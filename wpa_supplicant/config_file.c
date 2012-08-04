@@ -323,11 +323,17 @@ struct wpa_config * wpa_config_read(const char *name)
 	int cred_id = 0;
 
 	config = wpa_config_alloc_empty(NULL, NULL);
-	if (config == NULL)
+	if (config == NULL) {
+		wpa_printf(MSG_ERROR, "Failed to allocate config file "
+			   "structure");
 		return NULL;
+	}
+
 	wpa_printf(MSG_DEBUG, "Reading configuration file '%s'", name);
 	f = fopen(name, "r");
 	if (f == NULL) {
+		wpa_printf(MSG_ERROR, "Failed to open config file '%s', "
+			   "error: %s", name, strerror(errno));
 		os_free(config);
 		return NULL;
 	}
@@ -372,6 +378,8 @@ struct wpa_config * wpa_config_read(const char *name)
 		} else if (os_strncmp(pos, "blob-base64-", 12) == 0) {
 			if (wpa_config_process_blob(config, f, &line, pos + 12)
 			    < 0) {
+				wpa_printf(MSG_ERROR, "Line %d: failed to "
+					   "process blob.", line);
 				errors++;
 				continue;
 			}

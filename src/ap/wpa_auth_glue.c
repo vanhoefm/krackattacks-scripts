@@ -184,9 +184,15 @@ static const u8 * hostapd_wpa_auth_get_psk(void *ctx, const u8 *addr,
 {
 	struct hostapd_data *hapd = ctx;
 	struct sta_info *sta = ap_get_sta(hapd, addr);
-	if (sta && sta->psk)
-		return sta->psk;
-	return hostapd_get_psk(hapd->conf, addr, prev_psk);
+	const u8 *psk = hostapd_get_psk(hapd->conf, addr, prev_psk);
+	/*
+	 * This is about to iterate over all psks, prev_psk gives the last
+	 * returned psk which should not be returned again.
+	 * logic list (all hostapd_get_psk; sta->psk)
+	 */
+	if (sta && sta->psk && !psk && sta->psk != prev_psk)
+		psk = sta->psk;
+	return psk;
 }
 
 

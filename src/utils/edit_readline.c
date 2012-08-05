@@ -127,6 +127,17 @@ int edit_init(void (*cmd_cb)(void *ctx, char *cmd),
 
 	eloop_register_read_sock(STDIN_FILENO, edit_read_char, NULL, NULL);
 
+	if (ps) {
+		size_t blen = os_strlen(ps) + 3;
+		char *ps2 = os_malloc(blen);
+		if (ps2) {
+			os_snprintf(ps2, blen, "%s> ", ps);
+			rl_callback_handler_install(ps2, readline_cmd_handler);
+			os_free(ps2);
+			return 0;
+		}
+	}
+
 	rl_callback_handler_install("> ", readline_cmd_handler);
 
 	return 0;

@@ -112,7 +112,7 @@ static void readline_cmd_handler(char *cmd)
 int edit_init(void (*cmd_cb)(void *ctx, char *cmd),
 	      void (*eof_cb)(void *ctx),
 	      char ** (*completion_cb)(void *ctx, const char *cmd, int pos),
-	      void *ctx, const char *history_file)
+	      void *ctx, const char *history_file, const char *ps)
 {
 	edit_cb_ctx = ctx;
 	edit_cmd_cb = cmd_cb;

@@ -1112,7 +1112,7 @@ static void edit_read_char(int sock, void *eloop_ctx, void *sock_ctx)
 int edit_init(void (*cmd_cb)(void *ctx, char *cmd),
 	      void (*eof_cb)(void *ctx),
 	      char ** (*completion_cb)(void *ctx, const char *cmd, int pos),
-	      void *ctx, const char *history_file)
+	      void *ctx, const char *history_file, const char *ps)
 {
 	currbuf[0] = '\0';
 	dl_list_init(&history_list);

@@ -977,7 +977,7 @@ static void hostapd_cli_interactive(void)
 
 	eloop_register_signal_terminate(hostapd_cli_eloop_terminate, NULL);
 	edit_init(hostapd_cli_edit_cmd_cb, hostapd_cli_edit_eof_cb,
-		  NULL, NULL, NULL);
+		  NULL, NULL, NULL, NULL);
 	eloop_register_timeout(ping_interval, 0, hostapd_cli_ping, NULL, NULL);
 
 	eloop_run();

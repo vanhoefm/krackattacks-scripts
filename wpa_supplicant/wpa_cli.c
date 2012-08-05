@@ -3820,7 +3820,7 @@ static void wpa_cli_interactive(void)
 
 	eloop_register_signal_terminate(wpa_cli_eloop_terminate, NULL);
 	edit_init(wpa_cli_edit_cmd_cb, wpa_cli_edit_eof_cb,
-		  wpa_cli_edit_completion_cb, NULL, hfile);
+		  wpa_cli_edit_completion_cb, NULL, hfile, NULL);
 	eloop_register_timeout(ping_interval, 0, wpa_cli_ping, NULL, NULL);
 
 	eloop_run();

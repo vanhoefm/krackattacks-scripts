@@ -1663,7 +1663,7 @@ static void wlantest_cli_interactive(int s)
 	cli.s = s;
 	eloop_register_signal_terminate(wlantest_cli_eloop_terminate, &cli);
 	edit_init(wlantest_cli_edit_cmd_cb, wlantest_cli_edit_eof_cb,
-		  wlantest_cli_edit_completion_cb, &cli, hfile);
+		  wlantest_cli_edit_completion_cb, &cli, hfile, NULL);
 
 	eloop_run();
 

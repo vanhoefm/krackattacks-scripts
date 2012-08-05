@@ -3627,7 +3627,14 @@ static void wpa_cli_action_cb(char *msg, size_t len)
 static void wpa_cli_reconnect(void)
 {
 	wpa_cli_close_connection();
-	wpa_cli_open_connection(ctrl_ifname, 1);
+	if (wpa_cli_open_connection(ctrl_ifname, 1) < 0)
+		return;
+
+	if (interactive) {
+		edit_clear_line();
+		printf("\rConnection to wpa_supplicant re-established\n");
+		edit_redraw();
+	}
 }
 
 
@@ -3699,6 +3706,33 @@ static void cli_event(const char *str)
 }
 
 
+static int check_terminating(const char *msg)
+{
+	const char *pos = msg;
+
+	if (*pos == '<') {
+		/* skip priority */
+		pos = os_strchr(pos, '>');
+		if (pos)
+			pos++;
+		else
+			pos = msg;
+	}
+
+	if (str_match(pos, WPA_EVENT_TERMINATING) && ctrl_conn) {
+		edit_clear_line();
+		printf("\rConnection to wpa_supplicant lost - trying to "
+		       "reconnect\n");
+		edit_redraw();
+		wpa_cli_attached = 0;
+		wpa_cli_close_connection();
+		return 1;
+	}
+
+	return 0;
+}
+
+
 static void wpa_cli_recv_pending(struct wpa_ctrl *ctrl, int action_monitor)
 {
 	if (ctrl_conn == NULL) {
@@ -3719,6 +3753,9 @@ static void wpa_cli_recv_pending(struct wpa_ctrl *ctrl, int action_monitor)
 					printf("\r%s\n", buf);
 					edit_redraw();
 				}
+
+				if (interactive && check_terminating(buf) > 0)
+					return;
 			}
 		} else {
 			printf("Could not read pending message.\n");

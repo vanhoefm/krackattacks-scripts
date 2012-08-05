@@ -9,7 +9,6 @@
 #ifndef ACCOUNTING_H
 #define ACCOUNTING_H
 
-void accounting_sta_interim(struct hostapd_data *hapd, struct sta_info *sta);
 #ifdef CONFIG_NO_ACCOUNTING
 static inline void accounting_sta_start(struct hostapd_data *hapd,
 					struct sta_info *sta)

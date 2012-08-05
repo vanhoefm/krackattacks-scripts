@@ -28,6 +28,8 @@
 
 static void accounting_sta_get_id(struct hostapd_data *hapd,
 				  struct sta_info *sta);
+static void accounting_sta_interim(struct hostapd_data *hapd,
+				   struct sta_info *sta);
 
 
 static struct radius_msg * accounting_msg(struct hostapd_data *hapd,
@@ -415,7 +417,8 @@ static void accounting_sta_report(struct hostapd_data *hapd,
  * @hapd: hostapd BSS data
  * @sta: The station
  */
-void accounting_sta_interim(struct hostapd_data *hapd, struct sta_info *sta)
+static void accounting_sta_interim(struct hostapd_data *hapd,
+				   struct sta_info *sta)
 {
 	if (sta->acct_session_started)
 		accounting_sta_report(hapd, sta, 0);

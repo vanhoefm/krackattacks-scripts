@@ -430,6 +430,12 @@ static int wpa_ctrl_command(struct wpa_ctrl *ctrl, char *cmd)
 }
 
 
+static int wpa_cli_cmd_ifname(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "IFNAME");
+}
+
+
 static int wpa_cli_cmd_status(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	if (argc > 0 && os_strcmp(argv[0], "verbose") == 0)
@@ -2947,6 +2953,9 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "status", wpa_cli_cmd_status,
 	  cli_cmd_flag_none,
 	  "[verbose] = get current WPA/EAPOL/EAP status" },
+	{ "ifname", wpa_cli_cmd_ifname,
+	  cli_cmd_flag_none,
+	  "= get current interface name" },
 	{ "ping", wpa_cli_cmd_ping,
 	  cli_cmd_flag_none,
 	  "= pings wpa_supplicant" },

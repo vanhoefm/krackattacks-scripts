@@ -15,6 +15,9 @@
 #include <unistd.h>
 #include <fcntl.h>
 #endif /* CONFIG_CTRL_IFACE_UNIX */
+#ifdef CONFIG_CTRL_IFACE_UDP_REMOTE
+#include <netdb.h>
+#endif /* CONFIG_CTRL_IFACE_UDP_REMOTE */
 
 #ifdef ANDROID
 #include <dirent.h>
@@ -246,6 +249,9 @@ struct wpa_ctrl * wpa_ctrl_open(const char *ctrl_path)
 	struct wpa_ctrl *ctrl;
 	char buf[128];
 	size_t len;
+#ifdef CONFIG_CTRL_IFACE_UDP_REMOTE
+	struct hostent *h;
+#endif /* CONFIG_CTRL_IFACE_UDP_REMOTE */
 
 	ctrl = os_malloc(sizeof(*ctrl));
 	if (ctrl == NULL)
@@ -260,7 +266,11 @@ struct wpa_ctrl * wpa_ctrl_open(const char *ctrl_path)
 	}
 
 	ctrl->local.sin_family = AF_INET;
+#ifdef CONFIG_CTRL_IFACE_UDP_REMOTE
+	ctrl->local.sin_addr.s_addr = INADDR_ANY;
+#else /* CONFIG_CTRL_IFACE_UDP_REMOTE */
 	ctrl->local.sin_addr.s_addr = htonl((127 << 24) | 1);
+#endif /* CONFIG_CTRL_IFACE_UDP_REMOTE */
 	if (bind(ctrl->s, (struct sockaddr *) &ctrl->local,
 		 sizeof(ctrl->local)) < 0) {
 		close(ctrl->s);
@@ -271,6 +281,40 @@ struct wpa_ctrl * wpa_ctrl_open(const char *ctrl_path)
 	ctrl->dest.sin_family = AF_INET;
 	ctrl->dest.sin_addr.s_addr = htonl((127 << 24) | 1);
 	ctrl->dest.sin_port = htons(WPA_CTRL_IFACE_PORT);
+
+#ifdef CONFIG_CTRL_IFACE_UDP_REMOTE
+	if (ctrl_path) {
+		char *port, *name;
+		int port_id;
+
+		name = os_strdup(ctrl_path);
+		if (name == NULL) {
+			close(ctrl->s);
+			os_free(ctrl);
+			return NULL;
+		}
+		port = os_strchr(name, ':');
+
+		if (port) {
+			port_id = atoi(&port[1]);
+			port[0] = '\0';
+		} else
+			port_id = WPA_CTRL_IFACE_PORT;
+
+		h = gethostbyname(name);
+		os_free(name);
+		if (h == NULL) {
+			perror("gethostbyname");
+			close(ctrl->s);
+			os_free(ctrl);
+			return NULL;
+		}
+		ctrl->dest.sin_port = htons(port_id);
+		os_memcpy(h->h_addr, (char *) &ctrl->dest.sin_addr.s_addr,
+			  h->h_length);
+	}
+#endif /* CONFIG_CTRL_IFACE_UDP_REMOTE */
+
 	if (connect(ctrl->s, (struct sockaddr *) &ctrl->dest,
 		    sizeof(ctrl->dest)) < 0) {
 		perror("connect");

@@ -95,6 +95,7 @@ static DEFINE_DL_LIST(p2p_groups); /* struct cli_txt_entry */
 static void print_help(void);
 static void wpa_cli_mon_receive(int sock, void *eloop_ctx, void *sock_ctx);
 static void wpa_cli_close_connection(void);
+static char * wpa_cli_get_default_ifname(void);
 
 
 static void usage(void)
@@ -3834,6 +3835,9 @@ static void start_edit(void)
 
 static void try_connection(void *eloop_ctx, void *timeout_ctx)
 {
+	if (ctrl_ifname == NULL)
+		ctrl_ifname = wpa_cli_get_default_ifname();
+
 	if (!wpa_cli_open_connection(ctrl_ifname, 1) == 0) {
 		if (!warning_displayed) {
 			printf("Could not connect to wpa_supplicant: "

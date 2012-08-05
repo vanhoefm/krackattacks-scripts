@@ -1151,6 +1151,11 @@ endif
 ifeq ($(CONFIG_CTRL_IFACE), named_pipe)
 L_CFLAGS += -DCONFIG_CTRL_IFACE_NAMED_PIPE
 endif
+ifeq ($(CONFIG_CTRL_IFACE), udp-remote)
+CONFIG_CTRL_IFACE=udp
+L_CFLAGS += -DCONFIG_CTRL_IFACE_UDP
+L_CFLAGS += -DCONFIG_CTRL_IFACE_UDP_REMOTE
+endif
 OBJS += ctrl_iface.c ctrl_iface_$(CONFIG_CTRL_IFACE).c
 endif
 

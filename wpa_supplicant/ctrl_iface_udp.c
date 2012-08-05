@@ -163,6 +163,8 @@ static void wpa_supplicant_ctrl_iface_receive(int sock, void *eloop_ctx,
 		perror("recvfrom(ctrl_iface)");
 		return;
 	}
+
+#ifndef CONFIG_CTRL_IFACE_UDP_REMOTE
 	if (from.sin_addr.s_addr != htonl((127 << 24) | 1)) {
 		/*
 		 * The OS networking stack is expected to drop this kind of
@@ -174,6 +176,8 @@ static void wpa_supplicant_ctrl_iface_receive(int sock, void *eloop_ctx,
 			   "source %s", inet_ntoa(from.sin_addr));
 		return;
 	}
+#endif /* CONFIG_CTRL_IFACE_UDP_REMOTE */
+
 	buf[res] = '\0';
 
 	if (os_strcmp(buf, "GET_COOKIE") == 0) {
@@ -266,6 +270,7 @@ wpa_supplicant_ctrl_iface_init(struct wpa_supplicant *wpa_s)
 {
 	struct ctrl_iface_priv *priv;
 	struct sockaddr_in addr;
+	int port = WPA_CTRL_IFACE_PORT;
 
 	priv = os_zalloc(sizeof(*priv));
 	if (priv == NULL)
@@ -285,12 +290,24 @@ wpa_supplicant_ctrl_iface_init(struct wpa_supplicant *wpa_s)
 
 	os_memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
+#ifdef CONFIG_CTRL_IFACE_UDP_REMOTE
+	addr.sin_addr.s_addr = INADDR_ANY;
+#else /* CONFIG_CTRL_IFACE_UDP_REMOTE */
 	addr.sin_addr.s_addr = htonl((127 << 24) | 1);
-	addr.sin_port = htons(WPA_CTRL_IFACE_PORT);
+#endif /* CONFIG_CTRL_IFACE_UDP_REMOTE */
+try_again:
+	addr.sin_port = htons(port);
 	if (bind(priv->sock, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+		port--;
+		if ((WPA_CTRL_IFACE_PORT - port) < WPA_CTRL_IFACE_PORT_LIMIT)
+			goto try_again;
 		perror("bind(AF_INET)");
 		goto fail;
 	}
+
+#ifdef CONFIG_CTRL_IFACE_UDP_REMOTE
+	wpa_msg(wpa_s, MSG_DEBUG, "ctrl_iface_init UDP port: %d", port);
+#endif /* CONFIG_CTRL_IFACE_UDP_REMOTE */
 
 	eloop_register_read_sock(priv->sock, wpa_supplicant_ctrl_iface_receive,
 				 wpa_s, priv);
@@ -442,6 +459,8 @@ static void wpa_supplicant_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 		perror("recvfrom(ctrl_iface)");
 		return;
 	}
+
+#ifndef CONFIG_CTRL_IFACE_UDP_REMOTE
 	if (from.sin_addr.s_addr != htonl((127 << 24) | 1)) {
 		/*
 		 * The OS networking stack is expected to drop this kind of
@@ -453,6 +472,8 @@ static void wpa_supplicant_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 			   "source %s", inet_ntoa(from.sin_addr));
 		return;
 	}
+#endif /* CONFIG_CTRL_IFACE_UDP_REMOTE */
+
 	buf[res] = '\0';
 
 	if (os_strcmp(buf, "GET_COOKIE") == 0) {
@@ -502,6 +523,7 @@ wpa_supplicant_global_ctrl_iface_init(struct wpa_global *global)
 {
 	struct ctrl_iface_global_priv *priv;
 	struct sockaddr_in addr;
+	int port = WPA_GLOBAL_CTRL_IFACE_PORT;
 
 	priv = os_zalloc(sizeof(*priv));
 	if (priv == NULL)
@@ -523,12 +545,25 @@ wpa_supplicant_global_ctrl_iface_init(struct wpa_global *global)
 
 	os_memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
+#ifdef CONFIG_CTRL_IFACE_UDP_REMOTE
+	addr.sin_addr.s_addr = INADDR_ANY;
+#else /* CONFIG_CTRL_IFACE_UDP_REMOTE */
 	addr.sin_addr.s_addr = htonl((127 << 24) | 1);
-	addr.sin_port = htons(WPA_GLOBAL_CTRL_IFACE_PORT);
+#endif /* CONFIG_CTRL_IFACE_UDP_REMOTE */
+try_again:
+	addr.sin_port = htons(port);
 	if (bind(priv->sock, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+		port++;
+		if ((port - WPA_GLOBAL_CTRL_IFACE_PORT) <
+		    WPA_GLOBAL_CTRL_IFACE_PORT_LIMIT)
+			goto try_again;
 		perror("bind(AF_INET)");
 		goto fail;
 	}
+
+#ifdef CONFIG_CTRL_IFACE_UDP_REMOTE
+	wpa_printf(MSG_DEBUG, "global_ctrl_iface_init UDP port: %d", port);
+#endif /* CONFIG_CTRL_IFACE_UDP_REMOTE */
 
 	eloop_register_read_sock(priv->sock,
 				 wpa_supplicant_global_ctrl_iface_receive,

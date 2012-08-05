@@ -298,8 +298,11 @@ void wpa_ctrl_cleanup(void);
 #endif /* ANDROID */
 
 #ifdef CONFIG_CTRL_IFACE_UDP
+/* Port range for multiple wpa_supplicant instances and multiple VIFs */
 #define WPA_CTRL_IFACE_PORT 9877
+#define WPA_CTRL_IFACE_PORT_LIMIT 50 /* decremented from start */
 #define WPA_GLOBAL_CTRL_IFACE_PORT 9878
+#define WPA_GLOBAL_CTRL_IFACE_PORT_LIMIT 20 /* incremented from start */
 #endif /* CONFIG_CTRL_IFACE_UDP */
 
 

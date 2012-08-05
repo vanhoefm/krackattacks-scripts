@@ -3777,12 +3777,6 @@ static void wpa_cli_ping(void *eloop_ctx, void *timeout_ctx)
 }
 
 
-static void wpa_cli_eloop_terminate(int sig, void *signal_ctx)
-{
-	eloop_terminate();
-}
-
-
 static void wpa_cli_mon_receive(int sock, void *eloop_ctx, void *sock_ctx)
 {
 	wpa_cli_recv_pending(mon_conn, 0);
@@ -3805,12 +3799,13 @@ static void wpa_cli_edit_eof_cb(void *ctx)
 }
 
 
-static void wpa_cli_interactive(void)
-{
-	char *home, *hfile = NULL;
-	const char *ps = wpa_ctrl_get_remote_ifname(ctrl_conn);
+static int warning_displayed = 0;
+static char *hfile = NULL;
+static int edit_started = 0;
 
-	printf("\nInteractive mode\n\n");
+static void start_edit(void)
+{
+	char *home;
 
 	home = getenv("HOME");
 	if (home) {
@@ -3821,17 +3816,50 @@ static void wpa_cli_interactive(void)
 			os_snprintf(hfile, hfile_len, "%s/%s", home, fname);
 	}
 
-	eloop_register_signal_terminate(wpa_cli_eloop_terminate, NULL);
-	edit_init(wpa_cli_edit_cmd_cb, wpa_cli_edit_eof_cb,
-		  wpa_cli_edit_completion_cb, NULL, hfile, ps);
-	eloop_register_timeout(ping_interval, 0, wpa_cli_ping, NULL, NULL);
+	if (edit_init(wpa_cli_edit_cmd_cb, wpa_cli_edit_eof_cb,
+		      wpa_cli_edit_completion_cb, NULL, hfile,
+		      wpa_ctrl_get_remote_ifname(ctrl_conn)) < 0) {
+		eloop_terminate();
+		return;
+	}
 
+	edit_started = 1;
+	eloop_register_timeout(ping_interval, 0, wpa_cli_ping, NULL, NULL);
+}
+
+
+static void try_connection(void *eloop_ctx, void *timeout_ctx)
+{
+	if (!wpa_cli_open_connection(ctrl_ifname, 1) == 0) {
+		if (!warning_displayed) {
+			printf("Could not connect to wpa_supplicant: "
+			       "%s - re-trying\n", ctrl_ifname);
+			warning_displayed = 1;
+		}
+		eloop_register_timeout(1, 0, try_connection, NULL, NULL);
+		return;
+	}
+
+	if (warning_displayed)
+		printf("Connection established.\n");
+
+	start_edit();
+}
+
+
+static void wpa_cli_interactive(void)
+{
+	printf("\nInteractive mode\n\n");
+
+	eloop_register_timeout(0, 0, try_connection, NULL, NULL);
 	eloop_run();
+	eloop_cancel_timeout(try_connection, NULL, NULL);
 
 	cli_txt_list_flush(&p2p_peers);
 	cli_txt_list_flush(&p2p_groups);
 	cli_txt_list_flush(&bsses);
-	edit_deinit(hfile, wpa_cli_edit_filter_history_cb);
+	if (edit_started)
+		edit_deinit(hfile, wpa_cli_edit_filter_history_cb);
 	os_free(hfile);
 	eloop_cancel_timeout(wpa_cli_ping, NULL, NULL);
 	wpa_cli_close_connection();
@@ -3890,10 +3918,10 @@ static void wpa_cli_cleanup(void)
 	os_program_deinit();
 }
 
-static void wpa_cli_terminate(int sig)
+
+static void wpa_cli_terminate(int sig, void *ctx)
 {
-	wpa_cli_cleanup();
-	exit(0);
+	eloop_terminate();
 }
 
 
@@ -3963,7 +3991,6 @@ static char * wpa_cli_get_default_ifname(void)
 
 int main(int argc, char *argv[])
 {
-	int warning_displayed = 0;
 	int c;
 	int daemonize = 0;
 	int ret = 0;
@@ -4033,30 +4060,13 @@ int main(int argc, char *argv[])
 		}
 	}
 
-#ifndef _WIN32_WCE
-	signal(SIGINT, wpa_cli_terminate);
-	signal(SIGTERM, wpa_cli_terminate);
-#endif /* _WIN32_WCE */
+	eloop_register_signal_terminate(wpa_cli_terminate, NULL);
 
 	if (ctrl_ifname == NULL)
 		ctrl_ifname = wpa_cli_get_default_ifname();
 
 	if (interactive) {
-		for (; !global;) {
-			if (wpa_cli_open_connection(ctrl_ifname, 1) == 0) {
-				if (warning_displayed)
-					printf("Connection established.\n");
-				break;
-			}
-
-			if (!warning_displayed) {
-				printf("Could not connect to wpa_supplicant: "
-				       "%s - re-trying\n", ctrl_ifname);
-				warning_displayed = 1;
-			}
-			os_sleep(1, 0);
-			continue;
-		}
+		wpa_cli_interactive();
 	} else {
 		if (!global &&
 		    wpa_cli_open_connection(ctrl_ifname, 0) < 0) {
@@ -4075,17 +4085,16 @@ int main(int argc, char *argv[])
 				return -1;
 			}
 		}
+
+		if (daemonize && os_daemonize(pid_file))
+			return -1;
+
+		if (action_file)
+			wpa_cli_action(ctrl_conn);
+		else
+			ret = wpa_request(ctrl_conn, argc - optind,
+					  &argv[optind]);
 	}
-
-	if (daemonize && os_daemonize(pid_file))
-		return -1;
-
-	if (interactive)
-		wpa_cli_interactive();
-	else if (action_file)
-		wpa_cli_action(ctrl_conn);
-	else
-		ret = wpa_request(ctrl_conn, argc - optind, &argv[optind]);
 
 	os_free(ctrl_ifname);
 	eloop_destroy();

@@ -20,6 +20,7 @@ static int cmdbuf_pos = 0;
 static int cmdbuf_len = 0;
 static char currbuf[CMD_BUF_LEN];
 static int currbuf_valid = 0;
+static const char *ps2 = NULL;
 
 #define HISTORY_MAX 100
 
@@ -47,7 +48,7 @@ void edit_clear_line(void)
 {
 	int i;
 	putchar('\r');
-	for (i = 0; i < cmdbuf_len + 2; i++)
+	for (i = 0; i < cmdbuf_len + 2 + (ps2 ? (int) os_strlen(ps2) : 0); i++)
 		putchar(' ');
 }
 
@@ -346,7 +347,7 @@ static void process_cmd(void)
 {
 
 	if (cmdbuf_len == 0) {
-		printf("\n> ");
+		printf("\n%s> ", ps2 ? ps2 : "");
 		fflush(stdout);
 		return;
 	}
@@ -356,7 +357,7 @@ static void process_cmd(void)
 	cmdbuf_pos = 0;
 	cmdbuf_len = 0;
 	edit_cmd_cb(edit_cb_ctx, cmdbuf);
-	printf("> ");
+	printf("%s> ", ps2 ? ps2 : "");
 	fflush(stdout);
 }
 
@@ -1132,7 +1133,8 @@ int edit_init(void (*cmd_cb)(void *ctx, char *cmd),
 
 	eloop_register_read_sock(STDIN_FILENO, edit_read_char, NULL, NULL);
 
-	printf("> ");
+	ps2 = ps;
+	printf("%s> ", ps2 ? ps2 : "");
 	fflush(stdout);
 
 	return 0;
@@ -1161,11 +1163,11 @@ void edit_redraw(void)
 {
 	char tmp;
 	cmdbuf[cmdbuf_len] = '\0';
-	printf("\r> %s", cmdbuf);
+	printf("\r%s> %s", ps2 ? ps2 : "", cmdbuf);
 	if (cmdbuf_pos != cmdbuf_len) {
 		tmp = cmdbuf[cmdbuf_pos];
 		cmdbuf[cmdbuf_pos] = '\0';
-		printf("\r> %s", cmdbuf);
+		printf("\r%s> %s", ps2 ? ps2 : "", cmdbuf);
 		cmdbuf[cmdbuf_pos] = tmp;
 	}
 	fflush(stdout);

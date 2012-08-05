@@ -49,6 +49,8 @@ struct wpa_ctrl {
 	struct sockaddr_in local;
 	struct sockaddr_in dest;
 	char *cookie;
+	char *remote_ifname;
+	char *remote_ip;
 #endif /* CONFIG_CTRL_IFACE_UDP */
 #ifdef CONFIG_CTRL_IFACE_UNIX
 	int s;
@@ -302,23 +304,27 @@ struct wpa_ctrl * wpa_ctrl_open(const char *ctrl_path)
 			port_id = WPA_CTRL_IFACE_PORT;
 
 		h = gethostbyname(name);
+		ctrl->remote_ip = os_strdup(name);
 		os_free(name);
 		if (h == NULL) {
 			perror("gethostbyname");
 			close(ctrl->s);
+			os_free(ctrl->remote_ip);
 			os_free(ctrl);
 			return NULL;
 		}
 		ctrl->dest.sin_port = htons(port_id);
 		os_memcpy(h->h_addr, (char *) &ctrl->dest.sin_addr.s_addr,
 			  h->h_length);
-	}
+	} else
+		ctrl->remote_ip = os_strdup("localhost");
 #endif /* CONFIG_CTRL_IFACE_UDP_REMOTE */
 
 	if (connect(ctrl->s, (struct sockaddr *) &ctrl->dest,
 		    sizeof(ctrl->dest)) < 0) {
 		perror("connect");
 		close(ctrl->s);
+		os_free(ctrl->remote_ip);
 		os_free(ctrl);
 		return NULL;
 	}
@@ -329,7 +335,22 @@ struct wpa_ctrl * wpa_ctrl_open(const char *ctrl_path)
 		ctrl->cookie = os_strdup(buf);
 	}
 
+	if (wpa_ctrl_request(ctrl, "IFNAME", 6, buf, &len, NULL) == 0) {
+		buf[len] = '\0';
+		ctrl->remote_ifname = os_strdup(buf);
+	}
+
 	return ctrl;
+}
+
+
+char * wpa_ctrl_get_remote_ifname(struct wpa_ctrl *ctrl)
+{
+#define WPA_CTRL_MAX_PS_NAME 100
+	static char ps[WPA_CTRL_MAX_PS_NAME] = {};
+	os_snprintf(ps, WPA_CTRL_MAX_PS_NAME, "%s/%s",
+		    ctrl->remote_ip, ctrl->remote_ifname);
+	return ps;
 }
 
 
@@ -337,6 +358,8 @@ void wpa_ctrl_close(struct wpa_ctrl *ctrl)
 {
 	close(ctrl->s);
 	os_free(ctrl->cookie);
+	os_free(ctrl->remote_ifname);
+	os_free(ctrl->remote_ip);
 	os_free(ctrl);
 }
 

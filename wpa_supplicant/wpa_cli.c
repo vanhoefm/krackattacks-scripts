@@ -3806,6 +3806,7 @@ static void wpa_cli_edit_eof_cb(void *ctx)
 static void wpa_cli_interactive(void)
 {
 	char *home, *hfile = NULL;
+	const char *ps = wpa_ctrl_get_remote_ifname(ctrl_conn);
 
 	printf("\nInteractive mode\n\n");
 
@@ -3820,7 +3821,7 @@ static void wpa_cli_interactive(void)
 
 	eloop_register_signal_terminate(wpa_cli_eloop_terminate, NULL);
 	edit_init(wpa_cli_edit_cmd_cb, wpa_cli_edit_eof_cb,
-		  wpa_cli_edit_completion_cb, NULL, hfile, NULL);
+		  wpa_cli_edit_completion_cb, NULL, hfile, ps);
 	eloop_register_timeout(ping_interval, 0, wpa_cli_ping, NULL, NULL);
 
 	eloop_run();

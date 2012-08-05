@@ -94,6 +94,7 @@ static DEFINE_DL_LIST(p2p_groups); /* struct cli_txt_entry */
 
 static void print_help(void);
 static void wpa_cli_mon_receive(int sock, void *eloop_ctx, void *sock_ctx);
+static void wpa_cli_close_connection(void);
 
 
 static void usage(void)
@@ -361,6 +362,7 @@ static int wpa_cli_open_connection(const char *ifname, int attach)
 		} else {
 			printf("Warning: Failed to attach to "
 			       "wpa_supplicant.\n");
+			wpa_cli_close_connection();
 			return -1;
 		}
 	}

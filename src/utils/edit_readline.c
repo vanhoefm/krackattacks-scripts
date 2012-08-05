@@ -147,6 +147,9 @@ int edit_init(void (*cmd_cb)(void *ctx, char *cmd),
 void edit_deinit(const char *history_file,
 		 int (*filter_cb)(void *ctx, const char *cmd))
 {
+	rl_set_prompt("");
+	rl_replace_line("", 0);
+	rl_redisplay();
 	rl_callback_handler_remove();
 	readline_free_completions();
 

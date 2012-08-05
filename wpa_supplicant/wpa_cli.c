@@ -3806,6 +3806,11 @@ static int edit_started = 0;
 static void start_edit(void)
 {
 	char *home;
+	char *ps = NULL;
+
+#ifdef CONFIG_CTRL_IFACE_UDP_REMOTE
+	ps = wpa_ctrl_get_remote_ifname(ctrl_conn);
+#endif /* CONFIG_CTRL_IFACE_UDP_REMOTE */
 
 	home = getenv("HOME");
 	if (home) {
@@ -3817,8 +3822,7 @@ static void start_edit(void)
 	}
 
 	if (edit_init(wpa_cli_edit_cmd_cb, wpa_cli_edit_eof_cb,
-		      wpa_cli_edit_completion_cb, NULL, hfile,
-		      wpa_ctrl_get_remote_ifname(ctrl_conn)) < 0) {
+		      wpa_cli_edit_completion_cb, NULL, hfile, ps) < 0) {
 		eloop_terminate();
 		return;
 	}

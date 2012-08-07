@@ -3617,9 +3617,10 @@ static int wpa_driver_nl80211_sched_scan(void *priv,
 {
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
-	int ret = 0;
-	struct nl_msg *msg, *ssids, *freqs, *match_set_ssid, *match_sets;
-	struct nl_msg *match_set_rssi;
+	int ret = -1;
+	struct nl_msg *msg, *ssids = NULL, *freqs = NULL;
+	struct nl_msg *match_set_ssid = NULL, *match_sets = NULL;
+	struct nl_msg *match_set_rssi = NULL;
 	size_t i;
 
 #ifdef ANDROID
@@ -3628,14 +3629,8 @@ static int wpa_driver_nl80211_sched_scan(void *priv,
 #endif /* ANDROID */
 
 	msg = nlmsg_alloc();
-	ssids = nlmsg_alloc();
-	freqs = nlmsg_alloc();
-	if (!msg || !ssids || !freqs) {
-		nlmsg_free(msg);
-		nlmsg_free(ssids);
-		nlmsg_free(freqs);
-		return -1;
-	}
+	if (!msg)
+		goto nla_put_failure;
 
 	os_free(drv->filter_ssids);
 	drv->filter_ssids = params->filter_ssids;
@@ -3652,6 +3647,8 @@ static int wpa_driver_nl80211_sched_scan(void *priv,
 	    (int) drv->num_filter_ssids <= drv->capa.max_match_sets) ||
 	    params->filter_rssi) {
 		match_sets = nlmsg_alloc();
+		if (match_sets == NULL)
+			goto nla_put_failure;
 
 		for (i = 0; i < drv->num_filter_ssids; i++) {
 			wpa_hexdump_ascii(MSG_MSGDUMP,
@@ -3660,42 +3657,52 @@ static int wpa_driver_nl80211_sched_scan(void *priv,
 					  drv->filter_ssids[i].ssid_len);
 
 			match_set_ssid = nlmsg_alloc();
-			nla_put(match_set_ssid,
+			if (match_set_ssid == NULL)
+				goto nla_put_failure;
+			NLA_PUT(match_set_ssid,
 				NL80211_ATTR_SCHED_SCAN_MATCH_SSID,
 				drv->filter_ssids[i].ssid_len,
 				drv->filter_ssids[i].ssid);
 
-			nla_put_nested(match_sets, i + 1, match_set_ssid);
-
-			nlmsg_free(match_set_ssid);
+			if (nla_put_nested(match_sets, i + 1, match_set_ssid) <
+			    0)
+				goto nla_put_failure;
 		}
 
 		if (params->filter_rssi) {
 			match_set_rssi = nlmsg_alloc();
+			if (match_set_rssi == NULL)
+				goto nla_put_failure;
 			NLA_PUT_U32(match_set_rssi,
 				    NL80211_SCHED_SCAN_MATCH_ATTR_RSSI,
 				    params->filter_rssi);
 			wpa_printf(MSG_MSGDUMP,
 				   "nl80211: Sched scan RSSI filter %d dBm",
 				   params->filter_rssi);
-			nla_put_nested(match_sets, 0, match_set_rssi);
-			nlmsg_free(match_set_rssi);
+			if (nla_put_nested(match_sets, 0, match_set_rssi) < 0)
+				goto nla_put_failure;
 		}
 
-		nla_put_nested(msg, NL80211_ATTR_SCHED_SCAN_MATCH,
-			       match_sets);
-		nlmsg_free(match_sets);
+		if (nla_put_nested(msg, NL80211_ATTR_SCHED_SCAN_MATCH,
+				   match_sets) < 0)
+			goto nla_put_failure;
 	}
 
-	for (i = 0; i < params->num_ssids; i++) {
-		wpa_hexdump_ascii(MSG_MSGDUMP, "nl80211: Sched scan SSID",
-				  params->ssids[i].ssid,
-				  params->ssids[i].ssid_len);
-		NLA_PUT(ssids, i + 1, params->ssids[i].ssid_len,
-			params->ssids[i].ssid);
+	if (params->num_ssids) {
+		ssids = nlmsg_alloc();
+		if (ssids == NULL)
+			goto nla_put_failure;
+		for (i = 0; i < params->num_ssids; i++) {
+			wpa_hexdump_ascii(MSG_MSGDUMP,
+					  "nl80211: Sched scan SSID",
+					  params->ssids[i].ssid,
+					  params->ssids[i].ssid_len);
+			NLA_PUT(ssids, i + 1, params->ssids[i].ssid_len,
+				params->ssids[i].ssid);
+		}
+		if (nla_put_nested(msg, NL80211_ATTR_SCAN_SSIDS, ssids) < 0)
+			goto nla_put_failure;
 	}
-	if (params->num_ssids)
-		nla_put_nested(msg, NL80211_ATTR_SCAN_SSIDS, ssids);
 
 	if (params->extra_ies) {
 		wpa_hexdump_ascii(MSG_MSGDUMP, "nl80211: Sched scan extra IEs",
@@ -3705,12 +3712,17 @@ static int wpa_driver_nl80211_sched_scan(void *priv,
 	}
 
 	if (params->freqs) {
+		freqs = nlmsg_alloc();
+		if (freqs == NULL)
+			goto nla_put_failure;
 		for (i = 0; params->freqs[i]; i++) {
 			wpa_printf(MSG_MSGDUMP, "nl80211: Scan frequency %u "
 				   "MHz", params->freqs[i]);
 			NLA_PUT_U32(freqs, i + 1, params->freqs[i]);
 		}
-		nla_put_nested(msg, NL80211_ATTR_SCAN_FREQUENCIES, freqs);
+		if (nla_put_nested(msg, NL80211_ATTR_SCAN_FREQUENCIES, freqs) <
+		    0)
+			goto nla_put_failure;
 	}
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
@@ -3728,6 +3740,9 @@ static int wpa_driver_nl80211_sched_scan(void *priv,
 		   "scan interval %d msec", ret, interval);
 
 nla_put_failure:
+	nlmsg_free(match_set_ssid);
+	nlmsg_free(match_sets);
+	nlmsg_free(match_set_rssi);
 	nlmsg_free(ssids);
 	nlmsg_free(msg);
 	nlmsg_free(freqs);

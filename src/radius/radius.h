@@ -213,7 +213,7 @@ struct radius_attr_hdr * radius_msg_add_attr(struct radius_msg *msg, u8 type,
 struct radius_msg * radius_msg_parse(const u8 *data, size_t len);
 int radius_msg_add_eap(struct radius_msg *msg, const u8 *data,
 		       size_t data_len);
-u8 *radius_msg_get_eap(struct radius_msg *msg, size_t *len);
+struct wpabuf * radius_msg_get_eap(struct radius_msg *msg);
 int radius_msg_verify(struct radius_msg *msg, const u8 *secret,
 		      size_t secret_len, struct radius_msg *sent_msg,
 		      int auth);

@@ -707,9 +707,9 @@ int radius_msg_add_eap(struct radius_msg *msg, const u8 *data, size_t data_len)
 }
 
 
-u8 *radius_msg_get_eap(struct radius_msg *msg, size_t *eap_len)
+struct wpabuf * radius_msg_get_eap(struct radius_msg *msg)
 {
-	u8 *eap, *pos;
+	struct wpabuf *eap;
 	size_t len, i;
 	struct radius_attr_hdr *attr;
 
@@ -726,22 +726,17 @@ u8 *radius_msg_get_eap(struct radius_msg *msg, size_t *eap_len)
 	if (len == 0)
 		return NULL;
 
-	eap = os_malloc(len);
+	eap = wpabuf_alloc(len);
 	if (eap == NULL)
 		return NULL;
 
-	pos = eap;
 	for (i = 0; i < msg->attr_used; i++) {
 		attr = radius_get_attr_hdr(msg, i);
 		if (attr->type == RADIUS_ATTR_EAP_MESSAGE) {
 			int flen = attr->length - sizeof(*attr);
-			os_memcpy(pos, attr + 1, flen);
-			pos += flen;
+			wpabuf_put_data(eap, attr + 1, flen);
 		}
 	}
-
-	if (eap_len)
-		*eap_len = len;
 
 	return eap;
 }

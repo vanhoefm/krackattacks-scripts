@@ -1470,7 +1470,6 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			} else {
 				os_memcpy(bss->ssid.ssid, pos,
 					  bss->ssid.ssid_len);
-				bss->ssid.ssid[bss->ssid.ssid_len] = '\0';
 				bss->ssid.ssid_set = 1;
 			}
 		} else if (os_strcmp(buf, "macaddr_acl") == 0) {

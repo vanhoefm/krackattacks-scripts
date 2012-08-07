@@ -523,7 +523,8 @@ static int hostapd_ctrl_iface_get_config(struct hostapd_data *hapd,
 	ret = os_snprintf(pos, end - pos, "bssid=" MACSTR "\n"
 			  "ssid=%s\n",
 			  MAC2STR(hapd->own_addr),
-			  hapd->conf->ssid.ssid);
+			  wpa_ssid_txt(hapd->conf->ssid.ssid,
+				       hapd->conf->ssid.ssid_len));
 	if (ret < 0 || ret >= end - pos)
 		return pos - buf;
 	pos += ret;

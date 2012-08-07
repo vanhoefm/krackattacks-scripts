@@ -150,7 +150,6 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 		return -1;
 	}
 	os_memcpy(bss->ssid.ssid, ssid->ssid, ssid->ssid_len);
-	bss->ssid.ssid[ssid->ssid_len] = '\0';
 	bss->ssid.ssid_len = ssid->ssid_len;
 	bss->ssid.ssid_set = 1;
 

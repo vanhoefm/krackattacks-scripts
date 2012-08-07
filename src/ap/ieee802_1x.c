@@ -481,7 +481,9 @@ static void ieee802_1x_encapsulate_radius(struct hostapd_data *hapd,
 	}
 
 	os_snprintf(buf, sizeof(buf), RADIUS_802_1X_ADDR_FORMAT ":%s",
-		    MAC2STR(hapd->own_addr), hapd->conf->ssid.ssid);
+		    MAC2STR(hapd->own_addr),
+		    wpa_ssid_txt(hapd->conf->ssid.ssid,
+				 hapd->conf->ssid.ssid_len));
 	buf[sizeof(buf) - 1] = '\0';
 	if (!hostapd_config_get_radius_attr(hapd->conf->radius_auth_req_attr,
 					    RADIUS_ATTR_CALLED_STATION_ID) &&

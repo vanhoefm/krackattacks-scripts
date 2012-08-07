@@ -136,7 +136,9 @@ static struct radius_msg * accounting_msg(struct hostapd_data *hapd,
 	}
 
 	os_snprintf(buf, sizeof(buf), RADIUS_802_1X_ADDR_FORMAT ":%s",
-		    MAC2STR(hapd->own_addr), hapd->conf->ssid.ssid);
+		    MAC2STR(hapd->own_addr),
+		    wpa_ssid_txt(hapd->conf->ssid.ssid,
+				 hapd->conf->ssid.ssid_len));
 	if (!hostapd_config_get_radius_attr(hapd->conf->radius_acct_req_attr,
 					    RADIUS_ATTR_CALLED_STATION_ID) &&
 	    !radius_msg_add_attr(msg, RADIUS_ATTR_CALLED_STATION_ID,

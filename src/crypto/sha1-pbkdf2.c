@@ -11,7 +11,7 @@
 #include "common.h"
 #include "sha1.h"
 
-static int pbkdf2_sha1_f(const char *passphrase, const char *ssid,
+static int pbkdf2_sha1_f(const char *passphrase, const u8 *ssid,
 			 size_t ssid_len, int iterations, unsigned int count,
 			 u8 *digest)
 {
@@ -22,7 +22,7 @@ static int pbkdf2_sha1_f(const char *passphrase, const char *ssid,
 	size_t len[2];
 	size_t passphrase_len = os_strlen(passphrase);
 
-	addr[0] = (u8 *) ssid;
+	addr[0] = ssid;
 	len[0] = ssid_len;
 	addr[1] = count_buf;
 	len[1] = 4;
@@ -69,7 +69,7 @@ static int pbkdf2_sha1_f(const char *passphrase, const char *ssid,
  * iterations is set to 4096 and buflen to 32. This function is described in
  * IEEE Std 802.11-2004, Clause H.4. The main construction is from PKCS#5 v2.0.
  */
-int pbkdf2_sha1(const char *passphrase, const char *ssid, size_t ssid_len,
+int pbkdf2_sha1(const char *passphrase, const u8 *ssid, size_t ssid_len,
 		int iterations, u8 *buf, size_t buflen)
 {
 	unsigned int count = 0;

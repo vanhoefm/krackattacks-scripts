@@ -1097,8 +1097,8 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 		if (bss && ssid->bssid_set && ssid->ssid_len == 0 &&
 		    ssid->passphrase) {
 			u8 psk[PMK_LEN];
-		        pbkdf2_sha1(ssid->passphrase, (char *) bss->ssid,
-				    bss->ssid_len, 4096, psk, PMK_LEN);
+		        pbkdf2_sha1(ssid->passphrase, bss->ssid, bss->ssid_len,
+				    4096, psk, PMK_LEN);
 		        wpa_hexdump_key(MSG_MSGDUMP, "PSK (from passphrase)",
 					psk, PMK_LEN);
 			wpa_sm_set_pmk(wpa_s->wpa, psk, PMK_LEN);
@@ -1131,8 +1131,8 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 #ifndef CONFIG_NO_PBKDF2
 			if (wpabuf_len(pw) >= 8 && wpabuf_len(pw) < 64 && bss)
 			{
-				pbkdf2_sha1(pw_str, (char *) bss->ssid,
-					    bss->ssid_len, 4096, psk, PMK_LEN);
+				pbkdf2_sha1(pw_str, bss->ssid, bss->ssid_len,
+					    4096, psk, PMK_LEN);
 				os_memset(pw_str, 0, sizeof(pw_str));
 				wpa_hexdump_key(MSG_MSGDUMP, "PSK (from "
 						"external passphrase)",

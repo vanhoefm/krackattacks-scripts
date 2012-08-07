@@ -2308,8 +2308,7 @@ char * wpa_config_get_no_key(struct wpa_ssid *ssid, const char *var)
 void wpa_config_update_psk(struct wpa_ssid *ssid)
 {
 #ifndef CONFIG_NO_PBKDF2
-	pbkdf2_sha1(ssid->passphrase,
-		    (char *) ssid->ssid, ssid->ssid_len, 4096,
+	pbkdf2_sha1(ssid->passphrase, ssid->ssid, ssid->ssid_len, 4096,
 		    ssid->psk, PMK_LEN);
 	wpa_hexdump_key(MSG_MSGDUMP, "PSK (from passphrase)",
 			ssid->psk, PMK_LEN);

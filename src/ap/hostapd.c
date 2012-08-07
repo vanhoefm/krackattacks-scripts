@@ -98,7 +98,7 @@ static void hostapd_reload_bss(struct hostapd_data *hapd)
 	hostapd_update_wps(hapd);
 
 	if (hapd->conf->ssid.ssid_set &&
-	    hostapd_set_ssid(hapd, (u8 *) hapd->conf->ssid.ssid,
+	    hostapd_set_ssid(hapd, hapd->conf->ssid.ssid,
 			     hapd->conf->ssid.ssid_len)) {
 		wpa_printf(MSG_ERROR, "Could not set SSID for kernel driver");
 		/* try to continue */
@@ -679,14 +679,14 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 		set_ssid = 0;
 		conf->ssid.ssid_len = ssid_len;
 		os_memcpy(conf->ssid.ssid, ssid, conf->ssid.ssid_len);
-		conf->ssid.ssid[conf->ssid.ssid_len] = '\0';
 	}
 
 	if (!hostapd_drv_none(hapd)) {
 		wpa_printf(MSG_ERROR, "Using interface %s with hwaddr " MACSTR
-			   " and ssid '%s'",
+			   " and ssid \"%s\"",
 			   hapd->conf->iface, MAC2STR(hapd->own_addr),
-			   hapd->conf->ssid.ssid);
+			   wpa_ssid_txt(hapd->conf->ssid.ssid,
+					hapd->conf->ssid.ssid_len));
 	}
 
 	if (hostapd_setup_wpa_psk(conf)) {
@@ -696,7 +696,7 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 
 	/* Set SSID for the kernel driver (to be used in beacon and probe
 	 * response frames) */
-	if (set_ssid && hostapd_set_ssid(hapd, (u8 *) conf->ssid.ssid,
+	if (set_ssid && hostapd_set_ssid(hapd, conf->ssid.ssid,
 					 conf->ssid.ssid_len)) {
 		wpa_printf(MSG_ERROR, "Could not set SSID for kernel driver");
 		return -1;

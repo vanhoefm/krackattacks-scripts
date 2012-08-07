@@ -48,7 +48,7 @@ typedef enum hostap_security_policy {
 } secpolicy;
 
 struct hostapd_ssid {
-	char ssid[HOSTAPD_MAX_SSID_LEN + 1];
+	u8 ssid[HOSTAPD_MAX_SSID_LEN];
 	size_t ssid_len;
 	int ssid_set;
 

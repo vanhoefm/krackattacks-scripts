@@ -165,7 +165,9 @@ static int hostapd_radius_acl_query(struct hostapd_data *hapd, const u8 *addr,
 	}
 
 	os_snprintf(buf, sizeof(buf), RADIUS_802_1X_ADDR_FORMAT ":%s",
-		    MAC2STR(hapd->own_addr), hapd->conf->ssid.ssid);
+		    MAC2STR(hapd->own_addr),
+		    wpa_ssid_txt(hapd->conf->ssid.ssid,
+				 hapd->conf->ssid.ssid_len));
 	if (!radius_msg_add_attr(msg, RADIUS_ATTR_CALLED_STATION_ID,
 				 (u8 *) buf, os_strlen(buf))) {
 		wpa_printf(MSG_DEBUG, "Could not add Called-Station-Id");

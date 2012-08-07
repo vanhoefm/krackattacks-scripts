@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	pbkdf2_sha1(passphrase, ssid, os_strlen(ssid), 4096, psk, 32);
+	pbkdf2_sha1(passphrase, (u8 *) ssid, os_strlen(ssid), 4096, psk, 32);
 
 	printf("network={\n");
 	printf("\tssid=\"%s\"\n", ssid);

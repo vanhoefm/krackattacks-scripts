@@ -22,6 +22,6 @@ int sha1_t_prf(const u8 *key, size_t key_len, const char *label,
 int __must_check tls_prf_sha1_md5(const u8 *secret, size_t secret_len,
 				  const char *label, const u8 *seed,
 				  size_t seed_len, u8 *out, size_t outlen);
-int pbkdf2_sha1(const char *passphrase, const char *ssid, size_t ssid_len,
+int pbkdf2_sha1(const char *passphrase, const u8 *ssid, size_t ssid_len,
 		int iterations, u8 *buf, size_t buflen);
 #endif /* SHA1_H */

@@ -350,6 +350,8 @@ SM_STATE(EAP, METHOD)
 	}
 
 	eapReqData = eapol_get_eapReqData(sm);
+	if (!eap_hdr_len_valid(eapReqData, 1))
+		return;
 
 	/*
 	 * Get ignore, methodState, decision, allowNotifications, and
@@ -438,6 +440,8 @@ SM_STATE(EAP, IDENTITY)
 
 	SM_ENTRY(EAP, IDENTITY);
 	eapReqData = eapol_get_eapReqData(sm);
+	if (!eap_hdr_len_valid(eapReqData, 1))
+		return;
 	eap_sm_processIdentity(sm, eapReqData);
 	wpabuf_free(sm->eapRespData);
 	sm->eapRespData = NULL;
@@ -454,6 +458,8 @@ SM_STATE(EAP, NOTIFICATION)
 
 	SM_ENTRY(EAP, NOTIFICATION);
 	eapReqData = eapol_get_eapReqData(sm);
+	if (!eap_hdr_len_valid(eapReqData, 1))
+		return;
 	eap_sm_processNotify(sm, eapReqData);
 	wpabuf_free(sm->eapRespData);
 	sm->eapRespData = NULL;
@@ -871,12 +877,16 @@ static struct wpabuf * eap_sm_buildNak(struct eap_sm *sm, int id)
 
 static void eap_sm_processIdentity(struct eap_sm *sm, const struct wpabuf *req)
 {
-	const struct eap_hdr *hdr = wpabuf_head(req);
-	const u8 *pos = (const u8 *) (hdr + 1);
-	pos++;
+	const u8 *pos;
+	size_t msg_len;
 
 	wpa_msg(sm->msg_ctx, MSG_INFO, WPA_EVENT_EAP_STARTED
 		"EAP authentication started");
+
+	pos = eap_hdr_validate(EAP_VENDOR_IETF, EAP_TYPE_IDENTITY, req,
+			       &msg_len);
+	if (pos == NULL)
+		return;
 
 	/*
 	 * RFC 3748 - 5.1: Identity
@@ -888,7 +898,7 @@ static void eap_sm_processIdentity(struct eap_sm *sm, const struct wpabuf *req)
 	/* TODO: could save displayable message so that it can be shown to the
 	 * user in case of interaction is required */
 	wpa_hexdump_ascii(MSG_DEBUG, "EAP: EAP-Request Identity data",
-			  pos, be_to_host16(hdr->length) - 5);
+			  pos, msg_len);
 }
 
 

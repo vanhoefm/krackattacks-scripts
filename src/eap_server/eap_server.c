@@ -275,6 +275,11 @@ SM_STATE(EAP, INTEGRITY_CHECK)
 {
 	SM_ENTRY(EAP, INTEGRITY_CHECK);
 
+	if (!eap_hdr_len_valid(sm->eap_if.eapRespData, 1)) {
+		sm->ignore = TRUE;
+		return;
+	}
+
 	if (sm->m->check) {
 		sm->ignore = sm->m->check(sm, sm->eap_method_priv,
 					  sm->eap_if.eapRespData);
@@ -308,6 +313,9 @@ SM_STATE(EAP, METHOD_REQUEST)
 SM_STATE(EAP, METHOD_RESPONSE)
 {
 	SM_ENTRY(EAP, METHOD_RESPONSE);
+
+	if (!eap_hdr_len_valid(sm->eap_if.eapRespData, 1))
+		return;
 
 	sm->m->process(sm, sm->eap_method_priv, sm->eap_if.eapRespData);
 	if (sm->m->isDone(sm, sm->eap_method_priv)) {
@@ -379,6 +387,9 @@ SM_STATE(EAP, NAK)
 		sm->eap_method_priv = NULL;
 	}
 	sm->m = NULL;
+
+	if (!eap_hdr_len_valid(sm->eap_if.eapRespData, 1))
+		return;
 
 	nak = wpabuf_head(sm->eap_if.eapRespData);
 	if (nak && wpabuf_len(sm->eap_if.eapRespData) > sizeof(*nak)) {

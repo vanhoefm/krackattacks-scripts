@@ -113,18 +113,6 @@ set:
 
 
 #ifndef NO_CONFIG_WRITE
-static int is_hex(const u8 *data, size_t len)
-{
-	size_t i;
-
-	for (i = 0; i < len; i++) {
-		if (data[i] < 32 || data[i] >= 127)
-			return 1;
-	}
-	return 0;
-}
-
-
 static char * wpa_config_write_string_ascii(const u8 *value, size_t len)
 {
 	char *buf;

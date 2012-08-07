@@ -1472,6 +1472,20 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 					  bss->ssid.ssid_len);
 				bss->ssid.ssid_set = 1;
 			}
+		} else if (os_strcmp(buf, "ssid2") == 0) {
+			size_t slen;
+			char *str = wpa_config_parse_string(pos, &slen);
+			if (str == NULL || slen < 1 ||
+				   slen > HOSTAPD_MAX_SSID_LEN) {
+				wpa_printf(MSG_ERROR, "Line %d: invalid SSID "
+					   "'%s'", line, pos);
+				errors++;
+			} else {
+				os_memcpy(bss->ssid.ssid, str, slen);
+				bss->ssid.ssid_len = slen;
+				bss->ssid.ssid_set = 1;
+			}
+			os_free(str);
 		} else if (os_strcmp(buf, "macaddr_acl") == 0) {
 			bss->macaddr_acl = atoi(pos);
 			if (bss->macaddr_acl != ACCEPT_UNLESS_DENIED &&

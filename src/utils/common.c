@@ -566,3 +566,15 @@ char * wpa_config_parse_string(const char *value, size_t *len)
 		return (char *) str;
 	}
 }
+
+
+int is_hex(const u8 *data, size_t len)
+{
+	size_t i;
+
+	for (i = 0; i < len; i++) {
+		if (data[i] < 32 || data[i] >= 127)
+			return 1;
+	}
+	return 0;
+}

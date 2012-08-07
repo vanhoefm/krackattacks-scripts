@@ -371,10 +371,17 @@ static int hapd_wps_cred_cb(struct hostapd_data *hapd, void *ctx)
 
 	fprintf(nconf, "wps_state=2\n");
 
-	fprintf(nconf, "ssid=");
-	for (i = 0; i < cred->ssid_len; i++)
-		fputc(cred->ssid[i], nconf);
-	fprintf(nconf, "\n");
+	if (is_hex(cred->ssid, cred->ssid_len)) {
+		fprintf(nconf, "ssid2=");
+		for (i = 0; i < cred->ssid_len; i++)
+			fprintf(nconf, "%02x", cred->ssid[i]);
+		fprintf(nconf, "\n");
+	} else {
+		fprintf(nconf, "ssid=");
+		for (i = 0; i < cred->ssid_len; i++)
+			fputc(cred->ssid[i], nconf);
+		fprintf(nconf, "\n");
+	}
 
 	if ((cred->auth_type & (WPS_AUTH_WPA2 | WPS_AUTH_WPA2PSK)) &&
 	    (cred->auth_type & (WPS_AUTH_WPA | WPS_AUTH_WPAPSK)))
@@ -464,6 +471,7 @@ static int hapd_wps_cred_cb(struct hostapd_data *hapd, void *ctx)
 			multi_bss = 1;
 		if (!multi_bss &&
 		    (str_starts(buf, "ssid=") ||
+		     str_starts(buf, "ssid2=") ||
 		     str_starts(buf, "auth_algs=") ||
 		     str_starts(buf, "wep_default_key=") ||
 		     str_starts(buf, "wep_key") ||

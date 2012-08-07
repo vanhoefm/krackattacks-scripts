@@ -69,6 +69,31 @@ static char * wpa_config_parse_string(const char *value, size_t *len)
 		os_memcpy(str, value, *len);
 		str[*len] = '\0';
 		return str;
+	} else if (*value == 'P' && value[1] == '"') {
+		const char *pos;
+		char *tstr, *str;
+		size_t tlen;
+		value += 2;
+		pos = os_strrchr(value, '"');
+		if (pos == NULL || pos[1] != '\0')
+			return NULL;
+		tlen = pos - value;
+		tstr = os_malloc(tlen + 1);
+		if (tstr == NULL)
+			return NULL;
+		os_memcpy(tstr, value, tlen);
+		tstr[tlen] = '\0';
+
+		str = os_malloc(tlen + 1);
+		if (str == NULL) {
+			os_free(tstr);
+			return NULL;
+		}
+
+		*len = printf_decode((u8 *) str, tlen + 1, tstr);
+		os_free(tstr);
+
+		return str;
 	} else {
 		u8 *str;
 		size_t tlen, hlen = os_strlen(value);

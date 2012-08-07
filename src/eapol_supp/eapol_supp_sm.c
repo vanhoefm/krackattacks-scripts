@@ -631,6 +631,7 @@ static void eapol_sm_processKey(struct eapol_sm *sm)
 	u8 ekey[IEEE8021X_KEY_IV_LEN + IEEE8021X_ENCR_KEY_LEN];
 	int key_len, res, sign_key_len, encr_key_len;
 	u16 rx_key_length;
+	size_t plen;
 
 	wpa_printf(MSG_DEBUG, "EAPOL: processKey");
 	if (sm->last_rx_key == NULL)
@@ -643,9 +644,12 @@ static void eapol_sm_processKey(struct eapol_sm *sm)
 		return;
 	}
 
+	if (sm->last_rx_key_len < sizeof(*hdr) + sizeof(*key))
+		return;
 	hdr = (struct ieee802_1x_hdr *) sm->last_rx_key;
 	key = (struct ieee802_1x_eapol_key *) (hdr + 1);
-	if (sizeof(*hdr) + be_to_host16(hdr->length) > sm->last_rx_key_len) {
+	plen = be_to_host16(hdr->length);
+	if (sizeof(*hdr) + plen > sm->last_rx_key_len || plen < sizeof(*key)) {
 		wpa_printf(MSG_WARNING, "EAPOL: Too short EAPOL-Key frame");
 		return;
 	}
@@ -711,7 +715,7 @@ static void eapol_sm_processKey(struct eapol_sm *sm)
 	}
 	wpa_printf(MSG_DEBUG, "EAPOL: EAPOL-Key key signature verified");
 
-	key_len = be_to_host16(hdr->length) - sizeof(*key);
+	key_len = plen - sizeof(*key);
 	if (key_len > 32 || rx_key_length > 32) {
 		wpa_printf(MSG_WARNING, "EAPOL: Too long key data length %d",
 			   key_len ? key_len : rx_key_length);

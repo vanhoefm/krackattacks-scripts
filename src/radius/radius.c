@@ -269,7 +269,7 @@ static void radius_msg_dump_attr(struct radius_attr_hdr *hdr)
 	printf("   Attribute %d (%s) length=%d\n",
 	       hdr->type, attr ? attr->name : "?Unknown?", hdr->length);
 
-	if (attr == NULL)
+	if (attr == NULL || hdr->length < sizeof(struct radius_attr_hdr))
 		return;
 
 	len = hdr->length - sizeof(struct radius_attr_hdr);
@@ -719,7 +719,8 @@ struct wpabuf * radius_msg_get_eap(struct radius_msg *msg)
 	len = 0;
 	for (i = 0; i < msg->attr_used; i++) {
 		attr = radius_get_attr_hdr(msg, i);
-		if (attr->type == RADIUS_ATTR_EAP_MESSAGE)
+		if (attr->type == RADIUS_ATTR_EAP_MESSAGE &&
+		    attr->length > sizeof(struct radius_attr_hdr))
 			len += attr->length - sizeof(struct radius_attr_hdr);
 	}
 
@@ -732,7 +733,8 @@ struct wpabuf * radius_msg_get_eap(struct radius_msg *msg)
 
 	for (i = 0; i < msg->attr_used; i++) {
 		attr = radius_get_attr_hdr(msg, i);
-		if (attr->type == RADIUS_ATTR_EAP_MESSAGE) {
+		if (attr->type == RADIUS_ATTR_EAP_MESSAGE &&
+		    attr->length > sizeof(struct radius_attr_hdr)) {
 			int flen = attr->length - sizeof(*attr);
 			wpabuf_put_data(eap, attr + 1, flen);
 		}
@@ -838,7 +840,7 @@ int radius_msg_copy_attr(struct radius_msg *dst, struct radius_msg *src,
 
 	for (i = 0; i < src->attr_used; i++) {
 		attr = radius_get_attr_hdr(src, i);
-		if (attr->type == type) {
+		if (attr->type == type && attr->length >= sizeof(*attr)) {
 			if (!radius_msg_add_attr(dst, type, (u8 *) (attr + 1),
 						 attr->length - sizeof(*attr)))
 				return -1;
@@ -895,7 +897,8 @@ static u8 *radius_msg_get_vendor_attr(struct radius_msg *msg, u32 vendor,
 		u32 vendor_id;
 		struct radius_attr_vendor *vhdr;
 
-		if (attr->type != RADIUS_ATTR_VENDOR_SPECIFIC)
+		if (attr->type != RADIUS_ATTR_VENDOR_SPECIFIC ||
+		    attr->length < sizeof(*attr))
 			continue;
 
 		left = attr->length - sizeof(*attr);
@@ -1268,7 +1271,7 @@ int radius_msg_get_attr(struct radius_msg *msg, u8 type, u8 *buf, size_t len)
 		}
 	}
 
-	if (!attr)
+	if (!attr || attr->length < sizeof(*attr))
 		return -1;
 
 	dlen = attr->length - sizeof(*attr);
@@ -1293,7 +1296,7 @@ int radius_msg_get_attr_ptr(struct radius_msg *msg, u8 type, u8 **buf,
 		}
 	}
 
-	if (!attr)
+	if (!attr || attr->length < sizeof(*attr))
 		return -1;
 
 	*buf = (u8 *) (attr + 1);
@@ -1344,6 +1347,8 @@ int radius_msg_get_vlanid(struct radius_msg *msg)
 
 	for (i = 0; i < msg->attr_used; i++) {
 		attr = radius_get_attr_hdr(msg, i);
+		if (attr->length < sizeof(*attr))
+			return -1;
 		data = (const u8 *) (attr + 1);
 		dlen = attr->length - sizeof(*attr);
 		if (attr->length < 3)

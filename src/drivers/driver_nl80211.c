@@ -3479,23 +3479,15 @@ static int wpa_driver_nl80211_scan(void *priv,
 {
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
-	int ret = 0, timeout;
-	struct nl_msg *msg, *ssids, *freqs, *rates;
+	int ret = -1, timeout;
+	struct nl_msg *msg, *ssids = NULL, *freqs = NULL, *rates = NULL;
 	size_t i;
 
 	drv->scan_for_auth = 0;
 
 	msg = nlmsg_alloc();
-	ssids = nlmsg_alloc();
-	freqs = nlmsg_alloc();
-	rates = nlmsg_alloc();
-	if (!msg || !ssids || !freqs || !rates) {
-		nlmsg_free(msg);
-		nlmsg_free(ssids);
-		nlmsg_free(freqs);
-		nlmsg_free(rates);
+	if (!msg)
 		return -1;
-	}
 
 	os_free(drv->filter_ssids);
 	drv->filter_ssids = params->filter_ssids;
@@ -3506,15 +3498,20 @@ static int wpa_driver_nl80211_scan(void *priv,
 
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
 
-	for (i = 0; i < params->num_ssids; i++) {
-		wpa_hexdump_ascii(MSG_MSGDUMP, "nl80211: Scan SSID",
-				  params->ssids[i].ssid,
-				  params->ssids[i].ssid_len);
-		NLA_PUT(ssids, i + 1, params->ssids[i].ssid_len,
-			params->ssids[i].ssid);
+	if (params->num_ssids) {
+		ssids = nlmsg_alloc();
+		if (ssids == NULL)
+			goto nla_put_failure;
+		for (i = 0; i < params->num_ssids; i++) {
+			wpa_hexdump_ascii(MSG_MSGDUMP, "nl80211: Scan SSID",
+					  params->ssids[i].ssid,
+					  params->ssids[i].ssid_len);
+			NLA_PUT(ssids, i + 1, params->ssids[i].ssid_len,
+				params->ssids[i].ssid);
+		}
+		if (nla_put_nested(msg, NL80211_ATTR_SCAN_SSIDS, ssids) < 0)
+			goto nla_put_failure;
 	}
-	if (params->num_ssids)
-		nla_put_nested(msg, NL80211_ATTR_SCAN_SSIDS, ssids);
 
 	if (params->extra_ies) {
 		wpa_hexdump(MSG_MSGDUMP, "nl80211: Scan extra IEs",
@@ -3524,16 +3521,25 @@ static int wpa_driver_nl80211_scan(void *priv,
 	}
 
 	if (params->freqs) {
+		freqs = nlmsg_alloc();
+		if (freqs == NULL)
+			goto nla_put_failure;
 		for (i = 0; params->freqs[i]; i++) {
 			wpa_printf(MSG_MSGDUMP, "nl80211: Scan frequency %u "
 				   "MHz", params->freqs[i]);
 			NLA_PUT_U32(freqs, i + 1, params->freqs[i]);
 		}
-		nla_put_nested(msg, NL80211_ATTR_SCAN_FREQUENCIES, freqs);
+		if (nla_put_nested(msg, NL80211_ATTR_SCAN_FREQUENCIES, freqs) <
+		    0)
+			goto nla_put_failure;
 	}
 
 	if (params->p2p_probe) {
 		wpa_printf(MSG_DEBUG, "nl80211: P2P probe - mask SuppRates");
+
+		rates = nlmsg_alloc();
+		if (rates == NULL)
+			goto nla_put_failure;
 
 		/*
 		 * Remove 2.4 GHz rates 1, 2, 5.5, 11 Mbps from supported rates
@@ -3543,7 +3549,9 @@ static int wpa_driver_nl80211_scan(void *priv,
 		 */
 		NLA_PUT(rates, NL80211_BAND_2GHZ, 8,
 			"\x0c\x12\x18\x24\x30\x48\x60\x6c");
-		nla_put_nested(msg, NL80211_ATTR_SCAN_SUPP_RATES, rates);
+		if (nla_put_nested(msg, NL80211_ATTR_SCAN_SUPP_RATES, rates) <
+		    0)
+			goto nla_put_failure;
 
 		NLA_PUT_FLAG(msg, NL80211_ATTR_TX_NO_CCK_RATE);
 	}
@@ -5655,7 +5663,8 @@ static int wpa_driver_nl80211_sta_add(void *priv,
 		NLA_PUT_U8(wme, NL80211_STA_WME_MAX_SP,
 				(params->qosinfo > WMM_QOSINFO_STA_SP_SHIFT) &
 				WMM_QOSINFO_STA_SP_MASK);
-		nla_put_nested(msg, NL80211_ATTR_STA_WME, wme);
+		if (nla_put_nested(msg, NL80211_ATTR_STA_WME, wme) < 0)
+			goto nla_put_failure;
 	}
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
@@ -8466,6 +8475,7 @@ static int nl80211_signal_monitor(void *priv, int threshold, int hysteresis)
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct nl_msg *msg, *cqm = NULL;
+	int ret = -1;
 
 	wpa_printf(MSG_DEBUG, "nl80211: Signal monitor threshold=%d "
 		   "hysteresis=%d", threshold, hysteresis);
@@ -8484,19 +8494,16 @@ static int nl80211_signal_monitor(void *priv, int threshold, int hysteresis)
 
 	NLA_PUT_U32(cqm, NL80211_ATTR_CQM_RSSI_THOLD, threshold);
 	NLA_PUT_U32(cqm, NL80211_ATTR_CQM_RSSI_HYST, hysteresis);
-	nla_put_nested(msg, NL80211_ATTR_CQM, cqm);
+	if (nla_put_nested(msg, NL80211_ATTR_CQM, cqm) < 0)
+		goto nla_put_failure;
 
-	nlmsg_free(cqm);
-	cqm = NULL;
-
-	if (send_and_recv_msgs(drv, msg, NULL, NULL) == 0)
-		return 0;
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	msg = NULL;
 
 nla_put_failure:
 	nlmsg_free(cqm);
 	nlmsg_free(msg);
-	return -1;
+	return ret;
 }
 
 

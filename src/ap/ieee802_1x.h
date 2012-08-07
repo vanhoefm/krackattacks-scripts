@@ -1,6 +1,6 @@
 /*
  * hostapd / IEEE 802.1X-2004 Authenticator
- * Copyright (c) 2002-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -14,6 +14,8 @@ struct sta_info;
 struct eapol_state_machine;
 struct hostapd_config;
 struct hostapd_bss_config;
+struct hostapd_radius_attr;
+struct radius_msg;
 
 #ifdef _MSC_VER
 #pragma pack(push, 1)
@@ -82,5 +84,10 @@ char *eap_type_text(u8 type);
 
 const char *radius_mode_txt(struct hostapd_data *hapd);
 int radius_sta_rate(struct hostapd_data *hapd, struct sta_info *sta);
+
+int add_common_radius_attr(struct hostapd_data *hapd,
+			   struct hostapd_radius_attr *req_attr,
+			   struct sta_info *sta,
+			   struct radius_msg *msg);
 
 #endif /* IEEE802_1X_H */

@@ -1,6 +1,6 @@
 /*
  * hostapd / IEEE 802.11 authentication (ACL)
- * Copyright (c) 2003-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -22,6 +22,7 @@
 #include "ap_config.h"
 #include "ap_drv_ops.h"
 #include "ieee802_11.h"
+#include "ieee802_1x.h"
 #include "ieee802_11_auth.h"
 
 #define RADIUS_ACL_TIMEOUT 30
@@ -140,51 +141,15 @@ static int hostapd_radius_acl_query(struct hostapd_data *hapd, const u8 *addr,
 		goto fail;
 	}
 
-	if (hapd->conf->own_ip_addr.af == AF_INET &&
-	    !radius_msg_add_attr(msg, RADIUS_ATTR_NAS_IP_ADDRESS,
-				 (u8 *) &hapd->conf->own_ip_addr.u.v4, 4)) {
-		wpa_printf(MSG_DEBUG, "Could not add NAS-IP-Address");
+	if (add_common_radius_attr(hapd, hapd->conf->radius_auth_req_attr,
+				   NULL, msg) < 0)
 		goto fail;
-	}
-
-#ifdef CONFIG_IPV6
-	if (hapd->conf->own_ip_addr.af == AF_INET6 &&
-	    !radius_msg_add_attr(msg, RADIUS_ATTR_NAS_IPV6_ADDRESS,
-				 (u8 *) &hapd->conf->own_ip_addr.u.v6, 16)) {
-		wpa_printf(MSG_DEBUG, "Could not add NAS-IPv6-Address");
-		goto fail;
-	}
-#endif /* CONFIG_IPV6 */
-
-	if (hapd->conf->nas_identifier &&
-	    !radius_msg_add_attr(msg, RADIUS_ATTR_NAS_IDENTIFIER,
-				 (u8 *) hapd->conf->nas_identifier,
-				 os_strlen(hapd->conf->nas_identifier))) {
-		wpa_printf(MSG_DEBUG, "Could not add NAS-Identifier");
-		goto fail;
-	}
-
-	os_snprintf(buf, sizeof(buf), RADIUS_802_1X_ADDR_FORMAT ":%s",
-		    MAC2STR(hapd->own_addr),
-		    wpa_ssid_txt(hapd->conf->ssid.ssid,
-				 hapd->conf->ssid.ssid_len));
-	if (!radius_msg_add_attr(msg, RADIUS_ATTR_CALLED_STATION_ID,
-				 (u8 *) buf, os_strlen(buf))) {
-		wpa_printf(MSG_DEBUG, "Could not add Called-Station-Id");
-		goto fail;
-	}
 
 	os_snprintf(buf, sizeof(buf), RADIUS_802_1X_ADDR_FORMAT,
 		    MAC2STR(addr));
 	if (!radius_msg_add_attr(msg, RADIUS_ATTR_CALLING_STATION_ID,
 				 (u8 *) buf, os_strlen(buf))) {
 		wpa_printf(MSG_DEBUG, "Could not add Calling-Station-Id");
-		goto fail;
-	}
-
-	if (!radius_msg_add_attr_int32(msg, RADIUS_ATTR_NAS_PORT_TYPE,
-				       RADIUS_NAS_PORT_TYPE_IEEE_802_11)) {
-		wpa_printf(MSG_DEBUG, "Could not add NAS-Port-Type");
 		goto fail;
 	}
 

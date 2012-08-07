@@ -489,17 +489,14 @@ size_t printf_decode(u8 *buf, size_t maxlen, const char *str)
  */
 const char * wpa_ssid_txt(const u8 *ssid, size_t ssid_len)
 {
-	static char ssid_txt[33];
-	char *pos;
+	static char ssid_txt[32 * 4 + 1];
 
-	if (ssid_len > 32)
-		ssid_len = 32;
-	os_memcpy(ssid_txt, ssid, ssid_len);
-	ssid_txt[ssid_len] = '\0';
-	for (pos = ssid_txt; *pos != '\0'; pos++) {
-		if ((u8) *pos < 32 || (u8) *pos >= 127)
-			*pos = '_';
+	if (ssid == NULL) {
+		ssid_txt[0] = '\0';
+		return ssid_txt;
 	}
+
+	printf_encode(ssid_txt, sizeof(ssid_txt), ssid, ssid_len);
 	return ssid_txt;
 }
 

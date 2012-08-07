@@ -331,6 +331,7 @@ static void rx_anqp_query_list_id(struct hostapd_data *hapd, u16 info_id,
 			     "IP Addr Type Availability",
 			     hapd->conf->ipaddr_type_configured,
 			     0, 0, qi);
+		break;
 	case ANQP_DOMAIN_NAME:
 		set_anqp_req(ANQP_REQ_DOMAIN_NAME, "Domain Name",
 			     hapd->conf->domain_name != NULL,

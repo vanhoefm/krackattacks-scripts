@@ -126,7 +126,7 @@ static void ieee802_1x_tx_key_one(struct hostapd_data *hapd,
 	hdr = (struct ieee802_1x_hdr *) buf;
 	key = (struct ieee802_1x_eapol_key *) (hdr + 1);
 	key->type = EAPOL_KEY_TYPE_RC4;
-	key->key_length = htons(key_len);
+	WPA_PUT_BE16(key->key_length, key_len);
 	wpa_get_ntp_timestamp(key->replay_counter);
 
 	if (random_get_bytes(key->key_iv, sizeof(key->key_iv))) {

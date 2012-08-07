@@ -65,7 +65,7 @@ u8 * hostapd_eid_vht_operation(struct hostapd_data *hapd, u8 *eid)
 
 	/* VHT Basic MCS set comes from hw */
 	/* Hard code 1 stream, MCS0-7 is a min Basic VHT MCS rates */
-	oper->vht_basic_mcs_set = 0xfffc;
+	oper->vht_basic_mcs_set = host_to_le16(0xfffc);
 	pos += sizeof(*oper);
 
 	return pos;

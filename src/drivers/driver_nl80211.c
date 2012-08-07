@@ -3468,6 +3468,83 @@ static void wpa_driver_nl80211_scan_timeout(void *eloop_ctx, void *timeout_ctx)
 }
 
 
+static struct nl_msg *
+nl80211_scan_common(struct wpa_driver_nl80211_data *drv, u8 cmd,
+		    struct wpa_driver_scan_params *params)
+{
+	struct nl_msg *msg;
+	int err;
+	size_t i;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return NULL;
+
+	nl80211_cmd(drv, msg, 0, cmd);
+
+	if (nla_put_u32(msg, NL80211_ATTR_IFINDEX, drv->ifindex) < 0)
+		goto fail;
+
+	if (params->num_ssids) {
+		struct nl_msg *ssids = nlmsg_alloc();
+		if (ssids == NULL)
+			goto fail;
+		for (i = 0; i < params->num_ssids; i++) {
+			wpa_hexdump_ascii(MSG_MSGDUMP, "nl80211: Scan SSID",
+					  params->ssids[i].ssid,
+					  params->ssids[i].ssid_len);
+			if (nla_put(ssids, i + 1, params->ssids[i].ssid_len,
+				    params->ssids[i].ssid) < 0) {
+				nlmsg_free(ssids);
+				goto fail;
+			}
+		}
+		err = nla_put_nested(msg, NL80211_ATTR_SCAN_SSIDS, ssids);
+		nlmsg_free(ssids);
+		if (err < 0)
+			goto fail;
+	}
+
+	if (params->extra_ies) {
+		wpa_hexdump(MSG_MSGDUMP, "nl80211: Scan extra IEs",
+			    params->extra_ies, params->extra_ies_len);
+		if (nla_put(msg, NL80211_ATTR_IE, params->extra_ies_len,
+			    params->extra_ies) < 0)
+			goto fail;
+	}
+
+	if (params->freqs) {
+		struct nl_msg *freqs = nlmsg_alloc();
+		if (freqs == NULL)
+			goto fail;
+		for (i = 0; params->freqs[i]; i++) {
+			wpa_printf(MSG_MSGDUMP, "nl80211: Scan frequency %u "
+				   "MHz", params->freqs[i]);
+			if (nla_put_u32(freqs, i + 1, params->freqs[i]) < 0) {
+				nlmsg_free(freqs);
+				goto fail;
+			}
+		}
+		err = nla_put_nested(msg, NL80211_ATTR_SCAN_FREQUENCIES,
+				     freqs);
+		nlmsg_free(freqs);
+		if (err < 0)
+			goto fail;
+	}
+
+	os_free(drv->filter_ssids);
+	drv->filter_ssids = params->filter_ssids;
+	params->filter_ssids = NULL;
+	drv->num_filter_ssids = params->num_filter_ssids;
+
+	return msg;
+
+fail:
+	nlmsg_free(msg);
+	return NULL;
+}
+
+
 /**
  * wpa_driver_nl80211_scan - Request the driver to initiate scan
  * @priv: Pointer to private driver data from wpa_driver_nl80211_init()
@@ -3480,59 +3557,13 @@ static int wpa_driver_nl80211_scan(void *priv,
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	int ret = -1, timeout;
-	struct nl_msg *msg, *ssids = NULL, *freqs = NULL, *rates = NULL;
-	size_t i;
+	struct nl_msg *msg, *rates = NULL;
 
 	drv->scan_for_auth = 0;
 
-	msg = nlmsg_alloc();
+	msg = nl80211_scan_common(drv, NL80211_CMD_TRIGGER_SCAN, params);
 	if (!msg)
 		return -1;
-
-	os_free(drv->filter_ssids);
-	drv->filter_ssids = params->filter_ssids;
-	params->filter_ssids = NULL;
-	drv->num_filter_ssids = params->num_filter_ssids;
-
-	nl80211_cmd(drv, msg, 0, NL80211_CMD_TRIGGER_SCAN);
-
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
-
-	if (params->num_ssids) {
-		ssids = nlmsg_alloc();
-		if (ssids == NULL)
-			goto nla_put_failure;
-		for (i = 0; i < params->num_ssids; i++) {
-			wpa_hexdump_ascii(MSG_MSGDUMP, "nl80211: Scan SSID",
-					  params->ssids[i].ssid,
-					  params->ssids[i].ssid_len);
-			NLA_PUT(ssids, i + 1, params->ssids[i].ssid_len,
-				params->ssids[i].ssid);
-		}
-		if (nla_put_nested(msg, NL80211_ATTR_SCAN_SSIDS, ssids) < 0)
-			goto nla_put_failure;
-	}
-
-	if (params->extra_ies) {
-		wpa_hexdump(MSG_MSGDUMP, "nl80211: Scan extra IEs",
-			    params->extra_ies, params->extra_ies_len);
-		NLA_PUT(msg, NL80211_ATTR_IE, params->extra_ies_len,
-			params->extra_ies);
-	}
-
-	if (params->freqs) {
-		freqs = nlmsg_alloc();
-		if (freqs == NULL)
-			goto nla_put_failure;
-		for (i = 0; params->freqs[i]; i++) {
-			wpa_printf(MSG_MSGDUMP, "nl80211: Scan frequency %u "
-				   "MHz", params->freqs[i]);
-			NLA_PUT_U32(freqs, i + 1, params->freqs[i]);
-		}
-		if (nla_put_nested(msg, NL80211_ATTR_SCAN_FREQUENCIES, freqs) <
-		    0)
-			goto nla_put_failure;
-	}
 
 	if (params->p2p_probe) {
 		wpa_printf(MSG_DEBUG, "nl80211: P2P probe - mask SuppRates");
@@ -3604,9 +3635,7 @@ static int wpa_driver_nl80211_scan(void *priv,
 			       drv, drv->ctx);
 
 nla_put_failure:
-	nlmsg_free(ssids);
 	nlmsg_free(msg);
-	nlmsg_free(freqs);
 	nlmsg_free(rates);
 	return ret;
 }
@@ -3626,7 +3655,7 @@ static int wpa_driver_nl80211_sched_scan(void *priv,
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	int ret = -1;
-	struct nl_msg *msg, *ssids = NULL, *freqs = NULL;
+	struct nl_msg *msg;
 	struct nl_msg *match_set_ssid = NULL, *match_sets = NULL;
 	struct nl_msg *match_set_rssi = NULL;
 	size_t i;
@@ -3636,18 +3665,9 @@ static int wpa_driver_nl80211_sched_scan(void *priv,
 		return android_pno_start(bss, params);
 #endif /* ANDROID */
 
-	msg = nlmsg_alloc();
+	msg = nl80211_scan_common(drv, NL80211_CMD_START_SCHED_SCAN, params);
 	if (!msg)
 		goto nla_put_failure;
-
-	os_free(drv->filter_ssids);
-	drv->filter_ssids = params->filter_ssids;
-	params->filter_ssids = NULL;
-	drv->num_filter_ssids = params->num_filter_ssids;
-
-	nl80211_cmd(drv, msg, 0, NL80211_CMD_START_SCHED_SCAN);
-
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
 
 	NLA_PUT_U32(msg, NL80211_ATTR_SCHED_SCAN_INTERVAL, interval);
 
@@ -3696,43 +3716,6 @@ static int wpa_driver_nl80211_sched_scan(void *priv,
 			goto nla_put_failure;
 	}
 
-	if (params->num_ssids) {
-		ssids = nlmsg_alloc();
-		if (ssids == NULL)
-			goto nla_put_failure;
-		for (i = 0; i < params->num_ssids; i++) {
-			wpa_hexdump_ascii(MSG_MSGDUMP,
-					  "nl80211: Sched scan SSID",
-					  params->ssids[i].ssid,
-					  params->ssids[i].ssid_len);
-			NLA_PUT(ssids, i + 1, params->ssids[i].ssid_len,
-				params->ssids[i].ssid);
-		}
-		if (nla_put_nested(msg, NL80211_ATTR_SCAN_SSIDS, ssids) < 0)
-			goto nla_put_failure;
-	}
-
-	if (params->extra_ies) {
-		wpa_hexdump_ascii(MSG_MSGDUMP, "nl80211: Sched scan extra IEs",
-				  params->extra_ies, params->extra_ies_len);
-		NLA_PUT(msg, NL80211_ATTR_IE, params->extra_ies_len,
-			params->extra_ies);
-	}
-
-	if (params->freqs) {
-		freqs = nlmsg_alloc();
-		if (freqs == NULL)
-			goto nla_put_failure;
-		for (i = 0; params->freqs[i]; i++) {
-			wpa_printf(MSG_MSGDUMP, "nl80211: Scan frequency %u "
-				   "MHz", params->freqs[i]);
-			NLA_PUT_U32(freqs, i + 1, params->freqs[i]);
-		}
-		if (nla_put_nested(msg, NL80211_ATTR_SCAN_FREQUENCIES, freqs) <
-		    0)
-			goto nla_put_failure;
-	}
-
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 
 	/* TODO: if we get an error here, we should fall back to normal scan */
@@ -3751,9 +3734,7 @@ nla_put_failure:
 	nlmsg_free(match_set_ssid);
 	nlmsg_free(match_sets);
 	nlmsg_free(match_set_rssi);
-	nlmsg_free(ssids);
 	nlmsg_free(msg);
-	nlmsg_free(freqs);
 	return ret;
 }
 

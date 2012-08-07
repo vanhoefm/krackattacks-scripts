@@ -446,6 +446,8 @@ size_t printf_decode(u8 *buf, size_t maxlen, const char *str);
 
 const char * wpa_ssid_txt(const u8 *ssid, size_t ssid_len);
 
+char * wpa_config_parse_string(const char *value, size_t *len);
+
 static inline int is_zero_ether_addr(const u8 *a)
 {
 	return !(a[0] | a[1] | a[2] | a[3] | a[4] | a[5]);

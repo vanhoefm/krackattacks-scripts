@@ -505,3 +505,64 @@ void * __hide_aliasing_typecast(void *foo)
 {
 	return foo;
 }
+
+
+char * wpa_config_parse_string(const char *value, size_t *len)
+{
+	if (*value == '"') {
+		const char *pos;
+		char *str;
+		value++;
+		pos = os_strrchr(value, '"');
+		if (pos == NULL || pos[1] != '\0')
+			return NULL;
+		*len = pos - value;
+		str = os_malloc(*len + 1);
+		if (str == NULL)
+			return NULL;
+		os_memcpy(str, value, *len);
+		str[*len] = '\0';
+		return str;
+	} else if (*value == 'P' && value[1] == '"') {
+		const char *pos;
+		char *tstr, *str;
+		size_t tlen;
+		value += 2;
+		pos = os_strrchr(value, '"');
+		if (pos == NULL || pos[1] != '\0')
+			return NULL;
+		tlen = pos - value;
+		tstr = os_malloc(tlen + 1);
+		if (tstr == NULL)
+			return NULL;
+		os_memcpy(tstr, value, tlen);
+		tstr[tlen] = '\0';
+
+		str = os_malloc(tlen + 1);
+		if (str == NULL) {
+			os_free(tstr);
+			return NULL;
+		}
+
+		*len = printf_decode((u8 *) str, tlen + 1, tstr);
+		os_free(tstr);
+
+		return str;
+	} else {
+		u8 *str;
+		size_t tlen, hlen = os_strlen(value);
+		if (hlen & 1)
+			return NULL;
+		tlen = hlen / 2;
+		str = os_malloc(tlen + 1);
+		if (str == NULL)
+			return NULL;
+		if (hexstr2bin(value, str, tlen)) {
+			os_free(str);
+			return NULL;
+		}
+		str[tlen] = '\0';
+		*len = tlen;
+		return (char *) str;
+	}
+}

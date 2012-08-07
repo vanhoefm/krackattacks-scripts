@@ -18,7 +18,7 @@
 struct radius_hdr {
 	u8 code;
 	u8 identifier;
-	u16 length; /* including this header */
+	be16 length; /* including this header */
 	u8 authenticator[16];
 	/* followed by length-20 octets of attributes */
 } STRUCT_PACKED;

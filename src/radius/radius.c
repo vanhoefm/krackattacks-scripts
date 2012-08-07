@@ -332,7 +332,7 @@ void radius_msg_dump(struct radius_msg *msg)
 
 	printf("RADIUS message: code=%d (%s) identifier=%d length=%d\n",
 	       msg->hdr->code, radius_code_string(msg->hdr->code),
-	       msg->hdr->identifier, ntohs(msg->hdr->length));
+	       msg->hdr->identifier, be_to_host16(msg->hdr->length));
 
 	for (i = 0; i < msg->attr_used; i++) {
 		struct radius_attr_hdr *attr = radius_get_attr_hdr(msg, i);
@@ -357,11 +357,11 @@ int radius_msg_finish(struct radius_msg *msg, const u8 *secret,
 				   "Message-Authenticator");
 			return -1;
 		}
-		msg->hdr->length = htons(wpabuf_len(msg->buf));
+		msg->hdr->length = host_to_be16(wpabuf_len(msg->buf));
 		hmac_md5(secret, secret_len, wpabuf_head(msg->buf),
 			 wpabuf_len(msg->buf), (u8 *) (attr + 1));
 	} else
-		msg->hdr->length = htons(wpabuf_len(msg->buf));
+		msg->hdr->length = host_to_be16(wpabuf_len(msg->buf));
 
 	if (wpabuf_len(msg->buf) > 0xffff) {
 		wpa_printf(MSG_WARNING, "RADIUS: Too long message (%lu)",
@@ -387,7 +387,7 @@ int radius_msg_finish_srv(struct radius_msg *msg, const u8 *secret,
 		printf("WARNING: Could not add Message-Authenticator\n");
 		return -1;
 	}
-	msg->hdr->length = htons(wpabuf_len(msg->buf));
+	msg->hdr->length = host_to_be16(wpabuf_len(msg->buf));
 	os_memcpy(msg->hdr->authenticator, req_authenticator,
 		  sizeof(msg->hdr->authenticator));
 	hmac_md5(secret, secret_len, wpabuf_head(msg->buf),
@@ -430,7 +430,7 @@ int radius_msg_finish_das_resp(struct radius_msg *msg, const u8 *secret,
 		return -1;
 	}
 
-	msg->hdr->length = htons(wpabuf_len(msg->buf));
+	msg->hdr->length = host_to_be16(wpabuf_len(msg->buf));
 	os_memcpy(msg->hdr->authenticator, req_hdr->authenticator, 16);
 	hmac_md5(secret, secret_len, wpabuf_head(msg->buf),
 		 wpabuf_len(msg->buf), (u8 *) (attr + 1));
@@ -458,7 +458,7 @@ void radius_msg_finish_acct(struct radius_msg *msg, const u8 *secret,
 	const u8 *addr[2];
 	size_t len[2];
 
-	msg->hdr->length = htons(wpabuf_len(msg->buf));
+	msg->hdr->length = host_to_be16(wpabuf_len(msg->buf));
 	os_memset(msg->hdr->authenticator, 0, MD5_MAC_LEN);
 	addr[0] = wpabuf_head(msg->buf);
 	len[0] = wpabuf_len(msg->buf);
@@ -633,7 +633,7 @@ struct radius_msg * radius_msg_parse(const u8 *data, size_t len)
 
 	hdr = (struct radius_hdr *) data;
 
-	msg_len = ntohs(hdr->length);
+	msg_len = be_to_host16(hdr->length);
 	if (msg_len < sizeof(*hdr) || msg_len > len) {
 		wpa_printf(MSG_INFO, "RADIUS: Invalid message length");
 		return NULL;

@@ -60,6 +60,12 @@
 
 #ifdef ANDROID
 #include "android_drv.h"
+
+/* system/core/libnl_2 in AOSP does not include nla_put_u32() */
+int nla_put_u32(struct nl_msg *msg, int attrtype, uint32_t value)
+{
+	return nla_put(msg, attrtype, sizeof(uint32_t), &value);
+}
 #endif /* ANDROID */
 #ifdef CONFIG_LIBNL20
 /* libnl 2.0 compatibility code */

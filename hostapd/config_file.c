@@ -2133,6 +2133,15 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 					   "read VLAN file '%s'", line, pos);
 				errors++;
 			}
+		} else if (os_strcmp(buf, "vlan_naming") == 0) {
+			bss->ssid.vlan_naming = atoi(pos);
+			if (bss->ssid.vlan_naming >= DYNAMIC_VLAN_NAMING_END ||
+			    bss->ssid.vlan_naming < 0) {
+				wpa_printf(MSG_ERROR, "Line %d: invalid "
+					   "naming scheme %d", line,
+                                           bss->ssid.vlan_naming);
+				errors++;
+                        }
 #ifdef CONFIG_FULL_DYNAMIC_VLAN
 		} else if (os_strcmp(buf, "vlan_tagged_interface") == 0) {
 			bss->ssid.vlan_tagged_interface = os_strdup(pos);

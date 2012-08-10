@@ -65,6 +65,10 @@ struct hostapd_ssid {
 #define DYNAMIC_VLAN_OPTIONAL 1
 #define DYNAMIC_VLAN_REQUIRED 2
 	int dynamic_vlan;
+#define DYNAMIC_VLAN_NAMING_WITHOUT_DEVICE 0
+#define DYNAMIC_VLAN_NAMING_WITH_DEVICE 1
+#define DYNAMIC_VLAN_NAMING_END 2
+	int vlan_naming;
 #ifdef CONFIG_FULL_DYNAMIC_VLAN
 	char *vlan_tagged_interface;
 #endif /* CONFIG_FULL_DYNAMIC_VLAN */

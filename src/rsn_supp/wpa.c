@@ -190,14 +190,17 @@ static int wpa_supplicant_get_pmk(struct wpa_sm *sm,
 #endif /* CONFIG_IEEE80211R */
 		}
 		if (res == 0) {
+			struct rsn_pmksa_cache_entry *sa = NULL;
 			wpa_hexdump_key(MSG_DEBUG, "WPA: PMK from EAPOL state "
 					"machines", sm->pmk, pmk_len);
 			sm->pmk_len = pmk_len;
 			if (sm->proto == WPA_PROTO_RSN &&
 			    !wpa_key_mgmt_ft(sm->key_mgmt)) {
-				pmksa_cache_add(sm->pmksa, sm->pmk, pmk_len,
-						src_addr, sm->own_addr,
-						sm->network_ctx, sm->key_mgmt);
+				sa = pmksa_cache_add(sm->pmksa,
+						     sm->pmk, pmk_len,
+						     src_addr, sm->own_addr,
+						     sm->network_ctx,
+						     sm->key_mgmt);
 			}
 			if (!sm->cur_pmksa && pmkid &&
 			    pmksa_cache_get(sm->pmksa, src_addr, pmkid, NULL))
@@ -207,6 +210,9 @@ static int wpa_supplicant_get_pmk(struct wpa_sm *sm,
 					"PMKID");
 				abort_cached = 0;
 			}
+
+			if (!sm->cur_pmksa)
+				sm->cur_pmksa = sa;
 		} else {
 			wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
 				"WPA: Failed to get master session key from "

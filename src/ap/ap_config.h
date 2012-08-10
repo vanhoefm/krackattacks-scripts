@@ -476,6 +476,7 @@ struct hostapd_config {
 	int require_ht;
 	u32 vht_capab;
 	int ieee80211ac;
+	int require_vht;
 	u8 vht_oper_chwidth;
 };
 

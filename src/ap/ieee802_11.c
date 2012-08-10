@@ -653,6 +653,13 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 				  elems.vht_capabilities_len);
 	if (resp != WLAN_STATUS_SUCCESS)
 		return resp;
+	if (hapd->iconf->ieee80211ac && hapd->iconf->require_vht &&
+	    !(sta->flags & WLAN_STA_VHT)) {
+		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
+			       HOSTAPD_LEVEL_INFO, "Station does not support "
+			       "mandatory VHT PHY - reject association");
+		return WLAN_STATUS_UNSPECIFIED_FAILURE;
+	}
 #endif /* CONFIG_IEEE80211AC */
 
 	if ((hapd->conf->wpa & WPA_PROTO_RSN) && elems.rsn_ie) {

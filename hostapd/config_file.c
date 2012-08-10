@@ -2222,6 +2222,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 					   "vht_capab", line);
 				errors++;
 			}
+		} else if (os_strcmp(buf, "require_vht") == 0) {
+			conf->require_vht = atoi(pos);
 		} else if (os_strcmp(buf, "vht_oper_chwidth") == 0) {
 			conf->vht_oper_chwidth = atoi(pos);
 #endif /* CONFIG_IEEE80211AC */

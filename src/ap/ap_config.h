@@ -478,6 +478,7 @@ struct hostapd_config {
 	int ieee80211ac;
 	int require_vht;
 	u8 vht_oper_chwidth;
+	u8 vht_oper_centr_freq_seg0_idx;
 };
 
 

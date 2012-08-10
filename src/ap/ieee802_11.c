@@ -648,6 +648,13 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 	}
 #endif /* CONFIG_IEEE80211N */
 
+#ifdef CONFIG_IEEE80211AC
+	resp = copy_sta_vht_capab(hapd, sta, elems.vht_capabilities,
+				  elems.vht_capabilities_len);
+	if (resp != WLAN_STATUS_SUCCESS)
+		return resp;
+#endif /* CONFIG_IEEE80211AC */
+
 	if ((hapd->conf->wpa & WPA_PROTO_RSN) && elems.rsn_ie) {
 		wpa_ie = elems.rsn_ie;
 		wpa_ie_len = elems.rsn_ie_len;

@@ -56,6 +56,8 @@ void hostapd_get_ht_capab(struct hostapd_data *hapd,
 u16 copy_sta_ht_capab(struct hostapd_data *hapd, struct sta_info *sta,
 		      const u8 *ht_capab, size_t ht_capab_len);
 void update_ht_state(struct hostapd_data *hapd, struct sta_info *sta);
+u16 copy_sta_vht_capab(struct hostapd_data *hapd, struct sta_info *sta,
+		       const u8 *vht_capab, size_t vht_capab_len);
 void hostapd_tx_status(struct hostapd_data *hapd, const u8 *addr,
 		       const u8 *buf, size_t len, int ack);
 void hostapd_eapol_tx_status(struct hostapd_data *hapd, const u8 *dst,

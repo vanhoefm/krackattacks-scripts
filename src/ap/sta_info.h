@@ -28,6 +28,7 @@
 #define WLAN_STA_ASSOC_REQ_OK BIT(15)
 #define WLAN_STA_WPS2 BIT(16)
 #define WLAN_STA_GAS BIT(17)
+#define WLAN_STA_VHT BIT(18)
 #define WLAN_STA_PENDING_DISASSOC_CB BIT(29)
 #define WLAN_STA_PENDING_DEAUTH_CB BIT(30)
 #define WLAN_STA_NONERP BIT(31)
@@ -97,6 +98,7 @@ struct sta_info {
 	u8 *psk; /* PSK from RADIUS authentication server */
 
 	struct ieee80211_ht_capabilities *ht_capabilities;
+	struct ieee80211_vht_capabilities *vht_capabilities;
 
 #ifdef CONFIG_IEEE80211W
 	int sa_query_count; /* number of pending SA Query requests;

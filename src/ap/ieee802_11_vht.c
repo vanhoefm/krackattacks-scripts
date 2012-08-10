@@ -70,3 +70,31 @@ u8 * hostapd_eid_vht_operation(struct hostapd_data *hapd, u8 *eid)
 
 	return pos;
 }
+
+
+u16 copy_sta_vht_capab(struct hostapd_data *hapd, struct sta_info *sta,
+		       const u8 *vht_capab, size_t vht_capab_len)
+{
+	/* Disable VHT caps for STAs associated to no-VHT BSSes. */
+	if (!vht_capab ||
+	    vht_capab_len < sizeof(struct ieee80211_vht_capabilities) ||
+	    hapd->conf->disable_11ac) {
+		sta->flags &= ~WLAN_STA_VHT;
+		os_free(sta->vht_capabilities);
+		sta->vht_capabilities = NULL;
+		return WLAN_STATUS_SUCCESS;
+	}
+
+	if (sta->vht_capabilities == NULL) {
+		sta->vht_capabilities =
+			os_zalloc(sizeof(struct ieee80211_vht_capabilities));
+		if (sta->vht_capabilities == NULL)
+			return WLAN_STATUS_UNSPECIFIED_FAILURE;
+	}
+
+	sta->flags |= WLAN_STA_VHT;
+	os_memcpy(sta->vht_capabilities, vht_capab,
+		  sizeof(struct ieee80211_vht_capabilities));
+
+	return WLAN_STATUS_SUCCESS;
+}

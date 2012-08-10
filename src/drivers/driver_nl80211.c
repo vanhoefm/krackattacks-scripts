@@ -7081,6 +7081,8 @@ done:
 
 	if (is_p2p_interface(nlmode))
 		nl80211_disable_11b_rates(drv, drv->ifindex, 1);
+	else if (drv->disabled_11b_rates)
+		nl80211_disable_11b_rates(drv, drv->ifindex, 0);
 
 	if (is_ap_interface(nlmode)) {
 		nl80211_mgmt_unsubscribe(bss, "start AP");
@@ -8371,7 +8373,8 @@ static int nl80211_disable_11b_rates(struct wpa_driver_nl80211_data *drv,
 	if (ret) {
 		wpa_printf(MSG_DEBUG, "nl80211: Set TX rates failed: ret=%d "
 			   "(%s)", ret, strerror(-ret));
-	}
+	} else
+		drv->disabled_11b_rates = disabled;
 
 	return ret;
 

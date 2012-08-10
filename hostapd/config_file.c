@@ -2223,7 +2223,7 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 				errors++;
 			}
 		} else if (os_strcmp(buf, "vht_oper_chwidth") == 0) {
-		    conf->vht_oper_chwidth = atoi(pos);
+			conf->vht_oper_chwidth = atoi(pos);
 #endif /* CONFIG_IEEE80211AC */
 		} else if (os_strcmp(buf, "max_listen_interval") == 0) {
 			bss->max_listen_interval = atoi(pos);

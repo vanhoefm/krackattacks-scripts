@@ -7079,6 +7079,9 @@ done:
 		return ret;
 	}
 
+	if (is_p2p_interface(nlmode))
+		nl80211_disable_11b_rates(drv, drv->ifindex, 1);
+
 	if (is_ap_interface(nlmode)) {
 		nl80211_mgmt_unsubscribe(bss, "start AP");
 		/* Setup additional AP mode functionality if needed */

@@ -881,6 +881,9 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 	if (config->ext_password_backend)
 		fprintf(f, "ext_password_backend=%s\n",
 			config->ext_password_backend);
+	if (config->p2p_go_max_inactivity != DEFAULT_P2P_GO_MAX_INACTIVITY)
+		fprintf(f, "p2p_go_max_inactivity=%d\n",
+			config->p2p_go_max_inactivity);
 }
 
 #endif /* CONFIG_NO_CONFIG_WRITE */

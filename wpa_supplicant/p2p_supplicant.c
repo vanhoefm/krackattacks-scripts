@@ -807,6 +807,7 @@ static void wpas_start_wps_go(struct wpa_supplicant *wpa_s,
 	ssid->proto = WPA_PROTO_RSN;
 	ssid->pairwise_cipher = WPA_CIPHER_CCMP;
 	ssid->passphrase = os_strdup(params->passphrase);
+	ssid->ap_max_inactivity = wpa_s->parent->conf->p2p_go_max_inactivity;
 
 	wpa_s->ap_configured_cb = p2p_go_configured;
 	wpa_s->ap_configured_cb_ctx = wpa_s;

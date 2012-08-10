@@ -18,6 +18,7 @@
 #define DEFAULT_FAST_REAUTH 1
 #define DEFAULT_P2P_GO_INTENT 7
 #define DEFAULT_P2P_INTRA_BSS 1
+#define DEFAULT_P2P_GO_MAX_INACTIVITY (5 * 60)
 #define DEFAULT_BSS_MAX_COUNT 200
 #define DEFAULT_BSS_EXPIRATION_AGE 180
 #define DEFAULT_BSS_EXPIRATION_SCAN_COUNT 2
@@ -723,6 +724,15 @@ struct wpa_config {
 	 * format: <backend name>[:<optional backend parameters>]
 	 */
 	char *ext_password_backend;
+
+	/*
+	 * p2p_go_max_inactivity - Timeout in seconds to detect STA inactivity
+	 *
+	 * This timeout value is used in P2P GO mode to clean up
+	 * inactive stations.
+	 * By default: 300 seconds.
+	 */
+	int p2p_go_max_inactivity;
 };
 
 

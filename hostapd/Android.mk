@@ -151,6 +151,12 @@ ifdef CONFIG_NO_VLAN
 L_CFLAGS += -DCONFIG_NO_VLAN
 else
 OBJS += src/ap/vlan_init.c
+ifdef CONFIG_VLAN_NETLINK
+ifdef CONFIG_FULL_DYNAMIC_VLAN
+OBJS += src/ap/vlan_util.c
+endif
+L_CFLAGS += -DCONFIG_VLAN_NETLINK
+endif
 endif
 
 ifdef CONFIG_NO_CTRL_IFACE

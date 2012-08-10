@@ -146,6 +146,29 @@ ifdef CONFIG_DRIVER_CUSTOM
 DRV_CFLAGS += -DCONFIG_DRIVER_CUSTOM
 endif
 
+ifdef CONFIG_VLAN_NETLINK
+ifdef CONFIG_FULL_DYNAMIC_VLAN
+ifdef CONFIG_LIBNL32
+  DRV_LIBS += -lnl-3
+  DRV_LIBS += -lnl-genl-3
+  DRV_LIBS += -lnl-route-3
+  DRV_CFLAGS += -DCONFIG_LIBNL20
+else
+  ifdef CONFIG_LIBNL_TINY
+    DRV_LIBS += -lnl-tiny
+  else
+    DRV_LIBS += -lnl
+  endif
+
+  ifdef CONFIG_LIBNL20
+    DRV_LIBS += -lnl-genl
+    DRV_LIBS += -lnl-route
+    DRV_CFLAGS += -DCONFIG_LIBNL20
+  endif
+endif
+endif
+endif
+
 ##### COMMON VARS
 DRV_BOTH_CFLAGS := $(DRV_CFLAGS) $(DRV_WPA_CFLAGS) $(DRV_AP_CFLAGS)
 DRV_WPA_CFLAGS += $(DRV_CFLAGS)

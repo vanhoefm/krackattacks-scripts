@@ -197,11 +197,25 @@ pmksa_cache_add(struct rsn_pmksa_cache *pmksa, const u8 *pmk, size_t pmk_len,
 	if (pmksa->pmksa_count >= pmksa_cache_max_entries && pmksa->pmksa) {
 		/* Remove the oldest entry to make room for the new entry */
 		pos = pmksa->pmksa;
-		pmksa->pmksa = pos->next;
-		wpa_printf(MSG_DEBUG, "RSN: removed the oldest PMKSA cache "
-			   "entry (for " MACSTR ") to make room for new one",
-			   MAC2STR(pos->aa));
-		pmksa_cache_free_entry(pmksa, pos, 0);
+
+		if (pos == pmksa->sm->cur_pmksa) {
+			/*
+			 * Never remove the current PMKSA cache entry, since
+			 * it's in use, and removing it triggers a needless
+			 * deauthentication.
+			 */
+			pos = pos->next;
+			pmksa->pmksa->next = pos ? pos->next : NULL;
+		} else
+			pmksa->pmksa = pos->next;
+
+		if (pos) {
+			wpa_printf(MSG_DEBUG, "RSN: removed the oldest idle "
+				   "PMKSA cache entry (for " MACSTR ") to "
+				   "make room for new one",
+				   MAC2STR(pos->aa));
+			pmksa_cache_free_entry(pmksa, pos, 0);
+		}
 	}
 
 	/* Add the new entry; order by expiration time */

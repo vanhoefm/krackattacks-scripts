@@ -2444,6 +2444,9 @@ static void wpa_group_gtk_init(struct wpa_authenticator *wpa_auth,
 
 static int wpa_group_update_sta(struct wpa_state_machine *sm, void *ctx)
 {
+	if (ctx != NULL && ctx != sm->group)
+		return 0;
+
 	if (sm->wpa_ptk_state != WPA_PTK_PTKINITDONE) {
 		wpa_auth_logger(sm->wpa_auth, sm->addr, LOGGER_DEBUG,
 				"Not in PTKINITDONE; skip Group Key update");
@@ -2630,7 +2633,7 @@ static void wpa_group_setkeys(struct wpa_authenticator *wpa_auth,
 			   group->GKeyDoneStations);
 		group->GKeyDoneStations = 0;
 	}
-	wpa_auth_for_each_sta(wpa_auth, wpa_group_update_sta, NULL);
+	wpa_auth_for_each_sta(wpa_auth, wpa_group_update_sta, group);
 	wpa_printf(MSG_DEBUG, "wpa_group_setkeys: GKeyDoneStations=%d",
 		   group->GKeyDoneStations);
 }

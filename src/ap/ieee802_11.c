@@ -882,6 +882,11 @@ static void send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 	p = hostapd_eid_ht_operation(hapd, p);
 #endif /* CONFIG_IEEE80211N */
 
+#ifdef CONFIG_IEEE80211AC
+	p = hostapd_eid_vht_capabilities(hapd, p);
+	p = hostapd_eid_vht_operation(hapd, p);
+#endif /* CONFIG_IEEE80211AC */
+
 	p = hostapd_eid_ext_capab(hapd, p);
 	p = hostapd_eid_bss_max_idle_period(hapd, p);
 

@@ -692,7 +692,7 @@ fail:
 			P2P_PENDING_GO_NEG_RESPONSE_FAILURE;
 	if (p2p_send_action(p2p, freq, sa, p2p->cfg->dev_addr,
 			    p2p->cfg->dev_addr,
-			    wpabuf_head(resp), wpabuf_len(resp), 200) < 0) {
+			    wpabuf_head(resp), wpabuf_len(resp), 250) < 0) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Failed to send Action frame");
 	}

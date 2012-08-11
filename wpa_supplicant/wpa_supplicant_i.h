@@ -514,14 +514,6 @@ struct wpa_supplicant {
 	 */
 	char cross_connect_uplink[100];
 
-	enum {
-		P2P_GROUP_REMOVAL_UNKNOWN,
-		P2P_GROUP_REMOVAL_REQUESTED,
-		P2P_GROUP_REMOVAL_IDLE_TIMEOUT,
-		P2P_GROUP_REMOVAL_UNAVAILABLE,
-		P2P_GROUP_REMOVAL_GO_ENDING_SESSION
-	} removal_reason;
-
 	unsigned int p2p_cb_on_scan_complete:1;
 	unsigned int p2p_auto_join:1;
 	unsigned int p2p_auto_pd:1;

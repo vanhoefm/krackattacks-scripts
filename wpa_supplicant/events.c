@@ -1524,9 +1524,15 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 	if (data && wpa_supplicant_event_associnfo(wpa_s, data) < 0)
 		return;
 
+	if (wpa_drv_get_bssid(wpa_s, bssid) < 0) {
+		wpa_dbg(wpa_s, MSG_ERROR, "Failed to get BSSID");
+		wpa_supplicant_disassociate(
+			wpa_s, WLAN_REASON_DEAUTH_LEAVING);
+		return;
+	}
+
 	wpa_supplicant_set_state(wpa_s, WPA_ASSOCIATED);
-	if (wpa_drv_get_bssid(wpa_s, bssid) >= 0 &&
-	    os_memcmp(bssid, wpa_s->bssid, ETH_ALEN) != 0) {
+	if (os_memcmp(bssid, wpa_s->bssid, ETH_ALEN) != 0) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Associated to a new BSS: BSSID="
 			MACSTR, MAC2STR(bssid));
 		random_add_randomness(bssid, ETH_ALEN);

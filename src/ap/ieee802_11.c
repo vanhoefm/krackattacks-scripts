@@ -785,7 +785,7 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 #endif /* CONFIG_IEEE80211R */
 
 #ifdef CONFIG_IEEE80211N
-		if ((sta->flags & (WLAN_STA_HT | WLAN_STA_VHT)) ||
+		if ((sta->flags & (WLAN_STA_HT | WLAN_STA_VHT)) &&
 		    wpa_auth_get_pairwise(sta->wpa_sm) == WPA_CIPHER_TKIP) {
 			hostapd_logger(hapd, sta->addr,
 				       HOSTAPD_MODULE_IEEE80211,

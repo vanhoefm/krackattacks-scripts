@@ -843,6 +843,8 @@ void sme_sched_obss_scan(struct wpa_supplicant *wpa_s, int enable)
 	const u8 *ie;
 	struct wpa_bss *bss = wpa_s->current_bss;
 	struct wpa_ssid *ssid = wpa_s->current_ssid;
+	struct hostapd_hw_modes *hw_mode = NULL;
+	int i;
 
 	eloop_cancel_timeout(sme_obss_scan_timeout, wpa_s, NULL);
 	wpa_s->sme.sched_obss_scan = 0;
@@ -853,9 +855,20 @@ void sme_sched_obss_scan(struct wpa_supplicant *wpa_s, int enable)
 	    ssid->mode != IEEE80211_MODE_INFRA)
 		return; /* Not using station SME in wpa_supplicant */
 
-	if (!wpa_s->hw.modes ||
-	    !(wpa_s->hw.modes->ht_capab & HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET))
-		return; /* Driver does not support HT40 */
+	if (!wpa_s->hw.modes)
+		return;
+
+	/* only HT caps in 11g mode are relevant */
+	for (i = 0; i < wpa_s->hw.num_modes; i++) {
+		hw_mode = &wpa_s->hw.modes[i];
+		if (hw_mode->mode == HOSTAPD_MODE_IEEE80211G)
+			break;
+	}
+
+	/* Driver does not support HT40 for 11g or doesn't have 11g. */
+	if (i == wpa_s->hw.num_modes || !hw_mode ||
+	    !(hw_mode->ht_capab & HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET))
+		return;
 
 	if (bss == NULL || bss->freq < 2400 || bss->freq > 2500)
 		return; /* Not associated on 2.4 GHz band */

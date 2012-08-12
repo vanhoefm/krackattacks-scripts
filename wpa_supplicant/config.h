@@ -27,6 +27,7 @@
 
 #include "config_ssid.h"
 #include "wps/wps.h"
+#include "common/ieee802_11_common.h"
 
 
 struct wpa_cred {
@@ -733,6 +734,8 @@ struct wpa_config {
 	 * By default: 300 seconds.
 	 */
 	int p2p_go_max_inactivity;
+
+	struct hostapd_wmm_ac_params wmm_ac_params[4];
 };
 
 

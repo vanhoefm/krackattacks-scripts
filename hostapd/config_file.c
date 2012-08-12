@@ -909,78 +909,6 @@ static int hostapd_config_tx_queue(struct hostapd_config *conf, char *name,
 }
 
 
-static int hostapd_config_wmm_ac(struct hostapd_config *conf, char *name,
-				 char *val)
-{
-	int num, v;
-	char *pos;
-	struct hostapd_wmm_ac_params *ac;
-
-	/* skip 'wme_ac_' or 'wmm_ac_' prefix */
-	pos = name + 7;
-	if (os_strncmp(pos, "be_", 3) == 0) {
-		num = 0;
-		pos += 3;
-	} else if (os_strncmp(pos, "bk_", 3) == 0) {
-		num = 1;
-		pos += 3;
-	} else if (os_strncmp(pos, "vi_", 3) == 0) {
-		num = 2;
-		pos += 3;
-	} else if (os_strncmp(pos, "vo_", 3) == 0) {
-		num = 3;
-		pos += 3;
-	} else {
-		wpa_printf(MSG_ERROR, "Unknown WMM name '%s'", pos);
-		return -1;
-	}
-
-	ac = &conf->wmm_ac_params[num];
-
-	if (os_strcmp(pos, "aifs") == 0) {
-		v = atoi(val);
-		if (v < 1 || v > 255) {
-			wpa_printf(MSG_ERROR, "Invalid AIFS value %d", v);
-			return -1;
-		}
-		ac->aifs = v;
-	} else if (os_strcmp(pos, "cwmin") == 0) {
-		v = atoi(val);
-		if (v < 0 || v > 12) {
-			wpa_printf(MSG_ERROR, "Invalid cwMin value %d", v);
-			return -1;
-		}
-		ac->cwmin = v;
-	} else if (os_strcmp(pos, "cwmax") == 0) {
-		v = atoi(val);
-		if (v < 0 || v > 12) {
-			wpa_printf(MSG_ERROR, "Invalid cwMax value %d", v);
-			return -1;
-		}
-		ac->cwmax = v;
-	} else if (os_strcmp(pos, "txop_limit") == 0) {
-		v = atoi(val);
-		if (v < 0 || v > 0xffff) {
-			wpa_printf(MSG_ERROR, "Invalid txop value %d", v);
-			return -1;
-		}
-		ac->txop_limit = v;
-	} else if (os_strcmp(pos, "acm") == 0) {
-		v = atoi(val);
-		if (v < 0 || v > 1) {
-			wpa_printf(MSG_ERROR, "Invalid acm value %d", v);
-			return -1;
-		}
-		ac->admission_control_mandatory = v;
-	} else {
-		wpa_printf(MSG_ERROR, "Unknown wmm_ac_ field '%s'", pos);
-		return -1;
-	}
-
-	return 0;
-}
-
-
 #ifdef CONFIG_IEEE80211R
 static int add_r0kh(struct hostapd_bss_config *bss, char *value)
 {
@@ -2164,7 +2092,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			bss->wmm_uapsd = atoi(pos);
 		} else if (os_strncmp(buf, "wme_ac_", 7) == 0 ||
 			   os_strncmp(buf, "wmm_ac_", 7) == 0) {
-			if (hostapd_config_wmm_ac(conf, buf, pos)) {
+			if (hostapd_config_wmm_ac(conf->wmm_ac_params, buf,
+						  pos)) {
 				wpa_printf(MSG_ERROR, "Line %d: invalid WMM "
 					   "ac item", line);
 				errors++;

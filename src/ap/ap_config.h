@@ -12,6 +12,7 @@
 #include "common/defs.h"
 #include "ip_addr.h"
 #include "common/wpa_common.h"
+#include "common/ieee802_11_common.h"
 #include "wps/wps.h"
 
 #define MAX_STA_COUNT 2007
@@ -134,14 +135,6 @@ struct hostapd_tx_queue_params {
 	int cwmin;
 	int cwmax;
 	int burst; /* maximum burst time in 0.1 ms, i.e., 10 = 1 ms */
-};
-
-struct hostapd_wmm_ac_params {
-	int cwmin;
-	int cwmax;
-	int aifs;
-	int txop_limit; /* in units of 32us */
-	int admission_control_mandatory;
 };
 
 

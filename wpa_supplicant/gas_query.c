@@ -19,7 +19,7 @@
 #include "gas_query.h"
 
 
-#define GAS_QUERY_TIMEOUT 5
+#define GAS_QUERY_TIMEOUT_PERIOD 5
 
 
 struct gas_query_pending {
@@ -457,7 +457,7 @@ int gas_query_req(struct gas_query *gas, const u8 *dst, int freq,
 		return -1;
 	}
 
-	eloop_register_timeout(GAS_QUERY_TIMEOUT, 0, gas_query_timeout,
+	eloop_register_timeout(GAS_QUERY_TIMEOUT_PERIOD, 0, gas_query_timeout,
 			       gas, query);
 
 	return dialog_token;

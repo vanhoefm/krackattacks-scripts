@@ -180,6 +180,25 @@ char * os_readfile(const char *name, size_t *len);
  */
 void * os_zalloc(size_t size);
 
+/**
+ * os_calloc - Allocate and zero memory for an array
+ * @nmemb: Number of members in the array
+ * @size: Number of bytes in each member
+ * Returns: Pointer to allocated and zeroed memory or %NULL on failure
+ *
+ * This function can be used as a wrapper for os_zalloc(nmemb * size) when an
+ * allocation is used for an array. The main benefit over os_zalloc() is in
+ * having an extra check to catch integer overflows in multiplication.
+ *
+ * Caller is responsible for freeing the returned buffer with os_free().
+ */
+static inline void * os_calloc(size_t nmemb, size_t size)
+{
+	if (size && nmemb > (~(size_t) 0) / size)
+		return NULL;
+	return os_zalloc(nmemb * size);
+}
+
 
 /*
  * The following functions are wrapper for standard ANSI C or POSIX functions.

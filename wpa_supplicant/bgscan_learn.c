@@ -75,7 +75,7 @@ static void bgscan_learn_add_neighbor(struct bgscan_learn_bss *bss,
 	if (bssid_in_array(bss->neigh, bss->num_neigh, bssid))
 		return;
 
-	n = os_realloc(bss->neigh, (bss->num_neigh + 1) * ETH_ALEN);
+	n = os_realloc_array(bss->neigh, bss->num_neigh + 1, ETH_ALEN);
 	if (n == NULL)
 		return;
 
@@ -219,7 +219,7 @@ static int * bgscan_learn_get_freqs(struct bgscan_learn_data *data,
 	dl_list_for_each(bss, &data->bss, struct bgscan_learn_bss, list) {
 		if (in_array(freqs, bss->freq))
 			continue;
-		n = os_realloc(freqs, (*count + 2) * sizeof(int));
+		n = os_realloc_array(freqs, *count + 2, sizeof(int));
 		if (n == NULL)
 			return freqs;
 		freqs = n;
@@ -248,7 +248,7 @@ static int * bgscan_learn_get_probe_freq(struct bgscan_learn_data *data,
 			wpa_printf(MSG_DEBUG, "bgscan learn: Probe new freq "
 				   "%u", data->supp_freqs[idx]);
 			data->probe_idx = idx;
-			n = os_realloc(freqs, (count + 2) * sizeof(int));
+			n = os_realloc_array(freqs, count + 2, sizeof(int));
 			if (n == NULL)
 				return freqs;
 			freqs = n;
@@ -360,7 +360,7 @@ static int * bgscan_learn_get_supp_freqs(struct wpa_supplicant *wpa_s)
 		for (j = 0; j < modes[i].num_channels; j++) {
 			if (modes[i].channels[j].flag & HOSTAPD_CHAN_DISABLED)
 				continue;
-			n = os_realloc(freqs, (count + 2) * sizeof(int));
+			n = os_realloc_array(freqs, count + 2, sizeof(int));
 			if (n == NULL)
 				continue;
 

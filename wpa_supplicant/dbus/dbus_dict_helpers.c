@@ -738,7 +738,7 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_byte_array(
 	entry->bytearray_value = NULL;
 	entry->array_type = DBUS_TYPE_BYTE;
 
-	buffer = os_zalloc(BYTE_ARRAY_ITEM_SIZE * BYTE_ARRAY_CHUNK_SIZE);
+	buffer = os_calloc(BYTE_ARRAY_CHUNK_SIZE, BYTE_ARRAY_ITEM_SIZE);
 	if (!buffer)
 		return FALSE;
 
@@ -748,8 +748,9 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_byte_array(
 		char byte;
 
 		if ((count % BYTE_ARRAY_CHUNK_SIZE) == 0 && count != 0) {
-			nbuffer = os_realloc(buffer, BYTE_ARRAY_ITEM_SIZE *
-					     (count + BYTE_ARRAY_CHUNK_SIZE));
+			nbuffer = os_realloc_array(
+				buffer, count + BYTE_ARRAY_CHUNK_SIZE,
+				BYTE_ARRAY_ITEM_SIZE);
 			if (nbuffer == NULL) {
 				os_free(buffer);
 				wpa_printf(MSG_ERROR, "dbus: _wpa_dbus_dict_"
@@ -795,7 +796,7 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_string_array(
 	entry->strarray_value = NULL;
 	entry->array_type = DBUS_TYPE_STRING;
 
-	buffer = os_zalloc(STR_ARRAY_ITEM_SIZE * STR_ARRAY_CHUNK_SIZE);
+	buffer = os_calloc(STR_ARRAY_CHUNK_SIZE, STR_ARRAY_ITEM_SIZE);
 	if (buffer == NULL)
 		return FALSE;
 
@@ -806,8 +807,9 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_string_array(
 		char *str;
 
 		if ((count % STR_ARRAY_CHUNK_SIZE) == 0 && count != 0) {
-			nbuffer = os_realloc(buffer, STR_ARRAY_ITEM_SIZE *
-					     (count + STR_ARRAY_CHUNK_SIZE));
+			nbuffer = os_realloc_array(
+				buffer, count + STR_ARRAY_CHUNK_SIZE,
+				STR_ARRAY_ITEM_SIZE);
 			if (nbuffer == NULL) {
 				os_free(buffer);
 				wpa_printf(MSG_ERROR, "dbus: _wpa_dbus_dict_"
@@ -871,8 +873,8 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_binarray(
 
 			buflen += BIN_ARRAY_CHUNK_SIZE;
 
-			newbuf = os_realloc(entry->binarray_value,
-					    buflen * BIN_ARRAY_ITEM_SIZE);
+			newbuf = os_realloc_array(entry->binarray_value,
+						  buflen, BIN_ARRAY_ITEM_SIZE);
 			if (!newbuf)
 				goto cleanup;
 			entry->binarray_value = newbuf;

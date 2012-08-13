@@ -52,8 +52,8 @@ struct p2p_group * p2p_group_init(struct p2p_data *p2p,
 	if (group == NULL)
 		return NULL;
 
-	groups = os_realloc(p2p->groups, (p2p->num_groups + 1) *
-			    sizeof(struct p2p_group *));
+	groups = os_realloc_array(p2p->groups, p2p->num_groups + 1,
+				  sizeof(struct p2p_group *));
 	if (groups == NULL) {
 		os_free(group);
 		return NULL;

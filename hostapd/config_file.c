@@ -167,7 +167,7 @@ static int hostapd_config_read_maclist(const char *fname,
 		if (*pos != '\0')
 			vlan_id = atoi(pos);
 
-		newacl = os_realloc(*acl, (*num + 1) * sizeof(**acl));
+		newacl = os_realloc_array(*acl, *num + 1, sizeof(**acl));
 		if (newacl == NULL) {
 			wpa_printf(MSG_ERROR, "MAC list reallocation failed");
 			fclose(f);
@@ -475,7 +475,7 @@ hostapd_config_read_radius_addr(struct hostapd_radius_server **server,
 	int ret;
 	static int server_index = 1;
 
-	nserv = os_realloc(*server, (*num_server + 1) * sizeof(*nserv));
+	nserv = os_realloc_array(*server, *num_server + 1, sizeof(*nserv));
 	if (nserv == NULL)
 		return -1;
 
@@ -784,8 +784,8 @@ static int hostapd_config_bss(struct hostapd_config *conf, const char *ifname)
 	if (*ifname == '\0')
 		return -1;
 
-	bss = os_realloc(conf->bss, (conf->num_bss + 1) *
-			 sizeof(struct hostapd_bss_config));
+	bss = os_realloc_array(conf->bss, conf->num_bss + 1,
+			       sizeof(struct hostapd_bss_config));
 	if (bss == NULL) {
 		wpa_printf(MSG_ERROR, "Failed to allocate memory for "
 			   "multi-BSS entry");
@@ -1258,9 +1258,9 @@ static int parse_roaming_consortium(struct hostapd_bss_config *bss, char *pos,
 	}
 	len /= 2;
 
-	rc = os_realloc(bss->roaming_consortium,
-			sizeof(struct hostapd_roaming_consortium) *
-			(bss->roaming_consortium_count + 1));
+	rc = os_realloc_array(bss->roaming_consortium,
+			      bss->roaming_consortium_count + 1,
+			      sizeof(struct hostapd_roaming_consortium));
 	if (rc == NULL)
 		return -1;
 
@@ -1293,9 +1293,8 @@ static int parse_venue_name(struct hostapd_bss_config *bss, char *pos,
 	if (nlen > 252)
 		goto fail;
 
-	vn = os_realloc(bss->venue_name,
-			sizeof(struct hostapd_venue_name) *
-			(bss->venue_name_count + 1));
+	vn = os_realloc_array(bss->venue_name, bss->venue_name_count + 1,
+			      sizeof(struct hostapd_venue_name));
 	if (vn == NULL)
 		return -1;
 

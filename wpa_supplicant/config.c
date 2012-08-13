@@ -918,7 +918,7 @@ static int * wpa_config_parse_freqs(const struct parse_data *data,
 		if (used == len) {
 			int *n;
 			size_t i;
-			n = os_realloc(freqs, (len * 2 + 1) * sizeof(int));
+			n = os_realloc_array(freqs, len * 2 + 1, sizeof(int));
 			if (n == NULL) {
 				os_free(freqs);
 				return NULL;
@@ -1047,8 +1047,8 @@ static int wpa_config_parse_eap(const struct parse_data *data,
 		last = *end == '\0';
 		*end = '\0';
 		tmp = methods;
-		methods = os_realloc(methods,
-				     (num_methods + 1) * sizeof(*methods));
+		methods = os_realloc_array(methods, num_methods + 1,
+					   sizeof(*methods));
 		if (methods == NULL) {
 			os_free(tmp);
 			os_free(buf);
@@ -1078,7 +1078,7 @@ static int wpa_config_parse_eap(const struct parse_data *data,
 	os_free(buf);
 
 	tmp = methods;
-	methods = os_realloc(methods, (num_methods + 1) * sizeof(*methods));
+	methods = os_realloc_array(methods, num_methods + 1, sizeof(*methods));
 	if (methods == NULL) {
 		os_free(tmp);
 		return -1;
@@ -1381,7 +1381,7 @@ static int wpa_config_parse_p2p_client_list(const struct parse_data *data,
 				   line, value);
 			/* continue anyway */
 		} else {
-			n = os_realloc(buf, (count + 1) * ETH_ALEN);
+			n = os_realloc_array(buf, count + 1, ETH_ALEN);
 			if (n == NULL) {
 				os_free(buf);
 				return -1;
@@ -1669,8 +1669,8 @@ int wpa_config_add_prio_network(struct wpa_config *config,
 	}
 
 	/* First network for this priority - add a new priority list */
-	nlist = os_realloc(config->pssid,
-			   (config->num_prio + 1) * sizeof(struct wpa_ssid *));
+	nlist = os_realloc_array(config->pssid, config->num_prio + 1,
+				 sizeof(struct wpa_ssid *));
 	if (nlist == NULL)
 		return -1;
 
@@ -2869,7 +2869,8 @@ static int wpa_config_process_p2p_pref_chan(
 		pos2++;
 		chan = atoi(pos2);
 
-		n = os_realloc(pref, (num + 1) * sizeof(struct p2p_channel));
+		n = os_realloc_array(pref, num + 1,
+				     sizeof(struct p2p_channel));
 		if (n == NULL)
 			goto fail;
 		pref = n;

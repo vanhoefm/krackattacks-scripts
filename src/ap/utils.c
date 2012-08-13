@@ -23,8 +23,8 @@ int hostapd_register_probereq_cb(struct hostapd_data *hapd,
 {
 	struct hostapd_probereq_cb *n;
 
-	n = os_realloc(hapd->probereq_cb, (hapd->num_probereq_cb + 1) *
-		       sizeof(struct hostapd_probereq_cb));
+	n = os_realloc_array(hapd->probereq_cb, hapd->num_probereq_cb + 1,
+			     sizeof(struct hostapd_probereq_cb));
 	if (n == NULL)
 		return -1;
 

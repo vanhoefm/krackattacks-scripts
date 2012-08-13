@@ -133,7 +133,7 @@ static int set_bssid_filter(struct wpa_supplicant *wpa_s, char *val)
 			os_free(filter);
 			return -1;
 		}
-		n = os_realloc(filter, (count + 1) * ETH_ALEN);
+		n = os_realloc_array(filter, count + 1, ETH_ALEN);
 		if (n == NULL) {
 			os_free(filter);
 			return -1;
@@ -3618,8 +3618,8 @@ static int p2p_ctrl_disallow_freq(struct wpa_supplicant *wpa_s,
 	 */
 	pos = param;
 	while (pos && pos[0]) {
-		n = os_realloc(freq,
-			       (count + 1) * sizeof(struct wpa_freq_range));
+		n = os_realloc_array(freq, count + 1,
+				     sizeof(struct wpa_freq_range));
 		if (n == NULL) {
 			os_free(freq);
 			return -1;

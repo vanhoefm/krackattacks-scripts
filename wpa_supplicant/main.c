@@ -241,8 +241,8 @@ int main(int argc, char *argv[])
 			break;
 		case 'N':
 			iface_count++;
-			iface = os_realloc(ifaces, iface_count *
-					   sizeof(struct wpa_interface));
+			iface = os_realloc_array(ifaces, iface_count,
+						 sizeof(struct wpa_interface));
 			if (iface == NULL)
 				goto out;
 			ifaces = iface;

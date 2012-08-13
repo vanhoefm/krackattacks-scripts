@@ -1159,8 +1159,9 @@ static int wpas_dbus_get_scan_channels(DBusMessage *message,
 
 #define FREQS_ALLOC_CHUNK 32
 		if (freqs_num % FREQS_ALLOC_CHUNK == 0) {
-			nfreqs = os_realloc(freqs, sizeof(int) *
-					    (freqs_num + FREQS_ALLOC_CHUNK));
+			nfreqs = os_realloc_array(
+				freqs, freqs_num + FREQS_ALLOC_CHUNK,
+				sizeof(int));
 			if (nfreqs == NULL)
 				os_free(freqs);
 			freqs = nfreqs;
@@ -1180,8 +1181,7 @@ static int wpas_dbus_get_scan_channels(DBusMessage *message,
 		dbus_message_iter_next(&array_iter);
 	}
 
-	nfreqs = os_realloc(freqs,
-			    sizeof(int) * (freqs_num + 1));
+	nfreqs = os_realloc_array(freqs, freqs_num + 1, sizeof(int));
 	if (nfreqs == NULL)
 		os_free(freqs);
 	freqs = nfreqs;

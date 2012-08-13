@@ -946,8 +946,8 @@ int eap_peer_select_phase2_methods(struct eap_peer_config *config,
 				   "method '%s'", start);
 		} else {
 			num_methods++;
-			_methods = os_realloc(methods,
-					      num_methods * sizeof(*methods));
+			_methods = os_realloc_array(methods, num_methods,
+						    sizeof(*methods));
 			if (_methods == NULL) {
 				os_free(methods);
 				os_free(buf);

@@ -3988,8 +3988,8 @@ static int bss_info_handler(struct nl_msg *msg, void *arg)
 		return NL_SKIP;
 	}
 
-	tmp = os_realloc(res->res,
-			 (res->num + 1) * sizeof(struct wpa_scan_res *));
+	tmp = os_realloc_array(res->res, res->num + 1,
+			       sizeof(struct wpa_scan_res *));
 	if (tmp == NULL) {
 		os_free(r);
 		return NL_SKIP;
@@ -4784,7 +4784,9 @@ static int phy_info_handler(struct nl_msg *msg, void *arg)
 		return NL_SKIP;
 
 	nla_for_each_nested(nl_band, tb_msg[NL80211_ATTR_WIPHY_BANDS], rem_band) {
-		mode = os_realloc(phy_info->modes, (*phy_info->num_modes + 1) * sizeof(*mode));
+		mode = os_realloc_array(phy_info->modes,
+					*phy_info->num_modes + 1,
+					sizeof(*mode));
 		if (!mode)
 			return NL_SKIP;
 		phy_info->modes = mode;
@@ -4951,7 +4953,7 @@ wpa_driver_nl80211_add_11b(struct hostapd_hw_modes *modes, u16 *num_modes)
 	if (mode11g_idx < 0)
 		return modes; /* 2.4 GHz band not supported at all */
 
-	nmodes = os_realloc(modes, (*num_modes + 1) * sizeof(*nmodes));
+	nmodes = os_realloc_array(modes, *num_modes + 1, sizeof(*nmodes));
 	if (nmodes == NULL)
 		return modes; /* Could not add 802.11b mode */
 
@@ -7583,8 +7585,8 @@ static void add_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx)
 	else
 		old = NULL;
 
-	drv->if_indices = os_realloc(old,
-				     sizeof(int) * (drv->num_if_indices + 1));
+	drv->if_indices = os_realloc_array(old, drv->num_if_indices + 1,
+					   sizeof(int));
 	if (!drv->if_indices) {
 		if (!old)
 			drv->if_indices = drv->default_if_indices;

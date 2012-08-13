@@ -530,8 +530,8 @@ static void wpas_p2p_add_persistent_group_client(struct wpa_supplicant *wpa_s,
 			return; /* already in list */
 	}
 
-	n = os_realloc(s->p2p_client_list,
-		       (s->num_p2p_clients + 1) * ETH_ALEN);
+	n = os_realloc_array(s->p2p_client_list, s->num_p2p_clients + 1,
+			     ETH_ALEN);
 	if (n == NULL)
 		return;
 	os_memcpy(n + s->num_p2p_clients * ETH_ALEN, addr, ETH_ALEN);

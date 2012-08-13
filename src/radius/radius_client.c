@@ -281,8 +281,8 @@ int radius_client_register(struct radius_client_data *radius,
 		num = &radius->num_auth_handlers;
 	}
 
-	newh = os_realloc(*handlers,
-			  (*num + 1) * sizeof(struct radius_rx_handler));
+	newh = os_realloc_array(*handlers, *num + 1,
+				sizeof(struct radius_rx_handler));
 	if (newh == NULL)
 		return -1;
 

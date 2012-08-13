@@ -1328,8 +1328,8 @@ wpa_driver_bsd_add_scan_entry(struct wpa_scan_results *res,
 
 	result->ie_len = pos - (u8 *)(result + 1);
 
-	tmp = os_realloc(res->res,
-			 (res->num + 1) * sizeof(struct wpa_scan_res *));
+	tmp = os_realloc_array(res->res, res->num + 1,
+			       sizeof(struct wpa_scan_res *));
 	if (tmp == NULL) {
 		os_free(result);
 		return;

@@ -795,8 +795,9 @@ static void ap_sa_query_timer(void *eloop_ctx, void *timeout_ctx)
 	    ap_check_sa_query_timeout(hapd, sta))
 		return;
 
-	nbuf = os_realloc(sta->sa_query_trans_id,
-			  (sta->sa_query_count + 1) * WLAN_SA_QUERY_TR_ID_LEN);
+	nbuf = os_realloc_array(sta->sa_query_trans_id,
+				sta->sa_query_count + 1,
+				WLAN_SA_QUERY_TR_ID_LEN);
 	if (nbuf == NULL)
 		return;
 	if (sta->sa_query_count == 0) {

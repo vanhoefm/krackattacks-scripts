@@ -951,9 +951,9 @@ static void sme_sa_query_timer(void *eloop_ctx, void *timeout_ctx)
 	    sme_check_sa_query_timeout(wpa_s))
 		return;
 
-	nbuf = os_realloc(wpa_s->sme.sa_query_trans_id,
-			  (wpa_s->sme.sa_query_count + 1) *
-			  WLAN_SA_QUERY_TR_ID_LEN);
+	nbuf = os_realloc_array(wpa_s->sme.sa_query_trans_id,
+				wpa_s->sme.sa_query_count + 1,
+				WLAN_SA_QUERY_TR_ID_LEN);
 	if (nbuf == NULL)
 		return;
 	if (wpa_s->sme.sa_query_count == 0) {

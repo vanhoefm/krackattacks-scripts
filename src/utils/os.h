@@ -486,6 +486,14 @@ char * os_strdup(const char *s);
 #endif /* OS_NO_C_LIB_DEFINES */
 
 
+static inline void * os_realloc_array(void *ptr, size_t nmemb, size_t size)
+{
+	if (size && nmemb > (~(size_t) 0) / size)
+		return NULL;
+	return os_realloc(ptr, nmemb * size);
+}
+
+
 /**
  * os_strlcpy - Copy a string with size bound and NUL-termination
  * @dest: Destination

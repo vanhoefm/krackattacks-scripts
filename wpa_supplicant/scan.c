@@ -380,9 +380,7 @@ static void wpas_add_interworking_elements(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_INTERWORKING */
 
 
-static struct wpabuf *
-wpa_supplicant_extra_ies(struct wpa_supplicant *wpa_s,
-			 struct wpa_driver_scan_params *params)
+static struct wpabuf * wpa_supplicant_extra_ies(struct wpa_supplicant *wpa_s)
 {
 	struct wpabuf *extra_ie = NULL;
 #ifdef CONFIG_WPS
@@ -635,7 +633,7 @@ ssid_list_set:
 #endif /* CONFIG_P2P */
 
 	wpa_supplicant_optimize_freqs(wpa_s, &params);
-	extra_ie = wpa_supplicant_extra_ies(wpa_s, &params);
+	extra_ie = wpa_supplicant_extra_ies(wpa_s);
 
 #ifdef CONFIG_HS20
 	if (wpa_s->conf->hs20 && wpabuf_resize(&extra_ie, 6) == 0)
@@ -763,7 +761,7 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 	struct wpa_driver_scan_params *scan_params;
 	enum wpa_states prev_state;
 	struct wpa_ssid *ssid = NULL;
-	struct wpabuf *wps_ie = NULL;
+	struct wpabuf *extra_ie = NULL;
 	int ret;
 	unsigned int max_sched_scan_ssids;
 	int wildcard = 0;
@@ -925,8 +923,11 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 		params.filter_ssids = NULL;
 	}
 
-	if (wpa_s->wps)
-		wps_ie = wpa_supplicant_extra_ies(wpa_s, &params);
+	extra_ie = wpa_supplicant_extra_ies(wpa_s);
+	if (extra_ie) {
+		params.extra_ies = wpabuf_head(extra_ie);
+		params.extra_ies_len = wpabuf_len(extra_ie);
+	}
 
 	scan_params = &params;
 
@@ -943,7 +944,7 @@ scan:
 
 	ret = wpa_supplicant_start_sched_scan(wpa_s, scan_params,
 					      wpa_s->sched_scan_interval);
-	wpabuf_free(wps_ie);
+	wpabuf_free(extra_ie);
 	os_free(params.filter_ssids);
 	if (ret) {
 		wpa_msg(wpa_s, MSG_WARNING, "Failed to initiate sched scan");

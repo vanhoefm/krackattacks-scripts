@@ -514,7 +514,7 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_P2P */
 
 	hapd_iface->num_bss = conf->num_bss;
-	hapd_iface->bss = os_zalloc(conf->num_bss *
+	hapd_iface->bss = os_calloc(conf->num_bss,
 				    sizeof(struct hostapd_data *));
 	if (hapd_iface->bss == NULL) {
 		wpa_supplicant_ap_deinit(wpa_s);

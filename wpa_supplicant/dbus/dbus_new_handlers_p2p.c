@@ -1049,7 +1049,7 @@ dbus_bool_t wpas_dbus_getter_p2p_peers(DBusMessageIter *iter, DBusError *error,
 	 * Now construct the peer object paths in a form suitable for
 	 * array_property_getter helper below.
 	 */
-	peer_obj_paths = os_zalloc(num * sizeof(char *));
+	peer_obj_paths = os_calloc(num, sizeof(char *));
 
 	if (!peer_obj_paths) {
 		out_of_mem = 1;
@@ -1509,7 +1509,7 @@ dbus_bool_t wpas_dbus_getter_persistent_groups(DBusMessageIter *iter,
 		if (network_is_persistent_group(ssid))
 			num++;
 
-	paths = os_zalloc(num * sizeof(char *));
+	paths = os_calloc(num, sizeof(char *));
 	if (!paths) {
 		dbus_set_error_const(error, DBUS_ERROR_NO_MEMORY, "no memory");
 		return FALSE;
@@ -1816,7 +1816,7 @@ dbus_bool_t wpas_dbus_getter_p2p_group_members(DBusMessageIter *iter,
 
 	num_members = p2p_get_group_num_members(wpa_s->p2p_group);
 
-	paths = os_zalloc(num_members * sizeof(char *));
+	paths = os_calloc(num_members, sizeof(char *));
 	if (!paths)
 		goto out_of_memory;
 

@@ -181,7 +181,7 @@ static struct hostapd_iface * hostapd_init(const char *config_file)
 	hapd_iface->conf = conf;
 
 	hapd_iface->num_bss = conf->num_bss;
-	hapd_iface->bss = os_zalloc(conf->num_bss *
+	hapd_iface->bss = os_calloc(conf->num_bss,
 				    sizeof(struct hostapd_data *));
 	if (hapd_iface->bss == NULL)
 		goto fail;
@@ -254,7 +254,7 @@ static int hostapd_driver_init(struct hostapd_iface *iface)
 	params.use_pae_group_addr = hapd->conf->use_pae_group_addr;
 
 	params.num_bridge = hapd->iface->num_bss;
-	params.bridge = os_zalloc(hapd->iface->num_bss * sizeof(char *));
+	params.bridge = os_calloc(hapd->iface->num_bss, sizeof(char *));
 	if (params.bridge == NULL)
 		return -1;
 	for (i = 0; i < hapd->iface->num_bss; i++) {
@@ -411,7 +411,7 @@ static int hostapd_global_init(struct hapd_interfaces *interfaces,
 		wpa_printf(MSG_ERROR, "No drivers enabled");
 		return -1;
 	}
-	global.drv_priv = os_zalloc(global.drv_count * sizeof(void *));
+	global.drv_priv = os_calloc(global.drv_count, sizeof(void *));
 	if (global.drv_priv == NULL)
 		return -1;
 
@@ -592,7 +592,7 @@ int main(int argc, char *argv[])
 		wpa_debug_open_file(log_file);
 
 	interfaces.count = argc - optind;
-	interfaces.iface = os_zalloc(interfaces.count *
+	interfaces.iface = os_calloc(interfaces.count,
 				     sizeof(struct hostapd_iface *));
 	if (interfaces.iface == NULL) {
 		wpa_printf(MSG_ERROR, "malloc failed");

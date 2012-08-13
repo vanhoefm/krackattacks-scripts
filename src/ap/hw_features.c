@@ -138,7 +138,7 @@ int hostapd_prepare_rates(struct hostapd_iface *iface,
 	iface->num_rates = 0;
 
 	iface->current_rates =
-		os_zalloc(mode->num_rates * sizeof(struct hostapd_rate_data));
+		os_calloc(mode->num_rates, sizeof(struct hostapd_rate_data));
 	if (!iface->current_rates) {
 		wpa_printf(MSG_ERROR, "Failed to allocate memory for rate "
 			   "table.");
@@ -470,7 +470,7 @@ static void ieee80211n_scan_channels_2g4(struct hostapd_iface *iface,
 		   affected_start, affected_end);
 
 	mode = iface->current_mode;
-	params->freqs = os_zalloc((mode->num_channels + 1) * sizeof(int));
+	params->freqs = os_calloc(mode->num_channels + 1, sizeof(int));
 	if (params->freqs == NULL)
 		return;
 	pos = 0;

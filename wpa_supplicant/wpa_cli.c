@@ -240,7 +240,7 @@ static char ** cli_txt_list_array(struct dl_list *txt_list)
 	char **res;
 	struct cli_txt_entry *e;
 
-	res = os_zalloc((count + 1) * sizeof(char *));
+	res = os_calloc(count + 1, sizeof(char *));
 	if (res == NULL)
 		return NULL;
 
@@ -3392,7 +3392,7 @@ static char ** wpa_list_cmd_list(void)
 	int i, count;
 
 	count = sizeof(wpa_cli_commands) / sizeof(wpa_cli_commands[0]);
-	res = os_zalloc(count * sizeof(char *));
+	res = os_calloc(count, sizeof(char *));
 	if (res == NULL)
 		return NULL;
 

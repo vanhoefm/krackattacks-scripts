@@ -330,7 +330,7 @@ static const u8 * nai_realm_parse_realm(struct nai_realm *r, const u8 *pos,
 		wpa_printf(MSG_DEBUG, "No room for EAP Methods");
 		return NULL;
 	}
-	r->eap = os_zalloc(r->eap_count * sizeof(struct nai_realm_eap));
+	r->eap = os_calloc(r->eap_count, sizeof(struct nai_realm_eap));
 	if (r->eap == NULL)
 		return NULL;
 
@@ -366,7 +366,7 @@ static struct nai_realm * nai_realm_parse(struct wpabuf *anqp, u16 *count)
 		return NULL;
 	}
 
-	realm = os_zalloc(num * sizeof(struct nai_realm));
+	realm = os_calloc(num, sizeof(struct nai_realm));
 	if (realm == NULL)
 		return NULL;
 

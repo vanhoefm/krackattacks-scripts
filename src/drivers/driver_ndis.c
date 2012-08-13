@@ -858,7 +858,7 @@ static struct wpa_scan_results * wpa_driver_ndis_get_scan_results(void *priv)
 		os_free(b);
 		return NULL;
 	}
-	results->res = os_zalloc(count * sizeof(struct wpa_scan_res *));
+	results->res = os_calloc(count, sizeof(struct wpa_scan_res *));
 	if (results->res == NULL) {
 		os_free(results);
 		os_free(b);

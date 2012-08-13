@@ -78,8 +78,8 @@ static void radius_msg_set_hdr(struct radius_msg *msg, u8 code, u8 identifier)
 
 static int radius_msg_initialize(struct radius_msg *msg)
 {
-	msg->attr_pos =
-		os_zalloc(RADIUS_DEFAULT_ATTR_COUNT * sizeof(*msg->attr_pos));
+	msg->attr_pos = os_calloc(RADIUS_DEFAULT_ATTR_COUNT,
+				  sizeof(*msg->attr_pos));
 	if (msg->attr_pos == NULL)
 		return -1;
 
@@ -1534,7 +1534,7 @@ int radius_copy_class(struct radius_class_data *dst,
 	if (src->attr == NULL)
 		return 0;
 
-	dst->attr = os_zalloc(src->count * sizeof(struct radius_attr_data));
+	dst->attr = os_calloc(src->count, sizeof(struct radius_attr_data));
 	if (dst->attr == NULL)
 		return -1;
 

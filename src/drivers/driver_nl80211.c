@@ -4843,7 +4843,8 @@ static int phy_info_handler(struct nl_msg *msg, void *arg)
 			mode->num_channels++;
 		}
 
-		mode->channels = os_zalloc(mode->num_channels * sizeof(struct hostapd_channel_data));
+		mode->channels = os_calloc(mode->num_channels,
+					   sizeof(struct hostapd_channel_data));
 		if (!mode->channels)
 			return NL_SKIP;
 
@@ -4905,7 +4906,7 @@ static int phy_info_handler(struct nl_msg *msg, void *arg)
 			mode->num_rates++;
 		}
 
-		mode->rates = os_zalloc(mode->num_rates * sizeof(int));
+		mode->rates = os_calloc(mode->num_rates, sizeof(int));
 		if (!mode->rates)
 			return NL_SKIP;
 

@@ -1205,7 +1205,7 @@ static void ieee802_1x_store_radius_class(struct hostapd_data *hapd,
 	if (count <= 0)
 		return;
 
-	nclass = os_zalloc(count * sizeof(struct radius_attr_data));
+	nclass = os_calloc(count, sizeof(struct radius_attr_data));
 	if (nclass == NULL)
 		return;
 

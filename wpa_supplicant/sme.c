@@ -802,7 +802,7 @@ static void wpa_setband_scan_freqs_list(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
-	params->freqs = os_zalloc((mode->num_channels + 1) * sizeof(int));
+	params->freqs = os_calloc(mode->num_channels + 1, sizeof(int));
 	if (params->freqs == NULL)
 		return;
 	for (count = 0, i = 0; i < mode->num_channels; i++) {

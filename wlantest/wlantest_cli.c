@@ -170,7 +170,7 @@ static char ** get_bssid_list(int s)
 	if (bssid == NULL)
 		return NULL;
 
-	res = os_zalloc((len / ETH_ALEN + 1) * sizeof(char *));
+	res = os_calloc(len / ETH_ALEN + 1, sizeof(char *));
 	if (res == NULL)
 		return NULL;
 	for (i = 0; i < len / ETH_ALEN; i++) {
@@ -208,7 +208,7 @@ static char ** get_sta_list(int s, const u8 *bssid, int add_bcast)
 	if (addr == NULL)
 		return NULL;
 
-	res = os_zalloc((len / ETH_ALEN + 1 + add_bcast) * sizeof(char *));
+	res = os_calloc(len / ETH_ALEN + 1 + add_bcast, sizeof(char *));
 	if (res == NULL)
 		return NULL;
 	for (i = 0; i < len / ETH_ALEN; i++) {
@@ -623,7 +623,7 @@ static char ** complete_get_sta_counter(int s, const char *str, int pos)
 	case 1:
 		/* counter list */
 		count = sizeof(sta_counters) / sizeof(sta_counters[0]);
-		res = os_zalloc(count * sizeof(char *));
+		res = os_calloc(count, sizeof(char *));
 		if (res == NULL)
 			return NULL;
 		for (i = 0; sta_counters[i].name; i++) {
@@ -722,7 +722,7 @@ static char ** complete_get_bss_counter(int s, const char *str, int pos)
 	case 1:
 		/* counter list */
 		count = sizeof(bss_counters) / sizeof(bss_counters[0]);
-		res = os_zalloc(count * sizeof(char *));
+		res = os_calloc(count, sizeof(char *));
 		if (res == NULL)
 			return NULL;
 		for (i = 0; bss_counters[i].name; i++) {
@@ -836,7 +836,7 @@ static char ** complete_get_tdls_counter(int s, const char *str, int pos)
 	case 1:
 		/* counter list */
 		count = sizeof(tdls_counters) / sizeof(tdls_counters[0]);
-		res = os_zalloc(count * sizeof(char *));
+		res = os_calloc(count, sizeof(char *));
 		if (res == NULL)
 			return NULL;
 		for (i = 0; tdls_counters[i].name; i++) {
@@ -972,7 +972,7 @@ static char ** complete_inject(int s, const char *str, int pos)
 	case 1:
 		/* frame list */
 		count = sizeof(inject_frames) / sizeof(inject_frames[0]);
-		res = os_zalloc(count * sizeof(char *));
+		res = os_calloc(count, sizeof(char *));
 		if (res == NULL)
 			break;
 		for (i = 0; inject_frames[i].name; i++) {
@@ -982,7 +982,7 @@ static char ** complete_inject(int s, const char *str, int pos)
 		}
 		break;
 	case 2:
-		res = os_zalloc(5 * sizeof(char *));
+		res = os_calloc(5, sizeof(char *));
 		if (res == NULL)
 			break;
 		res[0] = os_strdup("normal");
@@ -999,7 +999,7 @@ static char ** complete_inject(int s, const char *str, int pos)
 			break;
 		break;
 	case 3:
-		res = os_zalloc(3 * sizeof(char *));
+		res = os_calloc(3, sizeof(char *));
 		if (res == NULL)
 			break;
 		res[0] = os_strdup("ap");
@@ -1122,7 +1122,7 @@ static char ** complete_send(int s, const char *str, int pos)
 
 	switch (arg) {
 	case 1:
-		res = os_zalloc(5 * sizeof(char *));
+		res = os_calloc(5, sizeof(char *));
 		if (res == NULL)
 			break;
 		res[0] = os_strdup("normal");
@@ -1299,7 +1299,7 @@ static char ** complete_info_sta(int s, const char *str, int pos)
 	case 1:
 		/* counter list */
 		count = sizeof(sta_infos) / sizeof(sta_infos[0]);
-		res = os_zalloc(count * sizeof(char *));
+		res = os_calloc(count, sizeof(char *));
 		if (res == NULL)
 			return NULL;
 		for (i = 0; sta_infos[i].name; i++) {
@@ -1404,7 +1404,7 @@ static char ** complete_info_bss(int s, const char *str, int pos)
 	case 1:
 		/* counter list */
 		count = sizeof(bss_infos) / sizeof(bss_infos[0]);
-		res = os_zalloc(count * sizeof(char *));
+		res = os_calloc(count, sizeof(char *));
 		if (res == NULL)
 			return NULL;
 		for (i = 0; bss_infos[i].name; i++) {
@@ -1584,7 +1584,7 @@ static char ** wlantest_cli_cmd_list(void)
 
 	count = sizeof(wlantest_cli_commands) /
 		sizeof(wlantest_cli_commands[0]);
-	res = os_zalloc(count * sizeof(char *));
+	res = os_calloc(count, sizeof(char *));
 	if (res == NULL)
 		return NULL;
 

@@ -152,7 +152,7 @@ wpa_driver_privsep_get_scan_results2(void *priv)
 		return NULL;
 	}
 
-	results->res = os_zalloc(num * sizeof(struct wpa_scan_res *));
+	results->res = os_calloc(num, sizeof(struct wpa_scan_res *));
 	if (results->res == NULL) {
 		os_free(results);
 		os_free(buf);

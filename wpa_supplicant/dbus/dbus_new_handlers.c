@@ -871,7 +871,7 @@ dbus_bool_t wpas_dbus_getter_interfaces(DBusMessageIter *iter,
 	for (wpa_s = global->ifaces; wpa_s; wpa_s = wpa_s->next)
 		num++;
 
-	paths = os_zalloc(num * sizeof(char*));
+	paths = os_calloc(num, sizeof(char *));
 	if (!paths) {
 		dbus_set_error_const(error, DBUS_ERROR_NO_MEMORY, "no memory");
 		return FALSE;
@@ -2787,7 +2787,7 @@ dbus_bool_t wpas_dbus_getter_bsss(DBusMessageIter *iter, DBusError *error,
 	unsigned int i = 0;
 	dbus_bool_t success = FALSE;
 
-	paths = os_zalloc(wpa_s->num_bss * sizeof(char *));
+	paths = os_calloc(wpa_s->num_bss, sizeof(char *));
 	if (!paths) {
 		dbus_set_error_const(error, DBUS_ERROR_NO_MEMORY, "no memory");
 		return FALSE;
@@ -2850,7 +2850,7 @@ dbus_bool_t wpas_dbus_getter_networks(DBusMessageIter *iter, DBusError *error,
 		if (!network_is_persistent_group(ssid))
 			num++;
 
-	paths = os_zalloc(num * sizeof(char *));
+	paths = os_calloc(num, sizeof(char *));
 	if (!paths) {
 		dbus_set_error(error, DBUS_ERROR_NO_MEMORY, "no memory");
 		return FALSE;

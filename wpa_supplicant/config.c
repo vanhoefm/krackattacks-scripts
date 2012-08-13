@@ -907,7 +907,7 @@ static int * wpa_config_parse_freqs(const struct parse_data *data,
 
 	used = 0;
 	len = 10;
-	freqs = os_zalloc((len + 1) * sizeof(int));
+	freqs = os_calloc(len + 1, sizeof(int));
 	if (freqs == NULL)
 		return NULL;
 
@@ -2107,7 +2107,7 @@ char ** wpa_config_get_all(struct wpa_ssid *ssid, int get_keys)
 
 	get_keys = get_keys && ssid->export_keys;
 
-	props = os_zalloc(sizeof(char *) * ((2 * NUM_SSID_FIELDS) + 1));
+	props = os_calloc(2 * NUM_SSID_FIELDS + 1, sizeof(char *));
 	if (!props)
 		return NULL;
 

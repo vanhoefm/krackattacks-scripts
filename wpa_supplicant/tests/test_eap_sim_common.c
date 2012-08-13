@@ -28,7 +28,7 @@ static int test_eap_sim_prf(void)
 
 	printf("Testing EAP-SIM PRF (FIPS 186-2 + change notice 1)\n");
 	eap_sim_prf(xkey, buf, sizeof(buf));
-	if (memcmp(w, buf, sizeof(w) != 0)) {
+	if (memcmp(w, buf, sizeof(w)) != 0) {
 		printf("eap_sim_prf failed\n");
 		return 1;
 	}

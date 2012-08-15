@@ -504,7 +504,7 @@ DBusMessage * wpas_dbus_handler_p2p_connect(DBusMessage *message,
 
 	new_pin = wpas_p2p_connect(wpa_s, addr, pin, wps_method,
 				   persistent_group, 0, join, authorize_only,
-				   go_intent, freq, -1, 0);
+				   go_intent, freq, -1, 0, 0);
 
 	if (new_pin >= 0) {
 		char npin[9];

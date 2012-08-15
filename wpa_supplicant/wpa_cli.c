@@ -2362,7 +2362,7 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "p2p_stop_find", wpa_cli_cmd_p2p_stop_find, cli_cmd_flag_none,
 	  "= stop P2P Devices search" },
 	{ "p2p_connect", wpa_cli_cmd_p2p_connect, cli_cmd_flag_none,
-	  "<addr> <\"pbc\"|PIN> = connect to a P2P Devices" },
+	  "<addr> <\"pbc\"|PIN> [ht40] = connect to a P2P Device" },
 	{ "p2p_listen", wpa_cli_cmd_p2p_listen, cli_cmd_flag_none,
 	  "[timeout] = listen for P2P Devices for up-to timeout seconds" },
 	{ "p2p_group_remove", wpa_cli_cmd_p2p_group_remove, cli_cmd_flag_none,

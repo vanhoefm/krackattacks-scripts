@@ -1018,6 +1018,9 @@ void wpas_go_neg_completed(void *ctx, struct p2p_go_neg_results *res)
 		return;
 	}
 
+	if (wpa_s->p2p_go_ht40)
+		res->ht40 = 1;
+
 	wpa_msg(wpa_s, MSG_INFO, P2P_EVENT_GO_NEG_SUCCESS);
 	wpas_notify_p2p_go_neg_completed(wpa_s, res);
 
@@ -2871,7 +2874,8 @@ static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 					 wpa_s->p2p_go_intent,
 					 wpa_s->p2p_connect_freq,
 					 wpa_s->p2p_persistent_id,
-					 wpa_s->p2p_pd_before_go_neg);
+					 wpa_s->p2p_pd_before_go_neg,
+					 wpa_s->p2p_go_ht40);
 			return;
 		}
 
@@ -3157,6 +3161,7 @@ static int wpas_p2p_join_start(struct wpa_supplicant *wpa_s)
  *	parameters or -1 to generate new values (SSID/passphrase)
  * @pd: Whether to send Provision Discovery prior to GO Negotiation as an
  *	interoperability workaround when initiating group formation
+ * @ht40: Start GO with 40 MHz channel width
  * Returns: 0 or new PIN (if pin was %NULL) on success, -1 on unspecified
  *	failure, -2 on failure due to channel not currently available,
  *	-3 if forced channel is not supported
@@ -3164,7 +3169,8 @@ static int wpas_p2p_join_start(struct wpa_supplicant *wpa_s)
 int wpas_p2p_connect(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 		     const char *pin, enum p2p_wps_method wps_method,
 		     int persistent_group, int auto_join, int join, int auth,
-		     int go_intent, int freq, int persistent_id, int pd)
+		     int go_intent, int freq, int persistent_id, int pd,
+		     int ht40)
 {
 	int force_freq = 0, oper_freq = 0;
 	u8 bssid[ETH_ALEN];
@@ -3196,6 +3202,7 @@ int wpas_p2p_connect(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 	wpa_s->p2p_connect_freq = freq;
 	wpa_s->p2p_fallback_to_go_neg = 0;
 	wpa_s->p2p_pd_before_go_neg = !!pd;
+	wpa_s->p2p_go_ht40 = !!ht40;
 
 	if (pin)
 		os_strlcpy(wpa_s->p2p_pin, pin, sizeof(wpa_s->p2p_pin));
@@ -4947,7 +4954,8 @@ static void wpas_p2p_fallback_to_go_neg(struct wpa_supplicant *wpa_s,
 			 wpa_s->p2p_wps_method, wpa_s->p2p_persistent_group, 0,
 			 0, 0, wpa_s->p2p_go_intent, wpa_s->p2p_connect_freq,
 			 wpa_s->p2p_persistent_id,
-			 wpa_s->p2p_pd_before_go_neg);
+			 wpa_s->p2p_pd_before_go_neg,
+			 wpa_s->p2p_go_ht40);
 }
 
 

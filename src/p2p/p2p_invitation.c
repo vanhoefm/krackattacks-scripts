@@ -36,7 +36,8 @@ static struct wpabuf * p2p_build_invitation_req(struct p2p_data *p2p,
 	if (p2p->inv_role == P2P_INVITE_ROLE_ACTIVE_GO || !p2p->inv_persistent)
 		p2p_buf_add_config_timeout(buf, 0, 0);
 	else
-		p2p_buf_add_config_timeout(buf, 100, 20);
+		p2p_buf_add_config_timeout(buf, p2p->go_timeout,
+					   p2p->client_timeout);
 	p2p_buf_add_invitation_flags(buf, p2p->inv_persistent ?
 				     P2P_INVITATION_FLAGS_TYPE : 0);
 	p2p_buf_add_operating_channel(buf, p2p->cfg->country,

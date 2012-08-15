@@ -424,6 +424,9 @@ struct p2p_data {
 	 * in IDLE state.
 	 */
 	int pd_retries;
+
+	u8 go_timeout;
+	u8 client_timeout;
 };
 
 /**

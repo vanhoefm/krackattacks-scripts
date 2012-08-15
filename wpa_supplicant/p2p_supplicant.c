@@ -2670,6 +2670,13 @@ static int wpas_p2p_start_go_neg(struct wpa_supplicant *wpa_s,
 					   force_freq, persistent_group);
 	}
 
+	/*
+	 * Increase GO config timeout if HT40 is used since it takes some time
+	 * to scan channels for coex purposes before the BSS can be started.
+	 */
+	p2p_set_config_timeout(wpa_s->global->p2p,
+			       wpa_s->p2p_go_ht40 ? 255 : 100, 20);
+
 	return p2p_connect(wpa_s->global->p2p, peer_addr, wps_method,
 			   go_intent, own_interface_addr, force_freq,
 			   persistent_group, ssid ? ssid->ssid : NULL,

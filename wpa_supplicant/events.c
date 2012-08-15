@@ -448,6 +448,12 @@ static int wpa_supplicant_ssid_bss_match(struct wpa_supplicant *wpa_s,
 		return 1;
 	}
 
+	if ((ssid->key_mgmt & WPA_KEY_MGMT_IEEE8021X_NO_WPA) && !wpa_ie &&
+	    !rsn_ie) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "   allow for non-WPA IEEE 802.1X");
+		return 1;
+	}
+
 	if ((ssid->proto & (WPA_PROTO_WPA | WPA_PROTO_RSN)) &&
 	    wpa_key_mgmt_wpa(ssid->key_mgmt) && proto_match == 0) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "   skip - no WPA/RSN proto match");

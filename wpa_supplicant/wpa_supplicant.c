@@ -1309,6 +1309,16 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 				"key management and encryption suites");
 			return;
 		}
+	} else if ((ssid->key_mgmt & WPA_KEY_MGMT_IEEE8021X_NO_WPA) && bss &&
+		   wpa_key_mgmt_wpa_ieee8021x(ssid->key_mgmt)) {
+		/*
+		 * Both WPA and non-WPA IEEE 802.1X enabled in configuration -
+		 * use non-WPA since the scan results did not indicate that the
+		 * AP is using WPA or WPA2.
+		 */
+		wpa_supplicant_set_non_wpa_policy(wpa_s, ssid);
+		wpa_ie_len = 0;
+		wpa_s->wpa_proto = 0;
 	} else if (wpa_key_mgmt_wpa_any(ssid->key_mgmt)) {
 		wpa_ie_len = sizeof(wpa_ie);
 		if (wpa_supplicant_set_suites(wpa_s, NULL, ssid,

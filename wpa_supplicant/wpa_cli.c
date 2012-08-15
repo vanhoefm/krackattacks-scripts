@@ -433,6 +433,52 @@ static int wpa_ctrl_command(struct wpa_ctrl *ctrl, char *cmd)
 }
 
 
+static int write_cmd(char *buf, size_t buflen, const char *cmd, int argc,
+		     char *argv[])
+{
+	int i, res;
+	char *pos, *end;
+
+	pos = buf;
+	end = buf + buflen;
+
+	res = os_snprintf(pos, end - pos, "%s", cmd);
+	if (res < 0 || res >= end - pos)
+		goto fail;
+	pos += res;
+
+	for (i = 0; i < argc; i++) {
+		res = os_snprintf(pos, end - pos, " %s", argv[i]);
+		if (res < 0 || res >= end - pos)
+			goto fail;
+		pos += res;
+	}
+
+	buf[buflen - 1] = '\0';
+	return 0;
+
+fail:
+	printf("Too long command\n");
+	return -1;
+}
+
+
+static int wpa_cli_cmd(struct wpa_ctrl *ctrl, const char *cmd, int min_args,
+		       int argc, char *argv[])
+{
+	char buf[256];
+	if (argc < min_args) {
+		printf("Invalid %s command - at least %d argument%s "
+		       "required.\n", cmd, min_args,
+		       min_args > 1 ? "s are" : " is");
+		return -1;
+	}
+	if (write_cmd(buf, sizeof(buf), cmd, argc, argv) < 0)
+		return -1;
+	return wpa_ctrl_command(ctrl, buf);
+}
+
+
 static int wpa_cli_cmd_ifname(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	return wpa_ctrl_command(ctrl, "IFNAME");
@@ -463,14 +509,7 @@ static int wpa_cli_cmd_relog(struct wpa_ctrl *ctrl, int argc, char *argv[])
 
 static int wpa_cli_cmd_note(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
-	char cmd[256];
-	int ret;
-	if (argc == 0)
-		return -1;
-	ret = os_snprintf(cmd, sizeof(cmd), "NOTE %s", argv[0]);
-	if (ret < 0 || (size_t) ret >= sizeof(cmd))
-		return -1;
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "NOTE", 1, argc, argv);
 }
 
 

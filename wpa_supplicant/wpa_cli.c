@@ -599,21 +599,7 @@ static int wpa_cli_cmd_set(struct wpa_ctrl *ctrl, int argc, char *argv[])
 
 static int wpa_cli_cmd_get(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
-	char cmd[256];
-	int res;
-
-	if (argc != 1) {
-		printf("Invalid GET command: need one argument (variable "
-		       "name)\n");
-		return -1;
-	}
-
-	res = os_snprintf(cmd, sizeof(cmd), "GET %s", argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-		printf("Too long GET command.\n");
-		return -1;
-	}
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "GET", 1, argc, argv);
 }
 
 
@@ -639,169 +625,58 @@ static int wpa_cli_cmd_reassociate(struct wpa_ctrl *ctrl, int argc,
 static int wpa_cli_cmd_preauthenticate(struct wpa_ctrl *ctrl, int argc,
 				       char *argv[])
 {
-	char cmd[256];
-	int res;
-
-	if (argc != 1) {
-		printf("Invalid PREAUTH command: needs one argument "
-		       "(BSSID)\n");
-		return -1;
-	}
-
-	res = os_snprintf(cmd, sizeof(cmd), "PREAUTH %s", argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-		printf("Too long PREAUTH command.\n");
-		return -1;
-	}
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "PREAUTH", 1, argc, argv);
 }
 
 
 static int wpa_cli_cmd_ap_scan(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
-	char cmd[256];
-	int res;
-
-	if (argc != 1) {
-		printf("Invalid AP_SCAN command: needs one argument (ap_scan "
-		       "value)\n");
-		return -1;
-	}
-	res = os_snprintf(cmd, sizeof(cmd), "AP_SCAN %s", argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-		printf("Too long AP_SCAN command.\n");
-		return -1;
-	}
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "AP_SCAN", 1, argc, argv);
 }
 
 
 static int wpa_cli_cmd_scan_interval(struct wpa_ctrl *ctrl, int argc,
 				     char *argv[])
 {
-	char cmd[256];
-	int res;
-
-	if (argc != 1) {
-		printf("Invalid SCAN_INTERVAL command: needs one argument "
-		       "scan_interval value)\n");
-		return -1;
-	}
-	res = os_snprintf(cmd, sizeof(cmd), "SCAN_INTERVAL %s", argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-		printf("Too long SCAN_INTERVAL command.\n");
-		return -1;
-	}
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "SCAN_INTERVAL", 1, argc, argv);
 }
 
 
 static int wpa_cli_cmd_bss_expire_age(struct wpa_ctrl *ctrl, int argc,
 				      char *argv[])
 {
-	char cmd[256];
-	int res;
-
-	if (argc != 1) {
-		printf("Invalid BSS_EXPIRE_AGE command: needs one argument "
-		       "(bss_expire_age value)\n");
-		return -1;
-	}
-	res = os_snprintf(cmd, sizeof(cmd), "BSS_EXPIRE_AGE %s", argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-		printf("Too long BSS_EXPIRE_AGE command.\n");
-		return -1;
-	}
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "BSS_EXPIRE_AGE", 1, argc, argv);
 }
 
 
 static int wpa_cli_cmd_bss_expire_count(struct wpa_ctrl *ctrl, int argc,
 				        char *argv[])
 {
-	char cmd[256];
-	int res;
-
-	if (argc != 1) {
-		printf("Invalid BSS_EXPIRE_COUNT command: needs one argument "
-		       "(bss_expire_count value)\n");
-		return -1;
-	}
-	res = os_snprintf(cmd, sizeof(cmd), "BSS_EXPIRE_COUNT %s", argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-		printf("Too long BSS_EXPIRE_COUNT command.\n");
-		return -1;
-	}
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "BSS_EXPIRE_COUNT", 1, argc, argv);
 }
 
 
 static int wpa_cli_cmd_stkstart(struct wpa_ctrl *ctrl, int argc,
 				char *argv[])
 {
-	char cmd[256];
-	int res;
-
-	if (argc != 1) {
-		printf("Invalid STKSTART command: needs one argument "
-		       "(Peer STA MAC address)\n");
-		return -1;
-	}
-
-	res = os_snprintf(cmd, sizeof(cmd), "STKSTART %s", argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-		printf("Too long STKSTART command.\n");
-		return -1;
-	}
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "STKSTART", 1, argc, argv);
 }
 
 
 static int wpa_cli_cmd_ft_ds(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
-	char cmd[256];
-	int res;
-
-	if (argc != 1) {
-		printf("Invalid FT_DS command: needs one argument "
-		       "(Target AP MAC address)\n");
-		return -1;
-	}
-
-	res = os_snprintf(cmd, sizeof(cmd), "FT_DS %s", argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-		printf("Too long FT_DS command.\n");
-		return -1;
-	}
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "FT_DS", 1, argc, argv);
 }
 
 
 static int wpa_cli_cmd_wps_pbc(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
-	char cmd[256];
-	int res;
-
-	if (argc == 0) {
-		/* Any BSSID */
-		return wpa_ctrl_command(ctrl, "WPS_PBC");
-	}
-
-	/* Specific BSSID */
-	res = os_snprintf(cmd, sizeof(cmd), "WPS_PBC %s", argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-		printf("Too long WPS_PBC command.\n");
-		return -1;
-	}
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "WPS_PBC", 0, argc, argv);
 }
 
 
 static int wpa_cli_cmd_wps_pin(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
-	char cmd[256];
-	int res;
-
 	if (argc == 0) {
 		printf("Invalid WPS_PIN command: need one or two arguments:\n"
 		       "- BSSID: use 'any' to select any\n"
@@ -810,49 +685,14 @@ static int wpa_cli_cmd_wps_pin(struct wpa_ctrl *ctrl, int argc, char *argv[])
 		return -1;
 	}
 
-	if (argc == 1) {
-		/* Use dynamically generated PIN (returned as reply) */
-		res = os_snprintf(cmd, sizeof(cmd), "WPS_PIN %s", argv[0]);
-		if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-			printf("Too long WPS_PIN command.\n");
-			return -1;
-		}
-		return wpa_ctrl_command(ctrl, cmd);
-	}
-
-	/* Use hardcoded PIN from a label */
-	res = os_snprintf(cmd, sizeof(cmd), "WPS_PIN %s %s", argv[0], argv[1]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-		printf("Too long WPS_PIN command.\n");
-		return -1;
-	}
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "WPS_PIN", 1, argc, argv);
 }
 
 
 static int wpa_cli_cmd_wps_check_pin(struct wpa_ctrl *ctrl, int argc,
 				     char *argv[])
 {
-	char cmd[256];
-	int res;
-
-	if (argc != 1 && argc != 2) {
-		printf("Invalid WPS_CHECK_PIN command: needs one argument:\n"
-		       "- PIN to be verified\n");
-		return -1;
-	}
-
-	if (argc == 2)
-		res = os_snprintf(cmd, sizeof(cmd), "WPS_CHECK_PIN %s %s",
-				  argv[0], argv[1]);
-	else
-		res = os_snprintf(cmd, sizeof(cmd), "WPS_CHECK_PIN %s",
-				  argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-		printf("Too long WPS_CHECK_PIN command.\n");
-		return -1;
-	}
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "WPS_CHECK_PIN", 1, argc, argv);
 }
 
 
@@ -866,9 +706,6 @@ static int wpa_cli_cmd_wps_cancel(struct wpa_ctrl *ctrl, int argc,
 #ifdef CONFIG_WPS_OOB
 static int wpa_cli_cmd_wps_oob(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
-	char cmd[256];
-	int res;
-
 	if (argc != 3 && argc != 4) {
 		printf("Invalid WPS_OOB command: need three or four "
 		       "arguments:\n"
@@ -881,17 +718,7 @@ static int wpa_cli_cmd_wps_oob(struct wpa_ctrl *ctrl, int argc, char *argv[])
 		return -1;
 	}
 
-	if (argc == 3)
-		res = os_snprintf(cmd, sizeof(cmd), "WPS_OOB %s %s %s",
-				  argv[0], argv[1], argv[2]);
-	else
-		res = os_snprintf(cmd, sizeof(cmd), "WPS_OOB %s %s %s %s",
-				  argv[0], argv[1], argv[2], argv[3]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-		printf("Too long WPS_OOB command.\n");
-		return -1;
-	}
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "WPS_OOB", 3, argc, argv);
 }
 #endif /* CONFIG_WPS_OOB */
 
@@ -900,43 +727,14 @@ static int wpa_cli_cmd_wps_oob(struct wpa_ctrl *ctrl, int argc, char *argv[])
 
 static int wpa_cli_cmd_wps_nfc(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
-	char cmd[256];
-	int res;
-
-	if (argc >= 1)
-		res = os_snprintf(cmd, sizeof(cmd), "WPS_NFC %s",
-				  argv[0]);
-	else
-		res = os_snprintf(cmd, sizeof(cmd), "WPS_NFC");
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-		printf("Too long WPS_NFC command.\n");
-		return -1;
-	}
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "WPS_NFC", 0, argc, argv);
 }
 
 
 static int wpa_cli_cmd_wps_nfc_token(struct wpa_ctrl *ctrl, int argc,
 				     char *argv[])
 {
-	char cmd[256];
-	int res;
-
-	if (argc != 1) {
-		printf("Invalid WPS_NFC_TOKEN command: need one argument:\n"
-		       "format: WPS or NDEF\n");
-		return -1;
-	}
-	if (argc >= 1)
-		res = os_snprintf(cmd, sizeof(cmd), "WPS_NFC_TOKEN %s",
-				  argv[0]);
-	else
-		res = os_snprintf(cmd, sizeof(cmd), "WPS_NFC_TOKEN");
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-		printf("Too long WPS_NFC_TOKEN command.\n");
-		return -1;
-	}
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "WPS_NFC_TOKEN", 1, argc, argv);
 }
 
 
@@ -1028,41 +826,14 @@ static int wpa_cli_cmd_wps_reg(struct wpa_ctrl *ctrl, int argc, char *argv[])
 static int wpa_cli_cmd_wps_ap_pin(struct wpa_ctrl *ctrl, int argc,
 				  char *argv[])
 {
-	char cmd[256];
-	int res;
-
-	if (argc < 1) {
-		printf("Invalid WPS_AP_PIN command: needs at least one "
-		       "argument\n");
-		return -1;
-	}
-
-	if (argc > 2)
-		res = os_snprintf(cmd, sizeof(cmd), "WPS_AP_PIN %s %s %s",
-				  argv[0], argv[1], argv[2]);
-	else if (argc > 1)
-		res = os_snprintf(cmd, sizeof(cmd), "WPS_AP_PIN %s %s",
-				  argv[0], argv[1]);
-	else
-		res = os_snprintf(cmd, sizeof(cmd), "WPS_AP_PIN %s",
-				  argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-		printf("Too long WPS_AP_PIN command.\n");
-		return -1;
-	}
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "WPS_AP_PIN", 1, argc, argv);
 }
 
 
 static int wpa_cli_cmd_wps_er_start(struct wpa_ctrl *ctrl, int argc,
 				    char *argv[])
 {
-	char cmd[100];
-	if (argc > 0) {
-		os_snprintf(cmd, sizeof(cmd), "WPS_ER_START %s", argv[0]);
-		return wpa_ctrl_command(ctrl, cmd);
-	}
-	return wpa_ctrl_command(ctrl, "WPS_ER_START");
+	return wpa_cli_cmd(ctrl, "WPS_ER_START", 0, argc, argv);
 }
 
 
@@ -1077,9 +848,6 @@ static int wpa_cli_cmd_wps_er_stop(struct wpa_ctrl *ctrl, int argc,
 static int wpa_cli_cmd_wps_er_pin(struct wpa_ctrl *ctrl, int argc,
 				  char *argv[])
 {
-	char cmd[256];
-	int res;
-
 	if (argc < 2) {
 		printf("Invalid WPS_ER_PIN command: need at least two "
 		       "arguments:\n"
@@ -1089,48 +857,20 @@ static int wpa_cli_cmd_wps_er_pin(struct wpa_ctrl *ctrl, int argc,
 		return -1;
 	}
 
-	if (argc > 2)
-		res = os_snprintf(cmd, sizeof(cmd), "WPS_ER_PIN %s %s %s",
-				  argv[0], argv[1], argv[2]);
-	else
-		res = os_snprintf(cmd, sizeof(cmd), "WPS_ER_PIN %s %s",
-				  argv[0], argv[1]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-		printf("Too long WPS_ER_PIN command.\n");
-		return -1;
-	}
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "WPS_ER_PIN", 2, argc, argv);
 }
 
 
 static int wpa_cli_cmd_wps_er_pbc(struct wpa_ctrl *ctrl, int argc,
 				  char *argv[])
 {
-	char cmd[256];
-	int res;
-
-	if (argc != 1) {
-		printf("Invalid WPS_ER_PBC command: need one argument:\n"
-		       "- UUID: Specify the Enrollee\n");
-		return -1;
-	}
-
-	res = os_snprintf(cmd, sizeof(cmd), "WPS_ER_PBC %s",
-			  argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-		printf("Too long WPS_ER_PBC command.\n");
-		return -1;
-	}
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "WPS_ER_PBC", 1, argc, argv);
 }
 
 
 static int wpa_cli_cmd_wps_er_learn(struct wpa_ctrl *ctrl, int argc,
 				    char *argv[])
 {
-	char cmd[256];
-	int res;
-
 	if (argc != 2) {
 		printf("Invalid WPS_ER_LEARN command: need two arguments:\n"
 		       "- UUID: specify which AP to use\n"
@@ -1138,22 +878,13 @@ static int wpa_cli_cmd_wps_er_learn(struct wpa_ctrl *ctrl, int argc,
 		return -1;
 	}
 
-	res = os_snprintf(cmd, sizeof(cmd), "WPS_ER_LEARN %s %s",
-			  argv[0], argv[1]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-		printf("Too long WPS_ER_LEARN command.\n");
-		return -1;
-	}
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "WPS_ER_LEARN", 2, argc, argv);
 }
 
 
 static int wpa_cli_cmd_wps_er_set_config(struct wpa_ctrl *ctrl, int argc,
 					 char *argv[])
 {
-	char cmd[256];
-	int res;
-
 	if (argc != 2) {
 		printf("Invalid WPS_ER_SET_CONFIG command: need two "
 		       "arguments:\n"
@@ -1162,13 +893,7 @@ static int wpa_cli_cmd_wps_er_set_config(struct wpa_ctrl *ctrl, int argc,
 		return -1;
 	}
 
-	res = os_snprintf(cmd, sizeof(cmd), "WPS_ER_SET_CONFIG %s %s",
-			  argv[0], argv[1]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-		printf("Too long WPS_ER_SET_CONFIG command.\n");
-		return -1;
-	}
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "WPS_ER_SET_CONFIG", 2, argc, argv);
 }
 
 
@@ -1227,9 +952,6 @@ static int wpa_cli_cmd_wps_er_config(struct wpa_ctrl *ctrl, int argc,
 static int wpa_cli_cmd_wps_er_nfc_config_token(struct wpa_ctrl *ctrl, int argc,
 					       char *argv[])
 {
-	char cmd[256];
-	int res;
-
 	if (argc != 2) {
 		printf("Invalid WPS_ER_NFC_CONFIG_TOKEN command: need two "
 		       "arguments:\n"
@@ -1238,53 +960,20 @@ static int wpa_cli_cmd_wps_er_nfc_config_token(struct wpa_ctrl *ctrl, int argc,
 		return -1;
 	}
 
-	res = os_snprintf(cmd, sizeof(cmd), "WPS_ER_NFC_CONFIG_TOKEN %s %s",
-			  argv[0], argv[1]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-		printf("Too long WPS_ER_NFC_CONFIG_TOKEN command.\n");
-		return -1;
-	}
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "WPS_ER_NFC_CONFIG_TOKEN", 2, argc, argv);
 }
 #endif /* CONFIG_WPS_NFC */
 
 
 static int wpa_cli_cmd_ibss_rsn(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
-	char cmd[256];
-	int res;
-
-	if (argc != 1) {
-		printf("Invalid IBSS_RSN command: needs one argument "
-		       "(Peer STA MAC address)\n");
-		return -1;
-	}
-
-	res = os_snprintf(cmd, sizeof(cmd), "IBSS_RSN %s", argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-		printf("Too long IBSS_RSN command.\n");
-		return -1;
-	}
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "IBSS_RSN", 1, argc, argv);
 }
 
 
 static int wpa_cli_cmd_level(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
-	char cmd[256];
-	int res;
-
-	if (argc != 1) {
-		printf("Invalid LEVEL command: needs one argument (debug "
-		       "level)\n");
-		return -1;
-	}
-	res = os_snprintf(cmd, sizeof(cmd), "LEVEL %s", argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-		printf("Too long LEVEL command.\n");
-		return -1;
-	}
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "LEVEL", 1, argc, argv);
 }
 
 
@@ -1489,85 +1178,25 @@ static int wpa_cli_cmd_passphrase(struct wpa_ctrl *ctrl, int argc,
 
 static int wpa_cli_cmd_bssid(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
-	char cmd[256], *pos, *end;
-	int i, ret;
-
 	if (argc < 2) {
 		printf("Invalid BSSID command: needs two arguments (network "
 		       "id and BSSID)\n");
 		return -1;
 	}
 
-	end = cmd + sizeof(cmd);
-	pos = cmd;
-	ret = os_snprintf(pos, end - pos, "BSSID");
-	if (ret < 0 || ret >= end - pos) {
-		printf("Too long BSSID command.\n");
-		return -1;
-	}
-	pos += ret;
-	for (i = 0; i < argc; i++) {
-		ret = os_snprintf(pos, end - pos, " %s", argv[i]);
-		if (ret < 0 || ret >= end - pos) {
-			printf("Too long BSSID command.\n");
-			return -1;
-		}
-		pos += ret;
-	}
-
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "BSSID", 2, argc, argv);
 }
 
 
 static int wpa_cli_cmd_blacklist(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
-	char cmd[256], *pos, *end;
-	int i, ret;
-
-	end = cmd + sizeof(cmd);
-	pos = cmd;
-	ret = os_snprintf(pos, end - pos, "BLACKLIST");
-	if (ret < 0 || ret >= end - pos) {
-		printf("Too long BLACKLIST command.\n");
-		return -1;
-	}
-	pos += ret;
-	for (i = 0; i < argc; i++) {
-		ret = os_snprintf(pos, end - pos, " %s", argv[i]);
-		if (ret < 0 || ret >= end - pos) {
-			printf("Too long BLACKLIST command.\n");
-			return -1;
-		}
-		pos += ret;
-	}
-
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "BLACKLIST", 0, argc, argv);
 }
 
 
 static int wpa_cli_cmd_log_level(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
-	char cmd[256], *pos, *end;
-	int i, ret;
-
-	end = cmd + sizeof(cmd);
-	pos = cmd;
-	ret = os_snprintf(pos, end - pos, "LOG_LEVEL");
-	if (ret < 0 || ret >= end - pos) {
-		printf("Too long LOG_LEVEL command.\n");
-		return -1;
-	}
-	pos += ret;
-	for (i = 0; i < argc; i++) {
-		ret = os_snprintf(pos, end - pos, " %s", argv[i]);
-		if (ret < 0 || ret >= end - pos) {
-			printf("Too long LOG_LEVEL command.\n");
-			return -1;
-		}
-		pos += ret;
-	}
-
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "LOG_LEVEL", 0, argc, argv);
 }
 
 
@@ -1581,68 +1210,21 @@ static int wpa_cli_cmd_list_networks(struct wpa_ctrl *ctrl, int argc,
 static int wpa_cli_cmd_select_network(struct wpa_ctrl *ctrl, int argc,
 				      char *argv[])
 {
-	char cmd[32];
-	int res;
-
-	if (argc < 1) {
-		printf("Invalid SELECT_NETWORK command: needs one argument "
-		       "(network id)\n");
-		return -1;
-	}
-
-	res = os_snprintf(cmd, sizeof(cmd), "SELECT_NETWORK %s", argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd))
-		return -1;
-	cmd[sizeof(cmd) - 1] = '\0';
-
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "SELECT_NETWORK", 1, argc, argv);
 }
 
 
 static int wpa_cli_cmd_enable_network(struct wpa_ctrl *ctrl, int argc,
 				      char *argv[])
 {
-	char cmd[32];
-	int res;
-
-	if (argc < 1) {
-		printf("Invalid ENABLE_NETWORK command: needs one argument "
-		       "(network id)\n");
-		return -1;
-	}
-
-	if (argc > 1)
-		res = os_snprintf(cmd, sizeof(cmd), "ENABLE_NETWORK %s %s",
-				  argv[0], argv[1]);
-	else
-		res = os_snprintf(cmd, sizeof(cmd), "ENABLE_NETWORK %s",
-				  argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd))
-		return -1;
-	cmd[sizeof(cmd) - 1] = '\0';
-
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "ENABLE_NETWORK", 1, argc, argv);
 }
 
 
 static int wpa_cli_cmd_disable_network(struct wpa_ctrl *ctrl, int argc,
 				       char *argv[])
 {
-	char cmd[32];
-	int res;
-
-	if (argc < 1) {
-		printf("Invalid DISABLE_NETWORK command: needs one argument "
-		       "(network id)\n");
-		return -1;
-	}
-
-	res = os_snprintf(cmd, sizeof(cmd), "DISABLE_NETWORK %s", argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd))
-		return -1;
-	cmd[sizeof(cmd) - 1] = '\0';
-
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "DISABLE_NETWORK", 1, argc, argv);
 }
 
 
@@ -1656,21 +1238,7 @@ static int wpa_cli_cmd_add_network(struct wpa_ctrl *ctrl, int argc,
 static int wpa_cli_cmd_remove_network(struct wpa_ctrl *ctrl, int argc,
 				      char *argv[])
 {
-	char cmd[32];
-	int res;
-
-	if (argc < 1) {
-		printf("Invalid REMOVE_NETWORK command: needs one argument "
-		       "(network id)\n");
-		return -1;
-	}
-
-	res = os_snprintf(cmd, sizeof(cmd), "REMOVE_NETWORK %s", argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd))
-		return -1;
-	cmd[sizeof(cmd) - 1] = '\0';
-
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "REMOVE_NETWORK", 1, argc, argv);
 }
 
 
@@ -1698,9 +1266,6 @@ static void wpa_cli_show_network_variables(void)
 static int wpa_cli_cmd_set_network(struct wpa_ctrl *ctrl, int argc,
 				   char *argv[])
 {
-	char cmd[256];
-	int res;
-
 	if (argc == 0) {
 		wpa_cli_show_network_variables();
 		return 0;
@@ -1712,22 +1277,13 @@ static int wpa_cli_cmd_set_network(struct wpa_ctrl *ctrl, int argc,
 		return -1;
 	}
 
-	res = os_snprintf(cmd, sizeof(cmd), "SET_NETWORK %s %s %s",
-			  argv[0], argv[1], argv[2]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-		printf("Too long SET_NETWORK command.\n");
-		return -1;
-	}
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "SET_NETWORK", 3, argc, argv);
 }
 
 
 static int wpa_cli_cmd_get_network(struct wpa_ctrl *ctrl, int argc,
 				   char *argv[])
 {
-	char cmd[256];
-	int res;
-
 	if (argc == 0) {
 		wpa_cli_show_network_variables();
 		return 0;
@@ -1739,13 +1295,7 @@ static int wpa_cli_cmd_get_network(struct wpa_ctrl *ctrl, int argc,
 		return -1;
 	}
 
-	res = os_snprintf(cmd, sizeof(cmd), "GET_NETWORK %s %s",
-			  argv[0], argv[1]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-		printf("Too long GET_NETWORK command.\n");
-		return -1;
-	}
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "GET_NETWORK", 2, argc, argv);
 }
 
 
@@ -1765,42 +1315,19 @@ static int wpa_cli_cmd_add_cred(struct wpa_ctrl *ctrl, int argc, char *argv[])
 static int wpa_cli_cmd_remove_cred(struct wpa_ctrl *ctrl, int argc,
 				   char *argv[])
 {
-	char cmd[32];
-	int res;
-
-	if (argc < 1) {
-		printf("Invalid REMOVE_CRED command: needs one argument "
-		       "(cred id)\n");
-		return -1;
-	}
-
-	res = os_snprintf(cmd, sizeof(cmd), "REMOVE_CRED %s", argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd))
-		return -1;
-	cmd[sizeof(cmd) - 1] = '\0';
-
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "REMOVE_CRED", 1, argc, argv);
 }
 
 
 static int wpa_cli_cmd_set_cred(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
-	char cmd[256];
-	int res;
-
 	if (argc != 3) {
 		printf("Invalid SET_CRED command: needs three arguments\n"
 		       "(cred id, variable name, and value)\n");
 		return -1;
 	}
 
-	res = os_snprintf(cmd, sizeof(cmd), "SET_CRED %s %s %s",
-			  argv[0], argv[1], argv[2]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-		printf("Too long SET_CRED command.\n");
-		return -1;
-	}
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "SET_CRED", 3, argc, argv);
 }
 
 
@@ -1840,24 +1367,7 @@ static int wpa_cli_cmd_scan_results(struct wpa_ctrl *ctrl, int argc,
 
 static int wpa_cli_cmd_bss(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
-	char cmd[64];
-	int res;
-
-	if (argc < 1) {
-		printf("Invalid BSS command: need at least one argument"
-		       "(index or BSSID)\n");
-		return -1;
-	}
-
-	res = os_snprintf(cmd, sizeof(cmd), "BSS %s%s%s%s%s", argv[0],
-			  argc > 1 ? " " : "", argc > 1 ? argv[1] : "",
-			  argc > 2 ? " " : "", argc > 2 ? argv[2] : "");
-
-	if (res < 0 || (size_t) res >= sizeof(cmd))
-		return -1;
-	cmd[sizeof(cmd) - 1] = '\0';
-
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "BSS", 1, argc, argv);
 }
 
 
@@ -1879,9 +1389,6 @@ static char ** wpa_cli_complete_bss(const char *str, int pos)
 static int wpa_cli_cmd_get_capability(struct wpa_ctrl *ctrl, int argc,
 				      char *argv[])
 {
-	char cmd[64];
-	int res;
-
 	if (argc < 1 || argc > 2) {
 		printf("Invalid GET_CAPABILITY command: need either one or "
 		       "two arguments\n");
@@ -1894,13 +1401,7 @@ static int wpa_cli_cmd_get_capability(struct wpa_ctrl *ctrl, int argc,
 		return -1;
 	}
 
-	res = os_snprintf(cmd, sizeof(cmd), "GET_CAPABILITY %s%s", argv[0],
-			  (argc == 2) ? " strict" : "");
-	if (res < 0 || (size_t) res >= sizeof(cmd))
-		return -1;
-	cmd[sizeof(cmd) - 1] = '\0';
-
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "GET_CAPABILITY", 1, argc, argv);
 }
 
 
@@ -1980,20 +1481,7 @@ static int wpa_cli_cmd_interface_add(struct wpa_ctrl *ctrl, int argc,
 static int wpa_cli_cmd_interface_remove(struct wpa_ctrl *ctrl, int argc,
 					char *argv[])
 {
-	char cmd[128];
-	int res;
-
-	if (argc != 1) {
-		printf("Invalid INTERFACE_REMOVE command: needs one argument "
-		       "(interface name)\n");
-		return -1;
-	}
-
-	res = os_snprintf(cmd, sizeof(cmd), "INTERFACE_REMOVE %s", argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd))
-		return -1;
-	cmd[sizeof(cmd) - 1] = '\0';
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "INTERFACE_REMOVE", 1, argc, argv);
 }
 
 
@@ -2007,14 +1495,7 @@ static int wpa_cli_cmd_interface_list(struct wpa_ctrl *ctrl, int argc,
 #ifdef CONFIG_AP
 static int wpa_cli_cmd_sta(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
-	char buf[64];
-	if (argc != 1) {
-		printf("Invalid 'sta' command - exactly one argument, STA "
-		       "address, is required.\n");
-		return -1;
-	}
-	os_snprintf(buf, sizeof(buf), "STA %s", argv[0]);
-	return wpa_ctrl_command(ctrl, buf);
+	return wpa_cli_cmd(ctrl, "STA", 1, argc, argv);
 }
 
 
@@ -2071,36 +1552,14 @@ static int wpa_cli_cmd_all_sta(struct wpa_ctrl *ctrl, int argc, char *argv[])
 static int wpa_cli_cmd_deauthenticate(struct wpa_ctrl *ctrl, int argc,
 				      char *argv[])
 {
-	char buf[64];
-	if (argc < 1) {
-		printf("Invalid 'deauthenticate' command - exactly one "
-		       "argument, STA address, is required.\n");
-		return -1;
-	}
-	if (argc > 1)
-		os_snprintf(buf, sizeof(buf), "DEAUTHENTICATE %s %s",
-			    argv[0], argv[1]);
-	else
-		os_snprintf(buf, sizeof(buf), "DEAUTHENTICATE %s", argv[0]);
-	return wpa_ctrl_command(ctrl, buf);
+	return wpa_cli_cmd(ctrl, "DEAUTHENTICATE", 1, argc, argv);
 }
 
 
 static int wpa_cli_cmd_disassociate(struct wpa_ctrl *ctrl, int argc,
 				    char *argv[])
 {
-	char buf[64];
-	if (argc < 1) {
-		printf("Invalid 'disassociate' command - exactly one "
-		       "argument, STA address, is required.\n");
-		return -1;
-	}
-	if (argc > 1)
-		os_snprintf(buf, sizeof(buf), "DISASSOCIATE %s %s",
-			    argv[0], argv[1]);
-	else
-		os_snprintf(buf, sizeof(buf), "DISASSOCIATE %s", argv[0]);
-	return wpa_ctrl_command(ctrl, buf);
+	return wpa_cli_cmd(ctrl, "DISASSOCIATE", 1, argc, argv);
 }
 #endif /* CONFIG_AP */
 
@@ -2125,21 +1584,7 @@ static int wpa_cli_cmd_drop_sa(struct wpa_ctrl *ctrl, int argc, char *argv[])
 
 static int wpa_cli_cmd_roam(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
-	char cmd[128];
-	int res;
-
-	if (argc != 1) {
-		printf("Invalid ROAM command: needs one argument "
-		       "(target AP's BSSID)\n");
-		return -1;
-	}
-
-	res = os_snprintf(cmd, sizeof(cmd), "ROAM %s", argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-		printf("Too long ROAM command.\n");
-		return -1;
-	}
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "ROAM", 1, argc, argv);
 }
 
 
@@ -2147,24 +1592,7 @@ static int wpa_cli_cmd_roam(struct wpa_ctrl *ctrl, int argc, char *argv[])
 
 static int wpa_cli_cmd_p2p_find(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
-	char cmd[128];
-	int res;
-
-	if (argc == 0)
-		return wpa_ctrl_command(ctrl, "P2P_FIND");
-
-	if (argc > 2)
-		res = os_snprintf(cmd, sizeof(cmd), "P2P_FIND %s %s %s",
-				  argv[0], argv[1], argv[2]);
-	else if (argc > 1)
-		res = os_snprintf(cmd, sizeof(cmd), "P2P_FIND %s %s",
-				  argv[0], argv[1]);
-	else
-		res = os_snprintf(cmd, sizeof(cmd), "P2P_FIND %s", argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd))
-		return -1;
-	cmd[sizeof(cmd) - 1] = '\0';
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "P2P_FIND", 0, argc, argv);
 }
 
 
@@ -2178,33 +1606,7 @@ static int wpa_cli_cmd_p2p_stop_find(struct wpa_ctrl *ctrl, int argc,
 static int wpa_cli_cmd_p2p_connect(struct wpa_ctrl *ctrl, int argc,
 				   char *argv[])
 {
-	char cmd[128];
-	int res;
-
-	if (argc < 2) {
-		printf("Invalid P2P_CONNECT command: needs at least two "
-		       "arguments (address and pbc/PIN)\n");
-		return -1;
-	}
-
-	if (argc > 4)
-		res = os_snprintf(cmd, sizeof(cmd),
-				  "P2P_CONNECT %s %s %s %s %s",
-				  argv[0], argv[1], argv[2], argv[3],
-				  argv[4]);
-	else if (argc > 3)
-		res = os_snprintf(cmd, sizeof(cmd), "P2P_CONNECT %s %s %s %s",
-				  argv[0], argv[1], argv[2], argv[3]);
-	else if (argc > 2)
-		res = os_snprintf(cmd, sizeof(cmd), "P2P_CONNECT %s %s %s",
-				  argv[0], argv[1], argv[2]);
-	else
-		res = os_snprintf(cmd, sizeof(cmd), "P2P_CONNECT %s %s",
-				  argv[0], argv[1]);
-	if (res < 0 || (size_t) res >= sizeof(cmd))
-		return -1;
-	cmd[sizeof(cmd) - 1] = '\0';
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "P2P_CONNECT", 2, argc, argv);
 }
 
 
@@ -2226,37 +1628,14 @@ static char ** wpa_cli_complete_p2p_connect(const char *str, int pos)
 static int wpa_cli_cmd_p2p_listen(struct wpa_ctrl *ctrl, int argc,
 				  char *argv[])
 {
-	char cmd[128];
-	int res;
-
-	if (argc == 0)
-		return wpa_ctrl_command(ctrl, "P2P_LISTEN");
-
-	res = os_snprintf(cmd, sizeof(cmd), "P2P_LISTEN %s", argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd))
-		return -1;
-	cmd[sizeof(cmd) - 1] = '\0';
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "P2P_LISTEN", 0, argc, argv);
 }
 
 
 static int wpa_cli_cmd_p2p_group_remove(struct wpa_ctrl *ctrl, int argc,
 					char *argv[])
 {
-	char cmd[128];
-	int res;
-
-	if (argc != 1) {
-		printf("Invalid P2P_GROUP_REMOVE command: needs one argument "
-		       "(interface name)\n");
-		return -1;
-	}
-
-	res = os_snprintf(cmd, sizeof(cmd), "P2P_GROUP_REMOVE %s", argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd))
-		return -1;
-	cmd[sizeof(cmd) - 1] = '\0';
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "P2P_GROUP_REMOVE", 1, argc, argv);
 }
 
 
@@ -2278,31 +1657,13 @@ static char ** wpa_cli_complete_p2p_group_remove(const char *str, int pos)
 static int wpa_cli_cmd_p2p_group_add(struct wpa_ctrl *ctrl, int argc,
 					char *argv[])
 {
-	char cmd[128];
-	int res;
-
-	if (argc == 0)
-		return wpa_ctrl_command(ctrl, "P2P_GROUP_ADD");
-
-	if (argc > 1)
-		res = os_snprintf(cmd, sizeof(cmd), "P2P_GROUP_ADD %s %s",
-				  argv[0], argv[1]);
-	else
-		res = os_snprintf(cmd, sizeof(cmd), "P2P_GROUP_ADD %s",
-				  argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd))
-		return -1;
-	cmd[sizeof(cmd) - 1] = '\0';
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "P2P_GROUP_ADD", 0, argc, argv);
 }
 
 
 static int wpa_cli_cmd_p2p_prov_disc(struct wpa_ctrl *ctrl, int argc,
 				     char *argv[])
 {
-	char cmd[128];
-	int res;
-
 	if (argc != 2 && argc != 3) {
 		printf("Invalid P2P_PROV_DISC command: needs at least "
 		       "two arguments, address and config method\n"
@@ -2310,16 +1671,7 @@ static int wpa_cli_cmd_p2p_prov_disc(struct wpa_ctrl *ctrl, int argc,
 		return -1;
 	}
 
-	if (argc == 3)
-		res = os_snprintf(cmd, sizeof(cmd), "P2P_PROV_DISC %s %s %s",
-				  argv[0], argv[1], argv[2]);
-	else
-		res = os_snprintf(cmd, sizeof(cmd), "P2P_PROV_DISC %s %s",
-				  argv[0], argv[1]);
-	if (res < 0 || (size_t) res >= sizeof(cmd))
-		return -1;
-	cmd[sizeof(cmd) - 1] = '\0';
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "P2P_PROV_DISC", 2, argc, argv);
 }
 
 
@@ -2334,7 +1686,6 @@ static int wpa_cli_cmd_p2p_serv_disc_req(struct wpa_ctrl *ctrl, int argc,
 					 char *argv[])
 {
 	char cmd[4096];
-	int res;
 
 	if (argc != 2 && argc != 4) {
 		printf("Invalid P2P_SERV_DISC_REQ command: needs two "
@@ -2344,16 +1695,8 @@ static int wpa_cli_cmd_p2p_serv_disc_req(struct wpa_ctrl *ctrl, int argc,
 		return -1;
 	}
 
-	if (argc == 4)
-		res = os_snprintf(cmd, sizeof(cmd),
-				  "P2P_SERV_DISC_REQ %s %s %s %s",
-				  argv[0], argv[1], argv[2], argv[3]);
-	else
-		res = os_snprintf(cmd, sizeof(cmd), "P2P_SERV_DISC_REQ %s %s",
-				  argv[0], argv[1]);
-	if (res < 0 || (size_t) res >= sizeof(cmd))
+	if (write_cmd(cmd, sizeof(cmd), "P2P_SERV_DISC_REQ", argc, argv) < 0)
 		return -1;
-	cmd[sizeof(cmd) - 1] = '\0';
 	return wpa_ctrl_command(ctrl, cmd);
 }
 
@@ -2361,21 +1704,7 @@ static int wpa_cli_cmd_p2p_serv_disc_req(struct wpa_ctrl *ctrl, int argc,
 static int wpa_cli_cmd_p2p_serv_disc_cancel_req(struct wpa_ctrl *ctrl,
 						int argc, char *argv[])
 {
-	char cmd[128];
-	int res;
-
-	if (argc != 1) {
-		printf("Invalid P2P_SERV_DISC_CANCEL_REQ command: needs one "
-		       "argument (pending request identifier)\n");
-		return -1;
-	}
-
-	res = os_snprintf(cmd, sizeof(cmd), "P2P_SERV_DISC_CANCEL_REQ %s",
-			  argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd))
-		return -1;
-	cmd[sizeof(cmd) - 1] = '\0';
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "P2P_SERV_DISC_CANCEL_REQ", 1, argc, argv);
 }
 
 
@@ -2410,21 +1739,7 @@ static int wpa_cli_cmd_p2p_service_update(struct wpa_ctrl *ctrl, int argc,
 static int wpa_cli_cmd_p2p_serv_disc_external(struct wpa_ctrl *ctrl,
 					      int argc, char *argv[])
 {
-	char cmd[128];
-	int res;
-
-	if (argc != 1) {
-		printf("Invalid P2P_SERV_DISC_EXTERNAL command: needs one "
-		       "argument (external processing: 0/1)\n");
-		return -1;
-	}
-
-	res = os_snprintf(cmd, sizeof(cmd), "P2P_SERV_DISC_EXTERNAL %s",
-			  argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd))
-		return -1;
-	cmd[sizeof(cmd) - 1] = '\0';
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "P2P_SERV_DISC_EXTERNAL", 1, argc, argv);
 }
 
 
@@ -2492,60 +1807,20 @@ static int wpa_cli_cmd_p2p_service_del(struct wpa_ctrl *ctrl, int argc,
 static int wpa_cli_cmd_p2p_reject(struct wpa_ctrl *ctrl,
 				  int argc, char *argv[])
 {
-	char cmd[128];
-	int res;
-
-	if (argc != 1) {
-		printf("Invalid P2P_REJECT command: needs one argument "
-		       "(peer address)\n");
-		return -1;
-	}
-
-	res = os_snprintf(cmd, sizeof(cmd), "P2P_REJECT %s", argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd))
-		return -1;
-	cmd[sizeof(cmd) - 1] = '\0';
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "P2P_REJECT", 1, argc, argv);
 }
 
 
 static int wpa_cli_cmd_p2p_invite(struct wpa_ctrl *ctrl,
 				  int argc, char *argv[])
 {
-	char cmd[128];
-	int res;
-
-	if (argc < 1) {
-		printf("Invalid P2P_INVITE command: needs at least one "
-		       "argument\n");
-		return -1;
-	}
-
-	if (argc > 2)
-		res = os_snprintf(cmd, sizeof(cmd), "P2P_INVITE %s %s %s",
-				  argv[0], argv[1], argv[2]);
-	else if (argc > 1)
-		res = os_snprintf(cmd, sizeof(cmd), "P2P_INVITE %s %s",
-				  argv[0], argv[1]);
-	else
-		res = os_snprintf(cmd, sizeof(cmd), "P2P_INVITE %s", argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd))
-		return -1;
-	cmd[sizeof(cmd) - 1] = '\0';
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "P2P_INVITE", 1, argc, argv);
 }
 
 
 static int wpa_cli_cmd_p2p_peer(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
-	char buf[64];
-	if (argc != 1) {
-		printf("Invalid 'p2p_peer' command - exactly one argument, "
-		       "P2P peer device address, is required.\n");
-		return -1;
-	}
-	os_snprintf(buf, sizeof(buf), "P2P_PEER %s", argv[0]);
-	return wpa_ctrl_command(ctrl, buf);
+	return wpa_cli_cmd(ctrl, "P2P_PEER", 1, argc, argv);
 }
 
 
@@ -2621,20 +1896,7 @@ static int wpa_cli_cmd_p2p_peers(struct wpa_ctrl *ctrl, int argc, char *argv[])
 
 static int wpa_cli_cmd_p2p_set(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
-	char cmd[100];
-	int res;
-
-	if (argc != 2) {
-		printf("Invalid P2P_SET command: needs two arguments (field, "
-		       "value)\n");
-		return -1;
-	}
-
-	res = os_snprintf(cmd, sizeof(cmd), "P2P_SET %s %s", argv[0], argv[1]);
-	if (res < 0 || (size_t) res >= sizeof(cmd))
-		return -1;
-	cmd[sizeof(cmd) - 1] = '\0';
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "P2P_SET", 2, argc, argv);
 }
 
 
@@ -2654,31 +1916,13 @@ static int wpa_cli_cmd_p2p_cancel(struct wpa_ctrl *ctrl, int argc,
 static int wpa_cli_cmd_p2p_unauthorize(struct wpa_ctrl *ctrl, int argc,
 				       char *argv[])
 {
-	char cmd[100];
-	int res;
-
-	if (argc != 1) {
-		printf("Invalid P2P_UNAUTHORIZE command: needs one argument "
-		       "(peer address)\n");
-		return -1;
-	}
-
-	res = os_snprintf(cmd, sizeof(cmd), "P2P_UNAUTHORIZE %s", argv[0]);
-
-	if (res < 0 || (size_t) res >= sizeof(cmd))
-		return -1;
-
-	cmd[sizeof(cmd) - 1] = '\0';
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "P2P_UNAUTHORIZE", 1, argc, argv);
 }
 
 
 static int wpa_cli_cmd_p2p_presence_req(struct wpa_ctrl *ctrl, int argc,
 					char *argv[])
 {
-	char cmd[100];
-	int res;
-
 	if (argc != 0 && argc != 2 && argc != 4) {
 		printf("Invalid P2P_PRESENCE_REQ command: needs two arguments "
 		       "(preferred duration, interval; in microsecods).\n"
@@ -2687,28 +1931,13 @@ static int wpa_cli_cmd_p2p_presence_req(struct wpa_ctrl *ctrl, int argc,
 		return -1;
 	}
 
-	if (argc == 4)
-		res = os_snprintf(cmd, sizeof(cmd),
-				  "P2P_PRESENCE_REQ %s %s %s %s",
-				  argv[0], argv[1], argv[2], argv[3]);
-	else if (argc == 2)
-		res = os_snprintf(cmd, sizeof(cmd), "P2P_PRESENCE_REQ %s %s",
-				  argv[0], argv[1]);
-	else
-		res = os_snprintf(cmd, sizeof(cmd), "P2P_PRESENCE_REQ");
-	if (res < 0 || (size_t) res >= sizeof(cmd))
-		return -1;
-	cmd[sizeof(cmd) - 1] = '\0';
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "P2P_PRESENCE_REQ", 0, argc, argv);
 }
 
 
 static int wpa_cli_cmd_p2p_ext_listen(struct wpa_ctrl *ctrl, int argc,
 				      char *argv[])
 {
-	char cmd[100];
-	int res;
-
 	if (argc != 0 && argc != 2) {
 		printf("Invalid P2P_EXT_LISTEN command: needs two arguments "
 		       "(availability period, availability interval; in "
@@ -2718,15 +1947,7 @@ static int wpa_cli_cmd_p2p_ext_listen(struct wpa_ctrl *ctrl, int argc,
 		return -1;
 	}
 
-	if (argc == 2)
-		res = os_snprintf(cmd, sizeof(cmd), "P2P_EXT_LISTEN %s %s",
-				  argv[0], argv[1]);
-	else
-		res = os_snprintf(cmd, sizeof(cmd), "P2P_EXT_LISTEN");
-	if (res < 0 || (size_t) res >= sizeof(cmd))
-		return -1;
-	cmd[sizeof(cmd) - 1] = '\0';
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "P2P_EXT_LISTEN", 0, argc, argv);
 }
 
 #endif /* CONFIG_P2P */
@@ -2750,58 +1971,20 @@ static int wpa_cli_cmd_stop_fetch_anqp(struct wpa_ctrl *ctrl, int argc,
 static int wpa_cli_cmd_interworking_select(struct wpa_ctrl *ctrl, int argc,
 					   char *argv[])
 {
-	char cmd[100];
-	int res;
-
-	if (argc == 0)
-		return wpa_ctrl_command(ctrl, "INTERWORKING_SELECT");
-
-	res = os_snprintf(cmd, sizeof(cmd), "INTERWORKING_SELECT %s", argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd))
-		return -1;
-	cmd[sizeof(cmd) - 1] = '\0';
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "INTERWORKING_SELECT", 0, argc, argv);
 }
 
 
 static int wpa_cli_cmd_interworking_connect(struct wpa_ctrl *ctrl, int argc,
 					    char *argv[])
 {
-	char cmd[100];
-	int res;
-
-	if (argc != 1) {
-		printf("Invalid INTERWORKING_CONNECT commands: needs one "
-		       "argument (BSSID)\n");
-		return -1;
-	}
-
-	res = os_snprintf(cmd, sizeof(cmd), "INTERWORKING_CONNECT %s",
-			  argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd))
-		return -1;
-	cmd[sizeof(cmd) - 1] = '\0';
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "INTERWORKING_CONNECT", 1, argc, argv);
 }
 
 
 static int wpa_cli_cmd_anqp_get(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
-	char cmd[100];
-	int res;
-
-	if (argc != 2) {
-		printf("Invalid ANQP_GET command: needs two arguments "
-		       "(addr and info id list)\n");
-		return -1;
-	}
-
-	res = os_snprintf(cmd, sizeof(cmd), "ANQP_GET %s %s",
-			  argv[0], argv[1]);
-	if (res < 0 || (size_t) res >= sizeof(cmd))
-		return -1;
-	cmd[sizeof(cmd) - 1] = '\0';
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "ANQP_GET", 2, argc, argv);
 }
 #endif /* CONFIG_INTERWORKING */
 
@@ -2811,21 +1994,7 @@ static int wpa_cli_cmd_anqp_get(struct wpa_ctrl *ctrl, int argc, char *argv[])
 static int wpa_cli_cmd_hs20_anqp_get(struct wpa_ctrl *ctrl, int argc,
 				     char *argv[])
 {
-	char cmd[100];
-	int res;
-
-	if (argc != 2) {
-		printf("Invalid HS20_ANQP_GET command: needs two arguments "
-		       "(addr and subtype list)\n");
-		return -1;
-	}
-
-	res = os_snprintf(cmd, sizeof(cmd), "HS20_ANQP_GET %s %s",
-			  argv[0], argv[1]);
-	if (res < 0 || (size_t) res >= sizeof(cmd))
-		return -1;
-	cmd[sizeof(cmd) - 1] = '\0';
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "HS20_ANQP_GET", 2, argc, argv);
 }
 
 
@@ -2833,7 +2002,6 @@ static int wpa_cli_cmd_get_nai_home_realm_list(struct wpa_ctrl *ctrl, int argc,
 					       char *argv[])
 {
 	char cmd[512];
-	int res;
 
 	if (argc == 0) {
 		printf("Command needs one or two arguments (dst mac addr and "
@@ -2841,18 +2009,9 @@ static int wpa_cli_cmd_get_nai_home_realm_list(struct wpa_ctrl *ctrl, int argc,
 		return -1;
 	}
 
-	if (argc == 1)
-		res = os_snprintf(cmd, sizeof(cmd),
-				  "HS20_GET_NAI_HOME_REALM_LIST %s",
-				  argv[0]);
-	else
-		res = os_snprintf(cmd, sizeof(cmd),
-				  "HS20_GET_NAI_HOME_REALM_LIST %s %s",
-				  argv[0], argv[1]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-		printf("Too long command.\n");
+	if (write_cmd(cmd, sizeof(cmd), "HS20_GET_NAI_HOME_REALM_LIST",
+		      argc, argv) < 0)
 		return -1;
-	}
 
 	return wpa_ctrl_command(ctrl, cmd);
 }
@@ -2863,83 +2022,28 @@ static int wpa_cli_cmd_get_nai_home_realm_list(struct wpa_ctrl *ctrl, int argc,
 static int wpa_cli_cmd_sta_autoconnect(struct wpa_ctrl *ctrl, int argc,
 				       char *argv[])
 {
-	char cmd[256];
-	int res;
-
-	if (argc != 1) {
-		printf("Invalid STA_AUTOCONNECT command: needs one argument "
-		       "(0/1 = disable/enable automatic reconnection)\n");
-		return -1;
-	}
-	res = os_snprintf(cmd, sizeof(cmd), "STA_AUTOCONNECT %s", argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-		printf("Too long STA_AUTOCONNECT command.\n");
-		return -1;
-	}
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "STA_AUTOCONNECT", 1, argc, argv);
 }
 
 
 static int wpa_cli_cmd_tdls_discover(struct wpa_ctrl *ctrl, int argc,
 				     char *argv[])
 {
-	char cmd[256];
-	int res;
-
-	if (argc != 1) {
-		printf("Invalid TDLS_DISCOVER command: needs one argument "
-		       "(Peer STA MAC address)\n");
-		return -1;
-	}
-
-	res = os_snprintf(cmd, sizeof(cmd), "TDLS_DISCOVER %s", argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-		printf("Too long TDLS_DISCOVER command.\n");
-		return -1;
-	}
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "TDLS_DISCOVER", 1, argc, argv);
 }
 
 
 static int wpa_cli_cmd_tdls_setup(struct wpa_ctrl *ctrl, int argc,
 				  char *argv[])
 {
-	char cmd[256];
-	int res;
-
-	if (argc != 1) {
-		printf("Invalid TDLS_SETUP command: needs one argument "
-		       "(Peer STA MAC address)\n");
-		return -1;
-	}
-
-	res = os_snprintf(cmd, sizeof(cmd), "TDLS_SETUP %s", argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-		printf("Too long TDLS_SETUP command.\n");
-		return -1;
-	}
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "TDLS_SETUP", 1, argc, argv);
 }
 
 
 static int wpa_cli_cmd_tdls_teardown(struct wpa_ctrl *ctrl, int argc,
 				     char *argv[])
 {
-	char cmd[256];
-	int res;
-
-	if (argc != 1) {
-		printf("Invalid TDLS_TEARDOWN command: needs one argument "
-		       "(Peer STA MAC address)\n");
-		return -1;
-	}
-
-	res = os_snprintf(cmd, sizeof(cmd), "TDLS_TEARDOWN %s", argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-		printf("Too long TDLS_TEARDOWN command.\n");
-		return -1;
-	}
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "TDLS_TEARDOWN", 1, argc, argv);
 }
 
 
@@ -2961,19 +2065,10 @@ static int wpa_cli_cmd_reauthenticate(struct wpa_ctrl *ctrl, int argc,
 
 static int wpa_cli_cmd_autoscan(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
-	char cmd[256];
-	int res;
-
 	if (argc == 0)
 		return wpa_ctrl_command(ctrl, "AUTOSCAN ");
 
-	res = os_snprintf(cmd, sizeof(cmd), "AUTOSCAN %s", argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-		printf("Too long AUTOSCAN command.\n");
-		return -1;
-	}
-
-	return wpa_ctrl_command(ctrl, cmd);
+	return wpa_cli_cmd(ctrl, "AUTOSCAN", 0, argc, argv);
 }
 
 #endif /* CONFIG_AUTOSCAN */

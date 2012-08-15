@@ -75,6 +75,8 @@ struct p2p_go_neg_results {
 	 */
 	int freq;
 
+	int ht40;
+
 	/**
 	 * ssid - SSID of the group
 	 */

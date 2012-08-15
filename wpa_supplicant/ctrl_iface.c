@@ -3482,7 +3482,7 @@ static int p2p_ctrl_invite(struct wpa_supplicant *wpa_s, char *cmd)
 
 
 static int p2p_ctrl_group_add_persistent(struct wpa_supplicant *wpa_s,
-					 char *cmd, int freq)
+					 char *cmd, int freq, int ht40)
 {
 	int id;
 	struct wpa_ssid *ssid;
@@ -3496,26 +3496,31 @@ static int p2p_ctrl_group_add_persistent(struct wpa_supplicant *wpa_s,
 		return -1;
 	}
 
-	return wpas_p2p_group_add_persistent(wpa_s, ssid, 0, freq);
+	return wpas_p2p_group_add_persistent(wpa_s, ssid, 0, freq, ht40);
 }
 
 
 static int p2p_ctrl_group_add(struct wpa_supplicant *wpa_s, char *cmd)
 {
-	int freq = 0;
+	int freq = 0, ht40;
 	char *pos;
 
 	pos = os_strstr(cmd, "freq=");
 	if (pos)
 		freq = atoi(pos + 5);
 
+	ht40 = os_strstr(cmd, "ht40") != NULL;
+
 	if (os_strncmp(cmd, "persistent=", 11) == 0)
-		return p2p_ctrl_group_add_persistent(wpa_s, cmd + 11, freq);
+		return p2p_ctrl_group_add_persistent(wpa_s, cmd + 11, freq,
+						     ht40);
 	if (os_strcmp(cmd, "persistent") == 0 ||
 	    os_strncmp(cmd, "persistent ", 11) == 0)
-		return wpas_p2p_group_add(wpa_s, 1, freq);
+		return wpas_p2p_group_add(wpa_s, 1, freq, ht40);
 	if (os_strncmp(cmd, "freq=", 5) == 0)
-		return wpas_p2p_group_add(wpa_s, 0, freq);
+		return wpas_p2p_group_add(wpa_s, 0, freq, ht40);
+	if (ht40)
+		return wpas_p2p_group_add(wpa_s, 0, freq, ht40);
 
 	wpa_printf(MSG_DEBUG, "CTRL: Invalid P2P_GROUP_ADD parameters '%s'",
 		   cmd);
@@ -4313,7 +4318,7 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		if (wpas_p2p_group_remove(wpa_s, buf + 17))
 			reply_len = -1;
 	} else if (os_strcmp(buf, "P2P_GROUP_ADD") == 0) {
-		if (wpas_p2p_group_add(wpa_s, 0, 0))
+		if (wpas_p2p_group_add(wpa_s, 0, 0, 0))
 			reply_len = -1;
 	} else if (os_strncmp(buf, "P2P_GROUP_ADD ", 14) == 0) {
 		if (p2p_ctrl_group_add(wpa_s, buf + 14))

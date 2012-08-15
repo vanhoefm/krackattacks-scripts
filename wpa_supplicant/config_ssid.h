@@ -364,6 +364,8 @@ struct wpa_ssid {
 	 */
 	int frequency;
 
+	int ht40;
+
 	/**
 	 * wpa_ptk_rekey - Maximum lifetime for PTK in seconds
 	 *

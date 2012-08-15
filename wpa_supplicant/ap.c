@@ -99,6 +99,18 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 
 		if (!no_ht && mode && mode->ht_capab) {
 			conf->ieee80211n = 1;
+#ifdef CONFIG_P2P
+			if (conf->hw_mode == HOSTAPD_MODE_IEEE80211A &&
+			    (mode->ht_capab &
+			     HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET) &&
+			    ssid->ht40)
+				conf->secondary_channel =
+					wpas_p2p_get_ht40_mode(wpa_s, mode,
+							       conf->channel);
+			if (conf->secondary_channel)
+				conf->ht_capab |=
+					HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET;
+#endif /* CONFIG_P2P */
 
 			/*
 			 * white-list capabilities that won't cause issues

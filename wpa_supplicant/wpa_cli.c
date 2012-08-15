@@ -2368,7 +2368,7 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "p2p_group_remove", wpa_cli_cmd_p2p_group_remove, cli_cmd_flag_none,
 	  "<ifname> = remove P2P group interface (terminate group if GO)" },
 	{ "p2p_group_add", wpa_cli_cmd_p2p_group_add, cli_cmd_flag_none,
-	  "= add a new P2P group (local end as GO)" },
+	  "[ht40] = add a new P2P group (local end as GO)" },
 	{ "p2p_prov_disc", wpa_cli_cmd_p2p_prov_disc, cli_cmd_flag_none,
 	  "<addr> <method> = request provisioning discovery" },
 	{ "p2p_get_passphrase", wpa_cli_cmd_p2p_get_passphrase,

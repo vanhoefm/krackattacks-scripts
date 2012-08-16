@@ -721,6 +721,7 @@ endif
 
 ifdef NEED_SHA256
 OBJS += src/crypto/sha256.c
+OBJS += src/crypto/sha256-prf.c
 ifdef CONFIG_INTERNAL_SHA256
 OBJS += src/crypto/sha256-internal.c
 endif

@@ -1123,6 +1123,7 @@ SHA256OBJS = # none by default
 ifdef NEED_SHA256
 L_CFLAGS += -DCONFIG_SHA256
 SHA256OBJS += src/crypto/sha256.c
+SHA256OBJS += src/crypto/sha256-prf.c
 ifdef CONFIG_INTERNAL_SHA256
 SHA256OBJS += src/crypto/sha256-internal.c
 endif

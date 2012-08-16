@@ -1583,6 +1583,11 @@ test-eap_sim_common: $(TEST_EAP_SIM_COMMON_OBJS)
 
 tests: test-eap_sim_common
 
+FIPSDIR=/usr/local/ssl/fips-2.0
+FIPSLD=$(FIPSDIR)/bin/fipsld
+fips:
+	$(MAKE) CC=$(FIPSLD) FIPSLD_CC="$(CC)"
+
 clean:
 	$(MAKE) -C ../src clean
 	$(MAKE) -C dbus clean

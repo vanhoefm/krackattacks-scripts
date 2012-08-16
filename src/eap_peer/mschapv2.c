@@ -63,22 +63,28 @@ int mschapv2_derive_response(const u8 *identity, size_t identity_len,
 	if (pwhash) {
 		wpa_hexdump_key(MSG_DEBUG, "MSCHAPV2: password hash",
 				password, password_len);
-		generate_nt_response_pwhash(auth_challenge, peer_challenge,
-					    username, username_len,
-					    password, nt_response);
-		generate_authenticator_response_pwhash(
-			password, peer_challenge, auth_challenge,
-			username, username_len, nt_response, auth_response);
+		if (generate_nt_response_pwhash(auth_challenge, peer_challenge,
+						username, username_len,
+						password, nt_response) ||
+		    generate_authenticator_response_pwhash(
+			    password, peer_challenge, auth_challenge,
+			    username, username_len, nt_response,
+			    auth_response))
+			return -1;
 	} else {
 		wpa_hexdump_ascii_key(MSG_DEBUG, "MSCHAPV2: password",
 				      password, password_len);
-		generate_nt_response(auth_challenge, peer_challenge,
-				     username, username_len,
-				     password, password_len, nt_response);
-		generate_authenticator_response(password, password_len,
-						peer_challenge, auth_challenge,
-						username, username_len,
-						nt_response, auth_response);
+		if (generate_nt_response(auth_challenge, peer_challenge,
+					 username, username_len,
+					 password, password_len,
+					 nt_response) ||
+		    generate_authenticator_response(password, password_len,
+						    peer_challenge,
+						    auth_challenge,
+						    username, username_len,
+						    nt_response,
+						    auth_response))
+			return -1;
 	}
 	wpa_hexdump(MSG_DEBUG, "MSCHAPV2: NT Response",
 		    nt_response, MSCHAPV2_NT_RESPONSE_LEN);
@@ -94,7 +100,8 @@ int mschapv2_derive_response(const u8 *identity, size_t identity_len,
 		    hash_nt_password_hash(password_hash, password_hash_hash))
 			return -1;
 	}
-	get_master_key(password_hash_hash, nt_response, master_key);
+	if (get_master_key(password_hash_hash, nt_response, master_key))
+		return -1;
 	wpa_hexdump_key(MSG_DEBUG, "MSCHAPV2: Master Key",
 			master_key, MSCHAPV2_MASTER_KEY_LEN);
 

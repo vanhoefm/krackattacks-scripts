@@ -70,6 +70,7 @@ endif
 
 ifdef CONFIG_FIPS
 CONFIG_NO_RANDOM_POOL=
+CONFIG_OPENSSL_CMAC=y
 endif
 
 OBJS = config.c
@@ -1037,7 +1038,11 @@ AESOBJS += src/crypto/aes-encblock.c
 endif
 ifdef NEED_AES_OMAC1
 NEED_AES_ENC=y
+ifdef CONFIG_OPENSSL_CMAC
+CFLAGS += -DCONFIG_OPENSSL_CMAC
+else
 AESOBJS += src/crypto/aes-omac1.c
+endif
 endif
 ifdef NEED_AES_WRAP
 NEED_AES_ENC=y

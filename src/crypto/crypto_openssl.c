@@ -16,6 +16,9 @@
 #include <openssl/dh.h>
 #include <openssl/hmac.h>
 #include <openssl/rand.h>
+#ifdef CONFIG_OPENSSL_CMAC
+#include <openssl/cmac.h>
+#endif /* CONFIG_OPENSSL_CMAC */
 
 #include "common.h"
 #include "wpabuf.h"
@@ -747,3 +750,38 @@ int crypto_get_random(void *buf, size_t len)
 		return -1;
 	return 0;
 }
+
+
+#ifdef CONFIG_OPENSSL_CMAC
+int omac1_aes_128_vector(const u8 *key, size_t num_elem,
+			 const u8 *addr[], const size_t *len, u8 *mac)
+{
+	CMAC_CTX *ctx;
+	int ret = -1;
+	size_t outlen, i;
+
+	ctx = CMAC_CTX_new();
+	if (ctx == NULL)
+		return -1;
+
+	if (!CMAC_Init(ctx, key, 16, EVP_aes_128_cbc(), NULL))
+		goto fail;
+	for (i = 0; i < num_elem; i++) {
+		if (!CMAC_Update(ctx, addr[i], len[i]))
+			goto fail;
+	}
+	if (!CMAC_Final(ctx, mac, &outlen) || outlen != 16)
+		goto fail;
+
+	ret = 0;
+fail:
+	CMAC_CTX_free(ctx);
+	return ret;
+}
+
+
+int omac1_aes_128(const u8 *key, const u8 *data, size_t data_len, u8 *mac)
+{
+	return omac1_aes_128_vector(key, 1, &data, &data_len, mac);
+}
+#endif /* CONFIG_OPENSSL_CMAC */

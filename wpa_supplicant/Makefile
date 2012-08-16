@@ -1107,7 +1107,9 @@ ifdef CONFIG_INTERNAL_MD5
 MD5OBJS += ../src/crypto/md5-internal.o
 endif
 ifdef CONFIG_FIPS
+ifdef NEED_TLS_PRF
 MD5OBJS += ../src/crypto/md5-non-fips.o
+endif
 endif
 OBJS += $(MD5OBJS)
 OBJS_p += $(MD5OBJS)

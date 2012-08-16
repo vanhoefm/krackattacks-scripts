@@ -661,6 +661,7 @@ endif
 
 ifdef NEED_SHA1
 SHA1OBJS += ../src/crypto/sha1.o
+SHA1OBJS += ../src/crypto/sha1-prf.o
 ifdef CONFIG_INTERNAL_SHA1
 SHA1OBJS += ../src/crypto/sha1-internal.o
 ifdef NEED_FIPS186_2_PRF

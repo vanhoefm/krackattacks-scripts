@@ -202,54 +202,119 @@ int sha256_vector(size_t num_elem, const u8 *addr[], const size_t *len,
 #endif /* NO_SHA256_WRAPPER */
 
 
+static const EVP_CIPHER * aes_get_evp_cipher(size_t keylen)
+{
+	switch (keylen) {
+	case 16:
+		return EVP_aes_128_ecb();
+	case 24:
+		return EVP_aes_192_ecb();
+	case 32:
+		return EVP_aes_256_ecb();
+	}
+
+	return NULL;
+}
+
+
 void * aes_encrypt_init(const u8 *key, size_t len)
 {
-	AES_KEY *ak;
-	ak = os_malloc(sizeof(*ak));
-	if (ak == NULL)
+	EVP_CIPHER_CTX *ctx;
+	const EVP_CIPHER *type;
+
+	type = aes_get_evp_cipher(len);
+	if (type == NULL)
 		return NULL;
-	if (AES_set_encrypt_key(key, 8 * len, ak) < 0) {
-		os_free(ak);
+
+	ctx = os_malloc(sizeof(*ctx));
+	if (ctx == NULL)
+		return NULL;
+	EVP_CIPHER_CTX_init(ctx);
+	if (EVP_EncryptInit_ex(ctx, type, NULL, key, NULL) != 1) {
+		os_free(ctx);
 		return NULL;
 	}
-	return ak;
+	EVP_CIPHER_CTX_set_padding(ctx, 0);
+	return ctx;
 }
 
 
 void aes_encrypt(void *ctx, const u8 *plain, u8 *crypt)
 {
-	AES_encrypt(plain, crypt, ctx);
+	EVP_CIPHER_CTX *c = ctx;
+	int clen = 16;
+	if (EVP_EncryptUpdate(c, crypt, &clen, plain, 16) != 1) {
+		wpa_printf(MSG_ERROR, "OpenSSL: EVP_EncryptUpdate failed: %s",
+			   ERR_error_string(ERR_get_error(), NULL));
+	}
 }
 
 
 void aes_encrypt_deinit(void *ctx)
 {
-	os_free(ctx);
+	EVP_CIPHER_CTX *c = ctx;
+	u8 buf[16];
+	int len = sizeof(buf);
+	if (EVP_EncryptFinal_ex(c, buf, &len) != 1) {
+		wpa_printf(MSG_ERROR, "OpenSSL: EVP_EncryptFinal_ex failed: "
+			   "%s", ERR_error_string(ERR_get_error(), NULL));
+	}
+	if (len != 0) {
+		wpa_printf(MSG_ERROR, "OpenSSL: Unexpected padding length %d "
+			   "in AES encrypt", len);
+	}
+	EVP_CIPHER_CTX_cleanup(c);
+	os_free(c);
 }
 
 
 void * aes_decrypt_init(const u8 *key, size_t len)
 {
-	AES_KEY *ak;
-	ak = os_malloc(sizeof(*ak));
-	if (ak == NULL)
+	EVP_CIPHER_CTX *ctx;
+	const EVP_CIPHER *type;
+
+	type = aes_get_evp_cipher(len);
+	if (type == NULL)
 		return NULL;
-	if (AES_set_decrypt_key(key, 8 * len, ak) < 0) {
-		os_free(ak);
+
+	ctx = os_malloc(sizeof(*ctx));
+	if (ctx == NULL)
+		return NULL;
+	EVP_CIPHER_CTX_init(ctx);
+	if (EVP_DecryptInit_ex(ctx, type, NULL, key, NULL) != 1) {
+		os_free(ctx);
 		return NULL;
 	}
-	return ak;
+	EVP_CIPHER_CTX_set_padding(ctx, 0);
+	return ctx;
 }
 
 
 void aes_decrypt(void *ctx, const u8 *crypt, u8 *plain)
 {
-	AES_decrypt(crypt, plain, ctx);
+	EVP_CIPHER_CTX *c = ctx;
+	int plen = 16;
+	if (EVP_DecryptUpdate(c, plain, &plen, crypt, 16) != 1) {
+		wpa_printf(MSG_ERROR, "OpenSSL: EVP_DecryptUpdate failed: %s",
+			   ERR_error_string(ERR_get_error(), NULL));
+	}
 }
 
 
 void aes_decrypt_deinit(void *ctx)
 {
+	EVP_CIPHER_CTX *c = ctx;
+	u8 buf[16];
+	int len = sizeof(buf);
+	if (EVP_DecryptFinal_ex(c, buf, &len) != 1) {
+		wpa_printf(MSG_ERROR, "OpenSSL: EVP_DecryptFinal_ex failed: "
+			   "%s", ERR_error_string(ERR_get_error(), NULL));
+	}
+	if (len != 0) {
+		wpa_printf(MSG_ERROR, "OpenSSL: Unexpected padding length %d "
+			   "in AES decrypt", len);
+	}
+	EVP_CIPHER_CTX_cleanup(c);
 	os_free(ctx);
 }
 

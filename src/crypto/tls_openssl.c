@@ -2299,6 +2299,11 @@ static int tls_global_dh(SSL_CTX *ssl_ctx, const char *dh_file)
 int tls_connection_get_keys(void *ssl_ctx, struct tls_connection *conn,
 			    struct tls_keys *keys)
 {
+#ifdef CONFIG_FIPS
+	wpa_printf(MSG_ERROR, "OpenSSL: TLS keys cannot be exported in FIPS "
+		   "mode");
+	return -1;
+#else /* CONFIG_FIPS */
 	SSL *ssl;
 
 	if (conn == NULL || keys == NULL)
@@ -2316,6 +2321,7 @@ int tls_connection_get_keys(void *ssl_ctx, struct tls_connection *conn,
 	keys->server_random_len = SSL3_RANDOM_SIZE;
 
 	return 0;
+#endif /* CONFIG_FIPS */
 }
 
 

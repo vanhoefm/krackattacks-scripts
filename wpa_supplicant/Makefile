@@ -847,7 +847,9 @@ NEED_DES=y
 # Shared TLS functions (needed for EAP_TLS, EAP_PEAP, EAP_TTLS, and EAP_FAST)
 OBJS += ../src/eap_peer/eap_tls_common.o
 OBJS_h += ../src/eap_server/eap_server_tls_common.o
+ifndef CONFIG_FIPS
 NEED_TLS_PRF=y
+endif
 endif
 
 ifndef CONFIG_TLS

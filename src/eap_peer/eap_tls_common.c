@@ -259,7 +259,9 @@ void eap_peer_tls_ssl_deinit(struct eap_sm *sm, struct eap_ssl_data *data)
 u8 * eap_peer_tls_derive_key(struct eap_sm *sm, struct eap_ssl_data *data,
 			     const char *label, size_t len)
 {
+#ifndef CONFIG_FIPS
 	struct tls_keys keys;
+#endif /* CONFIG_FIPS */
 	u8 *rnd = NULL, *out;
 
 	out = os_malloc(len);
@@ -271,6 +273,7 @@ u8 * eap_peer_tls_derive_key(struct eap_sm *sm, struct eap_ssl_data *data,
 	    == 0)
 		return out;
 
+#ifndef CONFIG_FIPS
 	/*
 	 * TLS library did not support key generation, so get the needed TLS
 	 * session parameters and use an internal implementation of TLS PRF to
@@ -299,6 +302,7 @@ u8 * eap_peer_tls_derive_key(struct eap_sm *sm, struct eap_ssl_data *data,
 	return out;
 
 fail:
+#endif /* CONFIG_FIPS */
 	os_free(out);
 	os_free(rnd);
 	return NULL;

@@ -688,3 +688,13 @@ int crypto_hash_finish(struct crypto_hash *ctx, u8 *mac, size_t *len)
 
 	return -1;
 }
+
+
+int pbkdf2_sha1(const char *passphrase, const u8 *ssid, size_t ssid_len,
+		int iterations, u8 *buf, size_t buflen)
+{
+	if (PKCS5_PBKDF2_HMAC_SHA1(passphrase, os_strlen(passphrase), ssid,
+				   ssid_len, 4096, buflen, buf) != 1)
+		return -1;
+	return 0;
+}

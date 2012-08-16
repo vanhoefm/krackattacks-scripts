@@ -1091,7 +1091,9 @@ endif
 ifdef CONFIG_NO_WPA_PASSPHRASE
 CFLAGS += -DCONFIG_NO_PBKDF2
 else
+ifneq ($(CONFIG_TLS), openssl)
 SHA1OBJS += ../src/crypto/sha1-pbkdf2.o
+endif
 endif
 ifdef NEED_T_PRF
 SHA1OBJS += ../src/crypto/sha1-tprf.o

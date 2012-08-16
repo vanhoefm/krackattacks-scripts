@@ -676,7 +676,9 @@ ifdef NEED_FIPS186_2_PRF
 SHA1OBJS += src/crypto/fips_prf_internal.c
 endif
 endif
+ifneq ($(CONFIG_TLS), openssl)
 SHA1OBJS += src/crypto/sha1-pbkdf2.c
+endif
 ifdef NEED_T_PRF
 SHA1OBJS += src/crypto/sha1-tprf.c
 endif

@@ -1101,7 +1101,9 @@ SHA1OBJS += ../src/crypto/sha1-tlsprf.o
 endif
 endif
 
-MD5OBJS = ../src/crypto/md5.o
+ifndef CONFIG_FIPS
+MD5OBJS += ../src/crypto/md5.o
+endif
 ifdef NEED_MD5
 ifdef CONFIG_INTERNAL_MD5
 MD5OBJS += ../src/crypto/md5-internal.o

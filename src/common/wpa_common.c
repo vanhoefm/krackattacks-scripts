@@ -43,8 +43,10 @@ int wpa_eapol_key_mic(const u8 *key, int ver, const u8 *buf, size_t len,
 	u8 hash[SHA1_MAC_LEN];
 
 	switch (ver) {
+#ifndef CONFIG_FIPS
 	case WPA_KEY_INFO_TYPE_HMAC_MD5_RC4:
 		return hmac_md5(key, 16, buf, len, mic);
+#endif /* CONFIG_FIPS */
 	case WPA_KEY_INFO_TYPE_HMAC_SHA1_AES:
 		if (hmac_sha1(key, 16, buf, len, hash))
 			return -1;

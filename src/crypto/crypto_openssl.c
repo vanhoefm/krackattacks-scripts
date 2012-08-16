@@ -744,6 +744,49 @@ int hmac_sha1(const u8 *key, size_t key_len, const u8 *data, size_t data_len,
 }
 
 
+#ifdef CONFIG_SHA256
+
+int hmac_sha256_vector(const u8 *key, size_t key_len, size_t num_elem,
+		       const u8 *addr[], const size_t *len, u8 *mac)
+{
+	HMAC_CTX ctx;
+	size_t i;
+	unsigned int mdlen;
+	int res;
+
+	HMAC_CTX_init(&ctx);
+#if OPENSSL_VERSION_NUMBER < 0x00909000
+	HMAC_Init_ex(&ctx, key, key_len, EVP_sha256(), NULL);
+#else /* openssl < 0.9.9 */
+	if (HMAC_Init_ex(&ctx, key, key_len, EVP_sha256(), NULL) != 1)
+		return -1;
+#endif /* openssl < 0.9.9 */
+
+	for (i = 0; i < num_elem; i++)
+		HMAC_Update(&ctx, addr[i], len[i]);
+
+	mdlen = 32;
+#if OPENSSL_VERSION_NUMBER < 0x00909000
+	HMAC_Final(&ctx, mac, &mdlen);
+	res = 1;
+#else /* openssl < 0.9.9 */
+	res = HMAC_Final(&ctx, mac, &mdlen);
+#endif /* openssl < 0.9.9 */
+	HMAC_CTX_cleanup(&ctx);
+
+	return res == 1 ? 0 : -1;
+}
+
+
+int hmac_sha256(const u8 *key, size_t key_len, const u8 *data,
+		size_t data_len, u8 *mac)
+{
+	return hmac_sha256_vector(key, key_len, 1, &data, &data_len, mac);
+}
+
+#endif /* CONFIG_SHA256 */
+
+
 int crypto_get_random(void *buf, size_t len)
 {
 	if (RAND_bytes(buf, len) != 1)

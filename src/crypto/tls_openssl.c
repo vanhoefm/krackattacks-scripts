@@ -2323,6 +2323,19 @@ int tls_connection_prf(void *tls_ctx, struct tls_connection *conn,
 		       const char *label, int server_random_first,
 		       u8 *out, size_t out_len)
 {
+#if OPENSSL_VERSION_NUMBER >= 0x10001000L
+	SSL *ssl;
+	if (conn == NULL)
+		return -1;
+	if (server_random_first)
+		return -1;
+	ssl = conn->ssl;
+	if (SSL_export_keying_material(ssl, out, out_len, label,
+				       os_strlen(label), NULL, 0, 0) == 1) {
+		wpa_printf(MSG_DEBUG, "OpenSSL: Using internal PRF");
+		return 0;
+	}
+#endif
 	return -1;
 }
 

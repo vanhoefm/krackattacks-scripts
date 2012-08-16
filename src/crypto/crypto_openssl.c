@@ -636,6 +636,7 @@ struct crypto_hash * crypto_hash_init(enum crypto_hash_alg alg, const u8 *key,
 	ctx = os_zalloc(sizeof(*ctx));
 	if (ctx == NULL)
 		return NULL;
+	HMAC_CTX_init(&ctx->ctx);
 
 #if OPENSSL_VERSION_NUMBER < 0x00909000
 	HMAC_Init_ex(&ctx->ctx, key, key_len, md, NULL);

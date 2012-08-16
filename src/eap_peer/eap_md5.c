@@ -1,6 +1,6 @@
 /*
  * EAP peer method: EAP-MD5 (RFC 3748 and RFC 1994)
- * Copyright (c) 2004-2006, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -86,7 +86,13 @@ static struct wpabuf * eap_md5_process(struct eap_sm *sm, void *priv,
 
 	id = eap_get_id(resp);
 	rpos = wpabuf_put(resp, CHAP_MD5_LEN);
-	chap_md5(id, password, password_len, challenge, challenge_len, rpos);
+	if (chap_md5(id, password, password_len, challenge, challenge_len,
+		     rpos)) {
+		wpa_printf(MSG_INFO, "EAP-MD5: CHAP MD5 operation failed");
+		ret->ignore = TRUE;
+		wpabuf_free(resp);
+		return NULL;
+	}
 	wpa_hexdump(MSG_MSGDUMP, "EAP-MD5: Response", rpos, CHAP_MD5_LEN);
 
 	return resp;

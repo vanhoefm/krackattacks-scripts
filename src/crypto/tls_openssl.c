@@ -709,6 +709,8 @@ void * tls_init(const struct tls_config *conf)
 					   "mode");
 				ERR_load_crypto_strings();
 				ERR_print_errors_fp(stderr);
+				os_free(tls_global);
+				tls_global = NULL;
 				return NULL;
 			} else
 				wpa_printf(MSG_INFO, "Running in FIPS mode");
@@ -717,6 +719,8 @@ void * tls_init(const struct tls_config *conf)
 		if (conf && conf->fips_mode) {
 			wpa_printf(MSG_ERROR, "FIPS mode requested, but not "
 				   "supported");
+			os_free(tls_global);
+			tls_global = NULL;
 			return NULL;
 		}
 #endif /* OPENSSL_FIPS */

@@ -29,6 +29,7 @@
 
 #include "utils/common.h"
 #include "utils/eloop.h"
+#include "crypto/crypto.h"
 #include "sha1.h"
 #include "random.h"
 
@@ -177,6 +178,27 @@ int random_get_bytes(void *buf, size_t len)
 			*bytes++ ^= tmp[i];
 		left -= siz;
 	}
+
+#ifdef CONFIG_FIPS
+	/* Mix in additional entropy from the crypto module */
+	left = len;
+	while (left) {
+		size_t siz, i;
+		u8 tmp[EXTRACT_LEN];
+		if (crypto_get_random(tmp, sizeof(tmp)) < 0) {
+			wpa_printf(MSG_ERROR, "random: No entropy available "
+				   "for generating strong random bytes");
+			return -1;
+		}
+		wpa_hexdump_key(MSG_EXCESSIVE, "random from crypto module",
+				tmp, sizeof(tmp));
+		siz = left > EXTRACT_LEN ? EXTRACT_LEN : left;
+		for (i = 0; i < siz; i++)
+			*bytes++ ^= tmp[i];
+		left -= siz;
+	}
+#endif /* CONFIG_FIPS */
+
 	wpa_hexdump_key(MSG_EXCESSIVE, "mixed random", buf, len);
 
 	if (entropy < len)

@@ -15,6 +15,7 @@
 #include <openssl/evp.h>
 #include <openssl/dh.h>
 #include <openssl/hmac.h>
+#include <openssl/rand.h>
 
 #include "common.h"
 #include "wpabuf.h"
@@ -737,4 +738,12 @@ int hmac_sha1(const u8 *key, size_t key_len, const u8 *data, size_t data_len,
 	       u8 *mac)
 {
 	return hmac_sha1_vector(key, key_len, 1, &data, &data_len, mac);
+}
+
+
+int crypto_get_random(void *buf, size_t len)
+{
+	if (RAND_bytes(buf, len) != 1)
+		return -1;
+	return 0;
 }

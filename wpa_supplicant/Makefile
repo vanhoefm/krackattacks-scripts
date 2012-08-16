@@ -55,6 +55,10 @@ $(DESTDIR)$(BINDIR)/%: %
 install: $(addprefix $(DESTDIR)$(BINDIR)/,$(BINALL))
 	$(MAKE) -C ../src install
 
+ifdef CONFIG_FIPS
+CONFIG_NO_RANDOM_POOL=
+endif
+
 OBJS = config.o
 OBJS += notify.o
 OBJS += bss.o
@@ -1325,6 +1329,9 @@ endif
 
 ifdef CONFIG_FIPS
 CFLAGS += -DCONFIG_FIPS
+ifneq ($(CONFIG_TLS), openssl)
+$(error CONFIG_FIPS=y requires CONFIG_TLS=openssl)
+endif
 endif
 
 OBJS += $(SHA1OBJS) $(DESOBJS)

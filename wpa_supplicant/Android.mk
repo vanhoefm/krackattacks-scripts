@@ -68,6 +68,10 @@ ifdef CONFIG_DRIVER_NL80211
 INCLUDES += external/libnl-headers
 endif
 
+ifdef CONFIG_FIPS
+CONFIG_NO_RANDOM_POOL=
+endif
+
 OBJS = config.c
 OBJS += notify.c
 OBJS += bss.c

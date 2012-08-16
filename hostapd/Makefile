@@ -660,7 +660,9 @@ OBJS += $(AESOBJS)
 endif
 
 ifdef NEED_SHA1
+ifneq ($(CONFIG_TLS), openssl)
 SHA1OBJS += ../src/crypto/sha1.o
+endif
 SHA1OBJS += ../src/crypto/sha1-prf.o
 ifdef CONFIG_INTERNAL_SHA1
 SHA1OBJS += ../src/crypto/sha1-internal.o

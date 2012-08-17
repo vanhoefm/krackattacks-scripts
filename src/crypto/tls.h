@@ -81,6 +81,7 @@ struct tls_config {
 
 #define TLS_CONN_ALLOW_SIGN_RSA_MD5 BIT(0)
 #define TLS_CONN_DISABLE_TIME_CHECKS BIT(1)
+#define TLS_CONN_DISABLE_SESSION_TICKET BIT(2)
 
 /**
  * struct tls_connection_params - Parameters for TLS connection

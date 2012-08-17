@@ -2774,6 +2774,13 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 		return -1;
 	}
 
+#ifdef SSL_OP_NO_TICKET
+	if (params->flags & TLS_CONN_DISABLE_SESSION_TICKET)
+		SSL_set_options(conn->ssl, SSL_OP_NO_TICKET);
+	else
+		SSL_clear_options(conn->ssl, SSL_OP_NO_TICKET);
+#endif /*  SSL_OP_NO_TICKET */
+
 	conn->flags = params->flags;
 
 	tls_get_errors(tls_ctx);
@@ -2808,6 +2815,13 @@ int tls_global_set_params(void *tls_ctx,
 			   params->dh_file);
 		return -1;
 	}
+
+#ifdef SSL_OP_NO_TICKET
+	if (params->flags & TLS_CONN_DISABLE_SESSION_TICKET)
+		SSL_CTX_set_options(ssl_ctx, SSL_OP_NO_TICKET);
+	else
+		SSL_CTX_clear_options(ssl_ctx, SSL_OP_NO_TICKET);
+#endif /*  SSL_OP_NO_TICKET */
 
 	return 0;
 }

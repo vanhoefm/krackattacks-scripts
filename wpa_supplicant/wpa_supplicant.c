@@ -558,8 +558,16 @@ static void wpa_supplicant_start_bgscan(struct wpa_supplicant *wpa_s)
 			 * optimization, so the initial connection is not
 			 * affected.
 			 */
-		} else
+		} else {
+			struct wpa_scan_results *scan_res;
 			wpa_s->bgscan_ssid = wpa_s->current_ssid;
+			scan_res = wpa_supplicant_get_scan_results(wpa_s, NULL,
+								   0);
+			if (scan_res) {
+				bgscan_notify_scan(wpa_s, scan_res);
+				wpa_scan_results_free(scan_res);
+			}
+		}
 	} else
 		wpa_s->bgscan_ssid = NULL;
 }

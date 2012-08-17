@@ -169,7 +169,7 @@ static void * eap_fast_init(struct eap_sm *sm)
 	data->phase2_type.vendor = EAP_VENDOR_IETF;
 	data->phase2_type.method = EAP_TYPE_NONE;
 
-	if (eap_peer_tls_ssl_init(sm, &data->ssl, config)) {
+	if (eap_peer_tls_ssl_init(sm, &data->ssl, config, EAP_TYPE_FAST)) {
 		wpa_printf(MSG_INFO, "EAP-FAST: Failed to initialize SSL.");
 		eap_fast_deinit(sm, data);
 		return NULL;

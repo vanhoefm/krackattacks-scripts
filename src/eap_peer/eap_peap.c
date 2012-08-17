@@ -159,7 +159,7 @@ static void * eap_peap_init(struct eap_sm *sm)
 	data->phase2_type.vendor = EAP_VENDOR_IETF;
 	data->phase2_type.method = EAP_TYPE_NONE;
 
-	if (eap_peer_tls_ssl_init(sm, &data->ssl, config)) {
+	if (eap_peer_tls_ssl_init(sm, &data->ssl, config, EAP_TYPE_PEAP)) {
 		wpa_printf(MSG_INFO, "EAP-PEAP: Failed to initialize SSL.");
 		eap_peap_deinit(sm, data);
 		return NULL;

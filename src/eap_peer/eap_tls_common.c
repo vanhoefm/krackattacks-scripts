@@ -103,6 +103,18 @@ static int eap_tls_params_from_conf(struct eap_sm *sm,
 				    struct eap_peer_config *config, int phase2)
 {
 	os_memset(params, 0, sizeof(*params));
+	if (sm->workaround && data->eap_type != EAP_TYPE_FAST) {
+		/*
+		 * Some deployed authentication servers seem to be unable to
+		 * handle the TLS Session Ticket extension (they are supposed
+		 * to ignore unrecognized TLS extensions, but end up rejecting
+		 * the ClientHello instead). As a workaround, disable use of
+		 * TLS Sesson Ticket extension for EAP-TLS, EAP-PEAP, and
+		 * EAP-TTLS (EAP-FAST uses session ticket, so any server that
+		 * supports EAP-FAST does not need this workaround).
+		 */
+		params->flags |= TLS_CONN_DISABLE_SESSION_TICKET;
+	}
 	if (phase2) {
 		wpa_printf(MSG_DEBUG, "TLS: using phase2 config options");
 		eap_tls_params_from_conf2(params, config);
@@ -186,13 +198,14 @@ static int eap_tls_init_connection(struct eap_sm *sm,
  * @sm: Pointer to EAP state machine allocated with eap_peer_sm_init()
  * @data: Data for TLS processing
  * @config: Pointer to the network configuration
+ * @eap_type: EAP method used in Phase 1 (EAP_TYPE_TLS/PEAP/TTLS/FAST)
  * Returns: 0 on success, -1 on failure
  *
  * This function is used to initialize shared TLS functionality for EAP-TLS,
  * EAP-PEAP, EAP-TTLS, and EAP-FAST.
  */
 int eap_peer_tls_ssl_init(struct eap_sm *sm, struct eap_ssl_data *data,
-			  struct eap_peer_config *config)
+			  struct eap_peer_config *config, u8 eap_type)
 {
 	struct tls_connection_params params;
 
@@ -200,6 +213,7 @@ int eap_peer_tls_ssl_init(struct eap_sm *sm, struct eap_ssl_data *data,
 		return -1;
 
 	data->eap = sm;
+	data->eap_type = eap_type;
 	data->phase2 = sm->init_phase2;
 	data->ssl_ctx = sm->init_phase2 && sm->ssl_ctx2 ? sm->ssl_ctx2 :
 		sm->ssl_ctx;

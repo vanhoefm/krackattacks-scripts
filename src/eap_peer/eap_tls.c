@@ -44,7 +44,7 @@ static void * eap_tls_init(struct eap_sm *sm)
 	data->ssl_ctx = sm->init_phase2 && sm->ssl_ctx2 ? sm->ssl_ctx2 :
 		sm->ssl_ctx;
 
-	if (eap_peer_tls_ssl_init(sm, &data->ssl, config)) {
+	if (eap_peer_tls_ssl_init(sm, &data->ssl, config, EAP_TYPE_TLS)) {
 		wpa_printf(MSG_INFO, "EAP-TLS: Failed to initialize SSL.");
 		eap_tls_deinit(sm, data);
 		if (config->engine) {

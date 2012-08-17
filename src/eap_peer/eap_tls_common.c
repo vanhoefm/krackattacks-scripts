@@ -48,6 +48,10 @@ static void eap_tls_params_flags(struct tls_connection_params *params,
 		params->flags |= TLS_CONN_ALLOW_SIGN_RSA_MD5;
 	if (os_strstr(txt, "tls_disable_time_checks=1"))
 		params->flags |= TLS_CONN_DISABLE_TIME_CHECKS;
+	if (os_strstr(txt, "tls_disable_session_ticket=1"))
+		params->flags |= TLS_CONN_DISABLE_SESSION_TICKET;
+	if (os_strstr(txt, "tls_disable_session_ticket=0"))
+		params->flags &= ~TLS_CONN_DISABLE_SESSION_TICKET;
 }
 
 

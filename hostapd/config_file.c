@@ -1216,6 +1216,14 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 			   "disabled");
 		bss->wps_state = 0;
 	}
+
+	if (bss->wps_state && bss->wpa &&
+	    (!(bss->wpa & 2) ||
+	     !(bss->rsn_pairwise & WPA_CIPHER_CCMP))) {
+		wpa_printf(MSG_INFO, "WPS: WPA/TKIP configuration without "
+			   "WPA2/CCMP forced WPS to be disabled");
+		bss->wps_state = 0;
+	}
 #endif /* CONFIG_WPS2 */
 
 	return 0;

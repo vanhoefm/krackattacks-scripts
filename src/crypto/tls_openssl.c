@@ -2832,6 +2832,7 @@ int tls_connection_get_keyblock_size(void *tls_ctx,
 {
 	const EVP_CIPHER *c;
 	const EVP_MD *h;
+	int md_size;
 
 	if (conn == NULL || conn->ssl == NULL ||
 	    conn->ssl->enc_read_ctx == NULL ||
@@ -2845,9 +2846,20 @@ int tls_connection_get_keyblock_size(void *tls_ctx,
 #else
 	h = conn->ssl->read_hash;
 #endif
+	if (h)
+		md_size = EVP_MD_size(h);
+#if OPENSSL_VERSION_NUMBER >= 0x10000000L
+	else if (conn->ssl->s3)
+		md_size = conn->ssl->s3->tmp.new_mac_secret_size;
+#endif
+	else
+		return -1;
 
+	wpa_printf(MSG_DEBUG, "OpenSSL: keyblock size: key_len=%d MD_size=%d "
+		   "IV_len=%d", EVP_CIPHER_key_length(c), md_size,
+		   EVP_CIPHER_iv_length(c));
 	return 2 * (EVP_CIPHER_key_length(c) +
-		    EVP_MD_size(h) +
+		    md_size +
 		    EVP_CIPHER_iv_length(c));
 }
 

@@ -81,7 +81,17 @@ static struct radius_msg * accounting_msg(struct hostapd_data *hapd,
 	}
 
 	if (sta) {
+		/* Use 802.1X identity if available */
 		val = ieee802_1x_get_identity(sta->eapol_sm, &len);
+
+		/* Use RADIUS ACL identity if 802.1X provides no identity */
+		if (!val && sta->identity) {
+			val = (u8 *) sta->identity;
+			len = os_strlen(sta->identity);
+		}
+
+		/* Use STA MAC if neither 802.1X nor RADIUS ACL provided
+		 * identity */
 		if (!val) {
 			os_snprintf(buf, sizeof(buf), RADIUS_ADDR_FORMAT,
 				    MAC2STR(sta->addr));
@@ -120,6 +130,15 @@ static struct radius_msg * accounting_msg(struct hostapd_data *hapd,
 					 RADIUS_ATTR_CHARGEABLE_USER_IDENTITY,
 					 wpabuf_head(b), wpabuf_len(b))) {
 			wpa_printf(MSG_ERROR, "Could not add CUI");
+			goto fail;
+		}
+
+		if (!b && sta->radius_cui &&
+		    !radius_msg_add_attr(msg,
+					 RADIUS_ATTR_CHARGEABLE_USER_IDENTITY,
+					 (u8 *) sta->radius_cui,
+					 os_strlen(sta->radius_cui))) {
+			wpa_printf(MSG_ERROR, "Could not add CUI from ACL");
 			goto fail;
 		}
 	}

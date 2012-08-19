@@ -127,8 +127,11 @@ fail:
 		return NULL;
 
 	if (error) {
-		radius_msg_add_attr_int32(reply, RADIUS_ATTR_ERROR_CAUSE,
-					  error);
+		if (!radius_msg_add_attr_int32(reply, RADIUS_ATTR_ERROR_CAUSE,
+					       error)) {
+			radius_msg_free(reply);
+			return NULL;
+		}
 	}
 
 	return reply;
@@ -225,7 +228,12 @@ static void radius_das_receive(int sock, void *eloop_ctx, void *sock_ctx)
 			break;
 
 		/* Unsupported Service */
-		radius_msg_add_attr_int32(reply, RADIUS_ATTR_ERROR_CAUSE, 405);
+		if (!radius_msg_add_attr_int32(reply, RADIUS_ATTR_ERROR_CAUSE,
+					       405)) {
+			radius_msg_free(reply);
+			reply = NULL;
+			break;
+		}
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "DAS: Unexpected RADIUS code %u in "

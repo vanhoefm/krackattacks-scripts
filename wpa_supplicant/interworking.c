@@ -1395,7 +1395,8 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 		if (interworking_find_network_match(wpa_s)) {
 			wpa_printf(MSG_DEBUG, "Interworking: Possible BSS "
 				   "match for enabled network configurations");
-			interworking_reconnect(wpa_s);
+			if (wpa_s->auto_select)
+				interworking_reconnect(wpa_s);
 			return;
 		}
 

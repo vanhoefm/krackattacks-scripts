@@ -567,25 +567,21 @@ static int hostapd_parse_das_client(struct hostapd_bss_config *bss,
 				    const char *val)
 {
 	char *secret;
-	size_t len;
 
 	secret = os_strchr(val, ' ');
 	if (secret == NULL)
 		return -1;
 
 	secret++;
-	len = os_strlen(secret);
 
 	if (hostapd_parse_ip_addr(val, &bss->radius_das_client_addr))
 		return -1;
 
 	os_free(bss->radius_das_shared_secret);
-	bss->radius_das_shared_secret = os_malloc(len);
+	bss->radius_das_shared_secret = (u8 *) os_strdup(secret);
 	if (bss->radius_das_shared_secret == NULL)
 		return -1;
-
-	os_memcpy(bss->radius_das_shared_secret, secret, len);
-	bss->radius_das_shared_secret_len = len;
+	bss->radius_das_shared_secret_len = os_strlen(secret);
 
 	return 0;
 }

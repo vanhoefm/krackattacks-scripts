@@ -73,29 +73,26 @@ static int hostapd_acl_cache_get(struct hostapd_data *hapd, const u8 *addr,
 	struct os_time now;
 
 	os_get_time(&now);
-	entry = hapd->acl_cache;
 
-	while (entry) {
-		if (os_memcmp(entry->addr, addr, ETH_ALEN) == 0) {
-			if (now.sec - entry->timestamp > RADIUS_ACL_TIMEOUT)
-				return -1; /* entry has expired */
-			if (entry->accepted == HOSTAPD_ACL_ACCEPT_TIMEOUT)
-				if (session_timeout)
-					*session_timeout =
-						entry->session_timeout;
-			if (acct_interim_interval)
-				*acct_interim_interval =
-					entry->acct_interim_interval;
-			if (vlan_id)
-				*vlan_id = entry->vlan_id;
-			if (psk)
-				os_memcpy(psk, entry->psk, PMK_LEN);
-			if (has_psk)
-				*has_psk = entry->has_psk;
-			return entry->accepted;
-		}
+	for (entry = hapd->acl_cache; entry; entry = entry->next) {
+		if (os_memcmp(entry->addr, addr, ETH_ALEN) != 0)
+			continue;
 
-		entry = entry->next;
+		if (now.sec - entry->timestamp > RADIUS_ACL_TIMEOUT)
+			return -1; /* entry has expired */
+		if (entry->accepted == HOSTAPD_ACL_ACCEPT_TIMEOUT)
+			if (session_timeout)
+				*session_timeout = entry->session_timeout;
+		if (acct_interim_interval)
+			*acct_interim_interval =
+				entry->acct_interim_interval;
+		if (vlan_id)
+			*vlan_id = entry->vlan_id;
+		if (psk)
+			os_memcpy(psk, entry->psk, PMK_LEN);
+		if (has_psk)
+			*has_psk = entry->has_psk;
+		return entry->accepted;
 	}
 
 	return -1;

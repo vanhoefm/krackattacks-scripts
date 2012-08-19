@@ -407,8 +407,11 @@ void * eap_sim_db_init(const char *config,
 		goto fail;
 
 	if (os_strncmp(data->fname, "unix:", 5) == 0) {
-		if (eap_sim_db_open_socket(data))
-			goto fail;
+		if (eap_sim_db_open_socket(data)) {
+			wpa_printf(MSG_DEBUG, "EAP-SIM DB: External database "
+				   "connection not available - will retry "
+				   "later");
+		}
 	}
 
 	return data;

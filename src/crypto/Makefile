@@ -31,7 +31,6 @@ LIB_OBJS= \
 	md4-internal.o \
 	md5.o \
 	md5-internal.o \
-	md5-non-fips.o \
 	milenage.o \
 	ms_funcs.o \
 	rc4.o \

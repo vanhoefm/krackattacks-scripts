@@ -354,16 +354,6 @@ static int wpa_supplicant_wps_cred(void *ctx,
 		ssid->key_mgmt = WPA_KEY_MGMT_PSK;
 		ssid->proto = WPA_PROTO_WPA;
 		break;
-	case WPS_AUTH_WPA:
-		ssid->auth_alg = WPA_AUTH_ALG_OPEN;
-		ssid->key_mgmt = WPA_KEY_MGMT_IEEE8021X;
-		ssid->proto = WPA_PROTO_WPA;
-		break;
-	case WPS_AUTH_WPA2:
-		ssid->auth_alg = WPA_AUTH_ALG_OPEN;
-		ssid->key_mgmt = WPA_KEY_MGMT_IEEE8021X;
-		ssid->proto = WPA_PROTO_RSN;
-		break;
 	case WPS_AUTH_WPA2PSK:
 		ssid->auth_alg = WPA_AUTH_ALG_OPEN;
 		ssid->key_mgmt = WPA_KEY_MGMT_PSK;

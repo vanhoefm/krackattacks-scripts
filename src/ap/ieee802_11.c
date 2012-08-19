@@ -311,6 +311,8 @@ static void handle_auth(struct hostapd_data *hapd,
 	int has_psk = 0;
 	u8 resp_ies[2 + WLAN_AUTH_CHALLENGE_LEN];
 	size_t resp_ies_len = 0;
+	char *identity = NULL;
+	char *radius_cui = NULL;
 
 	if (len < IEEE80211_HDRLEN + sizeof(mgmt->u.auth)) {
 		printf("handle_auth - too short payload (len=%lu)\n",
@@ -372,7 +374,7 @@ static void handle_auth(struct hostapd_data *hapd,
 	res = hostapd_allowed_address(hapd, mgmt->sa, (u8 *) mgmt, len,
 				      &session_timeout,
 				      &acct_interim_interval, &vlan_id,
-				      psk, &has_psk);
+				      psk, &has_psk, &identity, &radius_cui);
 
 	if (res == HOSTAPD_ACL_REJECT) {
 		printf("Station " MACSTR " not allowed to authenticate.\n",
@@ -420,6 +422,11 @@ static void handle_auth(struct hostapd_data *hapd,
 		os_free(sta->psk);
 		sta->psk = NULL;
 	}
+
+	sta->identity = identity;
+	identity = NULL;
+	sta->radius_cui = radius_cui;
+	radius_cui = NULL;
 
 	sta->flags &= ~WLAN_STA_PREAUTH;
 	ieee802_1x_notify_pre_auth(sta->eapol_sm, 0);
@@ -482,6 +489,9 @@ static void handle_auth(struct hostapd_data *hapd,
 	}
 
  fail:
+	os_free(identity);
+	os_free(radius_cui);
+
 	send_auth_reply(hapd, mgmt->sa, mgmt->bssid, auth_alg,
 			auth_transaction + 1, resp, resp_ies, resp_ies_len);
 }

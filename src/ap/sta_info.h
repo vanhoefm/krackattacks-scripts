@@ -97,6 +97,9 @@ struct sta_info {
 	int vlan_id;
 	u8 *psk; /* PSK from RADIUS authentication server */
 
+	char *identity; /* User-Name from RADIUS */
+	char *radius_cui; /* Chargeable-User-Identity from RADIUS */
+
 	struct ieee80211_ht_capabilities *ht_capabilities;
 	struct ieee80211_vht_capabilities *vht_capabilities;
 

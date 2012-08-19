@@ -77,7 +77,8 @@ static void hostapd_acl_cache_free(struct hostapd_cached_radius_acl *acl_cache)
 static int hostapd_acl_cache_get(struct hostapd_data *hapd, const u8 *addr,
 				 u32 *session_timeout,
 				 u32 *acct_interim_interval, int *vlan_id,
-				 u8 *psk, int *has_psk)
+				 u8 *psk, int *has_psk, char **identity,
+				 char **radius_cui)
 {
 	struct hostapd_cached_radius_acl *entry;
 	struct os_time now;
@@ -102,6 +103,18 @@ static int hostapd_acl_cache_get(struct hostapd_data *hapd, const u8 *addr,
 			os_memcpy(psk, entry->psk, PMK_LEN);
 		if (has_psk)
 			*has_psk = entry->has_psk;
+		if (identity) {
+			if (entry->identity)
+				*identity = os_strdup(entry->identity);
+			else
+				*identity = NULL;
+		}
+		if (radius_cui) {
+			if (entry->radius_cui)
+				*radius_cui = os_strdup(entry->radius_cui);
+			else
+				*radius_cui = NULL;
+		}
 		return entry->accepted;
 	}
 
@@ -189,12 +202,18 @@ static int hostapd_radius_acl_query(struct hostapd_data *hapd, const u8 *addr,
  * @vlan_id: Buffer for returning VLAN ID
  * @psk: Buffer for returning WPA PSK
  * @has_psk: Buffer for indicating whether psk was filled
+ * @identity: Buffer for returning identity (from RADIUS)
+ * @radius_cui: Buffer for returning CUI (from RADIUS)
  * Returns: HOSTAPD_ACL_ACCEPT, HOSTAPD_ACL_REJECT, or HOSTAPD_ACL_PENDING
+ *
+ * The caller is responsible for freeing the returned *identity and *radius_cui
+ * values with os_free().
  */
 int hostapd_allowed_address(struct hostapd_data *hapd, const u8 *addr,
 			    const u8 *msg, size_t len, u32 *session_timeout,
 			    u32 *acct_interim_interval, int *vlan_id,
-			    u8 *psk, int *has_psk)
+			    u8 *psk, int *has_psk, char **identity,
+			    char **radius_cui)
 {
 	if (session_timeout)
 		*session_timeout = 0;
@@ -206,6 +225,10 @@ int hostapd_allowed_address(struct hostapd_data *hapd, const u8 *addr,
 		*has_psk = 0;
 	if (psk)
 		os_memset(psk, 0, PMK_LEN);
+	if (identity)
+		*identity = NULL;
+	if (radius_cui)
+		*radius_cui = NULL;
 
 	if (hostapd_maclist_found(hapd->conf->accept_mac,
 				  hapd->conf->num_accept_mac, addr, vlan_id))
@@ -230,7 +253,8 @@ int hostapd_allowed_address(struct hostapd_data *hapd, const u8 *addr,
 		/* Check whether ACL cache has an entry for this station */
 		int res = hostapd_acl_cache_get(hapd, addr, session_timeout,
 						acct_interim_interval,
-						vlan_id, psk, has_psk);
+						vlan_id, psk, has_psk,
+						identity, radius_cui);
 		if (res == HOSTAPD_ACL_ACCEPT ||
 		    res == HOSTAPD_ACL_ACCEPT_TIMEOUT)
 			return res;
@@ -242,6 +266,14 @@ int hostapd_allowed_address(struct hostapd_data *hapd, const u8 *addr,
 			if (os_memcmp(query->addr, addr, ETH_ALEN) == 0) {
 				/* pending query in RADIUS retransmit queue;
 				 * do not generate a new one */
+				if (identity) {
+					os_free(*identity);
+					*identity = NULL;
+				}
+				if (radius_cui) {
+					os_free(*radius_cui);
+					*radius_cui = NULL;
+				}
 				return HOSTAPD_ACL_PENDING;
 			}
 			query = query->next;

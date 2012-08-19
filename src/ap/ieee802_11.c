@@ -586,35 +586,20 @@ static u16 copy_supp_rates(struct hostapd_data *hapd, struct sta_info *sta,
 		return WLAN_STATUS_UNSPECIFIED_FAILURE;
 	}
 
-	if (elems->supp_rates_len > sizeof(sta->supported_rates)) {
+	if (elems->supp_rates_len + elems->ext_supp_rates_len >
+	    sizeof(sta->supported_rates)) {
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_DEBUG,
-			       "Invalid supported rates element length %d",
-			       elems->supp_rates_len);
+			       "Invalid supported rates element length %d+%d",
+			       elems->supp_rates_len,
+			       elems->ext_supp_rates_len);
 		return WLAN_STATUS_UNSPECIFIED_FAILURE;
 	}
 
-	os_memset(sta->supported_rates, 0, sizeof(sta->supported_rates));
-	os_memcpy(sta->supported_rates, elems->supp_rates,
-		  elems->supp_rates_len);
-	sta->supported_rates_len = elems->supp_rates_len;
-
-	if (elems->ext_supp_rates) {
-		if (elems->supp_rates_len + elems->ext_supp_rates_len >
-		    sizeof(sta->supported_rates)) {
-			hostapd_logger(hapd, sta->addr,
-				       HOSTAPD_MODULE_IEEE80211,
-				       HOSTAPD_LEVEL_DEBUG,
-				       "Invalid supported rates element length"
-				       " %d+%d", elems->supp_rates_len,
-				       elems->ext_supp_rates_len);
-			return WLAN_STATUS_UNSPECIFIED_FAILURE;
-		}
-
-		os_memcpy(sta->supported_rates + elems->supp_rates_len,
-			  elems->ext_supp_rates, elems->ext_supp_rates_len);
-		sta->supported_rates_len += elems->ext_supp_rates_len;
-	}
+	sta->supported_rates_len = merge_byte_arrays(
+		sta->supported_rates, sizeof(sta->supported_rates),
+		elems->supp_rates, elems->supp_rates_len,
+		elems->ext_supp_rates, elems->ext_supp_rates_len);
 
 	return WLAN_STATUS_SUCCESS;
 }

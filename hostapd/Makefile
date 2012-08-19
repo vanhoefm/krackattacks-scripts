@@ -884,6 +884,11 @@ ifdef TLS_FUNCS
 LIBS_n += -lcrypto
 endif
 
+ifdef CONFIG_SQLITE
+CFLAGS += -DCONFIG_SQLITE
+LIBS_h += -lsqlite3
+endif
+
 HOBJS += hlr_auc_gw.o ../src/utils/common.o ../src/utils/wpa_debug.o ../src/utils/os_$(CONFIG_OS).o ../src/utils/wpabuf.o ../src/crypto/milenage.o
 HOBJS += ../src/crypto/aes-encblock.o
 ifdef CONFIG_INTERNAL_AES

@@ -264,3 +264,6 @@ CONFIG_IPV6=y
 
 # Hotspot 2.0
 #CONFIG_HS20=y
+
+# Enable SQLite database support in hlr_auc_gw
+#CONFIG_SQLITE=y

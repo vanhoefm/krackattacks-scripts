@@ -1226,6 +1226,17 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 	}
 #endif /* CONFIG_WPS2 */
 
+#ifdef CONFIG_HS20
+	if (bss->hs20 &&
+	    (!(bss->wpa & 2) ||
+	     !(bss->rsn_pairwise & WPA_CIPHER_CCMP))) {
+		wpa_printf(MSG_ERROR, "HS 2.0: WPA2-Enterprise/CCMP "
+			   "configuration is required for Hotspot 2.0 "
+			   "functionality");
+		return -1;
+	}
+#endif /* CONFIG_HS20 */
+
 	return 0;
 }
 

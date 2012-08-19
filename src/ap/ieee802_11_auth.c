@@ -38,6 +38,8 @@ struct hostapd_cached_radius_acl {
 	int vlan_id;
 	int has_psk;
 	u8 psk[PMK_LEN];
+	char *identity;
+	char *radius_cui;
 };
 
 
@@ -52,6 +54,14 @@ struct hostapd_acl_query_data {
 
 
 #ifndef CONFIG_NO_RADIUS
+static void hostapd_acl_cache_free_entry(struct hostapd_cached_radius_acl *e)
+{
+	os_free(e->identity);
+	os_free(e->radius_cui);
+	os_free(e);
+}
+
+
 static void hostapd_acl_cache_free(struct hostapd_cached_radius_acl *acl_cache)
 {
 	struct hostapd_cached_radius_acl *prev;
@@ -59,7 +69,7 @@ static void hostapd_acl_cache_free(struct hostapd_cached_radius_acl *acl_cache)
 	while (acl_cache) {
 		prev = acl_cache;
 		acl_cache = acl_cache->next;
-		os_free(prev);
+		hostapd_acl_cache_free_entry(prev);
 	}
 }
 
@@ -297,7 +307,7 @@ static void hostapd_acl_expire_cache(struct hostapd_data *hapd, os_time_t now)
 			hostapd_drv_set_radius_acl_expire(hapd, entry->addr);
 			tmp = entry;
 			entry = entry->next;
-			os_free(tmp);
+			hostapd_acl_cache_free_entry(tmp);
 			continue;
 		}
 
@@ -414,6 +424,8 @@ hostapd_acl_recv_radius(struct radius_msg *msg, struct radius_msg *req,
 	if (hdr->code == RADIUS_CODE_ACCESS_ACCEPT) {
 		int passphraselen;
 		char *passphrase;
+		u8 *buf;
+		size_t len;
 
 		if (radius_msg_get_attr_int32(msg, RADIUS_ATTR_SESSION_TIMEOUT,
 					      &cache->session_timeout) == 0)
@@ -454,6 +466,19 @@ hostapd_acl_recv_radius(struct radius_msg *msg, struct radius_msg *req,
 				os_free(strpassphrase);
 			}
 			os_free(passphrase);
+		}
+		if (radius_msg_get_attr_ptr(msg, RADIUS_ATTR_USER_NAME,
+					    &buf, &len, NULL) == 0) {
+			cache->identity = os_zalloc(len + 1);
+			if (cache->identity)
+				os_memcpy(cache->identity, buf, len);
+		}
+		if (radius_msg_get_attr_ptr(
+			    msg, RADIUS_ATTR_CHARGEABLE_USER_IDENTITY,
+			    &buf, &len, NULL) == 0) {
+			cache->radius_cui = os_zalloc(len + 1);
+			if (cache->radius_cui)
+				os_memcpy(cache->radius_cui, buf, len);
 		}
 
 		if (hapd->conf->wpa_psk_radius == PSK_RADIUS_REQUIRED &&

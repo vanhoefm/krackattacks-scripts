@@ -757,7 +757,8 @@ SM_STEP(CTRL_DIR)
 struct eapol_state_machine *
 eapol_auth_alloc(struct eapol_authenticator *eapol, const u8 *addr,
 		 int flags, const struct wpabuf *assoc_wps_ie,
-		 const struct wpabuf *assoc_p2p_ie, void *sta_ctx)
+		 const struct wpabuf *assoc_p2p_ie, void *sta_ctx,
+		 const char *identity, const char *radius_cui)
 {
 	struct eapol_state_machine *sm;
 	struct eap_config eap_conf;
@@ -837,6 +838,15 @@ eapol_auth_alloc(struct eapol_authenticator *eapol, const u8 *addr,
 	sm->eap_if = eap_get_interface(sm->eap);
 
 	eapol_auth_initialize(sm);
+
+	if (identity) {
+		sm->identity = (u8 *) os_strdup(identity);
+		if (sm->identity)
+			sm->identity_len = os_strlen(identity);
+	}
+	if (radius_cui)
+		sm->radius_cui = wpabuf_alloc_copy(radius_cui,
+						   os_strlen(radius_cui));
 
 	return sm;
 }

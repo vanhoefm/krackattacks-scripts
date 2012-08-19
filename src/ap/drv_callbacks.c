@@ -692,7 +692,7 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 #ifndef CONFIG_NO_STDOUT_DEBUG
 	int level = MSG_DEBUG;
 
-	if (event == EVENT_RX_MGMT && data && data->rx_mgmt.frame &&
+	if (event == EVENT_RX_MGMT && data->rx_mgmt.frame &&
 	    data->rx_mgmt.frame_len >= 24) {
 		const struct ieee80211_hdr *hdr;
 		u16 fc;

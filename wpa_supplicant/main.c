@@ -101,20 +101,31 @@ static void license(void)
 }
 
 
-static void wpa_supplicant_fd_workaround(void)
+static void wpa_supplicant_fd_workaround(int start)
 {
 #ifdef __linux__
-	int s, i;
+	static int fd[3] = { -1, -1, -1 };
+	int i;
 	/* When started from pcmcia-cs scripts, wpa_supplicant might start with
 	 * fd 0, 1, and 2 closed. This will cause some issues because many
 	 * places in wpa_supplicant are still printing out to stdout. As a
 	 * workaround, make sure that fd's 0, 1, and 2 are not used for other
 	 * sockets. */
-	for (i = 0; i < 3; i++) {
-		s = open("/dev/null", O_RDWR);
-		if (s > 2) {
-			close(s);
-			break;
+	if (start) {
+		for (i = 0; i < 3; i++) {
+			fd[i] = open("/dev/null", O_RDWR);
+			if (fd[i] > 2) {
+				close(fd[i]);
+				fd[i] = -1;
+				break;
+			}
+		}
+	} else {
+		for (i = 0; i < 3; i++) {
+			if (fd[i] >= 0) {
+				close(fd[i]);
+				fd[i] = -1;
+			}
 		}
 	}
 #endif /* __linux__ */
@@ -140,7 +151,7 @@ int main(int argc, char *argv[])
 		return -1;
 	iface_count = 1;
 
-	wpa_supplicant_fd_workaround();
+	wpa_supplicant_fd_workaround(1);
 
 	for (;;) {
 		c = getopt(argc, argv,
@@ -288,6 +299,7 @@ int main(int argc, char *argv[])
 	wpa_supplicant_deinit(global);
 
 out:
+	wpa_supplicant_fd_workaround(0);
 	os_free(ifaces);
 	os_free(params.pid_file);
 

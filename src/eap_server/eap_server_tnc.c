@@ -9,7 +9,6 @@
 #include "includes.h"
 
 #include "common.h"
-#include "base64.h"
 #include "eap_i.h"
 #include "tncs.h"
 

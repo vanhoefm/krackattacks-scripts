@@ -1014,6 +1014,16 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 		return -1;
 	}
 
+	if (!wpa_bss_get_ie(bss, WLAN_EID_RSN)) {
+		/*
+		 * We currently support only HS 2.0 networks and those are
+		 * required to use WPA2-Enterprise.
+		 */
+		wpa_printf(MSG_DEBUG, "Interworking: Network does not use "
+			   "RSN");
+		return -1;
+	}
+
 	cred = interworking_credentials_available_roaming_consortium(wpa_s,
 								     bss);
 	if (cred)
@@ -1367,6 +1377,16 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 		cred = interworking_credentials_available(wpa_s, bss);
 		if (!cred)
 			continue;
+		if (!wpa_bss_get_ie(bss, WLAN_EID_RSN)) {
+			/*
+			 * We currently support only HS 2.0 networks and those
+			 * are required to use WPA2-Enterprise.
+			 */
+			wpa_printf(MSG_DEBUG, "Interworking: Credential match "
+				   "with " MACSTR " but network does not use "
+				   "RSN", MAC2STR(bss->bssid));
+			continue;
+		}
 		count++;
 		res = interworking_home_sp(wpa_s, bss->anqp_domain_name);
 		if (res > 0)

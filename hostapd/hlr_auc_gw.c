@@ -577,6 +577,7 @@ static void aka_req_auth(int s, struct sockaddr_un *from, socklen_t fromlen,
 	size_t res_len;
 	int ret;
 	struct milenage_parameters *m;
+	int failed = 0;
 
 	m = get_milenage(imsi);
 	if (m) {
@@ -601,7 +602,7 @@ static void aka_req_auth(int s, struct sockaddr_un *from, socklen_t fromlen,
 		memset(res, '2', EAP_AKA_RES_MAX_LEN);
 		res_len = EAP_AKA_RES_MAX_LEN;
 #else /* AKA_USE_FIXED_TEST_VALUES */
-		return;
+		failed = 1;
 #endif /* AKA_USE_FIXED_TEST_VALUES */
 	}
 
@@ -611,6 +612,13 @@ static void aka_req_auth(int s, struct sockaddr_un *from, socklen_t fromlen,
 	if (ret < 0 || ret >= end - pos)
 		return;
 	pos += ret;
+	if (failed) {
+		ret = snprintf(pos, end - pos, "FAILURE");
+		if (ret < 0 || ret >= end - pos)
+			return;
+		pos += ret;
+		goto done;
+	}
 	pos += wpa_snprintf_hex(pos, end - pos, _rand, EAP_AKA_RAND_LEN);
 	*pos++ = ' ';
 	pos += wpa_snprintf_hex(pos, end - pos, autn, EAP_AKA_AUTN_LEN);
@@ -621,6 +629,7 @@ static void aka_req_auth(int s, struct sockaddr_un *from, socklen_t fromlen,
 	*pos++ = ' ';
 	pos += wpa_snprintf_hex(pos, end - pos, res, res_len);
 
+done:
 	printf("Send: %s\n", reply);
 
 	if (sendto(s, reply, pos - reply, 0, (struct sockaddr *) from,

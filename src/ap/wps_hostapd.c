@@ -13,7 +13,6 @@
 #include "utils/uuid.h"
 #include "crypto/dh_groups.h"
 #include "crypto/dh_group5.h"
-#include "crypto/random.h"
 #include "common/wpa_ctrl.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"

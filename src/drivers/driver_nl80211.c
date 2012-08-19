@@ -7650,7 +7650,10 @@ static int i802_set_wds_sta(void *priv, const u8 *addr, int aid, int val,
 					    bridge_ifname, name) < 0)
 				return -1;
 		}
-		linux_set_iface_flags(drv->global->ioctl_sock, name, 1);
+		if (linux_set_iface_flags(drv->global->ioctl_sock, name, 1)) {
+			wpa_printf(MSG_ERROR, "nl80211: Failed to set WDS STA "
+				   "interface %s up", name);
+		}
 		return i802_set_sta_vlan(priv, addr, name, 0);
 	} else {
 		i802_set_sta_vlan(priv, addr, bss->ifname, 0);

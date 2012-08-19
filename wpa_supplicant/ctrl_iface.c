@@ -1124,7 +1124,9 @@ static int wpa_supplicant_ctrl_iface_status(struct wpa_supplicant *wpa_s,
 
 #ifdef CONFIG_HS20
 	if (wpa_s->current_bss &&
-	    wpa_bss_get_vendor_ie(wpa_s->current_bss, HS20_IE_VENDOR_TYPE)) {
+	    wpa_bss_get_vendor_ie(wpa_s->current_bss, HS20_IE_VENDOR_TYPE) &&
+	    wpa_s->wpa_proto == WPA_PROTO_RSN &&
+	    wpa_key_mgmt_wpa_ieee8021x(wpa_s->key_mgmt)) {
 		ret = os_snprintf(pos, end - pos, "hs20=1\n");
 		if (ret < 0 || ret >= end - pos)
 			return pos - buf;
@@ -1623,7 +1625,7 @@ static int wpa_supplicant_ctrl_iface_scan_result(
 		pos += ret;
 	}
 #ifdef CONFIG_HS20
-	if (wpa_bss_get_vendor_ie(bss, HS20_IE_VENDOR_TYPE)) {
+	if (wpa_bss_get_vendor_ie(bss, HS20_IE_VENDOR_TYPE) && ie2) {
 		ret = os_snprintf(pos, end - pos, "[HS20]");
 		if (ret < 0 || ret >= end - pos)
 			return -1;

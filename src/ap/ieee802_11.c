@@ -1351,7 +1351,10 @@ static void handle_action(struct hostapd_data *hapd,
 		os_memcpy(resp->bssid, hapd->own_addr, ETH_ALEN);
 		resp->u.action.category |= 0x80;
 
-		hostapd_drv_send_mlme(hapd, resp, len, 0);
+		if (hostapd_drv_send_mlme(hapd, resp, len, 0) < 0) {
+			wpa_printf(MSG_ERROR, "IEEE 802.11: Failed to send "
+				   "Action frame");
+		}
 		os_free(resp);
 	}
 }

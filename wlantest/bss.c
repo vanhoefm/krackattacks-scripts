@@ -92,7 +92,7 @@ int bss_add_pmk_from_passphrase(struct wlantest_bss *bss,
 	pmk = os_zalloc(sizeof(*pmk));
 	if (pmk == NULL)
 		return -1;
-	if (pbkdf2_sha1(passphrase, (char *) bss->ssid, bss->ssid_len, 4096,
+	if (pbkdf2_sha1(passphrase, bss->ssid, bss->ssid_len, 4096,
 			pmk->pmk, sizeof(pmk->pmk)) < 0) {
 		os_free(pmk);
 		return -1;

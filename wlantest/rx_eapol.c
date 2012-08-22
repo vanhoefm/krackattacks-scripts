@@ -648,7 +648,6 @@ static void rx_data_eapol_key_1_of_2(struct wlantest *wt, const u8 *dst,
 	struct wlantest_sta *sta;
 	const struct ieee802_1x_hdr *eapol;
 	const struct wpa_eapol_key *hdr;
-	const u8 *key_data;
 	u16 key_info, ver;
 	u8 *decrypted;
 	size_t decrypted_len = 0;
@@ -679,7 +678,6 @@ static void rx_data_eapol_key_1_of_2(struct wlantest *wt, const u8 *dst,
 	}
 	wpa_printf(MSG_DEBUG, "Valid MIC found in EAPOL-Key 1/2");
 
-	key_data = (const u8 *) (hdr + 1);
 	if (sta->proto & WPA_PROTO_RSN &&
 	    !(key_info & WPA_KEY_INFO_ENCR_KEY_DATA)) {
 		wpa_printf(MSG_INFO, "EAPOL-Key 1/2 without EncrKeyData bit");

@@ -19,7 +19,7 @@
 #endif /* TEST_PENDING_REQUEST */
 
 
-#define EAP_VENDOR_ID 0xfffefd
+#define EAP_VENDOR_ID EAP_VENDOR_HOSTAP
 #define EAP_VENDOR_TYPE 0xfcfbfaf9
 
 

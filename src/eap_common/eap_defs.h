@@ -71,7 +71,8 @@ typedef enum {
 enum {
 	EAP_VENDOR_IETF = 0,
 	EAP_VENDOR_MICROSOFT = 0x000137 /* Microsoft */,
-	EAP_VENDOR_WFA = 0x00372A /* Wi-Fi Alliance */
+	EAP_VENDOR_WFA = 0x00372A /* Wi-Fi Alliance */,
+	EAP_VENDOR_HOSTAP = 39068 /* hostapd/wpa_supplicant project */
 };
 
 #define EAP_MSK_LEN 64

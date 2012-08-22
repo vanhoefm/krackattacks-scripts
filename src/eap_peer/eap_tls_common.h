@@ -85,6 +85,9 @@ struct eap_ssl_data {
  /* could be up to 128 bytes, but only the first 64 bytes are used */
 #define EAP_TLS_KEY_LEN 64
 
+/* dummy type used as a flag for UNAUTH-TLS */
+#define EAP_UNAUTH_TLS_TYPE 255
+
 
 int eap_peer_tls_ssl_init(struct eap_sm *sm, struct eap_ssl_data *data,
 			  struct eap_peer_config *config, u8 eap_type);

@@ -39,6 +39,11 @@ int eap_server_register_methods(void)
 		ret = eap_server_tls_register();
 #endif /* EAP_SERVER_TLS */
 
+#ifdef EAP_SERVER_UNAUTH_TLS
+	if (ret == 0)
+		ret = eap_server_unauth_tls_register();
+#endif /* EAP_SERVER_TLS */
+
 #ifdef EAP_SERVER_MSCHAPV2
 	if (ret == 0)
 		ret = eap_server_mschapv2_register();

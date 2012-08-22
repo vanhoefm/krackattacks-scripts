@@ -223,6 +223,14 @@ OBJS += ../src/eap_server/eap_server_tls.o
 TLS_FUNCS=y
 endif
 
+ifdef CONFIG_EAP_UNAUTH_TLS
+CFLAGS += -DEAP_SERVER_UNAUTH_TLS
+ifndef CONFIG_EAP_TLS
+OBJS += ../src/eap_server/eap_server_tls.o
+TLS_FUNCS=y
+endif
+endif
+
 ifdef CONFIG_EAP_PEAP
 CFLAGS += -DEAP_SERVER_PEAP
 OBJS += ../src/eap_server/eap_server_peap.o

@@ -85,6 +85,7 @@ static inline int eap_peer_method_unload(struct eap_method *method)
 /* EAP peer method registration calls for statically linked in methods */
 int eap_peer_md5_register(void);
 int eap_peer_tls_register(void);
+int eap_peer_unauth_tls_register(void);
 int eap_peer_mschapv2_register(void);
 int eap_peer_peap_register(void);
 int eap_peer_ttls_register(void);

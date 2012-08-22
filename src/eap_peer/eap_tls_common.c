@@ -16,6 +16,18 @@
 #include "eap_config.h"
 
 
+static struct wpabuf * eap_tls_msg_alloc(EapType type, size_t payload_len,
+					 u8 code, u8 identifier)
+{
+	if (type == EAP_UNAUTH_TLS_TYPE)
+		return eap_msg_alloc(EAP_VENDOR_UNAUTH_TLS,
+				     EAP_VENDOR_TYPE_UNAUTH_TLS, payload_len,
+				     code, identifier);
+	return eap_msg_alloc(EAP_VENDOR_IETF, type, payload_len, code,
+			     identifier);
+}
+
+
 static int eap_tls_check_blob(struct eap_sm *sm, const char **name,
 			      const u8 **data, size_t *data_len)
 {
@@ -538,9 +550,8 @@ static int eap_tls_process_output(struct eap_ssl_data *data, EapType eap_type,
 		length_included = 1;
 	}
 
-	*out_data = eap_msg_alloc(EAP_VENDOR_IETF, eap_type,
-				  1 + length_included * 4 + len,
-				  EAP_CODE_RESPONSE, id);
+	*out_data = eap_tls_msg_alloc(eap_type, 1 + length_included * 4 + len,
+				      EAP_CODE_RESPONSE, id);
 	if (*out_data == NULL)
 		return -1;
 
@@ -678,8 +689,7 @@ struct wpabuf * eap_peer_tls_build_ack(u8 id, EapType eap_type,
 {
 	struct wpabuf *resp;
 
-	resp = eap_msg_alloc(EAP_VENDOR_IETF, eap_type, 1, EAP_CODE_RESPONSE,
-			     id);
+	resp = eap_tls_msg_alloc(eap_type, 1, EAP_CODE_RESPONSE, id);
 	if (resp == NULL)
 		return NULL;
 	wpa_printf(MSG_DEBUG, "SSL: Building ACK (type=%d id=%d ver=%d)",
@@ -772,7 +782,13 @@ const u8 * eap_peer_tls_process_init(struct eap_sm *sm,
 		return NULL;
 	}
 
-	pos = eap_hdr_validate(EAP_VENDOR_IETF, eap_type, reqData, &left);
+	if (eap_type == EAP_UNAUTH_TLS_TYPE)
+		pos = eap_hdr_validate(EAP_VENDOR_UNAUTH_TLS,
+				       EAP_VENDOR_TYPE_UNAUTH_TLS, reqData,
+				       &left);
+	else
+		pos = eap_hdr_validate(EAP_VENDOR_IETF, eap_type, reqData,
+				       &left);
 	if (pos == NULL) {
 		ret->ignore = TRUE;
 		return NULL;

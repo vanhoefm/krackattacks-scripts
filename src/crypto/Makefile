@@ -41,6 +41,7 @@ LIB_OBJS= \
 	sha1-tlsprf.o \
 	sha1-tprf.o \
 	sha256.o \
+	sha256-prf.o \
 	sha256-tlsprf.o \
 	sha256-internal.o
 

@@ -200,9 +200,6 @@ static void wpa_supplicant_timeout(void *eloop_ctx, void *timeout_ctx)
 		if (p2p_other_scan_completed(wpa_s->global->p2p) == 1) {
 			wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Pending P2P operation "
 				"continued after timed out authentication");
-			p2p_increase_search_delay(
-				wpa_s->global->p2p,
-				wpas_p2p_search_delay(wpa_s));
 		}
 	}
 #endif /* CONFIG_P2P */

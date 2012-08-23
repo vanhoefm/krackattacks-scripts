@@ -431,6 +431,10 @@ struct wpa_ssid {
 	 */
 	size_t num_p2p_clients;
 
+#ifndef P2P_MAX_STORED_CLIENTS
+#define P2P_MAX_STORED_CLIENTS 100
+#endif /* P2P_MAX_STORED_CLIENTS */
+
 	/**
 	 * p2p_group - Network generated as a P2P group (used internally)
 	 */

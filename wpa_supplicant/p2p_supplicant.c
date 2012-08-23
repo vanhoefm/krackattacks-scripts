@@ -560,7 +560,7 @@ static void wpas_p2p_add_persistent_group_client(struct wpa_supplicant *wpa_s,
 		break;
 	}
 
-	if (!found) {
+	if (!found && s->num_p2p_clients < P2P_MAX_STORED_CLIENTS) {
 		n = os_realloc_array(s->p2p_client_list,
 				     s->num_p2p_clients + 1, ETH_ALEN);
 		if (n == NULL)
@@ -568,6 +568,15 @@ static void wpas_p2p_add_persistent_group_client(struct wpa_supplicant *wpa_s,
 		os_memcpy(n + s->num_p2p_clients * ETH_ALEN, addr, ETH_ALEN);
 		s->p2p_client_list = n;
 		s->num_p2p_clients++;
+	} else if (!found) {
+		/* Not enough room for an additional entry - drop the oldest
+		 * entry */
+		os_memmove(s->p2p_client_list,
+			   s->p2p_client_list + ETH_ALEN,
+			   (s->num_p2p_clients - 1) * ETH_ALEN);
+		os_memcpy(s->p2p_client_list +
+			  (s->num_p2p_clients - 1) * ETH_ALEN,
+			  addr, ETH_ALEN);
 	}
 
 #ifndef CONFIG_NO_CONFIG_WRITE

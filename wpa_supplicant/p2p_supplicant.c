@@ -523,6 +523,7 @@ static void wpas_p2p_add_persistent_group_client(struct wpa_supplicant *wpa_s,
 	struct wpa_ssid *ssid, *s;
 	u8 *n;
 	size_t i;
+	int found = 0;
 
 	ssid = wpa_s->current_ssid;
 	if (ssid == NULL || ssid->mode != WPAS_MODE_P2P_GO ||
@@ -543,17 +544,31 @@ static void wpas_p2p_add_persistent_group_client(struct wpa_supplicant *wpa_s,
 
 	for (i = 0; s->p2p_client_list && i < s->num_p2p_clients; i++) {
 		if (os_memcmp(s->p2p_client_list + i * ETH_ALEN, addr,
-			      ETH_ALEN) == 0)
-			return; /* already in list */
+			      ETH_ALEN) != 0)
+			continue;
+
+		if (i == s->num_p2p_clients - 1)
+			return; /* already the most recent entry */
+
+		/* move the entry to mark it most recent */
+		os_memmove(s->p2p_client_list + i * ETH_ALEN,
+			   s->p2p_client_list + (i + 1) * ETH_ALEN,
+			   (s->num_p2p_clients - i - 1) * ETH_ALEN);
+		os_memcpy(s->p2p_client_list +
+			  (s->num_p2p_clients - 1) * ETH_ALEN, addr, ETH_ALEN);
+		found = 1;
+		break;
 	}
 
-	n = os_realloc_array(s->p2p_client_list, s->num_p2p_clients + 1,
-			     ETH_ALEN);
-	if (n == NULL)
-		return;
-	os_memcpy(n + s->num_p2p_clients * ETH_ALEN, addr, ETH_ALEN);
-	s->p2p_client_list = n;
-	s->num_p2p_clients++;
+	if (!found) {
+		n = os_realloc_array(s->p2p_client_list,
+				     s->num_p2p_clients + 1, ETH_ALEN);
+		if (n == NULL)
+			return;
+		os_memcpy(n + s->num_p2p_clients * ETH_ALEN, addr, ETH_ALEN);
+		s->p2p_client_list = n;
+		s->num_p2p_clients++;
+	}
 
 #ifndef CONFIG_NO_CONFIG_WRITE
 	if (wpa_s->parent->conf->update_config &&

@@ -1376,10 +1376,18 @@ static int wpa_config_parse_p2p_client_list(const struct parse_data *data,
 			pos++;
 
 		if (hwaddr_aton(pos, addr)) {
-			wpa_printf(MSG_ERROR, "Line %d: Invalid "
-				   "p2p_client_list address '%s'.",
-				   line, value);
-			/* continue anyway */
+			if (count == 0) {
+				wpa_printf(MSG_ERROR, "Line %d: Invalid "
+					   "p2p_client_list address '%s'.",
+					   line, value);
+				os_free(buf);
+				return -1;
+			}
+			/* continue anyway since this could have been from a
+			 * truncated configuration file line */
+			wpa_printf(MSG_INFO, "Line %d: Ignore likely "
+				   "truncated p2p_client_list address '%s'",
+				   line, pos);
 		} else {
 			n = os_realloc_array(buf, count + 1, ETH_ALEN);
 			if (n == NULL) {
@@ -1387,7 +1395,8 @@ static int wpa_config_parse_p2p_client_list(const struct parse_data *data,
 				return -1;
 			}
 			buf = n;
-			os_memcpy(buf + count * ETH_ALEN, addr, ETH_ALEN);
+			os_memmove(buf + ETH_ALEN, buf, count * ETH_ALEN);
+			os_memcpy(buf, addr, ETH_ALEN);
 			count++;
 			wpa_hexdump(MSG_MSGDUMP, "p2p_client_list",
 				    addr, ETH_ALEN);
@@ -1421,10 +1430,10 @@ static char * wpa_config_write_p2p_client_list(const struct parse_data *data,
 	pos = value;
 	end = value + 20 * ssid->num_p2p_clients;
 
-	for (i = 0; i < ssid->num_p2p_clients; i++) {
+	for (i = ssid->num_p2p_clients; i > 0; i--) {
 		res = os_snprintf(pos, end - pos, MACSTR " ",
 				  MAC2STR(ssid->p2p_client_list +
-					  i * ETH_ALEN));
+					  (i - 1) * ETH_ALEN));
 		if (res < 0 || res >= end - pos) {
 			os_free(value);
 			return NULL;

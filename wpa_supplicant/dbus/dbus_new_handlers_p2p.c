@@ -127,7 +127,7 @@ DBusMessage * wpas_dbus_handler_p2p_find(DBusMessage *message,
 	}
 
 	wpas_p2p_find(wpa_s, timeout, type, num_req_dev_types, req_dev_types,
-		      NULL);
+		      NULL, 0);
 	os_free(req_dev_types);
 	return reply;
 

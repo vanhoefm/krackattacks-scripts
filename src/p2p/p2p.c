@@ -920,7 +920,7 @@ static void p2p_free_req_dev_types(struct p2p_data *p2p)
 int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 	     enum p2p_discovery_type type,
 	     unsigned int num_req_dev_types, const u8 *req_dev_types,
-	     const u8 *dev_id)
+	     const u8 *dev_id, unsigned int search_delay)
 {
 	int res;
 
@@ -954,6 +954,8 @@ int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 	p2p->find_type = type;
 	p2p_device_clear_reported(p2p);
 	p2p_set_state(p2p, P2P_SEARCH);
+	p2p->search_delay = search_delay;
+	p2p->in_search_delay = 0;
 	eloop_cancel_timeout(p2p_find_timeout, p2p, NULL);
 	p2p->last_p2p_find_timeout = timeout;
 	if (timeout)
@@ -1009,7 +1011,7 @@ int p2p_other_scan_completed(struct p2p_data *p2p)
 		"now that previous scan was completed");
 	if (p2p_find(p2p, p2p->last_p2p_find_timeout, p2p->find_type,
 		     p2p->num_req_dev_types, p2p->req_dev_types,
-		     p2p->find_dev_id) < 0)
+		     p2p->find_dev_id, p2p->search_delay) < 0)
 		return 0;
 	return 1;
 }
@@ -2940,6 +2942,14 @@ int p2p_listen_end(struct p2p_data *p2p, unsigned int freq)
 			p2p_set_timeout(p2p, 0, 100000);
 			return 1;
 		}
+		if (p2p->search_delay) {
+			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Delay "
+				"search operation by %u ms",
+				p2p->search_delay);
+			p2p_set_timeout(p2p, p2p->search_delay / 1000,
+					(p2p->search_delay % 1000) * 1000);
+			return 1;
+		}
 		p2p_search(p2p);
 		return 1;
 	}
@@ -3134,6 +3144,16 @@ static void p2p_state_timeout(void *eloop_ctx, void *timeout_ctx)
 		/* Check if we timed out waiting for PD req */
 		if (p2p->pending_action_state == P2P_PENDING_PD)
 			p2p_timeout_prov_disc_req(p2p);
+		if (p2p->search_delay && !p2p->in_search_delay) {
+			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Delay "
+				"search operation by %u ms",
+				p2p->search_delay);
+			p2p->in_search_delay = 1;
+			p2p_set_timeout(p2p, p2p->search_delay / 1000,
+					(p2p->search_delay % 1000) * 1000);
+			break;
+		}
+		p2p->in_search_delay = 0;
 		p2p_search(p2p);
 		break;
 	case P2P_CONNECT:

@@ -427,6 +427,10 @@ struct p2p_data {
 
 	u8 go_timeout;
 	u8 client_timeout;
+
+	/* Extra delay in milliseconds between search iterations */
+	unsigned int search_delay;
+	int in_search_delay;
 };
 
 /**

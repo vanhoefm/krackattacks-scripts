@@ -19,6 +19,29 @@
 #include "p2p/p2p.h"
 
 
+static int newline_terminated(const char *buf, size_t buflen)
+{
+	size_t len = os_strlen(buf);
+	if (len == 0)
+		return 0;
+	if (len == buflen - 1 && buf[buflen - 1] != '\r' &&
+	    buf[len - 1] != '\n')
+		return 0;
+	return 1;
+}
+
+
+static void skip_line_end(FILE *stream)
+{
+	char buf[100];
+	while (fgets(buf, sizeof(buf), stream)) {
+		buf[sizeof(buf) - 1] = '\0';
+		if (newline_terminated(buf, sizeof(buf)))
+			return;
+	}
+}
+
+
 /**
  * wpa_config_get_line - Read the next configuration file line
  * @s: Buffer for the line
@@ -41,6 +64,15 @@ static char * wpa_config_get_line(char *s, int size, FILE *stream, int *line,
 	while (fgets(s, size, stream)) {
 		(*line)++;
 		s[size - 1] = '\0';
+		if (!newline_terminated(s, size)) {
+			/*
+			 * The line was truncated - skip rest of it to avoid
+			 * confusing error messages.
+			 */
+			wpa_printf(MSG_INFO, "Long line in configuration file "
+				   "truncated");
+			skip_line_end(stream);
+		}
 		pos = s;
 
 		/* Skip white space from the beginning of line. */
@@ -117,7 +149,7 @@ static struct wpa_ssid * wpa_config_read_network(FILE *f, int *line, int id)
 {
 	struct wpa_ssid *ssid;
 	int errors = 0, end = 0;
-	char buf[256], *pos, *pos2;
+	char buf[2000], *pos, *pos2;
 
 	wpa_printf(MSG_MSGDUMP, "Line: %d - start of a new network block",
 		   *line);

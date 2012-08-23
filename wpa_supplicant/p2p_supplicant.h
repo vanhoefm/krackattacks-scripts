@@ -143,5 +143,6 @@ void wpas_p2p_notify_ap_sta_authorized(struct wpa_supplicant *wpa_s,
 int wpas_p2p_scan_no_go_seen(struct wpa_supplicant *wpa_s);
 int wpas_p2p_get_ht40_mode(struct wpa_supplicant *wpa_s,
 			   struct hostapd_hw_modes *mode, u8 channel);
+unsigned int wpas_p2p_search_delay(struct wpa_supplicant *wpa_s);
 
 #endif /* P2P_SUPPLICANT_H */

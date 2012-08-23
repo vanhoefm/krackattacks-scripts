@@ -57,6 +57,10 @@
 #define P2P_MAX_INITIAL_CONN_WAIT 10
 #endif /* P2P_MAX_INITIAL_CONN_WAIT */
 
+#ifndef P2P_CONCURRENT_SEARCH_DELAY
+#define P2P_CONCURRENT_SEARCH_DELAY 500
+#endif /* P2P_CONCURRENT_SEARCH_DELAY */
+
 enum p2p_group_removal_reason {
 	P2P_GROUP_REMOVAL_UNKNOWN,
 	P2P_GROUP_REMOVAL_SILENT,
@@ -4981,4 +4985,42 @@ int wpas_p2p_scan_no_go_seen(struct wpa_supplicant *wpa_s)
 	wpas_p2p_fallback_to_go_neg(wpa_s, 1);
 
 	return 1;
+}
+
+
+unsigned int wpas_p2p_search_delay(struct wpa_supplicant *wpa_s)
+{
+	const char *rn, *rn2;
+	struct wpa_supplicant *ifs;
+
+	if (wpa_s->wpa_state > WPA_SCANNING) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Use %u ms search delay due to "
+			"concurrent operation",
+			P2P_CONCURRENT_SEARCH_DELAY);
+		return P2P_CONCURRENT_SEARCH_DELAY;
+	}
+
+	if (!wpa_s->driver->get_radio_name)
+		return 0;
+	rn = wpa_s->driver->get_radio_name(wpa_s->drv_priv);
+	if (rn == NULL || rn[0] == '\0')
+		return 0;
+
+	for (ifs = wpa_s->global->ifaces; ifs; ifs = ifs->next) {
+		if (ifs == wpa_s || !ifs->driver->get_radio_name)
+			continue;
+
+		rn2 = ifs->driver->get_radio_name(ifs->drv_priv);
+		if (!rn2 || os_strcmp(rn, rn2) != 0)
+			continue;
+		if (ifs->wpa_state > WPA_SCANNING) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Use %u ms search "
+				"delay due to concurrent operation on "
+				"interface %s",
+				P2P_CONCURRENT_SEARCH_DELAY, ifs->ifname);
+			return P2P_CONCURRENT_SEARCH_DELAY;
+		}
+	}
+
+	return 0;
 }

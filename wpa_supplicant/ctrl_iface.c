@@ -2958,7 +2958,7 @@ static int p2p_ctrl_find(struct wpa_supplicant *wpa_s, char *cmd)
 	enum p2p_discovery_type type = P2P_FIND_START_WITH_FULL;
 	u8 dev_id[ETH_ALEN], *_dev_id = NULL;
 	char *pos;
-	unsigned int search_delay = 0;
+	unsigned int search_delay;
 
 	if (os_strstr(cmd, "type=social"))
 		type = P2P_FIND_ONLY_SOCIAL;
@@ -2977,7 +2977,8 @@ static int p2p_ctrl_find(struct wpa_supplicant *wpa_s, char *cmd)
 	if (pos) {
 		pos += 6;
 		search_delay = atoi(pos);
-	}
+	} else
+		search_delay = wpas_p2p_search_delay(wpa_s);
 
 	return wpas_p2p_find(wpa_s, timeout, type, 0, NULL, _dev_id,
 			     search_delay);

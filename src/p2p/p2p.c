@@ -130,6 +130,8 @@ static const char * p2p_state_txt(int state)
 		return "INVITE_LISTEN";
 	case P2P_SEARCH_WHEN_READY:
 		return "SEARCH_WHEN_READY";
+	case P2P_CONTINUE_SEARCH_WHEN_READY:
+		return "CONTINUE_SEARCH_WHEN_READY";
 	default:
 		return "?";
 	}
@@ -799,6 +801,7 @@ static void p2p_search(struct p2p_data *p2p)
 	int freq = 0;
 	enum p2p_scan_type type;
 	u16 pw_id = DEV_PW_DEFAULT;
+	int res;
 
 	if (p2p->drv_in_listen) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Driver is still "
@@ -818,12 +821,18 @@ static void p2p_search(struct p2p_data *p2p)
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Starting search");
 	}
 
-	if (p2p->cfg->p2p_scan(p2p->cfg->cb_ctx, type, freq,
-			       p2p->num_req_dev_types, p2p->req_dev_types,
-			       p2p->find_dev_id, pw_id)) {
+	res = p2p->cfg->p2p_scan(p2p->cfg->cb_ctx, type, freq,
+				 p2p->num_req_dev_types, p2p->req_dev_types,
+				 p2p->find_dev_id, pw_id);
+	if (res < 0) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Scan request failed");
 		p2p_continue_find(p2p);
+	} else if (res == 1) {
+		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Could not start "
+			"p2p_scan at this point - will try again after "
+			"previous scan completes");
+		p2p_set_state(p2p, P2P_CONTINUE_SEARCH_WHEN_READY);
 	} else {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Running p2p_scan");
 		p2p->p2p_scan_running = 1;
@@ -1005,6 +1014,11 @@ int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 
 int p2p_other_scan_completed(struct p2p_data *p2p)
 {
+	if (p2p->state == P2P_CONTINUE_SEARCH_WHEN_READY) {
+		p2p_set_state(p2p, P2P_SEARCH);
+		p2p_search(p2p);
+		return 1;
+	}
 	if (p2p->state != P2P_SEARCH_WHEN_READY)
 		return 0;
 	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Starting pending P2P find "
@@ -3199,6 +3213,8 @@ static void p2p_state_timeout(void *eloop_ctx, void *timeout_ctx)
 		break;
 	case P2P_SEARCH_WHEN_READY:
 		break;
+	case P2P_CONTINUE_SEARCH_WHEN_READY:
+		break;
 	}
 }
 
@@ -3980,6 +3996,9 @@ int p2p_in_progress(struct p2p_data *p2p)
 {
 	if (p2p == NULL)
 		return 0;
+	if (p2p->state == P2P_SEARCH || p2p->state == P2P_SEARCH_WHEN_READY ||
+	    p2p->state == P2P_CONTINUE_SEARCH_WHEN_READY)
+		return 2;
 	return p2p->state != P2P_IDLE && p2p->state != P2P_PROVISIONING;
 }
 
@@ -3991,4 +4010,11 @@ void p2p_set_config_timeout(struct p2p_data *p2p, u8 go_timeout,
 		p2p->go_timeout = go_timeout;
 		p2p->client_timeout = client_timeout;
 	}
+}
+
+
+void p2p_increase_search_delay(struct p2p_data *p2p, unsigned int delay)
+{
+	if (p2p && p2p->search_delay < delay)
+		p2p->search_delay = delay;
 }

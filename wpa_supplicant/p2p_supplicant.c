@@ -121,6 +121,7 @@ static int wpas_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 			 const u8 *req_dev_types, const u8 *dev_id, u16 pw_id)
 {
 	struct wpa_supplicant *wpa_s = ctx;
+	struct wpa_supplicant *ifs;
 	struct wpa_driver_scan_params params;
 	int ret;
 	struct wpabuf *wps_ie, *ies;
@@ -129,6 +130,18 @@ static int wpas_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
 		return -1;
+
+	for (ifs = wpa_s->global->ifaces; ifs; ifs = ifs->next) {
+		if (ifs->sta_scan_pending &&
+		    wpas_p2p_in_progress(wpa_s) == 2) {
+			wpa_printf(MSG_DEBUG, "Delaying P2P scan to allow "
+				   "pending station mode scan to be "
+				   "completed on interface %s", ifs->ifname);
+			wpa_s->p2p_cb_on_scan_complete = 1;
+			wpa_supplicant_req_scan(ifs, 0, 0);
+			return 1;
+		}
+	}
 
 	os_memset(&params, 0, sizeof(params));
 
@@ -4263,7 +4276,7 @@ void wpas_p2p_completed(struct wpa_supplicant *wpa_s)
 	}
 
 	if (!wpa_s->show_group_started || !ssid)
-		return;
+		goto done;
 
 	wpa_s->show_group_started = 0;
 
@@ -4305,6 +4318,19 @@ void wpas_p2p_completed(struct wpa_supplicant *wpa_s)
 	if (network_id < 0)
 		network_id = ssid->id;
 	wpas_notify_p2p_group_started(wpa_s, ssid, network_id, 1);
+
+done:
+	if (wpa_s->p2p_cb_on_scan_complete && !wpa_s->global->p2p_disabled &&
+	    wpa_s->global->p2p != NULL) {
+		wpa_s->p2p_cb_on_scan_complete = 0;
+		if (p2p_other_scan_completed(wpa_s->global->p2p) == 1) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Pending P2P operation "
+				"continued after successful connection");
+			p2p_increase_search_delay(
+				wpa_s->global->p2p,
+				wpas_p2p_search_delay(wpa_s));
+		}
+	}
 }
 
 

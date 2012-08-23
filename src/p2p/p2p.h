@@ -1708,4 +1708,6 @@ const char * p2p_wps_method_text(enum p2p_wps_method method);
 void p2p_set_config_timeout(struct p2p_data *p2p, u8 go_timeout,
 			    u8 client_timeout);
 
+void p2p_increase_search_delay(struct p2p_data *p2p, unsigned int delay);
+
 #endif /* P2P_H */

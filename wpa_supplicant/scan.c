@@ -468,15 +468,18 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 
 #ifdef CONFIG_P2P
 	if (wpas_p2p_in_progress(wpa_s)) {
-		if (wpa_s->wpa_state == WPA_SCANNING) {
+		if (wpa_s->sta_scan_pending &&
+		    wpas_p2p_in_progress(wpa_s) == 2 &&
+		    wpa_s->p2p_cb_on_scan_complete) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "Process pending station "
+				"mode scan during P2P search");
+		} else {
 			wpa_dbg(wpa_s, MSG_DEBUG, "Delay station mode scan "
 				"while P2P operation is in progress");
+			wpa_s->sta_scan_pending = 1;
 			wpa_supplicant_req_scan(wpa_s, 5, 0);
-		} else {
-			wpa_dbg(wpa_s, MSG_DEBUG, "Do not request scan while "
-				"P2P operation is in progress");
+			return;
 		}
-		return;
 	}
 #endif /* CONFIG_P2P */
 

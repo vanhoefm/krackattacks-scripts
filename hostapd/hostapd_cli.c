@@ -71,6 +71,7 @@ static const char *commands_help =
 "   wps_pin <uuid> <pin> [timeout] [addr]  add WPS Enrollee PIN\n"
 "   wps_check_pin <PIN>  verify PIN checksum\n"
 "   wps_pbc              indicate button pushed to initiate PBC\n"
+"   wps_cancel           cancel the pending WPS operation\n"
 #ifdef CONFIG_WPS_OOB
 "   wps_oob <type> <path> <method>  use WPS with out-of-band (UFD)\n"
 #endif /* CONFIG_WPS_OOB */

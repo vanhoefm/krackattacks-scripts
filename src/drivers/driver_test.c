@@ -2820,7 +2820,8 @@ static int wpa_driver_test_probe_req_report(void *priv, int report)
 
 static int wpa_driver_test_p2p_find(void *priv, unsigned int timeout, int type)
 {
-	struct wpa_driver_test_data *drv = priv;
+	struct test_driver_bss *dbss = priv;
+	struct wpa_driver_test_data *drv = dbss->drv;
 	wpa_printf(MSG_DEBUG, "%s(timeout=%u)", __func__, timeout);
 	if (!drv->p2p)
 		return -1;
@@ -2830,7 +2831,8 @@ static int wpa_driver_test_p2p_find(void *priv, unsigned int timeout, int type)
 
 static int wpa_driver_test_p2p_stop_find(void *priv)
 {
-	struct wpa_driver_test_data *drv = priv;
+	struct test_driver_bss *dbss = priv;
+	struct wpa_driver_test_data *drv = dbss->drv;
 	wpa_printf(MSG_DEBUG, "%s", __func__);
 	if (!drv->p2p)
 		return -1;
@@ -2841,7 +2843,8 @@ static int wpa_driver_test_p2p_stop_find(void *priv)
 
 static int wpa_driver_test_p2p_listen(void *priv, unsigned int timeout)
 {
-	struct wpa_driver_test_data *drv = priv;
+	struct test_driver_bss *dbss = priv;
+	struct wpa_driver_test_data *drv = dbss->drv;
 	wpa_printf(MSG_DEBUG, "%s(timeout=%u)", __func__, timeout);
 	if (!drv->p2p)
 		return -1;
@@ -2855,7 +2858,8 @@ static int wpa_driver_test_p2p_connect(void *priv, const u8 *peer_addr,
 				       unsigned int force_freq,
 				       int persistent_group)
 {
-	struct wpa_driver_test_data *drv = priv;
+	struct test_driver_bss *dbss = priv;
+	struct wpa_driver_test_data *drv = dbss->drv;
 	wpa_printf(MSG_DEBUG, "%s(peer_addr=" MACSTR " wps_method=%d "
 		   "go_intent=%d "
 		   "own_interface_addr=" MACSTR " force_freq=%u "
@@ -2872,7 +2876,8 @@ static int wpa_driver_test_p2p_connect(void *priv, const u8 *peer_addr,
 
 static int wpa_driver_test_wps_success_cb(void *priv, const u8 *peer_addr)
 {
-	struct wpa_driver_test_data *drv = priv;
+	struct test_driver_bss *dbss = priv;
+	struct wpa_driver_test_data *drv = dbss->drv;
 	wpa_printf(MSG_DEBUG, "%s(peer_addr=" MACSTR ")",
 		   __func__, MAC2STR(peer_addr));
 	if (!drv->p2p)
@@ -2884,7 +2889,8 @@ static int wpa_driver_test_wps_success_cb(void *priv, const u8 *peer_addr)
 
 static int wpa_driver_test_p2p_group_formation_failed(void *priv)
 {
-	struct wpa_driver_test_data *drv = priv;
+	struct test_driver_bss *dbss = priv;
+	struct wpa_driver_test_data *drv = dbss->drv;
 	wpa_printf(MSG_DEBUG, "%s", __func__);
 	if (!drv->p2p)
 		return -1;
@@ -2896,7 +2902,8 @@ static int wpa_driver_test_p2p_group_formation_failed(void *priv)
 static int wpa_driver_test_p2p_set_params(void *priv,
 					  const struct p2p_params *params)
 {
-	struct wpa_driver_test_data *drv = priv;
+	struct test_driver_bss *dbss = priv;
+	struct wpa_driver_test_data *drv = dbss->drv;
 	wpa_printf(MSG_DEBUG, "%s", __func__);
 	if (!drv->p2p)
 		return -1;

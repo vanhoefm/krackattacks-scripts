@@ -2641,13 +2641,14 @@ void wpas_p2p_deinit_global(struct wpa_global *global)
 {
 	struct wpa_supplicant *wpa_s, *tmp;
 
+	wpa_s = global->ifaces;
+	if (wpa_s)
+		wpas_p2p_service_flush(wpa_s);
+
 	if (global->p2p == NULL)
 		return;
 
 	/* Remove remaining P2P group interfaces */
-	wpa_s = global->ifaces;
-	if (wpa_s)
-		wpas_p2p_service_flush(wpa_s);
 	while (wpa_s && wpa_s->p2p_group_interface != NOT_P2P_GROUP_INTERFACE)
 		wpa_s = wpa_s->next;
 	while (wpa_s) {

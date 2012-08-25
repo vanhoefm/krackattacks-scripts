@@ -1408,6 +1408,42 @@ fail:
 #endif /* CONFIG_INTERWORKING */
 
 
+#ifdef CONFIG_HS20
+static int hs20_parse_conn_capab(struct hostapd_bss_config *bss, char *buf,
+				 int line)
+{
+	u8 *conn_cap;
+	char *pos;
+
+	if (bss->hs20_connection_capability_len >= 0xfff0)
+		return -1;
+
+	conn_cap = os_realloc(bss->hs20_connection_capability,
+			      bss->hs20_connection_capability_len + 4);
+	if (conn_cap == NULL)
+		return -1;
+
+	bss->hs20_connection_capability = conn_cap;
+	conn_cap += bss->hs20_connection_capability_len;
+	pos = buf;
+	conn_cap[0] = atoi(pos);
+	pos = os_strchr(pos, ':');
+	if (pos == NULL)
+		return -1;
+	pos++;
+	WPA_PUT_LE16(conn_cap + 1, atoi(pos));
+	pos = os_strchr(pos, ':');
+	if (pos == NULL)
+		return -1;
+	pos++;
+	conn_cap[3] = atoi(pos);
+	bss->hs20_connection_capability_len += 4;
+
+	return 0;
+}
+#endif /* CONFIG_HS20 */
+
+
 #ifdef CONFIG_WPS_NFC
 static struct wpabuf * hostapd_parse_bin(const char *buf)
 {
@@ -2573,6 +2609,11 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			bss->hs20 = atoi(pos);
 		} else if (os_strcmp(buf, "disable_dgaf") == 0) {
 			bss->disable_dgaf = atoi(pos);
+		} else if (os_strcmp(buf, "hs20_conn_capab") == 0) {
+			if (hs20_parse_conn_capab(bss, pos, line) < 0) {
+				errors++;
+				return errors;
+			}
 		} else if (os_strcmp(buf, "hs20_operating_class") == 0) {
 			u8 *oper_class;
 			size_t oper_class_len;

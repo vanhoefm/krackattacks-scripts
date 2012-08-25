@@ -410,6 +410,8 @@ struct hostapd_bss_config {
 #ifdef CONFIG_HS20
 	int hs20;
 	int disable_dgaf;
+	u8 *hs20_connection_capability;
+	size_t hs20_connection_capability_len;
 	u8 *hs20_operating_class;
 	u8 hs20_operating_class_len;
 #endif /* CONFIG_HS20 */

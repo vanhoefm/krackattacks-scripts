@@ -139,6 +139,8 @@ static void anqp_add_hs_capab_list(struct hostapd_data *hapd,
 	wpabuf_put_u8(buf, HS20_STYPE_CAPABILITY_LIST);
 	wpabuf_put_u8(buf, 0); /* Reserved */
 	wpabuf_put_u8(buf, HS20_STYPE_CAPABILITY_LIST);
+	if (hapd->conf->hs20_connection_capability)
+		wpabuf_put_u8(buf, HS20_STYPE_CONNECTION_CAPABILITY);
 	if (hapd->conf->hs20_operating_class)
 		wpabuf_put_u8(buf, HS20_STYPE_OPERATING_CLASS);
 	gas_anqp_set_element_len(buf, len);
@@ -253,6 +255,22 @@ static void anqp_add_domain_name(struct hostapd_data *hapd, struct wpabuf *buf)
 }
 
 
+static void anqp_add_connection_capability(struct hostapd_data *hapd,
+					   struct wpabuf *buf)
+{
+	if (hapd->conf->hs20_connection_capability) {
+		u8 *len = gas_anqp_add_element(buf, ANQP_VENDOR_SPECIFIC);
+		wpabuf_put_be24(buf, OUI_WFA);
+		wpabuf_put_u8(buf, HS20_ANQP_OUI_TYPE);
+		wpabuf_put_u8(buf, HS20_STYPE_CONNECTION_CAPABILITY);
+		wpabuf_put_u8(buf, 0); /* Reserved */
+		wpabuf_put_data(buf, hapd->conf->hs20_connection_capability,
+				hapd->conf->hs20_connection_capability_len);
+		gas_anqp_set_element_len(buf, len);
+	}
+}
+
+
 static void anqp_add_operating_class(struct hostapd_data *hapd,
 				     struct wpabuf *buf)
 {
@@ -297,6 +315,8 @@ gas_serv_build_gas_resp_payload(struct hostapd_data *hapd,
 
 	if (request & ANQP_REQ_HS_CAPABILITY_LIST)
 		anqp_add_hs_capab_list(hapd, buf);
+	if (request & ANQP_REQ_CONNECTION_CAPABILITY)
+		anqp_add_connection_capability(hapd, buf);
 	if (request & ANQP_REQ_OPERATING_CLASS)
 		anqp_add_operating_class(hapd, buf);
 
@@ -409,6 +429,12 @@ static void rx_anqp_hs_query_list(struct hostapd_data *hapd, u8 subtype,
 	case HS20_STYPE_CAPABILITY_LIST:
 		set_anqp_req(ANQP_REQ_HS_CAPABILITY_LIST, "HS Capability List",
 			     1, 0, 0, qi);
+		break;
+	case HS20_STYPE_CONNECTION_CAPABILITY:
+		set_anqp_req(ANQP_REQ_CONNECTION_CAPABILITY,
+			     "Connection Capability",
+			     hapd->conf->hs20_connection_capability != NULL,
+			     0, 0, qi);
 		break;
 	case HS20_STYPE_OPERATING_CLASS:
 		set_anqp_req(ANQP_REQ_OPERATING_CLASS, "Operating Class",

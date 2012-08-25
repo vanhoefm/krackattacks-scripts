@@ -656,6 +656,23 @@ static int wpa_cli_cmd_bss_expire_count(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int wpa_cli_cmd_bss_flush(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	char cmd[256];
+	int res;
+
+	if (argc < 1)
+		res = os_snprintf(cmd, sizeof(cmd), "BSS_FLUSH 0");
+	else
+		res = os_snprintf(cmd, sizeof(cmd), "BSS_FLUSH %s", argv[0]);
+	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		printf("Too long BSS_FLUSH command.\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
 static int wpa_cli_cmd_stkstart(struct wpa_ctrl *ctrl, int argc,
 				char *argv[])
 {
@@ -2264,6 +2281,9 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "bss_expire_count", wpa_cli_cmd_bss_expire_count,
 	  cli_cmd_flag_none,
 	  "<value> = set BSS expiration scan count parameter" },
+	{ "bss_flush", wpa_cli_cmd_bss_flush,
+	  cli_cmd_flag_none,
+	  "<value> = set BSS flush age (0 by default)" },
 	{ "stkstart", wpa_cli_cmd_stkstart,
 	  cli_cmd_flag_none,
 	  "<addr> = request STK negotiation with <addr>" },

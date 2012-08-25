@@ -1441,6 +1441,71 @@ static int hs20_parse_conn_capab(struct hostapd_bss_config *bss, char *buf,
 
 	return 0;
 }
+
+
+static int hs20_parse_wan_metrics(struct hostapd_bss_config *bss, char *buf,
+				  int line)
+{
+	u8 *wan_metrics;
+	char *pos;
+
+	/* <WAN Info>:<DL Speed>:<UL Speed>:<DL Load>:<UL Load>:<LMD> */
+
+	wan_metrics = os_zalloc(13);
+	if (wan_metrics == NULL)
+		return -1;
+
+	pos = buf;
+	/* WAN Info */
+	if (hexstr2bin(pos, wan_metrics, 1) < 0)
+		goto fail;
+	pos += 2;
+	if (*pos != ':')
+		goto fail;
+	pos++;
+
+	/* Downlink Speed */
+	WPA_PUT_LE32(wan_metrics + 1, atoi(pos));
+	pos = os_strchr(pos, ':');
+	if (pos == NULL)
+		goto fail;
+	pos++;
+
+	/* Uplink Speed */
+	WPA_PUT_LE32(wan_metrics + 5, atoi(pos));
+	pos = os_strchr(pos, ':');
+	if (pos == NULL)
+		goto fail;
+	pos++;
+
+	/* Downlink Load */
+	wan_metrics[9] = atoi(pos);
+	pos = os_strchr(pos, ':');
+	if (pos == NULL)
+		goto fail;
+	pos++;
+
+	/* Uplink Load */
+	wan_metrics[10] = atoi(pos);
+	pos = os_strchr(pos, ':');
+	if (pos == NULL)
+		goto fail;
+	pos++;
+
+	/* LMD */
+	WPA_PUT_LE16(wan_metrics + 11, atoi(pos));
+
+	os_free(bss->hs20_wan_metrics);
+	bss->hs20_wan_metrics = wan_metrics;
+
+	return 0;
+
+fail:
+	wpa_printf(MSG_ERROR, "Line %d: Invalid hs20_wan_metrics '%s'",
+		   line, pos);
+	os_free(wan_metrics);
+	return -1;
+}
 #endif /* CONFIG_HS20 */
 
 
@@ -2609,6 +2674,11 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			bss->hs20 = atoi(pos);
 		} else if (os_strcmp(buf, "disable_dgaf") == 0) {
 			bss->disable_dgaf = atoi(pos);
+		} else if (os_strcmp(buf, "hs20_wan_metrics") == 0) {
+			if (hs20_parse_wan_metrics(bss, pos, line) < 0) {
+				errors++;
+				return errors;
+			}
 		} else if (os_strcmp(buf, "hs20_conn_capab") == 0) {
 			if (hs20_parse_conn_capab(bss, pos, line) < 0) {
 				errors++;

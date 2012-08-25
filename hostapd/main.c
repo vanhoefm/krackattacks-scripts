@@ -166,14 +166,9 @@ static struct hostapd_iface * hostapd_init(const char *config_file)
 	if (hapd_iface == NULL)
 		goto fail;
 
-	hapd_iface->reload_config = hostapd_reload_config;
-	hapd_iface->config_read_cb = hostapd_config_read;
 	hapd_iface->config_fname = os_strdup(config_file);
 	if (hapd_iface->config_fname == NULL)
 		goto fail;
-	hapd_iface->ctrl_iface_init = hostapd_ctrl_iface_init;
-	hapd_iface->ctrl_iface_deinit = hostapd_ctrl_iface_deinit;
-	hapd_iface->for_each_interface = hostapd_for_each_interface;
 
 	conf = hostapd_config_read(hapd_iface->config_fname);
 	if (conf == NULL)
@@ -539,6 +534,13 @@ int main(int argc, char *argv[])
 
 	if (os_program_init())
 		return -1;
+
+	os_memset(&interfaces, 0, sizeof(interfaces));
+	interfaces.reload_config = hostapd_reload_config;
+	interfaces.config_read_cb = hostapd_config_read;
+	interfaces.for_each_interface = hostapd_for_each_interface;
+	interfaces.ctrl_iface_init = hostapd_ctrl_iface_init;
+	interfaces.ctrl_iface_deinit = hostapd_ctrl_iface_deinit;
 
 	for (;;) {
 		c = getopt(argc, argv, "Bde:f:hKP:tv");

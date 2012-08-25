@@ -23,7 +23,17 @@ struct full_dynamic_vlan;
 enum wps_event;
 union wps_event_data;
 
+struct hostapd_iface;
+
 struct hapd_interfaces {
+	int (*reload_config)(struct hostapd_iface *iface);
+	struct hostapd_config * (*config_read_cb)(const char *config_fname);
+	int (*ctrl_iface_init)(struct hostapd_data *hapd);
+	void (*ctrl_iface_deinit)(struct hostapd_data *hapd);
+	int (*for_each_interface)(struct hapd_interfaces *interfaces,
+				  int (*cb)(struct hostapd_iface *iface,
+					    void *ctx), void *ctx);
+
 	size_t count;
 	struct hostapd_iface **iface;
 };
@@ -182,8 +192,6 @@ struct hostapd_data {
 struct hostapd_iface {
 	struct hapd_interfaces *interfaces;
 	void *owner;
-	int (*reload_config)(struct hostapd_iface *iface);
-	struct hostapd_config * (*config_read_cb)(const char *config_fname);
 	char *config_fname;
 	struct hostapd_config *conf;
 
@@ -241,13 +249,6 @@ struct hostapd_iface {
 
 	u16 ht_op_mode;
 	void (*scan_cb)(struct hostapd_iface *iface);
-
-	int (*ctrl_iface_init)(struct hostapd_data *hapd);
-	void (*ctrl_iface_deinit)(struct hostapd_data *hapd);
-
-	int (*for_each_interface)(struct hapd_interfaces *interfaces,
-				  int (*cb)(struct hostapd_iface *iface,
-					    void *ctx), void *ctx);
 };
 
 /* hostapd.c */

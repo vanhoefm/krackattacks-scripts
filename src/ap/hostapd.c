@@ -113,9 +113,10 @@ int hostapd_reload_config(struct hostapd_iface *iface)
 	struct hostapd_config *newconf, *oldconf;
 	size_t j;
 
-	if (iface->config_read_cb == NULL)
+	if (iface->interfaces == NULL ||
+	    iface->interfaces->config_read_cb == NULL)
 		return -1;
-	newconf = iface->config_read_cb(iface->config_fname);
+	newconf = iface->interfaces->config_read_cb(iface->config_fname);
 	if (newconf == NULL)
 		return -1;
 
@@ -286,8 +287,9 @@ static void hostapd_free_hapd_data(struct hostapd_data *hapd)
  */
 static void hostapd_cleanup(struct hostapd_data *hapd)
 {
-	if (hapd->iface->ctrl_iface_deinit)
-		hapd->iface->ctrl_iface_deinit(hapd);
+	if (hapd->iface->interfaces &&
+	    hapd->iface->interfaces->ctrl_iface_deinit)
+		hapd->iface->interfaces->ctrl_iface_deinit(hapd);
 	hostapd_free_hapd_data(hapd);
 }
 
@@ -770,8 +772,9 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 	}
 #endif /* CONFIG_INTERWORKING */
 
-	if (hapd->iface->ctrl_iface_init &&
-	    hapd->iface->ctrl_iface_init(hapd)) {
+	if (hapd->iface->interfaces &&
+	    hapd->iface->interfaces->ctrl_iface_init &&
+	    hapd->iface->interfaces->ctrl_iface_init(hapd)) {
 		wpa_printf(MSG_ERROR, "Failed to setup control interface");
 		return -1;
 	}

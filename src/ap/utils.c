@@ -78,7 +78,8 @@ void hostapd_prune_associations(struct hostapd_data *hapd, const u8 *addr)
 	struct prune_data data;
 	data.hapd = hapd;
 	data.addr = addr;
-	if (hapd->iface->for_each_interface)
-		hapd->iface->for_each_interface(hapd->iface->interfaces,
-						prune_associations, &data);
+	if (hapd->iface->interfaces &&
+	    hapd->iface->interfaces->for_each_interface)
+		hapd->iface->interfaces->for_each_interface(
+			hapd->iface->interfaces, prune_associations, &data);
 }

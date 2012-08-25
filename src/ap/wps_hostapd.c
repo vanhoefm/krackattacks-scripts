@@ -76,10 +76,11 @@ static int hostapd_wps_for_each(struct hostapd_data *hapd,
 	struct wps_for_each_data data;
 	data.func = func;
 	data.ctx = ctx;
-	if (iface->for_each_interface == NULL)
+	if (iface->interfaces == NULL ||
+	    iface->interfaces->for_each_interface == NULL)
 		return wps_for_each(iface, &data);
-	return iface->for_each_interface(iface->interfaces, wps_for_each,
-					 &data);
+	return iface->interfaces->for_each_interface(iface->interfaces,
+						     wps_for_each, &data);
 }
 
 
@@ -256,7 +257,8 @@ static void wps_reload_config(void *eloop_data, void *user_ctx)
 	struct hostapd_iface *iface = eloop_data;
 
 	wpa_printf(MSG_DEBUG, "WPS: Reload configuration data");
-	if (iface->reload_config(iface) < 0) {
+	if (iface->interfaces == NULL ||
+	    iface->interfaces->reload_config(iface) < 0) {
 		wpa_printf(MSG_WARNING, "WPS: Failed to reload the updated "
 			   "configuration");
 	}
@@ -717,10 +719,12 @@ static int get_uuid_cb(struct hostapd_iface *iface, void *ctx)
 static const u8 * get_own_uuid(struct hostapd_iface *iface)
 {
 	const u8 *uuid;
-	if (iface->for_each_interface == NULL)
+	if (iface->interfaces == NULL ||
+	    iface->interfaces->for_each_interface == NULL)
 		return NULL;
 	uuid = NULL;
-	iface->for_each_interface(iface->interfaces, get_uuid_cb, &uuid);
+	iface->interfaces->for_each_interface(iface->interfaces, get_uuid_cb,
+					      &uuid);
 	return uuid;
 }
 
@@ -736,10 +740,11 @@ static int count_interface_cb(struct hostapd_iface *iface, void *ctx)
 static int interface_count(struct hostapd_iface *iface)
 {
 	int count = 0;
-	if (iface->for_each_interface == NULL)
+	if (iface->interfaces == NULL ||
+	    iface->interfaces->for_each_interface == NULL)
 		return 0;
-	iface->for_each_interface(iface->interfaces, count_interface_cb,
-				  &count);
+	iface->interfaces->for_each_interface(iface->interfaces,
+					      count_interface_cb, &count);
 	return count;
 }
 

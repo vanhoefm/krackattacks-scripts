@@ -303,12 +303,13 @@ static int hostapd_wpa_auth_for_each_auth(
 {
 	struct hostapd_data *hapd = ctx;
 	struct wpa_auth_iface_iter_data data;
-	if (hapd->iface->for_each_interface == NULL)
+	if (hapd->iface->interfaces == NULL ||
+	    hapd->iface->interfaces->for_each_interface == NULL)
 		return -1;
 	data.cb = cb;
 	data.cb_ctx = cb_ctx;
-	return hapd->iface->for_each_interface(hapd->iface->interfaces,
-					       wpa_auth_iface_iter, &data);
+	return hapd->iface->interfaces->for_each_interface(
+		hapd->iface->interfaces, wpa_auth_iface_iter, &data);
 }
 
 
@@ -360,16 +361,17 @@ static int hostapd_wpa_auth_send_ether(void *ctx, const u8 *dst, u16 proto,
 	int ret;
 
 #ifdef CONFIG_IEEE80211R
-	if (proto == ETH_P_RRB && hapd->iface->for_each_interface) {
+	if (proto == ETH_P_RRB && hapd->iface->interfaces &&
+	    hapd->iface->interfaces->for_each_interface) {
 		int res;
 		struct wpa_auth_ft_iface_iter_data idata;
 		idata.src_hapd = hapd;
 		idata.dst = dst;
 		idata.data = data;
 		idata.data_len = data_len;
-		res = hapd->iface->for_each_interface(hapd->iface->interfaces,
-						      hostapd_wpa_auth_ft_iter,
-						      &idata);
+		res = hapd->iface->interfaces->for_each_interface(
+			hapd->iface->interfaces, hostapd_wpa_auth_ft_iter,
+			&idata);
 		if (res == 1)
 			return data_len;
 	}

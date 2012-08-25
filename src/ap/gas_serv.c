@@ -145,6 +145,8 @@ static void anqp_add_hs_capab_list(struct hostapd_data *hapd,
 		wpabuf_put_u8(buf, HS20_STYPE_WAN_METRICS);
 	if (hapd->conf->hs20_connection_capability)
 		wpabuf_put_u8(buf, HS20_STYPE_CONNECTION_CAPABILITY);
+	if (hapd->conf->nai_realm_data)
+		wpabuf_put_u8(buf, HS20_STYPE_NAI_HOME_REALM_QUERY);
 	if (hapd->conf->hs20_operating_class)
 		wpabuf_put_u8(buf, HS20_STYPE_OPERATING_CLASS);
 	gas_anqp_set_element_len(buf, len);
@@ -258,9 +260,122 @@ static void anqp_add_nai_realm_eap(struct wpabuf *buf,
 }
 
 
-static void anqp_add_nai_realm(struct hostapd_data *hapd, struct wpabuf *buf)
+static void anqp_add_nai_realm_data(struct wpabuf *buf,
+				    struct hostapd_nai_realm_data *realm,
+				    unsigned int realm_idx)
 {
-	if (hapd->conf->nai_realm_data) {
+	u8 *realm_data_len;
+
+	wpa_printf(MSG_DEBUG, "realm=%s, len=%d", realm->realm[realm_idx],
+		   (int) os_strlen(realm->realm[realm_idx]));
+	realm_data_len = wpabuf_put(buf, 2);
+	wpabuf_put_u8(buf, realm->encoding);
+	wpabuf_put_u8(buf, os_strlen(realm->realm[realm_idx]));
+	wpabuf_put_str(buf, realm->realm[realm_idx]);
+	anqp_add_nai_realm_eap(buf, realm);
+	gas_anqp_set_element_len(buf, realm_data_len);
+}
+
+
+static int hs20_add_nai_home_realm_matches(struct hostapd_data *hapd,
+					   struct wpabuf *buf,
+					   const u8 *home_realm,
+					   size_t home_realm_len)
+{
+	unsigned int i, j, k;
+	u8 num_realms, num_matching = 0, encoding, realm_len, *realm_list_len;
+	struct hostapd_nai_realm_data *realm;
+	const u8 *pos, *realm_name, *end;
+	struct {
+		unsigned int realm_data_idx;
+		unsigned int realm_idx;
+	} matches[10];
+
+	pos = home_realm;
+	end = pos + home_realm_len;
+	if (pos + 1 > end) {
+		wpa_hexdump(MSG_DEBUG, "Too short NAI Home Realm Query",
+			    home_realm, home_realm_len);
+		return -1;
+	}
+	num_realms = *pos++;
+
+	for (i = 0; i < num_realms && num_matching < 10; i++) {
+		if (pos + 2 > end) {
+			wpa_hexdump(MSG_DEBUG,
+				    "Truncated NAI Home Realm Query",
+				    home_realm, home_realm_len);
+			return -1;
+		}
+		encoding = *pos++;
+		realm_len = *pos++;
+		if (pos + realm_len > end) {
+			wpa_hexdump(MSG_DEBUG,
+				    "Truncated NAI Home Realm Query",
+				    home_realm, home_realm_len);
+			return -1;
+		}
+		realm_name = pos;
+		for (j = 0; j < hapd->conf->nai_realm_count &&
+			     num_matching < 10; j++) {
+			const u8 *rpos, *rend;
+			realm = &hapd->conf->nai_realm_data[j];
+			if (encoding != realm->encoding)
+				continue;
+
+			rpos = realm_name;
+			while (rpos < realm_name + realm_len &&
+			       num_matching < 10) {
+				for (rend = rpos;
+				     rend < realm_name + realm_len; rend++) {
+					if (*rend == ';')
+						break;
+				}
+				for (k = 0; k < MAX_NAI_REALMS &&
+					     realm->realm[k] &&
+					     num_matching < 10; k++) {
+					if ((int) os_strlen(realm->realm[k]) !=
+					    rend - rpos ||
+					    os_strncmp((char *) rpos,
+						       realm->realm[k],
+						       rend - rpos) != 0)
+						continue;
+					matches[num_matching].realm_data_idx =
+						j;
+					matches[num_matching].realm_idx = k;
+					num_matching++;
+				}
+				rpos = rend + 1;
+			}
+		}
+		pos += realm_len;
+	}
+
+	realm_list_len = gas_anqp_add_element(buf, ANQP_NAI_REALM);
+	wpabuf_put_le16(buf, num_matching);
+
+	/*
+	 * There are two ways to format. 1. each realm in a NAI Realm Data unit
+	 * 2. all realms that share the same EAP methods in a NAI Realm Data
+	 * unit. The first format is likely to be bigger in size than the
+	 * second, but may be easier to parse and process by the receiver.
+	 */
+	for (i = 0; i < num_matching; i++) {
+		wpa_printf(MSG_DEBUG, "realm_idx %d, realm_data_idx %d",
+			   matches[i].realm_data_idx, matches[i].realm_idx);
+		realm = &hapd->conf->nai_realm_data[matches[i].realm_data_idx];
+		anqp_add_nai_realm_data(buf, realm, matches[i].realm_idx);
+	}
+	gas_anqp_set_element_len(buf, realm_list_len);
+	return 0;
+}
+
+
+static void anqp_add_nai_realm(struct hostapd_data *hapd, struct wpabuf *buf,
+			       const u8 *home_realm, size_t home_realm_len,
+			       int nai_realm, int nai_home_realm)
+{
+	if (nai_realm && hapd->conf->nai_realm_data) {
 		u8 *len;
 		unsigned int i, j;
 		len = gas_anqp_add_element(buf, ANQP_NAI_REALM);
@@ -283,6 +398,9 @@ static void anqp_add_nai_realm(struct hostapd_data *hapd, struct wpabuf *buf)
 			gas_anqp_set_element_len(buf, realm_data_len);
 		}
 		gas_anqp_set_element_len(buf, len);
+	} else if (nai_home_realm && hapd->conf->nai_realm_data) {
+		hs20_add_nai_home_realm_matches(hapd, buf, home_realm,
+						home_realm_len);
 	}
 }
 
@@ -385,7 +503,8 @@ static void anqp_add_operating_class(struct hostapd_data *hapd,
 static struct wpabuf *
 gas_serv_build_gas_resp_payload(struct hostapd_data *hapd,
 				unsigned int request,
-				struct gas_dialog_info *di)
+				struct gas_dialog_info *di,
+				const u8 *home_realm, size_t home_realm_len)
 {
 	struct wpabuf *buf;
 
@@ -403,8 +522,10 @@ gas_serv_build_gas_resp_payload(struct hostapd_data *hapd,
 		anqp_add_roaming_consortium(hapd, buf);
 	if (request & ANQP_REQ_IP_ADDR_TYPE_AVAILABILITY)
 		anqp_add_ip_addr_type_availability(hapd, buf);
-	if (request & ANQP_REQ_NAI_REALM)
-		anqp_add_nai_realm(hapd, buf);
+	if (request & (ANQP_REQ_NAI_REALM | ANQP_REQ_NAI_HOME_REALM))
+		anqp_add_nai_realm(hapd, buf, home_realm, home_realm_len,
+				   request & ANQP_REQ_NAI_REALM,
+				   request & ANQP_REQ_NAI_HOME_REALM);
 	if (request & ANQP_REQ_3GPP_CELLULAR_NETWORK)
 		anqp_add_3gpp_cellular_network(hapd, buf);
 	if (request & ANQP_REQ_DOMAIN_NAME)
@@ -439,8 +560,8 @@ static void gas_serv_clear_cached_ies(void *eloop_data, void *user_ctx)
 struct anqp_query_info {
 	unsigned int request;
 	unsigned int remote_request;
-	const void *param;
-	u32 param_arg;
+	const u8 *home_realm_query;
+	size_t home_realm_query_len;
 	u16 remote_delay;
 };
 
@@ -566,6 +687,23 @@ static void rx_anqp_hs_query_list(struct hostapd_data *hapd, u8 subtype,
 }
 
 
+static void rx_anqp_hs_nai_home_realm(struct hostapd_data *hapd,
+				      const u8 *pos, const u8 *end,
+				      struct anqp_query_info *qi)
+{
+	qi->request |= ANQP_REQ_NAI_HOME_REALM;
+	qi->home_realm_query = pos;
+	qi->home_realm_query_len = end - pos;
+	if (hapd->conf->nai_realm_data != NULL) {
+		wpa_printf(MSG_DEBUG, "ANQP: HS 2.0 NAI Home Realm Query "
+			   "(local)");
+	} else {
+		wpa_printf(MSG_DEBUG, "ANQP: HS 2.0 NAI Home Realm Query not "
+			   "available");
+	}
+}
+
+
 static void rx_anqp_vendor_specific(struct hostapd_data *hapd,
 				    const u8 *pos, const u8 *end,
 				    struct anqp_query_info *qi)
@@ -607,6 +745,9 @@ static void rx_anqp_vendor_specific(struct hostapd_data *hapd,
 			pos++;
 		}
 		break;
+	case HS20_STYPE_NAI_HOME_REALM_QUERY:
+		rx_anqp_hs_nai_home_realm(hapd, pos, end, qi);
+		break;
 	default:
 		wpa_printf(MSG_DEBUG, "ANQP: Unsupported HS 2.0 query subtype "
 			   "%u", subtype);
@@ -621,7 +762,9 @@ static void gas_serv_req_local_processing(struct hostapd_data *hapd,
 {
 	struct wpabuf *buf, *tx_buf;
 
-	buf = gas_serv_build_gas_resp_payload(hapd, qi->request, NULL);
+	buf = gas_serv_build_gas_resp_payload(hapd, qi->request, NULL,
+					      qi->home_realm_query,
+					      qi->home_realm_query_len);
 	wpa_hexdump_buf(MSG_MSGDUMP, "ANQP: Locally generated ANQP responses",
 			buf);
 	if (!buf)
@@ -782,7 +925,7 @@ void gas_serv_tx_gas_response(struct hostapd_data *hapd, const u8 *dst,
 	if (dialog->sd_resp == NULL) {
 		buf = gas_serv_build_gas_resp_payload(hapd,
 						      dialog->all_requested,
-						      dialog);
+						      dialog, NULL, 0);
 		wpa_hexdump_buf(MSG_MSGDUMP, "ANQP: Generated ANQP responses",
 			buf);
 		if (!buf)
@@ -911,7 +1054,7 @@ static void gas_serv_rx_gas_comeback_req(struct hostapd_data *hapd,
 
 		buf = gas_serv_build_gas_resp_payload(hapd,
 						      dialog->all_requested,
-						      dialog);
+						      dialog, NULL, 0);
 		wpa_hexdump_buf(MSG_MSGDUMP, "ANQP: Generated ANQP responses",
 			buf);
 		if (!buf)

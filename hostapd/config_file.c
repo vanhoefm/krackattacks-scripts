@@ -2573,6 +2573,34 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			bss->hs20 = atoi(pos);
 		} else if (os_strcmp(buf, "disable_dgaf") == 0) {
 			bss->disable_dgaf = atoi(pos);
+		} else if (os_strcmp(buf, "hs20_operating_class") == 0) {
+			u8 *oper_class;
+			size_t oper_class_len;
+			oper_class_len = os_strlen(pos);
+			if (oper_class_len < 2 || (oper_class_len & 0x01)) {
+				wpa_printf(MSG_ERROR, "Line %d: Invalid "
+					   "hs20_operating_class '%s'",
+					   line, pos);
+				errors++;
+				return errors;
+			}
+			oper_class_len /= 2;
+			oper_class = os_malloc(oper_class_len);
+			if (oper_class == NULL) {
+				errors++;
+				return errors;
+			}
+			if (hexstr2bin(pos, oper_class, oper_class_len)) {
+				wpa_printf(MSG_ERROR, "Line %d: Invalid "
+					   "hs20_operating_class '%s'",
+					   line, pos);
+				os_free(oper_class);
+				errors++;
+				return errors;
+			}
+			os_free(bss->hs20_operating_class);
+			bss->hs20_operating_class = oper_class;
+			bss->hs20_operating_class_len = oper_class_len;
 #endif /* CONFIG_HS20 */
 		} else {
 			wpa_printf(MSG_ERROR, "Line %d: unknown configuration "

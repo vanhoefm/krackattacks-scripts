@@ -505,6 +505,10 @@ static void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 #ifdef CONFIG_RADIUS_TEST
 	os_free(conf->dump_msk_file);
 #endif /* CONFIG_RADIUS_TEST */
+
+#ifdef CONFIG_HS20
+	os_free(conf->hs20_operating_class);
+#endif /* CONFIG_HS20 */
 }
 
 

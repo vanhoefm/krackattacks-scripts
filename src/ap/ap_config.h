@@ -151,6 +151,23 @@ struct hostapd_lang_string {
 	u8 name[252];
 };
 
+#define MAX_NAI_REALMS 10
+#define MAX_NAI_REALMLEN 255
+#define MAX_NAI_EAP_METHODS 5
+#define MAX_NAI_AUTH_TYPES 4
+struct hostapd_nai_realm_data {
+	u8 encoding;
+	char realm_buf[MAX_NAI_REALMLEN + 1];
+	char *realm[MAX_NAI_REALMS];
+	u8 eap_method_count;
+	struct hostapd_nai_realm_eap {
+		u8 eap_method;
+		u8 num_auths;
+		u8 auth_id[MAX_NAI_AUTH_TYPES];
+		u8 auth_val[MAX_NAI_AUTH_TYPES];
+	} eap_method[MAX_NAI_EAP_METHODS];
+};
+
 /**
  * struct hostapd_bss_config - Per-BSS configuration
  */
@@ -403,6 +420,9 @@ struct hostapd_bss_config {
 	/* IEEE 802.11u - Domain Name */
 	u8 *domain_name;
 	size_t domain_name_len;
+
+	unsigned int nai_realm_count;
+	struct hostapd_nai_realm_data *nai_realm_data;
 
 	u16 gas_comeback_delay;
 	int gas_frag_limit;

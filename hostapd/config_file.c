@@ -1412,6 +1412,147 @@ fail:
 	return -1;
 }
 
+
+static int parse_nai_realm(struct hostapd_bss_config *bss, char *buf, int line)
+{
+	struct hostapd_nai_realm_data *realm;
+	size_t i, j, len;
+	int *offsets;
+	char *pos, *end, *rpos;
+
+	offsets = os_calloc(bss->nai_realm_count * MAX_NAI_REALMS,
+			    sizeof(int));
+	if (offsets == NULL)
+		return -1;
+
+	for (i = 0; i < bss->nai_realm_count; i++) {
+		realm = &bss->nai_realm_data[i];
+		for (j = 0; j < MAX_NAI_REALMS; j++) {
+			offsets[i * MAX_NAI_REALMS + j] =
+				realm->realm[j] ?
+				realm->realm[j] - realm->realm_buf : -1;
+		}
+	}
+
+	realm = os_realloc_array(bss->nai_realm_data, bss->nai_realm_count + 1,
+				 sizeof(struct hostapd_nai_realm_data));
+	if (realm == NULL) {
+		os_free(offsets);
+		return -1;
+	}
+	bss->nai_realm_data = realm;
+
+	/* patch the pointers after realloc */
+	for (i = 0; i < bss->nai_realm_count; i++) {
+		realm = &bss->nai_realm_data[i];
+		for (j = 0; j < MAX_NAI_REALMS; j++) {
+			int offs = offsets[i * MAX_NAI_REALMS + j];
+			if (offs >= 0)
+				realm->realm[j] = realm->realm_buf + offs;
+			else
+				realm->realm[j] = NULL;
+		}
+	}
+	os_free(offsets);
+
+	realm = &bss->nai_realm_data[bss->nai_realm_count];
+	os_memset(realm, 0, sizeof(*realm));
+
+	pos = buf;
+	realm->encoding = atoi(pos);
+	pos = os_strchr(pos, ',');
+	if (pos == NULL)
+		goto fail;
+	pos++;
+
+	end = os_strchr(pos, ',');
+	if (end) {
+		len = end - pos;
+		*end = '\0';
+	} else {
+		len = os_strlen(pos);
+	}
+
+	if (len > MAX_NAI_REALMLEN) {
+		wpa_printf(MSG_ERROR, "Too long a realm string (%d > max %d "
+			   "characters)", (int) len, MAX_NAI_REALMLEN);
+		goto fail;
+	}
+	os_memcpy(realm->realm_buf, pos, len);
+
+	if (end)
+		pos = end + 1;
+	else
+		pos = NULL;
+
+	while (pos && *pos) {
+		struct hostapd_nai_realm_eap *eap;
+
+		if (realm->eap_method_count >= MAX_NAI_EAP_METHODS) {
+			wpa_printf(MSG_ERROR, "Too many EAP methods");
+			goto fail;
+		}
+
+		eap = &realm->eap_method[realm->eap_method_count];
+		realm->eap_method_count++;
+
+		end = os_strchr(pos, ',');
+		if (end == NULL)
+			end = pos + os_strlen(pos);
+
+		eap->eap_method = atoi(pos);
+		for (;;) {
+			pos = os_strchr(pos, '[');
+			if (pos == NULL || pos > end)
+				break;
+			pos++;
+			if (eap->num_auths >= MAX_NAI_AUTH_TYPES) {
+				wpa_printf(MSG_ERROR, "Too many auth params");
+				goto fail;
+			}
+			eap->auth_id[eap->num_auths] = atoi(pos);
+			pos = os_strchr(pos, ':');
+			if (pos == NULL || pos > end)
+				goto fail;
+			pos++;
+			eap->auth_val[eap->num_auths] = atoi(pos);
+			pos = os_strchr(pos, ']');
+			if (pos == NULL || pos > end)
+				goto fail;
+			pos++;
+			eap->num_auths++;
+		}
+
+		if (*end != ',')
+			break;
+
+		pos = end + 1;
+	}
+
+	/* Split realm list into null terminated realms */
+	rpos = realm->realm_buf;
+	i = 0;
+	while (*rpos) {
+		if (i >= MAX_NAI_REALMS) {
+			wpa_printf(MSG_ERROR, "Too many realms");
+			goto fail;
+		}
+		realm->realm[i++] = rpos;
+		rpos = os_strchr(rpos, ';');
+		if (rpos == NULL)
+			break;
+		*rpos++ = '\0';
+	}
+
+	bss->nai_realm_count++;
+
+	return 0;
+
+fail:
+	wpa_printf(MSG_ERROR, "Line %d: invalid nai_realm '%s'", line, buf);
+	return -1;
+}
+
 #endif /* CONFIG_INTERWORKING */
 
 
@@ -2678,6 +2819,9 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			bss->domain_name_len = domain_list_len;
 		} else if (os_strcmp(buf, "anqp_3gpp_cell_net") == 0) {
 			if (parse_3gpp_cell_net(bss, pos, line) < 0)
+				errors++;
+		} else if (os_strcmp(buf, "nai_realm") == 0) {
+			if (parse_nai_realm(bss, pos, line) < 0)
 				errors++;
 		} else if (os_strcmp(buf, "gas_frag_limit") == 0) {
 			bss->gas_frag_limit = atoi(pos);

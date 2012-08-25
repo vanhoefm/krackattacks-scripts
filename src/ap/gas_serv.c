@@ -166,6 +166,8 @@ static void anqp_add_capab_list(struct hostapd_data *hapd,
 		wpabuf_put_le16(buf, ANQP_ROAMING_CONSORTIUM);
 	if (hapd->conf->ipaddr_type_configured)
 		wpabuf_put_le16(buf, ANQP_IP_ADDR_TYPE_AVAILABILITY);
+	if (hapd->conf->nai_realm_data)
+		wpabuf_put_le16(buf, ANQP_NAI_REALM);
 	if (hapd->conf->anqp_3gpp_cell_net)
 		wpabuf_put_le16(buf, ANQP_3GPP_CELLULAR_NETWORK);
 	if (hapd->conf->domain_name)
@@ -231,6 +233,56 @@ static void anqp_add_ip_addr_type_availability(struct hostapd_data *hapd,
 		wpabuf_put_le16(buf, ANQP_IP_ADDR_TYPE_AVAILABILITY);
 		wpabuf_put_le16(buf, 1);
 		wpabuf_put_u8(buf, hapd->conf->ipaddr_type_availability);
+	}
+}
+
+
+static void anqp_add_nai_realm_eap(struct wpabuf *buf,
+				   struct hostapd_nai_realm_data *realm)
+{
+	unsigned int i, j;
+
+	wpabuf_put_u8(buf, realm->eap_method_count);
+
+	for (i = 0; i < realm->eap_method_count; i++) {
+		struct hostapd_nai_realm_eap *eap = &realm->eap_method[i];
+		wpabuf_put_u8(buf, 2 + (3 * eap->num_auths));
+		wpabuf_put_u8(buf, eap->eap_method);
+		wpabuf_put_u8(buf, eap->num_auths);
+		for (j = 0; j < eap->num_auths; j++) {
+			wpabuf_put_u8(buf, eap->auth_id[j]);
+			wpabuf_put_u8(buf, 1);
+			wpabuf_put_u8(buf, eap->auth_val[j]);
+		}
+	}
+}
+
+
+static void anqp_add_nai_realm(struct hostapd_data *hapd, struct wpabuf *buf)
+{
+	if (hapd->conf->nai_realm_data) {
+		u8 *len;
+		unsigned int i, j;
+		len = gas_anqp_add_element(buf, ANQP_NAI_REALM);
+		wpabuf_put_le16(buf, hapd->conf->nai_realm_count);
+		for (i = 0; i < hapd->conf->nai_realm_count; i++) {
+			u8 *realm_data_len, *realm_len;
+			struct hostapd_nai_realm_data *realm;
+
+			realm = &hapd->conf->nai_realm_data[i];
+			realm_data_len = wpabuf_put(buf, 2);
+			wpabuf_put_u8(buf, realm->encoding);
+			realm_len = wpabuf_put(buf, 1);
+			for (j = 0; realm->realm[j]; j++) {
+				if (j > 0)
+					wpabuf_put_u8(buf, ';');
+				wpabuf_put_str(buf, realm->realm[j]);
+			}
+			*realm_len = (u8 *) wpabuf_put(buf, 0) - realm_len - 1;
+			anqp_add_nai_realm_eap(buf, realm);
+			gas_anqp_set_element_len(buf, realm_data_len);
+		}
+		gas_anqp_set_element_len(buf, len);
 	}
 }
 
@@ -351,6 +403,8 @@ gas_serv_build_gas_resp_payload(struct hostapd_data *hapd,
 		anqp_add_roaming_consortium(hapd, buf);
 	if (request & ANQP_REQ_IP_ADDR_TYPE_AVAILABILITY)
 		anqp_add_ip_addr_type_availability(hapd, buf);
+	if (request & ANQP_REQ_NAI_REALM)
+		anqp_add_nai_realm(hapd, buf);
 	if (request & ANQP_REQ_3GPP_CELLULAR_NETWORK)
 		anqp_add_3gpp_cellular_network(hapd, buf);
 	if (request & ANQP_REQ_DOMAIN_NAME)
@@ -434,6 +488,11 @@ static void rx_anqp_query_list_id(struct hostapd_data *hapd, u16 info_id,
 		set_anqp_req(ANQP_REQ_IP_ADDR_TYPE_AVAILABILITY,
 			     "IP Addr Type Availability",
 			     hapd->conf->ipaddr_type_configured,
+			     0, 0, qi);
+		break;
+	case ANQP_NAI_REALM:
+		set_anqp_req(ANQP_REQ_NAI_REALM, "NAI Realm",
+			     hapd->conf->nai_realm_data != NULL,
 			     0, 0, qi);
 		break;
 	case ANQP_3GPP_CELLULAR_NETWORK:

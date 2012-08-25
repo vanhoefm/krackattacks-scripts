@@ -601,7 +601,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (optind == argc)
+	if (optind == argc && interfaces.global_iface_path == NULL)
 		usage();
 
 	wpa_msg_register_ifname_cb(hostapd_msg_ifname_cb);
@@ -610,11 +610,13 @@ int main(int argc, char *argv[])
 		wpa_debug_open_file(log_file);
 
 	interfaces.count = argc - optind;
-	interfaces.iface = os_calloc(interfaces.count,
-				     sizeof(struct hostapd_iface *));
-	if (interfaces.iface == NULL) {
-		wpa_printf(MSG_ERROR, "malloc failed");
-		return -1;
+	if (interfaces.count) {
+		interfaces.iface = os_calloc(interfaces.count,
+					     sizeof(struct hostapd_iface *));
+		if (interfaces.iface == NULL) {
+			wpa_printf(MSG_ERROR, "malloc failed");
+			return -1;
+		}
 	}
 
 	if (hostapd_global_init(&interfaces, entropy_file))

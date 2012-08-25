@@ -1289,45 +1289,52 @@ static int parse_roaming_consortium(struct hostapd_bss_config *bss, char *pos,
 }
 
 
-static int parse_venue_name(struct hostapd_bss_config *bss, char *pos,
-			    int line)
+static int parse_lang_string(struct hostapd_lang_string **array,
+			     unsigned int *count, char *pos)
 {
 	char *sep;
 	size_t clen, nlen;
-	struct hostapd_venue_name *vn;
+	struct hostapd_lang_string *ls;
 
 	sep = os_strchr(pos, ':');
 	if (sep == NULL)
-		goto fail;
+		return -1;
 	*sep++ = '\0';
 
 	clen = os_strlen(pos);
 	if (clen < 2)
-		goto fail;
+		return -1;
 	nlen = os_strlen(sep);
 	if (nlen > 252)
-		goto fail;
-
-	vn = os_realloc_array(bss->venue_name, bss->venue_name_count + 1,
-			      sizeof(struct hostapd_venue_name));
-	if (vn == NULL)
 		return -1;
 
-	bss->venue_name = vn;
-	vn = &bss->venue_name[bss->venue_name_count];
-	bss->venue_name_count++;
+	ls = os_realloc_array(*array, *count + 1,
+			      sizeof(struct hostapd_lang_string));
+	if (ls == NULL)
+		return -1;
 
-	os_memset(vn->lang, 0, sizeof(vn->lang));
-	os_memcpy(vn->lang, pos, clen);
-	vn->name_len = nlen;
-	os_memcpy(vn->name, sep, nlen);
+	*array = ls;
+	ls = &(*array)[*count];
+	(*count)++;
+
+	os_memset(ls->lang, 0, sizeof(ls->lang));
+	os_memcpy(ls->lang, pos, clen);
+	ls->name_len = nlen;
+	os_memcpy(ls->name, sep, nlen);
 
 	return 0;
+}
 
-fail:
-	wpa_printf(MSG_ERROR, "Line %d: Invalid venue_name '%s'",
-		   line, pos);
-	return -1;
+
+static int parse_venue_name(struct hostapd_bss_config *bss, char *pos,
+			    int line)
+{
+	if (parse_lang_string(&bss->venue_name, &bss->venue_name_count, pos)) {
+		wpa_printf(MSG_ERROR, "Line %d: Invalid venue_name '%s'",
+			   line, pos);
+		return -1;
+	}
+	return 0;
 }
 
 

@@ -182,7 +182,7 @@ static void anqp_add_venue_name(struct hostapd_data *hapd, struct wpabuf *buf)
 		wpabuf_put_u8(buf, hapd->conf->venue_group);
 		wpabuf_put_u8(buf, hapd->conf->venue_type);
 		for (i = 0; i < hapd->conf->venue_name_count; i++) {
-			struct hostapd_venue_name *vn;
+			struct hostapd_lang_string *vn;
 			vn = &hapd->conf->venue_name[i];
 			wpabuf_put_u8(buf, 3 + vn->name_len);
 			wpabuf_put_data(buf, vn->lang, 3);

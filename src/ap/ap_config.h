@@ -145,7 +145,7 @@ struct hostapd_roaming_consortium {
 	u8 oi[MAX_ROAMING_CONSORTIUM_LEN];
 };
 
-struct hostapd_venue_name {
+struct hostapd_lang_string {
 	u8 lang[3];
 	u8 name_len;
 	u8 name[252];
@@ -386,7 +386,7 @@ struct hostapd_bss_config {
 
 	/* IEEE 802.11u - Venue Name duples */
 	unsigned int venue_name_count;
-	struct hostapd_venue_name *venue_name;
+	struct hostapd_lang_string *venue_name;
 
 	/* IEEE 802.11u - Network Authentication Type */
 	u8 *network_auth_type;

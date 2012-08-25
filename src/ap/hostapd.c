@@ -39,6 +39,7 @@ static int hostapd_setup_encryption(char *iface, struct hostapd_data *hapd);
 static int hostapd_broadcast_wep_clear(struct hostapd_data *hapd);
 
 extern int wpa_debug_level;
+extern struct wpa_driver_ops *wpa_drivers[];
 
 
 int hostapd_for_each_interface(struct hapd_interfaces *interfaces,
@@ -1145,6 +1146,190 @@ int hostapd_disable_iface(struct hostapd_iface *hapd_iface)
 
 	wpa_printf(MSG_DEBUG, "Interface %s disabled", bss->iface);
 	return 0;
+}
+
+
+static struct hostapd_iface *
+hostapd_iface_alloc(struct hapd_interfaces *interfaces)
+{
+	struct hostapd_iface **iface, *hapd_iface;
+
+	iface = os_realloc_array(interfaces->iface, interfaces->count + 1,
+				 sizeof(struct hostapd_iface *));
+	if (iface == NULL)
+		return NULL;
+	interfaces->iface = iface;
+	hapd_iface = interfaces->iface[interfaces->count] =
+		os_zalloc(sizeof(*hapd_iface));
+	if (hapd_iface == NULL) {
+		wpa_printf(MSG_ERROR, "%s: Failed to allocate memory for "
+			   "the interface", __func__);
+		return NULL;
+	}
+	interfaces->count++;
+	hapd_iface->interfaces = interfaces;
+
+	return hapd_iface;
+}
+
+
+static struct hostapd_config *
+hostapd_config_alloc(struct hapd_interfaces *interfaces, const char *ifname,
+		     const char *ctrl_iface)
+{
+	struct hostapd_bss_config *bss;
+	struct hostapd_config *conf;
+
+	/* Allocates memory for bss and conf */
+	conf = hostapd_config_defaults();
+	if (conf == NULL) {
+		 wpa_printf(MSG_ERROR, "%s: Failed to allocate memory for "
+				"configuration", __func__);
+		return NULL;
+	}
+
+	conf->driver = wpa_drivers[0];
+	if (conf->driver == NULL) {
+		wpa_printf(MSG_ERROR, "No driver wrappers registered!");
+		hostapd_config_free(conf);
+		return NULL;
+	}
+
+	bss = conf->last_bss = conf->bss;
+
+	os_strlcpy(bss->iface, ifname, sizeof(bss->iface));
+	bss->ctrl_interface = os_strdup(ctrl_iface);
+	if (bss->ctrl_interface == NULL) {
+		hostapd_config_free(conf);
+		return NULL;
+	}
+
+	/* Reading configuration file skipped, will be done in SET!
+	 * From reading the configuration till the end has to be done in
+	 * SET
+	 */
+	return conf;
+}
+
+
+static struct hostapd_iface * hostapd_data_alloc(
+	struct hapd_interfaces *interfaces, struct hostapd_config *conf)
+{
+	size_t i;
+	struct hostapd_iface *hapd_iface =
+		interfaces->iface[interfaces->count - 1];
+	struct hostapd_data *hapd;
+
+	hapd_iface->conf = conf;
+	hapd_iface->num_bss = conf->num_bss;
+
+	hapd_iface->bss = os_zalloc(conf->num_bss *
+				    sizeof(struct hostapd_data *));
+	if (hapd_iface->bss == NULL)
+		return NULL;
+
+	for (i = 0; i < conf->num_bss; i++) {
+		hapd = hapd_iface->bss[i] =
+			hostapd_alloc_bss_data(hapd_iface, conf,
+					       &conf->bss[i]);
+		if (hapd == NULL)
+			return NULL;
+		hapd->msg_ctx = hapd;
+	}
+
+	hapd_iface->interfaces = interfaces;
+
+	return hapd_iface;
+}
+
+
+int hostapd_add_iface(struct hapd_interfaces *interfaces, char *buf)
+{
+	struct hostapd_config *conf = NULL;
+	struct hostapd_iface *hapd_iface = NULL;
+	char *ptr;
+	size_t i;
+
+	ptr = os_strchr(buf, ' ');
+	if (ptr == NULL)
+		return -1;
+	*ptr++ = '\0';
+
+	for (i = 0; i < interfaces->count; i++) {
+		if (!os_strcmp(interfaces->iface[i]->conf->bss[0].iface,
+			       buf)) {
+			wpa_printf(MSG_INFO, "Cannot add interface - it "
+				   "already exists");
+			return -1;
+		}
+	}
+
+	hapd_iface = hostapd_iface_alloc(interfaces);
+	if (hapd_iface == NULL) {
+		wpa_printf(MSG_ERROR, "%s: Failed to allocate memory "
+			   "for interface", __func__);
+		goto fail;
+	}
+
+	conf = hostapd_config_alloc(interfaces, buf, ptr);
+	if (conf == NULL) {
+		wpa_printf(MSG_ERROR, "%s: Failed to allocate memory "
+			   "for configuration", __func__);
+		goto fail;
+	}
+
+	hapd_iface = hostapd_data_alloc(interfaces, conf);
+	if (hapd_iface == NULL) {
+		wpa_printf(MSG_ERROR, "%s: Failed to allocate memory "
+			   "for hostapd", __func__);
+		goto fail;
+	}
+
+	if (hapd_iface->interfaces &&
+	    hapd_iface->interfaces->ctrl_iface_init &&
+	    hapd_iface->interfaces->ctrl_iface_init(hapd_iface->bss[0])) {
+		wpa_printf(MSG_ERROR, "%s: Failed to setup control "
+			   "interface", __func__);
+		goto fail;
+	}
+	wpa_printf(MSG_INFO, "Add interface '%s'", conf->bss[0].iface);
+
+	return 0;
+
+fail:
+	if (conf)
+		hostapd_config_free(conf);
+	if (hapd_iface) {
+		os_free(hapd_iface->bss[interfaces->count]);
+		os_free(hapd_iface);
+	}
+	return -1;
+}
+
+
+int hostapd_remove_iface(struct hapd_interfaces *interfaces, char *buf)
+{
+	struct hostapd_iface *hapd_iface;
+	size_t i, k = 0;
+
+	for (i = 0; i < interfaces->count; i++) {
+		hapd_iface = interfaces->iface[i];
+		if (hapd_iface == NULL)
+			return -1;
+		if (!os_strcmp(hapd_iface->conf->bss[0].iface, buf)) {
+			wpa_printf(MSG_INFO, "Remove interface '%s'", buf);
+			hostapd_interface_deinit_free(hapd_iface);
+			k = i;
+			while (k < (interfaces->count - 1)) {
+				interfaces->iface[k] =
+					interfaces->iface[k + 1];
+				k++;
+			}
+			interfaces->count--;
+			return 0;
+		}
+	}
+	return -1;
 }
 
 #endif /* HOSTAPD */

@@ -1131,9 +1131,32 @@ void hostapd_ctrl_iface_deinit(struct hostapd_data *hapd)
 }
 
 
+static int hostapd_ctrl_iface_add(struct hapd_interfaces *interfaces,
+				  char *buf)
+{
+	if (hostapd_add_iface(interfaces, buf) < 0) {
+		wpa_printf(MSG_ERROR, "Adding interface %s failed", buf);
+		return -1;
+	}
+	return 0;
+}
+
+
+static int hostapd_ctrl_iface_remove(struct hapd_interfaces *interfaces,
+				     char *buf)
+{
+	if (hostapd_remove_iface(interfaces, buf) < 0) {
+		wpa_printf(MSG_ERROR, "Removing interface %s failed", buf);
+		return -1;
+	}
+	return 0;
+}
+
+
 static void hostapd_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 					      void *sock_ctx)
 {
+	void *interfaces = eloop_ctx;
 	char buf[256];
 	int res;
 	struct sockaddr_un from;
@@ -1155,6 +1178,12 @@ static void hostapd_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 	if (os_strcmp(buf, "PING") == 0) {
 		os_memcpy(reply, "PONG\n", 5);
 		reply_len = 5;
+	} else if (os_strncmp(buf, "ADD ", 4) == 0) {
+		if (hostapd_ctrl_iface_add(interfaces, buf + 4) < 0)
+			reply_len = -1;
+	} else if (os_strncmp(buf, "REMOVE ", 7) == 0) {
+		if (hostapd_ctrl_iface_remove(interfaces, buf + 7) < 0)
+			reply_len = -1;
 	} else {
 		wpa_printf(MSG_DEBUG, "Unrecognized global ctrl_iface command "
 			   "ignored");

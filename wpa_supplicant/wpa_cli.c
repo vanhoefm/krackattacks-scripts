@@ -2091,6 +2091,14 @@ static int wpa_cli_cmd_autoscan(struct wpa_ctrl *ctrl, int argc, char *argv[])
 #endif /* CONFIG_AUTOSCAN */
 
 
+static int wpa_cli_cmd_raw(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	if (argc == 0)
+		return -1;
+	return wpa_cli_cmd(ctrl, argv[0], 0, argc - 1, &argv[1]);
+}
+
+
 enum wpa_cli_cmd_flags {
 	cli_cmd_flag_none		= 0x00,
 	cli_cmd_flag_sensitive		= 0x01
@@ -2488,6 +2496,8 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "autoscan", wpa_cli_cmd_autoscan, cli_cmd_flag_none,
 	  "[params] = Set or unset (if none) autoscan parameters" },
 #endif /* CONFIG_AUTOSCAN */
+	{ "raw", wpa_cli_cmd_raw, cli_cmd_flag_sensitive,
+	  "<params..> = Sent unprocessed command" },
 	{ NULL, NULL, cli_cmd_flag_none, NULL }
 };
 

@@ -139,6 +139,8 @@ static void anqp_add_hs_capab_list(struct hostapd_data *hapd,
 	wpabuf_put_u8(buf, HS20_STYPE_CAPABILITY_LIST);
 	wpabuf_put_u8(buf, 0); /* Reserved */
 	wpabuf_put_u8(buf, HS20_STYPE_CAPABILITY_LIST);
+	if (hapd->conf->hs20_oper_friendly_name)
+		wpabuf_put_u8(buf, HS20_STYPE_OPERATOR_FRIENDLY_NAME);
 	if (hapd->conf->hs20_wan_metrics)
 		wpabuf_put_u8(buf, HS20_STYPE_WAN_METRICS);
 	if (hapd->conf->hs20_connection_capability)
@@ -257,6 +259,30 @@ static void anqp_add_domain_name(struct hostapd_data *hapd, struct wpabuf *buf)
 }
 
 
+static void anqp_add_operator_friendly_name(struct hostapd_data *hapd,
+					    struct wpabuf *buf)
+{
+	if (hapd->conf->hs20_oper_friendly_name) {
+		u8 *len;
+		unsigned int i;
+		len = gas_anqp_add_element(buf, ANQP_VENDOR_SPECIFIC);
+		wpabuf_put_be24(buf, OUI_WFA);
+		wpabuf_put_u8(buf, HS20_ANQP_OUI_TYPE);
+		wpabuf_put_u8(buf, HS20_STYPE_OPERATOR_FRIENDLY_NAME);
+		wpabuf_put_u8(buf, 0); /* Reserved */
+		for (i = 0; i < hapd->conf->hs20_oper_friendly_name_count; i++)
+		{
+			struct hostapd_lang_string *vn;
+			vn = &hapd->conf->hs20_oper_friendly_name[i];
+			wpabuf_put_u8(buf, 3 + vn->name_len);
+			wpabuf_put_data(buf, vn->lang, 3);
+			wpabuf_put_data(buf, vn->name, vn->name_len);
+		}
+		gas_anqp_set_element_len(buf, len);
+	}
+}
+
+
 static void anqp_add_wan_metrics(struct hostapd_data *hapd,
 				 struct wpabuf *buf)
 {
@@ -332,6 +358,8 @@ gas_serv_build_gas_resp_payload(struct hostapd_data *hapd,
 
 	if (request & ANQP_REQ_HS_CAPABILITY_LIST)
 		anqp_add_hs_capab_list(hapd, buf);
+	if (request & ANQP_REQ_OPERATOR_FRIENDLY_NAME)
+		anqp_add_operator_friendly_name(hapd, buf);
 	if (request & ANQP_REQ_WAN_METRICS)
 		anqp_add_wan_metrics(hapd, buf);
 	if (request & ANQP_REQ_CONNECTION_CAPABILITY)
@@ -448,6 +476,12 @@ static void rx_anqp_hs_query_list(struct hostapd_data *hapd, u8 subtype,
 	case HS20_STYPE_CAPABILITY_LIST:
 		set_anqp_req(ANQP_REQ_HS_CAPABILITY_LIST, "HS Capability List",
 			     1, 0, 0, qi);
+		break;
+	case HS20_STYPE_OPERATOR_FRIENDLY_NAME:
+		set_anqp_req(ANQP_REQ_OPERATOR_FRIENDLY_NAME,
+			     "Operator Friendly Name",
+			     hapd->conf->hs20_oper_friendly_name != NULL,
+			     0, 0, qi);
 		break;
 	case HS20_STYPE_WAN_METRICS:
 		set_anqp_req(ANQP_REQ_WAN_METRICS, "WAN Metrics",

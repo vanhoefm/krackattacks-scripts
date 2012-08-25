@@ -1513,6 +1513,19 @@ fail:
 	os_free(wan_metrics);
 	return -1;
 }
+
+
+static int hs20_parse_oper_friendly_name(struct hostapd_bss_config *bss,
+					 char *pos, int line)
+{
+	if (parse_lang_string(&bss->hs20_oper_friendly_name,
+			      &bss->hs20_oper_friendly_name_count, pos)) {
+		wpa_printf(MSG_ERROR, "Line %d: Invalid "
+			   "hs20_oper_friendly_name '%s'", line, pos);
+		return -1;
+	}
+	return 0;
+}
 #endif /* CONFIG_HS20 */
 
 
@@ -2681,6 +2694,9 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			bss->hs20 = atoi(pos);
 		} else if (os_strcmp(buf, "disable_dgaf") == 0) {
 			bss->disable_dgaf = atoi(pos);
+		} else if (os_strcmp(buf, "hs20_oper_friendly_name") == 0) {
+			if (hs20_parse_oper_friendly_name(bss, pos, line) < 0)
+				errors++;
 		} else if (os_strcmp(buf, "hs20_wan_metrics") == 0) {
 			if (hs20_parse_wan_metrics(bss, pos, line) < 0) {
 				errors++;

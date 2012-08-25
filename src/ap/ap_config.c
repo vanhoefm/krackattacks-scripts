@@ -507,6 +507,7 @@ static void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 #endif /* CONFIG_RADIUS_TEST */
 
 #ifdef CONFIG_HS20
+	os_free(conf->hs20_oper_friendly_name);
 	os_free(conf->hs20_wan_metrics);
 	os_free(conf->hs20_connection_capability);
 	os_free(conf->hs20_operating_class);

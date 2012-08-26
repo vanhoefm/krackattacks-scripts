@@ -189,6 +189,12 @@ SM_STATE(EAP, DISABLED)
 {
 	SM_ENTRY(EAP, DISABLED);
 	sm->num_rounds = 0;
+	/*
+	 * RFC 4137 does not describe clearing of idleWhile here, but doing so
+	 * allows the timer tick to be stopped more quickly when EAP is not in
+	 * use.
+	 */
+	eapol_set_int(sm, EAPOL_idleWhile, 0);
 }
 
 

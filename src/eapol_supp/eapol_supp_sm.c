@@ -1744,7 +1744,8 @@ static void eapol_sm_set_int(void *ctx, enum eapol_int_var variable,
 	switch (variable) {
 	case EAPOL_idleWhile:
 		sm->idleWhile = value;
-		eapol_enable_timer_tick(sm);
+		if (sm->idleWhile > 0)
+			eapol_enable_timer_tick(sm);
 		break;
 	}
 }

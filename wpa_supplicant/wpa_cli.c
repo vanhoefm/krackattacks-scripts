@@ -92,10 +92,11 @@ static DEFINE_DL_LIST(p2p_peers); /* struct cli_txt_entry */
 static DEFINE_DL_LIST(p2p_groups); /* struct cli_txt_entry */
 
 
-static void print_help(void);
+static void print_help(const char *cmd);
 static void wpa_cli_mon_receive(int sock, void *eloop_ctx, void *sock_ctx);
 static void wpa_cli_close_connection(void);
 static char * wpa_cli_get_default_ifname(void);
+static char ** wpa_list_cmd_list(void);
 
 
 static void usage(void)
@@ -112,7 +113,7 @@ static void usage(void)
 	       "  -B = run a daemon in the background\n"
 	       "  default path: " CONFIG_CTRL_IFACE_DIR "\n"
 	       "  default interface: first interface found in socket path\n");
-	print_help();
+	print_help(NULL);
 }
 
 
@@ -527,8 +528,23 @@ static int wpa_cli_cmd_pmksa(struct wpa_ctrl *ctrl, int argc, char *argv[])
 
 static int wpa_cli_cmd_help(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
-	print_help();
+	print_help(argc > 0 ? argv[0] : NULL);
 	return 0;
+}
+
+
+static char ** wpa_cli_complete_help(const char *str, int pos)
+{
+	int arg = get_cmd_arg_num(str, pos);
+	char **res = NULL;
+
+	switch (arg) {
+	case 1:
+		res = wpa_list_cmd_list();
+		break;
+	}
+
+	return res;
 }
 
 
@@ -2131,9 +2147,9 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "mib", wpa_cli_cmd_mib, NULL,
 	  cli_cmd_flag_none,
 	  "= get MIB variables (dot1x, dot11)" },
-	{ "help", wpa_cli_cmd_help, NULL,
+	{ "help", wpa_cli_cmd_help, wpa_cli_complete_help,
 	  cli_cmd_flag_none,
-	  "= show this usage help" },
+	  "[command] = show usage help" },
 	{ "interface", wpa_cli_cmd_interface, NULL,
 	  cli_cmd_flag_none,
 	  "[ifname] = show interfaces/select interface" },
@@ -2533,12 +2549,14 @@ static void print_cmd_help(struct wpa_cli_cmd *cmd, const char *pad)
 }
 
 
-static void print_help(void)
+static void print_help(const char *cmd)
 {
 	int n;
 	printf("commands:\n");
-	for (n = 0; wpa_cli_commands[n].cmd; n++)
-		print_cmd_help(&wpa_cli_commands[n], "  ");
+	for (n = 0; wpa_cli_commands[n].cmd; n++) {
+		if (cmd == NULL || str_starts(wpa_cli_commands[n].cmd, cmd))
+			print_cmd_help(&wpa_cli_commands[n], "  ");
+	}
 }
 
 

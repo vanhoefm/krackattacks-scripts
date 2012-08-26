@@ -1632,10 +1632,8 @@ static void wpa_supplicant_clear_connection(struct wpa_supplicant *wpa_s,
 	struct wpa_ssid *old_ssid;
 
 	wpa_clear_keys(wpa_s, addr);
-	wpa_supplicant_mark_disassoc(wpa_s);
 	old_ssid = wpa_s->current_ssid;
-	wpa_s->current_ssid = NULL;
-	wpa_s->current_bss = NULL;
+	wpa_supplicant_mark_disassoc(wpa_s);
 	wpa_sm_set_config(wpa_s->wpa, NULL);
 	eapol_sm_notify_config(wpa_s->eapol, NULL, NULL);
 	if (old_ssid != wpa_s->current_ssid)

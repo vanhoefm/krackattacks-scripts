@@ -648,6 +648,7 @@ void wpa_supplicant_set_state(struct wpa_supplicant *wpa_s,
 			ssid ? ssid->id : -1,
 			ssid && ssid->id_str ? ssid->id_str : "");
 #endif /* CONFIG_CTRL_IFACE || !CONFIG_NO_STDOUT_DEBUG */
+		wpas_clear_temp_disabled(wpa_s, ssid, 1);
 		wpa_s->new_connection = 0;
 		wpa_s->reassociated_connection = 1;
 		wpa_drv_set_operstate(wpa_s, 1);
@@ -1723,6 +1724,8 @@ void wpa_supplicant_enable_network(struct wpa_supplicant *wpa_s,
 			was_disabled = other_ssid->disabled;
 
 			other_ssid->disabled = 0;
+			if (was_disabled)
+				wpas_clear_temp_disabled(wpa_s, other_ssid, 0);
 
 			if (was_disabled != other_ssid->disabled)
 				wpas_notify_network_enabled_changed(
@@ -1743,6 +1746,7 @@ void wpa_supplicant_enable_network(struct wpa_supplicant *wpa_s,
 		was_disabled = ssid->disabled;
 
 		ssid->disabled = 0;
+		wpas_clear_temp_disabled(wpa_s, ssid, 1);
 
 		if (was_disabled != ssid->disabled)
 			wpas_notify_network_enabled_changed(wpa_s, ssid);
@@ -1813,6 +1817,9 @@ void wpa_supplicant_select_network(struct wpa_supplicant *wpa_s,
 		disconnected = 1;
 	}
 
+	if (ssid)
+		wpas_clear_temp_disabled(wpa_s, ssid, 1);
+
 	/*
 	 * Mark all other networks disabled or mark all networks enabled if no
 	 * network specified.
@@ -1824,6 +1831,8 @@ void wpa_supplicant_select_network(struct wpa_supplicant *wpa_s,
 			continue; /* do not change persistent P2P group data */
 
 		other_ssid->disabled = ssid ? (ssid->id != other_ssid->id) : 0;
+		if (was_disabled && !other_ssid->disabled)
+			wpas_clear_temp_disabled(wpa_s, other_ssid, 0);
 
 		if (was_disabled != other_ssid->disabled)
 			wpas_notify_network_enabled_changed(wpa_s, other_ssid);
@@ -3542,4 +3551,64 @@ int wpas_is_p2p_prioritized(struct wpa_supplicant *wpa_s)
 	if (wpa_s->global->conc_pref == WPA_CONC_PREF_STA)
 		return 0;
 	return -1;
+}
+
+
+void wpas_auth_failed(struct wpa_supplicant *wpa_s)
+{
+	struct wpa_ssid *ssid = wpa_s->current_ssid;
+	int dur;
+	struct os_time now;
+
+	if (ssid == NULL) {
+		wpa_printf(MSG_DEBUG, "Authentication failure but no known "
+			   "SSID block");
+		return;
+	}
+
+	if (ssid->key_mgmt == WPA_KEY_MGMT_WPS)
+		return;
+
+	ssid->auth_failures++;
+	if (ssid->auth_failures > 50)
+		dur = 300;
+	else if (ssid->auth_failures > 20)
+		dur = 120;
+	else if (ssid->auth_failures > 10)
+		dur = 60;
+	else if (ssid->auth_failures > 5)
+		dur = 30;
+	else if (ssid->auth_failures > 1)
+		dur = 20;
+	else
+		dur = 10;
+
+	os_get_time(&now);
+	if (now.sec + dur <= ssid->disabled_until.sec)
+		return;
+
+	ssid->disabled_until.sec = now.sec + dur;
+
+	wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_TEMP_DISABLED
+		"id=%d ssid=\"%s\" auth_failures=%u duration=%d",
+		ssid->id, wpa_ssid_txt(ssid->ssid, ssid->ssid_len),
+		ssid->auth_failures, dur);
+}
+
+
+void wpas_clear_temp_disabled(struct wpa_supplicant *wpa_s,
+			      struct wpa_ssid *ssid, int clear_failures)
+{
+	if (ssid == NULL)
+		return;
+
+	if (ssid->disabled_until.sec) {
+		wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_REENABLED
+			"id=%d ssid=\"%s\"",
+			ssid->id, wpa_ssid_txt(ssid->ssid, ssid->ssid_len));
+	}
+	ssid->disabled_until.sec = 0;
+	ssid->disabled_until.usec = 0;
+	if (clear_failures)
+		ssid->auth_failures = 0;
 }

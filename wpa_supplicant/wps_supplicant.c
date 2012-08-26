@@ -267,6 +267,9 @@ static int wpa_supplicant_wps_cred(void *ctx,
 			ssid->temporary = 0;
 			ssid->bssid_set = 0;
 		}
+		ssid->disabled_until.sec = 0;
+		ssid->disabled_until.usec = 0;
+		ssid->auth_failures = 0;
 	} else {
 		wpa_printf(MSG_DEBUG, "WPS: Create a new network based on the "
 			   "received credential");

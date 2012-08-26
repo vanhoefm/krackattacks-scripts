@@ -1920,3 +1920,11 @@ void eapol_sm_set_ext_pw_ctx(struct eapol_sm *sm,
 	if (sm && sm->eap)
 		eap_sm_set_ext_pw_ctx(sm->eap, ext);
 }
+
+
+int eapol_sm_failed(struct eapol_sm *sm)
+{
+	if (sm == NULL)
+		return 0;
+	return !sm->eapSuccess && sm->eapFail;
+}

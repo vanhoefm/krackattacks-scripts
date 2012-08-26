@@ -1362,10 +1362,12 @@ static int wpa_supplicant_ctrl_iface_list_networks(
 		if (ret < 0 || ret >= end - pos)
 			return pos - buf;
 		pos += ret;
-		ret = os_snprintf(pos, end - pos, "\t%s%s%s",
+		ret = os_snprintf(pos, end - pos, "\t%s%s%s%s",
 				  ssid == wpa_s->current_ssid ?
 				  "[CURRENT]" : "",
 				  ssid->disabled ? "[DISABLED]" : "",
+				  ssid->disabled_until.sec ?
+				  "[TEMP-DISABLED]" : "",
 				  ssid->disabled == 2 ? "[P2P-PERSISTENT]" :
 				  "");
 		if (ret < 0 || ret >= end - pos)

@@ -652,6 +652,9 @@ void wpa_supplicant_clear_status(struct wpa_supplicant *wpa_s);
 void wpas_connection_failed(struct wpa_supplicant *wpa_s, const u8 *bssid);
 int wpas_driver_bss_selection(struct wpa_supplicant *wpa_s);
 int wpas_is_p2p_prioritized(struct wpa_supplicant *wpa_s);
+void wpas_auth_failed(struct wpa_supplicant *wpa_s);
+void wpas_clear_temp_disabled(struct wpa_supplicant *wpa_s,
+			      struct wpa_ssid *ssid, int clear_failures);
 void wpa_supplicant_proc_40mhz_intolerant(struct wpa_supplicant *wpa_s);
 
 /**

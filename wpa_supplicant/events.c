@@ -43,9 +43,28 @@
 #include "offchannel.h"
 
 
+static int wpas_temp_disabled(struct wpa_supplicant *wpa_s,
+			      struct wpa_ssid *ssid)
+{
+	struct os_time now;
+
+	if (ssid == NULL || ssid->disabled_until.sec == 0)
+		return 0;
+
+	os_get_time(&now);
+	if (ssid->disabled_until.sec > now.sec)
+		return ssid->disabled_until.sec - now.sec;
+
+	wpas_clear_temp_disabled(wpa_s, ssid, 0);
+
+	return 0;
+}
+
+
 static int wpa_supplicant_select_config(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_ssid *ssid, *old_ssid;
+	int res;
 
 	if (wpa_s->conf->ap_scan == 1 && wpa_s->current_ssid)
 		return 0;
@@ -61,6 +80,13 @@ static int wpa_supplicant_select_config(struct wpa_supplicant *wpa_s)
 
 	if (wpas_network_disabled(wpa_s, ssid)) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Selected network is disabled");
+		return -1;
+	}
+
+	res = wpas_temp_disabled(wpa_s, ssid);
+	if (res > 0) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "Selected network is temporarily "
+			"disabled for %d second(s)", res);
 		return -1;
 	}
 
@@ -652,9 +678,17 @@ static struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 
 	for (ssid = group; ssid; ssid = ssid->pnext) {
 		int check_ssid = wpa ? 1 : (ssid->ssid_len != 0);
+		int res;
 
 		if (wpas_network_disabled(wpa_s, ssid)) {
 			wpa_dbg(wpa_s, MSG_DEBUG, "   skip - disabled");
+			continue;
+		}
+
+		res = wpas_temp_disabled(wpa_s, ssid);
+		if (res > 0) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "   skip - disabled "
+				"temporarily for %d second(s)", res);
 			continue;
 		}
 
@@ -1735,6 +1769,7 @@ static void wpa_supplicant_event_disassoc(struct wpa_supplicant *wpa_s,
 	    wpa_key_mgmt_wpa_psk(wpa_s->key_mgmt)) {
 		wpa_msg(wpa_s, MSG_INFO, "WPA: 4-Way Handshake failed - "
 			"pre-shared key may be incorrect");
+		wpas_auth_failed(wpa_s);
 	}
 	if (!wpa_s->auto_reconnect_disabled ||
 	    wpa_s->key_mgmt == WPA_KEY_MGMT_WPS) {
@@ -2306,6 +2341,11 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 #endif /* CONFIG_AP */
 		wpa_supplicant_event_disassoc(wpa_s, reason_code,
 					      locally_generated);
+		if (reason_code == WLAN_REASON_IEEE_802_1X_AUTH_FAILED ||
+		    ((wpa_key_mgmt_wpa_ieee8021x(wpa_s->key_mgmt) ||
+		      (wpa_s->key_mgmt & WPA_KEY_MGMT_IEEE8021X_NO_WPA)) &&
+		     eapol_sm_failed(wpa_s->eapol)))
+			wpas_auth_failed(wpa_s);
 #ifdef CONFIG_P2P
 		if (event == EVENT_DEAUTH && data) {
 			wpas_p2p_deauth_notif(wpa_s, data->deauth_info.addr,

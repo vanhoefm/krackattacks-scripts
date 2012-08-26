@@ -48,6 +48,10 @@ extern "C" {
 #define WPA_EVENT_EAP_SUCCESS "CTRL-EVENT-EAP-SUCCESS "
 /** EAP authentication failed (EAP-Failure received) */
 #define WPA_EVENT_EAP_FAILURE "CTRL-EVENT-EAP-FAILURE "
+/** Network block temporarily disabled (e.g., due to authentication failure) */
+#define WPA_EVENT_TEMP_DISABLED "CTRL-EVENT-SSID-TEMP-DISABLED "
+/** Temporarily disabled network block re-enabled */
+#define WPA_EVENT_REENABLED "CTRL-EVENT-SSID-REENABLED "
 /** New scan results available */
 #define WPA_EVENT_SCAN_RESULTS "CTRL-EVENT-SCAN-RESULTS "
 /** wpa_supplicant state change */

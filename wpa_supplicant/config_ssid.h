@@ -519,6 +519,16 @@ struct wpa_ssid {
 	 * By default: 2
 	 */
 	int dtim_period;
+
+	/**
+	 * auth_failures - Number of consecutive authentication failures
+	 */
+	unsigned int auth_failures;
+
+	/**
+	 * disabled_until - Network block disabled until this time if non-zero
+	 */
+	struct os_time disabled_until;
 };
 
 #endif /* CONFIG_SSID_H */

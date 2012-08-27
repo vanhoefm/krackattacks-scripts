@@ -249,6 +249,17 @@ enum offchannel_send_action_result {
 	OFFCHANNEL_SEND_ACTION_FAILED /* Frame was not sent due to a failure */
 };
 
+struct wps_ap_info {
+	u8 bssid[ETH_ALEN];
+	enum wps_ap_info_type {
+		WPS_AP_NOT_SEL_REG,
+		WPS_AP_SEL_REG,
+		WPS_AP_SEL_REG_OUR
+	} type;
+	unsigned int tries;
+	struct os_time last_attempt;
+};
+
 /**
  * struct wpa_supplicant - Internal data for wpa_supplicant interface
  *
@@ -537,6 +548,10 @@ struct wpa_supplicant {
 	void *autoscan_priv;
 
 	struct wpa_ssid *connect_without_scan;
+
+	struct wps_ap_info *wps_ap;
+	size_t num_wps_ap;
+	int wps_ap_iter;
 
 	int after_wps;
 	int known_wps_freq;

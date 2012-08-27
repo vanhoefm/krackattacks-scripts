@@ -1158,6 +1158,8 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 		return 0;
 	}
 
+	wpas_wps_update_ap_info(wpa_s, scan_res);
+
 	selected = wpa_supplicant_pick_network(wpa_s, scan_res, &ssid);
 
 	if (selected) {
@@ -1732,6 +1734,8 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 		ibss_rsn_set_psk(wpa_s->ibss_rsn, wpa_s->current_ssid->psk);
 	}
 #endif /* CONFIG_IBSS_RSN */
+
+	wpas_wps_notify_assoc(wpa_s, bssid);
 }
 
 

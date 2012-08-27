@@ -2880,6 +2880,34 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			bss->hs20_operating_class = oper_class;
 			bss->hs20_operating_class_len = oper_class_len;
 #endif /* CONFIG_HS20 */
+		} else if (os_strcmp(buf, "vendor_elements") == 0) {
+			struct wpabuf *elems;
+			size_t len = os_strlen(pos);
+			if (len & 0x01) {
+				wpa_printf(MSG_ERROR, "Line %d: Invalid "
+					   "vendor_elements '%s'", line, pos);
+				return 1;
+			}
+			len /= 2;
+			if (len == 0) {
+				wpabuf_free(bss->vendor_elements);
+				bss->vendor_elements = NULL;
+				return 0;
+			}
+
+			elems = wpabuf_alloc(len);
+			if (elems == NULL)
+				return 1;
+
+			if (hexstr2bin(pos, wpabuf_put(elems, len), len)) {
+				wpabuf_free(elems);
+				wpa_printf(MSG_ERROR, "Line %d: Invalid "
+					   "vendor_elements '%s'", line, pos);
+				return 1;
+			}
+
+			wpabuf_free(bss->vendor_elements);
+			bss->vendor_elements = elems;
 		} else {
 			wpa_printf(MSG_ERROR, "Line %d: unknown configuration "
 				   "item '%s'", line, buf);

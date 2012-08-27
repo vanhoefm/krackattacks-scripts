@@ -206,6 +206,8 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 	if (hapd->p2p_probe_resp_ie)
 		buflen += wpabuf_len(hapd->p2p_probe_resp_ie);
 #endif /* CONFIG_P2P */
+	if (hapd->conf->vendor_elements)
+		buflen += wpabuf_len(hapd->conf->vendor_elements);
 	resp = os_zalloc(buflen);
 	if (resp == NULL)
 		return NULL;
@@ -296,6 +298,12 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 #ifdef CONFIG_HS20
 	pos = hostapd_eid_hs20_indication(hapd, pos);
 #endif /* CONFIG_HS20 */
+
+	if (hapd->conf->vendor_elements) {
+		os_memcpy(pos, wpabuf_head(hapd->conf->vendor_elements),
+			  wpabuf_len(hapd->conf->vendor_elements));
+		pos += wpabuf_len(hapd->conf->vendor_elements);
+	}
 
 	*resp_len = pos - (u8 *) resp;
 	return (u8 *) resp;
@@ -528,6 +536,8 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 	if (hapd->p2p_beacon_ie)
 		tail_len += wpabuf_len(hapd->p2p_beacon_ie);
 #endif /* CONFIG_P2P */
+	if (hapd->conf->vendor_elements)
+		tail_len += wpabuf_len(hapd->conf->vendor_elements);
 	tailpos = tail = os_malloc(tail_len);
 	if (head == NULL || tail == NULL) {
 		wpa_printf(MSG_ERROR, "Failed to set beacon data");
@@ -637,6 +647,12 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 #ifdef CONFIG_HS20
 	tailpos = hostapd_eid_hs20_indication(hapd, tailpos);
 #endif /* CONFIG_HS20 */
+
+	if (hapd->conf->vendor_elements) {
+		os_memcpy(tailpos, wpabuf_head(hapd->conf->vendor_elements),
+			  wpabuf_len(hapd->conf->vendor_elements));
+		tailpos += wpabuf_len(hapd->conf->vendor_elements);
+	}
 
 	tail_len = tailpos > tail ? tailpos - tail : 0;
 

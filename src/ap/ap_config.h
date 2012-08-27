@@ -444,6 +444,8 @@ struct hostapd_bss_config {
 #ifdef CONFIG_RADIUS_TEST
 	char *dump_msk_file;
 #endif /* CONFIG_RADIUS_TEST */
+
+	struct wpabuf *vendor_elements;
 };
 
 

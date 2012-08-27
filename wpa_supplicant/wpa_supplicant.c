@@ -468,6 +468,8 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 
 	ext_password_deinit(wpa_s->ext_pw);
 	wpa_s->ext_pw = NULL;
+
+	wpabuf_free(wpa_s->last_gas_resp);
 }
 
 

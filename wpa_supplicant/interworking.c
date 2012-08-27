@@ -1757,3 +1757,84 @@ int interworking_select(struct wpa_supplicant *wpa_s, int auto_select)
 
 	return 0;
 }
+
+
+static void gas_resp_cb(void *ctx, const u8 *addr, u8 dialog_token,
+			enum gas_query_result result,
+			const struct wpabuf *adv_proto,
+			const struct wpabuf *resp, u16 status_code)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+
+	wpa_msg(wpa_s, MSG_INFO, GAS_RESPONSE_INFO "addr=" MACSTR
+		" dialog_token=%d status_code=%d resp_len=%d",
+		MAC2STR(addr), dialog_token, status_code,
+		resp ? (int) wpabuf_len(resp) : -1);
+	if (!resp)
+		return;
+
+	wpabuf_free(wpa_s->last_gas_resp);
+	wpa_s->last_gas_resp = wpabuf_dup(resp);
+	if (wpa_s->last_gas_resp == NULL)
+		return;
+	os_memcpy(wpa_s->last_gas_addr, addr, ETH_ALEN);
+	wpa_s->last_gas_dialog_token = dialog_token;
+}
+
+
+int gas_send_request(struct wpa_supplicant *wpa_s, const u8 *dst,
+		     const struct wpabuf *adv_proto,
+		     const struct wpabuf *query)
+{
+	struct wpabuf *buf;
+	int ret = 0;
+	int freq;
+	struct wpa_bss *bss;
+	int res;
+	size_t len;
+	u8 query_resp_len_limit = 0, pame_bi = 0;
+
+	freq = wpa_s->assoc_freq;
+	bss = wpa_bss_get_bssid(wpa_s, dst);
+	if (bss)
+		freq = bss->freq;
+	if (freq <= 0)
+		return -1;
+
+	wpa_printf(MSG_DEBUG, "GAS request to " MACSTR " (freq %d MHz)",
+		   MAC2STR(dst), freq);
+	wpa_hexdump_buf(MSG_DEBUG, "Advertisement Protocol ID", adv_proto);
+	wpa_hexdump_buf(MSG_DEBUG, "GAS Query", query);
+
+	len = 3 + wpabuf_len(adv_proto) + 2;
+	if (query)
+		len += wpabuf_len(query);
+	buf = gas_build_initial_req(0, len);
+	if (buf == NULL)
+		return -1;
+
+	/* Advertisement Protocol IE */
+	wpabuf_put_u8(buf, WLAN_EID_ADV_PROTO);
+	wpabuf_put_u8(buf, 1 + wpabuf_len(adv_proto)); /* Length */
+	wpabuf_put_u8(buf, (query_resp_len_limit & 0x7f) |
+		      (pame_bi ? 0x80 : 0));
+	wpabuf_put_buf(buf, adv_proto);
+
+	/* GAS Query */
+	if (query) {
+		wpabuf_put_le16(buf, wpabuf_len(query));
+		wpabuf_put_buf(buf, query);
+	} else
+		wpabuf_put_le16(buf, 0);
+
+	res = gas_query_req(wpa_s->gas, dst, freq, buf, gas_resp_cb, wpa_s);
+	if (res < 0) {
+		wpa_printf(MSG_DEBUG, "GAS: Failed to send Query Request");
+		ret = -1;
+	} else
+		wpa_printf(MSG_DEBUG, "GAS: Query started with dialog token "
+			   "%u", res);
+
+	wpabuf_free(buf);
+	return ret;
+}

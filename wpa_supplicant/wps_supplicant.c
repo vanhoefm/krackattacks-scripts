@@ -2010,6 +2010,8 @@ static void wpas_wps_update_ap_info_bss(struct wpa_supplicant *wpa_s,
 				   " changed type %d -> %d",
 				   MAC2STR(res->bssid), ap->type, type);
 			ap->type = type;
+			if (type != WPS_AP_NOT_SEL_REG)
+				wpa_blacklist_del(wpa_s, ap->bssid);
 		}
 		return;
 	}

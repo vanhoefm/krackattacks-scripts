@@ -1629,6 +1629,35 @@ static int wpa_cli_cmd_p2p_find(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+static char ** wpa_cli_complete_p2p_find(const char *str, int pos)
+{
+	char **res = NULL;
+	int arg = get_cmd_arg_num(str, pos);
+
+	res = os_calloc(6, sizeof(char *));
+	if (res == NULL)
+		return NULL;
+	res[0] = os_strdup("type=social");
+	if (res[0] == NULL) {
+		os_free(res);
+		return NULL;
+	}
+	res[1] = os_strdup("type=progressive");
+	if (res[1] == NULL)
+		return res;
+	res[2] = os_strdup("delay=");
+	if (res[2] == NULL)
+		return res;
+	res[3] = os_strdup("dev_id=");
+	if (res[3] == NULL)
+		return res;
+	if (arg == 1)
+		res[4] = os_strdup("[timeout]");
+
+	return res;
+}
+
+
 static int wpa_cli_cmd_p2p_stop_find(struct wpa_ctrl *ctrl, int argc,
 				     char *argv[])
 {
@@ -2416,7 +2445,8 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	  cli_cmd_flag_none,
 	  "<addr> = roam to the specified BSS" },
 #ifdef CONFIG_P2P
-	{ "p2p_find", wpa_cli_cmd_p2p_find, NULL, cli_cmd_flag_none,
+	{ "p2p_find", wpa_cli_cmd_p2p_find, wpa_cli_complete_p2p_find,
+	  cli_cmd_flag_none,
 	  "[timeout] [type=*] = find P2P Devices for up-to timeout seconds" },
 	{ "p2p_stop_find", wpa_cli_cmd_p2p_stop_find, NULL, cli_cmd_flag_none,
 	  "= stop P2P Devices search" },

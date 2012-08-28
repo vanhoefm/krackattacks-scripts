@@ -2377,7 +2377,7 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
 	struct wiphy_info_data *info = arg;
 	int p2p_go_supported = 0, p2p_client_supported = 0;
-	int p2p_concurrent = 0;
+	int p2p_concurrent = 0, p2p_multichan_concurrent = 0;
 	int auth_supported = 0, connect_supported = 0;
 	struct wpa_driver_capa *capa = info->capa;
 	static struct nla_policy
@@ -2478,6 +2478,8 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 
 			if (combination_has_p2p && combination_has_mgd) {
 				p2p_concurrent = 1;
+				if (nla_get_u32(tb_comb[NL80211_IFACE_COMB_NUM_CHANNELS]) > 1)
+					p2p_multichan_concurrent = 1;
 				break;
 			}
 
@@ -2545,6 +2547,13 @@ broken_combination:
 			   "interface (driver advertised support)");
 		capa->flags |= WPA_DRIVER_FLAGS_P2P_CONCURRENT;
 		capa->flags |= WPA_DRIVER_FLAGS_P2P_MGMT_AND_NON_P2P;
+
+		if (p2p_multichan_concurrent) {
+			wpa_printf(MSG_DEBUG, "nl80211: Enable multi-channel "
+				   "concurrent (driver advertised support)");
+			capa->flags |=
+				WPA_DRIVER_FLAGS_MULTI_CHANNEL_CONCURRENT;
+		}
 	}
 
 	if (tb[NL80211_ATTR_TDLS_SUPPORT]) {

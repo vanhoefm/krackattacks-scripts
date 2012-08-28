@@ -1411,7 +1411,9 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 			type = "unknown";
 		wpa_msg(wpa_s, MSG_INFO, INTERWORKING_AP MACSTR " type=%s",
 			MAC2STR(bss->bssid), type);
-		if (wpa_s->auto_select) {
+		if (wpa_s->auto_select ||
+		    (wpa_s->conf->auto_interworking &&
+		     wpa_s->auto_network_select)) {
 			if (selected == NULL ||
 			    cred->priority > selected_prio) {
 				selected = bss;
@@ -1443,6 +1445,14 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 				   "match for enabled network configurations");
 			if (wpa_s->auto_select)
 				interworking_reconnect(wpa_s);
+			return;
+		}
+
+		if (wpa_s->auto_network_select) {
+			wpa_printf(MSG_DEBUG, "Interworking: Continue "
+				   "scanning after ANQP fetch");
+			wpa_supplicant_req_scan(wpa_s, wpa_s->scan_interval,
+						0);
 			return;
 		}
 
@@ -1490,7 +1500,7 @@ static void interworking_next_anqp_fetch(struct wpa_supplicant *wpa_s)
 }
 
 
-static void interworking_start_fetch_anqp(struct wpa_supplicant *wpa_s)
+void interworking_start_fetch_anqp(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_bss *bss;
 
@@ -1748,6 +1758,7 @@ int interworking_select(struct wpa_supplicant *wpa_s, int auto_select)
 {
 	interworking_stop_fetch_anqp(wpa_s);
 	wpa_s->network_select = 1;
+	wpa_s->auto_network_select = 0;
 	wpa_s->auto_select = !!auto_select;
 	wpa_printf(MSG_DEBUG, "Interworking: Start scan for network "
 		   "selection");

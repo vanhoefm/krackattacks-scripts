@@ -916,6 +916,9 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 	if (config->p2p_go_max_inactivity != DEFAULT_P2P_GO_MAX_INACTIVITY)
 		fprintf(f, "p2p_go_max_inactivity=%d\n",
 			config->p2p_go_max_inactivity);
+	if (config->auto_interworking)
+		fprintf(f, "auto_interworking=%d\n",
+			config->auto_interworking);
 }
 
 #endif /* CONFIG_NO_CONFIG_WRITE */

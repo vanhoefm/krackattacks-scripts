@@ -3010,6 +3010,7 @@ static const struct global_parse_data global_fields[] = {
 	{ BIN(wps_nfc_dev_pw), 0 },
 	{ STR(ext_password_backend), CFG_CHANGED_EXT_PW_BACKEND },
 	{ INT(p2p_go_max_inactivity), 0 },
+	{ INT_RANGE(auto_interworking, 0, 1), 0 },
 };
 
 #undef FUNC

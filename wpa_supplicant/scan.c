@@ -89,6 +89,9 @@ int wpa_supplicant_enabled_networks(struct wpa_supplicant *wpa_s)
 			count++;
 		ssid = ssid->next;
 	}
+	if (wpa_s->conf->cred && wpa_s->conf->interworking &&
+	    wpa_s->conf->auto_interworking)
+		count++;
 	return count;
 }
 

@@ -736,6 +736,17 @@ struct wpa_config {
 	int p2p_go_max_inactivity;
 
 	struct hostapd_wmm_ac_params wmm_ac_params[4];
+
+	/**
+	 * auto_interworking - Whether to use network selection automatically
+	 *
+	 * 0 = do not automatically go through Interworking network selection
+	 *     (i.e., require explicit interworking_select command for this)
+	 * 1 = perform Interworking network selection if one or more
+	 *     credentials have been configured and scan did not find a
+	 *     matching network block
+	 */
+	int auto_interworking;
 };
 
 

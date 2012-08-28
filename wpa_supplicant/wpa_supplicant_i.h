@@ -570,6 +570,7 @@ struct wpa_supplicant {
 	unsigned int fetch_anqp_in_progress:1;
 	unsigned int network_select:1;
 	unsigned int auto_select:1;
+	unsigned int auto_network_select:1;
 #endif /* CONFIG_INTERWORKING */
 	unsigned int drv_capa_known;
 

@@ -41,6 +41,7 @@
 #include "bss.h"
 #include "scan.h"
 #include "offchannel.h"
+#include "interworking.h"
 
 
 static int wpas_temp_disabled(struct wpa_supplicant *wpa_s,
@@ -1204,6 +1205,19 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 				return 0;
 			}
 #endif /* CONFIG_P2P */
+#ifdef CONFIG_INTERWORKING
+			if (wpa_s->conf->auto_interworking &&
+			    wpa_s->conf->interworking &&
+			    wpa_s->conf->cred) {
+				wpa_dbg(wpa_s, MSG_DEBUG, "Interworking: "
+					"start ANQP fetch since no matching "
+					"networks found");
+				wpa_s->network_select = 1;
+				wpa_s->auto_network_select = 1;
+				interworking_start_fetch_anqp(wpa_s);
+				return 0;
+			}
+#endif /* CONFIG_INTERWORKING */
 			if (wpa_supplicant_req_sched_scan(wpa_s))
 				wpa_supplicant_req_new_scan(wpa_s, timeout_sec,
 							    timeout_usec);

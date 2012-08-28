@@ -2627,9 +2627,10 @@ static char ** wpa_cli_cmd_completion(const char *cmd, const char *str,
 	int i;
 
 	for (i = 0; wpa_cli_commands[i].cmd; i++) {
-		if (wpa_cli_commands[i].completion)
-			return wpa_cli_commands[i].completion(str, pos);
 		if (os_strcasecmp(wpa_cli_commands[i].cmd, cmd) == 0) {
+			if (wpa_cli_commands[i].completion)
+				return wpa_cli_commands[i].completion(str,
+								      pos);
 			edit_clear_line();
 			printf("\r%s\n", wpa_cli_commands[i].usage);
 			edit_redraw();

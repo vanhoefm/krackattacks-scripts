@@ -765,6 +765,7 @@ struct wpa_driver_capa {
 #define WPA_DRIVER_CAPA_ENC_TKIP	0x00000004
 #define WPA_DRIVER_CAPA_ENC_CCMP	0x00000008
 #define WPA_DRIVER_CAPA_ENC_WEP128	0x00000010
+#define WPA_DRIVER_CAPA_ENC_GCMP	0x00000020
 	unsigned int enc;
 
 #define WPA_DRIVER_AUTH_OPEN		0x00000001
@@ -1075,7 +1076,8 @@ struct wpa_driver_ops {
 	 * @ifname: Interface name (for multi-SSID/VLAN support)
 	 * @priv: private driver interface data
 	 * @alg: encryption algorithm (%WPA_ALG_NONE, %WPA_ALG_WEP,
-	 *	%WPA_ALG_TKIP, %WPA_ALG_CCMP, %WPA_ALG_IGTK, %WPA_ALG_PMK);
+	 *	%WPA_ALG_TKIP, %WPA_ALG_CCMP, %WPA_ALG_IGTK, %WPA_ALG_PMK,
+	 *	%WPA_ALG_GCMP);
 	 *	%WPA_ALG_NONE clears the key.
 	 * @addr: Address of the peer STA (BSSID of the current AP when setting
 	 *	pairwise key in station mode), ff:ff:ff:ff:ff:ff for
@@ -1092,11 +1094,11 @@ struct wpa_driver_ops {
 	 *	for Rx keys (in most cases, this is only used with broadcast
 	 *	keys and set to zero for unicast keys); %NULL if not set
 	 * @seq_len: length of the seq, depends on the algorithm:
-	 *	TKIP: 6 octets, CCMP: 6 octets, IGTK: 6 octets
+	 *	TKIP: 6 octets, CCMP/GCMP: 6 octets, IGTK: 6 octets
 	 * @key: key buffer; TKIP: 16-byte temporal key, 8-byte Tx Mic key,
 	 *	8-byte Rx Mic Key
 	 * @key_len: length of the key buffer in octets (WEP: 5 or 13,
-	 *	TKIP: 32, CCMP: 16, IGTK: 16)
+	 *	TKIP: 32, CCMP/GCMP: 16, IGTK: 16)
 	 *
 	 * Returns: 0 on success, -1 on failure
 	 *
@@ -1601,9 +1603,9 @@ struct wpa_driver_ops {
 	 * Returns: 0 on success, -1 on failure
 	 *
 	 * This function is used to fetch the last used TSC/packet number for
-	 * a TKIP, CCMP, or BIP/IGTK key. It is mainly used with group keys, so
-	 * there is no strict requirement on implementing support for unicast
-	 * keys (i.e., addr != %NULL).
+	 * a TKIP, CCMP, GCMP, or BIP/IGTK key. It is mainly used with group
+	 * keys, so there is no strict requirement on implementing support for
+	 * unicast keys (i.e., addr != %NULL).
 	 */
 	int (*get_seqnum)(const char *ifname, void *priv, const u8 *addr,
 			  int idx, u8 *seq);

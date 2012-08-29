@@ -91,7 +91,7 @@ void wpa_sm_key_request(struct wpa_sm *sm, int error, int pairwise)
 
 	if (wpa_key_mgmt_ft(sm->key_mgmt) || wpa_key_mgmt_sha256(sm->key_mgmt))
 		ver = WPA_KEY_INFO_TYPE_AES_128_CMAC;
-	else if (sm->pairwise_cipher == WPA_CIPHER_CCMP)
+	else if (sm->pairwise_cipher != WPA_CIPHER_TKIP)
 		ver = WPA_KEY_INFO_TYPE_HMAC_SHA1_AES;
 	else
 		ver = WPA_KEY_INFO_TYPE_HMAC_MD5_RC4;
@@ -356,7 +356,7 @@ static int wpa_derive_ptk(struct wpa_sm *sm, const unsigned char *src_addr,
 			  const struct wpa_eapol_key *key,
 			  struct wpa_ptk *ptk)
 {
-	size_t ptk_len = sm->pairwise_cipher == WPA_CIPHER_CCMP ? 48 : 64;
+	size_t ptk_len = sm->pairwise_cipher != WPA_CIPHER_TKIP ? 48 : 64;
 #ifdef CONFIG_IEEE80211R
 	if (wpa_key_mgmt_ft(sm->key_mgmt))
 		return wpa_derive_ptk_ft(sm, src_addr, key, ptk, ptk_len);
@@ -526,6 +526,11 @@ static int wpa_supplicant_install_ptk(struct wpa_sm *sm,
 		keylen = 16;
 		rsclen = 6;
 		break;
+	case WPA_CIPHER_GCMP:
+		alg = WPA_ALG_GCMP;
+		keylen = 16;
+		rsclen = 6;
+		break;
 	case WPA_CIPHER_TKIP:
 		alg = WPA_ALG_TKIP;
 		keylen = 32;
@@ -584,6 +589,14 @@ static int wpa_supplicant_check_group_cipher(struct wpa_sm *sm,
 		}
 		*key_rsc_len = 6;
 		*alg = WPA_ALG_CCMP;
+		break;
+	case WPA_CIPHER_GCMP:
+		if (keylen != 16 || maxkeylen < 16) {
+			ret = -1;
+			break;
+		}
+		*key_rsc_len = 6;
+		*alg = WPA_ALG_GCMP;
 		break;
 	case WPA_CIPHER_TKIP:
 		if (keylen != 32 || maxkeylen < 32) {
@@ -1127,6 +1140,14 @@ static void wpa_supplicant_process_3_of_4(struct wpa_sm *sm,
 		if (keylen != 16) {
 			wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
 				"WPA: Invalid CCMP key length %d (src=" MACSTR
+				")", keylen, MAC2STR(sm->bssid));
+			goto failed;
+		}
+		break;
+	case WPA_CIPHER_GCMP:
+		if (keylen != 16) {
+			wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
+				"WPA: Invalid GCMP key length %d (src=" MACSTR
 				")", keylen, MAC2STR(sm->bssid));
 			goto failed;
 		}
@@ -1718,6 +1739,13 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 		} else
 			goto out;
 	}
+	if (sm->pairwise_cipher == WPA_CIPHER_GCMP &&
+	    ver != WPA_KEY_INFO_TYPE_HMAC_SHA1_AES) {
+		wpa_msg(sm->ctx->msg_ctx, MSG_INFO,
+			"WPA: GCMP is used, but EAPOL-Key "
+			"descriptor version (%d) is not 2", ver);
+		goto out;
+	}
 
 #ifdef CONFIG_PEERKEY
 	for (peerkey = sm->peerkey; peerkey; peerkey = peerkey->next) {
@@ -1857,6 +1885,8 @@ static int wpa_cipher_bits(int cipher)
 	switch (cipher) {
 	case WPA_CIPHER_CCMP:
 		return 128;
+	case WPA_CIPHER_GCMP:
+		return 128;
 	case WPA_CIPHER_TKIP:
 		return 256;
 	case WPA_CIPHER_WEP104:
@@ -1906,6 +1936,8 @@ static u32 wpa_cipher_suite(struct wpa_sm *sm, int cipher)
 	case WPA_CIPHER_CCMP:
 		return (sm->proto == WPA_PROTO_RSN ?
 			RSN_CIPHER_SUITE_CCMP : WPA_CIPHER_SUITE_CCMP);
+	case WPA_CIPHER_GCMP:
+		return RSN_CIPHER_SUITE_GCMP;
 	case WPA_CIPHER_TKIP:
 		return (sm->proto == WPA_PROTO_RSN ?
 			RSN_CIPHER_SUITE_TKIP : WPA_CIPHER_SUITE_TKIP);
@@ -2690,6 +2722,11 @@ int wpa_wnmsleep_install_key(struct wpa_sm *sm, u8 subelem_id, u8 *buf)
 		keylen = 16;
 		gd.key_rsc_len = 6;
 		gd.alg = WPA_ALG_CCMP;
+		break;
+	case WPA_CIPHER_GCMP:
+		keylen = 16;
+		gd.key_rsc_len = 6;
+		gd.alg = WPA_ALG_GCMP;
 		break;
 	case WPA_CIPHER_TKIP:
 		keylen = 32;

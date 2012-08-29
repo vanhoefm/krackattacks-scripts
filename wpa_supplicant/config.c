@@ -643,6 +643,8 @@ static int wpa_config_parse_cipher(int line, const char *value)
 		*end = '\0';
 		if (os_strcmp(start, "CCMP") == 0)
 			val |= WPA_CIPHER_CCMP;
+		else if (os_strcmp(start, "GCMP") == 0)
+			val |= WPA_CIPHER_GCMP;
 		else if (os_strcmp(start, "TKIP") == 0)
 			val |= WPA_CIPHER_TKIP;
 		else if (os_strcmp(start, "WEP104") == 0)
@@ -686,6 +688,16 @@ static char * wpa_config_write_cipher(int cipher)
 
 	if (cipher & WPA_CIPHER_CCMP) {
 		ret = os_snprintf(pos, end - pos, "%sCCMP",
+				  pos == buf ? "" : " ");
+		if (ret < 0 || ret >= end - pos) {
+			end[-1] = '\0';
+			return buf;
+		}
+		pos += ret;
+	}
+
+	if (cipher & WPA_CIPHER_GCMP) {
+		ret = os_snprintf(pos, end - pos, "%sGCMP",
 				  pos == buf ? "" : " ");
 		if (ret < 0 || ret >= end - pos) {
 			end[-1] = '\0';
@@ -747,7 +759,8 @@ static int wpa_config_parse_pairwise(const struct parse_data *data,
 	val = wpa_config_parse_cipher(line, value);
 	if (val == -1)
 		return -1;
-	if (val & ~(WPA_CIPHER_CCMP | WPA_CIPHER_TKIP | WPA_CIPHER_NONE)) {
+	if (val & ~(WPA_CIPHER_CCMP | WPA_CIPHER_GCMP | WPA_CIPHER_TKIP |
+		    WPA_CIPHER_NONE)) {
 		wpa_printf(MSG_ERROR, "Line %d: not allowed pairwise cipher "
 			   "(0x%x).", line, val);
 		return -1;
@@ -776,8 +789,8 @@ static int wpa_config_parse_group(const struct parse_data *data,
 	val = wpa_config_parse_cipher(line, value);
 	if (val == -1)
 		return -1;
-	if (val & ~(WPA_CIPHER_CCMP | WPA_CIPHER_TKIP | WPA_CIPHER_WEP104 |
-		    WPA_CIPHER_WEP40)) {
+	if (val & ~(WPA_CIPHER_CCMP | WPA_CIPHER_GCMP | WPA_CIPHER_TKIP |
+		    WPA_CIPHER_WEP104 | WPA_CIPHER_WEP40)) {
 		wpa_printf(MSG_ERROR, "Line %d: not allowed group cipher "
 			   "(0x%x).", line, val);
 		return -1;

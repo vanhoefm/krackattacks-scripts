@@ -4201,6 +4201,10 @@ static int wpa_driver_nl80211_set_key(const char *ifname, void *priv,
 			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
 				    WLAN_CIPHER_SUITE_CCMP);
 			break;
+		case WPA_ALG_GCMP:
+			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
+				    WLAN_CIPHER_SUITE_GCMP);
+			break;
 		case WPA_ALG_IGTK:
 			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
 				    WLAN_CIPHER_SUITE_AES_CMAC);
@@ -4340,6 +4344,9 @@ static int nl_add_key(struct nl_msg *msg, enum wpa_alg alg,
 		break;
 	case WPA_ALG_CCMP:
 		NLA_PUT_U32(msg, NL80211_KEY_CIPHER, WLAN_CIPHER_SUITE_CCMP);
+		break;
+	case WPA_ALG_GCMP:
+		NLA_PUT_U32(msg, NL80211_KEY_CIPHER, WLAN_CIPHER_SUITE_GCMP);
 		break;
 	case WPA_ALG_IGTK:
 		NLA_PUT_U32(msg, NL80211_KEY_CIPHER,
@@ -5476,6 +5483,8 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 	num_suites = 0;
 	if (params->pairwise_ciphers & WPA_CIPHER_CCMP)
 		suites[num_suites++] = WLAN_CIPHER_SUITE_CCMP;
+	if (params->pairwise_ciphers & WPA_CIPHER_GCMP)
+		suites[num_suites++] = WLAN_CIPHER_SUITE_GCMP;
 	if (params->pairwise_ciphers & WPA_CIPHER_TKIP)
 		suites[num_suites++] = WLAN_CIPHER_SUITE_TKIP;
 	if (params->pairwise_ciphers & WPA_CIPHER_WEP104)
@@ -5491,6 +5500,10 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 	case WPA_CIPHER_CCMP:
 		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITE_GROUP,
 			    WLAN_CIPHER_SUITE_CCMP);
+		break;
+	case WPA_CIPHER_GCMP:
+		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITE_GROUP,
+			    WLAN_CIPHER_SUITE_GCMP);
 		break;
 	case WPA_CIPHER_TKIP:
 		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITE_GROUP,
@@ -6753,6 +6766,9 @@ skip_auth_type:
 		case CIPHER_CCMP:
 			cipher = WLAN_CIPHER_SUITE_CCMP;
 			break;
+		case CIPHER_GCMP:
+			cipher = WLAN_CIPHER_SUITE_GCMP;
+			break;
 		case CIPHER_TKIP:
 		default:
 			cipher = WLAN_CIPHER_SUITE_TKIP;
@@ -6773,6 +6789,9 @@ skip_auth_type:
 			break;
 		case CIPHER_CCMP:
 			cipher = WLAN_CIPHER_SUITE_CCMP;
+			break;
+		case CIPHER_GCMP:
+			cipher = WLAN_CIPHER_SUITE_GCMP;
 			break;
 		case CIPHER_TKIP:
 		default:
@@ -6916,6 +6935,9 @@ static int wpa_driver_nl80211_associate(
 		case CIPHER_CCMP:
 			cipher = WLAN_CIPHER_SUITE_CCMP;
 			break;
+		case CIPHER_GCMP:
+			cipher = WLAN_CIPHER_SUITE_GCMP;
+			break;
 		case CIPHER_TKIP:
 		default:
 			cipher = WLAN_CIPHER_SUITE_TKIP;
@@ -6937,6 +6959,9 @@ static int wpa_driver_nl80211_associate(
 			break;
 		case CIPHER_CCMP:
 			cipher = WLAN_CIPHER_SUITE_CCMP;
+			break;
+		case CIPHER_GCMP:
+			cipher = WLAN_CIPHER_SUITE_GCMP;
 			break;
 		case CIPHER_TKIP:
 		default:

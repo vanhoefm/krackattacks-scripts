@@ -123,6 +123,8 @@ int wpa_write_rsn_ie(struct wpa_auth_config *conf, u8 *buf, size_t len,
 
 	if (conf->wpa_group == WPA_CIPHER_CCMP) {
 		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_CCMP);
+	} else if (conf->wpa_group == WPA_CIPHER_GCMP) {
+		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_GCMP);
 	} else if (conf->wpa_group == WPA_CIPHER_TKIP) {
 		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_TKIP);
 	} else if (conf->wpa_group == WPA_CIPHER_WEP104) {
@@ -150,6 +152,11 @@ int wpa_write_rsn_ie(struct wpa_auth_config *conf, u8 *buf, size_t len,
 
 	if (conf->rsn_pairwise & WPA_CIPHER_CCMP) {
 		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_CCMP);
+		pos += RSN_SELECTOR_LEN;
+		num_suites++;
+	}
+	if (conf->rsn_pairwise & WPA_CIPHER_GCMP) {
+		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_GCMP);
 		pos += RSN_SELECTOR_LEN;
 		num_suites++;
 	}
@@ -453,6 +460,8 @@ int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 		selector = RSN_CIPHER_SUITE_CCMP;
 		if (data.pairwise_cipher & WPA_CIPHER_CCMP)
 			selector = RSN_CIPHER_SUITE_CCMP;
+		else if (data.pairwise_cipher & WPA_CIPHER_GCMP)
+			selector = RSN_CIPHER_SUITE_GCMP;
 		else if (data.pairwise_cipher & WPA_CIPHER_TKIP)
 			selector = RSN_CIPHER_SUITE_TKIP;
 		else if (data.pairwise_cipher & WPA_CIPHER_WEP104)
@@ -466,6 +475,8 @@ int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 		selector = RSN_CIPHER_SUITE_CCMP;
 		if (data.group_cipher & WPA_CIPHER_CCMP)
 			selector = RSN_CIPHER_SUITE_CCMP;
+		else if (data.group_cipher & WPA_CIPHER_GCMP)
+			selector = RSN_CIPHER_SUITE_GCMP;
 		else if (data.group_cipher & WPA_CIPHER_TKIP)
 			selector = RSN_CIPHER_SUITE_TKIP;
 		else if (data.group_cipher & WPA_CIPHER_WEP104)
@@ -607,6 +618,8 @@ int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 
 	if (ciphers & WPA_CIPHER_CCMP)
 		sm->pairwise = WPA_CIPHER_CCMP;
+	else if (ciphers & WPA_CIPHER_GCMP)
+		sm->pairwise = WPA_CIPHER_GCMP;
 	else
 		sm->pairwise = WPA_CIPHER_TKIP;
 

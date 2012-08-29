@@ -1428,6 +1428,13 @@ static char * wpa_supplicant_cipher_txt(char *pos, char *end, int cipher)
 		pos += ret;
 		first = 0;
 	}
+	if (cipher & WPA_CIPHER_GCMP) {
+		ret = os_snprintf(pos, end - pos, "%sGCMP", first ? "" : "+");
+		if (ret < 0 || ret >= end - pos)
+			return pos;
+		pos += ret;
+		first = 0;
+	}
 	return pos;
 }
 
@@ -2150,6 +2157,14 @@ static int ctrl_iface_get_capability_pairwise(int res, char *strict,
 		first = 0;
 	}
 
+	if (capa->enc & WPA_DRIVER_CAPA_ENC_GCMP) {
+		ret = os_snprintf(pos, end - pos, "%sGCMP", first ? "" : " ");
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+		first = 0;
+	}
+
 	if (capa->enc & WPA_DRIVER_CAPA_ENC_TKIP) {
 		ret = os_snprintf(pos, end - pos, "%sTKIP", first ? "" : " ");
 		if (ret < 0 || ret >= end - pos)
@@ -2192,6 +2207,14 @@ static int ctrl_iface_get_capability_group(int res, char *strict,
 
 	if (capa->enc & WPA_DRIVER_CAPA_ENC_CCMP) {
 		ret = os_snprintf(pos, end - pos, "%sCCMP", first ? "" : " ");
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+		first = 0;
+	}
+
+	if (capa->enc & WPA_DRIVER_CAPA_ENC_GCMP) {
+		ret = os_snprintf(pos, end - pos, "%sGCMP", first ? "" : " ");
 		if (ret < 0 || ret >= end - pos)
 			return pos - buf;
 		pos += ret;

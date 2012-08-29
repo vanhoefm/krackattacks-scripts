@@ -760,6 +760,9 @@ void wpa_ft_install_ptk(struct wpa_state_machine *sm)
 	} else if (sm->pairwise == WPA_CIPHER_CCMP) {
 		alg = WPA_ALG_CCMP;
 		klen = 16;
+	} else if (sm->pairwise == WPA_CIPHER_GCMP) {
+		alg = WPA_ALG_GCMP;
+		klen = 16;
 	} else {
 		wpa_printf(MSG_DEBUG, "FT: Unknown pairwise alg 0x%x - skip "
 			   "PTK configuration", sm->pairwise);
@@ -882,7 +885,7 @@ static u16 wpa_ft_process_auth_req(struct wpa_state_machine *sm,
 	wpa_hexdump(MSG_DEBUG, "FT: Generated ANonce",
 		    sm->ANonce, WPA_NONCE_LEN);
 
-	ptk_len = pairwise != WPA_CIPHER_CCMP ? 64 : 48;
+	ptk_len = pairwise == WPA_CIPHER_TKIP ? 64 : 48;
 	wpa_pmk_r1_to_ptk(pmk_r1, sm->SNonce, sm->ANonce, sm->addr,
 			  sm->wpa_auth->addr, pmk_r1_name,
 			  (u8 *) &sm->PTK, ptk_len, ptk_name);

@@ -173,6 +173,8 @@ static u8 * wpa_ft_gen_req_ies(struct wpa_sm *sm, size_t *len,
 	/* Group Suite Selector */
 	if (sm->group_cipher == WPA_CIPHER_CCMP)
 		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_CCMP);
+	else if (sm->group_cipher == WPA_CIPHER_GCMP)
+		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_GCMP);
 	else if (sm->group_cipher == WPA_CIPHER_TKIP)
 		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_TKIP);
 	else {
@@ -190,6 +192,8 @@ static u8 * wpa_ft_gen_req_ies(struct wpa_sm *sm, size_t *len,
 	/* Pairwise Suite List */
 	if (sm->pairwise_cipher == WPA_CIPHER_CCMP)
 		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_CCMP);
+	else if (sm->pairwise_cipher == WPA_CIPHER_GCMP)
+		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_GCMP);
 	else if (sm->pairwise_cipher == WPA_CIPHER_TKIP)
 		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_TKIP);
 	else {
@@ -326,6 +330,10 @@ static int wpa_ft_install_ptk(struct wpa_sm *sm, const u8 *bssid)
 	switch (sm->pairwise_cipher) {
 	case WPA_CIPHER_CCMP:
 		alg = WPA_ALG_CCMP;
+		keylen = 16;
+		break;
+	case WPA_CIPHER_GCMP:
+		alg = WPA_ALG_GCMP;
 		keylen = 16;
 		break;
 	case WPA_CIPHER_TKIP:
@@ -483,7 +491,7 @@ int wpa_ft_process_response(struct wpa_sm *sm, const u8 *ies, size_t ies_len,
 		    sm->pmk_r1_name, WPA_PMK_NAME_LEN);
 
 	bssid = target_ap;
-	ptk_len = sm->pairwise_cipher == WPA_CIPHER_CCMP ? 48 : 64;
+	ptk_len = sm->pairwise_cipher != WPA_CIPHER_TKIP ? 48 : 64;
 	wpa_pmk_r1_to_ptk(sm->pmk_r1, sm->snonce, ftie->anonce, sm->own_addr,
 			  bssid, sm->pmk_r1_name,
 			  (u8 *) &sm->ptk, ptk_len, ptk_name);
@@ -576,6 +584,11 @@ static int wpa_ft_process_gtk_subelem(struct wpa_sm *sm, const u8 *gtk_elem,
 		keylen = 16;
 		rsc_len = 6;
 		alg = WPA_ALG_CCMP;
+		break;
+	case WPA_CIPHER_GCMP:
+		keylen = 16;
+		rsc_len = 6;
+		alg = WPA_ALG_GCMP;
 		break;
 	case WPA_CIPHER_TKIP:
 		keylen = 32;

@@ -1929,6 +1929,12 @@ dbus_bool_t wpas_dbus_getter_capabilities(DBusMessageIter *iter,
 				goto nomem;
 		}
 
+		if (capa.enc & WPA_DRIVER_CAPA_ENC_GCMP) {
+			if (!wpa_dbus_dict_string_array_add_element(
+				    &iter_array, "gcmp"))
+				goto nomem;
+		}
+
 		if (capa.enc & WPA_DRIVER_CAPA_ENC_TKIP) {
 			if (!wpa_dbus_dict_string_array_add_element(
 				    &iter_array, "tkip"))
@@ -1967,6 +1973,12 @@ dbus_bool_t wpas_dbus_getter_capabilities(DBusMessageIter *iter,
 		if (capa.enc & WPA_DRIVER_CAPA_ENC_CCMP) {
 			if (!wpa_dbus_dict_string_array_add_element(
 				    &iter_array, "ccmp"))
+				goto nomem;
+		}
+
+		if (capa.enc & WPA_DRIVER_CAPA_ENC_GCMP) {
+			if (!wpa_dbus_dict_string_array_add_element(
+				    &iter_array, "gcmp"))
 				goto nomem;
 		}
 
@@ -3182,7 +3194,7 @@ static dbus_bool_t wpas_dbus_get_bss_security_prop(DBusMessageIter *iter,
 {
 	DBusMessageIter iter_dict, variant_iter;
 	const char *group;
-	const char *pairwise[2]; /* max 2 pairwise ciphers is supported */
+	const char *pairwise[3]; /* max 3 pairwise ciphers is supported */
 	const char *key_mgmt[7]; /* max 7 key managements may be supported */
 	int n;
 
@@ -3225,6 +3237,9 @@ static dbus_bool_t wpas_dbus_get_bss_security_prop(DBusMessageIter *iter,
 	case WPA_CIPHER_CCMP:
 		group = "ccmp";
 		break;
+	case WPA_CIPHER_GCMP:
+		group = "gcmp";
+		break;
 	case WPA_CIPHER_WEP104:
 		group = "wep104";
 		break;
@@ -3242,6 +3257,8 @@ static dbus_bool_t wpas_dbus_get_bss_security_prop(DBusMessageIter *iter,
 		pairwise[n++] = "tkip";
 	if (ie_data->pairwise_cipher & WPA_CIPHER_CCMP)
 		pairwise[n++] = "ccmp";
+	if (ie_data->pairwise_cipher & WPA_CIPHER_GCMP)
+		pairwise[n++] = "gcmp";
 
 	if (!wpa_dbus_dict_append_string_array(&iter_dict, "Pairwise",
 					       pairwise, n))

@@ -154,6 +154,11 @@ static int wpa_supplicant_set_wpa_none_key(struct wpa_supplicant *wpa_s,
 		keylen = 16;
 		alg = WPA_ALG_CCMP;
 		break;
+	case WPA_CIPHER_GCMP:
+		os_memcpy(key, ssid->psk, 16);
+		keylen = 16;
+		alg = WPA_ALG_GCMP;
+		break;
 	case WPA_CIPHER_TKIP:
 		/* WPA-None uses the same Michael MIC key for both TX and RX */
 		os_memcpy(key, ssid->psk, 16 + 8);
@@ -843,6 +848,8 @@ enum wpa_cipher cipher_suite2driver(int cipher)
 		return CIPHER_WEP104;
 	case WPA_CIPHER_CCMP:
 		return CIPHER_CCMP;
+	case WPA_CIPHER_GCMP:
+		return CIPHER_GCMP;
 	case WPA_CIPHER_TKIP:
 	default:
 		return CIPHER_TKIP;
@@ -1019,6 +1026,9 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 	if (sel & WPA_CIPHER_CCMP) {
 		wpa_s->group_cipher = WPA_CIPHER_CCMP;
 		wpa_dbg(wpa_s, MSG_DEBUG, "WPA: using GTK CCMP");
+	} else if (sel & WPA_CIPHER_GCMP) {
+		wpa_s->group_cipher = WPA_CIPHER_GCMP;
+		wpa_dbg(wpa_s, MSG_DEBUG, "WPA: using GTK GCMP");
 	} else if (sel & WPA_CIPHER_TKIP) {
 		wpa_s->group_cipher = WPA_CIPHER_TKIP;
 		wpa_dbg(wpa_s, MSG_DEBUG, "WPA: using GTK TKIP");
@@ -1038,6 +1048,9 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 	if (sel & WPA_CIPHER_CCMP) {
 		wpa_s->pairwise_cipher = WPA_CIPHER_CCMP;
 		wpa_dbg(wpa_s, MSG_DEBUG, "WPA: using PTK CCMP");
+	} else if (sel & WPA_CIPHER_GCMP) {
+		wpa_s->pairwise_cipher = WPA_CIPHER_GCMP;
+		wpa_dbg(wpa_s, MSG_DEBUG, "WPA: using PTK GCMP");
 	} else if (sel & WPA_CIPHER_TKIP) {
 		wpa_s->pairwise_cipher = WPA_CIPHER_TKIP;
 		wpa_dbg(wpa_s, MSG_DEBUG, "WPA: using PTK TKIP");

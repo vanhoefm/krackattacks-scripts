@@ -669,6 +669,8 @@ static int hostapd_config_parse_cipher(int line, const char *value)
 		*end = '\0';
 		if (os_strcmp(start, "CCMP") == 0)
 			val |= WPA_CIPHER_CCMP;
+		else if (os_strcmp(start, "GCMP") == 0)
+			val |= WPA_CIPHER_GCMP;
 		else if (os_strcmp(start, "TKIP") == 0)
 			val |= WPA_CIPHER_TKIP;
 		else if (os_strcmp(start, "WEP104") == 0)
@@ -1192,10 +1194,10 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 
 	if (conf->ieee80211n && bss->wpa &&
 	    !(bss->wpa_pairwise & WPA_CIPHER_CCMP) &&
-	    !(bss->rsn_pairwise & WPA_CIPHER_CCMP)) {
+	    !(bss->rsn_pairwise & (WPA_CIPHER_CCMP | WPA_CIPHER_GCMP))) {
 		bss->disable_11n = 1;
 		wpa_printf(MSG_ERROR, "HT (IEEE 802.11n) with WPA/WPA2 "
-			   "requires CCMP to be enabled, disabling HT "
+			   "requires CCMP/GCMP to be enabled, disabling HT "
 			   "capabilities");
 	}
 #endif /* CONFIG_IEEE80211N */
@@ -1225,7 +1227,7 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 #ifdef CONFIG_HS20
 	if (bss->hs20 &&
 	    (!(bss->wpa & 2) ||
-	     !(bss->rsn_pairwise & WPA_CIPHER_CCMP))) {
+	     !(bss->rsn_pairwise & (WPA_CIPHER_CCMP | WPA_CIPHER_GCMP)))) {
 		wpa_printf(MSG_ERROR, "HS 2.0: WPA2-Enterprise/CCMP "
 			   "configuration is required for Hotspot 2.0 "
 			   "functionality");
@@ -2941,6 +2943,9 @@ static void hostapd_set_security_params(struct hostapd_bss_config *bss)
 	}
 	if (pairwise & WPA_CIPHER_TKIP)
 		bss->wpa_group = WPA_CIPHER_TKIP;
+	else if ((pairwise & (WPA_CIPHER_CCMP | WPA_CIPHER_GCMP)) ==
+		 WPA_CIPHER_GCMP)
+		bss->wpa_group = WPA_CIPHER_GCMP;
 	else
 		bss->wpa_group = WPA_CIPHER_CCMP;
 

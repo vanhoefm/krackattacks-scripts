@@ -284,6 +284,9 @@ static void wpa_group_set_key_len(struct wpa_group *group, int cipher)
 	case WPA_CIPHER_CCMP:
 		group->GTK_len = 16;
 		break;
+	case WPA_CIPHER_GCMP:
+		group->GTK_len = 16;
+		break;
 	case WPA_CIPHER_TKIP:
 		group->GTK_len = 32;
 		break;
@@ -849,7 +852,8 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 	if (msg == REQUEST || msg == PAIRWISE_2 || msg == PAIRWISE_4 ||
 	    msg == GROUP_2) {
 		u16 ver = key_info & WPA_KEY_INFO_TYPE_MASK;
-		if (sm->pairwise == WPA_CIPHER_CCMP) {
+		if (sm->pairwise == WPA_CIPHER_CCMP ||
+		    sm->pairwise == WPA_CIPHER_GCMP) {
 			if (wpa_use_aes_cmac(sm) &&
 			    ver != WPA_KEY_INFO_TYPE_AES_128_CMAC) {
 				wpa_auth_logger(wpa_auth, sm->addr,
@@ -865,7 +869,7 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 				wpa_auth_logger(wpa_auth, sm->addr,
 						LOGGER_WARNING,
 						"did not use HMAC-SHA1-AES "
-						"with CCMP");
+						"with CCMP/GCMP");
 				return;
 			}
 		}
@@ -1240,7 +1244,7 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 		version = force_version;
 	else if (wpa_use_aes_cmac(sm))
 		version = WPA_KEY_INFO_TYPE_AES_128_CMAC;
-	else if (sm->pairwise == WPA_CIPHER_CCMP)
+	else if (sm->pairwise != WPA_CIPHER_TKIP)
 		version = WPA_KEY_INFO_TYPE_HMAC_SHA1_AES;
 	else
 		version = WPA_KEY_INFO_TYPE_HMAC_MD5_RC4;
@@ -1289,6 +1293,9 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 	alg = pairwise ? sm->pairwise : wpa_auth->conf.wpa_group;
 	switch (alg) {
 	case WPA_CIPHER_CCMP:
+		WPA_PUT_BE16(key->key_length, 16);
+		break;
+	case WPA_CIPHER_GCMP:
 		WPA_PUT_BE16(key->key_length, 16);
 		break;
 	case WPA_CIPHER_TKIP:
@@ -1538,6 +1545,8 @@ static enum wpa_alg wpa_alg_enum(int alg)
 	switch (alg) {
 	case WPA_CIPHER_CCMP:
 		return WPA_ALG_CCMP;
+	case WPA_CIPHER_GCMP:
+		return WPA_ALG_GCMP;
 	case WPA_CIPHER_TKIP:
 		return WPA_ALG_TKIP;
 	case WPA_CIPHER_WEP104:
@@ -1773,7 +1782,7 @@ SM_STATE(WPA_PTK, PTKSTART)
 static int wpa_derive_ptk(struct wpa_state_machine *sm, const u8 *pmk,
 			  struct wpa_ptk *ptk)
 {
-	size_t ptk_len = sm->pairwise == WPA_CIPHER_CCMP ? 48 : 64;
+	size_t ptk_len = sm->pairwise != WPA_CIPHER_TKIP ? 48 : 64;
 #ifdef CONFIG_IEEE80211R
 	if (wpa_key_mgmt_ft(sm->wpa_key_mgmt))
 		return wpa_auth_derive_ptk_ft(sm, pmk, ptk, ptk_len);
@@ -2093,6 +2102,9 @@ SM_STATE(WPA_PTK, PTKINITDONE)
 		if (sm->pairwise == WPA_CIPHER_TKIP) {
 			alg = WPA_ALG_TKIP;
 			klen = 32;
+		} else if (sm->pairwise == WPA_CIPHER_GCMP) {
+			alg = WPA_ALG_GCMP;
+			klen = 16;
 		} else {
 			alg = WPA_ALG_CCMP;
 			klen = 16;
@@ -2790,6 +2802,8 @@ static int wpa_cipher_bits(int cipher)
 	switch (cipher) {
 	case WPA_CIPHER_CCMP:
 		return 128;
+	case WPA_CIPHER_GCMP:
+		return 128;
 	case WPA_CIPHER_TKIP:
 		return 256;
 	case WPA_CIPHER_WEP104:
@@ -2921,6 +2935,8 @@ int wpa_get_mib_sta(struct wpa_state_machine *sm, char *buf, size_t buflen)
 	} else if (sm->wpa == WPA_VERSION_WPA2) {
 		if (sm->pairwise == WPA_CIPHER_CCMP)
 			pairwise = RSN_CIPHER_SUITE_CCMP;
+		else if (sm->pairwise == WPA_CIPHER_GCMP)
+			pairwise = RSN_CIPHER_SUITE_GCMP;
 		else if (sm->pairwise == WPA_CIPHER_TKIP)
 			pairwise = RSN_CIPHER_SUITE_TKIP;
 		else if (sm->pairwise == WPA_CIPHER_WEP104)

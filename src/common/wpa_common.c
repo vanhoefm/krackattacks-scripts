@@ -352,6 +352,8 @@ static int rsn_selector_to_bitfield(const u8 *s)
 	if (RSN_SELECTOR_GET(s) == RSN_CIPHER_SUITE_AES_128_CMAC)
 		return WPA_CIPHER_AES_128_CMAC;
 #endif /* CONFIG_IEEE80211W */
+	if (RSN_SELECTOR_GET(s) == RSN_CIPHER_SUITE_GCMP)
+		return WPA_CIPHER_GCMP;
 	return 0;
 }
 
@@ -908,6 +910,8 @@ const char * wpa_cipher_txt(int cipher)
 		return "CCMP";
 	case WPA_CIPHER_CCMP | WPA_CIPHER_TKIP:
 		return "CCMP+TKIP";
+	case WPA_CIPHER_GCMP:
+		return "GCMP";
 	default:
 		return "UNKNOWN";
 	}

@@ -218,6 +218,9 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 	}
 	if (pairwise & WPA_CIPHER_TKIP)
 		bss->wpa_group = WPA_CIPHER_TKIP;
+	else if ((pairwise & (WPA_CIPHER_CCMP | WPA_CIPHER_GCMP)) ==
+		 WPA_CIPHER_GCMP)
+		bss->wpa_group = WPA_CIPHER_GCMP;
 	else
 		bss->wpa_group = WPA_CIPHER_CCMP;
 
@@ -461,6 +464,8 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 
 	if (ssid->pairwise_cipher & WPA_CIPHER_CCMP)
 		wpa_s->pairwise_cipher = WPA_CIPHER_CCMP;
+	else if (ssid->pairwise_cipher & WPA_CIPHER_GCMP)
+		wpa_s->pairwise_cipher = WPA_CIPHER_GCMP;
 	else if (ssid->pairwise_cipher & WPA_CIPHER_TKIP)
 		wpa_s->pairwise_cipher = WPA_CIPHER_TKIP;
 	else if (ssid->pairwise_cipher & WPA_CIPHER_NONE)

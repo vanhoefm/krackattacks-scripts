@@ -132,6 +132,8 @@ static int wpa_gen_wpa_ie_rsn(u8 *rsn_ie, size_t rsn_ie_len,
 
 	if (group_cipher == WPA_CIPHER_CCMP) {
 		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_CCMP);
+	} else if (group_cipher == WPA_CIPHER_GCMP) {
+		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_GCMP);
 	} else if (group_cipher == WPA_CIPHER_TKIP) {
 		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_TKIP);
 	} else if (group_cipher == WPA_CIPHER_WEP104) {
@@ -149,6 +151,8 @@ static int wpa_gen_wpa_ie_rsn(u8 *rsn_ie, size_t rsn_ie_len,
 	*pos++ = 0;
 	if (pairwise_cipher == WPA_CIPHER_CCMP) {
 		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_CCMP);
+	} else if (pairwise_cipher == WPA_CIPHER_GCMP) {
+		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_GCMP);
 	} else if (pairwise_cipher == WPA_CIPHER_TKIP) {
 		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_TKIP);
 	} else if (pairwise_cipher == WPA_CIPHER_NONE) {

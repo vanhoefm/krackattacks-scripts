@@ -26,6 +26,7 @@ typedef enum { FALSE = 0, TRUE = 1 } Boolean;
 #ifdef CONFIG_IEEE80211W
 #define WPA_CIPHER_AES_128_CMAC BIT(5)
 #endif /* CONFIG_IEEE80211W */
+#define WPA_CIPHER_GCMP BIT(6)
 
 #define WPA_KEY_MGMT_IEEE8021X BIT(0)
 #define WPA_KEY_MGMT_PSK BIT(1)
@@ -91,7 +92,8 @@ enum wpa_alg {
 	WPA_ALG_TKIP,
 	WPA_ALG_CCMP,
 	WPA_ALG_IGTK,
-	WPA_ALG_PMK
+	WPA_ALG_PMK,
+	WPA_ALG_GCMP
 };
 
 /**
@@ -102,7 +104,8 @@ enum wpa_cipher {
 	CIPHER_WEP40,
 	CIPHER_TKIP,
 	CIPHER_CCMP,
-	CIPHER_WEP104
+	CIPHER_WEP104,
+	CIPHER_GCMP
 };
 
 /**

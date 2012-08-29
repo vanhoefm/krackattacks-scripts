@@ -1319,11 +1319,13 @@ static int interworking_home_sp(struct wpa_supplicant *wpa_s,
 		int mnc_len = 0;
 		if (cred->imsi)
 			imsi = cred->imsi;
+#ifdef CONFIG_PCSC
 		else if (cred->pcsc && wpa_s->conf->pcsc_reader &&
 			 wpa_s->scard && wpa_s->imsi[0]) {
 			imsi = wpa_s->imsi;
 			mnc_len = wpa_s->mnc_len;
 		}
+#endif /* CONFIG_PCSC */
 		if (imsi && build_root_nai(nai, sizeof(nai), imsi, mnc_len, 0)
 		    == 0) {
 			realm = os_strchr(nai, '@');

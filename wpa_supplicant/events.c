@@ -1054,6 +1054,9 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 	struct wpa_ssid *ssid = NULL;
 	struct wpa_scan_results *scan_res;
 	int ap = 0;
+#ifndef CONFIG_NO_RANDOM_POOL
+	size_t i, num;
+#endif /* CONFIG_NO_RANDOM_POOL */
 
 #ifdef CONFIG_AP
 	if (wpa_s->ap_iface)
@@ -1088,7 +1091,6 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 	}
 
 #ifndef CONFIG_NO_RANDOM_POOL
-	size_t i, num;
 	num = scan_res->num;
 	if (num > 10)
 		num = 10;

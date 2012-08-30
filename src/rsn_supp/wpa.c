@@ -520,32 +520,22 @@ static int wpa_supplicant_install_ptk(struct wpa_sm *sm,
 	wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG,
 		"WPA: Installing PTK to the driver");
 
-	switch (sm->pairwise_cipher) {
-	case WPA_CIPHER_CCMP:
-		alg = WPA_ALG_CCMP;
-		keylen = 16;
-		rsclen = 6;
-		break;
-	case WPA_CIPHER_GCMP:
-		alg = WPA_ALG_GCMP;
-		keylen = 16;
-		rsclen = 6;
-		break;
-	case WPA_CIPHER_TKIP:
-		alg = WPA_ALG_TKIP;
-		keylen = 32;
-		rsclen = 6;
-		break;
-	case WPA_CIPHER_NONE:
+	if (sm->pairwise_cipher == WPA_CIPHER_NONE) {
 		wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG, "WPA: Pairwise Cipher "
 			"Suite: NONE - do not use pairwise keys");
 		return 0;
-	default:
+	}
+
+	if (!wpa_cipher_valid_pairwise(sm->pairwise_cipher)) {
 		wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
 			"WPA: Unsupported pairwise cipher %d",
 			sm->pairwise_cipher);
 		return -1;
 	}
+
+	alg = wpa_cipher_to_alg(sm->pairwise_cipher);
+	keylen = wpa_cipher_key_len(sm->pairwise_cipher);
+	rsclen = wpa_cipher_rsc_len(sm->pairwise_cipher);
 
 	if (sm->proto == WPA_PROTO_RSN) {
 		key_rsc = null_rsc;
@@ -579,63 +569,25 @@ static int wpa_supplicant_check_group_cipher(struct wpa_sm *sm,
 					     int *key_rsc_len,
 					     enum wpa_alg *alg)
 {
-	int ret = 0;
+	int klen;
 
-	switch (group_cipher) {
-	case WPA_CIPHER_CCMP:
-		if (keylen != 16 || maxkeylen < 16) {
-			ret = -1;
-			break;
-		}
-		*key_rsc_len = 6;
-		*alg = WPA_ALG_CCMP;
-		break;
-	case WPA_CIPHER_GCMP:
-		if (keylen != 16 || maxkeylen < 16) {
-			ret = -1;
-			break;
-		}
-		*key_rsc_len = 6;
-		*alg = WPA_ALG_GCMP;
-		break;
-	case WPA_CIPHER_TKIP:
-		if (keylen != 32 || maxkeylen < 32) {
-			ret = -1;
-			break;
-		}
-		*key_rsc_len = 6;
-		*alg = WPA_ALG_TKIP;
-		break;
-	case WPA_CIPHER_WEP104:
-		if (keylen != 13 || maxkeylen < 13) {
-			ret = -1;
-			break;
-		}
-		*key_rsc_len = 0;
-		*alg = WPA_ALG_WEP;
-		break;
-	case WPA_CIPHER_WEP40:
-		if (keylen != 5 || maxkeylen < 5) {
-			ret = -1;
-			break;
-		}
-		*key_rsc_len = 0;
-		*alg = WPA_ALG_WEP;
-		break;
-	default:
+	*alg = wpa_cipher_to_alg(group_cipher);
+	if (*alg == WPA_ALG_NONE) {
 		wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
 			"WPA: Unsupported Group Cipher %d",
 			group_cipher);
 		return -1;
 	}
+	*key_rsc_len = wpa_cipher_rsc_len(group_cipher);
 
-	if (ret < 0 ) {
+	klen = wpa_cipher_key_len(group_cipher);
+	if (keylen != klen || maxkeylen < klen) {
 		wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
 			"WPA: Unsupported %s Group Cipher key length %d (%d)",
 			wpa_cipher_txt(group_cipher), keylen, maxkeylen);
+		return -1;
 	}
-
-	return ret;
+	return 0;
 }
 
 
@@ -1135,31 +1087,12 @@ static void wpa_supplicant_process_3_of_4(struct wpa_sm *sm,
 	}
 
 	keylen = WPA_GET_BE16(key->key_length);
-	switch (sm->pairwise_cipher) {
-	case WPA_CIPHER_CCMP:
-		if (keylen != 16) {
-			wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
-				"WPA: Invalid CCMP key length %d (src=" MACSTR
-				")", keylen, MAC2STR(sm->bssid));
-			goto failed;
-		}
-		break;
-	case WPA_CIPHER_GCMP:
-		if (keylen != 16) {
-			wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
-				"WPA: Invalid GCMP key length %d (src=" MACSTR
-				")", keylen, MAC2STR(sm->bssid));
-			goto failed;
-		}
-		break;
-	case WPA_CIPHER_TKIP:
-		if (keylen != 32) {
-			wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
-				"WPA: Invalid TKIP key length %d (src=" MACSTR
-				")", keylen, MAC2STR(sm->bssid));
-			goto failed;
-		}
-		break;
+	if (keylen != wpa_cipher_key_len(sm->pairwise_cipher)) {
+		wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
+			"WPA: Invalid %s key length %d (src=" MACSTR
+			")", wpa_cipher_txt(sm->pairwise_cipher), keylen,
+			MAC2STR(sm->bssid));
+		goto failed;
 	}
 
 	if (wpa_supplicant_send_4_of_4(sm, sm->bssid, key, ver, key_info,
@@ -1880,25 +1813,6 @@ out:
 
 
 #ifdef CONFIG_CTRL_IFACE
-static int wpa_cipher_bits(int cipher)
-{
-	switch (cipher) {
-	case WPA_CIPHER_CCMP:
-		return 128;
-	case WPA_CIPHER_GCMP:
-		return 128;
-	case WPA_CIPHER_TKIP:
-		return 256;
-	case WPA_CIPHER_WEP104:
-		return 104;
-	case WPA_CIPHER_WEP40:
-		return 40;
-	default:
-		return 0;
-	}
-}
-
-
 static u32 wpa_key_mgmt_suite(struct wpa_sm *sm)
 {
 	switch (sm->key_mgmt) {
@@ -1924,32 +1838,6 @@ static u32 wpa_key_mgmt_suite(struct wpa_sm *sm)
 #endif /* CONFIG_IEEE80211W */
 	case WPA_KEY_MGMT_WPA_NONE:
 		return WPA_AUTH_KEY_MGMT_NONE;
-	default:
-		return 0;
-	}
-}
-
-
-static u32 wpa_cipher_suite(struct wpa_sm *sm, int cipher)
-{
-	switch (cipher) {
-	case WPA_CIPHER_CCMP:
-		return (sm->proto == WPA_PROTO_RSN ?
-			RSN_CIPHER_SUITE_CCMP : WPA_CIPHER_SUITE_CCMP);
-	case WPA_CIPHER_GCMP:
-		return RSN_CIPHER_SUITE_GCMP;
-	case WPA_CIPHER_TKIP:
-		return (sm->proto == WPA_PROTO_RSN ?
-			RSN_CIPHER_SUITE_TKIP : WPA_CIPHER_SUITE_TKIP);
-	case WPA_CIPHER_WEP104:
-		return (sm->proto == WPA_PROTO_RSN ?
-			RSN_CIPHER_SUITE_WEP104 : WPA_CIPHER_SUITE_WEP104);
-	case WPA_CIPHER_WEP40:
-		return (sm->proto == WPA_PROTO_RSN ?
-			RSN_CIPHER_SUITE_WEP40 : WPA_CIPHER_SUITE_WEP40);
-	case WPA_CIPHER_NONE:
-		return (sm->proto == WPA_PROTO_RSN ?
-			RSN_CIPHER_SUITE_NONE : WPA_CIPHER_SUITE_NONE);
 	default:
 		return 0;
 	}
@@ -2003,7 +1891,7 @@ int wpa_sm_get_mib(struct wpa_sm *sm, char *buf, size_t buflen)
 			  rsna ? "TRUE" : "FALSE",
 			  rsna ? "TRUE" : "FALSE",
 			  RSN_VERSION,
-			  wpa_cipher_bits(sm->group_cipher),
+			  wpa_cipher_key_len(sm->group_cipher) * 8,
 			  sm->dot11RSNAConfigPMKLifetime,
 			  sm->dot11RSNAConfigPMKReauthThreshold,
 			  sm->dot11RSNAConfigSATimeout);
@@ -2023,12 +1911,16 @@ int wpa_sm_get_mib(struct wpa_sm *sm, char *buf, size_t buflen)
 		"dot11RSNAConfigNumberOfGTKSAReplayCounters=0\n"
 		"dot11RSNA4WayHandshakeFailures=%u\n",
 		RSN_SUITE_ARG(wpa_key_mgmt_suite(sm)),
-		RSN_SUITE_ARG(wpa_cipher_suite(sm, sm->pairwise_cipher)),
-		RSN_SUITE_ARG(wpa_cipher_suite(sm, sm->group_cipher)),
+		RSN_SUITE_ARG(wpa_cipher_to_suite(sm->proto,
+						  sm->pairwise_cipher)),
+		RSN_SUITE_ARG(wpa_cipher_to_suite(sm->proto,
+						  sm->group_cipher)),
 		pmkid_txt,
 		RSN_SUITE_ARG(wpa_key_mgmt_suite(sm)),
-		RSN_SUITE_ARG(wpa_cipher_suite(sm, sm->pairwise_cipher)),
-		RSN_SUITE_ARG(wpa_cipher_suite(sm, sm->group_cipher)),
+		RSN_SUITE_ARG(wpa_cipher_to_suite(sm->proto,
+						  sm->pairwise_cipher)),
+		RSN_SUITE_ARG(wpa_cipher_to_suite(sm->proto,
+						  sm->group_cipher)),
 		sm->dot11RSNA4WayHandshakeFailures);
 	if (ret >= 0 && (size_t) ret < buflen)
 		len += ret;
@@ -2717,33 +2609,10 @@ int wpa_wnmsleep_install_key(struct wpa_sm *sm, u8 subelem_id, u8 *buf)
 	os_memset(&igd, 0, sizeof(igd));
 #endif /* CONFIG_IEEE80211W */
 
-	switch (sm->group_cipher) {
-	case WPA_CIPHER_CCMP:
-		keylen = 16;
-		gd.key_rsc_len = 6;
-		gd.alg = WPA_ALG_CCMP;
-		break;
-	case WPA_CIPHER_GCMP:
-		keylen = 16;
-		gd.key_rsc_len = 6;
-		gd.alg = WPA_ALG_GCMP;
-		break;
-	case WPA_CIPHER_TKIP:
-		keylen = 32;
-		gd.key_rsc_len = 6;
-		gd.alg = WPA_ALG_TKIP;
-		break;
-	case WPA_CIPHER_WEP104:
-		keylen = 13;
-		gd.key_rsc_len = 0;
-		gd.alg = WPA_ALG_WEP;
-		break;
-	case WPA_CIPHER_WEP40:
-		keylen = 5;
-		gd.key_rsc_len = 0;
-		gd.alg = WPA_ALG_WEP;
-		break;
-	default:
+	keylen = wpa_cipher_key_len(sm->group_cipher);
+	gd.key_rsc_len = wpa_cipher_rsc_len(sm->group_cipher);
+	gd.alg = wpa_cipher_to_alg(sm->group_cipher);
+	if (gd.alg == WPA_ALG_NONE) {
 		wpa_printf(MSG_DEBUG, "Unsupported group cipher suite");
 		return -1;
 	}

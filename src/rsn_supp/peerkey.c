@@ -270,12 +270,7 @@ static int wpa_supplicant_process_smk_m2(
 	/* Include only the selected cipher in pairwise cipher suite */
 	WPA_PUT_LE16(pos, 1);
 	pos += 2;
-	if (cipher == WPA_CIPHER_CCMP)
-		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_CCMP);
-	else if (cipher == WPA_CIPHER_GCMP)
-		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_GCMP);
-	else if (cipher == WPA_CIPHER_TKIP)
-		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_TKIP);
+	RSN_SELECTOR_PUT(pos, wpa_cipher_to_suite(WPA_PROTO_RSN, cipher));
 	pos += RSN_SELECTOR_LEN;
 
 	hdr->len = (pos - peerkey->rsnie_p) - 2;
@@ -1063,22 +1058,8 @@ int wpa_sm_stkstart(struct wpa_sm *sm, const u8 *peer)
 	count_pos = pos;
 	pos += 2;
 
-	count = 0;
-	if (sm->allowed_pairwise_cipher & WPA_CIPHER_CCMP) {
-		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_CCMP);
-		pos += RSN_SELECTOR_LEN;
-		count++;
-	}
-	if (sm->allowed_pairwise_cipher & WPA_CIPHER_GCMP) {
-		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_GCMP);
-		pos += RSN_SELECTOR_LEN;
-		count++;
-	}
-	if (sm->allowed_pairwise_cipher & WPA_CIPHER_TKIP) {
-		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_TKIP);
-		pos += RSN_SELECTOR_LEN;
-		count++;
-	}
+	count = rsn_cipher_put_suites(pos, sm->allowed_pairwise_cipher);
+	pos += count * RSN_SELECTOR_LEN;
 	WPA_PUT_LE16(count_pos, count);
 
 	hdr->len = (pos - peerkey->rsnie_i) - 2;

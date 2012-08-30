@@ -1073,3 +1073,138 @@ int wpa_insert_pmkid(u8 *ies, size_t ies_len, const u8 *pmkid)
 	return added;
 }
 #endif /* CONFIG_IEEE80211R */
+
+
+int wpa_cipher_key_len(int cipher)
+{
+	switch (cipher) {
+	case WPA_CIPHER_CCMP:
+	case WPA_CIPHER_GCMP:
+		return 16;
+	case WPA_CIPHER_TKIP:
+		return 32;
+	case WPA_CIPHER_WEP104:
+		return 13;
+	case WPA_CIPHER_WEP40:
+		return 5;
+	}
+
+	return 0;
+}
+
+
+int wpa_cipher_rsc_len(int cipher)
+{
+	switch (cipher) {
+	case WPA_CIPHER_CCMP:
+	case WPA_CIPHER_GCMP:
+	case WPA_CIPHER_TKIP:
+		return 6;
+	case WPA_CIPHER_WEP104:
+	case WPA_CIPHER_WEP40:
+		return 0;
+	}
+
+	return 0;
+}
+
+
+int wpa_cipher_to_alg(int cipher)
+{
+	switch (cipher) {
+	case WPA_CIPHER_CCMP:
+		return WPA_ALG_CCMP;
+	case WPA_CIPHER_GCMP:
+		return WPA_ALG_GCMP;
+	case WPA_CIPHER_TKIP:
+		return WPA_ALG_TKIP;
+	case WPA_CIPHER_WEP104:
+	case WPA_CIPHER_WEP40:
+		return WPA_ALG_WEP;
+	}
+	return WPA_ALG_NONE;
+}
+
+
+int wpa_cipher_valid_pairwise(int cipher)
+{
+	return cipher == WPA_CIPHER_CCMP ||
+		cipher == WPA_CIPHER_GCMP ||
+		cipher == WPA_CIPHER_TKIP;
+}
+
+
+u32 wpa_cipher_to_suite(int proto, int cipher)
+{
+	if (cipher & WPA_CIPHER_CCMP)
+		return (proto == WPA_PROTO_RSN ?
+			RSN_CIPHER_SUITE_CCMP : WPA_CIPHER_SUITE_CCMP);
+	if (cipher & WPA_CIPHER_GCMP)
+		return RSN_CIPHER_SUITE_GCMP;
+	if (cipher & WPA_CIPHER_TKIP)
+		return (proto == WPA_PROTO_RSN ?
+			RSN_CIPHER_SUITE_TKIP : WPA_CIPHER_SUITE_TKIP);
+	if (cipher & WPA_CIPHER_WEP104)
+		return (proto == WPA_PROTO_RSN ?
+			RSN_CIPHER_SUITE_WEP104 : WPA_CIPHER_SUITE_WEP104);
+	if (cipher & WPA_CIPHER_WEP40)
+		return (proto == WPA_PROTO_RSN ?
+			RSN_CIPHER_SUITE_WEP40 : WPA_CIPHER_SUITE_WEP40);
+	if (cipher & WPA_CIPHER_NONE)
+		return (proto == WPA_PROTO_RSN ?
+			RSN_CIPHER_SUITE_NONE : WPA_CIPHER_SUITE_NONE);
+	return 0;
+}
+
+
+int rsn_cipher_put_suites(u8 *pos, int ciphers)
+{
+	int num_suites = 0;
+
+	if (ciphers & WPA_CIPHER_CCMP) {
+		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_CCMP);
+		pos += RSN_SELECTOR_LEN;
+		num_suites++;
+	}
+	if (ciphers & WPA_CIPHER_GCMP) {
+		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_GCMP);
+		pos += RSN_SELECTOR_LEN;
+		num_suites++;
+	}
+	if (ciphers & WPA_CIPHER_TKIP) {
+		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_TKIP);
+		pos += RSN_SELECTOR_LEN;
+		num_suites++;
+	}
+	if (ciphers & WPA_CIPHER_NONE) {
+		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_NONE);
+		pos += RSN_SELECTOR_LEN;
+		num_suites++;
+	}
+
+	return num_suites;
+}
+
+
+int wpa_cipher_put_suites(u8 *pos, int ciphers)
+{
+	int num_suites = 0;
+
+	if (ciphers & WPA_CIPHER_CCMP) {
+		RSN_SELECTOR_PUT(pos, WPA_CIPHER_SUITE_CCMP);
+		pos += WPA_SELECTOR_LEN;
+		num_suites++;
+	}
+	if (ciphers & WPA_CIPHER_TKIP) {
+		RSN_SELECTOR_PUT(pos, WPA_CIPHER_SUITE_TKIP);
+		pos += WPA_SELECTOR_LEN;
+		num_suites++;
+	}
+	if (ciphers & WPA_CIPHER_NONE) {
+		RSN_SELECTOR_PUT(pos, WPA_CIPHER_SUITE_NONE);
+		pos += WPA_SELECTOR_LEN;
+		num_suites++;
+	}
+
+	return num_suites;
+}

@@ -278,28 +278,6 @@ static void wpa_auth_pmksa_free_cb(struct rsn_pmksa_cache_entry *entry,
 }
 
 
-static void wpa_group_set_key_len(struct wpa_group *group, int cipher)
-{
-	switch (cipher) {
-	case WPA_CIPHER_CCMP:
-		group->GTK_len = 16;
-		break;
-	case WPA_CIPHER_GCMP:
-		group->GTK_len = 16;
-		break;
-	case WPA_CIPHER_TKIP:
-		group->GTK_len = 32;
-		break;
-	case WPA_CIPHER_WEP104:
-		group->GTK_len = 13;
-		break;
-	case WPA_CIPHER_WEP40:
-		group->GTK_len = 5;
-		break;
-	}
-}
-
-
 static int wpa_group_init_gmk_and_counter(struct wpa_authenticator *wpa_auth,
 					  struct wpa_group *group)
 {
@@ -341,8 +319,7 @@ static struct wpa_group * wpa_group_init(struct wpa_authenticator *wpa_auth,
 
 	group->GTKAuthenticator = TRUE;
 	group->vlan_id = vlan_id;
-
-	wpa_group_set_key_len(group, wpa_auth->conf.wpa_group);
+	group->GTK_len = wpa_cipher_key_len(wpa_auth->conf.wpa_group);
 
 	if (random_pool_ready() != 1) {
 		wpa_printf(MSG_INFO, "WPA: Not enough entropy in random pool "
@@ -517,7 +494,7 @@ int wpa_reconfig(struct wpa_authenticator *wpa_auth,
 	 * configuration.
 	 */
 	group = wpa_auth->group;
-	wpa_group_set_key_len(group, wpa_auth->conf.wpa_group);
+	group->GTK_len = wpa_cipher_key_len(wpa_auth->conf.wpa_group);
 	group->GInit = TRUE;
 	wpa_group_sm_step(wpa_auth, group);
 	group->GInit = FALSE;
@@ -1291,23 +1268,7 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 	WPA_PUT_BE16(key->key_info, key_info);
 
 	alg = pairwise ? sm->pairwise : wpa_auth->conf.wpa_group;
-	switch (alg) {
-	case WPA_CIPHER_CCMP:
-		WPA_PUT_BE16(key->key_length, 16);
-		break;
-	case WPA_CIPHER_GCMP:
-		WPA_PUT_BE16(key->key_length, 16);
-		break;
-	case WPA_CIPHER_TKIP:
-		WPA_PUT_BE16(key->key_length, 32);
-		break;
-	case WPA_CIPHER_WEP40:
-		WPA_PUT_BE16(key->key_length, 5);
-		break;
-	case WPA_CIPHER_WEP104:
-		WPA_PUT_BE16(key->key_length, 13);
-		break;
-	}
+	WPA_PUT_BE16(key->key_length, wpa_cipher_key_len(alg));
 	if (key_info & WPA_KEY_INFO_SMK_MESSAGE)
 		WPA_PUT_BE16(key->key_length, 0);
 
@@ -1537,24 +1498,6 @@ int wpa_auth_sm_event(struct wpa_state_machine *sm, wpa_event event)
 	}
 
 	return wpa_sm_step(sm);
-}
-
-
-static enum wpa_alg wpa_alg_enum(int alg)
-{
-	switch (alg) {
-	case WPA_CIPHER_CCMP:
-		return WPA_ALG_CCMP;
-	case WPA_CIPHER_GCMP:
-		return WPA_ALG_GCMP;
-	case WPA_CIPHER_TKIP:
-		return WPA_ALG_TKIP;
-	case WPA_CIPHER_WEP104:
-	case WPA_CIPHER_WEP40:
-		return WPA_ALG_WEP;
-	default:
-		return WPA_ALG_NONE;
-	}
 }
 
 
@@ -2097,18 +2040,8 @@ SM_STATE(WPA_PTK, PTKINITDONE)
 	SM_ENTRY_MA(WPA_PTK, PTKINITDONE, wpa_ptk);
 	sm->EAPOLKeyReceived = FALSE;
 	if (sm->Pair) {
-		enum wpa_alg alg;
-		int klen;
-		if (sm->pairwise == WPA_CIPHER_TKIP) {
-			alg = WPA_ALG_TKIP;
-			klen = 32;
-		} else if (sm->pairwise == WPA_CIPHER_GCMP) {
-			alg = WPA_ALG_GCMP;
-			klen = 16;
-		} else {
-			alg = WPA_ALG_CCMP;
-			klen = 16;
-		}
+		enum wpa_alg alg = wpa_cipher_to_alg(sm->pairwise);
+		int klen = wpa_cipher_key_len(sm->pairwise);
 		if (wpa_auth_set_key(sm->wpa_auth, 0, alg, sm->addr, 0,
 				     sm->PTK.tk1, klen)) {
 			wpa_sta_disconnect(sm->wpa_auth, sm->addr);
@@ -2657,7 +2590,7 @@ static int wpa_group_config_group_keys(struct wpa_authenticator *wpa_auth,
 	int ret = 0;
 
 	if (wpa_auth_set_key(wpa_auth, group->vlan_id,
-			     wpa_alg_enum(wpa_auth->conf.wpa_group),
+			     wpa_cipher_to_alg(wpa_auth->conf.wpa_group),
 			     broadcast_ether_addr, group->GN,
 			     group->GTK[group->GN - 1], group->GTK_len) < 0)
 		ret = -1;
@@ -2797,25 +2730,6 @@ static const char * wpa_bool_txt(int bool)
 }
 
 
-static int wpa_cipher_bits(int cipher)
-{
-	switch (cipher) {
-	case WPA_CIPHER_CCMP:
-		return 128;
-	case WPA_CIPHER_GCMP:
-		return 128;
-	case WPA_CIPHER_TKIP:
-		return 256;
-	case WPA_CIPHER_WEP104:
-		return 104;
-	case WPA_CIPHER_WEP40:
-		return 40;
-	default:
-		return 0;
-	}
-}
-
-
 #define RSN_SUITE "%02x-%02x-%02x-%d"
 #define RSN_SUITE_ARG(s) \
 ((s) >> 24) & 0xff, ((s) >> 16) & 0xff, ((s) >> 8) & 0xff, (s) & 0xff
@@ -2878,7 +2792,7 @@ int wpa_get_mib(struct wpa_authenticator *wpa_auth, char *buf, size_t buflen)
 		!!wpa_auth->conf.wpa_strict_rekey,
 		dot11RSNAConfigGroupUpdateCount,
 		dot11RSNAConfigPairwiseUpdateCount,
-		wpa_cipher_bits(wpa_auth->conf.wpa_group),
+		wpa_cipher_key_len(wpa_auth->conf.wpa_group) * 8,
 		dot11RSNAConfigPMKLifetime,
 		dot11RSNAConfigPMKReauthThreshold,
 		dot11RSNAConfigSATimeout,
@@ -2921,31 +2835,10 @@ int wpa_get_mib_sta(struct wpa_state_machine *sm, char *buf, size_t buflen)
 
 	/* dot11RSNAStatsEntry */
 
-	if (sm->wpa == WPA_VERSION_WPA) {
-		if (sm->pairwise == WPA_CIPHER_CCMP)
-			pairwise = WPA_CIPHER_SUITE_CCMP;
-		else if (sm->pairwise == WPA_CIPHER_TKIP)
-			pairwise = WPA_CIPHER_SUITE_TKIP;
-		else if (sm->pairwise == WPA_CIPHER_WEP104)
-			pairwise = WPA_CIPHER_SUITE_WEP104;
-		else if (sm->pairwise == WPA_CIPHER_WEP40)
-			pairwise = WPA_CIPHER_SUITE_WEP40;
-		else if (sm->pairwise == WPA_CIPHER_NONE)
-			pairwise = WPA_CIPHER_SUITE_NONE;
-	} else if (sm->wpa == WPA_VERSION_WPA2) {
-		if (sm->pairwise == WPA_CIPHER_CCMP)
-			pairwise = RSN_CIPHER_SUITE_CCMP;
-		else if (sm->pairwise == WPA_CIPHER_GCMP)
-			pairwise = RSN_CIPHER_SUITE_GCMP;
-		else if (sm->pairwise == WPA_CIPHER_TKIP)
-			pairwise = RSN_CIPHER_SUITE_TKIP;
-		else if (sm->pairwise == WPA_CIPHER_WEP104)
-			pairwise = RSN_CIPHER_SUITE_WEP104;
-		else if (sm->pairwise == WPA_CIPHER_WEP40)
-			pairwise = RSN_CIPHER_SUITE_WEP40;
-		else if (sm->pairwise == WPA_CIPHER_NONE)
-			pairwise = RSN_CIPHER_SUITE_NONE;
-	} else
+	pairwise = wpa_cipher_to_suite(sm->wpa == WPA_VERSION_WPA2 ?
+				       WPA_PROTO_RSN : WPA_PROTO_WPA,
+				       sm->pairwise);
+	if (pairwise == 0)
 		return 0;
 
 	ret = os_snprintf(

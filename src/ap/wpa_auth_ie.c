@@ -29,6 +29,7 @@ static int wpa_write_wpa_ie(struct wpa_auth_config *conf, u8 *buf, size_t len)
 	struct wpa_ie_hdr *hdr;
 	int num_suites;
 	u8 *pos, *count;
+	u32 suite;
 
 	hdr = (struct wpa_ie_hdr *) buf;
 	hdr->elem_id = WLAN_EID_VENDOR_SPECIFIC;
@@ -36,46 +37,25 @@ static int wpa_write_wpa_ie(struct wpa_auth_config *conf, u8 *buf, size_t len)
 	WPA_PUT_LE16(hdr->version, WPA_VERSION);
 	pos = (u8 *) (hdr + 1);
 
-	if (conf->wpa_group == WPA_CIPHER_CCMP) {
-		RSN_SELECTOR_PUT(pos, WPA_CIPHER_SUITE_CCMP);
-	} else if (conf->wpa_group == WPA_CIPHER_TKIP) {
-		RSN_SELECTOR_PUT(pos, WPA_CIPHER_SUITE_TKIP);
-	} else if (conf->wpa_group == WPA_CIPHER_WEP104) {
-		RSN_SELECTOR_PUT(pos, WPA_CIPHER_SUITE_WEP104);
-	} else if (conf->wpa_group == WPA_CIPHER_WEP40) {
-		RSN_SELECTOR_PUT(pos, WPA_CIPHER_SUITE_WEP40);
-	} else {
+	suite = wpa_cipher_to_suite(WPA_PROTO_WPA, conf->wpa_group);
+	if (suite == 0) {
 		wpa_printf(MSG_DEBUG, "Invalid group cipher (%d).",
 			   conf->wpa_group);
 		return -1;
 	}
+	RSN_SELECTOR_PUT(pos, suite);
 	pos += WPA_SELECTOR_LEN;
 
-	num_suites = 0;
 	count = pos;
 	pos += 2;
 
-	if (conf->wpa_pairwise & WPA_CIPHER_CCMP) {
-		RSN_SELECTOR_PUT(pos, WPA_CIPHER_SUITE_CCMP);
-		pos += WPA_SELECTOR_LEN;
-		num_suites++;
-	}
-	if (conf->wpa_pairwise & WPA_CIPHER_TKIP) {
-		RSN_SELECTOR_PUT(pos, WPA_CIPHER_SUITE_TKIP);
-		pos += WPA_SELECTOR_LEN;
-		num_suites++;
-	}
-	if (conf->wpa_pairwise & WPA_CIPHER_NONE) {
-		RSN_SELECTOR_PUT(pos, WPA_CIPHER_SUITE_NONE);
-		pos += WPA_SELECTOR_LEN;
-		num_suites++;
-	}
-
+	num_suites = wpa_cipher_put_suites(pos, conf->wpa_pairwise);
 	if (num_suites == 0) {
 		wpa_printf(MSG_DEBUG, "Invalid pairwise cipher (%d).",
 			   conf->wpa_pairwise);
 		return -1;
 	}
+	pos += num_suites * WPA_SELECTOR_LEN;
 	WPA_PUT_LE16(count, num_suites);
 
 	num_suites = 0;
@@ -112,30 +92,23 @@ int wpa_write_rsn_ie(struct wpa_auth_config *conf, u8 *buf, size_t len,
 		     const u8 *pmkid)
 {
 	struct rsn_ie_hdr *hdr;
-	int num_suites;
+	int num_suites, res;
 	u8 *pos, *count;
 	u16 capab;
+	u32 suite;
 
 	hdr = (struct rsn_ie_hdr *) buf;
 	hdr->elem_id = WLAN_EID_RSN;
 	WPA_PUT_LE16(hdr->version, RSN_VERSION);
 	pos = (u8 *) (hdr + 1);
 
-	if (conf->wpa_group == WPA_CIPHER_CCMP) {
-		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_CCMP);
-	} else if (conf->wpa_group == WPA_CIPHER_GCMP) {
-		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_GCMP);
-	} else if (conf->wpa_group == WPA_CIPHER_TKIP) {
-		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_TKIP);
-	} else if (conf->wpa_group == WPA_CIPHER_WEP104) {
-		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_WEP104);
-	} else if (conf->wpa_group == WPA_CIPHER_WEP40) {
-		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_WEP40);
-	} else {
+	suite = wpa_cipher_to_suite(WPA_PROTO_RSN, conf->wpa_group);
+	if (suite == 0) {
 		wpa_printf(MSG_DEBUG, "Invalid group cipher (%d).",
 			   conf->wpa_group);
 		return -1;
 	}
+	RSN_SELECTOR_PUT(pos, suite);
 	pos += RSN_SELECTOR_LEN;
 
 	num_suites = 0;
@@ -150,26 +123,9 @@ int wpa_write_rsn_ie(struct wpa_auth_config *conf, u8 *buf, size_t len,
 	}
 #endif /* CONFIG_RSN_TESTING */
 
-	if (conf->rsn_pairwise & WPA_CIPHER_CCMP) {
-		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_CCMP);
-		pos += RSN_SELECTOR_LEN;
-		num_suites++;
-	}
-	if (conf->rsn_pairwise & WPA_CIPHER_GCMP) {
-		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_GCMP);
-		pos += RSN_SELECTOR_LEN;
-		num_suites++;
-	}
-	if (conf->rsn_pairwise & WPA_CIPHER_TKIP) {
-		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_TKIP);
-		pos += RSN_SELECTOR_LEN;
-		num_suites++;
-	}
-	if (conf->rsn_pairwise & WPA_CIPHER_NONE) {
-		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_NONE);
-		pos += RSN_SELECTOR_LEN;
-		num_suites++;
-	}
+	res = rsn_cipher_put_suites(pos, conf->rsn_pairwise);
+	num_suites += res;
+	pos += res * RSN_SELECTOR_LEN;
 
 #ifdef CONFIG_RSN_TESTING
 	if (rsn_testing) {
@@ -457,34 +413,16 @@ int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 			selector = RSN_AUTH_KEY_MGMT_PSK_OVER_802_1X;
 		wpa_auth->dot11RSNAAuthenticationSuiteSelected = selector;
 
-		selector = RSN_CIPHER_SUITE_CCMP;
-		if (data.pairwise_cipher & WPA_CIPHER_CCMP)
+		selector = wpa_cipher_to_suite(WPA_PROTO_RSN,
+					       data.pairwise_cipher);
+		if (!selector)
 			selector = RSN_CIPHER_SUITE_CCMP;
-		else if (data.pairwise_cipher & WPA_CIPHER_GCMP)
-			selector = RSN_CIPHER_SUITE_GCMP;
-		else if (data.pairwise_cipher & WPA_CIPHER_TKIP)
-			selector = RSN_CIPHER_SUITE_TKIP;
-		else if (data.pairwise_cipher & WPA_CIPHER_WEP104)
-			selector = RSN_CIPHER_SUITE_WEP104;
-		else if (data.pairwise_cipher & WPA_CIPHER_WEP40)
-			selector = RSN_CIPHER_SUITE_WEP40;
-		else if (data.pairwise_cipher & WPA_CIPHER_NONE)
-			selector = RSN_CIPHER_SUITE_NONE;
 		wpa_auth->dot11RSNAPairwiseCipherSelected = selector;
 
-		selector = RSN_CIPHER_SUITE_CCMP;
-		if (data.group_cipher & WPA_CIPHER_CCMP)
+		selector = wpa_cipher_to_suite(WPA_PROTO_RSN,
+					       data.group_cipher);
+		if (!selector)
 			selector = RSN_CIPHER_SUITE_CCMP;
-		else if (data.group_cipher & WPA_CIPHER_GCMP)
-			selector = RSN_CIPHER_SUITE_GCMP;
-		else if (data.group_cipher & WPA_CIPHER_TKIP)
-			selector = RSN_CIPHER_SUITE_TKIP;
-		else if (data.group_cipher & WPA_CIPHER_WEP104)
-			selector = RSN_CIPHER_SUITE_WEP104;
-		else if (data.group_cipher & WPA_CIPHER_WEP40)
-			selector = RSN_CIPHER_SUITE_WEP40;
-		else if (data.group_cipher & WPA_CIPHER_NONE)
-			selector = RSN_CIPHER_SUITE_NONE;
 		wpa_auth->dot11RSNAGroupCipherSelected = selector;
 	} else {
 		res = wpa_parse_wpa_ie_wpa(wpa_ie, wpa_ie_len, &data);
@@ -496,30 +434,16 @@ int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 			selector = WPA_AUTH_KEY_MGMT_PSK_OVER_802_1X;
 		wpa_auth->dot11RSNAAuthenticationSuiteSelected = selector;
 
-		selector = WPA_CIPHER_SUITE_TKIP;
-		if (data.pairwise_cipher & WPA_CIPHER_CCMP)
-			selector = WPA_CIPHER_SUITE_CCMP;
-		else if (data.pairwise_cipher & WPA_CIPHER_TKIP)
-			selector = WPA_CIPHER_SUITE_TKIP;
-		else if (data.pairwise_cipher & WPA_CIPHER_WEP104)
-			selector = WPA_CIPHER_SUITE_WEP104;
-		else if (data.pairwise_cipher & WPA_CIPHER_WEP40)
-			selector = WPA_CIPHER_SUITE_WEP40;
-		else if (data.pairwise_cipher & WPA_CIPHER_NONE)
-			selector = WPA_CIPHER_SUITE_NONE;
+		selector = wpa_cipher_to_suite(WPA_PROTO_WPA,
+					       data.pairwise_cipher);
+		if (!selector)
+			selector = RSN_CIPHER_SUITE_TKIP;
 		wpa_auth->dot11RSNAPairwiseCipherSelected = selector;
 
-		selector = WPA_CIPHER_SUITE_TKIP;
-		if (data.group_cipher & WPA_CIPHER_CCMP)
-			selector = WPA_CIPHER_SUITE_CCMP;
-		else if (data.group_cipher & WPA_CIPHER_TKIP)
+		selector = wpa_cipher_to_suite(WPA_PROTO_WPA,
+					       data.group_cipher);
+		if (!selector)
 			selector = WPA_CIPHER_SUITE_TKIP;
-		else if (data.group_cipher & WPA_CIPHER_WEP104)
-			selector = WPA_CIPHER_SUITE_WEP104;
-		else if (data.group_cipher & WPA_CIPHER_WEP40)
-			selector = WPA_CIPHER_SUITE_WEP40;
-		else if (data.group_cipher & WPA_CIPHER_NONE)
-			selector = WPA_CIPHER_SUITE_NONE;
 		wpa_auth->dot11RSNAGroupCipherSelected = selector;
 	}
 	if (res) {

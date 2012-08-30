@@ -754,16 +754,9 @@ void wpa_ft_install_ptk(struct wpa_state_machine *sm)
 	int klen;
 
 	/* MLME-SETKEYS.request(PTK) */
-	if (sm->pairwise == WPA_CIPHER_TKIP) {
-		alg = WPA_ALG_TKIP;
-		klen = 32;
-	} else if (sm->pairwise == WPA_CIPHER_CCMP) {
-		alg = WPA_ALG_CCMP;
-		klen = 16;
-	} else if (sm->pairwise == WPA_CIPHER_GCMP) {
-		alg = WPA_ALG_GCMP;
-		klen = 16;
-	} else {
+	alg = wpa_cipher_to_alg(sm->pairwise);
+	klen = wpa_cipher_key_len(sm->pairwise);
+	if (!wpa_cipher_valid_pairwise(sm->pairwise)) {
 		wpa_printf(MSG_DEBUG, "FT: Unknown pairwise alg 0x%x - skip "
 			   "PTK configuration", sm->pairwise);
 		return;

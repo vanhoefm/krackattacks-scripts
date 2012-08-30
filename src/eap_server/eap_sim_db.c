@@ -74,6 +74,7 @@ struct eap_sim_db_data {
 	u8 db_tmp_identity[100];
 	char db_tmp_pseudonym_str[100];
 	struct eap_sim_pseudonym db_tmp_pseudonym;
+	struct eap_sim_reauth db_tmp_reauth;
 #endif /* CONFIG_SQLITE */
 };
 
@@ -109,6 +110,33 @@ static int db_table_create_pseudonym(sqlite3 *db)
 }
 
 
+static int db_table_create_reauth(sqlite3 *db)
+{
+	char *err = NULL;
+	const char *sql =
+		"CREATE TABLE reauth("
+		"  imsi INTEGER PRIMARY KEY NOT NULL,"
+		"  reauth_id CHAR(21) NOT NULL,"
+		"  counter INTEGER,"
+		"  aka_prime BOOL,"
+		"  mk CHAR(40),"
+		"  k_encr CHAR(32),"
+		"  k_aut CHAR(64),"
+		"  k_re CHAR(64)"
+		");";
+
+	wpa_printf(MSG_DEBUG, "EAP-SIM DB: Adding database table for "
+		   "reauth information");
+	if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
+		wpa_printf(MSG_ERROR, "EAP-SIM DB: SQLite error: %s", err);
+		sqlite3_free(err);
+		return -1;
+	}
+
+	return 0;
+}
+
+
 static sqlite3 * db_open(const char *db_file)
 {
 	sqlite3 *db;
@@ -122,6 +150,12 @@ static sqlite3 * db_open(const char *db_file)
 
 	if (!db_table_exists(db, "pseudonyms") &&
 	    db_table_create_pseudonym(db) < 0) {
+		sqlite3_close(db);
+		return NULL;
+	}
+
+	if (!db_table_exists(db, "reauth") &&
+	    db_table_create_reauth(db) < 0) {
 		sqlite3_close(db);
 		return NULL;
 	}
@@ -148,6 +182,7 @@ static int db_add_pseudonym(struct eap_sim_db_data *data, const u8 *identity,
 {
 	char cmd[128];
 	unsigned long long imsi;
+	char *err = NULL;
 
 	if (!valid_pseudonym_string(pseudonym) || identity_len >= sizeof(cmd))
 	{
@@ -162,8 +197,12 @@ static int db_add_pseudonym(struct eap_sim_db_data *data, const u8 *identity,
 		    "(imsi, pseudonym) VALUES (%llu , '%s');",
 		    imsi, pseudonym);
 	os_free(pseudonym);
-	if (sqlite3_exec(data->sqlite_db, cmd, NULL, data, NULL) != SQLITE_OK)
+	if (sqlite3_exec(data->sqlite_db, cmd, NULL, NULL, &err) != SQLITE_OK)
+	{
+		wpa_printf(MSG_ERROR, "EAP-SIM DB: SQLite error: %s", err);
+		sqlite3_free(err);
 		return -1;
+	}
 
 	return 0;
 }
@@ -251,7 +290,191 @@ db_get_pseudonym_id(struct eap_sim_db_data *data, const u8 *identity,
 	return &data->db_tmp_pseudonym;
 }
 
+
+static int db_add_reauth(struct eap_sim_db_data *data, const u8 *identity,
+			 size_t identity_len, char *reauth_id, u16 counter,
+			 const u8 *mk, int aka_prime, const u8 *k_encr,
+			 const u8 *k_aut, const u8 *k_re)
+{
+	char cmd[2000], *pos, *end;
+	unsigned long long imsi;
+	char *err = NULL;
+
+	if (!valid_pseudonym_string(reauth_id) || identity_len >= sizeof(cmd))
+	{
+		os_free(reauth_id);
+		return -1;
+	}
+	os_memcpy(cmd, identity, identity_len);
+	cmd[identity_len] = '\0';
+	imsi = atoll(cmd);
+
+	pos = cmd;
+	end = pos + sizeof(cmd);
+	pos += os_snprintf(pos, end - pos, "INSERT OR REPLACE INTO reauth "
+			   "(imsi, reauth_id, counter, aka_prime%s%s%s%s) "
+			   "VALUES (%llu, '%s', %u, %d",
+			   mk ? ", mk" : "",
+			   k_encr ? ", k_encr" : "",
+			   k_aut ? ", k_aut" : "",
+			   k_re ? ", k_re" : "",
+			   imsi, reauth_id, counter, aka_prime);
+	os_free(reauth_id);
+
+	if (mk) {
+		pos += os_snprintf(pos, end - pos, ", '");
+		pos += wpa_snprintf_hex(pos, end - pos, mk, EAP_SIM_MK_LEN);
+		pos += os_snprintf(pos, end - pos, "'");
+	}
+
+	if (k_encr) {
+		pos += os_snprintf(pos, end - pos, ", '");
+		pos += wpa_snprintf_hex(pos, end - pos, k_encr,
+					EAP_SIM_K_ENCR_LEN);
+		pos += os_snprintf(pos, end - pos, "'");
+	}
+
+	if (k_aut) {
+		pos += os_snprintf(pos, end - pos, ", '");
+		pos += wpa_snprintf_hex(pos, end - pos, k_aut,
+					EAP_AKA_PRIME_K_AUT_LEN);
+		pos += os_snprintf(pos, end - pos, "'");
+	}
+
+	if (k_re) {
+		pos += os_snprintf(pos, end - pos, ", '");
+		pos += wpa_snprintf_hex(pos, end - pos, k_re,
+					EAP_AKA_PRIME_K_RE_LEN);
+		pos += os_snprintf(pos, end - pos, "'");
+	}
+
+	os_snprintf(pos, end - pos, ");");
+
+	if (sqlite3_exec(data->sqlite_db, cmd, NULL, NULL, &err) != SQLITE_OK)
+	{
+		wpa_printf(MSG_ERROR, "EAP-SIM DB: SQLite error: %s", err);
+		sqlite3_free(err);
+		return -1;
+	}
+
+	return 0;
+}
+
+
+static int get_reauth_cb(void *ctx, int argc, char *argv[], char *col[])
+{
+	struct eap_sim_db_data *data = ctx;
+	int i;
+	size_t len;
+	struct eap_sim_reauth *reauth = &data->db_tmp_reauth;
+
+	for (i = 0; i < argc; i++) {
+		if (os_strcmp(col[i], "imsi") == 0 && argv[i]) {
+			len = os_strlen(argv[i]);
+			if (len > sizeof(data->db_tmp_identity))
+				continue;
+			os_memcpy(data->db_tmp_identity, argv[i], len);
+			reauth->identity = data->db_tmp_identity;
+			reauth->identity_len = len;
+		} else if (os_strcmp(col[i], "reauth_id") == 0 && argv[i]) {
+			len = os_strlen(argv[i]);
+			if (len >= sizeof(data->db_tmp_pseudonym_str))
+				continue;
+			os_memcpy(data->db_tmp_pseudonym_str, argv[i], len);
+			data->db_tmp_pseudonym_str[len] = '\0';
+			reauth->reauth_id = data->db_tmp_pseudonym_str;
+		} else if (os_strcmp(col[i], "counter") == 0 && argv[i]) {
+			reauth->counter = atoi(argv[i]);
+		} else if (os_strcmp(col[i], "aka_prime") == 0 && argv[i]) {
+			reauth->aka_prime = atoi(argv[i]);
+		} else if (os_strcmp(col[i], "mk") == 0 && argv[i]) {
+			hexstr2bin(argv[i], reauth->mk, sizeof(reauth->mk));
+		} else if (os_strcmp(col[i], "k_encr") == 0 && argv[i]) {
+			hexstr2bin(argv[i], reauth->k_encr,
+				   sizeof(reauth->k_encr));
+		} else if (os_strcmp(col[i], "k_aut") == 0 && argv[i]) {
+			hexstr2bin(argv[i], reauth->k_aut,
+				   sizeof(reauth->k_aut));
+		} else if (os_strcmp(col[i], "k_re") == 0 && argv[i]) {
+			hexstr2bin(argv[i], reauth->k_re,
+				   sizeof(reauth->k_re));
+		}
+	}
+
+	return 0;
+}
+
+
+static struct eap_sim_reauth *
+db_get_reauth(struct eap_sim_db_data *data, const char *reauth_id)
+{
+	char cmd[256];
+
+	if (!valid_pseudonym_string(reauth_id))
+		return NULL;
+	os_memset(&data->db_tmp_reauth, 0, sizeof(data->db_tmp_reauth));
+	os_strlcpy(data->db_tmp_pseudonym_str, reauth_id,
+		   sizeof(data->db_tmp_pseudonym_str));
+	data->db_tmp_reauth.reauth_id = data->db_tmp_pseudonym_str;
+	os_snprintf(cmd, sizeof(cmd),
+		    "SELECT * FROM reauth WHERE reauth_id='%s';", reauth_id);
+	if (sqlite3_exec(data->sqlite_db, cmd, get_reauth_cb, data, NULL) !=
+	    SQLITE_OK)
+		return NULL;
+	if (data->db_tmp_reauth.identity == NULL)
+		return NULL;
+	return &data->db_tmp_reauth;
+}
+
+
+static struct eap_sim_reauth *
+db_get_reauth_id(struct eap_sim_db_data *data, const u8 *identity,
+		 size_t identity_len)
+{
+	char cmd[256];
+	unsigned long long imsi;
+
+	if (identity_len >= sizeof(cmd))
+		return NULL;
+	os_memcpy(cmd, identity, identity_len);
+	cmd[identity_len] = '\0';
+	imsi = atoll(cmd);
+
+	os_memset(&data->db_tmp_reauth, 0, sizeof(data->db_tmp_reauth));
+	if (identity_len > sizeof(data->db_tmp_identity))
+		return NULL;
+	os_memcpy(data->db_tmp_identity, identity, identity_len);
+	data->db_tmp_reauth.identity = data->db_tmp_identity;
+	data->db_tmp_reauth.identity_len = identity_len;
+	os_snprintf(cmd, sizeof(cmd),
+		    "SELECT * FROM reauth WHERE imsi=%llu;", imsi);
+	if (sqlite3_exec(data->sqlite_db, cmd, get_reauth_cb, data, NULL) !=
+	    SQLITE_OK)
+		return NULL;
+	if (data->db_tmp_reauth.reauth_id == NULL)
+		return NULL;
+	return &data->db_tmp_reauth;
+}
+
+
+static void db_remove_reauth(struct eap_sim_db_data *data,
+			     struct eap_sim_reauth *reauth)
+{
+	char cmd[256];
+	unsigned long long imsi;
+
+	if (reauth->identity_len >= sizeof(cmd))
+		return;
+	os_memcpy(cmd, reauth->identity, reauth->identity_len);
+	cmd[reauth->identity_len] = '\0';
+	imsi = atoll(cmd);
+	os_snprintf(cmd, sizeof(cmd),
+		    "DELETE FROM reauth WHERE imsi=%llu;", imsi);
+	sqlite3_exec(data->sqlite_db, cmd, NULL, NULL, NULL);
+}
+
 #endif /* CONFIG_SQLITE */
+
 
 static struct eap_sim_db_pending *
 eap_sim_db_get_pending(struct eap_sim_db_data *data, const u8 *imsi,
@@ -949,6 +1172,14 @@ eap_sim_db_get_reauth(struct eap_sim_db_data *data, const u8 *identity,
 	os_memcpy(reauth_id, identity, len);
 	reauth_id[len] = '\0';
 
+#ifdef CONFIG_SQLITE
+	if (data->sqlite_db) {
+		r = db_get_reauth(data, reauth_id);
+		os_free(reauth_id);
+		return r;
+	}
+#endif /* CONFIG_SQLITE */
+
 	r = data->reauths;
 	while (r) {
 		if (os_strcmp(r->reauth_id, reauth_id) == 0)
@@ -979,6 +1210,11 @@ eap_sim_db_get_reauth_id(struct eap_sim_db_data *data, const u8 *identity,
 		identity = p->identity;
 		identity_len = p->identity_len;
 	}
+
+#ifdef CONFIG_SQLITE
+	if (data->sqlite_db)
+		return db_get_reauth_id(data, identity, identity_len);
+#endif /* CONFIG_SQLITE */
 
 	r = data->reauths;
 	while (r) {
@@ -1263,6 +1499,12 @@ int eap_sim_db_add_reauth(void *priv, const u8 *identity,
 	struct eap_sim_db_data *data = priv;
 	struct eap_sim_reauth *r;
 
+#ifdef CONFIG_SQLITE
+	if (data->sqlite_db)
+		return db_add_reauth(data, identity, identity_len,
+				     reauth_id, counter, mk, 0, NULL, NULL,
+				     NULL);
+#endif /* CONFIG_SQLITE */
 	r = eap_sim_db_add_reauth_data(data, identity, identity_len, reauth_id,
 				       counter);
 	if (r == NULL)
@@ -1302,6 +1544,12 @@ int eap_sim_db_add_reauth_prime(void *priv, const u8 *identity,
 	struct eap_sim_db_data *data = priv;
 	struct eap_sim_reauth *r;
 
+#ifdef CONFIG_SQLITE
+	if (data->sqlite_db)
+		return db_add_reauth(data, identity, identity_len,
+				     reauth_id, counter, NULL, 1,
+				     k_encr, k_aut, k_re);
+#endif /* CONFIG_SQLITE */
 	r = eap_sim_db_add_reauth_data(data, identity, identity_len, reauth_id,
 				       counter);
 	if (r == NULL)
@@ -1379,6 +1627,12 @@ void eap_sim_db_remove_reauth(void *priv, struct eap_sim_reauth *reauth)
 {
 	struct eap_sim_db_data *data = priv;
 	struct eap_sim_reauth *r, *prev = NULL;
+#ifdef CONFIG_SQLITE
+	if (data->sqlite_db) {
+		db_remove_reauth(data, reauth);
+		return;
+	}
+#endif /* CONFIG_SQLITE */
 	r = data->reauths;
 	while (r) {
 		if (r == reauth) {

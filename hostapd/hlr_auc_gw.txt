@@ -63,6 +63,12 @@ INSERT INTO milenage(imsi,ki,opc,amf,sqn) VALUES(
 );
 
 
+hostapd (EAP server) can also be configured to store the EAP-SIM/AKA
+pseudonyms and reauth information into a SQLite database. This is
+configured with the db parameter within the eap_sim_db configuration
+option.
+
+
 "hlr_auc_gw -D /path/to/hlr_auc_gw.db" can then be used to fetch
 Milenage parameters based on IMSI from the database. The database can be
 updated dynamically while hlr_auc_gw is running to add/remove/modify
@@ -78,7 +84,7 @@ driver=none
 radius_server_clients=hostapd.radius_clients
 eap_server=1
 eap_user_file=hostapd.eap_user
-eap_sim_db=unix:/tmp/hlr_auc_gw.sock
+eap_sim_db=unix:/tmp/hlr_auc_gw.sock db=/tmp/eap_sim.db
 eap_sim_aka_result_ind=1
 
 hostapd.radius_clients:

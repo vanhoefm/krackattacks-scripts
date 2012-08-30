@@ -17,6 +17,9 @@
 
 #include "includes.h"
 #include <sys/un.h>
+#ifdef CONFIG_SQLITE
+#include <sqlite3.h>
+#endif /* CONFIG_SQLITE */
 
 #include "common.h"
 #include "crypto/random.h"
@@ -66,8 +69,189 @@ struct eap_sim_db_data {
 	struct eap_sim_pseudonym *pseudonyms;
 	struct eap_sim_reauth *reauths;
 	struct eap_sim_db_pending *pending;
+#ifdef CONFIG_SQLITE
+	sqlite3 *sqlite_db;
+	u8 db_tmp_identity[100];
+	char db_tmp_pseudonym_str[100];
+	struct eap_sim_pseudonym db_tmp_pseudonym;
+#endif /* CONFIG_SQLITE */
 };
 
+
+#ifdef CONFIG_SQLITE
+
+static int db_table_exists(sqlite3 *db, const char *name)
+{
+	char cmd[128];
+	os_snprintf(cmd, sizeof(cmd), "SELECT 1 FROM %s;", name);
+	return sqlite3_exec(db, cmd, NULL, NULL, NULL) == SQLITE_OK;
+}
+
+
+static int db_table_create_pseudonym(sqlite3 *db)
+{
+	char *err = NULL;
+	const char *sql =
+		"CREATE TABLE pseudonyms("
+		"  imsi INTEGER PRIMARY KEY NOT NULL,"
+		"  pseudonym CHAR(21) NOT NULL"
+		");";
+
+	wpa_printf(MSG_DEBUG, "EAP-SIM DB: Adding database table for "
+		   "pseudonym information");
+	if (sqlite3_exec(db, sql, NULL, NULL, &err) != SQLITE_OK) {
+		wpa_printf(MSG_ERROR, "EAP-SIM DB: SQLite error: %s", err);
+		sqlite3_free(err);
+		return -1;
+	}
+
+	return 0;
+}
+
+
+static sqlite3 * db_open(const char *db_file)
+{
+	sqlite3 *db;
+
+	if (sqlite3_open(db_file, &db)) {
+		wpa_printf(MSG_ERROR, "EAP-SIM DB: Failed to open database "
+			   "%s: %s", db_file, sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return NULL;
+	}
+
+	if (!db_table_exists(db, "pseudonyms") &&
+	    db_table_create_pseudonym(db) < 0) {
+		sqlite3_close(db);
+		return NULL;
+	}
+
+	return db;
+}
+
+
+static int valid_pseudonym_string(const char *pseudonym)
+{
+	const char *pos = pseudonym;
+	while (*pos) {
+		if ((*pos < '0' || *pos > '9') &&
+		    (*pos < 'a' || *pos > 'f'))
+			return 0;
+		pos++;
+	}
+	return 1;
+}
+
+
+static int db_add_pseudonym(struct eap_sim_db_data *data, const u8 *identity,
+			    size_t identity_len, char *pseudonym)
+{
+	char cmd[128];
+	unsigned long long imsi;
+
+	if (!valid_pseudonym_string(pseudonym) || identity_len >= sizeof(cmd))
+	{
+		os_free(pseudonym);
+		return -1;
+	}
+	os_memcpy(cmd, identity, identity_len);
+	cmd[identity_len] = '\0';
+	imsi = atoll(cmd);
+
+	os_snprintf(cmd, sizeof(cmd), "INSERT OR REPLACE INTO pseudonyms "
+		    "(imsi, pseudonym) VALUES (%llu , '%s');",
+		    imsi, pseudonym);
+	os_free(pseudonym);
+	if (sqlite3_exec(data->sqlite_db, cmd, NULL, data, NULL) != SQLITE_OK)
+		return -1;
+
+	return 0;
+}
+
+
+static int get_pseudonym_cb(void *ctx, int argc, char *argv[], char *col[])
+{
+	struct eap_sim_db_data *data = ctx;
+	int i;
+	size_t len;
+
+	for (i = 0; i < argc; i++) {
+		if (os_strcmp(col[i], "imsi") == 0 && argv[i]) {
+			len = os_strlen(argv[i]);
+			if (len > sizeof(data->db_tmp_identity))
+				continue;
+			os_memcpy(data->db_tmp_identity, argv[i], len);
+			data->db_tmp_pseudonym.identity =
+				data->db_tmp_identity;
+			data->db_tmp_pseudonym.identity_len = len;
+		} else if (os_strcmp(col[i], "pseudonym") == 0 && argv[i]) {
+			len = os_strlen(argv[i]);
+			if (len >= sizeof(data->db_tmp_pseudonym_str))
+				continue;
+			os_memcpy(data->db_tmp_pseudonym_str, argv[i], len);
+			data->db_tmp_pseudonym_str[len] = '\0';
+			data->db_tmp_pseudonym.pseudonym =
+				data->db_tmp_pseudonym_str;
+		}
+	}
+
+	return 0;
+}
+
+
+static struct eap_sim_pseudonym *
+db_get_pseudonym(struct eap_sim_db_data *data, const char *pseudonym)
+{
+	char cmd[128];
+
+	if (!valid_pseudonym_string(pseudonym))
+		return NULL;
+	os_memset(&data->db_tmp_pseudonym, 0, sizeof(data->db_tmp_pseudonym));
+	os_strlcpy(data->db_tmp_pseudonym_str, pseudonym,
+		   sizeof(data->db_tmp_pseudonym_str));
+	data->db_tmp_pseudonym.pseudonym = data->db_tmp_pseudonym_str;
+	os_snprintf(cmd, sizeof(cmd),
+		    "SELECT imsi FROM pseudonyms WHERE pseudonym='%s';",
+		    pseudonym);
+	if (sqlite3_exec(data->sqlite_db, cmd, get_pseudonym_cb, data, NULL) !=
+	    SQLITE_OK)
+		return NULL;
+	if (data->db_tmp_pseudonym.identity == NULL)
+		return NULL;
+	return &data->db_tmp_pseudonym;
+}
+
+
+static struct eap_sim_pseudonym *
+db_get_pseudonym_id(struct eap_sim_db_data *data, const u8 *identity,
+		    size_t identity_len)
+{
+	char cmd[128];
+	unsigned long long imsi;
+
+	if (identity_len >= sizeof(cmd))
+		return NULL;
+	os_memcpy(cmd, identity, identity_len);
+	cmd[identity_len] = '\0';
+	imsi = atoll(cmd);
+
+	os_memset(&data->db_tmp_pseudonym, 0, sizeof(data->db_tmp_pseudonym));
+	if (identity_len > sizeof(data->db_tmp_identity))
+		return NULL;
+	os_memcpy(data->db_tmp_identity, identity, identity_len);
+	data->db_tmp_pseudonym.identity = data->db_tmp_identity;
+	data->db_tmp_pseudonym.identity_len = identity_len;
+	os_snprintf(cmd, sizeof(cmd),
+		    "SELECT pseudonym FROM pseudonyms WHERE imsi=%llu;", imsi);
+	if (sqlite3_exec(data->sqlite_db, cmd, get_pseudonym_cb, data, NULL) !=
+	    SQLITE_OK)
+		return NULL;
+	if (data->db_tmp_pseudonym.pseudonym == NULL)
+		return NULL;
+	return &data->db_tmp_pseudonym;
+}
+
+#endif /* CONFIG_SQLITE */
 
 static struct eap_sim_db_pending *
 eap_sim_db_get_pending(struct eap_sim_db_data *data, const u8 *imsi,
@@ -395,6 +579,7 @@ void * eap_sim_db_init(const char *config,
 		       void *ctx)
 {
 	struct eap_sim_db_data *data;
+	char *pos;
 
 	data = os_zalloc(sizeof(*data));
 	if (data == NULL)
@@ -406,6 +591,16 @@ void * eap_sim_db_init(const char *config,
 	data->fname = os_strdup(config);
 	if (data->fname == NULL)
 		goto fail;
+	pos = os_strstr(data->fname, " db=");
+	if (pos) {
+		*pos = '\0';
+#ifdef CONFIG_SQLITE
+		pos += 4;
+		data->sqlite_db = db_open(pos);
+		if (data->sqlite_db == NULL)
+			goto fail;
+#endif /* CONFIG_SQLITE */
+	}
 
 	if (os_strncmp(data->fname, "unix:", 5) == 0) {
 		if (eap_sim_db_open_socket(data)) {
@@ -451,6 +646,13 @@ void eap_sim_db_deinit(void *priv)
 	struct eap_sim_pseudonym *p, *prev;
 	struct eap_sim_reauth *r, *prevr;
 	struct eap_sim_db_pending *pending, *prev_pending;
+
+#ifdef CONFIG_SQLITE
+	if (data->sqlite_db) {
+		sqlite3_close(data->sqlite_db);
+		data->sqlite_db = NULL;
+	}
+#endif /* CONFIG_SQLITE */
 
 	eap_sim_db_close_socket(data);
 	os_free(data->fname);
@@ -669,6 +871,14 @@ eap_sim_db_get_pseudonym(struct eap_sim_db_data *data, const u8 *identity,
 	os_memcpy(pseudonym, identity, len);
 	pseudonym[len] = '\0';
 
+#ifdef CONFIG_SQLITE
+	if (data->sqlite_db) {
+		p = db_get_pseudonym(data, pseudonym);
+		os_free(pseudonym);
+		return p;
+	}
+#endif /* CONFIG_SQLITE */
+
 	p = data->pseudonyms;
 	while (p) {
 		if (os_strcmp(p->pseudonym, pseudonym) == 0)
@@ -693,6 +903,11 @@ eap_sim_db_get_pseudonym_id(struct eap_sim_db_data *data, const u8 *identity,
 	     identity[0] != EAP_AKA_PERMANENT_PREFIX &&
 	     identity[0] != EAP_AKA_PRIME_PERMANENT_PREFIX))
 		return NULL;
+
+#ifdef CONFIG_SQLITE
+	if (data->sqlite_db)
+		return db_get_pseudonym_id(data, identity, identity_len);
+#endif /* CONFIG_SQLITE */
 
 	p = data->pseudonyms;
 	while (p) {
@@ -939,6 +1154,11 @@ int eap_sim_db_add_pseudonym(void *priv, const u8 *identity,
 	wpa_printf(MSG_DEBUG, "EAP-SIM DB: Pseudonym: %s", pseudonym);
 
 	/* TODO: could store last two pseudonyms */
+#ifdef CONFIG_SQLITE
+	if (data->sqlite_db)
+		return db_add_pseudonym(data, identity, identity_len,
+					pseudonym);
+#endif /* CONFIG_SQLITE */
 	p = eap_sim_db_get_pseudonym(data, identity, identity_len);
 	if (p == NULL)
 		p = eap_sim_db_get_pseudonym_id(data, identity, identity_len);

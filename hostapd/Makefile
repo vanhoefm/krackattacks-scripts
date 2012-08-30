@@ -825,6 +825,12 @@ ifdef CONFIG_DEBUG_FILE
 CFLAGS += -DCONFIG_DEBUG_FILE
 endif
 
+ifdef CONFIG_SQLITE
+CFLAGS += -DCONFIG_SQLITE
+LIBS += -lsqlite3
+LIBS_h += -lsqlite3
+endif
+
 ALL=hostapd hostapd_cli
 
 all: verify_config $(ALL)
@@ -890,11 +896,6 @@ LIBS_n += -lbfd
 endif
 ifdef TLS_FUNCS
 LIBS_n += -lcrypto
-endif
-
-ifdef CONFIG_SQLITE
-CFLAGS += -DCONFIG_SQLITE
-LIBS_h += -lsqlite3
 endif
 
 HOBJS += hlr_auc_gw.o ../src/utils/common.o ../src/utils/wpa_debug.o ../src/utils/os_$(CONFIG_OS).o ../src/utils/wpabuf.o ../src/crypto/milenage.o

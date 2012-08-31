@@ -64,6 +64,7 @@ INCLUDES += $(LOCAL_PATH)/src/utils
 INCLUDES += $(LOCAL_PATH)/src/wps
 INCLUDES += external/openssl/include
 INCLUDES += frameworks/base/cmds/keystore
+INCLUDES += system/security/keystore
 ifdef CONFIG_DRIVER_NL80211
 INCLUDES += external/libnl-headers
 endif

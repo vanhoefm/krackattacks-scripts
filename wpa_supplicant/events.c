@@ -1768,6 +1768,35 @@ static void wpa_supplicant_event_disassoc(struct wpa_supplicant *wpa_s,
 					  int locally_generated)
 {
 	const u8 *bssid;
+
+	if (wpa_s->key_mgmt == WPA_KEY_MGMT_WPA_NONE) {
+		/*
+		 * At least Host AP driver and a Prism3 card seemed to be
+		 * generating streams of disconnected events when configuring
+		 * IBSS for WPA-None. Ignore them for now.
+		 */
+		return;
+	}
+
+	bssid = wpa_s->bssid;
+	if (is_zero_ether_addr(bssid))
+		bssid = wpa_s->pending_bssid;
+
+	if (!is_zero_ether_addr(bssid) ||
+	    wpa_s->wpa_state >= WPA_AUTHENTICATING) {
+		wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_DISCONNECTED "bssid=" MACSTR
+			" reason=%d%s",
+			MAC2STR(bssid), reason_code,
+			locally_generated ? " locally_generated=1" : "");
+	}
+}
+
+
+static void wpa_supplicant_event_disassoc_finish(struct wpa_supplicant *wpa_s,
+						 u16 reason_code,
+						 int locally_generated)
+{
+	const u8 *bssid;
 	int authenticating;
 	u8 prev_pending_bssid[ETH_ALEN];
 	struct wpa_bss *fast_reconnect = NULL;
@@ -1835,13 +1864,6 @@ static void wpa_supplicant_event_disassoc(struct wpa_supplicant *wpa_s,
 	else
 		wpa_s->disconnect_reason = reason_code;
 	wpas_notify_disconnect_reason(wpa_s);
-	if (!is_zero_ether_addr(bssid) ||
-	    wpa_s->wpa_state >= WPA_AUTHENTICATING) {
-		wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_DISCONNECTED "bssid=" MACSTR
-			" reason=%d%s",
-			MAC2STR(bssid), reason_code,
-			locally_generated ? " locally_generated=1" : "");
-	}
 	if (wpa_supplicant_dynamic_keys(wpa_s)) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Disconnect event - remove keys");
 		wpa_s->keys_cleared = 0;
@@ -2370,13 +2392,23 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			wpas_auth_failed(wpa_s);
 #ifdef CONFIG_P2P
 		if (event == EVENT_DEAUTH && data) {
-			wpas_p2p_deauth_notif(wpa_s, data->deauth_info.addr,
-					      reason_code,
-					      data->deauth_info.ie,
-					      data->deauth_info.ie_len,
-					      locally_generated);
+			if (wpas_p2p_deauth_notif(wpa_s,
+						  data->deauth_info.addr,
+						  reason_code,
+						  data->deauth_info.ie,
+						  data->deauth_info.ie_len,
+						  locally_generated) > 0) {
+				/*
+				 * The interface was removed, so cannot
+				 * continue processing any additional
+				 * operations after this.
+				 */
+				break;
+			}
 		}
 #endif /* CONFIG_P2P */
+		wpa_supplicant_event_disassoc_finish(wpa_s, reason_code,
+						     locally_generated);
 		break;
 	case EVENT_MICHAEL_MIC_FAILURE:
 		wpa_supplicant_event_michael_mic_failure(wpa_s, data);

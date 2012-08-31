@@ -113,9 +113,9 @@ int wpas_p2p_presence_req(struct wpa_supplicant *wpa_s, u32 duration1,
 			  u32 interval1, u32 duration2, u32 interval2);
 int wpas_p2p_ext_listen(struct wpa_supplicant *wpa_s, unsigned int period,
 			unsigned int interval);
-void wpas_p2p_deauth_notif(struct wpa_supplicant *wpa_s, const u8 *bssid,
-			   u16 reason_code, const u8 *ie, size_t ie_len,
-			   int locally_generated);
+int wpas_p2p_deauth_notif(struct wpa_supplicant *wpa_s, const u8 *bssid,
+			  u16 reason_code, const u8 *ie, size_t ie_len,
+			  int locally_generated);
 void wpas_p2p_disassoc_notif(struct wpa_supplicant *wpa_s, const u8 *bssid,
 			     u16 reason_code, const u8 *ie, size_t ie_len,
 			     int locally_generated);

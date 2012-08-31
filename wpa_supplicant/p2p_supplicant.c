@@ -333,7 +333,7 @@ static int wpas_p2p_group_delete(struct wpa_supplicant *wpa_s,
 		if (wpa_s && ifname)
 			wpa_drv_if_remove(wpa_s, type, ifname);
 		os_free(ifname);
-		return 0;
+		return 1;
 	}
 
 	wpa_printf(MSG_DEBUG, "P2P: Remove temporary group network");
@@ -4625,14 +4625,15 @@ static void wpas_p2p_set_group_idle_timeout(struct wpa_supplicant *wpa_s)
 }
 
 
-void wpas_p2p_deauth_notif(struct wpa_supplicant *wpa_s, const u8 *bssid,
-			   u16 reason_code, const u8 *ie, size_t ie_len,
-			   int locally_generated)
+/* Returns 1 if the interface was removed */
+int wpas_p2p_deauth_notif(struct wpa_supplicant *wpa_s, const u8 *bssid,
+			  u16 reason_code, const u8 *ie, size_t ie_len,
+			  int locally_generated)
 {
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
-		return;
+		return 0;
 	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_MGMT)
-		return;
+		return 0;
 
 	if (!locally_generated)
 		p2p_deauth_notif(wpa_s->global->p2p, bssid, reason_code, ie,
@@ -4644,9 +4645,13 @@ void wpas_p2p_deauth_notif(struct wpa_supplicant *wpa_s, const u8 *bssid,
 	    wpa_s->current_ssid->mode == WPAS_MODE_INFRA) {
 		wpa_printf(MSG_DEBUG, "P2P: GO indicated that the P2P Group "
 			   "session is ending");
-		wpas_p2p_group_delete(wpa_s,
-				      P2P_GROUP_REMOVAL_GO_ENDING_SESSION);
+		if (wpas_p2p_group_delete(wpa_s,
+					  P2P_GROUP_REMOVAL_GO_ENDING_SESSION)
+		    > 0)
+			return 1;
 	}
+
+	return 0;
 }
 
 
@@ -5081,7 +5086,8 @@ int wpas_p2p_disconnect(struct wpa_supplicant *wpa_s)
 	if (wpa_s == NULL)
 		return -1;
 
-	return wpas_p2p_group_delete(wpa_s, P2P_GROUP_REMOVAL_REQUESTED);
+	return wpas_p2p_group_delete(wpa_s, P2P_GROUP_REMOVAL_REQUESTED) < 0 ?
+		-1 : 0;
 }
 
 

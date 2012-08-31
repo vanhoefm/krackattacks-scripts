@@ -720,12 +720,16 @@ endif
 endif
 
 ifdef NEED_SHA256
+L_CFLAGS += -DCONFIG_SHA256
 ifneq ($(CONFIG_TLS), openssl)
 OBJS += src/crypto/sha256.c
 endif
 OBJS += src/crypto/sha256-prf.c
 ifdef CONFIG_INTERNAL_SHA256
 OBJS += src/crypto/sha256-internal.c
+endif
+ifdef NEED_TLS_PRF_SHA256
+OBJS += ../src/crypto/sha256-tlsprf.c
 endif
 endif
 

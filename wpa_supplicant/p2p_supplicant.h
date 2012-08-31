@@ -104,7 +104,8 @@ int wpas_p2p_service_del_upnp(struct wpa_supplicant *wpa_s, u8 version,
 			      const char *service);
 int wpas_p2p_reject(struct wpa_supplicant *wpa_s, const u8 *addr);
 int wpas_p2p_invite(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
-		    struct wpa_ssid *ssid, const u8 *go_dev_addr);
+		    struct wpa_ssid *ssid, const u8 *go_dev_addr, int freq,
+		    int ht40);
 int wpas_p2p_invite_group(struct wpa_supplicant *wpa_s, const char *ifname,
 			  const u8 *peer_addr, const u8 *go_dev_addr);
 void wpas_p2p_completed(struct wpa_supplicant *wpa_s);

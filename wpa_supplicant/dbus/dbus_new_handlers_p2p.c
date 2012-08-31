@@ -630,7 +630,7 @@ DBusMessage * wpas_dbus_handler_p2p_invite(DBusMessage *message,
 		if (ssid == NULL || ssid->disabled != 2)
 			goto err;
 
-		if (wpas_p2p_invite(wpa_s, peer_addr, ssid, NULL) < 0) {
+		if (wpas_p2p_invite(wpa_s, peer_addr, ssid, NULL, 0, 0) < 0) {
 			reply = wpas_dbus_error_unknown_error(
 				message,
 				"Failed to reinvoke a persistent group");

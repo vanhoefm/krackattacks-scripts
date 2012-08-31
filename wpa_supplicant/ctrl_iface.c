@@ -3515,6 +3515,8 @@ static int p2p_ctrl_invite_persistent(struct wpa_supplicant *wpa_s, char *cmd)
 	int id;
 	struct wpa_ssid *ssid;
 	u8 peer[ETH_ALEN];
+	int freq = 0;
+	int ht40;
 
 	id = atoi(cmd);
 	pos = os_strstr(cmd, " peer=");
@@ -3531,7 +3533,18 @@ static int p2p_ctrl_invite_persistent(struct wpa_supplicant *wpa_s, char *cmd)
 		return -1;
 	}
 
-	return wpas_p2p_invite(wpa_s, pos ? peer : NULL, ssid, NULL);
+	pos = os_strstr(cmd, " freq=");
+	if (pos) {
+		pos += 6;
+		freq = atoi(pos);
+		if (freq <= 0)
+			return -1;
+	}
+
+	ht40 = os_strstr(cmd, " ht40") != NULL;
+
+	return wpas_p2p_invite(wpa_s, pos ? peer : NULL, ssid, NULL, freq,
+			       ht40);
 }
 
 

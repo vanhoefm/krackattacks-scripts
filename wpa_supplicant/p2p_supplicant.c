@@ -262,7 +262,9 @@ static int wpas_p2p_group_delete(struct wpa_supplicant *wpa_s,
 				break;
 			ssid = ssid->next;
 		}
-		if (ssid == NULL) {
+		if (ssid == NULL &&
+			wpa_s->p2p_group_interface == NOT_P2P_GROUP_INTERFACE)
+		{
 			wpa_printf(MSG_ERROR, "P2P: P2P group interface "
 				   "not found");
 			return -1;

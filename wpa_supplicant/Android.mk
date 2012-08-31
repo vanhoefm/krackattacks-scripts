@@ -239,6 +239,12 @@ L_CFLAGS += -DCONFIG_P2P_STRICT
 endif
 endif
 
+ifdef CONFIG_HS20
+OBJS += hs20_supplicant.c
+L_CFLAGS += -DCONFIG_HS20
+CONFIG_INTERWORKING=y
+endif
+
 ifdef CONFIG_INTERWORKING
 OBJS += interworking.c
 L_CFLAGS += -DCONFIG_INTERWORKING
@@ -740,6 +746,12 @@ ifdef CONFIG_WPS
 L_CFLAGS += -DEAP_SERVER_WSC
 OBJS += src/ap/wps_hostapd.c
 OBJS += src/eap_server/eap_server_wsc.c
+endif
+ifdef CONFIG_INTERWORKING
+OBJS += src/ap/gas_serv.c
+endif
+ifdef CONFIG_HS20
+OBJS += src/ap/hs20.c
 endif
 endif
 

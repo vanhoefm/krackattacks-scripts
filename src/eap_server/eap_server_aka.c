@@ -49,6 +49,7 @@ struct eap_aka_data {
 	u8 *network_name;
 	size_t network_name_len;
 	u16 kdf;
+	int identity_round;
 };
 
 
@@ -264,21 +265,8 @@ static struct wpabuf * eap_aka_build_identity(struct eap_sm *sm,
 	wpa_printf(MSG_DEBUG, "EAP-AKA: Generating Identity");
 	msg = eap_sim_msg_init(EAP_CODE_REQUEST, id, data->eap_method,
 			       EAP_AKA_SUBTYPE_IDENTITY);
-	if (eap_sim_db_identity_known(sm->eap_sim_db_priv, sm->identity,
-				      sm->identity_len)) {
-		if (sm->identity_len > 0 &&
-		    (sm->identity[0] == EAP_AKA_REAUTH_ID_PREFIX ||
-		     sm->identity[0] == EAP_AKA_PRIME_REAUTH_ID_PREFIX)) {
-			/* Reauth id may have expired - try fullauth */
-			wpa_printf(MSG_DEBUG, "   AT_FULLAUTH_ID_REQ");
-			eap_sim_msg_add(msg, EAP_SIM_AT_FULLAUTH_ID_REQ, 0,
-					NULL, 0);
-		} else {
-			wpa_printf(MSG_DEBUG, "   AT_PERMANENT_ID_REQ");
-			eap_sim_msg_add(msg, EAP_SIM_AT_PERMANENT_ID_REQ, 0,
-					NULL, 0);
-		}
-	} else {
+	data->identity_round++;
+	if (data->identity_round == 1) {
 		/*
 		 * RFC 4187, Chap. 4.1.4 recommends that identity from EAP is
 		 * ignored and the AKA/Identity is used to request the
@@ -286,6 +274,18 @@ static struct wpabuf * eap_aka_build_identity(struct eap_sm *sm,
 		 */
 		wpa_printf(MSG_DEBUG, "   AT_ANY_ID_REQ");
 		eap_sim_msg_add(msg, EAP_SIM_AT_ANY_ID_REQ, 0, NULL, 0);
+	} else if (data->identity_round > 3) {
+		/* Cannot use more than three rounds of Identity messages */
+		return NULL;
+	} else if (sm->identity && sm->identity_len > 0 &&
+		   (sm->identity[0] == EAP_AKA_REAUTH_ID_PREFIX ||
+		    sm->identity[0] == EAP_AKA_PRIME_REAUTH_ID_PREFIX)) {
+		/* Reauth id may have expired - try fullauth */
+		wpa_printf(MSG_DEBUG, "   AT_FULLAUTH_ID_REQ");
+		eap_sim_msg_add(msg, EAP_SIM_AT_FULLAUTH_ID_REQ, 0, NULL, 0);
+	} else {
+		wpa_printf(MSG_DEBUG, "   AT_PERMANENT_ID_REQ");
+		eap_sim_msg_add(msg, EAP_SIM_AT_PERMANENT_ID_REQ, 0, NULL, 0);
 	}
 	buf = eap_sim_msg_finish(msg, NULL, NULL, 0);
 	if (eap_aka_add_id_msg(data, buf) < 0) {

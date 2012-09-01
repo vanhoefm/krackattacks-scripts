@@ -352,6 +352,8 @@ static struct wpabuf * eap_sim_client_error(struct eap_sim_data *data, u8 id,
 	data->num_id_req = 0;
 	data->num_notification = 0;
 
+	wpa_printf(MSG_DEBUG, "EAP-SIM: Send Client-Error (error code %d)",
+		   err);
 	msg = eap_sim_msg_init(EAP_CODE_RESPONSE, id, EAP_TYPE_SIM,
 			       EAP_SIM_SUBTYPE_CLIENT_ERROR);
 	eap_sim_msg_add(msg, EAP_SIM_AT_CLIENT_ERROR_CODE, err, NULL, 0);

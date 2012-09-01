@@ -425,6 +425,8 @@ static struct wpabuf * eap_aka_client_error(struct eap_aka_data *data, u8 id,
 	data->num_id_req = 0;
 	data->num_notification = 0;
 
+	wpa_printf(MSG_DEBUG, "EAP-AKA: Send Client-Error (error code %d)",
+		   err);
 	msg = eap_sim_msg_init(EAP_CODE_RESPONSE, id, data->eap_method,
 			       EAP_AKA_SUBTYPE_CLIENT_ERROR);
 	eap_sim_msg_add(msg, EAP_SIM_AT_CLIENT_ERROR_CODE, err, NULL, 0);

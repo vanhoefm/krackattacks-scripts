@@ -204,20 +204,11 @@ static int get_pseudonym_cb(void *ctx, int argc, char *argv[], char *col[])
 {
 	struct eap_sim_db_data *data = ctx;
 	int i;
-	size_t len;
 
 	for (i = 0; i < argc; i++) {
 		if (os_strcmp(col[i], "permanent") == 0 && argv[i]) {
 			os_strlcpy(data->db_tmp_identity, argv[i],
 				   sizeof(data->db_tmp_identity));
-		} else if (os_strcmp(col[i], "pseudonym") == 0 && argv[i]) {
-			len = os_strlen(argv[i]);
-			if (len >= sizeof(data->db_tmp_pseudonym_str))
-				continue;
-			os_memcpy(data->db_tmp_pseudonym_str, argv[i], len);
-			data->db_tmp_pseudonym_str[len] = '\0';
-			data->db_tmp_pseudonym.pseudonym =
-				data->db_tmp_pseudonym_str;
 		}
 	}
 
@@ -316,7 +307,6 @@ static int get_reauth_cb(void *ctx, int argc, char *argv[], char *col[])
 {
 	struct eap_sim_db_data *data = ctx;
 	int i;
-	size_t len;
 	struct eap_sim_reauth *reauth = &data->db_tmp_reauth;
 
 	for (i = 0; i < argc; i++) {
@@ -324,13 +314,6 @@ static int get_reauth_cb(void *ctx, int argc, char *argv[], char *col[])
 			os_strlcpy(data->db_tmp_identity, argv[i],
 				   sizeof(data->db_tmp_identity));
 			reauth->permanent = data->db_tmp_identity;
-		} else if (os_strcmp(col[i], "reauth_id") == 0 && argv[i]) {
-			len = os_strlen(argv[i]);
-			if (len >= sizeof(data->db_tmp_pseudonym_str))
-				continue;
-			os_memcpy(data->db_tmp_pseudonym_str, argv[i], len);
-			data->db_tmp_pseudonym_str[len] = '\0';
-			reauth->reauth_id = data->db_tmp_pseudonym_str;
 		} else if (os_strcmp(col[i], "counter") == 0 && argv[i]) {
 			reauth->counter = atoi(argv[i]);
 		} else if (os_strcmp(col[i], "mk") == 0 && argv[i]) {

@@ -42,9 +42,6 @@ int eap_sim_db_get_gsm_triplets(void *priv, const u8 *identity,
 #define EAP_SIM_DB_FAILURE -1
 #define EAP_SIM_DB_PENDING -2
 
-int eap_sim_db_identity_known(void *priv, const u8 *identity,
-			      size_t identity_len);
-
 char * eap_sim_db_get_next_pseudonym(void *priv,
 				     enum eap_sim_db_method method);
 

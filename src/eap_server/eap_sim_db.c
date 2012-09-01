@@ -1225,60 +1225,6 @@ eap_sim_db_get_reauth_id(struct eap_sim_db_data *data, const u8 *identity,
 }
 
 
-/**
- * eap_sim_db_identity_known - Verify whether the given identity is known
- * @priv: Private data pointer from eap_sim_db_init()
- * @identity: User name identity
- * @identity_len: Length of identity in bytes 
- * Returns: 0 if the user is found or -1 on failure
- *
- * In most cases, the user name is ['0','1','6'] | IMSI, i.e., 1 followed by
- * the IMSI in ASCII format for EAP-SIM, ['2','3','7'] | pseudonym, or
- * ['4','5','7'] | reauth_id.
- */
-int eap_sim_db_identity_known(void *priv, const u8 *identity,
-			      size_t identity_len)
-{
-	struct eap_sim_db_data *data = priv;
-
-	if (identity == NULL || identity_len < 2)
-		return -1;
-
-	if (identity[0] == EAP_SIM_PSEUDONYM_PREFIX ||
-	    identity[0] == EAP_AKA_PSEUDONYM_PREFIX ||
-	    identity[0] == EAP_AKA_PRIME_PSEUDONYM_PREFIX) {
-		struct eap_sim_pseudonym *p =
-			eap_sim_db_get_pseudonym(data, identity, identity_len);
-		return p ? 0 : -1;
-	}
-
-	if (identity[0] == EAP_SIM_REAUTH_ID_PREFIX ||
-	    identity[0] == EAP_AKA_REAUTH_ID_PREFIX ||
-	    identity[0] == EAP_AKA_PRIME_REAUTH_ID_PREFIX) {
-		struct eap_sim_reauth *r =
-			eap_sim_db_get_reauth(data, identity, identity_len);
-		return r ? 0 : -1;
-	}
-
-	if (identity[0] != EAP_SIM_PERMANENT_PREFIX &&
-	    identity[0] != EAP_AKA_PERMANENT_PREFIX &&
-	    identity[0] != EAP_AKA_PRIME_PERMANENT_PREFIX) {
-		/* Unknown identity prefix */
-		return -1;
-	}
-
-	/* TODO: Should consider asking HLR/AuC gateway whether this permanent
-	 * identity is known. If it is, EAP-SIM/AKA can skip identity request.
-	 * In case of EAP-AKA, this would reduce number of needed round-trips.
-	 * Ideally, this would be done with one wait, i.e., just request
-	 * authentication data and store it for the next use. This would then
-	 * need to use similar pending-request functionality as the normal
-	 * request for authentication data at later phase.
-	 */
-	return -1;
-}
-
-
 static char * eap_sim_db_get_next(struct eap_sim_db_data *data, char prefix)
 {
 	char *id, *pos, *end;

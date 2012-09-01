@@ -440,12 +440,10 @@ static void eap_sim_process_start(struct eap_sm *sm,
 	}
 
 	if (username[0] == EAP_SIM_REAUTH_ID_PREFIX) {
-		size_t len;
 		wpa_printf(MSG_DEBUG, "EAP-SIM: Reauth username '%s'",
 			   username);
 		data->reauth = eap_sim_db_get_reauth_entry(
-			sm->eap_sim_db_priv, (u8 *) username,
-			os_strlen(username));
+			sm->eap_sim_db_priv, username);
 		os_free(username);
 		if (data->reauth == NULL) {
 			wpa_printf(MSG_DEBUG, "EAP-SIM: Unknown reauth "
@@ -454,11 +452,8 @@ static void eap_sim_process_start(struct eap_sm *sm,
 			return;
 		}
 		wpa_printf(MSG_DEBUG, "EAP-SIM: Using fast re-authentication");
-		len = data->reauth->identity_len;
-		if (len >= sizeof(data->permanent))
-			len = sizeof(data->permanent) - 1;
-		os_memcpy(data->permanent, data->reauth->identity, len);
-		data->permanent[len] = '\0';
+		os_strlcpy(data->permanent, data->reauth->permanent,
+			   sizeof(data->permanent));
 		data->counter = data->reauth->counter;
 		os_memcpy(data->mk, data->reauth->mk, EAP_SIM_MK_LEN);
 		eap_sim_state(data, REAUTH);
@@ -466,13 +461,11 @@ static void eap_sim_process_start(struct eap_sm *sm,
 	}
 
 	if (username[0] == EAP_SIM_PSEUDONYM_PREFIX) {
-		const u8 *permanent;
-		size_t len;
+		const char *permanent;
 		wpa_printf(MSG_DEBUG, "EAP-SIM: Pseudonym username '%s'",
 			   username);
 		permanent = eap_sim_db_get_permanent(
-			sm->eap_sim_db_priv, (u8 *) username,
-			os_strlen(username), &len);
+			sm->eap_sim_db_priv, username);
 		os_free(username);
 		if (permanent == NULL) {
 			wpa_printf(MSG_DEBUG, "EAP-SIM: Unknown pseudonym "
@@ -480,10 +473,8 @@ static void eap_sim_process_start(struct eap_sm *sm,
 			/* Remain in START state for another round */
 			return;
 		}
-		if (len >= sizeof(data->permanent))
-			len = sizeof(data->permanent) - 1;
-		os_memcpy(data->permanent, permanent, len);
-		data->permanent[len] = '\0';
+		os_strlcpy(data->permanent, permanent,
+			   sizeof(data->permanent));
 	} else if (username[0] == EAP_SIM_PERMANENT_PREFIX) {
 		wpa_printf(MSG_DEBUG, "EAP-SIM: Permanent username '%s'",
 			   username);
@@ -517,8 +508,7 @@ static void eap_sim_process_start(struct eap_sm *sm,
 	data->reauth = NULL;
 
 	data->num_chal = eap_sim_db_get_gsm_triplets(
-		sm->eap_sim_db_priv, (u8 *) data->permanent,
-		os_strlen(data->permanent), EAP_SIM_MAX_CHAL,
+		sm->eap_sim_db_priv, data->permanent, EAP_SIM_MAX_CHAL,
 		(u8 *) data->rand, (u8 *) data->kc, (u8 *) data->sres, sm);
 	if (data->num_chal == EAP_SIM_DB_PENDING) {
 		wpa_printf(MSG_DEBUG, "EAP-SIM: GSM authentication triplets "
@@ -579,16 +569,12 @@ static void eap_sim_process_challenge(struct eap_sm *sm,
 		eap_sim_state(data, SUCCESS);
 
 	if (data->next_pseudonym) {
-		eap_sim_db_add_pseudonym(sm->eap_sim_db_priv,
-					 (u8 *) data->permanent,
-					 os_strlen(data->permanent),
+		eap_sim_db_add_pseudonym(sm->eap_sim_db_priv, data->permanent,
 					 data->next_pseudonym);
 		data->next_pseudonym = NULL;
 	}
 	if (data->next_reauth_id) {
-		eap_sim_db_add_reauth(sm->eap_sim_db_priv,
-				      (u8 *) data->permanent,
-				      os_strlen(data->permanent),
+		eap_sim_db_add_reauth(sm->eap_sim_db_priv, data->permanent,
 				      data->next_reauth_id, data->counter + 1,
 				      data->mk);
 		data->next_reauth_id = NULL;
@@ -646,9 +632,7 @@ static void eap_sim_process_reauth(struct eap_sm *sm,
 		eap_sim_state(data, SUCCESS);
 
 	if (data->next_reauth_id) {
-		eap_sim_db_add_reauth(sm->eap_sim_db_priv,
-				      (u8 *) data->permanent,
-				      os_strlen(data->permanent),
+		eap_sim_db_add_reauth(sm->eap_sim_db_priv, data->permanent,
 				      data->next_reauth_id,
 				      data->counter + 1, data->mk);
 		data->next_reauth_id = NULL;

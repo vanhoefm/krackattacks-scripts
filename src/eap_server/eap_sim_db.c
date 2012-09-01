@@ -29,15 +29,13 @@
 
 struct eap_sim_pseudonym {
 	struct eap_sim_pseudonym *next;
-	u8 *identity;
-	size_t identity_len;
-	char *pseudonym;
+	char *permanent; /* permanent username */
+	char *pseudonym; /* pseudonym username */
 };
 
 struct eap_sim_db_pending {
 	struct eap_sim_db_pending *next;
-	u8 imsi[20];
-	size_t imsi_len;
+	char imsi[20];
 	enum { PENDING, SUCCESS, FAILURE } state;
 	void *cb_session_ctx;
 	struct os_time timestamp;
@@ -71,7 +69,7 @@ struct eap_sim_db_data {
 	struct eap_sim_db_pending *pending;
 #ifdef CONFIG_SQLITE
 	sqlite3 *sqlite_db;
-	u8 db_tmp_identity[100];
+	char db_tmp_identity[100];
 	char db_tmp_pseudonym_str[100];
 	struct eap_sim_pseudonym db_tmp_pseudonym;
 	struct eap_sim_reauth db_tmp_reauth;
@@ -176,21 +174,18 @@ static int valid_pseudonym_string(const char *pseudonym)
 }
 
 
-static int db_add_pseudonym(struct eap_sim_db_data *data, const u8 *identity,
-			    size_t identity_len, char *pseudonym)
+static int db_add_pseudonym(struct eap_sim_db_data *data,
+			    const char *permanent, char *pseudonym)
 {
 	char cmd[128];
 	unsigned long long imsi;
 	char *err = NULL;
 
-	if (!valid_pseudonym_string(pseudonym) || identity_len >= sizeof(cmd))
-	{
+	if (!valid_pseudonym_string(pseudonym)) {
 		os_free(pseudonym);
 		return -1;
 	}
-	os_memcpy(cmd, identity, identity_len);
-	cmd[identity_len] = '\0';
-	imsi = atoll(cmd);
+	imsi = atoll(permanent);
 
 	os_snprintf(cmd, sizeof(cmd), "INSERT OR REPLACE INTO pseudonyms "
 		    "(imsi, pseudonym) VALUES (%llu , '%s');",
@@ -215,13 +210,8 @@ static int get_pseudonym_cb(void *ctx, int argc, char *argv[], char *col[])
 
 	for (i = 0; i < argc; i++) {
 		if (os_strcmp(col[i], "imsi") == 0 && argv[i]) {
-			len = os_strlen(argv[i]);
-			if (len > sizeof(data->db_tmp_identity))
-				continue;
-			os_memcpy(data->db_tmp_identity, argv[i], len);
-			data->db_tmp_pseudonym.identity =
-				data->db_tmp_identity;
-			data->db_tmp_pseudonym.identity_len = len;
+			os_strlcpy(data->db_tmp_identity, argv[i],
+				   sizeof(data->db_tmp_identity));
 		} else if (os_strcmp(col[i], "pseudonym") == 0 && argv[i]) {
 			len = os_strlen(argv[i]);
 			if (len >= sizeof(data->db_tmp_pseudonym_str))
@@ -254,59 +244,25 @@ db_get_pseudonym(struct eap_sim_db_data *data, const char *pseudonym)
 	if (sqlite3_exec(data->sqlite_db, cmd, get_pseudonym_cb, data, NULL) !=
 	    SQLITE_OK)
 		return NULL;
-	if (data->db_tmp_pseudonym.identity == NULL)
+	if (data->db_tmp_pseudonym.permanent == NULL)
 		return NULL;
 	return &data->db_tmp_pseudonym;
 }
 
 
-static struct eap_sim_pseudonym *
-db_get_pseudonym_id(struct eap_sim_db_data *data, const u8 *identity,
-		    size_t identity_len)
-{
-	char cmd[128];
-	unsigned long long imsi;
-
-	if (identity_len >= sizeof(cmd))
-		return NULL;
-	os_memcpy(cmd, identity, identity_len);
-	cmd[identity_len] = '\0';
-	imsi = atoll(cmd);
-
-	os_memset(&data->db_tmp_pseudonym, 0, sizeof(data->db_tmp_pseudonym));
-	if (identity_len > sizeof(data->db_tmp_identity))
-		return NULL;
-	os_memcpy(data->db_tmp_identity, identity, identity_len);
-	data->db_tmp_pseudonym.identity = data->db_tmp_identity;
-	data->db_tmp_pseudonym.identity_len = identity_len;
-	os_snprintf(cmd, sizeof(cmd),
-		    "SELECT pseudonym FROM pseudonyms WHERE imsi=%llu;", imsi);
-	if (sqlite3_exec(data->sqlite_db, cmd, get_pseudonym_cb, data, NULL) !=
-	    SQLITE_OK)
-		return NULL;
-	if (data->db_tmp_pseudonym.pseudonym == NULL)
-		return NULL;
-	return &data->db_tmp_pseudonym;
-}
-
-
-static int db_add_reauth(struct eap_sim_db_data *data, const u8 *identity,
-			 size_t identity_len, char *reauth_id, u16 counter,
-			 const u8 *mk, const u8 *k_encr,
-			 const u8 *k_aut, const u8 *k_re)
+static int db_add_reauth(struct eap_sim_db_data *data, const char *permanent,
+			 char *reauth_id, u16 counter, const u8 *mk,
+			 const u8 *k_encr, const u8 *k_aut, const u8 *k_re)
 {
 	char cmd[2000], *pos, *end;
 	unsigned long long imsi;
 	char *err = NULL;
 
-	if (!valid_pseudonym_string(reauth_id) || identity_len >= sizeof(cmd))
-	{
+	if (!valid_pseudonym_string(reauth_id)) {
 		os_free(reauth_id);
 		return -1;
 	}
-	os_memcpy(cmd, identity, identity_len);
-	cmd[identity_len] = '\0';
-	imsi = atoll(cmd);
+	imsi = atoll(permanent);
 
 	pos = cmd;
 	end = pos + sizeof(cmd);
@@ -369,12 +325,9 @@ static int get_reauth_cb(void *ctx, int argc, char *argv[], char *col[])
 
 	for (i = 0; i < argc; i++) {
 		if (os_strcmp(col[i], "imsi") == 0 && argv[i]) {
-			len = os_strlen(argv[i]);
-			if (len > sizeof(data->db_tmp_identity))
-				continue;
-			os_memcpy(data->db_tmp_identity, argv[i], len);
-			reauth->identity = data->db_tmp_identity;
-			reauth->identity_len = len;
+			os_strlcpy(data->db_tmp_identity, argv[i],
+				   sizeof(data->db_tmp_identity));
+			reauth->permanent = data->db_tmp_identity;
 		} else if (os_strcmp(col[i], "reauth_id") == 0 && argv[i]) {
 			len = os_strlen(argv[i]);
 			if (len >= sizeof(data->db_tmp_pseudonym_str))
@@ -418,37 +371,7 @@ db_get_reauth(struct eap_sim_db_data *data, const char *reauth_id)
 	if (sqlite3_exec(data->sqlite_db, cmd, get_reauth_cb, data, NULL) !=
 	    SQLITE_OK)
 		return NULL;
-	if (data->db_tmp_reauth.identity == NULL)
-		return NULL;
-	return &data->db_tmp_reauth;
-}
-
-
-static struct eap_sim_reauth *
-db_get_reauth_id(struct eap_sim_db_data *data, const u8 *identity,
-		 size_t identity_len)
-{
-	char cmd[256];
-	unsigned long long imsi;
-
-	if (identity_len >= sizeof(cmd))
-		return NULL;
-	os_memcpy(cmd, identity, identity_len);
-	cmd[identity_len] = '\0';
-	imsi = atoll(cmd);
-
-	os_memset(&data->db_tmp_reauth, 0, sizeof(data->db_tmp_reauth));
-	if (identity_len > sizeof(data->db_tmp_identity))
-		return NULL;
-	os_memcpy(data->db_tmp_identity, identity, identity_len);
-	data->db_tmp_reauth.identity = data->db_tmp_identity;
-	data->db_tmp_reauth.identity_len = identity_len;
-	os_snprintf(cmd, sizeof(cmd),
-		    "SELECT * FROM reauth WHERE imsi=%llu;", imsi);
-	if (sqlite3_exec(data->sqlite_db, cmd, get_reauth_cb, data, NULL) !=
-	    SQLITE_OK)
-		return NULL;
-	if (data->db_tmp_reauth.reauth_id == NULL)
+	if (data->db_tmp_reauth.permanent == NULL)
 		return NULL;
 	return &data->db_tmp_reauth;
 }
@@ -460,11 +383,7 @@ static void db_remove_reauth(struct eap_sim_db_data *data,
 	char cmd[256];
 	unsigned long long imsi;
 
-	if (reauth->identity_len >= sizeof(cmd))
-		return;
-	os_memcpy(cmd, reauth->identity, reauth->identity_len);
-	cmd[reauth->identity_len] = '\0';
-	imsi = atoll(cmd);
+	imsi = atoll(reauth->permanent);
 	os_snprintf(cmd, sizeof(cmd),
 		    "DELETE FROM reauth WHERE imsi=%llu;", imsi);
 	sqlite3_exec(data->sqlite_db, cmd, NULL, NULL, NULL);
@@ -474,15 +393,13 @@ static void db_remove_reauth(struct eap_sim_db_data *data,
 
 
 static struct eap_sim_db_pending *
-eap_sim_db_get_pending(struct eap_sim_db_data *data, const u8 *imsi,
-		       size_t imsi_len, int aka)
+eap_sim_db_get_pending(struct eap_sim_db_data *data, const char *imsi, int aka)
 {
 	struct eap_sim_db_pending *entry, *prev = NULL;
 
 	entry = data->pending;
 	while (entry) {
-		if (entry->aka == aka && entry->imsi_len == imsi_len &&
-		    os_memcmp(entry->imsi, imsi, imsi_len) == 0) {
+		if (entry->aka == aka && os_strcmp(entry->imsi, imsi) == 0) {
 			if (prev)
 				prev->next = entry->next;
 			else
@@ -517,7 +434,7 @@ static void eap_sim_db_sim_resp_auth(struct eap_sim_db_data *data,
 	 * (IMSI = ASCII string, Kc/SRES/RAND = hex string)
 	 */
 
-	entry = eap_sim_db_get_pending(data, (u8 *) imsi, os_strlen(imsi), 0);
+	entry = eap_sim_db_get_pending(data, imsi, 0);
 	if (entry == NULL) {
 		wpa_printf(MSG_DEBUG, "EAP-SIM DB: No pending entry for the "
 			   "received message found");
@@ -595,7 +512,7 @@ static void eap_sim_db_aka_resp_auth(struct eap_sim_db_data *data,
 	 * (IMSI = ASCII string, RAND/AUTN/IK/CK/RES = hex string)
 	 */
 
-	entry = eap_sim_db_get_pending(data, (u8 *) imsi, os_strlen(imsi), 1);
+	entry = eap_sim_db_get_pending(data, imsi, 1);
 	if (entry == NULL) {
 		wpa_printf(MSG_DEBUG, "EAP-SIM DB: No pending entry for the "
 			   "received message found");
@@ -842,7 +759,7 @@ fail:
 
 static void eap_sim_db_free_pseudonym(struct eap_sim_pseudonym *p)
 {
-	os_free(p->identity);
+	os_free(p->permanent);
 	os_free(p->pseudonym);
 	os_free(p);
 }
@@ -850,7 +767,7 @@ static void eap_sim_db_free_pseudonym(struct eap_sim_pseudonym *p)
 
 static void eap_sim_db_free_reauth(struct eap_sim_reauth *r)
 {
-	os_free(r->identity);
+	os_free(r->permanent);
 	os_free(r->reauth_id);
 	os_free(r);
 }
@@ -941,8 +858,7 @@ static void eap_sim_db_expire_pending(struct eap_sim_db_data *data)
 /**
  * eap_sim_db_get_gsm_triplets - Get GSM triplets
  * @priv: Private data pointer from eap_sim_db_init()
- * @identity: User name identity
- * @identity_len: Length of identity in bytes
+ * @username: Permanent username (prefix | IMSI)
  * @max_chal: Maximum number of triplets
  * @_rand: Buffer for RAND values
  * @kc: Buffer for Kc values
@@ -954,9 +870,6 @@ static void eap_sim_db_expire_pending(struct eap_sim_db_data *data)
  * callback function registered with eap_sim_db_init() will be called once the
  * results become available.
  *
- * In most cases, the user name is '1' | IMSI, i.e., 1 followed by the IMSI in
- * ASCII format.
- *
  * When using an external server for GSM triplets, this function can always
  * start a request and return EAP_SIM_DB_PENDING immediately if authentication
  * triplets are not available. Once the triplets are received, callback
@@ -965,39 +878,28 @@ static void eap_sim_db_expire_pending(struct eap_sim_db_data *data)
  * function will then be called again and the newly received triplets will then
  * be given to the caller.
  */
-int eap_sim_db_get_gsm_triplets(void *priv, const u8 *identity,
-				size_t identity_len, int max_chal,
+int eap_sim_db_get_gsm_triplets(void *priv, const char *username, int max_chal,
 				u8 *_rand, u8 *kc, u8 *sres,
 				void *cb_session_ctx)
 {
 	struct eap_sim_db_data *data = priv;
 	struct eap_sim_db_pending *entry;
 	int len, ret;
-	size_t i;
 	char msg[40];
+	const char *imsi;
+	size_t imsi_len;
 
-	if (identity_len < 2 || identity[0] != EAP_SIM_PERMANENT_PREFIX) {
-		wpa_hexdump_ascii(MSG_DEBUG, "EAP-SIM DB: unexpected identity",
-				  identity, identity_len);
+	if (username == NULL || username[0] != EAP_SIM_PERMANENT_PREFIX ||
+	    username[1] == '\0' || os_strlen(username) > sizeof(entry->imsi)) {
+		wpa_printf(MSG_DEBUG, "EAP-SIM DB: unexpected username '%s'",
+			   username);
 		return EAP_SIM_DB_FAILURE;
 	}
-	identity++;
-	identity_len--;
-	for (i = 0; i < identity_len; i++) {
-		if (identity[i] == '@') {
-			identity_len = i;
-			break;
-		}
-	}
-	if (identity_len + 1 > sizeof(entry->imsi)) {
-		wpa_hexdump_ascii(MSG_DEBUG, "EAP-SIM DB: unexpected identity",
-				  identity, identity_len);
-		return EAP_SIM_DB_FAILURE;
-	}
-	wpa_hexdump_ascii(MSG_DEBUG, "EAP-SIM DB: Get GSM triplets for IMSI",
-			  identity, identity_len);
+	imsi = username + 1;
+	wpa_printf(MSG_DEBUG, "EAP-SIM DB: Get GSM triplets for IMSI '%s'",
+		   imsi);
 
-	entry = eap_sim_db_get_pending(data, identity, identity_len, 0);
+	entry = eap_sim_db_get_pending(data, imsi, 0);
 	if (entry) {
 		int num_chal;
 		if (entry->state == FAILURE) {
@@ -1032,18 +934,19 @@ int eap_sim_db_get_gsm_triplets(void *priv, const u8 *identity,
 			return EAP_SIM_DB_FAILURE;
 	}
 
+	imsi_len = os_strlen(imsi);
 	len = os_snprintf(msg, sizeof(msg), "SIM-REQ-AUTH ");
-	if (len < 0 || len + identity_len >= sizeof(msg))
+	if (len < 0 || len + imsi_len >= sizeof(msg))
 		return EAP_SIM_DB_FAILURE;
-	os_memcpy(msg + len, identity, identity_len);
-	len += identity_len;
+	os_memcpy(msg + len, imsi, imsi_len);
+	len += imsi_len;
 	ret = os_snprintf(msg + len, sizeof(msg) - len, " %d", max_chal);
 	if (ret < 0 || (size_t) ret >= sizeof(msg) - len)
 		return EAP_SIM_DB_FAILURE;
 	len += ret;
 
-	wpa_hexdump(MSG_DEBUG, "EAP-SIM DB: requesting SIM authentication "
-		    "data for IMSI", identity, identity_len);
+	wpa_printf(MSG_DEBUG, "EAP-SIM DB: requesting SIM authentication "
+		   "data for IMSI '%s'", imsi);
 	if (eap_sim_db_send(data, msg, len) < 0)
 		return EAP_SIM_DB_FAILURE;
 
@@ -1052,8 +955,7 @@ int eap_sim_db_get_gsm_triplets(void *priv, const u8 *identity,
 		return EAP_SIM_DB_FAILURE;
 
 	os_get_time(&entry->timestamp);
-	os_memcpy(entry->imsi, identity, identity_len);
-	entry->imsi_len = identity_len;
+	os_strlcpy(entry->imsi, imsi, sizeof(entry->imsi));
 	entry->cb_session_ctx = cb_session_ctx;
 	entry->state = PENDING;
 	eap_sim_db_add_pending(data, entry);
@@ -1064,159 +966,49 @@ int eap_sim_db_get_gsm_triplets(void *priv, const u8 *identity,
 
 
 static struct eap_sim_pseudonym *
-eap_sim_db_get_pseudonym(struct eap_sim_db_data *data, const u8 *identity,
-			 size_t identity_len)
+eap_sim_db_get_pseudonym(struct eap_sim_db_data *data, const char *pseudonym)
 {
-	char *pseudonym;
-	size_t len;
 	struct eap_sim_pseudonym *p;
 
-	if (identity_len == 0 ||
-	    (identity[0] != EAP_SIM_PSEUDONYM_PREFIX &&
-	     identity[0] != EAP_AKA_PSEUDONYM_PREFIX &&
-	     identity[0] != EAP_AKA_PRIME_PSEUDONYM_PREFIX))
+	if (pseudonym[0] != EAP_SIM_PSEUDONYM_PREFIX &&
+	    pseudonym[0] != EAP_AKA_PSEUDONYM_PREFIX &&
+	    pseudonym[0] != EAP_AKA_PRIME_PSEUDONYM_PREFIX)
 		return NULL;
-
-	/* Remove possible realm from identity */
-	len = 0;
-	while (len < identity_len) {
-		if (identity[len] == '@')
-			break;
-		len++;
-	}
-
-	pseudonym = os_malloc(len + 1);
-	if (pseudonym == NULL)
-		return NULL;
-	os_memcpy(pseudonym, identity, len);
-	pseudonym[len] = '\0';
 
 #ifdef CONFIG_SQLITE
-	if (data->sqlite_db) {
-		p = db_get_pseudonym(data, pseudonym);
-		os_free(pseudonym);
-		return p;
-	}
+	if (data->sqlite_db)
+		return db_get_pseudonym(data, pseudonym);
 #endif /* CONFIG_SQLITE */
 
 	p = data->pseudonyms;
 	while (p) {
 		if (os_strcmp(p->pseudonym, pseudonym) == 0)
-			break;
+			return p;
 		p = p->next;
 	}
 
-	os_free(pseudonym);
-
-	return p;
-}
-
-
-static struct eap_sim_pseudonym *
-eap_sim_db_get_pseudonym_id(struct eap_sim_db_data *data, const u8 *identity,
-			    size_t identity_len)
-{
-	struct eap_sim_pseudonym *p;
-
-	if (identity_len == 0 ||
-	    (identity[0] != EAP_SIM_PERMANENT_PREFIX &&
-	     identity[0] != EAP_AKA_PERMANENT_PREFIX &&
-	     identity[0] != EAP_AKA_PRIME_PERMANENT_PREFIX))
-		return NULL;
-
-#ifdef CONFIG_SQLITE
-	if (data->sqlite_db)
-		return db_get_pseudonym_id(data, identity, identity_len);
-#endif /* CONFIG_SQLITE */
-
-	p = data->pseudonyms;
-	while (p) {
-		if (identity_len == p->identity_len &&
-		    os_memcmp(p->identity, identity, identity_len) == 0)
-			break;
-		p = p->next;
-	}
-
-	return p;
+	return NULL;
 }
 
 
 static struct eap_sim_reauth *
-eap_sim_db_get_reauth(struct eap_sim_db_data *data, const u8 *identity,
-		      size_t identity_len)
+eap_sim_db_get_reauth(struct eap_sim_db_data *data, const char *reauth_id)
 {
-	char *reauth_id;
-	size_t len;
 	struct eap_sim_reauth *r;
 
-	if (identity_len == 0 ||
-	    (identity[0] != EAP_SIM_REAUTH_ID_PREFIX &&
-	     identity[0] != EAP_AKA_REAUTH_ID_PREFIX &&
-	     identity[0] != EAP_AKA_PRIME_REAUTH_ID_PREFIX))
+	if (reauth_id[0] != EAP_SIM_REAUTH_ID_PREFIX &&
+	    reauth_id[0] != EAP_AKA_REAUTH_ID_PREFIX &&
+	    reauth_id[0] != EAP_AKA_PRIME_REAUTH_ID_PREFIX)
 		return NULL;
-
-	/* Remove possible realm from identity */
-	len = 0;
-	while (len < identity_len) {
-		if (identity[len] == '@')
-			break;
-		len++;
-	}
-
-	reauth_id = os_malloc(len + 1);
-	if (reauth_id == NULL)
-		return NULL;
-	os_memcpy(reauth_id, identity, len);
-	reauth_id[len] = '\0';
 
 #ifdef CONFIG_SQLITE
-	if (data->sqlite_db) {
-		r = db_get_reauth(data, reauth_id);
-		os_free(reauth_id);
-		return r;
-	}
+	if (data->sqlite_db)
+		return db_get_reauth(data, reauth_id);
 #endif /* CONFIG_SQLITE */
 
 	r = data->reauths;
 	while (r) {
 		if (os_strcmp(r->reauth_id, reauth_id) == 0)
-			break;
-		r = r->next;
-	}
-
-	os_free(reauth_id);
-
-	return r;
-}
-
-
-static struct eap_sim_reauth *
-eap_sim_db_get_reauth_id(struct eap_sim_db_data *data, const u8 *identity,
-			 size_t identity_len)
-{
-	struct eap_sim_pseudonym *p;
-	struct eap_sim_reauth *r;
-
-	if (identity_len == 0)
-		return NULL;
-
-	p = eap_sim_db_get_pseudonym(data, identity, identity_len);
-	if (p == NULL)
-		p = eap_sim_db_get_pseudonym_id(data, identity, identity_len);
-	if (p) {
-		identity = p->identity;
-		identity_len = p->identity_len;
-	}
-
-#ifdef CONFIG_SQLITE
-	if (data->sqlite_db)
-		return db_get_reauth_id(data, identity, identity_len);
-#endif /* CONFIG_SQLITE */
-
-	r = data->reauths;
-	while (r) {
-		if (identity_len == r->identity_len &&
-		    os_memcmp(r->identity, identity, identity_len) == 0)
 			break;
 		r = r->next;
 	}
@@ -1313,8 +1105,7 @@ char * eap_sim_db_get_next_reauth_id(void *priv, enum eap_sim_db_method method)
 /**
  * eap_sim_db_add_pseudonym - EAP-SIM DB: Add new pseudonym
  * @priv: Private data pointer from eap_sim_db_init()
- * @identity: Identity of the user (may be permanent identity or pseudonym)
- * @identity_len: Length of identity
+ * @permanent: Permanent username
  * @pseudonym: Pseudonym for this user. This needs to be an allocated buffer,
  * e.g., return value from eap_sim_db_get_next_pseudonym(). Caller must not
  * free it.
@@ -1323,25 +1114,23 @@ char * eap_sim_db_get_next_reauth_id(void *priv, enum eap_sim_db_method method)
  * This function adds a new pseudonym for EAP-SIM user. EAP-SIM DB is
  * responsible of freeing pseudonym buffer once it is not needed anymore.
  */
-int eap_sim_db_add_pseudonym(void *priv, const u8 *identity,
-			     size_t identity_len, char *pseudonym)
+int eap_sim_db_add_pseudonym(void *priv, const char *permanent,
+			     char *pseudonym)
 {
 	struct eap_sim_db_data *data = priv;
 	struct eap_sim_pseudonym *p;
-	wpa_hexdump_ascii(MSG_DEBUG, "EAP-SIM DB: Add pseudonym for identity",
-			  identity, identity_len);
-	wpa_printf(MSG_DEBUG, "EAP-SIM DB: Pseudonym: %s", pseudonym);
+	wpa_printf(MSG_DEBUG, "EAP-SIM DB: Add pseudonym '%s' for permanent "
+		   "username '%s'", pseudonym, permanent);
 
 	/* TODO: could store last two pseudonyms */
 #ifdef CONFIG_SQLITE
 	if (data->sqlite_db)
-		return db_add_pseudonym(data, identity, identity_len,
-					pseudonym);
+		return db_add_pseudonym(data, permanent, pseudonym);
 #endif /* CONFIG_SQLITE */
-	p = eap_sim_db_get_pseudonym(data, identity, identity_len);
-	if (p == NULL)
-		p = eap_sim_db_get_pseudonym_id(data, identity, identity_len);
-
+	for (p = data->pseudonyms; p; p = p->next) {
+		if (os_strcmp(permanent, p->permanent) == 0)
+			break;
+	}
 	if (p) {
 		wpa_printf(MSG_DEBUG, "EAP-SIM DB: Replacing previous "
 			   "pseudonym: %s", p->pseudonym);
@@ -1357,14 +1146,12 @@ int eap_sim_db_add_pseudonym(void *priv, const u8 *identity,
 	}
 
 	p->next = data->pseudonyms;
-	p->identity = os_malloc(identity_len);
-	if (p->identity == NULL) {
+	p->permanent = os_strdup(permanent);
+	if (p->permanent == NULL) {
 		os_free(p);
 		os_free(pseudonym);
 		return -1;
 	}
-	os_memcpy(p->identity, identity, identity_len);
-	p->identity_len = identity_len;
 	p->pseudonym = pseudonym;
 	data->pseudonyms = p;
 
@@ -1374,18 +1161,16 @@ int eap_sim_db_add_pseudonym(void *priv, const u8 *identity,
 
 
 static struct eap_sim_reauth *
-eap_sim_db_add_reauth_data(struct eap_sim_db_data *data, const u8 *identity,
-			   size_t identity_len, char *reauth_id, u16 counter)
+eap_sim_db_add_reauth_data(struct eap_sim_db_data *data,
+			   const char *permanent,
+			   char *reauth_id, u16 counter)
 {
 	struct eap_sim_reauth *r;
 
-	wpa_hexdump_ascii(MSG_DEBUG, "EAP-SIM DB: Add reauth_id for identity",
-			  identity, identity_len);
-	wpa_printf(MSG_DEBUG, "EAP-SIM DB: reauth_id: %s", reauth_id);
-
-	r = eap_sim_db_get_reauth(data, identity, identity_len);
-	if (r == NULL)
-		r = eap_sim_db_get_reauth_id(data, identity, identity_len);
+	for (r = data->reauths; r; r = r->next) {
+		if (os_strcmp(r->permanent, permanent) == 0)
+			break;
+	}
 
 	if (r) {
 		wpa_printf(MSG_DEBUG, "EAP-SIM DB: Replacing previous "
@@ -1400,14 +1185,12 @@ eap_sim_db_add_reauth_data(struct eap_sim_db_data *data, const u8 *identity,
 		}
 
 		r->next = data->reauths;
-		r->identity = os_malloc(identity_len);
-		if (r->identity == NULL) {
+		r->permanent = os_strdup(permanent);
+		if (r->permanent == NULL) {
 			os_free(r);
 			os_free(reauth_id);
 			return NULL;
 		}
-		os_memcpy(r->identity, identity, identity_len);
-		r->identity_len = identity_len;
 		r->reauth_id = reauth_id;
 		data->reauths = r;
 		wpa_printf(MSG_DEBUG, "EAP-SIM DB: Added new reauth entry");
@@ -1422,7 +1205,7 @@ eap_sim_db_add_reauth_data(struct eap_sim_db_data *data, const u8 *identity,
 /**
  * eap_sim_db_add_reauth - EAP-SIM DB: Add new re-authentication entry
  * @priv: Private data pointer from eap_sim_db_init()
- * @identity: Identity of the user (may be permanent identity or pseudonym)
+ * @permanent: Permanent username
  * @identity_len: Length of identity
  * @reauth_id: reauth_id for this user. This needs to be an allocated buffer,
  * e.g., return value from eap_sim_db_get_next_reauth_id(). Caller must not
@@ -1435,21 +1218,18 @@ eap_sim_db_add_reauth_data(struct eap_sim_db_data *data, const u8 *identity,
  * EAP-SIM DB is responsible of freeing reauth_id buffer once it is not needed
  * anymore.
  */
-int eap_sim_db_add_reauth(void *priv, const u8 *identity,
-			  size_t identity_len, char *reauth_id, u16 counter,
-			  const u8 *mk)
+int eap_sim_db_add_reauth(void *priv, const char *permanent, char *reauth_id,
+			  u16 counter, const u8 *mk)
 {
 	struct eap_sim_db_data *data = priv;
 	struct eap_sim_reauth *r;
 
 #ifdef CONFIG_SQLITE
 	if (data->sqlite_db)
-		return db_add_reauth(data, identity, identity_len,
-				     reauth_id, counter, mk, NULL, NULL,
-				     NULL);
+		return db_add_reauth(data, permanent, reauth_id, counter, mk,
+				     NULL, NULL, NULL);
 #endif /* CONFIG_SQLITE */
-	r = eap_sim_db_add_reauth_data(data, identity, identity_len, reauth_id,
-				       counter);
+	r = eap_sim_db_add_reauth_data(data, permanent, reauth_id, counter);
 	if (r == NULL)
 		return -1;
 
@@ -1463,8 +1243,7 @@ int eap_sim_db_add_reauth(void *priv, const u8 *identity,
 /**
  * eap_sim_db_add_reauth_prime - EAP-AKA' DB: Add new re-authentication entry
  * @priv: Private data pointer from eap_sim_db_init()
- * @identity: Identity of the user (may be permanent identity or pseudonym)
- * @identity_len: Length of identity
+ * @permanent: Permanent username
  * @reauth_id: reauth_id for this user. This needs to be an allocated buffer,
  * e.g., return value from eap_sim_db_get_next_reauth_id(). Caller must not
  * free it.
@@ -1478,22 +1257,22 @@ int eap_sim_db_add_reauth(void *priv, const u8 *identity,
  * EAP-SIM DB is responsible of freeing reauth_id buffer once it is not needed
  * anymore.
  */
-int eap_sim_db_add_reauth_prime(void *priv, const u8 *identity,
-				size_t identity_len, char *reauth_id,
-				u16 counter, const u8 *k_encr, const u8 *k_aut,
-				const u8 *k_re)
+int eap_sim_db_add_reauth_prime(void *priv, const char *permanent,
+				char *reauth_id, u16 counter, const u8 *k_encr,
+				const u8 *k_aut, const u8 *k_re)
 {
 	struct eap_sim_db_data *data = priv;
 	struct eap_sim_reauth *r;
 
+	wpa_printf(MSG_DEBUG, "EAP-SIM DB: Add reauth_id '%s' for permanent "
+		   "identity '%s'", reauth_id, permanent);
+
 #ifdef CONFIG_SQLITE
 	if (data->sqlite_db)
-		return db_add_reauth(data, identity, identity_len,
-				     reauth_id, counter, NULL,
+		return db_add_reauth(data, permanent, reauth_id, counter, NULL,
 				     k_encr, k_aut, k_re);
 #endif /* CONFIG_SQLITE */
-	r = eap_sim_db_add_reauth_data(data, identity, identity_len, reauth_id,
-				       counter);
+	r = eap_sim_db_add_reauth_data(data, permanent, reauth_id, counter);
 	if (r == NULL)
 		return -1;
 
@@ -1509,51 +1288,40 @@ int eap_sim_db_add_reauth_prime(void *priv, const u8 *identity,
 /**
  * eap_sim_db_get_permanent - EAP-SIM DB: Get permanent identity
  * @priv: Private data pointer from eap_sim_db_init()
- * @identity: Identity of the user (may be permanent identity or pseudonym)
- * @identity_len: Length of identity
- * @len: Buffer for length of the returned permanent identity
- * Returns: Pointer to the permanent identity, or %NULL if not found
+ * @pseudonym: Pseudonym username
+ * Returns: Pointer to permanent username or %NULL if not found
  */
-const u8 * eap_sim_db_get_permanent(void *priv, const u8 *identity,
-				    size_t identity_len, size_t *len)
+const char * eap_sim_db_get_permanent(void *priv, const char *pseudonym)
 {
 	struct eap_sim_db_data *data = priv;
 	struct eap_sim_pseudonym *p;
 
-	if (identity == NULL)
+	if (pseudonym == NULL)
 		return NULL;
 
-	p = eap_sim_db_get_pseudonym(data, identity, identity_len);
-	if (p == NULL)
-		p = eap_sim_db_get_pseudonym_id(data, identity, identity_len);
+	p = eap_sim_db_get_pseudonym(data, pseudonym);
 	if (p == NULL)
 		return NULL;
 
-	*len = p->identity_len;
-	return p->identity;
+	return p->permanent;
 }
 
 
 /**
  * eap_sim_db_get_reauth_entry - EAP-SIM DB: Get re-authentication entry
  * @priv: Private data pointer from eap_sim_db_init()
- * @identity: Identity of the user (may be permanent identity, pseudonym, or
- * reauth_id)
- * @identity_len: Length of identity
+ * @reauth_id: Fast re-authentication username
  * Returns: Pointer to the re-auth entry, or %NULL if not found
  */
 struct eap_sim_reauth *
-eap_sim_db_get_reauth_entry(void *priv, const u8 *identity,
-			    size_t identity_len)
+eap_sim_db_get_reauth_entry(void *priv, const char *reauth_id)
 {
 	struct eap_sim_db_data *data = priv;
 	struct eap_sim_reauth *r;
 
-	if (identity == NULL)
+	if (reauth_id == NULL)
 		return NULL;
-	r = eap_sim_db_get_reauth(data, identity, identity_len);
-	if (r == NULL)
-		r = eap_sim_db_get_reauth_id(data, identity, identity_len);
+	r = eap_sim_db_get_reauth(data, reauth_id);
 	return r;
 }
 
@@ -1593,8 +1361,7 @@ void eap_sim_db_remove_reauth(void *priv, struct eap_sim_reauth *reauth)
 /**
  * eap_sim_db_get_aka_auth - Get AKA authentication values
  * @priv: Private data pointer from eap_sim_db_init()
- * @identity: User name identity
- * @identity_len: Length of identity in bytes
+ * @username: Permanent username (prefix | IMSI)
  * @_rand: Buffer for RAND value
  * @autn: Buffer for AUTN value
  * @ik: Buffer for IK value
@@ -1607,9 +1374,6 @@ void eap_sim_db_remove_reauth(void *priv, struct eap_sim_reauth *reauth)
  * case, the callback function registered with eap_sim_db_init() will be
  * called once the results become available.
  *
- * In most cases, the user name is '0' | IMSI, i.e., 0 followed by the IMSI in
- * ASCII format for EAP-AKA and '6' | IMSI for EAP-AKA'.
- *
  * When using an external server for AKA authentication, this function can
  * always start a request and return EAP_SIM_DB_PENDING immediately if
  * authentication triplets are not available. Once the authentication data are
@@ -1618,41 +1382,30 @@ void eap_sim_db_remove_reauth(void *priv, struct eap_sim_reauth *reauth)
  * eap_sim_db_get_aka_auth() function will then be called again and the newly
  * received triplets will then be given to the caller.
  */
-int eap_sim_db_get_aka_auth(void *priv, const u8 *identity,
-			    size_t identity_len, u8 *_rand, u8 *autn, u8 *ik,
-			    u8 *ck, u8 *res, size_t *res_len,
+int eap_sim_db_get_aka_auth(void *priv, const char *username, u8 *_rand,
+			    u8 *autn, u8 *ik, u8 *ck, u8 *res, size_t *res_len,
 			    void *cb_session_ctx)
 {
 	struct eap_sim_db_data *data = priv;
 	struct eap_sim_db_pending *entry;
 	int len;
-	size_t i;
 	char msg[40];
+	const char *imsi;
+	size_t imsi_len;
 
-	if (identity_len < 2 || identity == NULL ||
-	    (identity[0] != EAP_AKA_PERMANENT_PREFIX &&
-	     identity[0] != EAP_AKA_PRIME_PERMANENT_PREFIX)) {
-		wpa_hexdump_ascii(MSG_DEBUG, "EAP-SIM DB: unexpected identity",
-				  identity, identity_len);
+	if (username == NULL ||
+	    (username[0] != EAP_AKA_PERMANENT_PREFIX &&
+	     username[0] != EAP_AKA_PRIME_PERMANENT_PREFIX) ||
+	    username[1] == '\0' || os_strlen(username) > sizeof(entry->imsi)) {
+		wpa_printf(MSG_DEBUG, "EAP-SIM DB: unexpected username '%s'",
+			   username);
 		return EAP_SIM_DB_FAILURE;
 	}
-	identity++;
-	identity_len--;
-	for (i = 0; i < identity_len; i++) {
-		if (identity[i] == '@') {
-			identity_len = i;
-			break;
-		}
-	}
-	if (identity_len + 1 > sizeof(entry->imsi)) {
-		wpa_hexdump_ascii(MSG_DEBUG, "EAP-SIM DB: unexpected identity",
-				  identity, identity_len);
-		return EAP_SIM_DB_FAILURE;
-	}
-	wpa_hexdump_ascii(MSG_DEBUG, "EAP-SIM DB: Get AKA auth for IMSI",
-			  identity, identity_len);
+	imsi = username + 1;
+	wpa_printf(MSG_DEBUG, "EAP-SIM DB: Get AKA auth for IMSI '%s'",
+		   imsi);
 
-	entry = eap_sim_db_get_pending(data, identity, identity_len, 1);
+	entry = eap_sim_db_get_pending(data, imsi, 1);
 	if (entry) {
 		if (entry->state == FAILURE) {
 			os_free(entry);
@@ -1683,14 +1436,15 @@ int eap_sim_db_get_aka_auth(void *priv, const u8 *identity,
 			return EAP_SIM_DB_FAILURE;
 	}
 
+	imsi_len = os_strlen(imsi);
 	len = os_snprintf(msg, sizeof(msg), "AKA-REQ-AUTH ");
-	if (len < 0 || len + identity_len >= sizeof(msg))
+	if (len < 0 || len + imsi_len >= sizeof(msg))
 		return EAP_SIM_DB_FAILURE;
-	os_memcpy(msg + len, identity, identity_len);
-	len += identity_len;
+	os_memcpy(msg + len, imsi, imsi_len);
+	len += imsi_len;
 
-	wpa_hexdump(MSG_DEBUG, "EAP-SIM DB: requesting AKA authentication "
-		    "data for IMSI", identity, identity_len);
+	wpa_printf(MSG_DEBUG, "EAP-SIM DB: requesting AKA authentication "
+		    "data for IMSI '%s'", imsi);
 	if (eap_sim_db_send(data, msg, len) < 0)
 		return EAP_SIM_DB_FAILURE;
 
@@ -1700,8 +1454,7 @@ int eap_sim_db_get_aka_auth(void *priv, const u8 *identity,
 
 	os_get_time(&entry->timestamp);
 	entry->aka = 1;
-	os_memcpy(entry->imsi, identity, identity_len);
-	entry->imsi_len = identity_len;
+	os_strlcpy(entry->imsi, imsi, sizeof(entry->imsi));
 	entry->cb_session_ctx = cb_session_ctx;
 	entry->state = PENDING;
 	eap_sim_db_add_pending(data, entry);
@@ -1714,8 +1467,7 @@ int eap_sim_db_get_aka_auth(void *priv, const u8 *identity,
 /**
  * eap_sim_db_resynchronize - Resynchronize AKA AUTN
  * @priv: Private data pointer from eap_sim_db_init()
- * @identity: User name identity
- * @identity_len: Length of identity in bytes
+ * @username: Permanent username
  * @auts: AUTS value from the peer
  * @_rand: RAND value used in the rejected message
  * Returns: 0 on success, -1 on failure
@@ -1726,43 +1478,35 @@ int eap_sim_db_get_aka_auth(void *priv, const u8 *identity,
  * eap_sim_db_get_aka_auth() will be called again to to fetch updated
  * RAND/AUTN values for the next challenge.
  */
-int eap_sim_db_resynchronize(void *priv, const u8 *identity,
-			     size_t identity_len, const u8 *auts,
-			     const u8 *_rand)
+int eap_sim_db_resynchronize(void *priv, const char *username,
+			     const u8 *auts, const u8 *_rand)
 {
 	struct eap_sim_db_data *data = priv;
-	size_t i;
+	const char *imsi;
+	size_t imsi_len;
 
-	if (identity_len < 2 || identity == NULL ||
-	    (identity[0] != EAP_AKA_PERMANENT_PREFIX &&
-	     identity[0] != EAP_AKA_PRIME_PERMANENT_PREFIX)) {
-		wpa_hexdump_ascii(MSG_DEBUG, "EAP-SIM DB: unexpected identity",
-				  identity, identity_len);
+	if (username == NULL ||
+	    (username[0] != EAP_AKA_PERMANENT_PREFIX &&
+	     username[0] != EAP_AKA_PRIME_PERMANENT_PREFIX) ||
+	    username[1] == '\0' || os_strlen(username) > 20) {
+		wpa_printf(MSG_DEBUG, "EAP-SIM DB: unexpected username '%s'",
+			   username);
 		return -1;
 	}
-	identity++;
-	identity_len--;
-	for (i = 0; i < identity_len; i++) {
-		if (identity[i] == '@') {
-			identity_len = i;
-			break;
-		}
-	}
-	if (identity_len > 20) {
-		wpa_hexdump_ascii(MSG_DEBUG, "EAP-SIM DB: unexpected identity",
-				  identity, identity_len);
-		return -1;
-	}
+	imsi = username + 1;
+	wpa_printf(MSG_DEBUG, "EAP-SIM DB: Get AKA auth for IMSI '%s'",
+		   imsi);
 
 	if (data->sock >= 0) {
 		char msg[100];
 		int len, ret;
 
+		imsi_len = os_strlen(imsi);
 		len = os_snprintf(msg, sizeof(msg), "AKA-AUTS ");
-		if (len < 0 || len + identity_len >= sizeof(msg))
+		if (len < 0 || len + imsi_len >= sizeof(msg))
 			return -1;
-		os_memcpy(msg + len, identity, identity_len);
-		len += identity_len;
+		os_memcpy(msg + len, imsi, imsi_len);
+		len += imsi_len;
 
 		ret = os_snprintf(msg + len, sizeof(msg) - len, " ");
 		if (ret < 0 || (size_t) ret >= sizeof(msg) - len)
@@ -1776,8 +1520,8 @@ int eap_sim_db_resynchronize(void *priv, const u8 *identity,
 		len += ret;
 		len += wpa_snprintf_hex(msg + len, sizeof(msg) - len,
 					_rand, EAP_AKA_RAND_LEN);
-		wpa_hexdump(MSG_DEBUG, "EAP-SIM DB: reporting AKA AUTS for "
-			    "IMSI", identity, identity_len);
+		wpa_printf(MSG_DEBUG, "EAP-SIM DB: reporting AKA AUTS for "
+			   "IMSI '%s'", imsi);
 		if (eap_sim_db_send(data, msg, len) < 0)
 			return -1;
 	}

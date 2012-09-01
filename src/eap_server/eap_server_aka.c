@@ -641,14 +641,6 @@ static void eap_aka_determine_identity(struct eap_sm *sm,
 		data->reauth = eap_sim_db_get_reauth_entry(
 			sm->eap_sim_db_priv, username);
 		os_free(username);
-		if (data->reauth &&
-		    (data->reauth->reauth_id[0] ==
-		     EAP_AKA_PRIME_REAUTH_ID_PREFIX) !=
-		    (data->eap_method == EAP_TYPE_AKA_PRIME)) {
-			wpa_printf(MSG_DEBUG, "EAP-AKA: Reauth data "
-				   "was for different AKA version");
-			data->reauth = NULL;
-		}
 		if (data->reauth == NULL) {
 			wpa_printf(MSG_DEBUG, "EAP-AKA: Unknown reauth "
 				   "identity - request full auth identity");

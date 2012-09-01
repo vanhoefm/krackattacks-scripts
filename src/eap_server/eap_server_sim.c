@@ -432,15 +432,12 @@ static void eap_sim_process_start(struct eap_sm *sm,
 	if (!attr->identity || attr->identity_len == 0) {
 		wpa_printf(MSG_DEBUG, "EAP-SIM: Peer did not provide any "
 			   "identity");
-		eap_sim_state(data, FAILURE);
-		return;
+		goto failed;
 	}
 
 	new_identity = os_malloc(attr->identity_len);
-	if (new_identity == NULL) {
-		eap_sim_state(data, FAILURE);
-		return;
-	}
+	if (new_identity == NULL)
+		goto failed;
 	os_free(sm->identity);
 	sm->identity = new_identity;
 	os_memcpy(sm->identity, attr->identity, attr->identity_len);
@@ -449,10 +446,8 @@ static void eap_sim_process_start(struct eap_sm *sm,
 	wpa_hexdump_ascii(MSG_DEBUG, "EAP-SIM: Identity",
 			  sm->identity, sm->identity_len);
 	username = sim_get_username(sm->identity, sm->identity_len);
-	if (username == NULL) {
-		eap_sim_state(data, FAILURE);
-		return;
-	}
+	if (username == NULL)
+		goto failed;
 
 	if (username[0] == EAP_SIM_REAUTH_ID_PREFIX) {
 		wpa_printf(MSG_DEBUG, "EAP-SIM: Reauth username '%s'",
@@ -499,8 +494,7 @@ static void eap_sim_process_start(struct eap_sm *sm,
 		wpa_printf(MSG_DEBUG, "EAP-SIM: Unrecognized username '%s'",
 			   username);
 		os_free(username);
-		eap_sim_state(data, FAILURE);
-		return;
+		goto failed;
 	}
 
 skip_id_update:
@@ -509,15 +503,13 @@ skip_id_update:
 	if (attr->nonce_mt == NULL || attr->selected_version < 0) {
 		wpa_printf(MSG_DEBUG, "EAP-SIM: Start/Response missing "
 			   "required attributes");
-		eap_sim_state(data, FAILURE);
-		return;
+		goto failed;
 	}
 
 	if (!eap_sim_supported_ver(data, attr->selected_version)) {
 		wpa_printf(MSG_DEBUG, "EAP-SIM: Peer selected unsupported "
 			   "version %d", attr->selected_version);
-		eap_sim_state(data, FAILURE);
-		return;
+		goto failed;
 	}
 
 	data->counter = 0; /* reset re-auth counter since this is full auth */
@@ -535,8 +527,7 @@ skip_id_update:
 	if (data->num_chal < 2) {
 		wpa_printf(MSG_INFO, "EAP-SIM: Failed to get GSM "
 			   "authentication triplets for the peer");
-		eap_sim_state(data, FAILURE);
-		return;
+		goto failed;
 	}
 
 	identity_len = sm->identity_len;
@@ -557,6 +548,11 @@ skip_id_update:
 			    data->emsk);
 
 	eap_sim_state(data, CHALLENGE);
+	return;
+
+failed:
+	data->notification = EAP_SIM_GENERAL_FAILURE_BEFORE_AUTH;
+	eap_sim_state(data, NOTIFICATION);
 }
 
 
@@ -571,7 +567,8 @@ static void eap_sim_process_challenge(struct eap_sm *sm,
 			       data->num_chal * EAP_SIM_SRES_LEN)) {
 		wpa_printf(MSG_WARNING, "EAP-SIM: Challenge message "
 			   "did not include valid AT_MAC");
-		eap_sim_state(data, FAILURE);
+		data->notification = EAP_SIM_GENERAL_FAILURE_BEFORE_AUTH;
+		eap_sim_state(data, NOTIFICATION);
 		return;
 	}
 
@@ -670,7 +667,8 @@ static void eap_sim_process_reauth(struct eap_sm *sm,
 	return;
 
 fail:
-	eap_sim_state(data, FAILURE);
+	data->notification = EAP_SIM_GENERAL_FAILURE_BEFORE_AUTH;
+	eap_sim_state(data, NOTIFICATION);
 	eap_sim_db_remove_reauth(sm->eap_sim_db_priv, data->reauth);
 	data->reauth = NULL;
 	os_free(decrypted);
@@ -723,6 +721,14 @@ static void eap_sim_process(struct eap_sm *sm, void *priv,
 
 	if (eap_sim_parse_attr(pos, end, &attr, 0, 0)) {
 		wpa_printf(MSG_DEBUG, "EAP-SIM: Failed to parse attributes");
+		if (subtype != EAP_SIM_SUBTYPE_CLIENT_ERROR &&
+		    (data->state == START || data->state == CHALLENGE ||
+		     data->state == REAUTH)) {
+			data->notification =
+				EAP_SIM_GENERAL_FAILURE_BEFORE_AUTH;
+			eap_sim_state(data, NOTIFICATION);
+			return;
+		}
 		eap_sim_state(data, FAILURE);
 		return;
 	}

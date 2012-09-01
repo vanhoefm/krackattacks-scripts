@@ -216,26 +216,23 @@ static int get_pseudonym_cb(void *ctx, int argc, char *argv[], char *col[])
 }
 
 
-static struct eap_sim_pseudonym *
+static char *
 db_get_pseudonym(struct eap_sim_db_data *data, const char *pseudonym)
 {
 	char cmd[128];
 
 	if (!valid_db_string(pseudonym))
 		return NULL;
-	os_memset(&data->db_tmp_pseudonym, 0, sizeof(data->db_tmp_pseudonym));
-	os_strlcpy(data->db_tmp_pseudonym_str, pseudonym,
-		   sizeof(data->db_tmp_pseudonym_str));
-	data->db_tmp_pseudonym.pseudonym = data->db_tmp_pseudonym_str;
+	os_memset(&data->db_tmp_identity, 0, sizeof(data->db_tmp_identity));
 	os_snprintf(cmd, sizeof(cmd),
 		    "SELECT permanent FROM pseudonyms WHERE pseudonym='%s';",
 		    pseudonym);
 	if (sqlite3_exec(data->sqlite_db, cmd, get_pseudonym_cb, data, NULL) !=
 	    SQLITE_OK)
 		return NULL;
-	if (data->db_tmp_pseudonym.permanent == NULL)
+	if (data->db_tmp_identity[0] == '\0')
 		return NULL;
-	return &data->db_tmp_pseudonym;
+	return data->db_tmp_identity;
 }
 
 
@@ -945,7 +942,7 @@ int eap_sim_db_get_gsm_triplets(void *priv, const char *username, int max_chal,
 }
 
 
-static struct eap_sim_pseudonym *
+static const char *
 eap_sim_db_get_pseudonym(struct eap_sim_db_data *data, const char *pseudonym)
 {
 	struct eap_sim_pseudonym *p;
@@ -963,7 +960,7 @@ eap_sim_db_get_pseudonym(struct eap_sim_db_data *data, const char *pseudonym)
 	p = data->pseudonyms;
 	while (p) {
 		if (os_strcmp(p->pseudonym, pseudonym) == 0)
-			return p;
+			return p->permanent;
 		p = p->next;
 	}
 
@@ -1274,16 +1271,11 @@ int eap_sim_db_add_reauth_prime(void *priv, const char *permanent,
 const char * eap_sim_db_get_permanent(void *priv, const char *pseudonym)
 {
 	struct eap_sim_db_data *data = priv;
-	struct eap_sim_pseudonym *p;
 
 	if (pseudonym == NULL)
 		return NULL;
 
-	p = eap_sim_db_get_pseudonym(data, pseudonym);
-	if (p == NULL)
-		return NULL;
-
-	return p->permanent;
+	return eap_sim_db_get_pseudonym(data, pseudonym);
 }
 
 

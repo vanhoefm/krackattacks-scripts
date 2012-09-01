@@ -92,4 +92,6 @@ int eap_sim_db_resynchronize(void *priv, const u8 *identity,
 			     size_t identity_len, const u8 *auts,
 			     const u8 *_rand);
 
+char * sim_get_username(const u8 *identity, size_t identity_len);
+
 #endif /* EAP_SIM_DB_H */

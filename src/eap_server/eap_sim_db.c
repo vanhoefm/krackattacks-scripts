@@ -1838,3 +1838,31 @@ int eap_sim_db_resynchronize(void *priv, const u8 *identity,
 
 	return 0;
 }
+
+
+/**
+ * sim_get_username - Extract username from SIM identity
+ * @identity: Identity
+ * @identity_len: Identity length
+ * Returns: Allocated buffer with the username part of the identity
+ *
+ * Caller is responsible for freeing the returned buffer with os_free().
+ */
+char * sim_get_username(const u8 *identity, size_t identity_len)
+{
+	char *username;
+	size_t pos;
+
+	for (pos = 0; pos < identity_len; pos++) {
+		if (identity[pos] == '@' || identity[pos] == '\0')
+			break;
+	}
+
+	username = os_malloc(pos + 1);
+	if (username == NULL)
+		return NULL;
+	os_memcpy(username, identity, pos);
+	username[pos] = '\0';
+
+	return username;
+}

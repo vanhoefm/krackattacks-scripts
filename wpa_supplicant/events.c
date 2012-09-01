@@ -1801,6 +1801,7 @@ static void wpa_supplicant_event_disassoc_finish(struct wpa_supplicant *wpa_s,
 	u8 prev_pending_bssid[ETH_ALEN];
 	struct wpa_bss *fast_reconnect = NULL;
 	struct wpa_ssid *fast_reconnect_ssid = NULL;
+	struct wpa_ssid *last_ssid;
 
 	authenticating = wpa_s->wpa_state == WPA_AUTHENTICATING;
 	os_memcpy(prev_pending_bssid, wpa_s->pending_bssid, ETH_ALEN);
@@ -1869,10 +1870,13 @@ static void wpa_supplicant_event_disassoc_finish(struct wpa_supplicant *wpa_s,
 		wpa_s->keys_cleared = 0;
 		wpa_clear_keys(wpa_s, wpa_s->bssid);
 	}
+	last_ssid = wpa_s->current_ssid;
 	wpa_supplicant_mark_disassoc(wpa_s);
 
-	if (authenticating && (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME))
+	if (authenticating && (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME)) {
 		sme_disassoc_while_authenticating(wpa_s, prev_pending_bssid);
+		wpa_s->current_ssid = last_ssid;
+	}
 
 	if (fast_reconnect) {
 #ifndef CONFIG_NO_SCAN_PROCESSING

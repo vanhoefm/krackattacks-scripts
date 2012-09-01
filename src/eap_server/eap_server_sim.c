@@ -118,6 +118,13 @@ static struct wpabuf * eap_sim_build_start(struct eap_sm *sm,
 	} else if (data->start_round > 3) {
 		/* Cannot use more than three rounds of Start messages */
 		return NULL;
+	} else if (data->start_round == 0) {
+		/*
+		 * This is a special case that is used to recover from
+		 * AT_COUNTER_TOO_SMALL during re-authentication. Since we
+		 * already know the identity of the peer, there is no need to
+		 * request any identity in this case.
+		 */
 	} else if (sm->identity && sm->identity_len > 0 &&
 		   sm->identity[0] == EAP_SIM_REAUTH_ID_PREFIX) {
 		/* Reauth id may have expired - try fullauth */
@@ -410,6 +417,14 @@ static void eap_sim_process_start(struct eap_sm *sm,
 
 	wpa_printf(MSG_DEBUG, "EAP-SIM: Receive start response");
 
+	if (data->start_round == 0) {
+		/*
+		 * Special case for AT_COUNTER_TOO_SMALL recovery - no identity
+		 * was requested since we already know it.
+		 */
+		goto skip_id_update;
+	}
+
 	/*
 	 * We always request identity in SIM/Start, so the peer is required to
 	 * have replied with one.
@@ -488,6 +503,7 @@ static void eap_sim_process_start(struct eap_sm *sm,
 		return;
 	}
 
+skip_id_update:
 	/* Full authentication */
 
 	if (attr->nonce_mt == NULL || attr->selected_version < 0) {
@@ -624,6 +640,16 @@ static void eap_sim_process_reauth(struct eap_sm *sm,
 
 	wpa_printf(MSG_DEBUG, "EAP-SIM: Re-authentication response includes "
 		   "the correct AT_MAC");
+
+	if (eattr.counter_too_small) {
+		wpa_printf(MSG_DEBUG, "EAP-AKA: Re-authentication response "
+			   "included AT_COUNTER_TOO_SMALL - starting full "
+			   "authentication");
+		data->start_round = -1;
+		eap_sim_state(data, START);
+		return;
+	}
+
 	if (sm->eap_sim_aka_result_ind && attr->result_ind) {
 		data->use_result_ind = 1;
 		data->notification = EAP_SIM_SUCCESS;

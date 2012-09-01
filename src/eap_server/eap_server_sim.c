@@ -1,6 +1,6 @@
 /*
  * hostapd / EAP-SIM (RFC 4186)
- * Copyright (c) 2005-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2005-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -36,6 +36,7 @@ struct eap_sim_data {
 	struct eap_sim_reauth *reauth;
 	u16 notification;
 	int use_result_ind;
+	int start_round;
 };
 
 
@@ -105,26 +106,25 @@ static struct wpabuf * eap_sim_build_start(struct eap_sm *sm,
 	wpa_printf(MSG_DEBUG, "EAP-SIM: Generating Start");
 	msg = eap_sim_msg_init(EAP_CODE_REQUEST, id, EAP_TYPE_SIM,
 			       EAP_SIM_SUBTYPE_START);
-	if (eap_sim_db_identity_known(sm->eap_sim_db_priv, sm->identity,
-				      sm->identity_len)) {
-		if (sm->identity_len > 0 &&
-		    sm->identity[0] == EAP_SIM_REAUTH_ID_PREFIX) {
-			/* Reauth id may have expired - try fullauth */
-			wpa_printf(MSG_DEBUG, "   AT_FULLAUTH_ID_REQ");
-			eap_sim_msg_add(msg, EAP_SIM_AT_FULLAUTH_ID_REQ, 0,
-					NULL, 0);
-		} else {
-			wpa_printf(MSG_DEBUG, "   AT_PERMANENT_ID_REQ");
-			eap_sim_msg_add(msg, EAP_SIM_AT_PERMANENT_ID_REQ, 0,
-					NULL, 0);
-		}
-	} else {
+	data->start_round++;
+	if (data->start_round == 1) {
 		/*
 		 * RFC 4186, Chap. 4.2.4 recommends that identity from EAP is
 		 * ignored and the SIM/Start is used to request the identity.
 		 */
 		wpa_printf(MSG_DEBUG, "   AT_ANY_ID_REQ");
 		eap_sim_msg_add(msg, EAP_SIM_AT_ANY_ID_REQ, 0, NULL, 0);
+	} else if (data->start_round > 3) {
+		/* Cannot use more than three rounds of Start messages */
+		return NULL;
+	} else if (sm->identity && sm->identity_len > 0 &&
+		   sm->identity[0] == EAP_SIM_REAUTH_ID_PREFIX) {
+		/* Reauth id may have expired - try fullauth */
+		wpa_printf(MSG_DEBUG, "   AT_FULLAUTH_ID_REQ");
+		eap_sim_msg_add(msg, EAP_SIM_AT_FULLAUTH_ID_REQ, 0, NULL, 0);
+	} else {
+		wpa_printf(MSG_DEBUG, "   AT_PERMANENT_ID_REQ");
+		eap_sim_msg_add(msg, EAP_SIM_AT_PERMANENT_ID_REQ, 0, NULL, 0);
 	}
 	wpa_printf(MSG_DEBUG, "   AT_VERSION_LIST");
 	ver[0] = 0;

@@ -92,7 +92,7 @@ static int db_table_create_pseudonym(sqlite3 *db)
 	char *err = NULL;
 	const char *sql =
 		"CREATE TABLE pseudonyms("
-		"  imsi INTEGER PRIMARY KEY NOT NULL,"
+		"  permanent CHAR(21) PRIMARY KEY,"
 		"  pseudonym CHAR(21) NOT NULL"
 		");";
 
@@ -113,7 +113,7 @@ static int db_table_create_reauth(sqlite3 *db)
 	char *err = NULL;
 	const char *sql =
 		"CREATE TABLE reauth("
-		"  imsi INTEGER PRIMARY KEY NOT NULL,"
+		"  permanent CHAR(21) PRIMARY KEY,"
 		"  reauth_id CHAR(21) NOT NULL,"
 		"  counter INTEGER,"
 		"  mk CHAR(40),"
@@ -178,18 +178,16 @@ static int db_add_pseudonym(struct eap_sim_db_data *data,
 			    const char *permanent, char *pseudonym)
 {
 	char cmd[128];
-	unsigned long long imsi;
 	char *err = NULL;
 
-	if (!valid_db_string(pseudonym)) {
+	if (!valid_db_string(permanent) || !valid_db_string(pseudonym)) {
 		os_free(pseudonym);
 		return -1;
 	}
-	imsi = atoll(permanent);
 
 	os_snprintf(cmd, sizeof(cmd), "INSERT OR REPLACE INTO pseudonyms "
-		    "(imsi, pseudonym) VALUES (%llu , '%s');",
-		    imsi, pseudonym);
+		    "(permanent, pseudonym) VALUES ('%s', '%s');",
+		    permanent, pseudonym);
 	os_free(pseudonym);
 	if (sqlite3_exec(data->sqlite_db, cmd, NULL, NULL, &err) != SQLITE_OK)
 	{
@@ -209,7 +207,7 @@ static int get_pseudonym_cb(void *ctx, int argc, char *argv[], char *col[])
 	size_t len;
 
 	for (i = 0; i < argc; i++) {
-		if (os_strcmp(col[i], "imsi") == 0 && argv[i]) {
+		if (os_strcmp(col[i], "permanent") == 0 && argv[i]) {
 			os_strlcpy(data->db_tmp_identity, argv[i],
 				   sizeof(data->db_tmp_identity));
 		} else if (os_strcmp(col[i], "pseudonym") == 0 && argv[i]) {
@@ -239,7 +237,7 @@ db_get_pseudonym(struct eap_sim_db_data *data, const char *pseudonym)
 		   sizeof(data->db_tmp_pseudonym_str));
 	data->db_tmp_pseudonym.pseudonym = data->db_tmp_pseudonym_str;
 	os_snprintf(cmd, sizeof(cmd),
-		    "SELECT imsi FROM pseudonyms WHERE pseudonym='%s';",
+		    "SELECT permanent FROM pseudonyms WHERE pseudonym='%s';",
 		    pseudonym);
 	if (sqlite3_exec(data->sqlite_db, cmd, get_pseudonym_cb, data, NULL) !=
 	    SQLITE_OK)
@@ -255,25 +253,23 @@ static int db_add_reauth(struct eap_sim_db_data *data, const char *permanent,
 			 const u8 *k_encr, const u8 *k_aut, const u8 *k_re)
 {
 	char cmd[2000], *pos, *end;
-	unsigned long long imsi;
 	char *err = NULL;
 
-	if (!valid_db_string(reauth_id)) {
+	if (!valid_db_string(permanent) || !valid_db_string(reauth_id)) {
 		os_free(reauth_id);
 		return -1;
 	}
-	imsi = atoll(permanent);
 
 	pos = cmd;
 	end = pos + sizeof(cmd);
 	pos += os_snprintf(pos, end - pos, "INSERT OR REPLACE INTO reauth "
-			   "(imsi, reauth_id, counter%s%s%s%s) "
-			   "VALUES (%llu, '%s', %u",
+			   "(permanent, reauth_id, counter%s%s%s%s) "
+			   "VALUES ('%s', '%s', %u",
 			   mk ? ", mk" : "",
 			   k_encr ? ", k_encr" : "",
 			   k_aut ? ", k_aut" : "",
 			   k_re ? ", k_re" : "",
-			   imsi, reauth_id, counter);
+			   permanent, reauth_id, counter);
 	os_free(reauth_id);
 
 	if (mk) {
@@ -324,7 +320,7 @@ static int get_reauth_cb(void *ctx, int argc, char *argv[], char *col[])
 	struct eap_sim_reauth *reauth = &data->db_tmp_reauth;
 
 	for (i = 0; i < argc; i++) {
-		if (os_strcmp(col[i], "imsi") == 0 && argv[i]) {
+		if (os_strcmp(col[i], "permanent") == 0 && argv[i]) {
 			os_strlcpy(data->db_tmp_identity, argv[i],
 				   sizeof(data->db_tmp_identity));
 			reauth->permanent = data->db_tmp_identity;
@@ -381,11 +377,12 @@ static void db_remove_reauth(struct eap_sim_db_data *data,
 			     struct eap_sim_reauth *reauth)
 {
 	char cmd[256];
-	unsigned long long imsi;
 
-	imsi = atoll(reauth->permanent);
+	if (!valid_db_string(reauth->permanent))
+		return;
 	os_snprintf(cmd, sizeof(cmd),
-		    "DELETE FROM reauth WHERE imsi=%llu;", imsi);
+		    "DELETE FROM reauth WHERE permanent='%s';",
+		    reauth->permanent);
 	sqlite3_exec(data->sqlite_db, cmd, NULL, NULL, NULL);
 }
 

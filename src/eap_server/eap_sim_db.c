@@ -1149,6 +1149,9 @@ int eap_sim_db_add_reauth(void *priv, const char *permanent, char *reauth_id,
 	struct eap_sim_db_data *data = priv;
 	struct eap_sim_reauth *r;
 
+	wpa_printf(MSG_DEBUG, "EAP-SIM DB: Add reauth_id '%s' for permanent "
+		   "identity '%s'", reauth_id, permanent);
+
 #ifdef CONFIG_SQLITE
 	if (data->sqlite_db)
 		return db_add_reauth(data, permanent, reauth_id, counter, mk,

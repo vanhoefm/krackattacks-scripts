@@ -650,7 +650,8 @@ static void eap_aka_determine_identity(struct eap_sm *sm,
 				sm->eap_sim_db_priv, sm->identity,
 				sm->identity_len);
 			if (data->reauth &&
-			    data->reauth->aka_prime !=
+			    (data->reauth->reauth_id[0] ==
+			     EAP_AKA_PRIME_REAUTH_ID_PREFIX) !=
 			    (data->eap_method == EAP_TYPE_AKA_PRIME)) {
 				wpa_printf(MSG_DEBUG, "EAP-AKA: Reauth data "
 					   "was for different AKA version");

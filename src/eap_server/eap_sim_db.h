@@ -71,7 +71,6 @@ struct eap_sim_reauth {
 	size_t identity_len;
 	char *reauth_id;
 	u16 counter;
-	int aka_prime;
 	u8 mk[EAP_SIM_MK_LEN];
 	u8 k_encr[EAP_SIM_K_ENCR_LEN];
 	u8 k_aut[EAP_AKA_PRIME_K_AUT_LEN];

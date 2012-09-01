@@ -405,18 +405,33 @@ static void eap_sim_process_start(struct eap_sm *sm,
 	const u8 *identity;
 	size_t identity_len;
 	u8 ver_list[2];
+	u8 *new_identity;
 
 	wpa_printf(MSG_DEBUG, "EAP-SIM: Receive start response");
 
-	if (attr->identity) {
-		os_free(sm->identity);
-		sm->identity = os_malloc(attr->identity_len);
-		if (sm->identity) {
-			os_memcpy(sm->identity, attr->identity,
-				  attr->identity_len);
-			sm->identity_len = attr->identity_len;
-		}
+	/*
+	 * We always request identity in SIM/Start, so the peer is required to
+	 * have replied with one.
+	 */
+	if (!attr->identity || attr->identity_len == 0) {
+		wpa_printf(MSG_DEBUG, "EAP-SIM: Peer did not provide any "
+			   "identity");
+		eap_sim_state(data, FAILURE);
+		return;
 	}
+
+	new_identity = os_malloc(attr->identity_len);
+	if (new_identity == NULL) {
+		eap_sim_state(data, FAILURE);
+		return;
+	}
+	os_free(sm->identity);
+	sm->identity = new_identity;
+	os_memcpy(sm->identity, attr->identity, attr->identity_len);
+	sm->identity_len = attr->identity_len;
+
+	wpa_hexdump_ascii(MSG_DEBUG, "EAP-SIM: Identity",
+			  sm->identity, sm->identity_len);
 
 	identity = NULL;
 	identity_len = 0;
@@ -452,9 +467,6 @@ static void eap_sim_process_start(struct eap_sm *sm,
 		eap_sim_state(data, FAILURE);
 		return;
 	}
-
-	wpa_hexdump_ascii(MSG_DEBUG, "EAP-SIM: Identity",
-			  identity, identity_len);
 
 	if (data->reauth) {
 		eap_sim_state(data, REAUTH);

@@ -345,18 +345,22 @@ static struct wpabuf * eap_sim_buildReq(struct eap_sm *sm, void *priv, u8 id)
 static Boolean eap_sim_check(struct eap_sm *sm, void *priv,
 			     struct wpabuf *respData)
 {
-	struct eap_sim_data *data = priv;
 	const u8 *pos;
 	size_t len;
-	u8 subtype;
 
 	pos = eap_hdr_validate(EAP_VENDOR_IETF, EAP_TYPE_SIM, respData, &len);
 	if (pos == NULL || len < 3) {
 		wpa_printf(MSG_INFO, "EAP-SIM: Invalid frame");
 		return TRUE;
 	}
-	subtype = *pos;
 
+	return FALSE;
+}
+
+
+static Boolean eap_sim_unexpected_subtype(struct eap_sim_data *data,
+					  u8 subtype)
+{
 	if (subtype == EAP_SIM_SUBTYPE_CLIENT_ERROR)
 		return FALSE;
 
@@ -718,6 +722,14 @@ static void eap_sim_process(struct eap_sm *sm, void *priv,
 	end = pos + len;
 	subtype = *pos;
 	pos += 3;
+
+	if (eap_sim_unexpected_subtype(data, subtype)) {
+		wpa_printf(MSG_DEBUG, "EAP-SIM: Unrecognized or unexpected "
+			   "EAP-SIM Subtype in EAP Response");
+		data->notification = EAP_SIM_GENERAL_FAILURE_BEFORE_AUTH;
+		eap_sim_state(data, NOTIFICATION);
+		return;
+	}
 
 	if (eap_sim_parse_attr(pos, end, &attr, 0, 0)) {
 		wpa_printf(MSG_DEBUG, "EAP-SIM: Failed to parse attributes");

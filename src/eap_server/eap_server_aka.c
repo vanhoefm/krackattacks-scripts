@@ -621,13 +621,15 @@ static Boolean eap_aka_subtype_ok(struct eap_aka_data *data, u8 subtype)
 }
 
 
+static void eap_aka_fullauth(struct eap_sm *sm, struct eap_aka_data *data,
+			     const u8 *identity, size_t identity_len);
+
 static void eap_aka_determine_identity(struct eap_sm *sm,
 				       struct eap_aka_data *data,
 				       int before_identity, int after_reauth)
 {
 	const u8 *identity;
 	size_t identity_len;
-	int res;
 
 	identity = NULL;
 	identity_len = 0;
@@ -705,6 +707,16 @@ static void eap_aka_determine_identity(struct eap_sm *sm,
 		eap_aka_state(data, REAUTH);
 		return;
 	}
+
+
+	eap_aka_fullauth(sm, data, identity, identity_len);
+}
+
+
+static void eap_aka_fullauth(struct eap_sm *sm, struct eap_aka_data *data,
+			     const u8 *identity, size_t identity_len)
+{
+	int res;
 
 	res = eap_sim_db_get_aka_auth(sm->eap_sim_db_priv, identity,
 				      identity_len, data->rand, data->autn,

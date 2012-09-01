@@ -942,58 +942,6 @@ int eap_sim_db_get_gsm_triplets(void *priv, const char *username, int max_chal,
 }
 
 
-static const char *
-eap_sim_db_get_pseudonym(struct eap_sim_db_data *data, const char *pseudonym)
-{
-	struct eap_sim_pseudonym *p;
-
-	if (pseudonym[0] != EAP_SIM_PSEUDONYM_PREFIX &&
-	    pseudonym[0] != EAP_AKA_PSEUDONYM_PREFIX &&
-	    pseudonym[0] != EAP_AKA_PRIME_PSEUDONYM_PREFIX)
-		return NULL;
-
-#ifdef CONFIG_SQLITE
-	if (data->sqlite_db)
-		return db_get_pseudonym(data, pseudonym);
-#endif /* CONFIG_SQLITE */
-
-	p = data->pseudonyms;
-	while (p) {
-		if (os_strcmp(p->pseudonym, pseudonym) == 0)
-			return p->permanent;
-		p = p->next;
-	}
-
-	return NULL;
-}
-
-
-static struct eap_sim_reauth *
-eap_sim_db_get_reauth(struct eap_sim_db_data *data, const char *reauth_id)
-{
-	struct eap_sim_reauth *r;
-
-	if (reauth_id[0] != EAP_SIM_REAUTH_ID_PREFIX &&
-	    reauth_id[0] != EAP_AKA_REAUTH_ID_PREFIX &&
-	    reauth_id[0] != EAP_AKA_PRIME_REAUTH_ID_PREFIX)
-		return NULL;
-
-#ifdef CONFIG_SQLITE
-	if (data->sqlite_db)
-		return db_get_reauth(data, reauth_id);
-#endif /* CONFIG_SQLITE */
-
-	r = data->reauths;
-	while (r) {
-		if (os_strcmp(r->reauth_id, reauth_id) == 0)
-			break;
-		r = r->next;
-	}
-
-	return r;
-}
-
-
 static char * eap_sim_db_get_next(struct eap_sim_db_data *data, char prefix)
 {
 	char *id, *pos, *end;
@@ -1271,11 +1219,26 @@ int eap_sim_db_add_reauth_prime(void *priv, const char *permanent,
 const char * eap_sim_db_get_permanent(void *priv, const char *pseudonym)
 {
 	struct eap_sim_db_data *data = priv;
+	struct eap_sim_pseudonym *p;
 
-	if (pseudonym == NULL)
+	if (pseudonym[0] != EAP_SIM_PSEUDONYM_PREFIX &&
+	    pseudonym[0] != EAP_AKA_PSEUDONYM_PREFIX &&
+	    pseudonym[0] != EAP_AKA_PRIME_PSEUDONYM_PREFIX)
 		return NULL;
 
-	return eap_sim_db_get_pseudonym(data, pseudonym);
+#ifdef CONFIG_SQLITE
+	if (data->sqlite_db)
+		return db_get_pseudonym(data, pseudonym);
+#endif /* CONFIG_SQLITE */
+
+	p = data->pseudonyms;
+	while (p) {
+		if (os_strcmp(p->pseudonym, pseudonym) == 0)
+			return p->permanent;
+		p = p->next;
+	}
+
+	return NULL;
 }
 
 
@@ -1291,9 +1254,23 @@ eap_sim_db_get_reauth_entry(void *priv, const char *reauth_id)
 	struct eap_sim_db_data *data = priv;
 	struct eap_sim_reauth *r;
 
-	if (reauth_id == NULL)
+	if (reauth_id[0] != EAP_SIM_REAUTH_ID_PREFIX &&
+	    reauth_id[0] != EAP_AKA_REAUTH_ID_PREFIX &&
+	    reauth_id[0] != EAP_AKA_PRIME_REAUTH_ID_PREFIX)
 		return NULL;
-	r = eap_sim_db_get_reauth(data, reauth_id);
+
+#ifdef CONFIG_SQLITE
+	if (data->sqlite_db)
+		return db_get_reauth(data, reauth_id);
+#endif /* CONFIG_SQLITE */
+
+	r = data->reauths;
+	while (r) {
+		if (os_strcmp(r->reauth_id, reauth_id) == 0)
+			break;
+		r = r->next;
+	}
+
 	return r;
 }
 

@@ -161,9 +161,9 @@ static sqlite3 * db_open(const char *db_file)
 }
 
 
-static int valid_pseudonym_string(const char *pseudonym)
+static int valid_db_string(const char *str)
 {
-	const char *pos = pseudonym;
+	const char *pos = str;
 	while (*pos) {
 		if ((*pos < '0' || *pos > '9') &&
 		    (*pos < 'a' || *pos > 'f'))
@@ -181,7 +181,7 @@ static int db_add_pseudonym(struct eap_sim_db_data *data,
 	unsigned long long imsi;
 	char *err = NULL;
 
-	if (!valid_pseudonym_string(pseudonym)) {
+	if (!valid_db_string(pseudonym)) {
 		os_free(pseudonym);
 		return -1;
 	}
@@ -232,7 +232,7 @@ db_get_pseudonym(struct eap_sim_db_data *data, const char *pseudonym)
 {
 	char cmd[128];
 
-	if (!valid_pseudonym_string(pseudonym))
+	if (!valid_db_string(pseudonym))
 		return NULL;
 	os_memset(&data->db_tmp_pseudonym, 0, sizeof(data->db_tmp_pseudonym));
 	os_strlcpy(data->db_tmp_pseudonym_str, pseudonym,
@@ -258,7 +258,7 @@ static int db_add_reauth(struct eap_sim_db_data *data, const char *permanent,
 	unsigned long long imsi;
 	char *err = NULL;
 
-	if (!valid_pseudonym_string(reauth_id)) {
+	if (!valid_db_string(reauth_id)) {
 		os_free(reauth_id);
 		return -1;
 	}
@@ -360,7 +360,7 @@ db_get_reauth(struct eap_sim_db_data *data, const char *reauth_id)
 {
 	char cmd[256];
 
-	if (!valid_pseudonym_string(reauth_id))
+	if (!valid_db_string(reauth_id))
 		return NULL;
 	os_memset(&data->db_tmp_reauth, 0, sizeof(data->db_tmp_reauth));
 	os_strlcpy(data->db_tmp_pseudonym_str, reauth_id,

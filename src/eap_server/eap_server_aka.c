@@ -773,6 +773,8 @@ static void eap_aka_process_identity(struct eap_sm *sm,
 				     struct wpabuf *respData,
 				     struct eap_sim_attrs *attr)
 {
+	u8 *new_identity;
+
 	wpa_printf(MSG_DEBUG, "EAP-AKA: Processing Identity");
 
 	if (attr->mac || attr->iv || attr->encr_data) {
@@ -783,15 +785,28 @@ static void eap_aka_process_identity(struct eap_sm *sm,
 		return;
 	}
 
-	if (attr->identity) {
-		os_free(sm->identity);
-		sm->identity = os_malloc(attr->identity_len);
-		if (sm->identity) {
-			os_memcpy(sm->identity, attr->identity,
-				  attr->identity_len);
-			sm->identity_len = attr->identity_len;
-		}
+	/*
+	 * We always request identity with AKA/Identity, so the peer is
+	 * required to have replied with one.
+	 */
+	if (!attr->identity || attr->identity_len == 0) {
+		wpa_printf(MSG_DEBUG, "EAP-AKA: Peer did not provide any "
+			   "identity");
+		data->notification = EAP_SIM_GENERAL_FAILURE_BEFORE_AUTH;
+		eap_aka_state(data, NOTIFICATION);
+		return;
 	}
+
+	new_identity = os_malloc(attr->identity_len);
+	if (new_identity == NULL) {
+		data->notification = EAP_SIM_GENERAL_FAILURE_BEFORE_AUTH;
+		eap_aka_state(data, NOTIFICATION);
+		return;
+	}
+	os_free(sm->identity);
+	sm->identity = new_identity;
+	os_memcpy(sm->identity, attr->identity, attr->identity_len);
+	sm->identity_len = attr->identity_len;
 
 	eap_aka_determine_identity(sm, data, 0, 0);
 	if (eap_get_id(respData) == data->pending_id) {

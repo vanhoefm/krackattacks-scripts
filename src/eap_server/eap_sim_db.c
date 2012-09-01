@@ -688,9 +688,10 @@ static void eap_sim_db_close_socket(struct eap_sim_db_data *data)
  * @ctx: Context pointer for get_complete_cb
  * Returns: Pointer to a private data structure or %NULL on failure
  */
-void * eap_sim_db_init(const char *config,
-		       void (*get_complete_cb)(void *ctx, void *session_ctx),
-		       void *ctx)
+struct eap_sim_db_data *
+eap_sim_db_init(const char *config,
+		void (*get_complete_cb)(void *ctx, void *session_ctx),
+		void *ctx)
 {
 	struct eap_sim_db_data *data;
 	char *pos;
@@ -834,7 +835,7 @@ static void eap_sim_db_expire_pending(struct eap_sim_db_data *data)
 
 /**
  * eap_sim_db_get_gsm_triplets - Get GSM triplets
- * @priv: Private data pointer from eap_sim_db_init()
+ * @data: Private data pointer from eap_sim_db_init()
  * @username: Permanent username (prefix | IMSI)
  * @max_chal: Maximum number of triplets
  * @_rand: Buffer for RAND values
@@ -855,11 +856,11 @@ static void eap_sim_db_expire_pending(struct eap_sim_db_data *data)
  * function will then be called again and the newly received triplets will then
  * be given to the caller.
  */
-int eap_sim_db_get_gsm_triplets(void *priv, const char *username, int max_chal,
+int eap_sim_db_get_gsm_triplets(struct eap_sim_db_data *data,
+				const char *username, int max_chal,
 				u8 *_rand, u8 *kc, u8 *sres,
 				void *cb_session_ctx)
 {
-	struct eap_sim_db_data *data = priv;
 	struct eap_sim_db_pending *entry;
 	int len, ret;
 	char msg[40];
@@ -964,7 +965,7 @@ static char * eap_sim_db_get_next(struct eap_sim_db_data *data, char prefix)
 
 /**
  * eap_sim_db_get_next_pseudonym - EAP-SIM DB: Get next pseudonym
- * @priv: Private data pointer from eap_sim_db_init()
+ * @data: Private data pointer from eap_sim_db_init()
  * @method: EAP method (SIM/AKA/AKA')
  * Returns: Next pseudonym (allocated string) or %NULL on failure
  *
@@ -973,9 +974,9 @@ static char * eap_sim_db_get_next(struct eap_sim_db_data *data, char prefix)
  * with eap_sim_db_add_pseudonym() once the authentication has been completed
  * successfully. Caller is responsible for freeing the returned buffer.
  */
-char * eap_sim_db_get_next_pseudonym(void *priv, enum eap_sim_db_method method)
+char * eap_sim_db_get_next_pseudonym(struct eap_sim_db_data *data,
+				     enum eap_sim_db_method method)
 {
-	struct eap_sim_db_data *data = priv;
 	char prefix = EAP_SIM_REAUTH_ID_PREFIX;
 
 	switch (method) {
@@ -996,7 +997,7 @@ char * eap_sim_db_get_next_pseudonym(void *priv, enum eap_sim_db_method method)
 
 /**
  * eap_sim_db_get_next_reauth_id - EAP-SIM DB: Get next reauth_id
- * @priv: Private data pointer from eap_sim_db_init()
+ * @data: Private data pointer from eap_sim_db_init()
  * @method: EAP method (SIM/AKA/AKA')
  * Returns: Next reauth_id (allocated string) or %NULL on failure
  *
@@ -1006,9 +1007,9 @@ char * eap_sim_db_get_next_pseudonym(void *priv, enum eap_sim_db_method method)
  * has been completed successfully. Caller is responsible for freeing the
  * returned buffer.
  */
-char * eap_sim_db_get_next_reauth_id(void *priv, enum eap_sim_db_method method)
+char * eap_sim_db_get_next_reauth_id(struct eap_sim_db_data *data,
+				     enum eap_sim_db_method method)
 {
-	struct eap_sim_db_data *data = priv;
 	char prefix = EAP_SIM_REAUTH_ID_PREFIX;
 
 	switch (method) {
@@ -1029,7 +1030,7 @@ char * eap_sim_db_get_next_reauth_id(void *priv, enum eap_sim_db_method method)
 
 /**
  * eap_sim_db_add_pseudonym - EAP-SIM DB: Add new pseudonym
- * @priv: Private data pointer from eap_sim_db_init()
+ * @data: Private data pointer from eap_sim_db_init()
  * @permanent: Permanent username
  * @pseudonym: Pseudonym for this user. This needs to be an allocated buffer,
  * e.g., return value from eap_sim_db_get_next_pseudonym(). Caller must not
@@ -1039,10 +1040,9 @@ char * eap_sim_db_get_next_reauth_id(void *priv, enum eap_sim_db_method method)
  * This function adds a new pseudonym for EAP-SIM user. EAP-SIM DB is
  * responsible of freeing pseudonym buffer once it is not needed anymore.
  */
-int eap_sim_db_add_pseudonym(void *priv, const char *permanent,
-			     char *pseudonym)
+int eap_sim_db_add_pseudonym(struct eap_sim_db_data *data,
+			     const char *permanent, char *pseudonym)
 {
-	struct eap_sim_db_data *data = priv;
 	struct eap_sim_pseudonym *p;
 	wpa_printf(MSG_DEBUG, "EAP-SIM DB: Add pseudonym '%s' for permanent "
 		   "username '%s'", pseudonym, permanent);
@@ -1143,10 +1143,9 @@ eap_sim_db_add_reauth_data(struct eap_sim_db_data *data,
  * EAP-SIM DB is responsible of freeing reauth_id buffer once it is not needed
  * anymore.
  */
-int eap_sim_db_add_reauth(void *priv, const char *permanent, char *reauth_id,
-			  u16 counter, const u8 *mk)
+int eap_sim_db_add_reauth(struct eap_sim_db_data *data, const char *permanent,
+			  char *reauth_id, u16 counter, const u8 *mk)
 {
-	struct eap_sim_db_data *data = priv;
 	struct eap_sim_reauth *r;
 
 	wpa_printf(MSG_DEBUG, "EAP-SIM DB: Add reauth_id '%s' for permanent "
@@ -1170,7 +1169,7 @@ int eap_sim_db_add_reauth(void *priv, const char *permanent, char *reauth_id,
 #ifdef EAP_SERVER_AKA_PRIME
 /**
  * eap_sim_db_add_reauth_prime - EAP-AKA' DB: Add new re-authentication entry
- * @priv: Private data pointer from eap_sim_db_init()
+ * @data: Private data pointer from eap_sim_db_init()
  * @permanent: Permanent username
  * @reauth_id: reauth_id for this user. This needs to be an allocated buffer,
  * e.g., return value from eap_sim_db_get_next_reauth_id(). Caller must not
@@ -1185,11 +1184,11 @@ int eap_sim_db_add_reauth(void *priv, const char *permanent, char *reauth_id,
  * EAP-SIM DB is responsible of freeing reauth_id buffer once it is not needed
  * anymore.
  */
-int eap_sim_db_add_reauth_prime(void *priv, const char *permanent,
-				char *reauth_id, u16 counter, const u8 *k_encr,
+int eap_sim_db_add_reauth_prime(struct eap_sim_db_data *data,
+				const char *permanent, char *reauth_id,
+				u16 counter, const u8 *k_encr,
 				const u8 *k_aut, const u8 *k_re)
 {
-	struct eap_sim_db_data *data = priv;
 	struct eap_sim_reauth *r;
 
 	wpa_printf(MSG_DEBUG, "EAP-SIM DB: Add reauth_id '%s' for permanent "
@@ -1215,13 +1214,13 @@ int eap_sim_db_add_reauth_prime(void *priv, const char *permanent,
 
 /**
  * eap_sim_db_get_permanent - EAP-SIM DB: Get permanent identity
- * @priv: Private data pointer from eap_sim_db_init()
+ * @data: Private data pointer from eap_sim_db_init()
  * @pseudonym: Pseudonym username
  * Returns: Pointer to permanent username or %NULL if not found
  */
-const char * eap_sim_db_get_permanent(void *priv, const char *pseudonym)
+const char *
+eap_sim_db_get_permanent(struct eap_sim_db_data *data, const char *pseudonym)
 {
-	struct eap_sim_db_data *data = priv;
 	struct eap_sim_pseudonym *p;
 
 	if (pseudonym[0] != EAP_SIM_PSEUDONYM_PREFIX &&
@@ -1247,14 +1246,14 @@ const char * eap_sim_db_get_permanent(void *priv, const char *pseudonym)
 
 /**
  * eap_sim_db_get_reauth_entry - EAP-SIM DB: Get re-authentication entry
- * @priv: Private data pointer from eap_sim_db_init()
+ * @data: Private data pointer from eap_sim_db_init()
  * @reauth_id: Fast re-authentication username
  * Returns: Pointer to the re-auth entry, or %NULL if not found
  */
 struct eap_sim_reauth *
-eap_sim_db_get_reauth_entry(void *priv, const char *reauth_id)
+eap_sim_db_get_reauth_entry(struct eap_sim_db_data *data,
+			    const char *reauth_id)
 {
-	struct eap_sim_db_data *data = priv;
 	struct eap_sim_reauth *r;
 
 	if (reauth_id[0] != EAP_SIM_REAUTH_ID_PREFIX &&
@@ -1280,13 +1279,13 @@ eap_sim_db_get_reauth_entry(void *priv, const char *reauth_id)
 
 /**
  * eap_sim_db_remove_reauth - EAP-SIM DB: Remove re-authentication entry
- * @priv: Private data pointer from eap_sim_db_init()
+ * @data: Private data pointer from eap_sim_db_init()
  * @reauth: Pointer to re-authentication entry from
  * eap_sim_db_get_reauth_entry()
  */
-void eap_sim_db_remove_reauth(void *priv, struct eap_sim_reauth *reauth)
+void eap_sim_db_remove_reauth(struct eap_sim_db_data *data,
+			      struct eap_sim_reauth *reauth)
 {
-	struct eap_sim_db_data *data = priv;
 	struct eap_sim_reauth *r, *prev = NULL;
 #ifdef CONFIG_SQLITE
 	if (data->sqlite_db) {
@@ -1312,7 +1311,7 @@ void eap_sim_db_remove_reauth(void *priv, struct eap_sim_reauth *reauth)
 
 /**
  * eap_sim_db_get_aka_auth - Get AKA authentication values
- * @priv: Private data pointer from eap_sim_db_init()
+ * @data: Private data pointer from eap_sim_db_init()
  * @username: Permanent username (prefix | IMSI)
  * @_rand: Buffer for RAND value
  * @autn: Buffer for AUTN value
@@ -1334,11 +1333,10 @@ void eap_sim_db_remove_reauth(void *priv, struct eap_sim_reauth *reauth)
  * eap_sim_db_get_aka_auth() function will then be called again and the newly
  * received triplets will then be given to the caller.
  */
-int eap_sim_db_get_aka_auth(void *priv, const char *username, u8 *_rand,
-			    u8 *autn, u8 *ik, u8 *ck, u8 *res, size_t *res_len,
-			    void *cb_session_ctx)
+int eap_sim_db_get_aka_auth(struct eap_sim_db_data *data, const char *username,
+			    u8 *_rand, u8 *autn, u8 *ik, u8 *ck,
+			    u8 *res, size_t *res_len, void *cb_session_ctx)
 {
-	struct eap_sim_db_data *data = priv;
 	struct eap_sim_db_pending *entry;
 	int len;
 	char msg[40];
@@ -1418,7 +1416,7 @@ int eap_sim_db_get_aka_auth(void *priv, const char *username, u8 *_rand,
 
 /**
  * eap_sim_db_resynchronize - Resynchronize AKA AUTN
- * @priv: Private data pointer from eap_sim_db_init()
+ * @data: Private data pointer from eap_sim_db_init()
  * @username: Permanent username
  * @auts: AUTS value from the peer
  * @_rand: RAND value used in the rejected message
@@ -1430,10 +1428,10 @@ int eap_sim_db_get_aka_auth(void *priv, const char *username, u8 *_rand,
  * eap_sim_db_get_aka_auth() will be called again to to fetch updated
  * RAND/AUTN values for the next challenge.
  */
-int eap_sim_db_resynchronize(void *priv, const char *username,
+int eap_sim_db_resynchronize(struct eap_sim_db_data *data,
+			     const char *username,
 			     const u8 *auts, const u8 *_rand)
 {
-	struct eap_sim_db_data *data = priv;
 	const char *imsi;
 	size_t imsi_len;
 

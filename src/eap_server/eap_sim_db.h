@@ -28,35 +28,41 @@ enum eap_sim_db_method {
 	EAP_SIM_DB_AKA_PRIME
 };
 
-void * eap_sim_db_init(const char *config,
-		       void (*get_complete_cb)(void *ctx, void *session_ctx),
-		       void *ctx);
+struct eap_sim_db_data;
+
+struct eap_sim_db_data *
+eap_sim_db_init(const char *config,
+		void (*get_complete_cb)(void *ctx, void *session_ctx),
+		void *ctx);
 
 void eap_sim_db_deinit(void *priv);
 
-int eap_sim_db_get_gsm_triplets(void *priv, const char *username, int max_chal,
+int eap_sim_db_get_gsm_triplets(struct eap_sim_db_data *data,
+				const char *username, int max_chal,
 				u8 *_rand, u8 *kc, u8 *sres,
 				void *cb_session_ctx);
 
 #define EAP_SIM_DB_FAILURE -1
 #define EAP_SIM_DB_PENDING -2
 
-char * eap_sim_db_get_next_pseudonym(void *priv,
+char * eap_sim_db_get_next_pseudonym(struct eap_sim_db_data *data,
 				     enum eap_sim_db_method method);
 
-char * eap_sim_db_get_next_reauth_id(void *priv,
+char * eap_sim_db_get_next_reauth_id(struct eap_sim_db_data *data,
 				     enum eap_sim_db_method method);
 
-int eap_sim_db_add_pseudonym(void *priv, const char *permanent,
-			     char *pseudonym);
+int eap_sim_db_add_pseudonym(struct eap_sim_db_data *data,
+			     const char *permanent, char *pseudonym);
 
-int eap_sim_db_add_reauth(void *priv, const char *permanent, char *reauth_id,
-			  u16 counter, const u8 *mk);
-int eap_sim_db_add_reauth_prime(void *priv, const char *permanent,
+int eap_sim_db_add_reauth(struct eap_sim_db_data *data, const char *permanent,
+			  char *reauth_id, u16 counter, const u8 *mk);
+int eap_sim_db_add_reauth_prime(struct eap_sim_db_data *data,
+				const char *permanent,
 				char *reauth_id, u16 counter, const u8 *k_encr,
 				const u8 *k_aut, const u8 *k_re);
 
-const char * eap_sim_db_get_permanent(void *priv, const char *pseudonym);
+const char * eap_sim_db_get_permanent(struct eap_sim_db_data *data,
+				      const char *pseudonym);
 
 struct eap_sim_reauth {
 	struct eap_sim_reauth *next;
@@ -70,15 +76,18 @@ struct eap_sim_reauth {
 };
 
 struct eap_sim_reauth *
-eap_sim_db_get_reauth_entry(void *priv, const char *reauth_id);
+eap_sim_db_get_reauth_entry(struct eap_sim_db_data *data,
+			    const char *reauth_id);
 
-void eap_sim_db_remove_reauth(void *priv, struct eap_sim_reauth *reauth);
+void eap_sim_db_remove_reauth(struct eap_sim_db_data *data,
+			      struct eap_sim_reauth *reauth);
 
-int eap_sim_db_get_aka_auth(void *priv, const char *username, u8 *_rand,
-			    u8 *autn, u8 *ik, u8 *ck, u8 *res, size_t *res_len,
-			    void *cb_session_ctx);
+int eap_sim_db_get_aka_auth(struct eap_sim_db_data *data, const char *username,
+			    u8 *_rand, u8 *autn, u8 *ik, u8 *ck,
+			    u8 *res, size_t *res_len, void *cb_session_ctx);
 
-int eap_sim_db_resynchronize(void *priv, const char *username, const u8 *auts,
+int eap_sim_db_resynchronize(struct eap_sim_db_data *data,
+			     const char *username, const u8 *auts,
 			     const u8 *_rand);
 
 char * sim_get_username(const u8 *identity, size_t identity_len);

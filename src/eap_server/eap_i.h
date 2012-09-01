@@ -151,7 +151,7 @@ struct eap_sm {
 	int user_eap_method_index;
 	int init_phase2;
 	void *ssl_ctx;
-	void *eap_sim_db_priv;
+	struct eap_sim_db_data *eap_sim_db_priv;
 	Boolean backend_auth;
 	Boolean update_user;
 	int eap_server;

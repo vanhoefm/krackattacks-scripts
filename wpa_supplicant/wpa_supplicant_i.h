@@ -347,6 +347,16 @@ struct wpa_supplicant {
 	unsigned int bss_update_idx;
 	unsigned int bss_next_id;
 
+	 /*
+	  * Pointers to BSS entries in the order they were in the last scan
+	  * results.
+	  */
+	struct wpa_bss **last_scan_res;
+	unsigned int last_scan_res_used;
+	unsigned int last_scan_res_size;
+	int last_scan_full;
+	struct os_time last_scan;
+
 	struct wpa_driver_ops *driver;
 	int interface_removed; /* whether the network interface has been
 				* removed */

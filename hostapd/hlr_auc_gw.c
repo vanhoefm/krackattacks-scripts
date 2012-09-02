@@ -78,6 +78,7 @@ struct milenage_parameters {
 	u8 opc[16];
 	u8 amf[2];
 	u8 sqn[6];
+	int set;
 };
 
 static struct milenage_parameters *milenage_db = NULL;
@@ -155,6 +156,8 @@ static int get_milenage_cb(void *ctx, int argc, char *argv[], char *col[])
 	struct milenage_parameters *m = ctx;
 	int i;
 
+	m->set = 1;
+
 	for (i = 0; i < argc; i++) {
 		if (os_strcmp(col[i], "ki") == 0 && argv[i] &&
 		    hexstr2bin(argv[i], m->ki, sizeof(m->ki))) {
@@ -201,6 +204,8 @@ static struct milenage_parameters * db_get_milenage(const char *imsi_txt)
 			 NULL) != SQLITE_OK)
 		return NULL;
 
+	if (!db_tmp_milenage.set)
+		return NULL;
 	return &db_tmp_milenage;
 }
 

@@ -1825,6 +1825,15 @@ static void eapol_sm_notify_status(void *ctx, const char *status,
 }
 
 
+static void eapol_sm_set_anon_id(void *ctx, const u8 *id, size_t len)
+{
+	struct eapol_sm *sm = ctx;
+
+	if (sm->ctx->set_anon_id)
+		sm->ctx->set_anon_id(sm->ctx->ctx, id, len);
+}
+
+
 static struct eapol_callbacks eapol_cb =
 {
 	eapol_sm_get_config,
@@ -1838,7 +1847,8 @@ static struct eapol_callbacks eapol_cb =
 	eapol_sm_notify_pending,
 	eapol_sm_eap_param_needed,
 	eapol_sm_notify_cert,
-	eapol_sm_notify_status
+	eapol_sm_notify_status,
+	eapol_sm_set_anon_id
 };
 
 

@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - Glue code to setup EAPOL and RSN modules
- * Copyright (c) 2003-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -729,6 +729,44 @@ static void wpa_supplicant_status_cb(void *ctx, const char *status,
 
 	wpas_notify_eap_status(wpa_s, status, parameter);
 }
+
+
+static void wpa_supplicant_set_anon_id(void *ctx, const u8 *id, size_t len)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+	char *str;
+	int res;
+
+	wpa_hexdump_ascii(MSG_DEBUG, "EAP method updated anonymous_identity",
+			  id, len);
+
+	if (wpa_s->current_ssid == NULL)
+		return;
+
+	if (id == NULL) {
+		if (wpa_config_set(wpa_s->current_ssid, "anonymous_identity",
+				   "NULL", 0) < 0)
+			return;
+	} else {
+		str = os_malloc(len * 2 + 1);
+		if (str == NULL)
+			return;
+		wpa_snprintf_hex(str, len * 2 + 1, id, len);
+		res = wpa_config_set(wpa_s->current_ssid, "anonymous_identity",
+				     str, 0);
+		os_free(str);
+		if (res < 0)
+			return;
+	}
+
+	if (wpa_s->conf->update_config) {
+		res = wpa_config_write(wpa_s->confname, wpa_s->conf);
+		if (res) {
+			wpa_printf(MSG_DEBUG, "Failed to update config after "
+				   "anonymous_id update");
+		}
+	}
+}
 #endif /* IEEE8021X_EAPOL */
 
 
@@ -761,6 +799,7 @@ int wpa_supplicant_init_eapol(struct wpa_supplicant *wpa_s)
 	ctx->cb = wpa_supplicant_eapol_cb;
 	ctx->cert_cb = wpa_supplicant_cert_cb;
 	ctx->status_cb = wpa_supplicant_status_cb;
+	ctx->set_anon_id = wpa_supplicant_set_anon_id;
 	ctx->cb_ctx = wpa_s;
 	wpa_s->eapol = eapol_sm_init(ctx);
 	if (wpa_s->eapol == NULL) {

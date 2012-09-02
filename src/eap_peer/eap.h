@@ -1,6 +1,6 @@
 /*
  * EAP peer state machine functions (RFC 4137)
- * Copyright (c) 2004-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -235,6 +235,14 @@ struct eapol_callbacks {
 	 */
 	void (*notify_status)(void *ctx, const char *status,
 			      const char *parameter);
+
+	/**
+	 * set_anon_id - Set or add anonymous identity
+	 * @ctx: eapol_ctx from eap_peer_sm_init() call
+	 * @id: Anonymous identity (e.g., EAP-SIM pseudonym) or %NULL to clear
+	 * @len: Length of anonymous identity in octets
+	 */
+	void (*set_anon_id)(void *ctx, const u8 *id, size_t len);
 };
 
 /**
@@ -308,6 +316,7 @@ int eap_is_wps_pin_enrollee(struct eap_peer_config *conf);
 
 struct ext_password_data;
 void eap_sm_set_ext_pw_ctx(struct eap_sm *sm, struct ext_password_data *ext);
+void eap_set_anon_id(struct eap_sm *sm, const u8 *id, size_t len);
 
 #endif /* IEEE8021X_EAPOL */
 

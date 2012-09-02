@@ -90,6 +90,7 @@ static void * eap_aka_init(struct eap_sm *sm)
 {
 	struct eap_aka_data *data;
 	const char *phase1 = eap_get_config_phase1(sm);
+	struct eap_peer_config *config = eap_get_config(sm);
 
 	data = os_zalloc(sizeof(*data));
 	if (data == NULL)
@@ -101,6 +102,15 @@ static void * eap_aka_init(struct eap_sm *sm)
 	data->prev_id = -1;
 
 	data->result_ind = phase1 && os_strstr(phase1, "result_ind=1") != NULL;
+
+	if (config && config->anonymous_identity) {
+		data->pseudonym = os_malloc(config->anonymous_identity_len);
+		if (data->pseudonym) {
+			os_memcpy(data->pseudonym, config->anonymous_identity,
+				  config->anonymous_identity_len);
+			data->pseudonym_len = config->anonymous_identity_len;
+		}
+	}
 
 	return data;
 }
@@ -227,13 +237,15 @@ static int eap_aka_umts_auth(struct eap_sm *sm, struct eap_aka_data *data)
 #define CLEAR_REAUTH_ID	0x02
 #define CLEAR_EAP_ID	0x04
 
-static void eap_aka_clear_identities(struct eap_aka_data *data, int id)
+static void eap_aka_clear_identities(struct eap_sm *sm,
+				     struct eap_aka_data *data, int id)
 {
 	if ((id & CLEAR_PSEUDONYM) && data->pseudonym) {
 		wpa_printf(MSG_DEBUG, "EAP-AKA: forgetting old pseudonym");
 		os_free(data->pseudonym);
 		data->pseudonym = NULL;
 		data->pseudonym_len = 0;
+		eap_set_anon_id(sm, NULL, 0);
 	}
 	if ((id & CLEAR_REAUTH_ID) && data->reauth_id) {
 		wpa_printf(MSG_DEBUG, "EAP-AKA: forgetting old reauth_id");
@@ -288,6 +300,7 @@ static int eap_aka_learn_ids(struct eap_sm *sm, struct eap_aka_data *data,
 				  realm, realm_len);
 		}
 		data->pseudonym_len = attr->next_pseudonym_len + realm_len;
+		eap_set_anon_id(sm, data->pseudonym, data->pseudonym_len);
 	}
 
 	if (attr->next_reauth_id) {
@@ -488,16 +501,16 @@ static struct wpabuf * eap_aka_response_identity(struct eap_sm *sm,
 		   data->pseudonym) {
 		identity = data->pseudonym;
 		identity_len = data->pseudonym_len;
-		eap_aka_clear_identities(data, CLEAR_REAUTH_ID);
+		eap_aka_clear_identities(sm, data, CLEAR_REAUTH_ID);
 	} else if (id_req != NO_ID_REQ) {
 		identity = eap_get_config_identity(sm, &identity_len);
 		if (identity) {
-			eap_aka_clear_identities(data, CLEAR_PSEUDONYM |
+			eap_aka_clear_identities(sm, data, CLEAR_PSEUDONYM |
 						 CLEAR_REAUTH_ID);
 		}
 	}
 	if (id_req != NO_ID_REQ)
-		eap_aka_clear_identities(data, CLEAR_EAP_ID);
+		eap_aka_clear_identities(sm, data, CLEAR_EAP_ID);
 
 	wpa_printf(MSG_DEBUG, "Generating EAP-AKA Identity (id=%d)", id);
 	msg = eap_sim_msg_init(EAP_CODE_RESPONSE, id, data->eap_method,
@@ -900,7 +913,7 @@ static struct wpabuf * eap_aka_process_challenge(struct eap_sm *sm,
 	 * other words, if no new identities are received, full
 	 * authentication will be used on next reauthentication (using
 	 * pseudonym identity or permanent identity). */
-	eap_aka_clear_identities(data, CLEAR_REAUTH_ID | CLEAR_EAP_ID);
+	eap_aka_clear_identities(sm, data, CLEAR_REAUTH_ID | CLEAR_EAP_ID);
 
 	if (attr->encr_data) {
 		u8 *decrypted;
@@ -1128,7 +1141,7 @@ static struct wpabuf * eap_aka_process_reauthentication(
 					   data->nonce_s, data->mk,
 					   data->msk, data->emsk);
 	}
-	eap_aka_clear_identities(data, CLEAR_REAUTH_ID | CLEAR_EAP_ID);
+	eap_aka_clear_identities(sm, data, CLEAR_REAUTH_ID | CLEAR_EAP_ID);
 	eap_aka_learn_ids(sm, data, &eattr);
 
 	if (data->result_ind && attr->result_ind)
@@ -1144,7 +1157,8 @@ static struct wpabuf * eap_aka_process_reauthentication(
 	if (data->counter > EAP_AKA_MAX_FAST_REAUTHS) {
 		wpa_printf(MSG_DEBUG, "EAP-AKA: Maximum number of "
 			   "fast reauths performed - force fullauth");
-		eap_aka_clear_identities(data, CLEAR_REAUTH_ID | CLEAR_EAP_ID);
+		eap_aka_clear_identities(sm, data,
+					 CLEAR_REAUTH_ID | CLEAR_EAP_ID);
 	}
 	os_free(decrypted);
 	return eap_aka_response_reauth(data, id, 0, data->nonce_s);
@@ -1262,7 +1276,7 @@ static Boolean eap_aka_has_reauth_data(struct eap_sm *sm, void *priv)
 static void eap_aka_deinit_for_reauth(struct eap_sm *sm, void *priv)
 {
 	struct eap_aka_data *data = priv;
-	eap_aka_clear_identities(data, CLEAR_EAP_ID);
+	eap_aka_clear_identities(sm, data, CLEAR_EAP_ID);
 	data->prev_id = -1;
 	wpabuf_free(data->id_msgs);
 	data->id_msgs = NULL;

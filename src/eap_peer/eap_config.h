@@ -35,6 +35,9 @@ struct eap_peer_config {
 	 *
 	 * If not set, the identity field will be used for both unencrypted and
 	 * protected fields.
+	 *
+	 * This field can also be used with EAP-SIM/AKA/AKA' to store the
+	 * pseudonym identity.
 	 */
 	u8 *anonymous_identity;
 

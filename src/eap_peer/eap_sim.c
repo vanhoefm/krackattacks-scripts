@@ -1,6 +1,6 @@
 /*
  * EAP peer method: EAP-SIM (RFC 4186)
- * Copyright (c) 2004-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -115,6 +115,15 @@ static void * eap_sim_init(struct eap_sm *sm)
 
 		data->result_ind = os_strstr(config->phase1, "result_ind=1") !=
 			NULL;
+	}
+
+	if (config && config->anonymous_identity) {
+		data->pseudonym = os_malloc(config->anonymous_identity_len);
+		if (data->pseudonym) {
+			os_memcpy(data->pseudonym, config->anonymous_identity,
+				  config->anonymous_identity_len);
+			data->pseudonym_len = config->anonymous_identity_len;
+		}
 	}
 
 	eap_sim_state(data, CONTINUE);
@@ -258,13 +267,15 @@ static int eap_sim_supported_ver(int version)
 #define CLEAR_REAUTH_ID	0x02
 #define CLEAR_EAP_ID	0x04
 
-static void eap_sim_clear_identities(struct eap_sim_data *data, int id)
+static void eap_sim_clear_identities(struct eap_sm *sm,
+				     struct eap_sim_data *data, int id)
 {
 	if ((id & CLEAR_PSEUDONYM) && data->pseudonym) {
 		wpa_printf(MSG_DEBUG, "EAP-SIM: forgetting old pseudonym");
 		os_free(data->pseudonym);
 		data->pseudonym = NULL;
 		data->pseudonym_len = 0;
+		eap_set_anon_id(sm, NULL, 0);
 	}
 	if ((id & CLEAR_REAUTH_ID) && data->reauth_id) {
 		wpa_printf(MSG_DEBUG, "EAP-SIM: forgetting old reauth_id");
@@ -319,6 +330,7 @@ static int eap_sim_learn_ids(struct eap_sm *sm, struct eap_sim_data *data,
 				  realm, realm_len);
 		}
 		data->pseudonym_len = attr->next_pseudonym_len + realm_len;
+		eap_set_anon_id(sm, data->pseudonym, data->pseudonym_len);
 	}
 
 	if (attr->next_reauth_id) {
@@ -378,16 +390,16 @@ static struct wpabuf * eap_sim_response_start(struct eap_sm *sm,
 		   data->pseudonym) {
 		identity = data->pseudonym;
 		identity_len = data->pseudonym_len;
-		eap_sim_clear_identities(data, CLEAR_REAUTH_ID);
+		eap_sim_clear_identities(sm, data, CLEAR_REAUTH_ID);
 	} else if (id_req != NO_ID_REQ) {
 		identity = eap_get_config_identity(sm, &identity_len);
 		if (identity) {
-			eap_sim_clear_identities(data, CLEAR_PSEUDONYM |
+			eap_sim_clear_identities(sm, data, CLEAR_PSEUDONYM |
 						 CLEAR_REAUTH_ID);
 		}
 	}
 	if (id_req != NO_ID_REQ)
-		eap_sim_clear_identities(data, CLEAR_EAP_ID);
+		eap_sim_clear_identities(sm, data, CLEAR_EAP_ID);
 
 	wpa_printf(MSG_DEBUG, "Generating EAP-SIM Start (id=%d)", id);
 	msg = eap_sim_msg_init(EAP_CODE_RESPONSE, id,
@@ -670,7 +682,7 @@ static struct wpabuf * eap_sim_process_challenge(struct eap_sm *sm,
 	 * other words, if no new reauth identity is received, full
 	 * authentication will be used on next reauthentication (using
 	 * pseudonym identity or permanent identity). */
-	eap_sim_clear_identities(data, CLEAR_REAUTH_ID | CLEAR_EAP_ID);
+	eap_sim_clear_identities(sm, data, CLEAR_REAUTH_ID | CLEAR_EAP_ID);
 
 	if (attr->encr_data) {
 		u8 *decrypted;
@@ -878,7 +890,7 @@ static struct wpabuf * eap_sim_process_reauthentication(
 				   data->reauth_id, data->reauth_id_len,
 				   data->nonce_s, data->mk, data->msk,
 				   data->emsk);
-	eap_sim_clear_identities(data, CLEAR_REAUTH_ID | CLEAR_EAP_ID);
+	eap_sim_clear_identities(sm, data, CLEAR_REAUTH_ID | CLEAR_EAP_ID);
 	eap_sim_learn_ids(sm, data, &eattr);
 
 	if (data->result_ind && attr->result_ind)
@@ -894,7 +906,8 @@ static struct wpabuf * eap_sim_process_reauthentication(
 	if (data->counter > EAP_SIM_MAX_FAST_REAUTHS) {
 		wpa_printf(MSG_DEBUG, "EAP-SIM: Maximum number of "
 			   "fast reauths performed - force fullauth");
-		eap_sim_clear_identities(data, CLEAR_REAUTH_ID | CLEAR_EAP_ID);
+		eap_sim_clear_identities(sm, data,
+					 CLEAR_REAUTH_ID | CLEAR_EAP_ID);
 	}
 	os_free(decrypted);
 	return eap_sim_response_reauth(data, id, 0, data->nonce_s);
@@ -1005,7 +1018,7 @@ static Boolean eap_sim_has_reauth_data(struct eap_sm *sm, void *priv)
 static void eap_sim_deinit_for_reauth(struct eap_sm *sm, void *priv)
 {
 	struct eap_sim_data *data = priv;
-	eap_sim_clear_identities(data, CLEAR_EAP_ID);
+	eap_sim_clear_identities(sm, data, CLEAR_EAP_ID);
 	data->use_result_ind = 0;
 }
 

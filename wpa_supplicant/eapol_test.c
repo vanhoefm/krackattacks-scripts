@@ -429,6 +429,37 @@ static void eapol_test_cert_cb(void *ctx, int depth, const char *subject,
 }
 
 
+static void eapol_test_set_anon_id(void *ctx, const u8 *id, size_t len)
+{
+	struct eapol_test_data *e = ctx;
+	struct wpa_supplicant *wpa_s = e->wpa_s;
+	char *str;
+	int res;
+
+	wpa_hexdump_ascii(MSG_DEBUG, "EAP method updated anonymous_identity",
+			  id, len);
+
+	if (wpa_s->current_ssid == NULL)
+		return;
+
+	if (id == NULL) {
+		if (wpa_config_set(wpa_s->current_ssid, "anonymous_identity",
+				   "NULL", 0) < 0)
+			return;
+	} else {
+		str = os_malloc(len * 2 + 1);
+		if (str == NULL)
+			return;
+		wpa_snprintf_hex(str, len * 2 + 1, id, len);
+		res = wpa_config_set(wpa_s->current_ssid, "anonymous_identity",
+				     str, 0);
+		os_free(str);
+		if (res < 0)
+			return;
+	}
+}
+
+
 static int test_eapol(struct eapol_test_data *e, struct wpa_supplicant *wpa_s,
 		      struct wpa_ssid *ssid)
 {
@@ -456,6 +487,7 @@ static int test_eapol(struct eapol_test_data *e, struct wpa_supplicant *wpa_s,
 	ctx->pkcs11_module_path = wpa_s->conf->pkcs11_module_path;
 	ctx->cert_cb = eapol_test_cert_cb;
 	ctx->cert_in_cb = 1;
+	ctx->set_anon_id = eapol_test_set_anon_id;
 
 	wpa_s->eapol = eapol_sm_init(ctx);
 	if (wpa_s->eapol == NULL) {

@@ -2321,3 +2321,16 @@ void eap_sm_set_ext_pw_ctx(struct eap_sm *sm, struct ext_password_data *ext)
 	sm->ext_pw_buf = NULL;
 	sm->ext_pw = ext;
 }
+
+
+/**
+ * eap_set_anon_id - Set or add anonymous identity
+ * @sm: Pointer to EAP state machine allocated with eap_peer_sm_init()
+ * @id: Anonymous identity (e.g., EAP-SIM pseudonym) or %NULL to clear
+ * @len: Length of anonymous identity in octets
+ */
+void eap_set_anon_id(struct eap_sm *sm, const u8 *id, size_t len)
+{
+	if (sm->eapol_cb->set_anon_id)
+		sm->eapol_cb->set_anon_id(sm->eapol_ctx, id, len);
+}

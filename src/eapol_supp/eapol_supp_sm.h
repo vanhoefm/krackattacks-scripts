@@ -239,6 +239,14 @@ struct eapol_ctx {
 	 */
 	void (*status_cb)(void *ctx, const char *status,
 			  const char *parameter);
+
+	/**
+	 * set_anon_id - Set or add anonymous identity
+	 * @ctx: eapol_ctx from eap_peer_sm_init() call
+	 * @id: Anonymous identity (e.g., EAP-SIM pseudonym)
+	 * @len: Length of anonymous identity in octets
+	 */
+	void (*set_anon_id)(void *ctx, const u8 *id, size_t len);
 };
 
 

@@ -1223,11 +1223,6 @@ eap_sim_db_get_permanent(struct eap_sim_db_data *data, const char *pseudonym)
 {
 	struct eap_sim_pseudonym *p;
 
-	if (pseudonym[0] != EAP_SIM_PSEUDONYM_PREFIX &&
-	    pseudonym[0] != EAP_AKA_PSEUDONYM_PREFIX &&
-	    pseudonym[0] != EAP_AKA_PRIME_PSEUDONYM_PREFIX)
-		return NULL;
-
 #ifdef CONFIG_SQLITE
 	if (data->sqlite_db)
 		return db_get_pseudonym(data, pseudonym);
@@ -1255,11 +1250,6 @@ eap_sim_db_get_reauth_entry(struct eap_sim_db_data *data,
 			    const char *reauth_id)
 {
 	struct eap_sim_reauth *r;
-
-	if (reauth_id[0] != EAP_SIM_REAUTH_ID_PREFIX &&
-	    reauth_id[0] != EAP_AKA_REAUTH_ID_PREFIX &&
-	    reauth_id[0] != EAP_AKA_PRIME_REAUTH_ID_PREFIX)
-		return NULL;
 
 #ifdef CONFIG_SQLITE
 	if (data->sqlite_db)

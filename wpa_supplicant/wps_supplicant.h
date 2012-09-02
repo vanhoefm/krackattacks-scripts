@@ -40,9 +40,9 @@ int wpas_wps_start_oob(struct wpa_supplicant *wpa_s, char *device_type,
 int wpas_wps_start_reg(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		       const char *pin, struct wps_new_ap_settings *settings);
 int wpas_wps_ssid_bss_match(struct wpa_supplicant *wpa_s,
-			    struct wpa_ssid *ssid, struct wpa_scan_res *bss);
+			    struct wpa_ssid *ssid, struct wpa_bss *bss);
 int wpas_wps_ssid_wildcard_ok(struct wpa_supplicant *wpa_s,
-			      struct wpa_ssid *ssid, struct wpa_scan_res *bss);
+			      struct wpa_ssid *ssid, struct wpa_bss *bss);
 int wpas_wps_scan_pbc_overlap(struct wpa_supplicant *wpa_s,
 			      struct wpa_bss *selected, struct wpa_ssid *ssid);
 void wpas_wps_notify_scan_results(struct wpa_supplicant *wpa_s);

@@ -1270,14 +1270,14 @@ void wpas_wps_deinit(struct wpa_supplicant *wpa_s)
 
 
 int wpas_wps_ssid_bss_match(struct wpa_supplicant *wpa_s,
-			    struct wpa_ssid *ssid, struct wpa_scan_res *bss)
+			    struct wpa_ssid *ssid, struct wpa_bss *bss)
 {
 	struct wpabuf *wps_ie;
 
 	if (!(ssid->key_mgmt & WPA_KEY_MGMT_WPS))
 		return -1;
 
-	wps_ie = wpa_scan_get_vendor_ie_multi(bss, WPS_IE_VENDOR_TYPE);
+	wps_ie = wpa_bss_get_vendor_ie_multi(bss, WPS_IE_VENDOR_TYPE);
 	if (eap_is_wps_pbc_enrollee(&ssid->eap)) {
 		if (!wps_ie) {
 			wpa_printf(MSG_DEBUG, "   skip - non-WPS AP");
@@ -1339,19 +1339,19 @@ int wpas_wps_ssid_bss_match(struct wpa_supplicant *wpa_s,
 
 int wpas_wps_ssid_wildcard_ok(struct wpa_supplicant *wpa_s,
 			      struct wpa_ssid *ssid,
-			      struct wpa_scan_res *bss)
+			      struct wpa_bss *bss)
 {
 	struct wpabuf *wps_ie = NULL;
 	int ret = 0;
 
 	if (eap_is_wps_pbc_enrollee(&ssid->eap)) {
-		wps_ie = wpa_scan_get_vendor_ie_multi(bss, WPS_IE_VENDOR_TYPE);
+		wps_ie = wpa_bss_get_vendor_ie_multi(bss, WPS_IE_VENDOR_TYPE);
 		if (wps_ie && wps_is_selected_pbc_registrar(wps_ie)) {
 			/* allow wildcard SSID for WPS PBC */
 			ret = 1;
 		}
 	} else if (eap_is_wps_pin_enrollee(&ssid->eap)) {
-		wps_ie = wpa_scan_get_vendor_ie_multi(bss, WPS_IE_VENDOR_TYPE);
+		wps_ie = wpa_bss_get_vendor_ie_multi(bss, WPS_IE_VENDOR_TYPE);
 		if (wps_ie &&
 		    (wps_is_addr_authorized(wps_ie, wpa_s->own_addr, 1) ||
 		     wpa_s->scan_runs >= WPS_PIN_SCAN_IGNORE_SEL_REG)) {
@@ -1373,7 +1373,7 @@ int wpas_wps_ssid_wildcard_ok(struct wpa_supplicant *wpa_s,
 			ret = 0;
 		if (bss->beacon_ie_len) {
 			struct wpabuf *bcn_wps;
-			bcn_wps = wpa_scan_get_vendor_ie_multi_beacon(
+			bcn_wps = wpa_bss_get_vendor_ie_multi_beacon(
 				bss, WPS_IE_VENDOR_TYPE);
 			if (bcn_wps == NULL) {
 				wpa_printf(MSG_DEBUG, "WPS: Mandatory WPS IE "

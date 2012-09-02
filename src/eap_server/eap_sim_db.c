@@ -1493,6 +1493,9 @@ char * sim_get_username(const u8 *identity, size_t identity_len)
 	char *username;
 	size_t pos;
 
+	if (identity == NULL)
+		return NULL;
+
 	for (pos = 0; pos < identity_len; pos++) {
 		if (identity[pos] == '@' || identity[pos] == '\0')
 			break;

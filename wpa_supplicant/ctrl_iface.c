@@ -1861,8 +1861,7 @@ static int wpa_supplicant_ctrl_iface_remove_network(
 	ssid = wpa_config_get_network(wpa_s->conf, id);
 	if (ssid)
 		wpas_notify_network_removed(wpa_s, ssid);
-	if (ssid == NULL ||
-	    wpa_config_remove_network(wpa_s->conf, id) < 0) {
+	if (ssid == NULL) {
 		wpa_printf(MSG_DEBUG, "CTRL_IFACE: Could not find network "
 			   "id=%d", id);
 		return -1;
@@ -1884,6 +1883,12 @@ static int wpa_supplicant_ctrl_iface_remove_network(
 		eapol_sm_notify_config(wpa_s->eapol, NULL, NULL);
 
 		wpa_supplicant_disassociate(wpa_s, WLAN_REASON_DEAUTH_LEAVING);
+	}
+
+	if (wpa_config_remove_network(wpa_s->conf, id) < 0) {
+		wpa_printf(MSG_DEBUG, "CTRL_IFACE: Not able to remove the "
+			   "network id=%d", id);
+		return -1;
 	}
 
 	return 0;

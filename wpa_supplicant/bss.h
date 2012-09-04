@@ -47,6 +47,7 @@ struct wpa_bss_anqp {
  * @flags: information flags about the BSS/IBSS (WPA_BSS_*)
  * @last_update_idx: Index of the last scan update
  * @bssid: BSSID
+ * @hessid: HESSID
  * @freq: frequency of the channel in MHz (e.g., 2412 = channel 1)
  * @beacon_int: beacon interval in TUs (host byte order)
  * @caps: capability information field in host byte order
@@ -69,6 +70,7 @@ struct wpa_bss {
 	unsigned int last_update_idx;
 	unsigned int flags;
 	u8 bssid[ETH_ALEN];
+	u8 hessid[ETH_ALEN];
 	u8 ssid[32];
 	size_t ssid_len;
 	int freq;

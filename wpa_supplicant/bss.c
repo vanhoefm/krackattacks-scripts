@@ -35,6 +35,22 @@
 #define WPA_BSS_IES_CHANGED_FLAG	BIT(8)
 
 
+static void wpa_bss_set_hessid(struct wpa_bss *bss)
+{
+#ifdef CONFIG_INTERWORKING
+	const u8 *ie = wpa_bss_get_ie(bss, WLAN_EID_INTERWORKING);
+	if (ie == NULL || (ie[1] != 7 && ie[1] != 9)) {
+		os_memset(bss->hessid, 0, ETH_ALEN);
+		return;
+	}
+	if (ie[1] == 7)
+		os_memcpy(bss->hessid, ie + 3, ETH_ALEN);
+	else
+		os_memcpy(bss->hessid, ie + 5, ETH_ALEN);
+#endif /* CONFIG_INTERWORKING */
+}
+
+
 struct wpa_bss_anqp * wpa_bss_anqp_alloc(void)
 {
 	struct wpa_bss_anqp *anqp;
@@ -227,6 +243,7 @@ static struct wpa_bss * wpa_bss_add(struct wpa_supplicant *wpa_s,
 	bss->ie_len = res->ie_len;
 	bss->beacon_ie_len = res->beacon_ie_len;
 	os_memcpy(bss + 1, res + 1, res->ie_len + res->beacon_ie_len);
+	wpa_bss_set_hessid(bss);
 
 	dl_list_add_tail(&wpa_s->bss, &bss->list);
 	dl_list_add_tail(&wpa_s->bss_id, &bss->list_id);
@@ -407,6 +424,8 @@ static void wpa_bss_update(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 		}
 		dl_list_add(prev, &bss->list_id);
 	}
+	if (changes & WPA_BSS_IES_CHANGED_FLAG)
+		wpa_bss_set_hessid(bss);
 	dl_list_add_tail(&wpa_s->bss, &bss->list);
 
 	notify_bss_changes(wpa_s, changes, bss);

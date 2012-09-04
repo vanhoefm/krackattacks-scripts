@@ -736,6 +736,9 @@ static int interworking_connect_3gpp(struct wpa_supplicant *wpa_s,
 	struct wpa_cred *cred;
 	struct wpa_ssid *ssid;
 	const u8 *ie;
+	int eap_type;
+	int res;
+	char prefix;
 
 	if (bss->anqp == NULL || bss->anqp->anqp_3gpp == NULL)
 		return -1;
@@ -797,14 +800,40 @@ static int interworking_connect_3gpp(struct wpa_supplicant *wpa_s,
 	if (interworking_set_hs20_params(ssid) < 0)
 		goto fail;
 
-	/* TODO: figure out whether to use EAP-SIM, EAP-AKA, or EAP-AKA' */
-	if (wpa_config_set(ssid, "eap", "SIM", 0) < 0) {
-		wpa_printf(MSG_DEBUG, "EAP-SIM not supported");
+	eap_type = EAP_TYPE_SIM;
+	if (cred->pcsc && wpa_s->scard && scard_supports_umts(wpa_s->scard))
+		eap_type = EAP_TYPE_AKA;
+	if (cred->eap_method && cred->eap_method[0].vendor == EAP_VENDOR_IETF) {
+		if (cred->eap_method[0].method == EAP_TYPE_SIM ||
+		    cred->eap_method[0].method == EAP_TYPE_AKA ||
+		    cred->eap_method[0].method == EAP_TYPE_AKA_PRIME)
+			eap_type = cred->eap_method[0].method;
+	}
+
+	switch (eap_type) {
+	case EAP_TYPE_SIM:
+		prefix = '1';
+		res = wpa_config_set(ssid, "eap", "SIM", 0);
+		break;
+	case EAP_TYPE_AKA:
+		prefix = '0';
+		res = wpa_config_set(ssid, "eap", "AKA", 0);
+		break;
+	case EAP_TYPE_AKA_PRIME:
+		prefix = '6';
+		res = wpa_config_set(ssid, "eap", "AKA'", 0);
+		break;
+	default:
+		res = -1;
+		break;
+	}
+	if (res < 0) {
+		wpa_printf(MSG_DEBUG, "Selected EAP method (%d) not supported",
+			   eap_type);
 		goto fail;
 	}
-	if (cred->pcsc && wpa_s->scard && scard_supports_umts(wpa_s->scard))
-		wpa_config_set(ssid, "eap", "AKA", 0);
-	if (!cred->pcsc && set_root_nai(ssid, cred->imsi, '1') < 0) {
+
+	if (!cred->pcsc && set_root_nai(ssid, cred->imsi, prefix) < 0) {
 		wpa_printf(MSG_DEBUG, "Failed to set Root NAI");
 		goto fail;
 	}

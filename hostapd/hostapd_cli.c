@@ -91,7 +91,12 @@ static const char *commands_help =
 static struct wpa_ctrl *ctrl_conn;
 static int hostapd_cli_quit = 0;
 static int hostapd_cli_attached = 0;
-static const char *ctrl_iface_dir = "/var/run/hostapd";
+
+#ifndef CONFIG_CTRL_IFACE_DIR
+#define CONFIG_CTRL_IFACE_DIR "/var/run/hostapd"
+#endif /* CONFIG_CTRL_IFACE_DIR */
+static const char *ctrl_iface_dir = CONFIG_CTRL_IFACE_DIR;
+
 static char *ctrl_ifname = NULL;
 static const char *pid_file = NULL;
 static const char *action_file = NULL;

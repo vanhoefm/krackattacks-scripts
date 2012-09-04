@@ -1590,6 +1590,38 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 }
 
 
+static struct wpa_bss_anqp *
+interworking_match_anqp_info(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
+{
+	struct wpa_bss *other;
+
+	if (is_zero_ether_addr(bss->hessid))
+		return NULL; /* Cannot be in the same homegenous ESS */
+
+	dl_list_for_each(other, &wpa_s->bss, struct wpa_bss, list) {
+		if (other == bss)
+			continue;
+		if (other->anqp == NULL)
+			continue;
+		if (!(other->flags & WPA_BSS_ANQP_FETCH_TRIED))
+			continue;
+		if (os_memcmp(bss->hessid, other->hessid, ETH_ALEN) != 0)
+			continue;
+		if (bss->ssid_len != other->ssid_len ||
+		    os_memcmp(bss->ssid, other->ssid, bss->ssid_len) != 0)
+			continue;
+
+		wpa_printf(MSG_DEBUG, "Interworking: Share ANQP data with "
+			   "already fetched BSSID " MACSTR " and " MACSTR,
+			   MAC2STR(other->bssid), MAC2STR(bss->bssid));
+		other->anqp->users++;
+		return other->anqp;
+	}
+
+	return NULL;
+}
+
+
 static void interworking_next_anqp_fetch(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_bss *bss;
@@ -1608,6 +1640,12 @@ static void interworking_next_anqp_fetch(struct wpa_supplicant *wpa_s)
 
 		if (!(bss->flags & WPA_BSS_ANQP_FETCH_TRIED)) {
 			if (bss->anqp == NULL) {
+				bss->anqp = interworking_match_anqp_info(wpa_s,
+									 bss);
+				if (bss->anqp) {
+					/* Shared data already fetched */
+					continue;
+				}
 				bss->anqp = wpa_bss_anqp_alloc();
 				if (bss->anqp == NULL)
 					break;

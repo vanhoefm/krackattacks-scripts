@@ -110,9 +110,13 @@ void hs20_parse_rx_hs20_anqp_resp(struct wpa_supplicant *wpa_s,
 	const u8 *pos = data;
 	u8 subtype;
 	struct wpa_bss *bss = wpa_bss_get_bssid(wpa_s, sa);
+	struct wpa_bss_anqp *anqp = NULL;
 
 	if (slen < 2)
 		return;
+
+	if (bss)
+		anqp = bss->anqp;
 
 	subtype = *pos++;
 	slen--;
@@ -130,9 +134,9 @@ void hs20_parse_rx_hs20_anqp_resp(struct wpa_supplicant *wpa_s,
 		wpa_msg(wpa_s, MSG_INFO, "RX-HS20-ANQP " MACSTR
 			" Operator Friendly Name", MAC2STR(sa));
 		wpa_hexdump_ascii(MSG_DEBUG, "oper friendly name", pos, slen);
-		if (bss) {
-			wpabuf_free(bss->hs20_operator_friendly_name);
-			bss->hs20_operator_friendly_name =
+		if (anqp) {
+			wpabuf_free(anqp->hs20_operator_friendly_name);
+			anqp->hs20_operator_friendly_name =
 				wpabuf_alloc_copy(pos, slen);
 		}
 		break;
@@ -140,18 +144,18 @@ void hs20_parse_rx_hs20_anqp_resp(struct wpa_supplicant *wpa_s,
 		wpa_msg(wpa_s, MSG_INFO, "RX-HS20-ANQP " MACSTR
 			" WAN Metrics", MAC2STR(sa));
 		wpa_hexdump_ascii(MSG_DEBUG, "WAN Metrics", pos, slen);
-		if (bss) {
-			wpabuf_free(bss->hs20_wan_metrics);
-			bss->hs20_wan_metrics = wpabuf_alloc_copy(pos, slen);
+		if (anqp) {
+			wpabuf_free(anqp->hs20_wan_metrics);
+			anqp->hs20_wan_metrics = wpabuf_alloc_copy(pos, slen);
 		}
 		break;
 	case HS20_STYPE_CONNECTION_CAPABILITY:
 		wpa_msg(wpa_s, MSG_INFO, "RX-HS20-ANQP " MACSTR
 			" Connection Capability", MAC2STR(sa));
 		wpa_hexdump_ascii(MSG_DEBUG, "conn capability", pos, slen);
-		if (bss) {
-			wpabuf_free(bss->hs20_connection_capability);
-			bss->hs20_connection_capability =
+		if (anqp) {
+			wpabuf_free(anqp->hs20_connection_capability);
+			anqp->hs20_connection_capability =
 				wpabuf_alloc_copy(pos, slen);
 		}
 		break;
@@ -159,9 +163,9 @@ void hs20_parse_rx_hs20_anqp_resp(struct wpa_supplicant *wpa_s,
 		wpa_msg(wpa_s, MSG_INFO, "RX-HS20-ANQP " MACSTR
 			" Operating Class", MAC2STR(sa));
 		wpa_hexdump_ascii(MSG_DEBUG, "Operating Class", pos, slen);
-		if (bss) {
-			wpabuf_free(bss->hs20_operating_class);
-			bss->hs20_operating_class =
+		if (anqp) {
+			wpabuf_free(anqp->hs20_operating_class);
+			anqp->hs20_operating_class =
 				wpabuf_alloc_copy(pos, slen);
 		}
 		break;

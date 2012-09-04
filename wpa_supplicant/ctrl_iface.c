@@ -2772,27 +2772,28 @@ static int print_bss_info(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 #endif /* CONFIG_WIFI_DISPLAY */
 
 #ifdef CONFIG_INTERWORKING
-	if (mask & WPA_BSS_MASK_INTERNETW) {
+	if ((mask & WPA_BSS_MASK_INTERNETW) && bss->anqp) {
+		struct wpa_bss_anqp *anqp = bss->anqp;
 		pos = anqp_add_hex(pos, end, "anqp_venue_name",
-				   bss->anqp_venue_name);
+				   anqp->venue_name);
 		pos = anqp_add_hex(pos, end, "anqp_network_auth_type",
-				   bss->anqp_network_auth_type);
+				   anqp->network_auth_type);
 		pos = anqp_add_hex(pos, end, "anqp_roaming_consortium",
-				   bss->anqp_roaming_consortium);
+				   anqp->roaming_consortium);
 		pos = anqp_add_hex(pos, end, "anqp_ip_addr_type_availability",
-				   bss->anqp_ip_addr_type_availability);
+				   anqp->ip_addr_type_availability);
 		pos = anqp_add_hex(pos, end, "anqp_nai_realm",
-				   bss->anqp_nai_realm);
-		pos = anqp_add_hex(pos, end, "anqp_3gpp", bss->anqp_3gpp);
+				   anqp->nai_realm);
+		pos = anqp_add_hex(pos, end, "anqp_3gpp", anqp->anqp_3gpp);
 		pos = anqp_add_hex(pos, end, "anqp_domain_name",
-				   bss->anqp_domain_name);
+				   anqp->domain_name);
 #ifdef CONFIG_HS20
 		pos = anqp_add_hex(pos, end, "hs20_operator_friendly_name",
-				   bss->hs20_operator_friendly_name);
+				   anqp->hs20_operator_friendly_name);
 		pos = anqp_add_hex(pos, end, "hs20_wan_metrics",
-				   bss->hs20_wan_metrics);
+				   anqp->hs20_wan_metrics);
 		pos = anqp_add_hex(pos, end, "hs20_connection_capability",
-				   bss->hs20_connection_capability);
+				   anqp->hs20_connection_capability);
 #endif /* CONFIG_HS20 */
 	}
 #endif /* CONFIG_INTERWORKING */

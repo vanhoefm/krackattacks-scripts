@@ -737,7 +737,7 @@ static int interworking_connect_3gpp(struct wpa_supplicant *wpa_s,
 	struct wpa_ssid *ssid;
 	const u8 *ie;
 
-	if (bss->anqp_3gpp == NULL)
+	if (bss->anqp == NULL || bss->anqp->anqp_3gpp == NULL)
 		return -1;
 
 	for (cred = wpa_s->conf->cred; cred; cred = cred->next) {
@@ -768,7 +768,7 @@ static int interworking_connect_3gpp(struct wpa_supplicant *wpa_s,
 #ifdef PCSC_FUNCS
 	compare:
 #endif /* PCSC_FUNCS */
-		if (plmn_id_match(bss->anqp_3gpp, imsi, mnc_len))
+		if (plmn_id_match(bss->anqp->anqp_3gpp, imsi, mnc_len))
 			break;
 	}
 	if (cred == NULL)
@@ -923,7 +923,8 @@ static struct wpa_cred * interworking_credentials_available_roaming_consortium(
 
 	ie = wpa_bss_get_ie(bss, WLAN_EID_ROAMING_CONSORTIUM);
 
-	if (ie == NULL && bss->anqp_roaming_consortium == NULL)
+	if (ie == NULL &&
+	    (bss->anqp == NULL || bss->anqp->roaming_consortium == NULL))
 		return NULL;
 
 	if (wpa_s->conf->cred == NULL)
@@ -933,7 +934,10 @@ static struct wpa_cred * interworking_credentials_available_roaming_consortium(
 		if (cred->roaming_consortium_len == 0)
 			continue;
 
-		if (!roaming_consortium_match(ie, bss->anqp_roaming_consortium,
+		if (!roaming_consortium_match(ie,
+					      bss->anqp ?
+					      bss->anqp->roaming_consortium :
+					      NULL,
 					      cred->roaming_consortium,
 					      cred->roaming_consortium_len))
 			continue;
@@ -1123,7 +1127,8 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 		return interworking_connect_roaming_consortium(wpa_s, cred,
 							       bss, ie);
 
-	realm = nai_realm_parse(bss->anqp_nai_realm, &count);
+	realm = nai_realm_parse(bss->anqp ? bss->anqp->nai_realm : NULL,
+				&count);
 	if (realm == NULL) {
 		wpa_printf(MSG_DEBUG, "Interworking: Could not parse NAI "
 			   "Realm list from " MACSTR, MAC2STR(bss->bssid));
@@ -1250,7 +1255,7 @@ static struct wpa_cred * interworking_credentials_available_3gpp(
 	int ret;
 
 #ifdef INTERWORKING_3GPP
-	if (bss->anqp_3gpp == NULL)
+	if (bss->anqp == NULL || bss->anqp->anqp_3gpp == NULL)
 		return NULL;
 
 	for (cred = wpa_s->conf->cred; cred; cred = cred->next) {
@@ -1283,7 +1288,7 @@ static struct wpa_cred * interworking_credentials_available_3gpp(
 #endif /* PCSC_FUNCS */
 		wpa_printf(MSG_DEBUG, "Interworking: Parsing 3GPP info from "
 			   MACSTR, MAC2STR(bss->bssid));
-		ret = plmn_id_match(bss->anqp_3gpp, imsi, mnc_len);
+		ret = plmn_id_match(bss->anqp->anqp_3gpp, imsi, mnc_len);
 		wpa_printf(MSG_DEBUG, "PLMN match %sfound", ret ? "" : "not ");
 		if (ret) {
 			if (selected == NULL ||
@@ -1303,7 +1308,7 @@ static struct wpa_cred * interworking_credentials_available_realm(
 	struct nai_realm *realm;
 	u16 count, i;
 
-	if (bss->anqp_nai_realm == NULL)
+	if (bss->anqp == NULL || bss->anqp->nai_realm == NULL)
 		return NULL;
 
 	if (wpa_s->conf->cred == NULL)
@@ -1311,7 +1316,7 @@ static struct wpa_cred * interworking_credentials_available_realm(
 
 	wpa_printf(MSG_DEBUG, "Interworking: Parsing NAI Realm list from "
 		   MACSTR, MAC2STR(bss->bssid));
-	realm = nai_realm_parse(bss->anqp_nai_realm, &count);
+	realm = nai_realm_parse(bss->anqp->nai_realm, &count);
 	if (realm == NULL) {
 		wpa_printf(MSG_DEBUG, "Interworking: Could not parse NAI "
 			   "Realm list from " MACSTR, MAC2STR(bss->bssid));
@@ -1492,7 +1497,8 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 			continue;
 		}
 		count++;
-		res = interworking_home_sp(wpa_s, bss->anqp_domain_name);
+		res = interworking_home_sp(wpa_s, bss->anqp ?
+					   bss->anqp->domain_name : NULL);
 		if (res > 0)
 			type = "home";
 		else if (res == 0)
@@ -1572,6 +1578,11 @@ static void interworking_next_anqp_fetch(struct wpa_supplicant *wpa_s)
 			continue; /* AP does not support Interworking */
 
 		if (!(bss->flags & WPA_BSS_ANQP_FETCH_TRIED)) {
+			if (bss->anqp == NULL) {
+				bss->anqp = wpa_bss_anqp_alloc();
+				if (bss->anqp == NULL)
+					break;
+			}
 			found++;
 			bss->flags |= WPA_BSS_ANQP_FETCH_TRIED;
 			wpa_msg(wpa_s, MSG_INFO, "Starting ANQP fetch for "
@@ -1667,9 +1678,13 @@ static void interworking_parse_rx_anqp_resp(struct wpa_supplicant *wpa_s,
 {
 	const u8 *pos = data;
 	struct wpa_bss *bss = wpa_bss_get_bssid(wpa_s, sa);
+	struct wpa_bss_anqp *anqp = NULL;
 #ifdef CONFIG_HS20
 	u8 type;
 #endif /* CONFIG_HS20 */
+
+	if (bss)
+		anqp = bss->anqp;
 
 	switch (info_id) {
 	case ANQP_CAPABILITY_LIST:
@@ -1680,9 +1695,9 @@ static void interworking_parse_rx_anqp_resp(struct wpa_supplicant *wpa_s,
 		wpa_msg(wpa_s, MSG_INFO, "RX-ANQP " MACSTR
 			" Venue Name", MAC2STR(sa));
 		wpa_hexdump_ascii(MSG_DEBUG, "ANQP: Venue Name", pos, slen);
-		if (bss) {
-			wpabuf_free(bss->anqp_venue_name);
-			bss->anqp_venue_name = wpabuf_alloc_copy(pos, slen);
+		if (anqp) {
+			wpabuf_free(anqp->venue_name);
+			anqp->venue_name = wpabuf_alloc_copy(pos, slen);
 		}
 		break;
 	case ANQP_NETWORK_AUTH_TYPE:
@@ -1691,10 +1706,9 @@ static void interworking_parse_rx_anqp_resp(struct wpa_supplicant *wpa_s,
 			MAC2STR(sa));
 		wpa_hexdump_ascii(MSG_DEBUG, "ANQP: Network Authentication "
 				  "Type", pos, slen);
-		if (bss) {
-			wpabuf_free(bss->anqp_network_auth_type);
-			bss->anqp_network_auth_type =
-				wpabuf_alloc_copy(pos, slen);
+		if (anqp) {
+			wpabuf_free(anqp->network_auth_type);
+			anqp->network_auth_type = wpabuf_alloc_copy(pos, slen);
 		}
 		break;
 	case ANQP_ROAMING_CONSORTIUM:
@@ -1702,10 +1716,9 @@ static void interworking_parse_rx_anqp_resp(struct wpa_supplicant *wpa_s,
 			" Roaming Consortium list", MAC2STR(sa));
 		wpa_hexdump_ascii(MSG_DEBUG, "ANQP: Roaming Consortium",
 				  pos, slen);
-		if (bss) {
-			wpabuf_free(bss->anqp_roaming_consortium);
-			bss->anqp_roaming_consortium =
-				wpabuf_alloc_copy(pos, slen);
+		if (anqp) {
+			wpabuf_free(anqp->roaming_consortium);
+			anqp->roaming_consortium = wpabuf_alloc_copy(pos, slen);
 		}
 		break;
 	case ANQP_IP_ADDR_TYPE_AVAILABILITY:
@@ -1714,9 +1727,9 @@ static void interworking_parse_rx_anqp_resp(struct wpa_supplicant *wpa_s,
 			MAC2STR(sa));
 		wpa_hexdump(MSG_MSGDUMP, "ANQP: IP Address Availability",
 			    pos, slen);
-		if (bss) {
-			wpabuf_free(bss->anqp_ip_addr_type_availability);
-			bss->anqp_ip_addr_type_availability =
+		if (anqp) {
+			wpabuf_free(anqp->ip_addr_type_availability);
+			anqp->ip_addr_type_availability =
 				wpabuf_alloc_copy(pos, slen);
 		}
 		break;
@@ -1724,9 +1737,9 @@ static void interworking_parse_rx_anqp_resp(struct wpa_supplicant *wpa_s,
 		wpa_msg(wpa_s, MSG_INFO, "RX-ANQP " MACSTR
 			" NAI Realm list", MAC2STR(sa));
 		wpa_hexdump_ascii(MSG_DEBUG, "ANQP: NAI Realm", pos, slen);
-		if (bss) {
-			wpabuf_free(bss->anqp_nai_realm);
-			bss->anqp_nai_realm = wpabuf_alloc_copy(pos, slen);
+		if (anqp) {
+			wpabuf_free(anqp->nai_realm);
+			anqp->nai_realm = wpabuf_alloc_copy(pos, slen);
 		}
 		break;
 	case ANQP_3GPP_CELLULAR_NETWORK:
@@ -1734,18 +1747,18 @@ static void interworking_parse_rx_anqp_resp(struct wpa_supplicant *wpa_s,
 			" 3GPP Cellular Network information", MAC2STR(sa));
 		wpa_hexdump_ascii(MSG_DEBUG, "ANQP: 3GPP Cellular Network",
 				  pos, slen);
-		if (bss) {
-			wpabuf_free(bss->anqp_3gpp);
-			bss->anqp_3gpp = wpabuf_alloc_copy(pos, slen);
+		if (anqp) {
+			wpabuf_free(anqp->anqp_3gpp);
+			anqp->anqp_3gpp = wpabuf_alloc_copy(pos, slen);
 		}
 		break;
 	case ANQP_DOMAIN_NAME:
 		wpa_msg(wpa_s, MSG_INFO, "RX-ANQP " MACSTR
 			" Domain Name list", MAC2STR(sa));
 		wpa_hexdump_ascii(MSG_MSGDUMP, "ANQP: Domain Name", pos, slen);
-		if (bss) {
-			wpabuf_free(bss->anqp_domain_name);
-			bss->anqp_domain_name = wpabuf_alloc_copy(pos, slen);
+		if (anqp) {
+			wpabuf_free(anqp->domain_name);
+			anqp->domain_name = wpabuf_alloc_copy(pos, slen);
 		}
 		break;
 	case ANQP_VENDOR_SPECIFIC:

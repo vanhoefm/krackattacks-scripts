@@ -35,6 +35,48 @@
 #define WPA_BSS_IES_CHANGED_FLAG	BIT(8)
 
 
+struct wpa_bss_anqp * wpa_bss_anqp_alloc(void)
+{
+	struct wpa_bss_anqp *anqp;
+	anqp = os_zalloc(sizeof(*anqp));
+	if (anqp == NULL)
+		return NULL;
+	anqp->users = 1;
+	return anqp;
+}
+
+
+static void wpa_bss_anqp_free(struct wpa_bss_anqp *anqp)
+{
+	if (anqp == NULL)
+		return;
+
+	anqp->users--;
+	if (anqp->users > 0) {
+		/* Another BSS entry holds a pointer to this ANQP info */
+		return;
+	}
+
+#ifdef CONFIG_INTERWORKING
+	wpabuf_free(anqp->venue_name);
+	wpabuf_free(anqp->network_auth_type);
+	wpabuf_free(anqp->roaming_consortium);
+	wpabuf_free(anqp->ip_addr_type_availability);
+	wpabuf_free(anqp->nai_realm);
+	wpabuf_free(anqp->anqp_3gpp);
+	wpabuf_free(anqp->domain_name);
+#endif /* CONFIG_INTERWORKING */
+#ifdef CONFIG_HS20
+	wpabuf_free(anqp->hs20_operator_friendly_name);
+	wpabuf_free(anqp->hs20_wan_metrics);
+	wpabuf_free(anqp->hs20_connection_capability);
+	wpabuf_free(anqp->hs20_operating_class);
+#endif /* CONFIG_HS20 */
+
+	os_free(anqp);
+}
+
+
 static void wpa_bss_remove(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 			   const char *reason)
 {
@@ -58,21 +100,7 @@ static void wpa_bss_remove(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 		" SSID '%s' due to %s", bss->id, MAC2STR(bss->bssid),
 		wpa_ssid_txt(bss->ssid, bss->ssid_len), reason);
 	wpas_notify_bss_removed(wpa_s, bss->bssid, bss->id);
-#ifdef CONFIG_INTERWORKING
-	wpabuf_free(bss->anqp_venue_name);
-	wpabuf_free(bss->anqp_network_auth_type);
-	wpabuf_free(bss->anqp_roaming_consortium);
-	wpabuf_free(bss->anqp_ip_addr_type_availability);
-	wpabuf_free(bss->anqp_nai_realm);
-	wpabuf_free(bss->anqp_3gpp);
-	wpabuf_free(bss->anqp_domain_name);
-#endif /* CONFIG_INTERWORKING */
-#ifdef CONFIG_HS20
-	wpabuf_free(bss->hs20_operator_friendly_name);
-	wpabuf_free(bss->hs20_wan_metrics);
-	wpabuf_free(bss->hs20_connection_capability);
-	wpabuf_free(bss->hs20_operating_class);
-#endif /* CONFIG_HS20 */
+	wpa_bss_anqp_free(bss->anqp);
 	os_free(bss);
 }
 

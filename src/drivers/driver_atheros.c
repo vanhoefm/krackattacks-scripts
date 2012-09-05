@@ -324,8 +324,7 @@ atheros_configure_wpa(struct atheros_driver_data *drv,
 	}
 #endif /* CONFIG_IEEE80211W */
 
-	wpa_printf(MSG_DEBUG, "%s: rsn capabilities=0x%x",
-		   __func__, params->rsn_preauth);
+	wpa_printf(MSG_DEBUG, "%s: rsn capabilities=0x%x", __func__, v);
 	if (set80211param(drv, IEEE80211_PARAM_RSNCAPS, v)) {
 		printf("Unable to set RSN capabilities to 0x%x\n", v);
 		return -1;

@@ -7373,6 +7373,7 @@ static int get_sta_handler(struct nl_msg *msg, void *arg)
 		[NL80211_STA_INFO_TX_BYTES] = { .type = NLA_U32 },
 		[NL80211_STA_INFO_RX_PACKETS] = { .type = NLA_U32 },
 		[NL80211_STA_INFO_TX_PACKETS] = { .type = NLA_U32 },
+		[NL80211_STA_INFO_TX_FAILED] = { .type = NLA_U32 },
 	};
 
 	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
@@ -7408,6 +7409,9 @@ static int get_sta_handler(struct nl_msg *msg, void *arg)
 	if (stats[NL80211_STA_INFO_TX_PACKETS])
 		data->tx_packets =
 			nla_get_u32(stats[NL80211_STA_INFO_TX_PACKETS]);
+	if (stats[NL80211_STA_INFO_TX_FAILED])
+		data->tx_retry_failed =
+			nla_get_u32(stats[NL80211_STA_INFO_TX_FAILED]);
 
 	return NL_SKIP;
 }

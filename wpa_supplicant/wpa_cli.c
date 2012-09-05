@@ -2174,6 +2174,13 @@ static int wpa_cli_cmd_signal_poll(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int wpa_cli_cmd_pktcnt_poll(struct wpa_ctrl *ctrl, int argc,
+				   char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "PKTCNT_POLL");
+}
+
+
 static int wpa_cli_cmd_reauthenticate(struct wpa_ctrl *ctrl, int argc,
 				      char *argv[])
 {
@@ -2619,6 +2626,9 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "signal_poll", wpa_cli_cmd_signal_poll, NULL,
 	  cli_cmd_flag_none,
 	  "= get signal parameters" },
+	{ "pktcnt_poll", wpa_cli_cmd_pktcnt_poll, NULL,
+	  cli_cmd_flag_none,
+	  "= get TX/RX packet counters" },
 	{ "reauthenticate", wpa_cli_cmd_reauthenticate, NULL,
 	  cli_cmd_flag_none,
 	  "= trigger IEEE 802.1X/EAPOL reauthentication" },

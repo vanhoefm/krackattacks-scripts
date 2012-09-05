@@ -30,6 +30,9 @@ static struct wpabuf * p2p_build_invitation_req(struct p2p_data *p2p,
 		for (i = 0; i < p2p->num_groups; i++) {
 			struct p2p_group *g = p2p->groups[i];
 			struct wpabuf *ie;
+			if (os_memcmp(p2p_group_get_interface_addr(g),
+				      p2p->inv_bssid, ETH_ALEN) != 0)
+				continue;
 			ie = p2p_group_get_wfd_ie(g);
 			if (ie) {
 				wfd_ie = ie;

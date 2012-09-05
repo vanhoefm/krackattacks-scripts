@@ -1638,7 +1638,7 @@ struct wpa_driver_ops {
 	int (*set_generic_elem)(void *priv, const u8 *elem, size_t elem_len);
 
 	/**
-	 * read_sta_data - Fetch station data (AP only)
+	 * read_sta_data - Fetch station data
 	 * @priv: Private driver interface data
 	 * @data: Buffer for returning station information
 	 * @addr: MAC address of the station

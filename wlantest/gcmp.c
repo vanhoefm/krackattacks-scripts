@@ -94,6 +94,13 @@ static void gf_mult(const u8 *x, const u8 *y, u8 *z)
 }
 
 
+static void ghash_start(u8 *y)
+{
+	/* Y_0 = 0^128 */
+	os_memset(y, 0, 16);
+}
+
+
 static void ghash(const u8 *h, const u8 *x, size_t xlen, u8 *y)
 {
 	size_t m, i;
@@ -102,12 +109,26 @@ static void ghash(const u8 *h, const u8 *x, size_t xlen, u8 *y)
 
 	m = xlen / 16;
 
-	/* Y_0 = 0^128 */
-	os_memset(y, 0, 16);
 	for (i = 0; i < m; i++) {
 		/* Y_i = (Y^(i-1) XOR X_i) dot H */
 		xor_block(y, xpos);
 		xpos += 16;
+
+		/* dot operation:
+		 * multiplication operation for binary Galois (finite) field of
+		 * 2^128 elements */
+		gf_mult(y, h, tmp);
+		os_memcpy(y, tmp, 16);
+	}
+
+	if (x + xlen > xpos) {
+		/* Add zero padded last block */
+		size_t last = x + xlen - xpos;
+		os_memcpy(tmp, xpos, last);
+		os_memset(tmp + last, 0, sizeof(tmp) - last);
+
+		/* Y_i = (Y^(i-1) XOR X_i) dot H */
+		xor_block(y, tmp);
 
 		/* dot operation:
 		 * multiplication operation for binary Galois (finite) field of
@@ -160,12 +181,10 @@ static int aes_gcm_ae(const u8 *key, const u8 *iv,
 		      const u8 *aad, size_t aad_len,
 		      u8 *crypt, u8 *tag)
 {
-	u8 *auth, *apos;
 	u8 H[AES_BLOCK_SIZE];
 	u8 J0[AES_BLOCK_SIZE];
-	u8 S[16];
+	u8 S[16], len_buf[16];
 	void *aes;
-	size_t padlen;
 	size_t iv_len = 12;
 
 	aes = aes_encrypt_init(key, 16);
@@ -192,38 +211,14 @@ static int aes_gcm_ae(const u8 *key, const u8 *iv,
 	 * 5. S = GHASH_H(A || 0^v || C || 0^u || [len(A)]64 || [len(C)]64)
 	 * (i.e., zero padded to block size A || C and lengths of each in bits)
 	 */
-	auth = os_malloc(32 + 16 + plain_len + 8 + 8);
-	if (auth == NULL) {
-		aes_encrypt_deinit(aes);
-		return -1;
-	}
+	ghash_start(S);
+	ghash(H, aad, aad_len, S);
+	ghash(H, crypt, plain_len, S);
+	WPA_PUT_BE64(len_buf, aad_len * 8);
+	WPA_PUT_BE64(len_buf + 8, plain_len * 8);
+	ghash(H, len_buf, sizeof(len_buf), S);
 
-	apos = auth;
-
-	/* Zero-padded AAD */
-	os_memcpy(apos, aad, aad_len);
-	apos += aad_len;
-	padlen = (16 - aad_len % 16) % 16;
-	os_memset(apos, 0, padlen);
-	apos += padlen;
-
-	/* Zero-padded C */
-	os_memcpy(apos, crypt, plain_len);
-	apos += plain_len;
-	padlen = (16 - plain_len % 16) % 16;
-	os_memset(apos, 0, padlen);
-	apos += padlen;
-
-	/* Length of AAD and C in bits */
-	WPA_PUT_BE64(apos, aad_len * 8);
-	apos += 8;
-	WPA_PUT_BE64(apos, plain_len * 8);
-	apos += 8;
-
-	wpa_hexdump_key(MSG_EXCESSIVE, "GHASH_H input", auth, apos - auth);
-	ghash(H, auth, apos - auth, S);
 	wpa_hexdump_key(MSG_EXCESSIVE, "S = GHASH_H(...)", S, 16);
-	os_free(auth);
 
 	/* 6. T = MSB_t(GCTR_K(J_0, S)) */
 	J0[AES_BLOCK_SIZE - 1] = 0x01;
@@ -245,12 +240,10 @@ static int aes_gcm_ad(const u8 *key, const u8 *iv,
 		      const u8 *aad, size_t aad_len, const u8 *tag,
 		      u8 *plain)
 {
-	u8 *auth, *apos;
 	u8 H[AES_BLOCK_SIZE];
 	u8 J0[AES_BLOCK_SIZE];
-	u8 S[16], T[16];
+	u8 S[16], T[16], len_buf[16];
 	void *aes;
-	size_t padlen;
 	size_t iv_len = 12;
 
 	aes = aes_encrypt_init(key, 16);
@@ -260,7 +253,7 @@ static int aes_gcm_ad(const u8 *key, const u8 *iv,
 	/* 2. Generate hash subkey H = AES_K(0^128) */
 	os_memset(H, 0, sizeof(H));
 	aes_encrypt(aes, H, H);
-	wpa_hexdump(MSG_EXCESSIVE, "Hash subkey H for GHASH", H, sizeof(H));
+	wpa_hexdump_key(MSG_EXCESSIVE, "Hash subkey H for GHASH", H, sizeof(H));
 
 	/* 3. Prepare block J_0 = IV || 0^31 || 1 [len(IV) = 96] */
 	os_memcpy(J0, iv, iv_len);
@@ -277,38 +270,14 @@ static int aes_gcm_ad(const u8 *key, const u8 *iv,
 	 * 6. S = GHASH_H(A || 0^v || C || 0^u || [len(A)]64 || [len(C)]64)
 	 * (i.e., zero padded to block size A || C and lengths of each in bits)
 	 */
-	auth = os_malloc(32 + 16 + crypt_len + 8 + 8);
-	if (auth == NULL) {
-		aes_encrypt_deinit(aes);
-		return -1;
-	}
+	ghash_start(S);
+	ghash(H, aad, aad_len, S);
+	ghash(H, crypt, crypt_len, S);
+	WPA_PUT_BE64(len_buf, aad_len * 8);
+	WPA_PUT_BE64(len_buf + 8, crypt_len * 8);
+	ghash(H, len_buf, sizeof(len_buf), S);
 
-	apos = auth;
-
-	/* Zero-padded AAD */
-	os_memcpy(apos, aad, aad_len);
-	apos += aad_len;
-	padlen = (16 - aad_len % 16) % 16;
-	os_memset(apos, 0, padlen);
-	apos += padlen;
-
-	/* Zero-padded C */
-	os_memcpy(apos, crypt, crypt_len);
-	apos += crypt_len;
-	padlen = (16 - crypt_len % 16) % 16;
-	os_memset(apos, 0, padlen);
-	apos += padlen;
-
-	/* Length of AAD and C in bits */
-	WPA_PUT_BE64(apos, aad_len * 8);
-	apos += 8;
-	WPA_PUT_BE64(apos, crypt_len * 8);
-	apos += 8;
-
-	wpa_hexdump(MSG_EXCESSIVE, "GHASH_H input", auth, apos - auth);
-	ghash(H, auth, apos - auth, S);
-	wpa_hexdump(MSG_EXCESSIVE, "S = GHASH_H(...)", S, 16);
-	os_free(auth);
+	wpa_hexdump_key(MSG_EXCESSIVE, "S = GHASH_H(...)", S, 16);
 
 	/* 7. T' = MSB_t(GCTR_K(J_0, S)) */
 	J0[AES_BLOCK_SIZE - 1] = 0x01;

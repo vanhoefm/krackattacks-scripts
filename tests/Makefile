@@ -39,7 +39,7 @@ LLIBS = -Wl,--start-group $(DLIBS) -Wl,--end-group $(SLIBS)
 
 
 test-aes: test-aes.o $(LIBS)
-	$(LDO) $(LDFLAGS) -o $@ $^
+	$(LDO) $(LDFLAGS) -o $@ $^ $(LLIBS)
 
 test-asn1: test-asn1.o $(LIBS)
 	$(LDO) $(LDFLAGS) -o $@ $^

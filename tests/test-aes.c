@@ -1,6 +1,6 @@
 /*
  * Test program for AES
- * Copyright (c) 2003-2006, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -160,6 +160,152 @@ static int test_cbc(void)
 }
 
 
+/*
+ * GCM test vectors from
+ * http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/gcm/gcm-spec.pdf
+ */
+struct gcm_test_vector {
+	char *k;
+	char *p;
+	char *aad;
+	char *iv;
+	char *c;
+	char *t;
+};
+
+static const struct gcm_test_vector gcm_tests[] = {
+	{
+		/* Test Case 1 */
+		"00000000000000000000000000000000",
+		"",
+		"",
+		"000000000000000000000000",
+		"",
+		"58e2fccefa7e3061367f1d57a4e7455a"
+	},
+	{
+		/* Test Case 2 */
+		"00000000000000000000000000000000",
+		"00000000000000000000000000000000",
+		"",
+		"000000000000000000000000",
+		"0388dace60b6a392f328c2b971b2fe78",
+		"ab6e47d42cec13bdf53a67b21257bddf"
+	},
+	{
+		/* Test Case 3 */
+		"feffe9928665731c6d6a8f9467308308",
+		"d9313225f88406e5a55909c5aff5269a86a7a9531534f7da2e4c303d8a318a721c3c0c95956809532fcf0e2449a6b525b16aedf5aa0de657ba637b391aafd255",
+		"",
+		"cafebabefacedbaddecaf888",
+		"42831ec2217774244b7221b784d0d49ce3aa212f2c02a4e035c17e2329aca12e21d514b25466931c7d8f6a5aac84aa051ba30b396a0aac973d58e091473f5985",
+		"4d5c2af327cd64a62cf35abd2ba6fab4"
+	},
+	{
+		/* Test Case 4 */
+		"feffe9928665731c6d6a8f9467308308",
+		"d9313225f88406e5a55909c5aff5269a86a7a9531534f7da2e4c303d8a318a721c3c0c95956809532fcf0e2449a6b525b16aedf5aa0de657ba637b39",
+		"feedfacedeadbeeffeedfacedeadbeefabaddad2",
+		"cafebabefacedbaddecaf888",
+		"42831ec2217774244b7221b784d0d49ce3aa212f2c02a4e035c17e2329aca12e21d514b25466931c7d8f6a5aac84aa051ba30b396a0aac973d58e091",
+		"5bc94fbc3221a5db94fae95ae7121a47"
+	},
+#if 0 /* Unsupported IV length */
+	{
+		/* Test Case 5 */
+		"feffe9928665731c6d6a8f9467308308",
+		"d9313225f88406e5a55909c5aff5269a86a7a9531534f7da2e4c303d8a318a721c3c0c95956809532fcf0e2449a6b525b16aedf5aa0de657ba637b39",
+		"feedfacedeadbeeffeedfacedeadbeefabaddad2",
+		"cafebabefacedbad",
+		"61353b4c2806934a777ff51fa22a4755699b2a714fcdc6f83766e5f97b6c742373806900e49f24b22b097544d4896b424989b5e1ebac0f07c23f4598",
+		"3612d2e79e3b0785561be14aaca2fccb"
+	},
+#endif
+};
+
+
+static int test_gcm(void)
+{
+	int ret = 0;
+	int i;
+	u8 k[16], aad[32], iv[12], t[16], tag[16];
+	u8 p[64], c[64], tmp[64];
+	size_t p_len, aad_len;
+
+	for (i = 0; i < sizeof(gcm_tests) / sizeof(gcm_tests[0]); i++) {
+		const struct gcm_test_vector *tc = &gcm_tests[i];
+
+		if (hexstr2bin(tc->k, k, sizeof(k))) {
+			printf("Invalid GCM test vector %d (k)\n", i);
+			ret++;
+			continue;
+		}
+
+		p_len = os_strlen(tc->p) / 2;
+		if (hexstr2bin(tc->p, p, p_len)) {
+			printf("Invalid GCM test vector %d (p)\n", i);
+			ret++;
+			continue;
+		}
+
+		aad_len = os_strlen(tc->aad) / 2;
+		if (hexstr2bin(tc->aad, aad, aad_len)) {
+			printf("Invalid GCM test vector %d (aad)\n", i);
+			ret++;
+			continue;
+		}
+
+		if (hexstr2bin(tc->iv, iv, sizeof(iv))) {
+			printf("Invalid GCM test vector %d (iv)\n", i);
+			ret++;
+			continue;
+		}
+
+		if (hexstr2bin(tc->c, c, p_len)) {
+			printf("Invalid GCM test vector %d (c)\n", i);
+			ret++;
+			continue;
+		}
+
+		if (hexstr2bin(tc->t, t, sizeof(t))) {
+			printf("Invalid GCM test vector %d (t)\n", i);
+			ret++;
+			continue;
+		}
+
+		if (aes_128_gcm_ae(k, iv, p, p_len, aad, aad_len, tmp, tag) < 0)
+		{
+			printf("GCM-AE failed (test case %d)\n", i);
+			ret++;
+			continue;
+		}
+
+		if (os_memcmp(c, tmp, p_len) != 0) {
+			printf("GCM-AE mismatch (test case %d)\n", i);
+			ret++;
+		}
+
+		if (os_memcmp(tag, t, sizeof(tag)) != 0) {
+			printf("GCM-AD tag mismatch (test case %d)\n", i);
+			ret++;
+		}
+
+		if (aes_128_gcm_ad(k, iv, c, p_len, aad, aad_len, t, tmp) < 0) {
+			printf("GCM-AD failed (test case %d)\n", i);
+			ret++;
+			continue;
+		}
+
+		if (os_memcmp(p, tmp, p_len) != 0) {
+			printf("GCM-AD mismatch (test case %d)\n", i);
+			ret++;
+		}
+	}
+
+	return ret;
+}
+
+
 /* OMAC1 AES-128 test vectors from
  * http://csrc.nist.gov/CryptoToolkit/modes/proposedmodes/omac/omac-ad.pdf
  * which are same as the examples from NIST SP800-38B
@@ -294,6 +440,8 @@ int main(int argc, char *argv[])
 	ret += test_eax();
 
 	ret += test_cbc();
+
+	ret += test_gcm();
 
 	if (ret)
 		printf("FAILED!\n");

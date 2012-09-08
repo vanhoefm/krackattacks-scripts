@@ -376,6 +376,53 @@ void tkip_get_pn(u8 *pn, const u8 *data)
 u8 * tkip_encrypt(const u8 *tk, u8 *frame, size_t len, size_t hdrlen, u8 *qos,
 		  u8 *pn, int keyid, size_t *encrypted_len)
 {
-	/* TODO */
-	return NULL;
+	u8 michael_hdr[16];
+	u8 mic[8];
+	struct ieee80211_hdr *hdr;
+	u16 fc;
+	const u8 *mic_key;
+	u8 *crypt, *pos;
+	u16 iv16;
+	u32 iv32;
+	u16 ttak[5];
+	u8 rc4key[16];
+
+	if (len < sizeof(*hdr) || len < hdrlen)
+		return NULL;
+	hdr = (struct ieee80211_hdr *) frame;
+	fc = le_to_host16(hdr->frame_control);
+
+	michael_mic_hdr(hdr, michael_hdr);
+	mic_key = tk + ((fc & WLAN_FC_FROMDS) ? 16 : 24);
+	michael_mic(mic_key, michael_hdr, frame + hdrlen, len - hdrlen, mic);
+	wpa_hexdump(MSG_EXCESSIVE, "TKIP: MIC", mic, sizeof(mic));
+
+	iv32 = WPA_GET_BE32(pn);
+	iv16 = WPA_GET_BE16(pn + 4);
+	tkip_mixing_phase1(ttak, tk, hdr->addr2, iv32);
+	wpa_hexdump(MSG_EXCESSIVE, "TKIP TTAK", (u8 *) ttak, sizeof(ttak));
+	tkip_mixing_phase2(rc4key, tk, ttak, iv16);
+	wpa_hexdump(MSG_EXCESSIVE, "TKIP RC4KEY", rc4key, sizeof(rc4key));
+
+	crypt = os_malloc(len + 8 + sizeof(mic) + 4);
+	if (crypt == NULL)
+		return NULL;
+	os_memcpy(crypt, frame, hdrlen);
+	pos = crypt + hdrlen;
+	os_memcpy(pos, rc4key, 3);
+	pos += 3;
+	*pos++ = keyid << 6 | BIT(5);
+	*pos++ = pn[3];
+	*pos++ = pn[2];
+	*pos++ = pn[1];
+	*pos++ = pn[0];
+
+	os_memcpy(pos, frame + hdrlen, len - hdrlen);
+	os_memcpy(pos + len - hdrlen, mic, sizeof(mic));
+	WPA_PUT_LE32(pos + len - hdrlen + sizeof(mic),
+		     crc32(pos, len - hdrlen + sizeof(mic)));
+	wep_crypt(rc4key, pos, len - hdrlen + sizeof(mic) + 4);
+
+	*encrypted_len = len + 8 + sizeof(mic) + 4;
+	return crypt;
 }

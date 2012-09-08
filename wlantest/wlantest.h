@@ -237,6 +237,9 @@ void tkip_get_pn(u8 *pn, const u8 *data);
 u8 * wep_decrypt(struct wlantest *wt, const struct ieee80211_hdr *hdr,
 		 const u8 *data, size_t data_len, size_t *decrypted_len);
 
+u8 * bip_protect(const u8 *igtk, u8 *frame, size_t len, u8 *ipn, int keyid,
+		 size_t *prot_len);
+
 int ctrl_init(struct wlantest *wt);
 void ctrl_deinit(struct wlantest *wt);
 

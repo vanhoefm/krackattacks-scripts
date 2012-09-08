@@ -81,58 +81,23 @@ static int is_robust_mgmt(u8 *frame, size_t len)
 static int wlantest_inject_bip(struct wlantest *wt, struct wlantest_bss *bss,
 			       u8 *frame, size_t len, int incorrect_key)
 {
-	u8 *prot, *pos, *buf;
-	u8 mic[16];
+	u8 *prot;
 	u8 dummy[16];
 	int ret;
-	u16 fc;
-	struct ieee80211_hdr *hdr;
 	size_t plen;
 
 	if (!bss->igtk_set[bss->igtk_idx])
 		return -1;
 
-	plen = len + 18;
-	prot = os_malloc(plen);
+	os_memset(dummy, 0x11, sizeof(dummy));
+	inc_byte_array(bss->ipn[bss->igtk_idx], 6);
+
+	prot = bip_protect(incorrect_key ? dummy : bss->igtk[bss->igtk_idx],
+			   frame, len, bss->ipn[bss->igtk_idx],
+			   bss->igtk_idx, &plen);
 	if (prot == NULL)
 		return -1;
-	os_memcpy(prot, frame, len);
-	pos = prot + len;
-	*pos++ = WLAN_EID_MMIE;
-	*pos++ = 16;
-	WPA_PUT_LE16(pos, bss->igtk_idx);
-	pos += 2;
-	inc_byte_array(bss->ipn[bss->igtk_idx], 6);
-	os_memcpy(pos, bss->ipn[bss->igtk_idx], 6);
-	pos += 6;
-	os_memset(pos, 0, 8); /* MIC */
 
-	buf = os_malloc(plen + 20 - 24);
-	if (buf == NULL) {
-		os_free(prot);
-		return -1;
-	}
-
-	/* BIP AAD: FC(masked) A1 A2 A3 */
-	hdr = (struct ieee80211_hdr *) frame;
-	fc = le_to_host16(hdr->frame_control);
-	fc &= ~(WLAN_FC_RETRY | WLAN_FC_PWRMGT | WLAN_FC_MOREDATA);
-	WPA_PUT_LE16(buf, fc);
-	os_memcpy(buf + 2, hdr->addr1, 3 * ETH_ALEN);
-	os_memcpy(buf + 20, prot + 24, plen - 24);
-	wpa_hexdump(MSG_MSGDUMP, "BIP: AAD|Body(masked)", buf, plen + 20 - 24);
-	/* MIC = L(AES-128-CMAC(AAD || Frame Body(masked)), 0, 64) */
-	os_memset(dummy, 0x11, sizeof(dummy));
-	if (omac1_aes_128(incorrect_key ? dummy : bss->igtk[bss->igtk_idx],
-			  buf, plen + 20 - 24, mic) < 0) {
-		os_free(prot);
-		os_free(buf);
-		return -1;
-	}
-	os_free(buf);
-
-	os_memcpy(pos, mic, 8);
-	wpa_hexdump(MSG_DEBUG, "BIP MMIE MIC", pos, 8);
 
 	ret = inject_frame(wt->monitor_sock, prot, plen);
 	os_free(prot);

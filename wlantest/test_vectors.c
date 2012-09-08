@@ -104,6 +104,40 @@ static void test_vector_ccmp(void)
 }
 
 
+static void test_vector_bip(void)
+{
+	u8 igtk[] = {
+		0x4e, 0xa9, 0x54, 0x3e, 0x09, 0xcf, 0x2b, 0x1e,
+		0xca, 0x66, 0xff, 0xc5, 0x8b, 0xde, 0xcb, 0xcf
+	};
+	u8 ipn[] = { 0x04, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	u8 frame[] = {
+		0xc0, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00,
+		0x02, 0x00
+	};
+	u8 *prot;
+	size_t prot_len;
+
+	wpa_printf(MSG_INFO, "\nIEEE Std 802.11-2012, M.9.1 BIP with broadcast "
+		   "Deauthentication frame\n");
+
+	wpa_hexdump(MSG_INFO, "IGTK", igtk, sizeof(igtk));
+	wpa_hexdump(MSG_INFO, "IPN", ipn, sizeof(ipn));
+	wpa_hexdump(MSG_INFO, "Plaintext frame", frame, sizeof(frame));
+
+	prot = bip_protect(igtk, frame, sizeof(frame), ipn, 4, &prot_len);
+	if (prot == NULL) {
+		wpa_printf(MSG_ERROR, "Failed to protect BIP frame");
+		return;
+	}
+
+	wpa_hexdump(MSG_INFO, "Protected MPDU (without FCS)", prot, prot_len);
+	os_free(prot);
+}
+
+
 static void test_vector_ccmp_mgmt(void)
 {
 	u8 tk[] = { 0x66, 0xed, 0x21, 0x04, 0x2f, 0x9f, 0x26, 0xd7,
@@ -147,6 +181,7 @@ int main(int argc, char *argv[])
 
 	test_vector_tkip();
 	test_vector_ccmp();
+	test_vector_bip();
 	test_vector_ccmp_mgmt();
 
 	os_program_deinit();

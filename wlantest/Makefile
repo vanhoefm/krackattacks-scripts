@@ -76,6 +76,7 @@ TOBJS += crc32.o
 TOBJS += ccmp.o
 TOBJS += tkip.o
 TOBJS += wep.o
+TOBJS += bip.o
 
 
 ../src/utils/libutils.a:

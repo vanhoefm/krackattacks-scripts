@@ -77,6 +77,7 @@ TOBJS += ccmp.o
 TOBJS += tkip.o
 TOBJS += wep.o
 TOBJS += bip.o
+TOBJS += gcmp.o
 
 
 ../src/utils/libutils.a:

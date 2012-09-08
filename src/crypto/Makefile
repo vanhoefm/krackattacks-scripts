@@ -19,6 +19,7 @@ LIB_OBJS= \
 	aes-ctr.o \
 	aes-eax.o \
 	aes-encblock.o \
+	aes-gcm.o \
 	aes-internal.o \
 	aes-internal-dec.o \
 	aes-internal-enc.o \

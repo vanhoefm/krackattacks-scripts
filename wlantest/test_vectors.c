@@ -104,6 +104,39 @@ static void test_vector_ccmp(void)
 }
 
 
+static void test_vector_ccmp_mgmt(void)
+{
+	u8 tk[] = { 0x66, 0xed, 0x21, 0x04, 0x2f, 0x9f, 0x26, 0xd7,
+		    0x11, 0x57, 0x06, 0xe4, 0x04, 0x14, 0xcf, 0x2e };
+	u8 pn[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 };
+	u8 frame[] = {
+		0xc0, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
+		0x01, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x60, 0x00,
+		0x02, 0x00
+	};
+	u8 *enc;
+	size_t enc_len;
+
+	wpa_printf(MSG_INFO, "\nIEEE Std 802.11-2012, M.9.2 CCMP with unicast "
+		   "Deauthentication frame\n");
+
+	wpa_hexdump(MSG_INFO, "TK", tk, sizeof(tk));
+	wpa_hexdump(MSG_INFO, "PN", pn, sizeof(pn));
+	wpa_hexdump(MSG_INFO, "802.11 Header", frame, 24);
+	wpa_hexdump(MSG_INFO, "Plaintext Data", frame + 24, sizeof(frame) - 24);
+
+	enc = ccmp_encrypt(tk, frame, sizeof(frame), 24, NULL, pn, 0, &enc_len);
+	if (enc == NULL) {
+		wpa_printf(MSG_ERROR, "Failed to encrypt CCMP frame");
+		return;
+	}
+
+	wpa_hexdump(MSG_INFO, "Encrypted MPDU (without FCS)", enc, enc_len);
+	os_free(enc);
+}
+
+
 int main(int argc, char *argv[])
 {
 	wpa_debug_level = MSG_EXCESSIVE;
@@ -114,6 +147,7 @@ int main(int argc, char *argv[])
 
 	test_vector_tkip();
 	test_vector_ccmp();
+	test_vector_ccmp_mgmt();
 
 	os_program_deinit();
 

@@ -173,17 +173,16 @@ static void aes_gctr(void *aes, const u8 *icb, const u8 *x, size_t xlen, u8 *y)
 
 
 /**
- * aes_128_gcm_ae - GCM-AE_K(IV, P, A) with len(IV) = 96
+ * aes_128_gcm_ae - GCM-AE_K(IV, P, A)
  */
-int aes_128_gcm_ae(const u8 *key, const u8 *iv,
+int aes_128_gcm_ae(const u8 *key, const u8 *iv, size_t iv_len,
 		   const u8 *plain, size_t plain_len,
 		   const u8 *aad, size_t aad_len, u8 *crypt, u8 *tag)
 {
 	u8 H[AES_BLOCK_SIZE];
-	u8 J0[AES_BLOCK_SIZE];
+	u8 J0[AES_BLOCK_SIZE], J0inc[AES_BLOCK_SIZE];
 	u8 S[16], len_buf[16];
 	void *aes;
-	size_t iv_len = 12;
 
 	aes = aes_encrypt_init(key, 16);
 	if (aes == NULL)
@@ -194,14 +193,27 @@ int aes_128_gcm_ae(const u8 *key, const u8 *iv,
 	aes_encrypt(aes, H, H);
 	wpa_hexdump_key(MSG_EXCESSIVE, "Hash subkey H for GHASH", H, sizeof(H));
 
-	/* 2. Prepare block J_0 = IV || 0^31 || 1 [len(IV) = 96] */
-	os_memcpy(J0, iv, iv_len);
-	os_memset(J0 + iv_len, 0, AES_BLOCK_SIZE - iv_len);
-	J0[AES_BLOCK_SIZE - 1] = 0x01;
+	if (iv_len == 12) {
+		/* 2. Prepare block J_0 = IV || 0^31 || 1 [len(IV) = 96] */
+		os_memcpy(J0, iv, iv_len);
+		os_memset(J0 + iv_len, 0, AES_BLOCK_SIZE - iv_len);
+		J0[AES_BLOCK_SIZE - 1] = 0x01;
+	} else {
+		/*
+		 * s = 128 * ceil(len(IV)/128) - len(IV)
+		 * J_0 = GHASH_H(IV || 0^(s+64) || [len(IV)]_64)
+		 */
+		ghash_start(J0);
+		ghash(H, iv, iv_len, J0);
+		WPA_PUT_BE64(len_buf, 0);
+		WPA_PUT_BE64(len_buf + 8, iv_len * 8);
+		ghash(H, len_buf, sizeof(len_buf), J0);
+	}
 
 	/* 3. C = GCTR_K(inc_32(J_0), P) */
-	inc32(J0);
-	aes_gctr(aes, J0, plain, plain_len, crypt);
+	os_memcpy(J0inc, J0, AES_BLOCK_SIZE);
+	inc32(J0inc);
+	aes_gctr(aes, J0inc, plain, plain_len, crypt);
 
 	/*
 	 * 4. u = 128 * ceil[len(C)/128] - len(C)
@@ -219,7 +231,6 @@ int aes_128_gcm_ae(const u8 *key, const u8 *iv,
 	wpa_hexdump_key(MSG_EXCESSIVE, "S = GHASH_H(...)", S, 16);
 
 	/* 6. T = MSB_t(GCTR_K(J_0, S)) */
-	J0[AES_BLOCK_SIZE - 1] = 0x01;
 	aes_gctr(aes, J0, S, sizeof(S), tag);
 
 	/* 7. Return (C, T) */
@@ -231,17 +242,16 @@ int aes_128_gcm_ae(const u8 *key, const u8 *iv,
 
 
 /**
- * aes_128_gcm_ad - GCM-AD_K(IV, C, A, T) with len(IV) = 96
+ * aes_128_gcm_ad - GCM-AD_K(IV, C, A, T)
  */
-int aes_128_gcm_ad(const u8 *key, const u8 *iv,
+int aes_128_gcm_ad(const u8 *key, const u8 *iv, size_t iv_len,
 		   const u8 *crypt, size_t crypt_len,
 		   const u8 *aad, size_t aad_len, const u8 *tag, u8 *plain)
 {
 	u8 H[AES_BLOCK_SIZE];
-	u8 J0[AES_BLOCK_SIZE];
+	u8 J0[AES_BLOCK_SIZE], J0inc[AES_BLOCK_SIZE];
 	u8 S[16], T[16], len_buf[16];
 	void *aes;
-	size_t iv_len = 12;
 
 	aes = aes_encrypt_init(key, 16);
 	if (aes == NULL)
@@ -252,14 +262,27 @@ int aes_128_gcm_ad(const u8 *key, const u8 *iv,
 	aes_encrypt(aes, H, H);
 	wpa_hexdump_key(MSG_EXCESSIVE, "Hash subkey H for GHASH", H, sizeof(H));
 
-	/* 3. Prepare block J_0 = IV || 0^31 || 1 [len(IV) = 96] */
-	os_memcpy(J0, iv, iv_len);
-	os_memset(J0 + iv_len, 0, AES_BLOCK_SIZE - iv_len);
-	J0[AES_BLOCK_SIZE - 1] = 0x01;
+	if (iv_len == 12) {
+		/* 3. Prepare block J_0 = IV || 0^31 || 1 [len(IV) = 96] */
+		os_memcpy(J0, iv, iv_len);
+		os_memset(J0 + iv_len, 0, AES_BLOCK_SIZE - iv_len);
+		J0[AES_BLOCK_SIZE - 1] = 0x01;
+	} else {
+		/*
+		 * s = 128 * ceil(len(IV)/128) - len(IV)
+		 * J_0 = GHASH_H(IV || 0^(s+64) || [len(IV)]_64)
+		 */
+		ghash_start(J0);
+		ghash(H, iv, iv_len, J0);
+		WPA_PUT_BE64(len_buf, 0);
+		WPA_PUT_BE64(len_buf + 8, iv_len * 8);
+		ghash(H, len_buf, sizeof(len_buf), J0);
+	}
 
 	/* 4. C = GCTR_K(inc_32(J_0), C) */
-	inc32(J0);
-	aes_gctr(aes, J0, crypt, crypt_len, plain);
+	os_memcpy(J0inc, J0, AES_BLOCK_SIZE);
+	inc32(J0inc);
+	aes_gctr(aes, J0inc, crypt, crypt_len, plain);
 
 	/*
 	 * 5. u = 128 * ceil[len(C)/128] - len(C)
@@ -277,7 +300,6 @@ int aes_128_gcm_ad(const u8 *key, const u8 *iv,
 	wpa_hexdump_key(MSG_EXCESSIVE, "S = GHASH_H(...)", S, 16);
 
 	/* 7. T' = MSB_t(GCTR_K(J_0, S)) */
-	J0[AES_BLOCK_SIZE - 1] = 0x01;
 	aes_gctr(aes, J0, S, sizeof(S), T);
 
 	aes_encrypt_deinit(aes);

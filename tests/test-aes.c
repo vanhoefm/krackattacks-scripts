@@ -210,7 +210,6 @@ static const struct gcm_test_vector gcm_tests[] = {
 		"42831ec2217774244b7221b784d0d49ce3aa212f2c02a4e035c17e2329aca12e21d514b25466931c7d8f6a5aac84aa051ba30b396a0aac973d58e091",
 		"5bc94fbc3221a5db94fae95ae7121a47"
 	},
-#if 0 /* Unsupported IV length */
 	{
 		/* Test Case 5 */
 		"feffe9928665731c6d6a8f9467308308",
@@ -220,7 +219,15 @@ static const struct gcm_test_vector gcm_tests[] = {
 		"61353b4c2806934a777ff51fa22a4755699b2a714fcdc6f83766e5f97b6c742373806900e49f24b22b097544d4896b424989b5e1ebac0f07c23f4598",
 		"3612d2e79e3b0785561be14aaca2fccb"
 	},
-#endif
+	{
+		/* Test Case 6 */
+		"feffe9928665731c6d6a8f9467308308",
+		"d9313225f88406e5a55909c5aff5269a86a7a9531534f7da2e4c303d8a318a721c3c0c95956809532fcf0e2449a6b525b16aedf5aa0de657ba637b39",
+		"feedfacedeadbeeffeedfacedeadbeefabaddad2",
+		"9313225df88406e555909c5aff5269aa6a7a9538534f7da1e4c303d2a318a728c3c0c95156809539fcf0e2429a6b525416aedbf5a0de6a57a637b39b",
+		"8ce24998625615b603a033aca13fb894be9112a5c3a211a8ba262a3cca7e2ca701e4a9a4fba43c90ccdcb281d48c7c6fd62875d2aca417034c34aee5",
+		"619cc5aefffe0bfa462af43c1699d050"
+	}
 };
 
 
@@ -228,9 +235,9 @@ static int test_gcm(void)
 {
 	int ret = 0;
 	int i;
-	u8 k[16], aad[32], iv[12], t[16], tag[16];
+	u8 k[16], aad[32], iv[64], t[16], tag[16];
 	u8 p[64], c[64], tmp[64];
-	size_t p_len, aad_len;
+	size_t p_len, aad_len, iv_len;
 
 	for (i = 0; i < sizeof(gcm_tests) / sizeof(gcm_tests[0]); i++) {
 		const struct gcm_test_vector *tc = &gcm_tests[i];
@@ -255,7 +262,8 @@ static int test_gcm(void)
 			continue;
 		}
 
-		if (hexstr2bin(tc->iv, iv, sizeof(iv))) {
+		iv_len = os_strlen(tc->iv) / 2;
+		if (hexstr2bin(tc->iv, iv, iv_len)) {
 			printf("Invalid GCM test vector %d (iv)\n", i);
 			ret++;
 			continue;
@@ -273,8 +281,8 @@ static int test_gcm(void)
 			continue;
 		}
 
-		if (aes_128_gcm_ae(k, iv, p, p_len, aad, aad_len, tmp, tag) < 0)
-		{
+		if (aes_128_gcm_ae(k, iv, iv_len, p, p_len, aad, aad_len, tmp,
+				   tag) < 0) {
 			printf("GCM-AE failed (test case %d)\n", i);
 			ret++;
 			continue;
@@ -286,11 +294,12 @@ static int test_gcm(void)
 		}
 
 		if (os_memcmp(tag, t, sizeof(tag)) != 0) {
-			printf("GCM-AD tag mismatch (test case %d)\n", i);
+			printf("GCM-AE tag mismatch (test case %d)\n", i);
 			ret++;
 		}
 
-		if (aes_128_gcm_ad(k, iv, c, p_len, aad, aad_len, t, tmp) < 0) {
+		if (aes_128_gcm_ad(k, iv, iv_len, c, p_len, aad, aad_len, t,
+				   tmp) < 0) {
 			printf("GCM-AD failed (test case %d)\n", i);
 			ret++;
 			continue;

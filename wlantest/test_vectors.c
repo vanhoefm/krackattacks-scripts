@@ -45,8 +45,8 @@ static void test_vector_tkip(void)
 		0x34, 0x35, 0x36, 0x37,
 		/* 0x68, 0x81, 0xa3, 0xf3, 0xd6, 0x48, 0xd0, 0x3c */
 	};
-	u8 *enc;
-	size_t enc_len;
+	u8 *enc, *plain;
+	size_t enc_len, plain_len;
 
 	wpa_printf(MSG_INFO, "\nIEEE Std 802.11-2012, M.6.3 TKIP test "
 		   "vector\n");
@@ -62,7 +62,25 @@ static void test_vector_tkip(void)
 	}
 
 	wpa_hexdump(MSG_INFO, "Encrypted MPDU (without FCS)", enc, enc_len);
+
+	wpa_debug_level = MSG_INFO;
+	plain = tkip_decrypt(tk, (const struct ieee80211_hdr *) enc,
+			     enc + 24, enc_len - 24, &plain_len);
+	wpa_debug_level = MSG_EXCESSIVE;
 	os_free(enc);
+
+	if (plain == NULL) {
+		wpa_printf(MSG_ERROR, "Failed to decrypt TKIP frame");
+		return;
+	}
+
+	if (plain_len != sizeof(frame) - 24 ||
+	    os_memcmp(plain, frame + 24, plain_len) != 0) {
+		wpa_hexdump(MSG_ERROR, "Decryption result did not match",
+			    plain, plain_len);
+	}
+
+	os_free(plain);
 }
 
 
@@ -79,8 +97,8 @@ static void test_vector_ccmp(void)
 		0x96, 0x7b, 0xb6, 0x2f, 0xb6, 0xcd, 0xa8, 0xeb,
 		0x7e, 0x78, 0xa0, 0x50
 	};
-	u8 *enc;
-	size_t enc_len;
+	u8 *enc, *plain;
+	size_t enc_len, plain_len;
 	u8 fcs[4];
 
 	wpa_printf(MSG_INFO, "\nIEEE Std 802.11-2012, M.6.4 CCMP test "
@@ -100,7 +118,25 @@ static void test_vector_ccmp(void)
 	wpa_hexdump(MSG_INFO, "Encrypted MPDU (without FCS)", enc, enc_len);
 	WPA_PUT_LE32(fcs, crc32(enc, enc_len));
 	wpa_hexdump(MSG_INFO, "FCS", fcs, sizeof(fcs));
+
+	wpa_debug_level = MSG_INFO;
+	plain = ccmp_decrypt(tk, (const struct ieee80211_hdr *) enc,
+			     enc + 24, enc_len - 24, &plain_len);
+	wpa_debug_level = MSG_EXCESSIVE;
 	os_free(enc);
+
+	if (plain == NULL) {
+		wpa_printf(MSG_ERROR, "Failed to decrypt CCMP frame");
+		return;
+	}
+
+	if (plain_len != sizeof(frame) - 24 ||
+	    os_memcmp(plain, frame + 24, plain_len) != 0) {
+		wpa_hexdump(MSG_ERROR, "Decryption result did not match",
+			    plain, plain_len);
+	}
+
+	os_free(plain);
 }
 
 
@@ -149,8 +185,8 @@ static void test_vector_ccmp_mgmt(void)
 		0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x60, 0x00,
 		0x02, 0x00
 	};
-	u8 *enc;
-	size_t enc_len;
+	u8 *enc, *plain;
+	size_t enc_len, plain_len;
 
 	wpa_printf(MSG_INFO, "\nIEEE Std 802.11-2012, M.9.2 CCMP with unicast "
 		   "Deauthentication frame\n");
@@ -167,7 +203,25 @@ static void test_vector_ccmp_mgmt(void)
 	}
 
 	wpa_hexdump(MSG_INFO, "Encrypted MPDU (without FCS)", enc, enc_len);
+
+	wpa_debug_level = MSG_INFO;
+	plain = ccmp_decrypt(tk, (const struct ieee80211_hdr *) enc,
+			     enc + 24, enc_len - 24, &plain_len);
+	wpa_debug_level = MSG_EXCESSIVE;
 	os_free(enc);
+
+	if (plain == NULL) {
+		wpa_printf(MSG_ERROR, "Failed to decrypt CCMP frame");
+		return;
+	}
+
+	if (plain_len != sizeof(frame) - 24 ||
+	    os_memcmp(plain, frame + 24, plain_len) != 0) {
+		wpa_hexdump(MSG_ERROR, "Decryption result did not match",
+			    plain, plain_len);
+	}
+
+	os_free(plain);
 }
 
 

@@ -73,7 +73,7 @@ static void gcmp_aad_nonce(const struct ieee80211_hdr *hdr, const u8 *data,
 }
 
 
-u8 * gcmp_decrypt(const u8 *tk, const struct ieee80211_hdr *hdr,
+u8 * gcmp_decrypt(const u8 *tk, size_t tk_len, const struct ieee80211_hdr *hdr,
 		  const u8 *data, size_t data_len, size_t *decrypted_len)
 {
 	u8 aad[30], nonce[12], *plain;
@@ -95,7 +95,7 @@ u8 * gcmp_decrypt(const u8 *tk, const struct ieee80211_hdr *hdr,
 	wpa_hexdump(MSG_EXCESSIVE, "GCMP AAD", aad, aad_len);
 	wpa_hexdump(MSG_EXCESSIVE, "GCMP nonce", nonce, sizeof(nonce));
 
-	if (aes_gcm_ad(tk, 16, nonce, sizeof(nonce), m, mlen, aad, aad_len,
+	if (aes_gcm_ad(tk, tk_len, nonce, sizeof(nonce), m, mlen, aad, aad_len,
 		       m + mlen, plain) < 0) {
 		u16 seq_ctrl = le_to_host16(hdr->seq_ctrl);
 		wpa_printf(MSG_INFO, "Invalid GCMP frame: A1=" MACSTR
@@ -113,7 +113,8 @@ u8 * gcmp_decrypt(const u8 *tk, const struct ieee80211_hdr *hdr,
 }
 
 
-u8 * gcmp_encrypt(const u8 *tk, u8 *frame, size_t len, size_t hdrlen, u8 *qos,
+u8 * gcmp_encrypt(const u8 *tk, size_t tk_len, u8 *frame, size_t len,
+		  size_t hdrlen, u8 *qos,
 		  u8 *pn, int keyid, size_t *encrypted_len)
 {
 	u8 aad[30], nonce[12], *crypt, *pos;
@@ -146,8 +147,8 @@ u8 * gcmp_encrypt(const u8 *tk, u8 *frame, size_t len, size_t hdrlen, u8 *qos,
 	wpa_hexdump(MSG_EXCESSIVE, "GCMP AAD", aad, aad_len);
 	wpa_hexdump(MSG_EXCESSIVE, "GCMP nonce", nonce, sizeof(nonce));
 
-	if (aes_gcm_ae(tk, 16, nonce, sizeof(nonce), frame + hdrlen, plen, aad,
-		       aad_len, pos, pos + plen) < 0) {
+	if (aes_gcm_ae(tk, tk_len, nonce, sizeof(nonce), frame + hdrlen, plen,
+		       aad, aad_len, pos, pos + plen) < 0) {
 		os_free(crypt);
 		return NULL;
 	}

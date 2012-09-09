@@ -408,6 +408,78 @@ static void test_vector_ccmp_256(void)
 }
 
 
+static void test_vector_bip_gmac_128(void)
+{
+	u8 igtk[] = {
+		0x4e, 0xa9, 0x54, 0x3e, 0x09, 0xcf, 0x2b, 0x1e,
+		0xca, 0x66, 0xff, 0xc5, 0x8b, 0xde, 0xcb, 0xcf
+	};
+	u8 ipn[] = { 0x04, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	u8 frame[] = {
+		0xc0, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00,
+		0x02, 0x00
+	};
+	u8 *prot;
+	size_t prot_len;
+
+	wpa_printf(MSG_INFO, "\nBIP-GMAC-128 with broadcast "
+		   "Deauthentication frame\n");
+
+	wpa_hexdump(MSG_INFO, "IGTK", igtk, sizeof(igtk));
+	wpa_hexdump(MSG_INFO, "IPN", ipn, sizeof(ipn));
+	wpa_hexdump(MSG_INFO, "Plaintext frame", frame, sizeof(frame));
+
+	prot = bip_gmac_protect(igtk, sizeof(igtk), frame, sizeof(frame),
+				ipn, 4, &prot_len);
+	if (prot == NULL) {
+		wpa_printf(MSG_ERROR, "Failed to protect BIP-GMAC-128 frame");
+		return;
+	}
+
+	wpa_hexdump(MSG_INFO, "Protected MPDU (without FCS)", prot, prot_len);
+	os_free(prot);
+}
+
+
+static void test_vector_bip_gmac_256(void)
+{
+	u8 igtk[] = {
+		0x4e, 0xa9, 0x54, 0x3e, 0x09, 0xcf, 0x2b, 0x1e,
+		0xca, 0x66, 0xff, 0xc5, 0x8b, 0xde, 0xcb, 0xcf,
+		0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+		0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f
+	};
+	u8 ipn[] = { 0x04, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	u8 frame[] = {
+		0xc0, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00,
+		0x02, 0x00
+	};
+	u8 *prot;
+	size_t prot_len;
+
+	wpa_printf(MSG_INFO, "\nBIP-GMAC-256 with broadcast "
+		   "Deauthentication frame\n");
+
+	wpa_hexdump(MSG_INFO, "IGTK", igtk, sizeof(igtk));
+	wpa_hexdump(MSG_INFO, "IPN", ipn, sizeof(ipn));
+	wpa_hexdump(MSG_INFO, "Plaintext frame", frame, sizeof(frame));
+
+	prot = bip_gmac_protect(igtk, sizeof(igtk), frame, sizeof(frame),
+				ipn, 4, &prot_len);
+	if (prot == NULL) {
+		wpa_printf(MSG_ERROR, "Failed to protect BIP-GMAC-256 frame");
+		return;
+	}
+
+	wpa_hexdump(MSG_INFO, "Protected MPDU (without FCS)", prot, prot_len);
+	os_free(prot);
+}
+
+
 int main(int argc, char *argv[])
 {
 	wpa_debug_level = MSG_EXCESSIVE;
@@ -423,6 +495,8 @@ int main(int argc, char *argv[])
 	test_vector_gcmp();
 	test_vector_gcmp_256();
 	test_vector_ccmp_256();
+	test_vector_bip_gmac_128();
+	test_vector_bip_gmac_256();
 
 	os_program_deinit();
 

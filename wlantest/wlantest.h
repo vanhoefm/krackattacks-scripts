@@ -243,6 +243,8 @@ u8 * wep_decrypt(struct wlantest *wt, const struct ieee80211_hdr *hdr,
 
 u8 * bip_protect(const u8 *igtk, u8 *frame, size_t len, u8 *ipn, int keyid,
 		 size_t *prot_len);
+u8 * bip_gmac_protect(const u8 *igtk, size_t igtk_len, u8 *frame, size_t len,
+		      u8 *ipn, int keyid, size_t *prot_len);
 
 u8 * gcmp_decrypt(const u8 *tk, size_t tk_len, const struct ieee80211_hdr *hdr,
 		  const u8 *data, size_t data_len, size_t *decrypted_len);

@@ -227,6 +227,10 @@ u8 * ccmp_decrypt(const u8 *tk, const struct ieee80211_hdr *hdr,
 u8 * ccmp_encrypt(const u8 *tk, u8 *frame, size_t len, size_t hdrlen, u8 *qos,
 		  u8 *pn, int keyid, size_t *encrypted_len);
 void ccmp_get_pn(u8 *pn, const u8 *data);
+u8 * ccmp_256_decrypt(const u8 *tk, const struct ieee80211_hdr *hdr,
+		      const u8 *data, size_t data_len, size_t *decrypted_len);
+u8 * ccmp_256_encrypt(const u8 *tk, u8 *frame, size_t len, size_t hdrlen,
+		      u8 *qos, u8 *pn, int keyid, size_t *encrypted_len);
 
 u8 * tkip_decrypt(const u8 *tk, const struct ieee80211_hdr *hdr,
 		  const u8 *data, size_t data_len, size_t *decrypted_len);

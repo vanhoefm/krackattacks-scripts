@@ -350,6 +350,64 @@ static void test_vector_gcmp_256(void)
 }
 
 
+static void test_vector_ccmp_256(void)
+{
+	u8 tk[] = { 0xc9, 0x7c, 0x1f, 0x67, 0xce, 0x37, 0x11, 0x85,
+		    0x51, 0x4a, 0x8a, 0x19, 0xf2, 0xbd, 0xd5, 0x2f,
+		    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+		    0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f };
+	u8 pn[] = { 0xB5, 0x03, 0x97, 0x76, 0xE7, 0x0C };
+	u8 frame[] = {
+		0x08, 0x48, 0xc3, 0x2c, 0x0f, 0xd2, 0xe1, 0x28,
+		0xa5, 0x7c, 0x50, 0x30, 0xf1, 0x84, 0x44, 0x08,
+		0xab, 0xae, 0xa5, 0xb8, 0xfc, 0xba, 0x80, 0x33,
+		0xf8, 0xba, 0x1a, 0x55, 0xd0, 0x2f, 0x85, 0xae,
+		0x96, 0x7b, 0xb6, 0x2f, 0xb6, 0xcd, 0xa8, 0xeb,
+		0x7e, 0x78, 0xa0, 0x50
+	};
+	u8 *enc, *plain;
+	size_t enc_len, plain_len;
+	u8 fcs[4];
+
+	wpa_printf(MSG_INFO, "\nCCMP-256 test vector\n");
+
+	wpa_hexdump(MSG_INFO, "TK", tk, sizeof(tk));
+	wpa_hexdump(MSG_INFO, "PN", pn, sizeof(pn));
+	wpa_hexdump(MSG_INFO, "802.11 Header", frame, 24);
+	wpa_hexdump(MSG_INFO, "Plaintext Data", frame + 24, sizeof(frame) - 24);
+
+	enc = ccmp_256_encrypt(tk, frame, sizeof(frame), 24, NULL, pn, 0,
+			       &enc_len);
+	if (enc == NULL) {
+		wpa_printf(MSG_ERROR, "Failed to encrypt CCMP frame");
+		return;
+	}
+
+	wpa_hexdump(MSG_INFO, "Encrypted MPDU (without FCS)", enc, enc_len);
+	WPA_PUT_LE32(fcs, crc32(enc, enc_len));
+	wpa_hexdump(MSG_INFO, "FCS", fcs, sizeof(fcs));
+
+	wpa_debug_level = MSG_INFO;
+	plain = ccmp_256_decrypt(tk, (const struct ieee80211_hdr *) enc,
+				 enc + 24, enc_len - 24, &plain_len);
+	wpa_debug_level = MSG_EXCESSIVE;
+	os_free(enc);
+
+	if (plain == NULL) {
+		wpa_printf(MSG_ERROR, "Failed to decrypt CCMP-256 frame");
+		return;
+	}
+
+	if (plain_len != sizeof(frame) - 24 ||
+	    os_memcmp(plain, frame + 24, plain_len) != 0) {
+		wpa_hexdump(MSG_ERROR, "Decryption result did not match",
+			    plain, plain_len);
+	}
+
+	os_free(plain);
+}
+
+
 int main(int argc, char *argv[])
 {
 	wpa_debug_level = MSG_EXCESSIVE;
@@ -364,6 +422,7 @@ int main(int argc, char *argv[])
 	test_vector_ccmp_mgmt();
 	test_vector_gcmp();
 	test_vector_gcmp_256();
+	test_vector_ccmp_256();
 
 	os_program_deinit();
 

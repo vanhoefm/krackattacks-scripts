@@ -175,3 +175,93 @@ u8 * ccmp_encrypt(const u8 *tk, u8 *frame, size_t len, size_t hdrlen, u8 *qos,
 
 	return crypt;
 }
+
+
+u8 * ccmp_256_decrypt(const u8 *tk, const struct ieee80211_hdr *hdr,
+		      const u8 *data, size_t data_len, size_t *decrypted_len)
+{
+	u8 aad[30], nonce[13];
+	size_t aad_len;
+	size_t mlen;
+	u8 *plain;
+
+	if (data_len < 8 + 16)
+		return NULL;
+
+	plain = os_malloc(data_len + AES_BLOCK_SIZE);
+	if (plain == NULL)
+		return NULL;
+
+	mlen = data_len - 8 - 16;
+
+	os_memset(aad, 0, sizeof(aad));
+	ccmp_aad_nonce(hdr, data, aad, &aad_len, nonce);
+	wpa_hexdump(MSG_EXCESSIVE, "CCMP-256 AAD", aad, aad_len);
+	wpa_hexdump(MSG_EXCESSIVE, "CCMP-256 nonce", nonce, 13);
+
+	if (aes_ccm_ad(tk, 16, nonce, 16, data + 8, mlen, aad, aad_len,
+		       data + 8 + mlen, plain) < 0) {
+		u16 seq_ctrl = le_to_host16(hdr->seq_ctrl);
+		wpa_printf(MSG_INFO, "Invalid CCMP-256 MIC in frame: A1=" MACSTR
+			   " A2=" MACSTR " A3=" MACSTR " seq=%u frag=%u",
+			   MAC2STR(hdr->addr1), MAC2STR(hdr->addr2),
+			   MAC2STR(hdr->addr3),
+			   WLAN_GET_SEQ_SEQ(seq_ctrl),
+			   WLAN_GET_SEQ_FRAG(seq_ctrl));
+		os_free(plain);
+		return NULL;
+	}
+	wpa_hexdump(MSG_EXCESSIVE, "CCMP-256 decrypted", plain, mlen);
+
+	*decrypted_len = mlen;
+	return plain;
+}
+
+
+u8 * ccmp_256_encrypt(const u8 *tk, u8 *frame, size_t len, size_t hdrlen,
+		      u8 *qos, u8 *pn, int keyid, size_t *encrypted_len)
+{
+	u8 aad[30], nonce[13];
+	size_t aad_len, plen;
+	u8 *crypt, *pos;
+	struct ieee80211_hdr *hdr;
+
+	if (len < hdrlen || hdrlen < 24)
+		return NULL;
+	plen = len - hdrlen;
+
+	crypt = os_malloc(hdrlen + 8 + plen + 16 + AES_BLOCK_SIZE);
+	if (crypt == NULL)
+		return NULL;
+
+	os_memcpy(crypt, frame, hdrlen);
+	hdr = (struct ieee80211_hdr *) crypt;
+	hdr->frame_control |= host_to_le16(WLAN_FC_ISWEP);
+	pos = crypt + hdrlen;
+	*pos++ = pn[5]; /* PN0 */
+	*pos++ = pn[4]; /* PN1 */
+	*pos++ = 0x00; /* Rsvd */
+	*pos++ = 0x20 | (keyid << 6);
+	*pos++ = pn[3]; /* PN2 */
+	*pos++ = pn[2]; /* PN3 */
+	*pos++ = pn[1]; /* PN4 */
+	*pos++ = pn[0]; /* PN5 */
+
+	os_memset(aad, 0, sizeof(aad));
+	ccmp_aad_nonce(hdr, crypt + hdrlen, aad, &aad_len, nonce);
+	wpa_hexdump(MSG_EXCESSIVE, "CCMP-256 AAD", aad, aad_len);
+	wpa_hexdump(MSG_EXCESSIVE, "CCMP-256 nonce", nonce, 13);
+
+	if (aes_ccm_ae(tk, 16, nonce, 16, frame + hdrlen, plen, aad, aad_len,
+		       pos, pos + plen) < 0) {
+		os_free(crypt);
+		return NULL;
+	}
+
+	wpa_hexdump(MSG_EXCESSIVE, "CCMP-256 encrypted", crypt + hdrlen + 8,
+		    plen);
+
+	*encrypted_len = hdrlen + 8 + plen + 16;
+
+	return crypt;
+}

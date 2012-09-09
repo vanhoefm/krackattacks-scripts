@@ -49,5 +49,8 @@ int __must_check aes_gcm_ad(const u8 *key, size_t key_len,
 			    const u8 *crypt, size_t crypt_len,
 			    const u8 *aad, size_t aad_len, const u8 *tag,
 			    u8 *plain);
+int __must_check aes_gmac(const u8 *key, size_t key_len,
+			  const u8 *iv, size_t iv_len,
+			  const u8 *aad, size_t aad_len, u8 *tag);
 
 #endif /* AES_WRAP_H */

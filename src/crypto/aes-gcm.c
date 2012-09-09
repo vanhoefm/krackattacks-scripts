@@ -311,3 +311,11 @@ int aes_gcm_ad(const u8 *key, size_t key_len, const u8 *iv, size_t iv_len,
 
 	return 0;
 }
+
+
+int aes_gmac(const u8 *key, size_t key_len, const u8 *iv, size_t iv_len,
+	     const u8 *aad, size_t aad_len, u8 *tag)
+{
+	return aes_gcm_ae(key, key_len, iv, iv_len, NULL, 0, aad, aad_len, NULL,
+			  tag);
+}

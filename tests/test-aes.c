@@ -407,6 +407,20 @@ static int test_gcm(void)
 			ret++;
 		}
 
+		if (p_len == 0) {
+			if (aes_gmac(k, k_len, iv, iv_len, aad, aad_len, tag) <
+			    0) {
+				printf("GMAC failed (test case %d)\n", i);
+				ret++;
+				continue;
+			}
+
+			if (os_memcmp(tag, t, sizeof(tag)) != 0) {
+				printf("GMAC tag mismatch (test case %d)\n", i);
+				ret++;
+			}
+		}
+
 		if (aes_gcm_ad(k, k_len, iv, iv_len, c, p_len, aad, aad_len,
 			       t, tmp) < 0) {
 			printf("GCM-AD failed (test case %d)\n", i);

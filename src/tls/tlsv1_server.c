@@ -361,9 +361,7 @@ struct tlsv1_server * tlsv1_server_init(struct tlsv1_credentials *cred)
 
 	count = 0;
 	suites = conn->cipher_suites;
-#ifndef CONFIG_CRYPTO_INTERNAL
 	suites[count++] = TLS_RSA_WITH_AES_256_CBC_SHA;
-#endif /* CONFIG_CRYPTO_INTERNAL */
 	suites[count++] = TLS_RSA_WITH_AES_128_CBC_SHA;
 	suites[count++] = TLS_RSA_WITH_3DES_EDE_CBC_SHA;
 	suites[count++] = TLS_RSA_WITH_RC4_128_SHA;
@@ -587,16 +585,12 @@ int tlsv1_server_set_cipher_list(struct tlsv1_server *conn, u8 *ciphers)
 	if (ciphers[0] == TLS_CIPHER_ANON_DH_AES128_SHA) {
 		count = 0;
 		suites = conn->cipher_suites;
-#ifndef CONFIG_CRYPTO_INTERNAL
 		suites[count++] = TLS_RSA_WITH_AES_256_CBC_SHA;
-#endif /* CONFIG_CRYPTO_INTERNAL */
 		suites[count++] = TLS_RSA_WITH_AES_128_CBC_SHA;
 		suites[count++] = TLS_RSA_WITH_3DES_EDE_CBC_SHA;
 		suites[count++] = TLS_RSA_WITH_RC4_128_SHA;
 		suites[count++] = TLS_RSA_WITH_RC4_128_MD5;
-#ifndef CONFIG_CRYPTO_INTERNAL
 		suites[count++] = TLS_DH_anon_WITH_AES_256_CBC_SHA;
-#endif /* CONFIG_CRYPTO_INTERNAL */
 		suites[count++] = TLS_DH_anon_WITH_AES_128_CBC_SHA;
 		suites[count++] = TLS_DH_anon_WITH_3DES_EDE_CBC_SHA;
 		suites[count++] = TLS_DH_anon_WITH_RC4_128_MD5;

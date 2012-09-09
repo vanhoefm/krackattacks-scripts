@@ -1,5 +1,5 @@
 /*
- * Galois/Counter Mode (GCM) and GMAC with AES-128
+ * Galois/Counter Mode (GCM) and GMAC with AES
  *
  * Copyright (c) 2012, Jouni Malinen <j@w1.fi>
  *
@@ -173,18 +173,18 @@ static void aes_gctr(void *aes, const u8 *icb, const u8 *x, size_t xlen, u8 *y)
 
 
 /**
- * aes_128_gcm_ae - GCM-AE_K(IV, P, A)
+ * aes_gcm_ae - GCM-AE_K(IV, P, A)
  */
-int aes_128_gcm_ae(const u8 *key, const u8 *iv, size_t iv_len,
-		   const u8 *plain, size_t plain_len,
-		   const u8 *aad, size_t aad_len, u8 *crypt, u8 *tag)
+int aes_gcm_ae(const u8 *key, size_t key_len, const u8 *iv, size_t iv_len,
+	       const u8 *plain, size_t plain_len,
+	       const u8 *aad, size_t aad_len, u8 *crypt, u8 *tag)
 {
 	u8 H[AES_BLOCK_SIZE];
 	u8 J0[AES_BLOCK_SIZE], J0inc[AES_BLOCK_SIZE];
 	u8 S[16], len_buf[16];
 	void *aes;
 
-	aes = aes_encrypt_init(key, 16);
+	aes = aes_encrypt_init(key, key_len);
 	if (aes == NULL)
 		return -1;
 
@@ -242,18 +242,18 @@ int aes_128_gcm_ae(const u8 *key, const u8 *iv, size_t iv_len,
 
 
 /**
- * aes_128_gcm_ad - GCM-AD_K(IV, C, A, T)
+ * aes_gcm_ad - GCM-AD_K(IV, C, A, T)
  */
-int aes_128_gcm_ad(const u8 *key, const u8 *iv, size_t iv_len,
-		   const u8 *crypt, size_t crypt_len,
-		   const u8 *aad, size_t aad_len, const u8 *tag, u8 *plain)
+int aes_gcm_ad(const u8 *key, size_t key_len, const u8 *iv, size_t iv_len,
+	       const u8 *crypt, size_t crypt_len,
+	       const u8 *aad, size_t aad_len, const u8 *tag, u8 *plain)
 {
 	u8 H[AES_BLOCK_SIZE];
 	u8 J0[AES_BLOCK_SIZE], J0inc[AES_BLOCK_SIZE];
 	u8 S[16], T[16], len_buf[16];
 	void *aes;
 
-	aes = aes_encrypt_init(key, 16);
+	aes = aes_encrypt_init(key, key_len);
 	if (aes == NULL)
 		return -1;
 

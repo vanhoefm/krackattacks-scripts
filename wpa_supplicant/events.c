@@ -1056,6 +1056,8 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 		if (p2p_other_scan_completed(wpa_s->global->p2p) == 1) {
 			wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Pending P2P operation "
 				"stopped scan processing");
+			wpa_s->sta_scan_pending = 1;
+			wpa_supplicant_req_scan(wpa_s, 5, 0);
 			return -1;
 		}
 	}

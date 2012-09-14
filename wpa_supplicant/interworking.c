@@ -59,7 +59,7 @@ static void interworking_reconnect(struct wpa_supplicant *wpa_s)
 		if (now.sec - wpa_s->last_scan.sec <= 5) {
 			wpa_printf(MSG_DEBUG, "Interworking: Old scan results "
 				   "are fresh - connect without new scan");
-			if (wpas_select_network_from_last_scan(wpa_s) == 0)
+			if (wpas_select_network_from_last_scan(wpa_s) >= 0)
 				return;
 		}
 	}

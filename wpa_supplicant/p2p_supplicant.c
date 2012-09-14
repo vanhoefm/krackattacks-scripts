@@ -189,10 +189,13 @@ static int wpas_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 	wpabuf_free(ies);
 
 	if (ret) {
-		if (wpa_s->scanning ||
-		    wpa_s->scan_res_handler == wpas_p2p_scan_res_handler) {
-			wpa_s->global->p2p_cb_on_scan_complete = 1;
-			ret = 1;
+		for (ifs = wpa_s->global->ifaces; ifs; ifs = ifs->next) {
+			if (ifs->scanning ||
+			    ifs->scan_res_handler == wpas_p2p_scan_res_handler) {
+				wpa_s->global->p2p_cb_on_scan_complete = 1;
+				ret = 1;
+				break;
+			}
 		}
 	} else
 		wpa_s->scan_res_handler = wpas_p2p_scan_res_handler;

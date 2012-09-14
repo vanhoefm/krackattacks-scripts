@@ -137,7 +137,7 @@ static int wpas_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 			wpa_printf(MSG_DEBUG, "Delaying P2P scan to allow "
 				   "pending station mode scan to be "
 				   "completed on interface %s", ifs->ifname);
-			wpa_s->p2p_cb_on_scan_complete = 1;
+			wpa_s->global->p2p_cb_on_scan_complete = 1;
 			wpa_supplicant_req_scan(ifs, 0, 0);
 			return 1;
 		}
@@ -191,7 +191,7 @@ static int wpas_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 	if (ret) {
 		if (wpa_s->scanning ||
 		    wpa_s->scan_res_handler == wpas_p2p_scan_res_handler) {
-			wpa_s->p2p_cb_on_scan_complete = 1;
+			wpa_s->global->p2p_cb_on_scan_complete = 1;
 			ret = 1;
 		}
 	} else
@@ -4166,7 +4166,7 @@ void wpas_p2p_stop_find(struct wpa_supplicant *wpa_s)
 	wpa_s->p2p_long_listen = 0;
 	eloop_cancel_timeout(wpas_p2p_long_listen_timeout, wpa_s, NULL);
 	eloop_cancel_timeout(wpas_p2p_join_scan, wpa_s, NULL);
-	wpa_s->p2p_cb_on_scan_complete = 0;
+	wpa_s->global->p2p_cb_on_scan_complete = 0;
 
 	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_MGMT) {
 		wpa_drv_p2p_stop_find(wpa_s);
@@ -4499,9 +4499,9 @@ void wpas_p2p_completed(struct wpa_supplicant *wpa_s)
 	wpas_notify_p2p_group_started(wpa_s, ssid, network_id, 1);
 
 done:
-	if (wpa_s->p2p_cb_on_scan_complete && !wpa_s->global->p2p_disabled &&
+	if (wpa_s->global->p2p_cb_on_scan_complete && !wpa_s->global->p2p_disabled &&
 	    wpa_s->global->p2p != NULL) {
-		wpa_s->p2p_cb_on_scan_complete = 0;
+		wpa_s->global->p2p_cb_on_scan_complete = 0;
 		if (p2p_other_scan_completed(wpa_s->global->p2p) == 1) {
 			wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Pending P2P operation "
 				"continued after successful connection");

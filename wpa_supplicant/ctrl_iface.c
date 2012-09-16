@@ -3520,7 +3520,7 @@ static int p2p_ctrl_invite_persistent(struct wpa_supplicant *wpa_s, char *cmd)
 	char *pos;
 	int id;
 	struct wpa_ssid *ssid;
-	u8 peer[ETH_ALEN];
+	u8 *_peer = NULL, peer[ETH_ALEN];
 	int freq = 0;
 	int ht40;
 
@@ -3530,6 +3530,7 @@ static int p2p_ctrl_invite_persistent(struct wpa_supplicant *wpa_s, char *cmd)
 		pos += 6;
 		if (hwaddr_aton(pos, peer))
 			return -1;
+		_peer = peer;
 	}
 	ssid = wpa_config_get_network(wpa_s->conf, id);
 	if (ssid == NULL || ssid->disabled != 2) {
@@ -3549,8 +3550,7 @@ static int p2p_ctrl_invite_persistent(struct wpa_supplicant *wpa_s, char *cmd)
 
 	ht40 = os_strstr(cmd, " ht40") != NULL;
 
-	return wpas_p2p_invite(wpa_s, pos ? peer : NULL, ssid, NULL, freq,
-			       ht40);
+	return wpas_p2p_invite(wpa_s, _peer, ssid, NULL, freq, ht40);
 }
 
 

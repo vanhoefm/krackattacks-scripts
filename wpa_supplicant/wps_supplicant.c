@@ -1869,6 +1869,7 @@ static int wpas_wps_use_cred(struct wpa_supplicant *wpa_s,
 }
 
 
+#ifdef CONFIG_WPS_ER
 static int wpas_wps_add_nfc_password_token(struct wpa_supplicant *wpa_s,
 					   struct wps_parse_attr *attr)
 {
@@ -1876,6 +1877,7 @@ static int wpas_wps_add_nfc_password_token(struct wpa_supplicant *wpa_s,
 		wpa_s->wps->registrar, attr->oob_dev_password,
 		attr->oob_dev_password_len);
 }
+#endif /* CONFIG_WPS_ER */
 
 
 static int wpas_wps_nfc_tag_process(struct wpa_supplicant *wpa_s,

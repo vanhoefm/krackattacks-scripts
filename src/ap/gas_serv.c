@@ -128,6 +128,7 @@ static void gas_serv_free_dialogs(struct hostapd_data *hapd,
 }
 
 
+#ifdef CONFIG_HS20
 static void anqp_add_hs_capab_list(struct hostapd_data *hapd,
 				   struct wpabuf *buf)
 {
@@ -151,6 +152,7 @@ static void anqp_add_hs_capab_list(struct hostapd_data *hapd,
 		wpabuf_put_u8(buf, HS20_STYPE_OPERATING_CLASS);
 	gas_anqp_set_element_len(buf, len);
 }
+#endif /* CONFIG_HS20 */
 
 
 static void anqp_add_capab_list(struct hostapd_data *hapd,
@@ -174,7 +176,9 @@ static void anqp_add_capab_list(struct hostapd_data *hapd,
 		wpabuf_put_le16(buf, ANQP_3GPP_CELLULAR_NETWORK);
 	if (hapd->conf->domain_name)
 		wpabuf_put_le16(buf, ANQP_DOMAIN_NAME);
+#ifdef CONFIG_HS20
 	anqp_add_hs_capab_list(hapd, buf);
+#endif /* CONFIG_HS20 */
 	gas_anqp_set_element_len(buf, len);
 }
 
@@ -429,6 +433,8 @@ static void anqp_add_domain_name(struct hostapd_data *hapd, struct wpabuf *buf)
 }
 
 
+#ifdef CONFIG_HS20
+
 static void anqp_add_operator_friendly_name(struct hostapd_data *hapd,
 					    struct wpabuf *buf)
 {
@@ -499,6 +505,8 @@ static void anqp_add_operating_class(struct hostapd_data *hapd,
 	}
 }
 
+#endif /* CONFIG_HS20 */
+
 
 static struct wpabuf *
 gas_serv_build_gas_resp_payload(struct hostapd_data *hapd,
@@ -531,6 +539,7 @@ gas_serv_build_gas_resp_payload(struct hostapd_data *hapd,
 	if (request & ANQP_REQ_DOMAIN_NAME)
 		anqp_add_domain_name(hapd, buf);
 
+#ifdef CONFIG_HS20
 	if (request & ANQP_REQ_HS_CAPABILITY_LIST)
 		anqp_add_hs_capab_list(hapd, buf);
 	if (request & ANQP_REQ_OPERATOR_FRIENDLY_NAME)
@@ -541,6 +550,7 @@ gas_serv_build_gas_resp_payload(struct hostapd_data *hapd,
 		anqp_add_connection_capability(hapd, buf);
 	if (request & ANQP_REQ_OPERATING_CLASS)
 		anqp_add_operating_class(hapd, buf);
+#endif /* CONFIG_HS20 */
 
 	return buf;
 }
@@ -649,6 +659,8 @@ static void rx_anqp_query_list(struct hostapd_data *hapd,
 }
 
 
+#ifdef CONFIG_HS20
+
 static void rx_anqp_hs_query_list(struct hostapd_data *hapd, u8 subtype,
 				  struct anqp_query_info *qi)
 {
@@ -754,6 +766,8 @@ static void rx_anqp_vendor_specific(struct hostapd_data *hapd,
 		break;
 	}
 }
+
+#endif /* CONFIG_HS20 */
 
 
 static void gas_serv_req_local_processing(struct hostapd_data *hapd,
@@ -899,9 +913,11 @@ static void gas_serv_rx_gas_initial_req(struct hostapd_data *hapd,
 		case ANQP_QUERY_LIST:
 			rx_anqp_query_list(hapd, pos, pos + elen, &qi);
 			break;
+#ifdef CONFIG_HS20
 		case ANQP_VENDOR_SPECIFIC:
 			rx_anqp_vendor_specific(hapd, pos, pos + elen, &qi);
 			break;
+#endif /* CONFIG_HS20 */
 		default:
 			wpa_printf(MSG_DEBUG, "ANQP: Unsupported Query "
 				   "Request element %u", info_id);

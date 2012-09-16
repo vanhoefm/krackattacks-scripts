@@ -6392,8 +6392,8 @@ static int wpa_driver_nl80211_hapd_send_eapol(
 	pos = (u8 *) (hdr + 1);
 
 	if (qos) {
-		/* add an empty QoS header if needed */
-		pos[0] = 0;
+		/* Set highest priority in QoS header */
+		pos[0] = 7;
 		pos[1] = 0;
 		pos += 2;
 	}

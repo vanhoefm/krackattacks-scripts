@@ -848,12 +848,18 @@ static void wpas_start_wps_go(struct wpa_supplicant *wpa_s,
 {
 	struct wpa_ssid *ssid;
 
-	if (wpas_copy_go_neg_results(wpa_s, params) < 0)
+	wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Starting GO");
+	if (wpas_copy_go_neg_results(wpa_s, params) < 0) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Could not copy GO Negotiation "
+			"results");
 		return;
+	}
 
 	ssid = wpa_config_add_network(wpa_s->conf);
-	if (ssid == NULL)
+	if (ssid == NULL) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Could not add network for GO");
 		return;
+	}
 
 	wpa_s->show_group_started = 0;
 
@@ -890,6 +896,8 @@ static void wpas_start_wps_go(struct wpa_supplicant *wpa_s,
 	wpa_s->connect_without_scan = ssid;
 	wpa_s->reassociate = 1;
 	wpa_s->disconnected = 0;
+	wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Request scan (that will be skipped) to "
+		"start GO)");
 	wpa_supplicant_req_scan(wpa_s, 0, 0);
 }
 
@@ -3731,18 +3739,27 @@ wpas_p2p_get_group_iface(struct wpa_supplicant *wpa_s, int addr_allocated,
 {
 	struct wpa_supplicant *group_wpa_s;
 
-	if (!wpas_p2p_create_iface(wpa_s))
+	if (!wpas_p2p_create_iface(wpa_s)) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Use same interface for group "
+			"operations");
 		return wpa_s;
+	}
 
 	if (wpas_p2p_add_group_interface(wpa_s, go ? WPA_IF_P2P_GO :
-					 WPA_IF_P2P_CLIENT) < 0)
+					 WPA_IF_P2P_CLIENT) < 0) {
+		wpa_msg(wpa_s, MSG_ERROR, "P2P: Failed to add group interface");
 		return NULL;
+	}
 	group_wpa_s = wpas_p2p_init_group_interface(wpa_s, go);
 	if (group_wpa_s == NULL) {
+		wpa_msg(wpa_s, MSG_ERROR, "P2P: Failed to initialize group "
+			"interface");
 		wpas_p2p_remove_pending_group_interface(wpa_s);
 		return NULL;
 	}
 
+	wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Use separate group interface %s",
+		group_wpa_s->ifname);
 	return group_wpa_s;
 }
 

@@ -851,6 +851,8 @@ static void wpa_supplicant_req_new_scan(struct wpa_supplicant *wpa_s,
 		 * we don't wait timeout seconds before transitioning
 		 * to INACTIVE state.
 		 */
+		wpa_dbg(wpa_s, MSG_DEBUG, "Short-circuit new scan request "
+			"since there are no enabled networks");
 		wpa_supplicant_set_state(wpa_s, WPA_INACTIVE);
 		return;
 	}

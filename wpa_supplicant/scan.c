@@ -451,6 +451,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	}
 
 	if (wpa_s->disconnected && !wpa_s->scan_req) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "Disconnected - do not scan");
 		wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
 		return;
 	}

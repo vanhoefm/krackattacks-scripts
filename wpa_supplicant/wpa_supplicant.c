@@ -1246,7 +1246,10 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 				"mode");
 			return;
 		}
-		wpa_supplicant_create_ap(wpa_s, ssid);
+		if (wpa_supplicant_create_ap(wpa_s, ssid) < 0) {
+			wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
+			return;
+		}
 		wpa_s->current_bss = bss;
 #else /* CONFIG_AP */
 		wpa_msg(wpa_s, MSG_ERROR, "AP mode support not included in "

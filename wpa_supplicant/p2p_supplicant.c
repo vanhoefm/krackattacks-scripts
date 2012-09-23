@@ -255,13 +255,12 @@ static int wpas_p2p_group_delete(struct wpa_supplicant *wpa_s,
 	if (ssid == NULL) {
 		/*
 		 * The current SSID was not known, but there may still be a
-		 * pending P2P group interface waiting for provisioning.
+		 * pending P2P group interface waiting for provisioning or a
+		 * P2P group that is trying to reconnect.
 		 */
 		ssid = wpa_s->conf->ssid;
 		while (ssid) {
-			if (ssid->p2p_group &&
-			    (ssid->mode == WPAS_MODE_P2P_GROUP_FORMATION ||
-			     (ssid->key_mgmt & WPA_KEY_MGMT_WPS)))
+			if (ssid->p2p_group)
 				break;
 			ssid = ssid->next;
 		}

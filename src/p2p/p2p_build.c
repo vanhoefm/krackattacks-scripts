@@ -132,7 +132,8 @@ void p2p_buf_add_channel_list(struct wpabuf *buf, const char *country,
 
 	/* Update attribute length */
 	WPA_PUT_LE16(len, (u8 *) wpabuf_put(buf, 0) - len - 2);
-	wpa_printf(MSG_DEBUG, "P2P: * Channel List");
+	wpa_hexdump(MSG_DEBUG, "P2P: * Channel List",
+		    len + 2, (u8 *) wpabuf_put(buf, 0) - len - 2);
 }
 
 

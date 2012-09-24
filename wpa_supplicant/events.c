@@ -854,6 +854,9 @@ static void wpa_supplicant_req_new_scan(struct wpa_supplicant *wpa_s,
 		wpa_dbg(wpa_s, MSG_DEBUG, "Short-circuit new scan request "
 			"since there are no enabled networks");
 		wpa_supplicant_set_state(wpa_s, WPA_INACTIVE);
+#ifdef CONFIG_P2P
+		wpa_s->sta_scan_pending = 0;
+#endif /* CONFIG_P2P */
 		return;
 	}
 	wpa_supplicant_req_scan(wpa_s, timeout_sec, timeout_usec);
@@ -1053,7 +1056,8 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 #ifdef CONFIG_P2P
 	if (wpa_s->global->p2p_cb_on_scan_complete &&
 	    !wpa_s->global->p2p_disabled &&
-	    wpa_s->global->p2p != NULL && !wpa_s->sta_scan_pending) {
+	    wpa_s->global->p2p != NULL && !wpa_s->sta_scan_pending &&
+	    !wpa_s->scan_res_handler) {
 		wpa_s->global->p2p_cb_on_scan_complete = 0;
 		if (p2p_other_scan_completed(wpa_s->global->p2p) == 1) {
 			wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Pending P2P operation "

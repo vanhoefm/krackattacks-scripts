@@ -642,6 +642,8 @@ void p2p_process_go_neg_conf(struct p2p_data *p2p, const u8 *sa,
 			     const u8 *data, size_t len);
 int p2p_connect_send(struct p2p_data *p2p, struct p2p_device *dev);
 u16 p2p_wps_method_pw_id(enum p2p_wps_method wps_method);
+void p2p_reselect_channel(struct p2p_data *p2p,
+			  struct p2p_channels *intersection);
 
 /* p2p_pd.c */
 void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,

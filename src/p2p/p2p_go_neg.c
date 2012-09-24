@@ -336,8 +336,8 @@ static struct wpabuf * p2p_build_go_neg_resp(struct p2p_data *p2p,
 }
 
 
-static void p2p_reselect_channel(struct p2p_data *p2p,
-				 struct p2p_channels *intersection)
+void p2p_reselect_channel(struct p2p_data *p2p,
+			  struct p2p_channels *intersection)
 {
 	struct p2p_reg_class *cl;
 	int freq;

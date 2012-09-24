@@ -233,6 +233,8 @@ void p2p_process_invitation_req(struct p2p_data *p2p, const u8 *sa,
 	}
 
 	if (op_freq) {
+		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Invitation "
+			"processing forced frequency %d MHz", op_freq);
 		if (p2p_freq_to_channel(p2p->cfg->country, op_freq,
 					&reg_class, &channel) < 0) {
 			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
@@ -256,24 +258,89 @@ void p2p_process_invitation_req(struct p2p_data *p2p, const u8 *sa,
 		if (status == P2P_SC_SUCCESS)
 			channels = &intersection;
 	} else {
+		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
+			"P2P: No forced channel from invitation processing - "
+			"figure out best one to use");
+
+		p2p_channels_intersect(&p2p->cfg->channels, &dev->channels,
+				       &intersection);
+		/* Default to own configuration as a starting point */
+		p2p->op_reg_class = p2p->cfg->op_reg_class;
+		p2p->op_channel = p2p->cfg->op_channel;
+		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Own default "
+			"op_class %d channel %d",
+			p2p->op_reg_class, p2p->op_channel);
+
+		/* Use peer preference if specified and compatible */
+		if (msg.operating_channel) {
+			int req_freq;
+			req_freq = p2p_channel_to_freq(
+				(const char *) msg.operating_channel,
+				msg.operating_channel[3],
+				msg.operating_channel[4]);
+			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Peer "
+				"operating channel preference: %d MHz",
+				req_freq);
+			if (req_freq > 0 &&
+			    p2p_channels_includes(&intersection,
+						  msg.operating_channel[3],
+						  msg.operating_channel[4])) {
+				p2p->op_reg_class = msg.operating_channel[3];
+				p2p->op_channel = msg.operating_channel[4];
+				wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
+					"P2P: Use peer preference op_class %d "
+					"channel %d",
+					p2p->op_reg_class, p2p->op_channel);
+			} else {
+				wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
+					"P2P: Cannot use peer channel "
+					"preference");
+			}
+		}
+
+		if (!p2p_channels_includes(&intersection, p2p->op_reg_class,
+					   p2p->op_channel)) {
+			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
+				"P2P: Initially selected channel (op_class %d "
+				"channel %d) not in channel intersection - try "
+				"to reselect",
+				p2p->op_reg_class, p2p->op_channel);
+			p2p_reselect_channel(p2p, &intersection);
+			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
+				"P2P: Re-selection result: op_class %d "
+				"channel %d",
+				p2p->op_reg_class, p2p->op_channel);
+			if (!p2p_channels_includes(&intersection,
+						   p2p->op_reg_class,
+						   p2p->op_channel)) {
+				wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
+					"P2P: Peer does not support selected "
+					"operating channel (reg_class=%u "
+					"channel=%u)",
+					p2p->op_reg_class, p2p->op_channel);
+				status = P2P_SC_FAIL_NO_COMMON_CHANNELS;
+				goto fail;
+			}
+		}
+
 		op_freq = p2p_channel_to_freq(p2p->cfg->country,
-					      p2p->cfg->op_reg_class,
-					      p2p->cfg->op_channel);
+					      p2p->op_reg_class,
+					      p2p->op_channel);
 		if (op_freq < 0) {
 			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 				"P2P: Unknown operational channel "
 				"(country=%c%c reg_class=%u channel=%u)",
 				p2p->cfg->country[0], p2p->cfg->country[1],
-				p2p->cfg->op_reg_class, p2p->cfg->op_channel);
+				p2p->op_reg_class, p2p->op_channel);
 			status = P2P_SC_FAIL_NO_COMMON_CHANNELS;
 			goto fail;
 		}
+		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Selected operating "
+			"channel - %d MHz", op_freq);
 
-		p2p_channels_intersect(&p2p->cfg->channels, &dev->channels,
-				       &intersection);
 		if (status == P2P_SC_SUCCESS) {
-			reg_class = p2p->cfg->op_reg_class;
-			channel = p2p->cfg->op_channel;
+			reg_class = p2p->op_reg_class;
+			channel = p2p->op_channel;
 			channels = &intersection;
 		}
 	}

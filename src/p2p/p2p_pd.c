@@ -278,11 +278,6 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 		return;
 	}
 
-	if (p2p->pending_action_state == P2P_PENDING_PD) {
-		os_memset(p2p->pending_pd_devaddr, 0, ETH_ALEN);
-		p2p->pending_action_state = P2P_NO_PENDING_ACTION;
-	}
-
 	if (dev->dialog_token != msg.dialog_token) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Ignore Provision Discovery Response with "
@@ -290,6 +285,11 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 			msg.dialog_token, dev->dialog_token);
 		p2p_parse_free(&msg);
 		return;
+	}
+
+	if (p2p->pending_action_state == P2P_PENDING_PD) {
+		os_memset(p2p->pending_pd_devaddr, 0, ETH_ALEN);
+		p2p->pending_action_state = P2P_NO_PENDING_ACTION;
 	}
 
 	/*

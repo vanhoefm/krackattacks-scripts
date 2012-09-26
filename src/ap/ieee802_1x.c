@@ -99,8 +99,10 @@ void ieee802_1x_set_sta_authorized(struct hostapd_data *hapd,
 		       "driver (errno=%d).\n", MAC2STR(sta->addr), errno);
 	}
 
-	if (authorized)
+	if (authorized) {
+		os_get_time(&sta->connected_time);
 		accounting_sta_start(hapd, sta);
+	}
 }
 
 

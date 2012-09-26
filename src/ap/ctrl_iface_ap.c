@@ -21,6 +21,28 @@
 #include "ap_drv_ops.h"
 
 
+static int hostapd_get_sta_conn_time(struct sta_info *sta,
+				     char *buf, size_t buflen)
+{
+	struct os_time now, age;
+	int len = 0, ret;
+
+	if (!sta->connected_time.sec)
+		return 0;
+
+	os_get_time(&now);
+	os_time_sub(&now, &sta->connected_time, &age);
+
+	ret = os_snprintf(buf + len, buflen - len, "connected_time=%u\n",
+			  (unsigned int) age.sec);
+	if (ret < 0 || (size_t) ret >= buflen - len)
+		return len;
+	len += ret;
+
+	return len;
+}
+
+
 static int hostapd_ctrl_iface_sta_mib(struct hostapd_data *hapd,
 				      struct sta_info *sta,
 				      char *buf, size_t buflen)
@@ -55,6 +77,10 @@ static int hostapd_ctrl_iface_sta_mib(struct hostapd_data *hapd,
 	if (res >= 0)
 		len += res;
 	res = hostapd_p2p_get_mib_sta(hapd, sta, buf + len, buflen - len);
+	if (res >= 0)
+		len += res;
+
+	res = hostapd_get_sta_conn_time(sta, buf + len, buflen - len);
 	if (res >= 0)
 		len += res;
 

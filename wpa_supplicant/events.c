@@ -84,6 +84,12 @@ static int wpa_supplicant_select_config(struct wpa_supplicant *wpa_s)
 		return -1;
 	}
 
+	if (disallowed_bssid(wpa_s, wpa_s->bssid) ||
+	    disallowed_ssid(wpa_s, ssid->ssid, ssid->ssid_len)) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "Selected BSS is disallowed");
+		return -1;
+	}
+
 	res = wpas_temp_disabled(wpa_s, ssid);
 	if (res > 0) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Selected network is temporarily "
@@ -669,6 +675,16 @@ static struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 
 	if (bss->ssid_len == 0) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "   skip - SSID not known");
+		return NULL;
+	}
+
+	if (disallowed_bssid(wpa_s, bss->bssid)) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "   skip - BSSID disallowed");
+		return NULL;
+	}
+
+	if (disallowed_ssid(wpa_s, bss->ssid, bss->ssid_len)) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "   skip - SSID disallowed");
 		return NULL;
 	}
 

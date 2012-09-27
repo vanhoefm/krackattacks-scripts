@@ -158,6 +158,128 @@ static int set_bssid_filter(struct wpa_supplicant *wpa_s, char *val)
 }
 
 
+static int set_disallow_aps(struct wpa_supplicant *wpa_s, char *val)
+{
+	char *pos;
+	u8 addr[ETH_ALEN], *bssid = NULL, *n;
+	struct wpa_ssid_value *ssid = NULL, *ns;
+	size_t count = 0, ssid_count = 0;
+	struct wpa_ssid *c;
+
+	/*
+	 * disallow_list ::= <ssid_spec> | <bssid_spec> | <disallow_list> | “”
+	 * SSID_SPEC ::= ssid <SSID_HEX>
+	 * BSSID_SPEC ::= bssid <BSSID_HEX>
+	 */
+
+	pos = val;
+	while (pos) {
+		if (*pos == '\0')
+			break;
+		if (os_strncmp(pos, "bssid ", 6) == 0) {
+			int res;
+			pos += 6;
+			res = hwaddr_aton2(pos, addr);
+			if (res < 0) {
+				os_free(ssid);
+				os_free(bssid);
+				wpa_printf(MSG_DEBUG, "Invalid disallow_aps "
+					   "BSSID value '%s'", pos);
+				return -1;
+			}
+			pos += res;
+			n = os_realloc_array(bssid, count + 1, ETH_ALEN);
+			if (n == NULL) {
+				os_free(ssid);
+				os_free(bssid);
+				return -1;
+			}
+			bssid = n;
+			os_memcpy(bssid + count * ETH_ALEN, addr, ETH_ALEN);
+			count++;
+		} else if (os_strncmp(pos, "ssid ", 5) == 0) {
+			char *end;
+			pos += 5;
+
+			end = pos;
+			while (*end) {
+				if (*end == '\0' || *end == ' ')
+					break;
+				end++;
+			}
+
+			ns = os_realloc_array(ssid, ssid_count + 1,
+					      sizeof(struct wpa_ssid_value));
+			if (ns == NULL) {
+				os_free(ssid);
+				os_free(bssid);
+				return -1;
+			}
+			ssid = ns;
+
+			if ((end - pos) & 0x01 || end - pos > 2 * 32 ||
+			    hexstr2bin(pos, ssid[ssid_count].ssid,
+				       (end - pos) / 2) < 0) {
+				os_free(ssid);
+				os_free(bssid);
+				wpa_printf(MSG_DEBUG, "Invalid disallow_aps "
+					   "SSID value '%s'", pos);
+				return -1;
+			}
+			ssid[ssid_count].ssid_len = (end - pos) / 2;
+			wpa_hexdump_ascii(MSG_DEBUG, "disallow_aps SSID",
+					  ssid[ssid_count].ssid,
+					  ssid[ssid_count].ssid_len);
+			ssid_count++;
+			pos = end;
+		} else {
+			wpa_printf(MSG_DEBUG, "Unexpected disallow_aps value "
+				   "'%s'", pos);
+			os_free(ssid);
+			os_free(bssid);
+			return -1;
+		}
+
+		pos = os_strchr(pos, ' ');
+		if (pos)
+			pos++;
+	}
+
+	wpa_hexdump(MSG_DEBUG, "disallow_aps_bssid", bssid, count * ETH_ALEN);
+	os_free(wpa_s->disallow_aps_bssid);
+	wpa_s->disallow_aps_bssid = bssid;
+	wpa_s->disallow_aps_bssid_count = count;
+
+	wpa_printf(MSG_DEBUG, "disallow_aps_ssid_count %d", (int) ssid_count);
+	os_free(wpa_s->disallow_aps_ssid);
+	wpa_s->disallow_aps_ssid = ssid;
+	wpa_s->disallow_aps_ssid_count = ssid_count;
+
+	if (!wpa_s->current_ssid || wpa_s->wpa_state < WPA_AUTHENTICATING)
+		return 0;
+
+	c = wpa_s->current_ssid;
+	if (c->mode != WPAS_MODE_INFRA && c->mode != WPAS_MODE_IBSS)
+		return 0;
+
+	if (!disallowed_bssid(wpa_s, wpa_s->bssid) &&
+	    !disallowed_ssid(wpa_s, c->ssid, c->ssid_len))
+		return 0;
+
+	wpa_printf(MSG_DEBUG, "Disconnect and try to find another network "
+		   "because current AP was marked disallowed");
+
+#ifdef CONFIG_SME
+	wpa_s->sme.prev_bssid_set = 0;
+#endif /* CONFIG_SME */
+	wpa_s->reassociate = 1;
+	wpa_supplicant_deauthenticate(wpa_s, WLAN_REASON_DEAUTH_LEAVING);
+	wpa_supplicant_req_scan(wpa_s, 0, 0);
+
+	return 0;
+}
+
+
 static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 					 char *cmd)
 {
@@ -291,6 +413,8 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_WIFI_DISPLAY */
 	} else if (os_strcasecmp(cmd, "bssid_filter") == 0) {
 		ret = set_bssid_filter(wpa_s, value);
+	} else if (os_strcasecmp(cmd, "disallow_aps") == 0) {
+		ret = set_disallow_aps(wpa_s, value);
 	} else {
 		value[-1] = '=';
 		ret = wpa_config_process_global(wpa_s->conf, cmd, -1);

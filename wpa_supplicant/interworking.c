@@ -1046,6 +1046,17 @@ static int interworking_set_eap_params(struct wpa_ssid *ssid,
 	    wpa_config_set_quoted(ssid, "client_cert", cred->client_cert) < 0)
 		return -1;
 
+#ifdef ANDROID
+	if (cred->private_key &&
+	    os_strncmp(cred->private_key, "keystore://", 11) == 0) {
+		/* Use OpenSSL engine configuration for Android keystore */
+		if (wpa_config_set_quoted(ssid, "engine_id", "keystore") < 0 ||
+		    wpa_config_set_quoted(ssid, "key_id",
+					  cred->private_key + 11) < 0 ||
+		    wpa_config_set(ssid, "engine", "1", 0) < 0)
+			return -1;
+	} else
+#endif /* ANDROID */
 	if (cred->private_key && cred->private_key[0] &&
 	    wpa_config_set_quoted(ssid, "private_key", cred->private_key) < 0)
 		return -1;

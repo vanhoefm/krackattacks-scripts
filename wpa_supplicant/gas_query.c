@@ -453,6 +453,7 @@ int gas_query_req(struct gas_query *gas, const u8 *dst, int freq,
 	if (gas_query_tx(gas, query, req) < 0) {
 		wpa_printf(MSG_DEBUG, "GAS: Failed to send Action frame to "
 			   MACSTR, MAC2STR(query->addr));
+		dl_list_del(&query->list);
 		os_free(query);
 		return -1;
 	}

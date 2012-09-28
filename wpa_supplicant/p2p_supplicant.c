@@ -5045,6 +5045,10 @@ int wpas_p2p_cancel(struct wpa_supplicant *wpa_s)
 			found = 1;
 			eloop_cancel_timeout(wpas_p2p_group_formation_timeout,
 					     wpa_s->parent, NULL);
+			if (wpa_s->p2p_in_provisioning) {
+				wpas_group_formation_completed(wpa_s, 0);
+				break;
+			}
 			wpas_p2p_group_delete(wpa_s,
 					      P2P_GROUP_REMOVAL_REQUESTED);
 			break;

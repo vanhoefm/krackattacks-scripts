@@ -4446,7 +4446,8 @@ static int wpa_driver_nl80211_mlme(struct wpa_driver_nl80211_data *drv,
 
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
 	NLA_PUT_U16(msg, NL80211_ATTR_REASON_CODE, reason_code);
-	NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, addr);
+	if (addr)
+		NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, addr);
 	if (local_state_change)
 		NLA_PUT_FLAG(msg, NL80211_ATTR_LOCAL_STATE_CHANGE);
 
@@ -4467,12 +4468,12 @@ nla_put_failure:
 
 
 static int wpa_driver_nl80211_disconnect(struct wpa_driver_nl80211_data *drv,
-					 const u8 *addr, int reason_code)
+					 int reason_code)
 {
-	wpa_printf(MSG_DEBUG, "%s(addr=" MACSTR " reason_code=%d)",
-		   __func__, MAC2STR(addr), reason_code);
+	wpa_printf(MSG_DEBUG, "%s(reason_code=%d)", __func__, reason_code);
 	drv->associated = 0;
-	return wpa_driver_nl80211_mlme(drv, addr, NL80211_CMD_DISCONNECT,
+	/* Disconnect command doesn't need BSSID - it uses cached value */
+	return wpa_driver_nl80211_mlme(drv, NULL, NL80211_CMD_DISCONNECT,
 				       reason_code, 0);
 }
 
@@ -4483,7 +4484,7 @@ static int wpa_driver_nl80211_deauthenticate(void *priv, const u8 *addr,
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	if (!(drv->capa.flags & WPA_DRIVER_FLAGS_SME))
-		return wpa_driver_nl80211_disconnect(drv, addr, reason_code);
+		return wpa_driver_nl80211_disconnect(drv, reason_code);
 	wpa_printf(MSG_DEBUG, "%s(addr=" MACSTR " reason_code=%d)",
 		   __func__, MAC2STR(addr), reason_code);
 	drv->associated = 0;
@@ -4500,7 +4501,7 @@ static int wpa_driver_nl80211_disassociate(void *priv, const u8 *addr,
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	if (!(drv->capa.flags & WPA_DRIVER_FLAGS_SME))
-		return wpa_driver_nl80211_disconnect(drv, addr, reason_code);
+		return wpa_driver_nl80211_disconnect(drv, reason_code);
 	wpa_printf(MSG_DEBUG, "%s", __func__);
 	drv->associated = 0;
 	return wpa_driver_nl80211_mlme(drv, addr, NL80211_CMD_DISASSOCIATE,
@@ -6617,55 +6618,6 @@ nla_put_failure:
 }
 
 
-static unsigned int nl80211_get_assoc_bssid(struct wpa_driver_nl80211_data *drv,
-					    u8 *bssid)
-{
-	struct nl_msg *msg;
-	int ret;
-	struct nl80211_bss_info_arg arg;
-
-	os_memset(&arg, 0, sizeof(arg));
-	msg = nlmsg_alloc();
-	if (!msg)
-		goto nla_put_failure;
-
-	nl80211_cmd(drv, msg, NLM_F_DUMP, NL80211_CMD_GET_SCAN);
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
-
-	arg.drv = drv;
-	ret = send_and_recv_msgs(drv, msg, bss_info_handler, &arg);
-	msg = NULL;
-	if (ret == 0) {
-		if (is_zero_ether_addr(arg.assoc_bssid))
-			return -ENOTCONN;
-		os_memcpy(bssid, arg.assoc_bssid, ETH_ALEN);
-		return 0;
-	}
-	wpa_printf(MSG_DEBUG, "nl80211: Scan result fetch failed: ret=%d "
-		   "(%s)", ret, strerror(-ret));
-nla_put_failure:
-	nlmsg_free(msg);
-	return drv->assoc_freq;
-}
-
-
-static int nl80211_disconnect(struct wpa_driver_nl80211_data *drv,
-			      const u8 *bssid)
-{
-	u8 addr[ETH_ALEN];
-
-	if (bssid == NULL) {
-		int res = nl80211_get_assoc_bssid(drv, addr);
-		if (res)
-			return res;
-		bssid = addr;
-	}
-
-	return wpa_driver_nl80211_disconnect(drv, bssid,
-					     WLAN_REASON_PREV_AUTH_NOT_VALID);
-}
-
-
 static int wpa_driver_nl80211_connect(
 	struct wpa_driver_nl80211_data *drv,
 	struct wpa_driver_associate_params *params)
@@ -6843,7 +6795,8 @@ skip_auth_type:
 		 * disconnection.
 		 */
 		if (ret == -EALREADY)
-			nl80211_disconnect(drv, params->bssid);
+			wpa_driver_nl80211_disconnect(
+				drv, WLAN_REASON_PREV_AUTH_NOT_VALID);
 		goto nla_put_failure;
 	}
 	ret = 0;

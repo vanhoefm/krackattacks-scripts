@@ -924,6 +924,44 @@ dbus_bool_t wpas_dbus_getter_eap_methods(DBusMessageIter *iter,
 }
 
 
+/**
+ * wpas_dbus_getter_global_capabilities - Request supported global capabilities
+ * @iter: Pointer to incoming dbus message iter
+ * @error: Location to store error on failure
+ * @user_data: Function specific data
+ * Returns: TRUE on success, FALSE on failure
+ *
+ * Getter for "Capabilities" property. Handles requests by dbus clients to
+ * return a list of strings with supported capabilities like AP, RSN IBSS,
+ * and P2P that are determined at compile time.
+ */
+dbus_bool_t wpas_dbus_getter_global_capabilities(DBusMessageIter *iter,
+					         DBusError *error,
+					         void *user_data)
+{
+	const char *capabilities[5] = { NULL, NULL, NULL, NULL, NULL };
+	size_t num_items = 0;
+
+#ifdef CONFIG_AP
+	capabilities[num_items++] = "ap";
+#endif /* CONFIG_AP */
+#ifdef CONFIG_IBSS_RSN
+	capabilities[num_items++] = "ibss-rsn";
+#endif /* CONFIG_IBSS_RSN */
+#ifdef CONFIG_P2P
+	capabilities[num_items++] = "p2p";
+#endif /* CONFIG_P2P */
+#ifdef CONFIG_INTERWORKING
+	capabilities[num_items++] = "interworking";
+#endif /* CONFIG_INTERWORKING */
+
+	return wpas_dbus_simple_array_property_getter(iter,
+						      DBUS_TYPE_STRING,
+						      capabilities,
+						      num_items, error);
+}
+
+
 static int wpas_dbus_get_scan_type(DBusMessage *message, DBusMessageIter *var,
 				   char **type, DBusMessage **reply)
 {

@@ -38,6 +38,8 @@ typedef enum { FALSE = 0, TRUE = 1 } Boolean;
 #define WPA_KEY_MGMT_IEEE8021X_SHA256 BIT(7)
 #define WPA_KEY_MGMT_PSK_SHA256 BIT(8)
 #define WPA_KEY_MGMT_WPS BIT(9)
+#define WPA_KEY_MGMT_SAE BIT(10)
+#define WPA_KEY_MGMT_FT_SAE BIT(11)
 
 static inline int wpa_key_mgmt_wpa_ieee8021x(int akm)
 {
@@ -50,13 +52,21 @@ static inline int wpa_key_mgmt_wpa_psk(int akm)
 {
 	return !!(akm & (WPA_KEY_MGMT_PSK |
 			 WPA_KEY_MGMT_FT_PSK |
-			 WPA_KEY_MGMT_PSK_SHA256));
+			 WPA_KEY_MGMT_PSK_SHA256 |
+			 WPA_KEY_MGMT_SAE));
 }
 
 static inline int wpa_key_mgmt_ft(int akm)
 {
 	return !!(akm & (WPA_KEY_MGMT_FT_PSK |
-			 WPA_KEY_MGMT_FT_IEEE8021X));
+			 WPA_KEY_MGMT_FT_IEEE8021X |
+			 WPA_KEY_MGMT_FT_SAE));
+}
+
+static inline int wpa_key_mgmt_sae(int akm)
+{
+	return !!(akm & (WPA_KEY_MGMT_SAE |
+			 WPA_KEY_MGMT_FT_SAE));
 }
 
 static inline int wpa_key_mgmt_sha256(int akm)
@@ -84,6 +94,7 @@ static inline int wpa_key_mgmt_wpa_any(int akm)
 #define WPA_AUTH_ALG_SHARED BIT(1)
 #define WPA_AUTH_ALG_LEAP BIT(2)
 #define WPA_AUTH_ALG_FT BIT(3)
+#define WPA_AUTH_ALG_SAE BIT(4)
 
 
 enum wpa_alg {
@@ -121,7 +132,9 @@ enum wpa_key_mgmt {
 	KEY_MGMT_FT_PSK,
 	KEY_MGMT_802_1X_SHA256,
 	KEY_MGMT_PSK_SHA256,
-	KEY_MGMT_WPS
+	KEY_MGMT_WPS,
+	KEY_MGMT_SAE,
+	KEY_MGMT_FT_SAE
 };
 
 /**

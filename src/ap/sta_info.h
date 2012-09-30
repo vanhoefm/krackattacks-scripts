@@ -123,6 +123,10 @@ struct sta_info {
 	struct wpabuf *p2p_ie; /* P2P IE from (Re)Association Request */
 
 	struct os_time connected_time;
+
+#ifdef CONFIG_SAE
+	enum { SAE_INIT, SAE_COMMIT, SAE_CONFIRM } sae_state;
+#endif /* CONFIG_SAE */
 };
 
 

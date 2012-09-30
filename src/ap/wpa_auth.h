@@ -291,4 +291,6 @@ int wpa_wnmsleep_igtk_subelem(struct wpa_state_machine *sm, u8 *pos);
 #endif /* CONFIG_IEEE80211W */
 #endif /* CONFIG_IEEE80211V */
 
+int wpa_auth_uses_sae(struct wpa_state_machine *sm);
+
 #endif /* WPA_AUTH_H */

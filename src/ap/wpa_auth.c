@@ -3056,3 +3056,11 @@ void wpa_auth_eapol_key_tx_status(struct wpa_authenticator *wpa_auth,
 				       wpa_send_eapol_timeout, wpa_auth, sm);
 	}
 }
+
+
+int wpa_auth_uses_sae(struct wpa_state_machine *sm)
+{
+	if (sm == NULL)
+		return 0;
+	return wpa_key_mgmt_sae(sm->wpa_key_mgmt);
+}

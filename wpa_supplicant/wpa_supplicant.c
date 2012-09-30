@@ -1073,6 +1073,10 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 	}
 
 	sel = ie.key_mgmt & ssid->key_mgmt;
+#ifdef CONFIG_SAE
+	if (!(wpa_s->drv_flags & WPA_DRIVER_FLAGS_SAE))
+		sel &= ~(WPA_KEY_MGMT_SAE | WPA_KEY_MGMT_FT_SAE);
+#endif /* CONFIG_SAE */
 	if (0) {
 #ifdef CONFIG_IEEE80211R
 	} else if (sel & WPA_KEY_MGMT_FT_IEEE8021X) {
@@ -1082,6 +1086,14 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 		wpa_s->key_mgmt = WPA_KEY_MGMT_FT_PSK;
 		wpa_dbg(wpa_s, MSG_DEBUG, "WPA: using KEY_MGMT FT/PSK");
 #endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_SAE
+	} else if (sel & WPA_KEY_MGMT_SAE) {
+		wpa_s->key_mgmt = WPA_KEY_MGMT_SAE;
+		wpa_dbg(wpa_s, MSG_DEBUG, "RSN: using KEY_MGMT SAE");
+	} else if (sel & WPA_KEY_MGMT_FT_SAE) {
+		wpa_s->key_mgmt = WPA_KEY_MGMT_FT_SAE;
+		wpa_dbg(wpa_s, MSG_DEBUG, "RSN: using KEY_MGMT FT/SAE");
+#endif /* CONFIG_SAE */
 #ifdef CONFIG_IEEE80211W
 	} else if (sel & WPA_KEY_MGMT_IEEE8021X_SHA256) {
 		wpa_s->key_mgmt = WPA_KEY_MGMT_IEEE8021X_SHA256;

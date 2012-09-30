@@ -747,6 +747,16 @@ struct wpa_config {
 	 *     matching network block
 	 */
 	int auto_interworking;
+
+	/**
+	 * p2p_go_ht40 - Default mode for HT40 enable when operating as GO.
+	 *
+	 * This will take effect for p2p_group_add, p2p_connect, and p2p_invite.
+	 * Note that regulatory constraints and driver capabilities are
+	 * consulted anyway, so setting it to 1 can't do real harm.
+	 * By default: 0 (disabled)
+	 */
+	int p2p_go_ht40;
 };
 
 

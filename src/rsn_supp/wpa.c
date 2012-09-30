@@ -1836,6 +1836,10 @@ static u32 wpa_key_mgmt_suite(struct wpa_sm *sm)
 	case WPA_KEY_MGMT_PSK_SHA256:
 		return RSN_AUTH_KEY_MGMT_PSK_SHA256;
 #endif /* CONFIG_IEEE80211W */
+	case WPA_KEY_MGMT_CCKM:
+		return (sm->proto == WPA_PROTO_RSN ?
+			RSN_AUTH_KEY_MGMT_CCKM:
+			WPA_AUTH_KEY_MGMT_CCKM);
 	case WPA_KEY_MGMT_WPA_NONE:
 		return WPA_AUTH_KEY_MGMT_NONE;
 	default:

@@ -83,6 +83,8 @@ static int wpa_gen_wpa_ie_wpa(u8 *wpa_ie, size_t wpa_ie_len,
 		RSN_SELECTOR_PUT(pos, WPA_AUTH_KEY_MGMT_PSK_OVER_802_1X);
 	} else if (key_mgmt == WPA_KEY_MGMT_WPA_NONE) {
 		RSN_SELECTOR_PUT(pos, WPA_AUTH_KEY_MGMT_NONE);
+	} else if (key_mgmt == WPA_KEY_MGMT_CCKM) {
+		RSN_SELECTOR_PUT(pos, WPA_AUTH_KEY_MGMT_CCKM);
 	} else {
 		wpa_printf(MSG_WARNING, "Invalid key management type (%d).",
 			   key_mgmt);
@@ -152,6 +154,8 @@ static int wpa_gen_wpa_ie_rsn(u8 *rsn_ie, size_t rsn_ie_len,
 		RSN_SELECTOR_PUT(pos, RSN_AUTH_KEY_MGMT_UNSPEC_802_1X);
 	} else if (key_mgmt == WPA_KEY_MGMT_PSK) {
 		RSN_SELECTOR_PUT(pos, RSN_AUTH_KEY_MGMT_PSK_OVER_802_1X);
+	} else if (key_mgmt == WPA_KEY_MGMT_CCKM) {
+		RSN_SELECTOR_PUT(pos, RSN_AUTH_KEY_MGMT_CCKM);
 #ifdef CONFIG_IEEE80211R
 	} else if (key_mgmt == WPA_KEY_MGMT_FT_IEEE8021X) {
 		RSN_SELECTOR_PUT(pos, RSN_AUTH_KEY_MGMT_FT_802_1X);

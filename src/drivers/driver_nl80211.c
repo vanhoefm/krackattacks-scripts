@@ -4209,6 +4209,14 @@ static int wpa_driver_nl80211_set_key(const char *ifname, void *priv,
 			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
 				    WLAN_CIPHER_SUITE_AES_CMAC);
 			break;
+		case WPA_ALG_SMS4:
+			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
+				    WLAN_CIPHER_SUITE_SMS4);
+			break;
+		case WPA_ALG_KRK:
+			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
+				    WLAN_CIPHER_SUITE_KRK);
+			break;
 		default:
 			wpa_printf(MSG_ERROR, "%s: Unsupported encryption "
 				   "algorithm %d", __func__, alg);
@@ -6709,6 +6717,9 @@ skip_auth_type:
 		int cipher;
 
 		switch (params->pairwise_suite) {
+		case CIPHER_SMS4:
+			cipher = WLAN_CIPHER_SUITE_SMS4;
+			break;
 		case CIPHER_WEP40:
 			cipher = WLAN_CIPHER_SUITE_WEP40;
 			break;
@@ -6733,6 +6744,9 @@ skip_auth_type:
 		int cipher;
 
 		switch (params->group_suite) {
+		case CIPHER_SMS4:
+			cipher = WLAN_CIPHER_SUITE_SMS4;
+			break;
 		case CIPHER_WEP40:
 			cipher = WLAN_CIPHER_SUITE_WEP40;
 			break;
@@ -6754,10 +6768,14 @@ skip_auth_type:
 	}
 
 	if (params->key_mgmt_suite == KEY_MGMT_802_1X ||
-	    params->key_mgmt_suite == KEY_MGMT_PSK) {
+	    params->key_mgmt_suite == KEY_MGMT_PSK ||
+	    params->key_mgmt_suite == KEY_MGMT_CCKM) {
 		int mgmt = WLAN_AKM_SUITE_PSK;
 
 		switch (params->key_mgmt_suite) {
+		case KEY_MGMT_CCKM:
+			mgmt = WLAN_AKM_SUITE_CCKM;
+			break;
 		case KEY_MGMT_802_1X:
 			mgmt = WLAN_AKM_SUITE_8021X;
 			break;

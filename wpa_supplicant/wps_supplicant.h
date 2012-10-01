@@ -96,7 +96,7 @@ static inline u8 wpas_wps_get_req_type(struct wpa_ssid *ssid)
 
 static inline int wpas_wps_ssid_bss_match(struct wpa_supplicant *wpa_s,
 					  struct wpa_ssid *ssid,
-					  struct wpa_scan_res *bss)
+					  struct wpa_bss *bss)
 {
 	return -1;
 }

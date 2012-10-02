@@ -110,6 +110,7 @@ struct wps_data * wps_init(const struct wps_config *cfg)
 		data->new_ap_settings =
 			os_malloc(sizeof(*data->new_ap_settings));
 		if (data->new_ap_settings == NULL) {
+			os_free(data->dev_password);
 			os_free(data);
 			return NULL;
 		}

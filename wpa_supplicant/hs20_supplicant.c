@@ -79,8 +79,10 @@ int hs20_anqp_send_req(struct wpa_supplicant *wpa_s, const u8 *dst, u32 stypes,
 
 	freq = wpa_s->assoc_freq;
 	bss = wpa_bss_get_bssid(wpa_s, dst);
-	if (bss)
+	if (bss) {
+		wpa_bss_anqp_unshare_alloc(bss);
 		freq = bss->freq;
+	}
 	if (freq <= 0)
 		return -1;
 

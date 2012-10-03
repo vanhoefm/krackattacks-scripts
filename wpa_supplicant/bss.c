@@ -62,6 +62,60 @@ struct wpa_bss_anqp * wpa_bss_anqp_alloc(void)
 }
 
 
+static struct wpa_bss_anqp * wpa_bss_anqp_clone(struct wpa_bss_anqp *anqp)
+{
+	struct wpa_bss_anqp *n;
+
+	n = os_zalloc(sizeof(*n));
+	if (n == NULL)
+		return NULL;
+
+#define ANQP_DUP(f) if (anqp->f) n->f = wpabuf_dup(anqp->f)
+#ifdef CONFIG_INTERWORKING
+	ANQP_DUP(venue_name);
+	ANQP_DUP(network_auth_type);
+	ANQP_DUP(roaming_consortium);
+	ANQP_DUP(ip_addr_type_availability);
+	ANQP_DUP(nai_realm);
+	ANQP_DUP(anqp_3gpp);
+	ANQP_DUP(domain_name);
+#endif /* CONFIG_INTERWORKING */
+#ifdef CONFIG_HS20
+	ANQP_DUP(hs20_operator_friendly_name);
+	ANQP_DUP(hs20_wan_metrics);
+	ANQP_DUP(hs20_connection_capability);
+	ANQP_DUP(hs20_operating_class);
+#endif /* CONFIG_HS20 */
+#undef ANQP_DUP
+
+	return n;
+}
+
+
+int wpa_bss_anqp_unshare_alloc(struct wpa_bss *bss)
+{
+	struct wpa_bss_anqp *anqp;
+
+	if (bss->anqp && bss->anqp->users > 1) {
+		/* allocated, but shared - clone an unshared copy */
+		anqp = wpa_bss_anqp_clone(bss->anqp);
+		if (anqp == NULL)
+			return -1;
+		anqp->users = 1;
+		bss->anqp->users--;
+		bss->anqp = anqp;
+		return 0;
+	}
+
+	if (bss->anqp)
+		return 0; /* already allocated and not shared */
+
+	/* not allocated - allocate a new storage area */
+	bss->anqp = wpa_bss_anqp_alloc();
+	return bss->anqp ? 0 : -1;
+}
+
+
 static void wpa_bss_anqp_free(struct wpa_bss_anqp *anqp)
 {
 	if (anqp == NULL)

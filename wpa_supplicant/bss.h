@@ -113,5 +113,6 @@ struct wpabuf * wpa_bss_get_vendor_ie_multi_beacon(const struct wpa_bss *bss,
 int wpa_bss_get_max_rate(const struct wpa_bss *bss);
 int wpa_bss_get_bit_rates(const struct wpa_bss *bss, u8 **rates);
 struct wpa_bss_anqp * wpa_bss_anqp_alloc(void);
+int wpa_bss_anqp_unshare_alloc(struct wpa_bss *bss);
 
 #endif /* BSS_H */

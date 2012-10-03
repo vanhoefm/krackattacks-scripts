@@ -141,9 +141,16 @@ void hs20_parse_rx_hs20_anqp_resp(struct wpa_supplicant *wpa_s,
 		}
 		break;
 	case HS20_STYPE_WAN_METRICS:
+		wpa_hexdump(MSG_DEBUG, "WAN Metrics", pos, slen);
+		if (slen < 13) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "HS 2.0: Too short WAN "
+				"Metrics value from " MACSTR, MAC2STR(sa));
+			break;
+		}
 		wpa_msg(wpa_s, MSG_INFO, "RX-HS20-ANQP " MACSTR
-			" WAN Metrics", MAC2STR(sa));
-		wpa_hexdump_ascii(MSG_DEBUG, "WAN Metrics", pos, slen);
+			" WAN Metrics %02x:%u:%u:%u:%u:%u", MAC2STR(sa),
+			pos[0], WPA_GET_LE32(pos + 1), WPA_GET_LE32(pos + 5),
+			pos[9], pos[10], WPA_GET_LE16(pos + 11));
 		if (anqp) {
 			wpabuf_free(anqp->hs20_wan_metrics);
 			anqp->hs20_wan_metrics = wpabuf_alloc_copy(pos, slen);

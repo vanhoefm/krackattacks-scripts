@@ -323,6 +323,14 @@ struct wpa_ssid {
 	int disabled;
 
 	/**
+	 * disabled_for_connect - Whether this network was temporarily disabled
+	 *
+	 * This flag is used to reenable all the temporarily disabled networks
+	 * after either the success or failure of a WPS connection.
+	 */
+	int disabled_for_connect;
+
+	/**
 	 * peerkey -  Whether PeerKey handshake for direct links is allowed
 	 *
 	 * This is only used when both RSN/WPA2 and IEEE 802.11e (QoS) are

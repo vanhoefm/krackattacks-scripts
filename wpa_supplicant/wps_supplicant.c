@@ -487,11 +487,46 @@ static void wpa_supplicant_wps_event_fail(struct wpa_supplicant *wpa_s,
 }
 
 
+static void wpas_wps_reenable_networks_cb(void *eloop_ctx, void *timeout_ctx);
+
+static void wpas_wps_reenable_networks(struct wpa_supplicant *wpa_s)
+{
+	struct wpa_ssid *ssid;
+
+	eloop_cancel_timeout(wpas_wps_reenable_networks_cb, wpa_s, NULL);
+
+	for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next) {
+		if (ssid->disabled_for_connect && ssid->disabled) {
+			ssid->disabled_for_connect = 0;
+			ssid->disabled = 0;
+			wpas_notify_network_enabled_changed(wpa_s, ssid);
+		}
+	}
+}
+
+
+static void wpas_wps_reenable_networks_cb(void *eloop_ctx, void *timeout_ctx)
+{
+	struct wpa_supplicant *wpa_s = eloop_ctx;
+	/* Enable the networks disabled during wpas_wps_reassoc */
+	wpas_wps_reenable_networks(wpa_s);
+}
+
+
 static void wpa_supplicant_wps_event_success(struct wpa_supplicant *wpa_s)
 {
 	wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_SUCCESS);
 	wpa_s->wps_success = 1;
 	wpas_notify_wps_event_success(wpa_s);
+
+	/*
+	 * Enable the networks disabled during wpas_wps_reassoc after 10
+	 * seconds. The 10 seconds timer is to allow the data connection to be
+	 * formed before allowing other networks to be selected.
+	 */
+	eloop_register_timeout(10, 0, wpas_wps_reenable_networks_cb, wpa_s,
+			       NULL);
+
 #ifdef CONFIG_P2P
 	wpas_p2p_wps_success(wpa_s, wpa_s->bssid, 0);
 #endif /* CONFIG_P2P */
@@ -690,6 +725,9 @@ static void wpas_clear_wps(struct wpa_supplicant *wpa_s)
 
 	prev_current = wpa_s->current_ssid;
 
+	/* Enable the networks disabled during wpas_wps_reassoc */
+	wpas_wps_reenable_networks(wpa_s);
+
 	eloop_cancel_timeout(wpas_wps_timeout, wpa_s, NULL);
 
 	/* Remove any existing WPS network from configuration */
@@ -819,6 +857,7 @@ static void wpas_wps_reassoc(struct wpa_supplicant *wpa_s,
 	ssid = wpa_s->conf->ssid;
 	while (ssid) {
 		int was_disabled = ssid->disabled;
+		ssid->disabled_for_connect = 0;
 		/*
 		 * In case the network object corresponds to a persistent group
 		 * then do not send out network disabled signal. In addition,
@@ -827,9 +866,12 @@ static void wpas_wps_reassoc(struct wpa_supplicant *wpa_s,
 		 */
 		if (was_disabled != 2) {
 			ssid->disabled = ssid != selected;
-			if (was_disabled != ssid->disabled)
+			if (was_disabled != ssid->disabled) {
+				if (ssid->disabled)
+					ssid->disabled_for_connect = 1;
 				wpas_notify_network_enabled_changed(wpa_s,
 								    ssid);
+			}
 		}
 		ssid = ssid->next;
 	}
@@ -940,8 +982,10 @@ int wpas_wps_cancel(struct wpa_supplicant *wpa_s)
 		wpa_supplicant_deauthenticate(wpa_s,
 					      WLAN_REASON_DEAUTH_LEAVING);
 		wpas_clear_wps(wpa_s);
-	} else
+	} else {
+		wpas_wps_reenable_networks(wpa_s);
 		wpas_wps_clear_ap_info(wpa_s);
+	}
 
 	return 0;
 }
@@ -1247,6 +1291,7 @@ int wpas_wps_init(struct wpa_supplicant *wpa_s)
 void wpas_wps_deinit(struct wpa_supplicant *wpa_s)
 {
 	eloop_cancel_timeout(wpas_wps_timeout, wpa_s, NULL);
+	eloop_cancel_timeout(wpas_wps_reenable_networks_cb, wpa_s, NULL);
 	wpas_wps_clear_ap_info(wpa_s);
 
 	if (wpa_s->wps == NULL)

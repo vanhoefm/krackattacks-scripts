@@ -260,7 +260,7 @@ static int wpas_p2p_group_delete(struct wpa_supplicant *wpa_s,
 		 */
 		ssid = wpa_s->conf->ssid;
 		while (ssid) {
-			if (ssid->p2p_group)
+			if (ssid->p2p_group && ssid->disabled != 2)
 				break;
 			ssid = ssid->next;
 		}

@@ -45,14 +45,16 @@ static struct wpabuf * sme_auth_build_sae_commit(struct wpa_supplicant *wpa_s)
 {
 	struct wpabuf *buf;
 
-	buf = wpabuf_alloc(4 + 4);
+	buf = wpabuf_alloc(4 + 2);
 	if (buf == NULL)
 		return NULL;
 
 	wpabuf_put_le16(buf, 1); /* Transaction seq# */
 	wpabuf_put_le16(buf, WLAN_STATUS_SUCCESS);
-	wpabuf_put_str(buf, "TEST");
-	/* TODO: full SAE commit */
+	wpabuf_put_le16(buf, 19); /* Finite Cyclic Group */
+	/* TODO: Anti-Clogging Token (if requested) */
+	/* TODO: Scalar */
+	/* TODO: Element */
 
 	return buf;
 }
@@ -62,14 +64,15 @@ static struct wpabuf * sme_auth_build_sae_confirm(struct wpa_supplicant *wpa_s)
 {
 	struct wpabuf *buf;
 
-	buf = wpabuf_alloc(4 + 4);
+	buf = wpabuf_alloc(4 + 2);
 	if (buf == NULL)
 		return NULL;
 
 	wpabuf_put_le16(buf, 2); /* Transaction seq# */
 	wpabuf_put_le16(buf, WLAN_STATUS_SUCCESS);
-	wpabuf_put_str(buf, "TEST");
-	/* TODO: full SAE confirm */
+	wpabuf_put_le16(buf, wpa_s->sme.sae_send_confirm);
+	wpa_s->sme.sae_send_confirm++;
+	/* TODO: Confirm */
 
 	return buf;
 }
@@ -330,6 +333,7 @@ void sme_send_authentication(struct wpa_supplicant *wpa_s,
 			return;
 		params.sae_data = wpabuf_head(resp);
 		params.sae_data_len = wpabuf_len(resp);
+		wpa_s->sme.sae_state = start ? SME_SAE_COMMIT : SME_SAE_CONFIRM;
 	}
 #endif /* CONFIG_SAE */
 
@@ -374,11 +378,47 @@ void sme_send_authentication(struct wpa_supplicant *wpa_s,
 void sme_authenticate(struct wpa_supplicant *wpa_s,
 		      struct wpa_bss *bss, struct wpa_ssid *ssid)
 {
+	wpa_s->sme.sae_state = SME_SAE_INIT;
+	wpa_s->sme.sae_send_confirm = 0;
 	sme_send_authentication(wpa_s, bss, ssid, 1);
 }
 
 
 #ifdef CONFIG_SAE
+
+static int sme_sae_process_commit(struct wpa_supplicant *wpa_s, const u8 *data,
+				  size_t len)
+{
+	/* Check Finite Cyclic Group */
+	if (len < 2)
+		return -1;
+	if (WPA_GET_LE16(data) != 19) {
+		wpa_printf(MSG_DEBUG, "SAE: Unsupported Finite Cyclic Group %u",
+			   WPA_GET_LE16(data));
+		return -1;
+	}
+
+	/* TODO */
+
+	return 0;
+}
+
+
+static int sme_sae_process_confirm(struct wpa_supplicant *wpa_s, const u8 *data,
+				   size_t len)
+{
+	u16 rc;
+
+	if (len < 2)
+		return -1;
+	rc = WPA_GET_LE16(data);
+	wpa_printf(MSG_DEBUG, "SAE: peer-send-confirm %u", rc);
+
+	/* TODO */
+	return 0;
+}
+
+
 static int sme_sae_auth(struct wpa_supplicant *wpa_s, u16 auth_transaction,
 			u16 status_code, const u8 *data, size_t len)
 {
@@ -394,11 +434,19 @@ static int sme_sae_auth(struct wpa_supplicant *wpa_s, u16 auth_transaction,
 		if (wpa_s->current_bss == NULL ||
 		    wpa_s->current_ssid == NULL)
 			return -1;
+		if (wpa_s->sme.sae_state != SME_SAE_COMMIT)
+			return -1;
+		if (sme_sae_process_commit(wpa_s, data, len) < 0)
+			return -1;
 		sme_send_authentication(wpa_s, wpa_s->current_bss,
 					wpa_s->current_ssid, 0);
 		return 0;
 	} else if (auth_transaction == 2) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "SME SAE confirm");
+		if (wpa_s->sme.sae_state != SME_SAE_CONFIRM)
+			return -1;
+		if (sme_sae_process_confirm(wpa_s, data, len) < 0)
+			return -1;
 		return 1;
 	}
 
@@ -441,9 +489,16 @@ void sme_event_auth(struct wpa_supplicant *wpa_s, union wpa_event_data *data)
 
 #ifdef CONFIG_SAE
 	if (data->auth.auth_type == WLAN_AUTH_SAE) {
-		if (sme_sae_auth(wpa_s, data->auth.auth_transaction,
-				 data->auth.status_code, data->auth.ies,
-				 data->auth.ies_len) != 1)
+		int res;
+		res = sme_sae_auth(wpa_s, data->auth.auth_transaction,
+				   data->auth.status_code, data->auth.ies,
+				   data->auth.ies_len);
+		if (res < 0) {
+			wpas_connection_failed(wpa_s, wpa_s->pending_bssid);
+			wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
+
+		}
+		if (res != 1)
 			return;
 	}
 #endif /* CONFIG_SAE */

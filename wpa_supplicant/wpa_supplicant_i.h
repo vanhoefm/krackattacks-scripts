@@ -467,6 +467,12 @@ struct wpa_supplicant {
 		u8 sched_obss_scan;
 		u16 obss_scan_int;
 		u16 bss_max_idle_period;
+		enum {
+			SME_SAE_INIT,
+			SME_SAE_COMMIT,
+			SME_SAE_CONFIRM
+		} sae_state;
+		u16 sae_send_confirm;
 	} sme;
 #endif /* CONFIG_SME */
 

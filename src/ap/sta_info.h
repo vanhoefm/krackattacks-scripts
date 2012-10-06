@@ -126,6 +126,7 @@ struct sta_info {
 
 #ifdef CONFIG_SAE
 	enum { SAE_INIT, SAE_COMMIT, SAE_CONFIRM } sae_state;
+	u16 sae_send_confirm;
 #endif /* CONFIG_SAE */
 };
 

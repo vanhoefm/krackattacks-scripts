@@ -829,6 +829,14 @@ const u8 * eap_peer_tls_process_init(struct eap_sm *sm,
 		}
 		pos += 4;
 		left -= 4;
+
+		if (left > tls_msg_len) {
+			wpa_printf(MSG_INFO, "SSL: TLS Message Length (%d "
+				   "bytes) smaller than this fragment (%d "
+				   "bytes)", (int) tls_msg_len, (int) left);
+			ret->ignore = TRUE;
+			return NULL;
+		}
 	}
 
 	ret->ignore = FALSE;

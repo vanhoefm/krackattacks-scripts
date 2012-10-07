@@ -297,6 +297,13 @@ static int eap_server_tls_reassemble(struct eap_ssl_data *data, u8 flags,
 			   tls_msg_len);
 		*pos += 4;
 		*left -= 4;
+
+		if (*left > tls_msg_len) {
+			wpa_printf(MSG_INFO, "SSL: TLS Message Length (%d "
+				   "bytes) smaller than this fragment (%d "
+				   "bytes)", (int) tls_msg_len, (int) *left);
+			return -1;
+		}
 	}
 
 	wpa_printf(MSG_DEBUG, "SSL: Received packet: Flags 0x%x "

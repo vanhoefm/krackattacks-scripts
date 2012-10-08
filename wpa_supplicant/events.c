@@ -1815,6 +1815,28 @@ static void wpa_supplicant_event_disassoc(struct wpa_supplicant *wpa_s,
 }
 
 
+static int could_be_psk_mismatch(struct wpa_supplicant *wpa_s, u16 reason_code,
+				 int locally_generated)
+{
+	if (wpa_s->wpa_state != WPA_4WAY_HANDSHAKE ||
+	    !wpa_key_mgmt_wpa_psk(wpa_s->key_mgmt))
+		return 0; /* Not in 4-way handshake with PSK */
+
+	/*
+	 * It looks like connection was lost while trying to go through PSK
+	 * 4-way handshake. Filter out known disconnection cases that are caused
+	 * by something else than PSK mismatch to avoid confusing reports.
+	 */
+
+	if (locally_generated) {
+		if (reason_code == WLAN_REASON_IE_IN_4WAY_DIFFERS)
+			return 0;
+	}
+
+	return 1;
+}
+
+
 static void wpa_supplicant_event_disassoc_finish(struct wpa_supplicant *wpa_s,
 						 u16 reason_code,
 						 int locally_generated)
@@ -1840,8 +1862,7 @@ static void wpa_supplicant_event_disassoc_finish(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
-	if (wpa_s->wpa_state == WPA_4WAY_HANDSHAKE &&
-	    wpa_key_mgmt_wpa_psk(wpa_s->key_mgmt)) {
+	if (could_be_psk_mismatch(wpa_s, reason_code, locally_generated)) {
 		wpa_msg(wpa_s, MSG_INFO, "WPA: 4-Way Handshake failed - "
 			"pre-shared key may be incorrect");
 		wpas_auth_failed(wpa_s);

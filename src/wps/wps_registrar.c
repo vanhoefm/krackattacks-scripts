@@ -187,6 +187,8 @@ static int wps_set_ie(struct wps_registrar *reg);
 static void wps_registrar_pbc_timeout(void *eloop_ctx, void *timeout_ctx);
 static void wps_registrar_set_selected_timeout(void *eloop_ctx,
 					       void *timeout_ctx);
+static void wps_registrar_remove_pin(struct wps_registrar *reg,
+				     struct wps_uuid_pin *pin);
 
 
 static void wps_registrar_add_authorized_mac(struct wps_registrar *reg,
@@ -691,6 +693,21 @@ void wps_registrar_deinit(struct wps_registrar *reg)
 }
 
 
+static void wps_registrar_invalidate_unused(struct wps_registrar *reg)
+{
+	struct wps_uuid_pin *pin;
+
+	dl_list_for_each(pin, &reg->pins, struct wps_uuid_pin, list) {
+		if (pin->wildcard_uuid == 1 && !(pin->flags & PIN_LOCKED)) {
+			wpa_printf(MSG_DEBUG, "WPS: Invalidate previously "
+				   "configured wildcard PIN");
+			wps_registrar_remove_pin(reg, pin);
+			break;
+		}
+	}
+}
+
+
 /**
  * wps_registrar_add_pin - Configure a new PIN for Registrar
  * @reg: Registrar data from wps_registrar_init()
@@ -729,6 +746,9 @@ int wps_registrar_add_pin(struct wps_registrar *reg, const u8 *addr,
 		os_get_time(&p->expiration);
 		p->expiration.sec += timeout;
 	}
+
+	if (p->wildcard_uuid)
+		wps_registrar_invalidate_unused(reg);
 
 	dl_list_add(&reg->pins, &p->list);
 

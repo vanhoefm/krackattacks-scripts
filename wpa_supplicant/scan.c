@@ -66,7 +66,8 @@ static int wpas_wps_in_use(struct wpa_supplicant *wpa_s,
 	}
 
 #ifdef CONFIG_P2P
-	if (!wpa_s->global->p2p_disabled && wpa_s->global->p2p) {
+	if (!wpa_s->global->p2p_disabled && wpa_s->global->p2p &&
+	    !wpa_s->conf->p2p_disabled) {
 		wpa_s->wps->dev.p2p = 1;
 		if (!wps) {
 			wps = 1;

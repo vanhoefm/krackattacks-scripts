@@ -757,6 +757,11 @@ struct wpa_config {
 	 * By default: 0 (disabled)
 	 */
 	int p2p_go_ht40;
+
+	/**
+	 * p2p_disabled - Whether P2P operations are disabled for this interface
+	 */
+	int p2p_disabled;
 };
 
 

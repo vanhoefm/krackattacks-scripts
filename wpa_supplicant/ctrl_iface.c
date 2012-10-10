@@ -664,9 +664,21 @@ static int wpa_supplicant_ctrl_iface_wps_pin(struct wpa_supplicant *wpa_s,
 	}
 
 #ifdef CONFIG_AP
-	if (wpa_s->ap_iface)
+	if (wpa_s->ap_iface) {
+		int timeout = 0;
+		char *pos;
+
+		if (pin) {
+			pos = os_strchr(pin, ' ');
+			if (pos) {
+				*pos++ = '\0';
+				timeout = atoi(pos);
+			}
+		}
+
 		return wpa_supplicant_ap_wps_pin(wpa_s, _bssid, pin,
-						 buf, buflen);
+						 buf, buflen, timeout);
+	}
 #endif /* CONFIG_AP */
 
 	if (pin) {

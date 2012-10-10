@@ -837,7 +837,7 @@ static void p2p_go_configured(void *ctx, void *data)
 					  params->peer_device_addr);
 	else if (wpa_s->p2p_pin[0])
 		wpa_supplicant_ap_wps_pin(wpa_s, params->peer_interface_addr,
-					  wpa_s->p2p_pin, NULL, 0);
+					  wpa_s->p2p_pin, NULL, 0, 0);
 	os_free(wpa_s->go_params);
 	wpa_s->go_params = NULL;
 }

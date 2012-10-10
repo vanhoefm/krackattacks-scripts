@@ -273,7 +273,7 @@ DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
 			ret = wpa_supplicant_ap_wps_pin(wpa_s,
 							params.bssid,
 							params.pin,
-							npin, sizeof(npin));
+							npin, sizeof(npin), 0);
 		else
 #endif /* CONFIG_AP */
 		{

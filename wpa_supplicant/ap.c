@@ -724,7 +724,8 @@ int wpa_supplicant_ap_wps_cancel(struct wpa_supplicant *wpa_s)
 
 
 int wpa_supplicant_ap_wps_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
-			      const char *pin, char *buf, size_t buflen)
+			      const char *pin, char *buf, size_t buflen,
+			      int timeout)
 {
 	int ret, ret_len = 0;
 
@@ -739,7 +740,7 @@ int wpa_supplicant_ap_wps_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		ret_len = os_snprintf(buf, buflen, "%s", pin);
 
 	ret = hostapd_wps_add_pin(wpa_s->ap_iface->bss[0], bssid, "any", pin,
-				  0);
+				  timeout);
 	if (ret)
 		return -1;
 	return ret_len;

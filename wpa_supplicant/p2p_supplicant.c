@@ -2318,6 +2318,18 @@ static void wpas_invitation_result(void *ctx, int status, const u8 *bssid)
 		return;
 	}
 
+	/*
+	 * The peer could have missed our ctrl::ack frame for Invitation
+	 * Response and continue retransmitting the frame. To reduce the
+	 * likelihood of the peer not getting successful TX status for the
+	 * Invitation Response frame, wait a short time here before starting
+	 * the persistent group so that we will remain on the current channel to
+	 * acknowledge any possible retransmission from the peer.
+	 */
+	wpa_dbg(wpa_s, MSG_DEBUG, "P2P: 50 ms wait on current channel before "
+		"starting persistent group");
+	os_sleep(0, 50000);
+
 	wpas_p2p_group_add_persistent(wpa_s, ssid,
 				      ssid->mode == WPAS_MODE_P2P_GO,
 				      wpa_s->p2p_persistent_go_freq,

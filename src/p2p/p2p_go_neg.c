@@ -1191,5 +1191,17 @@ void p2p_process_go_neg_conf(struct p2p_data *p2p, const u8 *sa,
 		return;
 	}
 
+	/*
+	 * The peer could have missed our ctrl::ack frame for GO Negotiation
+	 * Confirm and continue retransmitting the frame. To reduce the
+	 * likelihood of the peer not getting successful TX status for the
+	 * GO Negotiation Confirm frame, wait a short time here before starting
+	 * the group so that we will remain on the current channel to
+	 * acknowledge any possible retransmission from the peer.
+	 */
+	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: 20 ms wait on current "
+		"channel before starting group");
+	os_sleep(0, 20000);
+
 	p2p_go_complete(p2p, dev);
 }

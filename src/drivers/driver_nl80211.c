@@ -1040,6 +1040,8 @@ static void mlme_event_auth(struct wpa_driver_nl80211_data *drv,
 	os_memset(&event, 0, sizeof(event));
 	os_memcpy(event.auth.peer, mgmt->sa, ETH_ALEN);
 	event.auth.auth_type = le_to_host16(mgmt->u.auth.auth_alg);
+	event.auth.auth_transaction =
+		le_to_host16(mgmt->u.auth.auth_transaction);
 	event.auth.status_code = le_to_host16(mgmt->u.auth.status_code);
 	if (len > 24 + sizeof(mgmt->u.auth)) {
 		event.auth.ies = mgmt->u.auth.variable;
@@ -2578,6 +2580,9 @@ broken_combination:
 
 		if (flags & NL80211_FEATURE_INACTIVITY_TIMER)
 			capa->flags |= WPA_DRIVER_FLAGS_INACTIVITY_TIMER;
+
+		if (flags & NL80211_FEATURE_SAE)
+			capa->flags |= WPA_DRIVER_FLAGS_SAE;
 	}
 
 	if (tb[NL80211_ATTR_PROBE_RESP_OFFLOAD]) {
@@ -4633,6 +4638,12 @@ retry:
 	wpa_hexdump(MSG_DEBUG, "  * IEs", params->ie, params->ie_len);
 	if (params->ie)
 		NLA_PUT(msg, NL80211_ATTR_IE, params->ie_len, params->ie);
+	if (params->sae_data) {
+		wpa_hexdump(MSG_DEBUG, "  * SAE data", params->sae_data,
+			    params->sae_data_len);
+		NLA_PUT(msg, NL80211_ATTR_SAE_DATA, params->sae_data_len,
+			params->sae_data);
+	}
 	if (params->auth_alg & WPA_AUTH_ALG_OPEN)
 		type = NL80211_AUTHTYPE_OPEN_SYSTEM;
 	else if (params->auth_alg & WPA_AUTH_ALG_SHARED)
@@ -4641,6 +4652,8 @@ retry:
 		type = NL80211_AUTHTYPE_NETWORK_EAP;
 	else if (params->auth_alg & WPA_AUTH_ALG_FT)
 		type = NL80211_AUTHTYPE_FT;
+	else if (params->auth_alg & WPA_AUTH_ALG_SAE)
+		type = NL80211_AUTHTYPE_SAE;
 	else
 		goto nla_put_failure;
 	wpa_printf(MSG_DEBUG, "  * Auth Type %d", type);

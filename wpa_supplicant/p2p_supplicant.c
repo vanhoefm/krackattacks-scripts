@@ -4593,8 +4593,15 @@ int wpas_p2p_ext_listen(struct wpa_supplicant *wpa_s, unsigned int period,
 
 static int wpas_p2p_is_client(struct wpa_supplicant *wpa_s)
 {
-	return wpa_s->current_ssid != NULL &&
-		wpa_s->current_ssid->p2p_group &&
+	if (wpa_s->current_ssid == NULL) {
+		/*
+		 * current_ssid can be clearead when P2P client interface gets
+		 * disconnected, so assume this interface was used as P2P
+		 * client.
+		 */
+		return 1;
+	}
+	return wpa_s->current_ssid->p2p_group &&
 		wpa_s->current_ssid->mode == WPAS_MODE_INFRA;
 }
 

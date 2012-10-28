@@ -253,7 +253,7 @@ static int hostapd_ctrl_iface_wps_check_pin(
 #ifdef CONFIG_WPS_OOB
 static int hostapd_ctrl_iface_wps_oob(struct hostapd_data *hapd, char *txt)
 {
-	char *path, *method, *name;
+	char *path, *method;
 
 	path = os_strchr(txt, ' ');
 	if (path == NULL)
@@ -265,11 +265,7 @@ static int hostapd_ctrl_iface_wps_oob(struct hostapd_data *hapd, char *txt)
 		return -1;
 	*method++ = '\0';
 
-	name = os_strchr(method, ' ');
-	if (name != NULL)
-		*name++ = '\0';
-
-	return hostapd_wps_start_oob(hapd, txt, path, method, name);
+	return hostapd_wps_start_oob(hapd, txt, path, method);
 }
 #endif /* CONFIG_WPS_OOB */
 

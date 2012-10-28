@@ -739,15 +739,13 @@ static int wpa_cli_cmd_wps_cancel(struct wpa_ctrl *ctrl, int argc,
 #ifdef CONFIG_WPS_OOB
 static int wpa_cli_cmd_wps_oob(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
-	if (argc != 3 && argc != 4) {
-		printf("Invalid WPS_OOB command: need three or four "
+	if (argc != 3) {
+		printf("Invalid WPS_OOB command: need three "
 		       "arguments:\n"
-		       "- DEV_TYPE: use 'ufd' or 'nfc'\n"
+		       "- DEV_TYPE: use 'ufd'\n"
 		       "- PATH: path of OOB device like '/mnt'\n"
 		       "- METHOD: OOB method 'pin-e' or 'pin-r', "
-		       "'cred'\n"
-		       "- DEV_NAME: (only for NFC) device name like "
-		       "'pn531'\n");
+		       "'cred'\n");
 		return -1;
 	}
 
@@ -2490,7 +2488,7 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 #ifdef CONFIG_WPS_OOB
 	{ "wps_oob", wpa_cli_cmd_wps_oob, NULL,
 	  cli_cmd_flag_sensitive,
-	  "<DEV_TYPE> <PATH> <METHOD> [DEV_NAME] = start WPS OOB" },
+	  "<DEV_TYPE> <PATH> <METHOD> = start WPS OOB" },
 #endif /* CONFIG_WPS_OOB */
 #ifdef CONFIG_WPS_NFC
 	{ "wps_nfc", wpa_cli_cmd_wps_nfc, wpa_cli_complete_bss,

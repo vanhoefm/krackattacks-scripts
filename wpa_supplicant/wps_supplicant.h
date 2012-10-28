@@ -36,7 +36,7 @@ int wpas_wps_start_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		       const char *pin, int p2p_group, u16 dev_pw_id);
 int wpas_wps_cancel(struct wpa_supplicant *wpa_s);
 int wpas_wps_start_oob(struct wpa_supplicant *wpa_s, char *device_type,
-		       char *path, char *method, char *name);
+		       char *path, char *method);
 int wpas_wps_start_reg(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		       const char *pin, struct wps_new_ap_settings *settings);
 int wpas_wps_ssid_bss_match(struct wpa_supplicant *wpa_s,

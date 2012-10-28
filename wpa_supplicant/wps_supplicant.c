@@ -996,7 +996,7 @@ int wpas_wps_cancel(struct wpa_supplicant *wpa_s)
 
 #ifdef CONFIG_WPS_OOB
 int wpas_wps_start_oob(struct wpa_supplicant *wpa_s, char *device_type,
-		       char *path, char *method, char *name)
+		       char *path, char *method)
 {
 	struct wps_context *wps = wpa_s->wps;
 	struct oob_device_data *oob_dev;
@@ -1005,7 +1005,6 @@ int wpas_wps_start_oob(struct wpa_supplicant *wpa_s, char *device_type,
 	if (oob_dev == NULL)
 		return -1;
 	oob_dev->device_path = path;
-	oob_dev->device_name = name;
 	wps->oob_conf.oob_method = wps_get_oob_method(method);
 
 	if (wps->oob_conf.oob_method == OOB_METHOD_DEV_PWD_E) {

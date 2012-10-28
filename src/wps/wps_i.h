@@ -138,8 +138,6 @@ void wps_pbc_overlap_event(struct wps_context *wps);
 void wps_pbc_timeout_event(struct wps_context *wps);
 
 extern struct oob_device_data oob_ufd_device_data;
-extern struct oob_device_data oob_nfc_device_data;
-extern struct oob_nfc_device_data oob_nfc_pn531_device_data;
 
 struct wpabuf * wps_build_wsc_ack(struct wps_data *wps);
 struct wpabuf * wps_build_wsc_nack(struct wps_data *wps);

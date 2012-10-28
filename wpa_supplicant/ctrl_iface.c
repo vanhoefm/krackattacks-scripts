@@ -846,6 +846,149 @@ static int wpa_supplicant_ctrl_iface_wps_nfc_tag_read(
 	return ret;
 }
 
+
+static int wpas_ctrl_nfc_get_handover_req_wps(struct wpa_supplicant *wpa_s,
+					      char *reply, size_t max_len)
+{
+	struct wpabuf *buf;
+	int res;
+
+	buf = wpas_wps_nfc_handover_req(wpa_s);
+	if (buf == NULL)
+		return -1;
+
+	res = wpa_snprintf_hex_uppercase(reply, max_len, wpabuf_head(buf),
+					 wpabuf_len(buf));
+	reply[res++] = '\n';
+	reply[res] = '\0';
+
+	wpabuf_free(buf);
+
+	return res;
+}
+
+
+static int wpas_ctrl_nfc_get_handover_req(struct wpa_supplicant *wpa_s,
+					  char *cmd, char *reply,
+					  size_t max_len)
+{
+	char *pos;
+
+	pos = os_strchr(cmd, ' ');
+	if (pos == NULL)
+		return -1;
+	*pos++ = '\0';
+
+	if (os_strcmp(cmd, "NDEF") != 0)
+		return -1;
+
+	if (os_strcmp(pos, "WPS") == 0) {
+		return wpas_ctrl_nfc_get_handover_req_wps(wpa_s, reply,
+							  max_len);
+	}
+
+	return -1;
+}
+
+
+static int wpas_ctrl_nfc_get_handover_sel_wps(struct wpa_supplicant *wpa_s,
+					      char *reply, size_t max_len)
+{
+	struct wpabuf *buf;
+	int res;
+
+	buf = wpas_wps_nfc_handover_sel(wpa_s);
+	if (buf == NULL)
+		return -1;
+
+	res = wpa_snprintf_hex_uppercase(reply, max_len, wpabuf_head(buf),
+					 wpabuf_len(buf));
+	reply[res++] = '\n';
+	reply[res] = '\0';
+
+	wpabuf_free(buf);
+
+	return res;
+}
+
+
+static int wpas_ctrl_nfc_get_handover_sel(struct wpa_supplicant *wpa_s,
+					  char *cmd, char *reply,
+					  size_t max_len)
+{
+	char *pos;
+
+	pos = os_strchr(cmd, ' ');
+	if (pos == NULL)
+		return -1;
+	*pos++ = '\0';
+
+	if (os_strcmp(cmd, "NDEF") != 0)
+		return -1;
+
+	if (os_strcmp(pos, "WPS") == 0) {
+		return wpas_ctrl_nfc_get_handover_sel_wps(wpa_s, reply,
+							  max_len);
+	}
+
+	return -1;
+}
+
+
+static int wpas_ctrl_nfc_rx_handover_req(struct wpa_supplicant *wpa_s,
+					 char *cmd, char *reply,
+					 size_t max_len)
+{
+	size_t len;
+	struct wpabuf *buf;
+	int ret;
+
+	len = os_strlen(cmd);
+	if (len & 0x01)
+		return -1;
+	len /= 2;
+
+	buf = wpabuf_alloc(len);
+	if (buf == NULL)
+		return -1;
+	if (hexstr2bin(cmd, wpabuf_put(buf, len), len) < 0) {
+		wpabuf_free(buf);
+		return -1;
+	}
+
+	ret = wpas_wps_nfc_rx_handover_req(wpa_s, buf);
+	wpabuf_free(buf);
+
+	return ret;
+}
+
+
+static int wpas_ctrl_nfc_rx_handover_sel(struct wpa_supplicant *wpa_s,
+					 char *cmd)
+{
+	size_t len;
+	struct wpabuf *buf;
+	int ret;
+
+	len = os_strlen(cmd);
+	if (len & 0x01)
+		return -1;
+	len /= 2;
+
+	buf = wpabuf_alloc(len);
+	if (buf == NULL)
+		return -1;
+	if (hexstr2bin(cmd, wpabuf_put(buf, len), len) < 0) {
+		wpabuf_free(buf);
+		return -1;
+	}
+
+	ret = wpas_wps_nfc_rx_handover_sel(wpa_s, buf);
+	wpabuf_free(buf);
+
+	return ret;
+}
+
 #endif /* CONFIG_WPS_NFC */
 
 
@@ -4502,7 +4645,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	int reply_len;
 
 	if (os_strncmp(buf, WPA_CTRL_RSP, os_strlen(WPA_CTRL_RSP)) == 0 ||
-	    os_strncmp(buf, "SET_NETWORK ", 12) == 0) {
+	    os_strncmp(buf, "SET_NETWORK ", 12) == 0 ||
+	    os_strncmp(buf, "WPS_NFC_TAG_READ", 16) == 0 ||
+	    os_strncmp(buf, "NFC_RX_HANDOVER_SEL", 19) == 0) {
 		wpa_hexdump_ascii_key(MSG_DEBUG, "RX ctrl_iface",
 				      (const u8 *) buf, os_strlen(buf));
 	} else {
@@ -4639,6 +4784,18 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strncmp(buf, "WPS_NFC_TAG_READ ", 17) == 0) {
 		if (wpa_supplicant_ctrl_iface_wps_nfc_tag_read(wpa_s,
 							       buf + 17))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "NFC_GET_HANDOVER_REQ ", 21) == 0) {
+		reply_len = wpas_ctrl_nfc_get_handover_req(
+			wpa_s, buf + 21, reply, reply_size);
+	} else if (os_strncmp(buf, "NFC_GET_HANDOVER_SEL ", 21) == 0) {
+		reply_len = wpas_ctrl_nfc_get_handover_sel(
+			wpa_s, buf + 21, reply, reply_size);
+	} else if (os_strncmp(buf, "NFC_RX_HANDOVER_REQ ", 20) == 0) {
+		reply_len = wpas_ctrl_nfc_rx_handover_req(
+			wpa_s, buf + 20, reply, reply_size);
+	} else if (os_strncmp(buf, "NFC_RX_HANDOVER_SEL ", 20) == 0) {
+		if (wpas_ctrl_nfc_rx_handover_sel(wpa_s, buf + 20))
 			reply_len = -1;
 #endif /* CONFIG_WPS_NFC */
 	} else if (os_strncmp(buf, "WPS_REG ", 8) == 0) {

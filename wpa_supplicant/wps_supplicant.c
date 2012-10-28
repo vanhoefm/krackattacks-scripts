@@ -1975,6 +1975,45 @@ int wpas_wps_nfc_tag_read(struct wpa_supplicant *wpa_s,
 	return ret;
 }
 
+
+struct wpabuf * wpas_wps_nfc_handover_req(struct wpa_supplicant *wpa_s)
+{
+	return ndef_build_wifi_hr();
+}
+
+
+struct wpabuf * wpas_wps_nfc_handover_sel(struct wpa_supplicant *wpa_s)
+{
+	return NULL;
+}
+
+
+int wpas_wps_nfc_rx_handover_req(struct wpa_supplicant *wpa_s,
+				 const struct wpabuf *data)
+{
+	/* TODO */
+	return -1;
+}
+
+
+int wpas_wps_nfc_rx_handover_sel(struct wpa_supplicant *wpa_s,
+				 const struct wpabuf *data)
+{
+	struct wpabuf *wps;
+	int ret;
+
+	wps = ndef_parse_wifi(data);
+	if (wps == NULL)
+		return -1;
+	wpa_printf(MSG_DEBUG, "WPS: Received application/vnd.wfa.wsc "
+		   "payload from NFC connection handover");
+	wpa_hexdump_buf_key(MSG_DEBUG, "WPS: NFC payload", wps);
+	ret = wpas_wps_nfc_tag_process(wpa_s, wps);
+	wpabuf_free(wps);
+
+	return ret;
+}
+
 #endif /* CONFIG_WPS_NFC */
 
 

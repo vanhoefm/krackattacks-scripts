@@ -351,3 +351,27 @@ an AP) using a special value "nfc-pw" in place of the PIN parameter. If
 the ER functionality has been started (wps_er_start), the NFC password
 token is used to enable enrollment of a new station (that was the source
 of the NFC password token).
+
+"nfc_get_handover_req <NDEF> <WPS>" command can be used to build the
+contents of a Handover Request Message for connection handover. The
+first argument selects the format of the output data and the second
+argument selects which type of connection handover is requested (WPS =
+Wi-Fi handover as specified in WSC 2.0).
+
+"nfc_get_handover_sel <NDEF> <WPS>" command can be used to build the
+contents of a Handover Select Message for connection handover when this
+does not depend on the contents of the Handover Request Message. The
+first argument selects the format of the output data and the second
+argument selects which type of connection handover is requested (WPS =
+Wi-Fi handover as specified in WSC 2.0).
+
+"nfc_rx_handover_req <hexdump of payload>" is used to indicate receipt
+of NFC connection handover request. The payload may include multiple
+carriers the the applicable ones are matched based on the media
+type. The reply data is contents for the Handover Select Message
+(hexdump).
+
+"nfc_rx_handover_sel <hexdump of payload>" is used to indicate receipt
+of NFC connection handover select. The payload may include multiple
+carriers the the applicable ones are matched based on the media
+type.

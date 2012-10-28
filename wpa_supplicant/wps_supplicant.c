@@ -403,6 +403,9 @@ static int wpa_supplicant_wps_cred(void *ctx,
 
 	wpas_wps_security_workaround(wpa_s, ssid, cred);
 
+	if (cred->ap_channel)
+		wpa_s->wps_ap_channel = cred->ap_channel;
+
 #ifndef CONFIG_NO_CONFIG_WRITE
 	if (wpa_s->conf->update_config &&
 	    wpa_config_write(wpa_s->confname, wpa_s->conf)) {
@@ -1896,6 +1899,8 @@ int wpas_wps_start_nfc(struct wpa_supplicant *wpa_s, const u8 *bssid)
 static int wpas_wps_use_cred(struct wpa_supplicant *wpa_s,
 			     struct wps_parse_attr *attr)
 {
+	wpa_s->wps_ap_channel = 0;
+
 	if (wps_oob_use_cred(wpa_s->wps, attr) < 0)
 		return -1;
 
@@ -1906,6 +1911,24 @@ static int wpas_wps_use_cred(struct wpa_supplicant *wpa_s,
 		   "based on the received credential added");
 	wpa_s->normal_scans = 0;
 	wpa_supplicant_reinit_autoscan(wpa_s);
+	if (wpa_s->wps_ap_channel) {
+		u16 chan = wpa_s->wps_ap_channel;
+		int freq = 0;
+
+		if (chan >= 1 && chan <= 13)
+			freq = 2407 + 5 * chan;
+		else if (chan == 14)
+			freq = 2484;
+		else if (chan >= 30)
+			freq = 5000 + 5 * chan;
+
+		if (freq) {
+			wpa_printf(MSG_DEBUG, "WPS: Credential indicated "
+				   "AP channel %u -> %u MHz", chan, freq);
+			wpa_s->after_wps = 5;
+			wpa_s->wps_freq = freq;
+		}
+	}
 	wpa_s->disconnected = 0;
 	wpa_s->reassociate = 1;
 	wpa_supplicant_req_scan(wpa_s, 0, 0);

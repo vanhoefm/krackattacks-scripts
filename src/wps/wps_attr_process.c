@@ -258,6 +258,19 @@ static int wps_process_cred_802_1x_enabled(struct wps_credential *cred,
 }
 
 
+static int wps_process_cred_ap_channel(struct wps_credential *cred,
+				       const u8 *ap_channel)
+{
+	if (ap_channel == NULL)
+		return 0; /* optional attribute */
+
+	cred->ap_channel = WPA_GET_BE16(ap_channel);
+	wpa_printf(MSG_DEBUG, "WPS: AP Channel: %u", cred->ap_channel);
+
+	return 0;
+}
+
+
 static int wps_workaround_cred_key(struct wps_credential *cred)
 {
 	if (cred->auth_type & (WPS_AUTH_WPAPSK | WPS_AUTH_WPA2PSK) &&
@@ -303,7 +316,8 @@ int wps_process_cred(struct wps_parse_attr *attr,
 	    wps_process_cred_eap_identity(cred, attr->eap_identity,
 					  attr->eap_identity_len) ||
 	    wps_process_cred_key_prov_auto(cred, attr->key_prov_auto) ||
-	    wps_process_cred_802_1x_enabled(cred, attr->dot1x_enabled))
+	    wps_process_cred_802_1x_enabled(cred, attr->dot1x_enabled) ||
+	    wps_process_cred_ap_channel(cred, attr->ap_channel))
 		return -1;
 
 	return wps_workaround_cred_key(cred);

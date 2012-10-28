@@ -56,6 +56,7 @@ struct wps_parse_attr {
 	const u8 *settings_delay_time; /* 1 octet */
 	const u8 *network_key_shareable; /* 1 octet (Bool) */
 	const u8 *request_to_enroll; /* 1 octet (Bool) */
+	const u8 *ap_channel; /* 2 octets */
 
 	/* variable length fields */
 	const u8 *manufacturer;

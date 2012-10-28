@@ -542,6 +542,14 @@ static int wps_set_attr(struct wps_parse_attr *attr, u16 type,
 		if (wps_parse_vendor_ext(attr, pos, len) < 0)
 			return -1;
 		break;
+	case ATTR_AP_CHANNEL:
+		if (len != 2) {
+			wpa_printf(MSG_DEBUG, "WPS: Invalid AP Channel "
+				   "length %u", len);
+			return -1;
+		}
+		attr->ap_channel = pos;
+		break;
 	default:
 		wpa_printf(MSG_DEBUG, "WPS: Unsupported attribute type 0x%x "
 			   "len=%u", type, len);

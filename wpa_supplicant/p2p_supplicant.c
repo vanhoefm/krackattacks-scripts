@@ -2955,6 +2955,7 @@ static void wpas_p2p_pd_before_join_timeout(void *eloop_ctx, void *timeout_ctx)
 	struct wpa_supplicant *wpa_s = eloop_ctx;
 	if (!wpa_s->pending_pd_before_join)
 		return;
+	wpa_s->pending_pd_before_join = 0;
 	/*
 	 * Provision Discovery Response may have been lost - try to connect
 	 * anyway since we do not need any information from this PD.

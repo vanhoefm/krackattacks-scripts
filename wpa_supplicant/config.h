@@ -762,6 +762,17 @@ struct wpa_config {
 	 * p2p_disabled - Whether P2P operations are disabled for this interface
 	 */
 	int p2p_disabled;
+
+	/**
+	 * p2p_no_group_iface - Whether group interfaces can be used
+	 *
+	 * By default, wpa_supplicant will create a separate interface for P2P
+	 * group operations if the driver supports this. This functionality can
+	 * be disabled by setting this parameter to 1. In that case, the same
+	 * interface that was used for the P2P management operations is used
+	 * also for the group operation.
+	 */
+	int p2p_no_group_iface;
 };
 
 

@@ -872,6 +872,9 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 		fprintf(f, "p2p_go_ht40=%u\n", config->p2p_go_ht40);
 	if (config->p2p_disabled)
 		fprintf(f, "p2p_disabled=%u\n", config->p2p_disabled);
+	if (config->p2p_no_group_iface)
+		fprintf(f, "p2p_no_group_iface=%u\n",
+			config->p2p_no_group_iface);
 #endif /* CONFIG_P2P */
 	if (config->country[0] && config->country[1]) {
 		fprintf(f, "country=%c%c\n",

@@ -355,6 +355,11 @@ struct p2p_config {
 	size_t ssid_postfix_len;
 
 	/**
+	 * max_listen - Maximum listen duration in ms
+	 */
+	unsigned int max_listen;
+
+	/**
 	 * msg_ctx - Context to use with wpa_msg() calls
 	 */
 	void *msg_ctx;
@@ -1738,5 +1743,26 @@ int p2p_set_wfd_assoc_bssid(struct p2p_data *p2p, const struct wpabuf *elem);
 int p2p_set_wfd_coupled_sink_info(struct p2p_data *p2p,
 				  const struct wpabuf *elem);
 struct wpabuf * wifi_display_encaps(struct wpabuf *subelems);
+
+/**
+ * p2p_set_disc_int - Set min/max discoverable interval for p2p_find
+ * @p2p: P2P module context from p2p_init()
+ * @min_disc_int: minDiscoverableInterval (in units of 100 TU); default 1
+ * @max_disc_int: maxDiscoverableInterval (in units of 100 TU); default 3
+ * @max_disc_tu: Maximum number of TUs (1.024 ms) for discoverable interval; or
+ *	-1 not to limit
+ * Returns: 0 on success, or -1 on failure
+ *
+ * This function can be used to configure minDiscoverableInterval and
+ * maxDiscoverableInterval parameters for the Listen state during device
+ * discovery (p2p_find). A random number of 100 TU units is picked for each
+ * Listen state iteration from [min_disc_int,max_disc_int] range.
+ *
+ * max_disc_tu can be used to futher limit the discoverable duration. However,
+ * it should be noted that use of this parameter is not recommended since it
+ * would not be compliant with the P2P specification.
+ */
+int p2p_set_disc_int(struct p2p_data *p2p, int min_disc_int, int max_disc_int,
+		     int max_disc_tu);
 
 #endif /* P2P_H */

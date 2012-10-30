@@ -226,6 +226,11 @@ struct p2p_data {
 	int max_disc_int;
 
 	/**
+	 * max_disc_tu - Maximum number of TUs for discoverable interval
+	 */
+	int max_disc_tu;
+
+	/**
 	 * devices - List of known P2P Device peers
 	 */
 	struct dl_list devices;

@@ -214,7 +214,7 @@ void p2p_go_neg_failed(struct p2p_data *p2p, struct p2p_device *peer,
 }
 
 
-static void p2p_listen_in_find(struct p2p_data *p2p)
+static void p2p_listen_in_find(struct p2p_data *p2p, int dev_disc)
 {
 	unsigned int r, tu;
 	int freq;
@@ -235,6 +235,19 @@ static void p2p_listen_in_find(struct p2p_data *p2p)
 	os_get_random((u8 *) &r, sizeof(r));
 	tu = (r % ((p2p->max_disc_int - p2p->min_disc_int) + 1) +
 	      p2p->min_disc_int) * 100;
+	if (p2p->max_disc_tu >= 0 && tu > (unsigned int) p2p->max_disc_tu)
+		tu = p2p->max_disc_tu;
+	if (!dev_disc && tu < 100)
+		tu = 100; /* Need to wait in non-device discovery use cases */
+	if (p2p->cfg->max_listen && 1024 * tu / 1000 > p2p->cfg->max_listen)
+		tu = p2p->cfg->max_listen * 1000 / 1024;
+
+	if (tu == 0) {
+		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Skip listen state "
+			"since duration was 0 TU");
+		p2p_set_timeout(p2p, 0, 0);
+		return;
+	}
 
 	p2p->pending_listen_freq = freq;
 	p2p->pending_listen_sec = 0;
@@ -2327,6 +2340,7 @@ struct p2p_data * p2p_init(const struct p2p_config *cfg)
 
 	p2p->min_disc_int = 1;
 	p2p->max_disc_int = 3;
+	p2p->max_disc_tu = -1;
 
 	os_get_random(&p2p->next_tie_breaker, 1);
 	p2p->next_tie_breaker &= 0x01;
@@ -2590,7 +2604,7 @@ void p2p_continue_find(struct p2p_data *p2p)
 		}
 	}
 
-	p2p_listen_in_find(p2p);
+	p2p_listen_in_find(p2p, 1);
 }
 
 
@@ -3060,7 +3074,7 @@ static void p2p_timeout_connect(struct p2p_data *p2p)
 		return;
 	}
 	p2p_set_state(p2p, P2P_CONNECT_LISTEN);
-	p2p_listen_in_find(p2p);
+	p2p_listen_in_find(p2p, 0);
 }
 
 
@@ -3124,7 +3138,7 @@ static void p2p_timeout_wait_peer_idle(struct p2p_data *p2p)
 		"P2P: Go to Listen state while waiting for the peer to become "
 		"ready for GO Negotiation");
 	p2p_set_state(p2p, P2P_WAIT_PEER_CONNECT);
-	p2p_listen_in_find(p2p);
+	p2p_listen_in_find(p2p, 0);
 }
 
 
@@ -3192,7 +3206,7 @@ static void p2p_timeout_invite(struct p2p_data *p2p)
 		p2p_set_timeout(p2p, 0, 100000);
 		return;
 	}
-	p2p_listen_in_find(p2p);
+	p2p_listen_in_find(p2p, 0);
 }
 
 
@@ -4237,3 +4251,20 @@ int p2p_set_wfd_coupled_sink_info(struct p2p_data *p2p,
 }
 
 #endif /* CONFIG_WIFI_DISPLAY */
+
+
+int p2p_set_disc_int(struct p2p_data *p2p, int min_disc_int, int max_disc_int,
+		     int max_disc_tu)
+{
+	if (min_disc_int > max_disc_int || min_disc_int < 0 || max_disc_int < 0)
+		return -1;
+
+	p2p->min_disc_int = min_disc_int;
+	p2p->max_disc_int = max_disc_int;
+	p2p->max_disc_tu = max_disc_tu;
+	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Set discoverable interval: "
+		"min=%d max=%d max_tu=%d", min_disc_int, max_disc_int,
+		max_disc_tu);
+
+	return 0;
+}

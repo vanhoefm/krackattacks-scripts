@@ -696,6 +696,8 @@ scan:
 		wpa_msg(wpa_s, MSG_WARNING, "Failed to initiate AP scan");
 		if (prev_state != wpa_s->wpa_state)
 			wpa_supplicant_set_state(wpa_s, prev_state);
+		/* Restore scan_req since we will try to scan again */
+		wpa_s->scan_req = scan_req;
 		wpa_supplicant_req_scan(wpa_s, 1, 0);
 	}
 }

@@ -1234,6 +1234,135 @@ static int wpas_send_probe_resp(void *ctx, const struct wpabuf *buf)
 }
 
 
+/*
+ * DNS Header section is used only to calculate compression pointers, so the
+ * contents of this data does not matter, but the length needs to be reserved
+ * in the virtual packet.
+ */
+#define DNS_HEADER_LEN 12
+
+/*
+ * 27-octet in-memory packet from P2P specification containing two implied
+ * queries for _tcp.lcoal. PTR IN and _udp.local. PTR IN
+ */
+#define P2P_SD_IN_MEMORY_LEN 27
+
+static int p2p_sd_dns_uncompress_label(char **upos, char *uend, u8 *start,
+				       u8 **spos, const u8 *end)
+{
+	while (*spos < end) {
+		u8 val = ((*spos)[0] & 0xc0) >> 6;
+		int len;
+
+		if (val == 1 || val == 2) {
+			/* These are reserved values in RFC 1035 */
+			wpa_printf(MSG_DEBUG, "P2P: Invalid domain name "
+				   "sequence starting with 0x%x", val);
+			return -1;
+		}
+
+		if (val == 3) {
+			u16 offset;
+			u8 *spos_tmp;
+
+			/* Offset */
+			if (*spos + 2 > end) {
+				wpa_printf(MSG_DEBUG, "P2P: No room for full "
+					   "DNS offset field");
+				return -1;
+			}
+
+			offset = (((*spos)[0] & 0x3f) << 8) | (*spos)[1];
+			if (offset >= *spos - start) {
+				wpa_printf(MSG_DEBUG, "P2P: Invalid DNS "
+					   "pointer offset %u", offset);
+				return -1;
+			}
+
+			(*spos) += 2;
+			spos_tmp = start + offset;
+			return p2p_sd_dns_uncompress_label(upos, uend, start,
+							   &spos_tmp,
+							   *spos - 2);
+		}
+
+		/* Label */
+		len = (*spos)[0] & 0x3f;
+		if (len == 0)
+			return 0;
+
+		(*spos)++;
+		if (*spos + len > end) {
+			wpa_printf(MSG_DEBUG, "P2P: Invalid domain name "
+				   "sequence - no room for label with length "
+				   "%u", len);
+			return -1;
+		}
+
+		if (*upos + len + 2 > uend)
+			return -2;
+
+		os_memcpy(*upos, *spos, len);
+		*spos += len;
+		*upos += len;
+		(*upos)[0] = '.';
+		(*upos)++;
+		(*upos)[0] = '\0';
+	}
+
+	return 0;
+}
+
+
+/* Uncompress domain names per RFC 1035 using the P2P SD in-memory packet.
+ * Returns -1 on parsing error (invalid input sequence), -2 if output buffer is
+ * not large enough */
+static int p2p_sd_dns_uncompress(char *buf, size_t buf_len, const u8 *msg,
+				 size_t msg_len, size_t offset)
+{
+	/* 27-octet in-memory packet from P2P specification */
+	const char *prefix = "\x04_tcp\x05local\x00\x00\x0C\x00\x01"
+		"\x04_udp\xC0\x11\x00\x0C\x00\x01";
+	u8 *tmp, *end, *spos;
+	char *upos, *uend;
+	int ret = 0;
+
+	if (buf_len < 2)
+		return -1;
+	if (offset > msg_len)
+		return -1;
+
+	tmp = os_malloc(DNS_HEADER_LEN + P2P_SD_IN_MEMORY_LEN + msg_len);
+	if (tmp == NULL)
+		return -1;
+	spos = tmp + DNS_HEADER_LEN + P2P_SD_IN_MEMORY_LEN;
+	end = spos + msg_len;
+	spos += offset;
+
+	os_memset(tmp, 0, DNS_HEADER_LEN);
+	os_memcpy(tmp + DNS_HEADER_LEN, prefix, P2P_SD_IN_MEMORY_LEN);
+	os_memcpy(tmp + DNS_HEADER_LEN + P2P_SD_IN_MEMORY_LEN, msg, msg_len);
+
+	upos = buf;
+	uend = buf + buf_len;
+
+	ret = p2p_sd_dns_uncompress_label(&upos, uend, tmp, &spos, end);
+	if (ret) {
+		os_free(tmp);
+		return ret;
+	}
+
+	if (upos == buf) {
+		upos[0] = '.';
+		upos[1] = '\0';
+	} else if (upos[-1] == '.')
+		upos[-1] = '\0';
+
+	os_free(tmp);
+	return 0;
+}
+
+
 static struct p2p_srv_bonjour *
 wpas_p2p_service_get_bonjour(struct wpa_supplicant *wpa_s,
 			     const struct wpabuf *query)
@@ -1324,6 +1453,33 @@ static void wpas_sd_all_bonjour(struct wpa_supplicant *wpa_s,
 }
 
 
+static int match_bonjour_query(struct p2p_srv_bonjour *bsrv, const u8 *query,
+			       size_t query_len)
+{
+	char str_rx[256], str_srv[256];
+
+	if (query_len < 3 || wpabuf_len(bsrv->query) < 3)
+		return 0; /* Too short to include DNS Type and Version */
+	if (os_memcmp(query + query_len - 3,
+		      wpabuf_head_u8(bsrv->query) + wpabuf_len(bsrv->query) - 3,
+		      3) != 0)
+		return 0; /* Mismatch in DNS Type or Version */
+	if (query_len == wpabuf_len(bsrv->query) &&
+	    os_memcmp(query, wpabuf_head(bsrv->query), query_len - 3) == 0)
+		return 1; /* Binary match */
+
+	if (p2p_sd_dns_uncompress(str_rx, sizeof(str_rx), query, query_len - 3,
+				  0))
+		return 0; /* Failed to uncompress query */
+	if (p2p_sd_dns_uncompress(str_srv, sizeof(str_srv),
+				  wpabuf_head(bsrv->query),
+				  wpabuf_len(bsrv->query) - 3, 0))
+		return 0; /* Failed to uncompress service */
+
+	return os_strcmp(str_rx, str_srv) == 0;
+}
+
+
 static void wpas_sd_req_bonjour(struct wpa_supplicant *wpa_s,
 				struct wpabuf *resp, u8 srv_trans_id,
 				const u8 *query, size_t query_len)
@@ -1348,8 +1504,7 @@ static void wpas_sd_req_bonjour(struct wpa_supplicant *wpa_s,
 
 	dl_list_for_each(bsrv, &wpa_s->global->p2p_srv_bonjour,
 			 struct p2p_srv_bonjour, list) {
-		if (query_len != wpabuf_len(bsrv->query) ||
-		    os_memcmp(query, wpabuf_head(bsrv->query), query_len) != 0)
+		if (!match_bonjour_query(bsrv, query, query_len))
 			continue;
 
 		if (wpabuf_tailroom(resp) <

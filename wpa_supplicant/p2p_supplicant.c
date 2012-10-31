@@ -1329,8 +1329,8 @@ static void wpas_sd_req_bonjour(struct wpa_supplicant *wpa_s,
 				const u8 *query, size_t query_len)
 {
 	struct p2p_srv_bonjour *bsrv;
-	struct wpabuf buf;
 	u8 *len_pos;
+	int matches = 0;
 
 	wpa_hexdump_ascii(MSG_DEBUG, "P2P: SD Request for Bonjour",
 			  query, query_len);
@@ -1346,39 +1346,53 @@ static void wpas_sd_req_bonjour(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
-	if (wpabuf_tailroom(resp) < 5)
-		return;
-	/* Length (to be filled) */
-	len_pos = wpabuf_put(resp, 2);
-	wpabuf_put_u8(resp, P2P_SERV_BONJOUR);
-	wpabuf_put_u8(resp, srv_trans_id);
+	dl_list_for_each(bsrv, &wpa_s->global->p2p_srv_bonjour,
+			 struct p2p_srv_bonjour, list) {
+		if (query_len != wpabuf_len(bsrv->query) ||
+		    os_memcmp(query, wpabuf_head(bsrv->query), query_len) != 0)
+			continue;
 
-	wpabuf_set(&buf, query, query_len);
-	bsrv = wpas_p2p_service_get_bonjour(wpa_s, &buf);
-	if (bsrv == NULL) {
+		if (wpabuf_tailroom(resp) <
+		    5 + query_len + wpabuf_len(bsrv->resp))
+			return;
+
+		matches++;
+
+		/* Length (to be filled) */
+		len_pos = wpabuf_put(resp, 2);
+		wpabuf_put_u8(resp, P2P_SERV_BONJOUR);
+		wpabuf_put_u8(resp, srv_trans_id);
+
+		/* Status Code */
+		wpabuf_put_u8(resp, P2P_SD_SUCCESS);
+		wpa_hexdump_ascii(MSG_DEBUG, "P2P: Matching Bonjour service",
+				  wpabuf_head(bsrv->resp),
+				  wpabuf_len(bsrv->resp));
+
+		/* Response Data */
+		wpabuf_put_data(resp, query, query_len); /* Key */
+		wpabuf_put_buf(resp, bsrv->resp); /* Value */
+
+		WPA_PUT_LE16(len_pos, (u8 *) wpabuf_put(resp, 0) - len_pos - 2);
+	}
+
+	if (matches == 0) {
 		wpa_printf(MSG_DEBUG, "P2P: Requested Bonjour service not "
 			   "available");
+		if (wpabuf_tailroom(resp) < 5)
+			return;
+
+		/* Length (to be filled) */
+		len_pos = wpabuf_put(resp, 2);
+		wpabuf_put_u8(resp, P2P_SERV_BONJOUR);
+		wpabuf_put_u8(resp, srv_trans_id);
 
 		/* Status Code */
 		wpabuf_put_u8(resp, P2P_SD_REQUESTED_INFO_NOT_AVAILABLE);
 		/* Response Data: empty */
 		WPA_PUT_LE16(len_pos, (u8 *) wpabuf_put(resp, 0) - len_pos -
 			     2);
-		return;
 	}
-
-	/* Status Code */
-	wpabuf_put_u8(resp, P2P_SD_SUCCESS);
-	wpa_hexdump_ascii(MSG_DEBUG, "P2P: Matching Bonjour service",
-			  wpabuf_head(bsrv->resp), wpabuf_len(bsrv->resp));
-
-	if (wpabuf_tailroom(resp) >=
-	    wpabuf_len(bsrv->query) + wpabuf_len(bsrv->resp)) {
-		/* Response Data */
-		wpabuf_put_buf(resp, bsrv->query); /* Key */
-		wpabuf_put_buf(resp, bsrv->resp); /* Value */
-	}
-	WPA_PUT_LE16(len_pos, (u8 *) wpabuf_put(resp, 0) - len_pos - 2);
 }
 
 
@@ -1927,14 +1941,6 @@ int wpas_p2p_service_add_bonjour(struct wpa_supplicant *wpa_s,
 				 struct wpabuf *query, struct wpabuf *resp)
 {
 	struct p2p_srv_bonjour *bsrv;
-
-	bsrv = wpas_p2p_service_get_bonjour(wpa_s, query);
-	if (bsrv) {
-		wpabuf_free(query);
-		wpabuf_free(bsrv->resp);
-		bsrv->resp = resp;
-		return 0;
-	}
 
 	bsrv = os_zalloc(sizeof(*bsrv));
 	if (bsrv == NULL)

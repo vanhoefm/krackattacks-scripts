@@ -256,6 +256,15 @@ static int wpa_supplicant_wps_cred(void *ctx,
 		return 0;
 	}
 
+	if (auth_type == WPS_AUTH_WPAPSK || auth_type == WPS_AUTH_WPA2PSK) {
+		if (cred->key_len < 8 || cred->key_len > 2 * PMK_LEN) {
+			wpa_printf(MSG_ERROR, "WPS: Reject PSK credential with "
+				   "invalid Network Key length %lu",
+				   (unsigned long) cred->key_len);
+			return -1;
+		}
+	}
+
 	if (ssid && (ssid->key_mgmt & WPA_KEY_MGMT_WPS)) {
 		wpa_printf(MSG_DEBUG, "WPS: Replace WPS network block based "
 			   "on the received credential");

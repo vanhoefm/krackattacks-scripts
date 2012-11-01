@@ -665,6 +665,7 @@ static int wps_process_cred_e(struct wps_data *wps, const u8 *cred,
 {
 	struct wps_parse_attr attr;
 	struct wpabuf msg;
+	int ret = 0;
 
 	wpa_printf(MSG_DEBUG, "WPS: Received Credential");
 	os_memset(&wps->cred, 0, sizeof(wps->cred));
@@ -714,12 +715,12 @@ static int wps_process_cred_e(struct wps_data *wps, const u8 *cred,
 	if (wps->wps->cred_cb) {
 		wps->cred.cred_attr = cred - 4;
 		wps->cred.cred_attr_len = cred_len + 4;
-		wps->wps->cred_cb(wps->wps->cb_ctx, &wps->cred);
+		ret = wps->wps->cred_cb(wps->wps->cb_ctx, &wps->cred);
 		wps->cred.cred_attr = NULL;
 		wps->cred.cred_attr_len = 0;
 	}
 
-	return 0;
+	return ret;
 }
 
 

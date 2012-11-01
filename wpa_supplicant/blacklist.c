@@ -23,6 +23,9 @@ struct wpa_blacklist * wpa_blacklist_get(struct wpa_supplicant *wpa_s,
 {
 	struct wpa_blacklist *e;
 
+	if (wpa_s == NULL || bssid == NULL)
+		return NULL;
+
 	e = wpa_s->blacklist;
 	while (e) {
 		if (os_memcmp(e->bssid, bssid, ETH_ALEN) == 0)
@@ -53,6 +56,9 @@ struct wpa_blacklist * wpa_blacklist_get(struct wpa_supplicant *wpa_s,
 int wpa_blacklist_add(struct wpa_supplicant *wpa_s, const u8 *bssid)
 {
 	struct wpa_blacklist *e;
+
+	if (wpa_s == NULL || bssid == NULL)
+		return -1;
 
 	e = wpa_blacklist_get(wpa_s, bssid);
 	if (e) {
@@ -86,6 +92,9 @@ int wpa_blacklist_add(struct wpa_supplicant *wpa_s, const u8 *bssid)
 int wpa_blacklist_del(struct wpa_supplicant *wpa_s, const u8 *bssid)
 {
 	struct wpa_blacklist *e, *prev = NULL;
+
+	if (wpa_s == NULL || bssid == NULL)
+		return -1;
 
 	e = wpa_s->blacklist;
 	while (e) {

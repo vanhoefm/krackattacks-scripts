@@ -18,6 +18,7 @@
 #include "ctrl_iface.h"
 #include "bss.h"
 #include "wnm_sta.h"
+#include "hs20_supplicant.h"
 
 #define MAX_TFS_IE_LEN  1024
 #define WNM_MAX_NEIGHBOR_REPORT 10
@@ -751,6 +752,112 @@ int wnm_send_bss_transition_mgmt_query(struct wpa_supplicant *wpa_s,
 }
 
 
+static void ieee802_11_rx_wnm_notif_req_wfa(struct wpa_supplicant *wpa_s,
+					    const u8 *sa, const u8 *data,
+					    int len)
+{
+	const u8 *pos, *end;
+	u8 ie, ie_len;
+
+	pos = data;
+	end = data + len;
+
+	while (pos + 1 < end) {
+		ie = *pos++;
+		ie_len = *pos++;
+		wpa_printf(MSG_DEBUG, "WNM: WFA subelement %u len %u",
+			   ie, ie_len);
+		if (ie_len > end - pos) {
+			wpa_printf(MSG_DEBUG, "WNM: Not enough room for "
+				   "subelement");
+			break;
+		}
+
+#ifdef CONFIG_HS20
+		if (ie == WLAN_EID_VENDOR_SPECIFIC && ie_len >= 5 &&
+		    WPA_GET_BE24(pos) == OUI_WFA &&
+		    pos[3] == HS20_WNM_SUB_REM_NEEDED) {
+			/* Subscription Remediation subelement */
+			const u8 *ie_end;
+			u8 url_len;
+			char *url;
+			u8 osu_method;
+
+			wpa_printf(MSG_DEBUG, "WNM: Subscription Remediation "
+				   "subelement");
+			ie_end = pos + ie_len;
+			pos += 4;
+			url_len = *pos++;
+			if (url_len == 0) {
+				wpa_printf(MSG_DEBUG, "WNM: No Server URL included");
+				url = NULL;
+				osu_method = 1;
+			} else {
+				if (pos + url_len + 1 > ie_end) {
+					wpa_printf(MSG_DEBUG, "WNM: Not enough room for Server URL (len=%u) and Server Method (left %d)",
+						   url_len,
+						   (int) (ie_end - pos));
+					break;
+				}
+				url = os_malloc(url_len + 1);
+				if (url == NULL)
+					break;
+				os_memcpy(url, pos, url_len);
+				url[url_len] = '\0';
+				osu_method = pos[url_len];
+			}
+			hs20_rx_subscription_remediation(wpa_s, url,
+							 osu_method);
+			os_free(url);
+			break;
+		}
+#endif /* CONFIG_HS20 */
+
+		pos += ie_len;
+	}
+}
+
+
+static void ieee802_11_rx_wnm_notif_req(struct wpa_supplicant *wpa_s,
+					const u8 *sa, const u8 *frm, int len)
+{
+	const u8 *pos, *end;
+	u8 dialog_token, type;
+
+	/* Dialog Token [1] | Type [1] | Subelements */
+
+	if (len < 2 || sa == NULL)
+		return;
+	end = frm + len;
+	pos = frm;
+	dialog_token = *pos++;
+	type = *pos++;
+
+	wpa_dbg(wpa_s, MSG_DEBUG, "WNM: Received WNM-Notification Request "
+		"(dialog_token %u type %u sa " MACSTR ")",
+		dialog_token, type, MAC2STR(sa));
+	wpa_hexdump(MSG_DEBUG, "WNM-Notification Request subelements",
+		    pos, end - pos);
+
+	if (wpa_s->wpa_state != WPA_COMPLETED ||
+	    os_memcmp(sa, wpa_s->bssid, ETH_ALEN) != 0) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "WNM: WNM-Notification frame not "
+			"from our AP - ignore it");
+		return;
+	}
+
+	switch (type) {
+	case 1:
+		ieee802_11_rx_wnm_notif_req_wfa(wpa_s, sa, pos, end - pos);
+		break;
+	default:
+		wpa_dbg(wpa_s, MSG_DEBUG, "WNM: Ignore unknown "
+			"WNM-Notification type %u", type);
+		break;
+	}
+}
+
+
 void ieee802_11_rx_wnm_action(struct wpa_supplicant *wpa_s,
 			      const struct ieee80211_mgmt *mgmt, size_t len)
 {
@@ -781,6 +888,9 @@ void ieee802_11_rx_wnm_action(struct wpa_supplicant *wpa_s,
 		break;
 	case WNM_SLEEP_MODE_RESP:
 		ieee802_11_rx_wnmsleep_resp(wpa_s, pos, end - pos);
+		break;
+	case WNM_NOTIFICATION_REQ:
+		ieee802_11_rx_wnm_notif_req(wpa_s, mgmt->sa, pos, end - pos);
 		break;
 	default:
 		wpa_printf(MSG_ERROR, "WNM: Unknown request");

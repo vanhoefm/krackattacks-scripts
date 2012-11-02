@@ -914,6 +914,9 @@ enum {
 #define HS20_ANQP_DOMAIN_ID_PRESENT 0x04
 #define HS20_VERSION 0x10 /* Release 2 */
 
+/* WNM-Notification WFA vendors specific subtypes */
+#define HS20_WNM_SUB_REM_NEEDED 0
+
 /* Wi-Fi Direct (P2P) */
 
 #define P2P_OUI_TYPE 9

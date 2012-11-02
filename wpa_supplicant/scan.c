@@ -365,11 +365,17 @@ static void wpas_add_interworking_elements(struct wpa_supplicant *wpa_s,
 		return;
 
 	wpabuf_put_u8(buf, WLAN_EID_EXT_CAPAB);
-	wpabuf_put_u8(buf, 4);
+	wpabuf_put_u8(buf, 6);
 	wpabuf_put_u8(buf, 0x00);
 	wpabuf_put_u8(buf, 0x00);
 	wpabuf_put_u8(buf, 0x00);
 	wpabuf_put_u8(buf, 0x80); /* Bit 31 - Interworking */
+	wpabuf_put_u8(buf, 0x00);
+#ifdef CONFIG_HS20
+	wpabuf_put_u8(buf, 0x40); /* Bit 46 - WNM-Notification */
+#else /* CONFIG_HS20 */
+	wpabuf_put_u8(buf, 0x00);
+#endif /* CONFIG_HS20 */
 
 	wpabuf_put_u8(buf, WLAN_EID_INTERWORKING);
 	wpabuf_put_u8(buf, is_zero_ether_addr(wpa_s->conf->hessid) ? 1 :

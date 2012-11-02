@@ -20,4 +20,7 @@ int is_hs20_network(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid,
 		    struct wpa_bss *bss);
 int hs20_get_pps_mo_id(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid);
 
+void hs20_rx_subscription_remediation(struct wpa_supplicant *wpa_s,
+				      const char *url, u8 osu_method);
+
 #endif /* HS20_SUPPLICANT_H */

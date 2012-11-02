@@ -4376,6 +4376,12 @@ static int nl80211_mgmt_subscribe_non_ap(struct i802_bss *bss)
 	if (nl80211_register_action_frame(bss, (u8 *) "\x0a\x11", 2) < 0)
 		ret = -1;
 
+#ifdef CONFIG_HS20
+	/* WNM-Notification */
+	if (nl80211_register_action_frame(bss, (u8 *) "\x0a\x1a", 2) < 0)
+		return -1;
+#endif /* CONFIG_HS20 */
+
 	nl80211_mgmt_handle_register_eloop(bss);
 
 	return ret;

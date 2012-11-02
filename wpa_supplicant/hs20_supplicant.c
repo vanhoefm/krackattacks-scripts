@@ -23,13 +23,20 @@
 #include "hs20_supplicant.h"
 
 
-void wpas_hs20_add_indication(struct wpabuf *buf)
+void wpas_hs20_add_indication(struct wpabuf *buf, int pps_mo_id)
 {
+	u8 conf;
+
 	wpabuf_put_u8(buf, WLAN_EID_VENDOR_SPECIFIC);
-	wpabuf_put_u8(buf, 5);
+	wpabuf_put_u8(buf, pps_mo_id >= 0 ? 7 : 5);
 	wpabuf_put_be24(buf, OUI_WFA);
 	wpabuf_put_u8(buf, HS20_INDICATION_OUI_TYPE);
-	wpabuf_put_u8(buf, 0x00); /* Hotspot Configuration */
+	conf = HS20_VERSION;
+	if (pps_mo_id >= 0)
+		conf |= HS20_PPS_MO_ID_PRESENT;
+	wpabuf_put_u8(buf, conf);
+	if (pps_mo_id >= 0)
+		wpabuf_put_le16(buf, pps_mo_id);
 }
 
 
@@ -59,6 +66,22 @@ int is_hs20_network(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid,
 		return 0;
 
 	return 1;
+}
+
+
+int hs20_get_pps_mo_id(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid)
+{
+	struct wpa_cred *cred;
+
+	if (ssid == NULL || ssid->parent_cred == NULL)
+		return 0;
+
+	for (cred = wpa_s->conf->cred; cred; cred = cred->next) {
+		if (ssid->parent_cred == cred)
+			return cred->update_identifier;
+	}
+
+	return 0;
 }
 
 

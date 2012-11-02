@@ -1554,6 +1554,9 @@ static int wpa_supplicant_ctrl_iface_status(struct wpa_supplicant *wpa_s,
 {
 	char *pos, *end, tmp[30];
 	int res, verbose, wps, ret;
+#ifdef CONFIG_HS20
+	const u8 *hs20;
+#endif /* CONFIG_HS20 */
 
 	if (os_strcmp(params, "-DRIVER") == 0)
 		return wpa_drv_status(wpa_s, buf, buflen);
@@ -1692,10 +1695,16 @@ static int wpa_supplicant_ctrl_iface_status(struct wpa_supplicant *wpa_s,
 
 #ifdef CONFIG_HS20
 	if (wpa_s->current_bss &&
-	    wpa_bss_get_vendor_ie(wpa_s->current_bss, HS20_IE_VENDOR_TYPE) &&
+	    (hs20 = wpa_bss_get_vendor_ie(wpa_s->current_bss,
+					  HS20_IE_VENDOR_TYPE)) &&
 	    wpa_s->wpa_proto == WPA_PROTO_RSN &&
 	    wpa_key_mgmt_wpa_ieee8021x(wpa_s->key_mgmt)) {
-		ret = os_snprintf(pos, end - pos, "hs20=1\n");
+		int release = 1;
+		if (hs20[1] >= 5) {
+			u8 rel_num = (hs20[6] & 0xf0) >> 4;
+			release = rel_num + 1;
+		}
+		ret = os_snprintf(pos, end - pos, "hs20=%d\n", release);
 		if (ret < 0 || ret >= end - pos)
 			return pos - buf;
 		pos += ret;

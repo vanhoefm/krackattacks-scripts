@@ -909,6 +909,11 @@ enum {
 #define HS20_STYPE_NAI_HOME_REALM_QUERY 6
 #define HS20_STYPE_OPERATING_CLASS 7
 
+#define HS20_DGAF_DISABLED 0x01
+#define HS20_PPS_MO_ID_PRESENT 0x02
+#define HS20_ANQP_DOMAIN_ID_PRESENT 0x04
+#define HS20_VERSION 0x10 /* Release 2 */
+
 /* Wi-Fi Direct (P2P) */
 
 #define P2P_OUI_TYPE 9

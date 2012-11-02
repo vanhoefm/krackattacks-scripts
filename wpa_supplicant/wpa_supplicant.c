@@ -1586,7 +1586,8 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 		struct wpabuf *hs20;
 		hs20 = wpabuf_alloc(20);
 		if (hs20) {
-			wpas_hs20_add_indication(hs20);
+			int pps_mo_id = hs20_get_pps_mo_id(wpa_s, ssid);
+			wpas_hs20_add_indication(hs20, pps_mo_id);
 			os_memcpy(wpa_ie + wpa_ie_len, wpabuf_head(hs20),
 				  wpabuf_len(hs20));
 			wpa_ie_len += wpabuf_len(hs20);

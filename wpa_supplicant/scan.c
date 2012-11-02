@@ -425,7 +425,7 @@ static struct wpabuf * wpa_supplicant_extra_ies(struct wpa_supplicant *wpa_s)
 
 #ifdef CONFIG_HS20
 	if (wpa_s->conf->hs20 && wpabuf_resize(&extra_ie, 7) == 0)
-		wpas_hs20_add_indication(extra_ie);
+		wpas_hs20_add_indication(extra_ie, -1);
 #endif /* CONFIG_HS20 */
 
 	return extra_ie;

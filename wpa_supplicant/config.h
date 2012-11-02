@@ -244,6 +244,8 @@ struct wpa_cred {
 		char country[3];
 	} *roaming_partner;
 	size_t num_roaming_partner;
+
+	int update_identifier;
 };
 
 

@@ -804,6 +804,8 @@ static void wpa_config_write_cred(FILE *f, struct wpa_cred *cred)
 				p->country);
 		}
 	}
+	if (cred->update_identifier)
+		fprintf(f, "\tupdate_identifier=%d\n", cred->update_identifier);
 }
 
 

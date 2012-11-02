@@ -220,6 +220,9 @@ Credentials can be pre-configured for automatic network selection:
 #	(non-exact match means any subdomain matches the entry; priority is in
 #	0..255 range with 0 being the highest priority)
 #
+# update_identifier: PPS MO ID
+#	(Hotspot 2.0 PerProviderSubscription/UpdateIdentifier)
+#
 # for example:
 #
 #cred={

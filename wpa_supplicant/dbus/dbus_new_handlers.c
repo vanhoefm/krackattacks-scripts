@@ -3404,6 +3404,63 @@ dbus_bool_t wpas_dbus_getter_bss_rsn(DBusMessageIter *iter, DBusError *error,
 
 
 /**
+ * wpas_dbus_getter_bss_wps - Return the WPS options of a BSS
+ * @iter: Pointer to incoming dbus message iter
+ * @error: Location to store error on failure
+ * @user_data: Function specific data
+ * Returns: TRUE on success, FALSE on failure
+ *
+ * Getter for "WPS" property.
+ */
+dbus_bool_t wpas_dbus_getter_bss_wps(DBusMessageIter *iter, DBusError *error,
+				     void *user_data)
+{
+	struct bss_handler_args *args = user_data;
+	struct wpa_bss *res;
+#ifdef CONFIG_WPS
+	struct wpabuf *wps_ie;
+#endif /* CONFIG_WPS */
+	DBusMessageIter iter_dict, variant_iter;
+	const char *type = "";
+
+	res = get_bss_helper(args, error, __func__);
+	if (!res)
+		return FALSE;
+
+	if (!dbus_message_iter_open_container(iter, DBUS_TYPE_VARIANT,
+					      "a{sv}", &variant_iter))
+		goto nomem;
+
+	if (!wpa_dbus_dict_open_write(&variant_iter, &iter_dict))
+		goto nomem;
+
+#ifdef CONFIG_WPS
+	wps_ie = wpa_bss_get_vendor_ie_multi(res, WPS_IE_VENDOR_TYPE);
+	if (wps_ie) {
+		if (wps_is_selected_pbc_registrar(wps_ie))
+			type = "pbc";
+		else if (wps_is_selected_pin_registrar(wps_ie))
+			type = "pin";
+	}
+#endif /* CONFIG_WPS */
+
+	if (!wpa_dbus_dict_append_string(&iter_dict, "Type", type))
+		goto nomem;
+
+	if (!wpa_dbus_dict_close_write(&variant_iter, &iter_dict))
+		goto nomem;
+	if (!dbus_message_iter_close_container(iter, &variant_iter))
+		goto nomem;
+
+	return TRUE;
+
+nomem:
+	dbus_set_error_const(error, DBUS_ERROR_NO_MEMORY, "no memory");
+	return FALSE;
+}
+
+
+/**
  * wpas_dbus_getter_bss_ies - Return all IEs of a BSS
  * @iter: Pointer to incoming dbus message iter
  * @error: Location to store error on failure

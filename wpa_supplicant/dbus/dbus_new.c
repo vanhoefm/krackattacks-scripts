@@ -2236,6 +2236,10 @@ static const struct wpa_dbus_property_desc wpas_dbus_bss_properties[] = {
 	  wpas_dbus_getter_bss_rsn,
 	  NULL
 	},
+	{ "WPS", WPAS_DBUS_NEW_IFACE_BSS, "a{sv}",
+	  wpas_dbus_getter_bss_wps,
+	  NULL
+	},
 	{ "IEs", WPAS_DBUS_NEW_IFACE_BSS, "ay",
 	  wpas_dbus_getter_bss_ies,
 	  NULL

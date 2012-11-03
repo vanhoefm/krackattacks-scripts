@@ -323,6 +323,9 @@ void wpas_notify_bss_rsnie_changed(struct wpa_supplicant *wpa_s,
 void wpas_notify_bss_wps_changed(struct wpa_supplicant *wpa_s,
 				 unsigned int id)
 {
+#ifdef CONFIG_WPS
+	wpas_dbus_bss_signal_prop_changed(wpa_s, WPAS_DBUS_BSS_PROP_WPS, id);
+#endif /* CONFIG_WPS */
 }
 
 

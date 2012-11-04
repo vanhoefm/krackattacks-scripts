@@ -46,6 +46,26 @@ def wpas_tag_read(message):
         return
     print wpas.request("WPS_NFC_TAG_READ " + message.encode("hex"))
 
+
+def wps_tag_read(tag):
+    if len(tag.ndef.message):
+        message = nfc.ndef.Message(tag.ndef.message)
+        print "message type " + message.type
+
+        for record in message:
+            print "record type " + record.type
+            if record.type == "application/vnd.wfa.wsc":
+                print "WPS tag - send to wpa_supplicant"
+                wpas_tag_read(tag.ndef.message)
+                break
+    else:
+        print "Empty tag"
+
+    print "Remove tag"
+    while tag.is_present:
+        time.sleep(0.1)
+
+
 def main():
     clf = nfc.ContactlessFrontend()
 
@@ -55,31 +75,18 @@ def main():
 
             while True:
                 tag = clf.poll()
-                if tag and tag.ndef:
+                if tag == None:
+                    continue
+
+                if tag.ndef:
+                    wps_tag_read(tag)
                     break
+
                 if tag:
-                    print "Not an NDEF tag"
+                    print "Not an NDEF tag - remove tag"
                     while tag.is_present:
-                        time.sleep(0.2)
-
-            if len(tag.ndef.message):
-                message = nfc.ndef.Message(tag.ndef.message)
-                print "message type " + message.type
-
-                for record in message:
-                    print "record type " + record.type
-                    if record.type == "application/vnd.wfa.wsc":
-                        print "WPS tag - send to wpa_supplicant"
-                        wpas_tag_read(tag.ndef.message)
-                        break
-            else:
-                print "Empty tag"
-
-            print "Remove tag"
-            while tag.is_present:
-                time.sleep(0.2)
-
-            print "Ok"
+                        time.sleep(0.1)
+                    break
 
     except KeyboardInterrupt:
         raise SystemExit

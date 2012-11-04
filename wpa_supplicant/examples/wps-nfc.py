@@ -17,26 +17,34 @@ import wpactrl
 
 wpas_ctrl = '/var/run/wpa_supplicant'
 
-def wpas_tag_read(message):
+def wpas_connect():
     ifaces = []
     if os.path.isdir(wpas_ctrl):
         try:
             ifaces = [os.path.join(wpas_ctrl, i) for i in os.listdir(wpas_ctrl)]
         except OSError, error:
             print "Could not find wpa_supplicant: ", error
-            return
+            return None
 
     if len(ifaces) < 1:
         print "No wpa_supplicant control interface found"
-        return
+        return None
 
     for ctrl in ifaces:
         try:
             wpas = wpactrl.WPACtrl(ctrl)
-            print wpas.request("WPS_NFC_TAG_READ " + message.encode("hex"))
+            return wpas
         except wpactrl.error, error:
             print "Error: ", error
             pass
+    return None
+
+
+def wpas_tag_read(message):
+    wpas = wpas_connect()
+    if (wpas == None):
+        return
+    print wpas.request("WPS_NFC_TAG_READ " + message.encode("hex"))
 
 def main():
     clf = nfc.ContactlessFrontend()

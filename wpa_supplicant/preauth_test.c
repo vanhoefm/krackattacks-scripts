@@ -38,12 +38,6 @@ struct preauth_test_data {
 };
 
 
-static void _wpa_supplicant_disassociate(void *wpa_s, int reason_code)
-{
-	wpa_supplicant_disassociate(wpa_s, reason_code);
-}
-
-
 static void _wpa_supplicant_deauthenticate(void *wpa_s, int reason_code)
 {
 	wpa_supplicant_deauthenticate(wpa_s, reason_code);
@@ -238,7 +232,6 @@ static void wpa_init_conf(struct wpa_supplicant *wpa_s, const char *ifname)
 	ctx->set_state = _wpa_supplicant_set_state;
 	ctx->get_state = _wpa_supplicant_get_state;
 	ctx->deauthenticate = _wpa_supplicant_deauthenticate;
-	ctx->disassociate = _wpa_supplicant_disassociate;
 	ctx->set_key = wpa_supplicant_set_key;
 	ctx->get_network_ctx = wpa_supplicant_get_network_ctx;
 	ctx->get_bssid = wpa_supplicant_get_bssid;

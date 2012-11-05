@@ -143,12 +143,6 @@ static inline void wpa_sm_deauthenticate(struct wpa_sm *sm, int reason_code)
 	sm->ctx->deauthenticate(sm->ctx->ctx, reason_code);
 }
 
-static inline void wpa_sm_disassociate(struct wpa_sm *sm, int reason_code)
-{
-	WPA_ASSERT(sm->ctx->disassociate);
-	sm->ctx->disassociate(sm->ctx->ctx, reason_code);
-}
-
 static inline int wpa_sm_set_key(struct wpa_sm *sm, enum wpa_alg alg,
 				 const u8 *addr, int key_idx, int set_tx,
 				 const u8 *seq, size_t seq_len,

@@ -1682,57 +1682,6 @@ static void wpa_supplicant_clear_connection(struct wpa_supplicant *wpa_s,
 
 
 /**
- * wpa_supplicant_disassociate - Disassociate the current connection
- * @wpa_s: Pointer to wpa_supplicant data
- * @reason_code: IEEE 802.11 reason code for the disassociate frame
- *
- * This function is used to request %wpa_supplicant to disassociate with the
- * current AP.
- */
-void wpa_supplicant_disassociate(struct wpa_supplicant *wpa_s,
-				 int reason_code)
-{
-	u8 *addr = NULL;
-	union wpa_event_data event;
-	int zero_addr = 0;
-
-	wpa_dbg(wpa_s, MSG_DEBUG, "Request to disassociate - bssid=" MACSTR
-		" pending_bssid=" MACSTR " reason=%d state=%s",
-		MAC2STR(wpa_s->bssid), MAC2STR(wpa_s->pending_bssid),
-		reason_code, wpa_supplicant_state_txt(wpa_s->wpa_state));
-
-	if (!is_zero_ether_addr(wpa_s->bssid))
-		addr = wpa_s->bssid;
-	else if (!is_zero_ether_addr(wpa_s->pending_bssid) &&
-		 (wpa_s->wpa_state == WPA_AUTHENTICATING ||
-		  wpa_s->wpa_state == WPA_ASSOCIATING))
-		addr = wpa_s->pending_bssid;
-	else if (wpa_s->wpa_state == WPA_ASSOCIATING) {
-		/*
-		 * When using driver-based BSS selection, we may not know the
-		 * BSSID with which we are currently trying to associate. We
-		 * need to notify the driver of this disconnection even in such
-		 * a case, so use the all zeros address here.
-		 */
-		addr = wpa_s->bssid;
-		zero_addr = 1;
-	}
-
-	if (addr) {
-		wpa_drv_disassociate(wpa_s, addr, reason_code);
-		os_memset(&event, 0, sizeof(event));
-		event.disassoc_info.reason_code = (u16) reason_code;
-		event.disassoc_info.locally_generated = 1;
-		wpa_supplicant_event(wpa_s, EVENT_DISASSOC, &event);
-		if (zero_addr)
-			addr = NULL;
-	}
-
-	wpa_supplicant_clear_connection(wpa_s, addr);
-}
-
-
-/**
  * wpa_supplicant_deauthenticate - Deauthenticate the current connection
  * @wpa_s: Pointer to wpa_supplicant data
  * @reason_code: IEEE 802.11 reason code for the deauthenticate frame

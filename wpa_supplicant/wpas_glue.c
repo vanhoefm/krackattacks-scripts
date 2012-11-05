@@ -406,14 +406,6 @@ static enum wpa_states _wpa_supplicant_get_state(void *wpa_s)
 }
 
 
-static void _wpa_supplicant_disassociate(void *wpa_s, int reason_code)
-{
-	wpa_supplicant_disassociate(wpa_s, reason_code);
-	/* Schedule a scan to make sure we continue looking for networks */
-	wpa_supplicant_req_scan(wpa_s, 5, 0);
-}
-
-
 static void _wpa_supplicant_deauthenticate(void *wpa_s, int reason_code)
 {
 	wpa_supplicant_deauthenticate(wpa_s, reason_code);
@@ -839,7 +831,6 @@ int wpa_supplicant_init_wpa(struct wpa_supplicant *wpa_s)
 	ctx->set_state = _wpa_supplicant_set_state;
 	ctx->get_state = _wpa_supplicant_get_state;
 	ctx->deauthenticate = _wpa_supplicant_deauthenticate;
-	ctx->disassociate = _wpa_supplicant_disassociate;
 	ctx->set_key = wpa_supplicant_set_key;
 	ctx->get_network_ctx = wpa_supplicant_get_network_ctx;
 	ctx->get_bssid = wpa_supplicant_get_bssid;

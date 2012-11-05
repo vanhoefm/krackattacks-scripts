@@ -1609,7 +1609,7 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 
 	if (wpa_drv_get_bssid(wpa_s, bssid) < 0) {
 		wpa_dbg(wpa_s, MSG_ERROR, "Failed to get BSSID");
-		wpa_supplicant_disassociate(
+		wpa_supplicant_deauthenticate(
 			wpa_s, WLAN_REASON_DEAUTH_LEAVING);
 		return;
 	}
@@ -1627,7 +1627,7 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 			wpa_clear_keys(wpa_s, bssid);
 		}
 		if (wpa_supplicant_select_config(wpa_s) < 0) {
-			wpa_supplicant_disassociate(
+			wpa_supplicant_deauthenticate(
 				wpa_s, WLAN_REASON_DEAUTH_LEAVING);
 			return;
 		}

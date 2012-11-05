@@ -1547,7 +1547,8 @@ static void remove_network(void *arg, struct wpa_ssid *ssid)
 	}
 
 	if (ssid == wpa_s->current_ssid)
-		wpa_supplicant_disassociate(wpa_s, WLAN_REASON_DEAUTH_LEAVING);
+		wpa_supplicant_deauthenticate(wpa_s,
+					      WLAN_REASON_DEAUTH_LEAVING);
 }
 
 

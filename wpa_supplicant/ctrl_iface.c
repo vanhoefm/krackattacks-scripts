@@ -2124,8 +2124,8 @@ static int wpa_supplicant_ctrl_iface_remove_network(
 #endif /* CONFIG_SME */
 			wpa_sm_set_config(wpa_s->wpa, NULL);
 			eapol_sm_notify_config(wpa_s->eapol, NULL, NULL);
-			wpa_supplicant_disassociate(wpa_s,
-				                    WLAN_REASON_DEAUTH_LEAVING);
+			wpa_supplicant_deauthenticate(
+				wpa_s, WLAN_REASON_DEAUTH_LEAVING);
 		}
 		return 0;
 	}
@@ -2157,7 +2157,8 @@ static int wpa_supplicant_ctrl_iface_remove_network(
 		wpa_sm_set_config(wpa_s->wpa, NULL);
 		eapol_sm_notify_config(wpa_s->eapol, NULL, NULL);
 
-		wpa_supplicant_disassociate(wpa_s, WLAN_REASON_DEAUTH_LEAVING);
+		wpa_supplicant_deauthenticate(wpa_s,
+					      WLAN_REASON_DEAUTH_LEAVING);
 	}
 
 	if (wpa_config_remove_network(wpa_s->conf, id) < 0) {

@@ -190,7 +190,7 @@ static void wpa_supplicant_timeout(void *eloop_ctx, void *timeout_ctx)
 		MAC2STR(bssid));
 	wpa_blacklist_add(wpa_s, bssid);
 	wpa_sm_notify_disassoc(wpa_s->wpa);
-	wpa_supplicant_disassociate(wpa_s, WLAN_REASON_DEAUTH_LEAVING);
+	wpa_supplicant_deauthenticate(wpa_s, WLAN_REASON_DEAUTH_LEAVING);
 	wpa_s->reassociate = 1;
 
 	/*
@@ -1867,11 +1867,11 @@ void wpa_supplicant_disable_network(struct wpa_supplicant *wpa_s,
 					wpa_s, other_ssid);
 		}
 		if (wpa_s->current_ssid)
-			wpa_supplicant_disassociate(
+			wpa_supplicant_deauthenticate(
 				wpa_s, WLAN_REASON_DEAUTH_LEAVING);
 	} else if (ssid->disabled != 2) {
 		if (ssid == wpa_s->current_ssid)
-			wpa_supplicant_disassociate(
+			wpa_supplicant_deauthenticate(
 				wpa_s, WLAN_REASON_DEAUTH_LEAVING);
 
 		was_disabled = ssid->disabled;
@@ -1897,7 +1897,7 @@ void wpa_supplicant_select_network(struct wpa_supplicant *wpa_s,
 	int disconnected = 0;
 
 	if (ssid && ssid != wpa_s->current_ssid && wpa_s->current_ssid) {
-		wpa_supplicant_disassociate(
+		wpa_supplicant_deauthenticate(
 			wpa_s, WLAN_REASON_DEAUTH_LEAVING);
 		disconnected = 1;
 	}

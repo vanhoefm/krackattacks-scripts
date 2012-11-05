@@ -783,7 +783,7 @@ static void wpa_report_ie_mismatch(struct wpa_sm *sm,
 			    rsn_ie, rsn_ie_len);
 	}
 
-	wpa_sm_disassociate(sm, WLAN_REASON_IE_IN_4WAY_DIFFERS);
+	wpa_sm_deauthenticate(sm, WLAN_REASON_IE_IN_4WAY_DIFFERS);
 }
 
 

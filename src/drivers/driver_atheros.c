@@ -976,8 +976,6 @@ static int atheros_receive_pkt(struct atheros_driver_data *drv)
 	if (drv->sock_raw == NULL)
 		return -1;
 #endif /* CONFIG_WPS || CONFIG_IEEE80211R */
-	if (l2_packet_get_own_addr(drv->sock_xmit, drv->own_addr))
-		return -1;
 	return ret;
 }
 
@@ -1656,6 +1654,7 @@ atheros_init(struct hostapd_data *hapd, struct wpa_init_params *params)
 		goto bad;
 	if (l2_packet_get_own_addr(drv->sock_xmit, params->own_addr))
 		goto bad;
+	os_memcpy(drv->own_addr, params->own_addr, ETH_ALEN);
 	if (params->bridge[0]) {
 		wpa_printf(MSG_DEBUG, "Configure bridge %s for EAPOL traffic.",
 			   params->bridge[0]);

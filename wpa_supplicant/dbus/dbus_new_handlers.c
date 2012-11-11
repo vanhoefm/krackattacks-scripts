@@ -1492,13 +1492,15 @@ DBusMessage * wpas_dbus_handler_remove_network(DBusMessage *message,
 	/* Extract the network ID and ensure the network */
 	/* is actually a child of this interface */
 	iface = wpas_dbus_new_decompose_object_path(op, 0, &net_id, NULL);
-	if (iface == NULL || os_strcmp(iface, wpa_s->dbus_new_path) != 0) {
+	if (iface == NULL || net_id == NULL ||
+	    os_strcmp(iface, wpa_s->dbus_new_path) != 0) {
 		reply = wpas_dbus_error_invalid_args(message, op);
 		goto out;
 	}
 
+	errno = 0;
 	id = strtoul(net_id, NULL, 10);
-	if (errno == EINVAL) {
+	if (errno != 0) {
 		reply = wpas_dbus_error_invalid_args(message, op);
 		goto out;
 	}
@@ -1592,13 +1594,15 @@ DBusMessage * wpas_dbus_handler_select_network(DBusMessage *message,
 	/* Extract the network ID and ensure the network */
 	/* is actually a child of this interface */
 	iface = wpas_dbus_new_decompose_object_path(op, 0, &net_id, NULL);
-	if (iface == NULL || os_strcmp(iface, wpa_s->dbus_new_path) != 0) {
+	if (iface == NULL || net_id == NULL ||
+	    os_strcmp(iface, wpa_s->dbus_new_path) != 0) {
 		reply = wpas_dbus_error_invalid_args(message, op);
 		goto out;
 	}
 
+	errno = 0;
 	id = strtoul(net_id, NULL, 10);
-	if (errno == EINVAL) {
+	if (errno != 0) {
 		reply = wpas_dbus_error_invalid_args(message, op);
 		goto out;
 	}
@@ -1647,13 +1651,15 @@ DBusMessage * wpas_dbus_handler_network_reply(DBusMessage *message,
 	/* Extract the network ID and ensure the network */
 	/* is actually a child of this interface */
 	iface = wpas_dbus_new_decompose_object_path(op, 0, &net_id, NULL);
-	if (iface == NULL || os_strcmp(iface, wpa_s->dbus_new_path) != 0) {
+	if (iface == NULL || net_id == NULL ||
+	    os_strcmp(iface, wpa_s->dbus_new_path) != 0) {
 		reply = wpas_dbus_error_invalid_args(message, op);
 		goto out;
 	}
 
+	errno = 0;
 	id = strtoul(net_id, NULL, 10);
-	if (errno == EINVAL) {
+	if (errno != 0) {
 		reply = wpas_dbus_error_invalid_args(message, net_id);
 		goto out;
 	}

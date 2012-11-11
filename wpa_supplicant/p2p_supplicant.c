@@ -4768,7 +4768,7 @@ static int wpas_p2p_is_client(struct wpa_supplicant *wpa_s)
 {
 	if (wpa_s->current_ssid == NULL) {
 		/*
-		 * current_ssid can be clearead when P2P client interface gets
+		 * current_ssid can be cleared when P2P client interface gets
 		 * disconnected, so assume this interface was used as P2P
 		 * client.
 		 */

@@ -117,6 +117,7 @@ static struct wpabuf * eap_sim_build_start(struct eap_sm *sm,
 		eap_sim_msg_add(msg, EAP_SIM_AT_ANY_ID_REQ, 0, NULL, 0);
 	} else if (data->start_round > 3) {
 		/* Cannot use more than three rounds of Start messages */
+		eap_sim_msg_free(msg);
 		return NULL;
 	} else if (data->start_round == 0) {
 		/*

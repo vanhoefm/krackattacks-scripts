@@ -365,6 +365,7 @@ static struct wpabuf * eap_aka_build_identity(struct eap_sm *sm,
 		eap_sim_msg_add(msg, EAP_SIM_AT_ANY_ID_REQ, 0, NULL, 0);
 	} else if (data->identity_round > 3) {
 		/* Cannot use more than three rounds of Identity messages */
+		eap_sim_msg_free(msg);
 		return NULL;
 	} else if (sm->identity && sm->identity_len > 0 &&
 		   (sm->identity[0] == EAP_AKA_REAUTH_ID_PREFIX ||

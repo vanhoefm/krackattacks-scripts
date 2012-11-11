@@ -45,8 +45,7 @@ struct wps_data * wps_init(const struct wps_config *cfg)
 		os_memcpy(data->uuid_e, cfg->wps->uuid, WPS_UUID_LEN);
 	}
 	if (cfg->pin) {
-		data->dev_pw_id = data->wps->oob_dev_pw_id == 0 ?
-			cfg->dev_pw_id : data->wps->oob_dev_pw_id;
+		data->dev_pw_id = cfg->dev_pw_id;
 		data->dev_password = os_malloc(cfg->pin_len);
 		if (data->dev_password == NULL) {
 			os_free(data);

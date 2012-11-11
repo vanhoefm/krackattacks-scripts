@@ -736,24 +736,6 @@ static int wpa_cli_cmd_wps_cancel(struct wpa_ctrl *ctrl, int argc,
 }
 
 
-#ifdef CONFIG_WPS_OOB
-static int wpa_cli_cmd_wps_oob(struct wpa_ctrl *ctrl, int argc, char *argv[])
-{
-	if (argc != 3) {
-		printf("Invalid WPS_OOB command: need three "
-		       "arguments:\n"
-		       "- DEV_TYPE: use 'ufd'\n"
-		       "- PATH: path of OOB device like '/mnt'\n"
-		       "- METHOD: OOB method 'pin-e' or 'pin-r', "
-		       "'cred'\n");
-		return -1;
-	}
-
-	return wpa_cli_cmd(ctrl, "WPS_OOB", 3, argc, argv);
-}
-#endif /* CONFIG_WPS_OOB */
-
-
 #ifdef CONFIG_WPS_NFC
 
 static int wpa_cli_cmd_wps_nfc(struct wpa_ctrl *ctrl, int argc, char *argv[])
@@ -2485,11 +2467,6 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	  "<PIN> = verify PIN checksum" },
 	{ "wps_cancel", wpa_cli_cmd_wps_cancel, NULL, cli_cmd_flag_none,
 	  "Cancels the pending WPS operation" },
-#ifdef CONFIG_WPS_OOB
-	{ "wps_oob", wpa_cli_cmd_wps_oob, NULL,
-	  cli_cmd_flag_sensitive,
-	  "<DEV_TYPE> <PATH> <METHOD> = start WPS OOB" },
-#endif /* CONFIG_WPS_OOB */
 #ifdef CONFIG_WPS_NFC
 	{ "wps_nfc", wpa_cli_cmd_wps_nfc, wpa_cli_complete_bss,
 	  cli_cmd_flag_none,

@@ -2233,22 +2233,6 @@ static int wps_process_pubkey(struct wps_data *wps, const u8 *pk,
 		return -1;
 	}
 
-#ifdef CONFIG_WPS_OOB
-	if (wps->wps->oob_conf.pubkey_hash != NULL) {
-		const u8 *addr[1];
-		u8 hash[WPS_HASH_LEN];
-
-		addr[0] = pk;
-		sha256_vector(1, addr, &pk_len, hash);
-		if (os_memcmp(hash,
-			      wpabuf_head(wps->wps->oob_conf.pubkey_hash),
-			      WPS_OOB_PUBKEY_HASH_LEN) != 0) {
-			wpa_printf(MSG_ERROR, "WPS: Public Key hash error");
-			return -1;
-		}
-	}
-#endif /* CONFIG_WPS_OOB */
-
 	wpabuf_free(wps->dh_pubkey_e);
 	wps->dh_pubkey_e = wpabuf_alloc_copy(pk, pk_len);
 	if (wps->dh_pubkey_e == NULL)
@@ -2543,16 +2527,6 @@ static enum wps_process_res wps_process_m1(struct wps_data *wps,
 		}
 	}
 #endif /* CONFIG_WPS_NFC */
-
-#ifdef CONFIG_WPS_OOB
-	if (wps->dev_pw_id >= 0x10 && wps->nfc_pw_token == NULL &&
-	    wps->dev_pw_id != wps->wps->oob_dev_pw_id) {
-		wpa_printf(MSG_DEBUG, "WPS: OOB Device Password ID "
-			   "%d mismatch", wps->dev_pw_id);
-		wps->state = SEND_M2D;
-		return WPS_CONTINUE;
-	}
-#endif /* CONFIG_WPS_OOB */
 
 	if (wps->dev_pw_id == DEV_PW_PUSHBUTTON) {
 		if ((wps->wps->registrar->force_pbc_overlap ||

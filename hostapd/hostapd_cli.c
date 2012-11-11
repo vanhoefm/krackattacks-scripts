@@ -72,9 +72,6 @@ static const char *commands_help =
 "   wps_check_pin <PIN>  verify PIN checksum\n"
 "   wps_pbc              indicate button pushed to initiate PBC\n"
 "   wps_cancel           cancel the pending WPS operation\n"
-#ifdef CONFIG_WPS_OOB
-"   wps_oob <type> <path> <method>  use WPS with out-of-band (UFD)\n"
-#endif /* CONFIG_WPS_OOB */
 #ifdef CONFIG_WPS_NFC
 "   wps_nfc_tag_read <hexdump>  report read NFC tag with WPS data\n"
 "   wps_nfc_config_token <WPS/NDEF>  build NFC configuration token\n"
@@ -403,34 +400,6 @@ static int hostapd_cli_cmd_wps_cancel(struct wpa_ctrl *ctrl, int argc,
 {
 	return wpa_ctrl_command(ctrl, "WPS_CANCEL");
 }
-
-
-#ifdef CONFIG_WPS_OOB
-static int hostapd_cli_cmd_wps_oob(struct wpa_ctrl *ctrl, int argc,
-				   char *argv[])
-{
-	char cmd[256];
-	int res;
-
-	if (argc != 3) {
-		printf("Invalid WPS_OOB command: need three "
-		       "arguments:\n"
-		       "- DEV_TYPE: use 'ufd'\n"
-		       "- PATH: path of OOB device like '/mnt'\n"
-		       "- METHOD: OOB method 'pin-e' or 'pin-r', "
-		       "'cred'\n");
-		return -1;
-	}
-
-	res = os_snprintf(cmd, sizeof(cmd), "WPS_OOB %s %s %s",
-			  argv[0], argv[1], argv[2]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
-		printf("Too long WPS_OOB command.\n");
-		return -1;
-	}
-	return wpa_ctrl_command(ctrl, cmd);
-}
-#endif /* CONFIG_WPS_OOB */
 
 
 #ifdef CONFIG_WPS_NFC
@@ -798,9 +767,6 @@ static struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	{ "wps_check_pin", hostapd_cli_cmd_wps_check_pin },
 	{ "wps_pbc", hostapd_cli_cmd_wps_pbc },
 	{ "wps_cancel", hostapd_cli_cmd_wps_cancel },
-#ifdef CONFIG_WPS_OOB
-	{ "wps_oob", hostapd_cli_cmd_wps_oob },
-#endif /* CONFIG_WPS_OOB */
 #ifdef CONFIG_WPS_NFC
 	{ "wps_nfc_tag_read", hostapd_cli_cmd_wps_nfc_tag_read },
 	{ "wps_nfc_config_token", hostapd_cli_cmd_wps_nfc_config_token },

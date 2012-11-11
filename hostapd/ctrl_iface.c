@@ -250,26 +250,6 @@ static int hostapd_ctrl_iface_wps_check_pin(
 }
 
 
-#ifdef CONFIG_WPS_OOB
-static int hostapd_ctrl_iface_wps_oob(struct hostapd_data *hapd, char *txt)
-{
-	char *path, *method;
-
-	path = os_strchr(txt, ' ');
-	if (path == NULL)
-		return -1;
-	*path++ = '\0';
-
-	method = os_strchr(path, ' ');
-	if (method == NULL)
-		return -1;
-	*method++ = '\0';
-
-	return hostapd_wps_start_oob(hapd, txt, path, method);
-}
-#endif /* CONFIG_WPS_OOB */
-
-
 #ifdef CONFIG_WPS_NFC
 static int hostapd_ctrl_iface_wps_nfc_tag_read(struct hostapd_data *hapd,
 					       char *pos)
@@ -908,11 +888,6 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 	} else if (os_strcmp(buf, "WPS_CANCEL") == 0) {
 		if (hostapd_wps_cancel(hapd))
 			reply_len = -1;
-#ifdef CONFIG_WPS_OOB
-	} else if (os_strncmp(buf, "WPS_OOB ", 8) == 0) {
-		if (hostapd_ctrl_iface_wps_oob(hapd, buf + 8))
-			reply_len = -1;
-#endif /* CONFIG_WPS_OOB */
 	} else if (os_strncmp(buf, "WPS_AP_PIN ", 11) == 0) {
 		reply_len = hostapd_ctrl_iface_wps_ap_pin(hapd, buf + 11,
 							  reply, reply_size);

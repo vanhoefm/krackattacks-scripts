@@ -1036,8 +1036,6 @@ void hostapd_deinit_wps(struct hostapd_data *hapd)
 	wps_device_data_free(&hapd->wps->dev);
 	wpabuf_free(hapd->wps->dh_pubkey);
 	wpabuf_free(hapd->wps->dh_privkey);
-	wpabuf_free(hapd->wps->oob_conf.pubkey_hash);
-	wpabuf_free(hapd->wps->oob_conf.dev_password);
 	wps_free_pending_msgs(hapd->wps->upnp_msgs);
 	hostapd_wps_nfc_clear(hapd->wps);
 	os_free(hapd->wps);
@@ -1153,59 +1151,6 @@ int hostapd_wps_cancel(struct hostapd_data *hapd)
 {
 	return hostapd_wps_for_each(hapd, wps_cancel, NULL);
 }
-
-
-#ifdef CONFIG_WPS_OOB
-int hostapd_wps_start_oob(struct hostapd_data *hapd, char *device_type,
-			  char *path, char *method)
-{
-	struct wps_context *wps = hapd->wps;
-	struct oob_device_data *oob_dev;
-
-	oob_dev = wps_get_oob_device(device_type);
-	if (oob_dev == NULL)
-		return -1;
-	oob_dev->device_path = path;
-	wps->oob_conf.oob_method = wps_get_oob_method(method);
-
-	if (wps->oob_conf.oob_method == OOB_METHOD_DEV_PWD_R) {
-		/*
-		 * Use pre-configured DH keys in order to be able to write the
-		 * key hash into the OOB file.
-		 */
-		wpabuf_free(wps->dh_pubkey);
-		wpabuf_free(wps->dh_privkey);
-		wps->dh_privkey = NULL;
-		wps->dh_pubkey = dh_init(dh_groups_get(WPS_DH_GROUP),
-					 &wps->dh_privkey);
-		wps->dh_pubkey = wpabuf_zeropad(wps->dh_pubkey, 192);
-		if (wps->dh_pubkey == NULL) {
-			wpa_printf(MSG_ERROR, "WPS: Failed to initialize "
-				   "Diffie-Hellman handshake");
-			return -1;
-		}
-	}
-
-	if (wps_process_oob(wps, oob_dev, 1) < 0)
-		goto error;
-
-	if ((wps->oob_conf.oob_method == OOB_METHOD_DEV_PWD_E ||
-	     wps->oob_conf.oob_method == OOB_METHOD_DEV_PWD_R) &&
-	    hostapd_wps_add_pin(hapd, NULL, "any",
-				wpabuf_head(wps->oob_conf.dev_password), 0) <
-	    0)
-		goto error;
-
-	return 0;
-
-error:
-	wpabuf_free(wps->dh_pubkey);
-	wps->dh_pubkey = NULL;
-	wpabuf_free(wps->dh_privkey);
-	wps->dh_privkey = NULL;
-	return -1;
-}
-#endif /* CONFIG_WPS_OOB */
 
 
 static int hostapd_wps_probe_req_rx(void *ctx, const u8 *addr, const u8 *da,

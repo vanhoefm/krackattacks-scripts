@@ -21,8 +21,6 @@ int hostapd_wps_add_pin(struct hostapd_data *hapd, const u8 *addr,
 int hostapd_wps_button_pushed(struct hostapd_data *hapd,
 			      const u8 *p2p_dev_addr);
 int hostapd_wps_cancel(struct hostapd_data *hapd);
-int hostapd_wps_start_oob(struct hostapd_data *hapd, char *device_type,
-			  char *path, char *method);
 int hostapd_wps_get_mib_sta(struct hostapd_data *hapd, const u8 *addr,
 			    char *buf, size_t buflen);
 void hostapd_wps_ap_pin_disable(struct hostapd_data *hapd);

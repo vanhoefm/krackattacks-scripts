@@ -368,38 +368,6 @@ int wps_build_oob_dev_pw(struct wpabuf *msg, u16 dev_pw_id,
 
 	return 0;
 }
-
-
-int wps_build_oob_dev_password(struct wpabuf *msg, struct wps_context *wps)
-{
-	u8 dev_password_bin[WPS_OOB_DEVICE_PASSWORD_LEN];
-
-	wpa_printf(MSG_DEBUG, "WPS:  * OOB Device Password");
-
-	if (os_get_random((u8 *) &wps->oob_dev_pw_id, sizeof(u16)) < 0) {
-		wpa_printf(MSG_ERROR, "WPS: device password id "
-			   "generation error");
-		return -1;
-	}
-	wps->oob_dev_pw_id |= 0x0010;
-
-	if (random_get_bytes(dev_password_bin, WPS_OOB_DEVICE_PASSWORD_LEN) <
-	    0) {
-		wpa_printf(MSG_ERROR, "WPS: OOB device password "
-			   "generation error");
-		return -1;
-	}
-
-	wpa_snprintf_hex_uppercase(
-		wpabuf_put(wps->oob_conf.dev_password,
-			   wpabuf_size(wps->oob_conf.dev_password)),
-		wpabuf_size(wps->oob_conf.dev_password),
-		dev_password_bin, WPS_OOB_DEVICE_PASSWORD_LEN);
-
-	return wps_build_oob_dev_pw(msg, wps->oob_dev_pw_id, wps->dh_pubkey,
-				    dev_password_bin,
-				    WPS_OOB_DEVICE_PASSWORD_LEN);
-}
 #endif /* CONFIG_WPS_OOB */
 
 

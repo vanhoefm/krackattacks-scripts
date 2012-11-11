@@ -242,8 +242,11 @@ static int * bgscan_learn_get_probe_freq(struct bgscan_learn_data *data,
 
 	idx = data->probe_idx + 1;
 	while (idx != data->probe_idx) {
-		if (data->supp_freqs[idx] == 0)
+		if (data->supp_freqs[idx] == 0) {
+			if (data->probe_idx == 0)
+				break;
 			idx = 0;
+		}
 		if (!in_array(freqs, data->supp_freqs[idx])) {
 			wpa_printf(MSG_DEBUG, "bgscan learn: Probe new freq "
 				   "%u", data->supp_freqs[idx]);

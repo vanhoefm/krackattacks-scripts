@@ -88,6 +88,16 @@ struct p2p_go_neg_results {
 	size_t ssid_len;
 
 	/**
+	 * psk - WPA pre-shared key (256 bits) (GO only)
+	 */
+	u8 psk[32];
+
+	/**
+	 * psk_set - Whether PSK field is configured (GO only)
+	 */
+	int psk_set;
+
+	/**
 	 * passphrase - WPA2-Personal passphrase for the group (GO only)
 	 */
 	char passphrase[64];

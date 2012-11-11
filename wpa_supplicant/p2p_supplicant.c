@@ -888,7 +888,11 @@ static void wpas_start_wps_go(struct wpa_supplicant *wpa_s,
 		wpa_config_remove_network(wpa_s->conf, ssid->id);
 		return;
 	}
-	wpa_config_update_psk(ssid);
+	ssid->psk_set = params->psk_set;
+	if (ssid->psk_set)
+		os_memcpy(ssid->psk, params->psk, sizeof(ssid->psk));
+	else
+		wpa_config_update_psk(ssid);
 	ssid->ap_max_inactivity = wpa_s->parent->conf->p2p_go_max_inactivity;
 
 	wpa_s->ap_configured_cb = p2p_go_configured;
@@ -4117,6 +4121,9 @@ int wpas_p2p_group_add_persistent(struct wpa_supplicant *wpa_s,
 		return -1;
 
 	params.role_go = 1;
+	params.psk_set = ssid->psk_set;
+	if (params.psk_set)
+		os_memcpy(params.psk, ssid->psk, sizeof(params.psk));
 	if (ssid->passphrase == NULL ||
 	    os_strlen(ssid->passphrase) >= sizeof(params.passphrase)) {
 		wpa_printf(MSG_DEBUG, "P2P: Invalid passphrase in persistent "

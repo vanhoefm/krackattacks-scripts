@@ -174,15 +174,15 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 		bss->wpa = ssid->proto;
 	bss->wpa_key_mgmt = ssid->key_mgmt;
 	bss->wpa_pairwise = ssid->pairwise_cipher;
-	if (ssid->passphrase) {
-		bss->ssid.wpa_passphrase = os_strdup(ssid->passphrase);
-	} else if (ssid->psk_set) {
+	if (ssid->psk_set) {
 		os_free(bss->ssid.wpa_psk);
 		bss->ssid.wpa_psk = os_zalloc(sizeof(struct hostapd_wpa_psk));
 		if (bss->ssid.wpa_psk == NULL)
 			return -1;
 		os_memcpy(bss->ssid.wpa_psk->psk, ssid->psk, PMK_LEN);
 		bss->ssid.wpa_psk->group = 1;
+	} else if (ssid->passphrase) {
+		bss->ssid.wpa_passphrase = os_strdup(ssid->passphrase);
 	} else if (ssid->wep_key_len[0] || ssid->wep_key_len[1] ||
 		   ssid->wep_key_len[2] || ssid->wep_key_len[3]) {
 		struct hostapd_wep_keys *wep = &bss->ssid.wep;

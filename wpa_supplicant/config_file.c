@@ -676,7 +676,7 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 	INT_DEFe(fragment_size, DEFAULT_FRAGMENT_SIZE);
 #endif /* IEEE8021X_EAPOL */
 	INT(mode);
-	INT(proactive_key_caching);
+	write_int(f, "proactive_key_caching", ssid->proactive_key_caching, -1);
 	INT(disabled);
 	INT(peerkey);
 #ifdef CONFIG_IEEE80211W
@@ -926,6 +926,8 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 	if (config->auto_interworking)
 		fprintf(f, "auto_interworking=%d\n",
 			config->auto_interworking);
+	if (config->okc)
+		fprintf(f, "okc=%d\n", config->okc);
 }
 
 #endif /* CONFIG_NO_CONFIG_WRITE */

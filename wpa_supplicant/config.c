@@ -2041,6 +2041,7 @@ void wpa_config_set_network_defaults(struct wpa_ssid *ssid)
 	ssid->ampdu_factor = DEFAULT_AMPDU_FACTOR;
 	ssid->ampdu_density = DEFAULT_AMPDU_DENSITY;
 #endif /* CONFIG_HT_OVERRIDES */
+	ssid->proactive_key_caching = -1;
 }
 
 
@@ -3033,6 +3034,7 @@ static const struct global_parse_data global_fields[] = {
 	{ STR(ext_password_backend), CFG_CHANGED_EXT_PW_BACKEND },
 	{ INT(p2p_go_max_inactivity), 0 },
 	{ INT_RANGE(auto_interworking, 0, 1), 0 },
+	{ INT(okc), 0 },
 };
 
 #undef FUNC

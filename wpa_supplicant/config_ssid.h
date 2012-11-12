@@ -228,13 +228,18 @@ struct wpa_ssid {
 	 *
 	 * This field can be used to enable proactive key caching which is also
 	 * known as opportunistic PMKSA caching for WPA2. This is disabled (0)
-	 * by default. Enable by setting this to 1.
+	 * by default unless default value is changed with the global okc=1
+	 * parameter. Enable by setting this to 1.
 	 *
 	 * Proactive key caching is used to make supplicant assume that the APs
 	 * are using the same PMK and generate PMKSA cache entries without
 	 * doing RSN pre-authentication. This requires support from the AP side
 	 * and is normally used with wireless switches that co-locate the
 	 * authenticator.
+	 *
+	 * Internally, special value -1 is used to indicate that the parameter
+	 * was not specified in the configuration (i.e., default behavior is
+	 * followed).
 	 */
 	int proactive_key_caching;
 

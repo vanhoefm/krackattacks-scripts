@@ -880,7 +880,8 @@ void wpa_supplicant_rsn_supp_set_config(struct wpa_supplicant *wpa_s,
 		conf.peerkey_enabled = ssid->peerkey;
 		conf.allowed_pairwise_cipher = ssid->pairwise_cipher;
 #ifdef IEEE8021X_EAPOL
-		conf.proactive_key_caching = ssid->proactive_key_caching;
+		conf.proactive_key_caching = ssid->proactive_key_caching < 0 ?
+			wpa_s->conf->okc : ssid->proactive_key_caching;
 		conf.eap_workaround = ssid->eap_workaround;
 		conf.eap_conf_ctx = &ssid->eap;
 #endif /* IEEE8021X_EAPOL */

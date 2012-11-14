@@ -4547,20 +4547,6 @@ static int wpa_driver_nl80211_deauthenticate(void *priv, const u8 *addr,
 }
 
 
-static int wpa_driver_nl80211_disassociate(void *priv, const u8 *addr,
-					   int reason_code)
-{
-	struct i802_bss *bss = priv;
-	struct wpa_driver_nl80211_data *drv = bss->drv;
-	if (!(drv->capa.flags & WPA_DRIVER_FLAGS_SME))
-		return wpa_driver_nl80211_disconnect(drv, reason_code);
-	wpa_printf(MSG_DEBUG, "%s", __func__);
-	drv->associated = 0;
-	return wpa_driver_nl80211_mlme(drv, addr, NL80211_CMD_DISASSOCIATE,
-				       reason_code, 0);
-}
-
-
 static void nl80211_copy_auth_params(struct wpa_driver_nl80211_data *drv,
 				     struct wpa_driver_auth_params *params)
 {
@@ -9177,7 +9163,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.stop_sched_scan = wpa_driver_nl80211_stop_sched_scan,
 	.get_scan_results2 = wpa_driver_nl80211_get_scan_results,
 	.deauthenticate = wpa_driver_nl80211_deauthenticate,
-	.disassociate = wpa_driver_nl80211_disassociate,
 	.authenticate = wpa_driver_nl80211_authenticate,
 	.associate = wpa_driver_nl80211_associate,
 	.global_init = nl80211_global_init,

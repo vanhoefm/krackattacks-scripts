@@ -304,17 +304,6 @@ static int wpa_driver_privsep_deauthenticate(void *priv, const u8 *addr,
 }
 
 
-static int wpa_driver_privsep_disassociate(void *priv, const u8 *addr,
-					int reason_code)
-{
-	//struct wpa_driver_privsep_data *drv = priv;
-	wpa_printf(MSG_DEBUG, "%s addr=" MACSTR " reason_code=%d",
-		   __func__, MAC2STR(addr), reason_code);
-	wpa_printf(MSG_DEBUG, "%s - TODO", __func__);
-	return 0;
-}
-
-
 static void wpa_driver_privsep_event_assoc(void *ctx,
 					   enum wpa_event_type event,
 					   u8 *buf, size_t len)
@@ -736,7 +725,6 @@ struct wpa_driver_ops wpa_driver_privsep_ops = {
 	.set_param = wpa_driver_privsep_set_param,
 	.scan2 = wpa_driver_privsep_scan,
 	.deauthenticate = wpa_driver_privsep_deauthenticate,
-	.disassociate = wpa_driver_privsep_disassociate,
 	.associate = wpa_driver_privsep_associate,
 	.get_capa = wpa_driver_privsep_get_capa,
 	.get_mac_addr = wpa_driver_privsep_get_mac_addr,

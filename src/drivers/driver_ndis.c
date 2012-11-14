@@ -725,14 +725,6 @@ static int wpa_driver_ndis_deauthenticate(void *priv, const u8 *addr,
 }
 
 
-static int wpa_driver_ndis_disassociate(void *priv, const u8 *addr,
-					int reason_code)
-{
-	struct wpa_driver_ndis_data *drv = priv;
-	return wpa_driver_ndis_disconnect(drv);
-}
-
-
 static void wpa_driver_ndis_scan_timeout(void *eloop_ctx, void *timeout_ctx)
 {
 	wpa_printf(MSG_DEBUG, "Scan timeout - try to get results");
@@ -3223,7 +3215,6 @@ void driver_ndis_init_ops(void)
 	wpa_driver_ndis_ops.init = wpa_driver_ndis_init;
 	wpa_driver_ndis_ops.deinit = wpa_driver_ndis_deinit;
 	wpa_driver_ndis_ops.deauthenticate = wpa_driver_ndis_deauthenticate;
-	wpa_driver_ndis_ops.disassociate = wpa_driver_ndis_disassociate;
 	wpa_driver_ndis_ops.associate = wpa_driver_ndis_associate;
 	wpa_driver_ndis_ops.add_pmkid = wpa_driver_ndis_add_pmkid;
 	wpa_driver_ndis_ops.remove_pmkid = wpa_driver_ndis_remove_pmkid;

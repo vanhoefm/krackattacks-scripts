@@ -1201,17 +1201,6 @@ struct wpa_driver_ops {
 	int (*deauthenticate)(void *priv, const u8 *addr, int reason_code);
 
 	/**
-	 * disassociate - Request driver to disassociate
-	 * @priv: private driver interface data
-	 * @addr: peer address (BSSID of the AP)
-	 * @reason_code: 16-bit reason code to be sent in the disassociation
-	 *	frame
-	 *
-	 * Returns: 0 on success, -1 on failure
-	 */
-	int (*disassociate)(void *priv, const u8 *addr, int reason_code);
-
-	/**
 	 * associate - Request driver to associate
 	 * @priv: private driver interface data
 	 * @params: association parameters

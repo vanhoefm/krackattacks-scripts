@@ -139,16 +139,6 @@ static inline int wpa_drv_deauthenticate(struct wpa_supplicant *wpa_s,
 	return -1;
 }
 
-static inline int wpa_drv_disassociate(struct wpa_supplicant *wpa_s,
-				       const u8 *addr, int reason_code)
-{
-	if (wpa_s->driver->disassociate) {
-		return wpa_s->driver->disassociate(wpa_s->drv_priv, addr,
-						   reason_code);
-	}
-	return -1;
-}
-
 static inline int wpa_drv_add_pmkid(struct wpa_supplicant *wpa_s,
 				    const u8 *bssid, const u8 *pmkid)
 {

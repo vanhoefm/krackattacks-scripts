@@ -112,10 +112,10 @@ static void hostapd_wpa_auth_disconnect(void *ctx, const u8 *addr,
 }
 
 
-static void hostapd_wpa_auth_mic_failure_report(void *ctx, const u8 *addr)
+static int hostapd_wpa_auth_mic_failure_report(void *ctx, const u8 *addr)
 {
 	struct hostapd_data *hapd = ctx;
-	michael_mic_failure(hapd, addr, 0);
+	return michael_mic_failure(hapd, addr, 0);
 }
 
 

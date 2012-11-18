@@ -54,11 +54,12 @@ static const int dot11RSNAConfigPMKReauthThreshold = 70;
 static const int dot11RSNAConfigSATimeout = 60;
 
 
-static inline void wpa_auth_mic_failure_report(
+static inline int wpa_auth_mic_failure_report(
 	struct wpa_authenticator *wpa_auth, const u8 *addr)
 {
 	if (wpa_auth->cb.mic_failure_report)
-		wpa_auth->cb.mic_failure_report(wpa_auth->cb.ctx, addr);
+		return wpa_auth->cb.mic_failure_report(wpa_auth->cb.ctx, addr);
+	return 0;
 }
 
 
@@ -700,8 +701,8 @@ static int ft_check_msg_2_of_4(struct wpa_authenticator *wpa_auth,
 #endif /* CONFIG_IEEE80211R */
 
 
-static void wpa_receive_error_report(struct wpa_authenticator *wpa_auth,
-				     struct wpa_state_machine *sm, int group)
+static int wpa_receive_error_report(struct wpa_authenticator *wpa_auth,
+				    struct wpa_state_machine *sm, int group)
 {
 	/* Supplicant reported a Michael MIC error */
 	wpa_auth_vlogger(wpa_auth, sm->addr, LOGGER_INFO,
@@ -718,7 +719,8 @@ static void wpa_receive_error_report(struct wpa_authenticator *wpa_auth,
 				"ignore Michael MIC failure report since "
 				"pairwise cipher is not TKIP");
 	} else {
-		wpa_auth_mic_failure_report(wpa_auth, sm->addr);
+		if (wpa_auth_mic_failure_report(wpa_auth, sm->addr) > 0)
+			return 1; /* STA entry was removed */
 		sm->dot11RSNAStatsTKIPRemoteMICFailures++;
 		wpa_auth->dot11RSNAStatsTKIPRemoteMICFailures++;
 	}
@@ -728,6 +730,7 @@ static void wpa_receive_error_report(struct wpa_authenticator *wpa_auth,
 	 * Authenticator may do it, let's change the keys now anyway.
 	 */
 	wpa_request_new_ptk(sm);
+	return 0;
 }
 
 
@@ -1081,9 +1084,10 @@ continue_processing:
 #endif /* CONFIG_PEERKEY */
 			return;
 		} else if (key_info & WPA_KEY_INFO_ERROR) {
-			wpa_receive_error_report(
-				wpa_auth, sm,
-				!(key_info & WPA_KEY_INFO_KEY_TYPE));
+			if (wpa_receive_error_report(
+				    wpa_auth, sm,
+				    !(key_info & WPA_KEY_INFO_KEY_TYPE)) > 0)
+				return; /* STA entry was removed */
 		} else if (key_info & WPA_KEY_INFO_KEY_TYPE) {
 			wpa_auth_logger(wpa_auth, sm->addr, LOGGER_INFO,
 					"received EAPOL-Key Request for new "

@@ -1,5 +1,95 @@
 ChangeLog for hostapd
 
+????-??-?? - v2.0
+	* added AP-STA-DISCONNECTED ctrl_iface event
+	* improved debug logging (human readable event names, interface name
+	  included in more entries)
+	* added number of small changes to make it easier for static analyzers
+	  to understand the implementation
+	* added a workaround for Windows 7 Michael MIC failure reporting and
+	  use of the Secure bit in EAPOL-Key msg 3/4
+	* fixed number of small bugs (see git logs for more details)
+	* changed OpenSSL to read full certificate chain from server_cert file
+	* nl80211: number of updates to use new cfg80211/nl80211 functionality
+	  - replace monitor interface with nl80211 commands
+	  - additional information for driver-based AP SME
+	* EAP-pwd:
+	  - fix KDF for group 21 and zero-padding
+	  - added support for fragmentation
+	  - increased maximum number of hunting-and-pecking iterations
+	* avoid excessive Probe Response retries for broadcast Probe Request
+	  frames (only with drivers using hostapd SME/MLME)
+	* added preliminary support for using TLS v1.2 (CONFIG_TLSV12=y)
+	* fixed WPS operation stopping on dual concurrent AP
+	* added wps_rf_bands configuration parameter for overriding RF Bands
+	  value for WPS
+	* added support for getting per-device PSK from RADIUS Tunnel-Password
+	* added support for libnl 3.2 and newer
+	* increased initial group key handshake retransmit timeout to 500 ms
+	* added a workaround for 4-way handshake to update SNonce even after
+	  having sent EAPOL-Key 3/4 to avoid issues with some supplicant
+	  implementations that can change SNonce for each EAP-Key 2/4
+	* added a workaround for EAPOL-Key 4/4 using incorrect type value in
+	  WPA2 mode (some deployed stations use WPA type in that message)
+	* added a WPS workaround for mixed mode AP Settings with Windows 7
+	* changed WPS AP PIN disabling mechanism to disable the PIN after 10
+	  consecutive failures in addition to using the exponential lockout
+	  period
+	* added support for WFA Hotspot 2.0
+	  - GAS/ANQP advertisement of network information
+	  - disable_dgaf parameter to disable downstream group-addressed
+	    forwarding
+	* simplified licensing terms by selecting the BSD license as the only
+	  alternative
+	* EAP-SIM: fixed re-authentication not to update pseudonym
+	* EAP-SIM: use Notification round before EAP-Failure
+	* EAP-AKA: added support for AT_COUNTER_TOO_SMALL
+	* EAP-AKA: skip AKA/Identity exchange if EAP identity is recognized
+	* EAP-AKA': fixed identity for MK derivation
+	* EAP-AKA': updated to RFC 5448 (username prefixes changed); note: this
+	  breaks interoperability with older versions
+	* EAP-SIM/AKA: allow pseudonym to be used after unknown reauth id
+	* changed ANonce to be a random number instead of Counter-based
+	* added support for canceling WPS operations with hostapd_cli wps_cancel
+	* fixed EAP/WPS to PSK transition on reassociation in cases where
+	  deauthentication is missed
+	* hlr_auc_gw enhancements:
+	  - a new command line parameter -u can be used to enable updating of
+	    SQN in Milenage file
+	  - use 5 bit IND for SQN updates
+	  - SQLite database can now be used to store Milenage information
+	* EAP-SIM/AKA DB: added optional use of SQLite database for pseudonyms
+	  and reauth data
+	* added support for Chargeable-User-Identity (RFC 4372)
+	* added radius_auth_req_attr and radius_acct_req_attr configuration
+	  parameters to allow adding/overriding of RADIUS attributes in
+	  Access-Request and Accounting-Request packets
+	* added support for RADIUS dynamic authorization server (RFC 5176)
+	* added initial support for WNM operations
+	  - BSS max idle period
+	  - WNM-Sleep Mode
+	* added new WPS NFC ctrl_iface mechanism
+	  - removed obsoleted WPS_OOB command (including support for deprecated
+	    UFD config_method)
+	* added FT support for drivers that implement MLME internally
+	* added SA Query support for drivers that implement MLME internally
+	* removed default ACM=1 from AC_VO and AC_VI
+	* changed VENDOR-TEST EAP method to use proper private enterprise number
+	  (this will not interoperate with older versions)
+	* added hostapd.conf parameter vendor_elements to allow arbitrary vendor
+	  specific elements to be added to the Beacon and Probe Response frames
+	* added support for configuring GCMP cipher for IEEE 802.11ad
+	* added support for 256-bit AES with internal TLS implementation
+	* changed EAPOL transmission to use AC_VO if WMM is active
+	* fixed EAP-TLS/PEAP/TTLS/FAST server to validate TLS Message Length
+	  correctly; invalid messages could have caused the hostapd process to
+	  terminate before this fix [CVE-2012-4445]
+	* limit number of active wildcard PINs for WPS Registrar to one to avoid
+	  confusing behavior with multiple wildcard PINs
+	* added a workaround for WPS PBC session overlap detection to avoid
+	  interop issues with deployed station implementations that do not
+	  remove active PBC indication from Probe Request frames properly
+
 2012-05-10 - v1.0
 	* Add channel selection support in hostapd. See hostapd.conf.
 	* Add support for IEEE 802.11v Time Advertisement mechanism with UTC

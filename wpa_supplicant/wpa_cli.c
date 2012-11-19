@@ -1350,7 +1350,7 @@ static int wpa_cli_cmd_set_network(struct wpa_ctrl *ctrl, int argc,
 		return 0;
 	}
 
-	if (argc != 3) {
+	if (argc < 3) {
 		printf("Invalid SET_NETWORK command: needs three arguments\n"
 		       "(network id, variable name, and value)\n");
 		return -1;

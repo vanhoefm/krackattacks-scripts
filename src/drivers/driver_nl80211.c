@@ -2113,6 +2113,43 @@ static void nl80211_client_probe_event(struct wpa_driver_nl80211_data *drv,
 }
 
 
+static void nl80211_tdls_oper_event(struct wpa_driver_nl80211_data *drv,
+				    struct nlattr **tb)
+{
+	union wpa_event_data data;
+
+	wpa_printf(MSG_DEBUG, "nl80211: TDLS operation event");
+
+	if (!tb[NL80211_ATTR_MAC] || !tb[NL80211_ATTR_TDLS_OPERATION])
+		return;
+
+	os_memset(&data, 0, sizeof(data));
+	os_memcpy(data.tdls.peer, nla_data(tb[NL80211_ATTR_MAC]), ETH_ALEN);
+	switch (nla_get_u8(tb[NL80211_ATTR_TDLS_OPERATION])) {
+	case NL80211_TDLS_SETUP:
+		wpa_printf(MSG_DEBUG, "nl80211: TDLS setup request for peer "
+			   MACSTR, MAC2STR(data.tdls.peer));
+		data.tdls.oper = TDLS_REQUEST_SETUP;
+		break;
+	case NL80211_TDLS_TEARDOWN:
+		wpa_printf(MSG_DEBUG, "nl80211: TDLS teardown request for peer "
+			   MACSTR, MAC2STR(data.tdls.peer));
+		data.tdls.oper = TDLS_REQUEST_TEARDOWN;
+		break;
+	default:
+		wpa_printf(MSG_DEBUG, "nl80211: Unsupported TDLS operatione "
+			   "event");
+		return;
+	}
+	if (tb[NL80211_ATTR_REASON_CODE]) {
+		data.tdls.reason_code =
+			nla_get_u16(tb[NL80211_ATTR_REASON_CODE]);
+	}
+
+	wpa_supplicant_event(drv->ctx, EVENT_TDLS, &data);
+}
+
+
 static void nl80211_spurious_frame(struct i802_bss *bss, struct nlattr **tb,
 				   int wds)
 {
@@ -2244,6 +2281,9 @@ static void do_process_drv_event(struct wpa_driver_nl80211_data *drv,
 		break;
 	case NL80211_CMD_PROBE_CLIENT:
 		nl80211_client_probe_event(drv, tb);
+		break;
+	case NL80211_CMD_TDLS_OPER:
+		nl80211_tdls_oper_event(drv, tb);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "nl80211: Ignored unknown event "

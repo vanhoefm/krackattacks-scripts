@@ -1686,8 +1686,7 @@ static int ieee802_1x_get_eap_user(void *ctx, const u8 *identity,
 	const struct hostapd_eap_user *eap_user;
 	int i;
 
-	eap_user = hostapd_get_eap_user(hapd->conf, identity,
-					identity_len, phase2);
+	eap_user = hostapd_get_eap_user(hapd, identity, identity_len, phase2);
 	if (eap_user == NULL)
 		return -1;
 

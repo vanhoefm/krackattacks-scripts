@@ -200,6 +200,12 @@ static int hostapd_config_read_eap_user(const char *fname,
 	if (!fname)
 		return 0;
 
+	if (os_strncmp(fname, "sqlite:", 7) == 0) {
+		os_free(conf->eap_user_sqlite);
+		conf->eap_user_sqlite = os_strdup(fname + 7);
+		return 0;
+	}
+
 	f = fopen(fname, "r");
 	if (!f) {
 		wpa_printf(MSG_ERROR, "EAP user file '%s' not found.", fname);

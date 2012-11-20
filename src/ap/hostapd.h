@@ -10,6 +10,7 @@
 #define HOSTAPD_H
 
 #include "common/defs.h"
+#include "ap_config.h"
 
 struct wpa_driver_ops;
 struct wpa_ctrl_dst;
@@ -187,6 +188,10 @@ struct hostapd_data {
 #ifdef CONFIG_INTERWORKING
 	size_t gas_frag_limit;
 #endif /* CONFIG_INTERWORKING */
+
+#ifdef CONFIG_SQLITE
+	struct hostapd_eap_user tmp_eap_user;
+#endif /* CONFIG_SQLITE */
 };
 
 
@@ -296,5 +301,9 @@ int hostapd_probe_req_rx(struct hostapd_data *hapd, const u8 *sa, const u8 *da,
 			 int ssi_signal);
 void hostapd_event_ch_switch(struct hostapd_data *hapd, int freq, int ht,
 			     int offset);
+
+const struct hostapd_eap_user *
+hostapd_get_eap_user(struct hostapd_data *hapd, const u8 *identity,
+		     size_t identity_len, int phase2);
 
 #endif /* HOSTAPD_H */

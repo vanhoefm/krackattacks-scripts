@@ -273,6 +273,11 @@ static void hostapd_free_hapd_data(struct hostapd_data *hapd)
 #ifdef CONFIG_INTERWORKING
 	gas_serv_deinit(hapd);
 #endif /* CONFIG_INTERWORKING */
+
+#ifdef CONFIG_SQLITE
+	os_free(hapd->tmp_eap_user.identity);
+	os_free(hapd->tmp_eap_user.password);
+#endif /* CONFIG_SQLITE */
 }
 
 

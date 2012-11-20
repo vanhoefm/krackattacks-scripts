@@ -408,6 +408,7 @@ static void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 		user = user->next;
 		hostapd_config_free_eap_user(prev_user);
 	}
+	os_free(conf->eap_user_sqlite);
 
 	os_free(conf->dump_log_name);
 	os_free(conf->eap_req_id_text);
@@ -618,58 +619,4 @@ const u8 * hostapd_get_psk(const struct hostapd_bss_config *conf,
 	}
 
 	return NULL;
-}
-
-
-const struct hostapd_eap_user *
-hostapd_get_eap_user(const struct hostapd_bss_config *conf, const u8 *identity,
-		     size_t identity_len, int phase2)
-{
-	struct hostapd_eap_user *user = conf->eap_user;
-
-#ifdef CONFIG_WPS
-	if (conf->wps_state && identity_len == WSC_ID_ENROLLEE_LEN &&
-	    os_memcmp(identity, WSC_ID_ENROLLEE, WSC_ID_ENROLLEE_LEN) == 0) {
-		static struct hostapd_eap_user wsc_enrollee;
-		os_memset(&wsc_enrollee, 0, sizeof(wsc_enrollee));
-		wsc_enrollee.methods[0].method = eap_server_get_type(
-			"WSC", &wsc_enrollee.methods[0].vendor);
-		return &wsc_enrollee;
-	}
-
-	if (conf->wps_state && identity_len == WSC_ID_REGISTRAR_LEN &&
-	    os_memcmp(identity, WSC_ID_REGISTRAR, WSC_ID_REGISTRAR_LEN) == 0) {
-		static struct hostapd_eap_user wsc_registrar;
-		os_memset(&wsc_registrar, 0, sizeof(wsc_registrar));
-		wsc_registrar.methods[0].method = eap_server_get_type(
-			"WSC", &wsc_registrar.methods[0].vendor);
-		wsc_registrar.password = (u8 *) conf->ap_pin;
-		wsc_registrar.password_len = conf->ap_pin ?
-			os_strlen(conf->ap_pin) : 0;
-		return &wsc_registrar;
-	}
-#endif /* CONFIG_WPS */
-
-	while (user) {
-		if (!phase2 && user->identity == NULL) {
-			/* Wildcard match */
-			break;
-		}
-
-		if (user->phase2 == !!phase2 && user->wildcard_prefix &&
-		    identity_len >= user->identity_len &&
-		    os_memcmp(user->identity, identity, user->identity_len) ==
-		    0) {
-			/* Wildcard prefix match */
-			break;
-		}
-
-		if (user->phase2 == !!phase2 &&
-		    user->identity_len == identity_len &&
-		    os_memcmp(user->identity, identity, identity_len) == 0)
-			break;
-		user = user->next;
-	}
-
-	return user;
 }

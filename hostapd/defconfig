@@ -265,5 +265,5 @@ CONFIG_IPV6=y
 # Hotspot 2.0
 #CONFIG_HS20=y
 
-# Enable SQLite database support in hlr_auc_gw
+# Enable SQLite database support in hlr_auc_gw, EAP-SIM DB, and eap_user_file
 #CONFIG_SQLITE=y

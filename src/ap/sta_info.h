@@ -57,6 +57,7 @@ struct sta_info {
 	unsigned int ht_20mhz_set:1;
 	unsigned int no_p2p_set:1;
 	unsigned int qos_map_enabled:1;
+	unsigned int remediation:1;
 
 	u16 auth_alg;
 	u8 previous_ap[6];
@@ -125,6 +126,8 @@ struct sta_info {
 	struct wpabuf *wps_ie; /* WPS IE from (Re)Association Request */
 	struct wpabuf *p2p_ie; /* P2P IE from (Re)Association Request */
 	struct wpabuf *hs20_ie; /* HS 2.0 IE from (Re)Association Request */
+	u8 remediation_method;
+	char *remediation_url; /* HS 2.0 Subscription Remediation Server URL */
 
 	struct os_reltime connected_time;
 

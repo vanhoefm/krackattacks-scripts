@@ -265,6 +265,7 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 	hostapd_free_psk_list(sta->psk);
 	os_free(sta->identity);
 	os_free(sta->radius_cui);
+	os_free(sta->remediation_url);
 
 #ifdef CONFIG_SAE
 	sae_clear_data(sta->sae);

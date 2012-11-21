@@ -30,6 +30,7 @@
 #include "ap_config.h"
 #include "ap_drv_ops.h"
 #include "wps_hostapd.h"
+#include "hs20.h"
 #include "ieee802_1x.h"
 
 
@@ -1238,6 +1239,74 @@ static void ieee802_1x_update_sta_cui(struct hostapd_data *hapd,
 }
 
 
+#ifdef CONFIG_HS20
+
+static void ieee802_1x_hs20_sub_rem(struct sta_info *sta, u8 *pos, size_t len)
+{
+	sta->remediation = 1;
+	os_free(sta->remediation_url);
+	if (len > 2) {
+		sta->remediation_url = os_malloc(len);
+		if (!sta->remediation_url)
+			return;
+		sta->remediation_method = pos[0];
+		os_memcpy(sta->remediation_url, pos + 1, len - 1);
+		sta->remediation_url[len - 1] = '\0';
+		wpa_printf(MSG_DEBUG, "HS 2.0: Subscription remediation needed "
+			   "for " MACSTR " - server method %u URL %s",
+			   MAC2STR(sta->addr), sta->remediation_method,
+			   sta->remediation_url);
+	} else {
+		sta->remediation_url = NULL;
+		wpa_printf(MSG_DEBUG, "HS 2.0: Subscription remediation needed "
+			   "for " MACSTR, MAC2STR(sta->addr));
+	}
+	/* TODO: assign the STA into remediation VLAN or add filtering */
+}
+
+#endif /* CONFIG_HS20 */
+
+
+static void ieee802_1x_check_hs20(struct hostapd_data *hapd,
+				  struct sta_info *sta,
+				  struct radius_msg *msg)
+{
+#ifdef CONFIG_HS20
+	u8 *buf, *pos, *end, type, sublen;
+	size_t len;
+
+	buf = NULL;
+	sta->remediation = 0;
+	for (;;) {
+		if (radius_msg_get_attr_ptr(msg, RADIUS_ATTR_VENDOR_SPECIFIC,
+					    &buf, &len, buf) < 0)
+			break;
+		if (len < 6)
+			continue;
+		pos = buf;
+		end = buf + len;
+		if (WPA_GET_BE32(pos) != RADIUS_VENDOR_ID_WFA)
+			continue;
+		pos += 4;
+
+		type = *pos++;
+		sublen = *pos++;
+		if (sublen < 2)
+			continue; /* invalid length */
+		sublen -= 2; /* skip header */
+		if (pos + sublen > end)
+			continue; /* invalid WFA VSA */
+
+		switch (type) {
+		case RADIUS_VENDOR_ATTR_WFA_HS20_SUBSCR_REMEDIATION:
+			ieee802_1x_hs20_sub_rem(sta, pos, sublen);
+			break;
+		}
+	}
+#endif /* CONFIG_HS20 */
+}
+
+
 struct sta_id_search {
 	u8 identifier;
 	struct eapol_state_machine *sm;
@@ -1396,7 +1465,8 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 		ieee802_1x_store_radius_class(hapd, sta, msg);
 		ieee802_1x_update_sta_identity(hapd, sta, msg);
 		ieee802_1x_update_sta_cui(hapd, sta, msg);
-		if (sm->eap_if->eapKeyAvailable &&
+		ieee802_1x_check_hs20(hapd, sta, msg);
+		if (sm->eap_if->eapKeyAvailable && !sta->remediation &&
 		    wpa_auth_pmksa_add(sta->wpa_sm, sm->eapol_key_crypt,
 				       session_timeout_set ?
 				       (int) session_timeout : -1, sm) == 0) {
@@ -2150,8 +2220,24 @@ static void ieee802_1x_finished(struct hostapd_data *hapd,
 	/* TODO: get PMKLifetime from WPA parameters */
 	static const int dot11RSNAConfigPMKLifetime = 43200;
 
+#ifdef CONFIG_HS20
+	if (success) {
+		if (sta->remediation) {
+			wpa_printf(MSG_DEBUG, "HS 2.0: Send WNM-Notification "
+				   "to " MACSTR " to indicate Subscription "
+				   "Remediation",
+				   MAC2STR(sta->addr));
+			hs20_send_wnm_notification(hapd, sta->addr,
+						   sta->remediation_method,
+						   sta->remediation_url);
+			os_free(sta->remediation_url);
+			sta->remediation_url = NULL;
+		}
+	}
+#endif /* CONFIG_HS20 */
+
 	key = ieee802_1x_get_key(sta->eapol_sm, &len);
-	if (success && key && len >= PMK_LEN &&
+	if (success && key && len >= PMK_LEN && !sta->remediation &&
 	    wpa_auth_pmksa_add(sta->wpa_sm, key, dot11RSNAConfigPMKLifetime,
 			       sta->eapol_sm) == 0) {
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_WPA,

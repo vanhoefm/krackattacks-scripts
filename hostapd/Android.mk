@@ -73,6 +73,7 @@ OBJS += src/ap/utils.c
 OBJS += src/ap/authsrv.c
 OBJS += src/ap/ieee802_1x.c
 OBJS += src/ap/ap_config.c
+OBJS += src/ap/eap_user_db.c
 OBJS += src/ap/ieee802_11_auth.c
 OBJS += src/ap/sta_info.c
 OBJS += src/ap/wpa_auth.c

@@ -126,6 +126,7 @@ struct hostapd_eap_user {
 	unsigned int wildcard_prefix:1;
 	unsigned int password_hash:1; /* whether password is hashed with
 				       * nt_password_hash() */
+	unsigned int remediation:1;
 	int ttls_auth; /* EAP_TTLS_AUTH_* bitfield */
 };
 
@@ -489,6 +490,8 @@ struct hostapd_bss_config {
 	} *hs20_osu_providers, *last_osu;
 	size_t hs20_osu_providers_count;
 	unsigned int hs20_deauth_req_timeout;
+	char *subscr_remediation_url;
+	u8 subscr_remediation_method;
 #endif /* CONFIG_HS20 */
 
 	u8 wps_rf_bands; /* RF bands for WPS (WPS_RF_*) */

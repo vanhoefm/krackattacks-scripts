@@ -2,6 +2,7 @@ CREATE TABLE users(
 	identity TEXT PRIMARY KEY,
 	methods TEXT,
 	password TEXT,
+	remediation TEXT,
 	phase2 INTEGER
 );
 

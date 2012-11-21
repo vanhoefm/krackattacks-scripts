@@ -546,6 +546,7 @@ void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 		}
 		os_free(conf->hs20_osu_providers);
 	}
+	os_free(conf->subscr_remediation_url);
 #endif /* CONFIG_HS20 */
 
 	wpabuf_free(conf->vendor_elements);

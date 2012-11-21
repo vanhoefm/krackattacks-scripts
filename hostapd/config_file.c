@@ -3075,6 +3075,11 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		} else if (os_strcmp(buf, "osu_service_desc") == 0) {
 			if (hs20_parse_osu_service_desc(bss, pos, line) < 0)
 				errors++;
+		} else if (os_strcmp(buf, "subscr_remediation_url") == 0) {
+			os_free(bss->subscr_remediation_url);
+			bss->subscr_remediation_url = os_strdup(pos);
+		} else if (os_strcmp(buf, "subscr_remediation_method") == 0) {
+			bss->subscr_remediation_method = atoi(pos);
 #endif /* CONFIG_HS20 */
 #ifdef CONFIG_TESTING_OPTIONS
 #define PARSE_TEST_PROBABILITY(_val)					\

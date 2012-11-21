@@ -173,6 +173,8 @@ struct eapol_state_machine {
 	struct eapol_authenticator *eapol;
 
 	void *sta; /* station context pointer to use in callbacks */
+
+	int remediation;
 };
 
 #endif /* EAPOL_AUTH_SM_I_H */

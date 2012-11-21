@@ -35,7 +35,8 @@
 
 
 static void ieee802_1x_finished(struct hostapd_data *hapd,
-				struct sta_info *sta, int success);
+				struct sta_info *sta, int success,
+				int remediation);
 
 
 static void ieee802_1x_send(struct hostapd_data *hapd, struct sta_info *sta,
@@ -1746,14 +1747,14 @@ static void ieee802_1x_aaa_send(void *ctx, void *sta_ctx,
 
 
 static void _ieee802_1x_finished(void *ctx, void *sta_ctx, int success,
-				 int preauth)
+				 int preauth, int remediation)
 {
 	struct hostapd_data *hapd = ctx;
 	struct sta_info *sta = sta_ctx;
 	if (preauth)
 		rsn_preauth_finished(hapd, sta, success);
 	else
-		ieee802_1x_finished(hapd, sta, success);
+		ieee802_1x_finished(hapd, sta, success, remediation);
 }
 
 
@@ -1787,6 +1788,7 @@ static int ieee802_1x_get_eap_user(void *ctx, const u8 *identity,
 	}
 	user->force_version = eap_user->force_version;
 	user->ttls_auth = eap_user->ttls_auth;
+	user->remediation = eap_user->remediation;
 
 	return 0;
 }
@@ -2290,7 +2292,8 @@ int ieee802_1x_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 
 
 static void ieee802_1x_finished(struct hostapd_data *hapd,
-				struct sta_info *sta, int success)
+				struct sta_info *sta, int success,
+				int remediation)
 {
 	const u8 *key;
 	size_t len;
@@ -2298,6 +2301,14 @@ static void ieee802_1x_finished(struct hostapd_data *hapd,
 	static const int dot11RSNAConfigPMKLifetime = 43200;
 
 #ifdef CONFIG_HS20
+	if (remediation && !sta->remediation) {
+		sta->remediation = 1;
+		os_free(sta->remediation_url);
+		sta->remediation_url =
+			os_strdup(hapd->conf->subscr_remediation_url);
+		sta->remediation_method = 1; /* SOAP-XML SPP */
+	}
+
 	if (success) {
 		if (sta->remediation) {
 			wpa_printf(MSG_DEBUG, "HS 2.0: Send WNM-Notification "

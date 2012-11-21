@@ -77,6 +77,8 @@ struct radius_session {
 	u8 last_identifier;
 	struct radius_msg *last_reply;
 	u8 last_authenticator[16];
+
+	unsigned int remediation:1;
 };
 
 /**
@@ -307,6 +309,9 @@ struct radius_server_data {
 #ifdef CONFIG_RADIUS_TEST
 	char *dump_msk_file;
 #endif /* CONFIG_RADIUS_TEST */
+
+	char *subscr_remediation_url;
+	u8 subscr_remediation_method;
 };
 
 
@@ -621,6 +626,34 @@ radius_server_encapsulate_eap(struct radius_server_data *data,
 			RADIUS_DEBUG("Failed to add MPPE key attributes");
 		}
 	}
+
+#ifdef CONFIG_HS20
+	if (code == RADIUS_CODE_ACCESS_ACCEPT && sess->remediation &&
+	    data->subscr_remediation_url) {
+		u8 *buf;
+		size_t url_len = os_strlen(data->subscr_remediation_url);
+		buf = os_malloc(1 + url_len);
+		if (buf == NULL) {
+			radius_msg_free(msg);
+			return NULL;
+		}
+		buf[0] = data->subscr_remediation_method;
+		os_memcpy(&buf[1], data->subscr_remediation_url, url_len);
+		if (!radius_msg_add_wfa(
+			    msg, RADIUS_VENDOR_ATTR_WFA_HS20_SUBSCR_REMEDIATION,
+			    buf, 1 + url_len)) {
+			RADIUS_DEBUG("Failed to add WFA-HS20-SubscrRem");
+		}
+		os_free(buf);
+	} else if (code == RADIUS_CODE_ACCESS_ACCEPT && sess->remediation) {
+		u8 buf[1];
+		if (!radius_msg_add_wfa(
+			    msg, RADIUS_VENDOR_ATTR_WFA_HS20_SUBSCR_REMEDIATION,
+			    buf, 0)) {
+			RADIUS_DEBUG("Failed to add WFA-HS20-SubscrRem");
+		}
+	}
+#endif /* CONFIG_HS20 */
 
 	if (radius_msg_copy_attr(msg, request, RADIUS_ATTR_PROXY_STATE) < 0) {
 		RADIUS_DEBUG("Failed to copy Proxy-State attribute(s)");
@@ -1444,6 +1477,11 @@ radius_server_init(struct radius_server_conf *conf)
 		}
 	}
 
+	if (conf->subscr_remediation_url) {
+		data->subscr_remediation_url =
+			os_strdup(conf->subscr_remediation_url);
+	}
+
 #ifdef CONFIG_RADIUS_TEST
 	if (conf->dump_msk_file)
 		data->dump_msk_file = os_strdup(conf->dump_msk_file);
@@ -1530,6 +1568,7 @@ void radius_server_deinit(struct radius_server_data *data)
 #ifdef CONFIG_RADIUS_TEST
 	os_free(data->dump_msk_file);
 #endif /* CONFIG_RADIUS_TEST */
+	os_free(data->subscr_remediation_url);
 	os_free(data);
 }
 
@@ -1682,9 +1721,13 @@ static int radius_server_get_eap_user(void *ctx, const u8 *identity,
 {
 	struct radius_session *sess = ctx;
 	struct radius_server_data *data = sess->server;
+	int ret;
 
-	return data->get_eap_user(data->conf_ctx, identity, identity_len,
-				  phase2, user);
+	ret = data->get_eap_user(data->conf_ctx, identity, identity_len,
+				 phase2, user);
+	if (ret == 0 && user)
+		sess->remediation = user->remediation;
+	return ret;
 }
 
 

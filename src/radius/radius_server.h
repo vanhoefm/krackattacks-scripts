@@ -209,6 +209,9 @@ struct radius_server_conf {
 #ifdef CONFIG_RADIUS_TEST
 	const char *dump_msk_file;
 #endif /* CONFIG_RADIUS_TEST */
+
+	char *subscr_remediation_url;
+	u8 subscr_remediation_method;
 };
 
 

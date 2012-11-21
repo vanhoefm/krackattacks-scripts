@@ -80,6 +80,7 @@ static int hostapd_radius_get_eap_user(void *ctx, const u8 *identity,
 	}
 	user->force_version = eap_user->force_version;
 	user->ttls_auth = eap_user->ttls_auth;
+	user->remediation = eap_user->remediation;
 
 	return 0;
 }
@@ -116,6 +117,10 @@ static int hostapd_setup_radius_srv(struct hostapd_data *hapd)
 #ifdef CONFIG_RADIUS_TEST
 	srv.dump_msk_file = conf->dump_msk_file;
 #endif /* CONFIG_RADIUS_TEST */
+#ifdef CONFIG_HS20
+	srv.subscr_remediation_url = conf->subscr_remediation_url;
+	srv.subscr_remediation_method = conf->subscr_remediation_method;
+#endif /* CONFIG_HS20 */
 
 	hapd->radius_srv = radius_server_init(&srv);
 	if (hapd->radius_srv == NULL) {

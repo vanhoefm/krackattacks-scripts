@@ -32,6 +32,7 @@ struct eap_user {
 			    * nt_password_hash() */
 	int phase2;
 	int force_version;
+	unsigned int remediation:1;
 	int ttls_auth; /* bitfield of
 			* EAP_TTLS_AUTH_{PAP,CHAP,MSCHAP,MSCHAPV2} */
 };

@@ -89,6 +89,8 @@ static int get_user_cb(void *ctx, int argc, char *argv[], char *col[])
 			user->next = (void *) 1;
 		} else if (os_strcmp(col[i], "methods") == 0 && argv[i]) {
 			set_user_methods(user, argv[i]);
+		} else if (os_strcmp(col[i], "remediation") == 0 && argv[i]) {
+			user->remediation = strlen(argv[i]) > 0;
 		}
 	}
 
@@ -173,8 +175,8 @@ eap_user_sqlite_get(struct hostapd_data *hapd, const u8 *identity,
 	}
 
 	os_snprintf(cmd, sizeof(cmd),
-		    "SELECT password,methods FROM users WHERE "
-		    "identity='%s' AND phase2=%d;", id_str, phase2);
+		    "SELECT * FROM users WHERE identity='%s' AND phase2=%d;",
+		    id_str, phase2);
 	wpa_printf(MSG_DEBUG, "DB: %s", cmd);
 	if (sqlite3_exec(db, cmd, get_user_cb, &hapd->tmp_eap_user, NULL) !=
 	    SQLITE_OK) {

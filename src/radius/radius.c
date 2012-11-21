@@ -1220,6 +1220,33 @@ int radius_msg_add_mppe_keys(struct radius_msg *msg,
 }
 
 
+int radius_msg_add_wfa(struct radius_msg *msg, u8 subtype, const u8 *data,
+		       size_t len)
+{
+	struct radius_attr_hdr *attr;
+	u8 *buf, *pos;
+	size_t alen;
+
+	alen = 4 + 2 + len;
+	buf = os_malloc(alen);
+	if (buf == NULL)
+		return 0;
+	pos = buf;
+	WPA_PUT_BE32(pos, RADIUS_VENDOR_ID_WFA);
+	pos += 4;
+	*pos++ = subtype;
+	*pos++ = 2 + len;
+	os_memcpy(pos, data, len);
+	attr = radius_msg_add_attr(msg, RADIUS_ATTR_VENDOR_SPECIFIC,
+				   buf, alen);
+	os_free(buf);
+	if (attr == NULL)
+		return 0;
+
+	return 1;
+}
+
+
 /* Add User-Password attribute to a RADIUS message and encrypt it as specified
  * in RFC 2865, Chap. 5.2 */
 struct radius_attr_hdr *

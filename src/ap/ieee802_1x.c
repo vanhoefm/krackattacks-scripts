@@ -531,6 +531,28 @@ static void ieee802_1x_encapsulate_radius(struct hostapd_data *hapd,
 				   "version");
 			goto fail;
 		}
+
+		if (sta->hs20_ie && wpabuf_len(sta->hs20_ie) > 0) {
+			const u8 *pos;
+			u8 buf[3];
+			u16 id;
+			pos = wpabuf_head_u8(sta->hs20_ie);
+			buf[0] = (*pos) >> 4;
+			if (((*pos) & HS20_PPS_MO_ID_PRESENT) &&
+			    wpabuf_len(sta->hs20_ie) >= 3)
+				id = WPA_GET_LE16(pos + 1);
+			else
+				id = 0;
+			WPA_PUT_BE16(buf + 1, id);
+			if (!radius_msg_add_wfa(
+				    msg,
+				    RADIUS_VENDOR_ATTR_WFA_HS20_STA_VERSION,
+				    buf, sizeof(buf))) {
+				wpa_printf(MSG_ERROR, "Could not add HS 2.0 "
+					   "STA version");
+				goto fail;
+			}
+		}
 	}
 #endif /* CONFIG_HS20 */
 

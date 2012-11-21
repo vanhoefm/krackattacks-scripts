@@ -521,6 +521,19 @@ static void ieee802_1x_encapsulate_radius(struct hostapd_data *hapd,
 		}
 	}
 
+#ifdef CONFIG_HS20
+	if (hapd->conf->hs20) {
+		u8 ver = 1; /* Release 2 */
+		if (!radius_msg_add_wfa(
+			    msg, RADIUS_VENDOR_ATTR_WFA_HS20_AP_VERSION,
+			    &ver, 1)) {
+			wpa_printf(MSG_ERROR, "Could not add HS 2.0 AP "
+				   "version");
+			goto fail;
+		}
+	}
+#endif /* CONFIG_HS20 */
+
 	if (radius_client_send(hapd->radius, msg, RADIUS_AUTH, sta->addr) < 0)
 		goto fail;
 

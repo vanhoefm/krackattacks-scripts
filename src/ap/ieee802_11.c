@@ -962,6 +962,15 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 	p2p_group_notif_assoc(hapd->p2p_group, sta->addr, ies, ies_len);
 #endif /* CONFIG_P2P */
 
+#ifdef CONFIG_HS20
+	wpabuf_free(sta->hs20_ie);
+	if (elems.hs20 && elems.hs20_len > 4) {
+		sta->hs20_ie = wpabuf_alloc_copy(elems.hs20 + 4,
+						 elems.hs20_len - 4);
+	} else
+		sta->hs20_ie = NULL;
+#endif /* CONFIG_HS20 */
+
 	return WLAN_STATUS_SUCCESS;
 }
 

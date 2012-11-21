@@ -109,6 +109,15 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 	}
 #endif /* CONFIG_P2P */
 
+#ifdef CONFIG_HS20
+	wpabuf_free(sta->hs20_ie);
+	if (elems.hs20 && elems.hs20_len > 4) {
+		sta->hs20_ie = wpabuf_alloc_copy(elems.hs20 + 4,
+						 elems.hs20_len - 4);
+	} else
+		sta->hs20_ie = NULL;
+#endif /* CONFIG_HS20 */
+
 	if (hapd->conf->wpa) {
 		if (ie == NULL || ielen == 0) {
 #ifdef CONFIG_WPS

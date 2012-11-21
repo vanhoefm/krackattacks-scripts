@@ -121,6 +121,7 @@ struct sta_info {
 
 	struct wpabuf *wps_ie; /* WPS IE from (Re)Association Request */
 	struct wpabuf *p2p_ie; /* P2P IE from (Re)Association Request */
+	struct wpabuf *hs20_ie; /* HS 2.0 IE from (Re)Association Request */
 
 	struct os_time connected_time;
 

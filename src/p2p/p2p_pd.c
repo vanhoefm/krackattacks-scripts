@@ -408,7 +408,8 @@ int p2p_send_prov_disc_req(struct p2p_data *p2p, struct p2p_device *dev,
 
 
 int p2p_prov_disc_req(struct p2p_data *p2p, const u8 *peer_addr,
-		      u16 config_methods, int join, int force_freq)
+		      u16 config_methods, int join, int force_freq,
+		      int user_initiated_pd)
 {
 	struct p2p_device *dev;
 
@@ -446,11 +447,7 @@ int p2p_prov_disc_req(struct p2p_data *p2p, const u8 *peer_addr,
 		return 0;
 	}
 
-	/*
-	 * We use the join param as a cue to differentiate between user
-	 * initiated PD request and one issued during finds (internal).
-	 */
-	p2p->user_initiated_pd = !join;
+	p2p->user_initiated_pd = user_initiated_pd;
 
 	if (p2p->user_initiated_pd)
 		p2p->pd_retries = MAX_PROV_DISC_REQ_RETRIES;

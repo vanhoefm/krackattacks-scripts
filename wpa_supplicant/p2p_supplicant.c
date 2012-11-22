@@ -2420,6 +2420,7 @@ static void wpas_invitation_received(void *ctx, const u8 *sa, const u8 *bssid,
 			wpas_p2p_group_add_persistent(
 				wpa_s, s, go, go ? op_freq : 0, 0);
 		} else if (bssid) {
+			wpa_s->user_initiated_pd = 0;
 			wpas_p2p_join(wpa_s, bssid, go_dev_addr,
 				      wpa_s->p2p_wps_method, 0);
 		}
@@ -3251,7 +3252,7 @@ static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 		if (p2p_prov_disc_req(wpa_s->global->p2p,
 				      wpa_s->pending_join_dev_addr,
 				      wpa_s->pending_pd_config_methods, join,
-				      0) < 0) {
+				      0, wpa_s->user_initiated_pd) < 0) {
 			wpa_s->p2p_auto_pd = 0;
 			wpa_msg(wpa_s, MSG_INFO, P2P_EVENT_PROV_DISC_FAILURE
 				" p2p_dev_addr=" MACSTR " status=N/A",
@@ -3361,7 +3362,7 @@ static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 
 		if (p2p_prov_disc_req(wpa_s->global->p2p,
 				      wpa_s->pending_join_dev_addr, method, 1,
-				      freq) < 0) {
+				      freq, wpa_s->user_initiated_pd) < 0) {
 			wpa_printf(MSG_DEBUG, "P2P: Failed to send Provision "
 				   "Discovery Request before joining an "
 				   "existing group");
@@ -3636,6 +3637,7 @@ int wpas_p2p_connect(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 				   wpa_s->p2p_auto_started.sec,
 				   wpa_s->p2p_auto_started.usec);
 		}
+		wpa_s->user_initiated_pd = 1;
 		if (wpas_p2p_join(wpa_s, iface_addr, dev_addr, wps_method,
 				  auto_join) < 0)
 			return -1;
@@ -4334,7 +4336,7 @@ int wpas_p2p_prov_disc(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 
 	return p2p_prov_disc_req(wpa_s->global->p2p, peer_addr,
 				 config_methods, use == WPAS_P2P_PD_FOR_JOIN,
-				 0);
+				 0, 1);
 }
 
 

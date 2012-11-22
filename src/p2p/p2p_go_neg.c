@@ -211,7 +211,7 @@ int p2p_connect_send(struct p2p_data *p2p, struct p2p_device *dev)
 		else
 			return -1;
 		return p2p_prov_disc_req(p2p, dev->info.p2p_device_addr,
-					 config_method, 0, 0);
+					 config_method, 0, 0, 1);
 	}
 
 	freq = dev->listen_freq > 0 ? dev->listen_freq : dev->oper_freq;

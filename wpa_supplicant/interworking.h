@@ -25,5 +25,8 @@ void interworking_stop_fetch_anqp(struct wpa_supplicant *wpa_s);
 int interworking_select(struct wpa_supplicant *wpa_s, int auto_select);
 int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss);
 void interworking_start_fetch_anqp(struct wpa_supplicant *wpa_s);
+int interworking_home_sp_cred(struct wpa_supplicant *wpa_s,
+			      struct wpa_cred *cred,
+			      struct wpabuf *domain_names);
 
 #endif /* INTERWORKING_H */

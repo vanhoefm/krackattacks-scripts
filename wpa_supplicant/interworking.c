@@ -1438,50 +1438,60 @@ static int domain_name_list_contains(struct wpabuf *domain_names,
 }
 
 
+int interworking_home_sp_cred(struct wpa_supplicant *wpa_s,
+			      struct wpa_cred *cred,
+			      struct wpabuf *domain_names)
+{
+#ifdef INTERWORKING_3GPP
+	char nai[100], *realm;
+
+	char *imsi = NULL;
+	int mnc_len = 0;
+	if (cred->imsi)
+		imsi = cred->imsi;
+#ifdef CONFIG_PCSC
+	else if (cred->pcsc && wpa_s->conf->pcsc_reader &&
+		 wpa_s->scard && wpa_s->imsi[0]) {
+		imsi = wpa_s->imsi;
+		mnc_len = wpa_s->mnc_len;
+	}
+#endif /* CONFIG_PCSC */
+	if (imsi && build_root_nai(nai, sizeof(nai), imsi, mnc_len, 0) == 0) {
+		realm = os_strchr(nai, '@');
+		if (realm)
+			realm++;
+		wpa_printf(MSG_DEBUG, "Interworking: Search for match "
+			   "with SIM/USIM domain %s", realm);
+		if (realm &&
+		    domain_name_list_contains(domain_names, realm))
+			return 1;
+	}
+#endif /* INTERWORKING_3GPP */
+
+	if (cred->domain == NULL)
+		return 0;
+
+	wpa_printf(MSG_DEBUG, "Interworking: Search for match with "
+		   "home SP FQDN %s", cred->domain);
+	if (domain_name_list_contains(domain_names, cred->domain))
+		return 1;
+
+	return 0;
+}
+
+
 static int interworking_home_sp(struct wpa_supplicant *wpa_s,
 				struct wpabuf *domain_names)
 {
 	struct wpa_cred *cred;
-#ifdef INTERWORKING_3GPP
-	char nai[100], *realm;
-#endif /* INTERWORKING_3GPP */
 
 	if (domain_names == NULL || wpa_s->conf->cred == NULL)
 		return -1;
 
 	for (cred = wpa_s->conf->cred; cred; cred = cred->next) {
-#ifdef INTERWORKING_3GPP
-		char *imsi = NULL;
-		int mnc_len = 0;
-		if (cred->imsi)
-			imsi = cred->imsi;
-#ifdef CONFIG_PCSC
-		else if (cred->pcsc && wpa_s->conf->pcsc_reader &&
-			 wpa_s->scard && wpa_s->imsi[0]) {
-			imsi = wpa_s->imsi;
-			mnc_len = wpa_s->mnc_len;
-		}
-#endif /* CONFIG_PCSC */
-		if (imsi && build_root_nai(nai, sizeof(nai), imsi, mnc_len, 0)
-		    == 0) {
-			realm = os_strchr(nai, '@');
-			if (realm)
-				realm++;
-			wpa_printf(MSG_DEBUG, "Interworking: Search for match "
-				   "with SIM/USIM domain %s", realm);
-			if (realm &&
-			    domain_name_list_contains(domain_names, realm))
-				return 1;
-		}
-#endif /* INTERWORKING_3GPP */
-
-		if (cred->domain == NULL)
-			continue;
-
-		wpa_printf(MSG_DEBUG, "Interworking: Search for match with "
-			   "home SP FQDN %s", cred->domain);
-		if (domain_name_list_contains(domain_names, cred->domain))
-			return 1;
+		int res = interworking_home_sp_cred(wpa_s, cred, domain_names);
+		if (res)
+			return res;
 	}
 
 	return 0;

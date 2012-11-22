@@ -542,6 +542,15 @@ struct wpa_ssid {
 	 * disabled_until - Network block disabled until this time if non-zero
 	 */
 	struct os_time disabled_until;
+
+	/**
+	 * parent_cred - Pointer to parent wpa_cred entry
+	 *
+	 * This pointer can be used to delete temporary networks when a wpa_cred
+	 * that was used to create them is removed. This pointer should not be
+	 * dereferences since it may not be updated in all cases.
+	 */
+	void *parent_cred;
 };
 
 #endif /* CONFIG_SSID_H */

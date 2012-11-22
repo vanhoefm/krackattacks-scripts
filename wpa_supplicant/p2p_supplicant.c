@@ -723,19 +723,13 @@ static void wpas_p2p_send_action_tx_status(struct wpa_supplicant *wpa_s,
 	if (result != OFFCHANNEL_SEND_ACTION_SUCCESS &&
 	    wpa_s->pending_pd_before_join &&
 	    (os_memcmp(dst, wpa_s->pending_join_dev_addr, ETH_ALEN) == 0 ||
-	     os_memcmp(dst, wpa_s->pending_join_iface_addr, ETH_ALEN) == 0)) {
+	     os_memcmp(dst, wpa_s->pending_join_iface_addr, ETH_ALEN) == 0) &&
+	    wpa_s->p2p_fallback_to_go_neg) {
 		wpa_s->pending_pd_before_join = 0;
-		if (wpa_s->p2p_fallback_to_go_neg) {
-			wpa_dbg(wpa_s, MSG_DEBUG, "P2P: No ACK for PD Req "
-				"during p2p_connect-auto");
-			wpas_p2p_fallback_to_go_neg(wpa_s, 0);
-			return;
-		}
-
-		wpa_printf(MSG_DEBUG, "P2P: Starting pending "
-			   "join-existing-group operation (no ACK for PD "
-			   "Req)");
-		wpas_p2p_join_start(wpa_s);
+		wpa_dbg(wpa_s, MSG_DEBUG, "P2P: No ACK for PD Req "
+			"during p2p_connect-auto");
+		wpas_p2p_fallback_to_go_neg(wpa_s, 0);
+		return;
 	}
 }
 
@@ -2287,6 +2281,15 @@ static void wpas_prov_disc_fail(void *ctx, const u8 *peer,
 		wpa_dbg(wpa_s, MSG_DEBUG, "P2P: PD for p2p_connect-auto "
 			"failed - fall back to GO Negotiation");
 		wpas_p2p_fallback_to_go_neg(wpa_s, 0);
+		return;
+	}
+
+	if (status == P2P_PROV_DISC_TIMEOUT_JOIN) {
+		wpa_s->pending_pd_before_join = 0;
+		wpa_printf(MSG_DEBUG, "P2P: Starting pending "
+			   "join-existing-group operation (no ACK for PD "
+			   "Req attempts)");
+		wpas_p2p_join_start(wpa_s);
 		return;
 	}
 

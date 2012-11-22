@@ -2650,8 +2650,7 @@ static void p2p_retry_pd(struct p2p_data *p2p)
 
 	/*
 	 * Retry the prov disc req attempt only for the peer that the user had
-	 * requested for and provided a join has not been initiated on it
-	 * in the meantime.
+	 * requested.
 	 */
 
 	dl_list_for_each(dev, &p2p->devices, struct p2p_device, list) {
@@ -2660,15 +2659,14 @@ static void p2p_retry_pd(struct p2p_data *p2p)
 			continue;
 		if (!dev->req_config_methods)
 			continue;
-		if (dev->flags & P2P_DEV_PD_FOR_JOIN)
-			continue;
 
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Send "
 			"pending Provision Discovery Request to "
 			MACSTR " (config methods 0x%x)",
 			MAC2STR(dev->info.p2p_device_addr),
 			dev->req_config_methods);
-		p2p_send_prov_disc_req(p2p, dev, 0, 0);
+		p2p_send_prov_disc_req(p2p, dev,
+				       dev->flags & P2P_DEV_PD_FOR_JOIN, 0);
 		return;
 	}
 }
@@ -3183,9 +3181,23 @@ static void p2p_timeout_prov_disc_req(struct p2p_data *p2p)
 		p2p->pd_retries--;
 		p2p_retry_pd(p2p);
 	} else {
+		struct p2p_device *dev;
+		int for_join = 0;
+
+		dl_list_for_each(dev, &p2p->devices, struct p2p_device, list) {
+			if (os_memcmp(p2p->pending_pd_devaddr,
+				      dev->info.p2p_device_addr, ETH_ALEN) != 0)
+				continue;
+			if (dev->req_config_methods &&
+			    (dev->flags & P2P_DEV_PD_FOR_JOIN))
+				for_join = 1;
+		}
+
 		if (p2p->cfg->prov_disc_fail)
 			p2p->cfg->prov_disc_fail(p2p->cfg->cb_ctx,
 						 p2p->pending_pd_devaddr,
+						 for_join ?
+						 P2P_PROV_DISC_TIMEOUT_JOIN :
 						 P2P_PROV_DISC_TIMEOUT);
 		p2p_reset_pending_pd(p2p);
 	}

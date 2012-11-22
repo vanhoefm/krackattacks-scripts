@@ -82,8 +82,6 @@ static void wpas_p2p_join_scan(void *eloop_ctx, void *timeout_ctx);
 static int wpas_p2p_join(struct wpa_supplicant *wpa_s, const u8 *iface_addr,
 			 const u8 *dev_addr, enum p2p_wps_method wps_method,
 			 int auto_join);
-static void wpas_p2p_pd_before_join_timeout(void *eloop_ctx,
-					    void *timeout_ctx);
 static int wpas_p2p_create_iface(struct wpa_supplicant *wpa_s);
 static void wpas_p2p_cross_connect_setup(struct wpa_supplicant *wpa_s);
 static void wpas_p2p_group_idle_timeout(void *eloop_ctx, void *timeout_ctx);
@@ -2970,7 +2968,6 @@ void wpas_p2p_deinit(struct wpa_supplicant *wpa_s)
 	wpa_s->go_params = NULL;
 	eloop_cancel_timeout(wpas_p2p_group_formation_timeout, wpa_s, NULL);
 	eloop_cancel_timeout(wpas_p2p_join_scan, wpa_s, NULL);
-	eloop_cancel_timeout(wpas_p2p_pd_before_join_timeout, wpa_s, NULL);
 	wpa_s->p2p_long_listen = 0;
 	eloop_cancel_timeout(wpas_p2p_long_listen_timeout, wpa_s, NULL);
 	eloop_cancel_timeout(wpas_p2p_group_idle_timeout, wpa_s, NULL);
@@ -3119,22 +3116,6 @@ static void wpas_p2p_check_join_scan_limit(struct wpa_supplicant *wpa_s)
 		wpa_msg(wpa_s->parent, MSG_INFO,
 			P2P_EVENT_GROUP_FORMATION_FAILURE);
 	}
-}
-
-
-static void wpas_p2p_pd_before_join_timeout(void *eloop_ctx, void *timeout_ctx)
-{
-	struct wpa_supplicant *wpa_s = eloop_ctx;
-	if (!wpa_s->pending_pd_before_join)
-		return;
-	wpa_s->pending_pd_before_join = 0;
-	/*
-	 * Provision Discovery Response may have been lost - try to connect
-	 * anyway since we do not need any information from this PD.
-	 */
-	wpa_printf(MSG_DEBUG, "P2P: PD timeout for join-existing-group - "
-		   "try to connect anyway");
-	wpas_p2p_join_start(wpa_s);
 }
 
 
@@ -3372,18 +3353,6 @@ static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 			wpa_s->pending_pd_before_join = 0;
 			goto start;
 		}
-
-		/*
-		 * Actual join operation will be started from the Action frame
-		 * TX status callback (if no ACK is received) or when the
-		 * Provision Discovery Response is received. Use a short
-		 * timeout as a backup mechanism should the Provision Discovery
-		 * Response be lost for any reason.
-		 */
-		eloop_cancel_timeout(wpas_p2p_pd_before_join_timeout, wpa_s,
-				     NULL);
-		eloop_register_timeout(2, 0, wpas_p2p_pd_before_join_timeout,
-				       wpa_s, NULL);
 		return;
 	}
 
@@ -3500,7 +3469,6 @@ static int wpas_p2p_join_start(struct wpa_supplicant *wpa_s)
 	struct p2p_go_neg_results res;
 	struct wpa_bss *bss;
 
-	eloop_cancel_timeout(wpas_p2p_pd_before_join_timeout, wpa_s, NULL);
 	group = wpas_p2p_get_group_iface(wpa_s, 0, 0);
 	if (group == NULL)
 		return -1;
@@ -5409,7 +5377,6 @@ static void wpas_p2p_fallback_to_go_neg(struct wpa_supplicant *wpa_s,
 					int group_added)
 {
 	struct wpa_supplicant *group = wpa_s;
-	eloop_cancel_timeout(wpas_p2p_pd_before_join_timeout, wpa_s, NULL);
 	if (wpa_s->global->p2p_group_formation)
 		group = wpa_s->global->p2p_group_formation;
 	wpa_s = wpa_s->parent;

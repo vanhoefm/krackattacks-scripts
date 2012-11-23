@@ -305,6 +305,22 @@ wpa_supplicant_ctrl_iface_init(struct wpa_supplicant *wpa_s)
 		}
 	}
 
+#ifdef ANDROID
+	/*
+	 * wpa_supplicant is started from /init.*.rc on Android and that seems
+	 * to be using umask 0077 which would leave the control interface
+	 * directory without group access. This breaks things since Wi-Fi
+	 * framework assumes that this directory can be accessed by other
+	 * applications in the wifi group. Fix this by adding group access even
+	 * if umask value would prevent this.
+	 */
+	if (chmod(dir, S_IRWXU | S_IRWXG) < 0) {
+		wpa_printf(MSG_ERROR, "CTRL: Could not chmod directory: %s",
+			   strerror(errno));
+		/* Try to continue anyway */
+	}
+#endif /* ANDROID */
+
 	if (gid_str) {
 		grp = getgrnam(gid_str);
 		if (grp) {

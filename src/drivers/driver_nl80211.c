@@ -2661,6 +2661,9 @@ broken_combination:
 
 		if (flags & NL80211_FEATURE_SAE)
 			capa->flags |= WPA_DRIVER_FLAGS_SAE;
+
+		if (flags & NL80211_FEATURE_NEED_OBSS_SCAN)
+			capa->flags |= WPA_DRIVER_FLAGS_OBSS_SCAN;
 	}
 
 	if (tb[NL80211_ATTR_PROBE_RESP_OFFLOAD]) {

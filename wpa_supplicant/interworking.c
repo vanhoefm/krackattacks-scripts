@@ -717,9 +717,12 @@ static int set_root_nai(struct wpa_ssid *ssid, const char *imsi, char prefix)
 #endif /* INTERWORKING_3GPP */
 
 
-static int interworking_set_hs20_params(struct wpa_ssid *ssid)
+static int interworking_set_hs20_params(struct wpa_supplicant *wpa_s,
+					struct wpa_ssid *ssid)
 {
-	if (wpa_config_set(ssid, "key_mgmt", "WPA-EAP", 0) < 0)
+	if (wpa_config_set(ssid, "key_mgmt",
+			   wpa_s->conf->pmf != NO_MGMT_FRAME_PROTECTION ?
+			   "WPA-EAP WPA-EAP-SHA256" : "WPA-EAP", 0) < 0)
 		return -1;
 	if (wpa_config_set(ssid, "proto", "RSN", 0) < 0)
 		return -1;
@@ -798,7 +801,7 @@ static int interworking_connect_3gpp(struct wpa_supplicant *wpa_s,
 	os_memcpy(ssid->ssid, ie + 2, ie[1]);
 	ssid->ssid_len = ie[1];
 
-	if (interworking_set_hs20_params(ssid) < 0)
+	if (interworking_set_hs20_params(wpa_s, ssid) < 0)
 		goto fail;
 
 	eap_type = EAP_TYPE_SIM;
@@ -1107,7 +1110,7 @@ static int interworking_connect_roaming_consortium(
 	os_memcpy(ssid->ssid, ssid_ie + 2, ssid_ie[1]);
 	ssid->ssid_len = ssid_ie[1];
 
-	if (interworking_set_hs20_params(ssid) < 0)
+	if (interworking_set_hs20_params(wpa_s, ssid) < 0)
 		goto fail;
 
 	if (cred->eap_method == NULL) {
@@ -1222,7 +1225,7 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 	os_memcpy(ssid->ssid, ie + 2, ie[1]);
 	ssid->ssid_len = ie[1];
 
-	if (interworking_set_hs20_params(ssid) < 0)
+	if (interworking_set_hs20_params(wpa_s, ssid) < 0)
 		goto fail;
 
 	if (wpa_config_set(ssid, "eap", eap_get_name(EAP_VENDOR_IETF,

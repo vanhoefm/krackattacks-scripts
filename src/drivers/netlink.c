@@ -97,8 +97,6 @@ struct netlink_data * netlink_init(struct netlink_config *cfg)
 	if (netlink == NULL)
 		return NULL;
 
-	netlink->cfg = cfg;
-
 	netlink->sock = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
 	if (netlink->sock < 0) {
 		wpa_printf(MSG_ERROR, "netlink: Failed to open netlink "
@@ -120,6 +118,8 @@ struct netlink_data * netlink_init(struct netlink_config *cfg)
 
 	eloop_register_read_sock(netlink->sock, netlink_receive, netlink,
 				 NULL);
+
+	netlink->cfg = cfg;
 
 	return netlink;
 }

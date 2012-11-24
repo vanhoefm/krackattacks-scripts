@@ -49,6 +49,8 @@ u8 * hostapd_eid_supp_rates(struct hostapd_data *hapd, u8 *eid)
 	num = hapd->iface->num_rates;
 	if (hapd->iconf->ieee80211n && hapd->iconf->require_ht)
 		num++;
+	if (hapd->iconf->ieee80211ac && hapd->iconf->require_vht)
+		num++;
 	if (num > 8) {
 		/* rest of the rates are encoded in Extended supported
 		 * rates element */
@@ -66,9 +68,15 @@ u8 * hostapd_eid_supp_rates(struct hostapd_data *hapd, u8 *eid)
 		pos++;
 	}
 
-	if (hapd->iconf->ieee80211n && hapd->iconf->require_ht &&
-	    hapd->iface->num_rates < 8)
+	if (hapd->iconf->ieee80211n && hapd->iconf->require_ht && count < 8) {
+		count++;
 		*pos++ = 0x80 | BSS_MEMBERSHIP_SELECTOR_HT_PHY;
+	}
+
+	if (hapd->iconf->ieee80211ac && hapd->iconf->require_vht && count < 8) {
+		count++;
+		*pos++ = 0x80 | BSS_MEMBERSHIP_SELECTOR_VHT_PHY;
+	}
 
 	return pos;
 }
@@ -84,6 +92,8 @@ u8 * hostapd_eid_ext_supp_rates(struct hostapd_data *hapd, u8 *eid)
 
 	num = hapd->iface->num_rates;
 	if (hapd->iconf->ieee80211n && hapd->iconf->require_ht)
+		num++;
+	if (hapd->iconf->ieee80211ac && hapd->iconf->require_vht)
 		num++;
 	if (num <= 8)
 		return eid;
@@ -103,9 +113,17 @@ u8 * hostapd_eid_ext_supp_rates(struct hostapd_data *hapd, u8 *eid)
 		pos++;
 	}
 
-	if (hapd->iconf->ieee80211n && hapd->iconf->require_ht &&
-	    hapd->iface->num_rates >= 8)
-		*pos++ = 0x80 | BSS_MEMBERSHIP_SELECTOR_HT_PHY;
+	if (hapd->iconf->ieee80211n && hapd->iconf->require_ht) {
+		count++;
+		if (count > 8)
+			*pos++ = 0x80 | BSS_MEMBERSHIP_SELECTOR_HT_PHY;
+	}
+
+	if (hapd->iconf->ieee80211ac && hapd->iconf->require_vht) {
+		count++;
+		if (count > 8)
+			*pos++ = 0x80 | BSS_MEMBERSHIP_SELECTOR_VHT_PHY;
+	}
 
 	return pos;
 }

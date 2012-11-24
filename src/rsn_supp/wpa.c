@@ -2376,6 +2376,22 @@ int wpa_sm_get_status(struct wpa_sm *sm, char *buf, size_t buflen,
 	if (ret < 0 || ret >= end - pos)
 		return pos - buf;
 	pos += ret;
+
+	if (sm->mfp != NO_MGMT_FRAME_PROTECTION && sm->ap_rsn_ie) {
+		struct wpa_ie_data rsn;
+		if (wpa_parse_wpa_ie_rsn(sm->ap_rsn_ie, sm->ap_rsn_ie_len, &rsn)
+		    >= 0 &&
+		    rsn.capabilities & (WPA_CAPABILITY_MFPR |
+					WPA_CAPABILITY_MFPC)) {
+			ret = os_snprintf(pos, end - pos, "pmf=%d\n",
+					  (rsn.capabilities &
+					   WPA_CAPABILITY_MFPR) ? 2 : 1);
+			if (ret < 0 || ret >= end - pos)
+				return pos - buf;
+			pos += ret;
+		}
+	}
+
 	return pos - buf;
 }
 

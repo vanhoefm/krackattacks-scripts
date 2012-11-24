@@ -361,6 +361,12 @@ struct wpa_ssid {
 	 *
 	 * This value is used to configure policy for management frame
 	 * protection (IEEE 802.11w). 0 = disabled, 1 = optional, 2 = required.
+	 * This is disabled by default unless the default value has been changed
+	 * with the global pmf=1/2 parameter.
+	 *
+	 * Internally, special value 3 is used to indicate that the parameter
+	 * was not specified in the configuration (i.e., default behavior is
+	 * followed).
 	 */
 	enum mfp_options ieee80211w;
 #endif /* CONFIG_IEEE80211W */

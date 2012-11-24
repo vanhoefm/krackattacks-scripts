@@ -263,8 +263,9 @@ void sme_send_authentication(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_IEEE80211R */
 
 #ifdef CONFIG_IEEE80211W
-	wpa_s->sme.mfp = ssid->ieee80211w;
-	if (ssid->ieee80211w != NO_MGMT_FRAME_PROTECTION) {
+	wpa_s->sme.mfp = ssid->ieee80211w == MGMT_FRAME_PROTECTION_DEFAULT ?
+		wpa_s->conf->pmf : ssid->ieee80211w;
+	if (wpa_s->sme.mfp != NO_MGMT_FRAME_PROTECTION) {
 		const u8 *rsn = wpa_bss_get_ie(bss, WLAN_EID_RSN);
 		struct wpa_ie_data _ie;
 		if (rsn && wpa_parse_wpa_ie(rsn, 2 + rsn[1], &_ie) == 0 &&
@@ -1190,7 +1191,9 @@ void sme_event_unprot_disconnect(struct wpa_supplicant *wpa_s, const u8 *sa,
 	if (wpa_s->wpa_state != WPA_COMPLETED)
 		return;
 	ssid = wpa_s->current_ssid;
-	if (ssid == NULL || ssid->ieee80211w == 0)
+	if (ssid == NULL ||
+	    (ssid->ieee80211w == MGMT_FRAME_PROTECTION_DEFAULT ?
+	     wpa_s->conf->pmf : ssid->ieee80211w) == NO_MGMT_FRAME_PROTECTION)
 		return;
 	if (os_memcmp(sa, wpa_s->bssid, ETH_ALEN) != 0)
 		return;

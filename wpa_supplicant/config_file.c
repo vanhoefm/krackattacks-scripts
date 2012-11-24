@@ -680,7 +680,8 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 	INT(disabled);
 	INT(peerkey);
 #ifdef CONFIG_IEEE80211W
-	INT(ieee80211w);
+	write_int(f, "ieee80211w", ssid->ieee80211w,
+		  MGMT_FRAME_PROTECTION_DEFAULT);
 #endif /* CONFIG_IEEE80211W */
 	STR(id_str);
 #ifdef CONFIG_P2P
@@ -928,6 +929,8 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 			config->auto_interworking);
 	if (config->okc)
 		fprintf(f, "okc=%d\n", config->okc);
+	if (config->pmf)
+		fprintf(f, "pmf=%d\n", config->pmf);
 }
 
 #endif /* CONFIG_NO_CONFIG_WRITE */

@@ -930,7 +930,9 @@ static int wpa_supplicant_suites_from_ai(struct wpa_supplicant *wpa_s,
 
 #ifdef CONFIG_IEEE80211W
 	if (!(ie->capabilities & WPA_CAPABILITY_MFPC) &&
-	    ssid->ieee80211w == MGMT_FRAME_PROTECTION_REQUIRED) {
+	    (ssid->ieee80211w == MGMT_FRAME_PROTECTION_DEFAULT ?
+	     wpa_s->conf->pmf : ssid->ieee80211w) ==
+	    MGMT_FRAME_PROTECTION_REQUIRED) {
 		wpa_msg(wpa_s, MSG_INFO, "WPA: Driver associated with an AP "
 			"that does not support management frame protection - "
 			"reject");
@@ -1126,7 +1128,8 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 
 #ifdef CONFIG_IEEE80211W
 	sel = ie.mgmt_group_cipher;
-	if (ssid->ieee80211w == NO_MGMT_FRAME_PROTECTION ||
+	if ((ssid->ieee80211w == MGMT_FRAME_PROTECTION_DEFAULT ?
+	     wpa_s->conf->pmf : ssid->ieee80211w) == NO_MGMT_FRAME_PROTECTION ||
 	    !(ie.capabilities & WPA_CAPABILITY_MFPC))
 		sel = 0;
 	if (sel & WPA_CIPHER_AES_128_CMAC) {
@@ -1139,7 +1142,9 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 	}
 	wpa_sm_set_param(wpa_s->wpa, WPA_PARAM_MGMT_GROUP,
 			 wpa_s->mgmt_group_cipher);
-	wpa_sm_set_param(wpa_s->wpa, WPA_PARAM_MFP, ssid->ieee80211w);
+	wpa_sm_set_param(wpa_s->wpa, WPA_PARAM_MFP,
+			 (ssid->ieee80211w == MGMT_FRAME_PROTECTION_DEFAULT ?
+			  wpa_s->conf->pmf : ssid->ieee80211w));
 #endif /* CONFIG_IEEE80211W */
 
 	if (wpa_sm_set_assoc_wpa_ie_default(wpa_s->wpa, wpa_ie, wpa_ie_len)) {
@@ -1562,8 +1567,10 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	params.drop_unencrypted = use_crypt;
 
 #ifdef CONFIG_IEEE80211W
-	params.mgmt_frame_protection = ssid->ieee80211w;
-	if (ssid->ieee80211w != NO_MGMT_FRAME_PROTECTION && bss) {
+	params.mgmt_frame_protection =
+		ssid->ieee80211w == MGMT_FRAME_PROTECTION_DEFAULT ?
+		wpa_s->conf->pmf : ssid->ieee80211w;
+	if (params.mgmt_frame_protection != NO_MGMT_FRAME_PROTECTION && bss) {
 		const u8 *rsn = wpa_bss_get_ie(bss, WLAN_EID_RSN);
 		struct wpa_ie_data ie;
 		if (rsn && wpa_parse_wpa_ie(rsn, 2 + rsn[1], &ie) == 0 &&

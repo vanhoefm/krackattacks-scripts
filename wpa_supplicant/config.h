@@ -782,6 +782,15 @@ struct wpa_config {
 	 * default behavior.
 	 */
 	int okc;
+
+	/**
+	 * pmf - Whether to enable/require PMF by default
+	 *
+	 * By default, PMF is disabled unless enabled by the per-network
+	 * ieee80211w=1 or ieee80211w=2 parameter. pmf=1/2 can be used to change
+	 * this default behavior.
+	 */
+	enum mfp_options pmf;
 };
 
 

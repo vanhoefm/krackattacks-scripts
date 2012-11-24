@@ -286,8 +286,9 @@ enum wpa_states {
 enum mfp_options {
 	NO_MGMT_FRAME_PROTECTION = 0,
 	MGMT_FRAME_PROTECTION_OPTIONAL = 1,
-	MGMT_FRAME_PROTECTION_REQUIRED = 2
+	MGMT_FRAME_PROTECTION_REQUIRED = 2,
 };
+#define MGMT_FRAME_PROTECTION_DEFAULT 3
 
 /**
  * enum hostapd_hw_mode - Hardware mode

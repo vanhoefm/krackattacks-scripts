@@ -21,7 +21,6 @@
 #include "../notify.h"
 #include "../bss.h"
 #include "../scan.h"
-#include "../ctrl_iface.h"
 #include "../autoscan.h"
 #include "dbus_new_helpers.h"
 #include "dbus_new.h"

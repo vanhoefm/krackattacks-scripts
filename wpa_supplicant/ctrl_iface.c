@@ -37,7 +37,6 @@
 #include "ctrl_iface.h"
 #include "interworking.h"
 #include "blacklist.h"
-#include "wpas_glue.h"
 #include "autoscan.h"
 
 extern struct wpa_driver_ops *wpa_drivers[];

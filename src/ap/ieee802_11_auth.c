@@ -419,6 +419,8 @@ static void hostapd_acl_expire(void *eloop_ctx, void *timeout_ctx)
 
 
 static void decode_tunnel_passwords(struct hostapd_data *hapd,
+				    const u8 *shared_secret,
+				    size_t shared_secret_len,
 				    struct radius_msg *msg,
 				    struct radius_msg *req,
 				    struct hostapd_cached_radius_acl *cache)
@@ -433,9 +435,7 @@ static void decode_tunnel_passwords(struct hostapd_data *hapd,
 	 */
 	for (i = 0; ; i++) {
 		passphrase = radius_msg_get_tunnel_password(
-			msg, &passphraselen,
-			hapd->conf->radius->auth_server->shared_secret,
-			hapd->conf->radius->auth_server->shared_secret_len,
+			msg, &passphraselen, shared_secret, shared_secret_len,
 			req, i);
 		/*
 		 * Passphrase is NULL iff there is no i-th Tunnel-Password
@@ -546,7 +546,8 @@ hostapd_acl_recv_radius(struct radius_msg *msg, struct radius_msg *req,
 
 		cache->vlan_id = radius_msg_get_vlanid(msg);
 
-		decode_tunnel_passwords(hapd, msg, req, cache);
+		decode_tunnel_passwords(hapd, shared_secret, shared_secret_len,
+					msg, req, cache);
 
 		if (radius_msg_get_attr_ptr(msg, RADIUS_ATTR_USER_NAME,
 					    &buf, &len, NULL) == 0) {

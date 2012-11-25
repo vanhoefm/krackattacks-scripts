@@ -80,9 +80,9 @@ static struct wpabuf * sme_auth_build_sae_confirm(struct wpa_supplicant *wpa_s)
 #endif /* CONFIG_SAE */
 
 
-void sme_send_authentication(struct wpa_supplicant *wpa_s,
-			     struct wpa_bss *bss, struct wpa_ssid *ssid,
-			     int start)
+static void sme_send_authentication(struct wpa_supplicant *wpa_s,
+				    struct wpa_bss *bss, struct wpa_ssid *ssid,
+				    int start)
 {
 	struct wpa_driver_auth_params params;
 	struct wpa_ssid *old_ssid;

@@ -95,11 +95,9 @@ static void pmksa_cache_expire(void *eloop_ctx, void *timeout_ctx)
 
 	os_get_time(&now);
 	while (pmksa->pmksa && pmksa->pmksa->expiration <= now.sec) {
-		struct rsn_pmksa_cache_entry *entry = pmksa->pmksa;
-		pmksa->pmksa = entry->next;
 		wpa_printf(MSG_DEBUG, "RSN: expired PMKSA cache entry for "
-			   MACSTR, MAC2STR(entry->spa));
-		pmksa_cache_free_entry(pmksa, entry);
+			   MACSTR, MAC2STR(pmksa->pmksa->spa));
+		pmksa_cache_free_entry(pmksa, pmksa->pmksa);
 	}
 
 	pmksa_cache_set_expiration(pmksa);

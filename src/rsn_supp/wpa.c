@@ -1935,25 +1935,40 @@ int wpa_sm_get_mib(struct wpa_sm *sm, char *buf, size_t buflen)
 
 
 static void wpa_sm_pmksa_free_cb(struct rsn_pmksa_cache_entry *entry,
-				 void *ctx, int replace)
+				 void *ctx, enum pmksa_free_reason reason)
 {
 	struct wpa_sm *sm = ctx;
+	int deauth = 0;
 
-	if (sm->cur_pmksa == entry ||
+	wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG, "RSN: PMKSA cache entry free_cb: "
+		MACSTR " reason=%d", MAC2STR(entry->aa), reason);
+
+	if (sm->cur_pmksa == entry) {
+		wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG,
+			"RSN: %s current PMKSA entry",
+			reason == PMKSA_REPLACE ? "replaced" : "removed");
+		pmksa_cache_clear_current(sm);
+
+		/*
+		 * If an entry is simply being replaced, there's no need to
+		 * deauthenticate because it will be immediately re-added.
+		 * This happens when EAP authentication is completed again
+		 * (reauth or failed PMKSA caching attempt).
+		 */
+		if (reason != PMKSA_REPLACE)
+			deauth = 1;
+	}
+
+	if (reason == PMKSA_EXPIRE &&
 	    (sm->pmk_len == entry->pmk_len &&
 	     os_memcmp(sm->pmk, entry->pmk, sm->pmk_len) == 0)) {
 		wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG,
-			"RSN: removed current PMKSA entry");
-		sm->cur_pmksa = NULL;
+			"RSN: deauthenticating due to expired PMK");
+		pmksa_cache_clear_current(sm);
+		deauth = 1;
+	}
 
-		if (replace) {
-			/* A new entry is being added, so no need to
-			 * deauthenticate in this case. This happens when EAP
-			 * authentication is completed again (reauth or failed
-			 * PMKSA caching attempt). */
-			return;
-		}
-
+	if (deauth) {
 		os_memset(sm->pmk, 0, sizeof(sm->pmk));
 		wpa_sm_deauthenticate(sm, WLAN_REASON_UNSPECIFIED);
 	}

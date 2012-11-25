@@ -38,11 +38,17 @@ struct rsn_pmksa_cache_entry {
 
 struct rsn_pmksa_cache;
 
+enum pmksa_free_reason {
+	PMKSA_FREE,
+	PMKSA_REPLACE,
+	PMKSA_EXPIRE,
+};
+
 #if defined(IEEE8021X_EAPOL) && !defined(CONFIG_NO_WPA2)
 
 struct rsn_pmksa_cache *
 pmksa_cache_init(void (*free_cb)(struct rsn_pmksa_cache_entry *entry,
-				 void *ctx, int replace),
+				 void *ctx, enum pmksa_free_reason reason),
 		 void *ctx, struct wpa_sm *sm);
 void pmksa_cache_deinit(struct rsn_pmksa_cache *pmksa);
 struct rsn_pmksa_cache_entry * pmksa_cache_get(struct rsn_pmksa_cache *pmksa,
@@ -66,7 +72,7 @@ void pmksa_cache_flush(struct rsn_pmksa_cache *pmksa, void *network_ctx);
 
 static inline struct rsn_pmksa_cache *
 pmksa_cache_init(void (*free_cb)(struct rsn_pmksa_cache_entry *entry,
-				 void *ctx, int replace),
+				 void *ctx, int reason),
 		 void *ctx, struct wpa_sm *sm)
 {
 	return (void *) -1;

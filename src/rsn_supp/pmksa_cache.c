@@ -25,7 +25,7 @@ struct rsn_pmksa_cache {
 	struct wpa_sm *sm; /* TODO: get rid of this reference(?) */
 
 	void (*free_cb)(struct rsn_pmksa_cache_entry *entry, void *ctx,
-			int replace);
+			enum pmksa_free_reason reason);
 	void *ctx;
 };
 
@@ -41,11 +41,11 @@ static void _pmksa_cache_free_entry(struct rsn_pmksa_cache_entry *entry)
 
 static void pmksa_cache_free_entry(struct rsn_pmksa_cache *pmksa,
 				   struct rsn_pmksa_cache_entry *entry,
-				   int replace)
+				   enum pmksa_free_reason reason)
 {
 	wpa_sm_remove_pmkid(pmksa->sm, entry->aa, entry->pmkid);
 	pmksa->pmksa_count--;
-	pmksa->free_cb(entry, pmksa->ctx, replace);
+	pmksa->free_cb(entry, pmksa->ctx, reason);
 	_pmksa_cache_free_entry(entry);
 }
 
@@ -61,7 +61,7 @@ static void pmksa_cache_expire(void *eloop_ctx, void *timeout_ctx)
 		pmksa->pmksa = entry->next;
 		wpa_printf(MSG_DEBUG, "RSN: expired PMKSA cache entry for "
 			   MACSTR, MAC2STR(entry->aa));
-		pmksa_cache_free_entry(pmksa, entry, 0);
+		pmksa_cache_free_entry(pmksa, entry, PMKSA_EXPIRE);
 	}
 
 	pmksa_cache_set_expiration(pmksa);
@@ -164,22 +164,9 @@ pmksa_cache_add(struct rsn_pmksa_cache *pmksa, const u8 *pmk, size_t pmk_len,
 				pmksa->pmksa = pos->next;
 			else
 				prev->next = pos->next;
-			if (pos == pmksa->sm->cur_pmksa) {
-				/* We are about to replace the current PMKSA
-				 * cache entry. This happens when the PMKSA
-				 * caching attempt fails, so we don't want to
-				 * force pmksa_cache_free_entry() to disconnect
-				 * at this point. Let's just make sure the old
-				 * PMKSA cache entry will not be used in the
-				 * future.
-				 */
-				wpa_printf(MSG_DEBUG, "RSN: replacing current "
-					   "PMKSA entry");
-				pmksa->sm->cur_pmksa = NULL;
-			}
 			wpa_printf(MSG_DEBUG, "RSN: Replace PMKSA entry for "
 				   "the current AP");
-			pmksa_cache_free_entry(pmksa, pos, 1);
+			pmksa_cache_free_entry(pmksa, pos, PMKSA_REPLACE);
 
 			/*
 			 * If OKC is used, there may be other PMKSA cache
@@ -214,7 +201,7 @@ pmksa_cache_add(struct rsn_pmksa_cache *pmksa, const u8 *pmk, size_t pmk_len,
 				   "PMKSA cache entry (for " MACSTR ") to "
 				   "make room for new one",
 				   MAC2STR(pos->aa));
-			pmksa_cache_free_entry(pmksa, pos, 0);
+			pmksa_cache_free_entry(pmksa, pos, PMKSA_FREE);
 		}
 	}
 
@@ -265,7 +252,7 @@ void pmksa_cache_flush(struct rsn_pmksa_cache *pmksa, void *network_ctx)
 				pmksa->pmksa = entry->next;
 			tmp = entry;
 			entry = entry->next;
-			pmksa_cache_free_entry(pmksa, tmp, 0);
+			pmksa_cache_free_entry(pmksa, tmp, PMKSA_FREE);
 			removed++;
 		} else {
 			prev = entry;
@@ -507,7 +494,7 @@ int pmksa_cache_list(struct rsn_pmksa_cache *pmksa, char *buf, size_t len)
  */
 struct rsn_pmksa_cache *
 pmksa_cache_init(void (*free_cb)(struct rsn_pmksa_cache_entry *entry,
-				 void *ctx, int replace),
+				 void *ctx, enum pmksa_free_reason reason),
 		 void *ctx, struct wpa_sm *sm)
 {
 	struct rsn_pmksa_cache *pmksa;

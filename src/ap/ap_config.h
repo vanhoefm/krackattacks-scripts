@@ -96,6 +96,11 @@ struct hostapd_vlan {
 };
 
 #define PMK_LEN 32
+struct hostapd_sta_wpa_psk_short {
+	struct hostapd_sta_wpa_psk_short *next;
+	u8 psk[PMK_LEN];
+};
+
 struct hostapd_wpa_psk {
 	struct hostapd_wpa_psk *next;
 	int group;

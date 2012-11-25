@@ -1455,13 +1455,7 @@ DBusMessage * wpas_dbus_handler_reassociate(DBusMessage *message,
 					    struct wpa_supplicant *wpa_s)
 {
 	if (wpa_s->current_ssid != NULL) {
-		wpa_s->extra_blacklist_count = 0;
-		wpa_s->normal_scans = 0;
-		wpa_supplicant_reinit_autoscan(wpa_s);
-		wpa_s->disconnected = 0;
-		wpa_s->reassociate = 1;
-		wpa_supplicant_req_scan(wpa_s, 0, 0);
-
+		wpas_request_connection(wpa_s);
 		return NULL;
 	}
 

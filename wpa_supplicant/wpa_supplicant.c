@@ -3716,3 +3716,22 @@ int disallowed_ssid(struct wpa_supplicant *wpa_s, const u8 *ssid,
 
 	return 0;
 }
+
+
+/**
+ * wpas_request_connection - Request a new connection
+ * @wpa_s: Pointer to the network interface
+ *
+ * This function is used to request a new connection to be found. It will mark
+ * the interface to allow reassociation and request a new scan to find a
+ * suitable network to connect to.
+ */
+void wpas_request_connection(struct wpa_supplicant *wpa_s)
+{
+	wpa_s->normal_scans = 0;
+	wpa_supplicant_reinit_autoscan(wpa_s);
+	wpa_s->extra_blacklist_count = 0;
+	wpa_s->disconnected = 0;
+	wpa_s->reassociate = 1;
+	wpa_supplicant_req_scan(wpa_s, 0, 0);
+}

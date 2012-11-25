@@ -754,6 +754,7 @@ void wpas_clear_temp_disabled(struct wpa_supplicant *wpa_s,
 int disallowed_bssid(struct wpa_supplicant *wpa_s, const u8 *bssid);
 int disallowed_ssid(struct wpa_supplicant *wpa_s, const u8 *ssid,
 		    size_t ssid_len);
+void wpas_request_connection(struct wpa_supplicant *wpa_s);
 
 /**
  * wpa_supplicant_ctrl_iface_ctrl_rsp_handle - Handle a control response

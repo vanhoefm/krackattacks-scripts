@@ -55,14 +55,9 @@ struct hostapd_acl_query_data {
 #ifndef CONFIG_NO_RADIUS
 static void hostapd_acl_cache_free_entry(struct hostapd_cached_radius_acl *e)
 {
-	struct hostapd_sta_wpa_psk_short *psk = e->psk;
 	os_free(e->identity);
 	os_free(e->radius_cui);
-	while (psk) {
-		struct hostapd_sta_wpa_psk_short *prev = psk;
-		psk = psk->next;
-		os_free(prev);
-	}
+	hostapd_free_psk_list(e->psk);
 	os_free(e);
 }
 
@@ -634,5 +629,15 @@ void hostapd_acl_deinit(struct hostapd_data *hapd)
 		prev = query;
 		query = query->next;
 		hostapd_acl_query_free(prev);
+	}
+}
+
+
+void hostapd_free_psk_list(struct hostapd_sta_wpa_psk_short *psk)
+{
+	while (psk) {
+		struct hostapd_sta_wpa_psk_short *prev = psk;
+		psk = psk->next;
+		os_free(prev);
 	}
 }

@@ -20,6 +20,7 @@
 #include "accounting.h"
 #include "ieee802_1x.h"
 #include "ieee802_11.h"
+#include "ieee802_11_auth.h"
 #include "wpa_auth.h"
 #include "preauth_auth.h"
 #include "ap_config.h"
@@ -235,11 +236,7 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 	wpabuf_free(sta->hs20_ie);
 
 	os_free(sta->ht_capabilities);
-	while (sta->psk) {
-		struct hostapd_sta_wpa_psk_short *prev = sta->psk;
-		sta->psk = sta->psk->next;
-		os_free(prev);
-	}
+	hostapd_free_psk_list(sta->psk);
 	os_free(sta->identity);
 	os_free(sta->radius_cui);
 

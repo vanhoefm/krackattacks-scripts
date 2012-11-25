@@ -23,5 +23,6 @@ int hostapd_allowed_address(struct hostapd_data *hapd, const u8 *addr,
 			    char **identity, char **radius_cui);
 int hostapd_acl_init(struct hostapd_data *hapd);
 void hostapd_acl_deinit(struct hostapd_data *hapd);
+void hostapd_free_psk_list(struct hostapd_sta_wpa_psk_short *psk);
 
 #endif /* IEEE802_11_AUTH_H */

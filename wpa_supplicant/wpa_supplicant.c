@@ -1322,7 +1322,7 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 		   (ssid->key_mgmt & WPA_KEY_MGMT_WPS)) {
 		/* Use ap_scan==1 style network selection to find the network
 		 */
-		wpa_s->scan_req = 2;
+		wpa_s->scan_req = MANUAL_SCAN_REQ;
 		wpa_s->reassociate = 1;
 		wpa_supplicant_req_scan(wpa_s, 0, 0);
 		return;
@@ -2413,7 +2413,7 @@ static struct wpa_supplicant * wpa_supplicant_alloc(void)
 	wpa_s = os_zalloc(sizeof(*wpa_s));
 	if (wpa_s == NULL)
 		return NULL;
-	wpa_s->scan_req = 1;
+	wpa_s->scan_req = INITIAL_SCAN_REQ;
 	wpa_s->scan_interval = 5;
 	wpa_s->new_connection = 1;
 	wpa_s->parent = wpa_s;

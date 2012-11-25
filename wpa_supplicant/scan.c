@@ -505,7 +505,8 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_supplicant *wpa_s = eloop_ctx;
 	struct wpa_ssid *ssid;
-	int scan_req = 0, ret;
+	enum scan_req_type scan_req = NORMAL_SCAN_REQ;
+	int ret;
 	struct wpabuf *extra_ie = NULL;
 	struct wpa_driver_scan_params params;
 	struct wpa_driver_scan_params *scan_params;
@@ -517,14 +518,14 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		return;
 	}
 
-	if (wpa_s->disconnected && !wpa_s->scan_req) {
+	if (wpa_s->disconnected && wpa_s->scan_req == NORMAL_SCAN_REQ) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Disconnected - do not scan");
 		wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
 		return;
 	}
 
 	if (!wpa_supplicant_enabled_networks(wpa_s) &&
-	    !wpa_s->scan_req) {
+	    wpa_s->scan_req == NORMAL_SCAN_REQ) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "No enabled networks - do not scan");
 		wpa_supplicant_set_state(wpa_s, WPA_INACTIVE);
 #ifdef CONFIG_P2P
@@ -572,7 +573,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	}
 
 	scan_req = wpa_s->scan_req;
-	wpa_s->scan_req = 0;
+	wpa_s->scan_req = NORMAL_SCAN_REQ;
 
 	os_memset(&params, 0, sizeof(params));
 
@@ -589,7 +590,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		goto scan;
 	}
 
-	if (scan_req != 2 && wpa_s->connect_without_scan) {
+	if (scan_req != MANUAL_SCAN_REQ && wpa_s->connect_without_scan) {
 		for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next) {
 			if (ssid == wpa_s->connect_without_scan)
 				break;
@@ -627,7 +628,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		}
 	}
 
-	if (scan_req != 2 && wpa_s->conf->ap_scan == 2) {
+	if (scan_req != MANUAL_SCAN_REQ && wpa_s->conf->ap_scan == 2) {
 		wpa_s->connect_without_scan = NULL;
 		wpa_s->prev_scan_wildcard = 0;
 		wpa_supplicant_assoc_try(wpa_s, ssid);
@@ -762,7 +763,7 @@ scan:
 	 * station interface when we are not configured to prefer station
 	 * connection and a concurrent operation is already in process.
 	 */
-	if (wpa_s->scan_for_connection && !scan_req &&
+	if (wpa_s->scan_for_connection && scan_req == NORMAL_SCAN_REQ &&
 	    !scan_params->freqs && !params.freqs &&
 	    wpas_is_p2p_prioritized(wpa_s) &&
 	    !(wpa_s->drv_flags & WPA_DRIVER_FLAGS_MULTI_CHANNEL_CONCURRENT) &&

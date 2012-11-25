@@ -36,7 +36,7 @@ static const struct autoscan_ops * autoscan_modules[] = {
 
 static void request_scan(struct wpa_supplicant *wpa_s)
 {
-	wpa_s->scan_req = 2;
+	wpa_s->scan_req = MANUAL_SCAN_REQ;
 
 	if (wpa_supplicant_req_sched_scan(wpa_s))
 		wpa_supplicant_req_scan(wpa_s, wpa_s->scan_interval, 0);

@@ -1313,7 +1313,7 @@ DBusMessage * wpas_dbus_handler_scan(DBusMessage *message,
 		} else if (params.freqs && params.freqs[0]) {
 			wpa_supplicant_trigger_scan(wpa_s, &params);
 		} else {
-			wpa_s->scan_req = 2;
+			wpa_s->scan_req = MANUAL_SCAN_REQ;
 			wpa_supplicant_req_scan(wpa_s, 0, 0);
 		}
 	} else if (!os_strcmp(type, "active")) {

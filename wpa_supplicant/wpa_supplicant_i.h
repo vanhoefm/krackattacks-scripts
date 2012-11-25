@@ -397,8 +397,36 @@ struct wpa_supplicant {
 
 	struct wpa_blacklist *blacklist;
 
-	int scan_req; /* manual scan request; this forces a scan even if there
-		       * are no enabled networks in the configuration */
+	/**
+	 * scan_req - Type of the scan request
+	 */
+	enum scan_req_type {
+		/**
+		 * NORMAL_SCAN_REQ - Normal scan request
+		 *
+		 * This is used for scans initiated by wpa_supplicant to find an
+		 * AP for a connection.
+		 */
+		NORMAL_SCAN_REQ,
+
+		/**
+		 * INITIAL_SCAN_REQ - Initial scan request
+		 *
+		 * This is used for the first scan on an interface to force at
+		 * least one scan to be run even if the configuration does not
+		 * include any enabled networks.
+		 */
+		INITIAL_SCAN_REQ,
+
+		/**
+		 * MANUAL_SCAN_REQ - Manual scan request
+		 *
+		 * This is used for scans where the user request a scan or
+		 * a specific wpa_supplicant operation (e.g., WPS) requires scan
+		 * to be run.
+		 */
+		MANUAL_SCAN_REQ
+	} scan_req;
 	int scan_runs; /* number of scan runs since WPS was started */
 	int *next_scan_freqs;
 	int scan_interval; /* time in sec between scans to find suitable AP */

@@ -331,7 +331,7 @@ DBusMessage * wpas_dbus_global_set_debugparams(DBusMessage *message,
 DBusMessage * wpas_dbus_iface_scan(DBusMessage *message,
 				   struct wpa_supplicant *wpa_s)
 {
-	wpa_s->scan_req = 2;
+	wpa_s->scan_req = MANUAL_SCAN_REQ;
 	wpa_supplicant_req_scan(wpa_s, 0, 0);
 	return wpas_dbus_new_success_reply(message);
 }

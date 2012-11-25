@@ -4786,6 +4786,7 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED)
 			reply_len = -1;
 		else {
+			wpa_s->extra_blacklist_count = 0;
 			wpa_s->disconnected = 0;
 			wpa_s->reassociate = 1;
 			wpa_supplicant_req_scan(wpa_s, 0, 0);
@@ -4796,6 +4797,7 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED)
 			reply_len = -1;
 		else if (wpa_s->disconnected) {
+			wpa_s->extra_blacklist_count = 0;
 			wpa_s->disconnected = 0;
 			wpa_s->reassociate = 1;
 			wpa_supplicant_req_scan(wpa_s, 0, 0);

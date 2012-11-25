@@ -398,6 +398,18 @@ struct wpa_supplicant {
 	struct wpa_blacklist *blacklist;
 
 	/**
+	 * extra_blacklist_count - Sum of blacklist counts after last connection
+	 *
+	 * This variable is used to maintain a count of temporary blacklisting
+	 * failures (maximum number for any BSS) over blacklist clear
+	 * operations. This is needed for figuring out whether there has been
+	 * failures prior to the last blacklist clear operation which happens
+	 * whenever no other not-blacklisted BSS candidates are available. This
+	 * gets cleared whenever a connection has been established successfully.
+	 */
+	int extra_blacklist_count;
+
+	/**
 	 * scan_req - Type of the scan request
 	 */
 	enum scan_req_type {

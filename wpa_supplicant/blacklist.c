@@ -123,14 +123,19 @@ int wpa_blacklist_del(struct wpa_supplicant *wpa_s, const u8 *bssid)
 void wpa_blacklist_clear(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_blacklist *e, *prev;
+	int max_count = 0;
 
 	e = wpa_s->blacklist;
 	wpa_s->blacklist = NULL;
 	while (e) {
+		if (e->count > max_count)
+			max_count = e->count;
 		prev = e;
 		e = e->next;
 		wpa_printf(MSG_DEBUG, "Removed BSSID " MACSTR " from "
 			   "blacklist (clear)", MAC2STR(prev->bssid));
 		os_free(prev);
 	}
+
+	wpa_s->extra_blacklist_count += max_count;
 }

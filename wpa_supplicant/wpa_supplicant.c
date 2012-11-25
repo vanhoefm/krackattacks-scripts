@@ -665,6 +665,7 @@ void wpa_supplicant_set_state(struct wpa_supplicant *wpa_s,
 			ssid && ssid->id_str ? ssid->id_str : "");
 #endif /* CONFIG_CTRL_IFACE || !CONFIG_NO_STDOUT_DEBUG */
 		wpas_clear_temp_disabled(wpa_s, ssid, 1);
+		wpa_s->extra_blacklist_count = 0;
 		wpa_s->new_connection = 0;
 		wpa_s->reassociated_connection = 1;
 		wpa_drv_set_operstate(wpa_s, 1);
@@ -3446,6 +3447,12 @@ void wpas_connection_failed(struct wpa_supplicant *wpa_s, const u8 *bssid)
 		}
 	}
 
+	/*
+	 * Add previous failure count in case the temporary blacklist was
+	 * cleared due to no other BSSes being available.
+	 */
+	count += wpa_s->extra_blacklist_count;
+
 	switch (count) {
 	case 1:
 		timeout = 100;
@@ -3456,9 +3463,16 @@ void wpas_connection_failed(struct wpa_supplicant *wpa_s, const u8 *bssid)
 	case 3:
 		timeout = 1000;
 		break;
-	default:
+	case 4:
 		timeout = 5000;
+		break;
+	default:
+		timeout = 10000;
+		break;
 	}
+
+	wpa_dbg(wpa_s, MSG_DEBUG, "Blacklist count %d --> request scan in %d "
+		"ms", count, timeout);
 
 	/*
 	 * TODO: if more than one possible AP is available in scan results,

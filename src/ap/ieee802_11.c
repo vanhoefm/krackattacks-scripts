@@ -570,13 +570,15 @@ static void handle_auth(struct hostapd_data *hapd,
 			       HOSTAPD_LEVEL_INFO, "VLAN ID %d", sta->vlan_id);
 	}
 
-	if (psk && hapd->conf->wpa_psk_radius != PSK_RADIUS_IGNORED) {
-		os_free(sta->psk);
-		sta->psk = os_malloc(PMK_LEN);
-		if (sta->psk)
-			os_memcpy(sta->psk, psk->psk, PMK_LEN);
+	while (sta->psk) {
+		struct hostapd_sta_wpa_psk_short *prev = sta->psk;
+		sta->psk = sta->psk->next;
+		os_free(prev);
+	}
+	if (hapd->conf->wpa_psk_radius != PSK_RADIUS_IGNORED) {
+		sta->psk = psk;
+		psk = NULL;
 	} else {
-		os_free(sta->psk);
 		sta->psk = NULL;
 	}
 

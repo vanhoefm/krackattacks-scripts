@@ -188,10 +188,18 @@ static const u8 * hostapd_wpa_auth_get_psk(void *ctx, const u8 *addr,
 	/*
 	 * This is about to iterate over all psks, prev_psk gives the last
 	 * returned psk which should not be returned again.
-	 * logic list (all hostapd_get_psk; sta->psk)
+	 * logic list (all hostapd_get_psk; all sta->psk)
 	 */
-	if (sta && sta->psk && !psk && sta->psk != prev_psk)
-		psk = sta->psk;
+	if (sta && sta->psk && !psk) {
+		struct hostapd_sta_wpa_psk_short *pos;
+		psk = sta->psk->psk;
+		for (pos = sta->psk; pos; pos = pos->next) {
+			if (pos->psk == prev_psk) {
+				psk = pos->next ? pos->next->psk : NULL;
+				break;
+			}
+		}
+	}
 	return psk;
 }
 

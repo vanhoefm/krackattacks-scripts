@@ -242,7 +242,7 @@ int radius_msg_get_attr(struct radius_msg *msg, u8 type, u8 *buf, size_t len);
 int radius_msg_get_vlanid(struct radius_msg *msg);
 char * radius_msg_get_tunnel_password(struct radius_msg *msg, int *keylen,
 				      const u8 *secret, size_t secret_len,
-				      struct radius_msg *sent_msg);
+				      struct radius_msg *sent_msg, size_t n);
 
 static inline int radius_msg_add_attr_int32(struct radius_msg *msg, u8 type,
 					    u32 value)

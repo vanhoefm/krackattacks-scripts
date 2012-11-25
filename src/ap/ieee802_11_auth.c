@@ -482,7 +482,7 @@ hostapd_acl_recv_radius(struct radius_msg *msg, struct radius_msg *req,
 			msg, &passphraselen,
 			hapd->conf->radius->auth_server->shared_secret,
 			hapd->conf->radius->auth_server->shared_secret_len,
-			req);
+			req, 0);
 		cache->has_psk = passphrase != NULL;
 		if (passphrase != NULL) {
 			/* passphrase does not contain the NULL termination.

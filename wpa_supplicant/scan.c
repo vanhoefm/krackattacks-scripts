@@ -435,6 +435,72 @@ static struct wpabuf * wpa_supplicant_extra_ies(struct wpa_supplicant *wpa_s)
 }
 
 
+#ifdef CONFIG_P2P
+
+/*
+ * Check whether there are any enabled networks or credentials that could be
+ * used for a non-P2P connection.
+ */
+static int non_p2p_network_enabled(struct wpa_supplicant *wpa_s)
+{
+	struct wpa_ssid *ssid;
+
+	for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next) {
+		if (wpas_network_disabled(wpa_s, ssid))
+			continue;
+		if (!ssid->p2p_group)
+			return 1;
+	}
+
+	if (wpa_s->conf->cred && wpa_s->conf->interworking &&
+	    wpa_s->conf->auto_interworking)
+		return 1;
+
+	return 0;
+}
+
+
+/*
+ * Find the operating frequency of any other virtual interface that is using
+ * the same radio concurrently.
+ */
+static int shared_vif_oper_freq(struct wpa_supplicant *wpa_s)
+{
+	const char *rn, *rn2;
+	struct wpa_supplicant *ifs;
+	u8 bssid[ETH_ALEN];
+
+	if (!wpa_s->driver->get_radio_name)
+		return -1;
+
+	rn = wpa_s->driver->get_radio_name(wpa_s->drv_priv);
+	if (rn == NULL || rn[0] == '\0')
+		return -1;
+
+	for (ifs = wpa_s->global->ifaces; ifs; ifs = ifs->next) {
+		if (ifs == wpa_s || !ifs->driver->get_radio_name)
+			continue;
+
+		rn2 = ifs->driver->get_radio_name(ifs->drv_priv);
+		if (!rn2 || os_strcmp(rn, rn2) != 0)
+			continue;
+
+		if (ifs->current_ssid == NULL || ifs->assoc_freq == 0)
+			continue;
+
+		if (ifs->current_ssid->mode == WPAS_MODE_AP ||
+		    ifs->current_ssid->mode == WPAS_MODE_P2P_GO)
+			return ifs->current_ssid->frequency;
+		if (wpa_drv_get_bssid(ifs, bssid) == 0)
+			return ifs->assoc_freq;
+	}
+
+	return 0;
+}
+
+#endif /* CONFIG_P2P */
+
+
 static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_supplicant *wpa_s = eloop_ctx;
@@ -686,6 +752,35 @@ ssid_list_set:
 	scan_params = &params;
 
 scan:
+#ifdef CONFIG_P2P
+	/*
+	 * If the driver does not support multi-channel concurrency and a
+	 * virtual interface that shares the same radio with the wpa_s interface
+	 * is operating there may not be need to scan other channels apart from
+	 * the current operating channel on the other virtual interface. Filter
+	 * out other channels in case we are trying to find a connection for a
+	 * station interface when we are not configured to prefer station
+	 * connection and a concurrent operation is already in process.
+	 */
+	if (wpa_s->scan_for_connection && !scan_req &&
+	    !scan_params->freqs && !params.freqs &&
+	    wpas_is_p2p_prioritized(wpa_s) &&
+	    !(wpa_s->drv_flags & WPA_DRIVER_FLAGS_MULTI_CHANNEL_CONCURRENT) &&
+	    wpa_s->p2p_group_interface == NOT_P2P_GROUP_INTERFACE &&
+	    non_p2p_network_enabled(wpa_s)) {
+		int freq = shared_vif_oper_freq(wpa_s);
+		if (freq > 0) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Scan only the current "
+				"operating channel (%d MHz) since driver does "
+				"not support multi-channel concurrency", freq);
+			params.freqs = os_zalloc(sizeof(int) * 2);
+			if (params.freqs)
+				params.freqs[0] = freq;
+			scan_params->freqs = params.freqs;
+		}
+	}
+#endif /* CONFIG_P2P */
+
 	ret = wpa_supplicant_trigger_scan(wpa_s, scan_params);
 
 	wpabuf_free(extra_ie);
@@ -699,6 +794,8 @@ scan:
 		/* Restore scan_req since we will try to scan again */
 		wpa_s->scan_req = scan_req;
 		wpa_supplicant_req_scan(wpa_s, 1, 0);
+	} else {
+		wpa_s->scan_for_connection = 0;
 	}
 }
 

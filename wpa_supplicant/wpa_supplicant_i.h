@@ -403,6 +403,8 @@ struct wpa_supplicant {
 	int *next_scan_freqs;
 	int scan_interval; /* time in sec between scans to find suitable AP */
 	int normal_scans; /* normal scans run before sched_scan */
+	int scan_for_connection; /* whether the scan request was triggered for
+				  * finding a connection */
 
 	unsigned int drv_flags;
 	unsigned int drv_enc;

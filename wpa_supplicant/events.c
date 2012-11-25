@@ -877,6 +877,8 @@ static void wpa_supplicant_req_new_scan(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_P2P */
 		return;
 	}
+
+	wpa_s->scan_for_connection = 1;
 	wpa_supplicant_req_scan(wpa_s, timeout_sec, timeout_usec);
 }
 

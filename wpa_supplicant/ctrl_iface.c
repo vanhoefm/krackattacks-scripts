@@ -5219,6 +5219,7 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 			reply_len = -1;
 #endif /* CONFIG_AUTOSCAN */
 	} else if (os_strcmp(buf, "REAUTHENTICATE") == 0) {
+		pmksa_cache_clear_current(wpa_s->wpa);
 		eapol_sm_request_reauth(wpa_s->eapol);
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);

@@ -236,6 +236,14 @@ struct wpa_cred {
 		size_t ssid_len;
 	} *excluded_ssid;
 	size_t num_excluded_ssid;
+
+	struct roaming_partner {
+		char fqdn[128];
+		int exact_match;
+		u8 priority;
+		char country[3];
+	} *roaming_partner;
+	size_t num_roaming_partner;
 };
 
 

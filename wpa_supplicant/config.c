@@ -1923,6 +1923,7 @@ void wpa_config_free_cred(struct wpa_cred *cred)
 	os_free(cred->phase1);
 	os_free(cred->phase2);
 	os_free(cred->excluded_ssid);
+	os_free(cred->roaming_partner);
 	os_free(cred);
 }
 
@@ -2585,6 +2586,63 @@ int wpa_config_set_cred(struct wpa_cred *cred, const char *var,
 		os_memcpy(e->ssid, val, len);
 		e->ssid_len = len;
 
+		os_free(val);
+
+		return 0;
+	}
+
+	if (os_strcmp(var, "roaming_partner") == 0) {
+		struct roaming_partner *p;
+		char *pos;
+
+		p = os_realloc_array(cred->roaming_partner,
+				     cred->num_roaming_partner + 1,
+				     sizeof(struct roaming_partner));
+		if (p == NULL) {
+			os_free(val);
+			return -1;
+		}
+		cred->roaming_partner = p;
+
+		p = &cred->roaming_partner[cred->num_roaming_partner];
+
+		pos = os_strchr(val, ',');
+		if (pos == NULL) {
+			os_free(val);
+			return -1;
+		}
+		*pos++ = '\0';
+		if (pos - val - 1 >= (int) sizeof(p->fqdn)) {
+			os_free(val);
+			return -1;
+		}
+		os_memcpy(p->fqdn, val, pos - val);
+
+		p->exact_match = atoi(pos);
+
+		pos = os_strchr(pos, ',');
+		if (pos == NULL) {
+			os_free(val);
+			return -1;
+		}
+		*pos++ = '\0';
+
+		p->priority = atoi(pos);
+
+		pos = os_strchr(pos, ',');
+		if (pos == NULL) {
+			os_free(val);
+			return -1;
+		}
+		*pos++ = '\0';
+
+		if (os_strlen(pos) >= sizeof(p->country)) {
+			os_free(val);
+			return -1;
+		}
+		os_memcpy(p->country, pos, os_strlen(pos) + 1);
+
+		cred->num_roaming_partner++;
 		os_free(val);
 
 		return 0;

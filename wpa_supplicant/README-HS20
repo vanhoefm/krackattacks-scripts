@@ -213,6 +213,13 @@ Credentials can be pre-configured for automatic network selection:
 #	matching with the network. Multiple entries can be used to specify more
 #	than one SSID.
 #
+# roaming_partner: Roaming partner information
+#	This optional field can be used to configure preferences between roaming
+#	partners. The field is a string in following format:
+#	<FQDN>,<0/1 exact match>,<priority>,<* or country code>
+#	(non-exact match means any subdomain matches the entry; priority is in
+#	0..255 range with 0 being the highest priority)
+#
 # for example:
 #
 #cred={

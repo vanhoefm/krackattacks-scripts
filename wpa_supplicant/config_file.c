@@ -796,6 +796,14 @@ static void wpa_config_write_cred(FILE *f, struct wpa_cred *cred)
 			fprintf(f, "\n");
 		}
 	}
+	if (cred->roaming_partner) {
+		for (i = 0; i < cred->num_roaming_partner; i++) {
+			struct roaming_partner *p = &cred->roaming_partner[i];
+			fprintf(f, "\troaming_partner=\"%s,%d,%u,%s\"\n",
+				p->fqdn, p->exact_match, p->priority,
+				p->country);
+		}
+	}
 }
 
 

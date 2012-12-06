@@ -155,7 +155,8 @@ static int cred_with_domain(struct wpa_supplicant *wpa_s)
 	struct wpa_cred *cred;
 
 	for (cred = wpa_s->conf->cred; cred; cred = cred->next) {
-		if (cred->domain || cred->pcsc || cred->imsi)
+		if (cred->domain || cred->pcsc || cred->imsi ||
+		    cred->roaming_partner)
 			return 1;
 	}
 	return 0;
@@ -1630,7 +1631,7 @@ static struct wpa_cred * interworking_credentials_available(
 
 
 static int domain_name_list_contains(struct wpabuf *domain_names,
-				     const char *domain)
+				     const char *domain, int exact_match)
 {
 	const u8 *pos, *end;
 	size_t len;
@@ -1648,6 +1649,12 @@ static int domain_name_list_contains(struct wpabuf *domain_names,
 		if (pos[0] == len &&
 		    os_strncasecmp(domain, (const char *) (pos + 1), len) == 0)
 			return 1;
+		if (!exact_match && pos[0] > len && pos[pos[0] - len] == '.') {
+			const char *ap = (const char *) (pos + 1);
+			int offset = pos[0] - len;
+			if (os_strncasecmp(domain, ap + offset, len) == 0)
+				return 1;
+		}
 
 		pos += 1 + pos[0];
 	}
@@ -1690,7 +1697,7 @@ int interworking_home_sp_cred(struct wpa_supplicant *wpa_s,
 		wpa_printf(MSG_DEBUG, "Interworking: Search for match "
 			   "with SIM/USIM domain %s", realm);
 		if (realm &&
-		    domain_name_list_contains(domain_names, realm))
+		    domain_name_list_contains(domain_names, realm, 1))
 			return 1;
 		if (realm)
 			ret = 0;
@@ -1703,7 +1710,7 @@ int interworking_home_sp_cred(struct wpa_supplicant *wpa_s,
 	for (i = 0; i < cred->num_domain; i++) {
 		wpa_printf(MSG_DEBUG, "Interworking: Search for match with "
 			   "home SP FQDN %s", cred->domain[i]);
-		if (domain_name_list_contains(domain_names, cred->domain[i]))
+		if (domain_name_list_contains(domain_names, cred->domain[i], 1))
 			return 1;
 	}
 
@@ -1755,6 +1762,73 @@ static int interworking_find_network_match(struct wpa_supplicant *wpa_s)
 }
 
 
+static int roaming_partner_match(struct wpa_supplicant *wpa_s,
+				 struct roaming_partner *partner,
+				 struct wpabuf *domain_names)
+{
+	if (!domain_name_list_contains(domain_names, partner->fqdn,
+				       partner->exact_match))
+		return 0;
+	/* TODO: match Country */
+	return 1;
+}
+
+
+static u8 roaming_prio(struct wpa_supplicant *wpa_s, struct wpa_cred *cred,
+		       struct wpa_bss *bss)
+{
+	size_t i;
+
+	if (bss->anqp == NULL || bss->anqp->domain_name == NULL)
+		return 128; /* cannot check preference with domain name */
+
+	if (interworking_home_sp_cred(wpa_s, cred, bss->anqp->domain_name) > 0)
+		return 0; /* max preference for home SP network */
+
+	for (i = 0; i < cred->num_roaming_partner; i++) {
+		if (roaming_partner_match(wpa_s, &cred->roaming_partner[i],
+					  bss->anqp->domain_name))
+			return cred->roaming_partner[i].priority;
+	}
+
+	return 128;
+}
+
+
+static struct wpa_bss * pick_best_roaming_partner(struct wpa_supplicant *wpa_s,
+						  struct wpa_bss *selected,
+						  struct wpa_cred *cred)
+{
+	struct wpa_bss *bss;
+	u8 best_prio, prio;
+
+	/*
+	 * Check if any other BSS is operated by a more preferred roaming
+	 * partner.
+	 */
+
+	best_prio = roaming_prio(wpa_s, cred, selected);
+
+	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {
+		if (bss == selected)
+			continue;
+		cred = interworking_credentials_available(wpa_s, bss);
+		if (!cred)
+			continue;
+		if (!wpa_bss_get_ie(bss, WLAN_EID_RSN))
+			continue;
+		prio = roaming_prio(wpa_s, cred, bss);
+		if (prio < best_prio) {
+			best_prio = prio;
+			selected = bss;
+		}
+	}
+
+
+	return selected;
+}
+
+
 static void interworking_select_network(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_bss *bss, *selected = NULL, *selected_home = NULL;
@@ -1762,7 +1836,8 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 	unsigned int count = 0;
 	const char *type;
 	int res;
-	struct wpa_cred *cred;
+	struct wpa_cred *cred, *selected_cred = NULL;
+	struct wpa_cred *selected_home_cred = NULL;
 
 	wpa_s->network_select = 0;
 
@@ -1798,12 +1873,14 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 			    cred->priority > selected_prio) {
 				selected = bss;
 				selected_prio = cred->priority;
+				selected_cred = cred;
 			}
 			if (res > 0 &&
 			    (selected_home == NULL ||
 			     cred->priority > selected_home_prio)) {
 				selected_home = bss;
 				selected_home_prio = cred->priority;
+				selected_home_cred = cred;
 			}
 		}
 	}
@@ -1812,6 +1889,7 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 	    selected_home_prio >= selected_prio) {
 		/* Prefer network operated by the Home SP */
 		selected = selected_home;
+		selected_cred = selected_home_cred;
 	}
 
 	if (count == 0) {
@@ -1840,8 +1918,11 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 			"with matching credentials found");
 	}
 
-	if (selected)
+	if (selected) {
+		selected = pick_best_roaming_partner(wpa_s, selected,
+						     selected_cred);
 		interworking_connect(wpa_s, selected);
+	}
 }
 
 

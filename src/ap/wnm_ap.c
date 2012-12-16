@@ -104,7 +104,7 @@ static int ieee802_11_send_wnmsleep_resp(struct hostapd_data *hapd,
 	mgmt->u.action.u.wnm_sleep_resp.dialogtoken = dialog_token;
 	pos = (u8 *)mgmt->u.action.u.wnm_sleep_resp.variable;
 	/* add key data if MFP is enabled */
-	if (wpa_auth_uses_mfp(sta->wpa_sm) ||
+	if (!wpa_auth_uses_mfp(sta->wpa_sm) ||
 	    action_type != WNM_SLEEP_MODE_EXIT) {
 		mgmt->u.action.u.wnm_sleep_resp.keydata_len = 0;
 	} else {
@@ -162,13 +162,14 @@ static int ieee802_11_send_wnmsleep_resp(struct hostapd_data *hapd,
 		 * 2. start GTK/IGTK update if MFP is not used
 		 * 3. unpause the node in driver
 		 */
-		if (wnmsleep_ie.status == WNM_STATUS_SLEEP_ACCEPT &&
+		if ((wnmsleep_ie.status == WNM_STATUS_SLEEP_ACCEPT ||
+		     wnmsleep_ie.status ==
+		     WNM_STATUS_SLEEP_EXIT_ACCEPT_GTK_UPDATE) &&
 		    wnmsleep_ie.action_type == WNM_SLEEP_MODE_EXIT) {
 			wpa_set_wnmsleep(sta->wpa_sm, 0);
 			hostapd_drv_wnm_oper(hapd, WNM_SLEEP_EXIT_CONFIRM,
 					     addr, NULL, NULL);
-			if (wpa_auth_uses_mfp(sta->wpa_sm) &&
-			    action_type == WNM_SLEEP_MODE_EXIT)
+			if (!wpa_auth_uses_mfp(sta->wpa_sm))
 				wpa_wnmsleep_rekey_gtk(sta->wpa_sm);
 		}
 	} else

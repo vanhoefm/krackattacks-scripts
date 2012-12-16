@@ -1835,6 +1835,7 @@ void wpa_config_free_cred(struct wpa_cred *cred)
 	os_free(cred->eap_method);
 	os_free(cred->phase1);
 	os_free(cred->phase2);
+	os_free(cred->excluded_ssid);
 	os_free(cred);
 }
 
@@ -2408,6 +2409,34 @@ int wpa_config_set_cred(struct wpa_cred *cred, const char *var,
 		os_memcpy(cred->roaming_consortium, val, len);
 		cred->roaming_consortium_len = len;
 		os_free(val);
+		return 0;
+	}
+
+	if (os_strcmp(var, "excluded_ssid") == 0) {
+		struct excluded_ssid *e;
+
+		if (len > MAX_SSID_LEN) {
+			wpa_printf(MSG_ERROR, "Line %d: invalid "
+				   "excluded_ssid length %d", line, (int) len);
+			os_free(val);
+			return -1;
+		}
+
+		e = os_realloc_array(cred->excluded_ssid,
+				     cred->num_excluded_ssid + 1,
+				     sizeof(struct excluded_ssid));
+		if (e == NULL) {
+			os_free(val);
+			return -1;
+		}
+		cred->excluded_ssid = e;
+
+		e = &cred->excluded_ssid[cred->num_excluded_ssid++];
+		os_memcpy(e->ssid, val, len);
+		e->ssid_len = len;
+
+		os_free(val);
+
 		return 0;
 	}
 

@@ -948,6 +948,24 @@ static int roaming_consortium_match(const u8 *ie, const struct wpabuf *anqp,
 }
 
 
+static int cred_excluded_ssid(struct wpa_cred *cred, struct wpa_bss *bss)
+{
+	size_t i;
+
+	if (!cred->excluded_ssid)
+		return 0;
+
+	for (i = 0; i < cred->num_excluded_ssid; i++) {
+		struct excluded_ssid *e = &cred->excluded_ssid[i];
+		if (bss->ssid_len == e->ssid_len &&
+		    os_memcmp(bss->ssid, e->ssid, e->ssid_len) == 0)
+			return 1;
+	}
+
+	return 0;
+}
+
+
 static struct wpa_cred * interworking_credentials_available_roaming_consortium(
 	struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 {
@@ -973,6 +991,9 @@ static struct wpa_cred * interworking_credentials_available_roaming_consortium(
 					      NULL,
 					      cred->roaming_consortium,
 					      cred->roaming_consortium_len))
+			continue;
+
+		if (cred_excluded_ssid(cred, bss))
 			continue;
 
 		if (selected == NULL ||
@@ -1343,6 +1364,8 @@ static struct wpa_cred * interworking_credentials_available_3gpp(
 		ret = plmn_id_match(bss->anqp->anqp_3gpp, imsi, mnc_len);
 		wpa_printf(MSG_DEBUG, "PLMN match %sfound", ret ? "" : "not ");
 		if (ret) {
+			if (cred_excluded_ssid(cred, bss))
+				continue;
 			if (selected == NULL ||
 			    selected->priority < cred->priority)
 				selected = cred;
@@ -1383,6 +1406,8 @@ static struct wpa_cred * interworking_credentials_available_realm(
 			if (!nai_realm_match(&realm[i], cred->realm))
 				continue;
 			if (nai_realm_find_eap(cred, &realm[i])) {
+				if (cred_excluded_ssid(cred, bss))
+					continue;
 				if (selected == NULL ||
 				    selected->priority < cred->priority)
 					selected = cred;

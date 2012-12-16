@@ -196,6 +196,12 @@ struct wpa_cred {
 	 * Pre-configured EAP parameters or %NULL.
 	 */
 	char *phase2;
+
+	struct excluded_ssid {
+		u8 ssid[MAX_SSID_LEN];
+		size_t ssid_len;
+	} *excluded_ssid;
+	size_t num_excluded_ssid;
 };
 
 

@@ -190,6 +190,11 @@ Credentials can be pre-configured for automatic network selection:
 # phase2: Pre-configure Phase 2 (inner authentication) parameters
 #	This optional field is used with like the 'eap' parameter.
 #
+# excluded_ssid: Excluded SSID
+#	This optional field can be used to excluded specific SSID(s) from
+#	matching with the network. Multiple entries can be used to specify more
+#	than one SSID.
+#
 # for example:
 #
 #cred={

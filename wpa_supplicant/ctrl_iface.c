@@ -4679,6 +4679,8 @@ static int wpas_ctrl_iface_wnm_sleep(struct wpa_supplicant *wpa_s, char *cmd)
 	int enter;
 	int intval = 0;
 	char *pos;
+	int ret;
+	struct wpabuf *tfs_req = NULL;
 
 	if (os_strncmp(cmd, "enter", 5) == 0)
 		enter = 1;
@@ -4691,7 +4693,33 @@ static int wpas_ctrl_iface_wnm_sleep(struct wpa_supplicant *wpa_s, char *cmd)
 	if (pos)
 		intval = atoi(pos + 10);
 
-	return ieee802_11_send_wnmsleep_req(wpa_s, enter ? 0 : 1, intval);
+	pos = os_strstr(cmd, " tfs_req=");
+	if (pos) {
+		char *end;
+		size_t len;
+		pos += 9;
+		end = os_strchr(pos, ' ');
+		if (end)
+			len = end - pos;
+		else
+			len = os_strlen(pos);
+		if (len & 1)
+			return -1;
+		len /= 2;
+		tfs_req = wpabuf_alloc(len);
+		if (tfs_req == NULL)
+			return -1;
+		if (hexstr2bin(pos, wpabuf_put(tfs_req, len), len) < 0) {
+			wpabuf_free(tfs_req);
+			return -1;
+		}
+	}
+
+	ret = ieee802_11_send_wnmsleep_req(wpa_s, enter ? 0 : 1, intval,
+					   tfs_req);
+	wpabuf_free(tfs_req);
+
+	return ret;
 }
 
 #endif /* CONFIG_WNM */

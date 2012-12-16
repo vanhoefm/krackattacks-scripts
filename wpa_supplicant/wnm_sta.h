@@ -13,7 +13,7 @@ struct rx_action;
 struct wpa_supplicant;
 
 int ieee802_11_send_wnmsleep_req(struct wpa_supplicant *wpa_s,
-				 u8 action, u16 intval);
+				 u8 action, u16 intval, struct wpabuf *tfs_req);
 
 void ieee802_11_rx_wnm_action(struct wpa_supplicant *wpa_s,
 			      struct rx_action *action);

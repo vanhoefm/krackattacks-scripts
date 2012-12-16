@@ -41,7 +41,7 @@ static int ieee80211_11_set_tfs_ie(struct wpa_supplicant *wpa_s,
 
 /* MLME-SLEEPMODE.request */
 int ieee802_11_send_wnmsleep_req(struct wpa_supplicant *wpa_s,
-				 u8 action, u16 intval)
+				 u8 action, u16 intval, struct wpabuf *tfs_req)
 {
 	struct ieee80211_mgmt *mgmt;
 	int res;
@@ -53,6 +53,11 @@ int ieee802_11_send_wnmsleep_req(struct wpa_supplicant *wpa_s,
 	enum wnm_oper tfs_oper = action == 0 ? WNM_SLEEP_TFS_REQ_IE_ADD :
 		WNM_SLEEP_TFS_REQ_IE_NONE;
 
+	wpa_printf(MSG_DEBUG, "WNM: Request to send WNM-Sleep Mode Request "
+		   "action=%s to " MACSTR,
+		   action == 0 ? "enter" : "exit",
+		   MAC2STR(wpa_s->bssid));
+
 	/* WNM-Sleep Mode IE */
 	wnmsleep_ie_len = sizeof(struct wnm_sleep_element);
 	wnmsleep_ie = os_zalloc(sizeof(struct wnm_sleep_element));
@@ -63,19 +68,33 @@ int ieee802_11_send_wnmsleep_req(struct wpa_supplicant *wpa_s,
 	wnmsleep_ie->action_type = action;
 	wnmsleep_ie->status = WNM_STATUS_SLEEP_ACCEPT;
 	wnmsleep_ie->intval = host_to_le16(intval);
+	wpa_hexdump(MSG_DEBUG, "WNM: WNM-Sleep Mode element",
+		    (u8 *) wnmsleep_ie, wnmsleep_ie_len);
 
 	/* TFS IE(s) */
-	wnmtfs_ie = os_zalloc(MAX_TFS_IE_LEN);
-	if (wnmtfs_ie == NULL) {
-		os_free(wnmsleep_ie);
-		return -1;
+	if (tfs_req) {
+		wnmtfs_ie_len = wpabuf_len(tfs_req);
+		wnmtfs_ie = os_malloc(wnmtfs_ie_len);
+		if (wnmtfs_ie == NULL) {
+			os_free(wnmsleep_ie);
+			return -1;
+		}
+		os_memcpy(wnmtfs_ie, wpabuf_head(tfs_req), wnmtfs_ie_len);
+	} else {
+		wnmtfs_ie = os_zalloc(MAX_TFS_IE_LEN);
+		if (wnmtfs_ie == NULL) {
+			os_free(wnmsleep_ie);
+			return -1;
+		}
+		if (ieee80211_11_get_tfs_ie(wpa_s, wnmtfs_ie, &wnmtfs_ie_len,
+					    tfs_oper)) {
+			wnmtfs_ie_len = 0;
+			os_free(wnmtfs_ie);
+			wnmtfs_ie = NULL;
+		}
 	}
-	if (ieee80211_11_get_tfs_ie(wpa_s, wnmtfs_ie, &wnmtfs_ie_len,
-				    tfs_oper)) {
-		wnmtfs_ie_len = 0;
-		os_free(wnmtfs_ie);
-		wnmtfs_ie = NULL;
-	}
+	wpa_hexdump(MSG_DEBUG, "WNM: TFS Request element",
+		    (u8 *) wnmtfs_ie, wnmtfs_ie_len);
 
 	mgmt = os_zalloc(sizeof(*mgmt) + wnmsleep_ie_len + wnmtfs_ie_len);
 	if (mgmt == NULL) {

@@ -2150,7 +2150,7 @@ static void wpa_supplicant_event_wnm(struct wpa_supplicant *wpa_s,
 			   "(action=%d, intval=%d)",
 			   data->wnm.sleep_action, data->wnm.sleep_intval);
 		ieee802_11_send_wnmsleep_req(wpa_s, data->wnm.sleep_action,
-					     data->wnm.sleep_intval);
+					     data->wnm.sleep_intval, NULL);
 		break;
 	}
 }

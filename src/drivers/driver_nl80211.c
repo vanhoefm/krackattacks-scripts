@@ -3266,6 +3266,9 @@ static int nl80211_mgmt_subscribe_non_ap(struct i802_bss *bss)
 	/* WNM - BSS Transition Management Request */
 	if (nl80211_register_action_frame(bss, (u8 *) "\x0a\x07", 2) < 0)
 		return -1;
+	/* WNM-Sleep Mode Response */
+	if (nl80211_register_action_frame(bss, (u8 *) "\x0a\x11", 2) < 0)
+		return -1;
 
 	return 0;
 }

@@ -174,7 +174,8 @@ static void ieee802_11_rx_wnmsleep_resp(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
-	if (wnmsleep_ie->status == WNM_STATUS_SLEEP_ACCEPT) {
+	if (wnmsleep_ie->status == WNM_STATUS_SLEEP_ACCEPT ||
+	    wnmsleep_ie->status == WNM_STATUS_SLEEP_EXIT_ACCEPT_GTK_UPDATE) {
 		wpa_printf(MSG_DEBUG, "Successfully recv WNM-Sleep Response "
 			   "frame (action=%d, intval=%d)",
 			   wnmsleep_ie->action_type, wnmsleep_ie->intval);

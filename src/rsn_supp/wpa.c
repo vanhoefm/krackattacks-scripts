@@ -2637,7 +2637,6 @@ int wpa_wnmsleep_install_key(struct wpa_sm *sm, u8 subelem_id, u8 *buf)
 #endif /* CONFIG_IEEE80211W */
 	u16 keyinfo;
 	u8 keylen;  /* plaintext key len */
-	u8 keydatalen;
 	u8 *key_rsc;
 
 	os_memset(&gd, 0, sizeof(gd));
@@ -2655,8 +2654,7 @@ int wpa_wnmsleep_install_key(struct wpa_sm *sm, u8 subelem_id, u8 *buf)
 
 	if (subelem_id == WNM_SLEEP_SUBELEM_GTK) {
 		key_rsc = buf + 5;
-		keyinfo = WPA_GET_LE16(buf+2);
-		keydatalen = buf[1] - 11 - 8;
+		keyinfo = WPA_GET_LE16(buf + 2);
 		gd.gtk_len = keylen;
 		if (gd.gtk_len != buf[4]) {
 			wpa_printf(MSG_DEBUG, "GTK len mismatch len %d vs %d",
@@ -2667,18 +2665,7 @@ int wpa_wnmsleep_install_key(struct wpa_sm *sm, u8 subelem_id, u8 *buf)
 		gd.tx = wpa_supplicant_gtk_tx_bit_workaround(
 		         sm, !!(keyinfo & WPA_KEY_INFO_TXRX));
 
-		if (keydatalen % 8) {
-			wpa_printf(MSG_DEBUG, "WPA: Unsupported AES-WRAP len "
-				   "%d", keydatalen);
-			return -1;
-		}
-
-		if (aes_unwrap(sm->ptk.kek, keydatalen / 8, buf + 13, gd.gtk))
-		{
-			wpa_printf(MSG_WARNING, "WNM: AES unwrap failed - "
-				   "could not decrypt GTK");
-			return -1;
-		}
+		os_memcpy(gd.gtk, buf + 13, gd.gtk_len);
 
 		wpa_hexdump_key(MSG_DEBUG, "Install GTK (WNM SLEEP)",
 				gd.gtk, gd.gtk_len);
@@ -2689,22 +2676,11 @@ int wpa_wnmsleep_install_key(struct wpa_sm *sm, u8 subelem_id, u8 *buf)
 		}
 #ifdef CONFIG_IEEE80211W
 	} else if (subelem_id == WNM_SLEEP_SUBELEM_IGTK) {
-		if (buf[1] != 2 + 6 + WPA_IGTK_LEN + 8) {
-			wpa_printf(MSG_DEBUG, "WPA: Unsupported AES-WRAP len "
-				   "%d", buf[1] - 2 - 6 - 8);
-			return -1;
-		}
 		os_memcpy(igd.keyid, buf + 2, 2);
 		os_memcpy(igd.pn, buf + 4, 6);
 
 		keyidx = WPA_GET_LE16(igd.keyid);
-
-		if (aes_unwrap(sm->ptk.kek, WPA_IGTK_LEN / 8, buf + 10,
-			       igd.igtk)) {
-			wpa_printf(MSG_WARNING, "WNM: AES unwrap failed - "
-				   "could not decrypr IGTK");
-			return -1;
-		}
+		os_memcpy(igd.igtk, buf + 10, WPA_IGTK_LEN);
 
 		wpa_hexdump_key(MSG_DEBUG, "Install IGTK (WNM SLEEP)",
 				igd.igtk, WPA_IGTK_LEN);

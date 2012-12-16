@@ -522,7 +522,7 @@ static int nai_realm_cred_username(struct nai_realm_eap *eap)
 
 	if (eap->method == EAP_TYPE_TTLS) {
 		if (eap->inner_method == 0 && eap->inner_non_eap == 0)
-			return 0;
+			return 1; /* Assume TTLS/MSCHAPv2 is used */
 		if (eap->inner_method &&
 		    eap_get_name(EAP_VENDOR_IETF, eap->inner_method) == NULL)
 			return 0;
@@ -1259,6 +1259,12 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 				goto fail;
 			break;
 		case NAI_REALM_INNER_NON_EAP_MSCHAPV2:
+			if (wpa_config_set(ssid, "phase2", "\"auth=MSCHAPV2\"",
+					   0) < 0)
+				goto fail;
+			break;
+		default:
+			/* EAP params were not set - assume TTLS/MSCHAPv2 */
 			if (wpa_config_set(ssid, "phase2", "\"auth=MSCHAPV2\"",
 					   0) < 0)
 				goto fail;

@@ -38,6 +38,7 @@
 #include "interworking.h"
 #include "blacklist.h"
 #include "autoscan.h"
+#include "wnm_sta.h"
 
 extern struct wpa_driver_ops *wpa_drivers[];
 
@@ -4671,6 +4672,31 @@ static int wpa_supplicant_ctrl_iface_autoscan(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_AUTOSCAN */
 
 
+#ifdef CONFIG_WNM
+
+static int wpas_ctrl_iface_wnm_sleep(struct wpa_supplicant *wpa_s, char *cmd)
+{
+	int enter;
+	int intval = 0;
+	char *pos;
+
+	if (os_strncmp(cmd, "enter", 5) == 0)
+		enter = 1;
+	else if (os_strncmp(cmd, "exit", 4) == 0)
+		enter = 0;
+	else
+		return -1;
+
+	pos = os_strstr(cmd, " interval=");
+	if (pos)
+		intval = atoi(pos + 10);
+
+	return ieee802_11_send_wnmsleep_req(wpa_s, enter ? 0 : 1, intval);
+}
+
+#endif /* CONFIG_WNM */
+
+
 static int wpa_supplicant_signal_poll(struct wpa_supplicant *wpa_s, char *buf,
 				      size_t buflen)
 {
@@ -5221,6 +5247,11 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strcmp(buf, "REAUTHENTICATE") == 0) {
 		pmksa_cache_clear_current(wpa_s->wpa);
 		eapol_sm_request_reauth(wpa_s->eapol);
+#ifdef CONFIG_WNM
+	} else if (os_strncmp(buf, "WNM_SLEEP ", 10) == 0) {
+		if (wpas_ctrl_iface_wnm_sleep(wpa_s, buf + 10))
+			reply_len = -1;
+#endif /* CONFIG_WNM */
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);
 		reply_len = 16;

@@ -41,7 +41,7 @@ static int ieee80211_11_set_tfs_ie(struct wpa_supplicant *wpa_s,
 
 /* MLME-SLEEPMODE.request */
 int ieee802_11_send_wnmsleep_req(struct wpa_supplicant *wpa_s,
-				 u8 action, u8 intval)
+				 u8 action, u16 intval)
 {
 	struct ieee80211_mgmt *mgmt;
 	int res;
@@ -62,7 +62,7 @@ int ieee802_11_send_wnmsleep_req(struct wpa_supplicant *wpa_s,
 	wnmsleep_ie->len = wnmsleep_ie_len - 2;
 	wnmsleep_ie->action_type = action;
 	wnmsleep_ie->status = WNM_STATUS_SLEEP_ACCEPT;
-	wnmsleep_ie->intval = intval;
+	wnmsleep_ie->intval = host_to_le16(intval);
 
 	/* TFS IE(s) */
 	wnmtfs_ie = os_zalloc(MAX_TFS_IE_LEN);

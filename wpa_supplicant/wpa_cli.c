@@ -2247,6 +2247,16 @@ static int wpa_cli_cmd_autoscan(struct wpa_ctrl *ctrl, int argc, char *argv[])
 #endif /* CONFIG_AUTOSCAN */
 
 
+#ifdef CONFIG_WNM
+
+static int wpa_cli_cmd_wnm_sleep(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "WNM_SLEEP", 0, argc, argv);
+}
+
+#endif /* CONFIG_WNM */
+
+
 static int wpa_cli_cmd_raw(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	if (argc == 0)
@@ -2689,6 +2699,10 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "autoscan", wpa_cli_cmd_autoscan, NULL, cli_cmd_flag_none,
 	  "[params] = Set or unset (if none) autoscan parameters" },
 #endif /* CONFIG_AUTOSCAN */
+#ifdef CONFIG_WNM
+	{ "wnm_sleep", wpa_cli_cmd_wnm_sleep, NULL, cli_cmd_flag_none,
+	  "<enter/exit> [interval=#] = enter/exit WNM-Sleep mode" },
+#endif /* CONFIG_WNM */
 	{ "raw", wpa_cli_cmd_raw, NULL, cli_cmd_flag_sensitive,
 	  "<params..> = Sent unprocessed command" },
 	{ NULL, NULL, NULL, cli_cmd_flag_none, NULL }

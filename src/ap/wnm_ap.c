@@ -132,7 +132,8 @@ static int ieee802_11_send_wnmsleep_resp(struct hostapd_data *hapd,
 	os_memcpy(pos, &wnmsleep_ie, wnmsleep_ie_len);
 	/* copy TFS IE here */
 	pos += wnmsleep_ie_len;
-	os_memcpy(pos, wnmtfs_ie, wnmtfs_ie_len);
+	if (wnmtfs_ie)
+		os_memcpy(pos, wnmtfs_ie, wnmtfs_ie_len);
 
 	len = 1 + sizeof(mgmt->u.action.u.wnm_sleep_resp) + gtk_elem_len +
 		igtk_elem_len + wnmsleep_ie_len + wnmtfs_ie_len;

@@ -2,7 +2,7 @@
  * hostapd / IEEE 802.11 Management: Beacon and Probe Request/Response
  * Copyright (c) 2002-2004, Instant802 Networks, Inc.
  * Copyright (c) 2005-2006, Devicescape Software, Inc.
- * Copyright (c) 2008-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2008-2012, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -310,6 +310,46 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 }
 
 
+enum ssid_match_result {
+	NO_SSID_MATCH,
+	EXACT_SSID_MATCH,
+	WILDCARD_SSID_MATCH
+};
+
+static enum ssid_match_result ssid_match(struct hostapd_data *hapd,
+					 const u8 *ssid, size_t ssid_len,
+					 const u8 *ssid_list,
+					 size_t ssid_list_len)
+{
+	const u8 *pos, *end;
+	int wildcard = 0;
+
+	if (ssid_len == 0)
+		wildcard = 1;
+	if (ssid_len == hapd->conf->ssid.ssid_len &&
+	    os_memcmp(ssid, hapd->conf->ssid.ssid, ssid_len) == 0)
+		return EXACT_SSID_MATCH;
+
+	if (ssid_list == NULL)
+		return wildcard ? WILDCARD_SSID_MATCH : NO_SSID_MATCH;
+
+	pos = ssid_list;
+	end = ssid_list + ssid_list_len;
+	while (pos + 1 <= end) {
+		if (pos + 2 + pos[1] > end)
+			break;
+		if (pos[1] == 0)
+			wildcard = 1;
+		if (pos[1] == hapd->conf->ssid.ssid_len &&
+		    os_memcmp(pos + 2, hapd->conf->ssid.ssid, pos[1]) == 0)
+			return EXACT_SSID_MATCH;
+		pos += 2 + pos[1];
+	}
+
+	return wildcard ? WILDCARD_SSID_MATCH : NO_SSID_MATCH;
+}
+
+
 void handle_probe_req(struct hostapd_data *hapd,
 		      const struct ieee80211_mgmt *mgmt, size_t len,
 		      int ssi_signal)
@@ -321,6 +361,7 @@ void handle_probe_req(struct hostapd_data *hapd,
 	struct sta_info *sta = NULL;
 	size_t i, resp_len;
 	int noack;
+	enum ssid_match_result res;
 
 	ie = mgmt->u.probe_req.variable;
 	if (len < IEEE80211_HDRLEN + sizeof(mgmt->u.probe_req))
@@ -376,7 +417,8 @@ void handle_probe_req(struct hostapd_data *hapd,
 	}
 #endif /* CONFIG_P2P */
 
-	if (hapd->conf->ignore_broadcast_ssid && elems.ssid_len == 0) {
+	if (hapd->conf->ignore_broadcast_ssid && elems.ssid_len == 0 &&
+	    elems.ssid_list_len == 0) {
 		wpa_printf(MSG_MSGDUMP, "Probe Request from " MACSTR " for "
 			   "broadcast SSID ignored", MAC2STR(mgmt->sa));
 		return;
@@ -394,10 +436,9 @@ void handle_probe_req(struct hostapd_data *hapd,
 	}
 #endif /* CONFIG_P2P */
 
-	if (elems.ssid_len == 0 ||
-	    (elems.ssid_len == hapd->conf->ssid.ssid_len &&
-	     os_memcmp(elems.ssid, hapd->conf->ssid.ssid, elems.ssid_len) ==
-	     0)) {
+	res = ssid_match(hapd, elems.ssid, elems.ssid_len,
+			 elems.ssid_list, elems.ssid_list_len);
+	if (res != NO_SSID_MATCH) {
 		if (sta)
 			sta->ssid_probe = &hapd->conf->ssid;
 	} else {
@@ -406,9 +447,10 @@ void handle_probe_req(struct hostapd_data *hapd,
 			ieee802_11_print_ssid(ssid_txt, elems.ssid,
 					      elems.ssid_len);
 			wpa_printf(MSG_MSGDUMP, "Probe Request from " MACSTR
-				   " for foreign SSID '%s' (DA " MACSTR ")",
+				   " for foreign SSID '%s' (DA " MACSTR ")%s",
 				   MAC2STR(mgmt->sa), ssid_txt,
-				   MAC2STR(mgmt->da));
+				   MAC2STR(mgmt->da),
+				   elems.ssid_list ? " (SSID list)" : "");
 		}
 		return;
 	}
@@ -455,7 +497,8 @@ void handle_probe_req(struct hostapd_data *hapd,
 	 * If this is a broadcast probe request, apply no ack policy to avoid
 	 * excessive retries.
 	 */
-	noack = !!(elems.ssid_len == 0 && is_broadcast_ether_addr(mgmt->da));
+	noack = !!(res == WILDCARD_SSID_MATCH &&
+		   is_broadcast_ether_addr(mgmt->da));
 
 	if (hostapd_drv_send_mlme(hapd, resp, resp_len, noack) < 0)
 		perror("handle_probe_req: send");

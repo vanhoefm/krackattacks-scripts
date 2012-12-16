@@ -177,6 +177,10 @@ u8 * hostapd_eid_ext_capab(struct hostapd_data *hapd, u8 *eid)
 		len = 3;
 	if (len < 7 && hapd->conf->ssid.utf8_ssid)
 		len = 7;
+#ifdef CONFIG_WNM
+	if (len < 4)
+		len = 4;
+#endif /* CONFIG_WNM */
 	if (len == 0)
 		return eid;
 
@@ -193,6 +197,9 @@ u8 * hostapd_eid_ext_capab(struct hostapd_data *hapd, u8 *eid)
 	if (len < 4)
 		return pos;
 	*pos = 0x00;
+#ifdef CONFIG_WNM
+	*pos |= 0x02; /* Bit 25 - SSID List */
+#endif /* CONFIG_WNM */
 	if (hapd->conf->time_advertisement == 2)
 		*pos |= 0x08; /* Bit 27 - UTC TSF Offset */
 	if (hapd->conf->interworking)

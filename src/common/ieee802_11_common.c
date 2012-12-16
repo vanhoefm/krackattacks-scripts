@@ -284,6 +284,10 @@ ParseRes ieee802_11_parse_elems(const u8 *start, size_t len,
 				break;
 			elems->bss_max_idle_period = pos;
 			break;
+		case WLAN_EID_SSID_LIST:
+			elems->ssid_list = pos;
+			elems->ssid_list_len = elen;
+			break;
 		default:
 			unknown++;
 			if (!show_errors)

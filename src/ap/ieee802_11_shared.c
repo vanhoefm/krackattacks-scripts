@@ -175,6 +175,8 @@ u8 * hostapd_eid_ext_capab(struct hostapd_data *hapd, u8 *eid)
 		len = 4;
 	if (len < 3 && hapd->conf->wnm_sleep_mode)
 		len = 3;
+	if (len < 7 && hapd->conf->ssid.utf8_ssid)
+		len = 7;
 	if (len == 0)
 		return eid;
 
@@ -204,6 +206,18 @@ u8 * hostapd_eid_ext_capab(struct hostapd_data *hapd, u8 *eid)
 		*pos |= 0x40; /* Bit 38 - TDLS Prohibited */
 	if (hapd->conf->tdls & TDLS_PROHIBIT_CHAN_SWITCH)
 		*pos |= 0x80; /* Bit 39 - TDLS Channel Switching Prohibited */
+	pos++;
+
+	if (len < 6)
+		return pos;
+	*pos = 0x00;
+	pos++;
+
+	if (len < 7)
+		return pos;
+	*pos = 0x00;
+	if (hapd->conf->ssid.utf8_ssid)
+		*pos |= 0x01; /* Bit 48 - UTF-8 SSID */
 	pos++;
 
 	return pos;

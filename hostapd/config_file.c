@@ -1780,6 +1780,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 				bss->ssid.ssid_set = 1;
 			}
 			os_free(str);
+		} else if (os_strcmp(buf, "utf8_ssid") == 0) {
+			bss->ssid.utf8_ssid = atoi(pos) > 0;
 		} else if (os_strcmp(buf, "macaddr_acl") == 0) {
 			bss->macaddr_acl = atoi(pos);
 			if (bss->macaddr_acl != ACCEPT_UNLESS_DENIED &&

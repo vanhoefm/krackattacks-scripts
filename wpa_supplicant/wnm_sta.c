@@ -11,8 +11,8 @@
 #include "utils/common.h"
 #include "common/ieee802_11_defs.h"
 #include "rsn_supp/wpa.h"
-#include "../wpa_supplicant/wpa_supplicant_i.h"
-#include "../wpa_supplicant/driver_i.h"
+#include "wpa_supplicant_i.h"
+#include "driver_i.h"
 
 #define MAX_TFS_IE_LEN  1024
 

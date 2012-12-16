@@ -331,8 +331,11 @@ void wlantest_process(struct wlantest *wt, const u8 *data, size_t len)
 		return;
 	if (!txflags)
 		rx_frame(wt, frame, frame_len);
-	else
+	else {
 		tx_status(wt, frame, frame_len, !failed);
+		/* Process as RX frame to support local monitor interface */
+		rx_frame(wt, frame, frame_len);
+	}
 }
 
 

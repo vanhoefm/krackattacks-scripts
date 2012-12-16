@@ -725,6 +725,9 @@ OBJS += ../src/ap/eap_user_db.o
 ifdef CONFIG_IEEE80211N
 OBJS += ../src/ap/ieee802_11_ht.o
 endif
+ifdef CONFIG_WNM
+OBJS += ../src/ap/wnm_ap.o
+endif
 ifdef CONFIG_CTRL_IFACE
 OBJS += ../src/ap/ctrl_iface_ap.o
 endif

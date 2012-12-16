@@ -99,6 +99,8 @@ int ieee802_11_send_wnmsleep_req(struct wpa_supplicant *wpa_s,
 	if (mgmt == NULL) {
 		wpa_printf(MSG_DEBUG, "MLME: Failed to allocate buffer for "
 			   "WNM-Sleep Request action frame");
+		os_free(wnmsleep_ie);
+		os_free(wnmtfs_ie);
 		return -1;
 	}
 

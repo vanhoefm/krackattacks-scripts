@@ -110,6 +110,7 @@ int ieee802_11_send_wnmsleep_req(struct wpa_supplicant *wpa_s,
 					   WLAN_FC_STYPE_ACTION);
 	mgmt->u.action.category = WLAN_ACTION_WNM;
 	mgmt->u.action.u.wnm_sleep_req.action = WNM_SLEEP_MODE_REQ;
+	mgmt->u.action.u.wnm_sleep_req.dialogtoken = 1;
 	os_memcpy(mgmt->u.action.u.wnm_sleep_req.variable, wnmsleep_ie,
 		  wnmsleep_ie_len);
 	/* copy TFS IE here */

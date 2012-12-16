@@ -390,6 +390,7 @@ struct hostapd_bss_config {
 	/* IEEE 802.11v */
 	int time_advertisement;
 	char *time_zone;
+	int wnm_sleep_mode;
 
 	/* IEEE 802.11u - Interworking */
 	int interworking;

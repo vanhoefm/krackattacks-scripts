@@ -34,6 +34,7 @@
 #include "ap_mlme.h"
 #include "p2p_hostapd.h"
 #include "ap_drv_ops.h"
+#include "wnm_ap.h"
 #include "ieee802_11.h"
 
 
@@ -1434,19 +1435,46 @@ static int robust_action_frame(u8 category)
 #endif /* CONFIG_IEEE80211W */
 
 
+#ifdef CONFIG_WNM
+static void hostapd_wnm_action(struct hostapd_data *hapd, struct sta_info *sta,
+			       const struct ieee80211_mgmt *mgmt,
+			       size_t len)
+{
+	struct rx_action action;
+	if (len < IEEE80211_HDRLEN + 2)
+		return;
+	os_memset(&action, 0, sizeof(action));
+	action.da = mgmt->da;
+	action.sa = mgmt->sa;
+	action.bssid = mgmt->bssid;
+	action.category = mgmt->u.action.category;
+	action.data = (const u8 *) &mgmt->u.action.u.wnm_sleep_req.action;
+	action.len = len - IEEE80211_HDRLEN - 1;
+	action.freq = hapd->iface->freq;
+	ieee802_11_rx_wnm_action_ap(hapd, &action);
+}
+#endif /* CONFIG_WNM */
+
+
 static void handle_action(struct hostapd_data *hapd,
 			  const struct ieee80211_mgmt *mgmt, size_t len)
 {
-#if defined(CONFIG_IEEE80211W) || defined(CONFIG_IEEE80211R)
 	struct sta_info *sta;
 	sta = ap_get_sta(hapd, mgmt->sa);
-#endif /* CONFIG_IEEE80211W || CONFIG_IEEE80211R */
 
 	if (len < IEEE80211_HDRLEN + 1) {
 		hostapd_logger(hapd, mgmt->sa, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_DEBUG,
 			       "handle_action - too short payload (len=%lu)",
 			       (unsigned long) len);
+		return;
+	}
+
+	if (mgmt->u.action.category != WLAN_ACTION_PUBLIC &&
+	    (sta == NULL || !(sta->flags & WLAN_STA_ASSOC))) {
+		wpa_printf(MSG_DEBUG, "IEEE 802.11: Ignored Action "
+			   "frame (category=%u) from unassociated STA " MACSTR,
+			   MAC2STR(mgmt->sa), mgmt->u.action.category);
 		return;
 	}
 
@@ -1465,20 +1493,10 @@ static void handle_action(struct hostapd_data *hapd,
 	switch (mgmt->u.action.category) {
 #ifdef CONFIG_IEEE80211R
 	case WLAN_ACTION_FT:
-	{
-		if (sta == NULL || !(sta->flags & WLAN_STA_ASSOC)) {
-			wpa_printf(MSG_DEBUG, "IEEE 802.11: Ignored FT Action "
-				   "frame from unassociated STA " MACSTR,
-				   MAC2STR(mgmt->sa));
-			return;
-		}
-
 		if (wpa_ft_action_rx(sta->wpa_sm, (u8 *) &mgmt->u.action,
 				     len - IEEE80211_HDRLEN))
 			break;
-
 		return;
-	}
 #endif /* CONFIG_IEEE80211R */
 	case WLAN_ACTION_WMM:
 		hostapd_wmm_action(hapd, mgmt, len);
@@ -1488,6 +1506,11 @@ static void handle_action(struct hostapd_data *hapd,
 		hostapd_sa_query_action(hapd, mgmt, len);
 		return;
 #endif /* CONFIG_IEEE80211W */
+#ifdef CONFIG_WNM
+	case WLAN_ACTION_WNM:
+		hostapd_wnm_action(hapd, sta, mgmt, len);
+		return;
+#endif /* CONFIG_WNM */
 	case WLAN_ACTION_PUBLIC:
 		if (hapd->public_action_cb) {
 			hapd->public_action_cb(hapd->public_action_cb_ctx,

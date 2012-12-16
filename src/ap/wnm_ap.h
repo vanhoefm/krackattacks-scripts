@@ -11,7 +11,7 @@
 
 struct rx_action;
 
-void ieee802_11_rx_wnm_action_ap(struct hostapd_data *hapd,
-				 struct rx_action *action);
+int ieee802_11_rx_wnm_action_ap(struct hostapd_data *hapd,
+				struct rx_action *action);
 
 #endif /* WNM_AP_H */

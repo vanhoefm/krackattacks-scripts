@@ -173,6 +173,8 @@ u8 * hostapd_eid_ext_capab(struct hostapd_data *hapd, u8 *eid)
 		len = 5;
 	if (len < 4 && hapd->conf->interworking)
 		len = 4;
+	if (len < 3 && hapd->conf->wnm_sleep_mode)
+		len = 3;
 	if (len == 0)
 		return eid;
 
@@ -180,8 +182,14 @@ u8 * hostapd_eid_ext_capab(struct hostapd_data *hapd, u8 *eid)
 	*pos++ = len;
 	*pos++ = 0x00;
 	*pos++ = 0x00;
-	*pos++ = 0x00;
 
+	*pos = 0x00;
+	if (hapd->conf->wnm_sleep_mode)
+		*pos |= 0x02; /* Bit 17 - WNM-Sleep Mode */
+	pos++;
+
+	if (len < 4)
+		return pos;
 	*pos = 0x00;
 	if (hapd->conf->time_advertisement == 2)
 		*pos |= 0x08; /* Bit 27 - UTC TSF Offset */

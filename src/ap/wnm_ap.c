@@ -183,29 +183,29 @@ static int ieee802_11_send_wnmsleep_resp(struct hostapd_data *hapd,
 static void ieee802_11_rx_wnmsleep_req(struct hostapd_data *hapd,
 				       const u8 *addr, const u8 *frm, int len)
 {
-	/*
-	 * Action [1] | Dialog Token [1] | WNM-Sleep Mode IE |
-	 * TFS Response IE
-	 */
-	u8 *pos = (u8 *) frm; /* point to action field */
-	u8 dialog_token = pos[1];
+	/* Dialog Token [1] | WNM-Sleep Mode IE | TFS Response IE */
+	const u8 *pos = frm;
+	u8 dialog_token;
 	struct wnm_sleep_element *wnmsleep_ie = NULL;
 	/* multiple TFS Req IE (assuming consecutive) */
 	u8 *tfsreq_ie_start = NULL;
 	u8 *tfsreq_ie_end = NULL;
 	u16 tfsreq_ie_len = 0;
 
-	pos += 1 + 1;
-	while (pos - frm < len - 1) {
-		u8 ie_len = *(pos+1);
+	dialog_token = *pos++;
+	while (pos + 1 < frm + len) {
+		u8 ie_len = pos[1];
+		if (pos + 2 + ie_len > frm + len)
+			break;
 		if (*pos == WLAN_EID_WNMSLEEP)
-			wnmsleep_ie = (struct wnm_sleep_element *)pos;
+			wnmsleep_ie = (struct wnm_sleep_element *) pos;
 		else if (*pos == WLAN_EID_TFS_REQ) {
 			if (!tfsreq_ie_start)
-				tfsreq_ie_start = pos;
-			tfsreq_ie_end = pos;
+				tfsreq_ie_start = (u8 *) pos;
+			tfsreq_ie_end = (u8 *) pos;
 		} else
-			wpa_printf(MSG_DEBUG, "EID %d not recognized", *pos);
+			wpa_printf(MSG_DEBUG, "WNM: EID %d not recognized",
+				   *pos);
 		pos += ie_len + 2;
 	}
 
@@ -238,18 +238,20 @@ static void ieee802_11_rx_wnmsleep_req(struct hostapd_data *hapd,
 }
 
 
-void ieee802_11_rx_wnm_action_ap(struct hostapd_data *hapd,
-				 struct rx_action *action)
+int ieee802_11_rx_wnm_action_ap(struct hostapd_data *hapd,
+				struct rx_action *action)
 {
-	u8 *pos = (u8 *) action->data + 1; /* point to the action field */
-	u8 act = *pos;
+	if (action->len < 1 || action->data == NULL)
+		return -1;
 
-	switch (act) {
+	switch (action->data[0]) {
 	case WNM_SLEEP_MODE_REQ:
 		ieee802_11_rx_wnmsleep_req(hapd, action->sa, action->data + 1,
-					   action->len);
-		break;
-	default:
-		break;
+					   action->len - 1);
+		return 0;
 	}
+
+	wpa_printf(MSG_DEBUG, "WNM: Unsupported WNM Action %u from " MACSTR,
+		   action->data[0], MAC2STR(action->sa));
+	return -1;
 }

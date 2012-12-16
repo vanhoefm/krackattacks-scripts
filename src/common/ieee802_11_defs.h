@@ -1048,10 +1048,13 @@ struct ieee80211_2040_intol_chan_report {
 struct wnm_sleep_element {
 	u8 eid;     /* WLAN_EID_WNMSLEEP */
 	u8 len;
-	u8 action_type; /* WLAN_WNM_SLEEP_ENTER/EXIT */
+	u8 action_type; /* WNM_SLEEP_ENTER/WNM_SLEEP_MODE_EXIT */
 	u8 status;
 	le16 intval;
 } STRUCT_PACKED;
+
+#define WNM_SLEEP_MODE_ENTER 0
+#define WNM_SLEEP_MODE_EXIT 1
 
 enum wnm_sleep_mode_response_status {
 	WNM_STATUS_SLEEP_ACCEPT = 0,

@@ -188,7 +188,7 @@ static void ieee802_11_rx_wnmsleep_resp(struct wpa_supplicant *wpa_s,
 		wpa_printf(MSG_DEBUG, "Successfully recv WNM-Sleep Response "
 			   "frame (action=%d, intval=%d)",
 			   wnmsleep_ie->action_type, wnmsleep_ie->intval);
-		if (wnmsleep_ie->action_type == 0) {
+		if (wnmsleep_ie->action_type == WNM_SLEEP_MODE_ENTER) {
 			wpa_drv_wnm_oper(wpa_s, WNM_SLEEP_ENTER_CONFIRM,
 					 wpa_s->bssid, NULL, NULL);
 			/* remove GTK/IGTK ?? */
@@ -212,7 +212,7 @@ static void ieee802_11_rx_wnmsleep_resp(struct wpa_supplicant *wpa_s,
 					wpa_printf(MSG_DEBUG, "Fail to set "
 						   "TFS Resp IE");
 			}
-		} else if (wnmsleep_ie->action_type == 1) {
+		} else if (wnmsleep_ie->action_type == WNM_SLEEP_MODE_EXIT) {
 			u8 *ptr, *end;
 			wpa_drv_wnm_oper(wpa_s, WNM_SLEEP_EXIT_CONFIRM,
 					 wpa_s->bssid, NULL, NULL);
@@ -270,10 +270,10 @@ static void ieee802_11_rx_wnmsleep_resp(struct wpa_supplicant *wpa_s,
 		wpa_printf(MSG_DEBUG, "Reject recv WNM-Sleep Response frame "
 			   "(action=%d, intval=%d)",
 			   wnmsleep_ie->action_type, wnmsleep_ie->intval);
-		if (wnmsleep_ie->action_type == 0)
+		if (wnmsleep_ie->action_type == WNM_SLEEP_MODE_ENTER)
 			wpa_drv_wnm_oper(wpa_s, WNM_SLEEP_ENTER_FAIL,
 					 wpa_s->bssid, NULL, NULL);
-		else if (wnmsleep_ie->action_type == 1)
+		else if (wnmsleep_ie->action_type == WNM_SLEEP_MODE_EXIT)
 			wpa_drv_wnm_oper(wpa_s, WNM_SLEEP_EXIT_FAIL,
 					 wpa_s->bssid, NULL, NULL);
 	}

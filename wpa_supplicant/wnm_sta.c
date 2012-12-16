@@ -137,6 +137,92 @@ int ieee802_11_send_wnmsleep_req(struct wpa_supplicant *wpa_s,
 }
 
 
+static void wnm_sleep_mode_enter_success(struct wpa_supplicant *wpa_s,
+					 u8 *tfsresp_ie_start,
+					 u8 *tfsresp_ie_end)
+{
+	wpa_drv_wnm_oper(wpa_s, WNM_SLEEP_ENTER_CONFIRM,
+			 wpa_s->bssid, NULL, NULL);
+	/* remove GTK/IGTK ?? */
+
+	/* set the TFS Resp IE(s) */
+	if (tfsresp_ie_start && tfsresp_ie_end &&
+	    tfsresp_ie_end - tfsresp_ie_start >= 0) {
+		u16 tfsresp_ie_len;
+		tfsresp_ie_len = (tfsresp_ie_end + tfsresp_ie_end[1] + 2) -
+			tfsresp_ie_start;
+		wpa_printf(MSG_DEBUG, "TFS Resp IE(s) found");
+		/* pass the TFS Resp IE(s) to driver for processing */
+		if (ieee80211_11_set_tfs_ie(wpa_s, wpa_s->bssid,
+					    tfsresp_ie_start,
+					    &tfsresp_ie_len,
+					    WNM_SLEEP_TFS_RESP_IE_SET))
+			wpa_printf(MSG_DEBUG, "WNM: Fail to set TFS Resp IE");
+	}
+}
+
+
+static void wnm_sleep_mode_exit_success(struct wpa_supplicant *wpa_s,
+					const u8 *frm, u16 key_len_total)
+{
+	u8 *ptr, *end;
+	u8 gtk_len;
+
+	wpa_drv_wnm_oper(wpa_s, WNM_SLEEP_EXIT_CONFIRM,  wpa_s->bssid,
+			 NULL, NULL);
+
+	/* Install GTK/IGTK */
+
+	/* point to key data field */
+	ptr = (u8 *) frm + 1 + 1 + 2;
+	end = ptr + key_len_total;
+	wpa_hexdump_key(MSG_DEBUG, "WNM: Key Data", ptr, key_len_total);
+
+	while (ptr + 1 < end) {
+		if (ptr + 2 + ptr[1] > end) {
+			wpa_printf(MSG_DEBUG, "WNM: Invalid Key Data element "
+				   "length");
+			if (end > ptr) {
+				wpa_hexdump(MSG_DEBUG, "WNM: Remaining data",
+					    ptr, end - ptr);
+			}
+			break;
+		}
+		if (*ptr == WNM_SLEEP_SUBELEM_GTK) {
+			if (ptr[1] < 11 + 5) {
+				wpa_printf(MSG_DEBUG, "WNM: Too short GTK "
+					   "subelem");
+				break;
+			}
+			gtk_len = *(ptr + 4);
+			if (ptr[1] < 11 + gtk_len ||
+			    gtk_len < 5 || gtk_len > 32) {
+				wpa_printf(MSG_DEBUG, "WNM: Invalid GTK "
+					   "subelem");
+				break;
+			}
+			wpa_wnmsleep_install_key(
+				wpa_s->wpa,
+				WNM_SLEEP_SUBELEM_GTK,
+				ptr);
+			ptr += 13 + gtk_len;
+#ifdef CONFIG_IEEE80211W
+		} else if (*ptr == WNM_SLEEP_SUBELEM_IGTK) {
+			if (ptr[1] < 2 + 6 + WPA_IGTK_LEN) {
+				wpa_printf(MSG_DEBUG, "WNM: Too short IGTK "
+					   "subelem");
+				break;
+			}
+			wpa_wnmsleep_install_key(wpa_s->wpa,
+						 WNM_SLEEP_SUBELEM_IGTK, ptr);
+			ptr += 10 + WPA_IGTK_LEN;
+#endif /* CONFIG_IEEE80211W */
+		} else
+			break; /* skip the loop */
+	}
+}
+
+
 static void ieee802_11_rx_wnmsleep_resp(struct wpa_supplicant *wpa_s,
 					const u8 *frm, int len)
 {
@@ -146,12 +232,10 @@ static void ieee802_11_rx_wnmsleep_resp(struct wpa_supplicant *wpa_s,
 	 */
 	u8 *pos = (u8 *) frm; /* point to action field */
 	u16 key_len_total = le_to_host16(*((u16 *)(frm+2)));
-	u8 gtk_len;
 	struct wnm_sleep_element *wnmsleep_ie = NULL;
 	/* multiple TFS Resp IE (assuming consecutive) */
 	u8 *tfsresp_ie_start = NULL;
 	u8 *tfsresp_ie_end = NULL;
-	u16 tfsresp_ie_len = 0;
 
 	wpa_printf(MSG_DEBUG, "action=%d token = %d key_len_total = %d",
 		   frm[0], frm[1], key_len_total);
@@ -189,82 +273,10 @@ static void ieee802_11_rx_wnmsleep_resp(struct wpa_supplicant *wpa_s,
 			   "frame (action=%d, intval=%d)",
 			   wnmsleep_ie->action_type, wnmsleep_ie->intval);
 		if (wnmsleep_ie->action_type == WNM_SLEEP_MODE_ENTER) {
-			wpa_drv_wnm_oper(wpa_s, WNM_SLEEP_ENTER_CONFIRM,
-					 wpa_s->bssid, NULL, NULL);
-			/* remove GTK/IGTK ?? */
-
-			/* set the TFS Resp IE(s) */
-			if (tfsresp_ie_start && tfsresp_ie_end &&
-			    tfsresp_ie_end - tfsresp_ie_start >= 0) {
-				tfsresp_ie_len = (tfsresp_ie_end +
-						  tfsresp_ie_end[1] + 2) -
-					tfsresp_ie_start;
-				wpa_printf(MSG_DEBUG, "TFS Resp IE(s) found");
-				/*
-				 * pass the TFS Resp IE(s) to driver for
-				 * processing
-				 */
-				if (ieee80211_11_set_tfs_ie(
-					    wpa_s, wpa_s->bssid,
-					    tfsresp_ie_start,
-					    &tfsresp_ie_len,
-					    WNM_SLEEP_TFS_RESP_IE_SET))
-					wpa_printf(MSG_DEBUG, "Fail to set "
-						   "TFS Resp IE");
-			}
+			wnm_sleep_mode_enter_success(wpa_s, tfsresp_ie_start,
+						     tfsresp_ie_end);
 		} else if (wnmsleep_ie->action_type == WNM_SLEEP_MODE_EXIT) {
-			u8 *ptr, *end;
-			wpa_drv_wnm_oper(wpa_s, WNM_SLEEP_EXIT_CONFIRM,
-					 wpa_s->bssid, NULL, NULL);
-			/* Install GTK/IGTK */
-			/* point to key data field */
-			ptr = (u8 *) frm + 1 + 1 + 2;
-			end = ptr + key_len_total;
-			wpa_hexdump_key(MSG_DEBUG, "WNM: Key Data",
-					ptr, key_len_total);
-			while (ptr + 1 < end) {
-				if (ptr + 2 + ptr[1] > end) {
-					wpa_printf(MSG_DEBUG,
-						   "WNM: Invalid Key "
-						   "Data element length");
-					if (end > ptr)
-						wpa_hexdump(MSG_DEBUG, "WNM: Remaining data", ptr, end - ptr);
-					break;
-				}
-				if (*ptr == WNM_SLEEP_SUBELEM_GTK) {
-					if (ptr[1] < 11 + 5) {
-						wpa_printf(MSG_DEBUG,
-							   "WNM: Too short GTK subelem");
-						break;
-					}
-					gtk_len = *(ptr + 4);
-					if (ptr[1] < 11 + gtk_len ||
-					    gtk_len < 5 || gtk_len > 32) {
-						wpa_printf(MSG_DEBUG,
-							   "WNM: Invalid GTK subelem");
-						break;
-					}
-					wpa_wnmsleep_install_key(
-						wpa_s->wpa,
-						WNM_SLEEP_SUBELEM_GTK,
-						ptr);
-					ptr += 13 + gtk_len;
-#ifdef CONFIG_IEEE80211W
-				} else if (*ptr == WNM_SLEEP_SUBELEM_IGTK) {
-					if (ptr[1] < 2 + 6 + WPA_IGTK_LEN) {
-						wpa_printf(MSG_DEBUG,
-							   "WNM: Too short IGTK subelem");
-						break;
-					}
-					wpa_wnmsleep_install_key(
-						wpa_s->wpa,
-						WNM_SLEEP_SUBELEM_IGTK,
-						ptr);
-					ptr += 10 + WPA_IGTK_LEN;
-#endif /* CONFIG_IEEE80211W */
-				} else
-					break; /* skip the loop */
-			}
+			wnm_sleep_mode_exit_success(wpa_s, frm, key_len_total);
 		}
 	} else {
 		wpa_printf(MSG_DEBUG, "Reject recv WNM-Sleep Response frame "

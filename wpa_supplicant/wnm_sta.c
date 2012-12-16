@@ -127,9 +127,6 @@ static void ieee802_11_rx_wnmsleep_resp(struct wpa_supplicant *wpa_s,
 	u8 *pos = (u8 *) frm; /* point to action field */
 	u16 key_len_total = le_to_host16(*((u16 *)(frm+2)));
 	u8 gtk_len;
-#ifdef CONFIG_IEEE80211W
-	u8 igtk_len;
-#endif /* CONFIG_IEEE80211W */
 	struct wnm_sleep_element *wnmsleep_ie = NULL;
 	/* multiple TFS Resp IE (assuming consecutive) */
 	u8 *tfsresp_ie_start = NULL;
@@ -203,7 +200,6 @@ static void ieee802_11_rx_wnmsleep_resp(struct wpa_supplicant *wpa_s,
 #ifdef CONFIG_IEEE80211W
 					} else if (*ptr ==
 						   WNM_SLEEP_SUBELEM_IGTK) {
-						igtk_len = WPA_IGTK_LEN;
 						wpa_wnmsleep_install_key(
 							wpa_s->wpa,
 							WNM_SLEEP_SUBELEM_IGTK,

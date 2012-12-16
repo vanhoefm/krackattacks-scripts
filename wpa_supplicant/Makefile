@@ -738,10 +738,6 @@ ifdef CONFIG_IEEE80211N
 CFLAGS += -DCONFIG_IEEE80211N
 endif
 
-ifdef CONFIG_WNM
-CFLAGS += -DCONFIG_WNM
-endif
-
 ifdef NEED_AP_MLME
 OBJS += ../src/ap/wmm.o
 OBJS += ../src/ap/ap_list.o
@@ -760,6 +756,10 @@ endif
 ifdef CONFIG_HS20
 OBJS += ../src/ap/hs20.o
 endif
+endif
+
+ifdef CONFIG_WNM
+CFLAGS += -DCONFIG_WNM
 endif
 
 ifdef NEED_RSN_AUTHENTICATOR

@@ -2413,11 +2413,9 @@ static int wpa_group_update_sta(struct wpa_state_machine *sm, void *ctx)
 				"marking station for GTK rekeying");
 	}
 
-#ifdef CONFIG_IEEE80211V
-	/* Do not rekey GTK/IGTK when STA is in wnmsleep */
+	/* Do not rekey GTK/IGTK when STA is in WNM-Sleep Mode */
 	if (sm->is_wnmsleep)
 		return 0;
-#endif /* CONFIG_IEEE80211V */
 
 	sm->group->GKeyDoneStations++;
 	sm->GUpdateStationKeys = TRUE;
@@ -2427,8 +2425,8 @@ static int wpa_group_update_sta(struct wpa_state_machine *sm, void *ctx)
 }
 
 
-#ifdef CONFIG_IEEE80211V
-/* update GTK when exiting wnmsleep mode */
+#ifdef CONFIG_WNM
+/* update GTK when exiting WNM-Sleep Mode */
 void wpa_wnmsleep_rekey_gtk(struct wpa_state_machine *sm)
 {
 	if (sm->is_wnmsleep)
@@ -2550,7 +2548,7 @@ int wpa_wnmsleep_igtk_subelem(struct wpa_state_machine *sm, u8 *pos)
 	return subelem_len;
 }
 #endif /* CONFIG_IEEE80211W */
-#endif /* CONFIG_IEEE80211V */
+#endif /* CONFIG_WNM */
 
 
 static void wpa_group_setkeys(struct wpa_authenticator *wpa_auth,

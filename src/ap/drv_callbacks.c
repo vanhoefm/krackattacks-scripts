@@ -512,13 +512,13 @@ static void hostapd_action_rx(struct hostapd_data *hapd,
 					   action->data + 2);
 	}
 #endif /* CONFIG_IEEE80211W */
-#ifdef CONFIG_IEEE80211V
+#ifdef CONFIG_WNM
 	if (action->category == WLAN_ACTION_WNM) {
 		wpa_printf(MSG_DEBUG, "%s: WNM_ACTION length %d",
 			   __func__, (int) action->len);
 		ieee802_11_rx_wnm_action_ap(hapd, action);
 	}
-#endif /* CONFIG_IEEE80211V */
+#endif /* CONFIG_WNM */
 }
 
 

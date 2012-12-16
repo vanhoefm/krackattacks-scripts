@@ -2138,7 +2138,7 @@ static void wpa_supplicant_event_tdls(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_TDLS */
 
 
-#ifdef CONFIG_IEEE80211V
+#ifdef CONFIG_WNM
 static void wpa_supplicant_event_wnm(struct wpa_supplicant *wpa_s,
 				     union wpa_event_data *data)
 {
@@ -2154,7 +2154,7 @@ static void wpa_supplicant_event_wnm(struct wpa_supplicant *wpa_s,
 		break;
 	}
 }
-#endif /* CONFIG_IEEE80211V */
+#endif /* CONFIG_WNM */
 
 
 #ifdef CONFIG_IEEE80211R
@@ -2507,11 +2507,11 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		wpa_supplicant_event_tdls(wpa_s, data);
 		break;
 #endif /* CONFIG_TDLS */
-#ifdef CONFIG_IEEE80211V
+#ifdef CONFIG_WNM
 	case EVENT_WNM:
 		wpa_supplicant_event_wnm(wpa_s, data);
 		break;
-#endif /* CONFIG_IEEE80211V */
+#endif /* CONFIG_WNM */
 #ifdef CONFIG_IEEE80211R
 	case EVENT_FT_RESPONSE:
 		wpa_supplicant_event_ft_response(wpa_s, data);
@@ -2709,12 +2709,12 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		}
 #endif /* CONFIG_SME */
 #endif /* CONFIG_IEEE80211W */
-#ifdef CONFIG_IEEE80211V
+#ifdef CONFIG_WNM
 		if (data->rx_action.category == WLAN_ACTION_WNM) {
 			ieee802_11_rx_wnm_action(wpa_s, &data->rx_action);
 			break;
 		}
-#endif /* CONFIG_IEEE80211V */
+#endif /* CONFIG_WNM */
 #ifdef CONFIG_GAS
 		if (data->rx_action.category == WLAN_ACTION_PUBLIC &&
 		    gas_query_rx(wpa_s->gas, data->rx_action.da,

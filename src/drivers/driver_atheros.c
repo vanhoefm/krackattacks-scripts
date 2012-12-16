@@ -874,7 +874,7 @@ static void atheros_raw_recv_hs20(void *ctx, const u8 *src_addr, const u8 *buf,
 }
 #endif /* CONFIG_HS20 */
 
-#if defined(CONFIG_IEEE80211V) && !defined(CONFIG_IEEE80211R)
+#if defined(CONFIG_WNM) && !defined(CONFIG_IEEE80211R)
 static void atheros_raw_recv_11v(void *ctx, const u8 *src_addr, const u8 *buf,
 				 size_t len)
 {
@@ -921,9 +921,9 @@ static void atheros_raw_recv_11v(void *ctx, const u8 *src_addr, const u8 *buf,
 		break;
 	}
 }
-#endif /* CONFIG_IEEE80211V */
+#endif /* CONFIG_WNM */
 
-#if defined(CONFIG_WPS) || defined(CONFIG_IEEE80211R) || defined(CONFIG_IEEE80211V)
+#if defined(CONFIG_WPS) || defined(CONFIG_IEEE80211R) || defined(CONFIG_WNM)
 static void atheros_raw_receive(void *ctx, const u8 *src_addr, const u8 *buf,
 				size_t len)
 {
@@ -933,9 +933,9 @@ static void atheros_raw_receive(void *ctx, const u8 *src_addr, const u8 *buf,
 #ifdef CONFIG_IEEE80211R
 	atheros_raw_recv_11r(ctx, src_addr, buf, len);
 #endif /* CONFIG_IEEE80211R */
-#if defined(CONFIG_IEEE80211V) && !defined(CONFIG_IEEE80211R)
+#if defined(CONFIG_WNM) && !defined(CONFIG_IEEE80211R)
 	atheros_raw_recv_11v(ctx, src_addr, buf, len);
-#endif /* CONFIG_IEEE80211V */
+#endif /* CONFIG_WNM */
 #ifdef CONFIG_HS20
 	atheros_raw_recv_hs20(ctx, src_addr, buf, len);
 #endif /* CONFIG_HS20 */
@@ -957,9 +957,9 @@ static int atheros_receive_pkt(struct atheros_driver_data *drv)
 			       IEEE80211_FILTER_TYPE_AUTH |
 			       IEEE80211_FILTER_TYPE_ACTION);
 #endif
-#ifdef CONFIG_IEEE80211V
+#ifdef CONFIG_WNM
 	filt.app_filterype |= IEEE80211_FILTER_TYPE_ACTION;
-#endif /* CONFIG_IEEE80211V */
+#endif /* CONFIG_WNM */
 #ifdef CONFIG_HS20
 	filt.app_filterype |= IEEE80211_FILTER_TYPE_ACTION;
 #endif /* CONFIG_HS20 */
@@ -1959,7 +1959,7 @@ static int atheros_send_action(void *priv, unsigned int freq,
 }
 
 
-#ifdef CONFIG_IEEE80211V
+#ifdef CONFIG_WNM
 static int athr_wnm_tfs(struct atheros_driver_data *drv, const u8* peer,
 			u8 *ie, u16 *len, enum wnm_oper oper)
 {
@@ -2112,7 +2112,7 @@ static int atheros_wnm_oper(void *priv, enum wnm_oper oper, const u8 *peer,
 		return -1;
 	}
 }
-#endif /* CONFIG_IEEE80211V */
+#endif /* CONFIG_WNM */
 
 
 const struct wpa_driver_ops wpa_driver_atheros_ops = {
@@ -2146,7 +2146,7 @@ const struct wpa_driver_ops wpa_driver_atheros_ops = {
 	.add_sta_node    	= atheros_add_sta_node,
 #endif /* CONFIG_IEEE80211R */
 	.send_action		= atheros_send_action,
-#ifdef CONFIG_IEEE80211V
+#ifdef CONFIG_WNM
 	.wnm_oper		= atheros_wnm_oper,
-#endif /* CONFIG_IEEE80211V */
+#endif /* CONFIG_WNM */
 };

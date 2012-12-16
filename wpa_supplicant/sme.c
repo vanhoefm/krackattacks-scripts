@@ -94,6 +94,7 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_IEEE80211R */
 	int i, bssid_changed;
 	struct wpabuf *resp = NULL;
+	u32 ext_capab;
 
 	if (bss == NULL) {
 		wpa_msg(wpa_s, MSG_ERROR, "SME: No scan result available for "
@@ -308,8 +309,16 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 	}
 #endif /* CONFIG_HS20 */
 
+	ext_capab = 0;
 #ifdef CONFIG_INTERWORKING
-	if (wpa_s->conf->interworking) {
+	if (wpa_s->conf->interworking)
+		ext_capab |= BIT(31); /* Interworking */
+#endif /* CONFIG_INTERWORKING */
+#ifdef CONFIG_WNM
+	ext_capab |= BIT(17); /* WNM-Sleep Mode */
+#endif /* CONFIG_WNM */
+
+	if (ext_capab) {
 		u8 *pos = wpa_s->sme.assoc_req_ie;
 		if (wpa_s->sme.assoc_req_ie_len > 0 && pos[0] == WLAN_EID_RSN)
 			pos += 2 + pos[1];
@@ -319,12 +328,8 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 		wpa_s->sme.assoc_req_ie_len += 6;
 		*pos++ = WLAN_EID_EXT_CAPAB;
 		*pos++ = 4;
-		*pos++ = 0x00;
-		*pos++ = 0x00;
-		*pos++ = 0x00;
-		*pos++ = 0x80; /* Bit 31 - Interworking */
+		WPA_PUT_LE32(pos, ext_capab);
 	}
-#endif /* CONFIG_INTERWORKING */
 
 #ifdef CONFIG_SAE
 	if (params.auth_alg == WPA_AUTH_ALG_SAE) {

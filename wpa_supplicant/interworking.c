@@ -516,9 +516,14 @@ static int nai_realm_cred_username(struct nai_realm_eap *eap)
 		return 0;
 	}
 
-	if (eap->method == EAP_TYPE_PEAP &&
-	    eap_get_name(EAP_VENDOR_IETF, eap->inner_method) == NULL)
-		return 0;
+	if (eap->method == EAP_TYPE_PEAP) {
+		if (eap->inner_method &&
+		    eap_get_name(EAP_VENDOR_IETF, eap->inner_method) == NULL)
+			return 0;
+		if (!eap->inner_method &&
+		    eap_get_name(EAP_VENDOR_IETF, EAP_TYPE_MSCHAPV2) == NULL)
+			return 0;
+	}
 
 	if (eap->method == EAP_TYPE_TTLS) {
 		if (eap->inner_method == 0 && eap->inner_non_eap == 0)
@@ -1294,7 +1299,10 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 		break;
 	case EAP_TYPE_PEAP:
 		os_snprintf(buf, sizeof(buf), "\"auth=%s\"",
-			    eap_get_name(EAP_VENDOR_IETF, eap->inner_method));
+			    eap_get_name(EAP_VENDOR_IETF,
+					 eap->inner_method ?
+					 eap->inner_method :
+					 EAP_TYPE_MSCHAPV2));
 		if (wpa_config_set(ssid, "phase2", buf, 0) < 0)
 			goto fail;
 		break;

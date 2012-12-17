@@ -1293,7 +1293,7 @@ static int wps_set_ie(struct wps_registrar *reg)
 	    wps_build_uuid_e(probe, reg->wps->uuid) ||
 	    wps_build_device_attrs(&reg->wps->dev, probe) ||
 	    wps_build_probe_config_methods(reg, probe) ||
-	    wps_build_rf_bands(&reg->wps->dev, probe) ||
+	    (reg->dualband && wps_build_rf_bands(&reg->wps->dev, probe)) ||
 	    wps_build_wfa_ext(probe, 0, auth_macs, count) ||
 	    wps_build_vendor_ext(&reg->wps->dev, probe)) {
 		wpabuf_free(beacon);

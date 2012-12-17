@@ -1490,7 +1490,8 @@ int interworking_home_sp_cred(struct wpa_supplicant *wpa_s,
 		mnc_len = wpa_s->mnc_len;
 	}
 #endif /* CONFIG_PCSC */
-	if (imsi && build_root_nai(nai, sizeof(nai), imsi, mnc_len, 0) == 0) {
+	if (domain_names &&
+	    imsi && build_root_nai(nai, sizeof(nai), imsi, mnc_len, 0) == 0) {
 		realm = os_strchr(nai, '@');
 		if (realm)
 			realm++;
@@ -1502,7 +1503,7 @@ int interworking_home_sp_cred(struct wpa_supplicant *wpa_s,
 	}
 #endif /* INTERWORKING_3GPP */
 
-	if (cred->domain == NULL)
+	if (domain_names == NULL || cred->domain == NULL)
 		return 0;
 
 	wpa_printf(MSG_DEBUG, "Interworking: Search for match with "

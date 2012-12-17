@@ -1003,6 +1003,21 @@ int hostapd_ctrl_iface_init(struct hostapd_data *hapd)
 		return -1;
 	}
 
+#ifdef ANDROID
+	/*
+	 * Android is using umask 0077 which would leave the control interface
+	 * directory without group access. This breaks things since Wi-Fi
+	 * framework assumes that this directory can be accessed by other
+	 * applications in the wifi group. Fix this by adding group access even
+	 * if umask value would prevent this.
+	 */
+	if (chmod(hapd->conf->ctrl_interface, S_IRWXU | S_IRWXG) < 0) {
+		wpa_printf(MSG_ERROR, "CTRL: Could not chmod directory: %s",
+			   strerror(errno));
+		/* Try to continue anyway */
+	}
+#endif /* ANDROID */
+
 	if (os_strlen(hapd->conf->ctrl_interface) + 1 +
 	    os_strlen(hapd->conf->iface) >= sizeof(addr.sun_path))
 		goto fail;

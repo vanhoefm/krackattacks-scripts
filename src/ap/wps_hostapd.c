@@ -957,6 +957,9 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 	if (conf->ssid.security_policy == SECURITY_STATIC_WEP)
 		cfg.static_wep_only = 1;
 	cfg.dualband = interface_count(hapd->iface) > 1;
+	if ((wps->dev.rf_bands & (WPS_RF_50GHZ | WPS_RF_24GHZ)) ==
+	    (WPS_RF_50GHZ | WPS_RF_24GHZ))
+		cfg.dualband = 1;
 	if (cfg.dualband)
 		wpa_printf(MSG_DEBUG, "WPS: Dualband AP");
 

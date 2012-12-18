@@ -191,7 +191,13 @@ group interface is used as a parameter for this command.
 
 p2p_cancel
 
-Cancel an ongoing P2P group formation related operation.
+Cancel an ongoing P2P group formation and joining-a-group related
+operation. This operations unauthorizes the specific peer device (if any
+had been authorized to start group formation), stops P2P find (if in
+progress), stops pending operations for join-a-group, and removes the
+P2P group interface (if one was used) that is in the WPS provisioning
+step. If the WPS provisioning step has been completed, the group is not
+terminated.
 
 Service Discovery
 

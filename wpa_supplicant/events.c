@@ -1316,12 +1316,16 @@ static void wnm_bss_keep_alive(void *eloop_ctx, void *sock_ctx)
 	if (wpa_s->wpa_state < WPA_ASSOCIATED)
 		return;
 
-	wpa_printf(MSG_DEBUG, "WNM: Send keep-alive to AP " MACSTR,
-		   MAC2STR(wpa_s->bssid));
-	/* TODO: could skip this if normal data traffic has been sent */
-	/* TODO: Consider using some more appropriate data frame for this */
-	if (wpa_s->l2)
-		l2_packet_send(wpa_s->l2, wpa_s->bssid, 0x0800, (u8 *) "", 0);
+	if (!wpa_s->no_keep_alive) {
+		wpa_printf(MSG_DEBUG, "WNM: Send keep-alive to AP " MACSTR,
+			   MAC2STR(wpa_s->bssid));
+		/* TODO: could skip this if normal data traffic has been sent */
+		/* TODO: Consider using some more appropriate data frame for
+		 * this */
+		if (wpa_s->l2)
+			l2_packet_send(wpa_s->l2, wpa_s->bssid, 0x0800,
+				       (u8 *) "", 0);
+	}
 
 #ifdef CONFIG_SME
 	if (wpa_s->sme.bss_max_idle_period) {

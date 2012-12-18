@@ -415,6 +415,8 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 		ret = set_bssid_filter(wpa_s, value);
 	} else if (os_strcasecmp(cmd, "disallow_aps") == 0) {
 		ret = set_disallow_aps(wpa_s, value);
+	} else if (os_strcasecmp(cmd, "no_keep_alive") == 0) {
+		wpa_s->no_keep_alive = !!atoi(value);
 	} else {
 		value[-1] = '=';
 		ret = wpa_config_process_global(wpa_s->conf, cmd, -1);

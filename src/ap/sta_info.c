@@ -493,6 +493,7 @@ struct sta_info * ap_sta_add(struct hostapd_data *hapd, const u8 *addr)
 		return NULL;
 	}
 	sta->acct_interim_interval = hapd->conf->acct_interim_interval;
+	accounting_sta_get_id(hapd, sta);
 
 	/* initialize STA info data */
 	wpa_printf(MSG_DEBUG, "%s: register ap_handle_timer timeout "

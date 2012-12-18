@@ -454,6 +454,16 @@ static int add_common_radius_sta_attr(struct hostapd_data *hapd,
 		return -1;
 	}
 
+	if (sta->acct_session_id_hi || sta->acct_session_id_lo) {
+		os_snprintf(buf, sizeof(buf), "%08X-%08X",
+			    sta->acct_session_id_hi, sta->acct_session_id_lo);
+		if (!radius_msg_add_attr(msg, RADIUS_ATTR_ACCT_SESSION_ID,
+					 (u8 *) buf, os_strlen(buf))) {
+			wpa_printf(MSG_ERROR, "Could not add Acct-Session-Id");
+			return -1;
+		}
+	}
+
 	return 0;
 }
 

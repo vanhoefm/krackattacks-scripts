@@ -3479,6 +3479,7 @@ static int wpas_p2p_join_start(struct wpa_supplicant *wpa_s)
 	}
 
 	group->p2p_in_provisioning = 1;
+	wpa_s->global->p2p_group_formation = wpa_s;
 	group->p2p_fallback_to_go_neg = wpa_s->p2p_fallback_to_go_neg;
 
 	os_memset(&res, 0, sizeof(res));
@@ -5190,6 +5191,13 @@ void wpas_p2p_update_channel_list(struct wpa_supplicant *wpa_s)
 }
 
 
+static void wpas_p2p_scan_res_ignore(struct wpa_supplicant *wpa_s,
+				     struct wpa_scan_results *scan_res)
+{
+	wpa_printf(MSG_DEBUG, "P2P: Ignore scan results");
+}
+
+
 int wpas_p2p_cancel(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_global *global = wpa_s->global;
@@ -5210,6 +5218,18 @@ int wpas_p2p_cancel(struct wpa_supplicant *wpa_s)
 		wpa_printf(MSG_DEBUG, "P2P: Unauthorize pending GO Neg peer "
 			   MACSTR, MAC2STR(peer));
 		p2p_unauthorize(global->p2p, peer);
+		found = 1;
+	}
+
+	if (wpa_s->scan_res_handler == wpas_p2p_scan_res_join) {
+		wpa_printf(MSG_DEBUG, "P2P: Stop pending scan for join");
+		wpa_s->scan_res_handler = wpas_p2p_scan_res_ignore;
+		found = 1;
+	}
+
+	if (wpa_s->pending_pd_before_join) {
+		wpa_printf(MSG_DEBUG, "P2P: Stop pending PD before join");
+		wpa_s->pending_pd_before_join = 0;
 		found = 1;
 	}
 

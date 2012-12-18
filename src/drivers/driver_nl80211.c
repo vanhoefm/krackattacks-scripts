@@ -4974,19 +4974,35 @@ static int phy_info_handler(struct nl_msg *msg, void *arg)
 				/* crude heuristic */
 				if (mode->channels[idx].freq < 4000)
 					mode->mode = HOSTAPD_MODE_IEEE80211B;
+				else if (mode->channels[idx].freq > 50000)
+					mode->mode = HOSTAPD_MODE_IEEE80211AD;
 				else
 					mode->mode = HOSTAPD_MODE_IEEE80211A;
 				mode_is_set = 1;
 			}
 
-			/* crude heuristic */
-			if (mode->channels[idx].freq < 4000)
+			switch (mode->mode) {
+			case HOSTAPD_MODE_IEEE80211AD:
+				mode->channels[idx].chan =
+					(mode->channels[idx].freq - 56160) /
+					2160;
+				break;
+			case HOSTAPD_MODE_IEEE80211A:
+				mode->channels[idx].chan =
+					mode->channels[idx].freq / 5 - 1000;
+				break;
+			case HOSTAPD_MODE_IEEE80211B:
+			case HOSTAPD_MODE_IEEE80211G:
 				if (mode->channels[idx].freq == 2484)
 					mode->channels[idx].chan = 14;
 				else
-					mode->channels[idx].chan = (mode->channels[idx].freq - 2407) / 5;
-			else
-				mode->channels[idx].chan = mode->channels[idx].freq/5 - 1000;
+					mode->channels[idx].chan =
+						(mode->channels[idx].freq -
+						 2407) / 5;
+				break;
+			default:
+				break;
+			}
 
 			if (tb_freq[NL80211_FREQUENCY_ATTR_DISABLED])
 				mode->channels[idx].flag |=

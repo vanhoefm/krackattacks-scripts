@@ -63,6 +63,10 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 		   (ssid->frequency >= 5745 && ssid->frequency <= 5825)) {
 		conf->hw_mode = HOSTAPD_MODE_IEEE80211A;
 		conf->channel = (ssid->frequency - 5000) / 5;
+	} else if (ssid->frequency >= 56160 + 2160 * 1 &&
+		   ssid->frequency <= 56160 + 2160 * 4) {
+		conf->hw_mode = HOSTAPD_MODE_IEEE80211AD;
+		conf->channel = (ssid->frequency - 56160) / 2160;
 	} else {
 		wpa_printf(MSG_ERROR, "Unsupported AP mode frequency: %d MHz",
 			   ssid->frequency);

@@ -2765,6 +2765,9 @@ static int ctrl_iface_get_capability_channels(struct wpa_supplicant *wpa_s,
 		case HOSTAPD_MODE_IEEE80211A:
 			hmode = "A";
 			break;
+		case HOSTAPD_MODE_IEEE80211AD:
+			hmode = "AD";
+			break;
 		default:
 			continue;
 		}

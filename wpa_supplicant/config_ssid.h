@@ -28,6 +28,7 @@
 #define DEFAULT_BG_SCAN_PERIOD -1
 #define DEFAULT_DISABLE_HT 0
 #define DEFAULT_DISABLE_HT40 0
+#define DEFAULT_DISABLE_SGI 0
 #define DEFAULT_DISABLE_MAX_AMSDU -1 /* no change */
 #define DEFAULT_AMPDU_FACTOR -1 /* no change */
 #define DEFAULT_AMPDU_DENSITY -1 /* no change */
@@ -493,6 +494,14 @@ struct wpa_ssid {
 	 * to 1 to have it disabled.
 	 */
 	int disable_ht40;
+
+	/**
+	 * disable_sgi - Disable SGI (Short Guard Interval) for this network
+	 *
+	 * By default, use it if it is available, but this can be configured
+	 * to 1 to have it disabled.
+	 */
+	int disable_sgi;
 
 	/**
 	 * disable_max_amsdu - Disable MAX A-MSDU

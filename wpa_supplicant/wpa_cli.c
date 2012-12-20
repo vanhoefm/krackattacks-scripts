@@ -2298,6 +2298,24 @@ static int wpa_cli_cmd_get_nai_home_realm_list(struct wpa_ctrl *ctrl, int argc,
 	return wpa_ctrl_command(ctrl, cmd);
 }
 
+
+static int wpa_cli_cmd_hs20_icon_request(struct wpa_ctrl *ctrl, int argc,
+					 char *argv[])
+{
+	char cmd[512];
+
+	if (argc < 2) {
+		printf("Command needs two arguments (dst mac addr and "
+		       "icon name)\n");
+		return -1;
+	}
+
+	if (write_cmd(cmd, sizeof(cmd), "HS20_ICON_REQUEST", argc, argv) < 0)
+		return -1;
+
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
 #endif /* CONFIG_HS20 */
 
 
@@ -2831,6 +2849,9 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "nai_home_realm_list", wpa_cli_cmd_get_nai_home_realm_list,
 	  wpa_cli_complete_bss, cli_cmd_flag_none,
 	  "<addr> <home realm> = get HS20 nai home realm list" },
+	{ "hs20_icon_request", wpa_cli_cmd_hs20_icon_request,
+	  wpa_cli_complete_bss, cli_cmd_flag_none,
+	  "<addr> <icon name> = get Hotspot 2.0 OSU icon" },
 #endif /* CONFIG_HS20 */
 	{ "sta_autoconnect", wpa_cli_cmd_sta_autoconnect, NULL,
 	  cli_cmd_flag_none,

@@ -105,6 +105,11 @@ struct wpabuf * hs20_build_anqp_req(u32 stypes, const u8 *payload,
 		wpabuf_put_u8(buf, 0); /* Reserved */
 		if (payload)
 			wpabuf_put_data(buf, payload, payload_len);
+	} else if (stypes == BIT(HS20_STYPE_ICON_REQUEST)) {
+		wpabuf_put_u8(buf, HS20_STYPE_ICON_REQUEST);
+		wpabuf_put_u8(buf, 0); /* Reserved */
+		if (payload)
+			wpabuf_put_data(buf, payload, payload_len);
 	} else {
 		u8 i;
 		wpabuf_put_u8(buf, HS20_STYPE_QUERY_LIST);
@@ -167,6 +172,7 @@ void hs20_parse_rx_hs20_anqp_resp(struct wpa_supplicant *wpa_s,
 	u8 subtype;
 	struct wpa_bss *bss = wpa_bss_get_bssid(wpa_s, sa);
 	struct wpa_bss_anqp *anqp = NULL;
+	u16 data_len;
 
 	if (slen < 2)
 		return;
@@ -231,6 +237,46 @@ void hs20_parse_rx_hs20_anqp_resp(struct wpa_supplicant *wpa_s,
 			anqp->hs20_operating_class =
 				wpabuf_alloc_copy(pos, slen);
 		}
+		break;
+	case HS20_STYPE_ICON_BINARY_FILE:
+		wpa_msg(wpa_s, MSG_INFO, "RX-HS20-ANQP " MACSTR
+			" Icon Binary File", MAC2STR(sa));
+
+		if (slen < 4) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "HS 2.0: Too short Icon "
+				"Binary File value from " MACSTR, MAC2STR(sa));
+			break;
+		}
+
+		wpa_printf(MSG_DEBUG, "HS 2.0: Download Status Code %u", *pos);
+		pos++;
+		slen--;
+
+		if ((size_t) 1 + pos[0] > slen) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "HS 2.0: Too short Icon "
+				"Binary File value from " MACSTR, MAC2STR(sa));
+			break;
+		}
+		wpa_hexdump_ascii(MSG_DEBUG, "Icon Type", pos + 1, pos[0]);
+		slen -= 1 + pos[0];
+		pos += 1 + pos[0];
+
+		if (slen < 2) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "HS 2.0: Too short Icon "
+				"Binary File value from " MACSTR, MAC2STR(sa));
+			break;
+		}
+		data_len = WPA_GET_BE16(pos);
+		pos += 2;
+		slen -= 2;
+
+		if (data_len > slen) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "HS 2.0: Too short Icon "
+				"Binary File value from " MACSTR, MAC2STR(sa));
+			break;
+		}
+
+		wpa_printf(MSG_DEBUG, "Icon Binary Data: %u bytes", data_len);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "HS20: Unsupported subtype %u", subtype);

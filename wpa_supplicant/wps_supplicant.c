@@ -423,6 +423,13 @@ static int wpa_supplicant_wps_cred(void *ctx,
 	}
 #endif /* CONFIG_NO_CONFIG_WRITE */
 
+	/*
+	 * Optimize the post-WPS scan based on the channel used during
+	 * the provisioning in case EAP-Failure is not received.
+	 */
+	wpa_s->after_wps = 5;
+	wpa_s->wps_freq = wpa_s->assoc_freq;
+
 	return 0;
 }
 

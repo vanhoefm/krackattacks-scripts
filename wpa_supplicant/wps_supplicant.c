@@ -511,6 +511,7 @@ static void wpas_wps_reenable_networks_cb(void *eloop_ctx, void *timeout_ctx);
 static void wpas_wps_reenable_networks(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_ssid *ssid;
+	int changed = 0;
 
 	eloop_cancel_timeout(wpas_wps_reenable_networks_cb, wpa_s, NULL);
 
@@ -519,7 +520,18 @@ static void wpas_wps_reenable_networks(struct wpa_supplicant *wpa_s)
 			ssid->disabled_for_connect = 0;
 			ssid->disabled = 0;
 			wpas_notify_network_enabled_changed(wpa_s, ssid);
+			changed++;
 		}
+	}
+
+	if (changed) {
+#ifndef CONFIG_NO_CONFIG_WRITE
+		if (wpa_s->conf->update_config &&
+		    wpa_config_write(wpa_s->confname, wpa_s->conf)) {
+			wpa_printf(MSG_DEBUG, "WPS: Failed to update "
+				   "configuration");
+		}
+#endif /* CONFIG_NO_CONFIG_WRITE */
 	}
 }
 

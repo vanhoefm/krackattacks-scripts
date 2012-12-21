@@ -474,6 +474,7 @@ struct wpa_supplicant {
 	struct wpabuf *pending_eapol_rx;
 	struct os_time pending_eapol_rx_time;
 	u8 pending_eapol_rx_src[ETH_ALEN];
+	unsigned int last_eapol_matches_bssid:1;
 
 	struct ibss_rsn *ibss_rsn;
 

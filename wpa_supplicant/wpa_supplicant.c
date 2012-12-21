@@ -2200,17 +2200,28 @@ void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 	wpa_dbg(wpa_s, MSG_DEBUG, "RX EAPOL from " MACSTR, MAC2STR(src_addr));
 	wpa_hexdump(MSG_MSGDUMP, "RX EAPOL", buf, len);
 
-	if (wpa_s->wpa_state < WPA_ASSOCIATED) {
+	if (wpa_s->wpa_state < WPA_ASSOCIATED ||
+	    (wpa_s->last_eapol_matches_bssid &&
+#ifdef CONFIG_AP
+	     !wpa_s->ap_iface &&
+#endif /* CONFIG_AP */
+	     os_memcmp(src_addr, wpa_s->bssid, ETH_ALEN) != 0)) {
 		/*
 		 * There is possible race condition between receiving the
 		 * association event and the EAPOL frame since they are coming
 		 * through different paths from the driver. In order to avoid
 		 * issues in trying to process the EAPOL frame before receiving
 		 * association information, lets queue it for processing until
-		 * the association event is received.
+		 * the association event is received. This may also be needed in
+		 * driver-based roaming case, so also use src_addr != BSSID as a
+		 * trigger if we have previously confirmed that the
+		 * Authenticator uses BSSID as the src_addr (which is not the
+		 * case with wired IEEE 802.1X).
 		 */
 		wpa_dbg(wpa_s, MSG_DEBUG, "Not associated - Delay processing "
-			"of received EAPOL frame");
+			"of received EAPOL frame (state=%s bssid=" MACSTR ")",
+			wpa_supplicant_state_txt(wpa_s->wpa_state),
+			MAC2STR(wpa_s->bssid));
 		wpabuf_free(wpa_s->pending_eapol_rx);
 		wpa_s->pending_eapol_rx = wpabuf_alloc_copy(buf, len);
 		if (wpa_s->pending_eapol_rx) {
@@ -2220,6 +2231,9 @@ void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 		}
 		return;
 	}
+
+	wpa_s->last_eapol_matches_bssid =
+		os_memcmp(src_addr, wpa_s->bssid, ETH_ALEN) == 0;
 
 #ifdef CONFIG_AP
 	if (wpa_s->ap_iface) {

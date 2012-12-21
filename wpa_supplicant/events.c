@@ -1743,6 +1743,8 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 		eapol_sm_notify_eap_success(wpa_s->eapol, TRUE);
 	}
 
+	wpa_s->last_eapol_matches_bssid = 0;
+
 	if (wpa_s->pending_eapol_rx) {
 		struct os_time now, age;
 		os_get_time(&now);

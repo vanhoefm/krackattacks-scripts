@@ -19,6 +19,9 @@ void gas_query_deinit(struct gas_query *gas);
 int gas_query_rx(struct gas_query *gas, const u8 *da, const u8 *sa,
 		 const u8 *bssid, const u8 *data, size_t len, int freq);
 
+/**
+ * enum gas_query_result - GAS query result
+ */
 enum gas_query_result {
 	GAS_QUERY_SUCCESS,
 	GAS_QUERY_FAILURE,

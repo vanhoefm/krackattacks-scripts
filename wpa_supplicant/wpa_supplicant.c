@@ -1242,6 +1242,7 @@ int wpas_build_ext_capab(struct wpa_supplicant *wpa_s, u8 *buf)
 
 #ifdef CONFIG_WNM
 	ext_capab |= BIT(17); /* WNM-Sleep Mode */
+	ext_capab |= BIT(19); /* BSS Transition */
 #endif /* CONFIG_WNM */
 
 	if (!ext_capab)

@@ -2721,8 +2721,12 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			bss->time_zone = os_strdup(pos);
 			if (bss->time_zone == NULL)
 				errors++;
+#ifdef CONFIG_WNM
 		} else if (os_strcmp(buf, "wnm_sleep_mode") == 0) {
 			bss->wnm_sleep_mode = atoi(pos);
+		} else if (os_strcmp(buf, "bss_transition") == 0) {
+			bss->bss_transition = atoi(pos);
+#endif /* CONFIG_WNM */
 #ifdef CONFIG_INTERWORKING
 		} else if (os_strcmp(buf, "interworking") == 0) {
 			bss->interworking = atoi(pos);

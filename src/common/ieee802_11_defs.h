@@ -538,6 +538,16 @@ struct ieee80211_mgmt {
 					 * Entries */
 					u8 variable[0];
 				} STRUCT_PACKED bss_tm_req;
+				struct {
+					u8 action; /* 8 */
+					u8 dialog_token;
+					u8 status_code;
+					u8 bss_termination_delay;
+					/* Target BSSID (optional),
+					 * BSS Transition Candidate List
+					 * Entries (optional) */
+					u8 variable[0];
+				} STRUCT_PACKED bss_tm_resp;
 			} u;
 		} STRUCT_PACKED action;
 	} u;

@@ -192,6 +192,8 @@ u8 * hostapd_eid_ext_capab(struct hostapd_data *hapd, u8 *eid)
 	*pos = 0x00;
 	if (hapd->conf->wnm_sleep_mode)
 		*pos |= 0x02; /* Bit 17 - WNM-Sleep Mode */
+	if (hapd->conf->bss_transition)
+		*pos |= 0x08; /* Bit 19 - BSS Transition */
 	pos++;
 
 	if (len < 4)

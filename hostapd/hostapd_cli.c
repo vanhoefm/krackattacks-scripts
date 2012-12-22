@@ -539,6 +539,26 @@ static int hostapd_cli_cmd_wps_config(struct wpa_ctrl *ctrl, int argc,
 #endif /* CONFIG_WPS */
 
 
+static int hostapd_cli_cmd_disassoc_imminent(struct wpa_ctrl *ctrl, int argc,
+					     char *argv[])
+{
+	char buf[300];
+	int res;
+
+	if (argc < 2) {
+		printf("Invalid 'disassoc_imminent' command - two arguments "
+		       "(STA addr and Disassociation Timer) are needed\n");
+		return -1;
+	}
+
+	res = os_snprintf(buf, sizeof(buf), "DISASSOC_IMMINENT %s %s",
+			  argv[0], argv[1]);
+	if (res < 0 || res >= (int) sizeof(buf))
+		return -1;
+	return wpa_ctrl_command(ctrl, buf);
+}
+
+
 static int hostapd_cli_cmd_ess_disassoc(struct wpa_ctrl *ctrl, int argc,
 					char *argv[])
 {
@@ -775,6 +795,7 @@ static struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	{ "wps_ap_pin", hostapd_cli_cmd_wps_ap_pin },
 	{ "wps_config", hostapd_cli_cmd_wps_config },
 #endif /* CONFIG_WPS */
+	{ "disassoc_imminent", hostapd_cli_cmd_disassoc_imminent },
 	{ "ess_disassoc", hostapd_cli_cmd_ess_disassoc },
 	{ "get_config", hostapd_cli_cmd_get_config },
 	{ "help", hostapd_cli_cmd_help },

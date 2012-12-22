@@ -250,6 +250,15 @@ int ieee802_11_rx_wnm_action_ap(struct hostapd_data *hapd,
 		return -1;
 
 	switch (action->data[0]) {
+	case WNM_BSS_TRANS_MGMT_QUERY:
+		wpa_printf(MSG_DEBUG, "WNM: BSS Transition Management Query");
+		/* TODO */
+		return -1;
+	case WNM_BSS_TRANS_MGMT_RESP:
+		wpa_printf(MSG_DEBUG, "WNM: BSS Transition Management "
+			   "Response");
+		/* TODO */
+		return -1;
 	case WNM_SLEEP_MODE_REQ:
 		ieee802_11_rx_wnmsleep_req(hapd, action->sa, action->data + 1,
 					   action->len - 1);

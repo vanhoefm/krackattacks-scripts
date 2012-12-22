@@ -1230,6 +1230,32 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 }
 
 
+int wpas_build_ext_capab(struct wpa_supplicant *wpa_s, u8 *buf)
+{
+	u32 ext_capab = 0;
+	u8 *pos = buf;
+
+#ifdef CONFIG_INTERWORKING
+	if (wpa_s->conf->interworking)
+		ext_capab |= BIT(31); /* Interworking */
+#endif /* CONFIG_INTERWORKING */
+
+#ifdef CONFIG_WNM
+	ext_capab |= BIT(17); /* WNM-Sleep Mode */
+#endif /* CONFIG_WNM */
+
+	if (!ext_capab)
+		return 0;
+
+	*pos++ = WLAN_EID_EXT_CAPAB;
+	*pos++ = 4;
+	WPA_PUT_LE32(pos, ext_capab);
+	pos += 4;
+
+	return pos - buf;
+}
+
+
 /**
  * wpa_supplicant_associate - Request association
  * @wpa_s: Pointer to wpa_supplicant data
@@ -1251,7 +1277,8 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	struct wpa_driver_capa capa;
 	int assoc_failed = 0;
 	struct wpa_ssid *old_ssid;
-	u32 ext_capab;
+	u8 ext_capab[10];
+	int ext_capab_len;
 #ifdef CONFIG_HT_OVERRIDES
 	struct ieee80211_ht_capabilities htcaps;
 	struct ieee80211_ht_capabilities htcaps_mask;
@@ -1462,24 +1489,15 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	}
 #endif /* CONFIG_HS20 */
 
-	ext_capab = 0;
-#ifdef CONFIG_INTERWORKING
-	if (wpa_s->conf->interworking)
-		ext_capab |= BIT(31); /* Interworking */
-#endif /* CONFIG_INTERWORKING */
-#ifdef CONFIG_WNM
-	ext_capab |= BIT(17); /* WNM-Sleep Mode */
-#endif /* CONFIG_WNM */
-
-	if (ext_capab) {
+	ext_capab_len = wpas_build_ext_capab(wpa_s, ext_capab);
+	if (ext_capab_len > 0) {
 		u8 *pos = wpa_ie;
 		if (wpa_ie_len > 0 && pos[0] == WLAN_EID_RSN)
 			pos += 2 + pos[1];
-		os_memmove(pos + 6, pos, wpa_ie_len - (pos - wpa_ie));
-		wpa_ie_len += 6;
-		*pos++ = WLAN_EID_EXT_CAPAB;
-		*pos++ = 4;
-		WPA_PUT_LE32(pos, ext_capab);
+		os_memmove(pos + ext_capab_len, pos,
+			   wpa_ie_len - (pos - wpa_ie));
+		wpa_ie_len += ext_capab_len;
+		os_memcpy(pos, ext_capab, ext_capab_len);
 	}
 
 	wpa_clear_keys(wpa_s, bss ? bss->bssid : NULL);

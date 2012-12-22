@@ -94,7 +94,8 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_IEEE80211R */
 	int i, bssid_changed;
 	struct wpabuf *resp = NULL;
-	u32 ext_capab;
+	u8 ext_capab[10];
+	int ext_capab_len;
 
 	if (bss == NULL) {
 		wpa_msg(wpa_s, MSG_ERROR, "SME: No scan result available for "
@@ -309,26 +310,16 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 	}
 #endif /* CONFIG_HS20 */
 
-	ext_capab = 0;
-#ifdef CONFIG_INTERWORKING
-	if (wpa_s->conf->interworking)
-		ext_capab |= BIT(31); /* Interworking */
-#endif /* CONFIG_INTERWORKING */
-#ifdef CONFIG_WNM
-	ext_capab |= BIT(17); /* WNM-Sleep Mode */
-#endif /* CONFIG_WNM */
-
-	if (ext_capab) {
+	ext_capab_len = wpas_build_ext_capab(wpa_s, ext_capab);
+	if (ext_capab_len > 0) {
 		u8 *pos = wpa_s->sme.assoc_req_ie;
 		if (wpa_s->sme.assoc_req_ie_len > 0 && pos[0] == WLAN_EID_RSN)
 			pos += 2 + pos[1];
-		os_memmove(pos + 6, pos,
+		os_memmove(pos + ext_capab_len, pos,
 			   wpa_s->sme.assoc_req_ie_len -
 			   (pos - wpa_s->sme.assoc_req_ie));
-		wpa_s->sme.assoc_req_ie_len += 6;
-		*pos++ = WLAN_EID_EXT_CAPAB;
-		*pos++ = 4;
-		WPA_PUT_LE32(pos, ext_capab);
+		wpa_s->sme.assoc_req_ie_len += ext_capab_len;
+		os_memcpy(pos, ext_capab, ext_capab_len);
 	}
 
 #ifdef CONFIG_SAE

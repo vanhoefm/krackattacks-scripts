@@ -201,6 +201,7 @@ struct i802_bss {
 
 	int freq;
 
+	void *ctx;
 	struct nl_handle *nl_preq, *nl_mgmt;
 	struct nl_cb *nl_cb;
 
@@ -1529,7 +1530,7 @@ static void mlme_event(struct wpa_driver_nl80211_data *drv,
 }
 
 
-static void mlme_event_michael_mic_failure(struct wpa_driver_nl80211_data *drv,
+static void mlme_event_michael_mic_failure(struct i802_bss *bss,
 					   struct nlattr *tb[])
 {
 	union wpa_event_data data;
@@ -1561,7 +1562,7 @@ static void mlme_event_michael_mic_failure(struct wpa_driver_nl80211_data *drv,
 		wpa_printf(MSG_DEBUG, "nl80211: Key Id %d", key_id);
 	}
 
-	wpa_supplicant_event(drv->ctx, EVENT_MICHAEL_MIC_FAILURE, &data);
+	wpa_supplicant_event(bss->ctx, EVENT_MICHAEL_MIC_FAILURE, &data);
 }
 
 
@@ -2168,9 +2169,11 @@ static void nl80211_spurious_frame(struct i802_bss *bss, struct nlattr **tb,
 }
 
 
-static void do_process_drv_event(struct wpa_driver_nl80211_data *drv,
-				 int cmd, struct nlattr **tb)
+static void do_process_drv_event(struct i802_bss *bss, int cmd,
+				 struct nlattr **tb)
 {
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+
 	if (drv->ap_scan_as_station != NL80211_IFTYPE_UNSPECIFIED &&
 	    (cmd == NL80211_CMD_NEW_SCAN_RESULTS ||
 	     cmd == NL80211_CMD_SCAN_ABORTED)) {
@@ -2243,7 +2246,7 @@ static void do_process_drv_event(struct wpa_driver_nl80211_data *drv,
 				      tb[NL80211_ATTR_DISCONNECTED_BY_AP]);
 		break;
 	case NL80211_CMD_MICHAEL_MIC_FAILURE:
-		mlme_event_michael_mic_failure(drv, tb);
+		mlme_event_michael_mic_failure(bss, tb);
 		break;
 	case NL80211_CMD_JOIN_IBSS:
 		mlme_event_join_ibss(drv, tb);
@@ -2298,21 +2301,25 @@ static int process_drv_event(struct nl_msg *msg, void *arg)
 	struct wpa_driver_nl80211_data *drv = arg;
 	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
 	struct nlattr *tb[NL80211_ATTR_MAX + 1];
+	struct i802_bss *bss;
+	int ifidx = -1;
 
 	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
 		  genlmsg_attrlen(gnlh, 0), NULL);
 
-	if (tb[NL80211_ATTR_IFINDEX]) {
-		int ifindex = nla_get_u32(tb[NL80211_ATTR_IFINDEX]);
-		if (ifindex != drv->ifindex && !have_ifidx(drv, ifindex)) {
-			wpa_printf(MSG_DEBUG, "nl80211: Ignored event (cmd=%d)"
-				   " for foreign interface (ifindex %d)",
-				   gnlh->cmd, ifindex);
+	if (tb[NL80211_ATTR_IFINDEX])
+		ifidx = nla_get_u32(tb[NL80211_ATTR_IFINDEX]);
+
+	for (bss = &drv->first_bss; bss; bss = bss->next) {
+		if (ifidx == -1 || ifidx == bss->ifindex) {
+			do_process_drv_event(bss, gnlh->cmd, tb);
 			return NL_SKIP;
 		}
 	}
 
-	do_process_drv_event(drv, gnlh->cmd, tb);
+	wpa_printf(MSG_DEBUG, "nl80211: Ignored event (cmd=%d) for foreign "
+		   "interface (ifindex %d)", gnlh->cmd, ifidx);
+
 	return NL_SKIP;
 }
 
@@ -2324,6 +2331,7 @@ static int process_global_event(struct nl_msg *msg, void *arg)
 	struct nlattr *tb[NL80211_ATTR_MAX + 1];
 	struct wpa_driver_nl80211_data *drv, *tmp;
 	int ifidx = -1;
+	struct i802_bss *bss;
 
 	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
 		  genlmsg_attrlen(gnlh, 0), NULL);
@@ -2333,9 +2341,12 @@ static int process_global_event(struct nl_msg *msg, void *arg)
 
 	dl_list_for_each_safe(drv, tmp, &global->interfaces,
 			      struct wpa_driver_nl80211_data, list) {
-		if (ifidx == -1 || ifidx == drv->ifindex ||
-		    have_ifidx(drv, ifidx))
-			do_process_drv_event(drv, gnlh->cmd, tb);
+		for (bss = &drv->first_bss; bss; bss = bss->next) {
+			if (ifidx == -1 || ifidx == bss->ifindex) {
+				do_process_drv_event(bss, gnlh->cmd, tb);
+				return NL_SKIP;
+			}
+		}
 	}
 
 	return NL_SKIP;
@@ -3069,6 +3080,8 @@ static void * wpa_driver_nl80211_init(void *ctx, const char *ifname,
 	drv->ctx = ctx;
 	bss = &drv->first_bss;
 	bss->drv = drv;
+	bss->ctx = ctx;
+
 	os_strlcpy(bss->ifname, ifname, sizeof(bss->ifname));
 	drv->monitor_ifidx = -1;
 	drv->monitor_sock = -1;
@@ -8125,6 +8138,7 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 		new_bss->drv = drv;
 		new_bss->next = drv->first_bss.next;
 		new_bss->freq = drv->first_bss.freq;
+		new_bss->ctx = bss_ctx;
 		drv->first_bss.next = new_bss;
 		if (drv_priv)
 			*drv_priv = new_bss;

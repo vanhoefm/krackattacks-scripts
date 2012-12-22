@@ -3758,12 +3758,12 @@ void wpas_p2p_cancel_remain_on_channel_cb(struct wpa_supplicant *wpa_s,
 {
 	wpa_printf(MSG_DEBUG, "P2P: Cancel remain-on-channel callback "
 		   "(p2p_long_listen=%d ms pending_action_tx=%p)",
-		   wpa_s->p2p_long_listen, wpa_s->pending_action_tx);
+		   wpa_s->p2p_long_listen, offchannel_pending_action_tx(wpa_s));
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
 		return;
 	if (p2p_listen_end(wpa_s->global->p2p, freq) > 0)
 		return; /* P2P module started a new operation */
-	if (wpa_s->pending_action_tx)
+	if (offchannel_pending_action_tx(wpa_s))
 		return;
 	if (wpa_s->p2p_long_listen > 0)
 		wpa_s->p2p_long_listen -= wpa_s->max_remain_on_chan;
@@ -4321,13 +4321,12 @@ int wpas_p2p_scan_result_text(const u8 *ies, size_t ies_len, char *buf,
 
 static void wpas_p2p_clear_pending_action_tx(struct wpa_supplicant *wpa_s)
 {
-	if (!wpa_s->pending_action_tx)
+	if (!offchannel_pending_action_tx(wpa_s))
 		return;
 
 	wpa_printf(MSG_DEBUG, "P2P: Drop pending Action TX due to new "
 		   "operation request");
-	wpabuf_free(wpa_s->pending_action_tx);
-	wpa_s->pending_action_tx = NULL;
+	offchannel_clear_pending_action_tx(wpa_s);
 }
 
 

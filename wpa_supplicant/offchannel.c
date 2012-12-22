@@ -357,6 +357,33 @@ void offchannel_cancel_remain_on_channel_cb(struct wpa_supplicant *wpa_s,
 
 
 /**
+ * offchannel_pending_action_tx - Check whether there is a pending Action TX
+ * @wpa_s: Pointer to wpa_supplicant data
+ * Returns: Pointer to pending frame or %NULL if no pending operation
+ *
+ * This function can be used to check whether there is a pending Action frame TX
+ * operation. The returned pointer should be used only for checking whether it
+ * is %NULL (no pending frame) or to print the pointer value in debug
+ * information (i.e., the pointer should not be dereferenced).
+ */
+const void * offchannel_pending_action_tx(struct wpa_supplicant *wpa_s)
+{
+	return wpa_s->pending_action_tx;
+}
+
+
+/**
+ * offchannel_clear_pending_action_tx - Clear pending Action frame TX
+ * @wpa_s: Pointer to wpa_supplicant data
+ */
+void offchannel_clear_pending_action_tx(struct wpa_supplicant *wpa_s)
+{
+	wpabuf_free(wpa_s->pending_action_tx);
+	wpa_s->pending_action_tx = NULL;
+}
+
+
+/**
  * offchannel_deinit - Deinit off-channel operations
  * @wpa_s: Pointer to wpa_supplicant data
  *
@@ -365,7 +392,6 @@ void offchannel_cancel_remain_on_channel_cb(struct wpa_supplicant *wpa_s,
  */
 void offchannel_deinit(struct wpa_supplicant *wpa_s)
 {
-	wpabuf_free(wpa_s->pending_action_tx);
-	wpa_s->pending_action_tx = NULL;
+	offchannel_clear_pending_action_tx(wpa_s);
 	eloop_cancel_timeout(wpas_send_action_cb, wpa_s, NULL);
 }

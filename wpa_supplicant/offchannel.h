@@ -29,5 +29,7 @@ void offchannel_deinit(struct wpa_supplicant *wpa_s);
 void offchannel_send_action_tx_status(
 	struct wpa_supplicant *wpa_s, const u8 *dst, const u8 *data,
 	size_t data_len, enum offchannel_send_action_result result);
+const void * offchannel_pending_action_tx(struct wpa_supplicant *wpa_s);
+void offchannel_clear_pending_action_tx(struct wpa_supplicant *wpa_s);
 
 #endif /* OFFCHANNEL_H */

@@ -132,6 +132,17 @@ static void wpas_send_action_cb(void *eloop_ctx, void *timeout_ctx)
 }
 
 
+/**
+ * offchannel_send_action_tx_status - TX status callback
+ * @wpa_s: Pointer to wpa_supplicant data
+ * @dst: Destination MAC address of the transmitted Action frame
+ * @data: Transmitted frame payload
+ * @data_len: Length of @data in bytes
+ * @result: TX status
+ *
+ * This function is called whenever the driver indicates a TX status event for
+ * a frame sent by offchannel_send_action() using wpa_drv_send_action().
+ */
 void offchannel_send_action_tx_status(
 	struct wpa_supplicant *wpa_s, const u8 *dst, const u8 *data,
 	size_t data_len, enum offchannel_send_action_result result)
@@ -164,6 +175,27 @@ void offchannel_send_action_tx_status(
 }
 
 
+/**
+ * offchannel_send_action - Request off-channel Action frame TX
+ * @wpa_s: Pointer to wpa_supplicant data
+ * @freq: The frequency in MHz indicating the channel on which the frame is to
+ *	transmitted or 0 for the current channel (only if associated)
+ * @dst: Action frame destination MAC address
+ * @src: Action frame source MAC address
+ * @bssid: Action frame BSSID
+ * @buf: Frame to transmit starting from the Category field
+ * @len: Length of @buf in bytes
+ * @wait_time: Wait time for response in milliseconds
+ * @tx_cb: Callback function for indicating TX status or %NULL for now callback
+ * @no_cck: Whether CCK rates are to be disallowed for TX rate selection
+ * Returns: 0 on success or -1 on failure
+ *
+ * This function is used to request an Action frame to be transmitted on the
+ * current operating channel or on another channel (off-channel). The actual
+ * frame transmission will be delayed until the driver is ready on the specified
+ * channel. The @wait_time parameter can be used to request the driver to remain
+ * awake on the channel to wait for a response.
+ */
 int offchannel_send_action(struct wpa_supplicant *wpa_s, unsigned int freq,
 			   const u8 *dst, const u8 *src, const u8 *bssid,
 			   const u8 *buf, size_t len, unsigned int wait_time,
@@ -266,6 +298,13 @@ int offchannel_send_action(struct wpa_supplicant *wpa_s, unsigned int freq,
 }
 
 
+/**
+ * offchannel_send_send_action_done - Notify completion of Action frame sequence
+ * @wpa_s: Pointer to wpa_supplicant data
+ *
+ * This function can be used to cancel a wait for additional response frames on
+ * the channel that was used with offchannel_send_action().
+ */
 void offchannel_send_action_done(struct wpa_supplicant *wpa_s)
 {
 	wpa_printf(MSG_DEBUG, "Off-channel: Action frame sequence done "
@@ -284,6 +323,15 @@ void offchannel_send_action_done(struct wpa_supplicant *wpa_s)
 }
 
 
+/**
+ * offchannel_remain_on_channel_cb - Remain-on-channel callback function
+ * @wpa_s: Pointer to wpa_supplicant data
+ * @freq: Frequency (in MHz) of the selected channel
+ * @duration: Duration of the remain-on-channel operation in milliseconds
+ *
+ * This function is called whenever the driver notifies beginning of a
+ * remain-on-channel operation.
+ */
 void offchannel_remain_on_channel_cb(struct wpa_supplicant *wpa_s,
 				     unsigned int freq, unsigned int duration)
 {
@@ -293,6 +341,14 @@ void offchannel_remain_on_channel_cb(struct wpa_supplicant *wpa_s,
 }
 
 
+/**
+ * offchannel_cancel_remain_on_channel_cb - Remain-on-channel stopped callback
+ * @wpa_s: Pointer to wpa_supplicant data
+ * @freq: Frequency (in MHz) of the selected channel
+ *
+ * This function is called whenever the driver notifies termination of a
+ * remain-on-channel operation.
+ */
 void offchannel_cancel_remain_on_channel_cb(struct wpa_supplicant *wpa_s,
 					    unsigned int freq)
 {
@@ -300,6 +356,13 @@ void offchannel_cancel_remain_on_channel_cb(struct wpa_supplicant *wpa_s,
 }
 
 
+/**
+ * offchannel_deinit - Deinit off-channel operations
+ * @wpa_s: Pointer to wpa_supplicant data
+ *
+ * This function is used to free up any allocated resources for off-channel
+ * operations.
+ */
 void offchannel_deinit(struct wpa_supplicant *wpa_s)
 {
 	wpabuf_free(wpa_s->pending_action_tx);

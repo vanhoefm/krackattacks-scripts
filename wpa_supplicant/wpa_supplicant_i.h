@@ -249,11 +249,15 @@ struct wpa_global {
 };
 
 
+/**
+ * offchannel_send_action_result - Result of offchannel send Action frame
+ */
 enum offchannel_send_action_result {
-	OFFCHANNEL_SEND_ACTION_SUCCESS /* Frame was send and acknowledged */,
-	OFFCHANNEL_SEND_ACTION_NO_ACK /* Frame was sent, but not acknowledged
+	OFFCHANNEL_SEND_ACTION_SUCCESS /**< Frame was send and acknowledged */,
+	OFFCHANNEL_SEND_ACTION_NO_ACK /**< Frame was sent, but not acknowledged
 				       */,
-	OFFCHANNEL_SEND_ACTION_FAILED /* Frame was not sent due to a failure */
+	OFFCHANNEL_SEND_ACTION_FAILED /**< Frame was not sent due to a failure
+				       */
 };
 
 struct wps_ap_info {

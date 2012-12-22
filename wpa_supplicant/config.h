@@ -716,12 +716,12 @@ struct wpa_config {
 	struct wpabuf *wps_nfc_dh_pubkey;
 
 	/**
-	 * wps_nfc_dh_pubkey - NFC DH Private Key for password token
+	 * wps_nfc_dh_privkey - NFC DH Private Key for password token
 	 */
 	struct wpabuf *wps_nfc_dh_privkey;
 
 	/**
-	 * wps_nfc_dh_pubkey - NFC Device Password for password token
+	 * wps_nfc_dev_pw - NFC Device Password for password token
 	 */
 	struct wpabuf *wps_nfc_dev_pw;
 

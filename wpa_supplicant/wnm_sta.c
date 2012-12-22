@@ -296,11 +296,45 @@ static void ieee802_11_rx_wnmsleep_resp(struct wpa_supplicant *wpa_s,
 void ieee802_11_rx_wnm_action(struct wpa_supplicant *wpa_s,
 			      struct rx_action *action)
 {
-	u8 *pos = (u8 *) action->data; /* point to action field */
-	u8 act = *pos++;
-	/* u8 dialog_token = *pos++; */
+	const u8 *pos, *end;
+	u8 act, mode;
+
+	if (action->data == NULL || action->len == 0)
+		return;
+
+	pos = action->data;
+	end = pos + action->len;
+	act = *pos++;
+
+	wpa_printf(MSG_DEBUG, "WNM: RX action %u from " MACSTR,
+		   act, MAC2STR(action->sa));
 
 	switch (act) {
+	case WNM_BSS_TRANS_MGMT_REQ:
+		if (pos + 5 > end)
+			break;
+		wpa_printf(MSG_DEBUG, "WNM: BSS Transition Management "
+			   "Request: dialog_token=%u request_mode=0x%x "
+			   "disassoc_timer=%u validity_interval=%u",
+			   pos[0], pos[1], WPA_GET_LE16(pos + 2), pos[4]);
+		mode = pos[1];
+		pos += 5;
+		if (mode & 0x08)
+			pos += 12; /* BSS Termination Duration */
+		if (mode & 0x10) {
+			char url[256];
+			if (pos + 1 > end || pos + 1 + pos[0] > end) {
+				wpa_printf(MSG_DEBUG, "WNM: Invalid BSS "
+					   "Transition Management Request "
+					   "(URL)");
+				break;
+			}
+			os_memcpy(url, pos + 1, pos[0]);
+			url[pos[0]] = '\0';
+			wpa_msg(wpa_s, MSG_INFO, "WNM: ESS Disassociation "
+				"Imminent - session_info_url=%s", url);
+		}
+		break;
 	case WNM_SLEEP_MODE_RESP:
 		ieee802_11_rx_wnmsleep_resp(wpa_s, action->data, action->len);
 		break;

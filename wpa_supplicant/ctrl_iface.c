@@ -5139,7 +5139,7 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED)
 			reply_len = -1;
 		else {
-			if (!wpa_s->scanning &&
+			if (!wpa_s->sched_scanning && !wpa_s->scanning &&
 			    ((wpa_s->wpa_state <= WPA_SCANNING) ||
 			     (wpa_s->wpa_state == WPA_COMPLETED))) {
 				wpa_s->normal_scans = 0;

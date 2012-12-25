@@ -1321,7 +1321,8 @@ static void wpa_driver_test_scan_timeout(void *eloop_ctx, void *timeout_ctx)
 		for (i = 0; i < drv->num_scanres; i++) {
 			struct wpa_scan_res *bss = drv->scanres[i];
 			if (p2p_scan_res_handler(drv->p2p, bss->bssid,
-						 bss->freq, bss->level,
+						 bss->freq, bss->age,
+						 bss->level,
 						 (const u8 *) (bss + 1),
 						 bss->ie_len) > 0)
 				return;

@@ -583,6 +583,7 @@ static void p2p_copy_wps_info(struct p2p_device *dev, int probe_req,
  *	P2P Device Address or P2P Interface Address)
  * @level: Signal level (signal strength of the received frame from the peer)
  * @freq: Frequency on which the Beacon or Probe Response frame was received
+ * @age_ms: Age of the information in milliseconds
  * @ies: IEs from the Beacon or Probe Response frame
  * @ies_len: Length of ies buffer in octets
  * @scan_res: Whether this was based on scan results
@@ -593,13 +594,15 @@ static void p2p_copy_wps_info(struct p2p_device *dev, int probe_req,
  * like Provision Discovery Request that contains P2P Capability and P2P Device
  * Info attributes.
  */
-int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq, int level,
-		   const u8 *ies, size_t ies_len, int scan_res)
+int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq,
+		   unsigned int age_ms, int level, const u8 *ies,
+		   size_t ies_len, int scan_res)
 {
 	struct p2p_device *dev;
 	struct p2p_message msg;
 	const u8 *p2p_dev_addr;
 	int i;
+	struct os_time time_now, time_tmp_age, entry_ts;
 
 	os_memset(&msg, 0, sizeof(msg));
 	if (p2p_parse_ies(ies, ies_len, &msg)) {
@@ -634,7 +637,22 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq, int level,
 		p2p_parse_free(&msg);
 		return -1;
 	}
-	os_get_time(&dev->last_seen);
+
+	os_get_time(&time_now);
+	time_tmp_age.sec = age_ms / 1000;
+	time_tmp_age.usec = (age_ms % 1000) * 1000;
+	os_time_sub(&time_now, &time_tmp_age, &entry_ts);
+
+	/*
+	 * Update the device entry only if the new peer
+	 * entry is newer than the one previously stored.
+	 */
+	if (dev->last_seen.usec > 0 &&
+	    os_time_before(&entry_ts, &dev->last_seen))
+		return -1;
+
+	os_memcpy(&dev->last_seen, &entry_ts, sizeof(struct os_time));
+
 	dev->flags &= ~(P2P_DEV_PROBE_REQ_ONLY | P2P_DEV_GROUP_CLIENT_ONLY);
 
 	if (os_memcmp(addr, p2p_dev_addr, ETH_ALEN) != 0)
@@ -2723,9 +2741,10 @@ static void p2p_prov_disc_cb(struct p2p_data *p2p, int success)
 
 
 int p2p_scan_res_handler(struct p2p_data *p2p, const u8 *bssid, int freq,
-			 int level, const u8 *ies, size_t ies_len)
+			 unsigned int age, int level, const u8 *ies,
+			 size_t ies_len)
 {
-	p2p_add_device(p2p, bssid, freq, level, ies, ies_len, 1);
+	p2p_add_device(p2p, bssid, freq, age, level, ies, ies_len, 1);
 
 	return 0;
 }

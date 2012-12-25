@@ -900,7 +900,7 @@ static void wpas_start_wps_go(struct wpa_supplicant *wpa_s,
 	ssid->psk_set = params->psk_set;
 	if (ssid->psk_set)
 		os_memcpy(ssid->psk, params->psk, sizeof(ssid->psk));
-	else
+	else if (ssid->passphrase)
 		wpa_config_update_psk(ssid);
 	ssid->ap_max_inactivity = wpa_s->parent->conf->p2p_go_max_inactivity;
 

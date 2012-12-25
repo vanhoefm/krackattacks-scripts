@@ -390,6 +390,21 @@ void p2p_reselect_channel(struct p2p_data *p2p,
 		}
 	}
 
+	/* Try a channel where we might be able to use HT40 */
+	for (i = 0; i < intersection->reg_classes; i++) {
+		struct p2p_reg_class *c = &intersection->reg_class[i];
+		if (c->reg_class == 116 || c->reg_class == 117 ||
+		    c->reg_class == 126 || c->reg_class == 127) {
+			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
+				"P2P: Pick possible HT40 channel (reg_class "
+				"%u channel %u) from intersection",
+				c->reg_class, c->channel[0]);
+			p2p->op_reg_class = c->reg_class;
+			p2p->op_channel = c->channel[0];
+			return;
+		}
+	}
+
 	/*
 	 * Fall back to whatever is included in the channel intersection since
 	 * no better options seems to be available.

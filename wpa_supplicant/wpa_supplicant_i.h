@@ -384,7 +384,6 @@ struct wpa_supplicant {
 	int scanning;
 	int sched_scanning;
 	int new_connection;
-	int reassociated_connection;
 
 	int eapol_received; /* number of EAPOL packets received after the
 			     * previous association event */

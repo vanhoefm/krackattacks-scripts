@@ -658,16 +658,14 @@ void wpa_supplicant_set_state(struct wpa_supplicant *wpa_s,
 #if defined(CONFIG_CTRL_IFACE) || !defined(CONFIG_NO_STDOUT_DEBUG)
 		struct wpa_ssid *ssid = wpa_s->current_ssid;
 		wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_CONNECTED "- Connection to "
-			MACSTR " completed %s [id=%d id_str=%s]",
-			MAC2STR(wpa_s->bssid), wpa_s->reassociated_connection ?
-			"(reauth)" : "(auth)",
+			MACSTR " completed [id=%d id_str=%s]",
+			MAC2STR(wpa_s->bssid),
 			ssid ? ssid->id : -1,
 			ssid && ssid->id_str ? ssid->id_str : "");
 #endif /* CONFIG_CTRL_IFACE || !CONFIG_NO_STDOUT_DEBUG */
 		wpas_clear_temp_disabled(wpa_s, ssid, 1);
 		wpa_s->extra_blacklist_count = 0;
 		wpa_s->new_connection = 0;
-		wpa_s->reassociated_connection = 1;
 		wpa_drv_set_operstate(wpa_s, 1);
 #ifndef IEEE8021X_EAPOL
 		wpa_drv_set_supp_port(wpa_s, 1);

@@ -58,6 +58,11 @@ static int pno_start(struct wpa_supplicant *wpa_s)
 	if (wpa_s->pno)
 		return 0;
 
+	if (wpa_s->wpa_state == WPA_SCANNING) {
+		wpa_supplicant_cancel_sched_scan(wpa_s);
+		wpa_supplicant_cancel_scan(wpa_s);
+	}
+
 	os_memset(&params, 0, sizeof(params));
 
 	num_ssid = 0;
@@ -113,11 +118,17 @@ static int pno_start(struct wpa_supplicant *wpa_s)
 
 static int pno_stop(struct wpa_supplicant *wpa_s)
 {
+	int ret = 0;
+
 	if (wpa_s->pno) {
 		wpa_s->pno = 0;
-		return wpa_drv_stop_sched_scan(wpa_s);
+		ret = wpa_drv_stop_sched_scan(wpa_s);
 	}
-	return 0;
+
+	if (wpa_s->wpa_state == WPA_SCANNING)
+		wpa_supplicant_req_scan(wpa_s, 0, 0);
+
+	return ret;
 }
 
 

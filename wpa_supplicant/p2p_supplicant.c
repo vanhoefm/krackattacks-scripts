@@ -796,15 +796,28 @@ static void p2p_go_configured(void *ctx, void *data)
 		wpa_printf(MSG_DEBUG, "P2P: Group setup without provisioning");
 		if (wpa_s->global->p2p_group_formation == wpa_s)
 			wpa_s->global->p2p_group_formation = NULL;
-		wpa_msg(wpa_s->parent, MSG_INFO, P2P_EVENT_GROUP_STARTED
-			"%s GO ssid=\"%s\" freq=%d passphrase=\"%s\" "
-			"go_dev_addr=" MACSTR "%s",
-			wpa_s->ifname,
-			wpa_ssid_txt(ssid->ssid, ssid->ssid_len),
-			ssid->frequency,
-			params->passphrase ? params->passphrase : "",
-			MAC2STR(wpa_s->global->p2p_dev_addr),
-			params->persistent_group ? " [PERSISTENT]" : "");
+		if (os_strlen(params->passphrase) > 0) {
+			wpa_msg(wpa_s->parent, MSG_INFO, P2P_EVENT_GROUP_STARTED
+				"%s GO ssid=\"%s\" freq=%d passphrase=\"%s\" "
+				"go_dev_addr=" MACSTR "%s", wpa_s->ifname,
+				wpa_ssid_txt(ssid->ssid, ssid->ssid_len),
+				ssid->frequency, params->passphrase,
+				MAC2STR(wpa_s->global->p2p_dev_addr),
+				params->persistent_group ? " [PERSISTENT]" :
+				"");
+		} else {
+			char psk[65];
+			wpa_snprintf_hex(psk, sizeof(psk), params->psk,
+					 sizeof(params->psk));
+			wpa_msg(wpa_s->parent, MSG_INFO, P2P_EVENT_GROUP_STARTED
+				"%s GO ssid=\"%s\" freq=%d psk=%s "
+				"go_dev_addr=" MACSTR "%s", wpa_s->ifname,
+				wpa_ssid_txt(ssid->ssid, ssid->ssid_len),
+				ssid->frequency, psk,
+				MAC2STR(wpa_s->global->p2p_dev_addr),
+				params->persistent_group ? " [PERSISTENT]" :
+				"");
+		}
 
 		if (params->persistent_group)
 			network_id = wpas_p2p_store_persistent_group(
@@ -874,13 +887,16 @@ static void wpas_start_wps_go(struct wpa_supplicant *wpa_s,
 	ssid->key_mgmt = WPA_KEY_MGMT_PSK;
 	ssid->proto = WPA_PROTO_RSN;
 	ssid->pairwise_cipher = WPA_CIPHER_CCMP;
-	ssid->passphrase = os_strdup(params->passphrase);
-	if (ssid->passphrase == NULL) {
-		wpa_msg(wpa_s, MSG_ERROR, "P2P: Failed to copy passphrase for "
-			"GO");
-		wpa_config_remove_network(wpa_s->conf, ssid->id);
-		return;
-	}
+	if (os_strlen(params->passphrase) > 0) {
+		ssid->passphrase = os_strdup(params->passphrase);
+		if (ssid->passphrase == NULL) {
+			wpa_msg(wpa_s, MSG_ERROR, "P2P: Failed to copy "
+				"passphrase for GO");
+			wpa_config_remove_network(wpa_s->conf, ssid->id);
+			return;
+		}
+	} else
+		ssid->passphrase = NULL;
 	ssid->psk_set = params->psk_set;
 	if (ssid->psk_set)
 		os_memcpy(ssid->psk, params->psk, sizeof(ssid->psk));
@@ -4099,14 +4115,15 @@ int wpas_p2p_group_add_persistent(struct wpa_supplicant *wpa_s,
 	params.psk_set = ssid->psk_set;
 	if (params.psk_set)
 		os_memcpy(params.psk, ssid->psk, sizeof(params.psk));
-	if (ssid->passphrase == NULL ||
-	    os_strlen(ssid->passphrase) >= sizeof(params.passphrase)) {
-		wpa_printf(MSG_DEBUG, "P2P: Invalid passphrase in persistent "
-			   "group");
-		return -1;
+	if (ssid->passphrase) {
+		if (os_strlen(ssid->passphrase) >= sizeof(params.passphrase)) {
+			wpa_printf(MSG_ERROR, "P2P: Invalid passphrase in "
+				   "persistent group");
+			return -1;
+		}
+		os_strlcpy(params.passphrase, ssid->passphrase,
+			   sizeof(params.passphrase));
 	}
-	os_strlcpy(params.passphrase, ssid->passphrase,
-		   sizeof(params.passphrase));
 	os_memcpy(params.ssid, ssid->ssid, ssid->ssid_len);
 	params.ssid_len = ssid->ssid_len;
 	params.persistent_group = 1;

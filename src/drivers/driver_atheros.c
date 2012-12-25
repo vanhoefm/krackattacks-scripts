@@ -1688,13 +1688,17 @@ atheros_init(struct hostapd_data *hapd, struct wpa_init_params *params)
 	linux_set_iface_flags(drv->ioctl_sock, drv->iface, 0);
 	atheros_set_privacy(drv, 0); /* default to no privacy */
 
-	atheros_receive_pkt(drv);
+	if (atheros_receive_pkt(drv))
+		goto bad;
 
 	if (atheros_wireless_event_init(drv))
 		goto bad;
 
 	return drv;
 bad:
+	atheros_reset_appfilter(drv);
+	if (drv->sock_raw)
+		l2_packet_deinit(drv->sock_raw);
 	if (drv->sock_recv != NULL && drv->sock_recv != drv->sock_xmit)
 		l2_packet_deinit(drv->sock_recv);
 	if (drv->sock_xmit != NULL)

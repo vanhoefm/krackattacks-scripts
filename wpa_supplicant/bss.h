@@ -19,7 +19,11 @@ struct wpa_scan_res;
 #define WPA_BSS_ASSOCIATED		BIT(5)
 #define WPA_BSS_ANQP_FETCH_TRIED	BIT(6)
 
+/**
+ * struct wpa_bss_anqp - ANQP data for a BSS entry (struct wpa_bss)
+ */
 struct wpa_bss_anqp {
+	/** Number of BSS entries referring to this ANQP data instance */
 	unsigned int users;
 #ifdef CONFIG_INTERWORKING
 	struct wpabuf *venue_name;
@@ -40,49 +44,52 @@ struct wpa_bss_anqp {
 
 /**
  * struct wpa_bss - BSS table
- * @list: List entry for struct wpa_supplicant::bss
- * @list_id: List entry for struct wpa_supplicant::bss_id
- * @id: Unique identifier for this BSS entry
- * @scan_miss_count: Number of counts without seeing this BSS
- * @flags: information flags about the BSS/IBSS (WPA_BSS_*)
- * @last_update_idx: Index of the last scan update
- * @bssid: BSSID
- * @hessid: HESSID
- * @freq: frequency of the channel in MHz (e.g., 2412 = channel 1)
- * @beacon_int: beacon interval in TUs (host byte order)
- * @caps: capability information field in host byte order
- * @qual: signal quality
- * @noise: noise level
- * @level: signal level
- * @tsf: Timestamp of last Beacon/Probe Response frame
- * @last_update: Time of the last update (i.e., Beacon or Probe Response RX)
- * @ie_len: length of the following IE field in octets (from Probe Response)
- * @beacon_ie_len: length of the following Beacon IE field in octets
  *
  * This structure is used to store information about neighboring BSSes in
  * generic format. It is mainly updated based on scan results from the driver.
  */
 struct wpa_bss {
+	/** List entry for struct wpa_supplicant::bss */
 	struct dl_list list;
+	/** List entry for struct wpa_supplicant::bss_id */
 	struct dl_list list_id;
+	/** Unique identifier for this BSS entry */
 	unsigned int id;
+	/** Number of counts without seeing this BSS */
 	unsigned int scan_miss_count;
+	/** Index of the last scan update */
 	unsigned int last_update_idx;
+	/** Information flags about the BSS/IBSS (WPA_BSS_*) */
 	unsigned int flags;
+	/** BSSID */
 	u8 bssid[ETH_ALEN];
+	/** HESSID */
 	u8 hessid[ETH_ALEN];
+	/** SSID */
 	u8 ssid[32];
+	/** Length of SSID */
 	size_t ssid_len;
+	/** Frequency of the channel in MHz (e.g., 2412 = channel 1) */
 	int freq;
+	/** Beacon interval in TUs (host byte order) */
 	u16 beacon_int;
+	/** Capability information field in host byte order */
 	u16 caps;
+	/** Signal quality */
 	int qual;
+	/** Noise level */
 	int noise;
+	/** Signal level */
 	int level;
+	/** Timestamp of last Beacon/Probe Response frame */
 	u64 tsf;
+	/** Time of the last update (i.e., Beacon or Probe Response RX) */
 	struct os_time last_update;
+	/** ANQP data */
 	struct wpa_bss_anqp *anqp;
+	/** Length of the following IE field in octets (from Probe Response) */
 	size_t ie_len;
+	/** Length of the following Beacon IE field in octets */
 	size_t beacon_ie_len;
 	/* followed by ie_len octets of IEs */
 	/* followed by beacon_ie_len octets of IEs */

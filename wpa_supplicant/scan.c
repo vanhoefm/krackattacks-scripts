@@ -1274,53 +1274,6 @@ struct wpabuf * wpa_scan_get_vendor_ie_multi(const struct wpa_scan_res *res,
 }
 
 
-/**
- * wpa_scan_get_vendor_ie_multi_beacon - Fetch vendor IE data from a scan result
- * @res: Scan result entry
- * @vendor_type: Vendor type (four octets starting the IE payload)
- * Returns: Pointer to the information element payload or %NULL if not found
- *
- * This function returns concatenated payload of possibly fragmented vendor
- * specific information elements in the scan result. The caller is responsible
- * for freeing the returned buffer.
- *
- * This function is like wpa_scan_get_vendor_ie_multi(), but uses IE buffer only
- * from Beacon frames instead of either Beacon or Probe Response frames.
- */
-struct wpabuf * wpa_scan_get_vendor_ie_multi_beacon(
-	const struct wpa_scan_res *res, u32 vendor_type)
-{
-	struct wpabuf *buf;
-	const u8 *end, *pos;
-
-	if (res->beacon_ie_len == 0)
-		return NULL;
-	buf = wpabuf_alloc(res->beacon_ie_len);
-	if (buf == NULL)
-		return NULL;
-
-	pos = (const u8 *) (res + 1);
-	pos += res->ie_len;
-	end = pos + res->beacon_ie_len;
-
-	while (pos + 1 < end) {
-		if (pos + 2 + pos[1] > end)
-			break;
-		if (pos[0] == WLAN_EID_VENDOR_SPECIFIC && pos[1] >= 4 &&
-		    vendor_type == WPA_GET_BE32(&pos[2]))
-			wpabuf_put_data(buf, pos + 2 + 4, pos[1] - 4);
-		pos += 2 + pos[1];
-	}
-
-	if (wpabuf_len(buf) == 0) {
-		wpabuf_free(buf);
-		buf = NULL;
-	}
-
-	return buf;
-}
-
-
 /*
  * Channels with a great SNR can operate at full rate. What is a great SNR?
  * This doc https://supportforums.cisco.com/docs/DOC-12954 says, "the general

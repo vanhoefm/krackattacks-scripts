@@ -344,10 +344,6 @@ void p2p_reselect_channel(struct p2p_data *p2p,
 	u8 op_reg_class, op_channel;
 	unsigned int i;
 
-	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Selected operating "
-		"channel (reg_class %u channel %u) not acceptable to the "
-		"peer", p2p->op_reg_class, p2p->op_channel);
-
 	/* First, try to pick the best channel from another band */
 	freq = p2p_channel_to_freq(p2p->cfg->country, p2p->op_reg_class,
 				   p2p->op_channel);
@@ -406,6 +402,20 @@ void p2p_reselect_channel(struct p2p_data *p2p,
 	}
 
 	/*
+	 * Try to see if the original channel is in the intersection. If
+	 * so, no need to change anything, as it already contains some
+	 * randomness.
+	 */
+	if (p2p_channels_includes(intersection, p2p->op_reg_class,
+				  p2p->op_channel)) {
+		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
+			"P2P: Using original operating class and channel "
+			"(op_class %u channel %u) from intersection",
+			p2p->op_reg_class, p2p->op_channel);
+		return;
+	}
+
+	/*
 	 * Fall back to whatever is included in the channel intersection since
 	 * no better options seems to be available.
 	 */
@@ -449,6 +459,17 @@ static int p2p_go_select_channel(struct p2p_data *p2p, struct p2p_device *dev,
 				"not support the forced channel");
 			return -1;
 		}
+
+		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Selected operating "
+			"channel (op_class %u channel %u) not acceptable to "
+			"the peer", p2p->op_reg_class, p2p->op_channel);
+		p2p_reselect_channel(p2p, &intersection);
+	} else if (!(dev->flags & P2P_DEV_FORCE_FREQ) &&
+		   !p2p->cfg->cfg_op_channel) {
+		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Try to optimize "
+			"channel selection with peer information received; "
+			"previously selected op_class %u channel %u",
+			p2p->op_reg_class, p2p->op_channel);
 		p2p_reselect_channel(p2p, &intersection);
 	}
 

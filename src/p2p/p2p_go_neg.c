@@ -336,6 +336,17 @@ static struct wpabuf * p2p_build_go_neg_resp(struct p2p_data *p2p,
 }
 
 
+/**
+ * p2p_reselect_channel - Re-select operating channel based on peer information
+ * @p2p: P2P module context from p2p_init()
+ * @intersection: Support channel list intersection from local and peer
+ *
+ * This function is used to re-select the best channel after having received
+ * information from the peer to allow supported channel lists to be intersected.
+ * This can be used to improve initial channel selection done in
+ * p2p_prepare_channel() prior to the start of GO Negotiation. In addition, this
+ * can be used for Invitation case.
+ */
 void p2p_reselect_channel(struct p2p_data *p2p,
 			  struct p2p_channels *intersection)
 {

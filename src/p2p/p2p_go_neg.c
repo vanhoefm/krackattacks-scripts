@@ -442,8 +442,15 @@ static int p2p_go_select_channel(struct p2p_data *p2p, struct p2p_device *dev,
 	}
 
 	if (!p2p_channels_includes(&intersection, p2p->op_reg_class,
-				   p2p->op_channel))
+				   p2p->op_channel)) {
+		if (dev->flags & P2P_DEV_FORCE_FREQ) {
+			*status = P2P_SC_FAIL_NO_COMMON_CHANNELS;
+			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Peer does "
+				"not support the forced channel");
+			return -1;
+		}
 		p2p_reselect_channel(p2p, &intersection);
+	}
 
 	if (!p2p->ssid_set) {
 		p2p_build_ssid(p2p, p2p->ssid, &p2p->ssid_len);

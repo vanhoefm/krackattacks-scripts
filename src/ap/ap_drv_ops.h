@@ -13,6 +13,7 @@ enum wpa_driver_if_type;
 struct wpa_bss_params;
 struct wpa_driver_scan_params;
 struct ieee80211_ht_capabilities;
+struct ieee80211_vht_capabilities;
 
 u32 hostapd_sta_flags_to_drv(u32 flags);
 int hostapd_build_ap_extra_ies(struct hostapd_data *hapd,
@@ -37,6 +38,7 @@ int hostapd_sta_add(struct hostapd_data *hapd,
 		    const u8 *supp_rates, size_t supp_rates_len,
 		    u16 listen_interval,
 		    const struct ieee80211_ht_capabilities *ht_capab,
+		    const struct ieee80211_vht_capabilities *vht_capab,
 		    u32 flags, u8 qosinfo);
 int hostapd_set_privacy(struct hostapd_data *hapd, int enabled);
 int hostapd_set_generic_elem(struct hostapd_data *hapd, const u8 *elem,

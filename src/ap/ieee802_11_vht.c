@@ -108,3 +108,14 @@ u16 copy_sta_vht_capab(struct hostapd_data *hapd, struct sta_info *sta,
 
 	return WLAN_STATUS_SUCCESS;
 }
+
+void hostapd_get_vht_capab(struct hostapd_data *hapd,
+			   struct ieee80211_vht_capabilities *vht_cap,
+			   struct ieee80211_vht_capabilities *neg_vht_cap)
+{
+	if (vht_cap == NULL)
+		return;
+	os_memcpy(neg_vht_cap, vht_cap, sizeof(*neg_vht_cap));
+
+	/* TODO: mask own capabilities, like get_ht_capab() */
+}

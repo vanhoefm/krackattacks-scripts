@@ -1708,6 +1708,7 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 	struct sta_info *sta;
 	int new_assoc = 1;
 	struct ieee80211_ht_capabilities ht_cap;
+	struct ieee80211_vht_capabilities vht_cap;
 
 	if (len < IEEE80211_HDRLEN + (reassoc ? sizeof(mgmt->u.reassoc_resp) :
 				      sizeof(mgmt->u.assoc_resp))) {
@@ -1780,11 +1781,16 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 	if (sta->flags & WLAN_STA_HT)
 		hostapd_get_ht_capab(hapd, sta->ht_capabilities, &ht_cap);
 #endif /* CONFIG_IEEE80211N */
+#ifdef CONFIG_IEEE80211AC
+	if (sta->flags & WLAN_STA_VHT)
+		hostapd_get_vht_capab(hapd, sta->vht_capabilities, &vht_cap);
+#endif /* CONFIG_IEEE80211AC */
 
 	if (hostapd_sta_add(hapd, sta->addr, sta->aid, sta->capability,
 			    sta->supported_rates, sta->supported_rates_len,
 			    sta->listen_interval,
 			    sta->flags & WLAN_STA_HT ? &ht_cap : NULL,
+			    sta->flags & WLAN_STA_VHT ? &vht_cap : NULL,
 			    sta->flags, sta->qosinfo)) {
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_NOTICE,

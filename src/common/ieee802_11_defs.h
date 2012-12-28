@@ -712,6 +712,12 @@ struct ieee80211_vht_operation {
 #define VHT_CAP_RX_ANTENNA_PATTERN                  ((u32) BIT(28))
 #define VHT_CAP_TX_ANTENNA_PATTERN                  ((u32) BIT(29))
 
+/* VHT channel widths */
+#define VHT_CHANWIDTH_USE_HT	0
+#define VHT_CHANWIDTH_80MHZ	1
+#define VHT_CHANWIDTH_160MHZ	2
+#define VHT_CHANWIDTH_80P80MHZ	3
+
 #define OUI_MICROSOFT 0x0050f2 /* Microsoft (also used in Wi-Fi specs)
 				* 00:50:F2 */
 #define WPA_IE_VENDOR_TYPE 0x0050f201

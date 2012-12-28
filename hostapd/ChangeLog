@@ -89,6 +89,8 @@ ChangeLog for hostapd
 	* added a workaround for WPS PBC session overlap detection to avoid
 	  interop issues with deployed station implementations that do not
 	  remove active PBC indication from Probe Request frames properly
+	* added support for using SQLite for the eap_user database
+	* added Acct-Session-Id attribute into Access-Request messages
 
 2012-05-10 - v1.0
 	* Add channel selection support in hostapd. See hostapd.conf.

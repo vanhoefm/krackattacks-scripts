@@ -5811,6 +5811,12 @@ static int wpa_driver_nl80211_sta_add(void *priv,
 			params->ht_capabilities);
 	}
 
+	if (params->vht_capabilities) {
+		NLA_PUT(msg, NL80211_ATTR_VHT_CAPABILITY,
+			sizeof(*params->vht_capabilities),
+			params->vht_capabilities);
+	}
+
 	os_memset(&upd, 0, sizeof(upd));
 	upd.mask = sta_flags_nl80211(params->flags);
 	upd.set = upd.mask;

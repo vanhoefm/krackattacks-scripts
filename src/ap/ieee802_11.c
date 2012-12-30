@@ -392,7 +392,7 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 			    u8 auth_transaction)
 {
 	u16 resp = WLAN_STATUS_SUCCESS;
-	struct wpabuf *data;
+	struct wpabuf *data = NULL;
 
 	if (!sta->sae) {
 		sta->sae = os_zalloc(sizeof(*sta->sae));
@@ -407,8 +407,12 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 		resp = handle_sae_commit(hapd, sta, mgmt->u.auth.variable,
 					 ((u8 *) mgmt) + len -
 					 mgmt->u.auth.variable);
-		if (resp == WLAN_STATUS_SUCCESS)
+		if (resp == WLAN_STATUS_SUCCESS) {
 			sta->sae->state = SAE_COMMIT;
+			data = auth_build_sae_commit(hapd, sta);
+			if (data == NULL)
+				resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+		}
 	} else if (auth_transaction == 2) {
 		if (sta->sae->state != SAE_COMMIT) {
 			hostapd_logger(hapd, sta->addr,
@@ -428,6 +432,10 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 			wpa_auth_sm_event(sta->wpa_sm, WPA_AUTH);
 			sta->auth_alg = WLAN_AUTH_SAE;
 			mlme_authenticate_indication(hapd, sta);
+
+			data = auth_build_sae_confirm(hapd, sta);
+			if (data == NULL)
+				resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
 		}
 	} else {
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
@@ -438,16 +446,6 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 	}
 
 	sta->auth_alg = WLAN_AUTH_SAE;
-
-	if (resp == WLAN_STATUS_SUCCESS) {
-		if (auth_transaction == 1)
-			data = auth_build_sae_commit(hapd, sta);
-		else
-			data = auth_build_sae_confirm(hapd, sta);
-		if (data == NULL)
-			resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
-	} else
-		data = NULL;
 
 	send_auth_reply(hapd, mgmt->sa, mgmt->bssid, WLAN_AUTH_SAE,
 			auth_transaction, resp,

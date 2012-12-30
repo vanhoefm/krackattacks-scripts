@@ -1,6 +1,6 @@
 /*
  * wpa_supplicant - SME
- * Copyright (c) 2009-2010, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2009-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -42,20 +42,32 @@ static void sme_stop_sa_query(struct wpa_supplicant *wpa_s);
 
 #ifdef CONFIG_SAE
 
-static struct wpabuf * sme_auth_build_sae_commit(struct wpa_supplicant *wpa_s)
+static struct wpabuf * sme_auth_build_sae_commit(struct wpa_supplicant *wpa_s,
+						 struct wpa_ssid *ssid,
+						 const u8 *bssid)
 {
 	struct wpabuf *buf;
 
-	buf = wpabuf_alloc(4 + 2);
+	if (ssid->passphrase == NULL) {
+		wpa_printf(MSG_DEBUG, "SAE: No password available");
+		return NULL;
+	}
+
+	if (sae_prepare_commit(wpa_s->own_addr, bssid,
+			       (u8 *) ssid->passphrase,
+			       os_strlen(ssid->passphrase),
+			       &wpa_s->sme.sae) < 0) {
+		wpa_printf(MSG_DEBUG, "SAE: Could not pick PWE");
+		return NULL;
+	}
+
+	buf = wpabuf_alloc(4 + SAE_COMMIT_MAX_LEN);
 	if (buf == NULL)
 		return NULL;
 
 	wpabuf_put_le16(buf, 1); /* Transaction seq# */
 	wpabuf_put_le16(buf, WLAN_STATUS_SUCCESS);
-	wpabuf_put_le16(buf, 19); /* Finite Cyclic Group */
-	/* TODO: Anti-Clogging Token (if requested) */
-	/* TODO: Scalar */
-	/* TODO: Element */
+	sae_write_commit(&wpa_s->sme.sae, buf);
 
 	return buf;
 }
@@ -326,7 +338,8 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 #ifdef CONFIG_SAE
 	if (params.auth_alg == WPA_AUTH_ALG_SAE) {
 		if (start)
-			resp = sme_auth_build_sae_commit(wpa_s);
+			resp = sme_auth_build_sae_commit(wpa_s, ssid,
+							 bss->bssid);
 		else
 			resp = sme_auth_build_sae_confirm(wpa_s);
 		if (resp == NULL)

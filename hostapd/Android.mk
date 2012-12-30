@@ -202,6 +202,7 @@ endif
 
 ifdef CONFIG_SAE
 L_CFLAGS += -DCONFIG_SAE
+OBJS += src/common/sae.c
 endif
 
 ifdef CONFIG_IEEE80211N

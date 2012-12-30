@@ -174,6 +174,7 @@ endif
 
 ifdef CONFIG_SAE
 CFLAGS += -DCONFIG_SAE
+OBJS += ../src/common/sae.o
 endif
 
 ifdef CONFIG_WNM

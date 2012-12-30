@@ -323,14 +323,18 @@ static struct wpabuf * auth_build_sae_commit(struct hostapd_data *hapd,
 {
 	struct wpabuf *buf;
 
-	buf = wpabuf_alloc(2);
+	if (sae_prepare_commit(hapd->own_addr, sta->addr,
+			       (u8 *) hapd->conf->ssid.wpa_passphrase,
+			       os_strlen(hapd->conf->ssid.wpa_passphrase),
+			       sta->sae) < 0) {
+		wpa_printf(MSG_DEBUG, "SAE: Could not pick PWE");
+		return NULL;
+	}
+
+	buf = wpabuf_alloc(SAE_COMMIT_MAX_LEN);
 	if (buf == NULL)
 		return NULL;
-
-	wpabuf_put_le16(buf, 19); /* Finite Cyclic Group */
-	/* TODO: Anti-Clogging Token (if requested) */
-	/* TODO: Scalar */
-	/* TODO: Element */
+	sae_write_commit(sta->sae, buf);
 
 	return buf;
 }

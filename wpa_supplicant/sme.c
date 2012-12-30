@@ -399,21 +399,6 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 
 #ifdef CONFIG_SAE
 
-static int sme_sae_process_confirm(struct wpa_supplicant *wpa_s, const u8 *data,
-				   size_t len)
-{
-	u16 rc;
-
-	if (len < 2)
-		return -1;
-	rc = WPA_GET_LE16(data);
-	wpa_printf(MSG_DEBUG, "SAE: peer-send-confirm %u", rc);
-
-	/* TODO */
-	return 0;
-}
-
-
 static int sme_sae_auth(struct wpa_supplicant *wpa_s, u16 auth_transaction,
 			u16 status_code, const u8 *data, size_t len)
 {
@@ -448,7 +433,7 @@ static int sme_sae_auth(struct wpa_supplicant *wpa_s, u16 auth_transaction,
 		wpa_dbg(wpa_s, MSG_DEBUG, "SME SAE confirm");
 		if (wpa_s->sme.sae.state != SAE_CONFIRM)
 			return -1;
-		if (sme_sae_process_confirm(wpa_s, data, len) < 0)
+		if (sae_check_confirm(&wpa_s->sme.sae, data, len) < 0)
 			return -1;
 		return 1;
 	}

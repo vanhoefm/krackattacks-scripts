@@ -574,3 +574,51 @@ void sae_write_confirm(struct sae_data *sae, struct wpabuf *buf)
 	hmac_sha256_vector(sae->kck, sizeof(sae->kck), 5, addr, len,
 			   wpabuf_put(buf, SHA256_MAC_LEN));
 }
+
+
+int sae_check_confirm(struct sae_data *sae, const u8 *data, size_t len)
+{
+	u16 rc;
+	const u8 *addr[5];
+	size_t elen[5];
+	u8 verifier[SHA256_MAC_LEN];
+
+	wpa_hexdump(MSG_DEBUG, "SAE: Confirm fields", data, len);
+
+	if (len < 2 + SHA256_MAC_LEN) {
+		wpa_printf(MSG_DEBUG, "SAE: Too short confirm message");
+		return -1;
+	}
+
+	rc = WPA_GET_LE16(data);
+	wpa_printf(MSG_DEBUG, "SAE: peer-send-confirm %u", rc);
+
+	/* Confirm
+	 * CN(key, X, Y, Z, ...) =
+	 *    HMAC-SHA256(key, D2OS(X) || D2OS(Y) || D2OS(Z) | ...)
+	 * verifier = CN(KCK, peer-send-confirm, peer-commit-scalar,
+	 *               PEER-COMMIT-ELEMENT, commit-scalar, COMMIT-ELEMENT)
+	 */
+	addr[0] = data;
+	elen[0] = 2;
+	addr[1] = sae->peer_commit_scalar;
+	elen[1] = 32;
+	addr[2] = sae->peer_commit_element;
+	elen[2] = 2 * 32;
+	addr[3] = sae->own_commit_scalar;
+	elen[3] = 32;
+	addr[4] = sae->own_commit_element;
+	elen[4] = 2 * 32;
+	hmac_sha256_vector(sae->kck, sizeof(sae->kck), 5, addr, elen, verifier);
+
+	if (os_memcmp(verifier, data + 2, SHA256_MAC_LEN) != 0) {
+		wpa_printf(MSG_DEBUG, "SAE: Confirm mismatch");
+		wpa_hexdump(MSG_DEBUG, "SAE: Received confirm",
+			    data + 2, SHA256_MAC_LEN);
+		wpa_hexdump(MSG_DEBUG, "SAE: Calculated verifier",
+			    verifier, SHA256_MAC_LEN);
+		return -1;
+	}
+
+	return 0;
+}

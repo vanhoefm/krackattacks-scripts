@@ -365,22 +365,6 @@ static struct wpabuf * auth_build_sae_confirm(struct hostapd_data *hapd,
 }
 
 
-static u16 handle_sae_confirm(struct hostapd_data *hapd, struct sta_info *sta,
-			      const u8 *data, size_t len)
-{
-	u16 rc;
-
-	wpa_hexdump(MSG_DEBUG, "SAE confirm fields", data, len);
-
-	if (len < 2)
-		return WLAN_STATUS_UNSPECIFIED_FAILURE;
-	rc = WPA_GET_LE16(data);
-	wpa_printf(MSG_DEBUG, "SAE: peer-send-confirm %u", rc);
-
-	return WLAN_STATUS_SUCCESS;
-}
-
-
 static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 			    const struct ieee80211_mgmt *mgmt, size_t len,
 			    u8 auth_transaction)
@@ -418,10 +402,12 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_DEBUG,
 			       "SAE authentication (RX confirm)");
-		resp = handle_sae_confirm(hapd, sta, mgmt->u.auth.variable,
-					  ((u8 *) mgmt) + len -
-					  mgmt->u.auth.variable);
-		if (resp == WLAN_STATUS_SUCCESS) {
+		if (sae_check_confirm(sta->sae, mgmt->u.auth.variable,
+				       ((u8 *) mgmt) + len -
+				       mgmt->u.auth.variable) < 0) {
+			resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+		} else {
+			resp = WLAN_STATUS_SUCCESS;
 			sta->flags |= WLAN_STA_AUTH;
 			wpa_auth_sm_event(sta->wpa_sm, WPA_AUTH);
 			sta->auth_alg = WLAN_AUTH_SAE;

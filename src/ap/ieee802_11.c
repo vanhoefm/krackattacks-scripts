@@ -355,13 +355,11 @@ static struct wpabuf * auth_build_sae_confirm(struct hostapd_data *hapd,
 {
 	struct wpabuf *buf;
 
-	buf = wpabuf_alloc(2);
+	buf = wpabuf_alloc(SAE_CONFIRM_MAX_LEN);
 	if (buf == NULL)
 		return NULL;
 
-	wpabuf_put_le16(buf, sta->sae->send_confirm);
-	sta->sae->send_confirm++;
-	/* TODO: Confirm */
+	sae_write_confirm(sta->sae, buf);
 
 	return buf;
 }

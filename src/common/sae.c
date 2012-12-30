@@ -542,3 +542,35 @@ u16 sae_parse_commit(struct sae_data *sae, const u8 *data, size_t len)
 
 	return WLAN_STATUS_SUCCESS;
 }
+
+
+void sae_write_confirm(struct sae_data *sae, struct wpabuf *buf)
+{
+	const u8 *sc;
+	const u8 *addr[5];
+	size_t len[5];
+
+	/* Send-Confirm */
+	sc = wpabuf_put(buf, 0);
+	wpabuf_put_le16(buf, sae->send_confirm);
+	sae->send_confirm++;
+
+	/* Confirm
+	 * CN(key, X, Y, Z, ...) =
+	 *    HMAC-SHA256(key, D2OS(X) || D2OS(Y) || D2OS(Z) | ...)
+	 * confirm = CN(KCK, send-confirm, commit-scalar, COMMIT-ELEMENT,
+	 *              peer-commit-scalar, PEER-COMMIT-ELEMENT)
+	 */
+	addr[0] = sc;
+	len[0] = 2;
+	addr[1] = sae->own_commit_scalar;
+	len[1] = 32;
+	addr[2] = sae->own_commit_element;
+	len[2] = 2 * 32;
+	addr[3] = sae->peer_commit_scalar;
+	len[3] = 32;
+	addr[4] = sae->peer_commit_element;
+	len[4] = 2 * 32;
+	hmac_sha256_vector(sae->kck, sizeof(sae->kck), 5, addr, len,
+			   wpabuf_put(buf, SHA256_MAC_LEN));
+}

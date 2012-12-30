@@ -77,15 +77,13 @@ static struct wpabuf * sme_auth_build_sae_confirm(struct wpa_supplicant *wpa_s)
 {
 	struct wpabuf *buf;
 
-	buf = wpabuf_alloc(4 + 2);
+	buf = wpabuf_alloc(4 + SAE_CONFIRM_MAX_LEN);
 	if (buf == NULL)
 		return NULL;
 
 	wpabuf_put_le16(buf, 2); /* Transaction seq# */
 	wpabuf_put_le16(buf, WLAN_STATUS_SUCCESS);
-	wpabuf_put_le16(buf, wpa_s->sme.sae.send_confirm);
-	wpa_s->sme.sae.send_confirm++;
-	/* TODO: Confirm */
+	sae_write_confirm(&wpa_s->sme.sae, buf);
 
 	return buf;
 }

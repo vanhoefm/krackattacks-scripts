@@ -10,6 +10,7 @@
 #define SAE_H
 
 #define SAE_COMMIT_MAX_LEN (2 + 3 * 32)
+#define SAE_CONFIRM_MAX_LEN (2 + 32)
 
 struct sae_data {
 	enum { SAE_INIT, SAE_COMMIT, SAE_CONFIRM } state;
@@ -30,5 +31,6 @@ int sae_prepare_commit(const u8 *addr1, const u8 *addr2,
 int sae_process_commit(struct sae_data *sae);
 void sae_write_commit(struct sae_data *sae, struct wpabuf *buf);
 u16 sae_parse_commit(struct sae_data *sae, const u8 *data, size_t len);
+void sae_write_confirm(struct sae_data *sae, struct wpabuf *buf);
 
 #endif /* SAE_H */

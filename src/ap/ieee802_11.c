@@ -318,16 +318,26 @@ static void handle_auth_ft_finish(void *ctx, const u8 *dst, const u8 *bssid,
 
 #ifdef CONFIG_SAE
 
-static struct wpabuf * auth_build_sae_commit(struct hostapd_data *hapd,
-					     struct sta_info *sta)
+static struct wpabuf * auth_process_sae_commit(struct hostapd_data *hapd,
+					       struct sta_info *sta)
 {
 	struct wpabuf *buf;
+
+	if (hapd->conf->ssid.wpa_passphrase == NULL) {
+		wpa_printf(MSG_DEBUG, "SAE: No password available");
+		return NULL;
+	}
 
 	if (sae_prepare_commit(hapd->own_addr, sta->addr,
 			       (u8 *) hapd->conf->ssid.wpa_passphrase,
 			       os_strlen(hapd->conf->ssid.wpa_passphrase),
 			       sta->sae) < 0) {
 		wpa_printf(MSG_DEBUG, "SAE: Could not pick PWE");
+		return NULL;
+	}
+
+	if (sae_process_commit(sta->sae) < 0) {
+		wpa_printf(MSG_DEBUG, "SAE: Failed to process peer commit");
 		return NULL;
 	}
 
@@ -354,24 +364,6 @@ static struct wpabuf * auth_build_sae_confirm(struct hostapd_data *hapd,
 	/* TODO: Confirm */
 
 	return buf;
-}
-
-
-static u16 handle_sae_commit(struct hostapd_data *hapd, struct sta_info *sta,
-			     const u8 *data, size_t len)
-{
-	wpa_hexdump(MSG_DEBUG, "SAE commit fields", data, len);
-
-	/* Check Finite Cyclic Group */
-	if (len < 2)
-		return WLAN_STATUS_UNSPECIFIED_FAILURE;
-	if (WPA_GET_LE16(data) != 19) {
-		wpa_printf(MSG_DEBUG, "SAE: Unsupported Finite Cyclic Group %u",
-			   WPA_GET_LE16(data));
-		return WLAN_STATUS_FINITE_CYCLIC_GROUP_NOT_SUPPORTED;
-	}
-
-	return WLAN_STATUS_SUCCESS;
 }
 
 
@@ -408,12 +400,12 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_DEBUG,
 			       "start SAE authentication (RX commit)");
-		resp = handle_sae_commit(hapd, sta, mgmt->u.auth.variable,
-					 ((u8 *) mgmt) + len -
-					 mgmt->u.auth.variable);
+		resp = sae_parse_commit(sta->sae, mgmt->u.auth.variable,
+					((const u8 *) mgmt) + len -
+					mgmt->u.auth.variable);
 		if (resp == WLAN_STATUS_SUCCESS) {
 			sta->sae->state = SAE_COMMIT;
-			data = auth_build_sae_commit(hapd, sta);
+			data = auth_process_sae_commit(hapd, sta);
 			if (data == NULL)
 				resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
 		}

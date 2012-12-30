@@ -401,24 +401,6 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 
 #ifdef CONFIG_SAE
 
-static int sme_sae_process_commit(struct wpa_supplicant *wpa_s, const u8 *data,
-				  size_t len)
-{
-	/* Check Finite Cyclic Group */
-	if (len < 2)
-		return -1;
-	if (WPA_GET_LE16(data) != 19) {
-		wpa_printf(MSG_DEBUG, "SAE: Unsupported Finite Cyclic Group %u",
-			   WPA_GET_LE16(data));
-		return -1;
-	}
-
-	/* TODO */
-
-	return 0;
-}
-
-
 static int sme_sae_process_confirm(struct wpa_supplicant *wpa_s, const u8 *data,
 				   size_t len)
 {
@@ -451,8 +433,16 @@ static int sme_sae_auth(struct wpa_supplicant *wpa_s, u16 auth_transaction,
 			return -1;
 		if (wpa_s->sme.sae.state != SAE_COMMIT)
 			return -1;
-		if (sme_sae_process_commit(wpa_s, data, len) < 0)
+		if (sae_parse_commit(&wpa_s->sme.sae, data, len) !=
+		    WLAN_STATUS_SUCCESS)
 			return -1;
+
+		if (sae_process_commit(&wpa_s->sme.sae) < 0) {
+			wpa_printf(MSG_DEBUG, "SAE: Failed to process peer "
+				   "commit");
+			return -1;
+		}
+
 		sme_send_authentication(wpa_s, wpa_s->current_bss,
 					wpa_s->current_ssid, 0);
 		return 0;

@@ -1,6 +1,6 @@
 /*
  * hostapd / WPA authenticator glue code
- * Copyright (c) 2002-2011, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -10,6 +10,7 @@
 
 #include "utils/common.h"
 #include "common/ieee802_11_defs.h"
+#include "common/sae.h"
 #include "eapol_auth/eapol_auth_sm.h"
 #include "eapol_auth/eapol_auth_sm_i.h"
 #include "eap_server/eap.h"
@@ -184,7 +185,17 @@ static const u8 * hostapd_wpa_auth_get_psk(void *ctx, const u8 *addr,
 {
 	struct hostapd_data *hapd = ctx;
 	struct sta_info *sta = ap_get_sta(hapd, addr);
-	const u8 *psk = hostapd_get_psk(hapd->conf, addr, prev_psk);
+	const u8 *psk;
+
+#ifdef CONFIG_SAE
+	if (sta && sta->auth_alg == WLAN_AUTH_SAE) {
+		if (!sta->sae || prev_psk)
+			return NULL;
+		return sta->sae->pmk;
+	}
+#endif /* CONFIG_SAE */
+
+	psk = hostapd_get_psk(hapd->conf, addr, prev_psk);
 	/*
 	 * This is about to iterate over all psks, prev_psk gives the last
 	 * returned psk which should not be returned again.

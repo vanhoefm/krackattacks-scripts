@@ -488,6 +488,10 @@ void sme_event_auth(struct wpa_supplicant *wpa_s, union wpa_event_data *data)
 		}
 		if (res != 1)
 			return;
+
+		wpa_printf(MSG_DEBUG, "SME: SAE completed - setting PMK for "
+			   "4-way handshake");
+		wpa_sm_set_pmk(wpa_s->wpa, wpa_s->sme.sae.pmk, PMK_LEN);
 	}
 #endif /* CONFIG_SAE */
 

@@ -14,6 +14,7 @@
 #include "common/ieee802_11_common.h"
 #include "eapol_supp/eapol_supp_sm.h"
 #include "common/wpa_common.h"
+#include "common/sae.h"
 #include "rsn_supp/wpa.h"
 #include "rsn_supp/pmksa_cache.h"
 #include "config.h"
@@ -70,8 +71,8 @@ static struct wpabuf * sme_auth_build_sae_confirm(struct wpa_supplicant *wpa_s)
 
 	wpabuf_put_le16(buf, 2); /* Transaction seq# */
 	wpabuf_put_le16(buf, WLAN_STATUS_SUCCESS);
-	wpabuf_put_le16(buf, wpa_s->sme.sae_send_confirm);
-	wpa_s->sme.sae_send_confirm++;
+	wpabuf_put_le16(buf, wpa_s->sme.sae.send_confirm);
+	wpa_s->sme.sae.send_confirm++;
 	/* TODO: Confirm */
 
 	return buf;
@@ -332,7 +333,7 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 			return;
 		params.sae_data = wpabuf_head(resp);
 		params.sae_data_len = wpabuf_len(resp);
-		wpa_s->sme.sae_state = start ? SME_SAE_COMMIT : SME_SAE_CONFIRM;
+		wpa_s->sme.sae.state = start ? SAE_COMMIT : SAE_CONFIRM;
 	}
 #endif /* CONFIG_SAE */
 
@@ -377,8 +378,10 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 void sme_authenticate(struct wpa_supplicant *wpa_s,
 		      struct wpa_bss *bss, struct wpa_ssid *ssid)
 {
-	wpa_s->sme.sae_state = SME_SAE_INIT;
-	wpa_s->sme.sae_send_confirm = 0;
+#ifdef CONFIG_SAE
+	wpa_s->sme.sae.state = SAE_INIT;
+	wpa_s->sme.sae.send_confirm = 0;
+#endif /* CONFIG_SAE */
 	sme_send_authentication(wpa_s, bss, ssid, 1);
 }
 
@@ -433,7 +436,7 @@ static int sme_sae_auth(struct wpa_supplicant *wpa_s, u16 auth_transaction,
 		if (wpa_s->current_bss == NULL ||
 		    wpa_s->current_ssid == NULL)
 			return -1;
-		if (wpa_s->sme.sae_state != SME_SAE_COMMIT)
+		if (wpa_s->sme.sae.state != SAE_COMMIT)
 			return -1;
 		if (sme_sae_process_commit(wpa_s, data, len) < 0)
 			return -1;
@@ -442,7 +445,7 @@ static int sme_sae_auth(struct wpa_supplicant *wpa_s, u16 auth_transaction,
 		return 0;
 	} else if (auth_transaction == 2) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "SME SAE confirm");
-		if (wpa_s->sme.sae_state != SME_SAE_CONFIRM)
+		if (wpa_s->sme.sae.state != SAE_CONFIRM)
 			return -1;
 		if (sme_sae_process_confirm(wpa_s, data, len) < 0)
 			return -1;

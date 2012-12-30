@@ -127,8 +127,7 @@ struct sta_info {
 	struct os_time connected_time;
 
 #ifdef CONFIG_SAE
-	enum { SAE_INIT, SAE_COMMIT, SAE_CONFIRM } sae_state;
-	u16 sae_send_confirm;
+	struct sae_data *sae;
 #endif /* CONFIG_SAE */
 };
 

@@ -17,6 +17,7 @@
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
 #include "common/wpa_ctrl.h"
+#include "common/sae.h"
 #include "radius/radius.h"
 #include "radius/radius_client.h"
 #include "p2p/p2p.h"
@@ -344,8 +345,8 @@ static struct wpabuf * auth_build_sae_confirm(struct hostapd_data *hapd,
 	if (buf == NULL)
 		return NULL;
 
-	wpabuf_put_le16(buf, sta->sae_send_confirm);
-	sta->sae_send_confirm++;
+	wpabuf_put_le16(buf, sta->sae->send_confirm);
+	sta->sae->send_confirm++;
 	/* TODO: Confirm */
 
 	return buf;
@@ -393,6 +394,12 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 	u16 resp = WLAN_STATUS_SUCCESS;
 	struct wpabuf *data;
 
+	if (!sta->sae) {
+		sta->sae = os_zalloc(sizeof(*sta->sae));
+		if (sta->sae == NULL)
+			return;
+	}
+
 	if (auth_transaction == 1) {
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_DEBUG,
@@ -401,9 +408,9 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 					 ((u8 *) mgmt) + len -
 					 mgmt->u.auth.variable);
 		if (resp == WLAN_STATUS_SUCCESS)
-			sta->sae_state = SAE_COMMIT;
+			sta->sae->state = SAE_COMMIT;
 	} else if (auth_transaction == 2) {
-		if (sta->sae_state != SAE_COMMIT) {
+		if (sta->sae->state != SAE_COMMIT) {
 			hostapd_logger(hapd, sta->addr,
 				       HOSTAPD_MODULE_IEEE80211,
 				       HOSTAPD_LEVEL_DEBUG,

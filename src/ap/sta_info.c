@@ -240,6 +240,10 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 	os_free(sta->identity);
 	os_free(sta->radius_cui);
 
+#ifdef CONFIG_SAE
+	os_free(sta->sae);
+#endif /* CONFIG_SAE */
+
 	os_free(sta);
 }
 

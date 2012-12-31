@@ -344,7 +344,7 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 			return;
 		params.sae_data = wpabuf_head(resp);
 		params.sae_data_len = wpabuf_len(resp);
-		wpa_s->sme.sae.state = start ? SAE_COMMIT : SAE_CONFIRM;
+		wpa_s->sme.sae.state = start ? SAE_COMMITTED : SAE_CONFIRMED;
 	}
 #endif /* CONFIG_SAE */
 
@@ -390,7 +390,7 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 		      struct wpa_bss *bss, struct wpa_ssid *ssid)
 {
 #ifdef CONFIG_SAE
-	wpa_s->sme.sae.state = SAE_INIT;
+	wpa_s->sme.sae.state = SAE_NOTHING;
 	wpa_s->sme.sae.send_confirm = 0;
 #endif /* CONFIG_SAE */
 	sme_send_authentication(wpa_s, bss, ssid, 1);
@@ -414,7 +414,7 @@ static int sme_sae_auth(struct wpa_supplicant *wpa_s, u16 auth_transaction,
 		if (wpa_s->current_bss == NULL ||
 		    wpa_s->current_ssid == NULL)
 			return -1;
-		if (wpa_s->sme.sae.state != SAE_COMMIT)
+		if (wpa_s->sme.sae.state != SAE_COMMITTED)
 			return -1;
 		if (sae_parse_commit(&wpa_s->sme.sae, data, len) !=
 		    WLAN_STATUS_SUCCESS)
@@ -431,10 +431,11 @@ static int sme_sae_auth(struct wpa_supplicant *wpa_s, u16 auth_transaction,
 		return 0;
 	} else if (auth_transaction == 2) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "SME SAE confirm");
-		if (wpa_s->sme.sae.state != SAE_CONFIRM)
+		if (wpa_s->sme.sae.state != SAE_CONFIRMED)
 			return -1;
 		if (sae_check_confirm(&wpa_s->sme.sae, data, len) < 0)
 			return -1;
+		wpa_s->sme.sae.state = SAE_ACCEPTED;
 		return 1;
 	}
 

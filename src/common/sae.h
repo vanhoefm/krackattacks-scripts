@@ -13,7 +13,7 @@
 #define SAE_CONFIRM_MAX_LEN (2 + 32)
 
 struct sae_data {
-	enum { SAE_INIT, SAE_COMMIT, SAE_CONFIRM } state;
+	enum { SAE_NOTHING, SAE_COMMITTED, SAE_CONFIRMED, SAE_ACCEPTED } state;
 	u16 send_confirm;
 	u8 kck[32];
 	u8 pmk[32];

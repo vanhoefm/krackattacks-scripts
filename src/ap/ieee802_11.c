@@ -376,6 +376,7 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 		sta->sae = os_zalloc(sizeof(*sta->sae));
 		if (sta->sae == NULL)
 			return;
+		sta->sae->state = SAE_NOTHING;
 	}
 
 	if (auth_transaction == 1) {
@@ -386,13 +387,14 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 					((const u8 *) mgmt) + len -
 					mgmt->u.auth.variable);
 		if (resp == WLAN_STATUS_SUCCESS) {
-			sta->sae->state = SAE_COMMIT;
 			data = auth_process_sae_commit(hapd, sta);
 			if (data == NULL)
 				resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+			else
+				sta->sae->state = SAE_COMMITTED;
 		}
 	} else if (auth_transaction == 2) {
-		if (sta->sae->state != SAE_COMMIT) {
+		if (sta->sae->state != SAE_COMMITTED) {
 			hostapd_logger(hapd, sta->addr,
 				       HOSTAPD_MODULE_IEEE80211,
 				       HOSTAPD_LEVEL_DEBUG,
@@ -416,6 +418,8 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 			data = auth_build_sae_confirm(hapd, sta);
 			if (data == NULL)
 				resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+			else
+				sta->sae->state = SAE_ACCEPTED;
 		}
 	} else {
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,

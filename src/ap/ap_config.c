@@ -89,6 +89,8 @@ void hostapd_config_defaults_bss(struct hostapd_bss_config *bss)
 #endif /* CONFIG_IEEE80211R */
 
 	bss->radius_das_time_window = 300;
+
+	bss->sae_anti_clogging_threshold = 5;
 }
 
 

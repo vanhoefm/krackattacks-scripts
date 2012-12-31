@@ -2935,6 +2935,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 
 			wpabuf_free(bss->vendor_elements);
 			bss->vendor_elements = elems;
+		} else if (os_strcmp(buf, "sae_anti_clogging_threshold") == 0) {
+			bss->sae_anti_clogging_threshold = atoi(pos);
 		} else {
 			wpa_printf(MSG_ERROR, "Line %d: unknown configuration "
 				   "item '%s'", line, buf);

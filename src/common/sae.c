@@ -487,21 +487,28 @@ int sae_process_commit(struct sae_data *sae)
 }
 
 
-void sae_write_commit(struct sae_data *sae, struct wpabuf *buf)
+void sae_write_commit(struct sae_data *sae, struct wpabuf *buf,
+		      const struct wpabuf *token)
 {
 	wpabuf_put_le16(buf, 19); /* Finite Cyclic Group */
-	/* TODO: Anti-Clogging Token (if requested) */
+	if (token)
+		wpabuf_put_buf(buf, token);
 	wpabuf_put_data(buf, sae->own_commit_scalar, 32);
 	wpabuf_put_data(buf, sae->own_commit_element, 2 * 32);
 }
 
 
-u16 sae_parse_commit(struct sae_data *sae, const u8 *data, size_t len)
+u16 sae_parse_commit(struct sae_data *sae, const u8 *data, size_t len,
+		     const u8 **token, size_t *token_len)
 {
 	const u8 *pos = data, *end = data + len;
 	size_t val_len;
 
 	wpa_hexdump(MSG_DEBUG, "SAE: Commit fields", data, len);
+	if (token)
+		*token = NULL;
+	if (token_len)
+		*token_len = 0;
 
 	/* Check Finite Cyclic Group */
 	if (pos + 2 > end)
@@ -513,6 +520,16 @@ u16 sae_parse_commit(struct sae_data *sae, const u8 *data, size_t len)
 	}
 	pos += 2;
 	val_len = 32;
+
+	if (pos + 3 * val_len < end) {
+		size_t tlen = end - (pos + 3 * val_len);
+		wpa_hexdump(MSG_DEBUG, "SAE: Anti-Clogging Token", pos, tlen);
+		if (token)
+			*token = pos;
+		if (token_len)
+			*token_len = tlen;
+		pos += tlen;
+	}
 
 	if (pos + val_len > end) {
 		wpa_printf(MSG_DEBUG, "SAE: Not enough data for scalar");
@@ -547,12 +564,6 @@ u16 sae_parse_commit(struct sae_data *sae, const u8 *data, size_t len)
 		    sae->peer_commit_element, val_len);
 	wpa_hexdump(MSG_DEBUG, "SAE: Peer commit-element(y)",
 		    sae->peer_commit_element + val_len, val_len);
-	pos += 2 * val_len;
-
-	if (end > pos) {
-		wpa_hexdump(MSG_DEBUG, "SAE: Unexpected extra data in commit",
-			    pos, end - pos);
-	}
 
 	return WLAN_STATUS_SUCCESS;
 }

@@ -516,6 +516,7 @@ struct wpa_supplicant {
 		u16 bss_max_idle_period;
 #ifdef CONFIG_SAE
 		struct sae_data sae;
+		struct wpabuf *sae_token;
 #endif /* CONFIG_SAE */
 	} sme;
 #endif /* CONFIG_SME */

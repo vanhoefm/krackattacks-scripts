@@ -47,6 +47,7 @@ static struct wpabuf * sme_auth_build_sae_commit(struct wpa_supplicant *wpa_s,
 						 const u8 *bssid)
 {
 	struct wpabuf *buf;
+	size_t len;
 
 	if (ssid->passphrase == NULL) {
 		wpa_printf(MSG_DEBUG, "SAE: No password available");
@@ -61,13 +62,14 @@ static struct wpabuf * sme_auth_build_sae_commit(struct wpa_supplicant *wpa_s,
 		return NULL;
 	}
 
-	buf = wpabuf_alloc(4 + SAE_COMMIT_MAX_LEN);
+	len = wpa_s->sme.sae_token ? wpabuf_len(wpa_s->sme.sae_token) : 0;
+	buf = wpabuf_alloc(4 + SAE_COMMIT_MAX_LEN + len);
 	if (buf == NULL)
 		return NULL;
 
 	wpabuf_put_le16(buf, 1); /* Transaction seq# */
 	wpabuf_put_le16(buf, WLAN_STATUS_SUCCESS);
-	sae_write_commit(&wpa_s->sme.sae, buf);
+	sae_write_commit(&wpa_s->sme.sae, buf, wpa_s->sme.sae_token);
 
 	return buf;
 }
@@ -406,6 +408,19 @@ static int sme_sae_auth(struct wpa_supplicant *wpa_s, u16 auth_transaction,
 		"status code %u", auth_transaction, status_code);
 	wpa_hexdump(MSG_DEBUG, "SME: SAE fields", data, len);
 
+	if (auth_transaction == 1 &&
+	    status_code == WLAN_STATUS_ANTI_CLOGGING_TOKEN_REQ &&
+	    wpa_s->sme.sae.state == SAE_COMMITTED &&
+	    wpa_s->current_bss && wpa_s->current_ssid) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "SME: SAE anti-clogging token "
+			"requested");
+		wpabuf_free(wpa_s->sme.sae_token);
+		wpa_s->sme.sae_token = wpabuf_alloc_copy(data, len);
+		sme_send_authentication(wpa_s, wpa_s->current_bss,
+					wpa_s->current_ssid, 1);
+		return 0;
+	}
+
 	if (status_code != WLAN_STATUS_SUCCESS)
 		return -1;
 
@@ -416,7 +431,7 @@ static int sme_sae_auth(struct wpa_supplicant *wpa_s, u16 auth_transaction,
 			return -1;
 		if (wpa_s->sme.sae.state != SAE_COMMITTED)
 			return -1;
-		if (sae_parse_commit(&wpa_s->sme.sae, data, len) !=
+		if (sae_parse_commit(&wpa_s->sme.sae, data, len, NULL, NULL) !=
 		    WLAN_STATUS_SUCCESS)
 			return -1;
 
@@ -426,6 +441,8 @@ static int sme_sae_auth(struct wpa_supplicant *wpa_s, u16 auth_transaction,
 			return -1;
 		}
 
+		wpabuf_free(wpa_s->sme.sae_token);
+		wpa_s->sme.sae_token = NULL;
 		sme_send_authentication(wpa_s, wpa_s->current_bss,
 					wpa_s->current_ssid, 0);
 		return 0;
@@ -795,6 +812,10 @@ void sme_deinit(struct wpa_supplicant *wpa_s)
 #ifdef CONFIG_IEEE80211W
 	sme_stop_sa_query(wpa_s);
 #endif /* CONFIG_IEEE80211W */
+#ifdef CONFIG_SAE
+	wpabuf_free(wpa_s->sme.sae_token);
+	wpa_s->sme.sae_token = NULL;
+#endif /* CONFIG_SAE */
 
 	eloop_cancel_timeout(sme_assoc_timer, wpa_s, NULL);
 	eloop_cancel_timeout(sme_auth_timer, wpa_s, NULL);

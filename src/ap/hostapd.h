@@ -192,6 +192,12 @@ struct hostapd_data {
 #ifdef CONFIG_SQLITE
 	struct hostapd_eap_user tmp_eap_user;
 #endif /* CONFIG_SQLITE */
+
+#ifdef CONFIG_SAE
+	/** Key used for generating SAE anti-clogging tokens */
+	u8 sae_token_key[8];
+	os_time_t last_sae_token_key_update;
+#endif /* CONFIG_SAE */
 };
 
 

@@ -13,6 +13,8 @@
 #include "utils/common.h"
 #include "utils/eloop.h"
 #include "crypto/crypto.h"
+#include "crypto/sha256.h"
+#include "crypto/random.h"
 #include "drivers/driver.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
@@ -344,7 +346,7 @@ static struct wpabuf * auth_process_sae_commit(struct hostapd_data *hapd,
 	buf = wpabuf_alloc(SAE_COMMIT_MAX_LEN);
 	if (buf == NULL)
 		return NULL;
-	sae_write_commit(sta->sae, buf);
+	sae_write_commit(sta->sae, buf, NULL);
 
 	return buf;
 }
@@ -365,6 +367,74 @@ static struct wpabuf * auth_build_sae_confirm(struct hostapd_data *hapd,
 }
 
 
+static int use_sae_anti_clogging(struct hostapd_data *hapd)
+{
+	struct sta_info *sta;
+	unsigned int open = 0;
+
+	if (hapd->conf->sae_anti_clogging_threshold == 0)
+		return 1;
+
+	for (sta = hapd->sta_list; sta; sta = sta->next) {
+		if (!sta->sae)
+			continue;
+		if (sta->sae->state != SAE_COMMITTED &&
+		    sta->sae->state != SAE_CONFIRMED)
+			continue;
+		open++;
+		if (open >= hapd->conf->sae_anti_clogging_threshold)
+			return 1;
+	}
+
+	return 0;
+}
+
+
+static int check_sae_token(struct hostapd_data *hapd, const u8 *addr,
+			   const u8 *token, size_t token_len)
+{
+	u8 mac[SHA256_MAC_LEN];
+
+	if (token_len != SHA256_MAC_LEN)
+		return -1;
+	if (hmac_sha256(hapd->sae_token_key, sizeof(hapd->sae_token_key),
+			addr, ETH_ALEN, mac) < 0 ||
+	    os_memcmp(token, mac, SHA256_MAC_LEN) != 0)
+		return -1;
+
+	return 0;
+}
+
+
+static struct wpabuf * auth_build_token_req(struct hostapd_data *hapd,
+					    const u8 *addr)
+{
+	struct wpabuf *buf;
+	u8 *token;
+	struct os_time t;
+
+	os_get_time(&t);
+	if (hapd->last_sae_token_key_update == 0 ||
+	    t.sec > hapd->last_sae_token_key_update + 60) {
+		random_get_bytes(hapd->sae_token_key,
+				 sizeof(hapd->sae_token_key));
+		wpa_hexdump(MSG_DEBUG, "SAE: Updated token key",
+			    hapd->sae_token_key, sizeof(hapd->sae_token_key));
+		hapd->last_sae_token_key_update = t.sec;
+	}
+
+	buf = wpabuf_alloc(SHA256_MAC_LEN);
+	if (buf == NULL)
+		return NULL;
+
+	token = wpabuf_put(buf, SHA256_MAC_LEN);
+	hmac_sha256(hapd->sae_token_key, sizeof(hapd->sae_token_key),
+		    addr, ETH_ALEN, token);
+
+	return buf;
+}
+
+
 static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 			    const struct ieee80211_mgmt *mgmt, size_t len,
 			    u8 auth_transaction)
@@ -373,6 +443,8 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 	struct wpabuf *data = NULL;
 
 	if (!sta->sae) {
+		if (auth_transaction != 1)
+			return;
 		sta->sae = os_zalloc(sizeof(*sta->sae));
 		if (sta->sae == NULL)
 			return;
@@ -380,18 +452,37 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 	}
 
 	if (auth_transaction == 1) {
+		const u8 *token = NULL;
+		size_t token_len = 0;
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_DEBUG,
 			       "start SAE authentication (RX commit)");
 		resp = sae_parse_commit(sta->sae, mgmt->u.auth.variable,
 					((const u8 *) mgmt) + len -
-					mgmt->u.auth.variable);
+					mgmt->u.auth.variable, &token,
+					&token_len);
+		if (token && check_sae_token(hapd, sta->addr, token, token_len)
+		    < 0) {
+			wpa_printf(MSG_DEBUG, "SAE: Drop commit message with "
+				   "incorrect token from " MACSTR,
+				   MAC2STR(sta->addr));
+			return;
+		}
+
 		if (resp == WLAN_STATUS_SUCCESS) {
-			data = auth_process_sae_commit(hapd, sta);
-			if (data == NULL)
-				resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
-			else
-				sta->sae->state = SAE_COMMITTED;
+			if (!token && use_sae_anti_clogging(hapd)) {
+				wpa_printf(MSG_DEBUG, "SAE: Request anti-"
+					   "clogging token from " MACSTR,
+					   MAC2STR(sta->addr));
+				data = auth_build_token_req(hapd, sta->addr);
+				resp = WLAN_STATUS_ANTI_CLOGGING_TOKEN_REQ;
+			} else {
+				data = auth_process_sae_commit(hapd, sta);
+				if (data == NULL)
+					resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+				else
+					sta->sae->state = SAE_COMMITTED;
+			}
 		}
 	} else if (auth_transaction == 2) {
 		if (sta->sae->state != SAE_COMMITTED) {

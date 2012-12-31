@@ -455,6 +455,8 @@ struct hostapd_bss_config {
 #endif /* CONFIG_RADIUS_TEST */
 
 	struct wpabuf *vendor_elements;
+
+	unsigned int sae_anti_clogging_threshold;
 };
 
 

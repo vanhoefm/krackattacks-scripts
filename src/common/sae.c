@@ -518,6 +518,20 @@ u16 sae_parse_commit(struct sae_data *sae, const u8 *data, size_t len)
 		wpa_printf(MSG_DEBUG, "SAE: Not enough data for scalar");
 		return WLAN_STATUS_UNSPECIFIED_FAILURE;
 	}
+
+	/*
+	 * IEEE Std 802.11-2012, 11.3.8.6.1: If there is a protocol instance for
+	 * the peer and it is in Authenticated state, the new Commit Message
+	 * shall be dropped if the peer-scalar is identical to the one used in
+	 * the existing protocol instance.
+	 */
+	if (sae->state == SAE_ACCEPTED &&
+	    os_memcmp(sae->peer_commit_scalar, pos, val_len) == 0) {
+		wpa_printf(MSG_DEBUG, "SAE: Do not accept re-use of previous "
+			   "peer-commit-scalar");
+		return WLAN_STATUS_UNSPECIFIED_FAILURE;
+	}
+
 	os_memcpy(sae->peer_commit_scalar, pos, val_len);
 	wpa_hexdump(MSG_DEBUG, "SAE: Peer commit-scalar",
 		    sae->peer_commit_scalar, val_len);

@@ -175,6 +175,7 @@ endif
 ifdef CONFIG_SAE
 CFLAGS += -DCONFIG_SAE
 OBJS += ../src/common/sae.o
+NEED_ECC=y
 endif
 
 ifdef CONFIG_WNM
@@ -1179,6 +1180,10 @@ ifdef CONFIG_INTERNAL_DH_GROUP5
 ifdef NEED_DH_GROUPS
 OBJS += ../src/crypto/dh_group5.o
 endif
+endif
+
+ifdef NEED_ECC
+CFLAGS += -DCONFIG_ECC
 endif
 
 ifdef CONFIG_NO_RANDOM_POOL

@@ -7,12 +7,9 @@
  */
 
 #include "includes.h"
-/* TODO: move OpenSSL dependencies into crypto/crypto_openssl.c */
-#include <openssl/bn.h>
-#include <openssl/ec.h>
-#include <openssl/obj_mac.h>
 
 #include "common.h"
+#include "crypto/crypto.h"
 #include "crypto/sha256.h"
 #include "crypto/random.h"
 #include "ieee802_11_defs.h"
@@ -74,63 +71,6 @@ static int sae_get_rand(u8 *val)
 }
 
 
-static EC_POINT * alloc_elem(EC_GROUP *group, const u8 *val, size_t len)
-{
-	BIGNUM *x, *y;
-	EC_POINT *elem;
-
-	x = BN_bin2bn(val, len, NULL);
-	y = BN_bin2bn(val + len, len, NULL);
-	elem = EC_POINT_new(group);
-	if (x == NULL || y == NULL || elem == NULL) {
-		BN_free(x);
-		BN_free(y);
-		EC_POINT_free(elem);
-		return NULL;
-	}
-
-	if (!EC_POINT_set_affine_coordinates_GFp(group, elem, x, y, NULL)) {
-		EC_POINT_free(elem);
-		elem = NULL;
-	}
-
-	BN_free(x);
-	BN_free(y);
-
-	return elem;
-}
-
-
-static void sae_bn_to_bin(const BIGNUM *bn, u8 *bin, size_t len)
-{
-	int offset = len - BN_num_bytes(bn);
-	os_memset(bin, 0, offset);
-	BN_bn2bin(bn, bin + offset);
-}
-
-
-static int sae_ec_point_to_bin(BN_CTX *bnctx, EC_GROUP *group, EC_POINT *point,
-			       u8 *bin)
-{
-	BIGNUM *x, *y;
-	int ret = -1;
-
-	x = BN_new();
-	y = BN_new();
-
-	if (x && y &&
-	    EC_POINT_get_affine_coordinates_GFp(group, point, x, y, bnctx)) {
-		sae_bn_to_bin(x, bin, 32);
-		sae_bn_to_bin(y, bin + 32, 32);
-		ret = 0;
-	}
-
-	BN_free(x);
-	BN_free(y);
-	return ret;
-}
-
-
 static void sae_pwd_seed_key(const u8 *addr1, const u8 *addr2, u8 *key)
 {
 	wpa_printf(MSG_DEBUG, "SAE: PWE derivation - addr1=" MACSTR
@@ -145,11 +85,11 @@ static void sae_pwd_seed_key(const u8 *addr1, const u8 *addr2, u8 *key)
 }
 
 
-static int sae_test_pwd_seed(BN_CTX *bnctx, EC_GROUP *group, const u8 *pwd_seed,
-			     EC_POINT *pwe, u8 *pwe_bin)
+static int sae_test_pwd_seed(struct crypto_ec *ecc, const u8 *pwd_seed,
+			     struct crypto_ec_point *pwe, u8 *pwe_bin)
 {
 	u8 pwd_value[32];
-	BIGNUM *x;
+	struct crypto_bignum *x;
 	int y_bit;
 
 	wpa_hexdump_key(MSG_DEBUG, "SAE: pwd-seed", pwd_seed, 32);
@@ -166,21 +106,19 @@ static int sae_test_pwd_seed(BN_CTX *bnctx, EC_GROUP *group, const u8 *pwd_seed,
 
 	y_bit = pwd_seed[SHA256_MAC_LEN - 1] & 0x01;
 
-	x = BN_bin2bn(pwd_value, sizeof(pwd_value), NULL);
+	x = crypto_bignum_init_set(pwd_value, sizeof(pwd_value));
 	if (x == NULL)
 		return -1;
-	if (!EC_POINT_set_compressed_coordinates_GFp(group, pwe, x, y_bit,
-						     bnctx) ||
-	    !EC_POINT_is_on_curve(group, pwe, bnctx)) {
-		BN_free(x);
+	if (crypto_ec_point_solve_y_coord(ecc, pwe, x, y_bit) < 0) {
+		crypto_bignum_deinit(x, 0);
 		wpa_printf(MSG_DEBUG, "SAE: No solution found");
 		return 0;
 	}
-	BN_free(x);
+	crypto_bignum_deinit(x, 0);
 
 	wpa_printf(MSG_DEBUG, "SAE: PWE found");
 
-	if (sae_ec_point_to_bin(bnctx, group, pwe, pwe_bin) < 0)
+	if (crypto_ec_point_to_bin(ecc, pwe, pwe_bin, pwe_bin + 32) < 0)
 		return -1;
 
 	wpa_hexdump_key(MSG_DEBUG, "SAE: PWE x", pwe_bin, 32);
@@ -189,19 +127,20 @@ static int sae_test_pwd_seed(BN_CTX *bnctx, EC_GROUP *group, const u8 *pwd_seed,
 }
 
 
-static int sae_derive_pwe(BN_CTX *bnctx, EC_GROUP *group, const u8 *addr1,
+static int sae_derive_pwe(struct crypto_ec *ecc, const u8 *addr1,
 			  const u8 *addr2, const u8 *password,
-			  size_t password_len, EC_POINT *pwe, u8 *pwe_bin)
+			  size_t password_len, struct crypto_ec_point *pwe,
+			  u8 *pwe_bin)
 {
 	u8 counter, k = 4;
 	u8 addrs[2 * ETH_ALEN];
 	const u8 *addr[2];
 	size_t len[2];
 	int found = 0;
-	EC_POINT *pwe_tmp;
+	struct crypto_ec_point *pwe_tmp;
 	u8 pwe_bin_tmp[2 * 32];
 
-	pwe_tmp = EC_POINT_new(group);
+	pwe_tmp = crypto_ec_point_init(ecc);
 	if (pwe_tmp == NULL)
 		return -1;
 
@@ -233,7 +172,7 @@ static int sae_derive_pwe(BN_CTX *bnctx, EC_GROUP *group, const u8 *addr1,
 		if (hmac_sha256_vector(addrs, sizeof(addrs), 2, addr, len,
 				       pwd_seed) < 0)
 			break;
-		res = sae_test_pwd_seed(bnctx, group, pwd_seed,
+		res = sae_test_pwd_seed(ecc, pwd_seed,
 					found ? pwe_tmp : pwe,
 					found ? pwe_bin_tmp : pwe_bin);
 		if (res < 0)
@@ -255,17 +194,17 @@ static int sae_derive_pwe(BN_CTX *bnctx, EC_GROUP *group, const u8 *addr1,
 		}
 	}
 
-	EC_POINT_clear_free(pwe_tmp);
+	crypto_ec_point_deinit(pwe_tmp, 1);
 
 	return found ? 0 : -1;
 }
 
 
-static int sae_derive_commit(struct sae_data *sae, BN_CTX *bnctx,
-			     EC_GROUP *group, EC_POINT *pwe)
+static int sae_derive_commit(struct sae_data *sae, struct crypto_ec *ecc,
+			     struct crypto_ec_point *pwe)
 {
-	BIGNUM *x, *bn_rand, *bn_mask, *order;
-	EC_POINT *elem;
+	struct crypto_bignum *x, *bn_rand, *bn_mask, *order;
+	struct crypto_ec_point *elem;
 	u8 mask[32];
 	int ret = -1;
 
@@ -275,27 +214,28 @@ static int sae_derive_commit(struct sae_data *sae, BN_CTX *bnctx,
 			sae->sae_rand, sizeof(sae->sae_rand));
 	wpa_hexdump_key(MSG_DEBUG, "SAE: mask", mask, sizeof(mask));
 
-	x = BN_new();
-	bn_rand = BN_bin2bn(sae->sae_rand, 32, NULL);
-	bn_mask = BN_bin2bn(mask, sizeof(mask), NULL);
-	order = BN_bin2bn(group19_order, sizeof(group19_order), NULL);
-	elem = EC_POINT_new(group);
+	x = crypto_bignum_init();
+	bn_rand = crypto_bignum_init_set(sae->sae_rand, 32);
+	bn_mask = crypto_bignum_init_set(mask, sizeof(mask));
+	order = crypto_bignum_init_set(group19_order, sizeof(group19_order));
+	elem = crypto_ec_point_init(ecc);
 	if (x == NULL || bn_rand == NULL || bn_mask == NULL || order == NULL ||
 	    elem == NULL)
 		goto fail;
 
 	/* commit-scalar = (rand + mask) modulo r */
-	BN_add(x, bn_rand, bn_mask);
-	BN_mod(x, x, order, bnctx);
-	sae_bn_to_bin(x, sae->own_commit_scalar, 32);
+	crypto_bignum_add(bn_rand, bn_mask, x);
+	crypto_bignum_mod(x, order, x);
+	crypto_bignum_to_bin(x, sae->own_commit_scalar,
+			     sizeof(sae->own_commit_scalar), 32);
 	wpa_hexdump(MSG_DEBUG, "SAE: commit-scalar",
 		    sae->own_commit_scalar, 32);
 
 	/* COMMIT-ELEMENT = inverse(scalar-op(mask, PWE)) */
-	if (!EC_POINT_mul(group, elem, NULL, pwe, bn_mask, bnctx) ||
-	    !EC_POINT_invert(group, elem, bnctx) ||
-	    sae_ec_point_to_bin(bnctx, group, elem, sae->own_commit_element) <
-	    0)
+	if (crypto_ec_point_mul(ecc, pwe, bn_mask, elem) < 0 ||
+	    crypto_ec_point_invert(ecc, elem) < 0 ||
+	    crypto_ec_point_to_bin(ecc, elem, sae->own_commit_element,
+				   sae->own_commit_element + 32) < 0)
 		goto fail;
 
 	wpa_hexdump(MSG_DEBUG, "SAE: commit-element x",
@@ -305,12 +245,12 @@ static int sae_derive_commit(struct sae_data *sae, BN_CTX *bnctx,
 
 	ret = 0;
 fail:
-	EC_POINT_free(elem);
-	BN_free(order);
-	BN_clear_free(bn_mask);
+	crypto_ec_point_deinit(elem, 0);
+	crypto_bignum_deinit(order, 0);
+	crypto_bignum_deinit(bn_mask, 1);
 	os_memset(mask, 0, sizeof(mask));
-	BN_clear_free(bn_rand);
-	BN_clear_free(x);
+	crypto_bignum_deinit(bn_rand, 1);
+	crypto_bignum_deinit(x, 1);
 	return ret;
 }
 
@@ -319,23 +259,20 @@ int sae_prepare_commit(const u8 *addr1, const u8 *addr2,
 		       const u8 *password, size_t password_len,
 		       struct sae_data *sae)
 {
-	BN_CTX *bnctx;
-	EC_POINT *pwe;
-	EC_GROUP *group;
+	struct crypto_ec *ecc;
+	struct crypto_ec_point *pwe;
 	int ret = 0;
 
-	bnctx = BN_CTX_new();
-	group = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
-	pwe = EC_POINT_new(group);
-	if (bnctx == NULL || group == NULL || pwe == NULL ||
-	    sae_derive_pwe(bnctx, group, addr1, addr2, password, password_len,
-			   pwe, sae->pwe) < 0 ||
-	    sae_derive_commit(sae, bnctx, group, pwe) < 0)
+	ecc = crypto_ec_init(19);
+	pwe = crypto_ec_point_init(ecc);
+	if (ecc == NULL || pwe == NULL ||
+	    sae_derive_pwe(ecc, addr1, addr2, password, password_len, pwe,
+			   sae->pwe) < 0 ||
+	    sae_derive_commit(sae, ecc, pwe) < 0)
 		ret = -1;
 
-	EC_POINT_clear_free(pwe);
-	EC_GROUP_free(group);
-	BN_CTX_free(bnctx);
+	crypto_ec_point_deinit(pwe, 1);
+	crypto_ec_deinit(ecc);
 
 	return ret;
 }
@@ -365,24 +302,26 @@ static int sae_check_peer_commit(struct sae_data *sae)
 }
 
 
-static int sae_derive_k(struct sae_data *sae, u8 *k, BN_CTX *bnctx,
-			EC_GROUP *group)
+static int sae_derive_k(struct sae_data *sae, u8 *k)
 {
-	EC_POINT *pwe, *peer_elem, *K;
-	BIGNUM *k_bn, *rand_bn, *peer_scalar;
+	struct crypto_ec *ecc;
+	struct crypto_ec_point *pwe, *peer_elem, *K;
+	struct crypto_bignum *rand_bn, *peer_scalar;
 	int ret = -1;
 
-	pwe = alloc_elem(group, sae->pwe, 32);
-	peer_scalar = BN_bin2bn(sae->peer_commit_scalar, 32, NULL);
-	peer_elem = alloc_elem(group, sae->peer_commit_element, 32);
-	K = EC_POINT_new(group);
-	k_bn = BN_new();
-	rand_bn = BN_bin2bn(sae->sae_rand, 32, NULL);
+	ecc = crypto_ec_init(19);
+	if (ecc == NULL)
+		return -1;
+	pwe = crypto_ec_point_from_bin(ecc, sae->pwe);
+	peer_scalar = crypto_bignum_init_set(sae->peer_commit_scalar, 32);
+	peer_elem = crypto_ec_point_from_bin(ecc, sae->peer_commit_element);
+	K = crypto_ec_point_init(ecc);
+	rand_bn = crypto_bignum_init_set(sae->sae_rand, 32);
 	if (pwe == NULL || peer_elem == NULL || peer_scalar == NULL ||
-	    K == NULL || k_bn == NULL || rand_bn == NULL)
+	    K == NULL || rand_bn == NULL)
 		goto fail;
 
-	if (!EC_POINT_is_on_curve(group, peer_elem, NULL)) {
+	if (!crypto_ec_point_is_on_curve(ecc, peer_elem)) {
 		wpa_printf(MSG_DEBUG, "SAE: Peer element is not on curve");
 		goto fail;
 	}
@@ -394,41 +333,40 @@ static int sae_derive_k(struct sae_data *sae, u8 *k, BN_CTX *bnctx,
 	 * k = F(K) (= x coordinate)
 	 */
 
-	if (!EC_POINT_mul(group, K, NULL, pwe, peer_scalar, bnctx) ||
-	    !EC_POINT_add(group, K, K, peer_elem, bnctx) ||
-	    !EC_POINT_mul(group, K, NULL, K, rand_bn, bnctx) ||
-	    EC_POINT_is_at_infinity(group, K) ||
-	    !EC_POINT_get_affine_coordinates_GFp(group, K, k_bn, NULL, bnctx)) {
+	if (crypto_ec_point_mul(ecc, pwe, peer_scalar, K) < 0 ||
+	    crypto_ec_point_add(ecc, K, peer_elem, K) < 0 ||
+	    crypto_ec_point_mul(ecc, K, rand_bn, K) < 0 ||
+	    crypto_ec_point_is_at_infinity(ecc, K) ||
+	    crypto_ec_point_to_bin(ecc, K, k, NULL) < 0) {
 		wpa_printf(MSG_DEBUG, "SAE: Failed to calculate K and k");
 		goto fail;
 	}
 
-	sae_bn_to_bin(k_bn, k, 32);
 	wpa_hexdump_key(MSG_DEBUG, "SAE: k", k, 32);
 
 	ret = 0;
 fail:
-	EC_POINT_free(pwe);
-	EC_POINT_free(peer_elem);
-	EC_POINT_clear_free(K);
-	BN_free(k_bn);
-	BN_free(rand_bn);
+	crypto_ec_point_deinit(pwe, 1);
+	crypto_ec_point_deinit(peer_elem, 0);
+	crypto_ec_point_deinit(K, 1);
+	crypto_bignum_deinit(rand_bn, 1);
+	crypto_ec_deinit(ecc);
 	return ret;
 }
 
 
-static int sae_derive_keys(struct sae_data *sae, const u8 *k, BN_CTX *bnctx)
+static int sae_derive_keys(struct sae_data *sae, const u8 *k)
 {
 	u8 null_key[32], val[32];
 	u8 keyseed[SHA256_MAC_LEN];
 	u8 keys[32 + 32];
-	BIGNUM *order, *own_scalar, *peer_scalar, *tmp;
+	struct crypto_bignum *order, *own_scalar, *peer_scalar, *tmp;
 	int ret = -1;
 
-	order = BN_bin2bn(group19_order, sizeof(group19_order), NULL);
-	own_scalar = BN_bin2bn(sae->own_commit_scalar, 32, NULL);
-	peer_scalar = BN_bin2bn(sae->peer_commit_scalar, 32, NULL);
-	tmp = BN_new();
+	order = crypto_bignum_init_set(group19_order, sizeof(group19_order));
+	own_scalar = crypto_bignum_init_set(sae->own_commit_scalar, 32);
+	peer_scalar = crypto_bignum_init_set(sae->peer_commit_scalar, 32);
+	tmp = crypto_bignum_init();
 	if (order == NULL || own_scalar == NULL || peer_scalar == NULL ||
 	    tmp == NULL)
 		goto fail;
@@ -443,9 +381,9 @@ static int sae_derive_keys(struct sae_data *sae, const u8 *k, BN_CTX *bnctx)
 	hmac_sha256(null_key, sizeof(null_key), k, 32, keyseed);
 	wpa_hexdump_key(MSG_DEBUG, "SAE: keyseed", keyseed, sizeof(keyseed));
 
-	BN_add(tmp, own_scalar, peer_scalar);
-	BN_mod(tmp, tmp, order, bnctx);
-	sae_bn_to_bin(tmp, val, sizeof(group19_prime));
+	crypto_bignum_add(own_scalar, peer_scalar, tmp);
+	crypto_bignum_mod(tmp, order, tmp);
+	crypto_bignum_to_bin(tmp, val, sizeof(val), sizeof(group19_prime));
 	wpa_hexdump(MSG_DEBUG, "SAE: PMKID", val, 16);
 	sha256_prf(keyseed, sizeof(keyseed), "SAE KCK and PMK",
 		   val, sizeof(val), keys, sizeof(keys));
@@ -456,34 +394,22 @@ static int sae_derive_keys(struct sae_data *sae, const u8 *k, BN_CTX *bnctx)
 
 	ret = 0;
 fail:
-	BN_free(order);
-	BN_free(own_scalar);
-	BN_free(tmp);
+	crypto_bignum_deinit(tmp, 0);
+	crypto_bignum_deinit(peer_scalar, 0);
+	crypto_bignum_deinit(own_scalar, 0);
+	crypto_bignum_deinit(order, 0);
 	return ret;
 }
 
 
 int sae_process_commit(struct sae_data *sae)
 {
-	BN_CTX *bnctx;
-	EC_GROUP *group;
-	int ret = 0;
 	u8 k[32];
-
-	if (sae_check_peer_commit(sae) < 0)
+	if (sae_check_peer_commit(sae) < 0 ||
+	    sae_derive_k(sae, k) < 0 ||
+	    sae_derive_keys(sae, k) < 0)
 		return -1;
-
-	bnctx = BN_CTX_new();
-	group = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
-	if (bnctx == NULL || group == NULL ||
-	    sae_derive_k(sae, k, bnctx, group) < 0 ||
-	    sae_derive_keys(sae, k, bnctx) < 0)
-		ret = -1;
-
-	EC_GROUP_free(group);
-	BN_CTX_free(bnctx);
-
-	return ret;
+	return 0;
 }
 
 

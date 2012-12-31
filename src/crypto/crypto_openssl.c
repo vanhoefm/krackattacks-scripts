@@ -19,6 +19,9 @@
 #ifdef CONFIG_OPENSSL_CMAC
 #include <openssl/cmac.h>
 #endif /* CONFIG_OPENSSL_CMAC */
+#ifdef CONFIG_ECC
+#include <openssl/ec.h>
+#endif /* CONFIG_ECC */
 
 #include "common.h"
 #include "wpabuf.h"
@@ -818,3 +821,251 @@ int omac1_aes_128(const u8 *key, const u8 *data, size_t data_len, u8 *mac)
 	return omac1_aes_128_vector(key, 1, &data, &data_len, mac);
 }
 #endif /* CONFIG_OPENSSL_CMAC */
+
+
+struct crypto_bignum * crypto_bignum_init(void)
+{
+	return (struct crypto_bignum *) BN_new();
+}
+
+
+struct crypto_bignum * crypto_bignum_init_set(const u8 *buf, size_t len)
+{
+	BIGNUM *bn = BN_bin2bn(buf, len, NULL);
+	return (struct crypto_bignum *) bn;
+}
+
+
+void crypto_bignum_deinit(struct crypto_bignum *n, int clear)
+{
+	if (clear)
+		BN_clear_free((BIGNUM *) n);
+	else
+		BN_free((BIGNUM *) n);
+}
+
+
+int crypto_bignum_to_bin(const struct crypto_bignum *a,
+			 u8 *buf, size_t buflen, size_t padlen)
+{
+	int num_bytes, offset;
+
+	if (padlen > buflen)
+		return -1;
+
+	num_bytes = BN_num_bytes((const BIGNUM *) a);
+	if ((size_t) num_bytes > buflen)
+		return -1;
+	if (padlen > (size_t) num_bytes)
+		offset = padlen - num_bytes;
+	else
+		offset = 0;
+
+	os_memset(buf, 0, offset);
+	BN_bn2bin((const BIGNUM *) a, buf + offset);
+
+	return num_bytes + offset;
+}
+
+
+int crypto_bignum_add(const struct crypto_bignum *a,
+		      const struct crypto_bignum *b,
+		      struct crypto_bignum *c)
+{
+	return BN_add((BIGNUM *) c, (const BIGNUM *) a, (const BIGNUM *) b) ?
+		0 : -1;
+}
+
+
+int crypto_bignum_mod(const struct crypto_bignum *a,
+		      const struct crypto_bignum *b,
+		      struct crypto_bignum *c)
+{
+	int res;
+	BN_CTX *bnctx;
+
+	bnctx = BN_CTX_new();
+	if (bnctx == NULL)
+		return -1;
+	res = BN_mod((BIGNUM *) c, (const BIGNUM *) a, (const BIGNUM *) b,
+		     bnctx);
+	BN_CTX_free(bnctx);
+
+	return res ? 0 : -1;
+}
+
+
+#ifdef CONFIG_ECC
+
+struct crypto_ec {
+	EC_GROUP *group;
+	BN_CTX *bnctx;
+	size_t prime_len;
+};
+
+struct crypto_ec * crypto_ec_init(int group)
+{
+	struct crypto_ec *e;
+
+	if (group != 19)
+		return NULL;
+
+	e = os_zalloc(sizeof(*e));
+	if (e == NULL)
+		return NULL;
+
+	e->prime_len = 32;
+	e->bnctx = BN_CTX_new();
+	e->group = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
+	if (e->group == NULL || e->bnctx == NULL) {
+		crypto_ec_deinit(e);
+		e = NULL;
+	}
+
+	return e;
+}
+
+
+void crypto_ec_deinit(struct crypto_ec *e)
+{
+	if (e == NULL)
+		return;
+	EC_GROUP_free(e->group);
+	BN_CTX_free(e->bnctx);
+	os_free(e);
+}
+
+
+struct crypto_ec_point * crypto_ec_point_init(struct crypto_ec *e)
+{
+	if (e == NULL)
+		return NULL;
+	return (struct crypto_ec_point *) EC_POINT_new(e->group);
+}
+
+
+size_t crypto_ec_prime_len(struct crypto_ec *e)
+{
+	return e->prime_len;
+}
+
+
+void crypto_ec_point_deinit(struct crypto_ec_point *p, int clear)
+{
+	if (clear)
+		EC_POINT_clear_free((EC_POINT *) p);
+	else
+		EC_POINT_free((EC_POINT *) p);
+}
+
+
+int crypto_ec_point_to_bin(struct crypto_ec *e,
+			   const struct crypto_ec_point *point, u8 *x, u8 *y)
+{
+	BIGNUM *x_bn, *y_bn;
+	int ret = -1;
+
+	x_bn = BN_new();
+	y_bn = BN_new();
+
+	if (x_bn && y_bn &&
+	    EC_POINT_get_affine_coordinates_GFp(e->group, (EC_POINT *) point,
+						x_bn, y_bn, e->bnctx)) {
+		if (x) {
+			crypto_bignum_to_bin((struct crypto_bignum *) x_bn,
+					     x, e->prime_len, e->prime_len);
+		}
+		if (y) {
+			crypto_bignum_to_bin((struct crypto_bignum *) y_bn,
+					     y, e->prime_len, e->prime_len);
+		}
+		ret = 0;
+	}
+
+	BN_free(x_bn);
+	BN_free(y_bn);
+	return ret;
+}
+
+
+struct crypto_ec_point * crypto_ec_point_from_bin(struct crypto_ec *e,
+						  const u8 *val)
+{
+	BIGNUM *x, *y;
+	EC_POINT *elem;
+
+	x = BN_bin2bn(val, e->prime_len, NULL);
+	y = BN_bin2bn(val + e->prime_len, e->prime_len, NULL);
+	elem = EC_POINT_new(e->group);
+	if (x == NULL || y == NULL || elem == NULL) {
+		BN_free(x);
+		BN_free(y);
+		EC_POINT_free(elem);
+		return NULL;
+	}
+
+	if (!EC_POINT_set_affine_coordinates_GFp(e->group, elem, x, y,
+						 e->bnctx)) {
+		EC_POINT_free(elem);
+		elem = NULL;
+	}
+
+	BN_free(x);
+	BN_free(y);
+
+	return (struct crypto_ec_point *) elem;
+}
+
+
+int crypto_ec_point_add(struct crypto_ec *e, const struct crypto_ec_point *a,
+			const struct crypto_ec_point *b,
+			struct crypto_ec_point *c)
+{
+	return EC_POINT_add(e->group, (EC_POINT *) c, (const EC_POINT *) a,
+			    (const EC_POINT *) b, e->bnctx) ? 0 : -1;
+}
+
+
+int crypto_ec_point_mul(struct crypto_ec *e, const struct crypto_ec_point *p,
+			const struct crypto_bignum *b,
+			struct crypto_ec_point *res)
+{
+	return EC_POINT_mul(e->group, (EC_POINT *) res, NULL,
+			    (const EC_POINT *) p, (const BIGNUM *) b, e->bnctx)
+		? 0 : -1;
+}
+
+
+int crypto_ec_point_invert(struct crypto_ec *e, struct crypto_ec_point *p)
+{
+	return EC_POINT_invert(e->group, (EC_POINT *) p, e->bnctx) ? 0 : -1;
+}
+
+
+int crypto_ec_point_solve_y_coord(struct crypto_ec *e,
+				  struct crypto_ec_point *p,
+				  const struct crypto_bignum *x, int y_bit)
+{
+	if (!EC_POINT_set_compressed_coordinates_GFp(e->group, (EC_POINT *) p,
+						     (const BIGNUM *) x, y_bit,
+						     e->bnctx) ||
+	    !EC_POINT_is_on_curve(e->group, (EC_POINT *) p, e->bnctx))
+		return -1;
+	return 0;
+}
+
+
+int crypto_ec_point_is_at_infinity(struct crypto_ec *e,
+				   const struct crypto_ec_point *p)
+{
+	return EC_POINT_is_at_infinity(e->group, (const EC_POINT *) p);
+}
+
+
+int crypto_ec_point_is_on_curve(struct crypto_ec *e,
+				const struct crypto_ec_point *p)
+{
+	return EC_POINT_is_on_curve(e->group, (const EC_POINT *) p, e->bnctx);
+}
+
+#endif /* CONFIG_ECC */

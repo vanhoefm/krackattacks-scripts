@@ -111,7 +111,7 @@ static void sae_pwd_seed_key(const u8 *addr1, const u8 *addr2, u8 *key)
 static int sae_test_pwd_seed(struct sae_data *sae, const u8 *pwd_seed,
 			     struct crypto_ec_point *pwe, u8 *pwe_bin)
 {
-	u8 pwd_value[32];
+	u8 pwd_value[SAE_MAX_PRIME_LEN];
 	struct crypto_bignum *x;
 	int y_bit;
 
@@ -163,7 +163,7 @@ static int sae_derive_pwe(struct sae_data *sae, const u8 *addr1,
 	size_t len[2];
 	int found = 0;
 	struct crypto_ec_point *pwe_tmp;
-	u8 pwe_bin_tmp[2 * 32];
+	u8 pwe_bin_tmp[2 * SAE_MAX_PRIME_LEN];
 
 	pwe_tmp = crypto_ec_point_init(sae->ec);
 	if (pwe_tmp == NULL)
@@ -229,7 +229,7 @@ static int sae_derive_commit(struct sae_data *sae, struct crypto_ec_point *pwe)
 {
 	struct crypto_bignum *x, *bn_rand, *bn_mask, *order;
 	struct crypto_ec_point *elem;
-	u8 mask[32];
+	u8 mask[SAE_MAX_PRIME_LEN];
 	int ret = -1;
 
 	if (sae_get_rand(sae->sae_rand) < 0 || sae_get_rand(mask) < 0)
@@ -375,7 +375,7 @@ fail:
 
 static int sae_derive_keys(struct sae_data *sae, const u8 *k)
 {
-	u8 null_key[32], val[32];
+	u8 null_key[32], val[SAE_MAX_PRIME_LEN];
 	u8 keyseed[SHA256_MAC_LEN];
 	u8 keys[32 + 32];
 	struct crypto_bignum *order, *own_scalar, *peer_scalar, *tmp;
@@ -424,7 +424,7 @@ fail:
 
 int sae_process_commit(struct sae_data *sae)
 {
-	u8 k[32];
+	u8 k[SAE_MAX_PRIME_LEN];
 	if (sae_check_peer_commit(sae) < 0 ||
 	    sae_derive_k(sae, k) < 0 ||
 	    sae_derive_keys(sae, k) < 0)

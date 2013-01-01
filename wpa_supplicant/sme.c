@@ -54,6 +54,9 @@ static struct wpabuf * sme_auth_build_sae_commit(struct wpa_supplicant *wpa_s,
 		return NULL;
 	}
 
+	if (sae_set_group(&wpa_s->sme.sae, 19) < 0)
+		return NULL;
+
 	if (sae_prepare_commit(wpa_s->own_addr, bssid,
 			       (u8 *) ssid->passphrase,
 			       os_strlen(ssid->passphrase),
@@ -815,6 +818,7 @@ void sme_deinit(struct wpa_supplicant *wpa_s)
 #ifdef CONFIG_SAE
 	wpabuf_free(wpa_s->sme.sae_token);
 	wpa_s->sme.sae_token = NULL;
+	sae_clear_data(&wpa_s->sme.sae);
 #endif /* CONFIG_SAE */
 
 	eloop_cancel_timeout(sme_assoc_timer, wpa_s, NULL);

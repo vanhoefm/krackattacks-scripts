@@ -12,6 +12,7 @@
 #include "utils/eloop.h"
 #include "common/ieee802_11_defs.h"
 #include "common/wpa_ctrl.h"
+#include "common/sae.h"
 #include "radius/radius.h"
 #include "radius/radius_client.h"
 #include "drivers/driver.h"
@@ -241,6 +242,7 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 	os_free(sta->radius_cui);
 
 #ifdef CONFIG_SAE
+	sae_clear_data(sta->sae);
 	os_free(sta->sae);
 #endif /* CONFIG_SAE */
 

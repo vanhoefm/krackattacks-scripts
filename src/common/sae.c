@@ -31,6 +31,29 @@ static const u8 group19_order[] = {
 };
 
 
+int sae_set_group(struct sae_data *sae, int group)
+{
+	crypto_ec_deinit(sae->ec);
+	sae->ec = crypto_ec_init(group);
+	if (!sae->ec)
+		return -1;
+
+	sae->group = group;
+	sae->prime_len = crypto_ec_prime_len(sae->ec);
+
+	return 0;
+}
+
+
+void sae_clear_data(struct sae_data *sae)
+{
+	if (sae == NULL)
+		return;
+	crypto_ec_deinit(sae->ec);
+	os_memset(sae, 0, sizeof(*sae));
+}
+
+
 static int val_zero_or_one(const u8 *val, size_t len)
 {
 	size_t i;
@@ -416,7 +439,7 @@ int sae_process_commit(struct sae_data *sae)
 void sae_write_commit(struct sae_data *sae, struct wpabuf *buf,
 		      const struct wpabuf *token)
 {
-	wpabuf_put_le16(buf, 19); /* Finite Cyclic Group */
+	wpabuf_put_le16(buf, sae->group); /* Finite Cyclic Group */
 	if (token)
 		wpabuf_put_buf(buf, token);
 	wpabuf_put_data(buf, sae->own_commit_scalar, 32);
@@ -429,6 +452,7 @@ u16 sae_parse_commit(struct sae_data *sae, const u8 *data, size_t len,
 {
 	const u8 *pos = data, *end = data + len;
 	size_t val_len;
+	u16 group;
 
 	wpa_hexdump(MSG_DEBUG, "SAE: Commit fields", data, len);
 	if (token)
@@ -439,9 +463,14 @@ u16 sae_parse_commit(struct sae_data *sae, const u8 *data, size_t len,
 	/* Check Finite Cyclic Group */
 	if (pos + 2 > end)
 		return WLAN_STATUS_UNSPECIFIED_FAILURE;
-	if (WPA_GET_LE16(pos) != 19) {
+	group = WPA_GET_LE16(pos);
+	if (sae->state == SAE_COMMITTED && group != sae->group) {
+		wpa_printf(MSG_DEBUG, "SAE: Do not allow group to be changed");
+		return WLAN_STATUS_FINITE_CYCLIC_GROUP_NOT_SUPPORTED;
+	}
+	if (group != sae->group && sae_set_group(sae, group) < 0) {
 		wpa_printf(MSG_DEBUG, "SAE: Unsupported Finite Cyclic Group %u",
-			   WPA_GET_LE16(pos));
+			   group);
 		return WLAN_STATUS_FINITE_CYCLIC_GROUP_NOT_SUPPORTED;
 	}
 	pos += 2;

@@ -23,7 +23,13 @@ struct sae_data {
 	u8 peer_commit_element[2 * 32];
 	u8 pwe[2 * 32];
 	u8 sae_rand[32];
+	int group;
+	struct crypto_ec *ec;
+	int prime_len;
 };
+
+int sae_set_group(struct sae_data *sae, int group);
+void sae_clear_data(struct sae_data *sae);
 
 int sae_prepare_commit(const u8 *addr1, const u8 *addr2,
 		       const u8 *password, size_t password_len,

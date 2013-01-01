@@ -900,7 +900,6 @@ int crypto_bignum_mod(const struct crypto_bignum *a,
 struct crypto_ec {
 	EC_GROUP *group;
 	BN_CTX *bnctx;
-	size_t prime_len;
 	BIGNUM *prime;
 	BIGNUM *order;
 };
@@ -908,17 +907,32 @@ struct crypto_ec {
 struct crypto_ec * crypto_ec_init(int group)
 {
 	struct crypto_ec *e;
+	int nid;
 
-	if (group != 19)
+	/* Map from IANA registry for IKE D-H groups to OpenSSL NID */
+	switch (group) {
+	case 19:
+		nid = NID_X9_62_prime256v1;
+		break;
+	case 20:
+		nid = NID_secp384r1;
+		break;
+	case 25:
+		nid = NID_X9_62_prime192v1;
+		break;
+	case 26:
+		nid = NID_secp224r1;
+		break;
+	default:
 		return NULL;
+	}
 
 	e = os_zalloc(sizeof(*e));
 	if (e == NULL)
 		return NULL;
 
-	e->prime_len = 32;
 	e->bnctx = BN_CTX_new();
-	e->group = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
+	e->group = EC_GROUP_new_by_curve_name(nid);
 	e->prime = BN_new();
 	e->order = BN_new();
 	if (e->group == NULL || e->bnctx == NULL || e->prime == NULL ||
@@ -954,7 +968,7 @@ struct crypto_ec_point * crypto_ec_point_init(struct crypto_ec *e)
 
 size_t crypto_ec_prime_len(struct crypto_ec *e)
 {
-	return e->prime_len;
+	return BN_num_bytes(e->prime);
 }
 
 
@@ -984,6 +998,7 @@ int crypto_ec_point_to_bin(struct crypto_ec *e,
 {
 	BIGNUM *x_bn, *y_bn;
 	int ret = -1;
+	int len = BN_num_bytes(e->prime);
 
 	x_bn = BN_new();
 	y_bn = BN_new();
@@ -993,11 +1008,11 @@ int crypto_ec_point_to_bin(struct crypto_ec *e,
 						x_bn, y_bn, e->bnctx)) {
 		if (x) {
 			crypto_bignum_to_bin((struct crypto_bignum *) x_bn,
-					     x, e->prime_len, e->prime_len);
+					     x, len, len);
 		}
 		if (y) {
 			crypto_bignum_to_bin((struct crypto_bignum *) y_bn,
-					     y, e->prime_len, e->prime_len);
+					     y, len, len);
 		}
 		ret = 0;
 	}
@@ -1013,9 +1028,10 @@ struct crypto_ec_point * crypto_ec_point_from_bin(struct crypto_ec *e,
 {
 	BIGNUM *x, *y;
 	EC_POINT *elem;
+	int len = BN_num_bytes(e->prime);
 
-	x = BN_bin2bn(val, e->prime_len, NULL);
-	y = BN_bin2bn(val + e->prime_len, e->prime_len, NULL);
+	x = BN_bin2bn(val, len, NULL);
+	y = BN_bin2bn(val + len, len, NULL);
 	elem = EC_POINT_new(e->group);
 	if (x == NULL || y == NULL || elem == NULL) {
 		BN_free(x);

@@ -917,6 +917,9 @@ struct crypto_ec * crypto_ec_init(int group)
 	case 20:
 		nid = NID_secp384r1;
 		break;
+	case 21:
+		nid = NID_secp521r1;
+		break;
 	case 25:
 		nid = NID_X9_62_prime192v1;
 		break;
@@ -969,6 +972,12 @@ struct crypto_ec_point * crypto_ec_point_init(struct crypto_ec *e)
 size_t crypto_ec_prime_len(struct crypto_ec *e)
 {
 	return BN_num_bytes(e->prime);
+}
+
+
+size_t crypto_ec_prime_len_bits(struct crypto_ec *e)
+{
+	return BN_num_bits(e->prime);
 }
 
 

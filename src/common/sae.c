@@ -63,15 +63,27 @@ static int val_zero(const u8 *val, size_t len)
 }
 
 
-static int sae_get_rand(const u8 *order, size_t prime_len, u8 *val)
+static void buf_shift_right(u8 *buf, size_t len, size_t bits)
+{
+	size_t i;
+	for (i = len - 1; i > 0; i--)
+		buf[i] = (buf[i - 1] << (8 - bits)) | (buf[i] >> bits);
+	buf[0] >>= bits;
+}
+
+
+static int sae_get_rand(const u8 *order, size_t prime_len_bits, u8 *val)
 {
 	int iter = 0;
+	size_t prime_len = (prime_len_bits + 7) / 8;
 
 	do {
-		if (random_get_bytes(val, prime_len) < 0)
-			return -1;
 		if (iter++ > 100)
 			return -1;
+		if (random_get_bytes(val, prime_len) < 0)
+			return -1;
+		if (prime_len_bits % 8)
+			buf_shift_right(val, prime_len, 8 - prime_len_bits % 8);
 	} while (os_memcmp(val, order, prime_len) >= 0 ||
 		 val_zero_or_one(val, prime_len));
 
@@ -83,13 +95,14 @@ static struct crypto_bignum * sae_get_rand_and_mask(struct sae_data *sae)
 {
 	u8 mask[SAE_MAX_PRIME_LEN], order[SAE_MAX_PRIME_LEN];
 	struct crypto_bignum *bn;
+	size_t prime_len_bits = crypto_ec_prime_len_bits(sae->ec);
 
 	if (crypto_bignum_to_bin(crypto_ec_get_order(sae->ec),
 				 order, sizeof(order), sae->prime_len) < 0)
 		return NULL;
 
-	if (sae_get_rand(order, sae->prime_len, sae->sae_rand) < 0 ||
-	    sae_get_rand(order, sae->prime_len, mask) < 0)
+	if (sae_get_rand(order, prime_len_bits, sae->sae_rand) < 0 ||
+	    sae_get_rand(order, prime_len_bits, mask) < 0)
 		return NULL;
 	wpa_hexdump_key(MSG_DEBUG, "SAE: rand",
 			sae->sae_rand, sae->prime_len);
@@ -120,6 +133,7 @@ static int sae_test_pwd_seed(struct sae_data *sae, const u8 *pwd_seed,
 	u8 pwd_value[SAE_MAX_PRIME_LEN], prime[SAE_MAX_PRIME_LEN];
 	struct crypto_bignum *x;
 	int y_bit;
+	size_t bits;
 
 	if (crypto_bignum_to_bin(crypto_ec_get_prime(sae->ec),
 				 prime, sizeof(prime), sae->prime_len) < 0)
@@ -128,8 +142,11 @@ static int sae_test_pwd_seed(struct sae_data *sae, const u8 *pwd_seed,
 	wpa_hexdump_key(MSG_DEBUG, "SAE: pwd-seed", pwd_seed, SHA256_MAC_LEN);
 
 	/* pwd-value = KDF-z(pwd-seed, "SAE Hunting and Pecking", p) */
-	sha256_prf(pwd_seed, SHA256_MAC_LEN, "SAE Hunting and Pecking",
-		   prime, sae->prime_len, pwd_value, sae->prime_len);
+	bits = crypto_ec_prime_len_bits(sae->ec);
+	sha256_prf_bits(pwd_seed, SHA256_MAC_LEN, "SAE Hunting and Pecking",
+			prime, sae->prime_len, pwd_value, bits);
+	if (bits % 8)
+		buf_shift_right(pwd_value, sizeof(pwd_value), 8 - bits % 8);
 	wpa_hexdump_key(MSG_DEBUG, "SAE: pwd-value",
 			pwd_value, sae->prime_len);
 
@@ -241,8 +258,10 @@ static int sae_derive_commit(struct sae_data *sae, struct crypto_ec_point *pwe)
 	int ret = -1;
 
 	mask = sae_get_rand_and_mask(sae);
-	if (mask == NULL)
+	if (mask == NULL) {
+		wpa_printf(MSG_DEBUG, "SAE: Could not get rand/mask");
 		return -1;
+	}
 
 	x = crypto_bignum_init();
 	bn_rand = crypto_bignum_init_set(sae->sae_rand, sae->prime_len);
@@ -263,8 +282,10 @@ static int sae_derive_commit(struct sae_data *sae, struct crypto_ec_point *pwe)
 	    crypto_ec_point_invert(sae->ec, elem) < 0 ||
 	    crypto_ec_point_to_bin(sae->ec, elem, sae->own_commit_element,
 				   sae->own_commit_element + sae->prime_len) <
-	    0)
+	    0) {
+		wpa_printf(MSG_DEBUG, "SAE: Could not compute commit-element");
 		goto fail;
+	}
 
 	wpa_hexdump(MSG_DEBUG, "SAE: commit-element x",
 		    sae->own_commit_element, sae->prime_len);

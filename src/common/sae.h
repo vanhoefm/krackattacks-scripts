@@ -1,6 +1,6 @@
 /*
  * Simultaneous authentication of equals
- * Copyright (c) 2012, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2012-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -13,7 +13,7 @@
 #define SAE_PMK_LEN 32
 #define SAE_PMKID_LEN 16
 #define SAE_KEYSEED_KEY_LEN 32
-#define SAE_MAX_PRIME_LEN 48
+#define SAE_MAX_PRIME_LEN 66
 #define SAE_COMMIT_MAX_LEN (2 + 3 * SAE_MAX_PRIME_LEN)
 #define SAE_CONFIRM_MAX_LEN (2 + SAE_MAX_PRIME_LEN)
 

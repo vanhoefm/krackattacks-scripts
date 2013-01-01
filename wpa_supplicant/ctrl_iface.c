@@ -1373,6 +1373,16 @@ static int wpa_supplicant_ctrl_iface_status(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_AP */
 		pos += wpa_sm_get_status(wpa_s->wpa, pos, end - pos, verbose);
 	}
+#ifdef CONFIG_SAE
+	if (wpa_s->wpa_state >= WPA_ASSOCIATED &&
+	    wpa_s->sme.sae.state == SAE_ACCEPTED && !wpa_s->ap_iface) {
+		ret = os_snprintf(pos, end - pos, "sae_group=%d\n",
+				  wpa_s->sme.sae.group);
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+	}
+#endif /* CONFIG_SAE */
 	ret = os_snprintf(pos, end - pos, "wpa_state=%s\n",
 			  wpa_supplicant_state_txt(wpa_s->wpa_state));
 	if (ret < 0 || ret >= end - pos)

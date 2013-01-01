@@ -42,6 +42,45 @@ static void sme_stop_sa_query(struct wpa_supplicant *wpa_s);
 
 #ifdef CONFIG_SAE
 
+static int index_within_array(const int *array, int idx)
+{
+	int i;
+	for (i = 0; i < idx; i++) {
+		if (array[i] == -1)
+			return 0;
+	}
+	return 1;
+}
+
+
+static int sme_set_sae_group(struct wpa_supplicant *wpa_s)
+{
+	int *groups = wpa_s->conf->sae_groups;
+	int default_groups[] = { 19, 20, 21, 25, 26 };
+
+	if (!groups)
+		groups = default_groups;
+
+	/* Configuration may have changed, so validate current index */
+	if (!index_within_array(groups, wpa_s->sme.sae_group_index))
+		return -1;
+
+	for (;;) {
+		int group = groups[wpa_s->sme.sae_group_index];
+		if (group < 0)
+			break;
+		if (sae_set_group(&wpa_s->sme.sae, group) == 0) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "SME: Selected SAE group %d",
+				wpa_s->sme.sae.group);
+		       return 0;
+		}
+		wpa_s->sme.sae_group_index++;
+	}
+
+	return -1;
+}
+
+
 static struct wpabuf * sme_auth_build_sae_commit(struct wpa_supplicant *wpa_s,
 						 struct wpa_ssid *ssid,
 						 const u8 *bssid)
@@ -54,8 +93,10 @@ static struct wpabuf * sme_auth_build_sae_commit(struct wpa_supplicant *wpa_s,
 		return NULL;
 	}
 
-	if (sae_set_group(&wpa_s->sme.sae, 19) < 0)
+	if (sme_set_sae_group(wpa_s) < 0) {
+		wpa_printf(MSG_DEBUG, "SAE: Failed to select group");
 		return NULL;
+	}
 
 	if (sae_prepare_commit(wpa_s->own_addr, bssid,
 			       (u8 *) ssid->passphrase,
@@ -424,6 +465,20 @@ static int sme_sae_auth(struct wpa_supplicant *wpa_s, u16 auth_transaction,
 		return 0;
 	}
 
+	if (auth_transaction == 1 &&
+	    status_code == WLAN_STATUS_FINITE_CYCLIC_GROUP_NOT_SUPPORTED &&
+	    wpa_s->sme.sae.state == SAE_COMMITTED &&
+	    wpa_s->current_bss && wpa_s->current_ssid) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "SME: SAE group not supported");
+		wpa_s->sme.sae_group_index++;
+		if (sme_set_sae_group(wpa_s) < 0)
+			return -1; /* no other groups enabled */
+		wpa_dbg(wpa_s, MSG_DEBUG, "SME: Try next enabled SAE group");
+		sme_send_authentication(wpa_s, wpa_s->current_bss,
+					wpa_s->current_ssid, 1);
+		return 0;
+	}
+
 	if (status_code != WLAN_STATUS_SUCCESS)
 		return -1;
 
@@ -434,7 +489,8 @@ static int sme_sae_auth(struct wpa_supplicant *wpa_s, u16 auth_transaction,
 			return -1;
 		if (wpa_s->sme.sae.state != SAE_COMMITTED)
 			return -1;
-		if (sae_parse_commit(&wpa_s->sme.sae, data, len, NULL, NULL) !=
+		if (sae_parse_commit(&wpa_s->sme.sae, data, len, NULL, NULL,
+				     wpa_s->conf->sae_groups) !=
 		    WLAN_STATUS_SUCCESS)
 			return -1;
 

@@ -470,7 +470,7 @@ void sae_write_commit(struct sae_data *sae, struct wpabuf *buf,
 
 
 u16 sae_parse_commit(struct sae_data *sae, const u8 *data, size_t len,
-		     const u8 **token, size_t *token_len)
+		     const u8 **token, size_t *token_len, int *allowed_groups)
 {
 	const u8 *pos = data, *end = data + len;
 	u16 group;
@@ -485,6 +485,19 @@ u16 sae_parse_commit(struct sae_data *sae, const u8 *data, size_t len,
 	if (pos + 2 > end)
 		return WLAN_STATUS_UNSPECIFIED_FAILURE;
 	group = WPA_GET_LE16(pos);
+	if (allowed_groups) {
+		int i;
+		for (i = 0; allowed_groups[i] >= 0; i++) {
+			if (allowed_groups[i] == group)
+				break;
+		}
+		if (allowed_groups[i] != group) {
+			wpa_printf(MSG_DEBUG, "SAE: Proposed group %u not "
+				   "enabled in the current configuration",
+				   group);
+			return WLAN_STATUS_FINITE_CYCLIC_GROUP_NOT_SUPPORTED;
+		}
+	}
 	if (sae->state == SAE_COMMITTED && group != sae->group) {
 		wpa_printf(MSG_DEBUG, "SAE: Do not allow group to be changed");
 		return WLAN_STATUS_FINITE_CYCLIC_GROUP_NOT_SUPPORTED;

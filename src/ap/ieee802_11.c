@@ -460,7 +460,7 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 		resp = sae_parse_commit(sta->sae, mgmt->u.auth.variable,
 					((const u8 *) mgmt) + len -
 					mgmt->u.auth.variable, &token,
-					&token_len);
+					&token_len, hapd->conf->sae_groups);
 		if (token && check_sae_token(hapd, sta->addr, token, token_len)
 		    < 0) {
 			wpa_printf(MSG_DEBUG, "SAE: Drop commit message with "

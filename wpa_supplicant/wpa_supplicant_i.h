@@ -517,6 +517,7 @@ struct wpa_supplicant {
 #ifdef CONFIG_SAE
 		struct sae_data sae;
 		struct wpabuf *sae_token;
+		int sae_group_index;
 #endif /* CONFIG_SAE */
 	} sme;
 #endif /* CONFIG_SME */

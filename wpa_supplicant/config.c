@@ -916,9 +916,7 @@ static char * wpa_config_write_auth_alg(const struct parse_data *data,
 #endif /* NO_CONFIG_WRITE */
 
 
-static int * wpa_config_parse_freqs(const struct parse_data *data,
-				    struct wpa_ssid *ssid, int line,
-				    const char *value)
+static int * wpa_config_parse_int_array(const char *value)
 {
 	int *freqs;
 	size_t used, len;
@@ -965,7 +963,7 @@ static int wpa_config_parse_scan_freq(const struct parse_data *data,
 {
 	int *freqs;
 
-	freqs = wpa_config_parse_freqs(data, ssid, line, value);
+	freqs = wpa_config_parse_int_array(value);
 	if (freqs == NULL)
 		return -1;
 	os_free(ssid->scan_freq);
@@ -981,7 +979,7 @@ static int wpa_config_parse_freq_list(const struct parse_data *data,
 {
 	int *freqs;
 
-	freqs = wpa_config_parse_freqs(data, ssid, line, value);
+	freqs = wpa_config_parse_int_array(value);
 	if (freqs == NULL)
 		return -1;
 	os_free(ssid->freq_list);
@@ -1903,6 +1901,7 @@ void wpa_config_free(struct wpa_config *config)
 	wpabuf_free(config->wps_nfc_dh_privkey);
 	wpabuf_free(config->wps_nfc_dev_pw);
 	os_free(config->ext_password_backend);
+	os_free(config->sae_groups);
 	os_free(config);
 }
 
@@ -2978,6 +2977,24 @@ static int wpa_config_process_hessid(
 }
 
 
+static int wpa_config_process_sae_groups(
+	const struct global_parse_data *data,
+	struct wpa_config *config, int line, const char *pos)
+{
+	int *groups = wpa_config_parse_int_array(pos);
+	if (groups == NULL) {
+		wpa_printf(MSG_ERROR, "Line %d: Invalid sae_groups '%s'",
+			   line, pos);
+		return -1;
+	}
+
+	os_free(config->sae_groups);
+	config->sae_groups = groups;
+
+	return 0;
+}
+
+
 #ifdef OFFSET
 #undef OFFSET
 #endif /* OFFSET */
@@ -3070,6 +3087,7 @@ static const struct global_parse_data global_fields[] = {
 	{ INT_RANGE(auto_interworking, 0, 1), 0 },
 	{ INT(okc), 0 },
 	{ INT(pmf), 0 },
+	{ FUNC(sae_groups), 0 },
 };
 
 #undef FUNC

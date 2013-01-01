@@ -1,6 +1,6 @@
 /*
  * hostapd / Configuration file parser
- * Copyright (c) 2003-2012, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -2937,6 +2937,12 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			bss->vendor_elements = elems;
 		} else if (os_strcmp(buf, "sae_anti_clogging_threshold") == 0) {
 			bss->sae_anti_clogging_threshold = atoi(pos);
+		} else if (os_strcmp(buf, "sae_groups") == 0) {
+			if (hostapd_parse_rates(&bss->sae_groups, pos)) {
+				wpa_printf(MSG_ERROR, "Line %d: Invalid "
+					   "sae_groups value '%s'", line, pos);
+				return 1;
+			}
 		} else {
 			wpa_printf(MSG_ERROR, "Line %d: unknown configuration "
 				   "item '%s'", line, buf);

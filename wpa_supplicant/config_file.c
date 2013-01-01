@@ -970,6 +970,16 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 		fprintf(f, "okc=%d\n", config->okc);
 	if (config->pmf)
 		fprintf(f, "pmf=%d\n", config->pmf);
+
+	if (config->sae_groups) {
+		int i;
+		fprintf(f, "sae_groups=");
+		for (i = 0; config->sae_groups[i] >= 0; i++) {
+			fprintf(f, "%s%d", i > 0 ? " " : "",
+				config->sae_groups[i]);
+		}
+		fprintf(f, "\n");
+	}
 }
 
 #endif /* CONFIG_NO_CONFIG_WRITE */

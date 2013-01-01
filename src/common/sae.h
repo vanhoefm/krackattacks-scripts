@@ -43,7 +43,7 @@ int sae_process_commit(struct sae_data *sae);
 void sae_write_commit(struct sae_data *sae, struct wpabuf *buf,
 		      const struct wpabuf *token);
 u16 sae_parse_commit(struct sae_data *sae, const u8 *data, size_t len,
-		     const u8 **token, size_t *token_len);
+		     const u8 **token, size_t *token_len, int *allowed_groups);
 void sae_write_confirm(struct sae_data *sae, struct wpabuf *buf);
 int sae_check_confirm(struct sae_data *sae, const u8 *data, size_t len);
 

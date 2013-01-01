@@ -797,6 +797,16 @@ struct wpa_config {
 	 * this default behavior.
 	 */
 	enum mfp_options pmf;
+
+	/**
+	 * sae_groups - Preference list of enabled groups for SAE
+	 *
+	 * By default (if this parameter is not set), the mandatory group 19
+	 * (ECC group defined over a 256-bit prime order field) is preferred,
+	 * but other groups are also enabled. If this parameter is set, the
+	 * groups will be tried in the indicated order.
+	 */
+	int *sae_groups;
 };
 
 

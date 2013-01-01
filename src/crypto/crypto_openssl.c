@@ -901,6 +901,7 @@ struct crypto_ec {
 	EC_GROUP *group;
 	BN_CTX *bnctx;
 	size_t prime_len;
+	BIGNUM *order;
 };
 
 struct crypto_ec * crypto_ec_init(int group)
@@ -917,7 +918,9 @@ struct crypto_ec * crypto_ec_init(int group)
 	e->prime_len = 32;
 	e->bnctx = BN_CTX_new();
 	e->group = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
-	if (e->group == NULL || e->bnctx == NULL) {
+	e->order = BN_new();
+	if (e->group == NULL || e->bnctx == NULL || e->order == NULL ||
+	    !EC_GROUP_get_order(e->group, e->order, e->bnctx)) {
 		crypto_ec_deinit(e);
 		e = NULL;
 	}
@@ -930,6 +933,7 @@ void crypto_ec_deinit(struct crypto_ec *e)
 {
 	if (e == NULL)
 		return;
+	BN_free(e->order);
 	EC_GROUP_free(e->group);
 	BN_CTX_free(e->bnctx);
 	os_free(e);
@@ -947,6 +951,12 @@ struct crypto_ec_point * crypto_ec_point_init(struct crypto_ec *e)
 size_t crypto_ec_prime_len(struct crypto_ec *e)
 {
 	return e->prime_len;
+}
+
+
+const struct crypto_bignum * crypto_ec_get_order(struct crypto_ec *e)
+{
+	return (const struct crypto_bignum *) e->order;
 }
 
 

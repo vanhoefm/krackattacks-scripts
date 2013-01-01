@@ -227,7 +227,7 @@ static int sae_derive_pwe(struct sae_data *sae, const u8 *addr1,
 
 static int sae_derive_commit(struct sae_data *sae, struct crypto_ec_point *pwe)
 {
-	struct crypto_bignum *x, *bn_rand, *bn_mask, *order;
+	struct crypto_bignum *x, *bn_rand, *bn_mask;
 	struct crypto_ec_point *elem;
 	u8 mask[SAE_MAX_PRIME_LEN];
 	int ret = -1;
@@ -241,15 +241,13 @@ static int sae_derive_commit(struct sae_data *sae, struct crypto_ec_point *pwe)
 	x = crypto_bignum_init();
 	bn_rand = crypto_bignum_init_set(sae->sae_rand, sae->prime_len);
 	bn_mask = crypto_bignum_init_set(mask, sizeof(mask));
-	order = crypto_bignum_init_set(group19_order, sizeof(group19_order));
 	elem = crypto_ec_point_init(sae->ec);
-	if (x == NULL || bn_rand == NULL || bn_mask == NULL || order == NULL ||
-	    elem == NULL)
+	if (x == NULL || bn_rand == NULL || bn_mask == NULL || elem == NULL)
 		goto fail;
 
 	/* commit-scalar = (rand + mask) modulo r */
 	crypto_bignum_add(bn_rand, bn_mask, x);
-	crypto_bignum_mod(x, order, x);
+	crypto_bignum_mod(x, crypto_ec_get_order(sae->ec), x);
 	crypto_bignum_to_bin(x, sae->own_commit_scalar,
 			     sizeof(sae->own_commit_scalar), sae->prime_len);
 	wpa_hexdump(MSG_DEBUG, "SAE: commit-scalar",
@@ -271,7 +269,6 @@ static int sae_derive_commit(struct sae_data *sae, struct crypto_ec_point *pwe)
 	ret = 0;
 fail:
 	crypto_ec_point_deinit(elem, 0);
-	crypto_bignum_deinit(order, 0);
 	crypto_bignum_deinit(bn_mask, 1);
 	os_memset(mask, 0, sizeof(mask));
 	crypto_bignum_deinit(bn_rand, 1);
@@ -378,17 +375,15 @@ static int sae_derive_keys(struct sae_data *sae, const u8 *k)
 	u8 null_key[SAE_KEYSEED_KEY_LEN], val[SAE_MAX_PRIME_LEN];
 	u8 keyseed[SHA256_MAC_LEN];
 	u8 keys[SAE_KCK_LEN + SAE_PMK_LEN];
-	struct crypto_bignum *order, *own_scalar, *peer_scalar, *tmp;
+	struct crypto_bignum *own_scalar, *peer_scalar, *tmp;
 	int ret = -1;
 
-	order = crypto_bignum_init_set(group19_order, sizeof(group19_order));
 	own_scalar = crypto_bignum_init_set(sae->own_commit_scalar,
 					    sae->prime_len);
 	peer_scalar = crypto_bignum_init_set(sae->peer_commit_scalar,
 					     sae->prime_len);
 	tmp = crypto_bignum_init();
-	if (order == NULL || own_scalar == NULL || peer_scalar == NULL ||
-	    tmp == NULL)
+	if (own_scalar == NULL || peer_scalar == NULL || tmp == NULL)
 		goto fail;
 
 	/* keyseed = H(<0>32, k)
@@ -402,7 +397,7 @@ static int sae_derive_keys(struct sae_data *sae, const u8 *k)
 	wpa_hexdump_key(MSG_DEBUG, "SAE: keyseed", keyseed, sizeof(keyseed));
 
 	crypto_bignum_add(own_scalar, peer_scalar, tmp);
-	crypto_bignum_mod(tmp, order, tmp);
+	crypto_bignum_mod(tmp, crypto_ec_get_order(sae->ec), tmp);
 	crypto_bignum_to_bin(tmp, val, sizeof(val), sae->prime_len);
 	wpa_hexdump(MSG_DEBUG, "SAE: PMKID", val, SAE_PMKID_LEN);
 	sha256_prf(keyseed, sizeof(keyseed), "SAE KCK and PMK",
@@ -417,7 +412,6 @@ fail:
 	crypto_bignum_deinit(tmp, 0);
 	crypto_bignum_deinit(peer_scalar, 0);
 	crypto_bignum_deinit(own_scalar, 0);
-	crypto_bignum_deinit(order, 0);
 	return ret;
 }
 

@@ -550,6 +550,13 @@ void crypto_ec_deinit(struct crypto_ec *e);
 size_t crypto_ec_prime_len(struct crypto_ec *e);
 
 /**
+ * crypto_ec_get_order - Get order of an EC group
+ * @e: EC context from crypto_ec_init()
+ * Returns: Order (bignum) of the group
+ */
+const struct crypto_bignum * crypto_ec_get_order(struct crypto_ec *e);
+
+/**
  * struct crypto_ec_point - Elliptic curve point
  *
  * Internal data structure for EC implementation to represent a point. The

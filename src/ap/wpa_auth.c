@@ -282,8 +282,9 @@ static void wpa_auth_pmksa_free_cb(struct rsn_pmksa_cache_entry *entry,
 static int wpa_group_init_gmk_and_counter(struct wpa_authenticator *wpa_auth,
 					  struct wpa_group *group)
 {
-	u8 buf[ETH_ALEN + 8 + sizeof(group)];
+	u8 buf[ETH_ALEN + 8 + sizeof(unsigned long)];
 	u8 rkey[32];
+	unsigned long ptr;
 
 	if (random_get_bytes(group->GMK, WPA_GMK_LEN) < 0)
 		return -1;
@@ -295,7 +296,8 @@ static int wpa_group_init_gmk_and_counter(struct wpa_authenticator *wpa_auth,
 	 */
 	os_memcpy(buf, wpa_auth->addr, ETH_ALEN);
 	wpa_get_ntp_timestamp(buf + ETH_ALEN);
-	os_memcpy(buf + ETH_ALEN + 8, &group, sizeof(group));
+	ptr = (unsigned long) group;
+	os_memcpy(buf + ETH_ALEN + 8, &ptr, sizeof(ptr));
 	if (random_get_bytes(rkey, sizeof(rkey)) < 0)
 		return -1;
 

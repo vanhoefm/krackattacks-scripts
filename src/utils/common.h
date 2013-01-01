@@ -224,69 +224,105 @@ static inline unsigned int wpa_swap_32(unsigned int v)
 
 /* Macros for handling unaligned memory accesses */
 
-#define WPA_GET_BE16(a) ((u16) (((a)[0] << 8) | (a)[1]))
-#define WPA_PUT_BE16(a, val)			\
-	do {					\
-		(a)[0] = ((u16) (val)) >> 8;	\
-		(a)[1] = ((u16) (val)) & 0xff;	\
-	} while (0)
+static inline u16 WPA_GET_BE16(const u8 *a)
+{
+	return (a[0] << 8) | a[1];
+}
 
-#define WPA_GET_LE16(a) ((u16) (((a)[1] << 8) | (a)[0]))
-#define WPA_PUT_LE16(a, val)			\
-	do {					\
-		(a)[1] = ((u16) (val)) >> 8;	\
-		(a)[0] = ((u16) (val)) & 0xff;	\
-	} while (0)
+static inline void WPA_PUT_BE16(u8 *a, u16 val)
+{
+	a[0] = val >> 8;
+	a[1] = val & 0xff;
+}
 
-#define WPA_GET_BE24(a) ((((u32) (a)[0]) << 16) | (((u32) (a)[1]) << 8) | \
-			 ((u32) (a)[2]))
-#define WPA_PUT_BE24(a, val)					\
-	do {							\
-		(a)[0] = (u8) ((((u32) (val)) >> 16) & 0xff);	\
-		(a)[1] = (u8) ((((u32) (val)) >> 8) & 0xff);	\
-		(a)[2] = (u8) (((u32) (val)) & 0xff);		\
-	} while (0)
+static inline u16 WPA_GET_LE16(const u8 *a)
+{
+	return (a[1] << 8) | a[0];
+}
 
-#define WPA_GET_BE32(a) ((((u32) (a)[0]) << 24) | (((u32) (a)[1]) << 16) | \
-			 (((u32) (a)[2]) << 8) | ((u32) (a)[3]))
-#define WPA_PUT_BE32(a, val)					\
-	do {							\
-		(a)[0] = (u8) ((((u32) (val)) >> 24) & 0xff);	\
-		(a)[1] = (u8) ((((u32) (val)) >> 16) & 0xff);	\
-		(a)[2] = (u8) ((((u32) (val)) >> 8) & 0xff);	\
-		(a)[3] = (u8) (((u32) (val)) & 0xff);		\
-	} while (0)
+static inline void WPA_PUT_LE16(u8 *a, u16 val)
+{
+	a[1] = val >> 8;
+	a[0] = val & 0xff;
+}
 
-#define WPA_GET_LE32(a) ((((u32) (a)[3]) << 24) | (((u32) (a)[2]) << 16) | \
-			 (((u32) (a)[1]) << 8) | ((u32) (a)[0]))
-#define WPA_PUT_LE32(a, val)					\
-	do {							\
-		(a)[3] = (u8) ((((u32) (val)) >> 24) & 0xff);	\
-		(a)[2] = (u8) ((((u32) (val)) >> 16) & 0xff);	\
-		(a)[1] = (u8) ((((u32) (val)) >> 8) & 0xff);	\
-		(a)[0] = (u8) (((u32) (val)) & 0xff);		\
-	} while (0)
+static inline u32 WPA_GET_BE24(const u8 *a)
+{
+	return (a[0] << 16) | (a[1] << 8) | a[2];
+}
 
-#define WPA_GET_BE64(a) ((((u64) (a)[0]) << 56) | (((u64) (a)[1]) << 48) | \
-			 (((u64) (a)[2]) << 40) | (((u64) (a)[3]) << 32) | \
-			 (((u64) (a)[4]) << 24) | (((u64) (a)[5]) << 16) | \
-			 (((u64) (a)[6]) << 8) | ((u64) (a)[7]))
-#define WPA_PUT_BE64(a, val)				\
-	do {						\
-		(a)[0] = (u8) (((u64) (val)) >> 56);	\
-		(a)[1] = (u8) (((u64) (val)) >> 48);	\
-		(a)[2] = (u8) (((u64) (val)) >> 40);	\
-		(a)[3] = (u8) (((u64) (val)) >> 32);	\
-		(a)[4] = (u8) (((u64) (val)) >> 24);	\
-		(a)[5] = (u8) (((u64) (val)) >> 16);	\
-		(a)[6] = (u8) (((u64) (val)) >> 8);	\
-		(a)[7] = (u8) (((u64) (val)) & 0xff);	\
-	} while (0)
+static inline void WPA_PUT_BE24(u8 *a, u32 val)
+{
+	a[0] = (val >> 16) & 0xff;
+	a[1] = (val >> 8) & 0xff;
+	a[2] = val & 0xff;
+}
 
-#define WPA_GET_LE64(a) ((((u64) (a)[7]) << 56) | (((u64) (a)[6]) << 48) | \
-			 (((u64) (a)[5]) << 40) | (((u64) (a)[4]) << 32) | \
-			 (((u64) (a)[3]) << 24) | (((u64) (a)[2]) << 16) | \
-			 (((u64) (a)[1]) << 8) | ((u64) (a)[0]))
+static inline u32 WPA_GET_BE32(const u8 *a)
+{
+	return (a[0] << 24) | (a[1] << 16) | (a[2] << 8) | a[3];
+}
+
+static inline void WPA_PUT_BE32(u8 *a, u32 val)
+{
+	a[0] = (val >> 24) & 0xff;
+	a[1] = (val >> 16) & 0xff;
+	a[2] = (val >> 8) & 0xff;
+	a[3] = val & 0xff;
+}
+
+static inline u32 WPA_GET_LE32(const u8 *a)
+{
+	return (a[3] << 24) | (a[2] << 16) | (a[1] << 8) | a[0];
+}
+
+static inline void WPA_PUT_LE32(u8 *a, u32 val)
+{
+	a[3] = (val >> 24) & 0xff;
+	a[2] = (val >> 16) & 0xff;
+	a[1] = (val >> 8) & 0xff;
+	a[0] = val & 0xff;
+}
+
+static inline u64 WPA_GET_BE64(const u8 *a)
+{
+	return (((u64) a[0]) << 56) | (((u64) a[1]) << 48) |
+		(((u64) a[2]) << 40) | (((u64) a[3]) << 32) |
+		(((u64) a[4]) << 24) | (((u64) a[5]) << 16) |
+		(((u64) a[6]) << 8) | ((u64) a[7]);
+}
+
+static inline void WPA_PUT_BE64(u8 *a, u64 val)
+{
+	a[0] = val >> 56;
+	a[1] = val >> 48;
+	a[2] = val >> 40;
+	a[3] = val >> 32;
+	a[4] = val >> 24;
+	a[5] = val >> 16;
+	a[6] = val >> 8;
+	a[7] = val & 0xff;
+}
+
+static inline u64 WPA_GET_LE64(const u8 *a)
+{
+	return (((u64) a[7]) << 56) | (((u64) a[6]) << 48) |
+		(((u64) a[5]) << 40) | (((u64) a[4]) << 32) |
+		(((u64) a[3]) << 24) | (((u64) a[2]) << 16) |
+		(((u64) a[1]) << 8) | ((u64) a[0]);
+}
+
+static inline void WPA_PUT_LE64(u8 *a, u64 val)
+{
+	a[7] = val >> 56;
+	a[6] = val >> 48;
+	a[5] = val >> 40;
+	a[4] = val >> 32;
+	a[3] = val >> 24;
+	a[2] = val >> 16;
+	a[1] = val >> 8;
+	a[0] = val & 0xff;
+}
 
 
 #ifndef ETH_ALEN

@@ -16,14 +16,6 @@
 #include "sae.h"
 
 
-static const u8 group19_prime[] = {
-	0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x01,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
-};
-
-
 int sae_set_group(struct sae_data *sae, int group)
 {
 	crypto_ec_deinit(sae->ec);
@@ -125,20 +117,23 @@ static void sae_pwd_seed_key(const u8 *addr1, const u8 *addr2, u8 *key)
 static int sae_test_pwd_seed(struct sae_data *sae, const u8 *pwd_seed,
 			     struct crypto_ec_point *pwe, u8 *pwe_bin)
 {
-	u8 pwd_value[SAE_MAX_PRIME_LEN];
+	u8 pwd_value[SAE_MAX_PRIME_LEN], prime[SAE_MAX_PRIME_LEN];
 	struct crypto_bignum *x;
 	int y_bit;
+
+	if (crypto_bignum_to_bin(crypto_ec_get_prime(sae->ec),
+				 prime, sizeof(prime), sae->prime_len) < 0)
+		return -1;
 
 	wpa_hexdump_key(MSG_DEBUG, "SAE: pwd-seed", pwd_seed, SHA256_MAC_LEN);
 
 	/* pwd-value = KDF-z(pwd-seed, "SAE Hunting and Pecking", p) */
 	sha256_prf(pwd_seed, SHA256_MAC_LEN, "SAE Hunting and Pecking",
-		   group19_prime, sizeof(group19_prime),
-		   pwd_value, sizeof(pwd_value));
+		   prime, sae->prime_len, pwd_value, sizeof(pwd_value));
 	wpa_hexdump_key(MSG_DEBUG, "SAE: pwd-value",
 			pwd_value, sizeof(pwd_value));
 
-	if (os_memcmp(pwd_value, group19_prime, sizeof(group19_prime)) >= 0)
+	if (os_memcmp(pwd_value, prime, sae->prime_len) >= 0)
 		return 0;
 
 	y_bit = pwd_seed[SHA256_MAC_LEN - 1] & 0x01;
@@ -308,10 +303,12 @@ int sae_prepare_commit(const u8 *addr1, const u8 *addr2,
 
 static int sae_check_peer_commit(struct sae_data *sae)
 {
-	u8 order[SAE_MAX_PRIME_LEN];
+	u8 order[SAE_MAX_PRIME_LEN], prime[SAE_MAX_PRIME_LEN];
 
 	if (crypto_bignum_to_bin(crypto_ec_get_order(sae->ec),
-				 order, sizeof(order), sae->prime_len) < 0)
+				 order, sizeof(order), sae->prime_len) < 0 ||
+	    crypto_bignum_to_bin(crypto_ec_get_prime(sae->ec),
+				 prime, sizeof(prime), sae->prime_len) < 0)
 		return -1;
 
 	/* 0 < scalar < r */
@@ -322,10 +319,9 @@ static int sae_check_peer_commit(struct sae_data *sae)
 	}
 
 	/* element x and y coordinates < p */
-	if (os_memcmp(sae->peer_commit_element, group19_prime,
-		      sizeof(group19_prime)) >= 0 ||
-	    os_memcmp(sae->peer_commit_element + sae->prime_len, group19_prime,
-		      sizeof(group19_prime)) >= 0) {
+	if (os_memcmp(sae->peer_commit_element, prime, sae->prime_len) >= 0 ||
+	    os_memcmp(sae->peer_commit_element + sae->prime_len, prime,
+		      sae->prime_len) >= 0) {
 		wpa_printf(MSG_DEBUG, "SAE: Invalid coordinates in peer "
 			   "element");
 		return -1;

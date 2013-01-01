@@ -1,6 +1,6 @@
 /*
- * WPA Supplicant / wrapper functions for crypto libraries
- * Copyright (c) 2004-2009, Jouni Malinen <j@w1.fi>
+ * Wrapper functions for crypto libraries
+ * Copyright (c) 2004-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -548,6 +548,13 @@ void crypto_ec_deinit(struct crypto_ec *e);
  * Returns: Length of the prime defining the group
  */
 size_t crypto_ec_prime_len(struct crypto_ec *e);
+
+/**
+ * crypto_ec_get_prime - Get prime defining an EC group
+ * @e: EC context from crypto_ec_init()
+ * Returns: Prime (bignum) defining the group
+ */
+const struct crypto_bignum * crypto_ec_get_prime(struct crypto_ec *e);
 
 /**
  * crypto_ec_get_order - Get order of an EC group

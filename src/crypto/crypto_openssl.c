@@ -1,6 +1,6 @@
 /*
- * WPA Supplicant / wrapper functions for libcrypto
- * Copyright (c) 2004-2012, Jouni Malinen <j@w1.fi>
+ * Wrapper functions for OpenSSL libcrypto
+ * Copyright (c) 2004-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -901,6 +901,7 @@ struct crypto_ec {
 	EC_GROUP *group;
 	BN_CTX *bnctx;
 	size_t prime_len;
+	BIGNUM *prime;
 	BIGNUM *order;
 };
 
@@ -918,8 +919,11 @@ struct crypto_ec * crypto_ec_init(int group)
 	e->prime_len = 32;
 	e->bnctx = BN_CTX_new();
 	e->group = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
+	e->prime = BN_new();
 	e->order = BN_new();
-	if (e->group == NULL || e->bnctx == NULL || e->order == NULL ||
+	if (e->group == NULL || e->bnctx == NULL || e->prime == NULL ||
+	    e->order == NULL ||
+	    !EC_GROUP_get_curve_GFp(e->group, e->prime, NULL, NULL, e->bnctx) ||
 	    !EC_GROUP_get_order(e->group, e->order, e->bnctx)) {
 		crypto_ec_deinit(e);
 		e = NULL;
@@ -951,6 +955,12 @@ struct crypto_ec_point * crypto_ec_point_init(struct crypto_ec *e)
 size_t crypto_ec_prime_len(struct crypto_ec *e)
 {
 	return e->prime_len;
+}
+
+
+const struct crypto_bignum * crypto_ec_get_prime(struct crypto_ec *e)
+{
+	return (const struct crypto_bignum *) e->prime;
 }
 
 

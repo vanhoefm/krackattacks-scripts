@@ -1,6 +1,6 @@
 /*
  * Simultaneous authentication of equals
- * Copyright (c) 2012, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2012-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -78,19 +78,40 @@ static int val_zero(const u8 *val, size_t len)
 }
 
 
-static int sae_get_rand(u8 *val)
+static int sae_get_rand(const u8 *order, size_t prime_len, u8 *val)
 {
 	int iter = 0;
 
 	do {
-		if (random_get_bytes(val, sizeof(group19_prime)) < 0)
+		if (random_get_bytes(val, prime_len) < 0)
 			return -1;
 		if (iter++ > 100)
 			return -1;
-	} while (os_memcmp(val, group19_order, sizeof(group19_prime)) >= 0 ||
-		 val_zero_or_one(val, sizeof(group19_prime)));
+	} while (os_memcmp(val, order, prime_len) >= 0 ||
+		 val_zero_or_one(val, prime_len));
 
 	return 0;
+}
+
+
+static struct crypto_bignum * sae_get_rand_and_mask(struct sae_data *sae)
+{
+	u8 mask[SAE_MAX_PRIME_LEN], order[SAE_MAX_PRIME_LEN];
+	struct crypto_bignum *bn;
+
+	if (crypto_bignum_to_bin(crypto_ec_get_order(sae->ec),
+				 order, sizeof(order), sae->prime_len) < 0)
+		return NULL;
+
+	if (sae_get_rand(order, sae->prime_len, sae->sae_rand) < 0 ||
+	    sae_get_rand(order, sae->prime_len, mask) < 0)
+		return NULL;
+	wpa_hexdump_key(MSG_DEBUG, "SAE: rand",
+			sae->sae_rand, sae->prime_len);
+	wpa_hexdump_key(MSG_DEBUG, "SAE: mask", mask, sae->prime_len);
+	bn = crypto_bignum_init_set(mask, sae->prime_len);
+	os_memset(mask, 0, sizeof(mask));
+	return bn;
 }
 
 
@@ -227,26 +248,22 @@ static int sae_derive_pwe(struct sae_data *sae, const u8 *addr1,
 
 static int sae_derive_commit(struct sae_data *sae, struct crypto_ec_point *pwe)
 {
-	struct crypto_bignum *x, *bn_rand, *bn_mask;
+	struct crypto_bignum *x, *bn_rand, *mask;
 	struct crypto_ec_point *elem;
-	u8 mask[SAE_MAX_PRIME_LEN];
 	int ret = -1;
 
-	if (sae_get_rand(sae->sae_rand) < 0 || sae_get_rand(mask) < 0)
+	mask = sae_get_rand_and_mask(sae);
+	if (mask == NULL)
 		return -1;
-	wpa_hexdump_key(MSG_DEBUG, "SAE: rand",
-			sae->sae_rand, sizeof(sae->sae_rand));
-	wpa_hexdump_key(MSG_DEBUG, "SAE: mask", mask, sizeof(mask));
 
 	x = crypto_bignum_init();
 	bn_rand = crypto_bignum_init_set(sae->sae_rand, sae->prime_len);
-	bn_mask = crypto_bignum_init_set(mask, sizeof(mask));
 	elem = crypto_ec_point_init(sae->ec);
-	if (x == NULL || bn_rand == NULL || bn_mask == NULL || elem == NULL)
+	if (x == NULL || bn_rand == NULL || elem == NULL)
 		goto fail;
 
 	/* commit-scalar = (rand + mask) modulo r */
-	crypto_bignum_add(bn_rand, bn_mask, x);
+	crypto_bignum_add(bn_rand, mask, x);
 	crypto_bignum_mod(x, crypto_ec_get_order(sae->ec), x);
 	crypto_bignum_to_bin(x, sae->own_commit_scalar,
 			     sizeof(sae->own_commit_scalar), sae->prime_len);
@@ -254,7 +271,7 @@ static int sae_derive_commit(struct sae_data *sae, struct crypto_ec_point *pwe)
 		    sae->own_commit_scalar, sae->prime_len);
 
 	/* COMMIT-ELEMENT = inverse(scalar-op(mask, PWE)) */
-	if (crypto_ec_point_mul(sae->ec, pwe, bn_mask, elem) < 0 ||
+	if (crypto_ec_point_mul(sae->ec, pwe, mask, elem) < 0 ||
 	    crypto_ec_point_invert(sae->ec, elem) < 0 ||
 	    crypto_ec_point_to_bin(sae->ec, elem, sae->own_commit_element,
 				   sae->own_commit_element + sae->prime_len) <
@@ -269,8 +286,7 @@ static int sae_derive_commit(struct sae_data *sae, struct crypto_ec_point *pwe)
 	ret = 0;
 fail:
 	crypto_ec_point_deinit(elem, 0);
-	crypto_bignum_deinit(bn_mask, 1);
-	os_memset(mask, 0, sizeof(mask));
+	crypto_bignum_deinit(mask, 1);
 	crypto_bignum_deinit(bn_rand, 1);
 	crypto_bignum_deinit(x, 1);
 	return ret;

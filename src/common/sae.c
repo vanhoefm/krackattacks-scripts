@@ -23,13 +23,6 @@ static const u8 group19_prime[] = {
 	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
 };
 
-static const u8 group19_order[] = {
-	0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00,
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-	0xBC, 0xE6, 0xFA, 0xAD, 0xA7, 0x17, 0x9E, 0x84,
-	0xF3, 0xB9, 0xCA, 0xC2, 0xFC, 0x63, 0x25, 0x51
-};
-
 
 int sae_set_group(struct sae_data *sae, int group)
 {
@@ -315,10 +308,15 @@ int sae_prepare_commit(const u8 *addr1, const u8 *addr2,
 
 static int sae_check_peer_commit(struct sae_data *sae)
 {
+	u8 order[SAE_MAX_PRIME_LEN];
+
+	if (crypto_bignum_to_bin(crypto_ec_get_order(sae->ec),
+				 order, sizeof(order), sae->prime_len) < 0)
+		return -1;
+
 	/* 0 < scalar < r */
 	if (val_zero(sae->peer_commit_scalar, sae->prime_len) ||
-	    os_memcmp(sae->peer_commit_scalar, group19_order,
-		      sizeof(group19_prime)) >= 0) {
+	    os_memcmp(sae->peer_commit_scalar, order, sae->prime_len) >= 0) {
 		wpa_printf(MSG_DEBUG, "SAE: Invalid peer scalar");
 		return -1;
 	}

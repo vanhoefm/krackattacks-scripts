@@ -709,7 +709,7 @@ void WpaGui::helpContents()
 void WpaGui::helpAbout()
 {
 	QMessageBox::about(this, "wpa_gui for wpa_supplicant",
-			   "Copyright (c) 2003-2012,\n"
+			   "Copyright (c) 2003-2013,\n"
 			   "Jouni Malinen <j@w1.fi>\n"
 			   "and contributors.\n"
 			   "\n"

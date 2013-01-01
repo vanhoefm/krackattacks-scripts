@@ -416,8 +416,9 @@ static struct wpabuf * auth_build_token_req(struct hostapd_data *hapd,
 	os_get_time(&t);
 	if (hapd->last_sae_token_key_update == 0 ||
 	    t.sec > hapd->last_sae_token_key_update + 60) {
-		random_get_bytes(hapd->sae_token_key,
-				 sizeof(hapd->sae_token_key));
+		if (random_get_bytes(hapd->sae_token_key,
+				     sizeof(hapd->sae_token_key)) < 0)
+			return NULL;
 		wpa_hexdump(MSG_DEBUG, "SAE: Updated token key",
 			    hapd->sae_token_key, sizeof(hapd->sae_token_key));
 		hapd->last_sae_token_key_update = t.sec;

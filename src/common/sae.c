@@ -202,6 +202,12 @@ static int sae_derive_pwe(struct sae_data *sae, const u8 *addr1,
 		u8 pwd_seed[SHA256_MAC_LEN];
 		int res;
 
+		if (counter > 200) {
+			/* This should not happen in practice */
+			wpa_printf(MSG_DEBUG, "SAE: Failed to derive PWE");
+			break;
+		}
+
 		wpa_printf(MSG_DEBUG, "SAE: counter = %u", counter);
 		if (hmac_sha256_vector(addrs, sizeof(addrs), 2, addr, len,
 				       pwd_seed) < 0)
@@ -219,12 +225,6 @@ static int sae_derive_pwe(struct sae_data *sae, const u8 *addr1,
 		} else {
 			wpa_printf(MSG_DEBUG, "SAE: Use this PWE");
 			found = 1;
-		}
-
-		if (counter > 200) {
-			/* This should not happen in practice */
-			wpa_printf(MSG_DEBUG, "SAE: Failed to derive PWE");
-			break;
 		}
 	}
 

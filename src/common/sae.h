@@ -9,6 +9,10 @@
 #ifndef SAE_H
 #define SAE_H
 
+#define SAE_KCK_LEN 32
+#define SAE_PMK_LEN 32
+#define SAE_PMKID_LEN 16
+#define SAE_KEYSEED_KEY_LEN 32
 #define SAE_MAX_PRIME_LEN 32
 #define SAE_COMMIT_MAX_LEN (2 + 3 * SAE_MAX_PRIME_LEN)
 #define SAE_CONFIRM_MAX_LEN (2 + SAE_MAX_PRIME_LEN)
@@ -16,8 +20,8 @@
 struct sae_data {
 	enum { SAE_NOTHING, SAE_COMMITTED, SAE_CONFIRMED, SAE_ACCEPTED } state;
 	u16 send_confirm;
-	u8 kck[32];
-	u8 pmk[32];
+	u8 kck[SAE_KCK_LEN];
+	u8 pmk[SAE_PMK_LEN];
 	u8 own_commit_scalar[SAE_MAX_PRIME_LEN];
 	u8 own_commit_element[2 * SAE_MAX_PRIME_LEN];
 	u8 peer_commit_scalar[SAE_MAX_PRIME_LEN];

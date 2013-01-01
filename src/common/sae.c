@@ -129,16 +129,16 @@ static int sae_test_pwd_seed(struct sae_data *sae, const u8 *pwd_seed,
 
 	/* pwd-value = KDF-z(pwd-seed, "SAE Hunting and Pecking", p) */
 	sha256_prf(pwd_seed, SHA256_MAC_LEN, "SAE Hunting and Pecking",
-		   prime, sae->prime_len, pwd_value, sizeof(pwd_value));
+		   prime, sae->prime_len, pwd_value, sae->prime_len);
 	wpa_hexdump_key(MSG_DEBUG, "SAE: pwd-value",
-			pwd_value, sizeof(pwd_value));
+			pwd_value, sae->prime_len);
 
 	if (os_memcmp(pwd_value, prime, sae->prime_len) >= 0)
 		return 0;
 
 	y_bit = pwd_seed[SHA256_MAC_LEN - 1] & 0x01;
 
-	x = crypto_bignum_init_set(pwd_value, sizeof(pwd_value));
+	x = crypto_bignum_init_set(pwd_value, sae->prime_len);
 	if (x == NULL)
 		return -1;
 	if (crypto_ec_point_solve_y_coord(sae->ec, pwe, x, y_bit) < 0) {

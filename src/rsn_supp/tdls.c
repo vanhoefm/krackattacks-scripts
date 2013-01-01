@@ -1309,21 +1309,10 @@ static int copy_supp_rates(const struct wpa_eapol_ie_parse *kde,
 		wpa_printf(MSG_DEBUG, "TDLS: No supported rates received");
 		return -1;
 	}
-
-	peer->supp_rates_len = kde->supp_rates_len - 2;
-	if (peer->supp_rates_len > IEEE80211_MAX_SUPP_RATES)
-		peer->supp_rates_len = IEEE80211_MAX_SUPP_RATES;
-	os_memcpy(peer->supp_rates, kde->supp_rates + 2, peer->supp_rates_len);
-
-	if (kde->ext_supp_rates) {
-		int clen = kde->ext_supp_rates_len - 2;
-		if (peer->supp_rates_len + clen > IEEE80211_MAX_SUPP_RATES)
-			clen = IEEE80211_MAX_SUPP_RATES - peer->supp_rates_len;
-		os_memcpy(peer->supp_rates + peer->supp_rates_len,
-			  kde->ext_supp_rates + 2, clen);
-		peer->supp_rates_len += clen;
-	}
-
+	peer->supp_rates_len = merge_byte_arrays(
+		peer->supp_rates, sizeof(peer->supp_rates),
+		kde->supp_rates + 2, kde->supp_rates_len - 2,
+		kde->ext_supp_rates + 2, kde->ext_supp_rates_len - 2);
 	return 0;
 }
 

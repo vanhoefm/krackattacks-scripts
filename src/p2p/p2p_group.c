@@ -169,6 +169,39 @@ static void p2p_group_add_noa(struct wpabuf *ie, struct wpabuf *noa)
 }
 
 
+static struct wpabuf * p2p_group_encaps_probe_resp(struct wpabuf *subelems)
+{
+	struct wpabuf *ie;
+	const u8 *pos, *end;
+	size_t len;
+
+	if (subelems == NULL)
+		return NULL;
+
+	len = wpabuf_len(subelems) + 100;
+
+	ie = wpabuf_alloc(len);
+	if (ie == NULL)
+		return NULL;
+
+	pos = wpabuf_head(subelems);
+	end = pos + wpabuf_len(subelems);
+
+	while (end > pos) {
+		size_t frag_len = end - pos;
+		if (frag_len > 251)
+			frag_len = 251;
+		wpabuf_put_u8(ie, WLAN_EID_VENDOR_SPECIFIC);
+		wpabuf_put_u8(ie, 4 + frag_len);
+		wpabuf_put_be32(ie, P2P_IE_VENDOR_TYPE);
+		wpabuf_put_data(ie, pos, frag_len);
+		pos += frag_len;
+	}
+
+	return ie;
+}
+
+
 static struct wpabuf * p2p_group_build_beacon_ie(struct p2p_group *group)
 {
 	struct wpabuf *ie;
@@ -367,9 +400,8 @@ static void wifi_display_group_update(struct p2p_group *group)
 static struct wpabuf * p2p_group_build_probe_resp_ie(struct p2p_group *group)
 {
 	u8 *group_info;
-	struct wpabuf *ie;
+	struct wpabuf *p2p_subelems, *ie;
 	struct p2p_group_member *m;
-	u8 *len;
 	size_t extra = 0;
 
 #ifdef CONFIG_WIFI_DISPLAY
@@ -377,33 +409,32 @@ static struct wpabuf * p2p_group_build_probe_resp_ie(struct p2p_group *group)
 		extra += wpabuf_len(group->wfd_ie);
 #endif /* CONFIG_WIFI_DISPLAY */
 
-	ie = wpabuf_alloc(257 + extra);
-	if (ie == NULL)
+	p2p_subelems = wpabuf_alloc(500 + extra);
+	if (p2p_subelems == NULL)
 		return NULL;
 
 #ifdef CONFIG_WIFI_DISPLAY
 	if (group->wfd_ie)
-		wpabuf_put_buf(ie, group->wfd_ie);
+		wpabuf_put_buf(p2p_subelems, group->wfd_ie);
 #endif /* CONFIG_WIFI_DISPLAY */
 
-	len = p2p_buf_add_ie_hdr(ie);
-
-	p2p_group_add_common_ies(group, ie);
-	p2p_group_add_noa(ie, group->noa);
+	p2p_group_add_common_ies(group, p2p_subelems);
+	p2p_group_add_noa(p2p_subelems, group->noa);
 
 	/* P2P Device Info */
-	p2p_buf_add_device_info(ie, group->p2p, NULL);
+	p2p_buf_add_device_info(p2p_subelems, group->p2p, NULL);
 
 	/* P2P Group Info */
-	group_info = wpabuf_put(ie, 0);
-	wpabuf_put_u8(ie, P2P_ATTR_GROUP_INFO);
-	wpabuf_put_le16(ie, 0); /* Length to be filled */
+	group_info = wpabuf_put(p2p_subelems, 0);
+	wpabuf_put_u8(p2p_subelems, P2P_ATTR_GROUP_INFO);
+	wpabuf_put_le16(p2p_subelems, 0); /* Length to be filled */
 	for (m = group->members; m; m = m->next)
-		p2p_client_info(ie, m);
+		p2p_client_info(p2p_subelems, m);
 	WPA_PUT_LE16(group_info + 1,
-		     (u8 *) wpabuf_put(ie, 0) - group_info - 3);
+		     (u8 *) wpabuf_put(p2p_subelems, 0) - group_info - 3);
 
-	p2p_buf_update_ie_hdr(ie, len);
+	ie = p2p_group_encaps_probe_resp(p2p_subelems);
+	wpabuf_free(p2p_subelems);
 
 	return ie;
 }

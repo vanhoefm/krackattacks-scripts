@@ -189,6 +189,7 @@ int hostapd_ctrl_iface_deauthenticate(struct hostapd_data *hapd,
 	u8 addr[ETH_ALEN];
 	struct sta_info *sta;
 	const char *pos;
+	u16 reason = WLAN_REASON_PREV_AUTH_NOT_VALID;
 
 	wpa_dbg(hapd->msg_ctx, MSG_DEBUG, "CTRL_IFACE DEAUTHENTICATE %s",
 		txtaddr);
@@ -228,11 +229,14 @@ int hostapd_ctrl_iface_deauthenticate(struct hostapd_data *hapd,
 	}
 #endif /* CONFIG_P2P_MANAGER */
 
-	hostapd_drv_sta_deauth(hapd, addr, WLAN_REASON_PREV_AUTH_NOT_VALID);
+	pos = os_strstr(txtaddr, " reason=");
+	if (pos)
+		reason = atoi(pos + 8);
+
+	hostapd_drv_sta_deauth(hapd, addr, reason);
 	sta = ap_get_sta(hapd, addr);
 	if (sta)
-		ap_sta_deauthenticate(hapd, sta,
-				      WLAN_REASON_PREV_AUTH_NOT_VALID);
+		ap_sta_deauthenticate(hapd, sta, reason);
 	else if (addr[0] == 0xff)
 		hostapd_free_stas(hapd);
 
@@ -246,6 +250,7 @@ int hostapd_ctrl_iface_disassociate(struct hostapd_data *hapd,
 	u8 addr[ETH_ALEN];
 	struct sta_info *sta;
 	const char *pos;
+	u16 reason = WLAN_REASON_PREV_AUTH_NOT_VALID;
 
 	wpa_dbg(hapd->msg_ctx, MSG_DEBUG, "CTRL_IFACE DISASSOCIATE %s",
 		txtaddr);
@@ -285,11 +290,14 @@ int hostapd_ctrl_iface_disassociate(struct hostapd_data *hapd,
 	}
 #endif /* CONFIG_P2P_MANAGER */
 
-	hostapd_drv_sta_disassoc(hapd, addr, WLAN_REASON_PREV_AUTH_NOT_VALID);
+	pos = os_strstr(txtaddr, " reason=");
+	if (pos)
+		reason = atoi(pos + 8);
+
+	hostapd_drv_sta_disassoc(hapd, addr, reason);
 	sta = ap_get_sta(hapd, addr);
 	if (sta)
-		ap_sta_disassociate(hapd, sta,
-				    WLAN_REASON_PREV_AUTH_NOT_VALID);
+		ap_sta_disassociate(hapd, sta, reason);
 	else if (addr[0] == 0xff)
 		hostapd_free_stas(hapd);
 

@@ -895,6 +895,98 @@ int crypto_bignum_mod(const struct crypto_bignum *a,
 }
 
 
+int crypto_bignum_exptmod(const struct crypto_bignum *a,
+			  const struct crypto_bignum *b,
+			  const struct crypto_bignum *c,
+			  struct crypto_bignum *d)
+{
+	int res;
+	BN_CTX *bnctx;
+
+	bnctx = BN_CTX_new();
+	if (bnctx == NULL)
+		return -1;
+	res = BN_mod_exp((BIGNUM *) d, (const BIGNUM *) a, (const BIGNUM *) b,
+			 (const BIGNUM *) c, bnctx);
+	BN_CTX_free(bnctx);
+
+	return res ? 0 : -1;
+}
+
+
+int crypto_bignum_rshift(const struct crypto_bignum *a, int n,
+			 struct crypto_bignum *b)
+{
+	return BN_rshift((BIGNUM *) b, (const BIGNUM *) a, n) ? 0 : -1;
+}
+
+
+int crypto_bignum_inverse(const struct crypto_bignum *a,
+			  const struct crypto_bignum *b,
+			  struct crypto_bignum *c)
+{
+	BIGNUM *res;
+	BN_CTX *bnctx;
+
+	bnctx = BN_CTX_new();
+	if (bnctx == NULL)
+		return -1;
+	res = BN_mod_inverse((BIGNUM *) c, (const BIGNUM *) a,
+			     (const BIGNUM *) b, bnctx);
+	BN_CTX_free(bnctx);
+
+	return res ? 0 : -1;
+}
+
+
+int crypto_bignum_sub(const struct crypto_bignum *a,
+		      const struct crypto_bignum *b,
+		      struct crypto_bignum *c)
+{
+	return BN_sub((BIGNUM *) c, (const BIGNUM *) a, (const BIGNUM *) b) ?
+		0 : -1;
+}
+
+
+int crypto_bignum_div(const struct crypto_bignum *a,
+		      const struct crypto_bignum *b,
+		      struct crypto_bignum *c)
+{
+	int res;
+
+	BN_CTX *bnctx;
+
+	bnctx = BN_CTX_new();
+	if (bnctx == NULL)
+		return -1;
+	res = BN_div((BIGNUM *) c, NULL, (const BIGNUM *) a,
+		     (const BIGNUM *) b, bnctx);
+	BN_CTX_free(bnctx);
+
+	return res ? 0 : -1;
+}
+
+
+int crypto_bignum_mulmod(const struct crypto_bignum *a,
+			 const struct crypto_bignum *b,
+			 const struct crypto_bignum *c,
+			 struct crypto_bignum *d)
+{
+	int res;
+
+	BN_CTX *bnctx;
+
+	bnctx = BN_CTX_new();
+	if (bnctx == NULL)
+		return -1;
+	res = BN_mod_mul((BIGNUM *) d, (const BIGNUM *) a, (const BIGNUM *) b,
+			 (const BIGNUM *) c, bnctx);
+	BN_CTX_free(bnctx);
+
+	return res ? 0 : -1;
+}
+
+
 #ifdef CONFIG_ECC
 
 struct crypto_ec {

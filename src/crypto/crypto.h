@@ -521,6 +521,75 @@ int crypto_bignum_mod(const struct crypto_bignum *a,
 		      struct crypto_bignum *c);
 
 /**
+ * crypto_bignum_exptmod - Modular exponentiation: d = a^b (mod c)
+ * @a: Bignum; base
+ * @b: Bignum; exponent
+ * @c: Bignum; modulus
+ * @d: Bignum; used to store the result of a^b (mod c)
+ * Returns: 0 on success, -1 on failure
+ */
+int crypto_bignum_exptmod(const struct crypto_bignum *a,
+			  const struct crypto_bignum *b,
+			  const struct crypto_bignum *c,
+			  struct crypto_bignum *d);
+
+/**
+ * crypto_bignum_rshift - b = a >> n
+ * @a: Bignum
+ * @n: Number of bits to shift
+ * @b: Bignum; used to store the result of a >> n
+ * Returns: 0 on success, -1 on failure
+ */
+int crypto_bignum_rshift(const struct crypto_bignum *a, int n,
+			 struct crypto_bignum *b);
+
+/**
+ * crypto_bignum_inverse - Inverse a bignum so that a * c = 1 (mod b)
+ * @a: Bignum
+ * @b: Bignum
+ * @c: Bignum; used to store the result
+ * Returns: 0 on success, -1 on failure
+ */
+int crypto_bignum_inverse(const struct crypto_bignum *a,
+			  const struct crypto_bignum *b,
+			  struct crypto_bignum *c);
+
+/**
+ * crypto_bignum_sub - c = a - b
+ * @a: Bignum
+ * @b: Bignum
+ * @c: Bignum; used to store the result of a - b
+ * Returns: 0 on success, -1 on failure
+ */
+int crypto_bignum_sub(const struct crypto_bignum *a,
+		      const struct crypto_bignum *b,
+		      struct crypto_bignum *c);
+
+/**
+ * crypto_bignum_div - c = a / b
+ * @a: Bignum
+ * @b: Bignum
+ * @c: Bignum; used to store the result of a / b
+ * Returns: 0 on success, -1 on failure
+ */
+int crypto_bignum_div(const struct crypto_bignum *a,
+		      const struct crypto_bignum *b,
+		      struct crypto_bignum *c);
+
+/**
+ * crypto_bignum_mulmod - d = a * b (mod c)
+ * @a: Bignum
+ * @b: Bignum
+ * @c: Bignum
+ * @d: Bignum; used to store the result of (a * b) % c
+ * Returns: 0 on success, -1 on failure
+ */
+int crypto_bignum_mulmod(const struct crypto_bignum *a,
+			 const struct crypto_bignum *b,
+			 const struct crypto_bignum *c,
+			 struct crypto_bignum *d);
+
+/**
  * struct crypto_ec - Elliptic curve context
  *
  * Internal data structure for EC implementation. The contents is specific

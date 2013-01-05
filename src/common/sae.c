@@ -25,6 +25,8 @@ int sae_set_group(struct sae_data *sae, int group)
 
 	sae->group = group;
 	sae->prime_len = crypto_ec_prime_len(sae->ec);
+	sae->prime = crypto_ec_get_prime(sae->ec);
+	sae->order = crypto_ec_get_order(sae->ec);
 
 	return 0;
 }
@@ -97,8 +99,8 @@ static struct crypto_bignum * sae_get_rand_and_mask(struct sae_data *sae)
 	struct crypto_bignum *bn;
 	size_t prime_len_bits = crypto_ec_prime_len_bits(sae->ec);
 
-	if (crypto_bignum_to_bin(crypto_ec_get_order(sae->ec),
-				 order, sizeof(order), sae->prime_len) < 0)
+	if (crypto_bignum_to_bin(sae->order, order, sizeof(order),
+				 sae->prime_len) < 0)
 		return NULL;
 
 	if (sae_get_rand(order, prime_len_bits, sae->sae_rand) < 0 ||
@@ -135,8 +137,8 @@ static int sae_test_pwd_seed(struct sae_data *sae, const u8 *pwd_seed,
 	int y_bit;
 	size_t bits;
 
-	if (crypto_bignum_to_bin(crypto_ec_get_prime(sae->ec),
-				 prime, sizeof(prime), sae->prime_len) < 0)
+	if (crypto_bignum_to_bin(sae->prime, prime, sizeof(prime),
+				 sae->prime_len) < 0)
 		return -1;
 
 	wpa_hexdump_key(MSG_DEBUG, "SAE: pwd-seed", pwd_seed, SHA256_MAC_LEN);
@@ -271,7 +273,7 @@ static int sae_derive_commit(struct sae_data *sae, struct crypto_ec_point *pwe)
 
 	/* commit-scalar = (rand + mask) modulo r */
 	crypto_bignum_add(bn_rand, mask, x);
-	crypto_bignum_mod(x, crypto_ec_get_order(sae->ec), x);
+	crypto_bignum_mod(x, sae->order, x);
 	crypto_bignum_to_bin(x, sae->own_commit_scalar,
 			     sizeof(sae->own_commit_scalar), sae->prime_len);
 	wpa_hexdump(MSG_DEBUG, "SAE: commit-scalar",
@@ -326,10 +328,10 @@ static int sae_check_peer_commit(struct sae_data *sae)
 {
 	u8 order[SAE_MAX_PRIME_LEN], prime[SAE_MAX_PRIME_LEN];
 
-	if (crypto_bignum_to_bin(crypto_ec_get_order(sae->ec),
-				 order, sizeof(order), sae->prime_len) < 0 ||
-	    crypto_bignum_to_bin(crypto_ec_get_prime(sae->ec),
-				 prime, sizeof(prime), sae->prime_len) < 0)
+	if (crypto_bignum_to_bin(sae->order, order, sizeof(order),
+				 sae->prime_len) < 0 ||
+	    crypto_bignum_to_bin(sae->prime, prime, sizeof(prime),
+				 sae->prime_len) < 0)
 		return -1;
 
 	/* 0 < scalar < r */
@@ -428,7 +430,7 @@ static int sae_derive_keys(struct sae_data *sae, const u8 *k)
 	wpa_hexdump_key(MSG_DEBUG, "SAE: keyseed", keyseed, sizeof(keyseed));
 
 	crypto_bignum_add(own_scalar, peer_scalar, tmp);
-	crypto_bignum_mod(tmp, crypto_ec_get_order(sae->ec), tmp);
+	crypto_bignum_mod(tmp, sae->order, tmp);
 	crypto_bignum_to_bin(tmp, val, sizeof(val), sae->prime_len);
 	wpa_hexdump(MSG_DEBUG, "SAE: PMKID", val, SAE_PMKID_LEN);
 	sha256_prf(keyseed, sizeof(keyseed), "SAE KCK and PMK",

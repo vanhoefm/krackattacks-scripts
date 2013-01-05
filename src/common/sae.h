@@ -31,6 +31,8 @@ struct sae_data {
 	int group;
 	struct crypto_ec *ec;
 	int prime_len;
+	const struct crypto_bignum *prime;
+	const struct crypto_bignum *order;
 };
 
 int sae_set_group(struct sae_data *sae, int group);

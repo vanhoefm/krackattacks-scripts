@@ -183,6 +183,7 @@ ifdef CONFIG_SAE
 L_CFLAGS += -DCONFIG_SAE
 OBJS += src/common/sae.c
 NEED_ECC=y
+NEED_DH_GROUPS=y
 endif
 
 ifdef CONFIG_TDLS

@@ -908,8 +908,6 @@ u16 sae_parse_commit(struct sae_data *sae, const u8 *data, size_t len,
 	const u8 *pos = data, *end = data + len;
 	u16 res;
 
-	wpa_hexdump(MSG_DEBUG, "SAE: Commit fields", data, len);
-
 	/* Check Finite Cyclic Group */
 	if (pos + 2 > end)
 		return WLAN_STATUS_UNSPECIFIED_FAILURE;
@@ -1035,8 +1033,6 @@ void sae_write_confirm(struct sae_data *sae, struct wpabuf *buf)
 int sae_check_confirm(struct sae_data *sae, const u8 *data, size_t len)
 {
 	u8 verifier[SHA256_MAC_LEN];
-
-	wpa_hexdump(MSG_DEBUG, "SAE: Confirm fields", data, len);
 
 	if (len < 2 + SHA256_MAC_LEN) {
 		wpa_printf(MSG_DEBUG, "SAE: Too short confirm message");

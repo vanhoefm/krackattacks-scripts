@@ -450,7 +450,6 @@ static int sme_sae_auth(struct wpa_supplicant *wpa_s, u16 auth_transaction,
 {
 	wpa_dbg(wpa_s, MSG_DEBUG, "SME: SAE authentication transaction %u "
 		"status code %u", auth_transaction, status_code);
-	wpa_hexdump(MSG_DEBUG, "SME: SAE fields", data, len);
 
 	if (auth_transaction == 1 &&
 	    status_code == WLAN_STATUS_ANTI_CLOGGING_TOKEN_REQ &&

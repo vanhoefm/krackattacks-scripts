@@ -568,14 +568,6 @@ fail:
 }
 
 
-static int sae_derive_k(struct sae_data *sae, u8 *k)
-{
-	if (sae->ec)
-		return sae_derive_k_ecc(sae, k);
-	return sae_derive_k_ffc(sae, k);
-}
-
-
 static int sae_derive_keys(struct sae_data *sae, const u8 *k)
 {
 	u8 null_key[SAE_KEYSEED_KEY_LEN], val[SAE_MAX_PRIME_LEN];
@@ -619,7 +611,9 @@ fail:
 int sae_process_commit(struct sae_data *sae)
 {
 	u8 k[SAE_MAX_PRIME_LEN];
-	if (sae_derive_k(sae, k) < 0 || sae_derive_keys(sae, k) < 0)
+	if ((sae->ec && sae_derive_k_ecc(sae, k) < 0) ||
+	    (sae->dh && sae_derive_k_ffc(sae, k) < 0) ||
+	    sae_derive_keys(sae, k) < 0)
 		return -1;
 	return 0;
 }

@@ -18,21 +18,16 @@
 #define SAE_COMMIT_MAX_LEN (2 + 3 * SAE_MAX_PRIME_LEN)
 #define SAE_CONFIRM_MAX_LEN (2 + SAE_MAX_PRIME_LEN)
 
-struct sae_data {
-	enum { SAE_NOTHING, SAE_COMMITTED, SAE_CONFIRMED, SAE_ACCEPTED } state;
-	u16 send_confirm;
+struct sae_temporary_data {
 	u8 kck[SAE_KCK_LEN];
-	u8 pmk[SAE_PMK_LEN];
 	struct crypto_bignum *own_commit_scalar;
 	struct crypto_bignum *own_commit_element_ffc;
 	struct crypto_ec_point *own_commit_element_ecc;
-	struct crypto_bignum *peer_commit_scalar;
 	struct crypto_bignum *peer_commit_element_ffc;
 	struct crypto_ec_point *peer_commit_element_ecc;
 	struct crypto_ec_point *pwe_ecc;
 	struct crypto_bignum *pwe_ffc;
 	struct crypto_bignum *sae_rand;
-	int group;
 	struct crypto_ec *ec;
 	int prime_len;
 	const struct dh_group *dh;
@@ -40,6 +35,15 @@ struct sae_data {
 	const struct crypto_bignum *order;
 	struct crypto_bignum *prime_buf;
 	struct crypto_bignum *order_buf;
+};
+
+struct sae_data {
+	enum { SAE_NOTHING, SAE_COMMITTED, SAE_CONFIRMED, SAE_ACCEPTED } state;
+	u16 send_confirm;
+	u8 pmk[SAE_PMK_LEN];
+	struct crypto_bignum *peer_commit_scalar;
+	int group;
+	struct sae_temporary_data *tmp;
 };
 
 int sae_set_group(struct sae_data *sae, int group);

@@ -14,6 +14,7 @@
 #define SAE_PMKID_LEN 16
 #define SAE_KEYSEED_KEY_LEN 32
 #define SAE_MAX_PRIME_LEN 512
+#define SAE_MAX_ECC_PRIME_LEN 66
 #define SAE_COMMIT_MAX_LEN (2 + 3 * SAE_MAX_PRIME_LEN)
 #define SAE_CONFIRM_MAX_LEN (2 + SAE_MAX_PRIME_LEN)
 
@@ -23,9 +24,11 @@ struct sae_data {
 	u8 kck[SAE_KCK_LEN];
 	u8 pmk[SAE_PMK_LEN];
 	struct crypto_bignum *own_commit_scalar;
-	u8 own_commit_element[2 * SAE_MAX_PRIME_LEN];
+	struct crypto_bignum *own_commit_element_ffc;
+	struct crypto_ec_point *own_commit_element_ecc;
 	struct crypto_bignum *peer_commit_scalar;
-	u8 peer_commit_element[2 * SAE_MAX_PRIME_LEN];
+	struct crypto_bignum *peer_commit_element_ffc;
+	struct crypto_ec_point *peer_commit_element_ecc;
 	struct crypto_ec_point *pwe_ecc;
 	struct crypto_bignum *pwe_ffc;
 	struct crypto_bignum *sae_rand;

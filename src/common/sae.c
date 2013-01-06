@@ -229,24 +229,22 @@ static int sae_test_pwd_seed_ffc(struct sae_data *sae, const u8 *pwd_seed,
 		 */
 		exp[0] = 2;
 		b = crypto_bignum_init_set(exp, sizeof(exp));
-		if (a == NULL || b == NULL)
-			res = -1;
-		else
-			res = crypto_bignum_exptmod(a, b, sae->prime, pwe);
 	} else {
-		struct crypto_bignum *tmp;
-
+		/* Calculate exponent: (p-1)/r */
 		exp[0] = 1;
 		b = crypto_bignum_init_set(exp, sizeof(exp));
-		tmp = crypto_bignum_init();
-		if (a == NULL || b == NULL || tmp == NULL ||
-		    crypto_bignum_sub(sae->prime, b, tmp) < 0 ||
-		    crypto_bignum_div(tmp, sae->order, b) < 0)
-			res = -1;
-		else
-			res = crypto_bignum_exptmod(a, b, sae->prime, pwe);
-		crypto_bignum_deinit(tmp, 0);
+		if (b == NULL ||
+		    crypto_bignum_sub(sae->prime, b, b) < 0 ||
+		    crypto_bignum_div(b, sae->order, b) < 0) {
+			crypto_bignum_deinit(b, 0);
+			b = NULL;
+		}
 	}
+
+	if (a == NULL || b == NULL)
+		res = -1;
+	else
+		res = crypto_bignum_exptmod(a, b, sae->prime, pwe);
 
 	crypto_bignum_deinit(a, 0);
 	crypto_bignum_deinit(b, 0);

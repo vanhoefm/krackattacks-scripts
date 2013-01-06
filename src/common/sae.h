@@ -28,6 +28,7 @@ struct sae_data {
 	u8 peer_commit_element[2 * SAE_MAX_PRIME_LEN];
 	u8 pwe[2 * SAE_MAX_PRIME_LEN];
 	u8 sae_rand[SAE_MAX_PRIME_LEN];
+	size_t rand_len;
 	int group;
 	struct crypto_ec *ec;
 	int prime_len;
@@ -36,7 +37,6 @@ struct sae_data {
 	const struct crypto_bignum *order;
 	struct crypto_bignum *prime_buf;
 	struct crypto_bignum *order_buf;
-	int safe_prime;
 };
 
 int sae_set_group(struct sae_data *sae, int group);

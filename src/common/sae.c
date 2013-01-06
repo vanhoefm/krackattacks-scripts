@@ -85,32 +85,6 @@ void sae_clear_data(struct sae_data *sae)
 }
 
 
-static int val_one(const u8 *val, size_t len)
-{
-	size_t i;
-
-	for (i = 0; i < len - 1; i++) {
-		if (val[i])
-			return 0;
-	}
-
-	return val[len - 1] == 1;
-}
-
-
-static int val_zero_or_one(const u8 *val, size_t len)
-{
-	size_t i;
-
-	for (i = 0; i < len - 1; i++) {
-		if (val[i])
-			return 0;
-	}
-
-	return val[len - 1] <= 1;
-}
-
-
 static void buf_shift_right(u8 *buf, size_t len, size_t bits)
 {
 	size_t i;
@@ -138,12 +112,12 @@ static struct crypto_bignum * sae_get_rand(struct sae_data *sae)
 			return NULL;
 		if (order_len_bits % 8)
 			buf_shift_right(val, order_len, 8 - order_len_bits % 8);
-		if (val_zero_or_one(val, order_len))
-			continue;
 		bn = crypto_bignum_init_set(val, order_len);
 		if (bn == NULL)
 			return NULL;
-		if (crypto_bignum_cmp(bn, sae->order) >= 0)
+		if (crypto_bignum_is_zero(bn) ||
+		    crypto_bignum_is_one(bn) ||
+		    crypto_bignum_cmp(bn, sae->order) >= 0)
 			continue;
 		break;
 	}
@@ -224,7 +198,7 @@ static int sae_test_pwd_seed_ecc(struct sae_data *sae, const u8 *pwd_seed,
 static int sae_test_pwd_seed_ffc(struct sae_data *sae, const u8 *pwd_seed,
 				 struct crypto_bignum *pwe)
 {
-	u8 pwd_value[SAE_MAX_PRIME_LEN], pwe_bin[SAE_MAX_PRIME_LEN];
+	u8 pwd_value[SAE_MAX_PRIME_LEN];
 	size_t bits = sae->prime_len * 8;
 	u8 exp[1];
 	struct crypto_bignum *a, *b;
@@ -282,16 +256,8 @@ static int sae_test_pwd_seed_ffc(struct sae_data *sae, const u8 *pwd_seed,
 		return -1;
 	}
 
-	res = crypto_bignum_to_bin(pwe, pwe_bin, sizeof(pwe_bin),
-				   sae->prime_len);
-	if (res < 0) {
-		wpa_printf(MSG_DEBUG, "SAE: Not room for PWE");
-		return -1;
-	}
-	wpa_hexdump_key(MSG_DEBUG, "SAE: PWE candidate", pwe_bin, res);
-
 	/* if (PWE > 1) --> found */
-	if (val_zero_or_one(pwe_bin, sae->prime_len)) {
+	if (crypto_bignum_is_zero(pwe) || crypto_bignum_is_one(pwe)) {
 		wpa_printf(MSG_DEBUG, "SAE: PWE <= 1");
 		return 0;
 	}
@@ -604,8 +570,8 @@ static int sae_derive_k_ffc(struct sae_data *sae, u8 *k)
 	    crypto_bignum_mulmod(K, sae->peer_commit_element_ffc, sae->prime, K)
 	    < 0 ||
 	    crypto_bignum_exptmod(K, sae->sae_rand, sae->prime, K) < 0 ||
-	    crypto_bignum_to_bin(K, k, SAE_MAX_PRIME_LEN, sae->prime_len) < 0 ||
-	    val_one(k, sae->prime_len)) {
+	    crypto_bignum_is_one(K) ||
+	    crypto_bignum_to_bin(K, k, SAE_MAX_PRIME_LEN, sae->prime_len) < 0) {
 		wpa_printf(MSG_DEBUG, "SAE: Failed to calculate K and k");
 		goto fail;
 	}
@@ -858,17 +824,14 @@ static u16 sae_parse_commit_element_ffc(struct sae_data *sae, const u8 *pos,
 	}
 	wpa_hexdump(MSG_DEBUG, "SAE: Peer commit-element", pos, sae->prime_len);
 
-	if (val_zero_or_one(pos, sae->prime_len)) {
-		wpa_printf(MSG_DEBUG, "SAE: Invalid peer element");
-		return WLAN_STATUS_UNSPECIFIED_FAILURE;
-	}
-
 	crypto_bignum_deinit(sae->peer_commit_element_ffc, 0);
 	sae->peer_commit_element_ffc = crypto_bignum_init_set(pos,
 							      sae->prime_len);
 	if (sae->peer_commit_element_ffc == NULL)
 		return WLAN_STATUS_UNSPECIFIED_FAILURE;
-	if (crypto_bignum_cmp(sae->peer_commit_element_ffc, sae->prime) >= 0) {
+	if (crypto_bignum_is_zero(sae->peer_commit_element_ffc) ||
+	    crypto_bignum_is_one(sae->peer_commit_element_ffc) ||
+	    crypto_bignum_cmp(sae->peer_commit_element_ffc, sae->prime) >= 0) {
 		wpa_printf(MSG_DEBUG, "SAE: Invalid peer element");
 		return WLAN_STATUS_UNSPECIFIED_FAILURE;
 	}

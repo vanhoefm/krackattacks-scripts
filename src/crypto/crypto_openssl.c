@@ -1006,6 +1006,12 @@ int crypto_bignum_is_zero(const struct crypto_bignum *a)
 }
 
 
+int crypto_bignum_is_one(const struct crypto_bignum *a)
+{
+	return BN_is_one((const BIGNUM *) a);
+}
+
+
 #ifdef CONFIG_ECC
 
 struct crypto_ec {

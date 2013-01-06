@@ -400,81 +400,74 @@ static int sae_derive_pwe_ffc(struct sae_data *sae, const u8 *addr1,
 }
 
 
-static int sae_derive_commit_ecc(struct sae_data *sae)
+static int sae_derive_commit_element_ecc(struct sae_data *sae,
+					 struct crypto_bignum *mask)
 {
-	struct crypto_bignum *mask;
-	int ret = -1;
-
-	mask = sae_get_rand_and_mask(sae);
-	if (mask == NULL) {
-		wpa_printf(MSG_DEBUG, "SAE: Could not get rand/mask");
-		return -1;
-	}
-
-	/* commit-scalar = (rand + mask) modulo r */
-	if (!sae->own_commit_scalar) {
-		sae->own_commit_scalar = crypto_bignum_init();
-		if (!sae->own_commit_scalar)
-			goto fail;
-	}
-	crypto_bignum_add(sae->sae_rand, mask, sae->own_commit_scalar);
-	crypto_bignum_mod(sae->own_commit_scalar, sae->order,
-			  sae->own_commit_scalar);
-
 	/* COMMIT-ELEMENT = inverse(scalar-op(mask, PWE)) */
 	if (!sae->own_commit_element_ecc) {
 		sae->own_commit_element_ecc = crypto_ec_point_init(sae->ec);
 		if (!sae->own_commit_element_ecc)
-			goto fail;
+			return -1;
 	}
+
 	if (crypto_ec_point_mul(sae->ec, sae->pwe_ecc, mask,
 				sae->own_commit_element_ecc) < 0 ||
 	    crypto_ec_point_invert(sae->ec, sae->own_commit_element_ecc) < 0) {
 		wpa_printf(MSG_DEBUG, "SAE: Could not compute commit-element");
-		goto fail;
-	}
-
-	ret = 0;
-fail:
-	crypto_bignum_deinit(mask, 1);
-	return ret;
-}
-
-
-static int sae_derive_commit_ffc(struct sae_data *sae)
-{
-	struct crypto_bignum *mask;
-	int ret = -1;
-
-	mask = sae_get_rand_and_mask(sae);
-	if (mask == NULL) {
-		wpa_printf(MSG_DEBUG, "SAE: Could not get rand/mask");
 		return -1;
 	}
 
-	/* commit-scalar = (rand + mask) modulo r */
-	if (!sae->own_commit_scalar) {
-		sae->own_commit_scalar = crypto_bignum_init();
-		if (!sae->own_commit_scalar)
-			goto fail;
-	}
-	crypto_bignum_add(sae->sae_rand, mask, sae->own_commit_scalar);
-	crypto_bignum_mod(sae->own_commit_scalar, sae->order,
-			  sae->own_commit_scalar);
+	return 0;
+}
 
+
+static int sae_derive_commit_element_ffc(struct sae_data *sae,
+					 struct crypto_bignum *mask)
+{
 	/* COMMIT-ELEMENT = inverse(scalar-op(mask, PWE)) */
 	if (!sae->own_commit_element_ffc) {
 		sae->own_commit_element_ffc = crypto_bignum_init();
 		if (!sae->own_commit_element_ffc)
-			goto fail;
+			return -1;
 	}
+
 	if (crypto_bignum_exptmod(sae->pwe_ffc, mask, sae->prime,
 				  sae->own_commit_element_ffc) < 0 ||
 	    crypto_bignum_inverse(sae->own_commit_element_ffc, sae->prime,
 				  sae->own_commit_element_ffc) < 0) {
 		wpa_printf(MSG_DEBUG, "SAE: Could not compute commit-element");
-		goto fail;
+		return -1;
 	}
+
+	return 0;
+}
+
+
+static int sae_derive_commit(struct sae_data *sae)
+{
+	struct crypto_bignum *mask;
+	int ret = -1;
+
+	mask = sae_get_rand_and_mask(sae);
+	if (mask == NULL) {
+		wpa_printf(MSG_DEBUG, "SAE: Could not get rand/mask");
+		return -1;
+	}
+
+	/* commit-scalar = (rand + mask) modulo r */
+	if (!sae->own_commit_scalar) {
+		sae->own_commit_scalar = crypto_bignum_init();
+		if (!sae->own_commit_scalar)
+			goto fail;
+	}
+	crypto_bignum_add(sae->sae_rand, mask, sae->own_commit_scalar);
+	crypto_bignum_mod(sae->own_commit_scalar, sae->order,
+			  sae->own_commit_scalar);
+
+	if (sae->ec && sae_derive_commit_element_ecc(sae, mask) < 0)
+		goto fail;
+	if (sae->dh && sae_derive_commit_element_ffc(sae, mask) < 0)
+		goto fail;
 
 	ret = 0;
 fail:
@@ -487,23 +480,15 @@ int sae_prepare_commit(const u8 *addr1, const u8 *addr2,
 		       const u8 *password, size_t password_len,
 		       struct sae_data *sae)
 {
-	if (sae->ec) {
-		if (sae_derive_pwe_ecc(sae, addr1, addr2, password,
-				       password_len) < 0 ||
-		    sae_derive_commit_ecc(sae) < 0)
-			return -1;
-		return 0;
-	}
-
-	if (sae->dh) {
-		if (sae_derive_pwe_ffc(sae, addr1, addr2, password,
-				       password_len) < 0 ||
-		    sae_derive_commit_ffc(sae) < 0)
-			return -1;
-		return 0;
-	}
-
-	return -1;
+	if (sae->ec && sae_derive_pwe_ecc(sae, addr1, addr2, password,
+					  password_len) < 0)
+		return -1;
+	if (sae->dh && sae_derive_pwe_ffc(sae, addr1, addr2, password,
+					  password_len) < 0)
+		return -1;
+	if (sae_derive_commit(sae) < 0)
+		return -1;
+	return 0;
 }
 
 

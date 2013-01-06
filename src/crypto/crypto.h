@@ -590,6 +590,22 @@ int crypto_bignum_mulmod(const struct crypto_bignum *a,
 			 struct crypto_bignum *d);
 
 /**
+ * crypto_bignum_cmp - Compare two bignums
+ * @a: Bignum
+ * @b: Bignum
+ * Returns: -1 if a < b, 0 if a == b, or 1 if a > b
+ */
+int crypto_bignum_cmp(const struct crypto_bignum *a,
+		      const struct crypto_bignum *b);
+
+/**
+ * crypto_bignum_bits - Get size of a bignum in bits
+ * @a: Bignum
+ * Returns: Number of bits in the bignum
+ */
+int crypto_bignum_bits(const struct crypto_bignum *a);
+
+/**
  * struct crypto_ec - Elliptic curve context
  *
  * Internal data structure for EC implementation. The contents is specific

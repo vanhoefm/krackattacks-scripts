@@ -123,28 +123,34 @@ static void buf_shift_right(u8 *buf, size_t len, size_t bits)
 }
 
 
-static struct crypto_bignum * sae_get_rand(const u8 *order,
-					   size_t order_len_bits)
+static struct crypto_bignum * sae_get_rand(struct sae_data *sae)
 {
 	u8 val[SAE_MAX_PRIME_LEN];
 	int iter = 0;
+	struct crypto_bignum *bn = NULL;
+	int order_len_bits = crypto_bignum_bits(sae->order);
 	size_t order_len = (order_len_bits + 7) / 8;
-	struct crypto_bignum *bn;
 
 	if (order_len > sizeof(val))
 		return NULL;
 
-	do {
+	for (;;) {
 		if (iter++ > 100)
 			return NULL;
 		if (random_get_bytes(val, order_len) < 0)
 			return NULL;
 		if (order_len_bits % 8)
 			buf_shift_right(val, order_len, 8 - order_len_bits % 8);
-	} while (os_memcmp(val, order, order_len) >= 0 ||
-		 val_zero_or_one(val, order_len));
+		if (val_zero_or_one(val, order_len))
+			continue;
+		bn = crypto_bignum_init_set(val, order_len);
+		if (bn == NULL)
+			return NULL;
+		if (crypto_bignum_cmp(bn, sae->order) >= 0)
+			continue;
+		break;
+	}
 
-	bn = crypto_bignum_init_set(val, order_len);
 	os_memset(val, 0, order_len);
 	return bn;
 }
@@ -152,28 +158,11 @@ static struct crypto_bignum * sae_get_rand(const u8 *order,
 
 static struct crypto_bignum * sae_get_rand_and_mask(struct sae_data *sae)
 {
-	u8 order[SAE_MAX_PRIME_LEN];
-	size_t prime_len_bits = crypto_ec_prime_len_bits(sae->ec);
-
-	if (crypto_bignum_to_bin(sae->order, order, sizeof(order),
-				 sae->prime_len) < 0)
-		return NULL;
-
 	crypto_bignum_deinit(sae->sae_rand, 1);
-	sae->sae_rand = sae_get_rand(order, prime_len_bits);
+	sae->sae_rand = sae_get_rand(sae);
 	if (sae->sae_rand == NULL)
 		return NULL;
-	return sae_get_rand(order, prime_len_bits);
-}
-
-
-static struct crypto_bignum * sae_get_rand_and_mask_dh(struct sae_data *sae)
-{
-	crypto_bignum_deinit(sae->sae_rand, 1);
-	sae->sae_rand = sae_get_rand(sae->dh->order, sae->dh->order_len * 8);
-	if (sae->sae_rand == NULL)
-		return NULL;
-	return sae_get_rand(sae->dh->order, sae->dh->order_len * 8);
+	return sae_get_rand(sae);
 }
 
 
@@ -521,7 +510,7 @@ static int sae_derive_commit_dh(struct sae_data *sae, struct crypto_bignum *pwe)
 	struct crypto_bignum *x, *mask, *elem;
 	int ret = -1;
 
-	mask = sae_get_rand_and_mask_dh(sae);
+	mask = sae_get_rand_and_mask(sae);
 	if (mask == NULL) {
 		wpa_printf(MSG_DEBUG, "SAE: Could not get rand/mask");
 		return -1;

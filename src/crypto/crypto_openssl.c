@@ -987,6 +987,19 @@ int crypto_bignum_mulmod(const struct crypto_bignum *a,
 }
 
 
+int crypto_bignum_cmp(const struct crypto_bignum *a,
+		      const struct crypto_bignum *b)
+{
+	return BN_cmp((const BIGNUM *) a, (const BIGNUM *) b);
+}
+
+
+int crypto_bignum_bits(const struct crypto_bignum *a)
+{
+	return BN_num_bits((const BIGNUM *) a);
+}
+
+
 #ifdef CONFIG_ECC
 
 struct crypto_ec {

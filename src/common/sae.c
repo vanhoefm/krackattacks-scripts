@@ -65,22 +65,44 @@ int sae_set_group(struct sae_data *sae, int group)
 }
 
 
-void sae_clear_data(struct sae_data *sae)
+void sae_clear_temp_data(struct sae_data *sae)
 {
 	if (sae == NULL)
 		return;
 	crypto_ec_deinit(sae->ec);
+	sae->ec = NULL;
+	sae->dh = NULL;
 	crypto_bignum_deinit(sae->prime_buf, 0);
+	sae->prime_buf = NULL;
+	sae->prime = NULL;
 	crypto_bignum_deinit(sae->order_buf, 0);
+	sae->order_buf = NULL;
+	sae->order = NULL;
 	crypto_bignum_deinit(sae->sae_rand, 1);
+	sae->sae_rand = NULL;
 	crypto_bignum_deinit(sae->pwe_ffc, 1);
+	sae->pwe_ffc = NULL;
 	crypto_bignum_deinit(sae->own_commit_scalar, 0);
-	crypto_bignum_deinit(sae->peer_commit_scalar, 0);
+	sae->own_commit_scalar = NULL;
 	crypto_bignum_deinit(sae->own_commit_element_ffc, 0);
+	sae->own_commit_element_ffc = NULL;
 	crypto_bignum_deinit(sae->peer_commit_element_ffc, 0);
+	sae->peer_commit_element_ffc = NULL;
 	crypto_ec_point_deinit(sae->pwe_ecc, 1);
+	sae->pwe_ecc = NULL;
 	crypto_ec_point_deinit(sae->own_commit_element_ecc, 0);
+	sae->own_commit_element_ecc = NULL;
 	crypto_ec_point_deinit(sae->peer_commit_element_ecc, 0);
+	sae->peer_commit_element_ecc = NULL;
+}
+
+
+void sae_clear_data(struct sae_data *sae)
+{
+	if (sae == NULL)
+		return;
+	sae_clear_temp_data(sae);
+	crypto_bignum_deinit(sae->peer_commit_scalar, 0);
 	os_memset(sae, 0, sizeof(*sae));
 }
 

@@ -510,8 +510,10 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 			data = auth_build_sae_confirm(hapd, sta);
 			if (data == NULL)
 				resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
-			else
+			else {
 				sta->sae->state = SAE_ACCEPTED;
+				sae_clear_temp_data(sta->sae);
+			}
 		}
 	} else {
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,

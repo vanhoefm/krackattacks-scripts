@@ -511,6 +511,7 @@ static int sme_sae_auth(struct wpa_supplicant *wpa_s, u16 auth_transaction,
 		if (sae_check_confirm(&wpa_s->sme.sae, data, len) < 0)
 			return -1;
 		wpa_s->sme.sae.state = SAE_ACCEPTED;
+		sae_clear_temp_data(&wpa_s->sme.sae);
 		return 1;
 	}
 

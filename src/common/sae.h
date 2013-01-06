@@ -43,6 +43,7 @@ struct sae_data {
 };
 
 int sae_set_group(struct sae_data *sae, int group);
+void sae_clear_temp_data(struct sae_data *sae);
 void sae_clear_data(struct sae_data *sae);
 
 int sae_prepare_commit(const u8 *addr1, const u8 *addr2,

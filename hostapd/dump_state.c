@@ -19,6 +19,7 @@
 #include "ap/ap_config.h"
 #include "ap/sta_info.h"
 #include "dump_state.h"
+#include "ap/ap_drv_ops.h"
 
 
 static void fprint_char(FILE *f, char c)
@@ -72,6 +73,7 @@ static void hostapd_dump_state(struct hostapd_data *hapd)
 #ifndef CONFIG_NO_RADIUS
 	char *buf;
 #endif /* CONFIG_NO_RADIUS */
+	struct hostap_sta_driver_data data;
 
 	if (!hapd->conf->dump_log_name) {
 		wpa_printf(MSG_DEBUG, "Dump file not defined - ignoring dump "
@@ -139,6 +141,13 @@ static void hostapd_dump_state(struct hostapd_data *hapd)
 			  "DEAUTH")));
 
 		ieee802_1x_dump_state(f, "  ", sta);
+
+		if (hostapd_drv_read_sta_data(hapd, &data, sta->addr) == 0) {
+			fprintf(f, "  rx_pkt=%lu tx_pkt=%lu\n"
+				"  rx_byte=%lu tx_byte=%lu\n",
+				data.rx_packets, data.tx_packets,
+				data.rx_bytes, data.tx_bytes);
+		}
 	}
 
 #ifndef CONFIG_NO_RADIUS

@@ -758,23 +758,9 @@ void sae_write_commit(struct sae_data *sae, struct wpabuf *buf,
 }
 
 
-u16 sae_parse_commit(struct sae_data *sae, const u8 *data, size_t len,
-		     const u8 **token, size_t *token_len, int *allowed_groups)
+static u16 sae_group_allowed(struct sae_data *sae, int *allowed_groups,
+			     u16 group)
 {
-	const u8 *pos = data, *end = data + len;
-	u16 group;
-	struct crypto_bignum *peer_scalar;
-
-	wpa_hexdump(MSG_DEBUG, "SAE: Commit fields", data, len);
-	if (token)
-		*token = NULL;
-	if (token_len)
-		*token_len = 0;
-
-	/* Check Finite Cyclic Group */
-	if (pos + 2 > end)
-		return WLAN_STATUS_UNSPECIFIED_FAILURE;
-	group = WPA_GET_LE16(pos);
 	if (allowed_groups) {
 		int i;
 		for (i = 0; allowed_groups[i] >= 0; i++) {
@@ -788,38 +774,60 @@ u16 sae_parse_commit(struct sae_data *sae, const u8 *data, size_t len,
 			return WLAN_STATUS_FINITE_CYCLIC_GROUP_NOT_SUPPORTED;
 		}
 	}
+
 	if (sae->state == SAE_COMMITTED && group != sae->group) {
 		wpa_printf(MSG_DEBUG, "SAE: Do not allow group to be changed");
 		return WLAN_STATUS_FINITE_CYCLIC_GROUP_NOT_SUPPORTED;
 	}
+
 	if (group != sae->group && sae_set_group(sae, group) < 0) {
 		wpa_printf(MSG_DEBUG, "SAE: Unsupported Finite Cyclic Group %u",
 			   group);
 		return WLAN_STATUS_FINITE_CYCLIC_GROUP_NOT_SUPPORTED;
 	}
+
 	if (sae->dh && !allowed_groups) {
 		wpa_printf(MSG_DEBUG, "SAE: Do not allow FFC group %u without "
 			   "explicit configuration enabling it", group);
 		return WLAN_STATUS_FINITE_CYCLIC_GROUP_NOT_SUPPORTED;
 	}
-	pos += 2;
 
-	if (pos + (sae->ec ? 3 : 2) * sae->prime_len < end) {
-		size_t tlen = end - (pos + (sae->ec ? 3 : 2) * sae->prime_len);
-		wpa_hexdump(MSG_DEBUG, "SAE: Anti-Clogging Token", pos, tlen);
+	return WLAN_STATUS_SUCCESS;
+}
+
+
+static void sae_parse_commit_token(struct sae_data *sae, const u8 **pos,
+				   const u8 *end, const u8 **token,
+				   size_t *token_len)
+{
+	if (*pos + (sae->ec ? 3 : 2) * sae->prime_len < end) {
+		size_t tlen = end - (*pos + (sae->ec ? 3 : 2) * sae->prime_len);
+		wpa_hexdump(MSG_DEBUG, "SAE: Anti-Clogging Token", *pos, tlen);
 		if (token)
-			*token = pos;
+			*token = *pos;
 		if (token_len)
 			*token_len = tlen;
-		pos += tlen;
+		*pos += tlen;
+	} else {
+		if (token)
+			*token = NULL;
+		if (token_len)
+			*token_len = 0;
 	}
+}
 
-	if (pos + sae->prime_len > end) {
+
+static u16 sae_parse_commit_scalar(struct sae_data *sae, const u8 **pos,
+				   const u8 *end)
+{
+	struct crypto_bignum *peer_scalar;
+
+	if (*pos + sae->prime_len > end) {
 		wpa_printf(MSG_DEBUG, "SAE: Not enough data for scalar");
 		return WLAN_STATUS_UNSPECIFIED_FAILURE;
 	}
 
-	peer_scalar = crypto_bignum_init_set(pos, sae->prime_len);
+	peer_scalar = crypto_bignum_init_set(*pos, sae->prime_len);
 	if (peer_scalar == NULL)
 		return WLAN_STATUS_UNSPECIFIED_FAILURE;
 
@@ -839,9 +847,16 @@ u16 sae_parse_commit(struct sae_data *sae, const u8 *data, size_t len,
 
 	crypto_bignum_deinit(sae->peer_commit_scalar, 0);
 	sae->peer_commit_scalar = peer_scalar;
-	wpa_hexdump(MSG_DEBUG, "SAE: Peer commit-scalar", pos, sae->prime_len);
-	pos += sae->prime_len;
+	wpa_hexdump(MSG_DEBUG, "SAE: Peer commit-scalar", *pos, sae->prime_len);
+	*pos += sae->prime_len;
 
+	return WLAN_STATUS_SUCCESS;
+}
+
+
+static u16 sae_parse_commit_element(struct sae_data *sae, const u8 *pos,
+				    const u8 *end)
+{
 	if (sae->dh) {
 		if (pos + sae->prime_len > end) {
 			wpa_printf(MSG_DEBUG, "SAE: Not enough data for "
@@ -867,6 +882,35 @@ u16 sae_parse_commit(struct sae_data *sae, const u8 *data, size_t len,
 		    sae->peer_commit_element + sae->prime_len, sae->prime_len);
 
 	return WLAN_STATUS_SUCCESS;
+}
+
+
+u16 sae_parse_commit(struct sae_data *sae, const u8 *data, size_t len,
+		     const u8 **token, size_t *token_len, int *allowed_groups)
+{
+	const u8 *pos = data, *end = data + len;
+	u16 res;
+
+	wpa_hexdump(MSG_DEBUG, "SAE: Commit fields", data, len);
+
+	/* Check Finite Cyclic Group */
+	if (pos + 2 > end)
+		return WLAN_STATUS_UNSPECIFIED_FAILURE;
+	res = sae_group_allowed(sae, allowed_groups, WPA_GET_LE16(pos));
+	if (res != WLAN_STATUS_SUCCESS)
+		return res;
+	pos += 2;
+
+	/* Optional Anti-Clogging Token */
+	sae_parse_commit_token(sae, &pos, end, token, token_len);
+
+	/* commit-scalar */
+	res = sae_parse_commit_scalar(sae, &pos, end);
+	if (res != WLAN_STATUS_SUCCESS)
+		return res;
+
+	/* commit-element */
+	return sae_parse_commit_element(sae, pos, end);
 }
 
 

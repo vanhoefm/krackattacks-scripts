@@ -26,7 +26,8 @@ struct sae_data {
 	u8 own_commit_element[2 * SAE_MAX_PRIME_LEN];
 	u8 peer_commit_scalar[SAE_MAX_PRIME_LEN];
 	u8 peer_commit_element[2 * SAE_MAX_PRIME_LEN];
-	u8 pwe[2 * SAE_MAX_PRIME_LEN];
+	struct crypto_ec_point *pwe_ecc;
+	struct crypto_bignum *pwe_ffc;
 	struct crypto_bignum *sae_rand;
 	int group;
 	struct crypto_ec *ec;

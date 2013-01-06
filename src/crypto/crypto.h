@@ -606,6 +606,13 @@ int crypto_bignum_cmp(const struct crypto_bignum *a,
 int crypto_bignum_bits(const struct crypto_bignum *a);
 
 /**
+ * crypto_bignum_is_zero - Is the given bignum zero
+ * @a: Bignum
+ * Returns: 1 if @a is zero or 0 if not
+ */
+int crypto_bignum_is_zero(const struct crypto_bignum *a);
+
+/**
  * struct crypto_ec - Elliptic curve context
  *
  * Internal data structure for EC implementation. The contents is specific

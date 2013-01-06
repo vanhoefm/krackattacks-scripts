@@ -74,6 +74,8 @@ void sae_clear_data(struct sae_data *sae)
 	crypto_bignum_deinit(sae->order_buf, 0);
 	crypto_bignum_deinit(sae->sae_rand, 1);
 	crypto_bignum_deinit(sae->pwe_ffc, 1);
+	crypto_bignum_deinit(sae->own_commit_scalar, 0);
+	crypto_bignum_deinit(sae->peer_commit_scalar, 0);
 	crypto_ec_point_deinit(sae->pwe_ecc, 1);
 	os_memset(sae, 0, sizeof(*sae));
 }
@@ -102,17 +104,6 @@ static int val_zero_or_one(const u8 *val, size_t len)
 	}
 
 	return val[len - 1] <= 1;
-}
-
-
-static int val_zero(const u8 *val, size_t len)
-{
-	size_t i;
-	for (i = 0; i < len; i++) {
-		if (val[i])
-			return 0;
-	}
-	return 1;
 }
 
 
@@ -303,7 +294,7 @@ static int sae_derive_pwe(struct sae_data *sae, const u8 *addr1,
 
 static int sae_derive_commit(struct sae_data *sae)
 {
-	struct crypto_bignum *x, *mask;
+	struct crypto_bignum *mask;
 	struct crypto_ec_point *elem;
 	int ret = -1;
 
@@ -313,18 +304,20 @@ static int sae_derive_commit(struct sae_data *sae)
 		return -1;
 	}
 
-	x = crypto_bignum_init();
 	elem = crypto_ec_point_init(sae->ec);
-	if (x == NULL || elem == NULL)
+	if (elem == NULL)
 		goto fail;
 
+	if (!sae->own_commit_scalar) {
+		sae->own_commit_scalar = crypto_bignum_init();
+		if (!sae->own_commit_scalar)
+			goto fail;
+	}
+
 	/* commit-scalar = (rand + mask) modulo r */
-	crypto_bignum_add(sae->sae_rand, mask, x);
-	crypto_bignum_mod(x, sae->order, x);
-	crypto_bignum_to_bin(x, sae->own_commit_scalar,
-			     sizeof(sae->own_commit_scalar), sae->prime_len);
-	wpa_hexdump(MSG_DEBUG, "SAE: commit-scalar",
-		    sae->own_commit_scalar, sae->prime_len);
+	crypto_bignum_add(sae->sae_rand, mask, sae->own_commit_scalar);
+	crypto_bignum_mod(sae->own_commit_scalar, sae->order,
+			  sae->own_commit_scalar);
 
 	/* COMMIT-ELEMENT = inverse(scalar-op(mask, PWE)) */
 	if (crypto_ec_point_mul(sae->ec, sae->pwe_ecc, mask, elem) < 0 ||
@@ -345,7 +338,6 @@ static int sae_derive_commit(struct sae_data *sae)
 fail:
 	crypto_ec_point_deinit(elem, 0);
 	crypto_bignum_deinit(mask, 1);
-	crypto_bignum_deinit(x, 1);
 	return ret;
 }
 
@@ -501,7 +493,7 @@ static int sae_derive_pwe_dh(struct sae_data *sae, const u8 *addr1,
 
 static int sae_derive_commit_dh(struct sae_data *sae)
 {
-	struct crypto_bignum *x, *mask, *elem;
+	struct crypto_bignum *mask, *elem;
 	int ret = -1;
 
 	mask = sae_get_rand_and_mask(sae);
@@ -510,18 +502,20 @@ static int sae_derive_commit_dh(struct sae_data *sae)
 		return -1;
 	}
 
-	x = crypto_bignum_init();
 	elem = crypto_bignum_init();
-	if (x == NULL || elem == NULL)
+	if (elem == NULL)
 		goto fail;
 
+	if (!sae->own_commit_scalar) {
+		sae->own_commit_scalar = crypto_bignum_init();
+		if (!sae->own_commit_scalar)
+			goto fail;
+	}
+
 	/* commit-scalar = (rand + mask) modulo r */
-	crypto_bignum_add(sae->sae_rand, mask, x);
-	crypto_bignum_mod(x, sae->order, x);
-	crypto_bignum_to_bin(x, sae->own_commit_scalar,
-			     sizeof(sae->own_commit_scalar), sae->prime_len);
-	wpa_hexdump(MSG_DEBUG, "SAE: commit-scalar",
-		    sae->own_commit_scalar, sae->prime_len);
+	crypto_bignum_add(sae->sae_rand, mask, sae->own_commit_scalar);
+	crypto_bignum_mod(sae->own_commit_scalar, sae->order,
+			  sae->own_commit_scalar);
 
 	/* COMMIT-ELEMENT = inverse(scalar-op(mask, PWE)) */
 	if (crypto_bignum_exptmod(sae->pwe_ffc, mask, sae->prime, elem) < 0 ||
@@ -540,7 +534,6 @@ static int sae_derive_commit_dh(struct sae_data *sae)
 fail:
 	crypto_bignum_deinit(elem, 0);
 	crypto_bignum_deinit(mask, 1);
-	crypto_bignum_deinit(x, 1);
 	return ret;
 }
 
@@ -576,17 +569,15 @@ int sae_prepare_commit(const u8 *addr1, const u8 *addr2,
 
 static int sae_check_peer_commit(struct sae_data *sae)
 {
-	u8 order[SAE_MAX_PRIME_LEN], prime[SAE_MAX_PRIME_LEN];
+	u8 prime[SAE_MAX_PRIME_LEN];
 
-	if (crypto_bignum_to_bin(sae->order, order, sizeof(order),
-				 sae->prime_len) < 0 ||
-	    crypto_bignum_to_bin(sae->prime, prime, sizeof(prime),
+	if (crypto_bignum_to_bin(sae->prime, prime, sizeof(prime),
 				 sae->prime_len) < 0)
 		return -1;
 
 	/* 0 < scalar < r */
-	if (val_zero(sae->peer_commit_scalar, sae->prime_len) ||
-	    os_memcmp(sae->peer_commit_scalar, order, sae->prime_len) >= 0) {
+	if (crypto_bignum_is_zero(sae->peer_commit_scalar) ||
+	    crypto_bignum_cmp(sae->peer_commit_scalar, sae->order) >= 0) {
 		wpa_printf(MSG_DEBUG, "SAE: Invalid peer scalar");
 		return -1;
 	}
@@ -617,14 +608,11 @@ static int sae_check_peer_commit(struct sae_data *sae)
 static int sae_derive_k_ec(struct sae_data *sae, u8 *k)
 {
 	struct crypto_ec_point *peer_elem, *K;
-	struct crypto_bignum *peer_scalar;
 	int ret = -1;
 
-	peer_scalar = crypto_bignum_init_set(sae->peer_commit_scalar,
-					     sae->prime_len);
 	peer_elem = crypto_ec_point_from_bin(sae->ec, sae->peer_commit_element);
 	K = crypto_ec_point_init(sae->ec);
-	if (peer_elem == NULL || peer_scalar == NULL || K == NULL)
+	if (peer_elem == NULL || K == NULL)
 		goto fail;
 
 	if (!crypto_ec_point_is_on_curve(sae->ec, peer_elem)) {
@@ -639,7 +627,8 @@ static int sae_derive_k_ec(struct sae_data *sae, u8 *k)
 	 * k = F(K) (= x coordinate)
 	 */
 
-	if (crypto_ec_point_mul(sae->ec, sae->pwe_ecc, peer_scalar, K) < 0 ||
+	if (crypto_ec_point_mul(sae->ec, sae->pwe_ecc, sae->peer_commit_scalar,
+				K) < 0 ||
 	    crypto_ec_point_add(sae->ec, K, peer_elem, K) < 0 ||
 	    crypto_ec_point_mul(sae->ec, K, sae->sae_rand, K) < 0 ||
 	    crypto_ec_point_is_at_infinity(sae->ec, K) ||
@@ -660,15 +649,13 @@ fail:
 
 static int sae_derive_k_dh(struct sae_data *sae, u8 *k)
 {
-	struct crypto_bignum *peer_elem, *K, *peer_scalar;
+	struct crypto_bignum *peer_elem, *K;
 	int ret = -1;
 
-	peer_scalar = crypto_bignum_init_set(sae->peer_commit_scalar,
-					     sae->prime_len);
 	peer_elem = crypto_bignum_init_set(sae->peer_commit_element,
 					   sae->prime_len);
 	K = crypto_bignum_init();
-	if (peer_elem == NULL || peer_scalar == NULL || K == NULL)
+	if (peer_elem == NULL || K == NULL)
 		goto fail;
 
 	/*
@@ -678,8 +665,8 @@ static int sae_derive_k_dh(struct sae_data *sae, u8 *k)
 	 * k = F(K) (= x coordinate)
 	 */
 
-	if (crypto_bignum_exptmod(sae->pwe_ffc, peer_scalar, sae->prime, K) < 0
-	    ||
+	if (crypto_bignum_exptmod(sae->pwe_ffc, sae->peer_commit_scalar,
+				  sae->prime, K) < 0 ||
 	    crypto_bignum_mulmod(K, peer_elem, sae->prime, K) < 0 ||
 	    crypto_bignum_exptmod(K, sae->sae_rand, sae->prime, K) < 0 ||
 	    crypto_bignum_to_bin(K, k, SAE_MAX_PRIME_LEN, sae->prime_len) < 0 ||
@@ -711,15 +698,11 @@ static int sae_derive_keys(struct sae_data *sae, const u8 *k)
 	u8 null_key[SAE_KEYSEED_KEY_LEN], val[SAE_MAX_PRIME_LEN];
 	u8 keyseed[SHA256_MAC_LEN];
 	u8 keys[SAE_KCK_LEN + SAE_PMK_LEN];
-	struct crypto_bignum *own_scalar, *peer_scalar, *tmp;
+	struct crypto_bignum *tmp;
 	int ret = -1;
 
-	own_scalar = crypto_bignum_init_set(sae->own_commit_scalar,
-					    sae->prime_len);
-	peer_scalar = crypto_bignum_init_set(sae->peer_commit_scalar,
-					     sae->prime_len);
 	tmp = crypto_bignum_init();
-	if (own_scalar == NULL || peer_scalar == NULL || tmp == NULL)
+	if (tmp == NULL)
 		goto fail;
 
 	/* keyseed = H(<0>32, k)
@@ -732,7 +715,7 @@ static int sae_derive_keys(struct sae_data *sae, const u8 *k)
 	hmac_sha256(null_key, sizeof(null_key), k, sae->prime_len, keyseed);
 	wpa_hexdump_key(MSG_DEBUG, "SAE: keyseed", keyseed, sizeof(keyseed));
 
-	crypto_bignum_add(own_scalar, peer_scalar, tmp);
+	crypto_bignum_add(sae->own_commit_scalar, sae->peer_commit_scalar, tmp);
 	crypto_bignum_mod(tmp, sae->order, tmp);
 	crypto_bignum_to_bin(tmp, val, sizeof(val), sae->prime_len);
 	wpa_hexdump(MSG_DEBUG, "SAE: PMKID", val, SAE_PMKID_LEN);
@@ -746,8 +729,6 @@ static int sae_derive_keys(struct sae_data *sae, const u8 *k)
 	ret = 0;
 fail:
 	crypto_bignum_deinit(tmp, 0);
-	crypto_bignum_deinit(peer_scalar, 0);
-	crypto_bignum_deinit(own_scalar, 0);
 	return ret;
 }
 
@@ -769,7 +750,9 @@ void sae_write_commit(struct sae_data *sae, struct wpabuf *buf,
 	wpabuf_put_le16(buf, sae->group); /* Finite Cyclic Group */
 	if (token)
 		wpabuf_put_buf(buf, token);
-	wpabuf_put_data(buf, sae->own_commit_scalar, sae->prime_len);
+	crypto_bignum_to_bin(sae->own_commit_scalar,
+			     wpabuf_put(buf, sae->prime_len), sae->prime_len,
+			     sae->prime_len);
 	wpabuf_put_data(buf, sae->own_commit_element,
 			(sae->ec ? 2 : 1) * sae->prime_len);
 }
@@ -780,6 +763,7 @@ u16 sae_parse_commit(struct sae_data *sae, const u8 *data, size_t len,
 {
 	const u8 *pos = data, *end = data + len;
 	u16 group;
+	struct crypto_bignum *peer_scalar;
 
 	wpa_hexdump(MSG_DEBUG, "SAE: Commit fields", data, len);
 	if (token)
@@ -835,22 +819,27 @@ u16 sae_parse_commit(struct sae_data *sae, const u8 *data, size_t len,
 		return WLAN_STATUS_UNSPECIFIED_FAILURE;
 	}
 
+	peer_scalar = crypto_bignum_init_set(pos, sae->prime_len);
+	if (peer_scalar == NULL)
+		return WLAN_STATUS_UNSPECIFIED_FAILURE;
+
 	/*
 	 * IEEE Std 802.11-2012, 11.3.8.6.1: If there is a protocol instance for
 	 * the peer and it is in Authenticated state, the new Commit Message
 	 * shall be dropped if the peer-scalar is identical to the one used in
 	 * the existing protocol instance.
 	 */
-	if (sae->state == SAE_ACCEPTED &&
-	    os_memcmp(sae->peer_commit_scalar, pos, sae->prime_len) == 0) {
+	if (sae->state == SAE_ACCEPTED && sae->peer_commit_scalar &&
+	    crypto_bignum_cmp(sae->peer_commit_scalar, peer_scalar) == 0) {
 		wpa_printf(MSG_DEBUG, "SAE: Do not accept re-use of previous "
 			   "peer-commit-scalar");
+		crypto_bignum_deinit(peer_scalar, 0);
 		return WLAN_STATUS_UNSPECIFIED_FAILURE;
 	}
 
-	os_memcpy(sae->peer_commit_scalar, pos, sae->prime_len);
-	wpa_hexdump(MSG_DEBUG, "SAE: Peer commit-scalar",
-		    sae->peer_commit_scalar, sae->prime_len);
+	crypto_bignum_deinit(sae->peer_commit_scalar, 0);
+	sae->peer_commit_scalar = peer_scalar;
+	wpa_hexdump(MSG_DEBUG, "SAE: Peer commit-scalar", pos, sae->prime_len);
 	pos += sae->prime_len;
 
 	if (sae->dh) {
@@ -881,43 +870,59 @@ u16 sae_parse_commit(struct sae_data *sae, const u8 *data, size_t len,
 }
 
 
-void sae_write_confirm(struct sae_data *sae, struct wpabuf *buf)
+static void sae_cn_confirm(struct sae_data *sae, const u8 *sc,
+			   const struct crypto_bignum *scalar1,
+			   const u8 *element1,
+			   const struct crypto_bignum *scalar2,
+			   const u8 *element2, u8 *confirm)
 {
-	const u8 *sc;
 	const u8 *addr[5];
 	size_t len[5];
-
-	/* Send-Confirm */
-	sc = wpabuf_put(buf, 0);
-	wpabuf_put_le16(buf, sae->send_confirm);
-	sae->send_confirm++;
+	u8 scalar_b1[SAE_MAX_PRIME_LEN], scalar_b2[SAE_MAX_PRIME_LEN];
 
 	/* Confirm
 	 * CN(key, X, Y, Z, ...) =
 	 *    HMAC-SHA256(key, D2OS(X) || D2OS(Y) || D2OS(Z) | ...)
 	 * confirm = CN(KCK, send-confirm, commit-scalar, COMMIT-ELEMENT,
 	 *              peer-commit-scalar, PEER-COMMIT-ELEMENT)
+	 * verifier = CN(KCK, peer-send-confirm, peer-commit-scalar,
+	 *               PEER-COMMIT-ELEMENT, commit-scalar, COMMIT-ELEMENT)
 	 */
 	addr[0] = sc;
 	len[0] = 2;
-	addr[1] = sae->own_commit_scalar;
+	crypto_bignum_to_bin(scalar1, scalar_b1, sizeof(scalar_b1),
+			     sae->prime_len);
+	addr[1] = scalar_b1;
 	len[1] = sae->prime_len;
-	addr[2] = sae->own_commit_element;
+	addr[2] = element1;
 	len[2] = (sae->ec ? 2 : 1) * sae->prime_len;
-	addr[3] = sae->peer_commit_scalar;
+	crypto_bignum_to_bin(scalar2, scalar_b2, sizeof(scalar_b2),
+			     sae->prime_len);
+	addr[3] = scalar_b2;
 	len[3] = sae->prime_len;
-	addr[4] = sae->peer_commit_element;
+	addr[4] = element2;
 	len[4] = (sae->ec ? 2 : 1) * sae->prime_len;
-	hmac_sha256_vector(sae->kck, sizeof(sae->kck), 5, addr, len,
-			   wpabuf_put(buf, SHA256_MAC_LEN));
+	hmac_sha256_vector(sae->kck, sizeof(sae->kck), 5, addr, len, confirm);
+}
+
+
+void sae_write_confirm(struct sae_data *sae, struct wpabuf *buf)
+{
+	const u8 *sc;
+
+	/* Send-Confirm */
+	sc = wpabuf_put(buf, 0);
+	wpabuf_put_le16(buf, sae->send_confirm);
+	sae->send_confirm++;
+
+	sae_cn_confirm(sae, sc, sae->own_commit_scalar, sae->own_commit_element,
+		       sae->peer_commit_scalar, sae->peer_commit_element,
+		       wpabuf_put(buf, SHA256_MAC_LEN));
 }
 
 
 int sae_check_confirm(struct sae_data *sae, const u8 *data, size_t len)
 {
-	u16 rc;
-	const u8 *addr[5];
-	size_t elen[5];
 	u8 verifier[SHA256_MAC_LEN];
 
 	wpa_hexdump(MSG_DEBUG, "SAE: Confirm fields", data, len);
@@ -927,26 +932,12 @@ int sae_check_confirm(struct sae_data *sae, const u8 *data, size_t len)
 		return -1;
 	}
 
-	rc = WPA_GET_LE16(data);
-	wpa_printf(MSG_DEBUG, "SAE: peer-send-confirm %u", rc);
+	wpa_printf(MSG_DEBUG, "SAE: peer-send-confirm %u", WPA_GET_LE16(data));
 
-	/* Confirm
-	 * CN(key, X, Y, Z, ...) =
-	 *    HMAC-SHA256(key, D2OS(X) || D2OS(Y) || D2OS(Z) | ...)
-	 * verifier = CN(KCK, peer-send-confirm, peer-commit-scalar,
-	 *               PEER-COMMIT-ELEMENT, commit-scalar, COMMIT-ELEMENT)
-	 */
-	addr[0] = data;
-	elen[0] = 2;
-	addr[1] = sae->peer_commit_scalar;
-	elen[1] = sae->prime_len;
-	addr[2] = sae->peer_commit_element;
-	elen[2] = (sae->ec ? 2 : 1) * sae->prime_len;
-	addr[3] = sae->own_commit_scalar;
-	elen[3] = sae->prime_len;
-	addr[4] = sae->own_commit_element;
-	elen[4] = (sae->ec ? 2 : 1) * sae->prime_len;
-	hmac_sha256_vector(sae->kck, sizeof(sae->kck), 5, addr, elen, verifier);
+	sae_cn_confirm(sae, data, sae->peer_commit_scalar,
+		       sae->peer_commit_element,
+		       sae->own_commit_scalar, sae->own_commit_element,
+		       verifier);
 
 	if (os_memcmp(verifier, data + 2, SHA256_MAC_LEN) != 0) {
 		wpa_printf(MSG_DEBUG, "SAE: Confirm mismatch");

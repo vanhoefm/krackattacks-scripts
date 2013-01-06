@@ -22,9 +22,9 @@ struct sae_data {
 	u16 send_confirm;
 	u8 kck[SAE_KCK_LEN];
 	u8 pmk[SAE_PMK_LEN];
-	u8 own_commit_scalar[SAE_MAX_PRIME_LEN];
+	struct crypto_bignum *own_commit_scalar;
 	u8 own_commit_element[2 * SAE_MAX_PRIME_LEN];
-	u8 peer_commit_scalar[SAE_MAX_PRIME_LEN];
+	struct crypto_bignum *peer_commit_scalar;
 	u8 peer_commit_element[2 * SAE_MAX_PRIME_LEN];
 	struct crypto_ec_point *pwe_ecc;
 	struct crypto_bignum *pwe_ffc;

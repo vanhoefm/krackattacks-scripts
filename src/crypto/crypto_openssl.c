@@ -1000,6 +1000,12 @@ int crypto_bignum_bits(const struct crypto_bignum *a)
 }
 
 
+int crypto_bignum_is_zero(const struct crypto_bignum *a)
+{
+	return BN_is_zero((const BIGNUM *) a);
+}
+
+
 #ifdef CONFIG_ECC
 
 struct crypto_ec {

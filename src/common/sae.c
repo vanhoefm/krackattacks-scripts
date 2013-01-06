@@ -567,44 +567,6 @@ int sae_prepare_commit(const u8 *addr1, const u8 *addr2,
 }
 
 
-static int sae_check_peer_commit(struct sae_data *sae)
-{
-	u8 prime[SAE_MAX_PRIME_LEN];
-
-	if (crypto_bignum_to_bin(sae->prime, prime, sizeof(prime),
-				 sae->prime_len) < 0)
-		return -1;
-
-	/* 0 < scalar < r */
-	if (crypto_bignum_is_zero(sae->peer_commit_scalar) ||
-	    crypto_bignum_cmp(sae->peer_commit_scalar, sae->order) >= 0) {
-		wpa_printf(MSG_DEBUG, "SAE: Invalid peer scalar");
-		return -1;
-	}
-
-	if (sae->dh) {
-		if (os_memcmp(sae->peer_commit_element, prime, sae->prime_len)
-		    >= 0 ||
-		    val_zero_or_one(sae->peer_commit_element, sae->prime_len)) {
-			wpa_printf(MSG_DEBUG, "SAE: Invalid peer element");
-			return -1;
-		}
-		return 0;
-	}
-
-	/* element x and y coordinates < p */
-	if (os_memcmp(sae->peer_commit_element, prime, sae->prime_len) >= 0 ||
-	    os_memcmp(sae->peer_commit_element + sae->prime_len, prime,
-		      sae->prime_len) >= 0) {
-		wpa_printf(MSG_DEBUG, "SAE: Invalid coordinates in peer "
-			   "element");
-		return -1;
-	}
-
-	return 0;
-}
-
-
 static int sae_derive_k_ec(struct sae_data *sae, u8 *k)
 {
 	struct crypto_ec_point *peer_elem, *K;
@@ -736,9 +698,7 @@ fail:
 int sae_process_commit(struct sae_data *sae)
 {
 	u8 k[SAE_MAX_PRIME_LEN];
-	if (sae_check_peer_commit(sae) < 0 ||
-	    sae_derive_k(sae, k) < 0 ||
-	    sae_derive_keys(sae, k) < 0)
+	if (sae_derive_k(sae, k) < 0 || sae_derive_keys(sae, k) < 0)
 		return -1;
 	return 0;
 }
@@ -845,6 +805,15 @@ static u16 sae_parse_commit_scalar(struct sae_data *sae, const u8 **pos,
 		return WLAN_STATUS_UNSPECIFIED_FAILURE;
 	}
 
+	/* 0 < scalar < r */
+	if (crypto_bignum_is_zero(peer_scalar) ||
+	    crypto_bignum_cmp(peer_scalar, sae->order) >= 0) {
+		wpa_printf(MSG_DEBUG, "SAE: Invalid peer scalar");
+		crypto_bignum_deinit(peer_scalar, 0);
+		return WLAN_STATUS_UNSPECIFIED_FAILURE;
+	}
+
+
 	crypto_bignum_deinit(sae->peer_commit_scalar, 0);
 	sae->peer_commit_scalar = peer_scalar;
 	wpa_hexdump(MSG_DEBUG, "SAE: Peer commit-scalar", *pos, sae->prime_len);
@@ -854,21 +823,38 @@ static u16 sae_parse_commit_scalar(struct sae_data *sae, const u8 **pos,
 }
 
 
-static u16 sae_parse_commit_element(struct sae_data *sae, const u8 *pos,
-				    const u8 *end)
+static u16 sae_parse_commit_element_ffc(struct sae_data *sae, const u8 *pos,
+					const u8 *end)
 {
-	if (sae->dh) {
-		if (pos + sae->prime_len > end) {
-			wpa_printf(MSG_DEBUG, "SAE: Not enough data for "
-				   "commit-element");
-			return WLAN_STATUS_UNSPECIFIED_FAILURE;
-		}
-		os_memcpy(sae->peer_commit_element, pos, sae->prime_len);
-		wpa_hexdump(MSG_DEBUG, "SAE: Peer commit-element",
-			    sae->peer_commit_element, sae->prime_len);
+	u8 prime[SAE_MAX_PRIME_LEN];
 
-		return WLAN_STATUS_SUCCESS;
+	if (pos + sae->prime_len > end) {
+		wpa_printf(MSG_DEBUG, "SAE: Not enough data for "
+			   "commit-element");
+		return WLAN_STATUS_UNSPECIFIED_FAILURE;
 	}
+	os_memcpy(sae->peer_commit_element, pos, sae->prime_len);
+	wpa_hexdump(MSG_DEBUG, "SAE: Peer commit-element",
+		    sae->peer_commit_element, sae->prime_len);
+
+	if (crypto_bignum_to_bin(sae->prime, prime, sizeof(prime),
+				 sae->prime_len) < 0)
+		return WLAN_STATUS_UNSPECIFIED_FAILURE;
+
+	if (os_memcmp(sae->peer_commit_element, prime, sae->prime_len) >= 0 ||
+	    val_zero_or_one(sae->peer_commit_element, sae->prime_len)) {
+		wpa_printf(MSG_DEBUG, "SAE: Invalid peer element");
+		return WLAN_STATUS_UNSPECIFIED_FAILURE;
+	}
+
+	return WLAN_STATUS_SUCCESS;
+}
+
+
+static u16 sae_parse_commit_element_ecc(struct sae_data *sae, const u8 *pos,
+					const u8 *end)
+{
+	u8 prime[SAE_MAX_PRIME_LEN];
 
 	if (pos + 2 * sae->prime_len > end) {
 		wpa_printf(MSG_DEBUG, "SAE: Not enough data for "
@@ -881,7 +867,29 @@ static u16 sae_parse_commit_element(struct sae_data *sae, const u8 *pos,
 	wpa_hexdump(MSG_DEBUG, "SAE: Peer commit-element(y)",
 		    sae->peer_commit_element + sae->prime_len, sae->prime_len);
 
+	if (crypto_bignum_to_bin(sae->prime, prime, sizeof(prime),
+				 sae->prime_len) < 0)
+		return -1;
+
+	/* element x and y coordinates < p */
+	if (os_memcmp(sae->peer_commit_element, prime, sae->prime_len) >= 0 ||
+	    os_memcmp(sae->peer_commit_element + sae->prime_len, prime,
+		      sae->prime_len) >= 0) {
+		wpa_printf(MSG_DEBUG, "SAE: Invalid coordinates in peer "
+			   "element");
+		return WLAN_STATUS_UNSPECIFIED_FAILURE;
+	}
+
 	return WLAN_STATUS_SUCCESS;
+}
+
+
+static u16 sae_parse_commit_element(struct sae_data *sae, const u8 *pos,
+				    const u8 *end)
+{
+	if (sae->dh)
+		return sae_parse_commit_element_ffc(sae, pos, end);
+	return sae_parse_commit_element_ecc(sae, pos, end);
 }
 
 

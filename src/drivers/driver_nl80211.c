@@ -6604,7 +6604,7 @@ static int wpa_driver_nl80211_sta_set_flags(void *priv, const u8 *addr,
 static int wpa_driver_nl80211_ap(struct wpa_driver_nl80211_data *drv,
 				 struct wpa_driver_associate_params *params)
 {
-	enum nl80211_iftype nlmode;
+	enum nl80211_iftype nlmode, old_mode;
 
 	if (params->p2p) {
 		wpa_printf(MSG_DEBUG, "nl80211: Setup AP operations for P2P "
@@ -6613,8 +6613,15 @@ static int wpa_driver_nl80211_ap(struct wpa_driver_nl80211_data *drv,
 	} else
 		nlmode = NL80211_IFTYPE_AP;
 
-	if (wpa_driver_nl80211_set_mode(&drv->first_bss, nlmode) ||
-	    wpa_driver_nl80211_set_freq(&drv->first_bss, params->freq, 0, 0)) {
+	old_mode = drv->nlmode;
+	if (wpa_driver_nl80211_set_mode(&drv->first_bss, nlmode)) {
+		nl80211_remove_monitor_interface(drv);
+		return -1;
+	}
+
+	if (wpa_driver_nl80211_set_freq(&drv->first_bss, params->freq, 0, 0)) {
+		if (old_mode != nlmode)
+			wpa_driver_nl80211_set_mode(&drv->first_bss, old_mode);
 		nl80211_remove_monitor_interface(drv);
 		return -1;
 	}

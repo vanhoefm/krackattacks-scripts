@@ -1680,6 +1680,11 @@ interworking_match_anqp_info(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 			continue;
 		if (other->anqp == NULL)
 			continue;
+		if (other->anqp->roaming_consortium == NULL &&
+		    other->anqp->nai_realm == NULL &&
+		    other->anqp->anqp_3gpp == NULL &&
+		    other->anqp->domain_name == NULL)
+			continue;
 		if (!(other->flags & WPA_BSS_ANQP_FETCH_TRIED))
 			continue;
 		if (os_memcmp(bss->hessid, other->hessid, ETH_ALEN) != 0)

@@ -1710,7 +1710,7 @@ static void interworking_next_anqp_fetch(struct wpa_supplicant *wpa_s)
 	int found = 0;
 	const u8 *ie;
 
-	if (!wpa_s->fetch_anqp_in_progress)
+	if (eloop_terminated() || !wpa_s->fetch_anqp_in_progress)
 		return;
 
 	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {

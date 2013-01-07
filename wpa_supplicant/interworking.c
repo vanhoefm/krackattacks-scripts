@@ -13,6 +13,7 @@
 #include "common/gas.h"
 #include "common/wpa_ctrl.h"
 #include "utils/pcsc_funcs.h"
+#include "utils/eloop.h"
 #include "drivers/driver.h"
 #include "eap_common/eap_defs.h"
 #include "eap_peer/eap.h"
@@ -170,6 +171,13 @@ static int additional_roaming_consortiums(struct wpa_bss *bss)
 }
 
 
+static void interworking_continue_anqp(void *eloop_ctx, void *sock_ctx)
+{
+	struct wpa_supplicant *wpa_s = eloop_ctx;
+	interworking_next_anqp_fetch(wpa_s);
+}
+
+
 static int interworking_anqp_send_req(struct wpa_supplicant *wpa_s,
 				      struct wpa_bss *bss)
 {
@@ -238,6 +246,8 @@ static int interworking_anqp_send_req(struct wpa_supplicant *wpa_s,
 	if (res < 0) {
 		wpa_printf(MSG_DEBUG, "ANQP: Failed to send Query Request");
 		ret = -1;
+		eloop_register_timeout(0, 0, interworking_continue_anqp, wpa_s,
+				       NULL);
 	} else
 		wpa_printf(MSG_DEBUG, "ANQP: Query started with dialog token "
 			   "%u", res);

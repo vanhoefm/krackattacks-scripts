@@ -380,9 +380,6 @@ int p2p_send_prov_disc_req(struct p2p_data *p2p, struct p2p_device *dev,
 		/* TODO: use device discoverability request through GO */
 	}
 
-	dev->dialog_token++;
-	if (dev->dialog_token == 0)
-		dev->dialog_token = 1;
 	req = p2p_build_prov_disc_req(p2p, dev->dialog_token,
 				      dev->req_config_methods,
 				      join ? dev : NULL);
@@ -452,6 +449,14 @@ int p2p_prov_disc_req(struct p2p_data *p2p, const u8 *peer_addr,
 
 	if (p2p->user_initiated_pd)
 		p2p->pd_retries = MAX_PROV_DISC_REQ_RETRIES;
+
+	/*
+	 * Assign dialog token here to use the same value in each retry within
+	 * the same PD exchange.
+	 */
+	dev->dialog_token++;
+	if (dev->dialog_token == 0)
+		dev->dialog_token = 1;
 
 	return p2p_send_prov_disc_req(p2p, dev, join, force_freq);
 }

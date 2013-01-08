@@ -731,6 +731,17 @@ static void eap_aka_determine_identity(struct eap_sm *sm,
 		return;
 	}
 
+	if (((data->eap_method == EAP_TYPE_AKA_PRIME &&
+	      username[0] == EAP_AKA_PRIME_REAUTH_ID_PREFIX) ||
+	     (data->eap_method == EAP_TYPE_AKA &&
+	      username[0] == EAP_AKA_REAUTH_ID_PREFIX)) &&
+	    data->identity_round == 1) {
+		/* Remain in IDENTITY state for another round to request full
+		 * auth identity since we did not recognize reauth id */
+		os_free(username);
+		return;
+	}
+
 	if ((data->eap_method == EAP_TYPE_AKA_PRIME &&
 	     username[0] == EAP_AKA_PRIME_PSEUDONYM_PREFIX) ||
 	    (data->eap_method == EAP_TYPE_AKA &&

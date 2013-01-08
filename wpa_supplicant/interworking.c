@@ -234,6 +234,7 @@ static int interworking_anqp_send_req(struct wpa_supplicant *wpa_s,
 			wpabuf_put_u8(extra, HS20_STYPE_WAN_METRICS);
 			wpabuf_put_u8(extra, HS20_STYPE_CONNECTION_CAPABILITY);
 			wpabuf_put_u8(extra, HS20_STYPE_OPERATING_CLASS);
+			wpabuf_put_u8(extra, HS20_STYPE_OSU_PROVIDERS_LIST);
 		}
 		gas_anqp_set_element_len(extra, len_pos);
 	}

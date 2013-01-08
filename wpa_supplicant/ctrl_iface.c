@@ -3527,6 +3527,10 @@ static int print_bss_info(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 				   anqp->hs20_wan_metrics);
 		pos = anqp_add_hex(pos, end, "hs20_connection_capability",
 				   anqp->hs20_connection_capability);
+		pos = anqp_add_hex(pos, end, "hs20_operating_class",
+				   anqp->hs20_operating_class);
+		pos = anqp_add_hex(pos, end, "hs20_osu_providers_list",
+				   anqp->hs20_osu_providers_list);
 #endif /* CONFIG_HS20 */
 	}
 #endif /* CONFIG_INTERWORKING */

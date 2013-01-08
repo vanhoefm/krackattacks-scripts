@@ -39,6 +39,7 @@ struct wpa_bss_anqp {
 	struct wpabuf *hs20_wan_metrics;
 	struct wpabuf *hs20_connection_capability;
 	struct wpabuf *hs20_operating_class;
+	struct wpabuf *hs20_osu_providers_list;
 #endif /* CONFIG_HS20 */
 };
 

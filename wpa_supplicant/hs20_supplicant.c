@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2009, Atheros Communications, Inc.
- * Copyright (c) 2011-2012, Qualcomm Atheros, Inc.
+ * Copyright (c) 2011-2013, Qualcomm Atheros, Inc.
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -235,6 +235,15 @@ void hs20_parse_rx_hs20_anqp_resp(struct wpa_supplicant *wpa_s,
 		if (anqp) {
 			wpabuf_free(anqp->hs20_operating_class);
 			anqp->hs20_operating_class =
+				wpabuf_alloc_copy(pos, slen);
+		}
+		break;
+	case HS20_STYPE_OSU_PROVIDERS_LIST:
+		wpa_msg(wpa_s, MSG_INFO, "RX-HS20-ANQP " MACSTR
+			" OSU Providers list", MAC2STR(sa));
+		if (anqp) {
+			wpabuf_free(anqp->hs20_osu_providers_list);
+			anqp->hs20_osu_providers_list =
 				wpabuf_alloc_copy(pos, slen);
 		}
 		break;

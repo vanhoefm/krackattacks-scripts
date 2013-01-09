@@ -145,9 +145,6 @@ static struct wpabuf * p2p_build_go_neg_req(struct p2p_data *p2p,
 	if (buf == NULL)
 		return NULL;
 
-	peer->dialog_token++;
-	if (peer->dialog_token == 0)
-		peer->dialog_token = 1;
 	p2p_buf_add_public_action_hdr(buf, P2P_GO_NEG_REQ, peer->dialog_token);
 
 	len = p2p_buf_add_ie_hdr(buf);

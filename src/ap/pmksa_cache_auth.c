@@ -209,6 +209,8 @@ static void pmksa_cache_link_entry(struct rsn_pmksa_cache *pmksa,
 	pmksa->pmkid[PMKID_HASH(entry->pmkid)] = entry;
 
 	pmksa->pmksa_count++;
+	if (prev == NULL)
+		pmksa_cache_set_expiration(pmksa);
 	wpa_printf(MSG_DEBUG, "RSN: added PMKSA cache entry for " MACSTR,
 		   MAC2STR(entry->spa));
 	wpa_hexdump(MSG_DEBUG, "RSN: added PMKID", entry->pmkid, PMKID_LEN);

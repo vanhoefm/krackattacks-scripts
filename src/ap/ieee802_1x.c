@@ -66,8 +66,9 @@ static void ieee802_1x_send(struct hostapd_data *hapd, struct sta_info *sta,
 	if (sta->flags & WLAN_STA_PREAUTH) {
 		rsn_preauth_send(hapd, sta, buf, len);
 	} else {
-		hostapd_drv_hapd_send_eapol(hapd, sta->addr, buf, len,
-					    encrypt, sta->flags);
+		hostapd_drv_hapd_send_eapol(
+			hapd, sta->addr, buf, len,
+			encrypt, hostapd_sta_flags_to_drv(sta->flags));
 	}
 
 	os_free(buf);

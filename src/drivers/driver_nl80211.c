@@ -6945,6 +6945,11 @@ skip_auth_type:
 		NLA_PUT_U32(msg, NL80211_ATTR_AKM_SUITES, mgmt);
 	}
 
+#ifdef CONFIG_IEEE80211W
+	if (params->mgmt_frame_protection == MGMT_FRAME_PROTECTION_REQUIRED)
+		NLA_PUT_U32(msg, NL80211_ATTR_USE_MFP, NL80211_MFP_REQUIRED);
+#endif /* CONFIG_IEEE80211W */
+
 	if (params->disable_ht)
 		NLA_PUT_FLAG(msg, NL80211_ATTR_DISABLE_HT);
 

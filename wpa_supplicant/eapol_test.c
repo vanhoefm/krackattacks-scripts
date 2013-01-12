@@ -98,7 +98,7 @@ static int add_extra_attr(struct radius_msg *msg,
 	size_t len;
 	char *pos;
 	u32 val;
-	char buf[128];
+	char buf[RADIUS_MAX_ATTR_LEN + 1];
 
 	switch (attr->syntax) {
 	case 's':
@@ -114,7 +114,7 @@ static int add_extra_attr(struct radius_msg *msg,
 		if (pos[0] == '0' && pos[1] == 'x')
 			pos += 2;
 		len = os_strlen(pos);
-		if ((len & 1) || (len / 2) > sizeof(buf)) {
+		if ((len & 1) || (len / 2) > RADIUS_MAX_ATTR_LEN) {
 			printf("Invalid extra attribute hexstring\n");
 			return -1;
 		}
@@ -171,7 +171,7 @@ static void ieee802_1x_encapsulate_radius(struct eapol_test_data *e,
 					  const u8 *eap, size_t len)
 {
 	struct radius_msg *msg;
-	char buf[128];
+	char buf[RADIUS_MAX_ATTR_LEN + 1];
 	const struct eap_hdr *hdr;
 	const u8 *pos;
 

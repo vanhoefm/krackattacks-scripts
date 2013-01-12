@@ -1,6 +1,6 @@
 ChangeLog for wpa_supplicant
 
-????-??-?? - v2.0
+2013-01-12 - v2.0
 	* removed Qt3-based wpa_gui (obsoleted by wpa_qui-qt4)
 	* removed unmaintained driver wrappers broadcom, iphone, osx, ralink,
 	  hostap, madwifi (hostap and madwifi remain available for hostapd;

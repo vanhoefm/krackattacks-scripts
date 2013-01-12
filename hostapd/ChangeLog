@@ -1,6 +1,6 @@
 ChangeLog for hostapd
 
-????-??-?? - v2.0
+2013-01-12 - v2.0
 	* added AP-STA-DISCONNECTED ctrl_iface event
 	* improved debug logging (human readable event names, interface name
 	  included in more entries)
@@ -91,6 +91,9 @@ ChangeLog for hostapd
 	  remove active PBC indication from Probe Request frames properly
 	* added support for using SQLite for the eap_user database
 	* added Acct-Session-Id attribute into Access-Request messages
+	* fixed EAPOL frame transmission to non-QoS STAs with nl80211
+	  (do not send QoS frames if the STA did not negotiate use of QoS for
+	  this association)
 
 2012-05-10 - v1.0
 	* Add channel selection support in hostapd. See hostapd.conf.

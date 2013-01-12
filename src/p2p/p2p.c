@@ -629,6 +629,7 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq,
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Do not add peer "
 			"filter for " MACSTR " due to peer filter",
 			MAC2STR(p2p_dev_addr));
+		p2p_parse_free(&msg);
 		return 0;
 	}
 
@@ -648,8 +649,10 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq,
 	 * entry is newer than the one previously stored.
 	 */
 	if (dev->last_seen.usec > 0 &&
-	    os_time_before(&entry_ts, &dev->last_seen))
+	    os_time_before(&entry_ts, &dev->last_seen)) {
+		p2p_parse_free(&msg);
 		return -1;
+	}
 
 	os_memcpy(&dev->last_seen, &entry_ts, sizeof(struct os_time));
 

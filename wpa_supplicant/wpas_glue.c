@@ -662,6 +662,8 @@ static void wpa_supplicant_eap_param_needed(void *ctx,
 		return;
 	}
 
+	wpas_notify_eap_status(wpa_s, "eap parameter needed", field_name);
+
 	buflen = 100 + os_strlen(txt) + ssid->ssid_len;
 	buf = os_malloc(buflen);
 	if (buf == NULL)

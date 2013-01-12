@@ -891,6 +891,7 @@ static void eap_sm_processIdentity(struct eap_sm *sm, const struct wpabuf *req)
 
 	wpa_msg(sm->msg_ctx, MSG_INFO, WPA_EVENT_EAP_STARTED
 		"EAP authentication started");
+	eap_notify_status(sm, "started", "");
 
 	pos = eap_hdr_validate(EAP_VENDOR_IETF, EAP_TYPE_IDENTITY, req,
 			       &msg_len);

@@ -1,5 +1,9 @@
 ChangeLog for hostapd
 
+????-??-?? - v2.1
+	* added support for simulataneous authentication of equals (SAE) for
+	  stronger password-based authentication with WPA2-Personal
+
 2013-01-12 - v2.0
 	* added AP-STA-DISCONNECTED ctrl_iface event
 	* improved debug logging (human readable event names, interface name

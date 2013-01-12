@@ -1173,7 +1173,7 @@ int main(int argc, char *argv[])
 			wait_for_monitor++;
 			break;
 		case 'N':
-			p1 = os_zalloc(sizeof(p1));
+			p1 = os_zalloc(sizeof(*p1));
 			if (p1 == NULL)
 				break;
 			if (!p)

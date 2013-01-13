@@ -2919,31 +2919,16 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 
 static void hostapd_set_security_params(struct hostapd_bss_config *bss)
 {
-	int pairwise;
-
 	if (bss->individual_wep_key_len == 0) {
 		/* individual keys are not use; can use key idx0 for
 		 * broadcast keys */
 		bss->broadcast_key_idx_min = 0;
 	}
 
-	/* Select group cipher based on the enabled pairwise cipher
-	 * suites */
-	pairwise = 0;
-	if (bss->wpa & 1)
-		pairwise |= bss->wpa_pairwise;
-	if (bss->wpa & 2) {
-		if (bss->rsn_pairwise == 0)
-			bss->rsn_pairwise = bss->wpa_pairwise;
-		pairwise |= bss->rsn_pairwise;
-	}
-	if (pairwise & WPA_CIPHER_TKIP)
-		bss->wpa_group = WPA_CIPHER_TKIP;
-	else if ((pairwise & (WPA_CIPHER_CCMP | WPA_CIPHER_GCMP)) ==
-		 WPA_CIPHER_GCMP)
-		bss->wpa_group = WPA_CIPHER_GCMP;
-	else
-		bss->wpa_group = WPA_CIPHER_CCMP;
+	if ((bss->wpa & 2) && bss->rsn_pairwise == 0)
+		bss->rsn_pairwise = bss->wpa_pairwise;
+	bss->wpa_group = wpa_select_ap_group_cipher(bss->wpa, bss->wpa_pairwise,
+						    bss->rsn_pairwise);
 
 	bss->radius->auth_server = bss->radius->auth_servers;
 	bss->radius->acct_server = bss->radius->acct_servers;

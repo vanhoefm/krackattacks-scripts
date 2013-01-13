@@ -1343,3 +1343,21 @@ int wpa_write_ciphers(char *start, char *end, int ciphers, const char *delim)
 
 	return pos - start;
 }
+
+
+int wpa_select_ap_group_cipher(int wpa, int wpa_pairwise, int rsn_pairwise)
+{
+	int pairwise = 0;
+
+	/* Select group cipher based on the enabled pairwise cipher suites */
+	if (wpa & 1)
+		pairwise |= wpa_pairwise;
+	if (wpa & 2)
+		pairwise |= rsn_pairwise;
+
+	if (pairwise & WPA_CIPHER_TKIP)
+		return WPA_CIPHER_TKIP;
+	if ((pairwise & (WPA_CIPHER_CCMP | WPA_CIPHER_GCMP)) == WPA_CIPHER_GCMP)
+		return WPA_CIPHER_GCMP;
+	return WPA_CIPHER_CCMP;
+}

@@ -46,7 +46,6 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 				  struct hostapd_config *conf)
 {
 	struct hostapd_bss_config *bss = &conf->bss[0];
-	int pairwise;
 
 	conf->driver = wpa_s->driver;
 
@@ -211,22 +210,10 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 	if (ssid->dtim_period)
 		bss->dtim_period = ssid->dtim_period;
 
-	/* Select group cipher based on the enabled pairwise cipher suites */
-	pairwise = 0;
-	if (bss->wpa & 1)
-		pairwise |= bss->wpa_pairwise;
-	if (bss->wpa & 2) {
-		if (bss->rsn_pairwise == 0)
-			bss->rsn_pairwise = bss->wpa_pairwise;
-		pairwise |= bss->rsn_pairwise;
-	}
-	if (pairwise & WPA_CIPHER_TKIP)
-		bss->wpa_group = WPA_CIPHER_TKIP;
-	else if ((pairwise & (WPA_CIPHER_CCMP | WPA_CIPHER_GCMP)) ==
-		 WPA_CIPHER_GCMP)
-		bss->wpa_group = WPA_CIPHER_GCMP;
-	else
-		bss->wpa_group = WPA_CIPHER_CCMP;
+	if ((bss->wpa & 2) && bss->rsn_pairwise == 0)
+		bss->rsn_pairwise = bss->wpa_pairwise;
+	bss->wpa_group = wpa_select_ap_group_cipher(bss->wpa, bss->wpa_pairwise,
+						    bss->rsn_pairwise);
 
 	if (bss->wpa && bss->ieee802_1x)
 		bss->ssid.security_policy = SECURITY_WPA;
@@ -268,7 +255,7 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 		goto no_wps;
 #ifdef CONFIG_WPS2
 	if (bss->ssid.security_policy == SECURITY_WPA_PSK &&
-	    (!(pairwise & WPA_CIPHER_CCMP) || !(bss->wpa & 2)))
+	    (!(bss->rsn_pairwise & WPA_CIPHER_CCMP) || !(bss->wpa & 2)))
 		goto no_wps; /* WPS2 does not allow WPA/TKIP-only
 			      * configuration */
 #endif /* CONFIG_WPS2 */

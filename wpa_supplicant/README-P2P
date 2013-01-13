@@ -225,6 +225,19 @@ This command returns an identifier for the pending query (e.g.,
 will be automatically removed when the specified peer has replied to
 it.
 
+Service Query TLV has following format:
+Length (2 octets, little endian) - length of following data
+Service Protocol Type (1 octet) - see the table below
+Service Transaction ID (1 octet) - nonzero identifier for the TLV
+Query Data (Length - 2 octets of data) - service protocol specific data
+
+Service Protocol Types:
+0 = All service protocols
+1 = Bonjour
+2 = UPnP
+3 = WS-Discovery
+4 = Wi-Fi Display
+
 For UPnP, an alternative command format can be used to specify a
 single query TLV (i.e., a service discovery for a specific UPnP
 service):

@@ -661,49 +661,12 @@ static int hostapd_config_parse_key_mgmt(int line, const char *value)
 
 static int hostapd_config_parse_cipher(int line, const char *value)
 {
-	int val = 0, last;
-	char *start, *end, *buf;
-
-	buf = os_strdup(value);
-	if (buf == NULL)
+	int val = wpa_parse_cipher(value);
+	if (val < 0) {
+		wpa_printf(MSG_ERROR, "Line %d: invalid cipher '%s'.",
+			   line, value);
 		return -1;
-	start = buf;
-
-	while (*start != '\0') {
-		while (*start == ' ' || *start == '\t')
-			start++;
-		if (*start == '\0')
-			break;
-		end = start;
-		while (*end != ' ' && *end != '\t' && *end != '\0')
-			end++;
-		last = *end == '\0';
-		*end = '\0';
-		if (os_strcmp(start, "CCMP") == 0)
-			val |= WPA_CIPHER_CCMP;
-		else if (os_strcmp(start, "GCMP") == 0)
-			val |= WPA_CIPHER_GCMP;
-		else if (os_strcmp(start, "TKIP") == 0)
-			val |= WPA_CIPHER_TKIP;
-		else if (os_strcmp(start, "WEP104") == 0)
-			val |= WPA_CIPHER_WEP104;
-		else if (os_strcmp(start, "WEP40") == 0)
-			val |= WPA_CIPHER_WEP40;
-		else if (os_strcmp(start, "NONE") == 0)
-			val |= WPA_CIPHER_NONE;
-		else {
-			wpa_printf(MSG_ERROR, "Line %d: invalid cipher '%s'.",
-				   line, start);
-			os_free(buf);
-			return -1;
-		}
-
-		if (last)
-			break;
-		start = end + 1;
 	}
-	os_free(buf);
-
 	if (val == 0) {
 		wpa_printf(MSG_ERROR, "Line %d: no cipher values configured.",
 			   line);

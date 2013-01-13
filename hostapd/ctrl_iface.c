@@ -635,20 +635,9 @@ static int hostapd_ctrl_iface_get_config(struct hostapd_data *hapd,
 		pos += ret;
 	}
 
-	if (hapd->conf->wpa && hapd->conf->wpa_group == WPA_CIPHER_CCMP) {
-		ret = os_snprintf(pos, end - pos, "group_cipher=CCMP\n");
-		if (ret < 0 || ret >= end - pos)
-			return pos - buf;
-		pos += ret;
-	} else if (hapd->conf->wpa &&
-		   hapd->conf->wpa_group == WPA_CIPHER_GCMP) {
-		ret = os_snprintf(pos, end - pos, "group_cipher=GCMP\n");
-		if (ret < 0 || ret >= end - pos)
-			return pos - buf;
-		pos += ret;
-	} else if (hapd->conf->wpa &&
-		   hapd->conf->wpa_group == WPA_CIPHER_TKIP) {
-		ret = os_snprintf(pos, end - pos, "group_cipher=TKIP\n");
+	if (hapd->conf->wpa) {
+		ret = os_snprintf(pos, end - pos, "group_cipher=%s\n",
+				  wpa_cipher_txt(hapd->conf->wpa_group));
 		if (ret < 0 || ret >= end - pos)
 			return pos - buf;
 		pos += ret;
@@ -660,24 +649,11 @@ static int hostapd_ctrl_iface_get_config(struct hostapd_data *hapd,
 			return pos - buf;
 		pos += ret;
 
-		if (hapd->conf->rsn_pairwise & WPA_CIPHER_CCMP) {
-			ret = os_snprintf(pos, end - pos, "CCMP ");
-			if (ret < 0 || ret >= end - pos)
-				return pos - buf;
-			pos += ret;
-		}
-		if (hapd->conf->rsn_pairwise & WPA_CIPHER_GCMP) {
-			ret = os_snprintf(pos, end - pos, "GCMP ");
-			if (ret < 0 || ret >= end - pos)
-				return pos - buf;
-			pos += ret;
-		}
-		if (hapd->conf->rsn_pairwise & WPA_CIPHER_TKIP) {
-			ret = os_snprintf(pos, end - pos, "TKIP ");
-			if (ret < 0 || ret >= end - pos)
-				return pos - buf;
-			pos += ret;
-		}
+		ret = wpa_write_ciphers(pos, end, hapd->conf->rsn_pairwise,
+					" ");
+		if (ret < 0)
+			return pos - buf;
+		pos += ret;
 
 		ret = os_snprintf(pos, end - pos, "\n");
 		if (ret < 0 || ret >= end - pos)
@@ -691,24 +667,11 @@ static int hostapd_ctrl_iface_get_config(struct hostapd_data *hapd,
 			return pos - buf;
 		pos += ret;
 
-		if (hapd->conf->wpa_pairwise & WPA_CIPHER_CCMP) {
-			ret = os_snprintf(pos, end - pos, "CCMP ");
-			if (ret < 0 || ret >= end - pos)
-				return pos - buf;
-			pos += ret;
-		}
-		if (hapd->conf->wpa_pairwise & WPA_CIPHER_GCMP) {
-			ret = os_snprintf(pos, end - pos, "GCMP ");
-			if (ret < 0 || ret >= end - pos)
-				return pos - buf;
-			pos += ret;
-		}
-		if (hapd->conf->wpa_pairwise & WPA_CIPHER_TKIP) {
-			ret = os_snprintf(pos, end - pos, "TKIP ");
-			if (ret < 0 || ret >= end - pos)
-				return pos - buf;
-			pos += ret;
-		}
+		ret = wpa_write_ciphers(pos, end, hapd->conf->rsn_pairwise,
+					" ");
+		if (ret < 0)
+			return pos - buf;
+		pos += ret;
 
 		ret = os_snprintf(pos, end - pos, "\n");
 		if (ret < 0 || ret >= end - pos)

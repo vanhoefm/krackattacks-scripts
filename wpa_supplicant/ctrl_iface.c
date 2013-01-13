@@ -1717,54 +1717,15 @@ static int wpa_supplicant_ctrl_iface_list_networks(
 
 static char * wpa_supplicant_cipher_txt(char *pos, char *end, int cipher)
 {
-	int first = 1, ret;
+	int ret;
 	ret = os_snprintf(pos, end - pos, "-");
 	if (ret < 0 || ret >= end - pos)
 		return pos;
 	pos += ret;
-	if (cipher & WPA_CIPHER_NONE) {
-		ret = os_snprintf(pos, end - pos, "%sNONE", first ? "" : "+");
-		if (ret < 0 || ret >= end - pos)
-			return pos;
-		pos += ret;
-		first = 0;
-	}
-	if (cipher & WPA_CIPHER_WEP40) {
-		ret = os_snprintf(pos, end - pos, "%sWEP40", first ? "" : "+");
-		if (ret < 0 || ret >= end - pos)
-			return pos;
-		pos += ret;
-		first = 0;
-	}
-	if (cipher & WPA_CIPHER_WEP104) {
-		ret = os_snprintf(pos, end - pos, "%sWEP104",
-				  first ? "" : "+");
-		if (ret < 0 || ret >= end - pos)
-			return pos;
-		pos += ret;
-		first = 0;
-	}
-	if (cipher & WPA_CIPHER_TKIP) {
-		ret = os_snprintf(pos, end - pos, "%sTKIP", first ? "" : "+");
-		if (ret < 0 || ret >= end - pos)
-			return pos;
-		pos += ret;
-		first = 0;
-	}
-	if (cipher & WPA_CIPHER_CCMP) {
-		ret = os_snprintf(pos, end - pos, "%sCCMP", first ? "" : "+");
-		if (ret < 0 || ret >= end - pos)
-			return pos;
-		pos += ret;
-		first = 0;
-	}
-	if (cipher & WPA_CIPHER_GCMP) {
-		ret = os_snprintf(pos, end - pos, "%sGCMP", first ? "" : "+");
-		if (ret < 0 || ret >= end - pos)
-			return pos;
-		pos += ret;
-		first = 0;
-	}
+	ret = wpa_write_ciphers(pos, end, cipher, "+");
+	if (ret < 0)
+		return pos;
+	pos += ret;
 	return pos;
 }
 

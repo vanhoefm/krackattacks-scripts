@@ -399,5 +399,6 @@ int wpa_cipher_put_suites(u8 *pos, int ciphers);
 int wpa_pick_pairwise_cipher(int ciphers, int none_allowed);
 int wpa_pick_group_cipher(int ciphers);
 int wpa_parse_cipher(const char *value);
+int wpa_write_ciphers(char *start, char *end, int ciphers, const char *delim);
 
 #endif /* WPA_COMMON_H */

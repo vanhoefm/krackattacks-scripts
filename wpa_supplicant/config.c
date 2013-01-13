@@ -647,72 +647,13 @@ static int wpa_config_parse_cipher(int line, const char *value)
 #ifndef NO_CONFIG_WRITE
 static char * wpa_config_write_cipher(int cipher)
 {
-	char *buf, *pos, *end;
-	int ret;
-
-	pos = buf = os_zalloc(50);
+	char *buf = os_zalloc(50);
 	if (buf == NULL)
 		return NULL;
-	end = buf + 50;
 
-	if (cipher & WPA_CIPHER_CCMP) {
-		ret = os_snprintf(pos, end - pos, "%sCCMP",
-				  pos == buf ? "" : " ");
-		if (ret < 0 || ret >= end - pos) {
-			end[-1] = '\0';
-			return buf;
-		}
-		pos += ret;
-	}
-
-	if (cipher & WPA_CIPHER_GCMP) {
-		ret = os_snprintf(pos, end - pos, "%sGCMP",
-				  pos == buf ? "" : " ");
-		if (ret < 0 || ret >= end - pos) {
-			end[-1] = '\0';
-			return buf;
-		}
-		pos += ret;
-	}
-
-	if (cipher & WPA_CIPHER_TKIP) {
-		ret = os_snprintf(pos, end - pos, "%sTKIP",
-				  pos == buf ? "" : " ");
-		if (ret < 0 || ret >= end - pos) {
-			end[-1] = '\0';
-			return buf;
-		}
-		pos += ret;
-	}
-
-	if (cipher & WPA_CIPHER_WEP104) {
-		ret = os_snprintf(pos, end - pos, "%sWEP104",
-				  pos == buf ? "" : " ");
-		if (ret < 0 || ret >= end - pos) {
-			end[-1] = '\0';
-			return buf;
-		}
-		pos += ret;
-	}
-
-	if (cipher & WPA_CIPHER_WEP40) {
-		ret = os_snprintf(pos, end - pos, "%sWEP40",
-				  pos == buf ? "" : " ");
-		if (ret < 0 || ret >= end - pos) {
-			end[-1] = '\0';
-			return buf;
-		}
-		pos += ret;
-	}
-
-	if (cipher & WPA_CIPHER_NONE) {
-		ret = os_snprintf(pos, end - pos, "%sNONE",
-				  pos == buf ? "" : " ");
-		if (ret < 0 || ret >= end - pos) {
-			end[-1] = '\0';
-			return buf;
-		}
-		pos += ret;
+	if (wpa_write_ciphers(buf, buf + 50, cipher, " ") < 0) {
+		os_free(buf);
+		return NULL;
 	}
 
 	return buf;

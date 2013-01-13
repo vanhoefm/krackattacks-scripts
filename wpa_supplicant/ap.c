@@ -460,7 +460,8 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 			   "cipher.");
 		return -1;
 	}
-	params.pairwise_suite = cipher_suite2driver(wpa_s->pairwise_cipher);
+	params.pairwise_suite =
+		wpa_cipher_to_suite_driver(wpa_s->pairwise_cipher);
 	params.group_suite = params.pairwise_suite;
 
 #ifdef CONFIG_P2P

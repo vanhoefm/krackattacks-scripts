@@ -1132,6 +1132,26 @@ int wpa_cipher_to_alg(int cipher)
 }
 
 
+enum wpa_cipher wpa_cipher_to_suite_driver(int cipher)
+{
+	switch (cipher) {
+	case WPA_CIPHER_NONE:
+		return CIPHER_NONE;
+	case WPA_CIPHER_WEP40:
+		return CIPHER_WEP40;
+	case WPA_CIPHER_WEP104:
+		return CIPHER_WEP104;
+	case WPA_CIPHER_CCMP:
+		return CIPHER_CCMP;
+	case WPA_CIPHER_GCMP:
+		return CIPHER_GCMP;
+	case WPA_CIPHER_TKIP:
+	default:
+		return CIPHER_TKIP;
+	}
+}
+
+
 int wpa_cipher_valid_pairwise(int cipher)
 {
 	return cipher == WPA_CIPHER_CCMP ||

@@ -845,26 +845,6 @@ static void wpa_supplicant_reconfig(int sig, void *signal_ctx)
 }
 
 
-enum wpa_cipher cipher_suite2driver(int cipher)
-{
-	switch (cipher) {
-	case WPA_CIPHER_NONE:
-		return CIPHER_NONE;
-	case WPA_CIPHER_WEP40:
-		return CIPHER_WEP40;
-	case WPA_CIPHER_WEP104:
-		return CIPHER_WEP104;
-	case WPA_CIPHER_CCMP:
-		return CIPHER_CCMP;
-	case WPA_CIPHER_GCMP:
-		return CIPHER_GCMP;
-	case WPA_CIPHER_TKIP:
-	default:
-		return CIPHER_TKIP;
-	}
-}
-
-
 enum wpa_key_mgmt key_mgmt2driver(int key_mgmt)
 {
 	switch (key_mgmt) {
@@ -1480,8 +1460,8 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 
 	wpa_clear_keys(wpa_s, bss ? bss->bssid : NULL);
 	use_crypt = 1;
-	cipher_pairwise = cipher_suite2driver(wpa_s->pairwise_cipher);
-	cipher_group = cipher_suite2driver(wpa_s->group_cipher);
+	cipher_pairwise = wpa_cipher_to_suite_driver(wpa_s->pairwise_cipher);
+	cipher_group = wpa_cipher_to_suite_driver(wpa_s->group_cipher);
 	if (wpa_s->key_mgmt == WPA_KEY_MGMT_NONE ||
 	    wpa_s->key_mgmt == WPA_KEY_MGMT_IEEE8021X_NO_WPA) {
 		if (wpa_s->key_mgmt == WPA_KEY_MGMT_NONE)

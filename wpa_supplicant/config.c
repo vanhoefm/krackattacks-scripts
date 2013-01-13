@@ -728,8 +728,7 @@ static int wpa_config_parse_pairwise(const struct parse_data *data,
 	val = wpa_config_parse_cipher(line, value);
 	if (val == -1)
 		return -1;
-	if (val & ~(WPA_CIPHER_CCMP | WPA_CIPHER_GCMP | WPA_CIPHER_TKIP |
-		    WPA_CIPHER_NONE)) {
+	if (val & ~WPA_ALLOWED_PAIRWISE_CIPHERS) {
 		wpa_printf(MSG_ERROR, "Line %d: not allowed pairwise cipher "
 			   "(0x%x).", line, val);
 		return -1;
@@ -758,8 +757,7 @@ static int wpa_config_parse_group(const struct parse_data *data,
 	val = wpa_config_parse_cipher(line, value);
 	if (val == -1)
 		return -1;
-	if (val & ~(WPA_CIPHER_CCMP | WPA_CIPHER_GCMP | WPA_CIPHER_TKIP |
-		    WPA_CIPHER_WEP104 | WPA_CIPHER_WEP40)) {
+	if (val & ~WPA_ALLOWED_GROUP_CIPHERS) {
 		wpa_printf(MSG_ERROR, "Line %d: not allowed group cipher "
 			   "(0x%x).", line, val);
 		return -1;

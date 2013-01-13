@@ -1,6 +1,6 @@
 /*
  * WPA/RSN - Shared functions for supplicant and authenticator
- * Copyright (c) 2002-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -1213,4 +1213,34 @@ int wpa_cipher_put_suites(u8 *pos, int ciphers)
 	}
 
 	return num_suites;
+}
+
+
+int wpa_pick_pairwise_cipher(int ciphers, int none_allowed)
+{
+	if (ciphers & WPA_CIPHER_CCMP)
+		return WPA_CIPHER_CCMP;
+	if (ciphers & WPA_CIPHER_GCMP)
+		return WPA_CIPHER_GCMP;
+	if (ciphers & WPA_CIPHER_TKIP)
+		return WPA_CIPHER_TKIP;
+	if (none_allowed && (ciphers & WPA_CIPHER_NONE))
+		return WPA_CIPHER_NONE;
+	return -1;
+}
+
+
+int wpa_pick_group_cipher(int ciphers)
+{
+	if (ciphers & WPA_CIPHER_CCMP)
+		return WPA_CIPHER_CCMP;
+	if (ciphers & WPA_CIPHER_GCMP)
+		return WPA_CIPHER_GCMP;
+	if (ciphers & WPA_CIPHER_TKIP)
+		return WPA_CIPHER_TKIP;
+	if (ciphers & WPA_CIPHER_WEP104)
+		return WPA_CIPHER_WEP104;
+	if (ciphers & WPA_CIPHER_WEP40)
+		return WPA_CIPHER_WEP40;
+	return -1;
 }

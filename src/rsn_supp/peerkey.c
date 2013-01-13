@@ -217,23 +217,17 @@ static int wpa_supplicant_process_smk_m2(
 		return -1;
 	}
 
-	cipher = ie.pairwise_cipher & sm->allowed_pairwise_cipher;
-	if (cipher & WPA_CIPHER_CCMP) {
-		wpa_printf(MSG_DEBUG, "RSN: Using CCMP for PeerKey");
-		cipher = WPA_CIPHER_CCMP;
-	} else if (cipher & WPA_CIPHER_GCMP) {
-		wpa_printf(MSG_DEBUG, "RSN: Using GCMP for PeerKey");
-		cipher = WPA_CIPHER_GCMP;
-	} else if (cipher & WPA_CIPHER_TKIP) {
-		wpa_printf(MSG_DEBUG, "RSN: Using TKIP for PeerKey");
-		cipher = WPA_CIPHER_TKIP;
-	} else {
+	cipher = wpa_pick_pairwise_cipher(ie.pairwise_cipher &
+					  sm->allowed_pairwise_cipher, 0);
+	if (cipher < 0) {
 		wpa_printf(MSG_INFO, "RSN: No acceptable cipher in SMK M2");
 		wpa_supplicant_send_smk_error(sm, src_addr, kde.mac_addr,
 					      STK_MUI_SMK, STK_ERR_CPHR_NS,
 					      ver);
 		return -1;
 	}
+	wpa_printf(MSG_DEBUG, "RSN: Using %s for PeerKey",
+		   wpa_cipher_txt(cipher));
 
 	/* TODO: find existing entry and if found, use that instead of adding
 	 * a new one; how to handle the case where both ends initiate at the
@@ -496,17 +490,9 @@ static int wpa_supplicant_process_smk_m5(struct wpa_sm *sm,
 	peerkey->rsnie_p_len = kde->rsn_ie_len;
 	os_memcpy(peerkey->pnonce, kde->nonce, WPA_NONCE_LEN);
 
-	cipher = ie.pairwise_cipher & sm->allowed_pairwise_cipher;
-	if (cipher & WPA_CIPHER_CCMP) {
-		wpa_printf(MSG_DEBUG, "RSN: Using CCMP for PeerKey");
-		peerkey->cipher = WPA_CIPHER_CCMP;
-	} else if (cipher & WPA_CIPHER_GCMP) {
-		wpa_printf(MSG_DEBUG, "RSN: Using GCMP for PeerKey");
-		peerkey->cipher = WPA_CIPHER_GCMP;
-	} else if (cipher & WPA_CIPHER_TKIP) {
-		wpa_printf(MSG_DEBUG, "RSN: Using TKIP for PeerKey");
-		peerkey->cipher = WPA_CIPHER_TKIP;
-	} else {
+	cipher = wpa_pick_pairwise_cipher(ie.pairwise_cipher &
+					  sm->allowed_pairwise_cipher, 0);
+	if (cipher < 0) {
 		wpa_printf(MSG_INFO, "RSN: SMK Peer STA " MACSTR " selected "
 			   "unacceptable cipher", MAC2STR(kde->mac_addr));
 		wpa_supplicant_send_smk_error(sm, src_addr, kde->mac_addr,
@@ -515,6 +501,9 @@ static int wpa_supplicant_process_smk_m5(struct wpa_sm *sm,
 		/* TODO: abort negotiation */
 		return -1;
 	}
+	wpa_printf(MSG_DEBUG, "RSN: Using %s for PeerKey",
+		   wpa_cipher_txt(cipher));
+	peerkey->cipher = cipher;
 
 	return 0;
 }

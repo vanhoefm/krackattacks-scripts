@@ -1033,45 +1033,24 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 	}
 
 	sel = ie.group_cipher & ssid->group_cipher;
-	if (sel & WPA_CIPHER_CCMP) {
-		wpa_s->group_cipher = WPA_CIPHER_CCMP;
-		wpa_dbg(wpa_s, MSG_DEBUG, "WPA: using GTK CCMP");
-	} else if (sel & WPA_CIPHER_GCMP) {
-		wpa_s->group_cipher = WPA_CIPHER_GCMP;
-		wpa_dbg(wpa_s, MSG_DEBUG, "WPA: using GTK GCMP");
-	} else if (sel & WPA_CIPHER_TKIP) {
-		wpa_s->group_cipher = WPA_CIPHER_TKIP;
-		wpa_dbg(wpa_s, MSG_DEBUG, "WPA: using GTK TKIP");
-	} else if (sel & WPA_CIPHER_WEP104) {
-		wpa_s->group_cipher = WPA_CIPHER_WEP104;
-		wpa_dbg(wpa_s, MSG_DEBUG, "WPA: using GTK WEP104");
-	} else if (sel & WPA_CIPHER_WEP40) {
-		wpa_s->group_cipher = WPA_CIPHER_WEP40;
-		wpa_dbg(wpa_s, MSG_DEBUG, "WPA: using GTK WEP40");
-	} else {
+	wpa_s->group_cipher = wpa_pick_group_cipher(sel);
+	if (wpa_s->group_cipher < 0) {
 		wpa_msg(wpa_s, MSG_WARNING, "WPA: Failed to select group "
 			"cipher");
 		return -1;
 	}
+	wpa_dbg(wpa_s, MSG_DEBUG, "WPA: using GTK %s",
+		wpa_cipher_txt(wpa_s->group_cipher));
 
 	sel = ie.pairwise_cipher & ssid->pairwise_cipher;
-	if (sel & WPA_CIPHER_CCMP) {
-		wpa_s->pairwise_cipher = WPA_CIPHER_CCMP;
-		wpa_dbg(wpa_s, MSG_DEBUG, "WPA: using PTK CCMP");
-	} else if (sel & WPA_CIPHER_GCMP) {
-		wpa_s->pairwise_cipher = WPA_CIPHER_GCMP;
-		wpa_dbg(wpa_s, MSG_DEBUG, "WPA: using PTK GCMP");
-	} else if (sel & WPA_CIPHER_TKIP) {
-		wpa_s->pairwise_cipher = WPA_CIPHER_TKIP;
-		wpa_dbg(wpa_s, MSG_DEBUG, "WPA: using PTK TKIP");
-	} else if (sel & WPA_CIPHER_NONE) {
-		wpa_s->pairwise_cipher = WPA_CIPHER_NONE;
-		wpa_dbg(wpa_s, MSG_DEBUG, "WPA: using PTK NONE");
-	} else {
+	wpa_s->pairwise_cipher = wpa_pick_pairwise_cipher(sel, 1);
+	if (wpa_s->pairwise_cipher < 0) {
 		wpa_msg(wpa_s, MSG_WARNING, "WPA: Failed to select pairwise "
 			"cipher");
 		return -1;
 	}
+	wpa_dbg(wpa_s, MSG_DEBUG, "WPA: using PTK %s",
+		wpa_cipher_txt(wpa_s->pairwise_cipher));
 
 	sel = ie.key_mgmt & ssid->key_mgmt;
 #ifdef CONFIG_SAE

@@ -466,15 +466,9 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 		wpa_s->key_mgmt = WPA_KEY_MGMT_NONE;
 	params.key_mgmt_suite = key_mgmt2driver(wpa_s->key_mgmt);
 
-	if (ssid->pairwise_cipher & WPA_CIPHER_CCMP)
-		wpa_s->pairwise_cipher = WPA_CIPHER_CCMP;
-	else if (ssid->pairwise_cipher & WPA_CIPHER_GCMP)
-		wpa_s->pairwise_cipher = WPA_CIPHER_GCMP;
-	else if (ssid->pairwise_cipher & WPA_CIPHER_TKIP)
-		wpa_s->pairwise_cipher = WPA_CIPHER_TKIP;
-	else if (ssid->pairwise_cipher & WPA_CIPHER_NONE)
-		wpa_s->pairwise_cipher = WPA_CIPHER_NONE;
-	else {
+	wpa_s->pairwise_cipher = wpa_pick_pairwise_cipher(ssid->pairwise_cipher,
+							  1);
+	if (wpa_s->pairwise_cipher < 0) {
 		wpa_printf(MSG_WARNING, "WPA: Failed to select pairwise "
 			   "cipher.");
 		return -1;

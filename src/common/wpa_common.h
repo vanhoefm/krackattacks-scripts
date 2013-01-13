@@ -1,6 +1,6 @@
 /*
  * WPA definitions shared between hostapd and wpa_supplicant
- * Copyright (c) 2002-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -390,5 +390,7 @@ int wpa_cipher_valid_pairwise(int cipher);
 u32 wpa_cipher_to_suite(int proto, int cipher);
 int rsn_cipher_put_suites(u8 *pos, int ciphers);
 int wpa_cipher_put_suites(u8 *pos, int ciphers);
+int wpa_pick_pairwise_cipher(int ciphers, int none_allowed);
+int wpa_pick_group_cipher(int ciphers);
 
 #endif /* WPA_COMMON_H */

@@ -564,12 +564,9 @@ int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 	}
 #endif /* CONFIG_IEEE80211R */
 
-	if (ciphers & WPA_CIPHER_CCMP)
-		sm->pairwise = WPA_CIPHER_CCMP;
-	else if (ciphers & WPA_CIPHER_GCMP)
-		sm->pairwise = WPA_CIPHER_GCMP;
-	else
-		sm->pairwise = WPA_CIPHER_TKIP;
+	sm->pairwise = wpa_pick_pairwise_cipher(ciphers, 0);
+	if (sm->pairwise < 0)
+		return WPA_INVALID_PAIRWISE;
 
 	/* TODO: clear WPA/WPA2 state if STA changes from one to another */
 	if (wpa_ie[0] == WLAN_EID_RSN)

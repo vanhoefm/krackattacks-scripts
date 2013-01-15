@@ -21,7 +21,6 @@
 #include "eloop.h"
 #include "utils/base64.h"
 #include "rsn_supp/wpa.h"
-#include "eap_peer/eap_i.h"
 #include "wpa_supplicant_i.h"
 #include "radius/radius.h"
 #include "radius/radius_client.h"

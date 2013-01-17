@@ -380,5 +380,19 @@ void wlantest_process_prism(struct wlantest *wt, const u8 *data, size_t len)
 void wlantest_process_80211(struct wlantest *wt, const u8 *data, size_t len)
 {
 	wpa_hexdump(MSG_EXCESSIVE, "Process data", data, len);
+
+	if (wt->assume_fcs && len >= 4) {
+		const u8 *fcspos;
+
+		len -= 4;
+		fcspos = data + len;
+		if (check_fcs(data, len, fcspos) < 0) {
+			wpa_printf(MSG_EXCESSIVE, "Drop RX frame with invalid "
+				   "FCS");
+			wt->fcs_error++;
+			return;
+		}
+	}
+
 	rx_frame(wt, data, len);
 }

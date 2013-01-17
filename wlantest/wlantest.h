@@ -175,6 +175,8 @@ struct wlantest {
 	u8 last_hdr[30];
 	size_t last_len;
 	int last_mgmt_valid;
+
+	unsigned int assume_fcs:1;
 };
 
 int add_wep(struct wlantest *wt, const char *key);

@@ -25,7 +25,7 @@ static void wlantest_terminate(int sig, void *signal_ctx)
 
 static void usage(void)
 {
-	printf("wlantest [-cddhqq] [-i<ifname>] [-r<pcap file>] "
+	printf("wlantest [-cddhqqF] [-i<ifname>] [-r<pcap file>] "
 	       "[-p<passphrase>]\n"
 		"         [-I<wired ifname>] [-R<wired pcap file>] "
 	       "[-P<RADIUS shared secret>]\n"
@@ -208,7 +208,7 @@ int main(int argc, char *argv[])
 	wlantest_init(&wt);
 
 	for (;;) {
-		c = getopt(argc, argv, "cdf:hi:I:p:P:qr:R:w:W:");
+		c = getopt(argc, argv, "cdf:Fhi:I:p:P:qr:R:w:W:");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -222,6 +222,9 @@ int main(int argc, char *argv[])
 		case 'f':
 			if (add_pmk_file(&wt, optarg) < 0)
 				return -1;
+			break;
+		case 'F':
+			wt.assume_fcs = 1;
 			break;
 		case 'h':
 			usage();

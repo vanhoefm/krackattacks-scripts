@@ -2137,7 +2137,7 @@ static void wpa_supplicant_event_tdls(struct wpa_supplicant *wpa_s,
 		wpa_tdls_start(wpa_s->wpa, data->tdls.peer);
 		break;
 	case TDLS_REQUEST_TEARDOWN:
-		wpa_tdls_send_teardown(wpa_s->wpa, data->tdls.peer,
+		wpa_tdls_teardown_link(wpa_s->wpa, data->tdls.peer,
 				       data->tdls.reason_code);
 		break;
 	}

@@ -102,6 +102,9 @@ static void interworking_anqp_resp_cb(void *ctx, const u8 *dst,
 {
 	struct wpa_supplicant *wpa_s = ctx;
 
+	wpa_printf(MSG_DEBUG, "ANQP: Response callback dst=" MACSTR
+		   " dialog_token=%u result=%d status_code=%u",
+		   MAC2STR(dst), dialog_token, result, status_code);
 	anqp_resp_cb(wpa_s, dst, dialog_token, result, adv_proto, resp,
 		     status_code);
 	interworking_next_anqp_fetch(wpa_s);
@@ -1970,8 +1973,21 @@ static void interworking_next_anqp_fetch(struct wpa_supplicant *wpa_s)
 	int found = 0;
 	const u8 *ie;
 
-	if (eloop_terminated() || !wpa_s->fetch_anqp_in_progress)
+	wpa_printf(MSG_DEBUG, "Interworking: next_anqp_fetch - "
+		   "fetch_anqp_in_progress=%d fetch_osu_icon_in_progress=%d",
+		   wpa_s->fetch_anqp_in_progress,
+		   wpa_s->fetch_osu_icon_in_progress);
+
+	if (eloop_terminated() || !wpa_s->fetch_anqp_in_progress) {
+		wpa_printf(MSG_DEBUG, "Interworking: Stop next-ANQP-fetch");
 		return;
+	}
+
+	if (wpa_s->fetch_osu_icon_in_progress) {
+		wpa_printf(MSG_DEBUG, "Interworking: Next icon (in progress)");
+		hs20_next_osu_icon(wpa_s);
+		return;
+	}
 
 	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {
 		if (!(bss->caps & IEEE80211_CAP_ESS))
@@ -2005,6 +2021,11 @@ static void interworking_next_anqp_fetch(struct wpa_supplicant *wpa_s)
 	}
 
 	if (found == 0) {
+		if (wpa_s->fetch_osu_info) {
+			wpa_printf(MSG_DEBUG, "Interworking: Next icon");
+			hs20_osu_icon_fetch(wpa_s);
+			return;
+		}
 		wpa_msg(wpa_s, MSG_INFO, "ANQP fetch completed");
 		wpa_s->fetch_anqp_in_progress = 0;
 		if (wpa_s->network_select)
@@ -2032,6 +2053,7 @@ int interworking_fetch_anqp(struct wpa_supplicant *wpa_s)
 
 	wpa_s->network_select = 0;
 	wpa_s->fetch_all_anqp = 1;
+	wpa_s->fetch_osu_info = 0;
 
 	interworking_start_fetch_anqp(wpa_s);
 
@@ -2229,14 +2251,22 @@ void anqp_resp_cb(void *ctx, const u8 *dst, u8 dialog_token,
 	u16 slen;
 	struct wpa_bss *bss = NULL, *tmp;
 
-	if (result != GAS_QUERY_SUCCESS)
+	wpa_printf(MSG_DEBUG, "Interworking: anqp_resp_cb dst=" MACSTR
+		   " dialog_token=%u result=%d status_code=%u",
+		   MAC2STR(dst), dialog_token, result, status_code);
+	if (result != GAS_QUERY_SUCCESS) {
+		if (wpa_s->fetch_osu_icon_in_progress)
+			hs20_icon_fetch_failed(wpa_s);
 		return;
+	}
 
 	pos = wpabuf_head(adv_proto);
 	if (wpabuf_len(adv_proto) < 4 || pos[0] != WLAN_EID_ADV_PROTO ||
 	    pos[1] < 2 || pos[3] != ACCESS_NETWORK_QUERY_PROTOCOL) {
 		wpa_printf(MSG_DEBUG, "ANQP: Unexpected Advertisement "
 			   "Protocol in response");
+		if (wpa_s->fetch_osu_icon_in_progress)
+			hs20_icon_fetch_failed(wpa_s);
 		return;
 	}
 
@@ -2276,6 +2306,8 @@ void anqp_resp_cb(void *ctx, const u8 *dst, u8 dialog_token,
 						slen);
 		pos += slen;
 	}
+
+	hs20_notify_parse_done(wpa_s);
 }
 
 
@@ -2296,6 +2328,7 @@ int interworking_select(struct wpa_supplicant *wpa_s, int auto_select,
 	wpa_s->auto_network_select = 0;
 	wpa_s->auto_select = !!auto_select;
 	wpa_s->fetch_all_anqp = 0;
+	wpa_s->fetch_osu_info = 0;
 	wpa_printf(MSG_DEBUG, "Interworking: Start scan for network "
 		   "selection");
 	wpa_s->scan_res_handler = interworking_scan_res_handler;

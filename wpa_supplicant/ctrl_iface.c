@@ -5197,6 +5197,7 @@ static int hs20_icon_request(struct wpa_supplicant *wpa_s, char *cmd)
 		used++;
 	icon = &cmd[used];
 
+	wpa_s->fetch_osu_icon_in_progress = 0;
 	return hs20_anqp_send_req(wpa_s, dst_addr, BIT(HS20_STYPE_ICON_REQUEST),
 				  (u8 *) icon, os_strlen(icon));
 }
@@ -5495,6 +5496,10 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 	radio_remove_works(wpa_s, NULL, 1);
 
 	wpa_s->next_ssid = NULL;
+
+#ifdef CONFIG_INTERWORKING
+	hs20_cancel_fetch_osu(wpa_s);
+#endif /* CONFIG_INTERWORKING */
 }
 
 
@@ -6129,6 +6134,11 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strncmp(buf, "HS20_ICON_REQUEST ", 18) == 0) {
 		if (hs20_icon_request(wpa_s, buf + 18) < 0)
 			reply_len = -1;
+	} else if (os_strcmp(buf, "FETCH_OSU") == 0) {
+		if (hs20_fetch_osu(wpa_s) < 0)
+			reply_len = -1;
+	} else if (os_strcmp(buf, "CANCEL_FETCH_OSU") == 0) {
+		hs20_cancel_fetch_osu(wpa_s);
 #endif /* CONFIG_HS20 */
 	} else if (os_strncmp(buf, WPA_CTRL_RSP, os_strlen(WPA_CTRL_RSP)) == 0)
 	{

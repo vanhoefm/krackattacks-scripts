@@ -2316,6 +2316,19 @@ static int wpa_cli_cmd_hs20_icon_request(struct wpa_ctrl *ctrl, int argc,
 	return wpa_ctrl_command(ctrl, cmd);
 }
 
+
+static int wpa_cli_cmd_fetch_osu(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "FETCH_OSU");
+}
+
+
+static int wpa_cli_cmd_cancel_fetch_osu(struct wpa_ctrl *ctrl, int argc,
+					char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "CANCEL_FETCH_OSU");
+}
+
 #endif /* CONFIG_HS20 */
 
 
@@ -2852,6 +2865,11 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "hs20_icon_request", wpa_cli_cmd_hs20_icon_request,
 	  wpa_cli_complete_bss, cli_cmd_flag_none,
 	  "<addr> <icon name> = get Hotspot 2.0 OSU icon" },
+	{ "fetch_osu", wpa_cli_cmd_fetch_osu, NULL, cli_cmd_flag_none,
+	  "= fetch OSU provider information from all APs" },
+	{ "cancel_fetch_osu", wpa_cli_cmd_cancel_fetch_osu, NULL,
+	  cli_cmd_flag_none,
+	  "= cancel fetch_osu command" },
 #endif /* CONFIG_HS20 */
 	{ "sta_autoconnect", wpa_cli_cmd_sta_autoconnect, NULL,
 	  cli_cmd_flag_none,

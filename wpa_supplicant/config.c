@@ -1999,6 +1999,7 @@ void wpa_config_free(struct wpa_config *config)
 	os_free(config->ext_password_backend);
 	os_free(config->sae_groups);
 	wpabuf_free(config->ap_vendor_elements);
+	os_free(config->osu_dir);
 	os_free(config);
 }
 
@@ -3464,6 +3465,7 @@ static const struct global_parse_data global_fields[] = {
 	{ INT(scan_cur_freq), 0 },
 	{ INT(sched_scan_interval), 0 },
 	{ INT(tdls_external_control), 0},
+	{ STR(osu_dir), 0 },
 };
 
 #undef FUNC

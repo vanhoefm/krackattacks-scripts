@@ -771,7 +771,12 @@ struct wpa_supplicant {
 	unsigned int auto_select:1;
 	unsigned int auto_network_select:1;
 	unsigned int fetch_all_anqp:1;
+	unsigned int fetch_osu_info:1;
+	unsigned int fetch_osu_icon_in_progress:1;
 	struct wpa_bss *interworking_gas_bss;
+	unsigned int osu_icon_id;
+	struct osu_provider *osu_prov;
+	size_t osu_prov_count;
 #endif /* CONFIG_INTERWORKING */
 	unsigned int drv_capa_known;
 

@@ -271,6 +271,11 @@ static void gas_query_rx_comeback(struct gas_query *gas,
 	if (frag_id != query->next_frag_id) {
 		wpa_printf(MSG_DEBUG, "GAS: Unexpected frag_id in response "
 			   "from " MACSTR, MAC2STR(query->addr));
+		if (frag_id + 1 == query->next_frag_id) {
+			wpa_printf(MSG_DEBUG, "GAS: Drop frame as possible "
+				   "retry of previous fragment");
+			return;
+		}
 		gas_query_done(gas, query, GAS_QUERY_PEER_ERROR);
 		return;
 	}

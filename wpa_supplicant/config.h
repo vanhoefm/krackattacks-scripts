@@ -200,6 +200,9 @@ struct wpa_cred {
 	 */
 	size_t roaming_consortium_len;
 
+	u8 required_roaming_consortium[15];
+	size_t required_roaming_consortium_len;
+
 	/**
 	 * eap_method - EAP method to use
 	 *

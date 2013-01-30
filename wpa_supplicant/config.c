@@ -2487,6 +2487,21 @@ int wpa_config_set_cred(struct wpa_cred *cred, const char *var,
 		return 0;
 	}
 
+	if (os_strcmp(var, "required_roaming_consortium") == 0) {
+		if (len < 3 || len > sizeof(cred->required_roaming_consortium))
+		{
+			wpa_printf(MSG_ERROR, "Line %d: invalid "
+				   "required_roaming_consortium length %d "
+				   "(3..15 expected)", line, (int) len);
+			os_free(val);
+			return -1;
+		}
+		os_memcpy(cred->required_roaming_consortium, val, len);
+		cred->required_roaming_consortium_len = len;
+		os_free(val);
+		return 0;
+	}
+
 	if (os_strcmp(var, "excluded_ssid") == 0) {
 		struct excluded_ssid *e;
 

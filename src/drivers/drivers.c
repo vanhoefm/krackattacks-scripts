@@ -24,6 +24,9 @@ extern struct wpa_driver_ops wpa_driver_madwifi_ops; /* driver_madwifi.c */
 #ifdef CONFIG_DRIVER_BSD
 extern struct wpa_driver_ops wpa_driver_bsd_ops; /* driver_bsd.c */
 #endif /* CONFIG_DRIVER_BSD */
+#ifdef CONFIG_DRIVER_OPENBSD
+extern struct wpa_driver_ops wpa_driver_openbsd_ops; /* driver_openbsd.c */
+#endif /* CONFIG_DRIVER_OPENBSD */
 #ifdef CONFIG_DRIVER_NDIS
 extern struct wpa_driver_ops wpa_driver_ndis_ops; /* driver_ndis.c */
 #endif /* CONFIG_DRIVER_NDIS */
@@ -62,6 +65,9 @@ struct wpa_driver_ops *wpa_drivers[] =
 #ifdef CONFIG_DRIVER_BSD
 	&wpa_driver_bsd_ops,
 #endif /* CONFIG_DRIVER_BSD */
+#ifdef CONFIG_DRIVER_OPENBSD
+	&wpa_driver_openbsd_ops,
+#endif /* CONFIG_DRIVER_OPENBSD */
 #ifdef CONFIG_DRIVER_NDIS
 	&wpa_driver_ndis_ops,
 #endif /* CONFIG_DRIVER_NDIS */

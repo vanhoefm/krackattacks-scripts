@@ -55,6 +55,14 @@ CONFIG_L2_FREEBSD=y
 CONFIG_DNET_PCAP=y
 endif
 
+ifdef CONFIG_DRIVER_OPENBSD
+ifndef CONFIG_L2_PACKET
+CONFIG_L2_PACKET=freebsd
+endif
+DRV_CFLAGS += -DCONFIG_DRIVER_OPENBSD
+DRV_OBJS += ../src/drivers/driver_openbsd.o
+endif
+
 ifdef CONFIG_DRIVER_TEST
 DRV_CFLAGS += -DCONFIG_DRIVER_TEST
 DRV_OBJS += ../src/drivers/driver_test.o

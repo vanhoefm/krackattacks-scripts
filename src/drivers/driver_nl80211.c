@@ -184,7 +184,6 @@ struct nl80211_wiphy_data {
 };
 
 static void nl80211_global_deinit(void *priv);
-static void wpa_driver_nl80211_deinit(void *priv);
 
 struct i802_bss {
 	struct wpa_driver_nl80211_data *drv;
@@ -292,6 +291,7 @@ struct wpa_driver_nl80211_data {
 };
 
 
+static void wpa_driver_nl80211_deinit(struct i802_bss *bss);
 static void wpa_driver_nl80211_scan_timeout(void *eloop_ctx,
 					    void *timeout_ctx);
 static int wpa_driver_nl80211_set_mode(struct i802_bss *bss,
@@ -307,7 +307,8 @@ static int nl80211_send_frame_cmd(struct i802_bss *bss,
 				  unsigned int freq, unsigned int wait,
 				  const u8 *buf, size_t buf_len, u64 *cookie,
 				  int no_cck, int no_ack, int offchanok);
-static int wpa_driver_nl80211_probe_req_report(void *priv, int report);
+static int wpa_driver_nl80211_probe_req_report(struct i802_bss *bss,
+					       int report);
 #ifdef ANDROID
 static int android_pno_start(struct i802_bss *bss,
 			     struct wpa_driver_scan_params *params);
@@ -318,7 +319,7 @@ static int android_pno_stop(struct i802_bss *bss);
 static void add_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx);
 static void del_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx);
 static int have_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx);
-static int wpa_driver_nl80211_if_remove(void *priv,
+static int wpa_driver_nl80211_if_remove(struct i802_bss *bss,
 					enum wpa_driver_if_type type,
 					const char *ifname);
 #else /* HOSTAPD */
@@ -336,7 +337,8 @@ static inline int have_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx)
 }
 #endif /* HOSTAPD */
 
-static int i802_set_freq(void *priv, struct hostapd_freq_params *freq);
+static int wpa_driver_nl80211_set_freq(struct i802_bss *bss,
+				       struct hostapd_freq_params *freq);
 static int nl80211_disable_11b_rates(struct wpa_driver_nl80211_data *drv,
 				     int ifindex, int disabled);
 
@@ -3481,14 +3483,13 @@ static int wpa_driver_nl80211_del_beacon(struct wpa_driver_nl80211_data *drv)
 
 /**
  * wpa_driver_nl80211_deinit - Deinitialize nl80211 driver interface
- * @priv: Pointer to private nl80211 data from wpa_driver_nl80211_init()
+ * @bss: Pointer to private nl80211 data from wpa_driver_nl80211_init()
  *
  * Shut down driver interface and processing of driver events. Free
  * private data buffer if one was allocated in wpa_driver_nl80211_init().
  */
-static void wpa_driver_nl80211_deinit(void *priv)
+static void wpa_driver_nl80211_deinit(struct i802_bss *bss)
 {
-	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 
 	bss->in_deinit = 1;
@@ -3524,7 +3525,7 @@ static void wpa_driver_nl80211_deinit(void *priv)
 		struct hostapd_freq_params freq;
 		os_memset(&freq, 0, sizeof(freq));
 		freq.freq = drv->last_freq;
-		i802_set_freq(priv, &freq);
+		wpa_driver_nl80211_set_freq(bss, &freq);
 	}
 
 	if (drv->eapol_sock >= 0) {
@@ -3664,14 +3665,13 @@ fail:
 
 /**
  * wpa_driver_nl80211_scan - Request the driver to initiate scan
- * @priv: Pointer to private driver data from wpa_driver_nl80211_init()
+ * @bss: Pointer to private driver data from wpa_driver_nl80211_init()
  * @params: Scan parameters
  * Returns: 0 on success, -1 on failure
  */
-static int wpa_driver_nl80211_scan(void *priv,
+static int wpa_driver_nl80211_scan(struct i802_bss *bss,
 				   struct wpa_driver_scan_params *params)
 {
-	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	int ret = -1, timeout;
 	struct nl_msg *msg, *rates = NULL;
@@ -4256,13 +4256,12 @@ static void nl80211_dump_scan(struct wpa_driver_nl80211_data *drv)
 }
 
 
-static int wpa_driver_nl80211_set_key(const char *ifname, void *priv,
+static int wpa_driver_nl80211_set_key(const char *ifname, struct i802_bss *bss,
 				      enum wpa_alg alg, const u8 *addr,
 				      int key_idx, int set_tx,
 				      const u8 *seq, size_t seq_len,
 				      const u8 *key, size_t key_len)
 {
-	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	int ifindex = if_nametoindex(ifname);
 	struct nl_msg *msg;
@@ -4589,10 +4588,9 @@ static int wpa_driver_nl80211_disconnect(struct wpa_driver_nl80211_data *drv,
 }
 
 
-static int wpa_driver_nl80211_deauthenticate(void *priv, const u8 *addr,
-					     int reason_code)
+static int wpa_driver_nl80211_deauthenticate(struct i802_bss *bss,
+					     const u8 *addr, int reason_code)
 {
-	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	if (!(drv->capa.flags & WPA_DRIVER_FLAGS_SME))
 		return wpa_driver_nl80211_disconnect(drv, reason_code);
@@ -4653,9 +4651,8 @@ static void nl80211_copy_auth_params(struct wpa_driver_nl80211_data *drv,
 
 
 static int wpa_driver_nl80211_authenticate(
-	void *priv, struct wpa_driver_auth_params *params)
+	struct i802_bss *bss, struct wpa_driver_auth_params *params)
 {
-	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	int ret = -1, i;
 	struct nl_msg *msg;
@@ -4673,7 +4670,7 @@ static int wpa_driver_nl80211_authenticate(
 	nlmode = params->p2p ?
 		NL80211_IFTYPE_P2P_CLIENT : NL80211_IFTYPE_STATION;
 	if (drv->nlmode != nlmode &&
-	    wpa_driver_nl80211_set_mode(priv, nlmode) < 0)
+	    wpa_driver_nl80211_set_mode(bss, nlmode) < 0)
 		return -1;
 
 retry:
@@ -4689,7 +4686,7 @@ retry:
 	for (i = 0; i < 4; i++) {
 		if (!params->wep_key[i])
 			continue;
-		wpa_driver_nl80211_set_key(bss->ifname, priv, WPA_ALG_WEP,
+		wpa_driver_nl80211_set_key(bss->ifname, bss, WPA_ALG_WEP,
 					   NULL, i,
 					   i == params->wep_tx_keyidx, NULL, 0,
 					   params->wep_key[i],
@@ -5403,12 +5400,11 @@ static int wpa_driver_nl80211_send_frame(struct i802_bss *bss,
 }
 
 
-static int wpa_driver_nl80211_send_mlme_freq(struct i802_bss *bss,
-					     const u8 *data,
-					     size_t data_len, int noack,
-					     unsigned int freq, int no_cck,
-					     int offchanok,
-					     unsigned int wait_time)
+static int wpa_driver_nl80211_send_mlme(struct i802_bss *bss, const u8 *data,
+					size_t data_len, int noack,
+					unsigned int freq, int no_cck,
+					int offchanok,
+					unsigned int wait_time)
 {
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct ieee80211_mgmt *mgmt;
@@ -5461,15 +5457,6 @@ static int wpa_driver_nl80211_send_mlme_freq(struct i802_bss *bss,
 	return wpa_driver_nl80211_send_frame(bss, data, data_len, encrypt,
 					     noack, freq, no_cck, offchanok,
 					     wait_time);
-}
-
-
-static int wpa_driver_nl80211_send_mlme(void *priv, const u8 *data,
-					size_t data_len, int noack)
-{
-	struct i802_bss *bss = priv;
-	return wpa_driver_nl80211_send_mlme_freq(bss, data, data_len, noack,
-						 0, 0, 0, 0);
 }
 
 
@@ -5851,9 +5838,8 @@ static int wpa_driver_nl80211_sta_add(void *priv,
 }
 
 
-static int wpa_driver_nl80211_sta_remove(void *priv, const u8 *addr)
+static int wpa_driver_nl80211_sta_remove(struct i802_bss *bss, const u8 *addr)
 {
-	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct nl_msg *msg;
 	int ret;
@@ -7567,10 +7553,10 @@ static int get_sta_handler(struct nl_msg *msg, void *arg)
 	return NL_SKIP;
 }
 
-static int i802_read_sta_data(void *priv, struct hostap_sta_driver_data *data,
+static int i802_read_sta_data(struct i802_bss *bss,
+			      struct hostap_sta_driver_data *data,
 			      const u8 *addr)
 {
-	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct nl_msg *msg;
 
@@ -7652,10 +7638,9 @@ static int i802_set_tx_queue_params(void *priv, int queue, int aifs,
 }
 
 
-static int i802_set_sta_vlan(void *priv, const u8 *addr,
+static int i802_set_sta_vlan(struct i802_bss *bss, const u8 *addr,
 			     const char *ifname, int vlan_id)
 {
-	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct nl_msg *msg;
 	int ret = -ENOBUFS;
@@ -7727,7 +7712,8 @@ static int i802_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr,
 	mgmt.u.deauth.reason_code = host_to_le16(reason);
 	return wpa_driver_nl80211_send_mlme(bss, (u8 *) &mgmt,
 					    IEEE80211_HDRLEN +
-					    sizeof(mgmt.u.deauth), 0);
+					    sizeof(mgmt.u.deauth), 0, 0, 0, 0,
+					    0);
 }
 
 
@@ -7750,7 +7736,8 @@ static int i802_sta_disassoc(void *priv, const u8 *own_addr, const u8 *addr,
 	mgmt.u.disassoc.reason_code = host_to_le16(reason);
 	return wpa_driver_nl80211_send_mlme(bss, (u8 *) &mgmt,
 					    IEEE80211_HDRLEN +
-					    sizeof(mgmt.u.disassoc), 0);
+					    sizeof(mgmt.u.disassoc), 0, 0, 0, 0,
+					    0);
 }
 
 #endif /* HOSTAPD || CONFIG_AP */
@@ -8028,7 +8015,8 @@ failed:
 
 static void i802_deinit(void *priv)
 {
-	wpa_driver_nl80211_deinit(priv);
+	struct i802_bss *bss = priv;
+	wpa_driver_nl80211_deinit(bss);
 }
 
 #endif /* HOSTAPD */
@@ -8206,11 +8194,10 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 }
 
 
-static int wpa_driver_nl80211_if_remove(void *priv,
+static int wpa_driver_nl80211_if_remove(struct i802_bss *bss,
 					enum wpa_driver_if_type type,
 					const char *ifname)
 {
-	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	int ifindex = if_nametoindex(ifname);
 
@@ -8331,14 +8318,14 @@ nla_put_failure:
 }
 
 
-static int wpa_driver_nl80211_send_action(void *priv, unsigned int freq,
+static int wpa_driver_nl80211_send_action(struct i802_bss *bss,
+					  unsigned int freq,
 					  unsigned int wait_time,
 					  const u8 *dst, const u8 *src,
 					  const u8 *bssid,
 					  const u8 *data, size_t data_len,
 					  int no_cck)
 {
-	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	int ret = -1;
 	u8 *buf;
@@ -8360,10 +8347,9 @@ static int wpa_driver_nl80211_send_action(void *priv, unsigned int freq,
 	os_memcpy(hdr->addr3, bssid, ETH_ALEN);
 
 	if (is_ap_interface(drv->nlmode))
-		ret = wpa_driver_nl80211_send_mlme_freq(priv, buf,
-							24 + data_len,
-							0, freq, no_cck, 1,
-							wait_time);
+		ret = wpa_driver_nl80211_send_mlme(bss, buf, 24 + data_len,
+						   0, freq, no_cck, 1,
+						   wait_time);
 	else
 		ret = nl80211_send_frame_cmd(bss, freq, wait_time, buf,
 					     24 + data_len,
@@ -8479,9 +8465,8 @@ nla_put_failure:
 }
 
 
-static int wpa_driver_nl80211_probe_req_report(void *priv, int report)
+static int wpa_driver_nl80211_probe_req_report(struct i802_bss *bss, int report)
 {
-	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 
 	if (!report) {
@@ -8983,7 +8968,8 @@ static void nl80211_send_null_frame(struct i802_bss *bss, const u8 *own_addr,
 	os_memcpy(nulldata.hdr.IEEE80211_BSSID_FROMDS, own_addr, ETH_ALEN);
 	os_memcpy(nulldata.hdr.IEEE80211_SA_FROMDS, own_addr, ETH_ALEN);
 
-	if (wpa_driver_nl80211_send_mlme(bss, (u8 *) &nulldata, size, 0) < 0)
+	if (wpa_driver_nl80211_send_mlme(bss, (u8 *) &nulldata, size, 0, 0, 0,
+					 0, 0) < 0)
 		wpa_printf(MSG_DEBUG, "nl80211_send_null_frame: Failed to "
 			   "send poll frame");
 }
@@ -9277,34 +9263,140 @@ static int android_pno_stop(struct i802_bss *bss)
 #endif /* ANDROID */
 
 
+static int driver_nl80211_set_key(const char *ifname, void *priv,
+				  enum wpa_alg alg, const u8 *addr,
+				  int key_idx, int set_tx,
+				  const u8 *seq, size_t seq_len,
+				  const u8 *key, size_t key_len)
+{
+	struct i802_bss *bss = priv;
+	return wpa_driver_nl80211_set_key(ifname, bss, alg, addr, key_idx,
+					  set_tx, seq, seq_len, key, key_len);
+}
+
+
+static int driver_nl80211_scan2(void *priv,
+				struct wpa_driver_scan_params *params)
+{
+	struct i802_bss *bss = priv;
+	return wpa_driver_nl80211_scan(bss, params);
+}
+
+
+static int driver_nl80211_deauthenticate(void *priv, const u8 *addr,
+					 int reason_code)
+{
+	struct i802_bss *bss = priv;
+	return wpa_driver_nl80211_deauthenticate(bss, addr, reason_code);
+}
+
+
+static int driver_nl80211_authenticate(void *priv,
+				       struct wpa_driver_auth_params *params)
+{
+	struct i802_bss *bss = priv;
+	return wpa_driver_nl80211_authenticate(bss, params);
+}
+
+
+static void driver_nl80211_deinit(void *priv)
+{
+	struct i802_bss *bss = priv;
+	wpa_driver_nl80211_deinit(bss);
+}
+
+
+static int driver_nl80211_if_remove(void *priv, enum wpa_driver_if_type type,
+				    const char *ifname)
+{
+	struct i802_bss *bss = priv;
+	return wpa_driver_nl80211_if_remove(bss, type, ifname);
+}
+
+
+static int driver_nl80211_send_mlme(void *priv, const u8 *data,
+				    size_t data_len, int noack)
+{
+	struct i802_bss *bss = priv;
+	return wpa_driver_nl80211_send_mlme(bss, data, data_len, noack,
+					    0, 0, 0, 0);
+}
+
+
+static int driver_nl80211_sta_remove(void *priv, const u8 *addr)
+{
+	struct i802_bss *bss = priv;
+	return wpa_driver_nl80211_sta_remove(bss, addr);
+}
+
+
+#if defined(HOSTAPD) || defined(CONFIG_AP)
+static int driver_nl80211_set_sta_vlan(void *priv, const u8 *addr,
+				       const char *ifname, int vlan_id)
+{
+	struct i802_bss *bss = priv;
+	return i802_set_sta_vlan(bss, addr, ifname, vlan_id);
+}
+#endif /* HOSTAPD || CONFIG_AP */
+
+
+static int driver_nl80211_read_sta_data(void *priv,
+					struct hostap_sta_driver_data *data,
+					const u8 *addr)
+{
+	struct i802_bss *bss = priv;
+	return i802_read_sta_data(bss, data, addr);
+}
+
+
+static int driver_nl80211_send_action(void *priv, unsigned int freq,
+				      unsigned int wait_time,
+				      const u8 *dst, const u8 *src,
+				      const u8 *bssid,
+				      const u8 *data, size_t data_len,
+				      int no_cck)
+{
+	struct i802_bss *bss = priv;
+	return wpa_driver_nl80211_send_action(bss, freq, wait_time, dst, src,
+					      bssid, data, data_len, no_cck);
+}
+
+
+static int driver_nl80211_probe_req_report(void *priv, int report)
+{
+	struct i802_bss *bss = priv;
+	return wpa_driver_nl80211_probe_req_report(bss, report);
+}
+
+
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
 	.get_bssid = wpa_driver_nl80211_get_bssid,
 	.get_ssid = wpa_driver_nl80211_get_ssid,
-	.set_key = wpa_driver_nl80211_set_key,
-	.scan2 = wpa_driver_nl80211_scan,
+	.set_key = driver_nl80211_set_key,
+	.scan2 = driver_nl80211_scan2,
 	.sched_scan = wpa_driver_nl80211_sched_scan,
 	.stop_sched_scan = wpa_driver_nl80211_stop_sched_scan,
 	.get_scan_results2 = wpa_driver_nl80211_get_scan_results,
-	.deauthenticate = wpa_driver_nl80211_deauthenticate,
-	.authenticate = wpa_driver_nl80211_authenticate,
+	.deauthenticate = driver_nl80211_deauthenticate,
+	.authenticate = driver_nl80211_authenticate,
 	.associate = wpa_driver_nl80211_associate,
 	.global_init = nl80211_global_init,
 	.global_deinit = nl80211_global_deinit,
 	.init2 = wpa_driver_nl80211_init,
-	.deinit = wpa_driver_nl80211_deinit,
+	.deinit = driver_nl80211_deinit,
 	.get_capa = wpa_driver_nl80211_get_capa,
 	.set_operstate = wpa_driver_nl80211_set_operstate,
 	.set_supp_port = wpa_driver_nl80211_set_supp_port,
 	.set_country = wpa_driver_nl80211_set_country,
 	.set_ap = wpa_driver_nl80211_set_ap,
 	.if_add = wpa_driver_nl80211_if_add,
-	.if_remove = wpa_driver_nl80211_if_remove,
-	.send_mlme = wpa_driver_nl80211_send_mlme,
+	.if_remove = driver_nl80211_if_remove,
+	.send_mlme = driver_nl80211_send_mlme,
 	.get_hw_feature_data = wpa_driver_nl80211_get_hw_feature_data,
 	.sta_add = wpa_driver_nl80211_sta_add,
-	.sta_remove = wpa_driver_nl80211_sta_remove,
+	.sta_remove = driver_nl80211_sta_remove,
 	.hapd_send_eapol = wpa_driver_nl80211_hapd_send_eapol,
 	.sta_set_flags = wpa_driver_nl80211_sta_set_flags,
 #ifdef HOSTAPD
@@ -9320,18 +9412,18 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.set_rts = i802_set_rts,
 	.set_frag = i802_set_frag,
 	.set_tx_queue_params = i802_set_tx_queue_params,
-	.set_sta_vlan = i802_set_sta_vlan,
+	.set_sta_vlan = driver_nl80211_set_sta_vlan,
 	.sta_deauth = i802_sta_deauth,
 	.sta_disassoc = i802_sta_disassoc,
 #endif /* HOSTAPD || CONFIG_AP */
-	.read_sta_data = i802_read_sta_data,
+	.read_sta_data = driver_nl80211_read_sta_data,
 	.set_freq = i802_set_freq,
-	.send_action = wpa_driver_nl80211_send_action,
+	.send_action = driver_nl80211_send_action,
 	.send_action_cancel_wait = wpa_driver_nl80211_send_action_cancel_wait,
 	.remain_on_channel = wpa_driver_nl80211_remain_on_channel,
 	.cancel_remain_on_channel =
 	wpa_driver_nl80211_cancel_remain_on_channel,
-	.probe_req_report = wpa_driver_nl80211_probe_req_report,
+	.probe_req_report = driver_nl80211_probe_req_report,
 	.deinit_ap = wpa_driver_nl80211_deinit_ap,
 	.deinit_p2p_cli = wpa_driver_nl80211_deinit_p2p_cli,
 	.resume = wpa_driver_nl80211_resume,

@@ -785,7 +785,6 @@ int wpa_supplicant_connect(struct wpa_supplicant *wpa_s,
 void wpa_supplicant_stop_countermeasures(void *eloop_ctx, void *sock_ctx);
 void wpa_supplicant_delayed_mic_error_report(void *eloop_ctx, void *sock_ctx);
 void wnm_bss_keep_alive_deinit(struct wpa_supplicant *wpa_s);
-int wpas_select_network_from_last_scan(struct wpa_supplicant *wpa_s);
 int wpa_supplicant_fast_associate(struct wpa_supplicant *wpa_s);
 
 /* eap_register.c */

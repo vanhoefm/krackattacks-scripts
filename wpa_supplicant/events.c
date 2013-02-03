@@ -44,6 +44,9 @@
 #include "interworking.h"
 
 
+static int wpas_select_network_from_last_scan(struct wpa_supplicant *wpa_s);
+
+
 static int wpas_temp_disabled(struct wpa_supplicant *wpa_s,
 			      struct wpa_ssid *ssid)
 {
@@ -1188,7 +1191,7 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 }
 
 
-int wpas_select_network_from_last_scan(struct wpa_supplicant *wpa_s)
+static int wpas_select_network_from_last_scan(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_bss *selected;
 	struct wpa_ssid *ssid = NULL;

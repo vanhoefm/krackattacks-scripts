@@ -241,10 +241,13 @@ int eloop_register_timeout(unsigned int secs, unsigned int usecs,
 	struct eloop_timeout *timeout, *tmp;
 	os_time_t now_sec;
 
-	timeout = os_malloc(sizeof(*timeout));
+	timeout = os_zalloc(sizeof(*timeout));
 	if (timeout == NULL)
 		return -1;
-	os_get_time(&timeout->time);
+	if (os_get_time(&timeout->time) < 0) {
+		os_free(timeout);
+		return -1;
+	}
 	now_sec = timeout->time.sec;
 	timeout->time.sec += secs;
 	if (timeout->time.sec < now_sec) {
@@ -279,6 +282,13 @@ int eloop_register_timeout(unsigned int secs, unsigned int usecs,
 }
 
 
+static void eloop_remove_timeout(struct eloop_timeout *timeout)
+{
+	dl_list_del(&timeout->list);
+	os_free(timeout);
+}
+
+
 int eloop_cancel_timeout(eloop_timeout_handler handler,
 			 void *eloop_data, void *user_data)
 {
@@ -292,8 +302,7 @@ int eloop_cancel_timeout(eloop_timeout_handler handler,
 		     eloop_data == ELOOP_ALL_CTX) &&
 		    (timeout->user_data == user_data ||
 		     user_data == ELOOP_ALL_CTX)) {
-			dl_list_del(&timeout->list);
-			os_free(timeout);
+			eloop_remove_timeout(timeout);
 			removed++;
 		}
 	}
@@ -487,10 +496,12 @@ void eloop_run(void)
 		if (timeout) {
 			os_get_time(&now);
 			if (!os_time_before(&now, &timeout->time)) {
-				dl_list_del(&timeout->list);
-				timeout->handler(timeout->eloop_data,
-						 timeout->user_data);
-				os_free(timeout);
+				void *eloop_data = timeout->eloop_data;
+				void *user_data = timeout->user_data;
+				eloop_timeout_handler handler =
+					timeout->handler;
+				eloop_remove_timeout(timeout);
+				handler(eloop_data, user_data);
 			}
 
 		}
@@ -551,8 +562,7 @@ void eloop_destroy(void)
 
 	dl_list_for_each_safe(timeout, prev, &eloop.timeout,
 			      struct eloop_timeout, list) {
-		dl_list_del(&timeout->list);
-		os_free(timeout);
+		eloop_remove_timeout(timeout);
 	}
 	os_free(eloop.readers);
 	os_free(eloop.signals);

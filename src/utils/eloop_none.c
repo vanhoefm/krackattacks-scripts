@@ -16,21 +16,21 @@ struct eloop_sock {
 	int sock;
 	void *eloop_data;
 	void *user_data;
-	void (*handler)(int sock, void *eloop_ctx, void *sock_ctx);
+	eloop_sock_handler handler;
 };
 
 struct eloop_timeout {
 	struct os_time time;
 	void *eloop_data;
 	void *user_data;
-	void (*handler)(void *eloop_ctx, void *sock_ctx);
+	eloop_timeout_handler handler;
 	struct eloop_timeout *next;
 };
 
 struct eloop_signal {
 	int sig;
 	void *user_data;
-	void (*handler)(int sig, void *eloop_ctx, void *signal_ctx);
+	eloop_signal_handler handler;
 	int signaled;
 };
 
@@ -59,9 +59,7 @@ int eloop_init(void)
 }
 
 
-int eloop_register_read_sock(int sock,
-			     void (*handler)(int sock, void *eloop_ctx,
-					     void *sock_ctx),
+int eloop_register_read_sock(int sock, eloop_sock_handler handler,
 			     void *eloop_data, void *user_data)
 {
 	struct eloop_sock *tmp;
@@ -110,7 +108,7 @@ void eloop_unregister_read_sock(int sock)
 
 
 int eloop_register_timeout(unsigned int secs, unsigned int usecs,
-			   void (*handler)(void *eloop_ctx, void *timeout_ctx),
+			   eloop_timeout_handler handler,
 			   void *eloop_data, void *user_data)
 {
 	struct eloop_timeout *timeout, *tmp, *prev;
@@ -156,7 +154,7 @@ int eloop_register_timeout(unsigned int secs, unsigned int usecs,
 }
 
 
-int eloop_cancel_timeout(void (*handler)(void *eloop_ctx, void *sock_ctx),
+int eloop_cancel_timeout(eloop_timeout_handler handler,
 			 void *eloop_data, void *user_data)
 {
 	struct eloop_timeout *timeout, *prev, *next;
@@ -188,8 +186,7 @@ int eloop_cancel_timeout(void (*handler)(void *eloop_ctx, void *sock_ctx),
 }
 
 
-int eloop_is_timeout_registered(void (*handler)(void *eloop_ctx,
-						void *timeout_ctx),
+int eloop_is_timeout_registered(eloop_timeout_handler handler,
 				void *eloop_data, void *user_data)
 {
 	struct eloop_timeout *tmp;
@@ -241,16 +238,13 @@ static void eloop_process_pending_signals(void)
 		if (eloop.signals[i].signaled) {
 			eloop.signals[i].signaled = 0;
 			eloop.signals[i].handler(eloop.signals[i].sig,
-						 eloop.user_data,
 						 eloop.signals[i].user_data);
 		}
 	}
 }
 
 
-int eloop_register_signal(int sig,
-			  void (*handler)(int sig, void *eloop_ctx,
-					  void *signal_ctx),
+int eloop_register_signal(int sig, eloop_signal_handler handler,
 			  void *user_data)
 {
 	struct eloop_signal *tmp;
@@ -275,8 +269,7 @@ int eloop_register_signal(int sig,
 }
 
 
-int eloop_register_signal_terminate(void (*handler)(int sig, void *eloop_ctx,
-						    void *signal_ctx),
+int eloop_register_signal_terminate(eloop_signal_handler handler,
 				    void *user_data)
 {
 #if 0
@@ -290,8 +283,7 @@ int eloop_register_signal_terminate(void (*handler)(int sig, void *eloop_ctx,
 }
 
 
-int eloop_register_signal_reconfig(void (*handler)(int sig, void *eloop_ctx,
-						   void *signal_ctx),
+int eloop_register_signal_reconfig(eloop_signal_handler handler,
 				   void *user_data)
 {
 #if 0

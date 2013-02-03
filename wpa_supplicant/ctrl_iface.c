@@ -2111,14 +2111,6 @@ static int wpa_supplicant_ctrl_iface_remove_network(
 	/* cmd: "<network id>" or "all" */
 	if (os_strcmp(cmd, "all") == 0) {
 		wpa_printf(MSG_DEBUG, "CTRL_IFACE: REMOVE_NETWORK all");
-		ssid = wpa_s->conf->ssid;
-		while (ssid) {
-			struct wpa_ssid *remove_ssid = ssid;
-			id = ssid->id;
-			ssid = ssid->next;
-			wpas_notify_network_removed(wpa_s, remove_ssid);
-			wpa_config_remove_network(wpa_s->conf, id);
-		}
 		eapol_sm_invalidate_cached_session(wpa_s->eapol);
 		if (wpa_s->current_ssid) {
 #ifdef CONFIG_SME
@@ -2128,6 +2120,14 @@ static int wpa_supplicant_ctrl_iface_remove_network(
 			eapol_sm_notify_config(wpa_s->eapol, NULL, NULL);
 			wpa_supplicant_deauthenticate(
 				wpa_s, WLAN_REASON_DEAUTH_LEAVING);
+		}
+		ssid = wpa_s->conf->ssid;
+		while (ssid) {
+			struct wpa_ssid *remove_ssid = ssid;
+			id = ssid->id;
+			ssid = ssid->next;
+			wpas_notify_network_removed(wpa_s, remove_ssid);
+			wpa_config_remove_network(wpa_s->conf, id);
 		}
 		return 0;
 	}

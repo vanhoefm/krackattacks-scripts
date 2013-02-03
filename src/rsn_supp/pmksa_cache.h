@@ -72,7 +72,7 @@ void pmksa_cache_flush(struct rsn_pmksa_cache *pmksa, void *network_ctx);
 
 static inline struct rsn_pmksa_cache *
 pmksa_cache_init(void (*free_cb)(struct rsn_pmksa_cache_entry *entry,
-				 void *ctx, int reason),
+				 void *ctx, enum pmksa_free_reason reason),
 		 void *ctx, struct wpa_sm *sm)
 {
 	return (void *) -1;

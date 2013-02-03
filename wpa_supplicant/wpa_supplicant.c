@@ -1980,7 +1980,7 @@ int wpa_supplicant_set_scan_interval(struct wpa_supplicant *wpa_s,
 	}
 	wpa_msg(wpa_s, MSG_DEBUG, "Setting scan interval: %d sec",
 		scan_interval);
-	wpa_s->scan_interval = scan_interval;
+	wpa_supplicant_update_scan_int(wpa_s, scan_interval);
 
 	return 0;
 }

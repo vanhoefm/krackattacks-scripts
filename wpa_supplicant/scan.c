@@ -816,6 +816,27 @@ scan:
 }
 
 
+void wpa_supplicant_update_scan_int(struct wpa_supplicant *wpa_s, int sec)
+{
+	struct os_time remaining, new_int;
+	int cancelled;
+
+	cancelled = eloop_cancel_timeout_one(wpa_supplicant_scan, wpa_s, NULL,
+					     &remaining);
+
+	new_int.sec = sec;
+	new_int.usec = 0;
+	if (cancelled && os_time_before(&remaining, &new_int)) {
+		new_int.sec = remaining.sec;
+		new_int.usec = remaining.usec;
+	}
+
+	eloop_register_timeout(new_int.sec, new_int.usec, wpa_supplicant_scan,
+			       wpa_s, NULL);
+	wpa_s->scan_interval = sec;
+}
+
+
 /**
  * wpa_supplicant_req_scan - Schedule a scan for neighboring access points
  * @wpa_s: Pointer to wpa_supplicant data

@@ -3719,7 +3719,7 @@ static int wpa_driver_nl80211_scan(void *priv,
 				    bss, NL80211_IFTYPE_STATION))
 				goto nla_put_failure;
 
-			if (wpa_driver_nl80211_scan(drv, params)) {
+			if (wpa_driver_nl80211_scan(bss, params)) {
 				wpa_driver_nl80211_set_mode(bss, drv->nlmode);
 				goto nla_put_failure;
 			}

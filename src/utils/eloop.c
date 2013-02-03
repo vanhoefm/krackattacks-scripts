@@ -556,6 +556,33 @@ int eloop_cancel_timeout(eloop_timeout_handler handler,
 }
 
 
+int eloop_cancel_timeout_one(eloop_timeout_handler handler,
+			     void *eloop_data, void *user_data,
+			     struct os_time *remaining)
+{
+	struct eloop_timeout *timeout, *prev;
+	int removed = 0;
+	struct os_time now;
+
+	os_get_time(&now);
+	remaining->sec = remaining->usec = 0;
+
+	dl_list_for_each_safe(timeout, prev, &eloop.timeout,
+			      struct eloop_timeout, list) {
+		if (timeout->handler == handler &&
+		    (timeout->eloop_data == eloop_data) &&
+		    (timeout->user_data == user_data)) {
+			removed = 1;
+			if (os_time_before(&now, &timeout->time))
+				os_time_sub(&timeout->time, &now, remaining);
+			eloop_remove_timeout(timeout);
+			break;
+		}
+	}
+	return removed;
+}
+
+
 int eloop_is_timeout_registered(eloop_timeout_handler handler,
 				void *eloop_data, void *user_data)
 {

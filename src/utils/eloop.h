@@ -195,6 +195,21 @@ int eloop_cancel_timeout(eloop_timeout_handler handler,
 			 void *eloop_data, void *user_data);
 
 /**
+ * eloop_cancel_timeout_one - Cancel a single timeout
+ * @handler: Matching callback function
+ * @eloop_data: Matching eloop_data
+ * @user_data: Matching user_data
+ * @remaining: Time left on the cancelled timer
+ * Returns: Number of cancelled timeouts
+ *
+ * Cancel matching <handler,eloop_data,user_data> timeout registered with
+ * eloop_register_timeout() and return the remaining time left.
+ */
+int eloop_cancel_timeout_one(eloop_timeout_handler handler,
+			     void *eloop_data, void *user_data,
+			     struct os_time *remaining);
+
+/**
  * eloop_is_timeout_registered - Check if a timeout is already registered
  * @handler: Matching callback function
  * @eloop_data: Matching eloop_data

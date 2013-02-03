@@ -54,16 +54,8 @@ static void interworking_reconnect(struct wpa_supplicant *wpa_s)
 	wpa_s->disconnected = 0;
 	wpa_s->reassociate = 1;
 
-	if (wpa_s->last_scan_res_used > 0) {
-		struct os_time now;
-		os_get_time(&now);
-		if (now.sec - wpa_s->last_scan.sec <= 5) {
-			wpa_printf(MSG_DEBUG, "Interworking: Old scan results "
-				   "are fresh - connect without new scan");
-			if (wpas_select_network_from_last_scan(wpa_s) >= 0)
-				return;
-		}
-	}
+	if (wpa_supplicant_fast_associate(wpa_s) >= 0)
+		return;
 
 	wpa_supplicant_req_scan(wpa_s, 0, 0);
 }

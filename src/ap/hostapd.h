@@ -151,6 +151,9 @@ struct hostapd_data {
 	void (*public_action_cb)(void *ctx, const u8 *buf, size_t len,
 				 int freq);
 	void *public_action_cb_ctx;
+	void (*public_action_cb2)(void *ctx, const u8 *buf, size_t len,
+				  int freq);
+	void *public_action_cb2_ctx;
 
 	int (*vendor_action_cb)(void *ctx, const u8 *buf, size_t len,
 				int freq);

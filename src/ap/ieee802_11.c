@@ -1599,8 +1599,14 @@ static void handle_action(struct hostapd_data *hapd,
 			hapd->public_action_cb(hapd->public_action_cb_ctx,
 					       (u8 *) mgmt, len,
 					       hapd->iface->freq);
-			return;
 		}
+		if (hapd->public_action_cb2) {
+			hapd->public_action_cb2(hapd->public_action_cb_ctx,
+						(u8 *) mgmt, len,
+						hapd->iface->freq);
+		}
+		if (hapd->public_action_cb || hapd->public_action_cb2)
+			return;
 		break;
 	case WLAN_ACTION_VENDOR_SPECIFIC:
 		if (hapd->vendor_action_cb) {

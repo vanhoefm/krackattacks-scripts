@@ -1158,8 +1158,8 @@ static void gas_serv_rx_public_action(void *ctx, const u8 *buf, size_t len,
 
 int gas_serv_init(struct hostapd_data *hapd)
 {
-	hapd->public_action_cb = gas_serv_rx_public_action;
-	hapd->public_action_cb_ctx = hapd;
+	hapd->public_action_cb2 = gas_serv_rx_public_action;
+	hapd->public_action_cb2_ctx = hapd;
 	hapd->gas_frag_limit = 1400;
 	if (hapd->conf->gas_frag_limit > 0)
 		hapd->gas_frag_limit = hapd->conf->gas_frag_limit;

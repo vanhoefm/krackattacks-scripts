@@ -3492,10 +3492,18 @@ static int wpas_p2p_join_start(struct wpa_supplicant *wpa_s)
 		os_memcpy(group->p2p_pin, wpa_s->p2p_pin,
 			  sizeof(group->p2p_pin));
 		group->p2p_wps_method = wpa_s->p2p_wps_method;
+	} else {
+		/*
+		 * Need to mark the current interface for p2p_group_formation
+		 * when a separate group interface is not used. This is needed
+		 * to allow p2p_cancel stop a pending p2p_connect-join.
+		 * wpas_p2p_init_group_interface() addresses this for the case
+		 * where a separate group interface is used.
+		 */
+		wpa_s->global->p2p_group_formation = wpa_s;
 	}
 
 	group->p2p_in_provisioning = 1;
-	wpa_s->global->p2p_group_formation = wpa_s;
 	group->p2p_fallback_to_go_neg = wpa_s->p2p_fallback_to_go_neg;
 
 	os_memset(&res, 0, sizeof(res));

@@ -3175,6 +3175,8 @@ static int wpa_supplicant_ctrl_iface_bss(struct wpa_supplicant *wpa_s,
 		}
 	} else if (os_strncmp(cmd, "FIRST", 5) == 0)
 		bss = dl_list_first(&wpa_s->bss_id, struct wpa_bss, list_id);
+	else if (os_strncmp(cmd, "LAST", 4) == 0)
+		bss = dl_list_last(&wpa_s->bss_id, struct wpa_bss, list_id);
 	else if (os_strncmp(cmd, "ID-", 3) == 0) {
 		i = atoi(cmd + 3);
 		bss = wpa_bss_get_id(wpa_s, i);

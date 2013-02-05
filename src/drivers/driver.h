@@ -911,6 +911,8 @@ struct hostapd_sta_add_params {
 	u32 flags; /* bitmask of WPA_STA_* flags */
 	int set; /* Set STA parameters instead of add */
 	u8 qosinfo;
+	const u8 *ext_capab;
+	size_t ext_capab_len;
 };
 
 struct hostapd_freq_params {

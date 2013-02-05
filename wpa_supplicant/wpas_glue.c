@@ -554,7 +554,7 @@ static int wpa_supplicant_tdls_peer_addset(
 	void *ctx, const u8 *peer, int add, u16 capability,
 	const u8 *supp_rates, size_t supp_rates_len,
 	const struct ieee80211_ht_capabilities *ht_capab,
-	u8 qosinfo)
+	u8 qosinfo, const u8 *ext_capab, size_t ext_capab_len)
 {
 	struct wpa_supplicant *wpa_s = ctx;
 	struct hostapd_sta_add_params params;
@@ -579,6 +579,8 @@ static int wpa_supplicant_tdls_peer_addset(
 	params.supp_rates = supp_rates;
 	params.supp_rates_len = supp_rates_len;
 	params.set = !add;
+	params.ext_capab = ext_capab;
+	params.ext_capab_len = ext_capab_len;
 
 	return wpa_drv_sta_add(wpa_s, &params);
 }

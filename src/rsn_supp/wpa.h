@@ -60,7 +60,8 @@ struct wpa_sm_ctx {
 				u16 capability, const u8 *supp_rates,
 				size_t supp_rates_len,
 				const struct ieee80211_ht_capabilities *ht_capab,
-				u8 qosinfo);
+				u8 qosinfo, const u8 *ext_capab,
+				size_t ext_capab_len);
 #endif /* CONFIG_TDLS */
 	void (*set_rekey_offload)(void *ctx, const u8 *kek, const u8 *kck,
 				  const u8 *replay_ctr);

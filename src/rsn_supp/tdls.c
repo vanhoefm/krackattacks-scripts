@@ -2071,12 +2071,12 @@ int wpa_tdls_start(struct wpa_sm *sm, const u8 *addr)
 }
 
 
-int wpa_tdls_reneg(struct wpa_sm *sm, const u8 *addr)
+void wpa_tdls_remove(struct wpa_sm *sm, const u8 *addr)
 {
 	struct wpa_tdls_peer *peer;
 
 	if (sm->tdls_disabled || !sm->tdls_supported)
-		return -1;
+		return;
 
 	for (peer = sm->tdls; peer; peer = peer->next) {
 		if (os_memcmp(peer->addr, addr, ETH_ALEN) == 0)
@@ -2084,7 +2084,7 @@ int wpa_tdls_reneg(struct wpa_sm *sm, const u8 *addr)
 	}
 
 	if (peer == NULL || !peer->tpk_success)
-		return -1;
+		return;
 
 	if (sm->tdls_external_setup) {
 		/*
@@ -2093,8 +2093,6 @@ int wpa_tdls_reneg(struct wpa_sm *sm, const u8 *addr)
 		 */
 		wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK, peer->addr);
 	}
-
-	return wpa_tdls_start(sm, addr);
 }
 
 

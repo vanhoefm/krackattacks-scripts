@@ -2157,7 +2157,11 @@ static void wpa_supplicant_event_tdls(struct wpa_supplicant *wpa_s,
 		return;
 	switch (data->tdls.oper) {
 	case TDLS_REQUEST_SETUP:
-		wpa_tdls_start(wpa_s->wpa, data->tdls.peer);
+		wpa_tdls_remove(wpa_s->wpa, data->tdls.peer);
+		if (wpa_tdls_is_external_setup(wpa_s->wpa))
+			wpa_tdls_start(wpa_s->wpa, data->tdls.peer);
+		else
+			wpa_drv_tdls_oper(wpa_s, TDLS_SETUP, data->tdls.peer);
 		break;
 	case TDLS_REQUEST_TEARDOWN:
 		wpa_tdls_teardown_link(wpa_s->wpa, data->tdls.peer,

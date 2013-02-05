@@ -355,7 +355,7 @@ wpa_ft_validate_reassoc_resp(struct wpa_sm *sm, const u8 *ies, size_t ies_len,
 void wpa_tdls_ap_ies(struct wpa_sm *sm, const u8 *ies, size_t len);
 void wpa_tdls_assoc_resp_ies(struct wpa_sm *sm, const u8 *ies, size_t len);
 int wpa_tdls_start(struct wpa_sm *sm, const u8 *addr);
-int wpa_tdls_reneg(struct wpa_sm *sm, const u8 *addr);
+void wpa_tdls_remove(struct wpa_sm *sm, const u8 *addr);
 int wpa_tdls_send_teardown(struct wpa_sm *sm, const u8 *addr, u16 reason_code);
 int wpa_tdls_teardown_link(struct wpa_sm *sm, const u8 *addr, u16 reason_code);
 int wpa_tdls_send_discovery_request(struct wpa_sm *sm, const u8 *addr);

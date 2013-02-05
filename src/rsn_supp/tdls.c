@@ -680,8 +680,11 @@ int wpa_tdls_send_teardown(struct wpa_sm *sm, const u8 *addr, u16 reason_code)
 		return -1;
 	pos = rbuf;
 
-	if (!wpa_tdls_get_privacy(sm) || !peer->tpk_set || !peer->tpk_success)
+	if (!wpa_tdls_get_privacy(sm) || !peer->tpk_set || !peer->tpk_success) {
+		/* Overwrite the reason code */
+		reason_code = WLAN_REASON_TDLS_TEARDOWN_UNSPECIFIED;
 		goto skip_ies;
+	}
 
 	ftie = (struct wpa_tdls_ftie *) pos;
 	ftie->ie_type = WLAN_EID_FAST_BSS_TRANSITION;
@@ -715,8 +718,7 @@ skip_ies:
 
 	/* request driver to send Teardown using this FTIE */
 	wpa_tdls_tpk_send(sm, addr, WLAN_TDLS_TEARDOWN, 0,
-			  WLAN_REASON_TDLS_TEARDOWN_UNSPECIFIED, rbuf,
-			  pos - rbuf);
+			  reason_code, rbuf, pos - rbuf);
 	os_free(rbuf);
 
 	/* clear the Peerkey statemachine */

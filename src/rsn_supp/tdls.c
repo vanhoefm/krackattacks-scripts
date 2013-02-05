@@ -1281,10 +1281,17 @@ wpa_tdls_process_discovery_request(struct wpa_sm *sm, const u8 *addr,
 			   " BSS " MACSTR, MAC2STR(lnkid->bssid));
 		return -1;
 	}
-
-	peer = wpa_tdls_add_peer(sm, addr);
-	if (peer == NULL)
-		return -1;
+	/* Find existing entry and if found, use that instead of adding
+	 * a new one */
+	for (peer = sm->tdls; peer; peer = peer->next) {
+		if (os_memcmp(peer->addr, addr, ETH_ALEN) == 0)
+			break;
+	}
+	if (peer == NULL) {
+		peer = wpa_tdls_add_peer(sm, addr);
+		if (peer == NULL)
+			return -1;
+	}
 
 	return wpa_tdls_send_discovery_response(sm, peer, dialog_token);
 }

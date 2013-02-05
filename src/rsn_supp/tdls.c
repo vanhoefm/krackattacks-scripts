@@ -868,9 +868,19 @@ static int wpa_tdls_send_error(struct wpa_sm *sm, const u8 *dst,
 
 
 static struct wpa_tdls_peer *
-wpa_tdls_add_peer(struct wpa_sm *sm, const u8 *addr)
+wpa_tdls_add_peer(struct wpa_sm *sm, const u8 *addr, int *existing)
 {
 	struct wpa_tdls_peer *peer;
+
+	if (existing)
+		*existing = 0;
+	for (peer = sm->tdls; peer; peer = peer->next) {
+		if (os_memcmp(peer->addr, addr, ETH_ALEN) == 0) {
+			if (existing)
+				*existing = 1;
+			return peer; /* re-use existing entry */
+		}
+	}
 
 	wpa_printf(MSG_INFO, "TDLS: Creating peer entry for " MACSTR,
 		   MAC2STR(addr));
@@ -1281,17 +1291,10 @@ wpa_tdls_process_discovery_request(struct wpa_sm *sm, const u8 *addr,
 			   " BSS " MACSTR, MAC2STR(lnkid->bssid));
 		return -1;
 	}
-	/* Find existing entry and if found, use that instead of adding
-	 * a new one */
-	for (peer = sm->tdls; peer; peer = peer->next) {
-		if (os_memcmp(peer->addr, addr, ETH_ALEN) == 0)
-			break;
-	}
-	if (peer == NULL) {
-		peer = wpa_tdls_add_peer(sm, addr);
-		if (peer == NULL)
-			return -1;
-	}
+
+	peer = wpa_tdls_add_peer(sm, addr, NULL);
+	if (peer == NULL)
+		return -1;
 
 	return wpa_tdls_send_discovery_response(sm, peer, dialog_token);
 }
@@ -1359,18 +1362,9 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 
 	wpa_printf(MSG_INFO, "TDLS: Dialog Token in TPK M1 %d", dtoken);
 
-	for (peer = sm->tdls; peer; peer = peer->next) {
-		if (os_memcmp(peer->addr, src_addr, ETH_ALEN) == 0) {
-			existing_peer = 1;
-			break;
-		}
-	}
-
-	if (peer == NULL) {
-		peer = wpa_tdls_add_peer(sm, src_addr);
-		if (peer == NULL)
-			goto error;
-	}
+	peer = wpa_tdls_add_peer(sm, src_addr, &existing_peer);
+	if (peer == NULL)
+		goto error;
 
 	/* capability information */
 	peer->capability = WPA_GET_LE16(cpos);
@@ -1404,15 +1398,9 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 
 #ifdef CONFIG_TDLS_TESTING
 	if (tdls_testing & TDLS_TESTING_CONCURRENT_INIT) {
-		for (peer = sm->tdls; peer; peer = peer->next) {
-			if (os_memcmp(peer->addr, src_addr, ETH_ALEN) == 0)
-				break;
-		}
-		if (peer == NULL) {
-			peer = wpa_tdls_add_peer(sm, src_addr);
-			if (peer == NULL)
-				goto error;
-		}
+		peer = wpa_tdls_add_peer(sm, src_addr, NULL);
+		if (peer == NULL)
+			goto error;
 		wpa_printf(MSG_DEBUG, "TDLS: Testing concurrent initiation of "
 			   "TDLS setup - send own request");
 		peer->initiator = 1;
@@ -2065,18 +2053,9 @@ int wpa_tdls_start(struct wpa_sm *sm, const u8 *addr)
 		return -1;
 	}
 
-	/* Find existing entry and if found, use that instead of adding
-	 * a new one */
-	for (peer = sm->tdls; peer; peer = peer->next) {
-		if (os_memcmp(peer->addr, addr, ETH_ALEN) == 0)
-			break;
-	}
-
-	if (peer == NULL) {
-		peer = wpa_tdls_add_peer(sm, addr);
-		if (peer == NULL)
-			return -1;
-	}
+	peer = wpa_tdls_add_peer(sm, addr, NULL);
+	if (peer == NULL)
+		return -1;
 
 	peer->initiator = 1;
 

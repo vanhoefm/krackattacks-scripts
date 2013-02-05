@@ -283,12 +283,15 @@ static inline int wpa_sm_tdls_oper(struct wpa_sm *sm, int oper,
 static inline int
 wpa_sm_tdls_peer_addset(struct wpa_sm *sm, const u8 *addr, int add,
 			u16 capability, const u8 *supp_rates,
-			size_t supp_rates_len)
+			size_t supp_rates_len,
+			const struct ieee80211_ht_capabilities *ht_capab,
+			u8 qosinfo)
 {
 	if (sm->ctx->tdls_peer_addset)
 		return sm->ctx->tdls_peer_addset(sm->ctx->ctx, addr, add,
 						 capability, supp_rates,
-						 supp_rates_len);
+						 supp_rates_len, ht_capab,
+						 qosinfo);
 	return -1;
 }
 #endif /* CONFIG_TDLS */

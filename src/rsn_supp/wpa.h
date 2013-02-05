@@ -12,6 +12,7 @@
 #include "common/defs.h"
 #include "common/eapol_common.h"
 #include "common/wpa_common.h"
+#include "common/ieee802_11_defs.h"
 
 struct wpa_sm;
 struct eapol_sm;
@@ -57,7 +58,9 @@ struct wpa_sm_ctx {
 	int (*tdls_oper)(void *ctx, int oper, const u8 *peer);
 	int (*tdls_peer_addset)(void *ctx, const u8 *addr, int add,
 				u16 capability, const u8 *supp_rates,
-				size_t supp_rates_len);
+				size_t supp_rates_len,
+				const struct ieee80211_ht_capabilities *ht_capab,
+				u8 qosinfo);
 #endif /* CONFIG_TDLS */
 	void (*set_rekey_offload)(void *ctx, const u8 *kek, const u8 *kck,
 				  const u8 *replay_ctr);

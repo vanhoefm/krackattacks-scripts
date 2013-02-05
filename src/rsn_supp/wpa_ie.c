@@ -427,6 +427,11 @@ int wpa_supplicant_parse_ies(const u8 *buf, size_t len,
 		} else if (*pos == WLAN_EID_EXT_SUPP_RATES) {
 			ie->ext_supp_rates = pos;
 			ie->ext_supp_rates_len = pos[1] + 2;
+		} else if (*pos == WLAN_EID_HT_CAP) {
+			ie->ht_capabilities = pos + 2;
+			ie->ht_capabilities_len = pos[1];
+		} else if (*pos == WLAN_EID_QOS && pos[1] >= 1) {
+			ie->qosinfo = pos[2];
 		} else if (*pos == WLAN_EID_VENDOR_SPECIFIC) {
 			ret = wpa_parse_generic(pos, end, ie);
 			if (ret < 0)

@@ -218,6 +218,7 @@
 /* EIDs defined by IEEE 802.11h - END */
 #define WLAN_EID_ERP_INFO 42
 #define WLAN_EID_HT_CAP 45
+#define WLAN_EID_QOS 46
 #define WLAN_EID_RSN 48
 #define WLAN_EID_EXT_SUPP_RATES 50
 #define WLAN_EID_MOBILITY_DOMAIN 54

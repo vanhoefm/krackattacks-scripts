@@ -735,7 +735,7 @@ ssid_list_set:
 	extra_ie = wpa_supplicant_extra_ies(wpa_s);
 
 #ifdef CONFIG_HS20
-	if (wpa_s->conf->hs20 && wpabuf_resize(&extra_ie, 6) == 0)
+	if (wpa_s->conf->hs20 && wpabuf_resize(&extra_ie, 7) == 0)
 		wpas_hs20_add_indication(extra_ie);
 #endif /* CONFIG_HS20 */
 

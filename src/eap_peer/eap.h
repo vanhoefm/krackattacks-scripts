@@ -306,6 +306,7 @@ void eap_set_force_disabled(struct eap_sm *sm, int disabled);
 int eap_key_available(struct eap_sm *sm);
 void eap_notify_success(struct eap_sm *sm);
 void eap_notify_lower_layer_success(struct eap_sm *sm);
+const u8 * eap_get_eapSessionId(struct eap_sm *sm, size_t *len);
 const u8 * eap_get_eapKeyData(struct eap_sm *sm, size_t *len);
 struct wpabuf * eap_get_eapRespData(struct eap_sm *sm);
 void eap_register_scard_ctx(struct eap_sm *sm, void *ctx);

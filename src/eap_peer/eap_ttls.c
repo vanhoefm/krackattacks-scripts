@@ -54,6 +54,8 @@ struct eap_ttls_data {
 	int resuming; /* starting a resumed session */
 	int reauth; /* reauthentication */
 	u8 *key_data;
+	u8 *session_id;
+	size_t id_len;
 
 	struct wpabuf *pending_phase2_req;
 
@@ -140,6 +142,7 @@ static void eap_ttls_deinit(struct eap_sm *sm, void *priv)
 	os_free(data->phase2_eap_types);
 	eap_peer_tls_ssl_deinit(sm, &data->ssl);
 	os_free(data->key_data);
+	os_free(data->session_id);
 	wpabuf_free(data->pending_phase2_req);
 	os_free(data);
 }
@@ -221,6 +224,17 @@ static int eap_ttls_v0_derive_key(struct eap_sm *sm,
 
 	wpa_hexdump_key(MSG_DEBUG, "EAP-TTLS: Derived key",
 			data->key_data, EAP_TLS_KEY_LEN);
+
+	os_free(data->session_id);
+	data->session_id = eap_peer_tls_derive_session_id(sm, &data->ssl,
+							  EAP_TYPE_TTLS,
+	                                                  &data->id_len);
+	if (data->session_id) {
+		wpa_hexdump(MSG_DEBUG, "EAP-TTLS: Derived Session-Id",
+			    data->session_id, data->id_len);
+	} else {
+		wpa_printf(MSG_ERROR, "EAP-TTLS: Failed to derive Session-Id");
+	}
 
 	return 0;
 }
@@ -1528,6 +1542,8 @@ static void * eap_ttls_init_for_reauth(struct eap_sm *sm, void *priv)
 	struct eap_ttls_data *data = priv;
 	os_free(data->key_data);
 	data->key_data = NULL;
+	os_free(data->session_id);
+	data->session_id = NULL;
 	if (eap_peer_tls_reauth_init(sm, &data->ssl)) {
 		os_free(data);
 		return NULL;
@@ -1612,6 +1628,25 @@ static u8 * eap_ttls_getKey(struct eap_sm *sm, void *priv, size_t *len)
 }
 
 
+static u8 * eap_ttls_get_session_id(struct eap_sm *sm, void *priv, size_t *len)
+{
+	struct eap_ttls_data *data = priv;
+	u8 *id;
+
+	if (data->session_id == NULL || !data->phase2_success)
+		return NULL;
+
+	id = os_malloc(data->id_len);
+	if (id == NULL)
+		return NULL;
+
+	*len = data->id_len;
+	os_memcpy(id, data->session_id, data->id_len);
+
+	return id;
+}
+
+
 int eap_peer_ttls_register(void)
 {
 	struct eap_method *eap;
@@ -1627,6 +1662,7 @@ int eap_peer_ttls_register(void)
 	eap->process = eap_ttls_process;
 	eap->isKeyAvailable = eap_ttls_isKeyAvailable;
 	eap->getKey = eap_ttls_getKey;
+	eap->getSessionId = eap_ttls_get_session_id;
 	eap->get_status = eap_ttls_get_status;
 	eap->has_reauth_data = eap_ttls_has_reauth_data;
 	eap->deinit_for_reauth = eap_ttls_deinit_for_reauth;

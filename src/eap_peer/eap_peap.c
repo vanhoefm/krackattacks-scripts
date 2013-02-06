@@ -56,6 +56,8 @@ struct eap_peap_data {
 	int resuming; /* starting a resumed session */
 	int reauth; /* reauthentication */
 	u8 *key_data;
+	u8 *session_id;
+	size_t id_len;
 
 	struct wpabuf *pending_phase2_req;
 	enum { NO_BINDING, OPTIONAL_BINDING, REQUIRE_BINDING } crypto_binding;
@@ -179,6 +181,7 @@ static void eap_peap_deinit(struct eap_sm *sm, void *priv)
 	os_free(data->phase2_types);
 	eap_peer_tls_ssl_deinit(sm, &data->ssl);
 	os_free(data->key_data);
+	os_free(data->session_id);
 	wpabuf_free(data->pending_phase2_req);
 	os_free(data);
 }
@@ -1107,6 +1110,20 @@ static struct wpabuf * eap_peap_process(struct eap_sm *sm, void *priv,
 					   "derive key");
 			}
 
+			os_free(data->session_id);
+			data->session_id =
+				eap_peer_tls_derive_session_id(sm, &data->ssl,
+							       EAP_TYPE_PEAP,
+							       &data->id_len);
+			if (data->session_id) {
+				wpa_hexdump(MSG_DEBUG,
+					    "EAP-PEAP: Derived Session-Id",
+					    data->session_id, data->id_len);
+			} else {
+				wpa_printf(MSG_ERROR, "EAP-PEAP: Failed to "
+					   "derive Session-Id");
+			}
+
 			if (sm->workaround && data->resuming) {
 				/*
 				 * At least few RADIUS servers (Aegis v1.1.6;
@@ -1178,6 +1195,8 @@ static void * eap_peap_init_for_reauth(struct eap_sm *sm, void *priv)
 	struct eap_peap_data *data = priv;
 	os_free(data->key_data);
 	data->key_data = NULL;
+	os_free(data->session_id);
+	data->session_id = NULL;
 	if (eap_peer_tls_reauth_init(sm, &data->ssl)) {
 		os_free(data);
 		return NULL;
@@ -1260,6 +1279,25 @@ static u8 * eap_peap_getKey(struct eap_sm *sm, void *priv, size_t *len)
 }
 
 
+static u8 * eap_peap_get_session_id(struct eap_sm *sm, void *priv, size_t *len)
+{
+	struct eap_peap_data *data = priv;
+	u8 *id;
+
+	if (data->session_id == NULL || !data->phase2_success)
+		return NULL;
+
+	id = os_malloc(data->id_len);
+	if (id == NULL)
+		return NULL;
+
+	*len = data->id_len;
+	os_memcpy(id, data->session_id, data->id_len);
+
+	return id;
+}
+
+
 int eap_peer_peap_register(void)
 {
 	struct eap_method *eap;
@@ -1279,6 +1317,7 @@ int eap_peer_peap_register(void)
 	eap->has_reauth_data = eap_peap_has_reauth_data;
 	eap->deinit_for_reauth = eap_peap_deinit_for_reauth;
 	eap->init_for_reauth = eap_peap_init_for_reauth;
+	eap->getSessionId = eap_peap_get_session_id;
 
 	ret = eap_peer_method_register(eap);
 	if (ret)

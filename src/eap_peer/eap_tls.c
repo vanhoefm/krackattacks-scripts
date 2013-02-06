@@ -21,6 +21,8 @@ static void eap_tls_deinit(struct eap_sm *sm, void *priv);
 struct eap_tls_data {
 	struct eap_ssl_data ssl;
 	u8 *key_data;
+	u8 *session_id;
+	size_t id_len;
 	void *ssl_ctx;
 	u8 eap_type;
 };
@@ -103,6 +105,7 @@ static void eap_tls_deinit(struct eap_sm *sm, void *priv)
 		return;
 	eap_peer_tls_ssl_deinit(sm, &data->ssl);
 	os_free(data->key_data);
+	os_free(data->session_id);
 	os_free(data);
 }
 
@@ -164,6 +167,17 @@ static void eap_tls_success(struct eap_sm *sm, struct eap_tls_data *data,
 				EAP_EMSK_LEN);
 	} else {
 		wpa_printf(MSG_INFO, "EAP-TLS: Failed to derive key");
+	}
+
+	os_free(data->session_id);
+	data->session_id = eap_peer_tls_derive_session_id(sm, &data->ssl,
+							  EAP_TYPE_TLS,
+			                                  &data->id_len);
+	if (data->session_id) {
+		wpa_hexdump(MSG_DEBUG, "EAP-TLS: Derived Session-Id",
+			    data->session_id, data->id_len);
+	} else {
+		wpa_printf(MSG_ERROR, "EAP-TLS: Failed to derive Session-Id");
 	}
 }
 
@@ -228,6 +242,8 @@ static void * eap_tls_init_for_reauth(struct eap_sm *sm, void *priv)
 	struct eap_tls_data *data = priv;
 	os_free(data->key_data);
 	data->key_data = NULL;
+	os_free(data->session_id);
+	data->session_id = NULL;
 	if (eap_peer_tls_reauth_init(sm, &data->ssl)) {
 		os_free(data);
 		return NULL;
@@ -289,6 +305,25 @@ static u8 * eap_tls_get_emsk(struct eap_sm *sm, void *priv, size_t *len)
 }
 
 
+static u8 * eap_tls_get_session_id(struct eap_sm *sm, void *priv, size_t *len)
+{
+	struct eap_tls_data *data = priv;
+	u8 *id;
+
+	if (data->session_id == NULL)
+		return NULL;
+
+	id = os_malloc(data->id_len);
+	if (id == NULL)
+		return NULL;
+
+	*len = data->id_len;
+	os_memcpy(id, data->session_id, data->id_len);
+
+	return id;
+}
+
+
 int eap_peer_tls_register(void)
 {
 	struct eap_method *eap;
@@ -304,6 +339,7 @@ int eap_peer_tls_register(void)
 	eap->process = eap_tls_process;
 	eap->isKeyAvailable = eap_tls_isKeyAvailable;
 	eap->getKey = eap_tls_getKey;
+	eap->getSessionId = eap_tls_get_session_id;
 	eap->get_status = eap_tls_get_status;
 	eap->has_reauth_data = eap_tls_has_reauth_data;
 	eap->deinit_for_reauth = eap_tls_deinit_for_reauth;

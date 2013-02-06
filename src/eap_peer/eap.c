@@ -161,6 +161,8 @@ SM_STATE(EAP, INITIALIZE)
 	eapol_set_bool(sm, EAPOL_eapFail, FALSE);
 	os_free(sm->eapKeyData);
 	sm->eapKeyData = NULL;
+	os_free(sm->eapSessionId);
+	sm->eapSessionId = NULL;
 	sm->eapKeyAvailable = FALSE;
 	eapol_set_bool(sm, EAPOL_eapRestart, FALSE);
 	sm->lastId = -1; /* new session - make sure this does not match with
@@ -403,6 +405,13 @@ SM_STATE(EAP, METHOD)
 		os_free(sm->eapKeyData);
 		sm->eapKeyData = sm->m->getKey(sm, sm->eap_method_priv,
 					       &sm->eapKeyDataLen);
+		os_free(sm->eapSessionId);
+		sm->eapSessionId = sm->m->getSessionId(sm, sm->eap_method_priv,
+						       &sm->eapSessionIdLen);
+		if (sm->eapSessionId) {
+			wpa_hexdump(MSG_DEBUG, "EAP: Session-Id",
+				    sm->eapSessionId, sm->eapSessionIdLen);
+		}
 	}
 }
 
@@ -1462,6 +1471,8 @@ void eap_sm_abort(struct eap_sm *sm)
 	sm->eapRespData = NULL;
 	os_free(sm->eapKeyData);
 	sm->eapKeyData = NULL;
+	os_free(sm->eapSessionId);
+	sm->eapSessionId = NULL;
 
 	/* This is not clearly specified in the EAP statemachines draft, but
 	 * it seems necessary to make sure that some of the EAPOL variables get
@@ -2155,6 +2166,28 @@ void eap_notify_lower_layer_success(struct eap_sm *sm)
 	wpa_msg(sm->msg_ctx, MSG_INFO, WPA_EVENT_EAP_SUCCESS
 		"EAP authentication completed successfully (based on lower "
 		"layer success)");
+}
+
+
+/**
+ * eap_get_eapSessionId - Get Session-Id from EAP state machine
+ * @sm: Pointer to EAP state machine allocated with eap_peer_sm_init()
+ * @len: Pointer to variable that will be set to number of bytes in the session
+ * Returns: Pointer to the EAP Session-Id or %NULL on failure
+ *
+ * Fetch EAP Session-Id from the EAP state machine. The Session-Id is available
+ * only after a successful authentication. EAP state machine continues to manage
+ * the Session-Id and the caller must not change or free the returned data.
+ */
+const u8 * eap_get_eapSessionId(struct eap_sm *sm, size_t *len)
+{
+	if (sm == NULL || sm->eapSessionId == NULL) {
+		*len = 0;
+		return NULL;
+	}
+
+	*len = sm->eapSessionIdLen;
+	return sm->eapSessionId;
 }
 
 

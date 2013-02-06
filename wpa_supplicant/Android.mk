@@ -1473,6 +1473,12 @@ ifneq ($(BOARD_WPA_SUPPLICANT_PRIVATE_LIB),)
 LOCAL_STATIC_LIBRARIES += $(BOARD_WPA_SUPPLICANT_PRIVATE_LIB)
 endif
 LOCAL_SHARED_LIBRARIES := libc libcutils
+
+ifdef CONFIG_EAP_PROXY
+OBJS += src/eap_peer/eap_proxy_$(CONFIG_EAP_PROXY).c
+include $(LOCAL_PATH)/eap_proxy_$(CONFIG_EAP_PROXY).mk
+endif
+
 ifeq ($(CONFIG_TLS), openssl)
 LOCAL_SHARED_LIBRARIES += libcrypto libssl
 endif

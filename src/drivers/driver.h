@@ -122,6 +122,13 @@ struct hostapd_hw_modes {
 #define IEEE80211_CAP_IBSS	0x0002
 #define IEEE80211_CAP_PRIVACY	0x0010
 
+/* DMG (60 GHz) IEEE 802.11ad */
+/* type - bits 0..1 */
+#define IEEE80211_CAP_DMG_MASK	0x0003
+#define IEEE80211_CAP_DMG_IBSS	0x0001 /* Tx by: STA */
+#define IEEE80211_CAP_DMG_PBSS	0x0002 /* Tx by: PCP */
+#define IEEE80211_CAP_DMG_AP	0x0003 /* Tx by: AP */
+
 #define WPA_SCAN_QUAL_INVALID		BIT(0)
 #define WPA_SCAN_NOISE_INVALID		BIT(1)
 #define WPA_SCAN_LEVEL_INVALID		BIT(2)

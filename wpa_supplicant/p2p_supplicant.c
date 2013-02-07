@@ -3856,7 +3856,11 @@ static int wpas_p2p_init_go_params(struct wpa_supplicant *wpa_s,
 		wpa_printf(MSG_DEBUG, "P2P: Set GO freq based on configured "
 			   "frequency %d MHz", params->freq);
 	} else if (wpa_s->conf->p2p_oper_reg_class == 115 ||
-		   wpa_s->conf->p2p_oper_reg_class == 124) {
+		   wpa_s->conf->p2p_oper_reg_class == 116 ||
+		   wpa_s->conf->p2p_oper_reg_class == 117 ||
+		   wpa_s->conf->p2p_oper_reg_class == 124 ||
+		   wpa_s->conf->p2p_oper_reg_class == 126 ||
+		   wpa_s->conf->p2p_oper_reg_class == 127) {
 		params->freq = 5000 + 5 * wpa_s->conf->p2p_oper_channel;
 		wpa_printf(MSG_DEBUG, "P2P: Set GO freq based on configured "
 			   "frequency %d MHz", params->freq);

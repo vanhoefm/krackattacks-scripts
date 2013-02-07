@@ -1125,7 +1125,8 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 						   data ? &data->scan_info :
 						   NULL, 1);
 	if (scan_res == NULL) {
-		if (wpa_s->conf->ap_scan == 2 || ap)
+		if (wpa_s->conf->ap_scan == 2 || ap ||
+		    wpa_s->scan_res_handler == scan_only_handler)
 			return -1;
 		wpa_dbg(wpa_s, MSG_DEBUG, "Failed to get scan results - try "
 			"scanning again");

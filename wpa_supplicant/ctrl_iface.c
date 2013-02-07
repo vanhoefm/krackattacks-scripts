@@ -5125,10 +5125,14 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		wpa_supplicant_cancel_scan(wpa_s);
 		wpa_supplicant_deauthenticate(wpa_s,
 					      WLAN_REASON_DEAUTH_LEAVING);
-	} else if (os_strcmp(buf, "SCAN") == 0) {
+	} else if (os_strcmp(buf, "SCAN") == 0 ||
+		   os_strncmp(buf, "SCAN ", 5) == 0) {
 		if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED)
 			reply_len = -1;
 		else {
+			if (os_strlen(buf) > 4 &&
+			    os_strncasecmp(buf + 5, "TYPE=ONLY", 9) == 0)
+				wpa_s->scan_res_handler = scan_only_handler;
 			if (!wpa_s->sched_scanning && !wpa_s->scanning &&
 			    ((wpa_s->wpa_state <= WPA_SCANNING) ||
 			     (wpa_s->wpa_state == WPA_COMPLETED))) {

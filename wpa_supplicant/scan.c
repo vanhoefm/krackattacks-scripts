@@ -11,6 +11,7 @@
 #include "utils/common.h"
 #include "utils/eloop.h"
 #include "common/ieee802_11_defs.h"
+#include "common/wpa_ctrl.h"
 #include "config.h"
 #include "wpa_supplicant_i.h"
 #include "driver_i.h"
@@ -1579,4 +1580,17 @@ int wpa_supplicant_update_scan_results(struct wpa_supplicant *wpa_s)
 	wpa_scan_results_free(scan_res);
 
 	return 0;
+}
+
+
+/**
+ * scan_only_handler - Reports scan results
+ */
+void scan_only_handler(struct wpa_supplicant *wpa_s,
+		       struct wpa_scan_results *scan_res)
+{
+	wpa_dbg(wpa_s, MSG_DEBUG, "Scan-only results received");
+	wpa_msg_ctrl(wpa_s, MSG_INFO, WPA_EVENT_SCAN_RESULTS);
+	wpas_notify_scan_results(wpa_s);
+	wpas_notify_scan_done(wpa_s, 1);
 }

@@ -3148,10 +3148,17 @@ static int wpa_supplicant_ctrl_iface_bss(struct wpa_supplicant *wpa_s,
 				return 0;
 			}
 
-			id1 = atoi(cmd + 6);
-			bss = wpa_bss_get_id(wpa_s, id1);
-			id2 = atoi(ctmp + 1);
-			if (id2 == 0)
+			if (*(cmd + 6) == '-')
+				id1 = 0;
+			else
+				id1 = atoi(cmd + 6);
+			ctmp++;
+			if (*ctmp >= '0' && *ctmp <= '9')
+				id2 = atoi(ctmp);
+			else
+				id2 = (unsigned int) -1;
+			bss = wpa_bss_get_id_range(wpa_s, id1, id2);
+			if (id2 == (unsigned int) -1)
 				bsslast = dl_list_last(&wpa_s->bss_id,
 						       struct wpa_bss,
 						       list_id);

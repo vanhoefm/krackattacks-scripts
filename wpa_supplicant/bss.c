@@ -865,6 +865,29 @@ struct wpa_bss * wpa_bss_get_id(struct wpa_supplicant *wpa_s, unsigned int id)
 
 
 /**
+ * wpa_bss_get_id_range - Fetch a BSS table entry based on identifier range
+ * @wpa_s: Pointer to wpa_supplicant data
+ * @idf: Smallest allowed identifier assigned for the entry
+ * @idf: Largest allowed identifier assigned for the entry
+ * Returns: Pointer to the BSS entry or %NULL if not found
+ *
+ * This function is similar to wpa_bss_get_id() but allows a BSS entry with the
+ * smallest id value to be fetched within the specified range without the
+ * caller having to know the exact id.
+ */
+struct wpa_bss * wpa_bss_get_id_range(struct wpa_supplicant *wpa_s,
+				      unsigned int idf, unsigned int idl)
+{
+	struct wpa_bss *bss;
+	dl_list_for_each(bss, &wpa_s->bss_id, struct wpa_bss, list_id) {
+		if (bss->id >= idf && bss->id <= idl)
+			return bss;
+	}
+	return NULL;
+}
+
+
+/**
  * wpa_bss_get_ie - Fetch a specified information element from a BSS entry
  * @bss: BSS table entry
  * @ie: Information element identitifier (WLAN_EID_*)

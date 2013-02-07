@@ -402,21 +402,10 @@ static struct wpabuf * p2p_group_build_probe_resp_ie(struct p2p_group *group)
 	u8 *group_info;
 	struct wpabuf *p2p_subelems, *ie;
 	struct p2p_group_member *m;
-	size_t extra = 0;
 
-#ifdef CONFIG_WIFI_DISPLAY
-	if (group->wfd_ie)
-		extra += wpabuf_len(group->wfd_ie);
-#endif /* CONFIG_WIFI_DISPLAY */
-
-	p2p_subelems = wpabuf_alloc(500 + extra);
+	p2p_subelems = wpabuf_alloc(500);
 	if (p2p_subelems == NULL)
 		return NULL;
-
-#ifdef CONFIG_WIFI_DISPLAY
-	if (group->wfd_ie)
-		wpabuf_put_buf(p2p_subelems, group->wfd_ie);
-#endif /* CONFIG_WIFI_DISPLAY */
 
 	p2p_group_add_common_ies(group, p2p_subelems);
 	p2p_group_add_noa(p2p_subelems, group->noa);
@@ -435,6 +424,13 @@ static struct wpabuf * p2p_group_build_probe_resp_ie(struct p2p_group *group)
 
 	ie = p2p_group_encaps_probe_resp(p2p_subelems);
 	wpabuf_free(p2p_subelems);
+
+#ifdef CONFIG_WIFI_DISPLAY
+	if (group->wfd_ie) {
+		struct wpabuf *wfd = wpabuf_dup(group->wfd_ie);
+		ie = wpabuf_concat(wfd, ie);
+	}
+#endif /* CONFIG_WIFI_DISPLAY */
 
 	return ie;
 }

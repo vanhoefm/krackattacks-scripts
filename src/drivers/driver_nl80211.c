@@ -2153,6 +2153,43 @@ static void nl80211_tdls_oper_event(struct wpa_driver_nl80211_data *drv,
 }
 
 
+static void nl80211_connect_failed_event(struct wpa_driver_nl80211_data *drv,
+					 struct nlattr **tb)
+{
+	union wpa_event_data data;
+	u32 reason;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Connect failed event");
+
+	if (!tb[NL80211_ATTR_MAC] || !tb[NL80211_ATTR_CONN_FAILED_REASON])
+		return;
+
+	os_memset(&data, 0, sizeof(data));
+	os_memcpy(data.connect_failed_reason.addr,
+		  nla_data(tb[NL80211_ATTR_MAC]), ETH_ALEN);
+
+	reason = nla_get_u32(tb[NL80211_ATTR_CONN_FAILED_REASON]);
+	switch (reason) {
+	case NL80211_CONN_FAIL_MAX_CLIENTS:
+		wpa_printf(MSG_DEBUG, "nl80211: Max client reached");
+		data.connect_failed_reason.code = MAX_CLIENT_REACHED;
+		break;
+	case NL80211_CONN_FAIL_BLOCKED_CLIENT:
+		wpa_printf(MSG_DEBUG, "nl80211: Blocked client " MACSTR
+			   " tried to connect",
+			   MAC2STR(data.connect_failed_reason.addr));
+		data.connect_failed_reason.code = BLOCKED_CLIENT;
+		break;
+	default:
+		wpa_printf(MSG_DEBUG, "nl8021l: Unknown connect failed reason "
+			   "%u", reason);
+		return;
+	}
+
+	wpa_supplicant_event(drv->ctx, EVENT_CONNECT_FAILED_REASON, &data);
+}
+
+
 static void nl80211_spurious_frame(struct i802_bss *bss, struct nlattr **tb,
 				   int wds)
 {
@@ -2289,6 +2326,9 @@ static void do_process_drv_event(struct i802_bss *bss, int cmd,
 		break;
 	case NL80211_CMD_TDLS_OPER:
 		nl80211_tdls_oper_event(drv, tb);
+		break;
+	case NL80211_CMD_CONN_FAILED:
+		nl80211_connect_failed_event(drv, tb);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "nl80211: Ignored unknown event "

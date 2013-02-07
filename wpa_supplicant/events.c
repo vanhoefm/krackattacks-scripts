@@ -2962,6 +2962,16 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		wpas_wps_start_pbc(wpa_s, NULL, 0);
 #endif /* CONFIG_WPS */
 		break;
+	case EVENT_CONNECT_FAILED_REASON:
+#ifdef CONFIG_AP
+		if (!wpa_s->ap_iface || !data)
+			break;
+		hostapd_event_connect_failed_reason(
+			wpa_s->ap_iface->bss[0],
+			data->connect_failed_reason.addr,
+			data->connect_failed_reason.code);
+#endif /* CONFIG_AP */
+		break;
 	default:
 		wpa_msg(wpa_s, MSG_INFO, "Unknown event %d", event);
 		break;

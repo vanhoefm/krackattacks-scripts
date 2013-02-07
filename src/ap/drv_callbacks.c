@@ -13,6 +13,7 @@
 #include "drivers/driver.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
+#include "common/wpa_ctrl.h"
 #include "crypto/random.h"
 #include "p2p/p2p.h"
 #include "wps/wps.h"
@@ -390,6 +391,22 @@ void hostapd_event_ch_switch(struct hostapd_data *hapd, int freq, int ht,
 	hapd->iconf->ieee80211n = ht;
 	hapd->iconf->secondary_channel = offset;
 #endif /* NEED_AP_MLME */
+}
+
+
+void hostapd_event_connect_failed_reason(struct hostapd_data *hapd,
+					 const u8 *addr, int reason_code)
+{
+	switch (reason_code) {
+	case MAX_CLIENT_REACHED:
+		wpa_msg(hapd->msg_ctx, MSG_INFO, AP_REJECTED_MAX_STA MACSTR,
+			MAC2STR(addr));
+		break;
+	case BLOCKED_CLIENT:
+		wpa_msg(hapd->msg_ctx, MSG_INFO, AP_REJECTED_BLOCKED_STA MACSTR,
+			MAC2STR(addr));
+		break;
+	}
 }
 
 
@@ -827,6 +844,13 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		hostapd_event_ch_switch(hapd, data->ch_switch.freq,
 					data->ch_switch.ht_enabled,
 					data->ch_switch.ch_offset);
+		break;
+	case EVENT_CONNECT_FAILED_REASON:
+		if (!data)
+			break;
+		hostapd_event_connect_failed_reason(
+			hapd, data->connect_failed_reason.addr,
+			data->connect_failed_reason.code);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "Unknown event %d", event);

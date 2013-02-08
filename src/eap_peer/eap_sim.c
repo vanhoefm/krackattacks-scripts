@@ -1084,6 +1084,29 @@ static u8 * eap_sim_getKey(struct eap_sm *sm, void *priv, size_t *len)
 }
 
 
+static u8 * eap_sim_get_session_id(struct eap_sm *sm, void *priv, size_t *len)
+{
+	struct eap_sim_data *data = priv;
+	u8 *id;
+
+	if (data->state != SUCCESS)
+		return NULL;
+
+	*len = 1 + data->num_chal * GSM_RAND_LEN + EAP_SIM_NONCE_MT_LEN;
+	id = os_malloc(*len);
+	if (id == NULL)
+		return NULL;
+
+	id[0] = EAP_TYPE_SIM;
+	os_memcpy(id + 1, data->rand, data->num_chal * GSM_RAND_LEN);
+	os_memcpy(id + 1 + data->num_chal * GSM_RAND_LEN, data->nonce_mt,
+		  EAP_SIM_NONCE_MT_LEN);
+	wpa_hexdump(MSG_DEBUG, "EAP-SIM: Derived Session-Id", id, *len);
+
+	return id;
+}
+
+
 static u8 * eap_sim_get_emsk(struct eap_sm *sm, void *priv, size_t *len)
 {
 	struct eap_sim_data *data = priv;
@@ -1118,6 +1141,7 @@ int eap_peer_sim_register(void)
 	eap->process = eap_sim_process;
 	eap->isKeyAvailable = eap_sim_isKeyAvailable;
 	eap->getKey = eap_sim_getKey;
+	eap->getSessionId = eap_sim_get_session_id;
 	eap->has_reauth_data = eap_sim_has_reauth_data;
 	eap->deinit_for_reauth = eap_sim_deinit_for_reauth;
 	eap->init_for_reauth = eap_sim_init_for_reauth;

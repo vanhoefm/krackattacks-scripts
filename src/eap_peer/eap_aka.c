@@ -1340,6 +1340,28 @@ static u8 * eap_aka_getKey(struct eap_sm *sm, void *priv, size_t *len)
 }
 
 
+static u8 * eap_aka_get_session_id(struct eap_sm *sm, void *priv, size_t *len)
+{
+	struct eap_aka_data *data = priv;
+	u8 *id;
+
+	if (data->state != SUCCESS)
+		return NULL;
+
+	*len = 1 + EAP_AKA_RAND_LEN + EAP_AKA_AUTN_LEN;
+	id = os_malloc(*len);
+	if (id == NULL)
+		return NULL;
+
+	id[0] = data->eap_method;
+	os_memcpy(id + 1, data->rand, EAP_AKA_RAND_LEN);
+	os_memcpy(id + 1 + EAP_AKA_RAND_LEN, data->autn, EAP_AKA_AUTN_LEN);
+	wpa_hexdump(MSG_DEBUG, "EAP-AKA: Derived Session-Id", id, *len);
+
+	return id;
+}
+
+
 static u8 * eap_aka_get_emsk(struct eap_sm *sm, void *priv, size_t *len)
 {
 	struct eap_aka_data *data = priv;
@@ -1374,6 +1396,7 @@ int eap_peer_aka_register(void)
 	eap->process = eap_aka_process;
 	eap->isKeyAvailable = eap_aka_isKeyAvailable;
 	eap->getKey = eap_aka_getKey;
+	eap->getSessionId = eap_aka_get_session_id;
 	eap->has_reauth_data = eap_aka_has_reauth_data;
 	eap->deinit_for_reauth = eap_aka_deinit_for_reauth;
 	eap->init_for_reauth = eap_aka_init_for_reauth;
@@ -1404,6 +1427,7 @@ int eap_peer_aka_prime_register(void)
 	eap->process = eap_aka_process;
 	eap->isKeyAvailable = eap_aka_isKeyAvailable;
 	eap->getKey = eap_aka_getKey;
+	eap->getSessionId = eap_aka_get_session_id;
 	eap->has_reauth_data = eap_aka_has_reauth_data;
 	eap->deinit_for_reauth = eap_aka_deinit_for_reauth;
 	eap->init_for_reauth = eap_aka_init_for_reauth;

@@ -1066,8 +1066,10 @@ int p2p_other_scan_completed(struct p2p_data *p2p)
 		"now that previous scan was completed");
 	if (p2p_find(p2p, p2p->last_p2p_find_timeout, p2p->find_type,
 		     p2p->num_req_dev_types, p2p->req_dev_types,
-		     p2p->find_dev_id, p2p->search_delay) < 0)
+		     p2p->find_dev_id, p2p->search_delay) < 0) {
+		wpa_msg(p2p->cfg->msg_ctx, MSG_INFO, P2P_EVENT_FIND_STOPPED);
 		return 0;
+	}
 	return 1;
 }
 

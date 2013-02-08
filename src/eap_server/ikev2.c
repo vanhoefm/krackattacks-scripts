@@ -990,7 +990,7 @@ static int ikev2_build_kei(struct ikev2_initiator_data *data,
 	 */
 	wpabuf_put(msg, data->dh->prime_len - wpabuf_len(pv));
 	wpabuf_put_buf(msg, pv);
-	os_free(pv);
+	wpabuf_free(pv);
 
 	plen = (u8 *) wpabuf_put(msg, 0) - (u8 *) phdr;
 	WPA_PUT_BE16(phdr->payload_length, plen);

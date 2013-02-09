@@ -133,8 +133,7 @@ int hostapd_ht_operation_update(struct hostapd_iface *iface)
 	new_op_mode = 0;
 	if (iface->num_sta_no_ht)
 		new_op_mode = OP_MODE_MIXED;
-	else if ((iface->conf->ht_capab & HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET)
-		 && iface->num_sta_ht_20mhz)
+	else if (iface->conf->secondary_channel && iface->num_sta_ht_20mhz)
 		new_op_mode = OP_MODE_20MHZ_HT_STA_ASSOCED;
 	else if (iface->olbc_ht)
 		new_op_mode = OP_MODE_MAY_BE_LEGACY_STAS;

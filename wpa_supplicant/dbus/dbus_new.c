@@ -1808,6 +1808,9 @@ void wpas_dbus_bss_signal_prop_changed(struct wpa_supplicant *wpa_s,
 	case WPAS_DBUS_BSS_PROP_RSN:
 		prop = "RSN";
 		break;
+	case WPAS_DBUS_BSS_PROP_WPS:
+		prop = "WPS";
+		break;
 	case WPAS_DBUS_BSS_PROP_IES:
 		prop = "IEs";
 		break;

@@ -185,6 +185,34 @@ def wps_write_password_tag(clf):
         time.sleep(0.1)
 
 
+def find_peer(clf):
+    while True:
+        if nfc.llcp.connected():
+            print "LLCP connected"
+        general_bytes = nfc.llcp.startup({})
+        peer = clf.listen(ord(os.urandom(1)) + 200, general_bytes)
+        if isinstance(peer, nfc.DEP):
+            print "listen -> DEP";
+            if peer.general_bytes.startswith("Ffm"):
+                print "Found DEP"
+                return peer
+            print "mismatch in general_bytes"
+            print peer.general_bytes
+
+        peer = clf.poll(general_bytes)
+        if isinstance(peer, nfc.DEP):
+            print "poll -> DEP";
+            if peer.general_bytes.startswith("Ffm"):
+                print "Found DEP"
+                return peer
+            print "mismatch in general_bytes"
+            print peer.general_bytes
+
+        if peer:
+            print "Found tag"
+            return peer
+
+
 def main():
     clf = nfc.ContactlessFrontend()
 
@@ -200,25 +228,18 @@ def main():
         while True:
             print "Waiting for a tag or peer to be touched"
 
-            while True:
-                general_bytes = nfc.llcp.startup({})
-                tag = clf.poll(general_bytes)
-                if tag == None:
-                    continue
+            tag = find_peer(clf)
+            if isinstance(tag, nfc.DEP):
+                wps_handover_init(tag)
+                continue
 
-                if isinstance(tag, nfc.DEP):
-                    wps_handover_init(tag)
-                    break
+            if tag.ndef:
+                wps_tag_read(tag)
+                continue
 
-                if tag.ndef:
-                    wps_tag_read(tag)
-                    break
-
-                if tag:
-                    print "Not an NDEF tag - remove tag"
-                    while tag.is_present:
-                        time.sleep(0.1)
-                    break
+            print "Not an NDEF tag - remove tag"
+            while tag.is_present:
+                time.sleep(0.1)
 
     except KeyboardInterrupt:
         raise SystemExit

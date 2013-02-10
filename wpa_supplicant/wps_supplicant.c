@@ -1977,8 +1977,10 @@ int wpas_wps_nfc_tag_read(struct wpa_supplicant *wpa_s,
 }
 
 
-struct wpabuf * wpas_wps_nfc_handover_req(struct wpa_supplicant *wpa_s)
+struct wpabuf * wpas_wps_nfc_handover_req(struct wpa_supplicant *wpa_s, int cr)
 {
+	if (cr)
+		return ndef_build_wifi_hc(1);
 	return ndef_build_wifi_hr();
 }
 

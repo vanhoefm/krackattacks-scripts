@@ -9,6 +9,8 @@
 import os
 import sys
 import time
+import random
+import StringIO
 
 import nfc
 import nfc.ndef
@@ -56,7 +58,7 @@ def wpas_get_handover_req():
     wpas = wpas_connect()
     if (wpas == None):
         return None
-    return wpas.request("NFC_GET_HANDOVER_REQ NDEF WPS").rstrip().decode("hex")
+    return wpas.request("NFC_GET_HANDOVER_REQ NDEF WPS-CR").rstrip().decode("hex")
 
 
 def wpas_put_handover_sel(message):
@@ -71,11 +73,21 @@ def wps_handover_init(peer):
 
     data = wpas_get_handover_req()
     if (data == None):
-        print "Could not get handover request message from wpa_supplicant"
+        print "Could not get handover request carrier record from wpa_supplicant"
         return
-    print "Handover request from wpa_supplicant: " + data.encode("hex")
-    message = nfc.ndef.Message(data)
-    print "Parsed handover request:"
+    print "Handover request carrier record from wpa_supplicant: " + data.encode("hex")
+    record = nfc.ndef.Record()
+    f = StringIO.StringIO(data)
+    record._read(f)
+    record = nfc.ndef.HandoverCarrierRecord(record)
+    print "Parsed handover request carrier record:"
+    print record.pretty()
+
+    message = nfc.ndef.HandoverRequestMessage(version="1.2")
+    message.nonce = random.randint(0, 0xffff)
+    message.add_carrier(record, "active")
+
+    print "Handover request:"
     print message.pretty()
 
     nfc.llcp.activate(peer);

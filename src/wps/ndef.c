@@ -170,10 +170,30 @@ struct wpabuf * ndef_build_wifi(const struct wpabuf *buf)
 }
 
 
+struct wpabuf * ndef_build_wifi_hc(int begin)
+{
+	struct wpabuf *hc, *carrier;
+
+	carrier = wpabuf_alloc(2 + os_strlen(wifi_handover_type));
+	if (carrier == NULL)
+		return NULL;
+	wpabuf_put_u8(carrier, 0x02); /* Carrier Type Format */
+	wpabuf_put_u8(carrier, os_strlen(wifi_handover_type));
+	wpabuf_put_str(carrier, wifi_handover_type);
+
+	hc = ndef_build_record((begin ? FLAG_MESSAGE_BEGIN : 0) |
+			       FLAG_MESSAGE_END | FLAG_TNF_NFC_FORUM, "Hc", 2,
+			       "0", 1, carrier);
+	wpabuf_free(carrier);
+
+	return hc;
+}
+
+
 struct wpabuf * ndef_build_wifi_hr(void)
 {
 	struct wpabuf *rn, *cr, *ac_payload, *ac, *hr_payload, *hr;
-	struct wpabuf *carrier, *hc;
+	struct wpabuf *hc;
 
 	rn = wpabuf_alloc(2);
 	if (rn == NULL)
@@ -224,18 +244,7 @@ struct wpabuf * ndef_build_wifi_hr(void)
 	if (hr == NULL)
 		return NULL;
 
-	carrier = wpabuf_alloc(2 + os_strlen(wifi_handover_type));
-	if (carrier == NULL) {
-		wpabuf_free(hr);
-		return NULL;
-	}
-	wpabuf_put_u8(carrier, 0x02); /* Carrier Type Format */
-	wpabuf_put_u8(carrier, os_strlen(wifi_handover_type));
-	wpabuf_put_str(carrier, wifi_handover_type);
-
-	hc = ndef_build_record(FLAG_MESSAGE_END | FLAG_TNF_NFC_FORUM, "Hc", 2,
-			       "0", 1, carrier);
-	wpabuf_free(carrier);
+	hc = ndef_build_wifi_hc(0);
 	if (hc == NULL) {
 		wpabuf_free(hr);
 		return NULL;

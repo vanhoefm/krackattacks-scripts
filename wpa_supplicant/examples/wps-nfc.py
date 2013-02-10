@@ -115,10 +115,25 @@ def wps_handover_init(peer):
         nfc.llcp.shutdown()
         client.close()
         return
+    if message.type != "urn:nfc:wkt:Hs":
+        print "Response was not Hs - received: " + message.type
+        nfc.llcp.shutdown()
+        client.close()
+        return
 
+    print "Received message"
+    print message.pretty()
+    message = nfc.ndef.HandoverSelectMessage(message)
     print "Handover select received"
     print message.pretty()
-    wpas_put_handover_sel(message)
+
+    for carrier in message.carriers:
+        print "Remote carrier type: " + carrier.type
+        if carrier.type == "application/vnd.wfa.wsc":
+            print "WPS carrier type match - send to wpa_supplicant"
+            wpas_put_handover_sel(carrier.record)
+            wifi = nfc.ndef.WifiConfigRecord(carrier.record)
+            print wifi.pretty()
 
     print "Remove peer"
     nfc.llcp.shutdown()

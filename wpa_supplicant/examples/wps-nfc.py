@@ -75,7 +75,8 @@ def wps_handover_init(peer):
         return
     print "Handover request from wpa_supplicant: " + data.encode("hex")
     message = nfc.ndef.Message(data)
-    print "Parsed handover request: " + message.pretty()
+    print "Parsed handover request:"
+    print message.pretty()
 
     nfc.llcp.activate(peer);
 
@@ -97,6 +98,12 @@ def wps_handover_init(peer):
 
     print "Receiving handover response"
     message = client._recv()
+    if message is None:
+        print "No response received"
+        nfc.llcp.shutdown()
+        client.close()
+        return
+
     print "Handover select received"
     print message.pretty()
     wpas_put_handover_sel(message)

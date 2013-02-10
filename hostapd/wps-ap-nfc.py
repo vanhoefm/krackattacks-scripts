@@ -92,7 +92,6 @@ def wps_handover_init(peer):
     print "Parsed handover request: " + message.pretty()
 
     nfc.llcp.activate(peer);
-    time.sleep(0.5)
 
     client = nfc.handover.HandoverClient()
     try:

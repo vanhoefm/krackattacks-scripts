@@ -86,6 +86,8 @@ static int wpas_p2p_create_iface(struct wpa_supplicant *wpa_s);
 static void wpas_p2p_cross_connect_setup(struct wpa_supplicant *wpa_s);
 static void wpas_p2p_group_idle_timeout(void *eloop_ctx, void *timeout_ctx);
 static void wpas_p2p_set_group_idle_timeout(struct wpa_supplicant *wpa_s);
+static void wpas_p2p_group_formation_timeout(void *eloop_ctx,
+					     void *timeout_ctx);
 static void wpas_p2p_fallback_to_go_neg(struct wpa_supplicant *wpa_s,
 					int group_added);
 static int wpas_p2p_stop_find_oper(struct wpa_supplicant *wpa_s);
@@ -316,6 +318,10 @@ static int wpas_p2p_group_delete(struct wpa_supplicant *wpa_s,
 
 	if (eloop_cancel_timeout(wpas_p2p_group_idle_timeout, wpa_s, NULL) > 0)
 		wpa_printf(MSG_DEBUG, "P2P: Cancelled P2P group idle timeout");
+	if (eloop_cancel_timeout(wpas_p2p_group_formation_timeout,
+				 wpa_s->parent, NULL) > 0)
+		wpa_printf(MSG_DEBUG, "P2P: Cancelled P2P group formation "
+			   "timeout");
 
 	if (removal_reason != P2P_GROUP_REMOVAL_SILENT && ssid)
 		wpas_notify_p2p_group_removed(wpa_s, ssid, gtype);

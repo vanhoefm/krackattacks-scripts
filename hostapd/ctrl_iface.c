@@ -352,6 +352,46 @@ static int hostapd_ctrl_iface_wps_nfc_token(struct hostapd_data *hapd,
 
 	return -1;
 }
+
+
+static int hostapd_ctrl_iface_nfc_get_handover_sel(struct hostapd_data *hapd,
+						   char *cmd, char *reply,
+						   size_t max_len)
+{
+	struct wpabuf *buf;
+	int res;
+	char *pos;
+	int ndef;
+
+	pos = os_strchr(cmd, ' ');
+	if (pos == NULL)
+		return -1;
+	*pos++ = '\0';
+
+	if (os_strcmp(cmd, "WPS") == 0)
+		ndef = 0;
+	else if (os_strcmp(cmd, "NDEF") == 0)
+		ndef = 1;
+	else
+		return -1;
+
+	if (os_strcmp(pos, "WPS-CR") == 0)
+		buf = hostapd_wps_nfc_hs_cr(hapd, ndef);
+	else
+		buf = NULL;
+	if (buf == NULL)
+		return -1;
+
+	res = wpa_snprintf_hex_uppercase(reply, max_len, wpabuf_head(buf),
+					 wpabuf_len(buf));
+	reply[res++] = '\n';
+	reply[res] = '\0';
+
+	wpabuf_free(buf);
+
+	return res;
+}
+
 #endif /* CONFIG_WPS_NFC */
 
 
@@ -913,6 +953,9 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 	} else if (os_strncmp(buf, "WPS_NFC_TOKEN ", 14) == 0) {
 		reply_len = hostapd_ctrl_iface_wps_nfc_token(
 			hapd, buf + 14, reply, reply_size);
+	} else if (os_strncmp(buf, "NFC_GET_HANDOVER_SEL ", 21) == 0) {
+		reply_len = hostapd_ctrl_iface_nfc_get_handover_sel(
+			hapd, buf + 21, reply, reply_size);
 #endif /* CONFIG_WPS_NFC */
 #endif /* CONFIG_WPS */
 #ifdef CONFIG_WNM

@@ -1583,6 +1583,16 @@ struct wpabuf * hostapd_wps_nfc_config_token(struct hostapd_data *hapd,
 }
 
 
+struct wpabuf * hostapd_wps_nfc_hs_cr(struct hostapd_data *hapd, int ndef)
+{
+	/*
+	 * Handover Select carrier record for WPS uses the same format as
+	 * configuration token.
+	 */
+	return hostapd_wps_nfc_config_token(hapd, ndef);
+}
+
+
 struct wpabuf * hostapd_wps_nfc_token_gen(struct hostapd_data *hapd, int ndef)
 {
 	return wps_nfc_token_gen(ndef, &hapd->conf->wps_nfc_dev_pw_id,

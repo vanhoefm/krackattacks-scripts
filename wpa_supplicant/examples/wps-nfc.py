@@ -1,7 +1,7 @@
 #!/usr/bin/python
 #
 # Example nfcpy to wpa_supplicant wrapper for WPS NFC operations
-# Copyright (c) 2012, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2012-2013, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -14,6 +14,9 @@ import nfc
 import nfc.ndef
 import nfc.llcp
 import nfc.handover
+
+import logging
+logging.basicConfig()
 
 import wpactrl
 

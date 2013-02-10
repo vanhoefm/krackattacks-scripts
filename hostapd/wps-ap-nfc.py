@@ -15,6 +15,9 @@ import nfc.ndef
 import nfc.llcp
 import nfc.handover
 
+import logging
+logging.basicConfig()
+
 import wpactrl
 
 wpas_ctrl = '/var/run/hostapd'

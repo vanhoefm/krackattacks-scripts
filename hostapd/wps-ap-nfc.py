@@ -204,7 +204,7 @@ def find_peer(clf):
         if nfc.llcp.connected():
             print "LLCP connected"
         general_bytes = nfc.llcp.startup({})
-        peer = clf.listen(ord(os.urandom(1)) + 200, general_bytes)
+        peer = clf.listen(ord(os.urandom(1)) + 250, general_bytes)
         if isinstance(peer, nfc.DEP):
             print "listen -> DEP";
             if peer.general_bytes.startswith("Ffm"):

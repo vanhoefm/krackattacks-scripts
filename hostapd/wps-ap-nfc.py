@@ -66,11 +66,11 @@ def wpas_get_password_token():
     return wpas.request("WPS_NFC_TOKEN NDEF").rstrip().decode("hex")
 
 
-def wpas_get_handover_req():
+def wpas_get_handover_sel():
     wpas = wpas_connect()
     if (wpas == None):
         return None
-    return wpas.request("NFC_GET_HANDOVER_REQ NDEF WPS").rstrip().decode("hex")
+    return wpas.request("NFC_GET_HANDOVER_SEL NDEF WPS-CR").rstrip().decode("hex")
 
 
 def wpas_put_handover_sel(message):
@@ -80,44 +80,59 @@ def wpas_put_handover_sel(message):
     print wpas.request("NFC_RX_HANDOVER_SEL " + str(message).encode("hex"))
 
 
-def wps_handover_init(peer):
-    print "Trying to initiate WPS handover"
+class HandoverServer(nfc.handover.HandoverServer):
+    def __init__(self):
+        super(HandoverServer, self).__init__()
 
-    data = wpas_get_handover_req()
-    if (data == None):
-        print "Could not get handover request message from hostapd"
-        return
-    print "Handover request from hostapd: " + data.encode("hex")
-    message = nfc.ndef.Message(data)
-    print "Parsed handover request: " + message.pretty()
+    def process_request(self, request):
+        print "HandoverServer - request received"
+        print "Parsed handover request: " + request.pretty()
+
+        sel = nfc.ndef.HandoverSelectMessage(version="1.2")
+
+        for carrier in request.carriers:
+            print "Remote carrier type: " + carrier.type
+            if carrier.type == "application/vnd.wfa.wsc":
+                print "WPS carrier type match - add WPS carrier record"
+                data = wpas_get_handover_sel()
+                if data is None:
+                    print "Could not get handover select carrier record from hostapd"
+                    continue
+                print "Handover select carrier record from hostapd:"
+                print data.encode("hex")
+
+                message = nfc.ndef.Message(data);
+                sel.add_carrier(message[0], "active", message[1:])
+
+        print "Handover select:"
+        print sel.pretty()
+        print str(sel).encode("hex")
+
+        print "Sending handover select"
+        return sel
+
+
+def wps_handover_resp(peer):
+    print "Trying to handle WPS handover"
+
+    srv = HandoverServer()
 
     nfc.llcp.activate(peer);
 
-    client = nfc.handover.HandoverClient()
     try:
         print "Trying handover";
-        client.connect()
-        print "Connected for handover"
+        srv.start()
+        print "Wait for disconnect"
+        while nfc.llcp.connected():
+            time.sleep(0.1)
+        print "Disconnected after handover"
     except nfc.llcp.ConnectRefused:
         print "Handover connection refused"
         nfc.llcp.shutdown()
-        client.close()
         return
-
-    print "Sending handover request"
-
-    if not client.send(message):
-        print "Failed to send handover request"
-
-    print "Receiving handover response"
-    message = client._recv()
-    print "Handover select received"
-    print message.pretty()
-    wpas_put_handover_sel(message)
 
     print "Remove peer"
     nfc.llcp.shutdown()
-    client.close()
     print "Done with handover"
 
 
@@ -229,7 +244,7 @@ def main():
 
             tag = find_peer(clf)
             if isinstance(tag, nfc.DEP):
-                wps_handover_init(tag)
+                wps_handover_resp(tag)
                 continue
 
             if tag.ndef:

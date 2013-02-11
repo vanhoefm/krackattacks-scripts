@@ -2017,6 +2017,17 @@ int wpas_wps_nfc_rx_handover_sel(struct wpa_supplicant *wpa_s,
 	return ret;
 }
 
+
+int wpas_wps_nfc_report_handover(struct wpa_supplicant *wpa_s,
+				 const struct wpabuf *req,
+				 const struct wpabuf *sel)
+{
+	wpa_printf(MSG_DEBUG, "NFC: WPS connection handover reported");
+	wpa_hexdump_buf_key(MSG_DEBUG, "WPS: Carrier record in request", req);
+	wpa_hexdump_buf_key(MSG_DEBUG, "WPS: Carrier record in select", sel);
+	return wpas_wps_nfc_rx_handover_sel(wpa_s, sel);
+}
+
 #endif /* CONFIG_WPS_NFC */
 
 

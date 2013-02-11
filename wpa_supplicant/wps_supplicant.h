@@ -72,6 +72,9 @@ int wpas_wps_nfc_rx_handover_req(struct wpa_supplicant *wpa_s,
 				 const struct wpabuf *data);
 int wpas_wps_nfc_rx_handover_sel(struct wpa_supplicant *wpa_s,
 				 const struct wpabuf *data);
+int wpas_wps_nfc_report_handover(struct wpa_supplicant *wpa_s,
+				 const struct wpabuf *req,
+				 const struct wpabuf *sel);
 void wpas_wps_update_ap_info(struct wpa_supplicant *wpa_s,
 			     struct wpa_scan_results *scan_res);
 void wpas_wps_notify_assoc(struct wpa_supplicant *wpa_s, const u8 *bssid);

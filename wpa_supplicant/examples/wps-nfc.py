@@ -61,11 +61,13 @@ def wpas_get_handover_req():
     return wpas.request("NFC_GET_HANDOVER_REQ NDEF WPS-CR").rstrip().decode("hex")
 
 
-def wpas_put_handover_sel(message):
+def wpas_report_handover(req, sel):
     wpas = wpas_connect()
     if (wpas == None):
-        return
-    print wpas.request("NFC_RX_HANDOVER_SEL " + str(message).encode("hex"))
+        return None
+    return wpas.request("NFC_REPORT_HANDOVER INIT WPS " +
+                        str(req).encode("hex") + " " +
+                        str(sel).encode("hex"))
 
 
 def wps_handover_init(peer):
@@ -131,7 +133,7 @@ def wps_handover_init(peer):
         print "Remote carrier type: " + carrier.type
         if carrier.type == "application/vnd.wfa.wsc":
             print "WPS carrier type match - send to wpa_supplicant"
-            wpas_put_handover_sel(carrier.record)
+            wpas_report_handover(data, carrier.record)
             wifi = nfc.ndef.WifiConfigRecord(carrier.record)
             print wifi.pretty()
 

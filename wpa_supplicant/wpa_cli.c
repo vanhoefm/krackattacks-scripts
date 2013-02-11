@@ -842,6 +842,13 @@ static int wpa_cli_cmd_nfc_rx_handover_sel(struct wpa_ctrl *ctrl, int argc,
 	return ret;
 }
 
+
+static int wpa_cli_cmd_nfc_report_handover(struct wpa_ctrl *ctrl, int argc,
+					   char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "NFC_REPORT_HANDOVER", 4, argc, argv);
+}
+
 #endif /* CONFIG_WPS_NFC */
 
 
@@ -2499,6 +2506,10 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "nfc_rx_handover_sel", wpa_cli_cmd_nfc_rx_handover_sel, NULL,
 	  cli_cmd_flag_none,
 	  "<hexdump of payload> = report received NFC handover select" },
+	{ "nfc_report_handover", wpa_cli_cmd_nfc_report_handover, NULL,
+	  cli_cmd_flag_none,
+	  "<role> <type> <hexdump of req> <hexdump of sel> = report completed "
+	  "NFC handover" },
 #endif /* CONFIG_WPS_NFC */
 	{ "wps_reg", wpa_cli_cmd_wps_reg, wpa_cli_complete_bss,
 	  cli_cmd_flag_sensitive,

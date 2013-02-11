@@ -73,11 +73,13 @@ def wpas_get_handover_sel():
     return wpas.request("NFC_GET_HANDOVER_SEL NDEF WPS-CR").rstrip().decode("hex")
 
 
-def wpas_put_handover_sel(message):
+def wpas_report_handover(req, sel):
     wpas = wpas_connect()
     if (wpas == None):
-        return
-    print wpas.request("NFC_RX_HANDOVER_SEL " + str(message).encode("hex"))
+        return None
+    return wpas.request("NFC_REPORT_HANDOVER RESP WPS " +
+                        str(req).encode("hex") + " " +
+                        str(sel).encode("hex"))
 
 
 class HandoverServer(nfc.handover.HandoverServer):
@@ -94,12 +96,14 @@ class HandoverServer(nfc.handover.HandoverServer):
             print "Remote carrier type: " + carrier.type
             if carrier.type == "application/vnd.wfa.wsc":
                 print "WPS carrier type match - add WPS carrier record"
+                self.received_carrier = carrier.record
                 data = wpas_get_handover_sel()
                 if data is None:
                     print "Could not get handover select carrier record from hostapd"
                     continue
                 print "Handover select carrier record from hostapd:"
                 print data.encode("hex")
+                self.sent_carrier = data
 
                 message = nfc.ndef.Message(data);
                 sel.add_carrier(message[0], "active", message[1:])
@@ -130,6 +134,9 @@ def wps_handover_resp(peer):
         print "Handover connection refused"
         nfc.llcp.shutdown()
         return
+
+    if srv.sent_carrier:
+        wpas_report_handover(srv.received_carrier, srv.sent_carrier)
 
     print "Remove peer"
     nfc.llcp.shutdown()

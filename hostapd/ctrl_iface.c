@@ -392,6 +392,19 @@ static int hostapd_ctrl_iface_nfc_get_handover_sel(struct hostapd_data *hapd,
 	return res;
 }
 
+
+static int hostapd_ctrl_iface_nfc_report_handover(struct hostapd_data *hapd,
+						  char *cmd)
+{
+	/*
+	 * Since NFC connection handover provided full WPS Credential, there is
+	 * no need for additional operations within hostapd. Just report this in
+	 * debug log.
+	 */
+	wpa_printf(MSG_DEBUG, "NFC: Connection handover reported: %s", cmd);
+	return 0;
+}
+
 #endif /* CONFIG_WPS_NFC */
 
 
@@ -956,6 +969,9 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 	} else if (os_strncmp(buf, "NFC_GET_HANDOVER_SEL ", 21) == 0) {
 		reply_len = hostapd_ctrl_iface_nfc_get_handover_sel(
 			hapd, buf + 21, reply, reply_size);
+	} else if (os_strncmp(buf, "NFC_REPORT_HANDOVER ", 20) == 0) {
+		if (hostapd_ctrl_iface_nfc_report_handover(hapd, buf + 20))
+			reply_len = -1;
 #endif /* CONFIG_WPS_NFC */
 #endif /* CONFIG_WPS */
 #ifdef CONFIG_WNM

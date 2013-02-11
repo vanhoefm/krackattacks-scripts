@@ -5359,10 +5359,29 @@ int wpas_p2p_disconnect(struct wpa_supplicant *wpa_s)
 
 int wpas_p2p_in_progress(struct wpa_supplicant *wpa_s)
 {
+	int ret;
+
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
 		return 0;
 
-	return p2p_in_progress(wpa_s->global->p2p);
+	ret = p2p_in_progress(wpa_s->global->p2p);
+	if (ret == 0) {
+		/*
+		 * Check whether there is an ongoing WPS provisioning step (or
+		 * other parts of group formation) on another interface since
+		 * p2p_in_progress() does not report this to avoid issues for
+		 * scans during such provisioning step.
+		 */
+		if (wpa_s->global->p2p_group_formation &&
+		    wpa_s->global->p2p_group_formation != wpa_s) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Another interface (%s) "
+				"in group formation",
+				wpa_s->global->p2p_group_formation->ifname);
+			ret = 1;
+		}
+	}
+
+	return ret;
 }
 
 

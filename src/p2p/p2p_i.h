@@ -390,6 +390,8 @@ struct p2p_data {
 	u8 *find_dev_id;
 	u8 find_dev_id_buf[ETH_ALEN];
 
+	struct os_time find_start; /* time of last p2p_find start */
+
 	struct p2p_group **groups;
 	size_t num_groups;
 

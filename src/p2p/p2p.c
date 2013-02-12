@@ -1017,6 +1017,7 @@ int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 
 	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Starting find (type=%d)",
 		type);
+	os_get_time(&p2p->find_start);
 	if (p2p->p2p_scan_running) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: p2p_scan is "
 			"already running");
@@ -2816,6 +2817,21 @@ int p2p_scan_res_handler(struct p2p_data *p2p, const u8 *bssid, int freq,
 			 struct os_time *rx_time, int level, const u8 *ies,
 			 size_t ies_len)
 {
+	if (os_time_before(rx_time, &p2p->find_start)) {
+		/*
+		 * The driver may have cached (e.g., in cfg80211 BSS table) the
+		 * scan results for relatively long time. To avoid reporting
+		 * stale information, update P2P peers only based on results
+		 * that have based on frames received after the last p2p_find
+		 * operation was started.
+		 */
+		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Ignore old scan "
+			"result for " MACSTR " (rx_time=%u.%06u)",
+			MAC2STR(bssid), (unsigned int) rx_time->sec,
+			(unsigned int) rx_time->usec);
+		return 0;
+	}
+
 	p2p_add_device(p2p, bssid, freq, rx_time, level, ies, ies_len, 1);
 
 	return 0;

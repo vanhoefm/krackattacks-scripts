@@ -1709,6 +1709,10 @@ void wpa_supplicant_deauthenticate(struct wpa_supplicant *wpa_s,
 		zero_addr = 1;
 	}
 
+#ifdef CONFIG_TDLS
+	wpa_tdls_teardown_peers(wpa_s->wpa);
+#endif /* CONFIG_TDLS */
+
 	if (addr) {
 		wpa_drv_deauthenticate(wpa_s, addr, reason_code);
 		os_memset(&event, 0, sizeof(event));

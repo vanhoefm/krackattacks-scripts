@@ -681,8 +681,10 @@ int wpa_tdls_send_teardown(struct wpa_sm *sm, const u8 *addr, u16 reason_code)
 	pos = rbuf;
 
 	if (!wpa_tdls_get_privacy(sm) || !peer->tpk_set || !peer->tpk_success) {
-		/* Overwrite the reason code */
-		reason_code = WLAN_REASON_TDLS_TEARDOWN_UNSPECIFIED;
+		if (reason_code != WLAN_REASON_DEAUTH_LEAVING) {
+			/* Overwrite the reason code */
+			reason_code = WLAN_REASON_TDLS_TEARDOWN_UNSPECIFIED;
+		}
 		goto skip_ies;
 	}
 
@@ -2204,6 +2206,28 @@ int wpa_tdls_init(struct wpa_sm *sm)
 		   sm->tdls_external_setup ? "external" : "internal");
 
 	return 0;
+}
+
+
+void wpa_tdls_teardown_peers(struct wpa_sm *sm)
+{
+	struct wpa_tdls_peer *peer;
+
+	peer = sm->tdls;
+
+	wpa_printf(MSG_DEBUG, "TDLS: Tear down peers");
+
+	while (peer) {
+		wpa_printf(MSG_DEBUG, "TDLS: Tear down peer " MACSTR,
+			   MAC2STR(peer->addr));
+		if (sm->tdls_external_setup)
+			wpa_tdls_send_teardown(sm, peer->addr,
+					       WLAN_REASON_DEAUTH_LEAVING);
+		else
+			wpa_sm_tdls_oper(sm, TDLS_TEARDOWN, peer->addr);
+
+		peer = peer->next;
+	}
 }
 
 

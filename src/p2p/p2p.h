@@ -1183,7 +1183,7 @@ void p2p_rx_action(struct p2p_data *p2p, const u8 *da, const u8 *sa,
  * @p2p: P2P module context from p2p_init()
  * @bssid: BSSID of the scan result
  * @freq: Frequency of the channel on which the device was found in MHz
- * @age: Age of the scan result in milliseconds
+ * @rx_time: Time when the result was received
  * @level: Signal level (signal strength of the received Beacon/Probe Response
  *	frame)
  * @ies: Pointer to IEs from the scan result
@@ -1205,7 +1205,7 @@ void p2p_rx_action(struct p2p_data *p2p, const u8 *da, const u8 *sa,
  * start of a pending operation, e.g., to start a pending GO negotiation.
  */
 int p2p_scan_res_handler(struct p2p_data *p2p, const u8 *bssid, int freq,
-			 unsigned int age, int level, const u8 *ies,
+			 struct os_time *rx_time, int level, const u8 *ies,
 			 size_t ies_len);
 
 /**

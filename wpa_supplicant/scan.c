@@ -1437,15 +1437,17 @@ static void dump_scan_res(struct wpa_scan_results *scan_res)
 		    == WPA_SCAN_LEVEL_DBM) {
 			int snr = r->level - r->noise;
 			wpa_printf(MSG_EXCESSIVE, MACSTR " freq=%d qual=%d "
-				   "noise=%d level=%d snr=%d%s flags=0x%x",
+				   "noise=%d level=%d snr=%d%s flags=0x%x "
+				   "age=%u",
 				   MAC2STR(r->bssid), r->freq, r->qual,
 				   r->noise, r->level, snr,
-				   snr >= GREAT_SNR ? "*" : "", r->flags);
+				   snr >= GREAT_SNR ? "*" : "", r->flags,
+				   r->age);
 		} else {
 			wpa_printf(MSG_EXCESSIVE, MACSTR " freq=%d qual=%d "
-				   "noise=%d level=%d flags=0x%x",
+				   "noise=%d level=%d flags=0x%x age=%u",
 				   MAC2STR(r->bssid), r->freq, r->qual,
-				   r->noise, r->level, r->flags);
+				   r->noise, r->level, r->flags, r->age);
 		}
 		pos = (u8 *) (r + 1);
 		if (r->ie_len)
@@ -1536,6 +1538,13 @@ wpa_supplicant_get_scan_results(struct wpa_supplicant *wpa_s,
 		wpa_dbg(wpa_s, MSG_DEBUG, "Failed to get scan results");
 		return NULL;
 	}
+	if (scan_res->fetch_time.sec == 0) {
+		/*
+		 * Make sure we have a valid timestamp if the driver wrapper
+		 * does not set this.
+		 */
+		os_get_time(&scan_res->fetch_time);
+	}
 	filter_scan_res(wpa_s, scan_res);
 
 #ifdef CONFIG_WPS
@@ -1552,7 +1561,8 @@ wpa_supplicant_get_scan_results(struct wpa_supplicant *wpa_s,
 
 	wpa_bss_update_start(wpa_s);
 	for (i = 0; i < scan_res->num; i++)
-		wpa_bss_update_scan_res(wpa_s, scan_res->res[i]);
+		wpa_bss_update_scan_res(wpa_s, scan_res->res[i],
+					&scan_res->fetch_time);
 	wpa_bss_update_end(wpa_s, info, new_scan);
 
 	return scan_res;

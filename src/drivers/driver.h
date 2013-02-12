@@ -187,10 +187,12 @@ struct wpa_scan_res {
  * struct wpa_scan_results - Scan results
  * @res: Array of pointers to allocated variable length scan result entries
  * @num: Number of entries in the scan result array
+ * @fetch_time: Time when the results were fetched from the driver
  */
 struct wpa_scan_results {
 	struct wpa_scan_res **res;
 	size_t num;
+	struct os_time fetch_time;
 };
 
 /**

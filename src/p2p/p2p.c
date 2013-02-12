@@ -593,7 +593,7 @@ static void p2p_copy_wps_info(struct p2p_device *dev, int probe_req,
  *	P2P Device Address or P2P Interface Address)
  * @level: Signal level (signal strength of the received frame from the peer)
  * @freq: Frequency on which the Beacon or Probe Response frame was received
- * @age_ms: Age of the information in milliseconds
+ * @rx_time: Time when the result was received
  * @ies: IEs from the Beacon or Probe Response frame
  * @ies_len: Length of ies buffer in octets
  * @scan_res: Whether this was based on scan results
@@ -605,14 +605,14 @@ static void p2p_copy_wps_info(struct p2p_device *dev, int probe_req,
  * Info attributes.
  */
 int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq,
-		   unsigned int age_ms, int level, const u8 *ies,
+		   struct os_time *rx_time, int level, const u8 *ies,
 		   size_t ies_len, int scan_res)
 {
 	struct p2p_device *dev;
 	struct p2p_message msg;
 	const u8 *p2p_dev_addr;
 	int i;
-	struct os_time time_now, time_tmp_age, entry_ts;
+	struct os_time time_now;
 
 	os_memset(&msg, 0, sizeof(msg));
 	if (p2p_parse_ies(ies, ies_len, &msg)) {
@@ -649,22 +649,29 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq,
 		return -1;
 	}
 
-	os_get_time(&time_now);
-	time_tmp_age.sec = age_ms / 1000;
-	time_tmp_age.usec = (age_ms % 1000) * 1000;
-	os_time_sub(&time_now, &time_tmp_age, &entry_ts);
+	if (rx_time == NULL) {
+		os_get_time(&time_now);
+		rx_time = &time_now;
+	}
 
 	/*
 	 * Update the device entry only if the new peer
 	 * entry is newer than the one previously stored.
 	 */
-	if (dev->last_seen.usec > 0 &&
-	    os_time_before(&entry_ts, &dev->last_seen)) {
+	if (dev->last_seen.sec > 0 &&
+	    os_time_before(rx_time, &dev->last_seen)) {
+		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Do not update peer "
+			"entry based on old frame (rx_time=%u.%06u "
+			"last_seen=%u.%06u)",
+			(unsigned int) rx_time->sec,
+			(unsigned int) rx_time->usec,
+			(unsigned int) dev->last_seen.sec,
+			(unsigned int) dev->last_seen.usec);
 		p2p_parse_free(&msg);
 		return -1;
 	}
 
-	os_memcpy(&dev->last_seen, &entry_ts, sizeof(struct os_time));
+	os_memcpy(&dev->last_seen, rx_time, sizeof(struct os_time));
 
 	dev->flags &= ~(P2P_DEV_PROBE_REQ_ONLY | P2P_DEV_GROUP_CLIENT_ONLY);
 
@@ -743,7 +750,9 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq,
 		return 0;
 
 	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-		"P2P: Peer found with Listen frequency %d MHz", freq);
+		"P2P: Peer found with Listen frequency %d MHz "
+		"(rx_time=%u.%06u)", freq, (unsigned int) rx_time->sec,
+		(unsigned int) rx_time->usec);
 	if (dev->flags & P2P_DEV_USER_REJECTED) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Do not report rejected device");
@@ -2804,10 +2813,10 @@ static void p2p_prov_disc_cb(struct p2p_data *p2p, int success)
 
 
 int p2p_scan_res_handler(struct p2p_data *p2p, const u8 *bssid, int freq,
-			 unsigned int age, int level, const u8 *ies,
+			 struct os_time *rx_time, int level, const u8 *ies,
 			 size_t ies_len)
 {
-	p2p_add_device(p2p, bssid, freq, age, level, ies, ies_len, 1);
+	p2p_add_device(p2p, bssid, freq, rx_time, level, ies, ies_len, 1);
 
 	return 0;
 }

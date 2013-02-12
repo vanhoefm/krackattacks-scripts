@@ -106,8 +106,12 @@ static void wpas_p2p_scan_res_handler(struct wpa_supplicant *wpa_s,
 
 	for (i = 0; i < scan_res->num; i++) {
 		struct wpa_scan_res *bss = scan_res->res[i];
+		struct os_time time_tmp_age, entry_ts;
+		time_tmp_age.sec = bss->age / 1000;
+		time_tmp_age.usec = (bss->age % 1000) * 1000;
+		os_time_sub(&scan_res->fetch_time, &time_tmp_age, &entry_ts);
 		if (p2p_scan_res_handler(wpa_s->global->p2p, bss->bssid,
-					 bss->freq, bss->age, bss->level,
+					 bss->freq, &entry_ts, bss->level,
 					 (const u8 *) (bss + 1),
 					 bss->ie_len) > 0)
 			break;

@@ -570,8 +570,18 @@ static void p2p_copy_wps_info(struct p2p_device *dev, int probe_req,
 	}
 
 	if (!probe_req) {
-		dev->info.config_methods = msg->config_methods ?
+		u16 new_config_methods;
+		new_config_methods = msg->config_methods ?
 			msg->config_methods : msg->wps_config_methods;
+		if (new_config_methods &&
+		    dev->info.config_methods != new_config_methods) {
+			wpa_printf(MSG_DEBUG, "P2P: Update peer " MACSTR
+				   " config_methods 0x%x -> 0x%x",
+				   MAC2STR(dev->info.p2p_device_addr),
+				   dev->info.config_methods,
+				   new_config_methods);
+			dev->info.config_methods = new_config_methods;
+		}
 	}
 }
 

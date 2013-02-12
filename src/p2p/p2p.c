@@ -750,6 +750,28 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq,
 		return 0;
 	}
 
+	if (dev->info.config_methods == 0 &&
+	    (freq == 2412 || freq == 2437 || freq == 2462)) {
+		/*
+		 * If we have only seen a Beacon frame from a GO, we do not yet
+		 * know what WPS config methods it supports. Since some
+		 * applications use config_methods value from P2P-DEVICE-FOUND
+		 * events, postpone reporting this peer until we've fully
+		 * discovered its capabilities.
+		 *
+		 * At least for now, do this only if the peer was detected on
+		 * one of the social channels since that peer can be easily be
+		 * found again and there are no limitations of having to use
+		 * passive scan on this channels, so this can be done through
+		 * Probe Response frame that includes the config_methods
+		 * information.
+		 */
+		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
+			"P2P: Do not report peer " MACSTR " with unknown "
+			"config methods", MAC2STR(addr));
+		return 0;
+	}
+
 	p2p->cfg->dev_found(p2p->cfg->cb_ctx, addr, &dev->info,
 			    !(dev->flags & P2P_DEV_REPORTED_ONCE));
 	dev->flags |= P2P_DEV_REPORTED | P2P_DEV_REPORTED_ONCE;

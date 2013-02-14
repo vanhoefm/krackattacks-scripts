@@ -837,6 +837,39 @@ static int wps_process_ap_settings_e(struct wps_data *wps,
 }
 
 
+static int wps_process_dev_pw_id(struct wps_data *wps, const u8 *dev_pw_id)
+{
+	u16 id;
+
+	if (dev_pw_id == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS: Device Password ID");
+		return -1;
+	}
+
+	id = WPA_GET_BE16(dev_pw_id);
+	if (wps->dev_pw_id == id) {
+		wpa_printf(MSG_DEBUG, "WPS: Device Password ID %u", id);
+		return 0;
+	}
+
+	wpa_printf(MSG_DEBUG, "WPS: Registrar trying to change Device Password "
+		   "ID from %u to %u", wps->dev_pw_id, id);
+
+	if (wps->alt_dev_password && wps->alt_dev_pw_id == id) {
+		wpa_printf(MSG_DEBUG, "WPS: Found a matching Device Password");
+		os_free(wps->dev_password);
+		wps->dev_pw_id = wps->alt_dev_pw_id;
+		wps->dev_password = wps->alt_dev_password;
+		wps->dev_password_len = wps->alt_dev_password_len;
+		wps->alt_dev_password = NULL;
+		wps->alt_dev_password_len = 0;
+		return 0;
+	}
+
+	return -1;
+}
+
+
 static enum wps_process_res wps_process_m2(struct wps_data *wps,
 					   const struct wpabuf *msg,
 					   struct wps_parse_attr *attr)
@@ -852,7 +885,8 @@ static enum wps_process_res wps_process_m2(struct wps_data *wps,
 
 	if (wps_process_registrar_nonce(wps, attr->registrar_nonce) ||
 	    wps_process_enrollee_nonce(wps, attr->enrollee_nonce) ||
-	    wps_process_uuid_r(wps, attr->uuid_r)) {
+	    wps_process_uuid_r(wps, attr->uuid_r) ||
+	    wps_process_dev_pw_id(wps, attr->dev_password_id)) {
 		wps->state = SEND_WSC_NACK;
 		return WPS_CONTINUE;
 	}

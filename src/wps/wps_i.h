@@ -71,6 +71,9 @@ struct wps_data {
 	size_t dev_password_len;
 	u16 dev_pw_id;
 	int pbc;
+	u8 *alt_dev_password;
+	size_t alt_dev_password_len;
+	u16 alt_dev_pw_id;
 
 	/**
 	 * request_type - Request Type attribute from (Re)AssocReq

@@ -53,12 +53,18 @@ struct wps_data * wps_init(const struct wps_config *cfg)
 		}
 		os_memcpy(data->dev_password, cfg->pin, cfg->pin_len);
 		data->dev_password_len = cfg->pin_len;
+		wpa_hexdump_key(MSG_DEBUG, "WPS: AP PIN dev_password",
+				data->dev_password, data->dev_password_len);
 	}
 
 #ifdef CONFIG_WPS_NFC
 	if (cfg->wps->ap && !cfg->registrar && cfg->wps->ap_nfc_dev_pw_id) {
+		/* Keep AP PIN as alternative Device Password */
+		data->alt_dev_pw_id = data->dev_pw_id;
+		data->alt_dev_password = data->dev_password;
+		data->alt_dev_password_len = data->dev_password_len;
+
 		data->dev_pw_id = cfg->wps->ap_nfc_dev_pw_id;
-		os_free(data->dev_password);
 		data->dev_password =
 			os_malloc(wpabuf_len(cfg->wps->ap_nfc_dev_pw));
 		if (data->dev_password == NULL) {
@@ -69,6 +75,8 @@ struct wps_data * wps_init(const struct wps_config *cfg)
 			  wpabuf_head(cfg->wps->ap_nfc_dev_pw),
 			  wpabuf_len(cfg->wps->ap_nfc_dev_pw));
 		data->dev_password_len = wpabuf_len(cfg->wps->ap_nfc_dev_pw);
+		wpa_hexdump_key(MSG_DEBUG, "WPS: NFC dev_password",
+			    data->dev_password, data->dev_password_len);
 	}
 #endif /* CONFIG_WPS_NFC */
 
@@ -155,6 +163,7 @@ void wps_deinit(struct wps_data *data)
 	wpabuf_free(data->dh_pubkey_r);
 	wpabuf_free(data->last_msg);
 	os_free(data->dev_password);
+	os_free(data->alt_dev_password);
 	os_free(data->new_psk);
 	wps_device_data_free(&data->peer_dev);
 	os_free(data->new_ap_settings);

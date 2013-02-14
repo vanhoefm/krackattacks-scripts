@@ -1358,6 +1358,14 @@ static int wps_get_dev_password(struct wps_data *wps)
 	} else {
 		pin = wps_registrar_get_pin(wps->wps->registrar, wps->uuid_e,
 					    &pin_len);
+		if (pin && wps->dev_pw_id >= 0x10) {
+			wpa_printf(MSG_DEBUG, "WPS: No match for OOB Device "
+				   "Password ID, but PIN found");
+			/*
+			 * See whether Enrollee is willing to use PIN instead.
+			 */
+			wps->dev_pw_id = DEV_PW_DEFAULT;
+		}
 	}
 	if (pin == NULL) {
 		wpa_printf(MSG_DEBUG, "WPS: No Device Password available for "

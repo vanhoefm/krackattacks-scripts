@@ -5857,6 +5857,16 @@ static int wpa_driver_nl80211_sta_add(void *priv,
 			params->vht_capabilities);
 	}
 
+	wpa_printf(MSG_DEBUG, "  * capability=0x%x", params->capability);
+	NLA_PUT_U16(msg, NL80211_ATTR_STA_CAPABILITY, params->capability);
+
+	if (params->ext_capab) {
+		wpa_hexdump(MSG_DEBUG, "  * ext_capab",
+			    params->ext_capab, params->ext_capab_len);
+		NLA_PUT(msg, NL80211_ATTR_STA_EXT_CAPABILITY,
+			params->ext_capab_len, params->ext_capab);
+	}
+
 	os_memset(&upd, 0, sizeof(upd));
 	upd.mask = sta_flags_nl80211(params->flags);
 	upd.set = upd.mask;

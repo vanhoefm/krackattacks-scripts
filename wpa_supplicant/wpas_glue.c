@@ -557,6 +557,8 @@ static int wpa_supplicant_tdls_peer_addset(
 	struct wpa_supplicant *wpa_s = ctx;
 	struct hostapd_sta_add_params params;
 
+	os_memset(&params, 0, sizeof(params));
+
 	params.addr = peer;
 	params.aid = 1;
 	params.capability = capability;

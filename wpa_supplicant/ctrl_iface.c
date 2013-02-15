@@ -928,6 +928,30 @@ static int wpas_ctrl_nfc_get_handover_req_wps(struct wpa_supplicant *wpa_s,
 }
 
 
+static int wpas_ctrl_nfc_get_handover_req_p2p(struct wpa_supplicant *wpa_s,
+					      char *reply, size_t max_len,
+					      int ndef)
+{
+	struct wpabuf *buf;
+	int res;
+
+	buf = wpas_p2p_nfc_handover_req(wpa_s, ndef);
+	if (buf == NULL) {
+		wpa_printf(MSG_DEBUG, "P2P: Could not generate NFC handover request");
+		return -1;
+	}
+
+	res = wpa_snprintf_hex_uppercase(reply, max_len, wpabuf_head(buf),
+					 wpabuf_len(buf));
+	reply[res++] = '\n';
+	reply[res] = '\0';
+
+	wpabuf_free(buf);
+
+	return res;
+}
+
+
 static int wpas_ctrl_nfc_get_handover_req(struct wpa_supplicant *wpa_s,
 					  char *cmd, char *reply,
 					  size_t max_len)
@@ -954,6 +978,11 @@ static int wpas_ctrl_nfc_get_handover_req(struct wpa_supplicant *wpa_s,
 			wpa_s, reply, max_len, ndef);
 	}
 
+	if (os_strcmp(pos, "P2P-CR") == 0) {
+		return wpas_ctrl_nfc_get_handover_req_p2p(
+			wpa_s, reply, max_len, ndef);
+	}
+
 	return -1;
 }
 
@@ -966,6 +995,28 @@ static int wpas_ctrl_nfc_get_handover_sel_wps(struct wpa_supplicant *wpa_s,
 	int res;
 
 	buf = wpas_wps_nfc_handover_sel(wpa_s, ndef, cr, uuid);
+	if (buf == NULL)
+		return -1;
+
+	res = wpa_snprintf_hex_uppercase(reply, max_len, wpabuf_head(buf),
+					 wpabuf_len(buf));
+	reply[res++] = '\n';
+	reply[res] = '\0';
+
+	wpabuf_free(buf);
+
+	return res;
+}
+
+
+static int wpas_ctrl_nfc_get_handover_sel_p2p(struct wpa_supplicant *wpa_s,
+					      char *reply, size_t max_len,
+					      int ndef, int tag)
+{
+	struct wpabuf *buf;
+	int res;
+
+	buf = wpas_p2p_nfc_handover_sel(wpa_s, ndef, tag);
 	if (buf == NULL)
 		return -1;
 
@@ -1003,9 +1054,21 @@ static int wpas_ctrl_nfc_get_handover_sel(struct wpa_supplicant *wpa_s,
 	if (pos2)
 		*pos2++ = '\0';
 	if (os_strcmp(pos, "WPS") == 0 || os_strcmp(pos, "WPS-CR") == 0) {
+		if (!ndef)
+			return -1;
 		return wpas_ctrl_nfc_get_handover_sel_wps(
 			wpa_s, reply, max_len, ndef,
 			os_strcmp(pos, "WPS-CR") == 0, pos2);
+	}
+
+	if (os_strcmp(pos, "P2P-CR") == 0) {
+		return wpas_ctrl_nfc_get_handover_sel_p2p(
+			wpa_s, reply, max_len, ndef, 0);
+	}
+
+	if (os_strcmp(pos, "P2P-CR-TAG") == 0) {
+		return wpas_ctrl_nfc_get_handover_sel_p2p(
+			wpa_s, reply, max_len, ndef, 1);
 	}
 
 	return -1;

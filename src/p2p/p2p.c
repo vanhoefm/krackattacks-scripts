@@ -4370,3 +4370,55 @@ void p2p_err(struct p2p_data *p2p, const char *fmt, ...)
 	va_end(ap);
 	p2p->cfg->debug_print(p2p->cfg->cb_ctx, MSG_ERROR, buf);
 }
+
+
+#ifdef CONFIG_WPS_NFC
+
+static struct wpabuf * p2p_build_nfc_handover(struct p2p_data *p2p)
+{
+	struct wpabuf *buf;
+	u8 op_class, channel;
+	enum p2p_role_indication role = P2P_DEVICE_NOT_IN_GROUP;
+
+	buf = wpabuf_alloc(1000);
+	if (buf == NULL)
+		return NULL;
+
+	op_class = p2p->cfg->reg_class;
+	channel = p2p->cfg->channel;
+
+	p2p_buf_add_capability(buf, p2p->dev_capab &
+			       ~P2P_DEV_CAPAB_CLIENT_DISCOVERABILITY, 0);
+	p2p_buf_add_device_info(buf, p2p, NULL);
+
+	if (p2p->num_groups > 0) {
+		role = P2P_GO_IN_A_GROUP;
+		p2p_freq_to_channel(p2p_group_get_freq(p2p->groups[0]),
+				    &op_class, &channel);
+	}
+
+	p2p_buf_add_oob_go_neg_channel(buf, p2p->cfg->country, op_class,
+				       channel, role);
+
+	if (p2p->num_groups > 0) {
+		/* Limit number of clients to avoid very long message */
+		p2p_buf_add_group_info(p2p->groups[0], buf, 5);
+		p2p_group_buf_add_id(p2p->groups[0], buf);
+	}
+
+	return buf;
+}
+
+
+struct wpabuf * p2p_build_nfc_handover_req(struct p2p_data *p2p)
+{
+	return p2p_build_nfc_handover(p2p);
+}
+
+
+struct wpabuf * p2p_build_nfc_handover_sel(struct p2p_data *p2p)
+{
+	return p2p_build_nfc_handover(p2p);
+}
+
+#endif /* CONFIG_WPS_NFC */

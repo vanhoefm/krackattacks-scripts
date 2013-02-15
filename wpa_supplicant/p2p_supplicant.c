@@ -6923,3 +6923,106 @@ int wpas_p2p_4way_hs_failed(struct wpa_supplicant *wpa_s)
 	wpa_s->p2p_last_4way_hs_fail = ssid;
 	return 0;
 }
+
+
+#ifdef CONFIG_WPS_NFC
+
+static struct wpabuf * wpas_p2p_nfc_handover(int ndef, struct wpabuf *wsc,
+					     struct wpabuf *p2p)
+{
+	struct wpabuf *ret;
+
+	if (wsc == NULL) {
+		wpabuf_free(p2p);
+		return NULL;
+	}
+
+	if (p2p == NULL) {
+		wpabuf_free(wsc);
+		wpa_printf(MSG_DEBUG, "P2P: No p2p buffer for handover");
+		return NULL;
+	}
+
+	ret = wpabuf_alloc(2 + wpabuf_len(wsc) + 2 + wpabuf_len(p2p));
+	if (ret == NULL) {
+		wpabuf_free(wsc);
+		wpabuf_free(p2p);
+		return NULL;
+	}
+
+	wpabuf_put_be16(ret, wpabuf_len(wsc));
+	wpabuf_put_buf(ret, wsc);
+	wpabuf_put_be16(ret, wpabuf_len(p2p));
+	wpabuf_put_buf(ret, p2p);
+
+	wpabuf_free(wsc);
+	wpabuf_free(p2p);
+	wpa_hexdump_buf(MSG_DEBUG,
+			"P2P: Generated NFC connection handover message", ret);
+
+	if (ndef && ret) {
+		struct wpabuf *tmp;
+		tmp = ndef_build_p2p(ret);
+		wpabuf_free(ret);
+		if (tmp == NULL) {
+			wpa_printf(MSG_DEBUG, "P2P: Failed to NDEF encapsulate handover request");
+			return NULL;
+		}
+		ret = tmp;
+	}
+
+	return ret;
+}
+
+
+struct wpabuf * wpas_p2p_nfc_handover_req(struct wpa_supplicant *wpa_s,
+					  int ndef)
+{
+	struct wpabuf *wsc, *p2p;
+
+	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL) {
+		wpa_printf(MSG_DEBUG, "P2P: P2P disabled - cannot build handover request");
+		return NULL;
+	}
+
+	if (wpa_s->conf->wps_nfc_dh_pubkey == NULL &&
+	    wps_nfc_gen_dh(&wpa_s->conf->wps_nfc_dh_pubkey,
+			   &wpa_s->conf->wps_nfc_dh_privkey) < 0) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "P2P: No DH key available for handover request");
+		return NULL;
+	}
+
+	wsc = wps_build_nfc_handover_req_p2p(wpa_s->parent->wps,
+					     wpa_s->conf->wps_nfc_dh_pubkey);
+	p2p = p2p_build_nfc_handover_req(wpa_s->global->p2p);
+
+	return wpas_p2p_nfc_handover(ndef, wsc, p2p);
+}
+
+
+struct wpabuf * wpas_p2p_nfc_handover_sel(struct wpa_supplicant *wpa_s,
+					  int ndef, int tag)
+{
+	struct wpabuf *wsc, *p2p;
+
+	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
+		return NULL;
+
+	if (!tag && wpa_s->conf->wps_nfc_dh_pubkey == NULL &&
+	    wps_nfc_gen_dh(&wpa_s->conf->wps_nfc_dh_pubkey,
+			   &wpa_s->conf->wps_nfc_dh_privkey) < 0)
+		return NULL;
+
+	wsc = wps_build_nfc_handover_sel_p2p(wpa_s->parent->wps,
+					     tag ?
+					     wpa_s->conf->wps_nfc_dev_pw_id :
+					     DEV_PW_NFC_CONNECTION_HANDOVER,
+					     wpa_s->conf->wps_nfc_dh_pubkey,
+					     tag ? wpa_s->conf->wps_nfc_dev_pw :
+					     NULL);
+	p2p = p2p_build_nfc_handover_sel(wpa_s->global->p2p);
+
+	return wpas_p2p_nfc_handover(ndef, wsc, p2p);
+}
+
+#endif /* CONFIG_WPS_NFC */

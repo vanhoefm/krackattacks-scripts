@@ -419,6 +419,13 @@ void p2p_buf_add_group_info(struct p2p_group *group, struct wpabuf *buf,
 }
 
 
+void p2p_group_buf_add_id(struct p2p_group *group, struct wpabuf *buf)
+{
+	p2p_buf_add_group_id(buf, group->p2p->cfg->dev_addr, group->cfg->ssid,
+			     group->cfg->ssid_len);
+}
+
+
 static struct wpabuf * p2p_group_build_probe_resp_ie(struct p2p_group *group)
 {
 	struct wpabuf *p2p_subelems, *ie;

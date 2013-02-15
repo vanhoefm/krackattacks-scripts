@@ -148,6 +148,10 @@ void wpas_p2p_new_psk_cb(struct wpa_supplicant *wpa_s, const u8 *mac_addr,
 			 const u8 *psk, size_t psk_len);
 void wpas_p2p_remove_client(struct wpa_supplicant *wpa_s, const u8 *peer,
 			    int iface_addr);
+struct wpabuf * wpas_p2p_nfc_handover_req(struct wpa_supplicant *wpa_s,
+					  int ndef);
+struct wpabuf * wpas_p2p_nfc_handover_sel(struct wpa_supplicant *wpa_s,
+					  int ndef, int tag);
 
 #ifdef CONFIG_P2P
 int wpas_p2p_4way_hs_failed(struct wpa_supplicant *wpa_s);

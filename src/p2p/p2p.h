@@ -1897,4 +1897,7 @@ int p2p_set_disc_int(struct p2p_data *p2p, int min_disc_int, int max_disc_int,
  */
 const char * p2p_get_state_txt(struct p2p_data *p2p);
 
+struct wpabuf * p2p_build_nfc_handover_req(struct p2p_data *p2p);
+struct wpabuf * p2p_build_nfc_handover_sel(struct p2p_data *p2p);
+
 #endif /* P2P_H */

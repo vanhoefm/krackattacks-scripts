@@ -50,7 +50,7 @@ struct p2p_channels {
 };
 
 enum p2p_wps_method {
-	WPS_NOT_READY, WPS_PIN_DISPLAY, WPS_PIN_KEYPAD, WPS_PBC
+	WPS_NOT_READY, WPS_PIN_DISPLAY, WPS_PIN_KEYPAD, WPS_PBC, WPS_NFC
 };
 
 /**

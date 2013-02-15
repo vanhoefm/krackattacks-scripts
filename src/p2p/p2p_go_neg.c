@@ -103,6 +103,8 @@ u16 p2p_wps_method_pw_id(enum p2p_wps_method wps_method)
 		return DEV_PW_USER_SPECIFIED;
 	case WPS_PBC:
 		return DEV_PW_PUSHBUTTON;
+	case WPS_NFC:
+		return DEV_PW_NFC_CONNECTION_HANDOVER;
 	default:
 		return DEV_PW_DEFAULT;
 	}
@@ -118,6 +120,8 @@ static const char * p2p_wps_method_str(enum p2p_wps_method wps_method)
 		return "Keypad";
 	case WPS_PBC:
 		return "PBC";
+	case WPS_NFC:
+		return "NFC";
 	default:
 		return "??";
 	}
@@ -131,6 +135,7 @@ static struct wpabuf * p2p_build_go_neg_req(struct p2p_data *p2p,
 	u8 *len;
 	u8 group_capab;
 	size_t extra = 0;
+	u16 pw_id;
 
 #ifdef CONFIG_WIFI_DISPLAY
 	if (p2p->wfd_ie_go_neg)
@@ -172,8 +177,10 @@ static struct wpabuf * p2p_build_go_neg_req(struct p2p_data *p2p,
 	p2p_buf_update_ie_hdr(buf, len);
 
 	/* WPS IE with Device Password ID attribute */
-	if (p2p_build_wps_ie(p2p, buf, p2p_wps_method_pw_id(peer->wps_method),
-			     0) < 0) {
+	pw_id = p2p_wps_method_pw_id(peer->wps_method);
+	if (peer->oob_pw_id)
+		pw_id = peer->oob_pw_id;
+	if (p2p_build_wps_ie(p2p, buf, pw_id, 0) < 0) {
 		p2p_dbg(p2p, "Failed to build WPS IE for GO Negotiation Request");
 		wpabuf_free(buf);
 		return NULL;
@@ -250,6 +257,7 @@ static struct wpabuf * p2p_build_go_neg_resp(struct p2p_data *p2p,
 	u8 *len;
 	u8 group_capab;
 	size_t extra = 0;
+	u16 pw_id;
 
 	p2p_dbg(p2p, "Building GO Negotiation Response");
 
@@ -312,9 +320,10 @@ static struct wpabuf * p2p_build_go_neg_resp(struct p2p_data *p2p,
 	p2p_buf_update_ie_hdr(buf, len);
 
 	/* WPS IE with Device Password ID attribute */
-	if (p2p_build_wps_ie(p2p, buf,
-			     p2p_wps_method_pw_id(peer ? peer->wps_method :
-						  WPS_NOT_READY), 0) < 0) {
+	pw_id = p2p_wps_method_pw_id(peer ? peer->wps_method : WPS_NOT_READY);
+	if (peer && peer->oob_pw_id)
+		pw_id = peer->oob_pw_id;
+	if (p2p_build_wps_ie(p2p, buf, pw_id, 0) < 0) {
 		p2p_dbg(p2p, "Failed to build WPS IE for GO Negotiation Response");
 		wpabuf_free(buf);
 		return NULL;

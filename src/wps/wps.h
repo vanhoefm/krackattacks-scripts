@@ -868,6 +868,12 @@ struct wpabuf * wps_build_nfc_handover_req(struct wps_context *ctx,
 struct wpabuf * wps_build_nfc_handover_sel(struct wps_context *ctx,
 					   struct wpabuf *nfc_dh_pubkey,
 					   const u8 *bssid, int freq);
+struct wpabuf * wps_build_nfc_handover_req_p2p(struct wps_context *ctx,
+					       struct wpabuf *nfc_dh_pubkey);
+struct wpabuf * wps_build_nfc_handover_sel_p2p(struct wps_context *ctx,
+					       int nfc_dev_pw_id,
+					       struct wpabuf *nfc_dh_pubkey,
+					       struct wpabuf *nfc_dev_pw);
 
 /* ndef.c */
 struct wpabuf * ndef_parse_wifi(const struct wpabuf *buf);

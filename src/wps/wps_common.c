@@ -18,6 +18,7 @@
 #include "crypto/sha256.h"
 #include "crypto/random.h"
 #include "wps_i.h"
+#include "wps_dev_attr.h"
 
 
 void wps_kdf(const u8 *key, const u8 *label_prefix, size_t label_prefix_len,
@@ -805,6 +806,95 @@ struct wpabuf * wps_build_nfc_handover_sel(struct wps_context *ctx,
 	}
 
 	WPA_PUT_BE16(len, wpabuf_len(msg) - 2);
+
+	return msg;
+}
+
+
+struct wpabuf * wps_build_nfc_handover_req_p2p(struct wps_context *ctx,
+					       struct wpabuf *nfc_dh_pubkey)
+{
+	struct wpabuf *msg;
+
+	if (ctx == NULL)
+		return NULL;
+
+	wpa_printf(MSG_DEBUG, "WPS: Building attributes for NFC connection "
+		   "handover request (P2P)");
+
+	if (nfc_dh_pubkey == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS: No NFC DH Public Key configured");
+		return NULL;
+	}
+
+	msg = wpabuf_alloc(1000);
+	if (msg == NULL)
+		return msg;
+
+	if (wps_build_manufacturer(&ctx->dev, msg) ||
+	    wps_build_model_name(&ctx->dev, msg) ||
+	    wps_build_model_number(&ctx->dev, msg) ||
+	    wps_build_oob_dev_pw(msg, DEV_PW_NFC_CONNECTION_HANDOVER,
+				 nfc_dh_pubkey, NULL, 0) ||
+	    wps_build_rf_bands(&ctx->dev, msg, 0) ||
+	    wps_build_serial_number(&ctx->dev, msg) ||
+	    wps_build_uuid_e(msg, ctx->uuid) ||
+	    wps_build_wfa_ext(msg, 0, NULL, 0)) {
+		wpabuf_free(msg);
+		return NULL;
+	}
+
+	return msg;
+}
+
+
+struct wpabuf * wps_build_nfc_handover_sel_p2p(struct wps_context *ctx,
+					       int nfc_dev_pw_id,
+					       struct wpabuf *nfc_dh_pubkey,
+					       struct wpabuf *nfc_dev_pw)
+{
+	struct wpabuf *msg;
+	const u8 *dev_pw;
+	size_t dev_pw_len;
+
+	if (ctx == NULL)
+		return NULL;
+
+	wpa_printf(MSG_DEBUG, "WPS: Building attributes for NFC connection "
+		   "handover select (P2P)");
+
+	if (nfc_dh_pubkey == NULL ||
+	    (nfc_dev_pw_id != DEV_PW_NFC_CONNECTION_HANDOVER &&
+	     nfc_dev_pw == NULL)) {
+		wpa_printf(MSG_DEBUG, "WPS: No NFC OOB Device Password "
+			   "configured");
+		return NULL;
+	}
+
+	msg = wpabuf_alloc(1000);
+	if (msg == NULL)
+		return msg;
+
+	if (nfc_dev_pw) {
+		dev_pw = wpabuf_head(nfc_dev_pw);
+		dev_pw_len = wpabuf_len(nfc_dev_pw);
+	} else {
+		dev_pw = NULL;
+		dev_pw_len = 0;
+	}
+
+	if (wps_build_manufacturer(&ctx->dev, msg) ||
+	    wps_build_model_name(&ctx->dev, msg) ||
+	    wps_build_model_number(&ctx->dev, msg) ||
+	    wps_build_oob_dev_pw(msg, nfc_dev_pw_id, nfc_dh_pubkey,
+				 dev_pw, dev_pw_len) ||
+	    wps_build_rf_bands(&ctx->dev, msg, 0) ||
+	    wps_build_serial_number(&ctx->dev, msg) ||
+	    wps_build_uuid_e(msg, ctx->uuid) ||
+	    wps_build_wfa_ext(msg, 0, NULL, 0)) {
+		wpabuf_free(msg);
+		return NULL;
+	}
 
 	return msg;
 }

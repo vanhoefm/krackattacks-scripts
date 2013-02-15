@@ -14,6 +14,7 @@ struct wps_parse_attr;
 int wps_build_manufacturer(struct wps_device_data *dev, struct wpabuf *msg);
 int wps_build_model_name(struct wps_device_data *dev, struct wpabuf *msg);
 int wps_build_model_number(struct wps_device_data *dev, struct wpabuf *msg);
+int wps_build_serial_number(struct wps_device_data *dev, struct wpabuf *msg);
 int wps_build_dev_name(struct wps_device_data *dev, struct wpabuf *msg);
 int wps_build_device_attrs(struct wps_device_data *dev, struct wpabuf *msg);
 int wps_build_os_version(struct wps_device_data *dev, struct wpabuf *msg);

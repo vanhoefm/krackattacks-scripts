@@ -85,8 +85,7 @@ int wps_build_model_number(struct wps_device_data *dev, struct wpabuf *msg)
 }
 
 
-static int wps_build_serial_number(struct wps_device_data *dev,
-				   struct wpabuf *msg)
+int wps_build_serial_number(struct wps_device_data *dev, struct wpabuf *msg)
 {
 	size_t len;
 	wpa_printf(MSG_DEBUG, "WPS:  * Serial Number");

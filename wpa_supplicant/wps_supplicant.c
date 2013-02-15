@@ -2003,9 +2003,12 @@ struct wpabuf * wpas_wps_nfc_handover_req(struct wpa_supplicant *wpa_s, int cr)
 }
 
 
-struct wpabuf * wpas_wps_nfc_handover_sel(struct wpa_supplicant *wpa_s)
+struct wpabuf * wpas_wps_nfc_handover_sel(struct wpa_supplicant *wpa_s,
+					  int ndef, int cr)
 {
-	return NULL;
+	if (!cr)
+		return NULL;
+	return wpas_ap_wps_nfc_handover_sel(wpa_s, ndef);
 }
 
 

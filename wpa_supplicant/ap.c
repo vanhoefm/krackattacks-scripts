@@ -860,6 +860,18 @@ struct wpabuf * wpas_ap_wps_nfc_config_token(struct wpa_supplicant *wpa_s,
 	return hostapd_wps_nfc_config_token(hapd, ndef);
 }
 
+
+struct wpabuf * wpas_ap_wps_nfc_handover_sel(struct wpa_supplicant *wpa_s,
+					     int ndef)
+{
+	struct hostapd_data *hapd;
+
+	if (wpa_s->ap_iface == NULL)
+		return NULL;
+	hapd = wpa_s->ap_iface->bss[0];
+	return hostapd_wps_nfc_hs_cr(hapd, ndef);
+}
+
 #endif /* CONFIG_WPS */
 
 

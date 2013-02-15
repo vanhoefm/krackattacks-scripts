@@ -328,6 +328,23 @@ void p2p_buf_add_p2p_interface(struct wpabuf *buf, struct p2p_data *p2p)
 }
 
 
+void p2p_buf_add_oob_go_neg_channel(struct wpabuf *buf, const char *country,
+				    u8 oper_class, u8 channel,
+				    enum p2p_role_indication role)
+{
+	/* OOB Group Owner Negotiation Channel */
+	wpabuf_put_u8(buf, P2P_ATTR_OOB_GO_NEG_CHANNEL);
+	wpabuf_put_le16(buf, 6);
+	wpabuf_put_data(buf, country, 3);
+	wpabuf_put_u8(buf, oper_class); /* Operating Class */
+	wpabuf_put_u8(buf, channel); /* Channel Number */
+	wpabuf_put_u8(buf, (u8) role); /* Role indication */
+	wpa_printf(MSG_DEBUG, "P2P: * OOB GO Negotiation Channel: Operating "
+		   "Class %u Channel %u Role %d",
+		   oper_class, channel, role);
+}
+
+
 static int p2p_add_wps_string(struct wpabuf *buf, enum wps_attribute attr,
 			      const char *val)
 {

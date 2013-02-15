@@ -268,6 +268,19 @@ static int p2p_parse_attribute(u8 id, const u8 *data, u16 len,
 		wpa_printf(MSG_DEBUG, "P2P: * Minor Reason Code: %u",
 			   *msg->minor_reason_code);
 		break;
+	case P2P_ATTR_OOB_GO_NEG_CHANNEL:
+		if (len < 6) {
+			wpa_printf(MSG_DEBUG, "P2P: Too short OOB GO Neg "
+				   "Channel attribute (length %d)", len);
+			return -1;
+		}
+		msg->oob_go_neg_channel = data;
+		wpa_printf(MSG_DEBUG, "P2P: * OOB GO Neg Channel: "
+			   "Country %c%c(0x%02x) Operating Class %d "
+			   "Channel Number %d Role %d",
+			   data[0], data[1], data[2], data[3], data[4],
+			   data[5]);
+		break;
 	default:
 		wpa_printf(MSG_DEBUG, "P2P: Skipped unknown attribute %d "
 			   "(length %d)", id, len);

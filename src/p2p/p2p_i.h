@@ -12,6 +12,8 @@
 #include "utils/list.h"
 #include "p2p.h"
 
+enum p2p_role_indication;
+
 enum p2p_go_state {
 	UNKNOWN_GO,
 	LOCAL_GO,
@@ -503,6 +505,8 @@ struct p2p_message {
 
 	const u8 *minor_reason_code;
 
+	const u8 *oob_go_neg_channel;
+
 	/* P2P Device Info */
 	const u8 *p2p_device_info;
 	size_t p2p_device_info_len;
@@ -636,6 +640,9 @@ void p2p_buf_add_noa(struct wpabuf *buf, u8 noa_index, u8 opp_ps, u8 ctwindow,
 void p2p_buf_add_ext_listen_timing(struct wpabuf *buf, u16 period,
 				   u16 interval);
 void p2p_buf_add_p2p_interface(struct wpabuf *buf, struct p2p_data *p2p);
+void p2p_buf_add_oob_go_neg_channel(struct wpabuf *buf, const char *country,
+				    u8 oper_class, u8 channel,
+				    enum p2p_role_indication role);
 int p2p_build_wps_ie(struct p2p_data *p2p, struct wpabuf *buf, int pw_id,
 		     int all_attr);
 

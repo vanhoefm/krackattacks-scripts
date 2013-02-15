@@ -338,3 +338,17 @@ If the NFC tag contains a password token, the token is added to the
 internal Registrar. This allows station Enrollee from which the password
 token was received to run through WPS protocol to provision the
 credential.
+
+"nfc_get_handover_sel <NDEF> <WPS>" command can be used to build the
+contents of a Handover Select Message for connection handover when this
+does not depend on the contents of the Handover Request Message. The
+first argument selects the format of the output data and the second
+argument selects which type of connection handover is requested (WPS =
+Wi-Fi handover as specified in WSC 2.0).
+
+"nfc_report_handover <INIT/RESP> WPS <carrier from handover request>
+<carrier from handover select>" is used to report completed NFC
+connection handover. The first parameter indicates whether the local
+device initiated or responded to the connection handover and the carrier
+records are the selected carrier from the handover request and select
+messages as a hexdump.

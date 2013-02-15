@@ -385,3 +385,10 @@ type. The reply data is contents for the Handover Select Message
 of NFC connection handover select. The payload may include multiple
 carriers the the applicable ones are matched based on the media
 type.
+
+"nfc_report_handover <INIT/RESP> WPS <carrier from handover request>
+<carrier from handover select>" can be used as an alternative way for
+reporting completed NFC connection handover. The first parameter
+indicates whether the local device initiated or responded to the
+connection handover and the carrier records are the selected carrier
+from the handover request and select messages as a hexdump.

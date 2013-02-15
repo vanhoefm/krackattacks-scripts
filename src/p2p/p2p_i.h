@@ -585,6 +585,8 @@ int p2p_channel_select(struct p2p_channels *chans, const int *classes,
 int p2p_parse_p2p_ie(const struct wpabuf *buf, struct p2p_message *msg);
 int p2p_parse_ies(const u8 *data, size_t len, struct p2p_message *msg);
 int p2p_parse(const u8 *data, size_t len, struct p2p_message *msg);
+int p2p_parse_ies_separate(const u8 *wsc, size_t wsc_len, const u8 *p2p,
+			   size_t p2p_len, struct p2p_message *msg);
 void p2p_parse_free(struct p2p_message *msg);
 int p2p_attr_text(struct wpabuf *data, char *buf, char *end);
 int p2p_group_info_parse(const u8 *gi, size_t gi_len,

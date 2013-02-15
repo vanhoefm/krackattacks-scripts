@@ -466,6 +466,33 @@ int p2p_parse(const u8 *data, size_t len, struct p2p_message *msg)
 }
 
 
+int p2p_parse_ies_separate(const u8 *wsc, size_t wsc_len, const u8 *p2p,
+			   size_t p2p_len, struct p2p_message *msg)
+{
+	os_memset(msg, 0, sizeof(*msg));
+
+	msg->wps_attributes = wpabuf_alloc_copy(wsc, wsc_len);
+	if (msg->wps_attributes &&
+	    p2p_parse_wps_ie(msg->wps_attributes, msg)) {
+		p2p_parse_free(msg);
+		return -1;
+	}
+
+	msg->p2p_attributes = wpabuf_alloc_copy(p2p, p2p_len);
+	if (msg->p2p_attributes &&
+	    p2p_parse_p2p_ie(msg->p2p_attributes, msg)) {
+		wpa_printf(MSG_DEBUG, "P2P: Failed to parse P2P IE data");
+		if (msg->p2p_attributes)
+			wpa_hexdump_buf(MSG_MSGDUMP, "P2P: P2P IE data",
+					msg->p2p_attributes);
+		p2p_parse_free(msg);
+		return -1;
+	}
+
+	return 0;
+}
+
+
 /**
  * p2p_parse_free - Free temporary data from P2P parsing
  * @msg: Parsed attributes

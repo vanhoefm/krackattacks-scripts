@@ -380,6 +380,9 @@ static int p2p_parse_wps_ie(const struct wpabuf *buf, struct p2p_message *msg)
 	msg->serial_number = attr.serial_number;
 	msg->serial_number_len = attr.serial_number_len;
 
+	msg->oob_dev_password = attr.oob_dev_password;
+	msg->oob_dev_password_len = attr.oob_dev_password_len;
+
 	return 0;
 }
 

@@ -533,6 +533,8 @@ struct p2p_message {
 	size_t model_number_len;
 	const u8 *serial_number;
 	size_t serial_number_len;
+	const u8 *oob_dev_password;
+	size_t oob_dev_password_len;
 
 	/* DS Parameter Set IE */
 	const u8 *ds_params;

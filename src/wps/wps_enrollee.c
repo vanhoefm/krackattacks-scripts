@@ -514,6 +514,23 @@ static int wps_process_pubkey(struct wps_data *wps, const u8 *pk,
 		return -1;
 	}
 
+	if (wps->peer_pubkey_hash_set) {
+		u8 hash[WPS_HASH_LEN];
+		sha256_vector(1, &pk, &pk_len, hash);
+		if (os_memcmp(hash, wps->peer_pubkey_hash,
+			      WPS_OOB_PUBKEY_HASH_LEN) != 0) {
+			wpa_printf(MSG_ERROR, "WPS: Public Key hash mismatch");
+			wpa_hexdump(MSG_DEBUG, "WPS: Received public key",
+				    pk, pk_len);
+			wpa_hexdump(MSG_DEBUG, "WPS: Calculated public key "
+				    "hash", hash, WPS_OOB_PUBKEY_HASH_LEN);
+			wpa_hexdump(MSG_DEBUG, "WPS: Expected public key hash",
+				    wps->peer_pubkey_hash,
+				    WPS_OOB_PUBKEY_HASH_LEN);
+			return -1;
+		}
+	}
+
 	wpabuf_free(wps->dh_pubkey_r);
 	wps->dh_pubkey_r = wpabuf_alloc_copy(pk, pk_len);
 	if (wps->dh_pubkey_r == NULL)

@@ -183,6 +183,11 @@ struct wps_config {
 	 * PBC with the AP.
 	 */
 	int pbc_in_m1;
+
+	/**
+	 * peer_pubkey_hash - Peer public key hash or %NULL if not known
+	 */
+	const u8 *peer_pubkey_hash;
 };
 
 struct wps_data * wps_init(const struct wps_config *cfg);

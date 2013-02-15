@@ -75,6 +75,9 @@ struct wps_data {
 	size_t alt_dev_password_len;
 	u16 alt_dev_pw_id;
 
+	u8 peer_pubkey_hash[WPS_OOB_PUBKEY_HASH_LEN];
+	int peer_pubkey_hash_set;
+
 	/**
 	 * request_type - Request Type attribute from (Re)AssocReq
 	 */

@@ -64,7 +64,9 @@ void wpas_wps_update_config(struct wpa_supplicant *wpa_s);
 struct wpabuf * wpas_wps_nfc_config_token(struct wpa_supplicant *wpa_s,
 					  int ndef, const char *id_str);
 struct wpabuf * wpas_wps_nfc_token(struct wpa_supplicant *wpa_s, int ndef);
-int wpas_wps_start_nfc(struct wpa_supplicant *wpa_s, const u8 *bssid);
+int wpas_wps_start_nfc(struct wpa_supplicant *wpa_s, const u8 *bssid,
+		       const struct wpabuf *dev_pw, u16 dev_pw_id,
+		       int p2p_group, const u8 *peer_pubkey_hash);
 int wpas_wps_nfc_tag_read(struct wpa_supplicant *wpa_s,
 			  const struct wpabuf *data);
 struct wpabuf * wpas_wps_nfc_handover_req(struct wpa_supplicant *wpa_s, int cr);

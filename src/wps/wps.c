@@ -133,6 +133,12 @@ struct wps_data * wps_init(const struct wps_config *cfg)
 	data->use_psk_key = cfg->use_psk_key;
 	data->pbc_in_m1 = cfg->pbc_in_m1;
 
+	if (cfg->peer_pubkey_hash) {
+		os_memcpy(data->peer_pubkey_hash, cfg->peer_pubkey_hash,
+			  WPS_OOB_PUBKEY_HASH_LEN);
+		data->peer_pubkey_hash_set = 1;
+	}
+
 	return data;
 }
 

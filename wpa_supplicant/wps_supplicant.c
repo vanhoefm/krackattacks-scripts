@@ -1072,12 +1072,14 @@ int wpas_wps_start_pbc(struct wpa_supplicant *wpa_s, const u8 *bssid,
 }
 
 
-int wpas_wps_start_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
-		       const char *pin, int p2p_group, u16 dev_pw_id)
+static int wpas_wps_start_dev_pw(struct wpa_supplicant *wpa_s, const u8 *bssid,
+				 const char *pin, int p2p_group, u16 dev_pw_id,
+				 const u8 *peer_pubkey_hash)
 {
 	struct wpa_ssid *ssid;
-	char val[128];
+	char val[128 + 2 * WPS_OOB_PUBKEY_HASH_LEN];
 	unsigned int rpin = 0;
+	char hash[2 * WPS_OOB_PUBKEY_HASH_LEN + 10];
 
 	wpas_clear_wps(wpa_s);
 	ssid = wpas_wps_add_network(wpa_s, 0, bssid);
@@ -1085,6 +1087,14 @@ int wpas_wps_start_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		return -1;
 	ssid->temporary = 1;
 	ssid->p2p_group = p2p_group;
+	if (peer_pubkey_hash) {
+		os_memcpy(hash, " pkhash=", 8);
+		wpa_snprintf_hex_uppercase(hash + 8, sizeof(hash) - 8,
+					   peer_pubkey_hash,
+					   WPS_OOB_PUBKEY_HASH_LEN);
+	} else {
+		hash[0] = '\0';
+	}
 #ifdef CONFIG_P2P
 	if (p2p_group && wpa_s->go_params && wpa_s->go_params->ssid_len) {
 		ssid->ssid = os_zalloc(wpa_s->go_params->ssid_len + 1);
@@ -1098,12 +1108,12 @@ int wpas_wps_start_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
 	}
 #endif /* CONFIG_P2P */
 	if (pin)
-		os_snprintf(val, sizeof(val), "\"pin=%s dev_pw_id=%u\"",
-			    pin, dev_pw_id);
+		os_snprintf(val, sizeof(val), "\"pin=%s dev_pw_id=%u%s\"",
+			    pin, dev_pw_id, hash);
 	else {
 		rpin = wps_generate_pin();
-		os_snprintf(val, sizeof(val), "\"pin=%08d dev_pw_id=%u\"",
-			    rpin, dev_pw_id);
+		os_snprintf(val, sizeof(val), "\"pin=%08d dev_pw_id=%u%s\"",
+			    rpin, dev_pw_id, hash);
 	}
 	if (wpa_config_set(ssid, "phase1", val, 0) < 0)
 		return -1;
@@ -1114,6 +1124,14 @@ int wpas_wps_start_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
 	wpa_s->wps_ap_iter = 1;
 	wpas_wps_reassoc(wpa_s, ssid, bssid);
 	return rpin;
+}
+
+
+int wpas_wps_start_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
+		       const char *pin, int p2p_group, u16 dev_pw_id)
+{
+	return wpas_wps_start_dev_pw(wpa_s, bssid, pin, p2p_group, dev_pw_id,
+				     NULL);
 }
 
 
@@ -2070,14 +2088,21 @@ struct wpabuf * wpas_wps_nfc_token(struct wpa_supplicant *wpa_s, int ndef)
 }
 
 
-int wpas_wps_start_nfc(struct wpa_supplicant *wpa_s, const u8 *bssid)
+int wpas_wps_start_nfc(struct wpa_supplicant *wpa_s, const u8 *bssid,
+		       const struct wpabuf *dev_pw, u16 dev_pw_id,
+		       int p2p_group, const u8 *peer_pubkey_hash)
 {
 	struct wps_context *wps = wpa_s->wps;
 	char pw[32 * 2 + 1];
 
+	if (dev_pw == NULL) {
+		dev_pw = wpa_s->conf->wps_nfc_dev_pw;
+		dev_pw_id = wpa_s->conf->wps_nfc_dev_pw_id;
+	}
+
 	if (wpa_s->conf->wps_nfc_dh_pubkey == NULL ||
 	    wpa_s->conf->wps_nfc_dh_privkey == NULL ||
-	    wpa_s->conf->wps_nfc_dev_pw == NULL)
+	    dev_pw == NULL)
 		return -1;
 
 	dh5_free(wps->dh_ctx);
@@ -2103,10 +2128,9 @@ int wpas_wps_start_nfc(struct wpa_supplicant *wpa_s, const u8 *bssid)
 	}
 
 	wpa_snprintf_hex_uppercase(pw, sizeof(pw),
-				   wpabuf_head(wpa_s->conf->wps_nfc_dev_pw),
-				   wpabuf_len(wpa_s->conf->wps_nfc_dev_pw));
-	return wpas_wps_start_pin(wpa_s, bssid, pw, 0,
-				  wpa_s->conf->wps_nfc_dev_pw_id);
+				   wpabuf_head(dev_pw), wpabuf_len(dev_pw));
+	return wpas_wps_start_dev_pw(wpa_s, bssid, pw, p2p_group, dev_pw_id,
+				     peer_pubkey_hash);
 }
 
 

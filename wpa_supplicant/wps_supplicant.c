@@ -1830,6 +1830,17 @@ void wpas_wps_update_config(struct wpa_supplicant *wpa_s)
 
 #ifdef CONFIG_WPS_NFC
 
+struct wpabuf * wpas_wps_nfc_config_token(struct wpa_supplicant *wpa_s,
+					  int ndef)
+{
+#ifdef CONFIG_AP
+	if (wpa_s->ap_iface)
+		return wpas_ap_wps_nfc_config_token(wpa_s, ndef);
+#endif /* CONFIG_AP */
+	return NULL;
+}
+
+
 struct wpabuf * wpas_wps_nfc_token(struct wpa_supplicant *wpa_s, int ndef)
 {
 	if (wpa_s->conf->wps_nfc_pw_from_config) {

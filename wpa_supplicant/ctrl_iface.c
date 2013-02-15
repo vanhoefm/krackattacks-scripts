@@ -778,6 +778,35 @@ static int wpa_supplicant_ctrl_iface_wps_nfc(struct wpa_supplicant *wpa_s,
 }
 
 
+static int wpa_supplicant_ctrl_iface_wps_nfc_config_token(
+	struct wpa_supplicant *wpa_s, char *cmd, char *reply, size_t max_len)
+{
+	int ndef;
+	struct wpabuf *buf;
+	int res;
+
+	if (os_strcmp(cmd, "WPS") == 0)
+		ndef = 0;
+	else if (os_strcmp(cmd, "NDEF") == 0)
+		ndef = 1;
+	else
+		return -1;
+
+	buf = wpas_wps_nfc_config_token(wpa_s, ndef);
+	if (buf == NULL)
+		return -1;
+
+	res = wpa_snprintf_hex_uppercase(reply, max_len, wpabuf_head(buf),
+					 wpabuf_len(buf));
+	reply[res++] = '\n';
+	reply[res] = '\0';
+
+	wpabuf_free(buf);
+
+	return res;
+}
+
+
 static int wpa_supplicant_ctrl_iface_wps_nfc_token(
 	struct wpa_supplicant *wpa_s, char *cmd, char *reply, size_t max_len)
 {
@@ -4958,6 +4987,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strncmp(buf, "WPS_NFC ", 8) == 0) {
 		if (wpa_supplicant_ctrl_iface_wps_nfc(wpa_s, buf + 8))
 			reply_len = -1;
+	} else if (os_strncmp(buf, "WPS_NFC_CONFIG_TOKEN ", 21) == 0) {
+		reply_len = wpa_supplicant_ctrl_iface_wps_nfc_config_token(
+			wpa_s, buf + 21, reply, reply_size);
 	} else if (os_strncmp(buf, "WPS_NFC_TOKEN ", 14) == 0) {
 		reply_len = wpa_supplicant_ctrl_iface_wps_nfc_token(
 			wpa_s, buf + 14, reply, reply_size);

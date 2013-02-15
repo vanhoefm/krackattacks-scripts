@@ -744,6 +744,13 @@ static int wpa_cli_cmd_wps_nfc(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+static int wpa_cli_cmd_wps_nfc_config_token(struct wpa_ctrl *ctrl, int argc,
+					    char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "WPS_NFC_CONFIG_TOKEN", 1, argc, argv);
+}
+
+
 static int wpa_cli_cmd_wps_nfc_token(struct wpa_ctrl *ctrl, int argc,
 				     char *argv[])
 {
@@ -2488,6 +2495,9 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "wps_nfc", wpa_cli_cmd_wps_nfc, wpa_cli_complete_bss,
 	  cli_cmd_flag_none,
 	  "[BSSID] = start Wi-Fi Protected Setup: NFC" },
+	{ "wps_nfc_config_token", wpa_cli_cmd_wps_nfc_config_token, NULL,
+	  cli_cmd_flag_none,
+	  "<WPS|NDEF> = build configuration token" },
 	{ "wps_nfc_token", wpa_cli_cmd_wps_nfc_token, NULL,
 	  cli_cmd_flag_none,
 	  "<WPS|NDEF> = create password token" },

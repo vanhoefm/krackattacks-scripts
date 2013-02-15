@@ -54,6 +54,13 @@ def wpas_tag_read(message):
     print wpas.request("WPS_NFC_TAG_READ " + message.encode("hex"))
 
 
+def wpas_get_config_token():
+    wpas = wpas_connect()
+    if (wpas == None):
+        return None
+    return wpas.request("WPS_NFC_CONFIG_TOKEN NDEF").rstrip().decode("hex")
+
+
 def wpas_get_password_token():
     wpas = wpas_connect()
     if (wpas == None):
@@ -169,6 +176,28 @@ def wps_tag_read(tag):
         time.sleep(0.1)
 
 
+def wps_write_config_tag(clf):
+    print "Write WPS config token"
+    data = wpas_get_config_token()
+    if (data == None):
+        print "Could not get WPS config token from wpa_supplicant"
+        return
+
+    print "Touch an NFC tag"
+    while True:
+        tag = clf.poll()
+        if tag == None:
+            time.sleep(0.1)
+            continue
+        break
+
+    print "Tag found - writing"
+    tag.ndef.message = data
+    print "Done - remove tag"
+    while tag.is_present:
+        time.sleep(0.1)
+
+
 def wps_write_password_tag(clf):
     print "Write WPS password token"
     data = wpas_get_password_token()
@@ -223,6 +252,10 @@ def main():
     clf = nfc.ContactlessFrontend()
 
     try:
+        if len(sys.argv) > 1 and sys.argv[1] == "write-config":
+            wps_write_config_tag(clf)
+            raise SystemExit
+
         if len(sys.argv) > 1 and sys.argv[1] == "write-password":
             wps_write_password_tag(clf)
             raise SystemExit

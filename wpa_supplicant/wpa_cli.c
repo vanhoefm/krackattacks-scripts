@@ -467,7 +467,7 @@ fail:
 static int wpa_cli_cmd(struct wpa_ctrl *ctrl, const char *cmd, int min_args,
 		       int argc, char *argv[])
 {
-	char buf[256];
+	char buf[4096];
 	if (argc < min_args) {
 		printf("Invalid %s command - at least %d argument%s "
 		       "required.\n", cmd, min_args,

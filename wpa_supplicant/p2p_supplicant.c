@@ -3942,7 +3942,7 @@ static int wpas_p2p_start_go_neg(struct wpa_supplicant *wpa_s,
 			   go_intent, own_interface_addr, force_freq,
 			   persistent_group, ssid ? ssid->ssid : NULL,
 			   ssid ? ssid->ssid_len : 0,
-			   wpa_s->p2p_pd_before_go_neg, pref_freq);
+			   wpa_s->p2p_pd_before_go_neg, pref_freq, 0);
 }
 
 
@@ -3959,7 +3959,7 @@ static int wpas_p2p_auth_go_neg(struct wpa_supplicant *wpa_s,
 	return p2p_authorize(wpa_s->global->p2p, peer_addr, wps_method,
 			     go_intent, own_interface_addr, force_freq,
 			     persistent_group, ssid ? ssid->ssid : NULL,
-			     ssid ? ssid->ssid_len : 0, pref_freq);
+			     ssid ? ssid->ssid_len : 0, pref_freq, 0);
 }
 
 

@@ -28,6 +28,7 @@ struct p2p_device {
 	struct os_reltime last_seen;
 	int listen_freq;
 	enum p2p_wps_method wps_method;
+	u16 oob_pw_id;
 
 	struct p2p_peer_info info;
 

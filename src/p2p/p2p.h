@@ -972,7 +972,7 @@ int p2p_connect(struct p2p_data *p2p, const u8 *peer_addr,
 		int go_intent, const u8 *own_interface_addr,
 		unsigned int force_freq, int persistent_group,
 		const u8 *force_ssid, size_t force_ssid_len,
-		int pd_before_go_neg, unsigned int pref_freq);
+		int pd_before_go_neg, unsigned int pref_freq, u16 oob_pw_id);
 
 /**
  * p2p_authorize - Authorize P2P group formation (GO negotiation)
@@ -1000,7 +1000,7 @@ int p2p_authorize(struct p2p_data *p2p, const u8 *peer_addr,
 		  int go_intent, const u8 *own_interface_addr,
 		  unsigned int force_freq, int persistent_group,
 		  const u8 *force_ssid, size_t force_ssid_len,
-		  unsigned int pref_freq);
+		  unsigned int pref_freq, u16 oob_pw_id);
 
 /**
  * p2p_reject - Reject peer device (explicitly block connection attempts)

@@ -211,6 +211,7 @@ void p2p_go_neg_failed(struct p2p_data *p2p, struct p2p_device *peer,
 	if (p2p->go_neg_peer) {
 		p2p->go_neg_peer->flags &= ~P2P_DEV_PEER_WAITING_RESPONSE;
 		p2p->go_neg_peer->wps_method = WPS_NOT_READY;
+		p2p->go_neg_peer->oob_pw_id = 0;
 	}
 	p2p->go_neg_peer = NULL;
 
@@ -1292,15 +1293,16 @@ int p2p_connect(struct p2p_data *p2p, const u8 *peer_addr,
 		int go_intent, const u8 *own_interface_addr,
 		unsigned int force_freq, int persistent_group,
 		const u8 *force_ssid, size_t force_ssid_len,
-		int pd_before_go_neg, unsigned int pref_freq)
+		int pd_before_go_neg, unsigned int pref_freq, u16 oob_pw_id)
 {
 	struct p2p_device *dev;
 
 	p2p_dbg(p2p, "Request to start group negotiation - peer=" MACSTR
 		"  GO Intent=%d  Intended Interface Address=" MACSTR
-		" wps_method=%d persistent_group=%d pd_before_go_neg=%d",
+		" wps_method=%d persistent_group=%d pd_before_go_neg=%d "
+		"oob_pw_id=%u",
 		MAC2STR(peer_addr), go_intent, MAC2STR(own_interface_addr),
-		wps_method, persistent_group, pd_before_go_neg);
+		wps_method, persistent_group, pd_before_go_neg, oob_pw_id);
 
 	dev = p2p_get_device(p2p, peer_addr);
 	if (dev == NULL || (dev->flags & P2P_DEV_PROBE_REQ_ONLY)) {
@@ -1384,6 +1386,7 @@ int p2p_connect(struct p2p_data *p2p, const u8 *peer_addr,
 	}
 
 	dev->wps_method = wps_method;
+	dev->oob_pw_id = oob_pw_id;
 	dev->status = P2P_SC_SUCCESS;
 
 	if (p2p->p2p_scan_running) {
@@ -1403,15 +1406,15 @@ int p2p_authorize(struct p2p_data *p2p, const u8 *peer_addr,
 		  int go_intent, const u8 *own_interface_addr,
 		  unsigned int force_freq, int persistent_group,
 		  const u8 *force_ssid, size_t force_ssid_len,
-		  unsigned int pref_freq)
+		  unsigned int pref_freq, u16 oob_pw_id)
 {
 	struct p2p_device *dev;
 
 	p2p_dbg(p2p, "Request to authorize group negotiation - peer=" MACSTR
 		"  GO Intent=%d  Intended Interface Address=" MACSTR
-		" wps_method=%d  persistent_group=%d",
+		" wps_method=%d  persistent_group=%d oob_pw_id=%u",
 		MAC2STR(peer_addr), go_intent, MAC2STR(own_interface_addr),
-		wps_method, persistent_group);
+		wps_method, persistent_group, oob_pw_id);
 
 	dev = p2p_get_device(p2p, peer_addr);
 	if (dev == NULL) {
@@ -1442,6 +1445,7 @@ int p2p_authorize(struct p2p_data *p2p, const u8 *peer_addr,
 	os_memcpy(p2p->intended_addr, own_interface_addr, ETH_ALEN);
 
 	dev->wps_method = wps_method;
+	dev->oob_pw_id = oob_pw_id;
 	dev->status = P2P_SC_SUCCESS;
 
 	return 0;
@@ -1593,6 +1597,7 @@ void p2p_go_complete(struct p2p_data *p2p, struct p2p_device *peer)
 	p2p->ssid_set = 0;
 	peer->go_neg_req_sent = 0;
 	peer->wps_method = WPS_NOT_READY;
+	peer->oob_pw_id = 0;
 
 	p2p_set_state(p2p, P2P_PROVISIONING);
 	p2p->cfg->go_neg_completed(p2p->cfg->cb_ctx, &res);
@@ -2459,6 +2464,7 @@ int p2p_unauthorize(struct p2p_data *p2p, const u8 *addr)
 		p2p->go_neg_peer = NULL;
 
 	dev->wps_method = WPS_NOT_READY;
+	dev->oob_pw_id = 0;
 	dev->flags &= ~P2P_DEV_WAIT_GO_NEG_RESPONSE;
 	dev->flags &= ~P2P_DEV_WAIT_GO_NEG_CONFIRM;
 

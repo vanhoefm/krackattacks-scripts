@@ -397,10 +397,31 @@ static void wifi_display_group_update(struct p2p_group *group)
 #endif /* CONFIG_WIFI_DISPLAY */
 
 
+void p2p_buf_add_group_info(struct p2p_group *group, struct wpabuf *buf,
+			    int max_clients)
+{
+	u8 *group_info;
+	int count = 0;
+	struct p2p_group_member *m;
+
+	p2p_dbg(group->p2p, "* P2P Group Info");
+	group_info = wpabuf_put(buf, 0);
+	wpabuf_put_u8(buf, P2P_ATTR_GROUP_INFO);
+	wpabuf_put_le16(buf, 0); /* Length to be filled */
+	for (m = group->members; m; m = m->next) {
+		p2p_client_info(buf, m);
+		count++;
+		if (max_clients >= 0 && count >= max_clients)
+			break;
+	}
+	WPA_PUT_LE16(group_info + 1,
+		     (u8 *) wpabuf_put(buf, 0) - group_info - 3);
+}
+
+
 static struct wpabuf * p2p_group_build_probe_resp_ie(struct p2p_group *group)
 {
 	struct wpabuf *p2p_subelems, *ie;
-	struct p2p_group_member *m;
 
 	p2p_subelems = wpabuf_alloc(500);
 	if (p2p_subelems == NULL)
@@ -413,17 +434,8 @@ static struct wpabuf * p2p_group_build_probe_resp_ie(struct p2p_group *group)
 	p2p_buf_add_device_info(p2p_subelems, group->p2p, NULL);
 
 	/* P2P Group Info: Only when at least one P2P Client is connected */
-	if (group->members) {
-		u8 *group_info;
-		group_info = wpabuf_put(p2p_subelems, 0);
-		wpabuf_put_u8(p2p_subelems, P2P_ATTR_GROUP_INFO);
-		wpabuf_put_le16(p2p_subelems, 0); /* Length to be filled */
-		for (m = group->members; m; m = m->next)
-			p2p_client_info(p2p_subelems, m);
-		WPA_PUT_LE16(group_info + 1,
-			     (u8 *) wpabuf_put(p2p_subelems, 0) - group_info -
-			     3);
-	}
+	if (group->members)
+		p2p_buf_add_group_info(group, p2p_subelems, -1);
 
 	ie = p2p_group_encaps_probe_resp(p2p_subelems);
 	wpabuf_free(p2p_subelems);

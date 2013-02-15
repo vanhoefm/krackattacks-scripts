@@ -2980,10 +2980,11 @@ static const struct global_parse_data global_fields[] = {
 	{ INT_RANGE(access_network_type, 0, 15), 0 },
 	{ INT_RANGE(pbc_in_m1, 0, 1), 0 },
 	{ STR(autoscan), 0 },
-	{ INT_RANGE(wps_nfc_dev_pw_id, 0x10, 0xffff), 0 },
-	{ BIN(wps_nfc_dh_pubkey), 0 },
-	{ BIN(wps_nfc_dh_privkey), 0 },
-	{ BIN(wps_nfc_dev_pw), 0 },
+	{ INT_RANGE(wps_nfc_dev_pw_id, 0x10, 0xffff),
+	  CFG_CHANGED_NFC_PASSWORD_TOKEN },
+	{ BIN(wps_nfc_dh_pubkey), CFG_CHANGED_NFC_PASSWORD_TOKEN },
+	{ BIN(wps_nfc_dh_privkey), CFG_CHANGED_NFC_PASSWORD_TOKEN },
+	{ BIN(wps_nfc_dev_pw), CFG_CHANGED_NFC_PASSWORD_TOKEN },
 	{ STR(ext_password_backend), CFG_CHANGED_EXT_PW_BACKEND },
 	{ INT(p2p_go_max_inactivity), 0 },
 	{ INT_RANGE(auto_interworking, 0, 1), 0 },
@@ -3020,6 +3021,8 @@ int wpa_config_process_global(struct wpa_config *config, char *pos, int line)
 				   "parse '%s'.", line, pos);
 			ret = -1;
 		}
+		if (field->changed_flag == CFG_CHANGED_NFC_PASSWORD_TOKEN)
+			config->wps_nfc_pw_from_config = 1;
 		config->changed_parameters |= field->changed_flag;
 		break;
 	}

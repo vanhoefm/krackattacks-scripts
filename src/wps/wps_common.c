@@ -562,11 +562,34 @@ struct wpabuf * wps_build_wsc_nack(struct wps_data *wps)
 
 
 #ifdef CONFIG_WPS_NFC
+
+struct wpabuf * wps_nfc_token_build(int ndef, int id, struct wpabuf *pubkey,
+				    struct wpabuf *dev_pw)
+{
+	struct wpabuf *ret;
+
+	if (pubkey == NULL || dev_pw == NULL)
+		return NULL;
+
+	ret = wps_build_nfc_pw_token(id, pubkey, dev_pw);
+	if (ndef && ret) {
+		struct wpabuf *tmp;
+		tmp = ndef_build_wifi(ret);
+		wpabuf_free(ret);
+		if (tmp == NULL)
+			return NULL;
+		ret = tmp;
+	}
+
+	return ret;
+}
+
+
 struct wpabuf * wps_nfc_token_gen(int ndef, int *id, struct wpabuf **pubkey,
 				  struct wpabuf **privkey,
 				  struct wpabuf **dev_pw)
 {
-	struct wpabuf *priv = NULL, *pub = NULL, *pw, *ret;
+	struct wpabuf *priv = NULL, *pub = NULL, *pw;
 	void *dh_ctx;
 	u16 val;
 
@@ -596,16 +619,7 @@ struct wpabuf * wps_nfc_token_gen(int ndef, int *id, struct wpabuf **pubkey,
 	wpabuf_free(*dev_pw);
 	*dev_pw = pw;
 
-	ret = wps_build_nfc_pw_token(*id, *pubkey, *dev_pw);
-	if (ndef && ret) {
-		struct wpabuf *tmp;
-		tmp = ndef_build_wifi(ret);
-		wpabuf_free(ret);
-		if (tmp == NULL)
-			return NULL;
-		ret = tmp;
-	}
-
-	return ret;
+	return wps_nfc_token_build(ndef, *id, *pubkey, *dev_pw);
 }
+
 #endif /* CONFIG_WPS_NFC */

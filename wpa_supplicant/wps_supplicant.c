@@ -1832,6 +1832,13 @@ void wpas_wps_update_config(struct wpa_supplicant *wpa_s)
 
 struct wpabuf * wpas_wps_nfc_token(struct wpa_supplicant *wpa_s, int ndef)
 {
+	if (wpa_s->conf->wps_nfc_pw_from_config) {
+		return wps_nfc_token_build(ndef,
+					   wpa_s->conf->wps_nfc_dev_pw_id,
+					   wpa_s->conf->wps_nfc_dh_pubkey,
+					   wpa_s->conf->wps_nfc_dev_pw);
+	}
+
 	return wps_nfc_token_gen(ndef, &wpa_s->conf->wps_nfc_dev_pw_id,
 				 &wpa_s->conf->wps_nfc_dh_pubkey,
 				 &wpa_s->conf->wps_nfc_dh_privkey,

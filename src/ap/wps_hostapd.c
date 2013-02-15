@@ -1595,6 +1595,13 @@ struct wpabuf * hostapd_wps_nfc_hs_cr(struct hostapd_data *hapd, int ndef)
 
 struct wpabuf * hostapd_wps_nfc_token_gen(struct hostapd_data *hapd, int ndef)
 {
+	if (hapd->conf->wps_nfc_pw_from_config) {
+		return wps_nfc_token_build(ndef,
+					   hapd->conf->wps_nfc_dev_pw_id,
+					   hapd->conf->wps_nfc_dh_pubkey,
+					   hapd->conf->wps_nfc_dev_pw);
+	}
+
 	return wps_nfc_token_gen(ndef, &hapd->conf->wps_nfc_dev_pw_id,
 				 &hapd->conf->wps_nfc_dh_pubkey,
 				 &hapd->conf->wps_nfc_dh_privkey,

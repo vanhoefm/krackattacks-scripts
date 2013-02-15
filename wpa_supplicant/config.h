@@ -220,6 +220,7 @@ struct wpa_cred {
 #define CFG_CHANGED_P2P_OPER_CHANNEL BIT(12)
 #define CFG_CHANGED_P2P_PREF_CHAN BIT(13)
 #define CFG_CHANGED_EXT_PW_BACKEND BIT(14)
+#define CFG_CHANGED_NFC_PASSWORD_TOKEN BIT(15)
 
 /**
  * struct wpa_config - wpa_supplicant configuration data
@@ -704,6 +705,15 @@ struct wpa_config {
 	 * <autoscan module name>:<module parameters>
 	 */
 	char *autoscan;
+
+	/**
+	 * wps_nfc_pw_from_config - NFC Device Password was read from config
+	 *
+	 * This parameter can be determined whether the NFC Device Password was
+	 * included in the configuration (1) or generated dynamically (0). Only
+	 * the former case is re-written back to the configuration file.
+	 */
+	int wps_nfc_pw_from_config;
 
 	/**
 	 * wps_nfc_dev_pw_id - NFC Device Password ID for password token

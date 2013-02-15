@@ -2627,15 +2627,19 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 					   "wps_nfc_dev_pw_id value", line);
 				errors++;
 			}
+			bss->wps_nfc_pw_from_config = 1;
 		} else if (os_strcmp(buf, "wps_nfc_dh_pubkey") == 0) {
 			wpabuf_free(bss->wps_nfc_dh_pubkey);
 			bss->wps_nfc_dh_pubkey = hostapd_parse_bin(pos);
+			bss->wps_nfc_pw_from_config = 1;
 		} else if (os_strcmp(buf, "wps_nfc_dh_privkey") == 0) {
 			wpabuf_free(bss->wps_nfc_dh_privkey);
 			bss->wps_nfc_dh_privkey = hostapd_parse_bin(pos);
+			bss->wps_nfc_pw_from_config = 1;
 		} else if (os_strcmp(buf, "wps_nfc_dev_pw") == 0) {
 			wpabuf_free(bss->wps_nfc_dev_pw);
 			bss->wps_nfc_dev_pw = hostapd_parse_bin(pos);
+			bss->wps_nfc_pw_from_config = 1;
 #endif /* CONFIG_WPS_NFC */
 #endif /* CONFIG_WPS */
 #ifdef CONFIG_P2P_MANAGER

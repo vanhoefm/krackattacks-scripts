@@ -950,12 +950,16 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 #endif /* CONFIG_INTERWORKING */
 	if (config->pbc_in_m1)
 		fprintf(f, "pbc_in_m1=%u\n", config->pbc_in_m1);
-	if (config->wps_nfc_dev_pw_id)
-		fprintf(f, "wps_nfc_dev_pw_id=%d\n",
-			config->wps_nfc_dev_pw_id);
-	write_global_bin(f, "wps_nfc_dh_pubkey", config->wps_nfc_dh_pubkey);
-	write_global_bin(f, "wps_nfc_dh_privkey", config->wps_nfc_dh_privkey);
-	write_global_bin(f, "wps_nfc_dev_pw", config->wps_nfc_dev_pw);
+	if (config->wps_nfc_pw_from_config) {
+		if (config->wps_nfc_dev_pw_id)
+			fprintf(f, "wps_nfc_dev_pw_id=%d\n",
+				config->wps_nfc_dev_pw_id);
+		write_global_bin(f, "wps_nfc_dh_pubkey",
+				 config->wps_nfc_dh_pubkey);
+		write_global_bin(f, "wps_nfc_dh_privkey",
+				 config->wps_nfc_dh_privkey);
+		write_global_bin(f, "wps_nfc_dev_pw", config->wps_nfc_dev_pw);
+	}
 
 	if (config->ext_password_backend)
 		fprintf(f, "ext_password_backend=%s\n",

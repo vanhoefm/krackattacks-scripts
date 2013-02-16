@@ -42,6 +42,10 @@
 #endif
 
 static void interworking_next_anqp_fetch(struct wpa_supplicant *wpa_s);
+static struct wpa_cred * interworking_credentials_available_realm(
+	struct wpa_supplicant *wpa_s, struct wpa_bss *bss);
+static struct wpa_cred * interworking_credentials_available_3gpp(
+	struct wpa_supplicant *wpa_s, struct wpa_bss *bss);
 
 
 static void interworking_reconnect(struct wpa_supplicant *wpa_s)
@@ -740,10 +744,10 @@ static int interworking_set_hs20_params(struct wpa_supplicant *wpa_s,
 
 
 static int interworking_connect_3gpp(struct wpa_supplicant *wpa_s,
+				     struct wpa_cred *cred,
 				     struct wpa_bss *bss)
 {
 #ifdef INTERWORKING_3GPP
-	struct wpa_cred *cred;
 	struct wpa_ssid *ssid;
 	const u8 *ie;
 	int eap_type;
@@ -751,40 +755,6 @@ static int interworking_connect_3gpp(struct wpa_supplicant *wpa_s,
 	char prefix;
 
 	if (bss->anqp == NULL || bss->anqp->anqp_3gpp == NULL)
-		return -1;
-
-	for (cred = wpa_s->conf->cred; cred; cred = cred->next) {
-		char *sep;
-		const char *imsi;
-		int mnc_len;
-
-#ifdef PCSC_FUNCS
-		if (cred->pcsc && wpa_s->conf->pcsc_reader && wpa_s->scard &&
-		    wpa_s->imsi[0]) {
-			imsi = wpa_s->imsi;
-			mnc_len = wpa_s->mnc_len;
-			goto compare;
-		}
-#endif /* PCSC_FUNCS */
-
-		if (cred->imsi == NULL || !cred->imsi[0] ||
-		    cred->milenage == NULL || !cred->milenage[0])
-			continue;
-
-		sep = os_strchr(cred->imsi, '-');
-		if (sep == NULL ||
-		    (sep - cred->imsi != 5 && sep - cred->imsi != 6))
-			continue;
-		mnc_len = sep - cred->imsi - 3;
-		imsi = cred->imsi;
-
-#ifdef PCSC_FUNCS
-	compare:
-#endif /* PCSC_FUNCS */
-		if (plmn_id_match(bss->anqp->anqp_3gpp, imsi, mnc_len))
-			break;
-	}
-	if (cred == NULL)
 		return -1;
 
 	ie = wpa_bss_get_ie(bss, WLAN_EID_SSID);
@@ -1167,7 +1137,7 @@ fail:
 
 int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 {
-	struct wpa_cred *cred;
+	struct wpa_cred *cred, *cred_rc, *cred_3gpp;
 	struct wpa_ssid *ssid;
 	struct nai_realm *realm;
 	struct nai_realm_eap *eap = NULL;
@@ -1194,39 +1164,61 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 		return -1;
 	}
 
-	cred = interworking_credentials_available_roaming_consortium(wpa_s,
-								     bss);
-	if (cred)
-		return interworking_connect_roaming_consortium(wpa_s, cred,
+	cred_rc = interworking_credentials_available_roaming_consortium(wpa_s,
+									bss);
+	if (cred_rc) {
+		wpa_printf(MSG_DEBUG, "Interworking: Highest roaming "
+			   "consortium matching credential priority %d",
+			   cred_rc->priority);
+	}
+
+	cred = interworking_credentials_available_realm(wpa_s, bss);
+	if (cred) {
+		wpa_printf(MSG_DEBUG, "Interworking: Highest NAI Realm list "
+			   "matching credential priority %d",
+			   cred->priority);
+	}
+
+	cred_3gpp = interworking_credentials_available_3gpp(wpa_s, bss);
+	if (cred_3gpp) {
+		wpa_printf(MSG_DEBUG, "Interworking: Highest 3GPP matching "
+			   "credential priority %d", cred_3gpp->priority);
+	}
+
+	if (cred_rc &&
+	    (cred == NULL || cred_rc->priority >= cred->priority) &&
+	    (cred_3gpp == NULL || cred_rc->priority >= cred_3gpp->priority))
+		return interworking_connect_roaming_consortium(wpa_s, cred_rc,
 							       bss, ie);
+
+	if (cred_3gpp &&
+	    (cred == NULL || cred_3gpp->priority >= cred->priority)) {
+		return interworking_connect_3gpp(wpa_s, cred_3gpp, bss);
+	}
+
+	if (cred == NULL) {
+		wpa_printf(MSG_DEBUG, "Interworking: No matching credentials "
+			   "found for " MACSTR, MAC2STR(bss->bssid));
+		return -1;
+	}
 
 	realm = nai_realm_parse(bss->anqp ? bss->anqp->nai_realm : NULL,
 				&count);
 	if (realm == NULL) {
 		wpa_printf(MSG_DEBUG, "Interworking: Could not parse NAI "
 			   "Realm list from " MACSTR, MAC2STR(bss->bssid));
-		count = 0;
+		return -1;
 	}
 
-	for (cred = wpa_s->conf->cred; cred; cred = cred->next) {
-		for (i = 0; i < count; i++) {
-			if (!nai_realm_match(&realm[i], cred->realm))
-				continue;
-			eap = nai_realm_find_eap(cred, &realm[i]);
-			if (eap)
-				break;
-		}
+	for (i = 0; i < count; i++) {
+		if (!nai_realm_match(&realm[i], cred->realm))
+			continue;
+		eap = nai_realm_find_eap(cred, &realm[i]);
 		if (eap)
 			break;
 	}
 
 	if (!eap) {
-		if (interworking_connect_3gpp(wpa_s, bss) == 0) {
-			if (realm)
-				nai_realm_free(realm, count);
-			return 0;
-		}
-
 		wpa_printf(MSG_DEBUG, "Interworking: No matching credentials "
 			   "and EAP method found for " MACSTR,
 			   MAC2STR(bss->bssid));

@@ -1601,7 +1601,7 @@ static void handle_action(struct hostapd_data *hapd,
 					       hapd->iface->freq);
 		}
 		if (hapd->public_action_cb2) {
-			hapd->public_action_cb2(hapd->public_action_cb_ctx,
+			hapd->public_action_cb2(hapd->public_action_cb2_ctx,
 						(u8 *) mgmt, len,
 						hapd->iface->freq);
 		}

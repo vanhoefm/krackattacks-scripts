@@ -61,6 +61,13 @@ def wpas_get_config_token():
     return wpas.request("WPS_NFC_CONFIG_TOKEN NDEF").rstrip().decode("hex")
 
 
+def wpas_get_er_config_token(uuid):
+    wpas = wpas_connect()
+    if (wpas == None):
+        return None
+    return wpas.request("WPS_ER_NFC_CONFIG_TOKEN NDEF " + uuid).rstrip().decode("hex")
+
+
 def wpas_get_password_token():
     wpas = wpas_connect()
     if (wpas == None):
@@ -198,6 +205,28 @@ def wps_write_config_tag(clf):
         time.sleep(0.1)
 
 
+def wps_write_er_config_tag(clf, uuid):
+    print "Write WPS ER config token"
+    data = wpas_get_er_config_token(uuid)
+    if (data == None):
+        print "Could not get WPS config token from wpa_supplicant"
+        return
+
+    print "Touch an NFC tag"
+    while True:
+        tag = clf.poll()
+        if tag == None:
+            time.sleep(0.1)
+            continue
+        break
+
+    print "Tag found - writing"
+    tag.ndef.message = data
+    print "Done - remove tag"
+    while tag.is_present:
+        time.sleep(0.1)
+
+
 def wps_write_password_tag(clf):
     print "Write WPS password token"
     data = wpas_get_password_token()
@@ -254,6 +283,10 @@ def main():
     try:
         if len(sys.argv) > 1 and sys.argv[1] == "write-config":
             wps_write_config_tag(clf)
+            raise SystemExit
+
+        if len(sys.argv) > 2 and sys.argv[1] == "write-er-config":
+            wps_write_er_config_tag(clf, sys.argv[2])
             raise SystemExit
 
         if len(sys.argv) > 1 and sys.argv[1] == "write-password":

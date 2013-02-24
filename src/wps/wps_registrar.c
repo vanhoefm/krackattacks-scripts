@@ -32,7 +32,7 @@ struct wps_nfc_pw_token {
 	struct dl_list list;
 	u8 pubkey_hash[WPS_OOB_PUBKEY_HASH_LEN];
 	u16 pw_id;
-	u8 dev_pw[WPS_OOB_DEVICE_PASSWORD_LEN];
+	u8 dev_pw[WPS_OOB_DEVICE_PASSWORD_LEN * 2 + 1];
 	size_t dev_pw_len;
 };
 
@@ -3498,8 +3498,10 @@ int wps_registrar_add_nfc_pw_token(struct wps_registrar *reg,
 
 	os_memcpy(token->pubkey_hash, pubkey_hash, WPS_OOB_PUBKEY_HASH_LEN);
 	token->pw_id = pw_id;
-	os_memcpy(token->dev_pw, dev_pw, dev_pw_len);
-	token->dev_pw_len = dev_pw_len;
+	wpa_snprintf_hex_uppercase((char *) token->dev_pw,
+				   sizeof(token->dev_pw),
+				   dev_pw, dev_pw_len);
+	token->dev_pw_len = dev_pw_len * 2;
 
 	dl_list_add(&reg->nfc_pw_tokens, &token->list);
 

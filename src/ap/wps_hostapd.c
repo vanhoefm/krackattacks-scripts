@@ -1612,6 +1612,7 @@ struct wpabuf * hostapd_wps_nfc_token_gen(struct hostapd_data *hapd, int ndef)
 int hostapd_wps_nfc_token_enable(struct hostapd_data *hapd)
 {
 	struct wps_context *wps = hapd->wps;
+	struct wpabuf *pw;
 
 	if (wps == NULL)
 		return -1;
@@ -1626,7 +1627,16 @@ int hostapd_wps_nfc_token_enable(struct hostapd_data *hapd)
 	wps->ap_nfc_dev_pw_id = hapd->conf->wps_nfc_dev_pw_id;
 	wps->ap_nfc_dh_pubkey = wpabuf_dup(hapd->conf->wps_nfc_dh_pubkey);
 	wps->ap_nfc_dh_privkey = wpabuf_dup(hapd->conf->wps_nfc_dh_privkey);
-	wps->ap_nfc_dev_pw = wpabuf_dup(hapd->conf->wps_nfc_dev_pw);
+	pw = hapd->conf->wps_nfc_dev_pw;
+	wps->ap_nfc_dev_pw = wpabuf_alloc(
+		wpabuf_len(pw) * 2 + 1);
+	if (wps->ap_nfc_dev_pw) {
+		wpa_snprintf_hex_uppercase(
+			(char *) wpabuf_put(wps->ap_nfc_dev_pw,
+					    wpabuf_len(pw) * 2),
+			wpabuf_len(pw) * 2 + 1,
+			wpabuf_head(pw), wpabuf_len(pw));
+	}
 
 	if (!wps->ap_nfc_dh_pubkey || !wps->ap_nfc_dh_privkey ||
 	    !wps->ap_nfc_dev_pw) {

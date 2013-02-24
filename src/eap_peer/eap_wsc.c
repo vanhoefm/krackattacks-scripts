@@ -137,7 +137,6 @@ static void * eap_wsc_init(struct eap_sm *sm)
 	struct wps_context *wps;
 	struct wps_credential new_ap_settings;
 	int res;
-	u8 dev_pw[WPS_OOB_DEVICE_PASSWORD_LEN];
 	int nfc = 0;
 
 	wps = sm->wps;
@@ -186,14 +185,6 @@ static void * eap_wsc_init(struct eap_sm *sm)
 		while (*pos != '\0' && *pos != ' ')
 			pos++;
 		cfg.pin_len = pos - (const char *) cfg.pin;
-		if (cfg.pin_len >= WPS_OOB_DEVICE_PASSWORD_MIN_LEN * 2 &&
-		    cfg.pin_len <= WPS_OOB_DEVICE_PASSWORD_LEN * 2 &&
-		    hexstr2bin((const char *) cfg.pin, dev_pw,
-			       cfg.pin_len / 2) == 0) {
-			/* Convert OOB Device Password to binary */
-			cfg.pin = dev_pw;
-			cfg.pin_len /= 2;
-		}
 		if (cfg.pin_len == 6 &&
 		    os_strncmp((const char *) cfg.pin, "nfc-pw", 6) == 0) {
 			cfg.pin = NULL;

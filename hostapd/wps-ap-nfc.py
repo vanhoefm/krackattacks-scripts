@@ -120,6 +120,7 @@ def wps_handover_resp(peer):
     print "Trying to handle WPS handover"
 
     srv = HandoverServer()
+    srv.sent_carrier = None
 
     nfc.llcp.activate(peer);
 

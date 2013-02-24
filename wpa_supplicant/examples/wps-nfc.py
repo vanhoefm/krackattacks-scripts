@@ -86,6 +86,8 @@ def wpas_get_handover_sel(uuid):
     wpas = wpas_connect()
     if (wpas == None):
         return None
+    if uuid is None:
+        return wpas.request("NFC_GET_HANDOVER_SEL NDEF WPS-CR").rstrip().decode("hex")
     return wpas.request("NFC_GET_HANDOVER_SEL NDEF WPS-CR " + uuid).rstrip().decode("hex")
 
 
@@ -133,7 +135,10 @@ class HandoverServer(nfc.handover.HandoverServer):
 
 
 def wps_handover_resp(peer, uuid):
-    print "Trying to handle WPS handover with AP " + uuid
+    if uuid is None:
+        print "Trying to handle WPS handover"
+    else:
+        print "Trying to handle WPS handover with AP " + uuid
 
     srv = HandoverServer()
     srv.sent_carrier = None
@@ -375,6 +380,8 @@ def main():
             if isinstance(tag, nfc.DEP):
                 if arg_uuid is None:
                     wps_handover_init(tag)
+                elif arg_uuid is "ap":
+                    wps_handover_resp(tag, None)
                 else:
                     wps_handover_resp(tag, arg_uuid)
                 continue

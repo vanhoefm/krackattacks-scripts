@@ -3128,7 +3128,12 @@ static void p2p_timeout_connect(struct p2p_data *p2p)
 		p2p_connect_send(p2p, p2p->go_neg_peer);
 		return;
 	}
-
+	if (p2p->go_neg_peer && p2p->go_neg_peer->oob_go_neg_freq > 0) {
+		p2p_dbg(p2p, "Skip connect-listen since GO Neg channel known (OOB)");
+		p2p_set_state(p2p, P2P_CONNECT_LISTEN);
+		p2p_set_timeout(p2p, 0, 30000);
+		return;
+	}
 	p2p_set_state(p2p, P2P_CONNECT_LISTEN);
 	p2p_listen_in_find(p2p, 0);
 }

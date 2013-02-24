@@ -2003,12 +2003,48 @@ struct wpabuf * wpas_wps_nfc_handover_req(struct wpa_supplicant *wpa_s, int cr)
 }
 
 
-struct wpabuf * wpas_wps_nfc_handover_sel(struct wpa_supplicant *wpa_s,
-					  int ndef, int cr)
+#ifdef CONFIG_WPS_NFC
+struct wpabuf * wpas_wps_er_nfc_handover_sel(struct wpa_supplicant *wpa_s,
+					     int ndef, const char *uuid)
 {
+	struct wpabuf *ret;
+	u8 u[UUID_LEN];
+
+	if (!wpa_s->wps_er)
+		return NULL;
+
+	if (uuid == NULL || uuid_str2bin(uuid, u))
+		return NULL;
+
+	/*
+	 * Handover Select carrier record for WPS uses the same format as
+	 * configuration token.
+	 */
+	ret = wps_er_nfc_config_token(wpa_s->wps_er, u);
+	if (ndef && ret) {
+		struct wpabuf *tmp;
+		tmp = ndef_build_wifi(ret);
+		wpabuf_free(ret);
+		if (tmp == NULL)
+			return NULL;
+		ret = tmp;
+	}
+
+	return ret;
+}
+#endif /* CONFIG_WPS_NFC */
+
+
+struct wpabuf * wpas_wps_nfc_handover_sel(struct wpa_supplicant *wpa_s,
+					  int ndef, int cr, const char *uuid)
+{
+	struct wpabuf *ret;
 	if (!cr)
 		return NULL;
-	return wpas_ap_wps_nfc_handover_sel(wpa_s, ndef);
+	ret = wpas_ap_wps_nfc_handover_sel(wpa_s, ndef);
+	if (ret)
+		return ret;
+	return wpas_wps_er_nfc_handover_sel(wpa_s, ndef, uuid);
 }
 
 

@@ -806,7 +806,8 @@ int wps_registrar_config_ap(struct wps_registrar *reg,
 			    struct wps_credential *cred);
 int wps_registrar_add_nfc_pw_token(struct wps_registrar *reg,
 				   const u8 *pubkey_hash, u16 pw_id,
-				   const u8 *dev_pw, size_t dev_pw_len);
+				   const u8 *dev_pw, size_t dev_pw_len,
+				   int pk_hash_provided_oob);
 int wps_registrar_add_nfc_password_token(struct wps_registrar *reg,
 					 const u8 *oob_dev_pw,
 					 size_t oob_dev_pw_len);

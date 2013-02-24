@@ -34,6 +34,7 @@ struct wps_nfc_pw_token {
 	u16 pw_id;
 	u8 dev_pw[WPS_OOB_DEVICE_PASSWORD_LEN * 2 + 1];
 	size_t dev_pw_len;
+	int pk_hash_provided_oob; /* whether own PK hash was provided OOB */
 };
 
 
@@ -1777,6 +1778,7 @@ static struct wpabuf * wps_build_ap_cred(struct wps_data *wps)
 static struct wpabuf * wps_build_m2(struct wps_data *wps)
 {
 	struct wpabuf *msg;
+	int config_in_m2 = 0;
 
 	if (random_get_bytes(wps->nonce_r, WPS_NONCE_LEN) < 0)
 		return NULL;
@@ -1807,14 +1809,40 @@ static struct wpabuf * wps_build_m2(struct wps_data *wps)
 	    wps_build_config_error(msg, WPS_CFG_NO_ERROR) ||
 	    wps_build_dev_password_id(msg, wps->dev_pw_id) ||
 	    wps_build_os_version(&wps->wps->dev, msg) ||
-	    wps_build_wfa_ext(msg, 0, NULL, 0) ||
-	    wps_build_authenticator(wps, msg)) {
+	    wps_build_wfa_ext(msg, 0, NULL, 0)) {
+		wpabuf_free(msg);
+		return NULL;
+	}
+
+#ifdef CONFIG_WPS_NFC
+	if (wps->nfc_pw_token && wps->nfc_pw_token->pk_hash_provided_oob) {
+		/*
+		 * Use abbreviated handshake since public key hash allowed
+		 * Enrollee to validate our public key similarly to how Enrollee
+		 * public key was validated. There is no need to validate Device
+		 * Password in this case.
+		 */
+		struct wpabuf *plain = wpabuf_alloc(500);
+		if (plain == NULL ||
+		    wps_build_cred(wps, plain) ||
+		    wps_build_key_wrap_auth(wps, plain) ||
+		    wps_build_encr_settings(wps, msg, plain)) {
+			wpabuf_free(msg);
+			wpabuf_free(plain);
+			return NULL;
+		}
+		wpabuf_free(plain);
+		config_in_m2 = 1;
+	}
+#endif /* CONFIG_WPS_NFC */
+
+	if (wps_build_authenticator(wps, msg)) {
 		wpabuf_free(msg);
 		return NULL;
 	}
 
 	wps->int_reg = 1;
-	wps->state = RECV_M3;
+	wps->state = config_in_m2 ? RECV_DONE : RECV_M3;
 	return msg;
 }
 
@@ -3496,7 +3524,8 @@ int wps_registrar_config_ap(struct wps_registrar *reg,
 
 int wps_registrar_add_nfc_pw_token(struct wps_registrar *reg,
 				   const u8 *pubkey_hash, u16 pw_id,
-				   const u8 *dev_pw, size_t dev_pw_len)
+				   const u8 *dev_pw, size_t dev_pw_len,
+				   int pk_hash_provided_oob)
 {
 	struct wps_nfc_pw_token *token;
 
@@ -3511,6 +3540,7 @@ int wps_registrar_add_nfc_pw_token(struct wps_registrar *reg,
 
 	os_memcpy(token->pubkey_hash, pubkey_hash, WPS_OOB_PUBKEY_HASH_LEN);
 	token->pw_id = pw_id;
+	token->pk_hash_provided_oob = pk_hash_provided_oob;
 	wpa_snprintf_hex_uppercase((char *) token->dev_pw,
 				   sizeof(token->dev_pw),
 				   dev_pw, dev_pw_len);
@@ -3563,7 +3593,7 @@ int wps_registrar_add_nfc_password_token(struct wps_registrar *reg,
 	wpa_hexdump_key(MSG_DEBUG, "WPS: Device Password", dev_pw, dev_pw_len);
 
 	return wps_registrar_add_nfc_pw_token(reg, hash, id, dev_pw,
-					      dev_pw_len);
+					      dev_pw_len, 0);
 }
 
 

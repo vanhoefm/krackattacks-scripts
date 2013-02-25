@@ -531,7 +531,7 @@ void p2p_invitation_resp_cb(struct p2p_data *p2p, int success)
 int p2p_invite(struct p2p_data *p2p, const u8 *peer, enum p2p_invite_role role,
 	       const u8 *bssid, const u8 *ssid, size_t ssid_len,
 	       unsigned int force_freq, const u8 *go_dev_addr,
-	       int persistent_group)
+	       int persistent_group, unsigned int pref_freq)
 {
 	struct p2p_device *dev;
 
@@ -561,6 +561,9 @@ int p2p_invite(struct p2p_data *p2p, const u8 *peer, enum p2p_invite_role role,
 		return -1;
 	}
 
+	if (p2p_prepare_channel(p2p, dev, force_freq, pref_freq) < 0)
+		return -1;
+
 	if (dev->flags & P2P_DEV_GROUP_CLIENT_ONLY) {
 		if (!(dev->info.dev_capab &
 		      P2P_DEV_CAPAB_CLIENT_DISCOVERABILITY)) {
@@ -573,26 +576,6 @@ int p2p_invite(struct p2p_data *p2p, const u8 *peer, enum p2p_invite_role role,
 	}
 
 	dev->invitation_reqs = 0;
-
-	if (force_freq) {
-		if (p2p_freq_to_channel(p2p->cfg->country, force_freq,
-					&p2p->op_reg_class, &p2p->op_channel) <
-		    0) {
-			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-				"P2P: Unsupported frequency %u MHz",
-				force_freq);
-			return -1;
-		}
-		p2p->channels.reg_classes = 1;
-		p2p->channels.reg_class[0].channels = 1;
-		p2p->channels.reg_class[0].reg_class = p2p->op_reg_class;
-		p2p->channels.reg_class[0].channel[0] = p2p->op_channel;
-	} else {
-		p2p->op_reg_class = p2p->cfg->op_reg_class;
-		p2p->op_channel = p2p->cfg->op_channel;
-		os_memcpy(&p2p->channels, &p2p->cfg->channels,
-			  sizeof(struct p2p_channels));
-	}
 
 	if (p2p->state != P2P_IDLE)
 		p2p_stop_find(p2p);

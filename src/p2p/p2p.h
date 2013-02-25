@@ -1042,12 +1042,14 @@ enum p2p_invite_role {
  * @force_freq: The only allowed channel frequency in MHz or 0
  * @go_dev_addr: Forced GO Device Address or %NULL if none
  * @persistent_group: Whether this is to reinvoke a persistent group
+ * @pref_freq: Preferred operating frequency in MHz or 0 (this is only used if
+ *	force_freq == 0)
  * Returns: 0 on success, -1 on failure
  */
 int p2p_invite(struct p2p_data *p2p, const u8 *peer, enum p2p_invite_role role,
 	       const u8 *bssid, const u8 *ssid, size_t ssid_len,
 	       unsigned int force_freq, const u8 *go_dev_addr,
-	       int persistent_group);
+	       int persistent_group, unsigned int pref_freq);
 
 /**
  * p2p_presence_req - Request GO presence

@@ -122,6 +122,7 @@ struct wpa_tdls_peer {
 	size_t supp_rates_len;
 
 	struct ieee80211_ht_capabilities *ht_capabilities;
+	struct ieee80211_vht_capabilities *vht_capabilities;
 
 	u8 qos_info;
 
@@ -620,6 +621,8 @@ static void wpa_tdls_peer_free(struct wpa_sm *sm, struct wpa_tdls_peer *peer)
 	peer->sm_tmr.buf = NULL;
 	os_free(peer->ht_capabilities);
 	peer->ht_capabilities = NULL;
+	os_free(peer->vht_capabilities);
+	peer->vht_capabilities = NULL;
 	os_free(peer->ext_capab);
 	peer->ext_capab = NULL;
 	peer->rsnie_i_len = peer->rsnie_p_len = 0;
@@ -1370,6 +1373,34 @@ static int copy_peer_ht_capab(const struct wpa_eapol_ie_parse *kde,
 }
 
 
+static int copy_peer_vht_capab(const struct wpa_eapol_ie_parse *kde,
+			      struct wpa_tdls_peer *peer)
+{
+	if (!kde->vht_capabilities ||
+	    kde->vht_capabilities_len <
+	    sizeof(struct ieee80211_vht_capabilities) ) {
+		wpa_printf(MSG_DEBUG, "TDLS: No supported vht capabilities "
+			   "received");
+		return 0;
+	}
+
+	if (!peer->vht_capabilities) {
+		peer->vht_capabilities =
+                        os_zalloc(sizeof(struct ieee80211_vht_capabilities));
+		if (peer->vht_capabilities == NULL)
+                        return -1;
+	}
+
+	os_memcpy(peer->vht_capabilities, kde->vht_capabilities,
+                  sizeof(struct ieee80211_vht_capabilities));
+	wpa_hexdump(MSG_DEBUG, "TDLS: Peer VHT capabilities",
+		    (u8 *) peer->vht_capabilities,
+		    sizeof(struct ieee80211_vht_capabilities));
+
+	return 0;
+}
+
+
 static int copy_peer_ext_capab(const struct wpa_eapol_ie_parse *kde,
 			       struct wpa_tdls_peer *peer)
 {
@@ -1464,6 +1495,9 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 		goto error;
 
 	if (copy_peer_ht_capab(&kde, peer) < 0)
+		goto error;
+
+	if (copy_peer_vht_capab(&kde, peer) < 0)
 		goto error;
 
 	if (copy_peer_ext_capab(&kde, peer) < 0)
@@ -1694,7 +1728,7 @@ skip_rsn:
 
 skip_rsn_check:
 	/* add the peer to the driver as a "setup in progress" peer */
-	wpa_sm_tdls_peer_addset(sm, peer->addr, 1, 0, NULL, 0, NULL, 0,
+	wpa_sm_tdls_peer_addset(sm, peer->addr, 1, 0, NULL, 0, NULL, NULL, 0,
 				NULL, 0);
 
 	wpa_printf(MSG_DEBUG, "TDLS: Sending TDLS Setup Response / TPK M2");
@@ -1738,8 +1772,9 @@ static void wpa_tdls_enable_link(struct wpa_sm *sm, struct wpa_tdls_peer *peer)
 	/* add supported rates, capabilities, and qos_info to the TDLS peer */
 	wpa_sm_tdls_peer_addset(sm, peer->addr, 0, peer->capability,
 				peer->supp_rates, peer->supp_rates_len,
-				peer->ht_capabilities, peer->qos_info,
-				peer->ext_capab, peer->ext_capab_len);
+				peer->ht_capabilities, peer->vht_capabilities,
+				peer->qos_info, peer->ext_capab,
+				peer->ext_capab_len);
 
 	wpa_sm_tdls_oper(sm, TDLS_ENABLE_LINK, peer->addr);
 }
@@ -1836,6 +1871,9 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 		goto error;
 
 	if (copy_peer_ht_capab(&kde, peer) < 0)
+		goto error;
+
+	if (copy_peer_vht_capab(&kde, peer) < 0)
 		goto error;
 
 	if (copy_peer_ext_capab(&kde, peer) < 0)
@@ -2146,7 +2184,7 @@ int wpa_tdls_start(struct wpa_sm *sm, const u8 *addr)
 	peer->initiator = 1;
 
 	/* add the peer to the driver as a "setup in progress" peer */
-	wpa_sm_tdls_peer_addset(sm, peer->addr, 1, 0, NULL, 0, NULL, 0,
+	wpa_sm_tdls_peer_addset(sm, peer->addr, 1, 0, NULL, 0, NULL, NULL, 0,
 				NULL, 0);
 
 	if (wpa_tdls_send_tpk_m1(sm, peer) < 0) {

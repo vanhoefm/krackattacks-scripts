@@ -1368,12 +1368,14 @@ int p2p_connect(struct p2p_data *p2p, const u8 *peer_addr,
 	else {
 		dev->flags &= ~P2P_DEV_PD_BEFORE_GO_NEG;
 		/*
-		 * Assign dialog token here to use the same value in each
-		 * retry within the same GO Negotiation exchange.
+		 * Assign dialog token and tie breaker here to use the same
+		 * values in each retry within the same GO Negotiation exchange.
 		 */
 		dev->dialog_token++;
 		if (dev->dialog_token == 0)
 			dev->dialog_token = 1;
+		dev->tie_breaker = p2p->next_tie_breaker;
+		p2p->next_tie_breaker = !p2p->next_tie_breaker;
 	}
 	dev->connect_reqs = 0;
 	dev->go_neg_req_sent = 0;

@@ -52,6 +52,7 @@ struct p2p_device {
 	int go_neg_req_sent;
 	enum p2p_go_state go_state;
 	u8 dialog_token;
+	u8 tie_breaker;
 	u8 intended_addr[ETH_ALEN];
 
 	char country[3];

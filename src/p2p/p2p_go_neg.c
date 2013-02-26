@@ -161,9 +161,7 @@ static struct wpabuf * p2p_build_go_neg_req(struct p2p_data *p2p,
 	p2p_buf_add_capability(buf, p2p->dev_capab &
 			       ~P2P_DEV_CAPAB_CLIENT_DISCOVERABILITY,
 			       group_capab);
-	p2p_buf_add_go_intent(buf, (p2p->go_intent << 1) |
-			      p2p->next_tie_breaker);
-	p2p->next_tie_breaker = !p2p->next_tie_breaker;
+	p2p_buf_add_go_intent(buf, (p2p->go_intent << 1) | peer->tie_breaker);
 	p2p_buf_add_config_timeout(buf, p2p->go_timeout, p2p->client_timeout);
 	p2p_buf_add_listen_channel(buf, p2p->cfg->country, p2p->cfg->reg_class,
 				   p2p->cfg->channel);

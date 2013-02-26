@@ -2166,7 +2166,8 @@ p2p_probe_req_rx(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 	if ((p2p->state == P2P_CONNECT || p2p->state == P2P_CONNECT_LISTEN) &&
 	    p2p->go_neg_peer &&
 	    os_memcmp(addr, p2p->go_neg_peer->info.p2p_device_addr, ETH_ALEN)
-	    == 0) {
+	    == 0 &&
+	    !(p2p->go_neg_peer->flags & P2P_DEV_WAIT_GO_NEG_CONFIRM)) {
 		/* Received a Probe Request from GO Negotiation peer */
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Found GO Negotiation peer - try to start GO "

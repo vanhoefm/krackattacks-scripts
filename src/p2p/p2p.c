@@ -2172,6 +2172,7 @@ p2p_probe_req_rx(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Found GO Negotiation peer - try to start GO "
 			"negotiation from timeout");
+		eloop_cancel_timeout(p2p_go_neg_start, p2p, NULL);
 		eloop_register_timeout(0, 0, p2p_go_neg_start, p2p, NULL);
 		return P2P_PREQ_PROCESSED;
 	}
@@ -2476,6 +2477,7 @@ void p2p_deinit(struct p2p_data *p2p)
 	eloop_cancel_timeout(p2p_expiration_timeout, p2p, NULL);
 	eloop_cancel_timeout(p2p_ext_listen_timeout, p2p, NULL);
 	eloop_cancel_timeout(p2p_scan_timeout, p2p, NULL);
+	eloop_cancel_timeout(p2p_go_neg_start, p2p, NULL);
 	p2p_flush(p2p);
 	p2p_free_req_dev_types(p2p);
 	os_free(p2p->cfg->dev_name);

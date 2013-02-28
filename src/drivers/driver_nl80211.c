@@ -8438,6 +8438,8 @@ static void wpa_driver_nl80211_send_action_cancel_wait(void *priv)
 	if (!msg)
 		return;
 
+	wpa_printf(MSG_DEBUG, "nl80211: Cancel TX frame wait: cookie=0x%llx",
+		   (long long unsigned int) drv->send_action_cookie);
 	nl80211_cmd(drv, msg, 0, NL80211_CMD_FRAME_WAIT_CANCEL);
 
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);

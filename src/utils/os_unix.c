@@ -11,7 +11,7 @@
 #include <time.h>
 
 #ifdef ANDROID
-#include <linux/capability.h>
+#include <sys/capability.h>
 #include <linux/prctl.h>
 #include <private/android_filesystem_config.h>
 #endif /* ANDROID */

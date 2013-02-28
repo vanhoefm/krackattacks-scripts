@@ -3225,6 +3225,13 @@ static int print_bss_info(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 	}
 #endif /* CONFIG_INTERWORKING */
 
+	if (mask & WPA_BSS_MASK_DELIM) {
+		ret = os_snprintf(pos, end - pos, "====\n");
+		if (ret < 0 || ret >= end - pos)
+			return 0;
+		pos += ret;
+	}
+
 	return pos - buf;
 }
 

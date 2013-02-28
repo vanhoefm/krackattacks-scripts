@@ -230,7 +230,7 @@ int p2p_connect_send(struct p2p_data *p2p, struct p2p_device *dev)
 	dev->connect_reqs++;
 	if (p2p_send_action(p2p, freq, dev->info.p2p_device_addr,
 			    p2p->cfg->dev_addr, dev->info.p2p_device_addr,
-			    wpabuf_head(req), wpabuf_len(req), 200) < 0) {
+			    wpabuf_head(req), wpabuf_len(req), 500) < 0) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Failed to send Action frame");
 		/* Use P2P find to recover and retry */
@@ -773,7 +773,7 @@ fail:
 			P2P_PENDING_GO_NEG_RESPONSE_FAILURE;
 	if (p2p_send_action(p2p, freq, sa, p2p->cfg->dev_addr,
 			    p2p->cfg->dev_addr,
-			    wpabuf_head(resp), wpabuf_len(resp), 250) < 0) {
+			    wpabuf_head(resp), wpabuf_len(resp), 500) < 0) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Failed to send Action frame");
 	}

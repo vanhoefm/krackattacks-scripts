@@ -198,8 +198,10 @@ void p2p_go_neg_failed(struct p2p_data *p2p, struct p2p_device *peer,
 	struct p2p_go_neg_results res;
 	p2p_clear_timeout(p2p);
 	p2p_set_state(p2p, P2P_IDLE);
-	if (p2p->go_neg_peer)
+	if (p2p->go_neg_peer) {
+		p2p->go_neg_peer->flags &= ~P2P_DEV_PEER_WAITING_RESPONSE;
 		p2p->go_neg_peer->wps_method = WPS_NOT_READY;
+	}
 	p2p->go_neg_peer = NULL;
 
 	os_memset(&res, 0, sizeof(res));
@@ -1128,6 +1130,10 @@ void p2p_stop_find_for_freq(struct p2p_data *p2p, int freq)
 	p2p_set_state(p2p, P2P_IDLE);
 	p2p_free_req_dev_types(p2p);
 	p2p->start_after_scan = P2P_AFTER_SCAN_NOTHING;
+	if (p2p->go_neg_peer) {
+		p2p->go_neg_peer->flags &= ~P2P_DEV_PEER_WAITING_RESPONSE;
+		p2p->go_neg_peer->wps_method = WPS_NOT_READY;
+	}
 	p2p->go_neg_peer = NULL;
 	p2p->sd_peer = NULL;
 	p2p->invite_peer = NULL;
@@ -2907,6 +2913,7 @@ int p2p_ie_text(struct wpabuf *p2p_ie, char *buf, char *end)
 static void p2p_go_neg_req_cb(struct p2p_data *p2p, int success)
 {
 	struct p2p_device *dev = p2p->go_neg_peer;
+	int timeout;
 
 	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 		"P2P: GO Negotiation Request TX callback: success=%d",
@@ -2945,7 +2952,20 @@ static void p2p_go_neg_req_cb(struct p2p_data *p2p, int success)
 	 * channel.
 	 */
 	p2p_set_state(p2p, P2P_CONNECT);
-	p2p_set_timeout(p2p, 0, success ? 500000 : 100000);
+	timeout = success ? 500000 : 100000;
+	if (!success && p2p->go_neg_peer &&
+	    (p2p->go_neg_peer->flags & P2P_DEV_PEER_WAITING_RESPONSE)) {
+		unsigned int r;
+		/*
+		 * Peer is expected to wait our response and we will skip the
+		 * listen phase. Add some randomness to the wait time here to
+		 * make it less likely to hit cases where we could end up in
+		 * sync with peer not listening.
+		 */
+		os_get_random((u8 *) &r, sizeof(r));
+		timeout += r % 100000;
+	}
+	p2p_set_timeout(p2p, 0, timeout);
 }
 
 
@@ -3183,6 +3203,15 @@ static void p2p_timeout_connect(struct p2p_data *p2p)
 		p2p_go_neg_failed(p2p, p2p->go_neg_peer, -1);
 		return;
 	}
+	if (p2p->go_neg_peer &&
+	    (p2p->go_neg_peer->flags & P2P_DEV_PEER_WAITING_RESPONSE) &&
+	    p2p->go_neg_peer->connect_reqs < 120) {
+		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Peer expected to "
+			"wait our response - skip listen");
+		p2p_connect_send(p2p, p2p->go_neg_peer);
+		return;
+	}
+
 	p2p_set_state(p2p, P2P_CONNECT_LISTEN);
 	p2p_listen_in_find(p2p, 0);
 }

@@ -57,7 +57,7 @@ test-md4: test-md4.o $(LIBS)
 	$(LDO) $(LDFLAGS) -o $@ $^
 
 test-md5: test-md5.o $(LIBS)
-	$(LDO) $(LDFLAGS) -o $@ $^
+	$(LDO) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 test-milenage: test-milenage.o $(LIBS)
 	$(LDO) $(LDFLAGS) -o $@ $^
@@ -72,7 +72,7 @@ test-rc4: test-rc4.o $(LIBS)
 	$(LDO) $(LDFLAGS) -o $@ $^
 
 test-sha1: test-sha1.o $(LIBS)
-	$(LDO) $(LDFLAGS) -o $@ $^
+	$(LDO) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 test-sha256: test-sha256.o $(LIBS)
 	$(LDO) $(LDFLAGS) -o $@ $^

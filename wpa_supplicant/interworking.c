@@ -1326,10 +1326,11 @@ fail:
 static struct wpa_cred * interworking_credentials_available_3gpp(
 	struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 {
-	struct wpa_cred *cred, *selected = NULL;
+	struct wpa_cred *selected = NULL;
+#ifdef INTERWORKING_3GPP
+	struct wpa_cred *cred;
 	int ret;
 
-#ifdef INTERWORKING_3GPP
 	if (bss->anqp == NULL || bss->anqp->anqp_3gpp == NULL)
 		return NULL;
 

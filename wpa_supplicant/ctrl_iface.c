@@ -3134,7 +3134,7 @@ static int print_bss_info(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 		if (wpa_bss_get_vendor_ie(bss, HS20_IE_VENDOR_TYPE)) {
 			ret = os_snprintf(pos, end - pos, "[HS20]");
 			if (ret < 0 || ret >= end - pos)
-				return -1;
+				return 0;
 			pos += ret;
 		}
 #endif /* CONFIG_HS20 */
@@ -3182,7 +3182,7 @@ static int print_bss_info(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 		if (wfd) {
 			ret = os_snprintf(pos, end - pos, "wfd_subelems=");
 			if (ret < 0 || ret >= end - pos)
-				return pos - buf;
+				return 0;
 			pos += ret;
 
 			pos += wpa_snprintf_hex(pos, end - pos,
@@ -3192,7 +3192,7 @@ static int print_bss_info(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 
 			ret = os_snprintf(pos, end - pos, "\n");
 			if (ret < 0 || ret >= end - pos)
-				return pos - buf;
+				return 0;
 			pos += ret;
 		}
 	}

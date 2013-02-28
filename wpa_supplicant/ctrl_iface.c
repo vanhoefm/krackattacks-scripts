@@ -3353,8 +3353,13 @@ static int wpa_supplicant_ctrl_iface_bss(struct wpa_supplicant *wpa_s,
 		ret += len;
 		buf += len;
 		buflen -= len;
-		if (bss == bsslast)
+		if (bss == bsslast) {
+			if ((mask & WPA_BSS_MASK_DELIM) && len &&
+			    (bss == dl_list_last(&wpa_s->bss_id,
+						 struct wpa_bss, list_id)))
+				os_snprintf(buf - 5, 5, "####\n");
 			break;
+		}
 		next = bss->list_id.next;
 		if (next == &wpa_s->bss_id)
 			break;

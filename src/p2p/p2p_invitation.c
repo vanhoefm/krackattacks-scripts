@@ -409,6 +409,7 @@ void p2p_process_invitation_resp(struct p2p_data *p2p, const u8 *sa,
 {
 	struct p2p_device *dev;
 	struct p2p_message msg;
+	struct p2p_channels intersection, *channels = NULL;
 
 	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 		"P2P: Received Invitation Response from " MACSTR,
@@ -440,9 +441,32 @@ void p2p_process_invitation_resp(struct p2p_data *p2p, const u8 *sa,
 		return;
 	}
 
+	if (!msg.channel_list) {
+		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
+			"P2P: Mandatory Channel List attribute missing in "
+			"Invitation Response from " MACSTR, MAC2STR(sa));
+#ifdef CONFIG_P2P_STRICT
+		p2p_parse_free(&msg);
+		return;
+#endif /* CONFIG_P2P_STRICT */
+		/* Try to survive without peer channel list */
+		channels = &p2p->channels;
+	} else if (p2p_peer_channels_check(p2p, &p2p->channels, dev,
+					   msg.channel_list,
+					   msg.channel_list_len) < 0) {
+		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
+			"P2P: No common channels found");
+		p2p_parse_free(&msg);
+		return;
+	} else {
+		p2p_channels_intersect(&p2p->channels, &dev->channels,
+				       &intersection);
+		channels = &intersection;
+	}
+
 	if (p2p->cfg->invitation_result)
 		p2p->cfg->invitation_result(p2p->cfg->cb_ctx, *msg.status,
-					    msg.group_bssid);
+					    msg.group_bssid, channels);
 
 	p2p_parse_free(&msg);
 

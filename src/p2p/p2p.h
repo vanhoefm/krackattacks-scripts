@@ -729,6 +729,7 @@ struct p2p_config {
 	 * @ctx: Callback context from cb_ctx
 	 * @status: Negotiation result (Status Code)
 	 * @bssid: P2P Group BSSID or %NULL if not received
+	 * @channels: Available operating channels for the group
 	 *
 	 * This callback is used to indicate result of an Invitation procedure
 	 * started with a call to p2p_invite(). The indicated status code is
@@ -736,7 +737,8 @@ struct p2p_config {
 	 * (P2P_SC_SUCCESS) indicating success or -1 to indicate a timeout or a
 	 * local failure in transmitting the Invitation Request.
 	 */
-	void (*invitation_result)(void *ctx, int status, const u8 *bssid);
+	void (*invitation_result)(void *ctx, int status, const u8 *bssid,
+				  const struct p2p_channels *channels);
 
 	/**
 	 * go_connected - Check whether we are connected to a GO
@@ -1615,6 +1617,9 @@ int p2p_get_oper_freq(struct p2p_data *p2p, const u8 *iface_addr);
  * @enabled: Whether intra BSS distribution will be enabled
  */
 void p2p_set_intra_bss_dist(struct p2p_data *p2p, int enabled);
+
+int p2p_channels_includes_freq(const struct p2p_channels *channels,
+			       unsigned int freq);
 
 /**
  * p2p_supported_freq - Check whether channel is supported for P2P

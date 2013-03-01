@@ -13,6 +13,7 @@ enum p2p_wps_method;
 struct p2p_go_neg_results;
 enum p2p_send_action_result;
 struct p2p_peer_info;
+struct p2p_channels;
 
 int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s);
 void wpas_p2p_deinit(struct wpa_supplicant *wpa_s);
@@ -31,7 +32,8 @@ int wpas_p2p_group_add(struct wpa_supplicant *wpa_s, int persistent_group,
 		       int freq, int ht40);
 int wpas_p2p_group_add_persistent(struct wpa_supplicant *wpa_s,
 				  struct wpa_ssid *ssid, int addr_allocated,
-				  int freq, int ht40);
+				  int freq, int ht40,
+				  const struct p2p_channels *channels);
 struct p2p_group * wpas_p2p_group_init(struct wpa_supplicant *wpa_s,
 				       struct wpa_ssid *ssid);
 void wpas_p2p_wps_success(struct wpa_supplicant *wpa_s, const u8 *peer_addr,

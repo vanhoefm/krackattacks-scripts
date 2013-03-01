@@ -254,6 +254,23 @@ int p2p_channels_includes(const struct p2p_channels *channels, u8 reg_class,
 }
 
 
+int p2p_channels_includes_freq(const struct p2p_channels *channels,
+			       unsigned int freq)
+{
+	size_t i, j;
+	for (i = 0; i < channels->reg_classes; i++) {
+		const struct p2p_reg_class *reg = &channels->reg_class[i];
+		for (j = 0; j < reg->channels; j++) {
+			if (p2p_channel_to_freq_j4(reg->reg_class,
+						   reg->channel[j]) ==
+			    (int) freq)
+				return 1;
+		}
+	}
+	return 0;
+}
+
+
 int p2p_supported_freq(struct p2p_data *p2p, unsigned int freq)
 {
 	u8 op_reg_class, op_channel;

@@ -346,7 +346,8 @@ DBusMessage * wpas_dbus_handler_p2p_group_add(DBusMessage *message,
 		if (ssid == NULL || ssid->disabled != 2)
 			goto inv_args;
 
-		if (wpas_p2p_group_add_persistent(wpa_s, ssid, 0, freq, 0)) {
+		if (wpas_p2p_group_add_persistent(wpa_s, ssid, 0, freq, 0,
+						  NULL)) {
 			reply = wpas_dbus_error_unknown_error(
 				message,
 				"Failed to reinvoke a persistent group");

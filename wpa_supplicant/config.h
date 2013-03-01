@@ -817,6 +817,22 @@ struct wpa_config {
 	 * groups will be tried in the indicated order.
 	 */
 	int *sae_groups;
+
+	/**
+	 * dtim_period - Default DTIM period in Beacon intervals
+	 *
+	 * This parameter can be used to set the default value for network
+	 * blocks that do not specify dtim_period.
+	 */
+	int dtim_period;
+
+	/**
+	 * beacon_int - Default Beacon interval in TU
+	 *
+	 * This parameter can be used to set the default value for network
+	 * blocks that do not specify beacon_int.
+	 */
+	int beacon_int;
 };
 
 

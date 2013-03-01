@@ -690,6 +690,8 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 #ifdef CONFIG_P2P
 	write_p2p_client_list(f, ssid);
 #endif /* CONFIG_P2P */
+	INT(dtim_period);
+	INT(beacon_int);
 
 #undef STR
 #undef INT
@@ -974,6 +976,10 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 		fprintf(f, "okc=%d\n", config->okc);
 	if (config->pmf)
 		fprintf(f, "pmf=%d\n", config->pmf);
+	if (config->dtim_period)
+		fprintf(f, "dtim_period=%d\n", config->dtim_period);
+	if (config->beacon_int)
+		fprintf(f, "beacon_int=%d\n", config->beacon_int);
 
 	if (config->sae_groups) {
 		int i;

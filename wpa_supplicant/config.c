@@ -1545,6 +1545,7 @@ static const struct parse_data ssid_fields[] = {
 #endif /* CONFIG_HT_OVERRIDES */
 	{ INT(ap_max_inactivity) },
 	{ INT(dtim_period) },
+	{ INT(beacon_int) },
 };
 
 #undef OFFSET
@@ -2991,6 +2992,8 @@ static const struct global_parse_data global_fields[] = {
 	{ INT(okc), 0 },
 	{ INT(pmf), 0 },
 	{ FUNC(sae_groups), 0 },
+	{ INT(dtim_period), 0 },
+	{ INT(beacon_int), 0 },
 };
 
 #undef FUNC

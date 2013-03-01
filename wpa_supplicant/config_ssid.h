@@ -549,6 +549,11 @@ struct wpa_ssid {
 	int dtim_period;
 
 	/**
+	 * beacon_int - Beacon interval (default: 100 TU)
+	 */
+	int beacon_int;
+
+	/**
 	 * auth_failures - Number of consecutive authentication failures
 	 */
 	unsigned int auth_failures;

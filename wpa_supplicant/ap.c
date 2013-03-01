@@ -209,6 +209,13 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 
 	if (ssid->dtim_period)
 		bss->dtim_period = ssid->dtim_period;
+	else if (wpa_s->conf->dtim_period)
+		bss->dtim_period = wpa_s->conf->dtim_period;
+
+	if (ssid->beacon_int)
+		conf->beacon_int = ssid->beacon_int;
+	else if (wpa_s->conf->beacon_int)
+		conf->beacon_int = wpa_s->conf->beacon_int;
 
 	if ((bss->wpa & 2) && bss->rsn_pairwise == 0)
 		bss->rsn_pairwise = bss->wpa_pairwise;

@@ -1130,10 +1130,8 @@ void p2p_stop_find_for_freq(struct p2p_data *p2p, int freq)
 	p2p_set_state(p2p, P2P_IDLE);
 	p2p_free_req_dev_types(p2p);
 	p2p->start_after_scan = P2P_AFTER_SCAN_NOTHING;
-	if (p2p->go_neg_peer) {
+	if (p2p->go_neg_peer)
 		p2p->go_neg_peer->flags &= ~P2P_DEV_PEER_WAITING_RESPONSE;
-		p2p->go_neg_peer->wps_method = WPS_NOT_READY;
-	}
 	p2p->go_neg_peer = NULL;
 	p2p->sd_peer = NULL;
 	p2p->invite_peer = NULL;

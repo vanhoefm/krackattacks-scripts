@@ -2476,8 +2476,14 @@ static void wpas_invitation_received(void *ctx, const u8 *sa, const u8 *bssid,
 		return;
 	}
 
-	wpa_msg(wpa_s, MSG_INFO, P2P_EVENT_INVITATION_RECEIVED "sa=" MACSTR
-		" persistent=%d", MAC2STR(sa), s->id);
+	if (s->mode == WPAS_MODE_P2P_GO && op_freq) {
+		wpa_msg(wpa_s, MSG_INFO, P2P_EVENT_INVITATION_RECEIVED "sa="
+			MACSTR " persistent=%d freq=%d",
+			MAC2STR(sa), s->id, op_freq);
+	} else {
+		wpa_msg(wpa_s, MSG_INFO, P2P_EVENT_INVITATION_RECEIVED "sa="
+			MACSTR " persistent=%d", MAC2STR(sa), s->id);
+	}
 }
 
 

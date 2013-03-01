@@ -38,7 +38,7 @@ u8 * hostapd_eid_vht_capabilities(struct hostapd_data *hapd, u8 *eid)
 		hapd->iface->current_mode->vht_capab);
 
 	/* Supported MCS set comes from hw */
-	os_memcpy(cap->vht_supported_mcs_set,
+	os_memcpy(&cap->vht_supported_mcs_set,
 	          hapd->iface->current_mode->vht_mcs_set, 8);
 
 	pos += sizeof(*cap);

@@ -579,7 +579,12 @@ struct ieee80211_ht_operation {
 
 struct ieee80211_vht_capabilities {
 	le32 vht_capabilities_info;
-	u8 vht_supported_mcs_set[8];
+	struct {
+		le16 rx_map;
+		le16 rx_highest;
+		le16 tx_map;
+		le16 tx_highest;
+	} vht_supported_mcs_set;
 } STRUCT_PACKED;
 
 struct ieee80211_vht_operation {

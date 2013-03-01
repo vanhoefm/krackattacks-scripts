@@ -3585,7 +3585,7 @@ static int wpas_p2p_setup_freqs(struct wpa_supplicant *wpa_s, int freq,
 			   "(%u MHz) not available for P2P - try to use "
 			   "another channel", *oper_freq);
 		*force_freq = 0;
-	} else if (*oper_freq > 0 &&
+	} else if (*oper_freq > 0 && *pref_freq == 0 &&
 		   (wpa_s->drv_flags &
 		    WPA_DRIVER_FLAGS_MULTI_CHANNEL_CONCURRENT)) {
 		wpa_printf(MSG_DEBUG, "P2P: Trying to prefer the channel we "
@@ -4583,11 +4583,11 @@ int wpas_p2p_reject(struct wpa_supplicant *wpa_s, const u8 *addr)
 /* Invite to reinvoke a persistent group */
 int wpas_p2p_invite(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 		    struct wpa_ssid *ssid, const u8 *go_dev_addr, int freq,
-		    int ht40)
+		    int ht40, int pref_freq)
 {
 	enum p2p_invite_role role;
 	u8 *bssid = NULL, bssid_buf[ETH_ALEN];
-	int force_freq = 0, pref_freq = 0, oper_freq = 0;
+	int force_freq = 0, oper_freq = 0;
 	int res;
 
 	wpa_s->p2p_persistent_go_freq = freq;

@@ -62,8 +62,11 @@ static struct wpabuf * p2p_build_invitation_req(struct p2p_data *p2p,
 					   p2p->client_timeout);
 	p2p_buf_add_invitation_flags(buf, p2p->inv_persistent ?
 				     P2P_INVITATION_FLAGS_TYPE : 0);
-	p2p_buf_add_operating_channel(buf, p2p->cfg->country,
-				      p2p->op_reg_class, p2p->op_channel);
+	if (p2p->inv_role != P2P_INVITE_ROLE_CLIENT ||
+	    !(peer->flags & P2P_DEV_NO_PREF_CHAN))
+		p2p_buf_add_operating_channel(buf, p2p->cfg->country,
+					      p2p->op_reg_class,
+					      p2p->op_channel);
 	if (p2p->inv_bssid_set)
 		p2p_buf_add_group_bssid(buf, p2p->inv_bssid);
 	p2p_buf_add_channel_list(buf, p2p->cfg->country, &p2p->channels);
@@ -563,6 +566,12 @@ int p2p_invite(struct p2p_data *p2p, const u8 *peer, enum p2p_invite_role role,
 
 	if (p2p_prepare_channel(p2p, dev, force_freq, pref_freq) < 0)
 		return -1;
+
+	if (persistent_group && role == P2P_INVITE_ROLE_CLIENT && !force_freq &&
+	    !pref_freq)
+		dev->flags |= P2P_DEV_NO_PREF_CHAN;
+	else
+		dev->flags &= ~P2P_DEV_NO_PREF_CHAN;
 
 	if (dev->flags & P2P_DEV_GROUP_CLIENT_ONLY) {
 		if (!(dev->info.dev_capab &

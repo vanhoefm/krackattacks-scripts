@@ -365,7 +365,7 @@ Remove all local services from internal SD query processing.
 Invitation
 
 p2p_invite [persistent=<network id>|group=<group ifname>] [peer=address]
-	[go_dev_addr=address] [freq=<freq in MHz>] [ht40]
+	[go_dev_addr=address] [freq=<freq in MHz>] [ht40] [pref=<MHz>]
 
 Invite a peer to join a group (e.g., group=wlan1) or to reinvoke a
 persistent group (e.g., persistent=4). If the peer device is the GO of
@@ -374,7 +374,11 @@ used to specify which device to invite. go_dev_addr parameter can be
 used to override the GO device address for Invitation Request should
 it be not known for some reason (this should not be needed in most
 cases). When reinvoking a persistent group, the GO device can specify
-the frequency for the group with the freq parameter.
+the frequency for the group with the freq parameter. When reinvoking a
+persistent group, the P2P client device can use freq parameter to force
+a specific operating channel (or invitation failure if GO rejects that)
+or pref parameter to request a specific channel (while allowing GO to
+select to use another channel, if needed).
 
 Group Operations
 

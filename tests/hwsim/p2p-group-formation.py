@@ -9,11 +9,19 @@
 import os
 import sys
 import time
+import subprocess
 
 import logging
 
 from wpasupplicant import WpaSupplicant
 
+
+def test_connectivity(ifname1, ifname2):
+    cmd = ["sudo",
+           "../../mac80211_hwsim/tools/hwsim_test",
+           ifname1,
+           ifname2]
+    subprocess.check_call(cmd)
 
 def main():
     if len(sys.argv) > 1 and sys.argv[1] == '-d':
@@ -43,6 +51,17 @@ def main():
     dev1.p2p_go_neg_init(addr0, pin, "enter", timeout=15)
     dev0.dump_monitor()
     dev1.dump_monitor()
+    print "Group formed"
+
+    test_connectivity('wlan0', 'wlan1')
+
+    dev0.remove_group('wlan0')
+    try:
+        dev1.remove_group('wlan1')
+    except:
+        pass
+
+    print "Test passed"
 
 if __name__ == "__main__":
     main()

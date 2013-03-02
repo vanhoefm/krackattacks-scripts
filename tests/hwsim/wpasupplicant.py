@@ -120,3 +120,7 @@ class WpaSupplicant:
         while self.mon.pending():
             ev = self.mon.recv()
             logger.debug(self.ifname + ": " + ev)
+
+    def remove_group(self, ifname):
+        if "OK" not in self.request("P2P_GROUP_REMOVE " + ifname):
+            raise Exception("Group could not be removed")

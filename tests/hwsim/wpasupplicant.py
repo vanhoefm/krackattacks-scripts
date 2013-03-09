@@ -45,6 +45,30 @@ class WpaSupplicant:
         self.request("REMOVE_CRED *")
         self.group_ifname = None
 
+    def add_network(self):
+        id = self.request("ADD_NETWORK")
+        if "FAIL" in id:
+            raise Exception("ADD_NETWORK failed")
+        return int(id)
+
+    def remove_network(self, id):
+        id = self.request("REMOVE_NETWORK " + str(id))
+        if "FAIL" in id:
+            raise Exception("REMOVE_NETWORK failed")
+        return None
+
+    def set_network(self, id, field, value):
+        res = self.request("SET_NETWORK " + str(id) + " " + field + " " + value)
+        if "FAIL" in res:
+            raise Exception("SET_NETWORK failed")
+        return None
+
+    def set_network_quoted(self, id, field, value):
+        res = self.request("SET_NETWORK " + str(id) + " " + field + ' "' + value + '"')
+        if "FAIL" in res:
+            raise Exception("SET_NETWORK failed")
+        return None
+
     def get_status(self, field):
         res = self.request("STATUS")
         lines = res.splitlines()
@@ -204,9 +228,15 @@ class WpaSupplicant:
             raise Exception("Group could not be removed")
         self.group_ifname = None
 
-    def p2p_start_go(self):
+    def p2p_start_go(self, persistent=None):
         self.dump_monitor()
         cmd = "P2P_GROUP_ADD"
+        if persistent is None:
+            pass
+        elif persistent is True:
+            cmd = cmd + " persistent"
+        else:
+            cmd = cmd + " persistent=" + str(persistent)
         if "OK" in self.request(cmd):
             ev = self.wait_event(["P2P-GROUP-STARTED"], timeout=5)
             if ev is None:

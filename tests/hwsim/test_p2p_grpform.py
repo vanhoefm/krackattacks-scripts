@@ -11,13 +11,13 @@ logger = logging.getLogger(__name__)
 
 import hwsim_utils
 
-def go_neg_pin_authorized(i_dev, r_dev, i_intent=None, r_intent=None, expect_failure=False, i_go_neg_status=None):
+def go_neg_pin_authorized(i_dev, r_dev, i_intent=None, r_intent=None, expect_failure=False, i_go_neg_status=None, i_method='enter', r_method='display'):
     r_dev.p2p_listen()
     i_dev.p2p_listen()
     pin = r_dev.wps_read_pin()
     logger.info("Start GO negotiation " + i_dev.ifname + " -> " + r_dev.ifname)
-    r_dev.p2p_go_neg_auth(i_dev.p2p_dev_addr(), pin, "display", go_intent=r_intent)
-    i_res = i_dev.p2p_go_neg_init(r_dev.p2p_dev_addr(), pin, "enter", timeout=15, go_intent=i_intent, expect_failure=expect_failure)
+    r_dev.p2p_go_neg_auth(i_dev.p2p_dev_addr(), pin, r_method, go_intent=r_intent)
+    i_res = i_dev.p2p_go_neg_init(r_dev.p2p_dev_addr(), pin, i_method, timeout=15, go_intent=i_intent, expect_failure=expect_failure)
     r_res = r_dev.p2p_go_neg_auth_result(expect_failure=expect_failure)
     logger.debug("i_res: " + str(i_res))
     logger.debug("r_res: " + str(r_res))
@@ -52,7 +52,15 @@ def test_grpform2(dev):
 def test_both_go_intent_15(dev):
     go_neg_pin_authorized(i_dev=dev[0], i_intent=15, r_dev=dev[1], r_intent=15, expect_failure=True, i_go_neg_status=9)
 
+def test_both_go_neg_display(dev):
+    go_neg_pin_authorized(i_dev=dev[0], r_dev=dev[1], expect_failure=True, i_go_neg_status=10, i_method='display', r_method='display')
+
+def test_both_go_neg_enter(dev):
+    go_neg_pin_authorized(i_dev=dev[0], r_dev=dev[1], expect_failure=True, i_go_neg_status=10, i_method='enter', r_method='enter')
+
 def add_tests(tests):
     tests.append(test_grpform)
     tests.append(test_grpform2)
     tests.append(test_both_go_intent_15)
+    tests.append(test_both_go_neg_display)
+    tests.append(test_both_go_neg_enter)

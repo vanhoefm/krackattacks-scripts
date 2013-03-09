@@ -15,6 +15,7 @@ import logging
 from wpasupplicant import WpaSupplicant
 
 import test_p2p_grpform
+import test_p2p_autogo
 
 def main():
     idx = 1
@@ -46,6 +47,7 @@ def main():
 
     tests = []
     test_p2p_grpform.add_tests(tests)
+    test_p2p_autogo.add_tests(tests)
 
     passed = []
     failed = []

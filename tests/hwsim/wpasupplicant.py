@@ -180,3 +180,37 @@ class WpaSupplicant:
             ifname = self.ifname
         if "OK" not in self.request("P2P_GROUP_REMOVE " + ifname):
             raise Exception("Group could not be removed")
+
+    def p2p_start_go(self):
+        self.dump_monitor()
+        cmd = "P2P_GROUP_ADD"
+        if "OK" in self.request(cmd):
+            ev = self.wait_event(["P2P-GROUP-STARTED"], timeout=5)
+            if ev is None:
+                raise Exception("GO start up timed out")
+            self.dump_monitor()
+            return self.group_form_result(ev)
+        raise Exception("P2P_GROUP_ADD failed")
+
+    def p2p_go_authorize_client(self, pin):
+        cmd = "WPS_PIN any " + pin
+        if "FAIL" in self.request(cmd):
+            raise Exception("Failed to authorize client connection on GO")
+        return None
+
+    def p2p_connect_group(self, go_addr, pin, timeout=0):
+        self.dump_monitor()
+        if not self.discover_peer(go_addr):
+            raise Exception("GO " + go_addr + " not found")
+        self.dump_monitor()
+        cmd = "P2P_CONNECT " + go_addr + " " + pin + " join"
+        if "OK" in self.request(cmd):
+            if timeout == 0:
+                self.dump_monitor()
+                return None
+            ev = self.wait_event(["P2P-GROUP-STARTED"], timeout)
+            if ev is None:
+                raise Exception("Joining the group timed out")
+            self.dump_monitor()
+            return self.group_form_result(ev)
+        raise Exception("P2P_CONNECT(join) failed")

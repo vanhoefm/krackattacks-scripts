@@ -54,8 +54,20 @@ class WpaSupplicant:
                 return value
         return None
 
+    def get_group_status(self, field):
+        res = self.group_request("STATUS")
+        lines = res.splitlines()
+        for l in lines:
+            [name,value] = l.split('=', 1)
+            if name == field:
+                return value
+        return None
+
     def p2p_dev_addr(self):
         return self.get_status("p2p_device_address")
+
+    def p2p_interface_addr(self):
+        return self.get_group_status("address")
 
     def p2p_listen(self):
         return self.request("P2P_LISTEN")
@@ -225,3 +237,15 @@ class WpaSupplicant:
             self.dump_monitor()
             return self.group_form_result(ev)
         raise Exception("P2P_CONNECT(join) failed")
+
+    def tdls_setup(self, peer):
+        cmd = "TDLS_SETUP " + peer
+        if "FAIL" in self.group_request(cmd):
+            raise Exception("Failed to request TDLS setup")
+        return None
+
+    def tdls_teardown(self, peer):
+        cmd = "TDLS_TEARDOWN " + peer
+        if "FAIL" in self.group_request(cmd):
+            raise Exception("Failed to request TDLS teardown")
+        return None

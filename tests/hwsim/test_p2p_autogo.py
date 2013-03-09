@@ -6,6 +6,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+import time
 import logging
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,23 @@ def test_autogo_2cli(dev):
     dev[1].remove_group()
     dev[0].remove_group()
 
+def test_autogo_tdls(dev):
+    autogo(dev[0])
+    connect_cli(dev[0], dev[1])
+    connect_cli(dev[0], dev[2])
+    hwsim_utils.test_connectivity_p2p(dev[1], dev[2])
+    addr2 = dev[2].p2p_interface_addr()
+    dev[1].tdls_setup(addr2)
+    time.sleep(1)
+    hwsim_utils.test_connectivity_p2p(dev[1], dev[2])
+    dev[1].tdls_teardown(addr2)
+    time.sleep(1)
+    hwsim_utils.test_connectivity_p2p(dev[1], dev[2])
+    dev[2].remove_group()
+    dev[1].remove_group()
+    dev[0].remove_group()
+
 def add_tests(tests):
     tests.append(test_autogo)
     tests.append(test_autogo_2cli)
+    tests.append(test_autogo_tdls)

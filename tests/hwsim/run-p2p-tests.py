@@ -17,12 +17,20 @@ from wpasupplicant import WpaSupplicant
 import test_p2p_grpform
 
 def main():
+    idx = 1
     if len(sys.argv) > 1 and sys.argv[1] == '-d':
         logging.basicConfig(level=logging.DEBUG)
+        idx = idx + 1
     elif len(sys.argv) > 1 and sys.argv[1] == '-q':
         logging.basicConfig(level=logging.WARNING)
+        idx = idx + 1
     else:
         logging.basicConfig(level=logging.INFO)
+
+    if len(sys.argv) > idx:
+        test_filter = sys.argv[idx]
+    else:
+        test_filter = None
 
     dev0 = WpaSupplicant('wlan0')
     dev1 = WpaSupplicant('wlan1')
@@ -43,6 +51,9 @@ def main():
     failed = []
 
     for t in tests:
+        if test_filter:
+            if test_filter not in t.__name__:
+                continue
         print "START " + t.__name__
         for d in dev:
             d.request("NOTE TEST-START " + t.__name__)

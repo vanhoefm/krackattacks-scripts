@@ -9,6 +9,7 @@
 import os
 import time
 import logging
+import re
 import wpaspy
 
 logger = logging.getLogger(__name__)
@@ -81,6 +82,26 @@ class WpaSupplicant:
                 return True
         return False
 
+    def group_form_result(self, ev):
+        exp = r'<.>(P2P-GROUP-STARTED) ([^ ]*) ([^ ]*) ssid="(.*)" freq=([0-9]*) ((?:psk=.*)|(?:passphrase=".*")) go_dev_addr=([0-9a-f:]*)'
+        s = re.split(exp, ev)
+        if len(s) < 8:
+            raise Exception("Could not parse P2P-GROUP-STARTED")
+        res = {}
+        res['result'] = 'success'
+        res['ifname'] = s[2]
+        res['role'] = s[3]
+        res['ssid'] = s[4]
+        res['freq'] = s[5]
+        p = re.match(r'psk=([0-9a-f]*)', s[6])
+        if p:
+            res['psk'] = p.group(1)
+        p = re.match(r'passphrase="(.*)"', s[6])
+        if p:
+            res['passphrase'] = p.group(1)
+        res['go_dev_addr'] = s[7]
+        return res
+
     def p2p_go_neg_auth(self, peer, pin, method):
         if not self.discover_peer(peer):
             raise Exception("Peer " + peer + " not found")
@@ -89,6 +110,13 @@ class WpaSupplicant:
         if "OK" in self.request(cmd):
             return None
         raise Exception("P2P_CONNECT (auth) failed")
+
+    def p2p_go_neg_auth_result(self, timeout=1):
+        ev = self.wait_event("P2P-GROUP-STARTED", timeout);
+        if ev is None:
+            raise Exception("Group formation timed out")
+        self.dump_monitor()
+        return self.group_form_result(ev)
 
     def p2p_go_neg_init(self, peer, pin, method, timeout=0):
         if not self.discover_peer(peer):
@@ -99,22 +127,23 @@ class WpaSupplicant:
             if timeout == 0:
                 self.dump_monitor()
                 return None
-            if self.wait_event("P2P-GROUP-STARTED", timeout):
-                self.dump_monitor()
-                return None
-            raise Exception("Group formation timed out")
+            ev = self.wait_event("P2P-GROUP-STARTED", timeout)
+            if ev is None:
+                raise Exception("Group formation timed out")
+            self.dump_monitor()
+            return self.group_form_result(ev)
         raise Exception("P2P_CONNECT failed")
 
     def wait_event(self, event, timeout):
         count = 0
         while count < timeout * 2:
             count = count + 1
-            time.sleep(0.5)
+            time.sleep(0.1)
             while self.mon.pending():
                 ev = self.mon.recv()
                 if event in ev:
-                    return True
-        return False
+                    return ev
+        return None
 
     def dump_monitor(self):
         while self.mon.pending():

@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 import hwsim_utils
 
-def go_neg_pin_authorized(i_dev, r_dev, i_intent=None, r_intent=None, expect_failure=False):
+def go_neg_pin_authorized(i_dev, r_dev, i_intent=None, r_intent=None, expect_failure=False, i_go_neg_status=None):
     r_dev.p2p_listen()
     i_dev.p2p_listen()
     pin = r_dev.wps_read_pin()
@@ -23,6 +23,11 @@ def go_neg_pin_authorized(i_dev, r_dev, i_intent=None, r_intent=None, expect_fai
     logger.debug("r_res: " + str(r_res))
     r_dev.dump_monitor()
     i_dev.dump_monitor()
+    if i_go_neg_status:
+        if i_res['result'] != 'go-neg-failed':
+            raise Exception("Expected GO Negotiation failure not reported")
+        if i_res['status'] != i_go_neg_status:
+            raise Exception("Expected GO Negotiation status not seen")
     if expect_failure:
         return
     logger.info("Group formed")
@@ -45,7 +50,7 @@ def test_grpform2(dev):
         pass
 
 def test_both_go_intent_15(dev):
-    go_neg_pin_authorized(i_dev=dev[0], i_intent=15, r_dev=dev[1], r_intent=15, expect_failure=True)
+    go_neg_pin_authorized(i_dev=dev[0], i_intent=15, r_dev=dev[1], r_intent=15, expect_failure=True, i_go_neg_status=9)
 
 def add_tests(tests):
     tests.append(test_grpform)

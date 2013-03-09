@@ -102,35 +102,47 @@ class WpaSupplicant:
         res['go_dev_addr'] = s[7]
         return res
 
-    def p2p_go_neg_auth(self, peer, pin, method):
+    def p2p_go_neg_auth(self, peer, pin, method, go_intent=None):
         if not self.discover_peer(peer):
             raise Exception("Peer " + peer + " not found")
         self.dump_monitor()
         cmd = "P2P_CONNECT " + peer + " " + pin + " " + method + " auth"
+        if go_intent:
+            cmd = cmd + ' go_intent=' + str(go_intent)
         if "OK" in self.request(cmd):
             return None
         raise Exception("P2P_CONNECT (auth) failed")
 
-    def p2p_go_neg_auth_result(self, timeout=1):
+    def p2p_go_neg_auth_result(self, timeout=1, expect_failure=False):
         ev = self.wait_event("P2P-GROUP-STARTED", timeout);
         if ev is None:
+            if expect_failure:
+                return None
             raise Exception("Group formation timed out")
         self.dump_monitor()
+        if expect_failure:
+            raise Exception("Group formation succeeded when expecting failure")
         return self.group_form_result(ev)
 
-    def p2p_go_neg_init(self, peer, pin, method, timeout=0):
+    def p2p_go_neg_init(self, peer, pin, method, timeout=0, go_intent=None, expect_failure=False):
         if not self.discover_peer(peer):
             raise Exception("Peer " + peer + " not found")
         self.dump_monitor()
         cmd = "P2P_CONNECT " + peer + " " + pin + " " + method
+        if go_intent:
+            cmd = cmd + ' go_intent=' + str(go_intent)
         if "OK" in self.request(cmd):
             if timeout == 0:
                 self.dump_monitor()
                 return None
             ev = self.wait_event("P2P-GROUP-STARTED", timeout)
             if ev is None:
+                if expect_failure:
+                    return None
                 raise Exception("Group formation timed out")
             self.dump_monitor()
+            if expect_failure:
+                raise Exception("Group formation succeeded when expecting failure")
             return self.group_form_result(ev)
         raise Exception("P2P_CONNECT failed")
 
@@ -141,6 +153,7 @@ class WpaSupplicant:
             time.sleep(0.1)
             while self.mon.pending():
                 ev = self.mon.recv()
+                logger.debug(self.ifname + ": " + ev)
                 if event in ev:
                     return ev
         return None

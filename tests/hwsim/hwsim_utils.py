@@ -24,4 +24,6 @@ def test_connectivity(ifname1, ifname2):
         raise
 
 def test_connectivity_p2p(dev1, dev2):
-    test_connectivity(dev1.ifname, dev2.ifname)
+    ifname1 = dev1.group_ifname if dev1.group_ifname else dev1.ifname
+    ifname2 = dev2.group_ifname if dev2.group_ifname else dev2.ifname
+    test_connectivity(ifname1, ifname2)

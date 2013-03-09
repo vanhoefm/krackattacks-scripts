@@ -18,6 +18,7 @@ wpas_ctrl = '/var/run/wpa_supplicant'
 class WpaSupplicant:
     def __init__(self, ifname):
         self.ifname = ifname
+        self.group_ifname = None
         self.ctrl = wpaspy.Ctrl(os.path.join(wpas_ctrl, ifname))
         self.mon = wpaspy.Ctrl(os.path.join(wpas_ctrl, ifname))
         self.mon.attach()
@@ -25,6 +26,13 @@ class WpaSupplicant:
     def request(self, cmd):
         logger.debug(self.ifname + ": CTRL: " + cmd)
         return self.ctrl.request(cmd)
+
+    def group_request(self, cmd):
+        if self.group_ifname and self.group_ifname != self.ifname:
+            logger.debug(self.group_ifname + ": CTRL: " + cmd)
+            gctrl = wpaspy.Ctrl(os.path.join(wpas_ctrl, self.group_ifname))
+            return gctrl.request(cmd)
+        return self.request(cmd)
 
     def ping(self):
         return "PONG" in self.request("PING")
@@ -35,6 +43,7 @@ class WpaSupplicant:
         self.request("P2P_GROUP_REMOVE *")
         self.request("REMOVE_NETWORK *")
         self.request("REMOVE_CRED *")
+        self.group_ifname = None
 
     def get_status(self, field):
         res = self.request("STATUS")
@@ -105,6 +114,7 @@ class WpaSupplicant:
         res = {}
         res['result'] = 'success'
         res['ifname'] = s[2]
+        self.group_ifname = s[2]
         res['role'] = s[3]
         res['ssid'] = s[4]
         res['freq'] = s[5]
@@ -177,9 +187,10 @@ class WpaSupplicant:
 
     def remove_group(self, ifname=None):
         if ifname is None:
-            ifname = self.ifname
+            ifname = self.group_ifname if self.group_ifname else self.iname
         if "OK" not in self.request("P2P_GROUP_REMOVE " + ifname):
             raise Exception("Group could not be removed")
+        self.group_ifname = None
 
     def p2p_start_go(self):
         self.dump_monitor()
@@ -194,7 +205,7 @@ class WpaSupplicant:
 
     def p2p_go_authorize_client(self, pin):
         cmd = "WPS_PIN any " + pin
-        if "FAIL" in self.request(cmd):
+        if "FAIL" in self.group_request(cmd):
             raise Exception("Failed to authorize client connection on GO")
         return None
 

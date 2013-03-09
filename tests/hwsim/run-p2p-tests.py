@@ -70,6 +70,10 @@ def main():
         for d in dev:
             d.request("NOTE TEST-STOP " + t.__name__)
 
+    if not test_filter:
+        for d in dev:
+            d.reset()
+
     print "passed tests: " + str(passed)
     print "failed tests: " + str(failed)
     if len(failed):

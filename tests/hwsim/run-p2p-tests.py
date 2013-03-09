@@ -7,15 +7,13 @@
 # See README for more details.
 
 import os
+import re
 import sys
 import time
 
 import logging
 
 from wpasupplicant import WpaSupplicant
-
-import test_p2p_grpform
-import test_p2p_autogo
 
 def main():
     idx = 1
@@ -46,8 +44,12 @@ def main():
         print "DEV: " + d.ifname + ": " + d.p2p_dev_addr()
 
     tests = []
-    test_p2p_grpform.add_tests(tests)
-    test_p2p_autogo.add_tests(tests)
+    for t in os.listdir("."):
+        m = re.match(r'(test_p2p_.*)\.py$', t)
+        if m:
+            print "Import test cases from " + t
+            mod = __import__(m.group(1))
+            mod.add_tests(tests)
 
     passed = []
     failed = []

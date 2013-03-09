@@ -56,6 +56,8 @@ def main():
         if test_filter:
             if test_filter not in t.__name__:
                 continue
+        for d in dev:
+            d.reset()
         print "START " + t.__name__
         for d in dev:
             d.request("NOTE TEST-START " + t.__name__)

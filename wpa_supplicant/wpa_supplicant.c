@@ -1755,12 +1755,9 @@ static void wpa_supplicant_enable_one_network(struct wpa_supplicant *wpa_s,
 void wpa_supplicant_enable_network(struct wpa_supplicant *wpa_s,
 				   struct wpa_ssid *ssid)
 {
-	struct wpa_ssid *other_ssid;
-
 	if (ssid == NULL) {
-		for (other_ssid = wpa_s->conf->ssid; other_ssid;
-		     other_ssid = other_ssid->next)
-			wpa_supplicant_enable_one_network(wpa_s, other_ssid);
+		for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next)
+			wpa_supplicant_enable_one_network(wpa_s, ssid);
 	} else
 		wpa_supplicant_enable_one_network(wpa_s, ssid);
 

@@ -1118,6 +1118,10 @@ scan:
 		wpa_s->first_sched_scan = 0;
 		wpa_s->sched_scan_timeout /= 2;
 		wpa_s->sched_scan_interval *= 2;
+		if (wpa_s->sched_scan_timeout < wpa_s->sched_scan_interval) {
+			wpa_s->sched_scan_interval = 10;
+			wpa_s->sched_scan_timeout = max_sched_scan_ssids * 2;
+		}
 	}
 
 	return 0;

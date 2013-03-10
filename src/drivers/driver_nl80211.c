@@ -5040,6 +5040,58 @@ static void phy_info_vht_capa(struct hostapd_hw_modes *mode,
 }
 
 
+static void phy_info_freq(struct hostapd_hw_modes *mode,
+			  struct hostapd_channel_data *chan,
+			  struct nlattr *tb_freq[])
+{
+	chan->freq = nla_get_u32(tb_freq[NL80211_FREQUENCY_ATTR_FREQ]);
+	chan->flag = 0;
+
+	/* mode is not set */
+	if (mode->mode >= NUM_HOSTAPD_MODES) {
+		/* crude heuristic */
+		if (chan->freq < 4000)
+			mode->mode = HOSTAPD_MODE_IEEE80211B;
+		else if (chan->freq > 50000)
+			mode->mode = HOSTAPD_MODE_IEEE80211AD;
+		else
+			mode->mode = HOSTAPD_MODE_IEEE80211A;
+	}
+
+	switch (mode->mode) {
+	case HOSTAPD_MODE_IEEE80211AD:
+		chan->chan = (chan->freq - 56160) / 2160;
+		break;
+	case HOSTAPD_MODE_IEEE80211A:
+		chan->chan = chan->freq / 5 - 1000;
+		break;
+	case HOSTAPD_MODE_IEEE80211B:
+	case HOSTAPD_MODE_IEEE80211G:
+		if (chan->freq == 2484)
+			chan->chan = 14;
+		else
+			chan->chan = (chan->freq - 2407) / 5;
+		break;
+	default:
+		break;
+	}
+
+	if (tb_freq[NL80211_FREQUENCY_ATTR_DISABLED])
+		chan->flag |= HOSTAPD_CHAN_DISABLED;
+	if (tb_freq[NL80211_FREQUENCY_ATTR_PASSIVE_SCAN])
+		chan->flag |= HOSTAPD_CHAN_PASSIVE_SCAN;
+	if (tb_freq[NL80211_FREQUENCY_ATTR_NO_IBSS])
+		chan->flag |= HOSTAPD_CHAN_NO_IBSS;
+	if (tb_freq[NL80211_FREQUENCY_ATTR_RADAR])
+		chan->flag |= HOSTAPD_CHAN_RADAR;
+
+	if (tb_freq[NL80211_FREQUENCY_ATTR_MAX_TX_POWER] &&
+	    !tb_freq[NL80211_FREQUENCY_ATTR_DISABLED])
+		chan->max_tx_power = nla_get_u32(
+			tb_freq[NL80211_FREQUENCY_ATTR_MAX_TX_POWER]) / 100;
+}
+
+
 static int phy_info_freqs(struct phy_info_arg *phy_info,
 			  struct hostapd_hw_modes *mode, struct nlattr *tb)
 {
@@ -5084,57 +5136,7 @@ static int phy_info_freqs(struct phy_info_arg *phy_info,
 			  nla_data(nl_freq), nla_len(nl_freq), freq_policy);
 		if (!tb_freq[NL80211_FREQUENCY_ATTR_FREQ])
 			continue;
-
-		mode->channels[idx].freq = nla_get_u32(
-			tb_freq[NL80211_FREQUENCY_ATTR_FREQ]);
-		mode->channels[idx].flag = 0;
-
-		/* mode is not set */
-		if (mode->mode >= NUM_HOSTAPD_MODES) {
-			/* crude heuristic */
-			if (mode->channels[idx].freq < 4000)
-				mode->mode = HOSTAPD_MODE_IEEE80211B;
-			else if (mode->channels[idx].freq > 50000)
-				mode->mode = HOSTAPD_MODE_IEEE80211AD;
-			else
-				mode->mode = HOSTAPD_MODE_IEEE80211A;
-		}
-
-		switch (mode->mode) {
-		case HOSTAPD_MODE_IEEE80211AD:
-			mode->channels[idx].chan =
-				(mode->channels[idx].freq - 56160) / 2160;
-			break;
-		case HOSTAPD_MODE_IEEE80211A:
-			mode->channels[idx].chan =
-				mode->channels[idx].freq / 5 - 1000;
-			break;
-		case HOSTAPD_MODE_IEEE80211B:
-		case HOSTAPD_MODE_IEEE80211G:
-			if (mode->channels[idx].freq == 2484)
-				mode->channels[idx].chan = 14;
-			else
-				mode->channels[idx].chan =
-					(mode->channels[idx].freq - 2407) / 5;
-			break;
-		default:
-			break;
-		}
-
-		if (tb_freq[NL80211_FREQUENCY_ATTR_DISABLED])
-			mode->channels[idx].flag |= HOSTAPD_CHAN_DISABLED;
-		if (tb_freq[NL80211_FREQUENCY_ATTR_PASSIVE_SCAN])
-			mode->channels[idx].flag |= HOSTAPD_CHAN_PASSIVE_SCAN;
-		if (tb_freq[NL80211_FREQUENCY_ATTR_NO_IBSS])
-			mode->channels[idx].flag |= HOSTAPD_CHAN_NO_IBSS;
-		if (tb_freq[NL80211_FREQUENCY_ATTR_RADAR])
-			mode->channels[idx].flag |= HOSTAPD_CHAN_RADAR;
-
-		if (tb_freq[NL80211_FREQUENCY_ATTR_MAX_TX_POWER] &&
-		    !tb_freq[NL80211_FREQUENCY_ATTR_DISABLED])
-			mode->channels[idx].max_tx_power =
-				nla_get_u32(tb_freq[NL80211_FREQUENCY_ATTR_MAX_TX_POWER]) / 100;
-
+		phy_info_freq(mode, &mode->channels[idx], tb_freq);
 		idx++;
 	}
 	phy_info->last_chan_idx = idx;

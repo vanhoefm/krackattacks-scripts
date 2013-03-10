@@ -1787,6 +1787,9 @@ void wpa_supplicant_disable_network(struct wpa_supplicant *wpa_s,
 	int was_disabled;
 
 	if (ssid == NULL) {
+		if (wpa_s->sched_scanning)
+			wpa_supplicant_cancel_sched_scan(wpa_s);
+
 		for (other_ssid = wpa_s->conf->ssid; other_ssid;
 		     other_ssid = other_ssid->next) {
 			was_disabled = other_ssid->disabled;
@@ -1812,8 +1815,15 @@ void wpa_supplicant_disable_network(struct wpa_supplicant *wpa_s,
 
 		ssid->disabled = 1;
 
-		if (was_disabled != ssid->disabled)
+		if (was_disabled != ssid->disabled) {
 			wpas_notify_network_enabled_changed(wpa_s, ssid);
+			if (wpa_s->sched_scanning) {
+				wpa_printf(MSG_DEBUG, "Stop ongoing sched_scan "
+					   "to remove network from filters");
+				wpa_supplicant_cancel_sched_scan(wpa_s);
+				wpa_supplicant_req_scan(wpa_s, 0, 0);
+			}
+		}
 	}
 }
 

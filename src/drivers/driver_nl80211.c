@@ -2546,12 +2546,42 @@ static unsigned int probe_resp_offload_support(int supp_protocols)
 }
 
 
-static int wiphy_info_handler(struct nl_msg *msg, void *arg)
+static void wiphy_info_supported_iftypes(struct wiphy_info_data *info,
+					 struct nlattr *tb)
 {
-	struct nlattr *tb[NL80211_ATTR_MAX + 1];
-	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
-	struct wiphy_info_data *info = arg;
-	struct wpa_driver_capa *capa = info->capa;
+	struct nlattr *nl_mode;
+	int i;
+
+	if (tb == NULL)
+		return;
+
+	nla_for_each_nested(nl_mode, tb, i) {
+		switch (nla_type(nl_mode)) {
+		case NL80211_IFTYPE_AP:
+			info->capa->flags |= WPA_DRIVER_FLAGS_AP;
+			break;
+		case NL80211_IFTYPE_P2P_GO:
+			info->p2p_go_supported = 1;
+			break;
+		case NL80211_IFTYPE_P2P_CLIENT:
+			info->p2p_client_supported = 1;
+			break;
+		case NL80211_IFTYPE_MONITOR:
+			info->monitor_supported = 1;
+			break;
+		}
+	}
+}
+
+
+static int wiphy_info_iface_comb_process(struct wiphy_info_data *info,
+					 struct nlattr *nl_combi)
+{
+	struct nlattr *tb_comb[NUM_NL80211_IFACE_COMB];
+	struct nlattr *tb_limit[NUM_NL80211_IFACE_LIMIT];
+	struct nlattr *nl_limit, *nl_mode;
+	int err, rem_limit, rem_mode;
+	int combination_has_p2p = 0, combination_has_mgd = 0;
 	static struct nla_policy
 	iface_combination_policy[NUM_NL80211_IFACE_COMB] = {
 		[NL80211_IFACE_COMB_LIMITS] = { .type = NLA_NESTED },
@@ -2563,6 +2593,164 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 		[NL80211_IFACE_LIMIT_TYPES] = { .type = NLA_NESTED },
 		[NL80211_IFACE_LIMIT_MAX] = { .type = NLA_U32 },
 	};
+
+	err = nla_parse_nested(tb_comb, MAX_NL80211_IFACE_COMB,
+			       nl_combi, iface_combination_policy);
+	if (err || !tb_comb[NL80211_IFACE_COMB_LIMITS] ||
+	    !tb_comb[NL80211_IFACE_COMB_MAXNUM] ||
+	    !tb_comb[NL80211_IFACE_COMB_NUM_CHANNELS])
+		return 0; /* broken combination */
+
+	nla_for_each_nested(nl_limit, tb_comb[NL80211_IFACE_COMB_LIMITS],
+			    rem_limit) {
+		err = nla_parse_nested(tb_limit, MAX_NL80211_IFACE_LIMIT,
+				       nl_limit, iface_limit_policy);
+		if (err || !tb_limit[NL80211_IFACE_LIMIT_TYPES])
+			return 0; /* broken combination */
+
+		nla_for_each_nested(nl_mode,
+				    tb_limit[NL80211_IFACE_LIMIT_TYPES],
+				    rem_mode) {
+			int ift = nla_type(nl_mode);
+			if (ift == NL80211_IFTYPE_P2P_GO ||
+			    ift == NL80211_IFTYPE_P2P_CLIENT)
+				combination_has_p2p = 1;
+			if (ift == NL80211_IFTYPE_STATION)
+				combination_has_mgd = 1;
+		}
+		if (combination_has_p2p && combination_has_mgd)
+			break;
+	}
+
+	if (combination_has_p2p && combination_has_mgd) {
+		info->p2p_concurrent = 1;
+		if (nla_get_u32(tb_comb[NL80211_IFACE_COMB_NUM_CHANNELS]) > 1)
+			info->p2p_multichan_concurrent = 1;
+		return 1;
+	}
+
+	return 0;
+}
+
+
+static void wiphy_info_iface_comb(struct wiphy_info_data *info,
+				  struct nlattr *tb)
+{
+	struct nlattr *nl_combi;
+	int rem_combi;
+
+	if (tb == NULL)
+		return;
+
+	nla_for_each_nested(nl_combi, tb, rem_combi) {
+		if (wiphy_info_iface_comb_process(info, nl_combi) > 0)
+			break;
+	}
+}
+
+
+static void wiphy_info_supp_cmds(struct wiphy_info_data *info,
+				 struct nlattr *tb)
+{
+	struct nlattr *nl_cmd;
+	int i;
+
+	if (tb == NULL)
+		return;
+
+	nla_for_each_nested(nl_cmd, tb, i) {
+		switch (nla_get_u32(nl_cmd)) {
+		case NL80211_CMD_AUTHENTICATE:
+			info->auth_supported = 1;
+			break;
+		case NL80211_CMD_CONNECT:
+			info->connect_supported = 1;
+			break;
+		case NL80211_CMD_START_SCHED_SCAN:
+			info->capa->sched_scan_supported = 1;
+			break;
+		case NL80211_CMD_PROBE_CLIENT:
+			info->poll_command_supported = 1;
+			break;
+		}
+	}
+}
+
+
+static void wiphy_info_max_roc(struct wpa_driver_capa *capa,
+			       struct nlattr *tb)
+{
+	/* default to 5000 since early versions of mac80211 don't set it */
+	capa->max_remain_on_chan = 5000;
+
+	if (tb)
+		capa->max_remain_on_chan = nla_get_u32(tb);
+}
+
+
+static void wiphy_info_tdls(struct wpa_driver_capa *capa, struct nlattr *tdls,
+			    struct nlattr *ext_setup)
+{
+	if (tdls == NULL)
+		return;
+
+	wpa_printf(MSG_DEBUG, "nl80211: TDLS supported");
+	capa->flags |= WPA_DRIVER_FLAGS_TDLS_SUPPORT;
+
+	if (ext_setup) {
+		wpa_printf(MSG_DEBUG, "nl80211: TDLS external setup");
+		capa->flags |= WPA_DRIVER_FLAGS_TDLS_EXTERNAL_SETUP;
+	}
+}
+
+
+static void wiphy_info_feature_flags(struct wiphy_info_data *info,
+				     struct nlattr *tb)
+{
+	u32 flags;
+	struct wpa_driver_capa *capa = info->capa;
+
+	if (tb == NULL)
+		return;
+
+	flags = nla_get_u32(tb);
+
+	if (flags & NL80211_FEATURE_SK_TX_STATUS)
+		info->data_tx_status = 1;
+
+	if (flags & NL80211_FEATURE_INACTIVITY_TIMER)
+		capa->flags |= WPA_DRIVER_FLAGS_INACTIVITY_TIMER;
+
+	if (flags & NL80211_FEATURE_SAE)
+		capa->flags |= WPA_DRIVER_FLAGS_SAE;
+
+	if (flags & NL80211_FEATURE_NEED_OBSS_SCAN)
+		capa->flags |= WPA_DRIVER_FLAGS_OBSS_SCAN;
+}
+
+
+static void wiphy_info_probe_resp_offload(struct wpa_driver_capa *capa,
+					  struct nlattr *tb)
+{
+	u32 protocols;
+
+	if (tb == NULL)
+		return;
+
+	protocols = nla_get_u32(tb);
+	wpa_printf(MSG_DEBUG, "nl80211: Supports Probe Response offload in AP "
+		   "mode");
+	capa->flags |= WPA_DRIVER_FLAGS_PROBE_RESP_OFFLOAD;
+	capa->probe_resp_offloads = probe_resp_offload_support(protocols);
+}
+
+
+static int wiphy_info_handler(struct nl_msg *msg, void *arg)
+{
+	struct nlattr *tb[NL80211_ATTR_MAX + 1];
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+	struct wiphy_info_data *info = arg;
+	struct wpa_driver_capa *capa = info->capa;
 
 	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
 		  genlmsg_attrlen(gnlh, 0), NULL);
@@ -2579,109 +2767,9 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 		capa->max_match_sets =
 			nla_get_u8(tb[NL80211_ATTR_MAX_MATCH_SETS]);
 
-	if (tb[NL80211_ATTR_SUPPORTED_IFTYPES]) {
-		struct nlattr *nl_mode;
-		int i;
-		nla_for_each_nested(nl_mode,
-				    tb[NL80211_ATTR_SUPPORTED_IFTYPES], i) {
-			switch (nla_type(nl_mode)) {
-			case NL80211_IFTYPE_AP:
-				capa->flags |= WPA_DRIVER_FLAGS_AP;
-				break;
-			case NL80211_IFTYPE_P2P_GO:
-				info->p2p_go_supported = 1;
-				break;
-			case NL80211_IFTYPE_P2P_CLIENT:
-				info->p2p_client_supported = 1;
-				break;
-			case NL80211_IFTYPE_MONITOR:
-				info->monitor_supported = 1;
-				break;
-			}
-		}
-	}
-
-	if (tb[NL80211_ATTR_INTERFACE_COMBINATIONS]) {
-		struct nlattr *nl_combi;
-		int rem_combi;
-
-		nla_for_each_nested(nl_combi,
-				    tb[NL80211_ATTR_INTERFACE_COMBINATIONS],
-				    rem_combi) {
-			struct nlattr *tb_comb[NUM_NL80211_IFACE_COMB];
-			struct nlattr *tb_limit[NUM_NL80211_IFACE_LIMIT];
-			struct nlattr *nl_limit, *nl_mode;
-			int err, rem_limit, rem_mode;
-			int combination_has_p2p = 0, combination_has_mgd = 0;
-
-			err = nla_parse_nested(tb_comb, MAX_NL80211_IFACE_COMB,
-					       nl_combi,
-					       iface_combination_policy);
-			if (err || !tb_comb[NL80211_IFACE_COMB_LIMITS] ||
-			    !tb_comb[NL80211_IFACE_COMB_MAXNUM] ||
-			    !tb_comb[NL80211_IFACE_COMB_NUM_CHANNELS])
-				goto broken_combination;
-
-			nla_for_each_nested(nl_limit,
-					    tb_comb[NL80211_IFACE_COMB_LIMITS],
-					    rem_limit) {
-				err = nla_parse_nested(tb_limit,
-						       MAX_NL80211_IFACE_LIMIT,
-						       nl_limit,
-						       iface_limit_policy);
-				if (err ||
-				    !tb_limit[NL80211_IFACE_LIMIT_TYPES])
-					goto broken_combination;
-
-				nla_for_each_nested(
-					nl_mode,
-					tb_limit[NL80211_IFACE_LIMIT_TYPES],
-					rem_mode) {
-					int ift = nla_type(nl_mode);
-					if (ift == NL80211_IFTYPE_P2P_GO ||
-					    ift == NL80211_IFTYPE_P2P_CLIENT)
-						combination_has_p2p = 1;
-					if (ift == NL80211_IFTYPE_STATION)
-						combination_has_mgd = 1;
-				}
-				if (combination_has_p2p && combination_has_mgd)
-					break;
-			}
-
-			if (combination_has_p2p && combination_has_mgd) {
-				info->p2p_concurrent = 1;
-				if (nla_get_u32(tb_comb[NL80211_IFACE_COMB_NUM_CHANNELS]) > 1)
-					info->p2p_multichan_concurrent = 1;
-				break;
-			}
-
-broken_combination:
-			;
-		}
-	}
-
-	if (tb[NL80211_ATTR_SUPPORTED_COMMANDS]) {
-		struct nlattr *nl_cmd;
-		int i;
-
-		nla_for_each_nested(nl_cmd,
-				    tb[NL80211_ATTR_SUPPORTED_COMMANDS], i) {
-			switch (nla_get_u32(nl_cmd)) {
-			case NL80211_CMD_AUTHENTICATE:
-				info->auth_supported = 1;
-				break;
-			case NL80211_CMD_CONNECT:
-				info->connect_supported = 1;
-				break;
-			case NL80211_CMD_START_SCHED_SCAN:
-				capa->sched_scan_supported = 1;
-				break;
-			case NL80211_CMD_PROBE_CLIENT:
-				info->poll_command_supported = 1;
-				break;
-			}
-		}
-	}
+	wiphy_info_supported_iftypes(info, tb[NL80211_ATTR_SUPPORTED_IFTYPES]);
+	wiphy_info_iface_comb(info, tb[NL80211_ATTR_INTERFACE_COMBINATIONS]);
+	wiphy_info_supp_cmds(info, tb[NL80211_ATTR_SUPPORTED_COMMANDS]);
 
 	if (tb[NL80211_ATTR_OFFCHANNEL_TX_OK]) {
 		wpa_printf(MSG_DEBUG, "nl80211: Using driver-based "
@@ -2694,55 +2782,21 @@ broken_combination:
 		capa->flags |= WPA_DRIVER_FLAGS_BSS_SELECTION;
 	}
 
-	/* default to 5000 since early versions of mac80211 don't set it */
-	capa->max_remain_on_chan = 5000;
+	wiphy_info_max_roc(capa,
+			   tb[NL80211_ATTR_MAX_REMAIN_ON_CHANNEL_DURATION]);
 
 	if (tb[NL80211_ATTR_SUPPORT_AP_UAPSD])
 		capa->flags |= WPA_DRIVER_FLAGS_AP_UAPSD;
 
-	if (tb[NL80211_ATTR_MAX_REMAIN_ON_CHANNEL_DURATION])
-		capa->max_remain_on_chan =
-			nla_get_u32(tb[NL80211_ATTR_MAX_REMAIN_ON_CHANNEL_DURATION]);
-
-	if (tb[NL80211_ATTR_TDLS_SUPPORT]) {
-		wpa_printf(MSG_DEBUG, "nl80211: TDLS supported");
-		capa->flags |= WPA_DRIVER_FLAGS_TDLS_SUPPORT;
-
-		if (tb[NL80211_ATTR_TDLS_EXTERNAL_SETUP]) {
-			wpa_printf(MSG_DEBUG, "nl80211: TDLS external setup");
-			capa->flags |=
-				WPA_DRIVER_FLAGS_TDLS_EXTERNAL_SETUP;
-		}
-	}
+	wiphy_info_tdls(capa, tb[NL80211_ATTR_TDLS_SUPPORT],
+			tb[NL80211_ATTR_TDLS_EXTERNAL_SETUP]);
 
 	if (tb[NL80211_ATTR_DEVICE_AP_SME])
 		info->device_ap_sme = 1;
 
-	if (tb[NL80211_ATTR_FEATURE_FLAGS]) {
-		u32 flags = nla_get_u32(tb[NL80211_ATTR_FEATURE_FLAGS]);
-
-		if (flags & NL80211_FEATURE_SK_TX_STATUS)
-			info->data_tx_status = 1;
-
-		if (flags & NL80211_FEATURE_INACTIVITY_TIMER)
-			capa->flags |= WPA_DRIVER_FLAGS_INACTIVITY_TIMER;
-
-		if (flags & NL80211_FEATURE_SAE)
-			capa->flags |= WPA_DRIVER_FLAGS_SAE;
-
-		if (flags & NL80211_FEATURE_NEED_OBSS_SCAN)
-			capa->flags |= WPA_DRIVER_FLAGS_OBSS_SCAN;
-	}
-
-	if (tb[NL80211_ATTR_PROBE_RESP_OFFLOAD]) {
-		int protocols =
-			nla_get_u32(tb[NL80211_ATTR_PROBE_RESP_OFFLOAD]);
-		wpa_printf(MSG_DEBUG, "nl80211: Supports Probe Response "
-			   "offload in AP mode");
-		capa->flags |= WPA_DRIVER_FLAGS_PROBE_RESP_OFFLOAD;
-		capa->probe_resp_offloads =
-			probe_resp_offload_support(protocols);
-	}
+	wiphy_info_feature_flags(info, tb[NL80211_ATTR_FEATURE_FLAGS]);
+	wiphy_info_probe_resp_offload(capa,
+				      tb[NL80211_ATTR_PROBE_RESP_OFFLOAD]);
 
 	return NL_SKIP;
 }
@@ -5069,7 +5123,8 @@ static int phy_info_handler(struct nl_msg *msg, void *arg)
 			idx = phy_info->last_chan_idx;
 
 			nla_for_each_nested(nl_freq, tb_band[NL80211_BAND_ATTR_FREQS], rem_freq) {
-				nla_parse(tb_freq, NL80211_FREQUENCY_ATTR_MAX, nla_data(nl_freq),
+				nla_parse(tb_freq, NL80211_FREQUENCY_ATTR_MAX,
+					  nla_data(nl_freq),
 					  nla_len(nl_freq), freq_policy);
 				if (!tb_freq[NL80211_FREQUENCY_ATTR_FREQ])
 					continue;

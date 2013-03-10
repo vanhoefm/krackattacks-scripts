@@ -178,10 +178,17 @@ static int wpa_config_parse_int(const struct parse_data *data,
 				struct wpa_ssid *ssid,
 				int line, const char *value)
 {
-	int *dst;
+	int val, *dst;
+	char *end;
 
 	dst = (int *) (((u8 *) ssid) + (long) data->param1);
-	*dst = atoi(value);
+	val = strtol(value, &end, 0);
+	if (*end) {
+		wpa_printf(MSG_ERROR, "Line %d: invalid number \"%s\"",
+			   line, value);
+		return -1;
+	}
+	*dst = val;
 	wpa_printf(MSG_MSGDUMP, "%s=%d (0x%x)", data->name, *dst, *dst);
 
 	if (data->param3 && *dst < (long) data->param3) {
@@ -2590,9 +2597,18 @@ static int wpa_global_config_parse_int(const struct global_parse_data *data,
 				       struct wpa_config *config, int line,
 				       const char *pos)
 {
-	int *dst;
+	int val, *dst;
+	char *end;
+
 	dst = (int *) (((u8 *) config) + (long) data->param1);
-	*dst = atoi(pos);
+	val = strtol(pos, &end, 0);
+	if (*end) {
+		wpa_printf(MSG_ERROR, "Line %d: invalid number \"%s\"",
+			   line, pos);
+		return -1;
+	}
+	*dst = val;
+
 	wpa_printf(MSG_DEBUG, "%s=%d", data->name, *dst);
 
 	if (data->param2 && *dst < (long) data->param2) {

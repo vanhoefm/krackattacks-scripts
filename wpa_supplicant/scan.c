@@ -1124,6 +1124,10 @@ scan:
 		}
 	}
 
+	/* If there is no more ssids, start next time from the beginning */
+	if (!ssid)
+		wpa_s->prev_sched_ssid = NULL;
+
 	return 0;
 }
 

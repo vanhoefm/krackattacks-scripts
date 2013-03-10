@@ -5003,14 +5003,9 @@ struct phy_info_arg {
 	int last_mode, last_chan_idx;
 };
 
-static int phy_info_handler(struct nl_msg *msg, void *arg)
+static int phy_info_band(struct phy_info_arg *phy_info, struct nlattr *nl_band)
 {
-	struct nlattr *tb_msg[NL80211_ATTR_MAX + 1];
-	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
-	struct phy_info_arg *phy_info = arg;
-
 	struct nlattr *tb_band[NL80211_BAND_ATTR_MAX + 1];
-
 	struct nlattr *tb_freq[NL80211_FREQUENCY_ATTR_MAX + 1];
 	static struct nla_policy freq_policy[NL80211_FREQUENCY_ATTR_MAX + 1] = {
 		[NL80211_FREQUENCY_ATTR_FREQ] = { .type = NLA_U32 },
@@ -5020,19 +5015,212 @@ static int phy_info_handler(struct nl_msg *msg, void *arg)
 		[NL80211_FREQUENCY_ATTR_RADAR] = { .type = NLA_FLAG },
 		[NL80211_FREQUENCY_ATTR_MAX_TX_POWER] = { .type = NLA_U32 },
 	};
-
 	struct nlattr *tb_rate[NL80211_BITRATE_ATTR_MAX + 1];
 	static struct nla_policy rate_policy[NL80211_BITRATE_ATTR_MAX + 1] = {
 		[NL80211_BITRATE_ATTR_RATE] = { .type = NLA_U32 },
-		[NL80211_BITRATE_ATTR_2GHZ_SHORTPREAMBLE] = { .type = NLA_FLAG },
+		[NL80211_BITRATE_ATTR_2GHZ_SHORTPREAMBLE] =
+		{ .type = NLA_FLAG },
 	};
-
-	struct nlattr *nl_band;
 	struct nlattr *nl_freq;
 	struct nlattr *nl_rate;
-	int rem_band, rem_freq, rem_rate;
+	int rem_freq, rem_rate;
 	struct hostapd_hw_modes *mode;
 	int idx;
+
+	if (phy_info->last_mode != nl_band->nla_type) {
+		mode = os_realloc_array(phy_info->modes,
+					*phy_info->num_modes + 1,
+					sizeof(*mode));
+		if (!mode)
+			return NL_SKIP;
+		phy_info->modes = mode;
+
+		mode = &phy_info->modes[*(phy_info->num_modes)];
+		os_memset(mode, 0, sizeof(*mode));
+		mode->mode = NUM_HOSTAPD_MODES;
+		mode->flags = HOSTAPD_MODE_FLAG_HT_INFO_KNOWN;
+		*(phy_info->num_modes) += 1;
+		phy_info->last_mode = nl_band->nla_type;
+		phy_info->last_chan_idx = 0;
+	} else
+		mode = &phy_info->modes[*(phy_info->num_modes) - 1];
+
+	nla_parse(tb_band, NL80211_BAND_ATTR_MAX, nla_data(nl_band),
+		  nla_len(nl_band), NULL);
+
+	if (tb_band[NL80211_BAND_ATTR_HT_CAPA]) {
+		mode->ht_capab = nla_get_u16(
+			tb_band[NL80211_BAND_ATTR_HT_CAPA]);
+	}
+
+	if (tb_band[NL80211_BAND_ATTR_HT_AMPDU_FACTOR]) {
+		mode->a_mpdu_params |= nla_get_u8(
+			tb_band[NL80211_BAND_ATTR_HT_AMPDU_FACTOR]) & 0x03;
+	}
+
+	if (tb_band[NL80211_BAND_ATTR_HT_AMPDU_DENSITY]) {
+		mode->a_mpdu_params |= nla_get_u8(
+			tb_band[NL80211_BAND_ATTR_HT_AMPDU_DENSITY]) << 2;
+	}
+
+	if (tb_band[NL80211_BAND_ATTR_HT_MCS_SET] &&
+	    nla_len(tb_band[NL80211_BAND_ATTR_HT_MCS_SET])) {
+		u8 *mcs;
+		mcs = nla_data(tb_band[NL80211_BAND_ATTR_HT_MCS_SET]);
+		os_memcpy(mode->mcs_set, mcs, 16);
+	}
+
+	if (tb_band[NL80211_BAND_ATTR_VHT_CAPA]) {
+		mode->vht_capab = nla_get_u32(
+			tb_band[NL80211_BAND_ATTR_VHT_CAPA]);
+	}
+
+	if (tb_band[NL80211_BAND_ATTR_VHT_MCS_SET] &&
+	    nla_len(tb_band[NL80211_BAND_ATTR_VHT_MCS_SET])) {
+		u8 *mcs;
+		mcs = nla_data(tb_band[NL80211_BAND_ATTR_VHT_MCS_SET]);
+		os_memcpy(mode->vht_mcs_set, mcs, 8);
+	}
+
+	if (tb_band[NL80211_BAND_ATTR_FREQS]) {
+		int new_channels = 0;
+		struct hostapd_channel_data *channel;
+		nla_for_each_nested(nl_freq, tb_band[NL80211_BAND_ATTR_FREQS],
+				    rem_freq) {
+			nla_parse(tb_freq, NL80211_FREQUENCY_ATTR_MAX,
+				  nla_data(nl_freq), nla_len(nl_freq),
+				  freq_policy);
+			if (!tb_freq[NL80211_FREQUENCY_ATTR_FREQ])
+				continue;
+			new_channels++;
+		}
+
+		channel = os_realloc_array(mode->channels,
+					   mode->num_channels + new_channels,
+					   sizeof(struct hostapd_channel_data));
+		if (!channel)
+			return NL_SKIP;
+
+		mode->channels = channel;
+		mode->num_channels += new_channels;
+
+		idx = phy_info->last_chan_idx;
+
+		nla_for_each_nested(nl_freq, tb_band[NL80211_BAND_ATTR_FREQS],
+				    rem_freq) {
+			nla_parse(tb_freq, NL80211_FREQUENCY_ATTR_MAX,
+				  nla_data(nl_freq), nla_len(nl_freq),
+				  freq_policy);
+			if (!tb_freq[NL80211_FREQUENCY_ATTR_FREQ])
+				continue;
+
+			mode->channels[idx].freq = nla_get_u32(
+				tb_freq[NL80211_FREQUENCY_ATTR_FREQ]);
+			mode->channels[idx].flag = 0;
+
+			/* mode is not set */
+			if (mode->mode >= NUM_HOSTAPD_MODES) {
+				/* crude heuristic */
+				if (mode->channels[idx].freq < 4000)
+					mode->mode = HOSTAPD_MODE_IEEE80211B;
+				else if (mode->channels[idx].freq > 50000)
+					mode->mode = HOSTAPD_MODE_IEEE80211AD;
+				else
+					mode->mode = HOSTAPD_MODE_IEEE80211A;
+			}
+
+			switch (mode->mode) {
+			case HOSTAPD_MODE_IEEE80211AD:
+				mode->channels[idx].chan =
+					(mode->channels[idx].freq - 56160) /
+					2160;
+				break;
+			case HOSTAPD_MODE_IEEE80211A:
+				mode->channels[idx].chan =
+					mode->channels[idx].freq / 5 - 1000;
+				break;
+			case HOSTAPD_MODE_IEEE80211B:
+			case HOSTAPD_MODE_IEEE80211G:
+				if (mode->channels[idx].freq == 2484)
+					mode->channels[idx].chan = 14;
+				else
+					mode->channels[idx].chan =
+						(mode->channels[idx].freq -
+						 2407) / 5;
+				break;
+			default:
+				break;
+			}
+
+			if (tb_freq[NL80211_FREQUENCY_ATTR_DISABLED])
+				mode->channels[idx].flag |=
+					HOSTAPD_CHAN_DISABLED;
+			if (tb_freq[NL80211_FREQUENCY_ATTR_PASSIVE_SCAN])
+				mode->channels[idx].flag |=
+					HOSTAPD_CHAN_PASSIVE_SCAN;
+			if (tb_freq[NL80211_FREQUENCY_ATTR_NO_IBSS])
+				mode->channels[idx].flag |=
+					HOSTAPD_CHAN_NO_IBSS;
+			if (tb_freq[NL80211_FREQUENCY_ATTR_RADAR])
+				mode->channels[idx].flag |= HOSTAPD_CHAN_RADAR;
+
+			if (tb_freq[NL80211_FREQUENCY_ATTR_MAX_TX_POWER] &&
+			    !tb_freq[NL80211_FREQUENCY_ATTR_DISABLED])
+				mode->channels[idx].max_tx_power =
+					nla_get_u32(tb_freq[NL80211_FREQUENCY_ATTR_MAX_TX_POWER]) / 100;
+
+			idx++;
+		}
+		phy_info->last_chan_idx = idx;
+	}
+
+	if (tb_band[NL80211_BAND_ATTR_RATES]) {
+		nla_for_each_nested(nl_rate, tb_band[NL80211_BAND_ATTR_RATES],
+				    rem_rate) {
+			nla_parse(tb_rate, NL80211_BITRATE_ATTR_MAX,
+				  nla_data(nl_rate), nla_len(nl_rate),
+				  rate_policy);
+			if (!tb_rate[NL80211_BITRATE_ATTR_RATE])
+				continue;
+			mode->num_rates++;
+		}
+
+		mode->rates = os_calloc(mode->num_rates, sizeof(int));
+		if (!mode->rates)
+			return NL_SKIP;
+
+		idx = 0;
+
+		nla_for_each_nested(nl_rate, tb_band[NL80211_BAND_ATTR_RATES],
+				    rem_rate) {
+			nla_parse(tb_rate, NL80211_BITRATE_ATTR_MAX,
+				  nla_data(nl_rate), nla_len(nl_rate),
+				  rate_policy);
+			if (!tb_rate[NL80211_BITRATE_ATTR_RATE])
+				continue;
+			mode->rates[idx] = nla_get_u32(
+				tb_rate[NL80211_BITRATE_ATTR_RATE]);
+
+			/* crude heuristic */
+			if (mode->mode == HOSTAPD_MODE_IEEE80211B &&
+			    mode->rates[idx] > 200)
+				mode->mode = HOSTAPD_MODE_IEEE80211G;
+
+			idx++;
+		}
+	}
+
+	return NL_OK;
+}
+
+
+static int phy_info_handler(struct nl_msg *msg, void *arg)
+{
+	struct nlattr *tb_msg[NL80211_ATTR_MAX + 1];
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+	struct phy_info_arg *phy_info = arg;
+	struct nlattr *nl_band;
+	int rem_band;
 
 	nla_parse(tb_msg, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
 		  genlmsg_attrlen(gnlh, 0), NULL);
@@ -5040,189 +5228,16 @@ static int phy_info_handler(struct nl_msg *msg, void *arg)
 	if (!tb_msg[NL80211_ATTR_WIPHY_BANDS])
 		return NL_SKIP;
 
-	nla_for_each_nested(nl_band, tb_msg[NL80211_ATTR_WIPHY_BANDS], rem_band) {
-		if (phy_info->last_mode != nl_band->nla_type) {
-			mode = os_realloc_array(phy_info->modes,
-						*phy_info->num_modes + 1,
-						sizeof(*mode));
-			if (!mode)
-				return NL_SKIP;
-			phy_info->modes = mode;
-
-			mode = &phy_info->modes[*(phy_info->num_modes)];
-			os_memset(mode, 0, sizeof(*mode));
-			mode->mode = NUM_HOSTAPD_MODES;
-			mode->flags = HOSTAPD_MODE_FLAG_HT_INFO_KNOWN;
-			*(phy_info->num_modes) += 1;
-			phy_info->last_mode = nl_band->nla_type;
-			phy_info->last_chan_idx = 0;
-		} else
-			mode = &phy_info->modes[*(phy_info->num_modes) - 1];
-
-		nla_parse(tb_band, NL80211_BAND_ATTR_MAX, nla_data(nl_band),
-			  nla_len(nl_band), NULL);
-
-		if (tb_band[NL80211_BAND_ATTR_HT_CAPA]) {
-			mode->ht_capab = nla_get_u16(
-				tb_band[NL80211_BAND_ATTR_HT_CAPA]);
-		}
-
-		if (tb_band[NL80211_BAND_ATTR_HT_AMPDU_FACTOR]) {
-			mode->a_mpdu_params |= nla_get_u8(
-				tb_band[NL80211_BAND_ATTR_HT_AMPDU_FACTOR]) &
-				0x03;
-		}
-
-		if (tb_band[NL80211_BAND_ATTR_HT_AMPDU_DENSITY]) {
-			mode->a_mpdu_params |= nla_get_u8(
-				tb_band[NL80211_BAND_ATTR_HT_AMPDU_DENSITY]) <<
-				2;
-		}
-
-		if (tb_band[NL80211_BAND_ATTR_HT_MCS_SET] &&
-		    nla_len(tb_band[NL80211_BAND_ATTR_HT_MCS_SET])) {
-			u8 *mcs;
-			mcs = nla_data(tb_band[NL80211_BAND_ATTR_HT_MCS_SET]);
-			os_memcpy(mode->mcs_set, mcs, 16);
-		}
-
-		if (tb_band[NL80211_BAND_ATTR_VHT_CAPA]) {
-			mode->vht_capab = nla_get_u32(
-				tb_band[NL80211_BAND_ATTR_VHT_CAPA]);
-		}
-
-		if (tb_band[NL80211_BAND_ATTR_VHT_MCS_SET] &&
-		    nla_len(tb_band[NL80211_BAND_ATTR_VHT_MCS_SET])) {
-			u8 *mcs;
-			mcs = nla_data(tb_band[NL80211_BAND_ATTR_VHT_MCS_SET]);
-			os_memcpy(mode->vht_mcs_set, mcs, 8);
-		}
-
-		if (tb_band[NL80211_BAND_ATTR_FREQS]) {
-			int new_channels = 0;
-			struct hostapd_channel_data *channel;
-			nla_for_each_nested(nl_freq, tb_band[NL80211_BAND_ATTR_FREQS], rem_freq) {
-				nla_parse(tb_freq, NL80211_FREQUENCY_ATTR_MAX,
-					  nla_data(nl_freq),
-					  nla_len(nl_freq), freq_policy);
-				if (!tb_freq[NL80211_FREQUENCY_ATTR_FREQ])
-					continue;
-				new_channels++;
-			}
-
-			channel = os_realloc_array(mode->channels,
-						   mode->num_channels + new_channels,
-						   sizeof(struct hostapd_channel_data));
-
-			if (!channel)
-				return NL_SKIP;
-
-			mode->channels = channel;
-			mode->num_channels += new_channels;
-
-			idx = phy_info->last_chan_idx;
-
-			nla_for_each_nested(nl_freq, tb_band[NL80211_BAND_ATTR_FREQS], rem_freq) {
-				nla_parse(tb_freq, NL80211_FREQUENCY_ATTR_MAX,
-					  nla_data(nl_freq),
-					  nla_len(nl_freq), freq_policy);
-				if (!tb_freq[NL80211_FREQUENCY_ATTR_FREQ])
-					continue;
-
-				mode->channels[idx].freq = nla_get_u32(tb_freq[NL80211_FREQUENCY_ATTR_FREQ]);
-				mode->channels[idx].flag = 0;
-
-				/* mode is not set */
-				if (mode->mode >= NUM_HOSTAPD_MODES) {
-					/* crude heuristic */
-					if (mode->channels[idx].freq < 4000)
-						mode->mode = HOSTAPD_MODE_IEEE80211B;
-					else if (mode->channels[idx].freq > 50000)
-						mode->mode = HOSTAPD_MODE_IEEE80211AD;
-					else
-						mode->mode = HOSTAPD_MODE_IEEE80211A;
-				}
-
-				switch (mode->mode) {
-				case HOSTAPD_MODE_IEEE80211AD:
-					mode->channels[idx].chan =
-						(mode->channels[idx].freq - 56160) /
-						2160;
-					break;
-				case HOSTAPD_MODE_IEEE80211A:
-					mode->channels[idx].chan =
-						mode->channels[idx].freq / 5 - 1000;
-					break;
-				case HOSTAPD_MODE_IEEE80211B:
-				case HOSTAPD_MODE_IEEE80211G:
-					if (mode->channels[idx].freq == 2484)
-						mode->channels[idx].chan = 14;
-					else
-						mode->channels[idx].chan =
-							(mode->channels[idx].freq -
-							 2407) / 5;
-					break;
-				default:
-					break;
-				}
-
-				if (tb_freq[NL80211_FREQUENCY_ATTR_DISABLED])
-					mode->channels[idx].flag |=
-						HOSTAPD_CHAN_DISABLED;
-				if (tb_freq[NL80211_FREQUENCY_ATTR_PASSIVE_SCAN])
-					mode->channels[idx].flag |=
-						HOSTAPD_CHAN_PASSIVE_SCAN;
-				if (tb_freq[NL80211_FREQUENCY_ATTR_NO_IBSS])
-					mode->channels[idx].flag |=
-						HOSTAPD_CHAN_NO_IBSS;
-				if (tb_freq[NL80211_FREQUENCY_ATTR_RADAR])
-					mode->channels[idx].flag |=
-						HOSTAPD_CHAN_RADAR;
-
-				if (tb_freq[NL80211_FREQUENCY_ATTR_MAX_TX_POWER] &&
-					!tb_freq[NL80211_FREQUENCY_ATTR_DISABLED])
-					mode->channels[idx].max_tx_power =
-						nla_get_u32(tb_freq[NL80211_FREQUENCY_ATTR_MAX_TX_POWER]) / 100;
-
-				idx++;
-			}
-			phy_info->last_chan_idx = idx;
-		}
-
-		if (tb_band[NL80211_BAND_ATTR_RATES]) {
-			nla_for_each_nested(nl_rate, tb_band[NL80211_BAND_ATTR_RATES], rem_rate) {
-				nla_parse(tb_rate, NL80211_BITRATE_ATTR_MAX, nla_data(nl_rate),
-					  nla_len(nl_rate), rate_policy);
-				if (!tb_rate[NL80211_BITRATE_ATTR_RATE])
-					continue;
-				mode->num_rates++;
-			}
-
-			mode->rates = os_calloc(mode->num_rates, sizeof(int));
-			if (!mode->rates)
-				return NL_SKIP;
-
-			idx = 0;
-
-			nla_for_each_nested(nl_rate, tb_band[NL80211_BAND_ATTR_RATES], rem_rate) {
-				nla_parse(tb_rate, NL80211_BITRATE_ATTR_MAX, nla_data(nl_rate),
-					  nla_len(nl_rate), rate_policy);
-				if (!tb_rate[NL80211_BITRATE_ATTR_RATE])
-					continue;
-				mode->rates[idx] = nla_get_u32(tb_rate[NL80211_BITRATE_ATTR_RATE]);
-
-				/* crude heuristic */
-				if (mode->mode == HOSTAPD_MODE_IEEE80211B &&
-					mode->rates[idx] > 200)
-					mode->mode = HOSTAPD_MODE_IEEE80211G;
-
-				idx++;
-			}
-		}
+	nla_for_each_nested(nl_band, tb_msg[NL80211_ATTR_WIPHY_BANDS], rem_band)
+	{
+		int res = phy_info_band(phy_info, nl_band);
+		if (res != NL_OK)
+			return res;
 	}
 
 	return NL_SKIP;
 }
+
 
 static struct hostapd_hw_modes *
 wpa_driver_nl80211_add_11b(struct hostapd_hw_modes *modes, u16 *num_modes)

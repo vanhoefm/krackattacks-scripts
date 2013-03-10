@@ -1550,6 +1550,27 @@ static const struct parse_data ssid_fields[] = {
 	{ INT_RANGE(ampdu_density, -1, 7) },
 	{ STR(ht_mcs) },
 #endif /* CONFIG_HT_OVERRIDES */
+#ifdef CONFIG_VHT_OVERRIDES
+	{ INT_RANGE(disable_vht, 0, 1) },
+	{ INT(vht_capa) },
+	{ INT(vht_capa_mask) },
+	{ INT_RANGE(vht_rx_mcs_nss_1, -1, 3) },
+	{ INT_RANGE(vht_rx_mcs_nss_2, -1, 3) },
+	{ INT_RANGE(vht_rx_mcs_nss_3, -1, 3) },
+	{ INT_RANGE(vht_rx_mcs_nss_4, -1, 3) },
+	{ INT_RANGE(vht_rx_mcs_nss_5, -1, 3) },
+	{ INT_RANGE(vht_rx_mcs_nss_6, -1, 3) },
+	{ INT_RANGE(vht_rx_mcs_nss_7, -1, 3) },
+	{ INT_RANGE(vht_rx_mcs_nss_8, -1, 3) },
+	{ INT_RANGE(vht_tx_mcs_nss_1, -1, 3) },
+	{ INT_RANGE(vht_tx_mcs_nss_2, -1, 3) },
+	{ INT_RANGE(vht_tx_mcs_nss_3, -1, 3) },
+	{ INT_RANGE(vht_tx_mcs_nss_4, -1, 3) },
+	{ INT_RANGE(vht_tx_mcs_nss_5, -1, 3) },
+	{ INT_RANGE(vht_tx_mcs_nss_6, -1, 3) },
+	{ INT_RANGE(vht_tx_mcs_nss_7, -1, 3) },
+	{ INT_RANGE(vht_tx_mcs_nss_8, -1, 3) },
+#endif /* CONFIG_VHT_OVERRIDES */
 	{ INT(ap_max_inactivity) },
 	{ INT(dtim_period) },
 	{ INT(beacon_int) },
@@ -1953,6 +1974,24 @@ void wpa_config_set_network_defaults(struct wpa_ssid *ssid)
 	ssid->ampdu_factor = DEFAULT_AMPDU_FACTOR;
 	ssid->ampdu_density = DEFAULT_AMPDU_DENSITY;
 #endif /* CONFIG_HT_OVERRIDES */
+#ifdef CONFIG_VHT_OVERRIDES
+	ssid->vht_rx_mcs_nss_1 = -1;
+	ssid->vht_rx_mcs_nss_2 = -1;
+	ssid->vht_rx_mcs_nss_3 = -1;
+	ssid->vht_rx_mcs_nss_4 = -1;
+	ssid->vht_rx_mcs_nss_5 = -1;
+	ssid->vht_rx_mcs_nss_6 = -1;
+	ssid->vht_rx_mcs_nss_7 = -1;
+	ssid->vht_rx_mcs_nss_8 = -1;
+	ssid->vht_tx_mcs_nss_1 = -1;
+	ssid->vht_tx_mcs_nss_2 = -1;
+	ssid->vht_tx_mcs_nss_3 = -1;
+	ssid->vht_tx_mcs_nss_4 = -1;
+	ssid->vht_tx_mcs_nss_5 = -1;
+	ssid->vht_tx_mcs_nss_6 = -1;
+	ssid->vht_tx_mcs_nss_7 = -1;
+	ssid->vht_tx_mcs_nss_8 = -1;
+#endif /* CONFIG_VHT_OVERRIDES */
 	ssid->proactive_key_caching = -1;
 #ifdef CONFIG_IEEE80211W
 	ssid->ieee80211w = MGMT_FRAME_PROTECTION_DEFAULT;

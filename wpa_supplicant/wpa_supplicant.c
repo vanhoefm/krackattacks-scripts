@@ -2625,6 +2625,54 @@ void wpa_supplicant_apply_ht_overrides(
 #endif /* CONFIG_HT_OVERRIDES */
 
 
+#ifdef CONFIG_VHT_OVERRIDES
+void wpa_supplicant_apply_vht_overrides(
+	struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid,
+	struct wpa_driver_associate_params *params)
+{
+	struct ieee80211_vht_capabilities *vhtcaps;
+	struct ieee80211_vht_capabilities *vhtcaps_mask;
+
+	if (!ssid)
+		return;
+
+	params->disable_vht = ssid->disable_vht;
+
+	vhtcaps = (void *) params->vhtcaps;
+	vhtcaps_mask = (void *) params->vhtcaps_mask;
+
+	if (!vhtcaps || !vhtcaps_mask)
+		return;
+
+	vhtcaps->vht_capabilities_info = ssid->vht_capa;
+	vhtcaps_mask->vht_capabilities_info = ssid->vht_capa_mask;
+
+#define OVERRIDE_MCS(i)							\
+	if (ssid->vht_tx_mcs_nss_ ##i >= 0) {				\
+		vhtcaps_mask->vht_supported_mcs_set.tx_map |=		\
+			3 << 2 * (i - 1);				\
+		vhtcaps->vht_supported_mcs_set.tx_map |=		\
+			ssid->vht_tx_mcs_nss_ ##i << 2 * (i - 1);	\
+	}								\
+	if (ssid->vht_rx_mcs_nss_ ##i >= 0) {				\
+		vhtcaps_mask->vht_supported_mcs_set.rx_map |=		\
+			3 << 2 * (i - 1);				\
+		vhtcaps->vht_supported_mcs_set.rx_map |=		\
+			ssid->vht_rx_mcs_nss_ ##i << 2 * (i - 1);	\
+	}
+
+	OVERRIDE_MCS(1);
+	OVERRIDE_MCS(2);
+	OVERRIDE_MCS(3);
+	OVERRIDE_MCS(4);
+	OVERRIDE_MCS(5);
+	OVERRIDE_MCS(6);
+	OVERRIDE_MCS(7);
+	OVERRIDE_MCS(8);
+}
+#endif /* CONFIG_VHT_OVERRIDES */
+
+
 static int pcsc_reader_init(struct wpa_supplicant *wpa_s)
 {
 #ifdef PCSC_FUNCS

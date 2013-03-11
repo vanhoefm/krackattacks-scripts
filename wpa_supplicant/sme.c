@@ -1269,8 +1269,6 @@ void sme_event_unprot_disconnect(struct wpa_supplicant *wpa_s, const u8 *sa,
 {
 	struct wpa_ssid *ssid;
 
-	if (!(wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME))
-		return;
 	if (wpa_s->wpa_state != WPA_COMPLETED)
 		return;
 	ssid = wpa_s->current_ssid;

@@ -323,9 +323,11 @@ static int wpas_p2p_group_delete(struct wpa_supplicant *wpa_s,
 	if (eloop_cancel_timeout(wpas_p2p_group_idle_timeout, wpa_s, NULL) > 0)
 		wpa_printf(MSG_DEBUG, "P2P: Cancelled P2P group idle timeout");
 	if (eloop_cancel_timeout(wpas_p2p_group_formation_timeout,
-				 wpa_s->parent, NULL) > 0)
+				 wpa_s->parent, NULL) > 0) {
 		wpa_printf(MSG_DEBUG, "P2P: Cancelled P2P group formation "
 			   "timeout");
+		wpa_s->p2p_in_provisioning = 0;
+	}
 
 	if (removal_reason != P2P_GROUP_REMOVAL_SILENT && ssid)
 		wpas_notify_p2p_group_removed(wpa_s, ssid, gtype);

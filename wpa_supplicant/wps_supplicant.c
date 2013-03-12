@@ -2007,6 +2007,7 @@ struct wpabuf * wpas_wps_nfc_handover_req(struct wpa_supplicant *wpa_s, int cr)
 struct wpabuf * wpas_wps_er_nfc_handover_sel(struct wpa_supplicant *wpa_s,
 					     int ndef, const char *uuid)
 {
+#ifdef CONFIG_WPS_ER
 	struct wpabuf *ret;
 	u8 u[UUID_LEN];
 
@@ -2031,6 +2032,9 @@ struct wpabuf * wpas_wps_er_nfc_handover_sel(struct wpa_supplicant *wpa_s,
 	}
 
 	return ret;
+#else /* CONFIG_WPS_ER */
+	return NULL;
+#endif /* CONFIG_WPS_ER */
 }
 #endif /* CONFIG_WPS_NFC */
 

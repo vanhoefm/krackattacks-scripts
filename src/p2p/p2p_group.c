@@ -564,6 +564,8 @@ int p2p_group_notif_assoc(struct p2p_group *group, const u8 *addr,
 	if (group == NULL)
 		return -1;
 
+	p2p_add_device(group->p2p, addr, 0, NULL, 0, ie, len, 0);
+
 	m = os_zalloc(sizeof(*m));
 	if (m == NULL)
 		return -1;

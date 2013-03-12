@@ -1438,6 +1438,7 @@ static int wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
 {
 	int l, len, found = 0, wpa_found, rsn_found;
 	const u8 *p;
+	u8 bssid[ETH_ALEN];
 
 	wpa_dbg(wpa_s, MSG_DEBUG, "Association info event");
 	if (data->assoc_info.req_ies)
@@ -1492,7 +1493,6 @@ static int wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
 #ifdef CONFIG_IEEE80211R
 #ifdef CONFIG_SME
 	if (wpa_s->sme.auth_alg == WPA_AUTH_ALG_FT) {
-		u8 bssid[ETH_ALEN];
 		if (wpa_drv_get_bssid(wpa_s, bssid) < 0 ||
 		    wpa_ft_validate_reassoc_resp(wpa_s->wpa,
 						 data->assoc_info.resp_ies,
@@ -1549,6 +1549,23 @@ static int wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
 		p += len;
 	}
 #endif /* CONFIG_SME */
+
+	/* Process FT when SME is in the driver */
+	if (!(wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME) &&
+	    wpa_ft_is_completed(wpa_s->wpa)) {
+		if (wpa_drv_get_bssid(wpa_s, bssid) < 0 ||
+		    wpa_ft_validate_reassoc_resp(wpa_s->wpa,
+						 data->assoc_info.resp_ies,
+						 data->assoc_info.resp_ies_len,
+						 bssid) < 0) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "FT: Validation of "
+				"Reassociation Response failed");
+			wpa_supplicant_deauthenticate(
+				wpa_s, WLAN_REASON_INVALID_IE);
+			return -1;
+		}
+		wpa_dbg(wpa_s, MSG_DEBUG, "FT: Reassociation Response done");
+	}
 
 	wpa_sm_set_ft_params(wpa_s->wpa, data->assoc_info.resp_ies,
 			     data->assoc_info.resp_ies_len);

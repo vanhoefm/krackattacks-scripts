@@ -788,8 +788,11 @@ int wpa_ft_validate_reassoc_resp(struct wpa_sm *sm, const u8 *ies,
 	if (parse.ric) {
 		wpa_hexdump(MSG_MSGDUMP, "FT: RIC Response",
 			    parse.ric, parse.ric_len);
-		/* TODO: parse response and inform driver about results */
+		/* TODO: parse response and inform driver about results when
+		 * using wpa_supplicant SME */
 	}
+
+	wpa_printf(MSG_DEBUG, "FT: Completed successfully");
 
 	return 0;
 }

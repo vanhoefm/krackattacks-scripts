@@ -1438,7 +1438,9 @@ static int wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
 {
 	int l, len, found = 0, wpa_found, rsn_found;
 	const u8 *p;
+#ifdef CONFIG_IEEE80211R
 	u8 bssid[ETH_ALEN];
+#endif /* CONFIG_IEEE80211R */
 
 	wpa_dbg(wpa_s, MSG_DEBUG, "Association info event");
 	if (data->assoc_info.req_ies)

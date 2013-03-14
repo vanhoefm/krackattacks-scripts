@@ -3968,18 +3968,45 @@ static int wpas_p2p_init_go_params(struct wpa_supplicant *wpa_s,
 
 	if (wpa_s->current_ssid && wpa_drv_get_bssid(wpa_s, bssid) == 0 &&
 	    wpa_s->assoc_freq && !freq) {
-		wpa_printf(MSG_DEBUG, "P2P: Force GO on the channel we are "
-			   "already using");
-		params->freq = wpa_s->assoc_freq;
-		if (!freq_included(channels, params->freq)) {
-			wpa_printf(MSG_DEBUG, "P2P: Forced GO freq %d MHz not "
-				   "accepted", params->freq);
-			return -1;
+		if (!p2p_supported_freq(wpa_s->global->p2p, wpa_s->assoc_freq)
+		    || !freq_included(channels, wpa_s->assoc_freq)) {
+			if (wpa_s->drv_flags &
+			    WPA_DRIVER_FLAGS_MULTI_CHANNEL_CONCURRENT) {
+				wpa_printf(MSG_DEBUG, "P2P: Cannot force GO on "
+					   "the channel we are already using "
+					   "(%u MHz) - allow multi-channel "
+					   "concurrency", wpa_s->assoc_freq);
+			} else {
+				wpa_printf(MSG_DEBUG, "P2P: Cannot force GO on "
+					   "the channel we are already using "
+					   "(%u MHz)", wpa_s->assoc_freq);
+				return -1;
+			}
+		} else {
+			wpa_printf(MSG_DEBUG, "P2P: Force GO on the channel we "
+				   "are already using (%u MHz)",
+				   wpa_s->assoc_freq);
+			params->freq = wpa_s->assoc_freq;
 		}
 	}
 
 	res = wpa_drv_shared_freq(wpa_s);
-	if (res > 0 && !freq) {
+	if (res > 0 && !freq &&
+	    (!p2p_supported_freq(wpa_s->global->p2p, res) ||
+	     !freq_included(channels, res))) {
+		if (wpa_s->drv_flags &
+		    WPA_DRIVER_FLAGS_MULTI_CHANNEL_CONCURRENT) {
+			wpa_printf(MSG_DEBUG, "P2P: Cannot force GO on the "
+				   "channel we are already using on a shared "
+				   "interface (%u MHz) - allow multi-channel "
+				   "concurrency", res);
+		} else {
+			wpa_printf(MSG_DEBUG, "P2P: Cannot force GO on the "
+				   "channel we are already using on a shared "
+				   "interface (%u MHz)", res);
+			return -1;
+		}
+	} else if (res > 0 && !freq) {
 		wpa_printf(MSG_DEBUG, "P2P: Force GO on the channel we are "
 			   "already using on a shared interface");
 		params->freq = res;

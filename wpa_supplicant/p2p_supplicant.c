@@ -98,6 +98,10 @@ static void wpas_p2p_set_own_freq_preference(struct wpa_supplicant *wpa_s,
 {
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
 		return;
+	if (freq > 0 &&
+	    (wpa_s->drv_flags & WPA_DRIVER_FLAGS_MULTI_CHANNEL_CONCURRENT) &&
+	    wpa_s->parent->conf->p2p_ignore_shared_freq)
+		freq = 0;
 	p2p_set_own_freq_preference(wpa_s->global->p2p, freq);
 }
 

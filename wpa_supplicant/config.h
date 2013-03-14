@@ -571,6 +571,7 @@ struct wpa_config {
 	int p2p_intra_bss;
 	unsigned int num_p2p_pref_chan;
 	struct p2p_channel *p2p_pref_chan;
+	int p2p_ignore_shared_freq;
 
 	struct wpabuf *wps_vendor_ext_m1;
 

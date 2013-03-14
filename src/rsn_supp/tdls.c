@@ -1636,7 +1636,7 @@ skip_rsn:
 					   MACSTR " (terminate previously "
 					   "initiated negotiation",
 					   MAC2STR(src_addr));
-				wpa_tdls_peer_free(sm, peer);
+				wpa_tdls_disable_link(sm, peer->addr);
 			}
 		}
 	}

@@ -417,6 +417,7 @@ struct p2p_data {
 	int best_freq_24;
 	int best_freq_5;
 	int best_freq_overall;
+	int own_freq_preference;
 
 	/**
 	 * wps_vendor_ext - WPS Vendor Extensions to add

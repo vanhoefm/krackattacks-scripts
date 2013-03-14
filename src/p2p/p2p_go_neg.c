@@ -350,6 +350,18 @@ void p2p_reselect_channel(struct p2p_data *p2p,
 	u8 op_reg_class, op_channel;
 	unsigned int i;
 
+	if (p2p->own_freq_preference > 0 &&
+	    p2p_freq_to_channel(p2p->cfg->country, p2p->own_freq_preference,
+				&op_reg_class, &op_channel) == 0 &&
+	    p2p_channels_includes(intersection, op_reg_class, op_channel)) {
+		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Pick own channel "
+			"preference (reg_class %u channel %u) from "
+			"intersection", op_reg_class, op_channel);
+		p2p->op_reg_class = op_reg_class;
+		p2p->op_channel = op_channel;
+		return;
+	}
+
 	if (p2p->best_freq_overall > 0 &&
 	    p2p_freq_to_channel(p2p->cfg->country, p2p->best_freq_overall,
 				&op_reg_class, &op_channel) == 0 &&

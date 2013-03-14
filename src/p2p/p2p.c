@@ -4202,6 +4202,14 @@ void p2p_set_best_channels(struct p2p_data *p2p, int freq_24, int freq_5,
 }
 
 
+void p2p_set_own_freq_preference(struct p2p_data *p2p, int freq)
+{
+	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Own frequency preference: "
+		"%d MHz", freq);
+	p2p->own_freq_preference = freq;
+}
+
+
 const u8 * p2p_get_go_neg_peer(struct p2p_data *p2p)
 {
 	if (p2p == NULL || p2p->go_neg_peer == NULL)

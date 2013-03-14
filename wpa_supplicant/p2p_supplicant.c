@@ -93,6 +93,15 @@ static void wpas_p2p_fallback_to_go_neg(struct wpa_supplicant *wpa_s,
 static int wpas_p2p_stop_find_oper(struct wpa_supplicant *wpa_s);
 
 
+static void wpas_p2p_set_own_freq_preference(struct wpa_supplicant *wpa_s,
+					     int freq)
+{
+	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
+		return;
+	p2p_set_own_freq_preference(wpa_s->global->p2p, freq);
+}
+
+
 static void wpas_p2p_scan_res_handler(struct wpa_supplicant *wpa_s,
 				      struct wpa_scan_results *scan_res)
 {
@@ -2410,11 +2419,14 @@ static u8 wpas_invitation_process(void *ctx, const u8 *sa, const u8 *bssid,
 	}
 
 accept_inv:
+	wpas_p2p_set_own_freq_preference(wpa_s, 0);
+
 	if (wpa_s->current_ssid && wpa_drv_get_bssid(wpa_s, cur_bssid) == 0 &&
 	    wpa_s->assoc_freq) {
 		wpa_printf(MSG_DEBUG, "P2P: Trying to force channel to match "
 			   "the channel we are already using");
 		*force_freq = wpa_s->assoc_freq;
+		wpas_p2p_set_own_freq_preference(wpa_s, wpa_s->assoc_freq);
 	}
 
 	res = wpa_drv_shared_freq(wpa_s);
@@ -2423,6 +2435,7 @@ accept_inv:
 			   "with the channel we are already using on a "
 			   "shared interface");
 		*force_freq = res;
+		wpas_p2p_set_own_freq_preference(wpa_s, res);
 	}
 
 	return P2P_SC_SUCCESS;
@@ -3736,6 +3749,7 @@ int wpas_p2p_connect(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 				   &oper_freq);
 	if (res)
 		return res;
+	wpas_p2p_set_own_freq_preference(wpa_s, oper_freq);
 
 	wpa_s->create_p2p_iface = wpas_p2p_create_iface(wpa_s);
 
@@ -4807,6 +4821,7 @@ int wpas_p2p_invite_group(struct wpa_supplicant *wpa_s, const char *ifname,
 				   &oper_freq);
 	if (res)
 		return res;
+	wpas_p2p_set_own_freq_preference(wpa_s, oper_freq);
 
 	return p2p_invite(wpa_s->global->p2p, peer_addr, role, bssid,
 			  ssid->ssid, ssid->ssid_len, force_freq,

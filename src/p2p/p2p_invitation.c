@@ -466,7 +466,7 @@ void p2p_process_invitation_resp(struct p2p_data *p2p, const u8 *sa,
 
 	if (p2p->cfg->invitation_result)
 		p2p->cfg->invitation_result(p2p->cfg->cb_ctx, *msg.status,
-					    msg.group_bssid, channels);
+					    msg.group_bssid, channels, sa);
 
 	p2p_parse_free(&msg);
 

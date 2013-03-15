@@ -3373,7 +3373,8 @@ static void p2p_timeout_invite_listen(struct p2p_data *p2p)
 				"P2P: Invitation Request retry limit reached");
 			if (p2p->cfg->invitation_result)
 				p2p->cfg->invitation_result(
-					p2p->cfg->cb_ctx, -1, NULL, NULL);
+					p2p->cfg->cb_ctx, -1, NULL, NULL,
+					p2p->invite_peer->info.p2p_device_addr);
 		}
 		p2p_set_state(p2p, P2P_IDLE);
 	}

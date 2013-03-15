@@ -3125,6 +3125,8 @@ int wpa_supplicant_remove_iface(struct wpa_global *global,
 
 	if (global->p2p_group_formation == wpa_s)
 		global->p2p_group_formation = NULL;
+	if (global->p2p_invite_group == wpa_s)
+		global->p2p_invite_group = NULL;
 	wpa_supplicant_deinit_iface(wpa_s, 1, terminate);
 	os_free(wpa_s);
 

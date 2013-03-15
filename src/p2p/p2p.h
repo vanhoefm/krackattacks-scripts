@@ -730,6 +730,7 @@ struct p2p_config {
 	 * @status: Negotiation result (Status Code)
 	 * @bssid: P2P Group BSSID or %NULL if not received
 	 * @channels: Available operating channels for the group
+	 * @addr: Peer address
 	 *
 	 * This callback is used to indicate result of an Invitation procedure
 	 * started with a call to p2p_invite(). The indicated status code is
@@ -738,7 +739,8 @@ struct p2p_config {
 	 * local failure in transmitting the Invitation Request.
 	 */
 	void (*invitation_result)(void *ctx, int status, const u8 *bssid,
-				  const struct p2p_channels *channels);
+				  const struct p2p_channels *channels,
+				  const u8 *addr);
 
 	/**
 	 * go_connected - Check whether we are connected to a GO

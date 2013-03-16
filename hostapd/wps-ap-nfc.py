@@ -18,7 +18,7 @@ import nfc.handover
 import logging
 logging.basicConfig()
 
-import wpactrl
+import wpaspy
 
 wpas_ctrl = '/var/run/hostapd'
 
@@ -37,10 +37,9 @@ def wpas_connect():
 
     for ctrl in ifaces:
         try:
-            wpas = wpactrl.WPACtrl(ctrl)
+            wpas = wpaspy.Ctrl(ctrl)
             return wpas
-        except wpactrl.error, error:
-            print "Error: ", error
+        except Exception, e:
             pass
     return None
 

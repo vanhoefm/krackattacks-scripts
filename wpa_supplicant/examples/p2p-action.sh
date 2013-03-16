@@ -41,6 +41,19 @@ if [ "$CMD" = "P2P-GROUP-STARTED" ]; then
 	kill_daemon dhclient /var/run/dhclient-$GIFNAME.pid
 	rm /var/run/dhclient.leases-$GIFNAME
 	kill_daemon dnsmasq /var/run/dnsmasq.pid-$GIFNAME
+	ipaddr=`echo "$*" | sed 's/.* ip_addr=\([^ ]*\).*/\1/'`
+	ipmask=`echo "$*" | sed 's/.* ip_mask=\([^ ]*\).*/\1/'`
+	goipaddr=`echo "$*" | sed 's/.* go_ip_addr=\([^ ]*\).*/\1/'`
+	if echo "$ipaddr$ipmask$goipaddr" | grep -q ' '; then
+	    ipaddr=""
+	    ipmask=""
+	    goipaddr=""
+	fi
+	if [ -n "$ipaddr" ]; then
+	    sudo ifconfig $GIFNAME "$ipaddr" netmask "$ipmask"
+	    sudo ip ro re default via "$goipaddr"
+	    exit 0
+	fi
 	dhclient -pf /var/run/dhclient-$GIFNAME.pid \
 	    -lf /var/run/dhclient.leases-$GIFNAME \
 	    -nw \

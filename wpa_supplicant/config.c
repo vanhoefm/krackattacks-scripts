@@ -10,6 +10,7 @@
 
 #include "common.h"
 #include "utils/uuid.h"
+#include "utils/ip_addr.h"
 #include "crypto/sha1.h"
 #include "rsn_supp/wpa.h"
 #include "eap_peer/eap.h"
@@ -2971,6 +2972,29 @@ static int wpa_config_process_freq_list(const struct global_parse_data *data,
 }
 
 
+#ifdef CONFIG_P2P
+static int wpa_global_config_parse_ipv4(const struct global_parse_data *data,
+					struct wpa_config *config, int line,
+					const char *pos)
+{
+	u32 *dst;
+	struct hostapd_ip_addr addr;
+
+	if (hostapd_parse_ip_addr(pos, &addr) < 0)
+		return -1;
+	if (addr.af != AF_INET)
+		return -1;
+
+	dst = (u32 *) (((u8 *) config) + (long) data->param1);
+	os_memcpy(dst, &addr.u.v4.s_addr, 4);
+	wpa_printf(MSG_DEBUG, "%s = 0x%x", data->name,
+		   WPA_GET_BE32((u8 *) dst));
+
+	return 0;
+}
+#endif /* CONFIG_P2P */
+
+
 static int wpa_config_process_country(const struct global_parse_data *data,
 				      struct wpa_config *config, int line,
 				      const char *pos)
@@ -3275,6 +3299,7 @@ static int wpa_config_process_no_ctrl_interface(
 #define STR(f) _STR(f), NULL, NULL
 #define STR_RANGE(f, min, max) _STR(f), (void *) min, (void *) max
 #define BIN(f) #f, wpa_global_config_parse_bin, OFFSET(f), NULL, NULL
+#define IPV4(f) #f, wpa_global_config_parse_ipv4, OFFSET(f), NULL, NULL
 
 static const struct global_parse_data global_fields[] = {
 #ifdef CONFIG_CTRL_IFACE
@@ -3333,6 +3358,10 @@ static const struct global_parse_data global_fields[] = {
 	{ INT(p2p_disabled), 0 },
 	{ INT(p2p_no_group_iface), 0 },
 	{ INT_RANGE(p2p_ignore_shared_freq, 0, 1), 0 },
+	{ IPV4(ip_addr_go), 0 },
+	{ IPV4(ip_addr_mask), 0 },
+	{ IPV4(ip_addr_start), 0 },
+	{ IPV4(ip_addr_end), 0 },
 #endif /* CONFIG_P2P */
 	{ FUNC(country), CFG_CHANGED_COUNTRY },
 	{ INT(bss_max_count), 0 },
@@ -3379,6 +3408,7 @@ static const struct global_parse_data global_fields[] = {
 #undef STR
 #undef STR_RANGE
 #undef BIN
+#undef IPV4
 #define NUM_GLOBAL_FIELDS ARRAY_SIZE(global_fields)
 
 

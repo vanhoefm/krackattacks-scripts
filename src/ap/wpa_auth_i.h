@@ -121,6 +121,10 @@ struct wpa_state_machine {
 #endif /* CONFIG_IEEE80211R */
 
 	int pending_1_of_4_timeout;
+
+#ifdef CONFIG_P2P
+	u8 ip_addr[4];
+#endif /* CONFIG_P2P */
 };
 
 
@@ -185,6 +189,10 @@ struct wpa_authenticator {
 
 	struct rsn_pmksa_cache *pmksa;
 	struct wpa_ft_pmk_cache *ft_pmk_cache;
+
+#ifdef CONFIG_P2P
+	struct bitfield *ip_pool;
+#endif /* CONFIG_P2P */
 };
 
 

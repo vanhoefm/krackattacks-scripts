@@ -58,6 +58,7 @@ struct wpa_sm {
 	u8 ssid[32];
 	size_t ssid_len;
 	int wpa_ptk_rekey;
+	int p2p;
 
 	u8 own_addr[ETH_ALEN];
 	const char *ifname;
@@ -122,6 +123,10 @@ struct wpa_sm {
 	u8 *assoc_resp_ies; /* MDIE and FTIE from (Re)Association Response */
 	size_t assoc_resp_ies_len;
 #endif /* CONFIG_IEEE80211R */
+
+#ifdef CONFIG_P2P
+	u8 p2p_ip_addr[3 * 4];
+#endif /* CONFIG_P2P */
 };
 
 

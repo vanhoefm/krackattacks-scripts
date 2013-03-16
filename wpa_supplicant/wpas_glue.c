@@ -948,6 +948,21 @@ void wpa_supplicant_rsn_supp_set_config(struct wpa_supplicant *wpa_s,
 		conf.ssid = ssid->ssid;
 		conf.ssid_len = ssid->ssid_len;
 		conf.wpa_ptk_rekey = ssid->wpa_ptk_rekey;
+#ifdef CONFIG_P2P
+		if (ssid->p2p_group && wpa_s->current_bss) {
+			struct wpabuf *p2p;
+			p2p = wpa_bss_get_vendor_ie_multi(wpa_s->current_bss,
+							  P2P_IE_VENDOR_TYPE);
+			if (p2p) {
+				u8 group_capab;
+				group_capab = p2p_get_group_capab(p2p);
+				if (group_capab &
+				    P2P_GROUP_CAPAB_IP_ADDR_ALLOCATION)
+					conf.p2p = 1;
+				wpabuf_free(p2p);
+			}
+		}
+#endif /* CONFIG_P2P */
 	}
 	wpa_sm_set_config(wpa_s->wpa, ssid ? &conf : NULL);
 }

@@ -908,6 +908,7 @@ void ap_sta_set_authorized(struct hostapd_data *hapd, struct sta_info *sta,
 	char buf[100];
 #ifdef CONFIG_P2P
 	u8 addr[ETH_ALEN];
+	u8 ip_addr_buf[4];
 #endif /* CONFIG_P2P */
 
 	if (!!authorized == !!(sta->flags & WLAN_STA_AUTHORIZED))
@@ -929,12 +930,25 @@ void ap_sta_set_authorized(struct hostapd_data *hapd, struct sta_info *sta,
 		os_snprintf(buf, sizeof(buf), MACSTR, MAC2STR(sta->addr));
 
 	if (authorized) {
-		wpa_msg(hapd->msg_ctx, MSG_INFO, AP_STA_CONNECTED "%s", buf);
+		char ip_addr[100];
+		ip_addr[0] = '\0';
+#ifdef CONFIG_P2P
+		if (wpa_auth_get_ip_addr(sta->wpa_sm, ip_addr_buf) == 0) {
+			os_snprintf(ip_addr, sizeof(ip_addr),
+				    " ip_addr=%u.%u.%u.%u",
+				    ip_addr_buf[0], ip_addr_buf[1],
+				    ip_addr_buf[2], ip_addr_buf[3]);
+		}
+#endif /* CONFIG_P2P */
+
+		wpa_msg(hapd->msg_ctx, MSG_INFO, AP_STA_CONNECTED "%s%s",
+			buf, ip_addr);
 
 		if (hapd->msg_ctx_parent &&
 		    hapd->msg_ctx_parent != hapd->msg_ctx)
 			wpa_msg_no_global(hapd->msg_ctx_parent, MSG_INFO,
-					  AP_STA_CONNECTED "%s", buf);
+					  AP_STA_CONNECTED "%s%s",
+					  buf, ip_addr);
 
 		sta->flags |= WLAN_STA_AUTHORIZED;
 	} else {

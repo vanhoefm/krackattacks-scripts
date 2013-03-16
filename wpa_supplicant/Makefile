@@ -257,6 +257,7 @@ OBJS += ../src/p2p/p2p_invitation.o
 OBJS += ../src/p2p/p2p_dev_disc.o
 OBJS += ../src/p2p/p2p_group.o
 OBJS += ../src/ap/p2p_hostapd.o
+OBJS += ../src/utils/bitfield.o
 CFLAGS += -DCONFIG_P2P
 NEED_GAS=y
 NEED_OFFCHANNEL=y

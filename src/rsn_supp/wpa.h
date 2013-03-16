@@ -95,6 +95,7 @@ struct rsn_supp_config {
 	const u8 *ssid;
 	size_t ssid_len;
 	int wpa_ptk_rekey;
+	int p2p;
 };
 
 #ifndef CONFIG_NO_WPA
@@ -144,6 +145,8 @@ int wpa_sm_has_ptk(struct wpa_sm *sm);
 void wpa_sm_update_replay_ctr(struct wpa_sm *sm, const u8 *replay_ctr);
 
 void wpa_sm_pmksa_cache_flush(struct wpa_sm *sm, void *network_ctx);
+
+int wpa_sm_get_p2p_ip_addr(struct wpa_sm *sm, u8 *buf);
 
 #else /* CONFIG_NO_WPA */
 

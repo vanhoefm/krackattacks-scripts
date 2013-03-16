@@ -78,6 +78,12 @@ static void hostapd_wpa_auth_conf(struct hostapd_bss_config *conf,
 	wconf->corrupt_gtk_rekey_mic_probability =
 		iconf->corrupt_gtk_rekey_mic_probability;
 #endif /* CONFIG_TESTING_OPTIONS */
+#ifdef CONFIG_P2P
+	os_memcpy(wconf->ip_addr_go, conf->ip_addr_go, 4);
+	os_memcpy(wconf->ip_addr_mask, conf->ip_addr_mask, 4);
+	os_memcpy(wconf->ip_addr_start, conf->ip_addr_start, 4);
+	os_memcpy(wconf->ip_addr_end, conf->ip_addr_end, 4);
+#endif /* CONFIG_P2P */
 }
 
 

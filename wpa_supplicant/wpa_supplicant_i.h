@@ -730,6 +730,7 @@ struct wpa_supplicant {
 	struct wpabuf *p2p_oob_dev_pw; /* OOB Device Password for group
 					* formation */
 	u8 p2p_peer_oob_pubkey_hash[WPS_OOB_PUBKEY_HASH_LEN];
+	u8 p2p_ip_addr_info[3 * 4];
 #endif /* CONFIG_P2P */
 
 	struct wpa_ssid *bgscan_ssid;

@@ -948,6 +948,11 @@ struct wpa_config {
 	 * specified TDLS peers.
 	 */
 	int tdls_external_control;
+
+	u8 ip_addr_go[4];
+	u8 ip_addr_mask[4];
+	u8 ip_addr_start[4];
+	u8 ip_addr_end[4];
 };
 
 

@@ -163,6 +163,12 @@ struct wpa_auth_config {
 #ifdef CONFIG_TESTING_OPTIONS
 	double corrupt_gtk_rekey_mic_probability;
 #endif /* CONFIG_TESTING_OPTIONS */
+#ifdef CONFIG_P2P
+	u8 ip_addr_go[4];
+	u8 ip_addr_mask[4];
+	u8 ip_addr_start[4];
+	u8 ip_addr_end[4];
+#endif /* CONFIG_P2P */
 };
 
 typedef enum {
@@ -296,5 +302,7 @@ int wpa_wnmsleep_igtk_subelem(struct wpa_state_machine *sm, u8 *pos);
 
 int wpa_auth_uses_sae(struct wpa_state_machine *sm);
 int wpa_auth_uses_ft_sae(struct wpa_state_machine *sm);
+
+int wpa_auth_get_ip_addr(struct wpa_state_machine *sm, u8 *addr);
 
 #endif /* WPA_AUTH_H */

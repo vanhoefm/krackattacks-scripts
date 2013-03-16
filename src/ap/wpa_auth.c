@@ -11,6 +11,7 @@
 #include "utils/common.h"
 #include "utils/eloop.h"
 #include "utils/state_machine.h"
+#include "utils/bitfield.h"
 #include "common/ieee802_11_defs.h"
 #include "crypto/aes_wrap.h"
 #include "crypto/crypto.h"
@@ -424,6 +425,17 @@ struct wpa_authenticator * wpa_init(const u8 *addr,
 				       wpa_rekey_gtk, wpa_auth, NULL);
 	}
 
+#ifdef CONFIG_P2P
+	if (WPA_GET_BE32(conf->ip_addr_start)) {
+		int count = WPA_GET_BE32(conf->ip_addr_end) -
+			WPA_GET_BE32(conf->ip_addr_start) + 1;
+		if (count > 1000)
+			count = 1000;
+		if (count > 0)
+			wpa_auth->ip_pool = bitfield_alloc(count);
+	}
+#endif /* CONFIG_P2P */
+
 	return wpa_auth;
 }
 
@@ -465,6 +477,11 @@ void wpa_deinit(struct wpa_authenticator *wpa_auth)
 	wpa_ft_pmk_cache_deinit(wpa_auth->ft_pmk_cache);
 	wpa_auth->ft_pmk_cache = NULL;
 #endif /* CONFIG_IEEE80211R */
+
+#ifdef CONFIG_P2P
+	bitfield_free(wpa_auth->ip_pool);
+#endif /* CONFIG_P2P */
+
 
 	os_free(wpa_auth->wpa_ie);
 
@@ -583,6 +600,19 @@ void wpa_auth_sta_no_wpa(struct wpa_state_machine *sm)
 
 static void wpa_free_sta_sm(struct wpa_state_machine *sm)
 {
+#ifdef CONFIG_P2P
+	if (WPA_GET_BE32(sm->ip_addr)) {
+		u32 start;
+		wpa_printf(MSG_DEBUG, "P2P: Free assigned IP "
+			   "address %u.%u.%u.%u from " MACSTR,
+			   sm->ip_addr[0], sm->ip_addr[1],
+			   sm->ip_addr[2], sm->ip_addr[3],
+			   MAC2STR(sm->addr));
+		start = WPA_GET_BE32(sm->wpa_auth->conf.ip_addr_start);
+		bitfield_clear(sm->wpa_auth->ip_pool,
+			       WPA_GET_BE32(sm->ip_addr) - start);
+	}
+#endif /* CONFIG_P2P */
 	if (sm->GUpdateStationKeys) {
 		sm->group->GKeyDoneStations--;
 		sm->GUpdateStationKeys = FALSE;
@@ -1000,6 +1030,26 @@ continue_processing:
 			return;
 		}
 #endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_P2P
+		if (kde.ip_addr_req && kde.ip_addr_req[0] &&
+		    wpa_auth->ip_pool && WPA_GET_BE32(sm->ip_addr) == 0) {
+			int idx;
+			wpa_printf(MSG_DEBUG, "P2P: IP address requested in "
+				   "EAPOL-Key exchange");
+			idx = bitfield_get_first_zero(wpa_auth->ip_pool);
+			if (idx >= 0) {
+				u32 start = WPA_GET_BE32(wpa_auth->conf.
+							 ip_addr_start);
+				bitfield_set(wpa_auth->ip_pool, idx);
+				WPA_PUT_BE32(sm->ip_addr, start + idx);
+				wpa_printf(MSG_DEBUG, "P2P: Assigned IP "
+					   "address %u.%u.%u.%u to " MACSTR,
+					   sm->ip_addr[0], sm->ip_addr[1],
+					   sm->ip_addr[2], sm->ip_addr[3],
+					   MAC2STR(sm->addr));
+			}
+		}
+#endif /* CONFIG_P2P */
 		break;
 	case PAIRWISE_4:
 		if (sm->wpa_ptk_state != WPA_PTK_PTKINITNEGOTIATING ||
@@ -1995,6 +2045,10 @@ SM_STATE(WPA_PTK, PTKINITNEGOTIATING)
 		kde_len += 300; /* FTIE + 2 * TIE */
 	}
 #endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_P2P
+	if (WPA_GET_BE32(sm->ip_addr) > 0)
+		kde_len += 2 + RSN_SELECTOR_LEN + 3 * 4;
+#endif /* CONFIG_P2P */
 	kde = os_malloc(kde_len);
 	if (kde == NULL)
 		return;
@@ -2056,6 +2110,16 @@ SM_STATE(WPA_PTK, PTKINITNEGOTIATING)
 		pos += 4;
 	}
 #endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_P2P
+	if (WPA_GET_BE32(sm->ip_addr) > 0) {
+		u8 addr[3 * 4];
+		os_memcpy(addr, sm->ip_addr, 4);
+		os_memcpy(addr + 4, sm->wpa_auth->conf.ip_addr_mask, 4);
+		os_memcpy(addr + 8, sm->wpa_auth->conf.ip_addr_go, 4);
+		pos = wpa_add_kde(pos, WFA_KEY_DATA_IP_ADDR_ALLOC,
+				  addr, sizeof(addr), NULL, 0);
+	}
+#endif /* CONFIG_P2P */
 
 	wpa_send_eapol(sm->wpa_auth, sm,
 		       (secure ? WPA_KEY_INFO_SECURE : 0) | WPA_KEY_INFO_MIC |
@@ -3103,3 +3167,14 @@ int wpa_auth_uses_ft_sae(struct wpa_state_machine *sm)
 		return 0;
 	return sm->wpa_key_mgmt == WPA_KEY_MGMT_FT_SAE;
 }
+
+
+#ifdef CONFIG_P2P
+int wpa_auth_get_ip_addr(struct wpa_state_machine *sm, u8 *addr)
+{
+	if (sm == NULL || WPA_GET_BE32(sm->ip_addr) == 0)
+		return -1;
+	os_memcpy(addr, sm->ip_addr, 4);
+	return 0;
+}
+#endif /* CONFIG_P2P */

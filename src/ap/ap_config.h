@@ -384,6 +384,12 @@ struct hostapd_bss_config {
 #define P2P_MANAGE BIT(3)
 #define P2P_ALLOW_CROSS_CONNECTION BIT(4)
 	int p2p;
+#ifdef CONFIG_P2P
+	u8 ip_addr_go[4];
+	u8 ip_addr_mask[4];
+	u8 ip_addr_start[4];
+	u8 ip_addr_end[4];
+#endif /* CONFIG_P2P */
 
 	int disassoc_low_ack;
 	int skip_inactivity_poll;

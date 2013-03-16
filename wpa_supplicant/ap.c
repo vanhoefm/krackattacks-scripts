@@ -182,6 +182,16 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 
 	bss->isolate = !wpa_s->conf->p2p_intra_bss;
 	bss->force_per_enrollee_psk = wpa_s->global->p2p_per_sta_psk;
+
+	if (ssid->p2p_group) {
+		os_memcpy(bss->ip_addr_go, wpa_s->parent->conf->ip_addr_go, 4);
+		os_memcpy(bss->ip_addr_mask, wpa_s->parent->conf->ip_addr_mask,
+			  4);
+		os_memcpy(bss->ip_addr_start,
+			  wpa_s->parent->conf->ip_addr_start, 4);
+		os_memcpy(bss->ip_addr_end, wpa_s->parent->conf->ip_addr_end,
+			  4);
+	}
 #endif /* CONFIG_P2P */
 
 	if (ssid->ssid_len == 0) {

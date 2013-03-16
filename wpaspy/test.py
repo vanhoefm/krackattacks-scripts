@@ -29,8 +29,7 @@ def wpas_connect():
         try:
             wpas = wpaspy.Ctrl(ctrl)
             return wpas
-        except wpactrl.error, error:
-            print "Error: ", error
+        except Exception, e:
             pass
     return None
 

@@ -655,8 +655,8 @@ void wpa_supplicant_set_state(struct wpa_supplicant *wpa_s,
 		wpa_supplicant_notify_scanning(wpa_s, 0);
 
 	if (state == WPA_COMPLETED && wpa_s->new_connection) {
-#if defined(CONFIG_CTRL_IFACE) || !defined(CONFIG_NO_STDOUT_DEBUG)
 		struct wpa_ssid *ssid = wpa_s->current_ssid;
+#if defined(CONFIG_CTRL_IFACE) || !defined(CONFIG_NO_STDOUT_DEBUG)
 		wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_CONNECTED "- Connection to "
 			MACSTR " completed [id=%d id_str=%s]",
 			MAC2STR(wpa_s->bssid),

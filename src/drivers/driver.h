@@ -864,6 +864,8 @@ struct wpa_driver_capa {
 #define WPA_DRIVER_FLAGS_SAE				0x02000000
 /* Driver makes use of OBSS scan mechanism in wpa_supplicant */
 #define WPA_DRIVER_FLAGS_OBSS_SCAN			0x04000000
+/* Driver supports IBSS (Ad-hoc) mode */
+#define WPA_DRIVER_FLAGS_IBSS				0x08000000
 	unsigned int flags;
 
 	int max_scan_ssids;

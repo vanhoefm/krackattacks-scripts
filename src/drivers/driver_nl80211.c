@@ -2591,6 +2591,9 @@ static void wiphy_info_supported_iftypes(struct wiphy_info_data *info,
 		case NL80211_IFTYPE_AP:
 			info->capa->flags |= WPA_DRIVER_FLAGS_AP;
 			break;
+		case NL80211_IFTYPE_ADHOC:
+			info->capa->flags |= WPA_DRIVER_FLAGS_IBSS;
+			break;
 		case NL80211_IFTYPE_P2P_GO:
 			info->p2p_go_supported = 1;
 			break;

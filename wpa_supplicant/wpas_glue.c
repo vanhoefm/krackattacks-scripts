@@ -798,8 +798,10 @@ int wpa_supplicant_init_eapol(struct wpa_supplicant *wpa_s)
 	ctx->eapol_done_cb = wpa_supplicant_notify_eapol_done;
 	ctx->eapol_send = wpa_supplicant_eapol_send;
 	ctx->set_wep_key = wpa_eapol_set_wep_key;
+#ifndef CONFIG_NO_CONFIG_BLOBS
 	ctx->set_config_blob = wpa_supplicant_set_config_blob;
 	ctx->get_config_blob = wpa_supplicant_get_config_blob;
+#endif /* CONFIG_NO_CONFIG_BLOBS */
 	ctx->aborted_cached = wpa_supplicant_aborted_cached;
 	ctx->opensc_engine_path = wpa_s->conf->opensc_engine_path;
 	ctx->pkcs11_engine_path = wpa_s->conf->pkcs11_engine_path;

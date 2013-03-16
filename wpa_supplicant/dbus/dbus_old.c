@@ -268,10 +268,12 @@ static DBusHandlerResult wpas_iface_message_handler(DBusConnection *connection,
 			reply = wpas_dbus_iface_get_state(message, wpa_s);
 		else if (!strcmp(method, "scanning"))
 			reply = wpas_dbus_iface_get_scanning(message, wpa_s);
+#ifndef CONFIG_NO_CONFIG_BLOBS
 		else if (!strcmp(method, "setBlobs"))
 			reply = wpas_dbus_iface_set_blobs(message, wpa_s);
 		else if (!strcmp(method, "removeBlobs"))
 			reply = wpas_dbus_iface_remove_blobs(message, wpa_s);
+#endif /* CONFIG_NO_CONFIG_BLOBS */
 #ifdef CONFIG_WPS
 		else if (!os_strcmp(method, "wpsPbc"))
 			reply = wpas_dbus_iface_wps_pbc(message, wpa_s);

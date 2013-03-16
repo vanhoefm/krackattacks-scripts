@@ -2430,6 +2430,7 @@ static const struct wpa_dbus_method_desc wpas_dbus_interface_methods[] = {
 		  END_ARGS
 	  }
 	},
+#ifndef CONFIG_NO_CONFIG_BLOBS
 	{ "AddBlob", WPAS_DBUS_NEW_IFACE_INTERFACE,
 	  (WPADBusMethodHandler) &wpas_dbus_handler_add_blob,
 	  {
@@ -2453,6 +2454,7 @@ static const struct wpa_dbus_method_desc wpas_dbus_interface_methods[] = {
 		  END_ARGS
 	  }
 	},
+#endif /* CONFIG_NO_CONFIG_BLOBS */
 #ifdef CONFIG_WPS
 	{ "Start", WPAS_DBUS_NEW_IFACE_WPS,
 	  (WPADBusMethodHandler) &wpas_dbus_handler_wps_start,

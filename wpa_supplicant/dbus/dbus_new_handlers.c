@@ -1696,6 +1696,8 @@ out:
 }
 
 
+#ifndef CONFIG_NO_CONFIG_BLOBS
+
 /**
  * wpas_dbus_handler_add_blob - Store named binary blob (ie, for certificates)
  * @message: Pointer to incoming dbus message
@@ -1859,6 +1861,9 @@ DBusMessage * wpas_dbus_handler_remove_blob(DBusMessage *message,
 	return reply;
 
 }
+
+#endif /* CONFIG_NO_CONFIG_BLOBS */
+
 
 /*
  * wpas_dbus_handler_flush_bss - Flush the BSS cache

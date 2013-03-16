@@ -205,7 +205,7 @@ class WpaSupplicant:
 
     def wait_event(self, events, timeout):
         count = 0
-        while count < timeout * 2:
+        while count < timeout * 10:
             count = count + 1
             time.sleep(0.1)
             while self.mon.pending():

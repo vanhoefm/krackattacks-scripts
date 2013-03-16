@@ -14,6 +14,7 @@ CFLAGS += -DCONFIG_IPV6
 
 LIB_OBJS= \
 	base64.o \
+	bitfield.o \
 	common.o \
 	ip_addr.o \
 	radiotap.o \

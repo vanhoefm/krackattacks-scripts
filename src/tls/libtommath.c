@@ -676,6 +676,9 @@ static int mp_exptmod (mp_int * G, mp_int * X, mp_int * P, mp_int * Y)
 #ifdef BN_MP_EXPTMOD_FAST_C
   }
 #endif
+  if (dr == 0) {
+    /* avoid compiler warnings about possibly unused variable */
+  }
 }
 
 

@@ -1372,6 +1372,11 @@ struct p2p_group_config {
 	size_t ssid_len;
 
 	/**
+	 * freq - Operating channel of the group
+	 */
+	int freq;
+
+	/**
 	 * cb_ctx - Context to use with callback functions
 	 */
 	void *cb_ctx;

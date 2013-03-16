@@ -5235,6 +5235,7 @@ struct p2p_group * wpas_p2p_group_init(struct wpa_supplicant *wpa_s,
 		cfg->max_clients = wpa_s->conf->max_num_sta;
 	os_memcpy(cfg->ssid, ssid->ssid, ssid->ssid_len);
 	cfg->ssid_len = ssid->ssid_len;
+	cfg->freq = ssid->frequency;
 	cfg->cb_ctx = wpa_s;
 	cfg->ie_update = wpas_p2p_ie_update;
 	cfg->idle_update = wpas_p2p_idle_update;

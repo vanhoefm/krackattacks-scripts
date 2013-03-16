@@ -999,3 +999,9 @@ void p2p_group_force_beacon_update_ies(struct p2p_group *group)
 	group->beacon_update = 1;
 	p2p_group_update_ies(group);
 }
+
+
+int p2p_group_get_freq(struct p2p_group *group)
+{
+	return group->cfg->freq;
+}

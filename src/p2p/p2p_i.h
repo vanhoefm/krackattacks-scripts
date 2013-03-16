@@ -604,6 +604,7 @@ void p2p_group_force_beacon_update_ies(struct p2p_group *group);
 struct wpabuf * p2p_group_get_wfd_ie(struct p2p_group *g);
 void p2p_buf_add_group_info(struct p2p_group *group, struct wpabuf *buf,
 			    int max_clients);
+int p2p_group_get_freq(struct p2p_group *group);
 
 
 void p2p_buf_add_action_hdr(struct wpabuf *buf, u8 subtype, u8 dialog_token);

@@ -455,6 +455,7 @@ struct hostapd_bss_config {
 #ifdef CONFIG_HS20
 	int hs20;
 	int disable_dgaf;
+	u16 anqp_domain_id;
 	unsigned int hs20_oper_friendly_name_count;
 	struct hostapd_lang_string *hs20_oper_friendly_name;
 	u8 *hs20_wan_metrics;

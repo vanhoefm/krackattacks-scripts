@@ -197,8 +197,8 @@ NEED_ECC=y
 NEED_DH_GROUPS=y
 endif
 
-ifdef CONFIG_IEEE80211V
-L_CFLAGS += -DCONFIG_IEEE80211V
+ifdef CONFIG_WNM
+CFLAGS += -DCONFIG_WNM
 OBJS += wnm_sta.c
 endif
 
@@ -767,10 +767,6 @@ endif
 ifdef CONFIG_HS20
 OBJS += src/ap/hs20.c
 endif
-endif
-
-ifdef CONFIG_WNM
-L_CFLAGS += -DCONFIG_WNM
 endif
 
 ifdef NEED_RSN_AUTHENTICATOR

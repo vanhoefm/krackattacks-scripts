@@ -159,6 +159,8 @@ static void anqp_add_hs_capab_list(struct hostapd_data *hapd,
 		wpabuf_put_u8(buf, HS20_STYPE_NAI_HOME_REALM_QUERY);
 	if (hapd->conf->hs20_operating_class)
 		wpabuf_put_u8(buf, HS20_STYPE_OPERATING_CLASS);
+	if (hapd->conf->hs20_icons_count)
+		wpabuf_put_u8(buf, HS20_STYPE_ICON_REQUEST);
 	gas_anqp_set_element_len(buf, len);
 }
 #endif /* CONFIG_HS20 */
@@ -514,6 +516,62 @@ static void anqp_add_operating_class(struct hostapd_data *hapd,
 	}
 }
 
+
+static void anqp_add_icon_binary_file(struct hostapd_data *hapd,
+				      struct wpabuf *buf,
+				      const u8 *name, size_t name_len)
+{
+	struct hs20_icon *icon;
+	size_t i;
+	u8 *len;
+
+	wpa_hexdump_ascii(MSG_DEBUG, "HS 2.0: Requested Icon Filename",
+			  name, name_len);
+	for (i = 0; i < hapd->conf->hs20_icons_count; i++) {
+		icon = &hapd->conf->hs20_icons[i];
+		if (name_len == os_strlen(icon->name) &&
+		    os_memcmp(name, icon->name, name_len) == 0)
+			break;
+	}
+
+	if (i < hapd->conf->hs20_icons_count)
+		icon = &hapd->conf->hs20_icons[i];
+	else
+		icon = NULL;
+
+	len = gas_anqp_add_element(buf, ANQP_VENDOR_SPECIFIC);
+	wpabuf_put_be24(buf, OUI_WFA);
+	wpabuf_put_u8(buf, HS20_ANQP_OUI_TYPE);
+	wpabuf_put_u8(buf, HS20_STYPE_ICON_BINARY_FILE);
+	wpabuf_put_u8(buf, 0); /* Reserved */
+
+	if (icon) {
+		char *data;
+		size_t data_len;
+
+		data = os_readfile(icon->file, &data_len);
+		if (data == NULL || data_len > 65535) {
+			wpabuf_put_u8(buf, 2); /* Download Status:
+						* Unspecified file error */
+			wpabuf_put_u8(buf, 0);
+			wpabuf_put_le16(buf, 0);
+		} else {
+			wpabuf_put_u8(buf, 0); /* Download Status: Success */
+			wpabuf_put_u8(buf, os_strlen(icon->type));
+			wpabuf_put_str(buf, icon->type);
+			wpabuf_put_le16(buf, data_len);
+			wpabuf_put_data(buf, data, data_len);
+		}
+		os_free(data);
+	} else {
+		wpabuf_put_u8(buf, 1); /* Download Status: File not found */
+		wpabuf_put_u8(buf, 0);
+		wpabuf_put_le16(buf, 0);
+	}
+
+	gas_anqp_set_element_len(buf, len);
+}
+
 #endif /* CONFIG_HS20 */
 
 
@@ -521,11 +579,19 @@ static struct wpabuf *
 gas_serv_build_gas_resp_payload(struct hostapd_data *hapd,
 				unsigned int request,
 				struct gas_dialog_info *di,
-				const u8 *home_realm, size_t home_realm_len)
+				const u8 *home_realm, size_t home_realm_len,
+				const u8 *icon_name, size_t icon_name_len)
 {
 	struct wpabuf *buf;
+	size_t len;
 
-	buf = wpabuf_alloc(1400);
+	len = 1400;
+	if (request & (ANQP_REQ_NAI_REALM | ANQP_REQ_NAI_HOME_REALM))
+		len += 1000;
+	if (request & ANQP_REQ_ICON_REQUEST)
+		len += 65536;
+
+	buf = wpabuf_alloc(len);
 	if (buf == NULL)
 		return NULL;
 
@@ -559,6 +625,8 @@ gas_serv_build_gas_resp_payload(struct hostapd_data *hapd,
 		anqp_add_connection_capability(hapd, buf);
 	if (request & ANQP_REQ_OPERATING_CLASS)
 		anqp_add_operating_class(hapd, buf);
+	if (request & ANQP_REQ_ICON_REQUEST)
+		anqp_add_icon_binary_file(hapd, buf, icon_name, icon_name_len);
 #endif /* CONFIG_HS20 */
 
 	return buf;
@@ -581,6 +649,8 @@ struct anqp_query_info {
 	unsigned int remote_request;
 	const u8 *home_realm_query;
 	size_t home_realm_query_len;
+	const u8 *icon_name;
+	size_t icon_name_len;
 	u16 remote_delay;
 };
 
@@ -725,6 +795,23 @@ static void rx_anqp_hs_nai_home_realm(struct hostapd_data *hapd,
 }
 
 
+static void rx_anqp_hs_icon_request(struct hostapd_data *hapd,
+				    const u8 *pos, const u8 *end,
+				    struct anqp_query_info *qi)
+{
+	qi->request |= ANQP_REQ_ICON_REQUEST;
+	qi->icon_name = pos;
+	qi->icon_name_len = end - pos;
+	if (hapd->conf->hs20_icons_count) {
+		wpa_printf(MSG_DEBUG, "ANQP: HS 2.0 Icon Request Query "
+			   "(local)");
+	} else {
+		wpa_printf(MSG_DEBUG, "ANQP: HS 2.0 Icon Request Query not "
+			   "available");
+	}
+}
+
+
 static void rx_anqp_vendor_specific(struct hostapd_data *hapd,
 				    const u8 *pos, const u8 *end,
 				    struct anqp_query_info *qi)
@@ -769,6 +856,9 @@ static void rx_anqp_vendor_specific(struct hostapd_data *hapd,
 	case HS20_STYPE_NAI_HOME_REALM_QUERY:
 		rx_anqp_hs_nai_home_realm(hapd, pos, end, qi);
 		break;
+	case HS20_STYPE_ICON_REQUEST:
+		rx_anqp_hs_icon_request(hapd, pos, end, qi);
+		break;
 	default:
 		wpa_printf(MSG_DEBUG, "ANQP: Unsupported HS 2.0 query subtype "
 			   "%u", subtype);
@@ -787,7 +877,8 @@ static void gas_serv_req_local_processing(struct hostapd_data *hapd,
 
 	buf = gas_serv_build_gas_resp_payload(hapd, qi->request, NULL,
 					      qi->home_realm_query,
-					      qi->home_realm_query_len);
+					      qi->home_realm_query_len,
+					      qi->icon_name, qi->icon_name_len);
 	wpa_hexdump_buf(MSG_MSGDUMP, "ANQP: Locally generated ANQP responses",
 			buf);
 	if (!buf)
@@ -954,7 +1045,7 @@ void gas_serv_tx_gas_response(struct hostapd_data *hapd, const u8 *dst,
 	if (dialog->sd_resp == NULL) {
 		buf = gas_serv_build_gas_resp_payload(hapd,
 						      dialog->all_requested,
-						      dialog, NULL, 0);
+						      dialog, NULL, 0, NULL, 0);
 		wpa_hexdump_buf(MSG_MSGDUMP, "ANQP: Generated ANQP responses",
 			buf);
 		if (!buf)
@@ -1087,7 +1178,7 @@ static void gas_serv_rx_gas_comeback_req(struct hostapd_data *hapd,
 
 		buf = gas_serv_build_gas_resp_payload(hapd,
 						      dialog->all_requested,
-						      dialog, NULL, 0);
+						      dialog, NULL, 0, NULL, 0);
 		wpa_hexdump_buf(MSG_MSGDUMP, "ANQP: Generated ANQP responses",
 			buf);
 		if (!buf)

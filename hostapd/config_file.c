@@ -1576,6 +1576,60 @@ static int hs20_parse_oper_friendly_name(struct hostapd_bss_config *bss,
 	}
 	return 0;
 }
+
+
+static int hs20_parse_icon(struct hostapd_bss_config *bss, char *pos)
+{
+	struct hs20_icon *icon;
+	char *end;
+
+	icon = os_realloc_array(bss->hs20_icons, bss->hs20_icons_count + 1,
+				sizeof(struct hs20_icon));
+	if (icon == NULL)
+		return -1;
+	bss->hs20_icons = icon;
+	icon = &bss->hs20_icons[bss->hs20_icons_count];
+	os_memset(icon, 0, sizeof(*icon));
+
+	icon->width = atoi(pos);
+	pos = os_strchr(pos, ':');
+	if (pos == NULL)
+		return -1;
+	pos++;
+
+	icon->height = atoi(pos);
+	pos = os_strchr(pos, ':');
+	if (pos == NULL)
+		return -1;
+	pos++;
+
+	end = os_strchr(pos, ':');
+	if (end == NULL || end - pos > 3)
+		return -1;
+	os_memcpy(icon->language, pos, end - pos);
+	pos = end + 1;
+
+	end = os_strchr(pos, ':');
+	if (end == NULL || end - pos > 255)
+		return -1;
+	os_memcpy(icon->type, pos, end - pos);
+	pos = end + 1;
+
+	end = os_strchr(pos, ':');
+	if (end == NULL || end - pos > 255)
+		return -1;
+	os_memcpy(icon->name, pos, end - pos);
+	pos = end + 1;
+
+	if (os_strlen(pos) > 255)
+		return -1;
+	os_memcpy(icon->file, pos, os_strlen(pos));
+
+	bss->hs20_icons_count++;
+
+	return 0;
+}
+
 #endif /* CONFIG_HS20 */
 
 
@@ -2857,6 +2911,13 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			os_free(bss->hs20_operating_class);
 			bss->hs20_operating_class = oper_class;
 			bss->hs20_operating_class_len = oper_class_len;
+		} else if (os_strcmp(buf, "hs20_icon") == 0) {
+			if (hs20_parse_icon(bss, pos) < 0) {
+				wpa_printf(MSG_ERROR, "Line %d: Invalid "
+					   "hs20_icon '%s'", line, pos);
+				errors++;
+				return errors;
+			}
 #endif /* CONFIG_HS20 */
 #ifdef CONFIG_TESTING_OPTIONS
 #define PARSE_TEST_PROBABILITY(_val)					\

@@ -37,6 +37,8 @@
 	(0x10000 << HS20_STYPE_NAI_HOME_REALM_QUERY)
 #define ANQP_REQ_OPERATING_CLASS \
 	(0x10000 << HS20_STYPE_OPERATING_CLASS)
+#define ANQP_REQ_ICON_REQUEST \
+	(0x10000 << HS20_STYPE_ICON_REQUEST)
 
 /* To account for latencies between hostapd and external ANQP processor */
 #define GAS_SERV_COMEBACK_DELAY_FUDGE 10

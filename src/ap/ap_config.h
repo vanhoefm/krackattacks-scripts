@@ -465,6 +465,15 @@ struct hostapd_bss_config {
 	size_t hs20_connection_capability_len;
 	u8 *hs20_operating_class;
 	u8 hs20_operating_class_len;
+	struct hs20_icon {
+		u16 width;
+		u16 height;
+		char language[3];
+		char type[256];
+		char name[256];
+		char file[256];
+	} *hs20_icons;
+	size_t hs20_icons_count;
 	unsigned int hs20_deauth_req_timeout;
 #endif /* CONFIG_HS20 */
 

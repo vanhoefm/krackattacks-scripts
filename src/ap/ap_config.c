@@ -528,6 +528,7 @@ void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 	os_free(conf->hs20_wan_metrics);
 	os_free(conf->hs20_connection_capability);
 	os_free(conf->hs20_operating_class);
+	os_free(conf->hs20_icons);
 #endif /* CONFIG_HS20 */
 
 	wpabuf_free(conf->vendor_elements);

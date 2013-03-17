@@ -109,6 +109,7 @@ def go_neg_pbc(i_dev, r_dev, i_intent=None, r_intent=None):
     return [i_res, r_res]
 
 def test_grpform(dev):
+    """P2P group formation using PIN and authorized connection (init -> GO)"""
     go_neg_pin_authorized(i_dev=dev[0], i_intent=15, r_dev=dev[1], r_intent=0)
     dev[0].remove_group()
     try:
@@ -117,6 +118,7 @@ def test_grpform(dev):
         pass
 
 def test_grpform2(dev):
+    """P2P group formation using PIN and authorized connection (resp -> GO)"""
     go_neg_pin_authorized(i_dev=dev[0], i_intent=0, r_dev=dev[1], r_intent=15)
     dev[0].remove_group()
     try:
@@ -125,6 +127,7 @@ def test_grpform2(dev):
         pass
 
 def test_grpform3(dev):
+    """P2P group formation using PIN and re-init GO Negotiation"""
     go_neg_pin(i_dev=dev[0], i_intent=15, r_dev=dev[1], r_intent=0)
     dev[0].remove_group()
     try:
@@ -133,6 +136,7 @@ def test_grpform3(dev):
         pass
 
 def test_grpform_pbc(dev):
+    """P2P group formation using PBC and re-init GO Negotiation"""
     [i_res, r_res] = go_neg_pbc(i_dev=dev[0], i_intent=15, r_dev=dev[1], r_intent=0)
     check_grpform_results(i_res, r_res)
     if i_res['role'] != 'GO' or r_res['role'] != 'client':
@@ -144,12 +148,15 @@ def test_grpform_pbc(dev):
         pass
 
 def test_both_go_intent_15(dev):
+    """P2P GO Negotiation with both devices using GO intent 15"""
     go_neg_pin_authorized(i_dev=dev[0], i_intent=15, r_dev=dev[1], r_intent=15, expect_failure=True, i_go_neg_status=9)
 
 def test_both_go_neg_display(dev):
+    """P2P GO Negotiation with both devices trying to display PIN"""
     go_neg_pin_authorized(i_dev=dev[0], r_dev=dev[1], expect_failure=True, i_go_neg_status=10, i_method='display', r_method='display')
 
 def test_both_go_neg_enter(dev):
+    """P2P GO Negotiation with both devices trying to enter PIN"""
     go_neg_pin_authorized(i_dev=dev[0], r_dev=dev[1], expect_failure=True, i_go_neg_status=10, i_method='enter', r_method='enter')
 
 def add_tests(tests):

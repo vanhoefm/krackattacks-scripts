@@ -61,6 +61,8 @@ def main():
         for d in dev:
             d.reset()
         print "START " + t.__name__
+        if t.__doc__:
+            print "Test: " + t.__doc__
         for d in dev:
             d.request("NOTE TEST-START " + t.__name__)
         try:

@@ -27,6 +27,7 @@ def connect_cli(go, client):
     hwsim_utils.test_connectivity_p2p(go, client)
 
 def test_autogo(dev):
+    """P2P autonomous GO and client joining group"""
     autogo(dev[0])
     connect_cli(dev[0], dev[1])
     dev[0].remove_group()
@@ -36,6 +37,7 @@ def test_autogo(dev):
         pass
 
 def test_autogo_2cli(dev):
+    """P2P autonomous GO and two clients joining group"""
     autogo(dev[0])
     connect_cli(dev[0], dev[1])
     connect_cli(dev[0], dev[2])
@@ -57,6 +59,7 @@ def wlantest_tdls_clear(bssid, addr1, addr2):
                      "clear_tdls_counters", bssid, addr1, addr2]);
 
 def test_autogo_tdls(dev):
+    """P2P autonomous GO and two clients using TDLS"""
     go = dev[0]
     logger.info("Start autonomous GO with fixed parameters " + go.ifname)
     id = go.add_network()

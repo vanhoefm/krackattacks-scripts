@@ -10,6 +10,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 def test_discovery(dev):
+    """P2P device discovery and provision discovery"""
     addr0 = dev[0].p2p_dev_addr()
     addr1 = dev[1].p2p_dev_addr()
     logger.info("Start device discovery")

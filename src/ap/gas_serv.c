@@ -159,6 +159,8 @@ static void anqp_add_hs_capab_list(struct hostapd_data *hapd,
 		wpabuf_put_u8(buf, HS20_STYPE_NAI_HOME_REALM_QUERY);
 	if (hapd->conf->hs20_operating_class)
 		wpabuf_put_u8(buf, HS20_STYPE_OPERATING_CLASS);
+	if (hapd->conf->hs20_osu_providers_count)
+		wpabuf_put_u8(buf, HS20_STYPE_OSU_PROVIDERS_LIST);
 	if (hapd->conf->hs20_icons_count)
 		wpabuf_put_u8(buf, HS20_STYPE_ICON_REQUEST);
 	gas_anqp_set_element_len(buf, len);
@@ -517,6 +519,113 @@ static void anqp_add_operating_class(struct hostapd_data *hapd,
 }
 
 
+static void anqp_add_osu_provider(struct wpabuf *buf,
+				  struct hostapd_bss_config *bss,
+				  struct hs20_osu_provider *p)
+{
+	u8 *len, *len2, *count;
+	unsigned int i;
+
+	len = wpabuf_put(buf, 2); /* OSU Provider Length to be filled */
+
+	/* OSU Friendly Name Duples */
+	len2 = wpabuf_put(buf, 2);
+	for (i = 0; i < p->friendly_name_count; i++) {
+		struct hostapd_lang_string *s = &p->friendly_name[i];
+		wpabuf_put_u8(buf, 3 + s->name_len);
+		wpabuf_put_data(buf, s->lang, 3);
+		wpabuf_put_data(buf, s->name, s->name_len);
+	}
+	WPA_PUT_LE16(len2, (u8 *) wpabuf_put(buf, 0) - len2 - 2);
+
+	/* OSU Server URI */
+	if (p->server_uri) {
+		wpabuf_put_u8(buf, os_strlen(p->server_uri));
+		wpabuf_put_str(buf, p->server_uri);
+	} else
+		wpabuf_put_u8(buf, 0);
+
+	/* OSU Method List */
+	count = wpabuf_put(buf, 1);
+	for (i = 0; p->method_list[i] >= 0; i++)
+		wpabuf_put_u8(buf, p->method_list[i]);
+	*count = i;
+
+	/* Icons Available */
+	len2 = wpabuf_put(buf, 2);
+	for (i = 0; i < p->icons_count; i++) {
+		size_t j;
+		struct hs20_icon *icon = NULL;
+
+		for (j = 0; j < bss->hs20_icons_count && !icon; j++) {
+			if (os_strcmp(p->icons[i], bss->hs20_icons[j].name) ==
+			    0)
+				icon = &bss->hs20_icons[j];
+		}
+		if (!icon)
+			continue; /* icon info not found */
+
+		wpabuf_put_le16(buf, icon->width);
+		wpabuf_put_le16(buf, icon->height);
+		wpabuf_put_data(buf, icon->language, 3);
+		wpabuf_put_u8(buf, os_strlen(icon->type));
+		wpabuf_put_str(buf, icon->type);
+		wpabuf_put_u8(buf, os_strlen(icon->name));
+		wpabuf_put_str(buf, icon->name);
+	}
+	WPA_PUT_LE16(len2, (u8 *) wpabuf_put(buf, 0) - len2 - 2);
+
+	/* OSU_NAI */
+	if (p->osu_nai) {
+		wpabuf_put_u8(buf, os_strlen(p->osu_nai));
+		wpabuf_put_str(buf, p->osu_nai);
+	} else
+		wpabuf_put_u8(buf, 0);
+
+	/* OSU Service Description Duples */
+	len2 = wpabuf_put(buf, 2);
+	for (i = 0; i < p->service_desc_count; i++) {
+		struct hostapd_lang_string *s = &p->service_desc[i];
+		wpabuf_put_u8(buf, 3 + s->name_len);
+		wpabuf_put_data(buf, s->lang, 3);
+		wpabuf_put_data(buf, s->name, s->name_len);
+	}
+	WPA_PUT_LE16(len2, (u8 *) wpabuf_put(buf, 0) - len2 - 2);
+
+	WPA_PUT_LE16(len, (u8 *) wpabuf_put(buf, 0) - len - 2);
+}
+
+
+static void anqp_add_osu_providers_list(struct hostapd_data *hapd,
+					struct wpabuf *buf)
+{
+	if (hapd->conf->hs20_osu_providers_count) {
+		size_t i;
+		u8 *len = gas_anqp_add_element(buf, ANQP_VENDOR_SPECIFIC);
+		wpabuf_put_be24(buf, OUI_WFA);
+		wpabuf_put_u8(buf, HS20_ANQP_OUI_TYPE);
+		wpabuf_put_u8(buf, HS20_STYPE_OSU_PROVIDERS_LIST);
+		wpabuf_put_u8(buf, 0); /* Reserved */
+
+		/* OSU SSID */
+		wpabuf_put_u8(buf, hapd->conf->osu_ssid_len);
+		wpabuf_put_data(buf, hapd->conf->osu_ssid,
+				hapd->conf->osu_ssid_len);
+
+		/* Number of OSU Providers */
+		wpabuf_put_u8(buf, hapd->conf->hs20_osu_providers_count);
+
+		for (i = 0; i < hapd->conf->hs20_osu_providers_count; i++) {
+			anqp_add_osu_provider(
+				buf, hapd->conf,
+				&hapd->conf->hs20_osu_providers[i]);
+		}
+
+		gas_anqp_set_element_len(buf, len);
+	}
+}
+
+
 static void anqp_add_icon_binary_file(struct hostapd_data *hapd,
 				      struct wpabuf *buf,
 				      const u8 *name, size_t name_len)
@@ -625,6 +734,8 @@ gas_serv_build_gas_resp_payload(struct hostapd_data *hapd,
 		anqp_add_connection_capability(hapd, buf);
 	if (request & ANQP_REQ_OPERATING_CLASS)
 		anqp_add_operating_class(hapd, buf);
+	if (request & ANQP_REQ_OSU_PROVIDERS_LIST)
+		anqp_add_osu_providers_list(hapd, buf);
 	if (request & ANQP_REQ_ICON_REQUEST)
 		anqp_add_icon_binary_file(hapd, buf, icon_name, icon_name_len);
 #endif /* CONFIG_HS20 */
@@ -769,6 +880,10 @@ static void rx_anqp_hs_query_list(struct hostapd_data *hapd, u8 subtype,
 		set_anqp_req(ANQP_REQ_OPERATING_CLASS, "Operating Class",
 			     hapd->conf->hs20_operating_class != NULL,
 			     0, 0, qi);
+		break;
+	case HS20_STYPE_OSU_PROVIDERS_LIST:
+		set_anqp_req(ANQP_REQ_OSU_PROVIDERS_LIST, "OSU Providers list",
+			     hapd->conf->hs20_osu_providers_count, 0, 0, qi);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "ANQP: Unsupported HS 2.0 subtype %u",

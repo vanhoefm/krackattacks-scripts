@@ -1630,6 +1630,142 @@ static int hs20_parse_icon(struct hostapd_bss_config *bss, char *pos)
 	return 0;
 }
 
+
+static int hs20_parse_osu_ssid(struct hostapd_bss_config *bss,
+			       char *pos, int line)
+{
+	size_t slen;
+	char *str;
+
+	str = wpa_config_parse_string(pos, &slen);
+	if (str == NULL || slen < 1 || slen > HOSTAPD_MAX_SSID_LEN) {
+		wpa_printf(MSG_ERROR, "Line %d: Invalid SSID '%s'", line, pos);
+		return -1;
+	}
+
+	os_memcpy(bss->osu_ssid, str, slen);
+	bss->osu_ssid_len = slen;
+	os_free(str);
+
+	return 0;
+}
+
+
+static int hs20_parse_osu_server_uri(struct hostapd_bss_config *bss,
+				     char *pos, int line)
+{
+	struct hs20_osu_provider *p;
+
+	p = os_realloc_array(bss->hs20_osu_providers,
+			     bss->hs20_osu_providers_count + 1, sizeof(*p));
+	if (p == NULL)
+		return -1;
+
+	bss->hs20_osu_providers = p;
+	bss->last_osu = &bss->hs20_osu_providers[bss->hs20_osu_providers_count];
+	bss->hs20_osu_providers_count++;
+	os_memset(bss->last_osu, 0, sizeof(*p));
+	bss->last_osu->server_uri = os_strdup(pos);
+
+	return 0;
+}
+
+
+static int hs20_parse_osu_friendly_name(struct hostapd_bss_config *bss,
+					char *pos, int line)
+{
+	if (bss->last_osu == NULL) {
+		wpa_printf(MSG_ERROR, "Line %d: Unexpected OSU field", line);
+		return -1;
+	}
+
+	if (parse_lang_string(&bss->last_osu->friendly_name,
+			      &bss->last_osu->friendly_name_count, pos)) {
+		wpa_printf(MSG_ERROR, "Line %d: Invalid osu_friendly_name '%s'",
+			   line, pos);
+		return -1;
+	}
+
+	return 0;
+}
+
+
+static int hs20_parse_osu_nai(struct hostapd_bss_config *bss,
+			      char *pos, int line)
+{
+	if (bss->last_osu == NULL) {
+		wpa_printf(MSG_ERROR, "Line %d: Unexpected OSU field", line);
+		return -1;
+	}
+
+	os_free(bss->last_osu->osu_nai);
+	bss->last_osu->osu_nai = os_strdup(pos);
+	if (bss->last_osu->osu_nai == NULL)
+		return -1;
+
+	return 0;
+}
+
+
+static int hs20_parse_osu_method_list(struct hostapd_bss_config *bss, char *pos,
+				      int line)
+{
+	if (bss->last_osu == NULL) {
+		wpa_printf(MSG_ERROR, "Line %d: Unexpected OSU field", line);
+		return -1;
+	}
+
+	if (hostapd_parse_intlist(&bss->last_osu->method_list, pos)) {
+		wpa_printf(MSG_ERROR, "Line %d: Invalid osu_method_list", line);
+		return -1;
+	}
+
+	return 0;
+}
+
+
+static int hs20_parse_osu_icon(struct hostapd_bss_config *bss, char *pos,
+			       int line)
+{
+	char **n;
+	struct hs20_osu_provider *p = bss->last_osu;
+
+	if (p == NULL) {
+		wpa_printf(MSG_ERROR, "Line %d: Unexpected OSU field", line);
+		return -1;
+	}
+
+	n = os_realloc_array(p->icons, p->icons_count + 1, sizeof(char *));
+	if (n == NULL)
+		return -1;
+	p->icons = n;
+	p->icons[p->icons_count] = os_strdup(pos);
+	if (p->icons[p->icons_count] == NULL)
+		return -1;
+	p->icons_count++;
+
+	return 0;
+}
+
+
+static int hs20_parse_osu_service_desc(struct hostapd_bss_config *bss,
+				       char *pos, int line)
+{
+	if (bss->last_osu == NULL) {
+		wpa_printf(MSG_ERROR, "Line %d: Unexpected OSU field", line);
+		return -1;
+	}
+
+	if (parse_lang_string(&bss->last_osu->service_desc,
+			      &bss->last_osu->service_desc_count, pos)) {
+		wpa_printf(MSG_ERROR, "Line %d: Invalid osu_service_desc '%s'",
+			   line, pos);
+		return -1;
+	}
+
+	return 0;
+}
+
 #endif /* CONFIG_HS20 */
 
 
@@ -2918,6 +3054,27 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 				errors++;
 				return errors;
 			}
+		} else if (os_strcmp(buf, "osu_ssid") == 0) {
+			if (hs20_parse_osu_ssid(bss, pos, line) < 0)
+				errors++;
+		} else if (os_strcmp(buf, "osu_server_uri") == 0) {
+			if (hs20_parse_osu_server_uri(bss, pos, line) < 0)
+				errors++;
+		} else if (os_strcmp(buf, "osu_friendly_name") == 0) {
+			if (hs20_parse_osu_friendly_name(bss, pos, line) < 0)
+				errors++;
+		} else if (os_strcmp(buf, "osu_nai") == 0) {
+			if (hs20_parse_osu_nai(bss, pos, line) < 0)
+				errors++;
+		} else if (os_strcmp(buf, "osu_method_list") == 0) {
+			if (hs20_parse_osu_method_list(bss, pos, line) < 0)
+				errors++;
+		} else if (os_strcmp(buf, "osu_icon") == 0) {
+			if (hs20_parse_osu_icon(bss, pos, line) < 0)
+				errors++;
+		} else if (os_strcmp(buf, "osu_service_desc") == 0) {
+			if (hs20_parse_osu_service_desc(bss, pos, line) < 0)
+				errors++;
 #endif /* CONFIG_HS20 */
 #ifdef CONFIG_TESTING_OPTIONS
 #define PARSE_TEST_PROBABILITY(_val)					\

@@ -529,6 +529,23 @@ void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 	os_free(conf->hs20_connection_capability);
 	os_free(conf->hs20_operating_class);
 	os_free(conf->hs20_icons);
+	if (conf->hs20_osu_providers) {
+		size_t i;
+		for (i = 0; i < conf->hs20_osu_providers_count; i++) {
+			struct hs20_osu_provider *p;
+			size_t j;
+			p = &conf->hs20_osu_providers[i];
+			os_free(p->friendly_name);
+			os_free(p->server_uri);
+			os_free(p->method_list);
+			for (j = 0; j < p->icons_count; j++)
+				os_free(p->icons[j]);
+			os_free(p->icons);
+			os_free(p->osu_nai);
+			os_free(p->service_desc);
+		}
+		os_free(conf->hs20_osu_providers);
+	}
 #endif /* CONFIG_HS20 */
 
 	wpabuf_free(conf->vendor_elements);

@@ -474,6 +474,20 @@ struct hostapd_bss_config {
 		char file[256];
 	} *hs20_icons;
 	size_t hs20_icons_count;
+	u8 osu_ssid[HOSTAPD_MAX_SSID_LEN];
+	size_t osu_ssid_len;
+	struct hs20_osu_provider {
+		unsigned int friendly_name_count;
+		struct hostapd_lang_string *friendly_name;
+		char *server_uri;
+		int *method_list;
+		char **icons;
+		size_t icons_count;
+		char *osu_nai;
+		unsigned int service_desc_count;
+		struct hostapd_lang_string *service_desc;
+	} *hs20_osu_providers, *last_osu;
+	size_t hs20_osu_providers_count;
 	unsigned int hs20_deauth_req_timeout;
 #endif /* CONFIG_HS20 */
 

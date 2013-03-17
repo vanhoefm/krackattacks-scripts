@@ -14,6 +14,16 @@ import Queue
 
 import hwsim_utils
 
+def check_grpform_results(i_res, r_res):
+    if i_res['result'] != 'success' or r_res['result'] != 'success':
+        raise Exception("Failed group formation")
+    if i_res['ssid'] != r_res['ssid']:
+        raise Exception("SSID mismatch")
+    if i_res['freq'] != r_res['freq']:
+        raise Exception("SSID mismatch")
+    if i_res['go_dev_addr'] != r_res['go_dev_addr']:
+        raise Exception("GO Device Address mismatch")
+
 def go_neg_init(i_dev, r_dev, pin, i_method, i_intent, res):
     logger.debug("Initiate GO Negotiation from i_dev")
     i_res = i_dev.p2p_go_neg_init(r_dev.p2p_dev_addr(), pin, i_method, timeout=15, go_intent=i_intent)
@@ -67,6 +77,37 @@ def go_neg_pin_authorized(i_dev, r_dev, i_intent=None, r_intent=None, expect_fai
     logger.info("Group formed")
     hwsim_utils.test_connectivity_p2p(r_dev, i_dev)
 
+def go_neg_init_pbc(i_dev, r_dev, i_intent, res):
+    logger.debug("Initiate GO Negotiation from i_dev")
+    i_res = i_dev.p2p_go_neg_init(r_dev.p2p_dev_addr(), None, "pbc", timeout=15, go_intent=i_intent)
+    logger.debug("i_res: " + str(i_res))
+    res.put(i_res)
+
+def go_neg_pbc(i_dev, r_dev, i_intent=None, r_intent=None):
+    r_dev.p2p_find()
+    i_dev.p2p_find()
+    logger.info("Start GO negotiation " + i_dev.ifname + " -> " + r_dev.ifname)
+    r_dev.dump_monitor()
+    res = Queue.Queue()
+    t = threading.Thread(target=go_neg_init_pbc, args=(i_dev, r_dev, i_intent, res))
+    t.start()
+    logger.debug("Wait for GO Negotiation Request on r_dev")
+    ev = r_dev.wait_event(["P2P-GO-NEG-REQUEST"], timeout=15)
+    if ev is None:
+        raise Exception("GO Negotiation timed out")
+    r_dev.dump_monitor()
+    logger.debug("Re-initiate GO Negotiation from r_dev")
+    r_res = r_dev.p2p_go_neg_init(i_dev.p2p_dev_addr(), None, "pbc", go_intent=r_intent, timeout=15)
+    logger.debug("r_res: " + str(r_res))
+    r_dev.dump_monitor()
+    t.join()
+    i_res = res.get()
+    logger.debug("i_res: " + str(i_res))
+    logger.info("Group formed")
+    hwsim_utils.test_connectivity_p2p(r_dev, i_dev)
+    i_dev.dump_monitor()
+    return [i_res, r_res]
+
 def test_grpform(dev):
     go_neg_pin_authorized(i_dev=dev[0], i_intent=15, r_dev=dev[1], r_intent=0)
     dev[0].remove_group()
@@ -91,6 +132,17 @@ def test_grpform3(dev):
     except:
         pass
 
+def test_grpform_pbc(dev):
+    [i_res, r_res] = go_neg_pbc(i_dev=dev[0], i_intent=15, r_dev=dev[1], r_intent=0)
+    check_grpform_results(i_res, r_res)
+    if i_res['role'] != 'GO' or r_res['role'] != 'client':
+        raise Exception("Unexpected device roles")
+    dev[0].remove_group()
+    try:
+        dev[1].remove_group()
+    except:
+        pass
+
 def test_both_go_intent_15(dev):
     go_neg_pin_authorized(i_dev=dev[0], i_intent=15, r_dev=dev[1], r_intent=15, expect_failure=True, i_go_neg_status=9)
 
@@ -104,6 +156,7 @@ def add_tests(tests):
     tests.append(test_grpform)
     tests.append(test_grpform2)
     tests.append(test_grpform3)
+    tests.append(test_grpform_pbc)
     tests.append(test_both_go_intent_15)
     tests.append(test_both_go_neg_display)
     tests.append(test_both_go_neg_enter)

@@ -128,6 +128,9 @@ endif
 OBJS += src/utils/$(CONFIG_ELOOP).c
 OBJS_c += src/utils/$(CONFIG_ELOOP).c
 
+ifdef CONFIG_ELOOP_POLL
+L_CFLAGS += -DCONFIG_ELOOP_POLL
+endif
 
 ifdef CONFIG_EAPOL_TEST
 L_CFLAGS += -Werror -DEAPOL_TEST
@@ -192,6 +195,11 @@ L_CFLAGS += -DCONFIG_SAE
 OBJS += src/common/sae.c
 NEED_ECC=y
 NEED_DH_GROUPS=y
+endif
+
+ifdef CONFIG_IEEE80211V
+L_CFLAGS += -DCONFIG_IEEE80211V
+OBJS += wnm_sta.c
 endif
 
 ifdef CONFIG_TDLS
@@ -741,6 +749,10 @@ ifdef CONFIG_IEEE80211N
 L_CFLAGS += -DCONFIG_IEEE80211N
 endif
 
+ifdef CONFIG_WNM
+L_CFLAGS += -DCONFIG_WNM
+endif
+
 ifdef NEED_AP_MLME
 OBJS += src/ap/wmm.c
 OBJS += src/ap/ap_list.c
@@ -872,6 +884,11 @@ ifdef CONFIG_TLSV11
 L_CFLAGS += -DCONFIG_TLSV11
 endif
 
+ifdef CONFIG_TLSV12
+L_CFLAGS += -DCONFIG_TLSV12
+NEED_SHA256=y
+endif
+
 ifeq ($(CONFIG_TLS), openssl)
 ifdef TLS_FUNCS
 L_CFLAGS += -DEAP_TLS_OPENSSL
@@ -956,6 +973,9 @@ OBJS += src/tls/pkcs8.c
 NEED_SHA256=y
 NEED_BASE64=y
 NEED_TLS_PRF=y
+ifdef CONFIG_TLSV12
+NEED_TLS_PRF_SHA256=y
+endif
 NEED_MODEXP=y
 NEED_CIPHER=y
 L_CFLAGS += -DCONFIG_TLS_INTERNAL_CLIENT
@@ -1111,7 +1131,9 @@ SHA1OBJS += src/crypto/sha1-tlsprf.c
 endif
 endif
 
-MD5OBJS = src/crypto/md5.c
+ifndef CONFIG_FIPS
+MD5OBJS += src/crypto/md5.c
+endif
 ifdef NEED_MD5
 ifdef CONFIG_INTERNAL_MD5
 MD5OBJS += src/crypto/md5-internal.c
@@ -1148,6 +1170,9 @@ endif
 SHA256OBJS += src/crypto/sha256-prf.c
 ifdef CONFIG_INTERNAL_SHA256
 SHA256OBJS += src/crypto/sha256-internal.c
+endif
+ifdef NEED_TLS_PRF_SHA256
+SHA256OBJS += src/crypto/sha256-tlsprf.c
 endif
 OBJS += $(SHA256OBJS)
 endif
@@ -1317,6 +1342,10 @@ L_CFLAGS += -DLOG_HOSTAPD="$(CONFIG_DEBUG_SYSLOG_FACILITY)"
 endif
 endif
 
+ifdef CONFIG_DEBUG_LINUX_TRACING
+L_CFLAGS += -DCONFIG_DEBUG_LINUX_TRACING
+endif
+
 ifdef CONFIG_DEBUG_FILE
 L_CFLAGS += -DCONFIG_DEBUG_FILE
 endif
@@ -1332,6 +1361,7 @@ endif
 OBJS += $(SHA1OBJS) $(DESOBJS)
 
 OBJS_p += $(SHA1OBJS)
+OBJS_p += $(SHA256OBJS)
 
 ifdef CONFIG_BGSCAN_SIMPLE
 L_CFLAGS += -DCONFIG_BGSCAN_SIMPLE
@@ -1368,18 +1398,18 @@ OBJS += autoscan.c
 endif
 
 ifdef CONFIG_EXT_PASSWORD_TEST
-OBJS += ../src/utils/ext_password_test.c
+OBJS += src/utils/ext_password_test.c
 L_CFLAGS += -DCONFIG_EXT_PASSWORD_TEST
 NEED_EXT_PASSWORD=y
 endif
 
 ifdef NEED_EXT_PASSWORD
-OBJS += ../src/utils/ext_password.c
+OBJS += src/utils/ext_password.c
 L_CFLAGS += -DCONFIG_EXT_PASSWORD
 endif
 
 ifdef NEED_GAS
-OBJS += ../src/common/gas.c
+OBJS += src/common/gas.c
 OBJS += gas_query.c
 L_CFLAGS += -DCONFIG_GAS
 NEED_OFFCHANNEL=y
@@ -1417,6 +1447,9 @@ OBJS_priv += src/utils/common.c
 OBJS_priv += src/utils/wpa_debug.c
 OBJS_priv += src/utils/wpabuf.c
 OBJS_priv += wpa_priv.c
+ifdef CONFIG_DRIVER_NL80211
+OBJS_priv += src/common/ieee802_11_common.c
+endif
 ifdef CONFIG_DRIVER_TEST
 OBJS_priv += $(SHA1OBJS)
 OBJS_priv += $(MD5OBJS)

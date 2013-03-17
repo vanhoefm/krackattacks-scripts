@@ -101,6 +101,9 @@ class WpaSupplicant:
             return self.request("P2P_FIND type=social")
         return self.request("P2P_FIND")
 
+    def p2p_stop_find(self):
+        return self.request("P2P_STOP_FIND")
+
     def wps_read_pin(self):
         #TODO: make this random
         self.pin = "12345670"

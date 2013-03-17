@@ -30,6 +30,7 @@
 #include "ap/wps_hostapd.h"
 #include "ap/ctrl_iface_ap.h"
 #include "ap/ap_drv_ops.h"
+#include "ap/hs20.h"
 #include "ap/wnm_ap.h"
 #include "ap/wpa_auth.h"
 #include "wps/wps_defs.h"
@@ -616,6 +617,32 @@ static int hostapd_ctrl_iface_wps_get_status(struct hostapd_data *hapd,
 }
 
 #endif /* CONFIG_WPS */
+
+#ifdef CONFIG_HS20
+
+static int hostapd_ctrl_iface_hs20_wnm_notif(struct hostapd_data *hapd,
+					     const char *cmd)
+{
+	u8 addr[ETH_ALEN];
+	const char *url;
+
+	if (hwaddr_aton(cmd, addr))
+		return -1;
+	url = cmd + 17;
+	if (*url == '\0') {
+		url = NULL;
+	} else {
+		if (*url != ' ')
+			return -1;
+		url++;
+		if (*url == '\0')
+			url = NULL;
+	}
+
+	return hs20_send_wnm_notification(hapd, addr, 1, url);
+}
+
+#endif /* CONFIG_HS20 */
 
 
 #ifdef CONFIG_INTERWORKING
@@ -1348,6 +1375,11 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 		if (hostapd_ctrl_iface_send_qos_map_conf(hapd, buf + 18))
 			reply_len = -1;
 #endif /* CONFIG_INTERWORKING */
+#ifdef CONFIG_HS20
+	} else if (os_strncmp(buf, "HS20_WNM_NOTIF ", 15) == 0) {
+		if (hostapd_ctrl_iface_hs20_wnm_notif(hapd, buf + 15))
+			reply_len = -1;
+#endif /* CONFIG_HS20 */
 #ifdef CONFIG_WNM
 	} else if (os_strncmp(buf, "DISASSOC_IMMINENT ", 18) == 0) {
 		if (hostapd_ctrl_iface_disassoc_imminent(hapd, buf + 18))

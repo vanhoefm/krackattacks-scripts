@@ -743,6 +743,26 @@ static int hostapd_cli_cmd_send_qos_map_conf(struct wpa_ctrl *ctrl,
 }
 
 
+static int hostapd_cli_cmd_hs20_wnm_notif(struct wpa_ctrl *ctrl, int argc,
+					  char *argv[])
+{
+	char buf[300];
+	int res;
+
+	if (argc < 2) {
+		printf("Invalid 'hs20_wnm_notif' command - two arguments (STA "
+		       "addr and URL) are needed\n");
+		return -1;
+	}
+
+	res = os_snprintf(buf, sizeof(buf), "HS20_WNM_NOTIF %s %s",
+			  argv[0], argv[1]);
+	if (res < 0 || res >= (int) sizeof(buf))
+		return -1;
+	return wpa_ctrl_command(ctrl, buf);
+}
+
+
 static int hostapd_cli_cmd_quit(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	hostapd_cli_quit = 1;
@@ -941,6 +961,7 @@ static struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	{ "set_qos_map_set", hostapd_cli_cmd_set_qos_map_set },
 	{ "send_qos_map_conf", hostapd_cli_cmd_send_qos_map_conf },
 	{ "chan_switch", hostapd_cli_cmd_chan_switch },
+	{ "hs20_wnm_notif", hostapd_cli_cmd_hs20_wnm_notif },
 	{ NULL, NULL }
 };
 

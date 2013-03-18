@@ -1613,3 +1613,9 @@ void scan_only_handler(struct wpa_supplicant *wpa_s,
 	wpas_notify_scan_results(wpa_s);
 	wpas_notify_scan_done(wpa_s, 1);
 }
+
+
+int wpas_scan_scheduled(struct wpa_supplicant *wpa_s)
+{
+	return eloop_is_timeout_registered(wpa_supplicant_scan, wpa_s, NULL);
+}

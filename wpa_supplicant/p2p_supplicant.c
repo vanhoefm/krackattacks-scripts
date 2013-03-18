@@ -151,6 +151,7 @@ static int wpas_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 
 	for (ifs = wpa_s->global->ifaces; ifs; ifs = ifs->next) {
 		if (ifs->sta_scan_pending &&
+		    (wpas_scan_scheduled(ifs) || ifs->scanning) &&
 		    wpas_p2p_in_progress(wpa_s) == 2) {
 			wpa_printf(MSG_DEBUG, "Delaying P2P scan to allow "
 				   "pending station mode scan to be "

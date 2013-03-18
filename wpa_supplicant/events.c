@@ -1089,7 +1089,8 @@ static int wpa_supplicant_need_to_roam(struct wpa_supplicant *wpa_s,
 /* Return != 0 if no scan results could be fetched or if scan results should not
  * be shared with other virtual interfaces. */
 static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
-					      union wpa_event_data *data)
+					      union wpa_event_data *data,
+					      int own_request)
 {
 	struct wpa_scan_results *scan_res;
 	int ap = 0;
@@ -1105,7 +1106,7 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 	wpa_supplicant_notify_scanning(wpa_s, 0);
 
 #ifdef CONFIG_P2P
-	if (wpa_s->global->p2p_cb_on_scan_complete &&
+	if (own_request && wpa_s->global->p2p_cb_on_scan_complete &&
 	    !wpa_s->global->p2p_disabled &&
 	    wpa_s->global->p2p != NULL && !wpa_s->sta_scan_pending &&
 	    !wpa_s->scan_res_handler) {
@@ -1127,6 +1128,8 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 	if (scan_res == NULL) {
 		if (wpa_s->conf->ap_scan == 2 || ap ||
 		    wpa_s->scan_res_handler == scan_only_handler)
+			return -1;
+		if (!own_request)
 			return -1;
 		wpa_dbg(wpa_s, MSG_DEBUG, "Failed to get scan results - try "
 			"scanning again");
@@ -1150,7 +1153,7 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 	}
 #endif /* CONFIG_NO_RANDOM_POOL */
 
-	if (wpa_s->scan_res_handler) {
+	if (own_request && wpa_s->scan_res_handler) {
 		void (*scan_res_handler)(struct wpa_supplicant *wpa_s,
 					 struct wpa_scan_results *scan_res);
 
@@ -1292,7 +1295,7 @@ static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 	const char *rn, *rn2;
 	struct wpa_supplicant *ifs;
 
-	if (_wpa_supplicant_event_scan_results(wpa_s, data) != 0) {
+	if (_wpa_supplicant_event_scan_results(wpa_s, data, 1) != 0) {
 		/*
 		 * If no scan results could be fetched, then no need to
 		 * notify those interfaces that did not actually request
@@ -1325,7 +1328,7 @@ static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 		if (rn2 && os_strcmp(rn, rn2) == 0) {
 			wpa_printf(MSG_DEBUG, "%s: Updating scan results from "
 				   "sibling", ifs->ifname);
-			_wpa_supplicant_event_scan_results(ifs, data);
+			_wpa_supplicant_event_scan_results(ifs, data, 0);
 		}
 	}
 }

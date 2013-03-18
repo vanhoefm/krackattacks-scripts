@@ -199,16 +199,7 @@ static void wpa_supplicant_timeout(void *eloop_ctx, void *timeout_ctx)
 	 */
 	wpa_supplicant_req_scan(wpa_s, 1, 0);
 
-#ifdef CONFIG_P2P
-	if (wpa_s->global->p2p_cb_on_scan_complete && !wpa_s->global->p2p_disabled &&
-	    wpa_s->global->p2p != NULL) {
-		wpa_s->global->p2p_cb_on_scan_complete = 0;
-		if (p2p_other_scan_completed(wpa_s->global->p2p) == 1) {
-			wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Pending P2P operation "
-				"continued after timed out authentication");
-		}
-	}
-#endif /* CONFIG_P2P */
+	wpas_p2p_continue_after_scan(wpa_s);
 }
 
 
@@ -3554,16 +3545,7 @@ void wpas_connection_failed(struct wpa_supplicant *wpa_s, const u8 *bssid)
 	wpa_supplicant_req_scan(wpa_s, timeout / 1000,
 				1000 * (timeout % 1000));
 
-#ifdef CONFIG_P2P
-	if (wpa_s->global->p2p_cb_on_scan_complete && !wpa_s->global->p2p_disabled &&
-	    wpa_s->global->p2p != NULL) {
-		wpa_s->global->p2p_cb_on_scan_complete = 0;
-		if (p2p_other_scan_completed(wpa_s->global->p2p) == 1) {
-			wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Pending P2P operation "
-				"continued after failed association");
-		}
-	}
-#endif /* CONFIG_P2P */
+	wpas_p2p_continue_after_scan(wpa_s);
 }
 
 

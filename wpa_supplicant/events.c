@@ -2505,18 +2505,9 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 #ifndef CONFIG_NO_SCAN_PROCESSING
 	case EVENT_SCAN_RESULTS:
 		wpa_supplicant_event_scan_results(wpa_s, data);
-#ifdef CONFIG_P2P
-	if (wpa_s->global->p2p_cb_on_scan_complete && !wpa_s->global->p2p_disabled &&
-	    wpa_s->global->p2p != NULL &&
-	    wpa_s->wpa_state != WPA_AUTHENTICATING &&
-	    wpa_s->wpa_state != WPA_ASSOCIATING) {
-		wpa_s->global->p2p_cb_on_scan_complete = 0;
-		if (p2p_other_scan_completed(wpa_s->global->p2p) == 1) {
-			wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Pending P2P operation "
-				"continued after scan result processing");
-		}
-	}
-#endif /* CONFIG_P2P */
+		if (wpa_s->wpa_state != WPA_AUTHENTICATING &&
+		    wpa_s->wpa_state != WPA_ASSOCIATING)
+			wpas_p2p_continue_after_scan(wpa_s);
 		break;
 #endif /* CONFIG_NO_SCAN_PROCESSING */
 	case EVENT_ASSOCINFO:

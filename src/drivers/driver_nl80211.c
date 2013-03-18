@@ -2251,29 +2251,30 @@ static void do_process_drv_event(struct i802_bss *bss, int cmd,
 
 	switch (cmd) {
 	case NL80211_CMD_TRIGGER_SCAN:
-		wpa_printf(MSG_DEBUG, "nl80211: Scan trigger");
+		wpa_dbg(drv->ctx, MSG_DEBUG, "nl80211: Scan trigger");
 		break;
 	case NL80211_CMD_START_SCHED_SCAN:
-		wpa_printf(MSG_DEBUG, "nl80211: Sched scan started");
+		wpa_dbg(drv->ctx, MSG_DEBUG, "nl80211: Sched scan started");
 		break;
 	case NL80211_CMD_SCHED_SCAN_STOPPED:
-		wpa_printf(MSG_DEBUG, "nl80211: Sched scan stopped");
+		wpa_dbg(drv->ctx, MSG_DEBUG, "nl80211: Sched scan stopped");
 		wpa_supplicant_event(drv->ctx, EVENT_SCHED_SCAN_STOPPED, NULL);
 		break;
 	case NL80211_CMD_NEW_SCAN_RESULTS:
-		wpa_printf(MSG_DEBUG, "nl80211: New scan results available");
+		wpa_dbg(drv->ctx, MSG_DEBUG,
+			"nl80211: New scan results available");
 		drv->scan_complete_events = 1;
 		eloop_cancel_timeout(wpa_driver_nl80211_scan_timeout, drv,
 				     drv->ctx);
 		send_scan_event(drv, 0, tb);
 		break;
 	case NL80211_CMD_SCHED_SCAN_RESULTS:
-		wpa_printf(MSG_DEBUG,
-			   "nl80211: New sched scan results available");
+		wpa_dbg(drv->ctx, MSG_DEBUG,
+			"nl80211: New sched scan results available");
 		send_scan_event(drv, 0, tb);
 		break;
 	case NL80211_CMD_SCAN_ABORTED:
-		wpa_printf(MSG_DEBUG, "nl80211: Scan aborted");
+		wpa_dbg(drv->ctx, MSG_DEBUG, "nl80211: Scan aborted");
 		/*
 		 * Need to indicate that scan results are available in order
 		 * not to make wpa_supplicant stop its scanning.
@@ -2362,8 +2363,8 @@ static void do_process_drv_event(struct i802_bss *bss, int cmd,
 		mlme_event_ft_event(drv, tb);
 		break;
 	default:
-		wpa_printf(MSG_DEBUG, "nl80211: Ignored unknown event "
-			   "(cmd=%d)", cmd);
+		wpa_dbg(drv->ctx, MSG_DEBUG, "nl80211: Ignored unknown event "
+			"(cmd=%d)", cmd);
 		break;
 	}
 }
@@ -3847,6 +3848,7 @@ static int wpa_driver_nl80211_scan(struct i802_bss *bss,
 	int ret = -1, timeout;
 	struct nl_msg *msg, *rates = NULL;
 
+	wpa_dbg(drv->ctx, MSG_DEBUG, "nl80211: scan request");
 	drv->scan_for_auth = 0;
 
 	msg = nl80211_scan_common(drv, NL80211_CMD_TRIGGER_SCAN, params);
@@ -3947,6 +3949,8 @@ static int wpa_driver_nl80211_sched_scan(void *priv,
 	struct nl_msg *match_set_ssid = NULL, *match_sets = NULL;
 	struct nl_msg *match_set_rssi = NULL;
 	size_t i;
+
+	wpa_dbg(drv->ctx, MSG_DEBUG, "nl80211: sched_scan request");
 
 #ifdef ANDROID
 	if (!drv->capa.sched_scan_supported)

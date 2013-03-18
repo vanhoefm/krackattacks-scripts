@@ -14,8 +14,8 @@ def test_discovery(dev):
     addr0 = dev[0].p2p_dev_addr()
     addr1 = dev[1].p2p_dev_addr()
     logger.info("Start device discovery")
-    dev[0].p2p_find()
-    dev[1].p2p_find()
+    dev[0].p2p_find(social=True)
+    dev[1].p2p_find(social=True)
     ev0 = dev[0].wait_event(["P2P-DEVICE-FOUND"], timeout=15)
     if ev0 is None:
         raise Exception("Device discovery timed out")

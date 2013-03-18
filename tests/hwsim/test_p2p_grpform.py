@@ -84,8 +84,8 @@ def go_neg_init_pbc(i_dev, r_dev, i_intent, res):
     res.put(i_res)
 
 def go_neg_pbc(i_dev, r_dev, i_intent=None, r_intent=None):
-    r_dev.p2p_find()
-    i_dev.p2p_find()
+    r_dev.p2p_find(social=True)
+    i_dev.p2p_find(social=True)
     logger.info("Start GO negotiation " + i_dev.ifname + " -> " + r_dev.ifname)
     r_dev.dump_monitor()
     res = Queue.Queue()

@@ -5082,21 +5082,19 @@ static void phy_info_freq(struct hostapd_hw_modes *mode,
 			  struct hostapd_channel_data *chan,
 			  struct nlattr *tb_freq[])
 {
+	enum hostapd_hw_mode m;
+
 	chan->freq = nla_get_u32(tb_freq[NL80211_FREQUENCY_ATTR_FREQ]);
 	chan->flag = 0;
 
-	/* mode is not set */
-	if (mode->mode >= NUM_HOSTAPD_MODES) {
-		/* crude heuristic */
-		if (chan->freq < 4000)
-			mode->mode = HOSTAPD_MODE_IEEE80211B;
-		else if (chan->freq > 50000)
-			mode->mode = HOSTAPD_MODE_IEEE80211AD;
-		else
-			mode->mode = HOSTAPD_MODE_IEEE80211A;
-	}
+	if (chan->freq < 4000)
+		m = HOSTAPD_MODE_IEEE80211B;
+	else if (chan->freq > 50000)
+		m = HOSTAPD_MODE_IEEE80211AD;
+	else
+		m = HOSTAPD_MODE_IEEE80211A;
 
-	switch (mode->mode) {
+	switch (m) {
 	case HOSTAPD_MODE_IEEE80211AD:
 		chan->chan = (chan->freq - 56160) / 2160;
 		break;
@@ -5220,12 +5218,6 @@ static int phy_info_rates(struct hostapd_hw_modes *mode, struct nlattr *tb)
 			continue;
 		mode->rates[idx] = nla_get_u32(
 			tb_rate[NL80211_BITRATE_ATTR_RATE]);
-
-		/* crude heuristic */
-		if (mode->mode == HOSTAPD_MODE_IEEE80211B &&
-		    mode->rates[idx] > 200)
-			mode->mode = HOSTAPD_MODE_IEEE80211G;
-
 		idx++;
 	}
 
@@ -5303,11 +5295,30 @@ static int phy_info_handler(struct nl_msg *msg, void *arg)
 
 
 static struct hostapd_hw_modes *
-wpa_driver_nl80211_add_11b(struct hostapd_hw_modes *modes, u16 *num_modes)
+wpa_driver_nl80211_postprocess_modes(struct hostapd_hw_modes *modes,
+				     u16 *num_modes)
 {
 	u16 m;
 	struct hostapd_hw_modes *mode11g = NULL, *nmodes, *mode;
 	int i, mode11g_idx = -1;
+
+	/* heuristic to set up modes */
+	for (m = 0; m < *num_modes; m++) {
+		if (!modes[m].num_channels)
+			continue;
+		if (modes[m].channels[0].freq < 4000) {
+			modes[m].mode = HOSTAPD_MODE_IEEE80211B;
+			for (i = 0; i < modes[m].num_rates; i++) {
+				if (modes[m].rates[i] > 200) {
+					modes[m].mode = HOSTAPD_MODE_IEEE80211G;
+					break;
+				}
+			}
+		} else if (modes[m].channels[0].freq > 50000)
+			modes[m].mode = HOSTAPD_MODE_IEEE80211AD;
+		else
+			modes[m].mode = HOSTAPD_MODE_IEEE80211A;
+	}
 
 	/* If only 802.11g mode is included, use it to construct matching
 	 * 802.11b mode data. */
@@ -5554,7 +5565,8 @@ wpa_driver_nl80211_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags)
 
 	if (send_and_recv_msgs(drv, msg, phy_info_handler, &result) == 0) {
 		nl80211_set_ht40_flags(drv, &result);
-		return wpa_driver_nl80211_add_11b(result.modes, num_modes);
+		return wpa_driver_nl80211_postprocess_modes(result.modes,
+							    num_modes);
 	}
 	msg = NULL;
  nla_put_failure:

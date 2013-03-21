@@ -5784,32 +5784,49 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 		cmd = NL80211_CMD_SET_BEACON;
 
 	nl80211_cmd(drv, msg, 0, cmd);
+	wpa_hexdump(MSG_DEBUG, "nl80211: Beacon head",
+		    params->head, params->head_len);
 	NLA_PUT(msg, NL80211_ATTR_BEACON_HEAD, params->head_len, params->head);
+	wpa_hexdump(MSG_DEBUG, "nl80211: Beacon tail",
+		    params->tail, params->tail_len);
 	NLA_PUT(msg, NL80211_ATTR_BEACON_TAIL, params->tail_len, params->tail);
+	wpa_printf(MSG_DEBUG, "nl80211: ifindex=%d", ifindex);
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, ifindex);
+	wpa_printf(MSG_DEBUG, "nl80211: beacon_int=%d", params->beacon_int);
 	NLA_PUT_U32(msg, NL80211_ATTR_BEACON_INTERVAL, params->beacon_int);
+	wpa_printf(MSG_DEBUG, "nl80211: dtim_period=%d", params->dtim_period);
 	NLA_PUT_U32(msg, NL80211_ATTR_DTIM_PERIOD, params->dtim_period);
+	wpa_hexdump_ascii(MSG_DEBUG, "nl80211: ssid",
+			  params->ssid, params->ssid_len);
 	NLA_PUT(msg, NL80211_ATTR_SSID, params->ssid_len,
 		params->ssid);
-	if (params->proberesp && params->proberesp_len)
+	if (params->proberesp && params->proberesp_len) {
+		wpa_hexdump(MSG_DEBUG, "nl80211: proberesp (offload)",
+			    params->proberesp, params->proberesp_len);
 		NLA_PUT(msg, NL80211_ATTR_PROBE_RESP, params->proberesp_len,
 			params->proberesp);
+	}
 	switch (params->hide_ssid) {
 	case NO_SSID_HIDING:
+		wpa_printf(MSG_DEBUG, "nl80211: hidden SSID not in use");
 		NLA_PUT_U32(msg, NL80211_ATTR_HIDDEN_SSID,
 			    NL80211_HIDDEN_SSID_NOT_IN_USE);
 		break;
 	case HIDDEN_SSID_ZERO_LEN:
+		wpa_printf(MSG_DEBUG, "nl80211: hidden SSID zero len");
 		NLA_PUT_U32(msg, NL80211_ATTR_HIDDEN_SSID,
 			    NL80211_HIDDEN_SSID_ZERO_LEN);
 		break;
 	case HIDDEN_SSID_ZERO_CONTENTS:
+		wpa_printf(MSG_DEBUG, "nl80211: hidden SSID zero contents");
 		NLA_PUT_U32(msg, NL80211_ATTR_HIDDEN_SSID,
 			    NL80211_HIDDEN_SSID_ZERO_CONTENTS);
 		break;
 	}
+	wpa_printf(MSG_DEBUG, "nl80211: privacy=%d", params->privacy);
 	if (params->privacy)
 		NLA_PUT_FLAG(msg, NL80211_ATTR_PRIVACY);
+	wpa_printf(MSG_DEBUG, "nl80211: auth_algs=0x%x", params->auth_algs);
 	if ((params->auth_algs & (WPA_AUTH_ALG_OPEN | WPA_AUTH_ALG_SHARED)) ==
 	    (WPA_AUTH_ALG_OPEN | WPA_AUTH_ALG_SHARED)) {
 		/* Leave out the attribute */
@@ -5820,6 +5837,7 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 		NLA_PUT_U32(msg, NL80211_ATTR_AUTH_TYPE,
 			    NL80211_AUTHTYPE_OPEN_SYSTEM);
 
+	wpa_printf(MSG_DEBUG, "nl80211: wpa_version=0x%x", params->wpa_version);
 	ver = 0;
 	if (params->wpa_version & WPA_PROTO_WPA)
 		ver |= NL80211_WPA_VERSION_1;
@@ -5828,6 +5846,8 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 	if (ver)
 		NLA_PUT_U32(msg, NL80211_ATTR_WPA_VERSIONS, ver);
 
+	wpa_printf(MSG_DEBUG, "nl80211: key_mgmt_suites=0x%x",
+		   params->key_mgmt_suites);
 	num_suites = 0;
 	if (params->key_mgmt_suites & WPA_KEY_MGMT_IEEE8021X)
 		suites[num_suites++] = WLAN_AKM_SUITE_8021X;
@@ -5842,6 +5862,8 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 	    params->pairwise_ciphers & (WPA_CIPHER_WEP104 | WPA_CIPHER_WEP40))
 		NLA_PUT_FLAG(msg, NL80211_ATTR_CONTROL_PORT_NO_ENCRYPT);
 
+	wpa_printf(MSG_DEBUG, "nl80211: pairwise_ciphers=0x%x",
+		   params->pairwise_ciphers);
 	num_suites = 0;
 	if (params->pairwise_ciphers & WPA_CIPHER_CCMP)
 		suites[num_suites++] = WLAN_CIPHER_SUITE_CCMP;
@@ -5858,6 +5880,8 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 			num_suites * sizeof(u32), suites);
 	}
 
+	wpa_printf(MSG_DEBUG, "nl80211: group_cipher=0x%x",
+		   params->group_cipher);
 	switch (params->group_cipher) {
 	case WPA_CIPHER_CCMP:
 		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITE_GROUP,
@@ -5882,21 +5906,29 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 	}
 
 	if (params->beacon_ies) {
+		wpa_hexdump_buf(MSG_DEBUG, "nl80211: beacon_ies",
+				params->beacon_ies);
 		NLA_PUT(msg, NL80211_ATTR_IE, wpabuf_len(params->beacon_ies),
 			wpabuf_head(params->beacon_ies));
 	}
 	if (params->proberesp_ies) {
+		wpa_hexdump_buf(MSG_DEBUG, "nl80211: proberesp_ies",
+				params->proberesp_ies);
 		NLA_PUT(msg, NL80211_ATTR_IE_PROBE_RESP,
 			wpabuf_len(params->proberesp_ies),
 			wpabuf_head(params->proberesp_ies));
 	}
 	if (params->assocresp_ies) {
+		wpa_hexdump_buf(MSG_DEBUG, "nl80211: assocresp_ies",
+				params->assocresp_ies);
 		NLA_PUT(msg, NL80211_ATTR_IE_ASSOC_RESP,
 			wpabuf_len(params->assocresp_ies),
 			wpabuf_head(params->assocresp_ies));
 	}
 
 	if (drv->capa.flags & WPA_DRIVER_FLAGS_INACTIVITY_TIMER)  {
+		wpa_printf(MSG_DEBUG, "nl80211: ap_max_inactivity=%d",
+			   params->ap_max_inactivity);
 		NLA_PUT_U16(msg, NL80211_ATTR_INACTIVITY_TIMEOUT,
 			    params->ap_max_inactivity);
 	}

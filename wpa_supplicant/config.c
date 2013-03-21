@@ -1833,6 +1833,7 @@ void wpa_config_free(struct wpa_config *config)
 	wpabuf_free(config->wps_nfc_dev_pw);
 	os_free(config->ext_password_backend);
 	os_free(config->sae_groups);
+	wpabuf_free(config->ap_vendor_elements);
 	os_free(config);
 }
 
@@ -2953,6 +2954,43 @@ static int wpa_config_process_sae_groups(
 }
 
 
+static int wpa_config_process_ap_vendor_elements(
+	const struct global_parse_data *data,
+	struct wpa_config *config, int line, const char *pos)
+{
+	struct wpabuf *tmp;
+	int len = os_strlen(pos) / 2;
+	u8 *p;
+
+	if (!len) {
+		wpa_printf(MSG_ERROR, "Line %d: invalid ap_vendor_elements",
+			   line);
+		return -1;
+	}
+
+	tmp = wpabuf_alloc(len);
+	if (tmp) {
+		p = wpabuf_put(tmp, len);
+
+		if (hexstr2bin(pos, p, len)) {
+			wpa_printf(MSG_ERROR, "Line %d: invalid "
+				   "ap_vendor_elements", line);
+			wpabuf_free(tmp);
+			return -1;
+		}
+
+		wpabuf_free(config->ap_vendor_elements);
+		config->ap_vendor_elements = tmp;
+	} else {
+		wpa_printf(MSG_ERROR, "Cannot allocate memory for "
+			   "ap_vendor_elements");
+		return -1;
+	}
+
+	return 0;
+}
+
+
 #ifdef OFFSET
 #undef OFFSET
 #endif /* OFFSET */
@@ -3050,6 +3088,7 @@ static const struct global_parse_data global_fields[] = {
 	{ FUNC(sae_groups), 0 },
 	{ INT(dtim_period), 0 },
 	{ INT(beacon_int), 0 },
+	{ FUNC(ap_vendor_elements), 0 },
 };
 
 #undef FUNC

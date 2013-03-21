@@ -305,6 +305,11 @@ no_wps:
 
 	bss->disassoc_low_ack = wpa_s->conf->disassoc_low_ack;
 
+	if (wpa_s->conf->ap_vendor_elements) {
+		bss->vendor_elements =
+			wpabuf_dup(wpa_s->conf->ap_vendor_elements);
+	}
+
 	return 0;
 }
 

@@ -990,6 +990,17 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 		}
 		fprintf(f, "\n");
 	}
+
+	if (config->ap_vendor_elements) {
+		int i, len = wpabuf_len(config->ap_vendor_elements);
+		const u8 *p = wpabuf_head_u8(config->ap_vendor_elements);
+		if (len > 0) {
+			fprintf(f, "ap_vendor_elements=");
+			for (i = 0; i < len; i++)
+				fprintf(f, "%02x", *p++);
+			fprintf(f, "\n");
+		}
+	}
 }
 
 #endif /* CONFIG_NO_CONFIG_WRITE */

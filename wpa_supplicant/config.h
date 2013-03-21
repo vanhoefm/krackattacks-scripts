@@ -834,6 +834,16 @@ struct wpa_config {
 	 * blocks that do not specify beacon_int.
 	 */
 	int beacon_int;
+
+	/**
+	 * ap_vendor_elements: Vendor specific elements for Beacon/ProbeResp
+	 *
+	 * This parameter can be used to define additional vendor specific
+	 * elements for Beacon and Probe Response frames in AP/P2P GO mode. The
+	 * format for these element(s) is a hexdump of the raw information
+	 * elements (id+len+payload for one or more elements).
+	 */
+	struct wpabuf *ap_vendor_elements;
 };
 
 

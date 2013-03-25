@@ -543,7 +543,13 @@ void p2p_invitation_resp_cb(struct p2p_data *p2p, int success)
 		"P2P: Invitation Response TX callback: success=%d", success);
 	p2p->cfg->send_action_done(p2p->cfg->cb_ctx);
 
-	if (success && p2p->cfg->invitation_received) {
+	if (!success)
+		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
+			"P2P: Assume Invitation Response was actually "
+			"received by the peer even though Ack was not "
+			"reported");
+
+	if (p2p->cfg->invitation_received) {
 		p2p->cfg->invitation_received(p2p->cfg->cb_ctx,
 					      p2p->inv_sa,
 					      p2p->inv_group_bssid_ptr,

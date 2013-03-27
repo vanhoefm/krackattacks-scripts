@@ -48,23 +48,54 @@ def wlantest_setup():
     subprocess.call(["../../wlantest/wlantest_cli", "add_passphrase",
                      "12345678"]);
 
+def wlantest_tdls_packet_counters(bssid, addr0, addr1):
+    dl = wlantest_tdls("valid_direct_link", bssid, addr0, addr1);
+    inv_dl = wlantest_tdls("invalid_direct_link", bssid, addr0, addr1);
+    ap = wlantest_tdls("valid_ap_path", bssid, addr0, addr1);
+    inv_ap = wlantest_tdls("invalid_ap_path", bssid, addr0, addr1);
+    return [dl,inv_dl,ap,inv_ap]
+
+def tdls_check_dl(sta0, sta1, bssid, addr0, addr1):
+    wlantest_tdls_clear(bssid, addr0, addr1);
+    hwsim_utils.test_connectivity_sta(sta0, sta1)
+    [dl,inv_dl,ap,inv_ap] = wlantest_tdls_packet_counters(bssid, addr0, addr1)
+    if dl == 0:
+        raise Exception("No valid frames through direct link")
+    if inv_dl > 0:
+        raise Exception("Invalid frames through direct link")
+    if ap > 0:
+        raise Exception("Unexpected frames through AP path")
+    if inv_ap > 0:
+        raise Exception("Invalid frames through AP path")
+
+def tdls_check_ap(sta0, sta1, bssid, addr0, addr1):
+    wlantest_tdls_clear(bssid, addr0, addr1);
+    hwsim_utils.test_connectivity_sta(sta0, sta1)
+    [dl,inv_dl,ap,inv_ap] = wlantest_tdls_packet_counters(bssid, addr0, addr1)
+    if dl > 0:
+        raise Exception("Unexpected frames through direct link")
+    if inv_dl > 0:
+        raise Exception("Invalid frames through direct link")
+    if ap == 0:
+        raise Exception("No valid frames through AP path")
+    if inv_ap > 0:
+        raise Exception("Invalid frames through AP path")
+
 def setup_tdls(sta0, sta1, bssid, reverse=False):
     logger.info("Setup TDLS")
     addr0 = sta0.p2p_interface_addr()
     addr1 = sta1.p2p_interface_addr()
+    wlantest_tdls_clear(bssid, addr0, addr1);
+    wlantest_tdls_clear(bssid, addr1, addr0);
     sta0.tdls_setup(addr1)
     time.sleep(1)
     if reverse:
         addr1 = sta0.p2p_interface_addr()
         addr0 = sta1.p2p_interface_addr()
-    hwsim_utils.test_connectivity_sta(sta0, sta1)
     conf = wlantest_tdls("setup_conf_ok", bssid, addr0, addr1);
     if conf == 0:
         raise Exception("No TDLS Setup Confirm (success) seen")
-    dl = wlantest_tdls("valid_direct_link", bssid, addr0, addr1);
-    if dl == 0:
-        raise Exception("No valid frames through direct link")
-    wlantest_tdls_clear(bssid, addr0, addr1);
+    tdls_check_dl(sta0, sta1, bssid, addr0, addr1)
 
 def teardown_tdls(sta0, sta1, bssid):
     logger.info("Teardown TDLS")
@@ -75,17 +106,7 @@ def teardown_tdls(sta0, sta1, bssid):
     teardown = wlantest_tdls("teardown", bssid, addr0, addr1);
     if teardown == 0:
         raise Exception("No TDLS Setup Teardown seen")
-    wlantest_tdls_clear(bssid, addr0, addr1);
-    hwsim_utils.test_connectivity_sta(sta0, sta1)
-    ap_path = wlantest_tdls("valid_ap_path", bssid, addr0, addr1);
-    if ap_path == 0:
-        raise Exception("No valid frames via AP path")
-    direct_link = wlantest_tdls("valid_direct_link", bssid, addr0, addr1);
-    if direct_link > 0:
-        raise Exception("Unexpected frames through direct link")
-    idirect_link = wlantest_tdls("invalid_direct_link", bssid, addr0, addr1);
-    if idirect_link > 0:
-        raise Exception("Unexpected frames through direct link (invalid)")
+    tdls_check_ap(sta0, sta1, bssid, addr0, addr1)
 
 def test_ap_wpa2_tdls(dev):
     """WPA2-PSK AP and two stations using TDLS"""

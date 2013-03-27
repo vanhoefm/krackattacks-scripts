@@ -81,7 +81,7 @@ def tdls_check_ap(sta0, sta1, bssid, addr0, addr1):
     if inv_ap > 0:
         raise Exception("Invalid frames through AP path")
 
-def setup_tdls(sta0, sta1, bssid, reverse=False):
+def setup_tdls(sta0, sta1, bssid, reverse=False, expect_fail=False):
     logger.info("Setup TDLS")
     addr0 = sta0.p2p_interface_addr()
     addr1 = sta1.p2p_interface_addr()
@@ -89,6 +89,9 @@ def setup_tdls(sta0, sta1, bssid, reverse=False):
     wlantest_tdls_clear(bssid, addr1, addr0);
     sta0.tdls_setup(addr1)
     time.sleep(1)
+    if expect_fail:
+        tdls_check_ap(sta0, sta1, bssid, addr0, addr1)
+        return
     if reverse:
         addr1 = sta0.p2p_interface_addr()
         addr0 = sta1.p2p_interface_addr()
@@ -134,8 +137,66 @@ def test_ap_wpa2_tdls_concurrent_init2(dev):
     dev[1].request("SET tdls_testing 0x80")
     setup_tdls(dev[0], dev[1], bssid)
 
+def test_ap_wpa2_tdls_decline_resp(dev):
+    """Decline TDLS Setup Response"""
+    bssid = "02:00:00:00:02:00"
+    wlantest_setup()
+    connect_2sta(dev)
+    dev[1].request("SET tdls_testing 0x200")
+    setup_tdls(dev[1], dev[0], bssid, expect_fail=True)
+
+def test_ap_wpa2_tdls_long_lifetime(dev):
+    """TDLS with long TPK lifetime"""
+    bssid = "02:00:00:00:02:00"
+    wlantest_setup()
+    connect_2sta(dev)
+    dev[1].request("SET tdls_testing 0x40")
+    setup_tdls(dev[1], dev[0], bssid)
+
+def test_ap_wpa2_tdls_long_frame(dev):
+    """TDLS with long setup/teardown frames"""
+    bssid = "02:00:00:00:02:00"
+    wlantest_setup()
+    connect_2sta(dev)
+    dev[0].request("SET tdls_testing 0x1")
+    dev[1].request("SET tdls_testing 0x1")
+    setup_tdls(dev[1], dev[0], bssid)
+    teardown_tdls(dev[1], dev[0], bssid)
+    setup_tdls(dev[0], dev[1], bssid)
+
+def test_ap_wpa2_tdls_reneg(dev):
+    """Renegotiate TDLS link"""
+    bssid = "02:00:00:00:02:00"
+    wlantest_setup()
+    connect_2sta(dev)
+    setup_tdls(dev[1], dev[0], bssid)
+    setup_tdls(dev[0], dev[1], bssid)
+
+def test_ap_wpa2_tdls_wrong_lifetime_resp(dev):
+    """Incorrect TPK lifetime in TDLS Setup Response"""
+    bssid = "02:00:00:00:02:00"
+    wlantest_setup()
+    connect_2sta(dev)
+    dev[1].request("SET tdls_testing 0x10")
+    setup_tdls(dev[0], dev[1], bssid, expect_fail=True)
+
+def test_ap_wpa2_tdls_diff_rsnie(dev):
+    """TDLS with different RSN IEs"""
+    bssid = "02:00:00:00:02:00"
+    wlantest_setup()
+    connect_2sta(dev)
+    dev[1].request("SET tdls_testing 0x2")
+    setup_tdls(dev[1], dev[0], bssid)
+    teardown_tdls(dev[1], dev[0], bssid)
+
 def add_tests(tests):
     tests.append(test_ap_wpa2_psk_2sta)
     tests.append(test_ap_wpa2_tdls)
     tests.append(test_ap_wpa2_tdls_concurrent_init)
     tests.append(test_ap_wpa2_tdls_concurrent_init2)
+    tests.append(test_ap_wpa2_tdls_decline_resp)
+    tests.append(test_ap_wpa2_tdls_long_lifetime)
+    tests.append(test_ap_wpa2_tdls_long_frame)
+    tests.append(test_ap_wpa2_tdls_reneg)
+    tests.append(test_ap_wpa2_tdls_wrong_lifetime_resp)
+    tests.append(test_ap_wpa2_tdls_diff_rsnie)

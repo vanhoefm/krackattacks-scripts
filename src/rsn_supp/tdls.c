@@ -1807,6 +1807,16 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 			   "TPK M2: " MACSTR, MAC2STR(src_addr));
 		return -1;
 	}
+	if (!peer->initiator) {
+		/*
+		 * This may happen if both devices try to initiate TDLS at the
+		 * same time and we accept the TPK M1 from the peer in
+		 * wpa_tdls_process_tpk_m1() and clear our previous state.
+		 */
+		wpa_printf(MSG_INFO, "TDLS: We were not the initiator, so "
+			   "ignore TPK M2 from " MACSTR, MAC2STR(src_addr));
+		return -1;
+	}
 	wpa_tdls_tpk_retry_timeout_cancel(sm, peer, WLAN_TDLS_SETUP_REQUEST);
 
 	if (len < 3 + 2 + 1)

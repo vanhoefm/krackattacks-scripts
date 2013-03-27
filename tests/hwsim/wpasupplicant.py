@@ -43,6 +43,8 @@ class WpaSupplicant:
         self.request("P2P_GROUP_REMOVE *")
         self.request("REMOVE_NETWORK *")
         self.request("REMOVE_CRED *")
+        self.request("SET tdls_disabled 0")
+        self.request("SET tdls_testing 0")
         self.group_ifname = None
 
     def add_network(self):
@@ -68,6 +70,20 @@ class WpaSupplicant:
         if "FAIL" in res:
             raise Exception("SET_NETWORK failed")
         return None
+
+    def select_network(self, id):
+        id = self.request("SELECT_NETWORK " + str(id))
+        if "FAIL" in id:
+            raise Exception("SELECT_NETWORK failed")
+        return None
+
+    def connect_network(self, id):
+        self.dump_monitor()
+        self.select_network(id)
+        ev = self.wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
+        if ev is None:
+            raise Exception("Association with the AP timed out")
+        self.dump_monitor()
 
     def get_status(self, field):
         res = self.request("STATUS")

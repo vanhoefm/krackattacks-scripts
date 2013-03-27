@@ -91,7 +91,7 @@ def test_autogo_tdls(dev):
     dev[1].tdls_teardown(addr2)
     time.sleep(1)
     teardown = wlantest_tdls("teardown", bssid, addr1, addr2);
-    if conf == teardown:
+    if teardown == 0:
         raise Exception("No TDLS Setup Teardown seen")
     wlantest_tdls_clear(bssid, addr1, addr2);
     hwsim_utils.test_connectivity_p2p(dev[1], dev[2])

@@ -240,6 +240,13 @@ int os_unsetenv(const char *name);
 char * os_readfile(const char *name, size_t *len);
 
 /**
+ * os_file_exists - Check whether the specified file exists
+ * @fname: Path and name of the file
+ * Returns: 1 if the file exists or 0 if not
+ */
+int os_file_exists(const char *fname);
+
+/**
  * os_zalloc - Allocate and zero memory
  * @size: Number of bytes to allocate
  * Returns: Pointer to allocated and zeroed memory or %NULL on failure

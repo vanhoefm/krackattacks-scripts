@@ -1464,6 +1464,52 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 	if (peer == NULL)
 		goto error;
 
+	/* If found, use existing entry instead of adding a new one;
+	 * how to handle the case where both ends initiate at the
+	 * same time? */
+	if (existing_peer) {
+		if (peer->tpk_success) {
+			wpa_printf(MSG_DEBUG, "TDLS: TDLS Setup Request while "
+				   "direct link is enabled - tear down the "
+				   "old link first");
+#if 0
+			/* TODO: Disabling the link would be more proper
+			 * operation here, but it seems to trigger a race with
+			 * some drivers handling the new request frame. */
+			wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK, src_addr);
+#else
+			if (sm->tdls_external_setup)
+				wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK,
+						 src_addr);
+			else
+				wpa_tdls_del_key(sm, peer);
+#endif
+			wpa_tdls_peer_free(sm, peer);
+		}
+
+		/*
+		 * An entry is already present, so check if we already sent a
+		 * TDLS Setup Request. If so, compare MAC addresses and let the
+		 * STA with the lower MAC address continue as the initiator.
+		 * The other negotiation is terminated.
+		 */
+		if (peer->initiator) {
+			if (os_memcmp(sm->own_addr, src_addr, ETH_ALEN) < 0) {
+				wpa_printf(MSG_DEBUG, "TDLS: Discard request "
+					   "from peer with higher address "
+					   MACSTR, MAC2STR(src_addr));
+				return -1;
+			} else {
+				wpa_printf(MSG_DEBUG, "TDLS: Accept request "
+					   "from peer with lower address "
+					   MACSTR " (terminate previously "
+					   "initiated negotiation",
+					   MAC2STR(src_addr));
+				wpa_tdls_disable_link(sm, peer->addr);
+			}
+		}
+	}
+
 	/* capability information */
 	peer->capability = WPA_GET_LE16(cpos);
 	cpos += 2;
@@ -1595,52 +1641,6 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 	}
 
 skip_rsn:
-	/* If found, use existing entry instead of adding a new one;
-	 * how to handle the case where both ends initiate at the
-	 * same time? */
-	if (existing_peer) {
-		if (peer->tpk_success) {
-			wpa_printf(MSG_DEBUG, "TDLS: TDLS Setup Request while "
-				   "direct link is enabled - tear down the "
-				   "old link first");
-#if 0
-			/* TODO: Disabling the link would be more proper
-			 * operation here, but it seems to trigger a race with
-			 * some drivers handling the new request frame. */
-			wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK, src_addr);
-#else
-			if (sm->tdls_external_setup)
-				wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK,
-						 src_addr);
-			else
-				wpa_tdls_del_key(sm, peer);
-#endif
-			wpa_tdls_peer_free(sm, peer);
-		}
-
-		/*
-		 * An entry is already present, so check if we already sent a
-		 * TDLS Setup Request. If so, compare MAC addresses and let the
-		 * STA with the lower MAC address continue as the initiator.
-		 * The other negotiation is terminated.
-		 */
-		if (peer->initiator) {
-			if (os_memcmp(sm->own_addr, src_addr, ETH_ALEN) < 0) {
-				wpa_printf(MSG_DEBUG, "TDLS: Discard request "
-					   "from peer with higher address "
-					   MACSTR, MAC2STR(src_addr));
-				return -1;
-			} else {
-				wpa_printf(MSG_DEBUG, "TDLS: Accept request "
-					   "from peer with lower address "
-					   MACSTR " (terminate previously "
-					   "initiated negotiation",
-					   MAC2STR(src_addr));
-				wpa_tdls_disable_link(sm, peer->addr);
-			}
-		}
-	}
-
 #ifdef CONFIG_TDLS_TESTING
 	if (tdls_testing & TDLS_TESTING_CONCURRENT_INIT) {
 		if (os_memcmp(sm->own_addr, peer->addr, ETH_ALEN) < 0) {

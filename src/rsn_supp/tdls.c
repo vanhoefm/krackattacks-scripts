@@ -1505,7 +1505,12 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 					   MACSTR " (terminate previously "
 					   "initiated negotiation",
 					   MAC2STR(src_addr));
-				wpa_tdls_disable_link(sm, peer->addr);
+				if (sm->tdls_external_setup)
+					wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK,
+							 src_addr);
+				else
+					wpa_tdls_del_key(sm, peer);
+				wpa_tdls_peer_free(sm, peer);
 			}
 		}
 	}

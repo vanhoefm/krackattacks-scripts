@@ -1213,7 +1213,6 @@ static int cmd_add_wepkey(int s, int argc, char *argv[])
 {
 	u8 resp[WLANTEST_CTRL_MAX_RESP_LEN];
 	u8 buf[100], *pos, *end;
-	size_t len;
 	int rlen;
 
 	if (argc < 1) {
@@ -1221,7 +1220,6 @@ static int cmd_add_wepkey(int s, int argc, char *argv[])
 		return -1;
 	}
 
-	len = os_strlen(argv[0]);
 	pos = buf;
 	end = buf + sizeof(buf);
 	WPA_PUT_BE32(pos, WLANTEST_CTRL_ADD_PASSPHRASE);

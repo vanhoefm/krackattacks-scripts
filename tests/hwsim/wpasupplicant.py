@@ -301,3 +301,17 @@ class WpaSupplicant:
         if "FAIL" in self.group_request(cmd):
             raise Exception("Failed to request TDLS teardown")
         return None
+
+    def connect(self, ssid, psk=None, proto=None, key_mgmt=None, wep_key0=None):
+        logger.info("Connect STA " + self.ifname + " to AP")
+        id = self.add_network()
+        self.set_network_quoted(id, "ssid", ssid)
+        if psk:
+            self.set_network_quoted(id, "psk", psk)
+        if proto:
+            self.set_network(id, "proto", proto)
+        if key_mgmt:
+            self.set_network(id, "key_mgmt", key_mgmt)
+        if wep_key0:
+            self.set_network(id, "wep_key0", wep_key0)
+        self.connect_network(id)

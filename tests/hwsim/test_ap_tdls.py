@@ -22,26 +22,15 @@ def start_ap_wpa2_psk(ifname):
     params = hostapd.wpa2_params(ssid="test-wpa2-psk", passphrase="12345678")
     hostapd.add_ap(ifname, params)
 
-def connect_sta(sta, ssid, psk=None, proto=None, key_mgmt=None, wep_key0=None):
-    logger.info("Connect STA " + sta.ifname + " to AP")
-    id = sta.add_network()
-    sta.set_network_quoted(id, "ssid", ssid)
-    if psk:
-        sta.set_network_quoted(id, "psk", psk)
-    if proto:
-        sta.set_network(id, "proto", proto)
-    if key_mgmt:
-        sta.set_network(id, "key_mgmt", key_mgmt)
-    if wep_key0:
-        sta.set_network(id, "wep_key0", wep_key0)
-    sta.connect_network(id)
-
-def connect_2sta(dev, ssid):
-    connect_sta(dev[0], ssid, psk="12345678")
-    connect_sta(dev[1], ssid, psk="12345678")
+def connectivity(dev, ap_ifname):
     hwsim_utils.test_connectivity_sta(dev[0], dev[1])
     hwsim_utils.test_connectivity(dev[0].ifname, "wlan2")
     hwsim_utils.test_connectivity(dev[1].ifname, "wlan2")
+
+def connect_2sta(dev, ssid):
+    dev[0].connect(ssid, psk="12345678")
+    dev[1].connect(ssid, psk="12345678")
+    connectivity(dev, "wlan2")
 
 def connect_2sta_wpa2_psk(dev):
     connect_2sta(dev, "test-wpa2-psk")
@@ -50,25 +39,19 @@ def connect_2sta_wpa_psk(dev):
     connect_2sta(dev, "test-wpa-psk")
 
 def connect_2sta_wpa_psk_mixed(dev):
-    connect_sta(dev[0], "test-wpa-mixed-psk", psk="12345678", proto="WPA")
-    connect_sta(dev[1], "test-wpa-mixed-psk", psk="12345678", proto="WPA2")
-    hwsim_utils.test_connectivity_sta(dev[0], dev[1])
-    hwsim_utils.test_connectivity(dev[0].ifname, "wlan2")
-    hwsim_utils.test_connectivity(dev[1].ifname, "wlan2")
+    dev[0].connect("test-wpa-mixed-psk", psk="12345678", proto="WPA")
+    dev[1].connect("test-wpa-mixed-psk", psk="12345678", proto="WPA2")
+    connectivity(dev, "wlan2")
 
 def connect_2sta_wep(dev):
-    connect_sta(dev[0], "test-wep", key_mgmt="NONE", wep_key0='"hello"')
-    connect_sta(dev[1], "test-wep", key_mgmt="NONE", wep_key0='"hello"')
-    hwsim_utils.test_connectivity_sta(dev[0], dev[1])
-    hwsim_utils.test_connectivity(dev[0].ifname, "wlan2")
-    hwsim_utils.test_connectivity(dev[1].ifname, "wlan2")
+    dev[0].connect("test-wep", key_mgmt="NONE", wep_key0='"hello"')
+    dev[1].connect("test-wep", key_mgmt="NONE", wep_key0='"hello"')
+    connectivity(dev, "wlan2")
 
 def connect_2sta_open(dev):
-    connect_sta(dev[0], "test-open", key_mgmt="NONE")
-    connect_sta(dev[1], "test-open", key_mgmt="NONE")
-    hwsim_utils.test_connectivity_sta(dev[0], dev[1])
-    hwsim_utils.test_connectivity(dev[0].ifname, "wlan2")
-    hwsim_utils.test_connectivity(dev[1].ifname, "wlan2")
+    dev[0].connect("test-open", key_mgmt="NONE")
+    dev[1].connect("test-open", key_mgmt="NONE")
+    connectivity(dev, "wlan2")
 
 def wlantest_tdls(field, bssid, addr1, addr2):
     res = subprocess.check_output(["../../wlantest/wlantest_cli",

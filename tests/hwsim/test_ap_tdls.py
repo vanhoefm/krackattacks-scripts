@@ -12,6 +12,20 @@ import logging
 logger = logging.getLogger(__name__)
 
 import hwsim_utils
+from hostapd import HostapdGlobal
+from hostapd import Hostapd
+
+ap_ifname = 'wlan2'
+
+def start_ap_wpa2_psk(ifname):
+    logger.info("Starting WPA2-PSK AP " + ifname)
+    hapd_global = HostapdGlobal()
+    hapd_global.add(ifname)
+    hapd = Hostapd(ifname)
+    if not hapd.ping():
+        raise Exception("Could not ping hostapd")
+    hapd.set_wpa2_psk("test-wpa2-psk", "12345678")
+    hapd.enable()
 
 def connect_sta(sta):
     logger.info("Connect STA " + sta.ifname + " to AP")
@@ -109,6 +123,7 @@ def teardown_tdls(sta0, sta1, bssid):
 
 def test_ap_wpa2_tdls(dev):
     """WPA2-PSK AP and two stations using TDLS"""
+    start_ap_wpa2_psk(ap_ifname)
     bssid = "02:00:00:00:02:00"
     wlantest_setup()
     connect_2sta(dev)
@@ -119,6 +134,7 @@ def test_ap_wpa2_tdls(dev):
 
 def test_ap_wpa2_tdls_concurrent_init(dev):
     """Concurrent TDLS setup initiation"""
+    start_ap_wpa2_psk(ap_ifname)
     bssid = "02:00:00:00:02:00"
     wlantest_setup()
     connect_2sta(dev)
@@ -127,6 +143,7 @@ def test_ap_wpa2_tdls_concurrent_init(dev):
 
 def test_ap_wpa2_tdls_concurrent_init2(dev):
     """Concurrent TDLS setup initiation (reverse)"""
+    start_ap_wpa2_psk(ap_ifname)
     bssid = "02:00:00:00:02:00"
     wlantest_setup()
     connect_2sta(dev)
@@ -135,6 +152,7 @@ def test_ap_wpa2_tdls_concurrent_init2(dev):
 
 def test_ap_wpa2_tdls_decline_resp(dev):
     """Decline TDLS Setup Response"""
+    start_ap_wpa2_psk(ap_ifname)
     bssid = "02:00:00:00:02:00"
     wlantest_setup()
     connect_2sta(dev)
@@ -143,6 +161,7 @@ def test_ap_wpa2_tdls_decline_resp(dev):
 
 def test_ap_wpa2_tdls_long_lifetime(dev):
     """TDLS with long TPK lifetime"""
+    start_ap_wpa2_psk(ap_ifname)
     bssid = "02:00:00:00:02:00"
     wlantest_setup()
     connect_2sta(dev)
@@ -151,6 +170,7 @@ def test_ap_wpa2_tdls_long_lifetime(dev):
 
 def test_ap_wpa2_tdls_long_frame(dev):
     """TDLS with long setup/teardown frames"""
+    start_ap_wpa2_psk(ap_ifname)
     bssid = "02:00:00:00:02:00"
     wlantest_setup()
     connect_2sta(dev)
@@ -162,6 +182,7 @@ def test_ap_wpa2_tdls_long_frame(dev):
 
 def test_ap_wpa2_tdls_reneg(dev):
     """Renegotiate TDLS link"""
+    start_ap_wpa2_psk(ap_ifname)
     bssid = "02:00:00:00:02:00"
     wlantest_setup()
     connect_2sta(dev)
@@ -170,6 +191,7 @@ def test_ap_wpa2_tdls_reneg(dev):
 
 def test_ap_wpa2_tdls_wrong_lifetime_resp(dev):
     """Incorrect TPK lifetime in TDLS Setup Response"""
+    start_ap_wpa2_psk(ap_ifname)
     bssid = "02:00:00:00:02:00"
     wlantest_setup()
     connect_2sta(dev)
@@ -178,6 +200,7 @@ def test_ap_wpa2_tdls_wrong_lifetime_resp(dev):
 
 def test_ap_wpa2_tdls_diff_rsnie(dev):
     """TDLS with different RSN IEs"""
+    start_ap_wpa2_psk(ap_ifname)
     bssid = "02:00:00:00:02:00"
     wlantest_setup()
     connect_2sta(dev)

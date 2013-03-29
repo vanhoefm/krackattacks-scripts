@@ -1,6 +1,6 @@
 #!/usr/bin/python
 #
-# AP WPA2-PSK tests
+# AP tests
 # Copyright (c) 2013, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
@@ -14,6 +14,14 @@ import time
 import logging
 
 from wpasupplicant import WpaSupplicant
+from hostapd import HostapdGlobal
+
+def reset_devs(dev, hapd_ifaces):
+        for d in dev:
+            d.reset()
+        hapd = HostapdGlobal()
+        for h in hapd_ifaces:
+            hapd.remove(h)
 
 def main():
     idx = 1
@@ -34,6 +42,7 @@ def main():
     dev0 = WpaSupplicant('wlan0')
     dev1 = WpaSupplicant('wlan1')
     dev = [ dev0, dev1 ]
+    hapd_ifaces = [ 'wlan2', 'wlan3' ]
 
     for d in dev:
         if not d.ping():
@@ -58,8 +67,7 @@ def main():
             #if test_filter not in t.__name__:
             if test_filter != t.__name__:
                 continue
-        for d in dev:
-            d.reset()
+        reset_devs(dev, hapd_ifaces)
         print "START " + t.__name__
         if t.__doc__:
             print "Test: " + t.__doc__
@@ -77,8 +85,7 @@ def main():
             d.request("NOTE TEST-STOP " + t.__name__)
 
     if not test_filter:
-        for d in dev:
-            d.reset()
+        reset_devs(dev, hapd_ifaces)
 
     print "passed tests: " + str(passed)
     print "failed tests: " + str(failed)

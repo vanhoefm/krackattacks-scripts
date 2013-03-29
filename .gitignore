@@ -1,7 +1,10 @@
 *.o
 *.d
+*.pyc
 *~
 .config
+tests/hwsim/logs
+wpaspy/build
 wpa_supplicant/eapol_test
 wpa_supplicant/nfc_pw_token
 wpa_supplicant/preauth_test

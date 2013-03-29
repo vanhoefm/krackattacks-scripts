@@ -1,6 +1,6 @@
 /*
  * wlantest controller
- * Copyright (c) 2010, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2010-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -1209,6 +1209,32 @@ static int cmd_add_passphrase(int s, int argc, char *argv[])
 }
 
 
+static int cmd_add_wepkey(int s, int argc, char *argv[])
+{
+	u8 resp[WLANTEST_CTRL_MAX_RESP_LEN];
+	u8 buf[100], *pos, *end;
+	size_t len;
+	int rlen;
+
+	if (argc < 1) {
+		printf("add_wepkey needs one argument: WEP key\n");
+		return -1;
+	}
+
+	len = os_strlen(argv[0]);
+	pos = buf;
+	end = buf + sizeof(buf);
+	WPA_PUT_BE32(pos, WLANTEST_CTRL_ADD_PASSPHRASE);
+	pos += 4;
+	pos = attr_add_str(pos, end, WLANTEST_ATTR_WEPKEY, argv[0]);
+
+	rlen = cmd_send_and_recv(s, buf, pos - buf, resp, sizeof(resp));
+	if (rlen < 0)
+		return -1;
+	return 0;
+}
+
+
 struct sta_infos {
 	const char *name;
 	enum wlantest_sta_info num;
@@ -1455,6 +1481,8 @@ static const struct wlantest_cli_cmd wlantest_cli_commands[] = {
 	{ "version", cmd_version, "= get wlantest version", NULL },
 	{ "add_passphrase", cmd_add_passphrase,
 	  "<passphrase> = add a known passphrase", NULL },
+	{ "add_wepkey", cmd_add_wepkey,
+	  "<WEP key> = add a known WEP key", NULL },
 	{ "info_sta", cmd_info_sta,
 	  "<field> <BSSID> <STA> = get STA information",
 	  complete_info_sta },

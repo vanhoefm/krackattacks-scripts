@@ -63,6 +63,23 @@ class Hostapd:
         self.set("wpa_key_mgmt", "WPA-PSK")
         self.set("rsn_pairwise", "CCMP")
 
+    def set_wpa_psk(self, ssid, passphrase):
+        self.set_defaults()
+        self.set("ssid", ssid)
+        self.set("wpa_passphrase", passphrase)
+        self.set("wpa", "1")
+        self.set("wpa_key_mgmt", "WPA-PSK")
+        self.set("wpa_pairwise", "TKIP")
+
+    def set_wpa_psk_mixed(self, ssid, passphrase):
+        self.set_defaults()
+        self.set("ssid", ssid)
+        self.set("wpa_passphrase", passphrase)
+        self.set("wpa", "3")
+        self.set("wpa_key_mgmt", "WPA-PSK")
+        self.set("wpa_pairwise", "TKIP")
+        self.set("rsn_pairwise", "CCMP")
+
     def enable(self):
         if not "OK" in self.ctrl.request("ENABLE"):
             raise Exception("Failed to enable hostapd interface " + self.ifname)

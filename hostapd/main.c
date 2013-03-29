@@ -9,6 +9,7 @@
 #include "utils/includes.h"
 #ifndef CONFIG_NATIVE_WINDOWS
 #include <syslog.h>
+#include <grp.h>
 #endif /* CONFIG_NATIVE_WINDOWS */
 
 #include "utils/common.h"
@@ -480,7 +481,8 @@ static void usage(void)
 		"\n"
 		"usage: hostapd [-hdBKtv] [-P <PID file>] [-e <entropy file>] "
 		"\\\n"
-		"         [-g <global ctrl_iface>] <configuration file(s)>\n"
+		"         [-g <global ctrl_iface>] [-G <group>] \\\n"
+		"         <configuration file(s)>\n"
 		"\n"
 		"options:\n"
 		"   -h   show this usage\n"
@@ -488,6 +490,7 @@ static void usage(void)
 		"   -B   run daemon in the background\n"
 		"   -e   entropy file\n"
 		"   -g   global control interface path\n"
+		"   -G   group for control interfaces\n"
 		"   -P   PID file\n"
 		"   -K   include key data in debug messages\n"
 #ifdef CONFIG_DEBUG_FILE
@@ -531,6 +534,22 @@ static int hostapd_get_global_ctrl_iface(struct hapd_interfaces *interfaces,
 }
 
 
+static int hostapd_get_ctrl_iface_group(struct hapd_interfaces *interfaces,
+					const char *group)
+{
+#ifndef CONFIG_NATIVE_WINDOWS
+	struct group *grp;
+	grp = getgrnam(group);
+	if (grp == NULL) {
+		wpa_printf(MSG_ERROR, "Unknown group '%s'", group);
+		return -1;
+	}
+	interfaces->ctrl_iface_group = grp->gr_gid;
+#endif /* CONFIG_NATIVE_WINDOWS */
+	return 0;
+}
+
+
 int main(int argc, char *argv[])
 {
 	struct hapd_interfaces interfaces;
@@ -556,7 +575,7 @@ int main(int argc, char *argv[])
 	interfaces.global_ctrl_sock = -1;
 
 	for (;;) {
-		c = getopt(argc, argv, "Bde:f:hKP:tvg:");
+		c = getopt(argc, argv, "Bde:f:hKP:tvg:G:");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -594,7 +613,9 @@ int main(int argc, char *argv[])
 		case 'g':
 			hostapd_get_global_ctrl_iface(&interfaces, optarg);
 			break;
-
+		case 'G':
+			hostapd_get_ctrl_iface_group(&interfaces, optarg);
+			break;
 		default:
 			usage();
 			break;

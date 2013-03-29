@@ -40,6 +40,7 @@ struct hapd_interfaces {
 	int global_ctrl_sock;
 	char *global_iface_path;
 	char *global_iface_name;
+	gid_t ctrl_iface_group;
 	struct hostapd_iface **iface;
 };
 

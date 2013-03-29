@@ -1076,6 +1076,14 @@ int hostapd_ctrl_iface_init(struct hostapd_data *hapd)
 		return -1;
 	}
 
+	if (!hapd->conf->ctrl_interface_gid_set &&
+	    hapd->iface->interfaces->ctrl_iface_group &&
+	    chown(hapd->conf->ctrl_interface, -1,
+		  hapd->iface->interfaces->ctrl_iface_group) < 0) {
+		perror("chown[ctrl_interface]");
+		return -1;
+	}
+
 #ifdef ANDROID
 	/*
 	 * Android is using umask 0077 which would leave the control interface
@@ -1144,6 +1152,13 @@ int hostapd_ctrl_iface_init(struct hostapd_data *hapd)
 
 	if (hapd->conf->ctrl_interface_gid_set &&
 	    chown(fname, -1, hapd->conf->ctrl_interface_gid) < 0) {
+		perror("chown[ctrl_interface/ifname]");
+		goto fail;
+	}
+
+	if (!hapd->conf->ctrl_interface_gid_set &&
+	    hapd->iface->interfaces->ctrl_iface_group &&
+	    chown(fname, -1, hapd->iface->interfaces->ctrl_iface_group) < 0) {
 		perror("chown[ctrl_interface/ifname]");
 		goto fail;
 	}
@@ -1316,6 +1331,11 @@ int hostapd_global_ctrl_iface_init(struct hapd_interfaces *interface)
 			perror("mkdir[ctrl_interface]");
 			goto fail;
 		}
+	} else if (interface->ctrl_iface_group &&
+		   chown(interface->global_iface_path, -1,
+			 interface->ctrl_iface_group) < 0) {
+		perror("chown[ctrl_interface]");
+		goto fail;
 	}
 
 	if (os_strlen(interface->global_iface_path) + 1 +
@@ -1367,6 +1387,12 @@ int hostapd_global_ctrl_iface_init(struct hapd_interfaces *interface)
 			fname = NULL;
 			goto fail;
 		}
+	}
+
+	if (interface->ctrl_iface_group &&
+	    chown(fname, -1, interface->ctrl_iface_group) < 0) {
+		perror("chown[ctrl_interface]");
+		goto fail;
 	}
 
 	if (chmod(fname, S_IRWXU | S_IRWXG) < 0) {

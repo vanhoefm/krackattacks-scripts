@@ -44,7 +44,7 @@ def main():
 
     tests = []
     for t in os.listdir("."):
-        m = re.match(r'(test_ap_wpa2.*)\.py$', t)
+        m = re.match(r'(test_ap_.*)\.py$', t)
         if m:
             print "Import test cases from " + t
             mod = __import__(m.group(1))

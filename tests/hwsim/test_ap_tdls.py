@@ -1,6 +1,6 @@
 #!/usr/bin/python
 #
-# Tests with a WPA2-PSK AP
+# TDLS tests
 # Copyright (c) 2013, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
@@ -26,10 +26,6 @@ def connect_2sta(dev):
     hwsim_utils.test_connectivity_sta(dev[0], dev[1])
     hwsim_utils.test_connectivity(dev[0].ifname, "wlan2")
     hwsim_utils.test_connectivity(dev[1].ifname, "wlan2")
-
-def test_ap_wpa2_psk_2sta(dev):
-    """WPA2-PSK AP and two stations"""
-    connect_2sta(dev)
 
 def wlantest_tdls(field, bssid, addr1, addr2):
     res = subprocess.check_output(["../../wlantest/wlantest_cli",
@@ -190,7 +186,6 @@ def test_ap_wpa2_tdls_diff_rsnie(dev):
     teardown_tdls(dev[1], dev[0], bssid)
 
 def add_tests(tests):
-    tests.append(test_ap_wpa2_psk_2sta)
     tests.append(test_ap_wpa2_tdls)
     tests.append(test_ap_wpa2_tdls_concurrent_init)
     tests.append(test_ap_wpa2_tdls_concurrent_init2)

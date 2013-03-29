@@ -47,18 +47,43 @@ def start_ap_wpa_mixed_psk(ifname):
     hapd.set_wpa_psk_mixed("test-wpa-mixed-psk", "12345678")
     hapd.enable()
 
-def connect_sta(sta, ssid, proto=None):
+def start_ap_wep(ifname):
+    logger.info("Starting WEP AP " + ifname)
+    hapd_global = HostapdGlobal()
+    hapd_global.add(ifname)
+    hapd = Hostapd(ifname)
+    if not hapd.ping():
+        raise Exception("Could not ping hostapd")
+    hapd.set_wep("test-wep", '"hello"')
+    hapd.enable()
+
+def start_ap_open(ifname):
+    logger.info("Starting open AP " + ifname)
+    hapd_global = HostapdGlobal()
+    hapd_global.add(ifname)
+    hapd = Hostapd(ifname)
+    if not hapd.ping():
+        raise Exception("Could not ping hostapd")
+    hapd.set_open("test-open")
+    hapd.enable()
+
+def connect_sta(sta, ssid, psk=None, proto=None, key_mgmt=None, wep_key0=None):
     logger.info("Connect STA " + sta.ifname + " to AP")
     id = sta.add_network()
     sta.set_network_quoted(id, "ssid", ssid)
-    sta.set_network_quoted(id, "psk", "12345678")
+    if psk:
+        sta.set_network_quoted(id, "psk", psk)
     if proto:
         sta.set_network(id, "proto", proto)
+    if key_mgmt:
+        sta.set_network(id, "key_mgmt", key_mgmt)
+    if wep_key0:
+        sta.set_network(id, "wep_key0", wep_key0)
     sta.connect_network(id)
 
 def connect_2sta(dev, ssid):
-    connect_sta(dev[0], ssid)
-    connect_sta(dev[1], ssid)
+    connect_sta(dev[0], ssid, psk="12345678")
+    connect_sta(dev[1], ssid, psk="12345678")
     hwsim_utils.test_connectivity_sta(dev[0], dev[1])
     hwsim_utils.test_connectivity(dev[0].ifname, "wlan2")
     hwsim_utils.test_connectivity(dev[1].ifname, "wlan2")
@@ -70,8 +95,22 @@ def connect_2sta_wpa_psk(dev):
     connect_2sta(dev, "test-wpa-psk")
 
 def connect_2sta_wpa_psk_mixed(dev):
-    connect_sta(dev[0], "test-wpa-mixed-psk", proto="WPA")
-    connect_sta(dev[1], "test-wpa-mixed-psk", proto="WPA2")
+    connect_sta(dev[0], "test-wpa-mixed-psk", psk="12345678", proto="WPA")
+    connect_sta(dev[1], "test-wpa-mixed-psk", psk="12345678", proto="WPA2")
+    hwsim_utils.test_connectivity_sta(dev[0], dev[1])
+    hwsim_utils.test_connectivity(dev[0].ifname, "wlan2")
+    hwsim_utils.test_connectivity(dev[1].ifname, "wlan2")
+
+def connect_2sta_wep(dev):
+    connect_sta(dev[0], "test-wep", key_mgmt="NONE", wep_key0='"hello"')
+    connect_sta(dev[1], "test-wep", key_mgmt="NONE", wep_key0='"hello"')
+    hwsim_utils.test_connectivity_sta(dev[0], dev[1])
+    hwsim_utils.test_connectivity(dev[0].ifname, "wlan2")
+    hwsim_utils.test_connectivity(dev[1].ifname, "wlan2")
+
+def connect_2sta_open(dev):
+    connect_sta(dev[0], "test-open", key_mgmt="NONE")
+    connect_sta(dev[1], "test-open", key_mgmt="NONE")
     hwsim_utils.test_connectivity_sta(dev[0], dev[1])
     hwsim_utils.test_connectivity(dev[0].ifname, "wlan2")
     hwsim_utils.test_connectivity(dev[1].ifname, "wlan2")
@@ -92,6 +131,8 @@ def wlantest_setup():
     subprocess.call(["../../wlantest/wlantest_cli", "flush"]);
     subprocess.call(["../../wlantest/wlantest_cli", "add_passphrase",
                      "12345678"]);
+    subprocess.call(["../../wlantest/wlantest_cli", "add_wepkey",
+                     "68656c6c6f"]);
 
 def wlantest_tdls_packet_counters(bssid, addr0, addr1):
     dl = wlantest_tdls("valid_direct_link", bssid, addr0, addr1);
@@ -263,6 +304,26 @@ def test_ap_wpa_mixed_tdls(dev):
     teardown_tdls(dev[0], dev[1], bssid)
     setup_tdls(dev[1], dev[0], bssid)
 
+def test_ap_wep_tdls(dev):
+    """WEP AP and two stations using TDLS"""
+    start_ap_wep(ap_ifname)
+    bssid = "02:00:00:00:02:00"
+    wlantest_setup()
+    connect_2sta_wep(dev)
+    setup_tdls(dev[0], dev[1], bssid)
+    teardown_tdls(dev[0], dev[1], bssid)
+    setup_tdls(dev[1], dev[0], bssid)
+
+def test_ap_open_tdls(dev):
+    """Open AP and two stations using TDLS"""
+    start_ap_open(ap_ifname)
+    bssid = "02:00:00:00:02:00"
+    wlantest_setup()
+    connect_2sta_open(dev)
+    setup_tdls(dev[0], dev[1], bssid)
+    teardown_tdls(dev[0], dev[1], bssid)
+    setup_tdls(dev[1], dev[0], bssid)
+
 def add_tests(tests):
     tests.append(test_ap_wpa2_tdls)
     tests.append(test_ap_wpa2_tdls_concurrent_init)
@@ -275,3 +336,5 @@ def add_tests(tests):
     tests.append(test_ap_wpa2_tdls_diff_rsnie)
     tests.append(test_ap_wpa_tdls)
     tests.append(test_ap_wpa_mixed_tdls)
+    tests.append(test_ap_wep_tdls)
+    tests.append(test_ap_open_tdls)

@@ -80,6 +80,11 @@ class Hostapd:
         self.set("wpa_pairwise", "TKIP")
         self.set("rsn_pairwise", "CCMP")
 
+    def set_wep(self, ssid, key):
+        self.set_defaults()
+        self.set("ssid", ssid)
+        self.set("wep_key0", key)
+
     def enable(self):
         if not "OK" in self.ctrl.request("ENABLE"):
             raise Exception("Failed to enable hostapd interface " + self.ifname)

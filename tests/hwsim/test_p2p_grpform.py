@@ -158,12 +158,3 @@ def test_both_go_neg_display(dev):
 def test_both_go_neg_enter(dev):
     """P2P GO Negotiation with both devices trying to enter PIN"""
     go_neg_pin_authorized(i_dev=dev[0], r_dev=dev[1], expect_failure=True, i_go_neg_status=10, i_method='enter', r_method='enter')
-
-def add_tests(tests):
-    tests.append(test_grpform)
-    tests.append(test_grpform2)
-    tests.append(test_grpform3)
-    tests.append(test_grpform_pbc)
-    tests.append(test_both_go_intent_15)
-    tests.append(test_both_go_neg_display)
-    tests.append(test_both_go_neg_enter)

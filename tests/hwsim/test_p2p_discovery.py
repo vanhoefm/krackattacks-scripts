@@ -70,7 +70,3 @@ def test_discovery(dev):
 
     dev[0].p2p_stop_find
     dev[1].p2p_stop_find
-
-
-def add_tests(tests):
-    tests.append(test_discovery)

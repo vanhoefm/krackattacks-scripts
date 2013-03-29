@@ -107,8 +107,3 @@ def test_autogo_tdls(dev):
     dev[2].remove_group()
     dev[1].remove_group()
     dev[0].remove_group()
-
-def add_tests(tests):
-    tests.append(test_autogo)
-    tests.append(test_autogo_2cli)
-    tests.append(test_autogo_tdls)

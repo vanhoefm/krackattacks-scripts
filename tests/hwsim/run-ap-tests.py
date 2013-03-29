@@ -57,14 +57,16 @@ def main():
         if m:
             print "Import test cases from " + t
             mod = __import__(m.group(1))
-            mod.add_tests(tests)
+            for s in dir(mod):
+                if s.startswith("test_"):
+                    func = mod.__dict__.get(s)
+                    tests.append(func)
 
     passed = []
     failed = []
 
     for t in tests:
         if test_filter:
-            #if test_filter not in t.__name__:
             if test_filter != t.__name__:
                 continue
         reset_devs(dev, hapd_ifaces)

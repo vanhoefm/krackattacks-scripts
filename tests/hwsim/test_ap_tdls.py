@@ -261,18 +261,3 @@ def test_ap_open_tdls(dev):
     setup_tdls(dev[0], dev[1], bssid)
     teardown_tdls(dev[0], dev[1], bssid)
     setup_tdls(dev[1], dev[0], bssid)
-
-def add_tests(tests):
-    tests.append(test_ap_wpa2_tdls)
-    tests.append(test_ap_wpa2_tdls_concurrent_init)
-    tests.append(test_ap_wpa2_tdls_concurrent_init2)
-    tests.append(test_ap_wpa2_tdls_decline_resp)
-    tests.append(test_ap_wpa2_tdls_long_lifetime)
-    tests.append(test_ap_wpa2_tdls_long_frame)
-    tests.append(test_ap_wpa2_tdls_reneg)
-    tests.append(test_ap_wpa2_tdls_wrong_lifetime_resp)
-    tests.append(test_ap_wpa2_tdls_diff_rsnie)
-    tests.append(test_ap_wpa_tdls)
-    tests.append(test_ap_wpa_mixed_tdls)
-    tests.append(test_ap_wep_tdls)
-    tests.append(test_ap_open_tdls)

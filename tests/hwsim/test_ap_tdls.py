@@ -14,58 +14,13 @@ logger = logging.getLogger(__name__)
 import hwsim_utils
 from hostapd import HostapdGlobal
 from hostapd import Hostapd
+import hostapd
 
 ap_ifname = 'wlan2'
 
 def start_ap_wpa2_psk(ifname):
-    logger.info("Starting WPA2-PSK AP " + ifname)
-    hapd_global = HostapdGlobal()
-    hapd_global.add(ifname)
-    hapd = Hostapd(ifname)
-    if not hapd.ping():
-        raise Exception("Could not ping hostapd")
-    hapd.set_wpa2_psk("test-wpa2-psk", "12345678")
-    hapd.enable()
-
-def start_ap_wpa_psk(ifname):
-    logger.info("Starting WPA-PSK AP " + ifname)
-    hapd_global = HostapdGlobal()
-    hapd_global.add(ifname)
-    hapd = Hostapd(ifname)
-    if not hapd.ping():
-        raise Exception("Could not ping hostapd")
-    hapd.set_wpa_psk("test-wpa-psk", "12345678")
-    hapd.enable()
-
-def start_ap_wpa_mixed_psk(ifname):
-    logger.info("Starting WPA+WPA2-PSK AP " + ifname)
-    hapd_global = HostapdGlobal()
-    hapd_global.add(ifname)
-    hapd = Hostapd(ifname)
-    if not hapd.ping():
-        raise Exception("Could not ping hostapd")
-    hapd.set_wpa_psk_mixed("test-wpa-mixed-psk", "12345678")
-    hapd.enable()
-
-def start_ap_wep(ifname):
-    logger.info("Starting WEP AP " + ifname)
-    hapd_global = HostapdGlobal()
-    hapd_global.add(ifname)
-    hapd = Hostapd(ifname)
-    if not hapd.ping():
-        raise Exception("Could not ping hostapd")
-    hapd.set_wep("test-wep", '"hello"')
-    hapd.enable()
-
-def start_ap_open(ifname):
-    logger.info("Starting open AP " + ifname)
-    hapd_global = HostapdGlobal()
-    hapd_global.add(ifname)
-    hapd = Hostapd(ifname)
-    if not hapd.ping():
-        raise Exception("Could not ping hostapd")
-    hapd.set_open("test-open")
-    hapd.enable()
+    params = hostapd.wpa2_params(ssid="test-wpa2-psk", passphrase="12345678")
+    hostapd.add_ap(ifname, params)
 
 def connect_sta(sta, ssid, psk=None, proto=None, key_mgmt=None, wep_key0=None):
     logger.info("Connect STA " + sta.ifname + " to AP")
@@ -286,7 +241,7 @@ def test_ap_wpa2_tdls_diff_rsnie(dev):
 
 def test_ap_wpa_tdls(dev):
     """WPA-PSK AP and two stations using TDLS"""
-    start_ap_wpa_psk(ap_ifname)
+    hostapd.add_ap(ap_ifname, hostapd.wpa_params(ssid="test-wpa-psk", passphrase="12345678"))
     bssid = "02:00:00:00:02:00"
     wlantest_setup()
     connect_2sta_wpa_psk(dev)
@@ -296,7 +251,7 @@ def test_ap_wpa_tdls(dev):
 
 def test_ap_wpa_mixed_tdls(dev):
     """WPA+WPA2-PSK AP and two stations using TDLS"""
-    start_ap_wpa_mixed_psk(ap_ifname)
+    hostapd.add_ap(ap_ifname, hostapd.wpa_mixed_params(ssid="test-wpa-mixed-psk", passphrase="12345678"))
     bssid = "02:00:00:00:02:00"
     wlantest_setup()
     connect_2sta_wpa_psk_mixed(dev)
@@ -306,7 +261,7 @@ def test_ap_wpa_mixed_tdls(dev):
 
 def test_ap_wep_tdls(dev):
     """WEP AP and two stations using TDLS"""
-    start_ap_wep(ap_ifname)
+    hostapd.add_ap(ap_ifname, { "ssid": "test-wep", "wep_key0": '"hello"' })
     bssid = "02:00:00:00:02:00"
     wlantest_setup()
     connect_2sta_wep(dev)
@@ -316,7 +271,7 @@ def test_ap_wep_tdls(dev):
 
 def test_ap_open_tdls(dev):
     """Open AP and two stations using TDLS"""
-    start_ap_open(ap_ifname)
+    hostapd.add_ap(ap_ifname, { "ssid": "test-open" })
     bssid = "02:00:00:00:02:00"
     wlantest_setup()
     connect_2sta_open(dev)

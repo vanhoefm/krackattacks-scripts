@@ -92,3 +92,50 @@ class Hostapd:
     def disable(self):
         if not "OK" in self.ctrl.request("ENABLE"):
             raise Exception("Failed to disable hostapd interface " + self.ifname)
+
+def add_ap(ifname, params):
+        logger.info("Starting AP " + ifname)
+        hapd_global = HostapdGlobal()
+        hapd_global.remove(ifname)
+        hapd_global.add(ifname)
+        hapd = Hostapd(ifname)
+        if not hapd.ping():
+            raise Exception("Could not ping hostapd")
+        hapd.set_defaults()
+        fields = [ "ssid", "wpa_passphrase", "wpa", "wpa_key_mgmt",
+                   "wpa_pairwise", "rsn_pairwise", "wep_key0" ]
+        for field in fields:
+            if field in params:
+                hapd.set(field, params[field])
+        hapd.enable()
+
+def wpa2_params(ssid=None, passphrase=None):
+    params = { "wpa": "2",
+               "wpa_key_mgmt": "WPA-PSK",
+               "rsn_pairwise": "CCMP" }
+    if ssid:
+        params["ssid"] = ssid
+    if passphrase:
+        params["wpa_passphrase"] = passphrase
+    return params
+
+def wpa_params(ssid=None, passphrase=None):
+    params = { "wpa": "1",
+               "wpa_key_mgmt": "WPA-PSK",
+               "wpa_pairwise": "TKIP" }
+    if ssid:
+        params["ssid"] = ssid
+    if passphrase:
+        params["wpa_passphrase"] = passphrase
+    return params
+
+def wpa_mixed_params(ssid=None, passphrase=None):
+    params = { "wpa": "3",
+               "wpa_key_mgmt": "WPA-PSK",
+               "wpa_pairwise": "TKIP",
+               "rsn_pairwise": "CCMP" }
+    if ssid:
+        params["ssid"] = ssid
+    if passphrase:
+        params["wpa_passphrase"] = passphrase
+    return params

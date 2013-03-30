@@ -259,7 +259,7 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 {
 	struct p2p_message msg;
 	struct p2p_device *dev;
-	u16 report_config_methods = 0;
+	u16 report_config_methods = 0, req_config_methods;
 	int success = 0;
 
 	if (p2p_parse(data, len, &msg))
@@ -294,6 +294,12 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 	}
 
 	/*
+	 * Use a local copy of the requested config methods since
+	 * p2p_reset_pending_pd() can clear this in the peer entry.
+	 */
+	req_config_methods = dev->req_config_methods;
+
+	/*
 	 * If the response is from the peer to whom a user initiated request
 	 * was sent earlier, we reset that state info here.
 	 */
@@ -301,9 +307,11 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 	    os_memcmp(p2p->pending_pd_devaddr, sa, ETH_ALEN) == 0)
 		p2p_reset_pending_pd(p2p);
 
-	if (msg.wps_config_methods != dev->req_config_methods) {
+	if (msg.wps_config_methods != req_config_methods) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Peer rejected "
-			"our Provision Discovery Request");
+			"our Provision Discovery Request (received "
+			"config_methods 0x%x expected 0x%x",
+			msg.wps_config_methods, req_config_methods);
 		if (p2p->cfg->prov_disc_fail)
 			p2p->cfg->prov_disc_fail(p2p->cfg->cb_ctx, sa,
 						 P2P_PROV_DISC_REJECTED);
@@ -311,10 +319,10 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 		goto out;
 	}
 
-	report_config_methods = dev->req_config_methods;
+	report_config_methods = req_config_methods;
 	dev->flags &= ~(P2P_DEV_PD_PEER_DISPLAY |
 			P2P_DEV_PD_PEER_KEYPAD);
-	if (dev->req_config_methods & WPS_CONFIG_DISPLAY) {
+	if (req_config_methods & WPS_CONFIG_DISPLAY) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Peer " MACSTR
 			" accepted to show a PIN on display", MAC2STR(sa));
 		dev->flags |= P2P_DEV_PD_PEER_DISPLAY;

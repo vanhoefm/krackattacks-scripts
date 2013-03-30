@@ -103,7 +103,7 @@ def add_ap(ifname, params):
             raise Exception("Could not ping hostapd")
         hapd.set_defaults()
         fields = [ "ssid", "wpa_passphrase", "wpa", "wpa_key_mgmt",
-                   "wpa_pairwise", "rsn_pairwise", "wep_key0" ]
+                   "wpa_pairwise", "rsn_pairwise", "ieee80211w", "wep_key0" ]
         for field in fields:
             if field in params:
                 hapd.set(field, params[field])

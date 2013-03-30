@@ -7,7 +7,6 @@
 # See README for more details.
 
 import time
-import subprocess
 import logging
 logger = logging.getLogger(__name__)
 
@@ -15,6 +14,7 @@ import hwsim_utils
 from hostapd import HostapdGlobal
 from hostapd import Hostapd
 import hostapd
+from wlantest import Wlantest
 
 ap_ifname = 'wlan2'
 
@@ -53,34 +53,23 @@ def connect_2sta_open(dev):
     dev[1].connect("test-open", key_mgmt="NONE")
     connectivity(dev, ap_ifname)
 
-def wlantest_tdls(field, bssid, addr1, addr2):
-    res = subprocess.check_output(["../../wlantest/wlantest_cli",
-                                   "get_tdls_counter", field, bssid, addr1,
-                                   addr2]);
-    if "FAIL" in res:
-        raise Exception("wlantest_cli command failed")
-    return int(res)
-
-def wlantest_tdls_clear(bssid, addr1, addr2):
-    subprocess.call(["../../wlantest/wlantest_cli",
-                     "clear_tdls_counters", bssid, addr1, addr2]);
-
 def wlantest_setup():
-    subprocess.call(["../../wlantest/wlantest_cli", "flush"]);
-    subprocess.call(["../../wlantest/wlantest_cli", "add_passphrase",
-                     "12345678"]);
-    subprocess.call(["../../wlantest/wlantest_cli", "add_wepkey",
-                     "68656c6c6f"]);
+    wt = Wlantest()
+    wt.flush()
+    wt.add_passphrase("12345678")
+    wt.add_wepkey("68656c6c6f")
 
 def wlantest_tdls_packet_counters(bssid, addr0, addr1):
-    dl = wlantest_tdls("valid_direct_link", bssid, addr0, addr1);
-    inv_dl = wlantest_tdls("invalid_direct_link", bssid, addr0, addr1);
-    ap = wlantest_tdls("valid_ap_path", bssid, addr0, addr1);
-    inv_ap = wlantest_tdls("invalid_ap_path", bssid, addr0, addr1);
+    wt = Wlantest()
+    dl = wt.get_tdls_counter("valid_direct_link", bssid, addr0, addr1)
+    inv_dl = wt.get_tdls_counter("invalid_direct_link", bssid, addr0, addr1)
+    ap = wt.get_tdls_counter("valid_ap_path", bssid, addr0, addr1)
+    inv_ap = wt.get_tdls_counter("invalid_ap_path", bssid, addr0, addr1)
     return [dl,inv_dl,ap,inv_ap]
 
 def tdls_check_dl(sta0, sta1, bssid, addr0, addr1):
-    wlantest_tdls_clear(bssid, addr0, addr1);
+    wt = Wlantest()
+    wt.tdls_clear(bssid, addr0, addr1)
     hwsim_utils.test_connectivity_sta(sta0, sta1)
     [dl,inv_dl,ap,inv_ap] = wlantest_tdls_packet_counters(bssid, addr0, addr1)
     if dl == 0:
@@ -93,7 +82,8 @@ def tdls_check_dl(sta0, sta1, bssid, addr0, addr1):
         raise Exception("Invalid frames through AP path")
 
 def tdls_check_ap(sta0, sta1, bssid, addr0, addr1):
-    wlantest_tdls_clear(bssid, addr0, addr1);
+    wt = Wlantest()
+    wt.tdls_clear(bssid, addr0, addr1);
     hwsim_utils.test_connectivity_sta(sta0, sta1)
     [dl,inv_dl,ap,inv_ap] = wlantest_tdls_packet_counters(bssid, addr0, addr1)
     if dl > 0:
@@ -109,8 +99,9 @@ def setup_tdls(sta0, sta1, bssid, reverse=False, expect_fail=False):
     logger.info("Setup TDLS")
     addr0 = sta0.p2p_interface_addr()
     addr1 = sta1.p2p_interface_addr()
-    wlantest_tdls_clear(bssid, addr0, addr1);
-    wlantest_tdls_clear(bssid, addr1, addr0);
+    wt = Wlantest()
+    wt.tdls_clear(bssid, addr0, addr1);
+    wt.tdls_clear(bssid, addr1, addr0);
     sta0.tdls_setup(addr1)
     time.sleep(1)
     if expect_fail:
@@ -119,7 +110,7 @@ def setup_tdls(sta0, sta1, bssid, reverse=False, expect_fail=False):
     if reverse:
         addr1 = sta0.p2p_interface_addr()
         addr0 = sta1.p2p_interface_addr()
-    conf = wlantest_tdls("setup_conf_ok", bssid, addr0, addr1);
+    conf = wt.get_tdls_counter("setup_conf_ok", bssid, addr0, addr1);
     if conf == 0:
         raise Exception("No TDLS Setup Confirm (success) seen")
     tdls_check_dl(sta0, sta1, bssid, addr0, addr1)
@@ -130,7 +121,8 @@ def teardown_tdls(sta0, sta1, bssid):
     addr1 = sta1.p2p_interface_addr()
     sta0.tdls_teardown(addr1)
     time.sleep(1)
-    teardown = wlantest_tdls("teardown", bssid, addr0, addr1);
+    wt = Wlantest()
+    teardown = wt.get_tdls_counter("teardown", bssid, addr0, addr1);
     if teardown == 0:
         raise Exception("No TDLS Setup Teardown seen")
     tdls_check_ap(sta0, sta1, bssid, addr0, addr1)

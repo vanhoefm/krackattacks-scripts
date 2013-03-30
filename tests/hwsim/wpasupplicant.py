@@ -302,7 +302,7 @@ class WpaSupplicant:
             raise Exception("Failed to request TDLS teardown")
         return None
 
-    def connect(self, ssid, psk=None, proto=None, key_mgmt=None, wep_key0=None):
+    def connect(self, ssid, psk=None, proto=None, key_mgmt=None, wep_key0=None, ieee80211w=None):
         logger.info("Connect STA " + self.ifname + " to AP")
         id = self.add_network()
         self.set_network_quoted(id, "ssid", ssid)
@@ -312,6 +312,8 @@ class WpaSupplicant:
             self.set_network(id, "proto", proto)
         if key_mgmt:
             self.set_network(id, "key_mgmt", key_mgmt)
+        if ieee80211w:
+            self.set_network(id, "ieee80211w", ieee80211w)
         if wep_key0:
             self.set_network(id, "wep_key0", wep_key0)
         self.connect_network(id)

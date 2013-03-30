@@ -3513,7 +3513,13 @@ static int wpa_supplicant_ctrl_iface_roam(struct wpa_supplicant *wpa_s,
 
 	wpa_printf(MSG_DEBUG, "CTRL_IFACE ROAM " MACSTR, MAC2STR(bssid));
 
-	bss = wpa_bss_get_bssid(wpa_s, bssid);
+	if (!ssid) {
+		wpa_printf(MSG_DEBUG, "CTRL_IFACE ROAM: No network "
+			   "configuration known for the target AP");
+		return -1;
+	}
+
+	bss = wpa_bss_get(wpa_s, bssid, ssid->ssid, ssid->ssid_len);
 	if (!bss) {
 		wpa_printf(MSG_DEBUG, "CTRL_IFACE ROAM: Target AP not found "
 			   "from BSS table");
@@ -3524,12 +3530,6 @@ static int wpa_supplicant_ctrl_iface_roam(struct wpa_supplicant *wpa_s,
 	 * TODO: Find best network configuration block from configuration to
 	 * allow roaming to other networks
 	 */
-
-	if (!ssid) {
-		wpa_printf(MSG_DEBUG, "CTRL_IFACE ROAM: No network "
-			   "configuration known for the target AP");
-		return -1;
-	}
 
 	wpa_s->reassociate = 1;
 	wpa_supplicant_connect(wpa_s, bss, ssid);

@@ -9,6 +9,8 @@
 import logging
 logger = logging.getLogger(__name__)
 
+import hwsim_utils
+
 def test_discovery(dev):
     """P2P device discovery and provision discovery"""
     addr0 = dev[0].p2p_dev_addr()
@@ -79,3 +81,18 @@ def test_discovery(dev):
 
     dev[0].p2p_stop_find
     dev[1].p2p_stop_find
+
+def test_discovery_group_client(dev):
+    """P2P device discovery for a client in a group"""
+    logger.info("Start autonomous GO " + dev[0].ifname)
+    res = dev[0].p2p_start_go(freq="2422")
+    logger.debug("res: " + str(res))
+    logger.info("Connect a client to the GO")
+    pin = dev[1].wps_read_pin()
+    dev[0].p2p_go_authorize_client(pin)
+    dev[1].p2p_connect_group(dev[0].p2p_dev_addr(), pin, timeout=60)
+    logger.info("Client connected")
+    hwsim_utils.test_connectivity_p2p(dev[0], dev[1])
+    logger.info("Try to discover a P2P client in a group")
+    if not dev[2].discover_peer(dev[1].p2p_dev_addr(), social=False):
+        raise Exception("Could not discover group client")

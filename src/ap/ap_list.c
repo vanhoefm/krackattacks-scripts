@@ -200,6 +200,8 @@ void ap_list_process_beacon(struct hostapd_iface *iface,
 
 	if (elems->ds_params && elems->ds_params_len == 1)
 		ap->channel = elems->ds_params[0];
+	else if (elems->ht_operation && elems->ht_operation_len >= 1)
+		ap->channel = elems->ht_operation[0];
 	else if (fi)
 		ap->channel = fi->channel;
 
@@ -221,17 +223,23 @@ void ap_list_process_beacon(struct hostapd_iface *iface,
 	if (!iface->olbc &&
 	    ap_list_beacon_olbc(iface, ap)) {
 		iface->olbc = 1;
-		wpa_printf(MSG_DEBUG, "OLBC AP detected: " MACSTR " - enable "
-			   "protection", MAC2STR(ap->addr));
+		wpa_printf(MSG_DEBUG, "OLBC AP detected: " MACSTR
+			   " (channel %d) - enable protection",
+			   MAC2STR(ap->addr), ap->channel);
 		set_beacon++;
 	}
 
 #ifdef CONFIG_IEEE80211N
-	if (!iface->olbc_ht && !ap->ht_support) {
+	if (!iface->olbc_ht && !ap->ht_support &&
+	    (ap->channel == 0 ||
+	     ap->channel == iface->conf->channel ||
+	     ap->channel == iface->conf->channel +
+	     iface->conf->secondary_channel * 4)) {
 		iface->olbc_ht = 1;
 		hostapd_ht_operation_update(iface);
 		wpa_printf(MSG_DEBUG, "OLBC HT AP detected: " MACSTR
-			   " - enable protection", MAC2STR(ap->addr));
+			   " (channel %d) - enable protection",
+			   MAC2STR(ap->addr), ap->channel);
 		set_beacon++;
 	}
 #endif /* CONFIG_IEEE80211N */

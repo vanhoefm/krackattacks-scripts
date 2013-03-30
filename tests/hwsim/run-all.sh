@@ -1,6 +1,7 @@
 #!/bin/sh
 
 errors=0
+umask 0002
 ./start-p2p.sh
 ./run-p2p-tests.py || errors=1
 ./start-ap.sh

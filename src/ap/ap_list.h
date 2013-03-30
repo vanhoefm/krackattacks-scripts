@@ -14,15 +14,10 @@
 struct ap_info {
 	/* Note: next/prev pointers are updated whenever a new beacon is
 	 * received because these are used to find the least recently used
-	 * entries. iter_next/iter_prev are updated only when adding new BSSes
-	 * and when removing old ones. These should be used when iterating
-	 * through the table in a manner that allows beacons to be received
-	 * during the iteration. */
+	 * entries. */
 	struct ap_info *next; /* next entry in AP list */
 	struct ap_info *prev; /* previous entry in AP list */
 	struct ap_info *hnext; /* next entry in hash table list */
-	struct ap_info *iter_next; /* next entry in AP iteration list */
-	struct ap_info *iter_prev; /* previous entry in AP iteration list */
 	u8 addr[6];
 	u8 supported_rates[WLAN_SUPP_RATES_MAX];
 	int erp; /* ERP Info or -1 if ERP info element not present */

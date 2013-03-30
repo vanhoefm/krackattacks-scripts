@@ -220,7 +220,6 @@ struct hostapd_iface {
 	int num_ap; /* number of entries in ap_list */
 	struct ap_info *ap_list; /* AP info list head */
 	struct ap_info *ap_hash[STA_HASH_SIZE];
-	struct ap_info *ap_iter_list;
 
 	unsigned int drv_flags;
 

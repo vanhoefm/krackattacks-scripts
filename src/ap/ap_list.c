@@ -87,34 +87,6 @@ static void ap_ap_list_del(struct hostapd_iface *iface, struct ap_info *ap)
 }
 
 
-static void ap_ap_iter_list_add(struct hostapd_iface *iface,
-				struct ap_info *ap)
-{
-	if (iface->ap_iter_list) {
-		ap->iter_prev = iface->ap_iter_list->iter_prev;
-		iface->ap_iter_list->iter_prev = ap;
-	} else
-		ap->iter_prev = ap;
-	ap->iter_next = iface->ap_iter_list;
-	iface->ap_iter_list = ap;
-}
-
-
-static void ap_ap_iter_list_del(struct hostapd_iface *iface,
-				struct ap_info *ap)
-{
-	if (iface->ap_iter_list == ap)
-		iface->ap_iter_list = ap->iter_next;
-	else
-		ap->iter_prev->iter_next = ap->iter_next;
-
-	if (ap->iter_next)
-		ap->iter_next->iter_prev = ap->iter_prev;
-	else if (iface->ap_iter_list)
-		iface->ap_iter_list->iter_prev = ap->iter_prev;
-}
-
-
 static void ap_ap_hash_add(struct hostapd_iface *iface, struct ap_info *ap)
 {
 	ap->hnext = iface->ap_hash[STA_HASH(ap->addr)];
@@ -148,7 +120,6 @@ static void ap_free_ap(struct hostapd_iface *iface, struct ap_info *ap)
 {
 	ap_ap_hash_del(iface, ap);
 	ap_ap_list_del(iface, ap);
-	ap_ap_iter_list_del(iface, ap);
 
 	iface->num_ap--;
 	os_free(ap);
@@ -203,7 +174,6 @@ static struct ap_info * ap_ap_add(struct hostapd_iface *iface, const u8 *addr)
 	ap_ap_list_add(iface, ap);
 	iface->num_ap++;
 	ap_ap_hash_add(iface, ap);
-	ap_ap_iter_list_add(iface, ap);
 
 	if (iface->num_ap > iface->conf->ap_table_max_size && ap != ap->prev) {
 		wpa_printf(MSG_DEBUG, "Removing the least recently used AP "

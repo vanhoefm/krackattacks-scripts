@@ -32,9 +32,19 @@ def test_ap_pmf_required(dev):
     hwsim_utils.test_connectivity(dev[0].ifname, ap_ifname)
     dev[1].connect(ssid, psk="12345678", ieee80211w="2", key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2")
     hwsim_utils.test_connectivity(dev[1].ifname, ap_ifname)
+    hapd = hostapd.Hostapd(ap_ifname)
+    hapd.request("SA_QUERY " + dev[0].p2p_interface_addr())
+    hapd.request("SA_QUERY " + dev[1].p2p_interface_addr())
     wt.require_ap_pmf_mandatory(bssid)
     wt.require_sta_pmf(bssid, dev[0].p2p_interface_addr())
     wt.require_sta_pmf_mandatory(bssid, dev[1].p2p_interface_addr())
+    time.sleep(0.1)
+    if wt.get_sta_counter("valid_saqueryresp_tx", bssid,
+                          dev[0].p2p_interface_addr()) < 1:
+        raise Exception("STA did not reply to SA Query")
+    if wt.get_sta_counter("valid_saqueryresp_tx", bssid,
+                          dev[1].p2p_interface_addr()) < 1:
+        raise Exception("STA did not reply to SA Query")
 
 def test_ap_pmf_optional(dev):
     """WPA2-PSK AP with PMF optional"""

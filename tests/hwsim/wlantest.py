@@ -45,6 +45,13 @@ class Wlantest:
             raise Exception("Could not get STA info from wlantest for " + addr)
         return res
 
+    def get_sta_counter(self, field, bssid, addr):
+        res = subprocess.check_output([wlantest_cli, "get_sta_counter", field,
+                                       bssid, addr]);
+        if "FAIL" in res:
+            raise Exception("wlantest_cli command failed")
+        return int(res)
+
     def tdls_clear(self, bssid, addr1, addr2):
         subprocess.call([wlantest_cli, "clear_tdls_counters", bssid, addr1,
                          addr2]);

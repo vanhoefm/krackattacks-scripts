@@ -223,7 +223,6 @@ void ap_list_process_beacon(struct hostapd_iface *iface,
 	struct ap_info *ap;
 	struct os_time now;
 	int new_ap = 0;
-	size_t len;
 	int set_beacon = 0;
 
 	if (iface->conf->ap_table_max_size < 1)
@@ -239,23 +238,9 @@ void ap_list_process_beacon(struct hostapd_iface *iface,
 		new_ap = 1;
 	}
 
-	ap->beacon_int = le_to_host16(mgmt->u.beacon.beacon_int);
-	ap->capability = le_to_host16(mgmt->u.beacon.capab_info);
-
-	if (elems->ssid) {
-		len = elems->ssid_len;
-		if (len >= sizeof(ap->ssid))
-			len = sizeof(ap->ssid) - 1;
-		os_memcpy(ap->ssid, elems->ssid, len);
-		ap->ssid[len] = '\0';
-		ap->ssid_len = len;
-	}
-
 	merge_byte_arrays(ap->supported_rates, WLAN_SUPP_RATES_MAX,
 			  elems->supp_rates, elems->supp_rates_len,
 			  elems->ext_supp_rates, elems->ext_supp_rates_len);
-
-	ap->wpa = elems->wpa_ie != NULL;
 
 	if (elems->erp_info && elems->erp_info_len == 1)
 		ap->erp = elems->erp_info[0];
@@ -272,11 +257,8 @@ void ap_list_process_beacon(struct hostapd_iface *iface,
 	else
 		ap->ht_support = 0;
 
-	ap->num_beacons++;
 	os_get_time(&now);
 	ap->last_beacon = now.sec;
-	if (fi)
-		ap->datarate = fi->datarate;
 
 	if (!new_ap && ap != iface->ap_list) {
 		/* move AP entry into the beginning of the list so that the

@@ -24,24 +24,14 @@ struct ap_info {
 	struct ap_info *iter_next; /* next entry in AP iteration list */
 	struct ap_info *iter_prev; /* previous entry in AP iteration list */
 	u8 addr[6];
-	u16 beacon_int;
-	u16 capability;
 	u8 supported_rates[WLAN_SUPP_RATES_MAX];
-	u8 ssid[33];
-	size_t ssid_len;
-	int wpa;
 	int erp; /* ERP Info or -1 if ERP info element not present */
 
 	int channel;
-	int datarate; /* in 100 kbps */
 
 	int ht_support;
 
-	unsigned int num_beacons; /* number of beacon frames received */
 	os_time_t last_beacon;
-
-	int already_seen; /* whether API call AP-NEW has already fetched
-			   * information about this AP */
 };
 
 struct ieee802_11_elems;

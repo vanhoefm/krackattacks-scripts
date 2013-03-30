@@ -1598,6 +1598,7 @@ SM_STATE(WPA_PTK, AUTHENTICATION2)
 	SM_ENTRY_MA(WPA_PTK, AUTHENTICATION2, wpa_ptk);
 
 	wpa_group_ensure_init(sm->wpa_auth, sm->group);
+	sm->ReAuthenticationRequest = FALSE;
 
 	/*
 	 * Definition of ANonce selection in IEEE Std 802.11i-2004 is somewhat
@@ -1611,12 +1612,11 @@ SM_STATE(WPA_PTK, AUTHENTICATION2)
 	if (random_get_bytes(sm->ANonce, WPA_NONCE_LEN)) {
 		wpa_printf(MSG_ERROR, "WPA: Failed to get random data for "
 			   "ANonce.");
-		wpa_sta_disconnect(sm->wpa_auth, sm->addr);
+		sm->Disconnect = TRUE;
 		return;
 	}
 	wpa_hexdump(MSG_DEBUG, "WPA: Assign ANonce", sm->ANonce,
 		    WPA_NONCE_LEN);
-	sm->ReAuthenticationRequest = FALSE;
 	/* IEEE 802.11i does not clear TimeoutCtr here, but this is more
 	 * logical place than INITIALIZE since AUTHENTICATION2 can be
 	 * re-entered on ReAuthenticationRequest without going through

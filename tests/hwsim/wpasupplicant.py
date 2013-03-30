@@ -315,3 +315,23 @@ class WpaSupplicant:
         if wep_key0:
             self.set_network(id, "wep_key0", wep_key0)
         self.connect_network(id)
+
+    def scan(self, type=None):
+        if type:
+            cmd = "SCAN TYPE=" + type
+        else:
+            cmd = "SCAN"
+        self.dump_monitor()
+        if not "OK" in self.request(cmd):
+            raise Exception("Failed to trigger scan")
+        ev = self.wait_event(["CTRL-EVENT-SCAN-RESULTS"], 15)
+        if ev is None:
+            raise Exception("Scan timed out")
+
+    def roam(self, bssid):
+        self.dump_monitor()
+        self.request("ROAM " + bssid)
+        ev = self.wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
+        if ev is None:
+            raise Exception("Roaming with the AP timed out")
+        self.dump_monitor()

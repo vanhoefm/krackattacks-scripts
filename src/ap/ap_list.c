@@ -50,7 +50,7 @@ static int ap_list_beacon_olbc(struct hostapd_iface *iface, struct ap_info *ap)
 }
 
 
-struct ap_info * ap_get_ap(struct hostapd_iface *iface, const u8 *ap)
+static struct ap_info * ap_get_ap(struct hostapd_iface *iface, const u8 *ap)
 {
 	struct ap_info *s;
 
@@ -139,25 +139,6 @@ static void hostapd_free_aps(struct hostapd_iface *iface)
 	}
 
 	iface->ap_list = NULL;
-}
-
-
-int ap_ap_for_each(struct hostapd_iface *iface,
-		   int (*func)(struct ap_info *s, void *data), void *data)
-{
-	struct ap_info *s;
-	int ret = 0;
-
-	s = iface->ap_list;
-
-	while (s) {
-		ret = func(s, data);
-		if (ret)
-			break;
-		s = s->next;
-	}
-
-	return ret;
 }
 
 

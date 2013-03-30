@@ -32,9 +32,6 @@ struct ap_info {
 struct ieee802_11_elems;
 struct hostapd_frame_info;
 
-struct ap_info * ap_get_ap(struct hostapd_iface *iface, const u8 *sta);
-int ap_ap_for_each(struct hostapd_iface *iface,
-		   int (*func)(struct ap_info *s, void *data), void *data);
 void ap_list_process_beacon(struct hostapd_iface *iface,
 			    const struct ieee80211_mgmt *mgmt,
 			    struct ieee802_11_elems *elems,

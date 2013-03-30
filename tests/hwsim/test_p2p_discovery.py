@@ -17,19 +17,10 @@ def test_discovery(dev):
     addr1 = dev[1].p2p_dev_addr()
     logger.info("Start device discovery")
     dev[0].p2p_find(social=True)
-    dev[1].p2p_find(social=True)
-    ev0 = dev[0].wait_event(["P2P-DEVICE-FOUND"], timeout=15)
-    if ev0 is None:
+    if not dev[1].discover_peer(addr0):
         raise Exception("Device discovery timed out")
-    ev1 = dev[1].wait_event(["P2P-DEVICE-FOUND"], timeout=15)
-    if ev1 is None:
+    if not dev[0].discover_peer(addr1):
         raise Exception("Device discovery timed out")
-    dev[0].dump_monitor()
-    dev[1].dump_monitor()
-    if addr1 not in ev0:
-        raise Exception("Dev1 not found properly")
-    if addr0 not in ev1:
-        raise Exception("Dev0 not found properly")
 
     logger.info("Test provision discovery for display")
     dev[0].request("P2P_PROV_DISC " + addr1 + " display")

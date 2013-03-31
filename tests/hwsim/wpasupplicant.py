@@ -85,29 +85,41 @@ class WpaSupplicant:
             raise Exception("Association with the AP timed out")
         self.dump_monitor()
 
-    def get_status(self, field):
+    def get_status(self):
         res = self.request("STATUS")
         lines = res.splitlines()
+        vals = dict()
         for l in lines:
             [name,value] = l.split('=', 1)
-            if name == field:
-                return value
+            vals[name] = value
+        return vals
+
+    def get_status_field(self, field):
+        vals = self.get_status()
+        if field in vals:
+            return vals[field]
         return None
 
-    def get_group_status(self, field):
+    def get_group_status(self):
         res = self.group_request("STATUS")
         lines = res.splitlines()
+        vals = dict()
         for l in lines:
             [name,value] = l.split('=', 1)
-            if name == field:
-                return value
+            vals[name] = value
+        return vals
+
+    def get_group_status_field(self, field):
+        vals = self.get_group_status()
+        if field in vals:
+            return vals[field]
         return None
 
     def p2p_dev_addr(self):
-        return self.get_status("p2p_device_address")
+        return self.get_status_field("p2p_device_address")
 
     def p2p_interface_addr(self):
-        return self.get_group_status("address")
+        return self.get_group_status_field("address")
 
     def p2p_listen(self):
         return self.request("P2P_LISTEN")

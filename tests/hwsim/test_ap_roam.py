@@ -14,32 +14,27 @@ logger = logging.getLogger(__name__)
 import hwsim_utils
 import hostapd
 
-ap_ifname = 'wlan2'
-bssid = "02:00:00:00:02:00"
-ap2_ifname = 'wlan3'
-bssid2 = "02:00:00:00:03:00"
-
-def test_ap_roam_open(dev):
+def test_ap_roam_open(dev, apdev):
     """Roam between two open APs"""
-    hostapd.add_ap(ap_ifname, { "ssid": "test-open" })
+    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
     dev[0].connect("test-open", key_mgmt="NONE")
-    hwsim_utils.test_connectivity(dev[0].ifname, ap_ifname)
-    hostapd.add_ap(ap2_ifname, { "ssid": "test-open" })
+    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hostapd.add_ap(apdev[1]['ifname'], { "ssid": "test-open" })
     dev[0].scan(type="ONLY")
-    dev[0].roam(bssid2)
-    hwsim_utils.test_connectivity(dev[0].ifname, ap2_ifname)
-    dev[0].roam(bssid)
-    hwsim_utils.test_connectivity(dev[0].ifname, ap_ifname)
+    dev[0].roam(apdev[1]['bssid'])
+    hwsim_utils.test_connectivity(dev[0].ifname, apdev[1]['ifname'])
+    dev[0].roam(apdev[0]['bssid'])
+    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
 
-def test_ap_roam_wpa2_psk(dev):
+def test_ap_roam_wpa2_psk(dev, apdev):
     """Roam between two WPA2-PSK APs"""
     params = hostapd.wpa2_params(ssid="test-wpa2-psk", passphrase="12345678")
-    hostapd.add_ap(ap_ifname, params)
+    hostapd.add_ap(apdev[0]['ifname'], params)
     dev[0].connect("test-wpa2-psk", psk="12345678")
-    hwsim_utils.test_connectivity(dev[0].ifname, ap_ifname)
-    hostapd.add_ap(ap2_ifname, params)
+    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hostapd.add_ap(apdev[1]['ifname'], params)
     dev[0].scan(type="ONLY")
-    dev[0].roam(bssid2)
-    hwsim_utils.test_connectivity(dev[0].ifname, ap2_ifname)
-    dev[0].roam(bssid)
-    hwsim_utils.test_connectivity(dev[0].ifname, ap_ifname)
+    dev[0].roam(apdev[1]['bssid'])
+    hwsim_utils.test_connectivity(dev[0].ifname, apdev[1]['ifname'])
+    dev[0].roam(apdev[0]['bssid'])
+    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])

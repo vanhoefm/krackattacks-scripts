@@ -16,12 +16,12 @@ import logging
 from wpasupplicant import WpaSupplicant
 from hostapd import HostapdGlobal
 
-def reset_devs(dev, hapd_ifaces):
-        for d in dev:
-            d.reset()
-        hapd = HostapdGlobal()
-        for h in hapd_ifaces:
-            hapd.remove(h)
+def reset_devs(dev, apdev):
+    for d in dev:
+        d.reset()
+    hapd = HostapdGlobal()
+    for ap in apdev:
+        hapd.remove(ap['ifname'])
 
 def main():
     idx = 1
@@ -42,7 +42,9 @@ def main():
     dev0 = WpaSupplicant('wlan0')
     dev1 = WpaSupplicant('wlan1')
     dev = [ dev0, dev1 ]
-    hapd_ifaces = [ 'wlan2', 'wlan3' ]
+    apdev = [ ]
+    apdev.append({"ifname": 'wlan2', "bssid": "02:00:00:00:02:00"})
+    apdev.append({"ifname": 'wlan3', "bssid": "02:00:00:00:03:00"})
 
     for d in dev:
         if not d.ping():
@@ -50,6 +52,8 @@ def main():
             return
         d.reset()
         print "DEV: " + d.ifname + ": " + d.p2p_dev_addr()
+    for ap in apdev:
+        print "APDEV: " + ap['ifname']
 
     tests = []
     for t in os.listdir("."):
@@ -69,14 +73,17 @@ def main():
         if test_filter:
             if test_filter != t.__name__:
                 continue
-        reset_devs(dev, hapd_ifaces)
+        reset_devs(dev, apdev)
         print "START " + t.__name__
         if t.__doc__:
             print "Test: " + t.__doc__
         for d in dev:
             d.request("NOTE TEST-START " + t.__name__)
         try:
-            t(dev)
+            if t.func_code.co_argcount > 1:
+                t(dev, apdev)
+            else:
+                t(dev)
             passed.append(t.__name__)
             print "PASS " + t.__name__
         except Exception, e:
@@ -87,7 +94,7 @@ def main():
             d.request("NOTE TEST-STOP " + t.__name__)
 
     if not test_filter:
-        reset_devs(dev, hapd_ifaces)
+        reset_devs(dev, apdev)
 
     print "passed tests: " + str(passed)
     print "failed tests: " + str(failed)

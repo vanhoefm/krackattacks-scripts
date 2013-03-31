@@ -216,8 +216,10 @@ static int wpas_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 				break;
 			}
 		}
-	} else
+	} else {
+		os_get_time(&wpa_s->scan_trigger_time);
 		wpa_s->scan_res_handler = wpas_p2p_scan_res_handler;
+	}
 
 	return ret;
 }
@@ -970,6 +972,7 @@ static void wpas_p2p_clone_config(struct wpa_supplicant *dst,
 	d->persistent_reconnect = s->persistent_reconnect;
 	d->max_num_sta = s->max_num_sta;
 	d->pbc_in_m1 = s->pbc_in_m1;
+	d->ignore_old_scan_res = s->ignore_old_scan_res;
 }
 
 
@@ -3550,8 +3553,10 @@ static void wpas_p2p_join_scan_req(struct wpa_supplicant *wpa_s, int freq)
 	 * the new scan results become available.
 	 */
 	ret = wpa_drv_scan(wpa_s, &params);
-	if (!ret)
+	if (!ret) {
+		os_get_time(&wpa_s->scan_trigger_time);
 		wpa_s->scan_res_handler = wpas_p2p_scan_res_join;
+	}
 
 	wpabuf_free(ies);
 

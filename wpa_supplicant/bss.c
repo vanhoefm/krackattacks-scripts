@@ -224,11 +224,27 @@ struct wpa_bss * wpa_bss_get(struct wpa_supplicant *wpa_s, const u8 *bssid,
 }
 
 
-static void wpa_bss_copy_res(struct wpa_bss *dst, struct wpa_scan_res *src,
-			     struct os_time *fetch_time)
+static void calculate_update_time(const struct os_time *fetch_time,
+				  unsigned int age_ms,
+				  struct os_time *update_time)
 {
 	os_time_t usec;
 
+	update_time->sec = fetch_time->sec;
+	update_time->usec = fetch_time->usec;
+	update_time->sec -= age_ms / 1000;
+	usec = (age_ms % 1000) * 1000;
+	if (update_time->usec < usec) {
+		update_time->sec--;
+		update_time->usec += 1000000;
+	}
+	update_time->usec -= usec;
+}
+
+
+static void wpa_bss_copy_res(struct wpa_bss *dst, struct wpa_scan_res *src,
+			     struct os_time *fetch_time)
+{
 	dst->flags = src->flags;
 	os_memcpy(dst->bssid, src->bssid, ETH_ALEN);
 	dst->freq = src->freq;
@@ -239,15 +255,7 @@ static void wpa_bss_copy_res(struct wpa_bss *dst, struct wpa_scan_res *src,
 	dst->level = src->level;
 	dst->tsf = src->tsf;
 
-	dst->last_update.sec = fetch_time->sec;
-	dst->last_update.usec = fetch_time->usec;
-	dst->last_update.sec -= src->age / 1000;
-	usec = (src->age % 1000) * 1000;
-	if (dst->last_update.usec < usec) {
-		dst->last_update.sec--;
-		dst->last_update.usec += 1000000;
-	}
-	dst->last_update.usec -= usec;
+	calculate_update_time(fetch_time, src->age, &dst->last_update);
 }
 
 
@@ -566,6 +574,21 @@ void wpa_bss_update_scan_res(struct wpa_supplicant *wpa_s,
 {
 	const u8 *ssid, *p2p;
 	struct wpa_bss *bss;
+
+	if (wpa_s->conf->ignore_old_scan_res) {
+		struct os_time update;
+		calculate_update_time(fetch_time, res->age, &update);
+		if (os_time_before(&update, &wpa_s->scan_trigger_time)) {
+			struct os_time age;
+			os_time_sub(&wpa_s->scan_trigger_time, &update, &age);
+			wpa_dbg(wpa_s, MSG_DEBUG, "BSS: Ignore driver BSS "
+				"table entry that is %u.%06u seconds older "
+				"than our scan trigger",
+				(unsigned int) age.sec,
+				(unsigned int) age.usec);
+			return;
+		}
+	}
 
 	ssid = wpa_scan_get_ie(res, WLAN_EID_SSID);
 	if (ssid == NULL) {

@@ -444,6 +444,7 @@ struct wpa_supplicant {
 		 */
 		MANUAL_SCAN_REQ
 	} scan_req;
+	struct os_time scan_trigger_time;
 	int scan_runs; /* number of scan runs since WPS was started */
 	int *next_scan_freqs;
 	int scan_interval; /* time in sec between scans to find suitable AP */

@@ -3089,6 +3089,7 @@ static const struct global_parse_data global_fields[] = {
 	{ INT(dtim_period), 0 },
 	{ INT(beacon_int), 0 },
 	{ FUNC(ap_vendor_elements), 0 },
+	{ INT_RANGE(ignore_old_scan_res, 0, 1), 0 },
 };
 
 #undef FUNC

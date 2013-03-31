@@ -844,6 +844,16 @@ struct wpa_config {
 	 * elements (id+len+payload for one or more elements).
 	 */
 	struct wpabuf *ap_vendor_elements;
+
+	/**
+	 * ignore_old_scan_res - Ignore scan results older than request
+	 *
+	 * The driver may have a cache of scan results that makes it return
+	 * information that is older than our scan trigger. This parameter can
+	 * be used to configure such old information to be ignored instead of
+	 * allowing it to update the internal BSS table.
+	 */
+	int ignore_old_scan_res;
 };
 
 

@@ -45,6 +45,7 @@ static void hostapd_wps_ap_pin_timeout(void *eloop_data, void *user_ctx);
 struct wps_for_each_data {
 	int (*func)(struct hostapd_data *h, void *ctx);
 	void *ctx;
+	struct hostapd_data *calling_hapd;
 };
 
 
@@ -57,7 +58,14 @@ static int wps_for_each(struct hostapd_iface *iface, void *ctx)
 		return 0;
 	for (j = 0; j < iface->num_bss; j++) {
 		struct hostapd_data *hapd = iface->bss[j];
-		int ret = data->func(hapd, data->ctx);
+		int ret;
+
+		if (hapd != data->calling_hapd &&
+		    (hapd->conf->wps_independent ||
+		     data->calling_hapd->conf->wps_independent))
+			continue;
+
+		ret = data->func(hapd, data->ctx);
 		if (ret)
 			return ret;
 	}
@@ -74,6 +82,7 @@ static int hostapd_wps_for_each(struct hostapd_data *hapd,
 	struct wps_for_each_data data;
 	data.func = func;
 	data.ctx = ctx;
+	data.calling_hapd = hapd;
 	if (iface->interfaces == NULL ||
 	    iface->interfaces->for_each_interface == NULL)
 		return wps_for_each(iface, &data);
@@ -814,7 +823,8 @@ static int get_uuid_cb(struct hostapd_iface *iface, void *ctx)
 		return 0;
 	for (j = 0; j < iface->num_bss; j++) {
 		struct hostapd_data *hapd = iface->bss[j];
-		if (hapd->wps && !is_nil_uuid(hapd->wps->uuid)) {
+		if (hapd->wps && !hapd->conf->wps_independent &&
+		    !is_nil_uuid(hapd->wps->uuid)) {
 			*uuid = hapd->wps->uuid;
 			return 1;
 		}
@@ -907,7 +917,7 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 	if (is_nil_uuid(hapd->conf->uuid)) {
 		const u8 *uuid;
 		uuid = get_own_uuid(hapd->iface);
-		if (uuid) {
+		if (uuid && !conf->wps_independent) {
 			os_memcpy(wps->uuid, uuid, UUID_LEN);
 			wpa_hexdump(MSG_DEBUG, "WPS: Clone UUID from another "
 				    "interface", wps->uuid, UUID_LEN);

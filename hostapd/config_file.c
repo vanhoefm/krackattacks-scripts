@@ -2509,6 +2509,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 					   "wps_state", line);
 				errors++;
 			}
+		} else if (os_strcmp(buf, "wps_independent") == 0) {
+			bss->wps_independent = atoi(pos);
 		} else if (os_strcmp(buf, "ap_setup_locked") == 0) {
 			bss->ap_setup_locked = atoi(pos);
 		} else if (os_strcmp(buf, "uuid") == 0) {

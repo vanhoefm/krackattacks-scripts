@@ -340,6 +340,7 @@ struct hostapd_bss_config {
 
 	int wps_state;
 #ifdef CONFIG_WPS
+	int wps_independent;
 	int ap_setup_locked;
 	u8 uuid[16];
 	char *wps_pin_requests;

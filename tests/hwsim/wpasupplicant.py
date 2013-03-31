@@ -66,6 +66,30 @@ class WpaSupplicant:
             raise Exception("SET_NETWORK failed")
         return None
 
+    def add_cred(self):
+        id = self.request("ADD_CRED")
+        if "FAIL" in id:
+            raise Exception("ADD_CRED failed")
+        return int(id)
+
+    def remove_cred(self, id):
+        id = self.request("REMOVE_CRED " + str(id))
+        if "FAIL" in id:
+            raise Exception("REMOVE_CRED failed")
+        return None
+
+    def set_cred(self, id, field, value):
+        res = self.request("SET_CRED " + str(id) + " " + field + " " + value)
+        if "FAIL" in res:
+            raise Exception("SET_CRED failed")
+        return None
+
+    def set_cred_quoted(self, id, field, value):
+        res = self.request("SET_CRED " + str(id) + " " + field + ' "' + value + '"')
+        if "FAIL" in res:
+            raise Exception("SET_CRED failed")
+        return None
+
     def select_network(self, id):
         id = self.request("SELECT_NETWORK " + str(id))
         if "FAIL" in id:

@@ -18,10 +18,10 @@ from hostapd import HostapdGlobal
 
 def reset_devs(dev, apdev):
     hapd = HostapdGlobal()
-    for ap in apdev:
-        hapd.remove(ap['ifname'])
     for d in dev:
         d.reset()
+    for ap in apdev:
+        hapd.remove(ap['ifname'])
 
 def main():
     test_file = None

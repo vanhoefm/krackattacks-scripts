@@ -38,13 +38,7 @@ class WpaSupplicant:
         return "PONG" in self.request("PING")
 
     def reset(self):
-        self.request("P2P_STOP_FIND")
-        self.request("P2P_FLUSH")
-        self.request("P2P_GROUP_REMOVE *")
-        self.request("REMOVE_NETWORK *")
-        self.request("REMOVE_CRED *")
-        self.request("SET tdls_disabled 0")
-        self.request("SET tdls_testing 0")
+        self.request("FLUSH")
         self.request("SET ignore_old_scan_res 0")
         self.group_ifname = None
 

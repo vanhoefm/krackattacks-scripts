@@ -17,11 +17,11 @@ from wpasupplicant import WpaSupplicant
 from hostapd import HostapdGlobal
 
 def reset_devs(dev, apdev):
-    for d in dev:
-        d.reset()
     hapd = HostapdGlobal()
     for ap in apdev:
         hapd.remove(ap['ifname'])
+    for d in dev:
+        d.reset()
 
 def main():
     test_file = None
@@ -56,7 +56,6 @@ def main():
         if not d.ping():
             print d.ifname + ": No response from wpa_supplicant"
             return
-        d.reset()
         print "DEV: " + d.ifname + ": " + d.p2p_dev_addr()
     for ap in apdev:
         print "APDEV: " + ap['ifname']

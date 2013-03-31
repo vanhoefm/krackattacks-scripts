@@ -22,7 +22,6 @@ def test_ap_wps_init(dev, apdev):
     hapd = hostapd.Hostapd(apdev[0]['ifname'])
     logger.info("WPS provisioning step")
     hapd.request("WPS_PBC")
-    dev[0].request("BSS_FLUSH 0")
     dev[0].request("SET ignore_old_scan_res 1")
     dev[0].dump_monitor()
     dev[0].request("WPS_PBC")
@@ -77,7 +76,6 @@ def test_ap_wps_conf_pin(dev, apdev):
     logger.info("WPS provisioning step")
     pin = dev[0].wps_read_pin()
     hapd.request("WPS_PIN any " + pin)
-    dev[0].request("BSS_FLUSH 0")
     dev[0].request("SET ignore_old_scan_res 1")
     dev[0].dump_monitor()
     dev[0].request("WPS_PIN any " + pin)
@@ -104,7 +102,6 @@ def test_ap_wps_reg_connect(dev, apdev):
                      "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
                      "ap_pin": appin})
     logger.info("WPS provisioning step")
-    dev[0].request("BSS_FLUSH 0")
     dev[0].request("SET ignore_old_scan_res 1")
     dev[0].dump_monitor()
     dev[0].request("WPS_REG " + apdev[0]['bssid'] + " " + appin)
@@ -129,7 +126,6 @@ def test_ap_wps_reg_config(dev, apdev):
                    { "ssid": ssid, "eap_server": "1", "wps_state": "2",
                      "ap_pin": appin})
     logger.info("WPS configuration step")
-    dev[0].request("BSS_FLUSH 0")
     dev[0].request("SET ignore_old_scan_res 1")
     dev[0].dump_monitor()
     new_ssid = "wps-new-ssid"
@@ -182,9 +178,7 @@ def test_ap_wps_pbc_overlap_2sta(dev, apdev):
     logger.info("WPS provisioning step")
     hapd.request("WPS_PBC")
     dev[0].request("SET ignore_old_scan_res 1")
-    dev[0].request("BSS_FLUSH 0")
     dev[1].request("SET ignore_old_scan_res 1")
-    dev[1].request("BSS_FLUSH 0")
     dev[0].dump_monitor()
     dev[1].dump_monitor()
     dev[0].request("WPS_PBC")

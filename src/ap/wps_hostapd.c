@@ -277,6 +277,114 @@ static void hapd_new_ap_event(struct hostapd_data *hapd, const u8 *attr,
 }
 
 
+static int hapd_wps_reconfig_in_memory(struct hostapd_data *hapd,
+				       const struct wps_credential *cred)
+{
+	struct hostapd_bss_config *bss = hapd->conf;
+
+	wpa_printf(MSG_DEBUG, "WPS: Updating in-memory configuration");
+
+	bss->wps_state = 2;
+	if (cred->ssid_len <= HOSTAPD_MAX_SSID_LEN) {
+		os_memcpy(bss->ssid.ssid, cred->ssid, cred->ssid_len);
+		bss->ssid.ssid_len = cred->ssid_len;
+		bss->ssid.ssid_set = 1;
+	}
+
+	if ((cred->auth_type & (WPS_AUTH_WPA2 | WPS_AUTH_WPA2PSK)) &&
+	    (cred->auth_type & (WPS_AUTH_WPA | WPS_AUTH_WPAPSK)))
+		bss->wpa = 3;
+	else if (cred->auth_type & (WPS_AUTH_WPA2 | WPS_AUTH_WPA2PSK))
+		bss->wpa = 2;
+	else if (cred->auth_type & (WPS_AUTH_WPA | WPS_AUTH_WPAPSK))
+		bss->wpa = 1;
+	else
+		bss->wpa = 0;
+
+	if (bss->wpa) {
+		if (cred->auth_type & (WPS_AUTH_WPA2 | WPS_AUTH_WPA))
+			bss->wpa_key_mgmt = WPA_KEY_MGMT_IEEE8021X;
+		if (cred->auth_type & (WPS_AUTH_WPA2PSK | WPS_AUTH_WPAPSK))
+			bss->wpa_key_mgmt = WPA_KEY_MGMT_PSK;
+
+		bss->wpa_pairwise = 0;
+		if (cred->encr_type & WPS_ENCR_AES)
+			bss->wpa_pairwise |= WPA_CIPHER_CCMP;
+		if (cred->encr_type & WPS_ENCR_TKIP)
+			bss->wpa_pairwise |= WPA_CIPHER_TKIP;
+		bss->rsn_pairwise = bss->wpa_pairwise;
+		bss->wpa_group = wpa_select_ap_group_cipher(bss->wpa,
+							    bss->wpa_pairwise,
+							    bss->rsn_pairwise);
+
+		if (cred->key_len >= 8 && cred->key_len < 64) {
+			os_free(bss->ssid.wpa_passphrase);
+			bss->ssid.wpa_passphrase = os_zalloc(cred->key_len + 1);
+			if (bss->ssid.wpa_passphrase)
+				os_memcpy(bss->ssid.wpa_passphrase, cred->key,
+					  cred->key_len);
+			os_free(bss->ssid.wpa_psk);
+			bss->ssid.wpa_psk = NULL;
+		} else if (cred->key_len == 64) {
+			os_free(bss->ssid.wpa_psk);
+			bss->ssid.wpa_psk =
+				os_zalloc(sizeof(struct hostapd_wpa_psk));
+			if (bss->ssid.wpa_psk &&
+			    hexstr2bin((const char *) cred->key,
+				       bss->ssid.wpa_psk->psk, PMK_LEN) == 0) {
+				bss->ssid.wpa_psk->group = 1;
+				os_free(bss->ssid.wpa_passphrase);
+				bss->ssid.wpa_passphrase = NULL;
+			}
+		}
+		bss->auth_algs = 1;
+	} else {
+		if ((cred->auth_type & WPS_AUTH_OPEN) &&
+		    (cred->auth_type & WPS_AUTH_SHARED))
+			bss->auth_algs = 3;
+		else if (cred->auth_type & WPS_AUTH_SHARED)
+			bss->auth_algs = 2;
+		else
+			bss->auth_algs = 1;
+		if (cred->encr_type & WPS_ENCR_WEP && cred->key_idx > 0 &&
+		    cred->key_idx <= 4) {
+			struct hostapd_wep_keys *wep = &bss->ssid.wep;
+			int idx = cred->key_idx;
+			if (idx)
+				idx--;
+			wep->idx = idx;
+			if (cred->key_len == 10 || cred->key_len == 26) {
+				os_free(wep->key[idx]);
+				wep->key[idx] = os_malloc(cred->key_len / 2);
+				if (wep->key[idx] == NULL ||
+				    hexstr2bin((const char *) cred->key,
+					       wep->key[idx],
+					       cred->key_len / 2))
+					return -1;
+				wep->len[idx] = cred->key_len / 2;
+			} else {
+				os_free(wep->key[idx]);
+				wep->key[idx] = os_malloc(cred->key_len);
+				if (wep->key[idx] == NULL)
+					return -1;
+				os_memcpy(wep->key[idx], cred->key,
+					  cred->key_len);
+				wep->len[idx] = cred->key_len;
+			}
+			wep->keys_set = 1;
+		}
+	}
+
+	/* Schedule configuration reload after short period of time to allow
+	 * EAP-WSC to be finished.
+	 */
+	eloop_register_timeout(0, 100000, wps_reload_config, hapd->iface,
+			       NULL);
+
+	return 0;
+}
+
+
 static int hapd_wps_cred_cb(struct hostapd_data *hapd, void *ctx)
 {
 	const struct wps_credential *cred = ctx;
@@ -344,7 +452,7 @@ static int hapd_wps_cred_cb(struct hostapd_data *hapd, void *ctx)
 	hapd->wps->wps_state = WPS_STATE_CONFIGURED;
 
 	if (hapd->iface->config_fname == NULL)
-		return 0;
+		return hapd_wps_reconfig_in_memory(hapd, cred);
 	len = os_strlen(hapd->iface->config_fname) + 5;
 	tmp_fname = os_malloc(len);
 	if (tmp_fname == NULL)

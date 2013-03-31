@@ -108,18 +108,9 @@ static void hostapd_reload_bss(struct hostapd_data *hapd)
 }
 
 
-int hostapd_reload_config(struct hostapd_iface *iface)
+static void hostapd_clear_old(struct hostapd_iface *iface)
 {
-	struct hostapd_data *hapd = iface->bss[0];
-	struct hostapd_config *newconf, *oldconf;
 	size_t j;
-
-	if (iface->interfaces == NULL ||
-	    iface->interfaces->config_read_cb == NULL)
-		return -1;
-	newconf = iface->interfaces->config_read_cb(iface->config_fname);
-	if (newconf == NULL)
-		return -1;
 
 	/*
 	 * Deauthenticate all stations since the new configuration may not
@@ -136,6 +127,31 @@ int hostapd_reload_config(struct hostapd_iface *iface)
 		radius_client_flush(iface->bss[j]->radius, 0);
 #endif /* CONFIG_NO_RADIUS */
 	}
+}
+
+
+int hostapd_reload_config(struct hostapd_iface *iface)
+{
+	struct hostapd_data *hapd = iface->bss[0];
+	struct hostapd_config *newconf, *oldconf;
+	size_t j;
+
+	if (iface->config_fname == NULL) {
+		/* Only in-memory config in use - assume it has been updated */
+		hostapd_clear_old(iface);
+		for (j = 0; j < iface->num_bss; j++)
+			hostapd_reload_bss(iface->bss[j]);
+		return 0;
+	}
+
+	if (iface->interfaces == NULL ||
+	    iface->interfaces->config_read_cb == NULL)
+		return -1;
+	newconf = iface->interfaces->config_read_cb(iface->config_fname);
+	if (newconf == NULL)
+		return -1;
+
+	hostapd_clear_old(iface);
 
 	oldconf = hapd->iconf;
 	iface->conf = newconf;

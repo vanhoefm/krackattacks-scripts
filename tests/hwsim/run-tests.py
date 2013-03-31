@@ -24,6 +24,7 @@ def reset_devs(dev, apdev):
         hapd.remove(ap['ifname'])
 
 def main():
+    test_file = None
     idx = 1
     if len(sys.argv) > 1 and sys.argv[1] == '-d':
         logging.basicConfig(level=logging.DEBUG)
@@ -33,6 +34,10 @@ def main():
         idx = idx + 1
     else:
         logging.basicConfig(level=logging.INFO)
+
+    if len(sys.argv) > idx + 1 and sys.argv[idx] == '-f':
+        test_file = sys.argv[idx + 1]
+        idx = idx + 2
 
     if len(sys.argv) > idx:
         test_filter = sys.argv[idx]
@@ -60,6 +65,8 @@ def main():
     for t in os.listdir("."):
         m = re.match(r'(test_.*)\.py$', t)
         if m:
+            if test_file and test_file not in t:
+                continue
             print "Import test cases from " + t
             mod = __import__(m.group(1))
             for s in dir(mod):

@@ -239,7 +239,14 @@ u8 * hostapd_eid_ext_capab(struct hostapd_data *hapd, u8 *eid)
 		}
 	}
 
-	return pos;
+	while (len > 0 && eid[1 + len] == 0) {
+		len--;
+		eid[1] = len;
+	}
+	if (len == 0)
+		return eid;
+
+	return eid + 2 + len;
 }
 
 

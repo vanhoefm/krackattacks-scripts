@@ -1231,7 +1231,14 @@ int wpas_build_ext_capab(struct wpa_supplicant *wpa_s, u8 *buf)
 		}
 	}
 
-	return pos - buf;
+	while (len > 0 && buf[1 + len] == 0) {
+		len--;
+		buf[1] = len;
+	}
+	if (len == 0)
+		return 0;
+
+	return 2 + len;
 }
 
 

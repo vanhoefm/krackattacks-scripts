@@ -3344,8 +3344,8 @@ static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 		if (join == 0 &&
 		    wpa_s->auto_pd_scan_retry < P2P_AUTO_PD_SCAN_ATTEMPTS) {
 			wpa_s->auto_pd_scan_retry++;
-			bss = wpa_bss_get_bssid(wpa_s,
-						wpa_s->pending_join_dev_addr);
+			bss = wpa_bss_get_bssid_latest(
+				wpa_s, wpa_s->pending_join_dev_addr);
 			if (bss) {
 				freq = bss->freq;
 				wpa_printf(MSG_DEBUG, "P2P: Scan retry %d for "
@@ -3425,7 +3425,7 @@ static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 		wpa_printf(MSG_DEBUG, "P2P: Target GO operating frequency "
 			   "from P2P peer table: %d MHz", freq);
 	}
-	bss = wpa_bss_get_bssid(wpa_s, wpa_s->pending_join_iface_addr);
+	bss = wpa_bss_get_bssid_latest(wpa_s, wpa_s->pending_join_iface_addr);
 	if (bss) {
 		freq = bss->freq;
 		wpa_printf(MSG_DEBUG, "P2P: Target GO operating frequency "
@@ -3627,7 +3627,7 @@ static int wpas_p2p_join_start(struct wpa_supplicant *wpa_s)
 	os_memcpy(res.peer_interface_addr, wpa_s->pending_join_iface_addr,
 		  ETH_ALEN);
 	res.wps_method = wpa_s->pending_join_wps_method;
-	bss = wpa_bss_get_bssid(wpa_s, wpa_s->pending_join_iface_addr);
+	bss = wpa_bss_get_bssid_latest(wpa_s, wpa_s->pending_join_iface_addr);
 	if (bss) {
 		res.freq = bss->freq;
 		res.ssid_len = bss->ssid_len;

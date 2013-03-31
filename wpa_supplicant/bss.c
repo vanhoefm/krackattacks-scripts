@@ -829,6 +829,34 @@ struct wpa_bss * wpa_bss_get_bssid(struct wpa_supplicant *wpa_s,
 }
 
 
+/**
+ * wpa_bss_get_bssid_latest - Fetch the latest BSS table entry based on BSSID
+ * @wpa_s: Pointer to wpa_supplicant data
+ * @bssid: BSSID
+ * Returns: Pointer to the BSS entry or %NULL if not found
+ *
+ * This function is like wpa_bss_get_bssid(), but full BSS table is iterated to
+ * find the entry that has the most recent update. This can help in finding the
+ * correct entry in cases where the SSID of the AP may have changed recently
+ * (e.g., in WPS reconfiguration cases).
+ */
+struct wpa_bss * wpa_bss_get_bssid_latest(struct wpa_supplicant *wpa_s,
+					  const u8 *bssid)
+{
+	struct wpa_bss *bss, *found = NULL;
+	if (!wpa_supplicant_filter_bssid_match(wpa_s, bssid))
+		return NULL;
+	dl_list_for_each_reverse(bss, &wpa_s->bss, struct wpa_bss, list) {
+		if (os_memcmp(bss->bssid, bssid, ETH_ALEN) != 0)
+			continue;
+		if (found == NULL ||
+		    os_time_before(&found->last_update, &bss->last_update))
+			found = bss;
+	}
+	return found;
+}
+
+
 #ifdef CONFIG_P2P
 /**
  * wpa_bss_get_p2p_dev_addr - Fetch a BSS table entry based on P2P Device Addr

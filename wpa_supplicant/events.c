@@ -851,9 +851,8 @@ wpa_supplicant_select_bss(struct wpa_supplicant *wpa_s,
 }
 
 
-static struct wpa_bss *
-wpa_supplicant_pick_network(struct wpa_supplicant *wpa_s,
-			    struct wpa_ssid **selected_ssid)
+struct wpa_bss * wpa_supplicant_pick_network(struct wpa_supplicant *wpa_s,
+					     struct wpa_ssid **selected_ssid)
 {
 	struct wpa_bss *selected = NULL;
 	int prio;

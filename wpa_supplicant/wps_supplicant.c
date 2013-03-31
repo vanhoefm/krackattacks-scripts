@@ -84,6 +84,10 @@ int wpas_wps_eapol_cb(struct wpa_supplicant *wpa_s)
 	    !(wpa_s->current_ssid->key_mgmt & WPA_KEY_MGMT_WPS)) {
 		int disabled = wpa_s->current_ssid->disabled;
 		unsigned int freq = wpa_s->assoc_freq;
+		struct wpa_bss *bss;
+		struct wpa_ssid *ssid = NULL;
+		int use_fast_assoc = 0;
+
 		wpa_printf(MSG_DEBUG, "WPS: Network configuration replaced - "
 			   "try to associate with the received credential "
 			   "(freq=%u)", freq);
@@ -98,7 +102,26 @@ int wpas_wps_eapol_cb(struct wpa_supplicant *wpa_s)
 		wpa_s->wps_freq = freq;
 		wpa_s->normal_scans = 0;
 		wpa_s->reassociate = 1;
-		wpa_supplicant_req_scan(wpa_s, 0, 0);
+
+		wpa_printf(MSG_DEBUG, "WPS: Checking whether fast association "
+			   "without a new scan can be used");
+		bss = wpa_supplicant_pick_network(wpa_s, &ssid);
+		if (bss) {
+			struct wpabuf *wps;
+			struct wps_parse_attr attr;
+
+			wps = wpa_bss_get_vendor_ie_multi(bss,
+							  WPS_IE_VENDOR_TYPE);
+			if (wps && wps_parse_msg(wps, &attr) == 0 &&
+			    attr.wps_state &&
+			    *attr.wps_state == WPS_STATE_CONFIGURED)
+				use_fast_assoc = 1;
+			wpabuf_free(wps);
+		}
+
+		if (!use_fast_assoc ||
+		    wpa_supplicant_fast_associate(wpa_s) != 1)
+			wpa_supplicant_req_scan(wpa_s, 0, 0);
 		return 1;
 	}
 

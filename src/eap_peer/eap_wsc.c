@@ -77,25 +77,33 @@ static int eap_wsc_new_ap_settings(struct wps_credential *cred,
 	else
 		len = end - pos;
 	if ((len & 1) || len > 2 * sizeof(cred->ssid) ||
-	    hexstr2bin(pos, cred->ssid, len / 2))
+	    hexstr2bin(pos, cred->ssid, len / 2)) {
+		wpa_printf(MSG_DEBUG, "EAP-WSC: Invalid new_ssid");
 		return -1;
+	}
 	cred->ssid_len = len / 2;
 
 	pos = os_strstr(params, "new_auth=");
-	if (pos == NULL)
+	if (pos == NULL) {
+		wpa_printf(MSG_DEBUG, "EAP-WSC: Missing new_auth");
 		return -1;
+	}
 	if (os_strncmp(pos + 9, "OPEN", 4) == 0)
 		cred->auth_type = WPS_AUTH_OPEN;
 	else if (os_strncmp(pos + 9, "WPAPSK", 6) == 0)
 		cred->auth_type = WPS_AUTH_WPAPSK;
 	else if (os_strncmp(pos + 9, "WPA2PSK", 7) == 0)
 		cred->auth_type = WPS_AUTH_WPA2PSK;
-	else
+	else {
+		wpa_printf(MSG_DEBUG, "EAP-WSC: Unknown new_auth");
 		return -1;
+	}
 
 	pos = os_strstr(params, "new_encr=");
-	if (pos == NULL)
+	if (pos == NULL) {
+		wpa_printf(MSG_DEBUG, "EAP-WSC: Missing new_encr");
 		return -1;
+	}
 	if (os_strncmp(pos + 9, "NONE", 4) == 0)
 		cred->encr_type = WPS_ENCR_NONE;
 	else if (os_strncmp(pos + 9, "WEP", 3) == 0)
@@ -104,8 +112,10 @@ static int eap_wsc_new_ap_settings(struct wps_credential *cred,
 		cred->encr_type = WPS_ENCR_TKIP;
 	else if (os_strncmp(pos + 9, "CCMP", 4) == 0)
 		cred->encr_type = WPS_ENCR_AES;
-	else
+	else {
+		wpa_printf(MSG_DEBUG, "EAP-WSC: Unknown new_encr");
 		return -1;
+	}
 
 	pos = os_strstr(params, "new_key=");
 	if (pos == NULL)
@@ -117,8 +127,10 @@ static int eap_wsc_new_ap_settings(struct wps_credential *cred,
 	else
 		len = end - pos;
 	if ((len & 1) || len > 2 * sizeof(cred->key) ||
-	    hexstr2bin(pos, cred->key, len / 2))
+	    hexstr2bin(pos, cred->key, len / 2)) {
+		wpa_printf(MSG_DEBUG, "EAP-WSC: Invalid new_key");
 		return -1;
+	}
 	cred->key_len = len / 2;
 
 	return 1;
@@ -211,6 +223,8 @@ static void * eap_wsc_init(struct eap_sm *sm)
 	res = eap_wsc_new_ap_settings(&new_ap_settings, phase1);
 	if (res < 0) {
 		os_free(data);
+		wpa_printf(MSG_DEBUG, "EAP-WSC: Failed to parse new AP "
+			   "settings");
 		return NULL;
 	}
 	if (res == 1) {
@@ -222,6 +236,7 @@ static void * eap_wsc_init(struct eap_sm *sm)
 	data->wps = wps_init(&cfg);
 	if (data->wps == NULL) {
 		os_free(data);
+		wpa_printf(MSG_DEBUG, "EAP-WSC: wps_init failed");
 		return NULL;
 	}
 	res = eap_get_config_fragment_size(sm);

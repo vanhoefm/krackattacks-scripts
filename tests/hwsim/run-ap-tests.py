@@ -41,10 +41,11 @@ def main():
 
     dev0 = WpaSupplicant('wlan0')
     dev1 = WpaSupplicant('wlan1')
-    dev = [ dev0, dev1 ]
+    dev2 = WpaSupplicant('wlan2')
+    dev = [ dev0, dev1, dev2 ]
     apdev = [ ]
-    apdev.append({"ifname": 'wlan2', "bssid": "02:00:00:00:02:00"})
     apdev.append({"ifname": 'wlan3', "bssid": "02:00:00:00:03:00"})
+    apdev.append({"ifname": 'wlan4', "bssid": "02:00:00:00:04:00"})
 
     for d in dev:
         if not d.ping():

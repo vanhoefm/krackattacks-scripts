@@ -45,6 +45,7 @@ class WpaSupplicant:
         self.request("REMOVE_CRED *")
         self.request("SET tdls_disabled 0")
         self.request("SET tdls_testing 0")
+        self.request("SET ignore_old_scan_res 0")
         self.group_ifname = None
 
     def add_network(self):

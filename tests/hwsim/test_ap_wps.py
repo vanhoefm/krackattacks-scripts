@@ -92,7 +92,7 @@ def test_ap_wps_conf_pin(dev, apdev):
 
 def test_ap_wps_reg_connect(dev, apdev):
     """WPS registrar using AP PIN to connect"""
-    ssid = "test-wps-conf-ap-pin"
+    ssid = "test-wps-reg-ap-pin"
     appin = "12345670"
     hostapd.add_ap(apdev[0]['ifname'],
                    { "ssid": ssid, "eap_server": "1", "wps_state": "2",
@@ -100,7 +100,8 @@ def test_ap_wps_reg_connect(dev, apdev):
                      "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
                      "ap_pin": appin})
     logger.info("WPS provisioning step")
-    dev[0].request("BSS_FLUSH")
+    dev[0].request("BSS_FLUSH 0")
+    dev[0].request("SET ignore_old_scan_res 1")
     dev[0].dump_monitor()
     dev[0].request("WPS_REG " + apdev[0]['bssid'] + " " + appin)
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
@@ -124,7 +125,8 @@ def test_ap_wps_reg_config(dev, apdev):
                    { "ssid": ssid, "eap_server": "1", "wps_state": "2",
                      "ap_pin": appin})
     logger.info("WPS configuration step")
-    dev[0].request("BSS_FLUSH")
+    dev[0].request("BSS_FLUSH 0")
+    dev[0].request("SET ignore_old_scan_res 1")
     dev[0].dump_monitor()
     new_ssid = "wps-new-ssid"
     new_passphrase = "1234567890"
@@ -175,8 +177,10 @@ def test_ap_wps_pbc_overlap_2sta(dev, apdev):
     hapd = hostapd.Hostapd(apdev[0]['ifname'])
     logger.info("WPS provisioning step")
     hapd.request("WPS_PBC")
-    dev[0].request("BSS_FLUSH")
-    dev[1].request("BSS_FLUSH")
+    dev[0].request("SET ignore_old_scan_res 1")
+    dev[0].request("BSS_FLUSH 0")
+    dev[1].request("SET ignore_old_scan_res 1")
+    dev[1].request("BSS_FLUSH 0")
     dev[0].dump_monitor()
     dev[1].dump_monitor()
     dev[0].request("WPS_PBC")

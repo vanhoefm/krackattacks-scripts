@@ -871,6 +871,7 @@ static void wpas_wps_reassoc(struct wpa_supplicant *wpa_s,
 	struct wpa_ssid *ssid;
 	struct wpa_bss *bss;
 
+	wpa_s->after_wps = 0;
 	wpa_s->known_wps_freq = 0;
 	if (bssid) {
 		bss = wpa_bss_get_bssid_latest(wpa_s, bssid);

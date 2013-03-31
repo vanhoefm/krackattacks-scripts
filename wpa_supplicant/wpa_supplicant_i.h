@@ -461,6 +461,10 @@ struct wpa_supplicant {
 	 */
 	unsigned int probe_resp_offloads;
 
+	/* extended capabilities supported by the driver */
+	const u8 *extended_capa, *extended_capa_mask;
+	unsigned int extended_capa_len;
+
 	int max_scan_ssids;
 	int max_sched_scan_ssids;
 	int sched_scan_supported;

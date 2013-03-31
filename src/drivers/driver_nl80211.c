@@ -220,6 +220,8 @@ struct wpa_driver_nl80211_data {
 	int ignore_if_down_event;
 	struct rfkill_data *rfkill;
 	struct wpa_driver_capa capa;
+	u8 *extended_capa, *extended_capa_mask;
+	unsigned int extended_capa_len;
 	int has_capability;
 
 	int operstate;
@@ -2545,6 +2547,7 @@ nla_put_failure:
 
 
 struct wiphy_info_data {
+	struct wpa_driver_nl80211_data *drv;
 	struct wpa_driver_capa *capa;
 
 	unsigned int error:1;
@@ -2786,6 +2789,7 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
 	struct wiphy_info_data *info = arg;
 	struct wpa_driver_capa *capa = info->capa;
+	struct wpa_driver_nl80211_data *drv = info->drv;
 
 	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
 		  genlmsg_attrlen(gnlh, 0), NULL);
@@ -2833,6 +2837,30 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 	wiphy_info_probe_resp_offload(capa,
 				      tb[NL80211_ATTR_PROBE_RESP_OFFLOAD]);
 
+	if (tb[NL80211_ATTR_EXT_CAPA] && tb[NL80211_ATTR_EXT_CAPA_MASK] &&
+	    drv->extended_capa == NULL) {
+		drv->extended_capa =
+			os_malloc(nla_len(tb[NL80211_ATTR_EXT_CAPA]));
+		if (drv->extended_capa) {
+			os_memcpy(drv->extended_capa,
+				  nla_data(tb[NL80211_ATTR_EXT_CAPA]),
+				  nla_len(tb[NL80211_ATTR_EXT_CAPA]));
+			drv->extended_capa_len =
+				nla_len(tb[NL80211_ATTR_EXT_CAPA]);
+		}
+		drv->extended_capa_mask =
+			os_malloc(nla_len(tb[NL80211_ATTR_EXT_CAPA]));
+		if (drv->extended_capa_mask) {
+			os_memcpy(drv->extended_capa_mask,
+				  nla_data(tb[NL80211_ATTR_EXT_CAPA]),
+				  nla_len(tb[NL80211_ATTR_EXT_CAPA]));
+		} else {
+			os_free(drv->extended_capa);
+			drv->extended_capa = NULL;
+			drv->extended_capa_len = 0;
+		}
+	}
+
 	return NL_SKIP;
 }
 
@@ -2845,6 +2873,7 @@ static int wpa_driver_nl80211_get_info(struct wpa_driver_nl80211_data *drv,
 
 	os_memset(info, 0, sizeof(*info));
 	info->capa = &drv->capa;
+	info->drv = drv;
 
 	msg = nlmsg_alloc();
 	if (!msg)
@@ -3733,6 +3762,8 @@ static void wpa_driver_nl80211_deinit(struct i802_bss *bss)
 	if (drv->in_interface_list)
 		dl_list_del(&drv->list);
 
+	os_free(drv->extended_capa);
+	os_free(drv->extended_capa_mask);
 	os_free(drv);
 }
 
@@ -7591,6 +7622,11 @@ static int wpa_driver_nl80211_get_capa(void *priv,
 	if (!drv->has_capability)
 		return -1;
 	os_memcpy(capa, &drv->capa, sizeof(*capa));
+	if (drv->extended_capa && drv->extended_capa_mask) {
+		capa->extended_capa = drv->extended_capa;
+		capa->extended_capa_mask = drv->extended_capa_mask;
+		capa->extended_capa_len = drv->extended_capa_len;
+	}
 	return 0;
 }
 

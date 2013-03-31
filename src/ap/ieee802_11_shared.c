@@ -164,10 +164,52 @@ void ieee802_11_sa_query_action(struct hostapd_data *hapd, const u8 *sa,
 #endif /* CONFIG_IEEE80211W */
 
 
+static void hostapd_ext_capab_byte(struct hostapd_data *hapd, u8 *pos, int idx)
+{
+	*pos = 0x00;
+
+	switch (idx) {
+	case 0: /* Bits 0-7 */
+		break;
+	case 1: /* Bits 8-15 */
+		break;
+	case 2: /* Bits 16-23 */
+		if (hapd->conf->wnm_sleep_mode)
+			*pos |= 0x02; /* Bit 17 - WNM-Sleep Mode */
+		if (hapd->conf->bss_transition)
+			*pos |= 0x08; /* Bit 19 - BSS Transition */
+		break;
+	case 3: /* Bits 24-31 */
+#ifdef CONFIG_WNM
+		*pos |= 0x02; /* Bit 25 - SSID List */
+#endif /* CONFIG_WNM */
+		if (hapd->conf->time_advertisement == 2)
+			*pos |= 0x08; /* Bit 27 - UTC TSF Offset */
+		if (hapd->conf->interworking)
+			*pos |= 0x80; /* Bit 31 - Interworking */
+		break;
+	case 4: /* Bits 32-39 */
+		if (hapd->conf->tdls & TDLS_PROHIBIT)
+			*pos |= 0x40; /* Bit 38 - TDLS Prohibited */
+		if (hapd->conf->tdls & TDLS_PROHIBIT_CHAN_SWITCH) {
+			/* Bit 39 - TDLS Channel Switching Prohibited */
+			*pos |= 0x80;
+		}
+		break;
+	case 5: /* Bits 40-47 */
+		break;
+	case 6: /* Bits 48-55 */
+		if (hapd->conf->ssid.utf8_ssid)
+			*pos |= 0x01; /* Bit 48 - UTF-8 SSID */
+		break;
+	}
+}
+
+
 u8 * hostapd_eid_ext_capab(struct hostapd_data *hapd, u8 *eid)
 {
 	u8 *pos = eid;
-	u8 len = 0;
+	u8 len = 0, i;
 
 	if (hapd->conf->tdls & (TDLS_PROHIBIT | TDLS_PROHIBIT_CHAN_SWITCH))
 		len = 5;
@@ -181,53 +223,21 @@ u8 * hostapd_eid_ext_capab(struct hostapd_data *hapd, u8 *eid)
 	if (len < 4)
 		len = 4;
 #endif /* CONFIG_WNM */
+	if (len < hapd->iface->extended_capa_len)
+		len = hapd->iface->extended_capa_len;
 	if (len == 0)
 		return eid;
 
 	*pos++ = WLAN_EID_EXT_CAPAB;
 	*pos++ = len;
-	*pos++ = 0x00;
-	*pos++ = 0x00;
+	for (i = 0; i < len; i++, pos++) {
+		hostapd_ext_capab_byte(hapd, pos, i);
 
-	*pos = 0x00;
-	if (hapd->conf->wnm_sleep_mode)
-		*pos |= 0x02; /* Bit 17 - WNM-Sleep Mode */
-	if (hapd->conf->bss_transition)
-		*pos |= 0x08; /* Bit 19 - BSS Transition */
-	pos++;
-
-	if (len < 4)
-		return pos;
-	*pos = 0x00;
-#ifdef CONFIG_WNM
-	*pos |= 0x02; /* Bit 25 - SSID List */
-#endif /* CONFIG_WNM */
-	if (hapd->conf->time_advertisement == 2)
-		*pos |= 0x08; /* Bit 27 - UTC TSF Offset */
-	if (hapd->conf->interworking)
-		*pos |= 0x80; /* Bit 31 - Interworking */
-	pos++;
-
-	if (len < 5)
-		return pos;
-	*pos = 0x00;
-	if (hapd->conf->tdls & TDLS_PROHIBIT)
-		*pos |= 0x40; /* Bit 38 - TDLS Prohibited */
-	if (hapd->conf->tdls & TDLS_PROHIBIT_CHAN_SWITCH)
-		*pos |= 0x80; /* Bit 39 - TDLS Channel Switching Prohibited */
-	pos++;
-
-	if (len < 6)
-		return pos;
-	*pos = 0x00;
-	pos++;
-
-	if (len < 7)
-		return pos;
-	*pos = 0x00;
-	if (hapd->conf->ssid.utf8_ssid)
-		*pos |= 0x01; /* Bit 48 - UTF-8 SSID */
-	pos++;
+		if (i < hapd->iface->extended_capa_len) {
+			*pos &= ~hapd->iface->extended_capa_mask[i];
+			*pos |= hapd->iface->extended_capa[i];
+		}
+	}
 
 	return pos;
 }

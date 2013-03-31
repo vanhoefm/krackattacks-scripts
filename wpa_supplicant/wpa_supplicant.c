@@ -1178,28 +1178,58 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 }
 
 
+static void wpas_ext_capab_byte(struct wpa_supplicant *wpa_s, u8 *pos, int idx)
+{
+	*pos = 0x00;
+
+	switch (idx) {
+	case 0: /* Bits 0-7 */
+		break;
+	case 1: /* Bits 8-15 */
+		break;
+	case 2: /* Bits 16-23 */
+#ifdef CONFIG_WNM
+		*pos |= 0x02; /* Bit 17 - WNM-Sleep Mode */
+		*pos |= 0x08; /* Bit 19 - BSS Transition */
+#endif /* CONFIG_WNM */
+		break;
+	case 3: /* Bits 24-31 */
+#ifdef CONFIG_WNM
+		*pos |= 0x02; /* Bit 25 - SSID List */
+#endif /* CONFIG_WNM */
+#ifdef CONFIG_INTERWORKING
+		if (wpa_s->conf->interworking)
+			*pos |= 0x80; /* Bit 31 - Interworking */
+#endif /* CONFIG_INTERWORKING */
+		break;
+	case 4: /* Bits 32-39 */
+		break;
+	case 5: /* Bits 40-47 */
+		break;
+	case 6: /* Bits 48-55 */
+		break;
+	}
+}
+
+
 int wpas_build_ext_capab(struct wpa_supplicant *wpa_s, u8 *buf)
 {
-	u32 ext_capab = 0;
 	u8 *pos = buf;
+	u8 len = 4, i;
 
-#ifdef CONFIG_INTERWORKING
-	if (wpa_s->conf->interworking)
-		ext_capab |= BIT(31); /* Interworking */
-#endif /* CONFIG_INTERWORKING */
-
-#ifdef CONFIG_WNM
-	ext_capab |= BIT(17); /* WNM-Sleep Mode */
-	ext_capab |= BIT(19); /* BSS Transition */
-#endif /* CONFIG_WNM */
-
-	if (!ext_capab)
-		return 0;
+	if (len < wpa_s->extended_capa_len)
+		len = wpa_s->extended_capa_len;
 
 	*pos++ = WLAN_EID_EXT_CAPAB;
-	*pos++ = 4;
-	WPA_PUT_LE32(pos, ext_capab);
-	pos += 4;
+	*pos++ = len;
+	for (i = 0; i < len; i++, pos++) {
+		wpas_ext_capab_byte(wpa_s, pos, i);
+
+		if (i < wpa_s->extended_capa_len) {
+			*pos &= ~wpa_s->extended_capa_mask[i];
+			*pos |= wpa_s->extended_capa[i];
+		}
+	}
 
 	return pos - buf;
 }
@@ -2904,6 +2934,9 @@ next_driver:
 		wpa_s->max_match_sets = capa.max_match_sets;
 		wpa_s->max_remain_on_chan = capa.max_remain_on_chan;
 		wpa_s->max_stations = capa.max_stations;
+		wpa_s->extended_capa = capa.extended_capa;
+		wpa_s->extended_capa_mask = capa.extended_capa_mask;
+		wpa_s->extended_capa_len = capa.extended_capa_len;
 	}
 	if (wpa_s->max_remain_on_chan == 0)
 		wpa_s->max_remain_on_chan = 1000;

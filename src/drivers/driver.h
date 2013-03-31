@@ -897,6 +897,15 @@ struct wpa_driver_capa {
 /* Driver Probe Response offloading support for IEEE 802.11u (Interworking) */
 #define WPA_DRIVER_PROBE_RESP_OFFLOAD_INTERWORKING	0x00000008
 	unsigned int probe_resp_offloads;
+
+	/**
+	 * extended_capa - extended capabilities in driver/device
+	 *
+	 * Must be allocated and freed by driver and the pointers must be
+	 * valid for the lifetime of the driver, i.e., freed in deinit()
+	 */
+	const u8 *extended_capa, *extended_capa_mask;
+	unsigned int extended_capa_len;
 };
 
 

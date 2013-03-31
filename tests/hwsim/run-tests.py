@@ -104,10 +104,12 @@ def main():
     if not test_filter:
         reset_devs(dev, apdev)
 
-    print "passed tests: " + str(passed)
-    print "failed tests: " + str(failed)
+    print
     if len(failed):
+        print "passed " + str(len(passed)) + " test case(s)"
+        print "failed tests: " + str(failed)
         sys.exit(1)
+    print "passed all " + str(len(passed)) + " test case(s)"
 
 if __name__ == "__main__":
     main()

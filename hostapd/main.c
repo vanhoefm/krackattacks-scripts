@@ -525,6 +525,8 @@ static int hostapd_get_global_ctrl_iface(struct hapd_interfaces *interfaces,
 		return -1;
 	pos = os_strrchr(interfaces->global_iface_path, '/');
 	if (pos == NULL) {
+		wpa_printf(MSG_ERROR, "No '/' in the global control interface "
+			   "file");
 		os_free(interfaces->global_iface_path);
 		interfaces->global_iface_path = NULL;
 		return -1;
@@ -614,10 +616,12 @@ int main(int argc, char *argv[])
 			exit(1);
 			break;
 		case 'g':
-			hostapd_get_global_ctrl_iface(&interfaces, optarg);
+			if (hostapd_get_global_ctrl_iface(&interfaces, optarg))
+				return -1;
 			break;
 		case 'G':
-			hostapd_get_ctrl_iface_group(&interfaces, optarg);
+			if (hostapd_get_ctrl_iface_group(&interfaces, optarg))
+				return -1;
 			break;
 		default:
 			usage();

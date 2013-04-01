@@ -187,6 +187,7 @@ static int interworking_anqp_send_req(struct wpa_supplicant *wpa_s,
 
 	wpa_printf(MSG_DEBUG, "Interworking: ANQP Query Request to " MACSTR,
 		   MAC2STR(bss->bssid));
+	wpa_s->interworking_gas_bss = bss;
 
 	info_ids[num_info_ids++] = ANQP_CAPABILITY_LIST;
 	if (all) {
@@ -1809,11 +1810,11 @@ int anqp_send_req(struct wpa_supplicant *wpa_s, const u8 *dst,
 
 
 static void interworking_parse_rx_anqp_resp(struct wpa_supplicant *wpa_s,
-					    const u8 *sa, u16 info_id,
+					    struct wpa_bss *bss, const u8 *sa,
+					    u16 info_id,
 					    const u8 *data, size_t slen)
 {
 	const u8 *pos = data;
-	struct wpa_bss *bss = wpa_bss_get_bssid(wpa_s, sa);
 	struct wpa_bss_anqp *anqp = NULL;
 #ifdef CONFIG_HS20
 	u8 type;
@@ -1949,6 +1950,7 @@ void anqp_resp_cb(void *ctx, const u8 *dst, u8 dialog_token,
 	const u8 *end;
 	u16 info_id;
 	u16 slen;
+	struct wpa_bss *bss = NULL, *tmp;
 
 	if (result != GAS_QUERY_SUCCESS)
 		return;
@@ -1960,6 +1962,21 @@ void anqp_resp_cb(void *ctx, const u8 *dst, u8 dialog_token,
 			   "Protocol in response");
 		return;
 	}
+
+	/*
+	 * If possible, select the BSS entry based on which BSS entry was used
+	 * for the request. This can help in cases where multiple BSS entries
+	 * may exist for the same AP.
+	 */
+	dl_list_for_each_reverse(tmp, &wpa_s->bss, struct wpa_bss, list) {
+		if (tmp == wpa_s->interworking_gas_bss &&
+		    os_memcmp(tmp->bssid, dst, ETH_ALEN) == 0) {
+			bss = tmp;
+			break;
+		}
+	}
+	if (bss == NULL)
+		bss = wpa_bss_get_bssid(wpa_s, dst);
 
 	pos = wpabuf_head(resp);
 	end = pos + wpabuf_len(resp);
@@ -1978,7 +1995,7 @@ void anqp_resp_cb(void *ctx, const u8 *dst, u8 dialog_token,
 				   "for Info ID %u", info_id);
 			break;
 		}
-		interworking_parse_rx_anqp_resp(wpa_s, dst, info_id, pos,
+		interworking_parse_rx_anqp_resp(wpa_s, bss, dst, info_id, pos,
 						slen);
 		pos += slen;
 	}

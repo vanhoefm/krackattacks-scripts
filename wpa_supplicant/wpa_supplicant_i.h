@@ -659,6 +659,7 @@ struct wpa_supplicant {
 	unsigned int auto_select:1;
 	unsigned int auto_network_select:1;
 	unsigned int fetch_all_anqp:1;
+	struct wpa_bss *interworking_gas_bss;
 #endif /* CONFIG_INTERWORKING */
 	unsigned int drv_capa_known;
 

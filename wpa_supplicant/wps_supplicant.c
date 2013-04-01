@@ -1905,8 +1905,13 @@ int wpas_wps_start_nfc(struct wpa_supplicant *wpa_s, const u8 *bssid)
 		return -1;
 	}
 	wps->dh_ctx = dh5_init_fixed(wps->dh_privkey, wps->dh_pubkey);
-	if (wps->dh_ctx == NULL)
+	if (wps->dh_ctx == NULL) {
+		wpabuf_free(wps->dh_pubkey);
+		wps->dh_pubkey = NULL;
+		wpabuf_free(wps->dh_privkey);
+		wps->dh_privkey = NULL;
 		return -1;
+	}
 
 	wpa_snprintf_hex_uppercase(pw, sizeof(pw),
 				   wpabuf_head(wpa_s->conf->wps_nfc_dev_pw),

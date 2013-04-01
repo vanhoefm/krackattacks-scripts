@@ -12,6 +12,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 import hwsim_utils
+from wlantest import Wlantest
 
 def autogo(go):
     logger.info("Start autonomous GO " + go.ifname)
@@ -46,20 +47,9 @@ def test_autogo_2cli(dev):
     dev[1].remove_group()
     dev[0].remove_group()
 
-def wlantest_tdls(field, bssid, addr1, addr2):
-    res = subprocess.check_output(["../../wlantest/wlantest_cli",
-                                   "get_tdls_counter", field, bssid, addr1,
-                                   addr2]);
-    if "FAIL" in res:
-        raise Exception("wlantest_cli command failed")
-    return int(res)
-
-def wlantest_tdls_clear(bssid, addr1, addr2):
-    subprocess.call(["../../wlantest/wlantest_cli",
-                     "clear_tdls_counters", bssid, addr1, addr2]);
-
 def test_autogo_tdls(dev):
     """P2P autonomous GO and two clients using TDLS"""
+    wt = Wlantest()
     go = dev[0]
     logger.info("Start autonomous GO with fixed parameters " + go.ifname)
     id = go.add_network()
@@ -69,9 +59,8 @@ def test_autogo_tdls(dev):
     go.set_network(id, "disabled", "2")
     res = go.p2p_start_go(persistent=id)
     logger.debug("res: " + str(res))
-    subprocess.call(["../../wlantest/wlantest_cli", "flush"]);
-    subprocess.call(["../../wlantest/wlantest_cli", "add_passphrase",
-                     "12345678"]);
+    wt.flush()
+    wt.add_passphrase("12345678")
     connect_cli(go, dev[1])
     connect_cli(go, dev[2])
     hwsim_utils.test_connectivity_p2p(dev[1], dev[2])
@@ -81,27 +70,28 @@ def test_autogo_tdls(dev):
     dev[1].tdls_setup(addr2)
     time.sleep(1)
     hwsim_utils.test_connectivity_p2p(dev[1], dev[2])
-    conf = wlantest_tdls("setup_conf_ok", bssid, addr1, addr2);
+    conf = wt.get_tdls_counter("setup_conf_ok", bssid, addr1, addr2);
     if conf == 0:
         raise Exception("No TDLS Setup Confirm (success) seen")
-    dl = wlantest_tdls("valid_direct_link", bssid, addr1, addr2);
+    dl = wt.get_tdls_counter("valid_direct_link", bssid, addr1, addr2);
     if dl == 0:
         raise Exception("No valid frames through direct link")
-    wlantest_tdls_clear(bssid, addr1, addr2);
+    wt.tdls_clear(bssid, addr1, addr2);
     dev[1].tdls_teardown(addr2)
     time.sleep(1)
-    teardown = wlantest_tdls("teardown", bssid, addr1, addr2);
+    teardown = wt.get_tdls_counter("teardown", bssid, addr1, addr2);
     if teardown == 0:
         raise Exception("No TDLS Setup Teardown seen")
-    wlantest_tdls_clear(bssid, addr1, addr2);
+    wt.tdls_clear(bssid, addr1, addr2);
     hwsim_utils.test_connectivity_p2p(dev[1], dev[2])
-    ap_path = wlantest_tdls("valid_ap_path", bssid, addr1, addr2);
+    ap_path = wt.get_tdls_counter("valid_ap_path", bssid, addr1, addr2);
     if ap_path == 0:
         raise Exception("No valid frames via AP path")
-    direct_link = wlantest_tdls("valid_direct_link", bssid, addr1, addr2);
+    direct_link = wt.get_tdls_counter("valid_direct_link", bssid, addr1, addr2);
     if direct_link > 0:
         raise Exception("Unexpected frames through direct link")
-    idirect_link = wlantest_tdls("invalid_direct_link", bssid, addr1, addr2);
+    idirect_link = wt.get_tdls_counter("invalid_direct_link", bssid, addr1,
+                                       addr2);
     if idirect_link > 0:
         raise Exception("Unexpected frames through direct link (invalid)")
     dev[2].remove_group()

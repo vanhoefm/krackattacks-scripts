@@ -368,12 +368,15 @@ first argument selects the format of the output data and the second
 argument selects which type of connection handover is requested (WPS =
 Wi-Fi handover as specified in WSC 2.0).
 
-"nfc_get_handover_sel <NDEF> <WPS>" command can be used to build the
-contents of a Handover Select Message for connection handover when this
-does not depend on the contents of the Handover Request Message. The
-first argument selects the format of the output data and the second
-argument selects which type of connection handover is requested (WPS =
-Wi-Fi handover as specified in WSC 2.0).
+"nfc_get_handover_sel <NDEF> <WPS> [UUID|BSSID]" command can be used to
+build the contents of a Handover Select Message for connection handover
+when this does not depend on the contents of the Handover Request
+Message. The first argument selects the format of the output data and
+the second argument selects which type of connection handover is
+requested (WPS = Wi-Fi handover as specified in WSC 2.0). If the options
+UUID|BSSID argument is included, this is a request to build the handover
+message for the specified AP when wpa_supplicant is operating as a WPS
+ER.
 
 "nfc_rx_handover_req <hexdump of payload>" is used to indicate receipt
 of NFC connection handover request. The payload may include multiple
@@ -392,3 +395,13 @@ reporting completed NFC connection handover. The first parameter
 indicates whether the local device initiated or responded to the
 connection handover and the carrier records are the selected carrier
 from the handover request and select messages as a hexdump.
+
+The "wps_er_nfc_config_token <WPS/NDEF> <UUID|BSSID>" command can be
+used to build an NFC configuration token for the specified AP when
+wpa_supplicant is operating as a WPS ER. The output value from this
+command is a hexdump of the selected AP configuration (WPS parameter
+requests this to include only the WPS attributes; NDEF parameter
+requests additional NDEF encapsulation to be included). This data needs
+to be written to an NFC tag with an external program. Once written, the
+NFC configuration token can be used to touch an NFC interface on a
+station to provision the credentials needed to access the network.

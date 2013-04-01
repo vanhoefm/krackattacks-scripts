@@ -784,7 +784,11 @@ static int wpa_supplicant_ctrl_iface_wps_nfc_config_token(
 	int ndef;
 	struct wpabuf *buf;
 	int res;
+	char *pos;
 
+	pos = os_strchr(cmd, ' ');
+	if (pos)
+		*pos++ = '\0';
 	if (os_strcmp(cmd, "WPS") == 0)
 		ndef = 0;
 	else if (os_strcmp(cmd, "NDEF") == 0)
@@ -792,7 +796,7 @@ static int wpa_supplicant_ctrl_iface_wps_nfc_config_token(
 	else
 		return -1;
 
-	buf = wpas_wps_nfc_config_token(wpa_s, ndef);
+	buf = wpas_wps_nfc_config_token(wpa_s, ndef, pos);
 	if (buf == NULL)
 		return -1;
 

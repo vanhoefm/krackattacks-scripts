@@ -1656,6 +1656,40 @@ int wpas_wps_er_learn(struct wpa_supplicant *wpa_s, const char *uuid,
 }
 
 
+static int wpas_wps_network_to_cred(struct wpa_ssid *ssid,
+				    struct wps_credential *cred)
+{
+	os_memset(cred, 0, sizeof(*cred));
+	if (ssid->ssid_len > 32)
+		return -1;
+	os_memcpy(cred->ssid, ssid->ssid, ssid->ssid_len);
+	cred->ssid_len = ssid->ssid_len;
+	if (ssid->key_mgmt & WPA_KEY_MGMT_PSK) {
+		cred->auth_type = (ssid->proto & WPA_PROTO_RSN) ?
+			WPS_AUTH_WPA2PSK : WPS_AUTH_WPAPSK;
+		if (ssid->pairwise_cipher & WPA_CIPHER_CCMP)
+			cred->encr_type = WPS_ENCR_AES;
+		else
+			cred->encr_type = WPS_ENCR_TKIP;
+		if (ssid->passphrase) {
+			cred->key_len = os_strlen(ssid->passphrase);
+			if (cred->key_len >= 64)
+				return -1;
+			os_memcpy(cred->key, ssid->passphrase, cred->key_len);
+		} else if (ssid->psk_set) {
+			cred->key_len = 32;
+			os_memcpy(cred->key, ssid->psk, 32);
+		} else
+			return -1;
+	} else {
+		cred->auth_type = WPS_AUTH_OPEN;
+		cred->encr_type = WPS_ENCR_NONE;
+	}
+
+	return 0;
+}
+
+
 int wpas_wps_er_set_config(struct wpa_supplicant *wpa_s, const char *uuid,
 			   int id)
 {
@@ -1674,32 +1708,8 @@ int wpas_wps_er_set_config(struct wpa_supplicant *wpa_s, const char *uuid,
 	if (ssid == NULL || ssid->ssid == NULL)
 		return -1;
 
-	os_memset(&cred, 0, sizeof(cred));
-	if (ssid->ssid_len > 32)
+	if (wpas_wps_network_to_cred(ssid, &cred) < 0)
 		return -1;
-	os_memcpy(cred.ssid, ssid->ssid, ssid->ssid_len);
-	cred.ssid_len = ssid->ssid_len;
-	if (ssid->key_mgmt & WPA_KEY_MGMT_PSK) {
-		cred.auth_type = (ssid->proto & WPA_PROTO_RSN) ?
-			WPS_AUTH_WPA2PSK : WPS_AUTH_WPAPSK;
-		if (ssid->pairwise_cipher & WPA_CIPHER_CCMP)
-			cred.encr_type = WPS_ENCR_AES;
-		else
-			cred.encr_type = WPS_ENCR_TKIP;
-		if (ssid->passphrase) {
-			cred.key_len = os_strlen(ssid->passphrase);
-			if (cred.key_len >= 64)
-				return -1;
-			os_memcpy(cred.key, ssid->passphrase, cred.key_len);
-		} else if (ssid->psk_set) {
-			cred.key_len = 32;
-			os_memcpy(cred.key, ssid->psk, 32);
-		} else
-			return -1;
-	} else {
-		cred.auth_type = WPS_AUTH_OPEN;
-		cred.encr_type = WPS_ENCR_NONE;
-	}
 	return wps_er_set_config(wpa_s->wps_er, use_uuid, use_addr, &cred);
 }
 
@@ -1886,9 +1896,52 @@ void wpas_wps_update_config(struct wpa_supplicant *wpa_s)
 
 #ifdef CONFIG_WPS_NFC
 
-struct wpabuf * wpas_wps_nfc_config_token(struct wpa_supplicant *wpa_s,
-					  int ndef)
+#ifdef CONFIG_WPS_ER
+static struct wpabuf *
+wpas_wps_network_config_token(struct wpa_supplicant *wpa_s, int ndef,
+			      struct wpa_ssid *ssid)
 {
+	struct wpabuf *ret;
+	struct wps_credential cred;
+
+	if (wpas_wps_network_to_cred(ssid, &cred) < 0)
+		return NULL;
+
+	ret = wps_er_config_token_from_cred(wpa_s->wps, &cred);
+
+	if (ndef && ret) {
+		struct wpabuf *tmp;
+		tmp = ndef_build_wifi(ret);
+		wpabuf_free(ret);
+		if (tmp == NULL)
+			return NULL;
+		ret = tmp;
+	}
+
+	return ret;
+}
+#endif /* CONFIG_WPS_ER */
+
+
+struct wpabuf * wpas_wps_nfc_config_token(struct wpa_supplicant *wpa_s,
+					  int ndef, const char *id_str)
+{
+#ifdef CONFIG_WPS_ER
+	if (id_str) {
+		int id;
+		char *end = NULL;
+		struct wpa_ssid *ssid;
+
+		id = strtol(id_str, &end, 10);
+		if (end && *end)
+			return NULL;
+
+		ssid = wpa_config_get_network(wpa_s->conf, id);
+		if (ssid == NULL)
+			return NULL;
+		return wpas_wps_network_config_token(wpa_s, ndef, ssid);
+	}
+#endif /* CONFIG_WPS_ER */
 #ifdef CONFIG_AP
 	if (wpa_s->ap_iface)
 		return wpas_ap_wps_nfc_config_token(wpa_s, ndef);

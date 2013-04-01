@@ -802,6 +802,8 @@ int wps_er_set_config(struct wps_er *er, const u8 *uuid, const u8 *addr,
 int wps_er_config(struct wps_er *er, const u8 *uuid, const u8 *addr,
 		  const u8 *pin, size_t pin_len,
 		  const struct wps_credential *cred);
+struct wpabuf * wps_er_config_token_from_cred(struct wps_context *wps,
+					      struct wps_credential *cred);
 struct wpabuf * wps_er_nfc_config_token(struct wps_er *er, const u8 *uuid,
 					const u8 *addr);
 

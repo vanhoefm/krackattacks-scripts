@@ -2023,12 +2023,35 @@ int wps_er_config(struct wps_er *er, const u8 *uuid, const u8 *addr,
 
 
 #ifdef CONFIG_WPS_NFC
+
+struct wpabuf * wps_er_config_token_from_cred(struct wps_context *wps,
+					      struct wps_credential *cred)
+{
+	struct wpabuf *ret;
+	struct wps_data data;
+
+	ret = wpabuf_alloc(500);
+	if (ret == NULL)
+		return NULL;
+
+	os_memset(&data, 0, sizeof(data));
+	data.wps = wps;
+	data.use_cred = cred;
+	if (wps_build_version(ret) ||
+	    wps_build_cred(&data, ret) ||
+	    wps_build_wfa_ext(ret, 0, NULL, 0)) {
+		wpabuf_free(ret);
+		return NULL;
+	}
+
+	return ret;
+}
+
+
 struct wpabuf * wps_er_nfc_config_token(struct wps_er *er, const u8 *uuid,
 					const u8 *addr)
 {
 	struct wps_er_ap *ap;
-	struct wpabuf *ret;
-	struct wps_data data;
 
 	if (er == NULL)
 		return NULL;
@@ -2042,20 +2065,7 @@ struct wpabuf * wps_er_nfc_config_token(struct wps_er *er, const u8 *uuid,
 		return NULL;
 	}
 
-	ret = wpabuf_alloc(500);
-	if (ret == NULL)
-		return NULL;
-
-	os_memset(&data, 0, sizeof(data));
-	data.wps = er->wps;
-	data.use_cred = ap->ap_settings;
-	if (wps_build_version(ret) ||
-	    wps_build_cred(&data, ret) ||
-	    wps_build_wfa_ext(ret, 0, NULL, 0)) {
-		wpabuf_free(ret);
-		return NULL;
-	}
-
-	return ret;
+	return wps_er_config_token_from_cred(er->wps, ap->ap_settings);
 }
+
 #endif /* CONFIG_WPS_NFC */

@@ -346,6 +346,10 @@ tag with an external program. Once written, the NFC configuration token
 can be used to touch an NFC interface on a station to provision the
 credentials needed to access the network.
 
+The "wps_nfc_config_token <WPS/NDEF> <network id>" command can be used
+to build an NFC configuration token based on a locally configured
+network.
+
 If the station includes NFC interface and reads an NFC tag with a MIME
 media type "application/vnd.wfa.wsc", the NDEF message payload (with or
 without NDEF encapsulation) can be delivered to wpa_supplicant using the

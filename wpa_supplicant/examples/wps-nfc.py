@@ -53,10 +53,12 @@ def wpas_tag_read(message):
     print wpas.request("WPS_NFC_TAG_READ " + message.encode("hex"))
 
 
-def wpas_get_config_token():
+def wpas_get_config_token(id=None):
     wpas = wpas_connect()
     if (wpas == None):
         return None
+    if id:
+        return wpas.request("WPS_NFC_CONFIG_TOKEN NDEF " + id).rstrip().decode("hex")
     return wpas.request("WPS_NFC_CONFIG_TOKEN NDEF").rstrip().decode("hex")
 
 
@@ -258,9 +260,9 @@ def wps_tag_read(tag):
         time.sleep(0.1)
 
 
-def wps_write_config_tag(clf):
+def wps_write_config_tag(clf, id=None):
     print "Write WPS config token"
-    data = wpas_get_config_token()
+    data = wpas_get_config_token(id)
     if (data == None):
         print "Could not get WPS config token from wpa_supplicant"
         return
@@ -362,6 +364,10 @@ def main():
 
         if len(sys.argv) > 1 and sys.argv[1] == "write-config":
             wps_write_config_tag(clf)
+            raise SystemExit
+
+        if len(sys.argv) > 2 and sys.argv[1] == "write-config-id":
+            wps_write_config_tag(clf, sys.argv[2])
             raise SystemExit
 
         if len(sys.argv) > 2 and sys.argv[1] == "write-er-config":

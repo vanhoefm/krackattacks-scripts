@@ -1605,25 +1605,36 @@ int wpas_wps_er_add_pin(struct wpa_supplicant *wpa_s, const u8 *addr,
 			const char *uuid, const char *pin)
 {
 	u8 u[UUID_LEN];
-	int any = 0;
+	const u8 *use_uuid = NULL;
+	u8 addr_buf[ETH_ALEN];
 
-	if (os_strcmp(uuid, "any") == 0)
-		any = 1;
-	else if (uuid_str2bin(uuid, u))
+	if (os_strcmp(uuid, "any") == 0) {
+	} else if (uuid_str2bin(uuid, u) == 0) {
+		use_uuid = u;
+	} else if (hwaddr_aton(uuid, addr_buf) == 0) {
+		use_uuid = wps_er_get_sta_uuid(wpa_s->wps_er, addr_buf);
+		if (use_uuid == NULL)
+			return -1;
+	} else
 		return -1;
 	return wps_registrar_add_pin(wpa_s->wps->registrar, addr,
-				     any ? NULL : u,
+				     use_uuid,
 				     (const u8 *) pin, os_strlen(pin), 300);
 }
 
 
 int wpas_wps_er_pbc(struct wpa_supplicant *wpa_s, const char *uuid)
 {
-	u8 u[UUID_LEN];
+	u8 u[UUID_LEN], *use_uuid = NULL;
+	u8 addr[ETH_ALEN], *use_addr = NULL;
 
-	if (uuid_str2bin(uuid, u))
+	if (uuid_str2bin(uuid, u) == 0)
+		use_uuid = u;
+	else if (hwaddr_aton(uuid, addr) == 0)
+		use_addr = addr;
+	else
 		return -1;
-	return wps_er_pbc(wpa_s->wps_er, u);
+	return wps_er_pbc(wpa_s->wps_er, use_uuid, use_addr);
 }
 
 

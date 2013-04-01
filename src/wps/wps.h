@@ -793,7 +793,8 @@ void wps_er_refresh(struct wps_er *er);
 void wps_er_deinit(struct wps_er *er, void (*cb)(void *ctx), void *ctx);
 void wps_er_set_sel_reg(struct wps_er *er, int sel_reg, u16 dev_passwd_id,
 			u16 sel_reg_config_methods);
-int wps_er_pbc(struct wps_er *er, const u8 *uuid);
+int wps_er_pbc(struct wps_er *er, const u8 *uuid, const u8 *addr);
+const u8 * wps_er_get_sta_uuid(struct wps_er *er, const u8 *addr);
 int wps_er_learn(struct wps_er *er, const u8 *uuid, const u8 *addr,
 		 const u8 *pin, size_t pin_len);
 int wps_er_set_config(struct wps_er *er, const u8 *uuid, const u8 *addr,

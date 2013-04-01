@@ -277,10 +277,10 @@ wps_er_config <UUID|BSSID> <AP PIN> <new SSID> <auth> <encr> <new key>
 <encr> must be one of the following: NONE WEP TKIP CCMP
 
 
-wps_er_pbc <Enrollee UUID>
+wps_er_pbc <Enrollee UUID|MAC address>
 - accept an Enrollee PBC using External Registrar
 
-wps_er_pin <Enrollee UUID> <PIN> [Enrollee MAC address]
+wps_er_pin <Enrollee UUID|"any"|MAC address> <PIN> [Enrollee MAC address]
 - add an Enrollee PIN to External Registrar
 - if Enrollee UUID is not known, "any" can be used to add a wildcard PIN
 - if the MAC address of the enrollee is known, it should be configured

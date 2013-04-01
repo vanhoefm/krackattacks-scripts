@@ -1558,7 +1558,7 @@ void wps_er_set_sel_reg(struct wps_er *er, int sel_reg, u16 dev_passwd_id,
 }
 
 
-int wps_er_pbc(struct wps_er *er, const u8 *uuid)
+int wps_er_pbc(struct wps_er *er, const u8 *uuid, const u8 *addr)
 {
 	int res;
 	struct wps_er_ap *ap;
@@ -1572,11 +1572,14 @@ int wps_er_pbc(struct wps_er *er, const u8 *uuid)
 		return -2;
 	}
 
-	ap = wps_er_ap_get(er, NULL, uuid, NULL);
+	if (uuid)
+		ap = wps_er_ap_get(er, NULL, uuid, NULL);
+	else
+		ap = NULL;
 	if (ap == NULL) {
 		struct wps_er_sta *sta = NULL;
 		dl_list_for_each(ap, &er->ap, struct wps_er_ap, list) {
-			sta = wps_er_sta_get(ap, NULL, uuid);
+			sta = wps_er_sta_get(ap, addr, uuid);
 			if (sta) {
 				uuid = ap->uuid;
 				break;
@@ -1619,6 +1622,19 @@ static void wps_er_ap_settings_cb(void *ctx, const struct wps_credential *cred)
 	data.ap_settings.cred = cred;
 	ap->er->wps->event_cb(ap->er->wps->cb_ctx, WPS_EV_ER_AP_SETTINGS,
 			      &data);
+}
+
+
+const u8 * wps_er_get_sta_uuid(struct wps_er *er, const u8 *addr)
+{
+	struct wps_er_ap *ap;
+	dl_list_for_each(ap, &er->ap, struct wps_er_ap, list) {
+		struct wps_er_sta *sta;
+		sta = wps_er_sta_get(ap, addr, NULL);
+		if (sta)
+			return sta->uuid;
+	}
+	return NULL;
 }
 
 

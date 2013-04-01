@@ -25,12 +25,9 @@ int wps_build_public_key(struct wps_data *wps, struct wpabuf *msg)
 	wpa_printf(MSG_DEBUG, "WPS:  * Public Key");
 	wpabuf_free(wps->dh_privkey);
 	wps->dh_privkey = NULL;
-	if (wps->dev_pw_id != DEV_PW_DEFAULT && wps->wps->dh_privkey) {
+	if (wps->dev_pw_id != DEV_PW_DEFAULT && wps->wps->dh_privkey &&
+	    wps->wps->dh_ctx) {
 		wpa_printf(MSG_DEBUG, "WPS: Using pre-configured DH keys");
-		if (wps->wps->dh_ctx == NULL) {
-			wpa_printf(MSG_DEBUG, "WPS: wps->wps->dh_ctx == NULL");
-			return -1;
-		}
 		if (wps->wps->dh_pubkey == NULL) {
 			wpa_printf(MSG_DEBUG,
 				   "WPS: wps->wps->dh_pubkey == NULL");

@@ -1,6 +1,6 @@
 /*
  * Wi-Fi Protected Setup - External Registrar
- * Copyright (c) 2009-2012, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2009-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -97,13 +97,16 @@ static void wps_er_sta_remove_all(struct wps_er_ap *ap)
 
 
 static struct wps_er_ap * wps_er_ap_get(struct wps_er *er,
-					struct in_addr *addr, const u8 *uuid)
+					struct in_addr *addr, const u8 *uuid,
+					const u8 *mac_addr)
 {
 	struct wps_er_ap *ap;
 	dl_list_for_each(ap, &er->ap, struct wps_er_ap, list) {
 		if ((addr == NULL || ap->addr.s_addr == addr->s_addr) &&
 		    (uuid == NULL ||
-		     os_memcmp(uuid, ap->uuid, WPS_UUID_LEN) == 0))
+		     os_memcmp(uuid, ap->uuid, WPS_UUID_LEN) == 0) &&
+		    (mac_addr == NULL ||
+		     os_memcmp(mac_addr, ap->mac_addr, ETH_ALEN) == 0))
 			return ap;
 	}
 	return NULL;
@@ -290,7 +293,7 @@ int wps_er_ap_cache_settings(struct wps_er *er, struct in_addr *addr)
 	struct wps_er_ap *ap;
 	struct wps_er_ap_settings *settings;
 
-	ap = wps_er_ap_get(er, addr, NULL);
+	ap = wps_er_ap_get(er, addr, NULL, NULL);
 	if (ap == NULL || ap->ap_settings == NULL)
 		return -1;
 
@@ -636,7 +639,7 @@ void wps_er_ap_add(struct wps_er *er, const u8 *uuid, struct in_addr *addr,
 {
 	struct wps_er_ap *ap;
 
-	ap = wps_er_ap_get(er, addr, uuid);
+	ap = wps_er_ap_get(er, addr, uuid, NULL);
 	if (ap) {
 		/* Update advertisement timeout */
 		eloop_cancel_timeout(wps_er_ap_timeout, er, ap);
@@ -1569,7 +1572,7 @@ int wps_er_pbc(struct wps_er *er, const u8 *uuid)
 		return -2;
 	}
 
-	ap = wps_er_ap_get(er, NULL, uuid);
+	ap = wps_er_ap_get(er, NULL, uuid, NULL);
 	if (ap == NULL) {
 		struct wps_er_sta *sta = NULL;
 		dl_list_for_each(ap, &er->ap, struct wps_er_ap, list) {
@@ -1877,20 +1880,22 @@ static int wps_er_send_get_device_info(struct wps_er_ap *ap,
 }
 
 
-int wps_er_learn(struct wps_er *er, const u8 *uuid, const u8 *pin,
-		 size_t pin_len)
+int wps_er_learn(struct wps_er *er, const u8 *uuid, const u8 *addr,
+		 const u8 *pin, size_t pin_len)
 {
 	struct wps_er_ap *ap;
 
 	if (er == NULL)
 		return -1;
 
-	ap = wps_er_ap_get(er, NULL, uuid);
+	ap = wps_er_ap_get(er, NULL, uuid, addr);
 	if (ap == NULL) {
 		wpa_printf(MSG_DEBUG, "WPS ER: AP not found for learn "
 			   "request");
 		return -1;
 	}
+	if (uuid == NULL)
+		uuid = ap->uuid;
 	if (ap->wps) {
 		wpa_printf(MSG_DEBUG, "WPS ER: Pending operation ongoing "
 			   "with the AP - cannot start learn");
@@ -1908,7 +1913,7 @@ int wps_er_learn(struct wps_er *er, const u8 *uuid, const u8 *pin,
 }
 
 
-int wps_er_set_config(struct wps_er *er, const u8 *uuid,
+int wps_er_set_config(struct wps_er *er, const u8 *uuid, const u8 *addr,
 		      const struct wps_credential *cred)
 {
 	struct wps_er_ap *ap;
@@ -1916,7 +1921,7 @@ int wps_er_set_config(struct wps_er *er, const u8 *uuid,
 	if (er == NULL)
 		return -1;
 
-	ap = wps_er_ap_get(er, NULL, uuid);
+	ap = wps_er_ap_get(er, NULL, uuid, addr);
 	if (ap == NULL) {
 		wpa_printf(MSG_DEBUG, "WPS ER: AP not found for set config "
 			   "request");
@@ -1960,20 +1965,23 @@ static void wps_er_ap_config_m1(struct wps_er_ap *ap, struct wpabuf *m1)
 }
 
 
-int wps_er_config(struct wps_er *er, const u8 *uuid, const u8 *pin,
-		  size_t pin_len, const struct wps_credential *cred)
+int wps_er_config(struct wps_er *er, const u8 *uuid, const u8 *addr,
+		  const u8 *pin, size_t pin_len,
+		  const struct wps_credential *cred)
 {
 	struct wps_er_ap *ap;
 
 	if (er == NULL)
 		return -1;
 
-	ap = wps_er_ap_get(er, NULL, uuid);
+	ap = wps_er_ap_get(er, NULL, uuid, addr);
 	if (ap == NULL) {
 		wpa_printf(MSG_DEBUG, "WPS ER: AP not found for config "
 			   "request");
 		return -1;
 	}
+	if (uuid == NULL)
+		uuid = ap->uuid;
 	if (ap->wps) {
 		wpa_printf(MSG_DEBUG, "WPS ER: Pending operation ongoing "
 			   "with the AP - cannot start config");
@@ -1999,7 +2007,8 @@ int wps_er_config(struct wps_er *er, const u8 *uuid, const u8 *pin,
 
 
 #ifdef CONFIG_WPS_NFC
-struct wpabuf * wps_er_nfc_config_token(struct wps_er *er, const u8 *uuid)
+struct wpabuf * wps_er_nfc_config_token(struct wps_er *er, const u8 *uuid,
+					const u8 *addr)
 {
 	struct wps_er_ap *ap;
 	struct wpabuf *ret;
@@ -2008,7 +2017,7 @@ struct wpabuf * wps_er_nfc_config_token(struct wps_er *er, const u8 *uuid)
 	if (er == NULL)
 		return NULL;
 
-	ap = wps_er_ap_get(er, NULL, uuid);
+	ap = wps_er_ap_get(er, NULL, uuid, addr);
 	if (ap == NULL)
 		return NULL;
 	if (ap->ap_settings == NULL) {

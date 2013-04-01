@@ -259,16 +259,16 @@ wps_er_start [IP address]
 wps_er_stop
 - stop WPS ER functionality
 
-wps_er_learn <UUID> <AP PIN>
+wps_er_learn <UUID|BSSID> <AP PIN>
 - learn AP configuration
 
-wps_er_set_config <UUID> <network id>
+wps_er_set_config <UUID|BSSID> <network id>
 - use AP configuration from a locally configured network (e.g., from
   wps_reg command); this does not change the AP's configuration, but
   only prepares a configuration to be used when enrolling a new device
   to the AP
 
-wps_er_config <UUID> <AP PIN> <new SSID> <auth> <encr> <new key>
+wps_er_config <UUID|BSSID> <AP PIN> <new SSID> <auth> <encr> <new key>
 - examples:
   wps_er_config 87654321-9abc-def0-1234-56789abc0002 12345670 testing WPA2PSK CCMP 12345678
   wpa_er_config 87654321-9abc-def0-1234-56789abc0002 12345670 clear OPEN NONE ""

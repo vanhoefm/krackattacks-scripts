@@ -1,6 +1,6 @@
 /*
  * wpa_supplicant / WPS integration
- * Copyright (c) 2008-2012, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2008-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -1630,11 +1630,17 @@ int wpas_wps_er_pbc(struct wpa_supplicant *wpa_s, const char *uuid)
 int wpas_wps_er_learn(struct wpa_supplicant *wpa_s, const char *uuid,
 		      const char *pin)
 {
-	u8 u[UUID_LEN];
+	u8 u[UUID_LEN], *use_uuid = NULL;
+	u8 addr[ETH_ALEN], *use_addr = NULL;
 
-	if (uuid_str2bin(uuid, u))
+	if (uuid_str2bin(uuid, u) == 0)
+		use_uuid = u;
+	else if (hwaddr_aton(uuid, addr) == 0)
+		use_addr = addr;
+	else
 		return -1;
-	return wps_er_learn(wpa_s->wps_er, u, (const u8 *) pin,
+
+	return wps_er_learn(wpa_s->wps_er, use_uuid, use_addr, (const u8 *) pin,
 			    os_strlen(pin));
 }
 
@@ -1642,11 +1648,16 @@ int wpas_wps_er_learn(struct wpa_supplicant *wpa_s, const char *uuid,
 int wpas_wps_er_set_config(struct wpa_supplicant *wpa_s, const char *uuid,
 			   int id)
 {
-	u8 u[UUID_LEN];
+	u8 u[UUID_LEN], *use_uuid = NULL;
+	u8 addr[ETH_ALEN], *use_addr = NULL;
 	struct wpa_ssid *ssid;
 	struct wps_credential cred;
 
-	if (uuid_str2bin(uuid, u))
+	if (uuid_str2bin(uuid, u) == 0)
+		use_uuid = u;
+	else if (hwaddr_aton(uuid, addr) == 0)
+		use_addr = addr;
+	else
 		return -1;
 	ssid = wpa_config_get_network(wpa_s->conf, id);
 	if (ssid == NULL || ssid->ssid == NULL)
@@ -1678,18 +1689,23 @@ int wpas_wps_er_set_config(struct wpa_supplicant *wpa_s, const char *uuid,
 		cred.auth_type = WPS_AUTH_OPEN;
 		cred.encr_type = WPS_ENCR_NONE;
 	}
-	return wps_er_set_config(wpa_s->wps_er, u, &cred);
+	return wps_er_set_config(wpa_s->wps_er, use_uuid, use_addr, &cred);
 }
 
 
 int wpas_wps_er_config(struct wpa_supplicant *wpa_s, const char *uuid,
 		       const char *pin, struct wps_new_ap_settings *settings)
 {
-	u8 u[UUID_LEN];
+	u8 u[UUID_LEN], *use_uuid = NULL;
+	u8 addr[ETH_ALEN], *use_addr = NULL;
 	struct wps_credential cred;
 	size_t len;
 
-	if (uuid_str2bin(uuid, u))
+	if (uuid_str2bin(uuid, u) == 0)
+		use_uuid = u;
+	else if (hwaddr_aton(uuid, addr) == 0)
+		use_addr = addr;
+	else
 		return -1;
 	if (settings->ssid_hex == NULL || settings->auth == NULL ||
 	    settings->encr == NULL || settings->key_hex == NULL)
@@ -1728,8 +1744,8 @@ int wpas_wps_er_config(struct wpa_supplicant *wpa_s, const char *uuid,
 	else
 		return -1;
 
-	return wps_er_config(wpa_s->wps_er, u, (const u8 *) pin,
-			     os_strlen(pin), &cred);
+	return wps_er_config(wpa_s->wps_er, use_uuid, use_addr,
+			     (const u8 *) pin, os_strlen(pin), &cred);
 }
 
 
@@ -1738,15 +1754,20 @@ struct wpabuf * wpas_wps_er_nfc_config_token(struct wpa_supplicant *wpa_s,
 					     int ndef, const char *uuid)
 {
 	struct wpabuf *ret;
-	u8 u[UUID_LEN];
+	u8 u[UUID_LEN], *use_uuid = NULL;
+	u8 addr[ETH_ALEN], *use_addr = NULL;
 
 	if (!wpa_s->wps_er)
 		return NULL;
 
-	if (uuid_str2bin(uuid, u))
+	if (uuid_str2bin(uuid, u) == 0)
+		use_uuid = u;
+	else if (hwaddr_aton(uuid, addr) == 0)
+		use_addr = addr;
+	else
 		return NULL;
 
-	ret = wps_er_nfc_config_token(wpa_s->wps_er, u);
+	ret = wps_er_nfc_config_token(wpa_s->wps_er, use_uuid, use_addr);
 	if (ndef && ret) {
 		struct wpabuf *tmp;
 		tmp = ndef_build_wifi(ret);
@@ -2038,19 +2059,26 @@ struct wpabuf * wpas_wps_er_nfc_handover_sel(struct wpa_supplicant *wpa_s,
 {
 #ifdef CONFIG_WPS_ER
 	struct wpabuf *ret;
-	u8 u[UUID_LEN];
+	u8 u[UUID_LEN], *use_uuid = NULL;
+	u8 addr[ETH_ALEN], *use_addr = NULL;
 
 	if (!wpa_s->wps_er)
 		return NULL;
 
-	if (uuid == NULL || uuid_str2bin(uuid, u))
+	if (uuid == NULL)
+		return NULL;
+	if (uuid_str2bin(uuid, u) == 0)
+		use_uuid = u;
+	else if (hwaddr_aton(uuid, addr) == 0)
+		use_addr = addr;
+	else
 		return NULL;
 
 	/*
 	 * Handover Select carrier record for WPS uses the same format as
 	 * configuration token.
 	 */
-	ret = wps_er_nfc_config_token(wpa_s->wps_er, u);
+	ret = wps_er_nfc_config_token(wpa_s->wps_er, use_uuid, use_addr);
 	if (ndef && ret) {
 		struct wpabuf *tmp;
 		tmp = ndef_build_wifi(ret);

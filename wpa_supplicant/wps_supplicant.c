@@ -1074,7 +1074,8 @@ int wpas_wps_start_pbc(struct wpa_supplicant *wpa_s, const u8 *bssid,
 
 static int wpas_wps_start_dev_pw(struct wpa_supplicant *wpa_s, const u8 *bssid,
 				 const char *pin, int p2p_group, u16 dev_pw_id,
-				 const u8 *peer_pubkey_hash)
+				 const u8 *peer_pubkey_hash,
+				 const u8 *ssid_val, size_t ssid_len)
 {
 	struct wpa_ssid *ssid;
 	char val[128 + 2 * WPS_OOB_PUBKEY_HASH_LEN];
@@ -1083,10 +1084,19 @@ static int wpas_wps_start_dev_pw(struct wpa_supplicant *wpa_s, const u8 *bssid,
 
 	wpas_clear_wps(wpa_s);
 	ssid = wpas_wps_add_network(wpa_s, 0, bssid);
-	if (ssid == NULL)
+	if (ssid == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS: Could not add network");
 		return -1;
+	}
 	ssid->temporary = 1;
 	ssid->p2p_group = p2p_group;
+	if (ssid_val) {
+		ssid->ssid = os_malloc(ssid_len);
+		if (ssid->ssid) {
+			os_memcpy(ssid->ssid, ssid_val, ssid_len);
+			ssid->ssid_len = ssid_len;
+		}
+	}
 	if (peer_pubkey_hash) {
 		os_memcpy(hash, " pkhash=", 8);
 		wpa_snprintf_hex_uppercase(hash + 8, sizeof(hash) - 8,
@@ -1131,7 +1141,7 @@ int wpas_wps_start_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		       const char *pin, int p2p_group, u16 dev_pw_id)
 {
 	return wpas_wps_start_dev_pw(wpa_s, bssid, pin, p2p_group, dev_pw_id,
-				     NULL);
+				     NULL, NULL, 0);
 }
 
 
@@ -2090,7 +2100,8 @@ struct wpabuf * wpas_wps_nfc_token(struct wpa_supplicant *wpa_s, int ndef)
 
 int wpas_wps_start_nfc(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		       const struct wpabuf *dev_pw, u16 dev_pw_id,
-		       int p2p_group, const u8 *peer_pubkey_hash)
+		       int p2p_group, const u8 *peer_pubkey_hash,
+		       const u8 *ssid, size_t ssid_len)
 {
 	struct wps_context *wps = wpa_s->wps;
 	char pw[32 * 2 + 1];
@@ -2130,7 +2141,7 @@ int wpas_wps_start_nfc(struct wpa_supplicant *wpa_s, const u8 *bssid,
 	wpa_snprintf_hex_uppercase(pw, sizeof(pw),
 				   wpabuf_head(dev_pw), wpabuf_len(dev_pw));
 	return wpas_wps_start_dev_pw(wpa_s, bssid, pw, p2p_group, dev_pw_id,
-				     peer_pubkey_hash);
+				     peer_pubkey_hash, ssid, ssid_len);
 }
 
 

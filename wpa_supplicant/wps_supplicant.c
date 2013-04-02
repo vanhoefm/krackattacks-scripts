@@ -1120,13 +1120,18 @@ static int wpas_wps_start_dev_pw(struct wpa_supplicant *wpa_s, const u8 *bssid,
 	if (pin)
 		os_snprintf(val, sizeof(val), "\"pin=%s dev_pw_id=%u%s\"",
 			    pin, dev_pw_id, hash);
-	else {
+	else if (pin == NULL && dev_pw_id == DEV_PW_NFC_CONNECTION_HANDOVER) {
+		os_snprintf(val, sizeof(val), "\"dev_pw_id=%u%s\"",
+			    dev_pw_id, hash);
+	} else {
 		rpin = wps_generate_pin();
 		os_snprintf(val, sizeof(val), "\"pin=%08d dev_pw_id=%u%s\"",
 			    rpin, dev_pw_id, hash);
 	}
-	if (wpa_config_set(ssid, "phase1", val, 0) < 0)
+	if (wpa_config_set(ssid, "phase1", val, 0) < 0) {
+		wpa_printf(MSG_DEBUG, "WPS: Failed to set phase1 '%s'", val);
 		return -1;
+	}
 	if (wpa_s->wps_fragment_size)
 		ssid->eap.fragment_size = wpa_s->wps_fragment_size;
 	eloop_register_timeout(WPS_PBC_WALK_TIME, 0, wpas_wps_timeout,
@@ -2106,15 +2111,23 @@ int wpas_wps_start_nfc(struct wpa_supplicant *wpa_s, const u8 *bssid,
 	struct wps_context *wps = wpa_s->wps;
 	char pw[32 * 2 + 1];
 
-	if (dev_pw == NULL) {
+	if (dev_pw_id != DEV_PW_NFC_CONNECTION_HANDOVER && dev_pw == NULL) {
 		dev_pw = wpa_s->conf->wps_nfc_dev_pw;
 		dev_pw_id = wpa_s->conf->wps_nfc_dev_pw_id;
 	}
 
 	if (wpa_s->conf->wps_nfc_dh_pubkey == NULL ||
-	    wpa_s->conf->wps_nfc_dh_privkey == NULL ||
-	    dev_pw == NULL)
+	    wpa_s->conf->wps_nfc_dh_privkey == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS: Missing DH params - "
+			   "cannot start NFC-triggered connection");
 		return -1;
+	}
+
+	if (dev_pw_id != DEV_PW_NFC_CONNECTION_HANDOVER && dev_pw == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS: Missing Device Password (id=%u) - "
+			   "cannot start NFC-triggered connection", dev_pw_id);
+		return -1;
+	}
 
 	dh5_free(wps->dh_ctx);
 	wpabuf_free(wps->dh_pubkey);
@@ -2127,6 +2140,7 @@ int wpas_wps_start_nfc(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		wps->dh_pubkey = NULL;
 		wpabuf_free(wps->dh_privkey);
 		wps->dh_privkey = NULL;
+		wpa_printf(MSG_DEBUG, "WPS: Failed to get DH priv/pub key");
 		return -1;
 	}
 	wps->dh_ctx = dh5_init_fixed(wps->dh_privkey, wps->dh_pubkey);
@@ -2135,13 +2149,18 @@ int wpas_wps_start_nfc(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		wps->dh_pubkey = NULL;
 		wpabuf_free(wps->dh_privkey);
 		wps->dh_privkey = NULL;
+		wpa_printf(MSG_DEBUG, "WPS: Failed to initialize DH context");
 		return -1;
 	}
 
-	wpa_snprintf_hex_uppercase(pw, sizeof(pw),
-				   wpabuf_head(dev_pw), wpabuf_len(dev_pw));
-	return wpas_wps_start_dev_pw(wpa_s, bssid, pw, p2p_group, dev_pw_id,
-				     peer_pubkey_hash, ssid, ssid_len);
+	if (dev_pw) {
+		wpa_snprintf_hex_uppercase(pw, sizeof(pw),
+					   wpabuf_head(dev_pw),
+					   wpabuf_len(dev_pw));
+	}
+	return wpas_wps_start_dev_pw(wpa_s, bssid, dev_pw ? pw : NULL,
+				     p2p_group, dev_pw_id, peer_pubkey_hash,
+				     ssid, ssid_len);
 }
 
 
@@ -2354,17 +2373,86 @@ int wpas_wps_nfc_rx_handover_sel(struct wpa_supplicant *wpa_s,
 				 const struct wpabuf *data)
 {
 	struct wpabuf *wps;
-	int ret;
+	int ret = -1;
+	u16 wsc_len;
+	const u8 *pos;
+	struct wpabuf msg;
+	struct wps_parse_attr attr;
+	u16 dev_pw_id;
 
 	wps = ndef_parse_wifi(data);
 	if (wps == NULL)
 		return -1;
 	wpa_printf(MSG_DEBUG, "WPS: Received application/vnd.wfa.wsc "
 		   "payload from NFC connection handover");
-	wpa_hexdump_buf_key(MSG_DEBUG, "WPS: NFC payload", wps);
-	ret = wpas_wps_nfc_tag_process(wpa_s, wps);
-	wpabuf_free(wps);
+	wpa_hexdump_buf(MSG_DEBUG, "WPS: NFC payload", wps);
+	if (wpabuf_len(wps) < 2) {
+		wpa_printf(MSG_DEBUG, "WPS: Too short Wi-Fi Handover Select "
+			   "Message");
+		goto out;
+	}
+	pos = wpabuf_head(wps);
+	wsc_len = WPA_GET_BE16(pos);
+	if (wsc_len > wpabuf_len(wps) - 2) {
+		wpa_printf(MSG_DEBUG, "WPS: Invalid WSC attribute length (%u) "
+			   "in Wi-Fi Handover Select Message", wsc_len);
+		goto out;
+	}
+	pos += 2;
 
+	wpa_hexdump(MSG_DEBUG,
+		    "WPS: WSC attributes in Wi-Fi Handover Select Message",
+		    pos, wsc_len);
+	if (wsc_len < wpabuf_len(wps) - 2) {
+		wpa_hexdump(MSG_DEBUG,
+			    "WPS: Ignore extra data after WSC attributes",
+			    pos + wsc_len, wpabuf_len(wps) - 2 - wsc_len);
+	}
+
+	wpabuf_set(&msg, pos, wsc_len);
+	ret = wps_parse_msg(&msg, &attr);
+	if (ret < 0) {
+		wpa_printf(MSG_DEBUG, "WPS: Could not parse WSC attributes in "
+			   "Wi-Fi Handover Select Message");
+		goto out;
+	}
+
+	if (attr.oob_dev_password == NULL ||
+	    attr.oob_dev_password_len < WPS_OOB_PUBKEY_HASH_LEN + 2) {
+		wpa_printf(MSG_DEBUG, "WPS: No Out-of-Band Device Password "
+			   "included in Wi-Fi Handover Select Message");
+		ret = -1;
+		goto out;
+	}
+
+	if (attr.ssid == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS: No SSID included in Wi-Fi Handover "
+			   "Select Message");
+		ret = -1;
+		goto out;
+	}
+
+	wpa_hexdump_ascii(MSG_DEBUG, "WPS: SSID", attr.ssid, attr.ssid_len);
+
+	wpa_hexdump(MSG_DEBUG, "WPS: Out-of-Band Device Password",
+		    attr.oob_dev_password, attr.oob_dev_password_len);
+	dev_pw_id = WPA_GET_BE16(attr.oob_dev_password +
+				 WPS_OOB_PUBKEY_HASH_LEN);
+	if (dev_pw_id != DEV_PW_NFC_CONNECTION_HANDOVER) {
+		wpa_printf(MSG_DEBUG, "WPS: Unexpected OOB Device Password ID "
+			   "%u in Wi-Fi Handover Select Message", dev_pw_id);
+		ret = -1;
+		goto out;
+	}
+	wpa_hexdump(MSG_DEBUG, "WPS: AP Public Key hash",
+		    attr.oob_dev_password, WPS_OOB_PUBKEY_HASH_LEN);
+
+	ret = wpas_wps_start_nfc(wpa_s, NULL, NULL, dev_pw_id, 0,
+				 attr.oob_dev_password,
+				 attr.ssid, attr.ssid_len);
+
+out:
+	wpabuf_free(wps);
 	return ret;
 }
 

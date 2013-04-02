@@ -210,16 +210,21 @@ static void * eap_wsc_init(struct eap_sm *sm)
 			cfg.pbc = 1;
 	}
 
+	pos = os_strstr(phase1, "dev_pw_id=");
+	if (pos) {
+		u16 id = atoi(pos + 10);
+		if (id == DEV_PW_NFC_CONNECTION_HANDOVER)
+			nfc = 1;
+		if (cfg.pin || id == DEV_PW_NFC_CONNECTION_HANDOVER)
+			cfg.dev_pw_id = id;
+	}
+
 	if (cfg.pin == NULL && !cfg.pbc && !nfc) {
 		wpa_printf(MSG_INFO, "EAP-WSC: PIN or PBC not set in phase1 "
 			   "configuration data");
 		os_free(data);
 		return NULL;
 	}
-
-	pos = os_strstr(phase1, "dev_pw_id=");
-	if (pos && cfg.pin)
-		cfg.dev_pw_id = atoi(pos + 10);
 
 	pos = os_strstr(phase1, " pkhash=");
 	if (pos) {

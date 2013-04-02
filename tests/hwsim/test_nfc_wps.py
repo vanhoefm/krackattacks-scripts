@@ -37,6 +37,7 @@ def ap_wps_params(ssid):
 
 def test_nfc_wps_password_token_sta(dev, apdev):
     """NFC tag with password token on the station/Enrollee"""
+    dev[0].request("SET ignore_old_scan_res 1")
     ssid = "test-wps-nfc-pw-token-conf"
     params = ap_wps_params(ssid)
     hostapd.add_ap(apdev[0]['ifname'], params)
@@ -78,6 +79,7 @@ def test_nfc_wps_config_token(dev, apdev):
 
 def test_nfc_wps_password_token_sta_init(dev, apdev):
     """Initial AP configuration with first WPS NFC Enrollee"""
+    dev[0].request("SET ignore_old_scan_res 1")
     ssid = "test-wps-nfc-pw-token-init"
     hostapd.add_ap(apdev[0]['ifname'],
                    { "ssid": ssid, "eap_server": "1", "wps_state": "1" })

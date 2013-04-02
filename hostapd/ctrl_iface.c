@@ -399,13 +399,70 @@ static int hostapd_ctrl_iface_nfc_get_handover_sel(struct hostapd_data *hapd,
 static int hostapd_ctrl_iface_nfc_report_handover(struct hostapd_data *hapd,
 						  char *cmd)
 {
-	/*
-	 * Since NFC connection handover provided full WPS Credential, there is
-	 * no need for additional operations within hostapd. Just report this in
-	 * debug log.
-	 */
-	wpa_printf(MSG_DEBUG, "NFC: Connection handover reported: %s", cmd);
-	return 0;
+	size_t len;
+	struct wpabuf *req, *sel;
+	int ret;
+	char *pos, *role, *type, *pos2;
+
+	role = cmd;
+	pos = os_strchr(role, ' ');
+	if (pos == NULL)
+		return -1;
+	*pos++ = '\0';
+
+	type = pos;
+	pos = os_strchr(type, ' ');
+	if (pos == NULL)
+		return -1;
+	*pos++ = '\0';
+
+	pos2 = os_strchr(pos, ' ');
+	if (pos2 == NULL)
+		return -1;
+	*pos2++ = '\0';
+
+	len = os_strlen(pos);
+	if (len & 0x01)
+		return -1;
+	len /= 2;
+
+	req = wpabuf_alloc(len);
+	if (req == NULL)
+		return -1;
+	if (hexstr2bin(pos, wpabuf_put(req, len), len) < 0) {
+		wpabuf_free(req);
+		return -1;
+	}
+
+	len = os_strlen(pos2);
+	if (len & 0x01) {
+		wpabuf_free(req);
+		return -1;
+	}
+	len /= 2;
+
+	sel = wpabuf_alloc(len);
+	if (sel == NULL) {
+		wpabuf_free(req);
+		return -1;
+	}
+	if (hexstr2bin(pos2, wpabuf_put(sel, len), len) < 0) {
+		wpabuf_free(req);
+		wpabuf_free(sel);
+		return -1;
+	}
+
+	if (os_strcmp(role, "RESP") == 0 && os_strcmp(type, "WPS") == 0) {
+		ret = hostapd_wps_nfc_report_handover(hapd, req, sel);
+	} else {
+		wpa_printf(MSG_DEBUG, "NFC: Unsupported connection handover "
+			   "reported: role=%s type=%s", role, type);
+		ret = -1;
+	}
+	wpabuf_free(req);
+	wpabuf_free(sel);
+
+	return ret;
 }
 
 #endif /* CONFIG_WPS_NFC */
@@ -1101,7 +1158,7 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 				       void *sock_ctx)
 {
 	struct hostapd_data *hapd = eloop_ctx;
-	char buf[256];
+	char buf[4096];
 	int res;
 	struct sockaddr_un from;
 	socklen_t fromlen = sizeof(from);

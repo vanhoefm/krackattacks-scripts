@@ -766,7 +766,7 @@ int wps_registrar_add_pin(struct wps_registrar *reg, const u8 *addr,
 	else
 		wps_registrar_add_authorized_mac(
 			reg, (u8 *) "\xff\xff\xff\xff\xff\xff");
-	wps_registrar_selected_registrar_changed(reg);
+	wps_registrar_selected_registrar_changed(reg, 0);
 	eloop_cancel_timeout(wps_registrar_set_selected_timeout, reg, NULL);
 	eloop_register_timeout(WPS_PBC_WALK_TIME, 0,
 			       wps_registrar_set_selected_timeout,
@@ -788,7 +788,7 @@ static void wps_registrar_remove_pin(struct wps_registrar *reg,
 		addr = pin->enrollee_addr;
 	wps_registrar_remove_authorized_mac(reg, addr);
 	wps_remove_pin(pin);
-	wps_registrar_selected_registrar_changed(reg);
+	wps_registrar_selected_registrar_changed(reg, 0);
 }
 
 
@@ -951,7 +951,7 @@ static void wps_registrar_stop_pbc(struct wps_registrar *reg)
 	os_memset(reg->p2p_dev_addr, 0, ETH_ALEN);
 	wps_registrar_remove_authorized_mac(reg,
 					    (u8 *) "\xff\xff\xff\xff\xff\xff");
-	wps_registrar_selected_registrar_changed(reg);
+	wps_registrar_selected_registrar_changed(reg, 0);
 }
 
 
@@ -999,7 +999,7 @@ int wps_registrar_button_pushed(struct wps_registrar *reg,
 		os_memset(reg->p2p_dev_addr, 0, ETH_ALEN);
 	wps_registrar_add_authorized_mac(reg,
 					 (u8 *) "\xff\xff\xff\xff\xff\xff");
-	wps_registrar_selected_registrar_changed(reg);
+	wps_registrar_selected_registrar_changed(reg, 0);
 
 	eloop_cancel_timeout(wps_registrar_set_selected_timeout, reg, NULL);
 	eloop_cancel_timeout(wps_registrar_pbc_timeout, reg, NULL);
@@ -1022,7 +1022,7 @@ static void wps_registrar_pin_completed(struct wps_registrar *reg)
 	wpa_printf(MSG_DEBUG, "WPS: PIN completed using internal Registrar");
 	eloop_cancel_timeout(wps_registrar_set_selected_timeout, reg, NULL);
 	reg->selected_registrar = 0;
-	wps_registrar_selected_registrar_changed(reg);
+	wps_registrar_selected_registrar_changed(reg, 0);
 }
 
 
@@ -3279,7 +3279,7 @@ static void wps_registrar_set_selected_timeout(void *eloop_ctx,
 		   "unselect internal Registrar");
 	reg->selected_registrar = 0;
 	reg->pbc = 0;
-	wps_registrar_selected_registrar_changed(reg);
+	wps_registrar_selected_registrar_changed(reg, 0);
 }
 
 
@@ -3351,7 +3351,8 @@ static void wps_registrar_sel_reg_union(struct wps_registrar *reg)
  * This function is called when selected registrar state changes, e.g., when an
  * AP receives a SetSelectedRegistrar UPnP message.
  */
-void wps_registrar_selected_registrar_changed(struct wps_registrar *reg)
+void wps_registrar_selected_registrar_changed(struct wps_registrar *reg,
+					      u16 dev_pw_id)
 {
 	wpa_printf(MSG_DEBUG, "WPS: Selected registrar information changed");
 
@@ -3375,7 +3376,8 @@ void wps_registrar_selected_registrar_changed(struct wps_registrar *reg)
 			reg->sel_reg_dev_password_id_override =
 				DEV_PW_PUSHBUTTON;
 			wps_set_pushbutton(&methods, reg->wps->config_methods);
-		}
+		} else if (dev_pw_id)
+			reg->sel_reg_dev_password_id_override = dev_pw_id;
 		wpa_printf(MSG_DEBUG, "WPS: Internal Registrar selected "
 			   "(pbc=%d)", reg->pbc);
 		reg->sel_reg_config_methods_override = methods;
@@ -3497,11 +3499,14 @@ int wps_registrar_add_nfc_pw_token(struct wps_registrar *reg,
 	reg->pbc = 0;
 	wps_registrar_add_authorized_mac(reg,
 					 (u8 *) "\xff\xff\xff\xff\xff\xff");
-	wps_registrar_selected_registrar_changed(reg);
+	wps_registrar_selected_registrar_changed(reg, pw_id);
 	eloop_cancel_timeout(wps_registrar_set_selected_timeout, reg, NULL);
 	eloop_register_timeout(WPS_PBC_WALK_TIME, 0,
 			       wps_registrar_set_selected_timeout,
 			       reg, NULL);
+
+	wpa_printf(MSG_DEBUG, "WPS: Added NFC Device Password %u to Registrar",
+		   pw_id);
 
 	return 0;
 }
@@ -3544,7 +3549,7 @@ void wps_registrar_remove_nfc_pw_token(struct wps_registrar *reg,
 {
 	wps_registrar_remove_authorized_mac(reg,
 					    (u8 *) "\xff\xff\xff\xff\xff\xff");
-	wps_registrar_selected_registrar_changed(reg);
+	wps_registrar_selected_registrar_changed(reg, 0);
 }
 
 #endif /* CONFIG_WPS_NFC */

@@ -197,7 +197,8 @@ enum wps_process_res wps_registrar_process_msg(struct wps_data *wps,
 int wps_build_cred(struct wps_data *wps, struct wpabuf *msg);
 int wps_device_store(struct wps_registrar *reg,
 		     struct wps_device_data *dev, const u8 *uuid);
-void wps_registrar_selected_registrar_changed(struct wps_registrar *reg);
+void wps_registrar_selected_registrar_changed(struct wps_registrar *reg,
+					      u16 dev_pw_id);
 const u8 * wps_authorized_macs(struct wps_registrar *reg, size_t *count);
 int wps_registrar_pbc_overlap(struct wps_registrar *reg,
 			      const u8 *addr, const u8 *uuid_e);

@@ -2259,11 +2259,29 @@ int wpas_wps_nfc_tag_read(struct wpa_supplicant *wpa_s,
 }
 
 
-struct wpabuf * wpas_wps_nfc_handover_req(struct wpa_supplicant *wpa_s, int cr)
+struct wpabuf * wpas_wps_nfc_handover_req(struct wpa_supplicant *wpa_s,
+					  int ndef)
 {
-	if (cr)
-		return ndef_build_wifi_hc(1);
-	return ndef_build_wifi_hr();
+	struct wpabuf *ret;
+
+	if (wpa_s->conf->wps_nfc_dh_pubkey == NULL &&
+	    wps_nfc_gen_dh(&wpa_s->conf->wps_nfc_dh_pubkey,
+			   &wpa_s->conf->wps_nfc_dh_privkey) < 0)
+		return NULL;
+
+	ret = wps_build_nfc_handover_req(wpa_s->wps,
+					 wpa_s->conf->wps_nfc_dh_pubkey);
+
+	if (ndef && ret) {
+		struct wpabuf *tmp;
+		tmp = ndef_build_wifi(ret);
+		wpabuf_free(ret);
+		if (tmp == NULL)
+			return NULL;
+		ret = tmp;
+	}
+
+	return ret;
 }
 
 

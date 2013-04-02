@@ -70,7 +70,8 @@ int wpas_wps_start_nfc(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		       const u8 *ssid, size_t ssid_len);
 int wpas_wps_nfc_tag_read(struct wpa_supplicant *wpa_s,
 			  const struct wpabuf *data);
-struct wpabuf * wpas_wps_nfc_handover_req(struct wpa_supplicant *wpa_s, int cr);
+struct wpabuf * wpas_wps_nfc_handover_req(struct wpa_supplicant *wpa_s,
+					  int ndef);
 struct wpabuf * wpas_wps_nfc_handover_sel(struct wpa_supplicant *wpa_s,
 					  int ndef, int cr, const char *uuid);
 int wpas_wps_nfc_rx_handover_req(struct wpa_supplicant *wpa_s,

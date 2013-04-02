@@ -908,12 +908,12 @@ static int wpa_supplicant_ctrl_iface_wps_nfc_tag_read(
 
 static int wpas_ctrl_nfc_get_handover_req_wps(struct wpa_supplicant *wpa_s,
 					      char *reply, size_t max_len,
-					      int cr)
+					      int ndef)
 {
 	struct wpabuf *buf;
 	int res;
 
-	buf = wpas_wps_nfc_handover_req(wpa_s, cr);
+	buf = wpas_wps_nfc_handover_req(wpa_s, ndef);
 	if (buf == NULL)
 		return -1;
 
@@ -933,18 +933,25 @@ static int wpas_ctrl_nfc_get_handover_req(struct wpa_supplicant *wpa_s,
 					  size_t max_len)
 {
 	char *pos;
+	int ndef;
 
 	pos = os_strchr(cmd, ' ');
 	if (pos == NULL)
 		return -1;
 	*pos++ = '\0';
 
-	if (os_strcmp(cmd, "NDEF") != 0)
+	if (os_strcmp(cmd, "WPS") == 0)
+		ndef = 0;
+	else if (os_strcmp(cmd, "NDEF") == 0)
+		ndef = 1;
+	else
 		return -1;
 
 	if (os_strcmp(pos, "WPS") == 0 || os_strcmp(pos, "WPS-CR") == 0) {
+		if (!ndef)
+			return -1;
 		return wpas_ctrl_nfc_get_handover_req_wps(
-			wpa_s, reply, max_len, os_strcmp(pos, "WPS-CR") == 0);
+			wpa_s, reply, max_len, ndef);
 	}
 
 	return -1;

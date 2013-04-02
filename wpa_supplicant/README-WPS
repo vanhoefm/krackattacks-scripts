@@ -366,11 +366,11 @@ the ER functionality has been started (wps_er_start), the NFC password
 token is used to enable enrollment of a new station (that was the source
 of the NFC password token).
 
-"nfc_get_handover_req <NDEF> <WPS>" command can be used to build the
-contents of a Handover Request Message for connection handover. The
-first argument selects the format of the output data and the second
-argument selects which type of connection handover is requested (WPS =
-Wi-Fi handover as specified in WSC 2.0).
+"nfc_get_handover_req <NDEF> <WPS-CR>" command can be used to build the
+WPS carrier record for a Handover Request Message for connection
+handover. The first argument selects the format of the output data and
+the second argument selects which type of connection handover is
+requested (WPS-CR = Wi-Fi handover as specified in WSC 2.0).
 
 "nfc_get_handover_sel <NDEF> <WPS> [UUID|BSSID]" command can be used to
 build the contents of a Handover Select Message for connection handover

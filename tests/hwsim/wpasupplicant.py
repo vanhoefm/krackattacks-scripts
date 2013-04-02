@@ -93,6 +93,7 @@ class WpaSupplicant:
         self.request("SET p2p_no_go_freq ")
         self.request("SET p2p_pref_chan ")
         self.request("SET p2p_no_group_iface 1")
+        self.request("SET p2p_go_intent 7")
         self.group_ifname = None
         self.dump_monitor()
 
@@ -350,10 +351,13 @@ class WpaSupplicant:
         if "P2P-GROUP-STARTED" not in ev:
             raise Exception("No P2P-GROUP-STARTED event seen")
 
-        exp = r'<.>(P2P-GROUP-STARTED) ([^ ]*) ([^ ]*) ssid="(.*)" freq=([0-9]*) ((?:psk=.*)|(?:passphrase=".*")) go_dev_addr=([0-9a-f:]*)'
+        exp = r'<.>(P2P-GROUP-STARTED) ([^ ]*) ([^ ]*) ssid="(.*)" freq=([0-9]*) ((?:psk=.*)|(?:passphrase=".*")) go_dev_addr=([0-9a-f:]*) ip_addr=([0-9.]*) ip_mask=([0-9.]*) go_ip_addr=([0-9.]*)'
         s = re.split(exp, ev)
-        if len(s) < 8:
-            raise Exception("Could not parse P2P-GROUP-STARTED")
+        if len(s) < 11:
+            exp = r'<.>(P2P-GROUP-STARTED) ([^ ]*) ([^ ]*) ssid="(.*)" freq=([0-9]*) ((?:psk=.*)|(?:passphrase=".*")) go_dev_addr=([0-9a-f:]*)'
+            s = re.split(exp, ev)
+            if len(s) < 8:
+                raise Exception("Could not parse P2P-GROUP-STARTED")
         res = {}
         res['result'] = 'success'
         res['ifname'] = s[2]
@@ -372,6 +376,13 @@ class WpaSupplicant:
         if p:
             res['passphrase'] = p.group(1)
         res['go_dev_addr'] = s[7]
+
+        if len(s) > 8 and len(s[8]) > 0:
+            res['ip_addr'] = s[8]
+        if len(s) > 9:
+            res['ip_mask'] = s[9]
+        if len(s) > 10:
+            res['go_ip_addr'] = s[10]
 
         if go_neg_res:
             exp = r'<.>(P2P-GO-NEG-SUCCESS) role=(GO|client) freq=([0-9]*)'

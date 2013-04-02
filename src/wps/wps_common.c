@@ -671,4 +671,90 @@ struct wpabuf * wps_nfc_token_gen(int ndef, int *id, struct wpabuf **pubkey,
 	return wps_nfc_token_build(ndef, *id, *pubkey, *dev_pw);
 }
 
+
+struct wpabuf * wps_build_nfc_handover_req(struct wps_context *ctx,
+					   struct wpabuf *nfc_dh_pubkey)
+{
+	struct wpabuf *msg;
+	void *len;
+
+	if (ctx == NULL)
+		return NULL;
+
+	wpa_printf(MSG_DEBUG, "WPS: Building attributes for NFC connection "
+		   "handover request");
+
+	if (nfc_dh_pubkey == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS: No NFC OOB Device Password "
+			   "configured");
+		return NULL;
+	}
+
+	msg = wpabuf_alloc(1000);
+	if (msg == NULL)
+		return msg;
+	len = wpabuf_put(msg, 2);
+
+	if (wps_build_oob_dev_pw(msg, DEV_PW_NFC_CONNECTION_HANDOVER,
+				 nfc_dh_pubkey, NULL, 0) ||
+	    wps_build_uuid_e(msg, ctx->uuid) ||
+	    wps_build_wfa_ext(msg, 0, NULL, 0)) {
+		wpabuf_free(msg);
+		return NULL;
+	}
+
+	WPA_PUT_BE16(len, wpabuf_len(msg) - 2);
+
+	return msg;
+}
+
+
+static int wps_build_ssid(struct wpabuf *msg, struct wps_context *wps)
+{
+	wpa_printf(MSG_DEBUG, "WPS:  * SSID");
+	wpa_hexdump_ascii(MSG_DEBUG, "WPS: SSID in Connection Handover Select",
+			  wps->ssid, wps->ssid_len);
+	wpabuf_put_be16(msg, ATTR_SSID);
+	wpabuf_put_be16(msg, wps->ssid_len);
+	wpabuf_put_data(msg, wps->ssid, wps->ssid_len);
+	return 0;
+}
+
+
+struct wpabuf * wps_build_nfc_handover_sel(struct wps_context *ctx,
+					   struct wpabuf *nfc_dh_pubkey)
+{
+	struct wpabuf *msg;
+	void *len;
+
+	if (ctx == NULL)
+		return NULL;
+
+	wpa_printf(MSG_DEBUG, "WPS: Building attributes for NFC connection "
+		   "handover select");
+
+	if (nfc_dh_pubkey == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS: No NFC OOB Device Password "
+			   "configured");
+		return NULL;
+	}
+
+	msg = wpabuf_alloc(1000);
+	if (msg == NULL)
+		return msg;
+	len = wpabuf_put(msg, 2);
+
+	if (wps_build_oob_dev_pw(msg, DEV_PW_NFC_CONNECTION_HANDOVER,
+				 nfc_dh_pubkey, NULL, 0) ||
+	    wps_build_ssid(msg, ctx) ||
+	    wps_build_wfa_ext(msg, 0, NULL, 0)) {
+		wpabuf_free(msg);
+		return NULL;
+	}
+
+	WPA_PUT_BE16(len, wpabuf_len(msg) - 2);
+
+	return msg;
+}
+
 #endif /* CONFIG_WPS_NFC */

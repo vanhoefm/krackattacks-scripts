@@ -1361,6 +1361,13 @@ static int wps_get_dev_password(struct wps_data *wps)
 		pin_len = 8;
 #ifdef CONFIG_WPS_NFC
 	} else if (wps->nfc_pw_token) {
+		if (wps->nfc_pw_token->pw_id == DEV_PW_NFC_CONNECTION_HANDOVER)
+		{
+			wpa_printf(MSG_DEBUG, "WPS: Using NFC connection "
+				   "handover and abbreviated WPS handshake "
+				   "without Device Password");
+			return 0;
+		}
 		wpa_printf(MSG_DEBUG, "WPS: Use OOB Device Password from NFC "
 			   "Password Token");
 		pin = wps->nfc_pw_token->dev_pw;
@@ -2556,6 +2563,9 @@ static enum wps_process_res wps_process_m1(struct wps_data *wps,
 	    wps->dev_pw_id != DEV_PW_USER_SPECIFIED &&
 	    wps->dev_pw_id != DEV_PW_MACHINE_SPECIFIED &&
 	    wps->dev_pw_id != DEV_PW_REGISTRAR_SPECIFIED &&
+#ifdef CONFIG_WPS_NFC
+	    wps->dev_pw_id != DEV_PW_NFC_CONNECTION_HANDOVER &&
+#endif /* CONFIG_WPS_NFC */
 	    (wps->dev_pw_id != DEV_PW_PUSHBUTTON ||
 	     !wps->wps->registrar->pbc)) {
 		wpa_printf(MSG_DEBUG, "WPS: Unsupported Device Password ID %d",
@@ -2565,7 +2575,8 @@ static enum wps_process_res wps_process_m1(struct wps_data *wps,
 	}
 
 #ifdef CONFIG_WPS_NFC
-	if (wps->dev_pw_id >= 0x10) {
+	if (wps->dev_pw_id >= 0x10 ||
+	    wps->dev_pw_id == DEV_PW_NFC_CONNECTION_HANDOVER) {
 		struct wps_nfc_pw_token *token;
 		const u8 *addr[1];
 		u8 hash[WPS_HASH_LEN];
@@ -3541,10 +3552,12 @@ int wps_registrar_add_nfc_pw_token(struct wps_registrar *reg,
 	os_memcpy(token->pubkey_hash, pubkey_hash, WPS_OOB_PUBKEY_HASH_LEN);
 	token->pw_id = pw_id;
 	token->pk_hash_provided_oob = pk_hash_provided_oob;
-	wpa_snprintf_hex_uppercase((char *) token->dev_pw,
-				   sizeof(token->dev_pw),
-				   dev_pw, dev_pw_len);
-	token->dev_pw_len = dev_pw_len * 2;
+	if (dev_pw) {
+		wpa_snprintf_hex_uppercase((char *) token->dev_pw,
+					   sizeof(token->dev_pw),
+					   dev_pw, dev_pw_len);
+		token->dev_pw_len = dev_pw_len * 2;
+	}
 
 	dl_list_add(&reg->nfc_pw_tokens, &token->list);
 
@@ -3573,8 +3586,7 @@ int wps_registrar_add_nfc_password_token(struct wps_registrar *reg,
 	u16 id;
 	size_t dev_pw_len;
 
-	if (oob_dev_pw_len < WPS_OOB_PUBKEY_HASH_LEN + 2 +
-	    WPS_OOB_DEVICE_PASSWORD_MIN_LEN ||
+	if (oob_dev_pw_len < WPS_OOB_PUBKEY_HASH_LEN + 2 ||
 	    oob_dev_pw_len > WPS_OOB_PUBKEY_HASH_LEN + 2 +
 	    WPS_OOB_DEVICE_PASSWORD_LEN)
 		return -1;

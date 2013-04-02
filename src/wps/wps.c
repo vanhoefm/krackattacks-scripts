@@ -58,6 +58,10 @@ struct wps_data * wps_init(const struct wps_config *cfg)
 	}
 
 #ifdef CONFIG_WPS_NFC
+	if (cfg->pin == NULL &&
+	    cfg->dev_pw_id == DEV_PW_NFC_CONNECTION_HANDOVER)
+		data->dev_pw_id = cfg->dev_pw_id;
+
 	if (cfg->wps->ap && !cfg->registrar && cfg->wps->ap_nfc_dev_pw_id) {
 		/* Keep AP PIN as alternative Device Password */
 		data->alt_dev_pw_id = data->dev_pw_id;

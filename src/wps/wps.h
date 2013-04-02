@@ -859,6 +859,10 @@ struct wpabuf * wps_nfc_token_build(int ndef, int id, struct wpabuf *pubkey,
 struct wpabuf * wps_nfc_token_gen(int ndef, int *id, struct wpabuf **pubkey,
 				  struct wpabuf **privkey,
 				  struct wpabuf **dev_pw);
+struct wpabuf * wps_build_nfc_handover_req(struct wps_context *ctx,
+					   struct wpabuf *nfc_dh_pubkey);
+struct wpabuf * wps_build_nfc_handover_sel(struct wps_context *ctx,
+					   struct wpabuf *nfc_dh_pubkey);
 
 /* ndef.c */
 struct wpabuf * ndef_parse_wifi(const struct wpabuf *buf);

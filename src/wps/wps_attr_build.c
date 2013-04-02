@@ -38,8 +38,11 @@ int wps_build_public_key(struct wps_data *wps, struct wpabuf *msg)
 		wps->wps->dh_ctx = NULL;
 		pubkey = wpabuf_dup(wps->wps->dh_pubkey);
 #ifdef CONFIG_WPS_NFC
-	} else if (wps->dev_pw_id >= 0x10 && wps->wps->ap &&
-		   wps->dev_pw_id == wps->wps->ap_nfc_dev_pw_id) {
+	} else if ((wps->dev_pw_id >= 0x10 ||
+		    wps->dev_pw_id == DEV_PW_NFC_CONNECTION_HANDOVER) &&
+		   wps->wps->ap &&
+		   (wps->dev_pw_id == wps->wps->ap_nfc_dev_pw_id ||
+		    wps->wps->ap_nfc_dh_pubkey)) {
 		wpa_printf(MSG_DEBUG, "WPS: Using NFC password token DH keys");
 		if (wps->wps->ap_nfc_dh_privkey == NULL) {
 			wpa_printf(MSG_DEBUG,
@@ -399,9 +402,11 @@ int wps_build_oob_dev_pw(struct wpabuf *msg, u16 dev_pw_id,
 		    pubkey_hash, WPS_OOB_PUBKEY_HASH_LEN);
 	wpabuf_put_data(msg, pubkey_hash, WPS_OOB_PUBKEY_HASH_LEN);
 	wpabuf_put_be16(msg, dev_pw_id);
-	wpa_hexdump_key(MSG_DEBUG, "WPS: OOB Device Password",
-			dev_pw, dev_pw_len);
-	wpabuf_put_data(msg, dev_pw, dev_pw_len);
+	if (dev_pw) {
+		wpa_hexdump_key(MSG_DEBUG, "WPS: OOB Device Password",
+				dev_pw, dev_pw_len);
+		wpabuf_put_data(msg, dev_pw, dev_pw_len);
+	}
 
 	return 0;
 }

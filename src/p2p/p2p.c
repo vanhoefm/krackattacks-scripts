@@ -4379,7 +4379,8 @@ void p2p_err(struct p2p_data *p2p, const char *fmt, ...)
 
 #ifdef CONFIG_WPS_NFC
 
-static struct wpabuf * p2p_build_nfc_handover(struct p2p_data *p2p)
+static struct wpabuf * p2p_build_nfc_handover(struct p2p_data *p2p,
+					      int client_freq)
 {
 	struct wpabuf *buf;
 	u8 op_class, channel;
@@ -4400,6 +4401,9 @@ static struct wpabuf * p2p_build_nfc_handover(struct p2p_data *p2p)
 		role = P2P_GO_IN_A_GROUP;
 		p2p_freq_to_channel(p2p_group_get_freq(p2p->groups[0]),
 				    &op_class, &channel);
+	} else if (client_freq > 0) {
+		role = P2P_CLIENT_IN_A_GROUP;
+		p2p_freq_to_channel(client_freq, &op_class, &channel);
 	}
 
 	p2p_buf_add_oob_go_neg_channel(buf, p2p->cfg->country, op_class,
@@ -4415,15 +4419,17 @@ static struct wpabuf * p2p_build_nfc_handover(struct p2p_data *p2p)
 }
 
 
-struct wpabuf * p2p_build_nfc_handover_req(struct p2p_data *p2p)
+struct wpabuf * p2p_build_nfc_handover_req(struct p2p_data *p2p,
+					   int client_freq)
 {
-	return p2p_build_nfc_handover(p2p);
+	return p2p_build_nfc_handover(p2p, client_freq);
 }
 
 
-struct wpabuf * p2p_build_nfc_handover_sel(struct p2p_data *p2p)
+struct wpabuf * p2p_build_nfc_handover_sel(struct p2p_data *p2p,
+					   int client_freq)
 {
-	return p2p_build_nfc_handover(p2p);
+	return p2p_build_nfc_handover(p2p, client_freq);
 }
 
 
@@ -4433,7 +4439,8 @@ int p2p_process_nfc_connection_handover(struct p2p_data *p2p,
 	struct p2p_message msg;
 	struct p2p_device *dev;
 	const u8 *p2p_dev_addr;
-	int peer_go = 0;
+	int freq;
+	enum p2p_role_indication role;
 
 	params->next_step = NO_ACTION;
 
@@ -4472,36 +4479,37 @@ int p2p_process_nfc_connection_handover(struct p2p_data *p2p,
 	dev->flags &= ~(P2P_DEV_PROBE_REQ_ONLY | P2P_DEV_GROUP_CLIENT_ONLY);
 	p2p_copy_wps_info(p2p, dev, 0, &msg);
 
-	if (msg.oob_go_neg_channel) {
-		int freq;
-		if (msg.oob_go_neg_channel[3] == 0 &&
-		    msg.oob_go_neg_channel[4] == 0)
-			freq = 0;
-		else
-			freq = p2p_channel_to_freq(msg.oob_go_neg_channel[3],
-						   msg.oob_go_neg_channel[4]);
-		if (freq < 0) {
-			p2p_dbg(p2p, "Unknown peer OOB GO Neg channel");
-		} else {
-			p2p_dbg(p2p, "Peer OOB GO Neg channel: %u MHz", freq);
-			dev->oob_go_neg_freq = freq;
-		}
-
-		if (!params->sel) {
-			freq = p2p_channel_to_freq(p2p->cfg->reg_class,
-						   p2p->cfg->channel);
-			if (freq < 0) {
-				p2p_dbg(p2p, "Own listen channel not known");
-				return -1;
-			}
-			p2p_dbg(p2p, "Use own Listen channel as OOB GO Neg channel: %u MHz",
-				freq);
-			dev->oob_go_neg_freq = freq;
-		}
-
-		if (msg.oob_go_neg_channel[5] == P2P_GO_IN_A_GROUP)
-			peer_go = 1;
+	if (!msg.oob_go_neg_channel) {
+		p2p_dbg(p2p, "OOB GO Negotiation Channel attribute not included");
+		return -1;
 	}
+
+	if (msg.oob_go_neg_channel[3] == 0 &&
+	    msg.oob_go_neg_channel[4] == 0)
+		freq = 0;
+	else
+		freq = p2p_channel_to_freq(msg.oob_go_neg_channel[3],
+					   msg.oob_go_neg_channel[4]);
+	if (freq < 0) {
+		p2p_dbg(p2p, "Unknown peer OOB GO Neg channel");
+		return -1;
+	} else {
+		p2p_dbg(p2p, "Peer OOB GO Neg channel: %u MHz", freq);
+		dev->oob_go_neg_freq = freq;
+	}
+
+	if (!params->sel) {
+		freq = p2p_channel_to_freq(p2p->cfg->reg_class,
+					   p2p->cfg->channel);
+		if (freq < 0) {
+			p2p_dbg(p2p, "Own listen channel not known");
+			return -1;
+		}
+		p2p_dbg(p2p, "Use own Listen channel as OOB GO Neg channel: %u MHz", freq);
+		dev->oob_go_neg_freq = freq;
+	}
+
+	role = msg.oob_go_neg_channel[5];
 
 	p2p_parse_free(&msg);
 
@@ -4516,11 +4524,14 @@ int p2p_process_nfc_connection_handover(struct p2p_data *p2p,
 		dev->flags |= P2P_DEV_REPORTED | P2P_DEV_REPORTED_ONCE;
 	}
 
-	if (peer_go && p2p->num_groups > 0)
+	if (role == P2P_GO_IN_A_GROUP && p2p->num_groups > 0)
 		params->next_step = BOTH_GO;
-	else if (peer_go)
+	else if (role == P2P_GO_IN_A_GROUP)
 		params->next_step = JOIN_GROUP;
-	else if (p2p->num_groups > 0)
+	else if (role == P2P_CLIENT_IN_A_GROUP) {
+		dev->flags |= P2P_DEV_GROUP_CLIENT_ONLY;
+		params->next_step = PEER_CLIENT;
+	} else if (p2p->num_groups > 0)
 		params->next_step = AUTH_JOIN;
 	else if (params->sel)
 		params->next_step = INIT_GO_NEG;

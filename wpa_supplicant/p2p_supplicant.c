@@ -6975,11 +6975,7 @@ static struct wpabuf * wpas_p2p_nfc_handover(int ndef, struct wpabuf *wsc,
 					     struct wpabuf *p2p)
 {
 	struct wpabuf *ret;
-
-	if (wsc == NULL) {
-		wpabuf_free(p2p);
-		return NULL;
-	}
+	size_t wsc_len;
 
 	if (p2p == NULL) {
 		wpabuf_free(wsc);
@@ -6987,15 +6983,17 @@ static struct wpabuf * wpas_p2p_nfc_handover(int ndef, struct wpabuf *wsc,
 		return NULL;
 	}
 
-	ret = wpabuf_alloc(2 + wpabuf_len(wsc) + 2 + wpabuf_len(p2p));
+	wsc_len = wsc ? wpabuf_len(wsc) : 0;
+	ret = wpabuf_alloc(2 + wsc_len + 2 + wpabuf_len(p2p));
 	if (ret == NULL) {
 		wpabuf_free(wsc);
 		wpabuf_free(p2p);
 		return NULL;
 	}
 
-	wpabuf_put_be16(ret, wpabuf_len(wsc));
-	wpabuf_put_buf(ret, wsc);
+	wpabuf_put_be16(ret, wsc_len);
+	if (wsc)
+		wpabuf_put_buf(ret, wsc);
 	wpabuf_put_be16(ret, wpabuf_len(p2p));
 	wpabuf_put_buf(ret, p2p);
 
@@ -7019,10 +7017,27 @@ static struct wpabuf * wpas_p2p_nfc_handover(int ndef, struct wpabuf *wsc,
 }
 
 
+static int wpas_p2p_cli_freq(struct wpa_supplicant *wpa_s)
+{
+	struct wpa_supplicant *iface;
+
+	for (iface = wpa_s->global->ifaces; iface; iface = iface->next) {
+		if (iface->wpa_state < WPA_ASSOCIATING ||
+		    iface->current_ssid == NULL || iface->assoc_freq == 0 ||
+		    !iface->current_ssid->p2p_group ||
+		    iface->current_ssid->mode != WPAS_MODE_INFRA)
+			continue;
+		return iface->assoc_freq;
+	}
+	return 0;
+}
+
+
 struct wpabuf * wpas_p2p_nfc_handover_req(struct wpa_supplicant *wpa_s,
 					  int ndef)
 {
 	struct wpabuf *wsc, *p2p;
+	int cli_freq = wpas_p2p_cli_freq(wpa_s);
 
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL) {
 		wpa_printf(MSG_DEBUG, "P2P: P2P disabled - cannot build handover request");
@@ -7036,9 +7051,12 @@ struct wpabuf * wpas_p2p_nfc_handover_req(struct wpa_supplicant *wpa_s,
 		return NULL;
 	}
 
-	wsc = wps_build_nfc_handover_req_p2p(wpa_s->parent->wps,
-					     wpa_s->conf->wps_nfc_dh_pubkey);
-	p2p = p2p_build_nfc_handover_req(wpa_s->global->p2p);
+	if (cli_freq == 0) {
+		wsc = wps_build_nfc_handover_req_p2p(
+			wpa_s->parent->wps, wpa_s->conf->wps_nfc_dh_pubkey);
+	} else
+		wsc = NULL;
+	p2p = p2p_build_nfc_handover_req(wpa_s->global->p2p, cli_freq);
 
 	return wpas_p2p_nfc_handover(ndef, wsc, p2p);
 }
@@ -7048,6 +7066,7 @@ struct wpabuf * wpas_p2p_nfc_handover_sel(struct wpa_supplicant *wpa_s,
 					  int ndef, int tag)
 {
 	struct wpabuf *wsc, *p2p;
+	int cli_freq = wpas_p2p_cli_freq(wpa_s);
 
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
 		return NULL;
@@ -7057,14 +7076,16 @@ struct wpabuf * wpas_p2p_nfc_handover_sel(struct wpa_supplicant *wpa_s,
 			   &wpa_s->conf->wps_nfc_dh_privkey) < 0)
 		return NULL;
 
-	wsc = wps_build_nfc_handover_sel_p2p(wpa_s->parent->wps,
-					     tag ?
-					     wpa_s->conf->wps_nfc_dev_pw_id :
-					     DEV_PW_NFC_CONNECTION_HANDOVER,
-					     wpa_s->conf->wps_nfc_dh_pubkey,
-					     tag ? wpa_s->conf->wps_nfc_dev_pw :
-					     NULL);
-	p2p = p2p_build_nfc_handover_sel(wpa_s->global->p2p);
+	if (cli_freq == 0) {
+		wsc = wps_build_nfc_handover_sel_p2p(
+			wpa_s->parent->wps,
+			tag ? wpa_s->conf->wps_nfc_dev_pw_id :
+			DEV_PW_NFC_CONNECTION_HANDOVER,
+			wpa_s->conf->wps_nfc_dh_pubkey,
+			tag ? wpa_s->conf->wps_nfc_dev_pw : NULL);
+	} else
+		wsc = NULL;
+	p2p = p2p_build_nfc_handover_sel(wpa_s->global->p2p, cli_freq);
 
 	return wpas_p2p_nfc_handover(ndef, wsc, p2p);
 }
@@ -7221,6 +7242,18 @@ static int wpas_p2p_nfc_connection_handover(struct wpa_supplicant *wpa_s,
 		return 0;
 	}
 
+	if (params.next_step == PEER_CLIENT) {
+		wpa_msg(wpa_s, MSG_INFO, P2P_EVENT_NFC_PEER_CLIENT "peer="
+			MACSTR, MAC2STR(params.peer->p2p_device_addr));
+		return 0;
+	}
+
+	if (wpas_p2p_cli_freq(wpa_s)) {
+		wpa_msg(wpa_s, MSG_INFO, P2P_EVENT_NFC_WHILE_CLIENT "peer="
+			MACSTR, MAC2STR(params.peer->p2p_device_addr));
+		return 0;
+	}
+
 	wpabuf_free(wpa_s->p2p_oob_dev_pw);
 	wpa_s->p2p_oob_dev_pw = NULL;
 
@@ -7271,6 +7304,7 @@ static int wpas_p2p_nfc_connection_handover(struct wpa_supplicant *wpa_s,
 	switch (params.next_step) {
 	case NO_ACTION:
 	case BOTH_GO:
+	case PEER_CLIENT:
 		/* already covered above */
 		return 0;
 	case JOIN_GROUP:

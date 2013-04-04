@@ -7212,6 +7212,15 @@ static int wpas_p2p_nfc_connection_handover(struct wpa_supplicant *wpa_s,
 	if (res)
 		return res;
 
+	if (params.next_step == NO_ACTION)
+		return 0;
+
+	if (params.next_step == BOTH_GO) {
+		wpa_msg(wpa_s, MSG_INFO, P2P_EVENT_NFC_BOTH_GO "peer=" MACSTR,
+			MAC2STR(params.peer->p2p_device_addr));
+		return 0;
+	}
+
 	wpabuf_free(wpa_s->p2p_oob_dev_pw);
 	wpa_s->p2p_oob_dev_pw = NULL;
 
@@ -7261,6 +7270,8 @@ static int wpas_p2p_nfc_connection_handover(struct wpa_supplicant *wpa_s,
 
 	switch (params.next_step) {
 	case NO_ACTION:
+	case BOTH_GO:
+		/* already covered above */
 		return 0;
 	case JOIN_GROUP:
 		return wpas_p2p_nfc_join_group(wpa_s, &params);

@@ -1910,7 +1910,8 @@ struct p2p_nfc_params {
 	size_t p2p_len;
 
 	enum {
-		NO_ACTION, JOIN_GROUP, AUTH_JOIN, INIT_GO_NEG, RESP_GO_NEG
+		NO_ACTION, JOIN_GROUP, AUTH_JOIN, INIT_GO_NEG, RESP_GO_NEG,
+		BOTH_GO
 	} next_step;
 	struct p2p_peer_info *peer;
 	u8 oob_dev_pw[WPS_OOB_PUBKEY_HASH_LEN + 2 +

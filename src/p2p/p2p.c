@@ -4516,7 +4516,9 @@ int p2p_process_nfc_connection_handover(struct p2p_data *p2p,
 		dev->flags |= P2P_DEV_REPORTED | P2P_DEV_REPORTED_ONCE;
 	}
 
-	if (peer_go)
+	if (peer_go && p2p->num_groups > 0)
+		params->next_step = BOTH_GO;
+	else if (peer_go)
 		params->next_step = JOIN_GROUP;
 	else if (p2p->num_groups > 0)
 		params->next_step = AUTH_JOIN;

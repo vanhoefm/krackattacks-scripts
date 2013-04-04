@@ -716,6 +716,7 @@ struct wpa_supplicant {
 	int p2p_first_connection_timeout;
 	unsigned int p2p_nfc_tag_enabled:1;
 	unsigned int p2p_peer_oob_pk_hash_known:1;
+	unsigned int p2p_disable_ip_addr_req:1;
 	int p2p_persistent_go_freq;
 	int p2p_persistent_id;
 	int p2p_go_intent;

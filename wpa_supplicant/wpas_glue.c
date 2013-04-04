@@ -949,7 +949,8 @@ void wpa_supplicant_rsn_supp_set_config(struct wpa_supplicant *wpa_s,
 		conf.ssid_len = ssid->ssid_len;
 		conf.wpa_ptk_rekey = ssid->wpa_ptk_rekey;
 #ifdef CONFIG_P2P
-		if (ssid->p2p_group && wpa_s->current_bss) {
+		if (ssid->p2p_group && wpa_s->current_bss &&
+		    !wpa_s->p2p_disable_ip_addr_req) {
 			struct wpabuf *p2p;
 			p2p = wpa_bss_get_vendor_ie_multi(wpa_s->current_bss,
 							  P2P_IE_VENDOR_TYPE);

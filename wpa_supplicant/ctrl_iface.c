@@ -4680,6 +4680,11 @@ static int p2p_ctrl_set(struct wpa_supplicant *wpa_s, char *cmd)
 		return wpas_p2p_nfc_tag_enabled(wpa_s, !!atoi(param));
 #endif /* CONFIG_WPS_NFC */
 
+	if (os_strcmp(cmd, "disable_ip_addr_req") == 0) {
+		wpa_s->p2p_disable_ip_addr_req = !!atoi(param);
+		return 0;
+	}
+
 	wpa_printf(MSG_DEBUG, "CTRL_IFACE: Unknown P2P_SET field value '%s'",
 		   cmd);
 
@@ -5356,6 +5361,7 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 	wpa_s->global->p2p_disabled = 0;
 	wpa_s->global->p2p_per_sta_psk = 0;
 	wpa_s->conf->num_sec_device_types = 0;
+	wpa_s->p2p_disable_ip_addr_req = 0;
 #endif /* CONFIG_P2P */
 
 #ifdef CONFIG_WPS_TESTING

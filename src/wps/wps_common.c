@@ -365,8 +365,7 @@ struct wpabuf * wps_get_oob_cred(struct wps_context *wps)
 	data.wps = wps;
 	data.auth_type = wps->auth_types;
 	data.encr_type = wps->encr_types;
-	if (wps_build_version(plain) ||
-	    wps_build_cred(&data, plain) ||
+	if (wps_build_cred(&data, plain) ||
 	    wps_build_wfa_ext(plain, 0, NULL, 0)) {
 		os_free(data.new_psk);
 		wpabuf_free(plain);
@@ -412,8 +411,7 @@ struct wpabuf * wps_build_nfc_pw_token(u16 dev_pw_id,
 	if (data == NULL)
 		return NULL;
 
-	if (wps_build_version(data) ||
-	    wps_build_oob_dev_pw(data, dev_pw_id, pubkey,
+	if (wps_build_oob_dev_pw(data, dev_pw_id, pubkey,
 				 wpabuf_head(dev_pw), wpabuf_len(dev_pw)) ||
 	    wps_build_wfa_ext(data, 0, NULL, 0)) {
 		wpa_printf(MSG_ERROR, "WPS: Failed to build NFC password "

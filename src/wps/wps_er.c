@@ -2040,8 +2040,7 @@ struct wpabuf * wps_er_config_token_from_cred(struct wps_context *wps,
 	os_memset(&data, 0, sizeof(data));
 	data.wps = wps;
 	data.use_cred = cred;
-	if (wps_build_version(ret) ||
-	    wps_build_cred(&data, ret) ||
+	if (wps_build_cred(&data, ret) ||
 	    wps_build_wfa_ext(ret, 0, NULL, 0)) {
 		wpabuf_free(ret);
 		return NULL;

@@ -946,6 +946,19 @@ struct wpabuf * wpas_ap_wps_nfc_handover_sel(struct wpa_supplicant *wpa_s,
 	return hostapd_wps_nfc_hs_cr(hapd, ndef);
 }
 
+
+int wpas_ap_wps_nfc_report_handover(struct wpa_supplicant *wpa_s,
+				    const struct wpabuf *req,
+				    const struct wpabuf *sel)
+{
+	struct hostapd_data *hapd;
+
+	if (wpa_s->ap_iface == NULL)
+		return -1;
+	hapd = wpa_s->ap_iface->bss[0];
+	return hostapd_wps_nfc_report_handover(hapd, req, sel);
+}
+
 #endif /* CONFIG_WPS_NFC */
 
 #endif /* CONFIG_WPS */

@@ -69,4 +69,8 @@ wpas_ap_wps_nfc_handover_sel(struct wpa_supplicant *wpa_s,
 }
 #endif /* CONFIG_AP */
 
+int wpas_ap_wps_nfc_report_handover(struct wpa_supplicant *wpa_s,
+				    const struct wpabuf *req,
+				    const struct wpabuf *sel);
+
 #endif /* AP_H */

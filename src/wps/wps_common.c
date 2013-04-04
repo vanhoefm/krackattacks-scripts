@@ -343,9 +343,35 @@ struct wpabuf * wps_get_oob_cred(struct wps_context *wps)
 	if (wps_build_version(plain) ||
 	    wps_build_cred(&data, plain) ||
 	    wps_build_wfa_ext(plain, 0, NULL, 0)) {
+		os_free(data.new_psk);
 		wpabuf_free(plain);
 		return NULL;
 	}
+
+	if (wps->wps_state == WPS_STATE_NOT_CONFIGURED && data.new_psk &&
+	    wps->ap) {
+		struct wps_credential cred;
+
+		wpa_printf(MSG_DEBUG, "WPS: Moving to Configured state based "
+			   "on credential token generation");
+
+		os_memset(&cred, 0, sizeof(cred));
+		os_memcpy(cred.ssid, wps->ssid, wps->ssid_len);
+		cred.ssid_len = wps->ssid_len;
+		cred.auth_type = WPS_AUTH_WPAPSK | WPS_AUTH_WPA2PSK;
+		cred.encr_type = WPS_ENCR_TKIP | WPS_ENCR_AES;
+		os_memcpy(cred.key, data.new_psk, data.new_psk_len);
+		cred.key_len = data.new_psk_len;
+
+		wps->wps_state = WPS_STATE_CONFIGURED;
+		wpa_hexdump_ascii_key(MSG_DEBUG,
+				      "WPS: Generated random passphrase",
+				      data.new_psk, data.new_psk_len);
+		if (wps->cred_cb)
+			wps->cred_cb(wps->cb_ctx, &cred);
+	}
+
+	os_free(data.new_psk);
 
 	return plain;
 }

@@ -77,6 +77,26 @@ def test_nfc_wps_config_token(dev, apdev):
         raise Exception("Association with the AP timed out")
     check_wpa2_connection(dev[0], apdev[0], ssid)
 
+def test_nfc_wps_config_token_init(dev, apdev):
+    """NFC tag with configuration token from AP with auto configuration"""
+    dev[0].request("SET ignore_old_scan_res 1")
+    ssid = "test-wps-nfc-conf-token-init"
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "1" })
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    logger.info("NFC configuration token from AP to station")
+    conf = hapd.request("WPS_NFC_CONFIG_TOKEN NDEF").rstrip()
+    if "FAIL" in conf:
+        raise Exception("Failed to generate configuration token")
+    dev[0].dump_monitor()
+    res = dev[0].request("WPS_NFC_TAG_READ " + conf)
+    if "FAIL" in res:
+        raise Exception("Failed to provide NFC tag contents to wpa_supplicant")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Association with the AP timed out")
+    check_wpa2_connection(dev[0], apdev[0], ssid, mixed=True)
+
 def test_nfc_wps_password_token_sta_init(dev, apdev):
     """Initial AP configuration with first WPS NFC Enrollee"""
     dev[0].request("SET ignore_old_scan_res 1")

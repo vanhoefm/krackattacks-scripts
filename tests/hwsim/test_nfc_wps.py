@@ -194,3 +194,59 @@ def test_nfc_wps_handover(dev, apdev):
     if ev is None:
         raise Exception("Association with the AP timed out")
     check_wpa2_connection(dev[0], apdev[0], ssid)
+
+def test_nfc_wps_handover_pk_hash_mismatch_sta(dev, apdev):
+    """WPS NFC connection handover with invalid pkhash from station (negative)"""
+    ssid = "wps-nfc-handover-pkhash-sta"
+    if "FAIL" in dev[0].request("SET wps_corrupt_pkhash 1"):
+        raise Exception("Could not enable wps_corrupt_pkhash")
+    params = ap_wps_params(ssid)
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    logger.info("NFC connection handover")
+    req = dev[0].request("NFC_GET_HANDOVER_REQ NDEF WPS-CR").rstrip()
+    if "FAIL" in req:
+        raise Exception("Failed to generate NFC connection handover request")
+    sel = hapd.request("NFC_GET_HANDOVER_SEL NDEF WPS-CR").rstrip()
+    if "FAIL" in sel:
+        raise Exception("Failed to generate NFC connection handover select")
+    res = hapd.request("NFC_REPORT_HANDOVER RESP WPS " + req + " " + sel)
+    if "FAIL" in res:
+        raise Exception("Failed to report NFC connection handover to to hostapd")
+    dev[0].dump_monitor()
+    res = dev[0].request("NFC_REPORT_HANDOVER INIT WPS " + req + " " + sel)
+    if "FAIL" in res:
+        raise Exception("Failed to report NFC connection handover to to wpa_supplicant")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED", "WPS-FAIL"], timeout=15)
+    if ev is None:
+        raise Exception("Timed out")
+    if "WPS-FAIL" not in ev:
+        raise Exception("Public key hash mismatch not detected")
+
+def test_nfc_wps_handover_pk_hash_mismatch_ap(dev, apdev):
+    """WPS NFC connection handover with invalid pkhash from AP (negative)"""
+    ssid = "wps-nfc-handover-pkhash-ap"
+    params = ap_wps_params(ssid)
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    if "FAIL" in hapd.request("SET wps_corrupt_pkhash 1"):
+        raise Exception("Could not enable wps_corrupt_pkhash")
+    logger.info("NFC connection handover")
+    req = dev[0].request("NFC_GET_HANDOVER_REQ NDEF WPS-CR").rstrip()
+    if "FAIL" in req:
+        raise Exception("Failed to generate NFC connection handover request")
+    sel = hapd.request("NFC_GET_HANDOVER_SEL NDEF WPS-CR").rstrip()
+    if "FAIL" in sel:
+        raise Exception("Failed to generate NFC connection handover select")
+    res = hapd.request("NFC_REPORT_HANDOVER RESP WPS " + req + " " + sel)
+    if "FAIL" in res:
+        raise Exception("Failed to report NFC connection handover to to hostapd")
+    dev[0].dump_monitor()
+    res = dev[0].request("NFC_REPORT_HANDOVER INIT WPS " + req + " " + sel)
+    if "FAIL" in res:
+        raise Exception("Failed to report NFC connection handover to to wpa_supplicant")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED", "WPS-FAIL"], timeout=15)
+    if ev is None:
+        raise Exception("Timed out")
+    if "WPS-FAIL" not in ev:
+        raise Exception("Public key hash mismatch not detected")

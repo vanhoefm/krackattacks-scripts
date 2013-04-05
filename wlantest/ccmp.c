@@ -199,7 +199,7 @@ u8 * ccmp_256_decrypt(const u8 *tk, const struct ieee80211_hdr *hdr,
 	wpa_hexdump(MSG_EXCESSIVE, "CCMP-256 AAD", aad, aad_len);
 	wpa_hexdump(MSG_EXCESSIVE, "CCMP-256 nonce", nonce, 13);
 
-	if (aes_ccm_ad(tk, 16, nonce, 16, data + 8, mlen, aad, aad_len,
+	if (aes_ccm_ad(tk, 32, nonce, 16, data + 8, mlen, aad, aad_len,
 		       data + 8 + mlen, plain) < 0) {
 		u16 seq_ctrl = le_to_host16(hdr->seq_ctrl);
 		wpa_printf(MSG_INFO, "Invalid CCMP-256 MIC in frame: A1=" MACSTR
@@ -252,7 +252,7 @@ u8 * ccmp_256_encrypt(const u8 *tk, u8 *frame, size_t len, size_t hdrlen,
 	wpa_hexdump(MSG_EXCESSIVE, "CCMP-256 AAD", aad, aad_len);
 	wpa_hexdump(MSG_EXCESSIVE, "CCMP-256 nonce", nonce, 13);
 
-	if (aes_ccm_ae(tk, 16, nonce, 16, frame + hdrlen, plen, aad, aad_len,
+	if (aes_ccm_ae(tk, 32, nonce, 16, frame + hdrlen, plen, aad, aad_len,
 		       pos, pos + plen) < 0) {
 		os_free(crypt);
 		return NULL;

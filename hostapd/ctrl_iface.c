@@ -537,14 +537,24 @@ static int hostapd_ctrl_iface_ess_disassoc(struct hostapd_data *hapd,
 					   const char *cmd)
 {
 	u8 addr[ETH_ALEN];
-	const char *url;
+	const char *url, *timerstr;
 	u8 buf[1000], *pos;
 	struct ieee80211_mgmt *mgmt;
 	size_t url_len;
+	int disassoc_timer;
 
 	if (hwaddr_aton(cmd, addr))
 		return -1;
-	url = cmd + 17;
+
+	timerstr = cmd + 17;
+	if (*timerstr != ' ')
+		return -1;
+	timerstr++;
+	disassoc_timer = atoi(timerstr);
+	if (disassoc_timer < 0 || disassoc_timer > 65535)
+		return -1;
+
+	url = os_strchr(timerstr, ' ');
 	if (*url != ' ')
 		return -1;
 	url++;
@@ -564,8 +574,9 @@ static int hostapd_ctrl_iface_ess_disassoc(struct hostapd_data *hapd,
 	mgmt->u.action.u.bss_tm_req.dialog_token = 1;
 	mgmt->u.action.u.bss_tm_req.req_mode =
 		WNM_BSS_TM_REQ_ESS_DISASSOC_IMMINENT;
-	mgmt->u.action.u.bss_tm_req.disassoc_timer = host_to_le16(0);
-	mgmt->u.action.u.bss_tm_req.validity_interval = 0;
+	mgmt->u.action.u.bss_tm_req.disassoc_timer =
+		host_to_le16(disassoc_timer);
+	mgmt->u.action.u.bss_tm_req.validity_interval = 0x01;
 
 	pos = mgmt->u.action.u.bss_tm_req.variable;
 
@@ -578,6 +589,25 @@ static int hostapd_ctrl_iface_ess_disassoc(struct hostapd_data *hapd,
 		wpa_printf(MSG_DEBUG, "Failed to send BSS Transition "
 			   "Management Request frame");
 		return -1;
+	}
+
+	/* send disassociation frame after time-out */
+	if (disassoc_timer) {
+		struct sta_info *sta;
+
+		sta = ap_get_sta(hapd, addr);
+		if (sta == NULL) {
+			wpa_printf(MSG_DEBUG, "Station " MACSTR " not found "
+				   "for ESS disassociation imminent message",
+				   MAC2STR(addr));
+			return -1;
+		}
+
+		sta->timeout_next = STA_DISASSOC_FROM_CLI;
+		eloop_cancel_timeout(ap_handle_timer, hapd, sta);
+		eloop_register_timeout(disassoc_timer / 1000,
+				       disassoc_timer % 1000 * 1000,
+				       ap_handle_timer, hapd, sta);
 	}
 
 	return 0;

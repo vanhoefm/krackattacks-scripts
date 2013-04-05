@@ -62,7 +62,8 @@ struct sta_info {
 	u8 previous_ap[6];
 
 	enum {
-		STA_NULLFUNC = 0, STA_DISASSOC, STA_DEAUTH, STA_REMOVE
+		STA_NULLFUNC = 0, STA_DISASSOC, STA_DEAUTH, STA_REMOVE,
+		STA_DISASSOC_FROM_CLI
 	} timeout_next;
 
 	u16 deauth_reason;

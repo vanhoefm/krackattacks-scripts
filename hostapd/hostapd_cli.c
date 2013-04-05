@@ -588,14 +588,14 @@ static int hostapd_cli_cmd_ess_disassoc(struct wpa_ctrl *ctrl, int argc,
 	char buf[300];
 	int res;
 
-	if (argc < 2) {
-		printf("Invalid 'ess_disassoc' command - two arguments (STA "
-		       "addr and URL) are needed\n");
+	if (argc < 3) {
+		printf("Invalid 'ess_disassoc' command - three arguments (STA "
+		       "addr, disassoc timer, and URL) are needed\n");
 		return -1;
 	}
 
-	res = os_snprintf(buf, sizeof(buf), "ESS_DISASSOC %s %s",
-			  argv[0], argv[1]);
+	res = os_snprintf(buf, sizeof(buf), "ESS_DISASSOC %s %s %s",
+			  argv[0], argv[1], argv[2]);
 	if (res < 0 || res >= (int) sizeof(buf))
 		return -1;
 	return wpa_ctrl_command(ctrl, buf);

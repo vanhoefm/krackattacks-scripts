@@ -48,8 +48,8 @@ static void _pmksa_cache_free_entry(struct rsn_pmksa_cache_entry *entry)
 }
 
 
-static void pmksa_cache_free_entry(struct rsn_pmksa_cache *pmksa,
-				   struct rsn_pmksa_cache_entry *entry)
+void pmksa_cache_free_entry(struct rsn_pmksa_cache *pmksa,
+			    struct rsn_pmksa_cache_entry *entry)
 {
 	struct rsn_pmksa_cache_entry *pos, *prev;
 

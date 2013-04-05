@@ -55,5 +55,7 @@ pmksa_cache_add_okc(struct rsn_pmksa_cache *pmksa,
 		    const u8 *aa, const u8 *pmkid);
 void pmksa_cache_to_eapol_data(struct rsn_pmksa_cache_entry *entry,
 			       struct eapol_state_machine *eapol);
+void pmksa_cache_free_entry(struct rsn_pmksa_cache *pmksa,
+			    struct rsn_pmksa_cache_entry *entry);
 
 #endif /* PMKSA_CACHE_H */

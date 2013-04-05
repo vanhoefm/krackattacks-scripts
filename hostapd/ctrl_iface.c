@@ -29,6 +29,7 @@
 #include "ap/wps_hostapd.h"
 #include "ap/ctrl_iface_ap.h"
 #include "ap/ap_drv_ops.h"
+#include "ap/wpa_auth.h"
 #include "wps/wps_defs.h"
 #include "wps/wps.h"
 #include "config_file.h"
@@ -594,6 +595,13 @@ static int hostapd_ctrl_iface_ess_disassoc(struct hostapd_data *hapd,
 	/* send disassociation frame after time-out */
 	if (disassoc_timer) {
 		struct sta_info *sta;
+
+		/*
+		 * Prevent STA from reconnecting using cached PMKSA to force
+		 * full authentication with the authentication server (which may
+		 * decide to reject the connection),
+		 */
+		wpa_auth_pmksa_remove(hapd->wpa_auth, addr);
 
 		sta = ap_get_sta(hapd, addr);
 		if (sta == NULL) {

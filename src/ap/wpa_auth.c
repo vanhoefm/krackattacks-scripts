@@ -2944,6 +2944,22 @@ int wpa_auth_pmksa_add_preauth(struct wpa_authenticator *wpa_auth,
 }
 
 
+void wpa_auth_pmksa_remove(struct wpa_authenticator *wpa_auth,
+			   const u8 *sta_addr)
+{
+	struct rsn_pmksa_cache_entry *pmksa;
+
+	if (wpa_auth == NULL || wpa_auth->pmksa == NULL)
+		return;
+	pmksa = pmksa_cache_auth_get(wpa_auth->pmksa, sta_addr, NULL);
+	if (pmksa) {
+		wpa_printf(MSG_DEBUG, "WPA: Remove PMKSA cache entry for "
+			   MACSTR " based on request", MAC2STR(sta_addr));
+		pmksa_cache_free_entry(wpa_auth->pmksa, pmksa);
+	}
+}
+
+
 static struct wpa_group *
 wpa_auth_add_group(struct wpa_authenticator *wpa_auth, int vlan_id)
 {

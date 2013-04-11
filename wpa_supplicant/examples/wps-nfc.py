@@ -49,17 +49,22 @@ def wpas_connect():
 def wpas_tag_read(message):
     wpas = wpas_connect()
     if (wpas == None):
-        return
-    print wpas.request("WPS_NFC_TAG_READ " + message.encode("hex"))
-
+        return False
+    if "FAIL" in wpas.request("WPS_NFC_TAG_READ " + message.encode("hex")):
+        return False
+    return True
 
 def wpas_get_config_token(id=None):
     wpas = wpas_connect()
     if (wpas == None):
         return None
     if id:
-        return wpas.request("WPS_NFC_CONFIG_TOKEN NDEF " + id).rstrip().decode("hex")
-    return wpas.request("WPS_NFC_CONFIG_TOKEN NDEF").rstrip().decode("hex")
+        ret = wpas.request("WPS_NFC_CONFIG_TOKEN NDEF " + id)
+    else:
+        ret = wpas.request("WPS_NFC_CONFIG_TOKEN NDEF")
+    if "FAIL" in ret:
+        return None
+    return ret.rstrip().decode("hex")
 
 
 def wpas_get_er_config_token(uuid):
@@ -241,7 +246,8 @@ def wps_handover_init(peer):
     print "Done with handover"
 
 
-def wps_tag_read(tag):
+def wps_tag_read(tag, wait_remove=True):
+    success = False
     if len(tag.ndef.message):
         message = nfc.ndef.Message(tag.ndef.message)
         print "message type " + message.type
@@ -250,21 +256,25 @@ def wps_tag_read(tag):
             print "record type " + record.type
             if record.type == "application/vnd.wfa.wsc":
                 print "WPS tag - send to wpa_supplicant"
-                wpas_tag_read(tag.ndef.message)
+                success = wpas_tag_read(tag.ndef.message)
                 break
     else:
         print "Empty tag"
 
-    print "Remove tag"
-    while tag.is_present:
-        time.sleep(0.1)
+    if wait_remove:
+        print "Remove tag"
+        while tag.is_present:
+            time.sleep(0.1)
+
+    return success
 
 
-def wps_write_config_tag(clf, id=None):
+def wps_write_config_tag(clf, id=None, wait_remove=True):
     print "Write WPS config token"
     data = wpas_get_config_token(id)
     if (data == None):
         print "Could not get WPS config token from wpa_supplicant"
+        sys.exit(1)
         return
 
     print "Touch an NFC tag"
@@ -278,7 +288,7 @@ def wps_write_config_tag(clf, id=None):
     print "Tag found - writing"
     tag.ndef.message = data
     print "Done - remove tag"
-    while tag.is_present:
+    while wait_remove and tag.is_present:
         time.sleep(0.1)
 
 
@@ -304,7 +314,7 @@ def wps_write_er_config_tag(clf, uuid):
         time.sleep(0.1)
 
 
-def wps_write_password_tag(clf):
+def wps_write_password_tag(clf, wait_remove=True):
     print "Write WPS password token"
     data = wpas_get_password_token()
     if (data == None):
@@ -322,7 +332,7 @@ def wps_write_password_tag(clf):
     print "Tag found - writing"
     tag.ndef.message = data
     print "Done - remove tag"
-    while tag.is_present:
+    while wait_remove and tag.is_present:
         time.sleep(0.1)
 
 
@@ -359,11 +369,20 @@ def main():
 
     try:
         arg_uuid = None
-        if len(sys.argv) > 1:
+        if len(sys.argv) > 1 and sys.argv[1] != '-1':
             arg_uuid = sys.argv[1]
+
+        if len(sys.argv) > 1 and sys.argv[1] == '-1':
+            only_one = True
+        else:
+            only_one = False
 
         if len(sys.argv) > 1 and sys.argv[1] == "write-config":
             wps_write_config_tag(clf)
+            raise SystemExit
+
+        if len(sys.argv) > 1 and sys.argv[1] == "write-config-no-wait":
+            wps_write_config_tag(clf, wait_remove=False)
             raise SystemExit
 
         if len(sys.argv) > 2 and sys.argv[1] == "write-config-id":
@@ -378,6 +397,10 @@ def main():
             wps_write_password_tag(clf)
             raise SystemExit
 
+        if len(sys.argv) > 1 and sys.argv[1] == "write-password-no-wait":
+            wps_write_password_tag(clf, wait_remove=False)
+            raise SystemExit
+
         while True:
             print "Waiting for a tag or peer to be touched"
 
@@ -389,13 +412,21 @@ def main():
                     wps_handover_resp(tag, None)
                 else:
                     wps_handover_resp(tag, arg_uuid)
+                if only_one:
+                    break
                 continue
 
             if tag.ndef:
-                wps_tag_read(tag)
+                success = wps_tag_read(tag, not only_one)
+                if only_one:
+                    if not success:
+                        sys.exit(1)
+                    break
                 continue
 
             print "Not an NDEF tag - remove tag"
+            if only_one:
+                sys.exit(1)
             while tag.is_present:
                 time.sleep(0.1)
 

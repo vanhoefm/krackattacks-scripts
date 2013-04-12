@@ -845,6 +845,9 @@ struct wpabuf * wps_er_config_token_from_cred(struct wps_context *wps,
 					      struct wps_credential *cred);
 struct wpabuf * wps_er_nfc_config_token(struct wps_er *er, const u8 *uuid,
 					const u8 *addr);
+struct wpabuf * wps_er_nfc_handover_sel(struct wps_er *er,
+					struct wps_context *wps, const u8 *uuid,
+					const u8 *addr, struct wpabuf *pubkey);
 
 int wps_dev_type_str2bin(const char *str, u8 dev_type[WPS_DEV_TYPE_LEN]);
 char * wps_dev_type_bin2str(const u8 dev_type[WPS_DEV_TYPE_LEN], char *buf,

@@ -1444,6 +1444,20 @@ int wpas_wps_init(struct wpa_supplicant *wpa_s)
 }
 
 
+#ifdef CONFIG_WPS_ER
+static void wpas_wps_nfc_clear(struct wps_context *wps)
+{
+	wps->ap_nfc_dev_pw_id = 0;
+	wpabuf_free(wps->ap_nfc_dh_pubkey);
+	wps->ap_nfc_dh_pubkey = NULL;
+	wpabuf_free(wps->ap_nfc_dh_privkey);
+	wps->ap_nfc_dh_privkey = NULL;
+	wpabuf_free(wps->ap_nfc_dev_pw);
+	wps->ap_nfc_dev_pw = NULL;
+}
+#endif /* CONFIG_WPS_ER */
+
+
 void wpas_wps_deinit(struct wpa_supplicant *wpa_s)
 {
 	eloop_cancel_timeout(wpas_wps_timeout, wpa_s, NULL);
@@ -1457,6 +1471,7 @@ void wpas_wps_deinit(struct wpa_supplicant *wpa_s)
 #ifdef CONFIG_WPS_ER
 	wps_er_deinit(wpa_s->wps_er, NULL, NULL);
 	wpa_s->wps_er = NULL;
+	wpas_wps_nfc_clear(wpa_s->wps);
 #endif /* CONFIG_WPS_ER */
 
 	wps_registrar_deinit(wpa_s->wps->registrar);
@@ -2305,6 +2320,7 @@ struct wpabuf * wpas_wps_nfc_handover_req(struct wpa_supplicant *wpa_s,
 
 
 #ifdef CONFIG_WPS_NFC
+
 static struct wpabuf *
 wpas_wps_er_nfc_handover_sel(struct wpa_supplicant *wpa_s, int ndef,
 			     const char *uuid)
@@ -2314,7 +2330,7 @@ wpas_wps_er_nfc_handover_sel(struct wpa_supplicant *wpa_s, int ndef,
 	u8 u[UUID_LEN], *use_uuid = NULL;
 	u8 addr[ETH_ALEN], *use_addr = NULL;
 
-	if (!wpa_s->wps_er)
+	if (wpa_s->wps == NULL)
 		return NULL;
 
 	if (uuid == NULL)
@@ -2326,11 +2342,26 @@ wpas_wps_er_nfc_handover_sel(struct wpa_supplicant *wpa_s, int ndef,
 	else
 		return NULL;
 
-	/*
-	 * Handover Select carrier record for WPS uses the same format as
-	 * configuration token.
-	 */
-	ret = wps_er_nfc_config_token(wpa_s->wps_er, use_uuid, use_addr);
+	if (wpa_s->conf->wps_nfc_dh_pubkey == NULL) {
+		struct wps_context *wps = wpa_s->wps;
+		if (wps_nfc_gen_dh(&wpa_s->conf->wps_nfc_dh_pubkey,
+				   &wpa_s->conf->wps_nfc_dh_privkey) < 0)
+			return NULL;
+
+		wpas_wps_nfc_clear(wps);
+		wps->ap_nfc_dev_pw_id = DEV_PW_NFC_CONNECTION_HANDOVER;
+		wps->ap_nfc_dh_pubkey =
+			wpabuf_dup(wpa_s->conf->wps_nfc_dh_pubkey);
+		wps->ap_nfc_dh_privkey =
+			wpabuf_dup(wpa_s->conf->wps_nfc_dh_privkey);
+		if (!wps->ap_nfc_dh_pubkey || !wps->ap_nfc_dh_privkey) {
+			wpas_wps_nfc_clear(wps);
+			return NULL;
+		}
+	}
+
+	ret = wps_er_nfc_handover_sel(wpa_s->wps_er, wpa_s->wps, use_uuid,
+				      use_addr, wpa_s->conf->wps_nfc_dh_pubkey);
 	if (ndef && ret) {
 		struct wpabuf *tmp;
 		tmp = ndef_build_wifi(ret);
@@ -2465,6 +2496,100 @@ int wpas_wps_nfc_report_handover(struct wpa_supplicant *wpa_s,
 	wpa_hexdump_buf_key(MSG_DEBUG, "WPS: Carrier record in request", req);
 	wpa_hexdump_buf_key(MSG_DEBUG, "WPS: Carrier record in select", sel);
 	return wpas_wps_nfc_rx_handover_sel(wpa_s, sel);
+}
+
+
+int wpas_er_wps_nfc_report_handover(struct wpa_supplicant *wpa_s,
+				    const struct wpabuf *req,
+				    const struct wpabuf *sel)
+{
+	struct wpabuf *wps;
+	int ret = -1;
+	u16 wsc_len;
+	const u8 *pos;
+	struct wpabuf msg;
+	struct wps_parse_attr attr;
+	u16 dev_pw_id;
+
+	/*
+	 * Enrollee/station is always initiator of the NFC connection handover,
+	 * so use the request message here to find Enrollee public key hash.
+	 */
+	wps = ndef_parse_wifi(req);
+	if (wps == NULL)
+		return -1;
+	wpa_printf(MSG_DEBUG, "WPS: Received application/vnd.wfa.wsc "
+		   "payload from NFC connection handover");
+	wpa_hexdump_buf(MSG_DEBUG, "WPS: NFC payload", wps);
+	if (wpabuf_len(wps) < 2) {
+		wpa_printf(MSG_DEBUG, "WPS: Too short Wi-Fi Handover Request "
+			   "Message");
+		goto out;
+	}
+	pos = wpabuf_head(wps);
+	wsc_len = WPA_GET_BE16(pos);
+	if (wsc_len > wpabuf_len(wps) - 2) {
+		wpa_printf(MSG_DEBUG, "WPS: Invalid WSC attribute length (%u) "
+			   "in rt Wi-Fi Handover Request Message", wsc_len);
+		goto out;
+	}
+	pos += 2;
+
+	wpa_hexdump(MSG_DEBUG,
+		    "WPS: WSC attributes in Wi-Fi Handover Request Message",
+		    pos, wsc_len);
+	if (wsc_len < wpabuf_len(wps) - 2) {
+		wpa_hexdump(MSG_DEBUG,
+			    "WPS: Ignore extra data after WSC attributes",
+			    pos + wsc_len, wpabuf_len(wps) - 2 - wsc_len);
+	}
+
+	wpabuf_set(&msg, pos, wsc_len);
+	ret = wps_parse_msg(&msg, &attr);
+	if (ret < 0) {
+		wpa_printf(MSG_DEBUG, "WPS: Could not parse WSC attributes in "
+			   "Wi-Fi Handover Request Message");
+		goto out;
+	}
+
+	if (attr.oob_dev_password == NULL ||
+	    attr.oob_dev_password_len < WPS_OOB_PUBKEY_HASH_LEN + 2) {
+		wpa_printf(MSG_DEBUG, "WPS: No Out-of-Band Device Password "
+			   "included in Wi-Fi Handover Request Message");
+		ret = -1;
+		goto out;
+	}
+
+	if (attr.uuid_e == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS: No UUID-E included in Wi-Fi "
+			   "Handover Request Message");
+		ret = -1;
+		goto out;
+	}
+
+	wpa_hexdump(MSG_DEBUG, "WPS: UUID-E", attr.uuid_e, WPS_UUID_LEN);
+
+	wpa_hexdump(MSG_DEBUG, "WPS: Out-of-Band Device Password",
+		    attr.oob_dev_password, attr.oob_dev_password_len);
+	dev_pw_id = WPA_GET_BE16(attr.oob_dev_password +
+				 WPS_OOB_PUBKEY_HASH_LEN);
+	if (dev_pw_id != DEV_PW_NFC_CONNECTION_HANDOVER) {
+		wpa_printf(MSG_DEBUG, "WPS: Unexpected OOB Device Password ID "
+			   "%u in Wi-Fi Handover Request Message", dev_pw_id);
+		ret = -1;
+		goto out;
+	}
+	wpa_hexdump(MSG_DEBUG, "WPS: Enrollee Public Key hash",
+		    attr.oob_dev_password, WPS_OOB_PUBKEY_HASH_LEN);
+
+	ret = wps_registrar_add_nfc_pw_token(wpa_s->wps->registrar,
+					     attr.oob_dev_password,
+					     DEV_PW_NFC_CONNECTION_HANDOVER,
+					     NULL, 0, 1);
+
+out:
+	wpabuf_free(wps);
+	return ret;
 }
 
 #endif /* CONFIG_WPS_NFC */

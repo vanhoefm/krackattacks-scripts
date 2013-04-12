@@ -1128,6 +1128,8 @@ static int wpas_ctrl_nfc_report_handover(struct wpa_supplicant *wpa_s,
 	} else if (os_strcmp(role, "RESP") == 0 && os_strcmp(type, "WPS") == 0)
 	{
 		ret = wpas_ap_wps_nfc_report_handover(wpa_s, req, sel);
+		if (ret < 0)
+			ret = wpas_er_wps_nfc_report_handover(wpa_s, req, sel);
 	} else {
 		wpa_printf(MSG_DEBUG, "NFC: Unsupported connection handover "
 			   "reported: role=%s type=%s", role, type);

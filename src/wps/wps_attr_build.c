@@ -40,7 +40,11 @@ int wps_build_public_key(struct wps_data *wps, struct wpabuf *msg)
 #ifdef CONFIG_WPS_NFC
 	} else if ((wps->dev_pw_id >= 0x10 ||
 		    wps->dev_pw_id == DEV_PW_NFC_CONNECTION_HANDOVER) &&
-		   wps->wps->ap &&
+		   (wps->wps->ap ||
+		    (wps->wps->ap_nfc_dh_pubkey &&
+		     wps->wps->ap_nfc_dev_pw_id ==
+		     DEV_PW_NFC_CONNECTION_HANDOVER &&
+		     wps->dev_pw_id == DEV_PW_NFC_CONNECTION_HANDOVER)) &&
 		   (wps->dev_pw_id == wps->wps->ap_nfc_dev_pw_id ||
 		    wps->wps->ap_nfc_dh_pubkey)) {
 		wpa_printf(MSG_DEBUG, "WPS: Using NFC password token DH keys");

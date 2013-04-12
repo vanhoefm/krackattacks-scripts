@@ -2070,4 +2070,29 @@ struct wpabuf * wps_er_nfc_config_token(struct wps_er *er, const u8 *uuid,
 	return wps_er_config_token_from_cred(er->wps, ap->ap_settings);
 }
 
+
+struct wpabuf * wps_er_nfc_handover_sel(struct wps_er *er,
+					struct wps_context *wps, const u8 *uuid,
+					const u8 *addr, struct wpabuf *pubkey)
+{
+	struct wps_er_ap *ap;
+
+	if (er == NULL)
+		return NULL;
+
+	ap = wps_er_ap_get(er, NULL, uuid, addr);
+	if (ap == NULL)
+		return NULL;
+	if (ap->ap_settings == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS ER: No settings known for the "
+			   "selected AP");
+		return NULL;
+	}
+
+	os_memcpy(wps->ssid, ap->ap_settings->ssid, ap->ap_settings->ssid_len);
+	wps->ssid_len = ap->ap_settings->ssid_len;
+
+	return wps_build_nfc_handover_sel(wps, pubkey);
+}
+
 #endif /* CONFIG_WPS_NFC */

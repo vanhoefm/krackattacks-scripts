@@ -2558,7 +2558,10 @@ static enum wps_process_res wps_process_m1(struct wps_data *wps,
 				      WPS_OOB_PUBKEY_HASH_LEN) != 0) {
 				wpa_printf(MSG_ERROR, "WPS: Public Key hash "
 					   "mismatch");
-				return WPS_FAILURE;
+				wps->state = SEND_M2D;
+				wps->config_error =
+					WPS_CFG_PUBLIC_KEY_HASH_MISMATCH;
+				return WPS_CONTINUE;
 			}
 		}
 	}

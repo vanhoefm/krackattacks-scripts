@@ -466,16 +466,20 @@ int gas_query_req(struct gas_query *gas, const u8 *dst, int freq,
 {
 	struct gas_query_pending *query;
 	int dialog_token;
+	static int next_start = 0;
 
 	if (wpabuf_len(req) < 3)
 		return -1;
 
 	for (dialog_token = 0; dialog_token < 256; dialog_token++) {
-		if (gas_query_dialog_token_available(gas, dst, dialog_token))
+		if (gas_query_dialog_token_available(
+			    gas, dst, (next_start + dialog_token) % 256))
 			break;
 	}
 	if (dialog_token == 256)
 		return -1; /* Too many pending queries */
+	dialog_token = (next_start + dialog_token) % 256;
+	next_start = (dialog_token + 1) % 256;
 
 	query = os_zalloc(sizeof(*query));
 	if (query == NULL)

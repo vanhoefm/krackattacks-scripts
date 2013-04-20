@@ -1,6 +1,6 @@
 /*
  * wpa_supplicant - WNM
- * Copyright (c) 2011-2012, Qualcomm Atheros, Inc.
+ * Copyright (c) 2011-2013, Qualcomm Atheros, Inc.
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -10,6 +10,7 @@
 
 #include "utils/common.h"
 #include "common/ieee802_11_defs.h"
+#include "common/wpa_ctrl.h"
 #include "rsn_supp/wpa.h"
 #include "wpa_supplicant_i.h"
 #include "driver_i.h"
@@ -615,6 +616,8 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 
 	if (wpa_s->wnm_mode & WNM_BSS_TM_REQ_ESS_DISASSOC_IMMINENT) {
 		char url[256];
+		unsigned int beacon_int;
+
 		if (pos + 1 > end || pos + 1 + pos[0] > end) {
 			wpa_printf(MSG_DEBUG, "WNM: Invalid BSS Transition "
 				   "Management Request (URL)");
@@ -623,8 +626,15 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 		os_memcpy(url, pos + 1, pos[0]);
 		url[pos[0]] = '\0';
 		pos += 1 + pos[0];
-		wpa_msg(wpa_s, MSG_INFO, "WNM: ESS Disassociation Imminent - "
-			"session_info_url=%s", url);
+
+		if (wpa_s->current_bss)
+			beacon_int = wpa_s->current_bss->beacon_int;
+		else
+			beacon_int = 100; /* best guess */
+
+		wpa_msg(wpa_s, MSG_INFO, ESS_DISASSOC_IMMINENT "%d %u %s",
+			wpa_sm_pmf_enabled(wpa_s->wpa),
+			wpa_s->wnm_dissoc_timer * beacon_int * 128 / 125, url);
 	}
 
 	if (wpa_s->wnm_mode & WNM_BSS_TM_REQ_DISASSOC_IMMINENT) {

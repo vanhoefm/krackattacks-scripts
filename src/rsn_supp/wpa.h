@@ -123,6 +123,7 @@ unsigned int wpa_sm_get_param(struct wpa_sm *sm,
 
 int wpa_sm_get_status(struct wpa_sm *sm, char *buf, size_t buflen,
 		      int verbose);
+int wpa_sm_pmf_enabled(struct wpa_sm *sm);
 
 void wpa_sm_key_request(struct wpa_sm *sm, int error, int pairwise);
 

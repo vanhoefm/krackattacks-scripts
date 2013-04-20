@@ -2412,6 +2412,21 @@ int wpa_sm_get_status(struct wpa_sm *sm, char *buf, size_t buflen,
 }
 
 
+int wpa_sm_pmf_enabled(struct wpa_sm *sm)
+{
+	struct wpa_ie_data rsn;
+
+	if (sm->mfp == NO_MGMT_FRAME_PROTECTION || !sm->ap_rsn_ie)
+		return 0;
+
+	if (wpa_parse_wpa_ie_rsn(sm->ap_rsn_ie, sm->ap_rsn_ie_len, &rsn) >= 0 &&
+	    rsn.capabilities & (WPA_CAPABILITY_MFPR | WPA_CAPABILITY_MFPC))
+		return 1;
+
+	return 0;
+}
+
+
 /**
  * wpa_sm_set_assoc_wpa_ie_default - Generate own WPA/RSN IE from configuration
  * @sm: Pointer to WPA state machine data from wpa_sm_init()

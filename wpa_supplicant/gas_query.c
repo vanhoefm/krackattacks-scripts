@@ -20,7 +20,7 @@
 
 
 /** GAS query timeout in seconds */
-#define GAS_QUERY_TIMEOUT_PERIOD 5
+#define GAS_QUERY_TIMEOUT_PERIOD 2
 
 
 /**

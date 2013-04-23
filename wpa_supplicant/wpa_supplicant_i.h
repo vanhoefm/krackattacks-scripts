@@ -56,6 +56,14 @@ struct wpa_interface {
 	const char *confname;
 
 	/**
+	 * confanother - Additional configuration name (file or profile) name
+	 *
+	 * This can also be %NULL when the additional configuration file is not
+	 * used.
+	 */
+	const char *confanother;
+
+	/**
 	 * ctrl_interface - Control interface parameter
 	 *
 	 * If a configuration file is not used, this variable can be used to
@@ -307,6 +315,7 @@ struct wpa_supplicant {
 	char bridge_ifname[16];
 
 	char *confname;
+	char *confanother;
 	struct wpa_config *conf;
 	int countermeasures;
 	os_time_t last_michael_mic_error;

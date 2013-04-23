@@ -1232,7 +1232,7 @@ int main(int argc, char *argv[])
 
 	os_memset(&wpa_s, 0, sizeof(wpa_s));
 	eapol_test.wpa_s = &wpa_s;
-	wpa_s.conf = wpa_config_read(conf);
+	wpa_s.conf = wpa_config_read(conf, NULL);
 	if (wpa_s.conf == NULL) {
 		printf("Failed to parse configuration file '%s'.\n", conf);
 		return -1;

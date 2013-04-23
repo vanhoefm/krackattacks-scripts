@@ -345,7 +345,7 @@ static int wpa_config_process_blob(struct wpa_config *config, FILE *f,
 #endif /* CONFIG_NO_CONFIG_BLOBS */
 
 
-struct wpa_config * wpa_config_read(const char *name)
+struct wpa_config * wpa_config_read(const char *name, struct wpa_config *cfgp)
 {
 	FILE *f;
 	char buf[512], *pos;
@@ -356,12 +356,19 @@ struct wpa_config * wpa_config_read(const char *name)
 	int id = 0;
 	int cred_id = 0;
 
-	config = wpa_config_alloc_empty(NULL, NULL);
+	if (name == NULL)
+		return NULL;
+	if (cfgp)
+		config = cfgp;
+	else
+		config = wpa_config_alloc_empty(NULL, NULL);
 	if (config == NULL) {
 		wpa_printf(MSG_ERROR, "Failed to allocate config file "
 			   "structure");
 		return NULL;
 	}
+	head = config->ssid;
+	cred_head = config->cred;
 
 	wpa_printf(MSG_DEBUG, "Reading configuration file '%s'", name);
 	f = fopen(name, "r");

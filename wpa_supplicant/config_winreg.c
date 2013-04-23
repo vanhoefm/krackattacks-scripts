@@ -434,7 +434,7 @@ static int wpa_config_read_networks(struct wpa_config *config, HKEY hk)
 }
 
 
-struct wpa_config * wpa_config_read(const char *name)
+struct wpa_config * wpa_config_read(const char *name, struct wpa_config *cfgp)
 {
 	TCHAR buf[256];
 	int errors = 0;
@@ -442,7 +442,12 @@ struct wpa_config * wpa_config_read(const char *name)
 	HKEY hk;
 	LONG ret;
 
-	config = wpa_config_alloc_empty(NULL, NULL);
+	if (name == NULL)
+		return NULL;
+	if (cfgp)
+		config = cfgp;
+	else
+		config = wpa_config_alloc_empty(NULL, NULL);
 	if (config == NULL)
 		return NULL;
 	wpa_printf(MSG_DEBUG, "Reading configuration profile '%s'", name);

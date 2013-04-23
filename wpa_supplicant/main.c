@@ -32,7 +32,8 @@ static void usage(void)
 	       "        [-o<override driver>] [-O<override ctrl>] \\\n"
 	       "        [-N -i<ifname> -c<conf> [-C<ctrl>] "
 	       "[-D<driver>] \\\n"
-	       "        [-p<driver_param>] [-b<br_ifname>] ...]\n"
+	       "        [-p<driver_param>] [-b<br_ifname>] [-I<config file>] "
+	       "...]\n"
 	       "\n"
 	       "drivers:\n",
 	       wpa_supplicant_version, wpa_supplicant_license);
@@ -50,6 +51,7 @@ static void usage(void)
 	       "  -c = Configuration file\n"
 	       "  -C = ctrl_interface parameter (only used if -c is not)\n"
 	       "  -i = interface name\n"
+	       "  -I = additional configuration file\n"
 	       "  -d = increase debugging verbosity (-dd even more)\n"
 	       "  -D = driver name (can be multiple drivers: nl80211,wext)\n"
 	       "  -e = entropy file\n");
@@ -155,7 +157,7 @@ int main(int argc, char *argv[])
 
 	for (;;) {
 		c = getopt(argc, argv,
-			   "b:Bc:C:D:de:f:g:hi:KLNo:O:p:P:qsTtuvW");
+			   "b:Bc:C:D:de:f:g:hi:I:KLNo:O:p:P:qsTtuvW");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -201,6 +203,9 @@ int main(int argc, char *argv[])
 			goto out;
 		case 'i':
 			iface->ifname = optarg;
+			break;
+		case 'I':
+			iface->confanother = optarg;
 			break;
 		case 'K':
 			params.wpa_debug_show_keys++;

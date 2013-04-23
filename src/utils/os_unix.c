@@ -213,6 +213,9 @@ char * os_rel2abs_path(const char *rel_path)
 	size_t len = 128, cwd_len, rel_len, ret_len;
 	int last_errno;
 
+	if (!rel_path)
+		return NULL;
+
 	if (rel_path[0] == '/')
 		return os_strdup(rel_path);
 

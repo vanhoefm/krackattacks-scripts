@@ -399,6 +399,9 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 	os_free(wpa_s->confname);
 	wpa_s->confname = NULL;
 
+	os_free(wpa_s->confanother);
+	wpa_s->confanother = NULL;
+
 	wpa_sm_set_eapol(wpa_s->wpa, NULL);
 	eapol_sm_deinit(wpa_s->eapol);
 	wpa_s->eapol = NULL;
@@ -760,12 +763,14 @@ int wpa_supplicant_reload_configuration(struct wpa_supplicant *wpa_s)
 
 	if (wpa_s->confname == NULL)
 		return -1;
-	conf = wpa_config_read(wpa_s->confname);
+	conf = wpa_config_read(wpa_s->confname, NULL);
 	if (conf == NULL) {
 		wpa_msg(wpa_s, MSG_ERROR, "Failed to parse the configuration "
 			"file '%s' - exiting", wpa_s->confname);
 		return -1;
 	}
+	wpa_config_read(wpa_s->confanother, conf);
+
 	conf->changed_parameters = (unsigned int) -1;
 
 	reconf_ctrl = !!conf->ctrl_interface != !!wpa_s->conf->ctrl_interface
@@ -2801,12 +2806,14 @@ static int wpa_supplicant_init_iface(struct wpa_supplicant *wpa_s,
 #else /* CONFIG_BACKEND_FILE */
 		wpa_s->confname = os_strdup(iface->confname);
 #endif /* CONFIG_BACKEND_FILE */
-		wpa_s->conf = wpa_config_read(wpa_s->confname);
+		wpa_s->conf = wpa_config_read(wpa_s->confname, NULL);
 		if (wpa_s->conf == NULL) {
 			wpa_printf(MSG_ERROR, "Failed to read or parse "
 				   "configuration '%s'.", wpa_s->confname);
 			return -1;
 		}
+		wpa_s->confanother = os_rel2abs_path(iface->confanother);
+		wpa_config_read(wpa_s->confanother, wpa_s->conf);
 
 		/*
 		 * Override ctrl_interface and driver_param if set on command

@@ -941,8 +941,7 @@ static int p2p_run_after_scan(struct p2p_data *p2p)
 	enum p2p_after_scan op;
 
 	if (p2p->after_scan_tx) {
-		/* TODO: schedule p2p_run_after_scan to be called from TX
-		 * status callback(?) */
+		p2p->after_scan_tx_in_progress = 1;
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Send pending "
 			"Action frame at p2p_scan completion");
 		p2p->cfg->send_action(p2p->cfg->cb_ctx,
@@ -3050,6 +3049,18 @@ void p2p_send_action_cb(struct p2p_data *p2p, unsigned int freq, const u8 *dst,
 	p2p->pending_action_state = P2P_NO_PENDING_ACTION;
 	switch (state) {
 	case P2P_NO_PENDING_ACTION:
+		if (p2p->after_scan_tx_in_progress) {
+			p2p->after_scan_tx_in_progress = 0;
+			if (p2p->start_after_scan != P2P_AFTER_SCAN_NOTHING &&
+			    p2p_run_after_scan(p2p))
+				break;
+			if (p2p->state == P2P_SEARCH) {
+				wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
+					"P2P: Continue find after "
+					"after_scan_tx completion");
+				p2p_continue_find(p2p);
+			}
+		}
 		break;
 	case P2P_PENDING_GO_NEG_REQUEST:
 		p2p_go_neg_req_cb(p2p, success);
@@ -3085,6 +3096,8 @@ void p2p_send_action_cb(struct p2p_data *p2p, unsigned int freq, const u8 *dst,
 		p2p_go_disc_req_cb(p2p, success);
 		break;
 	}
+
+	p2p->after_scan_tx_in_progress = 0;
 }
 
 

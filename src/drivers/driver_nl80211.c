@@ -4004,7 +4004,7 @@ static int wpa_driver_nl80211_sched_scan(void *priv,
 				drv->filter_ssids[i].ssid_len,
 				drv->filter_ssids[i].ssid);
 
-			nla_nest_end(msg, match_sets);
+			nla_nest_end(msg, match_set_ssid);
 		}
 
 		if (params->filter_rssi) {

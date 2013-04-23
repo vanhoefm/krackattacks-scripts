@@ -331,7 +331,15 @@ fi.w1.wpa_supplicant1.CreateInterface.
 	  <dt>fi.w1.wpa_supplicant1.InvalidArgs</dt>
 	  <dd>Invalid entries were found in the passed argument.</dd>
 	</dl>
-       </li>
+      </li>
+      <li>
+	<h3>EAPLogoff ( ) --> nothing</h3>
+	<p>IEEE 802.1X EAPOL state machine logoff.</p>
+      </li>
+      <li>
+	<h3>EAPLogon ( ) --> nothing</h3>
+	<p>IEEE 802.1X EAPOL state machine logon.</p>
+      </li>
     </ul>
 
 \subsection dbus_interface_properties Properties

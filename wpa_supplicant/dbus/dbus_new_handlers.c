@@ -1938,6 +1938,38 @@ DBusMessage * wpas_dbus_handler_autoscan(DBusMessage *message,
 #endif /* CONFIG_AUTOSCAN */
 
 
+/*
+ * wpas_dbus_handler_eap_logoff - IEEE 802.1X EAPOL state machine logoff
+ * @message: Pointer to incoming dbus message
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * Returns: NULL
+ *
+ * Handler function for "EAPLogoff" method call of network interface.
+ */
+DBusMessage * wpas_dbus_handler_eap_logoff(DBusMessage *message,
+					   struct wpa_supplicant *wpa_s)
+{
+	eapol_sm_notify_logoff(wpa_s->eapol, TRUE);
+	return NULL;
+}
+
+
+/*
+ * wpas_dbus_handler_eap_logon - IEEE 802.1X EAPOL state machine logon
+ * @message: Pointer to incoming dbus message
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * Returns: NULL
+ *
+ * Handler function for "EAPLogin" method call of network interface.
+ */
+DBusMessage * wpas_dbus_handler_eap_logon(DBusMessage *message,
+					  struct wpa_supplicant *wpa_s)
+{
+	eapol_sm_notify_logoff(wpa_s->eapol, FALSE);
+	return NULL;
+}
+
+
 /**
  * wpas_dbus_getter_capabilities - Return interface capabilities
  * @iter: Pointer to incoming dbus message iter

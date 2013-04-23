@@ -1533,6 +1533,10 @@ void eapol_sm_notify_logoff(struct eapol_sm *sm, Boolean logoff)
 {
 	if (sm) {
 		sm->userLogoff = logoff;
+		if (!logoff) {
+			/* If there is a delayed txStart queued, start now. */
+			sm->startWhen = 0;
+		}
 		eapol_sm_step(sm);
 	}
 }

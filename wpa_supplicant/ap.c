@@ -251,6 +251,16 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 		bss->rsn_pairwise = WPA_CIPHER_NONE;
 	}
 
+	if (bss->wpa_group_rekey < 86400 && (bss->wpa & 2) &&
+	    (bss->wpa_group == WPA_CIPHER_CCMP ||
+	     bss->wpa_group == WPA_CIPHER_GCMP)) {
+		/*
+		 * Strong ciphers do not need frequent rekeying, so increase
+		 * the default GTK rekeying period to 24 hours.
+		 */
+		bss->wpa_group_rekey = 86400;
+	}
+
 #ifdef CONFIG_WPS
 	/*
 	 * Enable WPS by default for open and WPA/WPA2-Personal network, but

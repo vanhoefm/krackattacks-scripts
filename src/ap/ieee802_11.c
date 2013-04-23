@@ -557,6 +557,16 @@ static void handle_auth(struct hostapd_data *hapd,
 		return;
 	}
 
+#ifdef CONFIG_TESTING_OPTIONS
+	if (hapd->iconf->ignore_auth_probability > 0.0d &&
+	    drand48() < hapd->iconf->ignore_auth_probability) {
+		wpa_printf(MSG_INFO,
+			   "TESTING: ignoring auth frame from " MACSTR,
+			   MAC2STR(mgmt->sa));
+		return;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
+
 	auth_alg = le_to_host16(mgmt->u.auth.auth_alg);
 	auth_transaction = le_to_host16(mgmt->u.auth.auth_transaction);
 	status_code = le_to_host16(mgmt->u.auth.status_code);
@@ -1225,6 +1235,26 @@ static void handle_assoc(struct hostapd_data *hapd,
 		       "\n", reassoc, (unsigned long) len);
 		return;
 	}
+
+#ifdef CONFIG_TESTING_OPTIONS
+	if (reassoc) {
+		if (hapd->iconf->ignore_reassoc_probability > 0.0d &&
+		    drand48() < hapd->iconf->ignore_reassoc_probability) {
+			wpa_printf(MSG_INFO,
+				   "TESTING: ignoring reassoc request from "
+				   MACSTR, MAC2STR(mgmt->sa));
+			return;
+		}
+	} else {
+		if (hapd->iconf->ignore_assoc_probability > 0.0d &&
+		    drand48() < hapd->iconf->ignore_assoc_probability) {
+			wpa_printf(MSG_INFO,
+				   "TESTING: ignoring assoc request from "
+				   MACSTR, MAC2STR(mgmt->sa));
+			return;
+		}
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	if (reassoc) {
 		capab_info = le_to_host16(mgmt->u.reassoc_req.capab_info);

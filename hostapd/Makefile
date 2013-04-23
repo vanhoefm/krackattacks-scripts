@@ -824,6 +824,10 @@ LIBS += -lsqlite3
 LIBS_h += -lsqlite3
 endif
 
+ifdef CONFIG_TESTING_OPTIONS
+CFLAGS += -DCONFIG_TESTING_OPTIONS
+endif
+
 ALL=hostapd hostapd_cli
 
 all: verify_config $(ALL)

@@ -2876,6 +2876,25 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			bss->hs20_operating_class = oper_class;
 			bss->hs20_operating_class_len = oper_class_len;
 #endif /* CONFIG_HS20 */
+#ifdef CONFIG_TESTING_OPTIONS
+#define PARSE_TEST_PROBABILITY(_val)					\
+		} else if (os_strcmp(buf, #_val) == 0) {		\
+			char *end;					\
+									\
+			conf->_val = strtod(pos, &end);			\
+			if (*end || conf->_val < 0.0d ||		\
+			    conf->_val > 1.0d) {			\
+				wpa_printf(MSG_ERROR,			\
+					   "Line %d: Invalid value '%s'", \
+					   line, pos);			\
+				errors++;				\
+				return errors;				\
+			}
+		PARSE_TEST_PROBABILITY(ignore_probe_probability)
+		PARSE_TEST_PROBABILITY(ignore_auth_probability)
+		PARSE_TEST_PROBABILITY(ignore_assoc_probability)
+		PARSE_TEST_PROBABILITY(ignore_reassoc_probability)
+#endif /* CONFIG_TESTING_OPTIONS */
 		} else if (os_strcmp(buf, "vendor_elements") == 0) {
 			struct wpabuf *elems;
 			size_t len = os_strlen(pos);

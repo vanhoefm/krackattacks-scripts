@@ -520,6 +520,13 @@ struct hostapd_config {
 	u8 vht_oper_chwidth;
 	u8 vht_oper_centr_freq_seg0_idx;
 	u8 vht_oper_centr_freq_seg1_idx;
+
+#ifdef CONFIG_TESTING_OPTIONS
+	double ignore_probe_probability;
+	double ignore_auth_probability;
+	double ignore_assoc_probability;
+	double ignore_reassoc_probability;
+#endif /* CONFIG_TESTING_OPTIONS */
 };
 
 

@@ -730,6 +730,9 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		if (WLAN_FC_GET_TYPE(fc) == WLAN_FC_TYPE_MGMT &&
 		    WLAN_FC_GET_STYPE(fc) == WLAN_FC_STYPE_BEACON)
 			level = MSG_EXCESSIVE;
+		if (WLAN_FC_GET_TYPE(fc) == WLAN_FC_TYPE_MGMT &&
+		    WLAN_FC_GET_STYPE(fc) == WLAN_FC_STYPE_PROBE_REQ)
+			level = MSG_EXCESSIVE;
 	}
 
 	wpa_dbg(hapd->msg_ctx, level, "Event %s (%d) received",

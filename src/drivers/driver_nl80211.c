@@ -1299,7 +1299,7 @@ static void mlme_event_mgmt(struct wpa_driver_nl80211_data *drv,
 	u16 fc, stype;
 	int ssi_signal = 0;
 
-	wpa_printf(MSG_DEBUG, "nl80211: Frame event");
+	wpa_printf(MSG_MSGDUMP, "nl80211: Frame event");
 	mgmt = (const struct ieee80211_mgmt *) frame;
 	if (len < 24) {
 		wpa_printf(MSG_DEBUG, "nl80211: Too short action frame");
@@ -1493,7 +1493,7 @@ static void mlme_event(struct wpa_driver_nl80211_data *drv,
 		return;
 	}
 
-	wpa_printf(MSG_DEBUG, "nl80211: MLME event %d", cmd);
+	wpa_printf(MSG_MSGDUMP, "nl80211: MLME event %d", cmd);
 	wpa_hexdump(MSG_MSGDUMP, "nl80211: MLME event frame",
 		    nla_data(frame), nla_len(frame));
 
@@ -2468,7 +2468,7 @@ static void wpa_driver_nl80211_event_receive(int sock, void *eloop_ctx,
 {
 	struct nl_cb *cb = eloop_ctx;
 
-	wpa_printf(MSG_DEBUG, "nl80211: Event message available");
+	wpa_printf(MSG_MSGDUMP, "nl80211: Event message available");
 
 	nl_recvmsgs(handle, cb);
 }
@@ -8619,7 +8619,7 @@ static int nl80211_send_frame_cmd(struct i802_bss *bss,
 	if (!msg)
 		return -1;
 
-	wpa_printf(MSG_DEBUG, "nl80211: CMD_FRAME freq=%u wait=%u no_cck=%d "
+	wpa_printf(MSG_MSGDUMP, "nl80211: CMD_FRAME freq=%u wait=%u no_cck=%d "
 		   "no_ack=%d offchanok=%d",
 		   freq, wait, no_cck, no_ack, offchanok);
 	nl80211_cmd(drv, msg, 0, NL80211_CMD_FRAME);
@@ -8646,7 +8646,7 @@ static int nl80211_send_frame_cmd(struct i802_bss *bss,
 			   freq, wait);
 		goto nla_put_failure;
 	}
-	wpa_printf(MSG_DEBUG, "nl80211: Frame TX command accepted%s; "
+	wpa_printf(MSG_MSGDUMP, "nl80211: Frame TX command accepted%s; "
 		   "cookie 0x%llx", no_ack ? " (no ACK)" : "",
 		   (long long unsigned int) cookie);
 

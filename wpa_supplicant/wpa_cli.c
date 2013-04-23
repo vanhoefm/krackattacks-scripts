@@ -2445,7 +2445,7 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	  "<<idx> | <bssid>> = get detailed scan result info" },
 	{ "get_capability", wpa_cli_cmd_get_capability, NULL,
 	  cli_cmd_flag_none,
-	  "<eap/pairwise/group/key_mgmt/proto/auth_alg/channels/modes> "
+	  "<eap/pairwise/group/key_mgmt/proto/auth_alg/channels/freq/modes> "
 	  "= get capabilies" },
 	{ "reconfigure", wpa_cli_cmd_reconfigure, NULL,
 	  cli_cmd_flag_none,

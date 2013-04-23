@@ -2944,6 +2944,60 @@ static int ctrl_iface_get_capability_channels(struct wpa_supplicant *wpa_s,
 }
 
 
+static int ctrl_iface_get_capability_freq(struct wpa_supplicant *wpa_s,
+					  char *buf, size_t buflen)
+{
+	struct hostapd_channel_data *chnl;
+	int ret, i, j;
+	char *pos, *end, *hmode;
+
+	pos = buf;
+	end = pos + buflen;
+
+	for (j = 0; j < wpa_s->hw.num_modes; j++) {
+		switch (wpa_s->hw.modes[j].mode) {
+		case HOSTAPD_MODE_IEEE80211B:
+			hmode = "B";
+			break;
+		case HOSTAPD_MODE_IEEE80211G:
+			hmode = "G";
+			break;
+		case HOSTAPD_MODE_IEEE80211A:
+			hmode = "A";
+			break;
+		case HOSTAPD_MODE_IEEE80211AD:
+			hmode = "AD";
+			break;
+		default:
+			continue;
+		}
+		ret = os_snprintf(pos, end - pos, "Mode[%s] Channels:\n",
+				  hmode);
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+		chnl = wpa_s->hw.modes[j].channels;
+		for (i = 0; i < wpa_s->hw.modes[j].num_channels; i++) {
+			if (chnl[i].flag & HOSTAPD_CHAN_DISABLED)
+				continue;
+			ret = os_snprintf(pos, end - pos, " %d = %d MHz%s\n",
+					  chnl[i].chan, chnl[i].freq,
+					  chnl[i].flag & HOSTAPD_CHAN_NO_IBSS ?
+					  " (NO_IBSS)" : "");
+			if (ret < 0 || ret >= end - pos)
+				return pos - buf;
+			pos += ret;
+		}
+		ret = os_snprintf(pos, end - pos, "\n");
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+	}
+
+	return pos - buf;
+}
+
+
 static int wpa_supplicant_ctrl_iface_get_capability(
 	struct wpa_supplicant *wpa_s, const char *_field, char *buf,
 	size_t buflen)
@@ -3000,6 +3054,9 @@ static int wpa_supplicant_ctrl_iface_get_capability(
 
 	if (os_strcmp(field, "channels") == 0)
 		return ctrl_iface_get_capability_channels(wpa_s, buf, buflen);
+
+	if (os_strcmp(field, "freq") == 0)
+		return ctrl_iface_get_capability_freq(wpa_s, buf, buflen);
 
 	wpa_printf(MSG_DEBUG, "CTRL_IFACE: Unknown GET_CAPABILITY field '%s'",
 		   field);

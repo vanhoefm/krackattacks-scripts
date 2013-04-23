@@ -1476,12 +1476,16 @@ static void mlme_event_unprot_disconnect(struct wpa_driver_nl80211_data *drv,
 }
 
 
-static void mlme_event(struct wpa_driver_nl80211_data *drv,
+static void mlme_event(struct i802_bss *bss,
 		       enum nl80211_commands cmd, struct nlattr *frame,
 		       struct nlattr *addr, struct nlattr *timed_out,
 		       struct nlattr *freq, struct nlattr *ack,
 		       struct nlattr *cookie, struct nlattr *sig)
 {
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	const u8 *data;
+	size_t len;
+
 	if (timed_out && addr) {
 		mlme_timeout_event(drv, cmd, addr);
 		return;
@@ -1493,7 +1497,23 @@ static void mlme_event(struct wpa_driver_nl80211_data *drv,
 		return;
 	}
 
-	wpa_printf(MSG_MSGDUMP, "nl80211: MLME event %d", cmd);
+	data = nla_data(frame);
+	len = nla_len(frame);
+	if (len < 4 + ETH_ALEN) {
+		wpa_printf(MSG_MSGDUMP, "nl80211: MLME event %d on %s(" MACSTR
+			   ") - too short",
+			   cmd, bss->ifname, MAC2STR(bss->addr));
+		return;
+	}
+	wpa_printf(MSG_MSGDUMP, "nl80211: MLME event %d on %s(" MACSTR ") A1="
+		   MACSTR, cmd, bss->ifname, MAC2STR(bss->addr),
+		   MAC2STR(data + 4));
+	if (cmd != NL80211_CMD_FRAME_TX_STATUS && !(data[4] & 0x01) &&
+	    os_memcmp(bss->addr, data + 4, ETH_ALEN) != 0) {
+		wpa_printf(MSG_MSGDUMP, "nl80211: %s: Ignore MLME frame event "
+			   "for foreign address", bss->ifname);
+		return;
+	}
 	wpa_hexdump(MSG_MSGDUMP, "nl80211: MLME event frame",
 		    nla_data(frame), nla_len(frame));
 
@@ -2292,7 +2312,7 @@ static void do_process_drv_event(struct i802_bss *bss, int cmd,
 	case NL80211_CMD_FRAME_TX_STATUS:
 	case NL80211_CMD_UNPROT_DEAUTHENTICATE:
 	case NL80211_CMD_UNPROT_DISASSOCIATE:
-		mlme_event(drv, cmd, tb[NL80211_ATTR_FRAME],
+		mlme_event(bss, cmd, tb[NL80211_ATTR_FRAME],
 			   tb[NL80211_ATTR_MAC], tb[NL80211_ATTR_TIMED_OUT],
 			   tb[NL80211_ATTR_WIPHY_FREQ], tb[NL80211_ATTR_ACK],
 			   tb[NL80211_ATTR_COOKIE],
@@ -2441,7 +2461,7 @@ static int process_bss_event(struct nl_msg *msg, void *arg)
 	switch (gnlh->cmd) {
 	case NL80211_CMD_FRAME:
 	case NL80211_CMD_FRAME_TX_STATUS:
-		mlme_event(bss->drv, gnlh->cmd, tb[NL80211_ATTR_FRAME],
+		mlme_event(bss, gnlh->cmd, tb[NL80211_ATTR_FRAME],
 			   tb[NL80211_ATTR_MAC], tb[NL80211_ATTR_TIMED_OUT],
 			   tb[NL80211_ATTR_WIPHY_FREQ], tb[NL80211_ATTR_ACK],
 			   tb[NL80211_ATTR_COOKIE],

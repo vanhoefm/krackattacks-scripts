@@ -3055,6 +3055,8 @@ static void wpa_supplicant_deinit_iface(struct wpa_supplicant *wpa_s,
 		wpa_config_free(wpa_s->conf);
 		wpa_s->conf = NULL;
 	}
+
+	os_free(wpa_s);
 }
 
 
@@ -3105,14 +3107,12 @@ struct wpa_supplicant * wpa_supplicant_add_iface(struct wpa_global *global,
 		wpa_printf(MSG_DEBUG, "Failed to add interface %s",
 			   iface->ifname);
 		wpa_supplicant_deinit_iface(wpa_s, 0, 0);
-		os_free(wpa_s);
 		return NULL;
 	}
 
 	/* Notify the control interfaces about new iface */
 	if (wpas_notify_iface_added(wpa_s)) {
 		wpa_supplicant_deinit_iface(wpa_s, 1, 0);
-		os_free(wpa_s);
 		return NULL;
 	}
 
@@ -3165,7 +3165,6 @@ int wpa_supplicant_remove_iface(struct wpa_global *global,
 	if (global->p2p_invite_group == wpa_s)
 		global->p2p_invite_group = NULL;
 	wpa_supplicant_deinit_iface(wpa_s, 1, terminate);
-	os_free(wpa_s);
 
 	return 0;
 }

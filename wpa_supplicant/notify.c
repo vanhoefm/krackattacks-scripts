@@ -627,4 +627,7 @@ void wpas_notify_eap_status(struct wpa_supplicant *wpa_s, const char *status,
 			    const char *parameter)
 {
 	wpas_dbus_signal_eap_status(wpa_s, status, parameter);
+	wpa_msg_ctrl(wpa_s, MSG_INFO, WPA_EVENT_EAP_STATUS
+		     "status='%s' parameter='%s'",
+		     status, parameter);
 }

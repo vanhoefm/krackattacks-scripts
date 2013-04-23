@@ -44,6 +44,8 @@ extern "C" {
 #define WPA_EVENT_EAP_PEER_CERT "CTRL-EVENT-EAP-PEER-CERT "
 /** EAP TLS certificate chain validation error */
 #define WPA_EVENT_EAP_TLS_CERT_ERROR "CTRL-EVENT-EAP-TLS-CERT-ERROR "
+/** EAP status */
+#define WPA_EVENT_EAP_STATUS "CTRL-EVENT-EAP-STATUS "
 /** EAP authentication completed successfully */
 #define WPA_EVENT_EAP_SUCCESS "CTRL-EVENT-EAP-SUCCESS "
 /** EAP authentication failed (EAP-Failure received) */

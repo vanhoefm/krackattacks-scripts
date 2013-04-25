@@ -3563,6 +3563,12 @@ void wpas_connection_failed(struct wpa_supplicant *wpa_s, const u8 *bssid)
 	 */
 	count += wpa_s->extra_blacklist_count;
 
+	if (count > 3 && wpa_s->current_ssid) {
+		wpa_printf(MSG_DEBUG, "Continuous association failures - "
+			   "consider temporary network disabling");
+		wpas_auth_failed(wpa_s);
+	}
+
 	switch (count) {
 	case 1:
 		timeout = 100;

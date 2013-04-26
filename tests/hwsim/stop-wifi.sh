@@ -3,6 +3,7 @@
 sudo killall -q hostapd
 sudo killall -q wpa_supplicant
 sudo killall -q wlantest
+sudo killall -q tcpdump
 if grep -q hwsim0 /proc/net/dev; then
     sudo ifconfig hwsim0 down
 fi

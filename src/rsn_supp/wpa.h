@@ -315,6 +315,7 @@ int wpa_ft_process_response(struct wpa_sm *sm, const u8 *ies, size_t ies_len,
 			    int ft_action, const u8 *target_ap,
 			    const u8 *ric_ies, size_t ric_ies_len);
 int wpa_ft_is_completed(struct wpa_sm *sm);
+void wpa_reset_ft_completed(struct wpa_sm *sm);
 int wpa_ft_validate_reassoc_resp(struct wpa_sm *sm, const u8 *ies,
 				 size_t ies_len, const u8 *src_addr);
 int wpa_ft_start_over_ds(struct wpa_sm *sm, const u8 *target_ap,
@@ -344,6 +345,10 @@ wpa_ft_process_response(struct wpa_sm *sm, const u8 *ies, size_t ies_len,
 static inline int wpa_ft_is_completed(struct wpa_sm *sm)
 {
 	return 0;
+}
+
+static inline void wpa_reset_ft_completed(struct wpa_sm *sm)
+{
 }
 
 static inline int

@@ -2466,6 +2466,7 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 					    data->deauth_info.ie,
 					    data->deauth_info.ie_len);
 			}
+			wpa_reset_ft_completed(wpa_s->wpa);
 		}
 #ifdef CONFIG_AP
 		if (wpa_s->ap_iface && data && data->deauth_info.addr) {

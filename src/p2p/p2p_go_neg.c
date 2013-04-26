@@ -619,8 +619,6 @@ void p2p_process_go_neg_req(struct p2p_data *p2p, const u8 *sa,
 			"P2P: Not ready for GO negotiation with " MACSTR,
 			MAC2STR(sa));
 		status = P2P_SC_FAIL_INFO_CURRENTLY_UNAVAILABLE;
-		if (dev)
-			dev->flags |= P2P_DEV_PEER_WAITING_RESPONSE;
 		p2p->cfg->go_neg_req_rx(p2p->cfg->cb_ctx, sa,
 					msg.dev_password_id);
 	} else if (p2p->go_neg_peer && p2p->go_neg_peer != dev) {

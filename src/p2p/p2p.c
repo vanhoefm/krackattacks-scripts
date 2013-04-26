@@ -2982,7 +2982,8 @@ static void p2p_go_neg_resp_cb(struct p2p_data *p2p, int success)
 }
 
 
-static void p2p_go_neg_resp_failure_cb(struct p2p_data *p2p, int success)
+static void p2p_go_neg_resp_failure_cb(struct p2p_data *p2p, int success,
+				       const u8 *addr)
 {
 	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 		"P2P: GO Negotiation Response (failure) TX callback: "
@@ -2990,6 +2991,12 @@ static void p2p_go_neg_resp_failure_cb(struct p2p_data *p2p, int success)
 	if (p2p->go_neg_peer && p2p->go_neg_peer->status != P2P_SC_SUCCESS) {
 		p2p_go_neg_failed(p2p, p2p->go_neg_peer,
 				  p2p->go_neg_peer->status);
+	} else if (success) {
+		struct p2p_device *dev;
+		dev = p2p_get_device(p2p, addr);
+		if (dev &&
+		    dev->status == P2P_SC_FAIL_INFO_CURRENTLY_UNAVAILABLE)
+			dev->flags |= P2P_DEV_PEER_WAITING_RESPONSE;
 	}
 }
 
@@ -3069,7 +3076,7 @@ void p2p_send_action_cb(struct p2p_data *p2p, unsigned int freq, const u8 *dst,
 		p2p_go_neg_resp_cb(p2p, success);
 		break;
 	case P2P_PENDING_GO_NEG_RESPONSE_FAILURE:
-		p2p_go_neg_resp_failure_cb(p2p, success);
+		p2p_go_neg_resp_failure_cb(p2p, success, dst);
 		break;
 	case P2P_PENDING_GO_NEG_CONFIRM:
 		p2p_go_neg_conf_cb(p2p, result);

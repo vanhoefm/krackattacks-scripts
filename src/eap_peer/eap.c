@@ -406,9 +406,11 @@ SM_STATE(EAP, METHOD)
 		sm->eapKeyData = sm->m->getKey(sm, sm->eap_method_priv,
 					       &sm->eapKeyDataLen);
 		os_free(sm->eapSessionId);
-		sm->eapSessionId = sm->m->getSessionId(sm, sm->eap_method_priv,
-						       &sm->eapSessionIdLen);
-		if (sm->eapSessionId) {
+		sm->eapSessionId = NULL;
+		if (sm->m->getSessionId) {
+			sm->eapSessionId = sm->m->getSessionId(
+				sm, sm->eap_method_priv,
+				&sm->eapSessionIdLen);
 			wpa_hexdump(MSG_DEBUG, "EAP: Session-Id",
 				    sm->eapSessionId, sm->eapSessionIdLen);
 		}

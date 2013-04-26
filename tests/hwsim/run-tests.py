@@ -25,6 +25,7 @@ def reset_devs(dev, apdev):
 
 def main():
     test_file = None
+    error_file = None
     idx = 1
     if len(sys.argv) > 1 and sys.argv[1] == '-d':
         logging.basicConfig(level=logging.DEBUG)
@@ -34,6 +35,10 @@ def main():
         idx = idx + 1
     else:
         logging.basicConfig(level=logging.INFO)
+
+    if len(sys.argv) > idx + 1 and sys.argv[idx] == '-e':
+        error_file = sys.argv[idx + 1]
+        idx = idx + 2
 
     if len(sys.argv) > idx + 1 and sys.argv[idx] == '-f':
         test_file = sys.argv[idx + 1]
@@ -107,6 +112,10 @@ def main():
     if len(failed):
         print "passed " + str(len(passed)) + " test case(s)"
         print "failed tests: " + str(failed)
+        if error_file:
+            f = open(error_file, 'w')
+            f.write(str(failed) + '\n')
+            f.close()
         sys.exit(1)
     print "passed all " + str(len(passed)) + " test case(s)"
 

@@ -15,6 +15,7 @@
 #include "common/ieee802_11_defs.h"
 #include "common/wpa_ctrl.h"
 #include "eapol_supp/eapol_supp_sm.h"
+#include "crypto/dh_group5.h"
 #include "ap/hostapd.h"
 #include "ap/ap_config.h"
 #include "ap/ap_drv_ops.h"
@@ -1152,3 +1153,48 @@ int wpa_supplicant_ap_mac_addr_filter(struct wpa_supplicant *wpa_s,
 
 	return 0;
 }
+
+
+#ifdef CONFIG_WPS_NFC
+int wpas_ap_wps_add_nfc_pw(struct wpa_supplicant *wpa_s, u16 pw_id,
+			   const struct wpabuf *pw, const u8 *pubkey_hash)
+{
+	struct hostapd_data *hapd;
+	struct wps_context *wps;
+
+	if (!wpa_s->ap_iface)
+		return -1;
+	hapd = wpa_s->ap_iface->bss[0];
+	wps = hapd->wps;
+
+	if (wpa_s->parent->conf->wps_nfc_dh_pubkey == NULL ||
+	    wpa_s->parent->conf->wps_nfc_dh_privkey == NULL) {
+		wpa_printf(MSG_DEBUG, "P2P: No NFC DH key known");
+		return -1;
+	}
+
+	dh5_free(wps->dh_ctx);
+	wpabuf_free(wps->dh_pubkey);
+	wpabuf_free(wps->dh_privkey);
+	wps->dh_privkey = wpabuf_dup(
+		wpa_s->parent->conf->wps_nfc_dh_privkey);
+	wps->dh_pubkey = wpabuf_dup(
+		wpa_s->parent->conf->wps_nfc_dh_pubkey);
+	if (wps->dh_privkey == NULL || wps->dh_pubkey == NULL) {
+		wps->dh_ctx = NULL;
+		wpabuf_free(wps->dh_pubkey);
+		wps->dh_pubkey = NULL;
+		wpabuf_free(wps->dh_privkey);
+		wps->dh_privkey = NULL;
+		return -1;
+	}
+	wps->dh_ctx = dh5_init_fixed(wps->dh_privkey, wps->dh_pubkey);
+	if (wps->dh_ctx == NULL)
+		return -1;
+
+	return wps_registrar_add_nfc_pw_token(hapd->wps->registrar, pubkey_hash,
+					      pw_id,
+					      pw ? wpabuf_head(pw) : NULL,
+					      pw ? wpabuf_len(pw) : 0, 1);
+}
+#endif /* CONFIG_WPS_NFC */

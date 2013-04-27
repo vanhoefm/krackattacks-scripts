@@ -12,6 +12,7 @@
 #include "utils/list.h"
 #include "common/defs.h"
 #include "common/sae.h"
+#include "wps/wps_defs.h"
 #include "config_ssid.h"
 
 extern const char *wpa_supplicant_version;
@@ -713,6 +714,7 @@ struct wpa_supplicant {
 	unsigned int p2p_go_group_formation_completed:1;
 	unsigned int waiting_presence_resp;
 	int p2p_first_connection_timeout;
+	unsigned int p2p_peer_oob_pk_hash_known:1;
 	int p2p_persistent_go_freq;
 	int p2p_persistent_id;
 	int p2p_go_intent;
@@ -722,6 +724,11 @@ struct wpa_supplicant {
 	struct wpa_radio_work *p2p_scan_work;
 	struct wpa_radio_work *p2p_listen_work;
 	struct wpa_radio_work *p2p_send_action_work;
+
+	u16 p2p_oob_dev_pw_id; /* OOB Device Password Id for group formation */
+	struct wpabuf *p2p_oob_dev_pw; /* OOB Device Password for group
+					* formation */
+	u8 p2p_peer_oob_pubkey_hash[WPS_OOB_PUBKEY_HASH_LEN];
 #endif /* CONFIG_P2P */
 
 	struct wpa_ssid *bgscan_ssid;

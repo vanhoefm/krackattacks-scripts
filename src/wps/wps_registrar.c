@@ -31,6 +31,7 @@
 struct wps_nfc_pw_token {
 	struct dl_list list;
 	u8 pubkey_hash[WPS_OOB_PUBKEY_HASH_LEN];
+	unsigned int peer_pk_hash_known:1;
 	u16 pw_id;
 	u8 dev_pw[WPS_OOB_DEVICE_PASSWORD_LEN * 2 + 1];
 	size_t dev_pw_len;
@@ -1822,7 +1823,8 @@ static struct wpabuf * wps_build_m2(struct wps_data *wps)
 	}
 
 #ifdef CONFIG_WPS_NFC
-	if (wps->nfc_pw_token && wps->nfc_pw_token->pk_hash_provided_oob) {
+	if (wps->nfc_pw_token && wps->nfc_pw_token->pk_hash_provided_oob &&
+	    wps->nfc_pw_token->pw_id == DEV_PW_NFC_CONNECTION_HANDOVER) {
 		/*
 		 * Use abbreviated handshake since public key hash allowed
 		 * Enrollee to validate our public key similarly to how Enrollee
@@ -2585,7 +2587,7 @@ static enum wps_process_res wps_process_m1(struct wps_data *wps,
 			   wps->dev_pw_id, wps->wps, wps->wps->registrar);
 		token = wps_get_nfc_pw_token(
 			&wps->wps->registrar->nfc_pw_tokens, wps->dev_pw_id);
-		if (token) {
+		if (token && token->peer_pk_hash_known) {
 			wpa_printf(MSG_DEBUG, "WPS: Found matching NFC "
 				   "Password Token");
 			dl_list_del(&token->list);
@@ -2602,6 +2604,10 @@ static enum wps_process_res wps_process_m1(struct wps_data *wps,
 					WPS_CFG_PUBLIC_KEY_HASH_MISMATCH;
 				return WPS_CONTINUE;
 			}
+		} else if (token) {
+			wpa_printf(MSG_DEBUG, "WPS: Found matching NFC "
+				   "Password Token (no peer PK hash)");
+			wps->nfc_pw_token = token;
 		}
 	}
 #endif /* CONFIG_WPS_NFC */
@@ -3543,13 +3549,23 @@ int wps_registrar_add_nfc_pw_token(struct wps_registrar *reg,
 	if (dev_pw_len > WPS_OOB_DEVICE_PASSWORD_LEN)
 		return -1;
 
+	if (pw_id == DEV_PW_NFC_CONNECTION_HANDOVER &&
+	    (pubkey_hash == NULL || !pk_hash_provided_oob)) {
+		wpa_printf(MSG_DEBUG, "WPS: Unexpected NFC Password Token "
+			   "addition - missing public key hash");
+		return -1;
+	}
+
 	wps_free_nfc_pw_tokens(&reg->nfc_pw_tokens, pw_id);
 
 	token = os_zalloc(sizeof(*token));
 	if (token == NULL)
 		return -1;
 
-	os_memcpy(token->pubkey_hash, pubkey_hash, WPS_OOB_PUBKEY_HASH_LEN);
+	token->peer_pk_hash_known = pubkey_hash != NULL;
+	if (pubkey_hash)
+		os_memcpy(token->pubkey_hash, pubkey_hash,
+			  WPS_OOB_PUBKEY_HASH_LEN);
 	token->pw_id = pw_id;
 	token->pk_hash_provided_oob = pk_hash_provided_oob;
 	if (dev_pw) {
@@ -3615,6 +3631,14 @@ void wps_registrar_remove_nfc_pw_token(struct wps_registrar *reg,
 	wps_registrar_remove_authorized_mac(reg,
 					    (u8 *) "\xff\xff\xff\xff\xff\xff");
 	wps_registrar_selected_registrar_changed(reg, 0);
+
+	/*
+	 * Free the NFC password token if it was used only for a single protocol
+	 * run. The static handover case uses the same password token multiple
+	 * times, so do not free that case here.
+	 */
+	if (token->peer_pk_hash_known)
+		os_free(token);
 }
 
 #endif /* CONFIG_WPS_NFC */

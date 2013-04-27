@@ -72,5 +72,7 @@ wpas_ap_wps_nfc_handover_sel(struct wpa_supplicant *wpa_s,
 int wpas_ap_wps_nfc_report_handover(struct wpa_supplicant *wpa_s,
 				    const struct wpabuf *req,
 				    const struct wpabuf *sel);
+int wpas_ap_wps_add_nfc_pw(struct wpa_supplicant *wpa_s, u16 pw_id,
+			   const struct wpabuf *pw, const u8 *pubkey_hash);
 
 #endif /* AP_H */

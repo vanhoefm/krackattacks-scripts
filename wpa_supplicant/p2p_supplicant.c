@@ -1107,9 +1107,20 @@ static void wpas_start_wps_enrollee(struct wpa_supplicant *wpa_s,
 			  res->ssid, res->ssid_len);
 	wpa_supplicant_ap_deinit(wpa_s);
 	wpas_copy_go_neg_results(wpa_s, res);
-	if (res->wps_method == WPS_PBC)
+	if (res->wps_method == WPS_PBC) {
 		wpas_wps_start_pbc(wpa_s, res->peer_interface_addr, 1);
-	else {
+#ifdef CONFIG_WPS_NFC
+	} else if (res->wps_method == WPS_NFC) {
+		wpas_wps_start_nfc(wpa_s, res->peer_interface_addr,
+				   wpa_s->parent->p2p_oob_dev_pw,
+				   wpa_s->parent->p2p_oob_dev_pw_id, 1,
+				   wpa_s->parent->p2p_oob_dev_pw_id ==
+				   DEV_PW_NFC_CONNECTION_HANDOVER ?
+				   wpa_s->parent->p2p_peer_oob_pubkey_hash :
+				   NULL,
+				   NULL, 0);
+#endif /* CONFIG_WPS_NFC */
+	} else {
 		u16 dev_pw_id = DEV_PW_DEFAULT;
 		if (wpa_s->p2p_wps_method == WPS_PIN_KEYPAD)
 			dev_pw_id = DEV_PW_REGISTRAR_SPECIFIED;
@@ -1233,10 +1244,24 @@ static void p2p_go_configured(void *ctx, void *data)
 			   "filtering");
 		return;
 	}
-	if (params->wps_method == WPS_PBC)
+	if (params->wps_method == WPS_PBC) {
 		wpa_supplicant_ap_wps_pbc(wpa_s, params->peer_interface_addr,
 					  params->peer_device_addr);
-	else if (wpa_s->p2p_pin[0])
+#ifdef CONFIG_WPS_NFC
+	} else if (params->wps_method == WPS_NFC) {
+		if (wpa_s->parent->p2p_oob_dev_pw_id !=
+		    DEV_PW_NFC_CONNECTION_HANDOVER &&
+		    !wpa_s->parent->p2p_oob_dev_pw) {
+			wpa_printf(MSG_DEBUG, "P2P: No NFC Dev Pw known");
+			return;
+		}
+		wpas_ap_wps_add_nfc_pw(
+			wpa_s, wpa_s->parent->p2p_oob_dev_pw_id,
+			wpa_s->parent->p2p_oob_dev_pw,
+			wpa_s->parent->p2p_peer_oob_pk_hash_known ?
+			wpa_s->parent->p2p_peer_oob_pubkey_hash : NULL);
+#endif /* CONFIG_WPS_NFC */
+	} else if (wpa_s->p2p_pin[0])
 		wpa_supplicant_ap_wps_pin(wpa_s, params->peer_interface_addr,
 					  wpa_s->p2p_pin, NULL, 0, 0);
 	os_free(wpa_s->go_params);
@@ -3848,6 +3873,9 @@ void wpas_p2p_deinit(struct wpa_supplicant *wpa_s)
 	}
 	eloop_cancel_timeout(wpas_p2p_send_action_work_timeout, wpa_s, NULL);
 
+	wpabuf_free(wpa_s->p2p_oob_dev_pw);
+	wpa_s->p2p_oob_dev_pw = NULL;
+
 	/* TODO: remove group interface from the driver if this wpa_s instance
 	 * is on top of a P2P group interface */
 }
@@ -3942,7 +3970,9 @@ static int wpas_p2p_start_go_neg(struct wpa_supplicant *wpa_s,
 			   go_intent, own_interface_addr, force_freq,
 			   persistent_group, ssid ? ssid->ssid : NULL,
 			   ssid ? ssid->ssid_len : 0,
-			   wpa_s->p2p_pd_before_go_neg, pref_freq, 0);
+			   wpa_s->p2p_pd_before_go_neg, pref_freq,
+			   wps_method == WPS_NFC ? wpa_s->p2p_oob_dev_pw_id :
+			   0);
 }
 
 
@@ -3959,7 +3989,9 @@ static int wpas_p2p_auth_go_neg(struct wpa_supplicant *wpa_s,
 	return p2p_authorize(wpa_s->global->p2p, peer_addr, wps_method,
 			     go_intent, own_interface_addr, force_freq,
 			     persistent_group, ssid ? ssid->ssid : NULL,
-			     ssid ? ssid->ssid_len : 0, pref_freq, 0);
+			     ssid ? ssid->ssid_len : 0, pref_freq,
+			     wps_method == WPS_NFC ? wpa_s->p2p_oob_dev_pw_id :
+			     0);
 }
 
 
@@ -7023,6 +7055,242 @@ struct wpabuf * wpas_p2p_nfc_handover_sel(struct wpa_supplicant *wpa_s,
 	p2p = p2p_build_nfc_handover_sel(wpa_s->global->p2p);
 
 	return wpas_p2p_nfc_handover(ndef, wsc, p2p);
+}
+
+
+static int wpas_p2p_nfc_join_group(struct wpa_supplicant *wpa_s,
+				   struct p2p_nfc_params *params)
+{
+	wpa_printf(MSG_DEBUG, "P2P: Initiate join-group based on NFC "
+		   "connection handover");
+	return wpas_p2p_connect(wpa_s, params->peer->p2p_device_addr, NULL,
+				WPS_NFC, 0, 0, 1, 0, wpa_s->conf->p2p_go_intent,
+				0, -1, 0, 1, 1);
+}
+
+
+static int wpas_p2p_nfc_auth_join(struct wpa_supplicant *wpa_s,
+				  struct p2p_nfc_params *params)
+{
+	wpa_printf(MSG_DEBUG, "P2P: Authorize join-group based on NFC "
+		   "connection handover");
+	for (wpa_s = wpa_s->global->ifaces; wpa_s; wpa_s = wpa_s->next) {
+		struct wpa_ssid *ssid = wpa_s->current_ssid;
+		if (ssid == NULL)
+			continue;
+		if (ssid->mode != WPAS_MODE_P2P_GO)
+			continue;
+		if (wpa_s->ap_iface == NULL)
+			continue;
+		break;
+	}
+	if (wpa_s == NULL) {
+		wpa_printf(MSG_DEBUG, "P2P: Could not find GO interface");
+		return -1;
+	}
+
+	if (wpa_s->parent->p2p_oob_dev_pw_id !=
+	    DEV_PW_NFC_CONNECTION_HANDOVER &&
+	    !wpa_s->parent->p2p_oob_dev_pw) {
+		wpa_printf(MSG_DEBUG, "P2P: No NFC Dev Pw known");
+		return -1;
+	}
+	return wpas_ap_wps_add_nfc_pw(
+		wpa_s, wpa_s->parent->p2p_oob_dev_pw_id,
+		wpa_s->parent->p2p_oob_dev_pw,
+		wpa_s->parent->p2p_peer_oob_pk_hash_known ?
+		wpa_s->parent->p2p_peer_oob_pubkey_hash : NULL);
+}
+
+
+static int wpas_p2p_nfc_init_go_neg(struct wpa_supplicant *wpa_s,
+				    struct p2p_nfc_params *params)
+{
+	wpa_printf(MSG_DEBUG, "P2P: Initiate GO Negotiation based on NFC "
+		   "connection handover");
+	return wpas_p2p_connect(wpa_s, params->peer->p2p_device_addr, NULL,
+				WPS_NFC, 0, 0, 0, 0, wpa_s->conf->p2p_go_intent,
+				0, -1, 0, 1, 1);
+}
+
+
+static int wpas_p2p_nfc_resp_go_neg(struct wpa_supplicant *wpa_s,
+				    struct p2p_nfc_params *params)
+{
+	int res;
+
+	wpa_printf(MSG_DEBUG, "P2P: Authorize GO Negotiation based on NFC "
+		   "connection handover");
+	res = wpas_p2p_connect(wpa_s, params->peer->p2p_device_addr, NULL,
+			       WPS_NFC, 0, 0, 0, 1, wpa_s->conf->p2p_go_intent,
+			       0, -1, 0, 1, 1);
+	if (res)
+		return res;
+
+	res = wpas_p2p_listen(wpa_s, 60);
+	if (res) {
+		p2p_unauthorize(wpa_s->global->p2p,
+				params->peer->p2p_device_addr);
+	}
+
+	return res;
+}
+
+
+static int wpas_p2p_nfc_connection_handover(struct wpa_supplicant *wpa_s,
+					    const struct wpabuf *data,
+					    int sel, int tag)
+{
+	const u8 *pos, *end;
+	u16 len, id;
+	struct p2p_nfc_params params;
+	int res;
+
+	os_memset(&params, 0, sizeof(params));
+	params.sel = sel;
+
+	wpa_hexdump_buf(MSG_DEBUG, "P2P: Received NFC tag payload", data);
+
+	pos = wpabuf_head(data);
+	end = pos + wpabuf_len(data);
+
+	if (end - pos < 2) {
+		wpa_printf(MSG_DEBUG, "P2P: Not enough data for Length of WSC "
+			   "attributes");
+		return -1;
+	}
+	len = WPA_GET_BE16(pos);
+	pos += 2;
+	if (pos + len > end) {
+		wpa_printf(MSG_DEBUG, "P2P: Not enough data for WSC "
+			   "attributes");
+		return -1;
+	}
+	params.wsc_attr = pos;
+	params.wsc_len = len;
+	pos += len;
+
+	if (end - pos < 2) {
+		wpa_printf(MSG_DEBUG, "P2P: Not enough data for Length of P2P "
+			   "attributes");
+		return -1;
+	}
+	len = WPA_GET_BE16(pos);
+	pos += 2;
+	if (pos + len > end) {
+		wpa_printf(MSG_DEBUG, "P2P: Not enough data for P2P "
+			   "attributes");
+		return -1;
+	}
+	params.p2p_attr = pos;
+	params.p2p_len = len;
+	pos += len;
+
+	wpa_hexdump(MSG_DEBUG, "P2P: WSC attributes",
+		    params.wsc_attr, params.wsc_len);
+	wpa_hexdump(MSG_DEBUG, "P2P: P2P attributes",
+		    params.p2p_attr, params.p2p_len);
+	if (pos < end) {
+		wpa_hexdump(MSG_DEBUG,
+			    "P2P: Ignored extra data after P2P attributes",
+			    pos, end - pos);
+	}
+
+	res = p2p_process_nfc_connection_handover(wpa_s->global->p2p, &params);
+	if (res)
+		return res;
+
+	wpabuf_free(wpa_s->p2p_oob_dev_pw);
+	wpa_s->p2p_oob_dev_pw = NULL;
+
+	if (params.oob_dev_pw_len < WPS_OOB_PUBKEY_HASH_LEN + 2) {
+		wpa_printf(MSG_DEBUG, "P2P: No peer OOB Dev Pw "
+			   "received");
+		return -1;
+	}
+
+	id = WPA_GET_BE16(params.oob_dev_pw + WPS_OOB_PUBKEY_HASH_LEN);
+	wpa_printf(MSG_DEBUG, "P2P: Peer OOB Dev Pw %u", id);
+	wpa_hexdump(MSG_DEBUG, "P2P: Peer OOB Public Key hash",
+		    params.oob_dev_pw, WPS_OOB_PUBKEY_HASH_LEN);
+	os_memcpy(wpa_s->p2p_peer_oob_pubkey_hash,
+		  params.oob_dev_pw, WPS_OOB_PUBKEY_HASH_LEN);
+	wpa_s->p2p_peer_oob_pk_hash_known = 1;
+
+	if (tag) {
+		if (id < 0x10) {
+			wpa_printf(MSG_DEBUG, "P2P: Static handover - invalid "
+				   "peer OOB Device Password Id %u", id);
+			return -1;
+		}
+		wpa_printf(MSG_DEBUG, "P2P: Static handover - use peer OOB "
+			   "Device Password Id %u", id);
+		wpa_hexdump_key(MSG_DEBUG, "P2P: Peer OOB Device Password",
+				params.oob_dev_pw + WPS_OOB_PUBKEY_HASH_LEN + 2,
+				params.oob_dev_pw_len -
+				WPS_OOB_PUBKEY_HASH_LEN - 2);
+		wpa_s->p2p_oob_dev_pw_id = id;
+		wpa_s->p2p_oob_dev_pw = wpabuf_alloc_copy(
+			params.oob_dev_pw + WPS_OOB_PUBKEY_HASH_LEN + 2,
+			params.oob_dev_pw_len -
+			WPS_OOB_PUBKEY_HASH_LEN - 2);
+		if (wpa_s->p2p_oob_dev_pw == NULL)
+			return -1;
+
+		if (wpa_s->conf->wps_nfc_dh_pubkey == NULL &&
+		    wps_nfc_gen_dh(&wpa_s->conf->wps_nfc_dh_pubkey,
+				   &wpa_s->conf->wps_nfc_dh_privkey) < 0)
+			return -1;
+	} else {
+		wpa_printf(MSG_DEBUG, "P2P: Using abbreviated WPS handshake "
+			   "without Device Password");
+		wpa_s->p2p_oob_dev_pw_id = DEV_PW_NFC_CONNECTION_HANDOVER;
+	}
+
+	switch (params.next_step) {
+	case NO_ACTION:
+		return 0;
+	case JOIN_GROUP:
+		return wpas_p2p_nfc_join_group(wpa_s, &params);
+	case AUTH_JOIN:
+		return wpas_p2p_nfc_auth_join(wpa_s, &params);
+	case INIT_GO_NEG:
+		return wpas_p2p_nfc_init_go_neg(wpa_s, &params);
+	case RESP_GO_NEG:
+		/* TODO: use own OOB Dev Pw */
+		return wpas_p2p_nfc_resp_go_neg(wpa_s, &params);
+	}
+
+	return -1;
+}
+
+
+int wpas_p2p_nfc_report_handover(struct wpa_supplicant *wpa_s, int init,
+				 const struct wpabuf *req,
+				 const struct wpabuf *sel)
+{
+	struct wpabuf *tmp;
+	int ret;
+
+	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
+		return -1;
+
+	wpa_printf(MSG_DEBUG, "NFC: P2P connection handover reported");
+
+	wpa_hexdump_ascii(MSG_DEBUG, "NFC: Req",
+			  wpabuf_head(req), wpabuf_len(req));
+	wpa_hexdump_ascii(MSG_DEBUG, "NFC: Sel",
+			  wpabuf_head(sel), wpabuf_len(sel));
+	tmp = ndef_parse_p2p(init ? sel : req);
+	if (tmp == NULL) {
+		wpa_printf(MSG_DEBUG, "P2P: Could not parse NDEF");
+		return -1;
+	}
+
+	ret = wpas_p2p_nfc_connection_handover(wpa_s, tmp, init, 0);
+	wpabuf_free(tmp);
+
+	return ret;
 }
 
 #endif /* CONFIG_WPS_NFC */

@@ -27,6 +27,7 @@ struct p2p_device {
 	struct dl_list list;
 	struct os_reltime last_seen;
 	int listen_freq;
+	int oob_go_neg_freq;
 	enum p2p_wps_method wps_method;
 	u16 oob_pw_id;
 
@@ -465,6 +466,8 @@ struct p2p_data {
 	struct wpabuf *wfd_assoc_bssid;
 	struct wpabuf *wfd_coupled_sink_info;
 #endif /* CONFIG_WIFI_DISPLAY */
+
+	u16 authorized_oob_dev_pw_id;
 };
 
 /**

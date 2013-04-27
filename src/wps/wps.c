@@ -178,7 +178,6 @@ void wps_deinit(struct wps_data *data)
 	wps_device_data_free(&data->peer_dev);
 	os_free(data->new_ap_settings);
 	dh5_free(data->dh_ctx);
-	os_free(data->nfc_pw_token);
 	os_free(data);
 }
 

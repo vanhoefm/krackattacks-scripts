@@ -152,6 +152,9 @@ struct wpabuf * wpas_p2p_nfc_handover_req(struct wpa_supplicant *wpa_s,
 					  int ndef);
 struct wpabuf * wpas_p2p_nfc_handover_sel(struct wpa_supplicant *wpa_s,
 					  int ndef, int tag);
+int wpas_p2p_nfc_report_handover(struct wpa_supplicant *wpa_s, int init,
+				 const struct wpabuf *req,
+				 const struct wpabuf *sel);
 
 #ifdef CONFIG_P2P
 int wpas_p2p_4way_hs_failed(struct wpa_supplicant *wpa_s);

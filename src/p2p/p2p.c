@@ -4421,4 +4421,106 @@ struct wpabuf * p2p_build_nfc_handover_sel(struct p2p_data *p2p)
 	return p2p_build_nfc_handover(p2p);
 }
 
+
+int p2p_process_nfc_connection_handover(struct p2p_data *p2p,
+					struct p2p_nfc_params *params)
+{
+	struct p2p_message msg;
+	struct p2p_device *dev;
+	const u8 *p2p_dev_addr;
+	int peer_go = 0;
+
+	params->next_step = NO_ACTION;
+
+	if (p2p_parse_ies_separate(params->wsc_attr, params->wsc_len,
+				   params->p2p_attr, params->p2p_len, &msg)) {
+		p2p_dbg(p2p, "Failed to parse WSC/P2P attributes from NFC");
+		p2p_parse_free(&msg);
+		return -1;
+	}
+
+	if (msg.p2p_device_addr)
+		p2p_dev_addr = msg.p2p_device_addr;
+	else if (msg.device_id)
+		p2p_dev_addr = msg.device_id;
+	else {
+		p2p_dbg(p2p, "Ignore scan data without P2P Device Info or P2P Device Id");
+		p2p_parse_free(&msg);
+		return -1;
+	}
+
+	if (msg.oob_dev_password) {
+		os_memcpy(params->oob_dev_pw, msg.oob_dev_password,
+			  msg.oob_dev_password_len);
+		params->oob_dev_pw_len = msg.oob_dev_password_len;
+	}
+
+	dev = p2p_create_device(p2p, p2p_dev_addr);
+	if (dev == NULL) {
+		p2p_parse_free(&msg);
+		return -1;
+	}
+
+	params->peer = &dev->info;
+
+	os_get_reltime(&dev->last_seen);
+	dev->flags &= ~(P2P_DEV_PROBE_REQ_ONLY | P2P_DEV_GROUP_CLIENT_ONLY);
+	p2p_copy_wps_info(p2p, dev, 0, &msg);
+
+	if (msg.oob_go_neg_channel) {
+		int freq;
+		if (msg.oob_go_neg_channel[3] == 0 &&
+		    msg.oob_go_neg_channel[4] == 0)
+			freq = 0;
+		else
+			freq = p2p_channel_to_freq(msg.oob_go_neg_channel[3],
+						   msg.oob_go_neg_channel[4]);
+		if (freq < 0) {
+			p2p_dbg(p2p, "Unknown peer OOB GO Neg channel");
+		} else {
+			p2p_dbg(p2p, "Peer OOB GO Neg channel: %u MHz", freq);
+			dev->oob_go_neg_freq = freq;
+		}
+
+		if (!params->sel) {
+			freq = p2p_channel_to_freq(p2p->cfg->reg_class,
+						   p2p->cfg->channel);
+			if (freq < 0) {
+				p2p_dbg(p2p, "Own listen channel not known");
+				return -1;
+			}
+			p2p_dbg(p2p, "Use own Listen channel as OOB GO Neg channel: %u MHz",
+				freq);
+			dev->oob_go_neg_freq = freq;
+		}
+
+		if (msg.oob_go_neg_channel[5] == P2P_GO_IN_A_GROUP)
+			peer_go = 1;
+	}
+
+	p2p_parse_free(&msg);
+
+	if (dev->flags & P2P_DEV_USER_REJECTED) {
+		p2p_dbg(p2p, "Do not report rejected device");
+		return 0;
+	}
+
+	if (!(dev->flags & P2P_DEV_REPORTED)) {
+		p2p->cfg->dev_found(p2p->cfg->cb_ctx, p2p_dev_addr, &dev->info,
+				    !(dev->flags & P2P_DEV_REPORTED_ONCE));
+		dev->flags |= P2P_DEV_REPORTED | P2P_DEV_REPORTED_ONCE;
+	}
+
+	if (peer_go)
+		params->next_step = JOIN_GROUP;
+	else if (p2p->num_groups > 0)
+		params->next_step = AUTH_JOIN;
+	else if (params->sel)
+		params->next_step = INIT_GO_NEG;
+	else
+		params->next_step = RESP_GO_NEG;
+
+	return 0;
+}
+
 #endif /* CONFIG_WPS_NFC */

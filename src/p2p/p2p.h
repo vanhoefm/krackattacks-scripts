@@ -9,6 +9,8 @@
 #ifndef P2P_H
 #define P2P_H
 
+#include "wps/wps_defs.h"
+
 /**
  * P2P_MAX_REG_CLASSES - Maximum number of regulatory classes
  */
@@ -1899,5 +1901,24 @@ const char * p2p_get_state_txt(struct p2p_data *p2p);
 
 struct wpabuf * p2p_build_nfc_handover_req(struct p2p_data *p2p);
 struct wpabuf * p2p_build_nfc_handover_sel(struct p2p_data *p2p);
+
+struct p2p_nfc_params {
+	int sel;
+	const u8 *wsc_attr;
+	size_t wsc_len;
+	const u8 *p2p_attr;
+	size_t p2p_len;
+
+	enum {
+		NO_ACTION, JOIN_GROUP, AUTH_JOIN, INIT_GO_NEG, RESP_GO_NEG
+	} next_step;
+	struct p2p_peer_info *peer;
+	u8 oob_dev_pw[WPS_OOB_PUBKEY_HASH_LEN + 2 +
+		      WPS_OOB_DEVICE_PASSWORD_LEN];
+	size_t oob_dev_pw_len;
+};
+
+int p2p_process_nfc_connection_handover(struct p2p_data *p2p,
+					struct p2p_nfc_params *params);
 
 #endif /* P2P_H */

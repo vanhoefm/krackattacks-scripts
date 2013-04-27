@@ -46,11 +46,17 @@ int p2p_random(char *buf, size_t len)
 }
 
 
-static int p2p_channel_to_freq_j4(int reg_class, int channel)
+/**
+ * p2p_channel_to_freq - Convert channel info to frequency
+ * @op_class: Operating class
+ * @channel: Channel number
+ * Returns: Frequency in MHz or -1 if the specified channel is unknown
+ */
+int p2p_channel_to_freq(int op_class, int channel)
 {
-	/* Table J-4 in P802.11REVmb/D4.0 - Global operating classes */
-	/* TODO: more regulatory classes */
-	switch (reg_class) {
+	/* Table E-4 in IEEE Std 802.11-2012 - Global operating classes */
+	/* TODO: more operating classes */
+	switch (op_class) {
 	case 81:
 		/* channels 1..13 */
 		if (channel < 1 || channel > 13)
@@ -94,75 +100,34 @@ static int p2p_channel_to_freq_j4(int reg_class, int channel)
 
 
 /**
- * p2p_channel_to_freq - Convert channel info to frequency
- * @country: Country code
- * @reg_class: Regulatory class
- * @channel: Channel number
- * Returns: Frequency in MHz or -1 if the specified channel is unknown
- */
-int p2p_channel_to_freq(const char *country, int reg_class, int channel)
-{
-	if (country[2] == 0x04)
-		return p2p_channel_to_freq_j4(reg_class, channel);
-
-	/* These are mainly for backwards compatibility; to be removed */
-	switch (reg_class) {
-	case 1: /* US/1, EU/1, JP/1 = 5 GHz, channels 36,40,44,48 */
-		if (channel < 36 || channel > 48)
-			return -1;
-		return 5000 + 5 * channel;
-	case 3: /* US/3 = 5 GHz, channels 149,153,157,161 */
-	case 5: /* US/5 = 5 GHz, channels 149,153,157,161 */
-		if (channel < 149 || channel > 161)
-			return -1;
-		return 5000 + 5 * channel;
-	case 4: /* EU/4 = 2.407 GHz, channels 1..13 */
-	case 12: /* US/12 = 2.407 GHz, channels 1..11 */
-	case 30: /* JP/30 = 2.407 GHz, channels 1..13 */
-		if (channel < 1 || channel > 13)
-			return -1;
-		return 2407 + 5 * channel;
-	case 31: /* JP/31 = 2.414 GHz, channel 14 */
-		if (channel != 14)
-			return -1;
-		return 2414 + 5 * channel;
-	}
-
-	return -1;
-}
-
-
-/**
  * p2p_freq_to_channel - Convert frequency into channel info
- * @country: Country code
- * @reg_class: Buffer for returning regulatory class
+ * @op_class: Buffer for returning operating class
  * @channel: Buffer for returning channel number
  * Returns: 0 on success, -1 if the specified frequency is unknown
  */
-int p2p_freq_to_channel(const char *country, unsigned int freq, u8 *reg_class,
-			u8 *channel)
+int p2p_freq_to_channel(unsigned int freq, u8 *op_class, u8 *channel)
 {
 	/* TODO: more operating classes */
 	if (freq >= 2412 && freq <= 2472) {
-		*reg_class = 81; /* 2.407 GHz, channels 1..13 */
+		*op_class = 81; /* 2.407 GHz, channels 1..13 */
 		*channel = (freq - 2407) / 5;
 		return 0;
 	}
 
 	if (freq == 2484) {
-		*reg_class = 82; /* channel 14 */
+		*op_class = 82; /* channel 14 */
 		*channel = 14;
 		return 0;
 	}
 
 	if (freq >= 5180 && freq <= 5240) {
-		*reg_class = 115; /* 5 GHz, channels 36..48 */
+		*op_class = 115; /* 5 GHz, channels 36..48 */
 		*channel = (freq - 5000) / 5;
 		return 0;
 	}
 
 	if (freq >= 5745 && freq <= 5805) {
-		*reg_class = 124; /* 5 GHz, channels 149..161 */
+		*op_class = 124; /* 5 GHz, channels 149..161 */
 		*channel = (freq - 5000) / 5;
 		return 0;
 	}
@@ -261,9 +226,8 @@ int p2p_channels_includes_freq(const struct p2p_channels *channels,
 	for (i = 0; i < channels->reg_classes; i++) {
 		const struct p2p_reg_class *reg = &channels->reg_class[i];
 		for (j = 0; j < reg->channels; j++) {
-			if (p2p_channel_to_freq_j4(reg->reg_class,
-						   reg->channel[j]) ==
-			    (int) freq)
+			if (p2p_channel_to_freq(reg->reg_class,
+						reg->channel[j]) == (int) freq)
 				return 1;
 		}
 	}
@@ -274,8 +238,7 @@ int p2p_channels_includes_freq(const struct p2p_channels *channels,
 int p2p_supported_freq(struct p2p_data *p2p, unsigned int freq)
 {
 	u8 op_reg_class, op_channel;
-	if (p2p_freq_to_channel(p2p->cfg->country, freq,
-				&op_reg_class, &op_channel) < 0)
+	if (p2p_freq_to_channel(freq, &op_reg_class, &op_channel) < 0)
 		return 0;
 	return p2p_channels_includes(&p2p->cfg->channels, op_reg_class,
 				     op_channel);

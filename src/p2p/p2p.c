@@ -226,8 +226,7 @@ static void p2p_listen_in_find(struct p2p_data *p2p, int dev_disc)
 		"P2P: Starting short listen state (state=%s)",
 		p2p_state_txt(p2p->state));
 
-	freq = p2p_channel_to_freq(p2p->cfg->country, p2p->cfg->reg_class,
-				   p2p->cfg->channel);
+	freq = p2p_channel_to_freq(p2p->cfg->reg_class, p2p->cfg->channel);
 	if (freq < 0) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Unknown regulatory class/channel");
@@ -277,8 +276,7 @@ int p2p_listen(struct p2p_data *p2p, unsigned int timeout)
 	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 		"P2P: Going to listen(only) state");
 
-	freq = p2p_channel_to_freq(p2p->cfg->country, p2p->cfg->reg_class,
-				   p2p->cfg->channel);
+	freq = p2p_channel_to_freq(p2p->cfg->reg_class, p2p->cfg->channel);
 	if (freq < 0) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Unknown regulatory class/channel");
@@ -867,7 +865,7 @@ static int p2p_get_next_prog_freq(struct p2p_data *p2p)
 		channel = c->reg_class[cl].channel[ch];
 	}
 
-	freq = p2p_channel_to_freq(p2p->cfg->country, reg_class, channel);
+	freq = p2p_channel_to_freq(reg_class, channel);
 	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Next progressive search "
 		"channel: reg_class %u channel %u -> %d MHz",
 		reg_class, channel, freq);
@@ -1176,8 +1174,7 @@ static int p2p_prepare_channel_pref(struct p2p_data *p2p,
 	u8 op_class, op_channel;
 	unsigned int freq = force_freq ? force_freq : pref_freq;
 
-	if (p2p_freq_to_channel(p2p->cfg->country, freq,
-				&op_class, &op_channel) < 0) {
+	if (p2p_freq_to_channel(freq, &op_class, &op_channel) < 0) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Unsupported frequency %u MHz", freq);
 		return -1;
@@ -1213,24 +1210,24 @@ static void p2p_prepare_channel_best(struct p2p_data *p2p)
 
 	if (!p2p->cfg->cfg_op_channel && p2p->best_freq_overall > 0 &&
 	    p2p_supported_freq(p2p, p2p->best_freq_overall) &&
-	    p2p_freq_to_channel(p2p->cfg->country, p2p->best_freq_overall,
-				&op_class, &op_channel) == 0) {
+	    p2p_freq_to_channel(p2p->best_freq_overall, &op_class, &op_channel)
+	    == 0) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Select best "
 			"overall channel as operating channel preference");
 		p2p->op_reg_class = op_class;
 		p2p->op_channel = op_channel;
 	} else if (!p2p->cfg->cfg_op_channel && p2p->best_freq_5 > 0 &&
 		   p2p_supported_freq(p2p, p2p->best_freq_5) &&
-		   p2p_freq_to_channel(p2p->cfg->country, p2p->best_freq_5,
-				       &op_class, &op_channel) == 0) {
+		   p2p_freq_to_channel(p2p->best_freq_5, &op_class, &op_channel)
+		   == 0) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Select best 5 GHz "
 			"channel as operating channel preference");
 		p2p->op_reg_class = op_class;
 		p2p->op_channel = op_channel;
 	} else if (!p2p->cfg->cfg_op_channel && p2p->best_freq_24 > 0 &&
 		   p2p_supported_freq(p2p, p2p->best_freq_24) &&
-		   p2p_freq_to_channel(p2p->cfg->country, p2p->best_freq_24,
-				       &op_class, &op_channel) == 0) {
+		   p2p_freq_to_channel(p2p->best_freq_24, &op_class,
+				       &op_channel) == 0) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Select best 2.4 "
 			"GHz channel as operating channel preference");
 		p2p->op_reg_class = op_class;
@@ -1479,8 +1476,7 @@ void p2p_add_dev_info(struct p2p_data *p2p, const u8 *addr,
 
 	if (msg->listen_channel) {
 		int freq;
-		freq = p2p_channel_to_freq((char *) msg->listen_channel,
-					   msg->listen_channel[3],
+		freq = p2p_channel_to_freq(msg->listen_channel[3],
 					   msg->listen_channel[4]);
 		if (freq < 0) {
 			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
@@ -1579,8 +1575,7 @@ void p2p_go_complete(struct p2p_data *p2p, struct p2p_device *peer)
 
 	if (go) {
 		/* Setup AP mode for WPS provisioning */
-		res.freq = p2p_channel_to_freq(p2p->cfg->country,
-					       p2p->op_reg_class,
+		res.freq = p2p_channel_to_freq(p2p->op_reg_class,
 					       p2p->op_channel);
 		os_memcpy(res.ssid, p2p->ssid, p2p->ssid_len);
 		res.ssid_len = p2p->ssid_len;
@@ -1604,8 +1599,7 @@ void p2p_go_complete(struct p2p_data *p2p, struct p2p_device *peer)
 			int freq;
 			if (freqs + 1 == P2P_MAX_CHANNELS)
 				break;
-			freq = p2p_channel_to_freq(peer->country, c->reg_class,
-						   c->channel[j]);
+			freq = p2p_channel_to_freq(c->reg_class, c->channel[j]);
 			if (freq < 0)
 				continue;
 			res.freq_list[freqs++] = freq;
@@ -1835,8 +1829,7 @@ static void p2p_add_dev_from_probe_req(struct p2p_data *p2p, const u8 *addr,
 
 	if (msg.listen_channel) {
 		os_memcpy(dev->country, msg.listen_channel, 3);
-		dev->listen_freq = p2p_channel_to_freq(dev->country,
-						       msg.listen_channel[3],
+		dev->listen_freq = p2p_channel_to_freq(msg.listen_channel[3],
 						       msg.listen_channel[4]);
 	}
 
@@ -4045,7 +4038,7 @@ void p2p_set_managed_oper(struct p2p_data *p2p, int enabled)
 
 int p2p_set_listen_channel(struct p2p_data *p2p, u8 reg_class, u8 channel)
 {
-	if (p2p_channel_to_freq(p2p->cfg->country, reg_class, channel) < 0)
+	if (p2p_channel_to_freq(reg_class, channel) < 0)
 		return -1;
 
 	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Set Listen channel: "
@@ -4075,8 +4068,7 @@ int p2p_set_ssid_postfix(struct p2p_data *p2p, const u8 *postfix, size_t len)
 int p2p_set_oper_channel(struct p2p_data *p2p, u8 op_reg_class, u8 op_channel,
 			 int cfg_op_channel)
 {
-	if (p2p_channel_to_freq(p2p->cfg->country, op_reg_class, op_channel)
-	    < 0)
+	if (p2p_channel_to_freq(op_reg_class, op_channel) < 0)
 		return -1;
 
 	wpa_msg(p2p->cfg->msg_ctx, MSG_INFO, "P2P: Set Operating channel: "

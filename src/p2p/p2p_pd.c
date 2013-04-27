@@ -217,8 +217,7 @@ out:
 	if (rx_freq > 0)
 		freq = rx_freq;
 	else
-		freq = p2p_channel_to_freq(p2p->cfg->country,
-					   p2p->cfg->reg_class,
+		freq = p2p_channel_to_freq(p2p->cfg->reg_class,
 					   p2p->cfg->channel);
 	if (freq < 0) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,

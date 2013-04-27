@@ -487,6 +487,7 @@ int is_hex(const u8 *data, size_t len);
 size_t merge_byte_arrays(u8 *res, size_t res_len,
 			 const u8 *src1, size_t src1_len,
 			 const u8 *src2, size_t src2_len);
+char * dup_binstr(const void *src, size_t len);
 
 static inline int is_zero_ether_addr(const u8 *a)
 {

@@ -1480,7 +1480,6 @@ int eap_sim_db_resynchronize(struct eap_sim_db_data *data,
  */
 char * sim_get_username(const u8 *identity, size_t identity_len)
 {
-	char *username;
 	size_t pos;
 
 	if (identity == NULL)
@@ -1491,11 +1490,5 @@ char * sim_get_username(const u8 *identity, size_t identity_len)
 			break;
 	}
 
-	username = os_malloc(pos + 1);
-	if (username == NULL)
-		return NULL;
-	os_memcpy(username, identity, pos);
-	username[pos] = '\0';
-
-	return username;
+	return dup_binstr(identity, pos);
 }

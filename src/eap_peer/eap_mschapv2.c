@@ -644,10 +644,8 @@ static struct wpabuf * eap_mschapv2_failure(struct eap_sm *sm,
 	 * must allocate a large enough temporary buffer to create that since
 	 * the received message does not include nul termination.
 	 */
-	buf = os_malloc(len + 1);
+	buf = dup_binstr(msdata, len);
 	if (buf) {
-		os_memcpy(buf, msdata, len);
-		buf[len] = '\0';
 		retry = eap_mschapv2_failure_txt(sm, data, buf);
 		os_free(buf);
 	}

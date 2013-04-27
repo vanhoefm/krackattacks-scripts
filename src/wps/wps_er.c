@@ -796,52 +796,31 @@ static struct wps_er_sta * wps_er_add_sta_data(struct wps_er_ap *ap,
 
 	if (attr->manufacturer) {
 		os_free(sta->manufacturer);
-		sta->manufacturer = os_malloc(attr->manufacturer_len + 1);
-		if (sta->manufacturer) {
-			os_memcpy(sta->manufacturer, attr->manufacturer,
-				  attr->manufacturer_len);
-			sta->manufacturer[attr->manufacturer_len] = '\0';
-		}
+		sta->manufacturer = dup_binstr(attr->manufacturer,
+					       attr->manufacturer_len);
 	}
 
 	if (attr->model_name) {
 		os_free(sta->model_name);
-		sta->model_name = os_malloc(attr->model_name_len + 1);
-		if (sta->model_name) {
-			os_memcpy(sta->model_name, attr->model_name,
-				  attr->model_name_len);
-			sta->model_name[attr->model_name_len] = '\0';
-		}
+		sta->model_name = dup_binstr(attr->model_name,
+					     attr->model_name_len);
 	}
 
 	if (attr->model_number) {
 		os_free(sta->model_number);
-		sta->model_number = os_malloc(attr->model_number_len + 1);
-		if (sta->model_number) {
-			os_memcpy(sta->model_number, attr->model_number,
-				  attr->model_number_len);
-			sta->model_number[attr->model_number_len] = '\0';
-		}
+		sta->model_number = dup_binstr(attr->model_number,
+					       attr->model_number_len);
 	}
 
 	if (attr->serial_number) {
 		os_free(sta->serial_number);
-		sta->serial_number = os_malloc(attr->serial_number_len + 1);
-		if (sta->serial_number) {
-			os_memcpy(sta->serial_number, attr->serial_number,
-				  attr->serial_number_len);
-			sta->serial_number[attr->serial_number_len] = '\0';
-		}
+		sta->serial_number = dup_binstr(attr->serial_number,
+						attr->serial_number_len);
 	}
 
 	if (attr->dev_name) {
 		os_free(sta->dev_name);
-		sta->dev_name = os_malloc(attr->dev_name_len + 1);
-		if (sta->dev_name) {
-			os_memcpy(sta->dev_name, attr->dev_name,
-				  attr->dev_name_len);
-			sta->dev_name[attr->dev_name_len] = '\0';
-		}
+		sta->dev_name = dup_binstr(attr->dev_name, attr->dev_name_len);
 	}
 
 	eloop_cancel_timeout(wps_er_sta_timeout, sta, NULL);

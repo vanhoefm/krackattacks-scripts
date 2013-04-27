@@ -517,11 +517,9 @@ char * wpa_config_parse_string(const char *value, size_t *len)
 		if (pos == NULL || pos[1] != '\0')
 			return NULL;
 		*len = pos - value;
-		str = os_malloc(*len + 1);
+		str = dup_binstr(value, *len);
 		if (str == NULL)
 			return NULL;
-		os_memcpy(str, value, *len);
-		str[*len] = '\0';
 		return str;
 	} else if (*value == 'P' && value[1] == '"') {
 		const char *pos;
@@ -532,11 +530,9 @@ char * wpa_config_parse_string(const char *value, size_t *len)
 		if (pos == NULL || pos[1] != '\0')
 			return NULL;
 		tlen = pos - value;
-		tstr = os_malloc(tlen + 1);
+		tstr = dup_binstr(value, tlen);
 		if (tstr == NULL)
 			return NULL;
-		os_memcpy(tstr, value, tlen);
-		tstr[tlen] = '\0';
 
 		str = os_malloc(tlen + 1);
 		if (str == NULL) {
@@ -609,4 +605,20 @@ size_t merge_byte_arrays(u8 *res, size_t res_len,
 	}
 
 	return len;
+}
+
+
+char * dup_binstr(const void *src, size_t len)
+{
+	char *res;
+
+	if (src == NULL)
+		return NULL;
+	res = os_malloc(len + 1);
+	if (res == NULL)
+		return NULL;
+	os_memcpy(res, src, len);
+	res[len] = '\0';
+
+	return res;
 }

@@ -741,12 +741,10 @@ enum tncc_process_res tncc_process_if_tnccs(struct tncc_data *tncc,
 	enum tncc_process_res res = TNCCS_PROCESS_OK_NO_RECOMMENDATION;
 	int recommendation_msg = 0;
 
-	buf = os_malloc(len + 1);
+	buf = dup_binstr(msg, len);
 	if (buf == NULL)
 		return TNCCS_PROCESS_ERROR;
 
-	os_memcpy(buf, msg, len);
-	buf[len] = '\0';
 	start = os_strstr(buf, "<TNCCS-Batch ");
 	end = os_strstr(buf, "</TNCCS-Batch>");
 	if (start == NULL || end == NULL || start > end) {

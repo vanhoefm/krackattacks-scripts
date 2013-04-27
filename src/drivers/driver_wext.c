@@ -502,11 +502,9 @@ static void wpa_driver_wext_event_wireless(struct wpa_driver_wext_data *drv,
 					   "IWEVCUSTOM length");
 				return;
 			}
-			buf = os_malloc(iwe->u.data.length + 1);
+			buf = dup_binstr(custom, iwe->u.data.length);
 			if (buf == NULL)
 				return;
-			os_memcpy(buf, custom, iwe->u.data.length);
-			buf[iwe->u.data.length] = '\0';
 			wpa_driver_wext_event_wireless_custom(drv->ctx, buf);
 			os_free(buf);
 			break;

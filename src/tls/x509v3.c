@@ -443,17 +443,16 @@ static int x509_parse_name(const u8 *buf, size_t len, struct x509_name *name,
 			return -1;
 		}
 
-		val = os_malloc(hdr.length + 1);
+		val = dup_binstr(hdr.payload, hdr.length);
 		if (val == NULL) {
 			x509_free_name(name);
 			return -1;
 		}
-		os_memcpy(val, hdr.payload, hdr.length);
-		val[hdr.length] = '\0';
 		if (os_strlen(val) != hdr.length) {
 			wpa_printf(MSG_INFO, "X509: Reject certificate with "
 				   "embedded NUL byte in a string (%s[NUL])",
 				   val);
+			os_free(val);
 			x509_free_name(name);
 			return -1;
 		}

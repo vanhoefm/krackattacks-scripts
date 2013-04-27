@@ -257,11 +257,9 @@ static int wps_process_manufacturer(struct wps_device_data *dev, const u8 *str,
 	wpa_hexdump_ascii(MSG_DEBUG, "WPS: Manufacturer", str, str_len);
 
 	os_free(dev->manufacturer);
-	dev->manufacturer = os_malloc(str_len + 1);
+	dev->manufacturer = dup_binstr(str, str_len);
 	if (dev->manufacturer == NULL)
 		return -1;
-	os_memcpy(dev->manufacturer, str, str_len);
-	dev->manufacturer[str_len] = '\0';
 
 	return 0;
 }
@@ -278,11 +276,9 @@ static int wps_process_model_name(struct wps_device_data *dev, const u8 *str,
 	wpa_hexdump_ascii(MSG_DEBUG, "WPS: Model Name", str, str_len);
 
 	os_free(dev->model_name);
-	dev->model_name = os_malloc(str_len + 1);
+	dev->model_name = dup_binstr(str, str_len);
 	if (dev->model_name == NULL)
 		return -1;
-	os_memcpy(dev->model_name, str, str_len);
-	dev->model_name[str_len] = '\0';
 
 	return 0;
 }
@@ -299,11 +295,9 @@ static int wps_process_model_number(struct wps_device_data *dev, const u8 *str,
 	wpa_hexdump_ascii(MSG_DEBUG, "WPS: Model Number", str, str_len);
 
 	os_free(dev->model_number);
-	dev->model_number = os_malloc(str_len + 1);
+	dev->model_number = dup_binstr(str, str_len);
 	if (dev->model_number == NULL)
 		return -1;
-	os_memcpy(dev->model_number, str, str_len);
-	dev->model_number[str_len] = '\0';
 
 	return 0;
 }
@@ -320,11 +314,9 @@ static int wps_process_serial_number(struct wps_device_data *dev,
 	wpa_hexdump_ascii(MSG_DEBUG, "WPS: Serial Number", str, str_len);
 
 	os_free(dev->serial_number);
-	dev->serial_number = os_malloc(str_len + 1);
+	dev->serial_number = dup_binstr(str, str_len);
 	if (dev->serial_number == NULL)
 		return -1;
-	os_memcpy(dev->serial_number, str, str_len);
-	dev->serial_number[str_len] = '\0';
 
 	return 0;
 }
@@ -341,11 +333,9 @@ static int wps_process_dev_name(struct wps_device_data *dev, const u8 *str,
 	wpa_hexdump_ascii(MSG_DEBUG, "WPS: Device Name", str, str_len);
 
 	os_free(dev->device_name);
-	dev->device_name = os_malloc(str_len + 1);
+	dev->device_name = dup_binstr(str, str_len);
 	if (dev->device_name == NULL)
 		return -1;
-	os_memcpy(dev->device_name, str, str_len);
-	dev->device_name[str_len] = '\0';
 
 	return 0;
 }

@@ -399,15 +399,13 @@ static void ieee802_1x_learn_identity(struct hostapd_data *hapd,
 
 	/* Save station identity for future RADIUS packets */
 	os_free(sm->identity);
-	sm->identity = os_malloc(identity_len + 1);
+	sm->identity = (u8 *) dup_binstr(identity, identity_len);
 	if (sm->identity == NULL) {
 		sm->identity_len = 0;
 		return;
 	}
 
-	os_memcpy(sm->identity, identity, identity_len);
 	sm->identity_len = identity_len;
-	sm->identity[identity_len] = '\0';
 	hostapd_logger(hapd, sm->addr, HOSTAPD_MODULE_IEEE8021X,
 		       HOSTAPD_LEVEL_DEBUG, "STA identity '%s'", sm->identity);
 	sm->dot1xAuthEapolRespIdFramesRx++;
@@ -1272,12 +1270,9 @@ static void ieee802_1x_update_sta_identity(struct hostapd_data *hapd,
 				    NULL) < 0)
 		return;
 
-	identity = os_malloc(len + 1);
+	identity = (u8 *) dup_binstr(buf, len);
 	if (identity == NULL)
 		return;
-
-	os_memcpy(identity, buf, len);
-	identity[len] = '\0';
 
 	hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE8021X,
 		       HOSTAPD_LEVEL_DEBUG, "old identity '%s' updated with "

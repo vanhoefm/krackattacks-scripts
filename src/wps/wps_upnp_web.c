@@ -996,13 +996,11 @@ static void web_connection_parse_subscribe(struct upnp_wps_device_sm *sm,
 				h++;
 			len = end - h;
 			os_free(callback_urls);
-			callback_urls = os_malloc(len + 1);
+			callback_urls = dup_binstr(h, len);
 			if (callback_urls == NULL) {
 				ret = HTTP_INTERNAL_SERVER_ERROR;
 				goto error;
 			}
-			os_memcpy(callback_urls, h, len);
-			callback_urls[len] = 0;
 			continue;
 		}
 		/* SID is only for renewal */

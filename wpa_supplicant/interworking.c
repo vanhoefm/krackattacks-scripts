@@ -408,11 +408,9 @@ static const u8 * nai_realm_parse_realm(struct nai_realm *r, const u8 *pos,
 		return NULL;
 	}
 	wpa_hexdump_ascii(MSG_DEBUG, "NAI Realm", pos, realm_len);
-	r->realm = os_malloc(realm_len + 1);
+	r->realm = dup_binstr(pos, realm_len);
 	if (r->realm == NULL)
 		return NULL;
-	os_memcpy(r->realm, pos, realm_len);
-	r->realm[realm_len] = '\0';
 	pos += realm_len;
 
 	if (pos + 1 > f_end) {

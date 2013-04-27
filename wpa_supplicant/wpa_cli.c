@@ -173,11 +173,9 @@ static void cli_txt_list_del_word(struct dl_list *txt_list, const char *txt)
 	end = os_strchr(txt, ' ');
 	if (end == NULL)
 		end = txt + os_strlen(txt);
-	buf = os_malloc(end - txt + 1);
+	buf = dup_binstr(txt, end - txt);
 	if (buf == NULL)
 		return;
-	os_memcpy(buf, txt, end - txt);
-	buf[end - txt] = '\0';
 	cli_txt_list_del(txt_list, buf);
 	os_free(buf);
 }
@@ -223,11 +221,9 @@ static int cli_txt_list_add_word(struct dl_list *txt_list, const char *txt)
 	end = os_strchr(txt, ' ');
 	if (end == NULL)
 		end = txt + os_strlen(txt);
-	buf = os_malloc(end - txt + 1);
+	buf = dup_binstr(txt, end - txt);
 	if (buf == NULL)
 		return -1;
-	os_memcpy(buf, txt, end - txt);
-	buf[end - txt] = '\0';
 	ret = cli_txt_list_add(txt_list, buf);
 	os_free(buf);
 	return ret;

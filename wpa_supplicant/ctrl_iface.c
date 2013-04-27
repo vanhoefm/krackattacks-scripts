@@ -4675,6 +4675,11 @@ static int p2p_ctrl_set(struct wpa_supplicant *wpa_s, char *cmd)
 		return 0;
 	}
 
+#ifdef CONFIG_WPS_NFC
+	if (os_strcmp(cmd, "nfc_tag") == 0)
+		return wpas_p2p_nfc_tag_enabled(wpa_s, !!atoi(param));
+#endif /* CONFIG_WPS_NFC */
+
 	wpa_printf(MSG_DEBUG, "CTRL_IFACE: Unknown P2P_SET field value '%s'",
 		   cmd);
 

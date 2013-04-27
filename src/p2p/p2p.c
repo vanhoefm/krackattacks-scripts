@@ -4523,4 +4523,23 @@ int p2p_process_nfc_connection_handover(struct p2p_data *p2p,
 	return 0;
 }
 
+
+void p2p_set_authorized_oob_dev_pw_id(struct p2p_data *p2p, u16 dev_pw_id,
+				      int go_intent,
+				      const u8 *own_interface_addr)
+{
+
+	p2p->authorized_oob_dev_pw_id = dev_pw_id;
+	if (dev_pw_id == 0) {
+		p2p_dbg(p2p, "NFC OOB Password unauthorized for static handover");
+		return;
+	}
+
+	p2p_dbg(p2p, "NFC OOB Password (id=%u) authorized for static handover",
+		dev_pw_id);
+
+	p2p->go_intent = go_intent;
+	os_memcpy(p2p->intended_addr, own_interface_addr, ETH_ALEN);
+}
+
 #endif /* CONFIG_WPS_NFC */

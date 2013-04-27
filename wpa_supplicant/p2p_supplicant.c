@@ -7303,4 +7303,68 @@ int wpas_p2p_nfc_report_handover(struct wpa_supplicant *wpa_s, int init,
 	return ret;
 }
 
+
+int wpas_p2p_nfc_tag_enabled(struct wpa_supplicant *wpa_s, int enabled)
+{
+	const u8 *if_addr;
+	int go_intent = wpa_s->conf->p2p_go_intent;
+
+	if (wpa_s->global->p2p == NULL)
+		return -1;
+
+	if (!enabled) {
+		p2p_set_authorized_oob_dev_pw_id(wpa_s->global->p2p, 0,
+						 0, NULL);
+		if (wpa_s->p2p_nfc_tag_enabled)
+			wpas_p2p_remove_pending_group_interface(wpa_s);
+		wpa_s->p2p_nfc_tag_enabled = 0;
+		return 0;
+	}
+
+	if (wpa_s->global->p2p_disabled)
+		return -1;
+
+	if (wpa_s->conf->wps_nfc_dh_pubkey == NULL ||
+	    wpa_s->conf->wps_nfc_dh_privkey == NULL ||
+	    wpa_s->conf->wps_nfc_dev_pw == NULL ||
+	    wpa_s->conf->wps_nfc_dev_pw_id < 0x10) {
+		wpa_printf(MSG_DEBUG, "P2P: NFC password token not configured "
+			   "to allow static handover cases");
+		return -1;
+	}
+
+	wpa_s->p2p_oob_dev_pw_id = wpa_s->conf->wps_nfc_dev_pw_id;
+	wpabuf_free(wpa_s->p2p_oob_dev_pw);
+	wpa_s->p2p_oob_dev_pw = wpabuf_dup(wpa_s->conf->wps_nfc_dev_pw);
+	if (wpa_s->p2p_oob_dev_pw == NULL)
+		return -1;
+	wpa_s->p2p_peer_oob_pk_hash_known = 0;
+
+	wpa_s->create_p2p_iface = wpas_p2p_create_iface(wpa_s);
+
+	if (wpa_s->create_p2p_iface) {
+		enum wpa_driver_if_type iftype;
+		/* Prepare to add a new interface for the group */
+		iftype = WPA_IF_P2P_GROUP;
+		if (go_intent == 15)
+			iftype = WPA_IF_P2P_GO;
+		if (wpas_p2p_add_group_interface(wpa_s, iftype) < 0) {
+			wpa_printf(MSG_ERROR, "P2P: Failed to allocate a new "
+				   "interface for the group");
+			return -1;
+		}
+
+		if_addr = wpa_s->pending_interface_addr;
+	} else
+		if_addr = wpa_s->own_addr;
+
+	wpa_s->p2p_nfc_tag_enabled = enabled;
+
+	p2p_set_authorized_oob_dev_pw_id(
+		wpa_s->global->p2p, wpa_s->conf->wps_nfc_dev_pw_id, go_intent,
+		if_addr);
+
+	return 0;
+}
+
 #endif /* CONFIG_WPS_NFC */

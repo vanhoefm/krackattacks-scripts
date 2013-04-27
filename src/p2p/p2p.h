@@ -1921,4 +1921,8 @@ struct p2p_nfc_params {
 int p2p_process_nfc_connection_handover(struct p2p_data *p2p,
 					struct p2p_nfc_params *params);
 
+void p2p_set_authorized_oob_dev_pw_id(struct p2p_data *p2p, u16 dev_pw_id,
+				      int go_intent,
+				      const u8 *own_interface_addr);
+
 #endif /* P2P_H */

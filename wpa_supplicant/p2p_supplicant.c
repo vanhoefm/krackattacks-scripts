@@ -7265,6 +7265,16 @@ static int wpas_p2p_nfc_connection_handover(struct wpa_supplicant *wpa_s,
 }
 
 
+int wpas_p2p_nfc_tag_process(struct wpa_supplicant *wpa_s,
+			     const struct wpabuf *data)
+{
+	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
+		return -1;
+
+	return wpas_p2p_nfc_connection_handover(wpa_s, data, 1, 1);
+}
+
+
 int wpas_p2p_nfc_report_handover(struct wpa_supplicant *wpa_s, int init,
 				 const struct wpabuf *req,
 				 const struct wpabuf *sel)

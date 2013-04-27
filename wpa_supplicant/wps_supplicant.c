@@ -2281,6 +2281,14 @@ int wpas_wps_nfc_tag_read(struct wpa_supplicant *wpa_s,
 		/* Assume this contains full NDEF record */
 		tmp = ndef_parse_wifi(data);
 		if (tmp == NULL) {
+#ifdef CONFIG_P2P
+			tmp = ndef_parse_p2p(data);
+			if (tmp) {
+				ret = wpas_p2p_nfc_tag_process(wpa_s, tmp);
+				wpabuf_free(tmp);
+				return ret;
+			}
+#endif /* CONFIG_P2P */
 			wpa_printf(MSG_DEBUG, "WPS: Could not parse NDEF");
 			return -1;
 		}

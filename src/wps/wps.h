@@ -872,6 +872,8 @@ struct wpabuf * wps_build_nfc_handover_sel(struct wps_context *ctx,
 /* ndef.c */
 struct wpabuf * ndef_parse_wifi(const struct wpabuf *buf);
 struct wpabuf * ndef_build_wifi(const struct wpabuf *buf);
+struct wpabuf * ndef_parse_p2p(const struct wpabuf *buf);
+struct wpabuf * ndef_build_p2p(const struct wpabuf *buf);
 
 #ifdef CONFIG_WPS_STRICT
 int wps_validate_beacon(const struct wpabuf *wps_ie);

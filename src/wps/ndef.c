@@ -30,6 +30,7 @@ struct ndef_record {
 };
 
 static char wifi_handover_type[] = "application/vnd.wfa.wsc";
+static char p2p_handover_type[] = "application/vnd.wfa.p2p";
 
 static int ndef_parse_record(const u8 *data, u32 size,
 			     struct ndef_record *record)
@@ -167,4 +168,29 @@ struct wpabuf * ndef_build_wifi(const struct wpabuf *buf)
 	return ndef_build_record(FLAG_MESSAGE_BEGIN | FLAG_MESSAGE_END |
 				 FLAG_TNF_RFC2046, wifi_handover_type,
 				 os_strlen(wifi_handover_type), NULL, 0, buf);
+}
+
+
+static int p2p_filter(struct ndef_record *record)
+{
+	if (record->type_length != os_strlen(p2p_handover_type))
+		return 0;
+	if (os_memcmp(record->type, p2p_handover_type,
+		      os_strlen(p2p_handover_type)) != 0)
+		return 0;
+	return 1;
+}
+
+
+struct wpabuf * ndef_parse_p2p(const struct wpabuf *buf)
+{
+	return ndef_parse_records(buf, p2p_filter);
+}
+
+
+struct wpabuf * ndef_build_p2p(const struct wpabuf *buf)
+{
+	return ndef_build_record(FLAG_MESSAGE_BEGIN | FLAG_MESSAGE_END |
+				 FLAG_TNF_RFC2046, p2p_handover_type,
+				 os_strlen(p2p_handover_type), NULL, 0, buf);
 }

@@ -1823,7 +1823,8 @@ struct wpabuf * hostapd_wps_nfc_hs_cr(struct hostapd_data *hapd, int ndef)
 	}
 
 	ret = wps_build_nfc_handover_sel(hapd->wps,
-					 hapd->conf->wps_nfc_dh_pubkey);
+					 hapd->conf->wps_nfc_dh_pubkey,
+					 hapd->own_addr, hapd->iface->freq);
 
 	if (ndef && ret) {
 		struct wpabuf *tmp;

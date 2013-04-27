@@ -2092,7 +2092,7 @@ struct wpabuf * wps_er_nfc_handover_sel(struct wps_er *er,
 	os_memcpy(wps->ssid, ap->ap_settings->ssid, ap->ap_settings->ssid_len);
 	wps->ssid_len = ap->ap_settings->ssid_len;
 
-	return wps_build_nfc_handover_sel(wps, pubkey);
+	return wps_build_nfc_handover_sel(wps, pubkey, addr, 0);
 }
 
 #endif /* CONFIG_WPS_NFC */

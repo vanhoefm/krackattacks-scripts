@@ -9,6 +9,8 @@
 #include "includes.h"
 
 #include "common.h"
+#include "common/defs.h"
+#include "common/ieee802_11_common.h"
 #include "crypto/aes_wrap.h"
 #include "crypto/crypto.h"
 #include "crypto/dh_group5.h"
@@ -739,8 +741,38 @@ static int wps_build_ssid(struct wpabuf *msg, struct wps_context *wps)
 }
 
 
+static int wps_build_ap_freq(struct wpabuf *msg, int freq)
+{
+	enum hostapd_hw_mode mode;
+	u8 channel, rf_band;
+	u16 ap_channel;
+
+	if (freq <= 0)
+		return 0;
+
+	mode = ieee80211_freq_to_chan(freq, &channel);
+	if (mode == NUM_HOSTAPD_MODES)
+		return 0; /* Unknown channel */
+
+	if (mode == HOSTAPD_MODE_IEEE80211G || mode == HOSTAPD_MODE_IEEE80211B)
+		rf_band = WPS_RF_24GHZ;
+	else if (mode == HOSTAPD_MODE_IEEE80211A)
+		rf_band = WPS_RF_50GHZ;
+	else
+		return 0; /* Unknown band */
+	ap_channel = channel;
+
+	if (wps_build_rf_bands_attr(msg, rf_band) ||
+	    wps_build_ap_channel(msg, ap_channel))
+		return -1;
+
+	return 0;
+}
+
+
 struct wpabuf * wps_build_nfc_handover_sel(struct wps_context *ctx,
-					   struct wpabuf *nfc_dh_pubkey)
+					   struct wpabuf *nfc_dh_pubkey,
+					   const u8 *bssid, int freq)
 {
 	struct wpabuf *msg;
 	void *len;
@@ -765,6 +797,8 @@ struct wpabuf * wps_build_nfc_handover_sel(struct wps_context *ctx,
 	if (wps_build_oob_dev_pw(msg, DEV_PW_NFC_CONNECTION_HANDOVER,
 				 nfc_dh_pubkey, NULL, 0) ||
 	    wps_build_ssid(msg, ctx) ||
+	    wps_build_ap_freq(msg, freq) ||
+	    (bssid && wps_build_mac_addr(msg, bssid)) ||
 	    wps_build_wfa_ext(msg, 0, NULL, 0)) {
 		wpabuf_free(msg);
 		return NULL;

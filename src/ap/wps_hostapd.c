@@ -1800,11 +1800,41 @@ struct wpabuf * hostapd_wps_nfc_config_token(struct hostapd_data *hapd,
 
 struct wpabuf * hostapd_wps_nfc_hs_cr(struct hostapd_data *hapd, int ndef)
 {
-	/*
-	 * Handover Select carrier record for WPS uses the same format as
-	 * configuration token.
-	 */
-	return hostapd_wps_nfc_config_token(hapd, ndef);
+	struct wpabuf *ret;
+
+	if (hapd->wps == NULL)
+		return NULL;
+
+	if (hapd->conf->wps_nfc_dh_pubkey == NULL) {
+		struct wps_context *wps = hapd->wps;
+		if (wps_nfc_gen_dh(&hapd->conf->wps_nfc_dh_pubkey,
+				   &hapd->conf->wps_nfc_dh_privkey) < 0)
+			return NULL;
+		hostapd_wps_nfc_clear(wps);
+		wps->ap_nfc_dev_pw_id = DEV_PW_NFC_CONNECTION_HANDOVER;
+		wps->ap_nfc_dh_pubkey =
+			wpabuf_dup(hapd->conf->wps_nfc_dh_pubkey);
+		wps->ap_nfc_dh_privkey =
+			wpabuf_dup(hapd->conf->wps_nfc_dh_privkey);
+		if (!wps->ap_nfc_dh_pubkey || !wps->ap_nfc_dh_privkey) {
+			hostapd_wps_nfc_clear(wps);
+			return NULL;
+		}
+	}
+
+	ret = wps_build_nfc_handover_sel(hapd->wps,
+					 hapd->conf->wps_nfc_dh_pubkey);
+
+	if (ndef && ret) {
+		struct wpabuf *tmp;
+		tmp = ndef_build_wifi(ret);
+		wpabuf_free(ret);
+		if (tmp == NULL)
+			return NULL;
+		ret = tmp;
+	}
+
+	return ret;
 }
 
 

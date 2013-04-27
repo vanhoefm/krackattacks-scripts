@@ -1526,18 +1526,6 @@ static int wps_build_cred_network_key(struct wpabuf *msg,
 }
 
 
-static int wps_build_cred_mac_addr(struct wpabuf *msg,
-				   const struct wps_credential *cred)
-{
-	wpa_printf(MSG_DEBUG, "WPS:  * MAC Address (" MACSTR ")",
-		   MAC2STR(cred->mac_addr));
-	wpabuf_put_be16(msg, ATTR_MAC_ADDR);
-	wpabuf_put_be16(msg, ETH_ALEN);
-	wpabuf_put_data(msg, cred->mac_addr, ETH_ALEN);
-	return 0;
-}
-
-
 static int wps_build_credential(struct wpabuf *msg,
 				const struct wps_credential *cred)
 {
@@ -1546,7 +1534,7 @@ static int wps_build_credential(struct wpabuf *msg,
 	    wps_build_cred_auth_type(msg, cred) ||
 	    wps_build_cred_encr_type(msg, cred) ||
 	    wps_build_cred_network_key(msg, cred) ||
-	    wps_build_cred_mac_addr(msg, cred))
+	    wps_build_mac_addr(msg, cred->mac_addr))
 		return -1;
 	return 0;
 }

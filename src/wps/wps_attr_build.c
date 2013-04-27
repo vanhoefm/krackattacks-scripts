@@ -417,3 +417,14 @@ struct wpabuf * wps_ie_encapsulate(struct wpabuf *data)
 
 	return ie;
 }
+
+
+int wps_build_mac_addr(struct wpabuf *msg, const u8 *addr)
+{
+	wpa_printf(MSG_DEBUG, "WPS:  * MAC Address (" MACSTR ")",
+		   MAC2STR(addr));
+	wpabuf_put_be16(msg, ATTR_MAC_ADDR);
+	wpabuf_put_be16(msg, ETH_ALEN);
+	wpabuf_put_data(msg, addr, ETH_ALEN);
+	return 0;
+}

@@ -16,16 +16,6 @@
 #include "wps_dev_attr.h"
 
 
-static int wps_build_mac_addr(struct wps_data *wps, struct wpabuf *msg)
-{
-	wpa_printf(MSG_DEBUG, "WPS:  * MAC Address");
-	wpabuf_put_be16(msg, ATTR_MAC_ADDR);
-	wpabuf_put_be16(msg, ETH_ALEN);
-	wpabuf_put_data(msg, wps->mac_addr_e, ETH_ALEN);
-	return 0;
-}
-
-
 static int wps_build_wps_state(struct wps_data *wps, struct wpabuf *msg)
 {
 	u8 state;
@@ -149,7 +139,7 @@ static struct wpabuf * wps_build_m1(struct wps_data *wps)
 	if (wps_build_version(msg) ||
 	    wps_build_msg_type(msg, WPS_M1) ||
 	    wps_build_uuid_e(msg, wps->uuid_e) ||
-	    wps_build_mac_addr(wps, msg) ||
+	    wps_build_mac_addr(msg, wps->mac_addr_e) ||
 	    wps_build_enrollee_nonce(wps, msg) ||
 	    wps_build_public_key(wps, msg) ||
 	    wps_build_auth_type_flags(wps, msg) ||

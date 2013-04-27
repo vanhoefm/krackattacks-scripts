@@ -837,6 +837,27 @@ int vlan_init(struct hostapd_data *hapd)
 	hapd->full_dynamic_vlan = full_dynamic_vlan_init(hapd);
 #endif /* CONFIG_FULL_DYNAMIC_VLAN */
 
+	if (hapd->conf->ssid.dynamic_vlan != DYNAMIC_VLAN_DISABLED &&
+	    !hapd->conf->vlan) {
+		/* dynamic vlans enabled but no (or empty) vlan_file given */
+		struct hostapd_vlan *vlan;
+		vlan = os_zalloc(sizeof(*vlan));
+		if (vlan == NULL) {
+			wpa_printf(MSG_ERROR, "Out of memory while assigning "
+				   "VLAN interfaces");
+			return -1;
+		}
+
+		vlan->vlan_id = VLAN_ID_WILDCARD;
+		os_snprintf(vlan->ifname, sizeof(vlan->ifname), "%s.#",
+			    hapd->conf->iface);
+		if (hapd->conf->vlan_tail)
+			hapd->conf->vlan_tail->next = vlan;
+		else
+			hapd->conf->vlan = vlan;
+		hapd->conf->vlan_tail = vlan;
+	}
+
 	if (vlan_dynamic_add(hapd, hapd->conf->vlan))
 		return -1;
 

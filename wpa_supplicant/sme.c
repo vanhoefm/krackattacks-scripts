@@ -942,39 +942,6 @@ static void sme_send_2040_bss_coex(struct wpa_supplicant *wpa_s,
 }
 
 
-/**
- * enum wpas_band - Frequency band
- * @WPAS_BAND_2GHZ: 2.4 GHz ISM band
- * @WPAS_BAND_5GHZ: around 5 GHz band (4.9 - 5.7 GHz)
- */
-enum wpas_band {
-	WPAS_BAND_2GHZ,
-	WPAS_BAND_5GHZ,
-	WPAS_BAND_INVALID
-};
-
-/**
- * freq_to_channel - Convert frequency into channel info
- * @channel: Buffer for returning channel number
- * Returns: Band (2 or 5 GHz)
- */
-static enum wpas_band freq_to_channel(int freq, u8 *channel)
-{
-	enum wpas_band band = (freq <= 2484) ? WPAS_BAND_2GHZ : WPAS_BAND_5GHZ;
-	u8 chan = 0;
-
-	if (freq >= 2412 && freq <= 2472)
-		chan = (freq - 2407) / 5;
-	else if (freq == 2484)
-		chan = 14;
-	else if (freq >= 5180 && freq <= 5805)
-		chan = (freq - 5000) / 5;
-
-	*channel = chan;
-	return band;
-}
-
-
 int sme_proc_obss_scan(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_bss *bss;
@@ -1011,7 +978,10 @@ int sme_proc_obss_scan(struct wpa_supplicant *wpa_s)
 
 	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {
 		/* Skip other band bss */
-		if (freq_to_channel(bss->freq, &channel) != WPAS_BAND_2GHZ)
+		enum hostapd_hw_mode mode;
+		mode = ieee80211_freq_to_chan(bss->freq, &channel);
+		if (mode != HOSTAPD_MODE_IEEE80211G &&
+		    mode != HOSTAPD_MODE_IEEE80211B)
 			continue;
 
 		ie = wpa_bss_get_ie(bss, WLAN_EID_HT_CAP);

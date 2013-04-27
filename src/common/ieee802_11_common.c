@@ -1,6 +1,6 @@
 /*
  * IEEE 802.11 Common routines
- * Copyright (c) 2002-2012, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -9,6 +9,7 @@
 #include "includes.h"
 
 #include "common.h"
+#include "defs.h"
 #include "ieee802_11_defs.h"
 #include "ieee802_11_common.h"
 
@@ -485,4 +486,29 @@ int hostapd_config_wmm_ac(struct hostapd_wmm_ac_params wmm_ac_params[],
 	}
 
 	return 0;
+}
+
+
+enum hostapd_hw_mode ieee80211_freq_to_chan(int freq, u8 *channel)
+{
+	enum hostapd_hw_mode mode = NUM_HOSTAPD_MODES;
+
+	if (freq >= 2412 && freq <= 2472) {
+		mode = HOSTAPD_MODE_IEEE80211G;
+		*channel = (freq - 2407) / 5;
+	} else if (freq == 2484) {
+		mode = HOSTAPD_MODE_IEEE80211B;
+		*channel = 14;
+	} else if (freq >= 4900 && freq < 5000) {
+		mode = HOSTAPD_MODE_IEEE80211A;
+		*channel = (freq - 4000) / 5;
+	} else if (freq >= 5000 && freq < 5900) {
+		mode = HOSTAPD_MODE_IEEE80211A;
+		*channel = (freq - 5000) / 5;
+	} else if (freq >= 56160 + 2160 * 1 && freq <= 56160 + 2160 * 4) {
+		mode = HOSTAPD_MODE_IEEE80211AD;
+		*channel = (freq - 56160) / 2160;
+	}
+
+	return mode;
 }

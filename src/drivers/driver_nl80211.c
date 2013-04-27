@@ -5103,35 +5103,11 @@ static void phy_info_freq(struct hostapd_hw_modes *mode,
 			  struct hostapd_channel_data *chan,
 			  struct nlattr *tb_freq[])
 {
-	enum hostapd_hw_mode m;
-
+	u8 channel;
 	chan->freq = nla_get_u32(tb_freq[NL80211_FREQUENCY_ATTR_FREQ]);
 	chan->flag = 0;
-
-	if (chan->freq < 4000)
-		m = HOSTAPD_MODE_IEEE80211B;
-	else if (chan->freq > 50000)
-		m = HOSTAPD_MODE_IEEE80211AD;
-	else
-		m = HOSTAPD_MODE_IEEE80211A;
-
-	switch (m) {
-	case HOSTAPD_MODE_IEEE80211AD:
-		chan->chan = (chan->freq - 56160) / 2160;
-		break;
-	case HOSTAPD_MODE_IEEE80211A:
-		chan->chan = chan->freq / 5 - 1000;
-		break;
-	case HOSTAPD_MODE_IEEE80211B:
-	case HOSTAPD_MODE_IEEE80211G:
-		if (chan->freq == 2484)
-			chan->chan = 14;
-		else
-			chan->chan = (chan->freq - 2407) / 5;
-		break;
-	default:
-		break;
-	}
+	if (ieee80211_freq_to_chan(chan->freq, &channel) != NUM_HOSTAPD_MODES)
+		chan->chan = channel;
 
 	if (tb_freq[NL80211_FREQUENCY_ATTR_DISABLED])
 		chan->flag |= HOSTAPD_CHAN_DISABLED;

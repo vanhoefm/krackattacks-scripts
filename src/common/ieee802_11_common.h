@@ -99,5 +99,6 @@ struct hostapd_wmm_ac_params {
 
 int hostapd_config_wmm_ac(struct hostapd_wmm_ac_params wmm_ac_params[],
 			  const char *name, const char *val);
+enum hostapd_hw_mode ieee80211_freq_to_chan(int freq, u8 *channel);
 
 #endif /* IEEE802_11_COMMON_H */

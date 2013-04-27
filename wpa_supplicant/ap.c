@@ -55,21 +55,14 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 		/* default channel 11 */
 		conf->hw_mode = HOSTAPD_MODE_IEEE80211G;
 		conf->channel = 11;
-	} else if (ssid->frequency >= 2412 && ssid->frequency <= 2472) {
-		conf->hw_mode = HOSTAPD_MODE_IEEE80211G;
-		conf->channel = (ssid->frequency - 2407) / 5;
-	} else if ((ssid->frequency >= 5180 && ssid->frequency <= 5240) ||
-		   (ssid->frequency >= 5745 && ssid->frequency <= 5825)) {
-		conf->hw_mode = HOSTAPD_MODE_IEEE80211A;
-		conf->channel = (ssid->frequency - 5000) / 5;
-	} else if (ssid->frequency >= 56160 + 2160 * 1 &&
-		   ssid->frequency <= 56160 + 2160 * 4) {
-		conf->hw_mode = HOSTAPD_MODE_IEEE80211AD;
-		conf->channel = (ssid->frequency - 56160) / 2160;
 	} else {
-		wpa_printf(MSG_ERROR, "Unsupported AP mode frequency: %d MHz",
-			   ssid->frequency);
-		return -1;
+		conf->hw_mode = ieee80211_freq_to_chan(ssid->frequency,
+						       &conf->channel);
+		if (conf->hw_mode == NUM_HOSTAPD_MODES) {
+			wpa_printf(MSG_ERROR, "Unsupported AP mode frequency: "
+				   "%d MHz", ssid->frequency);
+			return -1;
+		}
 	}
 
 	/* TODO: enable HT40 if driver supports it;

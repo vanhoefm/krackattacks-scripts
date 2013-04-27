@@ -83,7 +83,7 @@ static int hostapd_config_read_vlan_file(struct hostapd_bss_config *bss,
 			return -1;
 		}
 
-		vlan = os_malloc(sizeof(*vlan));
+		vlan = os_zalloc(sizeof(*vlan));
 		if (vlan == NULL) {
 			wpa_printf(MSG_ERROR, "Out of memory while reading "
 				   "VLAN interfaces from '%s'", fname);
@@ -91,7 +91,6 @@ static int hostapd_config_read_vlan_file(struct hostapd_bss_config *bss,
 			return -1;
 		}
 
-		os_memset(vlan, 0, sizeof(*vlan));
 		vlan->vlan_id = vlan_id;
 		os_strlcpy(vlan->ifname, pos, sizeof(vlan->ifname));
 		if (bss->vlan_tail)

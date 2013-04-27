@@ -449,3 +449,23 @@ int wps_build_mac_addr(struct wpabuf *msg, const u8 *addr)
 	wpabuf_put_data(msg, addr, ETH_ALEN);
 	return 0;
 }
+
+
+int wps_build_rf_bands_attr(struct wpabuf *msg, u8 rf_bands)
+{
+	wpa_printf(MSG_DEBUG, "WPS:  * RF Bands (%x)", rf_bands);
+	wpabuf_put_be16(msg, ATTR_RF_BANDS);
+	wpabuf_put_be16(msg, 1);
+	wpabuf_put_u8(msg, rf_bands);
+	return 0;
+}
+
+
+int wps_build_ap_channel(struct wpabuf *msg, u16 ap_channel)
+{
+	wpa_printf(MSG_DEBUG, "WPS:  * AP Channel (%u)", ap_channel);
+	wpabuf_put_be16(msg, ATTR_AP_CHANNEL);
+	wpabuf_put_be16(msg, 2);
+	wpabuf_put_be16(msg, ap_channel);
+	return 0;
+}

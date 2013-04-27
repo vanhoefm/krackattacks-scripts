@@ -220,11 +220,7 @@ int wps_build_vendor_ext_m1(struct wps_device_data *dev, struct wpabuf *msg)
 int wps_build_rf_bands(struct wps_device_data *dev, struct wpabuf *msg,
 		       u8 rf_band)
 {
-	wpa_printf(MSG_DEBUG, "WPS:  * RF Bands (%x)", dev->rf_bands);
-	wpabuf_put_be16(msg, ATTR_RF_BANDS);
-	wpabuf_put_be16(msg, 1);
-	wpabuf_put_u8(msg, rf_band ? rf_band : dev->rf_bands);
-	return 0;
+	return wps_build_rf_bands_attr(msg, rf_band ? rf_band : dev->rf_bands);
 }
 
 

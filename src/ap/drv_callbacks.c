@@ -469,7 +469,7 @@ static void hostapd_notif_auth(struct hostapd_data *hapd,
 	if (!sta) {
 		sta = ap_sta_add(hapd, rx_auth->peer);
 		if (sta == NULL) {
-			status = WLAN_STATUS_UNSPECIFIED_FAILURE;
+			status = WLAN_STATUS_AP_UNABLE_TO_HANDLE_NEW_STA;
 			goto fail;
 		}
 	}

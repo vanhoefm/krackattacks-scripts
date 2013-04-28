@@ -645,7 +645,7 @@ static void handle_auth(struct hostapd_data *hapd,
 
 	sta = ap_sta_add(hapd, mgmt->sa);
 	if (!sta) {
-		resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+		resp = WLAN_STATUS_AP_UNABLE_TO_HANDLE_NEW_STA;
 		goto fail;
 	}
 

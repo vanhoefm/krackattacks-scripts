@@ -171,7 +171,7 @@ void ssdp_listener_stop(struct upnp_wps_device_sm *sm);
 int ssdp_listener_start(struct upnp_wps_device_sm *sm);
 int ssdp_listener_open(void);
 int add_ssdp_network(const char *net_if);
-int ssdp_open_multicast_sock(u32 ip_addr);
+int ssdp_open_multicast_sock(u32 ip_addr, const char *forced_ifname);
 int ssdp_open_multicast(struct upnp_wps_device_sm *sm);
 
 /* wps_upnp_web.c */

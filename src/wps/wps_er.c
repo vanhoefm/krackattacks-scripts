@@ -1271,6 +1271,22 @@ wps_er_init(struct wps_context *wps, const char *ifname, const char *filter)
 	/* Limit event_id to < 32 bits to avoid issues with atoi() */
 	er->event_id &= 0x0fffffff;
 
+	if (filter && os_strncmp(filter, "ifname=", 7) == 0) {
+		const char *pos, *end;
+		pos = filter + 7;
+		end = os_strchr(pos, ' ');
+		if (end) {
+			size_t len = end - pos;
+			os_strlcpy(er->ifname, pos, len < sizeof(er->ifname) ?
+				   len + 1 : sizeof(er->ifname));
+			filter = end + 1;
+		} else {
+			os_strlcpy(er->ifname, pos, sizeof(er->ifname));
+			filter = NULL;
+		}
+		er->forced_ifname = 1;
+	}
+
 	if (filter) {
 		if (inet_aton(filter, &er->filter_addr) == 0) {
 			wpa_printf(MSG_INFO, "WPS UPnP: Invalid filter "
@@ -1281,10 +1297,10 @@ wps_er_init(struct wps_context *wps, const char *ifname, const char *filter)
 		wpa_printf(MSG_DEBUG, "WPS UPnP: Only accepting connections "
 			   "with %s", filter);
 	}
-	if (get_netif_info(ifname, &er->ip_addr, &er->ip_addr_text,
+	if (get_netif_info(er->ifname, &er->ip_addr, &er->ip_addr_text,
 			   er->mac_addr)) {
 		wpa_printf(MSG_INFO, "WPS UPnP: Could not get IP/MAC address "
-			   "for %s. Does it have IP address?", ifname);
+			   "for %s. Does it have IP address?", er->ifname);
 		wps_er_deinit(er, NULL, NULL);
 		return NULL;
 	}

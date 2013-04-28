@@ -282,3 +282,152 @@ def test_nfc_wps_handover_pk_hash_mismatch_ap(dev, apdev):
         raise Exception("Timed out")
     if "WPS-FAIL" not in ev:
         raise Exception("Public key hash mismatch not detected")
+
+def start_ap_er(er, ap, ssid):
+    ap_pin = "12345670"
+    ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
+    hostapd.add_ap(ap['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                     "wpa_passphrase": "12345678", "wpa": "2",
+                     "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+                     "device_name": "Wireless AP", "manufacturer": "Company",
+                     "model_name": "WAP", "model_number": "123",
+                     "serial_number": "12345", "device_type": "6-0050F204-1",
+                     "os_version": "01020300",
+                     "config_methods": "label push_button",
+                     "ap_pin": ap_pin, "uuid": ap_uuid, "upnp_iface": "lo"})
+    logger.info("Learn AP configuration")
+    er.dump_monitor()
+    er.request("SET ignore_old_scan_res 1")
+    er.wps_reg(ap['bssid'], ap_pin)
+
+    logger.info("Start ER")
+    er.request("WPS_ER_STOP")
+    time.sleep(1)
+    er.request("WPS_ER_START ifname=lo")
+    ev = er.wait_event(["WPS-ER-AP-ADD"], timeout=15)
+    if ev is None:
+        raise Exception("AP discovery timed out")
+    if ap_uuid not in ev:
+        raise Exception("Expected AP UUID not found")
+
+    logger.info("Use learned network configuration on ER")
+    er.request("WPS_ER_SET_CONFIG " + ap_uuid + " 0")
+
+def test_nfc_wps_er_pw_token(dev, apdev):
+    """WPS NFC password token from Enrollee to ER"""
+    ssid = "wps-nfc-er-pw-token"
+    start_ap_er(dev[0], apdev[0], ssid)
+    logger.info("WPS provisioning step using password token from station")
+    dev[1].request("SET ignore_old_scan_res 1")
+    pw = dev[1].request("WPS_NFC_TOKEN NDEF").rstrip()
+    if "FAIL" in pw:
+        raise Exception("Failed to generate password token")
+    res = dev[0].request("WPS_NFC_TAG_READ " + pw)
+    if "FAIL" in res:
+        raise Exception("Failed to provide NFC tag contents to WPS ER")
+    dev[0].dump_monitor()
+    res = dev[1].request("WPS_NFC")
+    if "FAIL" in res:
+        raise Exception("Failed to start Enrollee using NFC password token")
+    ev = dev[0].wait_event(["WPS-SUCCESS"], timeout=15)
+    if ev is None:
+        raise Exception("WPS ER did not report success")
+    ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Association with the AP timed out")
+    check_wpa2_connection(dev[1], apdev[0], ssid)
+
+def test_nfc_wps_er_config_token(dev, apdev):
+    """WPS NFC configuration token from ER to Enrollee"""
+    ssid = "wps-nfc-er-config-token"
+    start_ap_er(dev[0], apdev[0], ssid)
+    logger.info("WPS provisioning step using configuration token from ER")
+    conf = dev[0].request("WPS_ER_NFC_CONFIG_TOKEN NDEF " + apdev[0]['bssid']).rstrip()
+    if "FAIL" in conf:
+        raise Exception("Failed to generate configugration token")
+    dev[1].request("SET ignore_old_scan_res 1")
+    res = dev[1].request("WPS_NFC_TAG_READ " + conf)
+    if "FAIL" in res:
+        raise Exception("Failed to provide NFC tag contents to wpa_supplicant")
+    ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Association with the AP timed out")
+    check_wpa2_connection(dev[1], apdev[0], ssid)
+
+def test_nfc_wps_er_handover(dev, apdev):
+    """WPS NFC connection handover between Enrollee and ER"""
+    ssid = "wps-nfc-er-handover"
+    start_ap_er(dev[0], apdev[0], ssid)
+    logger.info("WPS provisioning step using connection handover")
+    req = dev[1].request("NFC_GET_HANDOVER_REQ NDEF WPS-CR").rstrip()
+    if "FAIL" in req:
+        raise Exception("Failed to generate NFC connection handover request")
+    sel = dev[0].request("NFC_GET_HANDOVER_SEL NDEF WPS-CR " + apdev[0]['bssid']).rstrip()
+    if "FAIL" in sel:
+        raise Exception("Failed to generate NFC connection handover select")
+    res = dev[0].request("NFC_REPORT_HANDOVER RESP WPS " + req + " " + sel)
+    if "FAIL" in res:
+        raise Exception("Failed to report NFC connection handover to to hostapd")
+    dev[1].dump_monitor()
+    res = dev[1].request("NFC_REPORT_HANDOVER INIT WPS " + req + " " + sel)
+    if "FAIL" in res:
+        raise Exception("Failed to report NFC connection handover to to wpa_supplicant")
+    ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Association with the AP timed out")
+    check_wpa2_connection(dev[1], apdev[0], ssid)
+
+def test_nfc_wps_er_handover_pk_hash_mismatch_sta(dev, apdev):
+    """WPS NFC connection handover with invalid pkhash from station to ER (negative)"""
+    ssid = "wps-nfc-er-handover-pkhash-sta"
+    start_ap_er(dev[0], apdev[0], ssid)
+    logger.info("WPS provisioning step using connection handover")
+    if "FAIL" in dev[1].request("SET wps_corrupt_pkhash 1"):
+        raise Exception("Could not enable wps_corrupt_pkhash")
+    dev[1].request("SET ignore_old_scan_res 1")
+    req = dev[1].request("NFC_GET_HANDOVER_REQ NDEF WPS-CR").rstrip()
+    if "FAIL" in req:
+        raise Exception("Failed to generate NFC connection handover request")
+    sel = dev[0].request("NFC_GET_HANDOVER_SEL NDEF WPS-CR " + apdev[0]['bssid']).rstrip()
+    if "FAIL" in sel:
+        raise Exception("Failed to generate NFC connection handover select")
+    res = dev[0].request("NFC_REPORT_HANDOVER RESP WPS " + req + " " + sel)
+    if "FAIL" in res:
+        raise Exception("Failed to report NFC connection handover to to hostapd")
+    dev[1].dump_monitor()
+    res = dev[1].request("NFC_REPORT_HANDOVER INIT WPS " + req + " " + sel)
+    if "FAIL" in res:
+        raise Exception("Failed to report NFC connection handover to to wpa_supplicant")
+    ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED", "WPS-FAIL"], timeout=15)
+    if ev is None:
+        raise Exception("Timed out")
+    if "WPS-FAIL" not in ev:
+        raise Exception("Public key hash mismatch not detected")
+
+def test_nfc_wps_er_handover_pk_hash_mismatch_er(dev, apdev):
+    """WPS NFC connection handover with invalid pkhash from ER to station (negative)"""
+    ssid = "wps-nfc-er-handover-pkhash-er"
+    start_ap_er(dev[0], apdev[0], ssid)
+    logger.info("WPS provisioning step using connection handover")
+    if "FAIL" in dev[0].request("SET wps_corrupt_pkhash 1"):
+        raise Exception("Could not enable wps_corrupt_pkhash")
+    dev[1].request("SET ignore_old_scan_res 1")
+    req = dev[1].request("NFC_GET_HANDOVER_REQ NDEF WPS-CR").rstrip()
+    if "FAIL" in req:
+        raise Exception("Failed to generate NFC connection handover request")
+    sel = dev[0].request("NFC_GET_HANDOVER_SEL NDEF WPS-CR " + apdev[0]['bssid']).rstrip()
+    if "FAIL" in sel:
+        raise Exception("Failed to generate NFC connection handover select")
+    res = dev[0].request("NFC_REPORT_HANDOVER RESP WPS " + req + " " + sel)
+    if "FAIL" in res:
+        raise Exception("Failed to report NFC connection handover to to hostapd")
+    dev[1].dump_monitor()
+    res = dev[1].request("NFC_REPORT_HANDOVER INIT WPS " + req + " " + sel)
+    if "FAIL" in res:
+        raise Exception("Failed to report NFC connection handover to to wpa_supplicant")
+    ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED", "WPS-FAIL"], timeout=15)
+    if ev is None:
+        raise Exception("Timed out")
+    if "WPS-FAIL" not in ev:
+        raise Exception("Public key hash mismatch not detected")

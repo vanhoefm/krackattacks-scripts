@@ -41,6 +41,7 @@ class WpaSupplicant:
         self.request("FLUSH")
         self.request("SET ignore_old_scan_res 0")
         self.group_ifname = None
+        self.dump_monitor()
 
     def add_network(self):
         id = self.request("ADD_NETWORK")
@@ -370,3 +371,23 @@ class WpaSupplicant:
         if ev is None:
             raise Exception("Roaming with the AP timed out")
         self.dump_monitor()
+
+    def wps_reg(self, bssid, pin, new_ssid=None, key_mgmt=None, cipher=None,
+                new_passphrase=None):
+        self.dump_monitor()
+        if new_ssid:
+            self.request("WPS_REG " + bssid + " " + pin + " " +
+                         new_ssid.encode("hex") + " " + key_mgmt + " " +
+                         cipher + " " + new_passphrase.encode("hex"))
+            ev = self.wait_event(["WPS-SUCCESS"], timeout=15)
+        else:
+            self.request("WPS_REG " + bssid + " " + pin)
+            ev = self.wait_event(["WPS-CRED-RECEIVED"], timeout=15)
+            if ev is None:
+                raise Exception("WPS cred timed out")
+            ev = self.wait_event(["WPS-FAIL"], timeout=15)
+        if ev is None:
+            raise Exception("WPS timed out")
+        ev = self.wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+        if ev is None:
+            raise Exception("Association with the AP timed out")

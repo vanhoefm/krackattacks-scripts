@@ -301,13 +301,18 @@ hostapd_interface_init(struct hapd_interfaces *interfaces,
 			iface->bss[0]->conf->logger_stdout_level--;
 	}
 
-	if (iface->conf->bss[0].iface[0] != 0 ||
-	    hostapd_drv_none(iface->bss[0])) {
-		if (hostapd_driver_init(iface) ||
-			hostapd_setup_interface(iface)) {
-			hostapd_interface_deinit_free(iface);
-			return NULL;
-		}
+	if (iface->conf->bss[0].iface[0] == '\0' &&
+	    !hostapd_drv_none(iface->bss[0])) {
+		wpa_printf(MSG_ERROR, "Interface name not specified in %s",
+			   config_fname);
+		hostapd_interface_deinit_free(iface);
+		return NULL;
+	}
+
+	if (hostapd_driver_init(iface) ||
+	    hostapd_setup_interface(iface)) {
+		hostapd_interface_deinit_free(iface);
+		return NULL;
 	}
 
 	return iface;

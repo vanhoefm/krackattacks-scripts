@@ -194,6 +194,8 @@ static struct hostapd_iface * hostapd_init(const char *config_file)
 	return hapd_iface;
 
 fail:
+	wpa_printf(MSG_ERROR, "Failed to set up interface with %s",
+		   config_file);
 	if (conf)
 		hostapd_config_free(conf);
 	if (hapd_iface) {
@@ -652,22 +654,28 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (hostapd_global_init(&interfaces, entropy_file))
+	if (hostapd_global_init(&interfaces, entropy_file)) {
+		wpa_printf(MSG_ERROR, "Failed to initilize global context");
 		return -1;
+	}
 
 	/* Initialize interfaces */
 	for (i = 0; i < interfaces.count; i++) {
 		interfaces.iface[i] = hostapd_interface_init(&interfaces,
 							     argv[optind + i],
 							     debug);
-		if (!interfaces.iface[i])
+		if (!interfaces.iface[i]) {
+			wpa_printf(MSG_ERROR, "Failed to initialize interface");
 			goto out;
+		}
 	}
 
 	hostapd_global_ctrl_iface_init(&interfaces);
 
-	if (hostapd_global_run(&interfaces, daemonize, pid_file))
+	if (hostapd_global_run(&interfaces, daemonize, pid_file)) {
+		wpa_printf(MSG_ERROR, "Failed to start eloop");
 		goto out;
+	}
 
 	ret = 0;
 

@@ -50,12 +50,12 @@ extern struct wpa_driver_ops wpa_driver_none_ops; /* driver_none.c */
 
 struct wpa_driver_ops *wpa_drivers[] =
 {
-#ifdef CONFIG_DRIVER_WEXT
-	&wpa_driver_wext_ops,
-#endif /* CONFIG_DRIVER_WEXT */
 #ifdef CONFIG_DRIVER_NL80211
 	&wpa_driver_nl80211_ops,
 #endif /* CONFIG_DRIVER_NL80211 */
+#ifdef CONFIG_DRIVER_WEXT
+	&wpa_driver_wext_ops,
+#endif /* CONFIG_DRIVER_WEXT */
 #ifdef CONFIG_DRIVER_HOSTAP
 	&wpa_driver_hostap_ops,
 #endif /* CONFIG_DRIVER_HOSTAP */

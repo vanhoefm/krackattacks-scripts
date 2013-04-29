@@ -84,7 +84,7 @@ static void usage(void)
 
 	printf("example:\n"
 	       "  wpa_supplicant -D%s -iwlan0 -c/etc/wpa_supplicant.conf\n",
-	       wpa_drivers[i] ? wpa_drivers[i]->name : "wext");
+	       wpa_drivers[0] ? wpa_drivers[0]->name : "nl80211");
 #endif /* CONFIG_NO_STDOUT_DEBUG */
 }
 

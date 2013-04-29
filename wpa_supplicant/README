@@ -115,13 +115,15 @@ Current hardware/software requirements:
 - NetBSD-current
 - Microsoft Windows with WinPcap (at least WinXP, may work with other versions)
 - drivers:
-	Linux drivers that support WPA/WPA2 configuration with the generic
-	Linux wireless extensions (WE-18 or newer). Even though there are
+	Linux drivers that support cfg80211/nl80211. Even though there are
 	number of driver specific interface included in wpa_supplicant, please
-	note that Linux drivers are moving to use generic wireless extensions
-	and driver_wext (-Dwext on wpa_supplicant command line) should be the
-	default option to start with before falling back to driver specific
-	interface.
+	note that Linux drivers are moving to use generic wireless configuration
+	interface driver_nl80211 (-Dnl80211 on wpa_supplicant command line)
+	should be the default option to start with before falling back to driver
+	specific interface.
+
+	Linux drivers that support WPA/WPA2 configuration with the generic
+	Linux wireless extensions (WE-18 or newer). Obsoleted by nl80211.
 
 	In theory, any driver that supports Linux wireless extensions can be
 	used with IEEE 802.1X (i.e., not WPA) when using ap_scan=0 option in
@@ -436,6 +438,7 @@ options:
   -N = start describing new interface
 
 drivers:
+  nl80211 = Linux nl80211/cfg80211
   wext = Linux wireless extensions (generic)
   wired = wpa_supplicant wired Ethernet driver
   roboswitch = wpa_supplicant Broadcom switch driver
@@ -477,7 +480,7 @@ If the interface is added in a Linux bridge (e.g., br0), the bridge
 interface needs to be configured to wpa_supplicant in addition to the
 main interface:
 
-wpa_supplicant -cw.conf -Dwext -iwlan0 -bbr0
+wpa_supplicant -cw.conf -Dnl80211 -iwlan0 -bbr0
 
 
 Configuration file
@@ -869,10 +872,10 @@ network (SSID):
 # Start wpa_supplicant in the background
 wpa_supplicant -g/var/run/wpa_supplicant-global -B
 
-# Add a new interface (wlan0, no configuration file, driver=wext, and
+# Add a new interface (wlan0, no configuration file, driver=nl80211, and
 # enable control interface)
 wpa_cli -g/var/run/wpa_supplicant-global interface_add wlan0 \
-	"" wext /var/run/wpa_supplicant
+	"" nl80211 /var/run/wpa_supplicant
 
 # Configure a network using the newly added network interface:
 wpa_cli -iwlan0 add_network
@@ -933,7 +936,7 @@ Example configuration:
   chmod 0750 /var/run/wpa_priv
 - start wpa_priv as root (e.g., from system startup scripts) with the
   enabled interfaces configured on the command line:
-  wpa_priv -B -P /var/run/wpa_priv.pid wext:ath0
+  wpa_priv -B -P /var/run/wpa_priv.pid nl80211:wlan0
 - run wpa_supplicant as non-root with a user that is in wpapriv group:
   wpa_supplicant -i ath0 -c wpa_supplicant.conf
 

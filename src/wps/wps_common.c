@@ -634,12 +634,36 @@ struct wpabuf * wps_nfc_token_build(int ndef, int id, struct wpabuf *pubkey,
 }
 
 
+int wps_nfc_gen_dh(struct wpabuf **pubkey, struct wpabuf **privkey)
+{
+	struct wpabuf *priv = NULL, *pub = NULL;
+	void *dh_ctx;
+
+	dh_ctx = dh5_init(&priv, &pub);
+	if (dh_ctx == NULL)
+		return -1;
+	pub = wpabuf_zeropad(pub, 192);
+	if (pub == NULL) {
+		wpabuf_free(priv);
+		return -1;
+	}
+	wpa_hexdump_buf(MSG_DEBUG, "WPS: Generated new DH pubkey", pub);
+	dh5_free(dh_ctx);
+
+	wpabuf_free(*pubkey);
+	*pubkey = pub;
+	wpabuf_free(*privkey);
+	*privkey = priv;
+
+	return 0;
+}
+
+
 struct wpabuf * wps_nfc_token_gen(int ndef, int *id, struct wpabuf **pubkey,
 				  struct wpabuf **privkey,
 				  struct wpabuf **dev_pw)
 {
-	struct wpabuf *priv = NULL, *pub = NULL, *pw;
-	void *dh_ctx;
+	struct wpabuf *pw;
 	u16 val;
 
 	pw = wpabuf_alloc(WPS_OOB_DEVICE_PASSWORD_LEN);
@@ -653,18 +677,12 @@ struct wpabuf * wps_nfc_token_gen(int ndef, int *id, struct wpabuf **pubkey,
 		return NULL;
 	}
 
-	dh_ctx = dh5_init(&priv, &pub);
-	if (dh_ctx == NULL) {
+	if (wps_nfc_gen_dh(pubkey, privkey) < 0) {
 		wpabuf_free(pw);
 		return NULL;
 	}
-	dh5_free(dh_ctx);
 
 	*id = 0x10 + val % 0xfff0;
-	wpabuf_free(*pubkey);
-	*pubkey = pub;
-	wpabuf_free(*privkey);
-	*privkey = priv;
 	wpabuf_free(*dev_pw);
 	*dev_pw = pw;
 

@@ -856,6 +856,7 @@ struct wpabuf * wps_build_nfc_pw_token(u16 dev_pw_id,
 				       const struct wpabuf *dev_pw);
 struct wpabuf * wps_nfc_token_build(int ndef, int id, struct wpabuf *pubkey,
 				    struct wpabuf *dev_pw);
+int wps_nfc_gen_dh(struct wpabuf **pubkey, struct wpabuf **privkey);
 struct wpabuf * wps_nfc_token_gen(int ndef, int *id, struct wpabuf **pubkey,
 				  struct wpabuf **privkey,
 				  struct wpabuf **dev_pw);

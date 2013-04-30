@@ -219,6 +219,80 @@ static void wpas_wps_security_workaround(struct wpa_supplicant *wpa_s,
 }
 
 
+static void wpas_wps_remove_dup_network(struct wpa_supplicant *wpa_s,
+					struct wpa_ssid *new_ssid)
+{
+	struct wpa_ssid *ssid, *next;
+
+	for (ssid = wpa_s->conf->ssid, next = ssid ? ssid->next : NULL; ssid;
+	     ssid = next, next = ssid ? ssid->next : NULL) {
+		/*
+		 * new_ssid has already been added to the list in
+		 * wpas_wps_add_network(), so skip it.
+		 */
+		if (ssid == new_ssid)
+			continue;
+
+		if (ssid->bssid_set || new_ssid->bssid_set) {
+			if (ssid->bssid_set != new_ssid->bssid_set)
+				continue;
+			if (os_memcmp(ssid->bssid, new_ssid->bssid, ETH_ALEN) !=
+			    0)
+				continue;
+		}
+
+		/* compare SSID */
+		if (ssid->ssid_len == 0 || ssid->ssid_len != new_ssid->ssid_len)
+			continue;
+
+		if (ssid->ssid && new_ssid->ssid) {
+			if (os_memcmp(ssid->ssid, new_ssid->ssid,
+				      ssid->ssid_len) != 0)
+				continue;
+		} else if (ssid->ssid || new_ssid->ssid)
+			continue;
+
+		/* compare security parameters */
+		if (ssid->auth_alg != new_ssid->auth_alg ||
+		    ssid->key_mgmt != new_ssid->key_mgmt ||
+		    ssid->proto != new_ssid->proto ||
+		    ssid->pairwise_cipher != new_ssid->pairwise_cipher ||
+		    ssid->group_cipher != new_ssid->group_cipher)
+			continue;
+
+		if (ssid->passphrase && new_ssid->passphrase) {
+			if (os_strlen(ssid->passphrase) !=
+			    os_strlen(new_ssid->passphrase))
+				continue;
+			if (os_strcmp(ssid->passphrase, new_ssid->passphrase) !=
+			    0)
+				continue;
+		} else if (ssid->passphrase || new_ssid->passphrase)
+			continue;
+
+		if ((ssid->psk_set || new_ssid->psk_set) &&
+		    os_memcmp(ssid->psk, new_ssid->psk, sizeof(ssid->psk)) != 0)
+			continue;
+
+		if (ssid->auth_alg == WPA_ALG_WEP) {
+			if (ssid->wep_tx_keyidx != new_ssid->wep_tx_keyidx)
+				continue;
+			if (os_memcmp(ssid->wep_key, new_ssid->wep_key,
+				      sizeof(ssid->wep_key)))
+				continue;
+			if (os_memcmp(ssid->wep_key_len, new_ssid->wep_key_len,
+				      sizeof(ssid->wep_key_len)))
+				continue;
+		}
+
+		/* Remove the duplicated older network entry. */
+		wpa_printf(MSG_DEBUG, "Remove duplicate network %d", ssid->id);
+		wpas_notify_network_removed(wpa_s, ssid);
+		wpa_config_remove_network(wpa_s->conf, ssid->id);
+	}
+}
+
+
 static int wpa_supplicant_wps_cred(void *ctx,
 				   const struct wps_credential *cred)
 {
@@ -437,6 +511,8 @@ static int wpa_supplicant_wps_cred(void *ctx,
 
 	if (cred->ap_channel)
 		wpa_s->wps_ap_channel = cred->ap_channel;
+
+	wpas_wps_remove_dup_network(wpa_s, ssid);
 
 #ifndef CONFIG_NO_CONFIG_WRITE
 	if (wpa_s->conf->update_config &&

@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    >
+	<TextView
+	    android:layout_width="wrap_content"
+	    android:layout_height="wrap_content"
+	    android:text="Framework commands"
+	    />
+	<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+		      android:layout_width="match_parent"
+		      android:layout_height="wrap_content"
+		      android:orientation="horizontal"
+		      >
+		<Button
+		    android:layout_width="wrap_content"
+		    android:layout_height="wrap_content"
+		    android:text="WifiManager"
+		    android:onClick="wifiManagerInfo"
+		    />
+		<Button
+		    android:layout_width="wrap_content"
+		    android:layout_height="wrap_content"
+		    android:text="WifiInfo"
+		    android:onClick="wifiInfo"
+		    />
+		<Button
+		    android:layout_width="wrap_content"
+		    android:layout_height="wrap_content"
+		    android:text="Networks"
+		    android:onClick="wifiConfiguredNetworks"
+		    />
+	</LinearLayout>
+	<TextView
+	    android:layout_width="wrap_content"
+	    android:layout_height="wrap_content"
+	    android:text="wpa_supplicant commands"
+	    />
+	<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+		      android:layout_width="wrap_content"
+		      android:layout_height="wrap_content"
+		      android:orientation="horizontal"
+		      >
+		<Button
+		    android:layout_width="wrap_content"
+		    android:layout_height="wrap_content"
+		    android:text="status"
+		    android:onClick="wpaStatus"
+		    />
+		<Button
+		    android:layout_width="wrap_content"
+		    android:layout_height="wrap_content"
+		    android:text="PMKSA"
+		    android:onClick="wpaPmksa"
+		    />
+		<Button
+		    android:layout_width="wrap_content"
+		    android:layout_height="wrap_content"
+		    android:text="networks"
+		    android:onClick="wpaListNetworks"
+		    />
+		<Button
+		    android:layout_width="wrap_content"
+		    android:layout_height="wrap_content"
+		    android:text="creds"
+		    android:onClick="wpaListCreds"
+		    />
+	</LinearLayout>
+	<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+		      android:layout_width="match_parent"
+		      android:layout_height="wrap_content"
+		      android:orientation="horizontal"
+		      >
+		<Button
+		    android:layout_width="wrap_content"
+		    android:layout_height="wrap_content"
+		    android:text="scanres"
+		    android:onClick="wpaScanResults"
+		    />
+	</LinearLayout>
+	<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+		      android:layout_width="match_parent"
+		      android:layout_height="wrap_content"
+		      android:orientation="horizontal"
+		      >
+		<Button
+		    android:layout_width="wrap_content"
+		    android:layout_height="wrap_content"
+		    android:text="log:info"
+		    android:onClick="wpaLogLevelInfo"
+		    />
+		<Button
+		    android:layout_width="wrap_content"
+		    android:layout_height="wrap_content"
+		    android:text="log:debug"
+		    android:onClick="wpaLogLevelDebug"
+		    />
+		<Button
+		    android:layout_width="wrap_content"
+		    android:layout_height="wrap_content"
+		    android:text="log:excessive"
+		    android:onClick="wpaLogLevelExcessive"
+		    />
+	</LinearLayout>
+	<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+		      android:layout_width="match_parent"
+		      android:layout_height="wrap_content"
+		      android:orientation="horizontal"
+		      >
+		<EditText android:id="@+id/edit_cmd"
+			  android:layout_weight="1"
+			  android:layout_width="0dp"
+			  android:layout_height="wrap_content"
+			  android:hint="wpa_cli command"
+			  />
+		<Button
+		    android:layout_width="wrap_content"
+		    android:layout_height="wrap_content"
+		    android:text="Run"
+		    android:onClick="runWpaCliCmd"
+		    />
+	</LinearLayout>
+	<TextView
+	    android:layout_width="wrap_content"
+	    android:layout_height="wrap_content"
+	    android:text="Shell commands"
+	    />
+	<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+		      android:layout_width="match_parent"
+		      android:layout_height="wrap_content"
+		      android:orientation="horizontal"
+		      >
+		<Button
+		    android:layout_width="wrap_content"
+		    android:layout_height="wrap_content"
+		    android:text="id"
+		    android:onClick="runId"
+		    />
+	</LinearLayout>
+</LinearLayout>

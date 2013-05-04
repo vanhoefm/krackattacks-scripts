@@ -8,12 +8,19 @@
 
 package w1.fi.wpadebug;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.IOException;
+
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.os.Bundle;
 import android.os.Parcelable;
 import android.view.MenuItem;
 import android.content.Intent;
+import android.content.DialogInterface;
 import android.widget.TextView;
+import android.widget.Toast;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.nfc.NdefMessage;
@@ -31,28 +38,76 @@ public class WpaNfcActivity extends Activity
 	return sb.toString();
     }
 
-    @Override
-    public void onCreate(Bundle savedInstanceState)
+    private void show_alert(String title, String message)
     {
-	Log.d(TAG, "onCreate");
-        super.onCreate(savedInstanceState);
+	AlertDialog.Builder alert = new AlertDialog.Builder(this);
+	alert.setTitle(title);
+	alert.setMessage(message);
+	alert.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+		public void onClick(DialogInterface dialog, int id)
+		{
+		    finish();
+		}
+	    });
+	alert.create().show();
+    }
+
+    private String wpaCmd(String cmd)
+    {
+	try {
+	    Log.d(TAG, "Executing wpaCmd: " + cmd);
+	    Process proc = Runtime.getRuntime().exec(new String[]{"/system/bin/mksh-su", "-c", "wpa_cli " + cmd});
+	    BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+	    StringBuffer output = new StringBuffer();
+	    int read;
+	    char[] buffer = new char[1024];
+	    while ((read = reader.read(buffer)) > 0)
+		output.append(buffer, 0, read);
+	    reader.close();
+	    proc.waitFor();
+	    Log.d(TAG, "External process completed - exitValue " +
+		  proc.exitValue());
+	    return output.toString();
+	} catch (IOException e) {
+	    show_alert("Could not run external program",
+		       "Execution of an external program failed. " +
+		       "Maybe mksh-su was not installed.");
+	    return null;
+	} catch (InterruptedException e) {
+	    throw new RuntimeException(e);
+	}
+    }
+
+    public boolean report_tag_read(byte[] payload)
+    {
+	String res = wpaCmd("WPS_NFC_TAG_READ " + byteArrayHex(payload));
+	if (res == null)
+	    return false;
+	if (!res.contains("OK")) {
+	    Toast.makeText(this, "Failed to report WSC tag read to " +
+			   "wpa_supplicant", Toast.LENGTH_LONG).show();
+	} else {
+	    Toast.makeText(this, "Reported WSC tag read to wpa_supplicant",
+			   Toast.LENGTH_LONG).show();
+	}
+	finish();
+	return true;
     }
 
     @Override
-    public void onResume()
+    public void onCreate(Bundle savedInstanceState)
     {
-	super.onResume();
+	super.onCreate(savedInstanceState);
 
 	Intent intent = getIntent();
 	String action = intent.getAction();
-	Log.d(TAG, "onResume: action=" + action);
+	Log.d(TAG, "onCreate: action=" + action);
 
 	if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action)) {
-	    Log.d(TAG, "onResume - NDEF discovered");
+	    Log.d(TAG, "NDEF discovered");
 	    Parcelable[] raw = intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES);
 	    if (raw != null) {
-		String txt = "NDEF message count: " + raw.length;
-		Log.d(TAG, txt);
+		Log.d(TAG, "NDEF message count: " + raw.length);
 		NdefMessage[] msgs = new NdefMessage[raw.length];
 		for (int i = 0; i < raw.length; i++) {
 		    msgs[i] = (NdefMessage) raw[i];
@@ -60,15 +115,17 @@ public class WpaNfcActivity extends Activity
 		    Log.d(TAG, "MIME type: " + rec.toMimeType());
 		    byte[] a = rec.getPayload();
 		    Log.d(TAG, "NDEF record: " + byteArrayHex(a));
-		    txt += "\nMessage[" + rec.toMimeType() + "]: " +
-			byteArrayHex(a);
-		}
+		    if (rec.getTnf() == NdefRecord.TNF_MIME_MEDIA &&
+			rec.toMimeType().equals("application/vnd/wfa.wsc")) {
+			Log.d(TAG, "WSC tag read");
+		    }
 
-		TextView textView = new TextView(this);
-		textView.setText(txt);
-		textView.setMovementMethod(new ScrollingMovementMethod());
-		setContentView(textView);
+		    if (!report_tag_read(a))
+			return;
+		}
 	    }
 	}
+
+	finish();
     }
 }

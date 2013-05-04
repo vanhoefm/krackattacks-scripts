@@ -28,5 +28,9 @@
 		<data android:mimeType="application/vnd.wfa.wsc" />
             </intent-filter>
 	</activity>
+	<activity android:name="w1.fi.wpadebug.CommandListActivity"
+		  android:label="Command list"
+		  android:parentActivityName="w1.fi.wpadebug.MainActivity">
+	</activity>
     </application>
 </manifest>

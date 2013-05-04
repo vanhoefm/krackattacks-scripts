@@ -44,6 +44,11 @@ adb root
 adb remount
 adb shell chmod 6755 /system/bin/mksh-su
 
+Optionally, a text file with a set of command can be installed to allow
+arbitrary shell commands to be executed. This text file need to be in
+/data/local/wpadebug.cmds and use title@command format per line. For
+example:
+version@cat /proc/version
 
 
 Uninstallation

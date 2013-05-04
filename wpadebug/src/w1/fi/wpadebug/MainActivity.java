@@ -41,13 +41,9 @@ public class MainActivity extends Activity
         setContentView(R.layout.main);
     }
 
-    public void runId(View view)
+    public void runCommands(View view)
     {
-	Intent intent = new Intent(this, DisplayMessageActivity.class);
-	String message = run("/system/bin/id");
-	if (message == null)
-	    return;
-	intent.putExtra(EXTRA_MESSAGE, message);
+	Intent intent = new Intent(this, CommandListActivity.class);
 	startActivity(intent);
     }
 

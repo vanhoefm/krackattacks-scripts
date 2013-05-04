@@ -122,11 +122,6 @@
 		    android:onClick="runWpaCliCmd"
 		    />
 	</LinearLayout>
-	<TextView
-	    android:layout_width="wrap_content"
-	    android:layout_height="wrap_content"
-	    android:text="Shell commands"
-	    />
 	<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
 		      android:layout_width="match_parent"
 		      android:layout_height="wrap_content"
@@ -135,8 +130,8 @@
 		<Button
 		    android:layout_width="wrap_content"
 		    android:layout_height="wrap_content"
-		    android:text="id"
-		    android:onClick="runId"
+		    android:text="Shell commands"
+		    android:onClick="runCommands"
 		    />
 	</LinearLayout>
 	<TextView

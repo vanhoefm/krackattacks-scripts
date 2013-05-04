@@ -50,6 +50,9 @@ arbitrary shell commands to be executed. This text file need to be in
 example:
 version@cat /proc/version
 
+Similarly, /data/local/wpadebug.wpacmds can be used to define additional
+wpa_supplicant control interface commands.
+
 
 Uninstallation
 --------------

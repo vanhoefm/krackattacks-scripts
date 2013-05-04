@@ -47,6 +47,12 @@ public class MainActivity extends Activity
 	startActivity(intent);
     }
 
+    public void runWpaCommands(View view)
+    {
+	Intent intent = new Intent(this, WpaCommandListActivity.class);
+	startActivity(intent);
+    }
+
     public void runWpaCliCmd(View view)
     {
 	Intent intent = new Intent(this, DisplayMessageActivity.class);
@@ -57,31 +63,6 @@ public class MainActivity extends Activity
 	    return;
 	}
 	wpaCmd(view, cmd);
-    }
-
-    public void wpaStatus(View view)
-    {
-	wpaCmd(view, "STATUS");
-    }
-
-    public void wpaPmksa(View view)
-    {
-	wpaCmd(view, "PMKSA");
-    }
-
-    public void wpaScanResults(View view)
-    {
-	wpaCmd(view, "SCAN_RESULTS");
-    }
-
-    public void wpaListNetworks(View view)
-    {
-	wpaCmd(view, "LIST_NETWORKS");
-    }
-
-    public void wpaListCreds(View view)
-    {
-	wpaCmd(view, "LIST_CREDS");
     }
 
     public void wpaLogLevelInfo(View view)

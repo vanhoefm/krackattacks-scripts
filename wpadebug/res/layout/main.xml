@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="wrap_content"
+    android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
     >
@@ -39,36 +39,6 @@
 	    android:text="wpa_supplicant commands"
 	    />
 	<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-		      android:layout_width="wrap_content"
-		      android:layout_height="wrap_content"
-		      android:orientation="horizontal"
-		      >
-		<Button
-		    android:layout_width="wrap_content"
-		    android:layout_height="wrap_content"
-		    android:text="status"
-		    android:onClick="wpaStatus"
-		    />
-		<Button
-		    android:layout_width="wrap_content"
-		    android:layout_height="wrap_content"
-		    android:text="PMKSA"
-		    android:onClick="wpaPmksa"
-		    />
-		<Button
-		    android:layout_width="wrap_content"
-		    android:layout_height="wrap_content"
-		    android:text="networks"
-		    android:onClick="wpaListNetworks"
-		    />
-		<Button
-		    android:layout_width="wrap_content"
-		    android:layout_height="wrap_content"
-		    android:text="creds"
-		    android:onClick="wpaListCreds"
-		    />
-	</LinearLayout>
-	<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
 		      android:layout_width="match_parent"
 		      android:layout_height="wrap_content"
 		      android:orientation="horizontal"
@@ -76,8 +46,8 @@
 		<Button
 		    android:layout_width="wrap_content"
 		    android:layout_height="wrap_content"
-		    android:text="scanres"
-		    android:onClick="wpaScanResults"
+		    android:text="wpa_supplicant commands"
+		    android:onClick="runWpaCommands"
 		    />
 	</LinearLayout>
 	<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"

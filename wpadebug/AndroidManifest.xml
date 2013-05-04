@@ -32,5 +32,9 @@
 		  android:label="Command list"
 		  android:parentActivityName="w1.fi.wpadebug.MainActivity">
 	</activity>
+	<activity android:name="w1.fi.wpadebug.WpaCommandListActivity"
+		  android:label="WPA command list"
+		  android:parentActivityName="w1.fi.wpadebug.MainActivity">
+	</activity>
     </application>
 </manifest>

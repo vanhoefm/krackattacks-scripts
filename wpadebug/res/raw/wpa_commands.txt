@@ -1,0 +1,5 @@
+Status@STATUS
+PMKSA cache@PMKSA
+Networks@LIST_NETWORKS
+Creds@LIST_CREDS
+Scan results@SCAN_RESULTS

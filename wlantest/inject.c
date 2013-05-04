@@ -285,9 +285,8 @@ int wlantest_inject(struct wlantest *wt, struct wlantest_bss *bss,
 		return -1;
 	}
 
-	if (prot != WLANTEST_INJECT_UNPROTECTED &&
-	    (bss == NULL || sta == NULL)) {
-		wpa_printf(MSG_INFO, "No BSS/STA information to inject "
+	if (prot != WLANTEST_INJECT_UNPROTECTED && bss == NULL) {
+		wpa_printf(MSG_INFO, "No BSS information to inject "
 			   "protected frames");
 		return -1;
 	}

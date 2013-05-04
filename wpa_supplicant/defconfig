@@ -423,6 +423,10 @@ CONFIG_PEERKEY=y
 # same file, e.g., using trace-cmd.
 #CONFIG_DEBUG_LINUX_TRACING=y
 
+# Add support for writing debug log to Android logcat instead of standard
+# output
+#CONFIG_ANDROID_LOG=y
+
 # Enable privilege separation (see README 'Privilege separation' for details)
 #CONFIG_PRIVSEP=y
 
@@ -495,6 +499,9 @@ CONFIG_PEERKEY=y
 # Hotspot 2.0
 #CONFIG_HS20=y
 
+# Disable roaming in wpa_supplicant
+#CONFIG_NO_ROAMING=y
+
 # AP mode operations with wpa_supplicant
 # This can be used for controlling AP mode operations with wpa_supplicant. It
 # should be noted that this is mainly aimed at simple cases like
@@ -506,6 +513,9 @@ CONFIG_PEERKEY=y
 # This can be used to enable P2P support in wpa_supplicant. See README-P2P for
 # more information on P2P operations.
 #CONFIG_P2P=y
+
+# Enable TDLS support
+#CONFIG_TDLS=y
 
 # Autoscan
 # This can be used to enable automatic scan support in wpa_supplicant.

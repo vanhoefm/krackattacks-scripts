@@ -973,6 +973,7 @@ static void wpas_p2p_clone_config(struct wpa_supplicant *dst,
 	d->max_num_sta = s->max_num_sta;
 	d->pbc_in_m1 = s->pbc_in_m1;
 	d->ignore_old_scan_res = s->ignore_old_scan_res;
+	d->beacon_int = s->beacon_int;
 }
 
 

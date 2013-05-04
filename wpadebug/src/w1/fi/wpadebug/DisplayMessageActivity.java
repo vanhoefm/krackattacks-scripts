@@ -16,9 +16,6 @@ import android.content.Intent;
 import android.widget.TextView;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
-import android.nfc.NdefMessage;
-import android.nfc.NdefRecord;
-import android.nfc.NfcAdapter;
 
 public class DisplayMessageActivity extends Activity
 {
@@ -41,8 +38,6 @@ public class DisplayMessageActivity extends Activity
 	Intent intent = getIntent();
 	String action = intent.getAction();
 	Log.d(TAG, "onCreate: action=" + action);
-	if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(intent.getAction()))
-	    return; // handled in onResume()
 
 	String message = intent.getStringExtra(MainActivity.EXTRA_MESSAGE);
 
@@ -50,39 +45,5 @@ public class DisplayMessageActivity extends Activity
 	textView.setText(message);
 	textView.setMovementMethod(new ScrollingMovementMethod());
         setContentView(textView);
-    }
-
-    @Override
-    public void onResume()
-    {
-	super.onResume();
-
-	Intent intent = getIntent();
-	String action = intent.getAction();
-	Log.d(TAG, "onResume: action=" + action);
-
-	if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action)) {
-	    Log.d(TAG, "onResume - NDEF discovered");
-	    Parcelable[] raw = intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES);
-	    if (raw != null) {
-		String txt = "NDEF message count: " + raw.length;
-		Log.d(TAG, txt);
-		NdefMessage[] msgs = new NdefMessage[raw.length];
-		for (int i = 0; i < raw.length; i++) {
-		    msgs[i] = (NdefMessage) raw[i];
-		    NdefRecord rec = msgs[i].getRecords()[0];
-		    Log.d(TAG, "MIME type: " + rec.toMimeType());
-		    byte[] a = rec.getPayload();
-		    Log.d(TAG, "NDEF record: " + byteArrayHex(a));
-		    txt += "\nMessage[" + rec.toMimeType() + "]: " +
-			byteArrayHex(a);
-		}
-
-		TextView textView = new TextView(this);
-		textView.setText(txt);
-		textView.setMovementMethod(new ScrollingMovementMethod());
-		setContentView(textView);
-	    }
-	}
     }
 }

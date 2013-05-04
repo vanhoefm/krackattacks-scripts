@@ -18,6 +18,10 @@
 	<activity android:name="w1.fi.wpadebug.DisplayMessageActivity"
 		  android:label="Operation result"
 		  android:parentActivityName="w1.fi.wpadebug.MainActivity">
+	</activity>
+	<activity android:name="w1.fi.wpadebug.WpaNfcActivity"
+		  android:label="wpa_supplicant NFC operation"
+		  android:parentActivityName="w1.fi.wpadebug.MainActivity">
             <intent-filter>
 		<action android:name="android.nfc.action.NDEF_DISCOVERED"/>
 		<category android:name="android.intent.category.DEFAULT"/>

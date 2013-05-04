@@ -448,6 +448,11 @@ static struct wpabuf * wpa_supplicant_extra_ies(struct wpa_supplicant *wpa_s)
 
 #endif /* CONFIG_WPS */
 
+#ifdef CONFIG_HS20
+	if (wpa_s->conf->hs20 && wpabuf_resize(&extra_ie, 7) == 0)
+		wpas_hs20_add_indication(extra_ie);
+#endif /* CONFIG_HS20 */
+
 	return extra_ie;
 }
 
@@ -735,11 +740,6 @@ ssid_list_set:
 
 	wpa_supplicant_optimize_freqs(wpa_s, &params);
 	extra_ie = wpa_supplicant_extra_ies(wpa_s);
-
-#ifdef CONFIG_HS20
-	if (wpa_s->conf->hs20 && wpabuf_resize(&extra_ie, 7) == 0)
-		wpas_hs20_add_indication(extra_ie);
-#endif /* CONFIG_HS20 */
 
 	if (params.freqs == NULL && wpa_s->next_scan_freqs) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Optimize scan based on previously "

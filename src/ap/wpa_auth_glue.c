@@ -28,6 +28,7 @@
 
 
 static void hostapd_wpa_auth_conf(struct hostapd_bss_config *conf,
+				  struct hostapd_config *iconf,
 				  struct wpa_auth_config *wconf)
 {
 	os_memset(wconf, 0, sizeof(*wconf));
@@ -74,6 +75,10 @@ static void hostapd_wpa_auth_conf(struct hostapd_bss_config *conf,
 #ifdef CONFIG_HS20
 	wconf->disable_gtk = conf->disable_dgaf;
 #endif /* CONFIG_HS20 */
+#ifdef CONFIG_TESTING_OPTIONS
+	wconf->corrupt_gtk_rekey_mic_probability =
+		iconf->corrupt_gtk_rekey_mic_probability;
+#endif /* CONFIG_TESTING_OPTIONS */
 }
 
 
@@ -509,7 +514,7 @@ int hostapd_setup_wpa(struct hostapd_data *hapd)
 	const u8 *wpa_ie;
 	size_t wpa_ie_len;
 
-	hostapd_wpa_auth_conf(hapd->conf, &_conf);
+	hostapd_wpa_auth_conf(hapd->conf, hapd->iconf, &_conf);
 	if (hapd->iface->drv_flags & WPA_DRIVER_FLAGS_EAPOL_TX_STATUS)
 		_conf.tx_status = 1;
 	if (hapd->iface->drv_flags & WPA_DRIVER_FLAGS_AP_MLME)
@@ -583,7 +588,7 @@ int hostapd_setup_wpa(struct hostapd_data *hapd)
 void hostapd_reconfig_wpa(struct hostapd_data *hapd)
 {
 	struct wpa_auth_config wpa_auth_conf;
-	hostapd_wpa_auth_conf(hapd->conf, &wpa_auth_conf);
+	hostapd_wpa_auth_conf(hapd->conf, hapd->iconf, &wpa_auth_conf);
 	wpa_reconfig(hapd->wpa_auth, &wpa_auth_conf);
 }
 

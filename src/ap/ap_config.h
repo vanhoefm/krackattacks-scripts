@@ -526,6 +526,7 @@ struct hostapd_config {
 	double ignore_auth_probability;
 	double ignore_assoc_probability;
 	double ignore_reassoc_probability;
+	double corrupt_gtk_rekey_mic_probability;
 #endif /* CONFIG_TESTING_OPTIONS */
 };
 

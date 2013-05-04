@@ -160,6 +160,9 @@ struct wpa_auth_config {
 #endif /* CONFIG_IEEE80211R */
 	int disable_gtk;
 	int ap_mlme;
+#ifdef CONFIG_TESTING_OPTIONS
+	double corrupt_gtk_rekey_mic_probability;
+#endif /* CONFIG_TESTING_OPTIONS */
 };
 
 typedef enum {

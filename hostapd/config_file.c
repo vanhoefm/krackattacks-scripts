@@ -2893,6 +2893,7 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		PARSE_TEST_PROBABILITY(ignore_auth_probability)
 		PARSE_TEST_PROBABILITY(ignore_assoc_probability)
 		PARSE_TEST_PROBABILITY(ignore_reassoc_probability)
+		PARSE_TEST_PROBABILITY(corrupt_gtk_rekey_mic_probability)
 #endif /* CONFIG_TESTING_OPTIONS */
 		} else if (os_strcmp(buf, "vendor_elements") == 0) {
 			struct wpabuf *elems;

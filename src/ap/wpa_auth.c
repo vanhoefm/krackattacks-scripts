@@ -1232,7 +1232,7 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 	else
 		version = WPA_KEY_INFO_TYPE_HMAC_MD5_RC4;
 
-	pairwise = key_info & WPA_KEY_INFO_KEY_TYPE;
+	pairwise = !!(key_info & WPA_KEY_INFO_KEY_TYPE);
 
 	wpa_printf(MSG_DEBUG, "WPA: Send EAPOL(version=%d secure=%d mic=%d "
 		   "ack=%d install=%d pairwise=%d kde_len=%lu keyidx=%d "

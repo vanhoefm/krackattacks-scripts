@@ -20,10 +20,14 @@ import android.content.Intent;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.widget.EditText;
+import android.widget.Toast;
 import android.util.Log;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiConfiguration;
+import android.nfc.NdefMessage;
+import android.nfc.NdefRecord;
+import android.nfc.NfcAdapter;
 
 public class MainActivity extends Activity
 {
@@ -179,5 +183,26 @@ public class MainActivity extends Activity
 	    sb.append(n.toString() + "\n");
 	intent.putExtra(EXTRA_MESSAGE, sb.toString());
 	startActivity(intent);
+    }
+
+    public void nfcWpsHandoverRequest(View view)
+    {
+	NfcAdapter nfc;
+	nfc = NfcAdapter.getDefaultAdapter(this);
+	if (nfc == null) {
+	    Toast.makeText(this, "NFC is not available",
+			   Toast.LENGTH_LONG).show();
+	    return;
+	}
+
+	NdefMessage msg;
+	msg = new NdefMessage(new NdefRecord[] {
+		NdefRecord.createMime("application/vnd.wfa.wsc",
+				      new byte[0])
+	    });
+
+	nfc.setNdefPushMessage(msg, this);
+	Toast.makeText(this, "NFC push message (WSC) configured",
+		       Toast.LENGTH_LONG).show();
     }
 }

@@ -560,35 +560,10 @@ static int wpa_cli_cmd_quit(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
-static void wpa_cli_show_variables(void)
-{
-	printf("set variables:\n"
-	       "  EAPOL::heldPeriod (EAPOL state machine held period, "
-	       "in seconds)\n"
-	       "  EAPOL::authPeriod (EAPOL state machine authentication "
-	       "period, in seconds)\n"
-	       "  EAPOL::startPeriod (EAPOL state machine start period, in "
-	       "seconds)\n"
-	       "  EAPOL::maxStart (EAPOL state machine maximum start "
-	       "attempts)\n");
-	printf("  dot11RSNAConfigPMKLifetime (WPA/WPA2 PMK lifetime in "
-	       "seconds)\n"
-	       "  dot11RSNAConfigPMKReauthThreshold (WPA/WPA2 reauthentication"
-	       " threshold\n\tpercentage)\n"
-	       "  dot11RSNAConfigSATimeout (WPA/WPA2 timeout for completing "
-	       "security\n\tassociation in seconds)\n");
-}
-
-
 static int wpa_cli_cmd_set(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	char cmd[256];
 	int res;
-
-	if (argc == 0) {
-		wpa_cli_show_variables();
-		return 0;
-	}
 
 	if (argc == 1) {
 		res = os_snprintf(cmd, sizeof(cmd), "SET %s ", argv[0]);
@@ -600,6 +575,63 @@ static int wpa_cli_cmd_set(struct wpa_ctrl *ctrl, int argc, char *argv[])
 	}
 
 	return wpa_cli_cmd(ctrl, "SET", 2, argc, argv);
+}
+
+
+static char ** wpa_cli_complete_set(const char *str, int pos)
+{
+	int arg = get_cmd_arg_num(str, pos);
+	const char *fields[] = {
+		/* runtime values */
+		"EAPOL::heldPeriod", "EAPOL::authPeriod", "EAPOL::startPeriod",
+		"EAPOL::maxStart", "dot11RSNAConfigPMKLifetime",
+		"dot11RSNAConfigPMKReauthThreshold", "dot11RSNAConfigSATimeout",
+		"wps_fragment_size", "wps_version_number", "ampdu",
+		"tdls_testing", "tdls_disabled", "pno", "radio_disabled",
+		"uapsd", "ps", "wifi_display", "bssid_filter", "disallow_aps",
+		"no_keep_alive",
+		/* global configuration parameters */
+		"eapol_version", "ap_scan", "disable_scan_offload",
+		"fast_reauth", "opensc_engine_path", "pkcs11_engine_path",
+		"pkcs11_module_path", "pcsc_reader", "pcsc_pin",
+		"driver_param", "dot11RSNAConfigPMKLifetime",
+		"dot11RSNAConfigPMKReauthThreshold",
+		"dot11RSNAConfigSATimeout",
+		"update_config", "load_dynamic_eap", "uuid", "device_name",
+		"manufacturer", "model_name", "model_number", "serial_number",
+		"device_type", "os_version", "config_methods",
+		"wps_cred_processing", "wps_vendor_ext_m1", "sec_device_type",
+		"p2p_listen_reg_class", "p2p_listen_channel",
+		"p2p_oper_reg_class", "p2p_oper_channel",
+		"p2p_go_intent", "p2p_ssid_postfix", "persistent_reconnect",
+		"p2p_intra_bss", "p2p_group_idle", "p2p_pref_chan",
+		"p2p_go_ht40", "p2p_disabled", "p2p_no_group_iface",
+		"p2p_ignore_shared_freq", "country", "bss_max_count",
+		"bss_expiration_age", "bss_expiration_scan_count",
+		"filter_ssids", "filter_rssi", "max_num_sta",
+		"disassoc_low_ack", "hs20", "interworking", "hessid",
+		"access_network_type", "pbc_in_m1", "autoscan",
+		"wps_nfc_dev_pw_id", "wps_nfc_dh_pubkey", "wps_nfc_dh_privkey",
+		"wps_nfc_dev_pw", "ext_password_backend",
+		"p2p_go_max_inactivity", "auto_interworking", "okc", "pmf",
+		"sae_groups", "dtim_period", "beacon_int", "ap_vendor_elements",
+		"ignore_old_scan_res", "freq_list"
+	};
+	int i, num_fields = sizeof(fields) / sizeof(fields[0]);
+
+	if (arg == 1) {
+		char **res = os_calloc(num_fields + 1, sizeof(char *));
+		if (res == NULL)
+			return NULL;
+		for (i = 0; i < num_fields; i++) {
+			res[i] = os_strdup(fields[i]);
+			if (res[i] == NULL)
+				return res;
+		}
+		return res;
+	}
+
+	return NULL;
 }
 
 
@@ -2322,7 +2354,7 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "quit", wpa_cli_cmd_quit, NULL,
 	  cli_cmd_flag_none,
 	  "= exit wpa_cli" },
-	{ "set", wpa_cli_cmd_set, NULL,
+	{ "set", wpa_cli_cmd_set, wpa_cli_complete_set,
 	  cli_cmd_flag_none,
 	  "= set variables (shows list of variables when run without "
 	  "arguments)" },

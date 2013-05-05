@@ -33,6 +33,35 @@ void wpas_hs20_add_indication(struct wpabuf *buf)
 }
 
 
+int is_hs20_network(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid,
+		    struct wpa_bss *bss)
+{
+	if (!wpa_s->conf->hs20 || !ssid)
+		return 0;
+
+	if (ssid->parent_cred)
+		return 1;
+
+	if (bss && !wpa_bss_get_vendor_ie(bss, HS20_IE_VENDOR_TYPE))
+		return 0;
+
+	/*
+	 * This may catch some non-Hotspot 2.0 cases, but it is safer to do that
+	 * than cause Hotspot 2.0 connections without indication element getting
+	 * added. Non-Hotspot 2.0 APs should ignore the unknown vendor element.
+	 */
+
+	if (!(ssid->key_mgmt & WPA_KEY_MGMT_IEEE8021X))
+		return 0;
+	if (!(ssid->pairwise_cipher & WPA_CIPHER_CCMP))
+		return 0;
+	if (ssid->proto != WPA_PROTO_RSN)
+		return 0;
+
+	return 1;
+}
+
+
 struct wpabuf * hs20_build_anqp_req(u32 stypes, const u8 *payload,
 				    size_t payload_len)
 {

@@ -631,6 +631,9 @@ static char ** wpa_cli_complete_set(const char *str, int pos)
 		return res;
 	}
 
+	if (arg > 1 && os_strncasecmp(str, "set bssid_filter ", 17) == 0)
+		return cli_txt_list_array(&bsses);
+
 	return NULL;
 }
 

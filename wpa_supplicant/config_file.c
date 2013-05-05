@@ -1015,6 +1015,16 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 	if (config->ignore_old_scan_res)
 		fprintf(f, "ignore_old_scan_res=%d\n",
 			config->ignore_old_scan_res);
+
+	if (config->freq_list && config->freq_list[0]) {
+		int i;
+		fprintf(f, "freq_list=");
+		for (i = 0; config->freq_list[i]; i++) {
+			fprintf(f, "%s%u", i > 0 ? " " : "",
+				config->freq_list[i]);
+		}
+		fprintf(f, "\n");
+	}
 }
 
 #endif /* CONFIG_NO_CONFIG_WRITE */

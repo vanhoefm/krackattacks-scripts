@@ -645,6 +645,14 @@ struct wpa_config {
 	unsigned int max_num_sta;
 
 	/**
+	 * freq_list - Array of allowed scan frequencies or %NULL for all
+	 *
+	 * This is an optional zero-terminated array of frequencies in
+	 * megahertz (MHz) to allow for narrowing scanning range.
+	 */
+	int *freq_list;
+
+	/**
 	 * changed_parameters - Bitmap of changed parameters since last update
 	 */
 	unsigned int changed_parameters;

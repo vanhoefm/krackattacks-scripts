@@ -1826,6 +1826,7 @@ void wpa_config_free(struct wpa_config *config)
 	os_free(config->pssid);
 	os_free(config->p2p_pref_chan);
 	os_free(config->autoscan);
+	os_free(config->freq_list);
 	wpabuf_free(config->wps_nfc_dh_pubkey);
 	wpabuf_free(config->wps_nfc_dh_privkey);
 	wpabuf_free(config->wps_nfc_dev_pw);
@@ -2733,6 +2734,21 @@ static int wpa_global_config_parse_bin(const struct global_parse_data *data,
 }
 
 
+static int wpa_config_process_freq_list(const struct global_parse_data *data,
+					struct wpa_config *config, int line,
+					const char *value)
+{
+	int *freqs;
+
+	freqs = wpa_config_parse_int_array(value);
+	if (freqs == NULL)
+		return -1;
+	os_free(config->freq_list);
+	config->freq_list = freqs;
+	return 0;
+}
+
+
 static int wpa_config_process_country(const struct global_parse_data *data,
 				      struct wpa_config *config, int line,
 				      const char *pos)
@@ -3088,6 +3104,7 @@ static const struct global_parse_data global_fields[] = {
 	{ INT(beacon_int), 0 },
 	{ FUNC(ap_vendor_elements), 0 },
 	{ INT_RANGE(ignore_old_scan_res, 0, 1), 0 },
+	{ FUNC(freq_list), 0 },
 };
 
 #undef FUNC

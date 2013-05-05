@@ -749,6 +749,13 @@ ssid_list_set:
 		os_free(wpa_s->next_scan_freqs);
 	wpa_s->next_scan_freqs = NULL;
 
+	/* See if user specified frequencies. If so, scan only those. */
+	if (wpa_s->conf->freq_list && !params.freqs) {
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"Optimize scan based on conf->freq_list");
+		int_array_concat(&params.freqs, wpa_s->conf->freq_list);
+	}
+
 	params.filter_ssids = wpa_supplicant_build_filter_ssids(
 		wpa_s->conf, &params.num_filter_ssids);
 	if (extra_ie) {

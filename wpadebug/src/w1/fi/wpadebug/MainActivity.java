@@ -53,6 +53,12 @@ public class MainActivity extends Activity
 	startActivity(intent);
     }
 
+    public void runWpaCredentials(View view)
+    {
+	Intent intent = new Intent(this, WpaCredActivity.class);
+	startActivity(intent);
+    }
+
     public void runWpaCliCmd(View view)
     {
 	Intent intent = new Intent(this, DisplayMessageActivity.class);

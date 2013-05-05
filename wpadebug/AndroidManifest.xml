@@ -36,5 +36,13 @@
 		  android:label="WPA command list"
 		  android:parentActivityName="w1.fi.wpadebug.MainActivity">
 	</activity>
+	<activity android:name="w1.fi.wpadebug.WpaCredActivity"
+		  android:label="Credentials"
+		  android:parentActivityName="w1.fi.wpadebug.MainActivity">
+	</activity>
+	<activity android:name="w1.fi.wpadebug.WpaCredEditActivity"
+		  android:label="Credential"
+		  android:parentActivityName="w1.fi.wpadebug.WpaCredActivity">
+	</activity>
     </application>
 </manifest>

@@ -4,105 +4,97 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     >
-	<TextView
-	    android:layout_width="wrap_content"
-	    android:layout_height="wrap_content"
-	    android:text="Framework commands"
-	    />
 	<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
 		      android:layout_width="match_parent"
 		      android:layout_height="wrap_content"
 		      android:orientation="horizontal"
 		      >
-		<Button
+		<TextView
 		    android:layout_width="wrap_content"
 		    android:layout_height="wrap_content"
-		    android:text="WifiManager"
-		    android:onClick="wifiManagerInfo"
+		    android:text="Username"
 		    />
-		<Button
-		    android:layout_width="wrap_content"
-		    android:layout_height="wrap_content"
-		    android:text="WifiInfo"
-		    android:onClick="wifiInfo"
-		    />
-		<Button
-		    android:layout_width="wrap_content"
-		    android:layout_height="wrap_content"
-		    android:text="Networks"
-		    android:onClick="wifiConfiguredNetworks"
-		    />
-	</LinearLayout>
-	<TextView
-	    android:layout_width="wrap_content"
-	    android:layout_height="wrap_content"
-	    android:text="wpa_supplicant commands"
-	    />
-	<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-		      android:layout_width="match_parent"
-		      android:layout_height="wrap_content"
-		      android:orientation="horizontal"
-		      >
-		<Button
-		    android:layout_width="wrap_content"
-		    android:layout_height="wrap_content"
-		    android:text="wpa_supplicant commands"
-		    android:onClick="runWpaCommands"
-		    />
-	</LinearLayout>
-	<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-		      android:layout_width="match_parent"
-		      android:layout_height="wrap_content"
-		      android:orientation="horizontal"
-		      >
-		<Button
-		    android:layout_width="wrap_content"
-		    android:layout_height="wrap_content"
-		    android:text="Credentials"
-		    android:onClick="runWpaCredentials"
-		    />
-	</LinearLayout>
-	<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-		      android:layout_width="match_parent"
-		      android:layout_height="wrap_content"
-		      android:orientation="horizontal"
-		      >
-		<Button
-		    android:layout_width="wrap_content"
-		    android:layout_height="wrap_content"
-		    android:text="log:info"
-		    android:onClick="wpaLogLevelInfo"
-		    />
-		<Button
-		    android:layout_width="wrap_content"
-		    android:layout_height="wrap_content"
-		    android:text="log:debug"
-		    android:onClick="wpaLogLevelDebug"
-		    />
-		<Button
-		    android:layout_width="wrap_content"
-		    android:layout_height="wrap_content"
-		    android:text="log:excessive"
-		    android:onClick="wpaLogLevelExcessive"
-		    />
-	</LinearLayout>
-	<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-		      android:layout_width="match_parent"
-		      android:layout_height="wrap_content"
-		      android:orientation="horizontal"
-		      >
-		<EditText android:id="@+id/edit_cmd"
+		<EditText android:id="@+id/cred_edit_username"
 			  android:layout_weight="1"
 			  android:layout_width="0dp"
 			  android:layout_height="wrap_content"
-			  android:hint="wpa_cli command"
+			  android:singleLine="true"
+			  android:lines="1"
 			  />
-		<Button
+	</LinearLayout>
+	<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+		      android:layout_width="match_parent"
+		      android:layout_height="wrap_content"
+		      android:orientation="horizontal"
+		      >
+		<TextView
 		    android:layout_width="wrap_content"
 		    android:layout_height="wrap_content"
-		    android:text="Run"
-		    android:onClick="runWpaCliCmd"
+		    android:text="Realm"
 		    />
+		<EditText android:id="@+id/cred_edit_realm"
+			  android:layout_weight="1"
+			  android:layout_width="0dp"
+			  android:layout_height="wrap_content"
+			  android:singleLine="true"
+			  android:lines="1"
+			  />
+	</LinearLayout>
+	<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+		      android:layout_width="match_parent"
+		      android:layout_height="wrap_content"
+		      android:orientation="horizontal"
+		      >
+		<TextView
+		    android:layout_width="wrap_content"
+		    android:layout_height="wrap_content"
+		    android:text="Password"
+		    />
+		<EditText android:id="@+id/cred_edit_password"
+			  android:layout_weight="1"
+			  android:layout_width="0dp"
+			  android:layout_height="wrap_content"
+			  android:singleLine="true"
+			  android:lines="1"
+			  android:inputType="textPassword"
+			  />
+	</LinearLayout>
+	<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+		      android:layout_width="match_parent"
+		      android:layout_height="wrap_content"
+		      android:orientation="horizontal"
+		      >
+		<TextView
+		    android:layout_width="wrap_content"
+		    android:layout_height="wrap_content"
+		    android:text="Domain"
+		    />
+		<EditText android:id="@+id/cred_edit_domain"
+			  android:layout_weight="1"
+			  android:layout_width="0dp"
+			  android:layout_height="wrap_content"
+			  android:singleLine="true"
+			  android:lines="1"
+			  />
+	</LinearLayout>
+	<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+		      android:layout_width="match_parent"
+		      android:layout_height="wrap_content"
+		      android:orientation="horizontal"
+		      >
+		<TextView
+		    android:layout_width="wrap_content"
+		    android:layout_height="wrap_content"
+		    android:text="IMSI"
+		    />
+		<EditText android:id="@+id/cred_edit_imsi"
+			  android:layout_weight="1"
+			  android:layout_width="0dp"
+			  android:layout_height="wrap_content"
+			  android:singleLine="true"
+			  android:lines="1"
+			  android:hint="Used only with SIM/USIM testing"
+			  />
 	</LinearLayout>
 	<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
 		      android:layout_width="match_parent"
@@ -112,25 +104,14 @@
 		<Button
 		    android:layout_width="wrap_content"
 		    android:layout_height="wrap_content"
-		    android:text="Shell commands"
-		    android:onClick="runCommands"
+		    android:text="Save"
+		    android:onClick="credSave"
 		    />
-	</LinearLayout>
-	<TextView
-	    android:layout_width="wrap_content"
-	    android:layout_height="wrap_content"
-	    android:text="NFC commands"
-	    />
-	<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-		      android:layout_width="match_parent"
-		      android:layout_height="wrap_content"
-		      android:orientation="horizontal"
-		      >
 		<Button
 		    android:layout_width="wrap_content"
 		    android:layout_height="wrap_content"
-		    android:text="WPS handover request"
-		    android:onClick="nfcWpsHandoverRequest"
+		    android:text="Cancel"
+		    android:onClick="credCancel"
 		    />
 	</LinearLayout>
 </LinearLayout>

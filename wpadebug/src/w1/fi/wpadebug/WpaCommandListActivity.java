@@ -59,8 +59,14 @@ public class WpaCommandListActivity extends ListActivity
 			   Toast.LENGTH_SHORT).show();
 	}
 
-	InputStream inres = getResources().openRawResource(R.raw.wpa_commands);
-	read_commands(list, new Scanner(inres));
+	InputStream inres;
+	try {
+	    inres = getResources().openRawResource(R.raw.wpa_commands);
+	    read_commands(list, new Scanner(inres));
+	} catch (android.content.res.Resources.NotFoundException e) {
+	    Toast.makeText(this, "Could not read internal resource",
+			   Toast.LENGTH_SHORT).show();
+	}
 
 	ArrayAdapter<CmdList> listAdapter;
 	listAdapter = new ArrayAdapter<CmdList>(this, android.R.layout.simple_list_item_1, list);

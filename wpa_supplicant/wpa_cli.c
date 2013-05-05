@@ -3289,6 +3289,37 @@ static void start_edit(void)
 }
 
 
+static void update_bssid_list(struct wpa_ctrl *ctrl)
+{
+	char buf[4096];
+	size_t len = sizeof(buf);
+	int ret;
+	char *cmd = "BSS RANGE=ALL MASK=0x2";
+	char *pos, *end;
+
+	if (ctrl == NULL)
+		return;
+	ret = wpa_ctrl_request(ctrl, cmd, os_strlen(cmd), buf, &len, NULL);
+	if (ret < 0)
+		return;
+	buf[len] = '\0';
+
+	pos = buf;
+	while (pos) {
+		pos = os_strstr(pos, "bssid=");
+		if (pos == NULL)
+			break;
+		pos += 6;
+		end = os_strchr(pos, '\n');
+		if (end == NULL)
+			break;
+		*end = '\0';
+		cli_txt_list_add(&bsses, pos);
+		pos = end + 1;
+	}
+}
+
+
 static void try_connection(void *eloop_ctx, void *timeout_ctx)
 {
 	if (ctrl_ifname == NULL)
@@ -3303,6 +3334,8 @@ static void try_connection(void *eloop_ctx, void *timeout_ctx)
 		eloop_register_timeout(1, 0, try_connection, NULL, NULL);
 		return;
 	}
+
+	update_bssid_list(ctrl_conn);
 
 	if (warning_displayed)
 		printf("Connection established.\n");

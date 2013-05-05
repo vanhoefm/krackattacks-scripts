@@ -345,7 +345,7 @@ static void insert_char(int c)
 
 static void process_cmd(void)
 {
-
+	currbuf_valid = 0;
 	if (cmdbuf_len == 0) {
 		printf("\n%s> ", ps2 ? ps2 : "");
 		fflush(stdout);

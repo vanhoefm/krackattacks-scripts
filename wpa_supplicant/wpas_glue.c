@@ -551,7 +551,7 @@ static int wpa_supplicant_tdls_oper(void *ctx, int oper, const u8 *peer)
 
 
 static int wpa_supplicant_tdls_peer_addset(
-	void *ctx, const u8 *peer, int add, u16 capability,
+	void *ctx, const u8 *peer, int add, u16 aid, u16 capability,
 	const u8 *supp_rates, size_t supp_rates_len,
 	const struct ieee80211_ht_capabilities *ht_capab,
 	const struct ieee80211_vht_capabilities *vht_capab,
@@ -563,7 +563,7 @@ static int wpa_supplicant_tdls_peer_addset(
 	os_memset(&params, 0, sizeof(params));
 
 	params.addr = peer;
-	params.aid = 1;
+	params.aid = add ? 1 : aid;
 	params.capability = capability;
 	params.flags = WPA_STA_TDLS_PEER | WPA_STA_AUTHORIZED;
 

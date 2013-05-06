@@ -6070,8 +6070,18 @@ static int wpa_driver_nl80211_sta_add(void *priv,
 	wpa_hexdump(MSG_DEBUG, "  * supported rates", params->supp_rates,
 		    params->supp_rates_len);
 	if (!params->set) {
-		wpa_printf(MSG_DEBUG, "  * aid=%u", params->aid);
-		NLA_PUT_U16(msg, NL80211_ATTR_STA_AID, params->aid);
+		if (params->aid) {
+			wpa_printf(MSG_DEBUG, "  * aid=%u", params->aid);
+			NLA_PUT_U16(msg, NL80211_ATTR_STA_AID, params->aid);
+		} else {
+			/*
+			 * cfg80211 validates that AID is non-zero, so we have
+			 * to make this a non-zero value for the TDLS case where
+			 * a dummy STA entry is used for now.
+			 */
+			wpa_printf(MSG_DEBUG, "  * aid=1 (TDLS workaround)");
+			NLA_PUT_U16(msg, NL80211_ATTR_STA_AID, 1);
+		}
 		wpa_printf(MSG_DEBUG, "  * listen_interval=%u",
 			   params->listen_interval);
 		NLA_PUT_U16(msg, NL80211_ATTR_STA_LISTEN_INTERVAL,

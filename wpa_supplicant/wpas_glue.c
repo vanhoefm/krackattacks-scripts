@@ -563,7 +563,7 @@ static int wpa_supplicant_tdls_peer_addset(
 	os_memset(&params, 0, sizeof(params));
 
 	params.addr = peer;
-	params.aid = add ? 1 : aid;
+	params.aid = aid;
 	params.capability = capability;
 	params.flags = WPA_STA_TDLS_PEER | WPA_STA_AUTHORIZED;
 

@@ -1265,7 +1265,6 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	enum wpa_cipher cipher_pairwise, cipher_group;
 	struct wpa_driver_associate_params params;
 	int wep_keys_set = 0;
-	struct wpa_driver_capa capa;
 	int assoc_failed = 0;
 	struct wpa_ssid *old_ssid;
 	u8 ext_capab[10];
@@ -1665,8 +1664,8 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 		wpa_supplicant_req_auth_timeout(wpa_s, timeout, 0);
 	}
 
-	if (wep_keys_set && wpa_drv_get_capa(wpa_s, &capa) == 0 &&
-	    capa.flags & WPA_DRIVER_FLAGS_SET_KEYS_AFTER_ASSOC) {
+	if (wep_keys_set &&
+	    (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SET_KEYS_AFTER_ASSOC)) {
 		/* Set static WEP keys again */
 		wpa_set_wep_keys(wpa_s, ssid);
 	}

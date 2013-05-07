@@ -1676,7 +1676,6 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 {
 	u8 bssid[ETH_ALEN];
 	int ft_completed;
-	struct wpa_driver_capa capa;
 
 #ifdef CONFIG_AP
 	if (wpa_s->ap_iface) {
@@ -1838,8 +1837,8 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 
 	if ((wpa_s->key_mgmt == WPA_KEY_MGMT_NONE ||
 	     wpa_s->key_mgmt == WPA_KEY_MGMT_IEEE8021X_NO_WPA) &&
-	    wpa_s->current_ssid && wpa_drv_get_capa(wpa_s, &capa) == 0 &&
-	    capa.flags & WPA_DRIVER_FLAGS_SET_KEYS_AFTER_ASSOC_DONE) {
+	    wpa_s->current_ssid &&
+	    (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SET_KEYS_AFTER_ASSOC_DONE)) {
 		/* Set static WEP keys again */
 		wpa_set_wep_keys(wpa_s, wpa_s->current_ssid);
 	}

@@ -1025,6 +1025,10 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 		}
 		fprintf(f, "\n");
 	}
+
+	if (config->sched_scan_interval)
+		fprintf(f, "sched_scan_interval=%u\n",
+			config->sched_scan_interval);
 }
 
 #endif /* CONFIG_NO_CONFIG_WRITE */

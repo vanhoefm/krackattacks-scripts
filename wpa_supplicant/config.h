@@ -862,6 +862,11 @@ struct wpa_config {
 	 * allowing it to update the internal BSS table.
 	 */
 	int ignore_old_scan_res;
+
+	/**
+	 * sched_scan_interval -  schedule scan interval
+	 */
+	unsigned int sched_scan_interval;
 };
 
 

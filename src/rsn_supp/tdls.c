@@ -698,13 +698,8 @@ int wpa_tdls_send_teardown(struct wpa_sm *sm, const u8 *addr, u16 reason_code)
 		return -1;
 	pos = rbuf;
 
-	if (!wpa_tdls_get_privacy(sm) || !peer->tpk_set || !peer->tpk_success) {
-		if (reason_code != WLAN_REASON_DEAUTH_LEAVING) {
-			/* Overwrite the reason code */
-			reason_code = WLAN_REASON_TDLS_TEARDOWN_UNSPECIFIED;
-		}
+	if (!wpa_tdls_get_privacy(sm) || !peer->tpk_set || !peer->tpk_success)
 		goto skip_ies;
-	}
 
 	ftie = (struct wpa_tdls_ftie *) pos;
 	ftie->ie_type = WLAN_EID_FAST_BSS_TRANSITION;

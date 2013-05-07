@@ -702,6 +702,8 @@ void wpa_supplicant_apply_vht_overrides(
 	struct wpa_driver_associate_params *params);
 
 int wpa_set_wep_keys(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid);
+int wpa_supplicant_set_wpa_none_key(struct wpa_supplicant *wpa_s,
+				    struct wpa_ssid *ssid);
 
 int wpa_supplicant_reload_configuration(struct wpa_supplicant *wpa_s);
 

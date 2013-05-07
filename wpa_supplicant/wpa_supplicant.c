@@ -126,8 +126,8 @@ int wpa_set_wep_keys(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid)
 }
 
 
-static int wpa_supplicant_set_wpa_none_key(struct wpa_supplicant *wpa_s,
-					   struct wpa_ssid *ssid)
+int wpa_supplicant_set_wpa_none_key(struct wpa_supplicant *wpa_s,
+				    struct wpa_ssid *ssid)
 {
 	u8 key[32];
 	size_t keylen;

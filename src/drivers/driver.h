@@ -866,6 +866,8 @@ struct wpa_driver_capa {
 #define WPA_DRIVER_FLAGS_OBSS_SCAN			0x04000000
 /* Driver supports IBSS (Ad-hoc) mode */
 #define WPA_DRIVER_FLAGS_IBSS				0x08000000
+/* Driver supports radar detection */
+#define WPA_DRIVER_FLAGS_RADAR				0x10000000
 	unsigned int flags;
 
 	int max_scan_ssids;

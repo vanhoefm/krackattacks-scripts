@@ -2680,6 +2680,7 @@ static int wiphy_info_iface_comb_process(struct wiphy_info_data *info,
 		[NL80211_IFACE_COMB_MAXNUM] = { .type = NLA_U32 },
 		[NL80211_IFACE_COMB_STA_AP_BI_MATCH] = { .type = NLA_FLAG },
 		[NL80211_IFACE_COMB_NUM_CHANNELS] = { .type = NLA_U32 },
+		[NL80211_IFACE_COMB_RADAR_DETECT_WIDTHS] = { .type = NLA_U32 },
 	},
 	iface_limit_policy[NUM_NL80211_IFACE_LIMIT] = {
 		[NL80211_IFACE_LIMIT_TYPES] = { .type = NLA_NESTED },
@@ -2692,6 +2693,9 @@ static int wiphy_info_iface_comb_process(struct wiphy_info_data *info,
 	    !tb_comb[NL80211_IFACE_COMB_MAXNUM] ||
 	    !tb_comb[NL80211_IFACE_COMB_NUM_CHANNELS])
 		return 0; /* broken combination */
+
+	if (tb_comb[NL80211_IFACE_COMB_RADAR_DETECT_WIDTHS])
+		info->capa->flags |= WPA_DRIVER_FLAGS_RADAR;
 
 	nla_for_each_nested(nl_limit, tb_comb[NL80211_IFACE_COMB_LIMITS],
 			    rem_limit) {

@@ -10,4 +10,4 @@ Type=simple
 ExecStart=@BINDIR@/wpa_supplicant -c/etc/wpa_supplicant/wpa_supplicant-nl80211-%I.conf -Dnl80211 -i%I
 
 [Install]
-Alias=multi-user.target.wants/wpa_supplicant-nl80211@wlan0.service
+Alias=multi-user.target.wants/wpa_supplicant-nl80211@%i.service

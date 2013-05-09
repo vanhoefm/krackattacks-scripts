@@ -10,4 +10,4 @@ Type=simple
 ExecStart=@BINDIR@/wpa_supplicant -c/etc/wpa_supplicant/wpa_supplicant-%I.conf -i%I
 
 [Install]
-Alias=multi-user.target.wants/wpa_supplicant@wlan0.service
+Alias=multi-user.target.wants/wpa_supplicant@%i.service

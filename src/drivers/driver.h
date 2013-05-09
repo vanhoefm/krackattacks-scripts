@@ -3100,7 +3100,38 @@ enum wpa_event_type {
 	 * with the specified client (for example, max client reached, etc.) in
 	 * AP mode.
 	 */
-	EVENT_CONNECT_FAILED_REASON
+	EVENT_CONNECT_FAILED_REASON,
+
+	/**
+	 * EVENT_RADAR_DETECTED - Notify of radar detection
+	 *
+	 * A radar has been detected on the supplied frequency, hostapd should
+	 * react accordingly (e.g., change channel).
+	 */
+	EVENT_DFS_RADAR_DETECTED,
+
+	/**
+	 * EVENT_CAC_FINISHED - Notify that channel availability check has been completed
+	 *
+	 * After a successful CAC, the channel can be marked clear and used.
+	 */
+	EVENT_DFS_CAC_FINISHED,
+
+	/**
+	 * EVENT_CAC_ABORTED - Notify that channel availability check has been aborted
+	 *
+	 * The CAC was not successful, and the channel remains in the previous
+	 * state. This may happen due to a radar beeing detected or other
+	 * external influences.
+	 */
+	EVENT_DFS_CAC_ABORTED,
+
+	/**
+	 * EVENT_DFS_CAC_NOP_FINISHED - Notify that non-occupancy period is over
+	 *
+	 * The channel which was previously unavailable is now available again.
+	 */
+	EVENT_DFS_NOP_FINISHED
 };
 
 
@@ -3738,6 +3769,14 @@ union wpa_event_data {
 			BLOCKED_CLIENT
 		} code;
 	} connect_failed_reason;
+
+	/**
+	 * struct dfs_event - Data for radar detected events
+	 * @freq: Frequency of the channel in MHz
+	 */
+	struct dfs_event {
+		int freq;
+	} dfs_event;
 };
 
 /**

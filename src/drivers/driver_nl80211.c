@@ -2234,6 +2234,43 @@ static void nl80211_connect_failed_event(struct wpa_driver_nl80211_data *drv,
 }
 
 
+static void nl80211_radar_event(struct wpa_driver_nl80211_data *drv,
+				struct nlattr **tb)
+{
+	union wpa_event_data data;
+	enum nl80211_radar_event event_type;
+
+	if (!tb[NL80211_ATTR_WIPHY_FREQ] || !tb[NL80211_ATTR_RADAR_EVENT])
+		return;
+
+	os_memset(&data, 0, sizeof(data));
+	data.dfs_event.freq = nla_get_u16(tb[NL80211_ATTR_WIPHY_FREQ]);
+	event_type = nla_get_u8(tb[NL80211_ATTR_RADAR_EVENT]);
+
+	wpa_printf(MSG_DEBUG, "nl80211: DFS event on freq %d MHz",
+		   data.dfs_event.freq);
+
+	switch (event_type) {
+	case NL80211_RADAR_DETECTED:
+		wpa_supplicant_event(drv->ctx, EVENT_DFS_RADAR_DETECTED, &data);
+		break;
+	case NL80211_RADAR_CAC_FINISHED:
+		wpa_supplicant_event(drv->ctx, EVENT_DFS_CAC_FINISHED, &data);
+		break;
+	case NL80211_RADAR_CAC_ABORTED:
+		wpa_supplicant_event(drv->ctx, EVENT_DFS_CAC_ABORTED, &data);
+		break;
+	case NL80211_RADAR_NOP_FINISHED:
+		wpa_supplicant_event(drv->ctx, EVENT_DFS_NOP_FINISHED, &data);
+		break;
+	default:
+		wpa_printf(MSG_DEBUG, "nl80211: Unknown radar event %d "
+			   "received", event_type);
+		break;
+	}
+}
+
+
 static void nl80211_spurious_frame(struct i802_bss *bss, struct nlattr **tb,
 				   int wds)
 {
@@ -2377,6 +2414,9 @@ static void do_process_drv_event(struct i802_bss *bss, int cmd,
 		break;
 	case NL80211_CMD_FT_EVENT:
 		mlme_event_ft_event(drv, tb);
+		break;
+	case NL80211_CMD_RADAR_DETECT:
+		nl80211_radar_event(drv, tb);
 		break;
 	default:
 		wpa_dbg(drv->ctx, MSG_DEBUG, "nl80211: Ignored unknown event "

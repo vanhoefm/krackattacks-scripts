@@ -799,6 +799,7 @@ void eloop_run(void)
 #endif /* CONFIG_ELOOP_POLL */
 	}
 
+	eloop.terminate = 0;
 out:
 #ifndef CONFIG_ELOOP_POLL
 	os_free(rfds);

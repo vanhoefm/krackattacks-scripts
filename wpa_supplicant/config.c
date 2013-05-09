@@ -2584,6 +2584,7 @@ struct wpa_config * wpa_config_alloc_empty(const char *ctrl_interface,
 	config->bss_expiration_scan_count = DEFAULT_BSS_EXPIRATION_SCAN_COUNT;
 	config->max_num_sta = DEFAULT_MAX_NUM_STA;
 	config->access_network_type = DEFAULT_ACCESS_NETWORK_TYPE;
+	config->scan_cur_freq = DEFAULT_SCAN_CUR_FREQ;
 	config->wmm_ac_params[0] = ac_be;
 	config->wmm_ac_params[1] = ac_bk;
 	config->wmm_ac_params[2] = ac_vi;
@@ -3105,6 +3106,7 @@ static const struct global_parse_data global_fields[] = {
 	{ FUNC(ap_vendor_elements), 0 },
 	{ INT_RANGE(ignore_old_scan_res, 0, 1), 0 },
 	{ FUNC(freq_list), 0 },
+	{ INT(scan_cur_freq), 0 },
 	{ INT(sched_scan_interval), 0 },
 };
 

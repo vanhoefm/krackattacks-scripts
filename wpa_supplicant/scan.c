@@ -481,6 +481,7 @@ static int non_p2p_network_enabled(struct wpa_supplicant *wpa_s)
 	return 0;
 }
 
+#endif /* CONFIG_P2P */
 
 /*
  * Find the operating frequency of any other virtual interface that is using
@@ -519,8 +520,6 @@ static int shared_vif_oper_freq(struct wpa_supplicant *wpa_s)
 
 	return 0;
 }
-
-#endif /* CONFIG_P2P */
 
 
 static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
@@ -754,6 +753,19 @@ ssid_list_set:
 		wpa_dbg(wpa_s, MSG_DEBUG,
 			"Optimize scan based on conf->freq_list");
 		int_array_concat(&params.freqs, wpa_s->conf->freq_list);
+	}
+
+	/* Use current associated channel? */
+	if (wpa_s->conf->scan_cur_freq && !params.freqs) {
+		int freq = shared_vif_oper_freq(wpa_s);
+		if (freq > 0) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "Scan only the current "
+				"operating channel (%d MHz) since "
+				"scan_cur_freq is enabled", freq);
+			params.freqs = os_zalloc(sizeof(int) * 2);
+			if (params.freqs)
+				params.freqs[0] = freq;
+		}
 	}
 
 	params.filter_ssids = wpa_supplicant_build_filter_ssids(

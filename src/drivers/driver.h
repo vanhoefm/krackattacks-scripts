@@ -2655,6 +2655,14 @@ struct wpa_driver_ops {
 	 * avoid frequency conflict in single channel concurrency.
 	 */
 	int (*switch_channel)(void *priv, unsigned int freq);
+
+	/**
+	 * start_dfs_cac - Listen for radar interference on the channel
+	 * @priv: Private driver interface data
+	 * @freq: Frequency (in MHz) of the channel
+	 * Returns: 0 on success, -1 on failure
+	 */
+	int (*start_dfs_cac)(void *priv, int freq);
 };
 
 

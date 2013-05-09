@@ -5162,6 +5162,22 @@ static void phy_info_freq(struct hostapd_hw_modes *mode,
 	    !tb_freq[NL80211_FREQUENCY_ATTR_DISABLED])
 		chan->max_tx_power = nla_get_u32(
 			tb_freq[NL80211_FREQUENCY_ATTR_MAX_TX_POWER]) / 100;
+	if (tb_freq[NL80211_FREQUENCY_ATTR_DFS_STATE]) {
+		enum nl80211_dfs_state state =
+			nla_get_u32(tb_freq[NL80211_FREQUENCY_ATTR_DFS_STATE]);
+
+		switch (state) {
+		case NL80211_DFS_USABLE:
+			chan->flag |= HOSTAPD_CHAN_DFS_USABLE;
+			break;
+		case NL80211_DFS_AVAILABLE:
+			chan->flag |= HOSTAPD_CHAN_DFS_AVAILABLE;
+			break;
+		case NL80211_DFS_UNAVAILABLE:
+			chan->flag |= HOSTAPD_CHAN_DFS_UNAVAILABLE;
+			break;
+		}
+	}
 }
 
 
@@ -5175,6 +5191,7 @@ static int phy_info_freqs(struct phy_info_arg *phy_info,
 		[NL80211_FREQUENCY_ATTR_NO_IBSS] = { .type = NLA_FLAG },
 		[NL80211_FREQUENCY_ATTR_RADAR] = { .type = NLA_FLAG },
 		[NL80211_FREQUENCY_ATTR_MAX_TX_POWER] = { .type = NLA_U32 },
+		[NL80211_FREQUENCY_ATTR_DFS_STATE] = { .type = NLA_U32 },
 	};
 	int new_channels = 0;
 	struct hostapd_channel_data *channel;

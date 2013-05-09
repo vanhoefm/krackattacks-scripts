@@ -498,6 +498,8 @@ struct hostapd_config {
 
 	int ieee80211d;
 
+	int ieee80211h; /* DFS */
+
 	struct hostapd_tx_queue_params tx_queue[NUM_TX_QUEUES];
 
 	/*

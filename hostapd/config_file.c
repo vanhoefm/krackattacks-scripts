@@ -1223,6 +1223,12 @@ static int hostapd_config_check(struct hostapd_config *conf)
 		return -1;
 	}
 
+	if (conf->ieee80211h && !conf->ieee80211d) {
+		wpa_printf(MSG_ERROR, "Cannot enable IEEE 802.11h without "
+			   "IEEE 802.11d enabled");
+		return -1;
+	}
+
 	for (i = 0; i < conf->num_bss; i++) {
 		if (hostapd_config_check_bss(&conf->bss[i], conf))
 			return -1;
@@ -1784,6 +1790,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			conf->country[2] = ' ';
 		} else if (os_strcmp(buf, "ieee80211d") == 0) {
 			conf->ieee80211d = atoi(pos);
+		} else if (os_strcmp(buf, "ieee80211h") == 0) {
+			conf->ieee80211h = atoi(pos);
 		} else if (os_strcmp(buf, "ieee8021x") == 0) {
 			bss->ieee802_1x = atoi(pos);
 		} else if (os_strcmp(buf, "eapol_version") == 0) {

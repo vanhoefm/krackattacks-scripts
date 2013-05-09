@@ -2663,6 +2663,17 @@ struct wpa_driver_ops {
 	 * Returns: 0 on success, -1 on failure
 	 */
 	int (*start_dfs_cac)(void *priv, int freq);
+
+	/**
+	 * stop_ap - Removes beacon from AP
+	 * @priv: Private driver interface data
+	 * Returns: 0 on success, -1 on failure (or if not supported)
+	 *
+	 * This optional function can be used to disable AP mode related
+	 * configuration. Unlike deinit_ap, it does not change to station
+	 * mode.
+	 */
+	int (*stop_ap)(void *priv);
 };
 
 

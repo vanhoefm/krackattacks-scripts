@@ -8986,6 +8986,18 @@ static int wpa_driver_nl80211_deinit_ap(void *priv)
 }
 
 
+static int wpa_driver_nl80211_stop_ap(void *priv)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	if (!is_ap_interface(drv->nlmode))
+		return -1;
+	wpa_driver_nl80211_del_beacon(drv);
+	bss->beacon_set = 0;
+	return 0;
+}
+
+
 static int wpa_driver_nl80211_deinit_p2p_cli(void *priv)
 {
 	struct i802_bss *bss = priv;
@@ -9913,6 +9925,7 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.poll_client = nl80211_poll_client,
 	.set_p2p_powersave = nl80211_set_p2p_powersave,
 	.start_dfs_cac = nl80211_start_radar_detection,
+	.stop_ap = wpa_driver_nl80211_stop_ap,
 #ifdef CONFIG_TDLS
 	.send_tdls_mgmt = nl80211_send_tdls_mgmt,
 	.tdls_oper = nl80211_tdls_oper,

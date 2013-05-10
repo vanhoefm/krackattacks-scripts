@@ -13,7 +13,7 @@ import wpaspy
 
 logger = logging.getLogger(__name__)
 hapd_ctrl = '/var/run/hostapd'
-hapd_global = 'hostapd-global'
+hapd_global = '/var/run/hostapd-global'
 
 class HostapdGlobal:
     def __init__(self):

@@ -6,13 +6,18 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+import os
 import subprocess
 import logging
 logger = logging.getLogger(__name__)
 
 def test_connectivity(ifname1, ifname2):
+    if os.path.isfile("../../mac80211_hwsim/tools/hwsim_test"):
+        hwsim_test = "../../mac80211_hwsim/tools/hwsim_test"
+    else:
+        hwsim_test = "hwsim_test"
     cmd = ["sudo",
-           "../../mac80211_hwsim/tools/hwsim_test",
+           hwsim_test,
            ifname1,
            ifname2]
     try:

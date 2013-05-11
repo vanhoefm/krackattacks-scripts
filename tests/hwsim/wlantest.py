@@ -13,52 +13,58 @@ import logging
 import wpaspy
 
 logger = logging.getLogger(__name__)
-wlantest_cli = '../../wlantest/wlantest_cli'
 
 class Wlantest:
+    def __init__(self):
+        if os.path.isfile('../../wlantest/wlantest_cli'):
+            self.wlantest_cli = '../../wlantest/wlantest_cli'
+        else:
+            self.wlantest_cli = 'wlantest_cli'
+
     def flush(self):
-        res = subprocess.check_output([wlantest_cli, "flush"])
+        res = subprocess.check_output([self.wlantest_cli, "flush"])
         if "FAIL" in res:
             raise Exception("wlantest_cli flush failed")
 
     def add_passphrase(self, passphrase):
-        res = subprocess.check_output([wlantest_cli, "add_passphrase",
+        res = subprocess.check_output([self.wlantest_cli, "add_passphrase",
                                        passphrase])
         if "FAIL" in res:
             raise Exception("wlantest_cli add_passphrase failed")
 
     def add_wepkey(self, key):
-        res = subprocess.check_output([wlantest_cli, "add_wepkey", key])
+        res = subprocess.check_output([self.wlantest_cli, "add_wepkey", key])
         if "FAIL" in res:
             raise Exception("wlantest_cli add_key failed")
 
     def info_bss(self, field, bssid):
-        res = subprocess.check_output([wlantest_cli, "info_bss", field, bssid])
+        res = subprocess.check_output([self.wlantest_cli, "info_bss",
+                                       field, bssid])
         if "FAIL" in res:
             raise Exception("Could not get BSS info from wlantest for " + bssid)
         return res
 
     def info_sta(self, field, bssid, addr):
-        res = subprocess.check_output([wlantest_cli, "info_sta", field, bssid,
-                                       addr])
+        res = subprocess.check_output([self.wlantest_cli, "info_sta",
+                                       field, bssid, addr])
         if "FAIL" in res:
             raise Exception("Could not get STA info from wlantest for " + addr)
         return res
 
     def get_sta_counter(self, field, bssid, addr):
-        res = subprocess.check_output([wlantest_cli, "get_sta_counter", field,
-                                       bssid, addr]);
+        res = subprocess.check_output([self.wlantest_cli, "get_sta_counter",
+                                       field, bssid, addr]);
         if "FAIL" in res:
             raise Exception("wlantest_cli command failed")
         return int(res)
 
     def tdls_clear(self, bssid, addr1, addr2):
-        subprocess.call([wlantest_cli, "clear_tdls_counters", bssid, addr1,
+        subprocess.call([self.wlantest_cli, "clear_tdls_counters", bssid, addr1,
                          addr2]);
 
     def get_tdls_counter(self, field, bssid, addr1, addr2):
-        res = subprocess.check_output([wlantest_cli, "get_tdls_counter", field,
-                                       bssid, addr1, addr2]);
+        res = subprocess.check_output([self.wlantest_cli, "get_tdls_counter",
+                                       field, bssid, addr1, addr2]);
         if "FAIL" in res:
             raise Exception("wlantest_cli command failed")
         return int(res)

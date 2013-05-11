@@ -42,6 +42,7 @@ please do not run them.
 
 adb root
 adb remount
+adb shell cp /system/bin/mksh /system/bin/mksh-su
 adb shell chmod 6755 /system/bin/mksh-su
 
 Optionally, a text file with a set of command can be installed to allow

@@ -1964,8 +1964,9 @@ static void wpa_supplicant_event_disassoc_finish(struct wpa_supplicant *wpa_s,
 			"pre-shared key may be incorrect");
 		wpas_auth_failed(wpa_s);
 	}
-	if (!wpa_s->auto_reconnect_disabled ||
-	    wpa_s->key_mgmt == WPA_KEY_MGMT_WPS) {
+	if (!wpa_s->disconnected &&
+	    (!wpa_s->auto_reconnect_disabled ||
+	     wpa_s->key_mgmt == WPA_KEY_MGMT_WPS)) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Auto connect enabled: try to "
 			"reconnect (wps=%d wpa_state=%d)",
 			wpa_s->key_mgmt == WPA_KEY_MGMT_WPS,

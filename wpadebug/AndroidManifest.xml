@@ -53,5 +53,15 @@
                 <action android:name="android.intent.action.MAIN" />
             </intent-filter>
 	</activity>
+	<receiver android:name="w1.fi.wpadebug.WifiReceiver">
+		<intent-filter>
+			<action android:name="android.net.wifi.STATE_CHANGE" />
+			<action android:name="android.net.wifi.RSSI_CHANGED" />
+			<action android:name="android.net.wifi.SCAN_RESULTS" />
+			<action android:name="android.net.wifi.supplicant.CONNECTION_CHANGE" />
+			<action android:name="android.net.wifi.supplicant.STATE_CHANGE" />
+			<action android:name="android.net.wifi.WIFI_STATE_CHANGED" />
+		</intent-filter>
+	</receiver>
     </application>
 </manifest>

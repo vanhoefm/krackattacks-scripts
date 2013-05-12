@@ -3525,6 +3525,17 @@ void wpas_connection_failed(struct wpa_supplicant *wpa_s, const u8 *bssid)
 	 */
 	eloop_cancel_timeout(wpa_supplicant_timeout, wpa_s, NULL);
 
+	if (wpa_s->disconnected) {
+		/*
+		 * There is no point in blacklisting the AP if this event is
+		 * generated based on local request to disconnect.
+		 */
+		wpa_dbg(wpa_s, MSG_DEBUG, "Ignore connection failure "
+			"indication since interface has been put into "
+			"disconnected state");
+		return;
+	}
+
 	/*
 	 * Add the failed BSSID into the blacklist and speed up next scan
 	 * attempt if there could be other APs that could accept association.

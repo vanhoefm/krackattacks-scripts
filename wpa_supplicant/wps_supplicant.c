@@ -648,6 +648,9 @@ static void wpa_supplicant_wps_event_success(struct wpa_supplicant *wpa_s)
 	wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_SUCCESS);
 	wpa_s->wps_success = 1;
 	wpas_notify_wps_event_success(wpa_s);
+	if (wpa_s->current_ssid)
+		wpas_clear_temp_disabled(wpa_s, wpa_s->current_ssid, 1);
+	wpa_s->extra_blacklist_count = 0;
 
 	/*
 	 * Enable the networks disabled during wpas_wps_reassoc after 10

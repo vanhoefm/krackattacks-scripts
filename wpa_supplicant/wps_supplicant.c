@@ -964,21 +964,10 @@ static struct wpa_ssid * wpas_wps_add_network(struct wpa_supplicant *wpa_s,
 }
 
 
-static void wpas_wps_reassoc(struct wpa_supplicant *wpa_s,
-			     struct wpa_ssid *selected, const u8 *bssid)
+static void wpas_wps_temp_disable(struct wpa_supplicant *wpa_s,
+				  struct wpa_ssid *selected)
 {
 	struct wpa_ssid *ssid;
-	struct wpa_bss *bss;
-
-	wpa_s->after_wps = 0;
-	wpa_s->known_wps_freq = 0;
-	if (bssid) {
-		bss = wpa_bss_get_bssid_latest(wpa_s, bssid);
-		if (bss && bss->freq > 0) {
-			wpa_s->known_wps_freq = 1;
-			wpa_s->wps_freq = bss->freq;
-		}
-	}
 
 	if (wpa_s->current_ssid)
 		wpa_supplicant_deauthenticate(
@@ -1006,6 +995,26 @@ static void wpas_wps_reassoc(struct wpa_supplicant *wpa_s,
 		}
 		ssid = ssid->next;
 	}
+}
+
+
+static void wpas_wps_reassoc(struct wpa_supplicant *wpa_s,
+			     struct wpa_ssid *selected, const u8 *bssid)
+{
+	struct wpa_bss *bss;
+
+	wpa_s->after_wps = 0;
+	wpa_s->known_wps_freq = 0;
+	if (bssid) {
+		bss = wpa_bss_get_bssid_latest(wpa_s, bssid);
+		if (bss && bss->freq > 0) {
+			wpa_s->known_wps_freq = 1;
+			wpa_s->wps_freq = bss->freq;
+		}
+	}
+
+	wpas_wps_temp_disable(wpa_s, selected);
+
 	wpa_s->disconnected = 0;
 	wpa_s->reassociate = 1;
 	wpa_s->scan_runs = 0;
@@ -2086,6 +2095,15 @@ static int wpas_wps_use_cred(struct wpa_supplicant *wpa_s,
 			     struct wps_parse_attr *attr)
 {
 	wpa_s->wps_ap_channel = 0;
+
+	/*
+	 * Disable existing networks temporarily to allow the newly learned
+	 * credential to be preferred. Enable the temporarily disabled networks
+	 * after 10 seconds.
+	 */
+	wpas_wps_temp_disable(wpa_s, NULL);
+	eloop_register_timeout(10, 0, wpas_wps_reenable_networks_cb, wpa_s,
+			       NULL);
 
 	if (wps_oob_use_cred(wpa_s->wps, attr) < 0)
 		return -1;

@@ -17,6 +17,7 @@
 #include "dbus_common_i.h"
 #include "dbus_new.h"
 #include "dbus_old.h"
+#include "../wpa_supplicant_i.h"
 
 
 #ifndef SIGPOLL
@@ -257,6 +258,22 @@ static int integrate_with_eloop(struct wpas_dbus_priv *priv)
 }
 
 
+static DBusHandlerResult disconnect_filter(DBusConnection *conn,
+                                           DBusMessage *message, void *data)
+{
+	struct wpas_dbus_priv *priv = data;
+
+	if (dbus_message_is_signal(message, DBUS_INTERFACE_LOCAL,
+	                           "Disconnected")) {
+		wpa_printf(MSG_DEBUG, "dbus: bus disconnected, terminating");
+		dbus_connection_set_exit_on_disconnect(conn, FALSE);
+		wpa_supplicant_terminate_proc(priv->global);
+		return DBUS_HANDLER_RESULT_HANDLED;
+	} else
+		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+}
+
+
 static int wpas_dbus_init_common(struct wpas_dbus_priv *priv)
 {
 	DBusError error;
@@ -265,7 +282,10 @@ static int wpas_dbus_init_common(struct wpas_dbus_priv *priv)
 	/* Get a reference to the system bus */
 	dbus_error_init(&error);
 	priv->con = dbus_bus_get(DBUS_BUS_SYSTEM, &error);
-	if (!priv->con) {
+	if (priv->con) {
+		dbus_connection_add_filter(priv->con, disconnect_filter, priv,
+		                           NULL);
+	} else {
 		wpa_printf(MSG_ERROR, "dbus: Could not acquire the system "
 			   "bus: %s - %s", error.name, error.message);
 		ret = -1;
@@ -304,6 +324,9 @@ static void wpas_dbus_deinit_common(struct wpas_dbus_priv *priv)
 						    NULL, NULL, NULL);
 		dbus_connection_set_timeout_functions(priv->con, NULL, NULL,
 						      NULL, NULL, NULL);
+		dbus_connection_remove_filter(priv->con, disconnect_filter,
+					      priv);
+
 		dbus_connection_unref(priv->con);
 	}
 

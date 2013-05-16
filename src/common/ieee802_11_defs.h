@@ -549,6 +549,14 @@ struct ieee80211_mgmt {
 					 * Entries (optional) */
 					u8 variable[0];
 				} STRUCT_PACKED bss_tm_resp;
+				struct {
+					u8 action; /* 6 */
+					u8 dialog_token;
+					u8 query_reason;
+					/* BSS Transition Candidate List
+					 * Entries (optional) */
+					u8 variable[0];
+				} STRUCT_PACKED bss_tm_query;
 			} u;
 		} STRUCT_PACKED action;
 	} u;

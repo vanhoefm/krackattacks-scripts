@@ -681,6 +681,41 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 }
 
 
+int wnm_send_bss_transition_mgmt_query(struct wpa_supplicant *wpa_s,
+				       u8 query_reason)
+{
+	u8 buf[1000], *pos;
+	struct ieee80211_mgmt *mgmt;
+	size_t len;
+	int ret;
+
+	wpa_printf(MSG_DEBUG, "WNM: Send BSS Transition Management Query to "
+		   MACSTR " query_reason=%u",
+		   MAC2STR(wpa_s->bssid), query_reason);
+
+	mgmt = (struct ieee80211_mgmt *) buf;
+	os_memset(&buf, 0, sizeof(buf));
+	os_memcpy(mgmt->da, wpa_s->bssid, ETH_ALEN);
+	os_memcpy(mgmt->sa, wpa_s->own_addr, ETH_ALEN);
+	os_memcpy(mgmt->bssid, wpa_s->bssid, ETH_ALEN);
+	mgmt->frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
+					   WLAN_FC_STYPE_ACTION);
+	mgmt->u.action.category = WLAN_ACTION_WNM;
+	mgmt->u.action.u.bss_tm_query.action = WNM_BSS_TRANS_MGMT_QUERY;
+	mgmt->u.action.u.bss_tm_query.dialog_token = 0;
+	mgmt->u.action.u.bss_tm_query.query_reason = query_reason;
+	pos = mgmt->u.action.u.bss_tm_query.variable;
+
+	len = pos - (u8 *) &mgmt->u.action.category;
+
+	ret = wpa_drv_send_action(wpa_s, wpa_s->assoc_freq, 0, wpa_s->bssid,
+				  wpa_s->own_addr, wpa_s->bssid,
+				  &mgmt->u.action.category, len, 0);
+
+	return ret;
+}
+
+
 void ieee802_11_rx_wnm_action(struct wpa_supplicant *wpa_s,
 			      struct rx_action *action)
 {

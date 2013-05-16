@@ -4975,6 +4975,19 @@ static int wpas_ctrl_iface_wnm_sleep(struct wpa_supplicant *wpa_s, char *cmd)
 	return ret;
 }
 
+
+static int wpas_ctrl_iface_wnm_bss_query(struct wpa_supplicant *wpa_s, char *cmd)
+{
+	int query_reason;
+
+	query_reason = atoi(cmd);
+
+	wpa_printf(MSG_DEBUG, "CTRL_IFACE: WNM_BSS_QUERY query_reason=%d",
+		   query_reason);
+
+	return wnm_send_bss_transition_mgmt_query(wpa_s, query_reason);
+}
+
 #endif /* CONFIG_WNM */
 
 
@@ -5589,6 +5602,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strncmp(buf, "WNM_SLEEP ", 10) == 0) {
 		if (wpas_ctrl_iface_wnm_sleep(wpa_s, buf + 10))
 			reply_len = -1;
+	} else if (os_strncmp(buf, "WNM_BSS_QUERY ", 10) == 0) {
+		if (wpas_ctrl_iface_wnm_bss_query(wpa_s, buf + 10))
+				reply_len = -1;
 #endif /* CONFIG_WNM */
 	} else if (os_strcmp(buf, "FLUSH") == 0) {
 		wpa_supplicant_ctrl_iface_flush(wpa_s);

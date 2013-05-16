@@ -83,6 +83,8 @@ void ieee802_11_rx_wnm_action(struct wpa_supplicant *wpa_s,
 void wnm_scan_response(struct wpa_supplicant *wpa_s,
 		       struct wpa_scan_results *scan_res);
 
+int wnm_send_bss_transition_mgmt_query(struct wpa_supplicant *wpa_s,
+				       u8 query_reason);
 void wnm_deallocate_memory(struct wpa_supplicant *wpa_s);
 
 #endif /* WNM_STA_H */

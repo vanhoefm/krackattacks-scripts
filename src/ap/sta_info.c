@@ -545,13 +545,16 @@ struct sta_info * ap_sta_add(struct hostapd_data *hapd, const u8 *addr)
 	sta->acct_interim_interval = hapd->conf->acct_interim_interval;
 	accounting_sta_get_id(hapd, sta);
 
+	if (!(hapd->iface->drv_flags & WPA_DRIVER_FLAGS_INACTIVITY_TIMER)) {
+		wpa_printf(MSG_DEBUG, "%s: register ap_handle_timer timeout "
+			   "for " MACSTR " (%d seconds - ap_max_inactivity)",
+			   __func__, MAC2STR(addr),
+			   hapd->conf->ap_max_inactivity);
+		eloop_register_timeout(hapd->conf->ap_max_inactivity, 0,
+				       ap_handle_timer, hapd, sta);
+	}
+
 	/* initialize STA info data */
-	wpa_printf(MSG_DEBUG, "%s: register ap_handle_timer timeout "
-		   "for " MACSTR " (%d seconds - ap_max_inactivity)",
-		   __func__, MAC2STR(addr),
-		   hapd->conf->ap_max_inactivity);
-	eloop_register_timeout(hapd->conf->ap_max_inactivity, 0,
-			       ap_handle_timer, hapd, sta);
 	os_memcpy(sta->addr, addr, ETH_ALEN);
 	sta->next = hapd->sta_list;
 	hapd->sta_list = sta;

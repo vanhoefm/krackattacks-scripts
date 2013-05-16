@@ -49,6 +49,7 @@
 #include "scan.h"
 #include "offchannel.h"
 #include "hs20_supplicant.h"
+#include "wnm_sta.h"
 
 const char *wpa_supplicant_version =
 "wpa_supplicant v" VERSION_STR "\n"
@@ -470,6 +471,9 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 	wpa_s->disallow_aps_ssid = NULL;
 
 	wnm_bss_keep_alive_deinit(wpa_s);
+#ifdef CONFIG_WNM
+	wnm_deallocate_memory(wpa_s);
+#endif /* CONFIG_WNM */
 
 	ext_password_deinit(wpa_s->ext_pw);
 	wpa_s->ext_pw = NULL;

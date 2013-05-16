@@ -690,6 +690,17 @@ struct wpa_supplicant {
 	u8 last_gas_dialog_token;
 
 	unsigned int no_keep_alive:1;
+
+#ifdef CONFIG_WNM
+	u8 wnm_dialog_token;
+	u8 wnm_reply;
+	u8 wnm_num_neighbor_report;
+	u8 wnm_mode;
+	u16 wnm_dissoc_timer;
+	u8 wnm_validity_interval;
+	u8 wnm_bss_termination_duration[12];
+	struct neighbor_report *wnm_neighbor_report_elements;
+#endif /* CONFIG_WNM */
 };
 
 

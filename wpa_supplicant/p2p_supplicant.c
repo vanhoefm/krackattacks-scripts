@@ -3030,6 +3030,12 @@ int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s)
 		wpa_printf(MSG_DEBUG, "P2P: Random operating channel: "
 			   "%d:%d", p2p.op_reg_class, p2p.op_channel);
 	}
+
+	if (wpa_s->conf->p2p_pref_chan && wpa_s->conf->num_p2p_pref_chan) {
+		p2p.pref_chan = wpa_s->conf->p2p_pref_chan;
+		p2p.num_pref_chan = wpa_s->conf->num_p2p_pref_chan;
+	}
+
 	if (wpa_s->conf->country[0] && wpa_s->conf->country[1]) {
 		os_memcpy(p2p.country, wpa_s->conf->country, 2);
 		p2p.country[2] = 0x04;

@@ -1631,6 +1631,15 @@ int p2p_channels_includes_freq(const struct p2p_channels *channels,
  */
 int p2p_supported_freq(struct p2p_data *p2p, unsigned int freq);
 
+/**
+ * p2p_get_pref_freq - Get channel from preferred channel list
+ * @p2p: P2P module context from p2p_init()
+ * @channels: List of channels
+ * Returns: Preferred channel
+ */
+unsigned int p2p_get_pref_freq(struct p2p_data *p2p,
+			       const struct p2p_channels *channels);
+
 void p2p_update_channel_list(struct p2p_data *p2p, struct p2p_channels *chan);
 
 /**

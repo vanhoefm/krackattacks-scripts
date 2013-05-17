@@ -3993,6 +3993,7 @@ static int wpas_p2p_init_go_params(struct wpa_supplicant *wpa_s,
 {
 	u8 bssid[ETH_ALEN];
 	int res;
+	unsigned int pref_freq;
 
 	os_memset(params, 0, sizeof(*params));
 	params->role_go = 1;
@@ -4049,6 +4050,11 @@ static int wpas_p2p_init_go_params(struct wpa_supplicant *wpa_s,
 		params->freq = wpa_s->best_5_freq;
 		wpa_printf(MSG_DEBUG, "P2P: Set GO freq based on best 5 GHz "
 			   "channel %d MHz", params->freq);
+	} else if ((pref_freq = p2p_get_pref_freq(wpa_s->global->p2p,
+						  channels))) {
+		params->freq = pref_freq;
+		wpa_printf(MSG_DEBUG, "P2P: Set GO freq %d MHz from preferred "
+			   "channels", params->freq);
 	} else {
 		int chan;
 		for (chan = 0; chan < 11; chan++) {

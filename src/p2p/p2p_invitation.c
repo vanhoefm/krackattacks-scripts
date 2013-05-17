@@ -322,6 +322,14 @@ void p2p_process_invitation_req(struct p2p_data *p2p, const u8 *sa,
 				status = P2P_SC_FAIL_NO_COMMON_CHANNELS;
 				goto fail;
 			}
+		} else if (!(dev->flags & P2P_DEV_FORCE_FREQ) &&
+			   !p2p->cfg->cfg_op_channel) {
+			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
+				"P2P: Try to reselect channel selection with "
+				"peer information received; "
+				"previously selected op_class %u channel %u",
+				p2p->op_reg_class, p2p->op_channel);
+			p2p_reselect_channel(p2p, &intersection);
 		}
 
 		op_freq = p2p_channel_to_freq(p2p->op_reg_class,

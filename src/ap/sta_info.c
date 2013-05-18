@@ -855,6 +855,7 @@ void ap_sta_set_authorized(struct hostapd_data *hapd, struct sta_info *sta,
 			   int authorized)
 {
 	const u8 *dev_addr = NULL;
+	char buf[100];
 #ifdef CONFIG_P2P
 	u8 addr[ETH_ALEN];
 #endif /* CONFIG_P2P */
@@ -871,44 +872,29 @@ void ap_sta_set_authorized(struct hostapd_data *hapd, struct sta_info *sta,
 		dev_addr = p2p_group_get_dev_addr(hapd->p2p_group, sta->addr);
 #endif /* CONFIG_P2P */
 
+	if (dev_addr)
+		os_snprintf(buf, sizeof(buf), MACSTR " p2p_dev_addr=" MACSTR,
+			    MAC2STR(sta->addr), MAC2STR(dev_addr));
+	else
+		os_snprintf(buf, sizeof(buf), MACSTR, MAC2STR(sta->addr));
+
 	if (authorized) {
-		if (dev_addr)
-			wpa_msg(hapd->msg_ctx, MSG_INFO, AP_STA_CONNECTED
-				MACSTR " p2p_dev_addr=" MACSTR,
-				MAC2STR(sta->addr), MAC2STR(dev_addr));
-		else
-			wpa_msg(hapd->msg_ctx, MSG_INFO, AP_STA_CONNECTED
-				MACSTR, MAC2STR(sta->addr));
+		wpa_msg(hapd->msg_ctx, MSG_INFO, AP_STA_CONNECTED "%s", buf);
+
 		if (hapd->msg_ctx_parent &&
-		    hapd->msg_ctx_parent != hapd->msg_ctx && dev_addr)
+		    hapd->msg_ctx_parent != hapd->msg_ctx)
 			wpa_msg(hapd->msg_ctx_parent, MSG_INFO,
-				AP_STA_CONNECTED MACSTR " p2p_dev_addr="
-				MACSTR,
-				MAC2STR(sta->addr), MAC2STR(dev_addr));
-		else if (hapd->msg_ctx_parent &&
-			 hapd->msg_ctx_parent != hapd->msg_ctx)
-			wpa_msg(hapd->msg_ctx_parent, MSG_INFO,
-				AP_STA_CONNECTED MACSTR, MAC2STR(sta->addr));
+				AP_STA_CONNECTED "%s", buf);
 
 		sta->flags |= WLAN_STA_AUTHORIZED;
 	} else {
-		if (dev_addr)
-			wpa_msg(hapd->msg_ctx, MSG_INFO, AP_STA_DISCONNECTED
-				MACSTR " p2p_dev_addr=" MACSTR,
-				MAC2STR(sta->addr), MAC2STR(dev_addr));
-		else
-			wpa_msg(hapd->msg_ctx, MSG_INFO, AP_STA_DISCONNECTED
-				MACSTR, MAC2STR(sta->addr));
+		wpa_msg(hapd->msg_ctx, MSG_INFO, AP_STA_DISCONNECTED "%s", buf);
+
 		if (hapd->msg_ctx_parent &&
-		    hapd->msg_ctx_parent != hapd->msg_ctx && dev_addr)
+		    hapd->msg_ctx_parent != hapd->msg_ctx)
 			wpa_msg(hapd->msg_ctx_parent, MSG_INFO,
-				AP_STA_DISCONNECTED MACSTR " p2p_dev_addr="
-				MACSTR, MAC2STR(sta->addr), MAC2STR(dev_addr));
-		else if (hapd->msg_ctx_parent &&
-			 hapd->msg_ctx_parent != hapd->msg_ctx)
-			wpa_msg(hapd->msg_ctx_parent, MSG_INFO,
-				AP_STA_DISCONNECTED MACSTR,
-				MAC2STR(sta->addr));
+				AP_STA_DISCONNECTED "%s", buf);
+
 		sta->flags &= ~WLAN_STA_AUTHORIZED;
 	}
 

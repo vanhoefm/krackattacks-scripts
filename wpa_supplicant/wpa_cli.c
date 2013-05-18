@@ -3330,6 +3330,9 @@ static void update_bssid_list(struct wpa_ctrl *ctrl)
 
 static void try_connection(void *eloop_ctx, void *timeout_ctx)
 {
+	if (ctrl_conn)
+		goto done;
+
 	if (ctrl_ifname == NULL)
 		ctrl_ifname = wpa_cli_get_default_ifname();
 
@@ -3348,6 +3351,7 @@ static void try_connection(void *eloop_ctx, void *timeout_ctx)
 	if (warning_displayed)
 		printf("Connection established.\n");
 
+done:
 	start_edit();
 }
 

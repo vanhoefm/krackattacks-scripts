@@ -157,8 +157,7 @@ static void p2p_send_gas_comeback_req(struct p2p_data *p2p, const u8 *dst,
 	p2p->pending_action_state = P2P_NO_PENDING_ACTION;
 	if (p2p_send_action(p2p, freq, dst, p2p->cfg->dev_addr, dst,
 			    wpabuf_head(req), wpabuf_len(req), 200) < 0)
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Failed to send Action frame");
+		p2p_dbg(p2p, "Failed to send Action frame");
 
 	wpabuf_free(req);
 }
@@ -235,9 +234,8 @@ int p2p_start_sd(struct p2p_data *p2p, struct p2p_device *dev)
 
 	freq = dev->listen_freq > 0 ? dev->listen_freq : dev->oper_freq;
 	if (freq <= 0) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: No Listen/Operating frequency known for the "
-			"peer " MACSTR " to send SD Request",
+		p2p_dbg(p2p, "No Listen/Operating frequency known for the peer "
+			MACSTR " to send SD Request",
 			MAC2STR(dev->info.p2p_device_addr));
 		return -1;
 	}
@@ -246,8 +244,7 @@ int p2p_start_sd(struct p2p_data *p2p, struct p2p_device *dev)
 	if (query == NULL)
 		return -1;
 
-	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-		"P2P: Start Service Discovery with " MACSTR,
+	p2p_dbg(p2p, "Start Service Discovery with " MACSTR,
 		MAC2STR(dev->info.p2p_device_addr));
 
 	req = p2p_build_sd_query(p2p->srv_update_indic, query->tlvs);
@@ -261,8 +258,7 @@ int p2p_start_sd(struct p2p_data *p2p, struct p2p_device *dev)
 	if (p2p_send_action(p2p, freq, dev->info.p2p_device_addr,
 			    p2p->cfg->dev_addr, dev->info.p2p_device_addr,
 			    wpabuf_head(req), wpabuf_len(req), 5000) < 0) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Failed to send Action frame");
+		p2p_dbg(p2p, "Failed to send Action frame");
 		ret = -1;
 	}
 
@@ -299,14 +295,12 @@ void p2p_rx_gas_initial_req(struct p2p_data *p2p, const u8 *sa,
 		return;
 
 	dialog_token = *pos++;
-	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-		"P2P: GAS Initial Request from " MACSTR " (dialog token %u, "
-		"freq %d)",
+	p2p_dbg(p2p, "GAS Initial Request from " MACSTR
+		" (dialog token %u, freq %d)",
 		MAC2STR(sa), dialog_token, rx_freq);
 
 	if (*pos != WLAN_EID_ADV_PROTO) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Unexpected IE in GAS Initial Request: %u", *pos);
+		p2p_dbg(p2p, "Unexpected IE in GAS Initial Request: %u", *pos);
 		return;
 	}
 	pos++;
@@ -314,15 +308,13 @@ void p2p_rx_gas_initial_req(struct p2p_data *p2p, const u8 *sa,
 	slen = *pos++;
 	next = pos + slen;
 	if (next > end || slen < 2) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Invalid IE in GAS Initial Request");
+		p2p_dbg(p2p, "Invalid IE in GAS Initial Request");
 		return;
 	}
 	pos++; /* skip QueryRespLenLimit and PAME-BI */
 
 	if (*pos != ACCESS_NETWORK_QUERY_PROTOCOL) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Unsupported GAS advertisement protocol id %u",
+		p2p_dbg(p2p, "Unsupported GAS advertisement protocol id %u",
 			*pos);
 		return;
 	}
@@ -341,8 +333,7 @@ void p2p_rx_gas_initial_req(struct p2p_data *p2p, const u8 *sa,
 	if (pos + 4 > end)
 		return;
 	if (WPA_GET_LE16(pos) != ANQP_VENDOR_SPECIFIC) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Unsupported ANQP Info ID %u", WPA_GET_LE16(pos));
+		p2p_dbg(p2p, "Unsupported ANQP Info ID %u", WPA_GET_LE16(pos));
 		return;
 	}
 	pos += 2;
@@ -350,21 +341,18 @@ void p2p_rx_gas_initial_req(struct p2p_data *p2p, const u8 *sa,
 	slen = WPA_GET_LE16(pos);
 	pos += 2;
 	if (pos + slen > end || slen < 3 + 1) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Invalid ANQP Query Request length");
+		p2p_dbg(p2p, "Invalid ANQP Query Request length");
 		return;
 	}
 
 	if (WPA_GET_BE24(pos) != OUI_WFA) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Unsupported ANQP OUI %06x", WPA_GET_BE24(pos));
+		p2p_dbg(p2p, "Unsupported ANQP OUI %06x", WPA_GET_BE24(pos));
 		return;
 	}
 	pos += 3;
 
 	if (*pos != P2P_OUI_TYPE) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Unsupported ANQP vendor type %u", *pos);
+		p2p_dbg(p2p, "Unsupported ANQP vendor type %u", *pos);
 		return;
 	}
 	pos++;
@@ -372,8 +360,7 @@ void p2p_rx_gas_initial_req(struct p2p_data *p2p, const u8 *sa,
 	if (pos + 2 > end)
 		return;
 	update_indic = WPA_GET_LE16(pos);
-	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-		"P2P: Service Update Indicator: %u", update_indic);
+	p2p_dbg(p2p, "Service Update Indicator: %u", update_indic);
 	pos += 2;
 
 	p2p->cfg->sd_request(p2p->cfg->cb_ctx, freq, sa, dialog_token,
@@ -389,8 +376,7 @@ void p2p_sd_response(struct p2p_data *p2p, int freq, const u8 *dst,
 
 	/* TODO: fix the length limit to match with the maximum frame length */
 	if (wpabuf_len(resp_tlvs) > 1400) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: SD response long "
-			"enough to require fragmentation");
+		p2p_dbg(p2p, "SD response long enough to require fragmentation");
 		if (p2p->sd_resp) {
 			/*
 			 * TODO: Could consider storing the fragmented response
@@ -399,14 +385,12 @@ void p2p_sd_response(struct p2p_data *p2p, int freq, const u8 *dst,
 			 * Though, that would eat more memory, so there are
 			 * also benefits to just using a single buffer.
 			 */
-			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Drop "
-				"previous SD response");
+			p2p_dbg(p2p, "Drop previous SD response");
 			wpabuf_free(p2p->sd_resp);
 		}
 		p2p->sd_resp = wpabuf_dup(resp_tlvs);
 		if (p2p->sd_resp == NULL) {
-			wpa_msg(p2p->cfg->msg_ctx, MSG_ERROR, "P2P: Failed to "
-				"allocate SD response fragmentation area");
+			p2p_err(p2p, "Failed to allocate SD response fragmentation area");
 			return;
 		}
 		os_memcpy(p2p->sd_resp_addr, dst, ETH_ALEN);
@@ -416,8 +400,7 @@ void p2p_sd_response(struct p2p_data *p2p, int freq, const u8 *dst,
 		resp = p2p_build_sd_response(dialog_token, WLAN_STATUS_SUCCESS,
 					     1, p2p->srv_update_indic, NULL);
 	} else {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: SD response fits "
-			"in initial response");
+		p2p_dbg(p2p, "SD response fits in initial response");
 		resp = p2p_build_sd_response(dialog_token,
 					     WLAN_STATUS_SUCCESS, 0,
 					     p2p->srv_update_indic, resp_tlvs);
@@ -429,8 +412,7 @@ void p2p_sd_response(struct p2p_data *p2p, int freq, const u8 *dst,
 	if (p2p_send_action(p2p, freq, dst, p2p->cfg->dev_addr,
 			    p2p->cfg->dev_addr,
 			    wpabuf_head(resp), wpabuf_len(resp), 200) < 0)
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Failed to send Action frame");
+		p2p_dbg(p2p, "Failed to send Action frame");
 
 	wpabuf_free(resp);
 }
@@ -450,21 +432,18 @@ void p2p_rx_gas_initial_resp(struct p2p_data *p2p, const u8 *sa,
 
 	if (p2p->state != P2P_SD_DURING_FIND || p2p->sd_peer == NULL ||
 	    os_memcmp(sa, p2p->sd_peer->info.p2p_device_addr, ETH_ALEN) != 0) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Ignore unexpected GAS Initial Response from "
+		p2p_dbg(p2p, "Ignore unexpected GAS Initial Response from "
 			MACSTR, MAC2STR(sa));
 		return;
 	}
 	p2p->cfg->send_action_done(p2p->cfg->cb_ctx);
 	p2p_clear_timeout(p2p);
 
-	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-		"P2P: Received GAS Initial Response from " MACSTR " (len=%d)",
+	p2p_dbg(p2p, "Received GAS Initial Response from " MACSTR " (len=%d)",
 		MAC2STR(sa), (int) len);
 
 	if (len < 5 + 2) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Too short GAS Initial Response frame");
+		p2p_dbg(p2p, "Too short GAS Initial Response frame");
 		return;
 	}
 
@@ -474,20 +453,16 @@ void p2p_rx_gas_initial_resp(struct p2p_data *p2p, const u8 *sa,
 	pos += 2;
 	comeback_delay = WPA_GET_LE16(pos);
 	pos += 2;
-	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-		"P2P: dialog_token=%u status_code=%u comeback_delay=%u",
+	p2p_dbg(p2p, "dialog_token=%u status_code=%u comeback_delay=%u",
 		dialog_token, status_code, comeback_delay);
 	if (status_code) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Service Discovery failed: status code %u",
+		p2p_dbg(p2p, "Service Discovery failed: status code %u",
 			status_code);
 		return;
 	}
 
 	if (*pos != WLAN_EID_ADV_PROTO) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Unexpected IE in GAS Initial Response: %u",
-			*pos);
+		p2p_dbg(p2p, "Unexpected IE in GAS Initial Response: %u", *pos);
 		return;
 	}
 	pos++;
@@ -495,15 +470,13 @@ void p2p_rx_gas_initial_resp(struct p2p_data *p2p, const u8 *sa,
 	slen = *pos++;
 	next = pos + slen;
 	if (next > end || slen < 2) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Invalid IE in GAS Initial Response");
+		p2p_dbg(p2p, "Invalid IE in GAS Initial Response");
 		return;
 	}
 	pos++; /* skip QueryRespLenLimit and PAME-BI */
 
 	if (*pos != ACCESS_NETWORK_QUERY_PROTOCOL) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Unsupported GAS advertisement protocol id %u",
+		p2p_dbg(p2p, "Unsupported GAS advertisement protocol id %u",
 			*pos);
 		return;
 	}
@@ -511,27 +484,22 @@ void p2p_rx_gas_initial_resp(struct p2p_data *p2p, const u8 *sa,
 	pos = next;
 	/* Query Response */
 	if (pos + 2 > end) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Too short Query "
-			"Response");
+		p2p_dbg(p2p, "Too short Query Response");
 		return;
 	}
 	slen = WPA_GET_LE16(pos);
 	pos += 2;
-	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Query Response Length: %d",
-		slen);
+	p2p_dbg(p2p, "Query Response Length: %d", slen);
 	if (pos + slen > end) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Not enough Query "
-			"Response data");
+		p2p_dbg(p2p, "Not enough Query Response data");
 		return;
 	}
 	end = pos + slen;
 
 	if (comeback_delay) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Fragmented "
-			"response - request fragments");
+		p2p_dbg(p2p, "Fragmented response - request fragments");
 		if (p2p->sd_rx_resp) {
-			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Drop "
-				"old SD reassembly buffer");
+			p2p_dbg(p2p, "Drop old SD reassembly buffer");
 			wpabuf_free(p2p->sd_rx_resp);
 			p2p->sd_rx_resp = NULL;
 		}
@@ -543,8 +511,7 @@ void p2p_rx_gas_initial_resp(struct p2p_data *p2p, const u8 *sa,
 	if (pos + 4 > end)
 		return;
 	if (WPA_GET_LE16(pos) != ANQP_VENDOR_SPECIFIC) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Unsupported ANQP Info ID %u", WPA_GET_LE16(pos));
+		p2p_dbg(p2p, "Unsupported ANQP Info ID %u", WPA_GET_LE16(pos));
 		return;
 	}
 	pos += 2;
@@ -552,21 +519,18 @@ void p2p_rx_gas_initial_resp(struct p2p_data *p2p, const u8 *sa,
 	slen = WPA_GET_LE16(pos);
 	pos += 2;
 	if (pos + slen > end || slen < 3 + 1) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Invalid ANQP Query Response length");
+		p2p_dbg(p2p, "Invalid ANQP Query Response length");
 		return;
 	}
 
 	if (WPA_GET_BE24(pos) != OUI_WFA) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Unsupported ANQP OUI %06x", WPA_GET_BE24(pos));
+		p2p_dbg(p2p, "Unsupported ANQP OUI %06x", WPA_GET_BE24(pos));
 		return;
 	}
 	pos += 3;
 
 	if (*pos != P2P_OUI_TYPE) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Unsupported ANQP vendor type %u", *pos);
+		p2p_dbg(p2p, "Unsupported ANQP vendor type %u", *pos);
 		return;
 	}
 	pos++;
@@ -574,8 +538,7 @@ void p2p_rx_gas_initial_resp(struct p2p_data *p2p, const u8 *sa,
 	if (pos + 2 > end)
 		return;
 	update_indic = WPA_GET_LE16(pos);
-	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-		"P2P: Service Update Indicator: %u", update_indic);
+	p2p_dbg(p2p, "Service Update Indicator: %u", update_indic);
 	pos += 2;
 
 	p2p->sd_peer->flags |= P2P_DEV_SD_INFO;
@@ -585,8 +548,7 @@ void p2p_rx_gas_initial_resp(struct p2p_data *p2p, const u8 *sa,
 	if (p2p->sd_query) {
 		if (!p2p->sd_query->for_all_peers) {
 			struct p2p_sd_query *q;
-			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-				"P2P: Remove completed SD query %p",
+			p2p_dbg(p2p, "Remove completed SD query %p",
 				p2p->sd_query);
 			q = p2p->sd_query;
 			p2p_unlink_sd_query(p2p, p2p->sd_query);
@@ -614,22 +576,20 @@ void p2p_rx_gas_comeback_req(struct p2p_data *p2p, const u8 *sa,
 	if (len < 1)
 		return;
 	dialog_token = *data;
-	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Dialog Token: %u",
-		dialog_token);
+	p2p_dbg(p2p, "Dialog Token: %u", dialog_token);
 	if (dialog_token != p2p->sd_resp_dialog_token) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: No pending SD "
-			"response fragment for dialog token %u", dialog_token);
+		p2p_dbg(p2p, "No pending SD response fragment for dialog token %u",
+			dialog_token);
 		return;
 	}
 
 	if (p2p->sd_resp == NULL) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: No pending SD "
-			"response fragment available");
+		p2p_dbg(p2p, "No pending SD response fragment available");
 		return;
 	}
 	if (os_memcmp(sa, p2p->sd_resp_addr, ETH_ALEN) != 0) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: No pending SD "
-			"response fragment for " MACSTR, MAC2STR(sa));
+		p2p_dbg(p2p, "No pending SD response fragment for " MACSTR,
+			MAC2STR(sa));
 		return;
 	}
 
@@ -646,19 +606,16 @@ void p2p_rx_gas_comeback_req(struct p2p_data *p2p, const u8 *sa,
 					   wpabuf_len(p2p->sd_resp));
 	if (resp == NULL)
 		return;
-	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Send GAS Comeback "
-		"Response (frag_id %d more=%d frag_len=%d)",
+	p2p_dbg(p2p, "Send GAS Comeback Response (frag_id %d more=%d frag_len=%d)",
 		p2p->sd_frag_id, more, (int) frag_len);
 	p2p->sd_frag_id++;
 	p2p->sd_resp_pos += frag_len;
 
 	if (more) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: %d more bytes "
-			"remain to be sent",
+		p2p_dbg(p2p, "%d more bytes remain to be sent",
 			(int) (wpabuf_len(p2p->sd_resp) - p2p->sd_resp_pos));
 	} else {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: All fragments of "
-			"SD response sent");
+		p2p_dbg(p2p, "All fragments of SD response sent");
 		wpabuf_free(p2p->sd_resp);
 		p2p->sd_resp = NULL;
 	}
@@ -667,8 +624,7 @@ void p2p_rx_gas_comeback_req(struct p2p_data *p2p, const u8 *sa,
 	if (p2p_send_action(p2p, rx_freq, sa, p2p->cfg->dev_addr,
 			    p2p->cfg->dev_addr,
 			    wpabuf_head(resp), wpabuf_len(resp), 200) < 0)
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Failed to send Action frame");
+		p2p_dbg(p2p, "Failed to send Action frame");
 
 	wpabuf_free(resp);
 }
@@ -691,21 +647,18 @@ void p2p_rx_gas_comeback_resp(struct p2p_data *p2p, const u8 *sa,
 
 	if (p2p->state != P2P_SD_DURING_FIND || p2p->sd_peer == NULL ||
 	    os_memcmp(sa, p2p->sd_peer->info.p2p_device_addr, ETH_ALEN) != 0) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Ignore unexpected GAS Comeback Response from "
+		p2p_dbg(p2p, "Ignore unexpected GAS Comeback Response from "
 			MACSTR, MAC2STR(sa));
 		return;
 	}
 	p2p->cfg->send_action_done(p2p->cfg->cb_ctx);
 	p2p_clear_timeout(p2p);
 
-	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-		"P2P: Received GAS Comeback Response from " MACSTR " (len=%d)",
+	p2p_dbg(p2p, "Received GAS Comeback Response from " MACSTR " (len=%d)",
 		MAC2STR(sa), (int) len);
 
 	if (len < 6 + 2) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Too short GAS Comeback Response frame");
+		p2p_dbg(p2p, "Too short GAS Comeback Response frame");
 		return;
 	}
 
@@ -718,22 +671,19 @@ void p2p_rx_gas_comeback_resp(struct p2p_data *p2p, const u8 *sa,
 	pos++;
 	comeback_delay = WPA_GET_LE16(pos);
 	pos += 2;
-	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-		"P2P: dialog_token=%u status_code=%u frag_id=%d more_frags=%d "
+	p2p_dbg(p2p, "dialog_token=%u status_code=%u frag_id=%d more_frags=%d "
 		"comeback_delay=%u",
 		dialog_token, status_code, frag_id, more_frags,
 		comeback_delay);
 	/* TODO: check frag_id match */
 	if (status_code) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Service Discovery failed: status code %u",
+		p2p_dbg(p2p, "Service Discovery failed: status code %u",
 			status_code);
 		return;
 	}
 
 	if (*pos != WLAN_EID_ADV_PROTO) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Unexpected IE in GAS Comeback Response: %u",
+		p2p_dbg(p2p, "Unexpected IE in GAS Comeback Response: %u",
 			*pos);
 		return;
 	}
@@ -742,15 +692,13 @@ void p2p_rx_gas_comeback_resp(struct p2p_data *p2p, const u8 *sa,
 	slen = *pos++;
 	next = pos + slen;
 	if (next > end || slen < 2) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Invalid IE in GAS Comeback Response");
+		p2p_dbg(p2p, "Invalid IE in GAS Comeback Response");
 		return;
 	}
 	pos++; /* skip QueryRespLenLimit and PAME-BI */
 
 	if (*pos != ACCESS_NETWORK_QUERY_PROTOCOL) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Unsupported GAS advertisement protocol id %u",
+		p2p_dbg(p2p, "Unsupported GAS advertisement protocol id %u",
 			*pos);
 		return;
 	}
@@ -758,22 +706,18 @@ void p2p_rx_gas_comeback_resp(struct p2p_data *p2p, const u8 *sa,
 	pos = next;
 	/* Query Response */
 	if (pos + 2 > end) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Too short Query "
-			"Response");
+		p2p_dbg(p2p, "Too short Query Response");
 		return;
 	}
 	slen = WPA_GET_LE16(pos);
 	pos += 2;
-	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Query Response Length: %d",
-		slen);
+	p2p_dbg(p2p, "Query Response Length: %d", slen);
 	if (pos + slen > end) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Not enough Query "
-			"Response data");
+		p2p_dbg(p2p, "Not enough Query Response data");
 		return;
 	}
 	if (slen == 0) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: No Query Response "
-			"data");
+		p2p_dbg(p2p, "No Query Response data");
 		return;
 	}
 	end = pos + slen;
@@ -790,34 +734,29 @@ void p2p_rx_gas_comeback_resp(struct p2p_data *p2p, const u8 *sa,
 	if (pos + 4 > end)
 		return;
 	if (WPA_GET_LE16(pos) != ANQP_VENDOR_SPECIFIC) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Unsupported ANQP Info ID %u", WPA_GET_LE16(pos));
+		p2p_dbg(p2p, "Unsupported ANQP Info ID %u", WPA_GET_LE16(pos));
 		return;
 	}
 	pos += 2;
 
 	slen = WPA_GET_LE16(pos);
 	pos += 2;
-	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: ANQP Query Response "
-		"length: %u", slen);
+	p2p_dbg(p2p, "ANQP Query Response length: %u", slen);
 	if (slen < 3 + 1) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Invalid ANQP Query Response length");
+		p2p_dbg(p2p, "Invalid ANQP Query Response length");
 		return;
 	}
 	if (pos + 4 > end)
 		return;
 
 	if (WPA_GET_BE24(pos) != OUI_WFA) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Unsupported ANQP OUI %06x", WPA_GET_BE24(pos));
+		p2p_dbg(p2p, "Unsupported ANQP OUI %06x", WPA_GET_BE24(pos));
 		return;
 	}
 	pos += 3;
 
 	if (*pos != P2P_OUI_TYPE) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Unsupported ANQP vendor type %u", *pos);
+		p2p_dbg(p2p, "Unsupported ANQP vendor type %u", *pos);
 		return;
 	}
 	pos++;
@@ -825,27 +764,23 @@ void p2p_rx_gas_comeback_resp(struct p2p_data *p2p, const u8 *sa,
 	if (pos + 2 > end)
 		return;
 	p2p->sd_rx_update_indic = WPA_GET_LE16(pos);
-	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-		"P2P: Service Update Indicator: %u", p2p->sd_rx_update_indic);
+	p2p_dbg(p2p, "Service Update Indicator: %u", p2p->sd_rx_update_indic);
 	pos += 2;
 
 skip_nqp_header:
 	if (wpabuf_resize(&p2p->sd_rx_resp, end - pos) < 0)
 		return;
 	wpabuf_put_data(p2p->sd_rx_resp, pos, end - pos);
-	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Current SD reassembly "
-		"buffer length: %u",
+	p2p_dbg(p2p, "Current SD reassembly buffer length: %u",
 		(unsigned int) wpabuf_len(p2p->sd_rx_resp));
 
 	if (more_frags) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: More fragments "
-			"remains");
+		p2p_dbg(p2p, "More fragments remains");
 		/* TODO: what would be a good size limit? */
 		if (wpabuf_len(p2p->sd_rx_resp) > 64000) {
 			wpabuf_free(p2p->sd_rx_resp);
 			p2p->sd_rx_resp = NULL;
-			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Too long "
-				"SD response - drop it");
+			p2p_dbg(p2p, "Too long SD response - drop it");
 			return;
 		}
 		p2p_send_gas_comeback_req(p2p, sa, dialog_token, rx_freq);
@@ -859,8 +794,7 @@ skip_nqp_header:
 	if (p2p->sd_query) {
 		if (!p2p->sd_query->for_all_peers) {
 			struct p2p_sd_query *q;
-			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-				"P2P: Remove completed SD query %p",
+			p2p_dbg(p2p, "Remove completed SD query %p",
 				p2p->sd_query);
 			q = p2p->sd_query;
 			p2p_unlink_sd_query(p2p, p2p->sd_query);
@@ -903,7 +837,7 @@ void * p2p_sd_request(struct p2p_data *p2p, const u8 *dst,
 
 	q->next = p2p->sd_queries;
 	p2p->sd_queries = q;
-	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Added SD Query %p", q);
+	p2p_dbg(p2p, "Added SD Query %p", q);
 
 	if (dst == NULL) {
 		struct p2p_device *dev;
@@ -937,8 +871,7 @@ void p2p_sd_service_update(struct p2p_data *p2p)
 int p2p_sd_cancel_request(struct p2p_data *p2p, void *req)
 {
 	if (p2p_unlink_sd_query(p2p, req)) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Cancel pending SD query %p", req);
+		p2p_dbg(p2p, "Cancel pending SD query %p", req);
 		p2p_free_sd_query(req);
 		return 0;
 	}

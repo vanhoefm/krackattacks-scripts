@@ -141,22 +141,19 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 	if (p2p_parse(data, len, &msg))
 		return;
 
-	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-		"P2P: Received Provision Discovery Request from " MACSTR
+	p2p_dbg(p2p, "Received Provision Discovery Request from " MACSTR
 		" with config methods 0x%x (freq=%d)",
 		MAC2STR(sa), msg.wps_config_methods, rx_freq);
 
 	dev = p2p_get_device(p2p, sa);
 	if (dev == NULL || (dev->flags & P2P_DEV_PROBE_REQ_ONLY)) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Provision Discovery Request from "
-			"unknown peer " MACSTR, MAC2STR(sa));
+		p2p_dbg(p2p, "Provision Discovery Request from unknown peer "
+			MACSTR, MAC2STR(sa));
 
 		if (p2p_add_device(p2p, sa, rx_freq, NULL, 0, data + 1, len - 1,
 				   0)) {
-			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			        "P2P: Provision Discovery Request add device "
-				"failed " MACSTR, MAC2STR(sa));
+			p2p_dbg(p2p, "Provision Discovery Request add device failed "
+				MACSTR, MAC2STR(sa));
 		}
 	} else if (msg.wfd_subelems) {
 		wpabuf_free(dev->info.wfd_subelems);
@@ -166,8 +163,7 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 	if (!(msg.wps_config_methods &
 	      (WPS_CONFIG_DISPLAY | WPS_CONFIG_KEYPAD |
 	       WPS_CONFIG_PUSHBUTTON))) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Unsupported "
-			"Config Methods in Provision Discovery Request");
+		p2p_dbg(p2p, "Unsupported Config Methods in Provision Discovery Request");
 		goto out;
 	}
 
@@ -180,8 +176,7 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 				break;
 		}
 		if (i == p2p->num_groups) {
-			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: PD "
-				"request for unknown P2P Group ID - reject");
+			p2p_dbg(p2p, "PD request for unknown P2P Group ID - reject");
 			goto out;
 		}
 	}
@@ -190,12 +185,12 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 		dev->flags &= ~(P2P_DEV_PD_PEER_DISPLAY |
 				P2P_DEV_PD_PEER_KEYPAD);
 	if (msg.wps_config_methods & WPS_CONFIG_DISPLAY) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Peer " MACSTR
+		p2p_dbg(p2p, "Peer " MACSTR
 			" requested us to show a PIN on display", MAC2STR(sa));
 		if (dev)
 			dev->flags |= P2P_DEV_PD_PEER_KEYPAD;
 	} else if (msg.wps_config_methods & WPS_CONFIG_KEYPAD) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Peer " MACSTR
+		p2p_dbg(p2p, "Peer " MACSTR
 			" requested us to write its PIN using keypad",
 			MAC2STR(sa));
 		if (dev)
@@ -212,16 +207,14 @@ out:
 		p2p_parse_free(&msg);
 		return;
 	}
-	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-		"P2P: Sending Provision Discovery Response");
+	p2p_dbg(p2p, "Sending Provision Discovery Response");
 	if (rx_freq > 0)
 		freq = rx_freq;
 	else
 		freq = p2p_channel_to_freq(p2p->cfg->reg_class,
 					   p2p->cfg->channel);
 	if (freq < 0) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Unknown regulatory class/channel");
+		p2p_dbg(p2p, "Unknown regulatory class/channel");
 		wpabuf_free(resp);
 		p2p_parse_free(&msg);
 		return;
@@ -230,8 +223,7 @@ out:
 	if (p2p_send_action(p2p, freq, sa, p2p->cfg->dev_addr,
 			    p2p->cfg->dev_addr,
 			    wpabuf_head(resp), wpabuf_len(resp), 200) < 0) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Failed to send Action frame");
+		p2p_dbg(p2p, "Failed to send Action frame");
 	}
 
 	wpabuf_free(resp);
@@ -264,24 +256,20 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 	if (p2p_parse(data, len, &msg))
 		return;
 
-	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-		"P2P: Received Provision Discovery Response from " MACSTR
+	p2p_dbg(p2p, "Received Provision Discovery Response from " MACSTR
 		" with config methods 0x%x",
 		MAC2STR(sa), msg.wps_config_methods);
 
 	dev = p2p_get_device(p2p, sa);
 	if (dev == NULL || !dev->req_config_methods) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Ignore Provision Discovery Response from "
-			MACSTR " with no pending request", MAC2STR(sa));
+		p2p_dbg(p2p, "Ignore Provision Discovery Response from " MACSTR
+			" with no pending request", MAC2STR(sa));
 		p2p_parse_free(&msg);
 		return;
 	}
 
 	if (dev->dialog_token != msg.dialog_token) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Ignore Provision Discovery Response with "
-			"unexpected Dialog Token %u (expected %u)",
+		p2p_dbg(p2p, "Ignore Provision Discovery Response with unexpected Dialog Token %u (expected %u)",
 			msg.dialog_token, dev->dialog_token);
 		p2p_parse_free(&msg);
 		return;
@@ -307,9 +295,7 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 		p2p_reset_pending_pd(p2p);
 
 	if (msg.wps_config_methods != req_config_methods) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Peer rejected "
-			"our Provision Discovery Request (received "
-			"config_methods 0x%x expected 0x%x",
+		p2p_dbg(p2p, "Peer rejected our Provision Discovery Request (received config_methods 0x%x expected 0x%x",
 			msg.wps_config_methods, req_config_methods);
 		if (p2p->cfg->prov_disc_fail)
 			p2p->cfg->prov_disc_fail(p2p->cfg->cb_ctx, sa,
@@ -322,11 +308,11 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 	dev->flags &= ~(P2P_DEV_PD_PEER_DISPLAY |
 			P2P_DEV_PD_PEER_KEYPAD);
 	if (req_config_methods & WPS_CONFIG_DISPLAY) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Peer " MACSTR
+		p2p_dbg(p2p, "Peer " MACSTR
 			" accepted to show a PIN on display", MAC2STR(sa));
 		dev->flags |= P2P_DEV_PD_PEER_DISPLAY;
 	} else if (msg.wps_config_methods & WPS_CONFIG_KEYPAD) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Peer " MACSTR
+		p2p_dbg(p2p, "Peer " MACSTR
 			" accepted to write our PIN using keypad",
 			MAC2STR(sa));
 		dev->flags |= P2P_DEV_PD_PEER_KEYPAD;
@@ -342,10 +328,8 @@ out:
 	dev->req_config_methods = 0;
 	p2p->cfg->send_action_done(p2p->cfg->cb_ctx);
 	if (dev->flags & P2P_DEV_PD_BEFORE_GO_NEG) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Start GO Neg after the PD-before-GO-Neg "
-			"workaround with " MACSTR,
-			MAC2STR(dev->info.p2p_device_addr));
+		p2p_dbg(p2p, "Start GO Neg after the PD-before-GO-Neg workaround with "
+			MACSTR, MAC2STR(dev->info.p2p_device_addr));
 		dev->flags &= ~P2P_DEV_PD_BEFORE_GO_NEG;
 		p2p_connect_send(p2p, dev);
 		return;
@@ -373,9 +357,8 @@ int p2p_send_prov_disc_req(struct p2p_data *p2p, struct p2p_device *dev,
 		freq = dev->listen_freq > 0 ? dev->listen_freq :
 			dev->oper_freq;
 	if (freq <= 0) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: No Listen/Operating frequency known for the "
-			"peer " MACSTR " to send Provision Discovery Request",
+		p2p_dbg(p2p, "No Listen/Operating frequency known for the peer "
+			MACSTR " to send Provision Discovery Request",
 			MAC2STR(dev->info.p2p_device_addr));
 		return -1;
 	}
@@ -383,8 +366,7 @@ int p2p_send_prov_disc_req(struct p2p_data *p2p, struct p2p_device *dev,
 	if (dev->flags & P2P_DEV_GROUP_CLIENT_ONLY) {
 		if (!(dev->info.dev_capab &
 		      P2P_DEV_CAPAB_CLIENT_DISCOVERABILITY)) {
-			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-				"P2P: Cannot use PD with P2P Device " MACSTR
+			p2p_dbg(p2p, "Cannot use PD with P2P Device " MACSTR
 				" that is in a group and is not discoverable",
 				MAC2STR(dev->info.p2p_device_addr));
 			return -1;
@@ -404,8 +386,7 @@ int p2p_send_prov_disc_req(struct p2p_data *p2p, struct p2p_device *dev,
 	if (p2p_send_action(p2p, freq, dev->info.p2p_device_addr,
 			    p2p->cfg->dev_addr, dev->info.p2p_device_addr,
 			    wpabuf_head(req), wpabuf_len(req), 200) < 0) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Failed to send Action frame");
+		p2p_dbg(p2p, "Failed to send Action frame");
 		wpabuf_free(req);
 		return -1;
 	}
@@ -427,14 +408,13 @@ int p2p_prov_disc_req(struct p2p_data *p2p, const u8 *peer_addr,
 	if (dev == NULL)
 		dev = p2p_get_device_interface(p2p, peer_addr);
 	if (dev == NULL || (dev->flags & P2P_DEV_PROBE_REQ_ONLY)) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Provision "
-			"Discovery Request destination " MACSTR
+		p2p_dbg(p2p, "Provision Discovery Request destination " MACSTR
 			" not yet known", MAC2STR(peer_addr));
 		return -1;
 	}
 
-	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Provision Discovery "
-		"Request with " MACSTR " (config methods 0x%x)",
+	p2p_dbg(p2p, "Provision Discovery Request with " MACSTR
+		" (config methods 0x%x)",
 		MAC2STR(peer_addr), config_methods);
 	if (config_methods == 0)
 		return -1;
@@ -450,9 +430,8 @@ int p2p_prov_disc_req(struct p2p_data *p2p, const u8 *peer_addr,
 
 	if (p2p->state != P2P_IDLE && p2p->state != P2P_SEARCH &&
 	    p2p->state != P2P_LISTEN_ONLY) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Busy with other "
-			"operations; postpone Provision Discovery Request "
-			"with " MACSTR " (config methods 0x%x)",
+		p2p_dbg(p2p, "Busy with other operations; postpone Provision Discovery Request with "
+			MACSTR " (config methods 0x%x)",
 			MAC2STR(peer_addr), config_methods);
 		return 0;
 	}

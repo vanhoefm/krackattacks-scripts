@@ -371,14 +371,17 @@ struct p2p_config {
 	unsigned int max_listen;
 
 	/**
-	 * msg_ctx - Context to use with wpa_msg() calls
-	 */
-	void *msg_ctx;
-
-	/**
 	 * cb_ctx - Context to use with callback functions
 	 */
 	void *cb_ctx;
+
+	/**
+	 * debug_print - Debug print
+	 * @ctx: Callback context from cb_ctx
+	 * @level: Debug verbosity level (MSG_*)
+	 * @msg: Debug message
+	 */
+	void (*debug_print)(void *ctx, int level, const char *msg);
 
 
 	/* Callbacks to request lower layer driver operations */

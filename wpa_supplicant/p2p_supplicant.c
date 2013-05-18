@@ -2929,6 +2929,13 @@ static int wpas_go_connected(void *ctx, const u8 *dev_addr)
 }
 
 
+static void wpas_p2p_debug_print(void *ctx, int level, const char *msg)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+	wpa_msg(wpa_s, level, "P2P: %s", msg);
+}
+
+
 /**
  * wpas_p2p_init - Initialize P2P module for %wpa_supplicant
  * @global: Pointer to global data from wpa_supplicant_init()
@@ -2967,8 +2974,8 @@ int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s)
 	}
 
 	os_memset(&p2p, 0, sizeof(p2p));
-	p2p.msg_ctx = wpa_s;
 	p2p.cb_ctx = wpa_s;
+	p2p.debug_print = wpas_p2p_debug_print;
 	p2p.p2p_scan = wpas_p2p_scan;
 	p2p.send_action = wpas_send_action;
 	p2p.send_action_done = wpas_send_action_done;

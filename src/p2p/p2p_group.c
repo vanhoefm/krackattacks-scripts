@@ -378,8 +378,8 @@ wifi_display_build_go_ie(struct p2p_group *group)
 	} else {
 		WPA_PUT_BE16(len, (u8 *) wpabuf_put(wfd_subelems, 0) - len -
 			     2);
-		wpa_printf(MSG_DEBUG, "WFD: WFD Session Info: %u descriptors",
-			   count);
+		p2p_dbg(group->p2p, "WFD: WFD Session Info: %u descriptors",
+			count);
 	}
 
 	wfd_ie = wifi_display_encaps(wfd_subelems);
@@ -588,7 +588,7 @@ int p2p_group_notif_assoc(struct p2p_group *group, const u8 *addr,
 	m->next = group->members;
 	group->members = m;
 	group->num_members++;
-	wpa_msg(group->p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Add client " MACSTR
+	p2p_dbg(group->p2p,  "Add client " MACSTR
 		" to group (p2p=%d wfd=%d client_info=%d); num_members=%u/%u",
 		MAC2STR(addr), m->p2p_ie ? 1 : 0, m->wfd_ie ? 1 : 0,
 		m->client_info ? 1 : 0,
@@ -641,8 +641,8 @@ struct wpabuf * p2p_group_assoc_resp_ie(struct p2p_group *group, u8 status)
 void p2p_group_notif_disassoc(struct p2p_group *group, const u8 *addr)
 {
 	if (p2p_group_remove_member(group, addr)) {
-		wpa_msg(group->p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Remove "
-			"client " MACSTR " from group; num_members=%u/%u",
+		p2p_dbg(group->p2p, "Remove client " MACSTR
+			" from group; num_members=%u/%u",
 			MAC2STR(addr), group->num_members,
 			group->cfg->max_clients);
 		if (group->num_members == group->cfg->max_clients - 1)
@@ -854,20 +854,18 @@ int p2p_group_go_discover(struct p2p_group *group, const u8 *dev_id,
 
 	m = p2p_group_get_client(group, dev_id);
 	if (m == NULL || m->client_info == NULL) {
-		wpa_printf(MSG_DEBUG, "P2P: Requested client was not in this "
-			   "group " MACSTR,
-			   MAC2STR(group->cfg->interface_addr));
+		p2p_dbg(group->p2p, "Requested client was not in this group "
+			MACSTR, MAC2STR(group->cfg->interface_addr));
 		return -1;
 	}
 
 	if (!(m->dev_capab & P2P_DEV_CAPAB_CLIENT_DISCOVERABILITY)) {
-		wpa_printf(MSG_DEBUG, "P2P: Requested client does not support "
-			   "client discoverability");
+		p2p_dbg(group->p2p, "Requested client does not support client discoverability");
 		return -1;
 	}
 
-	wpa_printf(MSG_DEBUG, "P2P: Schedule GO Discoverability Request to be "
-		   "sent to " MACSTR, MAC2STR(dev_id));
+	p2p_dbg(group->p2p, "Schedule GO Discoverability Request to be sent to "
+		MACSTR, MAC2STR(dev_id));
 
 	req = p2p_build_go_disc_req();
 	if (req == NULL)
@@ -882,8 +880,7 @@ int p2p_group_go_discover(struct p2p_group *group, const u8 *dev_id,
 				  group->cfg->interface_addr,
 				  wpabuf_head(req), wpabuf_len(req), 200) < 0)
 	{
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Failed to send Action frame");
+		p2p_dbg(p2p, "Failed to send Action frame");
 	}
 
 	wpabuf_free(req);
@@ -908,7 +905,7 @@ u8 p2p_group_presence_req(struct p2p_group *group,
 
 	m = p2p_group_get_client_iface(group, client_interface_addr);
 	if (m == NULL || m->client_info == NULL) {
-		wpa_printf(MSG_DEBUG, "P2P: Client was not in this group");
+		p2p_dbg(group->p2p, "Client was not in this group");
 		return P2P_SC_FAIL_UNABLE_TO_ACCOMMODATE;
 	}
 
@@ -921,9 +918,9 @@ u8 p2p_group_presence_req(struct p2p_group *group,
 	else
 		curr_noa_len = -1;
 	if (curr_noa_len < 0)
-		wpa_printf(MSG_DEBUG, "P2P: Failed to fetch current NoA");
+		p2p_dbg(group->p2p, "Failed to fetch current NoA");
 	else if (curr_noa_len == 0)
-		wpa_printf(MSG_DEBUG, "P2P: No NoA being advertized");
+		p2p_dbg(group->p2p, "No NoA being advertized");
 	else
 		wpa_hexdump(MSG_DEBUG, "P2P: Current NoA", curr_noa,
 			    curr_noa_len);

@@ -667,6 +667,7 @@ wpa_supplicant_global_ctrl_iface_init(struct wpa_global *global)
 {
 	struct ctrl_iface_global_priv *priv;
 	struct sockaddr_un addr;
+	const char *ctrl = global->params.ctrl_interface;
 
 	priv = os_zalloc(sizeof(*priv));
 	if (priv == NULL)
@@ -674,17 +675,39 @@ wpa_supplicant_global_ctrl_iface_init(struct wpa_global *global)
 	priv->global = global;
 	priv->sock = -1;
 
-	if (global->params.ctrl_interface == NULL)
+	if (ctrl == NULL)
 		return priv;
 
-#ifdef ANDROID
-	priv->sock = android_get_control_socket(global->params.ctrl_interface);
-	if (priv->sock >= 0)
-		goto havesock;
-#endif /* ANDROID */
+	wpa_printf(MSG_DEBUG, "Global control interface '%s'", ctrl);
 
-	wpa_printf(MSG_DEBUG, "Global control interface '%s'",
-		   global->params.ctrl_interface);
+#ifdef ANDROID
+	if (os_strncmp(ctrl, "@android:", 9) == 0) {
+		priv->sock = android_get_control_socket(ctrl + 9);
+		if (priv->sock < 0) {
+			wpa_printf(MSG_ERROR, "Failed to open Android control "
+				   "socket '%s'", ctrl + 9);
+			goto fail;
+		}
+		wpa_printf(MSG_DEBUG, "Using Android control socket '%s'",
+			   ctrl + 9);
+		goto havesock;
+	}
+
+	if (os_strncmp(ctrl, "@abstract:", 10) != 0) {
+		/*
+		 * Backwards compatibility - try to open an Android control
+		 * socket and if that fails, assume this was a UNIX domain
+		 * socket instead.
+		 */
+		priv->sock = android_get_control_socket(ctrl);
+		if (priv->sock >= 0) {
+			wpa_printf(MSG_DEBUG,
+				   "Using Android control socket '%s'",
+				   ctrl);
+			goto havesock;
+		}
+	}
+#endif /* ANDROID */
 
 	priv->sock = socket(PF_UNIX, SOCK_DGRAM, 0);
 	if (priv->sock < 0) {
@@ -697,8 +720,23 @@ wpa_supplicant_global_ctrl_iface_init(struct wpa_global *global)
 	addr.sun_len = sizeof(addr);
 #endif /* __FreeBSD__ */
 	addr.sun_family = AF_UNIX;
-	os_strlcpy(addr.sun_path, global->params.ctrl_interface,
-		   sizeof(addr.sun_path));
+
+	if (os_strncmp(ctrl, "@abstract:", 10) == 0) {
+		addr.sun_path[0] = '\0';
+		os_strlcpy(addr.sun_path + 1, ctrl + 10,
+			   sizeof(addr.sun_path) - 1);
+		if (bind(priv->sock, (struct sockaddr *) &addr, sizeof(addr)) <
+		    0) {
+			wpa_printf(MSG_ERROR, "supp-global-ctrl-iface-init: "
+				   "bind(PF_UNIX) failed: %s", strerror(errno));
+			goto fail;
+		}
+		wpa_printf(MSG_DEBUG, "Using Abstract control socket '%s'",
+			   ctrl + 10);
+		goto havesock;
+	}
+
+	os_strlcpy(addr.sun_path, ctrl, sizeof(addr.sun_path));
 	if (bind(priv->sock, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
 		perror("supp-global-ctrl-iface-init (will try fixup): "
 		       "bind(PF_UNIX)");
@@ -707,11 +745,11 @@ wpa_supplicant_global_ctrl_iface_init(struct wpa_global *global)
 			wpa_printf(MSG_DEBUG, "ctrl_iface exists, but does not"
 				   " allow connections - assuming it was left"
 				   "over from forced program termination");
-			if (unlink(global->params.ctrl_interface) < 0) {
+			if (unlink(ctrl) < 0) {
 				perror("unlink[ctrl_iface]");
 				wpa_printf(MSG_ERROR, "Could not unlink "
 					   "existing ctrl_iface socket '%s'",
-					   global->params.ctrl_interface);
+					   ctrl);
 				goto fail;
 			}
 			if (bind(priv->sock, (struct sockaddr *) &addr,
@@ -721,16 +759,18 @@ wpa_supplicant_global_ctrl_iface_init(struct wpa_global *global)
 			}
 			wpa_printf(MSG_DEBUG, "Successfully replaced leftover "
 				   "ctrl_iface socket '%s'",
-				   global->params.ctrl_interface);
+				   ctrl);
 		} else {
 			wpa_printf(MSG_INFO, "ctrl_iface exists and seems to "
 				   "be in use - cannot override it");
 			wpa_printf(MSG_INFO, "Delete '%s' manually if it is "
 				   "not used anymore",
-				   global->params.ctrl_interface);
+				   ctrl);
 			goto fail;
 		}
 	}
+
+	wpa_printf(MSG_DEBUG, "Using UNIX control socket '%s'", ctrl);
 
 	if (global->params.ctrl_interface_group) {
 		char *gid_str = global->params.ctrl_interface_group;
@@ -755,21 +795,20 @@ wpa_supplicant_global_ctrl_iface_init(struct wpa_global *global)
 			wpa_printf(MSG_DEBUG, "ctrl_interface_group=%d",
 				   (int) gid);
 		}
-		if (chown(global->params.ctrl_interface, -1, gid) < 0) {
+		if (chown(ctrl, -1, gid) < 0) {
 			perror("chown[global_ctrl_interface/ifname]");
 			goto fail;
 		}
 
-		if (chmod(global->params.ctrl_interface, S_IRWXU | S_IRWXG) < 0)
-		{
+		if (chmod(ctrl, S_IRWXU | S_IRWXG) < 0) {
 			perror("chmod[global_ctrl_interface/ifname]");
 			goto fail;
 		}
+	} else {
+		chmod(ctrl, S_IRWXU);
 	}
 
-#ifdef ANDROID
 havesock:
-#endif /* ANDROID */
 	eloop_register_read_sock(priv->sock,
 				 wpa_supplicant_global_ctrl_iface_receive,
 				 global, NULL);

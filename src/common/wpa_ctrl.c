@@ -82,6 +82,9 @@ struct wpa_ctrl * wpa_ctrl_open(const char *ctrl_path)
 	int tries = 0;
 	int flags;
 
+	if (ctrl_path == NULL)
+		return NULL;
+
 	ctrl = os_malloc(sizeof(*ctrl));
 	if (ctrl == NULL)
 		return NULL;
@@ -126,13 +129,27 @@ try_again:
 #ifdef ANDROID
 	chmod(ctrl->local.sun_path, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 	chown(ctrl->local.sun_path, AID_SYSTEM, AID_WIFI);
+
+	if (os_strncmp(ctrl_path, "@android:", 9) == 0) {
+		if (socket_local_client_connect(
+			    ctrl->s, ctrl_path + 9,
+			    ANDROID_SOCKET_NAMESPACE_RESERVED,
+			    SOCK_DGRAM) < 0) {
+			close(ctrl->s);
+			unlink(ctrl->local.sun_path);
+			os_free(ctrl);
+			return NULL;
+		}
+		return ctrl;
+	}
+
 	/*
 	 * If the ctrl_path isn't an absolute pathname, assume that
 	 * it's the name of a socket in the Android reserved namespace.
 	 * Otherwise, it's a normal UNIX domain socket appearing in the
 	 * filesystem.
 	 */
-	if (ctrl_path != NULL && *ctrl_path != '/') {
+	if (*ctrl_path != '/') {
 		char buf[21];
 		os_snprintf(buf, sizeof(buf), "wpa_%s", ctrl_path);
 		if (socket_local_client_connect(
@@ -149,12 +166,18 @@ try_again:
 #endif /* ANDROID */
 
 	ctrl->dest.sun_family = AF_UNIX;
-	res = os_strlcpy(ctrl->dest.sun_path, ctrl_path,
-			 sizeof(ctrl->dest.sun_path));
-	if (res >= sizeof(ctrl->dest.sun_path)) {
-		close(ctrl->s);
-		os_free(ctrl);
-		return NULL;
+	if (os_strncmp(ctrl_path, "@abstract:", 10) == 0) {
+		ctrl->dest.sun_path[0] = '\0';
+		os_strlcpy(ctrl->dest.sun_path + 1, ctrl_path + 10,
+			   sizeof(ctrl->dest.sun_path) - 1);
+	} else {
+		res = os_strlcpy(ctrl->dest.sun_path, ctrl_path,
+				 sizeof(ctrl->dest.sun_path));
+		if (res >= sizeof(ctrl->dest.sun_path)) {
+			close(ctrl->s);
+			os_free(ctrl);
+			return NULL;
+		}
 	}
 	if (connect(ctrl->s, (struct sockaddr *) &ctrl->dest,
 		    sizeof(ctrl->dest)) < 0) {

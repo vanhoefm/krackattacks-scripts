@@ -883,8 +883,8 @@ void ap_sta_set_authorized(struct hostapd_data *hapd, struct sta_info *sta,
 
 		if (hapd->msg_ctx_parent &&
 		    hapd->msg_ctx_parent != hapd->msg_ctx)
-			wpa_msg(hapd->msg_ctx_parent, MSG_INFO,
-				AP_STA_CONNECTED "%s", buf);
+			wpa_msg_no_global(hapd->msg_ctx_parent, MSG_INFO,
+					  AP_STA_CONNECTED "%s", buf);
 
 		sta->flags |= WLAN_STA_AUTHORIZED;
 	} else {
@@ -892,8 +892,8 @@ void ap_sta_set_authorized(struct hostapd_data *hapd, struct sta_info *sta,
 
 		if (hapd->msg_ctx_parent &&
 		    hapd->msg_ctx_parent != hapd->msg_ctx)
-			wpa_msg(hapd->msg_ctx_parent, MSG_INFO,
-				AP_STA_DISCONNECTED "%s", buf);
+			wpa_msg_no_global(hapd->msg_ctx_parent, MSG_INFO,
+					  AP_STA_DISCONNECTED "%s", buf);
 
 		sta->flags &= ~WLAN_STA_AUTHORIZED;
 	}

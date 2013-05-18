@@ -156,6 +156,7 @@ void wpa_hexdump_ascii_key(int level, const char *title, const u8 *buf,
 #define wpa_msg(args...) do { } while (0)
 #define wpa_msg_ctrl(args...) do { } while (0)
 #define wpa_msg_global(args...) do { } while (0)
+#define wpa_msg_no_global(args...) do { } while (0)
 #define wpa_msg_register_cb(f) do { } while (0)
 #define wpa_msg_register_ifname_cb(f) do { } while (0)
 #else /* CONFIG_NO_WPA_MSG */
@@ -204,6 +205,20 @@ PRINTF_FORMAT(3, 4);
  * specified by the context data).
  */
 void wpa_msg_global(void *ctx, int level, const char *fmt, ...)
+PRINTF_FORMAT(3, 4);
+
+/**
+ * wpa_msg_no_global - Conditional printf for ctrl_iface monitors
+ * @ctx: Pointer to context data; this is the ctx variable registered
+ *	with struct wpa_driver_ops::init()
+ * @level: priority level (MSG_*) of the message
+ * @fmt: printf format string, followed by optional arguments
+ *
+ * This function is used to print conditional debugging and error messages.
+ * This function is like wpa_msg(), but it does not send the output as a global
+ * event.
+ */
+void wpa_msg_no_global(void *ctx, int level, const char *fmt, ...)
 PRINTF_FORMAT(3, 4);
 
 typedef void (*wpa_msg_cb_func)(void *ctx, int level, int global,

@@ -3567,6 +3567,23 @@ int main(int argc, char *argv[])
 				global, strerror(errno));
 			return -1;
 		}
+
+		if (interactive) {
+			mon_conn = wpa_ctrl_open(global);
+			if (mon_conn) {
+				if (wpa_ctrl_attach(mon_conn) == 0) {
+					wpa_cli_attached = 1;
+					eloop_register_read_sock(
+						wpa_ctrl_get_fd(mon_conn),
+						wpa_cli_mon_receive,
+						NULL, NULL);
+				} else {
+					printf("Failed to open monitor "
+					       "connection through global "
+					       "control interface\n");
+				}
+			}
+		}
 	}
 
 	eloop_register_signal_terminate(wpa_cli_terminate, NULL);

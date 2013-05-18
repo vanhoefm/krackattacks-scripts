@@ -50,12 +50,20 @@ struct ctrl_iface_priv {
 };
 
 
-static void wpa_supplicant_ctrl_iface_send(struct ctrl_iface_priv *priv,
+struct ctrl_iface_global_priv {
+	struct wpa_global *global;
+	int sock;
+	struct dl_list ctrl_dst;
+};
+
+
+static void wpa_supplicant_ctrl_iface_send(const char *ifname, int sock,
+					   struct dl_list *ctrl_dst,
 					   int level, const char *buf,
 					   size_t len);
 
 
-static int wpa_supplicant_ctrl_iface_attach(struct ctrl_iface_priv *priv,
+static int wpa_supplicant_ctrl_iface_attach(struct dl_list *ctrl_dst,
 					    struct sockaddr_un *from,
 					    socklen_t fromlen)
 {
@@ -67,7 +75,7 @@ static int wpa_supplicant_ctrl_iface_attach(struct ctrl_iface_priv *priv,
 	os_memcpy(&dst->addr, from, sizeof(struct sockaddr_un));
 	dst->addrlen = fromlen;
 	dst->debug_level = MSG_INFO;
-	dl_list_add(&priv->ctrl_dst, &dst->list);
+	dl_list_add(ctrl_dst, &dst->list);
 	wpa_hexdump(MSG_DEBUG, "CTRL_IFACE monitor attached",
 		    (u8 *) from->sun_path,
 		    fromlen - offsetof(struct sockaddr_un, sun_path));
@@ -75,13 +83,13 @@ static int wpa_supplicant_ctrl_iface_attach(struct ctrl_iface_priv *priv,
 }
 
 
-static int wpa_supplicant_ctrl_iface_detach(struct ctrl_iface_priv *priv,
+static int wpa_supplicant_ctrl_iface_detach(struct dl_list *ctrl_dst,
 					    struct sockaddr_un *from,
 					    socklen_t fromlen)
 {
 	struct wpa_ctrl_dst *dst;
 
-	dl_list_for_each(dst, &priv->ctrl_dst, struct wpa_ctrl_dst, list) {
+	dl_list_for_each(dst, ctrl_dst, struct wpa_ctrl_dst, list) {
 		if (fromlen == dst->addrlen &&
 		    os_memcmp(from->sun_path, dst->addr.sun_path,
 			      fromlen - offsetof(struct sockaddr_un, sun_path))
@@ -148,14 +156,16 @@ static void wpa_supplicant_ctrl_iface_receive(int sock, void *eloop_ctx,
 	buf[res] = '\0';
 
 	if (os_strcmp(buf, "ATTACH") == 0) {
-		if (wpa_supplicant_ctrl_iface_attach(priv, &from, fromlen))
+		if (wpa_supplicant_ctrl_iface_attach(&priv->ctrl_dst, &from,
+						     fromlen))
 			reply_len = 1;
 		else {
 			new_attached = 1;
 			reply_len = 2;
 		}
 	} else if (os_strcmp(buf, "DETACH") == 0) {
-		if (wpa_supplicant_ctrl_iface_detach(priv, &from, fromlen))
+		if (wpa_supplicant_ctrl_iface_detach(&priv->ctrl_dst, &from,
+						     fromlen))
 			reply_len = 1;
 		else
 			reply_len = 2;
@@ -244,9 +254,25 @@ static void wpa_supplicant_ctrl_iface_msg_cb(void *ctx, int level,
 					     const char *txt, size_t len)
 {
 	struct wpa_supplicant *wpa_s = ctx;
-	if (wpa_s == NULL || wpa_s->ctrl_iface == NULL)
+
+	if (wpa_s == NULL)
 		return;
-	wpa_supplicant_ctrl_iface_send(wpa_s->ctrl_iface, level, txt, len);
+
+	if (wpa_s->global->ctrl_iface) {
+		struct ctrl_iface_global_priv *priv = wpa_s->global->ctrl_iface;
+		if (!dl_list_empty(&priv->ctrl_dst)) {
+			wpa_supplicant_ctrl_iface_send(wpa_s->ifname,
+						       priv->sock,
+						       &priv->ctrl_dst,
+						       level, txt, len);
+		}
+	}
+
+	if (wpa_s->ctrl_iface == NULL)
+		return;
+	wpa_supplicant_ctrl_iface_send(NULL, wpa_s->ctrl_iface->sock,
+				       &wpa_s->ctrl_iface->ctrl_dst,
+				       level, txt, len);
 }
 
 
@@ -519,14 +545,17 @@ free_dst:
 
 /**
  * wpa_supplicant_ctrl_iface_send - Send a control interface packet to monitors
- * @priv: Pointer to private data from wpa_supplicant_ctrl_iface_init()
+ * @ifname: Interface name for global control socket or %NULL
+ * @sock: Local socket fd
+ * @ctrl_dst: List of attached listeners
  * @level: Priority level of the message
  * @buf: Message data
  * @len: Message length
  *
  * Send a packet to all monitor programs attached to the control interface.
  */
-static void wpa_supplicant_ctrl_iface_send(struct ctrl_iface_priv *priv,
+static void wpa_supplicant_ctrl_iface_send(const char *ifname, int sock,
+					   struct dl_list *ctrl_dst,
 					   int level, const char *buf,
 					   size_t len)
 {
@@ -534,32 +563,45 @@ static void wpa_supplicant_ctrl_iface_send(struct ctrl_iface_priv *priv,
 	char levelstr[10];
 	int idx, res;
 	struct msghdr msg;
-	struct iovec io[2];
+	struct iovec io[5];
 
-	if (priv->sock < 0 || dl_list_empty(&priv->ctrl_dst))
+	if (sock < 0 || dl_list_empty(ctrl_dst))
 		return;
 
 	res = os_snprintf(levelstr, sizeof(levelstr), "<%d>", level);
 	if (res < 0 || (size_t) res >= sizeof(levelstr))
 		return;
-	io[0].iov_base = levelstr;
-	io[0].iov_len = os_strlen(levelstr);
-	io[1].iov_base = (char *) buf;
-	io[1].iov_len = len;
+	idx = 0;
+	if (ifname) {
+		io[idx].iov_base = "IFNAME=";
+		io[idx].iov_len = 7;
+		idx++;
+		io[idx].iov_base = (char *) ifname;
+		io[idx].iov_len = os_strlen(ifname);
+		idx++;
+		io[idx].iov_base = " ";
+		io[idx].iov_len = 1;
+		idx++;
+	}
+	io[idx].iov_base = levelstr;
+	io[idx].iov_len = os_strlen(levelstr);
+	idx++;
+	io[idx].iov_base = (char *) buf;
+	io[idx].iov_len = len;
+	idx++;
 	os_memset(&msg, 0, sizeof(msg));
 	msg.msg_iov = io;
-	msg.msg_iovlen = 2;
+	msg.msg_iovlen = idx;
 
 	idx = 0;
-	dl_list_for_each_safe(dst, next, &priv->ctrl_dst, struct wpa_ctrl_dst,
-			      list) {
+	dl_list_for_each_safe(dst, next, ctrl_dst, struct wpa_ctrl_dst, list) {
 		if (level >= dst->debug_level) {
 			wpa_hexdump(MSG_DEBUG, "CTRL_IFACE monitor send",
 				    (u8 *) dst->addr.sun_path, dst->addrlen -
 				    offsetof(struct sockaddr_un, sun_path));
 			msg.msg_name = (void *) &dst->addr;
 			msg.msg_namelen = dst->addrlen;
-			if (sendmsg(priv->sock, &msg, 0) < 0) {
+			if (sendmsg(sock, &msg, 0) < 0) {
 				int _errno = errno;
 				wpa_printf(MSG_INFO, "CTRL_IFACE monitor[%d]: "
 					   "%d - %s",
@@ -569,7 +611,7 @@ static void wpa_supplicant_ctrl_iface_send(struct ctrl_iface_priv *priv,
 				    (_errno != ENOBUFS && dst->errors > 10) ||
 				    _errno == ENOENT) {
 					wpa_supplicant_ctrl_iface_detach(
-						priv, &dst->addr,
+						ctrl_dst, &dst->addr,
 						dst->addrlen);
 				}
 			} else
@@ -602,8 +644,8 @@ void wpa_supplicant_ctrl_iface_wait(struct ctrl_iface_priv *priv)
 
 		if (os_strcmp(buf, "ATTACH") == 0) {
 			/* handle ATTACH signal of first monitor interface */
-			if (!wpa_supplicant_ctrl_iface_attach(priv, &from,
-							      fromlen)) {
+			if (!wpa_supplicant_ctrl_iface_attach(&priv->ctrl_dst,
+							      &from, fromlen)) {
 				sendto(priv->sock, "OK\n", 3, 0,
 				       (struct sockaddr *) &from, fromlen);
 				/* OK to continue */
@@ -623,21 +665,16 @@ void wpa_supplicant_ctrl_iface_wait(struct ctrl_iface_priv *priv)
 
 /* Global ctrl_iface */
 
-struct ctrl_iface_global_priv {
-	struct wpa_global *global;
-	int sock;
-};
-
-
 static void wpa_supplicant_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 						     void *sock_ctx)
 {
 	struct wpa_global *global = eloop_ctx;
+	struct ctrl_iface_global_priv *priv = sock_ctx;
 	char buf[256];
 	int res;
 	struct sockaddr_un from;
 	socklen_t fromlen = sizeof(from);
-	char *reply;
+	char *reply = NULL;
 	size_t reply_len;
 
 	res = recvfrom(sock, buf, sizeof(buf) - 1, 0,
@@ -648,16 +685,32 @@ static void wpa_supplicant_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 	}
 	buf[res] = '\0';
 
-	reply = wpa_supplicant_global_ctrl_iface_process(global, buf,
-							 &reply_len);
+	if (os_strcmp(buf, "ATTACH") == 0) {
+		if (wpa_supplicant_ctrl_iface_attach(&priv->ctrl_dst, &from,
+						     fromlen))
+			reply_len = 1;
+		else
+			reply_len = 2;
+	} else if (os_strcmp(buf, "DETACH") == 0) {
+		if (wpa_supplicant_ctrl_iface_detach(&priv->ctrl_dst, &from,
+						     fromlen))
+			reply_len = 1;
+		else
+			reply_len = 2;
+	} else {
+		reply = wpa_supplicant_global_ctrl_iface_process(global, buf,
+								 &reply_len);
+	}
 
 	if (reply) {
 		sendto(sock, reply, reply_len, 0, (struct sockaddr *) &from,
 		       fromlen);
 		os_free(reply);
-	} else if (reply_len) {
+	} else if (reply_len == 1) {
 		sendto(sock, "FAIL\n", 5, 0, (struct sockaddr *) &from,
 		       fromlen);
+	} else if (reply_len == 2) {
+		sendto(sock, "OK\n", 3, 0, (struct sockaddr *) &from, fromlen);
 	}
 }
 
@@ -672,6 +725,7 @@ wpa_supplicant_global_ctrl_iface_init(struct wpa_global *global)
 	priv = os_zalloc(sizeof(*priv));
 	if (priv == NULL)
 		return NULL;
+	dl_list_init(&priv->ctrl_dst);
 	priv->global = global;
 	priv->sock = -1;
 
@@ -811,7 +865,7 @@ wpa_supplicant_global_ctrl_iface_init(struct wpa_global *global)
 havesock:
 	eloop_register_read_sock(priv->sock,
 				 wpa_supplicant_global_ctrl_iface_receive,
-				 global, NULL);
+				 global, priv);
 
 	return priv;
 
@@ -826,11 +880,16 @@ fail:
 void
 wpa_supplicant_global_ctrl_iface_deinit(struct ctrl_iface_global_priv *priv)
 {
+	struct wpa_ctrl_dst *dst, *prev;
+
 	if (priv->sock >= 0) {
 		eloop_unregister_read_sock(priv->sock);
 		close(priv->sock);
 	}
 	if (priv->global->params.ctrl_interface)
 		unlink(priv->global->params.ctrl_interface);
+	dl_list_for_each_safe(dst, prev, &priv->ctrl_dst, struct wpa_ctrl_dst,
+			      list)
+		os_free(dst);
 	os_free(priv);
 }

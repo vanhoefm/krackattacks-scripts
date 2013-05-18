@@ -39,7 +39,10 @@ INCLUDES = $(LOCAL_PATH)
 INCLUDES += $(LOCAL_PATH)/src
 INCLUDES += $(LOCAL_PATH)/src/utils
 INCLUDES += external/openssl/include
+# frameworks/base/cmds/keystore is the old location and can be dropped at some
+# point
 INCLUDES += frameworks/base/cmds/keystore
+INCLUDES += system/security/keystore
 ifdef CONFIG_DRIVER_NL80211
 INCLUDES += external/libnl-headers
 endif

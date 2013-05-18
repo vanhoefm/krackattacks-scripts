@@ -545,6 +545,12 @@ struct p2p_config {
 	void (*dev_lost)(void *ctx, const u8 *dev_addr);
 
 	/**
+	 * find_stopped - Notification of a p2p_find operation stopping
+	 * @ctx: Callback context from cb_ctx
+	 */
+	void (*find_stopped)(void *ctx);
+
+	/**
 	 * go_neg_req_rx - Notification of a receive GO Negotiation Request
 	 * @ctx: Callback context from cb_ctx
 	 * @src: Source address of the message triggering this notification

@@ -12,7 +12,6 @@
 #include "eloop.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
-#include "common/wpa_ctrl.h"
 #include "wps/wps_i.h"
 #include "p2p_i.h"
 #include "p2p.h"
@@ -1108,7 +1107,7 @@ int p2p_other_scan_completed(struct p2p_data *p2p)
 	if (p2p_find(p2p, p2p->last_p2p_find_timeout, p2p->find_type,
 		     p2p->num_req_dev_types, p2p->req_dev_types,
 		     p2p->find_dev_id, p2p->search_delay) < 0) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_INFO, P2P_EVENT_FIND_STOPPED);
+		p2p->cfg->find_stopped(p2p->cfg->cb_ctx);
 		return 0;
 	}
 	return 1;
@@ -1123,7 +1122,7 @@ void p2p_stop_find_for_freq(struct p2p_data *p2p, int freq)
 	if (p2p->state == P2P_SEARCH ||
 	    p2p->state == P2P_CONTINUE_SEARCH_WHEN_READY ||
 	    p2p->state == P2P_SEARCH_WHEN_READY)
-		wpa_msg(p2p->cfg->msg_ctx, MSG_INFO, P2P_EVENT_FIND_STOPPED);
+		p2p->cfg->find_stopped(p2p->cfg->cb_ctx);
 	p2p_set_state(p2p, P2P_IDLE);
 	p2p_free_req_dev_types(p2p);
 	p2p->start_after_scan = P2P_AFTER_SCAN_NOTHING;

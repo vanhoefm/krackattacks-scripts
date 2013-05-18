@@ -1226,6 +1226,13 @@ static void wpas_dev_lost(void *ctx, const u8 *dev_addr)
 }
 
 
+static void wpas_find_stopped(void *ctx)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+	wpa_msg(wpa_s, MSG_INFO, P2P_EVENT_FIND_STOPPED);
+}
+
+
 static int wpas_start_listen(void *ctx, unsigned int freq,
 			     unsigned int duration,
 			     const struct wpabuf *probe_resp_ie)
@@ -2969,6 +2976,7 @@ int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s)
 	p2p.go_neg_req_rx = wpas_go_neg_req_rx;
 	p2p.dev_found = wpas_dev_found;
 	p2p.dev_lost = wpas_dev_lost;
+	p2p.find_stopped = wpas_find_stopped;
 	p2p.start_listen = wpas_start_listen;
 	p2p.stop_listen = wpas_stop_listen;
 	p2p.send_probe_resp = wpas_send_probe_resp;

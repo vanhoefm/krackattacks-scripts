@@ -1,6 +1,6 @@
 /*
  * wpa_supplicant/hostapd / Debug prints
- * Copyright (c) 2002-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -620,7 +620,7 @@ void wpa_msg(void *ctx, int level, const char *fmt, ...)
 	va_end(ap);
 	wpa_printf(level, "%s%s", prefix, buf);
 	if (wpa_msg_cb)
-		wpa_msg_cb(ctx, level, buf, len);
+		wpa_msg_cb(ctx, level, 0, buf, len);
 	os_free(buf);
 }
 
@@ -644,9 +644,33 @@ void wpa_msg_ctrl(void *ctx, int level, const char *fmt, ...)
 	va_start(ap, fmt);
 	len = vsnprintf(buf, buflen, fmt, ap);
 	va_end(ap);
-	wpa_msg_cb(ctx, level, buf, len);
+	wpa_msg_cb(ctx, level, 0, buf, len);
 	os_free(buf);
 }
+
+
+void wpa_msg_global(void *ctx, int level, const char *fmt, ...)
+{
+	va_list ap;
+	char *buf;
+	const int buflen = 2048;
+	int len;
+
+	buf = os_malloc(buflen);
+	if (buf == NULL) {
+		wpa_printf(MSG_ERROR, "wpa_msg_global: Failed to allocate "
+			   "message buffer");
+		return;
+	}
+	va_start(ap, fmt);
+	len = vsnprintf(buf, buflen, fmt, ap);
+	va_end(ap);
+	wpa_printf(level, "%s", buf);
+	if (wpa_msg_cb)
+		wpa_msg_cb(ctx, level, 1, buf, len);
+	os_free(buf);
+}
+
 #endif /* CONFIG_NO_WPA_MSG */
 
 

@@ -250,7 +250,7 @@ static char * wpa_supplicant_ctrl_iface_path(struct wpa_supplicant *wpa_s)
 }
 
 
-static void wpa_supplicant_ctrl_iface_msg_cb(void *ctx, int level,
+static void wpa_supplicant_ctrl_iface_msg_cb(void *ctx, int level, int global,
 					     const char *txt, size_t len)
 {
 	struct wpa_supplicant *wpa_s = ctx;
@@ -261,7 +261,8 @@ static void wpa_supplicant_ctrl_iface_msg_cb(void *ctx, int level,
 	if (wpa_s->global->ctrl_iface) {
 		struct ctrl_iface_global_priv *priv = wpa_s->global->ctrl_iface;
 		if (!dl_list_empty(&priv->ctrl_dst)) {
-			wpa_supplicant_ctrl_iface_send(wpa_s->ifname,
+			wpa_supplicant_ctrl_iface_send(global ? NULL :
+						       wpa_s->ifname,
 						       priv->sock,
 						       &priv->ctrl_dst,
 						       level, txt, len);

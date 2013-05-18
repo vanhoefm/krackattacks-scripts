@@ -1,6 +1,6 @@
 /*
  * wpa_supplicant/hostapd / Debug prints
- * Copyright (c) 2002-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -155,6 +155,7 @@ void wpa_hexdump_ascii_key(int level, const char *title, const u8 *buf,
 #ifdef CONFIG_NO_WPA_MSG
 #define wpa_msg(args...) do { } while (0)
 #define wpa_msg_ctrl(args...) do { } while (0)
+#define wpa_msg_global(args...) do { } while (0)
 #define wpa_msg_register_cb(f) do { } while (0)
 #define wpa_msg_register_ifname_cb(f) do { } while (0)
 #else /* CONFIG_NO_WPA_MSG */
@@ -189,8 +190,24 @@ void wpa_msg(void *ctx, int level, const char *fmt, ...) PRINTF_FORMAT(3, 4);
 void wpa_msg_ctrl(void *ctx, int level, const char *fmt, ...)
 PRINTF_FORMAT(3, 4);
 
-typedef void (*wpa_msg_cb_func)(void *ctx, int level, const char *txt,
-				size_t len);
+/**
+ * wpa_msg_global - Global printf for ctrl_iface monitors
+ * @ctx: Pointer to context data; this is the ctx variable registered
+ *	with struct wpa_driver_ops::init()
+ * @level: priority level (MSG_*) of the message
+ * @fmt: printf format string, followed by optional arguments
+ *
+ * This function is used to print conditional debugging and error messages.
+ * This function is like wpa_msg(), but it sends the output as a global event,
+ * i.e., without being specific to an interface. For backwards compatibility,
+ * an old style event is also delivered on one of the interfaces (the one
+ * specified by the context data).
+ */
+void wpa_msg_global(void *ctx, int level, const char *fmt, ...)
+PRINTF_FORMAT(3, 4);
+
+typedef void (*wpa_msg_cb_func)(void *ctx, int level, int global,
+				const char *txt, size_t len);
 
 /**
  * wpa_msg_register_cb - Register callback function for wpa_msg() messages

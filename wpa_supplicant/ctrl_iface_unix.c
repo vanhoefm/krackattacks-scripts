@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant / UNIX domain socket -based control interface
- * Copyright (c) 2004-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -728,6 +728,41 @@ wpa_supplicant_global_ctrl_iface_init(struct wpa_global *global)
 			wpa_printf(MSG_INFO, "Delete '%s' manually if it is "
 				   "not used anymore",
 				   global->params.ctrl_interface);
+			goto fail;
+		}
+	}
+
+	if (global->params.ctrl_interface_group) {
+		char *gid_str = global->params.ctrl_interface_group;
+		gid_t gid = 0;
+		struct group *grp;
+		char *endp;
+
+		grp = getgrnam(gid_str);
+		if (grp) {
+			gid = grp->gr_gid;
+			wpa_printf(MSG_DEBUG, "ctrl_interface_group=%d"
+				   " (from group name '%s')",
+				   (int) gid, gid_str);
+		} else {
+			/* Group name not found - try to parse this as gid */
+			gid = strtol(gid_str, &endp, 10);
+			if (*gid_str == '\0' || *endp != '\0') {
+				wpa_printf(MSG_ERROR, "CTRL: Invalid group "
+					   "'%s'", gid_str);
+				goto fail;
+			}
+			wpa_printf(MSG_DEBUG, "ctrl_interface_group=%d",
+				   (int) gid);
+		}
+		if (chown(global->params.ctrl_interface, -1, gid) < 0) {
+			perror("chown[global_ctrl_interface/ifname]");
+			goto fail;
+		}
+
+		if (chmod(global->params.ctrl_interface, S_IRWXU | S_IRWXG) < 0)
+		{
+			perror("chmod[global_ctrl_interface/ifname]");
 			goto fail;
 		}
 	}

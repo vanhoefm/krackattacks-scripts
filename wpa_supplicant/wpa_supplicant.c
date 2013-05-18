@@ -3288,6 +3288,9 @@ struct wpa_global * wpa_supplicant_init(struct wpa_params *params)
 	if (params->ctrl_interface)
 		global->params.ctrl_interface =
 			os_strdup(params->ctrl_interface);
+	if (params->ctrl_interface_group)
+		global->params.ctrl_interface_group =
+			os_strdup(params->ctrl_interface_group);
 	if (params->override_driver)
 		global->params.override_driver =
 			os_strdup(params->override_driver);
@@ -3430,6 +3433,7 @@ void wpa_supplicant_deinit(struct wpa_global *global)
 		os_free(global->params.pid_file);
 	}
 	os_free(global->params.ctrl_interface);
+	os_free(global->params.ctrl_interface_group);
 	os_free(global->params.override_driver);
 	os_free(global->params.override_ctrl_interface);
 

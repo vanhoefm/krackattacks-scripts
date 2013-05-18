@@ -155,6 +155,11 @@ struct wpa_params {
 	char *ctrl_interface;
 
 	/**
+	 * ctrl_interface_group - Global ctrl_iface group
+	 */
+	char *ctrl_interface_group;
+
+	/**
 	 * dbus_ctrl_interface - Enable the DBus control interface
 	 */
 	int dbus_ctrl_interface;

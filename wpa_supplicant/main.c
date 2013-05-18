@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant / main() function for UNIX like OSes and MinGW
- * Copyright (c) 2003-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -25,6 +25,7 @@ static void usage(void)
 	       "usage:\n"
 	       "  wpa_supplicant [-BddhKLqqstuvW] [-P<pid file>] "
 	       "[-g<global ctrl>] \\\n"
+	       "        [-G<group>] \\\n"
 	       "        -i<ifname> -c<config file> [-C<ctrl>] [-D<driver>] "
 	       "[-p<driver_param>] \\\n"
 	       "        [-b<br_ifname>] [-f<debug file>] [-e<entropy file>] "
@@ -59,6 +60,7 @@ static void usage(void)
 	printf("  -f = log output to debug file instead of stdout\n");
 #endif /* CONFIG_DEBUG_FILE */
 	printf("  -g = global ctrl_interface\n"
+	       "  -G = global ctrl_interface group\n"
 	       "  -K = include keys (passwords, etc.) in debug output\n");
 #ifdef CONFIG_DEBUG_SYSLOG
 	printf("  -s = log output to syslog instead of stdout\n");
@@ -157,7 +159,7 @@ int main(int argc, char *argv[])
 
 	for (;;) {
 		c = getopt(argc, argv,
-			   "b:Bc:C:D:de:f:g:hi:I:KLNo:O:p:P:qsTtuvW");
+			   "b:Bc:C:D:de:f:g:G:hi:I:KLNo:O:p:P:qsTtuvW");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -196,6 +198,9 @@ int main(int argc, char *argv[])
 #endif /* CONFIG_DEBUG_FILE */
 		case 'g':
 			params.ctrl_interface = optarg;
+			break;
+		case 'G':
+			params.ctrl_interface_group = optarg;
 			break;
 		case 'h':
 			usage();

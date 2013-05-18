@@ -410,6 +410,7 @@ Command line options
 
 usage:
   wpa_supplicant [-BddfhKLqqtuvwW] [-P<pid file>] [-g<global ctrl>] \
+        [-G<group>] \
         -i<ifname> -c<config file> [-C<ctrl>] [-D<driver>] [-p<driver_param>] \
         [-b<br_ifname> [-N -i<ifname> -c<conf> [-C<ctrl>] [-D<driver>] \
         [-p<driver_param>] [-b<br_ifname>] ...]
@@ -424,6 +425,7 @@ options:
   -D = driver name (can be multiple drivers: nl80211,wext)
   -f = Log output to default log location (normally /tmp)
   -g = global ctrl_interface
+  -G = global ctrl_interface group
   -K = include keys (passwords, etc.) in debug output
   -t = include timestamp in debug messages
   -h = show this help text

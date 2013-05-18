@@ -1218,8 +1218,10 @@ static int wpa_ft_rrb_rx_request(struct wpa_authenticator *wpa_auth,
 	rlen = 2 + 2 * ETH_ALEN + 2 + resp_ies_len;
 
 	frame = os_malloc(sizeof(*frame) + rlen);
-	if (frame == NULL)
+	if (frame == NULL) {
+		os_free(resp_ies);
 		return -1;
+	}
 	frame->frame_type = RSN_REMOTE_FRAME_TYPE_FT_RRB;
 	frame->packet_type = FT_PACKET_RESPONSE;
 	frame->action_length = host_to_le16(rlen);

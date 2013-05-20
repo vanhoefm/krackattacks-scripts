@@ -37,8 +37,10 @@ unsigned int tdls_testing = 0;
 #endif /* CONFIG_TDLS_TESTING */
 
 #define TPK_LIFETIME 43200 /* 12 hours */
-#define TPK_RETRY_COUNT 3
-#define TPK_TIMEOUT 5000 /* in milliseconds */
+#define TPK_M1_RETRY_COUNT 3
+#define TPK_M1_TIMEOUT 5000 /* in milliseconds */
+#define TPK_M2_RETRY_COUNT 10
+#define TPK_M2_TIMEOUT 500 /* in milliseconds */
 
 #define TDLS_MIC_LEN		16
 
@@ -244,8 +246,13 @@ static int wpa_tdls_tpk_send(struct wpa_sm *sm, const u8 *dest, u8 action_code,
 
 	eloop_cancel_timeout(wpa_tdls_tpk_retry_timeout, sm, peer);
 
-	peer->sm_tmr.count = TPK_RETRY_COUNT;
-	peer->sm_tmr.timer = TPK_TIMEOUT;
+	if (action_code == WLAN_TDLS_SETUP_RESPONSE) {
+		peer->sm_tmr.count = TPK_M2_RETRY_COUNT;
+		peer->sm_tmr.timer = TPK_M2_TIMEOUT;
+	} else {
+		peer->sm_tmr.count = TPK_M1_RETRY_COUNT;
+		peer->sm_tmr.timer = TPK_M1_TIMEOUT;
+	}
 
 	/* Copy message to resend on timeout */
 	os_memcpy(peer->sm_tmr.dest, dest, ETH_ALEN);
@@ -261,7 +268,8 @@ static int wpa_tdls_tpk_send(struct wpa_sm *sm, const u8 *dest, u8 action_code,
 
 	wpa_printf(MSG_DEBUG, "TDLS: Retry timeout registered "
 		   "(action_code=%u)", action_code);
-	eloop_register_timeout(peer->sm_tmr.timer / 1000, 0,
+	eloop_register_timeout(peer->sm_tmr.timer / 1000,
+			       (peer->sm_tmr.timer % 1000) * 1000,
 			       wpa_tdls_tpk_retry_timeout, sm, peer);
 	return 0;
 }
@@ -296,7 +304,6 @@ static void wpa_tdls_tpk_retry_timeout(void *eloop_ctx, void *timeout_ctx)
 
 	if (peer->sm_tmr.count) {
 		peer->sm_tmr.count--;
-		peer->sm_tmr.timer = TPK_TIMEOUT;
 
 		wpa_printf(MSG_INFO, "TDLS: Retrying sending of message "
 			   "(action_code=%u)",
@@ -323,7 +330,8 @@ static void wpa_tdls_tpk_retry_timeout(void *eloop_ctx, void *timeout_ctx)
 		}
 
 		eloop_cancel_timeout(wpa_tdls_tpk_retry_timeout, sm, peer);
-		eloop_register_timeout(peer->sm_tmr.timer / 1000, 0,
+		eloop_register_timeout(peer->sm_tmr.timer / 1000,
+				       (peer->sm_tmr.timer % 1000) * 1000,
 				       wpa_tdls_tpk_retry_timeout, sm, peer);
 	} else {
 		eloop_cancel_timeout(wpa_tdls_tpk_retry_timeout, sm, peer);

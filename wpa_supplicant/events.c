@@ -926,6 +926,15 @@ int wpa_supplicant_connect(struct wpa_supplicant *wpa_s,
 		return -1;
 	}
 
+	wpa_msg(wpa_s, MSG_DEBUG,
+		"Considering connect request: reassociate: %d  selected: "
+		MACSTR "  bssid: " MACSTR "  pending: " MACSTR
+		"  wpa_state: %s  ssid=%p  current_ssid=%p",
+		wpa_s->reassociate, MAC2STR(selected->bssid),
+		MAC2STR(wpa_s->bssid), MAC2STR(wpa_s->pending_bssid),
+		wpa_supplicant_state_txt(wpa_s->wpa_state),
+		ssid, wpa_s->current_ssid);
+
 	/*
 	 * Do not trigger new association unless the BSSID has changed or if
 	 * reassociation is requested. If we are in process of associating with
@@ -935,22 +944,21 @@ int wpa_supplicant_connect(struct wpa_supplicant *wpa_s,
 	    (os_memcmp(selected->bssid, wpa_s->bssid, ETH_ALEN) != 0 &&
 	     ((wpa_s->wpa_state != WPA_ASSOCIATING &&
 	       wpa_s->wpa_state != WPA_AUTHENTICATING) ||
-	      os_memcmp(selected->bssid, wpa_s->pending_bssid, ETH_ALEN) !=
-	      0))) {
+	      (!is_zero_ether_addr(wpa_s->pending_bssid) &&
+	       os_memcmp(selected->bssid, wpa_s->pending_bssid, ETH_ALEN) !=
+	       0) ||
+	      (is_zero_ether_addr(wpa_s->pending_bssid) &&
+	       ssid != wpa_s->current_ssid)))) {
 		if (wpa_supplicant_scard_init(wpa_s, ssid)) {
 			wpa_supplicant_req_new_scan(wpa_s, 10, 0);
 			return 0;
 		}
-		wpa_msg(wpa_s, MSG_DEBUG, "Request association: "
-			"reassociate: %d  selected: "MACSTR "  bssid: " MACSTR
-			"  pending: " MACSTR "  wpa_state: %s",
-			wpa_s->reassociate, MAC2STR(selected->bssid),
-			MAC2STR(wpa_s->bssid), MAC2STR(wpa_s->pending_bssid),
-			wpa_supplicant_state_txt(wpa_s->wpa_state));
+		wpa_msg(wpa_s, MSG_DEBUG, "Request association with " MACSTR,
+			MAC2STR(selected->bssid));
 		wpa_supplicant_associate(wpa_s, selected, ssid);
 	} else {
-		wpa_dbg(wpa_s, MSG_DEBUG, "Already associated with the "
-			"selected AP");
+		wpa_dbg(wpa_s, MSG_DEBUG, "Already associated or trying to "
+			"connect with the selected AP");
 	}
 
 	return 0;

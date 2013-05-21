@@ -6274,8 +6274,14 @@ static const char * nl80211_iftype_str(enum nl80211_iftype mode)
 		return "STATION";
 	case NL80211_IFTYPE_AP:
 		return "AP";
+	case NL80211_IFTYPE_AP_VLAN:
+		return "AP_VLAN";
+	case NL80211_IFTYPE_WDS:
+		return "WDS";
 	case NL80211_IFTYPE_MONITOR:
 		return "MONITOR";
+	case NL80211_IFTYPE_MESH_POINT:
+		return "MESH_POINT";
 	case NL80211_IFTYPE_P2P_CLIENT:
 		return "P2P_CLIENT";
 	case NL80211_IFTYPE_P2P_GO:

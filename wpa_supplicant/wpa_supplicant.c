@@ -1803,7 +1803,8 @@ void wpa_supplicant_enable_network(struct wpa_supplicant *wpa_s,
 			wpa_supplicant_cancel_sched_scan(wpa_s);
 		}
 
-		wpa_supplicant_req_scan(wpa_s, 0, 0);
+		if (wpa_supplicant_fast_associate(wpa_s) != 1)
+			wpa_supplicant_req_scan(wpa_s, 0, 0);
 	}
 }
 

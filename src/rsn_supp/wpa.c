@@ -2622,7 +2622,7 @@ void wpa_sm_update_replay_ctr(struct wpa_sm *sm, const u8 *replay_ctr)
 void wpa_sm_pmksa_cache_flush(struct wpa_sm *sm, void *network_ctx)
 {
 #ifndef CONFIG_NO_WPA2
-	pmksa_cache_flush(sm->pmksa, network_ctx);
+	pmksa_cache_flush(sm->pmksa, network_ctx, NULL, 0);
 #endif /* CONFIG_NO_WPA2 */
 }
 

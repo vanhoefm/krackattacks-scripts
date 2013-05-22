@@ -164,17 +164,23 @@ pmksa_cache_add(struct rsn_pmksa_cache *pmksa, const u8 *pmk, size_t pmk_len,
 				pmksa->pmksa = pos->next;
 			else
 				prev->next = pos->next;
-			wpa_printf(MSG_DEBUG, "RSN: Replace PMKSA entry for "
-				   "the current AP");
-			pmksa_cache_free_entry(pmksa, pos, PMKSA_REPLACE);
 
 			/*
 			 * If OKC is used, there may be other PMKSA cache
 			 * entries based on the same PMK. These needs to be
 			 * flushed so that a new entry can be created based on
-			 * the new PMK.
+			 * the new PMK. Only clear other entries if they have a
+			 * matching PMK and this PMK has been used successfully
+			 * with the current AP, i.e., if opportunistic flag has
+			 * been cleared in wpa_supplicant_key_neg_complete().
 			 */
-			pmksa_cache_flush(pmksa, network_ctx);
+			wpa_printf(MSG_DEBUG, "RSN: Replace PMKSA entry for "
+				   "the current AP and any PMKSA cache entry "
+				   "that was based on the old PMK");
+			if (!pos->opportunistic)
+				pmksa_cache_flush(pmksa, network_ctx, pos->pmk,
+						  pos->pmk_len);
+			pmksa_cache_free_entry(pmksa, pos, PMKSA_REPLACE);
 			break;
 		}
 		prev = pos;
@@ -235,15 +241,22 @@ pmksa_cache_add(struct rsn_pmksa_cache *pmksa, const u8 *pmk, size_t pmk_len,
  * pmksa_cache_flush - Flush PMKSA cache entries for a specific network
  * @pmksa: Pointer to PMKSA cache data from pmksa_cache_init()
  * @network_ctx: Network configuration context or %NULL to flush all entries
+ * @pmk: PMK to match for or %NYLL to match all PMKs
+ * @pmk_len: PMK length
  */
-void pmksa_cache_flush(struct rsn_pmksa_cache *pmksa, void *network_ctx)
+void pmksa_cache_flush(struct rsn_pmksa_cache *pmksa, void *network_ctx,
+		       const u8 *pmk, size_t pmk_len)
 {
 	struct rsn_pmksa_cache_entry *entry, *prev = NULL, *tmp;
 	int removed = 0;
 
 	entry = pmksa->pmksa;
 	while (entry) {
-		if (entry->network_ctx == network_ctx || network_ctx == NULL) {
+		if ((entry->network_ctx == network_ctx ||
+		     network_ctx == NULL) &&
+		    (pmk == NULL ||
+		     (pmk_len == entry->pmk_len &&
+		      os_memcmp(pmk, entry->pmk, pmk_len) == 0))) {
 			wpa_printf(MSG_DEBUG, "RSN: Flush PMKSA cache entry "
 				   "for " MACSTR, MAC2STR(entry->aa));
 			if (prev)

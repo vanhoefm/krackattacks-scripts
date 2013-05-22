@@ -66,7 +66,8 @@ int pmksa_cache_set_current(struct wpa_sm *sm, const u8 *pmkid,
 struct rsn_pmksa_cache_entry *
 pmksa_cache_get_opportunistic(struct rsn_pmksa_cache *pmksa,
 			      void *network_ctx, const u8 *aa);
-void pmksa_cache_flush(struct rsn_pmksa_cache *pmksa, void *network_ctx);
+void pmksa_cache_flush(struct rsn_pmksa_cache *pmksa, void *network_ctx,
+		       const u8 *pmk, size_t pmk_len);
 
 #else /* IEEE8021X_EAPOL and !CONFIG_NO_WPA2 */
 

@@ -689,6 +689,7 @@ struct p2p_config {
 	 * @persistent_group: Whether this is an invitation to reinvoke a
 	 *	persistent group (instead of invitation to join an active
 	 *	group)
+	 * @channels: Available operating channels for the group
 	 * Returns: Status code (P2P_SC_*)
 	 *
 	 * This optional callback can be used to implement persistent reconnect
@@ -709,7 +710,8 @@ struct p2p_config {
 	u8 (*invitation_process)(void *ctx, const u8 *sa, const u8 *bssid,
 				 const u8 *go_dev_addr, const u8 *ssid,
 				 size_t ssid_len, int *go, u8 *group_bssid,
-				 int *force_freq, int persistent_group);
+				 int *force_freq, int persistent_group,
+				 const struct p2p_channels *channels);
 
 	/**
 	 * invitation_received - Callback on Invitation Request RX

@@ -221,11 +221,14 @@ void p2p_process_invitation_req(struct p2p_data *p2p, const u8 *sa,
 		goto fail;
 	}
 
+	p2p_channels_intersect(&p2p->cfg->channels, &dev->channels,
+			       &intersection);
+
 	if (p2p->cfg->invitation_process) {
 		status = p2p->cfg->invitation_process(
 			p2p->cfg->cb_ctx, sa, msg.group_bssid, msg.group_id,
 			msg.group_id + ETH_ALEN, msg.group_id_len - ETH_ALEN,
-			&go, group_bssid, &op_freq, persistent);
+			&go, group_bssid, &op_freq, persistent, &intersection);
 	}
 
 	if (op_freq) {
@@ -238,8 +241,6 @@ void p2p_process_invitation_req(struct p2p_data *p2p, const u8 *sa,
 			goto fail;
 		}
 
-		p2p_channels_intersect(&p2p->cfg->channels, &dev->channels,
-				       &intersection);
 		if (!p2p_channels_includes(&intersection, reg_class, channel))
 		{
 			p2p_dbg(p2p, "forced freq %d MHz not in the supported channels interaction",
@@ -253,8 +254,6 @@ void p2p_process_invitation_req(struct p2p_data *p2p, const u8 *sa,
 	} else {
 		p2p_dbg(p2p, "No forced channel from invitation processing - figure out best one to use");
 
-		p2p_channels_intersect(&p2p->cfg->channels, &dev->channels,
-				       &intersection);
 		/* Default to own configuration as a starting point */
 		p2p->op_reg_class = p2p->cfg->op_reg_class;
 		p2p->op_channel = p2p->cfg->op_channel;

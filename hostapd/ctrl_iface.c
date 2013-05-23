@@ -595,6 +595,7 @@ static int hostapd_ctrl_iface_ess_disassoc(struct hostapd_data *hapd,
 	/* send disassociation frame after time-out */
 	if (disassoc_timer) {
 		struct sta_info *sta;
+		int timeout, beacon_int;
 
 		/*
 		 * Prevent STA from reconnecting using cached PMKSA to force
@@ -611,10 +612,18 @@ static int hostapd_ctrl_iface_ess_disassoc(struct hostapd_data *hapd,
 			return -1;
 		}
 
+		beacon_int = hapd->iconf->beacon_int;
+		if (beacon_int < 1)
+			beacon_int = 100; /* best guess */
+		/* Calculate timeout in ms based on beacon_int in TU */
+		timeout = disassoc_timer * beacon_int * 128 / 125;
+		wpa_printf(MSG_DEBUG, "Disassociation timer for " MACSTR
+			   " set to %d ms", MAC2STR(addr), timeout);
+
 		sta->timeout_next = STA_DISASSOC_FROM_CLI;
 		eloop_cancel_timeout(ap_handle_timer, hapd, sta);
-		eloop_register_timeout(disassoc_timer / 1000,
-				       disassoc_timer % 1000 * 1000,
+		eloop_register_timeout(timeout / 1000,
+				       timeout % 1000 * 1000,
 				       ap_handle_timer, hapd, sta);
 	}
 

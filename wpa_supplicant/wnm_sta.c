@@ -491,9 +491,10 @@ static int compare_scan_neighbor_results(struct wpa_supplicant *wpa_s,
 }
 
 
-static void wnm_send_bss_transition_mgmt_resp(struct wpa_supplicant *wpa_s,
-					      u8 dialog_token, u8 status,
-					      u8 delay, const u8 *target_bssid)
+static void wnm_send_bss_transition_mgmt_resp(
+	struct wpa_supplicant *wpa_s, u8 dialog_token,
+	enum bss_trans_mgmt_status_code status, u8 delay,
+	const u8 *target_bssid)
 {
 	u8 buf[1000], *pos;
 	struct ieee80211_mgmt *mgmt;
@@ -559,7 +560,7 @@ void wnm_scan_response(struct wpa_supplicant *wpa_s,
 		if (wpa_s->wnm_reply) {
 			wnm_send_bss_transition_mgmt_resp(wpa_s,
 						  wpa_s->wnm_dialog_token,
-						  0, /* Accept */
+						  WNM_BSS_TM_ACCEPT,
 						  0, NULL);
 		}
 
@@ -575,7 +576,7 @@ send_bss_resp_fail:
 	if (wpa_s->wnm_reply) {
 		wnm_send_bss_transition_mgmt_resp(wpa_s,
 						  wpa_s->wnm_dialog_token,
-						  1 /* Reject - unspecified */,
+						  WNM_BSS_TM_REJECT_UNSPECIFIED,
 						  0, NULL);
 	}
 	return;
@@ -603,7 +604,7 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 
 	pos += 5;
 
-	if (wpa_s->wnm_mode & 0x08) {
+	if (wpa_s->wnm_mode & WNM_BSS_TM_REQ_BSS_TERMINATION_INCLUDED) {
 		if (pos + 12 > end) {
 			wpa_printf(MSG_DEBUG, "WNM: Too short BSS TM Request");
 			return;
@@ -612,7 +613,7 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 		pos += 12; /* BSS Termination Duration */
 	}
 
-	if (wpa_s->wnm_mode & 0x10) {
+	if (wpa_s->wnm_mode & WNM_BSS_TM_REQ_ESS_DISASSOC_IMMINENT) {
 		char url[256];
 		if (pos + 1 > end || pos + 1 + pos[0] > end) {
 			wpa_printf(MSG_DEBUG, "WNM: Invalid BSS Transition "
@@ -626,7 +627,7 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 			"session_info_url=%s", url);
 	}
 
-	if (wpa_s->wnm_mode & 0x04) {
+	if (wpa_s->wnm_mode & WNM_BSS_TM_REQ_DISASSOC_IMMINENT) {
 		wpa_msg(wpa_s, MSG_INFO, "WNM: Disassociation Imminent - "
 			"Disassociation Timer %u", wpa_s->wnm_dissoc_timer);
 		if (wpa_s->wnm_dissoc_timer && !wpa_s->scanning) {
@@ -637,7 +638,7 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 		}
 	}
 
-	if (wpa_s->wnm_mode & 0x01) {
+	if (wpa_s->wnm_mode & WNM_BSS_TM_REQ_PREF_CAND_LIST_INCLUDED) {
 		wpa_msg(wpa_s, MSG_INFO, "WNM: Preferred List Available");
 		wpa_s->wnm_num_neighbor_report = 0;
 		os_free(wpa_s->wnm_neighbor_report_elements);
@@ -675,7 +676,7 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 			"Request Mode is zero");
 		wnm_send_bss_transition_mgmt_resp(wpa_s,
 						  wpa_s->wnm_dialog_token,
-						  1 /* Reject - unspecified */,
+						  WNM_BSS_TM_REJECT_UNSPECIFIED,
 						  0, NULL);
 	}
 }

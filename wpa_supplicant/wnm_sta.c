@@ -672,12 +672,16 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 		wpa_s->scan_res_handler = wnm_scan_response;
 		wpa_supplicant_req_scan(wpa_s, 0, 0);
 	} else if (reply) {
-		wpa_msg(wpa_s, MSG_INFO, "WNM: BSS Transition Management "
-			"Request Mode is zero");
+		enum bss_trans_mgmt_status_code status;
+		if (wpa_s->wnm_mode & WNM_BSS_TM_REQ_ESS_DISASSOC_IMMINENT)
+			status = WNM_BSS_TM_ACCEPT;
+		else {
+			wpa_msg(wpa_s, MSG_INFO, "WNM: BSS Transition Management Request did not include candidates");
+			status = WNM_BSS_TM_REJECT_UNSPECIFIED;
+		}
 		wnm_send_bss_transition_mgmt_resp(wpa_s,
 						  wpa_s->wnm_dialog_token,
-						  WNM_BSS_TM_REJECT_UNSPECIFIED,
-						  0, NULL);
+						  status, 0, NULL);
 	}
 }
 

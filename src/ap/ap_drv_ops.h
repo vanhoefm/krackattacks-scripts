@@ -173,6 +173,14 @@ static inline int hostapd_drv_sta_clear_stats(struct hostapd_data *hapd,
 	return hapd->driver->sta_clear_stats(hapd->drv_priv, addr);
 }
 
+static inline int hostapd_drv_set_acl(struct hostapd_data *hapd,
+				      struct hostapd_acl_params *params)
+{
+	if (hapd->driver == NULL || hapd->driver->set_acl == NULL)
+		return 0;
+	return hapd->driver->set_acl(hapd->drv_priv, params);
+}
+
 static inline int hostapd_drv_set_ap(struct hostapd_data *hapd,
 				     struct wpa_driver_ap_params *params)
 {

@@ -906,6 +906,8 @@ struct wpa_driver_capa {
 #define WPA_DRIVER_PROBE_RESP_OFFLOAD_INTERWORKING	0x00000008
 	unsigned int probe_resp_offloads;
 
+	unsigned int max_acl_mac_addrs;
+
 	/**
 	 * extended_capa - extended capabilities in driver/device
 	 *
@@ -964,6 +966,16 @@ struct hostapd_freq_params {
 	 * only for bandwidth 80 and an 80+80 channel */
 	int center_freq1, center_freq2;
 	int bandwidth;
+};
+
+struct mac_address {
+	u8 addr[ETH_ALEN];
+};
+
+struct hostapd_acl_params {
+	u8 acl_policy;
+	unsigned int num_mac_acl;
+	struct mac_address mac_acl[0];
 };
 
 enum wpa_driver_if_type {
@@ -1594,6 +1606,16 @@ struct wpa_driver_ops {
 	 * Returns: 0 on success, -1 on failure
 	 */
 	int (*set_ap)(void *priv, struct wpa_driver_ap_params *params);
+
+	/**
+	 * set_acl - Set ACL in AP mode
+	 * @priv: Private driver interface data
+	 * @params: Parameters to configure ACL
+	 * Returns: 0 on success, -1 on failure
+	 *
+	 * This is used only for the drivers which support MAC address ACL.
+	 */
+	int (*set_acl)(void *priv, struct hostapd_acl_params *params);
 
 	/**
 	 * hapd_init - Initialize driver interface (hostapd only)

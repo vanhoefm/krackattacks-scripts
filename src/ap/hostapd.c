@@ -837,6 +837,72 @@ static void hostapd_tx_queue_params(struct hostapd_iface *iface)
 }
 
 
+static int hostapd_set_acl_list(struct hostapd_data *hapd,
+				struct mac_acl_entry *mac_acl,
+				int n_entries, u8 accept_acl)
+{
+	struct hostapd_acl_params *acl_params;
+	int i, err;
+
+	acl_params = os_zalloc(sizeof(*acl_params) +
+			       (n_entries * sizeof(acl_params->mac_acl[0])));
+	if (!acl_params)
+		return -ENOMEM;
+
+	for (i = 0; i < n_entries; i++)
+		os_memcpy(acl_params->mac_acl[i].addr, mac_acl[i].addr,
+			  ETH_ALEN);
+
+	acl_params->acl_policy = accept_acl;
+	acl_params->num_mac_acl = n_entries;
+
+	err = hostapd_drv_set_acl(hapd, acl_params);
+
+	os_free(acl_params);
+
+	return err;
+}
+
+
+static void hostapd_set_acl(struct hostapd_data *hapd)
+{
+	struct hostapd_config *conf = hapd->iconf;
+	int err;
+	u8 accept_acl;
+
+	if (!(conf->bss->num_accept_mac || conf->bss->num_deny_mac))
+		return;
+
+	if (conf->bss->macaddr_acl == DENY_UNLESS_ACCEPTED) {
+		if (conf->bss->num_accept_mac) {
+			accept_acl = 1;
+			err = hostapd_set_acl_list(hapd, conf->bss->accept_mac,
+						   conf->bss->num_accept_mac,
+						   accept_acl);
+			if (err) {
+				wpa_printf(MSG_DEBUG, "Failed to set accept acl");
+				return;
+			}
+		} else {
+			wpa_printf(MSG_DEBUG, "Mismatch between ACL Policy & Accept/deny lists file");
+		}
+	} else if (conf->bss->macaddr_acl == ACCEPT_UNLESS_DENIED) {
+		if (conf->bss->num_deny_mac) {
+			accept_acl = 0;
+			err = hostapd_set_acl_list(hapd, conf->bss->deny_mac,
+						   conf->bss->num_deny_mac,
+						   accept_acl);
+			if (err) {
+				wpa_printf(MSG_DEBUG, "Failed to set deny acl");
+				return;
+			}
+		} else {
+			wpa_printf(MSG_DEBUG, "Mismatch between ACL Policy & Accept/deny lists file");
+		}
+	}
+}
+
+
 static int setup_interface(struct hostapd_iface *iface)
 {
 	struct hostapd_data *hapd = iface->bss[0];
@@ -961,6 +1027,8 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 	hostapd_tx_queue_params(iface);
 
 	ap_list_init(iface);
+
+	hostapd_set_acl(hapd);
 
 	if (hostapd_driver_commit(hapd) < 0) {
 		wpa_printf(MSG_ERROR, "%s: Failed to commit driver "

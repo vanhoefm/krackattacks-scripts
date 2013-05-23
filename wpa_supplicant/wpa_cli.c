@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - command line interface for wpa_supplicant daemon
- * Copyright (c) 2004-2012, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -81,6 +81,7 @@ static const char *pid_file = NULL;
 static const char *action_file = NULL;
 static int ping_interval = 5;
 static int interactive = 0;
+static char *ifname_prefix = NULL;
 
 struct cli_txt_entry {
 	struct dl_list list;
@@ -403,6 +404,12 @@ static int _wpa_ctrl_command(struct wpa_ctrl *ctrl, char *cmd, int print)
 	if (ctrl_conn == NULL) {
 		printf("Not connected to wpa_supplicant - command dropped.\n");
 		return -1;
+	}
+	if (ifname_prefix) {
+		os_snprintf(buf, sizeof(buf), "IFNAME=%s %s",
+			    ifname_prefix, cmd);
+		buf[sizeof(buf) - 1] = '\0';
+		cmd = buf;
 	}
 	len = sizeof(buf) - 1;
 	ret = wpa_ctrl_request(ctrl, cmd, os_strlen(cmd), buf, &len,
@@ -2888,6 +2895,16 @@ static int wpa_request(struct wpa_ctrl *ctrl, int argc, char *argv[])
 	struct wpa_cli_cmd *cmd, *match = NULL;
 	int count;
 	int ret = 0;
+
+	if (argc > 1 && os_strncasecmp(argv[0], "IFNAME=", 7) == 0) {
+		ifname_prefix = argv[0] + 7;
+		argv = &argv[1];
+		argc--;
+	} else
+		ifname_prefix = NULL;
+
+	if (argc == 0)
+		return -1;
 
 	count = 0;
 	cmd = wpa_cli_commands;

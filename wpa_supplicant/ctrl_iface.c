@@ -5064,6 +5064,9 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 	wpa_tdls_enable(wpa_s->wpa, 1);
 #endif /* CONFIG_TDLS */
 
+	eloop_cancel_timeout(wpa_supplicant_stop_countermeasures, wpa_s, NULL);
+	wpa_supplicant_stop_countermeasures(wpa_s, NULL);
+
 	wpa_s->no_keep_alive = 0;
 
 	os_free(wpa_s->disallow_aps_bssid);

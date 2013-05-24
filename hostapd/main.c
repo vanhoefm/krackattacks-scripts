@@ -279,6 +279,7 @@ static int hostapd_driver_init(struct hostapd_iface *iface)
 		iface->extended_capa = capa.extended_capa;
 		iface->extended_capa_mask = capa.extended_capa_mask;
 		iface->extended_capa_len = capa.extended_capa_len;
+		iface->drv_max_acl_mac_addrs = capa.max_acl_mac_addrs;
 	}
 
 	return 0;

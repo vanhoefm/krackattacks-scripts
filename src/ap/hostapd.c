@@ -870,6 +870,8 @@ static void hostapd_set_acl(struct hostapd_data *hapd)
 	int err;
 	u8 accept_acl;
 
+	if (hapd->iface->drv_max_acl_mac_addrs == 0)
+		return;
 	if (!(conf->bss->num_accept_mac || conf->bss->num_deny_mac))
 		return;
 

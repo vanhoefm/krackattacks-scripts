@@ -596,6 +596,13 @@ static int wpa_ft_process_gtk_subelem(struct wpa_sm *sm, const u8 *gtk_elem,
 	}
 
 	wpa_hexdump_key(MSG_DEBUG, "FT: GTK from Reassoc Resp", gtk, keylen);
+	if (sm->group_cipher == WPA_CIPHER_TKIP) {
+		/* Swap Tx/Rx keys for Michael MIC */
+		u8 tmp[8];
+		os_memcpy(tmp, gtk + 16, 8);
+		os_memcpy(gtk + 16, gtk + 24, 8);
+		os_memcpy(gtk + 24, tmp, 8);
+	}
 	if (wpa_sm_set_key(sm, alg, broadcast_ether_addr, keyidx, 0,
 			   gtk_elem + 3, rsc_len, gtk, keylen) < 0) {
 		wpa_printf(MSG_WARNING, "WPA: Failed to set GTK to the "

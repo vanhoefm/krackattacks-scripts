@@ -556,7 +556,7 @@ static int hostapd_ctrl_iface_ess_disassoc(struct hostapd_data *hapd,
 		return -1;
 
 	url = os_strchr(timerstr, ' ');
-	if (*url != ' ')
+	if (url == NULL)
 		return -1;
 	url++;
 	url_len = os_strlen(url);

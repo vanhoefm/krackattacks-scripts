@@ -106,6 +106,8 @@ struct wlantest_tdls {
 	u8 rsc_init[16 + 1][6];
 	u8 rsc_resp[16 + 1][6];
 	u32 counters[NUM_WLANTEST_TDLS_COUNTER];
+	u8 inonce[32];
+	u8 rnonce[32];
 };
 
 struct wlantest_bss {

@@ -53,6 +53,12 @@ static struct wlantest_tdls * get_tdls(struct wlantest *wt, const u8 *linkid,
 	if (!create_new)
 		return NULL;
 
+	add_note(wt, MSG_DEBUG, "Add new TDLS link context: initiator " MACSTR
+		 " responder " MACSTR " BSSID " MACSTR,
+		 MAC2STR(linkid + ETH_ALEN),
+		 MAC2STR(linkid + 2 * ETH_ALEN),
+		 MAC2STR(bssid));
+
 	tdls = os_zalloc(sizeof(*tdls));
 	if (tdls == NULL)
 		return NULL;
@@ -196,6 +202,7 @@ static void rx_data_tdls_setup_request(struct wlantest *wt, const u8 *bssid,
 {
 	struct ieee802_11_elems elems;
 	struct wlantest_tdls *tdls;
+	u8 linkid[3 * ETH_ALEN];
 
 	if (len < 3) {
 		add_note(wt, MSG_INFO, "Too short TDLS Setup Request " MACSTR
@@ -216,7 +223,20 @@ static void rx_data_tdls_setup_request(struct wlantest *wt, const u8 *bssid,
 	if (tdls) {
 		tdls->counters[WLANTEST_TDLS_COUNTER_SETUP_REQ]++;
 		tdls->dialog_token = data[0];
+		if (elems.ftie && elems.ftie_len >= sizeof(struct rsn_ftie)) {
+			const struct rsn_ftie *f;
+			f = (const struct rsn_ftie *) elems.ftie;
+			os_memcpy(tdls->inonce, f->snonce, WPA_NONCE_LEN);
+		}
 	}
+
+	/* Check whether reverse direction context exists already */
+	os_memcpy(linkid, bssid, ETH_ALEN);
+	os_memcpy(linkid + ETH_ALEN, dst, ETH_ALEN);
+	os_memcpy(linkid + 2 * ETH_ALEN, src, ETH_ALEN);
+	tdls = get_tdls(wt, linkid, 0, bssid);
+	if (tdls)
+		add_note(wt, MSG_INFO, "Reverse direction TDLS context exists");
 }
 
 
@@ -298,8 +318,10 @@ static void rx_data_tdls_setup_response(struct wlantest *wt, const u8 *bssid,
 		   MAC2STR(elems.link_id + 2 * ETH_ALEN));
 
 	tdls = get_tdls(wt, elems.link_id, 1, bssid);
-	if (!tdls)
+	if (!tdls) {
+		add_note(wt, MSG_INFO, "No match TDLS context found");
 		return;
+	}
 	if (status)
 		tdls->counters[WLANTEST_TDLS_COUNTER_SETUP_RESP_FAIL]++;
 	else
@@ -307,6 +329,16 @@ static void rx_data_tdls_setup_response(struct wlantest *wt, const u8 *bssid,
 
 	if (status != WLAN_STATUS_SUCCESS)
 		return;
+
+	if (elems.ftie && elems.ftie_len >= sizeof(struct rsn_ftie)) {
+		const struct rsn_ftie *f;
+		f = (const struct rsn_ftie *) elems.ftie;
+		if (os_memcmp(tdls->inonce, f->snonce, WPA_NONCE_LEN) != 0) {
+			add_note(wt, MSG_INFO, "Mismatch in TDLS initiator "
+				 "nonce");
+		}
+		os_memcpy(tdls->rnonce, f->anonce, WPA_NONCE_LEN);
+	}
 
 	if (tdls_derive_tpk(tdls, bssid, elems.ftie, elems.ftie_len) < 1)
 		return;
@@ -401,6 +433,19 @@ static void rx_data_tdls_setup_confirm(struct wlantest *wt, const u8 *bssid,
 	if (status != WLAN_STATUS_SUCCESS)
 		return;
 
+	if (elems.ftie && elems.ftie_len >= sizeof(struct rsn_ftie)) {
+		const struct rsn_ftie *f;
+		f = (const struct rsn_ftie *) elems.ftie;
+		if (os_memcmp(tdls->inonce, f->snonce, WPA_NONCE_LEN) != 0) {
+			add_note(wt, MSG_INFO, "Mismatch in TDLS initiator "
+				 "nonce");
+		}
+		if (os_memcmp(tdls->rnonce, f->anonce, WPA_NONCE_LEN) != 0) {
+			add_note(wt, MSG_INFO, "Mismatch in TDLS responder "
+				 "nonce");
+		}
+	}
+
 	tdls->link_up = 1;
 	if (tdls_derive_tpk(tdls, bssid, elems.ftie, elems.ftie_len) < 1) {
 		if (elems.ftie == NULL)
@@ -409,7 +454,7 @@ static void rx_data_tdls_setup_confirm(struct wlantest *wt, const u8 *bssid,
 	}
 	if (tdls_verify_mic(wt, tdls, 3, &elems) == 0) {
 		tdls->dialog_token = data[2];
-		add_note(wt, MSG_DEBUG, "TDLS: Dialog Token for the link: %u",
+		add_note(wt, MSG_DEBUG, "TDLS: Link up - Dialog Token: %u",
 			 tdls->dialog_token);
 	}
 
@@ -514,6 +559,8 @@ static void rx_data_tdls_teardown(struct wlantest *wt, const u8 *bssid,
 
 	tdls = get_tdls(wt, elems.link_id, 1, bssid);
 	if (tdls) {
+		if (tdls->link_up)
+			add_note(wt, MSG_DEBUG, "TDLS: Link down");
 		tdls->link_up = 0;
 		tdls->counters[WLANTEST_TDLS_COUNTER_TEARDOWN]++;
 		tdls_verify_mic_teardown(wt, tdls, 4, data, &elems);

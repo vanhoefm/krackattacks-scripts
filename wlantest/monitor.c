@@ -27,8 +27,12 @@ static void monitor_read(int sock, void *eloop_ctx, void *sock_ctx)
 		return;
 	}
 
+	clear_notes(wt);
+	os_free(wt->decrypted);
+	wt->decrypted = NULL;
 	write_pcap_captured(wt, buf, len);
 	wlantest_process(wt, buf, len);
+	write_pcapng_captured(wt, buf, len);
 }
 
 

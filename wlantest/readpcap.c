@@ -73,6 +73,10 @@ int read_cap_file(struct wlantest *wt, const char *fname)
 	wpa_printf(MSG_DEBUG, "pcap datalink type: %d", dlt);
 
 	for (;;) {
+		clear_notes(wt);
+		os_free(wt->decrypted);
+		wt->decrypted = NULL;
+
 		res = pcap_next_ex(pcap, &hdr, &data);
 		if (res == -2)
 			break; /* No more packets */
@@ -100,9 +104,10 @@ int read_cap_file(struct wlantest *wt, const char *fname)
 				pcap_dump(wt->write_pcap_dumper, hdr, data);
 		}
 		if (hdr->caplen < hdr->len) {
-			wpa_printf(MSG_DEBUG, "pcap: Dropped incomplete frame "
-				   "(%u/%u captured)",
-				   hdr->caplen, hdr->len);
+			add_note(wt, MSG_DEBUG, "pcap: Dropped incomplete "
+				 "frame (%u/%u captured)",
+				 hdr->caplen, hdr->len);
+			write_pcapng_write_read(wt, dlt, hdr, data);
 			continue;
 		}
 		count++;
@@ -115,7 +120,9 @@ int read_cap_file(struct wlantest *wt, const char *fname)
 			break;
 		case DLT_IEEE802_11:
 			wlantest_process_80211(wt, data, hdr->caplen);
+			break;
 		}
+		write_pcapng_write_read(wt, dlt, hdr, data);
 	}
 
 	pcap_close(pcap);

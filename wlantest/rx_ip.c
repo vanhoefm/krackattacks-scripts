@@ -96,6 +96,22 @@ static void rx_data_icmp(struct wlantest *wt, const u8 *bssid,
 }
 
 
+static int hwsim_test_packet(const u8 *data, size_t len)
+{
+	size_t i;
+
+	if (len != 1500 - 14)
+		return 0;
+
+	for (i = 0; i < len; i++) {
+		if (data[i] != (i & 0xff))
+			return 0;
+	}
+
+	return 1;
+}
+
+
 void rx_data_ip(struct wlantest *wt, const u8 *bssid, const u8 *sta_addr,
 		const u8 *dst, const u8 *src, const u8 *data, size_t len,
 		const u8 *peer_addr)
@@ -109,6 +125,10 @@ void rx_data_ip(struct wlantest *wt, const u8 *bssid, const u8 *sta_addr,
 	if (len < sizeof(*ip))
 		return;
 	if (ip->version != 4) {
+		if (hwsim_test_packet(data, len)) {
+			add_note(wt, MSG_INFO, "hwsim_test package");
+			return;
+		}
 		add_note(wt, MSG_DEBUG, "Unexpected IP protocol version %u in "
 			 "IPv4 packet (bssid=" MACSTR " str=" MACSTR
 			 " dst=" MACSTR ")", ip->version, MAC2STR(bssid),

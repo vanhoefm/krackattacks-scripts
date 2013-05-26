@@ -202,7 +202,7 @@ static void rx_data_bss_prot(struct wlantest *wt,
 	size_t dlen;
 	int tid;
 	u8 pn[6], *rsc;
-	struct wlantest_tdls *tdls = NULL;
+	struct wlantest_tdls *tdls = NULL, *found;
 	const u8 *tk = NULL;
 
 	if (hdr->addr1[0] & 0x01) {
@@ -230,16 +230,23 @@ static void rx_data_bss_prot(struct wlantest *wt,
 		sta2 = sta_find(bss, hdr->addr1);
 		if (sta == NULL || sta2 == NULL)
 			return;
+		found = NULL;
 		dl_list_for_each(tdls, &bss->tdls, struct wlantest_tdls, list)
 		{
 			if ((tdls->init == sta && tdls->resp == sta2) ||
 			    (tdls->init == sta2 && tdls->resp == sta)) {
-				if (!tdls->link_up)
-					wpa_printf(MSG_DEBUG, "TDLS: Link not "
-						   "up, but Data frame seen");
-				tk = tdls->tpk.tk;
-				break;
+				found = tdls;
+				if (tdls->link_up)
+					break;
 			}
+		}
+		if (found) {
+			if (!found->link_up)
+				add_note(wt, MSG_DEBUG,
+					 "TDLS: Link not up, but Data "
+					 "frame seen");
+			tk = found->tpk.tk;
+			tdls = found;
 		}
 	}
 	if ((sta == NULL ||
@@ -401,7 +408,7 @@ static struct wlantest_tdls * get_tdls(struct wlantest *wt, const u8 *bssid,
 {
 	struct wlantest_bss *bss;
 	struct wlantest_sta *sta1, *sta2;
-	struct wlantest_tdls *tdls;
+	struct wlantest_tdls *tdls, *found = NULL;
 
 	bss = bss_find(wt, bssid);
 	if (bss == NULL)
@@ -415,11 +422,14 @@ static struct wlantest_tdls * get_tdls(struct wlantest *wt, const u8 *bssid,
 
 	dl_list_for_each(tdls, &bss->tdls, struct wlantest_tdls, list) {
 		if ((tdls->init == sta1 && tdls->resp == sta2) ||
-		    (tdls->init == sta2 && tdls->resp == sta1))
-			return tdls;
+		    (tdls->init == sta2 && tdls->resp == sta1)) {
+			found = tdls;
+			if (tdls->link_up)
+				break;
+		}
 	}
 
-	return NULL;
+	return found;
 }
 
 

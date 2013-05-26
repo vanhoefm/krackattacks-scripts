@@ -14,8 +14,8 @@
 #include "wlantest.h"
 
 
-static void ping_update(struct wlantest_sta *sta, int req, u32 src, u32 dst,
-			u16 id, u16 seq)
+static void ping_update(struct wlantest *wt, struct wlantest_sta *sta, int req,
+			u32 src, u32 dst, u16 id, u16 seq)
 {
 	if (req) {
 		sta->icmp_echo_req_src = src;
@@ -34,8 +34,8 @@ static void ping_update(struct wlantest_sta *sta, int req, u32 src, u32 dst,
 		    sta->counters[WLANTEST_STA_COUNTER_REASSOCREQ_TX] == 0)
 			sta->counters[
 				WLANTEST_STA_COUNTER_PING_OK_FIRST_ASSOC]++;
-		wpa_printf(MSG_DEBUG, "ICMP echo (ping) match for STA " MACSTR,
-			   MAC2STR(sta->addr));
+		add_note(wt, MSG_DEBUG, "ICMP echo (ping) match for STA "
+			 MACSTR, MAC2STR(sta->addr));
 	}
 }
 
@@ -68,15 +68,15 @@ static void rx_data_icmp(struct wlantest *wt, const u8 *bssid,
 	addr.s_addr = dst;
 	snprintf(buf, sizeof(buf), "%s", inet_ntoa(addr));
 	addr.s_addr = src;
-	wpa_printf(MSG_DEBUG, "ICMP echo %s %s -> %s id=%04x seq=%u len=%u%s",
-		   hdr->type == ICMP_ECHO ? "request" : "response",
-		   inet_ntoa(addr), buf, id, seq, (unsigned) len - 8,
-		   peer_addr ? " [DL]" : "");
+	add_note(wt, MSG_DEBUG, "ICMP echo %s %s -> %s id=%04x seq=%u len=%u%s",
+		 hdr->type == ICMP_ECHO ? "request" : "response",
+		 inet_ntoa(addr), buf, id, seq, (unsigned) len - 8,
+		 peer_addr ? " [DL]" : "");
 
 	bss = bss_find(wt, bssid);
 	if (bss == NULL) {
-		wpa_printf(MSG_INFO, "No BSS " MACSTR " known for ICMP packet",
-			   MAC2STR(bssid));
+		add_note(wt, MSG_INFO, "No BSS " MACSTR
+			 " known for ICMP packet", MAC2STR(bssid));
 		return;
 	}
 
@@ -85,14 +85,14 @@ static void rx_data_icmp(struct wlantest *wt, const u8 *bssid,
 
 	sta = sta_find(bss, sta_addr);
 	if (sta == NULL) {
-		wpa_printf(MSG_INFO, "No STA " MACSTR " known for ICMP packet",
-			   MAC2STR(sta_addr));
+		add_note(wt, MSG_INFO, "No STA " MACSTR
+			 " known for ICMP packet", MAC2STR(sta_addr));
 		return;
 	}
 
-	ping_update(sta, hdr->type == ICMP_ECHO, src, dst, id, seq);
+	ping_update(wt, sta, hdr->type == ICMP_ECHO, src, dst, id, seq);
 	if (peer_addr && (sta = sta_find(bss, peer_addr)))
-		ping_update(sta, hdr->type == ICMP_ECHO, src, dst, id, seq);
+		ping_update(wt, sta, hdr->type == ICMP_ECHO, src, dst, id, seq);
 }
 
 
@@ -109,24 +109,24 @@ void rx_data_ip(struct wlantest *wt, const u8 *bssid, const u8 *sta_addr,
 	if (len < sizeof(*ip))
 		return;
 	if (ip->version != 4) {
-		wpa_printf(MSG_DEBUG, "Unexpected IP protocol version %u in "
-			   "IPv4 packet (bssid=" MACSTR " str=" MACSTR
-			   " dst=" MACSTR ")", ip->version, MAC2STR(bssid),
-			   MAC2STR(src), MAC2STR(dst));
+		add_note(wt, MSG_DEBUG, "Unexpected IP protocol version %u in "
+			 "IPv4 packet (bssid=" MACSTR " str=" MACSTR
+			 " dst=" MACSTR ")", ip->version, MAC2STR(bssid),
+			 MAC2STR(src), MAC2STR(dst));
 		return;
 	}
 	if (ip->ihl * 4 < sizeof(*ip)) {
-		wpa_printf(MSG_DEBUG, "Unexpected IP header length %u in "
-			   "IPv4 packet (bssid=" MACSTR " str=" MACSTR
-			   " dst=" MACSTR ")", ip->ihl, MAC2STR(bssid),
-			   MAC2STR(src), MAC2STR(dst));
+		add_note(wt, MSG_DEBUG, "Unexpected IP header length %u in "
+			 "IPv4 packet (bssid=" MACSTR " str=" MACSTR
+			 " dst=" MACSTR ")", ip->ihl, MAC2STR(bssid),
+			 MAC2STR(src), MAC2STR(dst));
 		return;
 	}
 	if (ip->ihl * 4 > len) {
-		wpa_printf(MSG_DEBUG, "Truncated IP header (ihl=%u len=%u) in "
-			   "IPv4 packet (bssid=" MACSTR " str=" MACSTR
-			   " dst=" MACSTR ")", ip->ihl, (unsigned) len,
-			   MAC2STR(bssid), MAC2STR(src), MAC2STR(dst));
+		add_note(wt, MSG_DEBUG, "Truncated IP header (ihl=%u len=%u) "
+			 "in IPv4 packet (bssid=" MACSTR " str=" MACSTR
+			 " dst=" MACSTR ")", ip->ihl, (unsigned) len,
+			 MAC2STR(bssid), MAC2STR(src), MAC2STR(dst));
 		return;
 	}
 

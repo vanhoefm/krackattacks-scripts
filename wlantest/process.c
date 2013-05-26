@@ -100,12 +100,12 @@ static void rx_update_ps(struct wlantest *wt, const struct ieee80211_hdr *hdr,
 	if (!to_ap) {
 		if (sta->pwrmgt && !sta->pspoll) {
 			u16 seq_ctrl = le_to_host16(hdr->seq_ctrl);
-			wpa_printf(MSG_DEBUG, "AP " MACSTR " sent a frame "
-				   "(%u:%u) to a sleeping STA " MACSTR
-				   " (seq=%u)",
-				   MAC2STR(sta->bss->bssid),
-				   type, stype, MAC2STR(sta->addr),
-				   WLAN_GET_SEQ_SEQ(seq_ctrl));
+			add_note(wt, MSG_DEBUG, "AP " MACSTR " sent a frame "
+				 "(%u:%u) to a sleeping STA " MACSTR
+				 " (seq=%u)",
+				 MAC2STR(sta->bss->bssid),
+				 type, stype, MAC2STR(sta->addr),
+				 WLAN_GET_SEQ_SEQ(seq_ctrl));
 		} else
 			sta->pspoll = 0;
 		return;
@@ -122,12 +122,12 @@ static void rx_update_ps(struct wlantest *wt, const struct ieee80211_hdr *hdr,
 		 * maintain state through the frame exchange.
 		 */
 		if (sta->pwrmgt && !(fc & WLAN_FC_PWRMGT)) {
-			wpa_printf(MSG_DEBUG, "STA " MACSTR " woke up from "
-				   "sleep", MAC2STR(sta->addr));
+			add_note(wt, MSG_DEBUG, "STA " MACSTR " woke up from "
+				 "sleep", MAC2STR(sta->addr));
 			sta->pwrmgt = 0;
 		} else if (!sta->pwrmgt && (fc & WLAN_FC_PWRMGT)) {
-			wpa_printf(MSG_DEBUG, "STA " MACSTR " went to sleep",
-				   MAC2STR(sta->addr));
+			add_note(wt, MSG_DEBUG, "STA " MACSTR " went to sleep",
+				 MAC2STR(sta->addr));
 			sta->pwrmgt = 1;
 		}
 	}
@@ -161,10 +161,10 @@ static int rx_duplicate(struct wlantest *wt, const struct ieee80211_hdr *hdr,
 
 	if ((fc & WLAN_FC_RETRY) && hdr->seq_ctrl == *seq_ctrl) {
 		u16 s = le_to_host16(hdr->seq_ctrl);
-		wpa_printf(MSG_MSGDUMP, "Ignore duplicated frame (seq=%u "
-			   "frag=%u A1=" MACSTR " A2=" MACSTR ")",
-			   WLAN_GET_SEQ_SEQ(s), WLAN_GET_SEQ_FRAG(s),
-			   MAC2STR(hdr->addr1), MAC2STR(hdr->addr2));
+		add_note(wt, MSG_MSGDUMP, "Ignore duplicated frame (seq=%u "
+			 "frag=%u A1=" MACSTR " A2=" MACSTR ")",
+			 WLAN_GET_SEQ_SEQ(s), WLAN_GET_SEQ_FRAG(s),
+			 MAC2STR(hdr->addr1), MAC2STR(hdr->addr2));
 		return 1;
 	}
 
@@ -181,8 +181,8 @@ static void rx_ack(struct wlantest *wt, const struct ieee80211_hdr *hdr)
 
 	if (wt->last_len < 24 || (last->addr1[0] & 0x01) ||
 	    os_memcmp(hdr->addr1, last->addr2, ETH_ALEN) != 0) {
-		wpa_printf(MSG_MSGDUMP, "Unknown Ack frame (previous frame "
-			   "not seen)");
+		add_note(wt, MSG_MSGDUMP, "Unknown Ack frame (previous frame "
+			 "not seen)");
 		return;
 	}
 
@@ -277,7 +277,7 @@ void wlantest_process(struct wlantest *wt, const u8 *data, size_t len)
 	wpa_hexdump(MSG_EXCESSIVE, "Process data", data, len);
 
 	if (ieee80211_radiotap_iterator_init(&iter, (void *) data, len)) {
-		wpa_printf(MSG_INFO, "Invalid radiotap frame");
+		add_note(wt, MSG_INFO, "Invalid radiotap frame");
 		return;
 	}
 
@@ -288,8 +288,8 @@ void wlantest_process(struct wlantest *wt, const u8 *data, size_t len)
 		if (ret == -ENOENT)
 			break;
 		if (ret) {
-			wpa_printf(MSG_INFO, "Invalid radiotap header: %d",
-				   ret);
+			add_note(wt, MSG_INFO, "Invalid radiotap header: %d",
+				 ret);
 			return;
 		}
 		switch (iter.this_arg_index) {
@@ -310,7 +310,7 @@ void wlantest_process(struct wlantest *wt, const u8 *data, size_t len)
 	}
 
 	if (iter.max_length == 8) {
-		wpa_printf(MSG_DEBUG, "Skip frame inserted by wlantest");
+		add_note(wt, MSG_DEBUG, "Skip frame inserted by wlantest");
 		return;
 	}
 	frame = data + iter.max_length;
@@ -320,8 +320,8 @@ void wlantest_process(struct wlantest *wt, const u8 *data, size_t len)
 		frame_len -= 4;
 		fcspos = frame + frame_len;
 		if (check_fcs(frame, frame_len, fcspos) < 0) {
-			wpa_printf(MSG_EXCESSIVE, "Drop RX frame with invalid "
-				   "FCS");
+			add_note(wt, MSG_EXCESSIVE, "Drop RX frame with "
+				 "invalid FCS");
 			wt->fcs_error++;
 			return;
 		}
@@ -332,6 +332,8 @@ void wlantest_process(struct wlantest *wt, const u8 *data, size_t len)
 	if (!txflags)
 		rx_frame(wt, frame, frame_len);
 	else {
+		add_note(wt, MSG_EXCESSIVE, "TX status - process as RX of "
+			 "local frame");
 		tx_status(wt, frame, frame_len, !failed);
 		/* Process as RX frame to support local monitor interface */
 		rx_frame(wt, frame, frame_len);
@@ -366,8 +368,8 @@ void wlantest_process_prism(struct wlantest *wt, const u8 *data, size_t len)
 		frame_len -= 4;
 		fcspos = frame + frame_len;
 		if (check_fcs(frame, frame_len, fcspos) < 0) {
-			wpa_printf(MSG_EXCESSIVE, "Drop RX frame with invalid "
-				   "FCS");
+			add_note(wt, MSG_EXCESSIVE, "Drop RX frame with "
+				 "invalid FCS");
 			wt->fcs_error++;
 			return;
 		}
@@ -387,8 +389,8 @@ void wlantest_process_80211(struct wlantest *wt, const u8 *data, size_t len)
 		len -= 4;
 		fcspos = data + len;
 		if (check_fcs(data, len, fcspos) < 0) {
-			wpa_printf(MSG_EXCESSIVE, "Drop RX frame with invalid "
-				   "FCS");
+			add_note(wt, MSG_EXCESSIVE, "Drop RX frame with "
+				 "invalid FCS");
 			wt->fcs_error++;
 			return;
 		}

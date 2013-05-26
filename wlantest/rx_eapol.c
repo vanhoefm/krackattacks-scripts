@@ -79,19 +79,20 @@ static void rx_data_eapol_key_1_of_4(struct wlantest *wt, const u8 *dst,
 	eapol = (const struct ieee802_1x_hdr *) data;
 	hdr = (const struct wpa_eapol_key *) (eapol + 1);
 	if (is_zero(hdr->key_nonce, WPA_NONCE_LEN)) {
-		wpa_printf(MSG_INFO, "EAPOL-Key 1/4 from " MACSTR " used "
-			   "zero nonce", MAC2STR(src));
+		add_note(wt, MSG_INFO, "EAPOL-Key 1/4 from " MACSTR
+			 " used zero nonce", MAC2STR(src));
 	}
 	if (!is_zero(hdr->key_rsc, 8)) {
-		wpa_printf(MSG_INFO, "EAPOL-Key 1/4 from " MACSTR " used "
-			   "non-zero Key RSC", MAC2STR(src));
+		add_note(wt, MSG_INFO, "EAPOL-Key 1/4 from " MACSTR
+			 " used non-zero Key RSC", MAC2STR(src));
 	}
 	os_memcpy(sta->anonce, hdr->key_nonce, WPA_NONCE_LEN);
 }
 
 
-static int try_pmk(struct wlantest_bss *bss, struct wlantest_sta *sta,
-		   u16 ver, const u8 *data, size_t len,
+static int try_pmk(struct wlantest *wt, struct wlantest_bss *bss,
+		   struct wlantest_sta *sta, u16 ver,
+		   const u8 *data, size_t len,
 		   struct wlantest_pmk *pmk)
 {
 	struct wpa_ptk ptk;
@@ -112,6 +113,7 @@ static int try_pmk(struct wlantest_bss *bss, struct wlantest_sta *sta,
 		 * Rekeying - use new PTK for EAPOL-Key frames, but continue
 		 * using the old PTK for frame decryption.
 		 */
+		add_note(wt, MSG_DEBUG, "Derived PTK during rekeying");
 		os_memcpy(&sta->tptk, &ptk, sizeof(ptk));
 		wpa_hexdump(MSG_DEBUG, "TPTK:KCK", sta->tptk.kck, 16);
 		wpa_hexdump(MSG_DEBUG, "TPTK:KEK", sta->tptk.kek, 16);
@@ -122,6 +124,7 @@ static int try_pmk(struct wlantest_bss *bss, struct wlantest_sta *sta,
 		sta->tptk_set = 1;
 		return 0;
 	}
+	add_note(wt, MSG_DEBUG, "Derived new PTK");
 	os_memcpy(&sta->ptk, &ptk, sizeof(ptk));
 	wpa_hexdump(MSG_DEBUG, "PTK:KCK", sta->ptk.kck, 16);
 	wpa_hexdump(MSG_DEBUG, "PTK:KEK", sta->ptk.kek, 16);
@@ -145,16 +148,16 @@ static void derive_ptk(struct wlantest *wt, struct wlantest_bss *bss,
 		   MAC2STR(sta->addr));
 	dl_list_for_each(pmk, &bss->pmk, struct wlantest_pmk, list) {
 		wpa_printf(MSG_DEBUG, "Try per-BSS PMK");
-		if (try_pmk(bss, sta, ver, data, len, pmk) == 0)
+		if (try_pmk(wt, bss, sta, ver, data, len, pmk) == 0)
 			return;
 	}
 
 	dl_list_for_each(pmk, &wt->pmk, struct wlantest_pmk, list) {
 		wpa_printf(MSG_DEBUG, "Try global PMK");
-		if (try_pmk(bss, sta, ver, data, len, pmk) == 0)
+		if (try_pmk(wt, bss, sta, ver, data, len, pmk) == 0)
 			return;
 	}
-	wpa_printf(MSG_DEBUG, "No matching PMK found to derive PTK");
+	add_note(wt, MSG_DEBUG, "No matching PMK found to derive PTK");
 }
 
 
@@ -181,12 +184,12 @@ static void rx_data_eapol_key_2_of_4(struct wlantest *wt, const u8 *dst,
 	eapol = (const struct ieee802_1x_hdr *) data;
 	hdr = (const struct wpa_eapol_key *) (eapol + 1);
 	if (is_zero(hdr->key_nonce, WPA_NONCE_LEN)) {
-		wpa_printf(MSG_INFO, "EAPOL-Key 2/4 from " MACSTR " used "
-			   "zero nonce", MAC2STR(src));
+		add_note(wt, MSG_INFO, "EAPOL-Key 2/4 from " MACSTR
+			 " used zero nonce", MAC2STR(src));
 	}
 	if (!is_zero(hdr->key_rsc, 8)) {
-		wpa_printf(MSG_INFO, "EAPOL-Key 2/4 from " MACSTR " used "
-			   "non-zero Key RSC", MAC2STR(src));
+		add_note(wt, MSG_INFO, "EAPOL-Key 2/4 from " MACSTR
+			 " used non-zero Key RSC", MAC2STR(src));
 	}
 	os_memcpy(sta->snonce, hdr->key_nonce, WPA_NONCE_LEN);
 	key_info = WPA_GET_BE16(hdr->key_info);
@@ -194,25 +197,27 @@ static void rx_data_eapol_key_2_of_4(struct wlantest *wt, const u8 *dst,
 	derive_ptk(wt, bss, sta, key_info & WPA_KEY_INFO_TYPE_MASK, data, len);
 
 	if (!sta->ptk_set && !sta->tptk_set) {
-		wpa_printf(MSG_DEBUG, "No PTK known to process EAPOL-Key 2/4");
+		add_note(wt, MSG_DEBUG,
+			 "No PTK known to process EAPOL-Key 2/4");
 		return;
 	}
 
 	kck = sta->ptk.kck;
 	if (sta->tptk_set) {
-		wpa_printf(MSG_DEBUG, "Use TPTK for validation EAPOL-Key MIC");
+		add_note(wt, MSG_DEBUG,
+			 "Use TPTK for validation EAPOL-Key MIC");
 		kck = sta->tptk.kck;
 	}
 	if (check_mic(kck, key_info & WPA_KEY_INFO_TYPE_MASK, data, len) < 0) {
-		wpa_printf(MSG_INFO, "Mismatch in EAPOL-Key 2/4 MIC");
+		add_note(wt, MSG_INFO, "Mismatch in EAPOL-Key 2/4 MIC");
 		return;
 	}
-	wpa_printf(MSG_DEBUG, "Valid MIC found in EAPOL-Key 2/4");
+	add_note(wt, MSG_DEBUG, "Valid MIC found in EAPOL-Key 2/4");
 
 	key_data = (const u8 *) (hdr + 1);
 
 	if (wpa_supplicant_parse_ies(key_data, key_data_len, &ie) < 0) {
-		wpa_printf(MSG_INFO, "Failed to parse EAPOL-Key Key Data");
+		add_note(wt, MSG_INFO, "Failed to parse EAPOL-Key Key Data");
 		return;
 	}
 
@@ -221,9 +226,10 @@ static void rx_data_eapol_key_2_of_4(struct wlantest *wt, const u8 *dst,
 			    ie.wpa_ie, ie.wpa_ie_len);
 		if (os_memcmp(ie.wpa_ie, sta->rsnie, ie.wpa_ie_len) != 0) {
 			struct ieee802_11_elems elems;
-			wpa_printf(MSG_INFO, "Mismatch in WPA IE between "
-				   "EAPOL-Key 2/4 and (Re)Association "
-				   "Request from " MACSTR, MAC2STR(sta->addr));
+			add_note(wt, MSG_INFO,
+				 "Mismatch in WPA IE between EAPOL-Key 2/4 "
+				 "and (Re)Association Request from " MACSTR,
+				 MAC2STR(sta->addr));
 			wpa_hexdump(MSG_INFO, "WPA IE in EAPOL-Key",
 				    ie.wpa_ie, ie.wpa_ie_len);
 			wpa_hexdump(MSG_INFO, "WPA IE in (Re)Association "
@@ -249,9 +255,10 @@ static void rx_data_eapol_key_2_of_4(struct wlantest *wt, const u8 *dst,
 			    ie.rsn_ie, ie.rsn_ie_len);
 		if (os_memcmp(ie.rsn_ie, sta->rsnie, ie.rsn_ie_len) != 0) {
 			struct ieee802_11_elems elems;
-			wpa_printf(MSG_INFO, "Mismatch in RSN IE between "
-				   "EAPOL-Key 2/4 and (Re)Association "
-				   "Request from " MACSTR, MAC2STR(sta->addr));
+			add_note(wt, MSG_INFO,
+				 "Mismatch in RSN IE between EAPOL-Key 2/4 "
+				 "and (Re)Association Request from " MACSTR,
+				 MAC2STR(sta->addr));
 			wpa_hexdump(MSG_INFO, "RSN IE in EAPOL-Key",
 				    ie.rsn_ie, ie.rsn_ie_len);
 			wpa_hexdump(MSG_INFO, "RSN IE in (Re)Association "
@@ -274,7 +281,7 @@ static void rx_data_eapol_key_2_of_4(struct wlantest *wt, const u8 *dst,
 }
 
 
-static u8 * decrypt_eapol_key_data_rc4(const u8 *kek,
+static u8 * decrypt_eapol_key_data_rc4(struct wlantest *wt, const u8 *kek,
 				       const struct wpa_eapol_key *hdr,
 				       size_t *len)
 {
@@ -289,7 +296,7 @@ static u8 * decrypt_eapol_key_data_rc4(const u8 *kek,
 	os_memcpy(ek + 16, kek, 16);
 	os_memcpy(buf, hdr + 1, keydatalen);
 	if (rc4_skip(ek, 32, 256, buf, keydatalen)) {
-		wpa_printf(MSG_INFO, "RC4 failed");
+		add_note(wt, MSG_INFO, "RC4 failed");
 		os_free(buf);
 		return NULL;
 	}
@@ -299,7 +306,7 @@ static u8 * decrypt_eapol_key_data_rc4(const u8 *kek,
 }
 
 
-static u8 * decrypt_eapol_key_data_aes(const u8 *kek,
+static u8 * decrypt_eapol_key_data_aes(struct wlantest *wt, const u8 *kek,
 				       const struct wpa_eapol_key *hdr,
 				       size_t *len)
 {
@@ -307,8 +314,8 @@ static u8 * decrypt_eapol_key_data_aes(const u8 *kek,
 	u16 keydatalen = WPA_GET_BE16(hdr->key_data_length);
 
 	if (keydatalen % 8) {
-		wpa_printf(MSG_INFO, "Unsupported AES-WRAP len %d",
-			   keydatalen);
+		add_note(wt, MSG_INFO, "Unsupported AES-WRAP len %d",
+			 keydatalen);
 		return NULL;
 	}
 	keydatalen -= 8; /* AES-WRAP adds 8 bytes */
@@ -317,8 +324,9 @@ static u8 * decrypt_eapol_key_data_aes(const u8 *kek,
 		return NULL;
 	if (aes_unwrap(kek, keydatalen / 8, (u8 *) (hdr + 1), buf)) {
 		os_free(buf);
-		wpa_printf(MSG_INFO, "AES unwrap failed - "
-			   "could not decrypt EAPOL-Key key data");
+		add_note(wt, MSG_INFO,
+			 "AES unwrap failed - could not decrypt EAPOL-Key "
+			 "key data");
 		return NULL;
 	}
 
@@ -327,31 +335,33 @@ static u8 * decrypt_eapol_key_data_aes(const u8 *kek,
 }
 
 
-static u8 * decrypt_eapol_key_data(const u8 *kek, u16 ver,
+static u8 * decrypt_eapol_key_data(struct wlantest *wt, const u8 *kek, u16 ver,
 				   const struct wpa_eapol_key *hdr,
 				   size_t *len)
 {
 	switch (ver) {
 	case WPA_KEY_INFO_TYPE_HMAC_MD5_RC4:
-		return decrypt_eapol_key_data_rc4(kek, hdr, len);
+		return decrypt_eapol_key_data_rc4(wt, kek, hdr, len);
 	case WPA_KEY_INFO_TYPE_HMAC_SHA1_AES:
 	case WPA_KEY_INFO_TYPE_AES_128_CMAC:
-		return decrypt_eapol_key_data_aes(kek, hdr, len);
+		return decrypt_eapol_key_data_aes(wt, kek, hdr, len);
 	default:
-		wpa_printf(MSG_INFO, "Unsupported EAPOL-Key Key Descriptor "
-			   "Version %u", ver);
+		add_note(wt, MSG_INFO,
+			 "Unsupported EAPOL-Key Key Descriptor Version %u",
+			 ver);
 		return NULL;
 	}
 }
 
 
-static void learn_kde_keys(struct wlantest_bss *bss, struct wlantest_sta *sta,
+static void learn_kde_keys(struct wlantest *wt, struct wlantest_bss *bss,
+			   struct wlantest_sta *sta,
 			   const u8 *buf, size_t len, const u8 *rsc)
 {
 	struct wpa_eapol_ie_parse ie;
 
 	if (wpa_supplicant_parse_ies(buf, len, &ie) < 0) {
-		wpa_printf(MSG_INFO, "Failed to parse EAPOL-Key Key Data");
+		add_note(wt, MSG_INFO, "Failed to parse EAPOL-Key Key Data");
 		return;
 	}
 
@@ -373,10 +383,11 @@ static void learn_kde_keys(struct wlantest_bss *bss, struct wlantest_sta *sta,
 			id = ie.gtk[0] & 0x03;
 			wpa_printf(MSG_DEBUG, "GTK KeyID=%u tx=%u",
 				   id, !!(ie.gtk[0] & 0x04));
-			if ((ie.gtk[0] & 0xf8) || ie.gtk[1])
-				wpa_printf(MSG_INFO, "GTK KDE: Reserved field "
-					   "set: %02x %02x",
-					   ie.gtk[0], ie.gtk[1]);
+			if ((ie.gtk[0] & 0xf8) || ie.gtk[1]) {
+				add_note(wt, MSG_INFO,
+					 "GTK KDE: Reserved field set: "
+					 "%02x %02x", ie.gtk[0], ie.gtk[1]);
+			}
 			wpa_hexdump(MSG_DEBUG, "GTK", ie.gtk + 2,
 				    ie.gtk_len - 2);
 			bss->gtk_len[id] = ie.gtk_len - 2;
@@ -393,8 +404,8 @@ static void learn_kde_keys(struct wlantest_bss *bss, struct wlantest_sta *sta,
 			sta->gtk_idx = id;
 			wpa_hexdump(MSG_DEBUG, "RSC", bss->rsc[id], 6);
 		} else {
-			wpa_printf(MSG_INFO, "Invalid GTK KDE length %u",
-				   (unsigned) ie.gtk_len);
+			add_note(wt, MSG_INFO, "Invalid GTK KDE length %u",
+				 (unsigned) ie.gtk_len);
 		}
 	}
 
@@ -405,8 +416,8 @@ static void learn_kde_keys(struct wlantest_bss *bss, struct wlantest_sta *sta,
 			u16 id;
 			id = WPA_GET_LE16(ie.igtk);
 			if (id > 5) {
-				wpa_printf(MSG_INFO, "Unexpected IGTK KeyID "
-					   "%u", id);
+				add_note(wt, MSG_INFO,
+					 "Unexpected IGTK KeyID %u", id);
 			} else {
 				const u8 *ipn;
 				wpa_printf(MSG_DEBUG, "IGTK KeyID %u", id);
@@ -425,8 +436,8 @@ static void learn_kde_keys(struct wlantest_bss *bss, struct wlantest_sta *sta,
 				bss->igtk_idx = id;
 			}
 		} else {
-			wpa_printf(MSG_INFO, "Invalid IGTK KDE length %u",
-				   (unsigned) ie.igtk_len);
+			add_note(wt, MSG_INFO, "Invalid IGTK KDE length %u",
+				 (unsigned) ie.igtk_len);
 		}
 	}
 }
@@ -461,8 +472,8 @@ static void rx_data_eapol_key_3_of_4(struct wlantest *wt, const u8 *dst,
 	key_info = WPA_GET_BE16(hdr->key_info);
 
 	if (os_memcmp(sta->anonce, hdr->key_nonce, WPA_NONCE_LEN) != 0) {
-		wpa_printf(MSG_INFO, "EAPOL-Key ANonce mismatch between 1/4 "
-			   "and 3/4");
+		add_note(wt, MSG_INFO,
+			 "EAPOL-Key ANonce mismatch between 1/4 and 3/4");
 		recalc = 1;
 	}
 	os_memcpy(sta->anonce, hdr->key_nonce, WPA_NONCE_LEN);
@@ -472,37 +483,39 @@ static void rx_data_eapol_key_3_of_4(struct wlantest *wt, const u8 *dst,
 	}
 
 	if (!sta->ptk_set && !sta->tptk_set) {
-		wpa_printf(MSG_DEBUG, "No PTK known to process EAPOL-Key 3/4");
+		add_note(wt, MSG_DEBUG,
+			 "No PTK known to process EAPOL-Key 3/4");
 		return;
 	}
 
 	kek = sta->ptk.kek;
 	kck = sta->ptk.kck;
 	if (sta->tptk_set) {
-		wpa_printf(MSG_DEBUG, "Use TPTK for validation EAPOL-Key MIC");
+		add_note(wt, MSG_DEBUG,
+			 "Use TPTK for validation EAPOL-Key MIC");
 		kck = sta->tptk.kck;
 		kek = sta->tptk.kek;
 	}
 	if (check_mic(kck, key_info & WPA_KEY_INFO_TYPE_MASK, data, len) < 0) {
-		wpa_printf(MSG_INFO, "Mismatch in EAPOL-Key 3/4 MIC");
+		add_note(wt, MSG_INFO, "Mismatch in EAPOL-Key 3/4 MIC");
 		return;
 	}
-	wpa_printf(MSG_DEBUG, "Valid MIC found in EAPOL-Key 3/4");
+	add_note(wt, MSG_DEBUG, "Valid MIC found in EAPOL-Key 3/4");
 
 	key_data = (const u8 *) (hdr + 1);
 	if (!(key_info & WPA_KEY_INFO_ENCR_KEY_DATA)) {
 		if (sta->proto & WPA_PROTO_RSN)
-			wpa_printf(MSG_INFO, "EAPOL-Key 3/4 without "
-				   "EncrKeyData bit");
+			add_note(wt, MSG_INFO,
+				 "EAPOL-Key 3/4 without EncrKeyData bit");
 		decrypted = key_data;
 		decrypted_len = WPA_GET_BE16(hdr->key_data_length);
 	} else {
 		ver = key_info & WPA_KEY_INFO_TYPE_MASK;
-		decrypted_buf = decrypt_eapol_key_data(kek, ver, hdr,
+		decrypted_buf = decrypt_eapol_key_data(wt, kek, ver, hdr,
 						       &decrypted_len);
 		if (decrypted_buf == NULL) {
-			wpa_printf(MSG_INFO, "Failed to decrypt EAPOL-Key Key "
-				   "Data");
+			add_note(wt, MSG_INFO,
+				 "Failed to decrypt EAPOL-Key Key Data");
 			return;
 		}
 		decrypted = decrypted_buf;
@@ -550,7 +563,7 @@ static void rx_data_eapol_key_3_of_4(struct wlantest *wt, const u8 *dst,
 	}
 
 	if (wpa_supplicant_parse_ies(decrypted, decrypted_len, &ie) < 0) {
-		wpa_printf(MSG_INFO, "Failed to parse EAPOL-Key Key Data");
+		add_note(wt, MSG_INFO, "Failed to parse EAPOL-Key Key Data");
 		os_free(decrypted_buf);
 		return;
 	}
@@ -558,9 +571,10 @@ static void rx_data_eapol_key_3_of_4(struct wlantest *wt, const u8 *dst,
 	if ((ie.wpa_ie &&
 	     os_memcmp(ie.wpa_ie, bss->wpaie, ie.wpa_ie_len) != 0) ||
 	    (ie.wpa_ie == NULL && bss->wpaie[0])) {
-		wpa_printf(MSG_INFO, "Mismatch in WPA IE between "
-			   "EAPOL-Key 3/4 and Beacon/Probe Response "
-			   "from " MACSTR, MAC2STR(bss->bssid));
+		add_note(wt, MSG_INFO,
+			 "Mismatch in WPA IE between EAPOL-Key 3/4 and "
+			 "Beacon/Probe Response from " MACSTR,
+			 MAC2STR(bss->bssid));
 		wpa_hexdump(MSG_INFO, "WPA IE in EAPOL-Key",
 			    ie.wpa_ie, ie.wpa_ie_len);
 		wpa_hexdump(MSG_INFO, "WPA IE in Beacon/Probe "
@@ -572,9 +586,9 @@ static void rx_data_eapol_key_3_of_4(struct wlantest *wt, const u8 *dst,
 	if ((ie.rsn_ie &&
 	     os_memcmp(ie.rsn_ie, bss->rsnie, ie.rsn_ie_len) != 0) ||
 	    (ie.rsn_ie == NULL && bss->rsnie[0])) {
-		wpa_printf(MSG_INFO, "Mismatch in RSN IE between "
-			   "EAPOL-Key 3/4 and Beacon/Probe Response "
-			   "from " MACSTR, MAC2STR(bss->bssid));
+		add_note(wt, MSG_INFO, "Mismatch in RSN IE between EAPOL-Key "
+			 "3/4 and Beacon/Probe Response from " MACSTR,
+			 MAC2STR(bss->bssid));
 		wpa_hexdump(MSG_INFO, "RSN IE in EAPOL-Key",
 			    ie.rsn_ie, ie.rsn_ie_len);
 		wpa_hexdump(MSG_INFO, "RSN IE in (Re)Association "
@@ -583,7 +597,7 @@ static void rx_data_eapol_key_3_of_4(struct wlantest *wt, const u8 *dst,
 			    bss->rsnie[0] ? 2 + bss->rsnie[1] : 0);
 	}
 
-	learn_kde_keys(bss, sta, decrypted, decrypted_len, hdr->key_rsc);
+	learn_kde_keys(wt, bss, sta, decrypted, decrypted_len, hdr->key_rsc);
 	os_free(decrypted_buf);
 }
 
@@ -684,7 +698,7 @@ static void rx_data_eapol_key_1_of_2(struct wlantest *wt, const u8 *dst,
 		return;
 	}
 	ver = key_info & WPA_KEY_INFO_TYPE_MASK;
-	decrypted = decrypt_eapol_key_data(sta->ptk.kek, ver, hdr,
+	decrypted = decrypt_eapol_key_data(wt, sta->ptk.kek, ver, hdr,
 					   &decrypted_len);
 	if (decrypted == NULL) {
 		wpa_printf(MSG_INFO, "Failed to decrypt EAPOL-Key Key Data");
@@ -731,7 +745,7 @@ static void rx_data_eapol_key_1_of_2(struct wlantest *wt, const u8 *dst,
 				     decrypted, plain_len);
 	}
 	if (sta->proto & WPA_PROTO_RSN)
-		learn_kde_keys(bss, sta, decrypted, decrypted_len,
+		learn_kde_keys(wt, bss, sta, decrypted, decrypted_len,
 			       hdr->key_rsc);
 	else {
 		int klen = bss->group_cipher == WPA_CIPHER_TKIP ? 32 : 16;

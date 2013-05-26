@@ -108,45 +108,45 @@ static void rx_data_bss_prot_group(struct wlantest *wt,
 	if (bss == NULL)
 		return;
 	if (len < 4) {
-		wpa_printf(MSG_INFO, "Too short group addressed data frame");
+		add_note(wt, MSG_INFO, "Too short group addressed data frame");
 		return;
 	}
 
 	if (bss->group_cipher & (WPA_CIPHER_TKIP | WPA_CIPHER_CCMP) &&
 	    !(data[3] & 0x20)) {
-		    wpa_printf(MSG_INFO, "Expected TKIP/CCMP frame from "
-			       MACSTR " did not have ExtIV bit set to 1",
-			       MAC2STR(bss->bssid));
-		    return;
+		add_note(wt, MSG_INFO, "Expected TKIP/CCMP frame from "
+			 MACSTR " did not have ExtIV bit set to 1",
+			 MAC2STR(bss->bssid));
+		return;
 	}
 
 	if (bss->group_cipher == WPA_CIPHER_TKIP) {
 		if (data[3] & 0x1f) {
-			wpa_printf(MSG_INFO, "TKIP frame from " MACSTR " used "
-				   "non-zero reserved bit",
-				   MAC2STR(bss->bssid));
+			add_note(wt, MSG_INFO, "TKIP frame from " MACSTR
+				 " used non-zero reserved bit",
+				 MAC2STR(bss->bssid));
 		}
 		if (data[1] != ((data[0] | 0x20) & 0x7f)) {
-			wpa_printf(MSG_INFO, "TKIP frame from " MACSTR " used "
-				   "incorrect WEPSeed[1] (was 0x%x, expected "
-				   "0x%x)",
-				   MAC2STR(bss->bssid), data[1],
-				   (data[0] | 0x20) & 0x7f);
+			add_note(wt, MSG_INFO, "TKIP frame from " MACSTR
+				 " used incorrect WEPSeed[1] (was 0x%x, "
+				 "expected 0x%x)",
+				 MAC2STR(bss->bssid), data[1],
+				 (data[0] | 0x20) & 0x7f);
 		}
 	} else if (bss->group_cipher == WPA_CIPHER_CCMP) {
 		if (data[2] != 0 || (data[3] & 0x1f) != 0) {
-			wpa_printf(MSG_INFO, "CCMP frame from " MACSTR " used "
-				   "non-zero reserved bit",
-				   MAC2STR(bss->bssid));
+			add_note(wt, MSG_INFO, "CCMP frame from " MACSTR
+				 " used non-zero reserved bit",
+				 MAC2STR(bss->bssid));
 		}
 	}
 
 	keyid = data[3] >> 6;
 	if (bss->gtk_len[keyid] == 0 && bss->group_cipher != WPA_CIPHER_WEP40)
 	{
-		wpa_printf(MSG_MSGDUMP, "No GTK known to decrypt the frame "
-			   "(A2=" MACSTR " KeyID=%d)",
-			   MAC2STR(hdr->addr2), keyid);
+		add_note(wt, MSG_MSGDUMP, "No GTK known to decrypt the frame "
+			 "(A2=" MACSTR " KeyID=%d)",
+			 MAC2STR(hdr->addr2), keyid);
 		return;
 	}
 
@@ -158,12 +158,12 @@ static void rx_data_bss_prot_group(struct wlantest *wt,
 		ccmp_get_pn(pn, data);
 	if (os_memcmp(pn, bss->rsc[keyid], 6) <= 0) {
 		u16 seq_ctrl = le_to_host16(hdr->seq_ctrl);
-		wpa_printf(MSG_INFO, "CCMP/TKIP replay detected: A1=" MACSTR
-			   " A2=" MACSTR " A3=" MACSTR " seq=%u frag=%u",
-			   MAC2STR(hdr->addr1), MAC2STR(hdr->addr2),
-			   MAC2STR(hdr->addr3),
-			   WLAN_GET_SEQ_SEQ(seq_ctrl),
-			   WLAN_GET_SEQ_FRAG(seq_ctrl));
+		add_note(wt, MSG_INFO, "CCMP/TKIP replay detected: A1=" MACSTR
+			 " A2=" MACSTR " A3=" MACSTR " seq=%u frag=%u",
+			 MAC2STR(hdr->addr1), MAC2STR(hdr->addr2),
+			 MAC2STR(hdr->addr3),
+			 WLAN_GET_SEQ_SEQ(seq_ctrl),
+			 WLAN_GET_SEQ_FRAG(seq_ctrl));
 		wpa_hexdump(MSG_INFO, "RX PN", pn, 6);
 		wpa_hexdump(MSG_INFO, "RSC", bss->rsc[keyid], 6);
 	}
@@ -183,7 +183,8 @@ skip_replay_det:
 		os_memcpy(bss->rsc[keyid], pn, 6);
 		write_pcap_decrypted(wt, (const u8 *) hdr, 24 + (qos ? 2 : 0),
 				     decrypted, dlen);
-	}
+	} else
+		add_note(wt, MSG_DEBUG, "Failed to decrypt frame");
 	os_free(decrypted);
 }
 
@@ -244,49 +245,49 @@ static void rx_data_bss_prot(struct wlantest *wt,
 	if ((sta == NULL ||
 	     (!sta->ptk_set && sta->pairwise_cipher != WPA_CIPHER_WEP40)) &&
 	    tk == NULL) {
-		wpa_printf(MSG_MSGDUMP, "No PTK known to decrypt the frame");
+		add_note(wt, MSG_MSGDUMP, "No PTK known to decrypt the frame");
 		return;
 	}
 
 	if (len < 4) {
-		wpa_printf(MSG_INFO, "Too short encrypted data frame");
+		add_note(wt, MSG_INFO, "Too short encrypted data frame");
 		return;
 	}
 
 	if (sta->pairwise_cipher & (WPA_CIPHER_TKIP | WPA_CIPHER_CCMP) &&
 	    !(data[3] & 0x20)) {
-		    wpa_printf(MSG_INFO, "Expected TKIP/CCMP frame from "
-			       MACSTR " did not have ExtIV bit set to 1",
-			       MAC2STR(src));
-		    return;
+		add_note(wt, MSG_INFO, "Expected TKIP/CCMP frame from "
+			 MACSTR " did not have ExtIV bit set to 1",
+			 MAC2STR(src));
+		return;
 	}
 
 	if (tk == NULL && sta->pairwise_cipher == WPA_CIPHER_TKIP) {
 		if (data[3] & 0x1f) {
-			wpa_printf(MSG_INFO, "TKIP frame from " MACSTR " used "
-				   "non-zero reserved bit",
-				   MAC2STR(hdr->addr2));
+			add_note(wt, MSG_INFO, "TKIP frame from " MACSTR
+				 " used non-zero reserved bit",
+				 MAC2STR(hdr->addr2));
 		}
 		if (data[1] != ((data[0] | 0x20) & 0x7f)) {
-			wpa_printf(MSG_INFO, "TKIP frame from " MACSTR " used "
-				   "incorrect WEPSeed[1] (was 0x%x, expected "
-				   "0x%x)",
-				   MAC2STR(hdr->addr2), data[1],
-				   (data[0] | 0x20) & 0x7f);
+			add_note(wt, MSG_INFO, "TKIP frame from " MACSTR
+				 " used incorrect WEPSeed[1] (was 0x%x, "
+				 "expected 0x%x)",
+				 MAC2STR(hdr->addr2), data[1],
+				 (data[0] | 0x20) & 0x7f);
 		}
 	} else if (tk || sta->pairwise_cipher == WPA_CIPHER_CCMP) {
 		if (data[2] != 0 || (data[3] & 0x1f) != 0) {
-			wpa_printf(MSG_INFO, "CCMP frame from " MACSTR " used "
-				   "non-zero reserved bit",
-				   MAC2STR(hdr->addr2));
+			add_note(wt, MSG_INFO, "CCMP frame from " MACSTR
+				 " used non-zero reserved bit",
+				 MAC2STR(hdr->addr2));
 		}
 	}
 
 	keyid = data[3] >> 6;
 	if (keyid != 0) {
-		wpa_printf(MSG_INFO, "Unexpected non-zero KeyID %d in "
-			   "individually addressed Data frame from " MACSTR,
-			   keyid, MAC2STR(hdr->addr2));
+		add_note(wt, MSG_INFO, "Unexpected non-zero KeyID %d in "
+			 "individually addressed Data frame from " MACSTR,
+			 keyid, MAC2STR(hdr->addr2));
 	}
 
 	if (qos)
@@ -312,12 +313,12 @@ static void rx_data_bss_prot(struct wlantest *wt,
 		ccmp_get_pn(pn, data);
 	if (os_memcmp(pn, rsc, 6) <= 0) {
 		u16 seq_ctrl = le_to_host16(hdr->seq_ctrl);
-		wpa_printf(MSG_INFO, "CCMP/TKIP replay detected: A1=" MACSTR
-			   " A2=" MACSTR " A3=" MACSTR " seq=%u frag=%u",
-			   MAC2STR(hdr->addr1), MAC2STR(hdr->addr2),
-			   MAC2STR(hdr->addr3),
-			   WLAN_GET_SEQ_SEQ(seq_ctrl),
-			   WLAN_GET_SEQ_FRAG(seq_ctrl));
+		add_note(wt, MSG_INFO, "CCMP/TKIP replay detected: A1=" MACSTR
+			 " A2=" MACSTR " A3=" MACSTR " seq=%u frag=%u",
+			 MAC2STR(hdr->addr1), MAC2STR(hdr->addr2),
+			 MAC2STR(hdr->addr3),
+			 WLAN_GET_SEQ_SEQ(seq_ctrl),
+			 WLAN_GET_SEQ_FRAG(seq_ctrl));
 		wpa_hexdump(MSG_INFO, "RX PN", pn, 6);
 		wpa_hexdump(MSG_INFO, "RSC", rsc, 6);
 	}
@@ -341,7 +342,8 @@ skip_replay_det:
 				dlen, 1, peer_addr);
 		write_pcap_decrypted(wt, (const u8 *) hdr, 24 + (qos ? 2 : 0),
 				     decrypted, dlen);
-	}
+	} else
+		add_note(wt, MSG_DEBUG, "Failed to decrypt frame");
 	os_free(decrypted);
 }
 

@@ -842,6 +842,24 @@ static int wps_process_dev_pw_id(struct wps_data *wps, const u8 *dev_pw_id)
 		return 0;
 	}
 
+#ifdef CONFIG_P2P
+	if ((id == DEV_PW_DEFAULT &&
+	     wps->dev_pw_id == DEV_PW_REGISTRAR_SPECIFIED) ||
+	    (id == DEV_PW_REGISTRAR_SPECIFIED &&
+	     wps->dev_pw_id == DEV_PW_DEFAULT)) {
+		/*
+		 * Common P2P use cases indicate whether the PIN is from the
+		 * client or GO using Device Password Id in M1/M2 in a way that
+		 * does not look fully compliant with WSC specification. Anyway,
+		 * this is deployed and needs to be allowed, so ignore changes
+		 * between Registrar-Specified and Default PIN.
+		 */
+		wpa_printf(MSG_DEBUG, "WPS: Allow PIN Device Password ID "
+			   "change");
+		return 0;
+	}
+#endif /* CONFIG_P2P */
+
 	wpa_printf(MSG_DEBUG, "WPS: Registrar trying to change Device Password "
 		   "ID from %u to %u", wps->dev_pw_id, id);
 

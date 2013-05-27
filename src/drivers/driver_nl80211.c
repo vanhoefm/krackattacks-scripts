@@ -7814,6 +7814,9 @@ static int wpa_driver_nl80211_set_supp_port(void *priv, int authorized)
 	struct nl_msg *msg;
 	struct nl80211_sta_flag_update upd;
 
+	wpa_printf(MSG_DEBUG, "nl80211: Set supplicant port %sauthorized for "
+		   MACSTR, authorized ? "" : "un", MAC2STR(drv->bssid));
+
 	msg = nlmsg_alloc();
 	if (!msg)
 		return -ENOMEM;

@@ -6241,6 +6241,9 @@ static int wpa_driver_nl80211_sta_add(void *priv,
 			   params->listen_interval);
 		NLA_PUT_U16(msg, NL80211_ATTR_STA_LISTEN_INTERVAL,
 			    params->listen_interval);
+	} else if (params->aid && (params->flags & WPA_STA_TDLS_PEER)) {
+		wpa_printf(MSG_DEBUG, "  * peer_aid=%u", params->aid);
+		NLA_PUT_U16(msg, NL80211_ATTR_PEER_AID, params->aid);
 	}
 	if (params->ht_capabilities) {
 		wpa_hexdump(MSG_DEBUG, "  * ht_capabilities",

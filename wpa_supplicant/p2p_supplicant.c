@@ -4034,6 +4034,60 @@ int wpas_p2p_group_remove(struct wpa_supplicant *wpa_s, const char *ifname)
 }
 
 
+static int wpas_p2p_select_go_freq(struct wpa_supplicant *wpa_s, int freq)
+{
+	unsigned int r;
+
+	if (freq == 2) {
+		wpa_printf(MSG_DEBUG, "P2P: Request to start GO on 2.4 GHz "
+			   "band");
+		if (wpa_s->best_24_freq > 0 &&
+		    p2p_supported_freq(wpa_s->global->p2p,
+				       wpa_s->best_24_freq)) {
+			freq = wpa_s->best_24_freq;
+			wpa_printf(MSG_DEBUG, "P2P: Use best 2.4 GHz band "
+				   "channel: %d MHz", freq);
+		} else {
+			os_get_random((u8 *) &r, sizeof(r));
+			freq = 2412 + (r % 3) * 25;
+			wpa_printf(MSG_DEBUG, "P2P: Use random 2.4 GHz band "
+				   "channel: %d MHz", freq);
+		}
+	}
+
+	if (freq == 5) {
+		wpa_printf(MSG_DEBUG, "P2P: Request to start GO on 5 GHz "
+			   "band");
+		if (wpa_s->best_5_freq > 0 &&
+		    p2p_supported_freq(wpa_s->global->p2p,
+				       wpa_s->best_5_freq)) {
+			freq = wpa_s->best_5_freq;
+			wpa_printf(MSG_DEBUG, "P2P: Use best 5 GHz band "
+				   "channel: %d MHz", freq);
+		} else {
+			os_get_random((u8 *) &r, sizeof(r));
+			freq = 5180 + (r % 4) * 20;
+			if (!p2p_supported_freq(wpa_s->global->p2p, freq)) {
+				wpa_printf(MSG_DEBUG, "P2P: Could not select "
+					   "5 GHz channel for P2P group");
+				return -1;
+			}
+			wpa_printf(MSG_DEBUG, "P2P: Use random 5 GHz band "
+				   "channel: %d MHz", freq);
+		}
+	}
+
+	if (freq > 0 && !p2p_supported_freq(wpa_s->global->p2p, freq)) {
+		wpa_printf(MSG_DEBUG, "P2P: The forced channel for GO "
+			   "(%u MHz) is not supported for P2P uses",
+			   freq);
+		return -1;
+	}
+
+	return freq;
+}
+
+
 static int wpas_p2p_init_go_params(struct wpa_supplicant *wpa_s,
 				   struct p2p_go_neg_results *params,
 				   int freq, int ht40,
@@ -4229,7 +4283,6 @@ int wpas_p2p_group_add(struct wpa_supplicant *wpa_s, int persistent_group,
 		       int freq, int ht40)
 {
 	struct p2p_go_neg_results params;
-	unsigned int r;
 
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
 		return -1;
@@ -4238,51 +4291,9 @@ int wpas_p2p_group_add(struct wpa_supplicant *wpa_s, int persistent_group,
 	wpa_printf(MSG_DEBUG, "P2P: Stop any on-going P2P FIND");
 	wpas_p2p_stop_find_oper(wpa_s);
 
-	if (freq == 2) {
-		wpa_printf(MSG_DEBUG, "P2P: Request to start GO on 2.4 GHz "
-			   "band");
-		if (wpa_s->best_24_freq > 0 &&
-		    p2p_supported_freq(wpa_s->global->p2p,
-				       wpa_s->best_24_freq)) {
-			freq = wpa_s->best_24_freq;
-			wpa_printf(MSG_DEBUG, "P2P: Use best 2.4 GHz band "
-				   "channel: %d MHz", freq);
-		} else {
-			os_get_random((u8 *) &r, sizeof(r));
-			freq = 2412 + (r % 3) * 25;
-			wpa_printf(MSG_DEBUG, "P2P: Use random 2.4 GHz band "
-				   "channel: %d MHz", freq);
-		}
-	}
-
-	if (freq == 5) {
-		wpa_printf(MSG_DEBUG, "P2P: Request to start GO on 5 GHz "
-			   "band");
-		if (wpa_s->best_5_freq > 0 &&
-		    p2p_supported_freq(wpa_s->global->p2p,
-				       wpa_s->best_5_freq)) {
-			freq = wpa_s->best_5_freq;
-			wpa_printf(MSG_DEBUG, "P2P: Use best 5 GHz band "
-				   "channel: %d MHz", freq);
-		} else {
-			os_get_random((u8 *) &r, sizeof(r));
-			freq = 5180 + (r % 4) * 20;
-			if (!p2p_supported_freq(wpa_s->global->p2p, freq)) {
-				wpa_printf(MSG_DEBUG, "P2P: Could not select "
-					   "5 GHz channel for P2P group");
-				return -1;
-			}
-			wpa_printf(MSG_DEBUG, "P2P: Use random 5 GHz band "
-				   "channel: %d MHz", freq);
-		}
-	}
-
-	if (freq > 0 && !p2p_supported_freq(wpa_s->global->p2p, freq)) {
-		wpa_printf(MSG_DEBUG, "P2P: The forced channel for GO "
-			   "(%u MHz) is not supported for P2P uses",
-			   freq);
+	freq = wpas_p2p_select_go_freq(wpa_s, freq);
+	if (freq < 0)
 		return -1;
-	}
 
 	if (wpas_p2p_init_go_params(wpa_s, &params, freq, ht40, NULL))
 		return -1;
@@ -4376,6 +4387,10 @@ int wpas_p2p_group_add_persistent(struct wpa_supplicant *wpa_s,
 		return wpas_start_p2p_client(wpa_s, ssid, addr_allocated);
 
 	if (ssid->mode != WPAS_MODE_P2P_GO)
+		return -1;
+
+	freq = wpas_p2p_select_go_freq(wpa_s, freq);
+	if (freq < 0)
 		return -1;
 
 	if (wpas_p2p_init_go_params(wpa_s, &params, freq, ht40, channels))

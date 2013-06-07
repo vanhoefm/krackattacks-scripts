@@ -9,11 +9,15 @@
 package w1.fi.wpadebug;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.Configuration;
+import android.net.http.SslError;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Window;
+import android.webkit.SslErrorHandler;
 import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -109,6 +113,34 @@ public class WpaWebViewActivity extends Activity
 	    Toast.makeText(activity, "Failed to load page: " +
 			   description + " (URL=" + failingUrl + ")",
 			   Toast.LENGTH_LONG).show();
+	}
+
+	@Override
+	public void onReceivedSslError(WebView view, SslErrorHandler handler,
+				       SslError error)
+	{
+	    Log.d(TAG, "SSL error: " + error);
+
+	    final SslErrorHandler h = handler;
+	    AlertDialog.Builder alert = new AlertDialog.Builder(activity);
+	    alert.setTitle("SSL error - Continue?");
+	    alert.setMessage(error.toString())
+		.setCancelable(false)
+		.setPositiveButton("Yes", new DialogInterface.OnClickListener()
+		    {
+			public void onClick(DialogInterface dialog, int id)
+			{
+			    h.proceed();
+			}
+		    })
+		.setNegativeButton("No", new DialogInterface.OnClickListener()
+		    {
+			public void onClick(DialogInterface dialog, int id)
+			{
+			    h.cancel();
+			}
+		    });
+	    alert.show();
 	}
     }
 }

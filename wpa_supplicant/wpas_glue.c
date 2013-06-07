@@ -513,8 +513,6 @@ static int wpa_supplicant_mark_authenticated(void *ctx, const u8 *target_ap)
 }
 #endif /* CONFIG_IEEE80211R */
 
-#endif /* CONFIG_NO_WPA */
-
 
 #ifdef CONFIG_TDLS
 
@@ -595,6 +593,8 @@ static int wpa_supplicant_tdls_peer_addset(
 }
 
 #endif /* CONFIG_TDLS */
+
+#endif /* CONFIG_NO_WPA */
 
 
 enum wpa_ctrl_req_type wpa_supplicant_ctrl_req_from_string(const char *field)

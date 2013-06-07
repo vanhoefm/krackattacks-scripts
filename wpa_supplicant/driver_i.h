@@ -129,6 +129,16 @@ static inline int wpa_drv_set_key(struct wpa_supplicant *wpa_s,
 	return -1;
 }
 
+static inline int wpa_drv_sta_deauth(struct wpa_supplicant *wpa_s,
+				     const u8 *addr, int reason_code)
+{
+	if (wpa_s->driver->sta_deauth) {
+		return wpa_s->driver->sta_deauth(wpa_s->drv_priv, NULL, addr,
+						 reason_code);
+	}
+	return -1;
+}
+
 static inline int wpa_drv_deauthenticate(struct wpa_supplicant *wpa_s,
 					 const u8 *addr, int reason_code)
 {

@@ -296,6 +296,13 @@ static int auth_set_key(void *ctx, int vlan_id, enum wpa_alg alg,
 }
 
 
+static void ibss_rsn_disconnect(void *ctx, const u8 *addr, u16 reason)
+{
+	struct ibss_rsn *ibss_rsn = ctx;
+	wpa_drv_sta_deauth(ibss_rsn->wpa_s, addr, reason);
+}
+
+
 static int auth_for_each_sta(void *ctx, int (*cb)(struct wpa_state_machine *sm,
 						  void *ctx),
 			     void *cb_ctx)
@@ -386,6 +393,7 @@ static int ibss_rsn_auth_init_group(struct ibss_rsn *ibss_rsn,
 	cb.get_psk = auth_get_psk;
 	cb.set_key = auth_set_key;
 	cb.for_each_sta = auth_for_each_sta;
+	cb.disconnect = ibss_rsn_disconnect;
 
 	ibss_rsn->auth_group = wpa_init(own_addr, &conf, &cb);
 	if (ibss_rsn->auth_group == NULL) {

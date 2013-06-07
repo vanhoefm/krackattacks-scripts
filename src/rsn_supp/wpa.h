@@ -245,6 +245,11 @@ static inline int wpa_sm_get_status(struct wpa_sm *sm, char *buf,
 	return 0;
 }
 
+static inline int wpa_sm_pmf_enabled(struct wpa_sm *sm)
+{
+	return 0;
+}
+
 static inline void wpa_sm_key_request(struct wpa_sm *sm, int error,
 				      int pairwise)
 {

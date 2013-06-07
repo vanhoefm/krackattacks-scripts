@@ -392,7 +392,6 @@ static void wpa_supplicant_process_1_of_4(struct wpa_sm *sm,
 
 	os_memset(&ie, 0, sizeof(ie));
 
-#ifndef CONFIG_NO_WPA2
 	if (sm->proto == WPA_PROTO_RSN) {
 		/* RSN: msg 1/4 should contain PMKID for the selected PMK */
 		const u8 *_buf = (const u8 *) (key + 1);
@@ -405,7 +404,6 @@ static void wpa_supplicant_process_1_of_4(struct wpa_sm *sm,
 				    "Authenticator", ie.pmkid, PMKID_LEN);
 		}
 	}
-#endif /* CONFIG_NO_WPA2 */
 
 	res = wpa_supplicant_get_pmk(sm, src_addr, ie.pmkid);
 	if (res == -2) {
@@ -664,7 +662,6 @@ static int wpa_supplicant_pairwise_gtk(struct wpa_sm *sm,
 				       const u8 *gtk, size_t gtk_len,
 				       int key_info)
 {
-#ifndef CONFIG_NO_WPA2
 	struct wpa_gtk_data gd;
 
 	/*
@@ -703,9 +700,6 @@ static int wpa_supplicant_pairwise_gtk(struct wpa_sm *sm,
 	wpa_supplicant_key_neg_complete(sm, sm->bssid,
 					key_info & WPA_KEY_INFO_SECURE);
 	return 0;
-#else /* CONFIG_NO_WPA2 */
-	return -1;
-#endif /* CONFIG_NO_WPA2 */
 }
 
 
@@ -2601,11 +2595,7 @@ int wpa_sm_parse_own_wpa_ie(struct wpa_sm *sm, struct wpa_ie_data *data)
 
 int wpa_sm_pmksa_cache_list(struct wpa_sm *sm, char *buf, size_t len)
 {
-#ifndef CONFIG_NO_WPA2
 	return pmksa_cache_list(sm->pmksa, buf, len);
-#else /* CONFIG_NO_WPA2 */
-	return -1;
-#endif /* CONFIG_NO_WPA2 */
 }
 
 
@@ -2636,9 +2626,7 @@ void wpa_sm_update_replay_ctr(struct wpa_sm *sm, const u8 *replay_ctr)
 
 void wpa_sm_pmksa_cache_flush(struct wpa_sm *sm, void *network_ctx)
 {
-#ifndef CONFIG_NO_WPA2
 	pmksa_cache_flush(sm->pmksa, network_ctx, NULL, 0);
-#endif /* CONFIG_NO_WPA2 */
 }
 
 

@@ -261,11 +261,6 @@ CONFIG_CTRL_IFACE=y
 # 35-50 kB in code size.
 #CONFIG_NO_WPA=y
 
-# Remove WPA2 support. This allows WPA to be used, but removes WPA2 code to
-# save about 1 kB in code size when building only WPA-Personal (no EAP support)
-# or 6 kB if building for WPA-Enterprise.
-#CONFIG_NO_WPA2=y
-
 # Remove IEEE 802.11i/WPA-Personal ASCII passphrase support
 # This option can be used to reduce code size by removing support for
 # converting ASCII passphrases into PSK. If this functionality is removed, the

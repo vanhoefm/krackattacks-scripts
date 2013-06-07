@@ -335,7 +335,6 @@ int wpa_ft_parse_ies(const u8 *ies, size_t ies_len,
 #endif /* CONFIG_IEEE80211R */
 
 
-#ifndef CONFIG_NO_WPA2
 static int rsn_selector_to_bitfield(const u8 *s)
 {
 	if (RSN_SELECTOR_GET(s) == RSN_CIPHER_SUITE_NONE)
@@ -384,7 +383,6 @@ static int rsn_key_mgmt_to_bitfield(const u8 *s)
 #endif /* CONFIG_SAE */
 	return 0;
 }
-#endif /* CONFIG_NO_WPA2 */
 
 
 /**
@@ -397,7 +395,6 @@ static int rsn_key_mgmt_to_bitfield(const u8 *s)
 int wpa_parse_wpa_ie_rsn(const u8 *rsn_ie, size_t rsn_ie_len,
 			 struct wpa_ie_data *data)
 {
-#ifndef CONFIG_NO_WPA2
 	const struct rsn_ie_hdr *hdr;
 	const u8 *pos;
 	int left;
@@ -551,9 +548,6 @@ int wpa_parse_wpa_ie_rsn(const u8 *rsn_ie, size_t rsn_ie_len,
 	}
 
 	return 0;
-#else /* CONFIG_NO_WPA2 */
-	return -1;
-#endif /* CONFIG_NO_WPA2 */
 }
 
 

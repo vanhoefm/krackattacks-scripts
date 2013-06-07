@@ -15,7 +15,7 @@
 #include "wpa_i.h"
 #include "pmksa_cache.h"
 
-#if defined(IEEE8021X_EAPOL) && !defined(CONFIG_NO_WPA2)
+#ifdef IEEE8021X_EAPOL
 
 static const int pmksa_cache_max_entries = 32;
 
@@ -522,4 +522,4 @@ pmksa_cache_init(void (*free_cb)(struct rsn_pmksa_cache_entry *entry,
 	return pmksa;
 }
 
-#endif /* IEEE8021X_EAPOL and !CONFIG_NO_WPA2 */
+#endif /* IEEE8021X_EAPOL */

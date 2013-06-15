@@ -284,6 +284,15 @@ static void hs20_continue_icon_fetch(void *eloop_ctx, void *sock_ctx)
 static void hs20_osu_icon_fetch_result(struct wpa_supplicant *wpa_s, int res)
 {
 	size_t i, j;
+	struct os_reltime now, tmp;
+	int dur;
+
+	os_get_reltime(&now);
+	os_reltime_sub(&now, &wpa_s->osu_icon_fetch_start, &tmp);
+	dur = tmp.sec * 1000 + tmp.usec / 1000;
+	wpa_printf(MSG_DEBUG, "HS 2.0: Icon fetch dur=%d ms res=%d",
+		   dur, res);
+
 	for (i = 0; i < wpa_s->osu_prov_count; i++) {
 		struct osu_provider *osu = &wpa_s->osu_prov[i];
 		for (j = 0; j < osu->icon_count; j++) {
@@ -510,6 +519,7 @@ void hs20_next_osu_icon(struct wpa_supplicant *wpa_s)
 			wpa_printf(MSG_DEBUG, "HS 2.0: Try to fetch icon '%s' "
 				   "from " MACSTR, icon->filename,
 				   MAC2STR(osu->bssid));
+			os_get_reltime(&wpa_s->osu_icon_fetch_start);
 			if (hs20_anqp_send_req(wpa_s, osu->bssid,
 					       BIT(HS20_STYPE_ICON_REQUEST),
 					       (u8 *) icon->filename,

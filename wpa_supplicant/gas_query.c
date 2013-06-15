@@ -42,6 +42,7 @@ struct gas_query_pending {
 	struct wpabuf *req;
 	struct wpabuf *adv_proto;
 	struct wpabuf *resp;
+	struct os_reltime last_oper;
 	void (*cb)(void *ctx, const u8 *dst, u8 dialog_token,
 		   enum gas_query_result result,
 		   const struct wpabuf *adv_proto,
@@ -62,6 +63,16 @@ struct gas_query {
 
 static void gas_query_tx_comeback_timeout(void *eloop_data, void *user_ctx);
 static void gas_query_timeout(void *eloop_data, void *user_ctx);
+
+
+static int ms_from_time(struct os_reltime *last)
+{
+	struct os_reltime now, res;
+
+	os_get_reltime(&now);
+	os_reltime_sub(&now, last, &res);
+	return res.sec * 1000 + res.usec / 1000;
+}
 
 
 /**
@@ -199,6 +210,7 @@ static void gas_query_tx_status(struct wpa_supplicant *wpa_s,
 {
 	struct gas_query_pending *query;
 	struct gas_query *gas = wpa_s->gas;
+	int dur;
 
 	if (gas->current == NULL) {
 		wpa_printf(MSG_DEBUG, "GAS: Unexpected TX status: freq=%u dst="
@@ -209,13 +221,15 @@ static void gas_query_tx_status(struct wpa_supplicant *wpa_s,
 
 	query = gas->current;
 
+	dur = ms_from_time(&query->last_oper);
 	wpa_printf(MSG_DEBUG, "GAS: TX status: freq=%u dst=" MACSTR
-		   " result=%d query=%p dialog_token=%u",
-		   freq, MAC2STR(dst), result, query, query->dialog_token);
+		   " result=%d query=%p dialog_token=%u dur=%d ms",
+		   freq, MAC2STR(dst), result, query, query->dialog_token, dur);
 	if (os_memcmp(dst, query->addr, ETH_ALEN) != 0) {
 		wpa_printf(MSG_DEBUG, "GAS: TX status for unexpected destination");
 		return;
 	}
+	os_get_reltime(&query->last_oper);
 
 	if (result == OFFCHANNEL_SEND_ACTION_SUCCESS) {
 		eloop_cancel_timeout(gas_query_timeout, gas, query);
@@ -251,6 +265,7 @@ static int gas_query_tx(struct gas_query *gas, struct gas_query_pending *query,
 		u8 *categ = wpabuf_mhead_u8(req);
 		*categ = WLAN_ACTION_PROTECTED_DUAL;
 	}
+	os_get_reltime(&query->last_oper);
 	res = offchannel_send_action(gas->wpa_s, query->freq, query->addr,
 				     gas->wpa_s->own_addr, query->addr,
 				     wpabuf_head(req), wpabuf_len(req), 1000,
@@ -451,6 +466,9 @@ int gas_query_rx(struct gas_query *gas, const u8 *da, const u8 *sa,
 			   " dialog token %u", MAC2STR(sa), dialog_token);
 		return -1;
 	}
+
+	wpa_printf(MSG_DEBUG, "GAS: Response in %d ms from " MACSTR,
+		   ms_from_time(&query->last_oper), MAC2STR(sa));
 
 	if (query->wait_comeback && action == WLAN_PA_GAS_INITIAL_RESP) {
 		wpa_printf(MSG_DEBUG, "GAS: Unexpected initial response from "

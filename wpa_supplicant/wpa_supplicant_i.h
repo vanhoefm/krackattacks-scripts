@@ -777,6 +777,7 @@ struct wpa_supplicant {
 	unsigned int osu_icon_id;
 	struct osu_provider *osu_prov;
 	size_t osu_prov_count;
+	struct os_reltime osu_icon_fetch_start;
 #endif /* CONFIG_INTERWORKING */
 	unsigned int drv_capa_known;
 

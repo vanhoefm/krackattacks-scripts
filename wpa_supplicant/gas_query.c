@@ -138,6 +138,40 @@ static int gas_query_append(struct gas_query_pending *query, const u8 *data,
 }
 
 
+static void gas_query_tx_status(struct wpa_supplicant *wpa_s,
+				unsigned int freq, const u8 *dst,
+				const u8 *src, const u8 *bssid,
+				const u8 *data, size_t data_len,
+				enum offchannel_send_action_result result)
+{
+	struct gas_query_pending *q, *query = NULL;
+	struct gas_query *gas = wpa_s->gas;
+
+	dl_list_for_each(q, &gas->pending, struct gas_query_pending, list) {
+		if (os_memcmp(q->addr, dst, ETH_ALEN) == 0) {
+			query = q;
+			break;
+		}
+	}
+
+	wpa_printf(MSG_DEBUG, "GAS: TX status: freq=%u dst=" MACSTR
+		   " result=%d query=%p",
+		   freq, MAC2STR(dst), result, query);
+	if (!query)
+		return;
+
+	if (result == OFFCHANNEL_SEND_ACTION_SUCCESS) {
+		eloop_cancel_timeout(gas_query_timeout, gas, query);
+		eloop_register_timeout(GAS_QUERY_TIMEOUT_PERIOD, 0,
+				       gas_query_timeout, gas, query);
+	}
+	if (result == OFFCHANNEL_SEND_ACTION_FAILED) {
+		eloop_cancel_timeout(gas_query_timeout, gas, query);
+		eloop_register_timeout(0, 0, gas_query_timeout, gas, query);
+	}
+}
+
+
 static int gas_query_tx(struct gas_query *gas, struct gas_query_pending *query,
 			struct wpabuf *req)
 {
@@ -148,7 +182,7 @@ static int gas_query_tx(struct gas_query *gas, struct gas_query_pending *query,
 	res = offchannel_send_action(gas->wpa_s, query->freq, query->addr,
 				     gas->wpa_s->own_addr, query->addr,
 				     wpabuf_head(req), wpabuf_len(req), 1000,
-				     NULL, 0);
+				     gas_query_tx_status, 0);
 	if (res == 0)
 		query->offchannel_tx_started = 1;
 	return res;

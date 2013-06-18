@@ -85,6 +85,7 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 
 	sta = ap_get_sta(hapd, addr);
 	if (sta) {
+		ap_sta_no_session_timeout(hapd, sta);
 		accounting_sta_stop(hapd, sta);
 
 		/*

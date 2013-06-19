@@ -1346,6 +1346,13 @@ static struct wpa_cred * interworking_credentials_available_3gpp(
 			goto compare;
 		}
 #endif /* PCSC_FUNCS */
+#ifdef CONFIG_EAP_PROXY
+		if (cred->pcsc && wpa_s->mnc_len > 0 && wpa_s->imsi[0]) {
+			imsi = wpa_s->imsi;
+			mnc_len = wpa_s->mnc_len;
+			goto compare;
+		}
+#endif /* CONFIG_EAP_PROXY */
 
 		if (cred->imsi == NULL || !cred->imsi[0] ||
 		    cred->milenage == NULL || !cred->milenage[0])
@@ -1358,9 +1365,9 @@ static struct wpa_cred * interworking_credentials_available_3gpp(
 		mnc_len = sep - cred->imsi - 3;
 		imsi = cred->imsi;
 
-#ifdef PCSC_FUNCS
+#if defined(PCSC_FUNCS) || defined(CONFIG_EAP_PROXY)
 	compare:
-#endif /* PCSC_FUNCS */
+#endif /* PCSC_FUNCS || CONFIG_EAP_PROXY */
 		wpa_printf(MSG_DEBUG, "Interworking: Parsing 3GPP info from "
 			   MACSTR, MAC2STR(bss->bssid));
 		ret = plmn_id_match(bss->anqp->anqp_3gpp, imsi, mnc_len);

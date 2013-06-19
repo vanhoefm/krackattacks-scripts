@@ -17,6 +17,7 @@
 #include "crypto/sha1.h"
 #include "eapol_supp/eapol_supp_sm.h"
 #include "eap_peer/eap.h"
+#include "eap_peer/eap_proxy.h"
 #include "eap_server/eap_methods.h"
 #include "rsn_supp/wpa.h"
 #include "eloop.h"
@@ -3009,6 +3010,20 @@ next_driver:
 
 	if (wpa_bss_init(wpa_s) < 0)
 		return -1;
+
+#ifdef CONFIG_EAP_PROXY
+{
+	size_t len;
+	wpa_s->mnc_len = eap_proxy_get_imsi(wpa_s->imsi, &len);
+	if (wpa_s->mnc_len > 0) {
+		wpa_s->imsi[len] = '\0';
+		wpa_printf(MSG_DEBUG, "eap_proxy: IMSI %s (MNC length %d)",
+			   wpa_s->imsi, wpa_s->mnc_len);
+	} else {
+		wpa_printf(MSG_DEBUG, "eap_proxy: IMSI not available");
+	}
+}
+#endif /* CONFIG_EAP_PROXY */
 
 	if (pcsc_reader_init(wpa_s) < 0)
 		return -1;

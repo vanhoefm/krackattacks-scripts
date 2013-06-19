@@ -1899,39 +1899,6 @@ struct wpabuf * p2p_build_probe_resp_ies(struct p2p_data *p2p)
 }
 
 
-static int is_11b(u8 rate)
-{
-	return rate == 0x02 || rate == 0x04 || rate == 0x0b || rate == 0x16;
-}
-
-
-static int supp_rates_11b_only(struct ieee802_11_elems *elems)
-{
-	int num_11b = 0, num_others = 0;
-	int i;
-
-	if (elems->supp_rates == NULL && elems->ext_supp_rates == NULL)
-		return 0;
-
-	for (i = 0; elems->supp_rates && i < elems->supp_rates_len; i++) {
-		if (is_11b(elems->supp_rates[i]))
-			num_11b++;
-		else
-			num_others++;
-	}
-
-	for (i = 0; elems->ext_supp_rates && i < elems->ext_supp_rates_len;
-	     i++) {
-		if (is_11b(elems->ext_supp_rates[i]))
-			num_11b++;
-		else
-			num_others++;
-	}
-
-	return num_11b > 0 && num_others == 0;
-}
-
-
 static enum p2p_probe_req_status
 p2p_reply_probe(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 		const u8 *bssid, const u8 *ie, size_t ie_len)

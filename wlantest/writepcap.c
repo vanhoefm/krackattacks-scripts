@@ -272,12 +272,23 @@ void write_pcapng_write_read(struct wlantest *wt, int dlt,
 	u8 *pos;
 	u32 *block_len;
 	u64 timestamp;
-	size_t len;
+	size_t len, datalen = hdr->caplen;
+	u8 rtap[] = {
+		0x00 /* rev */,
+		0x00 /* pad */,
+		0x0a, 0x00, /* header len */
+		0x02, 0x00, 0x00, 0x00, /* present flags */
+		0x00, /* flags */
+		0x00 /* pad */
+	};
+
+	if (wt->assume_fcs)
+		rtap[8] |= 0x10;
 
 	if (!wt->pcapng)
 		return;
 
-	len = sizeof(*pkt) + hdr->len + 100 + notes_len(wt, 32);
+	len = sizeof(*pkt) + hdr->len + 100 + notes_len(wt, 32) + sizeof(rtap);
 	pkt = os_zalloc(len);
 	if (pkt == NULL)
 		return;
@@ -293,8 +304,29 @@ void write_pcapng_write_read(struct wlantest *wt, int dlt,
 	pkt->packet_len = hdr->len;
 
 	pos = (u8 *) (pkt + 1);
-	os_memcpy(pos, data, hdr->caplen);
-	pos += ALIGN32(hdr->caplen);
+
+	switch (dlt) {
+	case DLT_IEEE802_11_RADIO:
+		break;
+	case DLT_PRISM_HEADER:
+		/* remove prism header (could be kept ... lazy) */
+		pkt->captured_len -= WPA_GET_LE32(data + 4);
+		pkt->packet_len -= WPA_GET_LE32(data + 4);
+		datalen -= WPA_GET_LE32(data + 4);
+		data += WPA_GET_LE32(data + 4);
+		/* fall through */
+	case DLT_IEEE802_11:
+		pkt->captured_len += sizeof(rtap);
+		pkt->packet_len += sizeof(rtap);
+		os_memcpy(pos, &rtap, sizeof(rtap));
+		pos += sizeof(rtap);
+		break;
+	default:
+		return;
+	}
+
+	os_memcpy(pos, data, datalen);
+	pos += datalen + PAD32(pkt->captured_len);
 	pos = pcapng_add_comments(wt, pos);
 
 	block_len = (u32 *) pos;

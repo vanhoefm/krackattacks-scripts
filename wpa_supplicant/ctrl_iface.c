@@ -5060,6 +5060,14 @@ static int wpa_supplicant_signal_poll(struct wpa_supplicant *wpa_s, char *buf,
 		pos += ret;
 	}
 
+	if (si.avg_signal) {
+		ret = os_snprintf(pos, end - pos,
+				  "AVG_RSSI=%d\n", si.avg_signal);
+		if (ret < 0 || ret >= end - pos)
+			return -1;
+		pos += ret;
+	}
+
 	return pos - buf;
 }
 

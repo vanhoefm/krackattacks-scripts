@@ -1108,6 +1108,7 @@ struct wpa_signal_info {
 	u32 frequency;
 	int above_threshold;
 	int current_signal;
+	int avg_signal;
 	int current_noise;
 	int current_txrate;
 	enum chan_width chanwidth;

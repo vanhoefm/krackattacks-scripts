@@ -9330,6 +9330,75 @@ nla_put_failure:
 }
 
 
+/* Converts nl80211_chan_width to a common format */
+static enum chan_width convert2width(int width)
+{
+	switch (width) {
+	case NL80211_CHAN_WIDTH_20_NOHT:
+		return CHAN_WIDTH_20_NOHT;
+	case NL80211_CHAN_WIDTH_20:
+		return CHAN_WIDTH_20;
+	case NL80211_CHAN_WIDTH_40:
+		return CHAN_WIDTH_40;
+	case NL80211_CHAN_WIDTH_80:
+		return CHAN_WIDTH_80;
+	case NL80211_CHAN_WIDTH_80P80:
+		return CHAN_WIDTH_80P80;
+	case NL80211_CHAN_WIDTH_160:
+		return CHAN_WIDTH_160;
+	}
+	return CHAN_WIDTH_UNKNOWN;
+}
+
+
+static int get_channel_width(struct nl_msg *msg, void *arg)
+{
+	struct nlattr *tb[NL80211_ATTR_MAX + 1];
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+	struct wpa_signal_info *sig_change = arg;
+
+	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+
+	sig_change->center_frq1 = -1;
+	sig_change->center_frq2 = -1;
+	sig_change->chanwidth = CHAN_WIDTH_UNKNOWN;
+
+	if (tb[NL80211_ATTR_CHANNEL_WIDTH]) {
+		sig_change->chanwidth = convert2width(
+			nla_get_u32(tb[NL80211_ATTR_CHANNEL_WIDTH]));
+		if (tb[NL80211_ATTR_CENTER_FREQ1])
+			sig_change->center_frq1 =
+				nla_get_u32(tb[NL80211_ATTR_CENTER_FREQ1]);
+		if (tb[NL80211_ATTR_CENTER_FREQ2])
+			sig_change->center_frq2 =
+				nla_get_u32(tb[NL80211_ATTR_CENTER_FREQ2]);
+	}
+
+	return NL_SKIP;
+}
+
+
+static int nl80211_get_channel_width(struct wpa_driver_nl80211_data *drv,
+				     struct wpa_signal_info *sig)
+{
+	struct nl_msg *msg;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -ENOMEM;
+
+	nl80211_cmd(drv, msg, 0, NL80211_CMD_GET_INTERFACE);
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+
+	return send_and_recv_msgs(drv, msg, get_channel_width, sig);
+
+nla_put_failure:
+	nlmsg_free(msg);
+	return -ENOBUFS;
+}
+
+
 static int nl80211_signal_poll(void *priv, struct wpa_signal_info *si)
 {
 	struct i802_bss *bss = priv;
@@ -9338,6 +9407,10 @@ static int nl80211_signal_poll(void *priv, struct wpa_signal_info *si)
 
 	os_memset(si, 0, sizeof(*si));
 	res = nl80211_get_link_signal(drv, si);
+	if (res != 0)
+		return res;
+
+	res = nl80211_get_channel_width(drv, si);
 	if (res != 0)
 		return res;
 

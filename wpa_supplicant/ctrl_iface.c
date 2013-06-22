@@ -4999,23 +4999,68 @@ static int wpas_ctrl_iface_wnm_bss_query(struct wpa_supplicant *wpa_s, char *cmd
 #endif /* CONFIG_WNM */
 
 
+/* Get string representation of channel width */
+static const char * channel_width_name(enum chan_width width)
+{
+	switch (width) {
+	case CHAN_WIDTH_20_NOHT:
+		return "20 MHz (no HT)";
+	case CHAN_WIDTH_20:
+		return "20 MHz";
+	case CHAN_WIDTH_40:
+		return "40 MHz";
+	case CHAN_WIDTH_80:
+		return "80 MHz";
+	case CHAN_WIDTH_80P80:
+		return "80+80 MHz";
+	case CHAN_WIDTH_160:
+		return "160 MHz";
+	default:
+		return "unknown";
+	}
+}
+
+
 static int wpa_supplicant_signal_poll(struct wpa_supplicant *wpa_s, char *buf,
 				      size_t buflen)
 {
 	struct wpa_signal_info si;
 	int ret;
+	char *pos, *end;
 
 	ret = wpa_drv_signal_poll(wpa_s, &si);
 	if (ret)
 		return -1;
 
-	ret = os_snprintf(buf, buflen, "RSSI=%d\nLINKSPEED=%d\n"
+	pos = buf;
+	end = buf + buflen;
+
+	ret = os_snprintf(pos, end - pos, "RSSI=%d\nLINKSPEED=%d\n"
 			  "NOISE=%d\nFREQUENCY=%u\n",
 			  si.current_signal, si.current_txrate / 1000,
 			  si.current_noise, si.frequency);
-	if (ret < 0 || (unsigned int) ret > buflen)
+	if (ret < 0 || ret > end - pos)
 		return -1;
-	return ret;
+	pos += ret;
+
+	if (si.chanwidth != CHAN_WIDTH_UNKNOWN) {
+		ret = os_snprintf(pos, end - pos, "WIDTH=%s\n",
+				  channel_width_name(si.chanwidth));
+		if (ret < 0 || ret > end - pos)
+			return -1;
+		pos += ret;
+	}
+
+	if (si.center_frq1 > 0 && si.center_frq2 > 0) {
+		ret = os_snprintf(pos, end - pos,
+				  "CENTER_FRQ1=%d\nCENTER_FRQ2=%d\n",
+				  si.center_frq1, si.center_frq2);
+		if (ret < 0 || ret > end - pos)
+			return -1;
+		pos += ret;
+	}
+
+	return pos - buf;
 }
 
 

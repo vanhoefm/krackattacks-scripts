@@ -533,6 +533,26 @@ fi.w1.wpa_supplicant1.CreateInterface.
       </li>
 
       <li>
+	<h3>StaAuthorized ( s : mac )</h3>
+	<p>A new station has been authorized to the interface.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>s : mac</dt>
+	  <dd>A mac address which has been authorized.</dd>
+	</dl>
+      </li>
+
+      <li>
+	<h3>StaDeauthorized ( s : mac )</h3>
+	<p>A station has been deauthorized to the interface.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>s : mac</dt>
+	  <dd>A mac address which has been deauthorized.</dd>
+	</dl>
+      </li>
+
+      <li>
 	<h3>PropertiesChanged ( a{sv} : properties )</h3>
 	<p>Some properties have changed.</p>
 	<h4>Arguments</h4>

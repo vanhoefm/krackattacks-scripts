@@ -547,6 +547,9 @@ static void wpas_notify_ap_sta_authorized(struct wpa_supplicant *wpa_s,
 	 */
 	wpas_dbus_signal_p2p_peer_joined(wpa_s, sta);
 #endif /* CONFIG_P2P */
+
+	/* Notify listeners a new station has been authorized */
+	wpas_dbus_signal_sta_authorized(wpa_s, sta);
 }
 
 
@@ -566,6 +569,9 @@ static void wpas_notify_ap_sta_deauthorized(struct wpa_supplicant *wpa_s,
 	 */
 	wpas_dbus_signal_p2p_peer_disconnected(wpa_s, sta);
 #endif /* CONFIG_P2P */
+
+	/* Notify listeners a station has been deauthorized */
+	wpas_dbus_signal_sta_deauthorized(wpa_s, sta);
 }
 
 

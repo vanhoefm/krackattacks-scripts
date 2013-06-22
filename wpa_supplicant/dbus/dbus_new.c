@@ -869,6 +869,76 @@ nomem:
 }
 
 
+/**
+ * wpas_dbus_signal_sta - Send a station related event signal
+ * @wpa_s: %wpa_supplicant network interface data
+ * @sta: station mac address
+ * @sig_name: signal name - StaAuthorized or StaDeauthorized
+ *
+ * Notify listeners about event related with station
+ */
+static void wpas_dbus_signal_sta(struct wpa_supplicant *wpa_s,
+				 const u8 *sta, const char *sig_name)
+{
+	struct wpas_dbus_priv *iface;
+	DBusMessage *msg;
+	char sta_mac[WPAS_DBUS_OBJECT_PATH_MAX];
+	char *dev_mac;
+
+	os_snprintf(sta_mac, WPAS_DBUS_OBJECT_PATH_MAX, MACSTR, MAC2STR(sta));
+	dev_mac = sta_mac;
+
+	iface = wpa_s->global->dbus;
+
+	/* Do nothing if the control interface is not turned on */
+	if (iface == NULL)
+		return;
+
+	msg = dbus_message_new_signal(wpa_s->dbus_new_path,
+				      WPAS_DBUS_NEW_IFACE_INTERFACE, sig_name);
+	if (msg == NULL)
+		return;
+
+	if (dbus_message_append_args(msg, DBUS_TYPE_STRING, &dev_mac,
+				     DBUS_TYPE_INVALID))
+		dbus_connection_send(iface->con, msg, NULL);
+	else
+		wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+	dbus_message_unref(msg);
+
+	wpa_printf(MSG_DEBUG, "dbus: Station MAC address '%s' '%s'",
+		   sta_mac, sig_name);
+}
+
+
+/**
+ * wpas_dbus_signal_sta_authorized - Send a STA authorized signal
+ * @wpa_s: %wpa_supplicant network interface data
+ * @sta: station mac address
+ *
+ * Notify listeners a new station has been authorized
+ */
+void wpas_dbus_signal_sta_authorized(struct wpa_supplicant *wpa_s,
+				     const u8 *sta)
+{
+	wpas_dbus_signal_sta(wpa_s, sta, "StaAuthorized");
+}
+
+
+/**
+ * wpas_dbus_signal_sta_deauthorized - Send a STA deauthorized signal
+ * @wpa_s: %wpa_supplicant network interface data
+ * @sta: station mac address
+ *
+ * Notify listeners a station has been deauthorized
+ */
+void wpas_dbus_signal_sta_deauthorized(struct wpa_supplicant *wpa_s,
+				       const u8 *sta)
+{
+	wpas_dbus_signal_sta(wpa_s, sta, "StaDeauthorized");
+}
+
+
 #ifdef CONFIG_P2P
 
 /**
@@ -3014,6 +3084,18 @@ static const struct wpa_dbus_signal_desc wpas_dbus_interface_signals[] = {
 	  {
 		  { "status", "s", ARG_OUT },
 		  { "parameter", "s", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ "StaAuthorized", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  {
+		  { "name", "s", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ "StaDeauthorized", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  {
+		  { "name", "s", ARG_OUT },
 		  END_ARGS
 	  }
 	},

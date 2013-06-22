@@ -124,7 +124,9 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_IEEE80211N */
 
 #ifdef CONFIG_P2P
-	if (conf->hw_mode == HOSTAPD_MODE_IEEE80211G) {
+	if (conf->hw_mode == HOSTAPD_MODE_IEEE80211G &&
+	    (ssid->mode == WPAS_MODE_P2P_GO ||
+	     ssid->mode == WPAS_MODE_P2P_GROUP_FORMATION)) {
 		/* Remove 802.11b rates from supported and basic rate sets */
 		int *list = os_malloc(4 * sizeof(int));
 		if (list) {

@@ -671,6 +671,7 @@ static void * nl80211_cmd(struct wpa_driver_nl80211_data *drv,
 struct wiphy_idx_data {
 	int wiphy_idx;
 	enum nl80211_iftype nlmode;
+	u8 *macaddr;
 };
 
 
@@ -689,6 +690,10 @@ static int netdev_info_handler(struct nl_msg *msg, void *arg)
 	if (tb[NL80211_ATTR_IFTYPE])
 		info->nlmode = nla_get_u32(tb[NL80211_ATTR_IFTYPE]);
 
+	if (tb[NL80211_ATTR_MAC] && info->macaddr)
+		os_memcpy(info->macaddr, nla_data(tb[NL80211_ATTR_MAC]),
+			  ETH_ALEN);
+
 	return NL_SKIP;
 }
 
@@ -698,6 +703,7 @@ static int nl80211_get_wiphy_index(struct i802_bss *bss)
 	struct nl_msg *msg;
 	struct wiphy_idx_data data = {
 		.wiphy_idx = -1,
+		.macaddr = NULL,
 	};
 
 	msg = nlmsg_alloc();
@@ -721,7 +727,8 @@ static enum nl80211_iftype nl80211_get_ifmode(struct i802_bss *bss)
 {
 	struct nl_msg *msg;
 	struct wiphy_idx_data data = {
-		.wiphy_idx = -1,
+		.nlmode = NL80211_IFTYPE_UNSPECIFIED,
+		.macaddr = NULL,
 	};
 
 	msg = nlmsg_alloc();
@@ -740,6 +747,31 @@ nla_put_failure:
 	nlmsg_free(msg);
 	return NL80211_IFTYPE_UNSPECIFIED;
 }
+
+
+#ifndef HOSTAPD
+static int nl80211_get_macaddr(struct i802_bss *bss)
+{
+	struct nl_msg *msg;
+	struct wiphy_idx_data data = {
+		.macaddr = bss->addr,
+	};
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return NL80211_IFTYPE_UNSPECIFIED;
+
+	nl80211_cmd(bss->drv, msg, 0, NL80211_CMD_GET_INTERFACE);
+	if (nl80211_set_iface_id(msg, bss) < 0)
+		goto nla_put_failure;
+
+	return send_and_recv_msgs(bss->drv, msg, netdev_info_handler, &data);
+
+nla_put_failure:
+	nlmsg_free(msg);
+	return NL80211_IFTYPE_UNSPECIFIED;
+}
+#endif /* HOSTAPD */
 
 
 static int nl80211_register_beacons(struct wpa_driver_nl80211_data *drv,
@@ -4019,6 +4051,7 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 		int ret = nl80211_set_p2pdev(bss, 1);
 		if (ret < 0)
 			wpa_printf(MSG_ERROR, "nl80211: Could not start P2P device");
+		nl80211_get_macaddr(bss);
 		return ret;
 	}
 
@@ -10407,6 +10440,18 @@ nla_put_failure:
 }
 
 
+const u8 * wpa_driver_nl80211_get_macaddr(void *priv)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+
+	if (drv->nlmode != NL80211_IFTYPE_P2P_DEVICE)
+		return NULL;
+
+	return bss->addr;
+}
+
+
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
@@ -10486,4 +10531,5 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.tdls_oper = nl80211_tdls_oper,
 #endif /* CONFIG_TDLS */
 	.update_ft_ies = wpa_driver_nl80211_update_ft_ies,
+	.get_mac_addr = wpa_driver_nl80211_get_macaddr,
 };

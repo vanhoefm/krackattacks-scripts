@@ -668,6 +668,7 @@ static void * nl80211_cmd(struct wpa_driver_nl80211_data *drv,
 
 struct wiphy_idx_data {
 	int wiphy_idx;
+	enum nl80211_iftype nlmode;
 };
 
 
@@ -682,6 +683,9 @@ static int netdev_info_handler(struct nl_msg *msg, void *arg)
 
 	if (tb[NL80211_ATTR_WIPHY])
 		info->wiphy_idx = nla_get_u32(tb[NL80211_ATTR_WIPHY]);
+
+	if (tb[NL80211_ATTR_IFTYPE])
+		info->nlmode = nla_get_u32(tb[NL80211_ATTR_IFTYPE]);
 
 	return NL_SKIP;
 }
@@ -709,6 +713,32 @@ nla_put_failure:
 	nlmsg_free(msg);
 	return -1;
 }
+
+
+#ifndef HOSTAPD
+static enum nl80211_iftype nl80211_get_ifmode(struct i802_bss *bss)
+{
+	struct nl_msg *msg;
+	struct wiphy_idx_data data = {
+		.wiphy_idx = -1,
+	};
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -1;
+
+	nl80211_cmd(bss->drv, msg, 0, NL80211_CMD_GET_INTERFACE);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, bss->ifindex);
+
+	if (send_and_recv_msgs(bss->drv, msg, netdev_info_handler, &data) == 0)
+		return data.nlmode;
+	msg = NULL;
+nla_put_failure:
+	nlmsg_free(msg);
+	return NL80211_IFTYPE_UNSPECIFIED;
+}
+#endif /* HOSTAPD */
 
 
 static int nl80211_register_beacons(struct wpa_driver_nl80211_data *drv,
@@ -3890,11 +3920,22 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 	 * dynamically added interface (e.g., P2P) that was already configured
 	 * with proper iftype.
 	 */
-	if (drv->ifindex != drv->global->if_add_ifindex &&
-	    wpa_driver_nl80211_set_mode(bss, NL80211_IFTYPE_STATION) < 0) {
-		wpa_printf(MSG_ERROR, "nl80211: Could not configure driver to "
-			   "use managed mode");
-		return -1;
+	if (drv->ifindex != drv->global->if_add_ifindex) {
+		enum nl80211_iftype nlmode;
+
+		nlmode = nl80211_get_ifmode(bss);
+		if (nlmode != NL80211_IFTYPE_P2P_DEVICE)
+			nlmode = NL80211_IFTYPE_STATION;
+
+		if (wpa_driver_nl80211_set_mode(bss, nlmode) < 0) {
+			wpa_printf(MSG_ERROR, "nl80211: Could not configure driver to use %s mode",
+				   nlmode == NL80211_IFTYPE_STATION ?
+				   "managed" : "P2P-Device");
+			return -1;
+		}
+
+		/* Always use managed mode internally, even for P2P Device */
+		drv->nlmode = NL80211_IFTYPE_STATION;
 	}
 
 	if (linux_set_iface_flags(drv->global->ioctl_sock, bss->ifname, 1)) {

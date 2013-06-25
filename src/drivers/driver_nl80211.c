@@ -4679,9 +4679,9 @@ static int wpa_driver_nl80211_set_key(const char *ifname, struct i802_bss *bss,
 	struct nl_msg *msg;
 	int ret;
 
-	wpa_printf(MSG_DEBUG, "%s: ifindex=%d alg=%d addr=%p key_idx=%d "
+	wpa_printf(MSG_DEBUG, "%s: ifindex=%d (%s) alg=%d addr=%p key_idx=%d "
 		   "set_tx=%d seq_len=%lu key_len=%lu",
-		   __func__, ifindex, alg, addr, key_idx, set_tx,
+		   __func__, ifindex, ifname, alg, addr, key_idx, set_tx,
 		   (unsigned long) seq_len, (unsigned long) key_len);
 #ifdef CONFIG_TDLS
 	if (key_idx == -1)

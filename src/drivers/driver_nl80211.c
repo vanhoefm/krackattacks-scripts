@@ -2813,6 +2813,10 @@ static void wiphy_info_supported_iftypes(struct wiphy_info_data *info,
 		case NL80211_IFTYPE_ADHOC:
 			info->capa->flags |= WPA_DRIVER_FLAGS_IBSS;
 			break;
+		case NL80211_IFTYPE_P2P_DEVICE:
+			info->capa->flags |=
+				WPA_DRIVER_FLAGS_DEDICATED_P2P_DEVICE;
+			break;
 		case NL80211_IFTYPE_P2P_GO:
 			info->p2p_go_supported = 1;
 			break;
@@ -6511,6 +6515,8 @@ static const char * nl80211_iftype_str(enum nl80211_iftype mode)
 		return "P2P_CLIENT";
 	case NL80211_IFTYPE_P2P_GO:
 		return "P2P_GO";
+	case NL80211_IFTYPE_P2P_DEVICE:
+		return "P2P_DEVICE";
 	default:
 		return "unknown";
 	}
@@ -8676,6 +8682,8 @@ static enum nl80211_iftype wpa_driver_nl80211_if_type(
 		return NL80211_IFTYPE_AP;
 	case WPA_IF_P2P_GO:
 		return NL80211_IFTYPE_P2P_GO;
+	case WPA_IF_P2P_DEVICE:
+		return NL80211_IFTYPE_P2P_DEVICE;
 	}
 	return -1;
 }

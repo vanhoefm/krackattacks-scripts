@@ -830,7 +830,7 @@ struct wpa_driver_capa {
  * it cannot be used for P2P group operations or non-P2P purposes.
  */
 #define WPA_DRIVER_FLAGS_P2P_DEDICATED_INTERFACE	0x00000400
-/* This interface is P2P capable (P2P Device, GO, or P2P Client */
+/* This interface is P2P capable (P2P GO or P2P Client) */
 #define WPA_DRIVER_FLAGS_P2P_CAPABLE	0x00000800
 /* Driver supports concurrent operations on multiple channels */
 #define WPA_DRIVER_FLAGS_MULTI_CHANNEL_CONCURRENT	0x00001000
@@ -874,6 +874,8 @@ struct wpa_driver_capa {
 #define WPA_DRIVER_FLAGS_IBSS				0x08000000
 /* Driver supports radar detection */
 #define WPA_DRIVER_FLAGS_RADAR				0x10000000
+/* Driver supports a dedicated interface for P2P Device */
+#define WPA_DRIVER_FLAGS_DEDICATED_P2P_DEVICE		0x20000000
 	unsigned int flags;
 
 	int max_scan_ssids;
@@ -1013,7 +1015,13 @@ enum wpa_driver_if_type {
 	 * WPA_IF_P2P_GROUP - P2P Group interface (will become either
 	 * WPA_IF_P2P_GO or WPA_IF_P2P_CLIENT, but the role is not yet known)
 	 */
-	WPA_IF_P2P_GROUP
+	WPA_IF_P2P_GROUP,
+
+	/**
+	 * WPA_IF_P2P_DEVICE - P2P Device interface is used to indentify the
+	 * abstracted P2P Device function in the driver
+	 */
+	WPA_IF_P2P_DEVICE
 };
 
 struct wpa_init_params {

@@ -717,7 +717,6 @@ nla_put_failure:
 }
 
 
-#ifndef HOSTAPD
 static enum nl80211_iftype nl80211_get_ifmode(struct i802_bss *bss)
 {
 	struct nl_msg *msg;
@@ -741,7 +740,6 @@ nla_put_failure:
 	nlmsg_free(msg);
 	return NL80211_IFTYPE_UNSPECIFIED;
 }
-#endif /* HOSTAPD */
 
 
 static int nl80211_register_beacons(struct wpa_driver_nl80211_data *drv,
@@ -3909,25 +3907,56 @@ static void wpa_driver_nl80211_send_rfkill(void *eloop_ctx, void *timeout_ctx)
 }
 
 
+static void nl80211_del_p2pdev(struct i802_bss *bss)
+{
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg;
+	int ret;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return;
+
+	nl80211_cmd(drv, msg, 0, NL80211_CMD_DEL_INTERFACE);
+	NLA_PUT_U64(msg, NL80211_ATTR_WDEV, bss->wdev_id);
+
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	msg = NULL;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Delete P2P Device %s (0x%llx): %s",
+		   bss->ifname, (long long unsigned int) bss->wdev_id,
+		   strerror(ret));
+
+nla_put_failure:
+	nlmsg_free(msg);
+}
+
+
 #ifndef HOSTAPD
-static int nl80211_start_p2pdev(struct i802_bss *bss)
+static int nl80211_set_p2pdev(struct i802_bss *bss, int start)
 {
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct nl_msg *msg;
 	int ret = -1;
 
-	wpa_printf(MSG_DEBUG, "nl80211: Start P2P Device %s (0x%llx)",
-		   bss->ifname, (long long unsigned int) bss->wdev_id);
-
 	msg = nlmsg_alloc();
 	if (!msg)
 		return -1;
 
-	nl80211_cmd(drv, msg, 0, NL80211_CMD_START_P2P_DEVICE);
+	if (start)
+		nl80211_cmd(drv, msg, 0, NL80211_CMD_START_P2P_DEVICE);
+	else
+		nl80211_cmd(drv, msg, 0, NL80211_CMD_STOP_P2P_DEVICE);
+
 	NLA_PUT_U64(msg, NL80211_ATTR_WDEV, bss->wdev_id);
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	msg = NULL;
+
+	wpa_printf(MSG_DEBUG, "nl80211: %s P2P Device %s (0x%llx): %s",
+		   start ? "Start" : "Stop",
+		   bss->ifname, (long long unsigned int) bss->wdev_id,
+		   strerror(ret));
 
 nla_put_failure:
 	nlmsg_free(msg);
@@ -3979,7 +4008,7 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 	}
 
 	if (nlmode == NL80211_IFTYPE_P2P_DEVICE) {
-		int ret = nl80211_start_p2pdev(bss);
+		int ret = nl80211_set_p2pdev(bss, 1);
 		if (ret < 0)
 			wpa_printf(MSG_ERROR, "nl80211: Could not start P2P device");
 		return ret;
@@ -4102,7 +4131,8 @@ static void wpa_driver_nl80211_deinit(struct i802_bss *bss)
 	(void) linux_set_iface_flags(drv->global->ioctl_sock, bss->ifname, 0);
 	wpa_driver_nl80211_set_mode(bss, NL80211_IFTYPE_STATION);
 	nl80211_mgmt_unsubscribe(bss, "deinit");
-
+	if (nl80211_get_ifmode(bss) == NL80211_IFTYPE_P2P_DEVICE)
+		nl80211_del_p2pdev(bss);
 	nl_cb_put(drv->nl_cb);
 
 	nl80211_destroy_bss(&drv->first_bss);

@@ -497,6 +497,10 @@ static void vlan_newlink(char *ifname, struct hostapd_data *hapd)
 				os_snprintf(br_name, sizeof(br_name), "%s%d",
 					    hapd->conf->vlan_bridge,
 					    vlan->vlan_id);
+			} else if (tagged_interface) {
+				os_snprintf(br_name, sizeof(br_name),
+				            "br%s.%d", tagged_interface,
+					    vlan->vlan_id);
 			} else {
 				os_snprintf(br_name, sizeof(br_name),
 				            "brvlan%d", vlan->vlan_id);
@@ -559,6 +563,10 @@ static void vlan_dellink(char *ifname, struct hostapd_data *hapd)
 			if (hapd->conf->vlan_bridge[0]) {
 				os_snprintf(br_name, sizeof(br_name), "%s%d",
 					    hapd->conf->vlan_bridge,
+					    vlan->vlan_id);
+			} else if (tagged_interface) {
+				os_snprintf(br_name, sizeof(br_name),
+				            "br%s.%d", tagged_interface,
 					    vlan->vlan_id);
 			} else {
 				os_snprintf(br_name, sizeof(br_name),

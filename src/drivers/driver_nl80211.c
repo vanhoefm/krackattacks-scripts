@@ -157,6 +157,8 @@ static void nl_destroy_handles(struct nl_handle **handle)
 struct nl80211_global {
 	struct dl_list interfaces;
 	int if_add_ifindex;
+	u64 if_add_wdevid;
+	int if_add_wdevid_set;
 	struct netlink_data *netlink;
 	struct nl_cb *nl_cb;
 	struct nl_handle *nl;
@@ -729,7 +731,8 @@ static enum nl80211_iftype nl80211_get_ifmode(struct i802_bss *bss)
 
 	nl80211_cmd(bss->drv, msg, 0, NL80211_CMD_GET_INTERFACE);
 
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, bss->ifindex);
+	if (nl80211_set_iface_id(msg, bss) < 0)
+		goto nla_put_failure;
 
 	if (send_and_recv_msgs(bss->drv, msg, netdev_info_handler, &data) == 0)
 		return data.nlmode;
@@ -3176,7 +3179,8 @@ static int wpa_driver_nl80211_get_info(struct wpa_driver_nl80211_data *drv,
 		nl80211_cmd(drv, msg, 0, NL80211_CMD_GET_WIPHY);
 
 	NLA_PUT_FLAG(msg, NL80211_ATTR_SPLIT_WIPHY_DUMP);
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->first_bss.ifindex);
+	if (nl80211_set_iface_id(msg, &drv->first_bss) < 0)
+		goto nla_put_failure;
 
 	if (send_and_recv_msgs(drv, msg, wiphy_info_handler, info))
 		return -1;
@@ -3666,7 +3670,7 @@ static int nl80211_register_frame(struct i802_bss *bss,
 
 	nl80211_cmd(drv, msg, 0, NL80211_CMD_REGISTER_ACTION);
 
-	if (nl80211_set_iface_id(msg, bss))
+	if (nl80211_set_iface_id(msg, bss) < 0)
 		goto nla_put_failure;
 
 	NLA_PUT_U16(msg, NL80211_ATTR_FRAME_TYPE, type);
@@ -3905,28 +3909,64 @@ static void wpa_driver_nl80211_send_rfkill(void *eloop_ctx, void *timeout_ctx)
 }
 
 
+#ifndef HOSTAPD
+static int nl80211_start_p2pdev(struct i802_bss *bss)
+{
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg;
+	int ret = -1;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Start P2P Device %s (0x%llx)",
+		   bss->ifname, (long long unsigned int) bss->wdev_id);
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -1;
+
+	nl80211_cmd(drv, msg, 0, NL80211_CMD_START_P2P_DEVICE);
+	NLA_PUT_U64(msg, NL80211_ATTR_WDEV, bss->wdev_id);
+
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	msg = NULL;
+
+nla_put_failure:
+	nlmsg_free(msg);
+	return ret;
+}
+#endif /* HOSTAPD */
+
+
 static int
 wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 {
+#ifndef HOSTAPD
+	enum nl80211_iftype nlmode = NL80211_IFTYPE_UNSPECIFIED;
+#endif /* HOSTAPD */
 	struct i802_bss *bss = &drv->first_bss;
 	int send_rfkill_event = 0;
+	int dynamic_if;
 
 	drv->ifindex = if_nametoindex(bss->ifname);
-	drv->first_bss.ifindex = drv->ifindex;
+	bss->ifindex = drv->ifindex;
+	bss->wdev_id = drv->global->if_add_wdevid;
+	bss->wdev_id_set = drv->global->if_add_wdevid_set;
+
+	dynamic_if = drv->ifindex == drv->global->if_add_ifindex;
+	dynamic_if = dynamic_if || drv->global->if_add_wdevid_set;
+	drv->global->if_add_wdevid_set = 0;
+
+	if (wpa_driver_nl80211_capa(drv))
+		return -1;
 
 #ifndef HOSTAPD
+	nlmode = nl80211_get_ifmode(bss);
+
 	/*
 	 * Make sure the interface starts up in station mode unless this is a
 	 * dynamically added interface (e.g., P2P) that was already configured
 	 * with proper iftype.
 	 */
-	if (drv->ifindex != drv->global->if_add_ifindex) {
-		enum nl80211_iftype nlmode;
-
-		nlmode = nl80211_get_ifmode(bss);
-		if (nlmode != NL80211_IFTYPE_P2P_DEVICE)
-			nlmode = NL80211_IFTYPE_STATION;
-
+	if (!dynamic_if) {
 		if (wpa_driver_nl80211_set_mode(bss, nlmode) < 0) {
 			wpa_printf(MSG_ERROR, "nl80211: Could not configure driver to use %s mode",
 				   nlmode == NL80211_IFTYPE_STATION ?
@@ -3936,6 +3976,13 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 
 		/* Always use managed mode internally, even for P2P Device */
 		drv->nlmode = NL80211_IFTYPE_STATION;
+	}
+
+	if (nlmode == NL80211_IFTYPE_P2P_DEVICE) {
+		int ret = nl80211_start_p2pdev(bss);
+		if (ret < 0)
+			wpa_printf(MSG_ERROR, "nl80211: Could not start P2P device");
+		return ret;
 	}
 
 	if (linux_set_iface_flags(drv->global->ioctl_sock, bss->ifname, 1)) {
@@ -3955,9 +4002,6 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 	netlink_send_oper_ifla(drv->global->netlink, drv->ifindex,
 			       1, IF_OPER_DORMANT);
 #endif /* HOSTAPD */
-
-	if (wpa_driver_nl80211_capa(drv))
-		return -1;
 
 	if (linux_get_ifhwaddr(drv->global->ioctl_sock, bss->ifname,
 			       bss->addr))
@@ -6659,12 +6703,8 @@ static int nl80211_create_iface_once(struct wpa_driver_nl80211_data *drv,
 		return ret;
 	}
 
-	if (iftype == NL80211_IFTYPE_P2P_DEVICE) {
-		wpa_printf(MSG_DEBUG,
-			   "nl80211: New P2P Device interface %s created",
-			   ifname);
+	if (iftype == NL80211_IFTYPE_P2P_DEVICE)
 		return 0;
-	}
 
 	ifidx = if_nametoindex(ifname);
 	wpa_printf(MSG_DEBUG, "nl80211: New interface %s created: ifindex=%d",
@@ -7906,7 +7946,8 @@ static int nl80211_set_mode(struct wpa_driver_nl80211_data *drv,
 		return -ENOMEM;
 
 	nl80211_cmd(drv, msg, 0, NL80211_CMD_SET_INTERFACE);
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, ifindex);
+	if (nl80211_set_iface_id(msg, &drv->first_bss) < 0)
+		goto nla_put_failure;
 	NLA_PUT_U32(msg, NL80211_ATTR_IFTYPE, mode);
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
@@ -8831,21 +8872,27 @@ static int nl80211_p2p_interface_addr(struct wpa_driver_nl80211_data *drv,
 #endif /* CONFIG_P2P */
 
 
-static int nl80211_create_p2p_dev_handler(struct nl_msg *msg, void *arg)
+struct wdev_info {
+	u64 wdev_id;
+	int wdev_id_set;
+	u8 macaddr[ETH_ALEN];
+};
+
+static int nl80211_wdev_handler(struct nl_msg *msg, void *arg)
 {
 	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
 	struct nlattr *tb[NL80211_ATTR_MAX + 1];
-	struct i802_bss *p2p_dev = arg;
+	struct wdev_info *wi = arg;
 
 	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
 		  genlmsg_attrlen(gnlh, 0), NULL);
 	if (tb[NL80211_ATTR_WDEV]) {
-		p2p_dev->wdev_id = nla_get_u64(tb[NL80211_ATTR_WDEV]);
-		p2p_dev->wdev_id_set = 1;
+		wi->wdev_id = nla_get_u64(tb[NL80211_ATTR_WDEV]);
+		wi->wdev_id_set = 1;
 	}
 
 	if (tb[NL80211_ATTR_MAC])
-		os_memcpy(p2p_dev->addr, nla_data(tb[NL80211_ATTR_MAC]),
+		os_memcpy(wi->macaddr, nla_data(tb[NL80211_ATTR_MAC]),
 			  ETH_ALEN);
 
 	return NL_SKIP;
@@ -8860,7 +8907,6 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 {
 	enum nl80211_iftype nlmode;
 	struct i802_bss *bss = priv;
-	struct i802_bss *p2pdev;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	int ifidx;
 #ifdef HOSTAPD
@@ -8877,21 +8923,25 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 		os_memcpy(if_addr, addr, ETH_ALEN);
 	nlmode = wpa_driver_nl80211_if_type(type);
 	if (nlmode == NL80211_IFTYPE_P2P_DEVICE) {
-		p2pdev = os_zalloc(sizeof(*p2pdev));
-		if (!p2pdev)
-			return -1;
-		*p2pdev = *bss;
-		os_strlcpy(p2pdev->ifname, ifname, IFNAMSIZ);
+		struct wdev_info p2pdev_info;
+
+		os_memset(&p2pdev_info, 0, sizeof(p2pdev_info));
 		ifidx = nl80211_create_iface(drv, ifname, nlmode, addr,
-					     0, nl80211_create_p2p_dev_handler,
-					     p2pdev);
-		if (!p2pdev->wdev_id_set || ifidx != 0 ||
-		    is_zero_ether_addr((const u8 *) &p2pdev->addr)) {
+					     0, nl80211_wdev_handler,
+					     &p2pdev_info);
+		if (!p2pdev_info.wdev_id_set || ifidx != 0) {
 			wpa_printf(MSG_ERROR, "nl80211: Failed to create a P2P Device interface %s",
 				   ifname);
-			os_free(p2pdev);
 			return -1;
 		}
+
+		drv->global->if_add_wdevid = p2pdev_info.wdev_id;
+		drv->global->if_add_wdevid_set = p2pdev_info.wdev_id_set;
+		if (!is_zero_ether_addr(p2pdev_info.macaddr))
+			os_memcpy(if_addr, p2pdev_info.macaddr, ETH_ALEN);
+		wpa_printf(MSG_DEBUG, "nl80211: New P2P Device interface %s (0x%llx) created",
+			   ifname,
+			   (long long unsigned int) p2pdev_info.wdev_id);
 	} else {
 		ifidx = nl80211_create_iface(drv, ifname, nlmode, addr,
 					     0, NULL, NULL);
@@ -9072,7 +9122,7 @@ static int nl80211_send_frame_cmd(struct i802_bss *bss,
 		   freq, wait, no_cck, no_ack, offchanok);
 	nl80211_cmd(drv, msg, 0, NL80211_CMD_FRAME);
 
-	if (nl80211_set_iface_id(msg, bss))
+	if (nl80211_set_iface_id(msg, bss) < 0)
 		goto nla_put_failure;
 
 	NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, freq);
@@ -9196,7 +9246,7 @@ static int wpa_driver_nl80211_remain_on_channel(void *priv, unsigned int freq,
 
 	nl80211_cmd(drv, msg, 0, NL80211_CMD_REMAIN_ON_CHANNEL);
 
-	if (nl80211_set_iface_id(msg, bss))
+	if (nl80211_set_iface_id(msg, bss) < 0)
 		goto nla_put_failure;
 
 	NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, freq);
@@ -9245,7 +9295,7 @@ static int wpa_driver_nl80211_cancel_remain_on_channel(void *priv)
 
 	nl80211_cmd(drv, msg, 0, NL80211_CMD_CANCEL_REMAIN_ON_CHANNEL);
 
-	if (nl80211_set_iface_id(msg, bss))
+	if (nl80211_set_iface_id(msg, bss) < 0)
 		goto nla_put_failure;
 
 	NLA_PUT_U64(msg, NL80211_ATTR_COOKIE, drv->remain_on_chan_cookie);

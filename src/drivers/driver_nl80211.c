@@ -4763,10 +4763,15 @@ static int wpa_driver_nl80211_set_key(const char *ifname, struct i802_bss *bss,
 				      const u8 *key, size_t key_len)
 {
 	struct wpa_driver_nl80211_data *drv = bss->drv;
-	int ifindex = if_nametoindex(ifname);
+	int ifindex;
 	struct nl_msg *msg;
 	int ret;
 
+	/* Ignore for P2P Device */
+	if (drv->nlmode == NL80211_IFTYPE_P2P_DEVICE)
+		return 0;
+
+	ifindex = if_nametoindex(ifname);
 	wpa_printf(MSG_DEBUG, "%s: ifindex=%d (%s) alg=%d addr=%p key_idx=%d "
 		   "set_tx=%d seq_len=%lu key_len=%lu",
 		   __func__, ifindex, ifname, alg, addr, key_idx, set_tx,
@@ -8826,13 +8831,36 @@ static int nl80211_p2p_interface_addr(struct wpa_driver_nl80211_data *drv,
 #endif /* CONFIG_P2P */
 
 
+static int nl80211_create_p2p_dev_handler(struct nl_msg *msg, void *arg)
+{
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+	struct nlattr *tb[NL80211_ATTR_MAX + 1];
+	struct i802_bss *p2p_dev = arg;
+
+	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+	if (tb[NL80211_ATTR_WDEV]) {
+		p2p_dev->wdev_id = nla_get_u64(tb[NL80211_ATTR_WDEV]);
+		p2p_dev->wdev_id_set = 1;
+	}
+
+	if (tb[NL80211_ATTR_MAC])
+		os_memcpy(p2p_dev->addr, nla_data(tb[NL80211_ATTR_MAC]),
+			  ETH_ALEN);
+
+	return NL_SKIP;
+}
+
+
 static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 				     const char *ifname, const u8 *addr,
 				     void *bss_ctx, void **drv_priv,
 				     char *force_ifname, u8 *if_addr,
 				     const char *bridge)
 {
+	enum nl80211_iftype nlmode;
 	struct i802_bss *bss = priv;
+	struct i802_bss *p2pdev;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	int ifidx;
 #ifdef HOSTAPD
@@ -8847,14 +8875,32 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 
 	if (addr)
 		os_memcpy(if_addr, addr, ETH_ALEN);
-	ifidx = nl80211_create_iface(drv, ifname,
-				     wpa_driver_nl80211_if_type(type), addr,
-				     0, NULL, NULL);
-	if (ifidx < 0) {
+	nlmode = wpa_driver_nl80211_if_type(type);
+	if (nlmode == NL80211_IFTYPE_P2P_DEVICE) {
+		p2pdev = os_zalloc(sizeof(*p2pdev));
+		if (!p2pdev)
+			return -1;
+		*p2pdev = *bss;
+		os_strlcpy(p2pdev->ifname, ifname, IFNAMSIZ);
+		ifidx = nl80211_create_iface(drv, ifname, nlmode, addr,
+					     0, nl80211_create_p2p_dev_handler,
+					     p2pdev);
+		if (!p2pdev->wdev_id_set || ifidx != 0 ||
+		    is_zero_ether_addr((const u8 *) &p2pdev->addr)) {
+			wpa_printf(MSG_ERROR, "nl80211: Failed to create a P2P Device interface %s",
+				   ifname);
+			os_free(p2pdev);
+			return -1;
+		}
+	} else {
+		ifidx = nl80211_create_iface(drv, ifname, nlmode, addr,
+					     0, NULL, NULL);
+		if (ifidx < 0) {
 #ifdef HOSTAPD
-		os_free(new_bss);
+			os_free(new_bss);
 #endif /* HOSTAPD */
-		return -1;
+			return -1;
+		}
 	}
 
 	if (!addr &&

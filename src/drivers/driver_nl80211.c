@@ -702,7 +702,7 @@ static int nl80211_get_wiphy_index(struct i802_bss *bss)
 
 	msg = nlmsg_alloc();
 	if (!msg)
-		return -1;
+		return NL80211_IFTYPE_UNSPECIFIED;
 
 	nl80211_cmd(bss->drv, msg, 0, NL80211_CMD_GET_INTERFACE);
 
@@ -3932,7 +3932,6 @@ nla_put_failure:
 }
 
 
-#ifndef HOSTAPD
 static int nl80211_set_p2pdev(struct i802_bss *bss, int start)
 {
 	struct wpa_driver_nl80211_data *drv = bss->drv;
@@ -3962,7 +3961,6 @@ nla_put_failure:
 	nlmsg_free(msg);
 	return ret;
 }
-#endif /* HOSTAPD */
 
 
 static int i802_set_iface_flags(struct i802_bss *bss, int up)
@@ -3984,7 +3982,7 @@ static int
 wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 {
 #ifndef HOSTAPD
-	enum nl80211_iftype nlmode = NL80211_IFTYPE_UNSPECIFIED;
+	enum nl80211_iftype nlmode = NL80211_IFTYPE_STATION;
 #endif /* HOSTAPD */
 	struct i802_bss *bss = &drv->first_bss;
 	int send_rfkill_event = 0;
@@ -4003,24 +4001,19 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 		return -1;
 
 #ifndef HOSTAPD
-	nlmode = nl80211_get_ifmode(bss);
+	if (dynamic_if)
+		nlmode = nl80211_get_ifmode(bss);
 
 	/*
 	 * Make sure the interface starts up in station mode unless this is a
 	 * dynamically added interface (e.g., P2P) that was already configured
 	 * with proper iftype.
 	 */
-	if (!dynamic_if) {
-		if (wpa_driver_nl80211_set_mode(bss, nlmode) < 0) {
-			wpa_printf(MSG_ERROR, "nl80211: Could not configure driver to use %s mode",
-				   nlmode == NL80211_IFTYPE_STATION ?
-				   "managed" : "P2P-Device");
-			return -1;
-		}
-
-		/* Always use managed mode internally, even for P2P Device */
-		drv->nlmode = NL80211_IFTYPE_STATION;
+	if (wpa_driver_nl80211_set_mode(bss, nlmode) < 0) {
+		wpa_printf(MSG_ERROR, "nl80211: Could not configure driver to use managed mode");
+		return -1;
 	}
+	drv->nlmode = nlmode;
 
 	if (nlmode == NL80211_IFTYPE_P2P_DEVICE) {
 		int ret = nl80211_set_p2pdev(bss, 1);
@@ -4144,10 +4137,12 @@ static void wpa_driver_nl80211_deinit(struct i802_bss *bss)
 	eloop_cancel_timeout(wpa_driver_nl80211_scan_timeout, drv, drv->ctx);
 
 	(void) i802_set_iface_flags(bss, 0);
-	wpa_driver_nl80211_set_mode(bss, NL80211_IFTYPE_STATION);
-	nl80211_mgmt_unsubscribe(bss, "deinit");
-	if (nl80211_get_ifmode(bss) == NL80211_IFTYPE_P2P_DEVICE)
+	if (drv->nlmode != NL80211_IFTYPE_P2P_DEVICE) {
+		wpa_driver_nl80211_set_mode(bss, NL80211_IFTYPE_STATION);
+	} else {
+		nl80211_mgmt_unsubscribe(bss, "deinit");
 		nl80211_del_p2pdev(bss);
+	}
 	nl_cb_put(drv->nl_cb);
 
 	nl80211_destroy_bss(&drv->first_bss);
@@ -6072,7 +6067,8 @@ static int wpa_driver_nl80211_send_mlme(struct i802_bss *bss, const u8 *data,
 	mgmt = (struct ieee80211_mgmt *) data;
 	fc = le_to_host16(mgmt->frame_control);
 
-	if (is_sta_interface(drv->nlmode) &&
+	if ((is_sta_interface(drv->nlmode) ||
+	     drv->nlmode == NL80211_IFTYPE_P2P_DEVICE) &&
 	    WLAN_FC_GET_TYPE(fc) == WLAN_FC_TYPE_MGMT &&
 	    WLAN_FC_GET_STYPE(fc) == WLAN_FC_STYPE_PROBE_RESP) {
 		/*
@@ -8017,6 +8013,9 @@ static int wpa_driver_nl80211_set_mode(struct i802_bss *bss,
 	int res;
 
 	res = nl80211_set_mode(drv, drv->ifindex, nlmode);
+	if (res && nlmode == nl80211_get_ifmode(bss))
+		res = 0;
+
 	if (res == 0) {
 		drv->nlmode = nlmode;
 		ret = 0;

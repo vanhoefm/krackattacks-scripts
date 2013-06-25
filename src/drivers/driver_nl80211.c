@@ -9030,11 +9030,14 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 		}
 	}
 
-	if (!addr &&
-	    linux_get_ifhwaddr(drv->global->ioctl_sock, bss->ifname,
-			       if_addr) < 0) {
-		nl80211_remove_iface(drv, ifidx);
-		return -1;
+	if (!addr) {
+		if (drv->nlmode == NL80211_IFTYPE_P2P_DEVICE)
+			os_memcpy(if_addr, bss->addr, ETH_ALEN);
+		else if (linux_get_ifhwaddr(drv->global->ioctl_sock,
+					    bss->ifname, if_addr) < 0) {
+			nl80211_remove_iface(drv, ifidx);
+			return -1;
+		}
 	}
 
 #ifdef CONFIG_P2P
@@ -9042,16 +9045,14 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 	    (type == WPA_IF_P2P_CLIENT || type == WPA_IF_P2P_GROUP ||
 	     type == WPA_IF_P2P_GO)) {
 		/* Enforce unique P2P Interface Address */
-		u8 new_addr[ETH_ALEN], own_addr[ETH_ALEN];
+		u8 new_addr[ETH_ALEN];
 
-		if (linux_get_ifhwaddr(drv->global->ioctl_sock, bss->ifname,
-				       own_addr) < 0 ||
-		    linux_get_ifhwaddr(drv->global->ioctl_sock, ifname,
+		if (linux_get_ifhwaddr(drv->global->ioctl_sock, ifname,
 				       new_addr) < 0) {
 			nl80211_remove_iface(drv, ifidx);
 			return -1;
 		}
-		if (os_memcmp(own_addr, new_addr, ETH_ALEN) == 0) {
+		if (os_memcmp(if_addr, new_addr, ETH_ALEN) == 0) {
 			wpa_printf(MSG_DEBUG, "nl80211: Allocate new address "
 				   "for P2P group interface");
 			if (nl80211_p2p_interface_addr(drv, new_addr) < 0) {

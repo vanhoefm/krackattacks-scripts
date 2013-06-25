@@ -1689,6 +1689,9 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 				   sizeof(conf->bss[0].iface));
 		} else if (os_strcmp(buf, "bridge") == 0) {
 			os_strlcpy(bss->bridge, pos, sizeof(bss->bridge));
+		} else if (os_strcmp(buf, "vlan_bridge") == 0) {
+			os_strlcpy(bss->vlan_bridge, pos,
+			           sizeof(bss->vlan_bridge));
 		} else if (os_strcmp(buf, "wds_bridge") == 0) {
 			os_strlcpy(bss->wds_bridge, pos,
 				   sizeof(bss->wds_bridge));

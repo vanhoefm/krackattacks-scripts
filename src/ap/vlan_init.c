@@ -493,8 +493,14 @@ static void vlan_newlink(char *ifname, struct hostapd_data *hapd)
 	while (vlan) {
 		if (os_strcmp(ifname, vlan->ifname) == 0) {
 
-			os_snprintf(br_name, sizeof(br_name), "brvlan%d",
-				    vlan->vlan_id);
+			if (hapd->conf->vlan_bridge[0]) {
+				os_snprintf(br_name, sizeof(br_name), "%s%d",
+					    hapd->conf->vlan_bridge,
+					    vlan->vlan_id);
+			} else {
+				os_snprintf(br_name, sizeof(br_name),
+				            "brvlan%d", vlan->vlan_id);
+			}
 
 			if (!br_addbr(br_name))
 				vlan->clean |= DVLAN_CLEAN_BR;
@@ -550,8 +556,14 @@ static void vlan_dellink(char *ifname, struct hostapd_data *hapd)
 
 	while (vlan) {
 		if (os_strcmp(ifname, vlan->ifname) == 0) {
-			os_snprintf(br_name, sizeof(br_name), "brvlan%d",
-				    vlan->vlan_id);
+			if (hapd->conf->vlan_bridge[0]) {
+				os_snprintf(br_name, sizeof(br_name), "%s%d",
+					    hapd->conf->vlan_bridge,
+					    vlan->vlan_id);
+			} else {
+				os_snprintf(br_name, sizeof(br_name),
+				            "brvlan%d", vlan->vlan_id);
+			}
 
 			if (vlan->clean & DVLAN_CLEAN_WLAN_PORT)
 				br_delif(br_name, vlan->ifname);

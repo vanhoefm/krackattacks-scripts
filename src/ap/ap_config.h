@@ -180,6 +180,7 @@ struct hostapd_nai_realm_data {
 struct hostapd_bss_config {
 	char iface[IFNAMSIZ + 1];
 	char bridge[IFNAMSIZ + 1];
+	char vlan_bridge[IFNAMSIZ + 1];
 	char wds_bridge[IFNAMSIZ + 1];
 
 	enum hostapd_logger_level logger_syslog_level, logger_stdout_level;

@@ -6613,6 +6613,13 @@ static int nl80211_create_iface_once(struct wpa_driver_nl80211_data *drv,
 		return ret;
 	}
 
+	if (iftype == NL80211_IFTYPE_P2P_DEVICE) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: New P2P Device interface %s created",
+			   ifname);
+		return 0;
+	}
+
 	ifidx = if_nametoindex(ifname);
 	wpa_printf(MSG_DEBUG, "nl80211: New interface %s created: ifindex=%d",
 		   ifname, ifidx);

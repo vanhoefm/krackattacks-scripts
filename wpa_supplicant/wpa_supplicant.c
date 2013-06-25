@@ -3416,9 +3416,6 @@ void wpa_supplicant_deinit(struct wpa_global *global)
 #ifdef CONFIG_WIFI_DISPLAY
 	wifi_display_deinit(global);
 #endif /* CONFIG_WIFI_DISPLAY */
-#ifdef CONFIG_P2P
-	wpas_p2p_deinit_global(global);
-#endif /* CONFIG_P2P */
 
 	while (global->ifaces)
 		wpa_supplicant_remove_iface(global, global->ifaces, 1);

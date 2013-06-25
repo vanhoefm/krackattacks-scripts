@@ -3965,6 +3965,21 @@ nla_put_failure:
 #endif /* HOSTAPD */
 
 
+static int i802_set_iface_flags(struct i802_bss *bss, int up)
+{
+	enum nl80211_iftype nlmode;
+
+	nlmode = nl80211_get_ifmode(bss);
+	if (nlmode != NL80211_IFTYPE_P2P_DEVICE) {
+		return linux_set_iface_flags(bss->drv->global->ioctl_sock,
+					     bss->ifname, up);
+	}
+
+	/* P2P Device has start/stop which is equivalent */
+	return nl80211_set_p2pdev(bss, up);
+}
+
+
 static int
 wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 {
@@ -4128,7 +4143,7 @@ static void wpa_driver_nl80211_deinit(struct i802_bss *bss)
 
 	eloop_cancel_timeout(wpa_driver_nl80211_scan_timeout, drv, drv->ctx);
 
-	(void) linux_set_iface_flags(drv->global->ioctl_sock, bss->ifname, 0);
+	(void) i802_set_iface_flags(bss, 0);
 	wpa_driver_nl80211_set_mode(bss, NL80211_IFTYPE_STATION);
 	nl80211_mgmt_unsubscribe(bss, "deinit");
 	if (nl80211_get_ifmode(bss) == NL80211_IFTYPE_P2P_DEVICE)
@@ -8025,8 +8040,7 @@ static int wpa_driver_nl80211_set_mode(struct i802_bss *bss,
 	wpa_printf(MSG_DEBUG, "nl80211: Try mode change after setting "
 		   "interface down");
 	for (i = 0; i < 10; i++) {
-		res = linux_set_iface_flags(drv->global->ioctl_sock,
-					    bss->ifname, 0);
+		res = i802_set_iface_flags(bss, 0);
 		if (res == -EACCES || res == -ENODEV)
 			break;
 		if (res == 0) {
@@ -8035,8 +8049,7 @@ static int wpa_driver_nl80211_set_mode(struct i802_bss *bss,
 			ret = nl80211_set_mode(drv, drv->ifindex, nlmode);
 			if (ret == -EACCES)
 				break;
-			res = linux_set_iface_flags(drv->global->ioctl_sock,
-						    bss->ifname, 1);
+			res = i802_set_iface_flags(bss, 1);
 			if (res && !ret)
 				ret = -1;
 			else if (ret != -EBUSY)
@@ -9482,11 +9495,9 @@ static int wpa_driver_nl80211_deinit_p2p_cli(void *priv)
 static void wpa_driver_nl80211_resume(void *priv)
 {
 	struct i802_bss *bss = priv;
-	struct wpa_driver_nl80211_data *drv = bss->drv;
-	if (linux_set_iface_flags(drv->global->ioctl_sock, bss->ifname, 1)) {
-		wpa_printf(MSG_DEBUG, "nl80211: Failed to set interface up on "
-			   "resume event");
-	}
+
+	if (i802_set_iface_flags(bss, 1))
+		wpa_printf(MSG_DEBUG, "nl80211: Failed to set interface up on resume event");
 }
 
 

@@ -547,6 +547,7 @@ int hostapd_wep_key_cmp(struct hostapd_wep_keys *a,
 const u8 * hostapd_get_psk(const struct hostapd_bss_config *conf,
 			   const u8 *addr, const u8 *prev_psk);
 int hostapd_setup_wpa_psk(struct hostapd_bss_config *conf);
+int hostapd_vlan_id_valid(struct hostapd_vlan *vlan, int vlan_id);
 const char * hostapd_get_vlan_id_ifname(struct hostapd_vlan *vlan,
 					int vlan_id);
 struct hostapd_radius_attr *

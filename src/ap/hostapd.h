@@ -25,6 +25,7 @@ enum wps_event;
 union wps_event_data;
 
 struct hostapd_iface;
+struct hostapd_dynamic_iface;
 
 struct hapd_interfaces {
 	int (*reload_config)(struct hostapd_iface *iface);
@@ -37,11 +38,13 @@ struct hapd_interfaces {
 	int (*driver_init)(struct hostapd_iface *iface);
 
 	size_t count;
+	size_t count_dynamic;
 	int global_ctrl_sock;
 	char *global_iface_path;
 	char *global_iface_name;
 	gid_t ctrl_iface_group;
 	struct hostapd_iface **iface;
+	struct hostapd_dynamic_iface **dynamic_iface;
 };
 
 
@@ -273,6 +276,16 @@ struct hostapd_iface {
 
 	u16 ht_op_mode;
 	void (*scan_cb)(struct hostapd_iface *iface);
+};
+
+/**
+ * struct hostapd_dynamic_iface - hostapd per dynamically allocated
+ * or added interface data structure
+ */
+struct hostapd_dynamic_iface {
+	char parent[IFNAMSIZ + 1];
+	char iface[IFNAMSIZ + 1];
+	unsigned int usage;
 };
 
 /* hostapd.c */

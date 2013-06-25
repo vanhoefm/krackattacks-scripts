@@ -6750,7 +6750,8 @@ static int nl80211_create_iface_once(struct wpa_driver_nl80211_data *drv,
 		return -1;
 
 	nl80211_cmd(drv, msg, 0, NL80211_CMD_NEW_INTERFACE);
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+	if (nl80211_set_iface_id(msg, &drv->first_bss) < 0)
+		goto nla_put_failure;
 	NLA_PUT_STRING(msg, NL80211_ATTR_IFNAME, ifname);
 	NLA_PUT_U32(msg, NL80211_ATTR_IFTYPE, iftype);
 

@@ -470,7 +470,7 @@ static int is_sta_interface(enum nl80211_iftype nlmode)
 }
 
 
-static int is_p2p_interface(enum nl80211_iftype nlmode)
+static int is_p2p_net_interface(enum nl80211_iftype nlmode)
 {
 	return (nlmode == NL80211_IFTYPE_P2P_CLIENT ||
 		nlmode == NL80211_IFTYPE_P2P_GO);
@@ -6602,7 +6602,7 @@ static int nl80211_create_iface(struct wpa_driver_nl80211_data *drv,
 						wds);
 	}
 
-	if (ret >= 0 && is_p2p_interface(iftype))
+	if (ret >= 0 && is_p2p_net_interface(iftype))
 		nl80211_disable_11b_rates(drv, ret, 1);
 
 	return ret;
@@ -7883,7 +7883,7 @@ done:
 		return ret;
 	}
 
-	if (is_p2p_interface(nlmode))
+	if (is_p2p_net_interface(nlmode))
 		nl80211_disable_11b_rates(drv, drv->ifindex, 1);
 	else if (drv->disabled_11b_rates)
 		nl80211_disable_11b_rates(drv, drv->ifindex, 0);

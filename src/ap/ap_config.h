@@ -295,6 +295,7 @@ struct hostapd_bss_config {
 	char *private_key;
 	char *private_key_passwd;
 	int check_crl;
+	char *ocsp_stapling_response;
 	char *dh_file;
 	u8 *pac_opaque_encr_key;
 	u8 *eap_fast_a_id;

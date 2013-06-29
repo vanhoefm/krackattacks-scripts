@@ -1,6 +1,6 @@
 /*
  * EAP peer configuration data
- * Copyright (c) 2003-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -634,6 +634,15 @@ struct eap_peer_config {
 	 *         password field is the name of that external entry
 	 */
 	u32 flags;
+
+	/**
+	 * ocsp - Whether to use/require OCSP to check server certificate
+	 *
+	 * 0 = do not use OCSP stapling (TLS certificate status extension)
+	 * 1 = try to use OCSP stapling, but not require response
+	 * 2 = require valid OCSP stapling response
+	 */
+	int ocsp;
 };
 
 

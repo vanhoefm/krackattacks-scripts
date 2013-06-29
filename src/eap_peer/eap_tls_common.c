@@ -1,6 +1,6 @@
 /*
  * EAP peer: EAP-TLS/PEAP/TTLS/FAST common functions
- * Copyright (c) 2004-2012, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -164,6 +164,10 @@ static int eap_tls_init_connection(struct eap_sm *sm,
 {
 	int res;
 
+	if (config->ocsp)
+		params->flags |= TLS_CONN_REQUEST_OCSP;
+	if (config->ocsp == 2)
+		params->flags |= TLS_CONN_REQUIRE_OCSP;
 	data->conn = tls_connection_init(data->ssl_ctx);
 	if (data->conn == NULL) {
 		wpa_printf(MSG_INFO, "SSL: Failed to initialize new TLS "

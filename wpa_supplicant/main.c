@@ -14,6 +14,7 @@
 #include "common.h"
 #include "wpa_supplicant_i.h"
 #include "driver_i.h"
+#include "p2p_supplicant.h"
 
 extern struct wpa_driver_ops *wpa_drivers[];
 
@@ -289,6 +290,8 @@ int main(int argc, char *argv[])
 	}
 
 	for (i = 0; exitcode == 0 && i < iface_count; i++) {
+		struct wpa_supplicant *wpa_s;
+
 		if ((ifaces[i].confname == NULL &&
 		     ifaces[i].ctrl_interface == NULL) ||
 		    ifaces[i].ifname == NULL) {
@@ -299,7 +302,15 @@ int main(int argc, char *argv[])
 			exitcode = -1;
 			break;
 		}
-		if (wpa_supplicant_add_iface(global, &ifaces[i]) == NULL)
+		wpa_s = wpa_supplicant_add_iface(global, &ifaces[i]);
+		if (wpa_s == NULL) {
+			exitcode = -1;
+			break;
+		}
+		if (wpa_s->global->p2p == NULL &&
+		    (wpa_s->drv_flags &
+		     WPA_DRIVER_FLAGS_DEDICATED_P2P_DEVICE) &&
+		    wpas_p2p_add_p2pdev_interface(wpa_s) < 0)
 			exitcode = -1;
 	}
 

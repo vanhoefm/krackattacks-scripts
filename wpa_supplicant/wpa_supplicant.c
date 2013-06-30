@@ -2328,7 +2328,8 @@ int wpa_supplicant_update_mac_addr(struct wpa_supplicant *wpa_s)
 		const u8 *addr = wpa_drv_get_mac_addr(wpa_s);
 		if (addr)
 			os_memcpy(wpa_s->own_addr, addr, ETH_ALEN);
-	} else if (!(wpa_s->drv_flags &
+	} else if (!wpa_s->p2p_mgmt &&
+		   !(wpa_s->drv_flags &
 		     WPA_DRIVER_FLAGS_P2P_DEDICATED_INTERFACE)) {
 		l2_packet_deinit(wpa_s->l2);
 		wpa_s->l2 = l2_packet_init(wpa_s->ifname,
@@ -2347,10 +2348,6 @@ int wpa_supplicant_update_mac_addr(struct wpa_supplicant *wpa_s)
 		wpa_msg(wpa_s, MSG_ERROR, "Failed to get own L2 address");
 		return -1;
 	}
-
-	wpa_dbg(wpa_s, MSG_DEBUG, "Own MAC address: " MACSTR,
-		MAC2STR(wpa_s->own_addr));
-	wpa_sm_set_own_addr(wpa_s->wpa, wpa_s->own_addr);
 
 	return 0;
 }
@@ -2396,6 +2393,10 @@ int wpa_supplicant_driver_init(struct wpa_supplicant *wpa_s)
 
 	if (wpa_supplicant_update_mac_addr(wpa_s) < 0)
 		return -1;
+
+	wpa_dbg(wpa_s, MSG_DEBUG, "Own MAC address: " MACSTR,
+		MAC2STR(wpa_s->own_addr));
+	wpa_sm_set_own_addr(wpa_s->wpa, wpa_s->own_addr);
 
 	if (wpa_s->bridge_ifname[0]) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Receiving packets from bridge "
@@ -2960,11 +2961,21 @@ next_driver:
 	if (wpa_s->max_remain_on_chan == 0)
 		wpa_s->max_remain_on_chan = 1000;
 
+	/*
+	 * Only take p2p_mgmt parameters when P2P Device is supported.
+	 * Doing it here as it determines whether l2_packet_init() will be done
+	 * during wpa_supplicant_driver_init().
+	 */
+	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_DEDICATED_P2P_DEVICE)
+		wpa_s->p2p_mgmt = iface->p2p_mgmt;
+	else
+		iface->p2p_mgmt = 1;
+
 	if (wpa_supplicant_driver_init(wpa_s) < 0)
 		return -1;
 
 #ifdef CONFIG_TDLS
-	if (wpa_tdls_init(wpa_s->wpa))
+	if (!iface->p2p_mgmt && wpa_tdls_init(wpa_s->wpa))
 		return -1;
 #endif /* CONFIG_TDLS */
 
@@ -3002,7 +3013,7 @@ next_driver:
 	}
 
 #ifdef CONFIG_P2P
-	if (wpas_p2p_init(wpa_s->global, wpa_s) < 0) {
+	if (iface->p2p_mgmt && wpas_p2p_init(wpa_s->global, wpa_s) < 0) {
 		wpa_msg(wpa_s, MSG_ERROR, "Failed to init P2P");
 		return -1;
 	}

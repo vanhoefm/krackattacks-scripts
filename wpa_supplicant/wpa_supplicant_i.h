@@ -104,6 +104,15 @@ struct wpa_interface {
 	 * receiving of EAPOL frames from an additional interface.
 	 */
 	const char *bridge_ifname;
+
+	/**
+	 * p2p_mgmt - Interface used for P2P management (P2P Device operations)
+	 *
+	 * Indicates whether wpas_p2p_init() must be called for this interface.
+	 * This is used only when the driver supports a dedicated P2P Device
+	 * interface that is not a network interface.
+	 */
+	int p2p_mgmt;
 };
 
 /**
@@ -565,6 +574,8 @@ struct wpa_supplicant {
 					    result);
 	unsigned int roc_waiting_drv_freq;
 	int action_tx_wait_time;
+
+	int p2p_mgmt;
 
 #ifdef CONFIG_P2P
 	struct p2p_go_neg_results *go_params;

@@ -253,6 +253,7 @@ struct wpa_driver_nl80211_data {
 	unsigned int retry_auth:1;
 	unsigned int use_monitor:1;
 	unsigned int ignore_next_local_disconnect:1;
+	unsigned int allow_p2p_device:1;
 
 	u64 remain_on_chan_cookie;
 	u64 send_action_cookie;
@@ -8120,6 +8121,13 @@ static int wpa_driver_nl80211_get_capa(void *priv,
 		capa->extended_capa_mask = drv->extended_capa_mask;
 		capa->extended_capa_len = drv->extended_capa_len;
 	}
+
+	if ((capa->flags & WPA_DRIVER_FLAGS_DEDICATED_P2P_DEVICE) &&
+	    !drv->allow_p2p_device) {
+		wpa_printf(MSG_DEBUG, "nl80211: Do not indicate P2P_DEVICE support (p2p_device=1 driver param not specified)");
+		capa->flags &= ~WPA_DRIVER_FLAGS_DEDICATED_P2P_DEVICE;
+	}
+
 	return 0;
 }
 
@@ -9746,6 +9754,12 @@ static int nl80211_set_param(void *priv, const char *param)
 			   "interface");
 		drv->capa.flags |= WPA_DRIVER_FLAGS_P2P_CONCURRENT;
 		drv->capa.flags |= WPA_DRIVER_FLAGS_P2P_MGMT_AND_NON_P2P;
+	}
+
+	if (os_strstr(param, "p2p_device=1")) {
+		struct i802_bss *bss = priv;
+		struct wpa_driver_nl80211_data *drv = bss->drv;
+		drv->allow_p2p_device = 1;
 	}
 #endif /* CONFIG_P2P */
 

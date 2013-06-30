@@ -9268,7 +9268,8 @@ static void wpa_driver_nl80211_send_action_cancel_wait(void *priv)
 		   (long long unsigned int) drv->send_action_cookie);
 	nl80211_cmd(drv, msg, 0, NL80211_CMD_FRAME_WAIT_CANCEL);
 
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+	if (nl80211_set_iface_id(msg, bss) < 0)
+		goto nla_put_failure;
 	NLA_PUT_U64(msg, NL80211_ATTR_COOKIE, drv->send_action_cookie);
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);

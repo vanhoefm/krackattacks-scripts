@@ -9025,7 +9025,7 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 			nl80211_remove_iface(drv, ifidx);
 			return -1;
 		}
-		if (os_memcmp(if_addr, new_addr, ETH_ALEN) == 0) {
+		if (nl80211_addr_in_use(drv->global, new_addr)) {
 			wpa_printf(MSG_DEBUG, "nl80211: Allocate new address "
 				   "for P2P group interface");
 			if (nl80211_p2p_interface_addr(drv, new_addr) < 0) {

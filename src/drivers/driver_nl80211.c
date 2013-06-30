@@ -2711,7 +2711,7 @@ static int process_global_event(struct nl_msg *msg, void *arg)
 	struct wpa_driver_nl80211_data *drv, *tmp;
 	int ifidx = -1;
 	struct i802_bss *bss;
-	u64 wdev_id;
+	u64 wdev_id = 0;
 	int wdev_id_set = 0;
 
 	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),

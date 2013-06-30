@@ -3114,6 +3114,10 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
 		  genlmsg_attrlen(gnlh, 0), NULL);
 
+	if (tb[NL80211_ATTR_WIPHY_NAME])
+		os_strncpy(drv->phyname,
+			   nla_get_string(tb[NL80211_ATTR_WIPHY_NAME]),
+			   sizeof(drv->phyname));
 	if (tb[NL80211_ATTR_MAX_NUM_SCAN_SSIDS])
 		capa->max_scan_ssids =
 			nla_get_u8(tb[NL80211_ATTR_MAX_NUM_SCAN_SSIDS]);
@@ -3475,39 +3479,6 @@ static void wpa_driver_nl80211_rfkill_unblocked(void *ctx)
 }
 
 
-static void nl80211_get_phy_name(struct wpa_driver_nl80211_data *drv)
-{
-	/* Find phy (radio) to which this interface belongs */
-	char buf[90], *pos;
-	int f, rv;
-
-	drv->phyname[0] = '\0';
-	snprintf(buf, sizeof(buf) - 1, "/sys/class/net/%s/phy80211/name",
-		 drv->first_bss.ifname);
-	f = open(buf, O_RDONLY);
-	if (f < 0) {
-		wpa_printf(MSG_DEBUG, "Could not open file %s: %s",
-			   buf, strerror(errno));
-		return;
-	}
-
-	rv = read(f, drv->phyname, sizeof(drv->phyname) - 1);
-	close(f);
-	if (rv < 0) {
-		wpa_printf(MSG_DEBUG, "Could not read file %s: %s",
-			   buf, strerror(errno));
-		return;
-	}
-
-	drv->phyname[rv] = '\0';
-	pos = os_strchr(drv->phyname, '\n');
-	if (pos)
-		*pos = '\0';
-	wpa_printf(MSG_DEBUG, "nl80211: interface %s in phy %s",
-		   drv->first_bss.ifname, drv->phyname);
-}
-
-
 static void wpa_driver_nl80211_handle_eapol_tx_status(int sock,
 						      void *eloop_ctx,
 						      void *handle)
@@ -3628,8 +3599,6 @@ static void * wpa_driver_nl80211_init(void *ctx, const char *ifname,
 
 	if (nl80211_init_bss(bss))
 		goto failed;
-
-	nl80211_get_phy_name(drv);
 
 	rcfg = os_zalloc(sizeof(*rcfg));
 	if (rcfg == NULL)
@@ -4032,6 +4001,9 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 
 	if (wpa_driver_nl80211_capa(drv))
 		return -1;
+
+	wpa_printf(MSG_DEBUG, "nl80211: interface %s in phy %s",
+		   bss->ifname, drv->phyname);
 
 #ifndef HOSTAPD
 	if (dynamic_if)

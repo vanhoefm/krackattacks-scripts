@@ -16,16 +16,29 @@ logger = logging.getLogger(__name__)
 wpas_ctrl = '/var/run/wpa_supplicant'
 
 class WpaSupplicant:
-    def __init__(self, ifname):
+    def __init__(self, ifname, global_iface=None):
         self.ifname = ifname
         self.group_ifname = None
         self.ctrl = wpaspy.Ctrl(os.path.join(wpas_ctrl, ifname))
         self.mon = wpaspy.Ctrl(os.path.join(wpas_ctrl, ifname))
         self.mon.attach()
 
+        self.global_iface = global_iface
+        if global_iface:
+            self.global_ctrl = wpaspy.Ctrl(global_iface)
+            self.global_mon = wpaspy.Ctrl(global_iface)
+            self.global_mon.attach()
+
     def request(self, cmd):
         logger.debug(self.ifname + ": CTRL: " + cmd)
         return self.ctrl.request(cmd)
+
+    def global_request(self, cmd):
+        if self.global_iface is None:
+            self.request(cmd)
+        else:
+            logger.debug(self.ifname + ": CTRL: " + cmd)
+            return self.global_ctrl.request(cmd)
 
     def group_request(self, cmd):
         if self.group_ifname and self.group_ifname != self.ifname:
@@ -142,15 +155,15 @@ class WpaSupplicant:
         return self.get_group_status_field("address")
 
     def p2p_listen(self):
-        return self.request("P2P_LISTEN")
+        return self.global_request("P2P_LISTEN")
 
     def p2p_find(self, social=False):
         if social:
-            return self.request("P2P_FIND type=social")
-        return self.request("P2P_FIND")
+            return self.global_request("P2P_FIND type=social")
+        return self.global_request("P2P_FIND")
 
     def p2p_stop_find(self):
-        return self.request("P2P_STOP_FIND")
+        return self.global_request("P2P_STOP_FIND")
 
     def wps_read_pin(self):
         #TODO: make this random
@@ -158,7 +171,7 @@ class WpaSupplicant:
         return self.pin
 
     def peer_known(self, peer, full=True):
-        res = self.request("P2P_PEER " + peer)
+        res = self.global_request("P2P_PEER " + peer)
         if peer.lower() not in res.lower():
             return False
         if not full:
@@ -221,12 +234,12 @@ class WpaSupplicant:
         cmd = "P2P_CONNECT " + peer + " " + pin + " " + method + " auth"
         if go_intent:
             cmd = cmd + ' go_intent=' + str(go_intent)
-        if "OK" in self.request(cmd):
+        if "OK" in self.global_request(cmd):
             return None
         raise Exception("P2P_CONNECT (auth) failed")
 
     def p2p_go_neg_auth_result(self, timeout=1, expect_failure=False):
-        ev = self.wait_event(["P2P-GROUP-STARTED","P2P-GO-NEG-FAILURE"], timeout);
+        ev = self.wait_global_event(["P2P-GROUP-STARTED","P2P-GO-NEG-FAILURE"], timeout);
         if ev is None:
             if expect_failure:
                 return None
@@ -244,11 +257,11 @@ class WpaSupplicant:
             cmd = "P2P_CONNECT " + peer + " " + method
         if go_intent:
             cmd = cmd + ' go_intent=' + str(go_intent)
-        if "OK" in self.request(cmd):
+        if "OK" in self.global_request(cmd):
             if timeout == 0:
                 self.dump_monitor()
                 return None
-            ev = self.wait_event(["P2P-GROUP-STARTED","P2P-GO-NEG-FAILURE"], timeout)
+            ev = self.wait_global_event(["P2P-GROUP-STARTED","P2P-GO-NEG-FAILURE"], timeout)
             if ev is None:
                 if expect_failure:
                     return None
@@ -270,6 +283,22 @@ class WpaSupplicant:
                         return ev
         return None
 
+    def wait_global_event(self, events, timeout):
+        if self.global_iface is None:
+            self.wait_event(events, timeout)
+        else:
+            count = 0
+            while count < timeout * 10:
+                count = count + 1
+                time.sleep(0.1)
+                while self.global_mon.pending():
+                    ev = self.global_mon.recv()
+                    logger.debug(self.ifname + ": " + ev)
+                    for event in events:
+                        if event in ev:
+                            return ev
+        return None
+
     def dump_monitor(self):
         while self.mon.pending():
             ev = self.mon.recv()
@@ -278,7 +307,7 @@ class WpaSupplicant:
     def remove_group(self, ifname=None):
         if ifname is None:
             ifname = self.group_ifname if self.group_ifname else self.iname
-        if "OK" not in self.request("P2P_GROUP_REMOVE " + ifname):
+        if "OK" not in self.global_request("P2P_GROUP_REMOVE " + ifname):
             raise Exception("Group could not be removed")
         self.group_ifname = None
 
@@ -293,8 +322,8 @@ class WpaSupplicant:
             cmd = cmd + " persistent=" + str(persistent)
         if freq:
             cmd = cmd + " freq=" + freq
-        if "OK" in self.request(cmd):
-            ev = self.wait_event(["P2P-GROUP-STARTED"], timeout=5)
+        if "OK" in self.global_request(cmd):
+            ev = self.wait_global_event(["P2P-GROUP-STARTED"], timeout=5)
             if ev is None:
                 raise Exception("GO start up timed out")
             self.dump_monitor()
@@ -313,11 +342,11 @@ class WpaSupplicant:
             raise Exception("GO " + go_addr + " not found")
         self.dump_monitor()
         cmd = "P2P_CONNECT " + go_addr + " " + pin + " join"
-        if "OK" in self.request(cmd):
+        if "OK" in self.global_request(cmd):
             if timeout == 0:
                 self.dump_monitor()
                 return None
-            ev = self.wait_event(["P2P-GROUP-STARTED"], timeout)
+            ev = self.wait_global_event(["P2P-GROUP-STARTED"], timeout)
             if ev is None:
                 raise Exception("Joining the group timed out")
             self.dump_monitor()

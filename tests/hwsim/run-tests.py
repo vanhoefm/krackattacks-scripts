@@ -49,9 +49,9 @@ def main():
     else:
         test_filter = None
 
-    dev0 = WpaSupplicant('wlan0')
-    dev1 = WpaSupplicant('wlan1')
-    dev2 = WpaSupplicant('wlan2')
+    dev0 = WpaSupplicant('wlan0', '/tmp/wpas-wlan0')
+    dev1 = WpaSupplicant('wlan1', '/tmp/wpas-wlan1')
+    dev2 = WpaSupplicant('wlan2', '/tmp/wpas-wlan2')
     dev = [ dev0, dev1, dev2 ]
     apdev = [ ]
     apdev.append({"ifname": 'wlan3', "bssid": "02:00:00:00:03:00"})

@@ -23,14 +23,14 @@ def test_discovery(dev):
         raise Exception("Device discovery timed out")
 
     logger.info("Test provision discovery for display")
-    dev[0].request("P2P_PROV_DISC " + addr1 + " display")
-    ev1 = dev[1].wait_event(["P2P-PROV-DISC-SHOW-PIN"], timeout=15)
+    dev[0].global_request("P2P_PROV_DISC " + addr1 + " display")
+    ev1 = dev[1].wait_global_event(["P2P-PROV-DISC-SHOW-PIN"], timeout=15)
     if ev1 is None:
         raise Exception("Provision discovery timed out (display/dev1)")
     if addr0 not in ev1:
         raise Exception("Dev0 not in provision discovery event")
-    ev0 = dev[0].wait_event(["P2P-PROV-DISC-ENTER-PIN",
-                             "P2P-PROV-DISC-FAILURE"], timeout=15)
+    ev0 = dev[0].wait_global_event(["P2P-PROV-DISC-ENTER-PIN",
+                                    "P2P-PROV-DISC-FAILURE"], timeout=15)
     if ev0 is None:
         raise Exception("Provision discovery timed out (display/dev0)")
     if "P2P-PROV-DISC-FAILURE" in ev0:
@@ -39,14 +39,15 @@ def test_discovery(dev):
         raise Exception("Dev1 not in provision discovery event")
 
     logger.info("Test provision discovery for keypad")
-    dev[0].request("P2P_PROV_DISC " + addr1 + " keypad")
-    ev1 = dev[1].wait_event(["P2P-PROV-DISC-ENTER-PIN"], timeout=15)
+    dev[0].global_request("P2P_PROV_DISC " + addr1 + " keypad")
+    ev1 = dev[1].wait_global_event(["P2P-PROV-DISC-ENTER-PIN"], timeout=15)
     if ev1 is None:
         raise Exception("Provision discovery timed out (keypad/dev1)")
     if addr0 not in ev1:
         raise Exception("Dev0 not in provision discovery event")
-    ev0 = dev[0].wait_event(["P2P-PROV-DISC-SHOW-PIN", "P2P-PROV-DISC-FAILURE"],
-                            timeout=15)
+    ev0 = dev[0].wait_global_event(["P2P-PROV-DISC-SHOW-PIN",
+                                    "P2P-PROV-DISC-FAILURE"],
+                                   timeout=15)
     if ev0 is None:
         raise Exception("Provision discovery timed out (keypad/dev0)")
     if "P2P-PROV-DISC-FAILURE" in ev0:
@@ -55,14 +56,15 @@ def test_discovery(dev):
         raise Exception("Dev1 not in provision discovery event")
 
     logger.info("Test provision discovery for push button")
-    dev[0].request("P2P_PROV_DISC " + addr1 + " pbc")
-    ev1 = dev[1].wait_event(["P2P-PROV-DISC-PBC-REQ"], timeout=15)
+    dev[0].global_request("P2P_PROV_DISC " + addr1 + " pbc")
+    ev1 = dev[1].wait_global_event(["P2P-PROV-DISC-PBC-REQ"], timeout=15)
     if ev1 is None:
         raise Exception("Provision discovery timed out (pbc/dev1)")
     if addr0 not in ev1:
         raise Exception("Dev0 not in provision discovery event")
-    ev0 = dev[0].wait_event(["P2P-PROV-DISC-PBC-RESP", "P2P-PROV-DISC-FAILURE"],
-                            timeout=15)
+    ev0 = dev[0].wait_global_event(["P2P-PROV-DISC-PBC-RESP",
+                                    "P2P-PROV-DISC-FAILURE"],
+                                   timeout=15)
     if ev0 is None:
         raise Exception("Provision discovery timed out (pbc/dev0)")
     if "P2P-PROV-DISC-FAILURE" in ev0:

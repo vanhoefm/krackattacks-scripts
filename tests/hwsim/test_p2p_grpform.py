@@ -40,7 +40,7 @@ def go_neg_pin(i_dev, r_dev, i_intent=None, r_intent=None, i_method='enter', r_m
     t = threading.Thread(target=go_neg_init, args=(i_dev, r_dev, pin, i_method, i_intent, res))
     t.start()
     logger.debug("Wait for GO Negotiation Request on r_dev")
-    ev = r_dev.wait_event(["P2P-GO-NEG-REQUEST"], timeout=15)
+    ev = r_dev.wait_global_event(["P2P-GO-NEG-REQUEST"], timeout=15)
     if ev is None:
         raise Exception("GO Negotiation timed out")
     r_dev.dump_monitor()
@@ -92,7 +92,7 @@ def go_neg_pbc(i_dev, r_dev, i_intent=None, r_intent=None):
     t = threading.Thread(target=go_neg_init_pbc, args=(i_dev, r_dev, i_intent, res))
     t.start()
     logger.debug("Wait for GO Negotiation Request on r_dev")
-    ev = r_dev.wait_event(["P2P-GO-NEG-REQUEST"], timeout=15)
+    ev = r_dev.wait_global_event(["P2P-GO-NEG-REQUEST"], timeout=15)
     if ev is None:
         raise Exception("GO Negotiation timed out")
     r_dev.dump_monitor()

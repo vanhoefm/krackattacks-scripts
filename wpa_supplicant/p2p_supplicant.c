@@ -1092,7 +1092,13 @@ wpas_p2p_init_group_interface(struct wpa_supplicant *wpa_s, int go)
 	os_memset(&iface, 0, sizeof(iface));
 	iface.ifname = wpa_s->pending_interface_name;
 	iface.driver = wpa_s->driver->name;
-	iface.ctrl_interface = wpa_s->conf->ctrl_interface;
+	if (wpa_s->conf->ctrl_interface == NULL &&
+	    wpa_s->parent != wpa_s &&
+	    wpa_s->p2p_mgmt &&
+	    (wpa_s->drv_flags & WPA_DRIVER_FLAGS_DEDICATED_P2P_DEVICE))
+		iface.ctrl_interface = wpa_s->parent->conf->ctrl_interface;
+	else
+		iface.ctrl_interface = wpa_s->conf->ctrl_interface;
 	iface.driver_param = wpa_s->conf->driver_param;
 	group_wpa_s = wpa_supplicant_add_iface(wpa_s->global, &iface);
 	if (group_wpa_s == NULL) {
@@ -3015,7 +3021,6 @@ int wpas_p2p_add_p2pdev_interface(struct wpa_supplicant *wpa_s)
 	iface.p2p_mgmt = 1;
 	iface.ifname = wpa_s->pending_interface_name;
 	iface.driver = wpa_s->driver->name;
-	iface.ctrl_interface = wpa_s->conf->ctrl_interface;
 	iface.driver_param = wpa_s->conf->driver_param;
 	iface.confname = wpa_s->confname;
 	p2pdev_wpa_s = wpa_supplicant_add_iface(wpa_s->global, &iface);
@@ -3023,6 +3028,7 @@ int wpas_p2p_add_p2pdev_interface(struct wpa_supplicant *wpa_s)
 		wpa_printf(MSG_DEBUG, "P2P: Failed to add P2P Device interface");
 		return -1;
 	}
+	p2pdev_wpa_s->parent = wpa_s;
 
 	wpa_s->pending_interface_name[0] = '\0';
 	return 0;

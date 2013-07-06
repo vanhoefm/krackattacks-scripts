@@ -223,6 +223,11 @@ struct radius_server_data {
 	u16 pwd_group;
 
 	/**
+	 * server_id - Server identity
+	 */
+	const char *server_id;
+
+	/**
 	 * wps - Wi-Fi Protected Setup context
 	 *
 	 * If WPS is used with an external RADIUS server (which is quite
@@ -511,6 +516,8 @@ radius_server_get_new_session(struct radius_server_data *data,
 	eap_conf.tnc = data->tnc;
 	eap_conf.wps = data->wps;
 	eap_conf.pwd_group = data->pwd_group;
+	eap_conf.server_id = (const u8 *) data->server_id;
+	eap_conf.server_id_len = os_strlen(data->server_id);
 	sess->eap = eap_server_sm_init(sess, &radius_server_eapol_cb,
 				       &eap_conf);
 	if (sess->eap == NULL) {
@@ -1280,6 +1287,7 @@ radius_server_init(struct radius_server_conf *conf)
 	data->tnc = conf->tnc;
 	data->wps = conf->wps;
 	data->pwd_group = conf->pwd_group;
+	data->server_id = conf->server_id;
 	if (conf->eap_req_id_text) {
 		data->eap_req_id_text = os_malloc(conf->eap_req_id_text_len);
 		if (data->eap_req_id_text) {

@@ -144,6 +144,11 @@ struct radius_server_conf {
 	u16 pwd_group;
 
 	/**
+	 * server_id - Server identity
+	 */
+	const char *server_id;
+
+	/**
 	 * wps - Wi-Fi Protected Setup context
 	 *
 	 * If WPS is used with an external RADIUS server (which is quite

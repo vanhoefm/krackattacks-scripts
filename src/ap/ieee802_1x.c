@@ -1828,6 +1828,13 @@ int ieee802_1x_init(struct hostapd_data *hapd)
 	conf.fragment_size = hapd->conf->fragment_size;
 	conf.pwd_group = hapd->conf->pwd_group;
 	conf.pbc_in_m1 = hapd->conf->pbc_in_m1;
+	if (hapd->conf->server_id) {
+		conf.server_id = (const u8 *) hapd->conf->server_id;
+		conf.server_id_len = os_strlen(hapd->conf->server_id);
+	} else {
+		conf.server_id = (const u8 *) "hostapd";
+		conf.server_id_len = 7;
+	}
 
 	os_memset(&cb, 0, sizeof(cb));
 	cb.eapol_send = ieee802_1x_eapol_send;

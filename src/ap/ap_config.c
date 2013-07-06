@@ -532,6 +532,8 @@ static void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 	wpabuf_free(conf->vendor_elements);
 
 	os_free(conf->sae_groups);
+
+	os_free(conf->server_id);
 }
 
 

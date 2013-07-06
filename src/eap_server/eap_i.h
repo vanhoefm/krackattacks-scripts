@@ -188,6 +188,9 @@ struct eap_sm {
 	int fragment_size;
 
 	int pbc_in_m1;
+
+	const u8 *server_id;
+	size_t server_id_len;
 };
 
 int eap_user_get(struct eap_sm *sm, const u8 *identity, size_t identity_len,

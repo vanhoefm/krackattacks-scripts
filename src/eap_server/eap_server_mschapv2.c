@@ -100,7 +100,6 @@ static struct wpabuf * eap_mschapv2_build_challenge(
 {
 	struct wpabuf *req;
 	struct eap_mschapv2_hdr *ms;
-	char *name = "hostapd"; /* TODO: make this configurable */
 	size_t ms_len;
 
 	if (!data->auth_challenge_from_tls &&
@@ -111,7 +110,7 @@ static struct wpabuf * eap_mschapv2_build_challenge(
 		return NULL;
 	}
 
-	ms_len = sizeof(*ms) + 1 + CHALLENGE_LEN + os_strlen(name);
+	ms_len = sizeof(*ms) + 1 + CHALLENGE_LEN + sm->server_id_len;
 	req = eap_msg_alloc(EAP_VENDOR_IETF, EAP_TYPE_MSCHAPV2, ms_len,
 			    EAP_CODE_REQUEST, id);
 	if (req == NULL) {
@@ -133,7 +132,7 @@ static struct wpabuf * eap_mschapv2_build_challenge(
 		wpabuf_put(req, CHALLENGE_LEN);
 	wpa_hexdump(MSG_MSGDUMP, "EAP-MSCHAPV2: Challenge",
 		    data->auth_challenge, CHALLENGE_LEN);
-	wpabuf_put_data(req, name, os_strlen(name));
+	wpabuf_put_data(req, sm->server_id, sm->server_id_len);
 
 	return req;
 }

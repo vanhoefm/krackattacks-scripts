@@ -356,6 +356,13 @@ OBJS += src/eap_server/eap_server_pwd.c src/eap_common/eap_pwd_common.c
 NEED_SHA256=y
 endif
 
+ifdef CONFIG_EAP_EKE
+L_CFLAGS += -DEAP_SERVER_EKE
+OBJS += src/eap_server/eap_server_eke.c src/eap_common/eap_eke_common.c
+NEED_DH_GROUPS=y
+NEED_DH_GROUPS_ALL=y
+endif
+
 ifdef CONFIG_EAP_VENDOR_TEST
 L_CFLAGS += -DEAP_SERVER_VENDOR_TEST
 OBJS += src/eap_server/eap_server_vendor_test.c

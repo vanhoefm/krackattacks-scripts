@@ -134,5 +134,10 @@ int eap_server_register_methods(void)
 		ret = eap_server_pwd_register();
 #endif /* EAP_SERVER_PWD */
 
+#ifdef EAP_SERVER_EKE
+	if (ret == 0)
+		ret = eap_server_eke_register();
+#endif /* EAP_SERVER_EKE */
+
 	return ret;
 }

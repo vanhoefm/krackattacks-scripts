@@ -27,8 +27,6 @@ struct eap_sake_data {
 	u8 session_id;
 	u8 *peerid;
 	size_t peerid_len;
-	u8 *serverid;
-	size_t serverid_len;
 };
 
 
@@ -77,11 +75,6 @@ static void * eap_sake_init(struct eap_sm *sm)
 	wpa_printf(MSG_DEBUG, "EAP-SAKE: Initialized Session ID %d",
 		   data->session_id);
 
-	/* TODO: add support for configuring SERVERID */
-	data->serverid = (u8 *) os_strdup("hostapd");
-	if (data->serverid)
-		data->serverid_len = os_strlen((char *) data->serverid);
-
 	return data;
 }
 
@@ -89,7 +82,6 @@ static void * eap_sake_init(struct eap_sm *sm)
 static void eap_sake_reset(struct eap_sm *sm, void *priv)
 {
 	struct eap_sake_data *data = priv;
-	os_free(data->serverid);
 	os_free(data->peerid);
 	os_free(data);
 }
@@ -131,8 +123,7 @@ static struct wpabuf * eap_sake_build_identity(struct eap_sm *sm,
 	wpa_printf(MSG_DEBUG, "EAP-SAKE: Request/Identity");
 
 	plen = 4;
-	if (data->serverid)
-		plen += 2 + data->serverid_len;
+	plen += 2 + sm->server_id_len;
 	msg = eap_sake_build_msg(data, id, plen, EAP_SAKE_SUBTYPE_IDENTITY);
 	if (msg == NULL) {
 		data->state = FAILURE;
@@ -142,11 +133,9 @@ static struct wpabuf * eap_sake_build_identity(struct eap_sm *sm,
 	wpa_printf(MSG_DEBUG, "EAP-SAKE: * AT_PERM_ID_REQ");
 	eap_sake_add_attr(msg, EAP_SAKE_AT_PERM_ID_REQ, NULL, 2);
 
-	if (data->serverid) {
-		wpa_printf(MSG_DEBUG, "EAP-SAKE: * AT_SERVERID");
-		eap_sake_add_attr(msg, EAP_SAKE_AT_SERVERID,
-				  data->serverid, data->serverid_len);
-	}
+	wpa_printf(MSG_DEBUG, "EAP-SAKE: * AT_SERVERID");
+	eap_sake_add_attr(msg, EAP_SAKE_AT_SERVERID,
+			  sm->server_id, sm->server_id_len);
 
 	return msg;
 }
@@ -169,9 +158,7 @@ static struct wpabuf * eap_sake_build_challenge(struct eap_sm *sm,
 	wpa_hexdump(MSG_MSGDUMP, "EAP-SAKE: RAND_S (server rand)",
 		    data->rand_s, EAP_SAKE_RAND_LEN);
 
-	plen = 2 + EAP_SAKE_RAND_LEN;
-	if (data->serverid)
-		plen += 2 + data->serverid_len;
+	plen = 2 + EAP_SAKE_RAND_LEN + 2 + sm->server_id_len;
 	msg = eap_sake_build_msg(data, id, plen, EAP_SAKE_SUBTYPE_CHALLENGE);
 	if (msg == NULL) {
 		data->state = FAILURE;
@@ -182,11 +169,9 @@ static struct wpabuf * eap_sake_build_challenge(struct eap_sm *sm,
 	eap_sake_add_attr(msg, EAP_SAKE_AT_RAND_S,
 			  data->rand_s, EAP_SAKE_RAND_LEN);
 
-	if (data->serverid) {
-		wpa_printf(MSG_DEBUG, "EAP-SAKE: * AT_SERVERID");
-		eap_sake_add_attr(msg, EAP_SAKE_AT_SERVERID,
-				  data->serverid, data->serverid_len);
-	}
+	wpa_printf(MSG_DEBUG, "EAP-SAKE: * AT_SERVERID");
+	eap_sake_add_attr(msg, EAP_SAKE_AT_SERVERID,
+			  sm->server_id, sm->server_id_len);
 
 	return msg;
 }
@@ -213,7 +198,7 @@ static struct wpabuf * eap_sake_build_confirm(struct eap_sm *sm,
 	wpabuf_put_u8(msg, 2 + EAP_SAKE_MIC_LEN);
 	mic = wpabuf_put(msg, EAP_SAKE_MIC_LEN);
 	if (eap_sake_compute_mic(data->tek.auth, data->rand_s, data->rand_p,
-				 data->serverid, data->serverid_len,
+				 sm->server_id, sm->server_id_len,
 				 data->peerid, data->peerid_len, 0,
 				 wpabuf_head(msg), wpabuf_len(msg), mic, mic))
 	{
@@ -362,7 +347,7 @@ static void eap_sake_process_challenge(struct eap_sm *sm,
 			     (u8 *) &data->tek, data->msk, data->emsk);
 
 	eap_sake_compute_mic(data->tek.auth, data->rand_s, data->rand_p,
-			     data->serverid, data->serverid_len,
+			     sm->server_id, sm->server_id_len,
 			     data->peerid, data->peerid_len, 1,
 			     wpabuf_head(respData), wpabuf_len(respData),
 			     attr.mic_p, mic_p);
@@ -399,7 +384,7 @@ static void eap_sake_process_confirm(struct eap_sm *sm,
 	}
 
 	eap_sake_compute_mic(data->tek.auth, data->rand_s, data->rand_p,
-			     data->serverid, data->serverid_len,
+			     sm->server_id, sm->server_id_len,
 			     data->peerid, data->peerid_len, 1,
 			     wpabuf_head(respData), wpabuf_len(respData),
 			     attr.mic_p, mic_p);

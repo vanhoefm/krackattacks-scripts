@@ -22,8 +22,8 @@ struct eap_psk_data {
 	enum { PSK_1, PSK_3, SUCCESS, FAILURE } state;
 	u8 rand_s[EAP_PSK_RAND_LEN];
 	u8 rand_p[EAP_PSK_RAND_LEN];
-	u8 *id_p, *id_s;
-	size_t id_p_len, id_s_len;
+	u8 *id_p;
+	size_t id_p_len;
 	u8 ak[EAP_PSK_AK_LEN], kdk[EAP_PSK_KDK_LEN], tek[EAP_PSK_TEK_LEN];
 	u8 msk[EAP_MSK_LEN];
 	u8 emsk[EAP_EMSK_LEN];
@@ -38,8 +38,6 @@ static void * eap_psk_init(struct eap_sm *sm)
 	if (data == NULL)
 		return NULL;
 	data->state = PSK_1;
-	data->id_s = (u8 *) "hostapd";
-	data->id_s_len = 7;
 
 	return data;
 }
@@ -70,7 +68,7 @@ static struct wpabuf * eap_psk_build_1(struct eap_sm *sm,
 		    data->rand_s, EAP_PSK_RAND_LEN);
 
 	req = eap_msg_alloc(EAP_VENDOR_IETF, EAP_TYPE_PSK,
-			    sizeof(*psk) + data->id_s_len,
+			    sizeof(*psk) + sm->server_id_len,
 			    EAP_CODE_REQUEST, id);
 	if (req == NULL) {
 		wpa_printf(MSG_ERROR, "EAP-PSK: Failed to allocate memory "
@@ -82,7 +80,7 @@ static struct wpabuf * eap_psk_build_1(struct eap_sm *sm,
 	psk = wpabuf_put(req, sizeof(*psk));
 	psk->flags = EAP_PSK_FLAGS_SET_T(0); /* T=0 */
 	os_memcpy(psk->rand_s, data->rand_s, EAP_PSK_RAND_LEN);
-	wpabuf_put_data(req, data->id_s, data->id_s_len);
+	wpabuf_put_data(req, sm->server_id, sm->server_id_len);
 
 	return req;
 }
@@ -112,13 +110,13 @@ static struct wpabuf * eap_psk_build_3(struct eap_sm *sm,
 	os_memcpy(psk->rand_s, data->rand_s, EAP_PSK_RAND_LEN);
 
 	/* MAC_S = OMAC1-AES-128(AK, ID_S||RAND_P) */
-	buflen = data->id_s_len + EAP_PSK_RAND_LEN;
+	buflen = sm->server_id_len + EAP_PSK_RAND_LEN;
 	buf = os_malloc(buflen);
 	if (buf == NULL)
 		goto fail;
 
-	os_memcpy(buf, data->id_s, data->id_s_len);
-	os_memcpy(buf + data->id_s_len, data->rand_p, EAP_PSK_RAND_LEN);
+	os_memcpy(buf, sm->server_id, sm->server_id_len);
+	os_memcpy(buf + sm->server_id_len, data->rand_p, EAP_PSK_RAND_LEN);
 	if (omac1_aes_128(data->ak, buf, buflen, psk->mac_s)) {
 		os_free(buf);
 		goto fail;
@@ -296,7 +294,7 @@ static void eap_psk_process_2(struct eap_sm *sm,
 	os_memcpy(data->rand_p, resp->rand_p, EAP_PSK_RAND_LEN);
 
 	/* MAC_P = OMAC1-AES-128(AK, ID_P||ID_S||RAND_S||RAND_P) */
-	buflen = data->id_p_len + data->id_s_len + 2 * EAP_PSK_RAND_LEN;
+	buflen = data->id_p_len + sm->server_id_len + 2 * EAP_PSK_RAND_LEN;
 	buf = os_malloc(buflen);
 	if (buf == NULL) {
 		data->state = FAILURE;
@@ -304,8 +302,8 @@ static void eap_psk_process_2(struct eap_sm *sm,
 	}
 	os_memcpy(buf, data->id_p, data->id_p_len);
 	pos = buf + data->id_p_len;
-	os_memcpy(pos, data->id_s, data->id_s_len);
-	pos += data->id_s_len;
+	os_memcpy(pos, sm->server_id, sm->server_id_len);
+	pos += sm->server_id_len;
 	os_memcpy(pos, data->rand_s, EAP_PSK_RAND_LEN);
 	pos += EAP_PSK_RAND_LEN;
 	os_memcpy(pos, data->rand_p, EAP_PSK_RAND_LEN);

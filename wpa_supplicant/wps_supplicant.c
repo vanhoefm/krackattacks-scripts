@@ -868,9 +868,8 @@ static void wpas_clear_wps(struct wpa_supplicant *wpa_s)
 	while (ssid) {
 		if (ssid->key_mgmt & WPA_KEY_MGMT_WPS) {
 			if (ssid == wpa_s->current_ssid) {
-				wpa_s->current_ssid = NULL;
-				if (ssid != NULL)
-					wpas_notify_network_changed(wpa_s);
+				wpa_supplicant_deauthenticate(
+					wpa_s, WLAN_REASON_DEAUTH_LEAVING);
 			}
 			id = ssid->id;
 			remove_ssid = ssid;

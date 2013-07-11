@@ -527,6 +527,7 @@ static int wps_process_pubkey(struct wps_data *wps, const u8 *pk,
 			wpa_hexdump(MSG_DEBUG, "WPS: Expected public key hash",
 				    wps->peer_pubkey_hash,
 				    WPS_OOB_PUBKEY_HASH_LEN);
+			wps->config_error = WPS_CFG_PUBLIC_KEY_HASH_MISMATCH;
 			return -1;
 		}
 	}

@@ -1370,6 +1370,11 @@ static void wpas_p2p_clone_config(struct wpa_supplicant *dst,
 	d->dtim_period = s->dtim_period;
 	d->disassoc_low_ack = s->disassoc_low_ack;
 	d->disable_scan_offload = s->disable_scan_offload;
+
+	if (s->wps_nfc_dh_privkey && s->wps_nfc_dh_pubkey) {
+		d->wps_nfc_dh_privkey = wpabuf_dup(s->wps_nfc_dh_privkey);
+		d->wps_nfc_dh_pubkey = wpabuf_dup(s->wps_nfc_dh_pubkey);
+	}
 }
 
 

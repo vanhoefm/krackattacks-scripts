@@ -2337,8 +2337,9 @@ wpas_wps_er_nfc_handover_sel(struct wpa_supplicant *wpa_s, int ndef,
 	struct wpabuf *ret;
 	u8 u[UUID_LEN], *use_uuid = NULL;
 	u8 addr[ETH_ALEN], *use_addr = NULL;
+	struct wps_context *wps = wpa_s->wps;
 
-	if (wpa_s->wps == NULL)
+	if (wps == NULL)
 		return NULL;
 
 	if (uuid == NULL)
@@ -2351,21 +2352,18 @@ wpas_wps_er_nfc_handover_sel(struct wpa_supplicant *wpa_s, int ndef,
 		return NULL;
 
 	if (wpa_s->conf->wps_nfc_dh_pubkey == NULL) {
-		struct wps_context *wps = wpa_s->wps;
 		if (wps_nfc_gen_dh(&wpa_s->conf->wps_nfc_dh_pubkey,
 				   &wpa_s->conf->wps_nfc_dh_privkey) < 0)
 			return NULL;
+	}
 
+	wpas_wps_nfc_clear(wps);
+	wps->ap_nfc_dev_pw_id = DEV_PW_NFC_CONNECTION_HANDOVER;
+	wps->ap_nfc_dh_pubkey = wpabuf_dup(wpa_s->conf->wps_nfc_dh_pubkey);
+	wps->ap_nfc_dh_privkey = wpabuf_dup(wpa_s->conf->wps_nfc_dh_privkey);
+	if (!wps->ap_nfc_dh_pubkey || !wps->ap_nfc_dh_privkey) {
 		wpas_wps_nfc_clear(wps);
-		wps->ap_nfc_dev_pw_id = DEV_PW_NFC_CONNECTION_HANDOVER;
-		wps->ap_nfc_dh_pubkey =
-			wpabuf_dup(wpa_s->conf->wps_nfc_dh_pubkey);
-		wps->ap_nfc_dh_privkey =
-			wpabuf_dup(wpa_s->conf->wps_nfc_dh_privkey);
-		if (!wps->ap_nfc_dh_pubkey || !wps->ap_nfc_dh_privkey) {
-			wpas_wps_nfc_clear(wps);
-			return NULL;
-		}
+		return NULL;
 	}
 
 	ret = wps_er_nfc_handover_sel(wpa_s->wps_er, wpa_s->wps, use_uuid,

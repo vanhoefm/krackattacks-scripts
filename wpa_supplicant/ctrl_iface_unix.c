@@ -602,7 +602,7 @@ static void wpa_supplicant_ctrl_iface_send(const char *ifname, int sock,
 				    offsetof(struct sockaddr_un, sun_path));
 			msg.msg_name = (void *) &dst->addr;
 			msg.msg_namelen = dst->addrlen;
-			if (sendmsg(sock, &msg, 0) < 0) {
+			if (sendmsg(sock, &msg, MSG_DONTWAIT) < 0) {
 				int _errno = errno;
 				wpa_printf(MSG_INFO, "CTRL_IFACE monitor[%d]: "
 					   "%d - %s",

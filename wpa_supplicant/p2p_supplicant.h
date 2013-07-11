@@ -74,6 +74,7 @@ void wpas_p2p_group_deinit(struct wpa_supplicant *wpa_s);
 void wpas_dev_found(void *ctx, const u8 *addr,
 		    const struct p2p_peer_info *info,
 		    int new_device);
+void wpas_p2p_group_formation_failed(struct wpa_supplicant *wpa_s);
 void wpas_go_neg_completed(void *ctx, struct p2p_go_neg_results *res);
 void wpas_go_neg_req_rx(void *ctx, const u8 *src, u16 dev_passwd_id);
 void wpas_prov_disc_req(void *ctx, const u8 *peer, u16 config_methods,

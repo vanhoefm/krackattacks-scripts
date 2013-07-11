@@ -1123,6 +1123,14 @@ static void wpas_p2p_group_formation_timeout(void *eloop_ctx,
 {
 	struct wpa_supplicant *wpa_s = eloop_ctx;
 	wpa_printf(MSG_DEBUG, "P2P: Group Formation timed out");
+	wpas_p2p_group_formation_failed(wpa_s);
+}
+
+
+void wpas_p2p_group_formation_failed(struct wpa_supplicant *wpa_s)
+{
+	eloop_cancel_timeout(wpas_p2p_group_formation_timeout,
+			     wpa_s->parent, NULL);
 	if (wpa_s->global->p2p)
 		p2p_group_formation_failed(wpa_s->global->p2p);
 	else if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_MGMT)
@@ -5559,14 +5567,7 @@ int wpas_p2p_notif_pbc_overlap(struct wpa_supplicant *wpa_s)
 		   "session overlap");
 	if (wpa_s != wpa_s->parent)
 		wpa_msg_ctrl(wpa_s->parent, MSG_INFO, WPS_EVENT_OVERLAP);
-
-	if (wpa_s->global->p2p)
-		p2p_group_formation_failed(wpa_s->global->p2p);
-
-	eloop_cancel_timeout(wpas_p2p_group_formation_timeout,
-			     wpa_s->parent, NULL);
-
-	wpas_group_formation_completed(wpa_s, 0);
+	wpas_p2p_group_formation_failed(wpa_s);
 	return 1;
 }
 

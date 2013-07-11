@@ -982,6 +982,7 @@ static void upnp_wps_device_stop(struct upnp_wps_device_sm *sm)
 
 	wpa_printf(MSG_DEBUG, "WPS UPnP: Stop device");
 	web_listener_stop(sm);
+	ssdp_listener_stop(sm);
 	upnp_wps_free_msearchreply(&sm->msearch_replies);
 	upnp_wps_free_subscriptions(&sm->subscriptions, NULL);
 
@@ -995,7 +996,6 @@ static void upnp_wps_device_stop(struct upnp_wps_device_sm *sm)
 	if (sm->multicast_sd >= 0)
 		close(sm->multicast_sd);
 	sm->multicast_sd = -1;
-	ssdp_listener_stop(sm);
 
 	sm->started = 0;
 }

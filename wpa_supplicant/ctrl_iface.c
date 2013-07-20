@@ -577,6 +577,7 @@ static int wpa_supplicant_ctrl_iface_tdls_teardown(
 	struct wpa_supplicant *wpa_s, char *addr)
 {
 	u8 peer[ETH_ALEN];
+	int ret;
 
 	if (hwaddr_aton(addr, peer)) {
 		wpa_printf(MSG_DEBUG, "CTRL_IFACE TDLS_TEARDOWN: invalid "
@@ -587,8 +588,14 @@ static int wpa_supplicant_ctrl_iface_tdls_teardown(
 	wpa_printf(MSG_DEBUG, "CTRL_IFACE TDLS_TEARDOWN " MACSTR,
 		   MAC2STR(peer));
 
-	return wpa_tdls_teardown_link(wpa_s->wpa, peer,
-				      WLAN_REASON_TDLS_TEARDOWN_UNSPECIFIED);
+	if (wpa_tdls_is_external_setup(wpa_s->wpa))
+		ret = wpa_tdls_teardown_link(
+			wpa_s->wpa, peer,
+			WLAN_REASON_TDLS_TEARDOWN_UNSPECIFIED);
+	else
+		ret = wpa_drv_tdls_oper(wpa_s, TDLS_TEARDOWN, peer);
+
+	return ret;
 }
 
 #endif /* CONFIG_TDLS */

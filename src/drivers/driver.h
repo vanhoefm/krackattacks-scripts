@@ -2050,10 +2050,12 @@ struct wpa_driver_ops {
 	 * @val: 1 = bind to 4-address WDS; 0 = unbind
 	 * @bridge_ifname: Bridge interface to use for the WDS station or %NULL
 	 *	to indicate that bridge is not to be used
+	 * @ifname_wds: Buffer to return the interface name for the new WDS
+	 *	station or %NULL to indicate name is not returned.
 	 * Returns: 0 on success, -1 on failure
 	 */
 	int (*set_wds_sta)(void *priv, const u8 *addr, int aid, int val,
-	                   const char *bridge_ifname);
+	                   const char *bridge_ifname, char *ifname_wds);
 
 	/**
 	 * send_action - Transmit an Action frame

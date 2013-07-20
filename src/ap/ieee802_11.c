@@ -1818,6 +1818,30 @@ static void handle_auth_cb(struct hostapd_data *hapd,
 }
 
 
+static void hostapd_set_wds_encryption(struct hostapd_data *hapd,
+				       struct sta_info *sta,
+				       char *ifname_wds)
+{
+	int i;
+	struct hostapd_ssid *ssid = sta->ssid;
+
+	if (hapd->conf->ieee802_1x || hapd->conf->wpa)
+		return;
+
+	for (i = 0; i < 4; i++) {
+		if (ssid->wep.key[i] &&
+		    hostapd_drv_set_key(ifname_wds, hapd, WPA_ALG_WEP, NULL, i,
+					i == ssid->wep.idx, NULL, 0,
+					ssid->wep.key[i], ssid->wep.len[i])) {
+			wpa_printf(MSG_WARNING,
+				   "Could not set WEP keys for WDS interface; %s",
+				   ifname_wds);
+			break;
+		}
+	}
+}
+
+
 static void handle_assoc_cb(struct hostapd_data *hapd,
 			    const struct ieee80211_mgmt *mgmt,
 			    size_t len, int reassoc, int ok)
@@ -1920,8 +1944,15 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 		goto fail;
 	}
 
-	if (sta->flags & WLAN_STA_WDS)
-		hostapd_set_wds_sta(hapd, sta->addr, sta->aid, 1);
+	if (sta->flags & WLAN_STA_WDS) {
+		int ret;
+		char ifname_wds[IFNAMSIZ + 1];
+
+		ret = hostapd_set_wds_sta(hapd, ifname_wds, sta->addr,
+					  sta->aid, 1);
+		if (!ret)
+			hostapd_set_wds_encryption(hapd, sta, ifname_wds);
+	}
 
 	if (sta->eapol_sm == NULL) {
 		/*
@@ -2162,11 +2193,18 @@ void ieee802_11_rx_from_unknown(struct hostapd_data *hapd, const u8 *src,
 			return;
 
 		if (wds && !(sta->flags & WLAN_STA_WDS)) {
+			int ret;
+			char ifname_wds[IFNAMSIZ + 1];
+
 			wpa_printf(MSG_DEBUG, "Enable 4-address WDS mode for "
 				   "STA " MACSTR " (aid %u)",
 				   MAC2STR(sta->addr), sta->aid);
 			sta->flags |= WLAN_STA_WDS;
-			hostapd_set_wds_sta(hapd, sta->addr, sta->aid, 1);
+			ret = hostapd_set_wds_sta(hapd, ifname_wds,
+						  sta->addr, sta->aid, 1);
+			if (!ret)
+				hostapd_set_wds_encryption(hapd, sta,
+							   ifname_wds);
 		}
 		return;
 	}

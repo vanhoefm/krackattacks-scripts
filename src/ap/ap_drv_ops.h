@@ -31,8 +31,8 @@ int hostapd_set_drv_ieee8021x(struct hostapd_data *hapd, const char *ifname,
 			      int enabled);
 int hostapd_vlan_if_add(struct hostapd_data *hapd, const char *ifname);
 int hostapd_vlan_if_remove(struct hostapd_data *hapd, const char *ifname);
-int hostapd_set_wds_sta(struct hostapd_data *hapd, const u8 *addr, int aid,
-			int val);
+int hostapd_set_wds_sta(struct hostapd_data *hapd, char *ifname_wds,
+			const u8 *addr, int aid, int val);
 int hostapd_sta_add(struct hostapd_data *hapd,
 		    const u8 *addr, u16 aid, u16 capability,
 		    const u8 *supp_rates, size_t supp_rates_len,

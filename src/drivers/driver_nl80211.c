@@ -5165,12 +5165,20 @@ nla_put_failure:
 static int wpa_driver_nl80211_disconnect(struct wpa_driver_nl80211_data *drv,
 					 int reason_code)
 {
+	int ret;
+
 	wpa_printf(MSG_DEBUG, "%s(reason_code=%d)", __func__, reason_code);
 	nl80211_mark_disconnected(drv);
-	drv->ignore_next_local_disconnect = 0;
 	/* Disconnect command doesn't need BSSID - it uses cached value */
-	return wpa_driver_nl80211_mlme(drv, NULL, NL80211_CMD_DISCONNECT,
-				       reason_code, 0);
+	ret = wpa_driver_nl80211_mlme(drv, NULL, NL80211_CMD_DISCONNECT,
+				      reason_code, 0);
+	/*
+	 * For locally generated disconnect, supplicant already generates a
+	 * DEAUTH event, so ignore the event from NL80211.
+	 */
+	drv->ignore_next_local_disconnect = ret == 0;
+
+	return ret;
 }
 
 
@@ -7798,8 +7806,6 @@ static int wpa_driver_nl80211_connect(
 		if (wpa_driver_nl80211_disconnect(
 			    drv, WLAN_REASON_PREV_AUTH_NOT_VALID))
 			return -1;
-		/* Ignore the next local disconnect message. */
-		drv->ignore_next_local_disconnect = 1;
 		ret = wpa_driver_nl80211_try_connect(drv, params);
 	}
 	return ret;

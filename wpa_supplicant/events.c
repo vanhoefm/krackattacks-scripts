@@ -548,6 +548,24 @@ static int ht_supported(const struct hostapd_hw_modes *mode)
 }
 
 
+static int vht_supported(const struct hostapd_hw_modes *mode)
+{
+	if (!(mode->flags & HOSTAPD_MODE_FLAG_VHT_INFO_KNOWN)) {
+		/*
+		 * The driver did not indicate whether it supports VHT. Assume
+		 * it does to avoid connection issues.
+		 */
+		return 1;
+	}
+
+	/*
+	 * A VHT non-AP STA shall support MCS 0-7 for one spatial stream.
+	 * TODO: Verify if this complies with the standard
+	 */
+	return (mode->vht_mcs_set[0] & 0x3) != 3;
+}
+
+
 static int rate_match(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 {
 	const struct hostapd_hw_modes *mode = NULL, *modes;
@@ -608,6 +626,18 @@ static int rate_match(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 					wpa_dbg(wpa_s, MSG_DEBUG,
 						"   hardware does not support "
 						"HT PHY");
+					return 0;
+				}
+				continue;
+			}
+
+			/* There's also a VHT selector for 802.11ac */
+			if (flagged && ((rate_ie[j] & 0x7f) ==
+					BSS_MEMBERSHIP_SELECTOR_VHT_PHY)) {
+				if (!vht_supported(mode)) {
+					wpa_dbg(wpa_s, MSG_DEBUG,
+						"   hardware does not support "
+						"VHT PHY");
 					return 0;
 				}
 				continue;

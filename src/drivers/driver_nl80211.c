@@ -5658,7 +5658,20 @@ static int phy_info_band(struct phy_info_arg *phy_info, struct nlattr *nl_band)
 		mode = &phy_info->modes[*(phy_info->num_modes)];
 		os_memset(mode, 0, sizeof(*mode));
 		mode->mode = NUM_HOSTAPD_MODES;
-		mode->flags = HOSTAPD_MODE_FLAG_HT_INFO_KNOWN;
+		mode->flags = HOSTAPD_MODE_FLAG_HT_INFO_KNOWN |
+			HOSTAPD_MODE_FLAG_VHT_INFO_KNOWN;
+
+		/*
+		 * Unsupported VHT MCS stream is defined as value 3, so the VHT
+		 * MCS RX/TX map must be initialized with 0xffff to mark all 8
+		 * possible streams as unsupported. This will be overridden if
+		 * driver advertises VHT support.
+		 */
+		mode->vht_mcs_set[0] = 0xff;
+		mode->vht_mcs_set[1] = 0xff;
+		mode->vht_mcs_set[4] = 0xff;
+		mode->vht_mcs_set[5] = 0xff;
+
 		*(phy_info->num_modes) += 1;
 		phy_info->last_mode = nl_band->nla_type;
 		phy_info->last_chan_idx = 0;

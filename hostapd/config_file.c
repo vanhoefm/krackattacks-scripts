@@ -1781,6 +1781,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			}
 		} else if (os_strcmp(buf, "wds_sta") == 0) {
 			bss->wds_sta = atoi(pos);
+		} else if (os_strcmp(buf, "start_disabled") == 0) {
+			bss->start_disabled = atoi(pos);
 		} else if (os_strcmp(buf, "ap_isolate") == 0) {
 			bss->isolate = atoi(pos);
 		} else if (os_strcmp(buf, "ap_max_inactivity") == 0) {

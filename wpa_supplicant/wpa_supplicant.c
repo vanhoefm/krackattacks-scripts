@@ -3969,8 +3969,13 @@ int get_shared_radio_freqs(struct wpa_supplicant *wpa_s,
 	}
 
 	/* If get_radio_name is not supported, use only the local freq */
-	if (!wpa_s->driver->get_radio_name)
+	if (!wpa_s->driver->get_radio_name) {
+		freq = wpa_drv_shared_freq(wpa_s);
+		if (freq > 0 && idx < len &&
+		    (idx == 0 || freq_array[0] != freq))
+			freq_array[idx++] = freq;
 		return idx;
+	}
 
 	rn = wpa_s->driver->get_radio_name(wpa_s->drv_priv);
 	if (rn == NULL || rn[0] == '\0')

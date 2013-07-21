@@ -133,7 +133,8 @@ static inline int wpa_drv_sta_deauth(struct wpa_supplicant *wpa_s,
 				     const u8 *addr, int reason_code)
 {
 	if (wpa_s->driver->sta_deauth) {
-		return wpa_s->driver->sta_deauth(wpa_s->drv_priv, NULL, addr,
+		return wpa_s->driver->sta_deauth(wpa_s->drv_priv,
+						 wpa_s->own_addr, addr,
 						 reason_code);
 	}
 	return -1;

@@ -3250,7 +3250,6 @@ static int wpa_driver_nl80211_get_info(struct wpa_driver_nl80211_data *drv,
 	if (info->num_multichan_concurrent > 1) {
 		wpa_printf(MSG_DEBUG, "nl80211: Enable multi-channel "
 			   "concurrent (driver advertised support)");
-		drv->capa.flags |= WPA_DRIVER_FLAGS_MULTI_CHANNEL_CONCURRENT;
 		drv->capa.num_multichan_concurrent =
 			info->num_multichan_concurrent;
 	}

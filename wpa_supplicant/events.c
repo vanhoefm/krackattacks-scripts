@@ -2330,6 +2330,23 @@ static void wpa_supplicant_event_ibss_rsn_start(struct wpa_supplicant *wpa_s,
 
 	ibss_rsn_start(wpa_s->ibss_rsn, data->ibss_rsn_start.peer);
 }
+
+
+static void wpa_supplicant_event_ibss_auth(struct wpa_supplicant *wpa_s,
+					   union wpa_event_data *data)
+{
+	struct wpa_ssid *ssid = wpa_s->current_ssid;
+
+	if (ssid == NULL)
+		return;
+
+	/* check if the ssid is correctly configured as IBSS/RSN */
+	if (ssid->mode != WPAS_MODE_IBSS || !wpa_key_mgmt_wpa(ssid->key_mgmt))
+		return;
+
+	ibss_rsn_handle_auth(wpa_s->ibss_rsn, data->rx_mgmt.frame,
+			     data->rx_mgmt.frame_len);
+}
 #endif /* CONFIG_IBSS_RSN */
 
 
@@ -2724,6 +2741,8 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 				  data->ch_switch.ch_offset);
 #endif /* CONFIG_AP */
 		break;
+#endif /* CONFIG_AP */
+#if defined(CONFIG_AP) || defined(CONFIG_IBSS_RSN)
 	case EVENT_RX_MGMT: {
 		u16 fc, stype;
 		const struct ieee80211_mgmt *mgmt;
@@ -2733,7 +2752,9 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		fc = le_to_host16(mgmt->frame_control);
 		stype = WLAN_FC_GET_STYPE(fc);
 
+#ifdef CONFIG_AP
 		if (wpa_s->ap_iface == NULL) {
+#endif /* CONFIG_AP */
 #ifdef CONFIG_P2P
 			if (stype == WLAN_FC_STYPE_PROBE_REQ &&
 			    data->rx_mgmt.frame_len > 24) {
@@ -2749,9 +2770,17 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 				break;
 			}
 #endif /* CONFIG_P2P */
+#ifdef CONFIG_IBSS_RSN
+			if (stype == WLAN_FC_STYPE_AUTH &&
+			    data->rx_mgmt.frame_len >= 30) {
+				wpa_supplicant_event_ibss_auth(wpa_s, data);
+				break;
+			}
+#endif /* CONFIG_IBSS_RSN */
 			wpa_dbg(wpa_s, MSG_DEBUG, "AP: ignore received "
 				"management frame in non-AP mode");
 			break;
+#ifdef CONFIG_AP
 		}
 
 		if (stype == WLAN_FC_STYPE_PROBE_REQ &&
@@ -2767,9 +2796,10 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		}
 
 		ap_mgmt_rx(wpa_s, &data->rx_mgmt);
+#endif /* CONFIG_AP */
 		break;
 		}
-#endif /* CONFIG_AP */
+#endif /* CONFIG_AP || CONFIG_IBSS_RSN */
 	case EVENT_RX_ACTION:
 		wpa_dbg(wpa_s, MSG_DEBUG, "Received Action frame: SA=" MACSTR
 			" Category=%u DataLen=%d freq=%d MHz",

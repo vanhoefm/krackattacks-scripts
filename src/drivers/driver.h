@@ -912,6 +912,11 @@ struct wpa_driver_capa {
 	unsigned int max_acl_mac_addrs;
 
 	/**
+	 * Number of supported concurrent channels
+	 */
+	unsigned int num_multichan_concurrent;
+
+	/**
 	 * extended_capa - extended capabilities in driver/device
 	 *
 	 * Must be allocated and freed by driver and the pointers must be

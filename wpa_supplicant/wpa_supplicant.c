@@ -2965,6 +2965,8 @@ next_driver:
 		wpa_s->extended_capa = capa.extended_capa;
 		wpa_s->extended_capa_mask = capa.extended_capa_mask;
 		wpa_s->extended_capa_len = capa.extended_capa_len;
+		wpa_s->num_multichan_concurrent =
+			capa.num_multichan_concurrent;
 	}
 	if (wpa_s->max_remain_on_chan == 0)
 		wpa_s->max_remain_on_chan = 1000;
@@ -2978,6 +2980,9 @@ next_driver:
 		wpa_s->p2p_mgmt = iface->p2p_mgmt;
 	else
 		iface->p2p_mgmt = 1;
+
+	if (wpa_s->num_multichan_concurrent == 0)
+		wpa_s->num_multichan_concurrent = 1;
 
 	if (wpa_supplicant_driver_init(wpa_s) < 0)
 		return -1;

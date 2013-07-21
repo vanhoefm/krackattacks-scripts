@@ -2875,6 +2875,8 @@ struct wiphy_info_data {
 	struct wpa_driver_nl80211_data *drv;
 	struct wpa_driver_capa *capa;
 
+	unsigned int num_multichan_concurrent;
+
 	unsigned int error:1;
 	unsigned int device_ap_sme:1;
 	unsigned int poll_command_supported:1;
@@ -2885,7 +2887,6 @@ struct wiphy_info_data {
 	unsigned int p2p_go_supported:1;
 	unsigned int p2p_client_supported:1;
 	unsigned int p2p_concurrent:1;
-	unsigned int p2p_multichan_concurrent:1;
 };
 
 
@@ -2995,8 +2996,8 @@ static int wiphy_info_iface_comb_process(struct wiphy_info_data *info,
 
 	if (combination_has_p2p && combination_has_mgd) {
 		info->p2p_concurrent = 1;
-		if (nla_get_u32(tb_comb[NL80211_IFACE_COMB_NUM_CHANNELS]) > 1)
-			info->p2p_multichan_concurrent = 1;
+		info->num_multichan_concurrent =
+			nla_get_u32(tb_comb[NL80211_IFACE_COMB_NUM_CHANNELS]);
 		return 1;
 	}
 
@@ -3246,10 +3247,12 @@ static int wpa_driver_nl80211_get_info(struct wpa_driver_nl80211_data *drv,
 		drv->capa.flags |= WPA_DRIVER_FLAGS_P2P_CONCURRENT;
 		drv->capa.flags |= WPA_DRIVER_FLAGS_P2P_MGMT_AND_NON_P2P;
 	}
-	if (info->p2p_multichan_concurrent) {
+	if (info->num_multichan_concurrent > 1) {
 		wpa_printf(MSG_DEBUG, "nl80211: Enable multi-channel "
 			   "concurrent (driver advertised support)");
 		drv->capa.flags |= WPA_DRIVER_FLAGS_MULTI_CHANNEL_CONCURRENT;
+		drv->capa.num_multichan_concurrent =
+			info->num_multichan_concurrent;
 	}
 
 	/* default to 5000 since early versions of mac80211 don't set it */

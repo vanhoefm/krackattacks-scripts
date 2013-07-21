@@ -483,44 +483,6 @@ static int non_p2p_network_enabled(struct wpa_supplicant *wpa_s)
 
 #endif /* CONFIG_P2P */
 
-/*
- * Find the operating frequency of any other virtual interface that is using
- * the same radio concurrently.
- */
-static int shared_vif_oper_freq(struct wpa_supplicant *wpa_s)
-{
-	const char *rn, *rn2;
-	struct wpa_supplicant *ifs;
-	u8 bssid[ETH_ALEN];
-
-	if (!wpa_s->driver->get_radio_name)
-		return -1;
-
-	rn = wpa_s->driver->get_radio_name(wpa_s->drv_priv);
-	if (rn == NULL || rn[0] == '\0')
-		return -1;
-
-	for (ifs = wpa_s->global->ifaces; ifs; ifs = ifs->next) {
-		if (ifs == wpa_s || !ifs->driver->get_radio_name)
-			continue;
-
-		rn2 = ifs->driver->get_radio_name(ifs->drv_priv);
-		if (!rn2 || os_strcmp(rn, rn2) != 0)
-			continue;
-
-		if (ifs->current_ssid == NULL || ifs->assoc_freq == 0)
-			continue;
-
-		if (ifs->current_ssid->mode == WPAS_MODE_AP ||
-		    ifs->current_ssid->mode == WPAS_MODE_P2P_GO)
-			return ifs->current_ssid->frequency;
-		if (wpa_drv_get_bssid(ifs, bssid) == 0)
-			return ifs->assoc_freq;
-	}
-
-	return 0;
-}
-
 
 static struct hostapd_hw_modes * get_mode(struct hostapd_hw_modes *modes,
 					  u16 num_modes,
@@ -815,14 +777,19 @@ ssid_list_set:
 
 	/* Use current associated channel? */
 	if (wpa_s->conf->scan_cur_freq && !params.freqs) {
-		int freq = shared_vif_oper_freq(wpa_s);
-		if (freq > 0) {
-			wpa_dbg(wpa_s, MSG_DEBUG, "Scan only the current "
-				"operating channel (%d MHz) since "
-				"scan_cur_freq is enabled", freq);
-			params.freqs = os_zalloc(sizeof(int) * 2);
-			if (params.freqs)
-				params.freqs[0] = freq;
+		unsigned int num = wpa_s->num_multichan_concurrent;
+
+		params.freqs = os_calloc(num + 1, sizeof(int));
+		if (params.freqs) {
+			num = get_shared_radio_freqs(wpa_s, params.freqs, num);
+			if (num > 0) {
+				wpa_dbg(wpa_s, MSG_DEBUG, "Scan only the "
+					"current operating channels since "
+					"scan_cur_freq is enabled");
+			} else {
+				os_free(params.freqs);
+				params.freqs = NULL;
+			}
 		}
 	}
 
@@ -860,18 +827,19 @@ scan:
 	if (wpa_s->scan_for_connection && scan_req == NORMAL_SCAN_REQ &&
 	    !scan_params->freqs && !params.freqs &&
 	    wpas_is_p2p_prioritized(wpa_s) &&
-	    !(wpa_s->drv_flags & WPA_DRIVER_FLAGS_MULTI_CHANNEL_CONCURRENT) &&
 	    wpa_s->p2p_group_interface == NOT_P2P_GROUP_INTERFACE &&
 	    non_p2p_network_enabled(wpa_s)) {
-		int freq = shared_vif_oper_freq(wpa_s);
-		if (freq > 0) {
-			wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Scan only the current "
-				"operating channel (%d MHz) since driver does "
-				"not support multi-channel concurrency", freq);
-			params.freqs = os_zalloc(sizeof(int) * 2);
-			if (params.freqs)
-				params.freqs[0] = freq;
-			scan_params->freqs = params.freqs;
+		unsigned int num = wpa_s->num_multichan_concurrent;
+
+		params.freqs = os_calloc(num + 1, sizeof(int));
+		if (params.freqs) {
+			num = get_shared_radio_freqs(wpa_s, params.freqs, num);
+			if (num > 0 && num == wpa_s->num_multichan_concurrent) {
+				wpa_dbg(wpa_s, MSG_DEBUG, "Scan only the current operating channels since all channels are already used");
+			} else {
+				os_free(params.freqs);
+				params.freqs = NULL;
+			}
 		}
 	}
 #endif /* CONFIG_P2P */

@@ -3942,3 +3942,67 @@ int wpas_wpa_is_in_progress(struct wpa_supplicant *wpa_s)
 
 	return 0;
 }
+
+
+/*
+ * Find the operating frequencies of any of the virtual interfaces that
+ * are using the same radio as the current interface.
+ */
+int get_shared_radio_freqs(struct wpa_supplicant *wpa_s,
+			   int *freq_array, unsigned int len)
+{
+	const char *rn, *rn2;
+	struct wpa_supplicant *ifs;
+	u8 bssid[ETH_ALEN];
+	int freq;
+	unsigned int idx = 0, i;
+
+	os_memset(freq_array, 0, sizeof(int) * len);
+
+	/* First add the frequency of the local interface */
+	if (wpa_s->current_ssid != NULL && wpa_s->assoc_freq != 0) {
+		if (wpa_s->current_ssid->mode == WPAS_MODE_AP ||
+		    wpa_s->current_ssid->mode == WPAS_MODE_P2P_GO)
+			freq_array[idx++] = wpa_s->current_ssid->frequency;
+		else if (wpa_drv_get_bssid(wpa_s, bssid) == 0)
+			freq_array[idx++] = wpa_s->assoc_freq;
+	}
+
+	/* If get_radio_name is not supported, use only the local freq */
+	if (!wpa_s->driver->get_radio_name)
+		return idx;
+
+	rn = wpa_s->driver->get_radio_name(wpa_s->drv_priv);
+	if (rn == NULL || rn[0] == '\0')
+		return idx;
+
+	for (ifs = wpa_s->global->ifaces, idx = 0; ifs && idx < len;
+	     ifs = ifs->next) {
+		if (wpa_s == ifs || !ifs->driver->get_radio_name)
+			continue;
+
+		rn2 = ifs->driver->get_radio_name(ifs->drv_priv);
+		if (!rn2 || os_strcmp(rn, rn2) != 0)
+			continue;
+
+		if (ifs->current_ssid == NULL || ifs->assoc_freq == 0)
+			continue;
+
+		if (ifs->current_ssid->mode == WPAS_MODE_AP ||
+		    ifs->current_ssid->mode == WPAS_MODE_P2P_GO)
+			freq = ifs->current_ssid->frequency;
+		else if (wpa_drv_get_bssid(ifs, bssid) == 0)
+			freq = ifs->assoc_freq;
+		else
+			continue;
+
+		/* Hold only distinct freqs */
+		for (i = 0; i < idx; i++)
+			if (freq_array[i] == freq)
+				break;
+
+		if (i == idx)
+			freq_array[idx++] = freq;
+	}
+	return idx;
+}

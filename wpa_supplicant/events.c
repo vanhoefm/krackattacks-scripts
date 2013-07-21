@@ -2430,12 +2430,141 @@ static void wpa_supplicant_event_unprot_disassoc(struct wpa_supplicant *wpa_s,
 }
 
 
+static void wpas_event_disconnect(struct wpa_supplicant *wpa_s, const u8 *addr,
+				  u16 reason_code, int locally_generated,
+				  const u8 *ie, size_t ie_len, int deauth)
+{
+#ifdef CONFIG_AP
+	if (wpa_s->ap_iface && addr) {
+		hostapd_notif_disassoc(wpa_s->ap_iface->bss[0], addr);
+		return;
+	}
+
+	if (wpa_s->ap_iface) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "Ignore deauth event in AP mode");
+		return;
+	}
+#endif /* CONFIG_AP */
+
+	wpa_supplicant_event_disassoc(wpa_s, reason_code, locally_generated);
+
+	if (reason_code == WLAN_REASON_IEEE_802_1X_AUTH_FAILED ||
+	    ((wpa_key_mgmt_wpa_ieee8021x(wpa_s->key_mgmt) ||
+	      (wpa_s->key_mgmt & WPA_KEY_MGMT_IEEE8021X_NO_WPA)) &&
+	     eapol_sm_failed(wpa_s->eapol)))
+		wpas_auth_failed(wpa_s);
+
+#ifdef CONFIG_P2P
+	if (deauth && ie && ie_len > 0) {
+		if (wpas_p2p_deauth_notif(wpa_s, addr, reason_code, ie, ie_len,
+					  locally_generated) > 0) {
+			/*
+			 * The interface was removed, so cannot continue
+			 * processing any additional operations after this.
+			 */
+			return;
+		}
+	}
+#endif /* CONFIG_P2P */
+
+	wpa_supplicant_event_disassoc_finish(wpa_s, reason_code,
+					     locally_generated);
+}
+
+
+static void wpas_event_disassoc(struct wpa_supplicant *wpa_s,
+				struct disassoc_info *info)
+{
+	u16 reason_code = 0;
+	int locally_generated = 0;
+	const u8 *addr = NULL;
+	const u8 *ie = NULL;
+	size_t ie_len = 0;
+
+	wpa_dbg(wpa_s, MSG_DEBUG, "Disassociation notification");
+
+	if (info) {
+		addr = info->addr;
+		ie = info->ie;
+		ie_len = info->ie_len;
+		reason_code = info->reason_code;
+		locally_generated = info->locally_generated;
+		wpa_dbg(wpa_s, MSG_DEBUG, " * reason %u%s", reason_code,
+			locally_generated ? " (locally generated)" : "");
+		if (addr)
+			wpa_dbg(wpa_s, MSG_DEBUG, " * address " MACSTR,
+				MAC2STR(addr));
+		wpa_hexdump(MSG_DEBUG, "Disassociation frame IE(s)",
+			    ie, ie_len);
+	}
+
+#ifdef CONFIG_AP
+	if (wpa_s->ap_iface && info && info->addr) {
+		hostapd_notif_disassoc(wpa_s->ap_iface->bss[0], info->addr);
+		return;
+	}
+
+	if (wpa_s->ap_iface) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "Ignore disassoc event in AP mode");
+		return;
+	}
+#endif /* CONFIG_AP */
+
+#ifdef CONFIG_P2P
+	if (info) {
+		wpas_p2p_disassoc_notif(
+			wpa_s, info->addr, reason_code, info->ie, info->ie_len,
+			locally_generated);
+	}
+#endif /* CONFIG_P2P */
+
+	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME)
+		sme_event_disassoc(wpa_s, info);
+
+	wpas_event_disconnect(wpa_s, addr, reason_code, locally_generated,
+			      ie, ie_len, 0);
+}
+
+
+static void wpas_event_deauth(struct wpa_supplicant *wpa_s,
+			      struct deauth_info *info)
+{
+	u16 reason_code = 0;
+	int locally_generated = 0;
+	const u8 *addr = NULL;
+	const u8 *ie = NULL;
+	size_t ie_len = 0;
+
+	wpa_dbg(wpa_s, MSG_DEBUG, "Deauthentication notification");
+
+	if (info) {
+		addr = info->addr;
+		ie = info->ie;
+		ie_len = info->ie_len;
+		reason_code = info->reason_code;
+		locally_generated = info->locally_generated;
+		wpa_dbg(wpa_s, MSG_DEBUG, " * reason %u%s",
+			reason_code,
+			locally_generated ? " (locally generated)" : "");
+		if (addr) {
+			wpa_dbg(wpa_s, MSG_DEBUG, " * address " MACSTR,
+				MAC2STR(addr));
+		}
+		wpa_hexdump(MSG_DEBUG, "Deauthentication frame IE(s)",
+			    ie, ie_len);
+	}
+
+	wpa_reset_ft_completed(wpa_s->wpa);
+
+	wpas_event_disconnect(wpa_s, addr, reason_code,
+			      locally_generated, ie, ie_len, 1);
+}
+
+
 void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			  union wpa_event_data *data)
 {
 	struct wpa_supplicant *wpa_s = ctx;
-	u16 reason_code = 0;
-	int locally_generated = 0;
 
 	if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED &&
 	    event != EVENT_INTERFACE_ENABLED &&
@@ -2474,109 +2603,12 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		wpa_supplicant_event_assoc(wpa_s, data);
 		break;
 	case EVENT_DISASSOC:
-		wpa_dbg(wpa_s, MSG_DEBUG, "Disassociation notification");
-		if (data) {
-			wpa_dbg(wpa_s, MSG_DEBUG, " * reason %u%s",
-				data->disassoc_info.reason_code,
-				data->disassoc_info.locally_generated ?
-				" (locally generated)" : "");
-			if (data->disassoc_info.addr)
-				wpa_dbg(wpa_s, MSG_DEBUG, " * address " MACSTR,
-					MAC2STR(data->disassoc_info.addr));
-		}
-#ifdef CONFIG_AP
-		if (wpa_s->ap_iface && data && data->disassoc_info.addr) {
-			hostapd_notif_disassoc(wpa_s->ap_iface->bss[0],
-					       data->disassoc_info.addr);
-			break;
-		}
-		if (wpa_s->ap_iface) {
-			wpa_dbg(wpa_s, MSG_DEBUG, "Ignore disassoc event in "
-				"AP mode");
-			break;
-		}
-#endif /* CONFIG_AP */
-		if (data) {
-			reason_code = data->disassoc_info.reason_code;
-			locally_generated =
-				data->disassoc_info.locally_generated;
-			wpa_hexdump(MSG_DEBUG, "Disassociation frame IE(s)",
-				    data->disassoc_info.ie,
-				    data->disassoc_info.ie_len);
-#ifdef CONFIG_P2P
-			wpas_p2p_disassoc_notif(
-				wpa_s, data->disassoc_info.addr, reason_code,
-				data->disassoc_info.ie,
-				data->disassoc_info.ie_len,
-				locally_generated);
-#endif /* CONFIG_P2P */
-		}
-		if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME)
-			sme_event_disassoc(wpa_s, data);
-		/* fall through */
+		wpas_event_disassoc(wpa_s,
+				    data ? &data->disassoc_info : NULL);
+		break;
 	case EVENT_DEAUTH:
-		if (event == EVENT_DEAUTH) {
-			wpa_dbg(wpa_s, MSG_DEBUG,
-				"Deauthentication notification");
-			if (data) {
-				reason_code = data->deauth_info.reason_code;
-				locally_generated =
-					data->deauth_info.locally_generated;
-				wpa_dbg(wpa_s, MSG_DEBUG, " * reason %u%s",
-					data->deauth_info.reason_code,
-					data->deauth_info.locally_generated ?
-					" (locally generated)" : "");
-				if (data->deauth_info.addr) {
-					wpa_dbg(wpa_s, MSG_DEBUG, " * address "
-						MACSTR,
-						MAC2STR(data->deauth_info.
-							addr));
-				}
-				wpa_hexdump(MSG_DEBUG,
-					    "Deauthentication frame IE(s)",
-					    data->deauth_info.ie,
-					    data->deauth_info.ie_len);
-			}
-			wpa_reset_ft_completed(wpa_s->wpa);
-		}
-#ifdef CONFIG_AP
-		if (wpa_s->ap_iface && data && data->deauth_info.addr) {
-			hostapd_notif_disassoc(wpa_s->ap_iface->bss[0],
-					       data->deauth_info.addr);
-			break;
-		}
-		if (wpa_s->ap_iface) {
-			wpa_dbg(wpa_s, MSG_DEBUG, "Ignore deauth event in "
-				"AP mode");
-			break;
-		}
-#endif /* CONFIG_AP */
-		wpa_supplicant_event_disassoc(wpa_s, reason_code,
-					      locally_generated);
-		if (reason_code == WLAN_REASON_IEEE_802_1X_AUTH_FAILED ||
-		    ((wpa_key_mgmt_wpa_ieee8021x(wpa_s->key_mgmt) ||
-		      (wpa_s->key_mgmt & WPA_KEY_MGMT_IEEE8021X_NO_WPA)) &&
-		     eapol_sm_failed(wpa_s->eapol)))
-			wpas_auth_failed(wpa_s);
-#ifdef CONFIG_P2P
-		if (event == EVENT_DEAUTH && data) {
-			if (wpas_p2p_deauth_notif(wpa_s,
-						  data->deauth_info.addr,
-						  reason_code,
-						  data->deauth_info.ie,
-						  data->deauth_info.ie_len,
-						  locally_generated) > 0) {
-				/*
-				 * The interface was removed, so cannot
-				 * continue processing any additional
-				 * operations after this.
-				 */
-				break;
-			}
-		}
-#endif /* CONFIG_P2P */
-		wpa_supplicant_event_disassoc_finish(wpa_s, reason_code,
-						     locally_generated);
+		wpas_event_deauth(wpa_s,
+				  data ? &data->deauth_info : NULL);
 		break;
 	case EVENT_MICHAEL_MIC_FAILURE:
 		wpa_supplicant_event_michael_mic_failure(wpa_s, data);

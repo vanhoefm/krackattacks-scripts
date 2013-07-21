@@ -25,7 +25,7 @@ void sme_event_auth_timed_out(struct wpa_supplicant *wpa_s,
 void sme_event_assoc_timed_out(struct wpa_supplicant *wpa_s,
 			       union wpa_event_data *data);
 void sme_event_disassoc(struct wpa_supplicant *wpa_s,
-			union wpa_event_data *data);
+			struct disassoc_info *info);
 void sme_event_unprot_disconnect(struct wpa_supplicant *wpa_s, const u8 *sa,
 				 const u8 *da, u16 reason_code);
 void sme_sa_query_rx(struct wpa_supplicant *wpa_s, const u8 *sa,
@@ -74,7 +74,7 @@ static inline void sme_event_assoc_timed_out(struct wpa_supplicant *wpa_s,
 }
 
 static inline void sme_event_disassoc(struct wpa_supplicant *wpa_s,
-				      union wpa_event_data *data)
+				      struct disassoc_info *info)
 {
 }
 

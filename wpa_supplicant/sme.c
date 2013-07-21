@@ -805,7 +805,7 @@ void sme_event_assoc_timed_out(struct wpa_supplicant *wpa_s,
 
 
 void sme_event_disassoc(struct wpa_supplicant *wpa_s,
-			union wpa_event_data *data)
+			struct disassoc_info *info)
 {
 	wpa_dbg(wpa_s, MSG_DEBUG, "SME: Disassociation event received");
 	if (wpa_s->sme.prev_bssid_set) {

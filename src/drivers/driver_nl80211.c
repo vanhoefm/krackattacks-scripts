@@ -9200,12 +9200,13 @@ static int nl80211_send_frame_cmd(struct i802_bss *bss,
 	wpa_printf(MSG_MSGDUMP, "nl80211: CMD_FRAME freq=%u wait=%u no_cck=%d "
 		   "no_ack=%d offchanok=%d",
 		   freq, wait, no_cck, no_ack, offchanok);
+	wpa_hexdump(MSG_MSGDUMP, "CMD_FRAME", buf, buf_len);
 	nl80211_cmd(drv, msg, 0, NL80211_CMD_FRAME);
 
 	if (nl80211_set_iface_id(msg, bss) < 0)
 		goto nla_put_failure;
-
-	NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, freq);
+	if (freq)
+		NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, freq);
 	if (wait)
 		NLA_PUT_U32(msg, NL80211_ATTR_DURATION, wait);
 	if (offchanok && (drv->capa.flags & WPA_DRIVER_FLAGS_OFFCHANNEL_TX))

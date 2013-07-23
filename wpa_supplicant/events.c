@@ -398,6 +398,9 @@ static int wpa_supplicant_match_privacy(struct wpa_bss *bss,
 	if (wpa_key_mgmt_wpa(ssid->key_mgmt))
 		privacy = 1;
 
+	if (ssid->key_mgmt & WPA_KEY_MGMT_OSEN)
+		privacy = 1;
+
 	if (bss->caps & IEEE80211_CAP_PRIVACY)
 		return privacy;
 	return !privacy;
@@ -537,6 +540,12 @@ static int wpa_supplicant_ssid_bss_match(struct wpa_supplicant *wpa_s,
 	    wpa_key_mgmt_wpa(ssid->key_mgmt) && proto_match == 0) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "   skip - no WPA/RSN proto match");
 		return 0;
+	}
+
+	if ((ssid->key_mgmt & WPA_KEY_MGMT_OSEN) &&
+	    wpa_bss_get_vendor_ie(bss, OSEN_IE_VENDOR_TYPE)) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "   allow in OSEN");
+		return 1;
 	}
 
 	if (!wpa_key_mgmt_wpa(ssid->key_mgmt)) {
@@ -736,6 +745,7 @@ static struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 	struct wpa_blacklist *e;
 	const u8 *ie;
 	struct wpa_ssid *ssid;
+	int osen;
 
 	ie = wpa_bss_get_vendor_ie(bss, WPA_IE_VENDOR_TYPE);
 	wpa_ie_len = ie ? ie[1] : 0;
@@ -743,14 +753,18 @@ static struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 	ie = wpa_bss_get_ie(bss, WLAN_EID_RSN);
 	rsn_ie_len = ie ? ie[1] : 0;
 
+	ie = wpa_bss_get_vendor_ie(bss, OSEN_IE_VENDOR_TYPE);
+	osen = ie != NULL;
+
 	wpa_dbg(wpa_s, MSG_DEBUG, "%d: " MACSTR " ssid='%s' "
-		"wpa_ie_len=%u rsn_ie_len=%u caps=0x%x level=%d%s%s",
+		"wpa_ie_len=%u rsn_ie_len=%u caps=0x%x level=%d%s%s%s",
 		i, MAC2STR(bss->bssid), wpa_ssid_txt(bss->ssid, bss->ssid_len),
 		wpa_ie_len, rsn_ie_len, bss->caps, bss->level,
 		wpa_bss_get_vendor_ie(bss, WPS_IE_VENDOR_TYPE) ? " wps" : "",
 		(wpa_bss_get_vendor_ie(bss, P2P_IE_VENDOR_TYPE) ||
 		 wpa_bss_get_vendor_ie_beacon(bss, P2P_IE_VENDOR_TYPE)) ?
-		" p2p" : "");
+		" p2p" : "",
+		osen ? " osen=1" : "");
 
 	e = wpa_blacklist_get(wpa_s, bss->bssid);
 	if (e) {
@@ -848,7 +862,7 @@ static struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 		if (!wpa_supplicant_ssid_bss_match(wpa_s, ssid, bss))
 			continue;
 
-		if (!wpa &&
+		if (!osen && !wpa &&
 		    !(ssid->key_mgmt & WPA_KEY_MGMT_NONE) &&
 		    !(ssid->key_mgmt & WPA_KEY_MGMT_WPS) &&
 		    !(ssid->key_mgmt & WPA_KEY_MGMT_IEEE8021X_NO_WPA)) {
@@ -860,6 +874,12 @@ static struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 		if (wpa && !wpa_key_mgmt_wpa(ssid->key_mgmt) &&
 		    has_wep_key(ssid)) {
 			wpa_dbg(wpa_s, MSG_DEBUG, "   skip - ignore WPA/WPA2 AP for WEP network block");
+			continue;
+		}
+
+		if ((ssid->key_mgmt & WPA_KEY_MGMT_OSEN) && !osen) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "   skip - non-OSEN network "
+				"not allowed");
 			continue;
 		}
 

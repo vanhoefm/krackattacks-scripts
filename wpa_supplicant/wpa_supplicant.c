@@ -937,13 +937,14 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 {
 	struct wpa_ie_data ie;
 	int sel, proto;
-	const u8 *bss_wpa, *bss_rsn;
+	const u8 *bss_wpa, *bss_rsn, *bss_osen;
 
 	if (bss) {
 		bss_wpa = wpa_bss_get_vendor_ie(bss, WPA_IE_VENDOR_TYPE);
 		bss_rsn = wpa_bss_get_ie(bss, WLAN_EID_RSN);
+		bss_osen = wpa_bss_get_vendor_ie(bss, OSEN_IE_VENDOR_TYPE);
 	} else
-		bss_wpa = bss_rsn = NULL;
+		bss_wpa = bss_rsn = bss_osen = NULL;
 
 	if (bss_rsn && (ssid->proto & WPA_PROTO_RSN) &&
 	    wpa_parse_wpa_ie(bss_rsn, 2 + bss_rsn[1], &ie) == 0 &&
@@ -959,11 +960,22 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 		   (ie.key_mgmt & ssid->key_mgmt)) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "WPA: using IEEE 802.11i/D3.0");
 		proto = WPA_PROTO_WPA;
+#ifdef CONFIG_HS20
+	} else if (bss_osen && (ssid->proto & WPA_PROTO_OSEN)) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "HS 2.0: using OSEN");
+		/* TODO: parse OSEN element */
+		ie.group_cipher = WPA_CIPHER_CCMP;
+		ie.pairwise_cipher = WPA_CIPHER_CCMP;
+		ie.key_mgmt = WPA_KEY_MGMT_OSEN;
+		proto = WPA_PROTO_OSEN;
+#endif /* CONFIG_HS20 */
 	} else if (bss) {
 		wpa_msg(wpa_s, MSG_WARNING, "WPA: Failed to select WPA/RSN");
 		return -1;
 	} else {
-		if (ssid->proto & WPA_PROTO_RSN)
+		if (ssid->proto & WPA_PROTO_OSEN)
+			proto = WPA_PROTO_OSEN;
+		else if (ssid->proto & WPA_PROTO_RSN)
 			proto = WPA_PROTO_RSN;
 		else
 			proto = WPA_PROTO_WPA;
@@ -996,7 +1008,7 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 	wpa_s->wpa_proto = proto;
 	wpa_sm_set_param(wpa_s->wpa, WPA_PARAM_PROTO, proto);
 	wpa_sm_set_param(wpa_s->wpa, WPA_PARAM_RSN_ENABLED,
-			 !!(ssid->proto & WPA_PROTO_RSN));
+			 !!(ssid->proto & (WPA_PROTO_RSN | WPA_PROTO_OSEN)));
 
 	if (bss || !wpa_s->ap_ies_from_associnfo) {
 		if (wpa_sm_set_ap_wpa_ie(wpa_s->wpa, bss_wpa,
@@ -1067,6 +1079,11 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 	} else if (sel & WPA_KEY_MGMT_WPA_NONE) {
 		wpa_s->key_mgmt = WPA_KEY_MGMT_WPA_NONE;
 		wpa_dbg(wpa_s, MSG_DEBUG, "WPA: using KEY_MGMT WPA-NONE");
+#ifdef CONFIG_HS20
+	} else if (sel & WPA_KEY_MGMT_OSEN) {
+		wpa_s->key_mgmt = WPA_KEY_MGMT_OSEN;
+		wpa_dbg(wpa_s, MSG_DEBUG, "HS 2.0: using KEY_MGMT OSEN");
+#endif /* CONFIG_HS20 */
 	} else {
 		wpa_msg(wpa_s, MSG_WARNING, "WPA: Failed to select "
 			"authenticated key management type");

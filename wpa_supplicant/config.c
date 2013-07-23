@@ -405,6 +405,8 @@ static int wpa_config_parse_proto(const struct parse_data *data,
 		else if (os_strcmp(start, "RSN") == 0 ||
 			 os_strcmp(start, "WPA2") == 0)
 			val |= WPA_PROTO_RSN;
+		else if (os_strcmp(start, "OSEN") == 0)
+			val |= WPA_PROTO_OSEN;
 		else {
 			wpa_printf(MSG_ERROR, "Line %d: invalid proto '%s'",
 				   line, start);
@@ -516,6 +518,10 @@ static int wpa_config_parse_key_mgmt(const struct parse_data *data,
 		else if (os_strcmp(start, "FT-SAE") == 0)
 			val |= WPA_KEY_MGMT_FT_SAE;
 #endif /* CONFIG_SAE */
+#ifdef CONFIG_HS20
+		else if (os_strcmp(start, "OSEN") == 0)
+			val |= WPA_KEY_MGMT_OSEN;
+#endif /* CONFIG_HS20 */
 		else {
 			wpa_printf(MSG_ERROR, "Line %d: invalid key_mgmt '%s'",
 				   line, start);

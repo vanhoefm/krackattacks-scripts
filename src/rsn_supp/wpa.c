@@ -688,10 +688,11 @@ static int wpa_supplicant_pairwise_gtk(struct wpa_sm *sm,
 	os_memcpy(gd.gtk, gtk, gtk_len);
 	gd.gtk_len = gtk_len;
 
-	if (wpa_supplicant_check_group_cipher(sm, sm->group_cipher,
-					      gtk_len, gtk_len,
-					      &gd.key_rsc_len, &gd.alg) ||
-	    wpa_supplicant_install_gtk(sm, &gd, key->key_rsc)) {
+	if (sm->group_cipher != WPA_CIPHER_GTK_NOT_USED &&
+	    (wpa_supplicant_check_group_cipher(sm, sm->group_cipher,
+					       gtk_len, gtk_len,
+					       &gd.key_rsc_len, &gd.alg) ||
+	     wpa_supplicant_install_gtk(sm, &gd, key->key_rsc))) {
 		wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG,
 			"RSN: Failed to install GTK");
 		return -1;
@@ -1112,7 +1113,10 @@ static void wpa_supplicant_process_3_of_4(struct wpa_sm *sm,
 	}
 	wpa_sm_set_state(sm, WPA_GROUP_HANDSHAKE);
 
-	if (ie.gtk &&
+	if (sm->group_cipher == WPA_CIPHER_GTK_NOT_USED) {
+		wpa_supplicant_key_neg_complete(sm, sm->bssid,
+						key_info & WPA_KEY_INFO_SECURE);
+	} else if (ie.gtk &&
 	    wpa_supplicant_pairwise_gtk(sm, key,
 					ie.gtk, ie.gtk_len, key_info) < 0) {
 		wpa_msg(sm->ctx->msg_ctx, MSG_INFO,

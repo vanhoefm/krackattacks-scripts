@@ -926,6 +926,8 @@ const char * wpa_cipher_txt(int cipher)
 		return "GCMP-256";
 	case WPA_CIPHER_CCMP_256:
 		return "CCMP-256";
+	case WPA_CIPHER_GTK_NOT_USED:
+		return "GTK_NOT_USED";
 	default:
 		return "UNKNOWN";
 	}
@@ -1206,6 +1208,8 @@ u32 wpa_cipher_to_suite(int proto, int cipher)
 	if (cipher & WPA_CIPHER_NONE)
 		return (proto == WPA_PROTO_RSN ?
 			RSN_CIPHER_SUITE_NONE : WPA_CIPHER_SUITE_NONE);
+	if (cipher & WPA_CIPHER_GTK_NOT_USED)
+		return RSN_CIPHER_SUITE_NO_GROUP_ADDRESSED;
 	return 0;
 }
 
@@ -1301,6 +1305,8 @@ int wpa_pick_group_cipher(int ciphers)
 		return WPA_CIPHER_CCMP;
 	if (ciphers & WPA_CIPHER_GCMP)
 		return WPA_CIPHER_GCMP;
+	if (ciphers & WPA_CIPHER_GTK_NOT_USED)
+		return WPA_CIPHER_GTK_NOT_USED;
 	if (ciphers & WPA_CIPHER_TKIP)
 		return WPA_CIPHER_TKIP;
 	if (ciphers & WPA_CIPHER_WEP104)
@@ -1347,6 +1353,8 @@ int wpa_parse_cipher(const char *value)
 			val |= WPA_CIPHER_WEP40;
 		else if (os_strcmp(start, "NONE") == 0)
 			val |= WPA_CIPHER_NONE;
+		else if (os_strcmp(start, "GTK_NOT_USED") == 0)
+			val |= WPA_CIPHER_GTK_NOT_USED;
 		else {
 			os_free(buf);
 			return -1;

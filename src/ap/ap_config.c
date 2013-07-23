@@ -890,6 +890,11 @@ void hostapd_set_security_params(struct hostapd_bss_config *bss)
 		bss->wpa_group = cipher;
 		bss->wpa_pairwise = cipher;
 		bss->rsn_pairwise = cipher;
+	} else if (bss->osen) {
+		bss->ssid.security_policy = SECURITY_OSEN;
+		bss->wpa_group = WPA_CIPHER_CCMP;
+		bss->wpa_pairwise = 0;
+		bss->rsn_pairwise = WPA_CIPHER_CCMP;
 	} else {
 		bss->ssid.security_policy = SECURITY_PLAINTEXT;
 		bss->wpa_group = WPA_CIPHER_NONE;

@@ -847,6 +847,11 @@ struct wpa_driver_ap_params {
 	 * disable_dgaf - Whether group-addressed frames are disabled
 	 */
 	int disable_dgaf;
+
+	/**
+	 * osen - Whether OSEN security is enabled
+	 */
+	int osen;
 };
 
 /**

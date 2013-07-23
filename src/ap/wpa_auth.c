@@ -211,6 +211,8 @@ static int wpa_use_aes_cmac(struct wpa_state_machine *sm)
 	if (wpa_key_mgmt_sha256(sm->wpa_key_mgmt))
 		ret = 1;
 #endif /* CONFIG_IEEE80211W */
+	if (sm->wpa_key_mgmt == WPA_KEY_MGMT_OSEN)
+		ret = 1;
 	return ret;
 }
 
@@ -878,6 +880,7 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 		if (sm->pairwise == WPA_CIPHER_CCMP ||
 		    sm->pairwise == WPA_CIPHER_GCMP) {
 			if (wpa_use_aes_cmac(sm) &&
+			    sm->wpa_key_mgmt != WPA_KEY_MGMT_OSEN &&
 			    ver != WPA_KEY_INFO_TYPE_AES_128_CMAC) {
 				wpa_auth_logger(wpa_auth, sm->addr,
 						LOGGER_WARNING,
@@ -1001,6 +1004,9 @@ continue_processing:
 		if (kde.rsn_ie) {
 			eapol_key_ie = kde.rsn_ie;
 			eapol_key_ie_len = kde.rsn_ie_len;
+		} else if (kde.osen) {
+			eapol_key_ie = kde.osen;
+			eapol_key_ie_len = kde.osen_len;
 		} else {
 			eapol_key_ie = kde.wpa_ie;
 			eapol_key_ie_len = kde.wpa_ie_len;
@@ -1286,6 +1292,8 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 
 	if (force_version)
 		version = force_version;
+	else if (sm->wpa_key_mgmt == WPA_KEY_MGMT_OSEN)
+		version = WPA_KEY_INFO_TYPE_AKM_DEFINED;
 	else if (wpa_use_aes_cmac(sm))
 		version = WPA_KEY_INFO_TYPE_AES_128_CMAC;
 	else if (sm->pairwise != WPA_CIPHER_TKIP)
@@ -1308,6 +1316,7 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 	key_data_len = kde_len;
 
 	if ((version == WPA_KEY_INFO_TYPE_HMAC_SHA1_AES ||
+	     sm->wpa_key_mgmt == WPA_KEY_MGMT_OSEN ||
 	     version == WPA_KEY_INFO_TYPE_AES_128_CMAC) && encr) {
 		pad_len = key_data_len % 8;
 		if (pad_len)
@@ -1376,6 +1385,7 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 		wpa_hexdump_key(MSG_DEBUG, "Plaintext EAPOL-Key Key Data",
 				buf, key_data_len);
 		if (version == WPA_KEY_INFO_TYPE_HMAC_SHA1_AES ||
+		    sm->wpa_key_mgmt == WPA_KEY_MGMT_OSEN ||
 		    version == WPA_KEY_INFO_TYPE_AES_128_CMAC) {
 			if (aes_wrap(sm->PTK.kek, (key_data_len - 8) / 8, buf,
 				     (u8 *) (key + 1))) {
@@ -1774,7 +1784,8 @@ SM_STATE(WPA_PTK, PTKSTART)
 	 * one possible PSK for this STA.
 	 */
 	if (sm->wpa == WPA_VERSION_WPA2 &&
-	    wpa_key_mgmt_wpa_ieee8021x(sm->wpa_key_mgmt)) {
+	    wpa_key_mgmt_wpa_ieee8021x(sm->wpa_key_mgmt) &&
+	    sm->wpa_key_mgmt != WPA_KEY_MGMT_OSEN) {
 		pmkid = buf;
 		pmkid_len = 2 + RSN_SELECTOR_LEN + PMKID_LEN;
 		pmkid[0] = WLAN_EID_VENDOR_SPECIFIC;

@@ -87,7 +87,7 @@ static void hostapd_reload_bss(struct hostapd_data *hapd)
 	else
 		hostapd_set_drv_ieee8021x(hapd, hapd->conf->iface, 0);
 
-	if (hapd->conf->wpa && hapd->wpa_auth == NULL) {
+	if ((hapd->conf->wpa || hapd->conf->osen) && hapd->wpa_auth == NULL) {
 		hostapd_setup_wpa(hapd);
 		if (hapd->wpa_auth)
 			wpa_init_keys(hapd->wpa_auth);
@@ -802,7 +802,7 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 		return -1;
 	}
 
-	if (hapd->conf->wpa && hostapd_setup_wpa(hapd))
+	if ((hapd->conf->wpa || hapd->conf->osen) && hostapd_setup_wpa(hapd))
 		return -1;
 
 	if (accounting_init(hapd)) {

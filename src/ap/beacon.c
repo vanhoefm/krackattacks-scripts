@@ -442,6 +442,7 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 
 #ifdef CONFIG_HS20
 	pos = hostapd_eid_hs20_indication(hapd, pos);
+	pos = hostapd_eid_osen(hapd, pos);
 #endif /* CONFIG_HS20 */
 
 	if (hapd->conf->vendor_elements) {
@@ -854,6 +855,7 @@ int ieee802_11_build_ap_params(struct hostapd_data *hapd,
 
 #ifdef CONFIG_HS20
 	tailpos = hostapd_eid_hs20_indication(hapd, tailpos);
+	tailpos = hostapd_eid_osen(hapd, tailpos);
 #endif /* CONFIG_HS20 */
 
 	if (hapd->conf->vendor_elements) {
@@ -925,6 +927,10 @@ int ieee802_11_build_ap_params(struct hostapd_data *hapd,
 	params->ap_max_inactivity = hapd->conf->ap_max_inactivity;
 #ifdef CONFIG_HS20
 	params->disable_dgaf = hapd->conf->disable_dgaf;
+	if (hapd->conf->osen) {
+		params->privacy = 1;
+		params->osen = 1;
+	}
 #endif /* CONFIG_HS20 */
 	return 0;
 }

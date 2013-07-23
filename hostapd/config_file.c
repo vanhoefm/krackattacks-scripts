@@ -2810,6 +2810,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			bss->hs20 = atoi(pos);
 		} else if (os_strcmp(buf, "disable_dgaf") == 0) {
 			bss->disable_dgaf = atoi(pos);
+		} else if (os_strcmp(buf, "osen") == 0) {
+			bss->osen = atoi(pos);
 		} else if (os_strcmp(buf, "anqp_domain_id") == 0) {
 			bss->anqp_domain_id = atoi(pos);
 		} else if (os_strcmp(buf, "hs20_oper_friendly_name") == 0) {

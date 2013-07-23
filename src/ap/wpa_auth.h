@@ -232,6 +232,9 @@ int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 			struct wpa_state_machine *sm,
 			const u8 *wpa_ie, size_t wpa_ie_len,
 			const u8 *mdie, size_t mdie_len);
+int wpa_validate_osen(struct wpa_authenticator *wpa_auth,
+		      struct wpa_state_machine *sm,
+		      const u8 *osen_ie, size_t osen_ie_len);
 int wpa_auth_uses_mfp(struct wpa_state_machine *sm);
 struct wpa_state_machine *
 wpa_auth_sta_init(struct wpa_authenticator *wpa_auth, const u8 *addr,

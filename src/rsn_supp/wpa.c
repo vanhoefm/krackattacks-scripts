@@ -110,7 +110,8 @@ void wpa_sm_key_request(struct wpa_sm *sm, int error, int pairwise)
 	if (rbuf == NULL)
 		return;
 
-	reply->type = sm->proto == WPA_PROTO_RSN ?
+	reply->type = (sm->proto == WPA_PROTO_RSN ||
+		       sm->proto == WPA_PROTO_OSEN) ?
 		EAPOL_KEY_TYPE_RSN : EAPOL_KEY_TYPE_WPA;
 	key_info = WPA_KEY_INFO_REQUEST | ver;
 	if (sm->ptk_set)
@@ -234,7 +235,8 @@ static int wpa_supplicant_get_pmk(struct wpa_sm *sm,
 	}
 
 	if (abort_cached && wpa_key_mgmt_wpa_ieee8021x(sm->key_mgmt) &&
-	    !wpa_key_mgmt_ft(sm->key_mgmt)) {
+	    !wpa_key_mgmt_ft(sm->key_mgmt) && sm->key_mgmt != WPA_KEY_MGMT_OSEN)
+	{
 		/* Send EAPOL-Start to trigger full EAP authentication. */
 		u8 *buf;
 		size_t buflen;
@@ -328,11 +330,12 @@ int wpa_supplicant_send_2_of_4(struct wpa_sm *sm, const unsigned char *dst,
 		return -1;
 	}
 
-	reply->type = sm->proto == WPA_PROTO_RSN ?
+	reply->type = (sm->proto == WPA_PROTO_RSN ||
+		       sm->proto == WPA_PROTO_OSEN) ?
 		EAPOL_KEY_TYPE_RSN : EAPOL_KEY_TYPE_WPA;
 	WPA_PUT_BE16(reply->key_info,
 		     ver | WPA_KEY_INFO_KEY_TYPE | WPA_KEY_INFO_MIC);
-	if (sm->proto == WPA_PROTO_RSN)
+	if (sm->proto == WPA_PROTO_RSN || sm->proto == WPA_PROTO_OSEN)
 		WPA_PUT_BE16(reply->key_length, 0);
 	else
 		os_memcpy(reply->key_length, key->key_length, 2);
@@ -397,7 +400,7 @@ static void wpa_supplicant_process_1_of_4(struct wpa_sm *sm,
 
 	os_memset(&ie, 0, sizeof(ie));
 
-	if (sm->proto == WPA_PROTO_RSN) {
+	if (sm->proto == WPA_PROTO_RSN || sm->proto == WPA_PROTO_OSEN) {
 		/* RSN: msg 1/4 should contain PMKID for the selected PMK */
 		const u8 *_buf = (const u8 *) (key + 1);
 		size_t len = WPA_GET_BE16(key->key_data_length);
@@ -564,7 +567,7 @@ static int wpa_supplicant_install_ptk(struct wpa_sm *sm,
 	keylen = wpa_cipher_key_len(sm->pairwise_cipher);
 	rsclen = wpa_cipher_rsc_len(sm->pairwise_cipher);
 
-	if (sm->proto == WPA_PROTO_RSN) {
+	if (sm->proto == WPA_PROTO_RSN || sm->proto == WPA_PROTO_OSEN) {
 		key_rsc = null_rsc;
 	} else {
 		key_rsc = key->key_rsc;
@@ -1036,12 +1039,13 @@ int wpa_supplicant_send_4_of_4(struct wpa_sm *sm, const unsigned char *dst,
 	if (rbuf == NULL)
 		return -1;
 
-	reply->type = sm->proto == WPA_PROTO_RSN ?
+	reply->type = (sm->proto == WPA_PROTO_RSN ||
+		       sm->proto == WPA_PROTO_OSEN) ?
 		EAPOL_KEY_TYPE_RSN : EAPOL_KEY_TYPE_WPA;
 	key_info &= WPA_KEY_INFO_SECURE;
 	key_info |= ver | WPA_KEY_INFO_KEY_TYPE | WPA_KEY_INFO_MIC;
 	WPA_PUT_BE16(reply->key_info, key_info);
-	if (sm->proto == WPA_PROTO_RSN)
+	if (sm->proto == WPA_PROTO_RSN || sm->proto == WPA_PROTO_OSEN)
 		WPA_PUT_BE16(reply->key_length, 0);
 	else
 		os_memcpy(reply->key_length, key->key_length, 2);
@@ -1323,12 +1327,13 @@ static int wpa_supplicant_send_2_of_2(struct wpa_sm *sm,
 	if (rbuf == NULL)
 		return -1;
 
-	reply->type = sm->proto == WPA_PROTO_RSN ?
+	reply->type = (sm->proto == WPA_PROTO_RSN ||
+		       sm->proto == WPA_PROTO_OSEN) ?
 		EAPOL_KEY_TYPE_RSN : EAPOL_KEY_TYPE_WPA;
 	key_info &= WPA_KEY_INFO_KEY_INDEX_MASK;
 	key_info |= ver | WPA_KEY_INFO_MIC | WPA_KEY_INFO_SECURE;
 	WPA_PUT_BE16(reply->key_info, key_info);
-	if (sm->proto == WPA_PROTO_RSN)
+	if (sm->proto == WPA_PROTO_RSN || sm->proto == WPA_PROTO_OSEN)
 		WPA_PUT_BE16(reply->key_length, 0);
 	else
 		os_memcpy(reply->key_length, key->key_length, 2);
@@ -1363,7 +1368,7 @@ static void wpa_supplicant_process_1_of_2(struct wpa_sm *sm,
 	key_info = WPA_GET_BE16(key->key_info);
 	keydatalen = WPA_GET_BE16(key->key_data_length);
 
-	if (sm->proto == WPA_PROTO_RSN) {
+	if (sm->proto == WPA_PROTO_RSN || sm->proto == WPA_PROTO_OSEN) {
 		ret = wpa_supplicant_process_1_of_2_rsn(sm,
 							(const u8 *) (key + 1),
 							keydatalen, key_info,
@@ -1811,7 +1816,7 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 	}
 	extra_len = WPA_GET_BE16(key->key_data_length);
 
-	if (sm->proto == WPA_PROTO_RSN &&
+	if ((sm->proto == WPA_PROTO_RSN || sm->proto == WPA_PROTO_OSEN) &&
 	    (key_info & WPA_KEY_INFO_ENCR_KEY_DATA)) {
 		if (wpa_supplicant_decrypt_key_data(sm, key, ver))
 			goto out;
@@ -1865,7 +1870,8 @@ static u32 wpa_key_mgmt_suite(struct wpa_sm *sm)
 {
 	switch (sm->key_mgmt) {
 	case WPA_KEY_MGMT_IEEE8021X:
-		return (sm->proto == WPA_PROTO_RSN ?
+		return ((sm->proto == WPA_PROTO_RSN ||
+			 sm->proto == WPA_PROTO_OSEN) ?
 			RSN_AUTH_KEY_MGMT_UNSPEC_802_1X :
 			WPA_AUTH_KEY_MGMT_UNSPEC_802_1X);
 	case WPA_KEY_MGMT_PSK:

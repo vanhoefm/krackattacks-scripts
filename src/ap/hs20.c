@@ -1,7 +1,7 @@
 /*
  * Hotspot 2.0 AP ANQP processing
  * Copyright (c) 2009, Atheros Communications, Inc.
- * Copyright (c) 2011-2012, Qualcomm Atheros, Inc.
+ * Copyright (c) 2011-2013, Qualcomm Atheros, Inc.
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -34,6 +34,58 @@ u8 * hostapd_eid_hs20_indication(struct hostapd_data *hapd, u8 *eid)
 	*eid++ = conf;
 	WPA_PUT_LE16(eid, hapd->conf->anqp_domain_id);
 	eid += 2;
+
+	return eid;
+}
+
+
+u8 * hostapd_eid_osen(struct hostapd_data *hapd, u8 *eid)
+{
+	u8 *len;
+	u16 capab;
+
+	if (!hapd->conf->osen)
+		return eid;
+
+	*eid++ = WLAN_EID_VENDOR_SPECIFIC;
+	len = eid++; /* to be filled */
+	WPA_PUT_BE24(eid, OUI_WFA);
+	eid += 3;
+	*eid++ = HS20_OSEN_OUI_TYPE;
+
+	/* Group Data Cipher Suite */
+	RSN_SELECTOR_PUT(eid, RSN_CIPHER_SUITE_NO_GROUP_ADDRESSED);
+	eid += RSN_SELECTOR_LEN;
+
+	/* Pairwise Cipher Suite Count and List */
+	WPA_PUT_LE16(eid, 1);
+	eid += 2;
+	RSN_SELECTOR_PUT(eid, RSN_CIPHER_SUITE_CCMP);
+	eid += RSN_SELECTOR_LEN;
+
+	/* AKM Suite Count and List */
+	WPA_PUT_LE16(eid, 1);
+	eid += 2;
+	RSN_SELECTOR_PUT(eid, RSN_AUTH_KEY_MGMT_OSEN);
+	eid += RSN_SELECTOR_LEN;
+
+	/* RSN Capabilities */
+	capab = 0;
+	if (hapd->conf->wmm_enabled) {
+		/* 4 PTKSA replay counters when using WMM */
+		capab |= (RSN_NUM_REPLAY_COUNTERS_16 << 2);
+	}
+#ifdef CONFIG_IEEE80211W
+	if (hapd->conf->ieee80211w != NO_MGMT_FRAME_PROTECTION) {
+		capab |= WPA_CAPABILITY_MFPC;
+		if (hapd->conf->ieee80211w == MGMT_FRAME_PROTECTION_REQUIRED)
+			capab |= WPA_CAPABILITY_MFPR;
+	}
+#endif /* CONFIG_IEEE80211W */
+	WPA_PUT_LE16(eid, capab);
+	eid += 2;
+
+	*len = eid - len - 1;
 
 	return eid;
 }

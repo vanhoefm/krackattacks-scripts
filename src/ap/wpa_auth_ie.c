@@ -295,6 +295,55 @@ int wpa_write_rsn_ie(struct wpa_auth_config *conf, u8 *buf, size_t len,
 }
 
 
+static u8 * wpa_write_osen(struct wpa_auth_config *conf, u8 *eid)
+{
+	u8 *len;
+	u16 capab;
+
+	*eid++ = WLAN_EID_VENDOR_SPECIFIC;
+	len = eid++; /* to be filled */
+	WPA_PUT_BE24(eid, OUI_WFA);
+	eid += 3;
+	*eid++ = HS20_OSEN_OUI_TYPE;
+
+	/* Group Data Cipher Suite */
+	RSN_SELECTOR_PUT(eid, RSN_CIPHER_SUITE_NO_GROUP_ADDRESSED);
+	eid += RSN_SELECTOR_LEN;
+
+	/* Pairwise Cipher Suite Count and List */
+	WPA_PUT_LE16(eid, 1);
+	eid += 2;
+	RSN_SELECTOR_PUT(eid, RSN_CIPHER_SUITE_CCMP);
+	eid += RSN_SELECTOR_LEN;
+
+	/* AKM Suite Count and List */
+	WPA_PUT_LE16(eid, 1);
+	eid += 2;
+	RSN_SELECTOR_PUT(eid, RSN_AUTH_KEY_MGMT_OSEN);
+	eid += RSN_SELECTOR_LEN;
+
+	/* RSN Capabilities */
+	capab = 0;
+	if (conf->wmm_enabled) {
+		/* 4 PTKSA replay counters when using WMM */
+		capab |= (RSN_NUM_REPLAY_COUNTERS_16 << 2);
+	}
+#ifdef CONFIG_IEEE80211W
+	if (conf->ieee80211w != NO_MGMT_FRAME_PROTECTION) {
+		capab |= WPA_CAPABILITY_MFPC;
+		if (conf->ieee80211w == MGMT_FRAME_PROTECTION_REQUIRED)
+			capab |= WPA_CAPABILITY_MFPR;
+	}
+#endif /* CONFIG_IEEE80211W */
+	WPA_PUT_LE16(eid, capab);
+	eid += 2;
+
+	*len = eid - len - 1;
+
+	return eid;
+}
+
+
 int wpa_auth_gen_wpa_ie(struct wpa_authenticator *wpa_auth)
 {
 	u8 *pos, buf[128];
@@ -302,6 +351,9 @@ int wpa_auth_gen_wpa_ie(struct wpa_authenticator *wpa_auth)
 
 	pos = buf;
 
+	if (wpa_auth->conf.wpa == WPA_PROTO_OSEN) {
+		pos = wpa_write_osen(&wpa_auth->conf, pos);
+	}
 	if (wpa_auth->conf.wpa & WPA_PROTO_RSN) {
 		res = wpa_write_rsn_ie(&wpa_auth->conf,
 				       pos, buf + sizeof(buf) - pos, NULL);
@@ -626,6 +678,36 @@ int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 }
 
 
+#ifdef CONFIG_HS20
+int wpa_validate_osen(struct wpa_authenticator *wpa_auth,
+		      struct wpa_state_machine *sm,
+		      const u8 *osen_ie, size_t osen_ie_len)
+{
+	if (wpa_auth == NULL || sm == NULL)
+		return -1;
+
+	/* TODO: parse OSEN element */
+	sm->wpa_key_mgmt = WPA_KEY_MGMT_OSEN;
+	sm->mgmt_frame_prot = 1;
+	sm->pairwise = WPA_CIPHER_CCMP;
+	sm->wpa = WPA_VERSION_WPA2;
+
+	if (sm->wpa_ie == NULL || sm->wpa_ie_len < osen_ie_len) {
+		os_free(sm->wpa_ie);
+		sm->wpa_ie = os_malloc(osen_ie_len);
+		if (sm->wpa_ie == NULL)
+			return -1;
+	}
+
+	os_memcpy(sm->wpa_ie, osen_ie, osen_ie_len);
+	sm->wpa_ie_len = osen_ie_len;
+
+	return 0;
+}
+
+#endif /* CONFIG_HS20 */
+
+
 /**
  * wpa_parse_generic - Parse EAPOL-Key Key Data Generic IEs
  * @pos: Pointer to the IE header
@@ -645,6 +727,12 @@ static int wpa_parse_generic(const u8 *pos, const u8 *end,
 	    pos[2 + WPA_SELECTOR_LEN + 1] == 0) {
 		ie->wpa_ie = pos;
 		ie->wpa_ie_len = pos[1] + 2;
+		return 0;
+	}
+
+	if (pos[1] >= 4 && WPA_GET_BE32(pos + 2) == OSEN_IE_VENDOR_TYPE) {
+		ie->osen = pos;
+		ie->osen_len = pos[1] + 2;
 		return 0;
 	}
 

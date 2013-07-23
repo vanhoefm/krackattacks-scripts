@@ -45,7 +45,8 @@ typedef enum hostap_security_policy {
 	SECURITY_STATIC_WEP = 1,
 	SECURITY_IEEE_802_1X = 2,
 	SECURITY_WPA_PSK = 3,
-	SECURITY_WPA = 4
+	SECURITY_WPA = 4,
+	SECURITY_OSEN = 5
 } secpolicy;
 
 struct hostapd_ssid {
@@ -452,6 +453,7 @@ struct hostapd_bss_config {
 	u8 qos_map_set[16 + 2 * 21];
 	unsigned int qos_map_set_len;
 
+	int osen;
 #ifdef CONFIG_HS20
 	int hs20;
 	int disable_dgaf;

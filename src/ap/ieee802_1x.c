@@ -686,7 +686,7 @@ void ieee802_1x_receive(struct hostapd_data *hapd, const u8 *sa, const u8 *buf,
 	struct rsn_pmksa_cache_entry *pmksa;
 	int key_mgmt;
 
-	if (!hapd->conf->ieee802_1x && !hapd->conf->wpa &&
+	if (!hapd->conf->ieee802_1x && !hapd->conf->wpa && !hapd->conf->osen &&
 	    !hapd->conf->wps_state)
 		return;
 
@@ -737,7 +737,7 @@ void ieee802_1x_receive(struct hostapd_data *hapd, const u8 *sa, const u8 *buf,
 		return;
 	}
 
-	if (!hapd->conf->ieee802_1x &&
+	if (!hapd->conf->ieee802_1x && !hapd->conf->osen &&
 	    !(sta->flags & (WLAN_STA_WPS | WLAN_STA_MAYBE_WPS))) {
 		wpa_printf(MSG_DEBUG, "IEEE 802.1X: Ignore EAPOL message - "
 			   "802.1X not enabled and WPS not used");
@@ -757,7 +757,7 @@ void ieee802_1x_receive(struct hostapd_data *hapd, const u8 *sa, const u8 *buf,
 			return;
 
 #ifdef CONFIG_WPS
-		if (!hapd->conf->ieee802_1x) {
+		if (!hapd->conf->ieee802_1x && hapd->conf->wps_state) {
 			u32 wflags = sta->flags & (WLAN_STA_WPS |
 						   WLAN_STA_WPS2 |
 						   WLAN_STA_MAYBE_WPS);
@@ -875,7 +875,7 @@ void ieee802_1x_new_station(struct hostapd_data *hapd, struct sta_info *sta)
 	}
 #endif /* CONFIG_WPS */
 
-	if (!force_1x && !hapd->conf->ieee802_1x) {
+	if (!force_1x && !hapd->conf->ieee802_1x && !hapd->conf->osen) {
 		wpa_printf(MSG_DEBUG, "IEEE 802.1X: Ignore STA - "
 			   "802.1X not enabled or forced for WPS");
 		/*
@@ -913,7 +913,8 @@ void ieee802_1x_new_station(struct hostapd_data *hapd, struct sta_info *sta)
 
 #ifdef CONFIG_WPS
 	sta->eapol_sm->flags &= ~EAPOL_SM_WAIT_START;
-	if (!hapd->conf->ieee802_1x && !(sta->flags & WLAN_STA_WPS2)) {
+	if (!hapd->conf->ieee802_1x && hapd->conf->wps_state &&
+	    !(sta->flags & WLAN_STA_WPS2)) {
 		/*
 		 * Delay EAPOL frame transmission until a possible WPS STA
 		 * initiates the handshake with EAPOL-Start. Only allow the

@@ -170,6 +170,17 @@ int hostapd_build_ap_extra_ies(struct hostapd_data *hapd,
 			goto fail;
 		wpabuf_put_data(proberesp, buf, pos - buf);
 	}
+
+	pos = hostapd_eid_osen(hapd, buf);
+	if (pos != buf) {
+		if (wpabuf_resize(&beacon, pos - buf) != 0)
+			goto fail;
+		wpabuf_put_data(beacon, buf, pos - buf);
+
+		if (wpabuf_resize(&proberesp, pos - buf) != 0)
+			goto fail;
+		wpabuf_put_data(proberesp, buf, pos - buf);
+	}
 #endif /* CONFIG_HS20 */
 
 	if (hapd->conf->vendor_elements) {

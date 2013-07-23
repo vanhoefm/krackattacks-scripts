@@ -64,6 +64,7 @@ struct eap_ssl_data {
 
 /* dummy type used as a flag for UNAUTH-TLS */
 #define EAP_UNAUTH_TLS_TYPE 255
+#define EAP_WFA_UNAUTH_TLS_TYPE 254
 
 
 struct wpabuf * eap_tls_msg_alloc(EapType type, size_t payload_len,

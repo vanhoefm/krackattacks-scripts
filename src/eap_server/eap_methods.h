@@ -27,6 +27,7 @@ int eap_server_identity_register(void);
 int eap_server_md5_register(void);
 int eap_server_tls_register(void);
 int eap_server_unauth_tls_register(void);
+int eap_server_wfa_unauth_tls_register(void);
 int eap_server_mschapv2_register(void);
 int eap_server_peap_register(void);
 int eap_server_tlv_register(void);

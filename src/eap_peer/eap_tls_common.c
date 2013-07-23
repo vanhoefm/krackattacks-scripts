@@ -23,6 +23,10 @@ static struct wpabuf * eap_tls_msg_alloc(EapType type, size_t payload_len,
 		return eap_msg_alloc(EAP_VENDOR_UNAUTH_TLS,
 				     EAP_VENDOR_TYPE_UNAUTH_TLS, payload_len,
 				     code, identifier);
+	if (type == EAP_WFA_UNAUTH_TLS_TYPE)
+		return eap_msg_alloc(EAP_VENDOR_WFA_NEW,
+				     EAP_VENDOR_WFA_UNAUTH_TLS, payload_len,
+				     code, identifier);
 	return eap_msg_alloc(EAP_VENDOR_IETF, type, payload_len, code,
 			     identifier);
 }
@@ -845,6 +849,10 @@ const u8 * eap_peer_tls_process_init(struct eap_sm *sm,
 	if (eap_type == EAP_UNAUTH_TLS_TYPE)
 		pos = eap_hdr_validate(EAP_VENDOR_UNAUTH_TLS,
 				       EAP_VENDOR_TYPE_UNAUTH_TLS, reqData,
+				       &left);
+	else if (eap_type == EAP_WFA_UNAUTH_TLS_TYPE)
+		pos = eap_hdr_validate(EAP_VENDOR_WFA_NEW,
+				       EAP_VENDOR_WFA_UNAUTH_TLS, reqData,
 				       &left);
 	else
 		pos = eap_hdr_validate(EAP_VENDOR_IETF, eap_type, reqData,

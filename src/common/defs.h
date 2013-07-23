@@ -48,12 +48,14 @@ typedef enum { FALSE = 0, TRUE = 1 } Boolean;
 #define WPA_KEY_MGMT_WAPI_PSK BIT(12)
 #define WPA_KEY_MGMT_WAPI_CERT BIT(13)
 #define WPA_KEY_MGMT_CCKM BIT(14)
+#define WPA_KEY_MGMT_OSEN BIT(15)
 
 static inline int wpa_key_mgmt_wpa_ieee8021x(int akm)
 {
 	return !!(akm & (WPA_KEY_MGMT_IEEE8021X |
 			 WPA_KEY_MGMT_FT_IEEE8021X |
 			 WPA_KEY_MGMT_CCKM |
+			 WPA_KEY_MGMT_OSEN |
 			 WPA_KEY_MGMT_IEEE8021X_SHA256));
 }
 
@@ -82,7 +84,8 @@ static inline int wpa_key_mgmt_sae(int akm)
 static inline int wpa_key_mgmt_sha256(int akm)
 {
 	return !!(akm & (WPA_KEY_MGMT_PSK_SHA256 |
-			 WPA_KEY_MGMT_IEEE8021X_SHA256));
+			 WPA_KEY_MGMT_IEEE8021X_SHA256 |
+			 WPA_KEY_MGMT_OSEN));
 }
 
 static inline int wpa_key_mgmt_wpa(int akm)
@@ -106,6 +109,7 @@ static inline int wpa_key_mgmt_cckm(int akm)
 #define WPA_PROTO_WPA BIT(0)
 #define WPA_PROTO_RSN BIT(1)
 #define WPA_PROTO_WAPI BIT(2)
+#define WPA_PROTO_OSEN BIT(3)
 
 #define WPA_AUTH_ALG_OPEN BIT(0)
 #define WPA_AUTH_ALG_SHARED BIT(1)

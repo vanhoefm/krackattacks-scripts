@@ -56,6 +56,11 @@ int wpa_eapol_key_mic(const u8 *key, int ver, const u8 *buf, size_t len,
 	case WPA_KEY_INFO_TYPE_AES_128_CMAC:
 		return omac1_aes_128(key, buf, len, mic);
 #endif /* CONFIG_IEEE80211R || CONFIG_IEEE80211W */
+#ifdef CONFIG_HS20
+	case WPA_KEY_INFO_TYPE_AKM_DEFINED:
+		/* FIX: This should be based on negotiated AKM */
+		return omac1_aes_128(key, buf, len, mic);
+#endif /* CONFIG_HS20 */
 	default:
 		return -1;
 	}

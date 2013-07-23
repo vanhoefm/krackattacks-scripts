@@ -41,6 +41,7 @@ struct ieee802_11_elems {
 	const u8 *ext_capab;
 	const u8 *bss_max_idle_period;
 	const u8 *ssid_list;
+	const u8 *osen;
 
 	u8 ssid_len;
 	u8 supp_rates_len;
@@ -69,6 +70,7 @@ struct ieee802_11_elems {
 	u8 hs20_len;
 	u8 ext_capab_len;
 	u8 ssid_list_len;
+	u8 osen_len;
 };
 
 typedef enum { ParseOK = 0, ParseUnknown = 1, ParseFailed = -1 } ParseRes;

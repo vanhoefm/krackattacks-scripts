@@ -185,6 +185,10 @@ CFLAGS += -DCONFIG_PEERKEY
 OBJS += ../src/ap/peerkey_auth.o
 endif
 
+ifdef CONFIG_HS20
+NEED_AES_OMAC1=y
+endif
+
 ifdef CONFIG_IEEE80211W
 CFLAGS += -DCONFIG_IEEE80211W
 NEED_SHA256=y

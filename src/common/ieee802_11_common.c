@@ -108,6 +108,11 @@ static int ieee802_11_parse_vendor_specific(const u8 *pos, size_t elen,
 			elems->hs20 = pos;
 			elems->hs20_len = elen;
 			break;
+		case HS20_OSEN_OUI_TYPE:
+			/* Hotspot 2.0 OSEN */
+			elems->osen = pos;
+			elems->osen_len = elen;
+			break;
 		default:
 			wpa_printf(MSG_MSGDUMP, "Unknown WFA "
 				   "information element ignored "

@@ -3805,6 +3805,11 @@ static int nl80211_mgmt_subscribe_non_ap(struct i802_bss *bss)
 	wpa_printf(MSG_DEBUG, "nl80211: Subscribe to mgmt frames with non-AP "
 		   "handle %p", bss->nl_mgmt);
 
+#ifdef CONFIG_INTERWORKING
+	/* QoS Map Configure */
+	if (nl80211_register_action_frame(bss, (u8 *) "\x01\x04", 2) < 0)
+		return -1;
+#endif /* CONFIG_INTERWORKING */
 #if defined(CONFIG_P2P) || defined(CONFIG_INTERWORKING)
 	/* GAS Initial Request */
 	if (nl80211_register_action_frame(bss, (u8 *) "\x04\x0a", 2) < 0)

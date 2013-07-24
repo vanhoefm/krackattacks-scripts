@@ -40,6 +40,7 @@ struct ieee802_11_elems {
 	const u8 *wfd;
 	const u8 *link_id;
 	const u8 *interworking;
+	const u8 *qos_map_set;
 	const u8 *hs20;
 	const u8 *ext_capab;
 	const u8 *bss_max_idle_period;
@@ -73,6 +74,7 @@ struct ieee802_11_elems {
 	u8 p2p_len;
 	u8 wfd_len;
 	u8 interworking_len;
+	u8 qos_map_set_len;
 	u8 hs20_len;
 	u8 ext_capab_len;
 	u8 ssid_list_len;

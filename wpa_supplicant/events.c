@@ -1503,6 +1503,43 @@ void wnm_bss_keep_alive_deinit(struct wpa_supplicant *wpa_s)
 }
 
 
+#ifdef CONFIG_INTERWORKING
+
+static int wpas_qos_map_set(struct wpa_supplicant *wpa_s, const u8 *qos_map,
+			    size_t len)
+{
+	int res;
+
+	wpa_hexdump(MSG_DEBUG, "Interworking: QoS Map Set", qos_map, len);
+	res = wpa_drv_set_qos_map(wpa_s, qos_map, len);
+	if (res) {
+		wpa_printf(MSG_DEBUG, "Interworking: Failed to configure QoS Map Set to the driver");
+	}
+
+	return res;
+}
+
+
+static void interworking_process_assoc_resp(struct wpa_supplicant *wpa_s,
+					    const u8 *ies, size_t ies_len)
+{
+	struct ieee802_11_elems elems;
+
+	if (ies == NULL)
+		return;
+
+	if (ieee802_11_parse_elems(ies, ies_len, &elems, 1) == ParseFailed)
+		return;
+
+	if (elems.qos_map_set) {
+		wpas_qos_map_set(wpa_s, elems.qos_map_set,
+				 elems.qos_map_set_len);
+	}
+}
+
+#endif /* CONFIG_INTERWORKING */
+
+
 static int wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
 					  union wpa_event_data *data)
 {
@@ -1527,6 +1564,10 @@ static int wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
 		wnm_process_assoc_resp(wpa_s, data->assoc_info.resp_ies,
 				       data->assoc_info.resp_ies_len);
 #endif /* CONFIG_WNM */
+#ifdef CONFIG_INTERWORKING
+		interworking_process_assoc_resp(wpa_s, data->assoc_info.resp_ies,
+						data->assoc_info.resp_ies_len);
+#endif /* CONFIG_INTERWORKING */
 	}
 	if (data->assoc_info.beacon_ies)
 		wpa_hexdump(MSG_DEBUG, "beacon_ies",
@@ -2906,6 +2947,19 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			break;
 		}
 #endif /* CONFIG_TDLS */
+#ifdef CONFIG_INTERWORKING
+		if (data->rx_action.category == WLAN_ACTION_QOS &&
+		    data->rx_action.len >= 1 &&
+		    data->rx_action.data[0] == QOS_QOS_MAP_CONFIG) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "Interworking: Received QoS Map Configure frame from "
+				MACSTR, MAC2STR(data->rx_action.sa));
+			if (os_memcmp(data->rx_action.sa, wpa_s->bssid, ETH_ALEN)
+			    == 0)
+				wpas_qos_map_set(wpa_s, data->rx_action.data + 1,
+						 data->rx_action.len - 1);
+			break;
+		}
+#endif /* CONFIG_INTERWORKING */
 #ifdef CONFIG_P2P
 		wpas_p2p_rx_action(wpa_s, data->rx_action.da,
 				   data->rx_action.sa,

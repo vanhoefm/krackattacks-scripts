@@ -276,6 +276,12 @@ ParseRes ieee802_11_parse_elems(const u8 *start, size_t len,
 			elems->interworking = pos;
 			elems->interworking_len = elen;
 			break;
+		case WLAN_EID_QOS_MAP_SET:
+			if (elen < 16)
+				break;
+			elems->qos_map_set = pos;
+			elems->qos_map_set_len = elen;
+			break;
 		case WLAN_EID_EXT_CAPAB:
 			elems->ext_capab = pos;
 			elems->ext_capab_len = elen;

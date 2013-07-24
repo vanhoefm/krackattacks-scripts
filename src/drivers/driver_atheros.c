@@ -872,7 +872,58 @@ static void atheros_raw_recv_hs20(void *ctx, const u8 *src_addr, const u8 *buf,
 	event.rx_mgmt.frame_len = len;
 	wpa_supplicant_event(drv->hapd, EVENT_RX_MGMT, &event);
 }
+
 #endif /* CONFIG_HS20 */
+
+
+static int atheros_set_qos_map(void *ctx, const u8 *qos_map_set,
+			       u8 qos_map_set_len)
+{
+#ifdef CONFIG_ATHEROS_QOS_MAP
+	struct atheros_driver_data *drv = ctx;
+	struct ieee80211req_athdbg req;
+	struct ieee80211_qos_map *qos_map = &req.data.qos_map;
+	struct iwreq iwr;
+	int i, up_start;
+
+	if (qos_map_set_len < 16 || qos_map_set_len > 58 ||
+	    qos_map_set_len & 1) {
+		wpa_printf(MSG_ERROR, "Invalid QoS Map");
+		return -1;
+	} else {
+		memset(&req, 0, sizeof(struct ieee80211req_athdbg));
+		req.cmd = IEEE80211_DBGREQ_SETQOSMAPCONF;
+		os_memset(&iwr, 0, sizeof(iwr));
+		os_strncpy(iwr.ifr_name, drv->iface, sizeof(iwr.ifr_name));
+		iwr.u.data.pointer = (void *) &req;
+		iwr.u.data.length = sizeof(struct ieee80211req_athdbg);
+	}
+
+	qos_map->valid = 1;
+	qos_map->num_dscp_except = (qos_map_set_len - 16) / 2;
+	if (qos_map->num_dscp_except) {
+		for (i = 0; i < qos_map->num_dscp_except; i++) {
+			qos_map->dscp_exception[i].dscp	= qos_map_set[i * 2];
+			qos_map->dscp_exception[i].up =	qos_map_set[i * 2 + 1];
+		}
+	}
+
+	up_start = qos_map_set_len - 16;
+	for (i = 0; i < IEEE80211_MAX_QOS_UP_RANGE; i++) {
+		qos_map->up[i].low = qos_map_set[up_start + (i * 2)];
+		qos_map->up[i].high = qos_map_set[up_start + (i * 2) + 1];
+	}
+
+	if (ioctl(drv->ioctl_sock, IEEE80211_IOCTL_DBGREQ, &iwr) < 0) {
+		perror("ioctl[IEEE80211_IOCTL_DBGREQ]");
+		wpa_printf(MSG_DEBUG, "%s: %s: Failed to set QoS Map",
+			   __func__, drv->iface);
+		return -1;
+	}
+#endif /* CONFIG_ATHEROS_QOS_MAP */
+
+	return 0;
+}
 
 #if defined(CONFIG_WNM) && !defined(CONFIG_IEEE80211R)
 static void atheros_raw_recv_11v(void *ctx, const u8 *src_addr, const u8 *buf,
@@ -2153,4 +2204,5 @@ const struct wpa_driver_ops wpa_driver_atheros_ops = {
 #if defined(CONFIG_WNM) && defined(IEEE80211_APPIE_FRAME_WNM)
 	.wnm_oper		= atheros_wnm_oper,
 #endif /* CONFIG_WNM && IEEE80211_APPIE_FRAME_WNM */
+	.set_qos_map		= atheros_set_qos_map,
 };

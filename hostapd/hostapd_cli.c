@@ -683,6 +683,45 @@ static int hostapd_cli_cmd_license(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int hostapd_cli_cmd_set_qos_map_set(struct wpa_ctrl *ctrl,
+					   int argc, char *argv[])
+{
+	char buf[200];
+	int res;
+
+	if (argc != 1) {
+		printf("Invalid 'set_qos_map_set' command - "
+		       "one argument (comma delimited QoS map set) "
+		       "is needed\n");
+		return -1;
+	}
+
+	res = os_snprintf(buf, sizeof(buf), "SET_QOS_MAP_SET %s", argv[0]);
+	if (res < 0 || res >= (int) sizeof(buf))
+		return -1;
+	return wpa_ctrl_command(ctrl, buf);
+}
+
+
+static int hostapd_cli_cmd_send_qos_map_conf(struct wpa_ctrl *ctrl,
+					     int argc, char *argv[])
+{
+	char buf[50];
+	int res;
+
+	if (argc != 1) {
+		printf("Invalid 'send_qos_map_conf' command - "
+		       "one argument (STA addr) is needed\n");
+		return -1;
+	}
+
+	res = os_snprintf(buf, sizeof(buf), "SEND_QOS_MAP_CONF %s", argv[0]);
+	if (res < 0 || res >= (int) sizeof(buf))
+		return -1;
+	return wpa_ctrl_command(ctrl, buf);
+}
+
+
 static int hostapd_cli_cmd_quit(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	hostapd_cli_quit = 1;
@@ -838,6 +877,8 @@ static struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	{ "quit", hostapd_cli_cmd_quit },
 	{ "set", hostapd_cli_cmd_set },
 	{ "get", hostapd_cli_cmd_get },
+	{ "set_qos_map_set", hostapd_cli_cmd_set_qos_map_set },
+	{ "send_qos_map_conf", hostapd_cli_cmd_send_qos_map_conf },
 	{ NULL, NULL }
 };
 

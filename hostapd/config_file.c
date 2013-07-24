@@ -1561,6 +1561,47 @@ fail:
 	return -1;
 }
 
+
+static int parse_qos_map_set(struct hostapd_bss_config *bss,
+			     char *buf, int line)
+{
+	u8 qos_map_set[16 + 2 * 21], count = 0;
+	char *pos = buf;
+	int val;
+
+	for (;;) {
+		if (count == sizeof(qos_map_set)) {
+			wpa_printf(MSG_ERROR, "Line %d: Too many qos_map_set "
+				   "parameters '%s'", line, buf);
+			return -1;
+		}
+
+		val = atoi(pos);
+		if (val > 255 || val < 0) {
+			wpa_printf(MSG_ERROR, "Line %d: Invalid qos_map_set "
+				   "'%s'", line, buf);
+			return -1;
+		}
+
+		qos_map_set[count++] = val;
+		pos = os_strchr(pos, ',');
+		if (!pos)
+			break;
+		pos++;
+	}
+
+	if (count < 16 || count & 1) {
+		wpa_printf(MSG_ERROR, "Line %d: Invalid qos_map_set '%s'",
+			   line, buf);
+		return -1;
+	}
+
+	os_memcpy(bss->qos_map_set, qos_map_set, count);
+	bss->qos_map_set_len = count;
+
+	return 0;
+}
+
 #endif /* CONFIG_INTERWORKING */
 
 
@@ -2886,6 +2927,9 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			bss->gas_frag_limit = atoi(pos);
 		} else if (os_strcmp(buf, "gas_comeback_delay") == 0) {
 			bss->gas_comeback_delay = atoi(pos);
+		} else if (os_strcmp(buf, "qos_map_set") == 0) {
+			if (parse_qos_map_set(bss, pos, line) < 0)
+				errors++;
 #endif /* CONFIG_INTERWORKING */
 #ifdef CONFIG_RADIUS_TEST
 		} else if (os_strcmp(buf, "dump_msk_file") == 0) {

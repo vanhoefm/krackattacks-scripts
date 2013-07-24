@@ -189,6 +189,8 @@ static void hostapd_ext_capab_byte(struct hostapd_data *hapd, u8 *pos, int idx)
 			*pos |= 0x80; /* Bit 31 - Interworking */
 		break;
 	case 4: /* Bits 32-39 */
+		if (hapd->conf->qos_map_set_len)
+			*pos |= 0x01; /* Bit 32 - QoS Map */
 		if (hapd->conf->tdls & TDLS_PROHIBIT)
 			*pos |= 0x40; /* Bit 38 - TDLS Prohibited */
 		if (hapd->conf->tdls & TDLS_PROHIBIT_CHAN_SWITCH) {
@@ -247,6 +249,23 @@ u8 * hostapd_eid_ext_capab(struct hostapd_data *hapd, u8 *eid)
 		return eid;
 
 	return eid + 2 + len;
+}
+
+
+u8 * hostapd_eid_qos_map_set(struct hostapd_data *hapd, u8 *eid)
+{
+	u8 *pos = eid;
+	u8 len = hapd->conf->qos_map_set_len;
+
+	if (!len)
+		return eid;
+
+	*pos++ = WLAN_EID_QOS_MAP_SET;
+	*pos++ = len;
+	os_memcpy(pos, hapd->conf->qos_map_set, len);
+	pos += len;
+
+	return pos;
 }
 
 

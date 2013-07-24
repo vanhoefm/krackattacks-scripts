@@ -442,6 +442,9 @@ struct hostapd_bss_config {
 	u16 gas_comeback_delay;
 	int gas_frag_limit;
 
+	u8 qos_map_set[16 + 2 * 21];
+	unsigned int qos_map_set_len;
+
 #ifdef CONFIG_HS20
 	int hs20;
 	int disable_dgaf;

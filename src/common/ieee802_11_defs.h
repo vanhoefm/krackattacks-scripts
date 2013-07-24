@@ -242,6 +242,7 @@
 #define WLAN_EID_LINK_ID 101
 #define WLAN_EID_INTERWORKING 107
 #define WLAN_EID_ADV_PROTO 108
+#define WLAN_EID_QOS_MAP_SET 110
 #define WLAN_EID_ROAMING_CONSORTIUM 111
 #define WLAN_EID_EXT_CAPAB 127
 #define WLAN_EID_CCKM 156
@@ -1078,6 +1079,15 @@ enum bss_trans_mgmt_status_code {
 #define WNM_NEIGHBOR_MEASUREMENT_PILOT          66
 #define WNM_NEIGHBOR_RRM_ENABLED_CAPABILITIES   70
 #define WNM_NEIGHBOR_MULTIPLE_BSSID             71
+
+/* QoS action */
+enum qos_action {
+	QOS_ADDTS_REQ = 0,
+	QOS_ADDTS_RESP = 1,
+	QOS_DELTS = 2,
+	QOS_SCHEDULE = 3,
+	QOS_QOS_MAP_CONFIG = 4,
+};
 
 /* IEEE Std 802.11-2012, 8.4.2.62 20/40 BSS Coexistence element */
 #define WLAN_20_40_BSS_COEX_INFO_REQ            BIT(0)

@@ -113,6 +113,9 @@ int hostapd_drv_wnm_oper(struct hostapd_data *hapd,
 			 enum wnm_oper oper, const u8 *peer,
 			 u8 *buf, u16 *buf_len);
 
+int hostapd_drv_set_qos_map(struct hostapd_data *hapd, const u8 *qos_map_set,
+			    u8 qos_map_set_len);
+
 static inline int hostapd_drv_set_countermeasures(struct hostapd_data *hapd,
 						  int enabled)
 {

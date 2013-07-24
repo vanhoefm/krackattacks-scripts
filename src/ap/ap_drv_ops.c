@@ -742,3 +742,13 @@ int hostapd_start_dfs_cac(struct hostapd_data *hapd, int mode, int freq,
 
 	return hapd->driver->start_dfs_cac(hapd->drv_priv, &data);
 }
+
+
+int hostapd_drv_set_qos_map(struct hostapd_data *hapd,
+			    const u8 *qos_map_set, u8 qos_map_set_len)
+{
+	if (hapd->driver == NULL || hapd->driver->set_qos_map == NULL)
+		return 0;
+	return hapd->driver->set_qos_map(hapd->drv_priv, qos_map_set,
+					 qos_map_set_len);
+}

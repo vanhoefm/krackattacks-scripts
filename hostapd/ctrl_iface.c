@@ -559,6 +559,106 @@ static int hostapd_ctrl_iface_wps_get_status(struct hostapd_data *hapd,
 #endif /* CONFIG_WPS */
 
 
+#ifdef CONFIG_INTERWORKING
+
+static int hostapd_ctrl_iface_set_qos_map_set(struct hostapd_data *hapd,
+					      const char *cmd)
+{
+	u8 qos_map_set[16 + 2 * 21], count = 0;
+	const char *pos = cmd;
+	int val, ret;
+
+	for (;;) {
+		if (count == sizeof(qos_map_set)) {
+			wpa_printf(MSG_ERROR, "Too many qos_map_set parameters");
+			return -1;
+		}
+
+		val = atoi(pos);
+		if (val < 0 || val > 255) {
+			wpa_printf(MSG_INFO, "Invalid QoS Map Set");
+			return -1;
+		}
+
+		qos_map_set[count++] = val;
+		pos = os_strchr(pos, ',');
+		if (!pos)
+			break;
+		pos++;
+	}
+
+	if (count < 16 || count & 1) {
+		wpa_printf(MSG_INFO, "Invalid QoS Map Set");
+		return -1;
+	}
+
+	ret = hostapd_drv_set_qos_map(hapd, qos_map_set, count);
+	if (ret) {
+		wpa_printf(MSG_INFO, "Failed to set QoS Map Set");
+		return -1;
+	}
+
+	os_memcpy(hapd->conf->qos_map_set, qos_map_set, count);
+	hapd->conf->qos_map_set_len = count;
+
+	return 0;
+}
+
+
+static int hostapd_ctrl_iface_send_qos_map_conf(struct hostapd_data *hapd,
+						const char *cmd)
+{
+	u8 addr[ETH_ALEN];
+	struct sta_info *sta;
+	struct wpabuf *buf;
+	u8 *qos_map_set = hapd->conf->qos_map_set;
+	u8 qos_map_set_len = hapd->conf->qos_map_set_len;
+	int ret;
+
+	if (!qos_map_set_len) {
+		wpa_printf(MSG_INFO, "QoS Map Set is not set");
+		return -1;
+	}
+
+	if (hwaddr_aton(cmd, addr))
+		return -1;
+
+	sta = ap_get_sta(hapd, addr);
+	if (sta == NULL) {
+		wpa_printf(MSG_DEBUG, "Station " MACSTR " not found "
+			   "for QoS Map Configuration message",
+			   MAC2STR(addr));
+		return -1;
+	}
+
+	if (!sta->qos_map_enabled) {
+		wpa_printf(MSG_DEBUG, "Station " MACSTR " did not indicate "
+			   "support for QoS Map", MAC2STR(addr));
+		return -1;
+	}
+
+	buf = wpabuf_alloc(2 + 2 + qos_map_set_len);
+	if (buf == NULL)
+		return -1;
+
+	wpabuf_put_u8(buf, WLAN_ACTION_QOS);
+	wpabuf_put_u8(buf, QOS_QOS_MAP_CONFIG);
+
+	/* QoS Map Set Element */
+	wpabuf_put_u8(buf, WLAN_EID_QOS_MAP_SET);
+	wpabuf_put_u8(buf, qos_map_set_len);
+	wpabuf_put_data(buf, qos_map_set, qos_map_set_len);
+
+	ret = hostapd_drv_send_action(hapd, hapd->iface->freq, 0, addr,
+				      wpabuf_head(buf), wpabuf_len(buf));
+	wpabuf_free(buf);
+
+	return ret;
+}
+
+#endif /* CONFIG_INTERWORKING */
+
+
 #ifdef CONFIG_WNM
 
 static int hostapd_ctrl_iface_disassoc_imminent(struct hostapd_data *hapd,
@@ -1093,6 +1193,14 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 			reply_len = -1;
 #endif /* CONFIG_WPS_NFC */
 #endif /* CONFIG_WPS */
+#ifdef CONFIG_INTERWORKING
+	} else if (os_strncmp(buf, "SET_QOS_MAP_SET ", 16) == 0) {
+		if (hostapd_ctrl_iface_set_qos_map_set(hapd, buf + 16))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "SEND_QOS_MAP_CONF ", 18) == 0) {
+		if (hostapd_ctrl_iface_send_qos_map_conf(hapd, buf + 18))
+			reply_len = -1;
+#endif /* CONFIG_INTERWORKING */
 #ifdef CONFIG_WNM
 	} else if (os_strncmp(buf, "DISASSOC_IMMINENT ", 18) == 0) {
 		if (hostapd_ctrl_iface_disassoc_imminent(hapd, buf + 18))

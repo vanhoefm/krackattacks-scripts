@@ -2572,6 +2572,15 @@ struct wpa_driver_ops {
 			u8 *buf, u16 *buf_len);
 
 	/**
+	 * set_qos_map - Set QoS Map
+	 * @priv: Private driver interface data
+	 * @qos_map_set: QoS Map
+	 * @qos_map_set_len: Length of QoS Map
+	 */
+	int (*set_qos_map)(void *priv, const u8 *qos_map_set,
+			   u8 qos_map_set_len);
+
+	/**
 	 * signal_poll - Get current connection information
 	 * @priv: Private driver interface data
 	 * @signal_info: Connection info structure

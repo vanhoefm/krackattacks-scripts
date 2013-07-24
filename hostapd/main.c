@@ -282,6 +282,15 @@ static int hostapd_driver_init(struct hostapd_iface *iface)
 		iface->drv_max_acl_mac_addrs = capa.max_acl_mac_addrs;
 	}
 
+#ifdef CONFIG_INTERWORKING
+	if (hapd->driver->set_qos_map && conf->qos_map_set_len &&
+	    hapd->driver->set_qos_map(hapd->drv_priv, conf->qos_map_set,
+				      conf->qos_map_set_len)) {
+		wpa_printf(MSG_ERROR, "Failed to initialize QoS Map.");
+		return -1;
+	}
+#endif /* CONFIG_INTERWORKING */
+
 	return 0;
 }
 

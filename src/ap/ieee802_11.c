@@ -859,6 +859,21 @@ static u16 copy_supp_rates(struct hostapd_data *hapd, struct sta_info *sta,
 }
 
 
+static u16 check_ext_capab(struct hostapd_data *hapd, struct sta_info *sta,
+			   const u8 *ext_capab_ie, size_t ext_capab_ie_len)
+{
+#ifdef CONFIG_INTERWORKING
+	/* check for QoS Map support */
+	if (ext_capab_ie_len >= 5) {
+		if (ext_capab_ie[4] & 0x01)
+			sta->qos_map_enabled = 1;
+	}
+#endif /* CONFIG_INTERWORKING */
+
+	return WLAN_STATUS_SUCCESS;
+}
+
+
 static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 			   const u8 *ies, size_t ies_len, int reassoc)
 {
@@ -879,6 +894,9 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 	if (resp != WLAN_STATUS_SUCCESS)
 		return resp;
 	resp = check_wmm(hapd, sta, elems.wmm, elems.wmm_len);
+	if (resp != WLAN_STATUS_SUCCESS)
+		return resp;
+	resp = check_ext_capab(hapd, sta, elems.ext_capab, elems.ext_capab_len);
 	if (resp != WLAN_STATUS_SUCCESS)
 		return resp;
 	resp = copy_supp_rates(hapd, sta, &elems);
@@ -1169,6 +1187,8 @@ static void send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 
 	p = hostapd_eid_ext_capab(hapd, p);
 	p = hostapd_eid_bss_max_idle_period(hapd, p);
+	if (sta->qos_map_enabled)
+		p = hostapd_eid_qos_map_set(hapd, p);
 
 	if (sta->flags & WLAN_STA_WMM)
 		p = hostapd_eid_wmm(hapd, p);

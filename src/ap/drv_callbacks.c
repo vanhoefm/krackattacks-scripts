@@ -715,6 +715,72 @@ static void hostapd_event_eapol_rx(struct hostapd_data *hapd, const u8 *src,
 }
 
 
+static struct hostapd_channel_data * hostapd_get_mode_channel(
+	struct hostapd_iface *iface, unsigned int freq)
+{
+	int i;
+	struct hostapd_channel_data *chan;
+
+	for (i = 0; i < iface->current_mode->num_channels; i++) {
+		chan = &iface->current_mode->channels[i];
+		if (!chan)
+			return NULL;
+		if ((unsigned int) chan->freq == freq)
+			return chan;
+	}
+
+	return NULL;
+}
+
+
+static void hostapd_update_nf(struct hostapd_iface *iface,
+			      struct hostapd_channel_data *chan,
+			      struct freq_survey *survey)
+{
+	if (!iface->chans_surveyed) {
+		chan->min_nf = survey->nf;
+		iface->lowest_nf = survey->nf;
+	} else {
+		if (dl_list_empty(&chan->survey_list))
+			chan->min_nf = survey->nf;
+		else if (survey->nf < chan->min_nf)
+			chan->min_nf = survey->nf;
+		if (survey->nf < iface->lowest_nf)
+			iface->lowest_nf = survey->nf;
+	}
+}
+
+
+static void hostapd_event_get_survey(struct hostapd_data *hapd,
+				     struct survey_results *survey_results)
+{
+	struct hostapd_iface *iface = hapd->iface;
+	struct freq_survey *survey, *tmp;
+	struct hostapd_channel_data *chan;
+
+	if (dl_list_empty(&survey_results->survey_list)) {
+		wpa_printf(MSG_DEBUG, "No survey data received");
+		return;
+	}
+
+	dl_list_for_each_safe(survey, tmp, &survey_results->survey_list,
+			      struct freq_survey, list) {
+		chan = hostapd_get_mode_channel(iface, survey->freq);
+		if (!chan)
+			continue;
+		if (chan->flag & HOSTAPD_CHAN_DISABLED)
+			continue;
+
+		dl_list_del(&survey->list);
+		dl_list_add_tail(&chan->survey_list, &survey->list);
+
+		hostapd_update_nf(iface, chan, survey);
+
+		iface->chans_surveyed++;
+	}
+}
+
+
 void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			  union wpa_event_data *data)
 {
@@ -855,6 +921,9 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		hostapd_event_connect_failed_reason(
 			hapd, data->connect_failed_reason.addr,
 			data->connect_failed_reason.code);
+		break;
+	case EVENT_SURVEY:
+		hostapd_event_get_survey(hapd, &data->survey_results);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "Unknown event %d", event);

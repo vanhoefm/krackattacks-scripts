@@ -9971,6 +9971,185 @@ static int nl80211_flush_pmkid(void *priv)
 }
 
 
+static void clean_survey_results(struct survey_results *survey_results)
+{
+	struct freq_survey *survey, *tmp;
+
+	if (dl_list_empty(&survey_results->survey_list))
+		return;
+
+	dl_list_for_each_safe(survey, tmp, &survey_results->survey_list,
+			      struct freq_survey, list) {
+		dl_list_del(&survey->list);
+		os_free(survey);
+	}
+}
+
+
+static void add_survey(struct nlattr **sinfo, u32 ifidx,
+		       struct dl_list *survey_list)
+{
+	struct freq_survey *survey;
+
+	survey = os_zalloc(sizeof(struct freq_survey));
+	if  (!survey)
+		return;
+
+	survey->ifidx = ifidx;
+	survey->freq = nla_get_u32(sinfo[NL80211_SURVEY_INFO_FREQUENCY]);
+	survey->filled = 0;
+
+	if (sinfo[NL80211_SURVEY_INFO_NOISE]) {
+		survey->nf = (int8_t)
+			nla_get_u8(sinfo[NL80211_SURVEY_INFO_NOISE]);
+		survey->filled |= SURVEY_HAS_NF;
+	}
+
+	if (sinfo[NL80211_SURVEY_INFO_CHANNEL_TIME]) {
+		survey->channel_time =
+			nla_get_u64(sinfo[NL80211_SURVEY_INFO_CHANNEL_TIME]);
+		survey->filled |= SURVEY_HAS_CHAN_TIME;
+	}
+
+	if (sinfo[NL80211_SURVEY_INFO_CHANNEL_TIME_BUSY]) {
+		survey->channel_time_busy =
+			nla_get_u64(sinfo[NL80211_SURVEY_INFO_CHANNEL_TIME_BUSY]);
+		survey->filled |= SURVEY_HAS_CHAN_TIME_BUSY;
+	}
+
+	if (sinfo[NL80211_SURVEY_INFO_CHANNEL_TIME_RX]) {
+		survey->channel_time_rx =
+			nla_get_u64(sinfo[NL80211_SURVEY_INFO_CHANNEL_TIME_RX]);
+		survey->filled |= SURVEY_HAS_CHAN_TIME_RX;
+	}
+
+	if (sinfo[NL80211_SURVEY_INFO_CHANNEL_TIME_TX]) {
+		survey->channel_time_tx =
+			nla_get_u64(sinfo[NL80211_SURVEY_INFO_CHANNEL_TIME_TX]);
+		survey->filled |= SURVEY_HAS_CHAN_TIME_TX;
+	}
+
+	wpa_printf(MSG_DEBUG, "nl80211: Freq survey dump event (freq=%d MHz noise=%d channel_time=%ld busy_time=%ld tx_time=%ld rx_time=%ld filled=%04x)",
+		   survey->freq,
+		   survey->nf,
+		   (unsigned long int) survey->channel_time,
+		   (unsigned long int) survey->channel_time_busy,
+		   (unsigned long int) survey->channel_time_tx,
+		   (unsigned long int) survey->channel_time_rx,
+		   survey->filled);
+
+	dl_list_add_tail(survey_list, &survey->list);
+}
+
+
+static int check_survey_ok(struct nlattr **sinfo, u32 surveyed_freq,
+			   unsigned int freq_filter)
+{
+	if (!freq_filter)
+		return 1;
+
+	return freq_filter == surveyed_freq;
+}
+
+
+static int survey_handler(struct nl_msg *msg, void *arg)
+{
+	struct nlattr *tb[NL80211_ATTR_MAX + 1];
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+	struct nlattr *sinfo[NL80211_SURVEY_INFO_MAX + 1];
+	struct survey_results *survey_results;
+	u32 surveyed_freq = 0;
+	u32 ifidx;
+
+	static struct nla_policy survey_policy[NL80211_SURVEY_INFO_MAX + 1] = {
+		[NL80211_SURVEY_INFO_FREQUENCY] = { .type = NLA_U32 },
+		[NL80211_SURVEY_INFO_NOISE] = { .type = NLA_U8 },
+	};
+
+	survey_results = (struct survey_results *) arg;
+
+	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+
+	ifidx = nla_get_u32(tb[NL80211_ATTR_IFINDEX]);
+
+	if (!tb[NL80211_ATTR_SURVEY_INFO])
+		return NL_SKIP;
+
+	if (nla_parse_nested(sinfo, NL80211_SURVEY_INFO_MAX,
+			     tb[NL80211_ATTR_SURVEY_INFO],
+			     survey_policy))
+		return NL_SKIP;
+
+	if (!sinfo[NL80211_SURVEY_INFO_FREQUENCY]) {
+		wpa_printf(MSG_ERROR, "nl80211: Invalid survey data");
+		return NL_SKIP;
+	}
+
+	surveyed_freq = nla_get_u32(sinfo[NL80211_SURVEY_INFO_FREQUENCY]);
+
+	if (!check_survey_ok(sinfo, surveyed_freq,
+			     survey_results->freq_filter))
+		return NL_SKIP;
+
+	if (survey_results->freq_filter &&
+	    survey_results->freq_filter != surveyed_freq) {
+		wpa_printf(MSG_EXCESSIVE, "nl80211: Ignoring survey data for freq %d MHz",
+			   surveyed_freq);
+		return NL_SKIP;
+	}
+
+	add_survey(sinfo, ifidx, &survey_results->survey_list);
+
+	return NL_SKIP;
+}
+
+
+static int wpa_driver_nl80211_get_survey(void *priv, unsigned int freq)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg;
+	int err = -ENOBUFS;
+	union wpa_event_data data;
+	struct survey_results *survey_results;
+
+	os_memset(&data, 0, sizeof(data));
+	survey_results = &data.survey_results;
+
+	dl_list_init(&survey_results->survey_list);
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		goto nla_put_failure;
+
+	nl80211_cmd(drv, msg, NLM_F_DUMP, NL80211_CMD_GET_SURVEY);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+
+	if (freq)
+		data.survey_results.freq_filter = freq;
+
+	do {
+		wpa_printf(MSG_DEBUG, "nl80211: Fetch survey data");
+		err = send_and_recv_msgs(drv, msg, survey_handler,
+					 survey_results);
+	} while (err > 0);
+
+	if (err) {
+		wpa_printf(MSG_ERROR, "nl80211: Failed to process survey data");
+		goto out_clean;
+	}
+
+	wpa_supplicant_event(drv->ctx, EVENT_SURVEY, &data);
+
+out_clean:
+	clean_survey_results(survey_results);
+nla_put_failure:
+	return err;
+}
+
+
 static void nl80211_set_rekey_info(void *priv, const u8 *kek, const u8 *kck,
 				   const u8 *replay_ctr)
 {
@@ -10597,4 +10776,5 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 #endif /* CONFIG_TDLS */
 	.update_ft_ies = wpa_driver_nl80211_update_ft_ies,
 	.get_mac_addr = wpa_driver_nl80211_get_macaddr,
+	.get_survey = wpa_driver_nl80211_get_survey,
 };

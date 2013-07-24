@@ -20,6 +20,7 @@
 #define WPA_SUPPLICANT_DRIVER_VERSION 4
 
 #include "common/defs.h"
+#include "utils/list.h"
 
 #define HOSTAPD_CHAN_DISABLED 0x00000001
 #define HOSTAPD_CHAN_PASSIVE_SCAN 0x00000002
@@ -55,9 +56,20 @@ struct hostapd_channel_data {
 	int flag;
 
 	/**
-	 * max_tx_power - maximum transmit power in dBm
+	 * max_tx_power - Maximum transmit power in dBm
 	 */
 	u8 max_tx_power;
+
+	/*
+	 * survey_list - Linked list of surveys
+	 */
+	struct dl_list survey_list;
+
+	/**
+	 * min_nf - Minimum observed noise floor, in dBm, based on all
+	 * surveyed channel data
+	 */
+	s8 min_nf;
 };
 
 #define HOSTAPD_MODE_FLAG_HT_INFO_KNOWN BIT(0)
@@ -2728,6 +2740,31 @@ struct wpa_driver_ops {
 	 * mode.
 	 */
 	int (*stop_ap)(void *priv);
+
+	/**
+	 * get_survey - Retrieve survey data
+	 * @priv: Private driver interface data
+	 * @freq: If set, survey data for the specified frequency is only
+	 *	being requested. If not set, all survey data is requested.
+	 * Returns: 0 on success, -1 on failure
+	 *
+	 * Use this to retrieve:
+	 *
+	 * - the observed channel noise floor
+	 * - the amount of time we have spent on the channel
+	 * - the amount of time during which we have spent on the channel that
+	 *   the radio has determined the medium is busy and we cannot
+	 *   transmit
+	 * - the amount of time we have spent receiving data
+	 * - the amount of time we have spent transmitting data
+	 *
+	 * This data can be used for spectrum heuristics. One example is
+	 * Automatic Channel Selection (ACS). The channel survey data is
+	 * kept on a linked list on the channel data, one entry is added
+	 * for each survey. The min_nf of the channel is updated for each
+	 * survey.
+	 */
+	int (*get_survey)(void *priv, unsigned int freq);
 };
 
 
@@ -3212,8 +3249,54 @@ enum wpa_event_type {
 	 *
 	 * The channel which was previously unavailable is now available again.
 	 */
-	EVENT_DFS_NOP_FINISHED
+	EVENT_DFS_NOP_FINISHED,
+
+	/*
+	* EVENT_SURVEY - Received survey data
+	*
+	* This event gets triggered when a driver query is issued for survey
+	* data and the requested data becomes available. The returned data is
+	* stored in struct survey_results. The results provide at most one
+	* survey entry for each frequency and at minimum will provide one survey
+	* entry for one frequency. The survey data can be os_malloc()'d and
+	* then os_free()'d, so the event callback must only copy data.
+	*/
+	EVENT_SURVEY
 };
+
+
+/**
+ * struct freq_survey - Channel survey info
+ *
+ * @ifidx: Interface index in which this survey was observed
+ * @freq: Center of frequency of the surveyed channel
+ * @nf: Channel noise floor in dBm
+ * @channel_time: Amount of time in ms the radio spent on the channel
+ * @channel_time_busy: Amount of time in ms the radio detected some signal
+ *     that indicated to the radio the channel was not clear
+ * @channel_time_rx: Amount of time the radio spent receiving data
+ * @channel_time_tx: Amount of time the radio spent transmitting data
+ * @filled: bitmask indicating which fields have been reported, see
+ *     SURVEY_HAS_* defines.
+ * @list: Internal list pointers
+ */
+struct freq_survey {
+	u32 ifidx;
+	unsigned int freq;
+	s8 nf;
+	u64 channel_time;
+	u64 channel_time_busy;
+	u64 channel_time_rx;
+	u64 channel_time_tx;
+	unsigned int filled;
+	struct dl_list list;
+};
+
+#define SURVEY_HAS_NF BIT(0)
+#define SURVEY_HAS_CHAN_TIME BIT(1)
+#define SURVEY_HAS_CHAN_TIME_BUSY BIT(2)
+#define SURVEY_HAS_CHAN_TIME_RX BIT(3)
+#define SURVEY_HAS_CHAN_TIME_TX BIT(4)
 
 
 /**
@@ -3858,6 +3941,17 @@ union wpa_event_data {
 	struct dfs_event {
 		int freq;
 	} dfs_event;
+
+	/**
+	 * survey_results - Survey result data for EVENT_SURVEY
+	 * @freq_filter: Requested frequency survey filter, 0 if request
+	 *	was for all survey data
+	 * @survey_list: Linked list of survey data
+	 */
+	struct survey_results {
+		unsigned int freq_filter;
+		struct dl_list survey_list; /* struct freq_survey */
+	} survey_results;
 };
 
 /**

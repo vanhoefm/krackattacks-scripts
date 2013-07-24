@@ -225,4 +225,14 @@ static inline void hostapd_drv_poll_client(struct hostapd_data *hapd,
 	hapd->driver->poll_client(hapd->drv_priv, own_addr, addr, qos);
 }
 
+static inline int hostapd_drv_get_survey(struct hostapd_data *hapd,
+					 unsigned int freq)
+{
+	if (hapd->driver == NULL)
+		return -1;
+	if (!hapd->driver->get_survey)
+		return -1;
+	return hapd->driver->get_survey(hapd->drv_priv, freq);
+}
+
 #endif /* AP_DRV_OPS */

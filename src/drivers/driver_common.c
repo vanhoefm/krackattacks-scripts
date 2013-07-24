@@ -84,6 +84,7 @@ const char * event_to_string(enum wpa_event_type event)
 	E2S(DFS_CAC_FINISHED);
 	E2S(DFS_CAC_ABORTED);
 	E2S(DFS_NOP_FINISHED);
+	E2S(SURVEY);
 	}
 
 	return "UNKNOWN";

@@ -301,6 +301,15 @@ struct hostapd_iface {
 	int olbc_ht;
 
 	u16 ht_op_mode;
+
+	/* surveying helpers */
+
+	/* number of channels surveyed */
+	unsigned int chans_surveyed;
+
+	/* lowest observed noise floor in dBm */
+	s8 lowest_nf;
+
 	void (*scan_cb)(struct hostapd_iface *iface);
 };
 

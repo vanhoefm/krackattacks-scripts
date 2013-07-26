@@ -2814,6 +2814,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			bss->osen = atoi(pos);
 		} else if (os_strcmp(buf, "anqp_domain_id") == 0) {
 			bss->anqp_domain_id = atoi(pos);
+		} else if (os_strcmp(buf, "hs20_deauth_req_timeout") == 0) {
+			bss->hs20_deauth_req_timeout = atoi(pos);
 		} else if (os_strcmp(buf, "hs20_oper_friendly_name") == 0) {
 			if (hs20_parse_oper_friendly_name(bss, pos, line) < 0)
 				errors++;

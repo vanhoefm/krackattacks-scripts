@@ -1265,6 +1265,27 @@ static void ieee802_1x_hs20_sub_rem(struct sta_info *sta, u8 *pos, size_t len)
 	/* TODO: assign the STA into remediation VLAN or add filtering */
 }
 
+
+static void ieee802_1x_hs20_deauth_req(struct hostapd_data *hapd,
+				       struct sta_info *sta, u8 *pos,
+				       size_t len)
+{
+	if (len < 3)
+		return; /* Malformed information */
+	sta->hs20_deauth_requested = 1;
+	wpa_printf(MSG_DEBUG, "HS 2.0: Deauthentication request - Code %u  "
+		   "Re-auth Delay %u",
+		   *pos, WPA_GET_LE16(pos + 1));
+	wpabuf_free(sta->hs20_deauth_req);
+	sta->hs20_deauth_req = wpabuf_alloc(len + 1);
+	if (sta->hs20_deauth_req) {
+		wpabuf_put_data(sta->hs20_deauth_req, pos, 3);
+		wpabuf_put_u8(sta->hs20_deauth_req, len - 3);
+		wpabuf_put_data(sta->hs20_deauth_req, pos + 3, len - 3);
+	}
+	ap_sta_session_timeout(hapd, sta, hapd->conf->hs20_deauth_req_timeout);
+}
+
 #endif /* CONFIG_HS20 */
 
 
@@ -1278,6 +1299,8 @@ static void ieee802_1x_check_hs20(struct hostapd_data *hapd,
 
 	buf = NULL;
 	sta->remediation = 0;
+	sta->hs20_deauth_requested = 0;
+
 	for (;;) {
 		if (radius_msg_get_attr_ptr(msg, RADIUS_ATTR_VENDOR_SPECIFIC,
 					    &buf, &len, buf) < 0)
@@ -1301,6 +1324,9 @@ static void ieee802_1x_check_hs20(struct hostapd_data *hapd,
 		switch (type) {
 		case RADIUS_VENDOR_ATTR_WFA_HS20_SUBSCR_REMEDIATION:
 			ieee802_1x_hs20_sub_rem(sta, pos, sublen);
+			break;
+		case RADIUS_VENDOR_ATTR_WFA_HS20_DEAUTH_REQ:
+			ieee802_1x_hs20_deauth_req(hapd, sta, pos, sublen);
 			break;
 		}
 	}
@@ -1468,6 +1494,7 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 		ieee802_1x_update_sta_cui(hapd, sta, msg);
 		ieee802_1x_check_hs20(hapd, sta, msg);
 		if (sm->eap_if->eapKeyAvailable && !sta->remediation &&
+		    !sta->hs20_deauth_requested &&
 		    wpa_auth_pmksa_add(sta->wpa_sm, sm->eapol_key_crypt,
 				       session_timeout_set ?
 				       (int) session_timeout : -1, sm) == 0) {
@@ -2234,11 +2261,20 @@ static void ieee802_1x_finished(struct hostapd_data *hapd,
 			os_free(sta->remediation_url);
 			sta->remediation_url = NULL;
 		}
+
+		if (sta->hs20_deauth_req) {
+			wpa_printf(MSG_DEBUG, "HS 2.0: Send WNM-Notification "
+				   "to " MACSTR " to indicate imminent "
+				   "deauthentication", MAC2STR(sta->addr));
+			hs20_send_wnm_notification_deauth_req(
+				hapd, sta->addr, sta->hs20_deauth_req);
+		}
 	}
 #endif /* CONFIG_HS20 */
 
 	key = ieee802_1x_get_key(sta->eapol_sm, &len);
 	if (success && key && len >= PMK_LEN && !sta->remediation &&
+	    !sta->hs20_deauth_requested &&
 	    wpa_auth_pmksa_add(sta->wpa_sm, key, dot11RSNAConfigPMKLifetime,
 			       sta->eapol_sm) == 0) {
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_WPA,

@@ -266,6 +266,7 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 	os_free(sta->identity);
 	os_free(sta->radius_cui);
 	os_free(sta->remediation_url);
+	wpabuf_free(sta->hs20_deauth_req);
 
 #ifdef CONFIG_SAE
 	sae_clear_data(sta->sae);

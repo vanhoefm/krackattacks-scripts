@@ -642,6 +642,56 @@ static int hostapd_ctrl_iface_hs20_wnm_notif(struct hostapd_data *hapd,
 	return hs20_send_wnm_notification(hapd, addr, 1, url);
 }
 
+
+static int hostapd_ctrl_iface_hs20_deauth_req(struct hostapd_data *hapd,
+					      const char *cmd)
+{
+	u8 addr[ETH_ALEN];
+	int code, reauth_delay, ret;
+	const char *pos;
+	size_t url_len;
+	struct wpabuf *req;
+
+	/* <STA MAC Addr> <Code(0/1)> <Re-auth-Delay(sec)> [URL] */
+	if (hwaddr_aton(cmd, addr))
+		return -1;
+
+	pos = os_strchr(cmd, ' ');
+	if (pos == NULL)
+		return -1;
+	pos++;
+	code = atoi(pos);
+
+	pos = os_strchr(pos, ' ');
+	if (pos == NULL)
+		return -1;
+	pos++;
+	reauth_delay = atoi(pos);
+
+	url_len = 0;
+	pos = os_strchr(pos, ' ');
+	if (pos) {
+		pos++;
+		url_len = os_strlen(pos);
+	}
+
+	req = wpabuf_alloc(4 + url_len);
+	if (req == NULL)
+		return -1;
+	wpabuf_put_u8(req, code);
+	wpabuf_put_le16(req, reauth_delay);
+	wpabuf_put_u8(req, url_len);
+	if (pos)
+		wpabuf_put_data(req, pos, url_len);
+
+	wpa_printf(MSG_DEBUG, "HS 2.0: Send WNM-Notification to " MACSTR
+		   " to indicate imminent deauthentication (code=%d "
+		   "reauth_delay=%d)", MAC2STR(addr), code, reauth_delay);
+	ret = hs20_send_wnm_notification_deauth_req(hapd, addr, req);
+	wpabuf_free(req);
+	return ret;
+}
+
 #endif /* CONFIG_HS20 */
 
 
@@ -1378,6 +1428,9 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 #ifdef CONFIG_HS20
 	} else if (os_strncmp(buf, "HS20_WNM_NOTIF ", 15) == 0) {
 		if (hostapd_ctrl_iface_hs20_wnm_notif(hapd, buf + 15))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "HS20_DEAUTH_REQ ", 16) == 0) {
+		if (hostapd_ctrl_iface_hs20_deauth_req(hapd, buf + 16))
 			reply_len = -1;
 #endif /* CONFIG_HS20 */
 #ifdef CONFIG_WNM

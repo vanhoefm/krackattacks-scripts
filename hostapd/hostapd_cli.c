@@ -763,6 +763,31 @@ static int hostapd_cli_cmd_hs20_wnm_notif(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int hostapd_cli_cmd_hs20_deauth_req(struct wpa_ctrl *ctrl, int argc,
+					   char *argv[])
+{
+	char buf[300];
+	int res;
+
+	if (argc < 3) {
+		printf("Invalid 'hs20_deauth_req' command - at least three arguments (STA addr, Code, Re-auth Delay) are needed\n");
+		return -1;
+	}
+
+	if (argc > 3)
+		res = os_snprintf(buf, sizeof(buf),
+				  "HS20_DEAUTH_REQ %s %s %s %s",
+				  argv[0], argv[1], argv[2], argv[3]);
+	else
+		res = os_snprintf(buf, sizeof(buf),
+				  "HS20_DEAUTH_REQ %s %s %s",
+				  argv[0], argv[1], argv[2]);
+	if (res < 0 || res >= (int) sizeof(buf))
+		return -1;
+	return wpa_ctrl_command(ctrl, buf);
+}
+
+
 static int hostapd_cli_cmd_quit(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	hostapd_cli_quit = 1;
@@ -962,6 +987,7 @@ static struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	{ "send_qos_map_conf", hostapd_cli_cmd_send_qos_map_conf },
 	{ "chan_switch", hostapd_cli_cmd_chan_switch },
 	{ "hs20_wnm_notif", hostapd_cli_cmd_hs20_wnm_notif },
+	{ "hs20_deauth_req", hostapd_cli_cmd_hs20_deauth_req },
 	{ NULL, NULL }
 };
 

@@ -140,3 +140,38 @@ int hs20_send_wnm_notification(struct hostapd_data *hapd, const u8 *addr,
 
 	return ret;
 }
+
+
+int hs20_send_wnm_notification_deauth_req(struct hostapd_data *hapd,
+					  const u8 *addr,
+					  const struct wpabuf *payload)
+{
+	struct wpabuf *buf;
+	int ret;
+
+	/* TODO: should refuse to send notification if the STA is not associated
+	 * or if the STA did not indicate support for WNM-Notification */
+
+	buf = wpabuf_alloc(4 + 6 + wpabuf_len(payload));
+	if (buf == NULL)
+		return -1;
+
+	wpabuf_put_u8(buf, WLAN_ACTION_WNM);
+	wpabuf_put_u8(buf, WNM_NOTIFICATION_REQ);
+	wpabuf_put_u8(buf, 1); /* Dialog token */
+	wpabuf_put_u8(buf, 1); /* Type - 1 reserved for WFA */
+
+	/* Deauthentication Imminent Notice subelement */
+	wpabuf_put_u8(buf, WLAN_EID_VENDOR_SPECIFIC);
+	wpabuf_put_u8(buf, 4 + wpabuf_len(payload));
+	wpabuf_put_be24(buf, OUI_WFA);
+	wpabuf_put_u8(buf, HS20_WNM_DEAUTH_IMMINENT_NOTICE);
+	wpabuf_put_buf(buf, payload);
+
+	ret = hostapd_drv_send_action(hapd, hapd->iface->freq, 0, addr,
+				      wpabuf_head(buf), wpabuf_len(buf));
+
+	wpabuf_free(buf);
+
+	return ret;
+}

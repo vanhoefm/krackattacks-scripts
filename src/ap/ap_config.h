@@ -465,6 +465,7 @@ struct hostapd_bss_config {
 	size_t hs20_connection_capability_len;
 	u8 *hs20_operating_class;
 	u8 hs20_operating_class_len;
+	unsigned int hs20_deauth_req_timeout;
 #endif /* CONFIG_HS20 */
 
 	u8 wps_rf_bands; /* RF bands for WPS (WPS_RF_*) */

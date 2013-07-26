@@ -14,10 +14,12 @@
 #include "common/ieee802_11_defs.h"
 #include "common/gas.h"
 #include "common/wpa_ctrl.h"
+#include "rsn_supp/wpa.h"
 #include "wpa_supplicant_i.h"
 #include "driver_i.h"
 #include "config.h"
 #include "bss.h"
+#include "blacklist.h"
 #include "gas_query.h"
 #include "interworking.h"
 #include "hs20_supplicant.h"
@@ -245,4 +247,34 @@ void hs20_rx_subscription_remediation(struct wpa_supplicant *wpa_s,
 			osu_method, url);
 	else
 		wpa_msg(wpa_s, MSG_INFO, HS20_SUBSCRIPTION_REMEDIATION);
+}
+
+
+void hs20_rx_deauth_imminent_notice(struct wpa_supplicant *wpa_s, u8 code,
+				    u16 reauth_delay, const char *url)
+{
+	if (!wpa_sm_pmf_enabled(wpa_s->wpa)) {
+		wpa_printf(MSG_DEBUG, "HS 2.0: Ignore deauthentication imminent notice since PMF was not enabled");
+		return;
+	}
+
+	wpa_msg(wpa_s, MSG_INFO, HS20_DEAUTH_IMMINENT_NOTICE "%u %u %s",
+		code, reauth_delay, url);
+
+	if (code == HS20_DEAUTH_REASON_CODE_BSS) {
+		wpa_printf(MSG_DEBUG, "HS 2.0: Add BSS to blacklist");
+		wpa_blacklist_add(wpa_s, wpa_s->bssid);
+	}
+
+	if (code == HS20_DEAUTH_REASON_CODE_ESS && wpa_s->current_ssid) {
+		struct os_time now;
+		os_get_time(&now);
+		if (now.sec + reauth_delay <=
+		    wpa_s->current_ssid->disabled_until.sec)
+			return;
+		wpa_printf(MSG_DEBUG, "HS 2.0: Disable network for %u seconds",
+			   reauth_delay);
+		wpa_s->current_ssid->disabled_until.sec =
+			now.sec + reauth_delay;
+	}
 }

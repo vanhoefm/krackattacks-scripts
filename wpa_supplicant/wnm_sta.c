@@ -756,7 +756,7 @@ static void ieee802_11_rx_wnm_notif_req_wfa(struct wpa_supplicant *wpa_s,
 					    const u8 *sa, const u8 *data,
 					    int len)
 {
-	const u8 *pos, *end;
+	const u8 *pos, *end, *next;
 	u8 ie, ie_len;
 
 	pos = data;
@@ -772,6 +772,13 @@ static void ieee802_11_rx_wnm_notif_req_wfa(struct wpa_supplicant *wpa_s,
 				   "subelement");
 			break;
 		}
+		next = pos + ie_len;
+		if (ie_len < 4) {
+			pos = next;
+			continue;
+		}
+		wpa_printf(MSG_DEBUG, "WNM: Subelement OUI %06x type %u",
+			   WPA_GET_BE24(pos), pos[3]);
 
 #ifdef CONFIG_HS20
 		if (ie == WLAN_EID_VENDOR_SPECIFIC && ie_len >= 5 &&
@@ -809,11 +816,45 @@ static void ieee802_11_rx_wnm_notif_req_wfa(struct wpa_supplicant *wpa_s,
 			hs20_rx_subscription_remediation(wpa_s, url,
 							 osu_method);
 			os_free(url);
-			break;
+			pos = next;
+			continue;
+		}
+
+		if (ie == WLAN_EID_VENDOR_SPECIFIC && ie_len >= 8 &&
+		    WPA_GET_BE24(pos) == OUI_WFA &&
+		    pos[3] == HS20_WNM_DEAUTH_IMMINENT_NOTICE) {
+			const u8 *ie_end;
+			u8 url_len;
+			char *url;
+			u8 code;
+			u16 reauth_delay;
+
+			ie_end = pos + ie_len;
+			pos += 4;
+			code = *pos++;
+			reauth_delay = WPA_GET_LE16(pos);
+			pos += 2;
+			url_len = *pos++;
+			wpa_printf(MSG_DEBUG, "WNM: HS 2.0 Deauthentication "
+				   "Imminent - Reason Code %u   "
+				   "Re-Auth Delay %u  URL Length %u",
+				   code, reauth_delay, url_len);
+			if (pos + url_len > ie_end)
+				break;
+			url = os_malloc(url_len + 1);
+			if (url == NULL)
+				break;
+			os_memcpy(url, pos, url_len);
+			url[url_len] = '\0';
+			hs20_rx_deauth_imminent_notice(wpa_s, code,
+						       reauth_delay, url);
+			os_free(url);
+			pos = next;
+			continue;
 		}
 #endif /* CONFIG_HS20 */
 
-		pos += ie_len;
+		pos = next;
 	}
 }
 

@@ -22,5 +22,7 @@ int hs20_get_pps_mo_id(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid);
 
 void hs20_rx_subscription_remediation(struct wpa_supplicant *wpa_s,
 				      const char *url, u8 osu_method);
+void hs20_rx_deauth_imminent_notice(struct wpa_supplicant *wpa_s, u8 code,
+				    u16 reauth_delay, const char *url);
 
 #endif /* HS20_SUPPLICANT_H */

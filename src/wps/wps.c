@@ -640,3 +640,18 @@ int wps_attr_text(struct wpabuf *data, char *buf, char *end)
 
 	return pos - buf;
 }
+
+
+const char * wps_ei_str(enum wps_error_indication ei)
+{
+	switch (ei) {
+	case WPS_EI_NO_ERROR:
+		return "No Error";
+	case WPS_EI_SECURITY_TKIP_ONLY_PROHIBITED:
+		return "TKIP Only Prohibited";
+	case WPS_EI_SECURITY_WEP_PROHIBITED:
+		return "WEP Prohibited";
+	default:
+		return "Unknown";
+	}
+}

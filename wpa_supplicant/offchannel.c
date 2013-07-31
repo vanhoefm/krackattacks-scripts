@@ -285,6 +285,8 @@ int offchannel_send_action(struct wpa_supplicant *wpa_s, unsigned int freq,
 		   "channel");
 	if (wait_time > wpa_s->max_remain_on_chan)
 		wait_time = wpa_s->max_remain_on_chan;
+	else if (wait_time == 0)
+		wait_time = 20;
 	if (wpa_drv_remain_on_channel(wpa_s, freq, wait_time) < 0) {
 		wpa_printf(MSG_DEBUG, "Off-channel: Failed to request driver "
 			   "to remain on channel (%u MHz) for Action "

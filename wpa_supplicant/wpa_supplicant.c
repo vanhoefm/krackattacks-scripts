@@ -3804,6 +3804,18 @@ void wpas_auth_failed(struct wpa_supplicant *wpa_s)
 		return;
 
 	ssid->auth_failures++;
+
+#ifdef CONFIG_P2P
+	if (ssid->p2p_group &&
+	    (wpa_s->p2p_in_provisioning || wpa_s->show_group_started)) {
+		/*
+		 * Skip the wait time since there is a short timeout on the
+		 * connection to a P2P group.
+		 */
+		return;
+	}
+#endif /* CONFIG_P2P */
+
 	if (ssid->auth_failures > 50)
 		dur = 300;
 	else if (ssid->auth_failures > 20)

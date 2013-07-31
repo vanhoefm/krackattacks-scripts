@@ -93,8 +93,14 @@ def tdls_check_ap(sta0, sta1, bssid, addr0, addr1):
     if inv_ap > 0:
         raise Exception("Invalid frames through AP path")
 
+def check_connectivity(sta0, sta1, ap):
+    hwsim_utils.test_connectivity_sta(sta0, sta1)
+    hwsim_utils.test_connectivity(sta0.ifname, ap['ifname'])
+    hwsim_utils.test_connectivity(sta1.ifname, ap['ifname'])
+
 def setup_tdls(sta0, sta1, ap, reverse=False, expect_fail=False):
     logger.info("Setup TDLS")
+    check_connectivity(sta0, sta1, ap)
     bssid = ap['bssid']
     addr0 = sta0.p2p_interface_addr()
     addr1 = sta1.p2p_interface_addr()
@@ -113,9 +119,11 @@ def setup_tdls(sta0, sta1, ap, reverse=False, expect_fail=False):
     if conf == 0:
         raise Exception("No TDLS Setup Confirm (success) seen")
     tdls_check_dl(sta0, sta1, bssid, addr0, addr1)
+    check_connectivity(sta0, sta1, ap)
 
 def teardown_tdls(sta0, sta1, ap):
     logger.info("Teardown TDLS")
+    check_connectivity(sta0, sta1, ap)
     bssid = ap['bssid']
     addr0 = sta0.p2p_interface_addr()
     addr1 = sta1.p2p_interface_addr()
@@ -126,6 +134,7 @@ def teardown_tdls(sta0, sta1, ap):
     if teardown == 0:
         raise Exception("No TDLS Setup Teardown seen")
     tdls_check_ap(sta0, sta1, bssid, addr0, addr1)
+    check_connectivity(sta0, sta1, ap)
 
 def test_ap_wpa2_tdls(dev, apdev):
     """WPA2-PSK AP and two stations using TDLS"""

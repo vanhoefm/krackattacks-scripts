@@ -93,8 +93,9 @@ def tdls_check_ap(sta0, sta1, bssid, addr0, addr1):
     if inv_ap > 0:
         raise Exception("Invalid frames through AP path")
 
-def setup_tdls(sta0, sta1, bssid, reverse=False, expect_fail=False):
+def setup_tdls(sta0, sta1, ap, reverse=False, expect_fail=False):
     logger.info("Setup TDLS")
+    bssid = ap['bssid']
     addr0 = sta0.p2p_interface_addr()
     addr1 = sta1.p2p_interface_addr()
     wt = Wlantest()
@@ -113,8 +114,9 @@ def setup_tdls(sta0, sta1, bssid, reverse=False, expect_fail=False):
         raise Exception("No TDLS Setup Confirm (success) seen")
     tdls_check_dl(sta0, sta1, bssid, addr0, addr1)
 
-def teardown_tdls(sta0, sta1, bssid):
+def teardown_tdls(sta0, sta1, ap):
     logger.info("Teardown TDLS")
+    bssid = ap['bssid']
     addr0 = sta0.p2p_interface_addr()
     addr1 = sta1.p2p_interface_addr()
     sta0.tdls_teardown(addr1)
@@ -128,131 +130,118 @@ def teardown_tdls(sta0, sta1, bssid):
 def test_ap_wpa2_tdls(dev, apdev):
     """WPA2-PSK AP and two stations using TDLS"""
     start_ap_wpa2_psk(apdev[0]['ifname'])
-    bssid = apdev[0]['bssid']
     wlantest_setup()
     connect_2sta_wpa2_psk(dev, apdev[0]['ifname'])
-    setup_tdls(dev[0], dev[1], bssid)
-    teardown_tdls(dev[0], dev[1], bssid)
-    setup_tdls(dev[1], dev[0], bssid)
-    #teardown_tdls(dev[0], dev[1], bssid)
+    setup_tdls(dev[0], dev[1], apdev[0])
+    teardown_tdls(dev[0], dev[1], apdev[0])
+    setup_tdls(dev[1], dev[0], apdev[0])
+    #teardown_tdls(dev[0], dev[1], apdev[0])
 
 def test_ap_wpa2_tdls_concurrent_init(dev, apdev):
     """Concurrent TDLS setup initiation"""
     start_ap_wpa2_psk(apdev[0]['ifname'])
-    bssid = apdev[0]['bssid']
     wlantest_setup()
     connect_2sta_wpa2_psk(dev, apdev[0]['ifname'])
     dev[0].request("SET tdls_testing 0x80")
-    setup_tdls(dev[1], dev[0], bssid, reverse=True)
+    setup_tdls(dev[1], dev[0], apdev[0], reverse=True)
 
 def test_ap_wpa2_tdls_concurrent_init2(dev, apdev):
     """Concurrent TDLS setup initiation (reverse)"""
     start_ap_wpa2_psk(apdev[0]['ifname'])
-    bssid = apdev[0]['bssid']
     wlantest_setup()
     connect_2sta_wpa2_psk(dev, apdev[0]['ifname'])
     dev[1].request("SET tdls_testing 0x80")
-    setup_tdls(dev[0], dev[1], bssid)
+    setup_tdls(dev[0], dev[1], apdev[0])
 
 def test_ap_wpa2_tdls_decline_resp(dev, apdev):
     """Decline TDLS Setup Response"""
     start_ap_wpa2_psk(apdev[0]['ifname'])
-    bssid = apdev[0]['bssid']
     wlantest_setup()
     connect_2sta_wpa2_psk(dev, apdev[0]['ifname'])
     dev[1].request("SET tdls_testing 0x200")
-    setup_tdls(dev[1], dev[0], bssid, expect_fail=True)
+    setup_tdls(dev[1], dev[0], apdev[0], expect_fail=True)
 
 def test_ap_wpa2_tdls_long_lifetime(dev, apdev):
     """TDLS with long TPK lifetime"""
     start_ap_wpa2_psk(apdev[0]['ifname'])
-    bssid = apdev[0]['bssid']
     wlantest_setup()
     connect_2sta_wpa2_psk(dev, apdev[0]['ifname'])
     dev[1].request("SET tdls_testing 0x40")
-    setup_tdls(dev[1], dev[0], bssid)
+    setup_tdls(dev[1], dev[0], apdev[0])
 
 def test_ap_wpa2_tdls_long_frame(dev, apdev):
     """TDLS with long setup/teardown frames"""
     start_ap_wpa2_psk(apdev[0]['ifname'])
-    bssid = apdev[0]['bssid']
     wlantest_setup()
     connect_2sta_wpa2_psk(dev, apdev[0]['ifname'])
     dev[0].request("SET tdls_testing 0x1")
     dev[1].request("SET tdls_testing 0x1")
-    setup_tdls(dev[1], dev[0], bssid)
-    teardown_tdls(dev[1], dev[0], bssid)
-    setup_tdls(dev[0], dev[1], bssid)
+    setup_tdls(dev[1], dev[0], apdev[0])
+    teardown_tdls(dev[1], dev[0], apdev[0])
+    setup_tdls(dev[0], dev[1], apdev[0])
 
 def test_ap_wpa2_tdls_reneg(dev, apdev):
     """Renegotiate TDLS link"""
     start_ap_wpa2_psk(apdev[0]['ifname'])
-    bssid = apdev[0]['bssid']
     wlantest_setup()
     connect_2sta_wpa2_psk(dev, apdev[0]['ifname'])
-    setup_tdls(dev[1], dev[0], bssid)
-    setup_tdls(dev[0], dev[1], bssid)
+    setup_tdls(dev[1], dev[0], apdev[0])
+    setup_tdls(dev[0], dev[1], apdev[0])
 
 def test_ap_wpa2_tdls_wrong_lifetime_resp(dev, apdev):
     """Incorrect TPK lifetime in TDLS Setup Response"""
     start_ap_wpa2_psk(apdev[0]['ifname'])
-    bssid = apdev[0]['bssid']
     wlantest_setup()
     connect_2sta_wpa2_psk(dev, apdev[0]['ifname'])
     dev[1].request("SET tdls_testing 0x10")
-    setup_tdls(dev[0], dev[1], bssid, expect_fail=True)
+    setup_tdls(dev[0], dev[1], apdev[0], expect_fail=True)
 
 def test_ap_wpa2_tdls_diff_rsnie(dev, apdev):
     """TDLS with different RSN IEs"""
     start_ap_wpa2_psk(apdev[0]['ifname'])
-    bssid = apdev[0]['bssid']
     wlantest_setup()
     connect_2sta_wpa2_psk(dev, apdev[0]['ifname'])
     dev[1].request("SET tdls_testing 0x2")
-    setup_tdls(dev[1], dev[0], bssid)
-    teardown_tdls(dev[1], dev[0], bssid)
+    setup_tdls(dev[1], dev[0], apdev[0])
+    teardown_tdls(dev[1], dev[0], apdev[0])
 
 def test_ap_wpa_tdls(dev, apdev):
     """WPA-PSK AP and two stations using TDLS"""
     hostapd.add_ap(apdev[0]['ifname'],
                    hostapd.wpa_params(ssid="test-wpa-psk",
                                       passphrase="12345678"))
-    bssid = apdev[0]['bssid']
     wlantest_setup()
     connect_2sta_wpa_psk(dev, apdev[0]['ifname'])
-    setup_tdls(dev[0], dev[1], bssid)
-    teardown_tdls(dev[0], dev[1], bssid)
-    setup_tdls(dev[1], dev[0], bssid)
+    setup_tdls(dev[0], dev[1], apdev[0])
+    teardown_tdls(dev[0], dev[1], apdev[0])
+    setup_tdls(dev[1], dev[0], apdev[0])
 
 def test_ap_wpa_mixed_tdls(dev, apdev):
     """WPA+WPA2-PSK AP and two stations using TDLS"""
     hostapd.add_ap(apdev[0]['ifname'],
                    hostapd.wpa_mixed_params(ssid="test-wpa-mixed-psk",
                                             passphrase="12345678"))
-    bssid = apdev[0]['bssid']
     wlantest_setup()
     connect_2sta_wpa_psk_mixed(dev, apdev[0]['ifname'])
-    setup_tdls(dev[0], dev[1], bssid)
-    teardown_tdls(dev[0], dev[1], bssid)
-    setup_tdls(dev[1], dev[0], bssid)
+    setup_tdls(dev[0], dev[1], apdev[0])
+    teardown_tdls(dev[0], dev[1], apdev[0])
+    setup_tdls(dev[1], dev[0], apdev[0])
 
 def test_ap_wep_tdls(dev, apdev):
     """WEP AP and two stations using TDLS"""
     hostapd.add_ap(apdev[0]['ifname'],
                    { "ssid": "test-wep", "wep_key0": '"hello"' })
-    bssid = apdev[0]['bssid']
     wlantest_setup()
     connect_2sta_wep(dev, apdev[0]['ifname'])
-    setup_tdls(dev[0], dev[1], bssid)
-    teardown_tdls(dev[0], dev[1], bssid)
-    setup_tdls(dev[1], dev[0], bssid)
+    setup_tdls(dev[0], dev[1], apdev[0])
+    teardown_tdls(dev[0], dev[1], apdev[0])
+    setup_tdls(dev[1], dev[0], apdev[0])
 
 def test_ap_open_tdls(dev, apdev):
     """Open AP and two stations using TDLS"""
     hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
-    bssid = apdev[0]['bssid']
     wlantest_setup()
     connect_2sta_open(dev, apdev[0]['ifname'])
-    setup_tdls(dev[0], dev[1], bssid)
-    teardown_tdls(dev[0], dev[1], bssid)
-    setup_tdls(dev[1], dev[0], bssid)
+    setup_tdls(dev[0], dev[1], apdev[0])
+    teardown_tdls(dev[0], dev[1], apdev[0])
+    setup_tdls(dev[1], dev[0], apdev[0])

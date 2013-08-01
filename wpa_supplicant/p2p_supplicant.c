@@ -4746,8 +4746,10 @@ int wpas_p2p_find(struct wpa_supplicant *wpa_s, unsigned int timeout,
 		return wpa_drv_p2p_find(wpa_s, timeout, type);
 
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL ||
-	    wpa_s->p2p_in_provisioning)
+	    wpa_s->p2p_in_provisioning || wpas_p2p_in_progress(wpa_s)) {
+		wpa_printf(MSG_DEBUG, "P2P: Reject p2p_find while P2P connection is in progress");
 		return -1;
+	}
 
 	wpa_supplicant_cancel_sched_scan(wpa_s);
 

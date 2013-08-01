@@ -130,6 +130,8 @@ struct sta_info {
 	u8 remediation_method;
 	char *remediation_url; /* HS 2.0 Subscription Remediation Server URL */
 	struct wpabuf *hs20_deauth_req;
+	char *hs20_session_info_url;
+	int hs20_disassoc_timer;
 
 	struct os_reltime connected_time;
 
@@ -173,6 +175,8 @@ void ap_sta_session_timeout(struct hostapd_data *hapd, struct sta_info *sta,
 			    u32 session_timeout);
 void ap_sta_no_session_timeout(struct hostapd_data *hapd,
 			       struct sta_info *sta);
+void ap_sta_session_warning_timeout(struct hostapd_data *hapd,
+				    struct sta_info *sta, int warning_time);
 struct sta_info * ap_sta_add(struct hostapd_data *hapd, const u8 *addr);
 void ap_sta_disassociate(struct hostapd_data *hapd, struct sta_info *sta,
 			 u16 reason);

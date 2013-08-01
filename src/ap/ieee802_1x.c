@@ -1286,12 +1286,55 @@ static void ieee802_1x_hs20_deauth_req(struct hostapd_data *hapd,
 	ap_sta_session_timeout(hapd, sta, hapd->conf->hs20_deauth_req_timeout);
 }
 
+
+static void ieee802_1x_hs20_session_info(struct hostapd_data *hapd,
+					 struct sta_info *sta, u8 *pos,
+					 size_t len, int session_timeout)
+{
+	unsigned int swt;
+	int warning_time, beacon_int;
+
+	if (len < 1)
+		return; /* Malformed information */
+	os_free(sta->hs20_session_info_url);
+	sta->hs20_session_info_url = os_malloc(len);
+	if (sta->hs20_session_info_url == NULL)
+		return;
+	swt = pos[0];
+	os_memcpy(sta->hs20_session_info_url, pos + 1, len - 1);
+	sta->hs20_session_info_url[len - 1] = '\0';
+	wpa_printf(MSG_DEBUG, "HS 2.0: Session Information URL='%s' SWT=%u "
+		   "(session_timeout=%d)",
+		   sta->hs20_session_info_url, swt, session_timeout);
+	if (session_timeout < 0) {
+		wpa_printf(MSG_DEBUG, "HS 2.0: No Session-Timeout set - ignore session info URL");
+		return;
+	}
+	if (swt == 255)
+		swt = 1; /* Use one minute as the AP selected value */
+
+	if ((unsigned int) session_timeout < swt * 60)
+		warning_time = 0;
+	else
+		warning_time = session_timeout - swt * 60;
+
+	beacon_int = hapd->iconf->beacon_int;
+	if (beacon_int < 1)
+		beacon_int = 100; /* best guess */
+	sta->hs20_disassoc_timer = swt * 60 * 1000 / beacon_int * 125 / 128;
+	if (sta->hs20_disassoc_timer > 65535)
+		sta->hs20_disassoc_timer = 65535;
+
+	ap_sta_session_warning_timeout(hapd, sta, warning_time);
+}
+
 #endif /* CONFIG_HS20 */
 
 
 static void ieee802_1x_check_hs20(struct hostapd_data *hapd,
 				  struct sta_info *sta,
-				  struct radius_msg *msg)
+				  struct radius_msg *msg,
+				  int session_timeout)
 {
 #ifdef CONFIG_HS20
 	u8 *buf, *pos, *end, type, sublen;
@@ -1327,6 +1370,10 @@ static void ieee802_1x_check_hs20(struct hostapd_data *hapd,
 			break;
 		case RADIUS_VENDOR_ATTR_WFA_HS20_DEAUTH_REQ:
 			ieee802_1x_hs20_deauth_req(hapd, sta, pos, sublen);
+			break;
+		case RADIUS_VENDOR_ATTR_WFA_HS20_SESSION_INFO_URL:
+			ieee802_1x_hs20_session_info(hapd, sta, pos, sublen,
+						     session_timeout);
 			break;
 		}
 	}
@@ -1492,7 +1539,9 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 		ieee802_1x_store_radius_class(hapd, sta, msg);
 		ieee802_1x_update_sta_identity(hapd, sta, msg);
 		ieee802_1x_update_sta_cui(hapd, sta, msg);
-		ieee802_1x_check_hs20(hapd, sta, msg);
+		ieee802_1x_check_hs20(hapd, sta, msg,
+				      session_timeout_set ?
+				      (int) session_timeout : -1);
 		if (sm->eap_if->eapKeyAvailable && !sta->remediation &&
 		    !sta->hs20_deauth_requested &&
 		    wpa_auth_pmksa_add(sta->wpa_sm, sm->eapol_key_crypt,

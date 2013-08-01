@@ -932,6 +932,7 @@ static int wpa_tdls_send_tpk_m1(struct wpa_sm *sm,
 	u8 *rbuf, *pos, *count_pos;
 	u16 count;
 	struct rsn_ie_hdr *hdr;
+	int status;
 
 	if (!wpa_tdls_get_privacy(sm)) {
 		wpa_printf(MSG_DEBUG, "TDLS: No security used on the link");
@@ -1092,11 +1093,11 @@ skip_ies:
 		   "Handshake Message 1 (peer " MACSTR ")",
 		   MAC2STR(peer->addr));
 
-	wpa_tdls_tpk_send(sm, peer->addr, WLAN_TDLS_SETUP_REQUEST, 1, 0,
-			  rbuf, pos - rbuf);
+	status = wpa_tdls_tpk_send(sm, peer->addr, WLAN_TDLS_SETUP_REQUEST,
+				   1, 0, rbuf, pos - rbuf);
 	os_free(rbuf);
 
-	return 0;
+	return status;
 }
 
 
@@ -1110,6 +1111,7 @@ static int wpa_tdls_send_tpk_m2(struct wpa_sm *sm,
 	u32 lifetime;
 	struct wpa_tdls_timeoutie timeoutie;
 	struct wpa_tdls_ftie *ftie;
+	int status;
 
 	buf_len = 0;
 	if (wpa_tdls_get_privacy(sm)) {
@@ -1175,11 +1177,11 @@ static int wpa_tdls_send_tpk_m2(struct wpa_sm *sm,
 			  (u8 *) &timeoutie, (u8 *) ftie, ftie->mic);
 
 skip_ies:
-	wpa_tdls_tpk_send(sm, src_addr, WLAN_TDLS_SETUP_RESPONSE, dtoken, 0,
-			  rbuf, pos - rbuf);
+	status = wpa_tdls_tpk_send(sm, src_addr, WLAN_TDLS_SETUP_RESPONSE,
+				   dtoken, 0, rbuf, pos - rbuf);
 	os_free(rbuf);
 
-	return 0;
+	return status;
 }
 
 
@@ -1193,6 +1195,7 @@ static int wpa_tdls_send_tpk_m3(struct wpa_sm *sm,
 	struct wpa_tdls_ftie *ftie;
 	struct wpa_tdls_timeoutie timeoutie;
 	u32 lifetime;
+	int status;
 
 	buf_len = 0;
 	if (wpa_tdls_get_privacy(sm)) {
@@ -1256,11 +1259,11 @@ static int wpa_tdls_send_tpk_m3(struct wpa_sm *sm,
 			  (u8 *) &timeoutie, (u8 *) ftie, ftie->mic);
 
 skip_ies:
-	wpa_tdls_tpk_send(sm, src_addr, WLAN_TDLS_SETUP_CONFIRM, dtoken, 0,
-			  rbuf, pos - rbuf);
+	status = wpa_tdls_tpk_send(sm, src_addr, WLAN_TDLS_SETUP_CONFIRM,
+				   dtoken, 0, rbuf, pos - rbuf);
 	os_free(rbuf);
 
-	return 0;
+	return status;
 }
 
 
@@ -2030,7 +2033,10 @@ skip_rsn:
 
 	wpa_printf(MSG_DEBUG, "TDLS: Sending TDLS Setup Confirm / "
 		   "TPK Handshake Message 3");
-	wpa_tdls_send_tpk_m3(sm, src_addr, dtoken, lnkid, peer);
+	if (wpa_tdls_send_tpk_m3(sm, src_addr, dtoken, lnkid, peer) < 0) {
+		wpa_tdls_disable_link(sm, peer->addr);
+		return -1;
+	}
 
 	ret = wpa_tdls_enable_link(sm, peer);
 	if (ret < 0) {
@@ -2043,8 +2049,7 @@ skip_rsn:
 error:
 	wpa_tdls_send_error(sm, src_addr, WLAN_TDLS_SETUP_CONFIRM, dtoken,
 			    status);
-	if (sm->tdls_external_setup)
-		wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK, src_addr);
+	wpa_tdls_disable_link(sm, peer->addr);
 	return -1;
 }
 

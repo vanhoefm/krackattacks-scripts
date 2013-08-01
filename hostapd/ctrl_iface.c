@@ -29,6 +29,7 @@
 #include "ap/wps_hostapd.h"
 #include "ap/ctrl_iface_ap.h"
 #include "ap/ap_drv_ops.h"
+#include "ap/wnm_ap.h"
 #include "ap/wpa_auth.h"
 #include "wps/wps_defs.h"
 #include "wps/wps.h"
@@ -708,13 +709,19 @@ static int hostapd_ctrl_iface_ess_disassoc(struct hostapd_data *hapd,
 {
 	u8 addr[ETH_ALEN];
 	const char *url, *timerstr;
-	u8 buf[1000], *pos;
-	struct ieee80211_mgmt *mgmt;
-	size_t url_len;
 	int disassoc_timer;
+	struct sta_info *sta;
 
 	if (hwaddr_aton(cmd, addr))
 		return -1;
+
+	sta = ap_get_sta(hapd, addr);
+	if (sta == NULL) {
+		wpa_printf(MSG_DEBUG, "Station " MACSTR
+			   " not found for ESS disassociation imminent message",
+			   MAC2STR(addr));
+		return -1;
+	}
 
 	timerstr = cmd + 17;
 	if (*timerstr != ' ')
@@ -728,76 +735,8 @@ static int hostapd_ctrl_iface_ess_disassoc(struct hostapd_data *hapd,
 	if (url == NULL)
 		return -1;
 	url++;
-	url_len = os_strlen(url);
-	if (url_len > 255)
-		return -1;
 
-	os_memset(buf, 0, sizeof(buf));
-	mgmt = (struct ieee80211_mgmt *) buf;
-	mgmt->frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
-					   WLAN_FC_STYPE_ACTION);
-	os_memcpy(mgmt->da, addr, ETH_ALEN);
-	os_memcpy(mgmt->sa, hapd->own_addr, ETH_ALEN);
-	os_memcpy(mgmt->bssid, hapd->own_addr, ETH_ALEN);
-	mgmt->u.action.category = WLAN_ACTION_WNM;
-	mgmt->u.action.u.bss_tm_req.action = WNM_BSS_TRANS_MGMT_REQ;
-	mgmt->u.action.u.bss_tm_req.dialog_token = 1;
-	mgmt->u.action.u.bss_tm_req.req_mode =
-		WNM_BSS_TM_REQ_DISASSOC_IMMINENT |
-		WNM_BSS_TM_REQ_ESS_DISASSOC_IMMINENT;
-	mgmt->u.action.u.bss_tm_req.disassoc_timer =
-		host_to_le16(disassoc_timer);
-	mgmt->u.action.u.bss_tm_req.validity_interval = 0x01;
-
-	pos = mgmt->u.action.u.bss_tm_req.variable;
-
-	/* Session Information URL */
-	*pos++ = url_len;
-	os_memcpy(pos, url, url_len);
-	pos += url_len;
-
-	if (hostapd_drv_send_mlme(hapd, buf, pos - buf, 0) < 0) {
-		wpa_printf(MSG_DEBUG, "Failed to send BSS Transition "
-			   "Management Request frame");
-		return -1;
-	}
-
-	/* send disassociation frame after time-out */
-	if (disassoc_timer) {
-		struct sta_info *sta;
-		int timeout, beacon_int;
-
-		/*
-		 * Prevent STA from reconnecting using cached PMKSA to force
-		 * full authentication with the authentication server (which may
-		 * decide to reject the connection),
-		 */
-		wpa_auth_pmksa_remove(hapd->wpa_auth, addr);
-
-		sta = ap_get_sta(hapd, addr);
-		if (sta == NULL) {
-			wpa_printf(MSG_DEBUG, "Station " MACSTR " not found "
-				   "for ESS disassociation imminent message",
-				   MAC2STR(addr));
-			return -1;
-		}
-
-		beacon_int = hapd->iconf->beacon_int;
-		if (beacon_int < 1)
-			beacon_int = 100; /* best guess */
-		/* Calculate timeout in ms based on beacon_int in TU */
-		timeout = disassoc_timer * beacon_int * 128 / 125;
-		wpa_printf(MSG_DEBUG, "Disassociation timer for " MACSTR
-			   " set to %d ms", MAC2STR(addr), timeout);
-
-		sta->timeout_next = STA_DISASSOC_FROM_CLI;
-		eloop_cancel_timeout(ap_handle_timer, hapd, sta);
-		eloop_register_timeout(timeout / 1000,
-				       timeout % 1000 * 1000,
-				       ap_handle_timer, hapd, sta);
-	}
-
-	return 0;
+	return wnm_send_ess_disassoc_imminent(hapd, sta, url, disassoc_timer);
 }
 
 #endif /* CONFIG_WNM */

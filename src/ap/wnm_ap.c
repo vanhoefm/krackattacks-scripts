@@ -1,6 +1,6 @@
 /*
  * hostapd - WNM
- * Copyright (c) 2011-2012, Qualcomm Atheros, Inc.
+ * Copyright (c) 2011-2013, Qualcomm Atheros, Inc.
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -9,6 +9,7 @@
 #include "utils/includes.h"
 
 #include "utils/common.h"
+#include "utils/eloop.h"
 #include "common/ieee802_11_defs.h"
 #include "ap/hostapd.h"
 #include "ap/sta_info.h"
@@ -389,4 +390,75 @@ int ieee802_11_rx_wnm_action_ap(struct hostapd_data *hapd,
 	wpa_printf(MSG_DEBUG, "WNM: Unsupported WNM Action %u from " MACSTR,
 		   action->data[0], MAC2STR(action->sa));
 	return -1;
+}
+
+
+int wnm_send_ess_disassoc_imminent(struct hostapd_data *hapd,
+				   struct sta_info *sta, const char *url,
+				   int disassoc_timer)
+{
+	u8 buf[1000], *pos;
+	struct ieee80211_mgmt *mgmt;
+	size_t url_len;
+
+	os_memset(buf, 0, sizeof(buf));
+	mgmt = (struct ieee80211_mgmt *) buf;
+	mgmt->frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
+					   WLAN_FC_STYPE_ACTION);
+	os_memcpy(mgmt->da, sta->addr, ETH_ALEN);
+	os_memcpy(mgmt->sa, hapd->own_addr, ETH_ALEN);
+	os_memcpy(mgmt->bssid, hapd->own_addr, ETH_ALEN);
+	mgmt->u.action.category = WLAN_ACTION_WNM;
+	mgmt->u.action.u.bss_tm_req.action = WNM_BSS_TRANS_MGMT_REQ;
+	mgmt->u.action.u.bss_tm_req.dialog_token = 1;
+	mgmt->u.action.u.bss_tm_req.req_mode =
+		WNM_BSS_TM_REQ_DISASSOC_IMMINENT |
+		WNM_BSS_TM_REQ_ESS_DISASSOC_IMMINENT;
+	mgmt->u.action.u.bss_tm_req.disassoc_timer =
+		host_to_le16(disassoc_timer);
+	mgmt->u.action.u.bss_tm_req.validity_interval = 0x01;
+
+	pos = mgmt->u.action.u.bss_tm_req.variable;
+
+	/* Session Information URL */
+	url_len = os_strlen(url);
+	if (url_len > 255)
+		return -1;
+	*pos++ = url_len;
+	os_memcpy(pos, url, url_len);
+	pos += url_len;
+
+	if (hostapd_drv_send_mlme(hapd, buf, pos - buf, 0) < 0) {
+		wpa_printf(MSG_DEBUG, "Failed to send BSS Transition "
+			   "Management Request frame");
+		return -1;
+	}
+
+	/* send disassociation frame after time-out */
+	if (disassoc_timer) {
+		int timeout, beacon_int;
+
+		/*
+		 * Prevent STA from reconnecting using cached PMKSA to force
+		 * full authentication with the authentication server (which may
+		 * decide to reject the connection),
+		 */
+		wpa_auth_pmksa_remove(hapd->wpa_auth, sta->addr);
+
+		beacon_int = hapd->iconf->beacon_int;
+		if (beacon_int < 1)
+			beacon_int = 100; /* best guess */
+		/* Calculate timeout in ms based on beacon_int in TU */
+		timeout = disassoc_timer * beacon_int * 128 / 125;
+		wpa_printf(MSG_DEBUG, "Disassociation timer for " MACSTR
+			   " set to %d ms", MAC2STR(sta->addr), timeout);
+
+		sta->timeout_next = STA_DISASSOC_FROM_CLI;
+		eloop_cancel_timeout(ap_handle_timer, hapd, sta);
+		eloop_register_timeout(timeout / 1000,
+				       timeout % 1000 * 1000,
+				       ap_handle_timer, hapd, sta);
+	}
+
+	return 0;
 }

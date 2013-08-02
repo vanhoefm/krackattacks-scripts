@@ -1634,8 +1634,8 @@ static struct wpa_cred * interworking_credentials_available(
 }
 
 
-static int domain_name_list_contains(struct wpabuf *domain_names,
-				     const char *domain, int exact_match)
+int domain_name_list_contains(struct wpabuf *domain_names,
+			      const char *domain, int exact_match)
 {
 	const u8 *pos, *end;
 	size_t len;

@@ -806,6 +806,9 @@ static void wpa_config_write_cred(FILE *f, struct wpa_cred *cred)
 	}
 	if (cred->update_identifier)
 		fprintf(f, "\tupdate_identifier=%d\n", cred->update_identifier);
+
+	if (cred->provisioning_sp)
+		fprintf(f, "\tprovisioning_sp=%s\n", cred->provisioning_sp);
 }
 
 

@@ -246,6 +246,11 @@ struct wpa_cred {
 	size_t num_roaming_partner;
 
 	int update_identifier;
+
+	/**
+	 * provisioning_sp - FQDN of the SP that provisioned the credential
+	 */
+	char *provisioning_sp;
 };
 
 

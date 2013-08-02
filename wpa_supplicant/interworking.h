@@ -29,5 +29,7 @@ void interworking_start_fetch_anqp(struct wpa_supplicant *wpa_s);
 int interworking_home_sp_cred(struct wpa_supplicant *wpa_s,
 			      struct wpa_cred *cred,
 			      struct wpabuf *domain_names);
+int domain_name_list_contains(struct wpabuf *domain_names,
+			      const char *domain, int exact_match);
 
 #endif /* INTERWORKING_H */

@@ -1720,15 +1720,38 @@ static int wpa_supplicant_ctrl_iface_status(struct wpa_supplicant *wpa_s,
 			if (wpa_s->current_ssid->parent_cred != cred)
 				continue;
 
-			for (i = 0; cred->domain && i < cred->num_domain; i++) {
+			if (cred->provisioning_sp) {
 				ret = os_snprintf(pos, end - pos,
-						  "home_sp=%s\n",
-						  cred->domain[i]);
+						  "provisioning_sp=%s\n",
+						  cred->provisioning_sp);
 				if (ret < 0 || ret >= end - pos)
 					return pos - buf;
 				pos += ret;
 			}
 
+			if (!cred->domain)
+				goto no_domain;
+
+			i = 0;
+			if (wpa_s->current_bss && wpa_s->current_bss->anqp) {
+				struct wpabuf *names =
+					wpa_s->current_bss->anqp->domain_name;
+				for (i = 0; names && i < cred->num_domain; i++)
+				{
+					if (domain_name_list_contains(
+						    names, cred->domain[i], 1))
+						break;
+				}
+				if (i == cred->num_domain)
+					i = 0; /* show first entry by default */
+			}
+			ret = os_snprintf(pos, end - pos, "home_sp=%s\n",
+					  cred->domain[i]);
+			if (ret < 0 || ret >= end - pos)
+				return pos - buf;
+			pos += ret;
+
+		no_domain:
 			if (wpa_s->current_bss == NULL ||
 			    wpa_s->current_bss->anqp == NULL)
 				res = -1;
@@ -2695,7 +2718,8 @@ static int wpa_supplicant_ctrl_iface_remove_cred(struct wpa_supplicant *wpa_s,
 	int id;
 	struct wpa_cred *cred, *prev;
 
-	/* cmd: "<cred id>", "all", or "sp_fqdn=<FQDN>" */
+	/* cmd: "<cred id>", "all", "sp_fqdn=<FQDN>", or
+	 * "provisioning_sp=<FQDN> */
 	if (os_strcmp(cmd, "all") == 0) {
 		wpa_printf(MSG_DEBUG, "CTRL_IFACE: REMOVE_CRED all");
 		cred = wpa_s->conf->cred;
@@ -2724,6 +2748,20 @@ static int wpa_supplicant_ctrl_iface_remove_cred(struct wpa_supplicant *wpa_s,
 					break;
 				}
 			}
+		}
+		return 0;
+	}
+
+	if (os_strncmp(cmd, "provisioning_sp=", 16) == 0) {
+		wpa_printf(MSG_DEBUG, "CTRL_IFACE: REMOVE_CRED provisioning SP FQDN '%s'",
+			   cmd + 16);
+		cred = wpa_s->conf->cred;
+		while (cred) {
+			prev = cred;
+			cred = cred->next;
+			if (prev->provisioning_sp &&
+			    os_strcmp(prev->provisioning_sp, cmd + 16) == 0)
+				wpas_ctrl_remove_cred(wpa_s, prev);
 		}
 		return 0;
 	}

@@ -1930,6 +1930,7 @@ void wpa_config_free_cred(struct wpa_cred *cred)
 	os_free(cred->phase2);
 	os_free(cred->excluded_ssid);
 	os_free(cred->roaming_partner);
+	os_free(cred->provisioning_sp);
 	os_free(cred);
 }
 
@@ -2657,6 +2658,12 @@ int wpa_config_set_cred(struct wpa_cred *cred, const char *var,
 		cred->num_roaming_partner++;
 		os_free(val);
 
+		return 0;
+	}
+
+	if (os_strcmp(var, "provisioning_sp") == 0) {
+		os_free(cred->provisioning_sp);
+		cred->provisioning_sp = val;
 		return 0;
 	}
 

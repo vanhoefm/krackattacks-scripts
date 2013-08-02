@@ -1855,6 +1855,8 @@ void wpa_config_free_ssid(struct wpa_ssid *ssid)
 
 void wpa_config_free_cred(struct wpa_cred *cred)
 {
+	size_t i;
+
 	os_free(cred->realm);
 	os_free(cred->username);
 	os_free(cred->password);
@@ -1864,6 +1866,8 @@ void wpa_config_free_cred(struct wpa_cred *cred)
 	os_free(cred->private_key_passwd);
 	os_free(cred->imsi);
 	os_free(cred->milenage);
+	for (i = 0; i < cred->num_domain; i++)
+		os_free(cred->domain[i]);
 	os_free(cred->domain);
 	os_free(cred->eap_method);
 	os_free(cred->phase1);
@@ -2437,8 +2441,16 @@ int wpa_config_set_cred(struct wpa_cred *cred, const char *var,
 	}
 
 	if (os_strcmp(var, "domain") == 0) {
-		os_free(cred->domain);
-		cred->domain = val;
+		char **new_domain;
+		new_domain = os_realloc_array(cred->domain,
+					      cred->num_domain + 1,
+					      sizeof(char *));
+		if (new_domain == NULL) {
+			os_free(val);
+			return -1;
+		}
+		new_domain[cred->num_domain++] = val;
+		cred->domain = new_domain;
 		return 0;
 	}
 

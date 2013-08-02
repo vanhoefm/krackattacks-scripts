@@ -1565,16 +1565,21 @@ static int wpa_supplicant_ctrl_iface_status(struct wpa_supplicant *wpa_s,
 		char *type;
 
 		for (cred = wpa_s->conf->cred; cred; cred = cred->next) {
+			size_t i;
+
 			if (wpa_s->current_ssid->parent_cred != cred)
 				continue;
 			if (!cred->domain)
 				continue;
 
-			ret = os_snprintf(pos, end - pos, "home_sp=%s\n",
-					  cred->domain);
-			if (ret < 0 || ret >= end - pos)
-				return pos - buf;
-			pos += ret;
+			for (i = 0; i < cred->num_domain; i++) {
+				ret = os_snprintf(pos, end - pos,
+						  "home_sp=%s\n",
+						  cred->domain[i]);
+				if (ret < 0 || ret >= end - pos)
+					return pos - buf;
+				pos += ret;
+			}
 
 			if (wpa_s->current_bss == NULL ||
 			    wpa_s->current_bss->anqp == NULL)
@@ -2448,7 +2453,7 @@ static int wpa_supplicant_ctrl_iface_list_creds(struct wpa_supplicant *wpa_s,
 		ret = os_snprintf(pos, end - pos, "%d\t%s\t%s\t%s\t%s\n",
 				  cred->id, cred->realm ? cred->realm : "",
 				  cred->username ? cred->username : "",
-				  cred->domain ? cred->domain : "",
+				  cred->domain ? cred->domain[0] : "",
 				  cred->imsi ? cred->imsi : "");
 		if (ret < 0 || ret >= end - pos)
 			return pos - buf;
@@ -2533,9 +2538,16 @@ static int wpa_supplicant_ctrl_iface_remove_cred(struct wpa_supplicant *wpa_s,
 		while (cred) {
 			prev = cred;
 			cred = cred->next;
-			if (prev->domain &&
-			    os_strcmp(prev->domain, cmd + 8) == 0)
-				wpas_ctrl_remove_cred(wpa_s, prev);
+			if (prev->domain) {
+				size_t i;
+				for (i = 0; i < prev->num_domain; i++) {
+					if (os_strcmp(prev->domain[i], cmd + 8)
+					    != 0)
+						continue;
+					wpas_ctrl_remove_cred(wpa_s, prev);
+					break;
+				}
+			}
 		}
 		return 0;
 	}

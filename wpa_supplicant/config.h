@@ -150,12 +150,19 @@ struct wpa_cred {
 	char *milenage;
 
 	/**
-	 * domain - Home service provider FQDN
+	 * domain - Home service provider FQDN(s)
 	 *
 	 * This is used to compare against the Domain Name List to figure out
-	 * whether the AP is operated by the Home SP.
+	 * whether the AP is operated by the Home SP. Multiple domain entries
+	 * can be used to configure alternative FQDNs that will be considered
+	 * home networks.
 	 */
-	char *domain;
+	char **domain;
+
+	/**
+	 * num_domain - Number of FQDNs in the domain array
+	 */
+	size_t num_domain;
 
 	/**
 	 * roaming_consortium - Roaming Consortium OI

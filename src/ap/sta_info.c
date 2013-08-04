@@ -689,15 +689,19 @@ int ap_sta_bind_vlan(struct hostapd_data *hapd, struct sta_info *sta,
 	if (sta->ssid->dynamic_vlan == DYNAMIC_VLAN_DISABLED)
 		sta->vlan_id = 0;
 	else if (sta->vlan_id > 0) {
+		struct hostapd_vlan *wildcard_vlan = NULL;
 		vlan = hapd->conf->vlan;
 		while (vlan) {
-			if (vlan->vlan_id == sta->vlan_id ||
-			    vlan->vlan_id == VLAN_ID_WILDCARD) {
-				iface = vlan->ifname;
+			if (vlan->vlan_id == sta->vlan_id)
 				break;
-			}
+			if (vlan->vlan_id == VLAN_ID_WILDCARD)
+				wildcard_vlan = vlan;
 			vlan = vlan->next;
 		}
+		if (!vlan)
+			vlan = wildcard_vlan;
+		if (vlan)
+			iface = vlan->ifname;
 	}
 
 	if (sta->vlan_id > 0 && vlan == NULL) {

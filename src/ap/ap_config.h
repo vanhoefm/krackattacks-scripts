@@ -327,7 +327,7 @@ struct hostapd_bss_config {
 	int wmm_enabled;
 	int wmm_uapsd;
 
-	struct hostapd_vlan *vlan, *vlan_tail;
+	struct hostapd_vlan *vlan;
 
 	macaddr bssid;
 

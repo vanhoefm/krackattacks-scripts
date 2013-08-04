@@ -1004,11 +1004,8 @@ int vlan_init(struct hostapd_data *hapd)
 		vlan->vlan_id = VLAN_ID_WILDCARD;
 		os_snprintf(vlan->ifname, sizeof(vlan->ifname), "%s.#",
 			    hapd->conf->iface);
-		if (hapd->conf->vlan_tail)
-			hapd->conf->vlan_tail->next = vlan;
-		else
-			hapd->conf->vlan = vlan;
-		hapd->conf->vlan_tail = vlan;
+		vlan->next = hapd->conf->vlan;
+		hapd->conf->vlan = vlan;
 	}
 
 	if (vlan_dynamic_add(hapd, hapd->conf->vlan))

@@ -93,11 +93,8 @@ static int hostapd_config_read_vlan_file(struct hostapd_bss_config *bss,
 
 		vlan->vlan_id = vlan_id;
 		os_strlcpy(vlan->ifname, pos, sizeof(vlan->ifname));
-		if (bss->vlan_tail)
-			bss->vlan_tail->next = vlan;
-		else
-			bss->vlan = vlan;
-		bss->vlan_tail = vlan;
+		vlan->next = bss->vlan;
+		bss->vlan = vlan;
 	}
 
 	fclose(f);

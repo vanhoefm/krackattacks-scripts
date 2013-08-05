@@ -227,6 +227,16 @@ Credentials can be pre-configured for automatic network selection:
 #	This optional field can be used to keep track of the SP that provisioned
 #	the credential to find the PPS MO (./Wi-Fi/<provisioning_sp>).
 #
+# Minimum backhaul threshold (PPS/<X+>/Policy/MinBackhauldThreshold/*)
+#	These fields can be used to specify minimum download/upload backhaul
+#	bandwidth that is preferred for the credential. This constraint is
+#	ignored if the AP does not advertise WAN Metrics information or if the
+#	limit would prevent any connection. Values are in kilobits per second.
+# min_dl_bandwidth_home
+# min_ul_bandwidth_home
+# min_dl_bandwidth_roaming
+# min_ul_bandwidth_roaming
+#
 # for example:
 #
 #cred={

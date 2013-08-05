@@ -2453,6 +2453,26 @@ int wpa_config_set_cred(struct wpa_cred *cred, const char *var,
 		return 0;
 	}
 
+	if (os_strcmp(var, "min_dl_bandwidth_home") == 0) {
+		cred->min_dl_bandwidth_home = atoi(value);
+		return 0;
+	}
+
+	if (os_strcmp(var, "min_ul_bandwidth_home") == 0) {
+		cred->min_ul_bandwidth_home = atoi(value);
+		return 0;
+	}
+
+	if (os_strcmp(var, "min_dl_bandwidth_roaming") == 0) {
+		cred->min_dl_bandwidth_roaming = atoi(value);
+		return 0;
+	}
+
+	if (os_strcmp(var, "min_ul_bandwidth_roaming") == 0) {
+		cred->min_ul_bandwidth_roaming = atoi(value);
+		return 0;
+	}
+
 	val = wpa_config_parse_string(value, &len);
 	if (val == NULL) {
 		wpa_printf(MSG_ERROR, "Line %d: invalid field '%s' string "

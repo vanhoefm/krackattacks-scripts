@@ -251,6 +251,11 @@ struct wpa_cred {
 	 * provisioning_sp - FQDN of the SP that provisioned the credential
 	 */
 	char *provisioning_sp;
+
+	unsigned int min_dl_bandwidth_home;
+	unsigned int min_ul_bandwidth_home;
+	unsigned int min_dl_bandwidth_roaming;
+	unsigned int min_ul_bandwidth_roaming;
 };
 
 

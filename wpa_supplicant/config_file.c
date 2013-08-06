@@ -822,6 +822,10 @@ static void wpa_config_write_cred(FILE *f, struct wpa_cred *cred)
 	if (cred->min_ul_bandwidth_roaming)
 		fprintf(f, "\tmin_ul_bandwidth_roaming=%u\n",
 			cred->min_ul_bandwidth_roaming);
+
+	if (cred->max_bss_load)
+		fprintf(f, "\tmax_bss_load=%u\n",
+			cred->max_bss_load);
 }
 
 

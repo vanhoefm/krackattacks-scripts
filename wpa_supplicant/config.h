@@ -256,6 +256,15 @@ struct wpa_cred {
 	unsigned int min_ul_bandwidth_home;
 	unsigned int min_dl_bandwidth_roaming;
 	unsigned int min_ul_bandwidth_roaming;
+
+	/**
+	 * max_bss_load - Maximum BSS Load Channel Utilization (1..255)
+	 * This value is used as the maximum channel utilization for network
+	 * selection purposes for home networks. If the AP does not advertise
+	 * BSS Load or if the limit would prevent any connection, this
+	 * constraint will be ignored.
+	 */
+	unsigned int max_bss_load;
 };
 
 

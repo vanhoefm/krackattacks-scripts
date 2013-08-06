@@ -1131,6 +1131,28 @@ static int cred_below_min_backhaul(struct wpa_supplicant *wpa_s,
 }
 
 
+static int cred_over_max_bss_load(struct wpa_supplicant *wpa_s,
+				  struct wpa_cred *cred, struct wpa_bss *bss)
+{
+	const u8 *ie;
+	int res;
+
+	if (!cred->max_bss_load)
+		return 0; /* No BSS Load constraint specified */
+
+	ie = wpa_bss_get_ie(bss, WLAN_EID_BSS_LOAD);
+	if (ie == NULL || ie[1] < 3)
+		return 0; /* No BSS Load advertised */
+
+	res = interworking_home_sp_cred(wpa_s, cred, bss->anqp ?
+					bss->anqp->domain_name : NULL);
+	if (res <= 0)
+		return 0; /* Not a home network */
+
+	return ie[4] > cred->max_bss_load;
+}
+
+
 static struct wpa_cred * interworking_credentials_available_roaming_consortium(
 	struct wpa_supplicant *wpa_s, struct wpa_bss *bss, int ignore_bw)
 {
@@ -1163,6 +1185,8 @@ static struct wpa_cred * interworking_credentials_available_roaming_consortium(
 		if (cred_no_required_oi_match(cred, bss))
 			continue;
 		if (!ignore_bw && cred_below_min_backhaul(wpa_s, cred, bss))
+			continue;
+		if (!ignore_bw && cred_over_max_bss_load(wpa_s, cred, bss))
 			continue;
 
 		if (selected == NULL ||
@@ -1656,6 +1680,9 @@ static struct wpa_cred * interworking_credentials_available_3gpp(
 			if (!ignore_bw &&
 			    cred_below_min_backhaul(wpa_s, cred, bss))
 				continue;
+			if (!ignore_bw &&
+			    cred_over_max_bss_load(wpa_s, cred, bss))
+				continue;
 			if (selected == NULL ||
 			    selected->priority < cred->priority)
 				selected = cred;
@@ -1702,6 +1729,9 @@ static struct wpa_cred * interworking_credentials_available_realm(
 					continue;
 				if (!ignore_bw &&
 				    cred_below_min_backhaul(wpa_s, cred, bss))
+					continue;
+				if (!ignore_bw &&
+				    cred_over_max_bss_load(wpa_s, cred, bss))
 					continue;
 				if (selected == NULL ||
 				    selected->priority < cred->priority)
@@ -1994,10 +2024,12 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 			type = "roaming";
 		else
 			type = "unknown";
-		wpa_msg(wpa_s, MSG_INFO, INTERWORKING_AP MACSTR " type=%s%s",
+		wpa_msg(wpa_s, MSG_INFO, INTERWORKING_AP MACSTR " type=%s%s%s",
 			MAC2STR(bss->bssid), type,
 			cred_below_min_backhaul(wpa_s, cred, bss) ?
-			" below_min_backhaul=1" : "");
+			" below_min_backhaul=1" : "",
+			cred_over_max_bss_load(wpa_s, cred, bss) ?
+			" over_max_bss_load=1" : "");
 		if (wpa_s->auto_select ||
 		    (wpa_s->conf->auto_interworking &&
 		     wpa_s->auto_network_select)) {

@@ -3002,6 +3002,25 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		PARSE_TEST_PROBABILITY(ignore_assoc_probability)
 		PARSE_TEST_PROBABILITY(ignore_reassoc_probability)
 		PARSE_TEST_PROBABILITY(corrupt_gtk_rekey_mic_probability)
+		} else if (os_strcmp(buf, "bss_load_test") == 0) {
+			WPA_PUT_LE16(bss->bss_load_test, atoi(pos));
+			pos = os_strchr(pos, ':');
+			if (pos == NULL) {
+				wpa_printf(MSG_ERROR, "Line %d: Invalid "
+					   "bss_load_test", line);
+				return 1;
+			}
+			pos++;
+			bss->bss_load_test[2] = atoi(pos);
+			pos = os_strchr(pos, ':');
+			if (pos == NULL) {
+				wpa_printf(MSG_ERROR, "Line %d: Invalid "
+					   "bss_load_test", line);
+				return 1;
+			}
+			pos++;
+			WPA_PUT_LE16(&bss->bss_load_test[3], atoi(pos));
+			bss->bss_load_test_set = 1;
 #endif /* CONFIG_TESTING_OPTIONS */
 		} else if (os_strcmp(buf, "vendor_elements") == 0) {
 			struct wpabuf *elems;

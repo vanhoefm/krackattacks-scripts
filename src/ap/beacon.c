@@ -38,6 +38,22 @@
 
 #ifdef NEED_AP_MLME
 
+static u8 * hostapd_eid_bss_load(struct hostapd_data *hapd, u8 *eid, size_t len)
+{
+#ifdef CONFIG_TESTING_OPTIONS
+	if (hapd->conf->bss_load_test_set) {
+		if (2 + 5 > len)
+			return eid;
+		*eid++ = WLAN_EID_BSS_LOAD;
+		*eid++ = 5;
+		os_memcpy(eid, hapd->conf->bss_load_test, 5);
+		eid += 5;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
+	return eid;
+}
+
+
 static u8 ieee802_11_erp_info(struct hostapd_data *hapd)
 {
 	u8 erp = 0;
@@ -250,6 +266,8 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 
 	/* RSN, MDIE, WPA */
 	pos = hostapd_eid_wpa(hapd, pos, epos - pos);
+
+	pos = hostapd_eid_bss_load(hapd, pos, epos - pos);
 
 #ifdef CONFIG_IEEE80211N
 	pos = hostapd_eid_ht_capabilities(hapd, pos);
@@ -661,6 +679,9 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 	/* RSN, MDIE, WPA */
 	tailpos = hostapd_eid_wpa(hapd, tailpos, tail + BEACON_TAIL_BUF_SIZE -
 				  tailpos);
+
+	tailpos = hostapd_eid_bss_load(hapd, tailpos,
+				       tail + BEACON_TAIL_BUF_SIZE - tailpos);
 
 #ifdef CONFIG_IEEE80211N
 	tailpos = hostapd_eid_ht_capabilities(hapd, tailpos);

@@ -61,9 +61,36 @@ struct bsd_driver_data {
 	int	prev_roaming;	/* roaming state to restore on deinit */
 	int	prev_privacy;	/* privacy state to restore on deinit */
 	int	prev_wpa;	/* wpa state to restore on deinit */
+	enum ieee80211_opmode opmode;	/* operation mode */
 };
 
 /* Generic functions for hostapd and wpa_supplicant */
+
+static enum ieee80211_opmode
+get80211opmode(struct bsd_driver_data *drv)
+{
+	struct ifmediareq ifmr;
+
+	(void) memset(&ifmr, 0, sizeof(ifmr));
+	(void) strncpy(ifmr.ifm_name, drv->ifname, sizeof(ifmr.ifm_name));
+
+	if (ioctl(drv->sock, SIOCGIFMEDIA, (caddr_t)&ifmr) >= 0) {
+		if (ifmr.ifm_current & IFM_IEEE80211_ADHOC) {
+			if (ifmr.ifm_current & IFM_FLAG0)
+				return IEEE80211_M_AHDEMO;
+			else
+				return IEEE80211_M_IBSS;
+		}
+		if (ifmr.ifm_current & IFM_IEEE80211_HOSTAP)
+			return IEEE80211_M_HOSTAP;
+		if (ifmr.ifm_current & IFM_IEEE80211_MONITOR)
+			return IEEE80211_M_MONITOR;
+		if (ifmr.ifm_current & IFM_IEEE80211_MBSS)
+			return IEEE80211_M_MBSS;
+	}
+	return IEEE80211_M_STA;
+}
+
 
 static int
 bsd_set80211(void *priv, int op, int val, const void *arg, int arg_len)
@@ -289,6 +316,7 @@ bsd_set_key(const char *ifname, void *priv, enum wpa_alg alg,
 	    size_t seq_len, const u8 *key, size_t key_len)
 {
 	struct ieee80211req_key wk;
+	struct bsd_driver_data *drv = priv;
 
 	wpa_printf(MSG_DEBUG, "%s: alg=%d addr=%p key_idx=%d set_tx=%d "
 		   "seq_len=%zu key_len=%zu", __func__, alg, addr, key_idx,
@@ -343,6 +371,14 @@ bsd_set_key(const char *ifname, void *priv, enum wpa_alg alg,
 	}
 	if (wk.ik_keyix != IEEE80211_KEYIX_NONE && set_tx)
 		wk.ik_flags |= IEEE80211_KEY_DEFAULT;
+#ifndef HOSTAPD
+	/*
+	 * Ignore replay failures in IBSS and AHDEMO mode.
+	 */
+	if (drv->opmode == IEEE80211_M_IBSS ||
+	    drv->opmode == IEEE80211_M_AHDEMO)
+		wk.ik_flags |= IEEE80211_KEY_NOREPLAY;
+#endif /* HOSTAPD */
 	wk.ik_keylen = key_len;
 	if (seq) {
 #ifdef WORDS_BIGENDIAN
@@ -1497,6 +1533,8 @@ wpa_driver_bsd_init(void *ctx, const char *ifname)
 
 	if (wpa_driver_bsd_capa(drv))
 		goto fail;
+
+	drv->opmode = get80211opmode(drv);
 
 	return drv;
 fail:

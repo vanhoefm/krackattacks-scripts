@@ -221,30 +221,6 @@ static int hostapd_broadcast_wep_set(struct hostapd_data *hapd)
 		errors++;
 	}
 
-	if (ssid->dyn_vlan_keys) {
-		size_t i;
-		for (i = 0; i <= ssid->max_dyn_vlan_keys; i++) {
-			const char *ifname;
-			struct hostapd_wep_keys *key = ssid->dyn_vlan_keys[i];
-			if (key == NULL)
-				continue;
-			ifname = hostapd_get_vlan_id_ifname(hapd->conf->vlan,
-							    i);
-			if (ifname == NULL)
-				continue;
-
-			idx = key->idx;
-			if (hostapd_drv_set_key(ifname, hapd, WPA_ALG_WEP,
-						broadcast_ether_addr, idx, 1,
-						NULL, 0, key->key[idx],
-						key->len[idx])) {
-				wpa_printf(MSG_WARNING, "Could not set "
-					   "dynamic VLAN WEP encryption.");
-				errors++;
-			}
-		}
-	}
-
 	return errors;
 }
 

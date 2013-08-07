@@ -74,8 +74,6 @@ struct hostapd_ssid {
 #ifdef CONFIG_FULL_DYNAMIC_VLAN
 	char *vlan_tagged_interface;
 #endif /* CONFIG_FULL_DYNAMIC_VLAN */
-	struct hostapd_wep_keys **dyn_vlan_keys;
-	size_t max_dyn_vlan_keys;
 };
 
 

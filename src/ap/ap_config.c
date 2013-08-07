@@ -451,19 +451,6 @@ static void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 	os_free(conf->radius);
 	os_free(conf->radius_das_shared_secret);
 	hostapd_config_free_vlan(conf);
-	if (conf->ssid.dyn_vlan_keys) {
-		struct hostapd_ssid *ssid = &conf->ssid;
-		size_t i;
-		for (i = 0; i <= ssid->max_dyn_vlan_keys; i++) {
-			if (ssid->dyn_vlan_keys[i] == NULL)
-				continue;
-			hostapd_config_free_wep(ssid->dyn_vlan_keys[i]);
-			os_free(ssid->dyn_vlan_keys[i]);
-		}
-		os_free(ssid->dyn_vlan_keys);
-		ssid->dyn_vlan_keys = NULL;
-	}
-
 	os_free(conf->time_zone);
 
 #ifdef CONFIG_IEEE80211R

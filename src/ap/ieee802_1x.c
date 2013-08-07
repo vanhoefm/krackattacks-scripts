@@ -190,9 +190,6 @@ void ieee802_1x_tx_key(struct hostapd_data *hapd, struct sta_info *sta)
 {
 	struct eapol_authenticator *eapol = hapd->eapol_auth;
 	struct eapol_state_machine *sm = sta->eapol_sm;
-#ifndef CONFIG_NO_VLAN
-	int vlan_id;
-#endif /* CONFIG_NO_VLAN */
 
 	if (sm == NULL || !sm->eap_if->eapKeyData)
 		return;
@@ -201,15 +198,12 @@ void ieee802_1x_tx_key(struct hostapd_data *hapd, struct sta_info *sta)
 		   MAC2STR(sta->addr));
 
 #ifndef CONFIG_NO_VLAN
-	vlan_id = sta->vlan_id;
-	if (vlan_id < 0 || vlan_id > MAX_VLAN_ID)
-		vlan_id = 0;
-
-	if (vlan_id) {
+	if (sta->vlan_id > 0 && sta->vlan_id <= MAX_VLAN_ID) {
 		wpa_printf(MSG_ERROR, "Using WEP with vlans is not supported.");
 		return;
 	}
 #endif /* CONFIG_NO_VLAN */
+
 	if (eapol->default_wep_key) {
 		ieee802_1x_tx_key_one(hapd, sta, eapol->default_wep_key_idx, 1,
 				      eapol->default_wep_key,

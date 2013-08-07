@@ -514,6 +514,7 @@ bsd_set_ieee8021x(void *priv, struct wpa_bss_params *params)
 	return bsd_ctrl_iface(priv, 1);
 }
 
+#ifdef HOSTAPD
 static int
 bsd_set_sta_authorized(void *priv, const u8 *addr,
 		       int total_flags, int flags_or, int flags_and)
@@ -533,6 +534,7 @@ bsd_set_sta_authorized(void *priv, const u8 *addr,
 				   IEEE80211_MLME_AUTHORIZE :
 				   IEEE80211_MLME_UNAUTHORIZE, 0, addr);
 }
+#endif /* HOSTAPD */
 
 static void
 bsd_new_sta(void *priv, void *ctx, u8 addr[IEEE80211_ADDR_LEN])
@@ -1597,6 +1599,7 @@ const struct wpa_driver_ops wpa_driver_bsd_ops = {
 	.read_sta_data		= bsd_read_sta_driver_data,
 	.sta_disassoc		= bsd_sta_disassoc,
 	.sta_deauth		= bsd_sta_deauth,
+	.sta_set_flags		= bsd_set_sta_authorized,
 #else /* HOSTAPD */
 	.init			= wpa_driver_bsd_init,
 	.deinit			= wpa_driver_bsd_deinit,
@@ -1615,6 +1618,5 @@ const struct wpa_driver_ops wpa_driver_bsd_ops = {
 	.hapd_set_ssid		= bsd_set_ssid,
 	.hapd_get_ssid		= bsd_get_ssid,
 	.hapd_send_eapol	= bsd_send_eapol,
-	.sta_set_flags		= bsd_set_sta_authorized,
 	.set_generic_elem	= bsd_set_opt_ie,
 };

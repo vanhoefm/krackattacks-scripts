@@ -265,10 +265,15 @@ bsd_ctrl_iface(void *priv, int enable)
 		return -1;
 	}
 
-	if (enable)
+	if (enable) {
+		if (ifr.ifr_flags & IFF_UP)
+			return 0;
 		ifr.ifr_flags |= IFF_UP;
-	else
+	} else {
+		if (!(ifr.ifr_flags & IFF_UP))
+			return 0;
 		ifr.ifr_flags &= ~IFF_UP;
+	}
 
 	if (ioctl(drv->sock, SIOCSIFFLAGS, &ifr) < 0) {
 		perror("ioctl[SIOCSIFFLAGS]");

@@ -310,6 +310,14 @@ bsd_ctrl_iface(void *priv, int enable)
 	return 0;
 }
 
+#ifdef HOSTAPD
+static int
+bsd_commit(void *priv)
+{
+	return bsd_ctrl_iface(priv, 1);
+}
+#endif /* HOSTAPD */
+
 static int
 bsd_set_key(const char *ifname, void *priv, enum wpa_alg alg,
 	    const unsigned char *addr, int key_idx, int set_tx, const u8 *seq,
@@ -1600,6 +1608,7 @@ const struct wpa_driver_ops wpa_driver_bsd_ops = {
 	.sta_disassoc		= bsd_sta_disassoc,
 	.sta_deauth		= bsd_sta_deauth,
 	.sta_set_flags		= bsd_set_sta_authorized,
+	.commit			= bsd_commit,
 #else /* HOSTAPD */
 	.init			= wpa_driver_bsd_init,
 	.deinit			= wpa_driver_bsd_deinit,

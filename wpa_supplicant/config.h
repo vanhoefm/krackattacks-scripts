@@ -265,6 +265,10 @@ struct wpa_cred {
 	 * constraint will be ignored.
 	 */
 	unsigned int max_bss_load;
+
+	unsigned int num_req_conn_capab;
+	u8 *req_conn_capab_proto;
+	int **req_conn_capab_port;
 };
 
 

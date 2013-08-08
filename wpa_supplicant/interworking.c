@@ -167,6 +167,7 @@ static int cred_with_domain(struct wpa_supplicant *wpa_s)
 
 
 #ifdef CONFIG_HS20
+
 static int cred_with_min_backhaul(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_cred *cred;
@@ -180,6 +181,19 @@ static int cred_with_min_backhaul(struct wpa_supplicant *wpa_s)
 	}
 	return 0;
 }
+
+
+static int cred_with_conn_capab(struct wpa_supplicant *wpa_s)
+{
+	struct wpa_cred *cred;
+
+	for (cred = wpa_s->conf->cred; cred; cred = cred->next) {
+		if (cred->num_req_conn_capab)
+			return 1;
+	}
+	return 0;
+}
+
 #endif /* CONFIG_HS20 */
 
 
@@ -253,7 +267,7 @@ static int interworking_anqp_send_req(struct wpa_supplicant *wpa_s,
 				      HS20_STYPE_OPERATOR_FRIENDLY_NAME);
 		if (all || cred_with_min_backhaul(wpa_s))
 			wpabuf_put_u8(extra, HS20_STYPE_WAN_METRICS);
-		if (all)
+		if (all || cred_with_conn_capab(wpa_s))
 			wpabuf_put_u8(extra, HS20_STYPE_CONNECTION_CAPABILITY);
 		if (all)
 			wpabuf_put_u8(extra, HS20_STYPE_OPERATING_CLASS);
@@ -1153,6 +1167,76 @@ static int cred_over_max_bss_load(struct wpa_supplicant *wpa_s,
 }
 
 
+static int has_proto_match(const u8 *pos, const u8 *end, u8 proto)
+{
+	while (pos + 4 <= end) {
+		if (pos[0] == proto && pos[3] == 1 /* Open */)
+			return 1;
+		pos += 4;
+	}
+
+	return 0;
+}
+
+
+static int has_proto_port_match(const u8 *pos, const u8 *end, u8 proto,
+				u16 port)
+{
+	while (pos + 4 <= end) {
+		if (pos[0] == proto && WPA_GET_LE16(&pos[1]) == port &&
+		    pos[3] == 1 /* Open */)
+			return 1;
+		pos += 4;
+	}
+
+	return 0;
+}
+
+
+static int cred_conn_capab_missing(struct wpa_supplicant *wpa_s,
+				   struct wpa_cred *cred, struct wpa_bss *bss)
+{
+	int res;
+	const u8 *capab, *end;
+	unsigned int i, j;
+	int *ports;
+
+	if (!cred->num_req_conn_capab)
+		return 0; /* No connection capability constraint specified */
+
+	if (bss->anqp == NULL || bss->anqp->hs20_connection_capability == NULL)
+		return 0; /* No Connection Capability known - ignore constraint
+			   */
+
+	res = interworking_home_sp_cred(wpa_s, cred, bss->anqp ?
+					bss->anqp->domain_name : NULL);
+	if (res > 0)
+		return 0; /* No constraint in home network */
+
+	capab = wpabuf_head(bss->anqp->hs20_connection_capability);
+	end = capab + wpabuf_len(bss->anqp->hs20_connection_capability);
+
+	for (i = 0; i < cred->num_req_conn_capab; i++) {
+		ports = cred->req_conn_capab_port[i];
+		if (!ports) {
+			if (!has_proto_match(capab, end,
+					     cred->req_conn_capab_proto[i]))
+				return 1;
+		} else {
+			for (j = 0; ports[j] > -1; j++) {
+				if (!has_proto_port_match(
+					    capab, end,
+					    cred->req_conn_capab_proto[i],
+					    ports[j]))
+					return 1;
+			}
+		}
+	}
+
+	return 0;
+}
+
+
 static struct wpa_cred * interworking_credentials_available_roaming_consortium(
 	struct wpa_supplicant *wpa_s, struct wpa_bss *bss, int ignore_bw)
 {
@@ -1187,6 +1271,8 @@ static struct wpa_cred * interworking_credentials_available_roaming_consortium(
 		if (!ignore_bw && cred_below_min_backhaul(wpa_s, cred, bss))
 			continue;
 		if (!ignore_bw && cred_over_max_bss_load(wpa_s, cred, bss))
+			continue;
+		if (!ignore_bw && cred_conn_capab_missing(wpa_s, cred, bss))
 			continue;
 
 		if (selected == NULL ||
@@ -1683,6 +1769,9 @@ static struct wpa_cred * interworking_credentials_available_3gpp(
 			if (!ignore_bw &&
 			    cred_over_max_bss_load(wpa_s, cred, bss))
 				continue;
+			if (!ignore_bw &&
+			    cred_conn_capab_missing(wpa_s, cred, bss))
+				continue;
 			if (selected == NULL ||
 			    selected->priority < cred->priority)
 				selected = cred;
@@ -1732,6 +1821,9 @@ static struct wpa_cred * interworking_credentials_available_realm(
 					continue;
 				if (!ignore_bw &&
 				    cred_over_max_bss_load(wpa_s, cred, bss))
+					continue;
+				if (!ignore_bw &&
+				    cred_conn_capab_missing(wpa_s, cred, bss))
 					continue;
 				if (selected == NULL ||
 				    selected->priority < cred->priority)
@@ -2024,12 +2116,15 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 			type = "roaming";
 		else
 			type = "unknown";
-		wpa_msg(wpa_s, MSG_INFO, INTERWORKING_AP MACSTR " type=%s%s%s",
+		wpa_msg(wpa_s, MSG_INFO, INTERWORKING_AP MACSTR
+			" type=%s%s%s%s",
 			MAC2STR(bss->bssid), type,
 			cred_below_min_backhaul(wpa_s, cred, bss) ?
 			" below_min_backhaul=1" : "",
 			cred_over_max_bss_load(wpa_s, cred, bss) ?
-			" over_max_bss_load=1" : "");
+			" over_max_bss_load=1" : "",
+			cred_conn_capab_missing(wpa_s, cred, bss) ?
+			" conn_capab_missing=1" : "");
 		if (wpa_s->auto_select ||
 		    (wpa_s->conf->auto_interworking &&
 		     wpa_s->auto_network_select)) {

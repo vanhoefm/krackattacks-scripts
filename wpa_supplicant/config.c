@@ -1931,6 +1931,10 @@ void wpa_config_free_cred(struct wpa_cred *cred)
 	os_free(cred->excluded_ssid);
 	os_free(cred->roaming_partner);
 	os_free(cred->provisioning_sp);
+	for (i = 0; i < cred->num_req_conn_capab; i++)
+		os_free(cred->req_conn_capab_port[i]);
+	os_free(cred->req_conn_capab_port);
+	os_free(cred->req_conn_capab_proto);
 	os_free(cred);
 }
 
@@ -2402,6 +2406,69 @@ void wpa_config_update_psk(struct wpa_ssid *ssid)
 }
 
 
+static int wpa_config_set_cred_req_conn_capab(struct wpa_cred *cred,
+					      const char *value)
+{
+	u8 *proto;
+	int **port;
+	int *ports, *nports;
+	const char *pos;
+	unsigned int num_ports;
+
+	proto = os_realloc_array(cred->req_conn_capab_proto,
+				 cred->num_req_conn_capab + 1, sizeof(u8));
+	if (proto == NULL)
+		return -1;
+	cred->req_conn_capab_proto = proto;
+
+	port = os_realloc_array(cred->req_conn_capab_port,
+				cred->num_req_conn_capab + 1, sizeof(int *));
+	if (port == NULL)
+		return -1;
+	cred->req_conn_capab_port = port;
+
+	proto[cred->num_req_conn_capab] = atoi(value);
+
+	pos = os_strchr(value, ':');
+	if (pos == NULL) {
+		port[cred->num_req_conn_capab] = NULL;
+		cred->num_req_conn_capab++;
+		return 0;
+	}
+	pos++;
+
+	ports = NULL;
+	num_ports = 0;
+
+	while (*pos) {
+		nports = os_realloc_array(ports, num_ports + 1, sizeof(int));
+		if (nports == NULL) {
+			os_free(ports);
+			return -1;
+		}
+		ports = nports;
+		ports[num_ports++] = atoi(pos);
+
+		pos = os_strchr(pos, ',');
+		if (pos == NULL)
+			break;
+		pos++;
+	}
+
+	nports = os_realloc_array(ports, num_ports + 1, sizeof(int));
+	if (nports == NULL) {
+		os_free(ports);
+		return -1;
+	}
+	ports = nports;
+	ports[num_ports] = -1;
+
+	port[cred->num_req_conn_capab] = ports;
+	cred->num_req_conn_capab++;
+	return 0;
+}
+
+
 int wpa_config_set_cred(struct wpa_cred *cred, const char *var,
 			const char *value, int line)
 {
@@ -2477,6 +2544,9 @@ int wpa_config_set_cred(struct wpa_cred *cred, const char *var,
 		cred->max_bss_load = atoi(value);
 		return 0;
 	}
+
+	if (os_strcmp(var, "req_conn_capab") == 0)
+		return wpa_config_set_cred_req_conn_capab(cred, value);
 
 	val = wpa_config_parse_string(value, &len);
 	if (val == NULL) {

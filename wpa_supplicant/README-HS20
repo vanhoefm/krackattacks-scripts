@@ -244,6 +244,21 @@ Credentials can be pre-configured for automatic network selection:
 #	BSS Load or if the limit would prevent any connection, this constraint
 #	will be ignored.
 #
+# req_conn_capab: Required connection capability
+#	(PPS/<X+>/Policy/RequiredProtoPortTuple)
+#	This value is used to configure set of required protocol/port pairs that
+#	a roaming network shall support (include explicitly in Connection
+#	Capability ANQP element). This constraint is ignored if the AP does not
+#	advertise Connection Capability or if this constraint would prevent any
+#	network connection. This policy is not used in home networks.
+#	Format: <protocol>[:<comma-separated list of ports]
+#	Multiple entries can be used to list multiple requirements.
+#	For example, number of common TCP protocols:
+#	req_conn_capab=6,22,80,443
+#	For example, IPSec/IKE:
+#	req_conn_capab=17:500
+#	req_conn_capab=50
+#
 # for example:
 #
 #cred={

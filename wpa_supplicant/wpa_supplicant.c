@@ -4344,16 +4344,22 @@ void wpas_auth_failed(struct wpa_supplicant *wpa_s)
 
 	if (ssid->auth_failures > 50)
 		dur = 300;
-	else if (ssid->auth_failures > 20)
-		dur = 120;
 	else if (ssid->auth_failures > 10)
-		dur = 60;
+		dur = 120;
 	else if (ssid->auth_failures > 5)
+		dur = 90;
+	else if (ssid->auth_failures > 3)
+		dur = 60;
+	else if (ssid->auth_failures > 2)
 		dur = 30;
 	else if (ssid->auth_failures > 1)
 		dur = 20;
 	else
 		dur = 10;
+
+	if (ssid->auth_failures > 1 &&
+	    wpa_key_mgmt_wpa_ieee8021x(ssid->key_mgmt))
+		dur += os_random() % (ssid->auth_failures * 10);
 
 	os_get_reltime(&now);
 	if (now.sec + dur <= ssid->disabled_until.sec)

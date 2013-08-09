@@ -46,9 +46,11 @@
 
 static void interworking_next_anqp_fetch(struct wpa_supplicant *wpa_s);
 static struct wpa_cred * interworking_credentials_available_realm(
-	struct wpa_supplicant *wpa_s, struct wpa_bss *bss, int ignore_bw);
+	struct wpa_supplicant *wpa_s, struct wpa_bss *bss, int ignore_bw,
+	int *excluded);
 static struct wpa_cred * interworking_credentials_available_3gpp(
-	struct wpa_supplicant *wpa_s, struct wpa_bss *bss, int ignore_bw);
+	struct wpa_supplicant *wpa_s, struct wpa_bss *bss, int ignore_bw,
+	int *excluded);
 
 
 static void interworking_reconnect(struct wpa_supplicant *wpa_s)
@@ -1238,10 +1240,12 @@ static int cred_conn_capab_missing(struct wpa_supplicant *wpa_s,
 
 
 static struct wpa_cred * interworking_credentials_available_roaming_consortium(
-	struct wpa_supplicant *wpa_s, struct wpa_bss *bss, int ignore_bw)
+	struct wpa_supplicant *wpa_s, struct wpa_bss *bss, int ignore_bw,
+	int *excluded)
 {
 	struct wpa_cred *cred, *selected = NULL;
 	const u8 *ie;
+	int is_excluded = 0;
 
 	ie = wpa_bss_get_ie(bss, WLAN_EID_ROAMING_CONSORTIUM);
 
@@ -1264,8 +1268,6 @@ static struct wpa_cred * interworking_credentials_available_roaming_consortium(
 					      cred->roaming_consortium_len))
 			continue;
 
-		if (cred_excluded_ssid(cred, bss))
-			continue;
 		if (cred_no_required_oi_match(cred, bss))
 			continue;
 		if (!ignore_bw && cred_below_min_backhaul(wpa_s, cred, bss))
@@ -1274,11 +1276,24 @@ static struct wpa_cred * interworking_credentials_available_roaming_consortium(
 			continue;
 		if (!ignore_bw && cred_conn_capab_missing(wpa_s, cred, bss))
 			continue;
-
-		if (selected == NULL ||
-		    selected->priority < cred->priority)
-			selected = cred;
+		if (cred_excluded_ssid(cred, bss)) {
+			if (excluded == NULL)
+				continue;
+			if (selected == NULL) {
+				selected = cred;
+				is_excluded = 1;
+			}
+		} else {
+			if (selected == NULL || is_excluded ||
+			    selected->priority < cred->priority) {
+				selected = cred;
+				is_excluded = 0;
+			}
+		}
 	}
+
+	if (excluded)
+		*excluded = is_excluded;
 
 	return selected;
 }
@@ -1451,7 +1466,8 @@ fail:
 }
 
 
-int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
+static int interworking_connect_helper(struct wpa_supplicant *wpa_s,
+				       struct wpa_bss *bss, int allow_excluded)
 {
 	struct wpa_cred *cred, *cred_rc, *cred_3gpp;
 	struct wpa_ssid *ssid;
@@ -1459,6 +1475,7 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 	struct nai_realm_eap *eap = NULL;
 	u16 count, i;
 	char buf[100];
+	int excluded = 0, *excl = allow_excluded ? &excluded : NULL;
 
 	if (wpa_s->conf->cred == NULL || bss == NULL)
 		return -1;
@@ -1479,50 +1496,64 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 		return -1;
 	}
 
-	cred_rc = interworking_credentials_available_roaming_consortium(wpa_s,
-									bss, 0);
+	cred_rc = interworking_credentials_available_roaming_consortium(
+		wpa_s, bss, 0, excl);
 	if (cred_rc) {
 		wpa_printf(MSG_DEBUG, "Interworking: Highest roaming "
 			   "consortium matching credential priority %d",
 			   cred_rc->priority);
+		if (allow_excluded && excl && !(*excl))
+			excl = NULL;
 	}
 
-	cred = interworking_credentials_available_realm(wpa_s, bss, 0);
+	cred = interworking_credentials_available_realm(wpa_s, bss, 0, excl);
 	if (cred) {
 		wpa_printf(MSG_DEBUG, "Interworking: Highest NAI Realm list "
 			   "matching credential priority %d",
 			   cred->priority);
+		if (allow_excluded && excl && !(*excl))
+			excl = NULL;
 	}
 
-	cred_3gpp = interworking_credentials_available_3gpp(wpa_s, bss, 0);
+	cred_3gpp = interworking_credentials_available_3gpp(wpa_s, bss, 0,
+							    excl);
 	if (cred_3gpp) {
 		wpa_printf(MSG_DEBUG, "Interworking: Highest 3GPP matching "
 			   "credential priority %d", cred_3gpp->priority);
+		if (allow_excluded && excl && !(*excl))
+			excl = NULL;
 	}
 
 	if (!cred_rc && !cred && !cred_3gpp) {
 		cred_rc = interworking_credentials_available_roaming_consortium(
-			wpa_s, bss, 1);
+			wpa_s, bss, 1, excl);
 		if (cred_rc) {
 			wpa_printf(MSG_DEBUG, "Interworking: Highest roaming "
 				   "consortium matching credential priority %d "
 				   "(ignore BW)",
 				   cred_rc->priority);
+			if (allow_excluded && excl && !(*excl))
+				excl = NULL;
 		}
 
-		cred = interworking_credentials_available_realm(wpa_s, bss, 1);
+		cred = interworking_credentials_available_realm(wpa_s, bss, 1,
+								excl);
 		if (cred) {
 			wpa_printf(MSG_DEBUG, "Interworking: Highest NAI Realm "
 				   "list matching credential priority %d "
 				   "(ignore BW)", cred->priority);
+			if (allow_excluded && excl && !(*excl))
+				excl = NULL;
 		}
 
 		cred_3gpp = interworking_credentials_available_3gpp(wpa_s, bss,
-								    1);
+								    1, excl);
 		if (cred_3gpp) {
 			wpa_printf(MSG_DEBUG, "Interworking: Highest 3GPP "
 				   "matching credential priority %d (ignore BW)",
 				   cred_3gpp->priority);
+			if (allow_excluded && excl && !(*excl))
+				excl = NULL;
 		}
 	}
 
@@ -1681,13 +1712,21 @@ fail:
 }
 
 
+int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
+{
+	return interworking_connect_helper(wpa_s, bss, 1);
+}
+
+
 static struct wpa_cred * interworking_credentials_available_3gpp(
-	struct wpa_supplicant *wpa_s, struct wpa_bss *bss, int ignore_bw)
+	struct wpa_supplicant *wpa_s, struct wpa_bss *bss, int ignore_bw,
+	int *excluded)
 {
 	struct wpa_cred *selected = NULL;
 #ifdef INTERWORKING_3GPP
 	struct wpa_cred *cred;
 	int ret;
+	int is_excluded = 0;
 
 	if (bss->anqp == NULL || bss->anqp->anqp_3gpp == NULL)
 		return NULL;
@@ -1759,8 +1798,6 @@ static struct wpa_cred * interworking_credentials_available_3gpp(
 		ret = plmn_id_match(bss->anqp->anqp_3gpp, imsi, mnc_len);
 		wpa_printf(MSG_DEBUG, "PLMN match %sfound", ret ? "" : "not ");
 		if (ret) {
-			if (cred_excluded_ssid(cred, bss))
-				continue;
 			if (cred_no_required_oi_match(cred, bss))
 				continue;
 			if (!ignore_bw &&
@@ -1772,22 +1809,38 @@ static struct wpa_cred * interworking_credentials_available_3gpp(
 			if (!ignore_bw &&
 			    cred_conn_capab_missing(wpa_s, cred, bss))
 				continue;
-			if (selected == NULL ||
-			    selected->priority < cred->priority)
-				selected = cred;
+			if (cred_excluded_ssid(cred, bss)) {
+				if (excluded == NULL)
+					continue;
+				if (selected == NULL) {
+					selected = cred;
+					is_excluded = 1;
+				}
+			} else {
+				if (selected == NULL || is_excluded ||
+				    selected->priority < cred->priority) {
+					selected = cred;
+					is_excluded = 0;
+				}
+			}
 		}
 	}
+
+	if (excluded)
+		*excluded = is_excluded;
 #endif /* INTERWORKING_3GPP */
 	return selected;
 }
 
 
 static struct wpa_cred * interworking_credentials_available_realm(
-	struct wpa_supplicant *wpa_s, struct wpa_bss *bss, int ignore_bw)
+	struct wpa_supplicant *wpa_s, struct wpa_bss *bss, int ignore_bw,
+	int *excluded)
 {
 	struct wpa_cred *cred, *selected = NULL;
 	struct nai_realm *realm;
 	u16 count, i;
+	int is_excluded = 0;
 
 	if (bss->anqp == NULL || bss->anqp->nai_realm == NULL)
 		return NULL;
@@ -1812,8 +1865,6 @@ static struct wpa_cred * interworking_credentials_available_realm(
 			if (!nai_realm_match(&realm[i], cred->realm))
 				continue;
 			if (nai_realm_find_eap(cred, &realm[i])) {
-				if (cred_excluded_ssid(cred, bss))
-					continue;
 				if (cred_no_required_oi_match(cred, bss))
 					continue;
 				if (!ignore_bw &&
@@ -1825,9 +1876,21 @@ static struct wpa_cred * interworking_credentials_available_realm(
 				if (!ignore_bw &&
 				    cred_conn_capab_missing(wpa_s, cred, bss))
 					continue;
-				if (selected == NULL ||
-				    selected->priority < cred->priority)
-					selected = cred;
+				if (cred_excluded_ssid(cred, bss)) {
+					if (excluded == NULL)
+						continue;
+					if (selected == NULL) {
+						selected = cred;
+						is_excluded = 1;
+					}
+				} else {
+					if (selected == NULL || is_excluded ||
+					    selected->priority <
+					    cred->priority) {
+						selected = cred;
+						is_excluded = 0;
+					}
+				}
 				break;
 			}
 		}
@@ -1835,14 +1898,19 @@ static struct wpa_cred * interworking_credentials_available_realm(
 
 	nai_realm_free(realm, count);
 
+	if (excluded)
+		*excluded = is_excluded;
+
 	return selected;
 }
 
 
 static struct wpa_cred * interworking_credentials_available_helper(
-	struct wpa_supplicant *wpa_s, struct wpa_bss *bss, int ignore_bw)
+	struct wpa_supplicant *wpa_s, struct wpa_bss *bss, int ignore_bw,
+	int *excluded)
 {
 	struct wpa_cred *cred, *cred2;
+	int excluded1, excluded2;
 
 	if (disallowed_bssid(wpa_s, bss->bssid) ||
 	    disallowed_ssid(wpa_s, bss->ssid, bss->ssid_len)) {
@@ -1851,34 +1919,51 @@ static struct wpa_cred * interworking_credentials_available_helper(
 		return NULL;
 	}
 
-	cred = interworking_credentials_available_realm(wpa_s, bss, ignore_bw);
-	cred2 = interworking_credentials_available_3gpp(wpa_s, bss, ignore_bw);
-	if (cred && cred2 && cred2->priority >= cred->priority)
+	cred = interworking_credentials_available_realm(wpa_s, bss, ignore_bw,
+							&excluded1);
+	cred2 = interworking_credentials_available_3gpp(wpa_s, bss, ignore_bw,
+							&excluded2);
+	if (cred && cred2 &&
+	    (cred2->priority >= cred->priority || (!excluded2 && excluded1))) {
 		cred = cred2;
-	if (!cred)
+		excluded1 = excluded2;
+	}
+	if (!cred) {
 		cred = cred2;
+		excluded1 = excluded2;
+	}
 
-	cred2 = interworking_credentials_available_roaming_consortium(wpa_s,
-								      bss,
-								      ignore_bw);
-	if (cred && cred2 && cred2->priority >= cred->priority)
+	cred2 = interworking_credentials_available_roaming_consortium(
+		wpa_s, bss, ignore_bw, &excluded2);
+	if (cred && cred2 &&
+	    (cred2->priority >= cred->priority || (!excluded2 && excluded1))) {
 		cred = cred2;
-	if (!cred)
+		excluded1 = excluded2;
+	}
+	if (!cred) {
 		cred = cred2;
+		excluded1 = excluded2;
+	}
 
+	if (excluded)
+		*excluded = excluded1;
 	return cred;
 }
 
 
 static struct wpa_cred * interworking_credentials_available(
-	struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
+	struct wpa_supplicant *wpa_s, struct wpa_bss *bss, int *excluded)
 {
 	struct wpa_cred *cred;
 
-	cred = interworking_credentials_available_helper(wpa_s, bss, 0);
+	if (excluded)
+		*excluded = 0;
+	cred = interworking_credentials_available_helper(wpa_s, bss, 0,
+							 excluded);
 	if (cred)
 		return cred;
-	return interworking_credentials_available_helper(wpa_s, bss, 1);
+	return interworking_credentials_available_helper(wpa_s, bss, 1,
+							 excluded);
 }
 
 
@@ -2064,7 +2149,7 @@ static struct wpa_bss * pick_best_roaming_partner(struct wpa_supplicant *wpa_s,
 	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {
 		if (bss == selected)
 			continue;
-		cred = interworking_credentials_available(wpa_s, bss);
+		cred = interworking_credentials_available(wpa_s, bss, NULL);
 		if (!cred)
 			continue;
 		if (!wpa_bss_get_ie(bss, WLAN_EID_RSN))
@@ -2094,7 +2179,9 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 	wpa_s->network_select = 0;
 
 	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {
-		cred = interworking_credentials_available(wpa_s, bss);
+		int excluded = 0;
+		cred = interworking_credentials_available(wpa_s, bss,
+							  &excluded);
 		if (!cred)
 			continue;
 		if (!wpa_bss_get_ie(bss, WLAN_EID_RSN)) {
@@ -2107,7 +2194,8 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 				   "RSN", MAC2STR(bss->bssid));
 			continue;
 		}
-		count++;
+		if (!excluded)
+			count++;
 		res = interworking_home_sp(wpa_s, bss->anqp ?
 					   bss->anqp->domain_name : NULL);
 		if (res > 0)
@@ -2116,8 +2204,8 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 			type = "roaming";
 		else
 			type = "unknown";
-		wpa_msg(wpa_s, MSG_INFO, INTERWORKING_AP MACSTR
-			" type=%s%s%s%s",
+		wpa_msg(wpa_s, MSG_INFO, "%s" MACSTR " type=%s%s%s%s",
+			excluded ? INTERWORKING_BLACKLISTED : INTERWORKING_AP,
 			MAC2STR(bss->bssid), type,
 			cred_below_min_backhaul(wpa_s, cred, bss) ?
 			" below_min_backhaul=1" : "",
@@ -2125,6 +2213,8 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 			" over_max_bss_load=1" : "",
 			cred_conn_capab_missing(wpa_s, cred, bss) ?
 			" conn_capab_missing=1" : "");
+		if (excluded)
+			continue;
 		if (wpa_s->auto_select ||
 		    (wpa_s->conf->auto_interworking &&
 		     wpa_s->auto_network_select)) {

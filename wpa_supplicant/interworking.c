@@ -1486,6 +1486,10 @@ static int interworking_connect_helper(struct wpa_supplicant *wpa_s,
 		return -1;
 	}
 
+	wpa_printf(MSG_DEBUG, "Interworking: Considering BSS " MACSTR
+		   " for connection (allow_excluded=%d)",
+		   MAC2STR(bss->bssid), allow_excluded);
+
 	if (!wpa_bss_get_ie(bss, WLAN_EID_RSN)) {
 		/*
 		 * We currently support only HS 2.0 networks and those are
@@ -1525,6 +1529,7 @@ static int interworking_connect_helper(struct wpa_supplicant *wpa_s,
 	}
 
 	if (!cred_rc && !cred && !cred_3gpp) {
+		wpa_printf(MSG_DEBUG, "Interworking: No full credential matches - consider options without BW(etc.) limits");
 		cred_rc = interworking_credentials_available_roaming_consortium(
 			wpa_s, bss, 1, excl);
 		if (cred_rc) {
@@ -2138,6 +2143,7 @@ static struct wpa_bss * pick_best_roaming_partner(struct wpa_supplicant *wpa_s,
 {
 	struct wpa_bss *bss;
 	u8 best_prio, prio;
+	struct wpa_cred *cred2;
 
 	/*
 	 * Check if any other BSS is operated by a more preferred roaming
@@ -2149,18 +2155,27 @@ static struct wpa_bss * pick_best_roaming_partner(struct wpa_supplicant *wpa_s,
 	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {
 		if (bss == selected)
 			continue;
-		cred = interworking_credentials_available(wpa_s, bss, NULL);
-		if (!cred)
+		cred2 = interworking_credentials_available(wpa_s, bss, NULL);
+		if (!cred2)
 			continue;
 		if (!wpa_bss_get_ie(bss, WLAN_EID_RSN))
 			continue;
-		prio = roaming_prio(wpa_s, cred, bss);
+		prio = roaming_prio(wpa_s, cred2, bss);
 		if (prio < best_prio) {
-			best_prio = prio;
-			selected = bss;
+			int bh1, bh2, load1, load2, conn1, conn2;
+			bh1 = cred_below_min_backhaul(wpa_s, cred, selected);
+			load1 = cred_over_max_bss_load(wpa_s, cred, selected);
+			conn1 = cred_conn_capab_missing(wpa_s, cred, selected);
+			bh2 = cred_below_min_backhaul(wpa_s, cred2, bss);
+			load2 = cred_over_max_bss_load(wpa_s, cred2, bss);
+			conn2 = cred_conn_capab_missing(wpa_s, cred2, bss);
+			if (bh1 || load1 || conn1 || !(bh2 || load2 || conn2)) {
+				wpa_printf(MSG_DEBUG, "Interworking: Better roaming partner " MACSTR " selected", MAC2STR(bss->bssid));
+				best_prio = prio;
+				selected = bss;
+			}
 		}
 	}
-
 
 	return selected;
 }
@@ -2169,17 +2184,22 @@ static struct wpa_bss * pick_best_roaming_partner(struct wpa_supplicant *wpa_s,
 static void interworking_select_network(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_bss *bss, *selected = NULL, *selected_home = NULL;
+	struct wpa_bss *selected2 = NULL, *selected2_home = NULL;
 	int selected_prio = -999999, selected_home_prio = -999999;
+	int selected2_prio = -999999, selected2_home_prio = -999999;
 	unsigned int count = 0;
 	const char *type;
 	int res;
 	struct wpa_cred *cred, *selected_cred = NULL;
 	struct wpa_cred *selected_home_cred = NULL;
+	struct wpa_cred *selected2_cred = NULL;
+	struct wpa_cred *selected2_home_cred = NULL;
 
 	wpa_s->network_select = 0;
 
 	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {
 		int excluded = 0;
+		int bh, bss_load, conn_capab;
 		cred = interworking_credentials_available(wpa_s, bss,
 							  &excluded);
 		if (!cred)
@@ -2204,32 +2224,48 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 			type = "roaming";
 		else
 			type = "unknown";
+		bh = cred_below_min_backhaul(wpa_s, cred, bss);
+		bss_load = cred_over_max_bss_load(wpa_s, cred, bss);
+		conn_capab = cred_conn_capab_missing(wpa_s, cred, bss);
 		wpa_msg(wpa_s, MSG_INFO, "%s" MACSTR " type=%s%s%s%s",
 			excluded ? INTERWORKING_BLACKLISTED : INTERWORKING_AP,
 			MAC2STR(bss->bssid), type,
-			cred_below_min_backhaul(wpa_s, cred, bss) ?
-			" below_min_backhaul=1" : "",
-			cred_over_max_bss_load(wpa_s, cred, bss) ?
-			" over_max_bss_load=1" : "",
-			cred_conn_capab_missing(wpa_s, cred, bss) ?
-			" conn_capab_missing=1" : "");
+			bh ? " below_min_backhaul=1" : "",
+			bss_load ? " over_max_bss_load=1" : "",
+			conn_capab ? " conn_capab_missing=1" : "");
 		if (excluded)
 			continue;
 		if (wpa_s->auto_select ||
 		    (wpa_s->conf->auto_interworking &&
 		     wpa_s->auto_network_select)) {
-			if (selected == NULL ||
-			    cred->priority > selected_prio) {
-				selected = bss;
-				selected_prio = cred->priority;
-				selected_cred = cred;
-			}
-			if (res > 0 &&
-			    (selected_home == NULL ||
-			     cred->priority > selected_home_prio)) {
-				selected_home = bss;
-				selected_home_prio = cred->priority;
-				selected_home_cred = cred;
+			if (bh || bss_load || conn_capab) {
+				if (selected2 == NULL ||
+				    cred->priority > selected2_prio) {
+					selected2 = bss;
+					selected2_prio = cred->priority;
+					selected2_cred = cred;
+				}
+				if (res > 0 &&
+				    (selected2_home == NULL ||
+				     cred->priority > selected2_home_prio)) {
+					selected2_home = bss;
+					selected2_home_prio = cred->priority;
+					selected2_home_cred = cred;
+				}
+			} else {
+				if (selected == NULL ||
+				    cred->priority > selected_prio) {
+					selected = bss;
+					selected_prio = cred->priority;
+					selected_cred = cred;
+				}
+				if (res > 0 &&
+				    (selected_home == NULL ||
+				     cred->priority > selected_home_prio)) {
+					selected_home = bss;
+					selected_home_prio = cred->priority;
+					selected_home_cred = cred;
+				}
 			}
 		}
 	}
@@ -2239,6 +2275,18 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 		/* Prefer network operated by the Home SP */
 		selected = selected_home;
 		selected_cred = selected_home_cred;
+	}
+
+	if (!selected) {
+		if (selected2_home) {
+			wpa_printf(MSG_DEBUG, "Interworking: Use home BSS with BW limit mismatch since no other network could be selected");
+			selected = selected2_home;
+			selected_cred = selected2_home_cred;
+		} else if (selected2) {
+			wpa_printf(MSG_DEBUG, "Interworking: Use visited BSS with BW limit mismatch since no other network could be selected");
+			selected = selected2;
+			selected_cred = selected2_cred;
+		}
 	}
 
 	if (count == 0) {

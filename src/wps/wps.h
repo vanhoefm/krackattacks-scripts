@@ -420,6 +420,16 @@ enum wps_event {
 	WPS_EV_PBC_TIMEOUT,
 
 	/**
+	 * WPS_EV_PBC_ACTIVE - PBC mode was activated
+	 */
+	WPS_EV_PBC_ACTIVE,
+
+	/**
+	 * WPS_EV_PBC_DISABLE - PBC mode was disabled
+	 */
+	WPS_EV_PBC_DISABLE,
+
+	/**
 	 * WPS_EV_ER_AP_ADD - ER: AP added
 	 */
 	WPS_EV_ER_AP_ADD,

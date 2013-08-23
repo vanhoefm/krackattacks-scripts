@@ -807,6 +807,12 @@ static void wpa_supplicant_wps_event(void *ctx, enum wps_event event,
 		break;
 	case WPS_EV_PBC_TIMEOUT:
 		break;
+	case WPS_EV_PBC_ACTIVE:
+		wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_ACTIVE);
+		break;
+	case WPS_EV_PBC_DISABLE:
+		wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_DISABLE);
+		break;
 	case WPS_EV_ER_AP_ADD:
 		wpa_supplicant_wps_event_er_ap_add(wpa_s, &data->ap);
 		break;

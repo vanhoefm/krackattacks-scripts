@@ -322,6 +322,24 @@ void wps_pbc_timeout_event(struct wps_context *wps)
 }
 
 
+void wps_pbc_active_event(struct wps_context *wps)
+{
+	if (wps->event_cb == NULL)
+		return;
+
+	wps->event_cb(wps->cb_ctx, WPS_EV_PBC_ACTIVE, NULL);
+}
+
+
+void wps_pbc_disable_event(struct wps_context *wps)
+{
+	if (wps->event_cb == NULL)
+		return;
+
+	wps->event_cb(wps->cb_ctx, WPS_EV_PBC_DISABLE, NULL);
+}
+
+
 #ifdef CONFIG_WPS_OOB
 
 struct wpabuf * wps_get_oob_cred(struct wps_context *wps)

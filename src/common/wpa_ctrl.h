@@ -84,6 +84,10 @@ extern "C" {
 #define WPS_EVENT_SUCCESS "WPS-SUCCESS "
 /** WPS enrollment attempt timed out and was terminated */
 #define WPS_EVENT_TIMEOUT "WPS-TIMEOUT "
+/* PBC mode was activated */
+#define WPS_EVENT_ACTIVE "WPS-PBC-ACTIVE "
+/* PBC mode was disabled */
+#define WPS_EVENT_DISABLE "WPS-PBC-DISABLE "
 
 #define WPS_EVENT_ENROLLEE_SEEN "WPS-ENROLLEE-SEEN "
 

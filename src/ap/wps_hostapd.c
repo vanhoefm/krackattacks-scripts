@@ -775,6 +775,12 @@ static void hostapd_wps_event_cb(void *ctx, enum wps_event event,
 	case WPS_EV_PBC_TIMEOUT:
 		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_TIMEOUT);
 		break;
+	case WPS_EV_PBC_ACTIVE:
+		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_ACTIVE);
+		break;
+	case WPS_EV_PBC_DISABLE:
+		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_DISABLE);
+		break;
 	case WPS_EV_ER_AP_ADD:
 		break;
 	case WPS_EV_ER_AP_REMOVE:

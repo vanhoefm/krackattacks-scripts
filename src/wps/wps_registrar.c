@@ -1001,6 +1001,7 @@ int wps_registrar_button_pushed(struct wps_registrar *reg,
 					 (u8 *) "\xff\xff\xff\xff\xff\xff");
 	wps_registrar_selected_registrar_changed(reg, 0);
 
+	wps_pbc_active_event(reg->wps);
 	eloop_cancel_timeout(wps_registrar_set_selected_timeout, reg, NULL);
 	eloop_cancel_timeout(wps_registrar_pbc_timeout, reg, NULL);
 	eloop_register_timeout(WPS_PBC_WALK_TIME, 0, wps_registrar_pbc_timeout,
@@ -1014,6 +1015,7 @@ static void wps_registrar_pbc_completed(struct wps_registrar *reg)
 	wpa_printf(MSG_DEBUG, "WPS: PBC completed - stopping PBC mode");
 	eloop_cancel_timeout(wps_registrar_pbc_timeout, reg, NULL);
 	wps_registrar_stop_pbc(reg);
+	wps_pbc_disable_event(reg->wps);
 }
 
 

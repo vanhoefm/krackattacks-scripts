@@ -1279,7 +1279,9 @@ static unsigned int nl80211_get_assoc_freq(struct wpa_driver_nl80211_data *drv)
 		wpa_printf(MSG_DEBUG, "nl80211: Operating frequency for the "
 			   "associated BSS from scan results: %u MHz",
 			   arg.assoc_freq);
-		return arg.assoc_freq ? arg.assoc_freq : drv->assoc_freq;
+		if (arg.assoc_freq)
+			drv->assoc_freq = arg.assoc_freq;
+		return drv->assoc_freq;
 	}
 	wpa_printf(MSG_DEBUG, "nl80211: Scan result fetch failed: ret=%d "
 		   "(%s)", ret, strerror(-ret));
@@ -7635,7 +7637,9 @@ static int wpa_driver_nl80211_try_connect(
 	if (params->freq) {
 		wpa_printf(MSG_DEBUG, "  * freq=%d", params->freq);
 		NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, params->freq);
-	}
+		drv->assoc_freq = params->freq;
+	} else
+		drv->assoc_freq = 0;
 	if (params->bg_scan_period >= 0) {
 		wpa_printf(MSG_DEBUG, "  * bg scan period=%d",
 			   params->bg_scan_period);

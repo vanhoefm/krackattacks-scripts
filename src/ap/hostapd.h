@@ -83,6 +83,7 @@ struct wps_stat {
 	enum wps_status status;
 	enum wps_error_indication failure_reason;
 	enum pbc_status pbc_status;
+	u8 peer_addr[ETH_ALEN];
 };
 
 

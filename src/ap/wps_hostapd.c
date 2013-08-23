@@ -711,6 +711,7 @@ static void hostapd_pwd_auth_fail(struct hostapd_data *hapd,
 	wpa_printf(MSG_DEBUG, "WPS: Authentication failure update");
 	hapd->wps_stats.status = WPS_STATUS_FAILURE;
 	hapd->wps_stats.failure_reason = WPS_EI_AUTH_FAILURE;
+	os_memcpy(hapd->wps_stats.peer_addr, data->peer_macaddr, ETH_ALEN);
 
 	hostapd_wps_for_each(hapd, wps_pwd_auth_fail, data);
 }
@@ -767,11 +768,13 @@ static void hostapd_wps_event_pbc_disable(struct hostapd_data *hapd)
 }
 
 
-static void hostapd_wps_event_success(struct hostapd_data *hapd)
+static void hostapd_wps_event_success(struct hostapd_data *hapd,
+				      struct wps_event_success *success)
 {
 	/* Update WPS status - Success */
 	hapd->wps_stats.pbc_status = WPS_PBC_STATUS_DISABLE;
 	hapd->wps_stats.status = WPS_STATUS_SUCCESS;
+	os_memcpy(hapd->wps_stats.peer_addr, success->peer_macaddr, ETH_ALEN);
 }
 
 
@@ -780,6 +783,8 @@ static void hostapd_wps_event_fail(struct hostapd_data *hapd,
 {
 	/* Update WPS status - Failure */
 	hapd->wps_stats.status = WPS_STATUS_FAILURE;
+	os_memcpy(hapd->wps_stats.peer_addr, fail->peer_macaddr, ETH_ALEN);
+
 	hapd->wps_stats.failure_reason = fail->error_indication;
 
 	if (fail->error_indication > 0 &&
@@ -809,7 +814,7 @@ static void hostapd_wps_event_cb(void *ctx, enum wps_event event,
 		hostapd_wps_event_fail(hapd, &data->fail);
 		break;
 	case WPS_EV_SUCCESS:
-		hostapd_wps_event_success(hapd);
+		hostapd_wps_event_success(hapd, &data->success);
 		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_SUCCESS);
 		break;
 	case WPS_EV_PWD_AUTH_FAIL:

@@ -497,11 +497,17 @@ union wps_event_data {
 		int msg;
 		u16 config_error;
 		u16 error_indication;
+		u8 peer_macaddr[ETH_ALEN];
 	} fail;
+
+	struct wps_event_success {
+		u8 peer_macaddr[ETH_ALEN];
+	} success;
 
 	struct wps_event_pwd_auth_fail {
 		int enrollee;
 		int part;
+		u8 peer_macaddr[ETH_ALEN];
 	} pwd_auth_fail;
 
 	struct wps_event_er_ap {

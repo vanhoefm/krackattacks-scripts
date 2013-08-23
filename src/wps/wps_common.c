@@ -266,7 +266,7 @@ int wps_pin_str_valid(const char *pin)
 
 
 void wps_fail_event(struct wps_context *wps, enum wps_msg_type msg,
-		    u16 config_error, u16 error_indication)
+		    u16 config_error, u16 error_indication, const u8 *mac_addr)
 {
 	union wps_event_data data;
 
@@ -277,20 +277,26 @@ void wps_fail_event(struct wps_context *wps, enum wps_msg_type msg,
 	data.fail.msg = msg;
 	data.fail.config_error = config_error;
 	data.fail.error_indication = error_indication;
+	os_memcpy(data.fail.peer_macaddr, mac_addr, ETH_ALEN);
 	wps->event_cb(wps->cb_ctx, WPS_EV_FAIL, &data);
 }
 
 
-void wps_success_event(struct wps_context *wps)
+void wps_success_event(struct wps_context *wps, const u8 *mac_addr)
 {
+	union wps_event_data data;
+
 	if (wps->event_cb == NULL)
 		return;
 
-	wps->event_cb(wps->cb_ctx, WPS_EV_SUCCESS, NULL);
+	os_memset(&data, 0, sizeof(data));
+	os_memcpy(data.success.peer_macaddr, mac_addr, ETH_ALEN);
+	wps->event_cb(wps->cb_ctx, WPS_EV_SUCCESS, &data);
 }
 
 
-void wps_pwd_auth_fail_event(struct wps_context *wps, int enrollee, int part)
+void wps_pwd_auth_fail_event(struct wps_context *wps, int enrollee, int part,
+			     const u8 *mac_addr)
 {
 	union wps_event_data data;
 
@@ -300,6 +306,7 @@ void wps_pwd_auth_fail_event(struct wps_context *wps, int enrollee, int part)
 	os_memset(&data, 0, sizeof(data));
 	data.pwd_auth_fail.enrollee = enrollee;
 	data.pwd_auth_fail.part = part;
+	os_memcpy(data.pwd_auth_fail.peer_macaddr, mac_addr, ETH_ALEN);
 	wps->event_cb(wps->cb_ctx, WPS_EV_PWD_AUTH_FAIL, &data);
 }
 

@@ -2169,7 +2169,7 @@ static int wps_process_e_snonce1(struct wps_data *wps, const u8 *e_snonce1)
 		wpa_printf(MSG_DEBUG, "WPS: E-Hash1 derived from E-S1 does "
 			   "not match with the pre-committed value");
 		wps->config_error = WPS_CFG_DEV_PASSWORD_AUTH_FAILURE;
-		wps_pwd_auth_fail_event(wps->wps, 0, 1);
+		wps_pwd_auth_fail_event(wps->wps, 0, 1, wps->mac_addr_e);
 		return -1;
 	}
 
@@ -2210,7 +2210,7 @@ static int wps_process_e_snonce2(struct wps_data *wps, const u8 *e_snonce2)
 			   "not match with the pre-committed value");
 		wps_registrar_invalidate_pin(wps->wps->registrar, wps->uuid_e);
 		wps->config_error = WPS_CFG_DEV_PASSWORD_AUTH_FAILURE;
-		wps_pwd_auth_fail_event(wps->wps, 0, 2);
+		wps_pwd_auth_fail_event(wps->wps, 0, 2, wps->mac_addr_e);
 		return -1;
 	}
 
@@ -2562,7 +2562,7 @@ static enum wps_process_res wps_process_m1(struct wps_data *wps,
 			wps_pbc_overlap_event(wps->wps);
 			wps_fail_event(wps->wps, WPS_M1,
 				       WPS_CFG_MULTIPLE_PBC_DETECTED,
-				       WPS_EI_NO_ERROR);
+				       WPS_EI_NO_ERROR, wps->mac_addr_e);
 			wps->wps->registrar->force_pbc_overlap = 1;
 			return WPS_CONTINUE;
 		}
@@ -2892,7 +2892,7 @@ static enum wps_process_res wps_process_wsc_msg(struct wps_data *wps,
 		ret = wps_process_m3(wps, msg, &attr);
 		if (ret == WPS_FAILURE || wps->state == SEND_WSC_NACK)
 			wps_fail_event(wps->wps, WPS_M3, wps->config_error,
-				       wps->error_indication);
+				       wps->error_indication, wps->mac_addr_e);
 		break;
 	case WPS_M5:
 		if (wps_validate_m5(msg) < 0)
@@ -2900,7 +2900,7 @@ static enum wps_process_res wps_process_wsc_msg(struct wps_data *wps,
 		ret = wps_process_m5(wps, msg, &attr);
 		if (ret == WPS_FAILURE || wps->state == SEND_WSC_NACK)
 			wps_fail_event(wps->wps, WPS_M5, wps->config_error,
-				       wps->error_indication);
+				       wps->error_indication, wps->mac_addr_e);
 		break;
 	case WPS_M7:
 		if (wps_validate_m7(msg) < 0)
@@ -2908,7 +2908,7 @@ static enum wps_process_res wps_process_wsc_msg(struct wps_data *wps,
 		ret = wps_process_m7(wps, msg, &attr);
 		if (ret == WPS_FAILURE || wps->state == SEND_WSC_NACK)
 			wps_fail_event(wps->wps, WPS_M7, wps->config_error,
-				       wps->error_indication);
+				       wps->error_indication, wps->mac_addr_e);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "WPS: Unsupported Message Type %d",
@@ -3054,19 +3054,19 @@ static enum wps_process_res wps_process_wsc_nack(struct wps_data *wps,
 	switch (old_state) {
 	case RECV_M3:
 		wps_fail_event(wps->wps, WPS_M2, config_error,
-			       wps->error_indication);
+			       wps->error_indication, wps->mac_addr_e);
 		break;
 	case RECV_M5:
 		wps_fail_event(wps->wps, WPS_M4, config_error,
-			       wps->error_indication);
+			       wps->error_indication, wps->mac_addr_e);
 		break;
 	case RECV_M7:
 		wps_fail_event(wps->wps, WPS_M6, config_error,
-			       wps->error_indication);
+			       wps->error_indication, wps->mac_addr_e);
 		break;
 	case RECV_DONE:
 		wps_fail_event(wps->wps, WPS_M8, config_error,
-			       wps->error_indication);
+			       wps->error_indication, wps->mac_addr_e);
 		break;
 	default:
 		break;
@@ -3187,7 +3187,7 @@ static enum wps_process_res wps_process_wsc_done(struct wps_data *wps,
 	/* TODO: maintain AuthorizedMACs somewhere separately for each ER and
 	 * merge them into APs own list.. */
 
-	wps_success_event(wps->wps);
+	wps_success_event(wps->wps, wps->mac_addr_e);
 
 	return WPS_DONE;
 }
@@ -3256,7 +3256,7 @@ enum wps_process_res wps_registrar_process_msg(struct wps_data *wps,
 			wps->state = SEND_WSC_NACK;
 			wps_fail_event(wps->wps, WPS_WSC_DONE,
 				       wps->config_error,
-				       wps->error_indication);
+				       wps->error_indication, wps->mac_addr_e);
 		}
 		return ret;
 	default:

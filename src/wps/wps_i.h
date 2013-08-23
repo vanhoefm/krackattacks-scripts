@@ -134,9 +134,10 @@ void wps_derive_psk(struct wps_data *wps, const u8 *dev_passwd,
 struct wpabuf * wps_decrypt_encr_settings(struct wps_data *wps, const u8 *encr,
 					  size_t encr_len);
 void wps_fail_event(struct wps_context *wps, enum wps_msg_type msg,
-		    u16 config_error, u16 error_indication);
-void wps_success_event(struct wps_context *wps);
-void wps_pwd_auth_fail_event(struct wps_context *wps, int enrollee, int part);
+		    u16 config_error, u16 error_indication, const u8 *mac_addr);
+void wps_success_event(struct wps_context *wps, const u8 *mac_addr);
+void wps_pwd_auth_fail_event(struct wps_context *wps, int enrollee, int part,
+			     const u8 *mac_addr);
 void wps_pbc_overlap_event(struct wps_context *wps);
 void wps_pbc_timeout_event(struct wps_context *wps);
 void wps_pbc_active_event(struct wps_context *wps);

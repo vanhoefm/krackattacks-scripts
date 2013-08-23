@@ -6686,6 +6686,9 @@ static int wpa_driver_nl80211_sta_remove(struct i802_bss *bss, const u8 *addr)
 	NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, addr);
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	wpa_printf(MSG_DEBUG, "nl80211: sta_remove -> DEL_STATION %s " MACSTR
+		   " --> %d (%s)",
+		   bss->ifname, MAC2STR(addr), ret, strerror(-ret));
 	if (ret == -ENOENT)
 		return 0;
 	return ret;
@@ -8364,6 +8367,8 @@ static int i802_flush(void *priv)
 	if (!msg)
 		return -1;
 
+	wpa_printf(MSG_DEBUG, "nl80211: flush -> DEL_STATION %s (all)",
+		   bss->ifname);
 	nl80211_cmd(drv, msg, 0, NL80211_CMD_DEL_STATION);
 
 	/*

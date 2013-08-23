@@ -1868,6 +1868,25 @@ static int atheros_set_ap(void *priv, struct wpa_driver_ap_params *params)
 	wpa_hexdump_buf(MSG_DEBUG, "atheros: assocresp_ies",
 			params->assocresp_ies);
 
+#if defined(CONFIG_HS20) && defined(IEEE80211_PARAM_OSEN)
+	if (params->osen) {
+		struct wpa_bss_params bss_params;
+
+		os_memset(&bss_params, 0, sizeof(struct wpa_bss_params));
+		bss_params.enabled = 1;
+		bss_params.wpa = 2;
+		bss_params.wpa_pairwise = WPA_CIPHER_CCMP;
+		bss_params.wpa_group = WPA_CIPHER_CCMP;
+		bss_params.ieee802_1x = 1;
+
+		if (atheros_set_privacy(priv, 1) ||
+		    set80211param(priv, IEEE80211_PARAM_OSEN, 1))
+			return -1;
+
+		return atheros_set_ieee8021x(priv, &bss_params);
+	}
+#endif /* CONFIG_HS20 && IEEE80211_PARAM_OSEN */
+
 	return 0;
 }
 

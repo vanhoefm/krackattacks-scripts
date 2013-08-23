@@ -72,9 +72,17 @@ enum wps_status {
 	WPS_STATUS_FAILURE
 };
 
+enum pbc_status {
+	WPS_PBC_STATUS_DISABLE,
+	WPS_PBC_STATUS_ACTIVE,
+	WPS_PBC_STATUS_TIMEOUT,
+	WPS_PBC_STATUS_OVERLAP
+};
+
 struct wps_stat {
 	enum wps_status status;
 	enum wps_error_indication failure_reason;
+	enum pbc_status pbc_status;
 };
 
 

@@ -739,9 +739,38 @@ static void hostapd_wps_ap_pin_success(struct hostapd_data *hapd)
 }
 
 
+static void hostapd_wps_event_pbc_overlap(struct hostapd_data *hapd)
+{
+	/* Update WPS Status - PBC Overlap */
+	hapd->wps_stats.pbc_status = WPS_PBC_STATUS_OVERLAP;
+}
+
+
+static void hostapd_wps_event_pbc_timeout(struct hostapd_data *hapd)
+{
+	/* Update WPS PBC Status:PBC Timeout */
+	hapd->wps_stats.pbc_status = WPS_PBC_STATUS_TIMEOUT;
+}
+
+
+static void hostapd_wps_event_pbc_active(struct hostapd_data *hapd)
+{
+	/* Update WPS PBC status - Active */
+	hapd->wps_stats.pbc_status = WPS_PBC_STATUS_ACTIVE;
+}
+
+
+static void hostapd_wps_event_pbc_disable(struct hostapd_data *hapd)
+{
+	/* Update WPS PBC status - Active */
+	hapd->wps_stats.pbc_status = WPS_PBC_STATUS_DISABLE;
+}
+
+
 static void hostapd_wps_event_success(struct hostapd_data *hapd)
 {
 	/* Update WPS status - Success */
+	hapd->wps_stats.pbc_status = WPS_PBC_STATUS_DISABLE;
 	hapd->wps_stats.status = WPS_STATUS_SUCCESS;
 }
 
@@ -787,15 +816,19 @@ static void hostapd_wps_event_cb(void *ctx, enum wps_event event,
 		hostapd_pwd_auth_fail(hapd, &data->pwd_auth_fail);
 		break;
 	case WPS_EV_PBC_OVERLAP:
+		hostapd_wps_event_pbc_overlap(hapd);
 		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_OVERLAP);
 		break;
 	case WPS_EV_PBC_TIMEOUT:
+		hostapd_wps_event_pbc_timeout(hapd);
 		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_TIMEOUT);
 		break;
 	case WPS_EV_PBC_ACTIVE:
+		hostapd_wps_event_pbc_active(hapd);
 		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_ACTIVE);
 		break;
 	case WPS_EV_PBC_DISABLE:
+		hostapd_wps_event_pbc_disable(hapd);
 		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_DISABLE);
 		break;
 	case WPS_EV_ER_AP_ADD:

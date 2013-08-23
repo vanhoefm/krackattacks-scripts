@@ -334,10 +334,24 @@ int wpa_supplicant_scard_init(struct wpa_supplicant *wpa_s,
 
 
 #ifndef CONFIG_NO_SCAN_PROCESSING
+
+static int has_wep_key(struct wpa_ssid *ssid)
+{
+	int i;
+
+	for (i = 0; i < NUM_WEP_KEYS; i++) {
+		if (ssid->wep_key_len[i])
+			return 1;
+	}
+
+	return 0;
+}
+
+
 static int wpa_supplicant_match_privacy(struct wpa_bss *bss,
 					struct wpa_ssid *ssid)
 {
-	int i, privacy = 0;
+	int privacy = 0;
 
 	if (ssid->mixed_cell)
 		return 1;
@@ -347,12 +361,9 @@ static int wpa_supplicant_match_privacy(struct wpa_bss *bss,
 		return 1;
 #endif /* CONFIG_WPS */
 
-	for (i = 0; i < NUM_WEP_KEYS; i++) {
-		if (ssid->wep_key_len[i]) {
-			privacy = 1;
-			break;
-		}
-	}
+	if (has_wep_key(ssid))
+		privacy = 1;
+
 #ifdef IEEE8021X_EAPOL
 	if ((ssid->key_mgmt & WPA_KEY_MGMT_IEEE8021X_NO_WPA) &&
 	    ssid->eapol_flags & (EAPOL_FLAG_REQUIRE_KEY_UNICAST |
@@ -815,6 +826,12 @@ static struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 		    !(ssid->key_mgmt & WPA_KEY_MGMT_IEEE8021X_NO_WPA)) {
 			wpa_dbg(wpa_s, MSG_DEBUG, "   skip - non-WPA network "
 				"not allowed");
+			continue;
+		}
+
+		if (wpa && !wpa_key_mgmt_wpa(ssid->key_mgmt) &&
+		    has_wep_key(ssid)) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "   skip - ignore WPA/WPA2 AP for WEP network block");
 			continue;
 		}
 

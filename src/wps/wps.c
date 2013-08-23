@@ -651,6 +651,8 @@ const char * wps_ei_str(enum wps_error_indication ei)
 		return "TKIP Only Prohibited";
 	case WPS_EI_SECURITY_WEP_PROHIBITED:
 		return "WEP Prohibited";
+	case WPS_EI_AUTH_FAILURE:
+		return "Authentication Failure";
 	default:
 		return "Unknown";
 	}

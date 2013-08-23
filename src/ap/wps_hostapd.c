@@ -707,6 +707,11 @@ static int wps_pwd_auth_fail(struct hostapd_data *hapd, void *ctx)
 static void hostapd_pwd_auth_fail(struct hostapd_data *hapd,
 				  struct wps_event_pwd_auth_fail *data)
 {
+	/* Update WPS Status - Authentication Failure */
+	wpa_printf(MSG_DEBUG, "WPS: Authentication failure update");
+	hapd->wps_stats.status = WPS_STATUS_FAILURE;
+	hapd->wps_stats.failure_reason = WPS_EI_AUTH_FAILURE;
+
 	hostapd_wps_for_each(hapd, wps_pwd_auth_fail, data);
 }
 
@@ -734,9 +739,20 @@ static void hostapd_wps_ap_pin_success(struct hostapd_data *hapd)
 }
 
 
+static void hostapd_wps_event_success(struct hostapd_data *hapd)
+{
+	/* Update WPS status - Success */
+	hapd->wps_stats.status = WPS_STATUS_SUCCESS;
+}
+
+
 static void hostapd_wps_event_fail(struct hostapd_data *hapd,
 				   struct wps_event_fail *fail)
 {
+	/* Update WPS status - Failure */
+	hapd->wps_stats.status = WPS_STATUS_FAILURE;
+	hapd->wps_stats.failure_reason = fail->error_indication;
+
 	if (fail->error_indication > 0 &&
 	    fail->error_indication < NUM_WPS_EI_VALUES) {
 		wpa_msg(hapd->msg_ctx, MSG_INFO,
@@ -764,6 +780,7 @@ static void hostapd_wps_event_cb(void *ctx, enum wps_event event,
 		hostapd_wps_event_fail(hapd, &data->fail);
 		break;
 	case WPS_EV_SUCCESS:
+		hostapd_wps_event_success(hapd);
 		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_SUCCESS);
 		break;
 	case WPS_EV_PWD_AUTH_FAIL:

@@ -487,6 +487,75 @@ static int hostapd_ctrl_iface_wps_config(struct hostapd_data *hapd, char *txt)
 
 	return hostapd_wps_config_ap(hapd, ssid, auth, encr, key);
 }
+
+
+static const char * pbc_status_str(enum pbc_status status)
+{
+	switch (status) {
+	case WPS_PBC_STATUS_DISABLE:
+		return "Disabled";
+	case WPS_PBC_STATUS_ACTIVE:
+		return "Active";
+	case WPS_PBC_STATUS_TIMEOUT:
+		return "Timed-out";
+	case WPS_PBC_STATUS_OVERLAP:
+		return "Overlap";
+	default:
+		return "Unknown";
+	}
+}
+
+
+static int hostapd_ctrl_iface_wps_get_status(struct hostapd_data *hapd,
+					     char *buf, size_t buflen)
+{
+	int ret;
+	char *pos, *end;
+
+	pos = buf;
+	end = buf + buflen;
+
+	ret = os_snprintf(pos, end - pos, "PBC Status: %s\n",
+			  pbc_status_str(hapd->wps_stats.pbc_status));
+
+	if (ret < 0 || ret >= end - pos)
+		return pos - buf;
+	pos += ret;
+
+	ret = os_snprintf(pos, end - pos, "Last WPS result: %s\n",
+			  (hapd->wps_stats.status == WPS_STATUS_SUCCESS ?
+			   "Success":
+			   (hapd->wps_stats.status == WPS_STATUS_FAILURE ?
+			    "Failed" : "None")));
+
+	if (ret < 0 || ret >= end - pos)
+		return pos - buf;
+	pos += ret;
+
+	/* If status == Failure - Add possible Reasons */
+	if(hapd->wps_stats.status == WPS_STATUS_FAILURE &&
+	   hapd->wps_stats.failure_reason > 0) {
+		ret = os_snprintf(pos, end - pos,
+				  "Failure Reason: %s\n",
+				  wps_ei_str(hapd->wps_stats.failure_reason));
+
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+	}
+
+	if (hapd->wps_stats.status) {
+		ret = os_snprintf(pos, end - pos, "Peer Address: " MACSTR "\n",
+				  MAC2STR(hapd->wps_stats.peer_addr));
+
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+	}
+
+	return pos - buf;
+}
+
 #endif /* CONFIG_WPS */
 
 
@@ -1003,6 +1072,9 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 	} else if (os_strncmp(buf, "WPS_CONFIG ", 11) == 0) {
 		if (hostapd_ctrl_iface_wps_config(hapd, buf + 11) < 0)
 			reply_len = -1;
+	} else if (os_strncmp(buf, "WPS_GET_STATUS", 13) == 0) {
+		reply_len = hostapd_ctrl_iface_wps_get_status(hapd, reply,
+							      reply_size);
 #ifdef CONFIG_WPS_NFC
 	} else if (os_strncmp(buf, "WPS_NFC_TAG_READ ", 17) == 0) {
 		if (hostapd_ctrl_iface_wps_nfc_tag_read(hapd, buf + 17))

@@ -20,7 +20,10 @@ from hostapd import HostapdGlobal
 def reset_devs(dev, apdev):
     hapd = HostapdGlobal()
     for d in dev:
-        d.reset()
+        try:
+            d.reset()
+        except Exception, e:
+            logger.info("Failed to reset device " + d.ifname)
     for ap in apdev:
         hapd.remove(ap['ifname'])
 

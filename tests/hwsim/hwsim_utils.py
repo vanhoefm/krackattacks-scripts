@@ -24,8 +24,8 @@ def test_connectivity(ifname1, ifname2):
         s = subprocess.check_output(cmd)
         logger.debug(s)
     except subprocess.CalledProcessError, e:
-        print "hwsim failed: " + str(e.returncode)
-        print e.output
+        logger.info("hwsim failed: " + str(e.returncode))
+        logger.info(e.output)
         raise
 
 def test_connectivity_p2p(dev1, dev2):

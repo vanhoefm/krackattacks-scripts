@@ -4169,6 +4169,7 @@ static void wpa_driver_nl80211_deinit(struct i802_bss *bss)
 	(void) i802_set_iface_flags(bss, 0);
 	if (drv->nlmode != NL80211_IFTYPE_P2P_DEVICE) {
 		wpa_driver_nl80211_set_mode(bss, NL80211_IFTYPE_STATION);
+		nl80211_mgmt_unsubscribe(bss, "deinit");
 	} else {
 		nl80211_mgmt_unsubscribe(bss, "deinit");
 		nl80211_del_p2pdev(bss);

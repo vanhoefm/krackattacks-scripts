@@ -36,5 +36,5 @@ sleep 1
 sudo chown $USER $DIR/logs/$DATE-hwsim0.dump
 if [ "x$VALGRIND" = "xy" ]; then
     sudo chown $USER $DIR/logs/$DATE-valgrind*
-    sleep 2
+    sleep 10
 fi

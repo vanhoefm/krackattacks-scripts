@@ -722,6 +722,7 @@ wpa_supplicant_global_ctrl_iface_init(struct wpa_global *global)
 	struct ctrl_iface_global_priv *priv;
 	struct sockaddr_un addr;
 	const char *ctrl = global->params.ctrl_interface;
+	int flags;
 
 	priv = os_zalloc(sizeof(*priv));
 	if (priv == NULL)
@@ -864,6 +865,20 @@ wpa_supplicant_global_ctrl_iface_init(struct wpa_global *global)
 	}
 
 havesock:
+
+	/*
+	 * Make socket non-blocking so that we don't hang forever if
+	 * target dies unexpectedly.
+	 */
+	flags = fcntl(priv->sock, F_GETFL);
+	if (flags >= 0) {
+		flags |= O_NONBLOCK;
+		if (fcntl(priv->sock, F_SETFL, flags) < 0) {
+			perror("fcntl(ctrl, O_NONBLOCK)");
+			/* Not fatal, continue on.*/
+		}
+	}
+
 	eloop_register_read_sock(priv->sock,
 				 wpa_supplicant_global_ctrl_iface_receive,
 				 global, priv);

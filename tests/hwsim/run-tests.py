@@ -90,7 +90,11 @@ def main():
         if t.__doc__:
             print "Test: " + t.__doc__
         for d in dev:
-            d.request("NOTE TEST-START " + t.__name__)
+            try:
+                d.request("NOTE TEST-START " + t.__name__)
+            except Exception, e:
+                print "Failed to issue TEST-START before " + t.__name__ + " for " + d.ifname
+                print e
         try:
             if t.func_code.co_argcount > 1:
                 t(dev, apdev)
@@ -103,7 +107,11 @@ def main():
             failed.append(t.__name__)
             print "FAIL " + t.__name__
         for d in dev:
-            d.request("NOTE TEST-STOP " + t.__name__)
+            try:
+                d.request("NOTE TEST-STOP " + t.__name__)
+            except Exception, e:
+                print "Failed to issue TEST-STOP after " + t.__name__ + " for " + d.ifname
+                print e
 
     if not test_filter:
         reset_devs(dev, apdev)

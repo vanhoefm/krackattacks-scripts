@@ -94,12 +94,12 @@ static int wpa_supplicant_ctrl_iface_detach(struct dl_list *ctrl_dst,
 		    os_memcmp(from->sun_path, dst->addr.sun_path,
 			      fromlen - offsetof(struct sockaddr_un, sun_path))
 		    == 0) {
-			dl_list_del(&dst->list);
-			os_free(dst);
 			wpa_hexdump(MSG_DEBUG, "CTRL_IFACE monitor detached",
 				    (u8 *) from->sun_path,
 				    fromlen -
 				    offsetof(struct sockaddr_un, sun_path));
+			dl_list_del(&dst->list);
+			os_free(dst);
 			return 0;
 		}
 	}

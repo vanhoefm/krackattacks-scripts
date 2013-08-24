@@ -80,14 +80,14 @@ static int wpa_supplicant_ctrl_iface_detach(struct ctrl_iface_priv *priv,
 	while (dst) {
 		if (from->sin_addr.s_addr == dst->addr.sin_addr.s_addr &&
 		    from->sin_port == dst->addr.sin_port) {
+			wpa_printf(MSG_DEBUG, "CTRL_IFACE monitor detached "
+				   "%s:%d", inet_ntoa(from->sin_addr),
+				   ntohs(from->sin_port));
 			if (prev == NULL)
 				priv->ctrl_dst = dst->next;
 			else
 				prev->next = dst->next;
 			os_free(dst);
-			wpa_printf(MSG_DEBUG, "CTRL_IFACE monitor detached "
-				   "%s:%d", inet_ntoa(from->sin_addr),
-				   ntohs(from->sin_port));
 			return 0;
 		}
 		prev = dst;

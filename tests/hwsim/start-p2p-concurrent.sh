@@ -5,6 +5,12 @@ WPAS=$DIR/../../wpa_supplicant/wpa_supplicant
 HAPD=$DIR/../../hostapd/hostapd
 WLANTEST=$DIR/../../wlantest/wlantest
 
+if [ "x$1" = "xvalgrind" ]; then
+    VALGRIND=y
+else
+    unset VALGRIND
+fi
+
 $DIR/stop-wifi.sh
 sudo modprobe mac80211_hwsim radios=5
 sudo iw wlan0 interface add sta0 type station
@@ -15,9 +21,20 @@ DATE=`date +%s`
 sudo ifconfig hwsim0 up
 sudo $WLANTEST -i hwsim0 -c -d > $DIR/logs/$DATE-hwsim0 &
 sudo tcpdump -ni hwsim0 -s 2500 -w $DIR/logs/$DATE-hwsim0.dump &
-sudo $WPAS -g /tmp/wpas-wlan0 -Gadmin -Dnl80211 -iwlan0 -c $DIR/p2p0.conf -N -Dnl80211 -ista0 -c $DIR/sta-dummy.conf -ddKt > $DIR/logs/$DATE-log0 &
-sudo $WPAS -g /tmp/wpas-wlan1 -Gadmin -Dnl80211 -iwlan1 -c $DIR/p2p1.conf -N -Dnl80211 -ista1 -c $DIR/sta-dummy.conf -ddKt > $DIR/logs/$DATE-log1 &
-sudo $WPAS -g /tmp/wpas-wlan2 -Gadmin -Dnl80211 -iwlan2 -c $DIR/p2p2.conf -N -Dnl80211 -ista2 -c $DIR/sta-dummy.conf -ddKt > $DIR/logs/$DATE-log2 &
-sudo $HAPD -ddKt -g /var/run/hostapd-global -G admin -ddKt > $DIR/logs/$DATE-hostapd &
+if [ "x$VALGRIND" = "xy" ]; then
+    for i in 0 1 2; do
+	sudo valgrind --log-file=$DIR/logs/$DATE-valgrind-wlan$i $WPAS -g /tmp/wpas-wlan$i -Gadmin -Dnl80211 -iwlan$i -c $DIR/p2p$i.conf -N -Dnl80211 -ista$i -c $DIR/sta-dummy.conf -ddKt > $DIR/logs/$DATE-log$i &
+    done
+    sudo valgrind --log-file=$DIR/logs/$DATE-valgrind-hostapd $HAPD -ddKt -g /var/run/hostapd-global -G admin -ddKt > $DIR/logs/$DATE-hostapd &
+else
+    for i in 0 1 2; do
+	sudo $WPAS -g /tmp/wpas-wlan$i -Gadmin -Dnl80211 -iwlan$i -c $DIR/p2p$i.conf -N -Dnl80211 -ista$i -c $DIR/sta-dummy.conf -ddKt > $DIR/logs/$DATE-log$i &
+    done
+    sudo $HAPD -ddKt -g /var/run/hostapd-global -G admin -ddKt > $DIR/logs/$DATE-hostapd &
+fi
 sleep 1
 sudo chown $USER $DIR/logs/$DATE-hwsim0.dump
+if [ "x$VALGRIND" = "xy" ]; then
+    sudo chown $USER $DIR/logs/$DATE-valgrind*
+    sleep 2
+fi

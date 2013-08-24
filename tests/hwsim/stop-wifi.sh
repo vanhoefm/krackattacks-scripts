@@ -2,6 +2,9 @@
 
 sudo killall -q hostapd
 sudo killall -q wpa_supplicant
+if [ "x$1" = "xvalgrind" ]; then
+    sudo kill `pidof valgrind.bin`
+fi
 sudo killall -q wlantest
 sudo killall -q tcpdump
 if grep -q hwsim0 /proc/net/dev; then

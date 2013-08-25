@@ -30,6 +30,7 @@ def reset_devs(dev, apdev):
 def main():
     test_file = None
     error_file = None
+    log_file = None
     idx = 1
     if len(sys.argv) > 1 and sys.argv[1] == '-d':
         logging.basicConfig(level=logging.DEBUG)
@@ -37,6 +38,10 @@ def main():
     elif len(sys.argv) > 1 and sys.argv[1] == '-q':
         logging.basicConfig(level=logging.WARNING)
         idx = idx + 1
+    elif len(sys.argv) > 2 and sys.argv[1] == '-l':
+        log_file = sys.argv[2]
+        logging.basicConfig(filename=log_file,level=logging.DEBUG)
+        idx = idx + 2
     else:
         logging.basicConfig(level=logging.INFO)
 
@@ -91,6 +96,8 @@ def main():
                 continue
         reset_devs(dev, apdev)
         logger.info("START " + t.__name__)
+        if log_file:
+            print "START " + t.__name__
         if t.__doc__:
             logger.info("Test: " + t.__doc__)
         for d in dev:
@@ -106,10 +113,14 @@ def main():
                 t(dev)
             passed.append(t.__name__)
             logger.info("PASS " + t.__name__)
+            if log_file:
+                print "PASS " + t.__name__
         except Exception, e:
             logger.info(e)
             failed.append(t.__name__)
             logger.info("FAIL " + t.__name__)
+            if log_file:
+                print "FAIL " + t.__name__
         for d in dev:
             try:
                 d.request("NOTE TEST-STOP " + t.__name__)
@@ -129,6 +140,8 @@ def main():
             f.close()
         sys.exit(1)
     logger.info("passed all " + str(len(passed)) + " test case(s)")
+    if log_file:
+        print "passed all " + str(len(passed)) + " test case(s)"
 
 if __name__ == "__main__":
     main()

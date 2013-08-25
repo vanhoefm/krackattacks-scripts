@@ -2161,8 +2161,9 @@ struct wpa_driver_ops {
 	 * Returns: 0 on success, -1 on failure (or if not supported)
 	 *
 	 * This optional function can be used to disable AP mode related
-	 * configuration and change the driver mode to station mode to allow
-	 * normal station operations like scanning to be completed.
+	 * configuration. If the interface was not dynamically added,
+	 * change the driver mode to station mode to allow normal station
+	 * operations like scanning to be completed.
 	 */
 	int (*deinit_ap)(void *priv);
 
@@ -2171,8 +2172,9 @@ struct wpa_driver_ops {
 	 * @priv: Private driver interface data
 	 * Returns: 0 on success, -1 on failure (or if not supported)
 	 *
-	 * This optional function can be used to disable P2P client mode. It
-	 * can be used to change the interface type back to station mode.
+	 * This optional function can be used to disable P2P client mode. If the
+	 * interface was not dynamically added, change the interface type back
+	 * to station mode.
 	 */
 	int (*deinit_p2p_cli)(void *priv);
 

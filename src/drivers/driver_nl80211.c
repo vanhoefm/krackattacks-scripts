@@ -197,6 +197,7 @@ struct i802_bss {
 	u8 addr[ETH_ALEN];
 
 	int freq;
+	int if_dynamic;
 
 	void *ctx;
 	struct nl_handle *nl_preq, *nl_mgmt;
@@ -4012,15 +4013,14 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 #endif /* HOSTAPD */
 	struct i802_bss *bss = &drv->first_bss;
 	int send_rfkill_event = 0;
-	int dynamic_if;
 
 	drv->ifindex = if_nametoindex(bss->ifname);
 	bss->ifindex = drv->ifindex;
 	bss->wdev_id = drv->global->if_add_wdevid;
 	bss->wdev_id_set = drv->global->if_add_wdevid_set;
 
-	dynamic_if = drv->ifindex == drv->global->if_add_ifindex;
-	dynamic_if = dynamic_if || drv->global->if_add_wdevid_set;
+	bss->if_dynamic = drv->ifindex == drv->global->if_add_ifindex;
+	bss->if_dynamic = bss->if_dynamic || drv->global->if_add_wdevid_set;
 	drv->global->if_add_wdevid_set = 0;
 
 	if (wpa_driver_nl80211_capa(drv))
@@ -4030,7 +4030,7 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 		   bss->ifname, drv->phyname);
 
 #ifndef HOSTAPD
-	if (dynamic_if)
+	if (bss->if_dynamic)
 		nlmode = nl80211_get_ifmode(bss);
 
 	/*
@@ -9540,6 +9540,14 @@ static int wpa_driver_nl80211_deinit_ap(void *priv)
 	if (!is_ap_interface(drv->nlmode))
 		return -1;
 	wpa_driver_nl80211_del_beacon(drv);
+
+	/*
+	 * If the P2P GO interface was dynamically added, then it is
+	 * possible that the interface change to station is not possible.
+	 */
+	if (drv->nlmode == NL80211_IFTYPE_P2P_GO && bss->if_dynamic)
+		return 0;
+
 	return wpa_driver_nl80211_set_mode(priv, NL80211_IFTYPE_STATION);
 }
 
@@ -9562,6 +9570,14 @@ static int wpa_driver_nl80211_deinit_p2p_cli(void *priv)
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	if (drv->nlmode != NL80211_IFTYPE_P2P_CLIENT)
 		return -1;
+
+	/*
+	 * If the P2P Client interface was dynamically added, then it is
+	 * possible that the interface change to station is not possible.
+	 */
+	if (bss->if_dynamic)
+		return 0;
+
 	return wpa_driver_nl80211_set_mode(priv, NL80211_IFTYPE_STATION);
 }
 

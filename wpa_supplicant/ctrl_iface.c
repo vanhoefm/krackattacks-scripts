@@ -6036,6 +6036,47 @@ static int wpas_global_ctrl_iface_save_config(struct wpa_global *global)
 #endif /* CONFIG_NO_CONFIG_WRITE */
 
 
+static int wpas_global_ctrl_iface_status(struct wpa_global *global,
+					 char *buf, size_t buflen)
+{
+	char *pos, *end;
+	int ret;
+	struct wpa_supplicant *wpa_s;
+
+	pos = buf;
+	end = buf + buflen;
+
+#ifdef CONFIG_P2P
+	if (global->p2p) {
+		ret = os_snprintf(pos, end - pos, "p2p_device_address=" MACSTR
+				  "\n", MAC2STR(global->p2p_dev_addr));
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+	}
+#endif /* CONFIG_P2P */
+
+#ifdef CONFIG_WIFI_DISPLAY
+	ret = os_snprintf(pos, end - pos, "wifi_display=%d\n",
+			  !!global->wifi_display);
+	if (ret < 0 || ret >= end - pos)
+		return pos - buf;
+	pos += ret;
+#endif /* CONFIG_WIFI_DISPLAY */
+
+	for (wpa_s = global->ifaces; wpa_s; wpa_s = wpa_s->next) {
+		ret = os_snprintf(pos, end - pos, "ifname=%s\n"
+				  "address=" MACSTR "\n",
+				  wpa_s->ifname, MAC2STR(wpa_s->own_addr));
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+	}
+
+	return pos - buf;
+}
+
+
 char * wpa_supplicant_global_ctrl_iface_process(struct wpa_global *global,
 						char *buf, size_t *resp_len)
 {
@@ -6101,6 +6142,9 @@ char * wpa_supplicant_global_ctrl_iface_process(struct wpa_global *global,
 		if (wpas_global_ctrl_iface_save_config(global))
 			reply_len = -1;
 #endif /* CONFIG_NO_CONFIG_WRITE */
+	} else if (os_strcmp(buf, "STATUS") == 0) {
+		reply_len = wpas_global_ctrl_iface_status(global, reply,
+							  reply_size);
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);
 		reply_len = 16;

@@ -17,7 +17,7 @@ mkdir -p $DIR/logs
 DATE=`date +%s`
 sudo ifconfig hwsim0 up
 sudo $WLANTEST -i hwsim0 -c -d > $DIR/logs/$DATE-hwsim0 &
-sudo tcpdump -ni hwsim0 -s 2500 -w $DIR/logs/$DATE-hwsim0.dump &
+sudo tcpdump -ni hwsim0 -s 2500 -w $DIR/logs/$DATE-hwsim0.dump > $DIR/logs/$DATE-tcpdump 2>&1 &
 if [ "x$VALGRIND" = "xy" ]; then
     for i in 0 1 2; do
 	chmod a+rx $WPAS

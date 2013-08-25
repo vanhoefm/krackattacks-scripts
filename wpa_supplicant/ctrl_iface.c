@@ -5989,6 +5989,28 @@ static char * wpas_global_ctrl_iface_redir(struct wpa_global *global,
 }
 
 
+static int wpas_global_ctrl_iface_set(struct wpa_global *global, char *cmd)
+{
+	char *value;
+
+	value = os_strchr(cmd, ' ');
+	if (value == NULL)
+		return -1;
+	*value++ = '\0';
+
+	wpa_printf(MSG_DEBUG, "GLOBAL_CTRL_IFACE SET '%s'='%s'", cmd, value);
+
+#ifdef CONFIG_WIFI_DISPLAY
+	if (os_strcasecmp(cmd, "wifi_display") == 0) {
+		wifi_display_enable(global, !!atoi(value));
+		return 0;
+	}
+#endif /* CONFIG_WIFI_DISPLAY */
+
+	return -1;
+}
+
+
 char * wpa_supplicant_global_ctrl_iface_process(struct wpa_global *global,
 						char *buf, size_t *resp_len)
 {
@@ -6046,6 +6068,9 @@ char * wpa_supplicant_global_ctrl_iface_process(struct wpa_global *global,
 		wpas_notify_suspend(global);
 	} else if (os_strcmp(buf, "RESUME") == 0) {
 		wpas_notify_resume(global);
+	} else if (os_strncmp(buf, "SET ", 4) == 0) {
+		if (wpas_global_ctrl_iface_set(global, buf + 4))
+			reply_len = -1;
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);
 		reply_len = 16;

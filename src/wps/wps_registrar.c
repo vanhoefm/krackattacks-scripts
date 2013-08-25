@@ -1265,7 +1265,7 @@ static int wps_set_ie(struct wps_registrar *reg)
 	    wps_build_sel_reg_dev_password_id(reg, beacon) ||
 	    wps_build_sel_reg_config_methods(reg, beacon) ||
 	    wps_build_sel_pbc_reg_uuid_e(reg, beacon) ||
-	    (reg->dualband && wps_build_rf_bands(&reg->wps->dev, beacon)) ||
+	    (reg->dualband && wps_build_rf_bands(&reg->wps->dev, beacon, 0)) ||
 	    wps_build_wfa_ext(beacon, 0, auth_macs, count) ||
 	    wps_build_vendor_ext(&reg->wps->dev, beacon)) {
 		wpabuf_free(beacon);
@@ -1295,7 +1295,7 @@ static int wps_set_ie(struct wps_registrar *reg)
 	    wps_build_uuid_e(probe, reg->wps->uuid) ||
 	    wps_build_device_attrs(&reg->wps->dev, probe) ||
 	    wps_build_probe_config_methods(reg, probe) ||
-	    (reg->dualband && wps_build_rf_bands(&reg->wps->dev, probe)) ||
+	    (reg->dualband && wps_build_rf_bands(&reg->wps->dev, probe, 0)) ||
 	    wps_build_wfa_ext(probe, 0, auth_macs, count) ||
 	    wps_build_vendor_ext(&reg->wps->dev, probe)) {
 		wpabuf_free(beacon);
@@ -1790,7 +1790,8 @@ static struct wpabuf * wps_build_m2(struct wps_data *wps)
 	    wps_build_conn_type_flags(wps, msg) ||
 	    wps_build_config_methods_r(wps->wps->registrar, msg) ||
 	    wps_build_device_attrs(&wps->wps->dev, msg) ||
-	    wps_build_rf_bands(&wps->wps->dev, msg) ||
+	    wps_build_rf_bands(&wps->wps->dev, msg,
+			       wps->wps->rf_band_cb(wps->wps->cb_ctx)) ||
 	    wps_build_assoc_state(wps, msg) ||
 	    wps_build_config_error(msg, WPS_CFG_NO_ERROR) ||
 	    wps_build_dev_password_id(msg, wps->dev_pw_id) ||
@@ -1831,7 +1832,8 @@ static struct wpabuf * wps_build_m2d(struct wps_data *wps)
 	    wps_build_conn_type_flags(wps, msg) ||
 	    wps_build_config_methods_r(wps->wps->registrar, msg) ||
 	    wps_build_device_attrs(&wps->wps->dev, msg) ||
-	    wps_build_rf_bands(&wps->wps->dev, msg) ||
+	    wps_build_rf_bands(&wps->wps->dev, msg,
+			       wps->wps->rf_band_cb(wps->wps->cb_ctx)) ||
 	    wps_build_assoc_state(wps, msg) ||
 	    wps_build_config_error(msg, err) ||
 	    wps_build_os_version(&wps->wps->dev, msg) ||

@@ -857,6 +857,15 @@ static void hostapd_wps_event_cb(void *ctx, enum wps_event event,
 }
 
 
+static int hostapd_wps_rf_band_cb(void *ctx)
+{
+	struct hostapd_data *hapd = ctx;
+
+	return hapd->iconf->hw_mode == HOSTAPD_MODE_IEEE80211A ?
+		WPS_RF_50GHZ : WPS_RF_24GHZ; /* FIX: dualband AP */
+}
+
+
 static void hostapd_wps_clear_ies(struct hostapd_data *hapd)
 {
 	wpabuf_free(hapd->wps_beacon_ie);
@@ -964,6 +973,7 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 
 	wps->cred_cb = hostapd_wps_cred_cb;
 	wps->event_cb = hostapd_wps_event_cb;
+	wps->rf_band_cb = hostapd_wps_rf_band_cb;
 	wps->cb_ctx = hapd;
 
 	os_memset(&cfg, 0, sizeof(cfg));

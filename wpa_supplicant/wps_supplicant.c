@@ -856,6 +856,17 @@ static void wpa_supplicant_wps_event(void *ctx, enum wps_event event,
 }
 
 
+static int wpa_supplicant_wps_rf_band(void *ctx)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+
+	if (!wpa_s->current_ssid || !wpa_s->assoc_freq)
+		return 0;
+
+	return (wpa_s->assoc_freq > 2484) ? WPS_RF_50GHZ : WPS_RF_24GHZ;
+}
+
+
 enum wps_request_type wpas_wps_get_req_type(struct wpa_ssid *ssid)
 {
 	if (eap_is_wps_pbc_enrollee(&ssid->eap) ||
@@ -1327,6 +1338,7 @@ int wpas_wps_init(struct wpa_supplicant *wpa_s)
 
 	wps->cred_cb = wpa_supplicant_wps_cred;
 	wps->event_cb = wpa_supplicant_wps_event;
+	wps->rf_band_cb = wpa_supplicant_wps_rf_band;
 	wps->cb_ctx = wpa_s;
 
 	wps->dev.device_name = wpa_s->conf->device_name;

@@ -746,6 +746,13 @@ struct wps_context {
 			 union wps_event_data *data);
 
 	/**
+	 * rf_band_cb - Fetch currently used RF band
+	 * @ctx: Higher layer context data (cb_ctx)
+	 * Return: Current used RF band or 0 if not known
+	 */
+	int (*rf_band_cb)(void *ctx);
+
+	/**
 	 * cb_ctx: Higher layer context data for callbacks
 	 */
 	void *cb_ctx;

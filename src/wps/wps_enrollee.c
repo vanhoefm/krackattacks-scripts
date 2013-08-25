@@ -148,7 +148,8 @@ static struct wpabuf * wps_build_m1(struct wps_data *wps)
 	    wps_build_config_methods(msg, config_methods) ||
 	    wps_build_wps_state(wps, msg) ||
 	    wps_build_device_attrs(&wps->wps->dev, msg) ||
-	    wps_build_rf_bands(&wps->wps->dev, msg) ||
+	    wps_build_rf_bands(&wps->wps->dev, msg,
+			       wps->wps->rf_band_cb(wps->wps->cb_ctx)) ||
 	    wps_build_assoc_state(wps, msg) ||
 	    wps_build_dev_password_id(msg, wps->dev_pw_id) ||
 	    wps_build_config_error(msg, WPS_CFG_NO_ERROR) ||

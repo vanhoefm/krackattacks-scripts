@@ -497,7 +497,7 @@ struct wpabuf * wps_build_probe_req_ie(u16 pw_id, struct wps_device_data *dev,
 	    wps_build_config_methods(ie, dev->config_methods) ||
 	    wps_build_uuid_e(ie, uuid) ||
 	    wps_build_primary_dev_type(dev, ie) ||
-	    wps_build_rf_bands(dev, ie) ||
+	    wps_build_rf_bands(dev, ie, 0) ||
 	    wps_build_assoc_state(NULL, ie) ||
 	    wps_build_config_error(ie, WPS_CFG_NO_ERROR) ||
 	    wps_build_dev_password_id(ie, pw_id) ||

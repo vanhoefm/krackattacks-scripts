@@ -14,6 +14,7 @@
 #include "utils/uuid.h"
 #include "common/ieee802_11_defs.h"
 #include "common/wpa_ctrl.h"
+#include "eapol_supp/eapol_supp_sm.h"
 #include "ap/hostapd.h"
 #include "ap/ap_config.h"
 #include "ap/ap_drv_ops.h"
@@ -582,6 +583,7 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 	hapd_iface->bss[0]->drv_priv = wpa_s->drv_priv;
 
 	wpa_s->current_ssid = ssid;
+	eapol_sm_notify_config(wpa_s->eapol, NULL, NULL);
 	os_memcpy(wpa_s->bssid, wpa_s->own_addr, ETH_ALEN);
 	wpa_s->assoc_freq = ssid->frequency;
 
@@ -605,6 +607,7 @@ void wpa_supplicant_ap_deinit(struct wpa_supplicant *wpa_s)
 		return;
 
 	wpa_s->current_ssid = NULL;
+	eapol_sm_notify_config(wpa_s->eapol, NULL, NULL);
 	wpa_s->assoc_freq = 0;
 #ifdef CONFIG_P2P
 	if (wpa_s->ap_iface->bss)

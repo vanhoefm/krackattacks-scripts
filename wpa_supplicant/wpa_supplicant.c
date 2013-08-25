@@ -1912,8 +1912,10 @@ void wpa_supplicant_select_network(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
-	if (ssid)
+	if (ssid) {
 		wpa_s->current_ssid = ssid;
+		eapol_sm_notify_config(wpa_s->eapol, NULL, NULL);
+	}
 	wpa_s->connect_without_scan = NULL;
 	wpa_s->disconnected = 0;
 	wpa_s->reassociate = 1;

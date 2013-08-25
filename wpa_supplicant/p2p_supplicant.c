@@ -4133,7 +4133,11 @@ int wpas_p2p_group_remove(struct wpa_supplicant *wpa_s, const char *ifname)
 		while (wpa_s) {
 			prev = wpa_s;
 			wpa_s = wpa_s->next;
-			wpas_p2p_disconnect(prev);
+			if (prev->p2p_group_interface !=
+			    NOT_P2P_GROUP_INTERFACE ||
+			    (prev->current_ssid &&
+			     prev->current_ssid->p2p_group))
+				wpas_p2p_disconnect(prev);
 		}
 		return 0;
 	}

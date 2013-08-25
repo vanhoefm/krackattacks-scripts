@@ -331,13 +331,13 @@ void wpa_supplicant_ctrl_iface_deinit(struct ctrl_iface_priv *priv)
 		eloop_unregister_read_sock(priv->sock);
 		if (priv->ctrl_dst) {
 			/*
-			 * Wait a second before closing the control socket if
+			 * Wait before closing the control socket if
 			 * there are any attached monitors in order to allow
 			 * them to receive any pending messages.
 			 */
 			wpa_printf(MSG_DEBUG, "CTRL_IFACE wait for attached "
 				   "monitors to receive messages");
-			os_sleep(1, 0);
+			os_sleep(0, 100000);
 		}
 		close(priv->sock);
 		priv->sock = -1;

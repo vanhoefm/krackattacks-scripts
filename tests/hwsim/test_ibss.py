@@ -17,10 +17,17 @@ def connect_ibss_cmd(dev, id):
     dev.select_network(id)
 
 def wait_ibss_connection(dev):
+    logger.info(dev.ifname + " waiting for IBSS start/join to complete")
     ev = dev.wait_event(["CTRL-EVENT-CONNECTED"], timeout=20)
     if ev is None:
         raise Exception("Connection to the IBSS timed out")
-    dev.dump_monitor()
+
+def wait_4way_handshake(dev1, dev2):
+    logger.info(dev1.ifname + " waiting for 4-way handshake completion with " + dev2.ifname + " " + dev2.p2p_interface_addr())
+    ev = dev1.wait_event(["IBSS-RSN-COMPLETED " + dev2.p2p_interface_addr()],
+                         timeout=20)
+    if ev is None:
+        raise Exception("4-way handshake in IBSS timed out")
 
 def add_ibss(dev, ssid, psk=None, proto=None, key_mgmt=None, pairwise=None, group=None):
     id = dev.add_network()
@@ -55,12 +62,15 @@ def test_ibss_rsn(dev):
 
     id = add_ibss_rsn(dev[1], ssid)
     connect_ibss_cmd(dev[1], id)
+    wait_ibss_connection(dev[1])
+    wait_4way_handshake(dev[0], dev[1])
+    wait_4way_handshake(dev[1], dev[0])
 
     id = add_ibss_rsn(dev[2], ssid)
     connect_ibss_cmd(dev[2], id)
-
-    wait_ibss_connection(dev[1])
     wait_ibss_connection(dev[2])
+    wait_4way_handshake(dev[0], dev[2])
+    wait_4way_handshake(dev[2], dev[0])
 
     # Allow some time for all peers to complete key setup
     time.sleep(3)

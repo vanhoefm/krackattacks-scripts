@@ -63,6 +63,9 @@ extern "C" {
 /** A BSS entry was removed (followed by BSS entry id and BSSID) */
 #define WPA_EVENT_BSS_REMOVED "CTRL-EVENT-BSS-REMOVED "
 
+/** RSN IBSS 4-way handshakes completed with specified peer */
+#define IBSS_RSN_COMPLETED "IBSS-RSN-COMPLETED "
+
 /** WPS overlap detected in PBC mode */
 #define WPS_EVENT_OVERLAP "WPS-OVERLAP-DETECTED "
 /** Available WPS AP with active PBC found in scan results */

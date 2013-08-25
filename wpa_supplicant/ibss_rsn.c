@@ -1,6 +1,6 @@
 /*
  * wpa_supplicant - IBSS RSN
- * Copyright (c) 2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2009-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -9,6 +9,7 @@
 #include "includes.h"
 
 #include "common.h"
+#include "common/wpa_ctrl.h"
 #include "l2_packet/l2_packet.h"
 #include "rsn_supp/wpa.h"
 #include "rsn_supp/wpa_ie.h"
@@ -114,6 +115,22 @@ static int supp_get_beacon_ie(void *ctx)
 }
 
 
+static void ibss_check_rsn_completed(struct ibss_rsn_peer *peer)
+{
+	struct wpa_supplicant *wpa_s = peer->ibss_rsn->wpa_s;
+
+	if ((peer->authentication_status &
+	     (IBSS_RSN_SET_PTK_SUPP | IBSS_RSN_SET_PTK_AUTH)) !=
+	    (IBSS_RSN_SET_PTK_SUPP | IBSS_RSN_SET_PTK_AUTH))
+		return;
+	if (peer->authentication_status & IBSS_RSN_REPORTED_PTK)
+		return;
+	peer->authentication_status |= IBSS_RSN_REPORTED_PTK;
+	wpa_msg(wpa_s, MSG_INFO, IBSS_RSN_COMPLETED MACSTR,
+		MAC2STR(peer->addr));
+}
+
+
 static int supp_set_key(void *ctx, enum wpa_alg alg,
 			const u8 *addr, int key_idx, int set_tx,
 			const u8 *seq, size_t seq_len,
@@ -128,6 +145,8 @@ static int supp_set_key(void *ctx, enum wpa_alg alg,
 	wpa_hexdump_key(MSG_DEBUG, "SUPP: set_key - key", key, key_len);
 
 	if (key_idx == 0) {
+		peer->authentication_status |= IBSS_RSN_SET_PTK_SUPP;
+		ibss_check_rsn_completed(peer);
 		/*
 		 * In IBSS RSN, the pairwise key from the 4-way handshake
 		 * initiated by the peer with highest MAC address is used.
@@ -281,6 +300,15 @@ static int auth_set_key(void *ctx, int vlan_id, enum wpa_alg alg,
 	wpa_hexdump_key(MSG_DEBUG, "AUTH: set_key - key", key, key_len);
 
 	if (idx == 0) {
+		if (addr) {
+			struct ibss_rsn_peer *peer;
+			peer = ibss_rsn_get_peer(ibss_rsn, addr);
+			if (peer) {
+				peer->authentication_status |=
+					IBSS_RSN_SET_PTK_AUTH;
+				ibss_check_rsn_completed(peer);
+			}
+		}
 		/*
 		 * In IBSS RSN, the pairwise key from the 4-way handshake
 		 * initiated by the peer with highest MAC address is used.

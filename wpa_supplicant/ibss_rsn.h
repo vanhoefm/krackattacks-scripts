@@ -19,6 +19,12 @@ struct ibss_rsn;
 #define IBSS_RSN_AUTH_BY_US		0x02
 /* we sent an EAPOL message */
 #define IBSS_RSN_AUTH_EAPOL_BY_US	0x04
+/* PTK derived as supplicant */
+#define IBSS_RSN_SET_PTK_SUPP		0x08
+/* PTK derived as authenticator */
+#define IBSS_RSN_SET_PTK_AUTH		0x10
+/* PTK completion reported */
+#define IBSS_RSN_REPORTED_PTK		0x20
 
 struct ibss_rsn_peer {
 	struct ibss_rsn_peer *next;

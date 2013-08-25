@@ -137,6 +137,12 @@ static const char * p2p_state_txt(int state)
 }
 
 
+const char * p2p_get_state_txt(struct p2p_data *p2p)
+{
+	return p2p_state_txt(p2p->state);
+}
+
+
 u16 p2p_get_provisioning_info(struct p2p_data *p2p, const u8 *addr)
 {
 	struct p2p_device *dev = NULL;

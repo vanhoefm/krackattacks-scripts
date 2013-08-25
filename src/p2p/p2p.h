@@ -1820,4 +1820,15 @@ struct wpabuf * wifi_display_encaps(struct wpabuf *subelems);
 int p2p_set_disc_int(struct p2p_data *p2p, int min_disc_int, int max_disc_int,
 		     int max_disc_tu);
 
+/**
+ * p2p_get_state_txt - Get current P2P state for debug purposes
+ * @p2p: P2P module context from p2p_init()
+ * Returns: Name of the current P2P module state
+ *
+ * It should be noted that the P2P module state names are internal information
+ * and subject to change at any point, i.e., this information should be used
+ * mainly for debugging purposes.
+ */
+const char * p2p_get_state_txt(struct p2p_data *p2p);
+
 #endif /* P2P_H */

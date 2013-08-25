@@ -6047,9 +6047,17 @@ static int wpas_global_ctrl_iface_status(struct wpa_global *global,
 	end = buf + buflen;
 
 #ifdef CONFIG_P2P
-	if (global->p2p) {
+	if (global->p2p && !global->p2p_disabled) {
 		ret = os_snprintf(pos, end - pos, "p2p_device_address=" MACSTR
-				  "\n", MAC2STR(global->p2p_dev_addr));
+				  "\n"
+				  "p2p_state=%s\n",
+				  MAC2STR(global->p2p_dev_addr),
+				  p2p_get_state_txt(global->p2p));
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+	} else if (global->p2p) {
+		ret = os_snprintf(pos, end - pos, "p2p_state=DISABLED\n");
 		if (ret < 0 || ret >= end - pos)
 			return pos - buf;
 		pos += ret;

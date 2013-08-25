@@ -59,8 +59,8 @@ class Wlantest:
         return int(res)
 
     def tdls_clear(self, bssid, addr1, addr2):
-        subprocess.call([self.wlantest_cli, "clear_tdls_counters", bssid, addr1,
-                         addr2]);
+        res = subprocess.check_output([self.wlantest_cli, "clear_tdls_counters",
+                                       bssid, addr1, addr2]);
 
     def get_tdls_counter(self, field, bssid, addr1, addr2):
         res = subprocess.check_output([self.wlantest_cli, "get_tdls_counter",

@@ -353,6 +353,8 @@ static int nl80211_leave_ibss(struct wpa_driver_nl80211_data *drv);
 static int wpa_driver_nl80211_authenticate_retry(
 	struct wpa_driver_nl80211_data *drv);
 
+static int i802_set_iface_flags(struct i802_bss *bss, int up);
+
 
 static const char * nl80211_command_to_string(enum nl80211_commands cmd)
 {
@@ -3494,8 +3496,7 @@ static void wpa_driver_nl80211_rfkill_unblocked(void *ctx)
 {
 	struct wpa_driver_nl80211_data *drv = ctx;
 	wpa_printf(MSG_DEBUG, "nl80211: RFKILL unblocked");
-	if (linux_set_iface_flags(drv->global->ioctl_sock,
-				  drv->first_bss.ifname, 1)) {
+	if (i802_set_iface_flags(&drv->first_bss, 1)) {
 		wpa_printf(MSG_DEBUG, "nl80211: Could not set interface UP "
 			   "after rfkill unblock");
 		return;

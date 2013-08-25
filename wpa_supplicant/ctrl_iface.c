@@ -6011,6 +6011,31 @@ static int wpas_global_ctrl_iface_set(struct wpa_global *global, char *cmd)
 }
 
 
+#ifndef CONFIG_NO_CONFIG_WRITE
+static int wpas_global_ctrl_iface_save_config(struct wpa_global *global)
+{
+	int ret = 0;
+	struct wpa_supplicant *wpa_s;
+
+	for (wpa_s = global->ifaces; wpa_s; wpa_s = wpa_s->next) {
+		if (!wpa_s->conf->update_config) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "CTRL_IFACE: SAVE_CONFIG - Not allowed to update configuration (update_config=0)");
+			continue;
+		}
+
+		if (wpa_config_write(wpa_s->confname, wpa_s->conf)) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "CTRL_IFACE: SAVE_CONFIG - Failed to update configuration");
+			ret = 1;
+		} else {
+			wpa_dbg(wpa_s, MSG_DEBUG, "CTRL_IFACE: SAVE_CONFIG - Configuration updated");
+		}
+	}
+
+	return ret;
+}
+#endif /* CONFIG_NO_CONFIG_WRITE */
+
+
 char * wpa_supplicant_global_ctrl_iface_process(struct wpa_global *global,
 						char *buf, size_t *resp_len)
 {
@@ -6071,6 +6096,11 @@ char * wpa_supplicant_global_ctrl_iface_process(struct wpa_global *global,
 	} else if (os_strncmp(buf, "SET ", 4) == 0) {
 		if (wpas_global_ctrl_iface_set(global, buf + 4))
 			reply_len = -1;
+#ifndef CONFIG_NO_CONFIG_WRITE
+	} else if (os_strcmp(buf, "SAVE_CONFIG") == 0) {
+		if (wpas_global_ctrl_iface_save_config(global))
+			reply_len = -1;
+#endif /* CONFIG_NO_CONFIG_WRITE */
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);
 		reply_len = 16;

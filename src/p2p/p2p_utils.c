@@ -109,6 +109,9 @@ int p2p_freq_to_channel(unsigned int freq, u8 *op_class, u8 *channel)
 {
 	/* TODO: more operating classes */
 	if (freq >= 2412 && freq <= 2472) {
+		if ((freq - 2407) % 5)
+			return -1;
+
 		*op_class = 81; /* 2.407 GHz, channels 1..13 */
 		*channel = (freq - 2407) / 5;
 		return 0;
@@ -121,12 +124,18 @@ int p2p_freq_to_channel(unsigned int freq, u8 *op_class, u8 *channel)
 	}
 
 	if (freq >= 5180 && freq <= 5240) {
+		if ((freq - 5000) % 5)
+			return -1;
+
 		*op_class = 115; /* 5 GHz, channels 36..48 */
 		*channel = (freq - 5000) / 5;
 		return 0;
 	}
 
 	if (freq >= 5745 && freq <= 5805) {
+		if ((freq - 5000) % 5)
+			return -1;
+
 		*op_class = 124; /* 5 GHz, channels 149..161 */
 		*channel = (freq - 5000) / 5;
 		return 0;

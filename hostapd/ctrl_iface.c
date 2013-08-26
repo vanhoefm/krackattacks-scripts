@@ -1328,7 +1328,10 @@ void hostapd_ctrl_iface_deinit(struct hostapd_data *hapd)
 					   "directory not empty - leaving it "
 					   "behind");
 			} else {
-				perror("rmdir[ctrl_interface]");
+				wpa_printf(MSG_ERROR,
+					   "rmdir[ctrl_interface=%s]: %s",
+					   hapd->conf->ctrl_interface,
+					   strerror(errno));
 			}
 		}
 	}
@@ -1558,7 +1561,10 @@ void hostapd_global_ctrl_iface_deinit(struct hapd_interfaces *interfaces)
 					   "directory not empty - leaving it "
 					   "behind");
 			} else {
-				perror("rmdir[ctrl_interface]");
+				wpa_printf(MSG_ERROR,
+					   "rmdir[ctrl_interface=%s]: %s",
+					   interfaces->global_iface_path,
+					   strerror(errno));
 			}
 		}
 		os_free(interfaces->global_iface_path);

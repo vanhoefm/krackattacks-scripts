@@ -3847,6 +3847,9 @@ static int wpas_p2p_setup_freqs(struct wpa_supplicant *wpa_s, int freq,
 
 	num = get_shared_radio_freqs(wpa_s, freqs,
 				     wpa_s->num_multichan_concurrent);
+	wpa_printf(MSG_DEBUG,
+		   "P2P: Setup freqs: freq=%d num_MCC=%d shared_freqs=%u",
+		   freq, wpa_s->num_multichan_concurrent, num);
 
 	if (freq > 0) {
 		if (!p2p_supported_freq(wpa_s->global->p2p, freq)) {

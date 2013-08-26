@@ -1133,6 +1133,8 @@ static int p2p_prepare_channel_pref(struct p2p_data *p2p,
 	u8 op_class, op_channel;
 	unsigned int freq = force_freq ? force_freq : pref_freq;
 
+	p2p_dbg(p2p, "Prepare channel pref - force_freq=%u pref_freq=%u",
+		force_freq, pref_freq);
 	if (p2p_freq_to_channel(freq, &op_class, &op_channel) < 0) {
 		p2p_dbg(p2p, "Unsupported frequency %u MHz", freq);
 		return -1;
@@ -1165,6 +1167,8 @@ static void p2p_prepare_channel_best(struct p2p_data *p2p)
 {
 	u8 op_class, op_channel;
 
+	p2p_dbg(p2p, "Prepare channel best");
+
 	if (!p2p->cfg->cfg_op_channel && p2p->best_freq_overall > 0 &&
 	    p2p_supported_freq(p2p, p2p->best_freq_overall) &&
 	    p2p_freq_to_channel(p2p->best_freq_overall, &op_class, &op_channel)
@@ -1187,6 +1191,7 @@ static void p2p_prepare_channel_best(struct p2p_data *p2p)
 		p2p->op_reg_class = op_class;
 		p2p->op_channel = op_channel;
 	} else {
+		p2p_dbg(p2p, "Select pre-configured channel as operating channel preference");
 		p2p->op_reg_class = p2p->cfg->op_reg_class;
 		p2p->op_channel = p2p->cfg->op_channel;
 	}
@@ -1212,6 +1217,8 @@ static void p2p_prepare_channel_best(struct p2p_data *p2p)
 int p2p_prepare_channel(struct p2p_data *p2p, struct p2p_device *dev,
 			unsigned int force_freq, unsigned int pref_freq)
 {
+	p2p_dbg(p2p, "Prepare channel - force_freq=%u pref_freq=%u",
+		force_freq, pref_freq);
 	if (force_freq || pref_freq) {
 		if (p2p_prepare_channel_pref(p2p, force_freq, pref_freq) < 0)
 			return -1;

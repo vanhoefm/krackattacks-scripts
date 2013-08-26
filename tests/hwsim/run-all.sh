@@ -11,7 +11,7 @@ if [ "x$1" = "xconcurrent-valgrind" ]; then
 	./run-tests.py -l logs/$DATE-run-$i -e logs/$DATE-failed-$i -f test_p2p_$i.py || errors=1
 	cat logs/$DATE-run-$i >> logs/last-debug
     done
-    ./stop-wifi.sh valgrind
+    ./stop-wifi.sh
     failures=`grep "ERROR SUMMARY" logs/$DATE-valgrind-* | grep -v " 0 errors" | wc -l`
     if [ $failures -gt 0 ]; then
 	echo "Mark as failed due to valgrind errors"
@@ -39,7 +39,7 @@ elif [ "x$1" = "xvalgrind" ]; then
     DATE=`ls -1tr logs | tail -1 | cut -f1 -d-`
     ./run-tests.py -l logs/$DATE-run -e logs/$DATE-failed || errors=1
     cat logs/$DATE-run > logs/last-debug
-    ./stop-wifi.sh valgrind
+    ./stop-wifi.sh
     failures=`grep "ERROR SUMMARY" logs/$DATE-valgrind-* | grep -v " 0 errors" | wc -l`
     if [ $failures -gt 0 ]; then
 	echo "Mark as failed due to valgrind errors"

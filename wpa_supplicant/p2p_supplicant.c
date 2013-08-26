@@ -1213,7 +1213,13 @@ void wpas_go_neg_completed(void *ctx, struct p2p_go_neg_results *res)
 	if (wpa_s->p2p_go_ht40)
 		res->ht40 = 1;
 
-	wpa_msg_global(wpa_s, MSG_INFO, P2P_EVENT_GO_NEG_SUCCESS);
+	wpa_msg_global(wpa_s, MSG_INFO, P2P_EVENT_GO_NEG_SUCCESS "role=%s "
+		       "freq=%d ht40=%d peer_dev=" MACSTR " peer_iface=" MACSTR
+		       " wps_method=%s",
+		       res->role_go ? "GO" : "client", res->freq, res->ht40,
+		       MAC2STR(res->peer_device_addr),
+		       MAC2STR(res->peer_interface_addr),
+		       p2p_wps_method_text(res->wps_method));
 	wpas_notify_p2p_go_neg_completed(wpa_s, res);
 
 	if (res->role_go && wpa_s->p2p_persistent_id >= 0) {

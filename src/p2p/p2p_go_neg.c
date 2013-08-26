@@ -1094,6 +1094,14 @@ void p2p_process_go_neg_conf(struct p2p_data *p2p, const u8 *sa,
 		p2p_parse_free(&msg);
 		return;
 #endif /* CONFIG_P2P_STRICT */
+	} else if (dev->go_state == REMOTE_GO) {
+		int oper_freq = p2p_channel_to_freq(msg.operating_channel[3],
+						    msg.operating_channel[4]);
+		if (oper_freq != dev->oper_freq) {
+			p2p_dbg(p2p, "Updated peer (GO) operating channel preference from %d MHz to %d MHz",
+				dev->oper_freq, oper_freq);
+			dev->oper_freq = oper_freq;
+		}
 	}
 
 	if (!msg.channel_list) {

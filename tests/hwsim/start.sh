@@ -2,6 +2,7 @@
 
 DIR="$( cd "$( dirname "$0" )" && pwd )"
 WPAS=$DIR/../../wpa_supplicant/wpa_supplicant
+WPACLI=$DIR/../../wpa_supplicant/wpa_cli
 HAPD=$DIR/../../hostapd/hostapd
 WLANTEST=$DIR/../../wlantest/wlantest
 
@@ -35,5 +36,27 @@ sleep 1
 sudo chown $USER $DIR/logs/$DATE-hwsim0.dump
 if [ "x$VALGRIND" = "xy" ]; then
     sudo chown $USER $DIR/logs/$DATE-*valgrind*
-    sleep 10
 fi
+
+# wait for programs to be fully initialized
+for i in 0 1 2; do
+    for j in `seq 1 10`; do
+	if $WPACLI -g /tmp/wpas-wlan$i ping | grep -q PONG; then
+	    break
+	fi
+	if [ $j = "10" ]; then
+	    echo "Could not connect to /tmp/wpas-wlan$i"
+	fi
+	sleep 1
+    done
+done
+
+for j in `seq 1 10`; do
+    if $WPACLI -g /var/run/hostapd-global ping | grep -q PONG; then
+	break
+    fi
+    if [ $j = "10" ]; then
+	echo "Could not connect to /var/run/hostapd-global"
+    fi
+    sleep 1
+done

@@ -25,7 +25,7 @@ def test_ap_wps_init(dev, apdev):
     dev[0].request("SET ignore_old_scan_res 1")
     dev[0].dump_monitor()
     dev[0].request("WPS_PBC")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
     if ev is None:
         raise Exception("Association with the AP timed out")
     status = dev[0].get_status()

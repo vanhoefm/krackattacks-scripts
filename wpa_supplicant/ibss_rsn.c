@@ -566,6 +566,8 @@ int ibss_rsn_start(struct ibss_rsn *ibss_rsn, const u8 *addr)
 		 */
 		peer->authentication_status |= IBSS_RSN_AUTH_BY_US;
 		return ibss_rsn_auth_init(ibss_rsn, peer);
+	} else {
+		os_get_time(&peer->own_auth_tx);
 	}
 
 	return 0;
@@ -807,6 +809,16 @@ static void ibss_rsn_handle_auth_1_of_2(struct ibss_rsn *ibss_rsn,
 
 	if (peer &&
 	    peer->authentication_status & IBSS_RSN_AUTH_EAPOL_BY_PEER) {
+		if (peer->own_auth_tx.sec) {
+			struct os_time now, diff;
+			os_get_time(&now);
+			os_time_sub(&now, &peer->own_auth_tx, &diff);
+			if (diff.sec == 0 && diff.usec < 500000) {
+				wpa_printf(MSG_DEBUG, "RSN: Skip IBSS reinit since only %u usec from own Auth frame TX",
+					   (int) diff.usec);
+				goto skip_reinit;
+			}
+		}
 		/*
 		 * A peer sent us an Authentication frame even though it already
 		 * started an EAPOL session. We should reinit state machines
@@ -829,6 +841,7 @@ static void ibss_rsn_handle_auth_1_of_2(struct ibss_rsn *ibss_rsn,
 			   MAC2STR(addr));
 	}
 
+skip_reinit:
 	/* reply with an Authentication frame now, before sending an EAPOL */
 	ibss_rsn_send_auth(ibss_rsn, addr, 2);
 	/* no need to start another AUTH challenge in the other way.. */

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-if pidof wpa_supplicant hostapd > /dev/null; then
+if pidof wpa_supplicant hostapd valgrind.bin > /dev/null; then
     RUNNING=yes
 else
     RUNNING=no
@@ -21,7 +21,7 @@ fi
 
 if [ "$RUNNING" = "yes" ]; then
     # give some time for hostapd and wpa_supplicant to complete deinit
-    sleep 2
+    sleep 4
 fi
 
 if pidof wpa_supplicant hostapd > /dev/null; then
@@ -35,6 +35,16 @@ for i in `pidof valgrind.bin`; do
     if ps $i | grep -q -E "wpa_supplicant|hostapd"; then
 	echo "wpa_supplicant/hostapd(valgrind) did not exit - try to force it to die"
 	sudo kill -9 $i
+    fi
+done
+
+for i in /tmp/wpas-wlan0 /tmp/wpas-wlan1 /tmp/wpas-wlan2 /var/run/hostapd-global; do
+    if [ -e $i ]; then
+	sleep 1
+	if [ -e $i ]; then
+	    echo "Control interface file $i exists - remove it"
+	    sudo rm $i
+	fi
     fi
 done
 

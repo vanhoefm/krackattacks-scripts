@@ -9,6 +9,7 @@
 import logging
 logger = logging.getLogger(__name__)
 import time
+import re
 
 import hwsim_utils
 
@@ -21,6 +22,11 @@ def wait_ibss_connection(dev):
     ev = dev.wait_event(["CTRL-EVENT-CONNECTED"], timeout=20)
     if ev is None:
         raise Exception("Connection to the IBSS timed out")
+    exp = r'<.>(CTRL-EVENT-CONNECTED) - Connection to ([0-9a-f:]*) completed.*'
+    s = re.split(exp, ev)
+    if len(s) < 3:
+        return None
+    return s[2]
 
 def wait_4way_handshake(dev1, dev2):
     logger.info(dev1.ifname + " waiting for 4-way handshake completion with " + dev2.ifname + " " + dev2.p2p_interface_addr())
@@ -69,19 +75,27 @@ def test_ibss_rsn(dev):
     logger.info("Start IBSS on the first STA")
     id = add_ibss_rsn(dev[0], ssid)
     connect_ibss_cmd(dev[0], id)
-    wait_ibss_connection(dev[0])
+    bssid0 = wait_ibss_connection(dev[0])
 
     logger.info("Join two STAs to the IBSS")
 
     id = add_ibss_rsn(dev[1], ssid)
     connect_ibss_cmd(dev[1], id)
-    wait_ibss_connection(dev[1])
+    bssid1 = wait_ibss_connection(dev[1])
+    if bssid0 != bssid1:
+        logger.info("STA0 BSSID " + bssid0 + " differs from STA1 BSSID " + bssid1)
+        # try to merge with a scan
+        dev[1].scan()
     wait_4way_handshake(dev[0], dev[1])
     wait_4way_handshake(dev[1], dev[0])
 
     id = add_ibss_rsn(dev[2], ssid)
     connect_ibss_cmd(dev[2], id)
-    wait_ibss_connection(dev[2])
+    bssid2 = wait_ibss_connection(dev[2])
+    if bssid0 != bssid2:
+        logger.info("STA0 BSSID " + bssid0 + " differs from STA2 BSSID " + bssid2)
+        # try to merge with a scan
+        dev[2].scan()
     wait_4way_handshake(dev[0], dev[2])
     wait_4way_handshake2(dev[2], dev[0], dev[1])
 

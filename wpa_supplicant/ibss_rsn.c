@@ -10,6 +10,7 @@
 
 #include "common.h"
 #include "common/wpa_ctrl.h"
+#include "utils/eloop.h"
 #include "l2_packet/l2_packet.h"
 #include "rsn_supp/wpa.h"
 #include "rsn_supp/wpa_ie.h"
@@ -18,6 +19,9 @@
 #include "driver_i.h"
 #include "common/ieee802_11_defs.h"
 #include "ibss_rsn.h"
+
+
+static void ibss_rsn_auth_timeout(void *eloop_ctx, void *timeout_ctx);
 
 
 static struct ibss_rsn_peer * ibss_rsn_get_peer(struct ibss_rsn *ibss_rsn,
@@ -34,6 +38,7 @@ static struct ibss_rsn_peer * ibss_rsn_get_peer(struct ibss_rsn *ibss_rsn,
 
 static void ibss_rsn_free(struct ibss_rsn_peer *peer)
 {
+	eloop_cancel_timeout(ibss_rsn_auth_timeout, peer, NULL);
 	wpa_auth_sta_deinit(peer->auth);
 	wpa_sm_deinit(peer->supp);
 	os_free(peer);
@@ -543,6 +548,23 @@ ibss_rsn_peer_init(struct ibss_rsn *ibss_rsn, const u8 *addr)
 }
 
 
+static void ibss_rsn_auth_timeout(void *eloop_ctx, void *timeout_ctx)
+{
+	struct ibss_rsn_peer *peer = eloop_ctx;
+
+	/*
+	 * Assume peer does not support Authentication exchange or the frame was
+	 * lost somewhere - start EAPOL Authenticator.
+	 */
+	wpa_printf(MSG_DEBUG,
+		   "RSN: Timeout on waiting Authentication frame response from "
+		   MACSTR " - start authenticator", MAC2STR(peer->addr));
+
+	peer->authentication_status |= IBSS_RSN_AUTH_BY_US;
+	ibss_rsn_auth_init(peer->ibss_rsn, peer);
+}
+
+
 int ibss_rsn_start(struct ibss_rsn *ibss_rsn, const u8 *addr)
 {
 	struct ibss_rsn_peer *peer;
@@ -568,6 +590,7 @@ int ibss_rsn_start(struct ibss_rsn *ibss_rsn, const u8 *addr)
 		return ibss_rsn_auth_init(ibss_rsn, peer);
 	} else {
 		os_get_time(&peer->own_auth_tx);
+		eloop_register_timeout(1, 0, ibss_rsn_auth_timeout, peer, NULL);
 	}
 
 	return 0;
@@ -882,7 +905,8 @@ void ibss_rsn_handle_auth(struct ibss_rsn *ibss_rsn, const u8 *auth_frame,
 		}
 
 		/* authentication has been completed */
-		wpa_printf(MSG_DEBUG, "RSN: IBSS Auth completed with "MACSTR,
+		eloop_cancel_timeout(ibss_rsn_auth_timeout, peer, NULL);
+		wpa_printf(MSG_DEBUG, "RSN: IBSS Auth completed with " MACSTR,
 			   MAC2STR(header->sa));
 		ibss_rsn_peer_authenticated(ibss_rsn, peer,
 					    IBSS_RSN_AUTH_BY_US);

@@ -57,6 +57,16 @@
 #define P2P_MAX_INITIAL_CONN_WAIT 10
 #endif /* P2P_MAX_INITIAL_CONN_WAIT */
 
+#ifndef P2P_MAX_INITIAL_CONN_WAIT_GO
+/*
+ * How many seconds to wait for initial 4-way handshake to get completed after
+ * WPS provisioning step on the GO. This controls the extra time the P2P
+ * operation is considered to be in progress (e.g., to delay other scans) after
+ * WPS provisioning has been completed on the GO during group formation.
+ */
+#define P2P_MAX_INITIAL_CONN_WAIT_GO 10
+#endif /* P2P_MAX_INITIAL_CONN_WAIT_GO */
+
 #ifndef P2P_CONCURRENT_SEARCH_DELAY
 #define P2P_CONCURRENT_SEARCH_DELAY 500
 #endif /* P2P_CONCURRENT_SEARCH_DELAY */
@@ -767,8 +777,10 @@ static void wpas_group_formation_completed(struct wpa_supplicant *wpa_s,
 							     ssid, go_dev_addr);
 	if (network_id < 0 && ssid)
 		network_id = ssid->id;
-	if (!client)
+	if (!client) {
 		wpas_notify_p2p_group_started(wpa_s, ssid, network_id, 0);
+		os_get_time(&wpa_s->global->p2p_go_wait_client);
+	}
 }
 
 
@@ -5769,6 +5781,19 @@ int wpas_p2p_in_progress(struct wpa_supplicant *wpa_s)
 		}
 	}
 
+	if (!ret && wpa_s->global->p2p_go_wait_client.sec) {
+		struct os_time now;
+		os_get_time(&now);
+		if (now.sec > wpa_s->global->p2p_go_wait_client.sec +
+		    P2P_MAX_INITIAL_CONN_WAIT_GO) {
+			/* Wait for the first client has expired */
+			wpa_s->global->p2p_go_wait_client.sec = 0;
+		} else {
+			wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Waiting for initial client connection during group formation");
+			ret = 1;
+		}
+	}
+
 	return ret;
 }
 
@@ -5828,6 +5853,7 @@ struct wpa_ssid * wpas_p2p_get_persistent(struct wpa_supplicant *wpa_s,
 void wpas_p2p_notify_ap_sta_authorized(struct wpa_supplicant *wpa_s,
 				       const u8 *addr)
 {
+	wpa_s->global->p2p_go_wait_client.sec = 0;
 	if (addr == NULL)
 		return;
 	wpas_p2p_add_persistent_group_client(wpa_s, addr);

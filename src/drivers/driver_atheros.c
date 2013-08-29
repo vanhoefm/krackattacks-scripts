@@ -1963,7 +1963,7 @@ static int atheros_send_action(void *priv, unsigned int freq,
 }
 
 
-#ifdef CONFIG_WNM
+#if defined(CONFIG_WNM) && defined(IEEE80211_APPIE_FRAME_WNM)
 static int athr_wnm_tfs(struct atheros_driver_data *drv, const u8* peer,
 			u8 *ie, u16 *len, enum wnm_oper oper)
 {
@@ -2116,7 +2116,7 @@ static int atheros_wnm_oper(void *priv, enum wnm_oper oper, const u8 *peer,
 		return -1;
 	}
 }
-#endif /* CONFIG_WNM */
+#endif /* CONFIG_WNM && IEEE80211_APPIE_FRAME_WNM */
 
 
 const struct wpa_driver_ops wpa_driver_atheros_ops = {
@@ -2150,7 +2150,7 @@ const struct wpa_driver_ops wpa_driver_atheros_ops = {
 	.add_sta_node    	= atheros_add_sta_node,
 #endif /* CONFIG_IEEE80211R */
 	.send_action		= atheros_send_action,
-#ifdef CONFIG_WNM
+#if defined(CONFIG_WNM) && defined(IEEE80211_APPIE_FRAME_WNM)
 	.wnm_oper		= atheros_wnm_oper,
-#endif /* CONFIG_WNM */
+#endif /* CONFIG_WNM && IEEE80211_APPIE_FRAME_WNM */
 };

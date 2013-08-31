@@ -32,10 +32,11 @@ def test_autogo(dev):
     autogo(dev[0])
     connect_cli(dev[0], dev[1])
     dev[0].remove_group()
-    try:
-        dev[1].remove_group()
-    except:
-        pass
+    ev = dev[1].wait_event(["P2P-GROUP-REMOVED"], timeout=2)
+    if ev is None:
+        raise Exception("Group removal event timed out")
+    if "reason=GO_ENDING_SESSION" not in ev:
+        raise Exception("Unexpected group removal reason")
 
 def test_autogo_2cli(dev):
     """P2P autonomous GO and two clients joining group"""

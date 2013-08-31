@@ -938,6 +938,8 @@ static int mnc_len_from_imsi(const char *imsi)
 	mcc_str[3] = '\0';
 	mcc = atoi(mcc_str);
 
+	if (mcc == 228)
+		return 2; /* Networks in Switzerland use 2-digit MNC */
 	if (mcc == 244)
 		return 2; /* Networks in Finland use 2-digit MNC */
 

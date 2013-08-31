@@ -1104,6 +1104,24 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 		return -1;
 	}
 
+	if (bss->wpa) {
+		int wep, i;
+
+		wep = bss->default_wep_key_len > 0 ||
+		       bss->individual_wep_key_len > 0;
+		for (i = 0; i < NUM_WEP_KEYS; i++) {
+			if (bss->ssid.wep.keys_set) {
+				wep = 1;
+				break;
+			}
+		}
+
+		if (wep) {
+			wpa_printf(MSG_ERROR, "WEP configuration in a WPA network is not supported");
+			return -1;
+		}
+	}
+
 	if (bss->wpa && bss->wpa_psk_radius != PSK_RADIUS_IGNORED &&
 	    bss->macaddr_acl != USE_EXTERNAL_RADIUS_AUTH) {
 		wpa_printf(MSG_ERROR, "WPA-PSK using RADIUS enabled, but no "

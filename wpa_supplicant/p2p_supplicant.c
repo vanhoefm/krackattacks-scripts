@@ -4130,6 +4130,12 @@ void wpas_p2p_cancel_remain_on_channel_cb(struct wpa_supplicant *wpa_s,
 	if (wpa_s->p2p_long_listen > 0) {
 		wpa_printf(MSG_DEBUG, "P2P: Continuing long Listen state");
 		wpas_p2p_listen_start(wpa_s, wpa_s->p2p_long_listen);
+	} else {
+		/*
+		 * When listen duration is over, stop listen & update p2p_state
+		 * to IDLE.
+		 */
+		p2p_stop_listen(wpa_s->global->p2p);
 	}
 }
 

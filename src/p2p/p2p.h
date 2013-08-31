@@ -904,6 +904,12 @@ void p2p_stop_find_for_freq(struct p2p_data *p2p, int freq);
 int p2p_listen(struct p2p_data *p2p, unsigned int timeout);
 
 /**
+ * p2p_stop_listen - Stop P2P Listen
+ * @p2p: P2P module context from p2p_init()
+ */
+void p2p_stop_listen(struct p2p_data *p2p);
+
+/**
  * p2p_connect - Start P2P group formation (GO negotiation)
  * @p2p: P2P module context from p2p_init()
  * @peer_addr: MAC address of the peer P2P client

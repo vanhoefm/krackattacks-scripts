@@ -1120,6 +1120,18 @@ void p2p_stop_listen_for_freq(struct p2p_data *p2p, int freq)
 }
 
 
+void p2p_stop_listen(struct p2p_data *p2p)
+{
+	if (p2p->state != P2P_LISTEN_ONLY) {
+		p2p_dbg(p2p, "Skip stop_listen since not in listen_only state.");
+		return;
+	}
+
+	p2p_stop_listen_for_freq(p2p, 0);
+	p2p_set_state(p2p, P2P_IDLE);
+}
+
+
 void p2p_stop_find(struct p2p_data *p2p)
 {
 	p2p_stop_find_for_freq(p2p, 0);

@@ -53,7 +53,7 @@ def test_nfc_wps_password_token_sta(dev, apdev):
     res = dev[0].request("WPS_NFC")
     if "FAIL" in res:
         raise Exception("Failed to start Enrollee using NFC password token")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
     if ev is None:
         raise Exception("Association with the AP timed out")
     check_wpa2_connection(dev[0], apdev[0], ssid)
@@ -115,7 +115,7 @@ def test_nfc_wps_password_token_sta_init(dev, apdev):
     res = dev[0].request("WPS_NFC")
     if "FAIL" in res:
         raise Exception("Failed to start Enrollee using NFC password token")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
     if ev is None:
         raise Exception("Association with the AP timed out")
     check_wpa2_connection(dev[0], apdev[0], ssid, mixed=True)
@@ -143,7 +143,7 @@ def test_nfc_wps_password_token_ap(dev, apdev):
     res = dev[0].request("WPS_REG " + apdev[0]['bssid'] + " nfc-pw " + new_ssid.encode("hex") + " WPA2PSK CCMP " + new_passphrase.encode("hex"))
     if "FAIL" in res:
         raise Exception("Failed to start Registrar using NFC password token")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
     if ev is None:
         raise Exception("Association with the AP timed out")
     check_wpa2_connection(dev[0], apdev[0], new_ssid, mixed=True)
@@ -168,7 +168,7 @@ def test_nfc_wps_handover(dev, apdev):
     res = dev[0].request("NFC_REPORT_HANDOVER INIT WPS " + req + " " + sel)
     if "FAIL" in res:
         raise Exception("Failed to report NFC connection handover to to wpa_supplicant")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
     if ev is None:
         raise Exception("Association with the AP timed out")
     check_wpa2_connection(dev[0], apdev[0], ssid)

@@ -278,3 +278,27 @@ CONFIG_IPV6=y
 # certain percentage of probe requests or auth/(re)assoc frames.
 #
 #CONFIG_TESTING_OPTIONS=y
+
+# Automatic Channel Selection
+# This will allow hostapd to pick the channel automatically when channel is set
+# to "acs_survey" or "0". Eventually, other ACS algorithms can be added in
+# similar way.
+#
+# Automatic selection is currently only done through initialization, later on
+# we hope to do background checks to keep us moving to more ideal channels as
+# time goes by. ACS is currently only supported through the nl80211 driver and
+# your driver must have survey dump capability that is filled by the driver
+# during scanning.
+#
+# You can customize the ACS survey algorithm with the hostapd.conf variable
+# acs_num_scans.
+#
+# Supported ACS drivers:
+# * ath9k
+# * ath5k
+# * ath10k
+#
+# For more details refer to:
+# http://wireless.kernel.org/en/users/Documentation/acs
+#
+#CONFIG_ACS=y

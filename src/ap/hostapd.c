@@ -919,6 +919,10 @@ static int setup_interface(struct hostapd_iface *iface)
 				   "channel. (%d)", ret);
 			return -1;
 		}
+		if (ret == 1) {
+			wpa_printf(MSG_DEBUG, "Interface initialization will be completed in a callback (ACS)");
+			return 0;
+		}
 		ret = hostapd_check_ht_capab(iface);
 		if (ret < 0)
 			return -1;

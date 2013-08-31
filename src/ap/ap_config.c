@@ -171,6 +171,10 @@ struct hostapd_config * hostapd_config_defaults(void)
 	conf->corrupt_gtk_rekey_mic_probability = 0.0d;
 #endif /* CONFIG_TESTING_OPTIONS */
 
+#ifdef CONFIG_ACS
+	conf->acs_num_scans = 5;
+#endif /* CONFIG_ACS */
+
 	return conf;
 }
 

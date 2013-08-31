@@ -29,6 +29,7 @@
 #define HOSTAPD_CHAN_HT40PLUS 0x00000010
 #define HOSTAPD_CHAN_HT40MINUS 0x00000020
 #define HOSTAPD_CHAN_HT40 0x00000040
+#define HOSTAPD_CHAN_SURVEY_LIST_INITIALIZED 0x00000080
 
 #define HOSTAPD_CHAN_DFS_UNKNOWN 0x00000000
 #define HOSTAPD_CHAN_DFS_USABLE 0x00000100
@@ -70,6 +71,15 @@ struct hostapd_channel_data {
 	 * surveyed channel data
 	 */
 	s8 min_nf;
+
+#ifdef CONFIG_ACS
+	/**
+	 * interference_factor - Computed interference factor on this
+	 * channel (used internally in src/ap/acs.c; driver wrappers do not
+	 * need to set this)
+	 */
+	long double interference_factor;
+#endif /* CONFIG_ACS */
 };
 
 #define HOSTAPD_MODE_FLAG_HT_INFO_KNOWN BIT(0)

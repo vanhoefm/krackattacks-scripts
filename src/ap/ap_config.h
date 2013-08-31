@@ -532,6 +532,10 @@ struct hostapd_config {
 	double ignore_reassoc_probability;
 	double corrupt_gtk_rekey_mic_probability;
 #endif /* CONFIG_TESTING_OPTIONS */
+
+#ifdef CONFIG_ACS
+	unsigned int acs_num_scans;
+#endif /* CONFIG_ACS */
 };
 
 

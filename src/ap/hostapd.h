@@ -310,6 +310,10 @@ struct hostapd_iface {
 	/* lowest observed noise floor in dBm */
 	s8 lowest_nf;
 
+#ifdef CONFIG_ACS
+	unsigned int acs_num_completed_scans;
+#endif /* CONFIG_ACS */
+
 	void (*scan_cb)(struct hostapd_iface *iface);
 };
 

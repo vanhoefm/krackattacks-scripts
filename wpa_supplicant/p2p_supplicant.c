@@ -3114,6 +3114,9 @@ int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s)
 	unsigned int r;
 	int i;
 
+	if (wpa_s->conf->p2p_disabled)
+		return 0;
+
 	if (!(wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_CAPABLE))
 		return 0;
 

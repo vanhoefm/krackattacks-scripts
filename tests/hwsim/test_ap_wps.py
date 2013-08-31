@@ -246,7 +246,7 @@ def test_ap_wps_er_add_enrollee(dev, apdev):
     dev[1].request("SET ignore_old_scan_res 1")
     dev[1].dump_monitor()
     dev[1].request("WPS_PIN any " + pin)
-    ev = dev[1].wait_event(["WPS-SUCCESS"], timeout=15)
+    ev = dev[1].wait_event(["WPS-SUCCESS"], timeout=30)
     if ev is None:
         raise Exception("Enrollee did not report success")
     ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)

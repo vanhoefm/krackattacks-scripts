@@ -2055,6 +2055,49 @@ static int wpa_cli_cmd_p2p_set(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+static char ** wpa_cli_complete_p2p_set(const char *str, int pos)
+{
+	int arg = get_cmd_arg_num(str, pos);
+	const char *fields[] = {
+		"discoverability",
+		"managed",
+		"listen_channel",
+		"ssid_postfix",
+		"noa",
+		"ps",
+		"oppps",
+		"ctwindow",
+		"disabled",
+		"conc_pref",
+		"force_long_sd",
+		"peer_filter",
+		"cross_connect",
+		"go_apsd",
+		"client_apsd",
+		"disallow_freq",
+		"disc_int",
+	};
+	int i, num_fields = sizeof(fields) / sizeof(fields[0]);
+
+	if (arg == 1) {
+		char **res = os_calloc(num_fields + 1, sizeof(char *));
+		if (res == NULL)
+			return NULL;
+		for (i = 0; i < num_fields; i++) {
+			res[i] = os_strdup(fields[i]);
+			if (res[i] == NULL)
+				return res;
+		}
+		return res;
+	}
+
+	if (arg == 2 && os_strncasecmp(str, "p2p_set peer_filter ", 20) == 0)
+		return cli_txt_list_array(&p2p_peers);
+
+	return NULL;
+}
+
+
 static int wpa_cli_cmd_p2p_flush(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	return wpa_ctrl_command(ctrl, "P2P_FLUSH");
@@ -2684,7 +2727,8 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "p2p_peer", wpa_cli_cmd_p2p_peer, wpa_cli_complete_p2p_peer,
 	  cli_cmd_flag_none,
 	  "<address> = show information about known P2P peer" },
-	{ "p2p_set", wpa_cli_cmd_p2p_set, NULL, cli_cmd_flag_none,
+	{ "p2p_set", wpa_cli_cmd_p2p_set, wpa_cli_complete_p2p_set,
+	  cli_cmd_flag_none,
 	  "<field> <value> = set a P2P parameter" },
 	{ "p2p_flush", wpa_cli_cmd_p2p_flush, NULL, cli_cmd_flag_none,
 	  "= flush P2P state" },

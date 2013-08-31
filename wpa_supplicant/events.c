@@ -2473,7 +2473,7 @@ static void wpas_event_disconnect(struct wpa_supplicant *wpa_s, const u8 *addr,
 		wpas_auth_failed(wpa_s);
 
 #ifdef CONFIG_P2P
-	if (deauth && ie && ie_len > 0) {
+	if (deauth && reason_code > 0) {
 		if (wpas_p2p_deauth_notif(wpa_s, addr, reason_code, ie, ie_len,
 					  locally_generated) > 0) {
 			/*

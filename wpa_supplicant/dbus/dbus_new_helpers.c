@@ -590,10 +590,10 @@ int wpa_dbus_unregister_object_per_iface(
 	if (!obj_desc) {
 		wpa_printf(MSG_ERROR, "dbus: %s: Could not obtain object's "
 			   "private data: %s", __func__, path);
-	} else {
-		eloop_cancel_timeout(flush_object_timeout_handler, con,
-				     obj_desc);
+		return 0;
 	}
+
+	eloop_cancel_timeout(flush_object_timeout_handler, con, obj_desc);
 
 	if (!dbus_connection_unregister_object_path(con, path))
 		return -1;

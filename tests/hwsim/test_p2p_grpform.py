@@ -26,7 +26,7 @@ def check_grpform_results(i_res, r_res):
 
 def go_neg_init(i_dev, r_dev, pin, i_method, i_intent, res):
     logger.debug("Initiate GO Negotiation from i_dev")
-    i_res = i_dev.p2p_go_neg_init(r_dev.p2p_dev_addr(), pin, i_method, timeout=15, go_intent=i_intent)
+    i_res = i_dev.p2p_go_neg_init(r_dev.p2p_dev_addr(), pin, i_method, timeout=20, go_intent=i_intent)
     logger.debug("i_res: " + str(i_res))
     res.put(i_res)
 
@@ -45,7 +45,7 @@ def go_neg_pin(i_dev, r_dev, i_intent=None, r_intent=None, i_method='enter', r_m
         raise Exception("GO Negotiation timed out")
     r_dev.dump_monitor()
     logger.debug("Re-initiate GO Negotiation from r_dev")
-    r_res = r_dev.p2p_go_neg_init(i_dev.p2p_dev_addr(), pin, r_method, go_intent=r_intent, timeout=15)
+    r_res = r_dev.p2p_go_neg_init(i_dev.p2p_dev_addr(), pin, r_method, go_intent=r_intent, timeout=20)
     logger.debug("r_res: " + str(r_res))
     r_dev.dump_monitor()
     t.join()
@@ -61,7 +61,7 @@ def go_neg_pin_authorized(i_dev, r_dev, i_intent=None, r_intent=None, expect_fai
     pin = r_dev.wps_read_pin()
     logger.info("Start GO negotiation " + i_dev.ifname + " -> " + r_dev.ifname)
     r_dev.p2p_go_neg_auth(i_dev.p2p_dev_addr(), pin, r_method, go_intent=r_intent)
-    i_res = i_dev.p2p_go_neg_init(r_dev.p2p_dev_addr(), pin, i_method, timeout=15, go_intent=i_intent, expect_failure=expect_failure)
+    i_res = i_dev.p2p_go_neg_init(r_dev.p2p_dev_addr(), pin, i_method, timeout=20, go_intent=i_intent, expect_failure=expect_failure)
     r_res = r_dev.p2p_go_neg_auth_result(expect_failure=expect_failure)
     logger.debug("i_res: " + str(i_res))
     logger.debug("r_res: " + str(r_res))
@@ -79,7 +79,7 @@ def go_neg_pin_authorized(i_dev, r_dev, i_intent=None, r_intent=None, expect_fai
 
 def go_neg_init_pbc(i_dev, r_dev, i_intent, res):
     logger.debug("Initiate GO Negotiation from i_dev")
-    i_res = i_dev.p2p_go_neg_init(r_dev.p2p_dev_addr(), None, "pbc", timeout=15, go_intent=i_intent)
+    i_res = i_dev.p2p_go_neg_init(r_dev.p2p_dev_addr(), None, "pbc", timeout=20, go_intent=i_intent)
     logger.debug("i_res: " + str(i_res))
     res.put(i_res)
 
@@ -97,7 +97,7 @@ def go_neg_pbc(i_dev, r_dev, i_intent=None, r_intent=None):
         raise Exception("GO Negotiation timed out")
     r_dev.dump_monitor()
     logger.debug("Re-initiate GO Negotiation from r_dev")
-    r_res = r_dev.p2p_go_neg_init(i_dev.p2p_dev_addr(), None, "pbc", go_intent=r_intent, timeout=15)
+    r_res = r_dev.p2p_go_neg_init(i_dev.p2p_dev_addr(), None, "pbc", go_intent=r_intent, timeout=20)
     logger.debug("r_res: " + str(r_res))
     r_dev.dump_monitor()
     t.join()

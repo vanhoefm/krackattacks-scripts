@@ -70,7 +70,7 @@ static struct wpa_ctrl *ctrl_conn;
 static struct wpa_ctrl *mon_conn;
 static int wpa_cli_quit = 0;
 static int wpa_cli_attached = 0;
-static int wpa_cli_connected = 0;
+static int wpa_cli_connected = -1;
 static int wpa_cli_last_id = 0;
 #ifndef CONFIG_CTRL_IFACE_DIR
 #define CONFIG_CTRL_IFACE_DIR "/var/run/wpa_supplicant"
@@ -3053,7 +3053,7 @@ static void wpa_cli_action_process(const char *msg)
 
 		os_setenv("WPA_CTRL_DIR", ctrl_iface_dir, 1);
 
-		if (!wpa_cli_connected || new_id != wpa_cli_last_id) {
+		if (wpa_cli_connected <= 0 || new_id != wpa_cli_last_id) {
 			wpa_cli_connected = 1;
 			wpa_cli_last_id = new_id;
 			wpa_cli_exec(action_file, ctrl_ifname, "CONNECTED");

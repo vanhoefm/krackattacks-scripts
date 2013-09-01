@@ -2149,6 +2149,13 @@ static int wpa_cli_cmd_p2p_ext_listen(struct wpa_ctrl *ctrl, int argc,
 	return wpa_cli_cmd(ctrl, "P2P_EXT_LISTEN", 0, argc, argv);
 }
 
+
+static int wpa_cli_cmd_p2p_remove_client(struct wpa_ctrl *ctrl, int argc,
+					 char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "P2P_REMOVE_CLIENT", 1, argc, argv);
+}
+
 #endif /* CONFIG_P2P */
 
 #ifdef CONFIG_WIFI_DISPLAY
@@ -2745,6 +2752,9 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "p2p_ext_listen", wpa_cli_cmd_p2p_ext_listen, NULL,
 	  cli_cmd_flag_none,
 	  "[<period> <interval>] = set extended listen timing" },
+	{ "p2p_remove_client", wpa_cli_cmd_p2p_remove_client,
+	  wpa_cli_complete_p2p_peer, cli_cmd_flag_none,
+	  "<address|iface=address> = remove a peer from all groups" },
 #endif /* CONFIG_P2P */
 #ifdef CONFIG_WIFI_DISPLAY
 	{ "wfd_subelem_set", wpa_cli_cmd_wfd_subelem_set, NULL,

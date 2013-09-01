@@ -1,6 +1,6 @@
 /*
  * hostapd / Station table
- * Copyright (c) 2002-2011, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -68,6 +68,30 @@ struct sta_info * ap_get_sta(struct hostapd_data *hapd, const u8 *sta)
 		s = s->hnext;
 	return s;
 }
+
+
+#ifdef CONFIG_P2P
+struct sta_info * ap_get_sta_p2p(struct hostapd_data *hapd, const u8 *addr)
+{
+	struct sta_info *sta;
+
+	for (sta = hapd->sta_list; sta; sta = sta->next) {
+		const u8 *p2p_dev_addr;
+
+		if (sta->p2p_ie == NULL)
+			continue;
+
+		p2p_dev_addr = p2p_get_go_dev_addr(sta->p2p_ie);
+		if (p2p_dev_addr == NULL)
+			continue;
+
+		if (os_memcmp(p2p_dev_addr, addr, ETH_ALEN) == 0)
+			return sta;
+	}
+
+	return NULL;
+}
+#endif /* CONFIG_P2P */
 
 
 static void ap_sta_list_del(struct hostapd_data *hapd, struct sta_info *sta)

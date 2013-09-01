@@ -4629,6 +4629,25 @@ static int p2p_ctrl_ext_listen(struct wpa_supplicant *wpa_s, char *cmd)
 	return wpas_p2p_ext_listen(wpa_s, period, interval);
 }
 
+
+static int p2p_ctrl_remove_client(struct wpa_supplicant *wpa_s, const char *cmd)
+{
+	const char *pos;
+	u8 peer[ETH_ALEN];
+	int iface_addr = 0;
+
+	pos = cmd;
+	if (os_strncmp(pos, "iface=", 6) == 0) {
+		iface_addr = 1;
+		pos += 6;
+	}
+	if (hwaddr_aton(pos, peer))
+		return -1;
+
+	wpas_p2p_remove_client(wpa_s, peer, iface_addr);
+	return 0;
+}
+
 #endif /* CONFIG_P2P */
 
 
@@ -5450,6 +5469,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strcmp(buf, "P2P_EXT_LISTEN") == 0) {
 		if (p2p_ctrl_ext_listen(wpa_s, "") < 0)
 			reply_len = -1;
+	} else if (os_strncmp(buf, "P2P_REMOVE_CLIENT ", 18) == 0) {
+		if (p2p_ctrl_remove_client(wpa_s, buf + 18) < 0)
+			reply_len = -1;
 #endif /* CONFIG_P2P */
 #ifdef CONFIG_WIFI_DISPLAY
 	} else if (os_strncmp(buf, "WFD_SUBELEM_SET ", 16) == 0) {
@@ -5936,6 +5958,7 @@ static char * wpas_global_ctrl_iface_redir_p2p(struct wpa_global *global,
 		"P2P_UNAUTHORIZE ",
 		"P2P_PRESENCE_REQ ",
 		"P2P_EXT_LISTEN ",
+		"P2P_REMOVE_CLIENT ",
 		NULL
 	};
 	int found = 0;

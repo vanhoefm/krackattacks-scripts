@@ -155,6 +155,8 @@ unsigned int wpas_p2p_search_delay(struct wpa_supplicant *wpa_s);
 void wpas_p2p_new_psk_cb(struct wpa_supplicant *wpa_s, const u8 *mac_addr,
 			 const u8 *p2p_dev_addr,
 			 const u8 *psk, size_t psk_len);
+void wpas_p2p_remove_client(struct wpa_supplicant *wpa_s, const u8 *peer,
+			    int iface_addr);
 
 #ifdef CONFIG_P2P
 void wpas_p2p_continue_after_scan(struct wpa_supplicant *wpa_s);

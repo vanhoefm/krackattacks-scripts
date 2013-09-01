@@ -17,6 +17,8 @@
 #include "p2p/p2p.h"
 #include "ap/hostapd.h"
 #include "ap/ap_config.h"
+#include "ap/sta_info.h"
+#include "ap/ap_drv_ops.h"
 #include "ap/p2p_hostapd.h"
 #include "eapol_supp/eapol_supp_sm.h"
 #include "rsn_supp/wpa.h"
@@ -2700,7 +2702,7 @@ static void wpas_invitation_received(void *ctx, const u8 *sa, const u8 *bssid,
 
 static void wpas_remove_persistent_peer(struct wpa_supplicant *wpa_s,
 					struct wpa_ssid *ssid,
-					const u8 *peer)
+					const u8 *peer, int inv)
 {
 	size_t i;
 
@@ -2725,8 +2727,9 @@ static void wpas_remove_persistent_peer(struct wpa_supplicant *wpa_s,
 	}
 
 	wpa_printf(MSG_DEBUG, "P2P: Remove peer " MACSTR " from persistent "
-		   "group %d client list due to invitation result",
-		   MAC2STR(peer), ssid->id);
+		   "group %d client list%s",
+		   MAC2STR(peer), ssid->id,
+		   inv ? " due to invitation result" : "");
 	os_memmove(ssid->p2p_client_list + i * ETH_ALEN,
 		   ssid->p2p_client_list + (i + 1) * ETH_ALEN,
 		   (ssid->num_p2p_clients - i - 1) * ETH_ALEN);
@@ -2753,7 +2756,7 @@ static void wpas_remove_persistent_client(struct wpa_supplicant *wpa_s,
 		return; /* Not operating as a GO in persistent group */
 	ssid = wpas_p2p_get_persistent(wpa_s->parent, peer,
 				       ssid->ssid, ssid->ssid_len);
-	wpas_remove_persistent_peer(wpa_s, ssid, peer);
+	wpas_remove_persistent_peer(wpa_s, ssid, peer, 1);
 }
 
 
@@ -2792,7 +2795,7 @@ static void wpas_invitation_result(void *ctx, int status, const u8 *bssid,
 		if (status == P2P_SC_FAIL_UNKNOWN_GROUP) {
 			ssid = wpa_config_get_network(
 				wpa_s->conf, wpa_s->pending_invite_ssid_id);
-			wpas_remove_persistent_peer(wpa_s, ssid, peer);
+			wpas_remove_persistent_peer(wpa_s, ssid, peer, 1);
 		}
 		wpas_p2p_remove_pending_group_interface(wpa_s);
 		return;
@@ -6115,4 +6118,111 @@ void wpas_p2p_new_psk_cb(struct wpa_supplicant *wpa_s, const u8 *mac_addr,
 	    wpa_config_write(wpa_s->parent->confname, wpa_s->parent->conf))
 		wpa_printf(MSG_DEBUG, "P2P: Failed to update configuration");
 #endif /* CONFIG_NO_CONFIG_WRITE */
+}
+
+
+static void wpas_p2p_remove_psk(struct wpa_supplicant *wpa_s,
+				struct wpa_ssid *s, const u8 *addr,
+				int iface_addr)
+{
+	struct psk_list_entry *psk, *tmp;
+	int changed = 0;
+
+	dl_list_for_each_safe(psk, tmp, &s->psk_list, struct psk_list_entry,
+			      list) {
+		if ((iface_addr && !psk->p2p &&
+		     os_memcmp(addr, psk->addr, ETH_ALEN) == 0) ||
+		    (!iface_addr && psk->p2p &&
+		     os_memcmp(addr, psk->addr, ETH_ALEN) == 0)) {
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"P2P: Remove persistent group PSK list entry for "
+				MACSTR " p2p=%u",
+				MAC2STR(psk->addr), psk->p2p);
+			dl_list_del(&psk->list);
+			os_free(psk);
+			changed++;
+		}
+	}
+
+
+#ifndef CONFIG_NO_CONFIG_WRITE
+	if (changed && wpa_s->conf->update_config &&
+	    wpa_config_write(wpa_s->confname, wpa_s->conf))
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"P2P: Failed to update configuration");
+#endif /* CONFIG_NO_CONFIG_WRITE */
+}
+
+
+static void wpas_p2p_remove_client_go(struct wpa_supplicant *wpa_s,
+				      const u8 *peer, int iface_addr)
+{
+	struct hostapd_data *hapd;
+	struct hostapd_wpa_psk *psk, *prev, *rem;
+	struct sta_info *sta;
+
+	if (wpa_s->ap_iface == NULL || wpa_s->current_ssid == NULL ||
+	    wpa_s->current_ssid->mode != WPAS_MODE_P2P_GO)
+		return;
+
+	/* Remove per-station PSK entry */
+	hapd = wpa_s->ap_iface->bss[0];
+	prev = NULL;
+	psk = hapd->conf->ssid.wpa_psk;
+	while (psk) {
+		if ((iface_addr && os_memcmp(peer, psk->addr, ETH_ALEN) == 0) ||
+		    (!iface_addr &&
+		     os_memcmp(peer, psk->p2p_dev_addr, ETH_ALEN) == 0)) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Remove operating group PSK entry for "
+				MACSTR " iface_addr=%d",
+				MAC2STR(peer), iface_addr);
+			if (prev)
+				prev->next = psk->next;
+			else
+				hapd->conf->ssid.wpa_psk = psk->next;
+			rem = psk;
+			psk = psk->next;
+			os_free(rem);
+		} else {
+			prev = psk;
+			psk = psk->next;
+		}
+	}
+
+	/* Disconnect from group */
+	if (iface_addr)
+		sta = ap_get_sta(hapd, peer);
+	else
+		sta = ap_get_sta_p2p(hapd, peer);
+	if (sta) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Disconnect peer " MACSTR
+			" (iface_addr=%d) from group",
+			MAC2STR(peer), iface_addr);
+		hostapd_drv_sta_deauth(hapd, sta->addr,
+				       WLAN_REASON_DEAUTH_LEAVING);
+		ap_sta_deauthenticate(hapd, sta, WLAN_REASON_DEAUTH_LEAVING);
+	}
+}
+
+
+void wpas_p2p_remove_client(struct wpa_supplicant *wpa_s, const u8 *peer,
+			    int iface_addr)
+{
+	struct wpa_ssid *s;
+	struct wpa_supplicant *w;
+
+	wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Remove client " MACSTR, MAC2STR(peer));
+
+	/* Remove from any persistent group */
+	for (s = wpa_s->parent->conf->ssid; s; s = s->next) {
+		if (s->disabled != 2 || s->mode != WPAS_MODE_P2P_GO)
+			continue;
+		if (!iface_addr)
+			wpas_remove_persistent_peer(wpa_s, s, peer, 0);
+		wpas_p2p_remove_psk(wpa_s->parent, s, peer, iface_addr);
+	}
+
+	/* Remove from any operating group */
+	for (w = wpa_s->global->ifaces; w; w = w->next)
+		wpas_p2p_remove_client_go(w, peer, iface_addr);
 }

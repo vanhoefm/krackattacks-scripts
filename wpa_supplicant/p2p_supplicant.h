@@ -160,9 +160,15 @@ void wpas_p2p_remove_client(struct wpa_supplicant *wpa_s, const u8 *peer,
 
 #ifdef CONFIG_P2P
 void wpas_p2p_continue_after_scan(struct wpa_supplicant *wpa_s);
+int wpas_p2p_4way_hs_failed(struct wpa_supplicant *wpa_s);
 #else /* CONFIG_P2P */
 static inline void wpas_p2p_continue_after_scan(struct wpa_supplicant *wpa_s)
 {
+}
+
+static inline int wpas_p2p_4way_hs_failed(struct wpa_supplicant *wpa_s)
+{
+	return 0;
 }
 #endif /* CONFIG_P2P */
 

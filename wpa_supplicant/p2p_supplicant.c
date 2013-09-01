@@ -82,7 +82,8 @@ enum p2p_group_removal_reason {
 	P2P_GROUP_REMOVAL_REQUESTED,
 	P2P_GROUP_REMOVAL_IDLE_TIMEOUT,
 	P2P_GROUP_REMOVAL_UNAVAILABLE,
-	P2P_GROUP_REMOVAL_GO_ENDING_SESSION
+	P2P_GROUP_REMOVAL_GO_ENDING_SESSION,
+	P2P_GROUP_REMOVAL_PSK_FAILURE
 };
 
 
@@ -390,6 +391,9 @@ static int wpas_p2p_group_delete(struct wpa_supplicant *wpa_s,
 		break;
 	case P2P_GROUP_REMOVAL_GO_ENDING_SESSION:
 		reason = " reason=GO_ENDING_SESSION";
+		break;
+	case P2P_GROUP_REMOVAL_PSK_FAILURE:
+		reason = " reason=PSK_FAILURE";
 		break;
 	default:
 		reason = "";
@@ -4519,6 +4523,7 @@ static int wpas_start_p2p_client(struct wpa_supplicant *wpa_s,
 	wpa_s = wpas_p2p_get_group_iface(wpa_s, addr_allocated, 0);
 	if (wpa_s == NULL)
 		return -1;
+	wpa_s->p2p_last_4way_hs_fail = NULL;
 
 	wpa_supplicant_ap_deinit(wpa_s);
 
@@ -6247,4 +6252,46 @@ void wpas_p2p_remove_client(struct wpa_supplicant *wpa_s, const u8 *peer,
 	/* Remove from any operating group */
 	for (w = wpa_s->global->ifaces; w; w = w->next)
 		wpas_p2p_remove_client_go(w, peer, iface_addr);
+}
+
+
+int wpas_p2p_4way_hs_failed(struct wpa_supplicant *wpa_s)
+{
+	struct wpa_ssid *ssid = wpa_s->current_ssid;
+
+	if (ssid == NULL || !ssid->p2p_group)
+		return 0;
+
+	if (wpa_s->p2p_last_4way_hs_fail &&
+	    wpa_s->p2p_last_4way_hs_fail == ssid) {
+		u8 go_dev_addr[ETH_ALEN];
+		struct wpa_ssid *persistent;
+
+		if (wpas_p2p_persistent_group(wpa_s, go_dev_addr,
+					      ssid->ssid,
+					      ssid->ssid_len) <= 0) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Could not determine whether 4-way handshake failures were for a persistent group");
+			goto disconnect;
+		}
+
+		wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Two 4-way handshake failures for a P2P group - go_dev_addr="
+			MACSTR, MAC2STR(go_dev_addr));
+		persistent = wpas_p2p_get_persistent(wpa_s->parent, go_dev_addr,
+						     ssid->ssid,
+						     ssid->ssid_len);
+		if (persistent == NULL || persistent->mode != WPAS_MODE_INFRA) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "P2P: No matching persistent group stored");
+			goto disconnect;
+		}
+		wpa_msg_global(wpa_s->parent, MSG_INFO,
+			       P2P_EVENT_PERSISTENT_PSK_FAIL "%d",
+			       persistent->id);
+	disconnect:
+		wpa_s->p2p_last_4way_hs_fail = NULL;
+		wpas_p2p_group_delete(wpa_s, P2P_GROUP_REMOVAL_PSK_FAILURE);
+		return 1;
+	}
+
+	wpa_s->p2p_last_4way_hs_fail = ssid;
+	return 0;
 }

@@ -652,6 +652,7 @@ struct wpa_supplicant {
 	int p2p_go_intent;
 	int p2p_connect_freq;
 	struct os_time p2p_auto_started;
+	struct wpa_ssid *p2p_last_4way_hs_fail;
 #endif /* CONFIG_P2P */
 
 	struct wpa_ssid *bgscan_ssid;

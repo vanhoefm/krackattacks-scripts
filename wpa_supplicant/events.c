@@ -2017,6 +2017,8 @@ static void wpa_supplicant_event_disassoc_finish(struct wpa_supplicant *wpa_s,
 	if (could_be_psk_mismatch(wpa_s, reason_code, locally_generated)) {
 		wpa_msg(wpa_s, MSG_INFO, "WPA: 4-Way Handshake failed - "
 			"pre-shared key may be incorrect");
+		if (wpas_p2p_4way_hs_failed(wpa_s) > 0)
+			return; /* P2P group removed */
 		wpas_auth_failed(wpa_s);
 	}
 	if (!wpa_s->disconnected &&

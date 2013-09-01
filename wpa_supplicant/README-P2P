@@ -199,6 +199,14 @@ P2P group interface (if one was used) that is in the WPS provisioning
 step. If the WPS provisioning step has been completed, the group is not
 terminated.
 
+p2p_remove_client <peer's P2P Device Address|iface=<interface address>>
+
+This command can be used to remove the specified client from all groups
+(operating and persistent) from the local GO. Note that the peer device
+can rejoin the group if it is in possession of a valid key. See p2p_set
+per_sta_psk command below for more details on how the peer can be
+removed securely.
+
 Service Discovery
 
 p2p_serv_disc_req
@@ -455,6 +463,20 @@ p2p_set ssid_postfix <postfix>
 Set postfix string to be added to the automatically generated P2P SSID
 (DIRECT-<two random characters>). For example, postfix of "-testing"
 could result in the SSID becoming DIRECT-ab-testing.
+
+p2p_set per_sta_psk <0/1>
+
+Disabled(default)/enables use of per-client PSK in the P2P groups. This
+can be used to request GO to assign a unique PSK for each client during
+WPS provisioning. When enabled, this allow clients to be removed from
+the group securily with p2p_remove_client command since that client's
+PSK is removed at the same time to prevent it from connecting back using
+the old PSK. When per-client PSK is not used, the client can still be
+disconnected, but it will be able to re-join the group since the PSK it
+learned previously is still valid. It should be noted that the default
+passphrase on the GO that is normally used to allow legacy stations to
+connect through manual configuration does not change here, so if that is
+shared, devices with knowledge of that passphrase can still connect.
 
 set <field> <value>
 

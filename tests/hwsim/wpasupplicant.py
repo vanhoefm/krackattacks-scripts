@@ -192,6 +192,18 @@ class WpaSupplicant:
                 return True
         return False
 
+    def get_peer(self, peer):
+        res = self.global_request("P2P_PEER " + peer)
+        if peer.lower() not in res.lower():
+            raise Exception("Peer information not available")
+        lines = res.splitlines()
+        vals = dict()
+        for l in lines:
+            if '=' in l:
+                [name,value] = l.split('=', 1)
+                vals[name] = value
+        return vals
+
     def group_form_result(self, ev, expect_failure=False):
         if expect_failure:
             if "P2P-GROUP-STARTED" in ev:
@@ -219,6 +231,10 @@ class WpaSupplicant:
         res['role'] = s[3]
         res['ssid'] = s[4]
         res['freq'] = s[5]
+        if "[PERSISTENT]" in ev:
+            res['persistent'] = True
+        else:
+            res['persistent'] = False
         p = re.match(r'psk=([0-9a-f]*)', s[6])
         if p:
             res['psk'] = p.group(1)
@@ -228,13 +244,15 @@ class WpaSupplicant:
         res['go_dev_addr'] = s[7]
         return res
 
-    def p2p_go_neg_auth(self, peer, pin, method, go_intent=None):
+    def p2p_go_neg_auth(self, peer, pin, method, go_intent=None, persistent=False):
         if not self.discover_peer(peer):
             raise Exception("Peer " + peer + " not found")
         self.dump_monitor()
         cmd = "P2P_CONNECT " + peer + " " + pin + " " + method + " auth"
         if go_intent:
             cmd = cmd + ' go_intent=' + str(go_intent)
+        if persistent:
+            cmd = cmd + " persistent"
         if "OK" in self.global_request(cmd):
             return None
         raise Exception("P2P_CONNECT (auth) failed")
@@ -248,7 +266,7 @@ class WpaSupplicant:
         self.dump_monitor()
         return self.group_form_result(ev, expect_failure)
 
-    def p2p_go_neg_init(self, peer, pin, method, timeout=0, go_intent=None, expect_failure=False):
+    def p2p_go_neg_init(self, peer, pin, method, timeout=0, go_intent=None, expect_failure=False, persistent=False):
         if not self.discover_peer(peer):
             raise Exception("Peer " + peer + " not found")
         self.dump_monitor()
@@ -258,6 +276,8 @@ class WpaSupplicant:
             cmd = "P2P_CONNECT " + peer + " " + method
         if go_intent:
             cmd = cmd + ' go_intent=' + str(go_intent)
+        if persistent:
+            cmd = cmd + " persistent"
         if "OK" in self.global_request(cmd):
             if timeout == 0:
                 self.dump_monitor()
@@ -307,7 +327,7 @@ class WpaSupplicant:
 
     def remove_group(self, ifname=None):
         if ifname is None:
-            ifname = self.group_ifname if self.group_ifname else self.iname
+            ifname = self.group_ifname if self.group_ifname else self.ifname
         if "OK" not in self.global_request("P2P_GROUP_REMOVE " + ifname):
             raise Exception("Group could not be removed")
         self.group_ifname = None

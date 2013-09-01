@@ -186,3 +186,64 @@ def test_persistent_group_per_sta_psk(dev):
     logger.info("Terminate persistent group")
     dev[0].remove_group()
     dev[0].dump_monitor()
+
+def test_persistent_group_invite_removed_client(dev):
+    """P2P persistent group client removal and re-invitation"""
+    addr0 = dev[0].p2p_dev_addr()
+    addr1 = dev[1].p2p_dev_addr()
+    dev[0].request("P2P_SET per_sta_psk 1")
+    logger.info("Form a persistent group")
+    [i_res, r_res] = go_neg_pin_authorized_persistent(i_dev=dev[0], i_intent=15,
+                                                      r_dev=dev[1], r_intent=0)
+    if not i_res['persistent'] or not r_res['persistent']:
+        raise Exception("Formed group was not persistent")
+
+    logger.info("Remove client from the group")
+    dev[0].global_request("P2P_REMOVE_CLIENT " + addr1)
+    dev[1].wait_go_ending_session()
+
+    logger.info("Re-invite the removed client to join the group")
+    dev[1].p2p_listen()
+    if not dev[0].discover_peer(addr1, social=True):
+        raise Exception("Peer " + peer + " not found")
+    dev[0].global_request("P2P_INVITE group=" + dev[0].group_ifname + " peer=" + addr1)
+    ev = dev[1].wait_global_event(["P2P-INVITATION-RECEIVED"], timeout=10)
+    if ev is None:
+        raise Exception("Timeout on invitation")
+    if "sa=" + addr0 + " persistent=" not in ev:
+        raise Exception("Unexpected invitation event")
+    [event,addr,persistent] = ev.split(' ', 2)
+    dev[1].global_request("P2P_GROUP_ADD " + persistent)
+    ev = dev[1].wait_global_event(["P2P-PERSISTENT-PSK-FAIL"], timeout=30)
+    if ev is None:
+        raise Exception("Did not receive PSK failure report")
+    [tmp,id] = ev.split('=', 1)
+    ev = dev[1].wait_global_event(["P2P-GROUP-REMOVED"], timeout=10)
+    if ev is None:
+        raise Exception("Group removal event timed out")
+    if "reason=PSK_FAILURE" not in ev:
+        raise Exception("Unexpected group removal reason")
+    dev[1].request("REMOVE_NETWORK " + id)
+
+    logger.info("Re-invite after client removed persistent group info")
+    dev[1].p2p_listen()
+    if not dev[0].discover_peer(addr1, social=True):
+        raise Exception("Peer " + peer + " not found")
+    dev[0].global_request("P2P_INVITE group=" + dev[0].group_ifname + " peer=" + addr1)
+    ev = dev[1].wait_global_event(["P2P-INVITATION-RECEIVED"], timeout=10)
+    if ev is None:
+        raise Exception("Timeout on invitation")
+    if " persistent=" in ev:
+        raise Exception("Unexpected invitation event")
+    pin = dev[1].wps_read_pin()
+    dev[0].p2p_go_authorize_client(pin)
+    c_res = dev[1].p2p_connect_group(addr0, pin, timeout=60)
+    if not c_res['persistent']:
+        raise Exception("Joining client did not recognize persistent group")
+    if r_res['psk'] == c_res['psk']:
+        raise Exception("Same PSK assigned on both times")
+    hwsim_utils.test_connectivity_p2p(dev[0], dev[1])
+
+    logger.info("Terminate persistent group")
+    dev[0].remove_group()
+    dev[1].wait_go_ending_session()

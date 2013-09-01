@@ -42,11 +42,7 @@ def test_persistent_group(dev):
 
     logger.info("Terminate persistent group")
     dev[0].remove_group()
-    ev = dev[1].wait_event(["P2P-GROUP-REMOVED"], timeout=3)
-    if ev is None:
-        raise Exception("Group removal event timed out")
-    if "reason=GO_ENDING_SESSION" not in ev:
-        raise Exception("Unexpected group removal reason")
+    dev[1].wait_go_ending_session()
 
     logger.info("Re-invoke persistent group from client")
     dev[0].request("SET persistent_reconnect 1")
@@ -76,11 +72,7 @@ def test_persistent_group(dev):
 
     logger.info("Terminate persistent group")
     dev[0].remove_group()
-    ev = dev[1].wait_event(["P2P-GROUP-REMOVED"], timeout=3)
-    if ev is None:
-        raise Exception("Group removal event timed out")
-    if "reason=GO_ENDING_SESSION" not in ev:
-        raise Exception("Unexpected group removal reason")
+    dev[1].wait_go_ending_session()
 
     logger.info("Re-invoke persistent group from GO")
     dev[1].request("SET persistent_reconnect 1")
@@ -110,11 +102,7 @@ def test_persistent_group(dev):
 
     logger.info("Terminate persistent group")
     dev[0].remove_group()
-    ev = dev[1].wait_event(["P2P-GROUP-REMOVED"], timeout=3)
-    if ev is None:
-        raise Exception("Group removal event timed out")
-    if "reason=GO_ENDING_SESSION" not in ev:
-        raise Exception("Unexpected group removal reason")
+    dev[1].wait_go_ending_session()
 
 def test_persistent_group_per_sta_psk(dev):
     """P2P persistent group formation and re-invocation using per-client PSK"""
@@ -158,11 +146,7 @@ def test_persistent_group_per_sta_psk(dev):
 
     logger.info("Remove one of the clients from the group")
     dev[0].global_request("P2P_REMOVE_CLIENT " + addr2)
-    ev = dev[2].wait_event(["P2P-GROUP-REMOVED"], timeout=3)
-    if ev is None:
-        raise Exception("Group removal event timed out")
-    if "reason=GO_ENDING_SESSION" not in ev:
-        raise Exception("Unexpected group removal reason")
+    dev[2].wait_go_ending_session()
 
     logger.info("Try to reconnect after having been removed from group")
     if not dev[2].discover_peer(addr0, social=True):
@@ -178,11 +162,7 @@ def test_persistent_group_per_sta_psk(dev):
 
     logger.info("Remove the remaining client from the group")
     dev[0].global_request("P2P_REMOVE_CLIENT " + addr1)
-    ev = dev[1].wait_event(["P2P-GROUP-REMOVED"], timeout=3)
-    if ev is None:
-        raise Exception("Group removal event timed out")
-    if "reason=GO_ENDING_SESSION" not in ev:
-        raise Exception("Unexpected group removal reason")
+    dev[1].wait_go_ending_session()
 
     logger.info("Terminate persistent group")
     dev[0].remove_group()

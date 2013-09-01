@@ -320,6 +320,13 @@ class WpaSupplicant:
                             return ev
         return None
 
+    def wait_go_ending_session(self):
+        ev = self.wait_event(["P2P-GROUP-REMOVED"], timeout=3)
+        if ev is None:
+            raise Exception("Group removal event timed out")
+        if "reason=GO_ENDING_SESSION" not in ev:
+            raise Exception("Unexpected group removal reason")
+
     def dump_monitor(self):
         while self.mon.pending():
             ev = self.mon.recv()

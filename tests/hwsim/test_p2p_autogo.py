@@ -32,11 +32,7 @@ def test_autogo(dev):
     autogo(dev[0])
     connect_cli(dev[0], dev[1])
     dev[0].remove_group()
-    ev = dev[1].wait_event(["P2P-GROUP-REMOVED"], timeout=2)
-    if ev is None:
-        raise Exception("Group removal event timed out")
-    if "reason=GO_ENDING_SESSION" not in ev:
-        raise Exception("Unexpected group removal reason")
+    dev[1].wait_go_ending_session()
 
 def test_autogo_2cli(dev):
     """P2P autonomous GO and two clients joining group"""
@@ -45,17 +41,9 @@ def test_autogo_2cli(dev):
     connect_cli(dev[0], dev[2])
     hwsim_utils.test_connectivity_p2p(dev[1], dev[2])
     dev[0].global_request("P2P_REMOVE_CLIENT " + dev[1].p2p_dev_addr())
-    ev = dev[1].wait_event(["P2P-GROUP-REMOVED"], timeout=2)
-    if ev is None:
-        raise Exception("Group removal event timed out")
-    if "reason=GO_ENDING_SESSION" not in ev:
-        raise Exception("Unexpected group removal reason")
+    dev[1].wait_go_ending_session()
     dev[0].remove_group()
-    ev = dev[2].wait_event(["P2P-GROUP-REMOVED"], timeout=2)
-    if ev is None:
-        raise Exception("Group removal event timed out")
-    if "reason=GO_ENDING_SESSION" not in ev:
-        raise Exception("Unexpected group removal reason")
+    dev[2].wait_go_ending_session()
 
 def test_autogo_tdls(dev):
     """P2P autonomous GO and two clients using TDLS"""

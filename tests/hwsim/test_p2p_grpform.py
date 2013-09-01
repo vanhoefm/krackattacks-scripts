@@ -177,16 +177,8 @@ def test_grpform_per_sta_psk(dev):
     hwsim_utils.test_connectivity_p2p(dev[1], dev[2])
 
     dev[0].remove_group()
-    ev = dev[1].wait_event(["P2P-GROUP-REMOVED"], timeout=2)
-    if ev is None:
-        raise Exception("Group removal event timed out")
-    if "reason=GO_ENDING_SESSION" not in ev:
-        raise Exception("Unexpected group removal reason")
-    ev = dev[2].wait_event(["P2P-GROUP-REMOVED"], timeout=2)
-    if ev is None:
-        raise Exception("Group removal event timed out")
-    if "reason=GO_ENDING_SESSION" not in ev:
-        raise Exception("Unexpected group removal reason")
+    dev[1].wait_go_ending_session()
+    dev[2].wait_go_ending_session()
 
 def test_grpform_per_sta_psk_wps(dev):
     """P2P group formation with per-STA PSKs with non-P2P WPS STA"""
@@ -204,8 +196,4 @@ def test_grpform_per_sta_psk_wps(dev):
 
     dev[0].remove_group()
     dev[2].request("DISCONNECT")
-    ev = dev[1].wait_event(["P2P-GROUP-REMOVED"], timeout=2)
-    if ev is None:
-        raise Exception("Group removal event timed out")
-    if "reason=GO_ENDING_SESSION" not in ev:
-        raise Exception("Unexpected group removal reason")
+    dev[1].wait_go_ending_session()

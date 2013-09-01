@@ -6034,6 +6034,33 @@ void wpas_p2p_continue_after_scan(struct wpa_supplicant *wpa_s)
 }
 
 
+static int wpas_p2p_remove_psk_entry(struct wpa_supplicant *wpa_s,
+				     struct wpa_ssid *s, const u8 *addr,
+				     int iface_addr)
+{
+	struct psk_list_entry *psk, *tmp;
+	int changed = 0;
+
+	dl_list_for_each_safe(psk, tmp, &s->psk_list, struct psk_list_entry,
+			      list) {
+		if ((iface_addr && !psk->p2p &&
+		     os_memcmp(addr, psk->addr, ETH_ALEN) == 0) ||
+		    (!iface_addr && psk->p2p &&
+		     os_memcmp(addr, psk->addr, ETH_ALEN) == 0)) {
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"P2P: Remove persistent group PSK list entry for "
+				MACSTR " p2p=%u",
+				MAC2STR(psk->addr), psk->p2p);
+			dl_list_del(&psk->list);
+			os_free(psk);
+			changed++;
+		}
+	}
+
+	return changed;
+}
+
+
 void wpas_p2p_new_psk_cb(struct wpa_supplicant *wpa_s, const u8 *mac_addr,
 			 const u8 *p2p_dev_addr,
 			 const u8 *psk, size_t psk_len)
@@ -6111,6 +6138,16 @@ void wpas_p2p_new_psk_cb(struct wpa_supplicant *wpa_s, const u8 *mac_addr,
 		os_free(last);
 	}
 
+	wpas_p2p_remove_psk_entry(wpa_s->parent, persistent,
+				  p2p_dev_addr ? p2p_dev_addr : mac_addr,
+				  p2p_dev_addr == NULL);
+	if (p2p_dev_addr) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Add new PSK for p2p_dev_addr="
+			MACSTR, MAC2STR(p2p_dev_addr));
+	} else {
+		wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Add new PSK for addr=" MACSTR,
+			MAC2STR(mac_addr));
+	}
 	dl_list_add(&persistent->psk_list, &p->list);
 
 #ifndef CONFIG_NO_CONFIG_WRITE
@@ -6125,32 +6162,17 @@ static void wpas_p2p_remove_psk(struct wpa_supplicant *wpa_s,
 				struct wpa_ssid *s, const u8 *addr,
 				int iface_addr)
 {
-	struct psk_list_entry *psk, *tmp;
-	int changed = 0;
+	int res;
 
-	dl_list_for_each_safe(psk, tmp, &s->psk_list, struct psk_list_entry,
-			      list) {
-		if ((iface_addr && !psk->p2p &&
-		     os_memcmp(addr, psk->addr, ETH_ALEN) == 0) ||
-		    (!iface_addr && psk->p2p &&
-		     os_memcmp(addr, psk->addr, ETH_ALEN) == 0)) {
-			wpa_dbg(wpa_s, MSG_DEBUG,
-				"P2P: Remove persistent group PSK list entry for "
-				MACSTR " p2p=%u",
-				MAC2STR(psk->addr), psk->p2p);
-			dl_list_del(&psk->list);
-			os_free(psk);
-			changed++;
-		}
-	}
-
-
+	res = wpas_p2p_remove_psk_entry(wpa_s, s, addr, iface_addr);
+	if (res > 0) {
 #ifndef CONFIG_NO_CONFIG_WRITE
-	if (changed && wpa_s->conf->update_config &&
-	    wpa_config_write(wpa_s->confname, wpa_s->conf))
-		wpa_dbg(wpa_s, MSG_DEBUG,
-			"P2P: Failed to update configuration");
+		if (wpa_s->conf->update_config &&
+		    wpa_config_write(wpa_s->confname, wpa_s->conf))
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"P2P: Failed to update configuration");
 #endif /* CONFIG_NO_CONFIG_WRITE */
+	}
 }
 
 

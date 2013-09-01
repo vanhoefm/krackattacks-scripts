@@ -1372,6 +1372,60 @@ static char * wpa_config_write_p2p_client_list(const struct parse_data *data,
 }
 #endif /* NO_CONFIG_WRITE */
 
+
+static int wpa_config_parse_psk_list(const struct parse_data *data,
+				     struct wpa_ssid *ssid, int line,
+				     const char *value)
+{
+	struct psk_list_entry *p;
+	const char *pos;
+
+	p = os_zalloc(sizeof(*p));
+	if (p == NULL)
+		return -1;
+
+	pos = value;
+	if (os_strncmp(pos, "P2P-", 4) == 0) {
+		p->p2p = 1;
+		pos += 4;
+	}
+
+	if (hwaddr_aton(pos, p->addr)) {
+		wpa_printf(MSG_ERROR, "Line %d: Invalid psk_list address '%s'",
+			   line, pos);
+		os_free(p);
+		return -1;
+	}
+	pos += 17;
+	if (*pos != '-') {
+		wpa_printf(MSG_ERROR, "Line %d: Invalid psk_list '%s'",
+			   line, pos);
+		os_free(p);
+		return -1;
+	}
+	pos++;
+
+	if (hexstr2bin(pos, p->psk, PMK_LEN) || pos[PMK_LEN * 2] != '\0') {
+		wpa_printf(MSG_ERROR, "Line %d: Invalid psk_list PSK '%s'",
+			   line, pos);
+		os_free(p);
+		return -1;
+	}
+
+	dl_list_add(&ssid->psk_list, &p->list);
+
+	return 0;
+}
+
+
+#ifndef NO_CONFIG_WRITE
+static char * wpa_config_write_psk_list(const struct parse_data *data,
+					struct wpa_ssid *ssid)
+{
+	return NULL;
+}
+#endif /* NO_CONFIG_WRITE */
+
 #endif /* CONFIG_P2P */
 
 /* Helper macros for network block parser */
@@ -1539,6 +1593,7 @@ static const struct parse_data ssid_fields[] = {
 	{ INT_RANGE(ignore_broadcast_ssid, 0, 2) },
 #ifdef CONFIG_P2P
 	{ FUNC(p2p_client_list) },
+	{ FUNC(psk_list) },
 #endif /* CONFIG_P2P */
 #ifdef CONFIG_HT_OVERRIDES
 	{ INT_RANGE(disable_ht, 0, 1) },
@@ -1731,6 +1786,8 @@ static void eap_peer_config_free(struct eap_peer_config *eap)
  */
 void wpa_config_free_ssid(struct wpa_ssid *ssid)
 {
+	struct psk_list_entry *psk;
+
 	os_free(ssid->ssid);
 	os_free(ssid->passphrase);
 	os_free(ssid->ext_psk);
@@ -1745,6 +1802,11 @@ void wpa_config_free_ssid(struct wpa_ssid *ssid)
 #ifdef CONFIG_HT_OVERRIDES
 	os_free(ssid->ht_mcs);
 #endif /* CONFIG_HT_OVERRIDES */
+	while ((psk = dl_list_first(&ssid->psk_list, struct psk_list_entry,
+				    list))) {
+		dl_list_del(&psk->list);
+		os_free(psk);
+	}
 	os_free(ssid);
 }
 
@@ -1908,6 +1970,7 @@ struct wpa_ssid * wpa_config_add_network(struct wpa_config *config)
 	if (ssid == NULL)
 		return NULL;
 	ssid->id = id;
+	dl_list_init(&ssid->psk_list);
 	if (last)
 		last->next = ssid;
 	else

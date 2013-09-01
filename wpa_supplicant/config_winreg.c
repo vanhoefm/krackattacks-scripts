@@ -302,6 +302,7 @@ static struct wpa_ssid * wpa_config_read_network(HKEY hk, const TCHAR *netw,
 		RegCloseKey(nhk);
 		return NULL;
 	}
+	dl_list_init(&ssid->psk_list);
 	ssid->id = id;
 
 	wpa_config_set_network_defaults(ssid);

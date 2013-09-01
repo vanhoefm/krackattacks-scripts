@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant / Network configuration structures
- * Copyright (c) 2003-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -10,6 +10,7 @@
 #define CONFIG_SSID_H
 
 #include "common/defs.h"
+#include "utils/list.h"
 #include "eap_peer/eap_config.h"
 
 #define MAX_SSID_LEN 32
@@ -32,6 +33,13 @@
 #define DEFAULT_DISABLE_MAX_AMSDU -1 /* no change */
 #define DEFAULT_AMPDU_FACTOR -1 /* no change */
 #define DEFAULT_AMPDU_DENSITY -1 /* no change */
+
+struct psk_list_entry {
+	struct dl_list list;
+	u8 addr[ETH_ALEN];
+	u8 psk[32];
+	u8 p2p;
+};
 
 /**
  * struct wpa_ssid - Network configuration data
@@ -454,6 +462,11 @@ struct wpa_ssid {
 #ifndef P2P_MAX_STORED_CLIENTS
 #define P2P_MAX_STORED_CLIENTS 100
 #endif /* P2P_MAX_STORED_CLIENTS */
+
+	/**
+	 * psk_list - Per-client PSKs (struct psk_list_entry)
+	 */
+	struct dl_list psk_list;
 
 	/**
 	 * p2p_group - Network generated as a P2P group (used internally)

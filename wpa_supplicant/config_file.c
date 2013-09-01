@@ -158,6 +158,7 @@ static struct wpa_ssid * wpa_config_read_network(FILE *f, int *line, int id)
 	ssid = os_zalloc(sizeof(*ssid));
 	if (ssid == NULL)
 		return NULL;
+	dl_list_init(&ssid->psk_list);
 	ssid->id = id;
 
 	wpa_config_set_network_defaults(ssid);
@@ -604,6 +605,7 @@ static void write_wep_key(FILE *f, int idx, struct wpa_ssid *ssid)
 
 
 #ifdef CONFIG_P2P
+
 static void write_p2p_client_list(FILE *f, struct wpa_ssid *ssid)
 {
 	char *value = wpa_config_get(ssid, "p2p_client_list");
@@ -612,6 +614,20 @@ static void write_p2p_client_list(FILE *f, struct wpa_ssid *ssid)
 	fprintf(f, "\tp2p_client_list=%s\n", value);
 	os_free(value);
 }
+
+
+static void write_psk_list(FILE *f, struct wpa_ssid *ssid)
+{
+	struct psk_list_entry *psk;
+	char hex[32 * 2 + 1];
+
+	dl_list_for_each(psk, &ssid->psk_list, struct psk_list_entry, list) {
+		wpa_snprintf_hex(hex, sizeof(hex), psk->psk, sizeof(psk->psk));
+		fprintf(f, "\tpsk_list=%s" MACSTR "-%s\n",
+			psk->p2p ? "P2P-" : "", MAC2STR(psk->addr), hex);
+	}
+}
+
 #endif /* CONFIG_P2P */
 
 
@@ -696,6 +712,7 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 	STR(id_str);
 #ifdef CONFIG_P2P
 	write_p2p_client_list(f, ssid);
+	write_psk_list(f, ssid);
 #endif /* CONFIG_P2P */
 	INT(dtim_period);
 	INT(beacon_int);

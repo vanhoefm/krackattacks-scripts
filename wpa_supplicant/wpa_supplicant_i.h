@@ -272,6 +272,8 @@ struct wpa_global {
 #define MAX_WFD_SUBELEMS 10
 	struct wpabuf *wfd_subelem[MAX_WFD_SUBELEMS];
 #endif /* CONFIG_WIFI_DISPLAY */
+
+	struct psk_list_entry *add_psk; /* From group formation */
 };
 
 

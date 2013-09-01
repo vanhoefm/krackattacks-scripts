@@ -125,6 +125,11 @@ static int hostapd_wps_new_psk_cb(void *ctx, const u8 *mac_addr,
 	os_memcpy(p->p2p_dev_addr, p2p_dev_addr, ETH_ALEN);
 	os_memcpy(p->psk, psk, PMK_LEN);
 
+	if (hapd->new_psk_cb) {
+		hapd->new_psk_cb(hapd->new_psk_cb_ctx, mac_addr, p2p_dev_addr,
+				 psk, psk_len);
+	}
+
 	p->next = ssid->wpa_psk;
 	ssid->wpa_psk = p;
 

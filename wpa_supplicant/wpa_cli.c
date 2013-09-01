@@ -2076,6 +2076,7 @@ static char ** wpa_cli_complete_p2p_set(const char *str, int pos)
 		"client_apsd",
 		"disallow_freq",
 		"disc_int",
+		"per_sta_psk",
 	};
 	int i, num_fields = sizeof(fields) / sizeof(fields[0]);
 

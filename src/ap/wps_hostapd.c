@@ -1145,6 +1145,7 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 		cfg.dualband = 1;
 	if (cfg.dualband)
 		wpa_printf(MSG_DEBUG, "WPS: Dualband AP");
+	cfg.force_per_enrollee_psk = conf->force_per_enrollee_psk;
 
 	wps->registrar = wps_registrar_init(wps, &cfg);
 	if (wps->registrar == NULL) {

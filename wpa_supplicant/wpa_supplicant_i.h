@@ -265,6 +265,7 @@ struct wpa_global {
 		WPA_CONC_PREF_P2P
 	} conc_pref;
 	unsigned int p2p_cb_on_scan_complete:1;
+	unsigned int p2p_per_sta_psk:1;
 
 #ifdef CONFIG_WIFI_DISPLAY
 	int wifi_display;

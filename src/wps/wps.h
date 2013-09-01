@@ -382,6 +382,14 @@ struct wps_registrar_config {
 	 * dualband - Whether this is a concurrent dualband AP
 	 */
 	int dualband;
+
+	/**
+	 * force_per_enrollee_psk - Force per-Enrollee random PSK
+	 *
+	 * This forces per-Enrollee random PSK to be generated even if a default
+	 * PSK is set for a network.
+	 */
+	int force_per_enrollee_psk;
 };
 
 

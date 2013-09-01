@@ -148,6 +148,7 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 	}
 
 	bss->isolate = !wpa_s->conf->p2p_intra_bss;
+	bss->force_per_enrollee_psk = wpa_s->global->p2p_per_sta_psk;
 #endif /* CONFIG_P2P */
 
 	if (ssid->ssid_len == 0) {

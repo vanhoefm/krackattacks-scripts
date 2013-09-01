@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant / Control interface (shared code for all backends)
- * Copyright (c) 2004-2012, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -4557,6 +4557,11 @@ static int p2p_ctrl_set(struct wpa_supplicant *wpa_s, char *cmd)
 
 		return p2p_set_disc_int(wpa_s->global->p2p, min_disc_int,
 					max_disc_int, max_disc_tu);
+	}
+
+	if (os_strcmp(cmd, "per_sta_psk") == 0) {
+		wpa_s->global->p2p_per_sta_psk = !!atoi(param);
+		return 0;
 	}
 
 	wpa_printf(MSG_DEBUG, "CTRL_IFACE: Unknown P2P_SET field value '%s'",

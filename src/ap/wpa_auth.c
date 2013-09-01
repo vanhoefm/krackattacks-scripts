@@ -82,11 +82,14 @@ static inline int wpa_auth_get_eapol(struct wpa_authenticator *wpa_auth,
 
 
 static inline const u8 * wpa_auth_get_psk(struct wpa_authenticator *wpa_auth,
-					  const u8 *addr, const u8 *prev_psk)
+					  const u8 *addr,
+					  const u8 *p2p_dev_addr,
+					  const u8 *prev_psk)
 {
 	if (wpa_auth->cb.get_psk == NULL)
 		return NULL;
-	return wpa_auth->cb.get_psk(wpa_auth->cb.ctx, addr, prev_psk);
+	return wpa_auth->cb.get_psk(wpa_auth->cb.ctx, addr, p2p_dev_addr,
+				    prev_psk);
 }
 
 
@@ -1681,7 +1684,7 @@ SM_STATE(WPA_PTK, INITPSK)
 {
 	const u8 *psk;
 	SM_ENTRY_MA(WPA_PTK, INITPSK, wpa_ptk);
-	psk = wpa_auth_get_psk(sm->wpa_auth, sm->addr, NULL);
+	psk = wpa_auth_get_psk(sm->wpa_auth, sm->addr, sm->p2p_dev_addr, NULL);
 	if (psk) {
 		os_memcpy(sm->PMK, psk, PMK_LEN);
 #ifdef CONFIG_IEEE80211R
@@ -1774,7 +1777,8 @@ SM_STATE(WPA_PTK, PTKCALCNEGOTIATING)
 	 * the packet */
 	for (;;) {
 		if (wpa_key_mgmt_wpa_psk(sm->wpa_key_mgmt)) {
-			pmk = wpa_auth_get_psk(sm->wpa_auth, sm->addr, pmk);
+			pmk = wpa_auth_get_psk(sm->wpa_auth, sm->addr,
+					       sm->p2p_dev_addr, pmk);
 			if (pmk == NULL)
 				break;
 		} else
@@ -2161,7 +2165,8 @@ SM_STEP(WPA_PTK)
 		}
 		break;
 	case WPA_PTK_INITPSK:
-		if (wpa_auth_get_psk(sm->wpa_auth, sm->addr, NULL))
+		if (wpa_auth_get_psk(sm->wpa_auth, sm->addr, sm->p2p_dev_addr,
+				     NULL))
 			SM_ENTER(WPA_PTK, PTKSTART);
 		else {
 			wpa_auth_logger(sm->wpa_auth, sm->addr, LOGGER_INFO,

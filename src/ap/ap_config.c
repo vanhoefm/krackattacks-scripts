@@ -1,6 +1,6 @@
 /*
  * hostapd / Configuration helper functions
- * Copyright (c) 2003-2012, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -625,14 +625,31 @@ const char * hostapd_get_vlan_id_ifname(struct hostapd_vlan *vlan, int vlan_id)
 
 
 const u8 * hostapd_get_psk(const struct hostapd_bss_config *conf,
-			   const u8 *addr, const u8 *prev_psk)
+			   const u8 *addr, const u8 *p2p_dev_addr,
+			   const u8 *prev_psk)
 {
 	struct hostapd_wpa_psk *psk;
 	int next_ok = prev_psk == NULL;
 
+	if (p2p_dev_addr) {
+		wpa_printf(MSG_DEBUG, "Searching a PSK for " MACSTR
+			   " p2p_dev_addr=" MACSTR " prev_psk=%p",
+			   MAC2STR(addr), MAC2STR(p2p_dev_addr), prev_psk);
+		if (!is_zero_ether_addr(p2p_dev_addr))
+			addr = NULL; /* Use P2P Device Address for matching */
+	} else {
+		wpa_printf(MSG_DEBUG, "Searching a PSK for " MACSTR
+			   " prev_psk=%p",
+			   MAC2STR(addr), prev_psk);
+	}
+
 	for (psk = conf->ssid.wpa_psk; psk != NULL; psk = psk->next) {
 		if (next_ok &&
-		    (psk->group || os_memcmp(psk->addr, addr, ETH_ALEN) == 0))
+		    (psk->group ||
+		     (addr && os_memcmp(psk->addr, addr, ETH_ALEN) == 0) ||
+		     (!addr && p2p_dev_addr &&
+		      os_memcmp(psk->p2p_dev_addr, p2p_dev_addr, ETH_ALEN) ==
+		      0)))
 			return psk->psk;
 
 		if (psk->psk == prev_psk)

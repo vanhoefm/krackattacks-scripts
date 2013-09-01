@@ -257,7 +257,8 @@ static void auth_logger(void *ctx, const u8 *addr, logger_level level,
 }
 
 
-static const u8 * auth_get_psk(void *ctx, const u8 *addr, const u8 *prev_psk)
+static const u8 * auth_get_psk(void *ctx, const u8 *addr,
+			       const u8 *p2p_dev_addr, const u8 *prev_psk)
 {
 	struct ibss_rsn *ibss_rsn = ctx;
 	wpa_printf(MSG_DEBUG, "AUTH: %s (addr=" MACSTR " prev_psk=%p)",

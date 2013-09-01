@@ -1205,11 +1205,20 @@ int wpas_wps_start_reg(struct wpa_supplicant *wpa_s, const u8 *bssid,
 }
 
 
-static int wpas_wps_new_psk_cb(void *ctx, const u8 *mac_addr, const u8 *psk,
+static int wpas_wps_new_psk_cb(void *ctx, const u8 *mac_addr,
+			       const u8 *p2p_dev_addr, const u8 *psk,
 			       size_t psk_len)
 {
-	wpa_printf(MSG_DEBUG, "WPS: Received new WPA/WPA2-PSK from WPS for "
-		   "STA " MACSTR, MAC2STR(mac_addr));
+	if (is_zero_ether_addr(p2p_dev_addr)) {
+		wpa_printf(MSG_DEBUG,
+			   "Received new WPA/WPA2-PSK from WPS for STA " MACSTR,
+			   MAC2STR(mac_addr));
+	} else {
+		wpa_printf(MSG_DEBUG,
+			   "Received new WPA/WPA2-PSK from WPS for STA " MACSTR
+			   " P2P Device Addr " MACSTR,
+			   MAC2STR(mac_addr), MAC2STR(p2p_dev_addr));
+	}
 	wpa_hexdump_key(MSG_DEBUG, "Per-device PSK", psk, psk_len);
 
 	/* TODO */

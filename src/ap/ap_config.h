@@ -105,6 +105,7 @@ struct hostapd_wpa_psk {
 	int group;
 	u8 psk[PMK_LEN];
 	u8 addr[ETH_ALEN];
+	u8 p2p_dev_addr[ETH_ALEN];
 };
 
 struct hostapd_eap_user {

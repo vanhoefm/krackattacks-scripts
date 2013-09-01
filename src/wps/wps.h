@@ -246,14 +246,15 @@ struct wps_registrar_config {
 	 * new_psk_cb - Callback for new PSK
 	 * @ctx: Higher layer context data (cb_ctx)
 	 * @mac_addr: MAC address of the Enrollee
+	 * @p2p_dev_addr: P2P Device Address of the Enrollee or all zeros if not
 	 * @psk: The new PSK
 	 * @psk_len: The length of psk in octets
 	 * Returns: 0 on success, -1 on failure
 	 *
 	 * This callback is called when a new per-device PSK is provisioned.
 	 */
-	int (*new_psk_cb)(void *ctx, const u8 *mac_addr, const u8 *psk,
-			  size_t psk_len);
+	int (*new_psk_cb)(void *ctx, const u8 *mac_addr, const u8 *p2p_dev_addr,
+			  const u8 *psk, size_t psk_len);
 
 	/**
 	 * set_ie_cb - Callback for WPS IE changes

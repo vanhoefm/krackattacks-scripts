@@ -142,8 +142,8 @@ struct wps_registrar {
 	int pbc;
 	int selected_registrar;
 
-	int (*new_psk_cb)(void *ctx, const u8 *mac_addr, const u8 *psk,
-			  size_t psk_len);
+	int (*new_psk_cb)(void *ctx, const u8 *mac_addr, const u8 *p2p_dev_addr,
+			  const u8 *psk, size_t psk_len);
 	int (*set_ie_cb)(void *ctx, struct wpabuf *beacon_ie,
 			 struct wpabuf *probe_resp_ie);
 	void (*pin_needed_cb)(void *ctx, const u8 *uuid_e,
@@ -1164,12 +1164,13 @@ void wps_registrar_probe_req_rx(struct wps_registrar *reg, const u8 *addr,
 
 
 static int wps_cb_new_psk(struct wps_registrar *reg, const u8 *mac_addr,
-			  const u8 *psk, size_t psk_len)
+			  const u8 *p2p_dev_addr, const u8 *psk, size_t psk_len)
 {
 	if (reg->new_psk_cb == NULL)
 		return 0;
 
-	return reg->new_psk_cb(reg->cb_ctx, mac_addr, psk, psk_len);
+	return reg->new_psk_cb(reg->cb_ctx, mac_addr, p2p_dev_addr, psk,
+			       psk_len);
 }
 
 
@@ -3168,7 +3169,8 @@ static enum wps_process_res wps_process_wsc_done(struct wps_data *wps,
 
 	if (wps->new_psk) {
 		if (wps_cb_new_psk(wps->wps->registrar, wps->mac_addr_e,
-				   wps->new_psk, wps->new_psk_len)) {
+				   wps->p2p_dev_addr, wps->new_psk,
+				   wps->new_psk_len)) {
 			wpa_printf(MSG_DEBUG, "WPS: Failed to configure the "
 				   "new PSK");
 		}

@@ -53,6 +53,7 @@ class WpaSupplicant:
     def reset(self):
         self.request("FLUSH")
         self.request("SET ignore_old_scan_res 0")
+        self.request("P2P_SET per_sta_psk 0")
         self.group_ifname = None
         self.dump_monitor()
 
@@ -332,6 +333,12 @@ class WpaSupplicant:
 
     def p2p_go_authorize_client(self, pin):
         cmd = "WPS_PIN any " + pin
+        if "FAIL" in self.group_request(cmd):
+            raise Exception("Failed to authorize client connection on GO")
+        return None
+
+    def p2p_go_authorize_client_pbc(self):
+        cmd = "WPS_PBC"
         if "FAIL" in self.group_request(cmd):
             raise Exception("Failed to authorize client connection on GO")
         return None

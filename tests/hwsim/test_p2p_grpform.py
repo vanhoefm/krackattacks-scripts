@@ -76,6 +76,7 @@ def go_neg_pin_authorized(i_dev, r_dev, i_intent=None, r_intent=None, expect_fai
         return
     logger.info("Group formed")
     hwsim_utils.test_connectivity_p2p(r_dev, i_dev)
+    return [i_res, r_res]
 
 def go_neg_init_pbc(i_dev, r_dev, i_intent, res):
     logger.debug("Initiate GO Negotiation from i_dev")
@@ -158,3 +159,53 @@ def test_both_go_neg_display(dev):
 def test_both_go_neg_enter(dev):
     """P2P GO Negotiation with both devices trying to enter PIN"""
     go_neg_pin_authorized(i_dev=dev[0], r_dev=dev[1], expect_failure=True, i_go_neg_status=10, i_method='enter', r_method='enter')
+
+def test_grpform_per_sta_psk(dev):
+    """P2P group formation with per-STA PSKs"""
+    dev[0].request("P2P_SET per_sta_psk 1")
+    [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15, r_dev=dev[1], r_intent=0)
+    check_grpform_results(i_res, r_res)
+
+    pin = dev[2].wps_read_pin()
+    dev[0].p2p_go_authorize_client(pin)
+    c_res = dev[2].p2p_connect_group(dev[0].p2p_dev_addr(), pin, timeout=60)
+    check_grpform_results(i_res, c_res)
+
+    if r_res['psk'] == c_res['psk']:
+        raise Exception("Same PSK assigned for both clients")
+
+    hwsim_utils.test_connectivity_p2p(dev[1], dev[2])
+
+    dev[0].remove_group()
+    ev = dev[1].wait_event(["P2P-GROUP-REMOVED"], timeout=2)
+    if ev is None:
+        raise Exception("Group removal event timed out")
+    if "reason=GO_ENDING_SESSION" not in ev:
+        raise Exception("Unexpected group removal reason")
+    ev = dev[2].wait_event(["P2P-GROUP-REMOVED"], timeout=2)
+    if ev is None:
+        raise Exception("Group removal event timed out")
+    if "reason=GO_ENDING_SESSION" not in ev:
+        raise Exception("Unexpected group removal reason")
+
+def test_grpform_per_sta_psk_wps(dev):
+    """P2P group formation with per-STA PSKs with non-P2P WPS STA"""
+    dev[0].request("P2P_SET per_sta_psk 1")
+    [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15, r_dev=dev[1], r_intent=0)
+    check_grpform_results(i_res, r_res)
+
+    dev[0].p2p_go_authorize_client_pbc()
+    dev[2].request("WPS_PBC")
+    ev = dev[2].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
+    if ev is None:
+        raise Exception("Association with the GO timed out")
+
+    hwsim_utils.test_connectivity_p2p_sta(dev[1], dev[2])
+
+    dev[0].remove_group()
+    dev[2].request("DISCONNECT")
+    ev = dev[1].wait_event(["P2P-GROUP-REMOVED"], timeout=2)
+    if ev is None:
+        raise Exception("Group removal event timed out")
+    if "reason=GO_ENDING_SESSION" not in ev:
+        raise Exception("Unexpected group removal reason")

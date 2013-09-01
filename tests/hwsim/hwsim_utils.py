@@ -33,6 +33,11 @@ def test_connectivity_p2p(dev1, dev2):
     ifname2 = dev2.group_ifname if dev2.group_ifname else dev2.ifname
     test_connectivity(ifname1, ifname2)
 
+def test_connectivity_p2p_sta(dev1, dev2):
+    ifname1 = dev1.group_ifname if dev1.group_ifname else dev1.ifname
+    ifname2 = dev2.ifname
+    test_connectivity(ifname1, ifname2)
+
 def test_connectivity_sta(dev1, dev2):
     ifname1 = dev1.ifname
     ifname2 = dev2.ifname

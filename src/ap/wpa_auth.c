@@ -1,6 +1,6 @@
 /*
  * IEEE 802.11 RSN / WPA Authenticator
- * Copyright (c) 2004-2011, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -508,7 +508,8 @@ int wpa_reconfig(struct wpa_authenticator *wpa_auth,
 
 
 struct wpa_state_machine *
-wpa_auth_sta_init(struct wpa_authenticator *wpa_auth, const u8 *addr)
+wpa_auth_sta_init(struct wpa_authenticator *wpa_auth, const u8 *addr,
+		  const u8 *p2p_dev_addr)
 {
 	struct wpa_state_machine *sm;
 
@@ -516,6 +517,8 @@ wpa_auth_sta_init(struct wpa_authenticator *wpa_auth, const u8 *addr)
 	if (sm == NULL)
 		return NULL;
 	os_memcpy(sm->addr, addr, ETH_ALEN);
+	if (p2p_dev_addr)
+		os_memcpy(sm->p2p_dev_addr, p2p_dev_addr, ETH_ALEN);
 
 	sm->wpa_auth = wpa_auth;
 	sm->group = wpa_auth->group;

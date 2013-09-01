@@ -1,6 +1,6 @@
 /*
  * hostapd / IEEE 802.11 Management
- * Copyright (c) 2002-2012, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -719,7 +719,7 @@ static void handle_auth(struct hostapd_data *hapd,
 		sta->auth_alg = WLAN_AUTH_FT;
 		if (sta->wpa_sm == NULL)
 			sta->wpa_sm = wpa_auth_sta_init(hapd->wpa_auth,
-							sta->addr);
+							sta->addr, NULL);
 		if (sta->wpa_sm == NULL) {
 			wpa_printf(MSG_DEBUG, "FT: Failed to initialize WPA "
 				   "state machine");
@@ -866,6 +866,7 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 	u16 resp;
 	const u8 *wpa_ie;
 	size_t wpa_ie_len;
+	const u8 *p2p_dev_addr = NULL;
 
 	if (ieee802_11_parse_elems(ies, ies_len, &elems, 1) == ParseFailed) {
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
@@ -910,6 +911,19 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 		return WLAN_STATUS_UNSPECIFIED_FAILURE;
 	}
 #endif /* CONFIG_IEEE80211AC */
+
+#ifdef CONFIG_P2P
+	if (elems.p2p) {
+		wpabuf_free(sta->p2p_ie);
+		sta->p2p_ie = ieee802_11_vendor_ie_concat(ies, ies_len,
+							  P2P_IE_VENDOR_TYPE);
+		if (sta->p2p_ie)
+			p2p_dev_addr = p2p_get_go_dev_addr(sta->p2p_ie);
+	} else {
+		wpabuf_free(sta->p2p_ie);
+		sta->p2p_ie = NULL;
+	}
+#endif /* CONFIG_P2P */
 
 	if ((hapd->conf->wpa & WPA_PROTO_RSN) && elems.rsn_ie) {
 		wpa_ie = elems.rsn_ie;
@@ -962,7 +976,8 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 		wpa_ie_len += 2;
 		if (sta->wpa_sm == NULL)
 			sta->wpa_sm = wpa_auth_sta_init(hapd->wpa_auth,
-							sta->addr);
+							sta->addr,
+							p2p_dev_addr);
 		if (sta->wpa_sm == NULL) {
 			wpa_printf(MSG_WARNING, "Failed to initialize WPA "
 				   "state machine");
@@ -1058,16 +1073,6 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 		wpa_auth_sta_no_wpa(sta->wpa_sm);
 
 #ifdef CONFIG_P2P
-	if (elems.p2p) {
-		wpabuf_free(sta->p2p_ie);
-		sta->p2p_ie = ieee802_11_vendor_ie_concat(ies, ies_len,
-							  P2P_IE_VENDOR_TYPE);
-
-	} else {
-		wpabuf_free(sta->p2p_ie);
-		sta->p2p_ie = NULL;
-	}
-
 	p2p_group_notif_assoc(hapd->p2p_group, sta->addr, ies, ies_len);
 #endif /* CONFIG_P2P */
 

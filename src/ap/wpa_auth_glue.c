@@ -471,7 +471,7 @@ hostapd_wpa_auth_add_sta(void *ctx, const u8 *sta_addr)
 		return sta->wpa_sm;
 	}
 
-	sta->wpa_sm = wpa_auth_sta_init(hapd->wpa_auth, sta->addr);
+	sta->wpa_sm = wpa_auth_sta_init(hapd->wpa_auth, sta->addr, NULL);
 	if (sta->wpa_sm == NULL) {
 		ap_free_sta(hapd, sta);
 		return NULL;

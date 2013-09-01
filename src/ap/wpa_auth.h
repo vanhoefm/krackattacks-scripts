@@ -227,7 +227,8 @@ int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 			const u8 *mdie, size_t mdie_len);
 int wpa_auth_uses_mfp(struct wpa_state_machine *sm);
 struct wpa_state_machine *
-wpa_auth_sta_init(struct wpa_authenticator *wpa_auth, const u8 *addr);
+wpa_auth_sta_init(struct wpa_authenticator *wpa_auth, const u8 *addr,
+		  const u8 *p2p_dev_addr);
 int wpa_auth_sta_associated(struct wpa_authenticator *wpa_auth,
 			    struct wpa_state_machine *sm);
 void wpa_auth_sta_no_wpa(struct wpa_state_machine *sm);

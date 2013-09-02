@@ -6255,6 +6255,13 @@ void wpas_p2p_remove_client(struct wpa_supplicant *wpa_s, const u8 *peer,
 }
 
 
+static void wpas_p2p_psk_failure_removal(void *eloop_ctx, void *timeout_ctx)
+{
+	struct wpa_supplicant *wpa_s = eloop_ctx;
+	wpas_p2p_group_delete(wpa_s, P2P_GROUP_REMOVAL_PSK_FAILURE);
+}
+
+
 int wpas_p2p_4way_hs_failed(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_ssid *ssid = wpa_s->current_ssid;
@@ -6288,7 +6295,13 @@ int wpas_p2p_4way_hs_failed(struct wpa_supplicant *wpa_s)
 			       persistent->id);
 	disconnect:
 		wpa_s->p2p_last_4way_hs_fail = NULL;
-		wpas_p2p_group_delete(wpa_s, P2P_GROUP_REMOVAL_PSK_FAILURE);
+		/*
+		 * Remove the group from a timeout to avoid issues with caller
+		 * continuing to use the interface if this is on a P2P group
+		 * interface.
+		 */
+		eloop_register_timeout(0, 0, wpas_p2p_psk_failure_removal,
+				       wpa_s, NULL);
 		return 1;
 	}
 

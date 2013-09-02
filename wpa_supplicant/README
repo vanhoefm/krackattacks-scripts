@@ -413,7 +413,7 @@ usage:
         [-G<group>] \
         -i<ifname> -c<config file> [-C<ctrl>] [-D<driver>] [-p<driver_param>] \
         [-b<br_ifname> [-N -i<ifname> -c<conf> [-C<ctrl>] [-D<driver>] \
-        [-p<driver_param>] [-b<br_ifname>] ...]
+        [-p<driver_param>] [-b<br_ifname>] [-m<P2P Device config file>] ...
 
 options:
   -b = optional bridge interface name
@@ -438,6 +438,7 @@ options:
   -w = wait for interface to be added, if needed
   -W = wait for a control interface monitor before starting
   -N = start describing new interface
+  -m = Configuration file for the P2P Device
 
 drivers:
   nl80211 = Linux nl80211/cfg80211

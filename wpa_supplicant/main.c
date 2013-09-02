@@ -43,6 +43,9 @@ static void usage(void)
 	       "        [-o<override driver>] [-O<override ctrl>] \\\n"
 	       "        [-N -i<ifname> -c<conf> [-C<ctrl>] "
 	       "[-D<driver>] \\\n"
+#ifdef CONFIG_P2P
+	       "        [-m<P2P Device config file>] \\\n"
+#endif /* CONFIG_P2P */
 	       "        [-p<driver_param>] [-b<br_ifname>] [-I<config file>] "
 	       "...]\n"
 	       "\n"
@@ -92,6 +95,9 @@ static void usage(void)
 #endif /* CONFIG_DBUS */
 	printf("  -v = show version\n"
 	       "  -W = wait for a control interface monitor before starting\n"
+#ifdef CONFIG_P2P
+	       "  -m = Configuration file for the P2P Device interface\n"
+#endif /* CONFIG_P2P */
 	       "  -N = start describing new interface\n");
 
 	printf("example:\n"
@@ -169,7 +175,7 @@ int main(int argc, char *argv[])
 
 	for (;;) {
 		c = getopt(argc, argv,
-			   "b:Bc:C:D:de:f:g:G:hi:I:KLNo:O:p:P:qsTtuvW");
+			   "b:Bc:C:D:de:f:g:G:hi:I:KLm:No:O:p:P:qsTtuvW");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -229,6 +235,11 @@ int main(int argc, char *argv[])
 			license();
 			exitcode = 0;
 			goto out;
+#ifdef CONFIG_P2P
+		case 'm':
+			iface->conf_p2p_dev = optarg;
+			break;
+#endif /* CONFIG_P2P */
 		case 'o':
 			params.override_driver = optarg;
 			break;

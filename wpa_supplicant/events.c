@@ -3196,6 +3196,20 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		break;
 	case EVENT_INTERFACE_DISABLED:
 		wpa_dbg(wpa_s, MSG_DEBUG, "Interface was disabled");
+#ifdef CONFIG_P2P
+		if (wpa_s->p2p_group_interface == P2P_GROUP_INTERFACE_GO ||
+		    (wpa_s->current_ssid && wpa_s->current_ssid->p2p_group &&
+		     wpa_s->current_ssid->mode == WPAS_MODE_P2P_GO)) {
+			/*
+			 * The interface was externally disabled. Remove
+			 * it assuming an external entity will start a
+			 * new session if needed.
+			 */
+			wpas_p2p_disconnect(wpa_s);
+			break;
+		}
+#endif /* CONFIG_P2P */
+
 		wpa_supplicant_mark_disassoc(wpa_s);
 		wpa_supplicant_set_state(wpa_s, WPA_INTERFACE_DISABLED);
 		break;

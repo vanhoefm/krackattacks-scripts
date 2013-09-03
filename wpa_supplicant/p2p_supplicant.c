@@ -1258,6 +1258,18 @@ void wpas_p2p_group_formation_failed(struct wpa_supplicant *wpa_s)
 }
 
 
+void wpas_p2p_ap_setup_failed(struct wpa_supplicant *wpa_s)
+{
+	if (wpa_s->global->p2p_group_formation != wpa_s)
+		return;
+	/* Speed up group formation timeout since this cannot succeed */
+	eloop_cancel_timeout(wpas_p2p_group_formation_timeout,
+			     wpa_s->parent, NULL);
+	eloop_register_timeout(0, 0, wpas_p2p_group_formation_timeout,
+			       wpa_s->parent, NULL);
+}
+
+
 void wpas_go_neg_completed(void *ctx, struct p2p_go_neg_results *res)
 {
 	struct wpa_supplicant *wpa_s = ctx;

@@ -1295,6 +1295,8 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 		}
 		if (wpa_supplicant_create_ap(wpa_s, ssid) < 0) {
 			wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
+			if (ssid->mode == WPAS_MODE_P2P_GROUP_FORMATION)
+				wpas_p2p_ap_setup_failed(wpa_s);
 			return;
 		}
 		wpa_s->current_bss = bss;

@@ -54,7 +54,16 @@ void wpas_ap_ch_switch(struct wpa_supplicant *wpa_s, int freq, int ht,
 		       int offset);
 struct wpabuf * wpas_ap_wps_nfc_config_token(struct wpa_supplicant *wpa_s,
 					     int ndef);
+#ifdef CONFIG_AP
 struct wpabuf * wpas_ap_wps_nfc_handover_sel(struct wpa_supplicant *wpa_s,
 					     int ndef);
+#else /* CONFIG_AP */
+static inline struct wpabuf *
+wpas_ap_wps_nfc_handover_sel(struct wpa_supplicant *wpa_s,
+			     int ndef)
+{
+	return NULL;
+}
+#endif /* CONFIG_AP */
 
 #endif /* AP_H */

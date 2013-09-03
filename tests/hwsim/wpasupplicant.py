@@ -51,11 +51,15 @@ class WpaSupplicant:
         return "PONG" in self.request("PING")
 
     def reset(self):
-        self.request("FLUSH")
+        res = self.request("FLUSH")
+        if not "OK" in res:
+            logger.info("FLUSH to " + self.ifname + " failed: " + res)
         self.request("SET ignore_old_scan_res 0")
         self.request("P2P_SET per_sta_psk 0")
         self.group_ifname = None
         self.dump_monitor()
+        if not self.ping():
+            logger.info("No PING response from " + self.ifname + " after reset")
 
     def add_network(self):
         id = self.request("ADD_NETWORK")

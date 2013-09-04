@@ -2422,6 +2422,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			}
 		} else if (os_strcmp(buf, "require_ht") == 0) {
 			conf->require_ht = atoi(pos);
+		} else if (os_strcmp(buf, "obss_interval") == 0) {
+			conf->obss_interval = atoi(pos);
 #endif /* CONFIG_IEEE80211N */
 #ifdef CONFIG_IEEE80211AC
 		} else if (os_strcmp(buf, "ieee80211ac") == 0) {

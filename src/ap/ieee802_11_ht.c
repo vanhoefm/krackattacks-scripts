@@ -50,6 +50,22 @@ u8 * hostapd_eid_ht_capabilities(struct hostapd_data *hapd, u8 *eid)
 
  	pos += sizeof(*cap);
 
+	if (hapd->iconf->obss_interval) {
+		struct ieee80211_obss_scan_parameters *scan_params;
+
+		*pos++ = WLAN_EID_OVERLAPPING_BSS_SCAN_PARAMS;
+		*pos++ = sizeof(*scan_params);
+
+		scan_params = (struct ieee80211_obss_scan_parameters *) pos;
+		os_memset(scan_params, 0, sizeof(*scan_params));
+		scan_params->width_trigger_scan_interval =
+			host_to_le16(hapd->iconf->obss_interval);
+
+		/* TODO: Fill in more parameters (supplicant ignores them) */
+
+		pos += sizeof(*scan_params);
+	}
+
 	return pos;
 }
 

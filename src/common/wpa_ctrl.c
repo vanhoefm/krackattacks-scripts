@@ -229,7 +229,6 @@ void wpa_ctrl_cleanup(void)
 	struct dirent entry;
 	struct dirent *result;
 	size_t dirnamelen;
-	int prefixlen = os_strlen(CONFIG_CTRL_IFACE_CLIENT_PREFIX);
 	size_t maxcopy;
 	char pathname[PATH_MAX];
 	char *namep;
@@ -246,11 +245,8 @@ void wpa_ctrl_cleanup(void)
 	namep = pathname + dirnamelen;
 	maxcopy = PATH_MAX - dirnamelen;
 	while (readdir_r(dir, &entry, &result) == 0 && result != NULL) {
-		if (os_strncmp(entry.d_name, CONFIG_CTRL_IFACE_CLIENT_PREFIX,
-			       prefixlen) == 0) {
-			if (os_strlcpy(namep, entry.d_name, maxcopy) < maxcopy)
-				unlink(pathname);
-		}
+		if (os_strlcpy(namep, entry.d_name, maxcopy) < maxcopy)
+			unlink(pathname);
 	}
 	closedir(dir);
 }

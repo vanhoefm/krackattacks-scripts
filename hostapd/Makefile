@@ -9,6 +9,8 @@ endif
 CFLAGS += -I$(abspath ../src)
 CFLAGS += -I$(abspath ../src/utils)
 
+export BINDIR ?= /usr/local/bin/
+
 # Uncomment following line and set the path to your kernel tree include
 # directory if your C library does not include all header files.
 # CFLAGS += -DUSE_KERNEL_HEADERS -I/usr/src/linux/include
@@ -931,9 +933,10 @@ verify_config:
 		exit 1; \
 	fi
 
-install: all
-	mkdir -p $(DESTDIR)/usr/local/bin
-	for i in $(ALL); do cp -f $$i $(DESTDIR)/usr/local/bin/$$i; done
+$(DESTDIR)$(BINDIR)/%: %
+	install -D $(<) $(@)
+
+install: $(addprefix $(DESTDIR)$(BINDIR)/,$(ALL))
 
 ../src/drivers/build.hostapd:
 	@if [ -f ../src/drivers/build.wpa_supplicant ]; then \

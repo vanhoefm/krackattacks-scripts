@@ -131,6 +131,11 @@ struct wpa_ssid {
 	int bssid_set;
 
 	/**
+	 * go_p2p_dev_addr - GO's P2P Device Address or all zeros if not set
+	 */
+	u8 go_p2p_dev_addr[ETH_ALEN];
+
+	/**
 	 * psk - WPA pre-shared key (256 bits)
 	 */
 	u8 psk[32];

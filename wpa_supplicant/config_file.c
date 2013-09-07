@@ -606,6 +606,15 @@ static void write_wep_key(FILE *f, int idx, struct wpa_ssid *ssid)
 
 #ifdef CONFIG_P2P
 
+static void write_go_p2p_dev_addr(FILE *f, struct wpa_ssid *ssid)
+{
+	char *value = wpa_config_get(ssid, "go_p2p_dev_addr");
+	if (value == NULL)
+		return;
+	fprintf(f, "\tgo_p2p_dev_addr=%s\n", value);
+	os_free(value);
+}
+
 static void write_p2p_client_list(FILE *f, struct wpa_ssid *ssid)
 {
 	char *value = wpa_config_get(ssid, "p2p_client_list");
@@ -714,6 +723,7 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 #endif /* CONFIG_IEEE80211W */
 	STR(id_str);
 #ifdef CONFIG_P2P
+	write_go_p2p_dev_addr(f, ssid);
 	write_p2p_client_list(f, ssid);
 	write_psk_list(f, ssid);
 #endif /* CONFIG_P2P */

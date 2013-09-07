@@ -866,6 +866,32 @@ static struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 			continue;
 		}
 
+		if (!is_zero_ether_addr(ssid->go_p2p_dev_addr)) {
+			struct wpabuf *p2p_ie;
+			u8 dev_addr[ETH_ALEN];
+
+			ie = wpa_bss_get_vendor_ie(bss, P2P_IE_VENDOR_TYPE);
+			if (ie == NULL) {
+				wpa_dbg(wpa_s, MSG_DEBUG, "   skip - no P2P element");
+				continue;
+			}
+			p2p_ie = wpa_bss_get_vendor_ie_multi(
+				bss, P2P_IE_VENDOR_TYPE);
+			if (p2p_ie == NULL) {
+				wpa_dbg(wpa_s, MSG_DEBUG, "   skip - could not fetch P2P element");
+				continue;
+			}
+
+			if (p2p_parse_dev_addr_in_p2p_ie(p2p_ie, dev_addr) < 0
+			    || os_memcmp(dev_addr, ssid->go_p2p_dev_addr,
+					 ETH_ALEN) != 0) {
+				wpa_dbg(wpa_s, MSG_DEBUG, "   skip - no matching GO P2P Device Address in P2P element");
+				wpabuf_free(p2p_ie);
+				continue;
+			}
+			wpabuf_free(p2p_ie);
+		}
+
 		/*
 		 * TODO: skip the AP if its P2P IE has Group Formation
 		 * bit set in the P2P Group Capability Bitmap and we

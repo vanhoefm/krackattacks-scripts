@@ -382,14 +382,20 @@ int wps_build_oob_dev_pw(struct wpabuf *msg, u16 dev_pw_id,
 	const u8 *addr[1];
 	u8 pubkey_hash[WPS_HASH_LEN];
 
+	wpa_printf(MSG_DEBUG, "WPS:  * OOB Device Password (dev_pw_id=%u)",
+		   dev_pw_id);
 	addr[0] = wpabuf_head(pubkey);
 	hash_len = wpabuf_len(pubkey);
 	sha256_vector(1, addr, &hash_len, pubkey_hash);
 
 	wpabuf_put_be16(msg, ATTR_OOB_DEVICE_PASSWORD);
 	wpabuf_put_be16(msg, WPS_OOB_PUBKEY_HASH_LEN + 2 + dev_pw_len);
+	wpa_hexdump(MSG_DEBUG, "WPS: Public Key Hash",
+		    pubkey_hash, WPS_OOB_PUBKEY_HASH_LEN);
 	wpabuf_put_data(msg, pubkey_hash, WPS_OOB_PUBKEY_HASH_LEN);
 	wpabuf_put_be16(msg, dev_pw_id);
+	wpa_hexdump_key(MSG_DEBUG, "WPS: OOB Device Password",
+			dev_pw, dev_pw_len);
 	wpabuf_put_data(msg, dev_pw, dev_pw_len);
 
 	return 0;

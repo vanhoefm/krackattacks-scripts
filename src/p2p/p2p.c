@@ -4493,12 +4493,17 @@ int p2p_process_nfc_connection_handover(struct p2p_data *p2p,
 	if (freq < 0) {
 		p2p_dbg(p2p, "Unknown peer OOB GO Neg channel");
 		return -1;
-	} else {
-		p2p_dbg(p2p, "Peer OOB GO Neg channel: %u MHz", freq);
-		dev->oob_go_neg_freq = freq;
 	}
+	role = msg.oob_go_neg_channel[5];
 
-	if (!params->sel) {
+	if (role == P2P_GO_IN_A_GROUP) {
+		p2p_dbg(p2p, "Peer OOB GO operating channel: %u MHz", freq);
+		params->go_freq = freq;
+	} else
+		p2p_dbg(p2p, "Peer OOB GO Neg channel: %u MHz", freq);
+	dev->oob_go_neg_freq = freq;
+
+	if (!params->sel && role != P2P_GO_IN_A_GROUP) {
 		freq = p2p_channel_to_freq(p2p->cfg->reg_class,
 					   p2p->cfg->channel);
 		if (freq < 0) {
@@ -4509,7 +4514,12 @@ int p2p_process_nfc_connection_handover(struct p2p_data *p2p,
 		dev->oob_go_neg_freq = freq;
 	}
 
-	role = msg.oob_go_neg_channel[5];
+	if (msg.group_id) {
+		os_memcpy(params->go_dev_addr, msg.group_id, ETH_ALEN);
+		params->go_ssid_len = msg.group_id_len - ETH_ALEN;
+		os_memcpy(params->go_ssid, msg.group_id + ETH_ALEN,
+			  params->go_ssid_len);
+	}
 
 	p2p_parse_free(&msg);
 

@@ -911,7 +911,8 @@ static void wpas_wps_timeout(void *eloop_ctx, void *timeout_ctx)
 
 
 static struct wpa_ssid * wpas_wps_add_network(struct wpa_supplicant *wpa_s,
-					      int registrar, const u8 *bssid)
+					      int registrar, const u8 *dev_addr,
+					      const u8 *bssid)
 {
 	struct wpa_ssid *ssid;
 
@@ -930,6 +931,11 @@ static struct wpa_ssid * wpas_wps_add_network(struct wpa_supplicant *wpa_s,
 		wpa_config_remove_network(wpa_s->conf, ssid->id);
 		return NULL;
 	}
+
+#ifdef CONFIG_P2P
+	if (dev_addr)
+		os_memcpy(ssid->go_p2p_dev_addr, dev_addr, ETH_ALEN);
+#endif /* CONFIG_P2P */
 
 	if (bssid) {
 #ifndef CONFIG_P2P
@@ -1044,7 +1050,7 @@ int wpas_wps_start_pbc(struct wpa_supplicant *wpa_s, const u8 *bssid,
 {
 	struct wpa_ssid *ssid;
 	wpas_clear_wps(wpa_s);
-	ssid = wpas_wps_add_network(wpa_s, 0, bssid);
+	ssid = wpas_wps_add_network(wpa_s, 0, NULL, bssid);
 	if (ssid == NULL)
 		return -1;
 	ssid->temporary = 1;
@@ -1072,7 +1078,8 @@ int wpas_wps_start_pbc(struct wpa_supplicant *wpa_s, const u8 *bssid,
 }
 
 
-static int wpas_wps_start_dev_pw(struct wpa_supplicant *wpa_s, const u8 *bssid,
+static int wpas_wps_start_dev_pw(struct wpa_supplicant *wpa_s,
+				 const u8 *dev_addr, const u8 *bssid,
 				 const char *pin, int p2p_group, u16 dev_pw_id,
 				 const u8 *peer_pubkey_hash,
 				 const u8 *ssid_val, size_t ssid_len)
@@ -1083,7 +1090,9 @@ static int wpas_wps_start_dev_pw(struct wpa_supplicant *wpa_s, const u8 *bssid,
 	char hash[2 * WPS_OOB_PUBKEY_HASH_LEN + 10];
 
 	wpas_clear_wps(wpa_s);
-	ssid = wpas_wps_add_network(wpa_s, 0, bssid);
+	if (bssid && is_zero_ether_addr(bssid))
+		bssid = NULL;
+	ssid = wpas_wps_add_network(wpa_s, 0, dev_addr, bssid);
 	if (ssid == NULL) {
 		wpa_printf(MSG_DEBUG, "WPS: Could not add network");
 		return -1;
@@ -1145,8 +1154,8 @@ static int wpas_wps_start_dev_pw(struct wpa_supplicant *wpa_s, const u8 *bssid,
 int wpas_wps_start_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		       const char *pin, int p2p_group, u16 dev_pw_id)
 {
-	return wpas_wps_start_dev_pw(wpa_s, bssid, pin, p2p_group, dev_pw_id,
-				     NULL, NULL, 0);
+	return wpas_wps_start_dev_pw(wpa_s, NULL, bssid, pin, p2p_group,
+				     dev_pw_id, NULL, NULL, 0);
 }
 
 
@@ -1196,7 +1205,7 @@ int wpas_wps_start_reg(struct wpa_supplicant *wpa_s, const u8 *bssid,
 	if (!pin)
 		return -1;
 	wpas_clear_wps(wpa_s);
-	ssid = wpas_wps_add_network(wpa_s, 1, bssid);
+	ssid = wpas_wps_add_network(wpa_s, 1, NULL, bssid);
 	if (ssid == NULL)
 		return -1;
 	ssid->temporary = 1;
@@ -2118,7 +2127,8 @@ struct wpabuf * wpas_wps_nfc_token(struct wpa_supplicant *wpa_s, int ndef)
 }
 
 
-int wpas_wps_start_nfc(struct wpa_supplicant *wpa_s, const u8 *bssid,
+int wpas_wps_start_nfc(struct wpa_supplicant *wpa_s, const u8 *go_dev_addr,
+		       const u8 *bssid,
 		       const struct wpabuf *dev_pw, u16 dev_pw_id,
 		       int p2p_group, const u8 *peer_pubkey_hash,
 		       const u8 *ssid, size_t ssid_len)
@@ -2173,7 +2183,8 @@ int wpas_wps_start_nfc(struct wpa_supplicant *wpa_s, const u8 *bssid,
 					   wpabuf_head(dev_pw),
 					   wpabuf_len(dev_pw));
 	}
-	return wpas_wps_start_dev_pw(wpa_s, bssid, dev_pw ? pw : NULL,
+	return wpas_wps_start_dev_pw(wpa_s, go_dev_addr, bssid,
+				     dev_pw ? pw : NULL,
 				     p2p_group, dev_pw_id, peer_pubkey_hash,
 				     ssid, ssid_len);
 }
@@ -2484,7 +2495,7 @@ int wpas_wps_nfc_rx_handover_sel(struct wpa_supplicant *wpa_s,
 	wpa_hexdump(MSG_DEBUG, "WPS: AP Public Key hash",
 		    attr.oob_dev_password, WPS_OOB_PUBKEY_HASH_LEN);
 
-	ret = wpas_wps_start_nfc(wpa_s, NULL, NULL, dev_pw_id, 0,
+	ret = wpas_wps_start_nfc(wpa_s, NULL, NULL, NULL, dev_pw_id, 0,
 				 attr.oob_dev_password,
 				 attr.ssid, attr.ssid_len);
 

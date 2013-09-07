@@ -1919,6 +1919,10 @@ struct p2p_nfc_params {
 	u8 oob_dev_pw[WPS_OOB_PUBKEY_HASH_LEN + 2 +
 		      WPS_OOB_DEVICE_PASSWORD_LEN];
 	size_t oob_dev_pw_len;
+	int go_freq;
+	u8 go_dev_addr[ETH_ALEN];
+	u8 go_ssid[32];
+	size_t go_ssid_len;
 };
 
 int p2p_process_nfc_connection_handover(struct p2p_data *p2p,

@@ -103,13 +103,15 @@ static void wpas_p2p_long_listen_timeout(void *eloop_ctx, void *timeout_ctx);
 static struct wpa_supplicant *
 wpas_p2p_get_group_iface(struct wpa_supplicant *wpa_s, int addr_allocated,
 			 int go);
-static int wpas_p2p_join_start(struct wpa_supplicant *wpa_s);
+static int wpas_p2p_join_start(struct wpa_supplicant *wpa_s, int freq,
+			       const u8 *ssid, size_t ssid_len);
 static void wpas_p2p_join_scan_req(struct wpa_supplicant *wpa_s, int freq,
 				   const u8 *ssid, size_t ssid_len);
 static void wpas_p2p_join_scan(void *eloop_ctx, void *timeout_ctx);
 static int wpas_p2p_join(struct wpa_supplicant *wpa_s, const u8 *iface_addr,
 			 const u8 *dev_addr, enum p2p_wps_method wps_method,
-			 int auto_join, const u8 *ssid, size_t ssid_len);
+			 int auto_join, int freq,
+			 const u8 *ssid, size_t ssid_len);
 static int wpas_p2p_create_iface(struct wpa_supplicant *wpa_s);
 static void wpas_p2p_cross_connect_setup(struct wpa_supplicant *wpa_s);
 static void wpas_p2p_group_idle_timeout(void *eloop_ctx, void *timeout_ctx);
@@ -580,6 +582,10 @@ static int wpas_p2p_persistent_group(struct wpa_supplicant *wpa_s,
 		bssid = wpa_s->bssid;
 
 	bss = wpa_bss_get(wpa_s, bssid, ssid, ssid_len);
+	if (bss == NULL && wpa_s->go_params &&
+	    !is_zero_ether_addr(wpa_s->go_params->peer_device_addr))
+		bss = wpa_bss_get_p2p_dev_addr(
+			wpa_s, wpa_s->go_params->peer_device_addr);
 	if (bss == NULL) {
 		u8 iface_addr[ETH_ALEN];
 		if (p2p_get_interface_addr(wpa_s->global->p2p, bssid,
@@ -1101,8 +1107,10 @@ static int wpas_copy_go_neg_results(struct wpa_supplicant *wpa_s,
 static void wpas_start_wps_enrollee(struct wpa_supplicant *wpa_s,
 				    struct p2p_go_neg_results *res)
 {
-	wpa_printf(MSG_DEBUG, "P2P: Start WPS Enrollee for peer " MACSTR,
-		   MAC2STR(res->peer_interface_addr));
+	wpa_printf(MSG_DEBUG, "P2P: Start WPS Enrollee for peer " MACSTR
+		   " dev_addr " MACSTR,
+		   MAC2STR(res->peer_interface_addr),
+		   MAC2STR(res->peer_device_addr));
 	wpa_hexdump_ascii(MSG_DEBUG, "P2P: Start WPS Enrollee for SSID",
 			  res->ssid, res->ssid_len);
 	wpa_supplicant_ap_deinit(wpa_s);
@@ -1111,7 +1119,8 @@ static void wpas_start_wps_enrollee(struct wpa_supplicant *wpa_s,
 		wpas_wps_start_pbc(wpa_s, res->peer_interface_addr, 1);
 #ifdef CONFIG_WPS_NFC
 	} else if (res->wps_method == WPS_NFC) {
-		wpas_wps_start_nfc(wpa_s, res->peer_interface_addr,
+		wpas_wps_start_nfc(wpa_s, res->peer_device_addr,
+				   res->peer_interface_addr,
 				   wpa_s->parent->p2p_oob_dev_pw,
 				   wpa_s->parent->p2p_oob_dev_pw_id, 1,
 				   wpa_s->parent->p2p_oob_dev_pw_id ==
@@ -2821,7 +2830,7 @@ static void wpas_prov_disc_resp(void *ctx, const u8 *peer, u16 config_methods)
 		wpa_s->pending_pd_before_join = 0;
 		wpa_printf(MSG_DEBUG, "P2P: Starting pending "
 			   "join-existing-group operation");
-		wpas_p2p_join_start(wpa_s);
+		wpas_p2p_join_start(wpa_s, 0, NULL, 0);
 		return;
 	}
 
@@ -2865,7 +2874,7 @@ static void wpas_prov_disc_fail(void *ctx, const u8 *peer,
 		wpa_printf(MSG_DEBUG, "P2P: Starting pending "
 			   "join-existing-group operation (no ACK for PD "
 			   "Req attempts)");
-		wpas_p2p_join_start(wpa_s);
+		wpas_p2p_join_start(wpa_s, 0, NULL, 0);
 		return;
 	}
 
@@ -3034,7 +3043,7 @@ static void wpas_invitation_received(void *ctx, const u8 *sa, const u8 *bssid,
 		} else if (bssid) {
 			wpa_s->user_initiated_pd = 0;
 			wpas_p2p_join(wpa_s, bssid, go_dev_addr,
-				      wpa_s->p2p_wps_method, 0,
+				      wpa_s->p2p_wps_method, 0, op_freq,
 				      ssid, ssid_len);
 		}
 		return;
@@ -4283,7 +4292,7 @@ static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 
 start:
 	/* Start join operation immediately */
-	wpas_p2p_join_start(wpa_s);
+	wpas_p2p_join_start(wpa_s, 0, NULL, 0);
 }
 
 
@@ -4384,11 +4393,12 @@ static void wpas_p2p_join_scan(void *eloop_ctx, void *timeout_ctx)
 
 static int wpas_p2p_join(struct wpa_supplicant *wpa_s, const u8 *iface_addr,
 			 const u8 *dev_addr, enum p2p_wps_method wps_method,
-			 int auto_join, const u8 *ssid, size_t ssid_len)
+			 int auto_join, int op_freq,
+			 const u8 *ssid, size_t ssid_len)
 {
 	wpa_printf(MSG_DEBUG, "P2P: Request to join existing group (iface "
-		   MACSTR " dev " MACSTR ")%s",
-		   MAC2STR(iface_addr), MAC2STR(dev_addr),
+		   MACSTR " dev " MACSTR " op_freq=%d)%s",
+		   MAC2STR(iface_addr), MAC2STR(dev_addr), op_freq,
 		   auto_join ? " (auto_join)" : "");
 	if (ssid && ssid_len) {
 		wpa_printf(MSG_DEBUG, "P2P: Group SSID specified: %s",
@@ -4405,12 +4415,13 @@ static int wpas_p2p_join(struct wpa_supplicant *wpa_s, const u8 *iface_addr,
 	wpas_p2p_stop_find(wpa_s);
 
 	wpa_s->p2p_join_scan_count = 0;
-	wpas_p2p_join_scan_req(wpa_s, 0, ssid, ssid_len);
+	wpas_p2p_join_scan_req(wpa_s, op_freq, ssid, ssid_len);
 	return 0;
 }
 
 
-static int wpas_p2p_join_start(struct wpa_supplicant *wpa_s)
+static int wpas_p2p_join_start(struct wpa_supplicant *wpa_s, int freq,
+			       const u8 *ssid, size_t ssid_len)
 {
 	struct wpa_supplicant *group;
 	struct p2p_go_neg_results res;
@@ -4438,17 +4449,25 @@ static int wpas_p2p_join_start(struct wpa_supplicant *wpa_s)
 	group->p2p_fallback_to_go_neg = wpa_s->p2p_fallback_to_go_neg;
 
 	os_memset(&res, 0, sizeof(res));
+	os_memcpy(res.peer_device_addr, wpa_s->pending_join_dev_addr, ETH_ALEN);
 	os_memcpy(res.peer_interface_addr, wpa_s->pending_join_iface_addr,
 		  ETH_ALEN);
 	res.wps_method = wpa_s->pending_join_wps_method;
-	bss = wpa_bss_get_bssid_latest(wpa_s, wpa_s->pending_join_iface_addr);
-	if (bss) {
-		res.freq = bss->freq;
-		res.ssid_len = bss->ssid_len;
-		os_memcpy(res.ssid, bss->ssid, bss->ssid_len);
-		wpa_printf(MSG_DEBUG, "P2P: Join target GO operating frequency "
-			   "from BSS table: %d MHz (SSID %s)", bss->freq,
-			   wpa_ssid_txt(bss->ssid, bss->ssid_len));
+	if (freq && ssid && ssid_len) {
+		res.freq = freq;
+		res.ssid_len = ssid_len;
+		os_memcpy(res.ssid, ssid, ssid_len);
+	} else {
+		bss = wpa_bss_get_bssid_latest(wpa_s,
+					       wpa_s->pending_join_iface_addr);
+		if (bss) {
+			res.freq = bss->freq;
+			res.ssid_len = bss->ssid_len;
+			os_memcpy(res.ssid, bss->ssid, bss->ssid_len);
+			wpa_printf(MSG_DEBUG, "P2P: Join target GO operating frequency from BSS table: %d MHz (SSID %s)",
+				   bss->freq,
+				   wpa_ssid_txt(bss->ssid, bss->ssid_len));
+		}
 	}
 
 	if (wpa_s->off_channel_freq || wpa_s->roc_waiting_drv_freq) {
@@ -4660,7 +4679,7 @@ int wpas_p2p_connect(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 		}
 		wpa_s->user_initiated_pd = 1;
 		if (wpas_p2p_join(wpa_s, iface_addr, dev_addr, wps_method,
-				  auto_join, NULL, 0) < 0)
+				  auto_join, freq, NULL, 0) < 0)
 			return -1;
 		return ret;
 	}
@@ -7100,10 +7119,23 @@ static int wpas_p2p_nfc_join_group(struct wpa_supplicant *wpa_s,
 				   struct p2p_nfc_params *params)
 {
 	wpa_printf(MSG_DEBUG, "P2P: Initiate join-group based on NFC "
-		   "connection handover");
+		   "connection handover (freq=%d)",
+		   params->go_freq);
+
+	if (params->go_freq && params->go_ssid_len) {
+		wpa_s->p2p_wps_method = WPS_NFC;
+		wpa_s->pending_join_wps_method = WPS_NFC;
+		os_memset(wpa_s->pending_join_iface_addr, 0, ETH_ALEN);
+		os_memcpy(wpa_s->pending_join_dev_addr, params->go_dev_addr,
+			  ETH_ALEN);
+		return wpas_p2p_join_start(wpa_s, params->go_freq,
+					   params->go_ssid,
+					   params->go_ssid_len);
+	}
+
 	return wpas_p2p_connect(wpa_s, params->peer->p2p_device_addr, NULL,
 				WPS_NFC, 0, 0, 1, 0, wpa_s->conf->p2p_go_intent,
-				0, -1, 0, 1, 1);
+				params->go_freq, -1, 0, 1, 1);
 }
 
 

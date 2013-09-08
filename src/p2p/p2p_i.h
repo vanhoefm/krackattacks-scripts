@@ -243,6 +243,7 @@ struct p2p_data {
 
 	const u8 *invite_go_dev_addr;
 	u8 invite_go_dev_addr_buf[ETH_ALEN];
+	int invite_dev_pw_id;
 
 	/**
 	 * sd_peer - Pointer to Service Discovery peer
@@ -522,6 +523,7 @@ struct p2p_message {
 
 	/* WPS IE */
 	u16 dev_password_id;
+	int dev_password_id_present;
 	u16 wps_config_methods;
 	const u8 *wps_pri_dev_type;
 	const u8 *wps_sec_dev_type_list;
@@ -699,7 +701,7 @@ void p2p_process_invitation_req(struct p2p_data *p2p, const u8 *sa,
 void p2p_process_invitation_resp(struct p2p_data *p2p, const u8 *sa,
 				 const u8 *data, size_t len);
 int p2p_invite_send(struct p2p_data *p2p, struct p2p_device *dev,
-		    const u8 *go_dev_addr);
+		    const u8 *go_dev_addr, int dev_pw_id);
 void p2p_invitation_req_cb(struct p2p_data *p2p, int success);
 void p2p_invitation_resp_cb(struct p2p_data *p2p, int success);
 

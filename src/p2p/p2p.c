@@ -1762,7 +1762,8 @@ static void p2p_invite_start(void *eloop_ctx, void *timeout_ctx)
 	if (p2p->invite_peer == NULL)
 		return;
 	p2p->cfg->stop_listen(p2p->cfg->cb_ctx);
-	p2p_invite_send(p2p, p2p->invite_peer, p2p->invite_go_dev_addr);
+	p2p_invite_send(p2p, p2p->invite_peer, p2p->invite_go_dev_addr,
+			p2p->invite_dev_pw_id);
 }
 
 
@@ -3277,7 +3278,7 @@ static void p2p_timeout_invite_listen(struct p2p_data *p2p)
 	if (p2p->invite_peer && p2p->invite_peer->invitation_reqs < 100) {
 		p2p_set_state(p2p, P2P_INVITE);
 		p2p_invite_send(p2p, p2p->invite_peer,
-				p2p->invite_go_dev_addr);
+				p2p->invite_go_dev_addr, p2p->invite_dev_pw_id);
 	} else {
 		if (p2p->invite_peer) {
 			p2p_dbg(p2p, "Invitation Request retry limit reached");

@@ -1109,9 +1109,9 @@ static void wpas_start_wps_enrollee(struct wpa_supplicant *wpa_s,
 				    struct p2p_go_neg_results *res)
 {
 	wpa_printf(MSG_DEBUG, "P2P: Start WPS Enrollee for peer " MACSTR
-		   " dev_addr " MACSTR,
+		   " dev_addr " MACSTR " wps_method %d",
 		   MAC2STR(res->peer_interface_addr),
-		   MAC2STR(res->peer_device_addr));
+		   MAC2STR(res->peer_device_addr), res->wps_method);
 	wpa_hexdump_ascii(MSG_DEBUG, "P2P: Start WPS Enrollee for SSID",
 			  res->ssid, res->ssid_len);
 	wpa_supplicant_ap_deinit(wpa_s);
@@ -2901,7 +2901,8 @@ static u8 wpas_invitation_process(void *ctx, const u8 *sa, const u8 *bssid,
 				  const u8 *go_dev_addr, const u8 *ssid,
 				  size_t ssid_len, int *go, u8 *group_bssid,
 				  int *force_freq, int persistent_group,
-				  const struct p2p_channels *channels)
+				  const struct p2p_channels *channels,
+				  int dev_pw_id)
 {
 	struct wpa_supplicant *wpa_s = ctx;
 	struct wpa_ssid *s;
@@ -2920,6 +2921,21 @@ static u8 wpas_invitation_process(void *ctx, const u8 *sa, const u8 *bssid,
 				   "authorized invitation");
 			goto accept_inv;
 		}
+
+#ifdef CONFIG_WPS_NFC
+		if (dev_pw_id >= 0 && wpa_s->parent->p2p_nfc_tag_enabled &&
+		    dev_pw_id == wpa_s->parent->p2p_oob_dev_pw_id) {
+			wpa_printf(MSG_DEBUG, "P2P: Accept invitation based on local enabled NFC Tag");
+			wpa_s->parent->p2p_wps_method = WPS_NFC;
+			wpa_s->parent->pending_join_wps_method = WPS_NFC;
+			os_memcpy(wpa_s->parent->pending_join_dev_addr,
+				  go_dev_addr, ETH_ALEN);
+			os_memcpy(wpa_s->parent->pending_join_iface_addr,
+				  bssid, ETH_ALEN);
+			goto accept_inv;
+		}
+#endif /* CONFIG_WPS_NFC */
+
 		/*
 		 * Do not accept the invitation automatically; notify user and
 		 * request approval.
@@ -5722,7 +5738,7 @@ int wpas_p2p_invite(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 
 	return p2p_invite(wpa_s->global->p2p, peer_addr, role, bssid,
 			  ssid->ssid, ssid->ssid_len, force_freq, go_dev_addr,
-			  1, pref_freq);
+			  1, pref_freq, -1);
 }
 
 
@@ -5796,7 +5812,7 @@ int wpas_p2p_invite_group(struct wpa_supplicant *wpa_s, const char *ifname,
 
 	return p2p_invite(wpa_s->global->p2p, peer_addr, role, bssid,
 			  ssid->ssid, ssid->ssid_len, force_freq,
-			  go_dev_addr, persistent, pref_freq);
+			  go_dev_addr, persistent, pref_freq, -1);
 }
 
 
@@ -7158,12 +7174,15 @@ static int wpas_p2p_nfc_join_group(struct wpa_supplicant *wpa_s,
 
 
 static int wpas_p2p_nfc_auth_join(struct wpa_supplicant *wpa_s,
-				  struct p2p_nfc_params *params)
+				  struct p2p_nfc_params *params, int tag)
 {
+	int res, persistent;
+	struct wpa_ssid *ssid;
+
 	wpa_printf(MSG_DEBUG, "P2P: Authorize join-group based on NFC "
 		   "connection handover");
 	for (wpa_s = wpa_s->global->ifaces; wpa_s; wpa_s = wpa_s->next) {
-		struct wpa_ssid *ssid = wpa_s->current_ssid;
+		ssid = wpa_s->current_ssid;
 		if (ssid == NULL)
 			continue;
 		if (ssid->mode != WPAS_MODE_P2P_GO)
@@ -7183,11 +7202,38 @@ static int wpas_p2p_nfc_auth_join(struct wpa_supplicant *wpa_s,
 		wpa_printf(MSG_DEBUG, "P2P: No NFC Dev Pw known");
 		return -1;
 	}
-	return wpas_ap_wps_add_nfc_pw(
+	res = wpas_ap_wps_add_nfc_pw(
 		wpa_s, wpa_s->parent->p2p_oob_dev_pw_id,
 		wpa_s->parent->p2p_oob_dev_pw,
 		wpa_s->parent->p2p_peer_oob_pk_hash_known ?
 		wpa_s->parent->p2p_peer_oob_pubkey_hash : NULL);
+	if (res)
+		return res;
+
+	if (!tag) {
+		wpa_printf(MSG_DEBUG, "P2P: Negotiated handover - wait for peer to join without invitation");
+		return 0;
+	}
+
+	if (!params->peer ||
+	    !(params->peer->dev_capab & P2P_DEV_CAPAB_INVITATION_PROCEDURE))
+		return 0;
+
+	wpa_printf(MSG_DEBUG, "P2P: Static handover - invite peer " MACSTR
+		   " to join", MAC2STR(params->peer->p2p_device_addr));
+
+	wpa_s->global->p2p_invite_group = wpa_s;
+	persistent = ssid->p2p_persistent_group &&
+		wpas_p2p_get_persistent(wpa_s->parent,
+					params->peer->p2p_device_addr,
+					ssid->ssid, ssid->ssid_len);
+	wpa_s->parent->pending_invite_ssid_id = -1;
+
+	return p2p_invite(wpa_s->global->p2p, params->peer->p2p_device_addr,
+			  P2P_INVITE_ROLE_ACTIVE_GO, wpa_s->own_addr,
+			  ssid->ssid, ssid->ssid_len, ssid->frequency,
+			  wpa_s->global->p2p_dev_addr, persistent, 0,
+			  wpa_s->parent->p2p_oob_dev_pw_id);
 }
 
 
@@ -7378,7 +7424,7 @@ static int wpas_p2p_nfc_connection_handover(struct wpa_supplicant *wpa_s,
 	case JOIN_GROUP:
 		return wpas_p2p_nfc_join_group(wpa_s, &params);
 	case AUTH_JOIN:
-		return wpas_p2p_nfc_auth_join(wpa_s, &params);
+		return wpas_p2p_nfc_auth_join(wpa_s, &params, tag);
 	case INIT_GO_NEG:
 		return wpas_p2p_nfc_init_go_neg(wpa_s, &params);
 	case RESP_GO_NEG:

@@ -353,6 +353,7 @@ static int p2p_parse_wps_ie(const struct wpabuf *buf, struct p2p_message *msg)
 		msg->dev_password_id = WPA_GET_BE16(attr.dev_password_id);
 		wpa_printf(MSG_DEBUG, "P2P: Device Password ID: %d",
 			   msg->dev_password_id);
+		msg->dev_password_id_present = 1;
 	}
 	if (attr.primary_dev_type) {
 		char devtype[WPS_DEV_TYPE_BUFSIZE];

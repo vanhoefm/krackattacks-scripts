@@ -16,7 +16,8 @@
 
 static struct wpabuf * p2p_build_invitation_req(struct p2p_data *p2p,
 						struct p2p_device *peer,
-						const u8 *go_dev_addr)
+						const u8 *go_dev_addr,
+						int dev_pw_id)
 {
 	struct wpabuf *buf;
 	u8 *len;
@@ -84,6 +85,11 @@ static struct wpabuf * p2p_build_invitation_req(struct p2p_data *p2p,
 	if (wfd_ie)
 		wpabuf_put_buf(buf, wfd_ie);
 #endif /* CONFIG_WIFI_DISPLAY */
+
+	if (dev_pw_id >= 0) {
+		/* WSC IE in Invitation Request for NFC static handover */
+		p2p_build_wps_ie(p2p, buf, dev_pw_id, 0);
+	}
 
 	return buf;
 }
@@ -228,7 +234,8 @@ void p2p_process_invitation_req(struct p2p_data *p2p, const u8 *sa,
 		status = p2p->cfg->invitation_process(
 			p2p->cfg->cb_ctx, sa, msg.group_bssid, msg.group_id,
 			msg.group_id + ETH_ALEN, msg.group_id_len - ETH_ALEN,
-			&go, group_bssid, &op_freq, persistent, &intersection);
+			&go, group_bssid, &op_freq, persistent, &intersection,
+			msg.dev_password_id_present ? msg.dev_password_id : -1);
 	}
 
 	if (op_freq) {
@@ -450,12 +457,14 @@ void p2p_process_invitation_resp(struct p2p_data *p2p, const u8 *sa,
 
 
 int p2p_invite_send(struct p2p_data *p2p, struct p2p_device *dev,
-		    const u8 *go_dev_addr)
+		    const u8 *go_dev_addr, int dev_pw_id)
 {
 	struct wpabuf *req;
 	int freq;
 
 	freq = dev->listen_freq > 0 ? dev->listen_freq : dev->oper_freq;
+	if (freq <= 0)
+		freq = dev->oob_go_neg_freq;
 	if (freq <= 0) {
 		p2p_dbg(p2p, "No Listen/Operating frequency known for the peer "
 			MACSTR " to send Invitation Request",
@@ -463,7 +472,7 @@ int p2p_invite_send(struct p2p_data *p2p, struct p2p_device *dev,
 		return -1;
 	}
 
-	req = p2p_build_invitation_req(p2p, dev, go_dev_addr);
+	req = p2p_build_invitation_req(p2p, dev, go_dev_addr, dev_pw_id);
 	if (req == NULL)
 		return -1;
 	if (p2p->state != P2P_IDLE)
@@ -528,7 +537,7 @@ void p2p_invitation_resp_cb(struct p2p_data *p2p, int success)
 int p2p_invite(struct p2p_data *p2p, const u8 *peer, enum p2p_invite_role role,
 	       const u8 *bssid, const u8 *ssid, size_t ssid_len,
 	       unsigned int force_freq, const u8 *go_dev_addr,
-	       int persistent_group, unsigned int pref_freq)
+	       int persistent_group, unsigned int pref_freq, int dev_pw_id)
 {
 	struct p2p_device *dev;
 
@@ -546,9 +555,15 @@ int p2p_invite(struct p2p_data *p2p, const u8 *peer, enum p2p_invite_role role,
 		p2p->invite_go_dev_addr = NULL;
 	wpa_hexdump_ascii(MSG_DEBUG, "Invitation for SSID",
 			  ssid, ssid_len);
+	if (dev_pw_id >= 0) {
+		p2p_dbg(p2p, "Invitation to use Device Password ID %d",
+			dev_pw_id);
+	}
+	p2p->invite_dev_pw_id = dev_pw_id;
 
 	dev = p2p_get_device(p2p, peer);
-	if (dev == NULL || (dev->listen_freq <= 0 && dev->oper_freq <= 0)) {
+	if (dev == NULL || (dev->listen_freq <= 0 && dev->oper_freq <= 0 &&
+			    dev->oob_go_neg_freq <= 0)) {
 		p2p_dbg(p2p, "Cannot invite unknown P2P Device " MACSTR,
 			MAC2STR(peer));
 		return -1;
@@ -586,5 +601,5 @@ int p2p_invite(struct p2p_data *p2p, const u8 *peer, enum p2p_invite_role role,
 	os_memcpy(p2p->inv_ssid, ssid, ssid_len);
 	p2p->inv_ssid_len = ssid_len;
 	p2p->inv_persistent = persistent_group;
-	return p2p_invite_send(p2p, dev, go_dev_addr);
+	return p2p_invite_send(p2p, dev, go_dev_addr, dev_pw_id);
 }

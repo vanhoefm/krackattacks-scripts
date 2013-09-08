@@ -4380,7 +4380,9 @@ void p2p_err(struct p2p_data *p2p, const char *fmt, ...)
 #ifdef CONFIG_WPS_NFC
 
 static struct wpabuf * p2p_build_nfc_handover(struct p2p_data *p2p,
-					      int client_freq)
+					      int client_freq,
+					      const u8 *go_dev_addr,
+					      const u8 *ssid, size_t ssid_len)
 {
 	struct wpabuf *buf;
 	u8 op_class, channel;
@@ -4413,6 +4415,14 @@ static struct wpabuf * p2p_build_nfc_handover(struct p2p_data *p2p,
 		/* Limit number of clients to avoid very long message */
 		p2p_buf_add_group_info(p2p->groups[0], buf, 5);
 		p2p_group_buf_add_id(p2p->groups[0], buf);
+	} else if (client_freq > 0 &&
+		   go_dev_addr && !is_zero_ether_addr(go_dev_addr) &&
+		   ssid && ssid_len > 0) {
+		/*
+		 * Add the optional P2P Group ID to indicate in which group this
+		 * device is a P2P Client.
+		 */
+		p2p_buf_add_group_id(buf, go_dev_addr, ssid, ssid_len);
 	}
 
 	return buf;
@@ -4420,16 +4430,22 @@ static struct wpabuf * p2p_build_nfc_handover(struct p2p_data *p2p,
 
 
 struct wpabuf * p2p_build_nfc_handover_req(struct p2p_data *p2p,
-					   int client_freq)
+					   int client_freq,
+					   const u8 *go_dev_addr,
+					   const u8 *ssid, size_t ssid_len)
 {
-	return p2p_build_nfc_handover(p2p, client_freq);
+	return p2p_build_nfc_handover(p2p, client_freq, go_dev_addr, ssid,
+				      ssid_len);
 }
 
 
 struct wpabuf * p2p_build_nfc_handover_sel(struct p2p_data *p2p,
-					   int client_freq)
+					   int client_freq,
+					   const u8 *go_dev_addr,
+					   const u8 *ssid, size_t ssid_len)
 {
-	return p2p_build_nfc_handover(p2p, client_freq);
+	return p2p_build_nfc_handover(p2p, client_freq, go_dev_addr, ssid,
+				      ssid_len);
 }
 
 
@@ -4498,6 +4514,10 @@ int p2p_process_nfc_connection_handover(struct p2p_data *p2p,
 
 	if (role == P2P_GO_IN_A_GROUP) {
 		p2p_dbg(p2p, "Peer OOB GO operating channel: %u MHz", freq);
+		params->go_freq = freq;
+	} else if (role == P2P_CLIENT_IN_A_GROUP) {
+		p2p_dbg(p2p, "Peer (client) OOB GO operating channel: %u MHz",
+			freq);
 		params->go_freq = freq;
 	} else
 		p2p_dbg(p2p, "Peer OOB GO Neg channel: %u MHz", freq);

@@ -7041,16 +7041,25 @@ static struct wpabuf * wpas_p2p_nfc_handover(int ndef, struct wpabuf *wsc,
 }
 
 
-static int wpas_p2p_cli_freq(struct wpa_supplicant *wpa_s)
+static int wpas_p2p_cli_freq(struct wpa_supplicant *wpa_s,
+			     struct wpa_ssid **ssid, u8 *go_dev_addr)
 {
 	struct wpa_supplicant *iface;
 
+	if (go_dev_addr)
+		os_memset(go_dev_addr, 0, ETH_ALEN);
+	if (ssid)
+		*ssid = NULL;
 	for (iface = wpa_s->global->ifaces; iface; iface = iface->next) {
 		if (iface->wpa_state < WPA_ASSOCIATING ||
 		    iface->current_ssid == NULL || iface->assoc_freq == 0 ||
 		    !iface->current_ssid->p2p_group ||
 		    iface->current_ssid->mode != WPAS_MODE_INFRA)
 			continue;
+		if (ssid)
+			*ssid = iface->current_ssid;
+		if (go_dev_addr)
+			os_memcpy(go_dev_addr, iface->go_dev_addr, ETH_ALEN);
 		return iface->assoc_freq;
 	}
 	return 0;
@@ -7061,7 +7070,9 @@ struct wpabuf * wpas_p2p_nfc_handover_req(struct wpa_supplicant *wpa_s,
 					  int ndef)
 {
 	struct wpabuf *wsc, *p2p;
-	int cli_freq = wpas_p2p_cli_freq(wpa_s);
+	struct wpa_ssid *ssid;
+	u8 go_dev_addr[ETH_ALEN];
+	int cli_freq = wpas_p2p_cli_freq(wpa_s, &ssid, go_dev_addr);
 
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL) {
 		wpa_printf(MSG_DEBUG, "P2P: P2P disabled - cannot build handover request");
@@ -7080,7 +7091,9 @@ struct wpabuf * wpas_p2p_nfc_handover_req(struct wpa_supplicant *wpa_s,
 			wpa_s->parent->wps, wpa_s->conf->wps_nfc_dh_pubkey);
 	} else
 		wsc = NULL;
-	p2p = p2p_build_nfc_handover_req(wpa_s->global->p2p, cli_freq);
+	p2p = p2p_build_nfc_handover_req(wpa_s->global->p2p, cli_freq,
+					 go_dev_addr, ssid ? ssid->ssid : NULL,
+					 ssid ? ssid->ssid_len : 0);
 
 	return wpas_p2p_nfc_handover(ndef, wsc, p2p);
 }
@@ -7090,7 +7103,9 @@ struct wpabuf * wpas_p2p_nfc_handover_sel(struct wpa_supplicant *wpa_s,
 					  int ndef, int tag)
 {
 	struct wpabuf *wsc, *p2p;
-	int cli_freq = wpas_p2p_cli_freq(wpa_s);
+	struct wpa_ssid *ssid;
+	u8 go_dev_addr[ETH_ALEN];
+	int cli_freq = wpas_p2p_cli_freq(wpa_s, &ssid, go_dev_addr);
 
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
 		return NULL;
@@ -7109,7 +7124,9 @@ struct wpabuf * wpas_p2p_nfc_handover_sel(struct wpa_supplicant *wpa_s,
 			tag ? wpa_s->conf->wps_nfc_dev_pw : NULL);
 	} else
 		wsc = NULL;
-	p2p = p2p_build_nfc_handover_sel(wpa_s->global->p2p, cli_freq);
+	p2p = p2p_build_nfc_handover_sel(wpa_s->global->p2p, cli_freq,
+					 go_dev_addr, ssid ? ssid->ssid : NULL,
+					 ssid ? ssid->ssid_len : 0);
 
 	return wpas_p2p_nfc_handover(ndef, wsc, p2p);
 }
@@ -7280,12 +7297,25 @@ static int wpas_p2p_nfc_connection_handover(struct wpa_supplicant *wpa_s,
 	}
 
 	if (params.next_step == PEER_CLIENT) {
-		wpa_msg(wpa_s, MSG_INFO, P2P_EVENT_NFC_PEER_CLIENT "peer="
-			MACSTR, MAC2STR(params.peer->p2p_device_addr));
+		if (!is_zero_ether_addr(params.go_dev_addr)) {
+			wpa_msg(wpa_s, MSG_INFO, P2P_EVENT_NFC_PEER_CLIENT
+				"peer=" MACSTR " freq=%d go_dev_addr=" MACSTR
+				" ssid=\"%s\"",
+				MAC2STR(params.peer->p2p_device_addr),
+				params.go_freq,
+				MAC2STR(params.go_dev_addr),
+				wpa_ssid_txt(params.go_ssid,
+					     params.go_ssid_len));
+		} else {
+			wpa_msg(wpa_s, MSG_INFO, P2P_EVENT_NFC_PEER_CLIENT
+				"peer=" MACSTR " freq=%d",
+				MAC2STR(params.peer->p2p_device_addr),
+				params.go_freq);
+		}
 		return 0;
 	}
 
-	if (wpas_p2p_cli_freq(wpa_s)) {
+	if (wpas_p2p_cli_freq(wpa_s, NULL, NULL)) {
 		wpa_msg(wpa_s, MSG_INFO, P2P_EVENT_NFC_WHILE_CLIENT "peer="
 			MACSTR, MAC2STR(params.peer->p2p_device_addr));
 		return 0;

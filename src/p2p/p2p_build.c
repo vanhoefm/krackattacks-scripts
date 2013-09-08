@@ -258,6 +258,7 @@ void p2p_buf_add_group_id(struct wpabuf *buf, const u8 *dev_addr,
 	wpabuf_put_data(buf, ssid, ssid_len);
 	wpa_printf(MSG_DEBUG, "P2P: * P2P Group ID " MACSTR,
 		   MAC2STR(dev_addr));
+	wpa_hexdump_ascii(MSG_DEBUG, "P2P: P2P Group ID SSID", ssid, ssid_len);
 }
 
 

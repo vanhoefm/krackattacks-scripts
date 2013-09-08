@@ -1373,6 +1373,12 @@ static int wps_get_dev_password(struct wps_data *wps)
 			   "Password Token");
 		pin = wps->nfc_pw_token->dev_pw;
 		pin_len = wps->nfc_pw_token->dev_pw_len;
+	} else if (wps->dev_pw_id >= 0x10 &&
+		   wps->wps->ap_nfc_dev_pw_id == wps->dev_pw_id &&
+		   wps->wps->ap_nfc_dev_pw) {
+		wpa_printf(MSG_DEBUG, "WPS: Use OOB Device Password from own NFC Password Token");
+		pin = wpabuf_head(wps->wps->ap_nfc_dev_pw);
+		pin_len = wpabuf_len(wps->wps->ap_nfc_dev_pw);
 #endif /* CONFIG_WPS_NFC */
 	} else {
 		pin = wps_registrar_get_pin(wps->wps->registrar, wps->uuid_e,
@@ -2608,6 +2614,10 @@ static enum wps_process_res wps_process_m1(struct wps_data *wps,
 			wpa_printf(MSG_DEBUG, "WPS: Found matching NFC "
 				   "Password Token (no peer PK hash)");
 			wps->nfc_pw_token = token;
+		} else if (wps->dev_pw_id >= 0x10 &&
+			   wps->wps->ap_nfc_dev_pw_id == wps->dev_pw_id &&
+			   wps->wps->ap_nfc_dev_pw) {
+			wpa_printf(MSG_DEBUG, "WPS: Found match with own NFC Password Token");
 		}
 	}
 #endif /* CONFIG_WPS_NFC */

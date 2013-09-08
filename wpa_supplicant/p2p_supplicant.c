@@ -20,6 +20,7 @@
 #include "ap/ap_config.h"
 #include "ap/sta_info.h"
 #include "ap/ap_drv_ops.h"
+#include "ap/wps_hostapd.h"
 #include "ap/p2p_hostapd.h"
 #include "eapol_supp/eapol_supp_sm.h"
 #include "rsn_supp/wpa.h"
@@ -7432,11 +7433,19 @@ int wpas_p2p_nfc_tag_enabled(struct wpa_supplicant *wpa_s, int enabled)
 {
 	const u8 *if_addr;
 	int go_intent = wpa_s->conf->p2p_go_intent;
+	struct wpa_supplicant *iface;
 
 	if (wpa_s->global->p2p == NULL)
 		return -1;
 
 	if (!enabled) {
+		wpa_printf(MSG_DEBUG, "P2P: Disable use of own NFC Tag");
+		for (iface = wpa_s->global->ifaces; iface; iface = iface->next)
+		{
+			if (!iface->ap_iface)
+				continue;
+			hostapd_wps_nfc_token_disable(iface->ap_iface->bss[0]);
+		}
 		p2p_set_authorized_oob_dev_pw_id(wpa_s->global->p2p, 0,
 						 0, NULL);
 		if (wpa_s->p2p_nfc_tag_enabled)
@@ -7456,6 +7465,8 @@ int wpas_p2p_nfc_tag_enabled(struct wpa_supplicant *wpa_s, int enabled)
 			   "to allow static handover cases");
 		return -1;
 	}
+
+	wpa_printf(MSG_DEBUG, "P2P: Enable use of own NFC Tag");
 
 	wpa_s->p2p_oob_dev_pw_id = wpa_s->conf->wps_nfc_dev_pw_id;
 	wpabuf_free(wpa_s->p2p_oob_dev_pw);
@@ -7484,6 +7495,27 @@ int wpas_p2p_nfc_tag_enabled(struct wpa_supplicant *wpa_s, int enabled)
 
 	wpa_s->p2p_nfc_tag_enabled = enabled;
 
+	for (iface = wpa_s->global->ifaces; iface; iface = iface->next) {
+		struct hostapd_data *hapd;
+		if (iface->ap_iface == NULL)
+			continue;
+		hapd = iface->ap_iface->bss[0];
+		wpabuf_free(hapd->conf->wps_nfc_dh_pubkey);
+		hapd->conf->wps_nfc_dh_pubkey =
+			wpabuf_dup(wpa_s->conf->wps_nfc_dh_pubkey);
+		wpabuf_free(hapd->conf->wps_nfc_dh_privkey);
+		hapd->conf->wps_nfc_dh_privkey =
+			wpabuf_dup(wpa_s->conf->wps_nfc_dh_privkey);
+		wpabuf_free(hapd->conf->wps_nfc_dev_pw);
+		hapd->conf->wps_nfc_dev_pw =
+			wpabuf_dup(wpa_s->conf->wps_nfc_dev_pw);
+		hapd->conf->wps_nfc_dev_pw_id = wpa_s->conf->wps_nfc_dev_pw_id;
+
+		if (hostapd_wps_nfc_token_enable(iface->ap_iface->bss[0]) < 0) {
+			wpa_dbg(iface, MSG_DEBUG,
+				"P2P: Failed to enable NFC Tag for GO");
+		}
+	}
 	p2p_set_authorized_oob_dev_pw_id(
 		wpa_s->global->p2p, wpa_s->conf->wps_nfc_dev_pw_id, go_intent,
 		if_addr);

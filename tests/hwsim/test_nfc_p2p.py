@@ -355,6 +355,109 @@ def test_nfc_p2p_static_handover_tagdev_go(dev):
     hwsim_utils.test_connectivity_p2p(dev[0], dev[1])
     check_ip_addr(res0)
 
+def test_nfc_p2p_static_handover_join_tagdev_go(dev):
+    """NFC static handover to join a P2P group (NFC Tag device is the GO)"""
+
+    logger.info("Start autonomous GO")
+    set_ip_addr_info(dev[0])
+    dev[0].p2p_start_go()
+
+    logger.info("Write NFC Tag on the GO")
+    pw = dev[0].request("WPS_NFC_TOKEN NDEF").rstrip()
+    if "FAIL" in pw:
+        raise Exception("Failed to generate password token")
+    res = dev[0].request("P2P_SET nfc_tag 1").rstrip()
+    if "FAIL" in res:
+        raise Exception("Failed to enable NFC Tag for P2P static handover")
+    sel = dev[0].request("NFC_GET_HANDOVER_SEL NDEF P2P-CR-TAG").rstrip()
+    if "FAIL" in sel:
+        raise Exception("Failed to generate NFC connection handover select")
+
+    logger.info("Read NFC Tag on a P2P Device to join a group")
+    res = dev[1].request("WPS_NFC_TAG_READ " + sel)
+    if "FAIL" in res:
+        raise Exception("Failed to provide NFC tag contents to wpa_supplicant")
+
+    ev = dev[1].wait_event(grpform_events, timeout=30)
+    if ev is None:
+        raise Exception("Joining the group timed out")
+    res = dev[1].group_form_result(ev)
+    hwsim_utils.test_connectivity_p2p(dev[0], dev[1])
+    check_ip_addr(res)
+
+    logger.info("Read NFC Tag on another P2P Device to join a group")
+    res = dev[2].request("WPS_NFC_TAG_READ " + sel)
+    if "FAIL" in res:
+        raise Exception("Failed to provide NFC tag contents to wpa_supplicant")
+
+    ev = dev[2].wait_event(grpform_events, timeout=30)
+    if ev is None:
+        raise Exception("Joining the group timed out")
+    res = dev[2].group_form_result(ev)
+    hwsim_utils.test_connectivity_p2p(dev[0], dev[2])
+    check_ip_addr(res)
+
+def test_nfc_p2p_static_handover_join_tagdev_client(dev):
+    """NFC static handover to join a P2P group (NFC Tag device is the P2P Client)"""
+    set_ip_addr_info(dev[0])
+    logger.info("Start autonomous GO")
+    dev[0].p2p_start_go()
+
+    dev[1].request("SET ignore_old_scan_res 1")
+    dev[2].request("SET ignore_old_scan_res 1")
+
+    logger.info("Write NFC Tag on the P2P Client")
+    res = dev[1].request("P2P_LISTEN")
+    if "FAIL" in res:
+        raise Exception("Failed to start Listen mode")
+    pw = dev[1].request("WPS_NFC_TOKEN NDEF").rstrip()
+    if "FAIL" in pw:
+        raise Exception("Failed to generate password token")
+    res = dev[1].request("P2P_SET nfc_tag 1").rstrip()
+    if "FAIL" in res:
+        raise Exception("Failed to enable NFC Tag for P2P static handover")
+    sel = dev[1].request("NFC_GET_HANDOVER_SEL NDEF P2P-CR-TAG").rstrip()
+    if "FAIL" in sel:
+        raise Exception("Failed to generate NFC connection handover select")
+
+    logger.info("Read NFC Tag on the GO to trigger invitation")
+    res = dev[0].request("WPS_NFC_TAG_READ " + sel)
+    if "FAIL" in res:
+        raise Exception("Failed to provide NFC tag contents to wpa_supplicant")
+
+    ev = dev[1].wait_event(grpform_events, timeout=30)
+    if ev is None:
+        raise Exception("Joining the group timed out")
+    res = dev[1].group_form_result(ev)
+    hwsim_utils.test_connectivity_p2p(dev[0], dev[1])
+    check_ip_addr(res)
+
+    logger.info("Write NFC Tag on another P2P Client")
+    res = dev[2].request("P2P_LISTEN")
+    if "FAIL" in res:
+        raise Exception("Failed to start Listen mode")
+    pw = dev[2].request("WPS_NFC_TOKEN NDEF").rstrip()
+    if "FAIL" in pw:
+        raise Exception("Failed to generate password token")
+    res = dev[2].request("P2P_SET nfc_tag 1").rstrip()
+    if "FAIL" in res:
+        raise Exception("Failed to enable NFC Tag for P2P static handover")
+    sel = dev[2].request("NFC_GET_HANDOVER_SEL NDEF P2P-CR-TAG").rstrip()
+    if "FAIL" in sel:
+        raise Exception("Failed to generate NFC connection handover select")
+
+    logger.info("Read NFC Tag on the GO to trigger invitation")
+    res = dev[0].request("WPS_NFC_TAG_READ " + sel)
+    if "FAIL" in res:
+        raise Exception("Failed to provide NFC tag contents to wpa_supplicant")
+
+    ev = dev[2].wait_event(grpform_events, timeout=30)
+    if ev is None:
+        raise Exception("Joining the group timed out")
+    res = dev[2].group_form_result(ev)
+    hwsim_utils.test_connectivity_p2p(dev[0], dev[2])
+    check_ip_addr(res)
+
 def test_nfc_p2p_go_legacy_config_token(dev):
     logger.info("Start autonomous GOs")
     dev[0].p2p_start_go()

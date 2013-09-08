@@ -1211,6 +1211,7 @@ int hostapd_init_wps_complete(struct hostapd_data *hapd)
 static void hostapd_wps_nfc_clear(struct wps_context *wps)
 {
 #ifdef CONFIG_WPS_NFC
+	wpa_printf(MSG_DEBUG, "WPS: Clear NFC Tag context %p", wps);
 	wps->ap_nfc_dev_pw_id = 0;
 	wpabuf_free(wps->ap_nfc_dh_pubkey);
 	wps->ap_nfc_dh_pubkey = NULL;
@@ -1823,6 +1824,9 @@ int hostapd_wps_nfc_token_enable(struct hostapd_data *hapd)
 		return -1;
 
 	hostapd_wps_nfc_clear(wps);
+	wpa_printf(MSG_DEBUG,
+		   "WPS: Enable NFC Tag (Dev Pw Id %u) for AP interface %s (context %p)",
+		   hapd->conf->wps_nfc_dev_pw_id, hapd->conf->iface, wps);
 	wps->ap_nfc_dev_pw_id = hapd->conf->wps_nfc_dev_pw_id;
 	wps->ap_nfc_dh_pubkey = wpabuf_dup(hapd->conf->wps_nfc_dh_pubkey);
 	wps->ap_nfc_dh_privkey = wpabuf_dup(hapd->conf->wps_nfc_dh_privkey);
@@ -1849,6 +1853,8 @@ int hostapd_wps_nfc_token_enable(struct hostapd_data *hapd)
 
 void hostapd_wps_nfc_token_disable(struct hostapd_data *hapd)
 {
+	wpa_printf(MSG_DEBUG, "WPS: Disable NFC token for AP interface %s",
+		   hapd->conf->iface);
 	hostapd_wps_nfc_clear(hapd->wps);
 }
 

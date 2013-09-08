@@ -1374,7 +1374,8 @@ static int wps_get_dev_password(struct wps_data *wps)
 	}
 	if (pin == NULL) {
 		wpa_printf(MSG_DEBUG, "WPS: No Device Password available for "
-			   "the Enrollee");
+			   "the Enrollee (context %p registrar %p)",
+			   wps->wps, wps->wps->registrar);
 		wps_cb_pin_needed(wps->wps->registrar, wps->uuid_e,
 				  &wps->peer_dev);
 		return -1;
@@ -2536,6 +2537,8 @@ static enum wps_process_res wps_process_m1(struct wps_data *wps,
 		const u8 *addr[1];
 		u8 hash[WPS_HASH_LEN];
 
+		wpa_printf(MSG_DEBUG, "WPS: Searching for NFC token match for id=%d (ctx %p registrar %p)",
+			   wps->dev_pw_id, wps->wps, wps->wps->registrar);
 		token = wps_get_nfc_pw_token(
 			&wps->wps->registrar->nfc_pw_tokens, wps->dev_pw_id);
 		if (token) {

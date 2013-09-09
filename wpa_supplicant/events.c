@@ -68,9 +68,25 @@ static int wpas_temp_disabled(struct wpa_supplicant *wpa_s,
 }
 
 
+static struct wpa_bss * wpa_supplicant_get_new_bss(
+	struct wpa_supplicant *wpa_s, const u8 *bssid)
+{
+	struct wpa_bss *bss = NULL;
+	struct wpa_ssid *ssid = wpa_s->current_ssid;
+
+	if (ssid->ssid_len > 0)
+		bss = wpa_bss_get(wpa_s, bssid, ssid->ssid, ssid->ssid_len);
+	if (!bss)
+		bss = wpa_bss_get_bssid(wpa_s, bssid);
+
+	return bss;
+}
+
+
 static int wpa_supplicant_select_config(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_ssid *ssid, *old_ssid;
+	struct wpa_bss *bss;
 	int res;
 
 	if (wpa_s->conf->ap_scan == 1 && wpa_s->current_ssid)
@@ -119,6 +135,18 @@ static int wpa_supplicant_select_config(struct wpa_supplicant *wpa_s)
 		eapol_sm_invalidate_cached_session(wpa_s->eapol);
 	old_ssid = wpa_s->current_ssid;
 	wpa_s->current_ssid = ssid;
+
+	bss = wpa_supplicant_get_new_bss(wpa_s, wpa_s->bssid);
+	if (!bss) {
+		wpa_supplicant_update_scan_results(wpa_s);
+
+		/* Get the BSS from the new scan results */
+		bss = wpa_supplicant_get_new_bss(wpa_s, wpa_s->bssid);
+	}
+
+	if (bss)
+		wpa_s->current_bss = bss;
+
 	wpa_supplicant_rsn_supp_set_config(wpa_s, wpa_s->current_ssid);
 	wpa_supplicant_initiate_eapol(wpa_s);
 	if (old_ssid != wpa_s->current_ssid)
@@ -1766,21 +1794,6 @@ static int wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
 }
 
 
-static struct wpa_bss * wpa_supplicant_get_new_bss(
-	struct wpa_supplicant *wpa_s, const u8 *bssid)
-{
-	struct wpa_bss *bss = NULL;
-	struct wpa_ssid *ssid = wpa_s->current_ssid;
-
-	if (ssid->ssid_len > 0)
-		bss = wpa_bss_get(wpa_s, bssid, ssid->ssid, ssid->ssid_len);
-	if (!bss)
-		bss = wpa_bss_get_bssid(wpa_s, bssid);
-
-	return bss;
-}
-
-
 static int wpa_supplicant_assoc_update_ie(struct wpa_supplicant *wpa_s)
 {
 	const u8 *bss_wpa = NULL, *bss_rsn = NULL;
@@ -1849,20 +1862,6 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 			wpa_supplicant_deauthenticate(
 				wpa_s, WLAN_REASON_DEAUTH_LEAVING);
 			return;
-		}
-		if (wpa_s->current_ssid) {
-			struct wpa_bss *bss = NULL;
-
-			bss = wpa_supplicant_get_new_bss(wpa_s, bssid);
-			if (!bss) {
-				wpa_supplicant_update_scan_results(wpa_s);
-
-				/* Get the BSS from the new scan results */
-				bss = wpa_supplicant_get_new_bss(wpa_s, bssid);
-			}
-
-			if (bss)
-				wpa_s->current_bss = bss;
 		}
 
 		if (wpa_s->conf->ap_scan == 1 &&

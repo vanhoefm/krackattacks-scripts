@@ -182,15 +182,27 @@ static void wpa_supplicant_ctrl_iface_receive(int sock, void *eloop_ctx,
 	}
 
 	if (reply) {
-		sendto(sock, reply, reply_len, 0, (struct sockaddr *) &from,
-		       fromlen);
+		if (sendto(sock, reply, reply_len, 0, (struct sockaddr *) &from,
+			   fromlen) < 0) {
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"ctrl_iface sendto failed: %s",
+				strerror(errno));
+		}
 		os_free(reply);
 	} else if (reply_len == 1) {
-		sendto(sock, "FAIL\n", 5, 0, (struct sockaddr *) &from,
-		       fromlen);
+		if (sendto(sock, "FAIL\n", 5, 0, (struct sockaddr *) &from,
+			   fromlen) < 0) {
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"ctrl_iface sendto failed: %s",
+				strerror(errno));
+		}
 	} else if (reply_len == 2) {
-		sendto(sock, "OK\n", 3, 0, (struct sockaddr *) &from,
-		       fromlen);
+		if (sendto(sock, "OK\n", 3, 0, (struct sockaddr *) &from,
+			   fromlen) < 0) {
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"ctrl_iface sendto failed: %s",
+				strerror(errno));
+		}
 	}
 
 	if (new_attached)
@@ -656,18 +668,30 @@ void wpa_supplicant_ctrl_iface_wait(struct ctrl_iface_priv *priv)
 			/* handle ATTACH signal of first monitor interface */
 			if (!wpa_supplicant_ctrl_iface_attach(&priv->ctrl_dst,
 							      &from, fromlen)) {
-				sendto(priv->sock, "OK\n", 3, 0,
-				       (struct sockaddr *) &from, fromlen);
+				if (sendto(priv->sock, "OK\n", 3, 0,
+					   (struct sockaddr *) &from, fromlen) <
+				    0) {
+					wpa_printf(MSG_DEBUG, "ctrl_iface sendto failed: %s",
+						   strerror(errno));
+				}
 				/* OK to continue */
 				return;
 			} else {
-				sendto(priv->sock, "FAIL\n", 5, 0,
-				       (struct sockaddr *) &from, fromlen);
+				if (sendto(priv->sock, "FAIL\n", 5, 0,
+					   (struct sockaddr *) &from, fromlen) <
+				    0) {
+					wpa_printf(MSG_DEBUG, "ctrl_iface sendto failed: %s",
+						   strerror(errno));
+				}
 			}
 		} else {
 			/* return FAIL for all other signals */
-			sendto(priv->sock, "FAIL\n", 5, 0,
-			       (struct sockaddr *) &from, fromlen);
+			if (sendto(priv->sock, "FAIL\n", 5, 0,
+				   (struct sockaddr *) &from, fromlen) < 0) {
+				wpa_printf(MSG_DEBUG,
+					   "ctrl_iface sendto failed: %s",
+					   strerror(errno));
+			}
 		}
 	}
 }
@@ -714,14 +738,24 @@ static void wpa_supplicant_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 	}
 
 	if (reply) {
-		sendto(sock, reply, reply_len, 0, (struct sockaddr *) &from,
-		       fromlen);
+		if (sendto(sock, reply, reply_len, 0, (struct sockaddr *) &from,
+			   fromlen) < 0) {
+			wpa_printf(MSG_DEBUG, "ctrl_iface sendto failed: %s",
+				strerror(errno));
+		}
 		os_free(reply);
 	} else if (reply_len == 1) {
-		sendto(sock, "FAIL\n", 5, 0, (struct sockaddr *) &from,
-		       fromlen);
+		if (sendto(sock, "FAIL\n", 5, 0, (struct sockaddr *) &from,
+			   fromlen) < 0) {
+			wpa_printf(MSG_DEBUG, "ctrl_iface sendto failed: %s",
+				   strerror(errno));
+		}
 	} else if (reply_len == 2) {
-		sendto(sock, "OK\n", 3, 0, (struct sockaddr *) &from, fromlen);
+		if (sendto(sock, "OK\n", 3, 0, (struct sockaddr *) &from,
+			   fromlen) < 0) {
+			wpa_printf(MSG_DEBUG, "ctrl_iface sendto failed: %s",
+				strerror(errno));
+		}
 	}
 }
 

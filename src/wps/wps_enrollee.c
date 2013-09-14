@@ -864,6 +864,12 @@ static int wps_process_dev_pw_id(struct wps_data *wps, const u8 *dev_pw_id)
 	wpa_printf(MSG_DEBUG, "WPS: Registrar trying to change Device Password "
 		   "ID from %u to %u", wps->dev_pw_id, id);
 
+	if (wps->dev_pw_id == DEV_PW_PUSHBUTTON && id == DEV_PW_DEFAULT) {
+		wpa_printf(MSG_DEBUG,
+			   "WPS: Workaround - ignore PBC-to-PIN change");
+		return 0;
+	}
+
 	if (wps->alt_dev_password && wps->alt_dev_pw_id == id) {
 		wpa_printf(MSG_DEBUG, "WPS: Found a matching Device Password");
 		os_free(wps->dev_password);

@@ -416,6 +416,27 @@ void p2p_reselect_channel(struct p2p_data *p2p,
 		}
 	}
 
+	/* Prefer a 5 GHz channel */
+	for (i = 0; i < intersection->reg_classes; i++) {
+		struct p2p_reg_class *c = &intersection->reg_class[i];
+		if ((c->reg_class == 115 || c->reg_class == 124) &&
+		    c->channels) {
+			unsigned int r;
+
+			/*
+			 * Pick one of the available channels in the operating
+			 * class at random.
+			 */
+			os_get_random((u8 *) &r, sizeof(r));
+			r %= c->channels;
+			p2p_dbg(p2p, "Pick possible 5 GHz channel (op_class %u channel %u) from intersection",
+				c->reg_class, c->channel[r]);
+			p2p->op_reg_class = c->reg_class;
+			p2p->op_channel = c->channel[r];
+			return;
+		}
+	}
+
 	/*
 	 * Try to see if the original channel is in the intersection. If
 	 * so, no need to change anything, as it already contains some

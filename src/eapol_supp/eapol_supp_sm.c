@@ -1257,6 +1257,24 @@ int eapol_sm_rx_eapol(struct eapol_sm *sm, const u8 *src, const u8 *buf,
 
 	switch (hdr->type) {
 	case IEEE802_1X_TYPE_EAP_PACKET:
+		if (sm->conf.workaround) {
+			/*
+			 * An AP has been reported to send out EAP message with
+			 * undocumented code 10 at some point near the
+			 * completion of EAP authentication. This can result in
+			 * issues with the unexpected EAP message triggering
+			 * restart of EAPOL authentication. Avoid this by
+			 * skipping the message without advancing the state
+			 * machine.
+			 */
+			const struct eap_hdr *ehdr =
+				(const struct eap_hdr *) (hdr + 1);
+			if (plen >= sizeof(*ehdr) && ehdr->code == 10) {
+				wpa_printf(MSG_DEBUG, "EAPOL: Ignore EAP packet with unknown code 10");
+				break;
+			}
+		}
+
 		if (sm->cached_pmk) {
 			/* Trying to use PMKSA caching, but Authenticator did
 			 * not seem to have a matching entry. Need to restart

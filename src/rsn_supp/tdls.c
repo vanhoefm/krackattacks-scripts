@@ -1683,16 +1683,27 @@ skip_rsn:
 	}
 
 	ftie = (struct wpa_tdls_ftie *) kde.ftie;
-	os_memcpy(peer->inonce, ftie->Snonce, WPA_NONCE_LEN);
 	os_memcpy(peer->rsnie_i, kde.rsn_ie, kde.rsn_ie_len);
 	peer->rsnie_i_len = kde.rsn_ie_len;
 	peer->cipher = cipher;
 
-	if (os_get_random(peer->rnonce, WPA_NONCE_LEN)) {
-		wpa_msg(sm->ctx->ctx, MSG_WARNING,
-			"TDLS: Failed to get random data for responder nonce");
-		wpa_tdls_peer_free(sm, peer);
-		goto error;
+	if (os_memcmp(peer->inonce, ftie->Snonce, WPA_NONCE_LEN) != 0) {
+		/*
+		 * There is no point in updating the RNonce for every obtained
+		 * TPK M1 frame (e.g., retransmission due to timeout) with the
+		 * same INonce (SNonce in FTIE). However, if the TPK M1 is
+		 * retransmitted with a different INonce, update the RNonce
+		 * since this is for a new TDLS session.
+		 */
+		wpa_printf(MSG_DEBUG,
+			   "TDLS: New TPK M1 INonce - generate new RNonce");
+		os_memcpy(peer->inonce, ftie->Snonce, WPA_NONCE_LEN);
+		if (os_get_random(peer->rnonce, WPA_NONCE_LEN)) {
+			wpa_msg(sm->ctx->ctx, MSG_WARNING,
+				"TDLS: Failed to get random data for responder nonce");
+			wpa_tdls_peer_free(sm, peer);
+			goto error;
+		}
 	}
 
 #if 0

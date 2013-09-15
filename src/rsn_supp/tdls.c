@@ -1848,8 +1848,11 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 	}
 	wpa_tdls_tpk_retry_timeout_cancel(sm, peer, WLAN_TDLS_SETUP_REQUEST);
 
-	if (len < 3 + 2 + 1)
+	if (len < 3 + 2 + 1) {
+		wpa_tdls_disable_link(sm, src_addr);
 		return -1;
+	}
+
 	pos = buf;
 	pos += 1 /* pkt_type */ + 1 /* Category */ + 1 /* Action */;
 	status = WPA_GET_LE16(pos);
@@ -1858,8 +1861,7 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 	if (status != WLAN_STATUS_SUCCESS) {
 		wpa_printf(MSG_INFO, "TDLS: Status code in TPK M2: %u",
 			   status);
-		if (sm->tdls_external_setup)
-			wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK, src_addr);
+		wpa_tdls_disable_link(sm, src_addr);
 		return -1;
 	}
 
@@ -1870,8 +1872,10 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 
 	wpa_printf(MSG_DEBUG, "TDLS: Dialog Token in TPK M2 %d", dtoken);
 
-	if (len < 3 + 2 + 1 + 2)
+	if (len < 3 + 2 + 1 + 2) {
+		wpa_tdls_disable_link(sm, src_addr);
 		return -1;
+	}
 
 	/* capability information */
 	peer->capability = WPA_GET_LE16(pos);
@@ -2082,7 +2086,7 @@ static int wpa_tdls_process_tpk_m3(struct wpa_sm *sm, const u8 *src_addr,
 	wpa_tdls_tpk_retry_timeout_cancel(sm, peer, WLAN_TDLS_SETUP_RESPONSE);
 
 	if (len < 3 + 3)
-		return -1;
+		goto error;
 	pos = buf;
 	pos += 1 /* pkt_type */ + 1 /* Category */ + 1 /* Action */;
 
@@ -2091,21 +2095,19 @@ static int wpa_tdls_process_tpk_m3(struct wpa_sm *sm, const u8 *src_addr,
 	if (status != 0) {
 		wpa_printf(MSG_INFO, "TDLS: Status code in TPK M3: %u",
 			   status);
-		if (sm->tdls_external_setup)
-			wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK, src_addr);
-		return -1;
+		goto error;
 	}
 	pos += 2 /* status code */ + 1 /* dialog token */;
 
 	ielen = len - (pos - buf); /* start of IE in buf */
 	if (wpa_supplicant_parse_ies((const u8 *) pos, ielen, &kde) < 0) {
 		wpa_printf(MSG_INFO, "TDLS: Failed to parse KDEs in TPK M3");
-		return -1;
+		goto error;
 	}
 
 	if (kde.lnkid == NULL || kde.lnkid_len < 3 * ETH_ALEN) {
 		wpa_printf(MSG_INFO, "TDLS: No Link Identifier IE in TPK M3");
-		return -1;
+		goto error;
 	}
 	wpa_hexdump(MSG_DEBUG, "TDLS: Link ID Received from TPK M3",
 		    (u8 *) kde.lnkid, kde.lnkid_len);
@@ -2113,7 +2115,7 @@ static int wpa_tdls_process_tpk_m3(struct wpa_sm *sm, const u8 *src_addr,
 
 	if (os_memcmp(sm->bssid, lnkid->bssid, ETH_ALEN) != 0) {
 		wpa_printf(MSG_INFO, "TDLS: TPK M3 from diff BSS");
-		return -1;
+		goto error;
 	}
 
 	if (!wpa_tdls_get_privacy(sm))
@@ -2121,7 +2123,7 @@ static int wpa_tdls_process_tpk_m3(struct wpa_sm *sm, const u8 *src_addr,
 
 	if (kde.ftie == NULL || kde.ftie_len < sizeof(*ftie)) {
 		wpa_printf(MSG_INFO, "TDLS: No FTIE in TPK M3");
-		return -1;
+		goto error;
 	}
 	wpa_hexdump(MSG_DEBUG, "TDLS: FTIE Received from TPK M3",
 		    kde.ftie, sizeof(*ftie));
@@ -2129,7 +2131,7 @@ static int wpa_tdls_process_tpk_m3(struct wpa_sm *sm, const u8 *src_addr,
 
 	if (kde.rsn_ie == NULL) {
 		wpa_printf(MSG_INFO, "TDLS: No RSN IE in TPK M3");
-		return -1;
+		goto error;
 	}
 	wpa_hexdump(MSG_DEBUG, "TDLS: RSN IE Received from TPK M3",
 		    kde.rsn_ie, kde.rsn_ie_len);
@@ -2137,24 +2139,24 @@ static int wpa_tdls_process_tpk_m3(struct wpa_sm *sm, const u8 *src_addr,
 	    os_memcmp(kde.rsn_ie, peer->rsnie_p, peer->rsnie_p_len) != 0) {
 		wpa_printf(MSG_INFO, "TDLS: RSN IE in TPK M3 does not match "
 			   "with the one sent in TPK M2");
-		return -1;
+		goto error;
 	}
 
 	if (!os_memcmp(peer->rnonce, ftie->Anonce, WPA_NONCE_LEN) == 0) {
 		wpa_printf(MSG_INFO, "TDLS: FTIE ANonce in TPK M3 does "
 			   "not match with FTIE ANonce used in TPK M2");
-		return -1;
+		goto error;
 	}
 
 	if (!os_memcmp(peer->inonce, ftie->Snonce, WPA_NONCE_LEN) == 0) {
 		wpa_printf(MSG_INFO, "TDLS: FTIE SNonce in TPK M3 does not "
 			   "match with FTIE SNonce used in TPK M1");
-		return -1;
+		goto error;
 	}
 
 	if (kde.key_lifetime == NULL) {
 		wpa_printf(MSG_INFO, "TDLS: No Key Lifetime IE in TPK M3");
-		return -1;
+		goto error;
 	}
 	timeoutie = (struct wpa_tdls_timeoutie *) kde.key_lifetime;
 	wpa_hexdump(MSG_DEBUG, "TDLS: Timeout IE Received from TPK M3",
@@ -2165,16 +2167,13 @@ static int wpa_tdls_process_tpk_m3(struct wpa_sm *sm, const u8 *src_addr,
 	if (lifetime != peer->lifetime) {
 		wpa_printf(MSG_INFO, "TDLS: Unexpected TPK lifetime %u in "
 			   "TPK M3 (expected %u)", lifetime, peer->lifetime);
-		if (sm->tdls_external_setup)
-			wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK, src_addr);
-		return -1;
+		goto error;
 	}
 
 	if (wpa_supplicant_verify_tdls_mic(3, peer, (u8 *) lnkid,
 					   (u8 *) timeoutie, ftie) < 0) {
 		wpa_tdls_del_key(sm, peer);
-		wpa_tdls_peer_free(sm, peer);
-		return -1;
+		goto error;
 	}
 
 	if (wpa_tdls_set_key(sm, peer) < 0) {
@@ -2195,6 +2194,9 @@ skip_rsn:
 				     WLAN_REASON_TDLS_TEARDOWN_UNSPECIFIED, 1);
 	}
 	return ret;
+error:
+	wpa_tdls_disable_link(sm, peer->addr);
+	return -1;
 }
 
 

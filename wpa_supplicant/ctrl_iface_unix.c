@@ -143,7 +143,7 @@ static void wpa_supplicant_ctrl_iface_receive(int sock, void *eloop_ctx,
 	int res;
 	struct sockaddr_un from;
 	socklen_t fromlen = sizeof(from);
-	char *reply = NULL;
+	char *reply = NULL, *reply_buf = NULL;
 	size_t reply_len = 0;
 	int new_attached = 0;
 
@@ -177,8 +177,17 @@ static void wpa_supplicant_ctrl_iface_receive(int sock, void *eloop_ctx,
 		else
 			reply_len = 2;
 	} else {
-		reply = wpa_supplicant_ctrl_iface_process(wpa_s, buf,
-							  &reply_len);
+		reply_buf = wpa_supplicant_ctrl_iface_process(wpa_s, buf,
+							      &reply_len);
+		reply = reply_buf;
+	}
+
+	if (!reply && reply_len == 1) {
+		reply = "FAIL\n";
+		reply_len = 5;
+	} else if (!reply && reply_len == 2) {
+		reply = "OK\n";
+		reply_len = 3;
 	}
 
 	if (reply) {
@@ -188,22 +197,8 @@ static void wpa_supplicant_ctrl_iface_receive(int sock, void *eloop_ctx,
 				"ctrl_iface sendto failed: %s",
 				strerror(errno));
 		}
-		os_free(reply);
-	} else if (reply_len == 1) {
-		if (sendto(sock, "FAIL\n", 5, 0, (struct sockaddr *) &from,
-			   fromlen) < 0) {
-			wpa_dbg(wpa_s, MSG_DEBUG,
-				"ctrl_iface sendto failed: %s",
-				strerror(errno));
-		}
-	} else if (reply_len == 2) {
-		if (sendto(sock, "OK\n", 3, 0, (struct sockaddr *) &from,
-			   fromlen) < 0) {
-			wpa_dbg(wpa_s, MSG_DEBUG,
-				"ctrl_iface sendto failed: %s",
-				strerror(errno));
-		}
 	}
+	os_free(reply_buf);
 
 	if (new_attached)
 		eapol_sm_notify_ctrl_attached(wpa_s->eapol);
@@ -708,7 +703,7 @@ static void wpa_supplicant_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 	int res;
 	struct sockaddr_un from;
 	socklen_t fromlen = sizeof(from);
-	char *reply = NULL;
+	char *reply = NULL, *reply_buf = NULL;
 	size_t reply_len;
 
 	res = recvfrom(sock, buf, sizeof(buf) - 1, 0,
@@ -733,8 +728,17 @@ static void wpa_supplicant_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 		else
 			reply_len = 2;
 	} else {
-		reply = wpa_supplicant_global_ctrl_iface_process(global, buf,
-								 &reply_len);
+		reply_buf = wpa_supplicant_global_ctrl_iface_process(
+			global, buf, &reply_len);
+		reply = reply_buf;
+	}
+
+	if (!reply && reply_len == 1) {
+		reply = "FAIL\n";
+		reply_len = 5;
+	} else if (!reply && reply_len == 2) {
+		reply = "OK\n";
+		reply_len = 3;
 	}
 
 	if (reply) {
@@ -743,20 +747,8 @@ static void wpa_supplicant_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 			wpa_printf(MSG_DEBUG, "ctrl_iface sendto failed: %s",
 				strerror(errno));
 		}
-		os_free(reply);
-	} else if (reply_len == 1) {
-		if (sendto(sock, "FAIL\n", 5, 0, (struct sockaddr *) &from,
-			   fromlen) < 0) {
-			wpa_printf(MSG_DEBUG, "ctrl_iface sendto failed: %s",
-				   strerror(errno));
-		}
-	} else if (reply_len == 2) {
-		if (sendto(sock, "OK\n", 3, 0, (struct sockaddr *) &from,
-			   fromlen) < 0) {
-			wpa_printf(MSG_DEBUG, "ctrl_iface sendto failed: %s",
-				strerror(errno));
-		}
 	}
+	os_free(reply_buf);
 }
 
 

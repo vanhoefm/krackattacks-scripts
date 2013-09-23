@@ -653,6 +653,7 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 	write_auth_alg(f, ssid);
 	STR(bgscan);
 	STR(autoscan);
+	STR(scan_freq);
 #ifdef IEEE8021X_EAPOL
 	write_eap(f, ssid);
 	STR(identity);

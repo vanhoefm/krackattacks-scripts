@@ -873,6 +873,10 @@ static int wpa_config_parse_scan_freq(const struct parse_data *data,
 	freqs = wpa_config_parse_int_array(value);
 	if (freqs == NULL)
 		return -1;
+	if (freqs[0] == 0) {
+		os_free(freqs);
+		freqs = NULL;
+	}
 	os_free(ssid->scan_freq);
 	ssid->scan_freq = freqs;
 
@@ -889,6 +893,10 @@ static int wpa_config_parse_freq_list(const struct parse_data *data,
 	freqs = wpa_config_parse_int_array(value);
 	if (freqs == NULL)
 		return -1;
+	if (freqs[0] == 0) {
+		os_free(freqs);
+		freqs = NULL;
+	}
 	os_free(ssid->freq_list);
 	ssid->freq_list = freqs;
 
@@ -2808,6 +2816,10 @@ static int wpa_config_process_freq_list(const struct global_parse_data *data,
 	freqs = wpa_config_parse_int_array(value);
 	if (freqs == NULL)
 		return -1;
+	if (freqs[0] == 0) {
+		os_free(freqs);
+		freqs = NULL;
+	}
 	os_free(config->freq_list);
 	config->freq_list = freqs;
 	return 0;

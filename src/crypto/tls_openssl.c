@@ -2862,8 +2862,15 @@ static int ocsp_resp_cb(SSL *s, void *arg)
 
 	wpa_printf(MSG_DEBUG, "OpenSSL: OCSP response verification succeeded");
 
-	if (!conn->peer_cert || !conn->peer_issuer) {
-		wpa_printf(MSG_DEBUG, "OpenSSL: Peer certificate or issue certificate not available for OCSP status check");
+	if (!conn->peer_cert) {
+		wpa_printf(MSG_DEBUG, "OpenSSL: Peer certificate not available for OCSP status check");
+		OCSP_BASICRESP_free(basic);
+		OCSP_RESPONSE_free(rsp);
+		return 0;
+	}
+
+	if (!conn->peer_issuer) {
+		wpa_printf(MSG_DEBUG, "OpenSSL: Peer issuer certificate not available for OCSP status check");
 		OCSP_BASICRESP_free(basic);
 		OCSP_RESPONSE_free(rsp);
 		return 0;

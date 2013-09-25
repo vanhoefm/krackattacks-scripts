@@ -1289,26 +1289,34 @@ static int parse_roaming_consortium(struct hostapd_bss_config *bss, char *pos,
 static int parse_lang_string(struct hostapd_lang_string **array,
 			     unsigned int *count, char *pos)
 {
-	char *sep;
-	size_t clen, nlen;
+	char *sep, *str = NULL;
+	size_t clen, nlen, slen;
 	struct hostapd_lang_string *ls;
+	int ret = -1;
+
+	if (*pos == '"' || (*pos == 'P' && pos[1] == '"')) {
+		str = wpa_config_parse_string(pos, &slen);
+		if (!str)
+			return -1;
+		pos = str;
+	}
 
 	sep = os_strchr(pos, ':');
 	if (sep == NULL)
-		return -1;
+		goto fail;
 	*sep++ = '\0';
 
 	clen = os_strlen(pos);
 	if (clen < 2 || clen > sizeof(ls->lang))
-		return -1;
+		goto fail;
 	nlen = os_strlen(sep);
 	if (nlen > 252)
-		return -1;
+		goto fail;
 
 	ls = os_realloc_array(*array, *count + 1,
 			      sizeof(struct hostapd_lang_string));
 	if (ls == NULL)
-		return -1;
+		goto fail;
 
 	*array = ls;
 	ls = &(*array)[*count];
@@ -1319,7 +1327,10 @@ static int parse_lang_string(struct hostapd_lang_string **array,
 	ls->name_len = nlen;
 	os_memcpy(ls->name, sep, nlen);
 
-	return 0;
+	ret = 0;
+fail:
+	os_free(str);
+	return ret;
 }
 
 

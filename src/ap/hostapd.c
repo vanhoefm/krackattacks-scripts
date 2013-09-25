@@ -1323,11 +1323,15 @@ int hostapd_add_iface(struct hapd_interfaces *interfaces, char *buf)
 	struct hostapd_iface *hapd_iface = NULL;
 	char *ptr;
 	size_t i;
+	const char *conf_file = NULL;
 
 	ptr = os_strchr(buf, ' ');
 	if (ptr == NULL)
 		return -1;
 	*ptr++ = '\0';
+
+	if (os_strncmp(ptr, "config=", 7) == 0)
+		conf_file = ptr + 7;
 
 	for (i = 0; i < interfaces->count; i++) {
 		if (!os_strcmp(interfaces->iface[i]->conf->bss[0].iface,
@@ -1345,8 +1349,14 @@ int hostapd_add_iface(struct hapd_interfaces *interfaces, char *buf)
 		goto fail;
 	}
 
-	conf = hostapd_config_alloc(interfaces, buf, ptr);
-	if (conf == NULL) {
+	if (conf_file && interfaces->config_read_cb) {
+		conf = interfaces->config_read_cb(conf_file);
+		if (conf && conf->bss)
+			os_strlcpy(conf->bss->iface, buf,
+				   sizeof(conf->bss->iface));
+	} else
+		conf = hostapd_config_alloc(interfaces, buf, ptr);
+	if (conf == NULL || conf->bss == NULL) {
 		wpa_printf(MSG_ERROR, "%s: Failed to allocate memory "
 			   "for configuration", __func__);
 		goto fail;

@@ -1217,9 +1217,6 @@ int hostapd_disable_iface(struct hostapd_iface *hapd_iface)
 	 * hostapd_setup_interface and hostapd_setup_interface_complete
 	 */
 	hostapd_cleanup_iface_partial(hapd_iface);
-	bss->wpa = 0;
-	bss->wpa_key_mgmt = -1;
-	bss->wpa_pairwise = -1;
 
 	wpa_printf(MSG_DEBUG, "Interface %s disabled", bss->iface);
 	return 0;

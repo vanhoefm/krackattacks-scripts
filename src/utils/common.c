@@ -400,7 +400,7 @@ size_t printf_decode(u8 *buf, size_t maxlen, const char *str)
 	int val;
 
 	while (*pos) {
-		if (len == maxlen)
+		if (len + 1 >= maxlen)
 			break;
 		switch (*pos) {
 		case '\\':
@@ -468,6 +468,8 @@ size_t printf_decode(u8 *buf, size_t maxlen, const char *str)
 			break;
 		}
 	}
+	if (maxlen > len)
+		buf[len] = '\0';
 
 	return len;
 }

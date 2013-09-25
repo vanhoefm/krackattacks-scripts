@@ -318,7 +318,7 @@ class WpaSupplicant:
                 time.sleep(0.1)
                 while self.global_mon.pending():
                     ev = self.global_mon.recv()
-                    logger.debug(self.ifname + ": " + ev)
+                    logger.debug(self.ifname + "(global): " + ev)
                     for event in events:
                         if event in ev:
                             return ev
@@ -335,6 +335,9 @@ class WpaSupplicant:
         while self.mon.pending():
             ev = self.mon.recv()
             logger.debug(self.ifname + ": " + ev)
+        while self.global_mon.pending():
+            ev = self.global_mon.recv()
+            logger.debug(self.ifname + "(global): " + ev)
 
     def remove_group(self, ifname=None):
         if ifname is None:

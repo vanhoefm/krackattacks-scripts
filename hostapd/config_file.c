@@ -1299,7 +1299,7 @@ static int parse_lang_string(struct hostapd_lang_string **array,
 	*sep++ = '\0';
 
 	clen = os_strlen(pos);
-	if (clen < 2)
+	if (clen < 2 || clen > sizeof(ls->lang))
 		return -1;
 	nlen = os_strlen(sep);
 	if (nlen > 252)

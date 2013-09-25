@@ -1035,6 +1035,8 @@ wpa_supplicant_global_ctrl_iface_init(struct wpa_global *global)
 		return NULL;
 	}
 
+	wpa_msg_register_cb(wpa_supplicant_ctrl_iface_msg_cb);
+
 	return priv;
 }
 

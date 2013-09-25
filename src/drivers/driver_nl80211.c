@@ -6102,8 +6102,11 @@ static int wpa_driver_nl80211_send_frame(struct i802_bss *bss,
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	u64 cookie;
 
-	if (freq == 0)
+	if (freq == 0) {
+		wpa_printf(MSG_DEBUG, "nl80211: send_frame - Use bss->freq=%u",
+			   bss->freq);
 		freq = bss->freq;
+	}
 
 	if (drv->use_monitor)
 		return wpa_driver_nl80211_send_mntr(drv, data, len,
@@ -6127,6 +6130,8 @@ static int wpa_driver_nl80211_send_mlme(struct i802_bss *bss, const u8 *data,
 
 	mgmt = (struct ieee80211_mgmt *) data;
 	fc = le_to_host16(mgmt->frame_control);
+	wpa_printf(MSG_DEBUG, "nl80211: send_mlme - noack=%d freq=%u no_cck=%d offchanok=%d wait_time=%u fc=0x%x nlmode=%d",
+		   noack, freq, no_cck, offchanok, wait_time, fc, drv->nlmode);
 
 	if ((is_sta_interface(drv->nlmode) ||
 	     drv->nlmode == NL80211_IFTYPE_P2P_DEVICE) &&
@@ -6137,16 +6142,22 @@ static int wpa_driver_nl80211_send_mlme(struct i802_bss *bss, const u8 *data,
 		 * but it works due to the single-threaded nature
 		 * of wpa_supplicant.
 		 */
-		if (freq == 0)
+		if (freq == 0) {
+			wpa_printf(MSG_DEBUG, "nl80211: Use last_mgmt_freq=%d",
+				   drv->last_mgmt_freq);
 			freq = drv->last_mgmt_freq;
+		}
 		return nl80211_send_frame_cmd(bss, freq, 0,
 					      data, data_len, NULL, 1, noack,
 					      1);
 	}
 
 	if (drv->device_ap_sme && is_ap_interface(drv->nlmode)) {
-		if (freq == 0)
+		if (freq == 0) {
+			wpa_printf(MSG_DEBUG, "nl80211: Use bss->freq=%d",
+				   bss->freq);
 			freq = bss->freq;
+		}
 		return nl80211_send_frame_cmd(bss, freq,
 					      (int) freq == bss->freq ? 0 :
 					      wait_time,
@@ -6169,6 +6180,7 @@ static int wpa_driver_nl80211_send_mlme(struct i802_bss *bss, const u8 *data,
 			encrypt = 0;
 	}
 
+	wpa_printf(MSG_DEBUG, "nl80211: send_mgmt -> send_frame");
 	return wpa_driver_nl80211_send_frame(bss, data, data_len, encrypt,
 					     noack, freq, no_cck, offchanok,
 					     wait_time);

@@ -1189,13 +1189,11 @@ int hostapd_reload_iface(struct hostapd_iface *hapd_iface)
 int hostapd_disable_iface(struct hostapd_iface *hapd_iface)
 {
 	size_t j;
-	struct hostapd_bss_config *bss;
 	const struct wpa_driver_ops *driver;
 	void *drv_priv;
 
 	if (hapd_iface == NULL)
 		return -1;
-	bss = hapd_iface->bss[0]->conf;
 	driver = hapd_iface->bss[0]->driver;
 	drv_priv = hapd_iface->bss[0]->drv_priv;
 
@@ -1218,7 +1216,8 @@ int hostapd_disable_iface(struct hostapd_iface *hapd_iface)
 	 */
 	hostapd_cleanup_iface_partial(hapd_iface);
 
-	wpa_printf(MSG_DEBUG, "Interface %s disabled", bss->iface);
+	wpa_printf(MSG_DEBUG, "Interface %s disabled",
+		   hapd_iface->bss[0]->conf->iface);
 	return 0;
 }
 

@@ -7525,6 +7525,12 @@ static int nl80211_leave_ibss(struct wpa_driver_nl80211_data *drv)
 	wpa_printf(MSG_DEBUG, "nl80211: Leave IBSS request sent successfully");
 
 nla_put_failure:
+	if (wpa_driver_nl80211_set_mode(&drv->first_bss,
+					NL80211_IFTYPE_STATION)) {
+		wpa_printf(MSG_INFO, "nl80211: Failed to set interface into "
+			   "station mode");
+	}
+
 	nlmsg_free(msg);
 	return ret;
 }

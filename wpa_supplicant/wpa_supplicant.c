@@ -716,6 +716,11 @@ void wpa_supplicant_terminate_proc(struct wpa_global *global)
 #ifdef CONFIG_WPS
 	struct wpa_supplicant *wpa_s = global->ifaces;
 	while (wpa_s) {
+#ifdef CONFIG_P2P
+		if (wpa_s->p2p_group_interface != NOT_P2P_GROUP_INTERFACE ||
+		    (wpa_s->current_ssid && wpa_s->current_ssid->p2p_group))
+			wpas_p2p_disconnect(wpa_s);
+#endif /* CONFIG_P2P */
 		if (wpas_wps_terminate_pending(wpa_s) == 1)
 			pending = 1;
 		wpa_s = wpa_s->next;

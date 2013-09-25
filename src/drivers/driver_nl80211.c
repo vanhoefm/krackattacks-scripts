@@ -1505,6 +1505,7 @@ static void mlme_event_mgmt(struct wpa_driver_nl80211_data *drv,
 	union wpa_event_data event;
 	u16 fc, stype;
 	int ssi_signal = 0;
+	int rx_freq = 0;
 
 	wpa_printf(MSG_MSGDUMP, "nl80211: Frame event");
 	mgmt = (const struct ieee80211_mgmt *) frame;
@@ -1522,8 +1523,11 @@ static void mlme_event_mgmt(struct wpa_driver_nl80211_data *drv,
 	os_memset(&event, 0, sizeof(event));
 	if (freq) {
 		event.rx_action.freq = nla_get_u32(freq);
-		drv->last_mgmt_freq = event.rx_action.freq;
+		rx_freq = drv->last_mgmt_freq = event.rx_action.freq;
 	}
+	wpa_printf(MSG_DEBUG,
+		   "nl80211: RX frame freq=%d ssi_signal=%d stype=%u len=%u",
+		   rx_freq, ssi_signal, stype, (unsigned int) len);
 	if (stype == WLAN_FC_STYPE_ACTION) {
 		event.rx_action.da = mgmt->da;
 		event.rx_action.sa = mgmt->sa;

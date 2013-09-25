@@ -618,5 +618,6 @@ void hostapd_deinit_wpa(struct hostapd_data *hapd)
 
 #ifdef CONFIG_IEEE80211R
 	l2_packet_deinit(hapd->l2);
+	hapd->l2 = NULL;
 #endif /* CONFIG_IEEE80211R */
 }

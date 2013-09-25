@@ -1021,6 +1021,7 @@ void vlan_deinit(struct hostapd_data *hapd)
 
 #ifdef CONFIG_FULL_DYNAMIC_VLAN
 	full_dynamic_vlan_deinit(hapd->full_dynamic_vlan);
+	hapd->full_dynamic_vlan = NULL;
 #endif /* CONFIG_FULL_DYNAMIC_VLAN */
 }
 

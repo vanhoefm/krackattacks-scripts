@@ -69,6 +69,15 @@
 #define P2P_MAX_INITIAL_CONN_WAIT_GO 10
 #endif /* P2P_MAX_INITIAL_CONN_WAIT_GO */
 
+#ifndef P2P_MAX_INITIAL_CONN_WAIT_GO_REINVOKE
+/*
+ * How many seconds to wait for initial 4-way handshake to get completed after
+ * re-invocation of a persistent group on the GO when the client is expected
+ * to connect automatically (no user interaction).
+ */
+#define P2P_MAX_INITIAL_CONN_WAIT_GO_REINVOKE 15
+#endif /* P2P_MAX_INITIAL_CONN_WAIT_GO_REINVOKE */
+
 #ifndef P2P_CONCURRENT_SEARCH_DELAY
 #define P2P_CONCURRENT_SEARCH_DELAY 500
 #endif /* P2P_CONCURRENT_SEARCH_DELAY */
@@ -984,6 +993,21 @@ static void p2p_go_configured(void *ctx, void *data)
 		wpas_notify_p2p_group_started(wpa_s, ssid, network_id, 0);
 		wpas_p2p_cross_connect_setup(wpa_s);
 		wpas_p2p_set_group_idle_timeout(wpa_s);
+
+		if (wpa_s->p2p_first_connection_timeout) {
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"P2P: Start group formation timeout of %d seconds until first data connection on GO",
+				wpa_s->p2p_first_connection_timeout);
+			wpa_s->p2p_go_group_formation_completed = 0;
+			wpa_s->global->p2p_group_formation = wpa_s;
+			eloop_cancel_timeout(wpas_p2p_group_formation_timeout,
+					     wpa_s->parent, NULL);
+			eloop_register_timeout(
+				wpa_s->p2p_first_connection_timeout, 0,
+				wpas_p2p_group_formation_timeout,
+				wpa_s->parent, NULL);
+		}
+
 		return;
 	}
 
@@ -2673,7 +2697,8 @@ static void wpas_invitation_received(void *ctx, const u8 *sa, const u8 *bssid,
 		if (s) {
 			int go = s->mode == WPAS_MODE_P2P_GO;
 			wpas_p2p_group_add_persistent(
-				wpa_s, s, go, go ? op_freq : 0, 0, NULL);
+				wpa_s, s, go, go ? op_freq : 0, 0, NULL,
+				go ? P2P_MAX_INITIAL_CONN_WAIT_GO_REINVOKE : 0);
 		} else if (bssid) {
 			wpa_s->user_initiated_pd = 0;
 			wpas_p2p_join(wpa_s, bssid, go_dev_addr,
@@ -2842,7 +2867,10 @@ static void wpas_invitation_result(void *ctx, int status, const u8 *bssid,
 	wpas_p2p_group_add_persistent(wpa_s, ssid,
 				      ssid->mode == WPAS_MODE_P2P_GO,
 				      wpa_s->p2p_persistent_go_freq,
-				      wpa_s->p2p_go_ht40, channels);
+				      wpa_s->p2p_go_ht40, channels,
+				      ssid->mode == WPAS_MODE_P2P_GO ?
+				      P2P_MAX_INITIAL_CONN_WAIT_GO_REINVOKE :
+				      0);
 }
 
 
@@ -4456,6 +4484,7 @@ wpas_p2p_get_group_iface(struct wpa_supplicant *wpa_s, int addr_allocated,
 	if (!wpas_p2p_create_iface(wpa_s)) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Use same interface for group "
 			"operations");
+		wpa_s->p2p_first_connection_timeout = 0;
 		return wpa_s;
 	}
 
@@ -4475,6 +4504,7 @@ wpas_p2p_get_group_iface(struct wpa_supplicant *wpa_s, int addr_allocated,
 
 	wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Use separate group interface %s",
 		group_wpa_s->ifname);
+	group_wpa_s->p2p_first_connection_timeout = 0;
 	return group_wpa_s;
 }
 
@@ -4577,7 +4607,8 @@ static int wpas_start_p2p_client(struct wpa_supplicant *wpa_s,
 int wpas_p2p_group_add_persistent(struct wpa_supplicant *wpa_s,
 				  struct wpa_ssid *ssid, int addr_allocated,
 				  int freq, int ht40,
-				  const struct p2p_channels *channels)
+				  const struct p2p_channels *channels,
+				  int connection_timeout)
 {
 	struct p2p_go_neg_results params;
 	int go = 0;
@@ -4634,6 +4665,7 @@ int wpas_p2p_group_add_persistent(struct wpa_supplicant *wpa_s,
 	if (wpa_s == NULL)
 		return -1;
 
+	wpa_s->p2p_first_connection_timeout = connection_timeout;
 	wpas_start_wps_go(wpa_s, &params, 0);
 
 	return 0;

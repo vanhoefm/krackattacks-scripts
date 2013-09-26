@@ -648,6 +648,7 @@ struct wpa_supplicant {
 	unsigned int p2p_go_ht40:1;
 	unsigned int user_initiated_pd:1;
 	unsigned int p2p_go_group_formation_completed:1;
+	int p2p_first_connection_timeout;
 	int p2p_persistent_go_freq;
 	int p2p_persistent_id;
 	int p2p_go_intent;

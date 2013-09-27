@@ -502,6 +502,22 @@ wpa_bss_update(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 	wpa_bss_copy_res(bss, res, fetch_time);
 	/* Move the entry to the end of the list */
 	dl_list_del(&bss->list);
+#ifdef CONFIG_P2P
+	if (wpa_bss_get_vendor_ie(bss, P2P_IE_VENDOR_TYPE) &&
+	    !wpa_scan_get_vendor_ie(res, P2P_IE_VENDOR_TYPE)) {
+		/*
+		 * This can happen when non-P2P station interface runs a scan
+		 * without P2P IE in the Probe Request frame. P2P GO would reply
+		 * to that with a Probe Response that does not include P2P IE.
+		 * Do not update the IEs in this BSS entry to avoid such loss of
+		 * information that may be needed for P2P operations to
+		 * determine group information.
+		 */
+		wpa_dbg(wpa_s, MSG_DEBUG, "BSS: Do not update scan IEs for "
+			MACSTR " since that would remove P2P IE information",
+			MAC2STR(bss->bssid));
+	} else
+#endif /* CONFIG_P2P */
 	if (bss->ie_len + bss->beacon_ie_len >=
 	    res->ie_len + res->beacon_ie_len) {
 		os_memcpy(bss + 1, res + 1, res->ie_len + res->beacon_ie_len);

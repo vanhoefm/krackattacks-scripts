@@ -625,8 +625,18 @@ void wpa_bss_update_scan_res(struct wpa_supplicant *wpa_s,
 	bss = wpa_bss_get(wpa_s, res->bssid, ssid + 2, ssid[1]);
 	if (bss == NULL)
 		bss = wpa_bss_add(wpa_s, ssid + 2, ssid[1], res, fetch_time);
-	else
+	else {
 		bss = wpa_bss_update(wpa_s, bss, res, fetch_time);
+		if (wpa_s->last_scan_res) {
+			unsigned int i;
+			for (i = 0; i < wpa_s->last_scan_res_used; i++) {
+				if (bss == wpa_s->last_scan_res[i]) {
+					/* Already in the list */
+					return;
+				}
+			}
+		}
+	}
 
 	if (bss == NULL)
 		return;

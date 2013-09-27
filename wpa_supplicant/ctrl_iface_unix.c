@@ -586,6 +586,8 @@ void wpa_supplicant_ctrl_iface_deinit(struct ctrl_iface_priv *priv)
 			os_free(fname);
 		}
 
+		if (priv->wpa_s->conf->ctrl_interface == NULL)
+			goto free_dst;
 		buf = os_strdup(priv->wpa_s->conf->ctrl_interface);
 		if (buf == NULL)
 			goto free_dst;

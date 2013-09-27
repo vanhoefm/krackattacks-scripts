@@ -3082,6 +3082,17 @@ static int wpa_config_process_ap_vendor_elements(
 }
 
 
+static int wpa_config_process_no_ctrl_interface(
+	const struct global_parse_data *data,
+	struct wpa_config *config, int line, const char *pos)
+{
+	wpa_printf(MSG_DEBUG, "no_ctrl_interface -> ctrl_interface=NULL");
+	os_free(config->ctrl_interface);
+	config->ctrl_interface = NULL;
+	return 0;
+}
+
+
 #ifdef OFFSET
 #undef OFFSET
 #endif /* OFFSET */
@@ -3101,6 +3112,7 @@ static int wpa_config_process_ap_vendor_elements(
 static const struct global_parse_data global_fields[] = {
 #ifdef CONFIG_CTRL_IFACE
 	{ STR(ctrl_interface), 0 },
+	{ FUNC_NO_VAR(no_ctrl_interface), 0 },
 	{ STR(ctrl_interface_group), 0 } /* deprecated */,
 #endif /* CONFIG_CTRL_IFACE */
 	{ INT_RANGE(eapol_version, 1, 2), 0 },

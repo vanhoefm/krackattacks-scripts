@@ -3082,6 +3082,7 @@ static int wpa_config_process_ap_vendor_elements(
 }
 
 
+#ifdef CONFIG_CTRL_IFACE
 static int wpa_config_process_no_ctrl_interface(
 	const struct global_parse_data *data,
 	struct wpa_config *config, int line, const char *pos)
@@ -3091,6 +3092,7 @@ static int wpa_config_process_no_ctrl_interface(
 	config->ctrl_interface = NULL;
 	return 0;
 }
+#endif /* CONFIG_CTRL_IFACE */
 
 
 #ifdef OFFSET

@@ -33,6 +33,7 @@ def main():
     test_file = None
     error_file = None
     log_file = None
+    results_file = None
     idx = 1
     if len(sys.argv) > 1 and sys.argv[1] == '-d':
         logging.basicConfig(level=logging.DEBUG)
@@ -49,6 +50,10 @@ def main():
 
     if len(sys.argv) > idx + 1 and sys.argv[idx] == '-e':
         error_file = sys.argv[idx + 1]
+        idx = idx + 2
+
+    if len(sys.argv) > idx + 1 and sys.argv[idx] == '-r':
+        results_file = sys.argv[idx + 1]
         idx = idx + 2
 
     if len(sys.argv) > idx + 1 and sys.argv[idx] == '-f':
@@ -117,17 +122,27 @@ def main():
             passed.append(t.__name__)
             end = datetime.now()
             diff = end - start
-            logger.info("PASS " + t.__name__ + " " + str(diff.total_seconds()) + " " + str(end))
+            result = "PASS " + t.__name__ + " " + str(diff.total_seconds()) + " " + str(end)
+            logger.info(result)
             if log_file:
-                print "PASS " + t.__name__ + " " + str(diff.total_seconds()) + " " + str(end)
+                print result
+            if results_file:
+                f = open(results_file, 'a')
+                f.write(result + "\n")
+                f.close()
         except Exception, e:
             end = datetime.now()
             diff = end - start
             logger.info(e)
             failed.append(t.__name__)
-            logger.info("FAIL " + t.__name__ + " " + str(diff.total_seconds()) + " " + str(end))
+            result = "FAIL " + t.__name__ + " " + str(diff.total_seconds()) + " " + str(end)
+            logger.info(result)
             if log_file:
-                print "FAIL " + t.__name__ + " " + str(diff.total_seconds()) + " " + str(end)
+                print result
+            if results_file:
+                f = open(results_file, 'a')
+                f.write(result + "\n")
+                f.close()
         for d in dev:
             try:
                 d.request("NOTE TEST-STOP " + t.__name__)

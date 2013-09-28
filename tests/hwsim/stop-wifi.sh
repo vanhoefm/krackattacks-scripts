@@ -21,14 +21,29 @@ fi
 
 if [ "$RUNNING" = "yes" ]; then
     # give some time for hostapd and wpa_supplicant to complete deinit
-    sleep 4
+    sleep 0.5
+    for i in `seq 1 5`; do
+	if pidof wpa_supplicant hostapd valgrind.bin > /dev/null; then
+	    echo "Waiting for processes to exit (1)"
+	    sleep 1
+	else
+	    break
+	fi
+    done
 fi
 
 if pidof wpa_supplicant hostapd > /dev/null; then
     echo "wpa_supplicant/hostapd did not exit - try to force them to die"
     sudo killall -9 -q hostapd
     sudo killall -9 -q wpa_supplicant
-    sleep 5
+    for i in `seq 1 5`; do
+	if pidof wpa_supplicant hostapd > /dev/null; then
+	    echo "Waiting for processes to exit (2)"
+	    sleep 1
+	else
+	    break
+	fi
+    done
 fi
 
 for i in `pidof valgrind.bin`; do
@@ -40,6 +55,7 @@ done
 
 for i in /tmp/wpas-wlan0 /tmp/wpas-wlan1 /tmp/wpas-wlan2 /var/run/hostapd-global; do
     if [ -e $i ]; then
+	echo "Waiting for ctrl_iface $i to disappear"
 	sleep 1
 	if [ -e $i ]; then
 	    echo "Control interface file $i exists - remove it"

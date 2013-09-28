@@ -47,6 +47,7 @@ for i in 0 1 2; do
 	fi
 	if [ $j = "10" ]; then
 	    echo "Could not connect to /tmp/wpas-wlan$i"
+	    exit 1
 	fi
 	sleep 1
     done
@@ -58,6 +59,9 @@ for j in `seq 1 10`; do
     fi
     if [ $j = "10" ]; then
 	echo "Could not connect to /var/run/hostapd-global"
+	exit 1
     fi
     sleep 1
 done
+
+exit 0

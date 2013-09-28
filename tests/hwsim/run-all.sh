@@ -4,7 +4,10 @@ errors=0
 umask 0002
 
 if [ "x$1" = "xconcurrent-valgrind" ]; then
-    ./start-p2p-concurrent.sh valgrind
+    if ! ./start-p2p-concurrent.sh valgrind; then
+	echo "Could not start test environment" > logs/last-debug
+	exit 1
+    fi
     DATE=`ls -1tr logs | tail -1 | cut -f1 -d-`
     rm logs/last-debug
     for i in autogo discovery grpform; do
@@ -22,7 +25,10 @@ if [ "x$1" = "xconcurrent-valgrind" ]; then
 	exit 1
     fi
 elif [ "x$1" = "xconcurrent" ]; then
-    ./start-p2p-concurrent.sh
+    if ! ./start-p2p-concurrent.sh; then
+	echo "Could not start test environment" > logs/last-debug
+	exit 1
+    fi
     DATE=`ls -1tr logs | tail -1 | cut -f1 -d-`
     rm logs/last-debug
     for i in autogo discovery grpform; do
@@ -35,7 +41,10 @@ elif [ "x$1" = "xconcurrent" ]; then
 	exit 1
     fi
 elif [ "x$1" = "xvalgrind" ]; then
-    ./start.sh valgrind
+    if ! ./start.sh valgrind; then
+	echo "Could not start test environment" > logs/last-debug
+	exit 1
+    fi
     DATE=`ls -1tr logs | tail -1 | cut -f1 -d-`
     ./run-tests.py -l logs/$DATE-run -e logs/$DATE-failed || errors=1
     cat logs/$DATE-run > logs/last-debug
@@ -50,7 +59,10 @@ elif [ "x$1" = "xvalgrind" ]; then
 	exit 1
     fi
 elif [ "x$1" = "xtrace" ]; then
-    ./start.sh trace
+    if ! ./start.sh trace; then
+	echo "Could not start test environment" > logs/last-debug
+	exit 1
+    fi
     DATE=`ls -1tr logs | tail -1 | cut -f1 -d-`
     sudo trace-cmd record -o logs/$DATE-trace.dat -e mac80211 -e cfg80211 su $USER -c "./run-tests.py -l logs/$DATE-run -e logs/$DATE-failed" || errors=1
     if [ -e logs/$DATE-failed ]; then
@@ -64,7 +76,10 @@ elif [ "x$1" = "xtrace" ]; then
 	exit 1
     fi
 else
-    ./start.sh
+    if ! ./start.sh; then
+	echo "Could not start test environment" > logs/last-debug
+	exit 1
+    fi
     DATE=`ls -1tr logs | tail -1 | cut -f1 -d-`
     ./run-tests.py -l logs/$DATE-run -e logs/$DATE-failed || errors=1
     cat logs/$DATE-run > logs/last-debug
@@ -74,3 +89,5 @@ else
 	exit 1
     fi
 fi
+
+echo "ALL-PASSED"

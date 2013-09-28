@@ -48,17 +48,18 @@ def main():
     else:
         logging.basicConfig(level=logging.INFO)
 
-    if len(sys.argv) > idx + 1 and sys.argv[idx] == '-e':
-        error_file = sys.argv[idx + 1]
-        idx = idx + 2
-
-    if len(sys.argv) > idx + 1 and sys.argv[idx] == '-r':
-        results_file = sys.argv[idx + 1]
-        idx = idx + 2
-
-    if len(sys.argv) > idx + 1 and sys.argv[idx] == '-f':
-        test_file = sys.argv[idx + 1]
-        idx = idx + 2
+    while len(sys.argv) > idx:
+        if len(sys.argv) > idx + 1 and sys.argv[idx] == '-e':
+            error_file = sys.argv[idx + 1]
+            idx = idx + 2
+        elif len(sys.argv) > idx + 1 and sys.argv[idx] == '-r':
+            results_file = sys.argv[idx + 1]
+            idx = idx + 2
+        elif len(sys.argv) > idx + 1 and sys.argv[idx] == '-f':
+            test_file = sys.argv[idx + 1]
+            idx = idx + 2
+        else:
+            break
 
     if len(sys.argv) > idx:
         test_filter = sys.argv[idx]

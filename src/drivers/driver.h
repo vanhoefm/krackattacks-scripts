@@ -2775,6 +2775,15 @@ struct wpa_driver_ops {
 	 * survey.
 	 */
 	int (*get_survey)(void *priv, unsigned int freq);
+
+	/**
+	 * status - Get driver interface status information
+	 * @priv: Private driver interface data
+	 * @buf: Buffer for printing tou the status information
+	 * @buflen: Maximum length of the buffer
+	 * Returns: Length of written status information or -1 on failure
+	 */
+	int (*status)(void *priv, char *buf, size_t buflen);
 };
 
 

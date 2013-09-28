@@ -496,6 +496,8 @@ static int wpa_cli_cmd_status(struct wpa_ctrl *ctrl, int argc, char *argv[])
 		return wpa_ctrl_command(ctrl, "STATUS-VERBOSE");
 	if (argc > 0 && os_strcmp(argv[0], "wps") == 0)
 		return wpa_ctrl_command(ctrl, "STATUS-WPS");
+	if (argc > 0 && os_strcmp(argv[0], "driver") == 0)
+		return wpa_ctrl_command(ctrl, "STATUS-DRIVER");
 	return wpa_ctrl_command(ctrl, "STATUS");
 }
 

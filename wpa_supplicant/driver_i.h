@@ -700,4 +700,12 @@ static inline int wpa_drv_wnm_oper(struct wpa_supplicant *wpa_s,
 				       buf_len);
 }
 
+static inline int wpa_drv_status(struct wpa_supplicant *wpa_s,
+				 char *buf, size_t buflen)
+{
+	if (!wpa_s->driver->status)
+		return -1;
+	return wpa_s->driver->status(wpa_s->drv_priv, buf, buflen);
+}
+
 #endif /* DRIVER_I_H */

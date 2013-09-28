@@ -226,6 +226,11 @@ struct wpa_driver_nl80211_data {
 	int operstate;
 
 	int scan_complete_events;
+	enum scan_states {
+		NO_SCAN, SCAN_REQUESTED, SCAN_STARTED, SCAN_COMPLETED,
+		SCAN_ABORTED, SCHED_SCAN_STARTED, SCHED_SCAN_STOPPED,
+		SCHED_SCAN_RESULTS
+	} scan_state;
 
 	struct nl_cb *nl_cb;
 
@@ -2567,17 +2572,21 @@ static void do_process_drv_event(struct i802_bss *bss, int cmd,
 	switch (cmd) {
 	case NL80211_CMD_TRIGGER_SCAN:
 		wpa_dbg(drv->ctx, MSG_DEBUG, "nl80211: Scan trigger");
+		drv->scan_state = SCAN_STARTED;
 		break;
 	case NL80211_CMD_START_SCHED_SCAN:
 		wpa_dbg(drv->ctx, MSG_DEBUG, "nl80211: Sched scan started");
+		drv->scan_state = SCHED_SCAN_STARTED;
 		break;
 	case NL80211_CMD_SCHED_SCAN_STOPPED:
 		wpa_dbg(drv->ctx, MSG_DEBUG, "nl80211: Sched scan stopped");
+		drv->scan_state = SCHED_SCAN_STOPPED;
 		wpa_supplicant_event(drv->ctx, EVENT_SCHED_SCAN_STOPPED, NULL);
 		break;
 	case NL80211_CMD_NEW_SCAN_RESULTS:
 		wpa_dbg(drv->ctx, MSG_DEBUG,
 			"nl80211: New scan results available");
+		drv->scan_state = SCAN_COMPLETED;
 		drv->scan_complete_events = 1;
 		eloop_cancel_timeout(wpa_driver_nl80211_scan_timeout, drv,
 				     drv->ctx);
@@ -2586,10 +2595,12 @@ static void do_process_drv_event(struct i802_bss *bss, int cmd,
 	case NL80211_CMD_SCHED_SCAN_RESULTS:
 		wpa_dbg(drv->ctx, MSG_DEBUG,
 			"nl80211: New sched scan results available");
+		drv->scan_state = SCHED_SCAN_RESULTS;
 		send_scan_event(drv, 0, tb);
 		break;
 	case NL80211_CMD_SCAN_ABORTED:
 		wpa_dbg(drv->ctx, MSG_DEBUG, "nl80211: Scan aborted");
+		drv->scan_state = SCAN_ABORTED;
 		/*
 		 * Need to indicate that scan results are available in order
 		 * not to make wpa_supplicant stop its scanning.
@@ -4361,6 +4372,7 @@ static int wpa_driver_nl80211_scan(struct i802_bss *bss,
 #endif /* HOSTAPD */
 	}
 
+	drv->scan_state = SCAN_REQUESTED;
 	/* Not all drivers generate "scan completed" wireless event, so try to
 	 * read results after a timeout. */
 	timeout = 10;
@@ -10725,6 +10737,163 @@ const u8 * wpa_driver_nl80211_get_macaddr(void *priv)
 }
 
 
+static const char * scan_state_str(enum scan_states scan_state)
+{
+	switch (scan_state) {
+	case NO_SCAN:
+		return "NO_SCAN";
+	case SCAN_REQUESTED:
+		return "SCAN_REQUESTED";
+	case SCAN_STARTED:
+		return "SCAN_STARTED";
+	case SCAN_COMPLETED:
+		return "SCAN_COMPLETED";
+	case SCAN_ABORTED:
+		return "SCAN_ABORTED";
+	case SCHED_SCAN_STARTED:
+		return "SCHED_SCAN_STARTED";
+	case SCHED_SCAN_STOPPED:
+		return "SCHED_SCAN_STOPPED";
+	case SCHED_SCAN_RESULTS:
+		return "SCHED_SCAN_RESULTS";
+	}
+
+	return "??";
+}
+
+
+static int wpa_driver_nl80211_status(void *priv, char *buf, size_t buflen)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	int res;
+	char *pos, *end;
+
+	pos = buf;
+	end = buf + buflen;
+
+	res = os_snprintf(pos, end - pos,
+			  "ifindex=%d\n"
+			  "ifname=%s\n"
+			  "brname=%s\n"
+			  "addr=" MACSTR "\n"
+			  "freq=%d\n"
+			  "%s%s%s%s%s",
+			  bss->ifindex,
+			  bss->ifname,
+			  bss->brname,
+			  MAC2STR(bss->addr),
+			  bss->freq,
+			  bss->beacon_set ? "beacon_set=1\n" : "",
+			  bss->added_if_into_bridge ?
+			  "added_if_into_bridge=1\n" : "",
+			  bss->added_bridge ? "added_bridge=1\n" : "",
+			  bss->in_deinit ? "in_deinit=1\n" : "",
+			  bss->if_dynamic ? "if_dynamic=1\n" : "");
+	if (res < 0 || res >= end - pos)
+		return pos - buf;
+	pos += res;
+
+	if (bss->wdev_id_set) {
+		res = os_snprintf(pos, end - pos, "wdev_id=%llu\n",
+				  (unsigned long long) bss->wdev_id);
+		if (res < 0 || res >= end - pos)
+			return pos - buf;
+		pos += res;
+	}
+
+	res = os_snprintf(pos, end - pos,
+			  "phyname=%s\n"
+			  "drv_ifindex=%d\n"
+			  "operstate=%d\n"
+			  "scan_state=%s\n"
+			  "auth_bssid=" MACSTR "\n"
+			  "auth_attempt_bssid=" MACSTR "\n"
+			  "bssid=" MACSTR "\n"
+			  "prev_bssid=" MACSTR "\n"
+			  "associated=%d\n"
+			  "assoc_freq=%u\n"
+			  "monitor_sock=%d\n"
+			  "monitor_ifidx=%d\n"
+			  "monitor_refcount=%d\n"
+			  "last_mgmt_freq=%u\n"
+			  "eapol_tx_sock=%d\n"
+			  "%s%s%s%s%s%s%s%s%s%s%s%s%s",
+			  drv->phyname,
+			  drv->ifindex,
+			  drv->operstate,
+			  scan_state_str(drv->scan_state),
+			  MAC2STR(drv->auth_bssid),
+			  MAC2STR(drv->auth_attempt_bssid),
+			  MAC2STR(drv->bssid),
+			  MAC2STR(drv->prev_bssid),
+			  drv->associated,
+			  drv->assoc_freq,
+			  drv->monitor_sock,
+			  drv->monitor_ifidx,
+			  drv->monitor_refcount,
+			  drv->last_mgmt_freq,
+			  drv->eapol_tx_sock,
+			  drv->ignore_if_down_event ?
+			  "ignore_if_down_event=1\n" : "",
+			  drv->scan_complete_events ?
+			  "scan_complete_events=1\n" : "",
+			  drv->disabled_11b_rates ?
+			  "disabled_11b_rates=1\n" : "",
+			  drv->pending_remain_on_chan ?
+			  "pending_remain_on_chan=1\n" : "",
+			  drv->in_interface_list ? "in_interface_list=1\n" : "",
+			  drv->device_ap_sme ? "device_ap_sme=1\n" : "",
+			  drv->poll_command_supported ?
+			  "poll_command_supported=1\n" : "",
+			  drv->data_tx_status ? "data_tx_status=1\n" : "",
+			  drv->scan_for_auth ? "scan_for_auth=1\n" : "",
+			  drv->retry_auth ? "retry_auth=1\n" : "",
+			  drv->use_monitor ? "use_monitor=1\n" : "",
+			  drv->ignore_next_local_disconnect ?
+			  "ignore_next_local_disconnect=1\n" : "",
+			  drv->allow_p2p_device ? "allow_p2p_device=1\n" : "");
+	if (res < 0 || res >= end - pos)
+		return pos - buf;
+	pos += res;
+
+	if (drv->has_capability) {
+		res = os_snprintf(pos, end - pos,
+				  "capa.key_mgmt=0x%x\n"
+				  "capa.enc=0x%x\n"
+				  "capa.auth=0x%x\n"
+				  "capa.flags=0x%x\n"
+				  "capa.max_scan_ssids=%d\n"
+				  "capa.max_sched_scan_ssids=%d\n"
+				  "capa.sched_scan_supported=%d\n"
+				  "capa.max_match_sets=%d\n"
+				  "capa.max_remain_on_chan=%u\n"
+				  "capa.max_stations=%u\n"
+				  "capa.probe_resp_offloads=0x%x\n"
+				  "capa.max_acl_mac_addrs=%u\n"
+				  "capa.num_multichan_concurrent=%u\n",
+				  drv->capa.key_mgmt,
+				  drv->capa.enc,
+				  drv->capa.auth,
+				  drv->capa.flags,
+				  drv->capa.max_scan_ssids,
+				  drv->capa.max_sched_scan_ssids,
+				  drv->capa.sched_scan_supported,
+				  drv->capa.max_match_sets,
+				  drv->capa.max_remain_on_chan,
+				  drv->capa.max_stations,
+				  drv->capa.probe_resp_offloads,
+				  drv->capa.max_acl_mac_addrs,
+				  drv->capa.num_multichan_concurrent);
+		if (res < 0 || res >= end - pos)
+			return pos - buf;
+		pos += res;
+	}
+
+	return pos - buf;
+}
+
+
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
@@ -10806,4 +10975,5 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.update_ft_ies = wpa_driver_nl80211_update_ft_ies,
 	.get_mac_addr = wpa_driver_nl80211_get_macaddr,
 	.get_survey = wpa_driver_nl80211_get_survey,
+	.status = wpa_driver_nl80211_status,
 };

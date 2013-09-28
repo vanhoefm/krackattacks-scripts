@@ -10,6 +10,7 @@ import os
 import re
 import sys
 import time
+from datetime import datetime
 
 import logging
 logger = logging.getLogger(__name__)
@@ -24,6 +25,7 @@ def reset_devs(dev, apdev):
             d.reset()
         except Exception, e:
             logger.info("Failed to reset device " + d.ifname)
+            print str(e)
     for ap in apdev:
         hapd.remove(ap['ifname'])
 
@@ -100,6 +102,7 @@ def main():
             print "START " + t.__name__
         if t.__doc__:
             logger.info("Test: " + t.__doc__)
+        start = datetime.now()
         for d in dev:
             try:
                 d.request("NOTE TEST-START " + t.__name__)
@@ -112,15 +115,19 @@ def main():
             else:
                 t(dev)
             passed.append(t.__name__)
-            logger.info("PASS " + t.__name__)
+            end = datetime.now()
+            diff = end - start
+            logger.info("PASS " + t.__name__ + " " + str(diff.total_seconds()) + " " + str(end))
             if log_file:
-                print "PASS " + t.__name__
+                print "PASS " + t.__name__ + " " + str(diff.total_seconds()) + " " + str(end)
         except Exception, e:
+            end = datetime.now()
+            diff = end - start
             logger.info(e)
             failed.append(t.__name__)
-            logger.info("FAIL " + t.__name__)
+            logger.info("FAIL " + t.__name__ + " " + str(diff.total_seconds()) + " " + str(end))
             if log_file:
-                print "FAIL " + t.__name__
+                print "FAIL " + t.__name__ + " " + str(diff.total_seconds()) + " " + str(end)
         for d in dev:
             try:
                 d.request("NOTE TEST-STOP " + t.__name__)

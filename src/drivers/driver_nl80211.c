@@ -9326,7 +9326,10 @@ static int wpa_driver_nl80211_send_action(struct i802_bss *bss,
 	os_memcpy(hdr->addr2, src, ETH_ALEN);
 	os_memcpy(hdr->addr3, bssid, ETH_ALEN);
 
-	if (is_ap_interface(drv->nlmode))
+	if (is_ap_interface(drv->nlmode) &&
+	    (!(drv->capa.flags & WPA_DRIVER_FLAGS_OFFCHANNEL_TX) ||
+	     (int) freq == bss->freq || drv->device_ap_sme ||
+	     !drv->use_monitor))
 		ret = wpa_driver_nl80211_send_mlme(bss, buf, 24 + data_len,
 						   0, freq, no_cck, 1,
 						   wait_time);

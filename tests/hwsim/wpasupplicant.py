@@ -10,6 +10,7 @@ import os
 import time
 import logging
 import re
+import subprocess
 import wpaspy
 
 logger = logging.getLogger(__name__)
@@ -58,6 +59,32 @@ class WpaSupplicant:
         self.request("P2P_SET per_sta_psk 0")
         self.group_ifname = None
         self.dump_monitor()
+
+        iter = 0
+        while iter < 60:
+            state = self.get_driver_status_field("scan_state")
+            if "SCAN_STARTED" in state or "SCAN_REQUESTED" in state:
+                logger.info(self.ifname + ": Waiting for scan operation to complete before continuing")
+                time.sleep(1)
+            else:
+                break
+            iter = iter + 1
+        if iter == 60:
+            logger.error(self.ifname + ": Driver scan state did not clear")
+            print "Trying to clear cfg80211/mac80211 scan state"
+            try:
+                cmd = ["sudo", "ifconfig", self.ifname, "down"]
+                subprocess.call(cmd)
+            except subprocess.CalledProcessError, e:
+                logger.info("ifconfig failed: " + str(e.returncode))
+                logger.info(e.output)
+            try:
+                cmd = ["sudo", "ifconfig", self.ifname, "up"]
+                subprocess.call(cmd)
+            except subprocess.CalledProcessError, e:
+                logger.info("ifconfig failed: " + str(e.returncode))
+                logger.info(e.output)
+
         if not self.ping():
             logger.info("No PING response from " + self.ifname + " after reset")
 
@@ -149,6 +176,21 @@ class WpaSupplicant:
 
     def get_group_status_field(self, field):
         vals = self.get_group_status()
+        if field in vals:
+            return vals[field]
+        return None
+
+    def get_driver_status(self):
+        res = self.request("STATUS-DRIVER")
+        lines = res.splitlines()
+        vals = dict()
+        for l in lines:
+            [name,value] = l.split('=', 1)
+            vals[name] = value
+        return vals
+
+    def get_driver_status_field(self, field):
+        vals = self.get_driver_status()
         if field in vals:
             return vals[field]
         return None

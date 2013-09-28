@@ -12,6 +12,12 @@ else
     unset VALGRIND
 fi
 
+if [ "x$1" = "xtrace" ]; then
+    TRACE="T"
+else
+    TRACE=""
+fi
+
 $DIR/stop-wifi.sh
 sudo modprobe mac80211_hwsim radios=5
 mkdir -p $DIR/logs
@@ -28,7 +34,7 @@ if [ "x$VALGRIND" = "xy" ]; then
     sudo valgrind --log-file=$DIR/logs/$DATE-valgrind-hostapd $HAPD -ddKt -g /var/run/hostapd-global -G admin -ddKt > $DIR/logs/$DATE-hostapd &
 else
     for i in 0 1 2; do
-	sudo $WPAS -g /tmp/wpas-wlan$i -Gadmin -Dnl80211 -iwlan$i -c $DIR/p2p$i.conf -ddKt > $DIR/logs/$DATE-log$i &
+	sudo $WPAS -g /tmp/wpas-wlan$i -Gadmin -Dnl80211 -iwlan$i -c $DIR/p2p$i.conf -ddKt$TRACE > $DIR/logs/$DATE-log$i &
     done
     sudo $HAPD -ddKt -g /var/run/hostapd-global -G admin -ddKt > $DIR/logs/$DATE-hostapd &
 fi

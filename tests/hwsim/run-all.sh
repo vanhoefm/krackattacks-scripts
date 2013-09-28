@@ -49,6 +49,20 @@ elif [ "x$1" = "xvalgrind" ]; then
 	tar czf /tmp/hwsim-tests-$DATE-FAILED-valgrind.tar.gz logs/$DATE*
 	exit 1
     fi
+elif [ "x$1" = "xtrace" ]; then
+    ./start.sh trace
+    DATE=`ls -1tr logs | tail -1 | cut -f1 -d-`
+    sudo trace-cmd record -o logs/$DATE-trace.dat -e mac80211 -e cfg80211 su $USER -c "./run-tests.py -l logs/$DATE-run -e logs/$DATE-failed" || errors=1
+    if [ -e logs/$DATE-failed ]; then
+	error=1
+    fi
+    sudo chown $USER logs/$DATE-trace.dat
+    cat logs/$DATE-run > logs/last-debug
+    ./stop-wifi.sh
+    if [ $errors -gt 0 ]; then
+	tar czf /tmp/hwsim-tests-$DATE-FAILED-trace.tar.gz logs/$DATE*
+	exit 1
+    fi
 else
     ./start.sh
     DATE=`ls -1tr logs | tail -1 | cut -f1 -d-`

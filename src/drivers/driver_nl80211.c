@@ -6108,10 +6108,14 @@ static int wpa_driver_nl80211_send_frame(struct i802_bss *bss,
 		freq = bss->freq;
 	}
 
-	if (drv->use_monitor)
+	if (drv->use_monitor) {
+		wpa_printf(MSG_DEBUG, "nl80211: send_frame(freq=%u bss->freq=%u) -> send_mntr",
+			   freq, bss->freq);
 		return wpa_driver_nl80211_send_mntr(drv, data, len,
 						    encrypt, noack);
+	}
 
+	wpa_printf(MSG_DEBUG, "nl80211: send_frame -> send_frame_cmd");
 	return nl80211_send_frame_cmd(bss, freq, wait_time, data, len,
 				      &cookie, no_cck, noack, offchanok);
 }
@@ -6180,7 +6184,7 @@ static int wpa_driver_nl80211_send_mlme(struct i802_bss *bss, const u8 *data,
 			encrypt = 0;
 	}
 
-	wpa_printf(MSG_DEBUG, "nl80211: send_mgmt -> send_frame");
+	wpa_printf(MSG_DEBUG, "nl80211: send_mlme -> send_frame");
 	return wpa_driver_nl80211_send_frame(bss, data, data_len, encrypt,
 					     noack, freq, no_cck, offchanok,
 					     wait_time);

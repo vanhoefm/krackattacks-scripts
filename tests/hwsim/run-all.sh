@@ -4,7 +4,7 @@ errors=0
 umask 0002
 
 if [ "x$1" = "xconcurrent-valgrind" ]; then
-    if ! ./start-p2p-concurrent.sh valgrind; then
+    if ! ./start.sh concurrent valgrind; then
 	echo "Could not start test environment" > logs/last-debug
 	exit 1
     fi
@@ -25,7 +25,7 @@ if [ "x$1" = "xconcurrent-valgrind" ]; then
 	exit 1
     fi
 elif [ "x$1" = "xconcurrent" ]; then
-    if ! ./start-p2p-concurrent.sh; then
+    if ! ./start.sh concurrent; then
 	echo "Could not start test environment" > logs/last-debug
 	exit 1
     fi

@@ -103,6 +103,7 @@ def main():
         logger.info("APDEV: " + ap['ifname'])
 
     passed = []
+    skipped = []
     failed = []
 
     for t in tests:
@@ -124,13 +125,19 @@ def main():
                 logger.info(e)
         try:
             if t.func_code.co_argcount > 1:
-                t(dev, apdev)
+                res = t(dev, apdev)
             else:
-                t(dev)
-            passed.append(t.__name__)
+                res = t(dev)
             end = datetime.now()
             diff = end - start
-            result = "PASS " + t.__name__ + " " + str(diff.total_seconds()) + " " + str(end)
+            if res == "skip":
+                skipped.append(t.__name__)
+                result = "SKIP "
+            else:
+                passed.append(t.__name__)
+                result = "PASS "
+            result = result + t.__name__ + " "
+            result = result + str(diff.total_seconds()) + " " + str(end)
             logger.info(result)
             if log_file or print_res:
                 print result
@@ -163,6 +170,7 @@ def main():
 
     if len(failed):
         logger.info("passed " + str(len(passed)) + " test case(s)")
+        logger.info("skipped " + str(len(skipped)) + " test case(s)")
         logger.info("failed tests: " + str(failed))
         if error_file:
             f = open(error_file, 'w')
@@ -170,8 +178,12 @@ def main():
             f.close()
         sys.exit(1)
     logger.info("passed all " + str(len(passed)) + " test case(s)")
+    if len(skipped):
+        logger.info("skipped " + str(len(skipped)) + " test case(s)")
     if log_file:
         print "passed all " + str(len(passed)) + " test case(s)"
+        if len(skipped):
+            print "skipped " + str(len(skipped)) + " test case(s)"
 
 if __name__ == "__main__":
     main()

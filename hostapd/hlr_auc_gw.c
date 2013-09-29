@@ -1,6 +1,6 @@
 /*
  * HLR/AuC testing gateway for hostapd EAP-SIM/AKA database/authenticator
- * Copyright (c) 2005-2007, 2012, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2005-2007, 2012-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -30,11 +30,15 @@
  * IMSI and max_chal are sent as an ASCII string,
  * Kc/SRES/RAND/AUTN/IK/CK/RES/AUTS as hex strings.
  *
- * The example implementation here reads GSM authentication triplets from a
+ * An example implementation here reads GSM authentication triplets from a
  * text file in IMSI:Kc:SRES:RAND format, IMSI in ASCII, other fields as hex
  * strings. This is used to simulate an HLR/AuC. As such, it is not very useful
  * for real life authentication, but it is useful both as an example
  * implementation and for EAP-SIM/AKA/AKA' testing.
+ *
+ * For a stronger example design, Milenage and GSM-Milenage algorithms can be
+ * used to dynamically generate authenticatipn information for EAP-AKA/AKA' and
+ * EAP-SIM, respectively, if Ki is known.
  *
  * SQN generation follows the not time-based Profile 2 described in
  * 3GPP TS 33.102 Annex C.3.2. The length of IND is 5 bits by default, but this
@@ -917,7 +921,7 @@ static void usage(void)
 {
 	printf("HLR/AuC testing gateway for hostapd EAP-SIM/AKA "
 	       "database/authenticator\n"
-	       "Copyright (c) 2005-2007, 2012, Jouni Malinen <j@w1.fi>\n"
+	       "Copyright (c) 2005-2007, 2012-2013, Jouni Malinen <j@w1.fi>\n"
 	       "\n"
 	       "usage:\n"
 	       "hlr_auc_gw [-hu] [-s<socket path>] [-g<triplet file>] "

@@ -18,6 +18,7 @@ def autogo(go):
     logger.info("Start autonomous GO " + go.ifname)
     res = go.p2p_start_go()
     logger.debug("res: " + str(res))
+    return res
 
 def connect_cli(go, client):
     logger.info("Try to connect the client to the GO")
@@ -95,3 +96,38 @@ def test_autogo_tdls(dev):
     dev[2].remove_group()
     dev[1].remove_group()
     dev[0].remove_group()
+
+def test_autogo_legacy(dev):
+    """P2P autonomous GO and legacy clients"""
+    res = autogo(dev[0])
+
+    logger.info("Connect P2P client")
+    connect_cli(dev[0], dev[1])
+
+    logger.info("Connect legacy WPS client")
+    pin = dev[2].wps_read_pin()
+    dev[0].p2p_go_authorize_client(pin)
+    dev[2].request("SET ignore_old_scan_res 1")
+    dev[2].request("P2P_SET disabled 1")
+    dev[2].dump_monitor()
+    dev[2].request("WPS_PIN any " + pin)
+    ev = dev[2].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
+    if ev is None:
+        raise Exception("Association with the GO timed out")
+    status = dev[2].get_status()
+    if status['wpa_state'] != 'COMPLETED':
+        raise Exception("Not fully connected")
+    hwsim_utils.test_connectivity_p2p_sta(dev[1], dev[2])
+    dev[2].request("DISCONNECT")
+
+    logger.info("Connect legacy non-WPS client")
+    dev[2].request("FLUSH")
+    dev[2].request("P2P_SET disabled 1")
+    dev[2].connect(ssid=res['ssid'], psk=res['passphrase'], proto='RSN',
+                   key_mgmt='WPA-PSK', pairwise='CCMP', group='CCMP',
+                   scan_freq=res['freq'])
+    hwsim_utils.test_connectivity_p2p_sta(dev[1], dev[2])
+    dev[2].request("DISCONNECT")
+
+    dev[0].remove_group()
+    dev[1].wait_go_ending_session()

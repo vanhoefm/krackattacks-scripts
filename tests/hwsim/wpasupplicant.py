@@ -57,6 +57,7 @@ class WpaSupplicant:
             logger.info("FLUSH to " + self.ifname + " failed: " + res)
         self.request("SET ignore_old_scan_res 0")
         self.request("P2P_SET per_sta_psk 0")
+        self.request("P2P_SET disabled 0")
         self.group_ifname = None
         self.dump_monitor()
 
@@ -450,7 +451,7 @@ class WpaSupplicant:
             raise Exception("Failed to request TDLS teardown")
         return None
 
-    def connect(self, ssid, psk=None, proto=None, key_mgmt=None, wep_key0=None, ieee80211w=None):
+    def connect(self, ssid, psk=None, proto=None, key_mgmt=None, wep_key0=None, ieee80211w=None, pairwise=None, group=None, scan_freq=None):
         logger.info("Connect STA " + self.ifname + " to AP")
         id = self.add_network()
         self.set_network_quoted(id, "ssid", ssid)
@@ -462,8 +463,14 @@ class WpaSupplicant:
             self.set_network(id, "key_mgmt", key_mgmt)
         if ieee80211w:
             self.set_network(id, "ieee80211w", ieee80211w)
+        if pairwise:
+            self.set_network(id, "pairwise", pairwise)
+        if group:
+            self.set_network(id, "group", group)
         if wep_key0:
             self.set_network(id, "wep_key0", wep_key0)
+        if scan_freq:
+            self.set_network(id, "scan_freq", scan_freq)
         self.connect_network(id)
 
     def scan(self, type=None):

@@ -35,11 +35,13 @@ def main():
     log_file = None
     results_file = None
     idx = 1
+    print_res = False
     if len(sys.argv) > 1 and sys.argv[1] == '-d':
         logging.basicConfig(level=logging.DEBUG)
         idx = idx + 1
     elif len(sys.argv) > 1 and sys.argv[1] == '-q':
         logging.basicConfig(level=logging.WARNING)
+        print_res = True
         idx = idx + 1
     elif len(sys.argv) > 2 and sys.argv[1] == '-l':
         log_file = sys.argv[2]
@@ -88,7 +90,7 @@ def main():
         if m:
             if test_file and test_file not in t:
                 continue
-            logger.info("Import test cases from " + t)
+            logger.debug("Import test cases from " + t)
             mod = __import__(m.group(1))
             for s in dir(mod):
                 if s.startswith("test_"):
@@ -125,7 +127,7 @@ def main():
             diff = end - start
             result = "PASS " + t.__name__ + " " + str(diff.total_seconds()) + " " + str(end)
             logger.info(result)
-            if log_file:
+            if log_file or print_res:
                 print result
             if results_file:
                 f = open(results_file, 'a')

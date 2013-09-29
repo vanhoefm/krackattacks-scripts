@@ -949,3 +949,37 @@ can be started when an interface is added (hotplug/udev/etc. scripts).
 wpa_priv can control multiple interface with one process, but it is
 also possible to run multiple wpa_priv processes at the same time, if
 desired.
+
+
+Linux capabilities instead of privileged process
+------------------------------------------------
+
+wpa_supplicant performs operations that need special permissions, e.g.,
+to control the network connection. Traditionally this has been achieved
+by running wpa_supplicant as a privileged process with effective user id
+0 (root). Linux capabilities can be used to provide restricted set of
+capabilities to match the functions needed by wpa_supplicant. The
+minimum set of capabilities needed for the operations is CAP_NET_ADMIN
+and CAP_NET_RAW.
+
+setcap(8) can be used to set file capabilities. For example:
+
+sudo setcap cap_net_raw,cap_net_admin+ep wpa_supplicant
+
+Please note that this would give anyone being able to run that
+wpa_supplicant binary access to the additional capabilities. This can
+further be limited by file owner/group and mode bits. For example:
+
+sudo chown wpas wpa_supplicant
+sudo chmod 0100 wpa_supplicant
+
+This combination of setcap, chown, and chmod commands would allow wpas
+user to execute wpa_supplicant with additional network admin/raw
+capabilities.
+
+Common way style of creating a control interface socket in
+/var/run/wpa_supplicant could not be done by this user, but this
+directory could be created before starting the wpa_supplicant and set to
+suitable mode to allow wpa_supplicant to create sockets
+there. Alternatively, other directory or abstract socket namespace could
+be used for the control interface.

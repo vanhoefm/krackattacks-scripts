@@ -633,7 +633,7 @@ static int sim_req_auth(char *imsi, char *resp, size_t resp_len)
 	if (pos) {
 		*pos++ = '\0';
 		max_chal = atoi(pos);
-		if (max_chal < 1 || max_chal < EAP_SIM_MAX_CHAL)
+		if (max_chal < 1 || max_chal > EAP_SIM_MAX_CHAL)
 			max_chal = EAP_SIM_MAX_CHAL;
 	} else
 		max_chal = EAP_SIM_MAX_CHAL;

@@ -6,6 +6,12 @@ WPACLI=$DIR/../../wpa_supplicant/wpa_cli
 HAPD=$DIR/../../hostapd/hostapd
 WLANTEST=$DIR/../../wlantest/wlantest
 
+if groups | tr ' ' "\n" | grep -q ^admin$; then
+    GROUP=admin
+else
+    GROUP=adm
+fi
+
 if [ "$1" = "concurrent" ]; then
     CONCURRENT=y
     shift
@@ -43,22 +49,22 @@ if [ "$VALGRIND" = "y" ]; then
     for i in 0 1 2; do
 	chmod a+rx $WPAS
 	if [ "$CONCURRENT" = "y" ]; then
-	    sudo valgrind --log-file=$DIR/logs/$DATE-valgrind-wlan$i $WPAS -g /tmp/wpas-wlan$i -Gadmin -Dnl80211 -iwlan$i -c $DIR/p2p$i.conf -N -Dnl80211 -ista$i -c $DIR/sta-dummy.conf -ddKt$TRACE > $DIR/logs/$DATE-log$i &
+	    sudo valgrind --log-file=$DIR/logs/$DATE-valgrind-wlan$i $WPAS -g /tmp/wpas-wlan$i -G$GROUP -Dnl80211 -iwlan$i -c $DIR/p2p$i.conf -N -Dnl80211 -ista$i -c $DIR/sta-dummy.conf -ddKt$TRACE > $DIR/logs/$DATE-log$i &
 	else
-	    sudo valgrind --log-file=$DIR/logs/$DATE-valgrind-wlan$i $WPAS -g /tmp/wpas-wlan$i -Gadmin -Dnl80211 -iwlan$i -c $DIR/p2p$i.conf -ddKt$TRACE > $DIR/logs/$DATE-log$i &
+	    sudo valgrind --log-file=$DIR/logs/$DATE-valgrind-wlan$i $WPAS -g /tmp/wpas-wlan$i -G$GROUP -Dnl80211 -iwlan$i -c $DIR/p2p$i.conf -ddKt$TRACE > $DIR/logs/$DATE-log$i &
 	fi
     done
     chmod a+rx $HAPD
-    sudo valgrind --log-file=$DIR/logs/$DATE-valgrind-hostapd $HAPD -ddKt -g /var/run/hostapd-global -G admin -ddKt > $DIR/logs/$DATE-hostapd &
+    sudo valgrind --log-file=$DIR/logs/$DATE-valgrind-hostapd $HAPD -ddKt -g /var/run/hostapd-global -G $GROUP -ddKt > $DIR/logs/$DATE-hostapd &
 else
     for i in 0 1 2; do
 	if [ "$CONCURRENT" = "y" ]; then
-	    sudo $WPAS -g /tmp/wpas-wlan$i -Gadmin -Dnl80211 -iwlan$i -c $DIR/p2p$i.conf -N -Dnl80211 -ista$i -c $DIR/sta-dummy.conf -ddKt$TRACE > $DIR/logs/$DATE-log$i &
+	    sudo $WPAS -g /tmp/wpas-wlan$i -G$GROUP -Dnl80211 -iwlan$i -c $DIR/p2p$i.conf -N -Dnl80211 -ista$i -c $DIR/sta-dummy.conf -ddKt$TRACE > $DIR/logs/$DATE-log$i &
 	else
-	    sudo $WPAS -g /tmp/wpas-wlan$i -Gadmin -Dnl80211 -iwlan$i -c $DIR/p2p$i.conf -ddKt$TRACE > $DIR/logs/$DATE-log$i &
+	    sudo $WPAS -g /tmp/wpas-wlan$i -G$GROUP -Dnl80211 -iwlan$i -c $DIR/p2p$i.conf -ddKt$TRACE > $DIR/logs/$DATE-log$i &
 	fi
     done
-    sudo $HAPD -ddKt -g /var/run/hostapd-global -G admin -ddKt > $DIR/logs/$DATE-hostapd &
+    sudo $HAPD -ddKt -g /var/run/hostapd-global -G $GROUP -ddKt > $DIR/logs/$DATE-hostapd &
 fi
 sleep 1
 sudo chown $USER $DIR/logs/$DATE-hwsim0.dump

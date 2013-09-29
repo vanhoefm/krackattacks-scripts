@@ -1040,6 +1040,7 @@ static void eap_aka_process_sync_failure(struct eap_sm *sm,
 	data->auts_reported = 1;
 
 	/* Remain in CHALLENGE state to re-try after resynchronization */
+	eap_aka_fullauth(sm, data);
 }
 
 

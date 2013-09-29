@@ -63,6 +63,24 @@ def main():
         else:
             break
 
+    tests = []
+    for t in os.listdir("."):
+        m = re.match(r'(test_.*)\.py$', t)
+        if m:
+            if test_file and test_file not in t:
+                continue
+            logger.debug("Import test cases from " + t)
+            mod = __import__(m.group(1))
+            for s in dir(mod):
+                if s.startswith("test_"):
+                    func = mod.__dict__.get(s)
+                    tests.append(func)
+
+    if len(sys.argv) > 1 and sys.argv[1] == '-L':
+        for t in tests:
+            print t.__name__ + " - " + t.__doc__
+        sys.exit(0)
+
     if len(sys.argv) > idx:
         test_filter = sys.argv[idx]
     else:
@@ -83,19 +101,6 @@ def main():
         logger.info("DEV: " + d.ifname + ": " + d.p2p_dev_addr())
     for ap in apdev:
         logger.info("APDEV: " + ap['ifname'])
-
-    tests = []
-    for t in os.listdir("."):
-        m = re.match(r'(test_.*)\.py$', t)
-        if m:
-            if test_file and test_file not in t:
-                continue
-            logger.debug("Import test cases from " + t)
-            mod = __import__(m.group(1))
-            for s in dir(mod):
-                if s.startswith("test_"):
-                    func = mod.__dict__.get(s)
-                    tests.append(func)
 
     passed = []
     failed = []

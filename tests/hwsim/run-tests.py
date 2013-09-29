@@ -114,6 +114,7 @@ def main():
         logger.info("START " + t.__name__)
         if log_file:
             print "START " + t.__name__
+            sys.stdout.flush()
         if t.__doc__:
             logger.info("Test: " + t.__doc__)
         start = datetime.now()
@@ -141,6 +142,7 @@ def main():
             logger.info(result)
             if log_file or print_res:
                 print result
+                sys.stdout.flush()
             if results_file:
                 f = open(results_file, 'a')
                 f.write(result + "\n")
@@ -154,6 +156,7 @@ def main():
             logger.info(result)
             if log_file:
                 print result
+                sys.stdout.flush()
             if results_file:
                 f = open(results_file, 'a')
                 f.write(result + "\n")

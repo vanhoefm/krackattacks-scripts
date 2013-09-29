@@ -148,3 +148,20 @@ def wpa_mixed_params(ssid=None, passphrase=None):
     if passphrase:
         params["wpa_passphrase"] = passphrase
     return params
+
+def radius_params():
+    params = { "auth_server_addr": "127.0.0.1",
+               "auth_server_port": "1812",
+               "auth_server_shared_secret": "radius",
+               "nas_identifier": "nas.w1.fi" }
+    return params
+
+def wpa2_eap_params(ssid=None):
+    params = radius_params()
+    params["wpa"] = "2"
+    params["wpa_key_mgmt"] = "WPA-EAP"
+    params["rsn_pairwise"] = "CCMP"
+    params["ieee8021x"] = "1"
+    if ssid:
+        params["ssid"] = ssid
+    return params

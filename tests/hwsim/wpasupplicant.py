@@ -452,7 +452,11 @@ class WpaSupplicant:
             raise Exception("Failed to request TDLS teardown")
         return None
 
-    def connect(self, ssid, psk=None, proto=None, key_mgmt=None, wep_key0=None, ieee80211w=None, pairwise=None, group=None, scan_freq=None):
+    def connect(self, ssid, psk=None, proto=None, key_mgmt=None, wep_key0=None,
+                ieee80211w=None, pairwise=None, group=None, scan_freq=None,
+                eap=None, identity=None, anonymous_identity=None,
+                password=None, phase1=None, phase2=None, ca_cert=None,
+                wait_connect=True):
         logger.info("Connect STA " + self.ifname + " to AP")
         id = self.add_network()
         self.set_network_quoted(id, "ssid", ssid)
@@ -472,7 +476,26 @@ class WpaSupplicant:
             self.set_network(id, "wep_key0", wep_key0)
         if scan_freq:
             self.set_network(id, "scan_freq", scan_freq)
-        self.connect_network(id)
+        if eap:
+            self.set_network(id, "eap", eap)
+        if identity:
+            self.set_network_quoted(id, "identity", identity)
+        if anonymous_identity:
+            self.set_network_quoted(id, "anonymous_identity",
+                                    anonymous_identity)
+        if password:
+            self.set_network_quoted(id, "password", password)
+        if ca_cert:
+            self.set_network_quoted(id, "ca_cert", ca_cert)
+        if phase1:
+            self.set_network_quoted(id, "phase1", phase1)
+        if phase2:
+            self.set_network_quoted(id, "phase2", phase2)
+        if wait_connect:
+            self.connect_network(id)
+        else:
+            self.dump_monitor()
+            self.select_network(id)
 
     def scan(self, type=None):
         if type:

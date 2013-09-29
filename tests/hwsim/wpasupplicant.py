@@ -58,6 +58,7 @@ class WpaSupplicant:
         self.request("SET ignore_old_scan_res 0")
         self.request("P2P_SET per_sta_psk 0")
         self.request("P2P_SET disabled 0")
+        self.request("P2P_SERVICE_FLUSH")
         self.group_ifname = None
         self.dump_monitor()
 

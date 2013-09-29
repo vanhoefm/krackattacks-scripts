@@ -5,6 +5,7 @@ WPAS=$DIR/../../wpa_supplicant/wpa_supplicant
 WPACLI=$DIR/../../wpa_supplicant/wpa_cli
 HAPD=$DIR/../../hostapd/hostapd
 WLANTEST=$DIR/../../wlantest/wlantest
+HLR_AUC_GW=$DIR/../../hostapd/hlr_auc_gw
 
 if groups | tr ' ' "\n" | grep -q ^admin$; then
     GROUP=admin
@@ -71,6 +72,12 @@ sudo chown $USER $DIR/logs/$DATE-hwsim0.dump
 if [ "x$VALGRIND" = "xy" ]; then
     sudo chown $USER $DIR/logs/$DATE-*valgrind*
 fi
+
+if [ -x $HLR_AUC_GW ]; then
+    $HLR_AUC_GW -m $DIR/auth_serv/hlr_auc_gw.milenage_db > $DIR/logs/$DATE-hlr_auc_gw &
+fi
+
+$HAPD -ddKt $DIR/auth_serv/as.conf > $DIR/logs/$DATE-auth_serv &
 
 # wait for programs to be fully initialized
 for i in 0 1 2; do

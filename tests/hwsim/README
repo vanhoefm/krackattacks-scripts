@@ -44,7 +44,7 @@ make
 cd ../hostapd
 cp ../tests/hwsim/example-hostapd.config .config
 make clean
-make
+make hostapd hlr_auc_gw
 cd ../wlantest
 make clean
 make
@@ -146,6 +146,8 @@ specific log:
 - tcpdump = tcpdump output
 - run = debug prints from the test scripts
 - trace.dat = Linux tracing record (if enabled)
+- hlr_auc_gw - hlr_auc_gw (EAP-SIM/AKA/AKA' authentication) log
+- auth_serv - hostapd as RADIUS authentication server log
 
 
 For manual testing, ./start.sh can be used to initialize interfaces and

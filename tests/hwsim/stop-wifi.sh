@@ -19,6 +19,8 @@ if grep -q hwsim0 /proc/net/dev; then
     sudo ifconfig hwsim0 down
 fi
 
+killall -q hlr_auc_gw
+
 if [ "$RUNNING" = "yes" ]; then
     # give some time for hostapd and wpa_supplicant to complete deinit
     sleep 0.5

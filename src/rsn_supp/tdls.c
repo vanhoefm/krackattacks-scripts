@@ -771,6 +771,14 @@ int wpa_tdls_teardown_link(struct wpa_sm *sm, const u8 *addr, u16 reason_code)
 }
 
 
+static void wpa_tdls_disable_peer_link(struct wpa_sm *sm,
+				       struct wpa_tdls_peer *peer)
+{
+	wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK, peer->addr);
+	wpa_tdls_peer_free(sm, peer);
+}
+
+
 void wpa_tdls_disable_link(struct wpa_sm *sm, const u8 *addr)
 {
 	struct wpa_tdls_peer *peer;
@@ -780,10 +788,8 @@ void wpa_tdls_disable_link(struct wpa_sm *sm, const u8 *addr)
 			break;
 	}
 
-	if (peer) {
-		wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK, addr);
-		wpa_tdls_peer_free(sm, peer);
-	}
+	if (peer)
+		wpa_tdls_disable_peer_link(sm, peer);
 }
 
 
@@ -856,11 +862,7 @@ skip_ftie:
 	 * Request the driver to disable the direct link and clear associated
 	 * keys.
 	 */
-	wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK, src_addr);
-
-	/* clear the Peerkey statemachine */
-	wpa_tdls_peer_free(sm, peer);
-
+	wpa_tdls_disable_peer_link(sm, peer);
 	return 0;
 }
 
@@ -2019,9 +2021,7 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 					   (u8 *) timeoutie, ftie) < 0) {
 		/* Discard the frame */
 		wpa_tdls_del_key(sm, peer);
-		wpa_tdls_peer_free(sm, peer);
-		if (sm->tdls_external_setup)
-			wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK, src_addr);
+		wpa_tdls_disable_peer_link(sm, peer);
 		return -1;
 	}
 

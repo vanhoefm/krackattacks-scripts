@@ -2916,7 +2916,7 @@ static int ocsp_resp_cb(SSL *s, void *arg)
 		wpa_printf(MSG_DEBUG, "OpenSSL: OCSP status unknown, but OCSP required");
 		return 0;
 	}
-		wpa_printf(MSG_DEBUG, "OpenSSL: OCSP status unknown, but OCSP was not required, so allow connection to continue");
+	wpa_printf(MSG_DEBUG, "OpenSSL: OCSP status unknown, but OCSP was not required, so allow connection to continue");
 	return 1;
 }
 

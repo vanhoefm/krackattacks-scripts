@@ -81,6 +81,8 @@ struct wpa_tdls_frame {
 static u8 * wpa_add_tdls_timeoutie(u8 *pos, u8 *ie, size_t ie_len, u32 tsecs);
 static void wpa_tdls_tpk_retry_timeout(void *eloop_ctx, void *timeout_ctx);
 static void wpa_tdls_peer_free(struct wpa_sm *sm, struct wpa_tdls_peer *peer);
+static void wpa_tdls_disable_peer_link(struct wpa_sm *sm,
+				       struct wpa_tdls_peer *peer);
 
 
 #define TDLS_MAX_IE_LEN 80
@@ -282,7 +284,7 @@ static int wpa_tdls_do_teardown(struct wpa_sm *sm, struct wpa_tdls_peer *peer,
 
 	ret = wpa_tdls_send_teardown(sm, peer->addr, reason_code);
 	/* disable the link after teardown was sent */
-	wpa_tdls_disable_link(sm, peer->addr);
+	wpa_tdls_disable_peer_link(sm, peer);
 
 	return ret;
 }
@@ -1756,7 +1758,7 @@ skip_rsn_check:
 
 	wpa_printf(MSG_DEBUG, "TDLS: Sending TDLS Setup Response / TPK M2");
 	if (wpa_tdls_send_tpk_m2(sm, src_addr, dtoken, lnkid, peer) < 0) {
-		wpa_tdls_disable_link(sm, peer->addr);
+		wpa_tdls_disable_peer_link(sm, peer);
 		goto error;
 	}
 
@@ -1854,7 +1856,7 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 	wpa_tdls_tpk_retry_timeout_cancel(sm, peer, WLAN_TDLS_SETUP_REQUEST);
 
 	if (len < 3 + 2 + 1) {
-		wpa_tdls_disable_link(sm, src_addr);
+		wpa_tdls_disable_peer_link(sm, peer);
 		return -1;
 	}
 
@@ -1866,7 +1868,7 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 	if (status != WLAN_STATUS_SUCCESS) {
 		wpa_printf(MSG_INFO, "TDLS: Status code in TPK M2: %u",
 			   status);
-		wpa_tdls_disable_link(sm, src_addr);
+		wpa_tdls_disable_peer_link(sm, peer);
 		return -1;
 	}
 
@@ -1878,7 +1880,7 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 	wpa_printf(MSG_DEBUG, "TDLS: Dialog Token in TPK M2 %d", dtoken);
 
 	if (len < 3 + 2 + 1 + 2) {
-		wpa_tdls_disable_link(sm, src_addr);
+		wpa_tdls_disable_peer_link(sm, peer);
 		return -1;
 	}
 
@@ -2041,7 +2043,7 @@ skip_rsn:
 	wpa_printf(MSG_DEBUG, "TDLS: Sending TDLS Setup Confirm / "
 		   "TPK Handshake Message 3");
 	if (wpa_tdls_send_tpk_m3(sm, src_addr, dtoken, lnkid, peer) < 0) {
-		wpa_tdls_disable_link(sm, peer->addr);
+		wpa_tdls_disable_peer_link(sm, peer);
 		return -1;
 	}
 
@@ -2056,7 +2058,7 @@ skip_rsn:
 error:
 	wpa_tdls_send_error(sm, src_addr, WLAN_TDLS_SETUP_CONFIRM, dtoken,
 			    status);
-	wpa_tdls_disable_link(sm, peer->addr);
+	wpa_tdls_disable_peer_link(sm, peer);
 	return -1;
 }
 
@@ -2198,7 +2200,7 @@ skip_rsn:
 	}
 	return ret;
 error:
-	wpa_tdls_disable_link(sm, peer->addr);
+	wpa_tdls_disable_peer_link(sm, peer);
 	return -1;
 }
 
@@ -2260,7 +2262,7 @@ int wpa_tdls_start(struct wpa_sm *sm, const u8 *addr)
 				NULL, 0);
 
 	if (wpa_tdls_send_tpk_m1(sm, peer) < 0) {
-		wpa_tdls_disable_link(sm, peer->addr);
+		wpa_tdls_disable_peer_link(sm, peer);
 		return -1;
 	}
 

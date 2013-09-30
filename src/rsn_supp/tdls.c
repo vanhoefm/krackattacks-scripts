@@ -109,6 +109,7 @@ struct wpa_tdls_peer {
 	} tpk;
 	int tpk_set;
 	int tpk_success;
+	int tpk_in_progress;
 
 	struct tpk_timer {
 		u8 dest[ETH_ALEN];
@@ -623,6 +624,7 @@ static void wpa_tdls_peer_free(struct wpa_sm *sm, struct wpa_tdls_peer *peer)
 	eloop_cancel_timeout(wpa_tdls_tpk_retry_timeout, sm, peer);
 	peer->reconfig_key = 0;
 	peer->initiator = 0;
+	peer->tpk_in_progress = 0;
 	os_free(peer->sm_tmr.buf);
 	peer->sm_tmr.buf = NULL;
 	os_free(peer->ht_capabilities);
@@ -1738,6 +1740,7 @@ skip_rsn_check:
 	/* add the peer to the driver as a "setup in progress" peer */
 	wpa_sm_tdls_peer_addset(sm, peer->addr, 1, 0, 0, NULL, 0, NULL, NULL, 0,
 				NULL, 0);
+	peer->tpk_in_progress = 1;
 
 	wpa_printf(MSG_DEBUG, "TDLS: Sending TDLS Setup Response / TPK M2");
 	if (wpa_tdls_send_tpk_m2(sm, src_addr, dtoken, lnkid, peer) < 0) {
@@ -1757,6 +1760,7 @@ error:
 static int wpa_tdls_enable_link(struct wpa_sm *sm, struct wpa_tdls_peer *peer)
 {
 	peer->tpk_success = 1;
+	peer->tpk_in_progress = 0;
 	eloop_cancel_timeout(wpa_tdls_tpk_timeout, sm, peer);
 	if (wpa_tdls_get_privacy(sm)) {
 		u32 lifetime = peer->lifetime;
@@ -2238,11 +2242,18 @@ int wpa_tdls_start(struct wpa_sm *sm, const u8 *addr)
 	if (peer == NULL)
 		return -1;
 
+	if (peer->tpk_in_progress) {
+		wpa_printf(MSG_DEBUG, "TDLS: Setup is already in progress with the peer");
+		return 0;
+	}
+
 	peer->initiator = 1;
 
 	/* add the peer to the driver as a "setup in progress" peer */
 	wpa_sm_tdls_peer_addset(sm, peer->addr, 1, 0, 0, NULL, 0, NULL, NULL, 0,
 				NULL, 0);
+
+	peer->tpk_in_progress = 1;
 
 	if (wpa_tdls_send_tpk_m1(sm, peer) < 0) {
 		wpa_tdls_disable_peer_link(sm, peer);

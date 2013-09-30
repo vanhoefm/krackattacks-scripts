@@ -1479,19 +1479,7 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 			wpa_printf(MSG_DEBUG, "TDLS: TDLS Setup Request while "
 				   "direct link is enabled - tear down the "
 				   "old link first");
-#if 0
-			/* TODO: Disabling the link would be more proper
-			 * operation here, but it seems to trigger a race with
-			 * some drivers handling the new request frame. */
-			wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK, src_addr);
-#else
-			if (sm->tdls_external_setup)
-				wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK,
-						 src_addr);
-			else
-				wpa_tdls_del_key(sm, peer);
-#endif
-			wpa_tdls_peer_free(sm, peer);
+			wpa_tdls_disable_peer_link(sm, peer);
 		}
 
 		/*
@@ -1512,12 +1500,7 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 					   MACSTR " (terminate previously "
 					   "initiated negotiation",
 					   MAC2STR(src_addr));
-				if (sm->tdls_external_setup)
-					wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK,
-							 src_addr);
-				else
-					wpa_tdls_del_key(sm, peer);
-				wpa_tdls_peer_free(sm, peer);
+				wpa_tdls_disable_peer_link(sm, peer);
 			}
 		}
 	}

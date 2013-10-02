@@ -1278,8 +1278,6 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	int wep_keys_set = 0;
 	int assoc_failed = 0;
 	struct wpa_ssid *old_ssid;
-	u8 ext_capab[10];
-	int ext_capab_len;
 #ifdef CONFIG_HT_OVERRIDES
 	struct ieee80211_ht_capabilities htcaps;
 	struct ieee80211_ht_capabilities htcaps_mask;
@@ -1491,15 +1489,27 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	}
 #endif /* CONFIG_HS20 */
 
-	ext_capab_len = wpas_build_ext_capab(wpa_s, ext_capab);
-	if (ext_capab_len > 0) {
-		u8 *pos = wpa_ie;
-		if (wpa_ie_len > 0 && pos[0] == WLAN_EID_RSN)
-			pos += 2 + pos[1];
-		os_memmove(pos + ext_capab_len, pos,
-			   wpa_ie_len - (pos - wpa_ie));
-		wpa_ie_len += ext_capab_len;
-		os_memcpy(pos, ext_capab, ext_capab_len);
+	/*
+	 * Workaround: Add Extended Capabilities element only if the AP
+	 * included this element in Beacon/Probe Response frames. Some older
+	 * APs seem to have interoperability issues if this element is
+	 * included, so while the standard may require us to include the
+	 * element in all cases, it is justifiable to skip it to avoid
+	 * interoperability issues.
+	 */
+	if (!bss || wpa_bss_get_ie(bss, WLAN_EID_EXT_CAPAB)) {
+		u8 ext_capab[10];
+		int ext_capab_len;
+		ext_capab_len = wpas_build_ext_capab(wpa_s, ext_capab);
+		if (ext_capab_len > 0) {
+			u8 *pos = wpa_ie;
+			if (wpa_ie_len > 0 && pos[0] == WLAN_EID_RSN)
+				pos += 2 + pos[1];
+			os_memmove(pos + ext_capab_len, pos,
+				   wpa_ie_len - (pos - wpa_ie));
+			wpa_ie_len += ext_capab_len;
+			os_memcpy(pos, ext_capab, ext_capab_len);
+		}
 	}
 
 	wpa_clear_keys(wpa_s, bss ? bss->bssid : NULL);

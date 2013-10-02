@@ -982,6 +982,7 @@ static void p2p_go_configured(void *ctx, void *data)
 				       " [PERSISTENT]" : "");
 		}
 
+		os_get_time(&wpa_s->global->p2p_go_wait_client);
 		if (params->persistent_group) {
 			network_id = wpas_p2p_store_persistent_group(
 				wpa_s->parent, ssid,

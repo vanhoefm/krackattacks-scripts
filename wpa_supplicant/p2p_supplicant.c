@@ -443,6 +443,11 @@ static int wpas_p2p_group_delete(struct wpa_supplicant *wpa_s,
 		return 1;
 	}
 
+	if (!wpa_s->p2p_go_group_formation_completed) {
+		wpa_s->global->p2p_group_formation = NULL;
+		wpa_s->p2p_in_provisioning = 0;
+	}
+
 	wpa_printf(MSG_DEBUG, "P2P: Remove temporary group network");
 	if (ssid && (ssid->p2p_group ||
 		     ssid->mode == WPAS_MODE_P2P_GROUP_FORMATION ||

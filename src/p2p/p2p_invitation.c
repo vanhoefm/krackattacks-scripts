@@ -466,7 +466,7 @@ int p2p_invite_send(struct p2p_data *p2p, struct p2p_device *dev,
 	dev->invitation_reqs++;
 	if (p2p_send_action(p2p, freq, dev->info.p2p_device_addr,
 			    p2p->cfg->dev_addr, dev->info.p2p_device_addr,
-			    wpabuf_head(req), wpabuf_len(req), 200) < 0) {
+			    wpabuf_head(req), wpabuf_len(req), 500) < 0) {
 		p2p_dbg(p2p, "Failed to send Action frame");
 		/* Use P2P find to recover and retry */
 		p2p_set_timeout(p2p, 0, 0);
@@ -492,7 +492,7 @@ void p2p_invitation_req_cb(struct p2p_data *p2p, int success)
 	 * channel.
 	 */
 	p2p_set_state(p2p, P2P_INVITE);
-	p2p_set_timeout(p2p, 0, success ? 350000 : 100000);
+	p2p_set_timeout(p2p, 0, success ? 500000 : 100000);
 }
 
 

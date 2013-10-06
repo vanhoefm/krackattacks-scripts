@@ -423,6 +423,12 @@ static int wpas_p2p_group_delete(struct wpa_supplicant *wpa_s,
 		wpa_s->p2p_in_provisioning = 0;
 	}
 
+	/*
+	 * Make sure wait for the first client does not remain active after the
+	 * group has been removed.
+	 */
+	wpa_s->global->p2p_go_wait_client.sec = 0;
+
 	if (removal_reason != P2P_GROUP_REMOVAL_SILENT && ssid)
 		wpas_notify_p2p_group_removed(wpa_s, ssid, gtype);
 

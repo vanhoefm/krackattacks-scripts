@@ -208,6 +208,24 @@ struct eap_peer_config {
 	u8 *altsubject_match;
 
 	/**
+	 * domain_suffix_match - Constraint for server domain name
+	 *
+	 * If set, this FQDN is used as a suffix match requirement for the
+	 * server certificate in SubjectAltName dNSName element(s). If a
+	 * matching dNSName is found, this constraint is met. If no dNSName
+	 * values are present, this constraint is matched against SubjetName CN
+	 * using same suffix match comparison. Suffix match here means that the
+	 * host/domain name is compared one label at a time starting from the
+	 * top-level domain and all the labels in domain_suffix_match shall be
+	 * included in the certificate. The certificate may include additional
+	 * sub-level labels in addition to the required labels.
+	 *
+	 * For example, domain_suffix_match=example.com would match
+	 * test.example.com but would not match test-example.com.
+	 */
+	char *domain_suffix_match;
+
+	/**
 	 * ca_cert2 - File path to CA certificate file (PEM/DER) (Phase 2)
 	 *
 	 * This file can have one or more trusted CA certificates. If ca_cert2
@@ -301,6 +319,14 @@ struct eap_peer_config {
 	 * EAP-TTLS/PEAP/FAST tunnel) authentication.
 	 */
 	u8 *altsubject_match2;
+
+	/**
+	 * domain_suffix_match2 - Constraint for server domain name
+	 *
+	 * This field is like domain_suffix_match, but used for phase 2 (inside
+	 * EAP-TTLS/PEAP/FAST tunnel) authentication.
+	 */
+	char *domain_suffix_match2;
 
 	/**
 	 * eap_methods - Allowed EAP methods

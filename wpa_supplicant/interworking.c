@@ -1100,6 +1100,11 @@ static int interworking_set_eap_params(struct wpa_ssid *ssid,
 	    wpa_config_set_quoted(ssid, "ca_cert", cred->ca_cert) < 0)
 		return -1;
 
+	if (cred->domain_suffix_match && cred->domain_suffix_match[0] &&
+	    wpa_config_set_quoted(ssid, "domain_suffix_match",
+				  cred->domain_suffix_match) < 0)
+		return -1;
+
 	return 0;
 }
 

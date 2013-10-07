@@ -1869,6 +1869,7 @@ void wpa_config_free_cred(struct wpa_cred *cred)
 	for (i = 0; i < cred->num_domain; i++)
 		os_free(cred->domain[i]);
 	os_free(cred->domain);
+	os_free(cred->domain_suffix_match);
 	os_free(cred->eap_method);
 	os_free(cred->phase1);
 	os_free(cred->phase2);
@@ -2437,6 +2438,12 @@ int wpa_config_set_cred(struct wpa_cred *cred, const char *var,
 	if (os_strcmp(var, "milenage") == 0) {
 		os_free(cred->milenage);
 		cred->milenage = val;
+		return 0;
+	}
+
+	if (os_strcmp(var, "domain_suffix_match") == 0) {
+		os_free(cred->domain_suffix_match);
+		cred->domain_suffix_match = val;
 		return 0;
 	}
 

@@ -2151,6 +2151,9 @@ static struct wpa_bss * pick_best_roaming_partner(struct wpa_supplicant *wpa_s,
 	 */
 
 	best_prio = roaming_prio(wpa_s, cred, selected);
+	wpa_printf(MSG_DEBUG, "Interworking: roaming_prio=%u for selected BSS "
+		   MACSTR " (cred=%d)", best_prio, MAC2STR(selected->bssid),
+		   cred->id);
 
 	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {
 		if (bss == selected)
@@ -2161,6 +2164,9 @@ static struct wpa_bss * pick_best_roaming_partner(struct wpa_supplicant *wpa_s,
 		if (!wpa_bss_get_ie(bss, WLAN_EID_RSN))
 			continue;
 		prio = roaming_prio(wpa_s, cred2, bss);
+		wpa_printf(MSG_DEBUG, "Interworking: roaming_prio=%u for BSS "
+			   MACSTR " (cred=%d)", prio, MAC2STR(bss->bssid),
+			   cred2->id);
 		if (prio < best_prio) {
 			int bh1, bh2, load1, load2, conn1, conn2;
 			bh1 = cred_below_min_backhaul(wpa_s, cred, selected);
@@ -2169,6 +2175,8 @@ static struct wpa_bss * pick_best_roaming_partner(struct wpa_supplicant *wpa_s,
 			bh2 = cred_below_min_backhaul(wpa_s, cred2, bss);
 			load2 = cred_over_max_bss_load(wpa_s, cred2, bss);
 			conn2 = cred_conn_capab_missing(wpa_s, cred2, bss);
+			wpa_printf(MSG_DEBUG, "Interworking: old: %d %d %d  new: %d %d %d",
+				   bh1, load1, conn1, bh2, load2, conn2);
 			if (bh1 || load1 || conn1 || !(bh2 || load2 || conn2)) {
 				wpa_printf(MSG_DEBUG, "Interworking: Better roaming partner " MACSTR " selected", MAC2STR(bss->bssid));
 				best_prio = prio;
@@ -2197,6 +2205,8 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 
 	wpa_s->network_select = 0;
 
+	wpa_printf(MSG_DEBUG, "Interworking: Select network (auto_select=%d)",
+		   wpa_s->auto_select);
 	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {
 		int excluded = 0;
 		int bh, bss_load, conn_capab;
@@ -2227,12 +2237,13 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 		bh = cred_below_min_backhaul(wpa_s, cred, bss);
 		bss_load = cred_over_max_bss_load(wpa_s, cred, bss);
 		conn_capab = cred_conn_capab_missing(wpa_s, cred, bss);
-		wpa_msg(wpa_s, MSG_INFO, "%s" MACSTR " type=%s%s%s%s",
+		wpa_msg(wpa_s, MSG_INFO, "%s" MACSTR " type=%s%s%s%s id=%d priority=%d",
 			excluded ? INTERWORKING_BLACKLISTED : INTERWORKING_AP,
 			MAC2STR(bss->bssid), type,
 			bh ? " below_min_backhaul=1" : "",
 			bss_load ? " over_max_bss_load=1" : "",
-			conn_capab ? " conn_capab_missing=1" : "");
+			conn_capab ? " conn_capab_missing=1" : "",
+			cred->id, cred->priority);
 		if (excluded)
 			continue;
 		if (wpa_s->auto_select ||
@@ -2241,6 +2252,7 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 			if (bh || bss_load || conn_capab) {
 				if (selected2 == NULL ||
 				    cred->priority > selected2_prio) {
+					wpa_printf(MSG_DEBUG, "Interworking: Mark as selected2");
 					selected2 = bss;
 					selected2_prio = cred->priority;
 					selected2_cred = cred;
@@ -2248,6 +2260,7 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 				if (res > 0 &&
 				    (selected2_home == NULL ||
 				     cred->priority > selected2_home_prio)) {
+					wpa_printf(MSG_DEBUG, "Interworking: Mark as selected2_home");
 					selected2_home = bss;
 					selected2_home_prio = cred->priority;
 					selected2_home_cred = cred;
@@ -2255,6 +2268,7 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 			} else {
 				if (selected == NULL ||
 				    cred->priority > selected_prio) {
+					wpa_printf(MSG_DEBUG, "Interworking: Mark as selected");
 					selected = bss;
 					selected_prio = cred->priority;
 					selected_cred = cred;
@@ -2262,6 +2276,7 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 				if (res > 0 &&
 				    (selected_home == NULL ||
 				     cred->priority > selected_home_prio)) {
+					wpa_printf(MSG_DEBUG, "Interworking: Mark as selected_home");
 					selected_home = bss;
 					selected_home_prio = cred->priority;
 					selected_home_cred = cred;
@@ -2273,6 +2288,7 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 	if (selected_home && selected_home != selected &&
 	    selected_home_prio >= selected_prio) {
 		/* Prefer network operated by the Home SP */
+		wpa_printf(MSG_DEBUG, "Interworking: Overrided selected with selected_home");
 		selected = selected_home;
 		selected_cred = selected_home_cred;
 	}
@@ -2316,8 +2332,15 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 	}
 
 	if (selected) {
+		wpa_printf(MSG_DEBUG, "Interworking: Selected " MACSTR,
+			   MAC2STR(selected->bssid));
 		selected = pick_best_roaming_partner(wpa_s, selected,
 						     selected_cred);
+		wpa_printf(MSG_DEBUG, "Interworking: Selected " MACSTR
+			   " (after best roaming partner selection)",
+			   MAC2STR(selected->bssid));
+		wpa_msg(wpa_s, MSG_INFO, INTERWORKING_SELECTED MACSTR,
+			MAC2STR(selected->bssid));
 		interworking_connect(wpa_s, selected);
 	}
 }

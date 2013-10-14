@@ -96,8 +96,9 @@ void ieee802_1x_set_sta_authorized(struct hostapd_data *hapd,
 	}
 
 	if (res && errno != ENOENT) {
-		printf("Could not set station " MACSTR " flags for kernel "
-		       "driver (errno=%d).\n", MAC2STR(sta->addr), errno);
+		wpa_printf(MSG_DEBUG, "Could not set station " MACSTR
+			   " flags for kernel driver (errno=%d).",
+			   MAC2STR(sta->addr), errno);
 	}
 
 	if (authorized) {

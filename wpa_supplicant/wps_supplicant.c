@@ -2174,6 +2174,8 @@ static int wpas_wps_use_cred(struct wpa_supplicant *wpa_s,
 	}
 	wpa_s->disconnected = 0;
 	wpa_s->reassociate = 1;
+
+	wpa_supplicant_cancel_sched_scan(wpa_s);
 	wpa_supplicant_req_scan(wpa_s, 0, 0);
 
 	return 0;

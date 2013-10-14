@@ -1028,6 +1028,43 @@ const u8 * wpa_bss_get_vendor_ie(const struct wpa_bss *bss, u32 vendor_type)
 
 
 /**
+ * wpa_bss_get_vendor_ie_beacon - Fetch a vendor information from a BSS entry
+ * @bss: BSS table entry
+ * @vendor_type: Vendor type (four octets starting the IE payload)
+ * Returns: Pointer to the information element (id field) or %NULL if not found
+ *
+ * This function returns the first matching information element in the BSS
+ * entry.
+ *
+ * This function is like wpa_bss_get_vendor_ie(), but uses IE buffer only
+ * from Beacon frames instead of either Beacon or Probe Response frames.
+ */
+const u8 * wpa_bss_get_vendor_ie_beacon(const struct wpa_bss *bss,
+					u32 vendor_type)
+{
+	const u8 *end, *pos;
+
+	if (bss->beacon_ie_len == 0)
+		return NULL;
+
+	pos = (const u8 *) (bss + 1);
+	pos += bss->ie_len;
+	end = pos + bss->beacon_ie_len;
+
+	while (pos + 1 < end) {
+		if (pos + 2 + pos[1] > end)
+			break;
+		if (pos[0] == WLAN_EID_VENDOR_SPECIFIC && pos[1] >= 4 &&
+		    vendor_type == WPA_GET_BE32(&pos[2]))
+			return pos;
+		pos += 2 + pos[1];
+	}
+
+	return NULL;
+}
+
+
+/**
  * wpa_bss_get_vendor_ie_multi - Fetch vendor IE data from a BSS entry
  * @bss: BSS table entry
  * @vendor_type: Vendor type (four octets starting the IE payload)

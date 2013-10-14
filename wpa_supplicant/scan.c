@@ -1332,6 +1332,43 @@ const u8 * wpa_scan_get_vendor_ie(const struct wpa_scan_res *res,
 
 
 /**
+ * wpa_scan_get_vendor_ie_beacon - Fetch vendor information from a scan result
+ * @res: Scan result entry
+ * @vendor_type: Vendor type (four octets starting the IE payload)
+ * Returns: Pointer to the information element (id field) or %NULL if not found
+ *
+ * This function returns the first matching information element in the scan
+ * result.
+ *
+ * This function is like wpa_scan_get_vendor_ie(), but uses IE buffer only
+ * from Beacon frames instead of either Beacon or Probe Response frames.
+ */
+const u8 * wpa_scan_get_vendor_ie_beacon(const struct wpa_scan_res *res,
+					 u32 vendor_type)
+{
+	const u8 *end, *pos;
+
+	if (res->beacon_ie_len == 0)
+		return NULL;
+
+	pos = (const u8 *) (res + 1);
+	pos += res->ie_len;
+	end = pos + res->beacon_ie_len;
+
+	while (pos + 1 < end) {
+		if (pos + 2 + pos[1] > end)
+			break;
+		if (pos[0] == WLAN_EID_VENDOR_SPECIFIC && pos[1] >= 4 &&
+		    vendor_type == WPA_GET_BE32(&pos[2]))
+			return pos;
+		pos += 2 + pos[1];
+	}
+
+	return NULL;
+}
+
+
+/**
  * wpa_scan_get_vendor_ie_multi - Fetch vendor IE data from a scan result
  * @res: Scan result entry
  * @vendor_type: Vendor type (four octets starting the IE payload)

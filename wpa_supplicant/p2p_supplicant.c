@@ -535,6 +535,9 @@ static int wpas_p2p_persistent_group(struct wpa_supplicant *wpa_s,
 	}
 
 	p2p = wpa_bss_get_vendor_ie_multi(bss, P2P_IE_VENDOR_TYPE);
+	if (p2p == NULL)
+		p2p = wpa_bss_get_vendor_ie_multi_beacon(bss,
+							 P2P_IE_VENDOR_TYPE);
 	if (p2p == NULL) {
 		wpa_printf(MSG_DEBUG, "P2P: Could not figure out whether "
 			   "group is persistent - BSS " MACSTR

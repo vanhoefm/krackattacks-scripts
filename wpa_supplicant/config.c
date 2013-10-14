@@ -546,10 +546,10 @@ static char * wpa_config_write_key_mgmt(const struct parse_data *data,
 	char *buf, *pos, *end;
 	int ret;
 
-	pos = buf = os_zalloc(50);
+	pos = buf = os_zalloc(100);
 	if (buf == NULL)
 		return NULL;
-	end = buf + 50;
+	end = buf + 100;
 
 	if (ssid->key_mgmt & WPA_KEY_MGMT_PSK) {
 		ret = os_snprintf(pos, end - pos, "%sWPA-PSK",
@@ -602,29 +602,59 @@ static char * wpa_config_write_key_mgmt(const struct parse_data *data,
 	}
 
 #ifdef CONFIG_IEEE80211R
-	if (ssid->key_mgmt & WPA_KEY_MGMT_FT_PSK)
-		pos += os_snprintf(pos, end - pos, "%sFT-PSK",
-				   pos == buf ? "" : " ");
+	if (ssid->key_mgmt & WPA_KEY_MGMT_FT_PSK) {
+		ret = os_snprintf(pos, end - pos, "%sFT-PSK",
+				  pos == buf ? "" : " ");
+		if (ret < 0 || ret >= end - pos) {
+			end[-1] = '\0';
+			return buf;
+		}
+		pos += ret;
+	}
 
-	if (ssid->key_mgmt & WPA_KEY_MGMT_FT_IEEE8021X)
-		pos += os_snprintf(pos, end - pos, "%sFT-EAP",
-				   pos == buf ? "" : " ");
+	if (ssid->key_mgmt & WPA_KEY_MGMT_FT_IEEE8021X) {
+		ret = os_snprintf(pos, end - pos, "%sFT-EAP",
+				  pos == buf ? "" : " ");
+		if (ret < 0 || ret >= end - pos) {
+			end[-1] = '\0';
+			return buf;
+		}
+		pos += ret;
+	}
 #endif /* CONFIG_IEEE80211R */
 
 #ifdef CONFIG_IEEE80211W
-	if (ssid->key_mgmt & WPA_KEY_MGMT_PSK_SHA256)
-		pos += os_snprintf(pos, end - pos, "%sWPA-PSK-SHA256",
-				   pos == buf ? "" : " ");
+	if (ssid->key_mgmt & WPA_KEY_MGMT_PSK_SHA256) {
+		ret = os_snprintf(pos, end - pos, "%sWPA-PSK-SHA256",
+				  pos == buf ? "" : " ");
+		if (ret < 0 || ret >= end - pos) {
+			end[-1] = '\0';
+			return buf;
+		}
+		pos += ret;
+	}
 
-	if (ssid->key_mgmt & WPA_KEY_MGMT_IEEE8021X_SHA256)
-		pos += os_snprintf(pos, end - pos, "%sWPA-EAP-SHA256",
-				   pos == buf ? "" : " ");
+	if (ssid->key_mgmt & WPA_KEY_MGMT_IEEE8021X_SHA256) {
+		ret = os_snprintf(pos, end - pos, "%sWPA-EAP-SHA256",
+				  pos == buf ? "" : " ");
+		if (ret < 0 || ret >= end - pos) {
+			end[-1] = '\0';
+			return buf;
+		}
+		pos += ret;
+	}
 #endif /* CONFIG_IEEE80211W */
 
 #ifdef CONFIG_WPS
-	if (ssid->key_mgmt & WPA_KEY_MGMT_WPS)
-		pos += os_snprintf(pos, end - pos, "%sWPS",
-				   pos == buf ? "" : " ");
+	if (ssid->key_mgmt & WPA_KEY_MGMT_WPS) {
+		ret = os_snprintf(pos, end - pos, "%sWPS",
+				  pos == buf ? "" : " ");
+		if (ret < 0 || ret >= end - pos) {
+			end[-1] = '\0';
+			return buf;
+		}
+		pos += ret;
+	}
 #endif /* CONFIG_WPS */
 
 	return buf;

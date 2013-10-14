@@ -858,6 +858,13 @@ static struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 		}
 
 #ifdef CONFIG_P2P
+		if (ssid->p2p_group &&
+		    !wpa_bss_get_vendor_ie(bss, P2P_IE_VENDOR_TYPE) &&
+		    !wpa_bss_get_vendor_ie_beacon(bss, P2P_IE_VENDOR_TYPE)) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "   skip - no P2P IE seen");
+			continue;
+		}
+
 		/*
 		 * TODO: skip the AP if its P2P IE has Group Formation
 		 * bit set in the P2P Group Capability Bitmap and we

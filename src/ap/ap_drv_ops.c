@@ -699,3 +699,30 @@ int hostapd_drv_send_action(struct hostapd_data *hapd, unsigned int freq,
 					 hapd->own_addr, hapd->own_addr, data,
 					 len, 0);
 }
+
+
+int hostapd_start_dfs_cac(struct hostapd_data *hapd, int freq, int flags)
+{
+	if (!hapd->driver || !hapd->driver->start_dfs_cac)
+		return 0;
+
+	if (!(flags & HOSTAPD_CHAN_RADAR)) {
+		wpa_printf(MSG_ERROR, "Can't start DFS_CAC, the channel %u is "
+			   "not DFS channel", hapd->iconf->channel);
+		return -1;
+	}
+
+	if (!hapd->iface->conf->ieee80211h) {
+		wpa_printf(MSG_ERROR, "Can't start DFS CAC, DFS functionality "
+			   "is not enabled");
+		return -1;
+	}
+
+	if (hapd->iface->conf->secondary_channel) {
+		wpa_printf(MSG_ERROR, "Can't start DFS CAC, DFS functionality "
+			   "on HT40 is not supported");
+		return -1;
+	}
+
+	return hapd->driver->start_dfs_cac(hapd->drv_priv, freq);
+}

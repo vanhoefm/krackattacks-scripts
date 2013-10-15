@@ -45,6 +45,36 @@ void hostapd_free_hw_features(struct hostapd_hw_modes *hw_features,
 }
 
 
+#ifndef CONFIG_NO_STDOUT_DEBUG
+static char * dfs_info(struct hostapd_channel_data *chan)
+{
+	static char info[256];
+	char *state;
+
+	switch (chan->flag & HOSTAPD_CHAN_DFS_MASK) {
+	case HOSTAPD_CHAN_DFS_UNKNOWN:
+		state = "unknown";
+		break;
+	case HOSTAPD_CHAN_DFS_USABLE:
+		state = "usable";
+		break;
+	case HOSTAPD_CHAN_DFS_UNAVAILABLE:
+		state = "unavailable";
+		break;
+	case HOSTAPD_CHAN_DFS_AVAILABLE:
+		state = "available";
+		break;
+	default:
+		return "";
+	}
+	os_snprintf(info, sizeof(info), " (DFS state = %s)", state);
+	info[sizeof(info) - 1] = '\0';
+
+	return info;
+}
+#endif /* CONFIG_NO_STDOUT_DEBUG */
+
+
 int hostapd_get_hw_features(struct hostapd_iface *iface)
 {
 	struct hostapd_data *hapd = iface->bss[0];
@@ -71,30 +101,40 @@ int hostapd_get_hw_features(struct hostapd_iface *iface)
 
 	for (i = 0; i < num_modes; i++) {
 		struct hostapd_hw_modes *feature = &modes[i];
+		int dfs_enabled = hapd->iconf->ieee80211h &&
+			(iface->drv_flags & WPA_DRIVER_FLAGS_RADAR);
+
 		/* set flag for channels we can use in current regulatory
 		 * domain */
 		for (j = 0; j < feature->num_channels; j++) {
+			int dfs = 0;
+
 			/*
 			 * Disable all channels that are marked not to allow
-			 * IBSS operation or active scanning. In addition,
-			 * disable all channels that require radar detection,
-			 * since that (in addition to full DFS) is not yet
-			 * supported.
+			 * IBSS operation or active scanning.
+			 * Use radar channels only if the driver supports DFS.
 			 */
-			if (feature->channels[j].flag &
-			    (HOSTAPD_CHAN_NO_IBSS |
-			     HOSTAPD_CHAN_PASSIVE_SCAN |
-			     HOSTAPD_CHAN_RADAR))
+			if ((feature->channels[j].flag &
+			     HOSTAPD_CHAN_RADAR) && dfs_enabled) {
+				dfs = 1;
+			} else if (feature->channels[j].flag &
+				   (HOSTAPD_CHAN_NO_IBSS |
+				    HOSTAPD_CHAN_PASSIVE_SCAN |
+				    HOSTAPD_CHAN_RADAR)) {
 				feature->channels[j].flag |=
 					HOSTAPD_CHAN_DISABLED;
+			}
+
 			if (feature->channels[j].flag & HOSTAPD_CHAN_DISABLED)
 				continue;
+
 			wpa_printf(MSG_MSGDUMP, "Allowed channel: mode=%d "
-				   "chan=%d freq=%d MHz max_tx_power=%d dBm",
+				   "chan=%d freq=%d MHz max_tx_power=%d dBm%s",
 				   feature->mode,
 				   feature->channels[j].chan,
 				   feature->channels[j].freq,
-				   feature->channels[j].max_tx_power);
+				   feature->channels[j].max_tx_power,
+				   dfs ? dfs_info(&feature->channels[j]) : "");
 		}
 	}
 
@@ -845,6 +885,24 @@ int hostapd_hw_get_channel(struct hostapd_data *hapd, int freq)
 			&hapd->iface->current_mode->channels[i];
 		if (ch->freq == freq)
 			return ch->chan;
+	}
+
+	return 0;
+}
+
+
+int hostapd_hw_get_channel_flag(struct hostapd_data *hapd, int chan)
+{
+	int i;
+
+	if (!hapd->iface->current_mode)
+		return 0;
+
+	for (i = 0; i < hapd->iface->current_mode->num_channels; i++) {
+		struct hostapd_channel_data *ch =
+			&hapd->iface->current_mode->channels[i];
+		if (ch->chan == chan)
+			return ch->flag;
 	}
 
 	return 0;

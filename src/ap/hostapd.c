@@ -32,6 +32,7 @@
 #include "ap_config.h"
 #include "p2p_hostapd.h"
 #include "gas_serv.h"
+#include "dfs.h"
 
 
 static int hostapd_flush_old_stations(struct hostapd_data *hapd, u16 reason);
@@ -931,6 +932,9 @@ static int setup_interface(struct hostapd_iface *iface)
 				   "be completed in a callback");
 			return 0;
 		}
+
+		if (iface->conf->ieee80211h)
+			wpa_printf(MSG_DEBUG, "DFS support is enabled");
 	}
 	return hostapd_setup_interface_complete(iface, 0);
 }
@@ -950,11 +954,22 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 
 	wpa_printf(MSG_DEBUG, "Completing interface initialization");
 	if (hapd->iconf->channel) {
+#ifdef NEED_AP_MLME
+		int res;
+#endif /* NEED_AP_MLME */
+
 		iface->freq = hostapd_hw_get_freq(hapd, hapd->iconf->channel);
 		wpa_printf(MSG_DEBUG, "Mode: %s  Channel: %d  "
 			   "Frequency: %d MHz",
 			   hostapd_hw_mode_txt(hapd->iconf->hw_mode),
 			   hapd->iconf->channel, iface->freq);
+
+#ifdef NEED_AP_MLME
+		/* Check DFS */
+		res = hostapd_handle_dfs(hapd);
+		if (res <= 0)
+			return res;
+#endif /* NEED_AP_MLME */
 
 		if (hostapd_set_freq(hapd, hapd->iconf->hw_mode, iface->freq,
 				     hapd->iconf->channel,

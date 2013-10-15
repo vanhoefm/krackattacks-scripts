@@ -782,6 +782,7 @@ OBJS += ../src/ap/wmm.o
 OBJS += ../src/ap/ap_list.o
 OBJS += ../src/ap/ieee802_11.o
 OBJS += ../src/ap/hw_features.o
+OBJS += ../src/ap/dfs.o
 CFLAGS += -DNEED_AP_MLME
 endif
 ifdef CONFIG_IEEE80211N

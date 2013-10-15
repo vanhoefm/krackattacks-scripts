@@ -10,6 +10,7 @@ import time
 import subprocess
 import logging
 logger = logging.getLogger(__name__)
+import os.path
 
 import hwsim_utils
 import hostapd
@@ -48,6 +49,9 @@ def eap_connect(dev, method, identity, anonymous_identity=None, password=None,
 
 def test_ap_wpa2_eap_sim(dev, apdev):
     """WPA2-Enterprise connection using EAP-SIM"""
+    if not os.path.exists("/tmp/hlr_auc_gw.sock"):
+        logger.info("No hlr_auc_gw available");
+        return "skip"
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], "SIM", "1232010000000000",
@@ -56,6 +60,9 @@ def test_ap_wpa2_eap_sim(dev, apdev):
 
 def test_ap_wpa2_eap_aka(dev, apdev):
     """WPA2-Enterprise connection using EAP-AKA"""
+    if not os.path.exists("/tmp/hlr_auc_gw.sock"):
+        logger.info("No hlr_auc_gw available");
+        return "skip"
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], "AKA", "0232010000000000",
@@ -64,6 +71,9 @@ def test_ap_wpa2_eap_aka(dev, apdev):
 
 def test_ap_wpa2_eap_aka_prime(dev, apdev):
     """WPA2-Enterprise connection using EAP-AKA'"""
+    if not os.path.exists("/tmp/hlr_auc_gw.sock"):
+        logger.info("No hlr_auc_gw available");
+        return "skip"
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], "AKA'", "6555444333222111",

@@ -2498,6 +2498,8 @@ static void nl80211_connect_failed_event(struct wpa_driver_nl80211_data *drv,
 }
 
 
+static enum chan_width convert2width(int width);
+
 static void nl80211_radar_event(struct wpa_driver_nl80211_data *drv,
 				struct nlattr **tb)
 {
@@ -2511,8 +2513,37 @@ static void nl80211_radar_event(struct wpa_driver_nl80211_data *drv,
 	data.dfs_event.freq = nla_get_u16(tb[NL80211_ATTR_WIPHY_FREQ]);
 	event_type = nla_get_u8(tb[NL80211_ATTR_RADAR_EVENT]);
 
-	wpa_printf(MSG_DEBUG, "nl80211: DFS event on freq %d MHz",
-		   data.dfs_event.freq);
+	/* Check HT params */
+	if (tb[NL80211_ATTR_WIPHY_CHANNEL_TYPE]) {
+		data.dfs_event.ht_enabled = 1;
+		data.dfs_event.chan_offset = 0;
+
+		switch (nla_get_u32(tb[NL80211_ATTR_WIPHY_CHANNEL_TYPE])) {
+		case NL80211_CHAN_NO_HT:
+			data.dfs_event.ht_enabled = 0;
+			break;
+		case NL80211_CHAN_HT20:
+			break;
+		case NL80211_CHAN_HT40PLUS:
+			data.dfs_event.chan_offset = 1;
+			break;
+		case NL80211_CHAN_HT40MINUS:
+			data.dfs_event.chan_offset = -1;
+			break;
+		}
+	}
+
+	/* Get VHT params */
+	data.dfs_event.chan_width =
+		convert2width(nla_get_u32(tb[NL80211_ATTR_CHANNEL_WIDTH]));
+	data.dfs_event.cf1 = nla_get_u32(tb[NL80211_ATTR_CENTER_FREQ1]);
+	if (tb[NL80211_ATTR_CENTER_FREQ2])
+		data.dfs_event.cf2 = nla_get_u32(tb[NL80211_ATTR_CENTER_FREQ2]);
+
+	wpa_printf(MSG_DEBUG, "nl80211: DFS event on freq %d MHz, ht: %d, offset: %d, width: %d, cf1: %dMHz, cf2: %dMHz",
+		   data.dfs_event.freq, data.dfs_event.ht_enabled,
+		   data.dfs_event.chan_offset, data.dfs_event.chan_width,
+		   data.dfs_event.cf1, data.dfs_event.cf2);
 
 	switch (event_type) {
 	case NL80211_RADAR_DETECTED:

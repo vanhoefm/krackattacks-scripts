@@ -3959,6 +3959,11 @@ union wpa_event_data {
 	 */
 	struct dfs_event {
 		int freq;
+		int ht_enabled;
+		int chan_offset;
+		enum chan_width chan_width;
+		int cf1;
+		int cf2;
 	} dfs_event;
 
 	/**

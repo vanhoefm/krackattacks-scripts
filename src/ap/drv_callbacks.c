@@ -791,27 +791,10 @@ static void hostapd_event_get_survey(struct hostapd_data *hapd,
 static void hostapd_event_dfs_radar_detected(struct hostapd_data *hapd,
 					     struct dfs_event *radar)
 {
-	int res;
-
 	wpa_printf(MSG_DEBUG, "DFS radar detected on %d MHz", radar->freq);
-
-	if (!hapd->iconf->ieee80211h)
-		return;
-
-	/* mark radar frequency as invalid */
-	res = ieee802_11_set_dfs_state(hapd, radar->freq,
-				       HOSTAPD_CHAN_DFS_UNAVAILABLE);
-
-	/* other frequency, just mark it and return. */
-	if (hapd->iface->freq != radar->freq)
-		return;
-
-	/* we are working on non-DFS channel - skip event */
-	if (res == 0)
-		return;
-
-	/* radar detected while operating, switch the channel. */
-	ieee802_11_start_channel_switch(hapd);
+	hostapd_dfs_radar_detected(hapd, radar->freq, radar->ht_enabled,
+				   radar->chan_offset, radar->chan_width,
+				   radar->cf1, radar->cf2);
 }
 
 
@@ -819,7 +802,9 @@ static void hostapd_event_dfs_cac_finished(struct hostapd_data *hapd,
 					   struct dfs_event *radar)
 {
 	wpa_printf(MSG_DEBUG, "DFS CAC finished on %d MHz", radar->freq);
-	ieee802_11_complete_cac(hapd, 1, radar->freq);
+	hostapd_dfs_complete_cac(hapd, 1, radar->freq, radar->ht_enabled,
+				 radar->chan_offset, radar->chan_width,
+				 radar->cf1, radar->cf2);
 }
 
 
@@ -827,7 +812,9 @@ static void hostapd_event_dfs_cac_aborted(struct hostapd_data *hapd,
 					  struct dfs_event *radar)
 {
 	wpa_printf(MSG_DEBUG, "DFS CAC aborted on %d MHz", radar->freq);
-	ieee802_11_complete_cac(hapd, 0, radar->freq);
+	hostapd_dfs_complete_cac(hapd, 0, radar->freq, radar->ht_enabled,
+				 radar->chan_offset, radar->chan_width,
+				 radar->cf1, radar->cf2);
 }
 
 
@@ -835,7 +822,9 @@ static void hostapd_event_dfs_nop_finished(struct hostapd_data *hapd,
 					   struct dfs_event *radar)
 {
 	wpa_printf(MSG_DEBUG, "DFS NOP finished on %d MHz", radar->freq);
-	ieee802_11_set_dfs_state(hapd, radar->freq, HOSTAPD_CHAN_DFS_USABLE);
+	hostapd_dfs_nop_finished(hapd, radar->freq, radar->ht_enabled,
+				 radar->chan_offset, radar->chan_width,
+				 radar->cf1, radar->cf2);
 }
 
 #endif /* NEED_AP_MLME */

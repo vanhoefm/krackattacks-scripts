@@ -718,19 +718,15 @@ int hostapd_drv_send_action(struct hostapd_data *hapd, unsigned int freq,
 					 len, 0);
 }
 
-
-int hostapd_start_dfs_cac(struct hostapd_data *hapd, int freq, int flags)
+int hostapd_start_dfs_cac(struct hostapd_data *hapd, int mode, int freq,
+			  int channel, int ht_enabled, int vht_enabled,
+			  int sec_channel_offset, int vht_oper_chwidth,
+			  int center_segment0, int center_segment1)
 {
 	struct hostapd_freq_params data;
 
 	if (!hapd->driver || !hapd->driver->start_dfs_cac)
 		return 0;
-
-	if (!(flags & HOSTAPD_CHAN_RADAR)) {
-		wpa_printf(MSG_ERROR, "Can't start DFS_CAC, the channel %u is "
-			   "not DFS channel", hapd->iconf->channel);
-		return -1;
-	}
 
 	if (!hapd->iface->conf->ieee80211h) {
 		wpa_printf(MSG_ERROR, "Can't start DFS CAC, DFS functionality "
@@ -738,16 +734,10 @@ int hostapd_start_dfs_cac(struct hostapd_data *hapd, int freq, int flags)
 		return -1;
 	}
 
-	if (hapd->iface->conf->secondary_channel) {
-		wpa_printf(MSG_ERROR, "Can't start DFS CAC, DFS functionality "
-			   "on HT40 is not supported");
-		return -1;
-	}
-
-	if (hostapd_set_freq_params(&data, hapd->iconf->hw_mode, freq,
-				    hapd->iconf->channel,
-				    hapd->iconf->ieee80211n,
-				    0, 0, 0, 0, 0))
+	if (hostapd_set_freq_params(&data, mode, freq, channel, ht_enabled,
+				    vht_enabled, sec_channel_offset,
+				    vht_oper_chwidth, center_segment0,
+				    center_segment1))
 		return -1;
 
 	return hapd->driver->start_dfs_cac(hapd->drv_priv, &data);

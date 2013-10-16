@@ -889,21 +889,3 @@ int hostapd_hw_get_channel(struct hostapd_data *hapd, int freq)
 
 	return 0;
 }
-
-
-int hostapd_hw_get_channel_flag(struct hostapd_data *hapd, int chan)
-{
-	int i;
-
-	if (!hapd->iface->current_mode)
-		return 0;
-
-	for (i = 0; i < hapd->iface->current_mode->num_channels; i++) {
-		struct hostapd_channel_data *ch =
-			&hapd->iface->current_mode->channels[i];
-		if (ch->chan == chan)
-			return ch->flag;
-	}
-
-	return 0;
-}

@@ -31,6 +31,9 @@ static int dfs_get_used_n_chans(struct hostapd_data *hapd)
 		case VHT_CHANWIDTH_80MHZ:
 			n_chans = 4;
 			break;
+		case VHT_CHANWIDTH_160MHZ:
+			n_chans = 8;
+			break;
 		default:
 			break;
 		}
@@ -132,8 +135,11 @@ static void dfs_adjust_vht_center_freq(struct hostapd_data *hapd,
 	case VHT_CHANWIDTH_80MHZ:
 		hapd->iconf->vht_oper_centr_freq_seg0_idx = chan->chan + 6;
 		break;
+	case VHT_CHANWIDTH_160MHZ:
+		hapd->iconf->vht_oper_centr_freq_seg0_idx =
+						chan->chan + 14;
 	default:
-		wpa_printf(MSG_INFO, "DFS only VHT20/40/80 is supported now");
+		wpa_printf(MSG_INFO, "DFS only VHT20/40/80/160 is supported now");
 		break;
 	}
 
@@ -163,9 +169,13 @@ static int dfs_get_start_chan_idx(struct hostapd_data *hapd)
 			channel_no =
 				hapd->iconf->vht_oper_centr_freq_seg0_idx - 6;
 			break;
+		case VHT_CHANWIDTH_160MHZ:
+			channel_no =
+				hapd->iconf->vht_oper_centr_freq_seg0_idx - 14;
+			break;
 		default:
 			wpa_printf(MSG_INFO,
-				   "DFS only VHT20/40/80 is supported now");
+				   "DFS only VHT20/40/80/160 is supported now");
 			channel_no = -1;
 			break;
 		}
@@ -344,6 +354,10 @@ static int set_dfs_state(struct hostapd_data *hapd, int freq, int ht_enabled,
 		n_chans = 4;
 		frequency = cf1 - 30;
 		break;
+	case CHAN_WIDTH_160:
+		n_chans = 8;
+		frequency = cf1 - 70;
+		break;
 	default:
 		wpa_printf(MSG_INFO, "DFS chan_width %d not supported",
 			   chan_width);
@@ -393,6 +407,10 @@ static int dfs_are_channels_overlapped(struct hostapd_data *hapd, int freq,
 	case CHAN_WIDTH_80:
 		radar_n_chans = 4;
 		frequency = cf1 - 30;
+		break;
+	case CHAN_WIDTH_160:
+		radar_n_chans = 8;
+		frequency = cf1 - 70;
 		break;
 	default:
 		wpa_printf(MSG_INFO, "DFS chan_width %d not supported",

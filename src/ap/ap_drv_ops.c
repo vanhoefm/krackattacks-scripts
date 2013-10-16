@@ -463,44 +463,44 @@ int hostapd_flush(struct hostapd_data *hapd)
 }
 
 
-int hostapd_set_freq(struct hostapd_data *hapd, int mode, int freq,
-		     int channel, int ht_enabled, int vht_enabled,
-		     int sec_channel_offset, int vht_oper_chwidth,
-		     int center_segment0, int center_segment1)
+static int hostapd_set_freq_params(struct hostapd_freq_params *data, int mode,
+				   int freq, int channel, int ht_enabled,
+				   int vht_enabled, int sec_channel_offset,
+				   int vht_oper_chwidth, int center_segment0,
+				   int center_segment1)
 {
-	struct hostapd_freq_params data;
 	int tmp;
 
-	os_memset(&data, 0, sizeof(data));
-	data.mode = mode;
-	data.freq = freq;
-	data.channel = channel;
-	data.ht_enabled = ht_enabled;
-	data.vht_enabled = vht_enabled;
-	data.sec_channel_offset = sec_channel_offset;
-	data.center_freq1 = freq + sec_channel_offset * 10;
-	data.center_freq2 = 0;
-	data.bandwidth = sec_channel_offset ? 40 : 20;
+	os_memset(data, 0, sizeof(*data));
+	data->mode = mode;
+	data->freq = freq;
+	data->channel = channel;
+	data->ht_enabled = ht_enabled;
+	data->vht_enabled = vht_enabled;
+	data->sec_channel_offset = sec_channel_offset;
+	data->center_freq1 = freq + sec_channel_offset * 10;
+	data->center_freq2 = 0;
+	data->bandwidth = sec_channel_offset ? 40 : 20;
 
 	/*
 	 * This validation code is probably misplaced, maybe it should be
 	 * in src/ap/hw_features.c and check the hardware support as well.
 	 */
-	if (data.vht_enabled) switch (vht_oper_chwidth) {
+	if (data->vht_enabled) switch (vht_oper_chwidth) {
 	case VHT_CHANWIDTH_USE_HT:
 		if (center_segment1)
 			return -1;
-		if (5000 + center_segment0 * 5 != data.center_freq1)
+		if (5000 + center_segment0 * 5 != data->center_freq1)
 			return -1;
 		break;
 	case VHT_CHANWIDTH_80P80MHZ:
 		if (center_segment1 == center_segment0 + 4 ||
 		    center_segment1 == center_segment0 - 4)
 			return -1;
-		data.center_freq2 = 5000 + center_segment1 * 5;
+		data->center_freq2 = 5000 + center_segment1 * 5;
 		/* fall through */
 	case VHT_CHANWIDTH_80MHZ:
-		data.bandwidth = 80;
+		data->bandwidth = 80;
 		if (vht_oper_chwidth == 1 && center_segment1)
 			return -1;
 		if (vht_oper_chwidth == 3 && !center_segment1)
@@ -510,13 +510,13 @@ int hostapd_set_freq(struct hostapd_data *hapd, int mode, int freq,
 		/* primary 40 part must match the HT configuration */
 		tmp = (30 + freq - 5000 - center_segment0 * 5)/20;
 		tmp /= 2;
-		if (data.center_freq1 != 5000 +
+		if (data->center_freq1 != 5000 +
 					 center_segment0 * 5 - 20 + 40 * tmp)
 			return -1;
-		data.center_freq1 = 5000 + center_segment0 * 5;
+		data->center_freq1 = 5000 + center_segment0 * 5;
 		break;
 	case VHT_CHANWIDTH_160MHZ:
-		data.bandwidth = 160;
+		data->bandwidth = 160;
 		if (center_segment1)
 			return -1;
 		if (!sec_channel_offset)
@@ -524,12 +524,30 @@ int hostapd_set_freq(struct hostapd_data *hapd, int mode, int freq,
 		/* primary 40 part must match the HT configuration */
 		tmp = (70 + freq - 5000 - center_segment0 * 5)/20;
 		tmp /= 2;
-		if (data.center_freq1 != 5000 +
+		if (data->center_freq1 != 5000 +
 					 center_segment0 * 5 - 60 + 40 * tmp)
 			return -1;
-		data.center_freq1 = 5000 + center_segment0 * 5;
+		data->center_freq1 = 5000 + center_segment0 * 5;
 		break;
 	}
+
+	return 0;
+}
+
+
+int hostapd_set_freq(struct hostapd_data *hapd, int mode, int freq,
+		     int channel, int ht_enabled, int vht_enabled,
+		     int sec_channel_offset, int vht_oper_chwidth,
+		     int center_segment0, int center_segment1)
+{
+	struct hostapd_freq_params data;
+
+	if (hostapd_set_freq_params(&data, mode, freq, channel, ht_enabled,
+				    vht_enabled, sec_channel_offset,
+				    vht_oper_chwidth,
+				    center_segment0, center_segment1))
+		return -1;
+
 	if (hapd->driver == NULL)
 		return 0;
 	if (hapd->driver->set_freq == NULL)

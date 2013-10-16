@@ -721,6 +721,8 @@ int hostapd_drv_send_action(struct hostapd_data *hapd, unsigned int freq,
 
 int hostapd_start_dfs_cac(struct hostapd_data *hapd, int freq, int flags)
 {
+	struct hostapd_freq_params data;
+
 	if (!hapd->driver || !hapd->driver->start_dfs_cac)
 		return 0;
 
@@ -742,5 +744,11 @@ int hostapd_start_dfs_cac(struct hostapd_data *hapd, int freq, int flags)
 		return -1;
 	}
 
-	return hapd->driver->start_dfs_cac(hapd->drv_priv, freq);
+	if (hostapd_set_freq_params(&data, hapd->iconf->hw_mode, freq,
+				    hapd->iconf->channel,
+				    hapd->iconf->ieee80211n,
+				    0, 0, 0, 0, 0))
+		return -1;
+
+	return hapd->driver->start_dfs_cac(hapd->drv_priv, &data);
 }

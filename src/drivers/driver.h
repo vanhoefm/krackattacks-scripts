@@ -2735,10 +2735,10 @@ struct wpa_driver_ops {
 	/**
 	 * start_dfs_cac - Listen for radar interference on the channel
 	 * @priv: Private driver interface data
-	 * @freq: Frequency (in MHz) of the channel
+	 * @freq: Channel parameters
 	 * Returns: 0 on success, -1 on failure
 	 */
-	int (*start_dfs_cac)(void *priv, int freq);
+	int (*start_dfs_cac)(void *priv, struct hostapd_freq_params *freq);
 
 	/**
 	 * stop_ap - Removes beacon from AP

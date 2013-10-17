@@ -403,7 +403,7 @@ static void hostapd_config_free_wep(struct hostapd_wep_keys *keys)
 }
 
 
-static void hostapd_config_free_bss(struct hostapd_bss_config *conf)
+void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 {
 	struct hostapd_wpa_psk *psk, *prev;
 	struct hostapd_eap_user *user, *prev_user;

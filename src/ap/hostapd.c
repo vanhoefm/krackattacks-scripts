@@ -1658,16 +1658,46 @@ fail:
 }
 
 
+static int hostapd_remove_bss(struct hostapd_iface *iface, unsigned int idx)
+{
+	struct hostapd_data *hapd;
+	size_t i;
+
+	if (idx > iface->num_bss || idx > iface->conf->num_bss)
+		return -1;
+	hapd = iface->bss[idx];
+	wpa_printf(MSG_INFO, "Remove BSS '%s'", hapd->conf->iface);
+
+	hostapd_free_stas(hapd);
+	hostapd_flush_old_stations(hapd, WLAN_REASON_DEAUTH_LEAVING);
+	hostapd_clear_wep(hapd);
+	hostapd_cleanup(hapd);
+	hostapd_config_free_bss(hapd->conf);
+	os_free(hapd);
+
+	iface->num_bss--;
+	for (i = idx; i < iface->num_bss; i++)
+		iface->bss[i] = iface->bss[i + 1];
+
+	iface->conf->num_bss--;
+	for (i = idx; i < iface->num_bss; i++)
+		iface->conf->bss[i] = iface->conf->bss[i + 1];
+
+	return 0;
+}
+
+
 int hostapd_remove_iface(struct hapd_interfaces *interfaces, char *buf)
 {
 	struct hostapd_iface *hapd_iface;
-	size_t i, k = 0;
+	size_t i, j, k = 0;
 
 	for (i = 0; i < interfaces->count; i++) {
 		hapd_iface = interfaces->iface[i];
 		if (hapd_iface == NULL)
 			return -1;
-		if (!os_strcmp(hapd_iface->conf->bss[0]->iface, buf)) {
+		if (hapd_iface->conf->num_bss == 1 &&
+		    !os_strcmp(hapd_iface->conf->bss[0]->iface, buf)) {
 			wpa_printf(MSG_INFO, "Remove interface '%s'", buf);
 			hostapd_interface_deinit_free(hapd_iface);
 			k = i;
@@ -1678,6 +1708,11 @@ int hostapd_remove_iface(struct hapd_interfaces *interfaces, char *buf)
 			}
 			interfaces->count--;
 			return 0;
+		}
+
+		for (j = 0; j < hapd_iface->conf->num_bss; j++) {
+			if (!os_strcmp(hapd_iface->conf->bss[j]->iface, buf))
+				return hostapd_remove_bss(hapd_iface, j);
 		}
 	}
 	return -1;

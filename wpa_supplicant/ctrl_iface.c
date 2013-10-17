@@ -117,7 +117,7 @@ static int pno_start(struct wpa_supplicant *wpa_s)
 	interval = wpa_s->conf->sched_scan_interval ?
 		wpa_s->conf->sched_scan_interval : 10;
 
-	ret = wpa_drv_sched_scan(wpa_s, &params, interval * 1000);
+	ret = wpa_supplicant_start_sched_scan(wpa_s, &params, interval);
 	os_free(params.filter_ssids);
 	if (ret == 0)
 		wpa_s->pno = 1;
@@ -131,7 +131,7 @@ static int pno_stop(struct wpa_supplicant *wpa_s)
 
 	if (wpa_s->pno) {
 		wpa_s->pno = 0;
-		ret = wpa_drv_stop_sched_scan(wpa_s);
+		ret = wpa_supplicant_stop_sched_scan(wpa_s);
 	}
 
 	if (wpa_s->wpa_state == WPA_SCANNING)

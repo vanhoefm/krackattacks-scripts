@@ -261,10 +261,9 @@ wpa_supplicant_sched_scan_timeout(void *eloop_ctx, void *timeout_ctx)
 }
 
 
-static int
-wpa_supplicant_start_sched_scan(struct wpa_supplicant *wpa_s,
-				struct wpa_driver_scan_params *params,
-				int interval)
+int wpa_supplicant_start_sched_scan(struct wpa_supplicant *wpa_s,
+				    struct wpa_driver_scan_params *params,
+				    int interval)
 {
 	int ret;
 
@@ -279,7 +278,7 @@ wpa_supplicant_start_sched_scan(struct wpa_supplicant *wpa_s,
 }
 
 
-static int wpa_supplicant_stop_sched_scan(struct wpa_supplicant *wpa_s)
+int wpa_supplicant_stop_sched_scan(struct wpa_supplicant *wpa_s)
 {
 	int ret;
 
@@ -564,6 +563,16 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		wpa_dbg(wpa_s, MSG_DEBUG, "Disconnected - do not scan");
 		wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
 		wpas_p2p_continue_after_scan(wpa_s);
+		return;
+	}
+
+	if (wpa_s->scanning) {
+		/*
+		 * If we are already in scanning state, we shall reschedule the
+		 * the incoming scan request.
+		 */
+		wpa_dbg(wpa_s, MSG_DEBUG, "Already scanning - Reschedule the incoming scan req");
+		wpa_supplicant_req_scan(wpa_s, 1, 0);
 		return;
 	}
 

@@ -250,6 +250,8 @@ struct hostapd_iface {
 	void *owner;
 	char *config_fname;
 	struct hostapd_config *conf;
+	char phy[16]; /* Name of the PHY (radio) */
+	int init_done;
 
 	size_t num_bss;
 	struct hostapd_data **bss;

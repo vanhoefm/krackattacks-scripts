@@ -438,10 +438,12 @@ static void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 	os_free(conf->accept_mac);
 	os_free(conf->deny_mac);
 	os_free(conf->nas_identifier);
-	hostapd_config_free_radius(conf->radius->auth_servers,
-				   conf->radius->num_auth_servers);
-	hostapd_config_free_radius(conf->radius->acct_servers,
-				   conf->radius->num_acct_servers);
+	if (conf->radius) {
+		hostapd_config_free_radius(conf->radius->auth_servers,
+					   conf->radius->num_auth_servers);
+		hostapd_config_free_radius(conf->radius->acct_servers,
+					   conf->radius->num_acct_servers);
+	}
 	hostapd_config_free_radius_attr(conf->radius_auth_req_attr);
 	hostapd_config_free_radius_attr(conf->radius_acct_req_attr);
 	os_free(conf->rsn_preauth_interfaces);

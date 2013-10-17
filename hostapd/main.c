@@ -327,7 +327,120 @@ hostapd_interface_init(struct hapd_interfaces *interfaces,
 		return NULL;
 	}
 
+	iface->init_done = 1;
+
 	return iface;
+}
+
+
+static struct hostapd_iface *
+hostapd_interface_init_bss(struct hapd_interfaces *interfaces, const char *phy,
+			   const char *config_fname, int debug)
+{
+	struct hostapd_iface *new_iface = NULL, *iface = NULL;
+	struct hostapd_data *hapd;
+	int k;
+	size_t i, bss_idx;
+
+	if (!phy || !*phy)
+		return NULL;
+
+	for (i = 0; i < interfaces->count; i++) {
+		if (os_strcmp(interfaces->iface[i]->phy, phy) == 0) {
+			iface = interfaces->iface[i];
+			break;
+		}
+	}
+
+	wpa_printf(MSG_ERROR, "Configuration file: %s (phy %s)%s",
+		   config_fname, phy, iface ? "" : " --> new PHY");
+	if (iface) {
+		struct hostapd_config *conf;
+		struct hostapd_bss_config **tmp_conf;
+		struct hostapd_data **tmp_bss;
+		struct hostapd_bss_config *bss;
+
+		/* Add new BSS to existing iface */
+		conf = hostapd_config_read(config_fname);
+		if (conf == NULL)
+			return NULL;
+		if (conf->num_bss > 1) {
+			wpa_printf(MSG_ERROR, "Multiple BSSes specified in BSS-config");
+			hostapd_config_free(conf);
+			return NULL;
+		}
+
+		tmp_conf = os_realloc_array(
+			iface->conf->bss, iface->conf->num_bss + 1,
+			sizeof(struct hostapd_bss_config *));
+		tmp_bss = os_realloc_array(iface->bss, iface->num_bss + 1,
+					   sizeof(struct hostapd_data *));
+		if (tmp_bss)
+			iface->bss = tmp_bss;
+		if (tmp_conf) {
+			iface->conf->bss = tmp_conf;
+			iface->conf->last_bss = tmp_conf[0];
+		}
+		if (tmp_bss == NULL || tmp_conf == NULL) {
+			hostapd_config_free(conf);
+			return NULL;
+		}
+		bss = iface->conf->bss[iface->conf->num_bss] = conf->bss[0];
+		iface->conf->num_bss++;
+
+		hapd = hostapd_alloc_bss_data(iface, iface->conf, bss);
+		if (hapd == NULL) {
+			iface->conf->num_bss--;
+			hostapd_config_free(conf);
+			return NULL;
+		}
+		iface->conf->last_bss = bss;
+		iface->bss[iface->num_bss] = hapd;
+		hapd->msg_ctx = hapd;
+
+		bss_idx = iface->num_bss++;
+		conf->num_bss--;
+		conf->bss[0] = NULL;
+		hostapd_config_free(conf);
+	} else {
+		/* Add a new iface with the first BSS */
+		new_iface = iface = hostapd_init(config_fname);
+		if (!iface)
+			return NULL;
+		os_strlcpy(iface->phy, phy, sizeof(iface->phy));
+		iface->interfaces = interfaces;
+		bss_idx = 0;
+	}
+
+	for (k = 0; k < debug; k++) {
+		if (iface->bss[bss_idx]->conf->logger_stdout_level > 0)
+			iface->bss[bss_idx]->conf->logger_stdout_level--;
+	}
+
+	if (iface->conf->bss[bss_idx]->iface[0] == '\0' &&
+	    !hostapd_drv_none(iface->bss[bss_idx])) {
+		wpa_printf(MSG_ERROR, "Interface name not specified in %s",
+			   config_fname);
+		if (new_iface)
+			hostapd_interface_deinit_free(new_iface);
+		return NULL;
+	}
+
+	return iface;
+}
+
+
+static int hostapd_interface_init2(struct hostapd_iface *iface)
+{
+	if (iface->init_done)
+		return 0;
+
+	if (hostapd_driver_init(iface) ||
+	    hostapd_setup_interface(iface))
+		return -1;
+	iface->init_done = 1;
+
+	return 0;
 }
 
 
@@ -577,11 +690,13 @@ int main(int argc, char *argv[])
 {
 	struct hapd_interfaces interfaces;
 	int ret = 1;
-	size_t i;
+	size_t i, j;
 	int c, debug = 0, daemonize = 0;
 	char *pid_file = NULL;
 	const char *log_file = NULL;
 	const char *entropy_file = NULL;
+	char **bss_config = NULL, **tmp_bss;
+	size_t num_bss_configs = 0;
 
 	if (os_program_init())
 		return -1;
@@ -598,7 +713,7 @@ int main(int argc, char *argv[])
 	interfaces.global_ctrl_sock = -1;
 
 	for (;;) {
-		c = getopt(argc, argv, "Bde:f:hKP:tvg:G:");
+		c = getopt(argc, argv, "b:Bde:f:hKP:tvg:G:");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -641,13 +756,23 @@ int main(int argc, char *argv[])
 			if (hostapd_get_ctrl_iface_group(&interfaces, optarg))
 				return -1;
 			break;
+		case 'b':
+			tmp_bss = os_realloc_array(bss_config,
+						   num_bss_configs + 1,
+						   sizeof(char *));
+			if (tmp_bss == NULL)
+				goto out;
+			bss_config = tmp_bss;
+			bss_config[num_bss_configs++] = optarg;
+			break;
 		default:
 			usage();
 			break;
 		}
 	}
 
-	if (optind == argc && interfaces.global_iface_path == NULL)
+	if (optind == argc && interfaces.global_iface_path == NULL &&
+	    num_bss_configs == 0)
 		usage();
 
 	wpa_msg_register_ifname_cb(hostapd_msg_ifname_cb);
@@ -656,8 +781,8 @@ int main(int argc, char *argv[])
 		wpa_debug_open_file(log_file);
 
 	interfaces.count = argc - optind;
-	if (interfaces.count) {
-		interfaces.iface = os_calloc(interfaces.count,
+	if (interfaces.count || num_bss_configs) {
+		interfaces.iface = os_calloc(interfaces.count + num_bss_configs,
 					     sizeof(struct hostapd_iface *));
 		if (interfaces.iface == NULL) {
 			wpa_printf(MSG_ERROR, "malloc failed");
@@ -681,6 +806,46 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	for (i = 0; i < num_bss_configs; i++) {
+		struct hostapd_iface *iface;
+		char *fname;
+
+		wpa_printf(MSG_INFO, "BSS config: %s", bss_config[i]);
+		fname = os_strchr(bss_config[i], ':');
+		if (fname == NULL) {
+			wpa_printf(MSG_ERROR,
+				   "Invalid BSS config identifier '%s'",
+				   bss_config[i]);
+			goto out;
+		}
+		*fname++ = '\0';
+		iface = hostapd_interface_init_bss(&interfaces, bss_config[i],
+						   fname, debug);
+		if (iface == NULL)
+			goto out;
+		for (j = 0; j < interfaces.count; j++) {
+			if (interfaces.iface[j] == iface)
+				break;
+		}
+		if (j == interfaces.count) {
+			struct hostapd_iface **tmp;
+			tmp = os_realloc_array(interfaces.iface,
+					       interfaces.count + 1,
+					       sizeof(struct hostapd_iface *));
+			if (tmp == NULL) {
+				hostapd_interface_deinit_free(iface);
+				goto out;
+			}
+			interfaces.iface = tmp;
+			interfaces.iface[interfaces.count++] = iface;
+		}
+	}
+
+	for (i = 0; i < interfaces.count; i++) {
+		if (hostapd_interface_init2(interfaces.iface[i]) < 0)
+			goto out;
+	}
+
 	hostapd_global_ctrl_iface_init(&interfaces);
 
 	if (hostapd_global_run(&interfaces, daemonize, pid_file)) {
@@ -702,6 +867,8 @@ int main(int argc, char *argv[])
 
 	if (log_file)
 		wpa_debug_close_file();
+
+	os_free(bss_config);
 
 	os_program_deinit();
 

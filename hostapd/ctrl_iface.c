@@ -743,6 +743,7 @@ static int hostapd_ctrl_iface_ess_disassoc(struct hostapd_data *hapd,
 	mgmt->u.action.u.bss_tm_req.action = WNM_BSS_TRANS_MGMT_REQ;
 	mgmt->u.action.u.bss_tm_req.dialog_token = 1;
 	mgmt->u.action.u.bss_tm_req.req_mode =
+		WNM_BSS_TM_REQ_DISASSOC_IMMINENT |
 		WNM_BSS_TM_REQ_ESS_DISASSOC_IMMINENT;
 	mgmt->u.action.u.bss_tm_req.disassoc_timer =
 		host_to_le16(disassoc_timer);

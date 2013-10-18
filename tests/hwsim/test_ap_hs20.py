@@ -71,7 +71,12 @@ def test_ap_hs20_select(dev, apdev):
     if "type=home" not in ev:
         raise Exception("Home network not recognized")
 
-    dev[0].set_cred_quoted(id, "domain", "no.match.example.com");
+    dev[0].remove_cred(id)
+    id = dev[0].add_cred()
+    dev[0].set_cred_quoted(id, "realm", "example.com")
+    dev[0].set_cred_quoted(id, "username", "test")
+    dev[0].set_cred_quoted(id, "password", "secret")
+    dev[0].set_cred_quoted(id, "domain", "no.match.example.com")
     dev[0].dump_monitor()
     dev[0].request("INTERWORKING_SELECT")
     ev = dev[0].wait_event(["INTERWORKING-AP", "INTERWORKING-NO-MATCH"],

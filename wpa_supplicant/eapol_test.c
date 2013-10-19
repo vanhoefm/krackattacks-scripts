@@ -1094,6 +1094,7 @@ static void usage(void)
 
 int main(int argc, char *argv[])
 {
+	struct wpa_global global;
 	struct wpa_supplicant wpa_s;
 	int c, ret = 1, wait_for_monitor = 0, save_config = 0;
 	char *as_addr = "127.0.0.1";
@@ -1230,7 +1231,9 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
+	os_memset(&global, 0, sizeof(global));
 	os_memset(&wpa_s, 0, sizeof(wpa_s));
+	wpa_s.global = &global;
 	eapol_test.wpa_s = &wpa_s;
 	wpa_s.conf = wpa_config_read(conf, NULL);
 	if (wpa_s.conf == NULL) {

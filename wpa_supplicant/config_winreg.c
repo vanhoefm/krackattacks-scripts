@@ -623,6 +623,9 @@ static int wpa_config_write_global(struct wpa_config *config, HKEY hk)
 	wpa_config_write_reg_dword(hk, TEXT("okc"), config->okc, 0);
 	wpa_config_write_reg_dword(hk, TEXT("pmf"), config->pmf, 0);
 
+	wpa_config_write_reg_dword(hk, TEXT("external_sim"),
+				   config->external_sim, 0);
+
 	return 0;
 }
 

@@ -348,6 +348,8 @@ struct eap_sm {
 
 	struct ext_password_data *ext_pw;
 	struct wpabuf *ext_pw_buf;
+
+	int external_sim;
 };
 
 const u8 * eap_get_config_identity(struct eap_sm *sm, size_t *len);

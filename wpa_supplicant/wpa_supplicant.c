@@ -303,6 +303,7 @@ void wpa_supplicant_initiate_eapol(struct wpa_supplicant *wpa_s)
 		!wpa_key_mgmt_wpa_ieee8021x(wpa_s->key_mgmt) &&
 		wpa_s->key_mgmt != WPA_KEY_MGMT_IEEE8021X_NO_WPA &&
 		wpa_s->key_mgmt != WPA_KEY_MGMT_WPS;
+	eapol_conf.external_sim = wpa_s->conf->external_sim;
 	eapol_sm_notify_config(wpa_s->eapol, &ssid->eap, &eapol_conf);
 #endif /* IEEE8021X_EAPOL */
 }
@@ -3749,6 +3750,10 @@ int wpa_supplicant_ctrl_iface_ctrl_rsp_handle(struct wpa_supplicant *wpa_s,
 		eap->pending_req_passphrase = 0;
 		if (ssid == wpa_s->current_ssid)
 			wpa_s->reassociate = 1;
+		break;
+	case WPA_CTRL_REQ_SIM:
+		os_free(eap->external_sim_resp);
+		eap->external_sim_resp = os_strdup(value);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "CTRL_IFACE: Unknown field '%s'", field);

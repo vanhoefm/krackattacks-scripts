@@ -1407,7 +1407,8 @@ static struct wpa_cred * interworking_credentials_available_3gpp(
 #endif /* CONFIG_EAP_PROXY */
 
 		if (cred->imsi == NULL || !cred->imsi[0] ||
-		    cred->milenage == NULL || !cred->milenage[0])
+		    (!wpa_s->conf->external_sim &&
+		     (cred->milenage == NULL || !cred->milenage[0])))
 			continue;
 
 		sep = os_strchr(cred->imsi, '-');

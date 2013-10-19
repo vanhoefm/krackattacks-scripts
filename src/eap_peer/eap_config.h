@@ -669,6 +669,15 @@ struct eap_peer_config {
 	 * 2 = require valid OCSP stapling response
 	 */
 	int ocsp;
+
+	/**
+	 * external_sim_resp - Response from external SIM processing
+	 *
+	 * This field should not be set in configuration step. It is only used
+	 * internally when control interface is used to request external
+	 * SIM/USIM processing.
+	 */
+	char *external_sim_resp;
 };
 
 

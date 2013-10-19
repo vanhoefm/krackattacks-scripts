@@ -611,6 +611,8 @@ enum wpa_ctrl_req_type wpa_supplicant_ctrl_req_from_string(const char *field)
 		return WPA_CTRL_REQ_EAP_OTP;
 	else if (os_strcmp(field, "PASSPHRASE") == 0)
 		return WPA_CTRL_REQ_EAP_PASSPHRASE;
+	else if (os_strcmp(field, "SIM") == 0)
+		return WPA_CTRL_REQ_SIM;
 	return WPA_CTRL_REQ_UNKNOWN;
 }
 
@@ -646,6 +648,9 @@ const char * wpa_supplicant_ctrl_req_to_string(enum wpa_ctrl_req_type field,
 	case WPA_CTRL_REQ_EAP_PASSPHRASE:
 		*txt = "Private key passphrase";
 		ret = "PASSPHRASE";
+		break;
+	case WPA_CTRL_REQ_SIM:
+		ret = "SIM";
 		break;
 	default:
 		break;

@@ -296,6 +296,7 @@ void eap_sm_request_new_password(struct eap_sm *sm);
 void eap_sm_request_pin(struct eap_sm *sm);
 void eap_sm_request_otp(struct eap_sm *sm, const char *msg, size_t msg_len);
 void eap_sm_request_passphrase(struct eap_sm *sm);
+void eap_sm_request_sim(struct eap_sm *sm, const char *req);
 void eap_sm_notify_ctrl_attached(struct eap_sm *sm);
 u32 eap_get_phase2_type(const char *name, int *vendor);
 struct eap_method_type * eap_get_phase2_types(struct eap_peer_config *config,
@@ -303,6 +304,7 @@ struct eap_method_type * eap_get_phase2_types(struct eap_peer_config *config,
 void eap_set_fast_reauth(struct eap_sm *sm, int enabled);
 void eap_set_workaround(struct eap_sm *sm, unsigned int workaround);
 void eap_set_force_disabled(struct eap_sm *sm, int disabled);
+void eap_set_external_sim(struct eap_sm *sm, int external_sim);
 int eap_key_available(struct eap_sm *sm);
 void eap_notify_success(struct eap_sm *sm);
 void eap_notify_lower_layer_success(struct eap_sm *sm);

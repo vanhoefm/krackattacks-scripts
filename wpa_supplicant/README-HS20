@@ -284,6 +284,17 @@ OK
 Note: the return value of add_cred is used as the first argument to
 the following set_cred commands.
 
+Add a SIM credential using a external SIM/USIM processing:
+
+> set external_sim 1
+OK
+> add_cred
+1
+> set_cred 1 imsi "23456-0000000000"
+OK
+> set_cred 1 eap SIM
+OK
+
 
 Add a WPA2-Enterprise network:
 

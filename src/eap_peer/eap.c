@@ -1638,7 +1638,8 @@ static void eap_sm_request(struct eap_sm *sm, enum wpa_ctrl_req_type field,
 			   const char *msg, size_t msglen)
 {
 	struct eap_peer_config *config;
-	char *txt = NULL, *tmp;
+	const char *txt = NULL;
+	char *tmp;
 
 	if (sm == NULL)
 		return;
@@ -1680,6 +1681,9 @@ static void eap_sm_request(struct eap_sm *sm, enum wpa_ctrl_req_type field,
 		break;
 	case WPA_CTRL_REQ_EAP_PASSPHRASE:
 		config->pending_req_passphrase++;
+		break;
+	case WPA_CTRL_REQ_SIM:
+		txt = msg;
 		break;
 	default:
 		return;
@@ -1788,6 +1792,17 @@ void eap_sm_request_otp(struct eap_sm *sm, const char *msg, size_t msg_len)
 void eap_sm_request_passphrase(struct eap_sm *sm)
 {
 	eap_sm_request(sm, WPA_CTRL_REQ_EAP_PASSPHRASE, NULL, 0);
+}
+
+
+/**
+ * eap_sm_request_sim - Request external SIM processing
+ * @sm: Pointer to EAP state machine allocated with eap_peer_sm_init()
+ * @req: EAP method specific request
+ */
+void eap_sm_request_sim(struct eap_sm *sm, const char *req)
+{
+	eap_sm_request(sm, WPA_CTRL_REQ_SIM, req, os_strlen(req));
 }
 
 
@@ -2301,6 +2316,17 @@ const struct wpa_config_blob * eap_get_config_blob(struct eap_sm *sm,
 void eap_set_force_disabled(struct eap_sm *sm, int disabled)
 {
 	sm->force_disabled = disabled;
+}
+
+
+/**
+ * eap_set_external_sim - Set external_sim flag
+ * @sm: Pointer to EAP state machine allocated with eap_peer_sm_init()
+ * @external_sim: Whether external SIM/USIM processing is used
+ */
+void eap_set_external_sim(struct eap_sm *sm, int external_sim)
+{
+	sm->external_sim = external_sim;
 }
 
 

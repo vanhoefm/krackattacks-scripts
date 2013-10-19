@@ -53,6 +53,11 @@ struct eapol_config {
 	 * eap_disabled - Whether EAP is disabled
 	 */
 	int eap_disabled;
+
+	/**
+	 * external_sim - Use external processing for SIM/USIM operations
+	 */
+	int external_sim;
 };
 
 struct eapol_sm;

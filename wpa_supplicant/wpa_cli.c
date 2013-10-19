@@ -625,7 +625,7 @@ static char ** wpa_cli_complete_set(const char *str, int pos)
 		"wps_nfc_dev_pw", "ext_password_backend",
 		"p2p_go_max_inactivity", "auto_interworking", "okc", "pmf",
 		"sae_groups", "dtim_period", "beacon_int", "ap_vendor_elements",
-		"ignore_old_scan_res", "freq_list"
+		"ignore_old_scan_res", "freq_list", "external_sim"
 	};
 	int i, num_fields = sizeof(fields) / sizeof(fields[0]);
 
@@ -1266,6 +1266,38 @@ static int wpa_cli_cmd_otp(struct wpa_ctrl *ctrl, int argc, char *argv[])
 		pos += ret;
 	}
 
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
+static int wpa_cli_cmd_sim(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	char cmd[256], *pos, *end;
+	int i, ret;
+
+	if (argc < 2) {
+		printf("Invalid SIM command: needs two arguments "
+		       "(network id and SIM operation response)\n");
+		return -1;
+	}
+
+	end = cmd + sizeof(cmd);
+	pos = cmd;
+	ret = os_snprintf(pos, end - pos, WPA_CTRL_RSP "SIM-%s:%s",
+			  argv[0], argv[1]);
+	if (ret < 0 || ret >= end - pos) {
+		printf("Too long SIM command.\n");
+		return -1;
+	}
+	pos += ret;
+	for (i = 2; i < argc; i++) {
+		ret = os_snprintf(pos, end - pos, " %s", argv[i]);
+		if (ret < 0 || ret >= end - pos) {
+			printf("Too long SIM command.\n");
+			return -1;
+		}
+		pos += ret;
+	}
 	return wpa_ctrl_command(ctrl, cmd);
 }
 
@@ -2466,6 +2498,9 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	  cli_cmd_flag_sensitive,
 	  "<network id> <passphrase> = configure private key passphrase\n"
 	  "  for an SSID" },
+	{ "sim", wpa_cli_cmd_sim, NULL,
+	  cli_cmd_flag_sensitive,
+	  "<network id> <pin> = report SIM operation result" },
 	{ "bssid", wpa_cli_cmd_bssid, NULL,
 	  cli_cmd_flag_none,
 	  "<network id> <BSSID> = set preferred BSSID for an SSID" },

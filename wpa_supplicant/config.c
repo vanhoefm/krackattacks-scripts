@@ -1815,6 +1815,7 @@ static void eap_peer_config_free(struct eap_peer_config *eap)
 	os_free(eap->pending_req_otp);
 	os_free(eap->pac_file);
 	os_free(eap->new_password);
+	os_free(eap->external_sim_resp);
 }
 #endif /* IEEE8021X_EAPOL */
 
@@ -3194,6 +3195,7 @@ static const struct global_parse_data global_fields[] = {
 	{ STR(pkcs11_module_path), 0 },
 	{ STR(pcsc_reader), 0 },
 	{ STR(pcsc_pin), 0 },
+	{ INT(external_sim), 0 },
 	{ STR(driver_param), 0 },
 	{ INT(dot11RSNAConfigPMKLifetime), 0 },
 	{ INT(dot11RSNAConfigPMKReauthThreshold), 0 },

@@ -1479,6 +1479,7 @@ void eapol_sm_notify_config(struct eapol_sm *sm,
 		eap_set_fast_reauth(sm->eap, conf->fast_reauth);
 		eap_set_workaround(sm->eap, conf->workaround);
 		eap_set_force_disabled(sm->eap, conf->eap_disabled);
+		eap_set_external_sim(sm->eap, conf->external_sim);
 	}
 }
 

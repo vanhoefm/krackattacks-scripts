@@ -275,7 +275,8 @@ int wpa_supplicant_scard_init(struct wpa_supplicant *wpa_s,
 #ifdef PCSC_FUNCS
 	int aka = 0, sim = 0;
 
-	if (ssid->eap.pcsc == NULL || wpa_s->scard != NULL)
+	if (ssid->eap.pcsc == NULL || wpa_s->scard != NULL ||
+	    wpa_s->conf->external_sim)
 		return 0;
 
 	if (ssid->eap.eap_methods == NULL) {

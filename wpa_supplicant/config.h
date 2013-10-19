@@ -453,6 +453,11 @@ struct wpa_config {
 	char *pcsc_pin;
 
 	/**
+	 * external_sim - Use external processing for SIM/USIM operations
+	 */
+	int external_sim;
+
+	/**
 	 * driver_param - Driver interface parameters
 	 *
 	 * This text string is passed to the selected driver interface with the

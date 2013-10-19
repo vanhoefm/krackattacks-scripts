@@ -18,6 +18,9 @@
  * SIM-REQ-AUTH <IMSI> <max_chal>
  * SIM-RESP-AUTH <IMSI> Kc1:SRES1:RAND1 Kc2:SRES2:RAND2 [Kc3:SRES3:RAND3]
  * SIM-RESP-AUTH <IMSI> FAILURE
+ * GSM-AUTH-REQ <IMSI> RAND1:RAND2[:RAND3]
+ * GSM-AUTH-RESP <IMSI> Kc1:SRES1:Kc2:SRES2[:Kc3:SRES3]
+ * GSM-AUTH-RESP <IMSI> FAILURE
  *
  * EAP-AKA / UMTS query/response:
  * AKA-REQ-AUTH <IMSI>
@@ -692,6 +695,56 @@ static int sim_req_auth(char *imsi, char *resp, size_t resp_len)
 }
 
 
+static int gsm_auth_req(char *imsi, char *resp, size_t resp_len)
+{
+	int count, ret;
+	char *pos, *rpos, *rend;
+	struct milenage_parameters *m;
+
+	resp[0] = '\0';
+
+	pos = os_strchr(imsi, ' ');
+	if (!pos)
+		return -1;
+	*pos++ = '\0';
+
+	rend = resp + resp_len;
+	rpos = resp;
+	ret = os_snprintf(rpos, rend - rpos, "GSM-AUTH-RESP %s", imsi);
+	if (ret < 0 || ret >= rend - rpos)
+		return -1;
+	rpos += ret;
+
+	m = get_milenage(imsi);
+	if (m) {
+		u8 _rand[16], sres[4], kc[8];
+		for (count = 0; count < EAP_SIM_MAX_CHAL; count++) {
+			if (hexstr2bin(pos, _rand, 16) != 0)
+				return -1;
+			gsm_milenage(m->opc, m->ki, _rand, sres, kc);
+			*rpos++ = count == 0 ? ' ' : ':';
+			rpos += wpa_snprintf_hex(rpos, rend - rpos, kc, 8);
+			*rpos++ = ':';
+			rpos += wpa_snprintf_hex(rpos, rend - rpos, sres, 4);
+			pos += 16 * 2;
+			if (*pos != ':')
+				break;
+			pos++;
+		}
+		*rpos = '\0';
+		return 0;
+	}
+
+	printf("No GSM triplets found for %s\n", imsi);
+	ret = os_snprintf(rpos, rend - rpos, " FAILURE");
+	if (ret < 0 || ret >= rend - rpos)
+		return -1;
+	rpos += ret;
+
+	return 0;
+}
+
+
 static void inc_sqn(u8 *sqn)
 {
 	u64 val, seq, ind;
@@ -846,6 +899,9 @@ static int process_cmd(char *cmd, char *resp, size_t resp_len)
 {
 	if (os_strncmp(cmd, "SIM-REQ-AUTH ", 13) == 0)
 		return sim_req_auth(cmd + 13, resp, resp_len);
+
+	if (os_strncmp(cmd, "GSM-AUTH-REQ ", 13) == 0)
+		return gsm_auth_req(cmd + 13, resp, resp_len);
 
 	if (os_strncmp(cmd, "AKA-REQ-AUTH ", 13) == 0)
 		return aka_req_auth(cmd + 13, resp, resp_len);

@@ -5197,12 +5197,18 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 }
 
 
+static void wpas_ctrl_eapol_response(void *eloop_ctx, void *timeout_ctx)
+{
+	struct wpa_supplicant *wpa_s = eloop_ctx;
+	eapol_sm_notify_ctrl_response(wpa_s->eapol);
+}
+
+
 char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 					 char *buf, size_t *resp_len)
 {
 	char *reply;
 	const int reply_size = 4096;
-	int ctrl_rsp = 0;
 	int reply_len;
 
 	if (os_strncmp(buf, WPA_CTRL_RSP, os_strlen(WPA_CTRL_RSP)) == 0 ||
@@ -5541,8 +5547,14 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		if (wpa_supplicant_ctrl_iface_ctrl_rsp(
 			    wpa_s, buf + os_strlen(WPA_CTRL_RSP)))
 			reply_len = -1;
-		else
-			ctrl_rsp = 1;
+		else {
+			/*
+			 * Notify response from timeout to allow the control
+			 * interface response to be sent first.
+			 */
+			eloop_register_timeout(0, 0, wpas_ctrl_eapol_response,
+					       wpa_s, NULL);
+		}
 	} else if (os_strcmp(buf, "RECONFIGURE") == 0) {
 		if (wpa_supplicant_reload_configuration(wpa_s))
 			reply_len = -1;
@@ -5739,9 +5751,6 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		os_memcpy(reply, "FAIL\n", 5);
 		reply_len = 5;
 	}
-
-	if (ctrl_rsp)
-		eapol_sm_notify_ctrl_response(wpa_s->eapol);
 
 	*resp_len = reply_len;
 	return reply;

@@ -142,6 +142,89 @@ static void eap_aka_deinit(struct eap_sm *sm, void *priv)
 }
 
 
+static int eap_aka_ext_sim_req(struct eap_sm *sm, struct eap_aka_data *data)
+{
+	char req[200], *pos, *end;
+
+	wpa_printf(MSG_DEBUG, "EAP-AKA: Use external USIM processing");
+	pos = req;
+	end = pos + sizeof(req);
+	pos += os_snprintf(pos, end - pos, "UMTS-AUTH");
+	pos += os_snprintf(pos, end - pos, ":");
+	pos += wpa_snprintf_hex(pos, end - pos, data->rand, EAP_AKA_RAND_LEN);
+	pos += os_snprintf(pos, end - pos, ":");
+	pos += wpa_snprintf_hex(pos, end - pos, data->autn, EAP_AKA_AUTN_LEN);
+
+	eap_sm_request_sim(sm, req);
+	return 1;
+}
+
+
+static int eap_aka_ext_sim_result(struct eap_sm *sm, struct eap_aka_data *data,
+				  struct eap_peer_config *conf)
+{
+	char *resp, *pos;
+
+	wpa_printf(MSG_DEBUG,
+		   "EAP-AKA: Use result from external USIM processing");
+
+	resp = conf->external_sim_resp;
+	conf->external_sim_resp = NULL;
+
+	if (os_strncmp(resp, "UMTS-AUTS:", 10) == 0) {
+		pos = resp + 10;
+		if (hexstr2bin(pos, data->auts, EAP_AKA_AUTS_LEN) < 0)
+			goto invalid;
+		wpa_hexdump_key(MSG_DEBUG, "EAP-AKA: AUTS", data->auts,
+				EAP_AKA_AUTS_LEN);
+		os_free(resp);
+		return -2;
+	}
+
+	if (os_strncmp(resp, "UMTS-AUTH:", 10) != 0) {
+		wpa_printf(MSG_DEBUG, "EAP-AKA: Unrecognized external USIM processing response");
+		os_free(resp);
+		return -1;
+	}
+
+	pos = resp + 10;
+	wpa_hexdump(MSG_DEBUG, "EAP-AKA: RAND", data->rand, EAP_AKA_RAND_LEN);
+
+	if (hexstr2bin(pos, data->ik, EAP_AKA_IK_LEN) < 0)
+		goto invalid;
+	wpa_hexdump_key(MSG_DEBUG, "EAP-AKA: IK", data->ik, EAP_AKA_IK_LEN);
+	pos += EAP_AKA_IK_LEN * 2;
+	if (*pos != ':')
+		goto invalid;
+	pos++;
+
+	if (hexstr2bin(pos, data->ck, EAP_AKA_CK_LEN) < 0)
+		goto invalid;
+	wpa_hexdump_key(MSG_DEBUG, "EAP-AKA: CK", data->ck, EAP_AKA_CK_LEN);
+	pos += EAP_AKA_CK_LEN * 2;
+	if (*pos != ':')
+		goto invalid;
+	pos++;
+
+	data->res_len = os_strlen(pos) / 2;
+	if (data->res_len > EAP_AKA_RES_MAX_LEN) {
+		data->res_len = 0;
+		goto invalid;
+	}
+	if (hexstr2bin(pos, data->res, data->res_len) < 0)
+		goto invalid;
+	wpa_hexdump_key(MSG_DEBUG, "EAP-AKA: RES", data->res, data->res_len);
+
+	os_free(resp);
+	return 0;
+
+invalid:
+	wpa_printf(MSG_DEBUG, "EAP-AKA: Invalid external USIM processing UMTS-AUTH response");
+	os_free(resp);
+	return -1;
+}
+
+
 static int eap_aka_umts_auth(struct eap_sm *sm, struct eap_aka_data *data)
 {
 	struct eap_peer_config *conf;
@@ -151,6 +234,14 @@ static int eap_aka_umts_auth(struct eap_sm *sm, struct eap_aka_data *data)
 	conf = eap_get_config(sm);
 	if (conf == NULL)
 		return -1;
+
+	if (sm->external_sim) {
+		if (conf->external_sim_resp)
+			return eap_aka_ext_sim_result(sm, data, conf);
+		else
+			return eap_aka_ext_sim_req(sm, data);
+	}
+
 	if (conf->pcsc) {
 		return scard_umts_auth(sm->scard_ctx, data->rand,
 				       data->autn, data->res, &data->res_len,
@@ -861,6 +952,9 @@ static struct wpabuf * eap_aka_process_challenge(struct eap_sm *sm,
 		wpa_printf(MSG_WARNING, "EAP-AKA: UMTS authentication "
 			   "failed (AUTN seq# -> AUTS)");
 		return eap_aka_synchronization_failure(data, id);
+	} else if (res > 0) {
+		wpa_printf(MSG_DEBUG, "EAP-AKA: Wait for external USIM processing");
+		return NULL;
 	} else if (res) {
 		wpa_printf(MSG_WARNING, "EAP-AKA: UMTS authentication failed");
 		return eap_aka_client_error(data, id,

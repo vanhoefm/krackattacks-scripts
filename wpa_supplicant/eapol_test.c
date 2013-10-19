@@ -1285,6 +1285,8 @@ int main(int argc, char *argv[])
 	os_memset(&wpa_s, 0, sizeof(wpa_s));
 	wpa_s.global = &global;
 	eapol_test.wpa_s = &wpa_s;
+	dl_list_init(&wpa_s.bss);
+	dl_list_init(&wpa_s.bss_id);
 	wpa_s.conf = wpa_config_read(conf, NULL);
 	if (wpa_s.conf == NULL) {
 		printf("Failed to parse configuration file '%s'.\n", conf);

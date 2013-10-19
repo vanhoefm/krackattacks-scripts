@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - test code
- * Copyright (c) 2003-2012, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -27,6 +27,7 @@
 #include "common/wpa_ctrl.h"
 #include "ctrl_iface.h"
 #include "pcsc_funcs.h"
+#include "wpas_glue.h"
 
 
 extern int wpa_debug_level;
@@ -395,6 +396,54 @@ static void eapol_test_write_cert(FILE *f, const char *subject,
 }
 
 
+#if defined(CONFIG_CTRL_IFACE) || !defined(CONFIG_NO_STDOUT_DEBUG)
+static void eapol_test_eap_param_needed(void *ctx, enum wpa_ctrl_req_type field,
+					const char *default_txt)
+{
+	struct eapol_test_data *e = ctx;
+	struct wpa_supplicant *wpa_s = e->wpa_s;
+	struct wpa_ssid *ssid = wpa_s->current_ssid;
+	const char *field_name, *txt = NULL;
+	char *buf;
+	size_t buflen;
+	int len;
+
+	if (ssid == NULL)
+		return;
+
+	field_name = wpa_supplicant_ctrl_req_to_string(field, default_txt,
+						       &txt);
+	if (field_name == NULL) {
+		wpa_printf(MSG_WARNING, "Unhandled EAP param %d needed",
+			   field);
+		return;
+	}
+
+	buflen = 100 + os_strlen(txt) + ssid->ssid_len;
+	buf = os_malloc(buflen);
+	if (buf == NULL)
+		return;
+	len = os_snprintf(buf, buflen,
+			  WPA_CTRL_REQ "%s-%d:%s needed for SSID ",
+			  field_name, ssid->id, txt);
+	if (len < 0 || (size_t) len >= buflen) {
+		os_free(buf);
+		return;
+	}
+	if (ssid->ssid && buflen > len + ssid->ssid_len) {
+		os_memcpy(buf + len, ssid->ssid, ssid->ssid_len);
+		len += ssid->ssid_len;
+		buf[len] = '\0';
+	}
+	buf[buflen - 1] = '\0';
+	wpa_msg(wpa_s, MSG_INFO, "%s", buf);
+	os_free(buf);
+}
+#else /* CONFIG_CTRL_IFACE || !CONFIG_NO_STDOUT_DEBUG */
+#define eapol_test_eap_param_needed NULL
+#endif /* CONFIG_CTRL_IFACE || !CONFIG_NO_STDOUT_DEBUG */
+
+
 static void eapol_test_cert_cb(void *ctx, int depth, const char *subject,
 			       const char *cert_hash,
 			       const struct wpabuf *cert)
@@ -484,6 +533,7 @@ static int test_eapol(struct eapol_test_data *e, struct wpa_supplicant *wpa_s,
 	ctx->opensc_engine_path = wpa_s->conf->opensc_engine_path;
 	ctx->pkcs11_engine_path = wpa_s->conf->pkcs11_engine_path;
 	ctx->pkcs11_module_path = wpa_s->conf->pkcs11_module_path;
+	ctx->eap_param_needed = eapol_test_eap_param_needed;
 	ctx->cert_cb = eapol_test_cert_cb;
 	ctx->cert_in_cb = 1;
 	ctx->set_anon_id = eapol_test_set_anon_id;

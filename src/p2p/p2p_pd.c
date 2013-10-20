@@ -437,6 +437,7 @@ int p2p_prov_disc_req(struct p2p_data *p2p, const u8 *peer_addr,
 	}
 
 	p2p->user_initiated_pd = user_initiated_pd;
+	p2p->pd_force_freq = force_freq;
 
 	if (p2p->user_initiated_pd)
 		p2p->pd_retries = MAX_PROV_DISC_REQ_RETRIES;
@@ -472,4 +473,5 @@ void p2p_reset_pending_pd(struct p2p_data *p2p)
 	p2p->user_initiated_pd = 0;
 	os_memset(p2p->pending_pd_devaddr, 0, ETH_ALEN);
 	p2p->pd_retries = 0;
+	p2p->pd_force_freq = 0;
 }

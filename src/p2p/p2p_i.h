@@ -442,6 +442,14 @@ struct p2p_data {
 	 */
 	int pd_retries;
 
+	/**
+	 * pd_force_freq - Forced frequency for PD retries or 0 to auto-select
+	 *
+	 * This is is used during PD retries for join-a-group case to use the
+	 * correct operating frequency determined from a BSS entry for the GO.
+	 */
+	int pd_force_freq;
+
 	u8 go_timeout;
 	u8 client_timeout;
 

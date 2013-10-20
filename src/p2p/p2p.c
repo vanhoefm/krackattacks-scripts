@@ -2664,7 +2664,8 @@ static void p2p_retry_pd(struct p2p_data *p2p)
 			MAC2STR(dev->info.p2p_device_addr),
 			dev->req_config_methods);
 		p2p_send_prov_disc_req(p2p, dev,
-				       dev->flags & P2P_DEV_PD_FOR_JOIN, 0);
+				       dev->flags & P2P_DEV_PD_FOR_JOIN,
+				       p2p->pd_force_freq);
 		return;
 	}
 }

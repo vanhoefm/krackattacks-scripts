@@ -124,6 +124,8 @@ def main():
             except Exception, e:
                 logger.info("Failed to issue TEST-START before " + t.__name__ + " for " + d.ifname)
                 logger.info(e)
+                print "FAIL " + t.__name__ + " - could not start test"
+                sys.exit(1)
         try:
             if t.func_code.co_argcount > 1:
                 res = t(dev, apdev)

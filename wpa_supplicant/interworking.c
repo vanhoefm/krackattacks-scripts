@@ -1564,6 +1564,12 @@ int interworking_home_sp_cred(struct wpa_supplicant *wpa_s,
 		mnc_len = wpa_s->mnc_len;
 	}
 #endif /* CONFIG_PCSC */
+#ifdef CONFIG_EAP_PROXY
+	else if (cred->pcsc && wpa_s->mnc_len > 0 && wpa_s->imsi[0]) {
+		imsi = wpa_s->imsi;
+		mnc_len = wpa_s->mnc_len;
+	}
+#endif /* CONFIG_EAP_PROXY */
 	if (domain_names &&
 	    imsi && build_root_nai(nai, sizeof(nai), imsi, mnc_len, 0) == 0) {
 		realm = os_strchr(nai, '@');

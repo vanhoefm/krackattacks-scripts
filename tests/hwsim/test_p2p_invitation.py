@@ -16,6 +16,14 @@ def test_p2p_go_invite(dev):
     addr0 = dev[0].p2p_dev_addr()
     addr1 = dev[1].p2p_dev_addr()
 
+    logger.info("Generate BSS table entry for old group")
+    # this adds more coverage to testing by forcing the GO to be found with an
+    # older entry in the BSS table and with that entry having a different
+    # operating channel.
+    dev[0].p2p_start_go(freq=2422)
+    dev[1].scan()
+    dev[0].remove_group()
+
     logger.info("Discover peer")
     dev[1].p2p_listen()
     if not dev[0].discover_peer(addr1, social=True):

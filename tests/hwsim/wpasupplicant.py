@@ -56,6 +56,7 @@ class WpaSupplicant:
         if not "OK" in res:
             logger.info("FLUSH to " + self.ifname + " failed: " + res)
         self.request("SET ignore_old_scan_res 0")
+        self.request("SET external_sim 0")
         self.request("P2P_SET per_sta_psk 0")
         self.request("P2P_SET disabled 0")
         self.request("P2P_SERVICE_FLUSH")

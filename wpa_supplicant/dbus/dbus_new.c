@@ -1362,7 +1362,7 @@ void wpas_dbus_signal_p2p_invitation_result(struct wpa_supplicant *wpa_s,
 	DBusMessageIter iter, dict_iter;
 	struct wpas_dbus_priv *iface;
 
-	wpa_printf(MSG_INFO, "%s\n", __func__);
+	wpa_printf(MSG_DEBUG, "%s", __func__);
 
 	iface = wpa_s->global->dbus;
 	/* Do nothing if the control interface is not turned on */

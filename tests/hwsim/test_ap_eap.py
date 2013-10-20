@@ -151,3 +151,53 @@ def test_ap_wpa2_eap_peap_eap_mschapv2(dev, apdev):
                 anonymous_identity="ttls", password="password",
                 ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+
+def test_ap_wpa2_eap_tls_neg_incorrect_trust_root(dev, apdev):
+    """WPA2-Enterprise negative test - incorrect trust root"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="DOMAIN\mschapv2 user", anonymous_identity="ttls",
+                   password="password", phase2="auth=MSCHAPV2",
+                   ca_cert="auth_serv/ca-incorrect.pem",
+                   wait_connect=False)
+
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
+    if ev is None:
+        raise Exception("Association and EAP start timed out")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=10)
+    if ev is None:
+        raise Exception("EAP method selection timed out")
+    if "TTLS" not in ev:
+        raise Exception("Unexpected EAP method")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-TLS-CERT-ERROR",
+                            "CTRL-EVENT-EAP-SUCCESS",
+                            "CTRL-EVENT-EAP-FAILURE",
+                            "CTRL-EVENT-CONNECTED",
+                            "CTRL-EVENT-DISCONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("EAP result timed out")
+    if "CTRL-EVENT-EAP-TLS-CERT-ERROR" not in ev:
+        raise Exception("TLS certificate error not reported")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS",
+                            "CTRL-EVENT-EAP-FAILURE",
+                            "CTRL-EVENT-CONNECTED",
+                            "CTRL-EVENT-DISCONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("EAP result(2) timed out")
+    if "CTRL-EVENT-EAP-FAILURE" not in ev:
+        raise Exception("EAP failure not reported")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED",
+                            "CTRL-EVENT-DISCONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("EAP result(3) timed out")
+    if "CTRL-EVENT-DISCONNECTED" not in ev:
+        raise Exception("Disconnection not reported")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-SSID-TEMP-DISABLED"], timeout=10)
+    if ev is None:
+        raise Exception("Network block disabling not reported")

@@ -5162,6 +5162,7 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 #ifdef CONFIG_WPS
 	wpas_wps_cancel(wpa_s);
 #endif /* CONFIG_WPS */
+	wpa_s->after_wps = 0;
 
 #ifdef CONFIG_TDLS_TESTING
 	extern unsigned int tdls_testing;
@@ -5595,6 +5596,7 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 			     (wpa_s->wpa_state == WPA_COMPLETED))) {
 				wpa_s->normal_scans = 0;
 				wpa_s->scan_req = MANUAL_SCAN_REQ;
+				wpa_s->after_wps = 0;
 				wpa_supplicant_req_scan(wpa_s, 0, 0);
 			} else if (wpa_s->sched_scanning) {
 				wpa_printf(MSG_DEBUG, "Stop ongoing "

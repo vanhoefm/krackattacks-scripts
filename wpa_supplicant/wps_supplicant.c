@@ -882,6 +882,8 @@ static void wpas_clear_wps(struct wpa_supplicant *wpa_s)
 	int id;
 	struct wpa_ssid *ssid, *remove_ssid = NULL, *prev_current;
 
+	wpa_s->after_wps = 0;
+
 	prev_current = wpa_s->current_ssid;
 
 	/* Enable the networks disabled during wpas_wps_reassoc */
@@ -1156,6 +1158,8 @@ int wpas_wps_cancel(struct wpa_supplicant *wpa_s)
 		wpas_wps_reenable_networks(wpa_s);
 		wpas_wps_clear_ap_info(wpa_s);
 	}
+
+	wpa_s->after_wps = 0;
 
 	return 0;
 }
@@ -2465,6 +2469,9 @@ void wpas_wps_update_ap_info(struct wpa_supplicant *wpa_s,
 void wpas_wps_notify_assoc(struct wpa_supplicant *wpa_s, const u8 *bssid)
 {
 	struct wps_ap_info *ap;
+
+	wpa_s->after_wps = 0;
+
 	if (!wpa_s->wps_ap_iter)
 		return;
 	ap = wpas_wps_get_ap_info(wpa_s, bssid);

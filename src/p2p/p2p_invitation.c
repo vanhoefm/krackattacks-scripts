@@ -407,7 +407,7 @@ void p2p_process_invitation_resp(struct p2p_data *p2p, const u8 *sa,
 		return;
 	}
 
-	if (!msg.channel_list) {
+	if (!msg.channel_list && *msg.status == P2P_SC_SUCCESS) {
 		p2p_dbg(p2p, "Mandatory Channel List attribute missing in Invitation Response from "
 			MACSTR, MAC2STR(sa));
 #ifdef CONFIG_P2P_STRICT
@@ -415,6 +415,9 @@ void p2p_process_invitation_resp(struct p2p_data *p2p, const u8 *sa,
 		return;
 #endif /* CONFIG_P2P_STRICT */
 		/* Try to survive without peer channel list */
+		channels = &p2p->channels;
+	} else if (!msg.channel_list) {
+		/* Non-success cases are not required to include Channel List */
 		channels = &p2p->channels;
 	} else if (p2p_peer_channels_check(p2p, &p2p->channels, dev,
 					   msg.channel_list,

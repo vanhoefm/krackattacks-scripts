@@ -457,6 +457,7 @@ class WpaSupplicant:
                 ieee80211w=None, pairwise=None, group=None, scan_freq=None,
                 eap=None, identity=None, anonymous_identity=None,
                 password=None, phase1=None, phase2=None, ca_cert=None,
+                domain_suffix_match=None,
                 wait_connect=True):
         logger.info("Connect STA " + self.ifname + " to AP")
         id = self.add_network()
@@ -492,6 +493,9 @@ class WpaSupplicant:
             self.set_network_quoted(id, "phase1", phase1)
         if phase2:
             self.set_network_quoted(id, "phase2", phase2)
+        if domain_suffix_match:
+            self.set_network_quoted(id, "domain_suffix_match",
+                                    domain_suffix_match)
         if wait_connect:
             self.connect_network(id)
         else:

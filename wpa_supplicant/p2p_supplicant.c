@@ -3750,7 +3750,8 @@ static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 	if (bss) {
 		freq = bss->freq;
 		wpa_printf(MSG_DEBUG, "P2P: Target GO operating frequency "
-			   "from BSS table: %d MHz", freq);
+			   "from BSS table: %d MHz (SSID %s)", freq,
+			   wpa_ssid_txt(bss->ssid, bss->ssid_len));
 	}
 	if (freq > 0) {
 		u16 method;
@@ -3955,6 +3956,9 @@ static int wpas_p2p_join_start(struct wpa_supplicant *wpa_s)
 		res.freq = bss->freq;
 		res.ssid_len = bss->ssid_len;
 		os_memcpy(res.ssid, bss->ssid, bss->ssid_len);
+		wpa_printf(MSG_DEBUG, "P2P: Join target GO operating frequency "
+			   "from BSS table: %d MHz (SSID %s)", bss->freq,
+			   wpa_ssid_txt(bss->ssid, bss->ssid_len));
 	}
 
 	if (wpa_s->off_channel_freq || wpa_s->roc_waiting_drv_freq) {

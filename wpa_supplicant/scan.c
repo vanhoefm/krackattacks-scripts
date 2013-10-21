@@ -21,6 +21,7 @@
 #include "hs20_supplicant.h"
 #include "notify.h"
 #include "bss.h"
+#include "gas_query.h"
 #include "scan.h"
 
 
@@ -603,6 +604,14 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		}
 	}
 #endif /* CONFIG_P2P */
+
+#ifdef CONFIG_GAS
+	if (gas_query_in_progress(wpa_s->gas)) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "Delay scan while GAS query is in progress");
+		wpa_supplicant_req_scan(wpa_s, 1, 0);
+		return;
+	}
+#endif /* CONFIG_GAS */
 
 	if (wpa_s->conf->ap_scan == 2)
 		max_ssids = 1;

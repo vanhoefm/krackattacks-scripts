@@ -598,3 +598,9 @@ void gas_query_cancel(struct gas_query *gas, const u8 *dst, u8 dialog_token)
 		gas_query_done(gas, query, GAS_QUERY_CANCELLED);
 
 }
+
+
+int gas_query_in_progress(struct gas_query *gas)
+{
+	return gas->current != NULL;
+}

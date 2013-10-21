@@ -153,21 +153,25 @@ static void gas_query_tx_status(struct wpa_supplicant *wpa_s,
 				const u8 *data, size_t data_len,
 				enum offchannel_send_action_result result)
 {
-	struct gas_query_pending *q, *query = NULL;
+	struct gas_query_pending *query;
 	struct gas_query *gas = wpa_s->gas;
 
-	dl_list_for_each(q, &gas->pending, struct gas_query_pending, list) {
-		if (os_memcmp(q->addr, dst, ETH_ALEN) == 0) {
-			query = q;
-			break;
-		}
+	if (gas->current == NULL) {
+		wpa_printf(MSG_DEBUG, "GAS: Unexpected TX status: freq=%u dst="
+			   MACSTR " result=%d - no query in progress",
+			   freq, MAC2STR(dst), result);
+		return;
 	}
 
+	query = gas->current;
+
 	wpa_printf(MSG_DEBUG, "GAS: TX status: freq=%u dst=" MACSTR
-		   " result=%d query=%p",
-		   freq, MAC2STR(dst), result, query);
-	if (!query)
+		   " result=%d query=%p dialog_token=%u",
+		   freq, MAC2STR(dst), result, query, query->dialog_token);
+	if (os_memcmp(dst, query->addr, ETH_ALEN) != 0) {
+		wpa_printf(MSG_DEBUG, "GAS: TX status for unexpected destination");
 		return;
+	}
 
 	if (result == OFFCHANNEL_SEND_ACTION_SUCCESS) {
 		eloop_cancel_timeout(gas_query_timeout, gas, query);
@@ -469,8 +473,9 @@ static void gas_query_timeout(void *eloop_data, void *user_ctx)
 	struct gas_query *gas = eloop_data;
 	struct gas_query_pending *query = user_ctx;
 
-	wpa_printf(MSG_DEBUG, "GAS: No response received for query to " MACSTR,
-		   MAC2STR(query->addr));
+	wpa_printf(MSG_DEBUG, "GAS: No response received for query to " MACSTR
+		   " dialog token %u",
+		   MAC2STR(query->addr), query->dialog_token);
 	gas_query_done(gas, query, GAS_QUERY_TIMEOUT);
 }
 
@@ -505,6 +510,8 @@ static void gas_service_timeout(void *eloop_data, void *user_ctx)
 	}
 	gas->current = query;
 
+	wpa_printf(MSG_DEBUG, "GAS: Starting query timeout for dialog token %u",
+		   query->dialog_token);
 	eloop_register_timeout(GAS_QUERY_TIMEOUT_PERIOD, 0,
 			       gas_query_timeout, gas, query);
 }

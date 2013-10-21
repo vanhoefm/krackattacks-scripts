@@ -3945,37 +3945,53 @@ void wpas_request_connection(struct wpa_supplicant *wpa_s)
 }
 
 
+static int wpas_conn_in_progress(struct wpa_supplicant *wpa_s)
+{
+	return wpa_s->wpa_state >= WPA_AUTHENTICATING &&
+		wpa_s->wpa_state != WPA_COMPLETED;
+}
+
+
 /**
  * wpas_wpa_is_in_progress - Check whether a connection is in progress
  * @wpa_s: Pointer to wpa_supplicant data
+ * @include_current: Whether to consider specified interface
  *
  * This function is to check if the wpa state is in beginning of the connection
  * during 4-way handshake or group key handshake with WPA on any shared
  * interface.
  */
-int wpas_wpa_is_in_progress(struct wpa_supplicant *wpa_s)
+int wpas_wpa_is_in_progress(struct wpa_supplicant *wpa_s, int include_current)
 {
 	const char *rn, *rn2;
 	struct wpa_supplicant *ifs;
 
-	if (!wpa_s->driver->get_radio_name)
+	if (!wpa_s->driver->get_radio_name) {
+		if (include_current && wpas_conn_in_progress(wpa_s)) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "Connection is in progress on interface %s - defer",
+				wpa_s->ifname);
+			return 1;
+		}
+
                 return 0;
+	}
 
 	rn = wpa_s->driver->get_radio_name(wpa_s->drv_priv);
 	if (rn == NULL || rn[0] == '\0')
 		return 0;
 
 	for (ifs = wpa_s->global->ifaces; ifs; ifs = ifs->next) {
-		if (ifs == wpa_s || !ifs->driver->get_radio_name)
+		if (!include_current && ifs == wpa_s)
+			continue;
+		if (!ifs->driver->get_radio_name)
 			continue;
 
 		rn2 = ifs->driver->get_radio_name(ifs->drv_priv);
 		if (!rn2 || os_strcmp(rn, rn2) != 0)
 			continue;
-		if (ifs->wpa_state >= WPA_AUTHENTICATING &&
-		    ifs->wpa_state != WPA_COMPLETED) {
+		if (wpas_conn_in_progress(ifs)) {
 			wpa_dbg(wpa_s, MSG_DEBUG, "Connection is in progress "
-				"on interface %s - defer scan", ifs->ifname);
+				"on interface %s - defer", ifs->ifname);
 			return 1;
 		}
 	}

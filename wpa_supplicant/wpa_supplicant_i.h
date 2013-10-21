@@ -823,7 +823,7 @@ int disallowed_ssid(struct wpa_supplicant *wpa_s, const u8 *ssid,
 		    size_t ssid_len);
 void wpas_request_connection(struct wpa_supplicant *wpa_s);
 int wpas_build_ext_capab(struct wpa_supplicant *wpa_s, u8 *buf);
-int wpas_wpa_is_in_progress(struct wpa_supplicant *wpa_s);
+int wpas_wpa_is_in_progress(struct wpa_supplicant *wpa_s, int include_current);
 
 /**
  * wpa_supplicant_ctrl_iface_ctrl_rsp_handle - Handle a control response

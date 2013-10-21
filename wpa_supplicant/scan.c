@@ -588,7 +588,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	}
 
 #ifdef CONFIG_P2P
-	if (wpas_p2p_in_progress(wpa_s) || wpas_wpa_is_in_progress(wpa_s)) {
+	if (wpas_p2p_in_progress(wpa_s) || wpas_wpa_is_in_progress(wpa_s, 0)) {
 		if (wpa_s->sta_scan_pending &&
 		    wpas_p2p_in_progress(wpa_s) == 2 &&
 		    wpa_s->global->p2p_cb_on_scan_complete) {

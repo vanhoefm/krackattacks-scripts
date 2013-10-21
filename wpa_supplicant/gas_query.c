@@ -478,10 +478,16 @@ static void gas_query_timeout(void *eloop_data, void *user_ctx)
 static void gas_service_timeout(void *eloop_data, void *user_ctx)
 {
 	struct gas_query *gas = eloop_data;
+	struct wpa_supplicant *wpa_s = gas->wpa_s;
 	struct gas_query_pending *query = user_ctx;
+	int conn;
 
-	if (gas->current) {
-		wpa_printf(MSG_DEBUG, "GAS: Delaying GAS query Tx while another operation is in progress");
+	conn = wpas_wpa_is_in_progress(wpa_s, 1);
+	if (conn || wpa_s->scanning || gas->current) {
+		wpa_printf(MSG_DEBUG, "GAS: Delaying GAS query Tx while another operation is in progress:%s%s%s",
+			   conn ? " connection" : "",
+			   wpa_s->scanning ? " scanning" : "",
+			   gas->current ? " gas_query" : "");
 		eloop_register_timeout(
 			GAS_SERVICE_RETRY_PERIOD_MS / 1000,
 			(GAS_SERVICE_RETRY_PERIOD_MS % 1000) * 1000,

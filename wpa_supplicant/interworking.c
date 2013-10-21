@@ -244,6 +244,7 @@ static int interworking_anqp_send_req(struct wpa_supplicant *wpa_s,
 			    interworking_anqp_resp_cb, wpa_s);
 	if (res < 0) {
 		wpa_printf(MSG_DEBUG, "ANQP: Failed to send Query Request");
+		wpabuf_free(buf);
 		ret = -1;
 		eloop_register_timeout(0, 0, interworking_continue_anqp, wpa_s,
 				       NULL);
@@ -251,7 +252,6 @@ static int interworking_anqp_send_req(struct wpa_supplicant *wpa_s,
 		wpa_printf(MSG_DEBUG, "ANQP: Query started with dialog token "
 			   "%u", res);
 
-	wpabuf_free(buf);
 	return ret;
 }
 
@@ -1877,12 +1877,12 @@ int anqp_send_req(struct wpa_supplicant *wpa_s, const u8 *dst,
 	res = gas_query_req(wpa_s->gas, dst, freq, buf, anqp_resp_cb, wpa_s);
 	if (res < 0) {
 		wpa_printf(MSG_DEBUG, "ANQP: Failed to send Query Request");
+		wpabuf_free(buf);
 		ret = -1;
 	} else
 		wpa_printf(MSG_DEBUG, "ANQP: Query started with dialog token "
 			   "%u", res);
 
-	wpabuf_free(buf);
 	return ret;
 }
 
@@ -2177,11 +2177,11 @@ int gas_send_request(struct wpa_supplicant *wpa_s, const u8 *dst,
 	res = gas_query_req(wpa_s->gas, dst, freq, buf, gas_resp_cb, wpa_s);
 	if (res < 0) {
 		wpa_printf(MSG_DEBUG, "GAS: Failed to send Query Request");
+		wpabuf_free(buf);
 		ret = -1;
 	} else
 		wpa_printf(MSG_DEBUG, "GAS: Query started with dialog token "
 			   "%u", res);
 
-	wpabuf_free(buf);
 	return ret;
 }

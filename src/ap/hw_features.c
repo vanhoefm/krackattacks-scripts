@@ -758,9 +758,12 @@ static void hostapd_notify_bad_chans(struct hostapd_iface *iface)
 }
 
 
-int hostapd_acs_completed(struct hostapd_iface *iface)
+int hostapd_acs_completed(struct hostapd_iface *iface, int err)
 {
 	int ret = -1;
+
+	if (err)
+		goto out;
 
 	switch (hostapd_check_chans(iface)) {
 	case HOSTAPD_CHAN_VALID:

@@ -655,6 +655,7 @@ static void acs_study(struct hostapd_iface *iface)
 	ideal_chan = acs_find_ideal_chan(iface);
 	if (!ideal_chan) {
 		wpa_printf(MSG_ERROR, "ACS: Failed to compute ideal channel");
+		err = -1;
 		goto fail;
 	}
 
@@ -663,24 +664,20 @@ static void acs_study(struct hostapd_iface *iface)
 	if (iface->conf->ieee80211ac)
 		acs_adjust_vht_center_freq(iface);
 
+	err = 0;
+fail:
 	/*
 	 * hostapd_setup_interface_complete() will return -1 on failure,
 	 * 0 on success and 0 is HOSTAPD_CHAN_VALID :)
 	 */
-	switch (hostapd_acs_completed(iface)) {
-	case HOSTAPD_CHAN_VALID:
+	if (hostapd_acs_completed(iface, err) == HOSTAPD_CHAN_VALID) {
 		acs_cleanup(iface);
 		return;
-	case HOSTAPD_CHAN_INVALID:
-	case HOSTAPD_CHAN_ACS:
-	default:
-		/* This can possibly happen if channel parameters (secondary
-		 * channel, center frequencies) are misconfigured */
-		wpa_printf(MSG_ERROR, "ACS: Possibly channel configuration is invalid, please report this along with your config file.");
-		goto fail;
 	}
 
-fail:
+	/* This can possibly happen if channel parameters (secondary
+	 * channel, center frequencies) are misconfigured */
+	wpa_printf(MSG_ERROR, "ACS: Possibly channel configuration is invalid, please report this along with your config file.");
 	acs_fail(iface);
 }
 

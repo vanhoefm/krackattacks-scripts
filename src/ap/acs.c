@@ -352,16 +352,6 @@ acs_survey_chan_interference_factor(struct hostapd_iface *iface,
 }
 
 
-static int acs_usable_chan(struct hostapd_channel_data *chan)
-{
-	if (dl_list_empty(&chan->survey_list))
-		return 0;
-	if (chan->flag & HOSTAPD_CHAN_DISABLED)
-		return 0;
-	return 1;
-}
-
-
 static int acs_usable_ht40_chan(struct hostapd_channel_data *chan)
 {
 	const int allowed[] = { 36, 44, 52, 60, 100, 108, 116, 124, 132, 149,
@@ -398,28 +388,54 @@ static int acs_survey_is_sufficient(struct freq_survey *survey)
 }
 
 
+static int acs_survey_list_is_sufficient(struct hostapd_channel_data *chan)
+{
+	struct freq_survey *survey;
+
+	dl_list_for_each(survey, &chan->survey_list, struct freq_survey, list)
+	{
+		if (!acs_survey_is_sufficient(survey)) {
+			wpa_printf(MSG_ERROR, "ACS: Channel %d has insufficient survey data",
+				   chan->chan);
+			return 0;
+		}
+	}
+
+	return 1;
+
+}
+
+
 static int acs_surveys_are_sufficient(struct hostapd_iface *iface)
 {
 	int i;
 	struct hostapd_channel_data *chan;
-	struct freq_survey *survey;
+	int valid = 0;
 
 	for (i = 0; i < iface->current_mode->num_channels; i++) {
 		chan = &iface->current_mode->channels[i];
 		if (chan->flag & HOSTAPD_CHAN_DISABLED)
 			continue;
 
-		dl_list_for_each(survey, &chan->survey_list,
-				 struct freq_survey, list)
-		{
-			if (!acs_survey_is_sufficient(survey)) {
-				wpa_printf(MSG_ERROR, "ACS: Channel %d has insufficient survey data",
-					   chan->chan);
-				return 0;
-			}
-		}
+		if (!acs_survey_list_is_sufficient(chan))
+			continue;
+
+		valid++;
 	}
 
+	/* We need at least survey data for one channel */
+	return !!valid;
+}
+
+
+static int acs_usable_chan(struct hostapd_channel_data *chan)
+{
+	if (dl_list_empty(&chan->survey_list))
+		return 0;
+	if (chan->flag & HOSTAPD_CHAN_DISABLED)
+		return 0;
+	if (!acs_survey_list_is_sufficient(chan))
+		return 0;
 	return 1;
 }
 

@@ -9251,10 +9251,8 @@ static int wpa_driver_nl80211_if_remove(struct i802_bss *bss,
 
 	wpa_printf(MSG_DEBUG, "nl80211: %s(type=%d ifname=%s) ifindex=%d",
 		   __func__, type, ifname, ifindex);
-	if (ifindex <= 0)
-		return -1;
-
-	nl80211_remove_iface(drv, ifindex);
+	if (ifindex > 0)
+		nl80211_remove_iface(drv, ifindex);
 
 #ifdef HOSTAPD
 	if (type != WPA_IF_AP_BSS)

@@ -472,7 +472,7 @@ static struct hostapd_channel_data *acs_find_chan(struct hostapd_iface *iface,
 	for (i = 0; i < iface->current_mode->num_channels; i++) {
 		chan = &iface->current_mode->channels[i];
 
-		if (!acs_usable_chan(chan))
+		if (chan->flag & HOSTAPD_CHAN_DISABLED)
 			continue;
 
 		if (chan->freq == freq)
@@ -492,7 +492,8 @@ static struct hostapd_channel_data *acs_find_chan(struct hostapd_iface *iface,
 static struct hostapd_channel_data *
 acs_find_ideal_chan(struct hostapd_iface *iface)
 {
-	struct hostapd_channel_data *chan, *adj_chan, *ideal_chan = NULL;
+	struct hostapd_channel_data *chan, *adj_chan, *ideal_chan = NULL,
+		*rand_chan = NULL;
 	long double factor, ideal_factor = 0;
 	int i, j;
 	int n_chans = 1;
@@ -524,8 +525,9 @@ acs_find_ideal_chan(struct hostapd_iface *iface)
 	for (i = 0; i < iface->current_mode->num_channels; i++) {
 		chan = &iface->current_mode->channels[i];
 
-		if (!acs_usable_chan(chan))
+		if (chan->flag & HOSTAPD_CHAN_DISABLED)
 			continue;
+
 
 		/* HT40 on 5 GHz has a limited set of primary channels as per
 		 * 11n Annex J */
@@ -538,14 +540,17 @@ acs_find_ideal_chan(struct hostapd_iface *iface)
 			continue;
 		}
 
-		factor = chan->interference_factor;
+		factor = 0;
+		if (acs_usable_chan(chan))
+			factor = chan->interference_factor;
 
 		for (j = 1; j < n_chans; j++) {
 			adj_chan = acs_find_chan(iface, chan->freq + (j * 20));
 			if (!adj_chan)
 				break;
 
-			factor += adj_chan->interference_factor;
+			if (acs_usable_chan(adj_chan))
+				factor += adj_chan->interference_factor;
 		}
 
 		if (j != n_chans) {
@@ -564,22 +569,22 @@ acs_find_ideal_chan(struct hostapd_iface *iface)
 
 				adj_chan = acs_find_chan(iface, chan->freq +
 							 (j * 20) - 5);
-				if (adj_chan)
+				if (adj_chan && acs_usable_chan(adj_chan))
 					factor += adj_chan->interference_factor;
 
 				adj_chan = acs_find_chan(iface, chan->freq +
 							 (j * 20) - 10);
-				if (adj_chan)
+				if (adj_chan && acs_usable_chan(adj_chan))
 					factor += adj_chan->interference_factor;
 
 				adj_chan = acs_find_chan(iface, chan->freq +
 							 (j * 20) + 5);
-				if (adj_chan)
+				if (adj_chan && acs_usable_chan(adj_chan))
 					factor += adj_chan->interference_factor;
 
 				adj_chan = acs_find_chan(iface, chan->freq +
 							 (j * 20) + 10);
-				if (adj_chan)
+				if (adj_chan && acs_usable_chan(adj_chan))
 					factor += adj_chan->interference_factor;
 			}
 		}
@@ -587,17 +592,24 @@ acs_find_ideal_chan(struct hostapd_iface *iface)
 		wpa_printf(MSG_DEBUG, "ACS:  * channel %d: total interference = %Lg",
 			   chan->chan, factor);
 
-		if (!ideal_chan || factor < ideal_factor) {
+		if (acs_usable_chan(chan) &&
+		    (!ideal_chan || factor < ideal_factor)) {
 			ideal_factor = factor;
 			ideal_chan = chan;
 		}
+
+		/* This channel would at least be usable */
+		if (!rand_chan)
+			rand_chan = chan;
 	}
 
-	if (ideal_chan)
+	if (ideal_chan) {
 		wpa_printf(MSG_DEBUG, "ACS: Ideal channel is %d (%d MHz) with total interference factor of %Lg",
 			   ideal_chan->chan, ideal_chan->freq, ideal_factor);
+		return ideal_chan;
+	}
 
-	return ideal_chan;
+	return rand_chan;
 }
 
 

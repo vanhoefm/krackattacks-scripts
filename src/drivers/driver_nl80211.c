@@ -2510,8 +2510,8 @@ static void nl80211_radar_event(struct wpa_driver_nl80211_data *drv,
 		return;
 
 	os_memset(&data, 0, sizeof(data));
-	data.dfs_event.freq = nla_get_u16(tb[NL80211_ATTR_WIPHY_FREQ]);
-	event_type = nla_get_u8(tb[NL80211_ATTR_RADAR_EVENT]);
+	data.dfs_event.freq = nla_get_u32(tb[NL80211_ATTR_WIPHY_FREQ]);
+	event_type = nla_get_u32(tb[NL80211_ATTR_RADAR_EVENT]);
 
 	/* Check HT params */
 	if (tb[NL80211_ATTR_WIPHY_CHANNEL_TYPE]) {

@@ -204,6 +204,42 @@ void p2p_channels_intersect(const struct p2p_channels *a,
 }
 
 
+void p2p_channels_remove_freqs(struct p2p_channels *chan,
+			       const struct wpa_freq_range_list *list)
+{
+	size_t o, c;
+
+	if (list == NULL)
+		return;
+
+	o = 0;
+	while (o < chan->reg_classes) {
+		struct p2p_reg_class *op = &chan->reg_class[o];
+
+		c = 0;
+		while (c < op->channels) {
+			int freq = p2p_channel_to_freq(op->reg_class,
+						       op->channel[c]);
+			if (freq > 0 && freq_range_list_includes(list, freq)) {
+				op->channels--;
+				os_memmove(&op->channel[c],
+					   &op->channel[c + 1],
+					   op->channels - c);
+			} else
+				c++;
+		}
+
+		if (op->channels == 0) {
+			chan->reg_classes--;
+			os_memmove(&chan->reg_class[o], &chan->reg_class[o + 1],
+				   (chan->reg_classes - o) *
+				   sizeof(struct p2p_reg_class));
+		} else
+			o++;
+	}
+}
+
+
 /**
  * p2p_channels_includes - Check whether a channel is included in the list
  * @channels: List of supported channels
@@ -251,6 +287,17 @@ int p2p_supported_freq(struct p2p_data *p2p, unsigned int freq)
 		return 0;
 	return p2p_channels_includes(&p2p->cfg->channels, op_reg_class,
 				     op_channel);
+}
+
+
+int p2p_supported_freq_go(struct p2p_data *p2p, unsigned int freq)
+{
+	u8 op_reg_class, op_channel;
+	if (p2p_freq_to_channel(freq, &op_reg_class, &op_channel) < 0)
+		return 0;
+	return p2p_channels_includes(&p2p->cfg->channels, op_reg_class,
+				     op_channel) &&
+		!freq_range_list_includes(&p2p->no_go_freq, freq);
 }
 
 

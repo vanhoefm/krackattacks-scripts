@@ -1936,6 +1936,7 @@ void wpa_config_free(struct wpa_config *config)
 	os_free(config->p2p_ssid_postfix);
 	os_free(config->pssid);
 	os_free(config->p2p_pref_chan);
+	os_free(config->p2p_no_go_freq.range);
 	os_free(config->autoscan);
 	os_free(config->freq_list);
 	wpabuf_free(config->wps_nfc_dh_pubkey);
@@ -3079,6 +3080,26 @@ fail:
 	wpa_printf(MSG_ERROR, "Line %d: Invalid p2p_pref_chan list", line);
 	return -1;
 }
+
+
+static int wpa_config_process_p2p_no_go_freq(
+	const struct global_parse_data *data,
+	struct wpa_config *config, int line, const char *pos)
+{
+	int ret;
+
+	ret = freq_range_list_parse(&config->p2p_no_go_freq, pos);
+	if (ret < 0) {
+		wpa_printf(MSG_ERROR, "Line %d: Invalid p2p_no_go_freq", line);
+		return -1;
+	}
+
+	wpa_printf(MSG_DEBUG, "P2P: p2p_no_go_freq with %u items",
+		   config->p2p_no_go_freq.num);
+
+	return 0;
+}
+
 #endif /* CONFIG_P2P */
 
 
@@ -3229,6 +3250,7 @@ static const struct global_parse_data global_fields[] = {
 	{ INT_RANGE(p2p_intra_bss, 0, 1), CFG_CHANGED_P2P_INTRA_BSS },
 	{ INT(p2p_group_idle), 0 },
 	{ FUNC(p2p_pref_chan), CFG_CHANGED_P2P_PREF_CHAN },
+	{ FUNC(p2p_no_go_freq), CFG_CHANGED_P2P_PREF_CHAN },
 	{ INT(p2p_go_ht40), 0 },
 	{ INT(p2p_disabled), 0 },
 	{ INT(p2p_no_group_iface), 0 },

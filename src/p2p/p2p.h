@@ -1649,6 +1649,14 @@ int p2p_channels_includes_freq(const struct p2p_channels *channels,
 int p2p_supported_freq(struct p2p_data *p2p, unsigned int freq);
 
 /**
+ * p2p_supported_freq_go - Check whether channel is supported for P2P GO operation
+ * @p2p: P2P module context from p2p_init()
+ * @freq: Channel frequency in MHz
+ * Returns: 0 if channel not usable for P2P, 1 if usable for P2P
+ */
+int p2p_supported_freq_go(struct p2p_data *p2p, unsigned int freq);
+
+/**
  * p2p_get_pref_freq - Get channel from preferred channel list
  * @p2p: P2P module context from p2p_init()
  * @channels: List of channels
@@ -1763,6 +1771,15 @@ int p2p_set_oper_channel(struct p2p_data *p2p, u8 op_reg_class, u8 op_channel,
  */
 int p2p_set_pref_chan(struct p2p_data *p2p, unsigned int num_pref_chan,
 		      const struct p2p_channel *pref_chan);
+
+/**
+ * p2p_set_no_go_freq - Set no GO channel ranges
+ * @p2p: P2P module context from p2p_init()
+ * @list: Channel ranges or %NULL to remove restriction
+ * Returns: 0 on success, -1 on failure
+ */
+int p2p_set_no_go_freq(struct p2p_data *p2p,
+		       const struct wpa_freq_range_list *list);
 
 /**
  * p2p_in_progress - Check whether a P2P operation is progress

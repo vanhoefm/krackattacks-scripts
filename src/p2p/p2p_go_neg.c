@@ -479,6 +479,9 @@ static int p2p_go_select_channel(struct p2p_data *p2p, struct p2p_device *dev,
 	p2p_channels_dump(p2p, "peer channels", &dev->channels);
 	p2p_channels_intersect(&p2p->channels, &dev->channels, &intersection);
 	p2p_channels_dump(p2p, "intersection", &intersection);
+	p2p_channels_remove_freqs(&intersection, &p2p->no_go_freq);
+	p2p_channels_dump(p2p, "intersection after no-GO removal",
+			  &intersection);
 	if (intersection.reg_classes == 0 ||
 	    intersection.reg_class[0].channels == 0) {
 		*status = P2P_SC_FAIL_NO_COMMON_CHANNELS;

@@ -3386,6 +3386,8 @@ int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s)
 			global->p2p, wpa_s->conf->wps_vendor_ext[i]);
 	}
 
+	p2p_set_no_go_freq(global->p2p, &wpa_s->conf->p2p_no_go_freq);
+
 	return 0;
 }
 
@@ -4313,8 +4315,8 @@ static int wpas_p2p_select_go_freq(struct wpa_supplicant *wpa_s, int freq)
 		wpa_printf(MSG_DEBUG, "P2P: Request to start GO on 2.4 GHz "
 			   "band");
 		if (wpa_s->best_24_freq > 0 &&
-		    p2p_supported_freq(wpa_s->global->p2p,
-				       wpa_s->best_24_freq)) {
+		    p2p_supported_freq_go(wpa_s->global->p2p,
+					  wpa_s->best_24_freq)) {
 			freq = wpa_s->best_24_freq;
 			wpa_printf(MSG_DEBUG, "P2P: Use best 2.4 GHz band "
 				   "channel: %d MHz", freq);
@@ -4330,7 +4332,7 @@ static int wpas_p2p_select_go_freq(struct wpa_supplicant *wpa_s, int freq)
 		wpa_printf(MSG_DEBUG, "P2P: Request to start GO on 5 GHz "
 			   "band");
 		if (wpa_s->best_5_freq > 0 &&
-		    p2p_supported_freq(wpa_s->global->p2p,
+		    p2p_supported_freq_go(wpa_s->global->p2p,
 				       wpa_s->best_5_freq)) {
 			freq = wpa_s->best_5_freq;
 			wpa_printf(MSG_DEBUG, "P2P: Use best 5 GHz band "
@@ -4338,7 +4340,7 @@ static int wpas_p2p_select_go_freq(struct wpa_supplicant *wpa_s, int freq)
 		} else {
 			os_get_random((u8 *) &r, sizeof(r));
 			freq = 5180 + (r % 4) * 20;
-			if (!p2p_supported_freq(wpa_s->global->p2p, freq)) {
+			if (!p2p_supported_freq_go(wpa_s->global->p2p, freq)) {
 				wpa_printf(MSG_DEBUG, "P2P: Could not select "
 					   "5 GHz channel for P2P group");
 				return -1;
@@ -4348,7 +4350,7 @@ static int wpas_p2p_select_go_freq(struct wpa_supplicant *wpa_s, int freq)
 		}
 	}
 
-	if (freq > 0 && !p2p_supported_freq(wpa_s->global->p2p, freq)) {
+	if (freq > 0 && !p2p_supported_freq_go(wpa_s->global->p2p, freq)) {
 		wpa_printf(MSG_DEBUG, "P2P: The forced channel for GO "
 			   "(%u MHz) is not supported for P2P uses",
 			   freq);
@@ -4401,24 +4403,24 @@ static int wpas_p2p_init_go_params(struct wpa_supplicant *wpa_s,
 			   "frequency %d MHz", params->freq);
 	} else if (wpa_s->conf->p2p_oper_channel == 0 &&
 		   wpa_s->best_overall_freq > 0 &&
-		   p2p_supported_freq(wpa_s->global->p2p,
-				      wpa_s->best_overall_freq) &&
+		   p2p_supported_freq_go(wpa_s->global->p2p,
+					 wpa_s->best_overall_freq) &&
 		   freq_included(channels, wpa_s->best_overall_freq)) {
 		params->freq = wpa_s->best_overall_freq;
 		wpa_printf(MSG_DEBUG, "P2P: Set GO freq based on best overall "
 			   "channel %d MHz", params->freq);
 	} else if (wpa_s->conf->p2p_oper_channel == 0 &&
 		   wpa_s->best_24_freq > 0 &&
-		   p2p_supported_freq(wpa_s->global->p2p,
-				      wpa_s->best_24_freq) &&
+		   p2p_supported_freq_go(wpa_s->global->p2p,
+					 wpa_s->best_24_freq) &&
 		   freq_included(channels, wpa_s->best_24_freq)) {
 		params->freq = wpa_s->best_24_freq;
 		wpa_printf(MSG_DEBUG, "P2P: Set GO freq based on best 2.4 GHz "
 			   "channel %d MHz", params->freq);
 	} else if (wpa_s->conf->p2p_oper_channel == 0 &&
 		   wpa_s->best_5_freq > 0 &&
-		   p2p_supported_freq(wpa_s->global->p2p,
-				      wpa_s->best_5_freq) &&
+		   p2p_supported_freq_go(wpa_s->global->p2p,
+					 wpa_s->best_5_freq) &&
 		   freq_included(channels, wpa_s->best_5_freq)) {
 		params->freq = wpa_s->best_5_freq;
 		wpa_printf(MSG_DEBUG, "P2P: Set GO freq based on best 5 GHz "
@@ -4564,7 +4566,7 @@ int wpas_p2p_group_add(struct wpa_supplicant *wpa_s, int persistent_group,
 	if (wpas_p2p_init_go_params(wpa_s, &params, freq, ht40, NULL))
 		return -1;
 	if (params.freq &&
-	    !p2p_supported_freq(wpa_s->global->p2p, params.freq)) {
+	    !p2p_supported_freq_go(wpa_s->global->p2p, params.freq)) {
 		wpa_printf(MSG_DEBUG, "P2P: The selected channel for GO "
 			   "(%u MHz) is not supported for P2P uses",
 			   params.freq);
@@ -5603,6 +5605,11 @@ void wpas_p2p_update_config(struct wpa_supplicant *wpa_s)
 		if (p2p_set_pref_chan(p2p, wpa_s->conf->num_p2p_pref_chan,
 				      wpa_s->conf->p2p_pref_chan) < 0) {
 			wpa_printf(MSG_ERROR, "P2P: Preferred channel list "
+				   "update failed");
+		}
+
+		if (p2p_set_no_go_freq(p2p, &wpa_s->conf->p2p_no_go_freq) < 0) {
+			wpa_printf(MSG_ERROR, "P2P: No GO channel list "
 				   "update failed");
 		}
 	}

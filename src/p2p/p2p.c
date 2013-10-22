@@ -1550,8 +1550,15 @@ void p2p_go_complete(struct p2p_data *p2p, struct p2p_device *peer)
 		}
 	}
 
+	p2p_channels_dump(p2p, "own channels", &p2p->channels);
+	p2p_channels_dump(p2p, "peer channels", &peer->channels);
 	p2p_channels_intersect(&p2p->channels, &peer->channels,
 			       &intersection);
+	if (go) {
+		p2p_channels_remove_freqs(&intersection, &p2p->no_go_freq);
+		p2p_channels_dump(p2p, "intersection after no-GO removal",
+				  &intersection);
+	}
 	freqs = 0;
 	for (i = 0; i < intersection.reg_classes; i++) {
 		struct p2p_reg_class *c = &intersection.reg_class[i];
@@ -2402,6 +2409,7 @@ void p2p_deinit(struct p2p_data *p2p)
 	wpabuf_free(p2p->sd_resp);
 	os_free(p2p->after_scan_tx);
 	p2p_remove_wps_vendor_extensions(p2p);
+	os_free(p2p->no_go_freq.range);
 	os_free(p2p);
 }
 
@@ -3928,6 +3936,31 @@ int p2p_set_pref_chan(struct p2p_data *p2p, unsigned int num_pref_chan,
 	os_free(p2p->cfg->pref_chan);
 	p2p->cfg->pref_chan = n;
 	p2p->cfg->num_pref_chan = num_pref_chan;
+
+	return 0;
+}
+
+
+int p2p_set_no_go_freq(struct p2p_data *p2p,
+		       const struct wpa_freq_range_list *list)
+{
+	struct wpa_freq_range *tmp;
+
+	if (list == NULL || list->num == 0) {
+		os_free(p2p->no_go_freq.range);
+		p2p->no_go_freq.range = NULL;
+		p2p->no_go_freq.num = 0;
+		return 0;
+	}
+
+	tmp = os_calloc(list->num, sizeof(struct wpa_freq_range));
+	if (tmp == NULL)
+		return -1;
+	os_memcpy(tmp, list->range, list->num * sizeof(struct wpa_freq_range));
+	os_free(p2p->no_go_freq.range);
+	p2p->no_go_freq.range = tmp;
+	p2p->no_go_freq.num = list->num;
+	p2p_dbg(p2p, "Updated no GO chan list");
 
 	return 0;
 }

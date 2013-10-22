@@ -316,6 +316,8 @@ struct p2p_data {
 	 */
 	struct p2p_channels channels;
 
+	struct wpa_freq_range_list no_go_freq;
+
 	enum p2p_pending_action_state {
 		P2P_NO_PENDING_ACTION,
 		P2P_PENDING_GO_NEG_REQUEST,
@@ -570,6 +572,8 @@ int p2p_freq_to_channel(unsigned int freq, u8 *op_class, u8 *channel);
 void p2p_channels_intersect(const struct p2p_channels *a,
 			    const struct p2p_channels *b,
 			    struct p2p_channels *res);
+void p2p_channels_remove_freqs(struct p2p_channels *chan,
+			       const struct wpa_freq_range_list *list);
 int p2p_channels_includes(const struct p2p_channels *channels, u8 reg_class,
 			  u8 channel);
 void p2p_channels_dump(struct p2p_data *p2p, const char *title,

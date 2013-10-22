@@ -941,6 +941,13 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 		}
 		fprintf(f, "\n");
 	}
+	if (config->p2p_no_go_freq.num) {
+		char *val = freq_range_list_str(&config->p2p_no_go_freq);
+		if (val) {
+			fprintf(f, "p2p_no_go_freq=%s\n", val);
+			os_free(val);
+		}
+	}
 	if (config->p2p_go_ht40)
 		fprintf(f, "p2p_go_ht40=%u\n", config->p2p_go_ht40);
 	if (config->p2p_disabled)

@@ -280,3 +280,36 @@ unsigned int p2p_get_pref_freq(struct p2p_data *p2p,
 
 	return 0;
 }
+
+
+void p2p_channels_dump(struct p2p_data *p2p, const char *title,
+		       const struct p2p_channels *chan)
+{
+	char buf[500], *pos, *end;
+	size_t i, j;
+	int ret;
+
+	pos = buf;
+	end = pos + sizeof(buf);
+
+	for (i = 0; i < chan->reg_classes; i++) {
+		const struct p2p_reg_class *c;
+		c = &chan->reg_class[i];
+		ret = os_snprintf(pos, end - pos, " %u:", c->reg_class);
+		if (ret < 0 || ret >= end - pos)
+			break;
+		pos += ret;
+
+		for (j = 0; j < c->channels; j++) {
+			ret = os_snprintf(pos, end - pos, "%s%u",
+					  j == 0 ? "" : ",",
+					  c->channel[j]);
+			if (ret < 0 || ret >= end - pos)
+				break;
+			pos += ret;
+		}
+	}
+	*pos = '\0';
+
+	p2p_dbg(p2p, "%s:%s", title, buf);
+}

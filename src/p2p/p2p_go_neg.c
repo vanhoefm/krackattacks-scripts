@@ -465,22 +465,16 @@ static int p2p_go_select_channel(struct p2p_data *p2p, struct p2p_device *dev,
 				 u8 *status)
 {
 	struct p2p_channels intersection;
-	size_t i;
 
+	p2p_channels_dump(p2p, "own channels", &p2p->channels);
+	p2p_channels_dump(p2p, "peer channels", &dev->channels);
 	p2p_channels_intersect(&p2p->channels, &dev->channels, &intersection);
+	p2p_channels_dump(p2p, "intersection", &intersection);
 	if (intersection.reg_classes == 0 ||
 	    intersection.reg_class[0].channels == 0) {
 		*status = P2P_SC_FAIL_NO_COMMON_CHANNELS;
 		p2p_dbg(p2p, "No common channels found");
 		return -1;
-	}
-
-	for (i = 0; i < intersection.reg_classes; i++) {
-		struct p2p_reg_class *c;
-		c = &intersection.reg_class[i];
-		p2p_dbg(p2p, "reg_class %u", c->reg_class);
-		wpa_hexdump(MSG_DEBUG, "P2P: channels",
-			    c->channel, c->channels);
 	}
 
 	if (!p2p_channels_includes(&intersection, p2p->op_reg_class,

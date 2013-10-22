@@ -1236,6 +1236,23 @@ static int wpas_dbus_get_scan_channels(DBusMessage *message,
 }
 
 
+static int wpas_dbus_get_scan_allow_roam(DBusMessage *message,
+					 DBusMessageIter *var,
+					 dbus_bool_t *allow,
+					 DBusMessage **reply)
+{
+	if (dbus_message_iter_get_arg_type(var) != DBUS_TYPE_BOOLEAN) {
+		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
+			   "Type must be a boolean");
+		*reply = wpas_dbus_error_invalid_args(
+			message, "Wrong Type value type. Boolean required");
+		return -1;
+	}
+	dbus_message_iter_get_basic(var, allow);
+	return 0;
+}
+
+
 /**
  * wpas_dbus_handler_scan - Request a wireless scan on an interface
  * @message: Pointer to incoming dbus message
@@ -1254,6 +1271,7 @@ DBusMessage * wpas_dbus_handler_scan(DBusMessage *message,
 	char *key = NULL, *type = NULL;
 	struct wpa_driver_scan_params params;
 	size_t i;
+	dbus_bool_t allow_roam = 1;
 
 	os_memset(&params, 0, sizeof(params));
 
@@ -1283,6 +1301,12 @@ DBusMessage * wpas_dbus_handler_scan(DBusMessage *message,
 		} else if (os_strcmp(key, "Channels") == 0) {
 			if (wpas_dbus_get_scan_channels(message, &variant_iter,
 							&params, &reply) < 0)
+				goto out;
+		} else if (os_strcmp(key, "AllowRoam") == 0) {
+			if (wpas_dbus_get_scan_allow_roam(message,
+							  &variant_iter,
+							  &allow_roam,
+							  &reply) < 0)
 				goto out;
 		} else {
 			wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
@@ -1331,6 +1355,9 @@ DBusMessage * wpas_dbus_handler_scan(DBusMessage *message,
 						     "Wrong scan type");
 		goto out;
 	}
+
+	if (!allow_roam)
+		wpa_s->scan_res_handler = scan_only_handler;
 
 out:
 	for (i = 0; i < WPAS_MAX_SCAN_SSIDS; i++)

@@ -4351,48 +4351,21 @@ static int p2p_ctrl_peer(struct wpa_supplicant *wpa_s, char *cmd,
 static int p2p_ctrl_disallow_freq(struct wpa_supplicant *wpa_s,
 				  const char *param)
 {
-	struct wpa_freq_range *freq = NULL, *n;
-	unsigned int count = 0, i;
-	const char *pos, *pos2, *pos3;
+	unsigned int i;
 
 	if (wpa_s->global->p2p == NULL)
 		return -1;
 
-	/*
-	 * param includes comma separated frequency range.
-	 * For example: 2412-2432,2462,5000-6000
-	 */
-	pos = param;
-	while (pos && pos[0]) {
-		n = os_realloc_array(freq, count + 1,
-				     sizeof(struct wpa_freq_range));
-		if (n == NULL) {
-			os_free(freq);
-			return -1;
-		}
-		freq = n;
-		freq[count].min = atoi(pos);
-		pos2 = os_strchr(pos, '-');
-		pos3 = os_strchr(pos, ',');
-		if (pos2 && (!pos3 || pos2 < pos3)) {
-			pos2++;
-			freq[count].max = atoi(pos2);
-		} else
-			freq[count].max = freq[count].min;
-		pos = pos3;
-		if (pos)
-			pos++;
-		count++;
-	}
+	if (freq_range_list_parse(&wpa_s->global->p2p_disallow_freq, param) < 0)
+		return -1;
 
-	for (i = 0; i < count; i++) {
+	for (i = 0; i < wpa_s->global->p2p_disallow_freq.num; i++) {
+		struct wpa_freq_range *freq;
+		freq = &wpa_s->global->p2p_disallow_freq.range[i];
 		wpa_printf(MSG_DEBUG, "P2P: Disallowed frequency range %u-%u",
-			   freq[i].min, freq[i].max);
+			   freq->min, freq->max);
 	}
 
-	os_free(wpa_s->global->p2p_disallow_freq);
-	wpa_s->global->p2p_disallow_freq = freq;
-	wpa_s->global->num_p2p_disallow_freq = count;
 	wpas_p2p_update_channel_list(wpa_s);
 	return 0;
 }

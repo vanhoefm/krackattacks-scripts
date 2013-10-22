@@ -505,6 +505,20 @@ static inline int is_broadcast_ether_addr(const u8 *a)
 #include "wpa_debug.h"
 
 
+struct wpa_freq_range_list {
+	struct wpa_freq_range {
+		unsigned int min;
+		unsigned int max;
+	} *range;
+	unsigned int num;
+};
+
+int freq_range_list_parse(struct wpa_freq_range_list *res, const char *value);
+int freq_range_list_includes(const struct wpa_freq_range_list *list,
+			     unsigned int freq);
+char * freq_range_list_str(const struct wpa_freq_range_list *list);
+
+
 /*
  * gcc 4.4 ends up generating strict-aliasing warnings about some very common
  * networking socket uses that do not really result in a real problem and

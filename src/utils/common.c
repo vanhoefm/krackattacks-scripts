@@ -624,3 +624,99 @@ char * dup_binstr(const void *src, size_t len)
 
 	return res;
 }
+
+
+int freq_range_list_parse(struct wpa_freq_range_list *res, const char *value)
+{
+	struct wpa_freq_range *freq = NULL, *n;
+	unsigned int count = 0;
+	const char *pos, *pos2, *pos3;
+
+	/*
+	 * Comma separated list of frequency ranges.
+	 * For example: 2412-2432,2462,5000-6000
+	 */
+	pos = value;
+	while (pos && pos[0]) {
+		n = os_realloc_array(freq, count + 1,
+				     sizeof(struct wpa_freq_range));
+		if (n == NULL) {
+			os_free(freq);
+			return -1;
+		}
+		freq = n;
+		freq[count].min = atoi(pos);
+		pos2 = os_strchr(pos, '-');
+		pos3 = os_strchr(pos, ',');
+		if (pos2 && (!pos3 || pos2 < pos3)) {
+			pos2++;
+			freq[count].max = atoi(pos2);
+		} else
+			freq[count].max = freq[count].min;
+		pos = pos3;
+		if (pos)
+			pos++;
+		count++;
+	}
+
+	os_free(res->range);
+	res->range = freq;
+	res->num = count;
+
+	return 0;
+}
+
+
+int freq_range_list_includes(const struct wpa_freq_range_list *list,
+			     unsigned int freq)
+{
+	unsigned int i;
+
+	if (list == NULL)
+		return 0;
+
+	for (i = 0; i < list->num; i++) {
+		if (freq >= list->range[i].min && freq <= list->range[i].max)
+			return 1;
+	}
+
+	return 0;
+}
+
+
+char * freq_range_list_str(const struct wpa_freq_range_list *list)
+{
+	char *buf, *pos, *end;
+	size_t maxlen;
+	unsigned int i;
+	int res;
+
+	if (list->num == 0)
+		return NULL;
+
+	maxlen = list->num * 30;
+	buf = os_malloc(maxlen);
+	if (buf == NULL)
+		return NULL;
+	pos = buf;
+	end = buf + maxlen;
+
+	for (i = 0; i < list->num; i++) {
+		struct wpa_freq_range *range = &list->range[i];
+
+		if (range->min == range->max)
+			res = os_snprintf(pos, end - pos, "%s%u",
+					  i == 0 ? "" : ",", range->min);
+		else
+			res = os_snprintf(pos, end - pos, "%s%u-%u",
+					  i == 0 ? "" : ",",
+					  range->min, range->max);
+		if (res < 0 || res > end - pos) {
+			os_free(buf);
+			return NULL;
+		}
+		pos += res;
+	}
+
+	return buf;
+}

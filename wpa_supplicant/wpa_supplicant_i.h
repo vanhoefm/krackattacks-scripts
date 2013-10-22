@@ -227,12 +227,6 @@ struct p2p_srv_upnp {
 	char *service;
 };
 
-struct wpa_freq_range {
-	unsigned int min;
-	unsigned int max;
-};
-
-
 /**
  * struct wpa_global - Internal, global data for all %wpa_supplicant interfaces
  *
@@ -257,8 +251,7 @@ struct wpa_global {
 	struct dl_list p2p_srv_upnp; /* struct p2p_srv_upnp */
 	int p2p_disabled;
 	int cross_connection;
-	struct wpa_freq_range *p2p_disallow_freq;
-	unsigned int num_p2p_disallow_freq;
+	struct wpa_freq_range_list p2p_disallow_freq;
 	enum wpa_conc_pref {
 		WPA_CONC_PREF_NOT_SET,
 		WPA_CONC_PREF_STA,

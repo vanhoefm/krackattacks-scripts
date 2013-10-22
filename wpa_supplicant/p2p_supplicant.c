@@ -2908,18 +2908,7 @@ static void wpas_invitation_result(void *ctx, int status, const u8 *bssid,
 static int wpas_p2p_disallowed_freq(struct wpa_global *global,
 				    unsigned int freq)
 {
-	unsigned int i;
-
-	if (global->p2p_disallow_freq == NULL)
-		return 0;
-
-	for (i = 0; i < global->num_p2p_disallow_freq; i++) {
-		if (freq >= global->p2p_disallow_freq[i].min &&
-		    freq <= global->p2p_disallow_freq[i].max)
-			return 1;
-	}
-
-	return 0;
+	return freq_range_list_includes(&global->p2p_disallow_freq, freq);
 }
 
 

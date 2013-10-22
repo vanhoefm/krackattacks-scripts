@@ -187,6 +187,7 @@ fi.w1.wpa_supplicant1.CreateInterface.
 	      <tr><td>SSIDs</td><td>aay</td><td>Array of SSIDs to scan for (applies only if scan type is active)</td><td>No</td>
 	      <tr><td>IEs</td><td>aay</td><td>Information elements to used in active scan (applies only if scan type is active)</td><td>No</td>
 	      <tr><td>Channels</td><td>a(uu)</td><td>Array of frequencies to scan in form of (center, width) in MHz.</td><td>No</td>
+	      <tr><td>AllowRoam</td><td>b</td><td>TRUE (or absent) to allow a roaming decision based on the results of this scan, FALSE to prevent a roaming decision.</td><td>No</td>
 	    </table>
 	  </dd>
 	</dl>

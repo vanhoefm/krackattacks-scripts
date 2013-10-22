@@ -760,7 +760,7 @@ static void hostapd_notify_bad_chans(struct hostapd_iface *iface)
 
 int hostapd_acs_completed(struct hostapd_iface *iface)
 {
-	int ret;
+	int ret = -1;
 
 	switch (hostapd_check_chans(iface)) {
 	case HOSTAPD_CHAN_VALID:
@@ -768,23 +768,25 @@ int hostapd_acs_completed(struct hostapd_iface *iface)
 	case HOSTAPD_CHAN_ACS:
 		wpa_printf(MSG_ERROR, "ACS error - reported complete, but no result available");
 		hostapd_notify_bad_chans(iface);
-		return -1;
+		goto out;
 	case HOSTAPD_CHAN_INVALID:
 	default:
 		wpa_printf(MSG_ERROR, "ACS picked unusable channels");
 		hostapd_notify_bad_chans(iface);
-		return -1;
+		goto out;
 	}
 
 	ret = hostapd_check_ht_capab(iface);
 	if (ret < 0)
-		return -1;
+		goto out;
 	if (ret == 1) {
 		wpa_printf(MSG_DEBUG, "Interface initialization will be completed in a callback");
 		return 0;
 	}
 
-	return hostapd_setup_interface_complete(iface, 0);
+	ret = 0;
+out:
+	return hostapd_setup_interface_complete(iface, ret);
 }
 
 

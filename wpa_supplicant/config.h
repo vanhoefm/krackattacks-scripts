@@ -606,6 +606,7 @@ struct wpa_config {
 	unsigned int num_p2p_pref_chan;
 	struct p2p_channel *p2p_pref_chan;
 	struct wpa_freq_range_list p2p_no_go_freq;
+	int p2p_add_cli_chan;
 	int p2p_ignore_shared_freq;
 
 	struct wpabuf *wps_vendor_ext_m1;

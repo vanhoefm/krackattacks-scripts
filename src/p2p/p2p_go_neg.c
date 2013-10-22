@@ -473,14 +473,16 @@ void p2p_reselect_channel(struct p2p_data *p2p,
 static int p2p_go_select_channel(struct p2p_data *p2p, struct p2p_device *dev,
 				 u8 *status)
 {
-	struct p2p_channels intersection;
+	struct p2p_channels tmp, intersection;
 
 	p2p_channels_dump(p2p, "own channels", &p2p->channels);
 	p2p_channels_dump(p2p, "peer channels", &dev->channels);
-	p2p_channels_intersect(&p2p->channels, &dev->channels, &intersection);
-	p2p_channels_dump(p2p, "intersection", &intersection);
-	p2p_channels_remove_freqs(&intersection, &p2p->no_go_freq);
-	p2p_channels_dump(p2p, "intersection after no-GO removal",
+	p2p_channels_intersect(&p2p->channels, &dev->channels, &tmp);
+	p2p_channels_dump(p2p, "intersection", &tmp);
+	p2p_channels_remove_freqs(&tmp, &p2p->no_go_freq);
+	p2p_channels_dump(p2p, "intersection after no-GO removal", &tmp);
+	p2p_channels_intersect(&tmp, &p2p->cfg->channels, &intersection);
+	p2p_channels_dump(p2p, "intersection with local channel list",
 			  &intersection);
 	if (intersection.reg_classes == 0 ||
 	    intersection.reg_class[0].channels == 0) {

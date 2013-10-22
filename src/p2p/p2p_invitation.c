@@ -548,7 +548,8 @@ int p2p_invite(struct p2p_data *p2p, const u8 *peer, enum p2p_invite_role role,
 		return -1;
 	}
 
-	if (p2p_prepare_channel(p2p, dev, force_freq, pref_freq) < 0)
+	if (p2p_prepare_channel(p2p, dev, force_freq, pref_freq,
+				role != P2P_INVITE_ROLE_CLIENT) < 0)
 		return -1;
 
 	if (persistent_group && role == P2P_INVITE_ROLE_CLIENT && !force_freq &&

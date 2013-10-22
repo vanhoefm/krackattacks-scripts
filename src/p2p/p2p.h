@@ -287,6 +287,20 @@ struct p2p_config {
 	struct p2p_channels channels;
 
 	/**
+	 * cli_channels - Additional client channels
+	 *
+	 * This list of channels (if any) will be used when advertising local
+	 * channels during GO Negotiation or Invitation for the cases where the
+	 * local end may become the client. This may allow the peer to become a
+	 * GO on additional channels if it supports these options. The main use
+	 * case for this is to include passive-scan channels on devices that may
+	 * not know their current location and have configured most channels to
+	 * not allow initiation of radition (i.e., another device needs to take
+	 * master responsibilities).
+	 */
+	struct p2p_channels cli_channels;
+
+	/**
 	 * num_pref_chan - Number of pref_chan entries
 	 */
 	unsigned int num_pref_chan;
@@ -1657,6 +1671,14 @@ int p2p_supported_freq(struct p2p_data *p2p, unsigned int freq);
 int p2p_supported_freq_go(struct p2p_data *p2p, unsigned int freq);
 
 /**
+ * p2p_supported_freq_cli - Check whether channel is supported for P2P client operation
+ * @p2p: P2P module context from p2p_init()
+ * @freq: Channel frequency in MHz
+ * Returns: 0 if channel not usable for P2P, 1 if usable for P2P
+ */
+int p2p_supported_freq_cli(struct p2p_data *p2p, unsigned int freq);
+
+/**
  * p2p_get_pref_freq - Get channel from preferred channel list
  * @p2p: P2P module context from p2p_init()
  * @channels: List of channels
@@ -1665,7 +1687,9 @@ int p2p_supported_freq_go(struct p2p_data *p2p, unsigned int freq);
 unsigned int p2p_get_pref_freq(struct p2p_data *p2p,
 			       const struct p2p_channels *channels);
 
-void p2p_update_channel_list(struct p2p_data *p2p, struct p2p_channels *chan);
+void p2p_update_channel_list(struct p2p_data *p2p,
+			     const struct p2p_channels *chan,
+			     const struct p2p_channels *cli_chan);
 
 /**
  * p2p_set_best_channels - Update best channel information

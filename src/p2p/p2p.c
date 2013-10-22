@@ -1140,19 +1140,21 @@ void p2p_stop_find(struct p2p_data *p2p)
 
 static int p2p_prepare_channel_pref(struct p2p_data *p2p,
 				    unsigned int force_freq,
-				    unsigned int pref_freq)
+				    unsigned int pref_freq, int go)
 {
 	u8 op_class, op_channel;
 	unsigned int freq = force_freq ? force_freq : pref_freq;
 
-	p2p_dbg(p2p, "Prepare channel pref - force_freq=%u pref_freq=%u",
-		force_freq, pref_freq);
+	p2p_dbg(p2p, "Prepare channel pref - force_freq=%u pref_freq=%u go=%d",
+		force_freq, pref_freq, go);
 	if (p2p_freq_to_channel(freq, &op_class, &op_channel) < 0) {
 		p2p_dbg(p2p, "Unsupported frequency %u MHz", freq);
 		return -1;
 	}
 
-	if (!p2p_channels_includes(&p2p->cfg->channels, op_class, op_channel)) {
+	if (!p2p_channels_includes(&p2p->cfg->channels, op_class, op_channel) &&
+	    (go || !p2p_channels_includes(&p2p->cfg->cli_channels, op_class,
+					  op_channel))) {
 		p2p_dbg(p2p, "Frequency %u MHz (oper_class %u channel %u) not allowed for P2P",
 			freq, op_class, op_channel);
 		return -1;
@@ -1226,6 +1228,7 @@ static void p2p_prepare_channel_best(struct p2p_data *p2p)
  * @dev: Selected peer device
  * @force_freq: Forced frequency in MHz or 0 if not forced
  * @pref_freq: Preferred frequency in MHz or 0 if no preference
+ * @go: Whether the local end will be forced to be GO
  * Returns: 0 on success, -1 on failure (channel not supported for P2P)
  *
  * This function is used to do initial operating channel selection for GO
@@ -1234,16 +1237,25 @@ static void p2p_prepare_channel_best(struct p2p_data *p2p)
  * is available.
  */
 int p2p_prepare_channel(struct p2p_data *p2p, struct p2p_device *dev,
-			unsigned int force_freq, unsigned int pref_freq)
+			unsigned int force_freq, unsigned int pref_freq, int go)
 {
-	p2p_dbg(p2p, "Prepare channel - force_freq=%u pref_freq=%u",
-		force_freq, pref_freq);
+	p2p_dbg(p2p, "Prepare channel - force_freq=%u pref_freq=%u go=%d",
+		force_freq, pref_freq, go);
 	if (force_freq || pref_freq) {
-		if (p2p_prepare_channel_pref(p2p, force_freq, pref_freq) < 0)
+		if (p2p_prepare_channel_pref(p2p, force_freq, pref_freq, go) <
+		    0)
 			return -1;
 	} else {
 		p2p_prepare_channel_best(p2p);
 	}
+	p2p_channels_dump(p2p, "prepared channels", &p2p->channels);
+	if (go)
+		p2p_channels_remove_freqs(&p2p->channels, &p2p->no_go_freq);
+	else if (!force_freq)
+		p2p_channels_union(&p2p->channels, &p2p->cfg->cli_channels,
+				   &p2p->channels);
+	p2p_channels_dump(p2p, "after go/cli filter/add", &p2p->channels);
+
 	p2p_dbg(p2p, "Own preference for operation channel: Operating Class %u Channel %u%s",
 		p2p->op_reg_class, p2p->op_channel,
 		force_freq ? " (forced)" : "");
@@ -1299,7 +1311,8 @@ int p2p_connect(struct p2p_data *p2p, const u8 *peer_addr,
 		return -1;
 	}
 
-	if (p2p_prepare_channel(p2p, dev, force_freq, pref_freq) < 0)
+	if (p2p_prepare_channel(p2p, dev, force_freq, pref_freq,
+				go_intent == 15) < 0)
 		return -1;
 
 	if (dev->flags & P2P_DEV_GROUP_CLIENT_ONLY) {
@@ -1409,7 +1422,8 @@ int p2p_authorize(struct p2p_data *p2p, const u8 *peer_addr,
 		return -1;
 	}
 
-	if (p2p_prepare_channel(p2p, dev, force_freq, pref_freq) < 0)
+	if (p2p_prepare_channel(p2p, dev, force_freq, pref_freq, go_intent ==
+				15) < 0)
 		return -1;
 
 	p2p->ssid_set = 0;
@@ -2372,6 +2386,10 @@ struct p2p_data * p2p_init(const struct p2p_config *cfg)
 
 	p2p->go_timeout = 100;
 	p2p->client_timeout = 20;
+
+	p2p_dbg(p2p, "initialized");
+	p2p_channels_dump(p2p, "channels", &p2p->cfg->channels);
+	p2p_channels_dump(p2p, "cli_channels", &p2p->cfg->cli_channels);
 
 	return p2p;
 }
@@ -4028,10 +4046,16 @@ void p2p_set_intra_bss_dist(struct p2p_data *p2p, int enabled)
 }
 
 
-void p2p_update_channel_list(struct p2p_data *p2p, struct p2p_channels *chan)
+void p2p_update_channel_list(struct p2p_data *p2p,
+			     const struct p2p_channels *chan,
+			     const struct p2p_channels *cli_chan)
 {
 	p2p_dbg(p2p, "Update channel list");
 	os_memcpy(&p2p->cfg->channels, chan, sizeof(struct p2p_channels));
+	p2p_channels_dump(p2p, "channels", &p2p->cfg->channels);
+	os_memcpy(&p2p->cfg->cli_channels, cli_chan,
+		  sizeof(struct p2p_channels));
+	p2p_channels_dump(p2p, "cli_channels", &p2p->cfg->cli_channels);
 }
 
 

@@ -572,6 +572,9 @@ int p2p_freq_to_channel(unsigned int freq, u8 *op_class, u8 *channel);
 void p2p_channels_intersect(const struct p2p_channels *a,
 			    const struct p2p_channels *b,
 			    struct p2p_channels *res);
+void p2p_channels_union(const struct p2p_channels *a,
+			const struct p2p_channels *b,
+			struct p2p_channels *res);
 void p2p_channels_remove_freqs(struct p2p_channels *chan,
 			       const struct wpa_freq_range_list *list);
 int p2p_channels_includes(const struct p2p_channels *channels, u8 reg_class,
@@ -730,7 +733,8 @@ int p2p_send_action(struct p2p_data *p2p, unsigned int freq, const u8 *dst,
 		    size_t len, unsigned int wait_time);
 void p2p_stop_listen_for_freq(struct p2p_data *p2p, int freq);
 int p2p_prepare_channel(struct p2p_data *p2p, struct p2p_device *dev,
-			unsigned int force_freq, unsigned int pref_freq);
+			unsigned int force_freq, unsigned int pref_freq,
+			int go);
 void p2p_dbg(struct p2p_data *p2p, const char *fmt, ...)
 PRINTF_FORMAT(2, 3);
 void p2p_info(struct p2p_data *p2p, const char *fmt, ...)

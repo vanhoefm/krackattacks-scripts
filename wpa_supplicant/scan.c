@@ -887,8 +887,10 @@ void wpa_supplicant_update_scan_int(struct wpa_supplicant *wpa_s, int sec)
 		new_int.usec = remaining.usec;
 	}
 
-	eloop_register_timeout(new_int.sec, new_int.usec, wpa_supplicant_scan,
-			       wpa_s, NULL);
+	if (cancelled) {
+		eloop_register_timeout(new_int.sec, new_int.usec,
+				       wpa_supplicant_scan, wpa_s, NULL);
+	}
 	wpa_s->scan_interval = sec;
 }
 

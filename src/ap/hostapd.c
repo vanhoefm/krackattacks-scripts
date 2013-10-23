@@ -1212,6 +1212,23 @@ fail:
 }
 
 
+static int ifname_in_use(struct hapd_interfaces *interfaces, const char *ifname)
+{
+	size_t i, j;
+
+	for (i = 0; i < interfaces->count; i++) {
+		struct hostapd_iface *iface = interfaces->iface[i];
+		for (j = 0; j < iface->num_bss; j++) {
+			struct hostapd_data *hapd = iface->bss[j];
+			if (os_strcmp(ifname, hapd->conf->iface) == 0)
+				return 1;
+		}
+	}
+
+	return 0;
+}
+
+
 struct hostapd_iface *
 hostapd_interface_init_bss(struct hapd_interfaces *interfaces, const char *phy,
 			   const char *config_fname, int debug)
@@ -1238,6 +1255,7 @@ hostapd_interface_init_bss(struct hapd_interfaces *interfaces, const char *phy,
 		struct hostapd_bss_config **tmp_conf;
 		struct hostapd_data **tmp_bss;
 		struct hostapd_bss_config *bss;
+		const char *ifname;
 
 		/* Add new BSS to existing iface */
 		conf = interfaces->config_read_cb(config_fname);
@@ -1245,6 +1263,14 @@ hostapd_interface_init_bss(struct hapd_interfaces *interfaces, const char *phy,
 			return NULL;
 		if (conf->num_bss > 1) {
 			wpa_printf(MSG_ERROR, "Multiple BSSes specified in BSS-config");
+			hostapd_config_free(conf);
+			return NULL;
+		}
+
+		ifname = conf->bss[0]->iface;
+		if (ifname[0] != '\0' && ifname_in_use(interfaces, ifname)) {
+			wpa_printf(MSG_ERROR,
+				   "Interface name %s already in use", ifname);
 			hostapd_config_free(conf);
 			return NULL;
 		}
@@ -1498,10 +1524,69 @@ static struct hostapd_iface * hostapd_data_alloc(
 int hostapd_add_iface(struct hapd_interfaces *interfaces, char *buf)
 {
 	struct hostapd_config *conf = NULL;
-	struct hostapd_iface *hapd_iface = NULL;
+	struct hostapd_iface *hapd_iface = NULL, *new_iface = NULL;
+	struct hostapd_data *hapd;
 	char *ptr;
-	size_t i;
-	const char *conf_file = NULL;
+	size_t i, j;
+	const char *conf_file = NULL, *phy_name = NULL;
+
+	if (os_strncmp(buf, "bss_config=", 11) == 0) {
+		char *pos;
+		phy_name = buf + 11;
+		pos = os_strchr(phy_name, ':');
+		if (!pos)
+			return -1;
+		*pos++ = '\0';
+		conf_file = pos;
+		if (!os_strlen(conf_file))
+			return -1;
+
+		hapd_iface = hostapd_interface_init_bss(interfaces, phy_name,
+							conf_file, 0);
+		if (!hapd_iface)
+			return -1;
+		for (j = 0; j < interfaces->count; j++) {
+			if (interfaces->iface[j] == hapd_iface)
+				break;
+		}
+		if (j == interfaces->count) {
+			struct hostapd_iface **tmp;
+			tmp = os_realloc_array(interfaces->iface,
+					       interfaces->count + 1,
+					       sizeof(struct hostapd_iface *));
+			if (!tmp) {
+				hostapd_interface_deinit_free(hapd_iface);
+				return -1;
+			}
+			interfaces->iface = tmp;
+			interfaces->iface[interfaces->count++] = hapd_iface;
+			new_iface = hapd_iface;
+		}
+
+		if (new_iface) {
+			if (interfaces->driver_init(hapd_iface) ||
+			    hostapd_setup_interface(hapd_iface)) {
+				interfaces->count--;
+				goto fail;
+			}
+			hapd_iface->init_done = 1;
+		} else {
+			/* Assign new BSS with bss[0]'s driver info */
+			hapd = hapd_iface->bss[hapd_iface->num_bss - 1];
+			hapd->driver = hapd_iface->bss[0]->driver;
+			hapd->drv_priv = hapd_iface->bss[0]->drv_priv;
+			os_memcpy(hapd->own_addr, hapd_iface->bss[0]->own_addr,
+				  ETH_ALEN);
+
+			if (hostapd_setup_bss(hapd, 0)) {
+				hapd_iface->conf->num_bss--;
+				hapd_iface->num_bss--;
+				os_free(hapd);
+				return -1;
+			}
+		}
+		return 0;
+	}
 
 	ptr = os_strchr(buf, ' ');
 	if (ptr == NULL)

@@ -2058,7 +2058,7 @@ int eapol_sm_get_eap_proxy_imsi(struct eapol_sm *sm, char *imsi, size_t *len)
 #ifdef CONFIG_EAP_PROXY
 	if (sm->eap_proxy == NULL)
 		return -1;
-	return eap_proxy_get_imsi(imsi, len);
+	return eap_proxy_get_imsi(sm->eap_proxy, imsi, len);
 #else /* CONFIG_EAP_PROXY */
 	return -1;
 #endif /* CONFIG_EAP_PROXY */

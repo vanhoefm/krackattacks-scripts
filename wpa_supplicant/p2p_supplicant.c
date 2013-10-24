@@ -1175,8 +1175,7 @@ static void wpas_p2p_get_group_ifname(struct wpa_supplicant *wpa_s,
 	if (os_strlen(ifname) >= IFNAMSIZ &&
 	    os_strlen(wpa_s->ifname) < IFNAMSIZ) {
 		/* Try to avoid going over the IFNAMSIZ length limit */
-		os_snprintf(ifname, sizeof(ifname), "p2p-%d",
-			    wpa_s->p2p_group_idx);
+		os_snprintf(ifname, len, "p2p-%d", wpa_s->p2p_group_idx);
 	}
 }
 

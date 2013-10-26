@@ -140,6 +140,22 @@ static void nl_destroy_handles(struct nl_handle **handle)
 }
 
 
+static void nl80211_register_eloop_read(struct nl_handle **handle,
+					eloop_sock_handler handler,
+					void *eloop_data)
+{
+	eloop_register_read_sock(nl_socket_get_fd(*handle), handler,
+				 eloop_data, *handle);
+}
+
+
+static void nl80211_destroy_eloop_handle(struct nl_handle **handle)
+{
+	eloop_unregister_read_sock(nl_socket_get_fd(*handle));
+	nl_destroy_handles(handle);
+}
+
+
 #ifndef IFF_LOWER_UP
 #define IFF_LOWER_UP   0x10000         /* driver signals L1 up         */
 #endif
@@ -906,8 +922,7 @@ nl80211_get_wiphy_data_ap(struct i802_bss *bss)
 		return NULL;
 	}
 
-	eloop_register_read_sock(nl_socket_get_fd(w->nl_beacons),
-				 nl80211_recv_beacons, w, w->nl_beacons);
+	nl80211_register_eloop_read(&w->nl_beacons, nl80211_recv_beacons, w);
 
 	dl_list_add(&nl80211_wiphys, &w->list);
 
@@ -954,10 +969,9 @@ static void nl80211_put_wiphy_data_ap(struct i802_bss *bss)
 	if (!dl_list_empty(&w->bsss))
 		return;
 
-	eloop_unregister_read_sock(nl_socket_get_fd(w->nl_beacons));
+	nl80211_destroy_eloop_handle(&w->nl_beacons);
 
 	nl_cb_put(w->nl_cb);
-	nl_destroy_handles(&w->nl_beacons);
 	dl_list_del(&w->list);
 	os_free(w);
 }
@@ -3490,9 +3504,9 @@ static int wpa_driver_nl80211_init_nl_global(struct nl80211_global *global)
 	nl_cb_set(global->nl_cb, NL_CB_VALID, NL_CB_CUSTOM,
 		  process_global_event, global);
 
-	eloop_register_read_sock(nl_socket_get_fd(global->nl_event),
-				 wpa_driver_nl80211_event_receive,
-				 global->nl_cb, global->nl_event);
+	nl80211_register_eloop_read(&global->nl_event,
+				    wpa_driver_nl80211_event_receive,
+				    global->nl_cb);
 
 	return 0;
 
@@ -3773,11 +3787,15 @@ static int nl80211_alloc_mgmt_handle(struct i802_bss *bss)
 	if (bss->nl_mgmt == NULL)
 		return -1;
 
-	eloop_register_read_sock(nl_socket_get_fd(bss->nl_mgmt),
-				 wpa_driver_nl80211_event_receive, bss->nl_cb,
-				 bss->nl_mgmt);
-
 	return 0;
+}
+
+
+static void nl80211_mgmt_handle_register_eloop(struct i802_bss *bss)
+{
+	nl80211_register_eloop_read(&bss->nl_mgmt,
+				    wpa_driver_nl80211_event_receive,
+				    bss->nl_cb);
 }
 
 
@@ -3865,6 +3883,8 @@ static int nl80211_mgmt_subscribe_non_ap(struct i802_bss *bss)
 	if (nl80211_register_action_frame(bss, (u8 *) "\x0a\x11", 2) < 0)
 		return -1;
 
+	nl80211_mgmt_handle_register_eloop(bss);
+
 	return 0;
 }
 
@@ -3937,10 +3957,10 @@ static int nl80211_mgmt_subscribe_ap(struct i802_bss *bss)
 	if (nl80211_get_wiphy_data_ap(bss) == NULL)
 		goto out_err;
 
+	nl80211_mgmt_handle_register_eloop(bss);
 	return 0;
 
 out_err:
-	eloop_unregister_read_sock(nl_socket_get_fd(bss->nl_mgmt));
 	nl_destroy_handles(&bss->nl_mgmt);
 	return -1;
 }
@@ -3959,10 +3979,10 @@ static int nl80211_mgmt_subscribe_ap_dev_sme(struct i802_bss *bss)
 				   NULL, 0) < 0)
 		goto out_err;
 
+	nl80211_mgmt_handle_register_eloop(bss);
 	return 0;
 
 out_err:
-	eloop_unregister_read_sock(nl_socket_get_fd(bss->nl_mgmt));
 	nl_destroy_handles(&bss->nl_mgmt);
 	return -1;
 }
@@ -3974,8 +3994,7 @@ static void nl80211_mgmt_unsubscribe(struct i802_bss *bss, const char *reason)
 		return;
 	wpa_printf(MSG_DEBUG, "nl80211: Unsubscribe mgmt frames handle %p "
 		   "(%s)", bss->nl_mgmt, reason);
-	eloop_unregister_read_sock(nl_socket_get_fd(bss->nl_mgmt));
-	nl_destroy_handles(&bss->nl_mgmt);
+	nl80211_destroy_eloop_handle(&bss->nl_mgmt);
 
 	nl80211_put_wiphy_data_ap(bss);
 }
@@ -9537,9 +9556,7 @@ static int wpa_driver_nl80211_probe_req_report(struct i802_bss *bss, int report)
 		} else if (bss->nl_preq) {
 			wpa_printf(MSG_DEBUG, "nl80211: Disable Probe Request "
 				   "reporting nl_preq=%p", bss->nl_preq);
-			eloop_unregister_read_sock(
-				nl_socket_get_fd(bss->nl_preq));
-			nl_destroy_handles(&bss->nl_preq);
+			nl80211_destroy_eloop_handle(&bss->nl_preq);
 		}
 		return 0;
 	}
@@ -9562,9 +9579,9 @@ static int wpa_driver_nl80211_probe_req_report(struct i802_bss *bss, int report)
 				   NULL, 0) < 0)
 		goto out_err;
 
-	eloop_register_read_sock(nl_socket_get_fd(bss->nl_preq),
-				 wpa_driver_nl80211_event_receive, bss->nl_cb,
-				 bss->nl_preq);
+	nl80211_register_eloop_read(&bss->nl_preq,
+				    wpa_driver_nl80211_event_receive,
+				    bss->nl_cb);
 
 	return 0;
 
@@ -9989,11 +10006,8 @@ static void nl80211_global_deinit(void *priv)
 
 	nl_destroy_handles(&global->nl);
 
-	if (global->nl_event) {
-		eloop_unregister_read_sock(
-			nl_socket_get_fd(global->nl_event));
-		nl_destroy_handles(&global->nl_event);
-	}
+	if (global->nl_event)
+		nl80211_destroy_eloop_handle(&global->nl_event);
 
 	nl_cb_put(global->nl_cb);
 

@@ -55,13 +55,37 @@ static int dfs_channel_available(struct hostapd_channel_data *chan)
 }
 
 
-static int dfs_is_ht40_allowed(struct hostapd_channel_data *chan)
+static int dfs_is_chan_allowed(struct hostapd_channel_data *chan, int n_chans)
 {
-	int allowed[] = { 36, 44, 52, 60, 100, 108, 116, 124, 132, 149, 157,
-			  184, 192 };
-	unsigned int i;
+	/*
+	 * The tables contain first valid channel number based on channel width.
+	 * We will also choose this first channel as the control one.
+	 */
+	int allowed_40[] = { 36, 44, 52, 60, 100, 108, 116, 124, 132, 149, 157,
+			     184, 192 };
+	/*
+	 * VHT80, valid channels based on center frequency:
+	 * 42, 58, 106, 122, 138, 155
+	 */
+	int allowed_80[] = { 36, 52, 100, 116, 132, 149 };
+	int *allowed = allowed_40;
+	unsigned int i, allowed_no = 0;
 
-	for (i = 0; i < sizeof(allowed) / sizeof(allowed[0]); i++) {
+	switch (n_chans) {
+	case 2:
+		allowed = allowed_40;
+		allowed_no = sizeof(allowed_40) / sizeof(allowed_40[0]);
+		break;
+	case 4:
+		allowed = allowed_80;
+		allowed_no = sizeof(allowed_80) / sizeof(allowed_80[0]);
+		break;
+	default:
+		wpa_printf(MSG_DEBUG, "Unknown width for %d channels", n_chans);
+		break;
+	}
+
+	for (i = 0; i < allowed_no; i++) {
 		if (chan->chan == allowed[i])
 			return 1;
 	}
@@ -92,7 +116,7 @@ static int dfs_find_channel(struct hostapd_data *hapd,
 		/* Skip HT40/VHT uncompatible channels */
 		if (hapd->iconf->ieee80211n &&
 		    hapd->iconf->secondary_channel) {
-			if (!dfs_is_ht40_allowed(chan))
+			if (!dfs_is_chan_allowed(chan, n_chans))
 				continue;
 
 			for (j = 1; j < n_chans; j++) {

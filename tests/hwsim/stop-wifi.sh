@@ -69,6 +69,8 @@ done
 
 if grep -q mac80211_hwsim /proc/modules ; then
     sudo rmmod mac80211_hwsim 
+    sudo rmmod mac80211
+    sudo rmmod cfg80211
     # wait at the end to avoid issues starting something new immediately after
     # this script returns
     sleep 1

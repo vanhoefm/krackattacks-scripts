@@ -724,6 +724,7 @@ static void wpa_supplicant_ctrl_iface_send(struct wpa_supplicant *wpa_s,
 			if (sock < 0) {
 				wpa_dbg(wpa_s, MSG_DEBUG,
 					"Failed to reinitialize ctrl_iface socket");
+				break;
 			}
 		}
 	}

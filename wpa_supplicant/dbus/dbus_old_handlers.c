@@ -539,7 +539,7 @@ DBusMessage * wpas_dbus_iface_capabilities(DBusMessage *message,
 			const char *args[] = {"CCMP", "TKIP", "NONE"};
 			if (!wpa_dbus_dict_append_string_array(
 				    &iter_dict, "pairwise", args,
-				    sizeof(args) / sizeof(char*)))
+				    ARRAY_SIZE(args)))
 				goto error;
 		}
 	} else {
@@ -582,7 +582,7 @@ DBusMessage * wpas_dbus_iface_capabilities(DBusMessage *message,
 			};
 			if (!wpa_dbus_dict_append_string_array(
 				    &iter_dict, "group", args,
-				    sizeof(args) / sizeof(char*)))
+				    ARRAY_SIZE(args)))
 				goto error;
 		}
 	} else {
@@ -632,7 +632,7 @@ DBusMessage * wpas_dbus_iface_capabilities(DBusMessage *message,
 			};
 			if (!wpa_dbus_dict_append_string_array(
 				    &iter_dict, "key_mgmt", args,
-				    sizeof(args) / sizeof(char*)))
+				    ARRAY_SIZE(args)))
 				goto error;
 		}
 	} else {
@@ -683,7 +683,7 @@ DBusMessage * wpas_dbus_iface_capabilities(DBusMessage *message,
 			const char *args[] = { "RSN", "WPA" };
 			if (!wpa_dbus_dict_append_string_array(
 				    &iter_dict, "proto", args,
-				    sizeof(args) / sizeof(char*)))
+				    ARRAY_SIZE(args)))
 				goto error;
 		}
 	} else {
@@ -720,7 +720,7 @@ DBusMessage * wpas_dbus_iface_capabilities(DBusMessage *message,
 			const char *args[] = { "OPEN", "SHARED", "LEAP" };
 			if (!wpa_dbus_dict_append_string_array(
 				    &iter_dict, "auth_alg", args,
-				    sizeof(args) / sizeof(char*)))
+				    ARRAY_SIZE(args)))
 				goto error;
 		}
 	} else {

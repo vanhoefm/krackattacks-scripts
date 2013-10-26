@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
 	size_t len[2];
 	int errors = 0;
 
-	for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++) {
+	for (i = 0; i < ARRAY_SIZE(tests); i++) {
 		printf("MD5 test case %d:", i);
 
 		addr[0] = (u8 *) tests[i].data;

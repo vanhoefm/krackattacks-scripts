@@ -1686,7 +1686,7 @@ static const struct parse_data ssid_fields[] = {
 #undef _FUNC
 #undef FUNC
 #undef FUNC_KEY
-#define NUM_SSID_FIELDS (sizeof(ssid_fields) / sizeof(ssid_fields[0]))
+#define NUM_SSID_FIELDS ARRAY_SIZE(ssid_fields)
 
 
 /**
@@ -3278,7 +3278,7 @@ static const struct global_parse_data global_fields[] = {
 #undef STR
 #undef STR_RANGE
 #undef BIN
-#define NUM_GLOBAL_FIELDS (sizeof(global_fields) / sizeof(global_fields[0]))
+#define NUM_GLOBAL_FIELDS ARRAY_SIZE(global_fields)
 
 
 int wpa_config_process_global(struct wpa_config *config, char *pos, int line)

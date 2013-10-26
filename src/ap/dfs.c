@@ -74,11 +74,11 @@ static int dfs_is_chan_allowed(struct hostapd_channel_data *chan, int n_chans)
 	switch (n_chans) {
 	case 2:
 		allowed = allowed_40;
-		allowed_no = sizeof(allowed_40) / sizeof(allowed_40[0]);
+		allowed_no = ARRAY_SIZE(allowed_40);
 		break;
 	case 4:
 		allowed = allowed_80;
-		allowed_no = sizeof(allowed_80) / sizeof(allowed_80[0]);
+		allowed_no = ARRAY_SIZE(allowed_80);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "Unknown width for %d channels", n_chans);

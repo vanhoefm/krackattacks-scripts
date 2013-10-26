@@ -134,7 +134,7 @@ static int test_cbc(void)
 	u8 *buf;
 	unsigned int i;
 
-	for (i = 0; i < sizeof(vectors) / sizeof(vectors[0]); i++) {
+	for (i = 0; i < ARRAY_SIZE(vectors); i++) {
 		struct cbc_test_vector *tv = &vectors[i];
 		buf = malloc(tv->len);
 		if (buf == NULL) {
@@ -347,7 +347,7 @@ static int test_gcm(void)
 	u8 p[64], c[64], tmp[64];
 	size_t k_len, p_len, aad_len, iv_len;
 
-	for (i = 0; i < sizeof(gcm_tests) / sizeof(gcm_tests[0]); i++) {
+	for (i = 0; i < ARRAY_SIZE(gcm_tests); i++) {
 		const struct gcm_test_vector *tc = &gcm_tests[i];
 
 		k_len = os_strlen(tc->k) / 2;
@@ -542,7 +542,7 @@ int main(int argc, char *argv[])
 
 	test_aes_perf();
 
-	for (i = 0; i < sizeof(test_vectors) / sizeof(test_vectors[0]); i++) {
+	for (i = 0; i < ARRAY_SIZE(test_vectors); i++) {
 		tv = &test_vectors[i];
 		if (omac1_aes_128(tv->k, tv->msg, tv->msg_len, result) ||
 		    memcmp(result, tv->tag, 16) != 0) {

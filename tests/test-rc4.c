@@ -198,7 +198,7 @@ static const struct rc4_test_vector tests[] = {
 	}
 };
 
-#define NUM_TESTS (sizeof(tests) / sizeof(tests[0]))
+#define NUM_TESTS ARRAY_SIZE(tests)
 
 
 static int run_test(unsigned int i, const u8 *key, size_t key_len,

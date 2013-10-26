@@ -57,8 +57,7 @@ static const struct tls_cipher_suite tls_cipher_suites[] = {
 	  TLS_CIPHER_AES_256_CBC, TLS_HASH_SHA256 }
 };
 
-#define NUM_ELEMS(a) (sizeof(a) / sizeof((a)[0]))
-#define NUM_TLS_CIPHER_SUITES NUM_ELEMS(tls_cipher_suites)
+#define NUM_TLS_CIPHER_SUITES ARRAY_SIZE(tls_cipher_suites)
 
 
 static const struct tls_cipher_data tls_ciphers[] = {
@@ -84,7 +83,7 @@ static const struct tls_cipher_data tls_ciphers[] = {
 	  CRYPTO_CIPHER_ALG_AES }
 };
 
-#define NUM_TLS_CIPHER_DATA NUM_ELEMS(tls_ciphers)
+#define NUM_TLS_CIPHER_DATA ARRAY_SIZE(tls_ciphers)
 
 
 /**

@@ -622,7 +622,7 @@ static char ** complete_get_sta_counter(int s, const char *str, int pos)
 	switch (arg) {
 	case 1:
 		/* counter list */
-		count = sizeof(sta_counters) / sizeof(sta_counters[0]);
+		count = ARRAY_SIZE(sta_counters);
 		res = os_calloc(count, sizeof(char *));
 		if (res == NULL)
 			return NULL;
@@ -721,7 +721,7 @@ static char ** complete_get_bss_counter(int s, const char *str, int pos)
 	switch (arg) {
 	case 1:
 		/* counter list */
-		count = sizeof(bss_counters) / sizeof(bss_counters[0]);
+		count = ARRAY_SIZE(bss_counters);
 		res = os_calloc(count, sizeof(char *));
 		if (res == NULL)
 			return NULL;
@@ -835,7 +835,7 @@ static char ** complete_get_tdls_counter(int s, const char *str, int pos)
 	switch (arg) {
 	case 1:
 		/* counter list */
-		count = sizeof(tdls_counters) / sizeof(tdls_counters[0]);
+		count = ARRAY_SIZE(tdls_counters);
 		res = os_calloc(count, sizeof(char *));
 		if (res == NULL)
 			return NULL;
@@ -971,7 +971,7 @@ static char ** complete_inject(int s, const char *str, int pos)
 	switch (arg) {
 	case 1:
 		/* frame list */
-		count = sizeof(inject_frames) / sizeof(inject_frames[0]);
+		count = ARRAY_SIZE(inject_frames);
 		res = os_calloc(count, sizeof(char *));
 		if (res == NULL)
 			break;
@@ -1322,7 +1322,7 @@ static char ** complete_info_sta(int s, const char *str, int pos)
 	switch (arg) {
 	case 1:
 		/* counter list */
-		count = sizeof(sta_infos) / sizeof(sta_infos[0]);
+		count = ARRAY_SIZE(sta_infos);
 		res = os_calloc(count, sizeof(char *));
 		if (res == NULL)
 			return NULL;
@@ -1427,7 +1427,7 @@ static char ** complete_info_bss(int s, const char *str, int pos)
 	switch (arg) {
 	case 1:
 		/* counter list */
-		count = sizeof(bss_infos) / sizeof(bss_infos[0]);
+		count = ARRAY_SIZE(bss_infos);
 		res = os_calloc(count, sizeof(char *));
 		if (res == NULL)
 			return NULL;
@@ -1606,11 +1606,9 @@ static void wlantest_cli_edit_eof_cb(void *ctx)
 static char ** wlantest_cli_cmd_list(void)
 {
 	char **res;
-	int i, count;
+	int i;
 
-	count = sizeof(wlantest_cli_commands) /
-		sizeof(wlantest_cli_commands[0]);
-	res = os_calloc(count, sizeof(char *));
+	res = os_calloc(ARRAY_SIZE(wlantest_cli_commands), sizeof(char *));
 	if (res == NULL)
 		return NULL;
 

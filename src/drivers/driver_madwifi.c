@@ -182,7 +182,7 @@ set80211priv(struct madwifi_driver_data *drv, int op, void *data, int len)
 #endif /* MADWIFI_NG */
 		int idx = op - first;
 		if (first <= op &&
-		    idx < (int) (sizeof(opnames) / sizeof(opnames[0])) &&
+		    idx < (int) ARRAY_SIZE(opnames) &&
 		    opnames[idx])
 			perror(opnames[idx]);
 		else

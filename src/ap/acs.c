@@ -358,7 +358,7 @@ static int acs_usable_ht40_chan(struct hostapd_channel_data *chan)
 				157, 184, 192 };
 	unsigned int i;
 
-	for (i = 0; i < sizeof(allowed) / sizeof(allowed[0]); i++)
+	for (i = 0; i < ARRAY_SIZE(allowed); i++)
 		if (chan->chan == allowed[i])
 			return 1;
 

@@ -2030,7 +2030,7 @@ dbus_bool_t wpas_dbus_getter_capabilities(DBusMessageIter *iter,
 		const char *args[] = {"ccmp", "tkip", "none"};
 		if (!wpa_dbus_dict_append_string_array(
 			    &iter_dict, "Pairwise", args,
-			    sizeof(args) / sizeof(char*)))
+			    ARRAY_SIZE(args)))
 			goto nomem;
 	} else {
 		if (!wpa_dbus_dict_begin_string_array(&iter_dict, "Pairwise",
@@ -2077,7 +2077,7 @@ dbus_bool_t wpas_dbus_getter_capabilities(DBusMessageIter *iter,
 		};
 		if (!wpa_dbus_dict_append_string_array(
 			    &iter_dict, "Group", args,
-			    sizeof(args) / sizeof(char*)))
+			    ARRAY_SIZE(args)))
 			goto nomem;
 	} else {
 		if (!wpa_dbus_dict_begin_string_array(&iter_dict, "Group",
@@ -2134,7 +2134,7 @@ dbus_bool_t wpas_dbus_getter_capabilities(DBusMessageIter *iter,
 		};
 		if (!wpa_dbus_dict_append_string_array(
 			    &iter_dict, "KeyMgmt", args,
-			    sizeof(args) / sizeof(char*)))
+			    ARRAY_SIZE(args)))
 			goto nomem;
 	} else {
 		if (!wpa_dbus_dict_begin_string_array(&iter_dict, "KeyMgmt",
@@ -2214,7 +2214,7 @@ dbus_bool_t wpas_dbus_getter_capabilities(DBusMessageIter *iter,
 		const char *args[] = { "rsn", "wpa" };
 		if (!wpa_dbus_dict_append_string_array(
 			    &iter_dict, "Protocol", args,
-			    sizeof(args) / sizeof(char*)))
+			    ARRAY_SIZE(args)))
 			goto nomem;
 	} else {
 		if (!wpa_dbus_dict_begin_string_array(&iter_dict, "Protocol",
@@ -2249,7 +2249,7 @@ dbus_bool_t wpas_dbus_getter_capabilities(DBusMessageIter *iter,
 		const char *args[] = { "open", "shared", "leap" };
 		if (!wpa_dbus_dict_append_string_array(
 			    &iter_dict, "AuthAlg", args,
-			    sizeof(args) / sizeof(char*)))
+			    ARRAY_SIZE(args)))
 			goto nomem;
 	} else {
 		if (!wpa_dbus_dict_begin_string_array(&iter_dict, "AuthAlg",
@@ -2285,7 +2285,7 @@ dbus_bool_t wpas_dbus_getter_capabilities(DBusMessageIter *iter,
 
 	/***** Scan */
 	if (!wpa_dbus_dict_append_string_array(&iter_dict, "Scan", scans,
-					       sizeof(scans) / sizeof(char *)))
+					       ARRAY_SIZE(scans)))
 		goto nomem;
 
 	/***** Modes */

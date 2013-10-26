@@ -3967,7 +3967,7 @@ static int nl80211_mgmt_subscribe_ap(struct i802_bss *bss)
 	wpa_printf(MSG_DEBUG, "nl80211: Subscribe to mgmt frames with AP "
 		   "handle %p", bss->nl_mgmt);
 
-	for (i = 0; i < sizeof(stypes) / sizeof(stypes[0]); i++) {
+	for (i = 0; i < ARRAY_SIZE(stypes); i++) {
 		if (nl80211_register_frame(bss, bss->nl_mgmt,
 					   (WLAN_FC_TYPE_MGMT << 2) |
 					   (stypes[i] << 4),
@@ -7238,7 +7238,7 @@ static struct sock_filter msock_filter_insns[] = {
 };
 
 static struct sock_fprog msock_filter = {
-	.len = sizeof(msock_filter_insns)/sizeof(msock_filter_insns[0]),
+	.len = ARRAY_SIZE(msock_filter_insns),
 	.filter = msock_filter_insns,
 };
 

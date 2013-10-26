@@ -1169,7 +1169,7 @@ static struct dh_group dh_groups[] = {
 #endif /* ALL_DH_GROUPS */
 };
 
-#define NUM_DH_GROUPS (sizeof(dh_groups) / sizeof(dh_groups[0]))
+#define NUM_DH_GROUPS ARRAY_SIZE(dh_groups)
 
 
 const struct dh_group * dh_groups_get(int id)

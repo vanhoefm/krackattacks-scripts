@@ -233,7 +233,7 @@ static struct radius_attr_type radius_attrs[] =
 	{ RADIUS_ATTR_NAS_IPV6_ADDRESS, "NAS-IPv6-Address", RADIUS_ATTR_IPV6 },
 	{ RADIUS_ATTR_ERROR_CAUSE, "Error-Cause", RADIUS_ATTR_INT32 }
 };
-#define RADIUS_ATTRS (sizeof(radius_attrs) / sizeof(radius_attrs[0]))
+#define RADIUS_ATTRS ARRAY_SIZE(radius_attrs)
 
 
 static struct radius_attr_type *radius_get_attr_type(u8 type)

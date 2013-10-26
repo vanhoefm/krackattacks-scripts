@@ -282,8 +282,7 @@ static struct passphrase_test passphrase_tests[] =
 	},
 };
 
-#define NUM_PASSPHRASE_TESTS \
-(sizeof(passphrase_tests) / sizeof(passphrase_tests[0]))
+#define NUM_PASSPHRASE_TESTS ARRAY_SIZE(passphrase_tests)
 
 
 struct rfc6070_test {
@@ -368,8 +367,7 @@ static struct rfc6070_test rfc6070_tests[] =
 #endif
 };
 
-#define NUM_RFC6070_TESTS \
-(sizeof(rfc6070_tests) / sizeof(rfc6070_tests[0]))
+#define NUM_RFC6070_TESTS ARRAY_SIZE(rfc6070_tests)
 
 
 int main(int argc, char *argv[])

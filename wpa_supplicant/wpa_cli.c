@@ -627,7 +627,7 @@ static char ** wpa_cli_complete_set(const char *str, int pos)
 		"sae_groups", "dtim_period", "beacon_int", "ap_vendor_elements",
 		"ignore_old_scan_res", "freq_list", "external_sim"
 	};
-	int i, num_fields = sizeof(fields) / sizeof(fields[0]);
+	int i, num_fields = ARRAY_SIZE(fields);
 
 	if (arg == 1) {
 		char **res = os_calloc(num_fields + 1, sizeof(char *));
@@ -2112,7 +2112,7 @@ static char ** wpa_cli_complete_p2p_set(const char *str, int pos)
 		"disc_int",
 		"per_sta_psk",
 	};
-	int i, num_fields = sizeof(fields) / sizeof(fields[0]);
+	int i, num_fields = ARRAY_SIZE(fields);
 
 	if (arg == 1) {
 		char **res = os_calloc(num_fields + 1, sizeof(char *));
@@ -2927,7 +2927,7 @@ static char ** wpa_list_cmd_list(void)
 	int i, count;
 	struct cli_txt_entry *e;
 
-	count = sizeof(wpa_cli_commands) / sizeof(wpa_cli_commands[0]);
+	count = ARRAY_SIZE(wpa_cli_commands);
 	count += dl_list_len(&p2p_groups);
 	count += dl_list_len(&ifnames);
 	res = os_calloc(count + 1, sizeof(char *));

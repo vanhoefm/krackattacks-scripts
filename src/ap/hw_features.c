@@ -270,7 +270,7 @@ static int ieee80211n_allowed_ht40_channel_pair(struct hostapd_iface *iface)
 		first = sec_chan;
 
 	ok = 0;
-	for (k = 0; k < sizeof(allowed) / sizeof(allowed[0]); k++) {
+	for (k = 0; k < ARRAY_SIZE(allowed); k++) {
 		if (first == allowed[k]) {
 			ok = 1;
 			break;

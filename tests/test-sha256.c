@@ -251,7 +251,7 @@ int main(int argc, char *argv[])
 	size_t len[2];
 	int errors = 0;
 
-	for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++) {
+	for (i = 0; i < ARRAY_SIZE(tests); i++) {
 		printf("SHA256 test case %d:", i + 1);
 
 		addr[0] = (u8 *) tests[i].data;
@@ -279,7 +279,7 @@ int main(int argc, char *argv[])
 		printf("\n");
 	}
 
-	for (i = 0; i < sizeof(hmac_tests) / sizeof(hmac_tests[0]); i++) {
+	for (i = 0; i < ARRAY_SIZE(hmac_tests); i++) {
 		struct hmac_test *t = &hmac_tests[i];
 		printf("HMAC-SHA256 test case %d:", i + 1);
 

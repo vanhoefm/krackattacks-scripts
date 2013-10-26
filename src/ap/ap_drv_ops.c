@@ -724,6 +724,7 @@ int hostapd_start_dfs_cac(struct hostapd_data *hapd, int mode, int freq,
 			  int center_segment0, int center_segment1)
 {
 	struct hostapd_freq_params data;
+	int res;
 
 	if (!hapd->driver || !hapd->driver->start_dfs_cac)
 		return 0;
@@ -740,7 +741,11 @@ int hostapd_start_dfs_cac(struct hostapd_data *hapd, int mode, int freq,
 				    center_segment1))
 		return -1;
 
-	return hapd->driver->start_dfs_cac(hapd->drv_priv, &data);
+	res = hapd->driver->start_dfs_cac(hapd->drv_priv, &data);
+	if (!res)
+		hapd->cac_started = 1;
+
+	return res;
 }
 
 

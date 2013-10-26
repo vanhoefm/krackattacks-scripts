@@ -152,6 +152,9 @@ struct hostapd_data {
 
 	int parameter_set_count;
 
+	/* DFS specific parameters */
+	int cac_started;
+
 	/* Time Advertisement */
 	u8 time_update_counter;
 	struct wpabuf *time_adv;

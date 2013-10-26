@@ -546,29 +546,13 @@ int hostapd_dfs_complete_cac(struct hostapd_data *hapd, int success, int freq,
 			     int ht_enabled, int chan_offset, int chan_width,
 			     int cf1, int cf2)
 {
-	struct hostapd_channel_data *channel;
-	int err = 1;
-
 	if (success) {
 		/* Complete iface/ap configuration */
 		set_dfs_state(hapd, freq, ht_enabled, chan_offset,
 			      chan_width, cf1, cf2,
 			      HOSTAPD_CHAN_DFS_AVAILABLE);
+		hapd->cac_started = 0;
 		hostapd_setup_interface_complete(hapd->iface, 0);
-	} else {
-		/* Switch to new channel */
-		set_dfs_state(hapd, freq, ht_enabled, chan_offset,
-			      chan_width, cf1, cf2,
-			      HOSTAPD_CHAN_DFS_UNAVAILABLE);
-		channel = dfs_get_valid_channel(hapd);
-		if (channel) {
-			hapd->iconf->channel = channel->chan;
-			hapd->iface->freq = channel->freq;
-			err = 0;
-		} else
-			wpa_printf(MSG_ERROR, "No valid channel available");
-
-		hostapd_setup_interface_complete(hapd->iface, err);
 	}
 
 	return 0;
@@ -588,7 +572,13 @@ static int hostapd_dfs_start_channel_switch(struct hostapd_data *hapd)
 		err = 0;
 	}
 
-	hapd->driver->stop_ap(hapd->drv_priv);
+	if (!hapd->cac_started) {
+		wpa_printf(MSG_DEBUG, "DFS radar detected");
+		hapd->driver->stop_ap(hapd->drv_priv);
+	} else {
+		wpa_printf(MSG_DEBUG, "DFS radar detected during CAC");
+		hapd->cac_started = 0;
+	}
 
 	hostapd_setup_interface_complete(hapd->iface, err);
 	return 0;
@@ -612,10 +602,6 @@ int hostapd_dfs_radar_detected(struct hostapd_data *hapd, int freq,
 	/* Skip if reported radar event not overlapped our channels */
 	res = dfs_are_channels_overlapped(hapd, freq, chan_width, cf1, cf2);
 	if (!res)
-		return 0;
-
-	/* we are working on non-DFS channel - skip event */
-	if (res == 0)
 		return 0;
 
 	/* radar detected while operating, switch the channel. */

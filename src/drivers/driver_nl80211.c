@@ -593,8 +593,14 @@ static int send_and_recv(struct nl80211_global *global,
 		nl_cb_set(cb, NL_CB_VALID, NL_CB_CUSTOM,
 			  valid_handler, valid_data);
 
-	while (err > 0)
-		nl_recvmsgs(nl_handle, cb);
+	while (err > 0) {
+		int res = nl_recvmsgs(nl_handle, cb);
+		if (res) {
+			wpa_printf(MSG_INFO,
+				   "nl80211: %s->nl_recvmsgs failed: %d",
+				   __func__, res);
+		}
+	}
  out:
 	nl_cb_put(cb);
 	nlmsg_free(msg);
@@ -844,10 +850,15 @@ nla_put_failure:
 static void nl80211_recv_beacons(int sock, void *eloop_ctx, void *handle)
 {
 	struct nl80211_wiphy_data *w = eloop_ctx;
+	int res;
 
 	wpa_printf(MSG_EXCESSIVE, "nl80211: Beacon event message available");
 
-	nl_recvmsgs(handle, w->nl_cb);
+	res = nl_recvmsgs(handle, w->nl_cb);
+	if (res) {
+		wpa_printf(MSG_INFO, "nl80211: %s->nl_recvmsgs failed: %d",
+			   __func__, res);
+	}
 }
 
 
@@ -2870,10 +2881,15 @@ static void wpa_driver_nl80211_event_receive(int sock, void *eloop_ctx,
 					     void *handle)
 {
 	struct nl_cb *cb = eloop_ctx;
+	int res;
 
 	wpa_printf(MSG_MSGDUMP, "nl80211: Event message available");
 
-	nl_recvmsgs(handle, cb);
+	res = nl_recvmsgs(handle, cb);
+	if (res) {
+		wpa_printf(MSG_INFO, "nl80211: %s->nl_recvmsgs failed: %d",
+			   __func__, res);
+	}
 }
 
 

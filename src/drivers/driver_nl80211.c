@@ -1830,18 +1830,12 @@ static void mlme_event_michael_mic_failure(struct i802_bss *bss,
 static void mlme_event_join_ibss(struct wpa_driver_nl80211_data *drv,
 				 struct nlattr *tb[])
 {
-	u16 type = (WLAN_FC_TYPE_MGMT << 2) | (WLAN_FC_STYPE_AUTH << 4);
-
 	if (tb[NL80211_ATTR_MAC] == NULL) {
 		wpa_printf(MSG_DEBUG, "nl80211: No address in IBSS joined "
 			   "event");
 		return;
 	}
 	os_memcpy(drv->bssid, nla_data(tb[NL80211_ATTR_MAC]), ETH_ALEN);
-
-	/* register for any AUTH message */
-	nl80211_register_frame(&drv->first_bss, drv->first_bss.nl_mgmt,
-			       type, NULL, 0);
 
 	drv->associated = 1;
 	wpa_printf(MSG_DEBUG, "nl80211: IBSS " MACSTR " joined",
@@ -3804,6 +3798,13 @@ static int nl80211_mgmt_subscribe_non_ap(struct i802_bss *bss)
 		return -1;
 	wpa_printf(MSG_DEBUG, "nl80211: Subscribe to mgmt frames with non-AP "
 		   "handle %p", bss->nl_mgmt);
+
+	if (drv->nlmode == NL80211_IFTYPE_ADHOC) {
+		u16 type = (WLAN_FC_TYPE_MGMT << 2) | (WLAN_FC_STYPE_AUTH << 4);
+
+		/* register for any AUTH message */
+		nl80211_register_frame(bss, bss->nl_mgmt, type, NULL, 0);
+	}
 
 #ifdef CONFIG_INTERWORKING
 	/* QoS Map Configure */

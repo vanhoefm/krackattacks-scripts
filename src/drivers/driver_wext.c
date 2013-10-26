@@ -2427,7 +2427,7 @@ static int wext_sched_scan(void *priv, struct wpa_driver_scan_params *params,
 	bp += WEXT_PNO_MAX_REPEAT_LENGTH + 1;
 
 	os_memset(&iwr, 0, sizeof(iwr));
-	os_strncpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
+	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
 	iwr.u.data.pointer = buf;
 	iwr.u.data.length = bp;
 

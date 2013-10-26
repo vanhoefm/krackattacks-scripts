@@ -3187,7 +3187,7 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 		  genlmsg_attrlen(gnlh, 0), NULL);
 
 	if (tb[NL80211_ATTR_WIPHY_NAME])
-		os_strncpy(drv->phyname,
+		os_strlcpy(drv->phyname,
 			   nla_get_string(tb[NL80211_ATTR_WIPHY_NAME]),
 			   sizeof(drv->phyname));
 	if (tb[NL80211_ATTR_MAX_NUM_SCAN_SSIDS])
@@ -10656,7 +10656,7 @@ static int android_pno_start(struct i802_bss *bss,
 
 	memset(&ifr, 0, sizeof(ifr));
 	memset(&priv_cmd, 0, sizeof(priv_cmd));
-	os_strncpy(ifr.ifr_name, bss->ifname, IFNAMSIZ);
+	os_strlcpy(ifr.ifr_name, bss->ifname, IFNAMSIZ);
 
 	priv_cmd.buf = buf;
 	priv_cmd.used_len = bp;

@@ -894,7 +894,7 @@ static int atheros_set_qos_map(void *ctx, const u8 *qos_map_set,
 		memset(&req, 0, sizeof(struct ieee80211req_athdbg));
 		req.cmd = IEEE80211_DBGREQ_SETQOSMAPCONF;
 		os_memset(&iwr, 0, sizeof(iwr));
-		os_strncpy(iwr.ifr_name, drv->iface, sizeof(iwr.ifr_name));
+		os_strlcpy(iwr.ifr_name, drv->iface, sizeof(iwr.ifr_name));
 		iwr.u.data.pointer = (void *) &req;
 		iwr.u.data.length = sizeof(struct ieee80211req_athdbg);
 	}
@@ -1385,7 +1385,7 @@ static void fetch_pending_big_events(struct atheros_driver_data *drv)
 
 	while (1) {
 		os_memset(&iwr, 0, sizeof(iwr));
-		os_strncpy(iwr.ifr_name, drv->iface, IFNAMSIZ);
+		os_strlcpy(iwr.ifr_name, drv->iface, IFNAMSIZ);
 
 		iwr.u.data.pointer = (void *) tbuf;
 		iwr.u.data.length = sizeof(tbuf);

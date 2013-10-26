@@ -72,7 +72,7 @@ get80211opmode(struct bsd_driver_data *drv)
 	struct ifmediareq ifmr;
 
 	(void) memset(&ifmr, 0, sizeof(ifmr));
-	(void) strncpy(ifmr.ifm_name, drv->ifname, sizeof(ifmr.ifm_name));
+	(void) os_strlcpy(ifmr.ifm_name, drv->ifname, sizeof(ifmr.ifm_name));
 
 	if (ioctl(drv->sock, SIOCGIFMEDIA, (caddr_t)&ifmr) >= 0) {
 		if (ifmr.ifm_current & IFM_IEEE80211_ADHOC) {

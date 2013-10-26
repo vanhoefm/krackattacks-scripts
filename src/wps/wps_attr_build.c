@@ -118,6 +118,8 @@ int wps_build_config_methods(struct wpabuf *msg, u16 methods)
 
 int wps_build_uuid_e(struct wpabuf *msg, const u8 *uuid)
 {
+	if (wpabuf_tailroom(msg) < 4 + WPS_UUID_LEN)
+		return -1;
 	wpa_printf(MSG_DEBUG, "WPS:  * UUID-E");
 	wpabuf_put_be16(msg, ATTR_UUID_E);
 	wpabuf_put_be16(msg, WPS_UUID_LEN);
@@ -183,6 +185,8 @@ int wps_build_version(struct wpabuf *msg)
 	 * backwards compatibility reasons. The real version negotiation is
 	 * done with Version2.
 	 */
+	if (wpabuf_tailroom(msg) < 5)
+		return -1;
 	wpa_printf(MSG_DEBUG, "WPS:  * Version (hardcoded 0x10)");
 	wpabuf_put_be16(msg, ATTR_VERSION);
 	wpabuf_put_be16(msg, 1);
@@ -197,6 +201,10 @@ int wps_build_wfa_ext(struct wpabuf *msg, int req_to_enroll,
 #ifdef CONFIG_WPS2
 	u8 *len;
 
+	if (wpabuf_tailroom(msg) <
+	    7 + 3 + (req_to_enroll ? 3 : 0) +
+	    (auth_macs ? 2 + auth_macs_count * ETH_ALEN : 0))
+		return -1;
 	wpabuf_put_be16(msg, ATTR_VENDOR_EXT);
 	len = wpabuf_put(msg, 2); /* to be filled */
 	wpabuf_put_be24(msg, WPS_VENDOR_ID_WFA);
@@ -230,6 +238,8 @@ int wps_build_wfa_ext(struct wpabuf *msg, int req_to_enroll,
 
 #ifdef CONFIG_WPS_TESTING
 	if (WPS_VERSION > 0x20) {
+		if (wpabuf_tailroom(msg) < 5)
+			return -1;
 		wpa_printf(MSG_DEBUG, "WPS:  * Extensibility Testing - extra "
 			   "attribute");
 		wpabuf_put_be16(msg, ATTR_EXTENSIBILITY_TEST);

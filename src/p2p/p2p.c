@@ -1911,7 +1911,11 @@ struct wpabuf * p2p_build_probe_resp_ies(struct p2p_data *p2p)
 		pw_id = p2p_wps_method_pw_id(p2p->go_neg_peer->wps_method);
 	}
 
-	p2p_build_wps_ie(p2p, buf, pw_id, 1);
+	if (p2p_build_wps_ie(p2p, buf, pw_id, 1) < 0) {
+		p2p_dbg(p2p, "Failed to build WPS IE for Probe Response");
+		wpabuf_free(buf);
+		return NULL;
+	}
 
 #ifdef CONFIG_WIFI_DISPLAY
 	if (p2p->wfd_ie_probe_resp)

@@ -3,6 +3,15 @@
 errors=0
 umask 0002
 
+if [ -z "$DBFILE" ]; then
+    DB=""
+else
+    DB="-S $DBFILE"
+    if [ -n "$BUILD" ]; then
+	DB="$DB -b $BUILD"
+    fi
+fi
+
 if [ "x$1" = "xconcurrent-valgrind" ]; then
     if ! ./start.sh concurrent valgrind; then
 	echo "Could not start test environment" > logs/last-debug
@@ -11,7 +20,7 @@ if [ "x$1" = "xconcurrent-valgrind" ]; then
     DATE=`ls -1tr logs | tail -1 | cut -f1 -d-`
     rm logs/last-debug
     for i in autogo discovery grpform; do
-	./run-tests.py -l logs/$DATE-run-$i -e logs/$DATE-failed-$i -r logs/results.txt -f test_p2p_$i.py || errors=1
+	./run-tests.py -l logs/$DATE-run-$i $DB -e logs/$DATE-failed-$i -r logs/results.txt -f test_p2p_$i.py || errors=1
 	cat logs/$DATE-run-$i >> logs/last-debug
     done
     ./stop-wifi.sh
@@ -32,7 +41,7 @@ elif [ "x$1" = "xconcurrent" ]; then
     DATE=`ls -1tr logs | tail -1 | cut -f1 -d-`
     rm logs/last-debug
     for i in autogo discovery grpform; do
-	./run-tests.py -l logs/$DATE-run-$i -e logs/$DATE-failed-$i -r logs/results.txt -f test_p2p_$i.py || errors=1
+	./run-tests.py -l logs/$DATE-run-$i $DB -e logs/$DATE-failed-$i -r logs/results.txt -f test_p2p_$i.py || errors=1
 	cat logs/$DATE-run-$i >> logs/last-debug
     done
     ./stop-wifi.sh
@@ -46,7 +55,7 @@ elif [ "x$1" = "xvalgrind" ]; then
 	exit 1
     fi
     DATE=`ls -1tr logs | tail -1 | cut -f1 -d-`
-    ./run-tests.py -l logs/$DATE-run -e logs/$DATE-failed -r logs/results.txt || errors=1
+    ./run-tests.py -l logs/$DATE-run $DB -e logs/$DATE-failed -r logs/results.txt || errors=1
     cat logs/$DATE-run > logs/last-debug
     ./stop-wifi.sh
     failures=`grep "ERROR SUMMARY" logs/$DATE-valgrind-* | grep -v " 0 errors" | wc -l`
@@ -64,7 +73,7 @@ elif [ "x$1" = "xtrace" ]; then
 	exit 1
     fi
     DATE=`ls -1tr logs | tail -1 | cut -f1 -d-`
-    sudo trace-cmd record -o logs/$DATE-trace.dat -e mac80211 -e cfg80211 su $USER -c "./run-tests.py -l logs/$DATE-run -e logs/$DATE-failed -r logs/results.txt" || errors=1
+    sudo trace-cmd record -o logs/$DATE-trace.dat -e mac80211 -e cfg80211 su $USER -c "./run-tests.py -l logs/$DATE-run $DB -e logs/$DATE-failed -r logs/results.txt" || errors=1
     if [ -e logs/$DATE-failed ]; then
 	error=1
     fi
@@ -81,7 +90,7 @@ else
 	exit 1
     fi
     DATE=`ls -1tr logs | tail -1 | cut -f1 -d-`
-    ./run-tests.py -l logs/$DATE-run -e logs/$DATE-failed -r logs/results.txt || errors=1
+    ./run-tests.py -l logs/$DATE-run $DB -e logs/$DATE-failed -r logs/results.txt || errors=1
     cat logs/$DATE-run > logs/last-debug
     ./stop-wifi.sh
     if [ $errors -gt 0 ]; then

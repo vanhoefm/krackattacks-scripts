@@ -10,6 +10,7 @@ import os
 import re
 import sys
 import time
+import sqlite3
 from datetime import datetime
 
 import logging
@@ -29,11 +30,29 @@ def reset_devs(dev, apdev):
     for ap in apdev:
         hapd.remove(ap['ifname'])
 
+def report(conn, build, commit, run, test, result, diff):
+    if conn:
+        if not build:
+            build = ''
+        if not commit:
+            commit = ''
+        sql = "INSERT INTO results(test,result,run,time,duration,build,commitid) VALUES('" + test.replace('test_', '', 1) + "', '" + result + "', " + str(run) + ", " + str(time.time()) + ", " + str(diff.total_seconds()) + ", '" + build + "', '" + commit + "')"
+        try:
+            conn.execute(sql)
+            conn.commit()
+        except Exception, e:
+            print "sqlite: " + str(e)
+            print "sql: " + sql
+
 def main():
     test_file = None
     error_file = None
     log_file = None
     results_file = None
+    conn = None
+    run = None
+    build = None
+    commit = None
     idx = 1
     print_res = False
     if len(sys.argv) > 1 and sys.argv[1] == '-d':
@@ -60,8 +79,21 @@ def main():
         elif len(sys.argv) > idx + 1 and sys.argv[idx] == '-f':
             test_file = sys.argv[idx + 1]
             idx = idx + 2
+        elif len(sys.argv) > idx + 1 and sys.argv[idx] == '-S':
+            conn = sqlite3.connect(sys.argv[idx + 1])
+            idx = idx + 2
+        elif len(sys.argv) > idx + 1 and sys.argv[idx] == '-b':
+            build = sys.argv[idx + 1]
+            idx = idx + 2
         else:
             break
+
+    if conn:
+        run = str(int(time.time()))
+        with open("commit") as f:
+            val = f.readlines()
+            if len(val) > 0:
+                commit = val[0].rstrip()
 
     tests = []
     for t in os.listdir("."):
@@ -125,6 +157,9 @@ def main():
                 logger.info("Failed to issue TEST-START before " + t.__name__ + " for " + d.ifname)
                 logger.info(e)
                 print "FAIL " + t.__name__ + " - could not start test"
+                if conn:
+                    conn.close()
+                    conn = None
                 sys.exit(1)
         try:
             if t.func_code.co_argcount > 1:
@@ -135,11 +170,12 @@ def main():
             diff = end - start
             if res == "skip":
                 skipped.append(t.__name__)
-                result = "SKIP "
+                result = "SKIP"
             else:
                 passed.append(t.__name__)
-                result = "PASS "
-            result = result + t.__name__ + " "
+                result = "PASS"
+            report(conn, build, commit, run, t.__name__, result, diff)
+            result = result + " " + t.__name__ + " "
             result = result + str(diff.total_seconds()) + " " + str(end)
             logger.info(result)
             if log_file or print_res:
@@ -154,6 +190,7 @@ def main():
             diff = end - start
             logger.info(e)
             failed.append(t.__name__)
+            report(conn, build, commit, run, t.__name__, "FAIL", diff)
             result = "FAIL " + t.__name__ + " " + str(diff.total_seconds()) + " " + str(end)
             logger.info(result)
             if log_file:
@@ -172,6 +209,9 @@ def main():
 
     if not test_filter:
         reset_devs(dev, apdev)
+
+    if conn:
+        conn.close()
 
     if len(failed):
         logger.info("passed " + str(len(passed)) + " test case(s)")

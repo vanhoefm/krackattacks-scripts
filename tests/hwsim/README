@@ -175,3 +175,18 @@ line is a convenient way of verifying functionality.
 run-tests.py will automatically import all test cases from the test_*.py
 files in this directory. All functions starting with the "test_" prefix
 in these files are assumed to be test cases.
+
+
+Results database
+----------------
+
+run-tests.py can be requested to write results from the execution of
+each test case into an sqlite database. The "-S <path to database>" and
+"-b <build id>" command line arguments can be used to do that. The
+database must have been prepared before this, e.g., with following:
+
+cat | sqlite3 /tmp/example.db <<EOF
+CREATE TABLE results (test,result,run,time,duration,build,commitid);
+CREATE INDEX results_idx ON results (test);
+CREATE INDEX results_idx2 ON results (run);
+EOF

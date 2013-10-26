@@ -784,11 +784,13 @@ void * tls_init(const struct tls_config *conf)
 	ssl = SSL_CTX_new(TLSv1_method());
 	if (ssl == NULL) {
 		tls_openssl_ref_count--;
+#ifdef OPENSSL_SUPPORTS_CTX_APP_DATA
+		if (context != tls_global)
+			os_free(context);
+#endif /* OPENSSL_SUPPORTS_CTX_APP_DATA */
 		if (tls_openssl_ref_count == 0) {
 			os_free(tls_global);
 			tls_global = NULL;
-		} else if (context != tls_global) {
-			os_free(context);
 		}
 		return NULL;
 	}

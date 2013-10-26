@@ -140,17 +140,26 @@ static void nl_destroy_handles(struct nl_handle **handle)
 }
 
 
+#if __WORDSIZE == 64
+#define ELOOP_SOCKET_INVALID	(intptr_t) 0x8888888888888889ULL
+#else
+#define ELOOP_SOCKET_INVALID	(intptr_t) 0x88888889ULL
+#endif
+
 static void nl80211_register_eloop_read(struct nl_handle **handle,
 					eloop_sock_handler handler,
 					void *eloop_data)
 {
+	nl_socket_set_nonblocking(*handle);
 	eloop_register_read_sock(nl_socket_get_fd(*handle), handler,
 				 eloop_data, *handle);
+	*handle = (void *) (((intptr_t) *handle) ^ ELOOP_SOCKET_INVALID);
 }
 
 
 static void nl80211_destroy_eloop_handle(struct nl_handle **handle)
 {
+	*handle = (void *) (((intptr_t) *handle) ^ ELOOP_SOCKET_INVALID);
 	eloop_unregister_read_sock(nl_socket_get_fd(*handle));
 	nl_destroy_handles(handle);
 }

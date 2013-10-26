@@ -518,6 +518,8 @@ int freq_range_list_includes(const struct wpa_freq_range_list *list,
 			     unsigned int freq);
 char * freq_range_list_str(const struct wpa_freq_range_list *list);
 
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
+
 
 /*
  * gcc 4.4 ends up generating strict-aliasing warnings about some very common

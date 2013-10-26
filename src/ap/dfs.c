@@ -154,7 +154,14 @@ static void dfs_adjust_vht_center_freq(struct hostapd_data *hapd,
 
 	switch (hapd->iconf->vht_oper_chwidth) {
 	case VHT_CHANWIDTH_USE_HT:
-		hapd->iconf->vht_oper_centr_freq_seg0_idx = chan->chan + 2;
+		if (hapd->iconf->secondary_channel == 1)
+			hapd->iconf->vht_oper_centr_freq_seg0_idx =
+				chan->chan + 2;
+		else if (hapd->iconf->secondary_channel == -1)
+			hapd->iconf->vht_oper_centr_freq_seg0_idx =
+				chan->chan - 2;
+		else
+			hapd->iconf->vht_oper_centr_freq_seg0_idx = chan->chan;
 		break;
 	case VHT_CHANWIDTH_80MHZ:
 		hapd->iconf->vht_oper_centr_freq_seg0_idx = chan->chan + 6;

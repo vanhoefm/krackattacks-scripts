@@ -361,15 +361,6 @@ int os_strcmp(const char *s1, const char *s2);
 int os_strncmp(const char *s1, const char *s2, size_t n);
 
 /**
- * os_strncpy - Copy a string
- * @dest: Destination
- * @src: Source
- * @n: Maximum number of characters to copy
- * Returns: dest
- */
-char * os_strncpy(char *dest, const char *src, size_t n);
-
-/**
  * os_strstr - Locate a substring
  * @haystack: String (haystack) to search from
  * @needle: Needle to search from haystack
@@ -464,9 +455,6 @@ char * os_strdup(const char *s);
 #endif
 #ifndef os_strncmp
 #define os_strncmp(s1, s2, n) strncmp((s1), (s2), (n))
-#endif
-#ifndef os_strncpy
-#define os_strncpy(d, s, n) strncpy((d), (s), (n))
 #endif
 #ifndef os_strrchr
 #define os_strrchr(s, c) strrchr((s), (c))

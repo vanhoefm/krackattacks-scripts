@@ -138,6 +138,7 @@ static void dfs_adjust_vht_center_freq(struct hostapd_data *hapd,
 	case VHT_CHANWIDTH_160MHZ:
 		hapd->iconf->vht_oper_centr_freq_seg0_idx =
 						chan->chan + 14;
+		break;
 	default:
 		wpa_printf(MSG_INFO, "DFS only VHT20/40/80/160 is supported now");
 		break;

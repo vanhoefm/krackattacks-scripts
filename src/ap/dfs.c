@@ -417,13 +417,14 @@ static int dfs_are_channels_overlapped(struct hostapd_data *hapd, int freq,
 	u8 radar_chan;
 	int res = 0;
 
-	if (hapd->iface->freq == freq)
-		res++;
-
 	/* Our configuration */
 	mode = hapd->iface->current_mode;
 	start_chan_idx = dfs_get_start_chan_idx(hapd);
 	n_chans = dfs_get_used_n_chans(hapd);
+
+	/* Check we are on DFS channel(s) */
+	if (!dfs_check_chans_radar(hapd, start_chan_idx, n_chans))
+		return 0;
 
 	/* Reported via radar event */
 	switch (chan_width) {
@@ -454,6 +455,8 @@ static int dfs_are_channels_overlapped(struct hostapd_data *hapd, int freq,
 
 	for (i = 0; i < n_chans; i++) {
 		chan = &mode->channels[start_chan_idx + i];
+		if (!(chan->flag & HOSTAPD_CHAN_RADAR))
+			continue;
 		for (j = 0; j < radar_n_chans; j++) {
 			wpa_printf(MSG_DEBUG, "checking our: %d, radar: %d",
 				   chan->chan, radar_chan + j * 4);

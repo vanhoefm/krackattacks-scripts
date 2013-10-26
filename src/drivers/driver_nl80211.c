@@ -4004,7 +4004,7 @@ static void nl80211_del_p2pdev(struct i802_bss *bss)
 
 	wpa_printf(MSG_DEBUG, "nl80211: Delete P2P Device %s (0x%llx): %s",
 		   bss->ifname, (long long unsigned int) bss->wdev_id,
-		   strerror(ret));
+		   strerror(-ret));
 
 nla_put_failure:
 	nlmsg_free(msg);
@@ -4034,7 +4034,7 @@ static int nl80211_set_p2pdev(struct i802_bss *bss, int start)
 	wpa_printf(MSG_DEBUG, "nl80211: %s P2P Device %s (0x%llx): %s",
 		   start ? "Start" : "Stop",
 		   bss->ifname, (long long unsigned int) bss->wdev_id,
-		   strerror(ret));
+		   strerror(-ret));
 
 nla_put_failure:
 	nlmsg_free(msg);

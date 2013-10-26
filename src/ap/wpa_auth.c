@@ -1863,6 +1863,7 @@ static u8 * ieee80211w_kde_add(struct wpa_state_machine *sm, u8 *pos)
 {
 	struct wpa_igtk_kde igtk;
 	struct wpa_group *gsm = sm->group;
+	u8 rsc[WPA_KEY_RSC_LEN];
 
 	if (!sm->mgmt_frame_prot)
 		return pos;
@@ -1870,8 +1871,10 @@ static u8 * ieee80211w_kde_add(struct wpa_state_machine *sm, u8 *pos)
 	igtk.keyid[0] = gsm->GN_igtk;
 	igtk.keyid[1] = 0;
 	if (gsm->wpa_group_state != WPA_GROUP_SETKEYSDONE ||
-	    wpa_auth_get_seqnum(sm->wpa_auth, NULL, gsm->GN_igtk, igtk.pn) < 0)
+	    wpa_auth_get_seqnum(sm->wpa_auth, NULL, gsm->GN_igtk, rsc) < 0)
 		os_memset(igtk.pn, 0, sizeof(igtk.pn));
+	else
+		os_memcpy(igtk.pn, rsc, sizeof(igtk.pn));
 	os_memcpy(igtk.igtk, gsm->IGTK[gsm->GN_igtk - 4], WPA_IGTK_LEN);
 	if (sm->wpa_auth->conf.disable_gtk) {
 		/*

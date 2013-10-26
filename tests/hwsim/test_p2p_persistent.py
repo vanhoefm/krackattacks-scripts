@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 import hwsim_utils
 
-def go_neg_pin_authorized_persistent(i_dev, r_dev, i_intent=None, r_intent=None, i_method='enter', r_method='display'):
+def go_neg_pin_authorized_persistent(i_dev, r_dev, i_intent=None, r_intent=None, i_method='enter', r_method='display', test_data=True):
     r_dev.p2p_listen()
     i_dev.p2p_listen()
     pin = r_dev.wps_read_pin()
@@ -27,82 +27,75 @@ def go_neg_pin_authorized_persistent(i_dev, r_dev, i_intent=None, r_intent=None,
     r_dev.dump_monitor()
     i_dev.dump_monitor()
     logger.info("Group formed")
-    hwsim_utils.test_connectivity_p2p(r_dev, i_dev)
+    if test_data:
+        hwsim_utils.test_connectivity_p2p(r_dev, i_dev)
     return [i_res, r_res]
+
+def terminate_group(go, cli):
+    logger.info("Terminate persistent group")
+    go.remove_group()
+    cli.wait_go_ending_session()
+
+def invite(inv, resp, extra=None):
+    addr = resp.p2p_dev_addr()
+    resp.request("SET persistent_reconnect 1")
+    resp.p2p_listen()
+    if not inv.discover_peer(addr, social=True):
+        raise Exception("Peer " + addr + " not found")
+    inv.dump_monitor()
+    peer = inv.get_peer(addr)
+    cmd = "P2P_INVITE persistent=" + peer['persistent'] + " peer=" + addr
+    if extra:
+        cmd = cmd + " " + extra;
+    inv.global_request(cmd)
+
+def check_result(go, cli):
+    ev = go.wait_global_event(["P2P-GROUP-STARTED"], timeout=30)
+    if ev is None:
+        raise Exception("Timeout on group re-invocation (on GO)")
+    go_res = go.group_form_result(ev)
+    if go_res['role'] != 'GO':
+        raise Exception("Persistent group GO did not become GO")
+    if not go_res['persistent']:
+        raise Exception("Persistent group not re-invoked as persistent (GO)")
+    ev = cli.wait_global_event(["P2P-GROUP-STARTED"], timeout=30)
+    if ev is None:
+        raise Exception("Timeout on group re-invocation (on client)")
+    cli_res = cli.group_form_result(ev)
+    if cli_res['role'] != 'client':
+        raise Exception("Persistent group client did not become client")
+    if not cli_res['persistent']:
+        raise Exception("Persistent group not re-invoked as persistent (cli)")
+    return [go_res, cli_res]
+
+def form(go, cli, test_data=True):
+    logger.info("Form a persistent group")
+    [i_res, r_res] = go_neg_pin_authorized_persistent(i_dev=go, i_intent=15,
+                                                      r_dev=cli, r_intent=0,
+                                                      test_data=test_data)
+    if not i_res['persistent'] or not r_res['persistent']:
+        raise Exception("Formed group was not persistent")
+    terminate_group(go, cli)
+
+def invite_from_cli(go, cli):
+    logger.info("Re-invoke persistent group from client")
+    invite(cli, go)
+    check_result(go, cli)
+    hwsim_utils.test_connectivity_p2p(go, cli)
+    terminate_group(go, cli)
+
+def invite_from_go(go, cli):
+    logger.info("Re-invoke persistent group from GO")
+    invite(go, cli)
+    check_result(go, cli)
+    hwsim_utils.test_connectivity_p2p(go, cli)
+    terminate_group(go, cli)
 
 def test_persistent_group(dev):
     """P2P persistent group formation and re-invocation"""
-    addr0 = dev[0].p2p_dev_addr()
-    addr1 = dev[1].p2p_dev_addr()
-    logger.info("Form a persistent group")
-    [i_res, r_res] = go_neg_pin_authorized_persistent(i_dev=dev[0], i_intent=15,
-                                                      r_dev=dev[1], r_intent=0)
-    if not i_res['persistent'] or not r_res['persistent']:
-        raise Exception("Formed group was not persistent")
-
-    logger.info("Terminate persistent group")
-    dev[0].remove_group()
-    dev[1].wait_go_ending_session()
-
-    logger.info("Re-invoke persistent group from client")
-    dev[0].request("SET persistent_reconnect 1")
-    dev[0].p2p_listen()
-    if not dev[1].discover_peer(addr0, social=True):
-        raise Exception("Peer " + peer + " not found")
-    dev[1].dump_monitor()
-    peer = dev[1].get_peer(addr0)
-    dev[1].global_request("P2P_INVITE persistent=" + peer['persistent'] + " peer=" + addr0)
-    ev = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=30)
-    if ev is None:
-        raise Exception("Timeout on group re-invocation (on GO)")
-    go_res = dev[0].group_form_result(ev)
-    if go_res['role'] != 'GO':
-        raise Exception("Persistent group GO did not become GO")
-    if not go_res['persistent']:
-        raise Exception("Persistent group not re-invoked as persistent (GO)")
-    ev = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=30)
-    if ev is None:
-        raise Exception("Timeout on group re-invocation (on client)")
-    cli_res = dev[1].group_form_result(ev)
-    if cli_res['role'] != 'client':
-        raise Exception("Persistent group client did not become client")
-    if not cli_res['persistent']:
-        raise Exception("Persistent group not re-invoked as persistent (cli)")
-    hwsim_utils.test_connectivity_p2p(dev[0], dev[1])
-
-    logger.info("Terminate persistent group")
-    dev[0].remove_group()
-    dev[1].wait_go_ending_session()
-
-    logger.info("Re-invoke persistent group from GO")
-    dev[1].request("SET persistent_reconnect 1")
-    dev[1].p2p_listen()
-    if not dev[0].discover_peer(addr1, social=True):
-        raise Exception("Peer " + peer + " not found")
-    dev[0].dump_monitor()
-    peer = dev[0].get_peer(addr1)
-    dev[0].global_request("P2P_INVITE persistent=" + peer['persistent'] + " peer=" + addr1)
-    ev = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=30)
-    if ev is None:
-        raise Exception("Timeout on group re-invocation (on GO)")
-    go_res = dev[0].group_form_result(ev)
-    if go_res['role'] != 'GO':
-        raise Exception("Persistent group GO did not become GO")
-    if not go_res['persistent']:
-        raise Exception("Persistent group not re-invoked as persistent (GO)")
-    ev = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=30)
-    if ev is None:
-        raise Exception("Timeout on group re-invocation (on client)")
-    cli_res = dev[1].group_form_result(ev)
-    if cli_res['role'] != 'client':
-        raise Exception("Persistent group client did not become client")
-    if not cli_res['persistent']:
-        raise Exception("Persistent group not re-invoked as persistent (cli)")
-    hwsim_utils.test_connectivity_p2p(dev[0], dev[1])
-
-    logger.info("Terminate persistent group")
-    dev[0].remove_group()
-    dev[1].wait_go_ending_session()
+    form(dev[0], dev[1])
+    invite_from_cli(dev[0], dev[1])
+    invite_from_go(dev[0], dev[1])
 
 def test_persistent_group_per_sta_psk(dev):
     """P2P persistent group formation and re-invocation using per-client PSK"""
@@ -244,6 +237,29 @@ def test_persistent_group_invite_removed_client(dev):
         raise Exception("Same PSK assigned on both times")
     hwsim_utils.test_connectivity_p2p(dev[0], dev[1])
 
-    logger.info("Terminate persistent group")
-    dev[0].remove_group()
-    dev[1].wait_go_ending_session()
+    terminate_group(dev[0], dev[1])
+
+def test_persistent_group_channel(dev):
+    """P2P persistent group re-invocation with channel selection"""
+    form(dev[0], dev[1], test_data=False)
+
+    logger.info("Re-invoke persistent group from client with forced channel")
+    invite(dev[1], dev[0], "freq=2427")
+    [go_res, cli_res] = check_result(dev[0], dev[1])
+    if go_res['freq'] != "2427":
+        raise Exception("Persistent group client forced channel not followed")
+    terminate_group(dev[0], dev[1])
+
+    logger.info("Re-invoke persistent group from GO with forced channel")
+    invite(dev[0], dev[1], "freq=2432")
+    [go_res, cli_res] = check_result(dev[0], dev[1])
+    if go_res['freq'] != "2432":
+        raise Exception("Persistent group GO channel preference not followed")
+    terminate_group(dev[0], dev[1])
+
+    logger.info("Re-invoke persistent group from client with channel preference")
+    invite(dev[1], dev[0], "pref=2417")
+    [go_res, cli_res] = check_result(dev[0], dev[1])
+    if go_res['freq'] != "2417":
+        raise Exception("Persistent group client channel preference not followed")
+    terminate_group(dev[0], dev[1])

@@ -57,6 +57,9 @@ class WpaSupplicant:
             logger.info("FLUSH to " + self.ifname + " failed: " + res)
         self.request("SET ignore_old_scan_res 0")
         self.request("SET external_sim 0")
+        self.request("SET p2p_add_cli_chan 0")
+        self.request("SET p2p_no_go_freq ")
+        self.request("SET p2p_pref_chan ")
         self.request("P2P_SET per_sta_psk 0")
         self.request("P2P_SET disabled 0")
         self.request("P2P_SERVICE_FLUSH")
@@ -253,7 +256,7 @@ class WpaSupplicant:
                 vals[name] = value
         return vals
 
-    def group_form_result(self, ev, expect_failure=False):
+    def group_form_result(self, ev, expect_failure=False, go_neg_res=None):
         if expect_failure:
             if "P2P-GROUP-STARTED" in ev:
                 raise Exception("Group formation succeeded when expecting failure")
@@ -291,15 +294,26 @@ class WpaSupplicant:
         if p:
             res['passphrase'] = p.group(1)
         res['go_dev_addr'] = s[7]
+
+        if go_neg_res:
+            exp = r'<.>(P2P-GO-NEG-SUCCESS) role=(GO|client) freq=([0-9]*)'
+            s = re.split(exp, go_neg_res)
+            if len(s) < 4:
+                raise Exception("Could not parse P2P-GO-NEG-SUCCESS")
+            res['go_neg_role'] = s[2]
+            res['go_neg_freq'] = s[3]
+
         return res
 
-    def p2p_go_neg_auth(self, peer, pin, method, go_intent=None, persistent=False):
+    def p2p_go_neg_auth(self, peer, pin, method, go_intent=None, persistent=False, freq=None):
         if not self.discover_peer(peer):
             raise Exception("Peer " + peer + " not found")
         self.dump_monitor()
         cmd = "P2P_CONNECT " + peer + " " + pin + " " + method + " auth"
         if go_intent:
             cmd = cmd + ' go_intent=' + str(go_intent)
+        if freq:
+            cmd = cmd + ' freq=' + str(freq)
         if persistent:
             cmd = cmd + " persistent"
         if "OK" in self.global_request(cmd):
@@ -307,13 +321,22 @@ class WpaSupplicant:
         raise Exception("P2P_CONNECT (auth) failed")
 
     def p2p_go_neg_auth_result(self, timeout=1, expect_failure=False):
-        ev = self.wait_global_event(["P2P-GROUP-STARTED","P2P-GO-NEG-FAILURE"], timeout);
+        go_neg_res = None
+        ev = self.wait_global_event(["P2P-GO-NEG-SUCCESS",
+                                     "P2P-GO-NEG-FAILURE"], timeout);
         if ev is None:
             if expect_failure:
                 return None
             raise Exception("Group formation timed out")
+        if "P2P-GO-NEG-SUCCESS" in ev:
+            go_neg_res = ev
+            ev = self.wait_global_event(["P2P-GROUP-STARTED"], timeout);
+            if ev is None:
+                if expect_failure:
+                    return None
+                raise Exception("Group formation timed out")
         self.dump_monitor()
-        return self.group_form_result(ev, expect_failure)
+        return self.group_form_result(ev, expect_failure, go_neg_res)
 
     def p2p_go_neg_init(self, peer, pin, method, timeout=0, go_intent=None, expect_failure=False, persistent=False, freq=None):
         if not self.discover_peer(peer):
@@ -333,13 +356,22 @@ class WpaSupplicant:
             if timeout == 0:
                 self.dump_monitor()
                 return None
-            ev = self.wait_global_event(["P2P-GROUP-STARTED","P2P-GO-NEG-FAILURE"], timeout)
+            go_neg_res = None
+            ev = self.wait_global_event(["P2P-GO-NEG-SUCCESS",
+                                         "P2P-GO-NEG-FAILURE"], timeout)
             if ev is None:
                 if expect_failure:
                     return None
                 raise Exception("Group formation timed out")
+            if "P2P-GO-NEG-SUCCESS" in ev:
+                go_neg_res = ev
+                ev = self.wait_global_event(["P2P-GROUP-STARTED"], timeout)
+                if ev is None:
+                    if expect_failure:
+                        return None
+                    raise Exception("Group formation timed out")
             self.dump_monitor()
-            return self.group_form_result(ev, expect_failure)
+            return self.group_form_result(ev, expect_failure, go_neg_res)
         raise Exception("P2P_CONNECT failed")
 
     def wait_event(self, events, timeout):

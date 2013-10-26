@@ -9117,15 +9117,6 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	int ifidx;
-#ifdef HOSTAPD
-	struct i802_bss *new_bss = NULL;
-
-	if (type == WPA_IF_AP_BSS) {
-		new_bss = os_zalloc(sizeof(*new_bss));
-		if (new_bss == NULL)
-			return -1;
-	}
-#endif /* HOSTAPD */
 
 	if (addr)
 		os_memcpy(if_addr, addr, ETH_ALEN);
@@ -9154,9 +9145,6 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 		ifidx = nl80211_create_iface(drv, ifname, nlmode, addr,
 					     0, NULL, NULL);
 		if (ifidx < 0) {
-#ifdef HOSTAPD
-			os_free(new_bss);
-#endif /* HOSTAPD */
 			return -1;
 		}
 	}
@@ -9201,16 +9189,23 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 #endif /* CONFIG_P2P */
 
 #ifdef HOSTAPD
-	if (bridge &&
-	    i802_check_bridge(drv, new_bss, bridge, ifname) < 0) {
-		wpa_printf(MSG_ERROR, "nl80211: Failed to add the new "
-			   "interface %s to a bridge %s", ifname, bridge);
-		nl80211_remove_iface(drv, ifidx);
-		os_free(new_bss);
-		return -1;
-	}
-
 	if (type == WPA_IF_AP_BSS) {
+		struct i802_bss *new_bss = os_zalloc(sizeof(*new_bss));
+		if (new_bss == NULL) {
+			nl80211_remove_iface(drv, ifidx);
+			return -1;
+		}
+
+		if (bridge &&
+		    i802_check_bridge(drv, new_bss, bridge, ifname) < 0) {
+			wpa_printf(MSG_ERROR, "nl80211: Failed to add the new "
+				   "interface %s to a bridge %s",
+				   ifname, bridge);
+			nl80211_remove_iface(drv, ifidx);
+			os_free(new_bss);
+			return -1;
+		}
+
 		if (linux_set_iface_flags(drv->global->ioctl_sock, ifname, 1))
 		{
 			nl80211_remove_iface(drv, ifidx);

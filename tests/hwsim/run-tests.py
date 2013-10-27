@@ -90,10 +90,13 @@ def main():
 
     if conn:
         run = str(int(time.time()))
-        with open("commit") as f:
-            val = f.readlines()
-            if len(val) > 0:
-                commit = val[0].rstrip()
+        try:
+            with open("commit") as f:
+                val = f.readlines()
+                if len(val) > 0:
+                    commit = val[0].rstrip()
+        except IOError:
+            pass
 
     tests = []
     for t in os.listdir("."):
@@ -108,9 +111,19 @@ def main():
                     func = mod.__dict__.get(s)
                     tests.append(func)
 
-    if len(sys.argv) > 1 and sys.argv[1] == '-L':
+    if len(sys.argv) > idx and sys.argv[idx] == '-L':
         for t in tests:
             print t.__name__ + " - " + t.__doc__
+            if conn:
+                sql = 'INSERT OR REPLACE INTO tests(test,description) VALUES ("' + t.__name__.replace('test_', '', 1) + '", "' + t.__doc__ + '")';
+                try:
+                    conn.execute(sql)
+                except Exception, e:
+                    print "sqlite: " + str(e)
+                    print "sql: " + sql
+        if conn:
+            conn.commit()
+            conn.close()
         sys.exit(0)
 
     if len(sys.argv) > idx:

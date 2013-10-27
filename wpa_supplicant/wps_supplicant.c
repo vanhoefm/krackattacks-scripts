@@ -883,6 +883,7 @@ static void wpas_clear_wps(struct wpa_supplicant *wpa_s)
 	struct wpa_ssid *ssid, *remove_ssid = NULL, *prev_current;
 
 	wpa_s->after_wps = 0;
+	wpa_s->known_wps_freq = 0;
 
 	prev_current = wpa_s->current_ssid;
 

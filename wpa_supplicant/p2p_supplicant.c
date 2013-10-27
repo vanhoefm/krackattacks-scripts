@@ -3038,7 +3038,7 @@ struct p2p_oper_class_map {
 	u8 min_chan;
 	u8 max_chan;
 	u8 inc;
-	enum { BW20, BW40PLUS, BW40MINUS } bw;
+	enum { BW20, BW40PLUS, BW40MINUS, BW80 } bw;
 };
 
 static struct p2p_oper_class_map op_class[] = {
@@ -3053,8 +3053,79 @@ static struct p2p_oper_class_map op_class[] = {
 	{ HOSTAPD_MODE_IEEE80211A, 117, 40, 48, 8, BW40MINUS },
 	{ HOSTAPD_MODE_IEEE80211A, 126, 149, 157, 8, BW40PLUS },
 	{ HOSTAPD_MODE_IEEE80211A, 127, 153, 161, 8, BW40MINUS },
+
+	/*
+	 * IEEE P802.11ac/D7.0 Table E-4 actually talks about channel center
+	 * frequency index 42, 58, 106, 122, 138, 155 with channel spacing of
+	 * 80 MHz, but currently use the following definition for simplicity
+	 * (these center frequencies are not actual channels, which makes
+	 * has_channel() fail). wpas_p2p_verify_80mhz() should take care of
+	 * removing invalid channels.
+	 */
+	{ HOSTAPD_MODE_IEEE80211A, 128, 36, 161, 4, BW80 },
 	{ -1, 0, 0, 0, 0, BW20 }
 };
+
+
+static int wpas_p2p_get_center_80mhz(struct wpa_supplicant *wpa_s,
+				     struct hostapd_hw_modes *mode,
+				     u8 channel)
+{
+	u8 center_channels[] = { 42, 58, 106, 122, 138, 155 };
+	unsigned int i;
+
+	if (mode->mode != HOSTAPD_MODE_IEEE80211A)
+		return 0;
+
+	for (i = 0; i < ARRAY_SIZE(center_channels); i++)
+		/*
+		 * In 80 MHz, the bandwidth "spans" 12 channels (e.g., 36-48),
+		 * so the center channel is 6 channels away from the start/end.
+		 */
+		if (channel >= center_channels[i] - 6 &&
+		    channel <= center_channels[i] + 6)
+			return center_channels[i];
+
+	return 0;
+}
+
+
+static enum chan_allowed wpas_p2p_verify_80mhz(struct wpa_supplicant *wpa_s,
+					       struct hostapd_hw_modes *mode,
+					       u8 channel, u8 bw)
+{
+	u8 center_chan;
+	int i, flags;
+	enum chan_allowed res, ret = ALLOWED;
+
+	center_chan = wpas_p2p_get_center_80mhz(wpa_s, mode, channel);
+	if (!center_chan)
+		return NOT_ALLOWED;
+	if (center_chan >= 58 && center_chan <= 138)
+		return NOT_ALLOWED; /* Do not allow DFS channels for P2P */
+
+	/* check all the channels are available */
+	for (i = 0; i < 4; i++) {
+		int adj_chan = center_chan - 6 + i * 4;
+
+		res = has_channel(wpa_s->global, mode, adj_chan, &flags);
+		if (res == NOT_ALLOWED)
+			return NOT_ALLOWED;
+		if (res == PASSIVE_ONLY)
+			ret = PASSIVE_ONLY;
+
+		if (i == 0 && !(flags & HOSTAPD_CHAN_VHT_10_70))
+			return NOT_ALLOWED;
+		if (i == 1 && !(flags & HOSTAPD_CHAN_VHT_30_50))
+			return NOT_ALLOWED;
+		if (i == 2 && !(flags & HOSTAPD_CHAN_VHT_50_30))
+			return NOT_ALLOWED;
+		if (i == 3 && !(flags & HOSTAPD_CHAN_VHT_70_10))
+			return NOT_ALLOWED;
+	}
+
+	return ret;
+}
 
 
 static enum chan_allowed wpas_p2p_verify_channel(struct wpa_supplicant *wpa_s,
@@ -3073,6 +3144,8 @@ static enum chan_allowed wpas_p2p_verify_channel(struct wpa_supplicant *wpa_s,
 		if (!(flag & HOSTAPD_CHAN_HT40PLUS))
 			return NOT_ALLOWED;
 		res2 = has_channel(wpa_s->global, mode, channel + 4, NULL);
+	} else if (bw == BW80) {
+		res2 = wpas_p2p_verify_80mhz(wpa_s, mode, channel, bw);
 	}
 
 	if (res == NOT_ALLOWED || res2 == NOT_ALLOWED)
@@ -3170,6 +3243,16 @@ int wpas_p2p_get_ht40_mode(struct wpa_supplicant *wpa_s,
 		}
 	}
 	return 0;
+}
+
+
+int wpas_p2p_get_vht80_center(struct wpa_supplicant *wpa_s,
+			      struct hostapd_hw_modes *mode, u8 channel)
+{
+	if (!wpas_p2p_verify_channel(wpa_s, mode, channel, BW80))
+		return 0;
+
+	return wpas_p2p_get_center_80mhz(wpa_s, mode, channel);
 }
 
 

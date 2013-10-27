@@ -94,6 +94,10 @@ int p2p_channel_to_freq(int op_class, int channel)
 		if (channel < 149 || channel > 161)
 			return -1;
 		return 5000 + 5 * channel;
+	case 128: /* center freqs 42, 58, 106, 122, 138, 155; 80 MHz */
+		if (channel < 36 || channel > 161)
+			return -1;
+		return 5000 + 5 * channel;
 	}
 	return -1;
 }

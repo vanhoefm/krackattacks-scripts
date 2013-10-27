@@ -828,6 +828,16 @@ struct wpa_config {
 	int p2p_go_ht40;
 
 	/**
+	 * p2p_go_vht - Default mode for VHT enable when operating as GO
+	 *
+	 * This will take effect for p2p_group_add, p2p_connect, and p2p_invite.
+	 * Note that regulatory constraints and driver capabilities are
+	 * consulted anyway, so setting it to 1 can't do real harm.
+	 * By default: 0 (disabled)
+	 */
+	int p2p_go_vht;
+
+	/**
 	 * p2p_disabled - Whether P2P operations are disabled for this interface
 	 */
 	int p2p_disabled;

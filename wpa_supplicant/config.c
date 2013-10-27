@@ -3253,6 +3253,7 @@ static const struct global_parse_data global_fields[] = {
 	{ FUNC(p2p_no_go_freq), CFG_CHANGED_P2P_PREF_CHAN },
 	{ INT_RANGE(p2p_add_cli_chan, 0, 1), 0 },
 	{ INT(p2p_go_ht40), 0 },
+	{ INT(p2p_go_vht), 0 },
 	{ INT(p2p_disabled), 0 },
 	{ INT(p2p_no_group_iface), 0 },
 	{ INT_RANGE(p2p_ignore_shared_freq, 0, 1), 0 },

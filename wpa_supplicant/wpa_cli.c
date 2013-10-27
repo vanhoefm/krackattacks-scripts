@@ -617,6 +617,7 @@ static char ** wpa_cli_complete_set(const char *str, int pos)
 		"p2p_intra_bss", "p2p_group_idle", "p2p_pref_chan",
 		"p2p_no_go_freq",
 		"p2p_go_ht40", "p2p_disabled", "p2p_no_group_iface",
+		"p2p_go_vht",
 		"p2p_ignore_shared_freq", "country", "bss_max_count",
 		"bss_expiration_age", "bss_expiration_scan_count",
 		"filter_ssids", "filter_rssi", "max_num_sta",

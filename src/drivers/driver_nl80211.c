@@ -6055,6 +6055,59 @@ static void nl80211_reg_rule_sec(struct nlattr *tb[],
 }
 
 
+static void nl80211_set_vht_mode(struct hostapd_hw_modes *mode, int start,
+				 int end)
+{
+	int c;
+
+	for (c = 0; c < mode->num_channels; c++) {
+		struct hostapd_channel_data *chan = &mode->channels[c];
+		if (chan->freq - 10 >= start && chan->freq + 70 <= end)
+			chan->flag |= HOSTAPD_CHAN_VHT_10_70;
+
+		if (chan->freq - 30 >= start && chan->freq + 50 <= end)
+			chan->flag |= HOSTAPD_CHAN_VHT_30_50;
+
+		if (chan->freq - 50 >= start && chan->freq + 30 <= end)
+			chan->flag |= HOSTAPD_CHAN_VHT_50_30;
+
+		if (chan->freq - 70 >= start && chan->freq + 10 <= end)
+			chan->flag |= HOSTAPD_CHAN_VHT_70_10;
+	}
+}
+
+
+static void nl80211_reg_rule_vht(struct nlattr *tb[],
+				 struct phy_info_arg *results)
+{
+	u32 start, end, max_bw;
+	u16 m;
+
+	if (tb[NL80211_ATTR_FREQ_RANGE_START] == NULL ||
+	    tb[NL80211_ATTR_FREQ_RANGE_END] == NULL ||
+	    tb[NL80211_ATTR_FREQ_RANGE_MAX_BW] == NULL)
+		return;
+
+	start = nla_get_u32(tb[NL80211_ATTR_FREQ_RANGE_START]) / 1000;
+	end = nla_get_u32(tb[NL80211_ATTR_FREQ_RANGE_END]) / 1000;
+	max_bw = nla_get_u32(tb[NL80211_ATTR_FREQ_RANGE_MAX_BW]) / 1000;
+
+	if (max_bw < 80)
+		return;
+
+	for (m = 0; m < *results->num_modes; m++) {
+		if (!(results->modes[m].ht_capab &
+		      HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET))
+			continue;
+		/* TODO: use a real VHT support indication */
+		if (!results->modes[m].vht_capab)
+			continue;
+
+		nl80211_set_vht_mode(&results->modes[m], start, end);
+	}
+}
+
+
 static int nl80211_get_reg(struct nl_msg *msg, void *arg)
 {
 	struct phy_info_arg *results = arg;
@@ -6099,12 +6152,19 @@ static int nl80211_get_reg(struct nl_msg *msg, void *arg)
 		nl80211_reg_rule_sec(tb_rule, results);
 	}
 
+	nla_for_each_nested(nl_rule, tb_msg[NL80211_ATTR_REG_RULES], rem_rule)
+	{
+		nla_parse(tb_rule, NL80211_FREQUENCY_ATTR_MAX,
+			  nla_data(nl_rule), nla_len(nl_rule), reg_policy);
+		nl80211_reg_rule_vht(tb_rule, results);
+	}
+
 	return NL_SKIP;
 }
 
 
-static int nl80211_set_ht40_flags(struct wpa_driver_nl80211_data *drv,
-				  struct phy_info_arg *results)
+static int nl80211_set_regulatory_flags(struct wpa_driver_nl80211_data *drv,
+					struct phy_info_arg *results)
 {
 	struct nl_msg *msg;
 
@@ -6147,7 +6207,7 @@ wpa_driver_nl80211_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags)
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
 
 	if (send_and_recv_msgs(drv, msg, phy_info_handler, &result) == 0) {
-		nl80211_set_ht40_flags(drv, &result);
+		nl80211_set_regulatory_flags(drv, &result);
 		return wpa_driver_nl80211_postprocess_modes(result.modes,
 							    num_modes);
 	}

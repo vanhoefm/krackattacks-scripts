@@ -60,11 +60,8 @@ wpaspy
 ------
 
 The python scripts use wpaspy.py to interact with the wpa_supplicant
-control interface. This needs to be installed in a way that python can
-find it. For example, with this command:
-
-sudo cp ../wpaspy/wpaspy.py /usr/local/lib/python2.7/dist-packages
-
+control interface, but the run-tests.py script adds the (relative)
+path into the environment so it doesn't need to be installed.
 
 
 mac80211_hwsim

@@ -16,6 +16,8 @@ from datetime import datetime
 import logging
 logger = logging.getLogger(__name__)
 
+sys.path.append('../../wpaspy')
+
 from wpasupplicant import WpaSupplicant
 from hostapd import HostapdGlobal
 

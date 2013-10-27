@@ -7074,12 +7074,13 @@ static void handle_monitor_read(int sock, void *eloop_ctx, void *sock_ctx)
 
 	len = recv(sock, buf, sizeof(buf), 0);
 	if (len < 0) {
-		perror("recv");
+		wpa_printf(MSG_ERROR, "nl80211: Monitor socket recv failed: %s",
+			   strerror(errno));
 		return;
 	}
 
 	if (ieee80211_radiotap_iterator_init(&iter, (void*)buf, len)) {
-		printf("received invalid radiotap frame\n");
+		wpa_printf(MSG_INFO, "nl80211: received invalid radiotap frame");
 		return;
 	}
 
@@ -7088,7 +7089,8 @@ static void handle_monitor_read(int sock, void *eloop_ctx, void *sock_ctx)
 		if (ret == -ENOENT)
 			break;
 		if (ret) {
-			printf("received invalid radiotap frame (%d)\n", ret);
+			wpa_printf(MSG_INFO, "nl80211: received invalid radiotap frame (%d)",
+				   ret);
 			return;
 		}
 		switch (iter.this_arg_index) {
@@ -7273,7 +7275,8 @@ static int add_monitor_filter(int s)
 
 	if (setsockopt(s, SOL_SOCKET, SO_ATTACH_FILTER,
 		       &msock_filter, sizeof(msock_filter))) {
-		perror("SO_ATTACH_FILTER");
+		wpa_printf(MSG_ERROR, "nl80211: setsockopt(SO_ATTACH_FILTER) failed: %s",
+			   strerror(errno));
 		return -1;
 	}
 
@@ -7355,7 +7358,8 @@ nl80211_create_monitor_interface(struct wpa_driver_nl80211_data *drv)
 	ll.sll_ifindex = drv->monitor_ifidx;
 	drv->monitor_sock = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 	if (drv->monitor_sock < 0) {
-		perror("socket[PF_PACKET,SOCK_RAW]");
+		wpa_printf(MSG_ERROR, "nl80211: socket[PF_PACKET,SOCK_RAW] failed: %s",
+			   strerror(errno));
 		goto error;
 	}
 
@@ -7366,7 +7370,8 @@ nl80211_create_monitor_interface(struct wpa_driver_nl80211_data *drv)
 	}
 
 	if (bind(drv->monitor_sock, (struct sockaddr *) &ll, sizeof(ll)) < 0) {
-		perror("monitor socket bind");
+		wpa_printf(MSG_ERROR, "nl80211: monitor socket bind failed: %s",
+			   strerror(errno));
 		goto error;
 	}
 
@@ -7374,13 +7379,14 @@ nl80211_create_monitor_interface(struct wpa_driver_nl80211_data *drv)
 	optval = 20;
 	if (setsockopt
 	    (drv->monitor_sock, SOL_SOCKET, SO_PRIORITY, &optval, optlen)) {
-		perror("Failed to set socket priority");
+		wpa_printf(MSG_ERROR, "nl80211: Failed to set socket priority: %s",
+			   strerror(errno));
 		goto error;
 	}
 
 	if (eloop_register_read_sock(drv->monitor_sock, handle_monitor_read,
 				     drv, NULL)) {
-		printf("Could not register monitor read socket\n");
+		wpa_printf(MSG_INFO, "nl80211: Could not register monitor read socket");
 		goto error;
 	}
 
@@ -7496,8 +7502,8 @@ static int wpa_driver_nl80211_hapd_send_eapol(
 		data_len;
 	hdr = os_zalloc(len);
 	if (hdr == NULL) {
-		printf("malloc() failed for i802_send_data(len=%lu)\n",
-		       (unsigned long) len);
+		wpa_printf(MSG_INFO, "nl80211: Failed to allocate EAPOL buffer(len=%lu)",
+			   (unsigned long) len);
 		return -1;
 	}
 
@@ -8896,7 +8902,8 @@ static void handle_eapol(int sock, void *eloop_ctx, void *sock_ctx)
 	len = recvfrom(sock, buf, sizeof(buf), 0,
 		       (struct sockaddr *)&lladdr, &fromlen);
 	if (len < 0) {
-		perror("recv");
+		wpa_printf(MSG_ERROR, "nl80211: EAPOL recv failed: %s",
+			   strerror(errno));
 		return;
 	}
 
@@ -9029,13 +9036,14 @@ static void *i802_init(struct hostapd_data *hapd,
 
 	drv->eapol_sock = socket(PF_PACKET, SOCK_DGRAM, htons(ETH_P_PAE));
 	if (drv->eapol_sock < 0) {
-		perror("socket(PF_PACKET, SOCK_DGRAM, ETH_P_PAE)");
+		wpa_printf(MSG_ERROR, "nl80211: socket(PF_PACKET, SOCK_DGRAM, ETH_P_PAE) failed: %s",
+			   strerror(errno));
 		goto failed;
 	}
 
 	if (eloop_register_read_sock(drv->eapol_sock, handle_eapol, drv, NULL))
 	{
-		printf("Could not register read socket for eapol\n");
+		wpa_printf(MSG_INFO, "nl80211: Could not register read socket for eapol");
 		goto failed;
 	}
 
@@ -10003,7 +10011,8 @@ static void * nl80211_global_init(void)
 
 	global->ioctl_sock = socket(PF_INET, SOCK_DGRAM, 0);
 	if (global->ioctl_sock < 0) {
-		perror("socket(PF_INET,SOCK_DGRAM)");
+		wpa_printf(MSG_ERROR, "nl80211: socket(PF_INET,SOCK_DGRAM) failed: %s",
+			   strerror(errno));
 		goto err;
 	}
 

@@ -484,6 +484,10 @@ CONFIG_PEERKEY=y
 # IEEE 802.11n (High Throughput) support (mainly for AP mode)
 #CONFIG_IEEE80211N=y
 
+# IEEE 802.11ac (Very High Throughput) support (mainly for AP mode)
+# (depends on CONFIG_IEEE80211N)
+#CONFIG_IEEE80211AC=y
+
 # Wireless Network Management (IEEE Std 802.11v-2011)
 # Note: This is experimental and not complete implementation.
 #CONFIG_WNM=y

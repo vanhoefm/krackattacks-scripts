@@ -57,7 +57,7 @@ struct hostapd_channel_data {
 	int flag;
 
 	/**
-	 * max_tx_power - Maximum transmit power in dBm
+	 * max_tx_power - Regulatory transmit power limit in dBm
 	 */
 	u8 max_tx_power;
 

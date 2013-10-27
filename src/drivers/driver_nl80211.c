@@ -5645,10 +5645,6 @@ static void phy_info_freq(struct hostapd_hw_modes *mode,
 	if (tb_freq[NL80211_FREQUENCY_ATTR_RADAR])
 		chan->flag |= HOSTAPD_CHAN_RADAR;
 
-	if (tb_freq[NL80211_FREQUENCY_ATTR_MAX_TX_POWER] &&
-	    !tb_freq[NL80211_FREQUENCY_ATTR_DISABLED])
-		chan->max_tx_power = nla_get_u32(
-			tb_freq[NL80211_FREQUENCY_ATTR_MAX_TX_POWER]) / 100;
 	if (tb_freq[NL80211_FREQUENCY_ATTR_DFS_STATE]) {
 		enum nl80211_dfs_state state =
 			nla_get_u32(tb_freq[NL80211_FREQUENCY_ATTR_DFS_STATE]);
@@ -5971,6 +5967,38 @@ static void nl80211_set_ht40_mode_sec(struct hostapd_hw_modes *mode, int start,
 }
 
 
+static void nl80211_reg_rule_max_eirp(struct nlattr *tb[],
+				      struct phy_info_arg *results)
+{
+	u32 start, end, max_eirp;
+	u16 m;
+
+	if (tb[NL80211_ATTR_FREQ_RANGE_START] == NULL ||
+	    tb[NL80211_ATTR_FREQ_RANGE_END] == NULL ||
+	    tb[NL80211_ATTR_POWER_RULE_MAX_EIRP] == NULL)
+		return;
+
+	start = nla_get_u32(tb[NL80211_ATTR_FREQ_RANGE_START]) / 1000;
+	end = nla_get_u32(tb[NL80211_ATTR_FREQ_RANGE_END]) / 1000;
+	max_eirp = nla_get_u32(tb[NL80211_ATTR_POWER_RULE_MAX_EIRP]) / 100;
+
+	wpa_printf(MSG_DEBUG, "nl80211: %u-%u @ %u mBm",
+		   start, end, max_eirp);
+
+	for (m = 0; m < *results->num_modes; m++) {
+		int c;
+		struct hostapd_hw_modes *mode = &results->modes[m];
+
+		for (c = 0; c < mode->num_channels; c++) {
+			struct hostapd_channel_data *chan = &mode->channels[c];
+			if ((u32) chan->freq - 10 >= start &&
+			    (u32) chan->freq + 10 <= end)
+				chan->max_tx_power = max_eirp;
+		}
+	}
+}
+
+
 static void nl80211_reg_rule_ht40(struct nlattr *tb[],
 				  struct phy_info_arg *results)
 {
@@ -6061,6 +6089,7 @@ static int nl80211_get_reg(struct nl_msg *msg, void *arg)
 		nla_parse(tb_rule, NL80211_FREQUENCY_ATTR_MAX,
 			  nla_data(nl_rule), nla_len(nl_rule), reg_policy);
 		nl80211_reg_rule_ht40(tb_rule, results);
+		nl80211_reg_rule_max_eirp(tb_rule, results);
 	}
 
 	nla_for_each_nested(nl_rule, tb_msg[NL80211_ATTR_REG_RULES], rem_rule)

@@ -42,6 +42,7 @@ static void wpas_wps_ap_pin_timeout(void *eloop_data, void *user_ctx);
 #endif /* CONFIG_WPS */
 
 
+#ifdef CONFIG_IEEE80211N
 static void wpas_conf_ap_vht(struct wpa_supplicant *wpa_s,
 			     struct hostapd_config *conf,
 			     struct hostapd_hw_modes *mode)
@@ -65,6 +66,7 @@ no_vht:
 	conf->vht_oper_centr_freq_seg0_idx =
 		channel + conf->secondary_channel * 2;
 }
+#endif /* CONFIG_IEEE80211N */
 
 
 static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,

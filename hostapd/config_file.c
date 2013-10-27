@@ -1064,11 +1064,11 @@ static int hostapd_config_vht_capab(struct hostapd_config *conf,
 	if (os_strstr(capab, "[SU-BEAMFORMEE]"))
 		conf->vht_capab |= VHT_CAP_SU_BEAMFORMEE_CAPABLE;
 	if (os_strstr(capab, "[BF-ANTENNA-2]") &&
-	    (conf->vht_capab & VHT_CAP_MU_BEAMFORMER_CAPABLE))
-		conf->vht_capab |= VHT_CAP_BEAMFORMER_ANTENNAS_MAX;
+	    (conf->vht_capab & VHT_CAP_SU_BEAMFORMEE_CAPABLE))
+		conf->vht_capab |= (1 << VHT_CAP_BEAMFORMEE_STS_OFFSET);
 	if (os_strstr(capab, "[SOUNDING-DIMENSION-2]") &&
-	    (conf->vht_capab & VHT_CAP_MU_BEAMFORMER_CAPABLE))
-		conf->vht_capab |= VHT_CAP_SOUNDING_DIMENTION_MAX;
+	    (conf->vht_capab & VHT_CAP_SU_BEAMFORMER_CAPABLE))
+		conf->vht_capab |= (1 << VHT_CAP_SOUNDING_DIMENSION_OFFSET);
 	if (os_strstr(capab, "[MU-BEAMFORMER]"))
 		conf->vht_capab |= VHT_CAP_MU_BEAMFORMER_CAPABLE;
 	if (os_strstr(capab, "[MU-BEAMFORMEE]"))

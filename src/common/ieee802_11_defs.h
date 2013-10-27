@@ -716,13 +716,18 @@ struct ieee80211_vht_operation {
 #define VHT_CAP_RXSTBC_4                            ((u32) BIT(10))
 #define VHT_CAP_SU_BEAMFORMER_CAPABLE               ((u32) BIT(11))
 #define VHT_CAP_SU_BEAMFORMEE_CAPABLE               ((u32) BIT(12))
-#define VHT_CAP_BEAMFORMER_ANTENNAS_MAX             ((u32) BIT(13) | BIT(14))
-#define VHT_CAP_SOUNDING_DIMENTION_MAX              ((u32) BIT(16) | BIT(17))
+#define VHT_CAP_BEAMFORMEE_STS_MAX                  ((u32) BIT(13) | \
+							   BIT(14) | BIT(15))
+#define VHT_CAP_BEAMFORMEE_STS_OFFSET               13
+#define VHT_CAP_SOUNDING_DIMENSION_MAX              ((u32) BIT(16) | \
+							   BIT(17) | BIT(18))
+#define VHT_CAP_SOUNDING_DIMENSION_OFFSET           16
 #define VHT_CAP_MU_BEAMFORMER_CAPABLE               ((u32) BIT(19))
 #define VHT_CAP_MU_BEAMFORMEE_CAPABLE               ((u32) BIT(20))
 #define VHT_CAP_VHT_TXOP_PS                         ((u32) BIT(21))
 #define VHT_CAP_HTC_VHT                             ((u32) BIT(22))
-#define VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT          ((u32) BIT(23))
+#define VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT          ((u32) BIT(23) | \
+							   BIT(24) | BIT(25))
 #define VHT_CAP_VHT_LINK_ADAPTATION_VHT_UNSOL_MFB   ((u32) BIT(27))
 #define VHT_CAP_VHT_LINK_ADAPTATION_VHT_MRQ_MFB     ((u32) BIT(26) | BIT(27))
 #define VHT_CAP_RX_ANTENNA_PATTERN                  ((u32) BIT(28))

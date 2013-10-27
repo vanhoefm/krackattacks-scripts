@@ -653,6 +653,92 @@ static int ieee80211n_supported_ht_capab(struct hostapd_iface *iface)
 	return 1;
 }
 
+
+#ifdef CONFIG_IEEE80211AC
+
+static int ieee80211ac_cap_check(u32 hw, u32 conf, u32 cap, const char *name)
+{
+	u32 req_cap = conf & cap;
+
+	/*
+	 * Make sure we support all requested capabilities.
+	 * NOTE: We assume that 'cap' represents a capability mask,
+	 * not a discrete value.
+	 */
+	if ((hw & req_cap) != req_cap) {
+		wpa_printf(MSG_ERROR, "Driver does not support configured VHT capability [%s]",
+			   name);
+		return 0;
+	}
+	return 1;
+}
+
+
+static int ieee80211ac_cap_check_max(u32 hw, u32 conf, u32 cap,
+				     const char *name)
+{
+	u32 hw_max = hw & cap;
+	u32 conf_val = conf & cap;
+
+	if (conf_val > hw_max) {
+		int offset = find_first_bit(cap);
+		wpa_printf(MSG_ERROR, "Configured VHT capability [%s] exceeds max value supported by the driver (%d > %d)",
+			   name, conf_val >> offset, hw_max >> offset);
+		return 0;
+	}
+	return 1;
+}
+
+
+static int ieee80211ac_supported_vht_capab(struct hostapd_iface *iface)
+{
+	u32 hw = iface->current_mode->vht_capab;
+	u32 conf = iface->conf->vht_capab;
+
+	wpa_printf(MSG_DEBUG, "hw vht capab: 0x%x, conf vht capab: 0x%x",
+		   hw, conf);
+
+#define VHT_CAP_CHECK(cap) \
+	do { \
+		if (!ieee80211ac_cap_check(hw, conf, cap, #cap)) \
+			return 0; \
+	} while (0)
+
+#define VHT_CAP_CHECK_MAX(cap) \
+	do { \
+		if (!ieee80211ac_cap_check_max(hw, conf, cap, #cap)) \
+			return 0; \
+	} while (0)
+
+	VHT_CAP_CHECK_MAX(VHT_CAP_MAX_MPDU_LENGTH_MASK);
+	VHT_CAP_CHECK(VHT_CAP_SUPP_CHAN_WIDTH_160MHZ);
+	VHT_CAP_CHECK(VHT_CAP_SUPP_CHAN_WIDTH_160_80PLUS80MHZ);
+	VHT_CAP_CHECK(VHT_CAP_RXLDPC);
+	VHT_CAP_CHECK(VHT_CAP_SHORT_GI_80);
+	VHT_CAP_CHECK(VHT_CAP_SHORT_GI_160);
+	VHT_CAP_CHECK(VHT_CAP_TXSTBC);
+	VHT_CAP_CHECK_MAX(VHT_CAP_RXSTBC_MASK);
+	VHT_CAP_CHECK(VHT_CAP_SU_BEAMFORMER_CAPABLE);
+	VHT_CAP_CHECK(VHT_CAP_SU_BEAMFORMEE_CAPABLE);
+	VHT_CAP_CHECK_MAX(VHT_CAP_BEAMFORMEE_STS_MAX);
+	VHT_CAP_CHECK_MAX(VHT_CAP_SOUNDING_DIMENSION_MAX);
+	VHT_CAP_CHECK(VHT_CAP_MU_BEAMFORMER_CAPABLE);
+	VHT_CAP_CHECK(VHT_CAP_MU_BEAMFORMEE_CAPABLE);
+	VHT_CAP_CHECK(VHT_CAP_VHT_TXOP_PS);
+	VHT_CAP_CHECK(VHT_CAP_HTC_VHT);
+	VHT_CAP_CHECK_MAX(VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT);
+	VHT_CAP_CHECK(VHT_CAP_VHT_LINK_ADAPTATION_VHT_UNSOL_MFB);
+	VHT_CAP_CHECK(VHT_CAP_VHT_LINK_ADAPTATION_VHT_MRQ_MFB);
+	VHT_CAP_CHECK(VHT_CAP_RX_ANTENNA_PATTERN);
+	VHT_CAP_CHECK(VHT_CAP_TX_ANTENNA_PATTERN);
+
+#undef VHT_CAP_CHECK
+#undef VHT_CAP_CHECK_MAX
+
+	return 1;
+}
+#endif /* CONFIG_IEEE80211AC */
+
 #endif /* CONFIG_IEEE80211N */
 
 
@@ -664,6 +750,10 @@ int hostapd_check_ht_capab(struct hostapd_iface *iface)
 		return 0;
 	if (!ieee80211n_supported_ht_capab(iface))
 		return -1;
+#ifdef CONFIG_IEEE80211AC
+	if (!ieee80211ac_supported_vht_capab(iface))
+		return -1;
+#endif /* CONFIG_IEEE80211AC */
 	ret = ieee80211n_check_40mhz(iface);
 	if (ret)
 		return ret;

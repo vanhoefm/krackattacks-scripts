@@ -704,6 +704,7 @@ struct ieee80211_vht_operation {
 /* VHT Defines */
 #define VHT_CAP_MAX_MPDU_LENGTH_7991                ((u32) BIT(0))
 #define VHT_CAP_MAX_MPDU_LENGTH_11454               ((u32) BIT(1))
+#define VHT_CAP_MAX_MPDU_LENGTH_MASK                ((u32) BIT(0) | BIT(1))
 #define VHT_CAP_SUPP_CHAN_WIDTH_160MHZ              ((u32) BIT(2))
 #define VHT_CAP_SUPP_CHAN_WIDTH_160_80PLUS80MHZ     ((u32) BIT(3))
 #define VHT_CAP_RXLDPC                              ((u32) BIT(4))
@@ -714,6 +715,8 @@ struct ieee80211_vht_operation {
 #define VHT_CAP_RXSTBC_2                            ((u32) BIT(9))
 #define VHT_CAP_RXSTBC_3                            ((u32) BIT(8) | BIT(9))
 #define VHT_CAP_RXSTBC_4                            ((u32) BIT(10))
+#define VHT_CAP_RXSTBC_MASK                         ((u32) BIT(8) | BIT(9) | \
+							   BIT(10))
 #define VHT_CAP_SU_BEAMFORMER_CAPABLE               ((u32) BIT(11))
 #define VHT_CAP_SU_BEAMFORMEE_CAPABLE               ((u32) BIT(12))
 #define VHT_CAP_BEAMFORMEE_STS_MAX                  ((u32) BIT(13) | \

@@ -467,7 +467,7 @@ static int hostapd_set_freq_params(struct hostapd_freq_params *data, int mode,
 				   int freq, int channel, int ht_enabled,
 				   int vht_enabled, int sec_channel_offset,
 				   int vht_oper_chwidth, int center_segment0,
-				   int center_segment1)
+				   int center_segment1, u32 vht_caps)
 {
 	int tmp;
 
@@ -494,6 +494,11 @@ static int hostapd_set_freq_params(struct hostapd_freq_params *data, int mode,
 			return -1;
 		break;
 	case VHT_CHANWIDTH_80P80MHZ:
+		if (!(vht_caps & VHT_CAP_SUPP_CHAN_WIDTH_160_80PLUS80MHZ)) {
+			wpa_printf(MSG_ERROR,
+				   "80+80 channel width is not supported!");
+			return -1;
+		}
 		if (center_segment1 == center_segment0 + 4 ||
 		    center_segment1 == center_segment0 - 4)
 			return -1;
@@ -517,6 +522,12 @@ static int hostapd_set_freq_params(struct hostapd_freq_params *data, int mode,
 		break;
 	case VHT_CHANWIDTH_160MHZ:
 		data->bandwidth = 160;
+		if (!(vht_caps & (VHT_CAP_SUPP_CHAN_WIDTH_160MHZ |
+				  VHT_CAP_SUPP_CHAN_WIDTH_160_80PLUS80MHZ))) {
+			wpa_printf(MSG_ERROR,
+				   "160MHZ channel width is not supported!");
+			return -1;
+		}
 		if (center_segment1)
 			return -1;
 		if (!sec_channel_offset)
@@ -545,7 +556,8 @@ int hostapd_set_freq(struct hostapd_data *hapd, int mode, int freq,
 	if (hostapd_set_freq_params(&data, mode, freq, channel, ht_enabled,
 				    vht_enabled, sec_channel_offset,
 				    vht_oper_chwidth,
-				    center_segment0, center_segment1))
+				    center_segment0, center_segment1,
+				    hapd->iface->current_mode->vht_capab))
 		return -1;
 
 	if (hapd->driver == NULL)
@@ -738,7 +750,8 @@ int hostapd_start_dfs_cac(struct hostapd_data *hapd, int mode, int freq,
 	if (hostapd_set_freq_params(&data, mode, freq, channel, ht_enabled,
 				    vht_enabled, sec_channel_offset,
 				    vht_oper_chwidth, center_segment0,
-				    center_segment1))
+				    center_segment1,
+				    hapd->iface->current_mode->vht_capab))
 		return -1;
 
 	res = hapd->driver->start_dfs_cac(hapd->drv_priv, &data);

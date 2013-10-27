@@ -2102,6 +2102,7 @@ int interworking_select(struct wpa_supplicant *wpa_s, int auto_select)
 	wpa_s->normal_scans = 0;
 	wpa_s->scan_req = MANUAL_SCAN_REQ;
 	wpa_s->after_wps = 0;
+	wpa_s->known_wps_freq = 0;
 	wpa_supplicant_req_scan(wpa_s, 0, 0);
 
 	return 0;

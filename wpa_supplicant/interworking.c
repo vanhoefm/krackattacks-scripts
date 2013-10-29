@@ -53,6 +53,16 @@ static struct wpa_cred * interworking_credentials_available_3gpp(
 	int *excluded);
 
 
+static int cred_prio_cmp(const struct wpa_cred *a, const struct wpa_cred *b)
+{
+	if (a->priority > b->priority)
+		return 1;
+	if (a->priority < b->priority)
+		return -1;
+	return 0;
+}
+
+
 static void interworking_reconnect(struct wpa_supplicant *wpa_s)
 {
 	if (wpa_s->wpa_state >= WPA_AUTHENTICATING) {
@@ -1285,7 +1295,7 @@ static struct wpa_cred * interworking_credentials_available_roaming_consortium(
 			}
 		} else {
 			if (selected == NULL || is_excluded ||
-			    selected->priority < cred->priority) {
+			    cred_prio_cmp(selected, cred) < 0) {
 				selected = cred;
 				is_excluded = 0;
 			}
@@ -1563,13 +1573,13 @@ static int interworking_connect_helper(struct wpa_supplicant *wpa_s,
 	}
 
 	if (cred_rc &&
-	    (cred == NULL || cred_rc->priority >= cred->priority) &&
-	    (cred_3gpp == NULL || cred_rc->priority >= cred_3gpp->priority))
+	    (cred == NULL || cred_prio_cmp(cred_rc, cred) >= 0) &&
+	    (cred_3gpp == NULL || cred_prio_cmp(cred_rc, cred_3gpp) >= 0))
 		return interworking_connect_roaming_consortium(wpa_s, cred_rc,
 							       bss);
 
 	if (cred_3gpp &&
-	    (cred == NULL || cred_3gpp->priority >= cred->priority)) {
+	    (cred == NULL || cred_prio_cmp(cred_3gpp, cred) >= 0)) {
 		return interworking_connect_3gpp(wpa_s, cred_3gpp, bss);
 	}
 
@@ -1823,7 +1833,7 @@ static struct wpa_cred * interworking_credentials_available_3gpp(
 				}
 			} else {
 				if (selected == NULL || is_excluded ||
-				    selected->priority < cred->priority) {
+				    cred_prio_cmp(selected, cred) < 0) {
 					selected = cred;
 					is_excluded = 0;
 				}
@@ -1890,8 +1900,8 @@ static struct wpa_cred * interworking_credentials_available_realm(
 					}
 				} else {
 					if (selected == NULL || is_excluded ||
-					    selected->priority <
-					    cred->priority) {
+					    cred_prio_cmp(selected, cred) < 0)
+					{
 						selected = cred;
 						is_excluded = 0;
 					}
@@ -1929,7 +1939,7 @@ static struct wpa_cred * interworking_credentials_available_helper(
 	cred2 = interworking_credentials_available_3gpp(wpa_s, bss, ignore_bw,
 							&excluded2);
 	if (cred && cred2 &&
-	    (cred2->priority >= cred->priority || (!excluded2 && excluded1))) {
+	    (cred_prio_cmp(cred2, cred) >= 0 || (!excluded2 && excluded1))) {
 		cred = cred2;
 		excluded1 = excluded2;
 	}
@@ -1941,7 +1951,7 @@ static struct wpa_cred * interworking_credentials_available_helper(
 	cred2 = interworking_credentials_available_roaming_consortium(
 		wpa_s, bss, ignore_bw, &excluded2);
 	if (cred && cred2 &&
-	    (cred2->priority >= cred->priority || (!excluded2 && excluded1))) {
+	    (cred_prio_cmp(cred2, cred) >= 0 || (!excluded2 && excluded1))) {
 		cred = cred2;
 		excluded1 = excluded2;
 	}
@@ -2249,29 +2259,30 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 		     wpa_s->auto_network_select)) {
 			if (bh || bss_load || conn_capab) {
 				if (selected2_cred == NULL ||
-				    cred->priority > selected2_cred->priority) {
+				    cred_prio_cmp(cred, selected2_cred) > 0) {
 					wpa_printf(MSG_DEBUG, "Interworking: Mark as selected2");
 					selected2 = bss;
 					selected2_cred = cred;
 				}
 				if (res > 0 &&
 				    (selected2_home_cred == NULL ||
-				     cred->priority > selected2_home_cred->priority)) {
+				     cred_prio_cmp(cred, selected2_home_cred) >
+				     0)) {
 					wpa_printf(MSG_DEBUG, "Interworking: Mark as selected2_home");
 					selected2_home = bss;
 					selected2_home_cred = cred;
 				}
 			} else {
 				if (selected_cred == NULL ||
-				    cred->priority > selected_cred->priority) {
+				    cred_prio_cmp(cred, selected_cred) > 0) {
 					wpa_printf(MSG_DEBUG, "Interworking: Mark as selected");
 					selected = bss;
 					selected_cred = cred;
 				}
 				if (res > 0 &&
 				    (selected_home_cred == NULL ||
-				     cred->priority >
-				     selected_home_cred->priority)) {
+				     cred_prio_cmp(cred, selected_home_cred) >
+				     0)) {
 					wpa_printf(MSG_DEBUG, "Interworking: Mark as selected_home");
 					selected_home = bss;
 					selected_home_cred = cred;
@@ -2283,7 +2294,7 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 	if (selected_home && selected_home != selected &&
 	    selected_home_cred &&
 	    (selected_cred == NULL ||
-	     selected_home_cred->priority >= selected_cred->priority)) {
+	     cred_prio_cmp(selected_home_cred, selected_cred) >= 0)) {
 		/* Prefer network operated by the Home SP */
 		wpa_printf(MSG_DEBUG, "Interworking: Overrided selected with selected_home");
 		selected = selected_home;

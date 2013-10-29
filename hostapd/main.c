@@ -185,7 +185,7 @@ static struct hostapd_iface * hostapd_init(const char *config_file)
 	for (i = 0; i < conf->num_bss; i++) {
 		hapd = hapd_iface->bss[i] =
 			hostapd_alloc_bss_data(hapd_iface, conf,
-					       &conf->bss[i]);
+					       conf->bss[i]);
 		if (hapd == NULL)
 			goto fail;
 		hapd->msg_ctx = hapd;
@@ -313,7 +313,7 @@ hostapd_interface_init(struct hapd_interfaces *interfaces,
 			iface->bss[0]->conf->logger_stdout_level--;
 	}
 
-	if (iface->conf->bss[0].iface[0] == '\0' &&
+	if (iface->conf->bss[0]->iface[0] == '\0' &&
 	    !hostapd_drv_none(iface->bss[0])) {
 		wpa_printf(MSG_ERROR, "Interface name not specified in %s",
 			   config_fname);
@@ -526,8 +526,9 @@ static void usage(void)
 static const char * hostapd_msg_ifname_cb(void *ctx)
 {
 	struct hostapd_data *hapd = ctx;
-	if (hapd && hapd->iconf && hapd->iconf->bss)
-		return hapd->iconf->bss->iface;
+	if (hapd && hapd->iconf && hapd->iconf->bss &&
+	    hapd->iconf->num_bss > 0 && hapd->iconf->bss[0])
+		return hapd->iconf->bss[0]->iface;
 	return NULL;
 }
 

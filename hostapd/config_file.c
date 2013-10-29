@@ -748,21 +748,21 @@ static int hostapd_parse_intlist(int **int_list, char *val)
 
 static int hostapd_config_bss(struct hostapd_config *conf, const char *ifname)
 {
-	struct hostapd_bss_config *bss;
+	struct hostapd_bss_config **all, *bss;
 
 	if (*ifname == '\0')
 		return -1;
 
-	bss = os_realloc_array(conf->bss, conf->num_bss + 1,
-			       sizeof(struct hostapd_bss_config));
-	if (bss == NULL) {
+	all = os_realloc_array(conf->bss, conf->num_bss + 1,
+			       sizeof(struct hostapd_bss_config *));
+	if (all == NULL) {
 		wpa_printf(MSG_ERROR, "Failed to allocate memory for "
 			   "multi-BSS entry");
 		return -1;
 	}
-	conf->bss = bss;
+	conf->bss = all;
 
-	bss = &(conf->bss[conf->num_bss]);
+	bss = conf->bss[conf->num_bss];
 	os_memset(bss, 0, sizeof(*bss));
 	bss->radius = os_zalloc(sizeof(*bss->radius));
 	if (bss->radius == NULL) {
@@ -1143,13 +1143,13 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 		size_t i;
 
 		for (i = 0; i < conf->num_bss; i++) {
-			if ((&conf->bss[i] != bss) &&
-			    (hostapd_mac_comp(conf->bss[i].bssid,
+			if (conf->bss[i] != bss &&
+			    (hostapd_mac_comp(conf->bss[i]->bssid,
 					      bss->bssid) == 0)) {
 				wpa_printf(MSG_ERROR, "Duplicate BSSID " MACSTR
 					   " on interface '%s' and '%s'.",
 					   MAC2STR(bss->bssid),
-					   conf->bss[i].iface, bss->iface);
+					   conf->bss[i]->iface, bss->iface);
 				return -1;
 			}
 		}
@@ -1245,7 +1245,7 @@ static int hostapd_config_check(struct hostapd_config *conf)
 	}
 
 	for (i = 0; i < conf->num_bss; i++) {
-		if (hostapd_config_check_bss(&conf->bss[i], conf))
+		if (hostapd_config_check_bss(conf->bss[i], conf))
 			return -1;
 	}
 
@@ -1752,8 +1752,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 
 	{
 		if (os_strcmp(buf, "interface") == 0) {
-			os_strlcpy(conf->bss[0].iface, pos,
-				   sizeof(conf->bss[0].iface));
+			os_strlcpy(conf->bss[0]->iface, pos,
+				   sizeof(conf->bss[0]->iface));
 		} else if (os_strcmp(buf, "bridge") == 0) {
 			os_strlcpy(bss->bridge, pos, sizeof(bss->bridge));
 		} else if (os_strcmp(buf, "vlan_bridge") == 0) {
@@ -3157,7 +3157,7 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 		return NULL;
 	}
 
-	bss = conf->last_bss = conf->bss;
+	bss = conf->last_bss = conf->bss[0];
 
 	while (fgets(buf, sizeof(buf), f)) {
 		bss = conf->last_bss;
@@ -3191,7 +3191,7 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 	fclose(f);
 
 	for (i = 0; i < conf->num_bss; i++)
-		hostapd_set_security_params(&conf->bss[i]);
+		hostapd_set_security_params(conf->bss[i]);
 
 	if (hostapd_config_check(conf))
 		errors++;
@@ -3223,7 +3223,7 @@ int hostapd_set_iface(struct hostapd_config *conf,
 	}
 
 	for (i = 0; i < conf->num_bss; i++)
-		hostapd_set_security_params(&conf->bss[i]);
+		hostapd_set_security_params(conf->bss[i]);
 
 	if (hostapd_config_check(conf)) {
 		wpa_printf(MSG_ERROR, "Configuration check failed");

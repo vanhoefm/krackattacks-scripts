@@ -73,7 +73,7 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 				  struct wpa_ssid *ssid,
 				  struct hostapd_config *conf)
 {
-	struct hostapd_bss_config *bss = &conf->bss[0];
+	struct hostapd_bss_config *bss = conf->bss[0];
 
 	conf->driver = wpa_s->driver;
 
@@ -561,8 +561,8 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 		  sizeof(wpa_s->conf->wmm_ac_params));
 
 	if (params.uapsd > 0) {
-		conf->bss->wmm_enabled = 1;
-		conf->bss->wmm_uapsd = 1;
+		conf->bss[0]->wmm_enabled = 1;
+		conf->bss[0]->wmm_uapsd = 1;
 	}
 
 	if (wpa_supplicant_conf_ap(wpa_s, ssid, conf)) {
@@ -573,9 +573,9 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 
 #ifdef CONFIG_P2P
 	if (ssid->mode == WPAS_MODE_P2P_GO)
-		conf->bss[0].p2p = P2P_ENABLED | P2P_GROUP_OWNER;
+		conf->bss[0]->p2p = P2P_ENABLED | P2P_GROUP_OWNER;
 	else if (ssid->mode == WPAS_MODE_P2P_GROUP_FORMATION)
-		conf->bss[0].p2p = P2P_ENABLED | P2P_GROUP_OWNER |
+		conf->bss[0]->p2p = P2P_ENABLED | P2P_GROUP_OWNER |
 			P2P_GROUP_FORMATION;
 #endif /* CONFIG_P2P */
 
@@ -590,7 +590,7 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 	for (i = 0; i < conf->num_bss; i++) {
 		hapd_iface->bss[i] =
 			hostapd_alloc_bss_data(hapd_iface, conf,
-					       &conf->bss[i]);
+					       conf->bss[i]);
 		if (hapd_iface->bss[i] == NULL) {
 			wpa_supplicant_ap_deinit(wpa_s);
 			return -1;
@@ -1042,9 +1042,9 @@ int wpa_supplicant_ap_update_beacon(struct wpa_supplicant *wpa_s)
 
 #ifdef CONFIG_P2P
 	if (ssid->mode == WPAS_MODE_P2P_GO)
-		iface->conf->bss[0].p2p = P2P_ENABLED | P2P_GROUP_OWNER;
+		iface->conf->bss[0]->p2p = P2P_ENABLED | P2P_GROUP_OWNER;
 	else if (ssid->mode == WPAS_MODE_P2P_GROUP_FORMATION)
-		iface->conf->bss[0].p2p = P2P_ENABLED | P2P_GROUP_OWNER |
+		iface->conf->bss[0]->p2p = P2P_ENABLED | P2P_GROUP_OWNER |
 			P2P_GROUP_FORMATION;
 #endif /* CONFIG_P2P */
 

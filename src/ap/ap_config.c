@@ -130,6 +130,13 @@ struct hostapd_config * hostapd_config_defaults(void)
 		os_free(bss);
 		return NULL;
 	}
+	conf->bss = os_calloc(1, sizeof(struct hostapd_bss_config *));
+	if (conf->bss == NULL) {
+		os_free(conf);
+		os_free(bss);
+		return NULL;
+	}
+	conf->bss[0] = bss;
 
 	bss->radius = os_zalloc(sizeof(*bss->radius));
 	if (bss->radius == NULL) {
@@ -141,7 +148,6 @@ struct hostapd_config * hostapd_config_defaults(void)
 	hostapd_config_defaults_bss(bss);
 
 	conf->num_bss = 1;
-	conf->bss = bss;
 
 	conf->beacon_int = 100;
 	conf->rts_threshold = -1; /* use driver default: 2347 */
@@ -525,6 +531,8 @@ static void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 	os_free(conf->sae_groups);
 
 	os_free(conf->server_id);
+
+	os_free(conf);
 }
 
 
@@ -540,7 +548,7 @@ void hostapd_config_free(struct hostapd_config *conf)
 		return;
 
 	for (i = 0; i < conf->num_bss; i++)
-		hostapd_config_free_bss(&conf->bss[i]);
+		hostapd_config_free_bss(conf->bss[i]);
 	os_free(conf->bss);
 	os_free(conf->supported_rates);
 	os_free(conf->basic_rates);

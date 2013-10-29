@@ -481,7 +481,7 @@ struct hostapd_bss_config {
  * struct hostapd_config - Per-radio interface configuration
  */
 struct hostapd_config {
-	struct hostapd_bss_config *bss, *last_bss;
+	struct hostapd_bss_config **bss, *last_bss;
 	size_t num_bss;
 
 	u16 beacon_int;

@@ -50,6 +50,8 @@ class Hostapd:
         self.set("hw_mode", "g")
         self.set("channel", "1")
         self.set("ieee80211n", "1")
+        self.set("logger_stdout", "-1")
+        self.set("logger_stdout_level", "0")
 
     def set_open(self, ssid):
         self.set_defaults()

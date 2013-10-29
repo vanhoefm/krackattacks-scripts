@@ -109,6 +109,19 @@ def interworking_ext_sim_connect(dev, bssid, method):
     if ev is None:
         raise Exception("Connection timed out")
 
+def interworking_connect(dev, bssid, method):
+    dev.request("INTERWORKING_CONNECT " + bssid)
+
+    ev = dev.wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=15)
+    if ev is None:
+        raise Exception("Network connected timed out")
+    if "(" + method + ")" not in ev:
+        raise Exception("Unexpected EAP method selection")
+
+    ev = dev.wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Connection timed out")
+
 def test_ap_hs20_select(dev, apdev):
     """Hotspot 2.0 network selection"""
     bssid = apdev[0]['bssid']
@@ -165,3 +178,75 @@ def test_ap_hs20_ext_sim_roaming(dev, apdev):
     interworking_select(dev[0], "roaming")
     interworking_ext_sim_connect(dev[0], bssid, "SIM")
     check_sp_type(dev[0], "roaming")
+
+def test_ap_hs20_username(dev, apdev):
+    """Hotspot 2.0 connection in username/password credential"""
+    if not hlr_auc_gw_available():
+        return "skip"
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    id = dev[0].add_cred_values(realm="example.com", username="hs20-test",
+                                password="password", domain="example.com")
+    interworking_select(dev[0], bssid, "home")
+    interworking_connect(dev[0], bssid, "TTLS")
+    check_sp_type(dev[0], "home")
+
+def test_ap_hs20_username_roaming(dev, apdev):
+    """Hotspot 2.0 connection in username/password credential (roaming)"""
+    if not hlr_auc_gw_available():
+        return "skip"
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['nai_realm'] = [ "0,example.com,13[5:6],21[2:4][5:7]",
+                            "0,roaming.example.com,21[2:4][5:7]",
+                            "0,another.example.com" ]
+    params['domain_name'] = "another.example.com"
+    params['hessid'] = bssid
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    id = dev[0].add_cred_values(realm="roaming.example.com",
+                                username="hs20-test",
+                                password="password", domain="example.com")
+    interworking_select(dev[0], bssid, "roaming")
+    interworking_connect(dev[0], bssid, "TTLS")
+    check_sp_type(dev[0], "roaming")
+
+def test_ap_hs20_username_unknown(dev, apdev):
+    """Hotspot 2.0 connection in username/password credential (no domain in cred)"""
+    if not hlr_auc_gw_available():
+        return "skip"
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    id = dev[0].add_cred_values(realm="example.com",
+                                username="hs20-test",
+                                password="password")
+    interworking_select(dev[0], bssid, "unknown")
+    interworking_connect(dev[0], bssid, "TTLS")
+    check_sp_type(dev[0], "unknown")
+
+def test_ap_hs20_username_unknown2(dev, apdev):
+    """Hotspot 2.0 connection in username/password credential (no domain advertized)"""
+    if not hlr_auc_gw_available():
+        return "skip"
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    del params['domain_name']
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    id = dev[0].add_cred_values(realm="example.com",
+                                username="hs20-test",
+                                password="password", domain="example.com")
+    interworking_select(dev[0], bssid, "unknown")
+    interworking_connect(dev[0], bssid, "TTLS")
+    check_sp_type(dev[0], "unknown")

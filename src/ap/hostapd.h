@@ -351,6 +351,9 @@ void hostapd_interface_deinit(struct hostapd_iface *iface);
 void hostapd_interface_free(struct hostapd_iface *iface);
 struct hostapd_iface * hostapd_init(struct hapd_interfaces *interfaces,
 				    const char *config_file);
+struct hostapd_iface *
+hostapd_interface_init_bss(struct hapd_interfaces *interfaces, const char *phy,
+			   const char *config_fname, int debug);
 void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,
 			   int reassoc);
 void hostapd_interface_deinit_free(struct hostapd_iface *iface);

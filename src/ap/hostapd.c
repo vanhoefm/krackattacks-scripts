@@ -1151,6 +1151,67 @@ void hostapd_interface_free(struct hostapd_iface *iface)
 }
 
 
+/**
+ * hostapd_init - Allocate and initialize per-interface data
+ * @config_file: Path to the configuration file
+ * Returns: Pointer to the allocated interface data or %NULL on failure
+ *
+ * This function is used to allocate main data structures for per-interface
+ * data. The allocated data buffer will be freed by calling
+ * hostapd_cleanup_iface().
+ */
+struct hostapd_iface * hostapd_init(struct hapd_interfaces *interfaces,
+				    const char *config_file)
+{
+	struct hostapd_iface *hapd_iface = NULL;
+	struct hostapd_config *conf = NULL;
+	struct hostapd_data *hapd;
+	size_t i;
+
+	hapd_iface = os_zalloc(sizeof(*hapd_iface));
+	if (hapd_iface == NULL)
+		goto fail;
+
+	hapd_iface->config_fname = os_strdup(config_file);
+	if (hapd_iface->config_fname == NULL)
+		goto fail;
+
+	conf = interfaces->config_read_cb(hapd_iface->config_fname);
+	if (conf == NULL)
+		goto fail;
+	hapd_iface->conf = conf;
+
+	hapd_iface->num_bss = conf->num_bss;
+	hapd_iface->bss = os_calloc(conf->num_bss,
+				    sizeof(struct hostapd_data *));
+	if (hapd_iface->bss == NULL)
+		goto fail;
+
+	for (i = 0; i < conf->num_bss; i++) {
+		hapd = hapd_iface->bss[i] =
+			hostapd_alloc_bss_data(hapd_iface, conf,
+					       conf->bss[i]);
+		if (hapd == NULL)
+			goto fail;
+		hapd->msg_ctx = hapd;
+	}
+
+	return hapd_iface;
+
+fail:
+	wpa_printf(MSG_ERROR, "Failed to set up interface with %s",
+		   config_file);
+	if (conf)
+		hostapd_config_free(conf);
+	if (hapd_iface) {
+		os_free(hapd_iface->config_fname);
+		os_free(hapd_iface->bss);
+		os_free(hapd_iface);
+	}
+	return NULL;
+}
+
+
 void hostapd_interface_deinit_free(struct hostapd_iface *iface)
 {
 	const struct wpa_driver_ops *driver;

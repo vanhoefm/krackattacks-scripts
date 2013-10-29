@@ -167,3 +167,9 @@ def test_ap_hs20_ext_sim(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
     if ev is None:
         raise Exception("Connection timed out")
+
+    type = dev[0].get_status_field("sp_type")
+    if type is None:
+        raise Exception("sp_type not available")
+    if type != "home":
+        raise Exception("sp_type did not indicate home network")

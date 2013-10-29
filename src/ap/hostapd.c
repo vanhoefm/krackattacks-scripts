@@ -1406,7 +1406,11 @@ fail:
 	if (conf)
 		hostapd_config_free(conf);
 	if (hapd_iface) {
-		os_free(hapd_iface->bss[interfaces->count]);
+		if (hapd_iface->bss) {
+			for (i = 0; i < hapd_iface->num_bss; i++)
+				os_free(hapd_iface->bss[i]);
+			os_free(hapd_iface->bss);
+		}
 		os_free(hapd_iface);
 	}
 	return -1;

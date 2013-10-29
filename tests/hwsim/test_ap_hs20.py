@@ -147,3 +147,21 @@ def test_ap_hs20_ext_sim(dev, apdev):
     interworking_select(dev[0], "home")
     interworking_ext_sim_connect(dev[0], bssid, "SIM")
     check_sp_type(dev[0], "home")
+
+def test_ap_hs20_ext_sim_roaming(dev, apdev):
+    """Hotspot 2.0 with external SIM processing in roaming network"""
+    if not hlr_auc_gw_available():
+        return "skip"
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    params['anqp_3gpp_cell_net'] = "244,91;310,026;232,01;234,56"
+    params['domain_name'] = "wlan.mnc091.mcc244.3gppnetwork.org"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    dev[0].request("SET external_sim 1")
+    dev[0].add_cred_values(imsi="23201-0000000000", eap="SIM")
+    interworking_select(dev[0], "roaming")
+    interworking_ext_sim_connect(dev[0], bssid, "SIM")
+    check_sp_type(dev[0], "roaming")

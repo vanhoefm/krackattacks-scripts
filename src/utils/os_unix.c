@@ -17,10 +17,10 @@
 #endif /* ANDROID */
 
 #include "os.h"
+#include "common.h"
 
 #ifdef WPA_TRACE
 
-#include "common.h"
 #include "wpa_debug.h"
 #include "trace.h"
 #include "list.h"

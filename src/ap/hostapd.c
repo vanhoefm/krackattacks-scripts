@@ -1185,18 +1185,10 @@ int hostapd_reload_iface(struct hostapd_iface *hapd_iface)
 
 	wpa_printf(MSG_DEBUG, "Reload interface %s",
 		   hapd_iface->conf->bss[0].iface);
-	for (j = 0; j < hapd_iface->num_bss; j++) {
-		hostapd_flush_old_stations(hapd_iface->bss[j],
-					   WLAN_REASON_PREV_AUTH_NOT_VALID);
-
-#ifndef CONFIG_NO_RADIUS
-		/* TODO: update dynamic data based on changed configuration
-		 * items (e.g., open/close sockets, etc.) */
-		radius_client_flush(hapd_iface->bss[j]->radius, 0);
-#endif  /* CONFIG_NO_RADIUS */
-
+	hostapd_clear_old(hapd_iface);
+	for (j = 0; j < hapd_iface->num_bss; j++)
 		hostapd_reload_bss(hapd_iface->bss[j]);
-	}
+
 	return 0;
 }
 

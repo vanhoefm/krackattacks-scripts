@@ -44,109 +44,50 @@ def hs20_ap_params():
     params['anqp_3gpp_cell_net'] = "244,91"
     return params
 
-def test_ap_hs20_select(dev, apdev):
-    """Hotspot 2.0 network selection"""
-    bssid = apdev[0]['bssid']
-    params = hs20_ap_params()
-    params['hessid'] = bssid
-    hostapd.add_ap(apdev[0]['ifname'], params)
-
-    dev[0].request("SET interworking 1")
-    dev[0].request("SET hs20 1")
-
-    id = dev[0].add_cred()
-    dev[0].set_cred_quoted(id, "realm", "example.com");
-    dev[0].set_cred_quoted(id, "username", "test");
-    dev[0].set_cred_quoted(id, "password", "secret");
-    dev[0].set_cred_quoted(id, "domain", "example.com");
-
-    dev[0].dump_monitor()
-    dev[0].request("INTERWORKING_SELECT")
-    ev = dev[0].wait_event(["INTERWORKING-AP", "INTERWORKING-NO-MATCH"],
-                           timeout=15)
+def interworking_select(dev, bssid, type=None, no_match=False):
+    dev.dump_monitor()
+    dev.request("INTERWORKING_SELECT")
+    ev = dev.wait_event(["INTERWORKING-AP", "INTERWORKING-NO-MATCH"],
+                        timeout=15)
     if ev is None:
         raise Exception("Network selection timed out");
+    if no_match:
+        if "INTERWORKING-NO-MATCH" not in ev:
+            raise Exception("Unexpected network match")
+        return
     if "INTERWORKING-NO-MATCH" in ev:
         raise Exception("Matching network not found")
     if bssid not in ev:
         raise Exception("Unexpected BSSID in match")
-    if "type=home" not in ev:
-        raise Exception("Home network not recognized")
+    if type and "type=" + type not in ev:
+        raise Exception("Network type not recognized correctly")
 
-    dev[0].remove_cred(id)
-    id = dev[0].add_cred()
-    dev[0].set_cred_quoted(id, "realm", "example.com")
-    dev[0].set_cred_quoted(id, "username", "test")
-    dev[0].set_cred_quoted(id, "password", "secret")
-    dev[0].set_cred_quoted(id, "domain", "no.match.example.com")
-    dev[0].dump_monitor()
-    dev[0].request("INTERWORKING_SELECT")
-    ev = dev[0].wait_event(["INTERWORKING-AP", "INTERWORKING-NO-MATCH"],
-                           timeout=15)
-    if ev is None:
-        raise Exception("Network selection timed out");
-    if "INTERWORKING-NO-MATCH" in ev:
-        raise Exception("Matching network not found")
-    if bssid not in ev:
-        raise Exception("Unexpected BSSID in match")
-    if "type=roaming" not in ev:
-        raise Exception("Roaming network not recognized")
+def check_sp_type(dev, sp_type):
+    type = dev.get_status_field("sp_type")
+    if type is None:
+        raise Exception("sp_type not available")
+    if type != sp_type:
+        raise Exception("sp_type did not indicate home network")
 
-    dev[0].set_cred_quoted(id, "realm", "no.match.example.com");
-    dev[0].dump_monitor()
-    dev[0].request("INTERWORKING_SELECT")
-    ev = dev[0].wait_event(["INTERWORKING-AP", "INTERWORKING-NO-MATCH"],
-                           timeout=15)
-    if ev is None:
-        raise Exception("Network selection timed out");
-    if "INTERWORKING-NO-MATCH" not in ev:
-        raise Exception("Unexpected network match")
-
-def test_ap_hs20_ext_sim(dev, apdev):
-    """Hotspot 2.0 with external SIM processing"""
+def hlr_auc_gw_available():
     if not os.path.exists("/tmp/hlr_auc_gw.sock"):
         logger.info("No hlr_auc_gw available");
-        return "skip"
+        return False
     if not os.path.exists("../../hostapd/hlr_auc_gw"):
         logger.info("No hlr_auc_gw available");
-        return "skip"
-    bssid = apdev[0]['bssid']
-    params = hs20_ap_params()
-    params['hessid'] = bssid
-    params['anqp_3gpp_cell_net'] = "232,01"
-    params['domain_name'] = "wlan.mnc001.mcc232.3gppnetwork.org"
-    hostapd.add_ap(apdev[0]['ifname'], params)
+        return False
+    return True
 
-    dev[0].request("SET interworking 1")
-    dev[0].request("SET hs20 1")
-    dev[0].request("SET external_sim 1")
+def interworking_ext_sim_connect(dev, bssid, method):
+    dev.request("INTERWORKING_CONNECT " + bssid)
 
-    id = dev[0].add_cred()
-    dev[0].set_cred_quoted(id, "imsi", "23201-0000000000")
-    dev[0].set_cred(id, "eap", "SIM")
-
-    dev[0].dump_monitor()
-    dev[0].request("INTERWORKING_SELECT")
-    ev = dev[0].wait_event(["INTERWORKING-AP", "INTERWORKING-NO-MATCH"],
-                           timeout=15)
-    if ev is None:
-        raise Exception("Network selection timed out")
-    if "INTERWORKING-NO-MATCH" in ev:
-        raise Exception("Matching network not found")
-    if bssid not in ev:
-        raise Exception("Unexpected BSSID in match")
-    if "type=home" not in ev:
-        raise Exception("Home network not recognized")
-
-    dev[0].request("INTERWORKING_CONNECT " + bssid)
-
-    ev = dev[0].wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=15)
+    ev = dev.wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=15)
     if ev is None:
         raise Exception("Network connected timed out")
-    if "(SIM)" not in ev:
+    if "(" + method + ")" not in ev:
         raise Exception("Unexpected EAP method selection")
 
-    ev = dev[0].wait_event(["CTRL-REQ-SIM"], timeout=15)
+    ev = dev.wait_event(["CTRL-REQ-SIM"], timeout=15)
     if ev is None:
         raise Exception("Wait for external SIM processing request timed out")
     p = ev.split(':', 2)
@@ -163,13 +104,46 @@ def test_ap_hs20_ext_sim(dev, apdev):
         raise Exception("Unexpected hlr_auc_gw response")
     resp = res.split(' ')[2].rstrip()
 
-    dev[0].request("CTRL-RSP-SIM-" + id + ":GSM-AUTH:" + resp)
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    dev.request("CTRL-RSP-SIM-" + id + ":GSM-AUTH:" + resp)
+    ev = dev.wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
     if ev is None:
         raise Exception("Connection timed out")
 
-    type = dev[0].get_status_field("sp_type")
-    if type is None:
-        raise Exception("sp_type not available")
-    if type != "home":
-        raise Exception("sp_type did not indicate home network")
+def test_ap_hs20_select(dev, apdev):
+    """Hotspot 2.0 network selection"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    id = dev[0].add_cred_values(realm="example.com", username="test",
+                                password="secret", domain="example.com")
+    interworking_select(dev[0], bssid, "home")
+
+    dev[0].remove_cred(id)
+    id = dev[0].add_cred_values(realm="example.com", username="test",
+                                password="secret",
+                                domain="no.match.example.com")
+    interworking_select(dev[0], bssid, "roaming")
+
+    dev[0].set_cred_quoted(id, "realm", "no.match.example.com");
+    interworking_select(dev[0], bssid, no_match=True)
+
+def test_ap_hs20_ext_sim(dev, apdev):
+    """Hotspot 2.0 with external SIM processing"""
+    if not hlr_auc_gw_available():
+        return "skip"
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    params['anqp_3gpp_cell_net'] = "232,01"
+    params['domain_name'] = "wlan.mnc001.mcc232.3gppnetwork.org"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    dev[0].request("SET external_sim 1")
+    dev[0].add_cred_values(imsi="23201-0000000000", eap="SIM")
+    interworking_select(dev[0], "home")
+    interworking_ext_sim_connect(dev[0], bssid, "SIM")
+    check_sp_type(dev[0], "home")

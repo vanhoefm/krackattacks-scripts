@@ -118,6 +118,10 @@ class WpaSupplicant:
             raise Exception("SET_NETWORK failed")
         return None
 
+    def hs20_enable(self):
+        self.request("SET interworking 1")
+        self.request("SET hs20 1")
+
     def add_cred(self):
         id = self.request("ADD_CRED")
         if "FAIL" in id:
@@ -141,6 +145,23 @@ class WpaSupplicant:
         if "FAIL" in res:
             raise Exception("SET_CRED failed")
         return None
+
+    def add_cred_values(self, realm=None, username=None, password=None,
+                        domain=None, imsi=None, eap=None):
+        id = self.add_cred()
+        if realm:
+            self.set_cred_quoted(id, "realm", realm)
+        if username:
+            self.set_cred_quoted(id, "username", username)
+        if password:
+            self.set_cred_quoted(id, "password", password)
+        if domain:
+            self.set_cred_quoted(id, "domain", domain)
+        if imsi:
+            self.set_cred_quoted(id, "imsi", imsi)
+        if eap:
+            self.set_cred(id, "eap", eap)
+        return id;
 
     def select_network(self, id):
         id = self.request("SELECT_NETWORK " + str(id))

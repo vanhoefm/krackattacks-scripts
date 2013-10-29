@@ -1569,10 +1569,8 @@ static int wpa_supplicant_ctrl_iface_status(struct wpa_supplicant *wpa_s,
 
 			if (wpa_s->current_ssid->parent_cred != cred)
 				continue;
-			if (!cred->domain)
-				continue;
 
-			for (i = 0; i < cred->num_domain; i++) {
+			for (i = 0; cred->domain && i < cred->num_domain; i++) {
 				ret = os_snprintf(pos, end - pos,
 						  "home_sp=%s\n",
 						  cred->domain[i]);

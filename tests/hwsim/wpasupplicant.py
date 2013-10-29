@@ -209,13 +209,13 @@ class WpaSupplicant:
 
         quoted = [ "realm", "username", "password", "domain", "imsi",
                    "excluded_ssid", "milenage", "ca_cert", "client_cert",
-                   "private_key", "domain_suffix_match" ]
+                   "private_key", "domain_suffix_match", "provisioning_sp" ]
         for field in quoted:
             if field in params:
                 self.set_cred_quoted(id, field, params[field])
 
         not_quoted = [ "eap", "roaming_consortium",
-                       "required_roaming_consortium" ]
+                       "required_roaming_consortium", "sp_priority" ]
         for field in not_quoted:
             if field in params:
                 self.set_cred(id, field, params[field])

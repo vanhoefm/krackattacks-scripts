@@ -80,7 +80,9 @@ def hlr_auc_gw_available():
 
 def interworking_ext_sim_connect(dev, bssid, method):
     dev.request("INTERWORKING_CONNECT " + bssid)
+    interworking_ext_sim_auth(dev, method)
 
+def interworking_ext_sim_auth(dev, method):
     ev = dev.wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=15)
     if ev is None:
         raise Exception("Network connected timed out")
@@ -111,7 +113,9 @@ def interworking_ext_sim_connect(dev, bssid, method):
 
 def interworking_connect(dev, bssid, method):
     dev.request("INTERWORKING_CONNECT " + bssid)
+    interworking_auth(dev, method)
 
+def interworking_auth(dev, method):
     ev = dev.wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=15)
     if ev is None:
         raise Exception("Network connected timed out")
@@ -827,3 +831,88 @@ def test_ap_hs20_domain_suffix_match(dev, apdev):
         raise Exception("TLS certificate error not reported")
     if "Domain suffix mismatch" not in ev:
         raise Exception("Domain suffix mismatch not reported")
+
+def test_ap_hs20_multi_cred_sp_prio(dev, apdev):
+    """Hotspot 2.0 multi-cred sp_priority"""
+    if not hlr_auc_gw_available():
+        return "skip"
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    del params['domain_name']
+    params['anqp_3gpp_cell_net'] = "232,01"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    dev[0].request("SET external_sim 1")
+    id1 = dev[0].add_cred_values({ 'imsi': "23201-0000000000", 'eap': "SIM",
+                                   'provisioning_sp': "example.com",
+                                   'sp_priority' :"1" })
+    id2 = dev[0].add_cred_values({ 'realm': "example.com",
+                                   'username': "hs20-test",
+                                   'password': "password",
+                                   'domain': "example.com",
+                                   'provisioning_sp': "example.com",
+                                   'sp_priority': "2" })
+    dev[0].dump_monitor()
+    dev[0].request("INTERWORKING_SELECT auto")
+    interworking_ext_sim_auth(dev[0], "SIM")
+    check_sp_type(dev[0], "unknown")
+    dev[0].request("REMOVE_NETWORK all")
+
+    dev[0].set_cred(id1, "sp_priority", "2")
+    dev[0].set_cred(id2, "sp_priority", "1")
+    dev[0].dump_monitor()
+    dev[0].request("INTERWORKING_SELECT auto")
+    interworking_auth(dev[0], "TTLS")
+    check_sp_type(dev[0], "unknown")
+
+def test_ap_hs20_multi_cred_sp_prio2(dev, apdev):
+    """Hotspot 2.0 multi-cred sp_priority with two BSSes"""
+    if not hlr_auc_gw_available():
+        return "skip"
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    del params['nai_realm']
+    del params['domain_name']
+    params['anqp_3gpp_cell_net'] = "232,01"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    bssid2 = apdev[1]['bssid']
+    params = hs20_ap_params()
+    params['ssid'] = "test-hs20-other"
+    params['hessid'] = bssid2
+    del params['domain_name']
+    del params['anqp_3gpp_cell_net']
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    dev[0].hs20_enable()
+    dev[0].request("SET external_sim 1")
+    id1 = dev[0].add_cred_values({ 'imsi': "23201-0000000000", 'eap': "SIM",
+                                   'provisioning_sp': "example.com",
+                                   'sp_priority': "1" })
+    id2 = dev[0].add_cred_values({ 'realm': "example.com",
+                                   'username': "hs20-test",
+                                   'password': "password",
+                                   'domain': "example.com",
+                                   'provisioning_sp': "example.com",
+                                   'sp_priority': "2" })
+    dev[0].dump_monitor()
+    dev[0].request("INTERWORKING_SELECT auto")
+    interworking_ext_sim_auth(dev[0], "SIM")
+    check_sp_type(dev[0], "unknown")
+    conn_bssid = dev[0].get_status_field("bssid")
+    if conn_bssid != bssid:
+        raise Exception("Connected to incorrect BSS")
+    dev[0].request("REMOVE_NETWORK all")
+
+    dev[0].set_cred(id1, "sp_priority", "2")
+    dev[0].set_cred(id2, "sp_priority", "1")
+    dev[0].dump_monitor()
+    dev[0].request("INTERWORKING_SELECT auto")
+    interworking_auth(dev[0], "TTLS")
+    check_sp_type(dev[0], "unknown")
+    conn_bssid = dev[0].get_status_field("bssid")
+    if conn_bssid != bssid2:
+        raise Exception("Connected to incorrect BSS")

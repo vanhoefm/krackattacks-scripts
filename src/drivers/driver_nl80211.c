@@ -8781,6 +8781,10 @@ static int i802_set_sta_vlan(struct i802_bss *bss, const u8 *addr,
 	if (!msg)
 		return -ENOMEM;
 
+	wpa_printf(MSG_DEBUG, "nl80211: %s[%d]: set_sta_vlan(" MACSTR
+		   ", ifname=%s[%d], vlan_id=%d)",
+		   bss->ifname, if_nametoindex(bss->ifname),
+		   MAC2STR(addr), ifname, if_nametoindex(ifname), vlan_id);
 	nl80211_cmd(drv, msg, 0, NL80211_CMD_SET_STATION);
 
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX,

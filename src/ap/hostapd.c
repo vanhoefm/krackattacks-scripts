@@ -1198,6 +1198,12 @@ int hostapd_reload_iface(struct hostapd_iface *hapd_iface)
 
 	wpa_printf(MSG_DEBUG, "Reload interface %s",
 		   hapd_iface->conf->bss[0]->iface);
+	for (j = 0; j < hapd_iface->num_bss; j++)
+		hostapd_set_security_params(hapd_iface->conf->bss[j]);
+	if (hostapd_config_check(hapd_iface->conf) < 0) {
+		wpa_printf(MSG_ERROR, "Updated configuration is invalid");
+		return -1;
+	}
 	hostapd_clear_old(hapd_iface);
 	for (j = 0; j < hapd_iface->num_bss; j++)
 		hostapd_reload_bss(hapd_iface->bss[j]);

@@ -2193,8 +2193,6 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_bss *bss, *selected = NULL, *selected_home = NULL;
 	struct wpa_bss *selected2 = NULL, *selected2_home = NULL;
-	int selected_prio = -999999, selected_home_prio = -999999;
-	int selected2_prio = -999999, selected2_home_prio = -999999;
 	unsigned int count = 0;
 	const char *type;
 	int res;
@@ -2250,35 +2248,32 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 		    (wpa_s->conf->auto_interworking &&
 		     wpa_s->auto_network_select)) {
 			if (bh || bss_load || conn_capab) {
-				if (selected2 == NULL ||
-				    cred->priority > selected2_prio) {
+				if (selected2_cred == NULL ||
+				    cred->priority > selected2_cred->priority) {
 					wpa_printf(MSG_DEBUG, "Interworking: Mark as selected2");
 					selected2 = bss;
-					selected2_prio = cred->priority;
 					selected2_cred = cred;
 				}
 				if (res > 0 &&
-				    (selected2_home == NULL ||
-				     cred->priority > selected2_home_prio)) {
+				    (selected2_home_cred == NULL ||
+				     cred->priority > selected2_home_cred->priority)) {
 					wpa_printf(MSG_DEBUG, "Interworking: Mark as selected2_home");
 					selected2_home = bss;
-					selected2_home_prio = cred->priority;
 					selected2_home_cred = cred;
 				}
 			} else {
-				if (selected == NULL ||
-				    cred->priority > selected_prio) {
+				if (selected_cred == NULL ||
+				    cred->priority > selected_cred->priority) {
 					wpa_printf(MSG_DEBUG, "Interworking: Mark as selected");
 					selected = bss;
-					selected_prio = cred->priority;
 					selected_cred = cred;
 				}
 				if (res > 0 &&
-				    (selected_home == NULL ||
-				     cred->priority > selected_home_prio)) {
+				    (selected_home_cred == NULL ||
+				     cred->priority >
+				     selected_home_cred->priority)) {
 					wpa_printf(MSG_DEBUG, "Interworking: Mark as selected_home");
 					selected_home = bss;
-					selected_home_prio = cred->priority;
 					selected_home_cred = cred;
 				}
 			}
@@ -2286,7 +2281,9 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 	}
 
 	if (selected_home && selected_home != selected &&
-	    selected_home_prio >= selected_prio) {
+	    selected_home_cred &&
+	    (selected_cred == NULL ||
+	     selected_home_cred->priority >= selected_cred->priority)) {
 		/* Prefer network operated by the Home SP */
 		wpa_printf(MSG_DEBUG, "Interworking: Overrided selected with selected_home");
 		selected = selected_home;

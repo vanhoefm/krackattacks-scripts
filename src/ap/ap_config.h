@@ -53,6 +53,8 @@ struct hostapd_ssid {
 	size_t ssid_len;
 	unsigned int ssid_set:1;
 	unsigned int utf8_ssid:1;
+	unsigned int wpa_passphrase_set:1;
+	unsigned int wpa_psk_set:1;
 
 	char vlan[IFNAMSIZ + 1];
 	secpolicy security_policy;

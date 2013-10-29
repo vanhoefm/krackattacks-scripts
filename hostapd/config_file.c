@@ -2181,8 +2181,11 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			} else {
 				os_free(bss->ssid.wpa_passphrase);
 				bss->ssid.wpa_passphrase = os_strdup(pos);
-				os_free(bss->ssid.wpa_psk);
-				bss->ssid.wpa_psk = NULL;
+				if (bss->ssid.wpa_passphrase) {
+					os_free(bss->ssid.wpa_psk);
+					bss->ssid.wpa_psk = NULL;
+					bss->ssid.wpa_passphrase_set = 1;
+				}
 			}
 		} else if (os_strcmp(buf, "wpa_psk") == 0) {
 			os_free(bss->ssid.wpa_psk);
@@ -2200,6 +2203,7 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 				bss->ssid.wpa_psk->group = 1;
 				os_free(bss->ssid.wpa_passphrase);
 				bss->ssid.wpa_passphrase = NULL;
+				bss->ssid.wpa_psk_set = 1;
 			}
 		} else if (os_strcmp(buf, "wpa_psk_file") == 0) {
 			os_free(bss->ssid.wpa_psk_file);

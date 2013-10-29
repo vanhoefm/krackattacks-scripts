@@ -62,10 +62,22 @@ int hostapd_for_each_interface(struct hapd_interfaces *interfaces,
 
 static void hostapd_reload_bss(struct hostapd_data *hapd)
 {
+	struct hostapd_ssid *ssid;
+
 #ifndef CONFIG_NO_RADIUS
 	radius_client_reconfig(hapd->radius, hapd->conf->radius);
 #endif /* CONFIG_NO_RADIUS */
 
+	ssid = &hapd->conf->ssid;
+	if (!ssid->wpa_psk_set && ssid->wpa_psk && !ssid->wpa_psk->next &&
+	    ssid->wpa_passphrase_set && ssid->wpa_passphrase) {
+		/*
+		 * Force PSK to be derived again since SSID or passphrase may
+		 * have changed.
+		 */
+		os_free(ssid->wpa_psk);
+		ssid->wpa_psk = NULL;
+	}
 	if (hostapd_setup_wpa_psk(hapd->conf)) {
 		wpa_printf(MSG_ERROR, "Failed to re-configure WPA PSK "
 			   "after reloading configuration");

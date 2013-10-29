@@ -554,6 +554,7 @@ class WpaSupplicant:
         else:
             self.dump_monitor()
             self.select_network(id)
+        return id
 
     def scan(self, type=None):
         if type:

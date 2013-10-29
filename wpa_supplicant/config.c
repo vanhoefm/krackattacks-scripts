@@ -2485,6 +2485,14 @@ int wpa_config_set_cred(struct wpa_cred *cred, const char *var,
 		return 0;
 	}
 
+	if (os_strcmp(var, "sp_priority") == 0) {
+		int prio = atoi(value);
+		if (prio < 0 || prio > 255)
+			return -1;
+		cred->sp_priority = prio;
+		return 0;
+	}
+
 	if (os_strcmp(var, "pcsc") == 0) {
 		cred->pcsc = atoi(value);
 		return 0;

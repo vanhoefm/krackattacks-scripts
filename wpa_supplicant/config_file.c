@@ -809,6 +809,8 @@ static void wpa_config_write_cred(FILE *f, struct wpa_cred *cred)
 
 	if (cred->provisioning_sp)
 		fprintf(f, "\tprovisioning_sp=%s\n", cred->provisioning_sp);
+	if (cred->sp_priority)
+		fprintf(f, "\tsp_priority=%d\n", cred->sp_priority);
 
 	if (cred->min_dl_bandwidth_home)
 		fprintf(f, "\tmin_dl_bandwidth_home=%u\n",

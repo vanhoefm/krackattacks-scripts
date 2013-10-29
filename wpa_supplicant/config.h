@@ -252,6 +252,16 @@ struct wpa_cred {
 	 */
 	char *provisioning_sp;
 
+	/**
+	 * sp_priority - Credential priority within a provisioning SP
+	 *
+	 * This is the priority of the credential among all credentials
+	 * provisionined by the same SP (i.e., for entries that have identical
+	 * provisioning_sp value). The range of this priority is 0-255 with 0
+	 * being the highest and 255 the lower priority.
+	 */
+	int sp_priority;
+
 	unsigned int min_dl_bandwidth_home;
 	unsigned int min_ul_bandwidth_home;
 	unsigned int min_dl_bandwidth_roaming;

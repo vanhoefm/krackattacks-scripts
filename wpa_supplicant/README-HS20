@@ -227,6 +227,12 @@ Credentials can be pre-configured for automatic network selection:
 #	This optional field can be used to keep track of the SP that provisioned
 #	the credential to find the PPS MO (./Wi-Fi/<provisioning_sp>).
 #
+# sp_priority: Credential priority within a provisioning SP
+#	This is the priority of the credential among all credentials
+#	provisionined by the same SP (i.e., for entries that have identical
+#	provisioning_sp value). The range of this priority is 0-255 with 0
+#	being the highest and 255 the lower priority.
+#
 # Minimum backhaul threshold (PPS/<X+>/Policy/MinBackhauldThreshold/*)
 #	These fields can be used to specify minimum download/upload backhaul
 #	bandwidth that is preferred for the credential. This constraint is

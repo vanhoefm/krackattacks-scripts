@@ -668,3 +668,209 @@ const u8 * hostapd_get_psk(const struct hostapd_bss_config *conf,
 
 	return NULL;
 }
+
+
+static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
+				    struct hostapd_config *conf)
+{
+	if (bss->ieee802_1x && !bss->eap_server &&
+	    !bss->radius->auth_servers) {
+		wpa_printf(MSG_ERROR, "Invalid IEEE 802.1X configuration (no "
+			   "EAP authenticator configured).");
+		return -1;
+	}
+
+	if (bss->wpa) {
+		int wep, i;
+
+		wep = bss->default_wep_key_len > 0 ||
+		       bss->individual_wep_key_len > 0;
+		for (i = 0; i < NUM_WEP_KEYS; i++) {
+			if (bss->ssid.wep.keys_set) {
+				wep = 1;
+				break;
+			}
+		}
+
+		if (wep) {
+			wpa_printf(MSG_ERROR, "WEP configuration in a WPA network is not supported");
+			return -1;
+		}
+	}
+
+	if (bss->wpa && bss->wpa_psk_radius != PSK_RADIUS_IGNORED &&
+	    bss->macaddr_acl != USE_EXTERNAL_RADIUS_AUTH) {
+		wpa_printf(MSG_ERROR, "WPA-PSK using RADIUS enabled, but no "
+			   "RADIUS checking (macaddr_acl=2) enabled.");
+		return -1;
+	}
+
+	if (bss->wpa && (bss->wpa_key_mgmt & WPA_KEY_MGMT_PSK) &&
+	    bss->ssid.wpa_psk == NULL && bss->ssid.wpa_passphrase == NULL &&
+	    bss->ssid.wpa_psk_file == NULL &&
+	    (bss->wpa_psk_radius != PSK_RADIUS_REQUIRED ||
+	     bss->macaddr_acl != USE_EXTERNAL_RADIUS_AUTH)) {
+		wpa_printf(MSG_ERROR, "WPA-PSK enabled, but PSK or passphrase "
+			   "is not configured.");
+		return -1;
+	}
+
+	if (hostapd_mac_comp_empty(bss->bssid) != 0) {
+		size_t i;
+
+		for (i = 0; i < conf->num_bss; i++) {
+			if (conf->bss[i] != bss &&
+			    (hostapd_mac_comp(conf->bss[i]->bssid,
+					      bss->bssid) == 0)) {
+				wpa_printf(MSG_ERROR, "Duplicate BSSID " MACSTR
+					   " on interface '%s' and '%s'.",
+					   MAC2STR(bss->bssid),
+					   conf->bss[i]->iface, bss->iface);
+				return -1;
+			}
+		}
+	}
+
+#ifdef CONFIG_IEEE80211R
+	if (wpa_key_mgmt_ft(bss->wpa_key_mgmt) &&
+	    (bss->nas_identifier == NULL ||
+	     os_strlen(bss->nas_identifier) < 1 ||
+	     os_strlen(bss->nas_identifier) > FT_R0KH_ID_MAX_LEN)) {
+		wpa_printf(MSG_ERROR, "FT (IEEE 802.11r) requires "
+			   "nas_identifier to be configured as a 1..48 octet "
+			   "string");
+		return -1;
+	}
+#endif /* CONFIG_IEEE80211R */
+
+#ifdef CONFIG_IEEE80211N
+	if (conf->ieee80211n && conf->hw_mode == HOSTAPD_MODE_IEEE80211B) {
+		bss->disable_11n = 1;
+		wpa_printf(MSG_ERROR, "HT (IEEE 802.11n) in 11b mode is not "
+			   "allowed, disabling HT capabilites");
+	}
+
+	if (conf->ieee80211n &&
+	    bss->ssid.security_policy == SECURITY_STATIC_WEP) {
+		bss->disable_11n = 1;
+		wpa_printf(MSG_ERROR, "HT (IEEE 802.11n) with WEP is not "
+			   "allowed, disabling HT capabilities");
+	}
+
+	if (conf->ieee80211n && bss->wpa &&
+	    !(bss->wpa_pairwise & WPA_CIPHER_CCMP) &&
+	    !(bss->rsn_pairwise & (WPA_CIPHER_CCMP | WPA_CIPHER_GCMP))) {
+		bss->disable_11n = 1;
+		wpa_printf(MSG_ERROR, "HT (IEEE 802.11n) with WPA/WPA2 "
+			   "requires CCMP/GCMP to be enabled, disabling HT "
+			   "capabilities");
+	}
+#endif /* CONFIG_IEEE80211N */
+
+#ifdef CONFIG_WPS2
+	if (bss->wps_state && bss->ignore_broadcast_ssid) {
+		wpa_printf(MSG_INFO, "WPS: ignore_broadcast_ssid "
+			   "configuration forced WPS to be disabled");
+		bss->wps_state = 0;
+	}
+
+	if (bss->wps_state && bss->ssid.wep.keys_set && bss->wpa == 0) {
+		wpa_printf(MSG_INFO, "WPS: WEP configuration forced WPS to be "
+			   "disabled");
+		bss->wps_state = 0;
+	}
+
+	if (bss->wps_state && bss->wpa &&
+	    (!(bss->wpa & 2) ||
+	     !(bss->rsn_pairwise & WPA_CIPHER_CCMP))) {
+		wpa_printf(MSG_INFO, "WPS: WPA/TKIP configuration without "
+			   "WPA2/CCMP forced WPS to be disabled");
+		bss->wps_state = 0;
+	}
+#endif /* CONFIG_WPS2 */
+
+#ifdef CONFIG_HS20
+	if (bss->hs20 &&
+	    (!(bss->wpa & 2) ||
+	     !(bss->rsn_pairwise & (WPA_CIPHER_CCMP | WPA_CIPHER_GCMP)))) {
+		wpa_printf(MSG_ERROR, "HS 2.0: WPA2-Enterprise/CCMP "
+			   "configuration is required for Hotspot 2.0 "
+			   "functionality");
+		return -1;
+	}
+#endif /* CONFIG_HS20 */
+
+	return 0;
+}
+
+
+int hostapd_config_check(struct hostapd_config *conf)
+{
+	size_t i;
+
+	if (conf->ieee80211d && (!conf->country[0] || !conf->country[1])) {
+		wpa_printf(MSG_ERROR, "Cannot enable IEEE 802.11d without "
+			   "setting the country_code");
+		return -1;
+	}
+
+	if (conf->ieee80211h && !conf->ieee80211d) {
+		wpa_printf(MSG_ERROR, "Cannot enable IEEE 802.11h without "
+			   "IEEE 802.11d enabled");
+		return -1;
+	}
+
+	for (i = 0; i < conf->num_bss; i++) {
+		if (hostapd_config_check_bss(conf->bss[i], conf))
+			return -1;
+	}
+
+	return 0;
+}
+
+
+void hostapd_set_security_params(struct hostapd_bss_config *bss)
+{
+	if (bss->individual_wep_key_len == 0) {
+		/* individual keys are not use; can use key idx0 for
+		 * broadcast keys */
+		bss->broadcast_key_idx_min = 0;
+	}
+
+	if ((bss->wpa & 2) && bss->rsn_pairwise == 0)
+		bss->rsn_pairwise = bss->wpa_pairwise;
+	bss->wpa_group = wpa_select_ap_group_cipher(bss->wpa, bss->wpa_pairwise,
+						    bss->rsn_pairwise);
+
+	bss->radius->auth_server = bss->radius->auth_servers;
+	bss->radius->acct_server = bss->radius->acct_servers;
+
+	if (bss->wpa && bss->ieee802_1x) {
+		bss->ssid.security_policy = SECURITY_WPA;
+	} else if (bss->wpa) {
+		bss->ssid.security_policy = SECURITY_WPA_PSK;
+	} else if (bss->ieee802_1x) {
+		int cipher = WPA_CIPHER_NONE;
+		bss->ssid.security_policy = SECURITY_IEEE_802_1X;
+		bss->ssid.wep.default_len = bss->default_wep_key_len;
+		if (bss->default_wep_key_len)
+			cipher = bss->default_wep_key_len >= 13 ?
+				WPA_CIPHER_WEP104 : WPA_CIPHER_WEP40;
+		bss->wpa_group = cipher;
+		bss->wpa_pairwise = cipher;
+		bss->rsn_pairwise = cipher;
+	} else if (bss->ssid.wep.keys_set) {
+		int cipher = WPA_CIPHER_WEP40;
+		if (bss->ssid.wep.len[0] >= 13)
+			cipher = WPA_CIPHER_WEP104;
+		bss->ssid.security_policy = SECURITY_STATIC_WEP;
+		bss->wpa_group = cipher;
+		bss->wpa_pairwise = cipher;
+		bss->rsn_pairwise = cipher;
+	} else {
+		bss->ssid.security_policy = SECURITY_PLAINTEXT;
+		bss->wpa_group = WPA_CIPHER_NONE;
+		bss->wpa_pairwise = WPA_CIPHER_NONE;
+		bss->rsn_pairwise = WPA_CIPHER_NONE;
+	}
+}

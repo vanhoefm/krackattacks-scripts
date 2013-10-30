@@ -7,12 +7,10 @@ HAPD=$DIR/../../hostapd/hostapd
 WLANTEST=$DIR/../../wlantest/wlantest
 HLR_AUC_GW=$DIR/../../hostapd/hlr_auc_gw
 
-DATE=`date +%s`
-
 if [ -z "$LOGDIR" ] ; then
-    LOGDIR=$DIR/logs
+    LOGDIR="$DIR/logs/$(date +%s)"
+    mkdir -p $LOGDIR
 fi
-export LOGDIR
 
 if groups | tr ' ' "\n" | grep -q ^admin$; then
     GROUP=admin
@@ -31,8 +29,8 @@ fi
 
 if [ "$1" = "valgrind" ]; then
     VALGRIND=y
-    VALGRIND_WPAS="valgrind --log-file=$LOGDIR/$DATE-valgrind-wlan%d"
-    VALGRIND_HAPD="valgrind --log-file=$LOGDIR/$DATE-valgrind-hostapd"
+    VALGRIND_WPAS="valgrind --log-file=$LOGDIR/valgrind-wlan%d"
+    VALGRIND_HAPD="valgrind --log-file=$LOGDIR/valgrind-hostapd"
     chmod -f a+rx $WPAS
     chmod -f a+rx $HAPD
     shift
@@ -58,25 +56,25 @@ if [ "$CONCURRENT" = "y" ]; then
 fi
 mkdir -p $LOGDIR
 sudo ifconfig hwsim0 up
-sudo $WLANTEST -i hwsim0 -c -d > $LOGDIR/$DATE-hwsim0 &
-sudo tcpdump -ni hwsim0 -s 2500 -w $LOGDIR/$DATE-hwsim0.dump > $LOGDIR/$DATE-tcpdump 2>&1 &
+sudo $WLANTEST -i hwsim0 -c -d > $LOGDIR/hwsim0 &
+sudo tcpdump -ni hwsim0 -s 2500 -w $LOGDIR/hwsim0.dump > $LOGDIR/tcpdump 2>&1 &
 for i in 0 1 2; do
     sudo $(printf -- "$VALGRIND_WPAS" $i) $WPAS -g /tmp/wpas-wlan$i -G$GROUP -Dnl80211 -iwlan$i -c $DIR/p2p$i.conf \
-         $(printf -- "$CONCURRENT_ARGS" $i) -ddKt$TRACE > $LOGDIR/$DATE-log$i &
+         $(printf -- "$CONCURRENT_ARGS" $i) -ddKt$TRACE > $LOGDIR/log$i &
 done
-sudo $VALGRIND_HAPD $HAPD -ddKt$TRACE -g /var/run/hostapd-global -G $GROUP -ddKt > $LOGDIR/$DATE-hostapd &
+sudo $VALGRIND_HAPD $HAPD -ddKt$TRACE -g /var/run/hostapd-global -G $GROUP -ddKt > $LOGDIR/hostapd &
 
 sleep 1
-sudo chown $USER $LOGDIR/$DATE-hwsim0.dump
+sudo chown $USER $LOGDIR/hwsim0.dump
 if [ "x$VALGRIND" = "xy" ]; then
-    sudo chown $USER $LOGDIR/$DATE-*valgrind*
+    sudo chown $USER $LOGDIR/*valgrind*
 fi
 
 if [ -x $HLR_AUC_GW ]; then
-    $HLR_AUC_GW -m $DIR/auth_serv/hlr_auc_gw.milenage_db > $LOGDIR/$DATE-hlr_auc_gw &
+    $HLR_AUC_GW -m $DIR/auth_serv/hlr_auc_gw.milenage_db > $LOGDIR/hlr_auc_gw &
 fi
 
-$HAPD -ddKt $DIR/auth_serv/as.conf > $LOGDIR/$DATE-auth_serv &
+$HAPD -ddKt $DIR/auth_serv/as.conf > $LOGDIR/auth_serv &
 
 # wait for programs to be fully initialized
 for i in 0 1 2; do

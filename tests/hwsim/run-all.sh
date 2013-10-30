@@ -3,9 +3,14 @@
 errors=0
 umask 0002
 
+DATE="$(date +%s)"
+unset LOGBASEDIR
 if [ -z "$LOGDIR" ]; then
-	LOGDIR=logs
+	LOGBASEDIR=logs
+	LOGDIR=$LOGBASEDIR/$DATE
+	mkdir -p $LOGDIR
 fi
+export LOGDIR
 
 if [ -z "$DBFILE" ]; then
     DB=""
@@ -52,25 +57,32 @@ else
 fi
 
 if ! ./start.sh $CONCURRENT $VALGRIND $TRACE; then
-	echo "Could not start test environment" > $LOGDIR/last-debug
+	if ! [ -z "$LOGBASEDIR" ] ; then
+		echo "Could not start test environment" > $LOGDIR/run
+	fi
 	exit 1
 fi
-DATE=`ls -1tr $LOGDIR | tail -1 | cut -f1 -d-`
-rm $LOGDIR/last-debug 2>/dev/null
-./run-tests.py $TRACE_ARGS -l $LOGDIR/$DATE-run $DB -e $LOGDIR/$DATE-failed -r $LOGDIR/results.txt $CONCURRENT_TESTS $@ || errors=1
 
-cat $LOGDIR/$DATE-run >> $LOGDIR/last-debug
+if ! [ -z "$LOGBASEDIR" ] ; then
+	rm $LOGBASEDIR/last-debug 2>/dev/null
+fi
+./run-tests.py $TRACE_ARGS -l $LOGDIR/run $DB -e $LOGDIR/failed -r $LOGDIR/results.txt $CONCURRENT_TESTS $@ || errors=1
+
+if ! [ -z "$LOGBASEDIR" ] ; then
+	cat $LOGDIR/run >> $LOGBASEDIR/last-debug
+fi
+
 ./stop-wifi.sh
 
 if [ ! -z "$VALGRIND" ] ; then
-    failures=`grep "ERROR SUMMARY" $LOGDIR/$DATE-valgrind-* | grep -v " 0 errors" | wc -l`
+    failures=`grep "ERROR SUMMARY" $LOGDIR/valgrind-* | grep -v " 0 errors" | wc -l`
     if [ $failures -gt 0 ]; then
 	echo "Mark as failed due to valgrind errors"
 	errors=1
     fi
 fi
 if [ $errors -gt 0 ]; then
-    tar czf /tmp/hwsim-tests-$DATE-FAILED$SUFFIX.tar.gz $LOGDIR/$DATE*
+    tar czf /tmp/hwsim-tests-$DATE-FAILED$SUFFIX.tar.gz $LOGDIR/
     exit 1
 fi
 

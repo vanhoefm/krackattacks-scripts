@@ -151,10 +151,10 @@ For manual testing, ./start.sh can be used to initialize interfaces and
 programs and run-tests.py to execute one or more test
 cases. run-tests.py output verbosity can be controlled with -d (more
 verbose debug output) and -q (less verbose output) on the command
-line. "-f <test_*.py>" can be used to specify that all test cases from a
-single file are to be run. Test name as the last command line argument
-can be specified that a single test case is to be run (e.g.,
-"./run-tests.py test_ap_pmf_required").
+line. "-f <test_filename(without.py)>" can be used to specify that all
+test cases from a single file are to be run. Test name as the last
+command line argument can be specified that a single test case is to be
+run (e.g., "./run-tests.py test_ap_pmf_required").
 
 
 Adding/modifying test cases

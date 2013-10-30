@@ -24,7 +24,7 @@ if [ "x$1" = "xconcurrent-valgrind" ]; then
     DATE=`ls -1tr $LOGDIR | tail -1 | cut -f1 -d-`
     rm $LOGDIR/last-debug
     for i in autogo discovery grpform; do
-	./run-tests.py -l $LOGDIR/$DATE-run-$i $DB -e $LOGDIR/$DATE-failed-$i -r $LOGDIR/results.txt -f test_p2p_$i.py || errors=1
+	./run-tests.py -l $LOGDIR/$DATE-run-$i $DB -e $LOGDIR/$DATE-failed-$i -r $LOGDIR/results.txt -f test_p2p_$i || errors=1
 	cat $LOGDIR/$DATE-run-$i >> $LOGDIR/last-debug
     done
     ./stop-wifi.sh
@@ -45,7 +45,7 @@ elif [ "x$1" = "xconcurrent" ]; then
     DATE=`ls -1tr $LOGDIR | tail -1 | cut -f1 -d-`
     rm $LOGDIR/last-debug
     for i in autogo discovery grpform; do
-	./run-tests.py -l $LOGDIR/$DATE-run-$i $DB -e $LOGDIR/$DATE-failed-$i -r $LOGDIR/results.txt -f test_p2p_$i.py || errors=1
+	./run-tests.py -l $LOGDIR/$DATE-run-$i $DB -e $LOGDIR/$DATE-failed-$i -r $LOGDIR/results.txt -f test_p2p_$i || errors=1
 	cat $LOGDIR/$DATE-run-$i >> $LOGDIR/last-debug
     done
     ./stop-wifi.sh

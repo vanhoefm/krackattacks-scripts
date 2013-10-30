@@ -10,7 +10,6 @@ import os
 import re
 import sys
 import time
-import sqlite3
 from datetime import datetime
 
 import logging
@@ -83,6 +82,7 @@ def main():
             test_file = sys.argv[idx + 1]
             idx = idx + 2
         elif len(sys.argv) > idx + 1 and sys.argv[idx] == '-S':
+            import sqlite3
             conn = sqlite3.connect(sys.argv[idx + 1])
             idx = idx + 2
         elif len(sys.argv) > idx + 1 and sys.argv[idx] == '-b':

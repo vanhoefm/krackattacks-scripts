@@ -65,9 +65,9 @@ done
 sudo $VALGRIND_HAPD $HAPD -ddKt$TRACE -g /var/run/hostapd-global -G $GROUP -ddKt > $LOGDIR/hostapd &
 
 sleep 1
-sudo chown $USER $LOGDIR/hwsim0.dump
+sudo chown -f $USER $LOGDIR/hwsim0.dump
 if [ "x$VALGRIND" = "xy" ]; then
-    sudo chown $USER $LOGDIR/*valgrind*
+    sudo chown -f $USER $LOGDIR/*valgrind*
 fi
 
 if [ -x $HLR_AUC_GW ]; then

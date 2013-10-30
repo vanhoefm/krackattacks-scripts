@@ -48,27 +48,30 @@ def report(conn, build, commit, run, test, result, diff):
             print "sqlite: " + str(e)
             print "sql: %r" % (params, )
 
-class Tracer(object):
-    def __init__(self, tracedir, testname):
-        self._tracedir = tracedir
+class DataCollector(object):
+    def __init__(self, logdir, testname, tracing, dmesg):
+        self._logdir = logdir
         self._testname = testname
+        self._tracing = tracing
+        self._dmesg = dmesg
     def __enter__(self):
-        if not self._tracedir:
-            return
-        output = os.path.join(self._tracedir, '%s.dat' % (self._testname, ))
-        self._trace_cmd = subprocess.Popen(['sudo', 'trace-cmd', 'record', '-o', output, '-e', 'mac80211', '-e', 'cfg80211', 'sh', '-c', 'echo STARTED ; read l'],
-                                           stdin=subprocess.PIPE,
-                                           stdout=subprocess.PIPE,
-                                           stderr=open('/dev/null', 'w'),
-                                           cwd=self._tracedir)
-        l = self._trace_cmd.stdout.read(7)
-        while not 'STARTED' in l:
-            l += self._trace_cmd.stdout.read(1)
+        if self._tracing:
+            output = os.path.join(self._logdir, '%s.dat' % (self._testname, ))
+            self._trace_cmd = subprocess.Popen(['sudo', 'trace-cmd', 'record', '-o', output, '-e', 'mac80211', '-e', 'cfg80211', 'sh', '-c', 'echo STARTED ; read l'],
+                                               stdin=subprocess.PIPE,
+                                               stdout=subprocess.PIPE,
+                                               stderr=open('/dev/null', 'w'),
+                                               cwd=self._logdir)
+            l = self._trace_cmd.stdout.read(7)
+            while not 'STARTED' in l:
+                l += self._trace_cmd.stdout.read(1)
     def __exit__(self, type, value, traceback):
-        if not self._tracedir:
-            return
-        self._trace_cmd.stdin.write('DONE\n')
-        self._trace_cmd.wait()
+        if self._tracing:
+            self._trace_cmd.stdin.write('DONE\n')
+            self._trace_cmd.wait()
+        if self._dmesg:
+            output = os.path.join(self._logdir, '%s.dmesg' % (self._testname, ))
+            subprocess.call(['sudo', 'dmesg', '-c'], stdout=open(output, 'w'))
 
 def main():
     tests = []
@@ -117,6 +120,8 @@ def main():
                         help='List tests (and update descriptions in DB)')
     parser.add_argument('-T', action='store_true', dest='tracing',
                         help='collect tracing per test case (in log directory)')
+    parser.add_argument('-D', action='store_true', dest='dmesg',
+                        help='collect dmesg per test case (in log directory)')
     parser.add_argument('-f', dest='testmodules', metavar='<test module>',
                         help='execute only tests from these test modules',
                         type=str, choices=[[]] + test_modules, nargs='+')
@@ -148,10 +153,6 @@ def main():
 
     error_file = args.errorfile and os.path.join(args.logdir, args.errorfile)
     results_file = args.resultsfile and os.path.join(args.logdir, args.resultsfile)
-
-    tracedir = None
-    if args.tracing:
-        tracedir = args.logdir
 
     if args.database:
         import sqlite3
@@ -199,6 +200,9 @@ def main():
     skipped = []
     failed = []
 
+    if args.dmesg:
+        subprocess.call(['sudo', 'dmesg', '-c'], stdout=open('/dev/null', 'w'))
+
     for t in tests:
         if args.tests:
             if not t.__name__ in args.tests:
@@ -206,7 +210,7 @@ def main():
         if args.testmodules:
             if not t.__module__ in args.testmodules:
                 continue
-        with Tracer(tracedir, t.__name__):
+        with DataCollector(args.logdir, t.__name__, args.tracing, args.dmesg):
             reset_devs(dev, apdev)
             logger.info("START " + t.__name__)
             if log_to_file:

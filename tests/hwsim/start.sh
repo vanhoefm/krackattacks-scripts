@@ -7,6 +7,8 @@ HAPD=$DIR/../../hostapd/hostapd
 WLANTEST=$DIR/../../wlantest/wlantest
 HLR_AUC_GW=$DIR/../../hostapd/hlr_auc_gw
 
+DATE=`date +%s`
+
 if [ -z "$LOGDIR" ] ; then
     LOGDIR=$DIR/logs
 fi
@@ -20,16 +22,24 @@ fi
 
 if [ "$1" = "concurrent" ]; then
     CONCURRENT=y
+    CONCURRENT_ARGS="-N -Dnl80211 -ista%d -c $DIR/sta-dummy.conf"
     shift
 else
     unset CONCURRENT
+    CONCURRENT_ARGS=
 fi
 
 if [ "$1" = "valgrind" ]; then
     VALGRIND=y
+    VALGRIND_WPAS="valgrind --log-file=$LOGDIR/$DATE-valgrind-wlan%d"
+    VALGRIND_HAPD="valgrind --log-file=$LOGDIR/$DATE-valgrind-hostapd"
+    chmod a+rx $WPAS
+    chmod a+rx $HAPD
     shift
 else
     unset VALGRIND
+    VALGRIND_WPAS=
+    VALGRIND_HAPD=
 fi
 
 if [ "$1" = "trace" ]; then
@@ -48,31 +58,15 @@ if [ "$CONCURRENT" = "y" ]; then
     sudo iw wlan2 interface add sta2 type station
 fi
 mkdir -p $LOGDIR
-DATE=`date +%s`
 sudo ifconfig hwsim0 up
 sudo $WLANTEST -i hwsim0 -c -d > $LOGDIR/$DATE-hwsim0 &
 sudo tcpdump -ni hwsim0 -s 2500 -w $LOGDIR/$DATE-hwsim0.dump > $LOGDIR/$DATE-tcpdump 2>&1 &
-if [ "$VALGRIND" = "y" ]; then
-    for i in 0 1 2; do
-	chmod a+rx $WPAS
-	if [ "$CONCURRENT" = "y" ]; then
-	    sudo valgrind --log-file=$LOGDIR/$DATE-valgrind-wlan$i $WPAS -g /tmp/wpas-wlan$i -G$GROUP -Dnl80211 -iwlan$i -c $DIR/p2p$i.conf -N -Dnl80211 -ista$i -c $DIR/sta-dummy.conf -ddKt$TRACE > $LOGDIR/$DATE-log$i &
-	else
-	    sudo valgrind --log-file=$LOGDIR/$DATE-valgrind-wlan$i $WPAS -g /tmp/wpas-wlan$i -G$GROUP -Dnl80211 -iwlan$i -c $DIR/p2p$i.conf -ddKt$TRACE > $LOGDIR/$DATE-log$i &
-	fi
-    done
-    chmod a+rx $HAPD
-    sudo valgrind --log-file=$LOGDIR/$DATE-valgrind-hostapd $HAPD -ddKt -g /var/run/hostapd-global -G $GROUP -ddKt > $LOGDIR/$DATE-hostapd &
-else
-    for i in 0 1 2; do
-	if [ "$CONCURRENT" = "y" ]; then
-	    sudo $WPAS -g /tmp/wpas-wlan$i -G$GROUP -Dnl80211 -iwlan$i -c $DIR/p2p$i.conf -N -Dnl80211 -ista$i -c $DIR/sta-dummy.conf -ddKt$TRACE > $LOGDIR/$DATE-log$i &
-	else
-	    sudo $WPAS -g /tmp/wpas-wlan$i -G$GROUP -Dnl80211 -iwlan$i -c $DIR/p2p$i.conf -ddKt$TRACE > $LOGDIR/$DATE-log$i &
-	fi
-    done
-    sudo $HAPD -ddKt -g /var/run/hostapd-global -G $GROUP -ddKt > $LOGDIR/$DATE-hostapd &
-fi
+for i in 0 1 2; do
+    sudo $(printf -- "$VALGRIND_WPAS" $i) $WPAS -g /tmp/wpas-wlan$i -G$GROUP -Dnl80211 -iwlan$i -c $DIR/p2p$i.conf \
+         $(printf -- "$CONCURRENT_ARGS" $i) -ddKt$TRACE > $LOGDIR/$DATE-log$i &
+done
+sudo $VALGRIND_HAPD $HAPD -ddKt -g /var/run/hostapd-global -G $GROUP -ddKt > $LOGDIR/$DATE-hostapd &
+
 sleep 1
 sudo chown $USER $LOGDIR/$DATE-hwsim0.dump
 if [ "x$VALGRIND" = "xy" ]; then

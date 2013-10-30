@@ -131,9 +131,9 @@ conditions:
 # run P2P test cases with concurrent station interface under valgrind
 ./run-all.sh concurrent-valgrind
 
-run-all.sh directs debug logs into the logs subdirectory. Log file names
-include the current UNIX timestamp and a postfix to identify the
-specific log:
+run-all.sh directs debug logs into the logs subdirectory (or $LOGDIR if
+present in the environment). Log file names include the current UNIX
+timestamp and a postfix to identify the specific log:
 - log0 = wpa_supplicant debug log for the first radio
 - log1 = wpa_supplicant debug log for the second radio
 - log2 = wpa_supplicant debug log for the third radio

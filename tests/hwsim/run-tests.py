@@ -12,6 +12,7 @@ import sys
 import time
 from datetime import datetime
 import argparse
+import subprocess
 
 import logging
 logger = logging.getLogger(__name__)
@@ -46,6 +47,28 @@ def report(conn, build, commit, run, test, result, diff):
         except Exception, e:
             print "sqlite: " + str(e)
             print "sql: %r" % (params, )
+
+class Tracer(object):
+    def __init__(self, tracedir, testname):
+        self._tracedir = tracedir
+        self._testname = testname
+    def __enter__(self):
+        if not self._tracedir:
+            return
+        output = os.path.join(self._tracedir, '%s.dat' % (self._testname, ))
+        self._trace_cmd = subprocess.Popen(['sudo', 'trace-cmd', 'record', '-o', output, '-e', 'mac80211', '-e', 'cfg80211', 'sh', '-c', 'echo STARTED ; read l'],
+                                           stdin=subprocess.PIPE,
+                                           stdout=subprocess.PIPE,
+                                           stderr=open('/dev/null', 'w'),
+                                           cwd=self._tracedir)
+        l = self._trace_cmd.stdout.read(7)
+        while not 'STARTED' in l:
+            l += self._trace_cmd.stdout.read(1)
+    def __exit__(self, type, value, traceback):
+        if not self._tracedir:
+            return
+        self._trace_cmd.stdin.write('DONE\n')
+        self._trace_cmd.wait()
 
 def main():
     tests = []
@@ -86,6 +109,8 @@ def main():
     parser.add_argument('-b', metavar='<build>', dest='build', help='build ID')
     parser.add_argument('-L', action='store_true', dest='update_tests_db',
                         help='List tests (and update descriptions in DB)')
+    parser.add_argument('-T', metavar='<dir>', dest='tracedir',
+                        help='tracing directory - will get a trace file per test')
     parser.add_argument('-f', dest='testmodules', metavar='<test module>',
                         help='execute only tests from these test modules',
                         type=str, choices=[[]] + test_modules, nargs='+')
@@ -165,70 +190,71 @@ def main():
         if args.testmodules:
             if not t.__module__ in args.testmodules:
                 continue
-        reset_devs(dev, apdev)
-        logger.info("START " + t.__name__)
-        if log_to_file:
-            print "START " + t.__name__
-            sys.stdout.flush()
-        if t.__doc__:
-            logger.info("Test: " + t.__doc__)
-        start = datetime.now()
-        for d in dev:
-            try:
-                d.request("NOTE TEST-START " + t.__name__)
-            except Exception, e:
-                logger.info("Failed to issue TEST-START before " + t.__name__ + " for " + d.ifname)
-                logger.info(e)
-                print "FAIL " + t.__name__ + " - could not start test"
-                if conn:
-                    conn.close()
-                    conn = None
-                sys.exit(1)
-        try:
-            if t.func_code.co_argcount > 1:
-                res = t(dev, apdev)
-            else:
-                res = t(dev)
-            end = datetime.now()
-            diff = end - start
-            if res == "skip":
-                skipped.append(t.__name__)
-                result = "SKIP"
-            else:
-                passed.append(t.__name__)
-                result = "PASS"
-            report(conn, args.build, args.commit, run, t.__name__, result, diff)
-            result = result + " " + t.__name__ + " "
-            result = result + str(diff.total_seconds()) + " " + str(end)
-            logger.info(result)
-            if log_to_file or print_res:
-                print result
-                sys.stdout.flush()
-            if results_file:
-                f = open(results_file, 'a')
-                f.write(result + "\n")
-                f.close()
-        except Exception, e:
-            end = datetime.now()
-            diff = end - start
-            logger.info(e)
-            failed.append(t.__name__)
-            report(conn, args.build, args.commit, run, t.__name__, "FAIL", diff)
-            result = "FAIL " + t.__name__ + " " + str(diff.total_seconds()) + " " + str(end)
-            logger.info(result)
+        with Tracer(args.tracedir, t.__name__):
+            reset_devs(dev, apdev)
+            logger.info("START " + t.__name__)
             if log_to_file:
-                print result
+                print "START " + t.__name__
                 sys.stdout.flush()
-            if results_file:
-                f = open(results_file, 'a')
-                f.write(result + "\n")
-                f.close()
-        for d in dev:
+            if t.__doc__:
+                logger.info("Test: " + t.__doc__)
+            start = datetime.now()
+            for d in dev:
+                try:
+                    d.request("NOTE TEST-START " + t.__name__)
+                except Exception, e:
+                    logger.info("Failed to issue TEST-START before " + t.__name__ + " for " + d.ifname)
+                    logger.info(e)
+                    print "FAIL " + t.__name__ + " - could not start test"
+                    if conn:
+                        conn.close()
+                        conn = None
+                    sys.exit(1)
             try:
-                d.request("NOTE TEST-STOP " + t.__name__)
+                if t.func_code.co_argcount > 1:
+                    res = t(dev, apdev)
+                else:
+                    res = t(dev)
+                end = datetime.now()
+                diff = end - start
+                if res == "skip":
+                    skipped.append(t.__name__)
+                    result = "SKIP"
+                else:
+                    passed.append(t.__name__)
+                    result = "PASS"
+                report(conn, args.build, args.commit, run, t.__name__, result, diff)
+                result = result + " " + t.__name__ + " "
+                result = result + str(diff.total_seconds()) + " " + str(end)
+                logger.info(result)
+                if log_to_file or print_res:
+                    print result
+                    sys.stdout.flush()
+                if results_file:
+                    f = open(results_file, 'a')
+                    f.write(result + "\n")
+                    f.close()
             except Exception, e:
-                logger.info("Failed to issue TEST-STOP after " + t.__name__ + " for " + d.ifname)
+                end = datetime.now()
+                diff = end - start
                 logger.info(e)
+                failed.append(t.__name__)
+                report(conn, args.build, args.commit, run, t.__name__, "FAIL", diff)
+                result = "FAIL " + t.__name__ + " " + str(diff.total_seconds()) + " " + str(end)
+                logger.info(result)
+                if log_to_file:
+                    print result
+                    sys.stdout.flush()
+                if results_file:
+                    f = open(results_file, 'a')
+                    f.write(result + "\n")
+                    f.close()
+            for d in dev:
+                try:
+                    d.request("NOTE TEST-STOP " + t.__name__)
+                except Exception, e:
+                    logger.info("Failed to issue TEST-STOP after " + t.__name__ + " for " + d.ifname)
+                    logger.info(e)
 
     if not args.tests:
         reset_devs(dev, apdev)

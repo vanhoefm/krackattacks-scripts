@@ -44,9 +44,11 @@ fi
 if [ "x$1" = "xtrace" ] ; then
 	TRACE=trace
 	SUFFIX=$SUFFIX-trace
+	TRACE_ARGS="-T $LOGDIR"
 	shift
 else
 	unset TRACE
+	unset TRACE_ARGS
 fi
 
 if ! ./start.sh $CONCURRENT $VALGRIND $TRACE; then
@@ -55,14 +57,7 @@ if ! ./start.sh $CONCURRENT $VALGRIND $TRACE; then
 fi
 DATE=`ls -1tr $LOGDIR | tail -1 | cut -f1 -d-`
 rm $LOGDIR/last-debug 2>/dev/null
-RUNTESTS="./run-tests.py -l $LOGDIR/$DATE-run $DB -e $LOGDIR/$DATE-failed -r $LOGDIR/results.txt $CONCURRENT_TESTS $@"
-
-if [ "$TRACE" != "" ] ; then
-	sudo trace-cmd record -o $LOGDIR/$DATE-trace.dat -e mac80211 -e cfg80211 su $USER -c $RUNTESTS || errors=1
-else
-	$RUNTESTS || errors=1
-fi
-
+./run-tests.py $TRACE_ARGS -l $LOGDIR/$DATE-run $DB -e $LOGDIR/$DATE-failed -r $LOGDIR/results.txt $CONCURRENT_TESTS $@ || errors=1
 
 cat $LOGDIR/$DATE-run >> $LOGDIR/last-debug
 ./stop-wifi.sh

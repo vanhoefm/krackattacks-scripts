@@ -200,6 +200,10 @@ def main():
     skipped = []
     failed = []
 
+    # make sure nothing is left over from previous runs
+    # (if there were any other manual runs or we crashed)
+    reset_devs(dev, apdev)
+
     if args.dmesg:
         subprocess.call(['sudo', 'dmesg', '-c'], stdout=open('/dev/null', 'w'))
 
@@ -211,7 +215,6 @@ def main():
             if not t.__module__ in args.testmodules:
                 continue
         with DataCollector(args.logdir, t.__name__, args.tracing, args.dmesg):
-            reset_devs(dev, apdev)
             logger.info("START " + t.__name__)
             if log_to_file:
                 print "START " + t.__name__
@@ -275,9 +278,7 @@ def main():
                 except Exception, e:
                     logger.info("Failed to issue TEST-STOP after " + t.__name__ + " for " + d.ifname)
                     logger.info(e)
-
-    if not args.tests:
-        reset_devs(dev, apdev)
+            reset_devs(dev, apdev)
 
     if conn:
         conn.close()

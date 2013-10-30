@@ -10,7 +10,7 @@ fi
 if [ -z "$DBFILE" ]; then
     DB=""
 else
-    DB="-S $DBFILE"
+    DB="-S $DBFILE --commit $(git rev-parse HEAD)"
     if [ -n "$BUILD" ]; then
 	DB="$DB -b $BUILD"
     fi

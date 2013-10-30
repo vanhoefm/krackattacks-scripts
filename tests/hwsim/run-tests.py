@@ -63,7 +63,6 @@ def main():
     test_names = list(set([t.__name__ for t in tests]))
 
     run = None
-    commit = None
     print_res = False
 
     parser = argparse.ArgumentParser(description='hwsim test runner')
@@ -82,6 +81,8 @@ def main():
                         help='results filename')
     parser.add_argument('-S', metavar='<sqlite3 db>', dest='database',
                         help='database to write results to')
+    parser.add_argument('--commit', metavar='<commit id>',
+                        help='commit ID, only for database')
     parser.add_argument('-b', metavar='<build>', dest='build', help='build ID')
     parser.add_argument('-L', action='store_true', dest='update_tests_db',
                         help='List tests (and update descriptions in DB)')
@@ -119,13 +120,6 @@ def main():
 
     if conn:
         run = str(int(time.time()))
-        try:
-            with open("commit") as f:
-                val = f.readlines()
-                if len(val) > 0:
-                    commit = val[0].rstrip()
-        except IOError:
-            pass
 
     if args.update_tests_db:
         for t in tests:
@@ -203,7 +197,7 @@ def main():
             else:
                 passed.append(t.__name__)
                 result = "PASS"
-            report(conn, args.build, commit, run, t.__name__, result, diff)
+            report(conn, args.build, args.commit, run, t.__name__, result, diff)
             result = result + " " + t.__name__ + " "
             result = result + str(diff.total_seconds()) + " " + str(end)
             logger.info(result)
@@ -219,7 +213,7 @@ def main():
             diff = end - start
             logger.info(e)
             failed.append(t.__name__)
-            report(conn, args.build, commit, run, t.__name__, "FAIL", diff)
+            report(conn, args.build, args.commit, run, t.__name__, "FAIL", diff)
             result = "FAIL " + t.__name__ + " " + str(diff.total_seconds()) + " " + str(end)
             logger.info(result)
             if log_to_file:

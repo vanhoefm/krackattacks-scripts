@@ -85,16 +85,16 @@ def main():
     parser.add_argument('-b', metavar='<build>', dest='build', help='build ID')
     parser.add_argument('-L', action='store_true', dest='update_tests_db',
                         help='List tests (and update descriptions in DB)')
-    parser.add_argument('-f', dest='testmodule', metavar='<test module>',
-                        help='execute only tests from this test module',
-                        type=str, choices=[[]] + test_modules)
+    parser.add_argument('-f', dest='testmodules', metavar='<test module>',
+                        help='execute only tests from these test modules',
+                        type=str, choices=[[]] + test_modules, nargs='+')
     parser.add_argument('tests', metavar='<test>', nargs='*', type=str,
                         help='tests to run (only valid without -f)',
                         choices=[[]] + test_names)
 
     args = parser.parse_args()
 
-    if args.tests and args.testmodule:
+    if args.tests and args.testmodules:
         print 'Invalid arguments - both test module and tests given'
         sys.exit(2)
 
@@ -168,8 +168,8 @@ def main():
         if args.tests:
             if not t.__name__ in args.tests:
                 continue
-        if args.testmodule:
-            if not t.__module__ == args.testmodule:
+        if args.testmodules:
+            if not t.__module__ in args.testmodules:
                 continue
         reset_devs(dev, apdev)
         logger.info("START " + t.__name__)

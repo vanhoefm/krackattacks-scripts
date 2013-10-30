@@ -218,6 +218,7 @@ struct i802_bss {
 	unsigned int added_bridge:1;
 	unsigned int in_deinit:1;
 	unsigned int wdev_id_set:1;
+	unsigned int added_if:1;
 
 	u8 addr[ETH_ALEN];
 
@@ -9383,6 +9384,7 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 		new_bss->next = drv->first_bss->next;
 		new_bss->freq = drv->first_bss->freq;
 		new_bss->ctx = bss_ctx;
+		new_bss->added_if = 1;
 		drv->first_bss->next = new_bss;
 		if (drv_priv)
 			*drv_priv = new_bss;
@@ -9410,7 +9412,7 @@ static int wpa_driver_nl80211_if_remove(struct i802_bss *bss,
 
 	wpa_printf(MSG_DEBUG, "nl80211: %s(type=%d ifname=%s) ifindex=%d",
 		   __func__, type, ifname, ifindex);
-	if (ifindex > 0)
+	if (ifindex > 0 && bss->added_if)
 		nl80211_remove_iface(drv, ifindex);
 
 #ifdef HOSTAPD
@@ -9448,6 +9450,18 @@ static int wpa_driver_nl80211_if_remove(struct i802_bss *bss,
 		if (bss)
 			wpa_printf(MSG_INFO, "nl80211: %s - could not find "
 				   "BSS %p in the list", __func__, bss);
+	} else {
+		nl80211_teardown_ap(bss);
+		wpa_driver_nl80211_del_beacon(drv);
+		nl80211_destroy_bss(bss);
+		i802_set_iface_flags(bss, 0);
+		if (drv->first_bss->next) {
+			drv->first_bss = drv->first_bss->next;
+			drv->ctx = drv->first_bss->ctx;
+			os_free(bss);
+		} else {
+			wpa_printf(MSG_DEBUG, "nl80211: No second BSS to reassign context to");
+		}
 	}
 #endif /* HOSTAPD */
 

@@ -257,8 +257,7 @@ static void hostapd_free_hapd_data(struct hostapd_data *hapd)
 
 	authsrv_deinit(hapd);
 
-	if (hapd->interface_added &&
-	    hostapd_if_remove(hapd, WPA_IF_AP_BSS, hapd->conf->iface)) {
+	if (hostapd_if_remove(hapd, WPA_IF_AP_BSS, hapd->conf->iface)) {
 		wpa_printf(MSG_WARNING, "Failed to remove BSS interface %s",
 			   hapd->conf->iface);
 	}
@@ -644,7 +643,6 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 			}
 		}
 
-		hapd->interface_added = 1;
 		if (hostapd_if_add(hapd->iface->bss[0], WPA_IF_AP_BSS,
 				   hapd->conf->iface, hapd->own_addr, hapd,
 				   &hapd->drv_priv, force_ifname, if_addr,
@@ -1128,13 +1126,13 @@ hostapd_alloc_bss_data(struct hostapd_iface *hapd_iface,
 
 void hostapd_interface_deinit(struct hostapd_iface *iface)
 {
-	size_t j;
+	int j;
 
 	if (iface == NULL)
 		return;
 
 	hostapd_cleanup_iface_pre(iface);
-	for (j = 0; j < iface->num_bss; j++) {
+	for (j = iface->num_bss - 1; j >= 0; j--) {
 		struct hostapd_data *hapd = iface->bss[j];
 		hostapd_free_stas(hapd);
 		hostapd_flush_old_stations(hapd, WLAN_REASON_DEAUTH_LEAVING);

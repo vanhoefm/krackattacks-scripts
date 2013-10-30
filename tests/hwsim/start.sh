@@ -64,7 +64,7 @@ for i in 0 1 2; do
     sudo $(printf -- "$VALGRIND_WPAS" $i) $WPAS -g /tmp/wpas-wlan$i -G$GROUP -Dnl80211 -iwlan$i -c $DIR/p2p$i.conf \
          $(printf -- "$CONCURRENT_ARGS" $i) -ddKt$TRACE > $LOGDIR/$DATE-log$i &
 done
-sudo $VALGRIND_HAPD $HAPD -ddKt -g /var/run/hostapd-global -G $GROUP -ddKt > $LOGDIR/$DATE-hostapd &
+sudo $VALGRIND_HAPD $HAPD -ddKt$TRACE -g /var/run/hostapd-global -G $GROUP -ddKt > $LOGDIR/$DATE-hostapd &
 
 sleep 1
 sudo chown $USER $LOGDIR/$DATE-hwsim0.dump

@@ -157,6 +157,12 @@ CONFIG_IPV6=y
 # Disabled by default.
 #CONFIG_DEBUG_FILE=y
 
+# Add support for sending all debug messages (regardless of debug verbosity)
+# to the Linux kernel tracing facility. This helps debug the entire stack by
+# making it easy to record everything happening from the driver up into the
+# same file, e.g., using trace-cmd.
+#CONFIG_DEBUG_LINUX_TRACING=y
+
 # Remove support for RADIUS accounting
 #CONFIG_NO_ACCOUNTING=y
 

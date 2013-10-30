@@ -629,6 +629,10 @@ static void usage(void)
 #ifdef CONFIG_DEBUG_FILE
 		"   -f   log output to debug file instead of stdout\n"
 #endif /* CONFIG_DEBUG_FILE */
+#ifdef CONFIG_DEBUG_LINUX_TRACING
+		"   -T = record to Linux tracing in addition to logging\n"
+		"        (records all messages regardless of debug verbosity)\n"
+#endif /* CONFIG_DEBUG_LINUX_TRACING */
 		"   -t   include timestamps in some debug messages\n"
 		"   -v   show hostapd version\n");
 
@@ -697,6 +701,9 @@ int main(int argc, char *argv[])
 	const char *entropy_file = NULL;
 	char **bss_config = NULL, **tmp_bss;
 	size_t num_bss_configs = 0;
+#ifdef CONFIG_DEBUG_LINUX_TRACING
+	int enable_trace_dbg = 0;
+#endif /* CONFIG_DEBUG_LINUX_TRACING */
 
 	if (os_program_init())
 		return -1;
@@ -713,7 +720,7 @@ int main(int argc, char *argv[])
 	interfaces.global_ctrl_sock = -1;
 
 	for (;;) {
-		c = getopt(argc, argv, "b:Bde:f:hKP:tvg:G:");
+		c = getopt(argc, argv, "b:Bde:f:hKP:Ttvg:G:");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -744,6 +751,11 @@ int main(int argc, char *argv[])
 		case 't':
 			wpa_debug_timestamp++;
 			break;
+#ifdef CONFIG_DEBUG_LINUX_TRACING
+		case 'T':
+			enable_trace_dbg = 1;
+			break;
+#endif /* CONFIG_DEBUG_LINUX_TRACING */
 		case 'v':
 			show_version();
 			exit(1);
@@ -779,6 +791,15 @@ int main(int argc, char *argv[])
 
 	if (log_file)
 		wpa_debug_open_file(log_file);
+#ifdef CONFIG_DEBUG_LINUX_TRACING
+	if (enable_trace_dbg) {
+		int tret = wpa_debug_open_linux_tracing();
+		if (tret) {
+			wpa_printf(MSG_ERROR, "Failed to enable trace logging");
+			return -1;
+		}
+	}
+#endif /* CONFIG_DEBUG_LINUX_TRACING */
 
 	interfaces.count = argc - optind;
 	if (interfaces.count || num_bss_configs) {
@@ -867,6 +888,7 @@ int main(int argc, char *argv[])
 
 	if (log_file)
 		wpa_debug_close_file();
+	wpa_debug_close_linux_tracing();
 
 	os_free(bss_config);
 

@@ -49,7 +49,7 @@ fi
 if [ "x$1" = "xtrace" ] ; then
 	TRACE=trace
 	SUFFIX=$SUFFIX-trace
-	TRACE_ARGS="-T $LOGDIR"
+	TRACE_ARGS="-T"
 	shift
 else
 	unset TRACE
@@ -66,7 +66,7 @@ fi
 if ! [ -z "$LOGBASEDIR" ] ; then
 	rm $LOGBASEDIR/last-debug 2>/dev/null
 fi
-./run-tests.py $TRACE_ARGS -l $LOGDIR/run $DB -e $LOGDIR/failed -r $LOGDIR/results.txt $CONCURRENT_TESTS $@ || errors=1
+./run-tests.py --logdir "$LOGDIR" $TRACE_ARGS -l run $DB -e failed -r results.txt $CONCURRENT_TESTS $@ || errors=1
 
 if ! [ -z "$LOGBASEDIR" ] ; then
 	cat $LOGDIR/run >> $LOGBASEDIR/last-debug

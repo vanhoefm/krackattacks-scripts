@@ -89,6 +89,9 @@ def main():
     print_res = False
 
     parser = argparse.ArgumentParser(description='hwsim test runner')
+    parser.add_argument('--logdir', metavar='<directory>', default='logs',
+                        help='log output directory for all other options, ' +
+                             'must be given if other log options are used')
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-d', const=logging.DEBUG, action='store_const',
                        dest='loglevel', default=logging.INFO,
@@ -96,12 +99,15 @@ def main():
     group.add_argument('-q', const=logging.WARNING, action='store_const',
                        dest='loglevel', help="be quiet")
     group.add_argument('-l', metavar='<filename>', dest='logfile',
-                       help='debug log filename')
+                       help='debug log filename (in log directory)')
 
     parser.add_argument('-e', metavar="<filename>", dest='errorfile',
-                        help='error filename')
+                        nargs='?', const="failed",
+                        help='error filename (in log directory)')
     parser.add_argument('-r', metavar="<filename>", dest='resultsfile',
-                        help='results filename')
+                        nargs='?', const="results.txt",
+                        help='results filename (in log directory)')
+
     parser.add_argument('-S', metavar='<sqlite3 db>', dest='database',
                         help='database to write results to')
     parser.add_argument('--commit', metavar='<commit id>',
@@ -109,8 +115,8 @@ def main():
     parser.add_argument('-b', metavar='<build>', dest='build', help='build ID')
     parser.add_argument('-L', action='store_true', dest='update_tests_db',
                         help='List tests (and update descriptions in DB)')
-    parser.add_argument('-T', metavar='<dir>', dest='tracedir',
-                        help='tracing directory - will get a trace file per test')
+    parser.add_argument('-T', action='store_true', dest='tracing',
+                        help='collect tracing per test case (in log directory)')
     parser.add_argument('-f', dest='testmodules', metavar='<test module>',
                         help='execute only tests from these test modules',
                         type=str, choices=[[]] + test_modules, nargs='+')
@@ -124,8 +130,14 @@ def main():
         print 'Invalid arguments - both test module and tests given'
         sys.exit(2)
 
+    if (args.logfile or args.errorfile or
+        args.resultsfile or args.tracing):
+        if not args.logdir:
+            print 'Need --logdir for the given options'
+            sys.exit(2)
+
     if args.logfile:
-        logging.basicConfig(filename=args.logfile,
+        logging.basicConfig(filename=os.path.join(args.logdir, args.logfile),
                             level=logging.DEBUG)
         log_to_file = True
     else:
@@ -134,8 +146,12 @@ def main():
         if args.loglevel == logging.WARNING:
             print_res = True
 
-    error_file = args.errorfile
-    results_file = args.resultsfile
+    error_file = args.errorfile and os.path.join(args.logdir, args.errorfile)
+    results_file = args.resultsfile and os.path.join(args.logdir, args.resultsfile)
+
+    tracedir = None
+    if args.tracing:
+        tracedir = args.logdir
 
     if args.database:
         import sqlite3
@@ -190,7 +206,7 @@ def main():
         if args.testmodules:
             if not t.__module__ in args.testmodules:
                 continue
-        with Tracer(args.tracedir, t.__name__):
+        with Tracer(tracedir, t.__name__):
             reset_devs(dev, apdev)
             logger.info("START " + t.__name__)
             if log_to_file:

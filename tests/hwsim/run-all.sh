@@ -44,6 +44,7 @@ fi
 if [ "x$1" = "xtrace" ] ; then
 	TRACE=trace
 	SUFFIX=$SUFFIX-trace
+	shift
 else
 	unset TRACE
 fi
@@ -54,7 +55,7 @@ if ! ./start.sh $CONCURRENT $VALGRIND $TRACE; then
 fi
 DATE=`ls -1tr $LOGDIR | tail -1 | cut -f1 -d-`
 rm $LOGDIR/last-debug 2>/dev/null
-RUNTESTS="./run-tests.py -l $LOGDIR/$DATE-run $DB -e $LOGDIR/$DATE-failed -r $LOGDIR/results.txt $CONCURRENT_TESTS"
+RUNTESTS="./run-tests.py -l $LOGDIR/$DATE-run $DB -e $LOGDIR/$DATE-failed -r $LOGDIR/results.txt $CONCURRENT_TESTS $@"
 
 if [ "$TRACE" != "" ] ; then
 	sudo trace-cmd record -o $LOGDIR/$DATE-trace.dat -e mac80211 -e cfg80211 su $USER -c $RUNTESTS || errors=1

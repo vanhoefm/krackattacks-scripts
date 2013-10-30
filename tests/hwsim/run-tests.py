@@ -38,13 +38,14 @@ def report(conn, build, commit, run, test, result, diff):
             build = ''
         if not commit:
             commit = ''
-        sql = "INSERT INTO results(test,result,run,time,duration,build,commitid) VALUES('" + test.replace('test_', '', 1) + "', '" + result + "', " + str(run) + ", " + str(time.time()) + ", " + str(diff.total_seconds()) + ", '" + build + "', '" + commit + "')"
+        sql = "INSERT INTO results(test,result,run,time,duration,build,commitid) VALUES(?, ?, ?, ?, ?, ?, ?)"
+        params = (test.replace('test_', '', 1), result, run, time.time(), diff.total_seconds(), build, commit)
         try:
-            conn.execute(sql)
+            conn.execute(sql, params)
             conn.commit()
         except Exception, e:
             print "sqlite: " + str(e)
-            print "sql: " + sql
+            print "sql: %r" % (params, )
 
 def main():
     test_file = None
@@ -117,12 +118,13 @@ def main():
         for t in tests:
             print t.__name__ + " - " + t.__doc__
             if conn:
-                sql = 'INSERT OR REPLACE INTO tests(test,description) VALUES ("' + t.__name__.replace('test_', '', 1) + '", "' + t.__doc__ + '")';
+                sql = 'INSERT OR REPLACE INTO tests(test,description) VALUES (?, ?)'
+                params = (t.__name__.replace('test_', '', 1), t.__doc__)
                 try:
-                    conn.execute(sql)
+                    conn.execute(sql, params)
                 except Exception, e:
                     print "sqlite: " + str(e)
-                    print "sql: " + sql
+                    print "sql: %r" % (params,)
         if conn:
             conn.commit()
             conn.close()

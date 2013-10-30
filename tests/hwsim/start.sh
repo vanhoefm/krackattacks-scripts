@@ -33,8 +33,8 @@ if [ "$1" = "valgrind" ]; then
     VALGRIND=y
     VALGRIND_WPAS="valgrind --log-file=$LOGDIR/$DATE-valgrind-wlan%d"
     VALGRIND_HAPD="valgrind --log-file=$LOGDIR/$DATE-valgrind-hostapd"
-    chmod a+rx $WPAS
-    chmod a+rx $HAPD
+    chmod -f a+rx $WPAS
+    chmod -f a+rx $HAPD
     shift
 else
     unset VALGRIND

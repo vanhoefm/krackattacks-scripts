@@ -1,0 +1,19 @@
+These scripts allow you to run the hwsim tests inside a KVM virtual machine.
+
+To set it up, first compile a kernel with the kernel-config file as the
+.config. You can adjust it as needed, the configuration is for a 64-bit
+x86 system and should be close to minimal. The architecture must be the
+same as your host since the host's filesystem is used.
+
+Install the required tools: at least 'kvm', if you want tracing trace-cmd,
+valgrind if you want, etc.
+
+Compile the hwsim tests as per the instructions given, you may have to
+install some extra development packages (e.g. binutils-dev for libbfd).
+
+Create a vm-config file and put the KERNELDIR option into it (see the
+vm-run.sh script). If you want valgrind, also increase the memory size.
+
+Now you can run the vm-run.sh script and it will execute the tests using
+your system's root filesystem (read-only) inside the VM. The options you
+give it are passed through to run-all.sh, see there.

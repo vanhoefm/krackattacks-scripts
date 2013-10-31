@@ -40,7 +40,7 @@ def report(conn, build, commit, run, test, result, diff):
         if not commit:
             commit = ''
         sql = "INSERT INTO results(test,result,run,time,duration,build,commitid) VALUES(?, ?, ?, ?, ?, ?, ?)"
-        params = (test.replace('test_', '', 1), result, run, time.time(), diff.total_seconds(), build, commit)
+        params = (test, result, run, time.time(), diff.total_seconds(), build, commit)
         try:
             conn.execute(sql, params)
             conn.commit()
@@ -86,7 +86,7 @@ def main():
                 if s.startswith("test_"):
                     func = mod.__dict__.get(s)
                     tests.append(func)
-    test_names = list(set([t.__name__ for t in tests]))
+    test_names = list(set([t.__name__.replace('test_', '', 1) for t in tests]))
 
     run = None
     print_res = False
@@ -165,10 +165,11 @@ def main():
 
     if args.update_tests_db:
         for t in tests:
-            print t.__name__ + " - " + t.__doc__
+            name = t.__name__.replace('test_', '', 1)
+            print name + " - " + t.__doc__
             if conn:
                 sql = 'INSERT OR REPLACE INTO tests(test,description) VALUES (?, ?)'
-                params = (t.__name__.replace('test_', '', 1), t.__doc__)
+                params = (name, t.__doc__)
                 try:
                     conn.execute(sql, params)
                 except Exception, e:
@@ -208,27 +209,28 @@ def main():
         subprocess.call(['sudo', 'dmesg', '-c'], stdout=open('/dev/null', 'w'))
 
     for t in tests:
+        name = t.__name__.replace('test_', '', 1)
         if args.tests:
-            if not t.__name__ in args.tests:
+            if not name in args.tests:
                 continue
         if args.testmodules:
             if not t.__module__ in args.testmodules:
                 continue
-        with DataCollector(args.logdir, t.__name__, args.tracing, args.dmesg):
-            logger.info("START " + t.__name__)
+        with DataCollector(args.logdir, name, args.tracing, args.dmesg):
+            logger.info("START " + name)
             if log_to_file:
-                print "START " + t.__name__
+                print "START " + name
                 sys.stdout.flush()
             if t.__doc__:
                 logger.info("Test: " + t.__doc__)
             start = datetime.now()
             for d in dev:
                 try:
-                    d.request("NOTE TEST-START " + t.__name__)
+                    d.request("NOTE TEST-START " + name)
                 except Exception, e:
-                    logger.info("Failed to issue TEST-START before " + t.__name__ + " for " + d.ifname)
+                    logger.info("Failed to issue TEST-START before " + name + " for " + d.ifname)
                     logger.info(e)
-                    print "FAIL " + t.__name__ + " - could not start test"
+                    print "FAIL " + name + " - could not start test"
                     if conn:
                         conn.close()
                         conn = None
@@ -241,13 +243,13 @@ def main():
                 end = datetime.now()
                 diff = end - start
                 if res == "skip":
-                    skipped.append(t.__name__)
+                    skipped.append(name)
                     result = "SKIP"
                 else:
-                    passed.append(t.__name__)
+                    passed.append(name)
                     result = "PASS"
-                report(conn, args.build, args.commit, run, t.__name__, result, diff)
-                result = result + " " + t.__name__ + " "
+                report(conn, args.build, args.commit, run, name, result, diff)
+                result = result + " " + name + " "
                 result = result + str(diff.total_seconds()) + " " + str(end)
                 logger.info(result)
                 if log_to_file or print_res:
@@ -261,9 +263,9 @@ def main():
                 end = datetime.now()
                 diff = end - start
                 logger.info(e)
-                failed.append(t.__name__)
-                report(conn, args.build, args.commit, run, t.__name__, "FAIL", diff)
-                result = "FAIL " + t.__name__ + " " + str(diff.total_seconds()) + " " + str(end)
+                failed.append(name)
+                report(conn, args.build, args.commit, run, name, "FAIL", diff)
+                result = "FAIL " + name + " " + str(diff.total_seconds()) + " " + str(end)
                 logger.info(result)
                 if log_to_file:
                     print result
@@ -274,9 +276,9 @@ def main():
                     f.close()
             for d in dev:
                 try:
-                    d.request("NOTE TEST-STOP " + t.__name__)
+                    d.request("NOTE TEST-STOP " + name)
                 except Exception, e:
-                    logger.info("Failed to issue TEST-STOP after " + t.__name__ + " for " + d.ifname)
+                    logger.info("Failed to issue TEST-STOP after " + name + " for " + d.ifname)
                     logger.info(e)
             reset_devs(dev, apdev)
 

@@ -154,7 +154,7 @@ verbose debug output) and -q (less verbose output) on the command
 line. "-f <test_filename(without.py)>" can be used to specify that all
 test cases from a single file are to be run. Test name as the last
 command line argument can be specified that a single test case is to be
-run (e.g., "./run-tests.py test_ap_pmf_required").
+run (e.g., "./run-tests.py ap_pmf_required").
 
 
 Adding/modifying test cases
@@ -171,7 +171,8 @@ line is a convenient way of verifying functionality.
 
 run-tests.py will automatically import all test cases from the test_*.py
 files in this directory. All functions starting with the "test_" prefix
-in these files are assumed to be test cases.
+in these files are assumed to be test cases. Each test case is named by
+the function name following the "test_" prefix.
 
 
 Results database

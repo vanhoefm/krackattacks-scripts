@@ -56,8 +56,7 @@ if [ "$CONCURRENT" = "y" ]; then
 fi
 mkdir -p $LOGDIR
 sudo ifconfig hwsim0 up
-sudo $WLANTEST -i hwsim0 -c -d > $LOGDIR/hwsim0 &
-sudo tcpdump -ni hwsim0 -s 2500 -w $LOGDIR/hwsim0.dump > $LOGDIR/tcpdump 2>&1 &
+sudo $WLANTEST -i hwsim0 -n $LOGDIR/hwsim0.pcapng -c -d > $LOGDIR/hwsim0 &
 for i in 0 1 2; do
     sudo $(printf -- "$VALGRIND_WPAS" $i) $WPAS -g /tmp/wpas-wlan$i -G$GROUP -Dnl80211 -iwlan$i -c $DIR/p2p$i.conf \
          $(printf -- "$CONCURRENT_ARGS" $i) -ddKt$TRACE > $LOGDIR/log$i &
@@ -65,7 +64,7 @@ done
 sudo $VALGRIND_HAPD $HAPD -ddKt$TRACE -g /var/run/hostapd-global -G $GROUP -ddKt > $LOGDIR/hostapd &
 
 sleep 1
-sudo chown -f $USER $LOGDIR/hwsim0.dump
+sudo chown -f $USER $LOGDIR/hwsim0.pcapng
 if [ "x$VALGRIND" = "xy" ]; then
     sudo chown -f $USER $LOGDIR/*valgrind*
 fi

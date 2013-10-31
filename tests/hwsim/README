@@ -139,7 +139,7 @@ timestamp and a postfix to identify the specific log:
 - log2 = wpa_supplicant debug log for the third radio
 - hostapd = hostapd debug log
 - hwsim0 = wlantest debug log
-- hwsim0.dump = pcap containing all frames exchanged during the tests
+- hwsim0.pcapng = capture with all frames exchanged during the tests
 - tcpdump = tcpdump output
 - run = debug prints from the test scripts
 - trace.dat = Linux tracing record (if enabled)

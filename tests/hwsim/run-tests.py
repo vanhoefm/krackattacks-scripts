@@ -107,10 +107,6 @@ def main():
     parser.add_argument('-e', metavar="<filename>", dest='errorfile',
                         nargs='?', const="failed",
                         help='error filename (in log directory)')
-    parser.add_argument('-r', metavar="<filename>", dest='resultsfile',
-                        nargs='?', const="results.txt",
-                        help='results filename (in log directory)')
-
     parser.add_argument('-S', metavar='<sqlite3 db>', dest='database',
                         help='database to write results to')
     parser.add_argument('--commit', metavar='<commit id>',
@@ -158,7 +154,6 @@ def main():
             print_res = True
 
     error_file = args.errorfile and os.path.join(args.logdir, args.errorfile)
-    results_file = args.resultsfile and os.path.join(args.logdir, args.resultsfile)
 
     if args.database:
         import sqlite3
@@ -270,10 +265,6 @@ def main():
                 if log_to_file or print_res:
                     print result
                     sys.stdout.flush()
-                if results_file:
-                    f = open(results_file, 'a')
-                    f.write(result + "\n")
-                    f.close()
             except Exception, e:
                 end = datetime.now()
                 diff = end - start
@@ -285,10 +276,6 @@ def main():
                 if log_to_file:
                     print result
                     sys.stdout.flush()
-                if results_file:
-                    f = open(results_file, 'a')
-                    f.write(result + "\n")
-                    f.close()
             for d in dev:
                 try:
                     d.request("NOTE TEST-STOP " + name)

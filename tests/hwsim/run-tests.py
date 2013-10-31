@@ -161,7 +161,7 @@ def main():
         conn = None
 
     if conn:
-        run = str(int(time.time()))
+        run = int(time.time())
 
     if args.update_tests_db:
         for t in tests:

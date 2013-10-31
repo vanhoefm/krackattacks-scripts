@@ -8,8 +8,11 @@ WLANTEST=$DIR/../../wlantest/wlantest
 HLR_AUC_GW=$DIR/../../hostapd/hlr_auc_gw
 
 if [ -z "$LOGDIR" ] ; then
-    LOGDIR="$DIR/logs/$(date +%s)"
+    DATE="$(date +%s)"
+    LOGDIR="$DIR/logs/$DATE"
     mkdir -p $LOGDIR
+    rm -rf $DIR/logs/current
+    ln -sf $DATE $DIR/logs/current
 fi
 
 if groups | tr ' ' "\n" | grep -q ^admin$; then

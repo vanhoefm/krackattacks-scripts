@@ -92,7 +92,7 @@ def main():
     print_res = False
 
     parser = argparse.ArgumentParser(description='hwsim test runner')
-    parser.add_argument('--logdir', metavar='<directory>', default='logs',
+    parser.add_argument('--logdir', metavar='<directory>',
                         help='log output directory for all other options, ' +
                              'must be given if other log options are used')
     group = parser.add_mutually_exclusive_group()
@@ -135,11 +135,11 @@ def main():
         print 'Invalid arguments - both test module and tests given'
         sys.exit(2)
 
-    if (args.logfile or args.errorfile or
-        args.resultsfile or args.tracing):
-        if not args.logdir:
-            print 'Need --logdir for the given options'
-            sys.exit(2)
+    if not args.logdir:
+        if os.path.exists('logs/current'):
+            args.logdir = 'logs/current'
+        else:
+            args.logdir = 'logs'
 
     if args.logfile:
         logger.setLevel(logging.DEBUG)

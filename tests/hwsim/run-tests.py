@@ -104,9 +104,6 @@ def main():
     group.add_argument('-l', action='store_true', dest='logfile',
                        help='store debug log to a file (in log directory)')
 
-    parser.add_argument('-e', metavar="<filename>", dest='errorfile',
-                        nargs='?', const="failed",
-                        help='error filename (in log directory)')
     parser.add_argument('-S', metavar='<sqlite3 db>', dest='database',
                         help='database to write results to')
     parser.add_argument('--commit', metavar='<commit id>',
@@ -152,8 +149,6 @@ def main():
         log_to_file = False
         if args.loglevel == logging.WARNING:
             print_res = True
-
-    error_file = args.errorfile and os.path.join(args.logdir, args.errorfile)
 
     if args.database:
         import sqlite3
@@ -316,10 +311,6 @@ def main():
         logger.info("passed " + str(len(passed)) + " test case(s)")
         logger.info("skipped " + str(len(skipped)) + " test case(s)")
         logger.info("failed tests: " + str(failed))
-        if error_file:
-            f = open(error_file, 'w')
-            f.write(str(failed) + '\n')
-            f.close()
         sys.exit(1)
     logger.info("passed all " + str(len(passed)) + " test case(s)")
     if len(skipped):

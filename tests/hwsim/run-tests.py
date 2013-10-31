@@ -30,6 +30,8 @@ def reset_devs(dev, apdev):
         except Exception, e:
             logger.info("Failed to reset device " + d.ifname)
             print str(e)
+    hapd.remove('wlan3-3')
+    hapd.remove('wlan3-2')
     for ap in apdev:
         hapd.remove(ap['ifname'])
 

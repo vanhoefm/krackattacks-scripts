@@ -24,6 +24,12 @@ class HostapdGlobal:
         if not "OK" in res:
             raise Exception("Could not add hostapd interface " + ifname)
 
+    def add_bss(self, phy, confname, ignore_error=False):
+        res = self.ctrl.request("ADD bss_config=" + phy + ":" + confname)
+        if not "OK" in res:
+            if not ignore_error:
+                raise Exception("Could not add hostapd BSS")
+
     def remove(self, ifname):
         self.ctrl.request("REMOVE " + ifname)
 
@@ -119,6 +125,19 @@ def add_ap(ifname, params):
             else:
                 hapd.set(f, v)
         hapd.enable()
+
+def add_bss(phy, ifname, confname, ignore_error=False):
+    logger.info("Starting BSS phy=" + phy + " ifname=" + ifname)
+    hapd_global = HostapdGlobal()
+    hapd_global.add_bss(phy, confname, ignore_error)
+    hapd = Hostapd(ifname)
+    if not hapd.ping():
+        raise Exception("Could not ping hostapd")
+
+def remove_bss(ifname):
+    logger.info("Removing BSS " + ifname)
+    hapd_global = HostapdGlobal()
+    hapd_global.remove(ifname)
 
 def wpa2_params(ssid=None, passphrase=None):
     params = { "wpa": "2",

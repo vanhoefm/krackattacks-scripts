@@ -48,7 +48,7 @@ int hostapd_set_ssid(struct hostapd_data *hapd, const u8 *buf, size_t len);
 int hostapd_if_add(struct hostapd_data *hapd, enum wpa_driver_if_type type,
 		   const char *ifname, const u8 *addr, void *bss_ctx,
 		   void **drv_priv, char *force_ifname, u8 *if_addr,
-		   const char *bridge);
+		   const char *bridge, int use_existing);
 int hostapd_if_remove(struct hostapd_data *hapd, enum wpa_driver_if_type type,
 		      const char *ifname);
 int hostapd_set_ieee8021x(struct hostapd_data *hapd,

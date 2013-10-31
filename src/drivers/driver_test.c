@@ -1059,7 +1059,7 @@ static int test_driver_if_add(void *priv, enum wpa_driver_if_type type,
 			      const char *ifname, const u8 *addr,
 			      void *bss_ctx, void **drv_priv,
 			      char *force_ifname, u8 *if_addr,
-			      const char *bridge)
+			      const char *bridge, int use_existing)
 {
 	struct test_driver_bss *dbss = priv;
 	struct wpa_driver_test_data *drv = dbss->drv;

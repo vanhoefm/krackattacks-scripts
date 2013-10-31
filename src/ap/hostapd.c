@@ -608,7 +608,8 @@ hostapd_das_disconnect(void *ctx, struct radius_das_attrs *attr)
 /**
  * hostapd_setup_bss - Per-BSS setup (initialization)
  * @hapd: Pointer to BSS data
- * @first: Whether this BSS is the first BSS of an interface
+ * @first: Whether this BSS is the first BSS of an interface; -1 = not first,
+ *	but interface may exist
  *
  * This function is used to initialize all per-BSS data structures and
  * resources. This gets called in a loop for each BSS when an interface is
@@ -623,7 +624,7 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 	char force_ifname[IFNAMSIZ];
 	u8 if_addr[ETH_ALEN];
 
-	if (!first) {
+	if (!first || first == -1) {
 		if (hostapd_mac_comp_empty(hapd->conf->bssid) == 0) {
 			/* Allocate the next available BSSID. */
 			do {
@@ -647,7 +648,7 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 				   hapd->conf->iface, hapd->own_addr, hapd,
 				   &hapd->drv_priv, force_ifname, if_addr,
 				   hapd->conf->bridge[0] ? hapd->conf->bridge :
-				   NULL)) {
+				   NULL, first == -1)) {
 			wpa_printf(MSG_ERROR, "Failed to add BSS (BSSID="
 				   MACSTR ")", MAC2STR(hapd->own_addr));
 			return -1;
@@ -1578,7 +1579,7 @@ int hostapd_add_iface(struct hapd_interfaces *interfaces, char *buf)
 			os_memcpy(hapd->own_addr, hapd_iface->bss[0]->own_addr,
 				  ETH_ALEN);
 
-			if (hostapd_setup_bss(hapd, 0)) {
+			if (hostapd_setup_bss(hapd, -1)) {
 				hapd_iface->conf->num_bss--;
 				hapd_iface->num_bss--;
 				os_free(hapd);

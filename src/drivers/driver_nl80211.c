@@ -7064,7 +7064,7 @@ static int nl80211_create_iface(struct wpa_driver_nl80211_data *drv,
 				const char *ifname, enum nl80211_iftype iftype,
 				const u8 *addr, int wds,
 				int (*handler)(struct nl_msg *, void *),
-				void *arg)
+				void *arg, int use_existing)
 {
 	int ret;
 
@@ -7073,6 +7073,11 @@ static int nl80211_create_iface(struct wpa_driver_nl80211_data *drv,
 
 	/* if error occurred and interface exists already */
 	if (ret == -ENFILE && if_nametoindex(ifname)) {
+		if (use_existing) {
+			wpa_printf(MSG_DEBUG, "nl80211: Continue using existing interface %s",
+				   ifname);
+			return -ENFILE;
+		}
 		wpa_printf(MSG_INFO, "Try to remove and re-create %s", ifname);
 
 		/* Try to remove the interface that was already there. */
@@ -7438,7 +7443,7 @@ nl80211_create_monitor_interface(struct wpa_driver_nl80211_data *drv)
 
 	drv->monitor_ifidx =
 		nl80211_create_iface(drv, buf, NL80211_IFTYPE_MONITOR, NULL,
-				     0, NULL, NULL);
+				     0, NULL, NULL, 0);
 
 	if (drv->monitor_ifidx == -EOPNOTSUPP) {
 		/*
@@ -8979,7 +8984,8 @@ static int i802_set_wds_sta(void *priv, const u8 *addr, int aid, int val,
 		if (!if_nametoindex(name)) {
 			if (nl80211_create_iface(drv, name,
 						 NL80211_IFTYPE_AP_VLAN,
-						 bss->addr, 1, NULL, NULL) < 0)
+						 bss->addr, 1, NULL, NULL, 0) <
+			    0)
 				return -1;
 			if (bridge_ifname &&
 			    linux_br_add_if(drv->global->ioctl_sock,
@@ -9276,12 +9282,13 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 				     const char *ifname, const u8 *addr,
 				     void *bss_ctx, void **drv_priv,
 				     char *force_ifname, u8 *if_addr,
-				     const char *bridge)
+				     const char *bridge, int use_existing)
 {
 	enum nl80211_iftype nlmode;
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	int ifidx;
+	int added = 1;
 
 	if (addr)
 		os_memcpy(if_addr, addr, ETH_ALEN);
@@ -9292,7 +9299,7 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 		os_memset(&p2pdev_info, 0, sizeof(p2pdev_info));
 		ifidx = nl80211_create_iface(drv, ifname, nlmode, addr,
 					     0, nl80211_wdev_handler,
-					     &p2pdev_info);
+					     &p2pdev_info, use_existing);
 		if (!p2pdev_info.wdev_id_set || ifidx != 0) {
 			wpa_printf(MSG_ERROR, "nl80211: Failed to create a P2P Device interface %s",
 				   ifname);
@@ -9308,8 +9315,11 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 			   (long long unsigned int) p2pdev_info.wdev_id);
 	} else {
 		ifidx = nl80211_create_iface(drv, ifname, nlmode, addr,
-					     0, NULL, NULL);
-		if (ifidx < 0) {
+					     0, NULL, NULL, use_existing);
+		if (use_existing && ifidx == -ENFILE) {
+			added = 0;
+			ifidx = if_nametoindex(ifname);
+		} else if (ifidx < 0) {
 			return -1;
 		}
 	}
@@ -9319,7 +9329,8 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 			os_memcpy(if_addr, bss->addr, ETH_ALEN);
 		else if (linux_get_ifhwaddr(drv->global->ioctl_sock,
 					    bss->ifname, if_addr) < 0) {
-			nl80211_remove_iface(drv, ifidx);
+			if (added)
+				nl80211_remove_iface(drv, ifidx);
 			return -1;
 		}
 	}
@@ -9357,7 +9368,8 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 	if (type == WPA_IF_AP_BSS) {
 		struct i802_bss *new_bss = os_zalloc(sizeof(*new_bss));
 		if (new_bss == NULL) {
-			nl80211_remove_iface(drv, ifidx);
+			if (added)
+				nl80211_remove_iface(drv, ifidx);
 			return -1;
 		}
 
@@ -9366,7 +9378,8 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 			wpa_printf(MSG_ERROR, "nl80211: Failed to add the new "
 				   "interface %s to a bridge %s",
 				   ifname, bridge);
-			nl80211_remove_iface(drv, ifidx);
+			if (added)
+				nl80211_remove_iface(drv, ifidx);
 			os_free(new_bss);
 			return -1;
 		}
@@ -9384,7 +9397,7 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 		new_bss->next = drv->first_bss->next;
 		new_bss->freq = drv->first_bss->freq;
 		new_bss->ctx = bss_ctx;
-		new_bss->added_if = 1;
+		new_bss->added_if = added;
 		drv->first_bss->next = new_bss;
 		if (drv_priv)
 			*drv_priv = new_bss;
@@ -9410,8 +9423,8 @@ static int wpa_driver_nl80211_if_remove(struct i802_bss *bss,
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	int ifindex = if_nametoindex(ifname);
 
-	wpa_printf(MSG_DEBUG, "nl80211: %s(type=%d ifname=%s) ifindex=%d",
-		   __func__, type, ifname, ifindex);
+	wpa_printf(MSG_DEBUG, "nl80211: %s(type=%d ifname=%s) ifindex=%d added_if=%d",
+		   __func__, type, ifname, ifindex, bss->added_if);
 	if (ifindex > 0 && bss->added_if)
 		nl80211_remove_iface(drv, ifindex);
 
@@ -9436,6 +9449,7 @@ static int wpa_driver_nl80211_if_remove(struct i802_bss *bss,
 	if (bss != drv->first_bss) {
 		struct i802_bss *tbss;
 
+		wpa_printf(MSG_DEBUG, "nl80211: Not the first BSS - remove it");
 		for (tbss = drv->first_bss; tbss; tbss = tbss->next) {
 			if (tbss->next == bss) {
 				tbss->next = bss->next;
@@ -9451,10 +9465,13 @@ static int wpa_driver_nl80211_if_remove(struct i802_bss *bss,
 			wpa_printf(MSG_INFO, "nl80211: %s - could not find "
 				   "BSS %p in the list", __func__, bss);
 	} else {
+		wpa_printf(MSG_DEBUG, "nl80211: First BSS - reassign context");
 		nl80211_teardown_ap(bss);
-		wpa_driver_nl80211_del_beacon(drv);
+		if (!bss->added_if && !drv->first_bss->next)
+			wpa_driver_nl80211_del_beacon(drv);
 		nl80211_destroy_bss(bss);
-		i802_set_iface_flags(bss, 0);
+		if (!bss->added_if)
+			i802_set_iface_flags(bss, 0);
 		if (drv->first_bss->next) {
 			drv->first_bss = drv->first_bss->next;
 			drv->ctx = drv->first_bss->ctx;

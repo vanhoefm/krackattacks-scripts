@@ -8,7 +8,7 @@
 
 import time
 import logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 import re
 
 import hostapd

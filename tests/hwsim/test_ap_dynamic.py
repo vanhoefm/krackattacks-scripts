@@ -9,7 +9,7 @@
 import time
 import subprocess
 import logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 import hwsim_utils
 import hostapd

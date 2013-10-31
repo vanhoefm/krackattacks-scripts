@@ -9,7 +9,7 @@
 import os
 import subprocess
 import logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 def test_connectivity(ifname1, ifname2):
     if os.path.isfile("../../mac80211_hwsim/tools/hwsim_test"):

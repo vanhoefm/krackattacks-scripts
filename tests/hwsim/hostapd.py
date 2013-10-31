@@ -11,7 +11,7 @@ import time
 import logging
 import wpaspy
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 hapd_ctrl = '/var/run/hostapd'
 hapd_global = '/var/run/hostapd-global'
 

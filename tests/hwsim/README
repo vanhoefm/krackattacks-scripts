@@ -141,7 +141,7 @@ timestamp and a postfix to identify the specific log:
 - hwsim0 = wlantest debug log
 - hwsim0.pcapng = capture with all frames exchanged during the tests
 - tcpdump = tcpdump output
-- run = debug prints from the test scripts
+- *.log = debug prints from the test scripts
 - trace.dat = Linux tracing record (if enabled)
 - hlr_auc_gw - hlr_auc_gw (EAP-SIM/AKA/AKA' authentication) log
 - auth_serv - hostapd as RADIUS authentication server log

@@ -13,7 +13,7 @@ import re
 import subprocess
 import wpaspy
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 wpas_ctrl = '/var/run/wpa_supplicant'
 
 class WpaSupplicant:

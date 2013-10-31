@@ -15,7 +15,7 @@ import argparse
 import subprocess
 
 import logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 sys.path.append('../../wpaspy')
 
@@ -101,8 +101,8 @@ def main():
                        help="verbose debug output")
     group.add_argument('-q', const=logging.WARNING, action='store_const',
                        dest='loglevel', help="be quiet")
-    group.add_argument('-l', metavar='<filename>', dest='logfile',
-                       help='debug log filename (in log directory)')
+    group.add_argument('-l', action='store_true', dest='logfile',
+                       help='store debug log to a file (in log directory)')
 
     parser.add_argument('-e', metavar="<filename>", dest='errorfile',
                         nargs='?', const="failed",
@@ -142,11 +142,17 @@ def main():
             sys.exit(2)
 
     if args.logfile:
-        logging.basicConfig(filename=os.path.join(args.logdir, args.logfile),
-                            level=logging.DEBUG)
+        logger.setLevel(logging.DEBUG)
+        file_name = os.path.join(args.logdir, 'run-tests.log')
+        log_handler = logging.FileHandler(file_name)
+        fmt = "%(asctime)s %(levelname)s %(message)s"
+        log_formatter = logging.Formatter(fmt)
+        log_handler.setFormatter(log_formatter)
+        logger.addHandler(log_handler)
         log_to_file = True
     else:
         logging.basicConfig(level=args.loglevel)
+        log_handler = None
         log_to_file = False
         if args.loglevel == logging.WARNING:
             print_res = True
@@ -216,6 +222,15 @@ def main():
         if args.testmodules:
             if not t.__module__.replace('test_', '', 1) in args.testmodules:
                 continue
+
+        if log_handler:
+            log_handler.stream.close()
+            logger.removeHandler(log_handler)
+            file_name = os.path.join(args.logdir, name + '.log')
+            log_handler = logging.FileHandler(file_name)
+            log_handler.setFormatter(log_formatter)
+            logger.addHandler(log_handler)
+
         with DataCollector(args.logdir, name, args.tracing, args.dmesg):
             logger.info("START " + name)
             if log_to_file:
@@ -281,6 +296,14 @@ def main():
                     logger.info("Failed to issue TEST-STOP after " + name + " for " + d.ifname)
                     logger.info(e)
             reset_devs(dev, apdev)
+
+    if log_handler:
+        log_handler.stream.close()
+        logger.removeHandler(log_handler)
+        file_name = os.path.join(args.logdir, 'run-tests.log')
+        log_handler = logging.FileHandler(file_name)
+        log_handler.setFormatter(log_formatter)
+        logger.addHandler(log_handler)
 
     if conn:
         conn.close()

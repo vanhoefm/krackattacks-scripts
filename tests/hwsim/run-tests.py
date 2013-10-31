@@ -247,32 +247,16 @@ def main():
                     res = t(dev, apdev)
                 else:
                     res = t(dev)
-                end = datetime.now()
-                diff = end - start
                 if res == "skip":
                     skipped.append(name)
                     result = "SKIP"
                 else:
                     passed.append(name)
                     result = "PASS"
-                report(conn, args.build, args.commit, run, name, result, diff)
-                result = result + " " + name + " "
-                result = result + str(diff.total_seconds()) + " " + str(end)
-                logger.info(result)
-                if log_to_file or print_res:
-                    print result
-                    sys.stdout.flush()
             except Exception, e:
-                end = datetime.now()
-                diff = end - start
                 logger.info(e)
+                result = "FAIL"
                 failed.append(name)
-                report(conn, args.build, args.commit, run, name, "FAIL", diff)
-                result = "FAIL " + name + " " + str(diff.total_seconds()) + " " + str(end)
-                logger.info(result)
-                if log_to_file:
-                    print result
-                    sys.stdout.flush()
             for d in dev:
                 try:
                     d.request("NOTE TEST-STOP " + name)
@@ -297,6 +281,16 @@ def main():
                 except Exception, e:
                     logger.info("Failed to rename log files")
                     logger.info(e)
+
+        end = datetime.now()
+        diff = end - start
+        report(conn, args.build, args.commit, run, name, result, diff)
+        result = result + " " + name + " "
+        result = result + str(diff.total_seconds()) + " " + str(end)
+        logger.info(result)
+        if log_to_file or print_res:
+            print result
+            sys.stdout.flush()
 
     if log_handler:
         log_handler.stream.close()

@@ -615,6 +615,10 @@ static int hostapd_dfs_start_channel_switch(struct hostapd_data *hapd)
 					&vht_oper_centr_freq_seg0_idx,
 					&vht_oper_centr_freq_seg1_idx);
 	if (channel) {
+		wpa_printf(MSG_DEBUG, "DFS will switch to a new channel %d",
+			   channel->chan);
+
+		hapd->iface->freq = channel->freq;
 		hapd->iconf->channel = channel->chan;
 		hapd->iconf->secondary_channel = secondary_channel;
 		hapd->iconf->vht_oper_centr_freq_seg0_idx =
@@ -626,15 +630,24 @@ static int hostapd_dfs_start_channel_switch(struct hostapd_data *hapd)
 		wpa_printf(MSG_ERROR, "No valid channel available");
 	}
 
-	if (!hapd->cac_started) {
-		wpa_printf(MSG_DEBUG, "DFS radar detected");
-		hapd->driver->stop_ap(hapd->drv_priv);
-	} else {
+	if (hapd->cac_started) {
 		wpa_printf(MSG_DEBUG, "DFS radar detected during CAC");
 		hapd->cac_started = 0;
+		/* FIXME: Wait for channel(s) to become available if no channel
+		 * has been found */
+		hostapd_setup_interface_complete(hapd->iface, err);
+		return err;
 	}
 
-	hostapd_setup_interface_complete(hapd->iface, err);
+	if (err) {
+		/* FIXME: Wait for channel(s) to become available */
+		hostapd_disable_iface(hapd->iface);
+		return err;
+	}
+
+	wpa_printf(MSG_DEBUG, "DFS radar detected");
+	hostapd_disable_iface(hapd->iface);
+	hostapd_enable_iface(hapd->iface);
 	return 0;
 }
 

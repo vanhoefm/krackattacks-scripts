@@ -1153,8 +1153,6 @@ void hostapd_interface_free(struct hostapd_iface *iface)
 }
 
 
-#ifdef HOSTAPD
-
 void hostapd_interface_deinit_free(struct hostapd_iface *iface)
 {
 	const struct wpa_driver_ops *driver;
@@ -1439,8 +1437,6 @@ int hostapd_remove_iface(struct hapd_interfaces *interfaces, char *buf)
 	}
 	return -1;
 }
-
-#endif /* HOSTAPD */
 
 
 /**

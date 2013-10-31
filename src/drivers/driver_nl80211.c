@@ -7378,7 +7378,10 @@ static int add_monitor_filter(int s)
 static void nl80211_remove_monitor_interface(
 	struct wpa_driver_nl80211_data *drv)
 {
-	drv->monitor_refcount--;
+	if (drv->monitor_refcount > 0)
+		drv->monitor_refcount--;
+	wpa_printf(MSG_DEBUG, "nl80211: Remove monitor interface: refcount=%d",
+		   drv->monitor_refcount);
 	if (drv->monitor_refcount > 0)
 		return;
 
@@ -7404,6 +7407,8 @@ nl80211_create_monitor_interface(struct wpa_driver_nl80211_data *drv)
 
 	if (drv->monitor_ifidx >= 0) {
 		drv->monitor_refcount++;
+		wpa_printf(MSG_DEBUG, "nl80211: Re-use existing monitor interface: refcount=%d",
+			   drv->monitor_refcount);
 		return 0;
 	}
 
@@ -7481,6 +7486,7 @@ nl80211_create_monitor_interface(struct wpa_driver_nl80211_data *drv)
 		goto error;
 	}
 
+	drv->monitor_refcount++;
 	return 0;
  error:
 	nl80211_remove_monitor_interface(drv);
@@ -7492,8 +7498,8 @@ static int nl80211_setup_ap(struct i802_bss *bss)
 {
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 
-	wpa_printf(MSG_DEBUG, "nl80211: Setup AP - device_ap_sme=%d "
-		   "use_monitor=%d", drv->device_ap_sme, drv->use_monitor);
+	wpa_printf(MSG_DEBUG, "nl80211: Setup AP(%s) - device_ap_sme=%d use_monitor=%d",
+		   bss->ifname, drv->device_ap_sme, drv->use_monitor);
 
 	/*
 	 * Disable Probe Request reporting unless we need it in this way for
@@ -7531,6 +7537,8 @@ static void nl80211_teardown_ap(struct i802_bss *bss)
 {
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 
+	wpa_printf(MSG_DEBUG, "nl80211: Teardown AP(%s) - device_ap_sme=%d use_monitor=%d",
+		   bss->ifname, drv->device_ap_sme, drv->use_monitor);
 	if (drv->device_ap_sme) {
 		wpa_driver_nl80211_probe_req_report(bss, 0);
 		if (!drv->use_monitor)

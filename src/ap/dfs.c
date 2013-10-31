@@ -516,6 +516,8 @@ int hostapd_handle_dfs(struct hostapd_data *hapd)
 	struct hostapd_channel_data *channel;
 	int res, n_chans, start_chan_idx;
 
+	hapd->cac_started = 0;
+
 	do {
 		/* Get start (first) channel for current configuration */
 		start_chan_idx = dfs_get_start_chan_idx(hapd);

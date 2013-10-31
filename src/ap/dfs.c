@@ -94,6 +94,31 @@ static int dfs_is_chan_allowed(struct hostapd_channel_data *chan, int n_chans)
 }
 
 
+static int dfs_chan_range_available(struct hostapd_hw_modes *mode,
+				    int first_chan_idx, int num_chans)
+{
+	struct hostapd_channel_data *first_chan, *chan;
+	int i;
+
+	if (first_chan_idx + num_chans >= mode->num_channels)
+		return 0;
+
+	first_chan = &mode->channels[first_chan_idx];
+
+	for (i = 0; i < num_chans; i++) {
+		chan = &mode->channels[first_chan_idx + i];
+
+		if (first_chan->freq + i * 20 != chan->freq)
+			return 0;
+
+		if (!dfs_channel_available(chan))
+			return 0;
+	}
+
+	return 1;
+}
+
+
 /*
  * The function assumes HT40+ operation.
  * Make sure to adjust the following variables after calling this:
@@ -106,8 +131,8 @@ static int dfs_find_channel(struct hostapd_data *hapd,
 			    int idx)
 {
 	struct hostapd_hw_modes *mode;
-	struct hostapd_channel_data *chan, *next_chan;
-	int i, j, channel_idx = 0, n_chans;
+	struct hostapd_channel_data *chan;
+	int i, channel_idx = 0, n_chans;
 
 	mode = hapd->iface->current_mode;
 	n_chans = dfs_get_used_n_chans(hapd);
@@ -116,24 +141,15 @@ static int dfs_find_channel(struct hostapd_data *hapd,
 	for (i = 0; i < mode->num_channels; i++) {
 		chan = &mode->channels[i];
 
-		/* Skip not available channels */
-		if (!dfs_channel_available(chan))
+		/* Skip HT40/VHT incompatible channels */
+		if (hapd->iconf->ieee80211n &&
+		    hapd->iconf->secondary_channel &&
+		    !dfs_is_chan_allowed(chan, n_chans))
 			continue;
 
-		/* Skip HT40/VHT uncompatible channels */
-		if (hapd->iconf->ieee80211n &&
-		    hapd->iconf->secondary_channel) {
-			if (!dfs_is_chan_allowed(chan, n_chans))
-				continue;
-
-			for (j = 1; j < n_chans; j++) {
-				next_chan = &mode->channels[i + j];
-				if (!dfs_channel_available(next_chan))
-					break;
-			}
-			if (j != n_chans)
-				continue;
-		}
+		/* Skip incompatible chandefs */
+		if (!dfs_chan_range_available(mode, i, n_chans))
+			continue;
 
 		if (ret_chan && idx == channel_idx) {
 			wpa_printf(MSG_DEBUG, "Selected ch. #%d", chan->chan);

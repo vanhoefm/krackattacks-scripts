@@ -22,13 +22,18 @@ KVMOUT=ttyS1
 # you can set EPATH if you need anything extra in $PATH inside the VM
 #EPATH=/some/dir
 
+# extra KVM arguments, e.g., -s for gdbserver
+#KVMARGS=-s
+
 test -f vm-config && . vm-config
 
-if [ -z "$KERNELDIR" ] ; then
-	echo "You need to set a KERNELDIR (in the environment or vm-config)"
+if [ -z "$KERNEL" ] && [ -z "$KERNELDIR" ] ; then
+	echo "You need to set a KERNEL or KERNELDIR (in the environment or vm-config)"
 	exit 2
 fi
-KERNEL=$KERNELDIR/arch/x86_64/boot/bzImage
+if [ -z "$KERNEL" ] ; then
+	KERNEL=$KERNELDIR/arch/x86_64/boot/bzImage
+fi
 
 
 CMD=$TESTDIR/vm/inside.sh
@@ -37,7 +42,7 @@ mkdir -p $LOGDIR
 
 exec kvm \
 	-kernel $KERNEL -smp 4 \
-	-s -m $MEMORY -nographic \
+	$KVMARGS -m $MEMORY -nographic \
 	-fsdev local,security_model=none,id=fsdev-root,path=/$ROTAG \
 	-device virtio-9p-pci,id=fs-root,fsdev=fsdev-root,mount_tag=/dev/root \
 	-fsdev local,security_model=none,id=fsdev-logs,path="$LOGDIR",writeout=immediate \

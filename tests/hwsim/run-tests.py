@@ -81,7 +81,7 @@ def main():
         if m:
             logger.debug("Import test cases from " + t)
             mod = __import__(m.group(1))
-            test_modules.append(mod.__name__)
+            test_modules.append(mod.__name__.replace('test_', '', 1))
             for s in dir(mod):
                 if s.startswith("test_"):
                     func = mod.__dict__.get(s)
@@ -214,7 +214,7 @@ def main():
             if not name in args.tests:
                 continue
         if args.testmodules:
-            if not t.__module__ in args.testmodules:
+            if not t.__module__.replace('test_', '', 1) in args.testmodules:
                 continue
         with DataCollector(args.logdir, name, args.tracing, args.dmesg):
             logger.info("START " + name)

@@ -24,12 +24,12 @@ fi
 if [ "x$1" = "xconcurrent-valgrind" ]; then
 	VALGRIND=valgrind
 	CONCURRENT=concurrent
-	CONCURRENT_TESTS="-f test_p2p_autogo test_p2p_discovery test_p2p_grpform"
+	CONCURRENT_TESTS="-f p2p_autogo p2p_discovery p2p_grpform"
 	SUFFIX=-concurrent-valgrind
 	shift
 elif [ "x$1" = "xconcurrent" ]; then
 	CONCURRENT=concurrent
-	CONCURRENT_TESTS="-f test_p2p_autogo test_p2p_discovery test_p2p_grpform"
+	CONCURRENT_TESTS="-f p2p_autogo p2p_discovery p2p_grpform"
 	unset VALGRIND
 	SUFFIX=-concurrent
 	shift

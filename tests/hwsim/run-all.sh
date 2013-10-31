@@ -63,14 +63,7 @@ if ! ./start.sh $CONCURRENT $VALGRIND $TRACE; then
 	exit 1
 fi
 
-if ! [ -z "$LOGBASEDIR" ] ; then
-	rm $LOGBASEDIR/last-debug 2>/dev/null
-fi
 ./run-tests.py -D --logdir "$LOGDIR" $TRACE_ARGS -l run $DB -e failed -r results.txt $CONCURRENT_TESTS $@ || errors=1
-
-if ! [ -z "$LOGBASEDIR" ] ; then
-	cat $LOGDIR/run >> $LOGBASEDIR/last-debug
-fi
 
 ./stop-wifi.sh
 

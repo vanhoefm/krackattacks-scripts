@@ -64,6 +64,7 @@ else
 	export USER=0
 	export LOGDIR=/tmp/logs
 	export DBFILE=$LOGDIR/results.db
+	export PREFILL_DB=y
 
 	cd $TESTDIR
 	./run-all.sh $ARGS >/dev/ttyS0 2>&1

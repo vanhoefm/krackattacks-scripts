@@ -35,14 +35,16 @@ def reset_devs(dev, apdev):
     for ap in apdev:
         hapd.remove(ap['ifname'])
 
-def report(conn, build, commit, run, test, result, diff):
+def report(conn, prefill, build, commit, run, test, result, duration):
     if conn:
         if not build:
             build = ''
         if not commit:
             commit = ''
+        if prefill:
+            conn.execute('DELETE FROM results WHERE test=? AND run=? AND result=?', (test, run, 'NOTRUN'))
         sql = "INSERT INTO results(test,result,run,time,duration,build,commitid) VALUES(?, ?, ?, ?, ?, ?, ?)"
-        params = (test, result, run, time.time(), diff.total_seconds(), build, commit)
+        params = (test, result, run, time.time(), duration, build, commit)
         try:
             conn.execute(sql, params)
             conn.commit()
@@ -108,6 +110,8 @@ def main():
 
     parser.add_argument('-S', metavar='<sqlite3 db>', dest='database',
                         help='database to write results to')
+    parser.add_argument('--prefill-tests', action='store_true', dest='prefill',
+                        help='prefill test database with NOTRUN before all tests')
     parser.add_argument('--commit', metavar='<commit id>',
                         help='commit ID, only for database')
     parser.add_argument('-b', metavar='<build>', dest='build', help='build ID')
@@ -208,6 +212,7 @@ def main():
     if args.dmesg:
         subprocess.call(['sudo', 'dmesg', '-c'], stdout=open('/dev/null', 'w'))
 
+    tests_to_run = []
     for t in tests:
         name = t.__name__.replace('test_', '', 1)
         if args.tests:
@@ -216,7 +221,15 @@ def main():
         if args.testmodules:
             if not t.__module__.replace('test_', '', 1) in args.testmodules:
                 continue
+        tests_to_run.append(t)
 
+    if conn and args.prefill:
+        for t in tests_to_run:
+            name = t.__name__.replace('test_', '', 1)
+            report(conn, False, args.build, args.commit, run, name, 'NOTRUN', 0)
+
+    for t in tests_to_run:
+        name = t.__name__.replace('test_', '', 1)
         if log_handler:
             log_handler.stream.close()
             logger.removeHandler(log_handler)
@@ -286,7 +299,7 @@ def main():
 
         end = datetime.now()
         diff = end - start
-        report(conn, args.build, args.commit, run, name, result, diff)
+        report(conn, args.prefill, args.build, args.commit, run, name, result, diff.total_seconds())
         result = result + " " + name + " "
         result = result + str(diff.total_seconds()) + " " + str(end)
         logger.info(result)

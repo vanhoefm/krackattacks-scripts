@@ -19,6 +19,9 @@ else
     if [ -n "$BUILD" ]; then
 	DB="$DB -b $BUILD"
     fi
+    if [ "$PREFILL_DB" = "y" ] ; then
+        DB="$DB --prefill-tests"
+    fi
 fi
 
 if [ "x$1" = "xconcurrent-valgrind" ]; then

@@ -63,6 +63,7 @@ else
 	# finally run the tests
 	export USER=0
 	export LOGDIR=/tmp/logs
+	export DBFILE=$LOGDIR/results.db
 
 	cd $TESTDIR
 	./run-all.sh $ARGS >/dev/ttyS0 2>&1

@@ -155,6 +155,8 @@ def main():
     if args.database:
         import sqlite3
         conn = sqlite3.connect(args.database)
+        conn.execute('CREATE TABLE IF NOT EXISTS results (test,result,run,time,duration,build,commitid)')
+        conn.execute('CREATE TABLE IF NOT EXISTS tests (test,description)')
     else:
         conn = None
 

@@ -4188,6 +4188,8 @@ static int wpa_driver_nl80211_del_beacon(struct wpa_driver_nl80211_data *drv)
 	if (!msg)
 		return -ENOMEM;
 
+	wpa_printf(MSG_DEBUG, "nl80211: Remove beacon (ifindex=%d)",
+		   drv->ifindex);
 	nl80211_cmd(drv, msg, 0, NL80211_CMD_DEL_BEACON);
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
 

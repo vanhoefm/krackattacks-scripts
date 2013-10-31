@@ -94,6 +94,13 @@ static int dfs_is_chan_allowed(struct hostapd_channel_data *chan, int n_chans)
 }
 
 
+/*
+ * The function assumes HT40+ operation.
+ * Make sure to adjust the following variables after calling this:
+ *  - hapd->secondary_channel
+ *  - hapd->vht_oper_centr_freq_seg0_idx
+ *  - hapd->vht_oper_centr_freq_seg1_idx
+ */
 static int dfs_find_channel(struct hostapd_data *hapd,
 			    struct hostapd_channel_data **ret_chan,
 			    int idx)
@@ -126,9 +133,6 @@ static int dfs_find_channel(struct hostapd_data *hapd,
 			}
 			if (j != n_chans)
 				continue;
-
-			/* Set HT40+ */
-			hapd->iconf->secondary_channel = 1;
 		}
 
 		if (ret_chan && idx == channel_idx) {
@@ -144,7 +148,9 @@ static int dfs_find_channel(struct hostapd_data *hapd,
 
 
 static void dfs_adjust_vht_center_freq(struct hostapd_data *hapd,
-				       struct hostapd_channel_data *chan)
+				       struct hostapd_channel_data *chan,
+				       u8 *vht_oper_centr_freq_seg0_idx,
+				       u8 *vht_oper_centr_freq_seg1_idx)
 {
 	if (!hapd->iconf->ieee80211ac)
 		return;
@@ -152,31 +158,31 @@ static void dfs_adjust_vht_center_freq(struct hostapd_data *hapd,
 	if (!chan)
 		return;
 
+	*vht_oper_centr_freq_seg1_idx = 0;
+
 	switch (hapd->iconf->vht_oper_chwidth) {
 	case VHT_CHANWIDTH_USE_HT:
 		if (hapd->iconf->secondary_channel == 1)
-			hapd->iconf->vht_oper_centr_freq_seg0_idx =
-				chan->chan + 2;
+			*vht_oper_centr_freq_seg0_idx = chan->chan + 2;
 		else if (hapd->iconf->secondary_channel == -1)
-			hapd->iconf->vht_oper_centr_freq_seg0_idx =
-				chan->chan - 2;
+			*vht_oper_centr_freq_seg0_idx = chan->chan - 2;
 		else
-			hapd->iconf->vht_oper_centr_freq_seg0_idx = chan->chan;
+			*vht_oper_centr_freq_seg0_idx = chan->chan;
 		break;
 	case VHT_CHANWIDTH_80MHZ:
-		hapd->iconf->vht_oper_centr_freq_seg0_idx = chan->chan + 6;
+		*vht_oper_centr_freq_seg0_idx = chan->chan + 6;
 		break;
 	case VHT_CHANWIDTH_160MHZ:
-		hapd->iconf->vht_oper_centr_freq_seg0_idx =
-						chan->chan + 14;
+		*vht_oper_centr_freq_seg0_idx = chan->chan + 14;
 		break;
 	default:
 		wpa_printf(MSG_INFO, "DFS only VHT20/40/80/160 is supported now");
 		break;
 	}
 
-	wpa_printf(MSG_DEBUG, "DFS adjusting VHT center frequency: %d",
-		   hapd->iconf->vht_oper_centr_freq_seg0_idx);
+	wpa_printf(MSG_DEBUG, "DFS adjusting VHT center frequency: %d, %d",
+		   *vht_oper_centr_freq_seg0_idx,
+		   *vht_oper_centr_freq_seg1_idx);
 }
 
 
@@ -295,12 +301,16 @@ static int dfs_check_chans_unavailable(struct hostapd_data *hapd,
 }
 
 
-static struct hostapd_channel_data * dfs_get_valid_channel(
-	struct hostapd_data *hapd)
+static struct hostapd_channel_data *
+dfs_get_valid_channel(struct hostapd_data *hapd,
+		      int *secondary_channel,
+		      u8 *vht_oper_centr_freq_seg0_idx,
+		      u8 *vht_oper_centr_freq_seg1_idx)
 {
 	struct hostapd_hw_modes *mode;
 	struct hostapd_channel_data *chan = NULL;
-	int channel_idx, new_channel_idx;
+	int num_available_chandefs;
+	int chan_idx;
 	u32 _rand;
 
 	wpa_printf(MSG_DEBUG, "DFS: Selecting random channel");
@@ -312,16 +322,24 @@ static struct hostapd_channel_data * dfs_get_valid_channel(
 	if (mode->mode != HOSTAPD_MODE_IEEE80211A)
 		return NULL;
 
-	/* get random available channel */
-	channel_idx = dfs_find_channel(hapd, NULL, 0);
-	if (channel_idx > 0) {
-		os_get_random((u8 *) &_rand, sizeof(_rand));
-		new_channel_idx = _rand % channel_idx;
-		dfs_find_channel(hapd, &chan, new_channel_idx);
-	}
+	/* Get the count first */
+	num_available_chandefs = dfs_find_channel(hapd, NULL, 0);
+	if (num_available_chandefs == 0)
+		return NULL;
 
-	/* VHT */
-	dfs_adjust_vht_center_freq(hapd, chan);
+	os_get_random((u8 *) &_rand, sizeof(_rand));
+	chan_idx = _rand % num_available_chandefs;
+	dfs_find_channel(hapd, &chan, chan_idx);
+
+	/* dfs_find_channel() calculations assume HT40+ */
+	if (hapd->iconf->secondary_channel)
+		*secondary_channel = 1;
+	else
+		*secondary_channel = 0;
+
+	dfs_adjust_vht_center_freq(hapd, chan,
+				   vht_oper_centr_freq_seg0_idx,
+				   vht_oper_centr_freq_seg1_idx);
 
 	return chan;
 }
@@ -513,13 +531,20 @@ int hostapd_handle_dfs(struct hostapd_data *hapd)
 		wpa_printf(MSG_DEBUG, "DFS %d chans unavailable - choose other channel: %s",
 			   res, res ? "yes": "no");
 		if (res) {
-			channel = dfs_get_valid_channel(hapd);
+			int sec;
+			u8 cf1, cf2;
+
+			channel = dfs_get_valid_channel(hapd, &sec, &cf1, &cf2);
 			if (!channel) {
 				wpa_printf(MSG_ERROR, "could not get valid channel");
 				return -1;
 			}
-			hapd->iconf->channel = channel->chan;
+
 			hapd->iface->freq = channel->freq;
+			hapd->iconf->channel = channel->chan;
+			hapd->iconf->secondary_channel = sec;
+			hapd->iconf->vht_oper_centr_freq_seg0_idx = cf1;
+			hapd->iconf->vht_oper_centr_freq_seg1_idx = cf2;
 		}
 	} while (res);
 
@@ -563,13 +588,24 @@ static int hostapd_dfs_start_channel_switch(struct hostapd_data *hapd)
 {
 	struct hostapd_channel_data *channel;
 	int err = 1;
+	int secondary_channel;
+	u8 vht_oper_centr_freq_seg0_idx;
+	u8 vht_oper_centr_freq_seg1_idx;
 
 	wpa_printf(MSG_DEBUG, "%s called", __func__);
-	channel = dfs_get_valid_channel(hapd);
+	channel = dfs_get_valid_channel(hapd, &secondary_channel,
+					&vht_oper_centr_freq_seg0_idx,
+					&vht_oper_centr_freq_seg1_idx);
 	if (channel) {
 		hapd->iconf->channel = channel->chan;
-		hapd->iface->freq = channel->freq;
+		hapd->iconf->secondary_channel = secondary_channel;
+		hapd->iconf->vht_oper_centr_freq_seg0_idx =
+					vht_oper_centr_freq_seg0_idx;
+		hapd->iconf->vht_oper_centr_freq_seg1_idx =
+					vht_oper_centr_freq_seg1_idx;
 		err = 0;
+	} else {
+		wpa_printf(MSG_ERROR, "No valid channel available");
 	}
 
 	if (!hapd->cac_started) {

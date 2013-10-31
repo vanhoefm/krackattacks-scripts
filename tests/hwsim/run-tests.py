@@ -297,6 +297,23 @@ def main():
                     logger.info(e)
             reset_devs(dev, apdev)
 
+            for i in range(0, 3):
+                try:
+                    import getpass
+                    srcname = os.path.join(args.logdir, 'log' + str(i))
+                    dstname = os.path.join(args.logdir, name + '.log' + str(i))
+                    num = 0
+                    while os.path.exists(dstname):
+                        dstname = os.path.join(args.logdir, name + '.log' + str(i) + '-' + str(num))
+                        num = num + 1
+                    os.rename(srcname, dstname)
+                    dev[i].request("RELOG")
+                    subprocess.call(['sudo', 'chown', '-f', getpass.getuser(),
+                                     srcname])
+                except Exception, e:
+                    logger.info("Failed to rename log files")
+                    logger.info(e)
+
     if log_handler:
         log_handler.stream.close()
         logger.removeHandler(log_handler)

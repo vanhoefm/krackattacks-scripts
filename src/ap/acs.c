@@ -729,14 +729,17 @@ static void acs_scan_complete(struct hostapd_iface *iface)
 		err = acs_request_scan(iface);
 		if (err) {
 			wpa_printf(MSG_ERROR, "ACS: Failed to request scan");
-			acs_fail(iface);
-			return;
+			goto fail;
 		}
 
 		return;
 	}
 
 	acs_study(iface);
+	return;
+fail:
+	hostapd_acs_completed(iface, 1);
+	acs_fail(iface);
 }
 
 

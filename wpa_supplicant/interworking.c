@@ -18,6 +18,7 @@
 #include "eap_common/eap_defs.h"
 #include "eap_peer/eap.h"
 #include "eap_peer/eap_methods.h"
+#include "eapol_supp/eapol_supp_sm.h"
 #include "wpa_supplicant_i.h"
 #include "config.h"
 #include "config_ssid.h"
@@ -1382,6 +1383,23 @@ static struct wpa_cred * interworking_credentials_available_3gpp(
 
 	if (bss->anqp == NULL || bss->anqp->anqp_3gpp == NULL)
 		return NULL;
+
+#ifdef CONFIG_EAP_PROXY
+	if (!wpa_s->imsi[0]) {
+		size_t len;
+		wpa_printf(MSG_DEBUG, "Interworking: IMSI not available - try to read again through eap_proxy");
+		wpa_s->mnc_len = eapol_sm_get_eap_proxy_imsi(wpa_s->eapol,
+							     wpa_s->imsi,
+							     &len);
+		if (wpa_s->mnc_len > 0) {
+			wpa_s->imsi[len] = '\0';
+			wpa_printf(MSG_DEBUG, "eap_proxy: IMSI %s (MNC length %d)",
+				   wpa_s->imsi, wpa_s->mnc_len);
+		} else {
+			wpa_printf(MSG_DEBUG, "eap_proxy: IMSI not available");
+		}
+	}
+#endif /* CONFIG_EAP_PROXY */
 
 	for (cred = wpa_s->conf->cred; cred; cred = cred->next) {
 		char *sep;

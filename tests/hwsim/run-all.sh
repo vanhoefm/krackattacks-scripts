@@ -68,7 +68,7 @@ fi
 
 ./run-tests.py -D --logdir "$LOGDIR" $TRACE_ARGS -q $DB $CONCURRENT_TESTS $@ || errors=1
 
-./stop-wifi.sh
+./stop.sh
 
 if [ ! -z "$VALGRIND" ] ; then
     failures=`grep "ERROR SUMMARY" $LOGDIR/valgrind-* | grep -v " 0 errors" | wc -l`

@@ -110,7 +110,7 @@ Simplest way to run a full set of the test cases is by running
 run-all.sh in tests/hwsim directory. This will use start.sh to load the
 mac80211_hwsim module and start wpa_supplicant, hostapd, and various
 test tools. run-tests.sh is then used to run through all the defined
-test cases and stop-wifi.sh to stop the programs and unload the kernel
+test cases and stop.sh to stop the programs and unload the kernel
 module.
 
 run-all.sh can be used to run the same test cases under different

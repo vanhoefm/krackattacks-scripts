@@ -50,7 +50,7 @@ else
     TRACE=""
 fi
 
-$DIR/stop-wifi.sh
+$DIR/stop.sh
 test -f /proc/modules && sudo modprobe mac80211_hwsim radios=5
 if [ "$CONCURRENT" = "y" ]; then
     sudo iw wlan0 interface add sta0 type station

@@ -678,7 +678,7 @@ static u16 sae_group_allowed(struct sae_data *sae, int *allowed_groups,
 {
 	if (allowed_groups) {
 		int i;
-		for (i = 0; allowed_groups[i] >= 0; i++) {
+		for (i = 0; allowed_groups[i] > 0; i++) {
 			if (allowed_groups[i] == group)
 				break;
 		}

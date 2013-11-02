@@ -46,7 +46,7 @@ static int index_within_array(const int *array, int idx)
 {
 	int i;
 	for (i = 0; i < idx; i++) {
-		if (array[i] == -1)
+		if (array[i] <= 0)
 			return 0;
 	}
 	return 1;
@@ -56,9 +56,9 @@ static int index_within_array(const int *array, int idx)
 static int sme_set_sae_group(struct wpa_supplicant *wpa_s)
 {
 	int *groups = wpa_s->conf->sae_groups;
-	int default_groups[] = { 19, 20, 21, 25, 26 };
+	int default_groups[] = { 19, 20, 21, 25, 26, 0 };
 
-	if (!groups)
+	if (!groups || groups[0] <= 0)
 		groups = default_groups;
 
 	/* Configuration may have changed, so validate current index */
@@ -438,6 +438,7 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 #ifdef CONFIG_SAE
 	wpa_s->sme.sae.state = SAE_NOTHING;
 	wpa_s->sme.sae.send_confirm = 0;
+	wpa_s->sme.sae_group_index = 0;
 #endif /* CONFIG_SAE */
 	sme_send_authentication(wpa_s, bss, ssid, 1);
 }
@@ -482,15 +483,18 @@ static int sme_sae_auth(struct wpa_supplicant *wpa_s, u16 auth_transaction,
 		return -1;
 
 	if (auth_transaction == 1) {
+		int *groups = wpa_s->conf->sae_groups;
+
 		wpa_dbg(wpa_s, MSG_DEBUG, "SME SAE commit");
 		if (wpa_s->current_bss == NULL ||
 		    wpa_s->current_ssid == NULL)
 			return -1;
 		if (wpa_s->sme.sae.state != SAE_COMMITTED)
 			return -1;
+		if (groups && groups[0] <= 0)
+			groups = NULL;
 		if (sae_parse_commit(&wpa_s->sme.sae, data, len, NULL, NULL,
-				     wpa_s->conf->sae_groups) !=
-		    WLAN_STATUS_SUCCESS)
+				     groups) != WLAN_STATUS_SUCCESS)
 			return -1;
 
 		if (sae_process_commit(&wpa_s->sme.sae) < 0) {

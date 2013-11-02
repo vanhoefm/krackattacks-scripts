@@ -68,7 +68,7 @@ for i in /tmp/wpas-wlan0 /tmp/wpas-wlan1 /tmp/wpas-wlan2 /var/run/hostapd-global
 done
 
 if grep -q mac80211_hwsim /proc/modules 2>/dev/null ; then
-    sudo rmmod mac80211_hwsim 
+    sudo rmmod mac80211_hwsim
     sudo rmmod mac80211
     sudo rmmod cfg80211
     # wait at the end to avoid issues starting something new immediately after

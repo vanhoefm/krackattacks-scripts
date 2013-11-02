@@ -66,7 +66,7 @@ if ! ./start.sh $CONCURRENT $VALGRIND $TRACE; then
 	exit 1
 fi
 
-./run-tests.py -D --logdir "$LOGDIR" $TRACE_ARGS -l $DB $CONCURRENT_TESTS $@ || errors=1
+./run-tests.py -D --logdir "$LOGDIR" $TRACE_ARGS -q $DB $CONCURRENT_TESTS $@ || errors=1
 
 ./stop-wifi.sh
 

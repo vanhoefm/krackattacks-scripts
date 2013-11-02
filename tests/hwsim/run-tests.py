@@ -93,7 +93,6 @@ def main():
     test_names = list(set([t.__name__.replace('test_', '', 1) for t in tests]))
 
     run = None
-    print_res = False
 
     parser = argparse.ArgumentParser(description='hwsim test runner')
     parser.add_argument('--logdir', metavar='<directory>',
@@ -105,8 +104,6 @@ def main():
                        help="verbose debug output")
     group.add_argument('-q', const=logging.WARNING, action='store_const',
                        dest='loglevel', help="be quiet")
-    group.add_argument('-l', action='store_true', dest='logfile',
-                       help='store debug log to a file (in log directory)')
 
     parser.add_argument('-S', metavar='<sqlite3 db>', dest='database',
                         help='database to write results to')
@@ -143,21 +140,20 @@ def main():
         else:
             args.logdir = 'logs'
 
-    if args.logfile:
-        logger.setLevel(logging.DEBUG)
-        file_name = os.path.join(args.logdir, 'run-tests.log')
-        log_handler = logging.FileHandler(file_name)
-        fmt = "%(asctime)s %(levelname)s %(message)s"
-        log_formatter = logging.Formatter(fmt)
-        log_handler.setFormatter(log_formatter)
-        logger.addHandler(log_handler)
-        log_to_file = True
-    else:
-        logging.basicConfig(level=args.loglevel)
-        log_handler = None
-        log_to_file = False
-        if args.loglevel == logging.WARNING:
-            print_res = True
+    # Write debug level log to a file and configurable verbosity to stdout
+    logger.setLevel(logging.DEBUG)
+
+    stdout_handler = logging.StreamHandler()
+    stdout_handler.setLevel(args.loglevel)
+    logger.addHandler(stdout_handler)
+
+    file_name = os.path.join(args.logdir, 'run-tests.log')
+    log_handler = logging.FileHandler(file_name)
+    log_handler.setLevel(logging.DEBUG)
+    fmt = "%(asctime)s %(levelname)s %(message)s"
+    log_formatter = logging.Formatter(fmt)
+    log_handler.setFormatter(log_formatter)
+    logger.addHandler(log_handler)
 
     if args.database:
         import sqlite3
@@ -242,12 +238,13 @@ def main():
             logger.removeHandler(log_handler)
             file_name = os.path.join(args.logdir, name + '.log')
             log_handler = logging.FileHandler(file_name)
+            log_handler.setLevel(logging.DEBUG)
             log_handler.setFormatter(log_formatter)
             logger.addHandler(log_handler)
 
         with DataCollector(args.logdir, name, args.tracing, args.dmesg):
             logger.info("START " + name)
-            if log_to_file:
+            if args.loglevel == logging.WARNING:
                 print "START " + name
                 sys.stdout.flush()
             if t.__doc__:
@@ -327,7 +324,7 @@ def main():
         result = result + " " + name + " "
         result = result + str(diff.total_seconds()) + " " + str(end)
         logger.info(result)
-        if log_to_file or print_res:
+        if args.loglevel == logging.WARNING:
             print result
             sys.stdout.flush()
 
@@ -336,6 +333,7 @@ def main():
         logger.removeHandler(log_handler)
         file_name = os.path.join(args.logdir, 'run-tests.log')
         log_handler = logging.FileHandler(file_name)
+        log_handler.setLevel(logging.DEBUG)
         log_handler.setFormatter(log_formatter)
         logger.addHandler(log_handler)
 
@@ -346,11 +344,13 @@ def main():
         logger.info("passed " + str(len(passed)) + " test case(s)")
         logger.info("skipped " + str(len(skipped)) + " test case(s)")
         logger.info("failed tests: " + str(failed))
+        if args.loglevel == logging.WARNING:
+            print "failed tests: " + str(failed)
         sys.exit(1)
     logger.info("passed all " + str(len(passed)) + " test case(s)")
     if len(skipped):
         logger.info("skipped " + str(len(skipped)) + " test case(s)")
-    if log_to_file:
+    if args.loglevel == logging.WARNING:
         print "passed all " + str(len(passed)) + " test case(s)"
         if len(skipped):
             print "skipped " + str(len(skipped)) + " test case(s)"

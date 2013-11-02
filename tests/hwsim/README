@@ -137,10 +137,9 @@ timestamp and a postfix to identify the specific log:
 - *.log0 = wpa_supplicant debug log for the first radio
 - *.log1 = wpa_supplicant debug log for the second radio
 - *.log2 = wpa_supplicant debug log for the third radio
-- hostapd = hostapd debug log
+- *.hostapd = hostapd debug log
 - hwsim0 = wlantest debug log
 - hwsim0.pcapng = capture with all frames exchanged during the tests
-- tcpdump = tcpdump output
 - *.log = debug prints from the test scripts
 - trace.dat = Linux tracing record (if enabled)
 - hlr_auc_gw - hlr_auc_gw (EAP-SIM/AKA/AKA' authentication) log

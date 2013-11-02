@@ -304,6 +304,23 @@ def main():
                     logger.info("Failed to rename log files")
                     logger.info(e)
 
+            try:
+                import getpass
+                srcname = os.path.join(args.logdir, 'hostapd')
+                dstname = os.path.join(args.logdir, name + '.hostapd')
+                num = 0
+                while os.path.exists(dstname):
+                    dstname = os.path.join(args.logdir, name + '.hostapd-' + str(num))
+                    num = num + 1
+                os.rename(srcname, dstname)
+                hapd = HostapdGlobal()
+                hapd.relog()
+                subprocess.call(['sudo', 'chown', '-f', getpass.getuser(),
+                                 srcname])
+            except Exception, e:
+                logger.info("Failed to rename hostapd log file")
+                logger.info(e)
+
         end = datetime.now()
         diff = end - start
         report(conn, args.prefill, args.build, args.commit, run, name, result, diff.total_seconds())

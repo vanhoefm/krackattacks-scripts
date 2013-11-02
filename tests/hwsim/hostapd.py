@@ -33,6 +33,9 @@ class HostapdGlobal:
     def remove(self, ifname):
         self.ctrl.request("REMOVE " + ifname)
 
+    def relog(self):
+        self.ctrl.request("RELOG")
+
 
 class Hostapd:
     def __init__(self, ifname):

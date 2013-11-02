@@ -114,7 +114,7 @@ static void hostapd_logger_cb(void *ctx, const u8 *addr, unsigned int module,
 
 	if ((conf_stdout & module) && level >= conf_stdout_level) {
 		wpa_debug_print_timestamp();
-		printf("%s\n", format);
+		wpa_printf(MSG_INFO, "%s", format);
 	}
 
 #ifndef CONFIG_NATIVE_WINDOWS

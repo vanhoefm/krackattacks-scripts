@@ -595,3 +595,6 @@ class WpaSupplicant:
         ev = self.wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
         if ev is None:
             raise Exception("Association with the AP timed out")
+
+    def relog(self):
+        self.request("RELOG")

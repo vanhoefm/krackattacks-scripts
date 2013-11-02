@@ -77,6 +77,23 @@ class DataCollector(object):
             output = os.path.join(self._logdir, '%s.dmesg' % (self._testname, ))
             subprocess.call(['sudo', 'dmesg', '-c'], stdout=open(output, 'w'))
 
+def rename_log(logdir, basename, testname, dev):
+    try:
+        import getpass
+        srcname = os.path.join(logdir, basename)
+        dstname = os.path.join(logdir, testname + '.' + basename)
+        num = 0
+        while os.path.exists(dstname):
+            dstname = os.path.join(logdir,
+                                   testname + '.' + basename + '-' + str(num))
+            num = num + 1
+        os.rename(srcname, dstname)
+        dev.relog()
+        subprocess.call(['sudo', 'chown', '-f', getpass.getuser(), srcname])
+    except Exception, e:
+        logger.info("Failed to rename log files")
+        logger.info(e)
+
 def main():
     tests = []
     test_modules = []
@@ -285,38 +302,10 @@ def main():
             reset_devs(dev, apdev)
 
             for i in range(0, 3):
-                try:
-                    import getpass
-                    srcname = os.path.join(args.logdir, 'log' + str(i))
-                    dstname = os.path.join(args.logdir, name + '.log' + str(i))
-                    num = 0
-                    while os.path.exists(dstname):
-                        dstname = os.path.join(args.logdir, name + '.log' + str(i) + '-' + str(num))
-                        num = num + 1
-                    os.rename(srcname, dstname)
-                    dev[i].request("RELOG")
-                    subprocess.call(['sudo', 'chown', '-f', getpass.getuser(),
-                                     srcname])
-                except Exception, e:
-                    logger.info("Failed to rename log files")
-                    logger.info(e)
+                rename_log(args.logdir, 'log' + str(i), name, dev[i])
 
-            try:
-                import getpass
-                srcname = os.path.join(args.logdir, 'hostapd')
-                dstname = os.path.join(args.logdir, name + '.hostapd')
-                num = 0
-                while os.path.exists(dstname):
-                    dstname = os.path.join(args.logdir, name + '.hostapd-' + str(num))
-                    num = num + 1
-                os.rename(srcname, dstname)
-                hapd = HostapdGlobal()
-                hapd.relog()
-                subprocess.call(['sudo', 'chown', '-f', getpass.getuser(),
-                                 srcname])
-            except Exception, e:
-                logger.info("Failed to rename hostapd log file")
-                logger.info(e)
+            hapd = HostapdGlobal()
+            rename_log(args.logdir, 'hostapd', name, hapd)
 
         end = datetime.now()
         diff = end - start

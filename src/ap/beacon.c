@@ -540,7 +540,7 @@ void handle_probe_req(struct hostapd_data *hapd,
 		   is_broadcast_ether_addr(mgmt->da));
 
 	if (hostapd_drv_send_mlme(hapd, resp, resp_len, noack) < 0)
-		perror("handle_probe_req: send");
+		wpa_printf(MSG_INFO, "handle_probe_req: send failed");
 
 	os_free(resp);
 

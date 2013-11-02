@@ -679,7 +679,7 @@ static int radius_server_reject(struct radius_server_data *data,
 	buf = radius_msg_get_buf(msg);
 	if (sendto(data->auth_sock, wpabuf_head(buf), wpabuf_len(buf), 0,
 		   (struct sockaddr *) from, sizeof(*from)) < 0) {
-		perror("sendto[RADIUS SRV]");
+		wpa_printf(MSG_INFO, "sendto[RADIUS SRV]: %s", strerror(errno));
 		ret = -1;
 	}
 
@@ -750,7 +750,8 @@ static int radius_server_request(struct radius_server_data *data,
 				     wpabuf_len(buf), 0,
 				     (struct sockaddr *) from, fromlen);
 			if (res < 0) {
-				perror("sendto[RADIUS SRV]");
+				wpa_printf(MSG_INFO, "sendto[RADIUS SRV]: %s",
+					   strerror(errno));
 			}
 			return 0;
 		}
@@ -842,7 +843,8 @@ static int radius_server_request(struct radius_server_data *data,
 			     wpabuf_len(buf), 0,
 			     (struct sockaddr *) from, fromlen);
 		if (res < 0) {
-			perror("sendto[RADIUS SRV]");
+			wpa_printf(MSG_INFO, "sendto[RADIUS SRV]: %s",
+				   strerror(errno));
 		}
 		radius_msg_free(sess->last_reply);
 		sess->last_reply = reply;
@@ -897,7 +899,8 @@ static void radius_server_receive_auth(int sock, void *eloop_ctx,
 	len = recvfrom(sock, buf, RADIUS_MAX_MSG_LEN, 0,
 		       (struct sockaddr *) &from.ss, &fromlen);
 	if (len < 0) {
-		perror("recvfrom[radius_server]");
+		wpa_printf(MSG_INFO, "recvfrom[radius_server]: %s",
+			   strerror(errno));
 		goto fail;
 	}
 
@@ -1001,7 +1004,7 @@ static int radius_server_open_socket(int port)
 
 	s = socket(PF_INET, SOCK_DGRAM, 0);
 	if (s < 0) {
-		perror("socket");
+		wpa_printf(MSG_INFO, "RADIUS: socket: %s", strerror(errno));
 		return -1;
 	}
 
@@ -1011,7 +1014,7 @@ static int radius_server_open_socket(int port)
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(port);
 	if (bind(s, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
-		perror("bind");
+		wpa_printf(MSG_INFO, "RADIUS: bind: %s", strerror(errno));
 		close(s);
 		return -1;
 	}
@@ -1028,7 +1031,8 @@ static int radius_server_open_socket6(int port)
 
 	s = socket(PF_INET6, SOCK_DGRAM, 0);
 	if (s < 0) {
-		perror("socket[IPv6]");
+		wpa_printf(MSG_INFO, "RADIUS: socket[IPv6]: %s",
+			   strerror(errno));
 		return -1;
 	}
 
@@ -1037,7 +1041,7 @@ static int radius_server_open_socket6(int port)
 	os_memcpy(&addr.sin6_addr, &in6addr_any, sizeof(in6addr_any));
 	addr.sin6_port = htons(port);
 	if (bind(s, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
-		perror("bind");
+		wpa_printf(MSG_INFO, "RADIUS: bind: %s", strerror(errno));
 		close(s);
 		return -1;
 	}
@@ -1248,8 +1252,7 @@ radius_server_init(struct radius_server_conf *conf)
 
 #ifndef CONFIG_IPV6
 	if (conf->ipv6) {
-		fprintf(stderr, "RADIUS server compiled without IPv6 "
-			"support.\n");
+		wpa_printf(MSG_ERROR, "RADIUS server compiled without IPv6 support");
 		return NULL;
 	}
 #endif /* CONFIG_IPV6 */
@@ -1305,7 +1308,7 @@ radius_server_init(struct radius_server_conf *conf)
 	data->clients = radius_server_read_clients(conf->client_file,
 						   conf->ipv6);
 	if (data->clients == NULL) {
-		printf("No RADIUS clients configured.\n");
+		wpa_printf(MSG_ERROR, "No RADIUS clients configured");
 		radius_server_deinit(data);
 		return NULL;
 	}
@@ -1317,8 +1320,7 @@ radius_server_init(struct radius_server_conf *conf)
 #endif /* CONFIG_IPV6 */
 	data->auth_sock = radius_server_open_socket(conf->auth_port);
 	if (data->auth_sock < 0) {
-		printf("Failed to open UDP socket for RADIUS authentication "
-		       "server\n");
+		wpa_printf(MSG_ERROR, "Failed to open UDP socket for RADIUS authentication server");
 		radius_server_deinit(data);
 		return NULL;
 	}

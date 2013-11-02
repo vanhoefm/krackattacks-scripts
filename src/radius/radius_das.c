@@ -1,6 +1,6 @@
 /*
  * RADIUS Dynamic Authorization Server (DAS) (RFC 5176)
- * Copyright (c) 2012, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2012-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -284,7 +284,7 @@ static int radius_das_open_socket(int port)
 
 	s = socket(PF_INET, SOCK_DGRAM, 0);
 	if (s < 0) {
-		perror("socket");
+		wpa_printf(MSG_INFO, "RADIUS DAS: socket: %s", strerror(errno));
 		return -1;
 	}
 
@@ -292,7 +292,7 @@ static int radius_das_open_socket(int port)
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(port);
 	if (bind(s, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
-		perror("bind");
+		wpa_printf(MSG_INFO, "RADIUS DAS: bind: %s", strerror(errno));
 		close(s);
 		return -1;
 	}

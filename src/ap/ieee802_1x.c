@@ -453,7 +453,7 @@ static void ieee802_1x_encapsulate_radius(struct hostapd_data *hapd,
 	msg = radius_msg_new(RADIUS_CODE_ACCESS_REQUEST,
 			     sm->radius_identifier);
 	if (msg == NULL) {
-		printf("Could not create net RADIUS packet\n");
+		wpa_printf(MSG_INFO, "Could not create new RADIUS packet");
 		return;
 	}
 
@@ -462,7 +462,7 @@ static void ieee802_1x_encapsulate_radius(struct hostapd_data *hapd,
 	if (sm->identity &&
 	    !radius_msg_add_attr(msg, RADIUS_ATTR_USER_NAME,
 				 sm->identity, sm->identity_len)) {
-		printf("Could not add User-Name\n");
+		wpa_printf(MSG_INFO, "Could not add User-Name");
 		goto fail;
 	}
 
@@ -476,12 +476,12 @@ static void ieee802_1x_encapsulate_radius(struct hostapd_data *hapd,
 	if (!hostapd_config_get_radius_attr(hapd->conf->radius_auth_req_attr,
 					    RADIUS_ATTR_FRAMED_MTU) &&
 	    !radius_msg_add_attr_int32(msg, RADIUS_ATTR_FRAMED_MTU, 1400)) {
-		printf("Could not add Framed-MTU\n");
+		wpa_printf(MSG_INFO, "Could not add Framed-MTU");
 		goto fail;
 	}
 
 	if (eap && !radius_msg_add_eap(msg, eap, len)) {
-		printf("Could not add EAP-Message\n");
+		wpa_printf(MSG_INFO, "Could not add EAP-Message");
 		goto fail;
 	}
 
@@ -493,8 +493,7 @@ static void ieee802_1x_encapsulate_radius(struct hostapd_data *hapd,
 		int res = radius_msg_copy_attr(msg, sm->last_recv_radius,
 					       RADIUS_ATTR_STATE);
 		if (res < 0) {
-			printf("Could not copy State attribute from previous "
-			       "Access-Challenge\n");
+			wpa_printf(MSG_INFO, "Could not copy State attribute from previous Access-Challenge");
 			goto fail;
 		}
 		if (res > 0) {
@@ -544,7 +543,7 @@ static void handle_eap_response(struct hostapd_data *hapd,
 	data = (u8 *) (eap + 1);
 
 	if (len < sizeof(*eap) + 1) {
-		printf("handle_eap_response: too short response data\n");
+		wpa_printf(MSG_INFO, "handle_eap_response: too short response data");
 		return;
 	}
 
@@ -572,7 +571,7 @@ static void handle_eap(struct hostapd_data *hapd, struct sta_info *sta,
 	u16 eap_len;
 
 	if (len < sizeof(*eap)) {
-		printf("   too short EAP packet\n");
+		wpa_printf(MSG_INFO, "   too short EAP packet");
 		return;
 	}
 
@@ -665,7 +664,7 @@ void ieee802_1x_receive(struct hostapd_data *hapd, const u8 *sa, const u8 *buf,
 	}
 
 	if (len < sizeof(*hdr)) {
-		printf("   too short IEEE 802.1X packet\n");
+		wpa_printf(MSG_INFO, "   too short IEEE 802.1X packet");
 		return;
 	}
 
@@ -675,7 +674,7 @@ void ieee802_1x_receive(struct hostapd_data *hapd, const u8 *sa, const u8 *buf,
 		   hdr->version, hdr->type, datalen);
 
 	if (len - sizeof(*hdr) < datalen) {
-		printf("   frame too short for this IEEE 802.1X packet\n");
+		wpa_printf(MSG_INFO, "   frame too short for this IEEE 802.1X packet");
 		if (sta->eapol_sm)
 			sta->eapol_sm->dot1xAuthEapLengthErrorFramesRx++;
 		return;
@@ -1277,15 +1276,14 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 			   "EAP-Message");
 	} else if (radius_msg_verify(msg, shared_secret, shared_secret_len,
 				     req, 1)) {
-		printf("Incoming RADIUS packet did not have correct "
-		       "Message-Authenticator - dropped\n");
+		wpa_printf(MSG_INFO, "Incoming RADIUS packet did not have correct Message-Authenticator - dropped");
 		return RADIUS_RX_INVALID_AUTHENTICATOR;
 	}
 
 	if (hdr->code != RADIUS_CODE_ACCESS_ACCEPT &&
 	    hdr->code != RADIUS_CODE_ACCESS_REJECT &&
 	    hdr->code != RADIUS_CODE_ACCESS_CHALLENGE) {
-		printf("Unknown RADIUS message code\n");
+		wpa_printf(MSG_INFO, "Unknown RADIUS message code");
 		return RADIUS_RX_UNKNOWN;
 	}
 
@@ -1449,7 +1447,7 @@ static int ieee802_1x_rekey_broadcast(struct hostapd_data *hapd)
 	if (eapol->default_wep_key == NULL ||
 	    random_get_bytes(eapol->default_wep_key,
 			     hapd->conf->default_wep_key_len)) {
-		printf("Could not generate random WEP key.\n");
+		wpa_printf(MSG_INFO, "Could not generate random WEP key");
 		os_free(eapol->default_wep_key);
 		eapol->default_wep_key = NULL;
 		return -1;

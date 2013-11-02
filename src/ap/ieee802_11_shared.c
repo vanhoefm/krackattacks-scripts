@@ -69,7 +69,7 @@ void ieee802_11_send_sa_query_req(struct hostapd_data *hapd,
 		  WLAN_SA_QUERY_TR_ID_LEN);
 	end = mgmt.u.action.u.sa_query_req.trans_id + WLAN_SA_QUERY_TR_ID_LEN;
 	if (hostapd_drv_send_mlme(hapd, &mgmt, end - (u8 *) &mgmt, 0) < 0)
-		perror("ieee802_11_send_sa_query_req: send");
+		wpa_printf(MSG_INFO, "ieee802_11_send_sa_query_req: send failed");
 }
 
 
@@ -107,7 +107,7 @@ static void ieee802_11_send_sa_query_resp(struct hostapd_data *hapd,
 		  WLAN_SA_QUERY_TR_ID_LEN);
 	end = resp.u.action.u.sa_query_req.trans_id + WLAN_SA_QUERY_TR_ID_LEN;
 	if (hostapd_drv_send_mlme(hapd, &resp, end - (u8 *) &resp, 0) < 0)
-		perror("ieee80211_mgmt_sa_query_request: send");
+		wpa_printf(MSG_INFO, "ieee80211_mgmt_sa_query_request: send failed");
 }
 
 

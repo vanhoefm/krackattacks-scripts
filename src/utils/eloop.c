@@ -753,7 +753,8 @@ void eloop_run(void)
 			   timeout ? timeout_ms : -1);
 
 		if (res < 0 && errno != EINTR && errno != 0) {
-			perror("poll");
+			wpa_printf(MSG_INFO, "eloop: poll: %s",
+				   strerror(errno));
 			goto out;
 		}
 #else /* CONFIG_ELOOP_POLL */
@@ -763,7 +764,8 @@ void eloop_run(void)
 		res = select(eloop.max_sock + 1, rfds, wfds, efds,
 			     timeout ? &_tv : NULL);
 		if (res < 0 && errno != EINTR && errno != 0) {
-			perror("select");
+			wpa_printf(MSG_INFO, "eloop: select: %s",
+				   strerror(errno));
 			goto out;
 		}
 #endif /* CONFIG_ELOOP_POLL */

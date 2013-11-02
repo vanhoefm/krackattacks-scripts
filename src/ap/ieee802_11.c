@@ -286,7 +286,7 @@ static void send_auth_reply(struct hostapd_data *hapd,
 		   MAC2STR(dst), auth_alg, auth_transaction,
 		   resp, (unsigned long) ies_len);
 	if (hostapd_drv_send_mlme(hapd, reply, rlen, 0) < 0)
-		perror("send_auth_reply: send");
+		wpa_printf(MSG_INFO, "send_auth_reply: send");
 
 	os_free(buf);
 }
@@ -552,8 +552,8 @@ static void handle_auth(struct hostapd_data *hapd,
 	char *radius_cui = NULL;
 
 	if (len < IEEE80211_HDRLEN + sizeof(mgmt->u.auth)) {
-		printf("handle_auth - too short payload (len=%lu)\n",
-		       (unsigned long) len);
+		wpa_printf(MSG_INFO, "handle_auth - too short payload (len=%lu)",
+			   (unsigned long) len);
 		return;
 	}
 
@@ -601,23 +601,23 @@ static void handle_auth(struct hostapd_data *hapd,
 #endif /* CONFIG_SAE */
 	      ((hapd->conf->auth_algs & WPA_AUTH_ALG_SHARED) &&
 	       auth_alg == WLAN_AUTH_SHARED_KEY))) {
-		printf("Unsupported authentication algorithm (%d)\n",
-		       auth_alg);
+		wpa_printf(MSG_INFO, "Unsupported authentication algorithm (%d)",
+			   auth_alg);
 		resp = WLAN_STATUS_NOT_SUPPORTED_AUTH_ALG;
 		goto fail;
 	}
 
 	if (!(auth_transaction == 1 || auth_alg == WLAN_AUTH_SAE ||
 	      (auth_alg == WLAN_AUTH_SHARED_KEY && auth_transaction == 3))) {
-		printf("Unknown authentication transaction number (%d)\n",
-		       auth_transaction);
+		wpa_printf(MSG_INFO, "Unknown authentication transaction number (%d)",
+			   auth_transaction);
 		resp = WLAN_STATUS_UNKNOWN_AUTH_TRANSACTION;
 		goto fail;
 	}
 
 	if (os_memcmp(mgmt->sa, hapd->own_addr, ETH_ALEN) == 0) {
-		printf("Station " MACSTR " not allowed to authenticate.\n",
-		       MAC2STR(mgmt->sa));
+		wpa_printf(MSG_INFO, "Station " MACSTR " not allowed to authenticate",
+			   MAC2STR(mgmt->sa));
 		resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
 		goto fail;
 	}
@@ -628,8 +628,8 @@ static void handle_auth(struct hostapd_data *hapd,
 				      &psk, &identity, &radius_cui);
 
 	if (res == HOSTAPD_ACL_REJECT) {
-		printf("Station " MACSTR " not allowed to authenticate.\n",
-		       MAC2STR(mgmt->sa));
+		wpa_printf(MSG_INFO, "Station " MACSTR " not allowed to authenticate",
+			   MAC2STR(mgmt->sa));
 		resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
 		goto fail;
 	}
@@ -1255,8 +1255,8 @@ static void handle_assoc(struct hostapd_data *hapd,
 
 	if (len < IEEE80211_HDRLEN + (reassoc ? sizeof(mgmt->u.reassoc_req) :
 				      sizeof(mgmt->u.assoc_req))) {
-		printf("handle_assoc(reassoc=%d) - too short payload (len=%lu)"
-		       "\n", reassoc, (unsigned long) len);
+		wpa_printf(MSG_INFO, "handle_assoc(reassoc=%d) - too short payload (len=%lu)",
+			   reassoc, (unsigned long) len);
 		return;
 	}
 
@@ -1442,8 +1442,8 @@ static void handle_disassoc(struct hostapd_data *hapd,
 	struct sta_info *sta;
 
 	if (len < IEEE80211_HDRLEN + sizeof(mgmt->u.disassoc)) {
-		printf("handle_disassoc - too short payload (len=%lu)\n",
-		       (unsigned long) len);
+		wpa_printf(MSG_INFO, "handle_disassoc - too short payload (len=%lu)",
+			   (unsigned long) len);
 		return;
 	}
 
@@ -1453,8 +1453,8 @@ static void handle_disassoc(struct hostapd_data *hapd,
 
 	sta = ap_get_sta(hapd, mgmt->sa);
 	if (sta == NULL) {
-		printf("Station " MACSTR " trying to disassociate, but it "
-		       "is not associated.\n", MAC2STR(mgmt->sa));
+		wpa_printf(MSG_INFO, "Station " MACSTR " trying to disassociate, but it is not associated",
+			   MAC2STR(mgmt->sa));
 		return;
 	}
 
@@ -1528,8 +1528,8 @@ static void handle_beacon(struct hostapd_data *hapd,
 	struct ieee802_11_elems elems;
 
 	if (len < IEEE80211_HDRLEN + sizeof(mgmt->u.beacon)) {
-		printf("handle_beacon - too short payload (len=%lu)\n",
-		       (unsigned long) len);
+		wpa_printf(MSG_INFO, "handle_beacon - too short payload (len=%lu)",
+			   (unsigned long) len);
 		return;
 	}
 
@@ -1749,8 +1749,8 @@ void ieee802_11_mgmt(struct hostapd_data *hapd, const u8 *buf, size_t len,
 	      stype == WLAN_FC_STYPE_ACTION) &&
 #endif /* CONFIG_P2P */
 	    os_memcmp(mgmt->bssid, hapd->own_addr, ETH_ALEN) != 0) {
-		printf("MGMT: BSSID=" MACSTR " not our address\n",
-		       MAC2STR(mgmt->bssid));
+		wpa_printf(MSG_INFO, "MGMT: BSSID=" MACSTR " not our address",
+			   MAC2STR(mgmt->bssid));
 		return;
 	}
 
@@ -1817,8 +1817,8 @@ static void handle_auth_cb(struct hostapd_data *hapd,
 	}
 
 	if (len < IEEE80211_HDRLEN + sizeof(mgmt->u.auth)) {
-		printf("handle_auth_cb - too short payload (len=%lu)\n",
-		       (unsigned long) len);
+		wpa_printf(MSG_INFO, "handle_auth_cb - too short payload (len=%lu)",
+			   (unsigned long) len);
 		return;
 	}
 
@@ -1828,8 +1828,8 @@ static void handle_auth_cb(struct hostapd_data *hapd,
 
 	sta = ap_get_sta(hapd, mgmt->da);
 	if (!sta) {
-		printf("handle_auth_cb: STA " MACSTR " not found\n",
-		       MAC2STR(mgmt->da));
+		wpa_printf(MSG_INFO, "handle_auth_cb: STA " MACSTR " not found",
+			   MAC2STR(mgmt->da));
 		return;
 	}
 
@@ -1879,15 +1879,15 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 
 	if (len < IEEE80211_HDRLEN + (reassoc ? sizeof(mgmt->u.reassoc_resp) :
 				      sizeof(mgmt->u.assoc_resp))) {
-		printf("handle_assoc_cb(reassoc=%d) - too short payload "
-		       "(len=%lu)\n", reassoc, (unsigned long) len);
+		wpa_printf(MSG_INFO, "handle_assoc_cb(reassoc=%d) - too short payload (len=%lu)",
+			   reassoc, (unsigned long) len);
 		return;
 	}
 
 	sta = ap_get_sta(hapd, mgmt->da);
 	if (!sta) {
-		printf("handle_assoc_cb: STA " MACSTR " not found\n",
-		       MAC2STR(mgmt->da));
+		wpa_printf(MSG_INFO, "handle_assoc_cb: STA " MACSTR " not found",
+			   MAC2STR(mgmt->da));
 		return;
 	}
 
@@ -2103,7 +2103,7 @@ void ieee802_11_mgmt_cb(struct hostapd_data *hapd, const u8 *buf, size_t len,
 		wpa_printf(MSG_DEBUG, "mgmt::action cb");
 		break;
 	default:
-		printf("unknown mgmt cb frame subtype %d\n", stype);
+		wpa_printf(MSG_INFO, "unknown mgmt cb frame subtype %d", stype);
 		break;
 	}
 }

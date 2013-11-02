@@ -138,6 +138,8 @@ def main():
     parser.add_argument('--shuffle-tests', action='store_true',
                         dest='shuffle_tests',
                         help='Shuffle test cases to randomize order')
+    parser.add_argument('--no-reset', action='store_true', dest='no_reset',
+                        help='Do not reset devices at the end of the test')
     parser.add_argument('-f', dest='testmodules', metavar='<test module>',
                         help='execute only tests from these test modules',
                         type=str, choices=[[]] + test_modules, nargs='+')
@@ -299,7 +301,10 @@ def main():
                 except Exception, e:
                     logger.info("Failed to issue TEST-STOP after {} for {}".format(name, d.ifname))
                     logger.info(e)
-            reset_devs(dev, apdev)
+            if args.no_reset:
+                print "Leaving devices in current state"
+            else:
+                reset_devs(dev, apdev)
 
             for i in range(0, 3):
                 rename_log(args.logdir, 'log' + str(i), name, dev[i])

@@ -2564,9 +2564,12 @@ static void nl80211_radar_event(struct wpa_driver_nl80211_data *drv,
 	}
 
 	/* Get VHT params */
-	data.dfs_event.chan_width =
-		convert2width(nla_get_u32(tb[NL80211_ATTR_CHANNEL_WIDTH]));
-	data.dfs_event.cf1 = nla_get_u32(tb[NL80211_ATTR_CENTER_FREQ1]);
+	if (tb[NL80211_ATTR_CHANNEL_WIDTH])
+		data.dfs_event.chan_width =
+			convert2width(nla_get_u32(
+					      tb[NL80211_ATTR_CHANNEL_WIDTH]));
+	if (tb[NL80211_ATTR_CENTER_FREQ1])
+		data.dfs_event.cf1 = nla_get_u32(tb[NL80211_ATTR_CENTER_FREQ1]);
 	if (tb[NL80211_ATTR_CENTER_FREQ2])
 		data.dfs_event.cf2 = nla_get_u32(tb[NL80211_ATTR_CENTER_FREQ2]);
 

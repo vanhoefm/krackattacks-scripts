@@ -1364,11 +1364,22 @@ int hostapd_enable_iface(struct hostapd_iface *hapd_iface)
 
 	if (hapd_iface->interfaces == NULL ||
 	    hapd_iface->interfaces->driver_init == NULL ||
-	    hapd_iface->interfaces->driver_init(hapd_iface) ||
-	    hostapd_setup_interface(hapd_iface)) {
-		hostapd_interface_deinit_free(hapd_iface);
+	    hapd_iface->interfaces->driver_init(hapd_iface))
+		return -1;
+
+	if (hostapd_setup_interface(hapd_iface)) {
+		const struct wpa_driver_ops *driver;
+		void *drv_priv;
+
+		driver = hapd_iface->bss[0]->driver;
+		drv_priv = hapd_iface->bss[0]->drv_priv;
+		if (driver && driver->hapd_deinit && drv_priv) {
+			driver->hapd_deinit(drv_priv);
+			hapd_iface->bss[0]->drv_priv = NULL;
+		}
 		return -1;
 	}
+
 	return 0;
 }
 

@@ -430,7 +430,8 @@ int hostapd_if_add(struct hostapd_data *hapd, enum wpa_driver_if_type type,
 int hostapd_if_remove(struct hostapd_data *hapd, enum wpa_driver_if_type type,
 		      const char *ifname)
 {
-	if (hapd->driver == NULL || hapd->driver->if_remove == NULL)
+	if (hapd->driver == NULL || hapd->drv_priv == NULL ||
+	    hapd->driver->if_remove == NULL)
 		return -1;
 	return hapd->driver->if_remove(hapd->drv_priv, type, ifname);
 }

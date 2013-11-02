@@ -26,8 +26,8 @@ def connectivity(dev, ap_ifname):
     hwsim_utils.test_connectivity(dev[1].ifname, ap_ifname)
 
 def connect_2sta(dev, ssid, ap_ifname):
-    dev[0].connect(ssid, psk="12345678")
-    dev[1].connect(ssid, psk="12345678")
+    dev[0].connect(ssid, psk="12345678", scan_freq="2412")
+    dev[1].connect(ssid, psk="12345678", scan_freq="2412")
     connectivity(dev, ap_ifname)
 
 def connect_2sta_wpa2_psk(dev, ap_ifname):
@@ -37,18 +37,22 @@ def connect_2sta_wpa_psk(dev, ap_ifname):
     connect_2sta(dev, "test-wpa-psk", ap_ifname)
 
 def connect_2sta_wpa_psk_mixed(dev, ap_ifname):
-    dev[0].connect("test-wpa-mixed-psk", psk="12345678", proto="WPA")
-    dev[1].connect("test-wpa-mixed-psk", psk="12345678", proto="WPA2")
+    dev[0].connect("test-wpa-mixed-psk", psk="12345678", proto="WPA",
+                   scan_freq="2412")
+    dev[1].connect("test-wpa-mixed-psk", psk="12345678", proto="WPA2",
+                   scan_freq="2412")
     connectivity(dev, ap_ifname)
 
 def connect_2sta_wep(dev, ap_ifname):
-    dev[0].connect("test-wep", key_mgmt="NONE", wep_key0='"hello"')
-    dev[1].connect("test-wep", key_mgmt="NONE", wep_key0='"hello"')
+    dev[0].connect("test-wep", key_mgmt="NONE", wep_key0='"hello"',
+                   scan_freq="2412")
+    dev[1].connect("test-wep", key_mgmt="NONE", wep_key0='"hello"',
+                   scan_freq="2412")
     connectivity(dev, ap_ifname)
 
 def connect_2sta_open(dev, ap_ifname):
-    dev[0].connect("test-open", key_mgmt="NONE")
-    dev[1].connect("test-open", key_mgmt="NONE")
+    dev[0].connect("test-open", key_mgmt="NONE", scan_freq="2412")
+    dev[1].connect("test-open", key_mgmt="NONE", scan_freq="2412")
     connectivity(dev, ap_ifname)
 
 def wlantest_setup():

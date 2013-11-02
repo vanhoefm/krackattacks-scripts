@@ -19,7 +19,8 @@ def test_ap_change_ssid(dev, apdev):
     params = hostapd.wpa2_params(ssid="test-wpa2-psk-start",
                                  passphrase="12345678")
     hostapd.add_ap(apdev[0]['ifname'], params)
-    id = dev[0].connect("test-wpa2-psk-start", psk="12345678")
+    id = dev[0].connect("test-wpa2-psk-start", psk="12345678",
+                        scan_freq="2412")
     dev[0].request("DISCONNECT")
 
     logger.info("Change SSID dynamically")

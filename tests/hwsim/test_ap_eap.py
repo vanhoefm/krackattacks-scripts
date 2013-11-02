@@ -22,7 +22,7 @@ def eap_connect(dev, method, identity, anonymous_identity=None, password=None,
                 identity=identity, anonymous_identity=anonymous_identity,
                 password=password, phase1=phase1, phase2=phase2,
                 ca_cert=ca_cert, domain_suffix_match=domain_suffix_match,
-                wait_connect=False)
+                wait_connect=False, scan_freq="2412")
     ev = dev.wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
     if ev is None:
         raise Exception("Association and EAP start timed out")
@@ -163,7 +163,7 @@ def test_ap_wpa2_eap_tls_neg_incorrect_trust_root(dev, apdev):
                    identity="DOMAIN\mschapv2 user", anonymous_identity="ttls",
                    password="password", phase2="auth=MSCHAPV2",
                    ca_cert="auth_serv/ca-incorrect.pem",
-                   wait_connect=False)
+                   wait_connect=False, scan_freq="2412")
 
     ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
     if ev is None:
@@ -214,7 +214,7 @@ def test_ap_wpa2_eap_tls_neg_suffix_match(dev, apdev):
                    password="password", phase2="auth=MSCHAPV2",
                    ca_cert="auth_serv/ca.pem",
                    domain_suffix_match="incorrect.example.com",
-                   wait_connect=False)
+                   wait_connect=False, scan_freq="2412")
 
     ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
     if ev is None:

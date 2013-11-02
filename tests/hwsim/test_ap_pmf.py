@@ -26,10 +26,12 @@ def test_ap_pmf_required(dev, apdev):
     params["ieee80211w"] = "2";
     hostapd.add_ap(apdev[0]['ifname'], params)
     dev[0].connect(ssid, psk="12345678", ieee80211w="1",
-                   key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2")
+                   key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2",
+                   scan_freq="2412")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
     dev[1].connect(ssid, psk="12345678", ieee80211w="2",
-                   key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2")
+                   key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2",
+                   scan_freq="2412")
     hwsim_utils.test_connectivity(dev[1].ifname, apdev[0]['ifname'])
     hapd = hostapd.Hostapd(apdev[0]['ifname'])
     hapd.request("SA_QUERY " + dev[0].p2p_interface_addr())
@@ -56,10 +58,12 @@ def test_ap_pmf_optional(dev, apdev):
     params["ieee80211w"] = "1";
     hostapd.add_ap(apdev[0]['ifname'], params)
     dev[0].connect(ssid, psk="12345678", ieee80211w="1",
-                   key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2")
+                   key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2",
+                   scan_freq="2412")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
     dev[1].connect(ssid, psk="12345678", ieee80211w="2",
-                   key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2")
+                   key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2",
+                   scan_freq="2412")
     hwsim_utils.test_connectivity(dev[1].ifname, apdev[0]['ifname'])
     wt.require_ap_pmf_optional(apdev[0]['bssid'])
     wt.require_sta_pmf(apdev[0]['bssid'], dev[0].p2p_interface_addr())
@@ -76,10 +80,12 @@ def test_ap_pmf_optional_2akm(dev, apdev):
     params["ieee80211w"] = "1";
     hostapd.add_ap(apdev[0]['ifname'], params)
     dev[0].connect(ssid, psk="12345678", ieee80211w="1",
-                   key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2")
+                   key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2",
+                   scan_freq="2412")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
     dev[1].connect(ssid, psk="12345678", ieee80211w="2",
-                   key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2")
+                   key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2",
+                   scan_freq="2412")
     hwsim_utils.test_connectivity(dev[1].ifname, apdev[0]['ifname'])
     wt.require_ap_pmf_optional(apdev[0]['bssid'])
     wt.require_sta_pmf(apdev[0]['bssid'], dev[0].p2p_interface_addr())
@@ -98,11 +104,13 @@ def test_ap_pmf_negative(dev, apdev):
     params = hostapd.wpa2_params(ssid=ssid, passphrase="12345678")
     hostapd.add_ap(apdev[0]['ifname'], params)
     dev[0].connect(ssid, psk="12345678", ieee80211w="1",
-                   key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2")
+                   key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2",
+                   scan_freq="2412")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
     try:
         dev[1].connect(ssid, psk="12345678", ieee80211w="2",
-                       key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2")
+                       key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2",
+                       scan_freq="2412")
         hwsim_utils.test_connectivity(dev[1].ifname, apdev[0]['ifname'])
         raise Exception("PMF required STA connected to no PMF AP")
     except Exception, e:

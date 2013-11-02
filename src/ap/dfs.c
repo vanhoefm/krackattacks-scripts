@@ -11,6 +11,7 @@
 
 #include "utils/common.h"
 #include "common/ieee802_11_defs.h"
+#include "common/wpa_ctrl.h"
 #include "hostapd.h"
 #include "ap_drv_ops.h"
 #include "drivers/driver.h"
@@ -568,6 +569,10 @@ int hostapd_handle_dfs(struct hostapd_data *hapd)
 
 	/* Finally start CAC */
 	wpa_printf(MSG_DEBUG, "DFS start CAC on %d MHz", hapd->iface->freq);
+	wpa_msg(hapd->msg_ctx, MSG_INFO, DFS_EVENT_CAC_START
+		"freq=%d chan=%d sec_chan=%d",
+		hapd->iface->freq,
+		hapd->iconf->channel, hapd->iconf->secondary_channel);
 	if (hostapd_start_dfs_cac(hapd, hapd->iconf->hw_mode,
 				  hapd->iface->freq,
 				  hapd->iconf->channel,
@@ -589,6 +594,10 @@ int hostapd_dfs_complete_cac(struct hostapd_data *hapd, int success, int freq,
 			     int ht_enabled, int chan_offset, int chan_width,
 			     int cf1, int cf2)
 {
+	wpa_msg(hapd->msg_ctx, MSG_INFO, DFS_EVENT_CAC_COMPLETED
+		"success=%d freq=%d ht_enabled=%d chan_offset=%d chan_width=%d cf1=%d cf2=%d",
+		success, freq, ht_enabled, chan_offset, chan_width, cf1, cf2);
+
 	if (success) {
 		/* Complete iface/ap configuration */
 		set_dfs_state(hapd, freq, ht_enabled, chan_offset,
@@ -617,6 +626,9 @@ static int hostapd_dfs_start_channel_switch(struct hostapd_data *hapd)
 	if (channel) {
 		wpa_printf(MSG_DEBUG, "DFS will switch to a new channel %d",
 			   channel->chan);
+		wpa_msg(hapd->msg_ctx, MSG_INFO, DFS_EVENT_NEW_CHANNEL
+			"freq=%d chan=%d sec_chan=%d", channel->freq,
+			channel->chan, secondary_channel);
 
 		hapd->iface->freq = channel->freq;
 		hapd->iconf->channel = channel->chan;
@@ -661,6 +673,10 @@ int hostapd_dfs_radar_detected(struct hostapd_data *hapd, int freq,
 	if (!hapd->iconf->ieee80211h)
 		return 0;
 
+	wpa_msg(hapd->msg_ctx, MSG_INFO, DFS_EVENT_RADAR_DETECTED
+		"freq=%d ht_enabled=%d chan_offset=%d chan_width=%d cf1=%d cf2=%d",
+		freq, ht_enabled, chan_offset, chan_width, cf1, cf2);
+
 	/* mark radar frequency as invalid */
 	res = set_dfs_state(hapd, freq, ht_enabled, chan_offset,
 			    chan_width, cf1, cf2,
@@ -682,6 +698,9 @@ int hostapd_dfs_nop_finished(struct hostapd_data *hapd, int freq,
 			     int ht_enabled, int chan_offset, int chan_width,
 			     int cf1, int cf2)
 {
+	wpa_msg(hapd->msg_ctx, MSG_INFO, DFS_EVENT_NOP_FINISHED
+		"freq=%d ht_enabled=%d chan_offset=%d chan_width=%d cf1=%d cf2=%d",
+		freq, ht_enabled, chan_offset, chan_width, cf1, cf2);
 	/* TODO add correct implementation here */
 	set_dfs_state(hapd, freq, ht_enabled, chan_offset, chan_width, cf1, cf2,
 		      HOSTAPD_CHAN_DFS_USABLE);

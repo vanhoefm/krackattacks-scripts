@@ -144,6 +144,8 @@ def test_grpform3(dev):
 
 def test_grpform_pbc(dev):
     """P2P group formation using PBC and re-init GO Negotiation"""
+    dev[0].request("SET ignore_old_scan_res 1")
+    dev[1].request("SET ignore_old_scan_res 1")
     [i_res, r_res] = go_neg_pbc(i_dev=dev[0], i_intent=15, r_dev=dev[1], r_intent=0)
     check_grpform_results(i_res, r_res)
     if i_res['role'] != 'GO' or r_res['role'] != 'client':

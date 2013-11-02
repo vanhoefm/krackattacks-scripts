@@ -297,7 +297,7 @@ def main():
                 try:
                     d.request("NOTE TEST-STOP " + name)
                 except Exception, e:
-                    logger.info("Failed to issue TEST-STOP after " + name + " for " + d.ifname)
+                    logger.info("Failed to issue TEST-STOP after {} for {}".format(name, d.ifname))
                     logger.info(e)
             reset_devs(dev, apdev)
 
@@ -310,8 +310,7 @@ def main():
         end = datetime.now()
         diff = end - start
         report(conn, args.prefill, args.build, args.commit, run, name, result, diff.total_seconds())
-        result = result + " " + name + " "
-        result = result + str(diff.total_seconds()) + " " + str(end)
+        result = "{} {} {} {}".format(result, name, diff.total_seconds(), end)
         logger.info(result)
         if args.loglevel == logging.WARNING:
             print result
@@ -330,19 +329,19 @@ def main():
         conn.close()
 
     if len(failed):
-        logger.info("passed " + str(len(passed)) + " test case(s)")
-        logger.info("skipped " + str(len(skipped)) + " test case(s)")
+        logger.info("passed {} test case(s)".format(len(passed)))
+        logger.info("skipped {} test case(s)".format(len(skipped)))
         logger.info("failed tests: " + str(failed))
         if args.loglevel == logging.WARNING:
             print "failed tests: " + str(failed)
         sys.exit(1)
-    logger.info("passed all " + str(len(passed)) + " test case(s)")
+    logger.info("passed all {} test case(s)".format(len(passed)))
     if len(skipped):
-        logger.info("skipped " + str(len(skipped)) + " test case(s)")
+        logger.info("skipped {} test case(s)".format(len(skipped)))
     if args.loglevel == logging.WARNING:
-        print "passed all " + str(len(passed)) + " test case(s)"
+        print "passed all {} test case(s)".format(len(passed))
         if len(skipped):
-            print "skipped " + str(len(skipped)) + " test case(s)"
+            print "skipped {} test case(s)".format(len(skipped))
 
 if __name__ == "__main__":
     main()

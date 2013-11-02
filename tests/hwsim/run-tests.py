@@ -121,6 +121,9 @@ def main():
                         help='collect tracing per test case (in log directory)')
     parser.add_argument('-D', action='store_true', dest='dmesg',
                         help='collect dmesg per test case (in log directory)')
+    parser.add_argument('--shuffle-tests', action='store_true',
+                        dest='shuffle_tests',
+                        help='Shuffle test cases to randomize order')
     parser.add_argument('-f', dest='testmodules', metavar='<test module>',
                         help='execute only tests from these test modules',
                         type=str, choices=[[]] + test_modules, nargs='+')
@@ -227,6 +230,10 @@ def main():
         for t in tests_to_run:
             name = t.__name__.replace('test_', '', 1)
             report(conn, False, args.build, args.commit, run, name, 'NOTRUN', 0)
+
+    if args.shuffle_tests:
+        from random import shuffle
+        shuffle(tests_to_run)
 
     for t in tests_to_run:
         name = t.__name__.replace('test_', '', 1)

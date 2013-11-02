@@ -1,6 +1,6 @@
 /*
  * hostapd / UNIX domain socket -based control interface
- * Copyright (c) 2004-2012, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -1494,6 +1494,7 @@ static void hostapd_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 		return;
 	}
 	buf[res] = '\0';
+	wpa_printf(MSG_DEBUG, "Global ctrl_iface command: %s", buf);
 
 	os_memcpy(reply, "OK\n", 3);
 	reply_len = 3;
@@ -1501,6 +1502,9 @@ static void hostapd_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 	if (os_strcmp(buf, "PING") == 0) {
 		os_memcpy(reply, "PONG\n", 5);
 		reply_len = 5;
+	} else if (os_strncmp(buf, "RELOG", 5) == 0) {
+		if (wpa_debug_reopen_file() < 0)
+			reply_len = -1;
 	} else if (os_strncmp(buf, "ADD ", 4) == 0) {
 		if (hostapd_ctrl_iface_add(interfaces, buf + 4) < 0)
 			reply_len = -1;

@@ -521,7 +521,7 @@ CONFIG_PEERKEY=y
 
 # Autoscan
 # This can be used to enable automatic scan support in wpa_supplicant.
-# See wpa_supplicant.conf for more information on autoscan usage.
+# See wpa_supplicant.conf for more information on autoscan usage.
 #
 # Enabling directly a module will enable autoscan support.
 # For exponential module:

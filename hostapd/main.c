@@ -265,16 +265,6 @@ hostapd_interface_init(struct hapd_interfaces *interfaces,
 }
 
 
-static int hostapd_interface_init2(struct hostapd_iface *iface)
-{
-	if (hostapd_driver_init(iface) ||
-	    hostapd_setup_interface(iface))
-		return -1;
-
-	return 0;
-}
-
-
 /**
  * handle_term - SIGINT and SIGTERM handler to terminate hostapd process
  */
@@ -694,7 +684,8 @@ int main(int argc, char *argv[])
 	}
 
 	for (i = 0; i < interfaces.count; i++) {
-		if (hostapd_interface_init2(interfaces.iface[i]) < 0)
+		if (hostapd_driver_init(interfaces.iface[i]) ||
+		    hostapd_setup_interface(interfaces.iface[i]))
 			goto out;
 	}
 

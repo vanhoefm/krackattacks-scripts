@@ -17,12 +17,14 @@ import hostapd
 
 def eap_connect(dev, method, identity, anonymous_identity=None, password=None,
                 phase1=None, phase2=None, ca_cert=None,
-                domain_suffix_match=None, password_hex=None):
+                domain_suffix_match=None, password_hex=None,
+                client_cert=None, private_key=None):
     dev.connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap=method,
                 identity=identity, anonymous_identity=anonymous_identity,
                 password=password, phase1=phase1, phase2=phase2,
                 ca_cert=ca_cert, domain_suffix_match=domain_suffix_match,
-                wait_connect=False, scan_freq="2412", password_hex=password_hex)
+                wait_connect=False, scan_freq="2412", password_hex=password_hex,
+                client_cert=client_cert, private_key=private_key)
     ev = dev.wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
     if ev is None:
         raise Exception("Association and EAP start timed out")
@@ -154,6 +156,14 @@ def test_ap_wpa2_eap_peap_eap_mschapv2(dev, apdev):
                 anonymous_identity="ttls", password="password",
                 ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+
+def test_ap_wpa2_eap_tls(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TLS"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], "TLS", "tls user", ca_cert="auth_serv/ca.pem",
+                client_cert="auth_serv/user.pem",
+                private_key="auth_serv/user.key")
 
 def test_ap_wpa2_eap_tls_neg_incorrect_trust_root(dev, apdev):
     """WPA2-Enterprise negative test - incorrect trust root"""

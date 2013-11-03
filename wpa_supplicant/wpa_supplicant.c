@@ -4046,7 +4046,7 @@ int get_shared_radio_freqs(struct wpa_supplicant *wpa_s,
 	if (rn == NULL || rn[0] == '\0')
 		return idx;
 
-	for (ifs = wpa_s->global->ifaces, idx = 0; ifs && idx < len;
+	for (ifs = wpa_s->global->ifaces; ifs && idx < len;
 	     ifs = ifs->next) {
 		if (wpa_s == ifs || !ifs->driver->get_radio_name)
 			continue;

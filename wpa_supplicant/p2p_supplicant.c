@@ -4605,7 +4605,7 @@ static int wpas_p2p_init_go_params(struct wpa_supplicant *wpa_s,
 		}
 
 		if (i == num) {
-			if (num == wpa_s->num_multichan_concurrent) {
+			if (wpas_p2p_num_unused_channels(wpa_s) <= 0) {
 				wpa_printf(MSG_DEBUG, "P2P: Cannot force GO on any of the channels we are already using");
 				os_free(freqs);
 				return -1;
@@ -4620,7 +4620,7 @@ static int wpas_p2p_init_go_params(struct wpa_supplicant *wpa_s,
 		}
 
 		if (i == num) {
-			if (num == wpa_s->num_multichan_concurrent) {
+			if (wpas_p2p_num_unused_channels(wpa_s) <= 0) {
 				wpa_printf(MSG_DEBUG, "P2P: Cannot force GO on freq (%u MHz) as all the channels are in use", freq);
 				os_free(freqs);
 				return -1;

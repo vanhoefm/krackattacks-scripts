@@ -1065,6 +1065,14 @@ static int setup_interface2(struct hostapd_iface *iface)
 }
 
 
+/**
+ * hostapd_setup_interface_complete - Complete interface setup
+ *
+ * This function is called when previous steps in the interface setup has been
+ * completed. This can also start operations, e.g., DFS, that will require
+ * additional processing before interface is ready to be enabled. Such
+ * operations will call this function from eloop callbacks when finished.
+ */
 int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 {
 	struct hostapd_data *hapd = iface->bss[0];
@@ -1193,6 +1201,12 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
  * and sets driver parameters based on the configuration.
  * Flushes old stations, sets the channel, encryption,
  * beacons, and WDS links based on the configuration.
+ *
+ * If interface setup requires more time, e.g., to perform HT co-ex scans, ACS,
+ * or DFS operations, this function returns 0 before such operations have been
+ * completed. The pending operations are registered into eloop and will be
+ * completed from eloop callbacks. Those callbacks end up calling
+ * hostapd_setup_interface_complete() once setup has been completed.
  */
 int hostapd_setup_interface(struct hostapd_iface *iface)
 {
@@ -1350,6 +1364,17 @@ static int ifname_in_use(struct hapd_interfaces *interfaces, const char *ifname)
 }
 
 
+/**
+ * hostapd_interface_init_bss - Read configuration file and init BSS data
+ *
+ * This function is used to parse configuration file for a BSS. This BSS is
+ * added to an existing interface sharing the same radio (if any) or a new
+ * interface is created if this is the first interface on a radio. This
+ * allocate memory for the BSS. No actual driver operations are started.
+ *
+ * This is similar to hostapd_interface_init(), but for a case where the
+ * configuration is used to add a single BSS instead of all BSSes for a radio.
+ */
 struct hostapd_iface *
 hostapd_interface_init_bss(struct hapd_interfaces *interfaces, const char *phy,
 			   const char *config_fname, int debug)

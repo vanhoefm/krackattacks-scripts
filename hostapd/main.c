@@ -147,6 +147,9 @@ static void hostapd_logger_cb(void *ctx, const u8 *addr, unsigned int module,
 #endif /* CONFIG_NO_HOSTAPD_LOGGER */
 
 
+/**
+ * hostapd_driver_init - Preparate driver interface
+ */
 static int hostapd_driver_init(struct hostapd_iface *iface)
 {
 	struct wpa_init_params params;
@@ -226,6 +229,13 @@ static int hostapd_driver_init(struct hostapd_iface *iface)
 }
 
 
+/**
+ * hostapd_interface_init - Read configuration file and init BSS data
+ *
+ * This function is used to parse configuration file for a full interface (one
+ * or more BSSes sharing the same radio) and allocate memory for the BSS
+ * interfaces. No actiual driver operations are started.
+ */
 static struct hostapd_iface *
 hostapd_interface_init(struct hapd_interfaces *interfaces,
 		       const char *config_fname, int debug)
@@ -628,7 +638,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	/* Initialize interfaces */
+	/* Allocate and parse configuration for full interface files */
 	for (i = 0; i < interfaces.count; i++) {
 		interfaces.iface[i] = hostapd_interface_init(&interfaces,
 							     argv[optind + i],
@@ -639,6 +649,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	/* Allocate and parse configuration for per-BSS files */
 	for (i = 0; i < num_bss_configs; i++) {
 		struct hostapd_iface *iface;
 		char *fname;
@@ -674,6 +685,14 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	/*
+	 * Enable configured interfaces. Depending on channel configuration,
+	 * this may complete full initialization before returning or use a
+	 * callback mechanism to complete setup in case of operations like HT
+	 * co-ex scans, ACS, or DFS are needed to determine channel parameters.
+	 * In such case, the interface will be enabled from eloop context within
+	 * hostapd_global_run().
+	 */
 	for (i = 0; i < interfaces.count; i++) {
 		if (hostapd_driver_init(interfaces.iface[i]) ||
 		    hostapd_setup_interface(interfaces.iface[i]))

@@ -1766,13 +1766,9 @@ int hostapd_add_iface(struct hapd_interfaces *interfaces, char *buf)
 		goto fail;
 	}
 
-	if (hapd_iface->interfaces &&
-	    hapd_iface->interfaces->ctrl_iface_init &&
-	    hapd_iface->interfaces->ctrl_iface_init(hapd_iface->bss[0])) {
-		wpa_printf(MSG_ERROR, "%s: Failed to setup control "
-			   "interface", __func__);
+	if (start_ctrl_iface(hapd_iface) < 0)
 		goto fail;
-	}
+
 	wpa_printf(MSG_INFO, "Add interface '%s'", conf->bss[0]->iface);
 
 	return 0;

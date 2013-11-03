@@ -254,6 +254,8 @@ struct hostapd_iface {
 	size_t num_bss;
 	struct hostapd_data **bss;
 
+	unsigned int wait_channel_update:1;
+
 	int num_ap; /* number of entries in ap_list */
 	struct ap_info *ap_list; /* AP info list head */
 	struct ap_info *ap_hash[STA_HASH_SIZE];
@@ -361,6 +363,7 @@ int hostapd_reload_iface(struct hostapd_iface *hapd_iface);
 int hostapd_disable_iface(struct hostapd_iface *hapd_iface);
 int hostapd_add_iface(struct hapd_interfaces *ifaces, char *buf);
 int hostapd_remove_iface(struct hapd_interfaces *ifaces, char *buf);
+void hostapd_channel_list_updated(struct hostapd_iface *iface);
 
 /* utils.c */
 int hostapd_register_probereq_cb(struct hostapd_data *hapd,

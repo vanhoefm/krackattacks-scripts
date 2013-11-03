@@ -1570,6 +1570,14 @@ struct wpa_driver_ops {
 	int (*set_country)(void *priv, const char *alpha2);
 
 	/**
+	 * get_country - Get country
+	 * @priv: Private driver interface data
+	 * @alpha2: Buffer for returning country code (at least 3 octets)
+	 * Returns: 0 on success, -1 on failure
+	 */
+	int (*get_country)(void *priv, char *alpha2);
+
+	/**
 	 * global_init - Global driver initialization
 	 * Returns: Pointer to private data (global), %NULL on failure
 	 *

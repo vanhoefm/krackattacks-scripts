@@ -38,6 +38,8 @@
 static int hostapd_flush_old_stations(struct hostapd_data *hapd, u16 reason);
 static int hostapd_setup_encryption(char *iface, struct hostapd_data *hapd);
 static int hostapd_broadcast_wep_clear(struct hostapd_data *hapd);
+static int setup_interface2(struct hostapd_iface *iface);
+static void channel_list_update_timeout(void *eloop_ctx, void *timeout_ctx);
 
 extern int wpa_debug_level;
 extern struct wpa_driver_ops *wpa_drivers[];
@@ -337,6 +339,8 @@ static void hostapd_cleanup_iface_partial(struct hostapd_iface *iface)
  */
 static void hostapd_cleanup_iface(struct hostapd_iface *iface)
 {
+	eloop_cancel_timeout(channel_list_update_timeout, iface, NULL);
+
 	hostapd_cleanup_iface_partial(iface);
 	hostapd_config_free(iface->conf);
 	iface->conf = NULL;
@@ -926,11 +930,39 @@ static int start_ctrl_iface(struct hostapd_iface *iface)
 }
 
 
+static void channel_list_update_timeout(void *eloop_ctx, void *timeout_ctx)
+{
+	struct hostapd_iface *iface = eloop_ctx;
+
+	if (!iface->wait_channel_update) {
+		wpa_printf(MSG_INFO, "Channel list update timeout, but interface was not waiting for it");
+		return;
+	}
+
+	/*
+	 * It is possible that the existing channel list is acceptable, so try
+	 * to proceed.
+	 */
+	wpa_printf(MSG_DEBUG, "Channel list update timeout - try to continue anyway");
+	setup_interface2(iface);
+}
+
+
+void hostapd_channel_list_updated(struct hostapd_iface *iface)
+{
+	if (!iface->wait_channel_update)
+		return;
+
+	wpa_printf(MSG_DEBUG, "Channel list updated - continue setup");
+	eloop_cancel_timeout(channel_list_update_timeout, iface, NULL);
+	setup_interface2(iface);
+}
+
+
 static int setup_interface(struct hostapd_iface *iface)
 {
 	struct hostapd_data *hapd = iface->bss[0];
 	size_t i;
-	char country[4];
 
 	/*
 	 * Make sure that all BSSes get configured with a pointer to the same
@@ -953,13 +985,38 @@ static int setup_interface(struct hostapd_iface *iface)
 		return -1;
 
 	if (hapd->iconf->country[0] && hapd->iconf->country[1]) {
+		char country[4], previous_country[4];
+
+		if (hostapd_get_country(hapd, previous_country) < 0)
+			previous_country[0] = '\0';
+
 		os_memcpy(country, hapd->iconf->country, 3);
 		country[3] = '\0';
 		if (hostapd_set_country(hapd, country) < 0) {
 			wpa_printf(MSG_ERROR, "Failed to set country code");
 			return -1;
 		}
+
+		wpa_printf(MSG_DEBUG, "Previous country code %s, new country code %s",
+			   previous_country, country);
+
+		if (os_strncmp(previous_country, country, 2) != 0) {
+			wpa_printf(MSG_DEBUG, "Continue interface setup after channel list update");
+			iface->wait_channel_update = 1;
+			eloop_register_timeout(1, 0,
+					       channel_list_update_timeout,
+					       iface, NULL);
+			return 0;
+		}
 	}
+
+	return setup_interface2(iface);
+}
+
+
+static int setup_interface2(struct hostapd_iface *iface)
+{
+	iface->wait_channel_update = 0;
 
 	if (hostapd_get_hw_features(iface)) {
 		/* Not all drivers support this yet, so continue without hw
@@ -1170,6 +1227,9 @@ void hostapd_interface_deinit(struct hostapd_iface *iface)
 
 	if (iface == NULL)
 		return;
+
+	eloop_cancel_timeout(channel_list_update_timeout, iface, NULL);
+	iface->wait_channel_update = 0;
 
 	hostapd_cleanup_iface_pre(iface);
 	for (j = iface->num_bss - 1; j >= 0; j--) {

@@ -2934,6 +2934,44 @@ nla_put_failure:
 }
 
 
+static int nl80211_get_country(struct nl_msg *msg, void *arg)
+{
+	char *alpha2 = arg;
+	struct nlattr *tb_msg[NL80211_ATTR_MAX + 1];
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+
+	nla_parse(tb_msg, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+	if (!tb_msg[NL80211_ATTR_REG_ALPHA2]) {
+		wpa_printf(MSG_DEBUG, "nl80211: No country information available");
+		return NL_SKIP;
+	}
+	os_strlcpy(alpha2, nla_data(tb_msg[NL80211_ATTR_REG_ALPHA2]), 3);
+	return NL_SKIP;
+}
+
+
+static int wpa_driver_nl80211_get_country(void *priv, char *alpha2)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg;
+	int ret;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -ENOMEM;
+
+	nl80211_cmd(drv, msg, 0, NL80211_CMD_GET_REG);
+	alpha2[0] = '\0';
+	ret = send_and_recv_msgs(drv, msg, nl80211_get_country, alpha2);
+	if (!alpha2[0])
+		ret = -1;
+
+	return ret;
+}
+
+
 static int protocol_feature_handler(struct nl_msg *msg, void *arg)
 {
 	u32 *feat = arg;
@@ -11204,6 +11242,7 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.set_operstate = wpa_driver_nl80211_set_operstate,
 	.set_supp_port = wpa_driver_nl80211_set_supp_port,
 	.set_country = wpa_driver_nl80211_set_country,
+	.get_country = wpa_driver_nl80211_get_country,
 	.set_ap = wpa_driver_nl80211_set_ap,
 	.set_acl = wpa_driver_nl80211_set_acl,
 	.if_add = wpa_driver_nl80211_if_add,

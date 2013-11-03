@@ -2848,6 +2848,24 @@ static int wpa_global_config_parse_str(const struct global_parse_data *data,
 }
 
 
+static int wpa_config_process_bgscan(const struct global_parse_data *data,
+				     struct wpa_config *config, int line,
+				     const char *pos)
+{
+	size_t len;
+	char *tmp;
+
+	tmp = wpa_config_parse_string(pos, &len);
+	if (tmp == NULL) {
+		wpa_printf(MSG_ERROR, "Line %d: failed to parse %s",
+			   line, data->name);
+		return -1;
+	}
+
+	return wpa_global_config_parse_str(data, config, line, tmp);
+}
+
+
 static int wpa_global_config_parse_bin(const struct global_parse_data *data,
 				       struct wpa_config *config, int line,
 				       const char *pos)
@@ -3209,6 +3227,7 @@ static const struct global_parse_data global_fields[] = {
 #endif /* CONFIG_CTRL_IFACE */
 	{ INT_RANGE(eapol_version, 1, 2), 0 },
 	{ INT(ap_scan), 0 },
+	{ FUNC(bgscan), 0 },
 	{ INT(disable_scan_offload), 0 },
 	{ INT(fast_reauth), 0 },
 	{ STR(opensc_engine_path), 0 },

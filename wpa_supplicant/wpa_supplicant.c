@@ -570,14 +570,22 @@ const char * wpa_supplicant_state_txt(enum wpa_states state)
 
 static void wpa_supplicant_start_bgscan(struct wpa_supplicant *wpa_s)
 {
+	const char *name;
+
+	if (wpa_s->current_ssid && wpa_s->current_ssid->bgscan)
+		name = wpa_s->current_ssid->bgscan;
+	else
+		name = wpa_s->conf->bgscan;
+	if (name == NULL)
+		return;
 	if (wpas_driver_bss_selection(wpa_s))
 		return;
 	if (wpa_s->current_ssid == wpa_s->bgscan_ssid)
 		return;
 
 	bgscan_deinit(wpa_s);
-	if (wpa_s->current_ssid && wpa_s->current_ssid->bgscan) {
-		if (bgscan_init(wpa_s, wpa_s->current_ssid)) {
+	if (wpa_s->current_ssid) {
+		if (bgscan_init(wpa_s, wpa_s->current_ssid, name)) {
 			wpa_dbg(wpa_s, MSG_DEBUG, "Failed to initialize "
 				"bgscan");
 			/*

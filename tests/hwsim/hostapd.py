@@ -46,6 +46,8 @@ class Hostapd:
     def __init__(self, ifname):
         self.ifname = ifname
         self.ctrl = wpaspy.Ctrl(os.path.join(hapd_ctrl, ifname))
+        self.mon = wpaspy.Ctrl(os.path.join(hapd_ctrl, ifname))
+        self.mon.attach()
 
     def request(self, cmd):
         logger.debug(self.ifname + ": CTRL: " + cmd)
@@ -109,6 +111,39 @@ class Hostapd:
         if not "OK" in self.ctrl.request("ENABLE"):
             raise Exception("Failed to disable hostapd interface " + self.ifname)
 
+    def dump_monitor(self):
+        while self.mon.pending():
+            ev = self.mon.recv()
+            logger.debug(self.ifname + ": " + ev)
+
+    def wait_event(self, events, timeout):
+        count = 0
+        while count < timeout * 10:
+            count = count + 1
+            time.sleep(0.1)
+            while self.mon.pending():
+                ev = self.mon.recv()
+                logger.debug(self.ifname + ": " + ev)
+                for event in events:
+                    if event in ev:
+                        return ev
+        return None
+
+    def get_status(self):
+        res = self.request("STATUS")
+        lines = res.splitlines()
+        vals = dict()
+        for l in lines:
+            [name,value] = l.split('=', 1)
+            vals[name] = value
+        return vals
+
+    def get_status_field(self, field):
+        vals = self.get_status()
+        if field in vals:
+            return vals[field]
+        return None
+
 def add_ap(ifname, params):
         logger.info("Starting AP " + ifname)
         hapd_global = HostapdGlobal()
@@ -133,6 +168,7 @@ def add_ap(ifname, params):
             else:
                 hapd.set(f, v)
         hapd.enable()
+        return hapd
 
 def add_bss(phy, ifname, confname, ignore_error=False):
     logger.info("Starting BSS phy=" + phy + " ifname=" + ifname)

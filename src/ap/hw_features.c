@@ -20,6 +20,7 @@
 #include "utils/eloop.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
+#include "common/wpa_ctrl.h"
 #include "drivers/driver.h"
 #include "hostapd.h"
 #include "ap_config.h"
@@ -857,14 +858,21 @@ int hostapd_acs_completed(struct hostapd_iface *iface, int err)
 
 	switch (hostapd_check_chans(iface)) {
 	case HOSTAPD_CHAN_VALID:
+		wpa_msg(iface->bss[0]->msg_ctx, MSG_INFO,
+			ACS_EVENT_COMPLETED "freq=%d channel=%d",
+			hostapd_hw_get_freq(iface->bss[0],
+					    iface->conf->channel),
+			iface->conf->channel);
 		break;
 	case HOSTAPD_CHAN_ACS:
 		wpa_printf(MSG_ERROR, "ACS error - reported complete, but no result available");
+		wpa_msg(iface->bss[0]->msg_ctx, MSG_INFO, ACS_EVENT_FAILED);
 		hostapd_notify_bad_chans(iface);
 		goto out;
 	case HOSTAPD_CHAN_INVALID:
 	default:
 		wpa_printf(MSG_ERROR, "ACS picked unusable channels");
+		wpa_msg(iface->bss[0]->msg_ctx, MSG_INFO, ACS_EVENT_FAILED);
 		hostapd_notify_bad_chans(iface);
 		goto out;
 	}

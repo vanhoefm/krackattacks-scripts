@@ -13,6 +13,7 @@
 #include "utils/common.h"
 #include "utils/list.h"
 #include "common/ieee802_11_defs.h"
+#include "common/wpa_ctrl.h"
 #include "drivers/driver.h"
 #include "hostapd.h"
 #include "ap_drv_ops.h"
@@ -793,6 +794,8 @@ enum hostapd_chan_status acs_init(struct hostapd_iface *iface)
 	err = acs_request_scan(iface);
 	if (err < 0)
 		return HOSTAPD_CHAN_INVALID;
+
+	wpa_msg(iface->bss[0]->msg_ctx, MSG_INFO, ACS_EVENT_STARTED);
 
 	return HOSTAPD_CHAN_ACS;
 }

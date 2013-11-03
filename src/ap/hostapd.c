@@ -782,13 +782,6 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 	}
 #endif /* CONFIG_INTERWORKING */
 
-	if (hapd->iface->interfaces &&
-	    hapd->iface->interfaces->ctrl_iface_init &&
-	    hapd->iface->interfaces->ctrl_iface_init(hapd)) {
-		wpa_printf(MSG_ERROR, "Failed to setup control interface");
-		return -1;
-	}
-
 	if (!hostapd_drv_none(hapd) && vlan_init(hapd)) {
 		wpa_printf(MSG_ERROR, "VLAN initialization failed.");
 		return -1;
@@ -895,6 +888,44 @@ static void hostapd_set_acl(struct hostapd_data *hapd)
 }
 
 
+static int start_ctrl_iface_bss(struct hostapd_data *hapd)
+{
+	if (!hapd->iface->interfaces ||
+	    !hapd->iface->interfaces->ctrl_iface_init)
+		return 0;
+
+	if (hapd->iface->interfaces->ctrl_iface_init(hapd)) {
+		wpa_printf(MSG_ERROR,
+			   "Failed to setup control interface for %s",
+			   hapd->conf->iface);
+		return -1;
+	}
+
+	return 0;
+}
+
+
+static int start_ctrl_iface(struct hostapd_iface *iface)
+{
+	size_t i;
+
+	if (!iface->interfaces || !iface->interfaces->ctrl_iface_init)
+		return 0;
+
+	for (i = 0; i < iface->num_bss; i++) {
+		struct hostapd_data *hapd = iface->bss[i];
+		if (iface->interfaces->ctrl_iface_init(hapd)) {
+			wpa_printf(MSG_ERROR,
+				   "Failed to setup control interface for %s",
+				   hapd->conf->iface);
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+
 static int setup_interface(struct hostapd_iface *iface)
 {
 	struct hostapd_data *hapd = iface->bss[0];
@@ -911,6 +942,14 @@ static int setup_interface(struct hostapd_iface *iface)
 	}
 
 	if (hostapd_validate_bssid_configuration(iface))
+		return -1;
+
+	/*
+	 * Initialize control interfaces early to allow external monitoring of
+	 * channel setup operations that may take considerable amount of time
+	 * especially for DFS cases.
+	 */
+	if (start_ctrl_iface(iface))
 		return -1;
 
 	if (hapd->iconf->country[0] && hapd->iconf->country[1]) {
@@ -1589,7 +1628,8 @@ int hostapd_add_iface(struct hapd_interfaces *interfaces, char *buf)
 			os_memcpy(hapd->own_addr, hapd_iface->bss[0]->own_addr,
 				  ETH_ALEN);
 
-			if (hostapd_setup_bss(hapd, -1)) {
+			if (start_ctrl_iface_bss(hapd) < 0 ||
+			    hostapd_setup_bss(hapd, -1)) {
 				hapd_iface->conf->num_bss--;
 				hapd_iface->num_bss--;
 				os_free(hapd);

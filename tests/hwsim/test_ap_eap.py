@@ -17,12 +17,12 @@ import hostapd
 
 def eap_connect(dev, method, identity, anonymous_identity=None, password=None,
                 phase1=None, phase2=None, ca_cert=None,
-                domain_suffix_match=None):
+                domain_suffix_match=None, password_hex=None):
     dev.connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap=method,
                 identity=identity, anonymous_identity=anonymous_identity,
                 password=password, phase1=phase1, phase2=phase2,
                 ca_cert=ca_cert, domain_suffix_match=domain_suffix_match,
-                wait_connect=False, scan_freq="2412")
+                wait_connect=False, scan_freq="2412", password_hex=password_hex)
     ev = dev.wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
     if ev is None:
         raise Exception("Association and EAP start timed out")
@@ -257,3 +257,49 @@ def test_ap_wpa2_eap_tls_neg_suffix_match(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-SSID-TEMP-DISABLED"], timeout=10)
     if ev is None:
         raise Exception("Network block disabling not reported")
+
+def test_ap_wpa2_eap_pwd(dev, apdev):
+    """WPA2-Enterprise connection using EAP-pwd"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], "PWD", "pwd user", password="secret password")
+
+def test_ap_wpa2_eap_gpsk(dev, apdev):
+    """WPA2-Enterprise connection using EAP-GPSK"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], "GPSK", "gpsk user",
+                password="abcdefghijklmnop0123456789abcdef")
+
+def test_ap_wpa2_eap_sake(dev, apdev):
+    """WPA2-Enterprise connection using EAP-SAKE"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], "SAKE", "sake user",
+                password_hex="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")
+
+def test_ap_wpa2_eap_eke(dev, apdev):
+    """WPA2-Enterprise connection using EAP-EKE"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], "EKE", "eke user", password="hello")
+
+def test_ap_wpa2_eap_ikev2(dev, apdev):
+    """WPA2-Enterprise connection using EAP-IKEv2"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], "IKEV2", "ikev2 user", password="ike password")
+
+def test_ap_wpa2_eap_pax(dev, apdev):
+    """WPA2-Enterprise connection using EAP-PAX"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], "PAX", "pax.user@example.com",
+                password_hex="0123456789abcdef0123456789abcdef")
+
+def test_ap_wpa2_eap_psk(dev, apdev):
+    """WPA2-Enterprise connection using EAP-PSK"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], "PSK", "psk.user@example.com",
+                password_hex="0123456789abcdef0123456789abcdef")

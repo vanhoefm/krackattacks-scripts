@@ -411,7 +411,8 @@ static int set_dfs_state(struct hostapd_iface *iface, int freq, int ht_enabled,
 	case CHAN_WIDTH_20_NOHT:
 	case CHAN_WIDTH_20:
 		n_chans = 1;
-		frequency = cf1;
+		if (frequency == 0)
+			frequency = cf1;
 		break;
 	case CHAN_WIDTH_40:
 		n_chans = 2;
@@ -466,7 +467,8 @@ static int dfs_are_channels_overlapped(struct hostapd_iface *iface, int freq,
 	case CHAN_WIDTH_20_NOHT:
 	case CHAN_WIDTH_20:
 		radar_n_chans = 1;
-		frequency = cf1;
+		if (frequency == 0)
+			frequency = cf1;
 		break;
 	case CHAN_WIDTH_40:
 		radar_n_chans = 2;

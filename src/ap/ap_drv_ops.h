@@ -101,7 +101,7 @@ int hostapd_sta_assoc(struct hostapd_data *hapd, const u8 *addr,
 		      int reassoc, u16 status, const u8 *ie, size_t len);
 int hostapd_add_tspec(struct hostapd_data *hapd, const u8 *addr,
 		      u8 *tspec_ie, size_t tspec_ielen);
-int hostapd_start_dfs_cac(struct hostapd_data *hapd, int mode, int freq,
+int hostapd_start_dfs_cac(struct hostapd_iface *iface, int mode, int freq,
 			  int channel, int ht_enabled, int vht_enabled,
 			  int sec_channel_offset, int vht_oper_chwidth,
 			  int center_segment0, int center_segment1);

@@ -9,16 +9,16 @@
 #ifndef DFS_H
 #define DFS_H
 
-int hostapd_handle_dfs(struct hostapd_data *hapd);
+int hostapd_handle_dfs(struct hostapd_iface *iface);
 
-int hostapd_dfs_complete_cac(struct hostapd_data *hapd, int success, int freq,
+int hostapd_dfs_complete_cac(struct hostapd_iface *iface, int success, int freq,
 			     int ht_enabled, int chan_offset, int chan_width,
 			     int cf1, int cf2);
-int hostapd_dfs_radar_detected(struct hostapd_data *hapd, int freq,
+int hostapd_dfs_radar_detected(struct hostapd_iface *iface, int freq,
 			       int ht_enabled,
 			       int chan_offset, int chan_width,
 			       int cf1, int cf2);
-int hostapd_dfs_nop_finished(struct hostapd_data *hapd, int freq,
+int hostapd_dfs_nop_finished(struct hostapd_iface *iface, int freq,
 			     int ht_enabled,
 			     int chan_offset, int chan_width, int cf1, int cf2);
 

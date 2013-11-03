@@ -1072,20 +1072,20 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 	}
 
 	wpa_printf(MSG_DEBUG, "Completing interface initialization");
-	if (hapd->iconf->channel) {
+	if (iface->conf->channel) {
 #ifdef NEED_AP_MLME
 		int res;
 #endif /* NEED_AP_MLME */
 
-		iface->freq = hostapd_hw_get_freq(hapd, hapd->iconf->channel);
+		iface->freq = hostapd_hw_get_freq(hapd, iface->conf->channel);
 		wpa_printf(MSG_DEBUG, "Mode: %s  Channel: %d  "
 			   "Frequency: %d MHz",
-			   hostapd_hw_mode_txt(hapd->iconf->hw_mode),
-			   hapd->iconf->channel, iface->freq);
+			   hostapd_hw_mode_txt(iface->conf->hw_mode),
+			   iface->conf->channel, iface->freq);
 
 #ifdef NEED_AP_MLME
 		/* Check DFS */
-		res = hostapd_handle_dfs(hapd);
+		res = hostapd_handle_dfs(iface);
 		if (res <= 0)
 			return res;
 #endif /* NEED_AP_MLME */
@@ -1140,6 +1140,7 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 		if (hostapd_mac_comp_empty(hapd->conf->bssid) == 0)
 			prev_addr = hapd->own_addr;
 	}
+	hapd = iface->bss[0];
 
 	hostapd_tx_queue_params(iface);
 

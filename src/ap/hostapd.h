@@ -151,9 +151,6 @@ struct hostapd_data {
 
 	int parameter_set_count;
 
-	/* DFS specific parameters */
-	int cac_started;
-
 	/* Time Advertisement */
 	u8 time_update_counter;
 	struct wpabuf *time_adv;
@@ -265,6 +262,7 @@ struct hostapd_iface {
 	struct hostapd_data **bss;
 
 	unsigned int wait_channel_update:1;
+	unsigned int cac_started:1;
 
 	int num_ap; /* number of entries in ap_list */
 	struct ap_info *ap_list; /* AP info list head */

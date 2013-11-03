@@ -1369,7 +1369,7 @@ hostapd_interface_init_bss(struct hapd_interfaces *interfaces, const char *phy,
 		}
 	}
 
-	wpa_printf(MSG_ERROR, "Configuration file: %s (phy %s)%s",
+	wpa_printf(MSG_INFO, "Configuration file: %s (phy %s)%s",
 		   config_fname, phy, iface ? "" : " --> new PHY");
 	if (iface) {
 		struct hostapd_config *conf;

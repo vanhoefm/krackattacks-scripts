@@ -762,16 +762,18 @@ static int hostapd_config_bss(struct hostapd_config *conf, const char *ifname)
 	}
 	conf->bss = all;
 
-	bss = conf->bss[conf->num_bss];
-	os_memset(bss, 0, sizeof(*bss));
+	bss = os_zalloc(sizeof(*bss));
+	if (bss == NULL)
+		return -1;
 	bss->radius = os_zalloc(sizeof(*bss->radius));
 	if (bss->radius == NULL) {
 		wpa_printf(MSG_ERROR, "Failed to allocate memory for "
 			   "multi-BSS RADIUS data");
+		os_free(bss);
 		return -1;
 	}
 
-	conf->num_bss++;
+	conf->bss[conf->num_bss++] = bss;
 	conf->last_bss = bss;
 
 	hostapd_config_defaults_bss(bss);

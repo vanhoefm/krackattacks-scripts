@@ -24,6 +24,11 @@ class HostapdGlobal:
         if not "OK" in res:
             raise Exception("Could not add hostapd interface " + ifname)
 
+    def add_iface(self, ifname, confname):
+        res = self.ctrl.request("ADD " + ifname + " config=" + confname)
+        if not "OK" in res:
+            raise Exception("Could not add hostapd interface")
+
     def add_bss(self, phy, confname, ignore_error=False):
         res = self.ctrl.request("ADD bss_config=" + phy + ":" + confname)
         if not "OK" in res:
@@ -133,6 +138,14 @@ def add_bss(phy, ifname, confname, ignore_error=False):
     logger.info("Starting BSS phy=" + phy + " ifname=" + ifname)
     hapd_global = HostapdGlobal()
     hapd_global.add_bss(phy, confname, ignore_error)
+    hapd = Hostapd(ifname)
+    if not hapd.ping():
+        raise Exception("Could not ping hostapd")
+
+def add_iface(ifname, confname):
+    logger.info("Starting interface " + ifname)
+    hapd_global = HostapdGlobal()
+    hapd_global.add_iface(ifname, confname)
     hapd = Hostapd(ifname)
     if not hapd.ping():
         raise Exception("Could not ping hostapd")

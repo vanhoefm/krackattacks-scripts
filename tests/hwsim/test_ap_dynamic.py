@@ -127,6 +127,7 @@ def test_ap_bss_add_remove(dev, apdev):
     hostapd.remove_bss(ifname2)
     multi_check(dev, [ True, False, False ])
     hostapd.remove_bss(ifname1)
+    multi_check(dev, [ False, False, False ])
     hostapd.add_bss('phy3', ifname1, 'bss-1.conf')
     multi_check(dev, [ True, False, False ])
     hostapd.add_bss('phy3', ifname2, 'bss-2.conf')
@@ -137,6 +138,25 @@ def test_ap_bss_add_remove(dev, apdev):
     logger.info("Test error handling if a duplicate ifname is tried")
     hostapd.add_bss('phy3', ifname3, 'bss-3.conf', ignore_error=True)
     multi_check(dev, [ True, True, True ])
+
+def test_ap_multi_bss_config(dev, apdev):
+    """hostapd start with a multi-BSS configuration file"""
+    for d in dev:
+        d.request("SET ignore_old_scan_res 1")
+    ifname1 = apdev[0]['ifname']
+    ifname2 = apdev[0]['ifname'] + '-2'
+    ifname3 = apdev[0]['ifname'] + '-3'
+    logger.info("Set up three BSSes with one configuration file")
+    hostapd.add_iface(ifname1, 'multi-bss.conf')
+    hapd = hostapd.Hostapd(ifname1)
+    hapd.enable()
+    multi_check(dev, [ True, True, True ])
+    hostapd.remove_bss(ifname1)
+    multi_check(dev, [ False, True, True ])
+    hostapd.remove_bss(ifname2)
+    multi_check(dev, [ False, False, True ])
+    hostapd.remove_bss(ifname3)
+    multi_check(dev, [ False, False, False ])
 
 def invalid_ap(hapd_global, ifname):
     logger.info("Trying to start AP " + ifname + " with invalid configuration")

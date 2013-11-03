@@ -1,6 +1,6 @@
 /*
  * Control interface for shared AP commands
- * Copyright (c) 2004-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -19,5 +19,7 @@ int hostapd_ctrl_iface_deauthenticate(struct hostapd_data *hapd,
 				      const char *txtaddr);
 int hostapd_ctrl_iface_disassociate(struct hostapd_data *hapd,
 				    const char *txtaddr);
+int hostapd_ctrl_iface_status(struct hostapd_data *hapd, char *buf,
+			      size_t buflen);
 
 #endif /* CTRL_IFACE_AP_H */

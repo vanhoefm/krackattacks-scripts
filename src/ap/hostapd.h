@@ -1,6 +1,6 @@
 /*
  * hostapd / Initialization and configuration
- * Copyright (c) 2002-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -375,6 +375,7 @@ int hostapd_add_iface(struct hapd_interfaces *ifaces, char *buf);
 int hostapd_remove_iface(struct hapd_interfaces *ifaces, char *buf);
 void hostapd_channel_list_updated(struct hostapd_iface *iface);
 void hostapd_set_state(struct hostapd_iface *iface, enum hostapd_iface_state s);
+const char * hostapd_state_text(enum hostapd_iface_state s);
 
 /* utils.c */
 int hostapd_register_probereq_cb(struct hostapd_data *hapd,

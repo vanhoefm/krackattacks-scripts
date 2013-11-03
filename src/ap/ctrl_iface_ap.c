@@ -1,6 +1,6 @@
 /*
  * Control interface for shared AP commands
- * Copyright (c) 2004-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -302,4 +302,81 @@ int hostapd_ctrl_iface_disassociate(struct hostapd_data *hapd,
 		hostapd_free_stas(hapd);
 
 	return 0;
+}
+
+
+int hostapd_ctrl_iface_status(struct hostapd_data *hapd, char *buf,
+			      size_t buflen)
+{
+	struct hostapd_iface *iface = hapd->iface;
+	int len = 0, ret;
+	size_t i;
+
+	ret = os_snprintf(buf + len, buflen - len,
+			  "state=%s\n"
+			  "phy=%s\n"
+			  "freq=%d\n"
+			  "num_sta_non_erp=%d\n"
+			  "num_sta_no_short_slot_time=%d\n"
+			  "num_sta_no_short_preamble=%d\n"
+			  "olbc=%d\n"
+			  "num_sta_ht_no_gf=%d\n"
+			  "num_sta_no_ht=%d\n"
+			  "num_sta_ht_20_mhz=%d\n"
+			  "olbc_ht=%d\n"
+			  "ht_op_mode=0x%x\n",
+			  hostapd_state_text(iface->state),
+			  iface->phy,
+			  iface->freq,
+			  iface->num_sta_non_erp,
+			  iface->num_sta_no_short_slot_time,
+			  iface->num_sta_no_short_preamble,
+			  iface->olbc,
+			  iface->num_sta_ht_no_gf,
+			  iface->num_sta_no_ht,
+			  iface->num_sta_ht_20mhz,
+			  iface->olbc_ht,
+			  iface->ht_op_mode);
+	if (ret < 0 || (size_t) ret >= buflen - len)
+		return len;
+	len += ret;
+
+	ret = os_snprintf(buf + len, buflen - len,
+			  "channel=%u\n"
+			  "secondary_channel=%d\n"
+			  "ieee80211n=%d\n"
+			  "ieee80211ac=%d\n"
+			  "vht_oper_chwidth=%d\n"
+			  "vht_oper_centr_freq_seg0_idx=%d\n"
+			  "vht_oper_centr_freq_seg1_idx=%d\n",
+			  iface->conf->channel,
+			  iface->conf->secondary_channel,
+			  iface->conf->ieee80211n,
+			  iface->conf->ieee80211ac,
+			  iface->conf->vht_oper_chwidth,
+			  iface->conf->vht_oper_centr_freq_seg0_idx,
+			  iface->conf->vht_oper_centr_freq_seg1_idx);
+	if (ret < 0 || (size_t) ret >= buflen - len)
+		return len;
+	len += ret;
+
+	for (i = 0; i < iface->num_bss; i++) {
+		struct hostapd_data *bss = iface->bss[i];
+		ret = os_snprintf(buf + len, buflen - len,
+				  "bss[%d]=%s\n"
+				  "bssid[%d]=" MACSTR "\n"
+				  "ssid[%d]=%s\n"
+				  "num_sta[%d]=%d\n",
+				  (int) i, bss->conf->iface,
+				  (int) i, MAC2STR(bss->own_addr),
+				  (int) i,
+				  wpa_ssid_txt(bss->conf->ssid.ssid,
+					       bss->conf->ssid.ssid_len),
+				  (int) i, bss->num_sta);
+		if (ret < 0 || (size_t) ret >= buflen - len)
+			return len;
+		len += ret;
+	}
+
+	return len;
 }

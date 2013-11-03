@@ -1899,7 +1899,7 @@ void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,
 }
 
 
-static const char * hostapd_state_text(enum hostapd_iface_state s)
+const char * hostapd_state_text(enum hostapd_iface_state s)
 {
 	switch (s) {
 	case HAPD_IFACE_UNINITIALIZED:

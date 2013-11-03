@@ -1062,6 +1062,10 @@ static int eapol_auth_conf_clone(struct eapol_auth_config *dst,
 	}
 	if (src->pac_opaque_encr_key) {
 		dst->pac_opaque_encr_key = os_malloc(16);
+		if (dst->pac_opaque_encr_key == NULL) {
+			os_free(dst->eap_req_id_text);
+			return -1;
+		}
 		os_memcpy(dst->pac_opaque_encr_key, src->pac_opaque_encr_key,
 			  16);
 	} else
@@ -1070,6 +1074,7 @@ static int eapol_auth_conf_clone(struct eapol_auth_config *dst,
 		dst->eap_fast_a_id = os_malloc(src->eap_fast_a_id_len);
 		if (dst->eap_fast_a_id == NULL) {
 			os_free(dst->eap_req_id_text);
+			os_free(dst->pac_opaque_encr_key);
 			return -1;
 		}
 		os_memcpy(dst->eap_fast_a_id, src->eap_fast_a_id,
@@ -1081,6 +1086,7 @@ static int eapol_auth_conf_clone(struct eapol_auth_config *dst,
 		dst->eap_fast_a_id_info = os_strdup(src->eap_fast_a_id_info);
 		if (dst->eap_fast_a_id_info == NULL) {
 			os_free(dst->eap_req_id_text);
+			os_free(dst->pac_opaque_encr_key);
 			os_free(dst->eap_fast_a_id);
 			return -1;
 		}

@@ -1,6 +1,6 @@
 /*
  * hostapd - Driver operations
- * Copyright (c) 2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2009-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -247,6 +247,14 @@ static inline int hostapd_get_country(struct hostapd_data *hapd, char *alpha2)
 	if (hapd->driver == NULL || hapd->driver->get_country == NULL)
 		return -1;
 	return hapd->driver->get_country(hapd->drv_priv, alpha2);
+}
+
+static inline const char * hostapd_drv_get_radio_name(struct hostapd_data *hapd)
+{
+	if (hapd->driver == NULL || hapd->drv_priv == NULL ||
+	    hapd->driver->get_radio_name == NULL)
+		return NULL;
+	return hapd->driver->get_radio_name(hapd->drv_priv);
 }
 
 #endif /* AP_DRV_OPS */

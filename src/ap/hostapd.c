@@ -965,6 +965,14 @@ static int setup_interface(struct hostapd_iface *iface)
 	struct hostapd_data *hapd = iface->bss[0];
 	size_t i;
 
+	if (!iface->phy[0]) {
+		const char *phy = hostapd_drv_get_radio_name(hapd);
+		if (phy) {
+			wpa_printf(MSG_DEBUG, "phy: %s", phy);
+			os_strlcpy(iface->phy, phy, sizeof(iface->phy));
+		}
+	}
+
 	/*
 	 * Make sure that all BSSes get configured with a pointer to the same
 	 * driver interface.

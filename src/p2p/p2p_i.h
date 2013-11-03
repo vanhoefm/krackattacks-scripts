@@ -608,6 +608,7 @@ u8 p2p_group_presence_req(struct p2p_group *group,
 int p2p_group_is_group_id_match(struct p2p_group *group, const u8 *group_id,
 				size_t group_id_len);
 void p2p_group_update_ies(struct p2p_group *group);
+void p2p_group_force_beacon_update_ies(struct p2p_group *group);
 struct wpabuf * p2p_group_get_wfd_ie(struct p2p_group *g);
 
 

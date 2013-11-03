@@ -980,3 +980,10 @@ int p2p_group_is_group_id_match(struct p2p_group *group, const u8 *group_id,
 	return os_memcmp(group_id + ETH_ALEN, group->cfg->ssid,
 			 group->cfg->ssid_len) == 0;
 }
+
+
+void p2p_group_force_beacon_update_ies(struct p2p_group *group)
+{
+	group->beacon_update = 1;
+	p2p_group_update_ies(group);
+}

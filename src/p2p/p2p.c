@@ -4192,7 +4192,7 @@ static void p2p_update_wfd_ie_groups(struct p2p_data *p2p)
 
 	for (g = 0; g < p2p->num_groups; g++) {
 		group = p2p->groups[g];
-		p2p_group_update_ies(group);
+		p2p_group_force_beacon_update_ies(group);
 	}
 }
 

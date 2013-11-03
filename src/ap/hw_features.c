@@ -539,6 +539,7 @@ static int ieee80211n_check_40mhz(struct hostapd_iface *iface)
 	if (!iface->conf->secondary_channel)
 		return 0; /* HT40 not used */
 
+	hostapd_set_state(iface, HAPD_IFACE_HT_SCAN);
 	wpa_printf(MSG_DEBUG, "Scan for neighboring BSSes prior to enabling "
 		   "40 MHz channel");
 	os_memset(&params, 0, sizeof(params));

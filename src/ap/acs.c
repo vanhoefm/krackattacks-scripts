@@ -795,6 +795,7 @@ enum hostapd_chan_status acs_init(struct hostapd_iface *iface)
 	if (err < 0)
 		return HOSTAPD_CHAN_INVALID;
 
+	hostapd_set_state(iface, HAPD_IFACE_ACS);
 	wpa_msg(iface->bss[0]->msg_ctx, MSG_INFO, ACS_EVENT_STARTED);
 
 	return HOSTAPD_CHAN_ACS;

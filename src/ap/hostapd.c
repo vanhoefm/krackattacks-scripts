@@ -987,6 +987,7 @@ static int setup_interface(struct hostapd_iface *iface)
 	if (hapd->iconf->country[0] && hapd->iconf->country[1]) {
 		char country[4], previous_country[4];
 
+		hostapd_set_state(iface, HAPD_IFACE_COUNTRY_UPDATE);
 		if (hostapd_get_country(hapd, previous_country) < 0)
 			previous_country[0] = '\0';
 
@@ -1056,6 +1057,7 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 
 	if (err) {
 		wpa_printf(MSG_ERROR, "Interface initialization failed");
+		hostapd_set_state(iface, HAPD_IFACE_DISABLED);
 		eloop_terminate();
 		return -1;
 	}
@@ -1153,6 +1155,7 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 			return -1;
 	}
 
+	hostapd_set_state(iface, HAPD_IFACE_ENABLED);
 	if (hapd->setup_complete_cb)
 		hapd->setup_complete_cb(hapd->setup_complete_cb_ctx);
 
@@ -1535,6 +1538,7 @@ int hostapd_disable_iface(struct hostapd_iface *hapd_iface)
 
 	wpa_printf(MSG_DEBUG, "Interface %s disabled",
 		   hapd_iface->bss[0]->conf->iface);
+	hostapd_set_state(hapd_iface, HAPD_IFACE_DISABLED);
 	return 0;
 }
 
@@ -1889,4 +1893,36 @@ void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,
 	eloop_cancel_timeout(ap_handle_timer, hapd, sta);
 	eloop_register_timeout(hapd->conf->ap_max_inactivity, 0,
 			       ap_handle_timer, hapd, sta);
+}
+
+
+static const char * hostapd_state_text(enum hostapd_iface_state s)
+{
+	switch (s) {
+	case HAPD_IFACE_UNINITIALIZED:
+		return "UNINITIALIZED";
+	case HAPD_IFACE_DISABLED:
+		return "DISABLED";
+	case HAPD_IFACE_COUNTRY_UPDATE:
+		return "COUNTRY_UPDATE";
+	case HAPD_IFACE_ACS:
+		return "ACS";
+	case HAPD_IFACE_HT_SCAN:
+		return "HT_SCAN";
+	case HAPD_IFACE_DFS:
+		return "DFS";
+	case HAPD_IFACE_ENABLED:
+		return "ENABLED";
+	}
+
+	return "UNKNOWN";
+}
+
+
+void hostapd_set_state(struct hostapd_iface *iface, enum hostapd_iface_state s)
+{
+	wpa_printf(MSG_INFO, "%s: interface state %s->%s",
+		   iface->conf->bss[0]->iface, hostapd_state_text(iface->state),
+		   hostapd_state_text(s));
+	iface->state = s;
 }

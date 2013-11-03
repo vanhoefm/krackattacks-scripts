@@ -568,6 +568,7 @@ int hostapd_handle_dfs(struct hostapd_data *hapd)
 	} while (res);
 
 	/* Finally start CAC */
+	hostapd_set_state(hapd->iface, HAPD_IFACE_DFS);
 	wpa_printf(MSG_DEBUG, "DFS start CAC on %d MHz", hapd->iface->freq);
 	wpa_msg(hapd->msg_ctx, MSG_INFO, DFS_EVENT_CAC_START
 		"freq=%d chan=%d sec_chan=%d",

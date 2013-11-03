@@ -251,6 +251,16 @@ struct hostapd_iface {
 	struct hostapd_config *conf;
 	char phy[16]; /* Name of the PHY (radio) */
 
+	enum hostapd_iface_state {
+		HAPD_IFACE_UNINITIALIZED,
+		HAPD_IFACE_DISABLED,
+		HAPD_IFACE_COUNTRY_UPDATE,
+		HAPD_IFACE_ACS,
+		HAPD_IFACE_HT_SCAN,
+		HAPD_IFACE_DFS,
+		HAPD_IFACE_ENABLED
+	} state;
+
 	size_t num_bss;
 	struct hostapd_data **bss;
 
@@ -364,6 +374,7 @@ int hostapd_disable_iface(struct hostapd_iface *hapd_iface);
 int hostapd_add_iface(struct hapd_interfaces *ifaces, char *buf);
 int hostapd_remove_iface(struct hapd_interfaces *ifaces, char *buf);
 void hostapd_channel_list_updated(struct hostapd_iface *iface);
+void hostapd_set_state(struct hostapd_iface *iface, enum hostapd_iface_state s);
 
 /* utils.c */
 int hostapd_register_probereq_cb(struct hostapd_data *hapd,

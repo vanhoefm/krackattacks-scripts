@@ -261,27 +261,15 @@ hostapd_interface_init(struct hapd_interfaces *interfaces,
 		return NULL;
 	}
 
-	if (hostapd_driver_init(iface) ||
-	    hostapd_setup_interface(iface)) {
-		hostapd_interface_deinit_free(iface);
-		return NULL;
-	}
-
-	iface->init_done = 1;
-
 	return iface;
 }
 
 
 static int hostapd_interface_init2(struct hostapd_iface *iface)
 {
-	if (iface->init_done)
-		return 0;
-
 	if (hostapd_driver_init(iface) ||
 	    hostapd_setup_interface(iface))
 		return -1;
-	iface->init_done = 1;
 
 	return 0;
 }

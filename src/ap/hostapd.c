@@ -1581,7 +1581,6 @@ int hostapd_add_iface(struct hapd_interfaces *interfaces, char *buf)
 				interfaces->count--;
 				goto fail;
 			}
-			hapd_iface->init_done = 1;
 		} else {
 			/* Assign new BSS with bss[0]'s driver info */
 			hapd = hapd_iface->bss[hapd_iface->num_bss - 1];

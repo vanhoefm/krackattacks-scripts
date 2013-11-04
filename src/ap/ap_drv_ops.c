@@ -491,7 +491,8 @@ static int hostapd_set_freq_params(struct hostapd_freq_params *data, int mode,
 	case VHT_CHANWIDTH_USE_HT:
 		if (center_segment1)
 			return -1;
-		if (5000 + center_segment0 * 5 != data->center_freq1)
+		if (5000 + center_segment0 * 5 != data->center_freq1 &&
+		    2407 + center_segment0 * 5 != data->center_freq1)
 			return -1;
 		break;
 	case VHT_CHANWIDTH_80P80MHZ:

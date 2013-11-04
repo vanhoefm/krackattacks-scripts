@@ -705,37 +705,44 @@ def test_ap_hs20_disallow_aps(dev, apdev):
 
 def policy_test(dev, ap, values, only_one=True):
     dev.dump_monitor()
-    logger.info("Verify network selection to AP " + ap['ifname'])
-    bssid = ap['bssid']
+    if ap:
+        logger.info("Verify network selection to AP " + ap['ifname'])
+        bssid = ap['bssid']
+    else:
+        logger.info("Verify network selection")
+        bssid = None
     dev.hs20_enable()
     id = dev.add_cred_values(values)
     dev.request("INTERWORKING_SELECT auto freq=2412")
+    events = []
     while True:
         ev = dev.wait_event(["INTERWORKING-AP", "INTERWORKING-NO-MATCH",
                              "INTERWORKING-SELECTED"], timeout=15)
         if ev is None:
             raise Exception("Network selection timed out")
+        events.append(ev)
         if "INTERWORKING-NO-MATCH" in ev:
             raise Exception("Matching AP not found")
-        if only_one and "INTERWORKING-AP" in ev and bssid not in ev:
+        if bssid and only_one and "INTERWORKING-AP" in ev and bssid not in ev:
             raise Exception("Unexpected AP claimed acceptable")
         if "INTERWORKING-SELECTED" in ev:
-            if bssid not in ev:
+            if bssid and bssid not in ev:
                 raise Exception("Selected incorrect BSS")
             break
 
     ev = dev.wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
     if ev is None:
         raise Exception("Connection timed out")
-    if bssid not in ev:
+    if bssid and bssid not in ev:
         raise Exception("Connected to incorrect BSS")
 
     conn_bssid = dev.get_status_field("bssid")
-    if conn_bssid != bssid:
+    if bssid and conn_bssid != bssid:
         raise Exception("bssid information points to incorrect BSS")
 
     dev.remove_cred(id)
     dev.dump_monitor()
+    return events
 
 def default_cred():
     return { 'realm': "example.com",
@@ -861,6 +868,64 @@ def test_ap_hs20_roaming_partner_preference(dev, apdev):
     policy_test(dev[0], apdev[1], values, only_one=False)
     values['roaming_partner'] = "example.net,0,255,*"
     policy_test(dev[0], apdev[0], values, only_one=False)
+
+def test_ap_hs20_max_bss_load(dev, apdev):
+    """Hotspot 2.0 and maximum BSS load"""
+    params = hs20_ap_params()
+    params['bss_load_test'] = "12:200:20000"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    params = hs20_ap_params()
+    params['ssid'] = "test-hs20-other"
+    params['bss_load_test'] = "5:20:10000"
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    logger.info("Verify maximum BSS load constraint")
+    values = default_cred()
+    values['domain'] = "example.com"
+    values['max_bss_load'] = "100"
+    events = policy_test(dev[0], apdev[1], values, only_one=False)
+
+    ev = [e for e in events if "INTERWORKING-AP " + apdev[0]['bssid'] in e]
+    if len(ev) != 1 or "over_max_bss_load=1" not in ev[0]:
+        raise Exception("Maximum BSS Load case not noticed")
+    ev = [e for e in events if "INTERWORKING-AP " + apdev[1]['bssid'] in e]
+    if len(ev) != 1 or "over_max_bss_load=1" in ev[0]:
+        raise Exception("Maximum BSS Load case reported incorrectly")
+
+    logger.info("Verify maximum BSS load does not prevent connection")
+    values['max_bss_load'] = "1"
+    events = policy_test(dev[0], None, values)
+
+    ev = [e for e in events if "INTERWORKING-AP " + apdev[0]['bssid'] in e]
+    if len(ev) != 1 or "over_max_bss_load=1" not in ev[0]:
+        raise Exception("Maximum BSS Load case not noticed")
+    ev = [e for e in events if "INTERWORKING-AP " + apdev[1]['bssid'] in e]
+    if len(ev) != 1 or "over_max_bss_load=1" not in ev[0]:
+        raise Exception("Maximum BSS Load case not noticed")
+
+def test_ap_hs20_max_bss_load2(dev, apdev):
+    """Hotspot 2.0 and maximum BSS load with one AP not advertising"""
+    params = hs20_ap_params()
+    params['bss_load_test'] = "12:200:20000"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    params = hs20_ap_params()
+    params['ssid'] = "test-hs20-other"
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    logger.info("Verify maximum BSS load constraint with AP advertisement")
+    values = default_cred()
+    values['domain'] = "example.com"
+    values['max_bss_load'] = "100"
+    events = policy_test(dev[0], apdev[1], values, only_one=False)
+
+    ev = [e for e in events if "INTERWORKING-AP " + apdev[0]['bssid'] in e]
+    if len(ev) != 1 or "over_max_bss_load=1" not in ev[0]:
+        raise Exception("Maximum BSS Load case not noticed")
+    ev = [e for e in events if "INTERWORKING-AP " + apdev[1]['bssid'] in e]
+    if len(ev) != 1 or "over_max_bss_load=1" in ev[0]:
+        raise Exception("Maximum BSS Load case reported incorrectly")
 
 def test_ap_hs20_multi_cred_sp_prio(dev, apdev):
     """Hotspot 2.0 multi-cred sp_priority"""

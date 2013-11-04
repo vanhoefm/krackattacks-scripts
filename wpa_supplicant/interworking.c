@@ -2129,6 +2129,12 @@ static int roaming_partner_match(struct wpa_supplicant *wpa_s,
 				 struct roaming_partner *partner,
 				 struct wpabuf *domain_names)
 {
+	wpa_printf(MSG_DEBUG, "Interworking: Comparing roaming_partner info fqdn='%s' exact_match=%d priority=%u country='%s'",
+		   partner->fqdn, partner->exact_match, partner->priority,
+		   partner->country);
+	wpa_hexdump_ascii(MSG_DEBUG, "Interworking: Domain names",
+			  wpabuf_head(domain_names),
+			  wpabuf_len(domain_names));
 	if (!domain_name_list_contains(domain_names, partner->fqdn,
 				       partner->exact_match))
 		return 0;
@@ -2142,18 +2148,27 @@ static u8 roaming_prio(struct wpa_supplicant *wpa_s, struct wpa_cred *cred,
 {
 	size_t i;
 
-	if (bss->anqp == NULL || bss->anqp->domain_name == NULL)
+	if (bss->anqp == NULL || bss->anqp->domain_name == NULL) {
+		wpa_printf(MSG_DEBUG, "Interworking: No ANQP domain name info -> use default roaming partner priority 128");
 		return 128; /* cannot check preference with domain name */
+	}
 
 	if (interworking_home_sp_cred(wpa_s, cred, bss->anqp->domain_name) > 0)
+	{
+		wpa_printf(MSG_DEBUG, "Interworking: Determined to be home SP -> use maximum preference 0 as roaming partner priority");
 		return 0; /* max preference for home SP network */
+	}
 
 	for (i = 0; i < cred->num_roaming_partner; i++) {
 		if (roaming_partner_match(wpa_s, &cred->roaming_partner[i],
-					  bss->anqp->domain_name))
+					  bss->anqp->domain_name)) {
+			wpa_printf(MSG_DEBUG, "Interworking: Roaming partner preference match - priority %u",
+				   cred->roaming_partner[i].priority);
 			return cred->roaming_partner[i].priority;
+		}
 	}
 
+	wpa_printf(MSG_DEBUG, "Interworking: No roaming partner preference match - use default roaming partner priority 128");
 	return 128;
 }
 

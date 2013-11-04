@@ -21,6 +21,7 @@ sys.path.append('../../wpaspy')
 
 from wpasupplicant import WpaSupplicant
 from hostapd import HostapdGlobal
+from check_kernel import check_kernel
 
 def reset_devs(dev, apdev):
     hapd = HostapdGlobal()
@@ -286,15 +287,12 @@ def main():
                 else:
                     res = t(dev)
                 if res == "skip":
-                    skipped.append(name)
                     result = "SKIP"
                 else:
-                    passed.append(name)
                     result = "PASS"
             except Exception, e:
                 logger.info(e)
                 result = "FAIL"
-                failed.append(name)
             for d in dev:
                 try:
                     d.request("NOTE TEST-STOP " + name)
@@ -314,6 +312,18 @@ def main():
 
         end = datetime.now()
         diff = end - start
+
+        if result == 'PASS' and args.dmesg:
+            if not check_kernel(os.path.join(args.logdir, name + '.dmesg')):
+                result = 'FAIL'
+
+        if result == 'PASS':
+            passed.append(name)
+        elif result == 'SKIP':
+            skipped.append(name)
+        else:
+            failed.append(name)
+
         report(conn, args.prefill, args.build, args.commit, run, name, result, diff.total_seconds())
         result = "{} {} {} {}".format(result, name, diff.total_seconds(), end)
         logger.info(result)

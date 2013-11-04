@@ -130,14 +130,15 @@ def test_ap_hs20_select(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
 
     dev[0].hs20_enable()
-    id = dev[0].add_cred_values(realm="example.com", username="test",
-                                password="secret", domain="example.com")
+    id = dev[0].add_cred_values({ 'realm': "example.com", 'username': "test",
+                                  'password': "secret",
+                                  'domain': "example.com" })
     interworking_select(dev[0], bssid, "home")
 
     dev[0].remove_cred(id)
-    id = dev[0].add_cred_values(realm="example.com", username="test",
-                                password="secret",
-                                domain="no.match.example.com")
+    id = dev[0].add_cred_values({ 'realm': "example.com", 'username': "test",
+                                  'password': "secret",
+                                  'domain': "no.match.example.com" })
     interworking_select(dev[0], bssid, "roaming")
 
     dev[0].set_cred_quoted(id, "realm", "no.match.example.com");
@@ -156,7 +157,7 @@ def test_ap_hs20_ext_sim(dev, apdev):
 
     dev[0].hs20_enable()
     dev[0].request("SET external_sim 1")
-    dev[0].add_cred_values(imsi="23201-0000000000", eap="SIM")
+    dev[0].add_cred_values({ 'imsi': "23201-0000000000", 'eap': "SIM" })
     interworking_select(dev[0], "home")
     interworking_ext_sim_connect(dev[0], bssid, "SIM")
     check_sp_type(dev[0], "home")
@@ -174,7 +175,7 @@ def test_ap_hs20_ext_sim_roaming(dev, apdev):
 
     dev[0].hs20_enable()
     dev[0].request("SET external_sim 1")
-    dev[0].add_cred_values(imsi="23201-0000000000", eap="SIM")
+    dev[0].add_cred_values({ 'imsi': "23201-0000000000", 'eap': "SIM" })
     interworking_select(dev[0], "roaming")
     interworking_ext_sim_connect(dev[0], bssid, "SIM")
     check_sp_type(dev[0], "roaming")
@@ -187,8 +188,10 @@ def test_ap_hs20_username(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
 
     dev[0].hs20_enable()
-    id = dev[0].add_cred_values(realm="example.com", username="hs20-test",
-                                password="password", domain="example.com")
+    id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'username': "hs20-test",
+                                  'password': "password",
+                                  'domain': "example.com" })
     interworking_select(dev[0], bssid, "home")
     interworking_connect(dev[0], bssid, "TTLS")
     check_sp_type(dev[0], "home")
@@ -205,9 +208,10 @@ def test_ap_hs20_username_roaming(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
 
     dev[0].hs20_enable()
-    id = dev[0].add_cred_values(realm="roaming.example.com",
-                                username="hs20-test",
-                                password="password", domain="example.com")
+    id = dev[0].add_cred_values({ 'realm': "roaming.example.com",
+                                  'username': "hs20-test",
+                                  'password': "password",
+                                  'domain': "example.com" })
     interworking_select(dev[0], bssid, "roaming")
     interworking_connect(dev[0], bssid, "TTLS")
     check_sp_type(dev[0], "roaming")
@@ -220,9 +224,9 @@ def test_ap_hs20_username_unknown(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
 
     dev[0].hs20_enable()
-    id = dev[0].add_cred_values(realm="example.com",
-                                username="hs20-test",
-                                password="password")
+    id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'username': "hs20-test",
+                                  'password': "password" })
     interworking_select(dev[0], bssid, "unknown")
     interworking_connect(dev[0], bssid, "TTLS")
     check_sp_type(dev[0], "unknown")
@@ -236,9 +240,10 @@ def test_ap_hs20_username_unknown2(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
 
     dev[0].hs20_enable()
-    id = dev[0].add_cred_values(realm="example.com",
-                                username="hs20-test",
-                                password="password", domain="example.com")
+    id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'username': "hs20-test",
+                                  'password': "password",
+                                  'domain': "example.com" })
     interworking_select(dev[0], bssid, "unknown")
     interworking_connect(dev[0], bssid, "TTLS")
     check_sp_type(dev[0], "unknown")

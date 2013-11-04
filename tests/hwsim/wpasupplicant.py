@@ -146,21 +146,19 @@ class WpaSupplicant:
             raise Exception("SET_CRED failed")
         return None
 
-    def add_cred_values(self, realm=None, username=None, password=None,
-                        domain=None, imsi=None, eap=None):
+    def add_cred_values(self, params):
         id = self.add_cred()
-        if realm:
-            self.set_cred_quoted(id, "realm", realm)
-        if username:
-            self.set_cred_quoted(id, "username", username)
-        if password:
-            self.set_cred_quoted(id, "password", password)
-        if domain:
-            self.set_cred_quoted(id, "domain", domain)
-        if imsi:
-            self.set_cred_quoted(id, "imsi", imsi)
-        if eap:
-            self.set_cred(id, "eap", eap)
+
+        quoted = [ "realm", "username", "password", "domain", "imsi" ]
+        for field in quoted:
+            if field in params:
+                self.set_cred_quoted(id, field, params[field])
+
+        not_quoted = [ "eap" ]
+        for field in not_quoted:
+            if field in params:
+                self.set_cred(id, field, params[field])
+
         return id;
 
     def select_network(self, id):

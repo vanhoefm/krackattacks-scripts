@@ -712,17 +712,23 @@ def policy_test(dev, ap, values, only_one=True):
     dev.request("INTERWORKING_SELECT auto freq=2412")
     while True:
         ev = dev.wait_event(["INTERWORKING-AP", "INTERWORKING-NO-MATCH",
-                             "CTRL-EVENT-CONNECTED"], timeout=15)
+                             "INTERWORKING-SELECTED"], timeout=15)
         if ev is None:
-            raise Exception("Connection timed out")
+            raise Exception("Network selection timed out")
         if "INTERWORKING-NO-MATCH" in ev:
             raise Exception("Matching AP not found")
         if only_one and "INTERWORKING-AP" in ev and bssid not in ev:
             raise Exception("Unexpected AP claimed acceptable")
-        if "CTRL-EVENT-CONNECTED" in ev:
+        if "INTERWORKING-SELECTED" in ev:
             if bssid not in ev:
-                raise Exception("Connected to incorrect BSS")
+                raise Exception("Selected incorrect BSS")
             break
+
+    ev = dev.wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Connection timed out")
+    if bssid not in ev:
+        raise Exception("Connected to incorrect BSS")
 
     conn_bssid = dev.get_status_field("bssid")
     if conn_bssid != bssid:

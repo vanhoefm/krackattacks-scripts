@@ -832,6 +832,30 @@ def test_ap_hs20_domain_suffix_match(dev, apdev):
     if "Domain suffix mismatch" not in ev:
         raise Exception("Domain suffix mismatch not reported")
 
+def test_ap_hs20_roaming_partner_preference(dev, apdev):
+    """Hotspot 2.0 and roaming partner preference"""
+    params = hs20_ap_params()
+    params['domain_name'] = "roaming.example.org"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    params = hs20_ap_params()
+    params['ssid'] = "test-hs20-other"
+    params['domain_name'] = "roaming.example.net"
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    logger.info("Verify default vs. specified preference")
+    values = default_cred()
+    values['roaming_partner'] = "roaming.example.net,1,127,*"
+    policy_test(dev[0], apdev[1], values, only_one=False)
+    values['roaming_partner'] = "roaming.example.net,1,129,*"
+    policy_test(dev[0], apdev[0], values, only_one=False)
+
+    logger.info("Verify partial FQDN match")
+    values['roaming_partner'] = "example.net,0,0,*"
+    policy_test(dev[0], apdev[1], values, only_one=False)
+    values['roaming_partner'] = "example.net,0,255,*"
+    policy_test(dev[0], apdev[0], values, only_one=False)
+
 def test_ap_hs20_multi_cred_sp_prio(dev, apdev):
     """Hotspot 2.0 multi-cred sp_priority"""
     if not hlr_auc_gw_available():

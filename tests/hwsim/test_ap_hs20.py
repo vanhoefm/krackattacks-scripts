@@ -276,6 +276,11 @@ def policy_test(dev, ap, values, only_one=True):
     dev.remove_cred(id)
     dev.dump_monitor()
 
+def default_cred():
+    return { 'realm': "example.com",
+             'username': "hs20-test",
+             'password': "password" }
+
 def test_ap_hs20_req_roaming_consortium(dev, apdev):
     """Hotspot 2.0 required roaming consortium"""
     params = hs20_ap_params()
@@ -286,10 +291,24 @@ def test_ap_hs20_req_roaming_consortium(dev, apdev):
     params['roaming_consortium'] = [ "223344" ]
     hostapd.add_ap(apdev[1]['ifname'], params)
 
-    values = { 'realm': "example.com",
-               'username': "hs20-test",
-               'password': "password",
-               'required_roaming_consortium': "223344" }
+    values = default_cred()
+    values['required_roaming_consortium'] = "223344"
     policy_test(dev[0], apdev[1], values)
     values['required_roaming_consortium'] = "112233"
+    policy_test(dev[0], apdev[0], values)
+
+def test_ap_hs20_excluded_ssid(dev, apdev):
+    """Hotspot 2.0 exclusion based on SSID"""
+    params = hs20_ap_params()
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    params = hs20_ap_params()
+    params['ssid'] = "test-hs20-other"
+    params['roaming_consortium'] = [ "223344" ]
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    values = default_cred()
+    values['excluded_ssid'] = "test-hs20"
+    policy_test(dev[0], apdev[1], values)
+    values['excluded_ssid'] = "test-hs20-other"
     policy_test(dev[0], apdev[0], values)

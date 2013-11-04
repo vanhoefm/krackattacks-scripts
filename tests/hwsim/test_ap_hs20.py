@@ -181,8 +181,6 @@ def test_ap_hs20_ext_sim_roaming(dev, apdev):
 
 def test_ap_hs20_username(dev, apdev):
     """Hotspot 2.0 connection in username/password credential"""
-    if not hlr_auc_gw_available():
-        return "skip"
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['hessid'] = bssid
@@ -197,8 +195,6 @@ def test_ap_hs20_username(dev, apdev):
 
 def test_ap_hs20_username_roaming(dev, apdev):
     """Hotspot 2.0 connection in username/password credential (roaming)"""
-    if not hlr_auc_gw_available():
-        return "skip"
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['nai_realm'] = [ "0,example.com,13[5:6],21[2:4][5:7]",
@@ -218,8 +214,6 @@ def test_ap_hs20_username_roaming(dev, apdev):
 
 def test_ap_hs20_username_unknown(dev, apdev):
     """Hotspot 2.0 connection in username/password credential (no domain in cred)"""
-    if not hlr_auc_gw_available():
-        return "skip"
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['hessid'] = bssid
@@ -235,8 +229,6 @@ def test_ap_hs20_username_unknown(dev, apdev):
 
 def test_ap_hs20_username_unknown2(dev, apdev):
     """Hotspot 2.0 connection in username/password credential (no domain advertized)"""
-    if not hlr_auc_gw_available():
-        return "skip"
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['hessid'] = bssid

@@ -247,3 +247,49 @@ def test_ap_hs20_username_unknown2(dev, apdev):
     interworking_select(dev[0], bssid, "unknown")
     interworking_connect(dev[0], bssid, "TTLS")
     check_sp_type(dev[0], "unknown")
+
+def policy_test(dev, ap, values, only_one=True):
+    dev.dump_monitor()
+    logger.info("Verify network selection to AP " + ap['ifname'])
+    bssid = ap['bssid']
+    dev.hs20_enable()
+    id = dev.add_cred_values(values)
+    dev.request("INTERWORKING_SELECT auto")
+    while True:
+        ev = dev.wait_event(["INTERWORKING-AP", "INTERWORKING-NO-MATCH",
+                             "CTRL-EVENT-CONNECTED"], timeout=15)
+        if ev is None:
+            raise Exception("Connection timed out")
+        if "INTERWORKING-NO-MATCH" in ev:
+            raise Exception("Matching AP not found")
+        if only_one and "INTERWORKING-AP" in ev and bssid not in ev:
+            raise Exception("Unexpected AP claimed acceptable")
+        if "CTRL-EVENT-CONNECTED" in ev:
+            if bssid not in ev:
+                raise Exception("Connected to incorrect BSS")
+            break
+
+    conn_bssid = dev.get_status_field("bssid")
+    if conn_bssid != bssid:
+        raise Exception("bssid information points to incorrect BSS")
+
+    dev.remove_cred(id)
+    dev.dump_monitor()
+
+def test_ap_hs20_req_roaming_consortium(dev, apdev):
+    """Hotspot 2.0 required roaming consortium"""
+    params = hs20_ap_params()
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    params = hs20_ap_params()
+    params['ssid'] = "test-hs20-other"
+    params['roaming_consortium'] = [ "223344" ]
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    values = { 'realm': "example.com",
+               'username': "hs20-test",
+               'password': "password",
+               'required_roaming_consortium': "223344" }
+    policy_test(dev[0], apdev[1], values)
+    values['required_roaming_consortium'] = "112233"
+    policy_test(dev[0], apdev[0], values)

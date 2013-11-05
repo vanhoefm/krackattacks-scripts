@@ -82,15 +82,15 @@ static int hostapd_ctrl_iface_detach(struct hostapd_data *hapd,
 		    os_memcmp(from->sun_path, dst->addr.sun_path,
 			      fromlen - offsetof(struct sockaddr_un, sun_path))
 		    == 0) {
+			wpa_hexdump(MSG_DEBUG, "CTRL_IFACE monitor detached",
+				    (u8 *) from->sun_path,
+				    fromlen -
+				    offsetof(struct sockaddr_un, sun_path));
 			if (prev == NULL)
 				hapd->ctrl_dst = dst->next;
 			else
 				prev->next = dst->next;
 			os_free(dst);
-			wpa_hexdump(MSG_DEBUG, "CTRL_IFACE monitor detached",
-				    (u8 *) from->sun_path,
-				    fromlen -
-				    offsetof(struct sockaddr_un, sun_path));
 			return 0;
 		}
 		prev = dst;

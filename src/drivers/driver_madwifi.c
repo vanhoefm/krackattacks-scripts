@@ -322,19 +322,16 @@ madwifi_set_ieee8021x(void *priv, struct wpa_bss_params *params)
 			IEEE80211_AUTH_AUTO);
 	}
 	if (!params->wpa && !params->ieee802_1x) {
-		hostapd_logger(drv->hapd, NULL, HOSTAPD_MODULE_DRIVER,
-			HOSTAPD_LEVEL_WARNING, "No 802.1X or WPA enabled!");
+		wpa_printf(MSG_WARNING, "No 802.1X or WPA enabled!");
 		return -1;
 	}
 	if (params->wpa && madwifi_configure_wpa(drv, params) != 0) {
-		hostapd_logger(drv->hapd, NULL, HOSTAPD_MODULE_DRIVER,
-			HOSTAPD_LEVEL_WARNING, "Error configuring WPA state!");
+		wpa_printf(MSG_WARNING, "Error configuring WPA state!");
 		return -1;
 	}
 	if (set80211param(priv, IEEE80211_PARAM_AUTHMODE,
 		(params->wpa ? IEEE80211_AUTH_WPA : IEEE80211_AUTH_8021X))) {
-		hostapd_logger(drv->hapd, NULL, HOSTAPD_MODULE_DRIVER,
-			HOSTAPD_LEVEL_WARNING, "Error enabling WPA/802.1X!");
+		wpa_printf(MSG_WARNING, "Error enabling WPA/802.1X!");
 		return -1;
 	}
 

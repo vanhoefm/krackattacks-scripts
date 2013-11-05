@@ -24,17 +24,25 @@ from hostapd import HostapdGlobal
 from check_kernel import check_kernel
 
 def reset_devs(dev, apdev):
-    hapd = HostapdGlobal()
+    ok = True
     for d in dev:
         try:
             d.reset()
         except Exception, e:
             logger.info("Failed to reset device " + d.ifname)
             print str(e)
-    hapd.remove('wlan3-3')
-    hapd.remove('wlan3-2')
-    for ap in apdev:
-        hapd.remove(ap['ifname'])
+            ok = False
+    try:
+        hapd = HostapdGlobal()
+        hapd.remove('wlan3-3')
+        hapd.remove('wlan3-2')
+        for ap in apdev:
+            hapd.remove(ap['ifname'])
+    except Exception, e:
+        logger.info("Failed to remove hostapd interface")
+        print str(e)
+        ok = False
+    return ok
 
 def report(conn, prefill, build, commit, run, test, result, duration):
     if conn:
@@ -89,8 +97,9 @@ def rename_log(logdir, basename, testname, dev):
                                    testname + '.' + basename + '-' + str(num))
             num = num + 1
         os.rename(srcname, dstname)
-        dev.relog()
-        subprocess.call(['sudo', 'chown', '-f', getpass.getuser(), srcname])
+        if dev:
+            dev.relog()
+            subprocess.call(['sudo', 'chown', '-f', getpass.getuser(), srcname])
     except Exception, e:
         logger.info("Failed to rename log files")
         logger.info(e)
@@ -226,7 +235,11 @@ def main():
 
     # make sure nothing is left over from previous runs
     # (if there were any other manual runs or we crashed)
-    reset_devs(dev, apdev)
+    if not reset_devs(dev, apdev):
+        if conn:
+            conn.close()
+            conn = None
+        sys.exit(1)
 
     if args.dmesg:
         subprocess.call(['sudo', 'dmesg', '-c'], stdout=open('/dev/null', 'w'))
@@ -262,6 +275,7 @@ def main():
             log_handler.setFormatter(log_formatter)
             logger.addHandler(log_handler)
 
+        reset_ok = True
         with DataCollector(args.logdir, name, args.tracing, args.dmesg):
             logger.info("START " + name)
             if args.loglevel == logging.WARNING:
@@ -299,15 +313,23 @@ def main():
                 except Exception, e:
                     logger.info("Failed to issue TEST-STOP after {} for {}".format(name, d.ifname))
                     logger.info(e)
+                    result = "FAIL"
             if args.no_reset:
                 print "Leaving devices in current state"
             else:
-                reset_devs(dev, apdev)
+                reset_ok = reset_devs(dev, apdev)
 
             for i in range(0, 3):
                 rename_log(args.logdir, 'log' + str(i), name, dev[i])
 
-            hapd = HostapdGlobal()
+            try:
+                hapd = HostapdGlobal()
+            except Exception, e:
+                print "Failed to connect to hostapd interface"
+                print str(e)
+                reset_ok = False
+                result = "FAIL"
+                hapd = None
             rename_log(args.logdir, 'hostapd', name, hapd)
 
         end = datetime.now()
@@ -330,6 +352,10 @@ def main():
         if args.loglevel == logging.WARNING:
             print result
             sys.stdout.flush()
+
+        if not reset_ok:
+            print "Terminating early due to device reset failure"
+            break
 
     if log_handler:
         log_handler.stream.close()

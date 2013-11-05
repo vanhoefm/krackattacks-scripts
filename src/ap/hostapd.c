@@ -1818,27 +1818,32 @@ fail:
 
 static int hostapd_remove_bss(struct hostapd_iface *iface, unsigned int idx)
 {
-	struct hostapd_data *hapd;
 	size_t i;
 
-	if (idx > iface->num_bss || idx > iface->conf->num_bss)
-		return -1;
-	hapd = iface->bss[idx];
-	wpa_printf(MSG_INFO, "Remove BSS '%s'", hapd->conf->iface);
+	wpa_printf(MSG_INFO, "Remove BSS '%s'", iface->conf->bss[idx]->iface);
 
-	hostapd_free_stas(hapd);
-	hostapd_flush_old_stations(hapd, WLAN_REASON_DEAUTH_LEAVING);
-	hostapd_clear_wep(hapd);
-	hostapd_cleanup(hapd);
-	hostapd_config_free_bss(hapd->conf);
-	os_free(hapd);
+	/* Remove hostapd_data only if it has already been initialized */
+	if (idx < iface->num_bss) {
+		struct hostapd_data *hapd = iface->bss[idx];
 
-	iface->num_bss--;
-	for (i = idx; i < iface->num_bss; i++)
-		iface->bss[i] = iface->bss[i + 1];
+		hostapd_free_stas(hapd);
+		hostapd_flush_old_stations(hapd, WLAN_REASON_DEAUTH_LEAVING);
+		hostapd_clear_wep(hapd);
+		hostapd_cleanup(hapd);
+		hostapd_config_free_bss(hapd->conf);
+		os_free(hapd);
+
+		iface->num_bss--;
+
+		for (i = idx; i < iface->num_bss; i++)
+			iface->bss[i] = iface->bss[i + 1];
+	} else {
+		hostapd_config_free_bss(iface->conf->bss[idx]);
+		iface->conf->bss[idx] = NULL;
+	}
 
 	iface->conf->num_bss--;
-	for (i = idx; i < iface->num_bss; i++)
+	for (i = idx; i < iface->conf->num_bss; i++)
 		iface->conf->bss[i] = iface->conf->bss[i + 1];
 
 	return 0;

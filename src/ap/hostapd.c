@@ -1082,7 +1082,8 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 	if (err) {
 		wpa_printf(MSG_ERROR, "Interface initialization failed");
 		hostapd_set_state(iface, HAPD_IFACE_DISABLED);
-		eloop_terminate();
+		if (iface->interfaces && iface->interfaces->terminate_on_error)
+			eloop_terminate();
 		return -1;
 	}
 
@@ -1187,6 +1188,8 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 
 	wpa_printf(MSG_DEBUG, "%s: Setup of interface done.",
 		   iface->bss[0]->conf->iface);
+	if (iface->interfaces && iface->interfaces->terminate_on_error > 0)
+		iface->interfaces->terminate_on_error--;
 
 	return 0;
 }

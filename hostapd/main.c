@@ -693,6 +693,7 @@ int main(int argc, char *argv[])
 	 * In such case, the interface will be enabled from eloop context within
 	 * hostapd_global_run().
 	 */
+	interfaces.terminate_on_error = interfaces.count;
 	for (i = 0; i < interfaces.count; i++) {
 		if (hostapd_driver_init(interfaces.iface[i]) ||
 		    hostapd_setup_interface(interfaces.iface[i]))

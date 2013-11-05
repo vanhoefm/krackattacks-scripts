@@ -45,6 +45,8 @@ struct hapd_interfaces {
 	gid_t ctrl_iface_group;
 	struct hostapd_iface **iface;
 	struct hostapd_dynamic_iface **dynamic_iface;
+
+	size_t terminate_on_error;
 };
 
 enum hostapd_chan_status {

@@ -4009,6 +4009,18 @@ int wpas_wpa_is_in_progress(struct wpa_supplicant *wpa_s, int include_current)
 }
 
 
+void dump_freq_array(struct wpa_supplicant *wpa_s, const char *title,
+		     int *freq_array, unsigned int len)
+{
+	unsigned int i;
+
+	wpa_dbg(wpa_s, MSG_DEBUG, "Shared frequencies (len=%u): %s",
+		len, title);
+	for (i = 0; i < len; i++)
+		wpa_dbg(wpa_s, MSG_DEBUG, "freq[%u]: %d", i, freq_array[i]);
+}
+
+
 /*
  * Find the operating frequencies of any of the virtual interfaces that
  * are using the same radio as the current interface.
@@ -4022,6 +4034,8 @@ int get_shared_radio_freqs(struct wpa_supplicant *wpa_s,
 	int freq;
 	unsigned int idx = 0, i;
 
+	wpa_dbg(wpa_s, MSG_DEBUG,
+		"Determining shared radio frequencies (max len %u)", len);
 	os_memset(freq_array, 0, sizeof(int) * len);
 
 	/* First add the frequency of the local interface */
@@ -4039,12 +4053,16 @@ int get_shared_radio_freqs(struct wpa_supplicant *wpa_s,
 		if (freq > 0 && idx < len &&
 		    (idx == 0 || freq_array[0] != freq))
 			freq_array[idx++] = freq;
+		dump_freq_array(wpa_s, "No get_radio_name", freq_array, idx);
 		return idx;
 	}
 
 	rn = wpa_s->driver->get_radio_name(wpa_s->drv_priv);
-	if (rn == NULL || rn[0] == '\0')
+	if (rn == NULL || rn[0] == '\0') {
+		dump_freq_array(wpa_s, "get_radio_name failed",
+				freq_array, idx);
 		return idx;
+	}
 
 	for (ifs = wpa_s->global->ifaces; ifs && idx < len;
 	     ifs = ifs->next) {
@@ -4074,5 +4092,7 @@ int get_shared_radio_freqs(struct wpa_supplicant *wpa_s,
 		if (i == idx)
 			freq_array[idx++] = freq;
 	}
+
+	dump_freq_array(wpa_s, "completed iteration", freq_array, idx);
 	return idx;
 }

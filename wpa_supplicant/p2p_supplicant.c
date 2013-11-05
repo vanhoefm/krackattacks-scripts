@@ -124,7 +124,7 @@ static int wpas_p2p_stop_find_oper(struct wpa_supplicant *wpa_s);
 static int wpas_p2p_num_unused_channels(struct wpa_supplicant *wpa_s)
 {
 	int *freqs;
-	int num;
+	int num, unused;
 
 	freqs = os_calloc(wpa_s->num_multichan_concurrent, sizeof(int));
 	if (!freqs)
@@ -134,7 +134,9 @@ static int wpas_p2p_num_unused_channels(struct wpa_supplicant *wpa_s)
 				     wpa_s->num_multichan_concurrent);
 	os_free(freqs);
 
-	return wpa_s->num_multichan_concurrent - num;
+	unused = wpa_s->num_multichan_concurrent - num;
+	wpa_dbg(wpa_s, MSG_DEBUG, "P2P: num_unused_channels: %d", unused);
+	return unused;
 }
 
 
@@ -163,6 +165,8 @@ static int wpas_p2p_valid_oper_freqs(struct wpa_supplicant *wpa_s,
 	}
 
 	os_free(freqs);
+
+	dump_freq_array(wpa_s, "valid for P2P", p2p_freqs, j);
 
 	return j;
 }

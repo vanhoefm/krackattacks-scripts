@@ -200,7 +200,8 @@ static void radius_das_receive(int sock, void *eloop_ctx, void *sock_ctx)
 				  (u8 *) &val, 4);
 	if (res == 4) {
 		u32 timestamp = ntohl(val);
-		if (abs(now.sec - timestamp) > das->time_window) {
+		if ((unsigned int) abs(now.sec - timestamp) >
+		    das->time_window) {
 			wpa_printf(MSG_DEBUG, "DAS: Unacceptable "
 				   "Event-Timestamp (%u; local time %u) in "
 				   "packet from %s:%d - drop",

@@ -188,3 +188,84 @@ def test_ap_invalid_config2(dev, apdev):
     hapd = invalid_ap(hapd_global, ifname)
     logger.info("Remove interface with failed configuration")
     hapd_global.remove(ifname)
+
+def test_ap_remove_during_acs(dev, apdev):
+    """Remove interface during ACS"""
+    params = hostapd.wpa2_params(ssid="test-acs-remove", passphrase="12345678")
+    params['channel'] = '0'
+    ifname = apdev[0]['ifname']
+    hapd = hostapd.HostapdGlobal()
+    hostapd.add_ap(ifname, params)
+    hapd.remove(ifname)
+
+def test_ap_remove_during_acs2(dev, apdev):
+    """Remove BSS during ACS in multi-BSS configuration"""
+    ifname = apdev[0]['ifname']
+    ifname2 = ifname + "-2"
+    hapd_global = hostapd.HostapdGlobal()
+    hapd_global.add(ifname)
+    hapd = hostapd.Hostapd(ifname)
+    hapd.set_defaults()
+    hapd.set("ssid", "test-acs-remove")
+    hapd.set("channel", "0")
+    hapd.set("bss", ifname2)
+    hapd.set("ssid", "test-acs-remove2")
+    hapd.enable()
+    hapd_global.remove(ifname)
+
+def test_ap_remove_during_acs3(dev, apdev):
+    """Remove second BSS during ACS in multi-BSS configuration"""
+    ifname = apdev[0]['ifname']
+    ifname2 = ifname + "-2"
+    hapd_global = hostapd.HostapdGlobal()
+    hapd_global.add(ifname)
+    hapd = hostapd.Hostapd(ifname)
+    hapd.set_defaults()
+    hapd.set("ssid", "test-acs-remove")
+    hapd.set("channel", "0")
+    hapd.set("bss", ifname2)
+    hapd.set("ssid", "test-acs-remove2")
+    hapd.enable()
+    hapd_global.remove(ifname2)
+
+def test_ap_remove_during_ht_coex_scan(dev, apdev):
+    """Remove interface during HT co-ex scan"""
+    params = hostapd.wpa2_params(ssid="test-ht-remove", passphrase="12345678")
+    params['channel'] = '1'
+    params['ht_capab'] = "[HT40+]"
+    ifname = apdev[0]['ifname']
+    hapd = hostapd.HostapdGlobal()
+    hostapd.add_ap(ifname, params)
+    hapd.remove(ifname)
+
+def test_ap_remove_during_ht_coex_scan2(dev, apdev):
+    """Remove BSS during HT co-ex scan in multi-BSS configuration"""
+    ifname = apdev[0]['ifname']
+    ifname2 = ifname + "-2"
+    hapd_global = hostapd.HostapdGlobal()
+    hapd_global.add(ifname)
+    hapd = hostapd.Hostapd(ifname)
+    hapd.set_defaults()
+    hapd.set("ssid", "test-ht-remove")
+    hapd.set("channel", "1")
+    hapd.set("ht_capab", "[HT40+]")
+    hapd.set("bss", ifname2)
+    hapd.set("ssid", "test-ht-remove2")
+    hapd.enable()
+    hapd_global.remove(ifname)
+
+def test_ap_remove_during_ht_coex_scan3(dev, apdev):
+    """Remove second BSS during HT co-ex scan in multi-BSS configuration"""
+    ifname = apdev[0]['ifname']
+    ifname2 = ifname + "-2"
+    hapd_global = hostapd.HostapdGlobal()
+    hapd_global.add(ifname)
+    hapd = hostapd.Hostapd(ifname)
+    hapd.set_defaults()
+    hapd.set("ssid", "test-ht-remove")
+    hapd.set("channel", "1")
+    hapd.set("ht_capab", "[HT40+]")
+    hapd.set("bss", ifname2)
+    hapd.set("ssid", "test-ht-remove2")
+    hapd.enable()
+    hapd_global.remove(ifname2)

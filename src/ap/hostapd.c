@@ -1854,8 +1854,7 @@ int hostapd_remove_iface(struct hapd_interfaces *interfaces, char *buf)
 		hapd_iface = interfaces->iface[i];
 		if (hapd_iface == NULL)
 			return -1;
-		if (hapd_iface->conf->num_bss == 1 &&
-		    !os_strcmp(hapd_iface->conf->bss[0]->iface, buf)) {
+		if (!os_strcmp(hapd_iface->conf->bss[0]->iface, buf)) {
 			wpa_printf(MSG_INFO, "Remove interface '%s'", buf);
 			hostapd_interface_deinit_free(hapd_iface);
 			k = i;

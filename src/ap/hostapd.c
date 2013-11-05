@@ -1806,8 +1806,14 @@ fail:
 		hostapd_config_free(conf);
 	if (hapd_iface) {
 		if (hapd_iface->bss) {
-			for (i = 0; i < hapd_iface->num_bss; i++)
+			for (i = 0; i < hapd_iface->num_bss; i++) {
+				hapd = hapd_iface->bss[i];
+				if (hapd && hapd_iface->interfaces &&
+				    hapd_iface->interfaces->ctrl_iface_deinit)
+					hapd_iface->interfaces->
+						ctrl_iface_deinit(hapd);
 				os_free(hapd_iface->bss[i]);
+			}
 			os_free(hapd_iface->bss);
 		}
 		os_free(hapd_iface);

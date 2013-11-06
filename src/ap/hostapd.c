@@ -300,11 +300,13 @@ static void hostapd_free_hapd_data(struct hostapd_data *hapd)
  */
 static void hostapd_cleanup(struct hostapd_data *hapd)
 {
-	wpa_printf(MSG_DEBUG, "%s(%s)", __func__, hapd->conf->iface);
+	wpa_printf(MSG_DEBUG, "%s(hapd=%p (%s))", __func__, hapd,
+		   hapd->conf->iface);
 	if (hapd->iface->interfaces &&
 	    hapd->iface->interfaces->ctrl_iface_deinit)
 		hapd->iface->interfaces->ctrl_iface_deinit(hapd);
 	hostapd_free_hapd_data(hapd);
+	hapd->started = 0;
 }
 
 
@@ -620,6 +622,16 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 	int ssid_len, set_ssid;
 	char force_ifname[IFNAMSIZ];
 	u8 if_addr[ETH_ALEN];
+
+	wpa_printf(MSG_DEBUG, "%s(hapd=%p (%s), first=%d)",
+		   __func__, hapd, hapd->conf->iface, first);
+
+	if (hapd->started) {
+		wpa_printf(MSG_ERROR, "%s: Interface %s was already started",
+			   __func__, hapd->conf->iface);
+		return -1;
+	}
+	hapd->started = 1;
 
 	if (!first || first == -1) {
 		if (hostapd_mac_comp_empty(hapd->conf->bssid) == 0) {

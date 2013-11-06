@@ -1267,6 +1267,12 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 
 	if (wpa_s->conf->cred == NULL || bss == NULL)
 		return -1;
+	if (disallowed_bssid(wpa_s, bss->bssid) ||
+	    disallowed_ssid(wpa_s, bss->ssid, bss->ssid_len)) {
+		wpa_printf(MSG_DEBUG, "Interworking: Reject connection to disallowed BSS "
+			   MACSTR, MAC2STR(bss->bssid));
+		return -1;
+	}
 	ie = wpa_bss_get_ie(bss, WLAN_EID_SSID);
 	if (ie == NULL || ie[1] == 0) {
 		wpa_printf(MSG_DEBUG, "Interworking: No SSID known for "
@@ -1597,6 +1603,13 @@ static struct wpa_cred * interworking_credentials_available(
 {
 	struct wpa_cred *cred, *cred2;
 
+	if (disallowed_bssid(wpa_s, bss->bssid) ||
+	    disallowed_ssid(wpa_s, bss->ssid, bss->ssid_len)) {
+		wpa_printf(MSG_DEBUG, "Interworking: Ignore disallowed BSS "
+			   MACSTR, MAC2STR(bss->bssid));
+		return NULL;
+	}
+
 	cred = interworking_credentials_available_realm(wpa_s, bss);
 	cred2 = interworking_credentials_available_3gpp(wpa_s, bss);
 	if (cred && cred2 && cred2->priority >= cred->priority)
@@ -1883,6 +1896,9 @@ static void interworking_next_anqp_fetch(struct wpa_supplicant *wpa_s)
 		ie = wpa_bss_get_ie(bss, WLAN_EID_EXT_CAPAB);
 		if (ie == NULL || ie[1] < 4 || !(ie[5] & 0x80))
 			continue; /* AP does not support Interworking */
+		if (disallowed_bssid(wpa_s, bss->bssid) ||
+		    disallowed_ssid(wpa_s, bss->ssid, bss->ssid_len))
+			continue; /* Disallowed BSS */
 
 		if (!(bss->flags & WPA_BSS_ANQP_FETCH_TRIED)) {
 			if (bss->anqp == NULL) {

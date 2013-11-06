@@ -58,6 +58,12 @@ static int pno_start(struct wpa_supplicant *wpa_s)
 	if (wpa_s->pno)
 		return 0;
 
+	if ((wpa_s->wpa_state > WPA_SCANNING) &&
+	    (wpa_s->wpa_state <= WPA_COMPLETED)) {
+		wpa_printf(MSG_ERROR, "PNO: In assoc process");
+		return -EAGAIN;
+	}
+
 	if (wpa_s->wpa_state == WPA_SCANNING) {
 		wpa_supplicant_cancel_sched_scan(wpa_s);
 		wpa_supplicant_cancel_scan(wpa_s);

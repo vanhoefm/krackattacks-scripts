@@ -1,6 +1,6 @@
 /*
  * Interworking (IEEE 802.11u)
- * Copyright (c) 2011-2012, Qualcomm Atheros, Inc.
+ * Copyright (c) 2011-2013, Qualcomm Atheros, Inc.
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -19,6 +19,7 @@
 #include "eap_peer/eap.h"
 #include "eap_peer/eap_methods.h"
 #include "eapol_supp/eapol_supp_sm.h"
+#include "rsn_supp/wpa.h"
 #include "wpa_supplicant_i.h"
 #include "config.h"
 #include "config_ssid.h"
@@ -770,6 +771,39 @@ static int already_connected(struct wpa_supplicant *wpa_s,
 }
 
 
+static void remove_duplicate_network(struct wpa_supplicant *wpa_s,
+				     struct wpa_cred *cred,
+				     struct wpa_bss *bss)
+{
+	struct wpa_ssid *ssid;
+
+	for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next) {
+		if (ssid->parent_cred != cred)
+			continue;
+		if (ssid->ssid_len != bss->ssid_len ||
+		    os_memcmp(ssid->ssid, bss->ssid, bss->ssid_len) != 0)
+			continue;
+
+		break;
+	}
+
+	if (ssid == NULL)
+		return;
+
+	wpa_printf(MSG_DEBUG, "Interworking: Remove duplicate network entry for the same credential");
+
+	if (ssid == wpa_s->current_ssid) {
+		wpa_sm_set_config(wpa_s->wpa, NULL);
+		eapol_sm_notify_config(wpa_s->eapol, NULL, NULL);
+		wpa_supplicant_deauthenticate(wpa_s,
+					      WLAN_REASON_DEAUTH_LEAVING);
+	}
+
+	wpas_notify_network_removed(wpa_s, ssid);
+	wpa_config_remove_network(wpa_s->conf, ssid->id);
+}
+
+
 static int interworking_set_hs20_params(struct wpa_supplicant *wpa_s,
 					struct wpa_ssid *ssid)
 {
@@ -810,6 +844,8 @@ static int interworking_connect_3gpp(struct wpa_supplicant *wpa_s,
 			MAC2STR(bss->bssid));
 		return 0;
 	}
+
+	remove_duplicate_network(wpa_s, cred, bss);
 
 	ssid = wpa_config_add_network(wpa_s->conf);
 	if (ssid == NULL)
@@ -1176,6 +1212,8 @@ static int interworking_connect_roaming_consortium(
 		return 0;
 	}
 
+	remove_duplicate_network(wpa_s, cred, bss);
+
 	ssid = wpa_config_add_network(wpa_s->conf);
 	if (ssid == NULL)
 		return -1;
@@ -1317,6 +1355,8 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 		nai_realm_free(realm, count);
 		return 0;
 	}
+
+	remove_duplicate_network(wpa_s, cred, bss);
 
 	ssid = wpa_config_add_network(wpa_s->conf);
 	if (ssid == NULL) {

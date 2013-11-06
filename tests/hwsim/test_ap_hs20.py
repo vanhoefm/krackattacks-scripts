@@ -248,6 +248,43 @@ def test_ap_hs20_username_unknown2(dev, apdev):
     interworking_connect(dev[0], bssid, "TTLS")
     check_sp_type(dev[0], "unknown")
 
+def test_ap_hs20_multiple_connects(dev, apdev):
+    """Hotspot 2.0 connection through multiple network selections"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    values = { 'realm': "example.com",
+               'username': "hs20-test",
+               'password': "password",
+               'domain': "example.com" }
+    id = dev[0].add_cred_values(values)
+
+    for i in range(0, 3):
+        logger.info("Starting Interworking network selection")
+        dev[0].request("INTERWORKING_SELECT auto")
+        while True:
+            ev = dev[0].wait_event(["INTERWORKING-NO-MATCH",
+                                    "INTERWORKING-ALREADY-CONNECTED",
+                                    "CTRL-EVENT-CONNECTED"], timeout=15)
+            if ev is None:
+                raise Exception("Connection timed out")
+            if "INTERWORKING-NO-MATCH" in ev:
+                raise Exception("Matching AP not found")
+            if "CTRL-EVENT-CONNECTED" in ev:
+                break
+            if i == 2 and "INTERWORKING-ALREADY-CONNECTED" in ev:
+                break
+        if i == 0:
+            dev[0].request("DISCONNECT")
+        dev[0].dump_monitor()
+
+    networks = dev[0].list_networks()
+    if len(networks) > 1:
+        raise Exception("Duplicated network block detected")
+
 def policy_test(dev, ap, values, only_one=True):
     dev.dump_monitor()
     logger.info("Verify network selection to AP " + ap['ifname'])

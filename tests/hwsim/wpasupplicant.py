@@ -118,6 +118,22 @@ class WpaSupplicant:
             raise Exception("SET_NETWORK failed")
         return None
 
+    def list_networks(self):
+        res = self.request("LIST_NETWORKS")
+        lines = res.splitlines()
+        networks = []
+        for l in lines:
+            if "network id" in l:
+                continue
+            [id,ssid,bssid,flags] = l.split('\t')
+            network = {}
+            network['id'] = id
+            network['ssid'] = ssid
+            network['bssid'] = bssid
+            network['flags'] = flags
+            networks.append(network)
+        return networks
+
     def hs20_enable(self):
         self.request("SET interworking 1")
         self.request("SET hs20 1")

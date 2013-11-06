@@ -212,7 +212,7 @@ NEED_DH_GROUPS=y
 endif
 
 ifdef CONFIG_WNM
-CFLAGS += -DCONFIG_WNM
+L_CFLAGS += -DCONFIG_WNM
 OBJS += src/ap/wnm_ap.c
 endif
 

@@ -1252,6 +1252,17 @@ hostapd_alloc_bss_data(struct hostapd_iface *hapd_iface,
 }
 
 
+static void hostapd_bss_deinit(struct hostapd_data *hapd)
+{
+	wpa_printf(MSG_DEBUG, "%s: deinit bss %s", __func__,
+		   hapd->conf->iface);
+	hostapd_free_stas(hapd);
+	hostapd_flush_old_stations(hapd, WLAN_REASON_DEAUTH_LEAVING);
+	hostapd_clear_wep(hapd);
+	hostapd_cleanup(hapd);
+}
+
+
 void hostapd_interface_deinit(struct hostapd_iface *iface)
 {
 	int j;
@@ -1263,15 +1274,8 @@ void hostapd_interface_deinit(struct hostapd_iface *iface)
 	eloop_cancel_timeout(channel_list_update_timeout, iface, NULL);
 	iface->wait_channel_update = 0;
 
-	for (j = iface->num_bss - 1; j >= 0; j--) {
-		struct hostapd_data *hapd = iface->bss[j];
-		wpa_printf(MSG_DEBUG, "%s: deinit bss %s", __func__,
-			   hapd->conf->iface);
-		hostapd_free_stas(hapd);
-		hostapd_flush_old_stations(hapd, WLAN_REASON_DEAUTH_LEAVING);
-		hostapd_clear_wep(hapd);
-		hostapd_cleanup(hapd);
-	}
+	for (j = iface->num_bss - 1; j >= 0; j--)
+		hostapd_bss_deinit(iface->bss[j]);
 }
 
 
@@ -1851,10 +1855,7 @@ static int hostapd_remove_bss(struct hostapd_iface *iface, unsigned int idx)
 	if (idx < iface->num_bss) {
 		struct hostapd_data *hapd = iface->bss[idx];
 
-		hostapd_free_stas(hapd);
-		hostapd_flush_old_stations(hapd, WLAN_REASON_DEAUTH_LEAVING);
-		hostapd_clear_wep(hapd);
-		hostapd_cleanup(hapd);
+		hostapd_bss_deinit(hapd);
 		wpa_printf(MSG_DEBUG, "%s: free hapd %p (%s)",
 			   __func__, hapd, hapd->conf->iface);
 		hostapd_config_free_bss(hapd->conf);

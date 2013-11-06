@@ -285,6 +285,45 @@ def test_ap_hs20_multiple_connects(dev, apdev):
     if len(networks) > 1:
         raise Exception("Duplicated network block detected")
 
+def test_ap_hs20_disallow_aps(dev, apdev):
+    """Hotspot 2.0 connection and disallow_aps"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    values = { 'realm': "example.com",
+               'username': "hs20-test",
+               'password': "password",
+               'domain': "example.com" }
+    id = dev[0].add_cred_values(values)
+
+    logger.info("Verify disallow_aps bssid")
+    dev[0].request("SET disallow_aps bssid " + bssid.translate(None, ':'))
+    dev[0].request("INTERWORKING_SELECT auto")
+    ev = dev[0].wait_event(["INTERWORKING-NO-MATCH"], timeout=15)
+    if ev is None:
+        raise Exception("Network selection timed out")
+    dev[0].dump_monitor()
+
+    logger.info("Verify disallow_aps ssid")
+    dev[0].request("SET disallow_aps ssid 746573742d68733230")
+    dev[0].request("INTERWORKING_SELECT auto")
+    ev = dev[0].wait_event(["INTERWORKING-NO-MATCH"], timeout=15)
+    if ev is None:
+        raise Exception("Network selection timed out")
+    dev[0].dump_monitor()
+
+    logger.info("Verify disallow_aps clear")
+    dev[0].request("SET disallow_aps ")
+    interworking_select(dev[0], bssid, "home")
+
+    dev[0].request("SET disallow_aps bssid " + bssid.translate(None, ':'))
+    ret = dev[0].request("INTERWORKING_CONNECT " + bssid)
+    if "FAIL" not in ret:
+        raise Exception("INTERWORKING_CONNECT to disallowed BSS not rejected")
+
 def policy_test(dev, ap, values, only_one=True):
     dev.dump_monitor()
     logger.info("Verify network selection to AP " + ap['ifname'])

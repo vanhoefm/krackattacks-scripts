@@ -750,6 +750,26 @@ static int set_root_nai(struct wpa_ssid *ssid, const char *imsi, char prefix)
 #endif /* INTERWORKING_3GPP */
 
 
+static int already_connected(struct wpa_supplicant *wpa_s,
+			     struct wpa_cred *cred, struct wpa_bss *bss)
+{
+	struct wpa_ssid *ssid;
+
+	if (wpa_s->wpa_state < WPA_ASSOCIATED || wpa_s->current_ssid == NULL)
+		return 0;
+
+	ssid = wpa_s->current_ssid;
+	if (ssid->parent_cred != cred)
+		return 0;
+
+	if (ssid->ssid_len != bss->ssid_len ||
+	    os_memcmp(ssid->ssid, bss->ssid, bss->ssid_len) != 0)
+		return 0;
+
+	return 1;
+}
+
+
 static int interworking_set_hs20_params(struct wpa_supplicant *wpa_s,
 					struct wpa_ssid *ssid)
 {
@@ -784,6 +804,12 @@ static int interworking_connect_3gpp(struct wpa_supplicant *wpa_s,
 		return -1;
 	wpa_printf(MSG_DEBUG, "Interworking: Connect with " MACSTR " (3GPP)",
 		   MAC2STR(bss->bssid));
+
+	if (already_connected(wpa_s, cred, bss)) {
+		wpa_msg(wpa_s, MSG_INFO, INTERWORKING_ALREADY_CONNECTED MACSTR,
+			MAC2STR(bss->bssid));
+		return 0;
+	}
 
 	ssid = wpa_config_add_network(wpa_s->conf);
 	if (ssid == NULL)
@@ -1144,6 +1170,12 @@ static int interworking_connect_roaming_consortium(
 	wpa_printf(MSG_DEBUG, "Interworking: Connect with " MACSTR " based on "
 		   "roaming consortium match", MAC2STR(bss->bssid));
 
+	if (already_connected(wpa_s, cred, bss)) {
+		wpa_msg(wpa_s, MSG_INFO, INTERWORKING_ALREADY_CONNECTED MACSTR,
+			MAC2STR(bss->bssid));
+		return 0;
+	}
+
 	ssid = wpa_config_add_network(wpa_s->conf);
 	if (ssid == NULL)
 		return -1;
@@ -1278,6 +1310,13 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 
 	wpa_printf(MSG_DEBUG, "Interworking: Connect with " MACSTR,
 		   MAC2STR(bss->bssid));
+
+	if (already_connected(wpa_s, cred, bss)) {
+		wpa_msg(wpa_s, MSG_INFO, INTERWORKING_ALREADY_CONNECTED MACSTR,
+			MAC2STR(bss->bssid));
+		nai_realm_free(realm, count);
+		return 0;
+	}
 
 	ssid = wpa_config_add_network(wpa_s->conf);
 	if (ssid == NULL) {

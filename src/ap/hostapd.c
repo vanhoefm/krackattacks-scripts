@@ -295,10 +295,8 @@ static void hostapd_free_hapd_data(struct hostapd_data *hapd)
  * @hapd: Pointer to BSS data
  *
  * This function is used to free all per-BSS data structures and resources.
- * This gets called in a loop for each BSS between calls to
- * hostapd_cleanup_iface_pre() and hostapd_cleanup_iface() when an interface
- * is deinitialized. Most of the modules that are initialized in
- * hostapd_setup_bss() are deinitialized here.
+ * Most of the modules that are initialized in hostapd_setup_bss() are
+ * deinitialized here.
  */
 static void hostapd_cleanup(struct hostapd_data *hapd)
 {
@@ -307,18 +305,6 @@ static void hostapd_cleanup(struct hostapd_data *hapd)
 	    hapd->iface->interfaces->ctrl_iface_deinit)
 		hapd->iface->interfaces->ctrl_iface_deinit(hapd);
 	hostapd_free_hapd_data(hapd);
-}
-
-
-/**
- * hostapd_cleanup_iface_pre - Preliminary per-interface cleanup
- * @iface: Pointer to interface data
- *
- * This function is called before per-BSS data structures are deinitialized
- * with hostapd_cleanup().
- */
-static void hostapd_cleanup_iface_pre(struct hostapd_iface *iface)
-{
 }
 
 
@@ -1277,7 +1263,6 @@ void hostapd_interface_deinit(struct hostapd_iface *iface)
 	eloop_cancel_timeout(channel_list_update_timeout, iface, NULL);
 	iface->wait_channel_update = 0;
 
-	hostapd_cleanup_iface_pre(iface);
 	for (j = iface->num_bss - 1; j >= 0; j--) {
 		struct hostapd_data *hapd = iface->bss[j];
 		wpa_printf(MSG_DEBUG, "%s: deinit bss %s", __func__,

@@ -490,6 +490,18 @@ static void ap_handle_session_timer(void *eloop_ctx, void *timeout_ctx)
 }
 
 
+void ap_sta_replenish_timeout(struct hostapd_data *hapd, struct sta_info *sta,
+			      u32 session_timeout)
+{
+	if (eloop_replenish_timeout(session_timeout, 0,
+				    ap_handle_session_timer, hapd, sta)) {
+		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
+			       HOSTAPD_LEVEL_DEBUG, "setting session timeout "
+			       "to %d seconds", session_timeout);
+	}
+}
+
+
 void ap_sta_session_timeout(struct hostapd_data *hapd, struct sta_info *sta,
 			    u32 session_timeout)
 {

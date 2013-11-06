@@ -162,6 +162,8 @@ void ap_sta_hash_add(struct hostapd_data *hapd, struct sta_info *sta);
 void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta);
 void hostapd_free_stas(struct hostapd_data *hapd);
 void ap_handle_timer(void *eloop_ctx, void *timeout_ctx);
+void ap_sta_replenish_timeout(struct hostapd_data *hapd, struct sta_info *sta,
+			      u32 session_timeout);
 void ap_sta_session_timeout(struct hostapd_data *hapd, struct sta_info *sta,
 			    u32 session_timeout);
 void ap_sta_no_session_timeout(struct hostapd_data *hapd,

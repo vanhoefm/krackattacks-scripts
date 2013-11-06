@@ -46,6 +46,8 @@ gas_dialog_create(struct hostapd_data *hapd, const u8 *addr, u8 dialog_token)
 		 * it to be that long.
 		 */
 		ap_sta_session_timeout(hapd, sta, 5);
+	} else {
+		ap_sta_replenish_timeout(hapd, sta, 5);
 	}
 
 	if (sta->gas_dialog == NULL) {

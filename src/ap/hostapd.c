@@ -1768,7 +1768,8 @@ int hostapd_add_iface(struct hapd_interfaces *interfaces, char *buf)
 				  ETH_ALEN);
 
 			if (start_ctrl_iface_bss(hapd) < 0 ||
-			    hostapd_setup_bss(hapd, -1)) {
+			    (hapd_iface->state == HAPD_IFACE_ENABLED &&
+			     hostapd_setup_bss(hapd, -1))) {
 				hapd_iface->conf->num_bss--;
 				hapd_iface->num_bss--;
 				wpa_printf(MSG_DEBUG, "%s: free hapd %p %s",

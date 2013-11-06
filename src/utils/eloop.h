@@ -223,6 +223,22 @@ int eloop_is_timeout_registered(eloop_timeout_handler handler,
 				void *eloop_data, void *user_data);
 
 /**
+ * eloop_replenish_timeout - Replenish a timeout that is already registered
+ * @req_secs: Requested number of seconds to the timeout
+ * @req_usecs: Requested number of microseconds to the timeout
+ * @handler: Matching callback function
+ * @eloop_data: Matching eloop_data
+ * @user_data: Matching user_data
+ * Returns: 1 if the timeout is replenished, 0 if no change is made
+ *
+ * Find a registered matching <handler,eloop_data,user_data> timeout. If found,
+ * replenish the timeout if remaining time is less than the requested time.
+ */
+int eloop_replenish_timeout(unsigned int req_secs, unsigned int req_usecs,
+			    eloop_timeout_handler handler, void *eloop_data,
+			    void *user_data);
+
+/**
  * eloop_register_signal - Register handler for signals
  * @sig: Signal number (e.g., SIGHUP)
  * @handler: Callback function to be called when the signal is received

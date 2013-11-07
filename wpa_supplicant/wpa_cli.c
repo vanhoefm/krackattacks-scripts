@@ -2412,6 +2412,14 @@ static int wpa_cli_cmd_raw(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+#ifdef ANDROID
+static int wpa_cli_cmd_driver(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "DRIVER", 1, argc, argv);
+}
+#endif /* ANDROID */
+
+
 static int wpa_cli_cmd_flush(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	return wpa_ctrl_command(ctrl, "FLUSH");
@@ -2881,6 +2889,10 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	  "<params..> = Sent unprocessed command" },
 	{ "flush", wpa_cli_cmd_flush, NULL, cli_cmd_flag_none,
 	  "= flush wpa_supplicant state" },
+#ifdef ANDROID
+	{ "driver", wpa_cli_cmd_driver, NULL, cli_cmd_flag_none,
+	  "<command> = driver private commands" },
+#endif /* ANDROID */
 	{ NULL, NULL, NULL, cli_cmd_flag_none, NULL }
 };
 

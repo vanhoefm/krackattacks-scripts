@@ -5158,6 +5158,20 @@ static int wpa_supplicant_pktcnt_poll(struct wpa_supplicant *wpa_s, char *buf,
 }
 
 
+#ifdef ANDROID
+static int wpa_supplicant_driver_cmd(struct wpa_supplicant *wpa_s, char *cmd,
+				     char *buf, size_t buflen)
+{
+	int ret;
+
+	ret = wpa_drv_driver_cmd(wpa_s, cmd, buf, buflen);
+	if (ret == 0)
+		ret = os_snprintf(buf, buflen, "%s\n", "OK");
+	return ret;
+}
+#endif /* ANDROID */
+
+
 static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 {
 	wpa_dbg(wpa_s, MSG_DEBUG, "Flush all wpa_supplicant state");
@@ -5749,6 +5763,11 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		if (wpa_supplicant_ctrl_iface_autoscan(wpa_s, buf + 9))
 			reply_len = -1;
 #endif /* CONFIG_AUTOSCAN */
+#ifdef ANDROID
+	} else if (os_strncmp(buf, "DRIVER ", 7) == 0) {
+		reply_len = wpa_supplicant_driver_cmd(wpa_s, buf + 7, reply,
+						      reply_size);
+#endif /* ANDROID */
 	} else if (os_strcmp(buf, "REAUTHENTICATE") == 0) {
 		pmksa_cache_clear_current(wpa_s->wpa);
 		eapol_sm_request_reauth(wpa_s->eapol);

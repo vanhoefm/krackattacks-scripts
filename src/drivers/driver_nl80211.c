@@ -362,6 +362,8 @@ static int wpa_driver_nl80211_probe_req_report(struct i802_bss *bss,
 static int android_pno_start(struct i802_bss *bss,
 			     struct wpa_driver_scan_params *params);
 static int android_pno_stop(struct i802_bss *bss);
+extern int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
+					 size_t buf_len);
 #endif /* ANDROID */
 #ifdef ANDROID_P2P
 int wpa_driver_set_p2p_noa(void *priv, u8 count, int start, int duration);
@@ -11454,4 +11456,7 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.get_noa = wpa_driver_get_p2p_noa,
 	.set_ap_wps_ie = wpa_driver_set_ap_wps_p2p_ie,
 #endif /* ANDROID_P2P */
+#ifdef ANDROID
+	.driver_cmd = wpa_driver_nl80211_driver_cmd,
+#endif /* ANDROID */
 };

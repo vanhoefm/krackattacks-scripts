@@ -179,3 +179,19 @@ def test_gas_concurrent_connect(dev, apdev):
         raise Exception("Operation timed out")
     if "CTRL-EVENT-CONNECTED" not in ev:
         raise Exception("Unexpected operation order")
+
+def test_gas_fragment(dev, apdev):
+    """GAS fragmentation"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd.set("gas_frag_limit", "50")
+
+    dev[0].scan()
+    dev[0].request("FETCH_ANQP")
+    for i in range(0, 6):
+        ev = dev[0].wait_event(["RX-ANQP"], timeout=5)
+        if ev is None:
+            raise Exception("Operation timed out")

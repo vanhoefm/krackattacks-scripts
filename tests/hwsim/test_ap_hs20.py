@@ -129,6 +129,7 @@ def test_ap_hs20_select(dev, apdev):
     params['hessid'] = bssid
     hostapd.add_ap(apdev[0]['ifname'], params)
 
+    dev[0].request("SET ignore_old_scan_res 1")
     dev[0].hs20_enable()
     id = dev[0].add_cred_values({ 'realm': "example.com", 'username': "test",
                                   'password': "secret",
@@ -155,6 +156,7 @@ def test_ap_hs20_ext_sim(dev, apdev):
     params['domain_name'] = "wlan.mnc001.mcc232.3gppnetwork.org"
     hostapd.add_ap(apdev[0]['ifname'], params)
 
+    dev[0].request("SET ignore_old_scan_res 1")
     dev[0].hs20_enable()
     dev[0].request("SET external_sim 1")
     dev[0].add_cred_values({ 'imsi': "23201-0000000000", 'eap': "SIM" })
@@ -173,6 +175,7 @@ def test_ap_hs20_ext_sim_roaming(dev, apdev):
     params['domain_name'] = "wlan.mnc091.mcc244.3gppnetwork.org"
     hostapd.add_ap(apdev[0]['ifname'], params)
 
+    dev[0].request("SET ignore_old_scan_res 1")
     dev[0].hs20_enable()
     dev[0].request("SET external_sim 1")
     dev[0].add_cred_values({ 'imsi': "23201-0000000000", 'eap': "SIM" })
@@ -187,6 +190,7 @@ def test_ap_hs20_username(dev, apdev):
     params['hessid'] = bssid
     hostapd.add_ap(apdev[0]['ifname'], params)
 
+    dev[0].request("SET ignore_old_scan_res 1")
     dev[0].hs20_enable()
     id = dev[0].add_cred_values({ 'realm': "example.com",
                                   'username': "hs20-test",
@@ -207,6 +211,7 @@ def test_ap_hs20_username_roaming(dev, apdev):
     params['hessid'] = bssid
     hostapd.add_ap(apdev[0]['ifname'], params)
 
+    dev[0].request("SET ignore_old_scan_res 1")
     dev[0].hs20_enable()
     id = dev[0].add_cred_values({ 'realm': "roaming.example.com",
                                   'username': "hs20-test",
@@ -223,6 +228,7 @@ def test_ap_hs20_username_unknown(dev, apdev):
     params['hessid'] = bssid
     hostapd.add_ap(apdev[0]['ifname'], params)
 
+    dev[0].request("SET ignore_old_scan_res 1")
     dev[0].hs20_enable()
     id = dev[0].add_cred_values({ 'realm': "example.com",
                                   'username': "hs20-test",
@@ -239,6 +245,7 @@ def test_ap_hs20_username_unknown2(dev, apdev):
     del params['domain_name']
     hostapd.add_ap(apdev[0]['ifname'], params)
 
+    dev[0].request("SET ignore_old_scan_res 1")
     dev[0].hs20_enable()
     id = dev[0].add_cred_values({ 'realm': "example.com",
                                   'username': "hs20-test",
@@ -255,6 +262,7 @@ def test_ap_hs20_multiple_connects(dev, apdev):
     params['hessid'] = bssid
     hostapd.add_ap(apdev[0]['ifname'], params)
 
+    dev[0].request("SET ignore_old_scan_res 1")
     dev[0].hs20_enable()
     values = { 'realm': "example.com",
                'username': "hs20-test",
@@ -292,6 +300,7 @@ def test_ap_hs20_disallow_aps(dev, apdev):
     params['hessid'] = bssid
     hostapd.add_ap(apdev[0]['ifname'], params)
 
+    dev[0].request("SET ignore_old_scan_res 1")
     dev[0].hs20_enable()
     values = { 'realm': "example.com",
                'username': "hs20-test",
@@ -328,6 +337,7 @@ def policy_test(dev, ap, values, only_one=True):
     dev.dump_monitor()
     logger.info("Verify network selection to AP " + ap['ifname'])
     bssid = ap['bssid']
+    dev.request("SET ignore_old_scan_res 1")
     dev.hs20_enable()
     id = dev.add_cred_values(values)
     dev.request("INTERWORKING_SELECT auto")

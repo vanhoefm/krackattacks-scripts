@@ -860,6 +860,12 @@ endif
 
 OBJS += src/drivers/driver_common.c
 
+ifdef CONFIG_ACS
+L_CFLAGS += -DCONFIG_ACS
+OBJS += src/ap/acs.c
+LIBS += -lm
+endif
+
 ifdef CONFIG_NO_STDOUT_DEBUG
 L_CFLAGS += -DCONFIG_NO_STDOUT_DEBUG
 endif

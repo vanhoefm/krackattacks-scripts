@@ -68,10 +68,7 @@ INCLUDES += $(LOCAL_PATH)/src/tls
 INCLUDES += $(LOCAL_PATH)/src/utils
 INCLUDES += $(LOCAL_PATH)/src/wps
 INCLUDES += external/openssl/include
-# frameworks/base/cmds/keystore is the old location and can be dropped at some
-# point
-INCLUDES += frameworks/base/cmds/keystore
-INCLUDES += system/security/keystore
+INCLUDES += system/security/keystore/include
 ifdef CONFIG_DRIVER_NL80211
 INCLUDES += external/libnl-headers
 endif

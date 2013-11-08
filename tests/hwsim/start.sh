@@ -21,9 +21,14 @@ else
     GROUP=adm
 fi
 
+sed "s/ GROUP=.*$/ GROUP=$GROUP/" "$DIR/sta-dummy.conf" > "$LOGDIR/sta-dummy.conf"
+for i in 0 1 2; do
+    sed "s/ GROUP=.*$/ GROUP=$GROUP/" "$DIR/p2p$i.conf" > "$LOGDIR/p2p$i.conf"
+done
+
 if [ "$1" = "concurrent" ]; then
     CONCURRENT=y
-    CONCURRENT_ARGS="-N -Dnl80211 -ista%d -c $DIR/sta-dummy.conf"
+    CONCURRENT_ARGS="-N -Dnl80211 -ista%d -c $LOGDIR/sta-dummy.conf"
     shift
 else
     unset CONCURRENT
@@ -61,7 +66,7 @@ mkdir -p $LOGDIR
 sudo ifconfig hwsim0 up
 sudo $WLANTEST -i hwsim0 -n $LOGDIR/hwsim0.pcapng -c -d > $LOGDIR/hwsim0 &
 for i in 0 1 2; do
-    sudo $(printf -- "$VALGRIND_WPAS" $i) $WPAS -g /tmp/wpas-wlan$i -G$GROUP -Dnl80211 -iwlan$i -c $DIR/p2p$i.conf \
+    sudo $(printf -- "$VALGRIND_WPAS" $i) $WPAS -g /tmp/wpas-wlan$i -G$GROUP -Dnl80211 -iwlan$i -c $LOGDIR/p2p$i.conf \
          $(printf -- "$CONCURRENT_ARGS" $i) -ddKt$TRACE -f $LOGDIR/log$i &
 done
 sudo $VALGRIND_HAPD $HAPD -ddKt$TRACE -g /var/run/hostapd-global -G $GROUP -ddKt -f $LOGDIR/hostapd &

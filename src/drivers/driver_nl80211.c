@@ -316,9 +316,6 @@ struct wpa_driver_nl80211_data {
 	int default_if_indices[16];
 	int *if_indices;
 	int num_if_indices;
-
-	int last_freq;
-	int last_freq_ht;
 #endif /* HOSTAPD */
 
 	/* From failed authentication command */
@@ -4299,14 +4296,6 @@ static void wpa_driver_nl80211_deinit(struct i802_bss *bss)
 		wpa_driver_nl80211_del_beacon(drv);
 
 #ifdef HOSTAPD
-	if (drv->last_freq_ht) {
-		/* Clear HT flags from the driver */
-		struct hostapd_freq_params freq;
-		os_memset(&freq, 0, sizeof(freq));
-		freq.freq = drv->last_freq;
-		wpa_driver_nl80211_set_freq(bss, &freq);
-	}
-
 	if (drv->eapol_sock >= 0) {
 		eloop_unregister_read_sock(drv->eapol_sock);
 		close(drv->eapol_sock);

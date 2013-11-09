@@ -297,6 +297,7 @@ struct wpa_driver_nl80211_data {
 	unsigned int use_monitor:1;
 	unsigned int ignore_next_local_disconnect:1;
 	unsigned int allow_p2p_device:1;
+	unsigned int hostapd:1;
 
 	u64 remain_on_chan_cookie;
 	u64 send_action_cookie;
@@ -310,13 +311,11 @@ struct wpa_driver_nl80211_data {
 
 	int eapol_tx_sock;
 
-#ifdef HOSTAPD
 	int eapol_sock; /* socket for EAPOL frames */
 
 	int default_if_indices[16];
 	int *if_indices;
 	int num_if_indices;
-#endif /* HOSTAPD */
 
 	/* From failed authentication command */
 	int auth_freq;
@@ -340,7 +339,8 @@ static void wpa_driver_nl80211_scan_timeout(void *eloop_ctx,
 static int wpa_driver_nl80211_set_mode(struct i802_bss *bss,
 				       enum nl80211_iftype nlmode);
 static int
-wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv);
+wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv,
+				   const u8 *set_addr);
 static int wpa_driver_nl80211_mlme(struct wpa_driver_nl80211_data *drv,
 				   const u8 *addr, int cmd, u16 reason_code,
 				   int local_state_change);
@@ -802,7 +802,6 @@ nla_put_failure:
 }
 
 
-#ifndef HOSTAPD
 static int nl80211_get_macaddr(struct i802_bss *bss)
 {
 	struct nl_msg *msg;
@@ -824,7 +823,6 @@ nla_put_failure:
 	nlmsg_free(msg);
 	return NL80211_IFTYPE_UNSPECIFIED;
 }
-#endif /* HOSTAPD */
 
 
 static int nl80211_register_beacons(struct wpa_driver_nl80211_data *drv,
@@ -1109,7 +1107,7 @@ static int wpa_driver_nl80211_own_ifindex(struct wpa_driver_nl80211_data *drv,
 	if (drv->if_removed && wpa_driver_nl80211_own_ifname(drv, buf, len)) {
 		wpa_printf(MSG_DEBUG, "nl80211: Update ifindex for a removed "
 			   "interface");
-		wpa_driver_nl80211_finish_drv_init(drv);
+		wpa_driver_nl80211_finish_drv_init(drv, NULL);
 		return 1;
 	}
 
@@ -3716,16 +3714,9 @@ static void nl80211_destroy_bss(struct i802_bss *bss)
 }
 
 
-/**
- * wpa_driver_nl80211_init - Initialize nl80211 driver interface
- * @ctx: context to be used when calling wpa_supplicant functions,
- * e.g., wpa_supplicant_event()
- * @ifname: interface name, e.g., wlan0
- * @global_priv: private driver global data from global_init()
- * Returns: Pointer to private data, %NULL on failure
- */
-static void * wpa_driver_nl80211_init(void *ctx, const char *ifname,
-				      void *global_priv)
+static void * wpa_driver_nl80211_drv_init(void *ctx, const char *ifname,
+					  void *global_priv, int hostapd,
+					  const u8 *set_addr)
 {
 	struct wpa_driver_nl80211_data *drv;
 	struct rfkill_config *rcfg;
@@ -3738,6 +3729,10 @@ static void * wpa_driver_nl80211_init(void *ctx, const char *ifname,
 		return NULL;
 	drv->global = global_priv;
 	drv->ctx = ctx;
+	drv->hostapd = !!hostapd;
+	drv->eapol_sock = -1;
+	drv->num_if_indices = sizeof(drv->default_if_indices) / sizeof(int);
+	drv->if_indices = drv->default_if_indices;
 
 	drv->first_bss = os_zalloc(sizeof(*drv->first_bss));
 	if (!drv->first_bss) {
@@ -3775,7 +3770,7 @@ static void * wpa_driver_nl80211_init(void *ctx, const char *ifname,
 		os_free(rcfg);
 	}
 
-	if (wpa_driver_nl80211_finish_drv_init(drv))
+	if (wpa_driver_nl80211_finish_drv_init(drv, set_addr))
 		goto failed;
 
 	drv->eapol_tx_sock = socket(PF_PACKET, SOCK_DGRAM, 0);
@@ -3810,6 +3805,21 @@ static void * wpa_driver_nl80211_init(void *ctx, const char *ifname,
 failed:
 	wpa_driver_nl80211_deinit(bss);
 	return NULL;
+}
+
+
+/**
+ * wpa_driver_nl80211_init - Initialize nl80211 driver interface
+ * @ctx: context to be used when calling wpa_supplicant functions,
+ * e.g., wpa_supplicant_event()
+ * @ifname: interface name, e.g., wlan0
+ * @global_priv: private driver global data from global_init()
+ * Returns: Pointer to private data, %NULL on failure
+ */
+static void * wpa_driver_nl80211_init(void *ctx, const char *ifname,
+				      void *global_priv)
+{
+	return wpa_driver_nl80211_drv_init(ctx, ifname, global_priv, 0, NULL);
 }
 
 
@@ -4160,13 +4170,12 @@ static int i802_set_iface_flags(struct i802_bss *bss, int up)
 
 
 static int
-wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
+wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv,
+				   const u8 *set_addr)
 {
-#ifndef HOSTAPD
-	enum nl80211_iftype nlmode = NL80211_IFTYPE_STATION;
-#endif /* HOSTAPD */
 	struct i802_bss *bss = drv->first_bss;
 	int send_rfkill_event = 0;
+	enum nl80211_iftype nlmode;
 
 	drv->ifindex = if_nametoindex(bss->ifname);
 	bss->ifindex = drv->ifindex;
@@ -4183,20 +4192,23 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 	wpa_printf(MSG_DEBUG, "nl80211: interface %s in phy %s",
 		   bss->ifname, drv->phyname);
 
-#ifndef HOSTAPD
-	if (bss->if_dynamic)
-		nlmode = nl80211_get_ifmode(bss);
+	if (set_addr &&
+	    (linux_set_iface_flags(drv->global->ioctl_sock, bss->ifname, 0) ||
+	     linux_set_ifhwaddr(drv->global->ioctl_sock, bss->ifname,
+				set_addr)))
+		return -1;
 
-	/*
-	 * Make sure the interface starts up in station mode unless this is a
-	 * dynamically added interface (e.g., P2P) that was already configured
-	 * with proper iftype.
-	 */
+	if (drv->hostapd)
+		nlmode = NL80211_IFTYPE_AP;
+	else if (bss->if_dynamic)
+		nlmode = nl80211_get_ifmode(bss);
+	else
+		nlmode = NL80211_IFTYPE_STATION;
+
 	if (wpa_driver_nl80211_set_mode(bss, nlmode) < 0) {
-		wpa_printf(MSG_ERROR, "nl80211: Could not configure driver to use managed mode");
+		wpa_printf(MSG_ERROR, "nl80211: Could not configure driver mode");
 		return -1;
 	}
-	drv->nlmode = nlmode;
 
 	if (nlmode == NL80211_IFTYPE_P2P_DEVICE) {
 		int ret = nl80211_set_p2pdev(bss, 1);
@@ -4220,9 +4232,9 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 		}
 	}
 
-	netlink_send_oper_ifla(drv->global->netlink, drv->ifindex,
-			       1, IF_OPER_DORMANT);
-#endif /* HOSTAPD */
+	if (!drv->hostapd)
+		netlink_send_oper_ifla(drv->global->netlink, drv->ifindex,
+				       1, IF_OPER_DORMANT);
 
 	if (linux_get_ifhwaddr(drv->global->ioctl_sock, bss->ifname,
 			       bss->addr))
@@ -4295,7 +4307,6 @@ static void wpa_driver_nl80211_deinit(struct i802_bss *bss)
 	if (is_ap_interface(drv->nlmode))
 		wpa_driver_nl80211_del_beacon(drv);
 
-#ifdef HOSTAPD
 	if (drv->eapol_sock >= 0) {
 		eloop_unregister_read_sock(drv->eapol_sock);
 		close(drv->eapol_sock);
@@ -4303,7 +4314,6 @@ static void wpa_driver_nl80211_deinit(struct i802_bss *bss)
 
 	if (drv->if_indices != drv->default_if_indices)
 		os_free(drv->if_indices);
-#endif /* HOSTAPD */
 
 	if (drv->disabled_11b_rates)
 		nl80211_disable_11b_rates(drv, drv->ifindex, 0);
@@ -9135,14 +9145,13 @@ static void *i802_init(struct hostapd_data *hapd,
 	int ifindex, br_ifindex;
 	int br_added = 0;
 
-	bss = wpa_driver_nl80211_init(hapd, params->ifname,
-				      params->global_priv);
+	bss = wpa_driver_nl80211_drv_init(hapd, params->ifname,
+					  params->global_priv, 1,
+					  params->bssid);
 	if (bss == NULL)
 		return NULL;
 
 	drv = bss->drv;
-	drv->nlmode = NL80211_IFTYPE_AP;
-	drv->eapol_sock = -1;
 
 	if (linux_br_get(brname, params->ifname) == 0) {
 		wpa_printf(MSG_DEBUG, "nl80211: Interface %s is in bridge %s",
@@ -9153,8 +9162,6 @@ static void *i802_init(struct hostapd_data *hapd,
 		br_ifindex = 0;
 	}
 
-	drv->num_if_indices = sizeof(drv->default_if_indices) / sizeof(int);
-	drv->if_indices = drv->default_if_indices;
 	for (i = 0; i < params->num_bridge; i++) {
 		if (params->bridge[i]) {
 			ifindex = if_nametoindex(params->bridge[i]);
@@ -9171,26 +9178,8 @@ static void *i802_init(struct hostapd_data *hapd,
 	/* start listening for EAPOL on the default AP interface */
 	add_ifidx(drv, drv->ifindex);
 
-	if (linux_set_iface_flags(drv->global->ioctl_sock, bss->ifname, 0))
-		goto failed;
-
-	if (params->bssid) {
-		if (linux_set_ifhwaddr(drv->global->ioctl_sock, bss->ifname,
-				       params->bssid))
-			goto failed;
-	}
-
-	if (wpa_driver_nl80211_set_mode(bss, drv->nlmode)) {
-		wpa_printf(MSG_ERROR, "nl80211: Failed to set interface %s "
-			   "into AP mode", bss->ifname);
-		goto failed;
-	}
-
 	if (params->num_bridge && params->bridge[0] &&
 	    i802_check_bridge(drv, bss, params->bridge[0], params->ifname) < 0)
-		goto failed;
-
-	if (linux_set_iface_flags(drv->global->ioctl_sock, bss->ifname, 1))
 		goto failed;
 
 	drv->eapol_sock = socket(PF_PACKET, SOCK_DGRAM, htons(ETH_P_PAE));

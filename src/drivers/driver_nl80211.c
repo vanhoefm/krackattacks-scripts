@@ -298,6 +298,7 @@ struct wpa_driver_nl80211_data {
 	unsigned int ignore_next_local_disconnect:1;
 	unsigned int allow_p2p_device:1;
 	unsigned int hostapd:1;
+	unsigned int start_mode_ap:1;
 
 	u64 remain_on_chan_cookie;
 	u64 send_action_cookie;
@@ -340,7 +341,7 @@ static int wpa_driver_nl80211_set_mode(struct i802_bss *bss,
 				       enum nl80211_iftype nlmode);
 static int
 wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv,
-				   const u8 *set_addr);
+				   const u8 *set_addr, int first);
 static int wpa_driver_nl80211_mlme(struct wpa_driver_nl80211_data *drv,
 				   const u8 *addr, int cmd, u16 reason_code,
 				   int local_state_change);
@@ -1092,7 +1093,7 @@ static int wpa_driver_nl80211_own_ifindex(struct wpa_driver_nl80211_data *drv,
 	if (drv->if_removed && wpa_driver_nl80211_own_ifname(drv, buf, len)) {
 		wpa_printf(MSG_DEBUG, "nl80211: Update ifindex for a removed "
 			   "interface");
-		wpa_driver_nl80211_finish_drv_init(drv, NULL);
+		wpa_driver_nl80211_finish_drv_init(drv, NULL, 0);
 		return 1;
 	}
 
@@ -3755,7 +3756,7 @@ static void * wpa_driver_nl80211_drv_init(void *ctx, const char *ifname,
 		os_free(rcfg);
 	}
 
-	if (wpa_driver_nl80211_finish_drv_init(drv, set_addr))
+	if (wpa_driver_nl80211_finish_drv_init(drv, set_addr, 1))
 		goto failed;
 
 	drv->eapol_tx_sock = socket(PF_PACKET, SOCK_DGRAM, 0);
@@ -4156,7 +4157,7 @@ static int i802_set_iface_flags(struct i802_bss *bss, int up)
 
 static int
 wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv,
-				   const u8 *set_addr)
+				   const u8 *set_addr, int first)
 {
 	struct i802_bss *bss = drv->first_bss;
 	int send_rfkill_event = 0;
@@ -4182,6 +4183,9 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv,
 	     linux_set_ifhwaddr(drv->global->ioctl_sock, bss->ifname,
 				set_addr)))
 		return -1;
+
+	if (first && nl80211_get_ifmode(bss) == NL80211_IFTYPE_AP)
+		drv->start_mode_ap = 1;
 
 	if (drv->hostapd)
 		nlmode = NL80211_IFTYPE_AP;
@@ -4311,7 +4315,9 @@ static void wpa_driver_nl80211_deinit(struct i802_bss *bss)
 
 	(void) i802_set_iface_flags(bss, 0);
 	if (drv->nlmode != NL80211_IFTYPE_P2P_DEVICE) {
-		wpa_driver_nl80211_set_mode(bss, NL80211_IFTYPE_STATION);
+		if (!drv->hostapd || !drv->start_mode_ap)
+			wpa_driver_nl80211_set_mode(bss,
+						    NL80211_IFTYPE_STATION);
 		nl80211_mgmt_unsubscribe(bss, "deinit");
 	} else {
 		nl80211_mgmt_unsubscribe(bss, "deinit");

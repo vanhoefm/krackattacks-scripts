@@ -299,6 +299,7 @@ struct wpa_driver_nl80211_data {
 	unsigned int allow_p2p_device:1;
 	unsigned int hostapd:1;
 	unsigned int start_mode_ap:1;
+	unsigned int start_iface_up:1;
 
 	u64 remain_on_chan_cookie;
 	u64 send_action_cookie;
@@ -3756,6 +3757,9 @@ static void * wpa_driver_nl80211_drv_init(void *ctx, const char *ifname,
 		os_free(rcfg);
 	}
 
+	if (linux_iface_up(drv->global->ioctl_sock, ifname) > 0)
+		drv->start_iface_up = 1;
+
 	if (wpa_driver_nl80211_finish_drv_init(drv, set_addr, 1))
 		goto failed;
 
@@ -4313,7 +4317,8 @@ static void wpa_driver_nl80211_deinit(struct i802_bss *bss)
 
 	eloop_cancel_timeout(wpa_driver_nl80211_scan_timeout, drv, drv->ctx);
 
-	(void) i802_set_iface_flags(bss, 0);
+	if (!drv->start_iface_up)
+		(void) i802_set_iface_flags(bss, 0);
 	if (drv->nlmode != NL80211_IFTYPE_P2P_DEVICE) {
 		if (!drv->hostapd || !drv->start_mode_ap)
 			wpa_driver_nl80211_set_mode(bss,

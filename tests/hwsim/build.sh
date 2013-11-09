@@ -5,11 +5,15 @@ set -e
 cd $(dirname $0)
 
 cd ../../wpa_supplicant
-cp ../tests/hwsim/example-wpa_supplicant.config .config
+if [ ! -e .config ]; then
+    cp ../tests/hwsim/example-wpa_supplicant.config .config
+fi
 make clean
 make -j8
 cd ../hostapd
-cp ../tests/hwsim/example-hostapd.config .config
+if [ ! -e .config ]; then
+    cp ../tests/hwsim/example-hostapd.config .config
+fi
 make clean
 make -j8 hostapd hlr_auc_gw
 cd ../wlantest

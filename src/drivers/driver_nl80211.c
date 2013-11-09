@@ -361,27 +361,12 @@ static int android_pno_start(struct i802_bss *bss,
 static int android_pno_stop(struct i802_bss *bss);
 #endif /* ANDROID */
 
-#ifdef HOSTAPD
 static void add_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx);
 static void del_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx);
 static int have_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx);
 static int wpa_driver_nl80211_if_remove(struct i802_bss *bss,
 					enum wpa_driver_if_type type,
 					const char *ifname);
-#else /* HOSTAPD */
-static inline void add_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx)
-{
-}
-
-static inline void del_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx)
-{
-}
-
-static inline int have_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx)
-{
-	return 0;
-}
-#endif /* HOSTAPD */
 
 static int wpa_driver_nl80211_set_freq(struct i802_bss *bss,
 				       struct hostapd_freq_params *freq);
@@ -4490,8 +4475,7 @@ static int wpa_driver_nl80211_scan(struct i802_bss *bss,
 	if (ret) {
 		wpa_printf(MSG_DEBUG, "nl80211: Scan trigger failed: ret=%d "
 			   "(%s)", ret, strerror(-ret));
-#ifdef HOSTAPD
-		if (is_ap_interface(drv->nlmode)) {
+		if (drv->hostapd && is_ap_interface(drv->nlmode)) {
 			/*
 			 * mac80211 does not allow scan requests in AP mode, so
 			 * try to do this in station mode.
@@ -4510,9 +4494,6 @@ static int wpa_driver_nl80211_scan(struct i802_bss *bss,
 			ret = 0;
 		} else
 			goto nla_put_failure;
-#else /* HOSTAPD */
-		goto nla_put_failure;
-#endif /* HOSTAPD */
 	}
 
 	drv->scan_state = SCAN_REQUESTED;
@@ -8546,8 +8527,6 @@ static int i802_set_freq(void *priv, struct hostapd_freq_params *freq)
 }
 
 
-#if defined(HOSTAPD) || defined(CONFIG_AP)
-
 static inline int min_int(int a, int b)
 {
 	if (a < b)
@@ -8702,8 +8681,6 @@ static int i802_flush(void *priv)
 	return -ENOBUFS;
 }
 
-#endif /* HOSTAPD || CONFIG_AP */
-
 
 static int get_sta_handler(struct nl_msg *msg, void *arg)
 {
@@ -8783,8 +8760,6 @@ static int i802_read_sta_data(struct i802_bss *bss,
 	return -ENOBUFS;
 }
 
-
-#if defined(HOSTAPD) || defined(CONFIG_AP)
 
 static int i802_set_tx_queue_params(void *priv, int queue, int aifs,
 				    int cw_min, int cw_max, int burst_time)
@@ -8951,9 +8926,6 @@ static int i802_sta_disassoc(void *priv, const u8 *own_addr, const u8 *addr,
 					    0);
 }
 
-#endif /* HOSTAPD || CONFIG_AP */
-
-#ifdef HOSTAPD
 
 static void add_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx)
 {
@@ -9215,8 +9187,6 @@ static void i802_deinit(void *priv)
 	wpa_driver_nl80211_deinit(bss);
 }
 
-#endif /* HOSTAPD */
-
 
 static enum nl80211_iftype wpa_driver_nl80211_if_type(
 	enum wpa_driver_if_type type)
@@ -9394,7 +9364,6 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 	}
 #endif /* CONFIG_P2P */
 
-#ifdef HOSTAPD
 	if (type == WPA_IF_AP_BSS) {
 		struct i802_bss *new_bss = os_zalloc(sizeof(*new_bss));
 		if (new_bss == NULL) {
@@ -9437,7 +9406,6 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 		if (nl80211_setup_ap(new_bss))
 			return -1;
 	}
-#endif /* HOSTAPD */
 
 	if (drv->global)
 		drv->global->if_add_ifindex = ifidx;
@@ -9458,7 +9426,6 @@ static int wpa_driver_nl80211_if_remove(struct i802_bss *bss,
 	if (ifindex > 0 && bss->added_if)
 		nl80211_remove_iface(drv, ifindex);
 
-#ifdef HOSTAPD
 	if (type != WPA_IF_AP_BSS)
 		return 0;
 
@@ -9510,7 +9477,6 @@ static int wpa_driver_nl80211_if_remove(struct i802_bss *bss,
 			wpa_printf(MSG_DEBUG, "nl80211: No second BSS to reassign context to");
 		}
 	}
-#endif /* HOSTAPD */
 
 	return 0;
 }
@@ -10969,14 +10935,12 @@ static int driver_nl80211_sta_remove(void *priv, const u8 *addr)
 }
 
 
-#if defined(HOSTAPD) || defined(CONFIG_AP)
 static int driver_nl80211_set_sta_vlan(void *priv, const u8 *addr,
 				       const char *ifname, int vlan_id)
 {
 	struct i802_bss *bss = priv;
 	return i802_set_sta_vlan(bss, addr, ifname, vlan_id);
 }
-#endif /* HOSTAPD || CONFIG_AP */
 
 
 static int driver_nl80211_read_sta_data(void *priv,
@@ -11242,12 +11206,9 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.sta_remove = driver_nl80211_sta_remove,
 	.hapd_send_eapol = wpa_driver_nl80211_hapd_send_eapol,
 	.sta_set_flags = wpa_driver_nl80211_sta_set_flags,
-#ifdef HOSTAPD
 	.hapd_init = i802_init,
 	.hapd_deinit = i802_deinit,
 	.set_wds_sta = i802_set_wds_sta,
-#endif /* HOSTAPD */
-#if defined(HOSTAPD) || defined(CONFIG_AP)
 	.get_seqnum = i802_get_seqnum,
 	.flush = i802_flush,
 	.get_inact_sec = i802_get_inact_sec,
@@ -11258,7 +11219,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.set_sta_vlan = driver_nl80211_set_sta_vlan,
 	.sta_deauth = i802_sta_deauth,
 	.sta_disassoc = i802_sta_disassoc,
-#endif /* HOSTAPD || CONFIG_AP */
 	.read_sta_data = driver_nl80211_read_sta_data,
 	.set_freq = i802_set_freq,
 	.send_action = driver_nl80211_send_action,

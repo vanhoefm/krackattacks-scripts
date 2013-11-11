@@ -431,9 +431,15 @@ void p2p_process_invitation_resp(struct p2p_data *p2p, const u8 *sa,
 		channels = &intersection;
 	}
 
-	if (p2p->cfg->invitation_result)
+	if (p2p->cfg->invitation_result) {
+		int freq = p2p_channel_to_freq(p2p->op_reg_class,
+					       p2p->op_channel);
+		if (freq < 0)
+			freq = 0;
 		p2p->cfg->invitation_result(p2p->cfg->cb_ctx, *msg.status,
-					    msg.group_bssid, channels, sa);
+					    msg.group_bssid, channels, sa,
+					    freq);
+	}
 
 	p2p_parse_free(&msg);
 

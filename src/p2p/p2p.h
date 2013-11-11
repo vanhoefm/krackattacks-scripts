@@ -758,6 +758,7 @@ struct p2p_config {
 	 * @bssid: P2P Group BSSID or %NULL if not received
 	 * @channels: Available operating channels for the group
 	 * @addr: Peer address
+	 * @freq: Frequency (in MHz) indicated during invitation or 0
 	 *
 	 * This callback is used to indicate result of an Invitation procedure
 	 * started with a call to p2p_invite(). The indicated status code is
@@ -767,7 +768,7 @@ struct p2p_config {
 	 */
 	void (*invitation_result)(void *ctx, int status, const u8 *bssid,
 				  const struct p2p_channels *channels,
-				  const u8 *addr);
+				  const u8 *addr, int freq);
 
 	/**
 	 * go_connected - Check whether we are connected to a GO

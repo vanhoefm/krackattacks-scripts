@@ -2846,10 +2846,11 @@ static void wpas_remove_persistent_client(struct wpa_supplicant *wpa_s,
 
 static void wpas_invitation_result(void *ctx, int status, const u8 *bssid,
 				   const struct p2p_channels *channels,
-				   const u8 *peer)
+				   const u8 *peer, int neg_freq)
 {
 	struct wpa_supplicant *wpa_s = ctx;
 	struct wpa_ssid *ssid;
+	int freq;
 
 	if (bssid) {
 		wpa_msg_global(wpa_s, MSG_INFO, P2P_EVENT_INVITATION_RESULT
@@ -2905,9 +2906,17 @@ static void wpas_invitation_result(void *ctx, int status, const u8 *bssid,
 		"starting persistent group");
 	os_sleep(0, 50000);
 
+	freq = wpa_s->p2p_persistent_go_freq;
+	if (neg_freq > 0 && ssid->mode == WPAS_MODE_P2P_GO &&
+	    freq_included(channels, neg_freq)) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Use frequence %d MHz from invitation for GO mode",
+			neg_freq);
+		freq = neg_freq;
+	}
+
 	wpas_p2p_group_add_persistent(wpa_s, ssid,
 				      ssid->mode == WPAS_MODE_P2P_GO,
-				      wpa_s->p2p_persistent_go_freq,
+				      freq,
 				      wpa_s->p2p_go_ht40, wpa_s->p2p_go_vht,
 				      channels,
 				      ssid->mode == WPAS_MODE_P2P_GO ?

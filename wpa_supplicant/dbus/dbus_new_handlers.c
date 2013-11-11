@@ -1997,6 +1997,170 @@ DBusMessage * wpas_dbus_handler_eap_logon(DBusMessage *message,
 }
 
 
+#ifdef CONFIG_TDLS
+
+static DBusMessage * get_peer_hwaddr_helper(DBusMessage *message,
+					    const char *func_name,
+					    u8 *peer_address)
+{
+	const char *peer_string;
+
+	if (!dbus_message_get_args(message, NULL,
+				   DBUS_TYPE_STRING, &peer_string,
+				   DBUS_TYPE_INVALID))
+		return wpas_dbus_error_invalid_args(message, NULL);
+
+	if (hwaddr_aton(peer_string, peer_address)) {
+		wpa_printf(MSG_DEBUG, "%s: invalid address '%s'",
+			   func_name, peer_string);
+		return wpas_dbus_error_invalid_args(
+			message, "Invalid hardware address format");
+	}
+
+	return NULL;
+}
+
+
+/*
+ * wpas_dbus_handler_tdls_discover - Discover TDLS peer
+ * @message: Pointer to incoming dbus message
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * Returns: NULL indicating success or DBus error message on failure
+ *
+ * Handler function for "TDLSDiscover" method call of network interface.
+ */
+DBusMessage * wpas_dbus_handler_tdls_discover(DBusMessage *message,
+					      struct wpa_supplicant *wpa_s)
+{
+	u8 peer[ETH_ALEN];
+	DBusMessage *error_reply;
+	int ret;
+
+	error_reply = get_peer_hwaddr_helper(message, __func__, peer);
+	if (error_reply)
+		return error_reply;
+
+	wpa_printf(MSG_DEBUG, "DBUS TDLS_DISCOVER " MACSTR, MAC2STR(peer));
+
+	if (wpa_tdls_is_external_setup(wpa_s->wpa))
+		ret = wpa_tdls_send_discovery_request(wpa_s->wpa, peer);
+	else
+		ret = wpa_drv_tdls_oper(wpa_s, TDLS_DISCOVERY_REQ, peer);
+
+	if (ret) {
+		return wpas_dbus_error_unknown_error(
+			message, "error performing TDLS discovery");
+	}
+
+	return NULL;
+}
+
+
+/*
+ * wpas_dbus_handler_tdls_setup - Setup TDLS session
+ * @message: Pointer to incoming dbus message
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * Returns: NULL indicating success or DBus error message on failure
+ *
+ * Handler function for "TDLSSetup" method call of network interface.
+ */
+DBusMessage * wpas_dbus_handler_tdls_setup(DBusMessage *message,
+					   struct wpa_supplicant *wpa_s)
+{
+	u8 peer[ETH_ALEN];
+	DBusMessage *error_reply;
+	int ret;
+
+	error_reply = get_peer_hwaddr_helper(message, __func__, peer);
+	if (error_reply)
+		return error_reply;
+
+	wpa_printf(MSG_DEBUG, "DBUS TDLS_SETUP " MACSTR, MAC2STR(peer));
+
+	wpa_tdls_remove(wpa_s->wpa, peer);
+	if (wpa_tdls_is_external_setup(wpa_s->wpa))
+		ret = wpa_tdls_start(wpa_s->wpa, peer);
+	else
+		ret = wpa_drv_tdls_oper(wpa_s, TDLS_SETUP, peer);
+
+	if (ret) {
+		return wpas_dbus_error_unknown_error(
+			message, "error performing TDLS setup");
+	}
+
+	return NULL;
+}
+
+
+/*
+ * wpas_dbus_handler_tdls_status - Return TDLS session status
+ * @message: Pointer to incoming dbus message
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * Returns: A string representing the state of the link to this TDLS peer
+ *
+ * Handler function for "TDLSStatus" method call of network interface.
+ */
+DBusMessage * wpas_dbus_handler_tdls_status(DBusMessage *message,
+					    struct wpa_supplicant *wpa_s)
+{
+	u8 peer[ETH_ALEN];
+	DBusMessage *reply;
+	const char *tdls_status;
+
+	reply = get_peer_hwaddr_helper(message, __func__, peer);
+	if (reply)
+		return reply;
+
+	wpa_printf(MSG_DEBUG, "DBUS TDLS_STATUS " MACSTR, MAC2STR(peer));
+
+	tdls_status = wpa_tdls_get_link_status(wpa_s->wpa, peer);
+
+	reply = dbus_message_new_method_return(message);
+	dbus_message_append_args(reply, DBUS_TYPE_STRING,
+				 &tdls_status, DBUS_TYPE_INVALID);
+	return reply;
+}
+
+
+/*
+ * wpas_dbus_handler_tdls_teardown - Teardown TDLS session
+ * @message: Pointer to incoming dbus message
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * Returns: NULL indicating success or DBus error message on failure
+ *
+ * Handler function for "TDLSTeardown" method call of network interface.
+ */
+DBusMessage * wpas_dbus_handler_tdls_teardown(DBusMessage *message,
+					      struct wpa_supplicant *wpa_s)
+{
+	u8 peer[ETH_ALEN];
+	DBusMessage *error_reply;
+	int ret;
+
+	error_reply = get_peer_hwaddr_helper(message, __func__, peer);
+	if (error_reply)
+		return error_reply;
+
+	wpa_printf(MSG_DEBUG, "DBUS TDLS_TEARDOWN " MACSTR, MAC2STR(peer));
+
+	if (wpa_tdls_is_external_setup(wpa_s->wpa))
+		ret = wpa_tdls_teardown_link(
+			wpa_s->wpa, peer,
+			WLAN_REASON_TDLS_TEARDOWN_UNSPECIFIED);
+	else
+		ret = wpa_drv_tdls_oper(wpa_s, TDLS_TEARDOWN, peer);
+
+	if (ret) {
+		return wpas_dbus_error_unknown_error(
+			message, "error performing TDLS teardown");
+	}
+
+	return NULL;
+}
+
+#endif /* CONFIG_TDLS */
+
+
 /**
  * wpas_dbus_getter_capabilities - Return interface capabilities
  * @iter: Pointer to incoming dbus message iter

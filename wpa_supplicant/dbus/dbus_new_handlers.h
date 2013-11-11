@@ -278,6 +278,15 @@ dbus_bool_t wpas_dbus_setter_process_credentials(DBusMessageIter *iter,
 						 DBusError *error,
 						 void *user_data);
 
+DBusMessage * wpas_dbus_handler_tdls_discover(DBusMessage *message,
+					      struct wpa_supplicant *wpa_s);
+DBusMessage * wpas_dbus_handler_tdls_setup(DBusMessage *message,
+					   struct wpa_supplicant *wpa_s);
+DBusMessage * wpas_dbus_handler_tdls_status(DBusMessage *message,
+					    struct wpa_supplicant *wpa_s);
+DBusMessage * wpas_dbus_handler_tdls_teardown(DBusMessage *message,
+					      struct wpa_supplicant *wpa_s);
+
 DBusMessage * wpas_dbus_error_invalid_args(DBusMessage *message,
 					   const char *arg);
 DBusMessage * wpas_dbus_error_unknown_error(DBusMessage *message,

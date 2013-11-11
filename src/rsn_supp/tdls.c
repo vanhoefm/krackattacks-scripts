@@ -797,6 +797,28 @@ void wpa_tdls_disable_link(struct wpa_sm *sm, const u8 *addr)
 }
 
 
+const char * wpa_tdls_get_link_status(struct wpa_sm *sm, const u8 *addr)
+{
+	struct wpa_tdls_peer *peer;
+
+	if (sm->tdls_disabled || !sm->tdls_supported)
+		return "disabled";
+
+	for (peer = sm->tdls; peer; peer = peer->next) {
+		if (os_memcmp(peer->addr, addr, ETH_ALEN) == 0)
+			break;
+	}
+
+	if (peer == NULL)
+		return "peer does not exist";
+
+	if (!peer->tpk_success)
+		return "peer not connected";
+
+	return "connected";
+}
+
+
 static int wpa_tdls_recv_teardown(struct wpa_sm *sm, const u8 *src_addr,
 				  const u8 *buf, size_t len)
 {

@@ -2736,6 +2736,37 @@ static const struct wpa_dbus_method_desc wpas_dbus_interface_methods[] = {
 	  }
 	},
 #endif /* CONFIG_AUTOSCAN */
+#ifdef CONFIG_TDLS
+	{ "TDLSDiscover", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  (WPADBusMethodHandler) wpas_dbus_handler_tdls_discover,
+	  {
+		  { "peer_address", "s", ARG_IN },
+		  END_ARGS
+	  }
+	},
+	{ "TDLSSetup", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  (WPADBusMethodHandler) wpas_dbus_handler_tdls_setup,
+	  {
+		  { "peer_address", "s", ARG_IN },
+		  END_ARGS
+	  }
+	},
+	{ "TDLSStatus", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  (WPADBusMethodHandler) wpas_dbus_handler_tdls_status,
+	  {
+		  { "peer_address", "s", ARG_IN },
+		  { "status", "s", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ "TDLSTeardown", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  (WPADBusMethodHandler) wpas_dbus_handler_tdls_teardown,
+	  {
+		  { "peer_address", "s", ARG_IN },
+		  END_ARGS
+	  }
+	},
+#endif /* CONFIG_TDLS */
 	{ NULL, NULL, NULL, { END_ARGS } }
 };
 

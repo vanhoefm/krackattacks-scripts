@@ -372,9 +372,9 @@ def main():
     if len(failed):
         logger.info("passed {} test case(s)".format(len(passed)))
         logger.info("skipped {} test case(s)".format(len(skipped)))
-        logger.info("failed tests: " + str(failed))
+        logger.info("failed tests: " + ' '.join(failed))
         if args.loglevel == logging.WARNING:
-            print "failed tests: " + str(failed)
+            print "failed tests: " + ' '.join(failed)
         sys.exit(1)
     logger.info("passed all {} test case(s)".format(len(passed)))
     if len(skipped):

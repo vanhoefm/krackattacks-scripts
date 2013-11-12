@@ -4774,9 +4774,9 @@ static int wpas_start_p2p_client(struct wpa_supplicant *wpa_s,
 	if (params->passphrase)
 		ssid->passphrase = os_strdup(params->passphrase);
 
-	wpa_supplicant_select_network(wpa_s, ssid);
-
 	wpa_s->show_group_started = 1;
+
+	wpa_supplicant_select_network(wpa_s, ssid);
 
 	return 0;
 }

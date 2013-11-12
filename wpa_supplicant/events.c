@@ -1353,10 +1353,12 @@ static int wpas_select_network_from_last_scan(struct wpa_supplicant *wpa_s,
 			if (wpas_p2p_scan_no_go_seen(wpa_s) == 1)
 				return 0;
 
-			if (wpa_s->p2p_in_provisioning) {
+			if (wpa_s->p2p_in_provisioning ||
+			    wpa_s->show_group_started) {
 				/*
 				 * Use shorter wait during P2P Provisioning
-				 * state to speed up group formation.
+				 * state and during P2P join-a-group operation
+				 * to speed up group formation.
 				 */
 				timeout_sec = 0;
 				timeout_usec = 250000;

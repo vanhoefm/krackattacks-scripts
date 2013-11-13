@@ -571,6 +571,10 @@ static int wpa_supplicant_ctrl_iface_tdls_setup(
 	wpa_printf(MSG_DEBUG, "CTRL_IFACE TDLS_SETUP " MACSTR,
 		   MAC2STR(peer));
 
+	if ((wpa_s->conf->tdls_external_control) &&
+	    wpa_tdls_is_external_setup(wpa_s->wpa))
+		return wpa_drv_tdls_oper(wpa_s, TDLS_SETUP, peer);
+
 	wpa_tdls_remove(wpa_s->wpa, peer);
 
 	if (wpa_tdls_is_external_setup(wpa_s->wpa))
@@ -596,6 +600,10 @@ static int wpa_supplicant_ctrl_iface_tdls_teardown(
 
 	wpa_printf(MSG_DEBUG, "CTRL_IFACE TDLS_TEARDOWN " MACSTR,
 		   MAC2STR(peer));
+
+	if ((wpa_s->conf->tdls_external_control) &&
+	    wpa_tdls_is_external_setup(wpa_s->wpa))
+		return wpa_drv_tdls_oper(wpa_s, TDLS_TEARDOWN, peer);
 
 	if (wpa_tdls_is_external_setup(wpa_s->wpa))
 		ret = wpa_tdls_teardown_link(

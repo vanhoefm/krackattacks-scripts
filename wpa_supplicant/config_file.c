@@ -1079,6 +1079,10 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 
 	if (config->external_sim)
 		fprintf(f, "external_sim=%d\n", config->external_sim);
+
+	if (config->tdls_external_control)
+		fprintf(f, "tdls_external_control=%d\n",
+			config->tdls_external_control);
 }
 
 #endif /* CONFIG_NO_CONFIG_WRITE */

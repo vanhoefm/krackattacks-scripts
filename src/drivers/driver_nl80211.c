@@ -2614,6 +2614,7 @@ static void do_process_drv_event(struct i802_bss *bss, int cmd,
 				 struct nlattr **tb)
 {
 	struct wpa_driver_nl80211_data *drv = bss->drv;
+	union wpa_event_data data;
 
 	wpa_printf(MSG_DEBUG, "nl80211: Drv Event %d (%s) received for %s",
 		   cmd, nl80211_command_to_string(cmd), bss->ifname);
@@ -2713,8 +2714,33 @@ static void do_process_drv_event(struct i802_bss *bss, int cmd,
 		break;
 	case NL80211_CMD_REG_CHANGE:
 		wpa_printf(MSG_DEBUG, "nl80211: Regulatory domain change");
+		if (tb[NL80211_ATTR_REG_INITIATOR] == NULL)
+			break;
+		os_memset(&data, 0, sizeof(data));
+		switch (nla_get_u8(tb[NL80211_ATTR_REG_INITIATOR])) {
+		case NL80211_REGDOM_SET_BY_CORE:
+			data.channel_list_changed.initiator =
+				REGDOM_SET_BY_CORE;
+			break;
+		case NL80211_REGDOM_SET_BY_USER:
+			data.channel_list_changed.initiator =
+				REGDOM_SET_BY_USER;
+			break;
+		case NL80211_REGDOM_SET_BY_DRIVER:
+			data.channel_list_changed.initiator =
+				REGDOM_SET_BY_DRIVER;
+			break;
+		case NL80211_REGDOM_SET_BY_COUNTRY_IE:
+			data.channel_list_changed.initiator =
+				REGDOM_SET_BY_COUNTRY_IE;
+			break;
+		default:
+			wpa_printf(MSG_DEBUG, "nl80211: Unknown reg change initiator %d received",
+				   nla_get_u8(tb[NL80211_ATTR_REG_INITIATOR]));
+			break;
+		}
 		wpa_supplicant_event(drv->ctx, EVENT_CHANNEL_LIST_CHANGED,
-				     NULL);
+				     &data);
 		break;
 	case NL80211_CMD_REG_BEACON_HINT:
 		wpa_printf(MSG_DEBUG, "nl80211: Regulatory beacon hint");

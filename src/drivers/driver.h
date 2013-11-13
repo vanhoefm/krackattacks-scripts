@@ -42,6 +42,13 @@
 #define HOSTAPD_CHAN_VHT_50_30 0x00002000
 #define HOSTAPD_CHAN_VHT_70_10 0x00004000
 
+enum reg_change_initiator {
+	REGDOM_SET_BY_CORE,
+	REGDOM_SET_BY_USER,
+	REGDOM_SET_BY_DRIVER,
+	REGDOM_SET_BY_COUNTRY_IE,
+};
+
 /**
  * struct hostapd_channel_data - Channel information
  */
@@ -3999,6 +4006,14 @@ union wpa_event_data {
 		unsigned int freq_filter;
 		struct dl_list survey_list; /* struct freq_survey */
 	} survey_results;
+
+	/**
+	 * channel_list_changed - Data for EVENT_CHANNEL_LIST_CHANGED
+	 * @initiator: Initiator of the regulatory change
+	 */
+	struct channel_list_changed {
+		enum reg_change_initiator initiator;
+	} channel_list_changed;
 };
 
 /**

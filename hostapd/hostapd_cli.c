@@ -846,6 +846,45 @@ static int hostapd_cli_cmd_get(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+static int hostapd_cli_cmd_chan_switch(struct wpa_ctrl *ctrl,
+				       int argc, char *argv[])
+{
+	char cmd[256];
+	int res;
+	int i;
+	char *tmp;
+	int total;
+
+	if (argc < 2) {
+		printf("Invalid chan_switch command: needs at least two "
+		       "arguments (count and freq)\n"
+		       "usage: <cs_count> <freq> [sec_channel_offset=] "
+		       "[center_freq1=] [center_freq2=] [bandwidth=] "
+		       "[blocktx] [ht|vht]\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "CHAN_SWITCH %s %s",
+			  argv[0], argv[1]);
+	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		printf("Too long CHAN_SWITCH command.\n");
+		return -1;
+	}
+
+	total = res;
+	for (i = 2; i < argc; i++) {
+		tmp = cmd + total;
+		res = os_snprintf(tmp, sizeof(cmd) - total, " %s", argv[i]);
+		if (res < 0 || (size_t) res >= sizeof(cmd) - total - 1) {
+			printf("Too long CHAN_SWITCH command.\n");
+			return -1;
+		}
+		total += res;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
 struct hostapd_cli_cmd {
 	const char *cmd;
 	int (*handler)(struct wpa_ctrl *ctrl, int argc, char *argv[]);
@@ -891,6 +930,7 @@ static struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	{ "get", hostapd_cli_cmd_get },
 	{ "set_qos_map_set", hostapd_cli_cmd_set_qos_map_set },
 	{ "send_qos_map_conf", hostapd_cli_cmd_send_qos_map_conf },
+	{ "chan_switch", hostapd_cli_cmd_chan_switch },
 	{ NULL, NULL }
 };
 

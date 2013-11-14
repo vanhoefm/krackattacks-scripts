@@ -1723,6 +1723,13 @@ static int wpa_cli_cmd_disassociate(struct wpa_ctrl *ctrl, int argc,
 {
 	return wpa_cli_cmd(ctrl, "DISASSOCIATE", 1, argc, argv);
 }
+
+static int wpa_cli_cmd_chanswitch(struct wpa_ctrl *ctrl, int argc,
+				    char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "CHAN_SWITCH", 2, argc, argv);
+}
+
 #endif /* CONFIG_AP */
 
 
@@ -2704,6 +2711,11 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "disassociate", wpa_cli_cmd_disassociate, NULL,
 	  cli_cmd_flag_none,
 	  "<addr> = disassociate a station" },
+	{ "chan_switch", wpa_cli_cmd_chanswitch, NULL,
+	  cli_cmd_flag_none,
+	  "<cs_count> <freq> [sec_channel_offset=] [center_freq1=]"
+	  " [center_freq2=] [bandwidth=] [blocktx] [ht|vht]"
+	  " = CSA parameters" },
 #endif /* CONFIG_AP */
 	{ "suspend", wpa_cli_cmd_suspend, NULL, cli_cmd_flag_none,
 	  "= notification of suspend/hibernate" },

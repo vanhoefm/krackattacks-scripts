@@ -1157,4 +1157,8 @@ enum wnm_sleep_mode_subelement_id {
 	WNM_SLEEP_SUBELEM_IGTK = 1
 };
 
+/* Channel Switch modes (802.11h) */
+#define CHAN_SWITCH_MODE_ALLOW_TX	0
+#define CHAN_SWITCH_MODE_BLOCK_TX	1
+
 #endif /* IEEE802_11_DEFS_H */

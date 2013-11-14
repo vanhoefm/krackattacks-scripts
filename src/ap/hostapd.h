@@ -27,6 +27,8 @@ union wps_event_data;
 struct hostapd_iface;
 struct hostapd_dynamic_iface;
 
+struct csa_settings;
+
 struct hapd_interfaces {
 	int (*reload_config)(struct hostapd_iface *iface);
 	struct hostapd_config * (*config_read_cb)(const char *config_fname);
@@ -332,6 +334,14 @@ struct hostapd_iface {
 	/* lowest observed noise floor in dBm */
 	s8 lowest_nf;
 
+	/* channel switch parameters */
+	int cs_freq;
+	u8 cs_count;
+	int cs_block_tx;
+	unsigned int cs_c_off_beacon;
+	unsigned int cs_c_off_proberesp;
+	int csa_in_progress;
+
 #ifdef CONFIG_ACS
 	unsigned int acs_num_completed_scans;
 #endif /* CONFIG_ACS */
@@ -378,6 +388,9 @@ int hostapd_remove_iface(struct hapd_interfaces *ifaces, char *buf);
 void hostapd_channel_list_updated(struct hostapd_iface *iface, int initiator);
 void hostapd_set_state(struct hostapd_iface *iface, enum hostapd_iface_state s);
 const char * hostapd_state_text(enum hostapd_iface_state s);
+int hostapd_switch_channel(struct hostapd_data *hapd,
+			   struct csa_settings *settings);
+void hostapd_cleanup_cs_params(struct hostapd_data *hapd);
 
 /* utils.c */
 int hostapd_register_probereq_cb(struct hostapd_data *hapd,

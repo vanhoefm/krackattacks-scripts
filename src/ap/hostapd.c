@@ -2014,3 +2014,230 @@ void hostapd_set_state(struct hostapd_iface *iface, enum hostapd_iface_state s)
 		   hostapd_state_text(s));
 	iface->state = s;
 }
+
+
+#ifdef NEED_AP_MLME
+
+static void free_beacon_data(struct beacon_data *beacon)
+{
+	os_free(beacon->head);
+	beacon->head = NULL;
+	os_free(beacon->tail);
+	beacon->tail = NULL;
+	os_free(beacon->probe_resp);
+	beacon->probe_resp = NULL;
+	os_free(beacon->beacon_ies);
+	beacon->beacon_ies = NULL;
+	os_free(beacon->proberesp_ies);
+	beacon->proberesp_ies = NULL;
+	os_free(beacon->assocresp_ies);
+	beacon->assocresp_ies = NULL;
+}
+
+
+static int hostapd_build_beacon_data(struct hostapd_iface *iface,
+				     struct beacon_data *beacon)
+{
+	struct wpabuf *beacon_extra, *proberesp_extra, *assocresp_extra;
+	struct wpa_driver_ap_params params;
+	int ret;
+	struct hostapd_data *hapd = iface->bss[0];
+
+	ret = ieee802_11_build_ap_params(hapd, &params);
+	if (ret < 0)
+		return ret;
+
+	ret = hostapd_build_ap_extra_ies(hapd, &beacon_extra,
+					 &proberesp_extra,
+					 &assocresp_extra);
+	if (ret)
+		goto free_ap_params;
+
+	ret = -1;
+	beacon->head = os_malloc(params.head_len);
+	if (!beacon->head)
+		goto free_ap_extra_ies;
+
+	os_memcpy(beacon->head, params.head, params.head_len);
+	beacon->head_len = params.head_len;
+
+	beacon->tail = os_malloc(params.tail_len);
+	if (!beacon->tail)
+		goto free_beacon;
+
+	os_memcpy(beacon->tail, params.tail, params.tail_len);
+	beacon->tail_len = params.tail_len;
+
+	if (params.proberesp != NULL) {
+		beacon->probe_resp = os_malloc(params.proberesp_len);
+		if (!beacon->probe_resp)
+			goto free_beacon;
+
+		os_memcpy(beacon->probe_resp, params.proberesp,
+			  params.proberesp_len);
+		beacon->probe_resp_len = params.proberesp_len;
+	}
+
+	/* copy the extra ies */
+	if (beacon_extra) {
+		beacon->beacon_ies = os_malloc(wpabuf_len(beacon_extra));
+		if (!beacon->beacon_ies)
+			goto free_beacon;
+
+		os_memcpy(beacon->beacon_ies,
+			  beacon_extra->buf, wpabuf_len(beacon_extra));
+		beacon->beacon_ies_len = wpabuf_len(beacon_extra);
+	}
+
+	if (proberesp_extra) {
+		beacon->proberesp_ies =
+			os_malloc(wpabuf_len(proberesp_extra));
+		if (!beacon->proberesp_ies)
+			goto free_beacon;
+
+		os_memcpy(beacon->proberesp_ies, proberesp_extra->buf,
+			  wpabuf_len(proberesp_extra));
+		beacon->proberesp_ies_len = wpabuf_len(proberesp_extra);
+	}
+
+	if (assocresp_extra) {
+		beacon->assocresp_ies =
+			os_malloc(wpabuf_len(assocresp_extra));
+		if (!beacon->assocresp_ies)
+			goto free_beacon;
+
+		os_memcpy(beacon->assocresp_ies, assocresp_extra->buf,
+			  wpabuf_len(assocresp_extra));
+		beacon->assocresp_ies_len = wpabuf_len(assocresp_extra);
+	}
+
+	ret = 0;
+free_beacon:
+	/* if the function fails, the caller should not free beacon data */
+	if (ret)
+		free_beacon_data(beacon);
+
+free_ap_extra_ies:
+	hostapd_free_ap_extra_ies(hapd, beacon_extra, proberesp_extra,
+				  assocresp_extra);
+free_ap_params:
+	ieee802_11_free_ap_params(&params);
+	return ret;
+}
+
+
+/*
+ * TODO: This flow currently supports only changing frequency within the
+ * same hw_mode. Any other changes to MAC parameters or provided settings (even
+ * width) are not supported.
+ */
+static int hostapd_change_config_freq(struct hostapd_data *hapd,
+				      struct hostapd_config *conf,
+				      struct hostapd_freq_params *params,
+				      struct hostapd_freq_params *old_params)
+{
+	int channel;
+
+	if (!params->channel) {
+		/* check if the new channel is supported by hw */
+		channel = hostapd_hw_get_channel(hapd, params->freq);
+		if (!channel)
+			return -1;
+	} else {
+		channel = params->channel;
+	}
+
+	/* if a pointer to old_params is provided we save previous state */
+	if (old_params) {
+		old_params->channel = conf->channel;
+		old_params->ht_enabled = conf->ieee80211n;
+		old_params->sec_channel_offset = conf->secondary_channel;
+	}
+
+	conf->channel = channel;
+	conf->ieee80211n = params->ht_enabled;
+	conf->secondary_channel = params->sec_channel_offset;
+
+	/* TODO: maybe call here hostapd_config_check here? */
+
+	return 0;
+}
+
+
+static int hostapd_fill_csa_settings(struct hostapd_iface *iface,
+				     struct csa_settings *settings)
+{
+	struct hostapd_freq_params old_freq;
+	int ret;
+
+	os_memset(&old_freq, 0, sizeof(old_freq));
+	if (!iface || !iface->freq || iface->csa_in_progress)
+		return -1;
+
+	ret = hostapd_change_config_freq(iface->bss[0], iface->conf,
+					 &settings->freq_params,
+					 &old_freq);
+	if (ret)
+		return ret;
+
+	ret = hostapd_build_beacon_data(iface, &settings->beacon_after);
+
+	/* change back the configuration */
+	hostapd_change_config_freq(iface->bss[0], iface->conf,
+				   &old_freq, NULL);
+
+	if (ret)
+		return ret;
+
+	/* set channel switch parameters for csa ie */
+	iface->cs_freq = settings->freq_params.freq;
+	iface->cs_count = settings->cs_count;
+	iface->cs_block_tx = settings->block_tx;
+
+	ret = hostapd_build_beacon_data(iface, &settings->beacon_csa);
+	if (ret) {
+		free_beacon_data(&settings->beacon_after);
+		return ret;
+	}
+
+	settings->counter_offset_beacon = iface->cs_c_off_beacon;
+	settings->counter_offset_presp = iface->cs_c_off_proberesp;
+
+	return 0;
+}
+
+
+void hostapd_cleanup_cs_params(struct hostapd_data *hapd)
+{
+	hapd->iface->cs_freq = 0;
+	hapd->iface->cs_count = 0;
+	hapd->iface->cs_block_tx = 0;
+	hapd->iface->cs_c_off_beacon = 0;
+	hapd->iface->cs_c_off_proberesp = 0;
+	hapd->iface->csa_in_progress = 0;
+}
+
+
+int hostapd_switch_channel(struct hostapd_data *hapd,
+			   struct csa_settings *settings)
+{
+	int ret;
+	ret = hostapd_fill_csa_settings(hapd->iface, settings);
+	if (ret)
+		return ret;
+
+	ret = hostapd_drv_switch_channel(hapd, settings);
+	free_beacon_data(&settings->beacon_csa);
+	free_beacon_data(&settings->beacon_after);
+
+	if (ret) {
+		/* if we failed, clean cs parameters */
+		hostapd_cleanup_cs_params(hapd);
+		return ret;
+	}
+
+	hapd->iface->csa_in_progress = 1;
+	return 0;
+}
+
+#endif /* NEED_AP_MLME */

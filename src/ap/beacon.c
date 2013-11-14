@@ -203,13 +203,34 @@ static u8 * hostapd_eid_wpa(struct hostapd_data *hapd, u8 *eid, size_t len)
 }
 
 
+static u8 * hostapd_eid_csa(struct hostapd_data *hapd, u8 *eid)
+{
+	u8 chan;
+
+	if (!hapd->iface->cs_freq)
+		return eid;
+
+	if (ieee80211_freq_to_chan(hapd->iface->cs_freq, &chan) ==
+	    NUM_HOSTAPD_MODES)
+		return eid;
+
+	*eid++ = WLAN_EID_CHANNEL_SWITCH;
+	*eid++ = 3;
+	*eid++ = hapd->iface->cs_block_tx;
+	*eid++ = chan;
+	*eid++ = hapd->iface->cs_count;
+
+	return eid;
+}
+
+
 static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 				   struct sta_info *sta,
 				   const struct ieee80211_mgmt *req,
 				   int is_p2p, size_t *resp_len)
 {
 	struct ieee80211_mgmt *resp;
-	u8 *pos, *epos;
+	u8 *pos, *epos, *old_pos;
 	size_t buflen;
 
 #define MAX_PROBERESP_LEN 768
@@ -282,6 +303,13 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 	pos = hostapd_eid_interworking(hapd, pos);
 	pos = hostapd_eid_adv_proto(hapd, pos);
 	pos = hostapd_eid_roaming_consortium(hapd, pos);
+
+	old_pos = pos;
+	pos = hostapd_eid_csa(hapd, pos);
+
+	/* save an offset to the counter - should be last byte */
+	hapd->iface->cs_c_off_proberesp = (pos != old_pos) ?
+		pos - (u8 *) resp - 1 : 0;
 
 #ifdef CONFIG_IEEE80211AC
 	pos = hostapd_eid_vht_capabilities(hapd, pos);
@@ -598,7 +626,7 @@ int ieee802_11_build_ap_params(struct hostapd_data *hapd,
 	size_t resp_len = 0;
 #ifdef NEED_AP_MLME
 	u16 capab_info;
-	u8 *pos, *tailpos;
+	u8 *pos, *tailpos, *old_pos;
 
 #define BEACON_HEAD_BUF_SIZE 256
 #define BEACON_TAIL_BUF_SIZE 512
@@ -693,6 +721,10 @@ int ieee802_11_build_ap_params(struct hostapd_data *hapd,
 	tailpos = hostapd_eid_interworking(hapd, tailpos);
 	tailpos = hostapd_eid_adv_proto(hapd, tailpos);
 	tailpos = hostapd_eid_roaming_consortium(hapd, tailpos);
+	old_pos = tailpos;
+	tailpos = hostapd_eid_csa(hapd, tailpos);
+	hapd->iface->cs_c_off_beacon = (old_pos != tailpos) ?
+		tailpos - tail - 1 : 0;
 
 #ifdef CONFIG_IEEE80211AC
 	tailpos = hostapd_eid_vht_capabilities(hapd, tailpos);
@@ -816,6 +848,11 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 {
 	struct wpa_driver_ap_params params;
 	struct wpabuf *beacon, *proberesp, *assocresp;
+
+	if (hapd->iface->csa_in_progress) {
+		wpa_printf(MSG_ERROR, "Cannot set beacons during CSA period");
+		return;
+	}
 
 	hapd->beacon_set_done = 1;
 

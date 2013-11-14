@@ -300,6 +300,7 @@ struct wpa_driver_nl80211_data {
 	unsigned int hostapd:1;
 	unsigned int start_mode_ap:1;
 	unsigned int start_iface_up:1;
+	unsigned int channel_switch_supported:1;
 
 	u64 remain_on_chan_cookie;
 	u64 send_action_cookie;
@@ -1501,6 +1502,8 @@ static void mlme_event_ch_switch(struct wpa_driver_nl80211_data *drv,
 	data.ch_switch.freq = nla_get_u32(freq);
 	data.ch_switch.ht_enabled = ht_enabled;
 	data.ch_switch.ch_offset = chan_offset;
+
+	drv->first_bss->freq = data.ch_switch.freq;
 
 	wpa_supplicant_event(drv->ctx, EVENT_CH_SWITCH, &data);
 }
@@ -3043,6 +3046,7 @@ struct wiphy_info_data {
 	unsigned int p2p_go_supported:1;
 	unsigned int p2p_client_supported:1;
 	unsigned int p2p_concurrent:1;
+	unsigned int channel_switch_supported:1;
 };
 
 
@@ -3199,6 +3203,9 @@ static void wiphy_info_supp_cmds(struct wiphy_info_data *info,
 			break;
 		case NL80211_CMD_PROBE_CLIENT:
 			info->poll_command_supported = 1;
+			break;
+		case NL80211_CMD_CHANNEL_SWITCH:
+			info->channel_switch_supported = 1;
 			break;
 		}
 	}
@@ -3461,6 +3468,7 @@ static int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 	drv->device_ap_sme = info.device_ap_sme;
 	drv->poll_command_supported = info.poll_command_supported;
 	drv->data_tx_status = info.data_tx_status;
+	drv->channel_switch_supported = info.channel_switch_supported;
 
 	/*
 	 * If poll command and tx status are supported, mac80211 is new enough
@@ -6763,24 +6771,9 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 }
 
 
-static int wpa_driver_nl80211_set_freq(struct i802_bss *bss,
-				       struct hostapd_freq_params *freq)
+static int nl80211_put_freq_params(struct nl_msg *msg,
+				   struct hostapd_freq_params *freq)
 {
-	struct wpa_driver_nl80211_data *drv = bss->drv;
-	struct nl_msg *msg;
-	int ret;
-
-	wpa_printf(MSG_DEBUG, "nl80211: Set freq %d (ht_enabled=%d, vht_enabled=%d,"
-		   " bandwidth=%d MHz, cf1=%d MHz, cf2=%d MHz)",
-		   freq->freq, freq->ht_enabled, freq->vht_enabled,
-		   freq->bandwidth, freq->center_freq1, freq->center_freq2);
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -1;
-
-	nl80211_cmd(drv, msg, 0, NL80211_CMD_SET_WIPHY);
-
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
 	NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, freq->freq);
 	if (freq->vht_enabled) {
 		switch (freq->bandwidth) {
@@ -6805,7 +6798,7 @@ static int wpa_driver_nl80211_set_freq(struct i802_bss *bss,
 				    NL80211_CHAN_WIDTH_160);
 			break;
 		default:
-			return -1;
+			return -EINVAL;
 		}
 		NLA_PUT_U32(msg, NL80211_ATTR_CENTER_FREQ1, freq->center_freq1);
 		if (freq->center_freq2)
@@ -6827,6 +6820,33 @@ static int wpa_driver_nl80211_set_freq(struct i802_bss *bss,
 			break;
 		}
 	}
+	return 0;
+
+nla_put_failure:
+	return -ENOBUFS;
+}
+
+
+static int wpa_driver_nl80211_set_freq(struct i802_bss *bss,
+				       struct hostapd_freq_params *freq)
+{
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg;
+	int ret;
+
+	wpa_printf(MSG_DEBUG,
+		   "nl80211: Set freq %d (ht_enabled=%d, vht_enabled=%d, bandwidth=%d MHz, cf1=%d MHz, cf2=%d MHz)",
+		   freq->freq, freq->ht_enabled, freq->vht_enabled,
+		   freq->bandwidth, freq->center_freq1, freq->center_freq2);
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -1;
+
+	nl80211_cmd(drv, msg, 0, NL80211_CMD_SET_WIPHY);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+	if (nl80211_put_freq_params(msg, freq) < 0)
+		goto nla_put_failure;
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	msg = NULL;
@@ -11211,6 +11231,128 @@ static int wpa_driver_nl80211_status(void *priv, char *buf, size_t buflen)
 }
 
 
+static int set_beacon_data(struct nl_msg *msg, struct beacon_data *settings)
+{
+	if (settings->head)
+		NLA_PUT(msg, NL80211_ATTR_BEACON_HEAD,
+			settings->head_len, settings->head);
+
+	if (settings->tail)
+		NLA_PUT(msg, NL80211_ATTR_BEACON_TAIL,
+			settings->tail_len, settings->tail);
+
+	if (settings->beacon_ies)
+		NLA_PUT(msg, NL80211_ATTR_IE,
+			settings->beacon_ies_len, settings->beacon_ies);
+
+	if (settings->proberesp_ies)
+		NLA_PUT(msg, NL80211_ATTR_IE_PROBE_RESP,
+			settings->proberesp_ies_len, settings->proberesp_ies);
+
+	if (settings->assocresp_ies)
+		NLA_PUT(msg,
+			NL80211_ATTR_IE_ASSOC_RESP,
+			settings->assocresp_ies_len, settings->assocresp_ies);
+
+	if (settings->probe_resp)
+		NLA_PUT(msg, NL80211_ATTR_PROBE_RESP,
+			settings->probe_resp_len, settings->probe_resp);
+
+	return 0;
+
+nla_put_failure:
+	return -ENOBUFS;
+}
+
+
+static int nl80211_switch_channel(void *priv, struct csa_settings *settings)
+{
+	struct nl_msg *msg;
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nlattr *beacon_csa;
+	int ret = -ENOBUFS;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Channel switch request (cs_count=%u block_tx=%u freq=%d)",
+		   settings->cs_count, settings->block_tx,
+		   settings->freq_params.freq);
+
+	if (!drv->channel_switch_supported) {
+		wpa_printf(MSG_DEBUG, "nl80211: Driver does not support channel switch command");
+		return -EOPNOTSUPP;
+	}
+
+	if ((drv->nlmode != NL80211_IFTYPE_AP) &&
+	    (drv->nlmode != NL80211_IFTYPE_P2P_GO))
+		return -EOPNOTSUPP;
+
+	/* check settings validity */
+	if (!settings->beacon_csa.tail ||
+	    ((settings->beacon_csa.tail_len <=
+	      settings->counter_offset_beacon) ||
+	     (settings->beacon_csa.tail[settings->counter_offset_beacon] !=
+	      settings->cs_count)))
+		return -EINVAL;
+
+	if (settings->beacon_csa.probe_resp &&
+	    ((settings->beacon_csa.probe_resp_len <=
+	      settings->counter_offset_presp) ||
+	     (settings->beacon_csa.probe_resp[settings->counter_offset_presp] !=
+	      settings->cs_count)))
+		return -EINVAL;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -ENOMEM;
+
+	nl80211_cmd(drv, msg, 0, NL80211_CMD_CHANNEL_SWITCH);
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+	NLA_PUT_U32(msg, NL80211_ATTR_CH_SWITCH_COUNT, settings->cs_count);
+	ret = nl80211_put_freq_params(msg, &settings->freq_params);
+	if (ret)
+		goto error;
+
+	if (settings->block_tx)
+		NLA_PUT_FLAG(msg, NL80211_ATTR_CH_SWITCH_BLOCK_TX);
+
+	/* beacon_after params */
+	ret = set_beacon_data(msg, &settings->beacon_after);
+	if (ret)
+		goto error;
+
+	/* beacon_csa params */
+	beacon_csa = nla_nest_start(msg, NL80211_ATTR_CSA_IES);
+	if (!beacon_csa)
+		goto nla_put_failure;
+
+	ret = set_beacon_data(msg, &settings->beacon_csa);
+	if (ret)
+		goto error;
+
+	NLA_PUT_U16(msg, NL80211_ATTR_CSA_C_OFF_BEACON,
+		    settings->counter_offset_beacon);
+
+	if (settings->beacon_csa.probe_resp)
+		NLA_PUT_U16(msg, NL80211_ATTR_CSA_C_OFF_PRESP,
+			    settings->counter_offset_presp);
+
+	nla_nest_end(msg, beacon_csa);
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	if (ret) {
+		wpa_printf(MSG_DEBUG, "nl80211: switch_channel failed err=%d (%s)",
+			   ret, strerror(-ret));
+	}
+	return ret;
+
+nla_put_failure:
+	ret = -ENOBUFS;
+error:
+	nlmsg_free(msg);
+	wpa_printf(MSG_DEBUG, "nl80211: Could not build channel switch request");
+	return ret;
+}
+
+
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
@@ -11290,4 +11432,5 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.get_mac_addr = wpa_driver_nl80211_get_macaddr,
 	.get_survey = wpa_driver_nl80211_get_survey,
 	.status = wpa_driver_nl80211_status,
+	.switch_channel = nl80211_switch_channel,
 };

@@ -683,11 +683,11 @@ static inline int wpa_drv_radio_disable(struct wpa_supplicant *wpa_s,
 }
 
 static inline int wpa_drv_switch_channel(struct wpa_supplicant *wpa_s,
-					 unsigned int freq)
+					 struct csa_settings *settings)
 {
 	if (!wpa_s->driver->switch_channel)
 		return -1;
-	return wpa_s->driver->switch_channel(wpa_s->drv_priv, freq);
+	return wpa_s->driver->switch_channel(wpa_s->drv_priv, settings);
 }
 
 static inline int wpa_drv_wnm_oper(struct wpa_supplicant *wpa_s,

@@ -24,5 +24,8 @@ void handle_probe_req(struct hostapd_data *hapd,
 void ieee802_11_set_beacon(struct hostapd_data *hapd);
 void ieee802_11_set_beacons(struct hostapd_iface *iface);
 void ieee802_11_update_beacons(struct hostapd_iface *iface);
+int ieee802_11_build_ap_params(struct hostapd_data *hapd,
+			       struct wpa_driver_ap_params *params);
+void ieee802_11_free_ap_params(struct wpa_driver_ap_params *params);
 
 #endif /* BEACON_H */

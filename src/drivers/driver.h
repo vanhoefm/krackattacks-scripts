@@ -634,7 +634,7 @@ struct wpa_driver_ap_params {
 	/**
 	 * head - Beacon head from IEEE 802.11 header to IEs before TIM IE
 	 */
-	const u8 *head;
+	u8 *head;
 
 	/**
 	 * head_len - Length of the head buffer in octets
@@ -644,7 +644,7 @@ struct wpa_driver_ap_params {
 	/**
 	 * tail - Beacon tail following TIM IE
 	 */
-	const u8 *tail;
+	u8 *tail;
 
 	/**
 	 * tail_len - Length of the tail buffer in octets
@@ -675,7 +675,7 @@ struct wpa_driver_ap_params {
 	 * This is used by drivers that reply to Probe Requests internally in
 	 * AP mode and require the full Probe Response template.
 	 */
-	const u8 *proberesp;
+	u8 *proberesp;
 
 	/**
 	 * proberesp_len - Length of the proberesp buffer in octets

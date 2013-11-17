@@ -2753,7 +2753,7 @@ static int pcsc_reader_init(struct wpa_supplicant *wpa_s)
 	if (!wpa_s->conf->pcsc_reader)
 		return 0;
 
-	wpa_s->scard = scard_init(SCARD_TRY_BOTH, wpa_s->conf->pcsc_reader);
+	wpa_s->scard = scard_init(wpa_s->conf->pcsc_reader);
 	if (!wpa_s->scard)
 		return 1;
 

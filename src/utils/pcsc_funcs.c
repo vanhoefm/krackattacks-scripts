@@ -485,17 +485,15 @@ static int scard_get_aid(struct scard_data *scard, unsigned char *aid,
 
 /**
  * scard_init - Initialize SIM/USIM connection using PC/SC
- * @sim_type: Allowed SIM types (SIM, USIM, or both)
  * @reader: Reader name prefix to search for
  * Returns: Pointer to private data structure, or %NULL on failure
  *
  * This function is used to initialize SIM/USIM connection. PC/SC is used to
- * open connection to the SIM/USIM card and the card is verified to support the
- * selected sim_type. In addition, local flag is set if a PIN is needed to
- * access some of the card functions. Once the connection is not needed
- * anymore, scard_deinit() can be used to close it.
+ * open connection to the SIM/USIM card. In addition, local flag is set if a
+ * PIN is needed to access some of the card functions. Once the connection is
+ * not needed anymore, scard_deinit() can be used to close it.
  */
-struct scard_data * scard_init(scard_sim_type sim_type, const char *reader)
+struct scard_data * scard_init(const char *reader)
 {
 	long ret;
 	unsigned long len, pos;
@@ -612,20 +610,14 @@ struct scard_data * scard_init(scard_sim_type sim_type, const char *reader)
 
 	blen = sizeof(buf);
 
-	scard->sim_type = SCARD_GSM_SIM;
-	if (sim_type == SCARD_USIM_ONLY || sim_type == SCARD_TRY_BOTH) {
-		wpa_printf(MSG_DEBUG, "SCARD: verifying USIM support");
-		if (_scard_select_file(scard, SCARD_FILE_MF, buf, &blen,
-				       SCARD_USIM, NULL, 0)) {
-			wpa_printf(MSG_DEBUG, "SCARD: USIM is not supported");
-			if (sim_type == SCARD_USIM_ONLY)
-				goto failed;
-			wpa_printf(MSG_DEBUG, "SCARD: Trying to use GSM SIM");
-			scard->sim_type = SCARD_GSM_SIM;
-		} else {
-			wpa_printf(MSG_DEBUG, "SCARD: USIM is supported");
-			scard->sim_type = SCARD_USIM;
-		}
+	wpa_printf(MSG_DEBUG, "SCARD: verifying USIM support");
+	if (_scard_select_file(scard, SCARD_FILE_MF, buf, &blen,
+			       SCARD_USIM, NULL, 0)) {
+		wpa_printf(MSG_DEBUG, "SCARD: USIM is not supported. Trying to use GSM SIM");
+		scard->sim_type = SCARD_GSM_SIM;
+	} else {
+		wpa_printf(MSG_DEBUG, "SCARD: USIM is supported");
+		scard->sim_type = SCARD_USIM;
 	}
 
 	if (scard->sim_type == SCARD_GSM_SIM) {

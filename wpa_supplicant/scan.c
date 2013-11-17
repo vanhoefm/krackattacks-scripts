@@ -914,29 +914,6 @@ void wpa_supplicant_req_scan(struct wpa_supplicant *wpa_s, int sec, int usec)
 		return;
 	}
 
-	/* If there's at least one network that should be specifically scanned
-	 * then don't cancel the scan and reschedule.  Some drivers do
-	 * background scanning which generates frequent scan results, and that
-	 * causes the specific SSID scan to get continually pushed back and
-	 * never happen, which causes hidden APs to never get probe-scanned.
-	 */
-	if (eloop_is_timeout_registered(wpa_supplicant_scan, wpa_s, NULL) &&
-	    wpa_s->conf->ap_scan == 1) {
-		struct wpa_ssid *ssid = wpa_s->conf->ssid;
-
-		while (ssid) {
-			if (!wpas_network_disabled(wpa_s, ssid) &&
-			    ssid->scan_ssid)
-				break;
-			ssid = ssid->next;
-		}
-		if (ssid) {
-			wpa_dbg(wpa_s, MSG_DEBUG, "Not rescheduling scan to "
-			        "ensure that specific SSID scans occur");
-			return;
-		}
-	}
-
 	wpa_dbg(wpa_s, MSG_DEBUG, "Setting scan request: %d sec %d usec",
 		sec, usec);
 	eloop_cancel_timeout(wpa_supplicant_scan, wpa_s, NULL);

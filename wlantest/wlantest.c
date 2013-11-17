@@ -15,6 +15,7 @@
 
 extern int wpa_debug_level;
 extern int wpa_debug_show_keys;
+extern int wpa_debug_timestamp;
 
 
 static void wlantest_terminate(int sig, void *signal_ctx)
@@ -25,7 +26,7 @@ static void wlantest_terminate(int sig, void *signal_ctx)
 
 static void usage(void)
 {
-	printf("wlantest [-cddhqqF] [-i<ifname>] [-r<pcap file>] "
+	printf("wlantest [-cddhqqFt] [-i<ifname>] [-r<pcap file>] "
 	       "[-p<passphrase>]\n"
 	       "         [-I<wired ifname>] [-R<wired pcap file>] "
 	       "[-P<RADIUS shared secret>]\n"
@@ -290,7 +291,7 @@ int main(int argc, char *argv[])
 	wlantest_init(&wt);
 
 	for (;;) {
-		c = getopt(argc, argv, "cdf:Fhi:I:L:n:p:P:qr:R:w:W:");
+		c = getopt(argc, argv, "cdf:Fhi:I:L:n:p:P:qr:R:tw:W:");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -337,6 +338,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'R':
 			read_wired_file = optarg;
+			break;
+		case 't':
+			wpa_debug_timestamp = 1;
 			break;
 		case 'w':
 			wt.write_file = optarg;

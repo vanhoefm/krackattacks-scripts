@@ -14,9 +14,9 @@ logger = logging.getLogger()
 import hwsim_utils
 from wlantest import Wlantest
 
-def autogo(go):
+def autogo(go, freq=None):
     logger.info("Start autonomous GO " + go.ifname)
-    res = go.p2p_start_go()
+    res = go.p2p_start_go(freq=freq)
     logger.debug("res: " + str(res))
     return res
 
@@ -131,3 +131,22 @@ def test_autogo_legacy(dev):
 
     dev[0].remove_group()
     dev[1].wait_go_ending_session()
+
+def test_autogo_chan_switch(dev):
+    """P2P autonomous GO switching channels"""
+    autogo(dev[0], freq=2417)
+    connect_cli(dev[0], dev[1])
+    res = dev[0].request("CHAN_SWITCH 5 2422")
+    if "FAIL" in res:
+        # for now, skip test since mac80211_hwsim support is not yet widely
+        # deployed
+        return 'skip'
+    ev = dev[0].wait_event(["AP-CSA-FINISHED"], timeout=10)
+    if ev is None:
+        raise Exception("CSA finished event timed out")
+    if "freq=2422" not in ev:
+        raise Exception("Unexpected cahnnel in CSA finished event")
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
+    time.sleep(0.1)
+    hwsim_utils.test_connectivity_p2p(dev[0], dev[1])

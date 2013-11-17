@@ -1,6 +1,6 @@
 /*
  * wlantest - IEEE 802.11 protocol monitoring and testing tool
- * Copyright (c) 2010-2011, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2010-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -245,15 +245,35 @@ size_t notes_len(struct wlantest *wt, size_t hdrlen)
 }
 
 
+int wlantest_relog(struct wlantest *wt)
+{
+	int ret = 0;
+
+	wpa_printf(MSG_INFO, "Re-open log/capture files");
+
+	if (wt->write_file) {
+		write_pcap_deinit(wt);
+		if (write_pcap_init(wt, wt->write_file) < 0)
+			ret = -1;
+	}
+
+	if (wt->pcapng_file) {
+		write_pcapng_deinit(wt);
+		if (write_pcapng_init(wt, wt->pcapng_file) < 0)
+			ret = -1;
+	}
+
+	return ret;
+}
+
+
 int main(int argc, char *argv[])
 {
 	int c;
 	const char *read_file = NULL;
 	const char *read_wired_file = NULL;
-	const char *write_file = NULL;
 	const char *ifname = NULL;
 	const char *ifname_wired = NULL;
-	const char *pcapng_file = NULL;
 	struct wlantest wt;
 	int ctrl_iface = 0;
 
@@ -294,7 +314,7 @@ int main(int argc, char *argv[])
 			ifname_wired = optarg;
 			break;
 		case 'n':
-			pcapng_file = optarg;
+			wt.pcapng_file = optarg;
 			break;
 		case 'p':
 			add_passphrase(&wt, optarg);
@@ -312,7 +332,7 @@ int main(int argc, char *argv[])
 			read_wired_file = optarg;
 			break;
 		case 'w':
-			write_file = optarg;
+			wt.write_file = optarg;
 			break;
 		case 'W':
 			if (add_wep(&wt, optarg) < 0)
@@ -333,10 +353,10 @@ int main(int argc, char *argv[])
 	if (eloop_init())
 		return -1;
 
-	if (write_file && write_pcap_init(&wt, write_file) < 0)
+	if (wt.write_file && write_pcap_init(&wt, wt.write_file) < 0)
 		return -1;
 
-	if (pcapng_file && write_pcapng_init(&wt, pcapng_file) < 0)
+	if (wt.pcapng_file && write_pcapng_init(&wt, wt.pcapng_file) < 0)
 		return -1;
 
 	if (read_wired_file && read_wired_cap_file(&wt, read_wired_file) < 0)

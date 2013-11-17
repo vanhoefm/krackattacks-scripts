@@ -740,6 +740,12 @@ static char ** complete_get_bss_counter(int s, const char *str, int pos)
 }
 
 
+static int cmd_relog(int s, int argc, char *argv[])
+{
+	return cmd_simple(s, WLANTEST_CTRL_RELOG);
+}
+
+
 struct tdls_counters {
 	const char *name;
 	enum wlantest_tdls_counter num;
@@ -1496,6 +1502,7 @@ static const struct wlantest_cli_cmd wlantest_cli_commands[] = {
 	{ "get_bss_counter", cmd_get_bss_counter,
 	  "<counter> <BSSID> = get BSS counter value",
 	  complete_get_bss_counter },
+	{ "relog", cmd_relog, "= re-open log-file (allow rolling logs)", NULL },
 	{ NULL, NULL, NULL, NULL }
 };
 

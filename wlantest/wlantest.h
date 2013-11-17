@@ -1,6 +1,6 @@
 /*
  * wlantest - IEEE 802.11 protocol monitoring and testing tool
- * Copyright (c) 2010, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2010-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -188,6 +188,9 @@ struct wlantest {
 
 	char *notes[MAX_NOTES];
 	size_t num_notes;
+
+	const char *write_file;
+	const char *pcapng_file;
 };
 
 void add_note(struct wlantest *wt, int level, const char *fmt, ...)
@@ -285,5 +288,7 @@ void ctrl_deinit(struct wlantest *wt);
 int wlantest_inject(struct wlantest *wt, struct wlantest_bss *bss,
 		    struct wlantest_sta *sta, u8 *frame, size_t len,
 		    enum wlantest_inject_protection prot);
+
+int wlantest_relog(struct wlantest *wt);
 
 #endif /* WLANTEST_H */

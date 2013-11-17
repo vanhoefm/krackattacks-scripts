@@ -1,6 +1,6 @@
 /*
  * wlantest control interface
- * Copyright (c) 2010, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2010-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -35,6 +35,7 @@ enum wlantest_ctrl_cmd {
 	WLANTEST_CTRL_SEND,
 	WLANTEST_CTRL_CLEAR_TDLS_COUNTERS,
 	WLANTEST_CTRL_GET_TDLS_COUNTER,
+	WLANTEST_CTRL_RELOG,
 };
 
 enum wlantest_ctrl_attr {

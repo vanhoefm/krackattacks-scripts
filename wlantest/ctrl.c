@@ -1,6 +1,6 @@
 /*
  * wlantest control interface
- * Copyright (c) 2010, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2010-2013, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -1187,6 +1187,14 @@ static void ctrl_send_(struct wlantest *wt, int sock, u8 *cmd, size_t clen)
 }
 
 
+static void ctrl_relog(struct wlantest *wt, int sock)
+{
+	int res = wlantest_relog(wt);
+	ctrl_send_simple(wt, sock, res ? WLANTEST_CTRL_FAILURE :
+			 WLANTEST_CTRL_SUCCESS);
+}
+
+
 static void ctrl_read(int sock, void *eloop_ctx, void *sock_ctx)
 {
 	struct wlantest *wt = eloop_ctx;
@@ -1269,6 +1277,9 @@ static void ctrl_read(int sock, void *eloop_ctx, void *sock_ctx)
 		break;
 	case WLANTEST_CTRL_SEND:
 		ctrl_send_(wt, sock, buf + 4, len - 4);
+		break;
+	case WLANTEST_CTRL_RELOG:
+		ctrl_relog(wt, sock);
 		break;
 	default:
 		ctrl_send_simple(wt, sock, WLANTEST_CTRL_UNKNOWN_CMD);

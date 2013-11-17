@@ -307,7 +307,6 @@ CONFIG_BACKEND=file
 # Select event loop implementation
 # eloop = select() loop (default)
 # eloop_win = Windows events and WaitForMultipleObject() loop
-# eloop_none = Empty template
 #CONFIG_ELOOP=eloop
 
 # Should we use poll instead of select? Select is used by default.

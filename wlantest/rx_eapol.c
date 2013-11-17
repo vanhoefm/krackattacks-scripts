@@ -410,8 +410,8 @@ static void learn_kde_keys(struct wlantest *wt, struct wlantest_bss *bss,
 		if (ie.gtk_len >= 2 && ie.gtk_len <= 2 + 32) {
 			int id;
 			id = ie.gtk[0] & 0x03;
-			wpa_printf(MSG_DEBUG, "GTK KeyID=%u tx=%u",
-				   id, !!(ie.gtk[0] & 0x04));
+			add_note(wt, MSG_DEBUG, "GTK KeyID=%u tx=%u",
+				 id, !!(ie.gtk[0] & 0x04));
 			if ((ie.gtk[0] & 0xf8) || ie.gtk[1]) {
 				add_note(wt, MSG_INFO,
 					 "GTK KDE: Reserved field set: "
@@ -449,7 +449,7 @@ static void learn_kde_keys(struct wlantest *wt, struct wlantest_bss *bss,
 					 "Unexpected IGTK KeyID %u", id);
 			} else {
 				const u8 *ipn;
-				wpa_printf(MSG_DEBUG, "IGTK KeyID %u", id);
+				add_note(wt, MSG_DEBUG, "IGTK KeyID %u", id);
 				wpa_hexdump(MSG_DEBUG, "IPN", ie.igtk + 2, 6);
 				wpa_hexdump(MSG_DEBUG, "IGTK", ie.igtk + 8,
 					    16);
@@ -653,28 +653,30 @@ static void rx_data_eapol_key_4_of_4(struct wlantest *wt, const u8 *dst,
 	eapol = (const struct ieee802_1x_hdr *) data;
 	hdr = (const struct wpa_eapol_key *) (eapol + 1);
 	if (!is_zero(hdr->key_rsc, 8)) {
-		wpa_printf(MSG_INFO, "EAPOL-Key 4/4 from " MACSTR " used "
-			   "non-zero Key RSC", MAC2STR(src));
+		add_note(wt, MSG_INFO, "EAPOL-Key 4/4 from " MACSTR " used "
+			 "non-zero Key RSC", MAC2STR(src));
 	}
 	key_info = WPA_GET_BE16(hdr->key_info);
 
 	if (!sta->ptk_set && !sta->tptk_set) {
-		wpa_printf(MSG_DEBUG, "No PTK known to process EAPOL-Key 4/4");
+		add_note(wt, MSG_DEBUG,
+			 "No PTK known to process EAPOL-Key 4/4");
 		return;
 	}
 
 	kck = sta->ptk.kck;
 	if (sta->tptk_set) {
-		wpa_printf(MSG_DEBUG, "Use TPTK for validation EAPOL-Key MIC");
+		add_note(wt, MSG_DEBUG,
+			 "Use TPTK for validation EAPOL-Key MIC");
 		kck = sta->tptk.kck;
 	}
 	if (check_mic(kck, key_info & WPA_KEY_INFO_TYPE_MASK, data, len) < 0) {
-		wpa_printf(MSG_INFO, "Mismatch in EAPOL-Key 4/4 MIC");
+		add_note(wt, MSG_INFO, "Mismatch in EAPOL-Key 4/4 MIC");
 		return;
 	}
-	wpa_printf(MSG_DEBUG, "Valid MIC found in EAPOL-Key 4/4");
+	add_note(wt, MSG_DEBUG, "Valid MIC found in EAPOL-Key 4/4");
 	if (sta->tptk_set) {
-		wpa_printf(MSG_DEBUG, "Update PTK (rekeying)");
+		add_note(wt, MSG_DEBUG, "Update PTK (rekeying)");
 		os_memcpy(&sta->ptk, &sta->tptk, sizeof(sta->ptk));
 		sta->ptk_set = 1;
 		sta->tptk_set = 0;
@@ -709,28 +711,29 @@ static void rx_data_eapol_key_1_of_2(struct wlantest *wt, const u8 *dst,
 	key_info = WPA_GET_BE16(hdr->key_info);
 
 	if (!sta->ptk_set) {
-		wpa_printf(MSG_DEBUG, "No PTK known to process EAPOL-Key 1/2");
+		add_note(wt, MSG_DEBUG,
+			 "No PTK known to process EAPOL-Key 1/2");
 		return;
 	}
 
 	if (sta->ptk_set &&
 	    check_mic(sta->ptk.kck, key_info & WPA_KEY_INFO_TYPE_MASK,
 		      data, len) < 0) {
-		wpa_printf(MSG_INFO, "Mismatch in EAPOL-Key 1/2 MIC");
+		add_note(wt, MSG_INFO, "Mismatch in EAPOL-Key 1/2 MIC");
 		return;
 	}
-	wpa_printf(MSG_DEBUG, "Valid MIC found in EAPOL-Key 1/2");
+	add_note(wt, MSG_DEBUG, "Valid MIC found in EAPOL-Key 1/2");
 
 	if (sta->proto & WPA_PROTO_RSN &&
 	    !(key_info & WPA_KEY_INFO_ENCR_KEY_DATA)) {
-		wpa_printf(MSG_INFO, "EAPOL-Key 1/2 without EncrKeyData bit");
+		add_note(wt, MSG_INFO, "EAPOL-Key 1/2 without EncrKeyData bit");
 		return;
 	}
 	ver = key_info & WPA_KEY_INFO_TYPE_MASK;
 	decrypted = decrypt_eapol_key_data(wt, sta->ptk.kek, ver, hdr,
 					   &decrypted_len);
 	if (decrypted == NULL) {
-		wpa_printf(MSG_INFO, "Failed to decrypt EAPOL-Key Key Data");
+		add_note(wt, MSG_INFO, "Failed to decrypt EAPOL-Key Key Data");
 		return;
 	}
 	wpa_hexdump(MSG_DEBUG, "Decrypted EAPOL-Key Key Data",
@@ -783,7 +786,7 @@ static void rx_data_eapol_key_1_of_2(struct wlantest *wt, const u8 *dst,
 			int id;
 			id = (key_info & WPA_KEY_INFO_KEY_INDEX_MASK) >>
 				WPA_KEY_INFO_KEY_INDEX_SHIFT;
-			wpa_printf(MSG_DEBUG, "GTK key index %d", id);
+			add_note(wt, MSG_DEBUG, "GTK key index %d", id);
 			wpa_hexdump(MSG_DEBUG, "GTK", decrypted,
 				    decrypted_len);
 			bss->gtk_len[id] = decrypted_len;
@@ -796,9 +799,9 @@ static void rx_data_eapol_key_1_of_2(struct wlantest *wt, const u8 *dst,
 			bss->rsc[id][5] = rsc[0];
 			wpa_hexdump(MSG_DEBUG, "RSC", bss->rsc[id], 6);
 		} else {
-			wpa_printf(MSG_INFO, "Unexpected WPA Key Data length "
-				   "in Group Key msg 1/2 from " MACSTR,
-				   MAC2STR(src));
+			add_note(wt, MSG_INFO, "Unexpected WPA Key Data length "
+				 "in Group Key msg 1/2 from " MACSTR,
+				 MAC2STR(src));
 		}
 	}
 	os_free(decrypted);
@@ -826,23 +829,24 @@ static void rx_data_eapol_key_2_of_2(struct wlantest *wt, const u8 *dst,
 	eapol = (const struct ieee802_1x_hdr *) data;
 	hdr = (const struct wpa_eapol_key *) (eapol + 1);
 	if (!is_zero(hdr->key_rsc, 8)) {
-		wpa_printf(MSG_INFO, "EAPOL-Key 2/2 from " MACSTR " used "
-			   "non-zero Key RSC", MAC2STR(src));
+		add_note(wt, MSG_INFO, "EAPOL-Key 2/2 from " MACSTR " used "
+			 "non-zero Key RSC", MAC2STR(src));
 	}
 	key_info = WPA_GET_BE16(hdr->key_info);
 
 	if (!sta->ptk_set) {
-		wpa_printf(MSG_DEBUG, "No PTK known to process EAPOL-Key 2/2");
+		add_note(wt, MSG_DEBUG,
+			 "No PTK known to process EAPOL-Key 2/2");
 		return;
 	}
 
 	if (sta->ptk_set &&
 	    check_mic(sta->ptk.kck, key_info & WPA_KEY_INFO_TYPE_MASK,
 		      data, len) < 0) {
-		wpa_printf(MSG_INFO, "Mismatch in EAPOL-Key 2/2 MIC");
+		add_note(wt, MSG_INFO, "Mismatch in EAPOL-Key 2/2 MIC");
 		return;
 	}
-	wpa_printf(MSG_DEBUG, "Valid MIC found in EAPOL-Key 2/2");
+	add_note(wt, MSG_DEBUG, "Valid MIC found in EAPOL-Key 2/2");
 }
 
 
@@ -861,8 +865,8 @@ static void rx_data_eapol_key(struct wlantest *wt, const u8 *dst,
 	wpa_hexdump(MSG_MSGDUMP, "EAPOL-Key",
 		    (const u8 *) hdr, len - sizeof(*eapol));
 	if (len < sizeof(*hdr)) {
-		wpa_printf(MSG_INFO, "Too short EAPOL-Key frame from " MACSTR,
-			   MAC2STR(src));
+		add_note(wt, MSG_INFO, "Too short EAPOL-Key frame from " MACSTR,
+			 MAC2STR(src));
 		return;
 	}
 
@@ -885,8 +889,8 @@ static void rx_data_eapol_key(struct wlantest *wt, const u8 *dst,
 	key_data_length = WPA_GET_BE16(hdr->key_data_length);
 	key_data = (const u8 *) (hdr + 1);
 	if (key_data + key_data_length > data + len) {
-		wpa_printf(MSG_INFO, "Truncated EAPOL-Key from " MACSTR,
-			   MAC2STR(src));
+		add_note(wt, MSG_INFO, "Truncated EAPOL-Key from " MACSTR,
+			 MAC2STR(src));
 		return;
 	}
 	if (key_data + key_data_length < data + len) {

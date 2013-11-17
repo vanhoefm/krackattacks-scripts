@@ -11,6 +11,7 @@ include ../lib.rules
 
 #CFLAGS += -DWPA_TRACE
 CFLAGS += -DCONFIG_IPV6
+CFLAGS += -DCONFIG_DEBUG_FILE
 
 LIB_OBJS= \
 	base64.o \

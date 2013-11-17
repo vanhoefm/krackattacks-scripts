@@ -30,7 +30,8 @@ static void usage(void)
 	       "         [-I<wired ifname>] [-R<wired pcap file>] "
 	       "[-P<RADIUS shared secret>]\n"
 	       "         [-n<write pcapng file>]\n"
-	       "         [-w<write pcap file>] [-f<MSK/PMK file>]\n");
+	       "         [-w<write pcap file>] [-f<MSK/PMK file>]\n"
+	       "         [-L<log file>]\n");
 }
 
 
@@ -250,6 +251,8 @@ int wlantest_relog(struct wlantest *wt)
 	int ret = 0;
 
 	wpa_printf(MSG_INFO, "Re-open log/capture files");
+	if (wpa_debug_reopen_file())
+		ret = -1;
 
 	if (wt->write_file) {
 		write_pcap_deinit(wt);
@@ -274,6 +277,7 @@ int main(int argc, char *argv[])
 	const char *read_wired_file = NULL;
 	const char *ifname = NULL;
 	const char *ifname_wired = NULL;
+	const char *logfile = NULL;
 	struct wlantest wt;
 	int ctrl_iface = 0;
 
@@ -286,7 +290,7 @@ int main(int argc, char *argv[])
 	wlantest_init(&wt);
 
 	for (;;) {
-		c = getopt(argc, argv, "cdf:Fhi:I:n:p:P:qr:R:w:W:");
+		c = getopt(argc, argv, "cdf:Fhi:I:L:n:p:P:qr:R:w:W:");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -312,6 +316,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'I':
 			ifname_wired = optarg;
+			break;
+		case 'L':
+			logfile = optarg;
 			break;
 		case 'n':
 			wt.pcapng_file = optarg;
@@ -353,6 +360,9 @@ int main(int argc, char *argv[])
 	if (eloop_init())
 		return -1;
 
+	if (logfile)
+		wpa_debug_open_file(logfile);
+
 	if (wt.write_file && write_pcap_init(&wt, wt.write_file) < 0)
 		return -1;
 
@@ -384,6 +394,7 @@ int main(int argc, char *argv[])
 
 	wlantest_deinit(&wt);
 
+	wpa_debug_close_file();
 	eloop_destroy();
 	os_program_deinit();
 

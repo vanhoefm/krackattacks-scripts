@@ -22,6 +22,7 @@ sys.path.append('../../wpaspy')
 from wpasupplicant import WpaSupplicant
 from hostapd import HostapdGlobal
 from check_kernel import check_kernel
+from wlantest import Wlantest
 
 def reset_devs(dev, apdev):
     ok = True
@@ -331,6 +332,10 @@ def main():
                 result = "FAIL"
                 hapd = None
             rename_log(args.logdir, 'hostapd', name, hapd)
+
+            wt = Wlantest()
+            rename_log(args.logdir, 'hwsim0.pcapng', name, wt)
+            rename_log(args.logdir, 'hwsim0', name, wt)
 
         end = datetime.now()
         diff = end - start

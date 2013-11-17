@@ -63,7 +63,7 @@ if [ "$CONCURRENT" = "y" ]; then
     sudo iw wlan2 interface add sta2 type station
 fi
 sudo ifconfig hwsim0 up
-sudo $WLANTEST -i hwsim0 -n $LOGDIR/hwsim0.pcapng -c -d > $LOGDIR/hwsim0 &
+sudo $WLANTEST -i hwsim0 -n $LOGDIR/hwsim0.pcapng -c -dt -L $LOGDIR/hwsim0 &
 for i in 0 1 2; do
     sudo $(printf -- "$VALGRIND_WPAS" $i) $WPAS -g /tmp/wpas-wlan$i -G$GROUP -Dnl80211 -iwlan$i -c $LOGDIR/p2p$i.conf \
          $(printf -- "$CONCURRENT_ARGS" $i) -ddKt$TRACE -f $LOGDIR/log$i &
@@ -71,7 +71,7 @@ done
 sudo $VALGRIND_HAPD $HAPD -ddKt$TRACE -g /var/run/hostapd-global -G $GROUP -ddKt -f $LOGDIR/hostapd &
 
 sleep 1
-sudo chown -f $USER $LOGDIR/hwsim0.pcapng $LOGDIR/log* $LOGDIR/hostapd
+sudo chown -f $USER $LOGDIR/hwsim0.pcapng $LOGDIR/hwsim0 $LOGDIR/log* $LOGDIR/hostapd
 if [ "x$VALGRIND" = "xy" ]; then
     sudo chown -f $USER $LOGDIR/*valgrind*
 fi

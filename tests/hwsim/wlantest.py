@@ -26,6 +26,11 @@ class Wlantest:
         if "FAIL" in res:
             raise Exception("wlantest_cli flush failed")
 
+    def relog(self):
+        res = subprocess.check_output([self.wlantest_cli, "relog"])
+        if "FAIL" in res:
+            raise Exception("wlantest_cli relog failed")
+
     def add_passphrase(self, passphrase):
         res = subprocess.check_output([self.wlantest_cli, "add_passphrase",
                                        passphrase])

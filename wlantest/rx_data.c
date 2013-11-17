@@ -14,6 +14,8 @@
 #include "common/ieee802_11_defs.h"
 #include "wlantest.h"
 
+extern int wpa_debug_level;
+
 
 static const char * data_stype(u16 stype)
 {
@@ -90,6 +92,39 @@ static void rx_data_process(struct wlantest *wt, const u8 *bssid,
 	}
 
 	wpa_hexdump(MSG_DEBUG, "Unrecognized LLC", data, len > 8 ? 8 : len);
+}
+
+
+static u8 * try_all_ptk(struct wlantest *wt, int pairwise_cipher,
+			const struct ieee80211_hdr *hdr,
+			const u8 *data, size_t data_len, size_t *decrypted_len)
+{
+	struct wlantest_ptk *ptk;
+	u8 *decrypted;
+	int prev_level = wpa_debug_level;
+
+	wpa_debug_level = MSG_WARNING;
+	dl_list_for_each(ptk, &wt->ptk, struct wlantest_ptk, list) {
+		decrypted = NULL;
+		if ((pairwise_cipher == WPA_CIPHER_CCMP ||
+		     pairwise_cipher == 0) && ptk->ptk_len == 48) {
+			decrypted = ccmp_decrypt(ptk->ptk.tk1, hdr, data,
+						 data_len, decrypted_len);
+		}
+		if ((pairwise_cipher == WPA_CIPHER_TKIP ||
+		     pairwise_cipher == 0) && ptk->ptk_len == 64) {
+			decrypted = tkip_decrypt(ptk->ptk.tk1, hdr, data,
+						 data_len, decrypted_len);
+		}
+		if (decrypted) {
+			wpa_debug_level = prev_level;
+			add_note(wt, MSG_DEBUG, "Found PTK match from list of all known PTKs");
+			return decrypted;
+		}
+	}
+	wpa_debug_level = prev_level;
+
+	return NULL;
 }
 
 
@@ -204,6 +239,8 @@ static void rx_data_bss_prot(struct wlantest *wt,
 	u8 pn[6], *rsc;
 	struct wlantest_tdls *tdls = NULL, *found;
 	const u8 *tk = NULL;
+	int ptk_iter_done = 0;
+	int try_ptk_iter = 0;
 
 	if (hdr->addr1[0] & 0x01) {
 		rx_data_bss_prot_group(wt, hdr, qos, dst, src, data, len);
@@ -253,7 +290,9 @@ static void rx_data_bss_prot(struct wlantest *wt,
 	     (!sta->ptk_set && sta->pairwise_cipher != WPA_CIPHER_WEP40)) &&
 	    tk == NULL) {
 		add_note(wt, MSG_MSGDUMP, "No PTK known to decrypt the frame");
-		return;
+		if (dl_list_empty(&wt->ptk))
+			return;
+		try_ptk_iter = 1;
 	}
 
 	if (len < 4) {
@@ -337,8 +376,20 @@ skip_replay_det:
 		decrypted = tkip_decrypt(sta->ptk.tk1, hdr, data, len, &dlen);
 	else if (sta->pairwise_cipher == WPA_CIPHER_WEP40)
 		decrypted = wep_decrypt(wt, hdr, data, len, &dlen);
-	else
+	else if (sta->ptk_set)
 		decrypted = ccmp_decrypt(sta->ptk.tk1, hdr, data, len, &dlen);
+	else {
+		decrypted = try_all_ptk(wt, sta->pairwise_cipher, hdr, data,
+					len, &dlen);
+		ptk_iter_done = 1;
+	}
+	if (!decrypted && !ptk_iter_done) {
+		decrypted = try_all_ptk(wt, sta->pairwise_cipher, hdr, data,
+					len, &dlen);
+		if (decrypted) {
+			add_note(wt, MSG_DEBUG, "Current PTK did not work, but found a match from all known PTKs");
+		}
+	}
 	if (decrypted) {
 		u16 fc = le_to_host16(hdr->frame_control);
 		const u8 *peer_addr = NULL;
@@ -349,7 +400,7 @@ skip_replay_det:
 				dlen, 1, peer_addr);
 		write_pcap_decrypted(wt, (const u8 *) hdr, 24 + (qos ? 2 : 0),
 				     decrypted, dlen);
-	} else
+	} else if (!try_ptk_iter)
 		add_note(wt, MSG_DEBUG, "Failed to decrypt frame");
 	os_free(decrypted);
 }

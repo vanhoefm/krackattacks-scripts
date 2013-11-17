@@ -19,6 +19,8 @@
 #include "rsn_supp/wpa_ie.h"
 #include "wlantest.h"
 
+extern int wpa_debug_level;
+
 
 static int is_zero(const u8 *buf, size_t len)
 {
@@ -157,6 +159,33 @@ static void derive_ptk(struct wlantest *wt, struct wlantest_bss *bss,
 		if (try_pmk(wt, bss, sta, ver, data, len, pmk) == 0)
 			return;
 	}
+
+	if (!sta->ptk_set) {
+		struct wlantest_ptk *ptk;
+		int prev_level = wpa_debug_level;
+
+		wpa_debug_level = MSG_WARNING;
+		dl_list_for_each(ptk, &wt->ptk, struct wlantest_ptk, list) {
+			if (check_mic(ptk->ptk.kck, ver, data, len) < 0)
+				continue;
+			wpa_printf(MSG_INFO, "Pre-set PTK matches for STA "
+				   MACSTR " BSSID " MACSTR,
+				   MAC2STR(sta->addr), MAC2STR(bss->bssid));
+			add_note(wt, MSG_DEBUG, "Using pre-set PTK");
+			os_memcpy(&sta->ptk, &ptk->ptk, sizeof(ptk->ptk));
+			wpa_hexdump(MSG_DEBUG, "PTK:KCK", sta->ptk.kck, 16);
+			wpa_hexdump(MSG_DEBUG, "PTK:KEK", sta->ptk.kek, 16);
+			wpa_hexdump(MSG_DEBUG, "PTK:TK1", sta->ptk.tk1, 16);
+			if (ptk->ptk_len > 48)
+				wpa_hexdump(MSG_DEBUG, "PTK:TK2",
+					    sta->ptk.u.tk2, 16);
+			sta->ptk_set = 1;
+			os_memset(sta->rsc_tods, 0, sizeof(sta->rsc_tods));
+			os_memset(sta->rsc_fromds, 0, sizeof(sta->rsc_fromds));
+		}
+		wpa_debug_level = prev_level;
+	}
+
 	add_note(wt, MSG_DEBUG, "No matching PMK found to derive PTK");
 }
 

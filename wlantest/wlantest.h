@@ -38,6 +38,12 @@ struct wlantest_pmk {
 	u8 pmk[32];
 };
 
+struct wlantest_ptk {
+	struct dl_list list;
+	struct wpa_ptk ptk;
+	size_t ptk_len;
+};
+
 struct wlantest_wep {
 	struct dl_list list;
 	size_t key_len;
@@ -164,6 +170,7 @@ struct wlantest {
 	struct dl_list secret; /* struct wlantest_radius_secret */
 	struct dl_list radius; /* struct wlantest_radius */
 	struct dl_list pmk; /* struct wlantest_pmk */
+	struct dl_list ptk; /* struct wlantest_ptk */
 	struct dl_list wep; /* struct wlantest_wep */
 
 	unsigned int rx_mgmt;

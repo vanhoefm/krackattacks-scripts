@@ -437,7 +437,7 @@ static int test_vector_gcmp(void)
 }
 
 
-static void test_vector_gcmp_256(void)
+static int test_vector_gcmp_256(void)
 {
 	u8 tk[] = { 0xc9, 0x7c, 0x1f, 0x67, 0xce, 0x37, 0x11, 0x85,
 		    0x51, 0x4a, 0x8a, 0x19, 0xf2, 0xbd, 0xd5, 0x2f,
@@ -457,11 +457,26 @@ static void test_vector_gcmp_256(void)
 		0x1e, 0x1f, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25,
 		0x26, 0x27
 	};
+	u8 encr[] = {
+		0x88, 0x48, 0x0b, 0x00, 0x0f, 0xd2, 0xe1, 0x28,
+		0xa5, 0x7c, 0x50, 0x30, 0xf1, 0x84, 0x44, 0x08,
+		0x50, 0x30, 0xf1, 0x84, 0x44, 0x08, 0x80, 0x33,
+		0x03, 0x00, 0x08, 0x2b, 0x00, 0x20, 0x5f, 0x5f,
+		0x89, 0x00, 0x65, 0x83, 0x43, 0xc8, 0xb1, 0x44,
+		0x47, 0xd9, 0x21, 0x1d, 0xef, 0xd4, 0x6a, 0xd8,
+		0x9c, 0x71, 0x0c, 0x6f, 0xc3, 0x33, 0x33, 0x23,
+		0x6e, 0x39, 0x97, 0xb9, 0x17, 0x6a, 0x5a, 0x8b,
+		0xe7, 0x79, 0xb2, 0x12, 0x66, 0x55, 0x5e, 0x70,
+		0xad, 0x79, 0x11, 0x43, 0x16, 0x85, 0x90, 0x95,
+		0x47, 0x3d, 0x5b, 0x1b, 0xd5, 0x96, 0xb3, 0xde,
+		0xa3, 0xbf
+	};
 	u8 *enc, *plain;
 	size_t enc_len, plain_len;
 	u8 fcs[4];
+	int err = 0;
 
-	wpa_printf(MSG_INFO, "\nGCMP-256 test vector\n");
+	wpa_printf(MSG_INFO, "\nIEEE P802.11ac/D7.0, M.11.1 GCMP-256 test vector\n");
 
 	wpa_hexdump(MSG_INFO, "TK", tk, sizeof(tk));
 	wpa_hexdump(MSG_INFO, "PN", pn, sizeof(pn));
@@ -472,10 +487,14 @@ static void test_vector_gcmp_256(void)
 			   pn, 0, &enc_len);
 	if (enc == NULL) {
 		wpa_printf(MSG_ERROR, "Failed to encrypt GCMP frame");
-		return;
+		return 1;
 	}
 
 	wpa_hexdump(MSG_INFO, "Encrypted MPDU (without FCS)", enc, enc_len);
+	if (enc_len != sizeof(encr) || os_memcmp(enc, encr, enc_len) != 0) {
+		wpa_printf(MSG_ERROR, "GCMP-256 test vector mismatch");
+		err++;
+	}
 	WPA_PUT_LE32(fcs, crc32(enc, enc_len));
 	wpa_hexdump(MSG_INFO, "FCS", fcs, sizeof(fcs));
 
@@ -487,20 +506,23 @@ static void test_vector_gcmp_256(void)
 
 	if (plain == NULL) {
 		wpa_printf(MSG_ERROR, "Failed to decrypt GCMP frame");
-		return;
+		return 1;
 	}
 
 	if (plain_len != sizeof(frame) - 26 ||
 	    os_memcmp(plain, frame + 26, plain_len) != 0) {
 		wpa_hexdump(MSG_ERROR, "Decryption result did not match",
 			    plain, plain_len);
+		err++;
 	}
 
 	os_free(plain);
+
+	return err;
 }
 
 
-static void test_vector_ccmp_256(void)
+static int test_vector_ccmp_256(void)
 {
 	u8 tk[] = { 0xc9, 0x7c, 0x1f, 0x67, 0xce, 0x37, 0x11, 0x85,
 		    0x51, 0x4a, 0x8a, 0x19, 0xf2, 0xbd, 0xd5, 0x2f,
@@ -515,11 +537,24 @@ static void test_vector_ccmp_256(void)
 		0x96, 0x7b, 0xb6, 0x2f, 0xb6, 0xcd, 0xa8, 0xeb,
 		0x7e, 0x78, 0xa0, 0x50
 	};
+	u8 encr[] = {
+		0x08, 0x48, 0xc3, 0x2c, 0x0f, 0xd2, 0xe1, 0x28,
+		0xa5, 0x7c, 0x50, 0x30, 0xf1, 0x84, 0x44, 0x08,
+		0xab, 0xae, 0xa5, 0xb8, 0xfc, 0xba, 0x80, 0x33,
+		0x0c, 0xe7, 0x00, 0x20, 0x76, 0x97, 0x03, 0xb5,
+		0x6d, 0x15, 0x5d, 0x88, 0x32, 0x66, 0x82, 0x56,
+		0xd6, 0xa9, 0x2b, 0x78, 0xe1, 0x1d, 0x8e, 0x54,
+		0x49, 0x5d, 0xd1, 0x74, 0x80, 0xaa, 0x56, 0xc9,
+		0x49, 0x2e, 0x88, 0x2b, 0x97, 0x64, 0x2f, 0x80,
+		0xd5, 0x0f, 0xe9, 0x7b
+
+	};
 	u8 *enc, *plain;
 	size_t enc_len, plain_len;
 	u8 fcs[4];
+	int err = 0;
 
-	wpa_printf(MSG_INFO, "\nCCMP-256 test vector\n");
+	wpa_printf(MSG_INFO, "\nIEEE P802.11ac/D7.0, M.6.4 CCMP-256 test vector\n");
 
 	wpa_hexdump(MSG_INFO, "TK", tk, sizeof(tk));
 	wpa_hexdump(MSG_INFO, "PN", pn, sizeof(pn));
@@ -530,10 +565,14 @@ static void test_vector_ccmp_256(void)
 			       &enc_len);
 	if (enc == NULL) {
 		wpa_printf(MSG_ERROR, "Failed to encrypt CCMP frame");
-		return;
+		return 1;
 	}
 
 	wpa_hexdump(MSG_INFO, "Encrypted MPDU (without FCS)", enc, enc_len);
+	if (enc_len != sizeof(encr) || os_memcmp(enc, encr, enc_len) != 0) {
+		wpa_printf(MSG_ERROR, "CCMP-256 test vector mismatch");
+		err++;
+	}
 	WPA_PUT_LE32(fcs, crc32(enc, enc_len));
 	wpa_hexdump(MSG_INFO, "FCS", fcs, sizeof(fcs));
 
@@ -545,20 +584,23 @@ static void test_vector_ccmp_256(void)
 
 	if (plain == NULL) {
 		wpa_printf(MSG_ERROR, "Failed to decrypt CCMP-256 frame");
-		return;
+		return 1;
 	}
 
 	if (plain_len != sizeof(frame) - 24 ||
 	    os_memcmp(plain, frame + 24, plain_len) != 0) {
 		wpa_hexdump(MSG_ERROR, "Decryption result did not match",
 			    plain, plain_len);
+		err++;
 	}
 
 	os_free(plain);
+
+	return err;
 }
 
 
-static void test_vector_bip_gmac_128(void)
+static int test_vector_bip_gmac_128(void)
 {
 	u8 igtk[] = {
 		0x4e, 0xa9, 0x54, 0x3e, 0x09, 0xcf, 0x2b, 0x1e,
@@ -571,10 +613,20 @@ static void test_vector_bip_gmac_128(void)
 		0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00,
 		0x02, 0x00
 	};
+	u8 res[] = {
+		0xc0, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00,
+		0x02, 0x00, 0x4c, 0x18, 0x04, 0x00, 0x04, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x3e, 0xd8, 0x62, 0xfb,
+		0x0f, 0x33, 0x38, 0xdd, 0x33, 0x86, 0xc8, 0x97,
+		0xe2, 0xed, 0x05, 0x3d
+	};
 	u8 *prot;
 	size_t prot_len;
+	int err = 0;
 
-	wpa_printf(MSG_INFO, "\nBIP-GMAC-128 with broadcast "
+	wpa_printf(MSG_INFO, "\nIEEE P802.11ac/D7.0, M.9.1 BIP-GMAC-128 with broadcast "
 		   "Deauthentication frame\n");
 
 	wpa_hexdump(MSG_INFO, "IGTK", igtk, sizeof(igtk));
@@ -585,15 +637,21 @@ static void test_vector_bip_gmac_128(void)
 				ipn, 4, &prot_len);
 	if (prot == NULL) {
 		wpa_printf(MSG_ERROR, "Failed to protect BIP-GMAC-128 frame");
-		return;
+		return 1;
 	}
 
 	wpa_hexdump(MSG_INFO, "Protected MPDU (without FCS)", prot, prot_len);
+	if (prot_len != sizeof(res) || os_memcmp(res, prot, prot_len) != 0) {
+		wpa_printf(MSG_ERROR, "BIP-GMAC-128 test vector mismatch");
+		err++;
+	}
 	os_free(prot);
+
+	return err;
 }
 
 
-static void test_vector_bip_gmac_256(void)
+static int test_vector_bip_gmac_256(void)
 {
 	u8 igtk[] = {
 		0x4e, 0xa9, 0x54, 0x3e, 0x09, 0xcf, 0x2b, 0x1e,
@@ -608,11 +666,20 @@ static void test_vector_bip_gmac_256(void)
 		0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00,
 		0x02, 0x00
 	};
+	u8 res[] = {
+		0xc0, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00,
+		0x02, 0x00, 0x4c, 0x18, 0x04, 0x00, 0x04, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x23, 0xbe, 0x59, 0xdc,
+		0xc7, 0x02, 0x2e, 0xe3, 0x83, 0x62, 0x7e, 0xbb,
+		0x10, 0x17, 0xdd, 0xfc
+	};
 	u8 *prot;
 	size_t prot_len;
+	int err = 0;
 
-	wpa_printf(MSG_INFO, "\nBIP-GMAC-256 with broadcast "
-		   "Deauthentication frame\n");
+	wpa_printf(MSG_INFO, "\nIEEE P802.11ac/D7.0, M.9.1 BIP-GMAC-256 with broadcast Deauthentication frame\n");
 
 	wpa_hexdump(MSG_INFO, "IGTK", igtk, sizeof(igtk));
 	wpa_hexdump(MSG_INFO, "IPN", ipn, sizeof(ipn));
@@ -622,11 +689,17 @@ static void test_vector_bip_gmac_256(void)
 				ipn, 4, &prot_len);
 	if (prot == NULL) {
 		wpa_printf(MSG_ERROR, "Failed to protect BIP-GMAC-256 frame");
-		return;
+		return 1;
 	}
 
 	wpa_hexdump(MSG_INFO, "Protected MPDU (without FCS)", prot, prot_len);
+	if (prot_len != sizeof(res) || os_memcmp(res, prot, prot_len) != 0) {
+		wpa_printf(MSG_ERROR, "BIP-GMAC-128 test vector mismatch");
+		err++;
+	}
 	os_free(prot);
+
+	return err;
 }
 
 
@@ -645,10 +718,10 @@ int main(int argc, char *argv[])
 	test_vector_bip();
 	test_vector_ccmp_mgmt();
 	errors += test_vector_gcmp();
-	test_vector_gcmp_256();
-	test_vector_ccmp_256();
-	test_vector_bip_gmac_128();
-	test_vector_bip_gmac_256();
+	errors += test_vector_gcmp_256();
+	errors += test_vector_ccmp_256();
+	errors += test_vector_bip_gmac_128();
+	errors += test_vector_bip_gmac_256();
 
 	if (errors)
 		wpa_printf(MSG_INFO, "One or more test vectors failed");

@@ -334,6 +334,73 @@ fi.w1.wpa_supplicant1.CreateInterface.
 	</dl>
       </li>
       <li>
+	<h3>TDLSDiscover ( s : peer_address ) --> nothing</h3>
+	<p>Initiate a TDLS discovery for a peer.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>s : peer_address</dt>
+	  <dd>MAC address for the peer to perform TDLS discovery.</dd>
+	</dl>
+	<h4>Possible errors</h4>
+	<dl>
+	  <dt>fi.w1.wpa_supplicant1.InvalidArgs</dt>
+	  <dd>The "peer_address" argument is not a properly formatted MAC.</dd>
+	  <dt>fi.w1.wpa_supplicant1.UnknownError</dt>
+	  <dd>Initiating the TDLS operation failed for an unknown reason.</dd>
+	</dl>
+      </li>
+      <li>
+	<h3>TDLSSetup ( s : peer_address ) --> nothing</h3>
+	<p>Setup a TDLS session for a peer.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>s : peer_address</dt>
+	  <dd>MAC address for the peer to perform TDLS setup.</dd>
+	</dl>
+	<h4>Possible errors</h4>
+	<dl>
+	  <dt>fi.w1.wpa_supplicant1.InvalidArgs</dt>
+	  <dd>The "peer_address" argument is not a properly formatted MAC.</dd>
+	  <dt>fi.w1.wpa_supplicant1.UnknownError</dt>
+	  <dd>Initiating the TDLS operation failed for an unknown reason.</dd>
+	</dl>
+      </li>
+      <li>
+	<h3>TDLSStatus ( s : peer_address ) --> s</h3>
+	<p>Return TDLS status with respect to a peer.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>s : peer_address</dt>
+	  <dd>MAC address for the peer for which status is requested.</dd>
+	</dl>
+	<h4>Returns</h4>
+	<dl>
+	  <dt>s : status</dt>
+	  <dd>Current status of the TDLS link with the selected peer.</dd>
+	</dl>
+	<h4>Possible errors</h4>
+	<dl>
+	  <dt>fi.w1.wpa_supplicant1.InvalidArgs</dt>
+	  <dd>The "peer_address" argument is not a properly formatted MAC.</dd>
+	</dl>
+      </li>
+      <li>
+	<h3>TDLSTeardown ( s : peer_address ) --> nothing</h3>
+	<p>Tear down a TDLS session with a peer.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>s : peer_address</dt>
+	  <dd>MAC address for the peer to tear down TDLS connectivity with.</dd>
+	</dl>
+	<h4>Possible errors</h4>
+	<dl>
+	  <dt>fi.w1.wpa_supplicant1.InvalidArgs</dt>
+	  <dd>The "peer_address" argument is not a properly formatted MAC.</dd>
+	  <dt>fi.w1.wpa_supplicant1.UnknownError</dt>
+	  <dd>Initiating the TDLS operation failed for an unknown reason.</dd>
+	</dl>
+      </li>
+      <li>
 	<h3>EAPLogoff ( ) --> nothing</h3>
 	<p>IEEE 802.1X EAPOL state machine logoff.</p>
       </li>

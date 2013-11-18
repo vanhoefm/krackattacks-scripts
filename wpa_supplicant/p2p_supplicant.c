@@ -4175,8 +4175,11 @@ static int wpas_p2p_setup_freqs(struct wpa_supplicant *wpa_s, int freq,
 	}
 
 	if (i == num) {
-		if (num < wpa_s->num_multichan_concurrent) {
+		if (num < wpa_s->num_multichan_concurrent && num > 0) {
 			wpa_printf(MSG_DEBUG, "P2P: Current operating channels are not available for P2P. Try to use another channel");
+			*force_freq = 0;
+		} else if (num < wpa_s->num_multichan_concurrent) {
+			wpa_printf(MSG_DEBUG, "P2P: No current operating channels - try to use a new channel");
 			*force_freq = 0;
 		} else {
 			wpa_printf(MSG_DEBUG, "P2P: All channels are in use and none of them are P2P enabled. Cannot start P2P group");

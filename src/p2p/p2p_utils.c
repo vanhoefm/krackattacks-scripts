@@ -439,3 +439,36 @@ void p2p_channels_dump(struct p2p_data *p2p, const char *title,
 
 	p2p_dbg(p2p, "%s:%s", title, buf);
 }
+
+
+int p2p_channel_select(struct p2p_channels *chans, const int *classes,
+		       u8 *op_class, u8 *op_channel)
+{
+	unsigned int i, j, r;
+
+	for (i = 0; i < chans->reg_classes; i++) {
+		struct p2p_reg_class *c = &chans->reg_class[i];
+
+		if (c->channels == 0)
+			continue;
+
+		for (j = 0; classes[j]; j++) {
+			if (c->reg_class == classes[j])
+				break;
+		}
+		if (!classes[j])
+			continue;
+
+		/*
+		 * Pick one of the available channels in the operating class at
+		 * random.
+		 */
+		os_get_random((u8 *) &r, sizeof(r));
+		r %= c->channels;
+		*op_class = c->reg_class;
+		*op_channel = c->channel[r];
+		return 0;
+	}
+
+	return -1;
+}

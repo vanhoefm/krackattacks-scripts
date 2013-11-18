@@ -348,6 +348,7 @@ void p2p_reselect_channel(struct p2p_data *p2p,
 	int freq;
 	u8 op_reg_class, op_channel;
 	unsigned int i;
+	const int op_classes_5ghz[] = { 115, 124, 0 };
 
 	if (p2p->own_freq_preference > 0 &&
 	    p2p_freq_to_channel(p2p->own_freq_preference,
@@ -438,24 +439,11 @@ void p2p_reselect_channel(struct p2p_data *p2p,
 	}
 
 	/* Prefer a 5 GHz channel */
-	for (i = 0; i < intersection->reg_classes; i++) {
-		struct p2p_reg_class *c = &intersection->reg_class[i];
-		if ((c->reg_class == 115 || c->reg_class == 124) &&
-		    c->channels) {
-			unsigned int r;
-
-			/*
-			 * Pick one of the available channels in the operating
-			 * class at random.
-			 */
-			os_get_random((u8 *) &r, sizeof(r));
-			r %= c->channels;
-			p2p_dbg(p2p, "Pick possible 5 GHz channel (op_class %u channel %u) from intersection",
-				c->reg_class, c->channel[r]);
-			p2p->op_reg_class = c->reg_class;
-			p2p->op_channel = c->channel[r];
-			return;
-		}
+	if (p2p_channel_select(intersection, op_classes_5ghz,
+			       &p2p->op_reg_class, &p2p->op_channel) == 0) {
+		p2p_dbg(p2p, "Pick possible 5 GHz channel (op_class %u channel %u) from intersection",
+			p2p->op_reg_class, p2p->op_channel);
+		return;
 	}
 
 	/*

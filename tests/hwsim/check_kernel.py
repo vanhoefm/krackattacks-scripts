@@ -13,7 +13,16 @@ Tests for kernel messages to find if there were any issues in them.
 
 import re
 
-issue = re.compile('(\[[0-9 .]*\] )?(WARNING:|BUG:).*')
+lockdep_messages = [
+  'possible circular locking dependency',
+  '.*-safe -> .*unsafe lock order detected',
+  'possible recursive locking detected',
+  'inconsistent lock state',
+  'possible irq lock inversion dependency',
+  'suspicious RCU usage',
+]
+lockdep = r'(\[\s*)?INFO: (%s)' % ('|'.join(lockdep_messages), )
+issue = re.compile('(\[[0-9 .]*\] )?(WARNING:|BUG:|%s).*' % lockdep)
 
 def check_kernel(logfile):
     for line in open(logfile, 'r'):

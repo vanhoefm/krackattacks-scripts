@@ -350,6 +350,7 @@ void p2p_reselect_channel(struct p2p_data *p2p,
 	unsigned int i;
 	const int op_classes_5ghz[] = { 115, 124, 0 };
 	const int op_classes_ht40[] = { 116, 117, 126, 127, 0 };
+	const int op_classes_vht[] = { 128, 0 };
 
 	if (p2p->own_freq_preference > 0 &&
 	    p2p_freq_to_channel(p2p->own_freq_preference,
@@ -415,15 +416,11 @@ void p2p_reselect_channel(struct p2p_data *p2p,
 	}
 
 	/* Try a channel where we might be able to use VHT */
-	for (i = 0; i < intersection->reg_classes; i++) {
-		struct p2p_reg_class *c = &intersection->reg_class[i];
-		if (c->reg_class == 128) {
-			p2p_dbg(p2p, "Pick possible VHT channel (reg_class %u channel %u) from intersection",
-				c->reg_class, c->channel[0]);
-			p2p->op_reg_class = c->reg_class;
-			p2p->op_channel = c->channel[0];
-			return;
-		}
+	if (p2p_channel_select(intersection, op_classes_vht,
+			       &p2p->op_reg_class, &p2p->op_channel) == 0) {
+		p2p_dbg(p2p, "Pick possible VHT channel (op_class %u channel %u) from intersection",
+			p2p->op_reg_class, p2p->op_channel);
+		return;
 	}
 
 	/* Try a channel where we might be able to use HT40 */

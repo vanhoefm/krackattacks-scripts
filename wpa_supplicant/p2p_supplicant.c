@@ -5285,6 +5285,7 @@ int wpas_p2p_invite(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 	u8 *bssid = NULL;
 	int force_freq = 0;
 	int res;
+	int no_pref_freq_given = pref_freq == 0;
 
 	wpa_s->global->p2p_invite_group = NULL;
 	if (peer_addr)
@@ -5330,6 +5331,15 @@ int wpas_p2p_invite(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
 		return -1;
+
+	if (wpa_s->parent->conf->p2p_ignore_shared_freq &&
+	    no_pref_freq_given && pref_freq > 0 &&
+	    wpa_s->num_multichan_concurrent > 1 &&
+	    wpas_p2p_num_unused_channels(wpa_s) > 0) {
+		wpa_printf(MSG_DEBUG, "P2P: Ignore own channel preference %d MHz for invitation due to p2p_ignore_shared_freq=1 configuration",
+			   pref_freq);
+		pref_freq = 0;
+	}
 
 	return p2p_invite(wpa_s->global->p2p, peer_addr, role, bssid,
 			  ssid->ssid, ssid->ssid_len, force_freq, go_dev_addr,

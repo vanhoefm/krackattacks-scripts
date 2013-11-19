@@ -179,8 +179,11 @@ static void wpas_p2p_set_own_freq_preference(struct wpa_supplicant *wpa_s,
 		return;
 	if (freq > 0 && wpa_s->num_multichan_concurrent > 1 &&
 	    wpas_p2p_num_unused_channels(wpa_s) > 0 &&
-	    wpa_s->parent->conf->p2p_ignore_shared_freq)
+	    wpa_s->parent->conf->p2p_ignore_shared_freq) {
+		wpa_printf(MSG_DEBUG, "P2P: Ignore own channel preference %d MHz due to p2p_ignore_shared_freq=1 configuration",
+			   freq);
 		freq = 0;
+	}
 	p2p_set_own_freq_preference(wpa_s->global->p2p, freq);
 }
 
@@ -2688,9 +2691,14 @@ accept_inv:
 
 	/* Get one of the frequencies currently in use */
 	if (wpas_p2p_valid_oper_freqs(wpa_s, &res, 1) > 0) {
-		wpa_printf(MSG_DEBUG, "P2P: Trying to force channel to match a channel already used by one of the interfaces");
-		*force_freq = res;
+		wpa_printf(MSG_DEBUG, "P2P: Trying to prefer a channel already used by one of the interfaces");
 		wpas_p2p_set_own_freq_preference(wpa_s, res);
+
+		if (wpa_s->num_multichan_concurrent < 2 ||
+		    wpas_p2p_num_unused_channels(wpa_s) < 1) {
+			wpa_printf(MSG_DEBUG, "P2P: No extra channels available - trying to force channel to match a channel already used by one of the interfaces");
+			*force_freq = res;
+		}
 	}
 
 	if (*force_freq > 0 && wpa_s->num_multichan_concurrent > 1 &&

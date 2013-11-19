@@ -243,6 +243,13 @@ static int hostapd_broadcast_wep_set(struct hostapd_data *hapd)
 
 static void hostapd_free_hapd_data(struct hostapd_data *hapd)
 {
+	if (!hapd->started) {
+		wpa_printf(MSG_ERROR, "%s: Interface %s wasn't started",
+			   __func__, hapd->conf->iface);
+		return;
+	}
+	hapd->started = 0;
+
 	wpa_printf(MSG_DEBUG, "%s(%s)", __func__, hapd->conf->iface);
 	iapp_deinit(hapd->iapp);
 	hapd->iapp = NULL;
@@ -306,7 +313,6 @@ static void hostapd_cleanup(struct hostapd_data *hapd)
 	    hapd->iface->interfaces->ctrl_iface_deinit)
 		hapd->iface->interfaces->ctrl_iface_deinit(hapd);
 	hostapd_free_hapd_data(hapd);
-	hapd->started = 0;
 }
 
 

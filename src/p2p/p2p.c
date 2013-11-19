@@ -1180,8 +1180,8 @@ static int p2p_prepare_channel_pref(struct p2p_data *p2p,
 static void p2p_prepare_channel_best(struct p2p_data *p2p)
 {
 	u8 op_class, op_channel;
-	const int op_classes_5ghz[] = { 115, 124, 0 };
-	const int op_classes_ht40[] = { 116, 117, 126, 127, 0 };
+	const int op_classes_5ghz[] = { 124, 115, 0 };
+	const int op_classes_ht40[] = { 126, 127, 116, 117, 0 };
 	const int op_classes_vht[] = { 128, 0 };
 
 	p2p_dbg(p2p, "Prepare channel best");

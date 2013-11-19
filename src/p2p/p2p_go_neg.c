@@ -348,8 +348,8 @@ void p2p_reselect_channel(struct p2p_data *p2p,
 	int freq;
 	u8 op_reg_class, op_channel;
 	unsigned int i;
-	const int op_classes_5ghz[] = { 115, 124, 0 };
-	const int op_classes_ht40[] = { 116, 117, 126, 127, 0 };
+	const int op_classes_5ghz[] = { 124, 115, 0 };
+	const int op_classes_ht40[] = { 126, 127, 116, 117, 0 };
 	const int op_classes_vht[] = { 128, 0 };
 
 	if (p2p->own_freq_preference > 0 &&

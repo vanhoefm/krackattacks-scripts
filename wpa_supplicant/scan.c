@@ -884,7 +884,7 @@ scan:
 
 void wpa_supplicant_update_scan_int(struct wpa_supplicant *wpa_s, int sec)
 {
-	struct os_time remaining, new_int;
+	struct os_reltime remaining, new_int;
 	int cancelled;
 
 	cancelled = eloop_cancel_timeout_one(wpa_supplicant_scan, wpa_s, NULL,
@@ -892,7 +892,7 @@ void wpa_supplicant_update_scan_int(struct wpa_supplicant *wpa_s, int sec)
 
 	new_int.sec = sec;
 	new_int.usec = 0;
-	if (cancelled && os_time_before(&remaining, &new_int)) {
+	if (cancelled && os_reltime_before(&remaining, &new_int)) {
 		new_int.sec = remaining.sec;
 		new_int.usec = remaining.usec;
 	}

@@ -23,6 +23,11 @@ struct os_time {
 	os_time_t usec;
 };
 
+struct os_reltime {
+	os_time_t sec;
+	os_time_t usec;
+};
+
 /**
  * os_get_time - Get current time (sec, usec)
  * @t: Pointer to buffer for the time
@@ -30,21 +35,56 @@ struct os_time {
  */
 int os_get_time(struct os_time *t);
 
+/**
+ * os_get_reltime - Get relative time (sec, usec)
+ * @t: Pointer to buffer for the time
+ * Returns: 0 on success, -1 on failure
+ */
+int os_get_reltime(struct os_reltime *t);
 
-/* Helper macros for handling struct os_time */
 
-#define os_time_before(a, b) \
-	((a)->sec < (b)->sec || \
-	 ((a)->sec == (b)->sec && (a)->usec < (b)->usec))
+/* Helpers for handling struct os_time */
 
-#define os_time_sub(a, b, res) do { \
-	(res)->sec = (a)->sec - (b)->sec; \
-	(res)->usec = (a)->usec - (b)->usec; \
-	if ((res)->usec < 0) { \
-		(res)->sec--; \
-		(res)->usec += 1000000; \
-	} \
-} while (0)
+static inline int os_time_before(struct os_time *a, struct os_time *b)
+{
+	return (a->sec < b->sec) ||
+	       (a->sec == b->sec && a->usec < b->usec);
+}
+
+
+static inline void os_time_sub(struct os_time *a, struct os_time *b,
+			       struct os_time *res)
+{
+	res->sec = a->sec - b->sec;
+	res->usec = a->usec - b->usec;
+	if (res->usec < 0) {
+		res->sec--;
+		res->usec += 1000000;
+	}
+}
+
+
+/* Helpers for handling struct os_reltime */
+
+static inline int os_reltime_before(struct os_reltime *a,
+				    struct os_reltime *b)
+{
+	return (a->sec < b->sec) ||
+	       (a->sec == b->sec && a->usec < b->usec);
+}
+
+
+static inline void os_reltime_sub(struct os_reltime *a, struct os_reltime *b,
+				  struct os_reltime *res)
+{
+	res->sec = a->sec - b->sec;
+	res->usec = a->usec - b->usec;
+	if (res->usec < 0) {
+		res->sec--;
+		res->usec += 1000000;
+	}
+}
+
 
 /**
  * os_mktime - Convert broken-down time into seconds since 1970-01-01

@@ -84,6 +84,14 @@ CONFIG_ELOOP=eloop
 endif
 OBJS += ../src/utils/$(CONFIG_ELOOP).o
 OBJS_c += ../src/utils/$(CONFIG_ELOOP).o
+
+ifeq ($(CONFIG_ELOOP), eloop)
+# Using glibc < 2.17 requires -lrt for clock_gettime()
+LIBS += -lrt
+LIBS_c += -lrt
+LIBS_h += -lrt
+endif
+
 OBJS += ../src/utils/common.o
 OBJS += ../src/utils/wpa_debug.o
 OBJS_c += ../src/utils/wpa_debug.o

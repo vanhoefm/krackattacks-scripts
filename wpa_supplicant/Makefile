@@ -113,6 +113,13 @@ endif
 OBJS += ../src/utils/$(CONFIG_ELOOP).o
 OBJS_c += ../src/utils/$(CONFIG_ELOOP).o
 
+ifeq ($(CONFIG_ELOOP), eloop)
+# Using glibc < 2.17 requires -lrt for clock_gettime()
+LIBS += -lrt
+LIBS_c += -lrt
+LIBS_p += -lrt
+endif
+
 ifdef CONFIG_ELOOP_POLL
 CFLAGS += -DCONFIG_ELOOP_POLL
 endif

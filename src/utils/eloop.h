@@ -207,7 +207,7 @@ int eloop_cancel_timeout(eloop_timeout_handler handler,
  */
 int eloop_cancel_timeout_one(eloop_timeout_handler handler,
 			     void *eloop_data, void *user_data,
-			     struct os_time *remaining);
+			     struct os_reltime *remaining);
 
 /**
  * eloop_is_timeout_registered - Check if a timeout is already registered

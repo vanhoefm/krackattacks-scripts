@@ -41,6 +41,17 @@ int os_get_time(struct os_time *t)
 }
 
 
+int os_get_reltime(struct os_reltime *t)
+{
+	int res;
+	struct timeval tv;
+	res = gettimeofday(&tv, NULL);
+	t->sec = tv.tv_sec;
+	t->usec = tv.tv_usec;
+	return res;
+}
+
+
 int os_mktime(int year, int month, int day, int hour, int min, int sec,
 	      os_time_t *t)
 {

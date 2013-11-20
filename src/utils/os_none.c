@@ -26,6 +26,12 @@ int os_get_time(struct os_time *t)
 }
 
 
+int os_get_reltime(struct os_reltime *t)
+{
+	return -1;
+}
+
+
 int os_mktime(int year, int month, int day, int hour, int min, int sec,
 	      os_time_t *t)
 {

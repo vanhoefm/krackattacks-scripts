@@ -31,7 +31,7 @@ struct eloop_event {
 
 struct eloop_timeout {
 	struct dl_list list;
-	struct os_time time;
+	struct os_reltime time;
 	void *eloop_data;
 	void *user_data;
 	eloop_timeout_handler handler;
@@ -244,7 +244,7 @@ int eloop_register_timeout(unsigned int secs, unsigned int usecs,
 	timeout = os_zalloc(sizeof(*timeout));
 	if (timeout == NULL)
 		return -1;
-	if (os_get_time(&timeout->time) < 0) {
+	if (os_get_reltime(&timeout->time) < 0) {
 		os_free(timeout);
 		return -1;
 	}
@@ -271,7 +271,7 @@ int eloop_register_timeout(unsigned int secs, unsigned int usecs,
 
 	/* Maintain timeouts in order of increasing time */
 	dl_list_for_each(tmp, &eloop.timeout, struct eloop_timeout, list) {
-		if (os_time_before(&timeout->time, &tmp->time)) {
+		if (os_reltime_before(&timeout->time, &tmp->time)) {
 			dl_list_add(tmp->list.prev, &timeout->list);
 			return 0;
 		}
@@ -313,13 +313,13 @@ int eloop_cancel_timeout(eloop_timeout_handler handler,
 
 int eloop_cancel_timeout_one(eloop_timeout_handler handler,
 			     void *eloop_data, void *user_data,
-			     struct os_time *remaining)
+			     struct os_reltime *remaining)
 {
 	struct eloop_timeout *timeout, *prev;
 	int removed = 0;
-	struct os_time now;
+	struct os_reltime now;
 
-	os_get_time(&now);
+	os_get_reltime(&now);
 	remaining->sec = remaining->usec = 0;
 
 	dl_list_for_each_safe(timeout, prev, &eloop.timeout,
@@ -328,8 +328,8 @@ int eloop_cancel_timeout_one(eloop_timeout_handler handler,
 		    (timeout->eloop_data == eloop_data) &&
 		    (timeout->user_data == user_data)) {
 			removed = 1;
-			if (os_time_before(&now, &timeout->time))
-				os_time_sub(&timeout->time, &now, remaining);
+			if (os_reltime_before(&now, &timeout->time))
+				os_reltime_sub(&timeout->time, &now, remaining);
 			eloop_remove_timeout(timeout);
 			break;
 		}
@@ -358,7 +358,7 @@ int eloop_deplete_timeout(unsigned int req_secs, unsigned int req_usecs,
 			  eloop_timeout_handler handler, void *eloop_data,
 			  void *user_data)
 {
-	struct os_time now, requested, remaining;
+	struct os_reltime now, requested, remaining;
 	struct eloop_timeout *tmp;
 
 	dl_list_for_each(tmp, &eloop.timeout, struct eloop_timeout, list) {
@@ -367,9 +367,9 @@ int eloop_deplete_timeout(unsigned int req_secs, unsigned int req_usecs,
 		    tmp->user_data == user_data) {
 			requested.sec = req_secs;
 			requested.usec = req_usecs;
-			os_get_time(&now);
-			os_time_sub(&tmp->time, &now, &remaining);
-			if (os_time_before(&requested, &remaining)) {
+			os_get_reltime(&now);
+			os_reltime_sub(&tmp->time, &now, &remaining);
+			if (os_reltime_before(&requested, &remaining)) {
 				eloop_cancel_timeout(handler, eloop_data,
 						     user_data);
 				eloop_register_timeout(requested.sec,
@@ -389,7 +389,7 @@ int eloop_replenish_timeout(unsigned int req_secs, unsigned int req_usecs,
 			    eloop_timeout_handler handler, void *eloop_data,
 			    void *user_data)
 {
-	struct os_time now, requested, remaining;
+	struct os_reltime now, requested, remaining;
 	struct eloop_timeout *tmp;
 
 	dl_list_for_each(tmp, &eloop.timeout, struct eloop_timeout, list) {
@@ -398,9 +398,9 @@ int eloop_replenish_timeout(unsigned int req_secs, unsigned int req_usecs,
 		    tmp->user_data == user_data) {
 			requested.sec = req_secs;
 			requested.usec = req_usecs;
-			os_get_time(&now);
-			os_time_sub(&tmp->time, &now, &remaining);
-			if (os_time_before(&remaining, &requested)) {
+			os_get_reltime(&now);
+			os_reltime_sub(&tmp->time, &now, &remaining);
+			if (os_reltime_before(&remaining, &requested)) {
 				eloop_cancel_timeout(handler, eloop_data,
 						     user_data);
 				eloop_register_timeout(requested.sec,
@@ -530,7 +530,7 @@ int eloop_register_signal_reconfig(eloop_signal_handler handler,
 
 void eloop_run(void)
 {
-	struct os_time tv, now;
+	struct os_reltime tv, now;
 	DWORD count, ret, timeout_val, err;
 	size_t i;
 
@@ -542,9 +542,9 @@ void eloop_run(void)
 		timeout = dl_list_first(&eloop.timeout, struct eloop_timeout,
 					list);
 		if (timeout) {
-			os_get_time(&now);
-			if (os_time_before(&now, &timeout->time))
-				os_time_sub(&timeout->time, &now, &tv);
+			os_get_reltime(&now);
+			if (os_reltime_before(&now, &timeout->time))
+				os_reltime_sub(&timeout->time, &now, &tv);
 		}
 
 		count = 0;
@@ -583,8 +583,8 @@ void eloop_run(void)
 		timeout = dl_list_first(&eloop.timeout, struct eloop_timeout,
 					list);
 		if (timeout) {
-			os_get_time(&now);
-			if (!os_time_before(&now, &timeout->time)) {
+			os_get_reltime(&now);
+			if (!os_reltime_before(&now, &timeout->time)) {
 				void *eloop_data = timeout->eloop_data;
 				void *user_data = timeout->user_data;
 				eloop_timeout_handler handler =

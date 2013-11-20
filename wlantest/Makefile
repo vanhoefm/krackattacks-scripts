@@ -19,6 +19,8 @@ CFLAGS += -I.
 CFLAGS += -I../src
 CFLAGS += -I../src/utils
 
+# glibc < 2.17 needs -lrt for clock_gettime()
+LIBS += -lrt
 
 ifndef LDO
 LDO=$(CC)
@@ -112,7 +114,7 @@ wlantest: $(OBJS) $(LIBWLANTEST)
 	$(LDO) $(LDFLAGS) -o wlantest $(OBJS) -L. -lwlantest $(LIBS)
 
 wlantest_cli: $(OBJS_cli) $(LIBWLANTEST)
-	$(LDO) $(LDFLAGS) -o wlantest_cli $(OBJS_cli) -L. -lwlantest
+	$(LDO) $(LDFLAGS) -o wlantest_cli $(OBJS_cli) -L. -lwlantest $(LIBS)
 
 test_vectors: $(TOBJS) $(LIBWLANTEST)
 	$(LDO) $(LDFLAGS) -o test_vectors $(TOBJS) -L. -lwlantest $(LIBS)

@@ -47,6 +47,17 @@ int os_get_time(struct os_time *t)
 }
 
 
+int os_get_reltime(struct os_reltime *t)
+{
+	/* consider using performance counters or so instead */
+	struct os_time now;
+	int res = os_get_time(&now);
+	t->sec = now.sec;
+	t->usec = now.usec;
+	return res;
+}
+
+
 int os_mktime(int year, int month, int day, int hour, int min, int sec,
 	      os_time_t *t)
 {

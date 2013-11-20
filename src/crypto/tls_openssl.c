@@ -3060,7 +3060,6 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 {
 	int ret;
 	unsigned long err;
-	SSL_CTX *ssl_ctx = tls_ctx;
 
 	if (conn == NULL)
 		return -1;
@@ -3133,6 +3132,7 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 
 #ifdef HAVE_OCSP
 	if (params->flags & TLS_CONN_REQUEST_OCSP) {
+		SSL_CTX *ssl_ctx = tls_ctx;
 		SSL_set_tlsext_status_type(conn->ssl, TLSEXT_STATUSTYPE_ocsp);
 		SSL_CTX_set_tlsext_status_cb(ssl_ctx, ocsp_resp_cb);
 		SSL_CTX_set_tlsext_status_arg(ssl_ctx, conn);

@@ -3028,12 +3028,15 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		if (data->rx_action.category == WLAN_ACTION_QOS &&
 		    data->rx_action.len >= 1 &&
 		    data->rx_action.data[0] == QOS_QOS_MAP_CONFIG) {
+			const u8 *pos = data->rx_action.data + 1;
+			size_t len = data->rx_action.len - 1;
 			wpa_dbg(wpa_s, MSG_DEBUG, "Interworking: Received QoS Map Configure frame from "
 				MACSTR, MAC2STR(data->rx_action.sa));
-			if (os_memcmp(data->rx_action.sa, wpa_s->bssid, ETH_ALEN)
-			    == 0)
-				wpas_qos_map_set(wpa_s, data->rx_action.data + 1,
-						 data->rx_action.len - 1);
+			if (os_memcmp(data->rx_action.sa, wpa_s->bssid,
+				      ETH_ALEN) == 0 &&
+			    len > 2 && pos[0] == WLAN_EID_QOS_MAP_SET &&
+			    pos[1] <= len - 2 && pos[1] >= 16)
+				wpas_qos_map_set(wpa_s, pos + 2, pos[1]);
 			break;
 		}
 #endif /* CONFIG_INTERWORKING */

@@ -44,7 +44,9 @@ struct hapd_interfaces {
 	int global_ctrl_sock;
 	char *global_iface_path;
 	char *global_iface_name;
+#ifndef CONFIG_NATIVE_WINDOWS
 	gid_t ctrl_iface_group;
+#endif /* CONFIG_NATIVE_WINDOWS */
 	struct hostapd_iface **iface;
 	struct hostapd_dynamic_iface **dynamic_iface;
 

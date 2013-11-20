@@ -1052,6 +1052,8 @@ static void wpas_wps_reassoc(struct wpa_supplicant *wpa_s,
 	wpa_s->normal_scans = 0;
 	wpa_s->wps_success = 0;
 	wpa_s->blacklist_cleared = 0;
+
+	wpa_supplicant_cancel_sched_scan(wpa_s);
 	wpa_supplicant_req_scan(wpa_s, 0, 0);
 }
 

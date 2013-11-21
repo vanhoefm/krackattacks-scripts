@@ -53,6 +53,8 @@ def check_result(go, cli):
     ev = go.wait_global_event(["P2P-GROUP-STARTED"], timeout=30)
     if ev is None:
         raise Exception("Timeout on group re-invocation (on GO)")
+    if "[PERSISTENT]" not in ev:
+        raise Exception("Re-invoked group not marked persistent")
     go_res = go.group_form_result(ev)
     if go_res['role'] != 'GO':
         raise Exception("Persistent group GO did not become GO")
@@ -61,6 +63,8 @@ def check_result(go, cli):
     ev = cli.wait_global_event(["P2P-GROUP-STARTED"], timeout=30)
     if ev is None:
         raise Exception("Timeout on group re-invocation (on client)")
+    if "[PERSISTENT]" not in ev:
+        raise Exception("Re-invoked group not marked persistent")
     cli_res = cli.group_form_result(ev)
     if cli_res['role'] != 'client':
         raise Exception("Persistent group client did not become client")
@@ -263,3 +267,15 @@ def test_persistent_group_channel(dev):
     if go_res['freq'] != "2417":
         raise Exception("Persistent group client channel preference not followed")
     terminate_group(dev[0], dev[1])
+
+def test_persistent_group_and_role_change(dev):
+    """P2P persistent group, auto GO in another role, and re-invocation"""
+    form(dev[0], dev[1])
+
+    logger.info("Start and stop autonomous GO on previous P2P client device")
+    dev[1].p2p_start_go()
+    dev[1].remove_group()
+    dev[1].dump_monitor()
+
+    logger.info("Re-invoke the persistent group")
+    invite_from_go(dev[0], dev[1])

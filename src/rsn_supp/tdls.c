@@ -1839,7 +1839,7 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 	int ielen;
 	u16 status;
 	const u8 *pos;
-	int ret;
+	int ret = 0;
 
 	wpa_printf(MSG_DEBUG, "TDLS: Received TDLS Setup Response / TPK M2 "
 		   "(Peer " MACSTR ")", MAC2STR(src_addr));
@@ -2056,11 +2056,19 @@ skip_rsn:
 		return -1;
 	}
 
-	ret = wpa_tdls_enable_link(sm, peer);
-	if (ret < 0) {
-		wpa_printf(MSG_DEBUG, "TDLS: Could not enable link");
-		wpa_tdls_do_teardown(sm, peer,
-				     WLAN_REASON_TDLS_TEARDOWN_UNSPECIFIED);
+	if (!peer->tpk_success) {
+		/*
+		 * Enable Link only when tpk_success is 0, signifying that this
+		 * processing of TPK M2 frame is not because of a retransmission
+		 * during TDLS setup handshake.
+		 */
+		ret = wpa_tdls_enable_link(sm, peer);
+		if (ret < 0) {
+			wpa_printf(MSG_DEBUG, "TDLS: Could not enable link");
+			wpa_tdls_do_teardown(
+				sm, peer,
+				WLAN_REASON_TDLS_TEARDOWN_UNSPECIFIED);
+		}
 	}
 	return ret;
 
@@ -2084,7 +2092,7 @@ static int wpa_tdls_process_tpk_m3(struct wpa_sm *sm, const u8 *src_addr,
 	u16 status;
 	const u8 *pos;
 	u32 lifetime;
-	int ret;
+	int ret = 0;
 
 	wpa_printf(MSG_DEBUG, "TDLS: Received TDLS Setup Confirm / TPK M3 "
 		   "(Peer " MACSTR ")", MAC2STR(src_addr));
@@ -2201,11 +2209,19 @@ static int wpa_tdls_process_tpk_m3(struct wpa_sm *sm, const u8 *src_addr,
 	}
 
 skip_rsn:
-	ret = wpa_tdls_enable_link(sm, peer);
-	if (ret < 0) {
-		wpa_printf(MSG_DEBUG, "TDLS: Could not enable link");
-		wpa_tdls_do_teardown(sm, peer,
-				     WLAN_REASON_TDLS_TEARDOWN_UNSPECIFIED);
+	if (!peer->tpk_success) {
+		/*
+		 * Enable Link only when tpk_success is 0, signifying that this
+		 * processing of TPK M3 frame is not because of a retransmission
+		 * during TDLS setup handshake.
+		 */
+		ret = wpa_tdls_enable_link(sm, peer);
+		if (ret < 0) {
+			wpa_printf(MSG_DEBUG, "TDLS: Could not enable link");
+			wpa_tdls_do_teardown(
+				sm, peer,
+				WLAN_REASON_TDLS_TEARDOWN_UNSPECIFIED);
+		}
 	}
 	return ret;
 error:
@@ -2306,7 +2322,7 @@ void wpa_tdls_remove(struct wpa_sm *sm, const u8 *addr)
 		 * Disable previous link to allow renegotiation to be completed
 		 * on AP path.
 		 */
-		wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK, peer->addr);
+		wpa_tdls_disable_peer_link(sm, peer);
 	}
 }
 

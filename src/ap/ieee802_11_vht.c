@@ -35,7 +35,7 @@ u8 * hostapd_eid_vht_capabilities(struct hostapd_data *hapd, u8 *eid)
 	cap = (struct ieee80211_vht_capabilities *) pos;
 	os_memset(cap, 0, sizeof(*cap));
 	cap->vht_capabilities_info = host_to_le32(
-		hapd->iface->current_mode->vht_capab);
+		hapd->iface->conf->vht_capab);
 
 	/* Supported MCS set comes from hw */
 	os_memcpy(&cap->vht_supported_mcs_set,

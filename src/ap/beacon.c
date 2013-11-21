@@ -878,8 +878,10 @@ fail:
 void ieee802_11_set_beacons(struct hostapd_iface *iface)
 {
 	size_t i;
-	for (i = 0; i < iface->num_bss; i++)
-		ieee802_11_set_beacon(iface->bss[i]);
+	for (i = 0; i < iface->num_bss; i++) {
+		if (iface->bss[i]->started)
+			ieee802_11_set_beacon(iface->bss[i]);
+	}
 }
 
 
@@ -888,7 +890,7 @@ void ieee802_11_update_beacons(struct hostapd_iface *iface)
 {
 	size_t i;
 	for (i = 0; i < iface->num_bss; i++)
-		if (iface->bss[i]->beacon_set_done)
+		if (iface->bss[i]->beacon_set_done && iface->bss[i]->started)
 			ieee802_11_set_beacon(iface->bss[i]);
 }
 

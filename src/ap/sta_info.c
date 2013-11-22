@@ -262,6 +262,7 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 	wpabuf_free(sta->hs20_ie);
 
 	os_free(sta->ht_capabilities);
+	os_free(sta->vht_capabilities);
 	hostapd_free_psk_list(sta->psk);
 	os_free(sta->identity);
 	os_free(sta->radius_cui);

@@ -2049,6 +2049,7 @@ static int hostapd_build_beacon_data(struct hostapd_iface *iface,
 	int ret;
 	struct hostapd_data *hapd = iface->bss[0];
 
+	os_memset(beacon, 0, sizeof(*beacon));
 	ret = ieee802_11_build_ap_params(hapd, &params);
 	if (ret < 0)
 		return ret;

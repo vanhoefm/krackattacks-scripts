@@ -625,13 +625,10 @@ static int send_and_recv_msgs_global(struct nl80211_global *global,
 }
 
 
-#ifndef ANDROID_P2P
-static
-#endif /* ANDROID_P2P */
-int send_and_recv_msgs(struct wpa_driver_nl80211_data *drv,
-		       struct nl_msg *msg,
-		       int (*valid_handler)(struct nl_msg *, void *),
-		       void *valid_data)
+static int send_and_recv_msgs(struct wpa_driver_nl80211_data *drv,
+			      struct nl_msg *msg,
+			      int (*valid_handler)(struct nl_msg *, void *),
+			      void *valid_data)
 {
 	return send_and_recv(drv->global, drv->global->nl, msg,
 			     valid_handler, valid_data);

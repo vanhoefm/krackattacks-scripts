@@ -1,8 +1,5 @@
 LOCAL_PATH:= $(call my-dir)
 
-ifndef WPA_SUPPLICANT_VERSION
-WPA_SUPPLICANT_VERSION := VER_0_8_X
-endif
 ifeq ($(WPA_SUPPLICANT_VERSION),VER_0_8_X)
 # The order of the 2 Android.mks does matter!
 # TODO: Clean up the Android.mks, reset all the temporary variables at the

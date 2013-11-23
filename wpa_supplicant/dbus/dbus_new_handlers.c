@@ -2162,6 +2162,63 @@ DBusMessage * wpas_dbus_handler_tdls_teardown(DBusMessage *message,
 
 
 /**
+ * wpas_dbus_handler_set_pkcs11_engine_and_module_path - Set PKCS #11 engine and module path
+ * @message: Pointer to incoming dbus message
+ * @wpa_s: %wpa_supplicant data structure
+ * Returns: A dbus message containing an error on failure or NULL on success
+ *
+ * Sets the PKCS #11 engine and module path.
+ */
+DBusMessage * wpas_dbus_handler_set_pkcs11_engine_and_module_path(
+	DBusMessage *message, struct wpa_supplicant *wpa_s)
+{
+	DBusMessageIter iter;
+	char *value = NULL;
+	char *pkcs11_engine_path = NULL;
+	char *pkcs11_module_path = NULL;
+
+	dbus_message_iter_init(message, &iter);
+	dbus_message_iter_get_basic(&iter, &value);
+	if (value == NULL) {
+		return dbus_message_new_error(
+			message, DBUS_ERROR_INVALID_ARGS,
+			"Invalid pkcs11_engine_path argument");
+	}
+	/* Empty path defaults to NULL */
+	if (os_strlen(value))
+		pkcs11_engine_path = value;
+
+	dbus_message_iter_next(&iter);
+	dbus_message_iter_get_basic(&iter, &value);
+	if (value == NULL) {
+		os_free(pkcs11_engine_path);
+		return dbus_message_new_error(
+			message, DBUS_ERROR_INVALID_ARGS,
+			"Invalid pkcs11_module_path argument");
+	}
+	/* Empty path defaults to NULL */
+	if (os_strlen(value))
+		pkcs11_module_path = value;
+
+	if (wpas_set_pkcs11_engine_and_module_path(wpa_s, pkcs11_engine_path,
+						   pkcs11_module_path))
+		return dbus_message_new_error(
+			message, DBUS_ERROR_FAILED,
+			"Reinit of the EAPOL state machine with the new PKCS "
+			"#11 engine and module path failed.");
+
+	wpa_dbus_mark_property_changed(
+		wpa_s->global->dbus, wpa_s->dbus_new_path,
+		WPAS_DBUS_NEW_IFACE_INTERFACE, "PKCS11EnginePath");
+	wpa_dbus_mark_property_changed(
+		wpa_s->global->dbus, wpa_s->dbus_new_path,
+		WPAS_DBUS_NEW_IFACE_INTERFACE, "PKCS11ModulePath");
+
+	return NULL;
+}
+
+
+/**
  * wpas_dbus_getter_capabilities - Return interface capabilities
  * @iter: Pointer to incoming dbus message iter
  * @error: Location to store error on failure
@@ -3173,6 +3230,76 @@ out:
 		os_free(paths[--i]);
 	os_free(paths);
 	return success;
+}
+
+
+/**
+ * wpas_dbus_getter_pkcs11_engine_path - Get PKCS #11 engine path
+ * @iter: Pointer to incoming dbus message iter
+ * @error: Location to store error on failure
+ * @user_data: Function specific data
+ * Returns: A dbus message containing the PKCS #11 engine path
+ *
+ * Getter for "PKCS11EnginePath" property.
+ */
+dbus_bool_t wpas_dbus_getter_pkcs11_engine_path(DBusMessageIter *iter,
+						DBusError *error,
+						void *user_data)
+{
+	struct wpa_supplicant *wpa_s = user_data;
+	const char *pkcs11_engine_path;
+
+	if (wpa_s->conf == NULL) {
+		wpa_printf(MSG_ERROR,
+			   "wpas_dbus_getter_pkcs11_engine_path[dbus]: An "
+			   "error occurred getting the PKCS #11 engine path.");
+		dbus_set_error_const(
+			error, DBUS_ERROR_FAILED,
+			"An error occured getting the PKCS #11 engine path.");
+		return FALSE;
+	}
+
+	if (wpa_s->conf->pkcs11_engine_path == NULL)
+		pkcs11_engine_path = "";
+	else
+		pkcs11_engine_path = wpa_s->conf->pkcs11_engine_path;
+	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_STRING,
+						&pkcs11_engine_path, error);
+}
+
+
+/**
+ * wpas_dbus_getter_pkcs11_module_path - Get PKCS #11 module path
+ * @iter: Pointer to incoming dbus message iter
+ * @error: Location to store error on failure
+ * @user_data: Function specific data
+ * Returns: A dbus message containing the PKCS #11 module path
+ *
+ * Getter for "PKCS11ModulePath" property.
+ */
+dbus_bool_t wpas_dbus_getter_pkcs11_module_path(DBusMessageIter *iter,
+						DBusError *error,
+						void *user_data)
+{
+	struct wpa_supplicant *wpa_s = user_data;
+	const char *pkcs11_module_path;
+
+	if (wpa_s->conf == NULL) {
+		wpa_printf(MSG_ERROR,
+			   "wpas_dbus_getter_pkcs11_module_path[dbus]: An "
+			   "error occurred getting the PKCS #11 module path.");
+		dbus_set_error_const(
+			error, DBUS_ERROR_FAILED,
+			"An error occured getting the PKCS #11 module path.");
+		return FALSE;
+	}
+
+	if (wpa_s->conf->pkcs11_module_path == NULL)
+		pkcs11_module_path = "";
+	else
+		pkcs11_module_path = wpa_s->conf->pkcs11_module_path;
+	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_STRING,
+						&pkcs11_module_path, error);
 }
 
 

@@ -772,6 +772,9 @@ void wpa_supplicant_disable_network(struct wpa_supplicant *wpa_s,
 				    struct wpa_ssid *ssid);
 void wpa_supplicant_select_network(struct wpa_supplicant *wpa_s,
 				   struct wpa_ssid *ssid);
+int wpas_set_pkcs11_engine_and_module_path(struct wpa_supplicant *wpa_s,
+					   const char *pkcs11_engine_path,
+					   const char *pkcs11_module_path);
 int wpa_supplicant_set_ap_scan(struct wpa_supplicant *wpa_s,
 			       int ap_scan);
 int wpa_supplicant_set_bss_expiration_age(struct wpa_supplicant *wpa_s,

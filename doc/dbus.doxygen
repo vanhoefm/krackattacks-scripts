@@ -408,6 +408,25 @@ fi.w1.wpa_supplicant1.CreateInterface.
 	<h3>EAPLogon ( ) --> nothing</h3>
 	<p>IEEE 802.1X EAPOL state machine logon.</p>
       </li>
+
+      <li>
+	<h3>SetPKCS11EngineAndModulePath ( s : pkcs11_engine_path, s : pkcs11_module_path ) --> nothing</h3>
+	<p>Set PKCS #11 engine and module path.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>s : pkcs11_engine_path</dt>
+	  <dd>PKCS #11 engine path.</dd>
+	  <dt>s : pkcs11_module_path</dt>
+	  <dd>PKCS #11 module path.</dd>
+	</dl>
+	<h4>Possible errors</h4>
+	<dl>
+	  <dt>org.freedesktop.DBus.Error.Failed.InvalidArgs</dt>
+	  <dd>Invalid PKCS #11 engine or module path.</dd>
+	  <dt>org.freedesktop.DBus.Error.Failed</dt>
+	  <dd>Reinit of the EAPOL state machine with the new PKCS #11 engine and module path failed.</dd>
+	</dl>
+      </li>
     </ul>
 
 \subsection dbus_interface_properties Properties
@@ -506,6 +525,16 @@ fi.w1.wpa_supplicant1.CreateInterface.
       <li>
 	<h3>ScanInterval - i - (read/write)</h3>
 	<p>Time (in seconds) between scans for a suitable AP. Must be >= 0.</p>
+      </li>
+
+      <li>
+	<h3>PKCS11EnginePath - s - (read)</h3>
+	<p>PKCS #11 engine path.</p>
+      </li>
+
+      <li>
+	<h3>PKCS11ModulePath - s - (read)</h3>
+	<p>PKCS #11 module path.</p>
       </li>
     </ul>
 

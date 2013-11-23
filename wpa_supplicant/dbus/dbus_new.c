@@ -2516,6 +2516,15 @@ static const struct wpa_dbus_method_desc wpas_dbus_interface_methods[] = {
 	  }
 	},
 #endif /* CONFIG_NO_CONFIG_BLOBS */
+	{ "SetPKCS11EngineAndModulePath", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  (WPADBusMethodHandler)
+	  &wpas_dbus_handler_set_pkcs11_engine_and_module_path,
+	  {
+		  { "pkcs11_engine_path", "s", ARG_IN },
+		  { "pkcs11_module_path", "s", ARG_IN },
+		  END_ARGS
+	  }
+	},
 #ifdef CONFIG_WPS
 	{ "Start", WPAS_DBUS_NEW_IFACE_WPS,
 	  (WPADBusMethodHandler) &wpas_dbus_handler_wps_start,
@@ -2842,6 +2851,14 @@ static const struct wpa_dbus_property_desc wpas_dbus_interface_properties[] = {
 	{ "ScanInterval", WPAS_DBUS_NEW_IFACE_INTERFACE, "i",
 	  wpas_dbus_getter_scan_interval,
 	  wpas_dbus_setter_scan_interval
+	},
+	{ "PKCS11EnginePath", WPAS_DBUS_NEW_IFACE_INTERFACE, "s",
+	  wpas_dbus_getter_pkcs11_engine_path,
+	  NULL
+	},
+	{ "PKCS11ModulePath", WPAS_DBUS_NEW_IFACE_INTERFACE, "s",
+	  wpas_dbus_getter_pkcs11_module_path,
+	  NULL
 	},
 #ifdef CONFIG_WPS
 	{ "ProcessCredentials", WPAS_DBUS_NEW_IFACE_WPS, "b",

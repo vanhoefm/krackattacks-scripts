@@ -122,6 +122,9 @@ DBusMessage * wpas_dbus_handler_get_blob(DBusMessage *message,
 DBusMessage * wpas_dbus_handler_remove_blob(DBusMessage *message,
 					    struct wpa_supplicant *wpa_s);
 
+DBusMessage * wpas_dbus_handler_set_pkcs11_engine_and_module_path(
+	DBusMessage *message, struct wpa_supplicant *wpa_s);
+
 DBusMessage * wpas_dbus_handler_flush_bss(DBusMessage *message,
 					  struct wpa_supplicant *wpa_s);
 
@@ -217,6 +220,14 @@ dbus_bool_t wpas_dbus_getter_bsss(DBusMessageIter *iter, DBusError *error,
 
 dbus_bool_t wpas_dbus_getter_networks(DBusMessageIter *iter, DBusError *error,
 				      void *user_data);
+
+dbus_bool_t wpas_dbus_getter_pkcs11_engine_path(DBusMessageIter *iter,
+						DBusError *error,
+						void *user_data);
+
+dbus_bool_t wpas_dbus_getter_pkcs11_module_path(DBusMessageIter *iter,
+						DBusError *error,
+						void *user_data);
 
 dbus_bool_t wpas_dbus_getter_blobs(DBusMessageIter *iter, DBusError *error,
 				   void *user_data);

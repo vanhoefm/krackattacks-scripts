@@ -133,7 +133,7 @@ int authsrv_init(struct hostapd_data *hapd)
 #ifdef EAP_TLS_FUNCS
 	if (hapd->conf->eap_server &&
 	    (hapd->conf->ca_cert || hapd->conf->server_cert ||
-	     hapd->conf->dh_file)) {
+	     hapd->conf->private_key || hapd->conf->dh_file)) {
 		struct tls_connection_params params;
 
 		hapd->ssl_ctx = tls_init(NULL);

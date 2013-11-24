@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - Driver event processing
- * Copyright (c) 2003-2012, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -1181,7 +1181,8 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 					      union wpa_event_data *data,
 					      int own_request)
 {
-	struct wpa_scan_results *scan_res;
+	struct wpa_scan_results *scan_res = NULL;
+	int ret = 0;
 	int ap = 0;
 #ifndef CONFIG_NO_RANDOM_POOL
 	size_t i, num;
@@ -1206,7 +1207,8 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 			wpa_s->scan_req = wpa_s->last_scan_req;
 			wpa_s->sta_scan_pending = 1;
 			wpa_supplicant_req_scan(wpa_s, 5, 0);
-			return -1;
+			ret = -1;
+			goto scan_work_done;
 		}
 	}
 	wpa_s->sta_scan_pending = 0;
@@ -1224,7 +1226,8 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 		wpa_dbg(wpa_s, MSG_DEBUG, "Failed to get scan results - try "
 			"scanning again");
 		wpa_supplicant_req_new_scan(wpa_s, 1, 0);
-		return -1;
+		ret = -1;
+		goto scan_work_done;
 	}
 
 #ifndef CONFIG_NO_RANDOM_POOL
@@ -1251,9 +1254,8 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 		scan_res_handler = wpa_s->scan_res_handler;
 		wpa_s->scan_res_handler = NULL;
 		scan_res_handler(wpa_s, scan_res);
-
-		wpa_scan_results_free(scan_res);
-		return -2;
+		ret = -2;
+		goto scan_work_done;
 	}
 
 	if (ap) {
@@ -1262,8 +1264,7 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 		if (wpa_s->ap_iface->scan_cb)
 			wpa_s->ap_iface->scan_cb(wpa_s->ap_iface);
 #endif /* CONFIG_AP */
-		wpa_scan_results_free(scan_res);
-		return 0;
+		goto scan_work_done;
 	}
 
 	wpa_dbg(wpa_s, MSG_DEBUG, "New scan results available (own=%u ext=%u)",
@@ -1286,38 +1287,44 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 		return 0;
 	}
 
-	if (sme_proc_obss_scan(wpa_s) > 0) {
-		wpa_scan_results_free(scan_res);
-		return 0;
-	}
+	if (sme_proc_obss_scan(wpa_s) > 0)
+		goto scan_work_done;
 
-	if ((wpa_s->conf->ap_scan == 2 && !wpas_wps_searching(wpa_s))) {
-		wpa_scan_results_free(scan_res);
-		return 0;
-	}
+	if ((wpa_s->conf->ap_scan == 2 && !wpas_wps_searching(wpa_s)))
+		goto scan_work_done;
 
-	if (autoscan_notify_scan(wpa_s, scan_res)) {
-		wpa_scan_results_free(scan_res);
-		return 0;
-	}
+	if (autoscan_notify_scan(wpa_s, scan_res))
+		goto scan_work_done;
 
 	if (wpa_s->disconnected) {
 		wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
-		wpa_scan_results_free(scan_res);
-		return 0;
+		goto scan_work_done;
 	}
 
 	if (!wpas_driver_bss_selection(wpa_s) &&
-	    bgscan_notify_scan(wpa_s, scan_res) == 1) {
-		wpa_scan_results_free(scan_res);
-		return 0;
-	}
+	    bgscan_notify_scan(wpa_s, scan_res) == 1)
+		goto scan_work_done;
 
 	wpas_wps_update_ap_info(wpa_s, scan_res);
 
 	wpa_scan_results_free(scan_res);
 
+	if (wpa_s->scan_work) {
+		struct wpa_radio_work *work = wpa_s->scan_work;
+		wpa_s->scan_work = NULL;
+		radio_work_done(work);
+	}
+
 	return wpas_select_network_from_last_scan(wpa_s, 1, own_request);
+
+scan_work_done:
+	wpa_scan_results_free(scan_res);
+	if (wpa_s->scan_work) {
+		struct wpa_radio_work *work = wpa_s->scan_work;
+		wpa_s->scan_work = NULL;
+		radio_work_done(work);
+	}
+	return ret;
 }
 
 

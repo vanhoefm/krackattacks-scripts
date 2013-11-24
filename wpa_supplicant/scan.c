@@ -142,6 +142,40 @@ static void wpa_supplicant_assoc_try(struct wpa_supplicant *wpa_s,
 }
 
 
+static void wpas_trigger_scan_cb(struct wpa_radio_work *work, int deinit)
+{
+	struct wpa_supplicant *wpa_s = work->wpa_s;
+	struct wpa_driver_scan_params *params = work->ctx;
+	int ret;
+
+	if (deinit) {
+		wpa_scan_free_params(params);
+		return;
+	}
+
+	wpa_supplicant_notify_scanning(wpa_s, 1);
+
+	if (wpa_s->clear_driver_scan_cache)
+		params->only_new_results = 1;
+	ret = wpa_drv_scan(wpa_s, params);
+	wpa_scan_free_params(params);
+	work->ctx = NULL;
+	if (ret) {
+		wpa_supplicant_notify_scanning(wpa_s, 0);
+		wpas_notify_scan_done(wpa_s, 0);
+		radio_work_done(work);
+		return;
+	}
+
+	os_get_reltime(&wpa_s->scan_trigger_time);
+	wpa_s->scan_runs++;
+	wpa_s->normal_scans++;
+	wpa_s->own_scan_requested = 1;
+	wpa_s->clear_driver_scan_cache = 0;
+	wpa_s->scan_work = work;
+}
+
+
 /**
  * wpa_supplicant_trigger_scan - Request driver to start a scan
  * @wpa_s: Pointer to wpa_supplicant data
@@ -151,25 +185,24 @@ static void wpa_supplicant_assoc_try(struct wpa_supplicant *wpa_s,
 int wpa_supplicant_trigger_scan(struct wpa_supplicant *wpa_s,
 				struct wpa_driver_scan_params *params)
 {
-	int ret;
+	struct wpa_driver_scan_params *ctx;
 
-	wpa_supplicant_notify_scanning(wpa_s, 1);
-
-	if (wpa_s->clear_driver_scan_cache)
-		params->only_new_results = 1;
-	ret = wpa_drv_scan(wpa_s, params);
-	if (ret) {
-		wpa_supplicant_notify_scanning(wpa_s, 0);
-		wpas_notify_scan_done(wpa_s, 0);
-	} else {
-		os_get_reltime(&wpa_s->scan_trigger_time);
-		wpa_s->scan_runs++;
-		wpa_s->normal_scans++;
-		wpa_s->own_scan_requested = 1;
-		wpa_s->clear_driver_scan_cache = 0;
+	if (wpa_s->scan_work) {
+		wpa_dbg(wpa_s, MSG_INFO, "Reject scan trigger since one is already pending");
+		return -1;
 	}
 
-	return ret;
+	ctx = wpa_scan_clone_params(params);
+	if (ctx == NULL)
+		return -1;
+
+	if (radio_add_work(wpa_s, 0, "scan", 0, wpas_trigger_scan_cb, ctx) < 0)
+	{
+		wpa_scan_free_params(ctx);
+		return -1;
+	}
+
+	return 0;
 }
 
 
@@ -1699,6 +1732,11 @@ void scan_only_handler(struct wpa_supplicant *wpa_s,
 	}
 	wpas_notify_scan_results(wpa_s);
 	wpas_notify_scan_done(wpa_s, 1);
+	if (wpa_s->scan_work) {
+		struct wpa_radio_work *work = wpa_s->scan_work;
+		wpa_s->scan_work = NULL;
+		radio_work_done(work);
+	}
 }
 
 

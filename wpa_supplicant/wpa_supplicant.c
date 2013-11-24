@@ -2903,6 +2903,13 @@ static struct wpa_radio * radio_add_interface(struct wpa_supplicant *wpa_s,
 
 static void radio_work_free(struct wpa_radio_work *work)
 {
+	if (work->wpa_s->scan_work == work) {
+		/* This should not really happen. */
+		wpa_dbg(work->wpa_s, MSG_INFO, "Freeing radio work '%s'@%p (started=%d) that is marked as scan_work",
+			work->type, work, work->started);
+		work->wpa_s->scan_work = NULL;
+	}
+
 	dl_list_del(&work->list);
 	os_free(work);
 }

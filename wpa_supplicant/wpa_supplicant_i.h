@@ -442,6 +442,7 @@ struct wpa_supplicant {
 	struct ctrl_iface_priv *ctrl_iface;
 
 	enum wpa_states wpa_state;
+	struct wpa_radio_work *scan_work;
 	int scanning;
 	int sched_scanning;
 	int new_connection;

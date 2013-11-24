@@ -4100,32 +4100,13 @@ static int wpas_conn_in_progress(struct wpa_supplicant *wpa_s)
  */
 int wpas_wpa_is_in_progress(struct wpa_supplicant *wpa_s, int include_current)
 {
-	const char *rn, *rn2;
 	struct wpa_supplicant *ifs;
 
-	if (!wpa_s->driver->get_radio_name) {
-		if (include_current && wpas_conn_in_progress(wpa_s)) {
-			wpa_dbg(wpa_s, MSG_DEBUG, "Connection is in progress on interface %s - defer",
-				wpa_s->ifname);
-			return 1;
-		}
-
-                return 0;
-	}
-
-	rn = wpa_s->driver->get_radio_name(wpa_s->drv_priv);
-	if (rn == NULL || rn[0] == '\0')
-		return 0;
-
-	for (ifs = wpa_s->global->ifaces; ifs; ifs = ifs->next) {
+	dl_list_for_each(ifs, &wpa_s->radio->ifaces, struct wpa_supplicant,
+			 radio_list) {
 		if (!include_current && ifs == wpa_s)
 			continue;
-		if (!ifs->driver->get_radio_name)
-			continue;
 
-		rn2 = ifs->driver->get_radio_name(ifs->drv_priv);
-		if (!rn2 || os_strcmp(rn, rn2) != 0)
-			continue;
 		if (wpas_conn_in_progress(ifs)) {
 			wpa_dbg(wpa_s, MSG_DEBUG, "Connection is in progress "
 				"on interface %s - defer", ifs->ifname);

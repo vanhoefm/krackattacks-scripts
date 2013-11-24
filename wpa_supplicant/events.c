@@ -1393,7 +1393,6 @@ static int wpas_select_network_from_last_scan(struct wpa_supplicant *wpa_s,
 static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 					      union wpa_event_data *data)
 {
-	const char *rn, *rn2;
 	struct wpa_supplicant *ifs;
 
 	if (_wpa_supplicant_event_scan_results(wpa_s, data, 1) != 0) {
@@ -1408,25 +1407,12 @@ static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 	}
 
 	/*
-	 * Check other interfaces to see if they have the same radio-name. If
+	 * Check other interfaces to see if they share the same radio. If
 	 * so, they get updated with this same scan info.
 	 */
-	if (!wpa_s->driver->get_radio_name)
-		return;
-
-	rn = wpa_s->driver->get_radio_name(wpa_s->drv_priv);
-	if (rn == NULL || rn[0] == '\0')
-		return;
-
-	wpa_dbg(wpa_s, MSG_DEBUG, "Checking for other virtual interfaces "
-		"sharing same radio (%s) in event_scan_results", rn);
-
-	for (ifs = wpa_s->global->ifaces; ifs; ifs = ifs->next) {
-		if (ifs == wpa_s || !ifs->driver->get_radio_name)
-			continue;
-
-		rn2 = ifs->driver->get_radio_name(ifs->drv_priv);
-		if (rn2 && os_strcmp(rn, rn2) == 0) {
+	dl_list_for_each(ifs, &wpa_s->radio->ifaces, struct wpa_supplicant,
+			 radio_list) {
+		if (ifs != wpa_s) {
 			wpa_printf(MSG_DEBUG, "%s: Updating scan results from "
 				   "sibling", ifs->ifname);
 			_wpa_supplicant_event_scan_results(ifs, data, 0);

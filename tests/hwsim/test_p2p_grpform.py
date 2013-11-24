@@ -89,19 +89,20 @@ def go_neg_pin_authorized(i_dev, r_dev, i_intent=None, r_intent=None, expect_fai
         hwsim_utils.test_connectivity_p2p(r_dev, i_dev)
     return [i_res, r_res]
 
-def go_neg_init_pbc(i_dev, r_dev, i_intent, res):
+def go_neg_init_pbc(i_dev, r_dev, i_intent, res, freq):
     logger.debug("Initiate GO Negotiation from i_dev")
-    i_res = i_dev.p2p_go_neg_init(r_dev.p2p_dev_addr(), None, "pbc", timeout=20, go_intent=i_intent)
+    i_res = i_dev.p2p_go_neg_init(r_dev.p2p_dev_addr(), None, "pbc",
+                                  timeout=20, go_intent=i_intent, freq=freq)
     logger.debug("i_res: " + str(i_res))
     res.put(i_res)
 
-def go_neg_pbc(i_dev, r_dev, i_intent=None, r_intent=None):
+def go_neg_pbc(i_dev, r_dev, i_intent=None, r_intent=None, i_freq=None, r_freq=None):
     r_dev.p2p_find(social=True)
     i_dev.p2p_find(social=True)
     logger.info("Start GO negotiation " + i_dev.ifname + " -> " + r_dev.ifname)
     r_dev.dump_monitor()
     res = Queue.Queue()
-    t = threading.Thread(target=go_neg_init_pbc, args=(i_dev, r_dev, i_intent, res))
+    t = threading.Thread(target=go_neg_init_pbc, args=(i_dev, r_dev, i_intent, res, i_freq))
     t.start()
     logger.debug("Wait for GO Negotiation Request on r_dev")
     ev = r_dev.wait_global_event(["P2P-GO-NEG-REQUEST"], timeout=15)
@@ -109,7 +110,8 @@ def go_neg_pbc(i_dev, r_dev, i_intent=None, r_intent=None):
         raise Exception("GO Negotiation timed out")
     r_dev.dump_monitor()
     logger.debug("Re-initiate GO Negotiation from r_dev")
-    r_res = r_dev.p2p_go_neg_init(i_dev.p2p_dev_addr(), None, "pbc", go_intent=r_intent, timeout=20)
+    r_res = r_dev.p2p_go_neg_init(i_dev.p2p_dev_addr(), None, "pbc",
+                                  go_intent=r_intent, timeout=20, freq=r_freq)
     logger.debug("r_res: " + str(r_res))
     r_dev.dump_monitor()
     t.join()

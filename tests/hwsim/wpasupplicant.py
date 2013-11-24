@@ -494,9 +494,9 @@ class WpaSupplicant:
             raise Exception("Failed to authorize client connection on GO")
         return None
 
-    def p2p_connect_group(self, go_addr, pin, timeout=0):
+    def p2p_connect_group(self, go_addr, pin, timeout=0, social=False):
         self.dump_monitor()
-        if not self.discover_peer(go_addr, social=False):
+        if not self.discover_peer(go_addr, social=social):
             raise Exception("GO " + go_addr + " not found")
         self.dump_monitor()
         cmd = "P2P_CONNECT " + go_addr + " " + pin + " join"
@@ -622,3 +622,10 @@ class WpaSupplicant:
 
     def relog(self):
         self.request("RELOG")
+
+    def wait_completed(self, timeout=10):
+        for i in range(0, timeout * 2):
+            if self.get_status_field("wpa_state") == "COMPLETED":
+                return
+            time.sleep(0.5)
+        raise Exception("Timeout while waiting for COMPLETED state")

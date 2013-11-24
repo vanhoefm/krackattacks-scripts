@@ -1,7 +1,7 @@
 all: libcrypto.a
 
 clean:
-	rm -f *~ *.o *.d libcrypto.a
+	rm -f *~ *.o *.d *.gcno *.gcda *.gcov libcrypto.a
 
 install:
 	@echo Nothing to be made.

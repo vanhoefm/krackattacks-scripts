@@ -129,6 +129,13 @@ ifdef CONFIG_EAPOL_TEST
 CFLAGS += -Werror -DEAPOL_TEST
 endif
 
+ifdef CONFIG_CODE_COVERAGE
+CFLAGS += -O0 -fprofile-arcs -ftest-coverage
+LIBS += -lgcov
+LIBS_c += -lgcov
+LIBS_p += -lgcov
+endif
+
 ifdef CONFIG_HT_OVERRIDES
 CFLAGS += -DCONFIG_HT_OVERRIDES
 endif
@@ -1672,7 +1679,8 @@ fips:
 clean:
 	$(MAKE) -C ../src clean
 	$(MAKE) -C dbus clean
-	rm -f core *~ *.o *.d eap_*.so $(ALL) $(WINALL) eapol_test preauth_test
+	rm -f core *~ *.o *.d *.gcno *.gcda *.gcov
+	rm -f eap_*.so $(ALL) $(WINALL) eapol_test preauth_test
 	rm -f wpa_priv
 	rm -f nfc_pw_token
 

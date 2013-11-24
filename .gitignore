@@ -1,5 +1,8 @@
 *.o
 *.d
+*.gcno
+*.gcda
+*.gcov
 *.pyc
 *~
 .config

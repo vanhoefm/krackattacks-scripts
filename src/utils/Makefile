@@ -1,7 +1,7 @@
 all: libutils.a
 
 clean:
-	rm -f *~ *.o *.d libutils.a
+	rm -f *~ *.o *.d *.gcno *.gcda *.gcov libutils.a
 
 install:
 	@echo Nothing to be made.

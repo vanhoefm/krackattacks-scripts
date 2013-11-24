@@ -1,6 +1,6 @@
 /*
  * wpa_supplicant - Internal definitions
- * Copyright (c) 2003-2012, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -281,7 +281,30 @@ struct wpa_radio {
 	char name[16]; /* from driver_ops get_radio_name() or empty if not
 			* available */
 	struct dl_list ifaces; /* struct wpa_supplicant::radio_list entries */
+	struct dl_list work; /* struct wpa_radio_work::list entries */
 };
+
+/**
+ * struct wpa_radio_work - Radio work item
+ */
+struct wpa_radio_work {
+	struct dl_list list;
+	unsigned int freq; /* known frequency (MHz) or 0 for multiple/unknown */
+	const char *type;
+	struct wpa_supplicant *wpa_s;
+	void (*cb)(struct wpa_radio_work *work, int deinit);
+	void *ctx;
+	unsigned int started:1;
+	struct os_reltime time;
+};
+
+int radio_add_work(struct wpa_supplicant *wpa_s, unsigned int freq,
+		   const char *type, int next,
+		   void (*cb)(struct wpa_radio_work *work, int deinit),
+		   void *ctx);
+void radio_work_done(struct wpa_radio_work *work);
+void radio_remove_unstarted_work(struct wpa_supplicant *wpa_s,
+				 const char *type);
 
 /**
  * offchannel_send_action_result - Result of offchannel send Action frame

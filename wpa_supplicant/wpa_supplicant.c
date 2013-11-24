@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant
- * Copyright (c) 2003-2012, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -54,7 +54,7 @@
 
 const char *wpa_supplicant_version =
 "wpa_supplicant v" VERSION_STR "\n"
-"Copyright (c) 2003-2013, Jouni Malinen <j@w1.fi> and contributors";
+"Copyright (c) 2003-2014, Jouni Malinen <j@w1.fi> and contributors";
 
 const char *wpa_supplicant_license =
 "This software may be distributed under the terms of the BSD license.\n"
@@ -2894,9 +2894,62 @@ static struct wpa_radio * radio_add_interface(struct wpa_supplicant *wpa_s,
 	if (rn)
 		os_strlcpy(radio->name, rn, sizeof(radio->name));
 	dl_list_init(&radio->ifaces);
+	dl_list_init(&radio->work);
 	dl_list_add(&radio->ifaces, &wpa_s->radio_list);
 
 	return radio;
+}
+
+
+static void radio_work_free(struct wpa_radio_work *work)
+{
+	dl_list_del(&work->list);
+	os_free(work);
+}
+
+
+static void radio_start_next_work(void *eloop_ctx, void *timeout_ctx)
+{
+	struct wpa_radio *radio = eloop_ctx;
+	struct wpa_radio_work *work;
+	struct os_reltime now, diff;
+
+	work = dl_list_first(&radio->work, struct wpa_radio_work, list);
+	if (work == NULL)
+		return;
+
+	if (work->started)
+		return; /* already started and still in progress */
+
+	os_get_reltime(&now);
+	os_reltime_sub(&now, &work->time, &diff);
+	wpa_dbg(work->wpa_s, MSG_DEBUG, "Starting radio work '%s'@%p after %ld.%06ld second wait",
+		work->type, work, diff.sec, diff.usec);
+	work->started = 1;
+	work->time = now;
+	work->cb(work, 0);
+}
+
+
+void radio_remove_unstarted_work(struct wpa_supplicant *wpa_s, const char *type)
+{
+	struct wpa_radio_work *work, *tmp;
+	struct wpa_radio *radio = wpa_s->radio;
+
+	dl_list_for_each_safe(work, tmp, &radio->work, struct wpa_radio_work,
+			      list) {
+		if (type && (work->started || os_strcmp(type, work->type) != 0))
+			continue;
+		if (work->started) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "Leaving started radio work '%s'@%p in the list",
+				work->type, work);
+			continue;
+		}
+		wpa_dbg(wpa_s, MSG_DEBUG, "Remove unstarted radio work '%s'@%p",
+			work->type, work);
+		work->cb(work, 1);
+		radio_work_free(work);
+	}
 }
 
 
@@ -2910,13 +2963,106 @@ static void radio_remove_interface(struct wpa_supplicant *wpa_s)
 	wpa_printf(MSG_DEBUG, "Remove interface %s from radio %s",
 		   wpa_s->ifname, radio->name);
 	dl_list_del(&wpa_s->radio_list);
-	wpa_s->radio = NULL;
-
-	if (!dl_list_empty(&radio->ifaces))
+	if (!dl_list_empty(&radio->ifaces)) {
+		wpa_s->radio = NULL;
 		return; /* Interfaces remain for this radio */
+	}
 
 	wpa_printf(MSG_DEBUG, "Remove radio %s", radio->name);
+	radio_remove_unstarted_work(wpa_s, NULL);
+	eloop_cancel_timeout(radio_start_next_work, radio, NULL);
+	wpa_s->radio = NULL;
 	os_free(radio);
+}
+
+
+static void radio_work_check_next(struct wpa_supplicant *wpa_s)
+{
+	struct wpa_radio *radio = wpa_s->radio;
+
+	if (dl_list_empty(&radio->work))
+		return;
+	eloop_cancel_timeout(radio_start_next_work, radio, NULL);
+	eloop_register_timeout(0, 0, radio_start_next_work, radio, NULL);
+}
+
+
+/**
+ * radio_add_work - Add a radio work item
+ * @wpa_s: Pointer to wpa_supplicant data
+ * @freq: Frequency of the offchannel operation in MHz or 0
+ * @type: Unique identifier for each type of work
+ * @next: Force as the next work to be executed
+ * @cb: Callback function for indicating when radio is available
+ * @ctx: Context pointer for the work (work->ctx in cb())
+ * Returns: 0 on success, -1 on failure
+ *
+ * This function is used to request time for an operation that requires
+ * exclusive radio control. Once the radio is available, the registered callback
+ * function will be called. radio_work_done() must be called once the exclusive
+ * radio operation has been completed, so that the radio is freed for other
+ * operations. The special case of deinit=1 is used to free the context data
+ * during interface removal. That does not allow the callback function to start
+ * the radio operation, i.e., it must free any resources allocated for the radio
+ * work and return.
+ *
+ * The @freq parameter can be used to indicate a single channel on which the
+ * offchannel operation will occur. This may allow multiple radio work
+ * operations to be performed in parallel if they apply for the same channel.
+ * Setting this to 0 indicates that the work item may use multiple channels or
+ * requires exclusive control of the radio.
+ */
+int radio_add_work(struct wpa_supplicant *wpa_s, unsigned int freq,
+		   const char *type, int next,
+		   void (*cb)(struct wpa_radio_work *work, int deinit),
+		   void *ctx)
+{
+	struct wpa_radio_work *work;
+	int was_empty;
+
+	work = os_zalloc(sizeof(*work));
+	if (work == NULL)
+		return -1;
+	wpa_dbg(wpa_s, MSG_DEBUG, "Add radio work '%s'@%p", type, work);
+	os_get_reltime(&work->time);
+	work->freq = freq;
+	work->type = type;
+	work->wpa_s = wpa_s;
+	work->cb = cb;
+	work->ctx = ctx;
+
+	was_empty = dl_list_empty(&wpa_s->radio->work);
+	if (next)
+		dl_list_add(&wpa_s->radio->work, &work->list);
+	else
+		dl_list_add_tail(&wpa_s->radio->work, &work->list);
+	if (was_empty) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "First radio work item in the queue - schedule start immediately");
+		radio_work_check_next(wpa_s);
+	}
+
+	return 0;
+}
+
+
+/**
+ * radio_work_done - Indicate that a radio work item has been completed
+ * @work: Completed work
+ *
+ * This function is called once the callback function registered with
+ * radio_add_work() has completed its work.
+ */
+void radio_work_done(struct wpa_radio_work *work)
+{
+	struct wpa_supplicant *wpa_s = work->wpa_s;
+	struct os_reltime now, diff;
+
+	os_get_reltime(&now);
+	os_reltime_sub(&now, &work->time, &diff);
+	wpa_dbg(wpa_s, MSG_DEBUG, "Radio work '%s'@%p done in %ld.%06ld seconds",
+		work->type, work, diff.sec, diff.usec);
+	radio_work_free(work);
+	radio_work_check_next(wpa_s);
 }
 
 

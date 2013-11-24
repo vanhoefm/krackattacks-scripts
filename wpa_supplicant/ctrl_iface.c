@@ -5216,6 +5216,8 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 	wpa_sm_set_param(wpa_s->wpa, RSNA_PMK_REAUTH_THRESHOLD, 70);
 	wpa_sm_set_param(wpa_s->wpa, RSNA_SA_TIMEOUT, 60);
 	eapol_sm_notify_logoff(wpa_s->eapol, FALSE);
+
+	radio_remove_unstarted_work(wpa_s, NULL);
 }
 
 

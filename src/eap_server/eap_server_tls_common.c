@@ -33,6 +33,11 @@ struct wpabuf * eap_tls_msg_alloc(EapType type, size_t payload_len,
 int eap_server_tls_ssl_init(struct eap_sm *sm, struct eap_ssl_data *data,
 			    int verify_peer)
 {
+	if (sm->ssl_ctx == NULL) {
+		wpa_printf(MSG_ERROR, "TLS context not initialized - cannot use TLS-based EAP method");
+		return -1;
+	}
+
 	data->eap = sm;
 	data->phase2 = sm->init_phase2;
 

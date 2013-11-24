@@ -2872,10 +2872,50 @@ int wpas_init_ext_pw(struct wpa_supplicant *wpa_s)
 }
 
 
+static int wpas_init_driver(struct wpa_supplicant *wpa_s,
+			    struct wpa_interface *iface)
+{
+	const char *ifname, *driver;
+
+	driver = iface->driver;
+next_driver:
+	if (wpa_supplicant_set_driver(wpa_s, driver) < 0)
+		return -1;
+
+	wpa_s->drv_priv = wpa_drv_init(wpa_s, wpa_s->ifname);
+	if (wpa_s->drv_priv == NULL) {
+		const char *pos;
+		pos = driver ? os_strchr(driver, ',') : NULL;
+		if (pos) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "Failed to initialize "
+				"driver interface - try next driver wrapper");
+			driver = pos + 1;
+			goto next_driver;
+		}
+		wpa_msg(wpa_s, MSG_ERROR, "Failed to initialize driver "
+			"interface");
+		return -1;
+	}
+	if (wpa_drv_set_param(wpa_s, wpa_s->conf->driver_param) < 0) {
+		wpa_msg(wpa_s, MSG_ERROR, "Driver interface rejected "
+			"driver_param '%s'", wpa_s->conf->driver_param);
+		return -1;
+	}
+
+	ifname = wpa_drv_get_ifname(wpa_s);
+	if (ifname && os_strcmp(ifname, wpa_s->ifname) != 0) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "Driver interface replaced "
+			"interface name with '%s'", ifname);
+		os_strlcpy(wpa_s->ifname, ifname, sizeof(wpa_s->ifname));
+	}
+
+	return 0;
+}
+
+
 static int wpa_supplicant_init_iface(struct wpa_supplicant *wpa_s,
 				     struct wpa_interface *iface)
 {
-	const char *ifname, *driver;
 	struct wpa_driver_capa capa;
 
 	wpa_printf(MSG_DEBUG, "Initializing interface '%s' conf '%s' driver "
@@ -2967,37 +3007,8 @@ static int wpa_supplicant_init_iface(struct wpa_supplicant *wpa_s,
 	 * L2 receive handler so that association events are processed before
 	 * EAPOL-Key packets if both become available for the same select()
 	 * call. */
-	driver = iface->driver;
-next_driver:
-	if (wpa_supplicant_set_driver(wpa_s, driver) < 0)
+	if (wpas_init_driver(wpa_s, iface) < 0)
 		return -1;
-
-	wpa_s->drv_priv = wpa_drv_init(wpa_s, wpa_s->ifname);
-	if (wpa_s->drv_priv == NULL) {
-		const char *pos;
-		pos = driver ? os_strchr(driver, ',') : NULL;
-		if (pos) {
-			wpa_dbg(wpa_s, MSG_DEBUG, "Failed to initialize "
-				"driver interface - try next driver wrapper");
-			driver = pos + 1;
-			goto next_driver;
-		}
-		wpa_msg(wpa_s, MSG_ERROR, "Failed to initialize driver "
-			"interface");
-		return -1;
-	}
-	if (wpa_drv_set_param(wpa_s, wpa_s->conf->driver_param) < 0) {
-		wpa_msg(wpa_s, MSG_ERROR, "Driver interface rejected "
-			"driver_param '%s'", wpa_s->conf->driver_param);
-		return -1;
-	}
-
-	ifname = wpa_drv_get_ifname(wpa_s);
-	if (ifname && os_strcmp(ifname, wpa_s->ifname) != 0) {
-		wpa_dbg(wpa_s, MSG_DEBUG, "Driver interface replaced "
-			"interface name with '%s'", ifname);
-		os_strlcpy(wpa_s->ifname, ifname, sizeof(wpa_s->ifname));
-	}
 
 	if (wpa_supplicant_init_wpa(wpa_s) < 0)
 		return -1;

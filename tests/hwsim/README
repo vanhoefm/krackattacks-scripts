@@ -125,12 +125,6 @@ conditions:
 # run normal test cases with Linux tracing
 ./run-all.sh trace
 
-# run P2P test cases with concurrent station interface
-./run-all.sh concurrent
-
-# run P2P test cases with concurrent station interface under valgrind
-./run-all.sh concurrent-valgrind
-
 run-all.sh directs debug logs into the logs subdirectory (or $LOGDIR if
 present in the environment). Log file names include the current UNIX
 timestamp and a postfix to identify the specific log:

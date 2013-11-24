@@ -21,19 +21,9 @@ else
     GROUP=adm
 fi
 
-sed "s/ GROUP=.*$/ GROUP=$GROUP/" "$DIR/sta-dummy.conf" > "$LOGDIR/sta-dummy.conf"
 for i in 0 1 2; do
     sed "s/ GROUP=.*$/ GROUP=$GROUP/" "$DIR/p2p$i.conf" > "$LOGDIR/p2p$i.conf"
 done
-
-if [ "$1" = "concurrent" ]; then
-    CONCURRENT=y
-    CONCURRENT_ARGS="-N -Dnl80211 -ista%d -c $LOGDIR/sta-dummy.conf"
-    shift
-else
-    unset CONCURRENT
-    CONCURRENT_ARGS=
-fi
 
 if [ "$1" = "valgrind" ]; then
     VALGRIND=y
@@ -57,16 +47,11 @@ fi
 
 $DIR/stop.sh
 test -f /proc/modules && sudo modprobe mac80211_hwsim radios=5
-if [ "$CONCURRENT" = "y" ]; then
-    sudo iw wlan0 interface add sta0 type station
-    sudo iw wlan1 interface add sta1 type station
-    sudo iw wlan2 interface add sta2 type station
-fi
 sudo ifconfig hwsim0 up
 sudo $WLANTEST -i hwsim0 -n $LOGDIR/hwsim0.pcapng -c -dt -L $LOGDIR/hwsim0 &
 for i in 0 1 2; do
     sudo $(printf -- "$VALGRIND_WPAS" $i) $WPAS -g /tmp/wpas-wlan$i -G$GROUP -Dnl80211 -iwlan$i -c $LOGDIR/p2p$i.conf \
-         $(printf -- "$CONCURRENT_ARGS" $i) -ddKt$TRACE -f $LOGDIR/log$i &
+         -ddKt$TRACE -f $LOGDIR/log$i &
 done
 sudo $VALGRIND_HAPD $HAPD -ddKt$TRACE -g /var/run/hostapd-global -G $GROUP -ddKt -f $LOGDIR/hostapd &
 

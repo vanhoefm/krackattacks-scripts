@@ -24,28 +24,12 @@ else
     fi
 fi
 
-if [ "x$1" = "xconcurrent-valgrind" ]; then
+if [ "x$1" = "xvalgrind" ]; then
 	VALGRIND=valgrind
-	CONCURRENT=concurrent
-	CONCURRENT_TESTS="-f p2p_autogo p2p_discovery p2p_grpform"
-	SUFFIX=-concurrent-valgrind
-	shift
-elif [ "x$1" = "xconcurrent" ]; then
-	CONCURRENT=concurrent
-	CONCURRENT_TESTS="-f p2p_autogo p2p_discovery p2p_grpform"
-	unset VALGRIND
-	SUFFIX=-concurrent
-	shift
-elif [ "x$1" = "xvalgrind" ]; then
-	VALGRIND=valgrind
-	unset CONCURRENT
-	unset CONCURRENT_TESTS
 	SUFFIX=-valgrind
 	shift
 else
 	unset VALGRIND
-	unset CONCURRENT
-	unset CONCURRENT_TESTS
 	SUFFIX=
 fi
 
@@ -59,14 +43,14 @@ else
 	unset TRACE_ARGS
 fi
 
-if ! ./start.sh $CONCURRENT $VALGRIND $TRACE; then
+if ! ./start.sh $VALGRIND $TRACE; then
 	if ! [ -z "$LOGBASEDIR" ] ; then
 		echo "Could not start test environment" > $LOGDIR/run
 	fi
 	exit 1
 fi
 
-./run-tests.py -D --logdir "$LOGDIR" $TRACE_ARGS -q $DB $CONCURRENT_TESTS $@ || errors=1
+./run-tests.py -D --logdir "$LOGDIR" $TRACE_ARGS -q $DB $@ || errors=1
 
 ./stop.sh
 

@@ -4137,7 +4137,6 @@ void dump_freq_array(struct wpa_supplicant *wpa_s, const char *title,
 int get_shared_radio_freqs(struct wpa_supplicant *wpa_s,
 			   int *freq_array, unsigned int len)
 {
-	const char *rn, *rn2;
 	struct wpa_supplicant *ifs;
 	u8 bssid[ETH_ALEN];
 	int freq;
@@ -4166,20 +4165,9 @@ int get_shared_radio_freqs(struct wpa_supplicant *wpa_s,
 		return idx;
 	}
 
-	rn = wpa_s->driver->get_radio_name(wpa_s->drv_priv);
-	if (rn == NULL || rn[0] == '\0') {
-		dump_freq_array(wpa_s, "get_radio_name failed",
-				freq_array, idx);
-		return idx;
-	}
-
-	for (ifs = wpa_s->global->ifaces; ifs && idx < len;
-	     ifs = ifs->next) {
-		if (wpa_s == ifs || !ifs->driver->get_radio_name)
-			continue;
-
-		rn2 = ifs->driver->get_radio_name(ifs->drv_priv);
-		if (!rn2 || os_strcmp(rn, rn2) != 0)
+	dl_list_for_each(ifs, &wpa_s->radio->ifaces, struct wpa_supplicant,
+			 radio_list) {
+		if (wpa_s == ifs)
 			continue;
 
 		if (ifs->current_ssid == NULL || ifs->assoc_freq == 0)

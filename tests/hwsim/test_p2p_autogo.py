@@ -12,6 +12,7 @@ import logging
 logger = logging.getLogger()
 
 import hwsim_utils
+import utils
 from wlantest import Wlantest
 
 def autogo(go, freq=None):
@@ -24,16 +25,74 @@ def connect_cli(go, client):
     logger.info("Try to connect the client to the GO")
     pin = client.wps_read_pin()
     go.p2p_go_authorize_client(pin)
-    client.p2p_connect_group(go.p2p_dev_addr(), pin, timeout=60)
+    res = client.p2p_connect_group(go.p2p_dev_addr(), pin, timeout=60)
     logger.info("Client connected")
     hwsim_utils.test_connectivity_p2p(go, client)
+    return res
 
 def test_autogo(dev):
     """P2P autonomous GO and client joining group"""
-    autogo(dev[0])
+    res = autogo(dev[0])
+    if "p2p-wlan" in res['ifname']:
+        raise Exception("Unexpected group interface name on GO")
+    res = connect_cli(dev[0], dev[1])
+    if "p2p-wlan" in res['ifname']:
+        raise Exception("Unexpected group interface name on client")
+    dev[0].remove_group()
+    dev[1].wait_go_ending_session()
+
+def test_autogo2(dev):
+    """P2P autonomous GO with a separate group interface and client joining group"""
+    dev[0].request("SET p2p_no_group_iface 0")
+    res = autogo(dev[0])
+    if "p2p-wlan" not in res['ifname']:
+        raise Exception("Unexpected group interface name on GO")
+    if res['ifname'] not in utils.get_ifnames():
+        raise Exception("Could not find group interface netdev")
     connect_cli(dev[0], dev[1])
     dev[0].remove_group()
     dev[1].wait_go_ending_session()
+    if res['ifname'] in utils.get_ifnames():
+        raise Exception("Group interface netdev was not removed")
+
+def test_autogo3(dev):
+    """P2P autonomous GO and client with a separate group interface joining group"""
+    dev[1].request("SET p2p_no_group_iface 0")
+    autogo(dev[0])
+    res = connect_cli(dev[0], dev[1])
+    if "p2p-wlan" not in res['ifname']:
+        raise Exception("Unexpected group interface name on client")
+    if res['ifname'] not in utils.get_ifnames():
+        raise Exception("Could not find group interface netdev")
+    dev[0].remove_group()
+    dev[1].wait_go_ending_session()
+    dev[1].ping()
+    if res['ifname'] in utils.get_ifnames():
+        raise Exception("Group interface netdev was not removed")
+
+def test_autogo4(dev):
+    """P2P autonomous GO and client joining group (both with a separate group interface)"""
+    dev[0].request("SET p2p_no_group_iface 0")
+    dev[1].request("SET p2p_no_group_iface 0")
+    res1 = autogo(dev[0])
+    res2 = connect_cli(dev[0], dev[1])
+    if "p2p-wlan" not in res1['ifname']:
+        raise Exception("Unexpected group interface name on GO")
+    if "p2p-wlan" not in res2['ifname']:
+        raise Exception("Unexpected group interface name on client")
+    ifnames = utils.get_ifnames()
+    if res1['ifname'] not in ifnames:
+        raise Exception("Could not find GO group interface netdev")
+    if res2['ifname'] not in ifnames:
+        raise Exception("Could not find client group interface netdev")
+    dev[0].remove_group()
+    dev[1].wait_go_ending_session()
+    dev[1].ping()
+    ifnames = utils.get_ifnames()
+    if res1['ifname'] in ifnames:
+        raise Exception("GO group interface netdev was not removed")
+    if res2['ifname'] in ifnames:
+        raise Exception("Client group interface netdev was not removed")
 
 def test_autogo_2cli(dev):
     """P2P autonomous GO and two clients joining group"""

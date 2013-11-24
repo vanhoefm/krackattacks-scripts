@@ -13,6 +13,7 @@ import threading
 import Queue
 
 import hwsim_utils
+import utils
 
 def check_grpform_results(i_res, r_res):
     if i_res['result'] != 'success' or r_res['result'] != 'success':
@@ -62,6 +63,7 @@ def go_neg_pin(i_dev, r_dev, i_intent=None, r_intent=None, i_method='enter', r_m
     logger.info("Group formed")
     hwsim_utils.test_connectivity_p2p(r_dev, i_dev)
     i_dev.dump_monitor()
+    return [i_res, r_res]
 
 def go_neg_pin_authorized(i_dev, r_dev, i_intent=None, r_intent=None, expect_failure=False, i_go_neg_status=None, i_method='enter', r_method='display', test_data=True, i_freq=None, r_freq=None):
     r_dev.p2p_listen()
@@ -132,15 +134,78 @@ def test_grpform(dev):
     check_grpform_results(i_res, r_res)
     remove_group(dev[0], dev[1])
 
+def test_grpform_a(dev):
+    """P2P group formation using PIN and authorized connection (init -> GO) (init: group iface)"""
+    dev[0].request("SET p2p_no_group_iface 0")
+    [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
+                                           r_dev=dev[1], r_intent=0)
+    if "p2p-wlan" not in i_res['ifname']:
+        raise Exception("Unexpected group interface name")
+    check_grpform_results(i_res, r_res)
+    remove_group(dev[0], dev[1])
+    if i_res['ifname'] in utils.get_ifnames():
+        raise Exception("Group interface netdev was not removed")
+
+def test_grpform_b(dev):
+    """P2P group formation using PIN and authorized connection (init -> GO) (resp: group iface)"""
+    dev[1].request("SET p2p_no_group_iface 0")
+    [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
+                                           r_dev=dev[1], r_intent=0)
+    if "p2p-wlan" not in r_res['ifname']:
+        raise Exception("Unexpected group interface name")
+    check_grpform_results(i_res, r_res)
+    remove_group(dev[0], dev[1])
+    if r_res['ifname'] in utils.get_ifnames():
+        raise Exception("Group interface netdev was not removed")
+
+def test_grpform_c(dev):
+    """P2P group formation using PIN and authorized connection (init -> GO) (group iface)"""
+    dev[0].request("SET p2p_no_group_iface 0")
+    dev[1].request("SET p2p_no_group_iface 0")
+    [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
+                                           r_dev=dev[1], r_intent=0)
+    if "p2p-wlan" not in i_res['ifname']:
+        raise Exception("Unexpected group interface name")
+    if "p2p-wlan" not in r_res['ifname']:
+        raise Exception("Unexpected group interface name")
+    check_grpform_results(i_res, r_res)
+    remove_group(dev[0], dev[1])
+    if i_res['ifname'] in utils.get_ifnames():
+        raise Exception("Group interface netdev was not removed")
+    if r_res['ifname'] in utils.get_ifnames():
+        raise Exception("Group interface netdev was not removed")
+
 def test_grpform2(dev):
     """P2P group formation using PIN and authorized connection (resp -> GO)"""
     go_neg_pin_authorized(i_dev=dev[0], i_intent=0, r_dev=dev[1], r_intent=15)
     remove_group(dev[0], dev[1])
 
+def test_grpform2_c(dev):
+    """P2P group formation using PIN and authorized connection (resp -> GO) (group iface)"""
+    dev[0].request("SET p2p_no_group_iface 0")
+    dev[1].request("SET p2p_no_group_iface 0")
+    [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=0, r_dev=dev[1], r_intent=15)
+    remove_group(dev[0], dev[1])
+    if i_res['ifname'] in utils.get_ifnames():
+        raise Exception("Group interface netdev was not removed")
+    if r_res['ifname'] in utils.get_ifnames():
+        raise Exception("Group interface netdev was not removed")
+
 def test_grpform3(dev):
     """P2P group formation using PIN and re-init GO Negotiation"""
     go_neg_pin(i_dev=dev[0], i_intent=15, r_dev=dev[1], r_intent=0)
     remove_group(dev[0], dev[1])
+
+def test_grpform3_c(dev):
+    """P2P group formation using PIN and re-init GO Negotiation (group iface)"""
+    dev[0].request("SET p2p_no_group_iface 0")
+    dev[1].request("SET p2p_no_group_iface 0")
+    [i_res, r_res] = go_neg_pin(i_dev=dev[0], i_intent=15, r_dev=dev[1], r_intent=0)
+    remove_group(dev[0], dev[1])
+    if i_res['ifname'] in utils.get_ifnames():
+        raise Exception("Group interface netdev was not removed")
+    if r_res['ifname'] in utils.get_ifnames():
+        raise Exception("Group interface netdev was not removed")
 
 def test_grpform_pbc(dev):
     """P2P group formation using PBC and re-init GO Negotiation"""

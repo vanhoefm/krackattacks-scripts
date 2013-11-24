@@ -2872,10 +2872,61 @@ int wpas_init_ext_pw(struct wpa_supplicant *wpa_s)
 }
 
 
+static struct wpa_radio * radio_add_interface(struct wpa_supplicant *wpa_s,
+					      const char *rn)
+{
+	struct wpa_supplicant *iface = wpa_s->global->ifaces;
+	struct wpa_radio *radio;
+
+	while (rn && iface) {
+		radio = iface->radio;
+		if (radio && os_strcmp(rn, radio->name) == 0) {
+			wpa_printf(MSG_DEBUG, "Add interface %s to existing radio %s",
+				   wpa_s->ifname, rn);
+			dl_list_add(&radio->ifaces, &wpa_s->radio_list);
+			return radio;
+		}
+	}
+
+	wpa_printf(MSG_DEBUG, "Add interface %s to a new radio %s",
+		   wpa_s->ifname, rn ? rn : "N/A");
+	radio = os_zalloc(sizeof(*radio));
+	if (radio == NULL)
+		return NULL;
+
+	if (rn)
+		os_strlcpy(radio->name, rn, sizeof(radio->name));
+	dl_list_init(&radio->ifaces);
+	dl_list_add(&radio->ifaces, &wpa_s->radio_list);
+
+	return radio;
+}
+
+
+static void radio_remove_interface(struct wpa_supplicant *wpa_s)
+{
+	struct wpa_radio *radio = wpa_s->radio;
+
+	if (!radio)
+		return;
+
+	wpa_printf(MSG_DEBUG, "Remove interface %s from radio %s",
+		   wpa_s->ifname, radio->name);
+	dl_list_del(&wpa_s->radio_list);
+	wpa_s->radio = NULL;
+
+	if (!dl_list_empty(&radio->ifaces))
+		return; /* Interfaces remain for this radio */
+
+	wpa_printf(MSG_DEBUG, "Remove radio %s", radio->name);
+	os_free(radio);
+}
+
+
 static int wpas_init_driver(struct wpa_supplicant *wpa_s,
 			    struct wpa_interface *iface)
 {
-	const char *ifname, *driver;
+	const char *ifname, *driver, *rn;
 
 	driver = iface->driver;
 next_driver:
@@ -2908,6 +2959,17 @@ next_driver:
 			"interface name with '%s'", ifname);
 		os_strlcpy(wpa_s->ifname, ifname, sizeof(wpa_s->ifname));
 	}
+
+	if (wpa_s->driver->get_radio_name)
+		rn = wpa_s->driver->get_radio_name(wpa_s->drv_priv);
+	else
+		rn = NULL;
+	if (rn && rn[0] == '\0')
+		rn = NULL;
+
+	wpa_s->radio = radio_add_interface(wpa_s, rn);
+	if (wpa_s->radio == NULL)
+		return -1;
 
 	return 0;
 }
@@ -3179,6 +3241,8 @@ static void wpa_supplicant_deinit_iface(struct wpa_supplicant *wpa_s,
 		wpas_p2p_deinit_global(wpa_s->global);
 	}
 #endif /* CONFIG_P2P */
+
+	radio_remove_interface(wpa_s);
 
 	if (wpa_s->drv_priv)
 		wpa_drv_deinit(wpa_s);

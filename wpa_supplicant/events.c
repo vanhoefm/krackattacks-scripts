@@ -2891,7 +2891,10 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 
 		wpas_ap_ch_switch(wpa_s, data->ch_switch.freq,
 				  data->ch_switch.ht_enabled,
-				  data->ch_switch.ch_offset);
+				  data->ch_switch.ch_offset,
+				  data->ch_switch.ch_width,
+				  data->ch_switch.cf1,
+				  data->ch_switch.cf2);
 		break;
 #endif /* CONFIG_AP */
 #if defined(CONFIG_AP) || defined(CONFIG_IBSS_RSN)

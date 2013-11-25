@@ -381,14 +381,15 @@ void hostapd_event_sta_low_ack(struct hostapd_data *hapd, const u8 *addr)
 
 
 void hostapd_event_ch_switch(struct hostapd_data *hapd, int freq, int ht,
-			     int offset)
+			     int offset, int width, int cf1, int cf2)
 {
 #ifdef NEED_AP_MLME
-	int channel;
+	int channel, chwidth, seg0_idx = 0, seg1_idx = 0;
 
 	hostapd_logger(hapd, NULL, HOSTAPD_MODULE_IEEE80211,
 		       HOSTAPD_LEVEL_INFO, "driver had channel switch: "
-		       "freq=%d, ht=%d, offset=%d", freq, ht, offset);
+		       "freq=%d, ht=%d, offset=%d, width=%d, cf1=%d, cf2=%d",
+		       freq, ht, offset, width, cf1, cf2);
 
 	hapd->iface->freq = freq;
 
@@ -400,9 +401,43 @@ void hostapd_event_ch_switch(struct hostapd_data *hapd, int freq, int ht,
 		return;
 	}
 
+	switch (width) {
+	case CHAN_WIDTH_80:
+		chwidth = VHT_CHANWIDTH_80MHZ;
+		break;
+	case CHAN_WIDTH_80P80:
+		chwidth = VHT_CHANWIDTH_80P80MHZ;
+		break;
+	case CHAN_WIDTH_160:
+		chwidth = VHT_CHANWIDTH_160MHZ;
+		break;
+	case CHAN_WIDTH_20_NOHT:
+	case CHAN_WIDTH_20:
+	case CHAN_WIDTH_40:
+	default:
+		chwidth = VHT_CHANWIDTH_USE_HT;
+		break;
+	}
+
+	switch (hapd->iface->current_mode->mode) {
+	case HOSTAPD_MODE_IEEE80211A:
+		if (cf1 > 5000)
+			seg0_idx = (cf1 - 5000) / 5;
+		if (cf2 > 5000)
+			seg1_idx = (cf2 - 5000) / 5;
+		break;
+	default:
+		seg0_idx = hostapd_hw_get_channel(hapd, cf1);
+		seg1_idx = hostapd_hw_get_channel(hapd, cf2);
+		break;
+	}
+
 	hapd->iconf->channel = channel;
 	hapd->iconf->ieee80211n = ht;
 	hapd->iconf->secondary_channel = offset;
+	hapd->iconf->vht_oper_chwidth = chwidth;
+	hapd->iconf->vht_oper_centr_freq_seg0_idx = seg0_idx;
+	hapd->iconf->vht_oper_centr_freq_seg1_idx = seg1_idx;
 
 	if (hapd->iface->csa_in_progress && freq == hapd->iface->cs_freq) {
 		hostapd_cleanup_cs_params(hapd);
@@ -976,7 +1011,10 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			break;
 		hostapd_event_ch_switch(hapd, data->ch_switch.freq,
 					data->ch_switch.ht_enabled,
-					data->ch_switch.ch_offset);
+					data->ch_switch.ch_offset,
+					data->ch_switch.ch_width,
+					data->ch_switch.cf1,
+					data->ch_switch.cf2);
 		break;
 	case EVENT_CONNECT_FAILED_REASON:
 		if (!data)

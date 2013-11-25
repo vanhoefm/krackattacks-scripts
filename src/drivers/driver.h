@@ -4028,11 +4028,17 @@ union wpa_event_data {
 	 * @freq: Frequency of new channel in MHz
 	 * @ht_enabled: Whether this is an HT channel
 	 * @ch_offset: Secondary channel offset
+	 * @ch_width: Channel width
+	 * @cf1: Center frequency 1
+	 * @cf2: Center frequency 2
 	 */
 	struct ch_switch {
 		int freq;
 		int ht_enabled;
 		int ch_offset;
+		enum chan_width ch_width;
+		int cf1;
+		int cf2;
 	} ch_switch;
 
 	/**

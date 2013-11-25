@@ -504,6 +504,27 @@ static const char * nl80211_command_to_string(enum nl80211_commands cmd)
 }
 
 
+/* Converts nl80211_chan_width to a common format */
+static enum chan_width convert2width(int width)
+{
+	switch (width) {
+	case NL80211_CHAN_WIDTH_20_NOHT:
+		return CHAN_WIDTH_20_NOHT;
+	case NL80211_CHAN_WIDTH_20:
+		return CHAN_WIDTH_20;
+	case NL80211_CHAN_WIDTH_40:
+		return CHAN_WIDTH_40;
+	case NL80211_CHAN_WIDTH_80:
+		return CHAN_WIDTH_80;
+	case NL80211_CHAN_WIDTH_80P80:
+		return CHAN_WIDTH_80P80;
+	case NL80211_CHAN_WIDTH_160:
+		return CHAN_WIDTH_160;
+	}
+	return CHAN_WIDTH_UNKNOWN;
+}
+
+
 static int is_ap_interface(enum nl80211_iftype nlmode)
 {
 	return (nlmode == NL80211_IFTYPE_AP ||
@@ -1484,36 +1505,60 @@ static void mlme_event_disconnect(struct wpa_driver_nl80211_data *drv,
 
 
 static void mlme_event_ch_switch(struct wpa_driver_nl80211_data *drv,
-				 struct nlattr *freq, struct nlattr *type)
+				 struct nlattr *ifindex, struct nlattr *freq,
+				 struct nlattr *type, struct nlattr *bw,
+				 struct nlattr *cf1, struct nlattr *cf2)
 {
+	struct i802_bss *bss;
 	union wpa_event_data data;
 	int ht_enabled = 1;
 	int chan_offset = 0;
+	int ifidx;
 
 	wpa_printf(MSG_DEBUG, "nl80211: Channel switch event");
 
-	if (!freq || !type)
+	if (!freq)
 		return;
 
-	switch (nla_get_u32(type)) {
-	case NL80211_CHAN_NO_HT:
-		ht_enabled = 0;
-		break;
-	case NL80211_CHAN_HT20:
-		break;
-	case NL80211_CHAN_HT40PLUS:
-		chan_offset = 1;
-		break;
-	case NL80211_CHAN_HT40MINUS:
-		chan_offset = -1;
-		break;
+	ifidx = nla_get_u32(ifindex);
+	for (bss = drv->first_bss; bss; bss = bss->next)
+		if (bss->ifindex == ifidx)
+			break;
+
+	if (bss == NULL) {
+		wpa_printf(MSG_WARNING, "nl80211: Unknown ifindex (%d) for channel switch, ignoring",
+			   ifidx);
+		return;
 	}
 
+	if (type) {
+		switch (nla_get_u32(type)) {
+		case NL80211_CHAN_NO_HT:
+			ht_enabled = 0;
+			break;
+		case NL80211_CHAN_HT20:
+			break;
+		case NL80211_CHAN_HT40PLUS:
+			chan_offset = 1;
+			break;
+		case NL80211_CHAN_HT40MINUS:
+			chan_offset = -1;
+			break;
+		}
+	}
+
+	os_memset(&data, 0, sizeof(data));
 	data.ch_switch.freq = nla_get_u32(freq);
 	data.ch_switch.ht_enabled = ht_enabled;
 	data.ch_switch.ch_offset = chan_offset;
+	if (bw)
+		data.ch_switch.ch_width = convert2width(nla_get_u32(bw));
+	if (cf1)
+		data.ch_switch.cf1 = nla_get_u32(cf1);
+	if (cf2)
+		data.ch_switch.cf2 = nla_get_u32(cf2);
 
-	drv->first_bss->freq = data.ch_switch.freq;
+	bss->freq = data.ch_switch.freq;
 
 	wpa_supplicant_event(drv->ctx, EVENT_CH_SWITCH, &data);
 }
@@ -2534,8 +2579,6 @@ static void nl80211_connect_failed_event(struct wpa_driver_nl80211_data *drv,
 }
 
 
-static enum chan_width convert2width(int width);
-
 static void nl80211_radar_event(struct wpa_driver_nl80211_data *drv,
 				struct nlattr **tb)
 {
@@ -2702,8 +2745,13 @@ static void do_process_drv_event(struct i802_bss *bss, int cmd,
 				   tb[NL80211_ATTR_RESP_IE]);
 		break;
 	case NL80211_CMD_CH_SWITCH_NOTIFY:
-		mlme_event_ch_switch(drv, tb[NL80211_ATTR_WIPHY_FREQ],
-				     tb[NL80211_ATTR_WIPHY_CHANNEL_TYPE]);
+		mlme_event_ch_switch(drv,
+				     tb[NL80211_ATTR_IFINDEX],
+				     tb[NL80211_ATTR_WIPHY_FREQ],
+				     tb[NL80211_ATTR_WIPHY_CHANNEL_TYPE],
+				     tb[NL80211_ATTR_CHANNEL_WIDTH],
+				     tb[NL80211_ATTR_CENTER_FREQ1],
+				     tb[NL80211_ATTR_CENTER_FREQ2]);
 		break;
 	case NL80211_CMD_DISCONNECT:
 		mlme_event_disconnect(drv, tb[NL80211_ATTR_REASON_CODE],
@@ -10020,27 +10068,6 @@ nla_put_failure:
 }
 
 
-/* Converts nl80211_chan_width to a common format */
-static enum chan_width convert2width(int width)
-{
-	switch (width) {
-	case NL80211_CHAN_WIDTH_20_NOHT:
-		return CHAN_WIDTH_20_NOHT;
-	case NL80211_CHAN_WIDTH_20:
-		return CHAN_WIDTH_20;
-	case NL80211_CHAN_WIDTH_40:
-		return CHAN_WIDTH_40;
-	case NL80211_CHAN_WIDTH_80:
-		return CHAN_WIDTH_80;
-	case NL80211_CHAN_WIDTH_80P80:
-		return CHAN_WIDTH_80P80;
-	case NL80211_CHAN_WIDTH_160:
-		return CHAN_WIDTH_160;
-	}
-	return CHAN_WIDTH_UNKNOWN;
-}
-
-
 static int get_channel_width(struct nl_msg *msg, void *arg)
 {
 	struct nlattr *tb[NL80211_ATTR_MAX + 1];
@@ -11288,9 +11315,11 @@ static int nl80211_switch_channel(void *priv, struct csa_settings *settings)
 	struct nlattr *beacon_csa;
 	int ret = -ENOBUFS;
 
-	wpa_printf(MSG_DEBUG, "nl80211: Channel switch request (cs_count=%u block_tx=%u freq=%d)",
+	wpa_printf(MSG_DEBUG, "nl80211: Channel switch request (cs_count=%u block_tx=%u freq=%d width=%d cf1=%d cf2=%d)",
 		   settings->cs_count, settings->block_tx,
-		   settings->freq_params.freq);
+		   settings->freq_params.freq, settings->freq_params.bandwidth,
+		   settings->freq_params.center_freq1,
+		   settings->freq_params.center_freq2);
 
 	if (!drv->channel_switch_supported) {
 		wpa_printf(MSG_DEBUG, "nl80211: Driver does not support channel switch command");

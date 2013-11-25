@@ -14,6 +14,7 @@ struct wpa_bss_params;
 struct wpa_driver_scan_params;
 struct ieee80211_ht_capabilities;
 struct ieee80211_vht_capabilities;
+struct hostapd_freq_params;
 
 u32 hostapd_sta_flags_to_drv(u32 flags);
 int hostapd_build_ap_extra_ies(struct hostapd_data *hapd,
@@ -105,6 +106,11 @@ int hostapd_start_dfs_cac(struct hostapd_iface *iface, int mode, int freq,
 			  int channel, int ht_enabled, int vht_enabled,
 			  int sec_channel_offset, int vht_oper_chwidth,
 			  int center_segment0, int center_segment1);
+int hostapd_set_freq_params(struct hostapd_freq_params *data, int mode,
+			    int freq, int channel, int ht_enabled,
+			    int vht_enabled, int sec_channel_offset,
+			    int vht_oper_chwidth, int center_segment0,
+			    int center_segment1, u32 vht_caps);
 
 
 #include "drivers/driver.h"

@@ -825,9 +825,9 @@ int ap_sta_bind_vlan(struct hostapd_data *hapd, struct sta_info *sta,
 int ap_check_sa_query_timeout(struct hostapd_data *hapd, struct sta_info *sta)
 {
 	u32 tu;
-	struct os_time now, passed;
-	os_get_time(&now);
-	os_time_sub(&now, &sta->sa_query_start, &passed);
+	struct os_reltime now, passed;
+	os_get_reltime(&now);
+	os_reltime_sub(&now, &sta->sa_query_start, &passed);
 	tu = (passed.sec * 1000000 + passed.usec) / 1024;
 	if (hapd->conf->assoc_sa_query_max_timeout < tu) {
 		hostapd_logger(hapd, sta->addr,
@@ -864,7 +864,7 @@ static void ap_sa_query_timer(void *eloop_ctx, void *timeout_ctx)
 		return;
 	if (sta->sa_query_count == 0) {
 		/* Starting a new SA Query procedure */
-		os_get_time(&sta->sa_query_start);
+		os_get_reltime(&sta->sa_query_start);
 	}
 	trans_id = nbuf + sta->sa_query_count * WLAN_SA_QUERY_TR_ID_LEN;
 	sta->sa_query_trans_id = nbuf;

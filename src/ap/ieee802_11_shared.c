@@ -24,13 +24,13 @@ u8 * hostapd_eid_assoc_comeback_time(struct hostapd_data *hapd,
 {
 	u8 *pos = eid;
 	u32 timeout, tu;
-	struct os_time now, passed;
+	struct os_reltime now, passed;
 
 	*pos++ = WLAN_EID_TIMEOUT_INTERVAL;
 	*pos++ = 5;
 	*pos++ = WLAN_TIMEOUT_ASSOC_COMEBACK;
-	os_get_time(&now);
-	os_time_sub(&now, &sta->sa_query_start, &passed);
+	os_get_reltime(&now);
+	os_reltime_sub(&now, &sta->sa_query_start, &passed);
 	tu = (passed.sec * 1000000 + passed.usec) / 1024;
 	if (hapd->conf->assoc_sa_query_max_timeout > tu)
 		timeout = hapd->conf->assoc_sa_query_max_timeout - tu;

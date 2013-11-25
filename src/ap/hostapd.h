@@ -241,7 +241,7 @@ struct hostapd_data {
 #ifdef CONFIG_SAE
 	/** Key used for generating SAE anti-clogging tokens */
 	u8 sae_token_key[8];
-	os_time_t last_sae_token_key_update;
+	struct os_reltime last_sae_token_key_update;
 #endif /* CONFIG_SAE */
 };
 

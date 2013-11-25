@@ -411,17 +411,17 @@ static struct wpabuf * auth_build_token_req(struct hostapd_data *hapd,
 {
 	struct wpabuf *buf;
 	u8 *token;
-	struct os_time t;
+	struct os_reltime now;
 
-	os_get_time(&t);
-	if (hapd->last_sae_token_key_update == 0 ||
-	    t.sec > hapd->last_sae_token_key_update + 60) {
+	os_get_reltime(&now);
+	if (!os_reltime_initialized(&hapd->last_sae_token_key_update) ||
+	    os_reltime_expired(&now, &hapd->last_sae_token_key_update, 60)) {
 		if (random_get_bytes(hapd->sae_token_key,
 				     sizeof(hapd->sae_token_key)) < 0)
 			return NULL;
 		wpa_hexdump(MSG_DEBUG, "SAE: Updated token key",
 			    hapd->sae_token_key, sizeof(hapd->sae_token_key));
-		hapd->last_sae_token_key_update = t.sec;
+		hapd->last_sae_token_key_update = now;
 	}
 
 	buf = wpabuf_alloc(SHA256_MAC_LEN);

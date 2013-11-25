@@ -108,6 +108,12 @@ static inline int os_reltime_expired(struct os_reltime *now,
 }
 
 
+static inline int os_reltime_initialized(struct os_reltime *t)
+{
+	return t->sec != 0 || t->usec != 0;
+}
+
+
 /**
  * os_mktime - Convert broken-down time into seconds since 1970-01-01
  * @year: Four digit year

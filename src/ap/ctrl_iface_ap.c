@@ -24,14 +24,13 @@
 static int hostapd_get_sta_conn_time(struct sta_info *sta,
 				     char *buf, size_t buflen)
 {
-	struct os_time now, age;
+	struct os_reltime age;
 	int len = 0, ret;
 
 	if (!sta->connected_time.sec)
 		return 0;
 
-	os_get_time(&now);
-	os_time_sub(&now, &sta->connected_time, &age);
+	os_reltime_age(&sta->connected_time, &age);
 
 	ret = os_snprintf(buf + len, buflen - len, "connected_time=%u\n",
 			  (unsigned int) age.sec);

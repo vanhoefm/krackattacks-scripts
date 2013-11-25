@@ -126,7 +126,7 @@ struct sta_info {
 	struct wpabuf *p2p_ie; /* P2P IE from (Re)Association Request */
 	struct wpabuf *hs20_ie; /* HS 2.0 IE from (Re)Association Request */
 
-	struct os_time connected_time;
+	struct os_reltime connected_time;
 
 #ifdef CONFIG_SAE
 	struct sae_data *sae;

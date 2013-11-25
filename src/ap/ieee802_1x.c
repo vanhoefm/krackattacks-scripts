@@ -102,7 +102,7 @@ void ieee802_1x_set_sta_authorized(struct hostapd_data *hapd,
 	}
 
 	if (authorized) {
-		os_get_time(&sta->connected_time);
+		os_get_reltime(&sta->connected_time);
 		accounting_sta_start(hapd, sta);
 	}
 }

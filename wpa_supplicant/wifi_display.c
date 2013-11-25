@@ -16,6 +16,9 @@
 #include "wifi_display.h"
 
 
+#define WIFI_DISPLAY_SUBELEM_HEADER_LEN 3
+
+
 int wifi_display_init(struct wpa_global *global)
 {
 	global->wifi_display = 1;
@@ -248,4 +251,42 @@ int wifi_display_subelem_get(struct wpa_global *global, char *cmd,
 				wpabuf_head_u8(global->wfd_subelem[subelem]) +
 				1,
 				wpabuf_len(global->wfd_subelem[subelem]) - 1);
+}
+
+
+char * wifi_display_subelem_hex(const struct wpabuf *wfd_subelems, u8 id)
+{
+	char *subelem = NULL;
+	const u8 *buf;
+	size_t buflen;
+	size_t i = 0;
+	u16 elen;
+
+	if (!wfd_subelems)
+		return NULL;
+
+	buf = wpabuf_head_u8(wfd_subelems);
+	if (!buf)
+		return NULL;
+
+	buflen = wpabuf_len(wfd_subelems);
+
+	while (i + WIFI_DISPLAY_SUBELEM_HEADER_LEN < buflen) {
+		elen = WPA_GET_BE16(buf + i + 1);
+
+		if (buf[i] == id) {
+			subelem = os_zalloc(2 * elen + 1);
+			if (!subelem)
+				return NULL;
+			wpa_snprintf_hex(subelem, 2 * elen + 1,
+					 buf + i +
+					 WIFI_DISPLAY_SUBELEM_HEADER_LEN,
+					 elen);
+			break;
+		}
+
+		i += elen + WIFI_DISPLAY_SUBELEM_HEADER_LEN;
+	}
+
+	return subelem;
 }

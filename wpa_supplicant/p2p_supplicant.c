@@ -33,6 +33,7 @@
 #include "offchannel.h"
 #include "wps_supplicant.h"
 #include "p2p_supplicant.h"
+#include "wifi_display.h"
 
 
 /*
@@ -1442,17 +1443,27 @@ void wpas_dev_found(void *ctx, const u8 *addr,
 #ifndef CONFIG_NO_STDOUT_DEBUG
 	struct wpa_supplicant *wpa_s = ctx;
 	char devtype[WPS_DEV_TYPE_BUFSIZE];
+	char *wfd_dev_info_hex = NULL;
+
+#ifdef CONFIG_WIFI_DISPLAY
+	wfd_dev_info_hex = wifi_display_subelem_hex(info->wfd_subelems,
+						    WFD_SUBELEM_DEVICE_INFO);
+#endif /* CONFIG_WIFI_DISPLAY */
 
 	wpa_msg_global(wpa_s, MSG_INFO, P2P_EVENT_DEVICE_FOUND MACSTR
 		       " p2p_dev_addr=" MACSTR
 		       " pri_dev_type=%s name='%s' config_methods=0x%x "
-		       "dev_capab=0x%x group_capab=0x%x",
+		       "dev_capab=0x%x group_capab=0x%x%s%s",
 		       MAC2STR(addr), MAC2STR(info->p2p_device_addr),
 		       wps_dev_type_bin2str(info->pri_dev_type, devtype,
 					    sizeof(devtype)),
-		info->device_name, info->config_methods,
-		info->dev_capab, info->group_capab);
+		       info->device_name, info->config_methods,
+		       info->dev_capab, info->group_capab,
+		       wfd_dev_info_hex ? " wfd_dev_info=0x" : "",
+		       wfd_dev_info_hex ? wfd_dev_info_hex : "");
 #endif /* CONFIG_NO_STDOUT_DEBUG */
+
+	os_free(wfd_dev_info_hex);
 
 	wpas_notify_p2p_device_found(ctx, info->p2p_device_addr, new_device);
 }

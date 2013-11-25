@@ -26,7 +26,7 @@ struct ap_info {
 
 	int ht_support;
 
-	os_time_t last_beacon;
+	struct os_reltime last_beacon;
 };
 
 struct ieee802_11_elems;

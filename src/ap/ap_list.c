@@ -172,7 +172,6 @@ void ap_list_process_beacon(struct hostapd_iface *iface,
 			    struct hostapd_frame_info *fi)
 {
 	struct ap_info *ap;
-	struct os_time now;
 	int new_ap = 0;
 	int set_beacon = 0;
 
@@ -210,8 +209,7 @@ void ap_list_process_beacon(struct hostapd_iface *iface,
 	else
 		ap->ht_support = 0;
 
-	os_get_time(&now);
-	ap->last_beacon = now.sec;
+	os_get_reltime(&ap->last_beacon);
 
 	if (!new_ap && ap != iface->ap_list) {
 		/* move AP entry into the beginning of the list so that the
@@ -252,7 +250,7 @@ void ap_list_process_beacon(struct hostapd_iface *iface,
 static void ap_list_timer(void *eloop_ctx, void *timeout_ctx)
 {
 	struct hostapd_iface *iface = eloop_ctx;
-	struct os_time now;
+	struct os_reltime now;
 	struct ap_info *ap;
 	int set_beacon = 0;
 
@@ -261,12 +259,12 @@ static void ap_list_timer(void *eloop_ctx, void *timeout_ctx)
 	if (!iface->ap_list)
 		return;
 
-	os_get_time(&now);
+	os_get_reltime(&now);
 
 	while (iface->ap_list) {
 		ap = iface->ap_list->prev;
-		if (ap->last_beacon + iface->conf->ap_table_expiration_time >=
-		    now.sec)
+		if (!os_reltime_expired(&now, &ap->last_beacon,
+					iface->conf->ap_table_expiration_time))
 			break;
 
 		ap_free_ap(iface, ap);

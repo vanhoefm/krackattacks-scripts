@@ -627,27 +627,111 @@ int hostapd_dfs_complete_cac(struct hostapd_iface *iface, int success, int freq,
 }
 
 
-static int hostapd_dfs_start_channel_switch(struct hostapd_iface *iface)
+static int hostapd_dfs_start_channel_switch_cac(struct hostapd_iface *iface)
 {
 	struct hostapd_channel_data *channel;
-	int err = 1;
 	int secondary_channel;
 	u8 vht_oper_centr_freq_seg0_idx;
 	u8 vht_oper_centr_freq_seg1_idx;
-	int skip_radar = 1;
+	int skip_radar = 0;
+	int err = 1;
 
-	wpa_printf(MSG_DEBUG, "%s called", __func__);
+	/* Radar detected during active CAC */
+	iface->cac_started = 0;
 	channel = dfs_get_valid_channel(iface, &secondary_channel,
 					&vht_oper_centr_freq_seg0_idx,
 					&vht_oper_centr_freq_seg1_idx,
 					skip_radar);
-	if (channel) {
-		wpa_printf(MSG_DEBUG, "DFS will switch to a new channel %d",
-			   channel->chan);
-		wpa_msg(iface->bss[0]->msg_ctx, MSG_INFO, DFS_EVENT_NEW_CHANNEL
-			"freq=%d chan=%d sec_chan=%d", channel->freq,
-			channel->chan, secondary_channel);
 
+	if (!channel) {
+		wpa_printf(MSG_ERROR, "No valid channel available");
+		hostapd_setup_interface_complete(iface, err);
+		return err;
+	}
+
+	wpa_printf(MSG_DEBUG, "DFS will switch to a new channel %d",
+		   channel->chan);
+	wpa_msg(iface->bss[0]->msg_ctx, MSG_INFO, DFS_EVENT_NEW_CHANNEL
+		"freq=%d chan=%d sec_chan=%d", channel->freq,
+		channel->chan, secondary_channel);
+
+	iface->freq = channel->freq;
+	iface->conf->channel = channel->chan;
+	iface->conf->secondary_channel = secondary_channel;
+	iface->conf->vht_oper_centr_freq_seg0_idx =
+		vht_oper_centr_freq_seg0_idx;
+	iface->conf->vht_oper_centr_freq_seg1_idx =
+		vht_oper_centr_freq_seg1_idx;
+	err = 0;
+
+	hostapd_setup_interface_complete(iface, err);
+	return err;
+}
+
+
+static int hostapd_dfs_start_channel_switch(struct hostapd_iface *iface)
+{
+	struct hostapd_channel_data *channel;
+	int secondary_channel;
+	u8 vht_oper_centr_freq_seg0_idx;
+	u8 vht_oper_centr_freq_seg1_idx;
+	int skip_radar = 1;
+	struct csa_settings csa_settings;
+	struct hostapd_data *hapd = iface->bss[0];
+	int err = 1;
+
+	wpa_printf(MSG_DEBUG, "%s called (CAC active: %s)", __func__,
+		   iface->cac_started ? "yes" : "no");
+
+	/* Check if active CAC */
+	if (iface->cac_started)
+		return hostapd_dfs_start_channel_switch_cac(iface);
+
+
+	/* Perform channel switch/CSA */
+	channel = dfs_get_valid_channel(iface, &secondary_channel,
+					&vht_oper_centr_freq_seg0_idx,
+					&vht_oper_centr_freq_seg1_idx,
+					skip_radar);
+
+	if (!channel) {
+		/* FIXME: Wait for channel(s) to become available */
+		hostapd_disable_iface(iface);
+		return err;
+	}
+
+	wpa_printf(MSG_DEBUG, "DFS will switch to a new channel %d",
+		   channel->chan);
+	wpa_msg(iface->bss[0]->msg_ctx, MSG_INFO, DFS_EVENT_NEW_CHANNEL
+		"freq=%d chan=%d sec_chan=%d", channel->freq,
+		channel->chan, secondary_channel);
+
+	/* Setup CSA request */
+	os_memset(&csa_settings, 0, sizeof(csa_settings));
+	csa_settings.cs_count = 5;
+	csa_settings.block_tx = 1;
+	err = hostapd_set_freq_params(&csa_settings.freq_params,
+				      iface->conf->hw_mode,
+				      channel->freq,
+				      channel->chan,
+				      iface->conf->ieee80211n,
+				      iface->conf->ieee80211ac,
+				      secondary_channel,
+				      iface->conf->vht_oper_chwidth,
+				      vht_oper_centr_freq_seg0_idx,
+				      vht_oper_centr_freq_seg1_idx,
+				      iface->current_mode->vht_capab);
+
+	if (err) {
+		wpa_printf(MSG_ERROR, "DFS failed to calculate CSA freq params");
+		hostapd_disable_iface(iface);
+		return err;
+	}
+
+	err = hostapd_switch_channel(hapd, &csa_settings);
+	if (err) {
+		wpa_printf(MSG_WARNING, "DFS failed to schedule CSA (%d) - trying fallback",
+			   err);
 		iface->freq = channel->freq;
 		iface->conf->channel = channel->chan;
 		iface->conf->secondary_channel = secondary_channel;
@@ -655,29 +739,16 @@ static int hostapd_dfs_start_channel_switch(struct hostapd_iface *iface)
 			vht_oper_centr_freq_seg0_idx;
 		iface->conf->vht_oper_centr_freq_seg1_idx =
 			vht_oper_centr_freq_seg1_idx;
-		err = 0;
-	} else {
-		wpa_printf(MSG_ERROR, "No valid channel available");
-	}
 
-	if (iface->cac_started) {
-		wpa_printf(MSG_DEBUG, "DFS radar detected during CAC");
-		iface->cac_started = 0;
-		/* FIXME: Wait for channel(s) to become available if no channel
-		 * has been found */
-		hostapd_setup_interface_complete(iface, err);
-		return err;
-	}
-
-	if (err) {
-		/* FIXME: Wait for channel(s) to become available */
 		hostapd_disable_iface(iface);
-		return err;
+		hostapd_enable_iface(iface);
+		return 0;
 	}
 
-	wpa_printf(MSG_DEBUG, "DFS radar detected");
-	hostapd_disable_iface(iface);
-	hostapd_enable_iface(iface);
+	/* Channel configuration will be updated once CSA completes and
+	 * ch_switch_notify event is received */
+
+	wpa_printf(MSG_DEBUG, "DFS waiting channel switch event");
 	return 0;
 }
 

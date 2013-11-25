@@ -86,6 +86,16 @@ static inline void os_reltime_sub(struct os_reltime *a, struct os_reltime *b,
 }
 
 
+static inline void os_reltime_age(struct os_reltime *start,
+				  struct os_reltime *age)
+{
+	struct os_reltime now;
+
+	os_get_reltime(&now);
+	os_reltime_sub(&now, start, age);
+}
+
+
 /**
  * os_mktime - Convert broken-down time into seconds since 1970-01-01
  * @year: Four digit year

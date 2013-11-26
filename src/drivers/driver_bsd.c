@@ -85,8 +85,10 @@ get80211opmode(struct bsd_driver_data *drv)
 			return IEEE80211_M_HOSTAP;
 		if (ifmr.ifm_current & IFM_IEEE80211_MONITOR)
 			return IEEE80211_M_MONITOR;
+#ifdef IEEE80211_M_MBSS
 		if (ifmr.ifm_current & IFM_IEEE80211_MBSS)
 			return IEEE80211_M_MBSS;
+#endif /* IEEE80211_M_MBSS */
 	}
 	return IEEE80211_M_STA;
 }
@@ -324,7 +326,9 @@ bsd_set_key(const char *ifname, void *priv, enum wpa_alg alg,
 	    size_t seq_len, const u8 *key, size_t key_len)
 {
 	struct ieee80211req_key wk;
+#ifdef IEEE80211_KEY_NOREPLAY
 	struct bsd_driver_data *drv = priv;
+#endif /* IEEE80211_KEY_NOREPLAY */
 
 	wpa_printf(MSG_DEBUG, "%s: alg=%d addr=%p key_idx=%d set_tx=%d "
 		   "seq_len=%zu key_len=%zu", __func__, alg, addr, key_idx,
@@ -380,12 +384,14 @@ bsd_set_key(const char *ifname, void *priv, enum wpa_alg alg,
 	if (wk.ik_keyix != IEEE80211_KEYIX_NONE && set_tx)
 		wk.ik_flags |= IEEE80211_KEY_DEFAULT;
 #ifndef HOSTAPD
+#ifdef IEEE80211_KEY_NOREPLAY
 	/*
 	 * Ignore replay failures in IBSS and AHDEMO mode.
 	 */
 	if (drv->opmode == IEEE80211_M_IBSS ||
 	    drv->opmode == IEEE80211_M_AHDEMO)
 		wk.ik_flags |= IEEE80211_KEY_NOREPLAY;
+#endif /* IEEE80211_KEY_NOREPLAY */
 #endif /* HOSTAPD */
 	wk.ik_keylen = key_len;
 	if (seq) {

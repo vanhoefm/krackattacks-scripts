@@ -66,6 +66,12 @@ extern "C" {
 /** RSN IBSS 4-way handshakes completed with specified peer */
 #define IBSS_RSN_COMPLETED "IBSS-RSN-COMPLETED "
 
+/** Notification of frequency conflict due to a concurrent operation.
+ *
+ * The indicated network is disabled and needs to be re-enabled before it can
+ * be used again.
+ */
+#define WPA_EVENT_FREQ_CONFLICT "CTRL-EVENT-FREQ-CONFLICT "
 /** WPS overlap detected in PBC mode */
 #define WPS_EVENT_OVERLAP "WPS-OVERLAP-DETECTED "
 /** Available WPS AP with active PBC found in scan results */

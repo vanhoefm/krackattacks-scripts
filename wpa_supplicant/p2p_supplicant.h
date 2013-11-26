@@ -29,6 +29,8 @@ void wpas_p2p_remain_on_channel_cb(struct wpa_supplicant *wpa_s,
 				   unsigned int freq, unsigned int duration);
 void wpas_p2p_cancel_remain_on_channel_cb(struct wpa_supplicant *wpa_s,
 					  unsigned int freq);
+int wpas_p2p_handle_frequency_conflicts(struct wpa_supplicant *wpa_s,
+                                          int freq, struct wpa_ssid *ssid);
 int wpas_p2p_group_remove(struct wpa_supplicant *wpa_s, const char *ifname);
 int wpas_p2p_group_add(struct wpa_supplicant *wpa_s, int persistent_group,
 		       int freq, int ht40, int vht);

@@ -1647,6 +1647,25 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	wpa_supplicant_apply_ht_overrides(wpa_s, ssid, &params);
 #endif /* CONFIG_HT_OVERRIDES */
 
+#ifdef CONFIG_P2P
+	/*
+	 * If multi-channel concurrency is not supported, check for any
+	 * frequency conflict. In case of any frequency conflict, remove the
+	 * least prioritized connection.
+	 */
+	if (wpa_s->num_multichan_concurrent < 2) {
+		int freq = wpa_drv_shared_freq(wpa_s);
+		if (freq > 0 && freq != params.freq) {
+			wpa_printf(MSG_DEBUG, "Shared interface with conflicting frequency found (%d != %d)",
+				   freq, params.freq);
+			if (wpas_p2p_handle_frequency_conflicts(wpa_s,
+								params.freq,
+								ssid) < 0)
+				return;
+		}
+	}
+#endif /* CONFIG_P2P */
+
 	ret = wpa_drv_associate(wpa_s, &params);
 	if (ret < 0) {
 		wpa_msg(wpa_s, MSG_INFO, "Association request to the driver "

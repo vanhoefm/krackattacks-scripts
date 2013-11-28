@@ -299,7 +299,8 @@ static void wpa_supplicant_optimize_freqs(
 		if (params->freqs)
 			params->freqs[0] = wpa_s->wps_freq;
 		wpa_s->after_wps--;
-	}
+	} else if (wpa_s->after_wps)
+		wpa_s->after_wps--;
 
 	if (params->freqs == NULL && wpa_s->known_wps_freq && wpa_s->wps_freq)
 	{

@@ -399,6 +399,14 @@ int wps_build_oob_dev_pw(struct wpabuf *msg, u16 dev_pw_id,
 	addr[0] = wpabuf_head(pubkey);
 	hash_len = wpabuf_len(pubkey);
 	sha256_vector(1, addr, &hash_len, pubkey_hash);
+#ifdef CONFIG_WPS_TESTING
+	if (wps_corrupt_pkhash) {
+		wpa_hexdump(MSG_DEBUG, "WPS: Real Public Key Hash",
+			    pubkey_hash, WPS_OOB_PUBKEY_HASH_LEN);
+		wpa_printf(MSG_INFO, "WPS: Testing - corrupt public key hash");
+		pubkey_hash[WPS_OOB_PUBKEY_HASH_LEN - 2]++;
+	}
+#endif /* CONFIG_WPS_TESTING */
 
 	wpabuf_put_be16(msg, ATTR_OOB_DEVICE_PASSWORD);
 	wpabuf_put_be16(msg, WPS_OOB_PUBKEY_HASH_LEN + 2 + dev_pw_len);

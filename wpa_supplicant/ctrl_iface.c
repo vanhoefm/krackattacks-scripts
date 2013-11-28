@@ -364,6 +364,10 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 		wps_testing_dummy_cred = atoi(value);
 		wpa_printf(MSG_DEBUG, "WPS: Testing - dummy_cred=%d",
 			   wps_testing_dummy_cred);
+	} else if (os_strcasecmp(cmd, "wps_corrupt_pkhash") == 0) {
+		wps_corrupt_pkhash = atoi(value);
+		wpa_printf(MSG_DEBUG, "WPS: Testing - wps_corrupt_pkhash=%d",
+			   wps_corrupt_pkhash);
 #endif /* CONFIG_WPS_TESTING */
 	} else if (os_strcasecmp(cmd, "ampdu") == 0) {
 		if (wpa_drv_ampdu(wpa_s, atoi(value)) < 0)
@@ -5388,6 +5392,7 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 #ifdef CONFIG_WPS_TESTING
 	wps_version_number = 0x20;
 	wps_testing_dummy_cred = 0;
+	wps_corrupt_pkhash = 0;
 #endif /* CONFIG_WPS_TESTING */
 #ifdef CONFIG_WPS
 	wpa_s->wps_fragment_size = 0;

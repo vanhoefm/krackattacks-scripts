@@ -13,6 +13,7 @@
 
 extern int wps_version_number;
 extern int wps_testing_dummy_cred;
+extern int wps_corrupt_pkhash;
 #define WPS_VERSION wps_version_number
 
 #else /* CONFIG_WPS_TESTING */

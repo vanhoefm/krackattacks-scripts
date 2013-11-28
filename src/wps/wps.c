@@ -18,6 +18,7 @@
 #ifdef CONFIG_WPS_TESTING
 int wps_version_number = 0x20;
 int wps_testing_dummy_cred = 0;
+int wps_corrupt_pkhash = 0;
 #endif /* CONFIG_WPS_TESTING */
 
 

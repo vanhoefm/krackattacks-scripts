@@ -965,6 +965,10 @@ static int hostapd_ctrl_iface_set(struct hostapd_data *hapd, char *cmd)
 		wps_testing_dummy_cred = atoi(value);
 		wpa_printf(MSG_DEBUG, "WPS: Testing - dummy_cred=%d",
 			   wps_testing_dummy_cred);
+	} else if (os_strcasecmp(cmd, "wps_corrupt_pkhash") == 0) {
+		wps_corrupt_pkhash = atoi(value);
+		wpa_printf(MSG_DEBUG, "WPS: Testing - wps_corrupt_pkhash=%d",
+			   wps_corrupt_pkhash);
 #endif /* CONFIG_WPS_TESTING */
 #ifdef CONFIG_INTERWORKING
 	} else if (os_strcasecmp(cmd, "gas_frag_limit") == 0) {
@@ -1599,6 +1603,16 @@ static int hostapd_ctrl_iface_remove(struct hapd_interfaces *interfaces,
 }
 
 
+static void hostapd_ctrl_iface_flush(struct hapd_interfaces *interfaces)
+{
+#ifdef CONFIG_WPS_TESTING
+	wps_version_number = 0x20;
+	wps_testing_dummy_cred = 0;
+	wps_corrupt_pkhash = 0;
+#endif /* CONFIG_WPS_TESTING */
+}
+
+
 static void hostapd_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 					      void *sock_ctx)
 {
@@ -1628,6 +1642,8 @@ static void hostapd_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 	} else if (os_strncmp(buf, "RELOG", 5) == 0) {
 		if (wpa_debug_reopen_file() < 0)
 			reply_len = -1;
+	} else if (os_strcmp(buf, "FLUSH") == 0) {
+		hostapd_ctrl_iface_flush(interfaces);
 	} else if (os_strncmp(buf, "ADD ", 4) == 0) {
 		if (hostapd_ctrl_iface_add(interfaces, buf + 4) < 0)
 			reply_len = -1;

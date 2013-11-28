@@ -46,6 +46,9 @@ class HostapdGlobal:
     def relog(self):
         self.ctrl.request("RELOG")
 
+    def flush(self):
+        self.ctrl.request("FLUSH")
+
 
 class Hostapd:
     def __init__(self, ifname):

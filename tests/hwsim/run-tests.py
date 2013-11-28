@@ -42,6 +42,7 @@ def reset_devs(dev, apdev):
 
     try:
         hapd = HostapdGlobal()
+        hapd.flush()
         hapd.remove('wlan3-3')
         hapd.remove('wlan3-2')
         for ap in apdev:

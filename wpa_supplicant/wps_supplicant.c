@@ -1017,13 +1017,17 @@ static void wpas_wps_temp_disable(struct wpa_supplicant *wpa_s,
 
 
 static void wpas_wps_reassoc(struct wpa_supplicant *wpa_s,
-			     struct wpa_ssid *selected, const u8 *bssid)
+			     struct wpa_ssid *selected, const u8 *bssid,
+			     int freq)
 {
 	struct wpa_bss *bss;
 
 	wpa_s->after_wps = 0;
 	wpa_s->known_wps_freq = 0;
-	if (bssid) {
+	if (freq) {
+		wpa_s->after_wps = 5;
+		wpa_s->wps_freq = freq;
+	} else if (bssid) {
 		bss = wpa_bss_get_bssid_latest(wpa_s, bssid);
 		if (bss && bss->freq > 0) {
 			wpa_s->known_wps_freq = 1;
@@ -1073,7 +1077,7 @@ int wpas_wps_start_pbc(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		ssid->eap.fragment_size = wpa_s->wps_fragment_size;
 	eloop_register_timeout(WPS_PBC_WALK_TIME, 0, wpas_wps_timeout,
 			       wpa_s, NULL);
-	wpas_wps_reassoc(wpa_s, ssid, bssid);
+	wpas_wps_reassoc(wpa_s, ssid, bssid, 0);
 	return 0;
 }
 
@@ -1082,7 +1086,7 @@ static int wpas_wps_start_dev_pw(struct wpa_supplicant *wpa_s,
 				 const u8 *dev_addr, const u8 *bssid,
 				 const char *pin, int p2p_group, u16 dev_pw_id,
 				 const u8 *peer_pubkey_hash,
-				 const u8 *ssid_val, size_t ssid_len)
+				 const u8 *ssid_val, size_t ssid_len, int freq)
 {
 	struct wpa_ssid *ssid;
 	char val[128 + 2 * WPS_OOB_PUBKEY_HASH_LEN];
@@ -1146,7 +1150,7 @@ static int wpas_wps_start_dev_pw(struct wpa_supplicant *wpa_s,
 	eloop_register_timeout(WPS_PBC_WALK_TIME, 0, wpas_wps_timeout,
 			       wpa_s, NULL);
 	wpa_s->wps_ap_iter = 1;
-	wpas_wps_reassoc(wpa_s, ssid, bssid);
+	wpas_wps_reassoc(wpa_s, ssid, bssid, freq);
 	return rpin;
 }
 
@@ -1155,7 +1159,7 @@ int wpas_wps_start_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		       const char *pin, int p2p_group, u16 dev_pw_id)
 {
 	return wpas_wps_start_dev_pw(wpa_s, NULL, bssid, pin, p2p_group,
-				     dev_pw_id, NULL, NULL, 0);
+				     dev_pw_id, NULL, NULL, 0, 0);
 }
 
 
@@ -1233,7 +1237,7 @@ int wpas_wps_start_reg(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		ssid->eap.fragment_size = wpa_s->wps_fragment_size;
 	eloop_register_timeout(WPS_PBC_WALK_TIME, 0, wpas_wps_timeout,
 			       wpa_s, NULL);
-	wpas_wps_reassoc(wpa_s, ssid, bssid);
+	wpas_wps_reassoc(wpa_s, ssid, bssid, 0);
 	return 0;
 }
 
@@ -2131,7 +2135,7 @@ int wpas_wps_start_nfc(struct wpa_supplicant *wpa_s, const u8 *go_dev_addr,
 		       const u8 *bssid,
 		       const struct wpabuf *dev_pw, u16 dev_pw_id,
 		       int p2p_group, const u8 *peer_pubkey_hash,
-		       const u8 *ssid, size_t ssid_len)
+		       const u8 *ssid, size_t ssid_len, int freq)
 {
 	struct wps_context *wps = wpa_s->wps;
 	char pw[32 * 2 + 1];
@@ -2186,7 +2190,7 @@ int wpas_wps_start_nfc(struct wpa_supplicant *wpa_s, const u8 *go_dev_addr,
 	return wpas_wps_start_dev_pw(wpa_s, go_dev_addr, bssid,
 				     dev_pw ? pw : NULL,
 				     p2p_group, dev_pw_id, peer_pubkey_hash,
-				     ssid, ssid_len);
+				     ssid, ssid_len, freq);
 }
 
 
@@ -2433,6 +2437,8 @@ int wpas_wps_nfc_rx_handover_sel(struct wpa_supplicant *wpa_s,
 	struct wpabuf msg;
 	struct wps_parse_attr attr;
 	u16 dev_pw_id;
+	const u8 *bssid = NULL;
+	int freq = 0;
 
 	wps = ndef_parse_wifi(data);
 	if (wps == NULL)
@@ -2488,6 +2494,39 @@ int wpas_wps_nfc_rx_handover_sel(struct wpa_supplicant *wpa_s,
 
 	wpa_hexdump_ascii(MSG_DEBUG, "WPS: SSID", attr.ssid, attr.ssid_len);
 
+	if (attr.mac_addr) {
+		bssid = attr.mac_addr;
+		wpa_printf(MSG_DEBUG, "WPS: MAC Address (BSSID): " MACSTR,
+			   MAC2STR(bssid));
+	}
+
+	if (attr.rf_bands)
+		wpa_printf(MSG_DEBUG, "WPS: RF Bands: %d", *attr.rf_bands);
+
+	if (attr.ap_channel) {
+		u16 chan = WPA_GET_BE16(attr.ap_channel);
+
+		wpa_printf(MSG_DEBUG, "WPS: AP Channel: %d", chan);
+
+		if (chan >= 1 && chan <= 13 &&
+		    (attr.rf_bands == NULL || *attr.rf_bands & WPS_RF_24GHZ))
+			freq = 2407 + 5 * chan;
+		else if (chan == 14 &&
+			 (attr.rf_bands == NULL ||
+			  *attr.rf_bands & WPS_RF_24GHZ))
+			freq = 2484;
+		else if (chan >= 30 &&
+			 (attr.rf_bands == NULL ||
+			  *attr.rf_bands & WPS_RF_50GHZ))
+			freq = 5000 + 5 * chan;
+
+		if (freq) {
+			wpa_printf(MSG_DEBUG,
+				   "WPS: AP indicated channel %u -> %u MHz",
+				   chan, freq);
+		}
+	}
+
 	wpa_hexdump(MSG_DEBUG, "WPS: Out-of-Band Device Password",
 		    attr.oob_dev_password, attr.oob_dev_password_len);
 	dev_pw_id = WPA_GET_BE16(attr.oob_dev_password +
@@ -2501,9 +2540,9 @@ int wpas_wps_nfc_rx_handover_sel(struct wpa_supplicant *wpa_s,
 	wpa_hexdump(MSG_DEBUG, "WPS: AP Public Key hash",
 		    attr.oob_dev_password, WPS_OOB_PUBKEY_HASH_LEN);
 
-	ret = wpas_wps_start_nfc(wpa_s, NULL, NULL, NULL, dev_pw_id, 0,
+	ret = wpas_wps_start_nfc(wpa_s, NULL, bssid, NULL, dev_pw_id, 0,
 				 attr.oob_dev_password,
-				 attr.ssid, attr.ssid_len);
+				 attr.ssid, attr.ssid_len, freq);
 
 out:
 	wpabuf_free(wps);

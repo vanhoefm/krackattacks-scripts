@@ -1128,7 +1128,7 @@ static void wpas_start_wps_enrollee(struct wpa_supplicant *wpa_s,
 				   DEV_PW_NFC_CONNECTION_HANDOVER ?
 				   wpa_s->parent->p2p_peer_oob_pubkey_hash :
 				   NULL,
-				   NULL, 0);
+				   NULL, 0, 0);
 #endif /* CONFIG_WPS_NFC */
 	} else {
 		u16 dev_pw_id = DEV_PW_DEFAULT;

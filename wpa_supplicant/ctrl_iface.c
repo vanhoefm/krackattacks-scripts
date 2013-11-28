@@ -818,7 +818,7 @@ static int wpa_supplicant_ctrl_iface_wps_nfc(struct wpa_supplicant *wpa_s,
 		return -1;
 
 	return wpas_wps_start_nfc(wpa_s, NULL, _bssid, NULL, 0, 0, NULL, NULL,
-				  0);
+				  0, 0);
 }
 
 

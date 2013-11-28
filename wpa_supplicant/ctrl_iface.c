@@ -361,13 +361,13 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 	} else if (os_strcasecmp(cmd, "ampdu") == 0) {
 		if (wpa_drv_ampdu(wpa_s, atoi(value)) < 0)
 			ret = -1;
+#ifdef CONFIG_TDLS
 #ifdef CONFIG_TDLS_TESTING
 	} else if (os_strcasecmp(cmd, "tdls_testing") == 0) {
 		extern unsigned int tdls_testing;
 		tdls_testing = strtol(value, NULL, 0);
 		wpa_printf(MSG_DEBUG, "TDLS: tdls_testing=0x%x", tdls_testing);
 #endif /* CONFIG_TDLS_TESTING */
-#ifdef CONFIG_TDLS
 	} else if (os_strcasecmp(cmd, "tdls_disabled") == 0) {
 		int disabled = atoi(value);
 		wpa_printf(MSG_DEBUG, "TDLS: tdls_disabled=%d", disabled);
@@ -5172,11 +5172,11 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 	wpa_s->after_wps = 0;
 	wpa_s->known_wps_freq = 0;
 
+#ifdef CONFIG_TDLS
 #ifdef CONFIG_TDLS_TESTING
 	extern unsigned int tdls_testing;
 	tdls_testing = 0;
 #endif /* CONFIG_TDLS_TESTING */
-#ifdef CONFIG_TDLS
 	wpa_drv_tdls_oper(wpa_s, TDLS_ENABLE, NULL);
 	wpa_tdls_enable(wpa_s->wpa, 1);
 #endif /* CONFIG_TDLS */

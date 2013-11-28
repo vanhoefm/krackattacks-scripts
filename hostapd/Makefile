@@ -15,6 +15,11 @@ CFLAGS += -I$(abspath ../src/utils)
 
 -include .config
 
+ifdef CONFIG_TESTING_OPTIONS
+CFLAGS += -DCONFIG_TESTING_OPTIONS
+CONFIG_WPS_TESTING=y
+endif
+
 ifndef CONFIG_OS
 ifdef CONFIG_NATIVE_WINDOWS
 CONFIG_OS=win32
@@ -856,10 +861,6 @@ ifdef CONFIG_SQLITE
 CFLAGS += -DCONFIG_SQLITE
 LIBS += -lsqlite3
 LIBS_h += -lsqlite3
-endif
-
-ifdef CONFIG_TESTING_OPTIONS
-CFLAGS += -DCONFIG_TESTING_OPTIONS
 endif
 
 ALL=hostapd hostapd_cli

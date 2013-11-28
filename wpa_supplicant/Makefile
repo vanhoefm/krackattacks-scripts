@@ -15,6 +15,12 @@ CFLAGS += -I$(abspath ../src/utils)
 
 -include .config
 
+ifdef CONFIG_TESTING_OPTIONS
+CFLAGS += -DCONFIG_TESTING_OPTIONS
+CONFIG_WPS_TESTING=y
+CONFIG_TDLS_TESTING=y
+endif
+
 BINALL=wpa_supplicant wpa_cli
 
 ifndef CONFIG_NO_WPA_PASSPHRASE

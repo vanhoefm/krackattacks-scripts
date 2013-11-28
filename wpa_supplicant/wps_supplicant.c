@@ -2210,6 +2210,12 @@ static int wpas_wps_use_cred(struct wpa_supplicant *wpa_s,
 	if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED)
 		return 0;
 
+	if (!wpa_s->wps_ap_channel && attr->ap_channel) {
+		wpa_s->wps_ap_channel = WPA_GET_BE16(attr->ap_channel);
+		wpa_printf(MSG_DEBUG, "WPS: Credential container indicated AP Channel %d",
+			   wpa_s->wps_ap_channel);
+	}
+
 	wpa_printf(MSG_DEBUG, "WPS: Request reconnection with new network "
 		   "based on the received credential added");
 	wpa_s->normal_scans = 0;

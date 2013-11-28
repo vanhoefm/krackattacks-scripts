@@ -1141,36 +1141,48 @@ static int wpas_ctrl_nfc_report_handover(struct wpa_supplicant *wpa_s,
 
 	role = cmd;
 	pos = os_strchr(role, ' ');
-	if (pos == NULL)
+	if (pos == NULL) {
+		wpa_printf(MSG_DEBUG, "NFC: Missing type in handover report");
 		return -1;
+	}
 	*pos++ = '\0';
 
 	type = pos;
 	pos = os_strchr(type, ' ');
-	if (pos == NULL)
+	if (pos == NULL) {
+		wpa_printf(MSG_DEBUG, "NFC: Missing request message in handover report");
 		return -1;
+	}
 	*pos++ = '\0';
 
 	pos2 = os_strchr(pos, ' ');
-	if (pos2 == NULL)
+	if (pos2 == NULL) {
+		wpa_printf(MSG_DEBUG, "NFC: Missing select message in handover report");
 		return -1;
+	}
 	*pos2++ = '\0';
 
 	len = os_strlen(pos);
-	if (len & 0x01)
+	if (len & 0x01) {
+		wpa_printf(MSG_DEBUG, "NFC: Invalid request message length in handover report");
 		return -1;
+	}
 	len /= 2;
 
 	req = wpabuf_alloc(len);
-	if (req == NULL)
+	if (req == NULL) {
+		wpa_printf(MSG_DEBUG, "NFC: Failed to allocate memory for request message");
 		return -1;
+	}
 	if (hexstr2bin(pos, wpabuf_put(req, len), len) < 0) {
+		wpa_printf(MSG_DEBUG, "NFC: Invalid request message hexdump in handover report");
 		wpabuf_free(req);
 		return -1;
 	}
 
 	len = os_strlen(pos2);
 	if (len & 0x01) {
+		wpa_printf(MSG_DEBUG, "NFC: Invalid select message length in handover report");
 		wpabuf_free(req);
 		return -1;
 	}
@@ -1178,14 +1190,19 @@ static int wpas_ctrl_nfc_report_handover(struct wpa_supplicant *wpa_s,
 
 	sel = wpabuf_alloc(len);
 	if (sel == NULL) {
+		wpa_printf(MSG_DEBUG, "NFC: Failed to allocate memory for select message");
 		wpabuf_free(req);
 		return -1;
 	}
 	if (hexstr2bin(pos2, wpabuf_put(sel, len), len) < 0) {
+		wpa_printf(MSG_DEBUG, "NFC: Invalid select message hexdump in handover report");
 		wpabuf_free(req);
 		wpabuf_free(sel);
 		return -1;
 	}
+
+	wpa_printf(MSG_DEBUG, "NFC: Connection handover reported - role=%s type=%s req_len=%d sel_len=%d",
+		   role, type, (int) wpabuf_len(req), (int) wpabuf_len(sel));
 
 	if (os_strcmp(role, "INIT") == 0 && os_strcmp(type, "WPS") == 0) {
 		ret = wpas_wps_nfc_report_handover(wpa_s, req, sel);
@@ -1207,6 +1224,9 @@ static int wpas_ctrl_nfc_report_handover(struct wpa_supplicant *wpa_s,
 	}
 	wpabuf_free(req);
 	wpabuf_free(sel);
+
+	if (ret)
+		wpa_printf(MSG_DEBUG, "NFC: Failed to process reported handover messages");
 
 	return ret;
 }

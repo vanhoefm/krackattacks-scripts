@@ -352,7 +352,8 @@ void wps_pbc_disable_event(struct wps_context *wps)
 
 #ifdef CONFIG_WPS_OOB
 
-struct wpabuf * wps_get_oob_cred(struct wps_context *wps)
+struct wpabuf * wps_get_oob_cred(struct wps_context *wps, int rf_band,
+				 int channel)
 {
 	struct wps_data data;
 	struct wpabuf *plain;
@@ -369,6 +370,9 @@ struct wpabuf * wps_get_oob_cred(struct wps_context *wps)
 	data.auth_type = wps->auth_types;
 	data.encr_type = wps->encr_types;
 	if (wps_build_cred(&data, plain) ||
+	    (rf_band && wps_build_rf_bands_attr(plain, rf_band)) ||
+	    (channel && wps_build_ap_channel(plain, channel)) ||
+	    wps_build_mac_addr(plain, wps->dev.mac_addr) ||
 	    wps_build_wfa_ext(plain, 0, NULL, 0)) {
 		os_free(data.new_psk);
 		wpabuf_free(plain);

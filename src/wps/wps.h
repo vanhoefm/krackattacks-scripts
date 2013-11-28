@@ -821,7 +821,8 @@ unsigned int wps_generate_pin(void);
 int wps_pin_str_valid(const char *pin);
 void wps_free_pending_msgs(struct upnp_pending_message *msgs);
 
-struct wpabuf * wps_get_oob_cred(struct wps_context *wps);
+struct wpabuf * wps_get_oob_cred(struct wps_context *wps, int rf_band,
+				 int channel);
 int wps_oob_use_cred(struct wps_context *wps, struct wps_parse_attr *attr);
 int wps_attr_text(struct wpabuf *data, char *buf, char *end);
 const char * wps_ei_str(enum wps_error_indication ei);

@@ -1784,7 +1784,8 @@ struct wpabuf * hostapd_wps_nfc_config_token(struct hostapd_data *hapd,
 	if (hapd->wps == NULL)
 		return NULL;
 
-	ret = wps_get_oob_cred(hapd->wps);
+	ret = wps_get_oob_cred(hapd->wps, hostapd_wps_rf_band_cb(hapd),
+			       hapd->iconf->channel);
 	if (ndef && ret) {
 		struct wpabuf *tmp;
 		tmp = ndef_build_wifi(ret);

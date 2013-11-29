@@ -260,31 +260,6 @@ static void wpas_wps_remove_dup_network(struct wpa_supplicant *wpa_s,
 		    ssid->group_cipher != new_ssid->group_cipher)
 			continue;
 
-		if (ssid->passphrase && new_ssid->passphrase) {
-			if (os_strlen(ssid->passphrase) !=
-			    os_strlen(new_ssid->passphrase))
-				continue;
-			if (os_strcmp(ssid->passphrase, new_ssid->passphrase) !=
-			    0)
-				continue;
-		} else if (ssid->passphrase || new_ssid->passphrase)
-			continue;
-
-		if ((ssid->psk_set || new_ssid->psk_set) &&
-		    os_memcmp(ssid->psk, new_ssid->psk, sizeof(ssid->psk)) != 0)
-			continue;
-
-		if (ssid->auth_alg == WPA_ALG_WEP) {
-			if (ssid->wep_tx_keyidx != new_ssid->wep_tx_keyidx)
-				continue;
-			if (os_memcmp(ssid->wep_key, new_ssid->wep_key,
-				      sizeof(ssid->wep_key)))
-				continue;
-			if (os_memcmp(ssid->wep_key_len, new_ssid->wep_key_len,
-				      sizeof(ssid->wep_key_len)))
-				continue;
-		}
-
 		/* Remove the duplicated older network entry. */
 		wpa_printf(MSG_DEBUG, "Remove duplicate network %d", ssid->id);
 		wpas_notify_network_removed(wpa_s, ssid);

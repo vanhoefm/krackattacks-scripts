@@ -27,6 +27,7 @@ import wpaspy
 wpas_ctrl = '/var/run/wpa_supplicant'
 srv = None
 continue_loop = True
+terminate_now = False
 
 def wpas_connect():
     ifaces = []
@@ -226,6 +227,11 @@ def wps_handover_init(llc):
         global continue_loop
         continue_loop = False
 
+    global no_wait
+    if no_wait:
+        print "Trying to exit.."
+        global terminate_now
+        terminate_now = True
 
 def wps_tag_read(tag, wait_remove=True):
     success = False
@@ -300,7 +306,7 @@ def wps_write_password_tag(clf, wait_remove=True):
 
 
 def rdwr_connected(tag):
-    global only_one
+    global only_one, no_wait
     print "Tag connected: " + str(tag)
 
     if tag.ndef:
@@ -315,15 +321,15 @@ def rdwr_connected(tag):
             continue_loop = False
     else:
         print "Not an NDEF tag - remove tag"
-        while tag.is_present:
-            time.sleep(0.1)
-    return True
+
+    return not no_wait
 
 
 def llcp_worker(llc):
     global arg_uuid
     if arg_uuid is None:
         wps_handover_init(llc)
+        print "Exiting llcp_worker thread"
         return
 
     global srv
@@ -356,8 +362,13 @@ def llcp_connected(llc):
         srv.start()
     else:
         threading.Thread(target=llcp_worker, args=(llc,)).start()
+    print "llcp_connected returning"
     return True
 
+
+def terminate_loop():
+    global terminate_now
+    return terminate_now
 
 def main():
     clf = nfc.ContactlessFrontend()
@@ -383,6 +394,9 @@ def main():
     global only_one
     only_one = args.only_one
 
+    global no_wait
+    no_wait = args.no_wait
+
     try:
         if not clf.open("usb"):
             print "Could not open connection with an NFC device"
@@ -407,7 +421,8 @@ def main():
             try:
                 if not clf.connect(rdwr={'on-connect': rdwr_connected},
                                    llcp={'on-startup': llcp_startup,
-                                         'on-connect': llcp_connected}):
+                                         'on-connect': llcp_connected},
+                                   terminate=terminate_loop):
                     break
             except Exception, e:
                 print "clf.connect failed"

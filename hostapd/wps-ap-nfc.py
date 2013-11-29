@@ -149,10 +149,10 @@ def rdwr_connected_write(tag):
     while write_wait_remove and tag.is_present:
         time.sleep(0.1)
 
-def wps_write_config_tag(clf):
+def wps_write_config_tag(clf, wait_remove=True):
     print "Write WPS config token"
     global write_data, write_wait_remove
-    write_wait_remove = True
+    write_wait_remove = wait_remove
     write_data = wpas_get_config_token()
     if write_data == None:
         print "Could not get WPS config token from hostapd"
@@ -162,10 +162,10 @@ def wps_write_config_tag(clf):
     clf.connect(rdwr={'on-connect': rdwr_connected_write})
 
 
-def wps_write_password_tag(clf):
+def wps_write_password_tag(clf, wait_remove=True):
     print "Write WPS password token"
     global write_data, write_wait_remove
-    write_wait_remove = True
+    write_wait_remove = wait_remove
     write_data = wpas_get_password_token()
     if write_data == None:
         print "Could not get WPS password token from hostapd"
@@ -176,7 +176,7 @@ def wps_write_password_tag(clf):
 
 
 def rdwr_connected(tag):
-    global only_one
+    global only_one, no_wait
     print "Tag connected: " + str(tag)
 
     if tag.ndef:
@@ -191,8 +191,6 @@ def rdwr_connected(tag):
             continue_loop = False
     else:
         print "Not an NDEF tag - remove tag"
-        while tag.is_present:
-            time.sleep(0.1)
 
     return not no_wait
 
@@ -218,6 +216,8 @@ def main():
     parser = argparse.ArgumentParser(description='nfcpy to hostapd integration for WPS NFC operations')
     parser.add_argument('--only-one', '-1', action='store_true',
                         help='run only one operation and exit')
+    parser.add_argument('--no-wait', action='store_true',
+                        help='do not wait for tag to be removed before exiting')
     parser.add_argument('command', choices=['write-config',
                                             'write-password'],
                         nargs='?')
@@ -226,17 +226,20 @@ def main():
     global only_one
     only_one = args.only_one
 
+    global no_wait
+    no_wait = args.no_wait
+
     try:
         if not clf.open("usb"):
             print "Could not open connection with an NFC device"
             raise SystemExit
 
         if args.command == "write-config":
-            wps_write_config_tag(clf)
+            wps_write_config_tag(clf, wait_remove=not args.no_wait)
             raise SystemExit
 
         if args.command == "write-password":
-            wps_write_password_tag(clf)
+            wps_write_password_tag(clf, wait_remove=not args.no_wait)
             raise SystemExit
 
         global continue_loop

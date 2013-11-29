@@ -185,10 +185,8 @@ static void wps_er_ap_unsubscribed(struct wps_er *er, struct wps_er_ap *ap)
 	dl_list_del(&ap->list);
 	wps_er_ap_free(ap);
 
-	if (er->deinitializing && dl_list_empty(&er->ap_unsubscribing)) {
-		eloop_cancel_timeout(wps_er_deinit_finish, er, NULL);
+	if (er->deinitializing && dl_list_empty(&er->ap_unsubscribing))
 		wps_er_deinit_finish(er, NULL);
-	}
 }
 
 
@@ -1347,9 +1345,19 @@ static void wps_er_deinit_finish(void *eloop_data, void *user_ctx)
 	struct wps_er *er = eloop_data;
 	void (*deinit_done_cb)(void *ctx);
 	void *deinit_done_ctx;
+	struct wps_er_ap *ap, *tmp;
 
 	wpa_printf(MSG_DEBUG, "WPS ER: Finishing deinit");
 
+	dl_list_for_each_safe(ap, tmp, &er->ap_unsubscribing, struct wps_er_ap,
+			      list) {
+		wpa_printf(MSG_DEBUG, "WPS ER: AP entry for %s (%s) still in ap_unsubscribing list - free it",
+			   inet_ntoa(ap->addr), ap->location);
+		dl_list_del(&ap->list);
+		wps_er_ap_free(ap);
+	}
+
+	eloop_cancel_timeout(wps_er_deinit_finish, er, NULL);
 	deinit_done_cb = er->deinit_done_cb;
 	deinit_done_ctx = er->deinit_done_ctx;
 	os_free(er->ip_addr_text);

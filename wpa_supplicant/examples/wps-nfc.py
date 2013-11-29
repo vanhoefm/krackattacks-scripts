@@ -10,7 +10,6 @@ import os
 import sys
 import time
 import random
-import StringIO
 import threading
 import argparse
 
@@ -164,16 +163,11 @@ def wps_handover_init(llc):
         print "Could not get handover request carrier record from wpa_supplicant"
         return
     print "Handover request carrier record from wpa_supplicant: " + data.encode("hex")
-    record = nfc.ndef.Record()
-    f = StringIO.StringIO(data)
-    record._read(f)
-    record = nfc.ndef.HandoverCarrierRecord(record)
-    print "Parsed handover request carrier record:"
-    print record.pretty()
 
     message = nfc.ndef.HandoverRequestMessage(version="1.2")
     message.nonce = random.randint(0, 0xffff)
-    message.add_carrier(record, "active")
+    datamsg = nfc.ndef.Message(data)
+    message.add_carrier(datamsg[0], "active", datamsg[1:])
 
     print "Handover request:"
     print message.pretty()

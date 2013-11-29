@@ -92,7 +92,11 @@ class HandoverServer(nfc.handover.HandoverServer):
 
     def process_request(self, request):
         print "HandoverServer - request received"
-        print "Parsed handover request: " + request.pretty()
+        try:
+            print "Parsed handover request: " + request.pretty()
+        except Exception, e:
+            print e
+        print str(request).encode("hex")
 
         sel = nfc.ndef.HandoverSelectMessage(version="1.2")
 
@@ -112,7 +116,10 @@ class HandoverServer(nfc.handover.HandoverServer):
                 sel.add_carrier(message[0], "active", message[1:])
 
         print "Handover select:"
-        print sel.pretty()
+        try:
+            print sel.pretty()
+        except Exception, e:
+            print e
         print str(sel).encode("hex")
 
         print "Sending handover select"

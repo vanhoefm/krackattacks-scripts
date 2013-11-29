@@ -126,7 +126,10 @@ class HandoverServer(nfc.handover.HandoverServer):
     def process_request(self, request):
         self.ho_server_processing = True
         print "HandoverServer - request received"
-        print "Parsed handover request: " + request.pretty()
+        try:
+            print "Parsed handover request: " + request.pretty()
+        except Exception, e:
+            print e
 
         sel = nfc.ndef.HandoverSelectMessage(version="1.2")
 
@@ -147,7 +150,10 @@ class HandoverServer(nfc.handover.HandoverServer):
                 sel.add_carrier(message[0], "active", message[1:])
 
         print "Handover select:"
-        print sel.pretty()
+        try:
+            print sel.pretty()
+        except Exception, e:
+            print e
         print str(sel).encode("hex")
 
         print "Sending handover select"
@@ -170,7 +176,11 @@ def wps_handover_init(llc):
     message.add_carrier(datamsg[0], "active", datamsg[1:])
 
     print "Handover request:"
-    print message.pretty()
+    try:
+        print message.pretty()
+    except Exception, e:
+        print e
+    print str(message).encode("hex")
 
     client = nfc.handover.HandoverClient(llc)
     try:
@@ -199,18 +209,26 @@ def wps_handover_init(llc):
         return
 
     print "Received message"
-    print message.pretty()
+    try:
+        print message.pretty()
+    except Exception, e:
+        print e
+    print str(message).encode("hex")
     message = nfc.ndef.HandoverSelectMessage(message)
     print "Handover select received"
-    print message.pretty()
+    try:
+        print message.pretty()
+    except Exception, e:
+        print e
 
     for carrier in message.carriers:
         print "Remote carrier type: " + carrier.type
         if carrier.type == "application/vnd.wfa.wsc":
             print "WPS carrier type match - send to wpa_supplicant"
             wpas_report_handover(data, carrier.record, "INIT")
-            wifi = nfc.ndef.WifiConfigRecord(carrier.record)
-            print wifi.pretty()
+            # nfcpy does not support the new format..
+            #wifi = nfc.ndef.WifiConfigRecord(carrier.record)
+            #print wifi.pretty()
 
     print "Remove peer"
     client.close()

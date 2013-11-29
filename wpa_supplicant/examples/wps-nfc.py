@@ -75,7 +75,10 @@ def wpas_get_er_config_token(uuid):
     wpas = wpas_connect()
     if (wpas == None):
         return None
-    return wpas.request("WPS_ER_NFC_CONFIG_TOKEN NDEF " + uuid).rstrip().decode("hex")
+    ret = wpas.request("WPS_ER_NFC_CONFIG_TOKEN NDEF " + uuid)
+    if "FAIL" in ret:
+        return None
+    return ret.rstrip().decode("hex")
 
 
 def wpas_get_password_token():
@@ -97,8 +100,12 @@ def wpas_get_handover_sel(uuid):
     if (wpas == None):
         return None
     if uuid is None:
-        return wpas.request("NFC_GET_HANDOVER_SEL NDEF WPS-CR").rstrip().decode("hex")
-    return wpas.request("NFC_GET_HANDOVER_SEL NDEF WPS-CR " + uuid).rstrip().decode("hex")
+        res = wpas.request("NFC_GET_HANDOVER_SEL NDEF WPS-CR").rstrip()
+    else:
+	res = wpas.request("NFC_GET_HANDOVER_SEL NDEF WPS-CR " + uuid).rstrip()
+    if "FAIL" in res:
+	return None
+    return res.decode("hex")
 
 
 def wpas_report_handover(req, sel, type):

@@ -9,6 +9,7 @@
 import os
 import sys
 import time
+import argparse
 
 import nfc
 import nfc.ndef
@@ -214,19 +215,27 @@ def llcp_connected(llc):
 def main():
     clf = nfc.ContactlessFrontend()
 
+    parser = argparse.ArgumentParser(description='nfcpy to hostapd integration for WPS NFC operations')
+    parser.add_argument('--only-one', '-1', action='store_true',
+                        help='run only one operation and exit')
+    parser.add_argument('command', choices=['write-config',
+                                            'write-password'],
+                        nargs='?')
+    args = parser.parse_args()
+
+    global only_one
+    only_one = args.only_one
+
     try:
         if not clf.open("usb"):
             print "Could not open connection with an NFC device"
             raise SystemExit
 
-        global only_one
-        only_one = False
-
-        if len(sys.argv) > 1 and sys.argv[1] == "write-config":
+        if args.command == "write-config":
             wps_write_config_tag(clf)
             raise SystemExit
 
-        if len(sys.argv) > 1 and sys.argv[1] == "write-password":
+        if args.command == "write-password":
             wps_write_password_tag(clf)
             raise SystemExit
 

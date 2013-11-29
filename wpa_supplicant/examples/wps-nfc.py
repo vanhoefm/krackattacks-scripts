@@ -12,6 +12,7 @@ import time
 import random
 import StringIO
 import threading
+import argparse
 
 import nfc
 import nfc.ndef
@@ -265,10 +266,10 @@ def wps_write_config_tag(clf, id=None, wait_remove=True):
     clf.connect(rdwr={'on-connect': rdwr_connected_write})
 
 
-def wps_write_er_config_tag(clf, uuid):
+def wps_write_er_config_tag(clf, uuid, wait_remove=True):
     print "Write WPS ER config token"
     global write_data, write_wait_remove
-    write_wait_remove = True
+    write_wait_remove = wait_remove
     write_data = wpas_get_er_config_token(uuid)
     if write_data == None:
         print "Could not get WPS config token from wpa_supplicant"
@@ -354,44 +355,42 @@ def llcp_connected(llc):
 def main():
     clf = nfc.ContactlessFrontend()
 
+    parser = argparse.ArgumentParser(description='nfcpy to wpa_supplicant integration for WPS NFC operations')
+    parser.add_argument('--only-one', '-1', action='store_true',
+                        help='run only one operation and exit')
+    parser.add_argument('--no-wait', action='store_true',
+                        help='do not wait for tag to be removed before exiting')
+    parser.add_argument('--uuid',
+                        help='UUID of an AP (used for WPS ER operations)')
+    parser.add_argument('--id',
+                        help='network id (used for WPS ER operations)')
+    parser.add_argument('command', choices=['write-config',
+                                            'write-er-config',
+                                            'write-password'],
+                        nargs='?')
+    args = parser.parse_args()
+
+    global arg_uuid
+    arg_uuid = args.uuid
+
+    global only_one
+    only_one = args.only_one
+
     try:
-        global arg_uuid
-        arg_uuid = None
-        if len(sys.argv) > 1 and sys.argv[1] != '-1':
-            arg_uuid = sys.argv[1]
-
-        global only_one
-        if len(sys.argv) > 1 and sys.argv[1] == '-1':
-            only_one = True
-        else:
-            only_one = False
-
         if not clf.open("usb"):
             print "Could not open connection with an NFC device"
             raise SystemExit
 
-        if len(sys.argv) > 1 and sys.argv[1] == "write-config":
-            wps_write_config_tag(clf)
+        if args.command == "write-config":
+            wps_write_config_tag(clf, id=args.id, wait_remove=not args.no_wait)
             raise SystemExit
 
-        if len(sys.argv) > 1 and sys.argv[1] == "write-config-no-wait":
-            wps_write_config_tag(clf, wait_remove=False)
+        if args.command == "write-er-config":
+            wps_write_er_config_tag(clf, args.uuid, wait_remove=not args.no_wait)
             raise SystemExit
 
-        if len(sys.argv) > 2 and sys.argv[1] == "write-config-id":
-            wps_write_config_tag(clf, sys.argv[2])
-            raise SystemExit
-
-        if len(sys.argv) > 2 and sys.argv[1] == "write-er-config":
-            wps_write_er_config_tag(clf, sys.argv[2])
-            raise SystemExit
-
-        if len(sys.argv) > 1 and sys.argv[1] == "write-password":
-            wps_write_password_tag(clf)
-            raise SystemExit
-
-        if len(sys.argv) > 1 and sys.argv[1] == "write-password-no-wait":
-            wps_write_password_tag(clf, wait_remove=False)
+        if args.command == "write-password":
+            wps_write_password_tag(clf, wait_remove=not args.no_wait)
             raise SystemExit
 
         global continue_loop

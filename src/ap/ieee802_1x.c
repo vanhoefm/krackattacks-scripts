@@ -29,6 +29,7 @@
 #include "pmksa_cache_auth.h"
 #include "ap_config.h"
 #include "ap_drv_ops.h"
+#include "wps_hostapd.h"
 #include "ieee802_1x.h"
 
 
@@ -2128,5 +2129,6 @@ static void ieee802_1x_finished(struct hostapd_data *hapd,
 		os_sleep(0, 10000);
 		ap_sta_disconnect(hapd, sta, sta->addr,
 				  WLAN_REASON_IEEE_802_1X_AUTH_FAILED);
+		hostapd_wps_eap_completed(hapd);
 	}
 }

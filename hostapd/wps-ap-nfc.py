@@ -17,7 +17,6 @@ import nfc.llcp
 import nfc.handover
 
 import logging
-logging.basicConfig()
 
 import wpaspy
 
@@ -214,6 +213,11 @@ def main():
     clf = nfc.ContactlessFrontend()
 
     parser = argparse.ArgumentParser(description='nfcpy to hostapd integration for WPS NFC operations')
+    parser.add_argument('-d', const=logging.DEBUG, default=logging.INFO,
+                        action='store_const', dest='loglevel',
+                        help='verbose debug output')
+    parser.add_argument('-q', const=logging.WARNING, action='store_const',
+                        dest='loglevel', help='be quiet')
     parser.add_argument('--only-one', '-1', action='store_true',
                         help='run only one operation and exit')
     parser.add_argument('--no-wait', action='store_true',
@@ -228,6 +232,8 @@ def main():
 
     global no_wait
     no_wait = args.no_wait
+
+    logging.basicConfig(level=args.loglevel)
 
     try:
         if not clf.open("usb"):

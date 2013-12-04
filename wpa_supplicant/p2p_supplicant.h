@@ -153,10 +153,10 @@ struct wpabuf * wpas_p2p_nfc_handover_req(struct wpa_supplicant *wpa_s,
 struct wpabuf * wpas_p2p_nfc_handover_sel(struct wpa_supplicant *wpa_s,
 					  int ndef, int tag);
 int wpas_p2p_nfc_tag_process(struct wpa_supplicant *wpa_s,
-			     const struct wpabuf *data);
+			     const struct wpabuf *data, int forced_freq);
 int wpas_p2p_nfc_report_handover(struct wpa_supplicant *wpa_s, int init,
 				 const struct wpabuf *req,
-				 const struct wpabuf *sel);
+				 const struct wpabuf *sel, int forced_freq);
 int wpas_p2p_nfc_tag_enabled(struct wpa_supplicant *wpa_s, int enabled);
 
 #ifdef CONFIG_P2P

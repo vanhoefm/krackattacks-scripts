@@ -7238,18 +7238,20 @@ static int wpas_p2p_nfc_auth_join(struct wpa_supplicant *wpa_s,
 
 
 static int wpas_p2p_nfc_init_go_neg(struct wpa_supplicant *wpa_s,
-				    struct p2p_nfc_params *params)
+				    struct p2p_nfc_params *params,
+				    int forced_freq)
 {
 	wpa_printf(MSG_DEBUG, "P2P: Initiate GO Negotiation based on NFC "
 		   "connection handover");
 	return wpas_p2p_connect(wpa_s, params->peer->p2p_device_addr, NULL,
 				WPS_NFC, 0, 0, 0, 0, wpa_s->conf->p2p_go_intent,
-				0, -1, 0, 1, 1);
+				forced_freq, -1, 0, 1, 1);
 }
 
 
 static int wpas_p2p_nfc_resp_go_neg(struct wpa_supplicant *wpa_s,
-				    struct p2p_nfc_params *params)
+				    struct p2p_nfc_params *params,
+				    int forced_freq)
 {
 	int res;
 
@@ -7257,7 +7259,7 @@ static int wpas_p2p_nfc_resp_go_neg(struct wpa_supplicant *wpa_s,
 		   "connection handover");
 	res = wpas_p2p_connect(wpa_s, params->peer->p2p_device_addr, NULL,
 			       WPS_NFC, 0, 0, 0, 1, wpa_s->conf->p2p_go_intent,
-			       0, -1, 0, 1, 1);
+			       forced_freq, -1, 0, 1, 1);
 	if (res)
 		return res;
 
@@ -7273,7 +7275,7 @@ static int wpas_p2p_nfc_resp_go_neg(struct wpa_supplicant *wpa_s,
 
 static int wpas_p2p_nfc_connection_handover(struct wpa_supplicant *wpa_s,
 					    const struct wpabuf *data,
-					    int sel, int tag)
+					    int sel, int tag, int forced_freq)
 {
 	const u8 *pos, *end;
 	u16 len, id;
@@ -7426,10 +7428,10 @@ static int wpas_p2p_nfc_connection_handover(struct wpa_supplicant *wpa_s,
 	case AUTH_JOIN:
 		return wpas_p2p_nfc_auth_join(wpa_s, &params, tag);
 	case INIT_GO_NEG:
-		return wpas_p2p_nfc_init_go_neg(wpa_s, &params);
+		return wpas_p2p_nfc_init_go_neg(wpa_s, &params, forced_freq);
 	case RESP_GO_NEG:
 		/* TODO: use own OOB Dev Pw */
-		return wpas_p2p_nfc_resp_go_neg(wpa_s, &params);
+		return wpas_p2p_nfc_resp_go_neg(wpa_s, &params, forced_freq);
 	}
 
 	return -1;
@@ -7437,18 +7439,18 @@ static int wpas_p2p_nfc_connection_handover(struct wpa_supplicant *wpa_s,
 
 
 int wpas_p2p_nfc_tag_process(struct wpa_supplicant *wpa_s,
-			     const struct wpabuf *data)
+			     const struct wpabuf *data, int forced_freq)
 {
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
 		return -1;
 
-	return wpas_p2p_nfc_connection_handover(wpa_s, data, 1, 1);
+	return wpas_p2p_nfc_connection_handover(wpa_s, data, 1, 1, forced_freq);
 }
 
 
 int wpas_p2p_nfc_report_handover(struct wpa_supplicant *wpa_s, int init,
 				 const struct wpabuf *req,
-				 const struct wpabuf *sel)
+				 const struct wpabuf *sel, int forced_freq)
 {
 	struct wpabuf *tmp;
 	int ret;
@@ -7462,13 +7464,16 @@ int wpas_p2p_nfc_report_handover(struct wpa_supplicant *wpa_s, int init,
 			  wpabuf_head(req), wpabuf_len(req));
 	wpa_hexdump_ascii(MSG_DEBUG, "NFC: Sel",
 			  wpabuf_head(sel), wpabuf_len(sel));
+	if (forced_freq)
+		wpa_printf(MSG_DEBUG, "NFC: Forced freq %d", forced_freq);
 	tmp = ndef_parse_p2p(init ? sel : req);
 	if (tmp == NULL) {
 		wpa_printf(MSG_DEBUG, "P2P: Could not parse NDEF");
 		return -1;
 	}
 
-	ret = wpas_p2p_nfc_connection_handover(wpa_s, tmp, init, 0);
+	ret = wpas_p2p_nfc_connection_handover(wpa_s, tmp, init, 0,
+					       forced_freq);
 	wpabuf_free(tmp);
 
 	return ret;

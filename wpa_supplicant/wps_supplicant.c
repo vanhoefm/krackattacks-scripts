@@ -2289,7 +2289,7 @@ static int wpas_wps_nfc_tag_process(struct wpa_supplicant *wpa_s,
 
 
 int wpas_wps_nfc_tag_read(struct wpa_supplicant *wpa_s,
-			  const struct wpabuf *data)
+			  const struct wpabuf *data, int forced_freq)
 {
 	const struct wpabuf *wps = data;
 	struct wpabuf *tmp = NULL;
@@ -2305,7 +2305,8 @@ int wpas_wps_nfc_tag_read(struct wpa_supplicant *wpa_s,
 #ifdef CONFIG_P2P
 			tmp = ndef_parse_p2p(data);
 			if (tmp) {
-				ret = wpas_p2p_nfc_tag_process(wpa_s, tmp);
+				ret = wpas_p2p_nfc_tag_process(wpa_s, tmp,
+							       forced_freq);
 				wpabuf_free(tmp);
 				return ret;
 			}

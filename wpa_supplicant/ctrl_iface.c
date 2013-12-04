@@ -890,6 +890,15 @@ static int wpa_supplicant_ctrl_iface_wps_nfc_tag_read(
 	size_t len;
 	struct wpabuf *buf;
 	int ret;
+	char *freq;
+	int forced_freq = 0;
+
+	freq = strstr(pos, " freq=");
+	if (freq) {
+		*freq = '\0';
+		freq += 6;
+		forced_freq = atoi(freq);
+	}
 
 	len = os_strlen(pos);
 	if (len & 0x01)
@@ -904,7 +913,7 @@ static int wpa_supplicant_ctrl_iface_wps_nfc_tag_read(
 		return -1;
 	}
 
-	ret = wpas_wps_nfc_tag_read(wpa_s, buf);
+	ret = wpas_wps_nfc_tag_read(wpa_s, buf, forced_freq);
 	wpabuf_free(buf);
 
 	return ret;
@@ -1142,6 +1151,15 @@ static int wpas_ctrl_nfc_report_handover(struct wpa_supplicant *wpa_s,
 	struct wpabuf *req, *sel;
 	int ret;
 	char *pos, *role, *type, *pos2;
+	char *freq;
+	int forced_freq = 0;
+
+	freq = strstr(cmd, " freq=");
+	if (freq) {
+		*freq = '\0';
+		freq += 6;
+		forced_freq = atoi(freq);
+	}
 
 	role = cmd;
 	pos = os_strchr(role, ' ');
@@ -1217,10 +1235,11 @@ static int wpas_ctrl_nfc_report_handover(struct wpa_supplicant *wpa_s,
 			ret = wpas_er_wps_nfc_report_handover(wpa_s, req, sel);
 	} else if (os_strcmp(role, "INIT") == 0 && os_strcmp(type, "P2P") == 0)
 	{
-		ret = wpas_p2p_nfc_report_handover(wpa_s, 1, req, sel);
+		ret = wpas_p2p_nfc_report_handover(wpa_s, 1, req, sel, 0);
 	} else if (os_strcmp(role, "RESP") == 0 && os_strcmp(type, "P2P") == 0)
 	{
-		ret = wpas_p2p_nfc_report_handover(wpa_s, 0, req, sel);
+		ret = wpas_p2p_nfc_report_handover(wpa_s, 0, req, sel,
+						   forced_freq);
 	} else {
 		wpa_printf(MSG_DEBUG, "NFC: Unsupported connection handover "
 			   "reported: role=%s type=%s", role, type);

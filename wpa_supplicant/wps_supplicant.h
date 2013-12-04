@@ -70,7 +70,7 @@ int wpas_wps_start_nfc(struct wpa_supplicant *wpa_s, const u8 *dev_addr,
 		       int p2p_group, const u8 *peer_pubkey_hash,
 		       const u8 *ssid, size_t ssid_len, int freq);
 int wpas_wps_nfc_tag_read(struct wpa_supplicant *wpa_s,
-			  const struct wpabuf *data);
+			  const struct wpabuf *data, int forced_freq);
 struct wpabuf * wpas_wps_nfc_handover_req(struct wpa_supplicant *wpa_s,
 					  int ndef);
 struct wpabuf * wpas_wps_nfc_handover_sel(struct wpa_supplicant *wpa_s,

@@ -34,7 +34,7 @@ if [ "$CMD" = "P2P-GROUP-STARTED" ]; then
 	    # start with -z to avoid that
 	    dnsmasq -x /var/run/dnsmasq.pid-$GIFNAME \
 		-i $GIFNAME \
-		-F192.168.42.11,192.168.42.99 --listen-address 192.168.42.1 -z
+		-F192.168.42.11,192.168.42.99 --listen-address 192.168.42.1 -z -p 0
 	fi
     fi
     if [ "$4" = "client" ]; then

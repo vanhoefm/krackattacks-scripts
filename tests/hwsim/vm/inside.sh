@@ -68,6 +68,11 @@ else
 
 	cd $TESTDIR
 	./run-all.sh $ARGS >/dev/ttyS0 2>&1
+	if test -d /sys/kernel/debug/gcov ; then
+		cp -ar /sys/kernel/debug/gcov /tmp/logs/
+		# these are broken as they're updated while being read ...
+		find /tmp/logs/gcov/ -wholename '*kernel/gcov/*' -print0 | xargs -0 rm
+	fi
 	#bash </dev/ttyS0 >/dev/ttyS0 2>&1
 fi
 

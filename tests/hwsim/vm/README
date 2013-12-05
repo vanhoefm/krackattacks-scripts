@@ -17,3 +17,28 @@ vm-run.sh script). If you want valgrind, also increase the memory size.
 Now you can run the vm-run.sh script and it will execute the tests using
 your system's root filesystem (read-only) inside the VM. The options you
 give it are passed through to run-all.sh, see there.
+
+
+--------------------------------------------------------------------------------
+
+Code Coverage Analysis
+
+In order to do code coverage analysis, reconfigure the kernel to include
+
+CONFIG_GCOV_KERNEL=y
+CONFIG_GCOV_PROFILE_ALL=y
+
+Note that for gcc 4.7, kernel version 3.13-rc1 or higher is required.
+
+The scripts inside the VM will automatically copy the gcov data out of the
+VM into the logs directory. To post-process this data, you'll want to use
+lcov and run
+
+cd /tmp/hwsim-test-logs/<timestamp>
+lcov -c -d gcov/ > gcov/data
+genhtml -o html/ gcov/data
+
+Then open html/index.html in your browser.
+
+Note that in this case you need to keep your build and source directories
+across the test run (otherwise, it's safe to only keep the kernel image.)

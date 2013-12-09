@@ -2905,6 +2905,8 @@ static struct wpa_radio * radio_add_interface(struct wpa_supplicant *wpa_s,
 			dl_list_add(&radio->ifaces, &wpa_s->radio_list);
 			return radio;
 		}
+
+		iface = iface->next;
 	}
 
 	wpa_printf(MSG_DEBUG, "Add interface %s to a new radio %s",

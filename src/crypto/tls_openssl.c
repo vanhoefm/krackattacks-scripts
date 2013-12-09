@@ -112,6 +112,7 @@ struct tls_connection {
 
 	X509 *peer_cert;
 	X509 *peer_issuer;
+	X509 *peer_issuer_issuer;
 };
 
 
@@ -1380,6 +1381,8 @@ static int tls_verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx)
 		conn->peer_cert = err_cert;
 	else if (depth == 1)
 		conn->peer_issuer = err_cert;
+	else if (depth == 2)
+		conn->peer_issuer_issuer = err_cert;
 
 	context = conn->context;
 	match = conn->subject_match;
@@ -2926,6 +2929,8 @@ static int ocsp_resp_cb(SSL *s, void *arg)
 	OCSP_BASICRESP *basic;
 	OCSP_CERTID *id;
 	ASN1_GENERALIZEDTIME *produced_at, *this_update, *next_update;
+	X509_STORE *store;
+	STACK_OF(X509) *certs = NULL;
 
 	len = SSL_get_tlsext_status_ocsp_resp(s, &p);
 	if (!p) {
@@ -2956,8 +2961,41 @@ static int ocsp_resp_cb(SSL *s, void *arg)
 		return 0;
 	}
 
-	status = OCSP_basic_verify(basic, NULL, SSL_CTX_get_cert_store(s->ctx),
-				   0);
+	store = SSL_CTX_get_cert_store(s->ctx);
+	if (conn->peer_issuer) {
+		wpa_printf(MSG_DEBUG, "OpenSSL: Add issuer");
+		X509_print_fp(stdout, conn->peer_issuer);
+
+		if (X509_STORE_add_cert(store, conn->peer_issuer) != 1) {
+			tls_show_errors(MSG_INFO, __func__,
+					"OpenSSL: Could not add issuer to certificate store\n");
+		}
+		certs = sk_X509_new_null();
+		if (certs) {
+			X509 *cert;
+			cert = X509_dup(conn->peer_issuer);
+			if (cert && !sk_X509_push(certs, cert)) {
+				tls_show_errors(
+					MSG_INFO, __func__,
+					"OpenSSL: Could not add issuer to OCSP responder trust store\n");
+				X509_free(cert);
+				sk_X509_free(certs);
+				certs = NULL;
+			}
+			if (conn->peer_issuer_issuer) {
+				cert = X509_dup(conn->peer_issuer_issuer);
+				if (cert && !sk_X509_push(certs, cert)) {
+					tls_show_errors(
+						MSG_INFO, __func__,
+						"OpenSSL: Could not add issuer to OCSP responder trust store\n");
+					X509_free(cert);
+				}
+			}
+		}
+	}
+
+	status = OCSP_basic_verify(basic, certs, store, OCSP_TRUSTOTHER);
+	sk_X509_pop_free(certs, X509_free);
 	if (status <= 0) {
 		tls_show_errors(MSG_INFO, __func__,
 				"OpenSSL: OCSP response failed verification");

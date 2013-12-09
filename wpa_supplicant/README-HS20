@@ -265,6 +265,11 @@ Credentials can be pre-configured for automatic network selection:
 #	req_conn_capab=17:500
 #	req_conn_capab=50
 #
+# ocsp: Whether to use/require OCSP to check server certificate
+#	0 = do not use OCSP stapling (TLS certificate status extension)
+#	1 = try to use OCSP stapling, but not require response
+#	2 = require valid OCSP stapling response
+#
 # for example:
 #
 #cred={

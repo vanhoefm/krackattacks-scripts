@@ -2556,6 +2556,11 @@ int wpa_config_set_cred(struct wpa_cred *cred, const char *var,
 	if (os_strcmp(var, "req_conn_capab") == 0)
 		return wpa_config_set_cred_req_conn_capab(cred, value);
 
+	if (os_strcmp(var, "ocsp") == 0) {
+		cred->ocsp = atoi(value);
+		return 0;
+	}
+
 	val = wpa_config_parse_string(value, &len);
 	if (val == NULL) {
 		wpa_printf(MSG_ERROR, "Line %d: invalid field '%s' string "

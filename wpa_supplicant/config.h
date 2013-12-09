@@ -279,6 +279,15 @@ struct wpa_cred {
 	unsigned int num_req_conn_capab;
 	u8 *req_conn_capab_proto;
 	int **req_conn_capab_port;
+
+	/**
+	 * ocsp - Whether to use/require OCSP to check server certificate
+	 *
+	 * 0 = do not use OCSP stapling (TLS certificate status extension)
+	 * 1 = try to use OCSP stapling, but not require response
+	 * 2 = require valid OCSP stapling response
+	 */
+	int ocsp;
 };
 
 

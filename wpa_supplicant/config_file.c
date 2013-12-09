@@ -828,6 +828,9 @@ static void wpa_config_write_cred(FILE *f, struct wpa_cred *cred)
 	if (cred->max_bss_load)
 		fprintf(f, "\tmax_bss_load=%u\n",
 			cred->max_bss_load);
+
+	if (cred->ocsp)
+		fprintf(f, "\tocsp=%d\n", cred->ocsp);
 }
 
 

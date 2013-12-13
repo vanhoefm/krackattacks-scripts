@@ -385,6 +385,7 @@ void hs20_parse_rx_hs20_anqp_resp(struct wpa_supplicant *wpa_s,
 	case HS20_STYPE_OSU_PROVIDERS_LIST:
 		wpa_msg(wpa_s, MSG_INFO, "RX-HS20-ANQP " MACSTR
 			" OSU Providers list", MAC2STR(sa));
+		wpa_s->num_prov_found++;
 		if (anqp) {
 			wpabuf_free(anqp->hs20_osu_providers_list);
 			anqp->hs20_osu_providers_list =
@@ -821,11 +822,20 @@ int hs20_fetch_osu(struct wpa_supplicant *wpa_s)
 	}
 
 	wpa_msg(wpa_s, MSG_INFO, "Starting OSU provisioning information fetch");
+	wpa_s->num_osu_scans = 0;
+	wpa_s->num_prov_found = 0;
+	hs20_start_osu_scan(wpa_s);
+
+	return 0;
+}
+
+
+void hs20_start_osu_scan(struct wpa_supplicant *wpa_s)
+{
+	wpa_s->num_osu_scans++;
 	wpa_s->scan_req = MANUAL_SCAN_REQ;
 	wpa_s->scan_res_handler = hs20_osu_scan_res_handler;
 	wpa_supplicant_req_scan(wpa_s, 0, 0);
-
-	return 0;
 }
 
 

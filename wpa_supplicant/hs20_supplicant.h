@@ -32,5 +32,6 @@ void hs20_osu_icon_fetch(struct wpa_supplicant *wpa_s);
 int hs20_fetch_osu(struct wpa_supplicant *wpa_s);
 void hs20_cancel_fetch_osu(struct wpa_supplicant *wpa_s);
 void hs20_icon_fetch_failed(struct wpa_supplicant *wpa_s);
+void hs20_start_osu_scan(struct wpa_supplicant *wpa_s);
 
 #endif /* HS20_SUPPLICANT_H */

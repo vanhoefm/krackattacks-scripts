@@ -2474,6 +2474,12 @@ static void interworking_next_anqp_fetch(struct wpa_supplicant *wpa_s)
 
 	if (found == 0) {
 		if (wpa_s->fetch_osu_info) {
+			if (wpa_s->num_prov_found == 0 &&
+			    wpa_s->num_osu_scans < 3) {
+				wpa_printf(MSG_DEBUG, "HS 2.0: No OSU providers seen - try to scan again");
+				hs20_start_osu_scan(wpa_s);
+				return;
+			}
 			wpa_printf(MSG_DEBUG, "Interworking: Next icon");
 			hs20_osu_icon_fetch(wpa_s);
 			return;

@@ -105,6 +105,7 @@ struct tls_connection {
 	unsigned int ca_cert_verify:1;
 	unsigned int cert_probe:1;
 	unsigned int server_cert_only:1;
+	unsigned int server:1;
 
 	u8 srv_cert_hash[32];
 
@@ -1476,6 +1477,16 @@ static int tls_verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx)
 				       TLS_FAIL_SERVER_CHAIN_PROBE);
 	}
 
+	if (!conn->server && err_cert && preverify_ok && depth == 0 &&
+	    (err_cert->ex_flags & EXFLAG_XKUSAGE) &&
+	    (err_cert->ex_xkusage & XKU_SSL_CLIENT)) {
+		wpa_printf(MSG_WARNING, "TLS: Server used client certificate");
+		openssl_tls_fail_event(conn, err_cert, err, depth, buf,
+				       "Server used client certificate",
+				       TLS_FAIL_SERVER_USED_CLIENT_CERT);
+		preverify_ok = 0;
+	}
+
 	if (preverify_ok && context->event_cb != NULL)
 		context->event_cb(context->cb_ctx,
 				  TLS_CERT_CHAIN_SUCCESS, NULL);
@@ -2526,6 +2537,8 @@ openssl_handshake(struct tls_connection *conn, const struct wpabuf *in_data,
 {
 	int res;
 	struct wpabuf *out_data;
+
+	conn->server = !!server;
 
 	/*
 	 * Give TLS handshake data from the server (if available) to OpenSSL

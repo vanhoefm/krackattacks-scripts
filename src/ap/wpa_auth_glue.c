@@ -15,7 +15,6 @@
 #include "eapol_auth/eapol_auth_sm_i.h"
 #include "eap_server/eap.h"
 #include "l2_packet/l2_packet.h"
-#include "drivers/driver.h"
 #include "hostapd.h"
 #include "ieee802_1x.h"
 #include "preauth_auth.h"

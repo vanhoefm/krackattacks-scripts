@@ -11,14 +11,13 @@
 
 #include "common/defs.h"
 #include "ap_config.h"
+#include "drivers/driver.h"
 
-struct wpa_driver_ops;
 struct wpa_ctrl_dst;
 struct radius_server_data;
 struct upnp_wps_device_sm;
 struct hostapd_data;
 struct sta_info;
-struct hostap_sta_driver_data;
 struct ieee80211_ht_capabilities;
 struct full_dynamic_vlan;
 enum wps_event;
@@ -26,8 +25,6 @@ union wps_event_data;
 
 struct hostapd_iface;
 struct hostapd_dynamic_iface;
-
-struct csa_settings;
 
 struct hapd_interfaces {
 	int (*reload_config)(struct hostapd_iface *iface);

@@ -14,7 +14,6 @@
 #include "common/wpa_ctrl.h"
 #include "radius/radius_client.h"
 #include "radius/radius_das.h"
-#include "drivers/driver.h"
 #include "hostapd.h"
 #include "authsrv.h"
 #include "sta_info.h"

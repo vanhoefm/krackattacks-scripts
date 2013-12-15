@@ -15,7 +15,6 @@
 #include "crypto/crypto.h"
 #include "crypto/sha256.h"
 #include "crypto/random.h"
-#include "drivers/driver.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
 #include "common/wpa_ctrl.h"

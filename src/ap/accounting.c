@@ -10,7 +10,6 @@
 
 #include "utils/common.h"
 #include "utils/eloop.h"
-#include "drivers/driver.h"
 #include "radius/radius.h"
 #include "radius/radius_client.h"
 #include "hostapd.h"

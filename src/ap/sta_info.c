@@ -15,7 +15,6 @@
 #include "common/sae.h"
 #include "radius/radius.h"
 #include "radius/radius_client.h"
-#include "drivers/driver.h"
 #include "p2p/p2p.h"
 #include "hostapd.h"
 #include "accounting.h"

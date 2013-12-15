@@ -223,13 +223,56 @@ static u8 * hostapd_eid_csa(struct hostapd_data *hapd, u8 *eid)
 }
 
 
+static u8 * hostapd_eid_secondary_channel(struct hostapd_data *hapd, u8 *eid)
+{
+	u8 sec_ch;
+
+	if (!hapd->iface->cs_freq_params.sec_channel_offset)
+		return eid;
+
+	if (hapd->iface->cs_freq_params.sec_channel_offset == -1)
+		sec_ch = HT_INFO_HT_PARAM_SECONDARY_CHNL_BELOW;
+	else if (hapd->iface->cs_freq_params.sec_channel_offset == 1)
+		sec_ch = HT_INFO_HT_PARAM_SECONDARY_CHNL_ABOVE;
+	else
+		return eid;
+
+	*eid++ = WLAN_EID_SECONDARY_CHANNEL_OFFSET;
+	*eid++ = 1;
+	*eid++ = sec_ch;
+
+	return eid;
+}
+
+
+static u8 * hostapd_add_csa_elems(struct hostapd_data *hapd, u8 *pos,
+				  u8 *start, unsigned int *csa_counter_off)
+{
+	u8 *old_pos = pos;
+
+	if (!csa_counter_off)
+		return pos;
+
+	*csa_counter_off = 0;
+	pos = hostapd_eid_csa(hapd, pos);
+
+	if (pos != old_pos) {
+		/* save an offset to the counter - should be last byte */
+		*csa_counter_off = pos - start - 1;
+		pos = hostapd_eid_secondary_channel(hapd, pos);
+	}
+
+	return pos;
+}
+
+
 static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 				   struct sta_info *sta,
 				   const struct ieee80211_mgmt *req,
 				   int is_p2p, size_t *resp_len)
 {
 	struct ieee80211_mgmt *resp;
-	u8 *pos, *epos, *old_pos;
+	u8 *pos, *epos;
 	size_t buflen;
 
 #define MAX_PROBERESP_LEN 768
@@ -303,13 +346,8 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 	pos = hostapd_eid_adv_proto(hapd, pos);
 	pos = hostapd_eid_roaming_consortium(hapd, pos);
 
-	old_pos = pos;
-	pos = hostapd_eid_csa(hapd, pos);
-
-	/* save an offset to the counter - should be last byte */
-	hapd->iface->cs_c_off_proberesp = (pos != old_pos) ?
-		pos - (u8 *) resp - 1 : 0;
-
+	pos = hostapd_add_csa_elems(hapd, pos, (u8 *)resp,
+				    &hapd->iface->cs_c_off_proberesp);
 #ifdef CONFIG_IEEE80211AC
 	pos = hostapd_eid_vht_capabilities(hapd, pos);
 	pos = hostapd_eid_vht_operation(hapd, pos);
@@ -625,7 +663,7 @@ int ieee802_11_build_ap_params(struct hostapd_data *hapd,
 	size_t resp_len = 0;
 #ifdef NEED_AP_MLME
 	u16 capab_info;
-	u8 *pos, *tailpos, *old_pos;
+	u8 *pos, *tailpos;
 
 #define BEACON_HEAD_BUF_SIZE 256
 #define BEACON_TAIL_BUF_SIZE 512
@@ -720,11 +758,8 @@ int ieee802_11_build_ap_params(struct hostapd_data *hapd,
 	tailpos = hostapd_eid_interworking(hapd, tailpos);
 	tailpos = hostapd_eid_adv_proto(hapd, tailpos);
 	tailpos = hostapd_eid_roaming_consortium(hapd, tailpos);
-	old_pos = tailpos;
-	tailpos = hostapd_eid_csa(hapd, tailpos);
-	hapd->iface->cs_c_off_beacon = (old_pos != tailpos) ?
-		tailpos - tail - 1 : 0;
-
+	tailpos = hostapd_add_csa_elems(hapd, tailpos, tail,
+					&hapd->iface->cs_c_off_beacon);
 #ifdef CONFIG_IEEE80211AC
 	tailpos = hostapd_eid_vht_capabilities(hapd, tailpos);
 	tailpos = hostapd_eid_vht_operation(hapd, tailpos);

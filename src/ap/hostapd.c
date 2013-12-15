@@ -2199,7 +2199,7 @@ static int hostapd_fill_csa_settings(struct hostapd_iface *iface,
 		return ret;
 
 	/* set channel switch parameters for csa ie */
-	iface->cs_freq = settings->freq_params.freq;
+	iface->cs_freq_params = settings->freq_params;
 	iface->cs_count = settings->cs_count;
 	iface->cs_block_tx = settings->block_tx;
 
@@ -2218,7 +2218,8 @@ static int hostapd_fill_csa_settings(struct hostapd_iface *iface,
 
 void hostapd_cleanup_cs_params(struct hostapd_data *hapd)
 {
-	hapd->iface->cs_freq = 0;
+	os_memset(&hapd->iface->cs_freq_params, 0,
+		  sizeof(hapd->iface->cs_freq_params));
 	hapd->iface->cs_count = 0;
 	hapd->iface->cs_block_tx = 0;
 	hapd->iface->cs_c_off_beacon = 0;

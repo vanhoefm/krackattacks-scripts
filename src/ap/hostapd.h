@@ -334,7 +334,7 @@ struct hostapd_iface {
 	s8 lowest_nf;
 
 	/* channel switch parameters */
-	int cs_freq;
+	struct hostapd_freq_params cs_freq_params;
 	u8 cs_count;
 	int cs_block_tx;
 	unsigned int cs_c_off_beacon;

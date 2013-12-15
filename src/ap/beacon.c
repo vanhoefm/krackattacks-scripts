@@ -206,10 +206,10 @@ static u8 * hostapd_eid_csa(struct hostapd_data *hapd, u8 *eid)
 {
 	u8 chan;
 
-	if (!hapd->iface->cs_freq)
+	if (!hapd->iface->cs_freq_params.freq)
 		return eid;
 
-	if (ieee80211_freq_to_chan(hapd->iface->cs_freq, &chan) ==
+	if (ieee80211_freq_to_chan(hapd->iface->cs_freq_params.freq, &chan) ==
 	    NUM_HOSTAPD_MODES)
 		return eid;
 

@@ -183,7 +183,9 @@ struct wps_registrar {
 	u8 p2p_dev_addr[ETH_ALEN];
 
 	u8 pbc_ignore_uuid[WPS_UUID_LEN];
-	struct os_time pbc_ignore_start;
+#ifdef WPS_WORKAROUNDS
+	struct os_reltime pbc_ignore_start;
+#endif /* WPS_WORKAROUNDS */
 };
 
 
@@ -1038,7 +1040,9 @@ void wps_registrar_complete(struct wps_registrar *registrar, const u8 *uuid_e,
 		wps_registrar_remove_pbc_session(registrar,
 						 uuid_e, NULL);
 		wps_registrar_pbc_completed(registrar);
-		os_get_time(&registrar->pbc_ignore_start);
+#ifdef WPS_WORKAROUNDS
+		os_get_reltime(&registrar->pbc_ignore_start);
+#endif /* WPS_WORKAROUNDS */
 		os_memcpy(registrar->pbc_ignore_uuid, uuid_e, WPS_UUID_LEN);
 	} else {
 		wps_registrar_pin_completed(registrar);
@@ -1141,9 +1145,9 @@ void wps_registrar_probe_req_rx(struct wps_registrar *reg, const u8 *addr,
 #ifdef WPS_WORKAROUNDS
 	if (reg->pbc_ignore_start.sec &&
 	    os_memcmp(attr.uuid_e, reg->pbc_ignore_uuid, WPS_UUID_LEN) == 0) {
-		struct os_time now, dur;
-		os_get_time(&now);
-		os_time_sub(&now, &reg->pbc_ignore_start, &dur);
+		struct os_reltime now, dur;
+		os_get_reltime(&now);
+		os_reltime_sub(&now, &reg->pbc_ignore_start, &dur);
 		if (dur.sec >= 0 && dur.sec < 5) {
 			wpa_printf(MSG_DEBUG, "WPS: Ignore PBC activation "
 				   "based on Probe Request from the Enrollee "
@@ -3190,7 +3194,9 @@ static enum wps_process_res wps_process_wsc_done(struct wps_data *wps,
 						 wps->uuid_e,
 						 wps->p2p_dev_addr);
 		wps_registrar_pbc_completed(wps->wps->registrar);
-		os_get_time(&wps->wps->registrar->pbc_ignore_start);
+#ifdef WPS_WORKAROUNDS
+		os_get_reltime(&wps->wps->registrar->pbc_ignore_start);
+#endif /* WPS_WORKAROUNDS */
 		os_memcpy(wps->wps->registrar->pbc_ignore_uuid, wps->uuid_e,
 			  WPS_UUID_LEN);
 	} else {

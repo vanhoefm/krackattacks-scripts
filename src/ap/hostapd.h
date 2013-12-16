@@ -146,7 +146,7 @@ struct hostapd_data {
 	struct eapol_authenticator *eapol_auth;
 
 	struct rsn_preauth_interface *preauth_iface;
-	time_t michael_mic_failure;
+	struct os_reltime michael_mic_failure;
 	int michael_mic_failures;
 	int tkip_countermeasures;
 

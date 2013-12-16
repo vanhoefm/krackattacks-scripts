@@ -113,7 +113,7 @@ struct wps_pbc_session {
 	struct wps_pbc_session *next;
 	u8 addr[ETH_ALEN];
 	u8 uuid_e[WPS_UUID_LEN];
-	struct os_time timestamp;
+	struct os_reltime timestamp;
 };
 
 
@@ -311,9 +311,9 @@ static void wps_registrar_add_pbc_session(struct wps_registrar *reg,
 					  const u8 *addr, const u8 *uuid_e)
 {
 	struct wps_pbc_session *pbc, *prev = NULL;
-	struct os_time now;
+	struct os_reltime now;
 
-	os_get_time(&now);
+	os_get_reltime(&now);
 
 	pbc = reg->pbc_sessions;
 	while (pbc) {
@@ -347,7 +347,8 @@ static void wps_registrar_add_pbc_session(struct wps_registrar *reg,
 	pbc = pbc->next;
 
 	while (pbc) {
-		if (now.sec > pbc->timestamp.sec + WPS_PBC_WALK_TIME) {
+		if (os_reltime_expired(&now, &pbc->timestamp,
+				       WPS_PBC_WALK_TIME)) {
 			prev->next = NULL;
 			wps_free_pbc_sessions(pbc);
 			break;
@@ -395,9 +396,9 @@ int wps_registrar_pbc_overlap(struct wps_registrar *reg,
 	int count = 0;
 	struct wps_pbc_session *pbc;
 	struct wps_pbc_session *first = NULL;
-	struct os_time now;
+	struct os_reltime now;
 
-	os_get_time(&now);
+	os_get_reltime(&now);
 
 	wpa_printf(MSG_DEBUG, "WPS: Checking active PBC sessions for overlap");
 
@@ -413,9 +414,9 @@ int wps_registrar_pbc_overlap(struct wps_registrar *reg,
 			   MAC2STR(pbc->addr));
 		wpa_hexdump(MSG_DEBUG, "WPS: UUID-E",
 			    pbc->uuid_e, WPS_UUID_LEN);
-		if (now.sec > pbc->timestamp.sec + WPS_PBC_WALK_TIME) {
-			wpa_printf(MSG_DEBUG, "WPS: PBC walk time has "
-				   "expired");
+		if (os_reltime_expired(&now, &pbc->timestamp,
+				       WPS_PBC_WALK_TIME)) {
+			wpa_printf(MSG_DEBUG, "WPS: PBC walk time has expired");
 			break;
 		}
 		if (first &&

@@ -224,9 +224,9 @@ struct wpa_bss * wpa_bss_get(struct wpa_supplicant *wpa_s, const u8 *bssid,
 }
 
 
-static void calculate_update_time(const struct os_time *fetch_time,
+static void calculate_update_time(const struct os_reltime *fetch_time,
 				  unsigned int age_ms,
-				  struct os_time *update_time)
+				  struct os_reltime *update_time)
 {
 	os_time_t usec;
 
@@ -243,7 +243,7 @@ static void calculate_update_time(const struct os_time *fetch_time,
 
 
 static void wpa_bss_copy_res(struct wpa_bss *dst, struct wpa_scan_res *src,
-			     struct os_time *fetch_time)
+			     struct os_reltime *fetch_time)
 {
 	dst->flags = src->flags;
 	os_memcpy(dst->bssid, src->bssid, ETH_ALEN);
@@ -326,7 +326,7 @@ static int wpa_bss_remove_oldest(struct wpa_supplicant *wpa_s)
 static struct wpa_bss * wpa_bss_add(struct wpa_supplicant *wpa_s,
 				    const u8 *ssid, size_t ssid_len,
 				    struct wpa_scan_res *res,
-				    struct os_time *fetch_time)
+				    struct os_reltime *fetch_time)
 {
 	struct wpa_bss *bss;
 
@@ -492,7 +492,7 @@ static void notify_bss_changes(struct wpa_supplicant *wpa_s, u32 changes,
 
 static struct wpa_bss *
 wpa_bss_update(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
-	       struct wpa_scan_res *res, struct os_time *fetch_time)
+	       struct wpa_scan_res *res, struct os_reltime *fetch_time)
 {
 	u32 changes;
 
@@ -587,17 +587,18 @@ void wpa_bss_update_start(struct wpa_supplicant *wpa_s)
  */
 void wpa_bss_update_scan_res(struct wpa_supplicant *wpa_s,
 			     struct wpa_scan_res *res,
-			     struct os_time *fetch_time)
+			     struct os_reltime *fetch_time)
 {
 	const u8 *ssid, *p2p;
 	struct wpa_bss *bss;
 
 	if (wpa_s->conf->ignore_old_scan_res) {
-		struct os_time update;
+		struct os_reltime update;
 		calculate_update_time(fetch_time, res->age, &update);
-		if (os_time_before(&update, &wpa_s->scan_trigger_time)) {
-			struct os_time age;
-			os_time_sub(&wpa_s->scan_trigger_time, &update, &age);
+		if (os_reltime_before(&update, &wpa_s->scan_trigger_time)) {
+			struct os_reltime age;
+			os_reltime_sub(&wpa_s->scan_trigger_time, &update,
+				       &age);
 			wpa_dbg(wpa_s, MSG_DEBUG, "BSS: Ignore driver BSS "
 				"table entry that is %u.%06u seconds older "
 				"than our scan trigger",
@@ -781,19 +782,19 @@ void wpa_bss_update_end(struct wpa_supplicant *wpa_s, struct scan_info *info,
 void wpa_bss_flush_by_age(struct wpa_supplicant *wpa_s, int age)
 {
 	struct wpa_bss *bss, *n;
-	struct os_time t;
+	struct os_reltime t;
 
 	if (dl_list_empty(&wpa_s->bss))
 		return;
 
-	os_get_time(&t);
+	os_get_reltime(&t);
 	t.sec -= age;
 
 	dl_list_for_each_safe(bss, n, &wpa_s->bss, struct wpa_bss, list) {
 		if (wpa_bss_in_use(wpa_s, bss))
 			continue;
 
-		if (os_time_before(&bss->last_update, &t)) {
+		if (os_reltime_before(&bss->last_update, &t)) {
 			wpa_bss_remove(wpa_s, bss, __func__);
 		} else
 			break;
@@ -900,7 +901,7 @@ struct wpa_bss * wpa_bss_get_bssid_latest(struct wpa_supplicant *wpa_s,
 		if (os_memcmp(bss->bssid, bssid, ETH_ALEN) != 0)
 			continue;
 		if (found == NULL ||
-		    os_time_before(&found->last_update, &bss->last_update))
+		    os_reltime_before(&found->last_update, &bss->last_update))
 			found = bss;
 	}
 	return found;

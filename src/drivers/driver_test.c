@@ -1318,8 +1318,8 @@ static void wpa_driver_test_scan_timeout(void *eloop_ctx, void *timeout_ctx)
 	if (drv->pending_p2p_scan && drv->p2p) {
 #ifdef CONFIG_P2P
 		size_t i;
-		struct os_time now;
-		os_get_time(&now);
+		struct os_reltime now;
+		os_get_reltime(&now);
 		for (i = 0; i < drv->num_scanres; i++) {
 			struct wpa_scan_res *bss = drv->scanres[i];
 			if (p2p_scan_res_handler(drv->p2p, bss->bssid,

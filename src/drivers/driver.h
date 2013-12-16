@@ -233,7 +233,7 @@ struct wpa_scan_res {
 struct wpa_scan_results {
 	struct wpa_scan_res **res;
 	size_t num;
-	struct os_time fetch_time;
+	struct os_reltime fetch_time;
 };
 
 /**

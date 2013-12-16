@@ -228,7 +228,7 @@ int wpa_supplicant_trigger_scan(struct wpa_supplicant *wpa_s,
 		wpa_supplicant_notify_scanning(wpa_s, 0);
 		wpas_notify_scan_done(wpa_s, 0);
 	} else {
-		os_get_time(&wpa_s->scan_trigger_time);
+		os_get_reltime(&wpa_s->scan_trigger_time);
 		wpa_s->scan_runs++;
 		wpa_s->normal_scans++;
 	}
@@ -1663,7 +1663,7 @@ wpa_supplicant_get_scan_results(struct wpa_supplicant *wpa_s,
 		 * Make sure we have a valid timestamp if the driver wrapper
 		 * does not set this.
 		 */
-		os_get_time(&scan_res->fetch_time);
+		os_get_reltime(&scan_res->fetch_time);
 	}
 	filter_scan_res(wpa_s, scan_res);
 

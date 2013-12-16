@@ -84,7 +84,7 @@ struct wpa_bss {
 	/** Timestamp of last Beacon/Probe Response frame */
 	u64 tsf;
 	/** Time of the last update (i.e., Beacon or Probe Response RX) */
-	struct os_time last_update;
+	struct os_reltime last_update;
 	/** ANQP data */
 	struct wpa_bss_anqp *anqp;
 	/** Length of the following IE field in octets (from Probe Response) */
@@ -98,7 +98,7 @@ struct wpa_bss {
 void wpa_bss_update_start(struct wpa_supplicant *wpa_s);
 void wpa_bss_update_scan_res(struct wpa_supplicant *wpa_s,
 			     struct wpa_scan_res *res,
-			     struct os_time *fetch_time);
+			     struct os_reltime *fetch_time);
 void wpa_bss_update_end(struct wpa_supplicant *wpa_s, struct scan_info *info,
 			int new_scan);
 int wpa_bss_init(struct wpa_supplicant *wpa_s);

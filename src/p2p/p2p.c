@@ -48,10 +48,10 @@ static void p2p_scan_timeout(void *eloop_ctx, void *timeout_ctx);
 static void p2p_expire_peers(struct p2p_data *p2p)
 {
 	struct p2p_device *dev, *n;
-	struct os_time now;
+	struct os_reltime now;
 	size_t i;
 
-	os_get_time(&now);
+	os_get_reltime(&now);
 	dl_list_for_each_safe(dev, n, &p2p->devices, struct p2p_device, list) {
 		if (dev->last_seen.sec + P2P_PEER_EXPIRATION_AGE >= now.sec)
 			continue;
@@ -63,7 +63,7 @@ static void p2p_expire_peers(struct p2p_data *p2p)
 			 * We are connected as a client to a group in which the
 			 * peer is the GO, so do not expire the peer entry.
 			 */
-			os_get_time(&dev->last_seen);
+			os_get_reltime(&dev->last_seen);
 			continue;
 		}
 
@@ -77,7 +77,7 @@ static void p2p_expire_peers(struct p2p_data *p2p)
 			 * The peer is connected as a client in a group where
 			 * we are the GO, so do not expire the peer entry.
 			 */
-			os_get_time(&dev->last_seen);
+			os_get_reltime(&dev->last_seen);
 			continue;
 		}
 
@@ -377,7 +377,7 @@ static struct p2p_device * p2p_create_device(struct p2p_data *p2p,
 	dl_list_for_each(dev, &p2p->devices, struct p2p_device, list) {
 		count++;
 		if (oldest == NULL ||
-		    os_time_before(&dev->last_seen, &oldest->last_seen))
+		    os_reltime_before(&dev->last_seen, &oldest->last_seen))
 			oldest = dev;
 	}
 	if (count + 1 > p2p->cfg->max_peers && oldest) {
@@ -480,7 +480,7 @@ static int p2p_add_group_clients(struct p2p_data *p2p, const u8 *go_dev_addr,
 
 		os_memcpy(dev->interface_addr, cli->p2p_interface_addr,
 			  ETH_ALEN);
-		os_get_time(&dev->last_seen);
+		os_get_reltime(&dev->last_seen);
 		os_memcpy(dev->member_in_go_dev, go_dev_addr, ETH_ALEN);
 		os_memcpy(dev->member_in_go_iface, go_interface_addr,
 			  ETH_ALEN);
@@ -596,14 +596,14 @@ static void p2p_copy_wps_info(struct p2p_data *p2p, struct p2p_device *dev,
  * Info attributes.
  */
 int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq,
-		   struct os_time *rx_time, int level, const u8 *ies,
+		   struct os_reltime *rx_time, int level, const u8 *ies,
 		   size_t ies_len, int scan_res)
 {
 	struct p2p_device *dev;
 	struct p2p_message msg;
 	const u8 *p2p_dev_addr;
 	int i;
-	struct os_time time_now;
+	struct os_reltime time_now;
 
 	os_memset(&msg, 0, sizeof(msg));
 	if (p2p_parse_ies(ies, ies_len, &msg)) {
@@ -637,7 +637,7 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq,
 	}
 
 	if (rx_time == NULL) {
-		os_get_time(&time_now);
+		os_get_reltime(&time_now);
 		rx_time = &time_now;
 	}
 
@@ -646,7 +646,7 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq,
 	 * entry is newer than the one previously stored.
 	 */
 	if (dev->last_seen.sec > 0 &&
-	    os_time_before(rx_time, &dev->last_seen)) {
+	    os_reltime_before(rx_time, &dev->last_seen)) {
 		p2p_dbg(p2p, "Do not update peer entry based on old frame (rx_time=%u.%06u last_seen=%u.%06u)",
 			(unsigned int) rx_time->sec,
 			(unsigned int) rx_time->usec,
@@ -656,7 +656,7 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq,
 		return -1;
 	}
 
-	os_memcpy(&dev->last_seen, rx_time, sizeof(struct os_time));
+	os_memcpy(&dev->last_seen, rx_time, sizeof(struct os_reltime));
 
 	dev->flags &= ~(P2P_DEV_PROBE_REQ_ONLY | P2P_DEV_GROUP_CLIENT_ONLY);
 
@@ -982,7 +982,7 @@ int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 	int res;
 
 	p2p_dbg(p2p, "Starting find (type=%d)", type);
-	os_get_time(&p2p->find_start);
+	os_get_reltime(&p2p->find_start);
 	if (p2p->p2p_scan_running) {
 		p2p_dbg(p2p, "p2p_scan is already running");
 	}
@@ -1471,7 +1471,7 @@ int p2p_authorize(struct p2p_data *p2p, const u8 *peer_addr,
 void p2p_add_dev_info(struct p2p_data *p2p, const u8 *addr,
 		      struct p2p_device *dev, struct p2p_message *msg)
 {
-	os_get_time(&dev->last_seen);
+	os_get_reltime(&dev->last_seen);
 
 	p2p_copy_wps_info(p2p, dev, 0, msg);
 
@@ -1810,7 +1810,7 @@ static void p2p_add_dev_from_probe_req(struct p2p_data *p2p, const u8 *addr,
 	if (dev) {
 		if (dev->country[0] == 0 && msg.listen_channel)
 			os_memcpy(dev->country, msg.listen_channel, 3);
-		os_get_time(&dev->last_seen);
+		os_get_reltime(&dev->last_seen);
 		p2p_parse_free(&msg);
 		return; /* already known */
 	}
@@ -1821,7 +1821,7 @@ static void p2p_add_dev_from_probe_req(struct p2p_data *p2p, const u8 *addr,
 		return;
 	}
 
-	os_get_time(&dev->last_seen);
+	os_get_reltime(&dev->last_seen);
 	dev->flags |= P2P_DEV_PROBE_REQ_ONLY;
 
 	if (msg.listen_channel) {
@@ -1855,7 +1855,7 @@ struct p2p_device * p2p_add_dev_from_go_neg_req(struct p2p_data *p2p,
 
 	dev = p2p_get_device(p2p, addr);
 	if (dev) {
-		os_get_time(&dev->last_seen);
+		os_get_reltime(&dev->last_seen);
 		return dev; /* already known */
 	}
 
@@ -2770,10 +2770,10 @@ static void p2p_prov_disc_cb(struct p2p_data *p2p, int success)
 
 
 int p2p_scan_res_handler(struct p2p_data *p2p, const u8 *bssid, int freq,
-			 struct os_time *rx_time, int level, const u8 *ies,
+			 struct os_reltime *rx_time, int level, const u8 *ies,
 			 size_t ies_len)
 {
-	if (os_time_before(rx_time, &p2p->find_start)) {
+	if (os_reltime_before(rx_time, &p2p->find_start)) {
 		/*
 		 * The driver may have cached (e.g., in cfg80211 BSS table) the
 		 * scan results for relatively long time. To avoid reporting
@@ -3455,7 +3455,7 @@ int p2p_get_peer_info_txt(const struct p2p_peer_info *info,
 	struct p2p_device *dev;
 	int res;
 	char *pos, *end;
-	struct os_time now;
+	struct os_reltime now;
 
 	if (info == NULL)
 		return -1;
@@ -3466,7 +3466,7 @@ int p2p_get_peer_info_txt(const struct p2p_peer_info *info,
 	pos = buf;
 	end = buf + buflen;
 
-	os_get_time(&now);
+	os_get_reltime(&now);
 	res = os_snprintf(pos, end - pos,
 			  "age=%d\n"
 			  "listen_freq=%d\n"

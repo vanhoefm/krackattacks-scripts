@@ -479,7 +479,7 @@ struct wpa_supplicant {
 		 */
 		MANUAL_SCAN_REQ
 	} scan_req, last_scan_req;
-	struct os_time scan_trigger_time;
+	struct os_reltime scan_trigger_time;
 	int scan_runs; /* number of scan runs since WPS was started */
 	int *next_scan_freqs;
 	int scan_interval; /* time in sec between scans to find suitable AP */
@@ -662,7 +662,7 @@ struct wpa_supplicant {
 	int p2p_persistent_id;
 	int p2p_go_intent;
 	int p2p_connect_freq;
-	struct os_time p2p_auto_started;
+	struct os_reltime p2p_auto_started;
 	struct wpa_ssid *p2p_last_4way_hs_fail;
 #endif /* CONFIG_P2P */
 

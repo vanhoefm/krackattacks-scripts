@@ -204,13 +204,13 @@ static void wpas_p2p_scan_res_handler(struct wpa_supplicant *wpa_s,
 
 	for (i = 0; i < scan_res->num; i++) {
 		struct wpa_scan_res *bss = scan_res->res[i];
-		struct os_time time_tmp_age, entry_ts;
+		struct os_reltime time_tmp_age, entry_ts;
 		const u8 *ies;
 		size_t ies_len;
 
 		time_tmp_age.sec = bss->age / 1000;
 		time_tmp_age.usec = (bss->age % 1000) * 1000;
-		os_time_sub(&scan_res->fetch_time, &time_tmp_age, &entry_ts);
+		os_reltime_sub(&scan_res->fetch_time, &time_tmp_age, &entry_ts);
 
 		ies = (const u8 *) (bss + 1);
 		ies_len = bss->ie_len;
@@ -317,7 +317,7 @@ static int wpas_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 			}
 		}
 	} else {
-		os_get_time(&wpa_s->scan_trigger_time);
+		os_get_reltime(&wpa_s->scan_trigger_time);
 		wpa_s->scan_res_handler = wpas_p2p_scan_res_handler;
 	}
 
@@ -3783,7 +3783,8 @@ static int wpas_p2p_peer_go(struct wpa_supplicant *wpa_s,
 		return 0;
 	}
 
-	updated = os_time_before(&wpa_s->p2p_auto_started, &bss->last_update);
+	updated = os_reltime_before(&wpa_s->p2p_auto_started,
+				    &bss->last_update);
 	wpa_printf(MSG_DEBUG, "P2P: Current BSS entry for peer updated at "
 		   "%ld.%06ld (%supdated in last scan)",
 		   bss->last_update.sec, bss->last_update.usec,
@@ -4028,7 +4029,7 @@ static void wpas_p2p_join_scan_req(struct wpa_supplicant *wpa_s, int freq)
 	 */
 	ret = wpa_drv_scan(wpa_s, &params);
 	if (!ret) {
-		os_get_time(&wpa_s->scan_trigger_time);
+		os_get_reltime(&wpa_s->scan_trigger_time);
 		wpa_s->scan_res_handler = wpas_p2p_scan_res_join;
 	}
 
@@ -4315,7 +4316,7 @@ int wpas_p2p_connect(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 					 dev_addr);
 		}
 		if (auto_join) {
-			os_get_time(&wpa_s->p2p_auto_started);
+			os_get_reltime(&wpa_s->p2p_auto_started);
 			wpa_printf(MSG_DEBUG, "P2P: Auto join started at "
 				   "%ld.%06ld",
 				   wpa_s->p2p_auto_started.sec,
@@ -5057,7 +5058,7 @@ int wpas_p2p_prov_disc(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 		wpa_s->auto_pd_scan_retry = 0;
 		wpas_p2p_stop_find(wpa_s);
 		wpa_s->p2p_join_scan_count = 0;
-		os_get_time(&wpa_s->p2p_auto_started);
+		os_get_reltime(&wpa_s->p2p_auto_started);
 		wpa_printf(MSG_DEBUG, "P2P: Auto PD started at %ld.%06ld",
 			   wpa_s->p2p_auto_started.sec,
 			   wpa_s->p2p_auto_started.usec);

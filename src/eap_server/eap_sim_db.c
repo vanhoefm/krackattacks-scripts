@@ -38,7 +38,6 @@ struct eap_sim_db_pending {
 	char imsi[20];
 	enum { PENDING, SUCCESS, FAILURE } state;
 	void *cb_session_ctx;
-	struct os_time timestamp;
 	int aka;
 	union {
 		struct {
@@ -935,7 +934,6 @@ int eap_sim_db_get_gsm_triplets(struct eap_sim_db_data *data,
 	if (entry == NULL)
 		return EAP_SIM_DB_FAILURE;
 
-	os_get_time(&entry->timestamp);
 	os_strlcpy(entry->imsi, imsi, sizeof(entry->imsi));
 	entry->cb_session_ctx = cb_session_ctx;
 	entry->state = PENDING;
@@ -1395,7 +1393,6 @@ int eap_sim_db_get_aka_auth(struct eap_sim_db_data *data, const char *username,
 	if (entry == NULL)
 		return EAP_SIM_DB_FAILURE;
 
-	os_get_time(&entry->timestamp);
 	entry->aka = 1;
 	os_strlcpy(entry->imsi, imsi, sizeof(entry->imsi));
 	entry->cb_session_ctx = cb_session_ctx;

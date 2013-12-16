@@ -853,7 +853,7 @@ static void wpas_group_formation_completed(struct wpa_supplicant *wpa_s,
 		network_id = ssid->id;
 	if (!client) {
 		wpas_notify_p2p_group_started(wpa_s, ssid, network_id, 0);
-		os_get_time(&wpa_s->global->p2p_go_wait_client);
+		os_get_reltime(&wpa_s->global->p2p_go_wait_client);
 	}
 }
 
@@ -1030,7 +1030,7 @@ static void p2p_go_configured(void *ctx, void *data)
 				       " [PERSISTENT]" : "");
 		}
 
-		os_get_time(&wpa_s->global->p2p_go_wait_client);
+		os_get_reltime(&wpa_s->global->p2p_go_wait_client);
 		if (params->persistent_group) {
 			network_id = wpas_p2p_store_persistent_group(
 				wpa_s->parent, ssid,
@@ -6143,10 +6143,10 @@ int wpas_p2p_in_progress(struct wpa_supplicant *wpa_s)
 	}
 
 	if (!ret && wpa_s->global->p2p_go_wait_client.sec) {
-		struct os_time now;
-		os_get_time(&now);
-		if (now.sec > wpa_s->global->p2p_go_wait_client.sec +
-		    P2P_MAX_INITIAL_CONN_WAIT_GO) {
+		struct os_reltime now;
+		os_get_reltime(&now);
+		if (os_reltime_expired(&now, &wpa_s->global->p2p_go_wait_client,
+				       P2P_MAX_INITIAL_CONN_WAIT_GO)) {
 			/* Wait for the first client has expired */
 			wpa_s->global->p2p_go_wait_client.sec = 0;
 		} else {

@@ -344,7 +344,7 @@ struct wpa_supplicant {
 	char *confanother;
 	struct wpa_config *conf;
 	int countermeasures;
-	os_time_t last_michael_mic_error;
+	struct os_reltime last_michael_mic_error;
 	u8 bssid[ETH_ALEN];
 	u8 pending_bssid[ETH_ALEN]; /* If wpa_state == WPA_ASSOCIATING, this
 				     * field contains the target BSSID. */

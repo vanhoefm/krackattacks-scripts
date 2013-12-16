@@ -2183,13 +2183,13 @@ wpa_supplicant_event_michael_mic_failure(struct wpa_supplicant *wpa_s,
 					 union wpa_event_data *data)
 {
 	int pairwise;
-	struct os_time t;
+	struct os_reltime t;
 
 	wpa_msg(wpa_s, MSG_WARNING, "Michael MIC failure detected");
 	pairwise = (data && data->michael_mic_failure.unicast);
-	os_get_time(&t);
-	if ((wpa_s->last_michael_mic_error &&
-	     t.sec - wpa_s->last_michael_mic_error <= 60) ||
+	os_get_reltime(&t);
+	if ((wpa_s->last_michael_mic_error.sec &&
+	     !os_reltime_expired(&t, &wpa_s->last_michael_mic_error, 60)) ||
 	    wpa_s->pending_mic_error_report) {
 		if (wpa_s->pending_mic_error_report) {
 			/*
@@ -2267,7 +2267,7 @@ wpa_supplicant_event_michael_mic_failure(struct wpa_supplicant *wpa_s,
 		wpa_sm_key_request(wpa_s->wpa, 1, pairwise);
 #endif /* CONFIG_DELAYED_MIC_ERROR_REPORT */
 	}
-	wpa_s->last_michael_mic_error = t.sec;
+	wpa_s->last_michael_mic_error = t;
 	wpa_s->mic_errors_seen++;
 }
 

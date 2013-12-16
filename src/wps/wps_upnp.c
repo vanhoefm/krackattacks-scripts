@@ -480,14 +480,14 @@ static void upnp_wps_device_send_event(struct upnp_wps_device_sm *sm)
 		"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
 		"<e:propertyset xmlns:e=\"urn:schemas-upnp-org:event-1-0\">\n";
 	const char *format_tail = "</e:propertyset>\n";
-	struct os_time now;
+	struct os_reltime now;
 
 	if (dl_list_empty(&sm->subscriptions)) {
 		/* optimize */
 		return;
 	}
 
-	if (os_get_time(&now) == 0) {
+	if (os_get_reltime(&now) == 0) {
 		if (now.sec != sm->last_event_sec) {
 			sm->last_event_sec = now.sec;
 			sm->num_events_in_sec = 1;

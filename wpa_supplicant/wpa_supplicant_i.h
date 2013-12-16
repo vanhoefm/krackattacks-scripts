@@ -302,7 +302,7 @@ struct wps_ap_info {
 		WPS_AP_SEL_REG_OUR
 	} type;
 	unsigned int tries;
-	struct os_time last_attempt;
+	struct os_reltime last_attempt;
 };
 
 struct wpa_ssid_value {

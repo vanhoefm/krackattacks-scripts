@@ -2360,7 +2360,7 @@ extern int wpa_debug_level;
 static void wpas_wps_dump_ap_info(struct wpa_supplicant *wpa_s)
 {
 	size_t i;
-	struct os_time now;
+	struct os_reltime now;
 
 	if (wpa_debug_level > MSG_DEBUG)
 		return;
@@ -2368,7 +2368,7 @@ static void wpas_wps_dump_ap_info(struct wpa_supplicant *wpa_s)
 	if (wpa_s->wps_ap == NULL)
 		return;
 
-	os_get_time(&now);
+	os_get_reltime(&now);
 
 	for (i = 0; i < wpa_s->num_wps_ap; i++) {
 		struct wps_ap_info *ap = &wpa_s->wps_ap[i];
@@ -2481,5 +2481,5 @@ void wpas_wps_notify_assoc(struct wpa_supplicant *wpa_s, const u8 *bssid)
 	if (ap == NULL)
 		return;
 	ap->tries++;
-	os_get_time(&ap->last_attempt);
+	os_get_reltime(&ap->last_attempt);
 }

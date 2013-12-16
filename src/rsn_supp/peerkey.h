@@ -24,7 +24,6 @@ struct wpa_peerkey {
 	int smk_complete;
 	u8 smkid[PMKID_LEN];
 	u32 lifetime;
-	os_time_t expiration;
 	int cipher; /* Selected cipher (WPA_CIPHER_*) */
 	u8 replay_counter[WPA_REPLAY_COUNTER_LEN];
 	int replay_counter_set;

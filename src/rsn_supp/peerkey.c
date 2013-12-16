@@ -516,7 +516,6 @@ static int wpa_supplicant_process_smk_m45(
 	struct wpa_peerkey *peerkey;
 	struct wpa_eapol_ie_parse kde;
 	u32 lifetime;
-	struct os_time now;
 
 	if (!sm->peerkey_enabled || sm->proto != WPA_PROTO_RSN) {
 		wpa_printf(MSG_DEBUG, "RSN: SMK handshake not allowed for "
@@ -568,10 +567,8 @@ static int wpa_supplicant_process_smk_m45(
 	lifetime = WPA_GET_BE32(kde.lifetime);
 	wpa_printf(MSG_DEBUG, "RSN: SMK lifetime %u seconds", lifetime);
 	if (lifetime > 1000000000)
-		lifetime = 1000000000; /* avoid overflowing expiration time */
+		lifetime = 1000000000; /* avoid overflowing eloop time */
 	peerkey->lifetime = lifetime;
-	os_get_time(&now);
-	peerkey->expiration = now.sec + lifetime;
 	eloop_register_timeout(lifetime, 0, wpa_supplicant_smk_timeout,
 			       sm, peerkey);
 
@@ -736,7 +733,6 @@ static void wpa_supplicant_update_smk_lifetime(struct wpa_sm *sm,
 					       struct wpa_eapol_ie_parse *kde)
 {
 	u32 lifetime;
-	struct os_time now;
 
 	if (kde->lifetime == NULL || kde->lifetime_len < sizeof(lifetime))
 		return;
@@ -755,8 +751,6 @@ static void wpa_supplicant_update_smk_lifetime(struct wpa_sm *sm,
 		   lifetime, peerkey->lifetime);
 	peerkey->lifetime = lifetime;
 
-	os_get_time(&now);
-	peerkey->expiration = now.sec + lifetime;
 	eloop_cancel_timeout(wpa_supplicant_smk_timeout, sm, peerkey);
 	eloop_register_timeout(lifetime, 0, wpa_supplicant_smk_timeout,
 			       sm, peerkey);

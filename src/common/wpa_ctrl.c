@@ -391,7 +391,7 @@ int wpa_ctrl_request(struct wpa_ctrl *ctrl, const char *cmd, size_t cmd_len,
 		     void (*msg_cb)(char *msg, size_t len))
 {
 	struct timeval tv;
-	struct os_time started_at;
+	struct os_reltime started_at;
 	int res;
 	fd_set rfds;
 	const char *_cmd;
@@ -430,12 +430,12 @@ retry_send:
 			 * longer before giving up.
 			 */
 			if (started_at.sec == 0)
-				os_get_time(&started_at);
+				os_get_reltime(&started_at);
 			else {
-				struct os_time n;
-				os_get_time(&n);
+				struct os_reltime n;
+				os_get_reltime(&n);
 				/* Try for a few seconds. */
-				if (n.sec > started_at.sec + 5)
+				if (os_reltime_expired(&n, &started_at, 5))
 					goto send_err;
 			}
 			os_sleep(1, 0);

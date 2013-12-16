@@ -1428,13 +1428,13 @@ int wpa_supplicant_fast_associate(struct wpa_supplicant *wpa_s)
 #ifdef CONFIG_NO_SCAN_PROCESSING
 	return -1;
 #else /* CONFIG_NO_SCAN_PROCESSING */
-	struct os_time now;
+	struct os_reltime now;
 
 	if (wpa_s->last_scan_res_used <= 0)
 		return -1;
 
-	os_get_time(&now);
-	if (now.sec - wpa_s->last_scan.sec > 5) {
+	os_get_reltime(&now);
+	if (os_reltime_expired(&now, &wpa_s->last_scan, 5)) {
 		wpa_printf(MSG_DEBUG, "Fast associate: Old scan results");
 		return -1;
 	}

@@ -409,7 +409,7 @@ struct wpa_supplicant {
 	unsigned int last_scan_res_used;
 	unsigned int last_scan_res_size;
 	int last_scan_full;
-	struct os_time last_scan;
+	struct os_reltime last_scan;
 
 	struct wpa_driver_ops *driver;
 	int interface_removed; /* whether the network interface has been

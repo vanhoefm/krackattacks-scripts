@@ -733,7 +733,7 @@ void wpa_bss_update_end(struct wpa_supplicant *wpa_s, struct scan_info *info,
 	struct wpa_bss *bss, *n;
 
 	wpa_s->last_scan_full = 0;
-	os_get_time(&wpa_s->last_scan);
+	os_get_reltime(&wpa_s->last_scan);
 	if (!new_scan)
 		return; /* do not expire entries without new scan */
 

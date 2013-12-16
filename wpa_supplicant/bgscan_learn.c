@@ -34,7 +34,7 @@ struct bgscan_learn_data {
 	int signal_threshold;
 	int short_interval; /* use if signal < threshold */
 	int long_interval; /* use if signal > threshold */
-	struct os_time last_bgscan;
+	struct os_reltime last_bgscan;
 	char *fname;
 	struct dl_list bss;
 	int *supp_freqs;
@@ -310,7 +310,7 @@ static void bgscan_learn_timeout(void *eloop_ctx, void *timeout_ctx)
 		eloop_register_timeout(data->scan_interval, 0,
 				       bgscan_learn_timeout, data, NULL);
 	} else
-		os_get_time(&data->last_bgscan);
+		os_get_reltime(&data->last_bgscan);
 	os_free(freqs);
 }
 
@@ -438,7 +438,7 @@ static void * bgscan_learn_init(struct wpa_supplicant *wpa_s,
 	 * us skip an immediate new scan in cases where the current signal
 	 * level is below the bgscan threshold.
 	 */
-	os_get_time(&data->last_bgscan);
+	os_get_reltime(&data->last_bgscan);
 
 	return data;
 }
@@ -565,7 +565,7 @@ static void bgscan_learn_notify_signal_change(void *priv, int above,
 {
 	struct bgscan_learn_data *data = priv;
 	int scan = 0;
-	struct os_time now;
+	struct os_reltime now;
 
 	if (data->short_interval == data->long_interval ||
 	    data->signal_threshold == 0)
@@ -579,7 +579,7 @@ static void bgscan_learn_notify_signal_change(void *priv, int above,
 		wpa_printf(MSG_DEBUG, "bgscan learn: Start using short bgscan "
 			   "interval");
 		data->scan_interval = data->short_interval;
-		os_get_time(&now);
+		os_get_reltime(&now);
 		if (now.sec > data->last_bgscan.sec + 1)
 			scan = 1;
 	} else if (data->scan_interval == data->short_interval && above) {
@@ -594,7 +594,7 @@ static void bgscan_learn_notify_signal_change(void *priv, int above,
 		 * Signal dropped further 4 dB. Request a new scan if we have
 		 * not yet scanned in a while.
 		 */
-		os_get_time(&now);
+		os_get_reltime(&now);
 		if (now.sec > data->last_bgscan.sec + 10)
 			scan = 1;
 	}

@@ -590,7 +590,7 @@ int ibss_rsn_start(struct ibss_rsn *ibss_rsn, const u8 *addr)
 		peer->authentication_status |= IBSS_RSN_AUTH_BY_US;
 		return ibss_rsn_auth_init(ibss_rsn, peer);
 	} else {
-		os_get_time(&peer->own_auth_tx);
+		os_get_reltime(&peer->own_auth_tx);
 		eloop_register_timeout(1, 0, ibss_rsn_auth_timeout, peer, NULL);
 	}
 
@@ -834,9 +834,9 @@ static void ibss_rsn_handle_auth_1_of_2(struct ibss_rsn *ibss_rsn,
 	if (peer &&
 	    peer->authentication_status & IBSS_RSN_AUTH_EAPOL_BY_PEER) {
 		if (peer->own_auth_tx.sec) {
-			struct os_time now, diff;
-			os_get_time(&now);
-			os_time_sub(&now, &peer->own_auth_tx, &diff);
+			struct os_reltime now, diff;
+			os_get_reltime(&now);
+			os_reltime_sub(&now, &peer->own_auth_tx, &diff);
 			if (diff.sec == 0 && diff.usec < 500000) {
 				wpa_printf(MSG_DEBUG, "RSN: Skip IBSS reinit since only %u usec from own Auth frame TX",
 					   (int) diff.usec);

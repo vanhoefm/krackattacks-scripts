@@ -3979,7 +3979,7 @@ void wpas_auth_failed(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_ssid *ssid = wpa_s->current_ssid;
 	int dur;
-	struct os_time now;
+	struct os_reltime now;
 
 	if (ssid == NULL) {
 		wpa_printf(MSG_DEBUG, "Authentication failure but no known "
@@ -4016,7 +4016,7 @@ void wpas_auth_failed(struct wpa_supplicant *wpa_s)
 	else
 		dur = 10;
 
-	os_get_time(&now);
+	os_get_reltime(&now);
 	if (now.sec + dur <= ssid->disabled_until.sec)
 		return;
 

@@ -611,7 +611,7 @@ struct wpa_ssid {
 	/**
 	 * disabled_until - Network block disabled until this time if non-zero
 	 */
-	struct os_time disabled_until;
+	struct os_reltime disabled_until;
 
 	/**
 	 * parent_cred - Pointer to parent wpa_cred entry

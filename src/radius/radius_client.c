@@ -122,7 +122,7 @@ struct radius_msg_list {
 	/**
 	 * last_attempt - Time of the last transmission attempt
 	 */
-	struct os_time last_attempt;
+	struct os_reltime last_attempt;
 
 	/**
 	 * shared_secret - Shared secret with the target RADIUS server
@@ -351,7 +351,7 @@ static int radius_client_retransmit(struct radius_client_data *radius,
 		       HOSTAPD_LEVEL_DEBUG, "Resending RADIUS message (id=%d)",
 		       radius_msg_get_hdr(entry->msg)->identifier);
 
-	os_get_time(&entry->last_attempt);
+	os_get_reltime(&entry->last_attempt);
 	buf = radius_msg_get_buf(entry->msg);
 	if (send(s, wpabuf_head(buf), wpabuf_len(buf), 0) < 0)
 		radius_client_handle_send_error(radius, s, entry->msg_type);
@@ -373,7 +373,7 @@ static void radius_client_timer(void *eloop_ctx, void *timeout_ctx)
 {
 	struct radius_client_data *radius = eloop_ctx;
 	struct hostapd_radius_servers *conf = radius->conf;
-	struct os_time now;
+	struct os_reltime now;
 	os_time_t first;
 	struct radius_msg_list *entry, *prev, *tmp;
 	int auth_failover = 0, acct_failover = 0;
@@ -383,7 +383,7 @@ static void radius_client_timer(void *eloop_ctx, void *timeout_ctx)
 	if (!entry)
 		return;
 
-	os_get_time(&now);
+	os_get_reltime(&now);
 	first = 0;
 
 	prev = NULL;
@@ -481,7 +481,7 @@ static void radius_client_timer(void *eloop_ctx, void *timeout_ctx)
 
 static void radius_client_update_timeout(struct radius_client_data *radius)
 {
-	struct os_time now;
+	struct os_reltime now;
 	os_time_t first;
 	struct radius_msg_list *entry;
 
@@ -497,7 +497,7 @@ static void radius_client_update_timeout(struct radius_client_data *radius)
 			first = entry->next_try;
 	}
 
-	os_get_time(&now);
+	os_get_reltime(&now);
 	if (first < now.sec)
 		first = now.sec;
 	eloop_register_timeout(first - now.sec, 0, radius_client_timer, radius,
@@ -536,7 +536,7 @@ static void radius_client_list_add(struct radius_client_data *radius,
 	entry->msg_type = msg_type;
 	entry->shared_secret = shared_secret;
 	entry->shared_secret_len = shared_secret_len;
-	os_get_time(&entry->last_attempt);
+	os_get_reltime(&entry->last_attempt);
 	entry->first_try = entry->last_attempt.sec;
 	entry->next_try = entry->first_try + RADIUS_CLIENT_FIRST_WAIT;
 	entry->attempts = 1;
@@ -692,7 +692,7 @@ static void radius_client_receive(int sock, void *eloop_ctx, void *sock_ctx)
 	struct radius_rx_handler *handlers;
 	size_t num_handlers, i;
 	struct radius_msg_list *req, *prev_req;
-	struct os_time now;
+	struct os_reltime now;
 	struct hostapd_radius_server *rconf;
 	int invalid_authenticator = 0;
 
@@ -772,7 +772,7 @@ static void radius_client_receive(int sock, void *eloop_ctx, void *sock_ctx)
 		goto fail;
 	}
 
-	os_get_time(&now);
+	os_get_reltime(&now);
 	roundtrip = (now.sec - req->last_attempt.sec) * 100 +
 		(now.usec - req->last_attempt.usec) / 10000;
 	hostapd_logger(radius->ctx, req->addr, HOSTAPD_MODULE_RADIUS,

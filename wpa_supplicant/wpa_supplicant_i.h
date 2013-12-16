@@ -551,7 +551,7 @@ struct wpa_supplicant {
 		u8 *sa_query_trans_id; /* buffer of WLAN_SA_QUERY_TR_ID_LEN *
 					* sa_query_count octets of pending
 					* SA Query transaction identifiers */
-		struct os_time sa_query_start;
+		struct os_reltime sa_query_start;
 		u8 sched_obss_scan;
 		u16 obss_scan_int;
 		u16 bss_max_idle_period;

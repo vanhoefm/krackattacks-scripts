@@ -1151,9 +1151,9 @@ static const unsigned int sa_query_retry_timeout = 201;
 static int sme_check_sa_query_timeout(struct wpa_supplicant *wpa_s)
 {
 	u32 tu;
-	struct os_time now, passed;
-	os_get_time(&now);
-	os_time_sub(&now, &wpa_s->sme.sa_query_start, &passed);
+	struct os_reltime now, passed;
+	os_get_reltime(&now);
+	os_reltime_sub(&now, &wpa_s->sme.sa_query_start, &passed);
 	tu = (passed.sec * 1000000 + passed.usec) / 1024;
 	if (sa_query_max_timeout < tu) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "SME: SA Query timed out");
@@ -1203,7 +1203,7 @@ static void sme_sa_query_timer(void *eloop_ctx, void *timeout_ctx)
 		return;
 	if (wpa_s->sme.sa_query_count == 0) {
 		/* Starting a new SA Query procedure */
-		os_get_time(&wpa_s->sme.sa_query_start);
+		os_get_reltime(&wpa_s->sme.sa_query_start);
 	}
 	trans_id = nbuf + wpa_s->sme.sa_query_count * WLAN_SA_QUERY_TR_ID_LEN;
 	wpa_s->sme.sa_query_trans_id = nbuf;

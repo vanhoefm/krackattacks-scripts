@@ -244,7 +244,7 @@ struct radius_server_data {
 	/**
 	 * start_time - Timestamp of server start
 	 */
-	struct os_time start_time;
+	struct os_reltime start_time;
 
 	/**
 	 * counters - Statistics counters for server operations
@@ -1261,7 +1261,7 @@ radius_server_init(struct radius_server_conf *conf)
 	if (data == NULL)
 		return NULL;
 
-	os_get_time(&data->start_time);
+	os_get_reltime(&data->start_time);
 	data->conf_ctx = conf->conf_ctx;
 	data->eap_sim_db_priv = conf->eap_sim_db_priv;
 	data->ssl_ctx = conf->ssl_ctx;
@@ -1375,7 +1375,7 @@ int radius_server_get_mib(struct radius_server_data *data, char *buf,
 	int ret, uptime;
 	unsigned int idx;
 	char *end, *pos;
-	struct os_time now;
+	struct os_reltime now;
 	struct radius_client *cli;
 
 	/* RFC 2619 - RADIUS Authentication Server MIB */
@@ -1386,7 +1386,7 @@ int radius_server_get_mib(struct radius_server_data *data, char *buf,
 	pos = buf;
 	end = buf + buflen;
 
-	os_get_time(&now);
+	os_get_reltime(&now);
 	uptime = (now.sec - data->start_time.sec) * 100 +
 		((now.usec - data->start_time.usec) / 10000) % 100;
 	ret = os_snprintf(pos, end - pos,

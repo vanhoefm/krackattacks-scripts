@@ -53,9 +53,9 @@ static void pmksa_cache_free_entry(struct rsn_pmksa_cache *pmksa,
 static void pmksa_cache_expire(void *eloop_ctx, void *timeout_ctx)
 {
 	struct rsn_pmksa_cache *pmksa = eloop_ctx;
-	struct os_time now;
+	struct os_reltime now;
 
-	os_get_time(&now);
+	os_get_reltime(&now);
 	while (pmksa->pmksa && pmksa->pmksa->expiration <= now.sec) {
 		struct rsn_pmksa_cache_entry *entry = pmksa->pmksa;
 		pmksa->pmksa = entry->next;
@@ -80,13 +80,13 @@ static void pmksa_cache_set_expiration(struct rsn_pmksa_cache *pmksa)
 {
 	int sec;
 	struct rsn_pmksa_cache_entry *entry;
-	struct os_time now;
+	struct os_reltime now;
 
 	eloop_cancel_timeout(pmksa_cache_expire, pmksa, NULL);
 	eloop_cancel_timeout(pmksa_cache_reauth, pmksa, NULL);
 	if (pmksa->pmksa == NULL)
 		return;
-	os_get_time(&now);
+	os_get_reltime(&now);
 	sec = pmksa->pmksa->expiration - now.sec;
 	if (sec < 0)
 		sec = 0;
@@ -125,7 +125,7 @@ pmksa_cache_add(struct rsn_pmksa_cache *pmksa, const u8 *pmk, size_t pmk_len,
 		const u8 *aa, const u8 *spa, void *network_ctx, int akmp)
 {
 	struct rsn_pmksa_cache_entry *entry, *pos, *prev;
-	struct os_time now;
+	struct os_reltime now;
 
 	if (pmk_len > PMK_LEN)
 		return NULL;
@@ -137,7 +137,7 @@ pmksa_cache_add(struct rsn_pmksa_cache *pmksa, const u8 *pmk, size_t pmk_len,
 	entry->pmk_len = pmk_len;
 	rsn_pmkid(pmk, pmk_len, aa, spa, entry->pmkid,
 		  wpa_key_mgmt_sha256(akmp));
-	os_get_time(&now);
+	os_get_reltime(&now);
 	entry->expiration = now.sec + pmksa->sm->dot11RSNAConfigPMKLifetime;
 	entry->reauth_time = now.sec + pmksa->sm->dot11RSNAConfigPMKLifetime *
 		pmksa->sm->dot11RSNAConfigPMKReauthThreshold / 100;
@@ -466,9 +466,9 @@ int pmksa_cache_list(struct rsn_pmksa_cache *pmksa, char *buf, size_t len)
 	int i, ret;
 	char *pos = buf;
 	struct rsn_pmksa_cache_entry *entry;
-	struct os_time now;
+	struct os_reltime now;
 
-	os_get_time(&now);
+	os_get_reltime(&now);
 	ret = os_snprintf(pos, buf + len - pos,
 			  "Index / AA / PMKID / expiration (in seconds) / "
 			  "opportunistic\n");

@@ -202,7 +202,6 @@ static void accounting_interim_update(void *eloop_ctx, void *timeout_ctx)
 void accounting_sta_start(struct hostapd_data *hapd, struct sta_info *sta)
 {
 	struct radius_msg *msg;
-	struct os_time t;
 	int interval;
 
 	if (sta->acct_session_started)
@@ -213,8 +212,7 @@ void accounting_sta_start(struct hostapd_data *hapd, struct sta_info *sta)
 		       "starting accounting session %08X-%08X",
 		       sta->acct_session_id_hi, sta->acct_session_id_lo);
 
-	os_get_time(&t);
-	sta->acct_session_start = t.sec;
+	os_get_reltime(&sta->acct_session_start);
 	sta->last_rx_bytes = sta->last_tx_bytes = 0;
 	sta->acct_input_gigawords = sta->acct_output_gigawords = 0;
 	hostapd_drv_sta_clear_stats(hapd, sta->addr);
@@ -244,6 +242,7 @@ static void accounting_sta_report(struct hostapd_data *hapd,
 	struct radius_msg *msg;
 	int cause = sta->acct_terminate_cause;
 	struct hostap_sta_driver_data data;
+	struct os_reltime now_r, diff;
 	struct os_time now;
 	u32 gigawords;
 
@@ -258,9 +257,11 @@ static void accounting_sta_report(struct hostapd_data *hapd,
 		return;
 	}
 
+	os_get_reltime(&now_r);
 	os_get_time(&now);
+	os_reltime_sub(&now_r, &sta->acct_session_start, &diff);
 	if (!radius_msg_add_attr_int32(msg, RADIUS_ATTR_ACCT_SESSION_TIME,
-				       now.sec - sta->acct_session_start)) {
+				       diff.sec)) {
 		wpa_printf(MSG_INFO, "Could not add Acct-Session-Time");
 		goto fail;
 	}

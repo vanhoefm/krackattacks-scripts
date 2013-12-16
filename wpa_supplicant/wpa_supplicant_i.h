@@ -517,7 +517,7 @@ struct wpa_supplicant {
 	int blacklist_cleared;
 
 	struct wpabuf *pending_eapol_rx;
-	struct os_time pending_eapol_rx_time;
+	struct os_reltime pending_eapol_rx_time;
 	u8 pending_eapol_rx_src[ETH_ALEN];
 	unsigned int last_eapol_matches_bssid:1;
 

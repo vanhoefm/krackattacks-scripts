@@ -2349,7 +2349,7 @@ void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 		wpabuf_free(wpa_s->pending_eapol_rx);
 		wpa_s->pending_eapol_rx = wpabuf_alloc_copy(buf, len);
 		if (wpa_s->pending_eapol_rx) {
-			os_get_time(&wpa_s->pending_eapol_rx_time);
+			os_get_reltime(&wpa_s->pending_eapol_rx_time);
 			os_memcpy(wpa_s->pending_eapol_rx_src, src_addr,
 				  ETH_ALEN);
 		}

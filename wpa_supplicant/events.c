@@ -1951,9 +1951,9 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 	wpa_s->last_eapol_matches_bssid = 0;
 
 	if (wpa_s->pending_eapol_rx) {
-		struct os_time now, age;
-		os_get_time(&now);
-		os_time_sub(&now, &wpa_s->pending_eapol_rx_time, &age);
+		struct os_reltime now, age;
+		os_get_reltime(&now);
+		os_reltime_sub(&now, &wpa_s->pending_eapol_rx_time, &age);
 		if (age.sec == 0 && age.usec < 100000 &&
 		    os_memcmp(wpa_s->pending_eapol_rx_src, bssid, ETH_ALEN) ==
 		    0) {

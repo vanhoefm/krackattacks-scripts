@@ -82,7 +82,7 @@ struct wps_uuid_pin {
 #define PIN_LOCKED BIT(0)
 #define PIN_EXPIRES BIT(1)
 	int flags;
-	struct os_time expiration;
+	struct os_reltime expiration;
 	u8 enrollee_addr[ETH_ALEN];
 };
 
@@ -748,7 +748,7 @@ int wps_registrar_add_pin(struct wps_registrar *reg, const u8 *addr,
 
 	if (timeout) {
 		p->flags |= PIN_EXPIRES;
-		os_get_time(&p->expiration);
+		os_get_reltime(&p->expiration);
 		p->expiration.sec += timeout;
 	}
 
@@ -797,13 +797,13 @@ static void wps_registrar_remove_pin(struct wps_registrar *reg,
 static void wps_registrar_expire_pins(struct wps_registrar *reg)
 {
 	struct wps_uuid_pin *pin, *prev;
-	struct os_time now;
+	struct os_reltime now;
 
-	os_get_time(&now);
+	os_get_reltime(&now);
 	dl_list_for_each_safe(pin, prev, &reg->pins, struct wps_uuid_pin, list)
 	{
 		if ((pin->flags & PIN_EXPIRES) &&
-		    os_time_before(&pin->expiration, &now)) {
+		    os_reltime_before(&pin->expiration, &now)) {
 			wpa_hexdump(MSG_DEBUG, "WPS: Expired PIN for UUID",
 				    pin->uuid, WPS_UUID_LEN);
 			wps_registrar_remove_pin(reg, pin);

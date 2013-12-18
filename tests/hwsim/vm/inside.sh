@@ -66,6 +66,11 @@ else
 	export DBFILE=$LOGDIR/results.db
 	export PREFILL_DB=y
 
+	# some tests need CRDA, install a simple uevent helper
+	# and preload the 00 domain it will have asked for already
+	echo $TESTDIR/vm/uevent.sh > /sys/kernel/uevent_helper
+	COUNTRY=00 crda
+
 	cd $TESTDIR
 	./run-all.sh $ARGS >/dev/ttyS0 2>&1
 	if test -d /sys/kernel/debug/gcov ; then

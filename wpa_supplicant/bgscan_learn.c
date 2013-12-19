@@ -422,6 +422,14 @@ static void * bgscan_learn_init(struct wpa_supplicant *wpa_s,
 
 	data->supp_freqs = bgscan_learn_get_supp_freqs(wpa_s);
 	data->scan_interval = data->short_interval;
+	if (data->signal_threshold) {
+		/* Poll for signal info to set initial scan interval */
+		struct wpa_signal_info siginfo;
+		if (wpa_drv_signal_poll(wpa_s, &siginfo) == 0 &&
+		    siginfo.current_signal >= data->signal_threshold)
+			data->scan_interval = data->long_interval;
+	}
+
 	eloop_register_timeout(data->scan_interval, 0, bgscan_learn_timeout,
 			       data, NULL);
 

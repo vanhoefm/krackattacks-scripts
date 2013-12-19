@@ -363,6 +363,9 @@ static int * bgscan_learn_get_supp_freqs(struct wpa_supplicant *wpa_s)
 		for (j = 0; j < modes[i].num_channels; j++) {
 			if (modes[i].channels[j].flag & HOSTAPD_CHAN_DISABLED)
 				continue;
+			/* some hw modes (e.g. 11b & 11g) contain same freqs */
+			if (in_array(freqs, modes[i].channels[j].freq))
+				continue;
 			n = os_realloc_array(freqs, count + 2, sizeof(int));
 			if (n == NULL)
 				continue;

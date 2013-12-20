@@ -403,7 +403,8 @@ def test_ap_hs20_username(dev, apdev):
     id = dev[0].add_cred_values({ 'realm': "example.com",
                                   'username': "hs20-test",
                                   'password': "password",
-                                  'domain': "example.com" })
+                                  'domain': "example.com",
+                                  'update_identifier': "1234" })
     interworking_select(dev[0], bssid, "home", freq="2412")
     interworking_connect(dev[0], bssid, "TTLS")
     check_sp_type(dev[0], "home")

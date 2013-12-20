@@ -217,7 +217,7 @@ class WpaSupplicant:
 
         not_quoted = [ "eap", "roaming_consortium",
                        "required_roaming_consortium", "sp_priority",
-                       "max_bss_load" ]
+                       "max_bss_load", "update_identifier" ]
         for field in not_quoted:
             if field in params:
                 self.set_cred(id, field, params[field])

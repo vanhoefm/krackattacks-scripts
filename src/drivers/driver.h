@@ -910,6 +910,8 @@ struct wpa_driver_capa {
 #define WPA_DRIVER_FLAGS_RADAR				0x10000000
 /* Driver supports a dedicated interface for P2P Device */
 #define WPA_DRIVER_FLAGS_DEDICATED_P2P_DEVICE		0x20000000
+/* Driver supports QoS Mapping */
+#define WPA_DRIVER_FLAGS_QOS_MAPPING			0x40000000
 	unsigned int flags;
 
 	int max_scan_ssids;

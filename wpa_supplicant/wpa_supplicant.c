@@ -1229,7 +1229,8 @@ static void wpas_ext_capab_byte(struct wpa_supplicant *wpa_s, u8 *pos, int idx)
 		break;
 	case 4: /* Bits 32-39 */
 #ifdef CONFIG_INTERWORKING
-		*pos |= 0x01; /* Bit 32 - QoS Map */
+		if (wpa_s->drv_flags / WPA_DRIVER_FLAGS_QOS_MAPPING)
+			*pos |= 0x01; /* Bit 32 - QoS Map */
 #endif /* CONFIG_INTERWORKING */
 		break;
 	case 5: /* Bits 40-47 */

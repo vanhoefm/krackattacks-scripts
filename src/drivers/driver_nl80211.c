@@ -3105,6 +3105,7 @@ struct wiphy_info_data {
 	unsigned int p2p_client_supported:1;
 	unsigned int p2p_concurrent:1;
 	unsigned int channel_switch_supported:1;
+	unsigned int set_qos_map_supported:1;
 };
 
 
@@ -3264,6 +3265,9 @@ static void wiphy_info_supp_cmds(struct wiphy_info_data *info,
 			break;
 		case NL80211_CMD_CHANNEL_SWITCH:
 			info->channel_switch_supported = 1;
+			break;
+		case NL80211_CMD_SET_QOS_MAP:
+			info->set_qos_map_supported = 1;
 			break;
 		}
 	}
@@ -3527,6 +3531,8 @@ static int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 	drv->poll_command_supported = info.poll_command_supported;
 	drv->data_tx_status = info.data_tx_status;
 	drv->channel_switch_supported = info.channel_switch_supported;
+	if (info.set_qos_map_supported)
+		drv->capa.flags |= WPA_DRIVER_FLAGS_QOS_MAPPING;
 
 	/*
 	 * If poll command and tx status are supported, mac80211 is new enough

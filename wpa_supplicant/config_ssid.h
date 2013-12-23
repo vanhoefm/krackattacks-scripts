@@ -315,12 +315,13 @@ struct wpa_ssid {
 	 * 4 = P2P Group Formation (used internally; not in configuration
 	 * files)
 	 *
-	 * Note: IBSS can only be used with key_mgmt NONE (plaintext and
-	 * static WEP) and key_mgmt=WPA-NONE (fixed group key TKIP/CCMP). In
-	 * addition, ap_scan has to be set to 2 for IBSS. WPA-None requires
-	 * following network block options: proto=WPA, key_mgmt=WPA-NONE,
-	 * pairwise=NONE, group=TKIP (or CCMP, but not both), and psk must also
-	 * be set (either directly or using ASCII passphrase).
+	 * Note: IBSS can only be used with key_mgmt NONE (plaintext and static
+	 * WEP) and WPA-PSK (with proto=RSN). In addition, key_mgmt=WPA-NONE
+	 * (fixed group key TKIP/CCMP) is available for backwards compatibility,
+	 * but its use is deprecated. WPA-None requires following network block
+	 * options: proto=WPA, key_mgmt=WPA-NONE, pairwise=NONE, group=TKIP (or
+	 * CCMP, but not both), and psk must also be set (either directly or
+	 * using ASCII passphrase).
 	 */
 	enum wpas_mode {
 		WPAS_MODE_INFRA = 0,

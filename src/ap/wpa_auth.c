@@ -437,6 +437,8 @@ int wpa_init_keys(struct wpa_authenticator *wpa_auth)
 	wpa_group_sm_step(wpa_auth, group);
 	group->GInit = FALSE;
 	wpa_group_sm_step(wpa_auth, group);
+	if (group->wpa_group_state == WPA_GROUP_FATAL_FAILURE)
+		return -1;
 	return 0;
 }
 
@@ -515,6 +517,9 @@ wpa_auth_sta_init(struct wpa_authenticator *wpa_auth, const u8 *addr,
 		  const u8 *p2p_dev_addr)
 {
 	struct wpa_state_machine *sm;
+
+	if (wpa_auth->group->wpa_group_state == WPA_GROUP_FATAL_FAILURE)
+		return NULL;
 
 	sm = os_zalloc(sizeof(struct wpa_state_machine));
 	if (sm == NULL)
@@ -2587,6 +2592,29 @@ static int wpa_group_config_group_keys(struct wpa_authenticator *wpa_auth,
 }
 
 
+static int wpa_group_disconnect_cb(struct wpa_state_machine *sm, void *ctx)
+{
+	if (sm->group == ctx) {
+		wpa_printf(MSG_DEBUG, "WPA: Mark STA " MACSTR
+			   " for discconnection due to fatal failure",
+			   MAC2STR(sm->addr));
+		sm->Disconnect = TRUE;
+	}
+
+	return 0;
+}
+
+
+static void wpa_group_fatal_failure(struct wpa_authenticator *wpa_auth,
+				    struct wpa_group *group)
+{
+	wpa_printf(MSG_DEBUG, "WPA: group state machine entering state FATAL_FAILURE");
+	group->changed = TRUE;
+	group->wpa_group_state = WPA_GROUP_FATAL_FAILURE;
+	wpa_auth_for_each_sta(wpa_auth, wpa_group_disconnect_cb, group);
+}
+
+
 static int wpa_group_setkeysdone(struct wpa_authenticator *wpa_auth,
 				 struct wpa_group *group)
 {
@@ -2595,8 +2623,10 @@ static int wpa_group_setkeysdone(struct wpa_authenticator *wpa_auth,
 	group->changed = TRUE;
 	group->wpa_group_state = WPA_GROUP_SETKEYSDONE;
 
-	if (wpa_group_config_group_keys(wpa_auth, group) < 0)
+	if (wpa_group_config_group_keys(wpa_auth, group) < 0) {
+		wpa_group_fatal_failure(wpa_auth, group);
 		return -1;
+	}
 
 	return 0;
 }
@@ -2607,6 +2637,8 @@ static void wpa_group_sm_step(struct wpa_authenticator *wpa_auth,
 {
 	if (group->GInit) {
 		wpa_group_gtk_init(wpa_auth, group);
+	} else if (group->wpa_group_state == WPA_GROUP_FATAL_FAILURE) {
+		/* Do not allow group operations */
 	} else if (group->wpa_group_state == WPA_GROUP_GTK_INIT &&
 		   group->GTKAuthenticator) {
 		wpa_group_setkeysdone(wpa_auth, group);
@@ -3014,6 +3046,9 @@ int wpa_auth_sta_set_vlan(struct wpa_state_machine *sm, int vlan_id)
 
 	if (sm->group == group)
 		return 0;
+
+	if (group->wpa_group_state == WPA_GROUP_FATAL_FAILURE)
+		return -1;
 
 	wpa_printf(MSG_DEBUG, "WPA: Moving STA " MACSTR " to use group state "
 		   "machine for VLAN ID %d", MAC2STR(sm->addr), vlan_id);

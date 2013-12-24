@@ -353,6 +353,16 @@ static int rsn_selector_to_bitfield(const u8 *s)
 #endif /* CONFIG_IEEE80211W */
 	if (RSN_SELECTOR_GET(s) == RSN_CIPHER_SUITE_GCMP)
 		return WPA_CIPHER_GCMP;
+	if (RSN_SELECTOR_GET(s) == RSN_CIPHER_SUITE_CCMP_256)
+		return WPA_CIPHER_CCMP_256;
+	if (RSN_SELECTOR_GET(s) == RSN_CIPHER_SUITE_GCMP_256)
+		return WPA_CIPHER_GCMP_256;
+	if (RSN_SELECTOR_GET(s) == RSN_CIPHER_SUITE_BIP_GMAC_128)
+		return WPA_CIPHER_BIP_GMAC_128;
+	if (RSN_SELECTOR_GET(s) == RSN_CIPHER_SUITE_BIP_GMAC_256)
+		return WPA_CIPHER_BIP_GMAC_256;
+	if (RSN_SELECTOR_GET(s) == RSN_CIPHER_SUITE_BIP_CMAC_256)
+		return WPA_CIPHER_BIP_CMAC_256;
 	return 0;
 }
 
@@ -912,6 +922,10 @@ const char * wpa_cipher_txt(int cipher)
 		return "CCMP+TKIP";
 	case WPA_CIPHER_GCMP:
 		return "GCMP";
+	case WPA_CIPHER_GCMP_256:
+		return "GCMP-256";
+	case WPA_CIPHER_CCMP_256:
+		return "CCMP-256";
 	default:
 		return "UNKNOWN";
 	}
@@ -1078,6 +1092,9 @@ int wpa_insert_pmkid(u8 *ies, size_t ies_len, const u8 *pmkid)
 int wpa_cipher_key_len(int cipher)
 {
 	switch (cipher) {
+	case WPA_CIPHER_CCMP_256:
+	case WPA_CIPHER_GCMP_256:
+		return 32;
 	case WPA_CIPHER_CCMP:
 	case WPA_CIPHER_GCMP:
 		return 16;
@@ -1096,6 +1113,8 @@ int wpa_cipher_key_len(int cipher)
 int wpa_cipher_rsc_len(int cipher)
 {
 	switch (cipher) {
+	case WPA_CIPHER_CCMP_256:
+	case WPA_CIPHER_GCMP_256:
 	case WPA_CIPHER_CCMP:
 	case WPA_CIPHER_GCMP:
 	case WPA_CIPHER_TKIP:
@@ -1112,6 +1131,10 @@ int wpa_cipher_rsc_len(int cipher)
 int wpa_cipher_to_alg(int cipher)
 {
 	switch (cipher) {
+	case WPA_CIPHER_CCMP_256:
+		return WPA_ALG_CCMP_256;
+	case WPA_CIPHER_GCMP_256:
+		return WPA_ALG_GCMP_256;
 	case WPA_CIPHER_CCMP:
 		return WPA_ALG_CCMP;
 	case WPA_CIPHER_GCMP:
@@ -1139,6 +1162,10 @@ enum wpa_cipher wpa_cipher_to_suite_driver(int cipher)
 		return CIPHER_CCMP;
 	case WPA_CIPHER_GCMP:
 		return CIPHER_GCMP;
+	case WPA_CIPHER_CCMP_256:
+		return CIPHER_CCMP_256;
+	case WPA_CIPHER_GCMP_256:
+		return CIPHER_GCMP_256;
 	case WPA_CIPHER_TKIP:
 	default:
 		return CIPHER_TKIP;
@@ -1148,7 +1175,9 @@ enum wpa_cipher wpa_cipher_to_suite_driver(int cipher)
 
 int wpa_cipher_valid_pairwise(int cipher)
 {
-	return cipher == WPA_CIPHER_CCMP ||
+	return cipher == WPA_CIPHER_CCMP_256 ||
+		cipher == WPA_CIPHER_GCMP_256 ||
+		cipher == WPA_CIPHER_CCMP ||
 		cipher == WPA_CIPHER_GCMP ||
 		cipher == WPA_CIPHER_TKIP;
 }
@@ -1156,6 +1185,10 @@ int wpa_cipher_valid_pairwise(int cipher)
 
 u32 wpa_cipher_to_suite(int proto, int cipher)
 {
+	if (cipher & WPA_CIPHER_CCMP_256)
+		return RSN_CIPHER_SUITE_CCMP_256;
+	if (cipher & WPA_CIPHER_GCMP_256)
+		return RSN_CIPHER_SUITE_GCMP_256;
 	if (cipher & WPA_CIPHER_CCMP)
 		return (proto == WPA_PROTO_RSN ?
 			RSN_CIPHER_SUITE_CCMP : WPA_CIPHER_SUITE_CCMP);
@@ -1181,6 +1214,16 @@ int rsn_cipher_put_suites(u8 *pos, int ciphers)
 {
 	int num_suites = 0;
 
+	if (ciphers & WPA_CIPHER_CCMP_256) {
+		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_CCMP_256);
+		pos += RSN_SELECTOR_LEN;
+		num_suites++;
+	}
+	if (ciphers & WPA_CIPHER_GCMP_256) {
+		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_GCMP_256);
+		pos += RSN_SELECTOR_LEN;
+		num_suites++;
+	}
 	if (ciphers & WPA_CIPHER_CCMP) {
 		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_CCMP);
 		pos += RSN_SELECTOR_LEN;
@@ -1232,6 +1275,10 @@ int wpa_cipher_put_suites(u8 *pos, int ciphers)
 
 int wpa_pick_pairwise_cipher(int ciphers, int none_allowed)
 {
+	if (ciphers & WPA_CIPHER_CCMP_256)
+		return WPA_CIPHER_CCMP_256;
+	if (ciphers & WPA_CIPHER_GCMP_256)
+		return WPA_CIPHER_GCMP_256;
 	if (ciphers & WPA_CIPHER_CCMP)
 		return WPA_CIPHER_CCMP;
 	if (ciphers & WPA_CIPHER_GCMP)
@@ -1246,6 +1293,10 @@ int wpa_pick_pairwise_cipher(int ciphers, int none_allowed)
 
 int wpa_pick_group_cipher(int ciphers)
 {
+	if (ciphers & WPA_CIPHER_CCMP_256)
+		return WPA_CIPHER_CCMP_256;
+	if (ciphers & WPA_CIPHER_GCMP_256)
+		return WPA_CIPHER_GCMP_256;
 	if (ciphers & WPA_CIPHER_CCMP)
 		return WPA_CIPHER_CCMP;
 	if (ciphers & WPA_CIPHER_GCMP)
@@ -1280,7 +1331,11 @@ int wpa_parse_cipher(const char *value)
 			end++;
 		last = *end == '\0';
 		*end = '\0';
-		if (os_strcmp(start, "CCMP") == 0)
+		if (os_strcmp(start, "CCMP-256") == 0)
+			val |= WPA_CIPHER_CCMP_256;
+		else if (os_strcmp(start, "GCMP-256") == 0)
+			val |= WPA_CIPHER_GCMP_256;
+		else if (os_strcmp(start, "CCMP") == 0)
 			val |= WPA_CIPHER_CCMP;
 		else if (os_strcmp(start, "GCMP") == 0)
 			val |= WPA_CIPHER_GCMP;
@@ -1312,6 +1367,20 @@ int wpa_write_ciphers(char *start, char *end, int ciphers, const char *delim)
 	char *pos = start;
 	int ret;
 
+	if (ciphers & WPA_CIPHER_CCMP_256) {
+		ret = os_snprintf(pos, end - pos, "%sCCMP-256",
+				  pos == start ? "" : delim);
+		if (ret < 0 || ret >= end - pos)
+			return -1;
+		pos += ret;
+	}
+	if (ciphers & WPA_CIPHER_GCMP_256) {
+		ret = os_snprintf(pos, end - pos, "%sGCMP-256",
+				  pos == start ? "" : delim);
+		if (ret < 0 || ret >= end - pos)
+			return -1;
+		pos += ret;
+	}
 	if (ciphers & WPA_CIPHER_CCMP) {
 		ret = os_snprintf(pos, end - pos, "%sCCMP",
 				  pos == start ? "" : delim);
@@ -1373,5 +1442,11 @@ int wpa_select_ap_group_cipher(int wpa, int wpa_pairwise, int rsn_pairwise)
 		return WPA_CIPHER_TKIP;
 	if ((pairwise & (WPA_CIPHER_CCMP | WPA_CIPHER_GCMP)) == WPA_CIPHER_GCMP)
 		return WPA_CIPHER_GCMP;
+	if ((pairwise & (WPA_CIPHER_GCMP_256 | WPA_CIPHER_CCMP |
+			 WPA_CIPHER_GCMP)) == WPA_CIPHER_GCMP_256)
+		return WPA_CIPHER_GCMP_256;
+	if ((pairwise & (WPA_CIPHER_CCMP_256 | WPA_CIPHER_CCMP |
+			 WPA_CIPHER_GCMP)) == WPA_CIPHER_CCMP_256)
+		return WPA_CIPHER_CCMP_256;
 	return WPA_CIPHER_CCMP;
 }

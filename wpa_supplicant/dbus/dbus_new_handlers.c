@@ -2260,6 +2260,18 @@ dbus_bool_t wpas_dbus_getter_capabilities(DBusMessageIter *iter,
 						      &iter_array))
 			goto nomem;
 
+		if (capa.enc & WPA_DRIVER_CAPA_ENC_CCMP_256) {
+			if (!wpa_dbus_dict_string_array_add_element(
+				    &iter_array, "ccmp-256"))
+				goto nomem;
+		}
+
+		if (capa.enc & WPA_DRIVER_CAPA_ENC_GCMP_256) {
+			if (!wpa_dbus_dict_string_array_add_element(
+				    &iter_array, "gcmp-256"))
+				goto nomem;
+		}
+
 		if (capa.enc & WPA_DRIVER_CAPA_ENC_CCMP) {
 			if (!wpa_dbus_dict_string_array_add_element(
 				    &iter_array, "ccmp"))
@@ -2306,6 +2318,18 @@ dbus_bool_t wpas_dbus_getter_capabilities(DBusMessageIter *iter,
 						      &iter_dict_val,
 						      &iter_array))
 			goto nomem;
+
+		if (capa.enc & WPA_DRIVER_CAPA_ENC_CCMP_256) {
+			if (!wpa_dbus_dict_string_array_add_element(
+				    &iter_array, "ccmp-256"))
+				goto nomem;
+		}
+
+		if (capa.enc & WPA_DRIVER_CAPA_ENC_GCMP_256) {
+			if (!wpa_dbus_dict_string_array_add_element(
+				    &iter_array, "gcmp-256"))
+				goto nomem;
+		}
 
 		if (capa.enc & WPA_DRIVER_CAPA_ENC_CCMP) {
 			if (!wpa_dbus_dict_string_array_add_element(
@@ -3601,7 +3625,7 @@ static dbus_bool_t wpas_dbus_get_bss_security_prop(DBusMessageIter *iter,
 {
 	DBusMessageIter iter_dict, variant_iter;
 	const char *group;
-	const char *pairwise[3]; /* max 3 pairwise ciphers is supported */
+	const char *pairwise[5]; /* max 5 pairwise ciphers is supported */
 	const char *key_mgmt[7]; /* max 7 key managements may be supported */
 	int n;
 
@@ -3650,6 +3674,12 @@ static dbus_bool_t wpas_dbus_get_bss_security_prop(DBusMessageIter *iter,
 	case WPA_CIPHER_WEP104:
 		group = "wep104";
 		break;
+	case WPA_CIPHER_CCMP_256:
+		group = "ccmp-256";
+		break;
+	case WPA_CIPHER_GCMP_256:
+		group = "gcmp-256";
+		break;
 	default:
 		group = "";
 		break;
@@ -3666,6 +3696,10 @@ static dbus_bool_t wpas_dbus_get_bss_security_prop(DBusMessageIter *iter,
 		pairwise[n++] = "ccmp";
 	if (ie_data->pairwise_cipher & WPA_CIPHER_GCMP)
 		pairwise[n++] = "gcmp";
+	if (ie_data->pairwise_cipher & WPA_CIPHER_CCMP_256)
+		pairwise[n++] = "ccmp-256";
+	if (ie_data->pairwise_cipher & WPA_CIPHER_GCMP_256)
+		pairwise[n++] = "gcmp-256";
 
 	if (!wpa_dbus_dict_append_string_array(&iter_dict, "Pairwise",
 					       pairwise, n))

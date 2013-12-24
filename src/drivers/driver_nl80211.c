@@ -5180,9 +5180,29 @@ static int wpa_driver_nl80211_set_key(const char *ifname, struct i802_bss *bss,
 			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
 				    WLAN_CIPHER_SUITE_GCMP);
 			break;
+		case WPA_ALG_CCMP_256:
+			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
+				    WLAN_CIPHER_SUITE_CCMP_256);
+			break;
+		case WPA_ALG_GCMP_256:
+			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
+				    WLAN_CIPHER_SUITE_GCMP_256);
+			break;
 		case WPA_ALG_IGTK:
 			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
 				    WLAN_CIPHER_SUITE_AES_CMAC);
+			break;
+		case WPA_ALG_BIP_GMAC_128:
+			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
+				    WLAN_CIPHER_SUITE_BIP_GMAC_128);
+			break;
+		case WPA_ALG_BIP_GMAC_256:
+			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
+				    WLAN_CIPHER_SUITE_BIP_GMAC_256);
+			break;
+		case WPA_ALG_BIP_CMAC_256:
+			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
+				    WLAN_CIPHER_SUITE_BIP_CMAC_256);
 			break;
 		case WPA_ALG_SMS4:
 			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
@@ -5320,9 +5340,29 @@ static int nl_add_key(struct nl_msg *msg, enum wpa_alg alg,
 	case WPA_ALG_GCMP:
 		NLA_PUT_U32(msg, NL80211_KEY_CIPHER, WLAN_CIPHER_SUITE_GCMP);
 		break;
+	case WPA_ALG_CCMP_256:
+		NLA_PUT_U32(msg, NL80211_KEY_CIPHER,
+			    WLAN_CIPHER_SUITE_CCMP_256);
+		break;
+	case WPA_ALG_GCMP_256:
+		NLA_PUT_U32(msg, NL80211_KEY_CIPHER,
+			    WLAN_CIPHER_SUITE_GCMP_256);
+		break;
 	case WPA_ALG_IGTK:
 		NLA_PUT_U32(msg, NL80211_KEY_CIPHER,
 			    WLAN_CIPHER_SUITE_AES_CMAC);
+		break;
+	case WPA_ALG_BIP_GMAC_128:
+		NLA_PUT_U32(msg, NL80211_KEY_CIPHER,
+			    WLAN_CIPHER_SUITE_BIP_GMAC_128);
+		break;
+	case WPA_ALG_BIP_GMAC_256:
+		NLA_PUT_U32(msg, NL80211_KEY_CIPHER,
+			    WLAN_CIPHER_SUITE_BIP_GMAC_256);
+		break;
+	case WPA_ALG_BIP_CMAC_256:
+		NLA_PUT_U32(msg, NL80211_KEY_CIPHER,
+			    WLAN_CIPHER_SUITE_BIP_CMAC_256);
 		break;
 	default:
 		wpa_printf(MSG_ERROR, "%s: Unsupported encryption "
@@ -6747,6 +6787,10 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 	wpa_printf(MSG_DEBUG, "nl80211: pairwise_ciphers=0x%x",
 		   params->pairwise_ciphers);
 	num_suites = 0;
+	if (params->pairwise_ciphers & WPA_CIPHER_CCMP_256)
+		suites[num_suites++] = WLAN_CIPHER_SUITE_CCMP_256;
+	if (params->pairwise_ciphers & WPA_CIPHER_GCMP_256)
+		suites[num_suites++] = WLAN_CIPHER_SUITE_GCMP_256;
 	if (params->pairwise_ciphers & WPA_CIPHER_CCMP)
 		suites[num_suites++] = WLAN_CIPHER_SUITE_CCMP;
 	if (params->pairwise_ciphers & WPA_CIPHER_GCMP)
@@ -6765,6 +6809,14 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 	wpa_printf(MSG_DEBUG, "nl80211: group_cipher=0x%x",
 		   params->group_cipher);
 	switch (params->group_cipher) {
+	case WPA_CIPHER_CCMP_256:
+		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITE_GROUP,
+			    WLAN_CIPHER_SUITE_CCMP_256);
+		break;
+	case WPA_CIPHER_GCMP_256:
+		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITE_GROUP,
+			    WLAN_CIPHER_SUITE_GCMP_256);
+		break;
 	case WPA_CIPHER_CCMP:
 		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITE_GROUP,
 			    WLAN_CIPHER_SUITE_CCMP);
@@ -8129,6 +8181,12 @@ skip_auth_type:
 		case CIPHER_GCMP:
 			cipher = WLAN_CIPHER_SUITE_GCMP;
 			break;
+		case CIPHER_CCMP_256:
+			cipher = WLAN_CIPHER_SUITE_CCMP_256;
+			break;
+		case CIPHER_GCMP_256:
+			cipher = WLAN_CIPHER_SUITE_GCMP_256;
+			break;
 		case CIPHER_TKIP:
 		default:
 			cipher = WLAN_CIPHER_SUITE_TKIP;
@@ -8155,6 +8213,12 @@ skip_auth_type:
 			break;
 		case CIPHER_GCMP:
 			cipher = WLAN_CIPHER_SUITE_GCMP;
+			break;
+		case CIPHER_CCMP_256:
+			cipher = WLAN_CIPHER_SUITE_CCMP_256;
+			break;
+		case CIPHER_GCMP_256:
+			cipher = WLAN_CIPHER_SUITE_GCMP_256;
 			break;
 		case CIPHER_TKIP:
 		default:
@@ -8347,6 +8411,12 @@ static int wpa_driver_nl80211_associate(
 		case CIPHER_GCMP:
 			cipher = WLAN_CIPHER_SUITE_GCMP;
 			break;
+		case CIPHER_CCMP_256:
+			cipher = WLAN_CIPHER_SUITE_CCMP_256;
+			break;
+		case CIPHER_GCMP_256:
+			cipher = WLAN_CIPHER_SUITE_GCMP_256;
+			break;
 		case CIPHER_TKIP:
 		default:
 			cipher = WLAN_CIPHER_SUITE_TKIP;
@@ -8371,6 +8441,12 @@ static int wpa_driver_nl80211_associate(
 			break;
 		case CIPHER_GCMP:
 			cipher = WLAN_CIPHER_SUITE_GCMP;
+			break;
+		case CIPHER_CCMP_256:
+			cipher = WLAN_CIPHER_SUITE_CCMP_256;
+			break;
+		case CIPHER_GCMP_256:
+			cipher = WLAN_CIPHER_SUITE_GCMP_256;
 			break;
 		case CIPHER_TKIP:
 		default:

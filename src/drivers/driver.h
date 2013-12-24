@@ -833,6 +833,12 @@ struct wpa_driver_capa {
 #define WPA_DRIVER_CAPA_ENC_CCMP	0x00000008
 #define WPA_DRIVER_CAPA_ENC_WEP128	0x00000010
 #define WPA_DRIVER_CAPA_ENC_GCMP	0x00000020
+#define WPA_DRIVER_CAPA_ENC_GCMP_256	0x00000040
+#define WPA_DRIVER_CAPA_ENC_CCMP_256	0x00000080
+#define WPA_DRIVER_CAPA_ENC_BIP		0x00000100
+#define WPA_DRIVER_CAPA_ENC_BIP_GMAC_128	0x00000200
+#define WPA_DRIVER_CAPA_ENC_BIP_GMAC_256	0x00000400
+#define WPA_DRIVER_CAPA_ENC_BIP_CMAC_256	0x00000800
 	unsigned int enc;
 
 #define WPA_DRIVER_AUTH_OPEN		0x00000001
@@ -1267,7 +1273,9 @@ struct wpa_driver_ops {
 	 * @priv: private driver interface data
 	 * @alg: encryption algorithm (%WPA_ALG_NONE, %WPA_ALG_WEP,
 	 *	%WPA_ALG_TKIP, %WPA_ALG_CCMP, %WPA_ALG_IGTK, %WPA_ALG_PMK,
-	 *	%WPA_ALG_GCMP);
+	 *	%WPA_ALG_GCMP, %WPA_ALG_GCMP_256, %WPA_ALG_CCMP_256,
+	 *	%WPA_ALG_BIP_GMAC_128, %WPA_ALG_BIP_GMAC_256,
+	 *	%WPA_ALG_BIP_CMAC_256);
 	 *	%WPA_ALG_NONE clears the key.
 	 * @addr: Address of the peer STA (BSSID of the current AP when setting
 	 *	pairwise key in station mode), ff:ff:ff:ff:ff:ff for

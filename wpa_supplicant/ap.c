@@ -276,7 +276,9 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 
 	if (bss->wpa_group_rekey < 86400 && (bss->wpa & 2) &&
 	    (bss->wpa_group == WPA_CIPHER_CCMP ||
-	     bss->wpa_group == WPA_CIPHER_GCMP)) {
+	     bss->wpa_group == WPA_CIPHER_GCMP ||
+	     bss->wpa_group == WPA_CIPHER_CCMP_256 ||
+	     bss->wpa_group == WPA_CIPHER_GCMP_256)) {
 		/*
 		 * Strong ciphers do not need frequent rekeying, so increase
 		 * the default GTK rekeying period to 24 hours.

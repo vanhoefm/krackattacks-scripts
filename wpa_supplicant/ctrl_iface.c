@@ -2678,6 +2678,24 @@ static int ctrl_iface_get_capability_pairwise(int res, char *strict,
 		return len;
 	}
 
+	if (capa->enc & WPA_DRIVER_CAPA_ENC_CCMP_256) {
+		ret = os_snprintf(pos, end - pos, "%sCCMP-256",
+				  first ? "" : " ");
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+		first = 0;
+	}
+
+	if (capa->enc & WPA_DRIVER_CAPA_ENC_GCMP_256) {
+		ret = os_snprintf(pos, end - pos, "%sGCMP-256",
+				  first ? "" : " ");
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+		first = 0;
+	}
+
 	if (capa->enc & WPA_DRIVER_CAPA_ENC_CCMP) {
 		ret = os_snprintf(pos, end - pos, "%sCCMP", first ? "" : " ");
 		if (ret < 0 || ret >= end - pos)
@@ -2732,6 +2750,24 @@ static int ctrl_iface_get_capability_group(int res, char *strict,
 		if (len >= buflen)
 			return -1;
 		return len;
+	}
+
+	if (capa->enc & WPA_DRIVER_CAPA_ENC_CCMP_256) {
+		ret = os_snprintf(pos, end - pos, "%sCCMP-256",
+				  first ? "" : " ");
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+		first = 0;
+	}
+
+	if (capa->enc & WPA_DRIVER_CAPA_ENC_GCMP_256) {
+		ret = os_snprintf(pos, end - pos, "%sGCMP-256",
+				  first ? "" : " ");
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+		first = 0;
 	}
 
 	if (capa->enc & WPA_DRIVER_CAPA_ENC_CCMP) {

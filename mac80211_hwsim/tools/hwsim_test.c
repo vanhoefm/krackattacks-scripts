@@ -17,6 +17,7 @@
 #include <net/ethernet.h>
 #include <net/if.h>
 #include <arpa/inet.h>
+#include <netinet/ip.h>
 
 #define MAC2STR(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5]
 #define MACSTR "%02x:%02x:%02x:%02x:%02x:%02x"
@@ -26,11 +27,28 @@
 
 static unsigned char addr1[ETH_ALEN], addr2[ETH_ALEN], bcast[ETH_ALEN];
 
+static u_int16_t checksum(const void *buf, size_t len)
+{
+	size_t i;
+	u_int32_t sum = 0;
+	const u_int16_t *pos = buf;
+
+	for (i = 0; i < len / 2; i++)
+		sum += *pos++;
+
+	while (sum >> 16)
+		sum = (sum & 0xffff) + (sum >> 16);
+
+	return sum ^ 0xffff;
+}
+
+
 static void tx(int s, const char *ifname, int ifindex,
 	       const unsigned char *src, const unsigned char *dst)
 {
 	char buf[HWSIM_PACKETLEN], *pos;
 	struct ether_header *eth;
+	struct iphdr *ip;
 	int i;
 
 	printf("TX: %s(ifindex=%d) " MACSTR " -> " MACSTR "\n",
@@ -40,8 +58,19 @@ static void tx(int s, const char *ifname, int ifindex,
 	memcpy(eth->ether_dhost, dst, ETH_ALEN);
 	memcpy(eth->ether_shost, src, ETH_ALEN);
 	eth->ether_type = htons(HWSIM_ETHERTYPE);
-	pos = (char *) (eth + 1);
-	for (i = 0; i < sizeof(buf) - sizeof(*eth); i++)
+	ip = (struct iphdr *) (eth + 1);
+	memset(ip, 0, sizeof(*ip));
+	ip->ihl = 5;
+	ip->version = 4;
+	ip->ttl = 64;
+	ip->tos = 0;
+	ip->tot_len = htons(HWSIM_PACKETLEN - sizeof(*eth));
+	ip->protocol = 1;
+	ip->saddr = htonl(192 << 24 | 168 << 16 | 1 << 8 | 1);
+	ip->daddr = htonl(192 << 24 | 168 << 16 | 1 << 8 | 2);
+	ip->check = checksum(ip, sizeof(*ip));
+	pos = (char *) (ip + 1);
+	for (i = 0; i < sizeof(buf) - sizeof(*eth) - sizeof(*ip); i++)
 		*pos++ = i;
 
 	if (send(s, buf, sizeof(buf), 0) < 0)
@@ -62,6 +91,7 @@ static void rx(int s, int iface, const char *ifname, int ifindex,
 {
 	char buf[HWSIM_PACKETLEN + 1], *pos;
 	struct ether_header *eth;
+	struct iphdr *ip;
 	int len, i;
 
 	len = recv(s, buf, sizeof(buf), 0);
@@ -76,12 +106,13 @@ static void rx(int s, int iface, const char *ifname, int ifindex,
 	       MAC2STR(eth->ether_shost), MAC2STR(eth->ether_dhost), len);
 
 	if (len != HWSIM_PACKETLEN) {
-		printf("Ignore frame with unexpected RX length\n");
+		printf("Ignore frame with unexpected RX length (%d)\n", len);
 		return;
 	}
 
-	pos = (char *) (eth + 1);
-	for (i = 0; i < sizeof(buf) - 1 - sizeof(*eth); i++) {
+	ip = (struct iphdr *) (eth + 1);
+	pos = (char *) (ip + 1);
+	for (i = 0; i < sizeof(buf) - 1 - sizeof(*eth) - sizeof(*ip); i++) {
 		if ((unsigned char) *pos != (unsigned char) i) {
 			printf("Ignore frame with unexpected contents\n");
 			printf("i=%d received=0x%x expected=0x%x\n",

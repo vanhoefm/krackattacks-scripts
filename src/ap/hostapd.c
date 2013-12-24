@@ -810,8 +810,8 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 		return -1;
 	}
 
-	if (!hapd->conf->start_disabled)
-		ieee802_11_set_beacon(hapd);
+	if (!hapd->conf->start_disabled && ieee802_11_set_beacon(hapd) < 0)
+		return -1;
 
 	if (hapd->wpa_auth && wpa_init_keys(hapd->wpa_auth) < 0)
 		return -1;

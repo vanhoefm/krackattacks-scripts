@@ -878,20 +878,21 @@ void ieee802_11_free_ap_params(struct wpa_driver_ap_params *params)
 }
 
 
-void ieee802_11_set_beacon(struct hostapd_data *hapd)
+int ieee802_11_set_beacon(struct hostapd_data *hapd)
 {
 	struct wpa_driver_ap_params params;
 	struct wpabuf *beacon, *proberesp, *assocresp;
+	int res, ret = -1;
 
 	if (hapd->iface->csa_in_progress) {
 		wpa_printf(MSG_ERROR, "Cannot set beacons during CSA period");
-		return;
+		return -1;
 	}
 
 	hapd->beacon_set_done = 1;
 
 	if (ieee802_11_build_ap_params(hapd, &params) < 0)
-		return;
+		return -1;
 
 	if (hostapd_build_ap_extra_ies(hapd, &beacon, &proberesp, &assocresp) <
 	    0)
@@ -901,31 +902,46 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 	params.proberesp_ies = proberesp;
 	params.assocresp_ies = assocresp;
 
-	if (hostapd_drv_set_ap(hapd, &params))
-		wpa_printf(MSG_ERROR, "Failed to set beacon parameters");
+	res = hostapd_drv_set_ap(hapd, &params);
 	hostapd_free_ap_extra_ies(hapd, beacon, proberesp, assocresp);
+	if (res)
+		wpa_printf(MSG_ERROR, "Failed to set beacon parameters");
+	else
+		ret = 0;
 fail:
 	ieee802_11_free_ap_params(&params);
+	return ret;
 }
 
 
-void ieee802_11_set_beacons(struct hostapd_iface *iface)
+int ieee802_11_set_beacons(struct hostapd_iface *iface)
 {
 	size_t i;
+	int ret = 0;
+
 	for (i = 0; i < iface->num_bss; i++) {
-		if (iface->bss[i]->started)
-			ieee802_11_set_beacon(iface->bss[i]);
+		if (iface->bss[i]->started &&
+		    ieee802_11_set_beacon(iface->bss[i]) < 0)
+			ret = -1;
 	}
+
+	return ret;
 }
 
 
 /* only update beacons if started */
-void ieee802_11_update_beacons(struct hostapd_iface *iface)
+int ieee802_11_update_beacons(struct hostapd_iface *iface)
 {
 	size_t i;
-	for (i = 0; i < iface->num_bss; i++)
-		if (iface->bss[i]->beacon_set_done && iface->bss[i]->started)
-			ieee802_11_set_beacon(iface->bss[i]);
+	int ret = 0;
+
+	for (i = 0; i < iface->num_bss; i++) {
+		if (iface->bss[i]->beacon_set_done && iface->bss[i]->started &&
+		    ieee802_11_set_beacon(iface->bss[i]) < 0)
+			ret = -1;
+	}
+
+	return ret;
 }
 
 #endif /* CONFIG_NATIVE_WINDOWS */

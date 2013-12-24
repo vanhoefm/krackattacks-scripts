@@ -77,7 +77,7 @@ PRINTF_FORMAT(2, 3);
  * output may be directed to stdout, stderr, and/or syslog based on
  * configuration. The contents of buf is printed out has hex dump.
  */
-void wpa_hexdump(int level, const char *title, const u8 *buf, size_t len);
+void wpa_hexdump(int level, const char *title, const void *buf, size_t len);
 
 static inline void wpa_hexdump_buf(int level, const char *title,
 				   const struct wpabuf *buf)
@@ -99,7 +99,7 @@ static inline void wpa_hexdump_buf(int level, const char *title,
  * like wpa_hexdump(), but by default, does not include secret keys (passwords,
  * etc.) in debug output.
  */
-void wpa_hexdump_key(int level, const char *title, const u8 *buf, size_t len);
+void wpa_hexdump_key(int level, const char *title, const void *buf, size_t len);
 
 static inline void wpa_hexdump_buf_key(int level, const char *title,
 				       const struct wpabuf *buf)
@@ -121,7 +121,7 @@ static inline void wpa_hexdump_buf_key(int level, const char *title,
  * the hex numbers and ASCII characters (for printable range) are shown. 16
  * bytes per line will be shown.
  */
-void wpa_hexdump_ascii(int level, const char *title, const u8 *buf,
+void wpa_hexdump_ascii(int level, const char *title, const void *buf,
 		       size_t len);
 
 /**
@@ -138,7 +138,7 @@ void wpa_hexdump_ascii(int level, const char *title, const u8 *buf,
  * bytes per line will be shown. This works like wpa_hexdump_ascii(), but by
  * default, does not include secret keys (passwords, etc.) in debug output.
  */
-void wpa_hexdump_ascii_key(int level, const char *title, const u8 *buf,
+void wpa_hexdump_ascii_key(int level, const char *title, const void *buf,
 			   size_t len);
 
 /*

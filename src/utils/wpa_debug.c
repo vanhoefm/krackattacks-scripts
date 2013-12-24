@@ -375,19 +375,19 @@ static void _wpa_hexdump(int level, const char *title, const u8 *buf,
 #endif /* CONFIG_ANDROID_LOG */
 }
 
-void wpa_hexdump(int level, const char *title, const u8 *buf, size_t len)
+void wpa_hexdump(int level, const char *title, const void *buf, size_t len)
 {
 	_wpa_hexdump(level, title, buf, len, 1);
 }
 
 
-void wpa_hexdump_key(int level, const char *title, const u8 *buf, size_t len)
+void wpa_hexdump_key(int level, const char *title, const void *buf, size_t len)
 {
 	_wpa_hexdump(level, title, buf, len, wpa_debug_show_keys);
 }
 
 
-static void _wpa_hexdump_ascii(int level, const char *title, const u8 *buf,
+static void _wpa_hexdump_ascii(int level, const char *title, const void *buf,
 			       size_t len, int show)
 {
 	size_t i, llen;
@@ -407,7 +407,7 @@ static void _wpa_hexdump_ascii(int level, const char *title, const u8 *buf,
 			/* can do ascii processing in userspace */
 			for (i = 0; i < len; i++)
 				fprintf(wpa_debug_tracing_file,
-					" %02x", buf[i]);
+					" %02x", pos[i]);
 		}
 		fflush(wpa_debug_tracing_file);
 	}
@@ -495,13 +495,14 @@ static void _wpa_hexdump_ascii(int level, const char *title, const u8 *buf,
 }
 
 
-void wpa_hexdump_ascii(int level, const char *title, const u8 *buf, size_t len)
+void wpa_hexdump_ascii(int level, const char *title, const void *buf,
+		       size_t len)
 {
 	_wpa_hexdump_ascii(level, title, buf, len, 1);
 }
 
 
-void wpa_hexdump_ascii_key(int level, const char *title, const u8 *buf,
+void wpa_hexdump_ascii_key(int level, const char *title, const void *buf,
 			   size_t len)
 {
 	_wpa_hexdump_ascii(level, title, buf, len, wpa_debug_show_keys);

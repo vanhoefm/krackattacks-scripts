@@ -11,7 +11,7 @@ import subprocess
 import logging
 logger = logging.getLogger()
 
-def test_connectivity(ifname1, ifname2):
+def test_connectivity(ifname1, ifname2, dscp=None, tos=None):
     if os.path.isfile("../../mac80211_hwsim/tools/hwsim_test"):
         hwsim_test = "../../mac80211_hwsim/tools/hwsim_test"
     else:
@@ -20,6 +20,12 @@ def test_connectivity(ifname1, ifname2):
            hwsim_test,
            ifname1,
            ifname2]
+    if dscp:
+        cmd.append('-D')
+        cmd.append(str(dscp))
+    elif tos:
+        cmd.append('-t')
+        cmd.append(str(tos))
     try:
         s = subprocess.check_output(cmd)
         logger.debug(s)
@@ -28,17 +34,17 @@ def test_connectivity(ifname1, ifname2):
         logger.info(e.output)
         raise
 
-def test_connectivity_p2p(dev1, dev2):
+def test_connectivity_p2p(dev1, dev2, dscp=None, tos=None):
     ifname1 = dev1.group_ifname if dev1.group_ifname else dev1.ifname
     ifname2 = dev2.group_ifname if dev2.group_ifname else dev2.ifname
-    test_connectivity(ifname1, ifname2)
+    test_connectivity(ifname1, ifname2, dscp, tos)
 
-def test_connectivity_p2p_sta(dev1, dev2):
+def test_connectivity_p2p_sta(dev1, dev2, dscp=None, tos=None):
     ifname1 = dev1.group_ifname if dev1.group_ifname else dev1.ifname
     ifname2 = dev2.ifname
-    test_connectivity(ifname1, ifname2)
+    test_connectivity(ifname1, ifname2, dscp, tos)
 
-def test_connectivity_sta(dev1, dev2):
+def test_connectivity_sta(dev1, dev2, dscp=None, tos=None):
     ifname1 = dev1.ifname
     ifname2 = dev2.ifname
-    test_connectivity(ifname1, ifname2)
+    test_connectivity(ifname1, ifname2, dscp, tos)

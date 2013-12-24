@@ -63,6 +63,12 @@ class Wlantest:
             raise Exception("wlantest_cli command failed")
         return int(res)
 
+    def clear_sta_counters(self, bssid, addr):
+        res = subprocess.check_output([self.wlantest_cli, "clear_sta_counters",
+                                       bssid, addr]);
+        if "FAIL" in res:
+            raise Exception("wlantest_cli command failed")
+
     def tdls_clear(self, bssid, addr1, addr2):
         res = subprocess.check_output([self.wlantest_cli, "clear_tdls_counters",
                                        bssid, addr1, addr2]);
@@ -114,3 +120,25 @@ class Wlantest:
         res = self.info_sta("key_mgmt", bssid, addr)
         if key_mgmt not in res:
             raise Exception("Unexpected STA key_mgmt")
+
+    def get_tx_tid(self, bssid, addr, tid):
+        res = subprocess.check_output([self.wlantest_cli, "get_tx_tid",
+                                       bssid, addr, str(tid)]);
+        if "FAIL" in res:
+            raise Exception("wlantest_cli command failed")
+        return int(res)
+
+    def get_rx_tid(self, bssid, addr, tid):
+        res = subprocess.check_output([self.wlantest_cli, "get_rx_tid",
+                                       bssid, addr, str(tid)]);
+        if "FAIL" in res:
+            raise Exception("wlantest_cli command failed")
+        return int(res)
+
+    def get_tid_counters(self, bssid, addr):
+        tx = {}
+        rx = {}
+        for tid in range(0, 17):
+            tx[tid] = self.get_tx_tid(bssid, addr, tid)
+            rx[tid] = self.get_rx_tid(bssid, addr, tid)
+        return [ tx, rx ]

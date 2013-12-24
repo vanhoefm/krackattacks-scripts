@@ -925,7 +925,7 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_INFO, "Station does not support "
 			       "mandatory VHT PHY - reject association");
-		return WLAN_STATUS_UNSPECIFIED_FAILURE;
+		return WLAN_STATUS_ASSOC_DENIED_NO_VHT;
 	}
 #endif /* CONFIG_IEEE80211AC */
 

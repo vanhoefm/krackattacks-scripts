@@ -97,6 +97,9 @@ struct wlantest_sta {
 	u8 gtk[32];
 	size_t gtk_len;
 	int gtk_idx;
+
+	u32 tx_tid[16 + 1];
+	u32 rx_tid[16 + 1];
 };
 
 struct wlantest_tdls {

@@ -300,6 +300,8 @@ static void rx_data_bss_prot(struct wlantest *wt,
 		return;
 	}
 
+	if (sta == NULL)
+		return;
 	if (sta->pairwise_cipher & (WPA_CIPHER_TKIP | WPA_CIPHER_CCMP) &&
 	    !(data[3] & 0x20)) {
 		add_note(wt, MSG_INFO, "Expected TKIP/CCMP frame from "
@@ -336,10 +338,19 @@ static void rx_data_bss_prot(struct wlantest *wt,
 			 keyid, MAC2STR(hdr->addr2));
 	}
 
-	if (qos)
+	if (qos) {
 		tid = qos[0] & 0x0f;
-	else
+		if (fc & WLAN_FC_TODS)
+			sta->tx_tid[tid]++;
+		else
+			sta->rx_tid[tid]++;
+	} else {
 		tid = 0;
+		if (fc & WLAN_FC_TODS)
+			sta->tx_tid[16]++;
+		else
+			sta->rx_tid[16]++;
+	}
 	if (tk) {
 		if (os_memcmp(hdr->addr2, tdls->init->addr, ETH_ALEN) == 0)
 			rsc = tdls->rsc_init[tid];
@@ -434,6 +445,8 @@ static void rx_data_bss(struct wlantest *wt, const struct ieee80211_hdr *hdr,
 		rx_data_bss_prot(wt, hdr, qos, dst, src, data, len);
 	else {
 		const u8 *bssid, *sta_addr, *peer_addr;
+		struct wlantest_bss *bss;
+
 		if (fc & WLAN_FC_TODS) {
 			bssid = hdr->addr1;
 			sta_addr = hdr->addr2;
@@ -447,6 +460,27 @@ static void rx_data_bss(struct wlantest *wt, const struct ieee80211_hdr *hdr,
 			sta_addr = hdr->addr2;
 			peer_addr = hdr->addr1;
 		}
+
+		bss = bss_get(wt, bssid);
+		if (bss) {
+			struct wlantest_sta *sta = sta_get(bss, sta_addr);
+
+			if (sta) {
+				if (qos) {
+					int tid = qos[0] & 0x0f;
+					if (fc & WLAN_FC_TODS)
+						sta->tx_tid[tid]++;
+					else
+						sta->rx_tid[tid]++;
+				} else {
+					if (fc & WLAN_FC_TODS)
+						sta->tx_tid[16]++;
+					else
+						sta->rx_tid[16]++;
+				}
+			}
+		}
+
 		rx_data_process(wt, bssid, sta_addr, dst, src, data, len, 0,
 				peer_addr);
 	}

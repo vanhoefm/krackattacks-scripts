@@ -36,6 +36,8 @@ enum wlantest_ctrl_cmd {
 	WLANTEST_CTRL_CLEAR_TDLS_COUNTERS,
 	WLANTEST_CTRL_GET_TDLS_COUNTER,
 	WLANTEST_CTRL_RELOG,
+	WLANTEST_CTRL_GET_TX_TID,
+	WLANTEST_CTRL_GET_RX_TID,
 };
 
 enum wlantest_ctrl_attr {
@@ -56,6 +58,7 @@ enum wlantest_ctrl_attr {
 	WLANTEST_ATTR_TDLS_COUNTER,
 	WLANTEST_ATTR_STA2_ADDR,
 	WLANTEST_ATTR_WEPKEY,
+	WLANTEST_ATTR_TID,
 };
 
 enum wlantest_bss_counter {

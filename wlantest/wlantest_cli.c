@@ -1452,6 +1452,119 @@ static char ** complete_info_bss(int s, const char *str, int pos)
 }
 
 
+static int cmd_get_tx_tid(int s, int argc, char *argv[])
+{
+	u8 resp[WLANTEST_CTRL_MAX_RESP_LEN];
+	u8 buf[100], *end, *pos;
+	int rlen;
+	size_t len;
+
+	if (argc != 3) {
+		printf("get_tx_tid needs three arguments: "
+		       "BSSID, STA address, and TID\n");
+		return -1;
+	}
+
+	pos = buf;
+	end = buf + sizeof(buf);
+	WPA_PUT_BE32(pos, WLANTEST_CTRL_GET_TX_TID);
+	pos += 4;
+
+	pos = attr_hdr_add(pos, end, WLANTEST_ATTR_BSSID, ETH_ALEN);
+	if (hwaddr_aton(argv[0], pos) < 0) {
+		printf("Invalid BSSID '%s'\n", argv[0]);
+		return -1;
+	}
+	pos += ETH_ALEN;
+
+	pos = attr_hdr_add(pos, end, WLANTEST_ATTR_STA_ADDR, ETH_ALEN);
+	if (hwaddr_aton(argv[1], pos) < 0) {
+		printf("Invalid STA address '%s'\n", argv[1]);
+		return -1;
+	}
+	pos += ETH_ALEN;
+
+	pos = attr_add_be32(pos, end, WLANTEST_ATTR_TID, atoi(argv[2]));
+
+	rlen = cmd_send_and_recv(s, buf, pos - buf, resp, sizeof(resp));
+	if (rlen < 0)
+		return -1;
+
+	pos = attr_get(resp + 4, rlen - 4, WLANTEST_ATTR_COUNTER, &len);
+	if (pos == NULL || len != 4)
+		return -1;
+	printf("%u\n", WPA_GET_BE32(pos));
+	return 0;
+}
+
+
+static int cmd_get_rx_tid(int s, int argc, char *argv[])
+{
+	u8 resp[WLANTEST_CTRL_MAX_RESP_LEN];
+	u8 buf[100], *end, *pos;
+	int rlen;
+	size_t len;
+
+	if (argc != 3) {
+		printf("get_tx_tid needs three arguments: "
+		       "BSSID, STA address, and TID\n");
+		return -1;
+	}
+
+	pos = buf;
+	end = buf + sizeof(buf);
+	WPA_PUT_BE32(pos, WLANTEST_CTRL_GET_RX_TID);
+	pos += 4;
+
+	pos = attr_hdr_add(pos, end, WLANTEST_ATTR_BSSID, ETH_ALEN);
+	if (hwaddr_aton(argv[0], pos) < 0) {
+		printf("Invalid BSSID '%s'\n", argv[0]);
+		return -1;
+	}
+	pos += ETH_ALEN;
+
+	pos = attr_hdr_add(pos, end, WLANTEST_ATTR_STA_ADDR, ETH_ALEN);
+	if (hwaddr_aton(argv[1], pos) < 0) {
+		printf("Invalid STA address '%s'\n", argv[1]);
+		return -1;
+	}
+	pos += ETH_ALEN;
+
+	pos = attr_add_be32(pos, end, WLANTEST_ATTR_TID, atoi(argv[2]));
+
+	rlen = cmd_send_and_recv(s, buf, pos - buf, resp, sizeof(resp));
+	if (rlen < 0)
+		return -1;
+
+	pos = attr_get(resp + 4, rlen - 4, WLANTEST_ATTR_COUNTER, &len);
+	if (pos == NULL || len != 4)
+		return -1;
+	printf("%u\n", WPA_GET_BE32(pos));
+	return 0;
+}
+
+
+static char ** complete_get_tid(int s, const char *str, int pos)
+{
+	int arg = get_cmd_arg_num(str, pos);
+	char **res = NULL;
+	u8 addr[ETH_ALEN];
+
+	switch (arg) {
+	case 1:
+		res = get_bssid_list(s);
+		break;
+	case 2:
+		if (hwaddr_aton(&str[get_prev_arg_pos(str, pos)], addr) < 0)
+			break;
+		res = get_sta_list(s, addr, 0);
+		break;
+	}
+
+	return res;
+}
+
+
 struct wlantest_cli_cmd {
 	const char *cmd;
 	int (*handler)(int s, int argc, char *argv[]);
@@ -1503,6 +1616,12 @@ static const struct wlantest_cli_cmd wlantest_cli_commands[] = {
 	  "<counter> <BSSID> = get BSS counter value",
 	  complete_get_bss_counter },
 	{ "relog", cmd_relog, "= re-open log-file (allow rolling logs)", NULL },
+	{ "get_tx_tid", cmd_get_tx_tid,
+	  "<BSSID> <STA> <TID> = get STA TX TID counter value",
+	  complete_get_tid },
+	{ "get_rx_tid", cmd_get_rx_tid,
+	  "<BSSID> <STA> <TID> = get STA RX TID counter value",
+	  complete_get_tid },
 	{ NULL, NULL, NULL, NULL }
 };
 

@@ -50,10 +50,10 @@ static void tx(int s, const char *ifname, int ifindex,
 
 
 struct rx_result {
-	int rx_unicast1:1;
-	int rx_broadcast1:1;
-	int rx_unicast2:1;
-	int rx_broadcast2:1;
+	unsigned int rx_unicast1:1;
+	unsigned int rx_broadcast1:1;
+	unsigned int rx_unicast2:1;
+	unsigned int rx_broadcast2:1;
 };
 
 
@@ -221,8 +221,8 @@ int main(int argc, char *argv[])
 
 	if (ret) {
 		printf("Did not receive all expected frames:\n"
-		       "rx_unicast1=%d rx_broadcast1=%d "
-		       "rx_unicast2=%d rx_broadcast2=%d\n",
+		       "rx_unicast1=%u rx_broadcast1=%u "
+		       "rx_unicast2=%u rx_broadcast2=%u\n",
 		       res.rx_unicast1, res.rx_broadcast1,
 		       res.rx_unicast2, res.rx_broadcast2);
 	} else {

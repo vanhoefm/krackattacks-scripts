@@ -44,7 +44,8 @@ static u_int16_t checksum(const void *buf, size_t len)
 
 
 static void tx(int s, const char *ifname, int ifindex,
-	       const unsigned char *src, const unsigned char *dst)
+	       const unsigned char *src, const unsigned char *dst,
+	       u_int8_t tos)
 {
 	char buf[HWSIM_PACKETLEN], *pos;
 	struct ether_header *eth;
@@ -63,7 +64,7 @@ static void tx(int s, const char *ifname, int ifindex,
 	ip->ihl = 5;
 	ip->version = 4;
 	ip->ttl = 64;
-	ip->tos = 0;
+	ip->tos = tos;
 	ip->tot_len = htons(HWSIM_PACKETLEN - sizeof(*eth));
 	ip->protocol = 1;
 	ip->saddr = htonl(192 << 24 | 168 << 16 | 1 << 8 | 1);
@@ -141,20 +142,56 @@ static void rx(int s, int iface, const char *ifname, int ifindex,
 }
 
 
+static void usage(void)
+{
+	fprintf(stderr, "usage: hwsim_test [-D<DSCP>] [-t<tos>] <ifname1> <ifname2>\n");
+}
+
+
 int main(int argc, char *argv[])
 {
-	int s1 = -1, s2 = -1, ret = -1;
+	int s1 = -1, s2 = -1, ret = -1, c;
 	struct ifreq ifr;
 	int ifindex1, ifindex2;
 	struct sockaddr_ll ll;
 	fd_set rfds;
 	struct timeval tv;
 	struct rx_result res;
+	char *s_ifname, *d_ifname, *end;
+	int tos = 0;
 
-	if (argc != 3) {
-		fprintf(stderr, "usage: hwsim_test <ifname1> <ifname2>\n");
+	for (;;) {
+		c = getopt(argc, argv, "D:t:");
+		if (c < 0)
+			break;
+		switch (c) {
+		case 'D':
+			tos = strtol(optarg, &end, 0) << 2;
+			if (*end) {
+				usage();
+				return -1;
+			}
+			break;
+		case 't':
+			tos = strtol(optarg, &end, 0);
+			if (*end) {
+				usage();
+				return -1;
+			}
+			break;
+		default:
+			usage();
+			return -1;
+		}
+	}
+
+	if (optind != argc - 2) {
+		usage();
 		return -1;
 	}
+
+	s_ifname = argv[optind];
+	d_ifname = argv[optind + 1];
 
 	memset(bcast, 0xff, ETH_ALEN);
 
@@ -171,7 +208,7 @@ int main(int argc, char *argv[])
 	}
 
 	memset(&ifr, 0, sizeof(ifr));
-	strncpy(ifr.ifr_name, argv[1], sizeof(ifr.ifr_name));
+	strncpy(ifr.ifr_name, s_ifname, sizeof(ifr.ifr_name));
 	if (ioctl(s1, SIOCGIFINDEX, &ifr) < 0) {
 		perror("ioctl[SIOCGIFINDEX]");
 		goto fail;
@@ -184,7 +221,7 @@ int main(int argc, char *argv[])
 	memcpy(addr1, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
 
 	memset(&ifr, 0, sizeof(ifr));
-	strncpy(ifr.ifr_name, argv[2], sizeof(ifr.ifr_name));
+	strncpy(ifr.ifr_name, d_ifname, sizeof(ifr.ifr_name));
 	if (ioctl(s2, SIOCGIFINDEX, &ifr) < 0) {
 		perror("ioctl[SIOCGIFINDEX]");
 		goto fail;
@@ -214,10 +251,10 @@ int main(int argc, char *argv[])
 		goto fail;
 	}
 
-	tx(s1, argv[1], ifindex1, addr1, addr2);
-	tx(s1, argv[1], ifindex1, addr1, bcast);
-	tx(s2, argv[2], ifindex2, addr2, addr1);
-	tx(s2, argv[2], ifindex2, addr2, bcast);
+	tx(s1, s_ifname, ifindex1, addr1, addr2, tos);
+	tx(s1, s_ifname, ifindex1, addr1, bcast, tos);
+	tx(s2, d_ifname, ifindex2, addr2, addr1, tos);
+	tx(s2, d_ifname, ifindex2, addr2, bcast, tos);
 
 	tv.tv_sec = 1;
 	tv.tv_usec = 0;
@@ -239,9 +276,9 @@ int main(int argc, char *argv[])
 			break; /* timeout */
 
 		if (FD_ISSET(s1, &rfds))
-			rx(s1, 1, argv[1], ifindex1, &res);
+			rx(s1, 1, s_ifname, ifindex1, &res);
 		if (FD_ISSET(s2, &rfds))
-			rx(s2, 2, argv[2], ifindex2, &res);
+			rx(s2, 2, d_ifname, ifindex2, &res);
 
 		if (res.rx_unicast1 && res.rx_broadcast1 &&
 		    res.rx_unicast2 && res.rx_broadcast2) {

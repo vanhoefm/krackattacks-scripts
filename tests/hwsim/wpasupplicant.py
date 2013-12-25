@@ -639,3 +639,12 @@ class WpaSupplicant:
         if "FAIL" in res:
             return None
         return res.split(' ')
+
+    def get_bss(self, bssid):
+        res = self.request("BSS " + bssid)
+        lines = res.splitlines()
+        vals = dict()
+        for l in lines:
+            [name,value] = l.split('=', 1)
+            vals[name] = value
+        return vals

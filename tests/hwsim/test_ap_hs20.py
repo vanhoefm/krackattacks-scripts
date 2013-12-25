@@ -58,7 +58,7 @@ def interworking_select(dev, bssid, type=None, no_match=False):
         return
     if "INTERWORKING-NO-MATCH" in ev:
         raise Exception("Matching network not found")
-    if bssid not in ev:
+    if bssid and bssid not in ev:
         raise Exception("Unexpected BSSID in match")
     if type and "type=" + type not in ev:
         raise Exception("Network type not recognized correctly")
@@ -133,6 +133,49 @@ def check_probe_resp(wt, bssid_unexpected, bssid_expected):
         count = wt.get_bss_counter("probe_response", bssid_expected)
         if count == 0:
             raise Exception("No Probe Response frame from AP")
+
+def test_ap_anqp_sharing(dev, apdev):
+    """ANQP sharing within ESS and explicit unshare"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    bssid2 = apdev[1]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    params['nai_realm'] = [ "0,example.com,13[5:6],21[2:4][5:7]" ]
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    dev[0].request("SET ignore_old_scan_res 1")
+    dev[0].hs20_enable()
+    id = dev[0].add_cred_values({ 'realm': "example.com", 'username': "test",
+                                  'password': "secret",
+                                  'domain': "example.com" })
+    logger.info("Normal network selection with shared ANQP results")
+    interworking_select(dev[0], None, "home")
+    dev[0].dump_monitor()
+
+    res1 = dev[0].get_bss(bssid)
+    res2 = dev[0].get_bss(bssid2)
+    if res1['anqp_nai_realm'] != res2['anqp_nai_realm']:
+        raise Exception("ANQP results were not shared between BSSes")
+
+    logger.info("Explicit ANQP request to unshare ANQP results")
+    dev[0].request("ANQP_GET " + bssid + " 263")
+    ev = dev[0].wait_event(["RX-ANQP"], timeout=5)
+    if ev is None:
+        raise Exception("ANQP operation timed out")
+
+    dev[0].request("ANQP_GET " + bssid2 + " 263")
+    ev = dev[0].wait_event(["RX-ANQP"], timeout=5)
+    if ev is None:
+        raise Exception("ANQP operation timed out")
+
+    res1 = dev[0].get_bss(bssid)
+    res2 = dev[0].get_bss(bssid2)
+    if res1['anqp_nai_realm'] == res2['anqp_nai_realm']:
+        raise Exception("ANQP results were not unshared")
 
 def test_ap_interworking_scan_filtering(dev, apdev):
     """Interworking scan filtering with HESSID and access network type"""

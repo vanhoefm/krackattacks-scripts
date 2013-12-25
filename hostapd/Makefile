@@ -6,8 +6,8 @@ ifndef CFLAGS
 CFLAGS = -MMD -O2 -Wall -g
 endif
 
-CFLAGS += -I../src
-CFLAGS += -I../src/utils
+CFLAGS += -I$(abspath ../src)
+CFLAGS += -I$(abspath ../src/utils)
 
 # Uncomment following line and set the path to your kernel tree include
 # directory if your C library does not include all header files.
@@ -873,9 +873,15 @@ Q=
 E=true
 endif
 
+ifdef CONFIG_CODE_COVERAGE
+%.o: %.c
+	@$(E) "  CC " $<
+	$(Q)cd $(dir $@); $(CC) -c -o $(notdir $@) $(CFLAGS) $(notdir $<)
+else
 %.o: %.c
 	$(Q)$(CC) -c -o $@ $(CFLAGS) $<
 	@$(E) "  CC " $<
+endif
 
 verify_config:
 	@if [ ! -r .config ]; then \
@@ -944,9 +950,15 @@ hlr_auc_gw: $(HOBJS)
 	$(Q)$(CC) $(LDFLAGS) -o hlr_auc_gw $(HOBJS) $(LIBS_h)
 	@$(E) "  LD " $@
 
+lcov-html:
+	lcov -c -d .. > lcov.info
+	genhtml lcov.info --output-directory lcov-html
+
 clean:
 	$(MAKE) -C ../src clean
 	rm -f core *~ *.o hostapd hostapd_cli nt_password_hash hlr_auc_gw
 	rm -f *.d *.gcno *.gcda *.gcov
+	rm -f lcov.info
+	rm -rf lcov-html
 
 -include $(OBJS:%.o=%.d)

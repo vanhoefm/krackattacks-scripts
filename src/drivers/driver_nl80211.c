@@ -3274,6 +3274,62 @@ static void wiphy_info_supp_cmds(struct wiphy_info_data *info,
 }
 
 
+static void wiphy_info_cipher_suites(struct wiphy_info_data *info,
+				     struct nlattr *tb)
+{
+	int i, num;
+	u32 *ciphers;
+
+	if (tb == NULL)
+		return;
+
+	num = nla_len(tb) / sizeof(u32);
+	ciphers = nla_data(tb);
+	for (i = 0; i < num; i++) {
+		u32 c = ciphers[i];
+
+		wpa_printf(MSG_DEBUG, "nl80211: Supported cipher %02x-%02x-%02x:%d",
+			   c >> 24, (c >> 16) & 0xff,
+			   (c >> 8) & 0xff, c & 0xff);
+		switch (c) {
+		case WLAN_CIPHER_SUITE_CCMP_256:
+			info->capa->enc |= WPA_DRIVER_CAPA_ENC_CCMP_256;
+			break;
+		case WLAN_CIPHER_SUITE_GCMP_256:
+			info->capa->enc |= WPA_DRIVER_CAPA_ENC_GCMP_256;
+			break;
+		case WLAN_CIPHER_SUITE_CCMP:
+			info->capa->enc |= WPA_DRIVER_CAPA_ENC_CCMP;
+			break;
+		case WLAN_CIPHER_SUITE_GCMP:
+			info->capa->enc |= WPA_DRIVER_CAPA_ENC_GCMP;
+			break;
+		case WLAN_CIPHER_SUITE_TKIP:
+			info->capa->enc |= WPA_DRIVER_CAPA_ENC_TKIP;
+			break;
+		case WLAN_CIPHER_SUITE_WEP104:
+			info->capa->enc |= WPA_DRIVER_CAPA_ENC_WEP104;
+			break;
+		case WLAN_CIPHER_SUITE_WEP40:
+			info->capa->enc |= WPA_DRIVER_CAPA_ENC_WEP40;
+			break;
+		case WLAN_CIPHER_SUITE_AES_CMAC:
+			info->capa->enc |= WPA_DRIVER_CAPA_ENC_BIP;
+			break;
+		case WLAN_CIPHER_SUITE_BIP_GMAC_128:
+			info->capa->enc |= WPA_DRIVER_CAPA_ENC_BIP_GMAC_128;
+			break;
+		case WLAN_CIPHER_SUITE_BIP_GMAC_256:
+			info->capa->enc |= WPA_DRIVER_CAPA_ENC_BIP_GMAC_256;
+			break;
+		case WLAN_CIPHER_SUITE_BIP_CMAC_256:
+			info->capa->enc |= WPA_DRIVER_CAPA_ENC_BIP_CMAC_256;
+			break;
+		}
+	}
+}
+
+
 static void wiphy_info_max_roc(struct wpa_driver_capa *capa,
 			       struct nlattr *tb)
 {
@@ -3373,6 +3429,7 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 	wiphy_info_supported_iftypes(info, tb[NL80211_ATTR_SUPPORTED_IFTYPES]);
 	wiphy_info_iface_comb(info, tb[NL80211_ATTR_INTERFACE_COMBINATIONS]);
 	wiphy_info_supp_cmds(info, tb[NL80211_ATTR_SUPPORTED_COMMANDS]);
+	wiphy_info_cipher_suites(info, tb[NL80211_ATTR_CIPHER_SUITES]);
 
 	if (tb[NL80211_ATTR_OFFCHANNEL_TX_OK]) {
 		wpa_printf(MSG_DEBUG, "nl80211: Using driver-based "
@@ -3500,15 +3557,10 @@ static int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 		return -1;
 
 	drv->has_capability = 1;
-	/* For now, assume TKIP, CCMP, WPA, WPA2 are supported */
 	drv->capa.key_mgmt = WPA_DRIVER_CAPA_KEY_MGMT_WPA |
 		WPA_DRIVER_CAPA_KEY_MGMT_WPA_PSK |
 		WPA_DRIVER_CAPA_KEY_MGMT_WPA2 |
 		WPA_DRIVER_CAPA_KEY_MGMT_WPA2_PSK;
-	drv->capa.enc = WPA_DRIVER_CAPA_ENC_WEP40 |
-		WPA_DRIVER_CAPA_ENC_WEP104 |
-		WPA_DRIVER_CAPA_ENC_TKIP |
-		WPA_DRIVER_CAPA_ENC_CCMP;
 	drv->capa.auth = WPA_DRIVER_AUTH_OPEN |
 		WPA_DRIVER_AUTH_SHARED |
 		WPA_DRIVER_AUTH_LEAP;

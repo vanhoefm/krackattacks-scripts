@@ -149,6 +149,8 @@ def test_ap_interworking_scan_filtering(dev, apdev):
     params['ssid'] = ssid2
     params['hessid'] = bssid2
     params['access_network_type'] = "1"
+    del params['venue_group']
+    del params['venue_type']
     hostapd.add_ap(apdev[1]['ifname'], params)
 
     dev[0].request("SET ignore_old_scan_res 1")

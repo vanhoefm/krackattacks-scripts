@@ -2658,6 +2658,24 @@ static int wpa_supplicant_ctrl_iface_save_config(struct wpa_supplicant *wpa_s)
 #endif /* CONFIG_NO_CONFIG_WRITE */
 
 
+struct cipher_info {
+	unsigned int capa;
+	const char *name;
+	int group_only;
+};
+
+static const struct cipher_info ciphers[] = {
+	{ WPA_DRIVER_CAPA_ENC_CCMP_256, "CCMP-256", 0 },
+	{ WPA_DRIVER_CAPA_ENC_GCMP_256, "GCMP-256", 0 },
+	{ WPA_DRIVER_CAPA_ENC_CCMP, "CCMP", 0 },
+	{ WPA_DRIVER_CAPA_ENC_GCMP, "GCMP", 0 },
+	{ WPA_DRIVER_CAPA_ENC_TKIP, "TKIP", 0 },
+	{ WPA_DRIVER_CAPA_KEY_MGMT_WPA_NONE, "NONE", 0 },
+	{ WPA_DRIVER_CAPA_ENC_WEP104, "WEP104", 1 },
+	{ WPA_DRIVER_CAPA_ENC_WEP40, "WEP40", 1 }
+};
+
+
 static int ctrl_iface_get_capability_pairwise(int res, char *strict,
 					      struct wpa_driver_capa *capa,
 					      char *buf, size_t buflen)
@@ -2665,6 +2683,7 @@ static int ctrl_iface_get_capability_pairwise(int res, char *strict,
 	int ret, first = 1;
 	char *pos, *end;
 	size_t len;
+	unsigned int i;
 
 	pos = buf;
 	end = pos + buflen;
@@ -2678,54 +2697,15 @@ static int ctrl_iface_get_capability_pairwise(int res, char *strict,
 		return len;
 	}
 
-	if (capa->enc & WPA_DRIVER_CAPA_ENC_CCMP_256) {
-		ret = os_snprintf(pos, end - pos, "%sCCMP-256",
-				  first ? "" : " ");
-		if (ret < 0 || ret >= end - pos)
-			return pos - buf;
-		pos += ret;
-		first = 0;
-	}
-
-	if (capa->enc & WPA_DRIVER_CAPA_ENC_GCMP_256) {
-		ret = os_snprintf(pos, end - pos, "%sGCMP-256",
-				  first ? "" : " ");
-		if (ret < 0 || ret >= end - pos)
-			return pos - buf;
-		pos += ret;
-		first = 0;
-	}
-
-	if (capa->enc & WPA_DRIVER_CAPA_ENC_CCMP) {
-		ret = os_snprintf(pos, end - pos, "%sCCMP", first ? "" : " ");
-		if (ret < 0 || ret >= end - pos)
-			return pos - buf;
-		pos += ret;
-		first = 0;
-	}
-
-	if (capa->enc & WPA_DRIVER_CAPA_ENC_GCMP) {
-		ret = os_snprintf(pos, end - pos, "%sGCMP", first ? "" : " ");
-		if (ret < 0 || ret >= end - pos)
-			return pos - buf;
-		pos += ret;
-		first = 0;
-	}
-
-	if (capa->enc & WPA_DRIVER_CAPA_ENC_TKIP) {
-		ret = os_snprintf(pos, end - pos, "%sTKIP", first ? "" : " ");
-		if (ret < 0 || ret >= end - pos)
-			return pos - buf;
-		pos += ret;
-		first = 0;
-	}
-
-	if (capa->key_mgmt & WPA_DRIVER_CAPA_KEY_MGMT_WPA_NONE) {
-		ret = os_snprintf(pos, end - pos, "%sNONE", first ? "" : " ");
-		if (ret < 0 || ret >= end - pos)
-			return pos - buf;
-		pos += ret;
-		first = 0;
+	for (i = 0; i < ARRAY_SIZE(ciphers); i++) {
+		if (!ciphers[i].group_only && capa->enc & ciphers[i].capa) {
+			ret = os_snprintf(pos, end - pos, "%s%s",
+					  first ? "" : " ", ciphers[i].name);
+			if (ret < 0 || ret >= end - pos)
+				return pos - buf;
+			pos += ret;
+			first = 0;
+		}
 	}
 
 	return pos - buf;
@@ -2739,6 +2719,7 @@ static int ctrl_iface_get_capability_group(int res, char *strict,
 	int ret, first = 1;
 	char *pos, *end;
 	size_t len;
+	unsigned int i;
 
 	pos = buf;
 	end = pos + buflen;
@@ -2752,63 +2733,15 @@ static int ctrl_iface_get_capability_group(int res, char *strict,
 		return len;
 	}
 
-	if (capa->enc & WPA_DRIVER_CAPA_ENC_CCMP_256) {
-		ret = os_snprintf(pos, end - pos, "%sCCMP-256",
-				  first ? "" : " ");
-		if (ret < 0 || ret >= end - pos)
-			return pos - buf;
-		pos += ret;
-		first = 0;
-	}
-
-	if (capa->enc & WPA_DRIVER_CAPA_ENC_GCMP_256) {
-		ret = os_snprintf(pos, end - pos, "%sGCMP-256",
-				  first ? "" : " ");
-		if (ret < 0 || ret >= end - pos)
-			return pos - buf;
-		pos += ret;
-		first = 0;
-	}
-
-	if (capa->enc & WPA_DRIVER_CAPA_ENC_CCMP) {
-		ret = os_snprintf(pos, end - pos, "%sCCMP", first ? "" : " ");
-		if (ret < 0 || ret >= end - pos)
-			return pos - buf;
-		pos += ret;
-		first = 0;
-	}
-
-	if (capa->enc & WPA_DRIVER_CAPA_ENC_GCMP) {
-		ret = os_snprintf(pos, end - pos, "%sGCMP", first ? "" : " ");
-		if (ret < 0 || ret >= end - pos)
-			return pos - buf;
-		pos += ret;
-		first = 0;
-	}
-
-	if (capa->enc & WPA_DRIVER_CAPA_ENC_TKIP) {
-		ret = os_snprintf(pos, end - pos, "%sTKIP", first ? "" : " ");
-		if (ret < 0 || ret >= end - pos)
-			return pos - buf;
-		pos += ret;
-		first = 0;
-	}
-
-	if (capa->enc & WPA_DRIVER_CAPA_ENC_WEP104) {
-		ret = os_snprintf(pos, end - pos, "%sWEP104",
-				  first ? "" : " ");
-		if (ret < 0 || ret >= end - pos)
-			return pos - buf;
-		pos += ret;
-		first = 0;
-	}
-
-	if (capa->enc & WPA_DRIVER_CAPA_ENC_WEP40) {
-		ret = os_snprintf(pos, end - pos, "%sWEP40", first ? "" : " ");
-		if (ret < 0 || ret >= end - pos)
-			return pos - buf;
-		pos += ret;
-		first = 0;
+	for (i = 0; i < ARRAY_SIZE(ciphers); i++) {
+		if (capa->enc & ciphers[i].capa) {
+			ret = os_snprintf(pos, end - pos, "%s%s",
+					  first ? "" : " ", ciphers[i].name);
+			if (ret < 0 || ret >= end - pos)
+				return pos - buf;
+			pos += ret;
+			first = 0;
+		}
 	}
 
 	return pos - buf;

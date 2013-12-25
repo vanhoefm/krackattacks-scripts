@@ -86,6 +86,7 @@ static void rx_mgmt_probe_resp(struct wlantest *wt, const u8 *data, size_t len)
 	if (bss == NULL)
 		return;
 
+	bss->counters[WLANTEST_BSS_COUNTER_PROBE_RESPONSE]++;
 	bss->capab_info = le_to_host16(mgmt->u.probe_resp.capab_info);
 	if (ieee802_11_parse_elems(mgmt->u.probe_resp.variable,
 				   len - (mgmt->u.probe_resp.variable - data),

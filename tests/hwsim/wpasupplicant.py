@@ -582,11 +582,13 @@ class WpaSupplicant:
             self.select_network(id)
         return id
 
-    def scan(self, type=None):
+    def scan(self, type=None, freq=None):
         if type:
             cmd = "SCAN TYPE=" + type
         else:
             cmd = "SCAN"
+        if freq:
+            cmd = cmd + " freq=" + freq
         self.dump_monitor()
         if not "OK" in self.request(cmd):
             raise Exception("Failed to trigger scan")

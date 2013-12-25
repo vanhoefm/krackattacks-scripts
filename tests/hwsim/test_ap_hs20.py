@@ -160,7 +160,7 @@ def test_ap_interworking_scan_filtering(dev, apdev):
     logger.info("Check probe request filtering based on HESSID")
 
     dev[0].request("SET hessid " + bssid2)
-    dev[0].scan()
+    dev[0].scan(freq="2412")
     check_probe_resp(wt, bssid, bssid2)
 
     logger.info("Check probe request filtering based on access network type")
@@ -169,14 +169,14 @@ def test_ap_interworking_scan_filtering(dev, apdev):
     wt.clear_bss_counters(bssid2)
     dev[0].request("SET hessid 00:00:00:00:00:00")
     dev[0].request("SET access_network_type 14")
-    dev[0].scan()
+    dev[0].scan(freq="2412")
     check_probe_resp(wt, bssid2, bssid)
 
     wt.clear_bss_counters(bssid)
     wt.clear_bss_counters(bssid2)
     dev[0].request("SET hessid 00:00:00:00:00:00")
     dev[0].request("SET access_network_type 1")
-    dev[0].scan()
+    dev[0].scan(freq="2412")
     check_probe_resp(wt, bssid, bssid2)
 
     logger.info("Check probe request filtering based on HESSID and ANT")
@@ -185,14 +185,14 @@ def test_ap_interworking_scan_filtering(dev, apdev):
     wt.clear_bss_counters(bssid2)
     dev[0].request("SET hessid " + bssid)
     dev[0].request("SET access_network_type 14")
-    dev[0].scan()
+    dev[0].scan(freq="2412")
     check_probe_resp(wt, bssid2, bssid)
 
     wt.clear_bss_counters(bssid)
     wt.clear_bss_counters(bssid2)
     dev[0].request("SET hessid " + bssid2)
     dev[0].request("SET access_network_type 14")
-    dev[0].scan()
+    dev[0].scan(freq="2412")
     check_probe_resp(wt, bssid, None)
     check_probe_resp(wt, bssid2, None)
 
@@ -200,7 +200,7 @@ def test_ap_interworking_scan_filtering(dev, apdev):
     wt.clear_bss_counters(bssid2)
     dev[0].request("SET hessid " + bssid)
     dev[0].request("SET access_network_type 1")
-    dev[0].scan()
+    dev[0].scan(freq="2412")
     check_probe_resp(wt, bssid, None)
     check_probe_resp(wt, bssid2, None)
 

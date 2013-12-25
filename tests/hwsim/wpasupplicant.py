@@ -629,3 +629,9 @@ class WpaSupplicant:
                 return
             time.sleep(0.5)
         raise Exception("Timeout while waiting for COMPLETED state")
+
+    def get_capability(self, field):
+        res = self.request("GET_CAPABILITY " + field)
+        if "FAIL" in res:
+            return None
+        return res.split(' ')

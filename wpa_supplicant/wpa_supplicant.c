@@ -459,6 +459,9 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 	os_free(wpa_s->next_scan_freqs);
 	wpa_s->next_scan_freqs = NULL;
 
+	os_free(wpa_s->manual_scan_freqs);
+	wpa_s->manual_scan_freqs = NULL;
+
 	gas_query_deinit(wpa_s->gas);
 	wpa_s->gas = NULL;
 

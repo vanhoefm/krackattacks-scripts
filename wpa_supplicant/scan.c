@@ -711,6 +711,13 @@ ssid_list_set:
 	wpa_supplicant_optimize_freqs(wpa_s, &params);
 	extra_ie = wpa_supplicant_extra_ies(wpa_s);
 
+	if (wpa_s->last_scan_req == MANUAL_SCAN_REQ && params.freqs == NULL &&
+	    wpa_s->manual_scan_freqs) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "Limit manual scan to specified channels");
+		params.freqs = wpa_s->manual_scan_freqs;
+		wpa_s->manual_scan_freqs = NULL;
+	}
+
 	if (params.freqs == NULL && wpa_s->next_scan_freqs) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Optimize scan based on previously "
 			"generated frequency list");
@@ -798,6 +805,13 @@ scan:
 #endif /* CONFIG_P2P */
 
 	ret = wpa_supplicant_trigger_scan(wpa_s, scan_params);
+
+	if (ret && wpa_s->last_scan_req == MANUAL_SCAN_REQ && params.freqs &&
+	    !wpa_s->manual_scan_freqs) {
+		/* Restore manual_scan_freqs for the next attempt */
+		wpa_s->manual_scan_freqs = params.freqs;
+		params.freqs = NULL;
+	}
 
 	wpabuf_free(extra_ie);
 	os_free(params.freqs);

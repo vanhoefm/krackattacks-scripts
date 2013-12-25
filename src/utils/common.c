@@ -735,3 +735,95 @@ char * freq_range_list_str(const struct wpa_freq_range_list *list)
 
 	return buf;
 }
+
+
+int int_array_len(const int *a)
+{
+	int i;
+	for (i = 0; a && a[i]; i++)
+		;
+	return i;
+}
+
+
+void int_array_concat(int **res, const int *a)
+{
+	int reslen, alen, i;
+	int *n;
+
+	reslen = int_array_len(*res);
+	alen = int_array_len(a);
+
+	n = os_realloc_array(*res, reslen + alen + 1, sizeof(int));
+	if (n == NULL) {
+		os_free(*res);
+		*res = NULL;
+		return;
+	}
+	for (i = 0; i <= alen; i++)
+		n[reslen + i] = a[i];
+	*res = n;
+}
+
+
+static int freq_cmp(const void *a, const void *b)
+{
+	int _a = *(int *) a;
+	int _b = *(int *) b;
+
+	if (_a == 0)
+		return 1;
+	if (_b == 0)
+		return -1;
+	return _a - _b;
+}
+
+
+void int_array_sort_unique(int *a)
+{
+	int alen;
+	int i, j;
+
+	if (a == NULL)
+		return;
+
+	alen = int_array_len(a);
+	qsort(a, alen, sizeof(int), freq_cmp);
+
+	i = 0;
+	j = 1;
+	while (a[i] && a[j]) {
+		if (a[i] == a[j]) {
+			j++;
+			continue;
+		}
+		a[++i] = a[j++];
+	}
+	if (a[i])
+		i++;
+	a[i] = 0;
+}
+
+
+void int_array_add_unique(int **res, int a)
+{
+	int reslen;
+	int *n;
+
+	for (reslen = 0; *res && (*res)[reslen]; reslen++) {
+		if ((*res)[reslen] == a)
+			return; /* already in the list */
+	}
+
+	n = os_realloc_array(*res, reslen + 2, sizeof(int));
+	if (n == NULL) {
+		os_free(*res);
+		*res = NULL;
+		return;
+	}
+
+	n[reslen] = a;
+	n[reslen + 1] = 0;
+
+	*res = n;
+}

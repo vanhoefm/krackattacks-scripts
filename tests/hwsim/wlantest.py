@@ -49,6 +49,19 @@ class Wlantest:
             raise Exception("Could not get BSS info from wlantest for " + bssid)
         return res
 
+    def get_bss_counter(self, field, bssid):
+        res = subprocess.check_output([self.wlantest_cli, "get_bss_counter",
+                                       field, bssid]);
+        if "FAIL" in res:
+            raise Exception("wlantest_cli command failed")
+        return int(res)
+
+    def clear_bss_counters(self, bssid):
+        res = subprocess.check_output([self.wlantest_cli, "clear_bss_counters",
+                                       bssid]);
+        if "FAIL" in res:
+            raise Exception("wlantest_cli command failed")
+
     def info_sta(self, field, bssid, addr):
         res = subprocess.check_output([self.wlantest_cli, "info_sta",
                                        field, bssid, addr])

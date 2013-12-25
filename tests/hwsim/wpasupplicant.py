@@ -57,6 +57,8 @@ class WpaSupplicant:
             logger.info("FLUSH to " + self.ifname + " failed: " + res)
         self.request("SET ignore_old_scan_res 0")
         self.request("SET external_sim 0")
+        self.request("SET hessid 00:00:00:00:00:00")
+        self.request("SET access_network_type 15")
         self.request("SET p2p_add_cli_chan 0")
         self.request("SET p2p_no_go_freq ")
         self.request("SET p2p_pref_chan ")

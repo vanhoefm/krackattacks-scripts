@@ -14,6 +14,7 @@ import os.path
 import subprocess
 
 import hostapd
+from wlantest import Wlantest
 
 def hs20_ap_params():
     params = hostapd.wpa2_params(ssid="test-hs20")
@@ -121,6 +122,87 @@ def interworking_connect(dev, bssid, method):
     ev = dev.wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
     if ev is None:
         raise Exception("Connection timed out")
+
+def check_probe_resp(wt, bssid_unexpected, bssid_expected):
+    if bssid_unexpected:
+        count = wt.get_bss_counter("probe_response", bssid_unexpected)
+        if count > 0:
+            raise Exception("Unexpected Probe Response frame from AP")
+
+    if bssid_expected:
+        count = wt.get_bss_counter("probe_response", bssid_expected)
+        if count == 0:
+            raise Exception("No Probe Response frame from AP")
+
+def test_ap_interworking_scan_filtering(dev, apdev):
+    """Interworking scan filtering with HESSID and access network type"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    ssid = "test-hs20-ap1"
+    params['ssid'] = ssid
+    params['hessid'] = bssid
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    bssid2 = apdev[1]['bssid']
+    params = hs20_ap_params()
+    ssid2 = "test-hs20-ap2"
+    params['ssid'] = ssid2
+    params['hessid'] = bssid2
+    params['access_network_type'] = "1"
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    dev[0].request("SET ignore_old_scan_res 1")
+    dev[0].hs20_enable()
+
+    wt = Wlantest()
+    wt.flush()
+
+    logger.info("Check probe request filtering based on HESSID")
+
+    dev[0].request("SET hessid " + bssid2)
+    dev[0].scan()
+    check_probe_resp(wt, bssid, bssid2)
+
+    logger.info("Check probe request filtering based on access network type")
+
+    wt.clear_bss_counters(bssid)
+    wt.clear_bss_counters(bssid2)
+    dev[0].request("SET hessid 00:00:00:00:00:00")
+    dev[0].request("SET access_network_type 14")
+    dev[0].scan()
+    check_probe_resp(wt, bssid2, bssid)
+
+    wt.clear_bss_counters(bssid)
+    wt.clear_bss_counters(bssid2)
+    dev[0].request("SET hessid 00:00:00:00:00:00")
+    dev[0].request("SET access_network_type 1")
+    dev[0].scan()
+    check_probe_resp(wt, bssid, bssid2)
+
+    logger.info("Check probe request filtering based on HESSID and ANT")
+
+    wt.clear_bss_counters(bssid)
+    wt.clear_bss_counters(bssid2)
+    dev[0].request("SET hessid " + bssid)
+    dev[0].request("SET access_network_type 14")
+    dev[0].scan()
+    check_probe_resp(wt, bssid2, bssid)
+
+    wt.clear_bss_counters(bssid)
+    wt.clear_bss_counters(bssid2)
+    dev[0].request("SET hessid " + bssid2)
+    dev[0].request("SET access_network_type 14")
+    dev[0].scan()
+    check_probe_resp(wt, bssid, None)
+    check_probe_resp(wt, bssid2, None)
+
+    wt.clear_bss_counters(bssid)
+    wt.clear_bss_counters(bssid2)
+    dev[0].request("SET hessid " + bssid)
+    dev[0].request("SET access_network_type 1")
+    dev[0].scan()
+    check_probe_resp(wt, bssid, None)
+    check_probe_resp(wt, bssid2, None)
 
 def test_ap_hs20_select(dev, apdev):
     """Hotspot 2.0 network selection"""

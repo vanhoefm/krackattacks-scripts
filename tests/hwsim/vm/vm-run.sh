@@ -43,7 +43,7 @@ CMD=$TESTDIR/vm/inside.sh
 LOGDIR=$LOGS/$(date +%s)
 mkdir -p $LOGDIR
 
-exec kvm \
+kvm \
 	-kernel $KERNEL -smp 4 \
 	$KVMARGS -m $MEMORY -nographic \
 	-fsdev local,security_model=none,id=fsdev-root,path=/$ROTAG \
@@ -52,3 +52,13 @@ exec kvm \
 	-device virtio-9p-pci,id=fs-logs,fsdev=fsdev-logs,mount_tag=logshare \
 	-monitor null -serial stdio -serial file:$LOGDIR/console \
 	-append "mac80211_hwsim.channels=$CHANNELS mac80211_hwsim.radios=5 init=$CMD testdir=$TESTDIR console=$KVMOUT root=/dev/root rootflags=trans=virtio,version=9p2000.u ro rootfstype=9p EPATH=$EPATH ARGS=$*"
+
+echo LOGDIR=$LOGDIR
+
+if [ -d $LOGDIR/gcov ]; then
+    echo "Move gcov data files from vm logdir to build directories"
+    for i in $LOGDIR/gcov/*.gcda; do
+	file=`basename $i | sed "s/.gcda$//"`
+	find ../../.. -name $file.gcno | sed s/.gcno/.gcda/ | xargs mv $i
+    done
+fi

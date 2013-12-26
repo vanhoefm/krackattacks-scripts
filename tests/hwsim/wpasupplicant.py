@@ -416,7 +416,7 @@ class WpaSupplicant:
             return self.group_form_result(ev, expect_failure, go_neg_res)
         raise Exception("P2P_CONNECT failed")
 
-    def wait_event(self, events, timeout):
+    def wait_event(self, events, timeout=10):
         count = 0
         while count < timeout * 10:
             count = count + 1

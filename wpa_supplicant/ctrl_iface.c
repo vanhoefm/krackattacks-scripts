@@ -5263,6 +5263,8 @@ static void wpas_ctrl_scan(struct wpa_supplicant *wpa_s, char *params,
 		return;
 	}
 
+	wpa_s->manual_scan_passive = 0;
+
 	if (params) {
 		if (os_strncasecmp(params, "TYPE=ONLY", 9) == 0)
 			wpa_s->scan_res_handler = scan_only_handler;
@@ -5272,6 +5274,10 @@ static void wpas_ctrl_scan(struct wpa_supplicant *wpa_s, char *params,
 			*reply_len = -1;
 			return;
 		}
+
+		pos = os_strstr(params, "passive=");
+		if (pos)
+			wpa_s->manual_scan_passive = !!atoi(pos + 8);
 	} else {
 		os_free(wpa_s->manual_scan_freqs);
 		wpa_s->manual_scan_freqs = NULL;

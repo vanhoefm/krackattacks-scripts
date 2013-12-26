@@ -698,6 +698,9 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		wpa_dbg(wpa_s, MSG_DEBUG, "Include wildcard SSID in "
 			"the scan request");
 		params.num_ssids++;
+	} else if (wpa_s->last_scan_req == MANUAL_SCAN_REQ &&
+		   wpa_s->manual_scan_passive && params.num_ssids == 0) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "Use passive scan based on manual request");
 	} else {
 		wpa_s->prev_scan_ssid = WILDCARD_SSID_SCAN;
 		params.num_ssids++;

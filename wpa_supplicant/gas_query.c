@@ -13,6 +13,7 @@
 #include "utils/eloop.h"
 #include "common/ieee802_11_defs.h"
 #include "common/gas.h"
+#include "common/wpa_ctrl.h"
 #include "wpa_supplicant_i.h"
 #include "driver_i.h"
 #include "offchannel.h"
@@ -82,10 +83,37 @@ struct gas_query * gas_query_init(struct wpa_supplicant *wpa_s)
 }
 
 
+static const char * gas_result_txt(enum gas_query_result result)
+{
+	switch (result) {
+	case GAS_QUERY_SUCCESS:
+		return "SUCCESS";
+	case GAS_QUERY_FAILURE:
+		return "FAILURE";
+	case GAS_QUERY_TIMEOUT:
+		return "TIMEOUT";
+	case GAS_QUERY_PEER_ERROR:
+		return "PEER_ERROR";
+	case GAS_QUERY_INTERNAL_ERROR:
+		return "INTERNAL_ERROR";
+	case GAS_QUERY_CANCELLED:
+		return "CANCELLED";
+	case GAS_QUERY_DELETED_AT_DEINIT:
+		return "DELETED_AT_DEINIT";
+	}
+
+	return "N/A";
+}
+
+
 static void gas_query_done(struct gas_query *gas,
 			   struct gas_query_pending *query,
 			   enum gas_query_result result)
 {
+	wpa_msg(gas->wpa_s, MSG_INFO, GAS_QUERY_DONE "addr=" MACSTR
+		" dialog_token=%u freq=%d status_code=%u result=%s",
+		MAC2STR(query->addr), query->dialog_token, query->freq,
+		query->status_code, gas_result_txt(result));
 	if (gas->current == query)
 		gas->current = NULL;
 	if (query->offchannel_tx_started)
@@ -581,8 +609,9 @@ int gas_query_req(struct gas_query *gas, const u8 *dst, int freq,
 
 	*(wpabuf_mhead_u8(req) + 2) = dialog_token;
 
-	wpa_printf(MSG_DEBUG, "GAS: Starting request for " MACSTR
-		   " dialog_token %u", MAC2STR(dst), dialog_token);
+	wpa_msg(gas->wpa_s, MSG_INFO, GAS_QUERY_START "addr=" MACSTR
+		" dialog_token=%u freq=%d",
+		MAC2STR(query->addr), query->dialog_token, query->freq);
 
 	eloop_register_timeout(0, 0, gas_service_timeout, gas, query);
 

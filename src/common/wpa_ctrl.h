@@ -154,6 +154,10 @@ extern "C" {
 #define INTERWORKING_ALREADY_CONNECTED "INTERWORKING-ALREADY-CONNECTED "
 
 #define GAS_RESPONSE_INFO "GAS-RESPONSE-INFO "
+/* parameters: <addr> <dialog_token> <freq> */
+#define GAS_QUERY_START "GAS-QUERY-START "
+/* parameters: <addr> <dialog_token> <freq> <status_code> <result> */
+#define GAS_QUERY_DONE "GAS-QUERY-DONE "
 
 /* hostapd control interface - fixed message prefixes */
 #define WPS_EVENT_PIN_NEEDED "WPS-PIN-NEEDED "

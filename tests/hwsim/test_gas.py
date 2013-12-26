@@ -11,6 +11,7 @@ import binascii
 import logging
 logger = logging.getLogger()
 import re
+import struct
 
 import hostapd
 
@@ -240,6 +241,66 @@ def test_gas_timeout(dev, apdev):
 
     expect_gas_result(dev[0], "TIMEOUT")
 
+MGMT_SUBTYPE_ACTION = 13
+ACTION_CATEG_PUBLIC = 4
+
+GAS_INITIAL_REQUEST = 10
+GAS_INITIAL_RESPONSE = 11
+GAS_COMEBACK_REQUEST = 12
+GAS_COMEBACK_RESPONSE = 13
+GAS_ACTIONS = [ GAS_INITIAL_REQUEST, GAS_INITIAL_RESPONSE,
+                GAS_COMEBACK_REQUEST, GAS_COMEBACK_RESPONSE ]
+
+def anqp_adv_proto():
+    return struct.pack('BBBB', 108, 2, 127, 0)
+
+def anqp_comeback_resp(dialog_token):
+    return struct.pack('<BBBHBH', ACTION_CATEG_PUBLIC, GAS_COMEBACK_RESPONSE,
+                       dialog_token, 0, 0, 0) + anqp_adv_proto()
+
+def gas_rx(hapd):
+    count = 0
+    while count < 30:
+        count = count + 1
+        query = hapd.mgmt_rx()
+        if query is None:
+            raise Exception("Action frame not received")
+        if query['subtype'] != MGMT_SUBTYPE_ACTION:
+            continue
+        payload = query['payload']
+        if len(payload) < 2:
+            continue
+        (category, action) = struct.unpack('BB', payload[0:2])
+        if category != ACTION_CATEG_PUBLIC or action not in GAS_ACTIONS:
+            continue
+        return query
+    raise Exception("No Action frame received")
+
+def parse_gas(payload):
+    pos = payload
+    (category, action, dialog_token) = struct.unpack('BBB', pos[0:3])
+    if category != ACTION_CATEG_PUBLIC:
+        return None
+    if action not in GAS_ACTIONS:
+        return None
+    gas = {}
+    gas['action'] = action
+    pos = pos[3:]
+
+    if len(pos) < 1:
+        return None
+
+    gas['dialog_token'] = dialog_token
+    return gas
+
+def action_response(req):
+    resp = {}
+    resp['fc'] = req['fc']
+    resp['da'] = req['sa']
+    resp['sa'] = req['da']
+    resp['bssid'] = req['bssid']
+    return resp
+
 def test_gas_invalid_response_type(dev, apdev):
     """GAS invalid response type"""
     hapd = start_ap(apdev[0])
@@ -250,16 +311,12 @@ def test_gas_invalid_response_type(dev, apdev):
 
     anqp_get(dev[0], bssid, 263)
 
-    query = hapd.mgmt_rx()
-    if query is None:
-        raise Exception("GAS query request not received")
-    resp = {}
-    resp['fc'] = query['fc']
-    resp['da'] = query['sa']
-    resp['sa'] = query['da']
-    resp['bssid'] = query['bssid']
+    query = gas_rx(hapd)
+    gas = parse_gas(query['payload'])
+
+    resp = action_response(query)
     # GAS Comeback Response instead of GAS Initial Response
-    resp['payload'] = binascii.unhexlify("040d" + binascii.hexlify(query['payload'][2]) + "0000000000" + "6c027f00" + "0000")
+    resp['payload'] = anqp_comeback_resp(gas['dialog_token']) + struct.pack('<H', 0)
     hapd.mgmt_tx(resp)
     ev = hapd.wait_event(["MGMT-TX-STATUS"], timeout=5)
     if ev is None:

@@ -2037,21 +2037,36 @@ static void send_scan_event(struct wpa_driver_nl80211_data *drv, int aborted,
 				&info->ssids[info->num_ssids];
 			s->ssid = nla_data(nl);
 			s->ssid_len = nla_len(nl);
+			wpa_printf(MSG_DEBUG, "nl80211: Scan probed for SSID '%s'",
+				   wpa_ssid_txt(s->ssid, s->ssid_len));
 			info->num_ssids++;
 			if (info->num_ssids == WPAS_MAX_SCAN_SSIDS)
 				break;
 		}
 	}
 	if (tb[NL80211_ATTR_SCAN_FREQUENCIES]) {
+		char msg[200], *pos, *end;
+		int res;
+
+		pos = msg;
+		end = pos + sizeof(msg);
+		*pos = '\0';
+
 		nla_for_each_nested(nl, tb[NL80211_ATTR_SCAN_FREQUENCIES], rem)
 		{
 			freqs[num_freqs] = nla_get_u32(nl);
+			res = os_snprintf(pos, end - pos, " %d",
+					  freqs[num_freqs]);
+			if (res > 0 && end - pos > res)
+				pos += res;
 			num_freqs++;
 			if (num_freqs == MAX_REPORT_FREQS - 1)
 				break;
 		}
 		info->freqs = freqs;
 		info->num_freqs = num_freqs;
+		wpa_printf(MSG_DEBUG, "nl80211: Scan included frequencies:%s",
+			   msg);
 	}
 	wpa_supplicant_event(drv->ctx, EVENT_SCAN_RESULTS, &event);
 }

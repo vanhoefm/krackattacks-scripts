@@ -354,3 +354,63 @@ def test_gas_failure_status_code(dev, apdev):
         raise Exception("GAS response not acknowledged")
 
     expect_gas_result(dev[0], "FAILURE")
+
+def test_gas_malformed(dev, apdev):
+    """GAS malformed response frames"""
+    hapd = start_ap(apdev[0])
+    bssid = apdev[0]['bssid']
+
+    dev[0].scan(freq="2412")
+    hapd.set("ext_mgmt_frame_handling", "1")
+
+    anqp_get(dev[0], bssid, 263)
+
+    query = gas_rx(hapd)
+    gas = parse_gas(query['payload'])
+
+    resp = action_response(query)
+
+    resp['payload'] = struct.pack('<BBBH', ACTION_CATEG_PUBLIC,
+                                  GAS_COMEBACK_RESPONSE,
+                                  gas['dialog_token'], 0)
+    hapd.mgmt_tx(resp)
+
+    resp['payload'] = struct.pack('<BBBHB', ACTION_CATEG_PUBLIC,
+                                  GAS_COMEBACK_RESPONSE,
+                                  gas['dialog_token'], 0, 0)
+    hapd.mgmt_tx(resp)
+
+    hdr = struct.pack('<BBBHH', ACTION_CATEG_PUBLIC, GAS_INITIAL_RESPONSE,
+                      gas['dialog_token'], 0, 0)
+    resp['payload'] = hdr + struct.pack('B', 108)
+    hapd.mgmt_tx(resp)
+    resp['payload'] = hdr + struct.pack('BB', 108, 0)
+    hapd.mgmt_tx(resp)
+    resp['payload'] = hdr + struct.pack('BB', 108, 1)
+    hapd.mgmt_tx(resp)
+    resp['payload'] = hdr + struct.pack('BB', 108, 255)
+    hapd.mgmt_tx(resp)
+    resp['payload'] = hdr + struct.pack('BBB', 108, 1, 127)
+    hapd.mgmt_tx(resp)
+    resp['payload'] = hdr + struct.pack('BBB', 108, 2, 127)
+    hapd.mgmt_tx(resp)
+    resp['payload'] = hdr + struct.pack('BBBB', 0, 2, 127, 0)
+    hapd.mgmt_tx(resp)
+
+    resp['payload'] = anqp_initial_resp(gas['dialog_token'], 0) + struct.pack('<H', 1)
+    hapd.mgmt_tx(resp)
+
+    resp['payload'] = anqp_initial_resp(gas['dialog_token'], 0) + struct.pack('<HB', 2, 0)
+    hapd.mgmt_tx(resp)
+
+    resp['payload'] = anqp_initial_resp(gas['dialog_token'], 0) + struct.pack('<H', 65535)
+    hapd.mgmt_tx(resp)
+
+    resp['payload'] = anqp_initial_resp(gas['dialog_token'], 0) + struct.pack('<HBB', 1, 0, 0)
+    hapd.mgmt_tx(resp)
+
+    # Station drops invalid frames, but the last of the responses is valid from
+    # GAS view point even though it has an extra octet in the end and the ANQP
+    # part of the response is not valid. This is reported as successfulyl
+    # completed GAS exchange.
+    expect_gas_result(dev[0], "SUCCESS")

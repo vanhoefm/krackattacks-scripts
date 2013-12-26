@@ -478,7 +478,7 @@ struct wpa_supplicant {
 		 */
 		MANUAL_SCAN_REQ
 	} scan_req, last_scan_req;
-	struct os_reltime scan_trigger_time;
+	struct os_reltime scan_trigger_time, scan_start_time;
 	int scan_runs; /* number of scan runs since WPS was started */
 	int *next_scan_freqs;
 	int *manual_scan_freqs;

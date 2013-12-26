@@ -2745,8 +2745,14 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		break;
 #ifndef CONFIG_NO_SCAN_PROCESSING
 	case EVENT_SCAN_STARTED:
+		os_get_reltime(&wpa_s->scan_start_time);
 		if (wpa_s->own_scan_requested) {
-			wpa_dbg(wpa_s, MSG_DEBUG, "Own scan request started a scan");
+			struct os_reltime diff;
+
+			os_reltime_sub(&wpa_s->scan_start_time,
+				       &wpa_s->scan_trigger_time, &diff);
+			wpa_dbg(wpa_s, MSG_DEBUG, "Own scan request started a scan in %ld.%06ld seconds",
+				diff.sec, diff.usec);
 			wpa_s->own_scan_requested = 0;
 			wpa_s->own_scan_running = 1;
 			if (wpa_s->last_scan_req == MANUAL_SCAN_REQ &&
@@ -2763,6 +2769,15 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		}
 		break;
 	case EVENT_SCAN_RESULTS:
+		if (os_reltime_initialized(&wpa_s->scan_start_time)) {
+			struct os_reltime now, diff;
+			os_get_reltime(&now);
+			os_reltime_sub(&now, &wpa_s->scan_start_time, &diff);
+			wpa_s->scan_start_time.sec = 0;
+			wpa_s->scan_start_time.usec = 0;
+			wpa_dbg(wpa_s, MSG_DEBUG, "Scan completed in %ld.%06ld seconds",
+				diff.sec, diff.usec);
+		}
 		wpa_supplicant_event_scan_results(wpa_s, data);
 		wpa_s->own_scan_running = 0;
 		wpa_s->external_scan_running = 0;

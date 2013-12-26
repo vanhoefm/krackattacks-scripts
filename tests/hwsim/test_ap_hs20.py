@@ -361,6 +361,24 @@ def test_ap_hs20_username(dev, apdev):
     interworking_connect(dev[0], bssid, "TTLS")
     check_sp_type(dev[0], "home")
 
+def test_ap_hs20_nai_realms(dev, apdev):
+    """Hotspot 2.0 connection and multiple NAI realms and TTLS/PAP"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    params['nai_realm'] = [ "0,no.match.here;example.com;no.match.here.either,21[2:1][5:7]" ]
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].request("SET ignore_old_scan_res 1")
+    dev[0].hs20_enable()
+    id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'username': "pap user",
+                                  'password': "password",
+                                  'domain': "example.com" })
+    interworking_select(dev[0], bssid, "home")
+    interworking_connect(dev[0], bssid, "TTLS")
+    check_sp_type(dev[0], "home")
+
 def test_ap_hs20_roaming_consortium(dev, apdev):
     """Hotspot 2.0 connection based on roaming consortium match"""
     bssid = apdev[0]['bssid']

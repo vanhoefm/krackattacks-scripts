@@ -361,6 +361,65 @@ def test_ap_hs20_username(dev, apdev):
     interworking_connect(dev[0], bssid, "TTLS")
     check_sp_type(dev[0], "home")
 
+def eap_test(dev, ap, eap_params, method, user):
+    bssid = ap['bssid']
+    params = hs20_ap_params()
+    params['nai_realm'] = [ "0,example.com," + eap_params ]
+    hostapd.add_ap(ap['ifname'], params)
+
+    dev.request("SET ignore_old_scan_res 1")
+    dev.hs20_enable()
+    dev.add_cred_values({ 'realm': "example.com",
+                          'username': user,
+                          'password': "password" })
+    interworking_select(dev, bssid)
+    interworking_connect(dev, bssid, method)
+
+def test_ap_hs20_eap_peap_mschapv2(dev, apdev):
+    """Hotspot 2.0 connection with PEAP/MSCHAPV2"""
+    eap_test(dev[0], apdev[0], "25[3:26]", "PEAP", "user")
+
+def test_ap_hs20_eap_peap_gtc(dev, apdev):
+    """Hotspot 2.0 connection with PEAP/GTC"""
+    eap_test(dev[0], apdev[0], "25[3:6]", "PEAP", "user")
+
+def test_ap_hs20_eap_ttls_chap(dev, apdev):
+    """Hotspot 2.0 connection with TTLS/CHAP"""
+    eap_test(dev[0], apdev[0], "21[2:2]", "TTLS", "chap user")
+
+def test_ap_hs20_eap_ttls_mschap(dev, apdev):
+    """Hotspot 2.0 connection with TTLS/MSCHAP"""
+    eap_test(dev[0], apdev[0], "21[2:3]", "TTLS", "mschap user")
+
+def test_ap_hs20_eap_ttls_eap_mschapv2(dev, apdev):
+    """Hotspot 2.0 connection with TTLS/EAP-MSCHAPv2"""
+    eap_test(dev[0], apdev[0], "21[3:26]", "TTLS", "user")
+
+def test_ap_hs20_eap_fast_mschapv2(dev, apdev):
+    """Hotspot 2.0 connection with FAST/EAP-MSCHAPV2"""
+    eap_test(dev[0], apdev[0], "43[3:26]", "FAST", "user")
+
+def test_ap_hs20_eap_fast_gtc(dev, apdev):
+    """Hotspot 2.0 connection with FAST/EAP-GTC"""
+    eap_test(dev[0], apdev[0], "43[3:6]", "FAST", "user")
+
+def test_ap_hs20_eap_tls(dev, apdev):
+    """Hotspot 2.0 connection with EAP-TLS"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['nai_realm'] = [ "0,example.com,13[5:6]" ]
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].request("SET ignore_old_scan_res 1")
+    dev[0].hs20_enable()
+    dev[0].add_cred_values({ 'realm': "example.com",
+                             'username': "certificate-user",
+                             'ca_cert': "auth_serv/ca.pem",
+                             'client_cert': "auth_serv/user.pem",
+                             'private_key': "auth_serv/user.key"})
+    interworking_select(dev[0], bssid)
+    interworking_connect(dev[0], bssid, "TLS")
+
 def test_ap_hs20_nai_realms(dev, apdev):
     """Hotspot 2.0 connection and multiple NAI realms and TTLS/PAP"""
     bssid = apdev[0]['bssid']

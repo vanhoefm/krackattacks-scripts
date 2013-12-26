@@ -38,6 +38,13 @@ def hs20_ap_params():
     params['nai_realm'] = [ "0,example.com,13[5:6],21[2:4][5:7]",
                             "0,another.example.com" ]
     params['anqp_3gpp_cell_net'] = "244,91"
+    params['network_auth_type'] = "02http://www.example.com/redirect/me/here/"
+    params['ipaddr_type_availability'] = "14"
+    params['hs20'] = "1"
+    params['hs20_oper_friendly_name'] = [ "eng:Example operator", "fin:Esimerkkioperaattori" ]
+    params['hs20_wan_metrics'] = "01:8000:1000:80:240:3000"
+    params['hs20_conn_capab'] = [ "1:0:2", "6:22:1", "17:5060:0" ]
+    params['hs20_operating_class'] = "5173"
     return params
 
 def start_ap(ap):
@@ -195,8 +202,8 @@ def test_gas_fragment(dev, apdev):
 
     dev[0].scan(freq="2412")
     dev[0].request("FETCH_ANQP")
-    for i in range(0, 6):
-        ev = dev[0].wait_event(["RX-ANQP"], timeout=5)
+    for i in range(0, 13):
+        ev = dev[0].wait_event(["RX-ANQP", "RX-HS20-ANQP"], timeout=5)
         if ev is None:
             raise Exception("Operation timed out")
 

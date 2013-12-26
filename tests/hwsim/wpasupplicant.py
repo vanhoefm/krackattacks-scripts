@@ -175,7 +175,8 @@ class WpaSupplicant:
             if field in params:
                 self.set_cred_quoted(id, field, params[field])
 
-        not_quoted = [ "eap", "required_roaming_consortium" ]
+        not_quoted = [ "eap", "roaming_consortium",
+                       "required_roaming_consortium" ]
         for field in not_quoted:
             if field in params:
                 self.set_cred(id, field, params[field])

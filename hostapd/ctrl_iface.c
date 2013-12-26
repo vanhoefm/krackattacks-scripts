@@ -994,6 +994,10 @@ static int hostapd_ctrl_iface_set(struct hostapd_data *hapd, char *cmd)
 		else
 			hapd->gas_frag_limit = val;
 #endif /* CONFIG_INTERWORKING */
+#ifdef CONFIG_TESTING_OPTIONS
+	} else if (os_strcasecmp(cmd, "ext_mgmt_frame_handling") == 0) {
+		hapd->ext_mgmt_frame_handling = atoi(value);
+#endif /* CONFIG_TESTING_OPTIONS */
 	} else {
 		ret = hostapd_set_iface(hapd->iconf, hapd->conf, cmd, value);
 	}
@@ -1051,6 +1055,7 @@ static int hostapd_ctrl_iface_disable(struct hostapd_iface *iface)
 
 
 #ifdef CONFIG_TESTING_OPTIONS
+
 static int hostapd_ctrl_iface_radar(struct hostapd_data *hapd, char *cmd)
 {
 	union wpa_event_data data;
@@ -1108,6 +1113,35 @@ static int hostapd_ctrl_iface_radar(struct hostapd_data *hapd, char *cmd)
 
 	return 0;
 }
+
+
+static int hostapd_ctrl_iface_mgmt_tx(struct hostapd_data *hapd, char *cmd)
+{
+	size_t len;
+	u8 *buf;
+	int res;
+
+	wpa_printf(MSG_DEBUG, "External MGMT TX: %s", cmd);
+
+	len = os_strlen(cmd);
+	if (len & 1)
+		return -1;
+	len /= 2;
+
+	buf = os_malloc(len);
+	if (buf == NULL)
+		return -1;
+
+	if (hexstr2bin(cmd, buf, len) < 0) {
+		os_free(buf);
+		return -1;
+	}
+
+	res = hostapd_drv_send_mlme(hapd, buf, len, 0);
+	os_free(buf);
+	return res;
+}
+
 #endif /* CONFIG_TESTING_OPTIONS */
 
 
@@ -1311,6 +1345,9 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 #ifdef CONFIG_TESTING_OPTIONS
 	} else if (os_strncmp(buf, "RADAR ", 6) == 0) {
 		if (hostapd_ctrl_iface_radar(hapd, buf + 6))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "MGMT_TX ", 8) == 0) {
+		if (hostapd_ctrl_iface_mgmt_tx(hapd, buf + 8))
 			reply_len = -1;
 #endif /* CONFIG_TESTING_OPTIONS */
 	} else if (os_strncmp(buf, "CHAN_SWITCH ", 12) == 0) {

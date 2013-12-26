@@ -240,6 +240,10 @@ struct hostapd_data {
 	u8 sae_token_key[8];
 	struct os_reltime last_sae_token_key_update;
 #endif /* CONFIG_SAE */
+
+#ifdef CONFIG_TESTING_OPTIONS
+	int ext_mgmt_frame_handling;
+#endif /* CONFIG_TESTING_OPTIONS */
 };
 
 

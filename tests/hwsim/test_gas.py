@@ -254,6 +254,10 @@ GAS_ACTIONS = [ GAS_INITIAL_REQUEST, GAS_INITIAL_RESPONSE,
 def anqp_adv_proto():
     return struct.pack('BBBB', 108, 2, 127, 0)
 
+def anqp_initial_resp(dialog_token, status_code):
+    return struct.pack('<BBBHH', ACTION_CATEG_PUBLIC, GAS_INITIAL_RESPONSE,
+                       dialog_token, status_code, 0) + anqp_adv_proto()
+
 def anqp_comeback_resp(dialog_token):
     return struct.pack('<BBBHBH', ACTION_CATEG_PUBLIC, GAS_COMEBACK_RESPONSE,
                        dialog_token, 0, 0, 0) + anqp_adv_proto()
@@ -326,3 +330,27 @@ def test_gas_invalid_response_type(dev, apdev):
 
     # station drops the invalid frame, so this needs to result in GAS timeout
     expect_gas_result(dev[0], "TIMEOUT")
+
+def test_gas_failure_status_code(dev, apdev):
+    """GAS failure status code"""
+    hapd = start_ap(apdev[0])
+    bssid = apdev[0]['bssid']
+
+    dev[0].scan(freq="2412")
+    hapd.set("ext_mgmt_frame_handling", "1")
+
+    anqp_get(dev[0], bssid, 263)
+
+    query = gas_rx(hapd)
+    gas = parse_gas(query['payload'])
+
+    resp = action_response(query)
+    resp['payload'] = anqp_initial_resp(gas['dialog_token'], 61) + struct.pack('<H', 0)
+    hapd.mgmt_tx(resp)
+    ev = hapd.wait_event(["MGMT-TX-STATUS"], timeout=5)
+    if ev is None:
+        raise Exception("Missing TX status for GAS response")
+    if "ok=1" not in ev:
+        raise Exception("GAS response not acknowledged")
+
+    expect_gas_result(dev[0], "FAILURE")

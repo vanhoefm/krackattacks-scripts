@@ -9,11 +9,16 @@
 import os
 import time
 import logging
+import binascii
+import struct
 import wpaspy
 
 logger = logging.getLogger()
 hapd_ctrl = '/var/run/hostapd'
 hapd_global = '/var/run/hostapd-global'
+
+def mac2tuple(mac):
+    return struct.unpack('6B', binascii.unhexlify(mac.replace(':','')))
 
 class HostapdGlobal:
     def __init__(self):
@@ -143,6 +148,36 @@ class Hostapd:
         if field in vals:
             return vals[field]
         return None
+
+    def mgmt_rx(self, timeout=5):
+        ev = self.wait_event(["MGMT-RX"], timeout=timeout)
+        if ev is None:
+            return None
+        msg = {}
+        frame = binascii.unhexlify(ev.split(' ')[1])
+        msg['frame'] = frame
+
+        hdr = struct.unpack('<HH6B6B6BH', frame[0:24])
+        msg['fc'] = hdr[0]
+        msg['subtype'] = (hdr[0] >> 4) & 0xf
+        hdr = hdr[1:]
+        msg['duration'] = hdr[0]
+        hdr = hdr[1:]
+        msg['da'] = "%02x:%02x:%02x:%02x:%02x:%02x" % hdr[0:6]
+        hdr = hdr[6:]
+        msg['sa'] = "%02x:%02x:%02x:%02x:%02x:%02x" % hdr[0:6]
+        hdr = hdr[6:]
+        msg['bssid'] = "%02x:%02x:%02x:%02x:%02x:%02x" % hdr[0:6]
+        hdr = hdr[6:]
+        msg['seq_ctrl'] = hdr[0]
+        msg['payload'] = frame[24:]
+
+        return msg
+
+    def mgmt_tx(self, msg):
+        t = (msg['fc'], 0) + mac2tuple(msg['da']) + mac2tuple(msg['sa']) + mac2tuple(msg['bssid']) + (0,)
+        hdr = struct.pack('<HH6B6B6BH', *t)
+        self.request("MGMT_TX " + binascii.hexlify(hdr + msg['payload']))
 
 def add_ap(ifname, params):
         logger.info("Starting AP " + ifname)

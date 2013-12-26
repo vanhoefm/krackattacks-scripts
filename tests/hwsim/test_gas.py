@@ -7,6 +7,7 @@
 # See README for more details.
 
 import time
+import binascii
 import logging
 logger = logging.getLogger()
 import re
@@ -212,6 +213,13 @@ def test_gas_comeback_delay(dev, apdev):
         if ev is None:
             raise Exception("Operation timed out")
 
+def expect_gas_result(dev, result):
+    ev = dev.wait_event(["GAS-QUERY-DONE"], timeout=10)
+    if ev is None:
+        raise Exception("GAS query timed out")
+    if "result=" + result not in ev:
+        raise Exception("Unexpected GAS query result")
+
 def test_gas_timeout(dev, apdev):
     """GAS timeout"""
     bssid = apdev[0]['bssid']
@@ -232,8 +240,40 @@ def test_gas_timeout(dev, apdev):
     if ev is None:
         raise Exception("MGMT RX wait timed out")
 
-    ev = dev[0].wait_event(["GAS-QUERY-DONE"], timeout=10)
+    expect_gas_result(dev[0], "TIMEOUT")
+
+def test_gas_invalid_response_type(dev, apdev):
+    """GAS invalid response type"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+
+    dev[0].scan(freq="2412")
+    hapd.set("ext_mgmt_frame_handling", "1")
+
+    dev[0].request("ANQP_GET " + bssid + " 263")
+    ev = dev[0].wait_event(["GAS-QUERY-START"], timeout=5)
     if ev is None:
-        raise Exception("GAS query timed out")
-    if "result=TIMEOUT" not in ev:
-        raise Exception("Unexpected GAS query result")
+        raise Exception("GAS query start timed out")
+
+    query = hapd.mgmt_rx()
+    if query is None:
+        raise Exception("GAS query request not received")
+    resp = {}
+    resp['fc'] = query['fc']
+    resp['da'] = query['sa']
+    resp['sa'] = query['da']
+    resp['bssid'] = query['bssid']
+    # GAS Comeback Response instead of GAS Initial Response
+    resp['payload'] = binascii.unhexlify("040d" + binascii.hexlify(query['payload'][2]) + "0000000000" + "6c027f00" + "0000")
+    hapd.mgmt_tx(resp)
+    ev = hapd.wait_event(["MGMT-TX-STATUS"], timeout=5)
+    if ev is None:
+        raise Exception("Missing TX status for GAS response")
+    if "ok=1" not in ev:
+        raise Exception("GAS response not acknowledged")
+
+    # station drops the invalid frame, so this needs to result in GAS timeout
+    expect_gas_result(dev[0], "TIMEOUT")

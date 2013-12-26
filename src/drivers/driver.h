@@ -3375,16 +3375,16 @@ enum wpa_event_type {
 	 */
 	EVENT_DFS_NOP_FINISHED,
 
-	/*
-	* EVENT_SURVEY - Received survey data
-	*
-	* This event gets triggered when a driver query is issued for survey
-	* data and the requested data becomes available. The returned data is
-	* stored in struct survey_results. The results provide at most one
-	* survey entry for each frequency and at minimum will provide one survey
-	* entry for one frequency. The survey data can be os_malloc()'d and
-	* then os_free()'d, so the event callback must only copy data.
-	*/
+	/**
+	 * EVENT_SURVEY - Received survey data
+	 *
+	 * This event gets triggered when a driver query is issued for survey
+	 * data and the requested data becomes available. The returned data is
+	 * stored in struct survey_results. The results provide at most one
+	 * survey entry for each frequency and at minimum will provide one
+	 * survey entry for one frequency. The survey data can be os_malloc()'d
+	 * and then os_free()'d, so the event callback must only copy data.
+	 */
 	EVENT_SURVEY
 };
 

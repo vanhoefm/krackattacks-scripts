@@ -179,6 +179,20 @@ class Hostapd:
         hdr = struct.pack('<HH6B6B6BH', *t)
         self.request("MGMT_TX " + binascii.hexlify(hdr + msg['payload']))
 
+    def get_sta(self, addr):
+        res = self.request("STA " + addr)
+        lines = res.splitlines()
+        vals = dict()
+        first = True
+        for l in lines:
+            if first:
+                vals['addr'] = l
+                first = False
+            else:
+                [name,value] = l.split('=', 1)
+                vals[name] = value
+        return vals
+
 def add_ap(ifname, params, wait_enabled=True):
         logger.info("Starting AP " + ifname)
         hapd_global = HostapdGlobal()

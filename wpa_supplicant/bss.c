@@ -732,25 +732,9 @@ void wpa_bss_update_end(struct wpa_supplicant *wpa_s, struct scan_info *info,
 {
 	struct wpa_bss *bss, *n;
 
-	wpa_s->last_scan_full = 0;
 	os_get_reltime(&wpa_s->last_scan);
 	if (!new_scan)
 		return; /* do not expire entries without new scan */
-
-	if (info && !info->aborted && !info->freqs) {
-		size_t i;
-		if (info->num_ssids == 0) {
-			wpa_s->last_scan_full = 1;
-		} else {
-			for (i = 0; i < info->num_ssids; i++) {
-				if (info->ssids[i].ssid == NULL ||
-				    info->ssids[i].ssid_len == 0) {
-					wpa_s->last_scan_full = 1;
-					break;
-				}
-			}
-		}
-	}
 
 	dl_list_for_each_safe(bss, n, &wpa_s->bss, struct wpa_bss, list) {
 		if (wpa_bss_in_use(wpa_s, bss))
@@ -765,10 +749,8 @@ void wpa_bss_update_end(struct wpa_supplicant *wpa_s, struct scan_info *info,
 		}
 	}
 
-	wpa_printf(MSG_DEBUG, "BSS: last_scan_res_used=%u/%u "
-		   "last_scan_full=%d",
-		   wpa_s->last_scan_res_used, wpa_s->last_scan_res_size,
-		   wpa_s->last_scan_full);
+	wpa_printf(MSG_DEBUG, "BSS: last_scan_res_used=%u/%u",
+		   wpa_s->last_scan_res_used, wpa_s->last_scan_res_size);
 }
 
 

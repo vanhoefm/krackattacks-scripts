@@ -1267,7 +1267,14 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 
 	wpa_dbg(wpa_s, MSG_DEBUG, "New scan results available (own=%u ext=%u)",
 		wpa_s->own_scan_running, wpa_s->external_scan_running);
-	wpa_msg_ctrl(wpa_s, MSG_INFO, WPA_EVENT_SCAN_RESULTS);
+	if (wpa_s->last_scan_req == MANUAL_SCAN_REQ &&
+	    wpa_s->manual_scan_use_id && wpa_s->own_scan_running) {
+		wpa_msg_ctrl(wpa_s, MSG_INFO, WPA_EVENT_SCAN_RESULTS "id=%u",
+			     wpa_s->manual_scan_id);
+		wpa_s->manual_scan_use_id = 0;
+	} else {
+		wpa_msg_ctrl(wpa_s, MSG_INFO, WPA_EVENT_SCAN_RESULTS);
+	}
 	wpas_notify_scan_results(wpa_s);
 
 	wpas_notify_scan_done(wpa_s, 1);
@@ -2742,7 +2749,13 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			wpa_dbg(wpa_s, MSG_DEBUG, "Own scan request started a scan");
 			wpa_s->own_scan_requested = 0;
 			wpa_s->own_scan_running = 1;
-			wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_SCAN_STARTED);
+			if (wpa_s->last_scan_req == MANUAL_SCAN_REQ &&
+			    wpa_s->manual_scan_use_id) {
+				wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_SCAN_STARTED "id=%u",
+					wpa_s->manual_scan_id);
+			} else {
+				wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_SCAN_STARTED);
+			}
 		} else {
 			wpa_dbg(wpa_s, MSG_DEBUG, "External program started a scan");
 			wpa_s->external_scan_running = 1;

@@ -5264,6 +5264,7 @@ static void wpas_ctrl_scan(struct wpa_supplicant *wpa_s, char *params,
 	}
 
 	wpa_s->manual_scan_passive = 0;
+	wpa_s->manual_scan_use_id = 0;
 
 	if (params) {
 		if (os_strncasecmp(params, "TYPE=ONLY", 9) == 0)
@@ -5278,6 +5279,10 @@ static void wpas_ctrl_scan(struct wpa_supplicant *wpa_s, char *params,
 		pos = os_strstr(params, "passive=");
 		if (pos)
 			wpa_s->manual_scan_passive = !!atoi(pos + 8);
+
+		pos = os_strstr(params, "use_id=");
+		if (pos)
+			wpa_s->manual_scan_use_id = atoi(pos + 7);
 	} else {
 		os_free(wpa_s->manual_scan_freqs);
 		wpa_s->manual_scan_freqs = NULL;
@@ -5293,11 +5298,25 @@ static void wpas_ctrl_scan(struct wpa_supplicant *wpa_s, char *params,
 		wpa_s->after_wps = 0;
 		wpa_s->known_wps_freq = 0;
 		wpa_supplicant_req_scan(wpa_s, 0, 0);
+		if (wpa_s->manual_scan_use_id) {
+			wpa_s->manual_scan_id++;
+			wpa_dbg(wpa_s, MSG_DEBUG, "Assigned scan id %u",
+				wpa_s->manual_scan_id);
+			*reply_len = os_snprintf(reply, reply_size, "%u\n",
+						 wpa_s->manual_scan_id);
+		}
 	} else if (wpa_s->sched_scanning) {
 		wpa_printf(MSG_DEBUG, "Stop ongoing sched_scan to allow requested full scan to proceed");
 		wpa_supplicant_cancel_sched_scan(wpa_s);
 		wpa_s->scan_req = MANUAL_SCAN_REQ;
 		wpa_supplicant_req_scan(wpa_s, 0, 0);
+		if (wpa_s->manual_scan_use_id) {
+			wpa_s->manual_scan_id++;
+			*reply_len = os_snprintf(reply, reply_size, "%u\n",
+						 wpa_s->manual_scan_id);
+			wpa_dbg(wpa_s, MSG_DEBUG, "Assigned scan id %u",
+				wpa_s->manual_scan_id);
+		}
 	} else {
 		wpa_printf(MSG_DEBUG, "Ongoing scan action - reject new request");
 		*reply_len = os_snprintf(reply, reply_size, "FAIL-BUSY\n");

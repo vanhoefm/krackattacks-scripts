@@ -1670,7 +1670,14 @@ void scan_only_handler(struct wpa_supplicant *wpa_s,
 		       struct wpa_scan_results *scan_res)
 {
 	wpa_dbg(wpa_s, MSG_DEBUG, "Scan-only results received");
-	wpa_msg_ctrl(wpa_s, MSG_INFO, WPA_EVENT_SCAN_RESULTS);
+	if (wpa_s->last_scan_req == MANUAL_SCAN_REQ &&
+	    wpa_s->manual_scan_use_id && wpa_s->own_scan_running) {
+		wpa_msg_ctrl(wpa_s, MSG_INFO, WPA_EVENT_SCAN_RESULTS "id=%u",
+			     wpa_s->manual_scan_id);
+		wpa_s->manual_scan_use_id = 0;
+	} else {
+		wpa_msg_ctrl(wpa_s, MSG_INFO, WPA_EVENT_SCAN_RESULTS);
+	}
 	wpas_notify_scan_results(wpa_s);
 	wpas_notify_scan_done(wpa_s, 1);
 }

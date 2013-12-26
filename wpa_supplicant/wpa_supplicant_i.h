@@ -483,9 +483,11 @@ struct wpa_supplicant {
 	int *next_scan_freqs;
 	int *manual_scan_freqs;
 	unsigned int manual_scan_passive:1;
+	unsigned int manual_scan_use_id:1;
 	unsigned int own_scan_requested:1;
 	unsigned int own_scan_running:1;
 	unsigned int external_scan_running:1;
+	unsigned int manual_scan_id;
 	int scan_interval; /* time in sec between scans to find suitable AP */
 	int normal_scans; /* normal scans run before sched_scan */
 	int scan_for_connection; /* whether the scan request was triggered for

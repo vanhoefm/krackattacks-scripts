@@ -1279,6 +1279,12 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 
 	wpas_notify_scan_done(wpa_s, 1);
 
+	if (!wpa_s->own_scan_running && wpa_s->external_scan_running) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "Do not use results from externally requested scan operation for network selection");
+		wpa_scan_results_free(scan_res);
+		return 0;
+	}
+
 	if (sme_proc_obss_scan(wpa_s) > 0) {
 		wpa_scan_results_free(scan_res);
 		return 0;

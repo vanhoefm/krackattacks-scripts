@@ -2457,7 +2457,7 @@ static int wpa_group_update_sta(struct wpa_state_machine *sm, void *ctx)
 /* update GTK when exiting WNM-Sleep Mode */
 void wpa_wnmsleep_rekey_gtk(struct wpa_state_machine *sm)
 {
-	if (sm->is_wnmsleep)
+	if (sm == NULL || sm->is_wnmsleep)
 		return;
 
 	wpa_group_update_sta(sm, NULL);
@@ -2466,7 +2466,8 @@ void wpa_wnmsleep_rekey_gtk(struct wpa_state_machine *sm)
 
 void wpa_set_wnmsleep(struct wpa_state_machine *sm, int flag)
 {
-	sm->is_wnmsleep = !!flag;
+	if (sm)
+		sm->is_wnmsleep = !!flag;
 }
 
 

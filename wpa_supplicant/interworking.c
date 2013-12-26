@@ -520,12 +520,13 @@ static int nai_realm_cred_username(struct nai_realm_eap *eap)
 	if (eap_get_name(EAP_VENDOR_IETF, eap->method) == NULL)
 		return 0; /* method not supported */
 
-	if (eap->method != EAP_TYPE_TTLS && eap->method != EAP_TYPE_PEAP) {
+	if (eap->method != EAP_TYPE_TTLS && eap->method != EAP_TYPE_PEAP &&
+	    eap->method != EAP_TYPE_FAST) {
 		/* Only tunneled methods with username/password supported */
 		return 0;
 	}
 
-	if (eap->method == EAP_TYPE_PEAP) {
+	if (eap->method == EAP_TYPE_PEAP || eap->method == EAP_TYPE_FAST) {
 		if (eap->inner_method &&
 		    eap_get_name(EAP_VENDOR_IETF, eap->inner_method) == NULL)
 			return 0;
@@ -1416,6 +1417,13 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 		}
 		break;
 	case EAP_TYPE_PEAP:
+	case EAP_TYPE_FAST:
+		if (wpa_config_set(ssid, "phase1", "\"fast_provisioning=2\"",
+				   0) < 0)
+			goto fail;
+		if (wpa_config_set(ssid, "pac_file",
+				   "\"blob://pac_interworking\"", 0) < 0)
+			goto fail;
 		os_snprintf(buf, sizeof(buf), "\"auth=%s\"",
 			    eap_get_name(EAP_VENDOR_IETF,
 					 eap->inner_method ?

@@ -211,3 +211,29 @@ def test_gas_comeback_delay(dev, apdev):
         ev = dev[0].wait_event(["RX-ANQP"], timeout=5)
         if ev is None:
             raise Exception("Operation timed out")
+
+def test_gas_timeout(dev, apdev):
+    """GAS timeout"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+
+    dev[0].scan(freq="2412")
+    hapd.set("ext_mgmt_frame_handling", "1")
+
+    dev[0].request("ANQP_GET " + bssid + " 263")
+    ev = dev[0].wait_event(["GAS-QUERY-START"], timeout=5)
+    if ev is None:
+        raise Exception("GAS query start timed out")
+
+    ev = hapd.wait_event(["MGMT-RX"], timeout=5)
+    if ev is None:
+        raise Exception("MGMT RX wait timed out")
+
+    ev = dev[0].wait_event(["GAS-QUERY-DONE"], timeout=10)
+    if ev is None:
+        raise Exception("GAS query timed out")
+    if "result=TIMEOUT" not in ev:
+        raise Exception("Unexpected GAS query result")

@@ -39,6 +39,12 @@ def hs20_ap_params():
     params['anqp_3gpp_cell_net'] = "244,91"
     return params
 
+def start_ap(ap):
+    params = hs20_ap_params()
+    params['hessid'] = ap['bssid']
+    hostapd.add_ap(ap['ifname'], params)
+    return hostapd.Hostapd(ap['ifname'])
+
 def get_gas_response(dev, bssid, info, allow_fetch_failure=False):
     exp = r'<.>(GAS-RESPONSE-INFO) addr=([0-9a-f:]*) dialog_token=([0-9]*) status_code=([0-9]*) resp_len=([\-0-9]*)'
     res = re.split(exp, info)
@@ -183,11 +189,7 @@ def test_gas_concurrent_connect(dev, apdev):
 
 def test_gas_fragment(dev, apdev):
     """GAS fragmentation"""
-    bssid = apdev[0]['bssid']
-    params = hs20_ap_params()
-    params['hessid'] = bssid
-    hostapd.add_ap(apdev[0]['ifname'], params)
-    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd = start_ap(apdev[0])
     hapd.set("gas_frag_limit", "50")
 
     dev[0].scan(freq="2412")
@@ -199,11 +201,7 @@ def test_gas_fragment(dev, apdev):
 
 def test_gas_comeback_delay(dev, apdev):
     """GAS fragmentation"""
-    bssid = apdev[0]['bssid']
-    params = hs20_ap_params()
-    params['hessid'] = bssid
-    hostapd.add_ap(apdev[0]['ifname'], params)
-    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd = start_ap(apdev[0])
     hapd.set("gas_comeback_delay", "500")
 
     dev[0].scan(freq="2412")
@@ -220,21 +218,21 @@ def expect_gas_result(dev, result):
     if "result=" + result not in ev:
         raise Exception("Unexpected GAS query result")
 
+def anqp_get(dev, bssid, id):
+    dev.request("ANQP_GET " + bssid + " " + str(id))
+    ev = dev.wait_event(["GAS-QUERY-START"], timeout=5)
+    if ev is None:
+        raise Exception("GAS query start timed out")
+
 def test_gas_timeout(dev, apdev):
     """GAS timeout"""
+    hapd = start_ap(apdev[0])
     bssid = apdev[0]['bssid']
-    params = hs20_ap_params()
-    params['hessid'] = bssid
-    hostapd.add_ap(apdev[0]['ifname'], params)
-    hapd = hostapd.Hostapd(apdev[0]['ifname'])
 
     dev[0].scan(freq="2412")
     hapd.set("ext_mgmt_frame_handling", "1")
 
-    dev[0].request("ANQP_GET " + bssid + " 263")
-    ev = dev[0].wait_event(["GAS-QUERY-START"], timeout=5)
-    if ev is None:
-        raise Exception("GAS query start timed out")
+    anqp_get(dev[0], bssid, 263)
 
     ev = hapd.wait_event(["MGMT-RX"], timeout=5)
     if ev is None:
@@ -244,19 +242,13 @@ def test_gas_timeout(dev, apdev):
 
 def test_gas_invalid_response_type(dev, apdev):
     """GAS invalid response type"""
+    hapd = start_ap(apdev[0])
     bssid = apdev[0]['bssid']
-    params = hs20_ap_params()
-    params['hessid'] = bssid
-    hostapd.add_ap(apdev[0]['ifname'], params)
-    hapd = hostapd.Hostapd(apdev[0]['ifname'])
 
     dev[0].scan(freq="2412")
     hapd.set("ext_mgmt_frame_handling", "1")
 
-    dev[0].request("ANQP_GET " + bssid + " 263")
-    ev = dev[0].wait_event(["GAS-QUERY-START"], timeout=5)
-    if ev is None:
-        raise Exception("GAS query start timed out")
+    anqp_get(dev[0], bssid, 263)
 
     query = hapd.mgmt_rx()
     if query is None:

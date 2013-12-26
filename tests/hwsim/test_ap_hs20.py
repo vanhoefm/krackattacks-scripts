@@ -272,6 +272,40 @@ def test_ap_hs20_select(dev, apdev):
     dev[0].set_cred_quoted(id, "realm", "no.match.example.com");
     interworking_select(dev[0], bssid, no_match=True)
 
+def hs20_simulated_sim(dev, ap, method):
+    bssid = ap['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    params['anqp_3gpp_cell_net'] = "555,444"
+    params['domain_name'] = "wlan.mnc444.mcc555.3gppnetwork.org"
+    hostapd.add_ap(ap['ifname'], params)
+
+    dev.request("SET ignore_old_scan_res 1")
+    dev.hs20_enable()
+    dev.add_cred_values({ 'imsi': "555444-333222111", 'eap': method,
+                          'milenage': "5122250214c33e723a5dd523fc145fc0:981d464c7c52eb6e5036234984ad0bcf:000000000123"})
+    interworking_select(dev, "home")
+    interworking_connect(dev, bssid, method)
+    check_sp_type(dev, "home")
+
+def test_ap_hs20_sim(dev, apdev):
+    """Hotspot 2.0 with simulated SIM and EAP-SIM"""
+    if not hlr_auc_gw_available():
+        return "skip"
+    hs20_simulated_sim(dev[0], apdev[0], "SIM")
+
+def test_ap_hs20_aka(dev, apdev):
+    """Hotspot 2.0 with simulated USIM and EAP-AKA"""
+    if not hlr_auc_gw_available():
+        return "skip"
+    hs20_simulated_sim(dev[0], apdev[0], "AKA")
+
+def test_ap_hs20_aka_prime(dev, apdev):
+    """Hotspot 2.0 with simulated USIM and EAP-AKA'"""
+    if not hlr_auc_gw_available():
+        return "skip"
+    hs20_simulated_sim(dev[0], apdev[0], "AKA'")
+
 def test_ap_hs20_ext_sim(dev, apdev):
     """Hotspot 2.0 with external SIM processing"""
     if not hlr_auc_gw_available():

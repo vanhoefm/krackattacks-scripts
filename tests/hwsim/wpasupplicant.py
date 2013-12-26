@@ -170,7 +170,7 @@ class WpaSupplicant:
         id = self.add_cred()
 
         quoted = [ "realm", "username", "password", "domain", "imsi",
-                   "excluded_ssid" ]
+                   "excluded_ssid", "milenage" ]
         for field in quoted:
             if field in params:
                 self.set_cred_quoted(id, field, params[field])

@@ -508,6 +508,17 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		return;
 	}
 
+	if (wpa_s->external_scan_running) {
+		struct os_reltime now, diff;
+		os_get_reltime(&now);
+		os_reltime_sub(&now, &wpa_s->scan_start_time, &diff);
+		if (diff.sec < 30) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "Externally triggered scan running - Reschedule the incoming scan req");
+			wpa_supplicant_req_scan(wpa_s, 1, 0);
+			return;
+		}
+	}
+
 	if (!wpa_supplicant_enabled_networks(wpa_s) &&
 	    wpa_s->scan_req == NORMAL_SCAN_REQ) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "No enabled networks - do not scan");

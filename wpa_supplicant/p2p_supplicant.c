@@ -319,6 +319,7 @@ static int wpas_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 	} else {
 		os_get_reltime(&wpa_s->scan_trigger_time);
 		wpa_s->scan_res_handler = wpas_p2p_scan_res_handler;
+		wpa_s->own_scan_requested = 1;
 	}
 
 	return ret;
@@ -4031,6 +4032,7 @@ static void wpas_p2p_join_scan_req(struct wpa_supplicant *wpa_s, int freq)
 	if (!ret) {
 		os_get_reltime(&wpa_s->scan_trigger_time);
 		wpa_s->scan_res_handler = wpas_p2p_scan_res_join;
+		wpa_s->own_scan_requested = 1;
 	}
 
 	wpabuf_free(ies);

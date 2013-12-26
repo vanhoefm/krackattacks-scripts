@@ -163,6 +163,7 @@ int wpa_supplicant_trigger_scan(struct wpa_supplicant *wpa_s,
 		os_get_reltime(&wpa_s->scan_trigger_time);
 		wpa_s->scan_runs++;
 		wpa_s->normal_scans++;
+		wpa_s->own_scan_requested = 1;
 	}
 
 	return ret;

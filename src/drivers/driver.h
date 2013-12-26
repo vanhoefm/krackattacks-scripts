@@ -3385,7 +3385,17 @@ enum wpa_event_type {
 	 * survey entry for one frequency. The survey data can be os_malloc()'d
 	 * and then os_free()'d, so the event callback must only copy data.
 	 */
-	EVENT_SURVEY
+	EVENT_SURVEY,
+
+	/**
+	 * EVENT_SCAN_STARTED - Scan started
+	 *
+	 * This indicates that driver has started a scan operation either based
+	 * on a request from wpa_supplicant/hostapd or from another application.
+	 * EVENT_SCAN_RESULTS is used to indicate when the scan has been
+	 * completed (either successfully or by getting cancelled).
+	 */
+	EVENT_SCAN_STARTED
 };
 
 

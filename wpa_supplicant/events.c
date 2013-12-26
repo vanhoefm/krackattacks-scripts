@@ -1265,7 +1265,8 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 		return 0;
 	}
 
-	wpa_dbg(wpa_s, MSG_DEBUG, "New scan results available");
+	wpa_dbg(wpa_s, MSG_DEBUG, "New scan results available (own=%u ext=%u)",
+		wpa_s->own_scan_running, wpa_s->external_scan_running);
 	wpa_msg_ctrl(wpa_s, MSG_INFO, WPA_EVENT_SCAN_RESULTS);
 	wpas_notify_scan_results(wpa_s);
 
@@ -2736,8 +2737,22 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		wpa_supplicant_event_michael_mic_failure(wpa_s, data);
 		break;
 #ifndef CONFIG_NO_SCAN_PROCESSING
+	case EVENT_SCAN_STARTED:
+		if (wpa_s->own_scan_requested) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "Own scan request started a scan");
+			wpa_s->own_scan_requested = 0;
+			wpa_s->own_scan_running = 1;
+			wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_SCAN_STARTED);
+		} else {
+			wpa_dbg(wpa_s, MSG_DEBUG, "External program started a scan");
+			wpa_s->external_scan_running = 1;
+			wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_SCAN_STARTED);
+		}
+		break;
 	case EVENT_SCAN_RESULTS:
 		wpa_supplicant_event_scan_results(wpa_s, data);
+		wpa_s->own_scan_running = 0;
+		wpa_s->external_scan_running = 0;
 		if (wpa_s->wpa_state != WPA_AUTHENTICATING &&
 		    wpa_s->wpa_state != WPA_ASSOCIATING)
 			wpas_p2p_continue_after_scan(wpa_s);

@@ -54,6 +54,8 @@ extern "C" {
 #define WPA_EVENT_TEMP_DISABLED "CTRL-EVENT-SSID-TEMP-DISABLED "
 /** Temporarily disabled network block re-enabled */
 #define WPA_EVENT_REENABLED "CTRL-EVENT-SSID-REENABLED "
+/** New scan started */
+#define WPA_EVENT_SCAN_STARTED "CTRL-EVENT-SCAN-STARTED "
 /** New scan results available */
 #define WPA_EVENT_SCAN_RESULTS "CTRL-EVENT-SCAN-RESULTS "
 /** wpa_supplicant state change */

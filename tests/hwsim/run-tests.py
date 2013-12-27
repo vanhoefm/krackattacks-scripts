@@ -342,6 +342,7 @@ def main():
 
         if result == 'PASS' and args.dmesg:
             if not check_kernel(os.path.join(args.logdir, name + '.dmesg')):
+                logger.info("Kernel issue found in dmesg - mark test failed")
                 result = 'FAIL'
 
         if result == 'PASS':

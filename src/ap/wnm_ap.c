@@ -155,6 +155,7 @@ static int ieee802_11_send_wnmsleep_resp(struct hostapd_data *hapd,
 		 */
 		if (wnmsleep_ie.status == WNM_STATUS_SLEEP_ACCEPT &&
 		    wnmsleep_ie.action_type == WNM_SLEEP_MODE_ENTER) {
+			sta->flags |= WLAN_STA_WNM_SLEEP_MODE;
 			hostapd_drv_wnm_oper(hapd, WNM_SLEEP_ENTER_CONFIRM,
 					     addr, NULL, NULL);
 			wpa_set_wnmsleep(sta->wpa_sm, 1);
@@ -168,6 +169,7 @@ static int ieee802_11_send_wnmsleep_resp(struct hostapd_data *hapd,
 		     wnmsleep_ie.status ==
 		     WNM_STATUS_SLEEP_EXIT_ACCEPT_GTK_UPDATE) &&
 		    wnmsleep_ie.action_type == WNM_SLEEP_MODE_EXIT) {
+			sta->flags &= ~WLAN_STA_WNM_SLEEP_MODE;
 			wpa_set_wnmsleep(sta->wpa_sm, 0);
 			hostapd_drv_wnm_oper(hapd, WNM_SLEEP_EXIT_CONFIRM,
 					     addr, NULL, NULL);

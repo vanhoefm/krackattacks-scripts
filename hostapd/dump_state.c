@@ -103,7 +103,7 @@ static void hostapd_dump_state(struct hostapd_data *hapd)
 		fprintf(f, "\nSTA=" MACSTR "\n", MAC2STR(sta->addr));
 
 		fprintf(f,
-			"  AID=%d flags=0x%x %s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
+			"  AID=%d flags=0x%x %s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
 			"\n"
 			"  capability=0x%x listen_interval=%d\n",
 			sta->aid,
@@ -126,6 +126,10 @@ static void hostapd_dump_state(struct hostapd_data *hapd)
 			(sta->flags & WLAN_STA_WDS ? "[WDS]" : ""),
 			(sta->flags & WLAN_STA_NONERP ? "[NonERP]" : ""),
 			(sta->flags & WLAN_STA_WPS2 ? "[WPS2]" : ""),
+			(sta->flags & WLAN_STA_GAS ? "[GAS]" : ""),
+			(sta->flags & WLAN_STA_VHT ? "[VHT]" : ""),
+			(sta->flags & WLAN_STA_WNM_SLEEP_MODE ?
+			 "[WNM_SLEEP_MODE]" : ""),
 			sta->capability,
 			sta->listen_interval);
 

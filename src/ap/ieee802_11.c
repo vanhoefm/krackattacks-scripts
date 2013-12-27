@@ -1931,6 +1931,7 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 	if (sta->flags & WLAN_STA_ASSOC)
 		new_assoc = 0;
 	sta->flags |= WLAN_STA_ASSOC;
+	sta->flags &= ~WLAN_STA_WNM_SLEEP_MODE;
 	if ((!hapd->conf->ieee802_1x && !hapd->conf->wpa) ||
 	    sta->auth_alg == WLAN_AUTH_FT) {
 		/*

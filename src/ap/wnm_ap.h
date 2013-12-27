@@ -14,6 +14,8 @@ struct sta_info;
 
 int ieee802_11_rx_wnm_action_ap(struct hostapd_data *hapd,
 				struct rx_action *action);
+int wnm_send_disassoc_imminent(struct hostapd_data *hapd,
+			       struct sta_info *sta, int disassoc_timer);
 int wnm_send_ess_disassoc_imminent(struct hostapd_data *hapd,
 				   struct sta_info *sta, const char *url,
 				   int disassoc_timer);

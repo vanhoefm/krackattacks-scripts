@@ -729,7 +729,7 @@ int wnm_send_bss_transition_mgmt_query(struct wpa_supplicant *wpa_s,
 					   WLAN_FC_STYPE_ACTION);
 	mgmt->u.action.category = WLAN_ACTION_WNM;
 	mgmt->u.action.u.bss_tm_query.action = WNM_BSS_TRANS_MGMT_QUERY;
-	mgmt->u.action.u.bss_tm_query.dialog_token = 0;
+	mgmt->u.action.u.bss_tm_query.dialog_token = 1;
 	mgmt->u.action.u.bss_tm_query.query_reason = query_reason;
 	pos = mgmt->u.action.u.bss_tm_query.variable;
 

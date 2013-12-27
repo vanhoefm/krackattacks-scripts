@@ -4,6 +4,7 @@ DIR="$( cd "$( dirname "$0" )" && pwd )"
 WPAS=$DIR/../../wpa_supplicant/wpa_supplicant
 WPACLI=$DIR/../../wpa_supplicant/wpa_cli
 HAPD=$DIR/../../hostapd/hostapd
+HAPD_AS=$DIR/../../hostapd/hostapd
 WLANTEST=$DIR/../../wlantest/wlantest
 HLR_AUC_GW=$DIR/../../hostapd/hlr_auc_gw
 
@@ -13,6 +14,17 @@ if [ -z "$LOGDIR" ] ; then
     mkdir -p $LOGDIR
     rm -rf $DIR/logs/current
     ln -sf $DATE $DIR/logs/current
+else
+    if [ -e $LOGDIR/alt-wpa_supplicant/wpa_supplicant/wpa_supplicant ]; then
+	WPAS=$LOGDIR/alt-wpa_supplicant/wpa_supplicant/wpa_supplicant
+    fi
+    if [ -e $LOGDIR/alt-hostapd/hostapd/hostapd ]; then
+	HAPD=$LOGDIR/alt-hostapd/hostapd/hostapd
+    fi
+    if [ -e $LOGDIR/alt-hostapd-as/hostapd/hostapd ]; then
+	HAPD_AS=$LOGDIR/alt-hostapd-as/hostapd/hostapd
+	HLR_AUC_GW=$LOGDIR/alt-hostapd-as/hostapd/hlr_auc_gw
+    fi
 fi
 
 if groups | tr ' ' "\n" | grep -q ^admin$; then
@@ -65,7 +77,7 @@ if [ -x $HLR_AUC_GW ]; then
     $HLR_AUC_GW -m $DIR/auth_serv/hlr_auc_gw.milenage_db > $LOGDIR/hlr_auc_gw &
 fi
 
-$HAPD -ddKt $DIR/auth_serv/as.conf > $LOGDIR/auth_serv &
+$HAPD_AS -ddKt $DIR/auth_serv/as.conf > $LOGDIR/auth_serv &
 
 # wait for programs to be fully initialized
 for i in 0 1 2; do

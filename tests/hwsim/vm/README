@@ -21,7 +21,20 @@ give it are passed through to run-all.sh, see there.
 
 --------------------------------------------------------------------------------
 
-Code Coverage Analysis
+Code Coverage Analysis for user space code
+
+Code coverage for wpa_supplicant and hostapd can be generated from the
+test run with following command line:
+
+./vm-run.sh --codecov [other arguments..]
+
+This builds a separate copies of wpa_supplicant and hostapd into a
+directory that is writable from the virtual machine to collect the gcov
+data. lcov is then used to prepare the reports at the end of the test
+run.
+
+
+Code Coverage Analysis for kernel code
 
 In order to do code coverage analysis, reconfigure the kernel to include
 

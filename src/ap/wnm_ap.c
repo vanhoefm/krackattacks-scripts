@@ -243,6 +243,126 @@ static void ieee802_11_rx_wnmsleep_req(struct hostapd_data *hapd,
 }
 
 
+static int ieee802_11_send_bss_trans_mgmt_request(struct hostapd_data *hapd,
+						  const u8 *addr,
+						  u8 dialog_token,
+						  const char *url)
+{
+	struct ieee80211_mgmt *mgmt;
+	size_t url_len, len;
+	u8 *pos;
+	int res;
+
+	if (url)
+		url_len = os_strlen(url);
+	else
+		url_len = 0;
+
+	mgmt = os_zalloc(sizeof(*mgmt) + (url_len ? 1 + url_len : 0));
+	if (mgmt == NULL)
+		return -1;
+	os_memcpy(mgmt->da, addr, ETH_ALEN);
+	os_memcpy(mgmt->sa, hapd->own_addr, ETH_ALEN);
+	os_memcpy(mgmt->bssid, hapd->own_addr, ETH_ALEN);
+	mgmt->frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
+					   WLAN_FC_STYPE_ACTION);
+	mgmt->u.action.category = WLAN_ACTION_WNM;
+	mgmt->u.action.u.bss_tm_req.action = WNM_BSS_TRANS_MGMT_REQ;
+	mgmt->u.action.u.bss_tm_req.dialog_token = dialog_token;
+	mgmt->u.action.u.bss_tm_req.req_mode = 0;
+	mgmt->u.action.u.bss_tm_req.disassoc_timer = host_to_le16(0);
+	mgmt->u.action.u.bss_tm_req.validity_interval = 1;
+	pos = mgmt->u.action.u.bss_tm_req.variable;
+	if (url) {
+		*pos++ += url_len;
+		os_memcpy(pos, url, url_len);
+		pos += url_len;
+	}
+
+	wpa_printf(MSG_DEBUG, "WNM: Send BSS Transition Management Request to "
+		   MACSTR " dialog_token=%u req_mode=0x%x disassoc_timer=%u "
+		   "validity_interval=%u",
+		   MAC2STR(addr), dialog_token,
+		   mgmt->u.action.u.bss_tm_req.req_mode,
+		   le_to_host16(mgmt->u.action.u.bss_tm_req.disassoc_timer),
+		   mgmt->u.action.u.bss_tm_req.validity_interval);
+
+	len = pos - &mgmt->u.action.category;
+	res = hostapd_drv_send_action(hapd, hapd->iface->freq, 0,
+				      mgmt->da, &mgmt->u.action.category, len);
+	os_free(mgmt);
+	return res;
+}
+
+
+static void ieee802_11_rx_bss_trans_mgmt_query(struct hostapd_data *hapd,
+					       const u8 *addr, const u8 *frm,
+					       size_t len)
+{
+	u8 dialog_token, reason;
+	const u8 *pos, *end;
+
+	if (len < 2) {
+		wpa_printf(MSG_DEBUG, "WNM: Ignore too short BSS Transition Management Query from "
+			   MACSTR, MAC2STR(addr));
+		return;
+	}
+
+	pos = frm;
+	end = pos + len;
+	dialog_token = *pos++;
+	reason = *pos++;
+
+	wpa_printf(MSG_DEBUG, "WNM: BSS Transition Management Query from "
+		   MACSTR " dialog_token=%u reason=%u",
+		   MAC2STR(addr), dialog_token, reason);
+
+	wpa_hexdump(MSG_DEBUG, "WNM: BSS Transition Candidate List Entries",
+		    pos, end - pos);
+
+	ieee802_11_send_bss_trans_mgmt_request(hapd, addr, dialog_token, NULL);
+}
+
+
+static void ieee802_11_rx_bss_trans_mgmt_resp(struct hostapd_data *hapd,
+					      const u8 *addr, const u8 *frm,
+					      size_t len)
+{
+	u8 dialog_token, status_code, bss_termination_delay;
+	const u8 *pos, *end;
+
+	if (len < 3) {
+		wpa_printf(MSG_DEBUG, "WNM: Ignore too short BSS Transition Management Response from "
+			   MACSTR, MAC2STR(addr));
+		return;
+	}
+
+	pos = frm;
+	end = pos + len;
+	dialog_token = *pos++;
+	status_code = *pos++;
+	bss_termination_delay = *pos++;
+
+	wpa_printf(MSG_DEBUG, "WNM: BSS Transition Management Response from "
+		   MACSTR " dialog_token=%u status_code=%u "
+		   "bss_termination_delay=%u", MAC2STR(addr), dialog_token,
+		   status_code, bss_termination_delay);
+
+	if (status_code == WNM_BSS_TM_ACCEPT) {
+		if (end - pos < ETH_ALEN) {
+			wpa_printf(MSG_DEBUG, "WNM: not enough room for Target BSSID field");
+			return;
+		}
+		wpa_printf(MSG_DEBUG, "WNM: Target BSSID: " MACSTR,
+			   MAC2STR(pos));
+		pos += ETH_ALEN;
+	}
+
+	wpa_hexdump(MSG_DEBUG, "WNM: BSS Transition Candidate List Entries",
+		    pos, end - pos);
+}
+
+
 int ieee802_11_rx_wnm_action_ap(struct hostapd_data *hapd,
 				struct rx_action *action)
 {
@@ -251,14 +371,15 @@ int ieee802_11_rx_wnm_action_ap(struct hostapd_data *hapd,
 
 	switch (action->data[0]) {
 	case WNM_BSS_TRANS_MGMT_QUERY:
-		wpa_printf(MSG_DEBUG, "WNM: BSS Transition Management Query");
-		/* TODO */
-		return -1;
+		ieee802_11_rx_bss_trans_mgmt_query(hapd, action->sa,
+						   action->data + 1,
+						   action->len - 1);
+		return 0;
 	case WNM_BSS_TRANS_MGMT_RESP:
-		wpa_printf(MSG_DEBUG, "WNM: BSS Transition Management "
-			   "Response");
-		/* TODO */
-		return -1;
+		ieee802_11_rx_bss_trans_mgmt_resp(hapd, action->sa,
+						  action->data + 1,
+						  action->len - 1);
+		return 0;
 	case WNM_SLEEP_MODE_REQ:
 		ieee802_11_rx_wnmsleep_req(hapd, action->sa, action->data + 1,
 					   action->len - 1);

@@ -238,13 +238,8 @@ static u16 auth_shared_key(struct hostapd_data *hapd, struct sta_info *sta,
 	hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 		       HOSTAPD_LEVEL_DEBUG,
 		       "authentication OK (shared key)");
-#ifdef IEEE80211_REQUIRE_AUTH_ACK
-	/* Station will be marked authenticated if it ACKs the
-	 * authentication reply. */
-#else
 	sta->flags |= WLAN_STA_AUTH;
 	wpa_auth_sm_event(sta->wpa_sm, WPA_AUTH);
-#endif
 	os_free(sta->challenge);
 	sta->challenge = NULL;
 
@@ -690,15 +685,10 @@ static void handle_auth(struct hostapd_data *hapd,
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_DEBUG,
 			       "authentication OK (open system)");
-#ifdef IEEE80211_REQUIRE_AUTH_ACK
-		/* Station will be marked authenticated if it ACKs the
-		 * authentication reply. */
-#else
 		sta->flags |= WLAN_STA_AUTH;
 		wpa_auth_sm_event(sta->wpa_sm, WPA_AUTH);
 		sta->auth_alg = WLAN_AUTH_OPEN;
 		mlme_authenticate_indication(hapd, sta);
-#endif
 		break;
 	case WLAN_AUTH_SHARED_KEY:
 		resp = auth_shared_key(hapd, sta, auth_transaction, challenge,

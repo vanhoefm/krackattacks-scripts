@@ -714,7 +714,7 @@ int hostapd_drv_wnm_oper(struct hostapd_data *hapd, enum wnm_oper oper,
 			 const u8 *peer, u8 *buf, u16 *buf_len)
 {
 	if (hapd->driver == NULL || hapd->driver->wnm_oper == NULL)
-		return 0;
+		return -1;
 	return hapd->driver->wnm_oper(hapd->drv_priv, oper, peer, buf,
 				      buf_len);
 }

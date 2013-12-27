@@ -179,7 +179,7 @@ class Hostapd:
         hdr = struct.pack('<HH6B6B6BH', *t)
         self.request("MGMT_TX " + binascii.hexlify(hdr + msg['payload']))
 
-def add_ap(ifname, params):
+def add_ap(ifname, params, wait_enabled=True):
         logger.info("Starting AP " + ifname)
         hapd_global = HostapdGlobal()
         hapd_global.remove(ifname)
@@ -203,6 +203,10 @@ def add_ap(ifname, params):
             else:
                 hapd.set(f, v)
         hapd.enable()
+        if wait_enabled:
+            ev = hapd.wait_event(["AP-ENABLED"], timeout=30)
+            if ev is None:
+                raise Exception("AP startup timed out")
         return hapd
 
 def add_bss(phy, ifname, confname, ignore_error=False):

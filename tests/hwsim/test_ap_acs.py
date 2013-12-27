@@ -42,7 +42,7 @@ def test_ap_acs(dev, apdev):
     """Automatic channel selection"""
     params = hostapd.wpa2_params(ssid="test-acs", passphrase="12345678")
     params['channel'] = '0'
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params, wait_enabled=False)
     wait_acs(hapd)
 
     freq = hapd.get_status_field("freq")

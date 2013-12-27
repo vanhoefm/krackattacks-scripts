@@ -17,11 +17,11 @@ def test_ap_ht40_scan(dev, apdev):
     params = { "ssid": "test-ht40",
                "channel": "5",
                "ht_capab": "[HT40-]"}
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params, wait_enabled=False)
 
     state = hapd.get_status_field("state")
     if state != "HT_SCAN":
-        time.wait(0.1)
+        time.sleep(0.1)
         state = hapd.get_status_field("state")
         if state != "HT_SCAN":
             raise Exception("Unexpected interface state - expected HT_SCAN")

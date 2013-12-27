@@ -56,8 +56,18 @@ static int hostapd_ctrl_iface_sta_mib(struct hostapd_data *hapd,
 	}
 
 	len = 0;
-	ret = os_snprintf(buf + len, buflen - len, MACSTR "\n",
+	ret = os_snprintf(buf + len, buflen - len, MACSTR "\nflags=",
 			  MAC2STR(sta->addr));
+	if (ret < 0 || (size_t) ret >= buflen - len)
+		return len;
+	len += ret;
+
+	ret = ap_sta_flags_txt(sta->flags, buf + len, buflen - len);
+	if (ret < 0)
+		return len;
+	len += ret;
+
+	ret = os_snprintf(buf + len, buflen - len, "\n");
 	if (ret < 0 || (size_t) ret >= buflen - len)
 		return len;
 	len += ret;

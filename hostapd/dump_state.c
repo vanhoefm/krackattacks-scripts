@@ -100,33 +100,17 @@ static void hostapd_dump_state(struct hostapd_data *hapd)
 		hapd->iface->num_sta_no_short_preamble);
 
 	for (sta = hapd->sta_list; sta != NULL; sta = sta->next) {
+		char flags[200];
+
 		fprintf(f, "\nSTA=" MACSTR "\n", MAC2STR(sta->addr));
 
+		ap_sta_flags_txt(sta->flags, flags, sizeof(flags));
 		fprintf(f,
-			"  AID=%d flags=0x%x %s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
-			"\n"
+			"  AID=%d flags=0x%x %s\n"
 			"  capability=0x%x listen_interval=%d\n",
 			sta->aid,
 			sta->flags,
-			(sta->flags & WLAN_STA_AUTH ? "[AUTH]" : ""),
-			(sta->flags & WLAN_STA_ASSOC ? "[ASSOC]" : ""),
-			(ap_sta_is_authorized(sta) ? "[AUTHORIZED]" : ""),
-			(sta->flags & WLAN_STA_PENDING_POLL ? "[PENDING_POLL" :
-			 ""),
-			(sta->flags & WLAN_STA_SHORT_PREAMBLE ?
-			 "[SHORT_PREAMBLE]" : ""),
-			(sta->flags & WLAN_STA_PREAUTH ? "[PREAUTH]" : ""),
-			(sta->flags & WLAN_STA_WMM ? "[WMM]" : ""),
-			(sta->flags & WLAN_STA_MFP ? "[MFP]" : ""),
-			(sta->flags & WLAN_STA_WPS ? "[WPS]" : ""),
-			(sta->flags & WLAN_STA_MAYBE_WPS ? "[MAYBE_WPS]" : ""),
-			(sta->flags & WLAN_STA_WDS ? "[WDS]" : ""),
-			(sta->flags & WLAN_STA_NONERP ? "[NonERP]" : ""),
-			(sta->flags & WLAN_STA_WPS2 ? "[WPS2]" : ""),
-			(sta->flags & WLAN_STA_GAS ? "[GAS]" : ""),
-			(sta->flags & WLAN_STA_VHT ? "[VHT]" : ""),
-			(sta->flags & WLAN_STA_WNM_SLEEP_MODE ?
-			 "[WNM_SLEEP_MODE]" : ""),
+			flags,
 			sta->capability,
 			sta->listen_interval);
 

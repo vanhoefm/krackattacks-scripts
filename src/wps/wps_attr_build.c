@@ -201,6 +201,11 @@ int wps_build_wfa_ext(struct wpabuf *msg, int req_to_enroll,
 #ifdef CONFIG_WPS2
 	u8 *len;
 
+#ifdef CONFIG_WPS_TESTING
+	if (WPS_VERSION == 0x10)
+		return 0;
+#endif /* CONFIG_WPS_TESTING */
+
 	if (wpabuf_tailroom(msg) <
 	    7 + 3 + (req_to_enroll ? 3 : 0) +
 	    (auth_macs ? 2 + auth_macs_count * ETH_ALEN : 0))

@@ -306,10 +306,18 @@ static inline void wpa_sm_pmksa_cache_flush(struct wpa_sm *sm,
 
 #ifdef CONFIG_PEERKEY
 int wpa_sm_stkstart(struct wpa_sm *sm, const u8 *peer);
+int wpa_sm_rx_eapol_peerkey(struct wpa_sm *sm, const u8 *src_addr,
+			    const u8 *buf, size_t len);
 #else /* CONFIG_PEERKEY */
 static inline int wpa_sm_stkstart(struct wpa_sm *sm, const u8 *peer)
 {
 	return -1;
+}
+
+static inline int wpa_sm_rx_eapol_peerkey(struct wpa_sm *sm, const u8 *src_addr,
+					  const u8 *buf, size_t len)
+{
+	return 0;
 }
 #endif /* CONFIG_PEERKEY */
 

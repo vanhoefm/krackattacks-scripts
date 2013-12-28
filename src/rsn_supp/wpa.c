@@ -2710,3 +2710,24 @@ int wpa_wnmsleep_install_key(struct wpa_sm *sm, u8 subelem_id, u8 *buf)
 	return 0;
 }
 #endif /* CONFIG_WNM */
+
+
+#ifdef CONFIG_PEERKEY
+int wpa_sm_rx_eapol_peerkey(struct wpa_sm *sm, const u8 *src_addr,
+			    const u8 *buf, size_t len)
+{
+	struct wpa_peerkey *peerkey;
+
+	for (peerkey = sm->peerkey; peerkey; peerkey = peerkey->next) {
+		if (os_memcmp(peerkey->addr, src_addr, ETH_ALEN) == 0)
+			break;
+	}
+
+	if (!peerkey)
+		return 0;
+
+	wpa_sm_rx_eapol(sm, src_addr, buf, len);
+
+	return 1;
+}
+#endif /* CONFIG_PEERKEY */

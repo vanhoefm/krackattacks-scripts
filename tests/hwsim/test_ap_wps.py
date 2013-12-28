@@ -183,6 +183,32 @@ def test_ap_wps_conf_pin(dev, apdev):
     if "WPS-M2D" not in ev:
         raise Exception("Unexpected WPS operation started")
 
+def test_ap_wps_conf_pin_2sta(dev, apdev):
+    """Two stations trying to use WPS PIN at the same time"""
+    ssid = "test-wps-conf-pin2"
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                     "wpa_passphrase": "12345678", "wpa": "2",
+                     "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP"})
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    logger.info("WPS provisioning step")
+    pin = "12345670"
+    pin2 = "55554444"
+    hapd.request("WPS_PIN " + dev[0].get_status_field("uuid") + " " + pin)
+    hapd.request("WPS_PIN " + dev[1].get_status_field("uuid") + " " + pin)
+    dev[0].request("SET ignore_old_scan_res 1")
+    dev[0].dump_monitor()
+    dev[1].request("SET ignore_old_scan_res 1")
+    dev[1].dump_monitor()
+    dev[0].request("WPS_PIN any " + pin)
+    dev[1].request("WPS_PIN any " + pin)
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
+    if ev is None:
+        raise Exception("Association with the AP timed out")
+    ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
+    if ev is None:
+        raise Exception("Association with the AP timed out")
+
 def test_ap_wps_reg_connect(dev, apdev):
     """WPS registrar using AP PIN to connect"""
     ssid = "test-wps-reg-ap-pin"

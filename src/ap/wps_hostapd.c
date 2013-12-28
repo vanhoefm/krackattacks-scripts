@@ -1240,6 +1240,7 @@ void hostapd_deinit_wps(struct hostapd_data *hapd)
 {
 	eloop_cancel_timeout(hostapd_wps_reenable_ap_pin, hapd, NULL);
 	eloop_cancel_timeout(hostapd_wps_ap_pin_timeout, hapd, NULL);
+	eloop_cancel_timeout(wps_reload_config, hapd->iface, NULL);
 	if (hapd->wps == NULL)
 		return;
 #ifdef CONFIG_WPS_UPNP

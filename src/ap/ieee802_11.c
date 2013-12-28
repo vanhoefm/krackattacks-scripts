@@ -1057,7 +1057,9 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 
 #ifdef CONFIG_SAE
 		if (wpa_auth_uses_sae(sta->wpa_sm) &&
-		    sta->auth_alg != WLAN_AUTH_SAE) {
+		    sta->auth_alg != WLAN_AUTH_SAE &&
+		    !(sta->auth_alg == WLAN_AUTH_FT &&
+		      wpa_auth_uses_ft_sae(sta->wpa_sm))) {
 			wpa_printf(MSG_DEBUG, "SAE: " MACSTR " tried to use "
 				   "SAE AKM after non-SAE auth_alg %u",
 				   MAC2STR(sta->addr), sta->auth_alg);

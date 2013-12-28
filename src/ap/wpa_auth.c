@@ -3095,3 +3095,11 @@ int wpa_auth_uses_sae(struct wpa_state_machine *sm)
 		return 0;
 	return wpa_key_mgmt_sae(sm->wpa_key_mgmt);
 }
+
+
+int wpa_auth_uses_ft_sae(struct wpa_state_machine *sm)
+{
+	if (sm == NULL)
+		return 0;
+	return sm->wpa_key_mgmt == WPA_KEY_MGMT_FT_SAE;
+}

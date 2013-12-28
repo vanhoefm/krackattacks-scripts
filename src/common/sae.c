@@ -701,6 +701,11 @@ static u16 sae_group_allowed(struct sae_data *sae, int *allowed_groups,
 		return WLAN_STATUS_FINITE_CYCLIC_GROUP_NOT_SUPPORTED;
 	}
 
+	if (sae->tmp == NULL) {
+		wpa_printf(MSG_DEBUG, "SAE: Group information not yet initialized");
+		return WLAN_STATUS_UNSPECIFIED_FAILURE;
+	}
+
 	if (sae->tmp->dh && !allowed_groups) {
 		wpa_printf(MSG_DEBUG, "SAE: Do not allow FFC group %u without "
 			   "explicit configuration enabling it", group);

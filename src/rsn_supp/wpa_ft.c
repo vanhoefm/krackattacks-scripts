@@ -207,6 +207,8 @@ static u8 * wpa_ft_gen_req_ies(struct wpa_sm *sm, size_t *len,
 		RSN_SELECTOR_PUT(pos, RSN_AUTH_KEY_MGMT_FT_802_1X);
 	else if (sm->key_mgmt == WPA_KEY_MGMT_FT_PSK)
 		RSN_SELECTOR_PUT(pos, RSN_AUTH_KEY_MGMT_FT_PSK);
+	else if (sm->key_mgmt == WPA_KEY_MGMT_FT_SAE)
+		RSN_SELECTOR_PUT(pos, RSN_AUTH_KEY_MGMT_FT_SAE);
 	else {
 		wpa_printf(MSG_WARNING, "FT: Invalid key management type (%d)",
 			   sm->key_mgmt);
@@ -400,8 +402,7 @@ int wpa_ft_process_response(struct wpa_sm *sm, const u8 *ies, size_t ies_len,
 		}
 	}
 
-	if (sm->key_mgmt != WPA_KEY_MGMT_FT_IEEE8021X &&
-	    sm->key_mgmt != WPA_KEY_MGMT_FT_PSK) {
+	if (!wpa_key_mgmt_ft(sm->key_mgmt)) {
 		wpa_printf(MSG_DEBUG, "FT: Reject FT IEs since FT is not "
 			   "enabled for this connection");
 		return -1;
@@ -526,8 +527,7 @@ int wpa_ft_is_completed(struct wpa_sm *sm)
 	if (sm == NULL)
 		return 0;
 
-	if (sm->key_mgmt != WPA_KEY_MGMT_FT_IEEE8021X &&
-	    sm->key_mgmt != WPA_KEY_MGMT_FT_PSK)
+	if (!wpa_key_mgmt_ft(sm->key_mgmt))
 		return 0;
 
 	return sm->ft_completed;
@@ -678,8 +678,7 @@ int wpa_ft_validate_reassoc_resp(struct wpa_sm *sm, const u8 *ies,
 
 	wpa_hexdump(MSG_DEBUG, "FT: Response IEs", ies, ies_len);
 
-	if (sm->key_mgmt != WPA_KEY_MGMT_FT_IEEE8021X &&
-	    sm->key_mgmt != WPA_KEY_MGMT_FT_PSK) {
+	if (!wpa_key_mgmt_ft(sm->key_mgmt)) {
 		wpa_printf(MSG_DEBUG, "FT: Reject FT IEs since FT is not "
 			   "enabled for this connection");
 		return -1;

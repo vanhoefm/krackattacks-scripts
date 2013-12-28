@@ -633,8 +633,7 @@ u8 * wpa_sm_write_assoc_resp_ies(struct wpa_state_machine *sm, u8 *pos,
 
 	conf = &sm->wpa_auth->conf;
 
-	if (sm->wpa_key_mgmt != WPA_KEY_MGMT_FT_IEEE8021X &&
-	    sm->wpa_key_mgmt != WPA_KEY_MGMT_FT_PSK)
+	if (!wpa_key_mgmt_ft(sm->wpa_key_mgmt))
 		return pos;
 
 	end = pos + max_len;

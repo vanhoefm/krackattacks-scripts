@@ -64,7 +64,8 @@ static inline int wpa_key_mgmt_wpa_psk(int akm)
 	return !!(akm & (WPA_KEY_MGMT_PSK |
 			 WPA_KEY_MGMT_FT_PSK |
 			 WPA_KEY_MGMT_PSK_SHA256 |
-			 WPA_KEY_MGMT_SAE));
+			 WPA_KEY_MGMT_SAE |
+			 WPA_KEY_MGMT_FT_SAE));
 }
 
 static inline int wpa_key_mgmt_ft(int akm)
@@ -89,7 +90,8 @@ static inline int wpa_key_mgmt_sha256(int akm)
 static inline int wpa_key_mgmt_wpa(int akm)
 {
 	return wpa_key_mgmt_wpa_ieee8021x(akm) ||
-		wpa_key_mgmt_wpa_psk(akm);
+		wpa_key_mgmt_wpa_psk(akm) ||
+		wpa_key_mgmt_sae(akm);
 }
 
 static inline int wpa_key_mgmt_wpa_any(int akm)

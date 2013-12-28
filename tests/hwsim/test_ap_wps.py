@@ -348,6 +348,43 @@ def test_ap_wps_pbc_overlap_2sta(dev, apdev):
     if "config_error=12" not in ev:
         raise Exception("PBC session overlap not correctly reported (dev1)")
 
+def test_ap_wps_cancel(dev, apdev):
+    """WPS AP cancelling enabled config method"""
+    ssid = "test-wps-ap-cancel"
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                     "wpa_passphrase": "12345678", "wpa": "2",
+                     "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP" })
+    bssid = apdev[0]['bssid']
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+
+    logger.info("Verify PBC enable/cancel")
+    hapd.request("WPS_PBC")
+    dev[0].request("SET ignore_old_scan_res 1")
+    dev[0].scan(freq="2412")
+    bss = dev[0].get_bss(apdev[0]['bssid'])
+    if "[WPS-PBC]" not in bss['flags']:
+        raise Exception("WPS-PBC flag missing")
+    if "FAIL" in hapd.request("WPS_CANCEL"):
+        raise Exception("WPS_CANCEL failed")
+    dev[0].scan(freq="2412")
+    bss = dev[0].get_bss(apdev[0]['bssid'])
+    if "[WPS-PBC]" in bss['flags']:
+        raise Exception("WPS-PBC flag not cleared")
+
+    logger.info("Verify PIN enable/cancel")
+    hapd.request("WPS_PIN any 12345670")
+    dev[0].scan(freq="2412")
+    bss = dev[0].get_bss(apdev[0]['bssid'])
+    if "[WPS-AUTH]" not in bss['flags']:
+        raise Exception("WPS-AUTH flag missing")
+    if "FAIL" in hapd.request("WPS_CANCEL"):
+        raise Exception("WPS_CANCEL failed")
+    dev[0].scan(freq="2412")
+    bss = dev[0].get_bss(apdev[0]['bssid'])
+    if "[WPS-AUTH]" in bss['flags']:
+        raise Exception("WPS-AUTH flag not cleared")
+
 def test_ap_wps_er_add_enrollee(dev, apdev):
     """WPS ER configuring AP and adding a new enrollee using PIN"""
     ssid = "wps-er-add-enrollee"

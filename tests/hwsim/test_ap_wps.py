@@ -175,6 +175,13 @@ def test_ap_wps_conf_pin(dev, apdev):
     bss = dev[1].get_bss(apdev[0]['bssid'])
     if "[WPS-AUTH]" in bss['flags']:
         raise Exception("WPS-AUTH flag not cleared")
+    logger.info("Try to connect from another station using the same PIN")
+    dev[1].request("WPS_PIN any " + pin)
+    ev = dev[1].wait_event(["WPS-M2D","CTRL-EVENT-CONNECTED"], timeout=30)
+    if ev is None:
+        raise Exception("Operation timed out")
+    if "WPS-M2D" not in ev:
+        raise Exception("Unexpected WPS operation started")
 
 def test_ap_wps_reg_connect(dev, apdev):
     """WPS registrar using AP PIN to connect"""

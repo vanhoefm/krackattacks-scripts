@@ -232,6 +232,42 @@ def test_ap_wps_reg_connect(dev, apdev):
     if status['key_mgmt'] != 'WPA2-PSK':
         raise Exception("Unexpected key_mgmt")
 
+def test_ap_wps_random_ap_pin(dev, apdev):
+    """WPS registrar using random AP PIN"""
+    ssid = "test-wps-reg-random-ap-pin"
+    ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                     "wpa_passphrase": "12345678", "wpa": "2",
+                     "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+                     "device_name": "Wireless AP", "manufacturer": "Company",
+                     "model_name": "WAP", "model_number": "123",
+                     "serial_number": "12345", "device_type": "6-0050F204-1",
+                     "os_version": "01020300",
+                     "config_methods": "label push_button",
+                     "uuid": ap_uuid, "upnp_iface": "lo" })
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    appin = hapd.request("WPS_AP_PIN random")
+    if "FAIL" in appin:
+        raise Exception("Could not generate random AP PIN")
+    if appin not in hapd.request("WPS_AP_PIN get"):
+        raise Exception("Could not fetch current AP PIN")
+    logger.info("WPS provisioning step")
+    dev[0].request("SET ignore_old_scan_res 1")
+    dev[0].wps_reg(apdev[0]['bssid'], appin)
+
+    hapd.request("WPS_AP_PIN disable")
+    logger.info("WPS provisioning step with AP PIN disabled")
+    dev[1].request("SET ignore_old_scan_res 1")
+    dev[1].request("WPS_REG " + apdev[0]['bssid'] + " " + appin)
+    ev = dev[1].wait_event(["WPS-SUCCESS", "WPS-FAIL"], timeout=15)
+    if ev is None:
+        raise Exception("WPS operation timed out")
+    if "WPS-SUCCESS" in ev:
+        raise Exception("WPS operation succeeded unexpectedly")
+    if "config_error=15" not in ev:
+        raise Exception("WPS setup locked state was not reported correctly")
+
 def test_ap_wps_reg_config(dev, apdev):
     """WPS registrar configuring and AP using AP PIN"""
     ssid = "test-wps-init-ap-pin"

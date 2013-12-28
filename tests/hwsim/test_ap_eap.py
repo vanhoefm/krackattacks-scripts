@@ -153,8 +153,18 @@ def test_ap_wpa2_eap_peap_eap_mschapv2(dev, apdev):
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], "PEAP", "user",
-                anonymous_identity="ttls", password="password",
+                anonymous_identity="peap", password="password",
                 ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2")
+    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+
+def test_ap_wpa2_eap_peap_crypto_binding(dev, apdev):
+    """WPA2-Enterprise connection using EAP-PEAPv0/EAP-MSCHAPv2 and crypto binding"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], "PEAP", "user", password="password",
+                ca_cert="auth_serv/ca.pem",
+                phase1="peapver=0 crypto_binding=2",
+                phase2="auth=MSCHAPV2")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
 
 def test_ap_wpa2_eap_tls(dev, apdev):

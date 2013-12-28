@@ -100,6 +100,49 @@ def test_ap_wps_twice(dev, apdev):
     if len(networks) > 1:
         raise Exception("Unexpected duplicated network block present")
 
+def test_ap_wps_incorrect_pin(dev, apdev):
+    """WPS PIN provisioning with incorrect PIN"""
+    ssid = "test-wps-incorrect-pin"
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                     "wpa_passphrase": "12345678", "wpa": "2",
+                     "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP"})
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+
+    logger.info("WPS provisioning attempt 1")
+    hapd.request("WPS_PIN any 12345670")
+    dev[0].request("SET ignore_old_scan_res 1")
+    dev[0].dump_monitor()
+    dev[0].request("WPS_PIN any 55554444")
+    ev = dev[0].wait_event(["WPS-FAIL"], timeout=30)
+    if ev is None:
+        raise Exception("WPS operation timed out")
+    if "config_error=18" not in ev:
+        raise Exception("Incorrect config_error reported")
+    if "msg=8" not in ev:
+        raise Exception("PIN error detected on incorrect message")
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"])
+    if ev is None:
+        raise Exception("Timeout on disconnection event")
+    dev[0].request("WPS_CANCEL")
+    # if a scan was in progress, wait for it to complete before trying WPS again
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], 5)
+
+    logger.info("WPS provisioning attempt 2")
+    hapd.request("WPS_PIN any 12345670")
+    dev[0].dump_monitor()
+    dev[0].request("WPS_PIN any 12344444")
+    ev = dev[0].wait_event(["WPS-FAIL"], timeout=30)
+    if ev is None:
+        raise Exception("WPS operation timed out")
+    if "config_error=18" not in ev:
+        raise Exception("Incorrect config_error reported")
+    if "msg=10" not in ev:
+        raise Exception("PIN error detected on incorrect message")
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"])
+    if ev is None:
+        raise Exception("Timeout on disconnection event")
+
 def test_ap_wps_conf_pin(dev, apdev):
     """WPS PIN provisioning with configured AP"""
     ssid = "test-wps-conf-pin"

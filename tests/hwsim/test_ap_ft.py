@@ -62,7 +62,7 @@ def ft_params2(rsn=True, ssid=None, passphrase=None):
     params['r1kh'] = "02:00:00:00:03:00 00:01:02:03:04:05 300102030405060708090a0b0c0d0e0f"
     return params
 
-def run_roams(dev, apdev, ssid, passphrase):
+def run_roams(dev, apdev, ssid, passphrase, over_ds=False):
     logger.info("Connect to first AP")
     dev.connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
                 ieee80211w="1")
@@ -75,13 +75,19 @@ def run_roams(dev, apdev, ssid, passphrase):
     hwsim_utils.test_connectivity(dev.ifname, ap1['ifname'])
 
     logger.info("Roam to the second AP")
-    dev.roam(ap2['bssid'])
+    if over_ds:
+        dev.roam_over_ds(ap2['bssid'])
+    else:
+        dev.roam(ap2['bssid'])
     if dev.get_status_field('bssid') != ap2['bssid']:
         raise Exception("Did not connect to correct AP")
     hwsim_utils.test_connectivity(dev.ifname, ap2['ifname'])
 
     logger.info("Roam back to the first AP")
-    dev.roam(ap1['bssid'])
+    if over_ds:
+        dev.roam_over_ds(ap1['bssid'])
+    else:
+        dev.roam(ap1['bssid'])
     if dev.get_status_field('bssid') != ap1['bssid']:
         raise Exception("Did not connect to correct AP")
     hwsim_utils.test_connectivity(dev.ifname, ap1['ifname'])
@@ -123,3 +129,29 @@ def test_ap_ft_pmf(dev, apdev):
     hostapd.add_ap(apdev[1]['ifname'], params)
 
     run_roams(dev[0], apdev, ssid, passphrase)
+
+def test_ap_ft_over_ds(dev, apdev):
+    """WPA2-PSK-FT AP over DS"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    run_roams(dev[0], apdev, ssid, passphrase, over_ds=True)
+
+def test_ap_ft_pmf_over_ds(dev, apdev):
+    """WPA2-PSK-FT AP over DS with PMF"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    params["ieee80211w"] = "2";
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    params["ieee80211w"] = "2";
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    run_roams(dev[0], apdev, ssid, passphrase, over_ds=True)

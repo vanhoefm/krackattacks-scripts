@@ -608,6 +608,14 @@ class WpaSupplicant:
             raise Exception("Roaming with the AP timed out")
         self.dump_monitor()
 
+    def roam_over_ds(self, bssid):
+        self.dump_monitor()
+        self.request("FT_DS " + bssid)
+        ev = self.wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
+        if ev is None:
+            raise Exception("Roaming with the AP timed out")
+        self.dump_monitor()
+
     def wps_reg(self, bssid, pin, new_ssid=None, key_mgmt=None, cipher=None,
                 new_passphrase=None):
         self.dump_monitor()

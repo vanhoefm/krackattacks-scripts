@@ -217,6 +217,37 @@ def test_ap_wps_reg_config(dev, apdev):
     if status['key_mgmt'] != 'WPA2-PSK':
         raise Exception("Unexpected key_mgmt")
 
+def test_ap_wps_reg_config_tkip(dev, apdev):
+    """WPS registrar configuring AP to use TKIP and AP upgrading to TKIP+CCMP"""
+    ssid = "test-wps-init-ap"
+    appin = "12345670"
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "1",
+                     "ap_pin": appin})
+    logger.info("WPS configuration step")
+    dev[0].request("SET ignore_old_scan_res 1")
+    dev[0].request("SET wps_version_number 0x10")
+    dev[0].dump_monitor()
+    new_ssid = "wps-new-ssid-with-tkip"
+    new_passphrase = "1234567890"
+    dev[0].wps_reg(apdev[0]['bssid'], appin, new_ssid, "WPAPSK", "TKIP",
+                   new_passphrase)
+    logger.info("Re-connect to verify WPA2 mixed mode")
+    dev[0].request("DISCONNECT")
+    id = 0
+    dev[0].set_network(id, "pairwise", "CCMP")
+    dev[0].set_network(id, "proto", "RSN")
+    dev[0].connect_network(id)
+    status = dev[0].get_status()
+    if status['wpa_state'] != 'COMPLETED' or status['bssid'] != apdev[0]['bssid']:
+        raise Exception("Not fully connected")
+    if status['ssid'] != new_ssid:
+        raise Exception("Unexpected SSID")
+    if status['pairwise_cipher'] != 'CCMP' or status['group_cipher'] != 'TKIP':
+        raise Exception("Unexpected encryption configuration")
+    if status['key_mgmt'] != 'WPA2-PSK':
+        raise Exception("Unexpected key_mgmt")
+
 def test_ap_wps_setup_locked(dev, apdev):
     """WPS registrar locking up AP setup on AP PIN failures"""
     ssid = "test-wps-incorrect-ap-pin"

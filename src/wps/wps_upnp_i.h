@@ -158,7 +158,6 @@ void subscription_destroy(struct subscription *s);
 struct subscription * subscription_find(struct upnp_wps_device_sm *sm,
 					const u8 uuid[UUID_LEN]);
 void subscr_addr_delete(struct subscr_addr *a);
-int send_wpabuf(int fd, struct wpabuf *buf);
 int get_netif_info(const char *net_if, unsigned *ip_addr, char **ip_addr_text,
 		   u8 mac[ETH_ALEN]);
 

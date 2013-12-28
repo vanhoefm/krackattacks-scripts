@@ -432,23 +432,6 @@ static void subscr_addr_list_create(struct subscription *s,
 }
 
 
-int send_wpabuf(int fd, struct wpabuf *buf)
-{
-	wpa_printf(MSG_DEBUG, "WPS UPnP: Send %lu byte message",
-		   (unsigned long) wpabuf_len(buf));
-	errno = 0;
-	if (write(fd, wpabuf_head(buf), wpabuf_len(buf)) !=
-	    (int) wpabuf_len(buf)) {
-		wpa_printf(MSG_ERROR, "WPS UPnP: Failed to send buffer: "
-			   "errno=%d (%s)",
-			   errno, strerror(errno));
-		return -1;
-	}
-
-	return 0;
-}
-
-
 static void wpabuf_put_property(struct wpabuf *buf, const char *name,
 				const char *value)
 {

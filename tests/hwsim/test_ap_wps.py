@@ -377,3 +377,41 @@ def test_ap_wps_fragmentation(dev, apdev):
         raise Exception("Unexpected encryption configuration")
     if status['key_mgmt'] != 'WPA2-PSK':
         raise Exception("Unexpected key_mgmt")
+
+def test_ap_wps_new_version_sta(dev, apdev):
+    """WPS compatibility with new version number on the station"""
+    ssid = "test-wps-ver"
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                     "wpa_passphrase": "12345678", "wpa": "2",
+                     "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP" })
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    logger.info("WPS provisioning step")
+    hapd.request("WPS_PBC")
+    dev[0].request("SET ignore_old_scan_res 1")
+    dev[0].dump_monitor()
+    dev[0].request("SET wps_version_number 0x43")
+    dev[0].request("WPS_PBC")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
+    if ev is None:
+        raise Exception("Association with the AP timed out")
+
+def test_ap_wps_new_version_ap(dev, apdev):
+    """WPS compatibility with new version number on the AP"""
+    ssid = "test-wps-ver"
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                     "wpa_passphrase": "12345678", "wpa": "2",
+                     "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP" })
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    logger.info("WPS provisioning step")
+    if "FAIL" in hapd.request("SET wps_version_number 0x43"):
+        raise Exception("Failed to enable test functionality")
+    hapd.request("WPS_PBC")
+    dev[0].request("SET ignore_old_scan_res 1")
+    dev[0].dump_monitor()
+    dev[0].request("WPS_PBC")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
+    hapd.request("SET wps_version_number 0x20")
+    if ev is None:
+        raise Exception("Association with the AP timed out")

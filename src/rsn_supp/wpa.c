@@ -2098,6 +2098,7 @@ void wpa_sm_notify_assoc(struct wpa_sm *sm, const u8 *bssid)
  */
 void wpa_sm_notify_disassoc(struct wpa_sm *sm)
 {
+	peerkey_deinit(sm);
 	rsn_preauth_deinit(sm);
 	pmksa_cache_clear_current(sm);
 	if (wpa_sm_get_state(sm) == WPA_4WAY_HANDSHAKE)

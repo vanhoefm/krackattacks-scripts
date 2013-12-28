@@ -1110,7 +1110,7 @@ void peerkey_deinit(struct wpa_sm *sm)
 	while (peerkey) {
 		prev = peerkey;
 		peerkey = peerkey->next;
-		os_free(prev);
+		wpa_supplicant_peerkey_free(sm, prev);
 	}
 	sm->peerkey = NULL;
 }

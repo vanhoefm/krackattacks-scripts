@@ -500,6 +500,42 @@ def test_ap_wps_er_add_enrollee_pbc(dev, apdev):
     if "FAIL" in dev[0].request("WPS_ER_SET_CONFIG " + apdev[0]['bssid'] + " 0"):
         raise Exception("Could not select AP based on BSSID")
 
+def test_ap_wps_er_config_ap(dev, apdev):
+    """WPS ER configuring AP over UPnP"""
+    ssid = "wps-er-ap-config"
+    ap_pin = "12345670"
+    ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                     "wpa_passphrase": "12345678", "wpa": "2",
+                     "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+                     "device_name": "Wireless AP", "manufacturer": "Company",
+                     "model_name": "WAP", "model_number": "123",
+                     "serial_number": "12345", "device_type": "6-0050F204-1",
+                     "os_version": "01020300",
+                     "config_methods": "label push_button",
+                     "ap_pin": ap_pin, "uuid": ap_uuid, "upnp_iface": "lo"})
+
+    logger.info("Connect ER to the AP")
+    dev[0].connect(ssid, psk="12345678", scan_freq="2412")
+
+    logger.info("WPS configuration step")
+    dev[0].request("WPS_ER_START ifname=lo")
+    ev = dev[0].wait_event(["WPS-ER-AP-ADD"], timeout=15)
+    if ev is None:
+        raise Exception("AP discovery timed out")
+    if ap_uuid not in ev:
+        raise Exception("Expected AP UUID not found")
+    new_passphrase = "1234567890"
+    dev[0].request("WPS_ER_CONFIG " + apdev[0]['bssid'] + " " + ap_pin + " " +
+                   ssid.encode("hex") + " WPA2PSK CCMP " +
+                   new_passphrase.encode("hex"))
+    ev = dev[0].wait_event(["WPS-SUCCESS"])
+    if ev is None:
+        raise Exception("WPS ER configuration operation timed out")
+    dev[1].wait_event(["CTRL-EVENT-DISCONNECTED"])
+    dev[0].connect(ssid, psk="1234567890", scan_freq="2412")
+
 def test_ap_wps_fragmentation(dev, apdev):
     """WPS with fragmentation in EAP-WSC and mixed mode WPA+WPA2"""
     ssid = "test-wps-fragmentation"

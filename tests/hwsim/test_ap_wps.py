@@ -475,6 +475,10 @@ def test_ap_wps_er_add_enrollee_pbc(dev, apdev):
         raise Exception("WPS ER did not report success")
     hwsim_utils.test_connectivity_sta(dev[0], dev[1])
 
+    # verify BSSID selection of the AP instead of UUID
+    if "FAIL" in dev[0].request("WPS_ER_SET_CONFIG " + apdev[0]['bssid'] + " 0"):
+        raise Exception("Could not select AP based on BSSID")
+
 def test_ap_wps_fragmentation(dev, apdev):
     """WPS with fragmentation in EAP-WSC and mixed mode WPA+WPA2"""
     ssid = "test-wps-fragmentation"

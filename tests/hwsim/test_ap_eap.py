@@ -18,16 +18,17 @@ import hostapd
 def eap_connect(dev, method, identity, anonymous_identity=None, password=None,
                 phase1=None, phase2=None, ca_cert=None,
                 domain_suffix_match=None, password_hex=None,
-                client_cert=None, private_key=None):
-    dev.connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap=method,
+                client_cert=None, private_key=None, sha256=False):
+    dev.connect("test-wpa2-eap", key_mgmt="WPA-EAP WPA-EAP-SHA256", eap=method,
                 identity=identity, anonymous_identity=anonymous_identity,
                 password=password, phase1=phase1, phase2=phase2,
                 ca_cert=ca_cert, domain_suffix_match=domain_suffix_match,
                 wait_connect=False, scan_freq="2412", password_hex=password_hex,
-                client_cert=client_cert, private_key=private_key)
-    eap_check_auth(dev, method, True)
+                client_cert=client_cert, private_key=private_key,
+                ieee80211w="1")
+    eap_check_auth(dev, method, True, sha256=sha256)
 
-def eap_check_auth(dev, method, initial, rsn=True):
+def eap_check_auth(dev, method, initial, rsn=True, sha256=False):
     ev = dev.wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
     if ev is None:
         raise Exception("Association and EAP start timed out")
@@ -61,16 +62,18 @@ def eap_check_auth(dev, method, initial, rsn=True):
         raise Exception("Port not authorized")
     if method not in status["selectedMethod"]:
         raise Exception("Incorrect EAP method status")
-    if rsn:
+    if sha256:
+        e = "WPA2-EAP-SHA256"
+    elif rsn:
         e = "WPA2/IEEE 802.1X/EAP"
     else:
         e = "WPA/IEEE 802.1X/EAP"
     if status["key_mgmt"] != e:
         raise Exception("Unexpected key_mgmt status: " + status["key_mgmt"])
 
-def eap_reauth(dev, method, rsn=True):
+def eap_reauth(dev, method, rsn=True, sha256=False):
     dev.request("REAUTHENTICATE")
-    eap_check_auth(dev, method, False, rsn=rsn)
+    eap_check_auth(dev, method, False, rsn=rsn, sha256=sha256)
 
 def test_ap_wpa2_eap_sim(dev, apdev):
     """WPA2-Enterprise connection using EAP-SIM"""
@@ -361,10 +364,12 @@ def test_ap_wpa2_eap_pax(dev, apdev):
 def test_ap_wpa2_eap_psk(dev, apdev):
     """WPA2-Enterprise connection using EAP-PSK"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    params["wpa_key_mgmt"] = "WPA-EAP-SHA256"
+    params["ieee80211w"] = "2"
     hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], "PSK", "psk.user@example.com",
-                password_hex="0123456789abcdef0123456789abcdef")
-    eap_reauth(dev[0], "PSK")
+                password_hex="0123456789abcdef0123456789abcdef", sha256=True)
+    eap_reauth(dev[0], "PSK", sha256=True)
 
 def test_ap_wpa_eap_peap_eap_mschapv2(dev, apdev):
     """WPA-Enterprise connection using EAP-PEAP/EAP-MSCHAPv2"""

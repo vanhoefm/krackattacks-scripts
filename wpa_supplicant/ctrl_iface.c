@@ -10,6 +10,7 @@
 
 #include "utils/common.h"
 #include "utils/eloop.h"
+#include "utils/uuid.h"
 #include "common/version.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
@@ -1628,6 +1629,17 @@ static int wpa_supplicant_ctrl_iface_status(struct wpa_supplicant *wpa_s,
 	res = rsn_preauth_get_status(wpa_s->wpa, pos, end - pos, verbose);
 	if (res >= 0)
 		pos += res;
+
+#ifdef CONFIG_WPS
+	{
+		char uuid_str[100];
+		uuid_bin2str(wpa_s->wps->uuid, uuid_str, sizeof(uuid_str));
+		ret = os_snprintf(pos, end - pos, "uuid=%s\n", uuid_str);
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+	}
+#endif /* CONFIG_WPS */
 
 #ifdef ANDROID
 	wpa_msg_ctrl(wpa_s, MSG_INFO, WPA_EVENT_STATE_CHANGE

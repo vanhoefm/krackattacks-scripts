@@ -350,3 +350,30 @@ def test_ap_wps_er_add_enrollee_pbc(dev, apdev):
     if ev is None:
         raise Exception("WPS ER did not report success")
     hwsim_utils.test_connectivity_sta(dev[0], dev[1])
+
+def test_ap_wps_fragmentation(dev, apdev):
+    """WPS with fragmentation in EAP-WSC and mixed mode WPA+WPA2"""
+    ssid = "test-wps-fragmentation"
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                     "wpa_passphrase": "12345678", "wpa": "3",
+                     "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+                     "wpa_pairwise": "TKIP",
+                     "fragment_size": "50" })
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    logger.info("WPS provisioning step")
+    hapd.request("WPS_PBC")
+    dev[0].request("SET ignore_old_scan_res 1")
+    dev[0].dump_monitor()
+    dev[0].request("SET wps_fragment_size 50")
+    dev[0].request("WPS_PBC")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
+    if ev is None:
+        raise Exception("Association with the AP timed out")
+    status = dev[0].get_status()
+    if status['wpa_state'] != 'COMPLETED':
+        raise Exception("Not fully connected")
+    if status['pairwise_cipher'] != 'CCMP' or status['group_cipher'] != 'TKIP':
+        raise Exception("Unexpected encryption configuration")
+    if status['key_mgmt'] != 'WPA2-PSK':
+        raise Exception("Unexpected key_mgmt")

@@ -174,6 +174,56 @@ def test_ap_wps_reg_config(dev, apdev):
     if status['key_mgmt'] != 'WPA2-PSK':
         raise Exception("Unexpected key_mgmt")
 
+def test_ap_wps_setup_locked(dev, apdev):
+    """WPS registrar locking up AP setup on AP PIN failures"""
+    ssid = "test-wps-incorrect-ap-pin"
+    appin = "12345670"
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                     "wpa_passphrase": "12345678", "wpa": "2",
+                     "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+                     "ap_pin": appin})
+    dev[0].request("SET ignore_old_scan_res 1")
+    new_ssid = "wps-new-ssid-test"
+    new_passphrase = "1234567890"
+
+    ap_setup_locked=False
+    for pin in ["55554444", "1234", "12345678", "00000000", "11111111"]:
+        dev[0].dump_monitor()
+        logger.info("Try incorrect AP PIN - attempt " + pin)
+        dev[0].wps_reg(apdev[0]['bssid'], pin, new_ssid, "WPA2PSK",
+                       "CCMP", new_passphrase, no_wait=True)
+        ev = dev[0].wait_event(["WPS-FAIL", "CTRL-EVENT-CONNECTED"])
+        if ev is None:
+            raise Exception("Timeout on receiving WPS operation failure event")
+        if "CTRL-EVENT-CONNECTED" in ev:
+            raise Exception("Unexpected connection")
+        if "config_error=15" in ev:
+            logger.info("AP Setup Locked")
+            ap_setup_locked=True
+        elif "config_error=18" not in ev:
+            raise Exception("config_error=18 not reported")
+        ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"])
+        if ev is None:
+            raise Exception("Timeout on disconnection event")
+        time.sleep(0.1)
+    if not ap_setup_locked:
+        raise Exception("AP setup was not locked")
+
+    time.sleep(0.5)
+    dev[0].dump_monitor()
+    logger.info("WPS provisioning step")
+    pin = dev[0].wps_read_pin()
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd.request("WPS_PIN any " + pin)
+    dev[0].request("WPS_PIN any " + pin)
+    ev = dev[0].wait_event(["WPS-SUCCESS"], timeout=30)
+    if ev is None:
+        raise Exception("WPS success was not reported")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
+    if ev is None:
+        raise Exception("Association with the AP timed out")
+
 def test_ap_wps_pbc_overlap_2ap(dev, apdev):
     """WPS PBC session overlap with two active APs"""
     hostapd.add_ap(apdev[0]['ifname'],

@@ -617,15 +617,19 @@ class WpaSupplicant:
         self.dump_monitor()
 
     def wps_reg(self, bssid, pin, new_ssid=None, key_mgmt=None, cipher=None,
-                new_passphrase=None):
+                new_passphrase=None, no_wait=False):
         self.dump_monitor()
         if new_ssid:
             self.request("WPS_REG " + bssid + " " + pin + " " +
                          new_ssid.encode("hex") + " " + key_mgmt + " " +
                          cipher + " " + new_passphrase.encode("hex"))
+            if no_wait:
+                return
             ev = self.wait_event(["WPS-SUCCESS"], timeout=15)
         else:
             self.request("WPS_REG " + bssid + " " + pin)
+            if no_wait:
+                return
             ev = self.wait_event(["WPS-CRED-RECEIVED"], timeout=15)
             if ev is None:
                 raise Exception("WPS cred timed out")

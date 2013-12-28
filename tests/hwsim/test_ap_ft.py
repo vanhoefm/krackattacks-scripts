@@ -62,14 +62,18 @@ def ft_params2(rsn=True, ssid=None, passphrase=None):
     params['r1kh'] = "02:00:00:00:03:00 00:01:02:03:04:05 300102030405060708090a0b0c0d0e0f"
     return params
 
-def run_roams(dev, apdev, ssid, passphrase, over_ds=False, sae=False):
+def run_roams(dev, apdev, ssid, passphrase, over_ds=False, sae=False, eap=False):
     logger.info("Connect to first AP")
-    if sae:
-        key_mgmt="FT-SAE"
+    if eap:
+        dev.connect(ssid, key_mgmt="FT-EAP", proto="WPA2", ieee80211w="1",
+                    eap="EKE", identity="eke user", password="hello")
     else:
-        key_mgmt="FT-PSK"
-    dev.connect(ssid, psk=passphrase, key_mgmt=key_mgmt, proto="WPA2",
-                ieee80211w="1")
+        if sae:
+            key_mgmt="FT-SAE"
+        else:
+            key_mgmt="FT-PSK"
+        dev.connect(ssid, psk=passphrase, key_mgmt=key_mgmt, proto="WPA2",
+                    ieee80211w="1")
     if dev.get_status_field('bssid') == apdev[0]['bssid']:
         ap1 = apdev[0]
         ap2 = apdev[1]
@@ -187,3 +191,22 @@ def test_ap_ft_sae_over_ds(dev, apdev):
     hostapd.add_ap(apdev[1]['ifname'], params)
 
     run_roams(dev[0], apdev, ssid, passphrase, sae=True, over_ds=True)
+
+def test_ap_ft_eap(dev, apdev):
+    """WPA2-EAP-FT AP"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    radius = hostapd.radius_params()
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    params['wpa_key_mgmt'] = "FT-EAP"
+    params["ieee8021x"] = "1"
+    params = dict(radius.items() + params.items())
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    params['wpa_key_mgmt'] = "FT-EAP"
+    params["ieee8021x"] = "1"
+    params = dict(radius.items() + params.items())
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    run_roams(dev[0], apdev, ssid, passphrase, eap=True)

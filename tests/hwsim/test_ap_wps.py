@@ -170,6 +170,12 @@ def test_ap_wps_conf_pin(dev, apdev):
     if status['key_mgmt'] != 'WPA2-PSK':
         raise Exception("Unexpected key_mgmt")
 
+    dev[1].request("SET ignore_old_scan_res 1")
+    dev[1].scan(freq="2412")
+    bss = dev[1].get_bss(apdev[0]['bssid'])
+    if "[WPS-AUTH]" in bss['flags']:
+        raise Exception("WPS-AUTH flag not cleared")
+
 def test_ap_wps_reg_connect(dev, apdev):
     """WPS registrar using AP PIN to connect"""
     ssid = "test-wps-reg-ap-pin"

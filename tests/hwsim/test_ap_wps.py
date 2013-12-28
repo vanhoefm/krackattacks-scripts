@@ -416,6 +416,27 @@ def test_ap_wps_er_add_enrollee(dev, apdev):
         raise Exception("WPS ER did not report success")
     hwsim_utils.test_connectivity_sta(dev[0], dev[1])
 
+    logger.info("Verify registrar selection behavior")
+    dev[0].request("WPS_ER_PIN any " + pin + " " + dev[1].p2p_interface_addr())
+    dev[1].request("DISCONNECT")
+    dev[1].wait_event(["CTRL-EVENT-DISCONNECTED"])
+    dev[1].scan(freq="2412")
+    bss = dev[1].get_bss(apdev[0]['bssid'])
+    if "[WPS-AUTH]" not in bss['flags']:
+        raise Exception("WPS-AUTH flag missing")
+
+    logger.info("Stop ER")
+    dev[0].dump_monitor()
+    dev[0].request("WPS_ER_STOP")
+    ev = dev[0].wait_event(["WPS-ER-AP-REMOVE"])
+    if ev is None:
+        raise Exception("WPS ER unsubscription timed out")
+
+    dev[1].scan(freq="2412")
+    bss = dev[1].get_bss(apdev[0]['bssid'])
+    if "[WPS-AUTH]" in bss['flags']:
+        raise Exception("WPS-AUTH flag not removed")
+
 def test_ap_wps_er_add_enrollee_pbc(dev, apdev):
     """WPS ER connected to AP and adding a new enrollee using PBC"""
     ssid = "wps-er-add-enrollee-pbc"

@@ -27,7 +27,7 @@ def eap_connect(dev, method, identity, anonymous_identity=None, password=None,
                 client_cert=client_cert, private_key=private_key)
     eap_check_auth(dev, method, True)
 
-def eap_check_auth(dev, method, initial):
+def eap_check_auth(dev, method, initial, rsn=True):
     ev = dev.wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
     if ev is None:
         raise Exception("Association and EAP start timed out")
@@ -61,12 +61,16 @@ def eap_check_auth(dev, method, initial):
         raise Exception("Port not authorized")
     if method not in status["selectedMethod"]:
         raise Exception("Incorrect EAP method status")
-    if status["key_mgmt"] != "WPA2/IEEE 802.1X/EAP":
-        raise Exception("Unexpected key_mgmt status")
+    if rsn:
+        e = "WPA2/IEEE 802.1X/EAP"
+    else:
+        e = "WPA/IEEE 802.1X/EAP"
+    if status["key_mgmt"] != e:
+        raise Exception("Unexpected key_mgmt status: " + status["key_mgmt"])
 
-def eap_reauth(dev, method):
+def eap_reauth(dev, method, rsn=True):
     dev.request("REAUTHENTICATE")
-    eap_check_auth(dev, method, False)
+    eap_check_auth(dev, method, False, rsn=rsn)
 
 def test_ap_wpa2_eap_sim(dev, apdev):
     """WPA2-Enterprise connection using EAP-SIM"""
@@ -361,3 +365,15 @@ def test_ap_wpa2_eap_psk(dev, apdev):
     eap_connect(dev[0], "PSK", "psk.user@example.com",
                 password_hex="0123456789abcdef0123456789abcdef")
     eap_reauth(dev[0], "PSK")
+
+def test_ap_wpa_eap_peap_eap_mschapv2(dev, apdev):
+    """WPA-Enterprise connection using EAP-PEAP/EAP-MSCHAPv2"""
+    params = hostapd.wpa_eap_params(ssid="test-wpa-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa-eap", key_mgmt="WPA-EAP", eap="PEAP",
+                   identity="user", password="password", phase2="auth=MSCHAPV2",
+                   ca_cert="auth_serv/ca.pem", wait_connect=False,
+                   scan_freq="2412")
+    eap_check_auth(dev[0], "PEAP", True, rsn=False)
+    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    eap_reauth(dev[0], "PEAP", rsn=False)

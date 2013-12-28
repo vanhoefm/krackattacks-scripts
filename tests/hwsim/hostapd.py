@@ -282,6 +282,16 @@ def radius_params():
                "nas_identifier": "nas.w1.fi" }
     return params
 
+def wpa_eap_params(ssid=None):
+    params = radius_params()
+    params["wpa"] = "1"
+    params["wpa_key_mgmt"] = "WPA-EAP"
+    params["wpa_pairwise"] = "TKIP"
+    params["ieee8021x"] = "1"
+    if ssid:
+        params["ssid"] = ssid
+    return params
+
 def wpa2_eap_params(ssid=None):
     params = radius_params()
     params["wpa"] = "2"

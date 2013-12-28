@@ -129,19 +129,6 @@ static int word_eq(char *s1, char *s2)
 }
 
 
-/* convert hex to binary
- * Requires that c have been previously tested true with isxdigit().
- */
-static int hex_value(int c)
-{
-	if (isdigit(c))
-		return c - '0';
-	if (islower(c))
-		return 10 + c - 'a';
-	return 10 + c - 'A';
-}
-
-
 static void httpread_timeout_handler(void *eloop_data, void *user_ctx);
 
 /* httpread_destroy -- if h is non-NULL, clean up
@@ -295,8 +282,7 @@ static int httpread_hdr_analyze(struct httpread *h)
 			int c = *rawuri;
 			if (c == '%' &&
 			    isxdigit(rawuri[1]) && isxdigit(rawuri[2])) {
-				*uri++ = (hex_value(rawuri[1]) << 4) |
-					hex_value(rawuri[2]);
+				*uri++ = hex2byte(rawuri + 1);
 				rawuri += 3;
 			} else {
 				*uri++ = c;

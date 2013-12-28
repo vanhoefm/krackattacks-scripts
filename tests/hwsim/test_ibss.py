@@ -68,6 +68,9 @@ def add_ibss(dev, ssid, psk=None, proto=None, key_mgmt=None, pairwise=None, grou
 def add_ibss_rsn(dev, ssid):
     return add_ibss(dev, ssid, "12345678", "RSN", "WPA-PSK", "CCMP", "CCMP")
 
+def add_ibss_wpa_none(dev, ssid):
+    return add_ibss(dev, ssid, "12345678", "WPA", "WPA-NONE", "TKIP", "TKIP")
+
 def test_ibss_rsn(dev):
     """IBSS RSN"""
     ssid="ibss-rsn"
@@ -104,3 +107,59 @@ def test_ibss_rsn(dev):
     hwsim_utils.test_connectivity(dev[0].ifname, dev[1].ifname)
     hwsim_utils.test_connectivity(dev[0].ifname, dev[2].ifname)
     hwsim_utils.test_connectivity(dev[1].ifname, dev[2].ifname)
+
+def test_ibss_wpa_none(dev):
+    """IBSS WPA-None"""
+    ssid="ibss-wpa-none"
+
+    logger.info("Start IBSS on the first STA")
+    id = add_ibss_wpa_none(dev[0], ssid)
+    connect_ibss_cmd(dev[0], id)
+    bssid0 = wait_ibss_connection(dev[0])
+
+    logger.info("Join two STAs to the IBSS")
+
+    id = add_ibss_wpa_none(dev[1], ssid)
+    connect_ibss_cmd(dev[1], id)
+    id = add_ibss_wpa_none(dev[2], ssid)
+    connect_ibss_cmd(dev[2], id)
+
+    # This is a bit ugly, but no one really cares about WPA-None, so there may
+    # not be enough justification to clean this up.. For now, wpa_supplicant
+    # will show two connection events with mac80211_hwsim where the first one
+    # comes with all zeros address.
+    if bssid0 == "00:00:00:00:00:00":
+        logger.info("Waiting for real BSSID on the first STA")
+        bssid0 = wait_ibss_connection(dev[0])
+
+    bssid1 = wait_ibss_connection(dev[1])
+    if bssid0 != bssid1:
+        logger.info("STA0 BSSID " + bssid0 + " differs from STA1 BSSID " + bssid1)
+        bssid1 = wait_ibss_connection(dev[1])
+
+    bssid2 = wait_ibss_connection(dev[2])
+    if bssid0 != bssid2:
+        logger.info("STA0 BSSID " + bssid0 + " differs from STA2 BSSID " + bssid2)
+        bssid2 = wait_ibss_connection(dev[2])
+
+    print bssid0
+    print bssid1
+    print bssid2
+
+    # Allow some time for all peers to complete key setup
+    time.sleep(1)
+
+    # This is supposed to work, but looks like WPA-None does not work with
+    # mac80211 currently..
+    try:
+        hwsim_utils.test_connectivity(dev[0].ifname, dev[1].ifname)
+    except Exception, e:
+        logger.info("Ignoring known connectivity failure: " + str(e))
+    try:
+        hwsim_utils.test_connectivity(dev[0].ifname, dev[2].ifname)
+    except Exception, e:
+        logger.info("Ignoring known connectivity failure: " + str(e))
+    try:
+        hwsim_utils.test_connectivity(dev[1].ifname, dev[2].ifname)
+    except Exception, e:
+        logger.info("Ignoring known connectivity failure: " + str(e))

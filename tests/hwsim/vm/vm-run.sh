@@ -130,6 +130,15 @@ if [ $CODECOV = "yes" ]; then
     genhtml -t "hostapd/hlr_auc_gw (AS) hwsim test run $DATE" lcov.info --output-directory $LOGDIR/lcov-hostapd-as >> lcov.log 2>&1
     mv lcov.info lcov.log $LOGDIR/lcov-hostapd-as
 
+    echo "Generating combined code coverage report"
+    mkdir $LOGDIR/lcov-combined
+    for i in wpa_supplicant hostapd hostapd-as; do
+	sed s%SF:/tmp/logs/alt-[^/]*/%SF:/tmp/logs/alt-wpa_supplicant/% < $LOGDIR/lcov-$i/lcov.info > $LOGDIR/lcov-combined/$i.info
+    done
+    cd $LOGDIR/lcov-combined
+    lcov -a wpa_supplicant.info -a hostapd.info -a hostapd-as.info -o combined.info > lcov.log 2>&1
+    genhtml -t "wpa_supplicant/hostapd combined for hwsim test run $DATE" combined.info --output-directory . >> lcov.log 2>&1
+
     cd $DIR
     rm -r /tmp/logs/alt-wpa_supplicant
     rm -r /tmp/logs/alt-hostapd
@@ -145,4 +154,5 @@ if [ $CODECOV = "yes" ]; then
     echo "wpa_supplicant: file://$LOGDIR/lcov-wpa_supplicant/index.html"
     echo "hostapd: file://$LOGDIR/lcov-hostapd/index.html"
     echo "hostapd/hlr_auc_gw (AS): file://$LOGDIR/lcov-hostapd-as/index.html"
+    echo "combined: file://$LOGDIR/lcov-combined/index.html"
 fi

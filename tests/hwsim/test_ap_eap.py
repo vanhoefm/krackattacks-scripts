@@ -25,6 +25,9 @@ def eap_connect(dev, method, identity, anonymous_identity=None, password=None,
                 ca_cert=ca_cert, domain_suffix_match=domain_suffix_match,
                 wait_connect=False, scan_freq="2412", password_hex=password_hex,
                 client_cert=client_cert, private_key=private_key)
+    eap_check_auth(dev, method, True)
+
+def eap_check_auth(dev, method, initial):
     ev = dev.wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
     if ev is None:
         raise Exception("Association and EAP start timed out")
@@ -36,19 +39,34 @@ def eap_connect(dev, method, identity, anonymous_identity=None, password=None,
     ev = dev.wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=10)
     if ev is None:
         raise Exception("EAP success timed out")
-    ev = dev.wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
-    if ev is None:
-        raise Exception("Association with the AP timed out")
 
-    status = dev.get_status()
-    if status["wpa_state"] != "COMPLETED":
-        raise Exception("Connection not completed")
+    if initial:
+        ev = dev.wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
+        if ev is None:
+            raise Exception("Association with the AP timed out")
+        status = dev.get_status()
+        if status["wpa_state"] != "COMPLETED":
+            raise Exception("Connection not completed")
+    else:
+        # no connected event since already connected
+        for i in range(0, 30):
+            status = dev.get_status()
+            if status["wpa_state"] == "COMPLETED":
+                break
+            time.sleep(0.1)
+        if status["wpa_state"] != "COMPLETED":
+            raise Exception("Connection not completed")
+
     if status["suppPortStatus"] != "Authorized":
         raise Exception("Port not authorized")
     if method not in status["selectedMethod"]:
         raise Exception("Incorrect EAP method status")
     if status["key_mgmt"] != "WPA2/IEEE 802.1X/EAP":
         raise Exception("Unexpected key_mgmt status")
+
+def eap_reauth(dev, method):
+    dev.request("REAUTHENTICATE")
+    eap_check_auth(dev, method, False)
 
 def test_ap_wpa2_eap_sim(dev, apdev):
     """WPA2-Enterprise connection using EAP-SIM"""
@@ -60,6 +78,7 @@ def test_ap_wpa2_eap_sim(dev, apdev):
     eap_connect(dev[0], "SIM", "1232010000000000",
                 password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    eap_reauth(dev[0], "SIM")
 
 def test_ap_wpa2_eap_aka(dev, apdev):
     """WPA2-Enterprise connection using EAP-AKA"""
@@ -71,6 +90,7 @@ def test_ap_wpa2_eap_aka(dev, apdev):
     eap_connect(dev[0], "AKA", "0232010000000000",
                 password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581:000000000123")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    eap_reauth(dev[0], "AKA")
 
 def test_ap_wpa2_eap_aka_prime(dev, apdev):
     """WPA2-Enterprise connection using EAP-AKA'"""
@@ -82,6 +102,7 @@ def test_ap_wpa2_eap_aka_prime(dev, apdev):
     eap_connect(dev[0], "AKA'", "6555444333222111",
                 password="5122250214c33e723a5dd523fc145fc0:981d464c7c52eb6e5036234984ad0bcf:000000000123")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    eap_reauth(dev[0], "AKA'")
 
 def test_ap_wpa2_eap_ttls_pap(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/PAP"""
@@ -91,6 +112,7 @@ def test_ap_wpa2_eap_ttls_pap(dev, apdev):
                 anonymous_identity="ttls", password="password",
                 ca_cert="auth_serv/ca.pem", phase2="auth=PAP")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    eap_reauth(dev[0], "TTLS")
 
 def test_ap_wpa2_eap_ttls_chap(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/CHAP"""
@@ -100,6 +122,7 @@ def test_ap_wpa2_eap_ttls_chap(dev, apdev):
                 anonymous_identity="ttls", password="password",
                 ca_cert="auth_serv/ca.pem", phase2="auth=CHAP")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    eap_reauth(dev[0], "TTLS")
 
 def test_ap_wpa2_eap_ttls_mschap(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/MSCHAP"""
@@ -110,6 +133,7 @@ def test_ap_wpa2_eap_ttls_mschap(dev, apdev):
                 ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAP",
                 domain_suffix_match="server.w1.fi")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    eap_reauth(dev[0], "TTLS")
 
 def test_ap_wpa2_eap_ttls_mschapv2(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/MSCHAPv2"""
@@ -120,6 +144,7 @@ def test_ap_wpa2_eap_ttls_mschapv2(dev, apdev):
                 ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
                 domain_suffix_match="w1.fi")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    eap_reauth(dev[0], "TTLS")
 
 def test_ap_wpa2_eap_ttls_eap_gtc(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/EAP-GTC"""
@@ -129,6 +154,7 @@ def test_ap_wpa2_eap_ttls_eap_gtc(dev, apdev):
                 anonymous_identity="ttls", password="password",
                 ca_cert="auth_serv/ca.pem", phase2="autheap=GTC")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    eap_reauth(dev[0], "TTLS")
 
 def test_ap_wpa2_eap_ttls_eap_md5(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/EAP-MD5"""
@@ -138,6 +164,7 @@ def test_ap_wpa2_eap_ttls_eap_md5(dev, apdev):
                 anonymous_identity="ttls", password="password",
                 ca_cert="auth_serv/ca.pem", phase2="autheap=MD5")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    eap_reauth(dev[0], "TTLS")
 
 def test_ap_wpa2_eap_ttls_eap_mschapv2(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/EAP-MSCHAPv2"""
@@ -147,6 +174,7 @@ def test_ap_wpa2_eap_ttls_eap_mschapv2(dev, apdev):
                 anonymous_identity="ttls", password="password",
                 ca_cert="auth_serv/ca.pem", phase2="autheap=MSCHAPV2")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    eap_reauth(dev[0], "TTLS")
 
 def test_ap_wpa2_eap_peap_eap_mschapv2(dev, apdev):
     """WPA2-Enterprise connection using EAP-PEAP/EAP-MSCHAPv2"""
@@ -156,6 +184,7 @@ def test_ap_wpa2_eap_peap_eap_mschapv2(dev, apdev):
                 anonymous_identity="peap", password="password",
                 ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    eap_reauth(dev[0], "PEAP")
 
 def test_ap_wpa2_eap_peap_crypto_binding(dev, apdev):
     """WPA2-Enterprise connection using EAP-PEAPv0/EAP-MSCHAPv2 and crypto binding"""
@@ -166,6 +195,7 @@ def test_ap_wpa2_eap_peap_crypto_binding(dev, apdev):
                 phase1="peapver=0 crypto_binding=2",
                 phase2="auth=MSCHAPV2")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    eap_reauth(dev[0], "PEAP")
 
 def test_ap_wpa2_eap_tls(dev, apdev):
     """WPA2-Enterprise connection using EAP-TLS"""
@@ -174,6 +204,7 @@ def test_ap_wpa2_eap_tls(dev, apdev):
     eap_connect(dev[0], "TLS", "tls user", ca_cert="auth_serv/ca.pem",
                 client_cert="auth_serv/user.pem",
                 private_key="auth_serv/user.key")
+    eap_reauth(dev[0], "TLS")
 
 def test_ap_wpa2_eap_tls_neg_incorrect_trust_root(dev, apdev):
     """WPA2-Enterprise negative test - incorrect trust root"""
@@ -283,6 +314,7 @@ def test_ap_wpa2_eap_pwd(dev, apdev):
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], "PWD", "pwd user", password="secret password")
+    eap_reauth(dev[0], "PWD")
 
 def test_ap_wpa2_eap_gpsk(dev, apdev):
     """WPA2-Enterprise connection using EAP-GPSK"""
@@ -290,6 +322,7 @@ def test_ap_wpa2_eap_gpsk(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], "GPSK", "gpsk user",
                 password="abcdefghijklmnop0123456789abcdef")
+    eap_reauth(dev[0], "GPSK")
 
 def test_ap_wpa2_eap_sake(dev, apdev):
     """WPA2-Enterprise connection using EAP-SAKE"""
@@ -297,18 +330,21 @@ def test_ap_wpa2_eap_sake(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], "SAKE", "sake user",
                 password_hex="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")
+    eap_reauth(dev[0], "SAKE")
 
 def test_ap_wpa2_eap_eke(dev, apdev):
     """WPA2-Enterprise connection using EAP-EKE"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], "EKE", "eke user", password="hello")
+    eap_reauth(dev[0], "EKE")
 
 def test_ap_wpa2_eap_ikev2(dev, apdev):
     """WPA2-Enterprise connection using EAP-IKEv2"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], "IKEV2", "ikev2 user", password="ike password")
+    eap_reauth(dev[0], "IKEV2")
 
 def test_ap_wpa2_eap_pax(dev, apdev):
     """WPA2-Enterprise connection using EAP-PAX"""
@@ -316,6 +352,7 @@ def test_ap_wpa2_eap_pax(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], "PAX", "pax.user@example.com",
                 password_hex="0123456789abcdef0123456789abcdef")
+    eap_reauth(dev[0], "PAX")
 
 def test_ap_wpa2_eap_psk(dev, apdev):
     """WPA2-Enterprise connection using EAP-PSK"""
@@ -323,3 +360,4 @@ def test_ap_wpa2_eap_psk(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], "PSK", "psk.user@example.com",
                 password_hex="0123456789abcdef0123456789abcdef")
+    eap_reauth(dev[0], "PSK")

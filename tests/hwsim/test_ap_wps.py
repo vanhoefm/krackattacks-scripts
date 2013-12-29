@@ -130,6 +130,10 @@ def test_ap_wps_conf(dev, apdev):
     if status['key_mgmt'] != 'WPA2-PSK':
         raise Exception("Unexpected key_mgmt")
 
+    sta = hapd.get_sta(dev[0].p2p_interface_addr())
+    if 'wpsDeviceName' not in sta or sta['wpsDeviceName'] != "Device A":
+        raise Exception("Device name not available in STA command")
+
 def test_ap_wps_twice(dev, apdev):
     """WPS provisioning with twice to change passphrase"""
     ssid = "test-wps-twice"

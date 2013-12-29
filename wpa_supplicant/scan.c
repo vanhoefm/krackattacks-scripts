@@ -1630,7 +1630,7 @@ wpa_supplicant_get_scan_results(struct wpa_supplicant *wpa_s,
 	filter_scan_res(wpa_s, scan_res);
 
 #ifdef CONFIG_WPS
-	if (wpas_wps_in_progress(wpa_s)) {
+	if (wpas_wps_searching(wpa_s)) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "WPS: Order scan results with WPS "
 			"provisioning rules");
 		compar = wpa_scan_result_wps_compar;

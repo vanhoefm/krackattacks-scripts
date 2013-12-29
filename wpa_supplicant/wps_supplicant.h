@@ -60,7 +60,6 @@ int wpas_wps_er_config(struct wpa_supplicant *wpa_s, const char *uuid,
 struct wpabuf * wpas_wps_er_nfc_config_token(struct wpa_supplicant *wpa_s,
 					     int ndef, const char *uuid);
 int wpas_wps_terminate_pending(struct wpa_supplicant *wpa_s);
-int wpas_wps_in_progress(struct wpa_supplicant *wpa_s);
 void wpas_wps_update_config(struct wpa_supplicant *wpa_s);
 struct wpabuf * wpas_wps_nfc_config_token(struct wpa_supplicant *wpa_s,
 					  int ndef, const char *id_str);

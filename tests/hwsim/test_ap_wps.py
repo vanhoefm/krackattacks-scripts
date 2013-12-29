@@ -103,6 +103,17 @@ def test_ap_wps_init_2ap_pin(dev, apdev):
     if "[WPS-AUTH]" in bss['flags']:
         raise Exception("WPS-AUTH flag bit ckeared from AP2")
 
+def test_ap_wps_init_through_wps_config(dev, apdev):
+    """Initial AP configuration using wps_config command"""
+    ssid = "test-wps-init-config"
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "1" })
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    if "FAIL" in hapd.request("WPS_CONFIG " + ssid.encode("hex") + " WPA2PSK CCMP " + "12345678".encode("hex")):
+        raise Exception("WPS_CONFIG command failed")
+    dev[0].connect(ssid, psk="12345678", scan_freq="2412", proto="WPA2",
+                   pairwise="CCMP", group="CCMP")
+
 def test_ap_wps_conf(dev, apdev):
     """WPS PBC provisioning with configured AP"""
     ssid = "test-wps-conf"

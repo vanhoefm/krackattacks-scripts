@@ -533,7 +533,7 @@ class WpaSupplicant:
                 password=None, phase1=None, phase2=None, ca_cert=None,
                 domain_suffix_match=None, password_hex=None,
                 client_cert=None, private_key=None, peerkey=False,
-                wait_connect=True):
+                wait_connect=True, only_add_network=False):
         logger.info("Connect STA " + self.ifname + " to AP")
         id = self.add_network()
         self.set_network_quoted(id, "ssid", ssid)
@@ -579,6 +579,8 @@ class WpaSupplicant:
                                     domain_suffix_match)
         if peerkey:
             self.set_network(id, "peerkey", "1")
+        if only_add_network:
+            return id
         if wait_connect:
             self.connect_network(id)
         else:

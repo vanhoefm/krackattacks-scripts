@@ -27,7 +27,7 @@ correctly and that the network connection works in the expected way.
 These test cases are run automatically against the hostap.git commits
 for regression testing and to help in keeping the hostap.git master
 branch in stable state. Results from these tests are available here:
-http://buildbot.w1.fi:8010/waterfall
+http://buildbot.w1.fi/hwsim/
 
 
 Building binaries for testing

@@ -265,6 +265,7 @@ def main():
         from random import shuffle
         shuffle(tests_to_run)
 
+    count = 0
     for t in tests_to_run:
         name = t.__name__.replace('test_', '', 1)
         if log_handler:
@@ -278,9 +279,11 @@ def main():
 
         reset_ok = True
         with DataCollector(args.logdir, name, args.tracing, args.dmesg):
-            logger.info("START " + name)
+            count = count + 1
+            msg = "START {} {}/{}".format(name, count, len(tests_to_run))
+            logger.info(msg)
             if args.loglevel == logging.WARNING:
-                print "START " + name
+                print msg
                 sys.stdout.flush()
             if t.__doc__:
                 logger.info("Test: " + t.__doc__)

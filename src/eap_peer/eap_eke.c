@@ -28,6 +28,10 @@ struct eap_eke_data {
 	u8 nonce_p[EAP_EKE_MAX_NONCE_LEN];
 	u8 nonce_s[EAP_EKE_MAX_NONCE_LEN];
 	struct wpabuf *msgs;
+	u8 dhgroup; /* forced DH group or 0 to allow all supported */
+	u8 encr; /* forced encryption algorithm or 0 to allow all supported */
+	u8 prf; /* forced PRF or 0 to allow all supported */
+	u8 mac; /* forced MAC or 0 to allow all supported */
 };
 
 
@@ -66,6 +70,7 @@ static void * eap_eke_init(struct eap_sm *sm)
 	struct eap_eke_data *data;
 	const u8 *identity, *password;
 	size_t identity_len, password_len;
+	const char *phase1;
 
 	password = eap_get_config_password(sm, &password_len);
 	if (!password) {
@@ -87,6 +92,39 @@ static void * eap_eke_init(struct eap_sm *sm)
 		}
 		os_memcpy(data->peerid, identity, identity_len);
 		data->peerid_len = identity_len;
+	}
+
+	phase1 = eap_get_config_phase1(sm);
+	if (phase1) {
+		const char *pos;
+
+		pos = os_strstr(phase1, "dhgroup=");
+		if (pos) {
+			data->dhgroup = atoi(pos + 8);
+			wpa_printf(MSG_DEBUG, "EAP-EKE: Forced dhgroup %u",
+				   data->dhgroup);
+		}
+
+		pos = os_strstr(phase1, "encr=");
+		if (pos) {
+			data->encr = atoi(pos + 5);
+			wpa_printf(MSG_DEBUG, "EAP-EKE: Forced encr %u",
+				   data->encr);
+		}
+
+		pos = os_strstr(phase1, "prf=");
+		if (pos) {
+			data->prf = atoi(pos + 4);
+			wpa_printf(MSG_DEBUG, "EAP-EKE: Forced prf %u",
+				   data->prf);
+		}
+
+		pos = os_strstr(phase1, "mac=");
+		if (pos) {
+			data->mac = atoi(pos + 4);
+			wpa_printf(MSG_DEBUG, "EAP-EKE: Forced mac %u",
+				   data->mac);
+		}
 	}
 
 	return data;
@@ -226,16 +264,20 @@ static struct wpabuf * eap_eke_process_id(struct eap_eke_data *data,
 			   i, pos[0], pos[1], pos[2], pos[3]);
 		pos += 4;
 
-		if (!eap_eke_supp_dhgroup(*tmp))
+		if ((data->dhgroup && data->dhgroup != *tmp) ||
+		    !eap_eke_supp_dhgroup(*tmp))
 			continue;
 		tmp++;
-		if (!eap_eke_supp_encr(*tmp))
+		if ((data->encr && data->encr != *tmp) ||
+		    !eap_eke_supp_encr(*tmp))
 			continue;
 		tmp++;
-		if (!eap_eke_supp_prf(*tmp))
+		if ((data->prf && data->prf != *tmp) ||
+		    !eap_eke_supp_prf(*tmp))
 			continue;
 		tmp++;
-		if (!eap_eke_supp_mac(*tmp))
+		if ((data->mac && data->mac != *tmp) ||
+		    !eap_eke_supp_mac(*tmp))
 			continue;
 
 		prop = tmp - 3;

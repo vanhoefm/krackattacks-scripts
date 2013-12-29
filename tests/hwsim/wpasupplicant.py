@@ -532,7 +532,7 @@ class WpaSupplicant:
                 eap=None, identity=None, anonymous_identity=None,
                 password=None, phase1=None, phase2=None, ca_cert=None,
                 domain_suffix_match=None, password_hex=None,
-                client_cert=None, private_key=None, peerkey=False,
+                client_cert=None, private_key=None, peerkey=False, okc=False,
                 wait_connect=True, only_add_network=False):
         logger.info("Connect STA " + self.ifname + " to AP")
         id = self.add_network()
@@ -579,6 +579,8 @@ class WpaSupplicant:
                                     domain_suffix_match)
         if peerkey:
             self.set_network(id, "peerkey", "1")
+        if okc:
+            self.set_network(id, "proactive_key_caching", "1")
         if only_add_network:
             return id
         if wait_connect:
@@ -666,3 +668,18 @@ class WpaSupplicant:
             [name,value] = l.split('=', 1)
             vals[name] = value
         return vals
+
+    def get_pmksa(self, bssid):
+        res = self.request("PMKSA")
+        lines = res.splitlines()
+        for l in lines:
+            if bssid not in l:
+                continue
+            vals = dict()
+            [index,aa,pmkid,expiration,opportunistic] = l.split(' ')
+            vals['index'] = index
+            vals['pmkid'] = pmkid
+            vals['expiration'] = expiration
+            vals['opportunistic'] = opportunistic
+            return vals
+        return None

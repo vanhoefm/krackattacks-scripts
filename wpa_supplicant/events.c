@@ -1396,7 +1396,7 @@ static int wpas_select_network_from_last_scan(struct wpa_supplicant *wpa_s,
 			}
 #endif /* CONFIG_INTERWORKING */
 #ifdef CONFIG_WPS
-			if (wpa_s->after_wps > 0) {
+			if (wpa_s->after_wps > 0 || wpas_wps_searching(wpa_s)) {
 				wpa_dbg(wpa_s, MSG_DEBUG, "Use shorter wait during WPS processing");
 				timeout_sec = 0;
 				timeout_usec = 500000;

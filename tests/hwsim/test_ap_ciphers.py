@@ -24,7 +24,7 @@ def check_cipher(dev, ap, cipher):
                "rsn_pairwise": cipher }
     hostapd.add_ap(ap['ifname'], params)
     dev.connect("test-wpa2-psk", psk="12345678",
-                pairwise=cipher, group=cipher)
+                pairwise=cipher, group=cipher, scan_freq="2412")
     hwsim_utils.test_connectivity(dev.ifname, ap['ifname'])
 
 def test_ap_cipher_tkip(dev, apdev):

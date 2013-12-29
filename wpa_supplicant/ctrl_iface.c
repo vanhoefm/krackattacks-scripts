@@ -5216,6 +5216,10 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 	wpa_s->extra_blacklist_count = 0;
 	wpa_supplicant_ctrl_iface_remove_network(wpa_s, "all");
 	wpa_supplicant_ctrl_iface_remove_cred(wpa_s, "all");
+
+	wpa_sm_set_param(wpa_s->wpa, RSNA_PMK_LIFETIME, 43200);
+	wpa_sm_set_param(wpa_s->wpa, RSNA_PMK_REAUTH_THRESHOLD, 70);
+	wpa_sm_set_param(wpa_s->wpa, RSNA_SA_TIMEOUT, 60);
 }
 
 

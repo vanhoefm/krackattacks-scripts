@@ -459,6 +459,14 @@ typedef u64 __bitwise le64;
 #endif /* __GNUC__ */
 #endif /* __must_check */
 
+#ifndef __maybe_unused
+#if __GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4)
+#define __maybe_unused __attribute__((unused))
+#else
+#define __maybe_unused
+#endif /* __GNUC__ */
+#endif /* __must_check */
+
 int hwaddr_aton(const char *txt, u8 *addr);
 int hwaddr_compact_aton(const char *txt, u8 *addr);
 int hwaddr_aton2(const char *txt, u8 *addr);

@@ -802,7 +802,7 @@ static u16 sae_parse_commit_element_ecc(struct sae_data *sae, const u8 *pos,
 
 	/* element x and y coordinates < p */
 	if (os_memcmp(pos, prime, sae->tmp->prime_len) >= 0 ||
-	    os_memcmp(pos + sae->tmp->prime_len + sae->tmp->prime_len, prime,
+	    os_memcmp(pos + sae->tmp->prime_len, prime,
 		      sae->tmp->prime_len) >= 0) {
 		wpa_printf(MSG_DEBUG, "SAE: Invalid coordinates in peer "
 			   "element");

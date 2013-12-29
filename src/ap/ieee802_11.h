@@ -15,8 +15,8 @@ struct sta_info;
 struct hostapd_frame_info;
 struct ieee80211_ht_capabilities;
 
-void ieee802_11_mgmt(struct hostapd_data *hapd, const u8 *buf, size_t len,
-		     struct hostapd_frame_info *fi);
+int ieee802_11_mgmt(struct hostapd_data *hapd, const u8 *buf, size_t len,
+		    struct hostapd_frame_info *fi);
 void ieee802_11_mgmt_cb(struct hostapd_data *hapd, const u8 *buf, size_t len,
 			u16 stype, int ok);
 void ieee802_11_print_ssid(char *buf, const u8 *ssid, u8 len);

@@ -632,17 +632,18 @@ static void hostapd_rx_from_unknown_sta(struct hostapd_data *hapd,
 }
 
 
-static void hostapd_mgmt_rx(struct hostapd_data *hapd, struct rx_mgmt *rx_mgmt)
+static int hostapd_mgmt_rx(struct hostapd_data *hapd, struct rx_mgmt *rx_mgmt)
 {
 	struct hostapd_iface *iface = hapd->iface;
 	const struct ieee80211_hdr *hdr;
 	const u8 *bssid;
 	struct hostapd_frame_info fi;
+	int ret;
 
 	hdr = (const struct ieee80211_hdr *) rx_mgmt->frame;
 	bssid = get_hdr_bssid(hdr, rx_mgmt->frame_len);
 	if (bssid == NULL)
-		return;
+		return 0;
 
 	hapd = get_hapd_bssid(iface, bssid);
 	if (hapd == NULL) {
@@ -657,7 +658,7 @@ static void hostapd_mgmt_rx(struct hostapd_data *hapd, struct rx_mgmt *rx_mgmt)
 		    WLAN_FC_GET_STYPE(fc) == WLAN_FC_STYPE_BEACON)
 			hapd = iface->bss[0];
 		else
-			return;
+			return 0;
 	}
 
 	os_memset(&fi, 0, sizeof(fi));
@@ -666,22 +667,29 @@ static void hostapd_mgmt_rx(struct hostapd_data *hapd, struct rx_mgmt *rx_mgmt)
 
 	if (hapd == HAPD_BROADCAST) {
 		size_t i;
-		for (i = 0; i < iface->num_bss; i++)
-			ieee802_11_mgmt(iface->bss[i], rx_mgmt->frame,
-					rx_mgmt->frame_len, &fi);
+		ret = 0;
+		for (i = 0; i < iface->num_bss; i++) {
+			if (ieee802_11_mgmt(iface->bss[i], rx_mgmt->frame,
+					    rx_mgmt->frame_len, &fi) > 0)
+				ret = 1;
+		}
 	} else
-		ieee802_11_mgmt(hapd, rx_mgmt->frame, rx_mgmt->frame_len, &fi);
+		ret = ieee802_11_mgmt(hapd, rx_mgmt->frame, rx_mgmt->frame_len,
+				      &fi);
 
 	random_add_randomness(&fi, sizeof(fi));
+
+	return ret;
 }
 
 
-static void hostapd_rx_action(struct hostapd_data *hapd,
-			      struct rx_action *rx_action)
+static int hostapd_rx_action(struct hostapd_data *hapd,
+			     struct rx_action *rx_action)
 {
 	struct rx_mgmt rx_mgmt;
 	u8 *buf;
 	struct ieee80211_hdr *hdr;
+	int ret;
 
 	wpa_printf(MSG_DEBUG, "EVENT_RX_ACTION DA=" MACSTR " SA=" MACSTR
 		   " BSSID=" MACSTR " category=%u",
@@ -692,7 +700,7 @@ static void hostapd_rx_action(struct hostapd_data *hapd,
 
 	buf = os_zalloc(24 + 1 + rx_action->len);
 	if (buf == NULL)
-		return;
+		return -1;
 	hdr = (struct ieee80211_hdr *) buf;
 	hdr->frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
 					  WLAN_FC_STYPE_ACTION);
@@ -713,8 +721,10 @@ static void hostapd_rx_action(struct hostapd_data *hapd,
 	os_memset(&rx_mgmt, 0, sizeof(rx_mgmt));
 	rx_mgmt.frame = buf;
 	rx_mgmt.frame_len = 24 + 1 + rx_action->len;
-	hostapd_mgmt_rx(hapd, &rx_mgmt);
+	ret = hostapd_mgmt_rx(hapd, &rx_mgmt);
 	os_free(buf);
+
+	return ret;
 }
 
 
@@ -1003,7 +1013,8 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		    data->rx_action.bssid == NULL)
 			break;
 #ifdef NEED_AP_MLME
-		hostapd_rx_action(hapd, &data->rx_action);
+		if (hostapd_rx_action(hapd, &data->rx_action) > 0)
+			break;
 #endif /* NEED_AP_MLME */
 		hostapd_action_rx(hapd, &data->rx_action);
 		break;

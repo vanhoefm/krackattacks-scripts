@@ -1535,9 +1535,9 @@ static void handle_beacon(struct hostapd_data *hapd,
 
 #ifdef CONFIG_IEEE80211W
 
-static void hostapd_sa_query_action(struct hostapd_data *hapd,
-				    const struct ieee80211_mgmt *mgmt,
-				    size_t len)
+static int hostapd_sa_query_action(struct hostapd_data *hapd,
+				   const struct ieee80211_mgmt *mgmt,
+				   size_t len)
 {
 	const u8 *end;
 
@@ -1546,12 +1546,13 @@ static void hostapd_sa_query_action(struct hostapd_data *hapd,
 	if (((u8 *) mgmt) + len < end) {
 		wpa_printf(MSG_DEBUG, "IEEE 802.11: Too short SA Query Action "
 			   "frame (len=%lu)", (unsigned long) len);
-		return;
+		return 0;
 	}
 
 	ieee802_11_sa_query_action(hapd, mgmt->sa,
 				   mgmt->u.action.u.sa_query_resp.action,
 				   mgmt->u.action.u.sa_query_resp.trans_id);
+	return 1;
 }
 
 
@@ -1564,13 +1565,12 @@ static int robust_action_frame(u8 category)
 
 
 #ifdef CONFIG_WNM
-static void hostapd_wnm_action(struct hostapd_data *hapd, struct sta_info *sta,
-			       const struct ieee80211_mgmt *mgmt,
-			       size_t len)
+static int hostapd_wnm_action(struct hostapd_data *hapd, struct sta_info *sta,
+			      const struct ieee80211_mgmt *mgmt, size_t len)
 {
 	struct rx_action action;
 	if (len < IEEE80211_HDRLEN + 2)
-		return;
+		return 0;
 	os_memset(&action, 0, sizeof(action));
 	action.da = mgmt->da;
 	action.sa = mgmt->sa;
@@ -1580,12 +1580,13 @@ static void hostapd_wnm_action(struct hostapd_data *hapd, struct sta_info *sta,
 	action.len = len - IEEE80211_HDRLEN - 1;
 	action.freq = hapd->iface->freq;
 	ieee802_11_rx_wnm_action_ap(hapd, &action);
+	return 1;
 }
 #endif /* CONFIG_WNM */
 
 
-static void handle_action(struct hostapd_data *hapd,
-			  const struct ieee80211_mgmt *mgmt, size_t len)
+static int handle_action(struct hostapd_data *hapd,
+			 const struct ieee80211_mgmt *mgmt, size_t len)
 {
 	struct sta_info *sta;
 	sta = ap_get_sta(hapd, mgmt->sa);
@@ -1595,7 +1596,7 @@ static void handle_action(struct hostapd_data *hapd,
 			       HOSTAPD_LEVEL_DEBUG,
 			       "handle_action - too short payload (len=%lu)",
 			       (unsigned long) len);
-		return;
+		return 0;
 	}
 
 	if (mgmt->u.action.category != WLAN_ACTION_PUBLIC &&
@@ -1603,7 +1604,7 @@ static void handle_action(struct hostapd_data *hapd,
 		wpa_printf(MSG_DEBUG, "IEEE 802.11: Ignored Action "
 			   "frame (category=%u) from unassociated STA " MACSTR,
 			   MAC2STR(mgmt->sa), mgmt->u.action.category);
-		return;
+		return 0;
 	}
 
 #ifdef CONFIG_IEEE80211W
@@ -1614,7 +1615,7 @@ static void handle_action(struct hostapd_data *hapd,
 			       HOSTAPD_LEVEL_DEBUG,
 			       "Dropped unprotected Robust Action frame from "
 			       "an MFP STA");
-		return;
+		return 0;
 	}
 #endif /* CONFIG_IEEE80211W */
 
@@ -1624,20 +1625,18 @@ static void handle_action(struct hostapd_data *hapd,
 		if (wpa_ft_action_rx(sta->wpa_sm, (u8 *) &mgmt->u.action,
 				     len - IEEE80211_HDRLEN))
 			break;
-		return;
+		return 1;
 #endif /* CONFIG_IEEE80211R */
 	case WLAN_ACTION_WMM:
 		hostapd_wmm_action(hapd, mgmt, len);
-		return;
+		return 1;
 #ifdef CONFIG_IEEE80211W
 	case WLAN_ACTION_SA_QUERY:
-		hostapd_sa_query_action(hapd, mgmt, len);
-		return;
+		return hostapd_sa_query_action(hapd, mgmt, len);
 #endif /* CONFIG_IEEE80211W */
 #ifdef CONFIG_WNM
 	case WLAN_ACTION_WNM:
-		hostapd_wnm_action(hapd, sta, mgmt, len);
-		return;
+		return hostapd_wnm_action(hapd, sta, mgmt, len);
 #endif /* CONFIG_WNM */
 	case WLAN_ACTION_PUBLIC:
 		if (hapd->public_action_cb) {
@@ -1651,14 +1650,14 @@ static void handle_action(struct hostapd_data *hapd,
 						hapd->iface->freq);
 		}
 		if (hapd->public_action_cb || hapd->public_action_cb2)
-			return;
+			return 1;
 		break;
 	case WLAN_ACTION_VENDOR_SPECIFIC:
 		if (hapd->vendor_action_cb) {
 			if (hapd->vendor_action_cb(hapd->vendor_action_cb_ctx,
 						   (u8 *) mgmt, len,
 						   hapd->iface->freq) == 0)
-				return;
+				return 1;
 		}
 		break;
 	}
@@ -1681,7 +1680,7 @@ static void handle_action(struct hostapd_data *hapd,
 			   "frame back to sender");
 		resp = os_malloc(len);
 		if (resp == NULL)
-			return;
+			return 0;
 		os_memcpy(resp, mgmt, len);
 		os_memcpy(resp->da, resp->sa, ETH_ALEN);
 		os_memcpy(resp->sa, hapd->own_addr, ETH_ALEN);
@@ -1694,6 +1693,8 @@ static void handle_action(struct hostapd_data *hapd,
 		}
 		os_free(resp);
 	}
+
+	return 1;
 }
 
 
@@ -1710,12 +1711,13 @@ static void handle_action(struct hostapd_data *hapd,
  * addition, it can be called to re-inserted pending frames (e.g., when using
  * external RADIUS server as an MAC ACL).
  */
-void ieee802_11_mgmt(struct hostapd_data *hapd, const u8 *buf, size_t len,
-		     struct hostapd_frame_info *fi)
+int ieee802_11_mgmt(struct hostapd_data *hapd, const u8 *buf, size_t len,
+		    struct hostapd_frame_info *fi)
 {
 	struct ieee80211_mgmt *mgmt;
 	int broadcast;
 	u16 fc, stype;
+	int ret = 0;
 
 #ifdef CONFIG_TESTING_OPTIONS
 	if (hapd->ext_mgmt_frame_handling) {
@@ -1726,12 +1728,12 @@ void ieee802_11_mgmt(struct hostapd_data *hapd, const u8 *buf, size_t len,
 			wpa_msg(hapd->msg_ctx, MSG_INFO, "MGMT-RX %s", hex);
 			os_free(hex);
 		}
-		return;
+		return 1;
 	}
 #endif /* CONFIG_TESTING_OPTIONS */
 
 	if (len < 24)
-		return;
+		return 0;
 
 	mgmt = (struct ieee80211_mgmt *) buf;
 	fc = le_to_host16(mgmt->frame_control);
@@ -1739,7 +1741,7 @@ void ieee802_11_mgmt(struct hostapd_data *hapd, const u8 *buf, size_t len,
 
 	if (stype == WLAN_FC_STYPE_BEACON) {
 		handle_beacon(hapd, mgmt, len, fi);
-		return;
+		return 1;
 	}
 
 	broadcast = mgmt->bssid[0] == 0xff && mgmt->bssid[1] == 0xff &&
@@ -1755,13 +1757,13 @@ void ieee802_11_mgmt(struct hostapd_data *hapd, const u8 *buf, size_t len,
 	    os_memcmp(mgmt->bssid, hapd->own_addr, ETH_ALEN) != 0) {
 		wpa_printf(MSG_INFO, "MGMT: BSSID=" MACSTR " not our address",
 			   MAC2STR(mgmt->bssid));
-		return;
+		return 0;
 	}
 
 
 	if (stype == WLAN_FC_STYPE_PROBE_REQ) {
 		handle_probe_req(hapd, mgmt, len, fi->ssi_signal);
-		return;
+		return 1;
 	}
 
 	if (os_memcmp(mgmt->da, hapd->own_addr, ETH_ALEN) != 0) {
@@ -1769,33 +1771,38 @@ void ieee802_11_mgmt(struct hostapd_data *hapd, const u8 *buf, size_t len,
 			       HOSTAPD_LEVEL_DEBUG,
 			       "MGMT: DA=" MACSTR " not our address",
 			       MAC2STR(mgmt->da));
-		return;
+		return 0;
 	}
 
 	switch (stype) {
 	case WLAN_FC_STYPE_AUTH:
 		wpa_printf(MSG_DEBUG, "mgmt::auth");
 		handle_auth(hapd, mgmt, len);
+		ret = 1;
 		break;
 	case WLAN_FC_STYPE_ASSOC_REQ:
 		wpa_printf(MSG_DEBUG, "mgmt::assoc_req");
 		handle_assoc(hapd, mgmt, len, 0);
+		ret = 1;
 		break;
 	case WLAN_FC_STYPE_REASSOC_REQ:
 		wpa_printf(MSG_DEBUG, "mgmt::reassoc_req");
 		handle_assoc(hapd, mgmt, len, 1);
+		ret = 1;
 		break;
 	case WLAN_FC_STYPE_DISASSOC:
 		wpa_printf(MSG_DEBUG, "mgmt::disassoc");
 		handle_disassoc(hapd, mgmt, len);
+		ret = 1;
 		break;
 	case WLAN_FC_STYPE_DEAUTH:
 		wpa_msg(hapd->msg_ctx, MSG_DEBUG, "mgmt::deauth");
 		handle_deauth(hapd, mgmt, len);
+		ret = 1;
 		break;
 	case WLAN_FC_STYPE_ACTION:
 		wpa_printf(MSG_DEBUG, "mgmt::action");
-		handle_action(hapd, mgmt, len);
+		ret = handle_action(hapd, mgmt, len);
 		break;
 	default:
 		hostapd_logger(hapd, mgmt->sa, HOSTAPD_MODULE_IEEE80211,
@@ -1803,6 +1810,8 @@ void ieee802_11_mgmt(struct hostapd_data *hapd, const u8 *buf, size_t len,
 			       "unknown mgmt frame subtype %d", stype);
 		break;
 	}
+
+	return ret;
 }
 
 

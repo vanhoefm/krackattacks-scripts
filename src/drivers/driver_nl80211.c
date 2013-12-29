@@ -1627,6 +1627,11 @@ static void mlme_event_mgmt(struct wpa_driver_nl80211_data *drv,
 		event.rx_action.category = mgmt->u.action.category;
 		event.rx_action.data = &mgmt->u.action.category + 1;
 		event.rx_action.len = frame + len - event.rx_action.data;
+		event.rx_action.ssi_signal = ssi_signal;
+		if (host_to_le16(WLAN_FC_ISWEP) & mgmt->frame_control)
+			event.rx_action.protected = 1;
+		else
+			event.rx_action.protected = -1;
 		wpa_supplicant_event(drv->ctx, EVENT_RX_ACTION, &event);
 	} else {
 		event.rx_mgmt.frame = frame;

@@ -3804,6 +3804,18 @@ union wpa_event_data {
 		 * freq - Frequency (in MHz) on which the frame was received
 		 */
 		int freq;
+
+		/**
+		 * ssi_signal - Signal strength in dBm (or 0 if not available)
+		 */
+		int ssi_signal;
+
+		/**
+		 * protected - Whether frame was protected (PMF)
+		 *
+		 * 0 = unknown, 1 = yes, -1 = not
+		 */
+		int protected;
 	} rx_action;
 
 	/**

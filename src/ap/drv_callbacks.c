@@ -696,7 +696,9 @@ static void hostapd_rx_action(struct hostapd_data *hapd,
 	hdr = (struct ieee80211_hdr *) buf;
 	hdr->frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
 					  WLAN_FC_STYPE_ACTION);
-	if (rx_action->category == WLAN_ACTION_SA_QUERY) {
+	if (rx_action->protected == 1)
+		hdr->frame_control |= host_to_le16(WLAN_FC_ISWEP);
+	else if (rx_action->category == WLAN_ACTION_SA_QUERY) {
 		/*
 		 * Assume frame was protected; it would have been dropped if
 		 * not.

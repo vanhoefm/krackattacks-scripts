@@ -9,11 +9,10 @@
 #ifndef WNM_AP_H
 #define WNM_AP_H
 
-struct rx_action;
 struct sta_info;
 
 int ieee802_11_rx_wnm_action_ap(struct hostapd_data *hapd,
-				struct rx_action *action);
+				const struct ieee80211_mgmt *mgmt, size_t len);
 int wnm_send_disassoc_imminent(struct hostapd_data *hapd,
 			       struct sta_info *sta, int disassoc_timer);
 int wnm_send_ess_disassoc_imminent(struct hostapd_data *hapd,

@@ -2707,6 +2707,87 @@ static void wpa_supplicant_update_channel_list(struct wpa_supplicant *wpa_s)
 }
 
 
+static void wpas_event_rx_mgmt_action(struct wpa_supplicant *wpa_s,
+				      const struct ieee80211_mgmt *mgmt,
+				      size_t len, int freq)
+{
+	const u8 *payload;
+	size_t plen;
+	u8 category;
+
+	if (len < IEEE80211_HDRLEN + 2)
+		return;
+
+	payload = &mgmt->u.action.category;
+	category = *payload++;
+	plen = (((const u8 *) mgmt) + len) - payload;
+
+	wpa_dbg(wpa_s, MSG_DEBUG, "Received Action frame: SA=" MACSTR
+		" Category=%u DataLen=%d freq=%d MHz",
+		MAC2STR(mgmt->sa), category, (int) plen, freq);
+
+#ifdef CONFIG_IEEE80211R
+	if (category == WLAN_ACTION_FT) {
+		ft_rx_action(wpa_s, payload, plen);
+		return;
+	}
+#endif /* CONFIG_IEEE80211R */
+
+#ifdef CONFIG_IEEE80211W
+#ifdef CONFIG_SME
+	if (category == WLAN_ACTION_SA_QUERY) {
+		sme_sa_query_rx(wpa_s, mgmt->sa, payload, plen);
+		return;
+	}
+#endif /* CONFIG_SME */
+#endif /* CONFIG_IEEE80211W */
+
+#ifdef CONFIG_WNM
+	if (mgmt->u.action.category == WLAN_ACTION_WNM) {
+		ieee802_11_rx_wnm_action(wpa_s, mgmt, len);
+		return;
+	}
+#endif /* CONFIG_WNM */
+
+#ifdef CONFIG_GAS
+	if (mgmt->u.action.category == WLAN_ACTION_PUBLIC &&
+	    gas_query_rx(wpa_s->gas, mgmt->da, mgmt->sa, mgmt->bssid,
+			 payload, plen, freq) == 0)
+		return;
+#endif /* CONFIG_GAS */
+
+#ifdef CONFIG_TDLS
+	if (category == WLAN_ACTION_PUBLIC && plen >= 4 &&
+	    payload[0] == WLAN_TDLS_DISCOVERY_RESPONSE) {
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"TDLS: Received Discovery Response from " MACSTR,
+			MAC2STR(mgmt->sa));
+		return;
+	}
+#endif /* CONFIG_TDLS */
+
+#ifdef CONFIG_INTERWORKING
+	if (category == WLAN_ACTION_QOS && plen >= 1 &&
+	    payload[0] == QOS_QOS_MAP_CONFIG) {
+		const u8 *pos = payload + 1;
+		size_t qlen = plen - 1;
+		wpa_dbg(wpa_s, MSG_DEBUG, "Interworking: Received QoS Map Configure frame from "
+			MACSTR, MAC2STR(mgmt->sa));
+		if (os_memcmp(mgmt->sa, wpa_s->bssid, ETH_ALEN) == 0 &&
+		    qlen > 2 && pos[0] == WLAN_EID_QOS_MAP_SET &&
+		    pos[1] <= qlen - 2 && pos[1] >= 16)
+			wpas_qos_map_set(wpa_s, pos + 2, pos[1]);
+		return;
+	}
+#endif /* CONFIG_INTERWORKING */
+
+#ifdef CONFIG_P2P
+	wpas_p2p_rx_action(wpa_s, mgmt->da, mgmt->sa, mgmt->bssid,
+			   category, payload, plen, freq);
+#endif /* CONFIG_P2P */
+}
+
+
 void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			  union wpa_event_data *data)
 {
@@ -2956,7 +3037,6 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 				  data->ch_switch.cf2);
 		break;
 #endif /* CONFIG_AP */
-#if defined(CONFIG_AP) || defined(CONFIG_IBSS_RSN)
 	case EVENT_RX_MGMT: {
 		u16 fc, stype;
 		const struct ieee80211_mgmt *mgmt;
@@ -2991,6 +3071,14 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 				break;
 			}
 #endif /* CONFIG_IBSS_RSN */
+
+			if (stype == WLAN_FC_STYPE_ACTION) {
+				wpas_event_rx_mgmt_action(
+					wpa_s, mgmt, data->rx_mgmt.frame_len,
+					data->rx_mgmt.freq);
+				break;
+			}
+
 			wpa_dbg(wpa_s, MSG_DEBUG, "AP: ignore received "
 				"management frame in non-AP mode");
 			break;
@@ -3013,79 +3101,6 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 #endif /* CONFIG_AP */
 		break;
 		}
-#endif /* CONFIG_AP || CONFIG_IBSS_RSN */
-	case EVENT_RX_ACTION:
-		wpa_dbg(wpa_s, MSG_DEBUG, "Received Action frame: SA=" MACSTR
-			" Category=%u DataLen=%d freq=%d MHz",
-			MAC2STR(data->rx_action.sa),
-			data->rx_action.category, (int) data->rx_action.len,
-			data->rx_action.freq);
-#ifdef CONFIG_IEEE80211R
-		if (data->rx_action.category == WLAN_ACTION_FT) {
-			ft_rx_action(wpa_s, data->rx_action.data,
-				     data->rx_action.len);
-			break;
-		}
-#endif /* CONFIG_IEEE80211R */
-#ifdef CONFIG_IEEE80211W
-#ifdef CONFIG_SME
-		if (data->rx_action.category == WLAN_ACTION_SA_QUERY) {
-			sme_sa_query_rx(wpa_s, data->rx_action.sa,
-					data->rx_action.data,
-					data->rx_action.len);
-			break;
-		}
-#endif /* CONFIG_SME */
-#endif /* CONFIG_IEEE80211W */
-#ifdef CONFIG_WNM
-		if (data->rx_action.category == WLAN_ACTION_WNM) {
-			ieee802_11_rx_wnm_action(wpa_s, &data->rx_action);
-			break;
-		}
-#endif /* CONFIG_WNM */
-#ifdef CONFIG_GAS
-		if (data->rx_action.category == WLAN_ACTION_PUBLIC &&
-		    gas_query_rx(wpa_s->gas, data->rx_action.da,
-				 data->rx_action.sa, data->rx_action.bssid,
-				 data->rx_action.data, data->rx_action.len,
-				 data->rx_action.freq) == 0)
-			break;
-#endif /* CONFIG_GAS */
-#ifdef CONFIG_TDLS
-		if (data->rx_action.category == WLAN_ACTION_PUBLIC &&
-		    data->rx_action.len >= 4 &&
-		    data->rx_action.data[0] == WLAN_TDLS_DISCOVERY_RESPONSE) {
-			wpa_dbg(wpa_s, MSG_DEBUG, "TDLS: Received Discovery "
-				"Response from " MACSTR,
-				MAC2STR(data->rx_action.sa));
-			break;
-		}
-#endif /* CONFIG_TDLS */
-#ifdef CONFIG_INTERWORKING
-		if (data->rx_action.category == WLAN_ACTION_QOS &&
-		    data->rx_action.len >= 1 &&
-		    data->rx_action.data[0] == QOS_QOS_MAP_CONFIG) {
-			const u8 *pos = data->rx_action.data + 1;
-			size_t len = data->rx_action.len - 1;
-			wpa_dbg(wpa_s, MSG_DEBUG, "Interworking: Received QoS Map Configure frame from "
-				MACSTR, MAC2STR(data->rx_action.sa));
-			if (os_memcmp(data->rx_action.sa, wpa_s->bssid,
-				      ETH_ALEN) == 0 &&
-			    len > 2 && pos[0] == WLAN_EID_QOS_MAP_SET &&
-			    pos[1] <= len - 2 && pos[1] >= 16)
-				wpas_qos_map_set(wpa_s, pos + 2, pos[1]);
-			break;
-		}
-#endif /* CONFIG_INTERWORKING */
-#ifdef CONFIG_P2P
-		wpas_p2p_rx_action(wpa_s, data->rx_action.da,
-				   data->rx_action.sa,
-				   data->rx_action.bssid,
-				   data->rx_action.category,
-				   data->rx_action.data,
-				   data->rx_action.len, data->rx_action.freq);
-#endif /* CONFIG_P2P */
-		break;
 	case EVENT_RX_PROBE_REQ:
 		if (data->rx_probe_req.sa == NULL ||
 		    data->rx_probe_req.ie == NULL)

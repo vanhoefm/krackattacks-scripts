@@ -1602,7 +1602,7 @@ static void mlme_event_mgmt(struct wpa_driver_nl80211_data *drv,
 	wpa_printf(MSG_MSGDUMP, "nl80211: Frame event");
 	mgmt = (const struct ieee80211_mgmt *) frame;
 	if (len < 24) {
-		wpa_printf(MSG_DEBUG, "nl80211: Too short action frame");
+		wpa_printf(MSG_DEBUG, "nl80211: Too short management frame");
 		return;
 	}
 
@@ -1614,31 +1614,16 @@ static void mlme_event_mgmt(struct wpa_driver_nl80211_data *drv,
 
 	os_memset(&event, 0, sizeof(event));
 	if (freq) {
-		event.rx_action.freq = nla_get_u32(freq);
-		rx_freq = drv->last_mgmt_freq = event.rx_action.freq;
+		event.rx_mgmt.freq = nla_get_u32(freq);
+		rx_freq = drv->last_mgmt_freq = event.rx_mgmt.freq;
 	}
 	wpa_printf(MSG_DEBUG,
 		   "nl80211: RX frame freq=%d ssi_signal=%d stype=%u len=%u",
 		   rx_freq, ssi_signal, stype, (unsigned int) len);
-	if (stype == WLAN_FC_STYPE_ACTION) {
-		event.rx_action.da = mgmt->da;
-		event.rx_action.sa = mgmt->sa;
-		event.rx_action.bssid = mgmt->bssid;
-		event.rx_action.category = mgmt->u.action.category;
-		event.rx_action.data = &mgmt->u.action.category + 1;
-		event.rx_action.len = frame + len - event.rx_action.data;
-		event.rx_action.ssi_signal = ssi_signal;
-		if (host_to_le16(WLAN_FC_ISWEP) & mgmt->frame_control)
-			event.rx_action.protected = 1;
-		else
-			event.rx_action.protected = -1;
-		wpa_supplicant_event(drv->ctx, EVENT_RX_ACTION, &event);
-	} else {
-		event.rx_mgmt.frame = frame;
-		event.rx_mgmt.frame_len = len;
-		event.rx_mgmt.ssi_signal = ssi_signal;
-		wpa_supplicant_event(drv->ctx, EVENT_RX_MGMT, &event);
-	}
+	event.rx_mgmt.frame = frame;
+	event.rx_mgmt.frame_len = len;
+	event.rx_mgmt.ssi_signal = ssi_signal;
+	wpa_supplicant_event(drv->ctx, EVENT_RX_MGMT, &event);
 }
 
 

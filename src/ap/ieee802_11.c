@@ -1564,27 +1564,6 @@ static int robust_action_frame(u8 category)
 #endif /* CONFIG_IEEE80211W */
 
 
-#ifdef CONFIG_WNM
-static int hostapd_wnm_action(struct hostapd_data *hapd, struct sta_info *sta,
-			      const struct ieee80211_mgmt *mgmt, size_t len)
-{
-	struct rx_action action;
-	if (len < IEEE80211_HDRLEN + 2)
-		return 0;
-	os_memset(&action, 0, sizeof(action));
-	action.da = mgmt->da;
-	action.sa = mgmt->sa;
-	action.bssid = mgmt->bssid;
-	action.category = mgmt->u.action.category;
-	action.data = (const u8 *) &mgmt->u.action.u.wnm_sleep_req.action;
-	action.len = len - IEEE80211_HDRLEN - 1;
-	action.freq = hapd->iface->freq;
-	ieee802_11_rx_wnm_action_ap(hapd, &action);
-	return 1;
-}
-#endif /* CONFIG_WNM */
-
-
 static int handle_action(struct hostapd_data *hapd,
 			 const struct ieee80211_mgmt *mgmt, size_t len)
 {
@@ -1636,7 +1615,8 @@ static int handle_action(struct hostapd_data *hapd,
 #endif /* CONFIG_IEEE80211W */
 #ifdef CONFIG_WNM
 	case WLAN_ACTION_WNM:
-		return hostapd_wnm_action(hapd, sta, mgmt, len);
+		ieee802_11_rx_wnm_action_ap(hapd, mgmt, len);
+		return 1;
 #endif /* CONFIG_WNM */
 	case WLAN_ACTION_PUBLIC:
 		if (hapd->public_action_cb) {

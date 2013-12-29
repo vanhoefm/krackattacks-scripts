@@ -558,39 +558,48 @@ fail:
 
 
 static void hostapd_action_rx(struct hostapd_data *hapd,
-			      struct rx_action *action)
+			      struct rx_mgmt *drv_mgmt)
 {
+	struct ieee80211_mgmt *mgmt;
 	struct sta_info *sta;
+	size_t plen __maybe_unused;
+	u16 fc;
+
+	if (drv_mgmt->frame_len < 24 + 1)
+		return;
+
+	plen = drv_mgmt->frame_len - 24 - 1;
+
+	mgmt = (struct ieee80211_mgmt *) drv_mgmt->frame;
+	fc = le_to_host16(mgmt->frame_control);
+	if (WLAN_FC_GET_STYPE(fc) != WLAN_FC_STYPE_ACTION)
+		return; /* handled by the driver */
 
         wpa_printf(MSG_DEBUG, "RX_ACTION cat %d action plen %d",
-		   action->category, (int) action->len);
+		   mgmt->u.action.category, (int) plen);
 
-	sta = ap_get_sta(hapd, action->sa);
+	sta = ap_get_sta(hapd, mgmt->sa);
 	if (sta == NULL) {
 		wpa_printf(MSG_DEBUG, "%s: station not found", __func__);
 		return;
 	}
 #ifdef CONFIG_IEEE80211R
-	if (action->category == WLAN_ACTION_FT) {
-		wpa_printf(MSG_DEBUG, "%s: FT_ACTION length %d",
-			   __func__, (int) action->len);
-		wpa_ft_action_rx(sta->wpa_sm, action->data, action->len);
+	if (mgmt->u.action.category == WLAN_ACTION_FT) {
+		const u8 *payload = drv_mgmt->frame + 24 + 1;
+		wpa_ft_action_rx(sta->wpa_sm, payload, plen);
 	}
 #endif /* CONFIG_IEEE80211R */
 #ifdef CONFIG_IEEE80211W
-	if (action->category == WLAN_ACTION_SA_QUERY && action->len >= 4) {
-		wpa_printf(MSG_DEBUG, "%s: SA_QUERY_ACTION length %d",
-			   __func__, (int) action->len);
-		ieee802_11_sa_query_action(hapd, action->sa,
-					   *(action->data + 1),
-					   action->data + 2);
+	if (mgmt->u.action.category == WLAN_ACTION_SA_QUERY && plen >= 4) {
+		ieee802_11_sa_query_action(
+			hapd, mgmt->sa,
+			mgmt->u.action.u.sa_query_resp.action,
+			mgmt->u.action.u.sa_query_resp.trans_id);
 	}
 #endif /* CONFIG_IEEE80211W */
 #ifdef CONFIG_WNM
-	if (action->category == WLAN_ACTION_WNM) {
-		wpa_printf(MSG_DEBUG, "%s: WNM_ACTION length %d",
-			   __func__, (int) action->len);
-		ieee802_11_rx_wnm_action_ap(hapd, action);
+	if (mgmt->u.action.category == WLAN_ACTION_WNM) {
+		ieee802_11_rx_wnm_action_ap(hapd, mgmt, drv_mgmt->frame_len);
 	}
 #endif /* CONFIG_WNM */
 }
@@ -678,51 +687,6 @@ static int hostapd_mgmt_rx(struct hostapd_data *hapd, struct rx_mgmt *rx_mgmt)
 				      &fi);
 
 	random_add_randomness(&fi, sizeof(fi));
-
-	return ret;
-}
-
-
-static int hostapd_rx_action(struct hostapd_data *hapd,
-			     struct rx_action *rx_action)
-{
-	struct rx_mgmt rx_mgmt;
-	u8 *buf;
-	struct ieee80211_hdr *hdr;
-	int ret;
-
-	wpa_printf(MSG_DEBUG, "EVENT_RX_ACTION DA=" MACSTR " SA=" MACSTR
-		   " BSSID=" MACSTR " category=%u",
-		   MAC2STR(rx_action->da), MAC2STR(rx_action->sa),
-		   MAC2STR(rx_action->bssid), rx_action->category);
-	wpa_hexdump(MSG_MSGDUMP, "Received action frame contents",
-		    rx_action->data, rx_action->len);
-
-	buf = os_zalloc(24 + 1 + rx_action->len);
-	if (buf == NULL)
-		return -1;
-	hdr = (struct ieee80211_hdr *) buf;
-	hdr->frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
-					  WLAN_FC_STYPE_ACTION);
-	if (rx_action->protected == 1)
-		hdr->frame_control |= host_to_le16(WLAN_FC_ISWEP);
-	else if (rx_action->category == WLAN_ACTION_SA_QUERY) {
-		/*
-		 * Assume frame was protected; it would have been dropped if
-		 * not.
-		 */
-		hdr->frame_control |= host_to_le16(WLAN_FC_ISWEP);
-	}
-	os_memcpy(hdr->addr1, rx_action->da, ETH_ALEN);
-	os_memcpy(hdr->addr2, rx_action->sa, ETH_ALEN);
-	os_memcpy(hdr->addr3, rx_action->bssid, ETH_ALEN);
-	buf[24] = rx_action->category;
-	os_memcpy(buf + 24 + 1, rx_action->data, rx_action->len);
-	os_memset(&rx_mgmt, 0, sizeof(rx_mgmt));
-	rx_mgmt.frame = buf;
-	rx_mgmt.frame_len = 24 + 1 + rx_action->len;
-	ret = hostapd_mgmt_rx(hapd, &rx_mgmt);
-	os_free(buf);
 
 	return ret;
 }
@@ -966,10 +930,14 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 					    data->rx_from_unknown.addr,
 					    data->rx_from_unknown.wds);
 		break;
-	case EVENT_RX_MGMT:
-		hostapd_mgmt_rx(hapd, &data->rx_mgmt);
-		break;
 #endif /* NEED_AP_MLME */
+	case EVENT_RX_MGMT:
+#ifdef NEED_AP_MLME
+		if (hostapd_mgmt_rx(hapd, &data->rx_mgmt) > 0)
+			break;
+#endif /* NEED_AP_MLME */
+		hostapd_action_rx(hapd, &data->rx_mgmt);
+		break;
 	case EVENT_RX_PROBE_REQ:
 		if (data->rx_probe_req.sa == NULL ||
 		    data->rx_probe_req.ie == NULL)
@@ -1007,16 +975,6 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		if (!data)
 			break;
 		hostapd_event_sta_low_ack(hapd, data->low_ack.addr);
-		break;
-	case EVENT_RX_ACTION:
-		if (data->rx_action.da == NULL || data->rx_action.sa == NULL ||
-		    data->rx_action.bssid == NULL)
-			break;
-#ifdef NEED_AP_MLME
-		if (hostapd_rx_action(hapd, &data->rx_action) > 0)
-			break;
-#endif /* NEED_AP_MLME */
-		hostapd_action_rx(hapd, &data->rx_action);
 		break;
 	case EVENT_AUTH:
 		hostapd_notif_auth(hapd, &data->auth);

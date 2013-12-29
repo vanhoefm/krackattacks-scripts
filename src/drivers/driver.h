@@ -2216,7 +2216,7 @@ struct wpa_driver_ops {
 	 *
 	 * This command is used to request the driver to remain awake on the
 	 * specified channel for the specified duration and report received
-	 * Action frames with EVENT_RX_ACTION events. Optionally, received
+	 * Action frames with EVENT_RX_MGMT events. Optionally, received
 	 * Probe Request frames may also be requested to be reported by calling
 	 * probe_req_report(). These will be reported with EVENT_RX_PROBE_REQ.
 	 *
@@ -3102,15 +3102,6 @@ enum wpa_event_type {
 	EVENT_RX_MGMT,
 
 	/**
-	 * EVENT_RX_ACTION - Action frame received
-	 *
-	 * This event is used to indicate when an Action frame has been
-	 * received. Information about the received frame is included in
-	 * union wpa_event_data::rx_action.
-	 */
-	EVENT_RX_ACTION,
-
-	/**
 	 * EVENT_REMAIN_ON_CHANNEL - Remain-on-channel duration started
 	 *
 	 * This event is used to indicate when the driver has started the
@@ -3763,42 +3754,6 @@ union wpa_event_data {
 		const u8 *frame;
 		size_t frame_len;
 		u32 datarate;
-		int ssi_signal; /* dBm */
-	} rx_mgmt;
-
-	/**
-	 * struct rx_action - Data for EVENT_RX_ACTION events
-	 */
-	struct rx_action {
-		/**
-		 * da - Destination address of the received Action frame
-		 */
-		const u8 *da;
-
-		/**
-		 * sa - Source address of the received Action frame
-		 */
-		const u8 *sa;
-
-		/**
-		 * bssid - Address 3 of the received Action frame
-		 */
-		const u8 *bssid;
-
-		/**
-		 * category - Action frame category
-		 */
-		u8 category;
-
-		/**
-		 * data - Action frame body after category field
-		 */
-		const u8 *data;
-
-		/**
-		 * len - Length of data in octets
-		 */
-		size_t len;
 
 		/**
 		 * freq - Frequency (in MHz) on which the frame was received
@@ -3809,14 +3764,7 @@ union wpa_event_data {
 		 * ssi_signal - Signal strength in dBm (or 0 if not available)
 		 */
 		int ssi_signal;
-
-		/**
-		 * protected - Whether frame was protected (PMF)
-		 *
-		 * 0 = unknown, 1 = yes, -1 = not
-		 */
-		int protected;
-	} rx_action;
+	} rx_mgmt;
 
 	/**
 	 * struct remain_on_channel - Data for EVENT_REMAIN_ON_CHANNEL events

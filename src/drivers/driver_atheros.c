@@ -806,16 +806,10 @@ static void atheros_raw_recv_11r(void *ctx, const u8 *src_addr, const u8 *buf,
 		drv_event_assoc(drv->hapd, mgmt->sa, iebuf, ielen, 1);
 		break;
 	case WLAN_FC_STYPE_ACTION:
-		if (&mgmt->u.action.category > buf + len)
-			break;
 		os_memset(&event, 0, sizeof(event));
-		event.rx_action.da = mgmt->da;
-		event.rx_action.sa = mgmt->sa;
-		event.rx_action.bssid = mgmt->bssid;
-		event.rx_action.category = mgmt->u.action.category;
-		event.rx_action.data = &mgmt->u.action.category;
-		event.rx_action.len = buf + len - event.rx_action.data;
-		wpa_supplicant_event(drv->hapd, EVENT_RX_ACTION, &event);
+		event.rx_mgmt.frame = buf;
+		event.rx_mgmt.frame_len = len;
+		wpa_supplicant_event(drv->hapd, EVENT_RX_MGMT, &event);
 		break;
 	case WLAN_FC_STYPE_AUTH:
 		if (len - IEEE80211_HDRLEN < sizeof(mgmt->u.auth))
@@ -954,16 +948,10 @@ static void atheros_raw_recv_11v(void *ctx, const u8 *src_addr, const u8 *buf,
 
 	switch (stype) {
 	case WLAN_FC_STYPE_ACTION:
-		if (&mgmt->u.action.category > buf + len)
-			break;
 		os_memset(&event, 0, sizeof(event));
-		event.rx_action.da = mgmt->da;
-		event.rx_action.sa = mgmt->sa;
-		event.rx_action.bssid = mgmt->bssid;
-		event.rx_action.category = mgmt->u.action.category;
-		event.rx_action.data = &mgmt->u.action.category;
-		event.rx_action.len = buf + len - event.rx_action.data;
-		wpa_supplicant_event(drv->hapd, EVENT_RX_ACTION, &event);
+		event.rx_mgmt.frame = buf;
+		event.rx_mgmt.frame_len = len;
+		wpa_supplicant_event(drv->hapd, EVENT_RX_MGMT, &event);
 		break;
 	default:
 		break;

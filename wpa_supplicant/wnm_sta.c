@@ -181,7 +181,7 @@ static void wnm_sleep_mode_exit_success(struct wpa_supplicant *wpa_s,
 	/* Install GTK/IGTK */
 
 	/* point to key data field */
-	ptr = (u8 *) frm + 1 + 1 + 2;
+	ptr = (u8 *) frm + 1 + 2;
 	end = ptr + key_len_total;
 	wpa_hexdump_key(MSG_DEBUG, "WNM: Key Data", ptr, key_len_total);
 
@@ -237,16 +237,16 @@ static void ieee802_11_rx_wnmsleep_resp(struct wpa_supplicant *wpa_s,
 	 * Action [1] | Diaglog Token [1] | Key Data Len [2] | Key Data |
 	 * WNM-Sleep Mode IE | TFS Response IE
 	 */
-	u8 *pos = (u8 *) frm; /* point to action field */
+	u8 *pos = (u8 *) frm; /* point to payload after the action field */
 	u16 key_len_total = le_to_host16(*((u16 *)(frm+2)));
 	struct wnm_sleep_element *wnmsleep_ie = NULL;
 	/* multiple TFS Resp IE (assuming consecutive) */
 	u8 *tfsresp_ie_start = NULL;
 	u8 *tfsresp_ie_end = NULL;
 
-	wpa_printf(MSG_DEBUG, "action=%d token = %d key_len_total = %d",
-		   frm[0], frm[1], key_len_total);
-	pos += 4 + key_len_total;
+	wpa_printf(MSG_DEBUG, "WNM-Sleep Mode Response token=%u key_len_total=%d",
+		   frm[0], key_len_total);
+	pos += 3 + key_len_total;
 	if (pos > frm + len) {
 		wpa_printf(MSG_INFO, "WNM: Too short frame for Key Data field");
 		return;
@@ -752,22 +752,23 @@ int wnm_send_bss_transition_mgmt_query(struct wpa_supplicant *wpa_s,
 
 
 void ieee802_11_rx_wnm_action(struct wpa_supplicant *wpa_s,
-			      struct rx_action *action)
+			      const struct ieee80211_mgmt *mgmt, size_t len)
 {
 	const u8 *pos, *end;
 	u8 act;
 
-	if (action->data == NULL || action->len == 0)
+	if (len < IEEE80211_HDRLEN + 2)
 		return;
 
-	pos = action->data;
-	end = pos + action->len;
+	pos = &mgmt->u.action.category;
+	pos++;
 	act = *pos++;
+	end = ((const u8 *) mgmt) + len;
 
 	wpa_printf(MSG_DEBUG, "WNM: RX action %u from " MACSTR,
-		   act, MAC2STR(action->sa));
+		   act, MAC2STR(mgmt->sa));
 	if (wpa_s->wpa_state < WPA_ASSOCIATED ||
-	    os_memcmp(action->sa, wpa_s->bssid, ETH_ALEN) != 0) {
+	    os_memcmp(mgmt->sa, wpa_s->bssid, ETH_ALEN) != 0) {
 		wpa_printf(MSG_DEBUG, "WNM: Ignore unexpected WNM Action "
 			   "frame");
 		return;
@@ -776,10 +777,10 @@ void ieee802_11_rx_wnm_action(struct wpa_supplicant *wpa_s,
 	switch (act) {
 	case WNM_BSS_TRANS_MGMT_REQ:
 		ieee802_11_rx_bss_trans_mgmt_req(wpa_s, pos, end,
-						 !(action->da[0] & 0x01));
+						 !(mgmt->da[0] & 0x01));
 		break;
 	case WNM_SLEEP_MODE_RESP:
-		ieee802_11_rx_wnmsleep_resp(wpa_s, action->data, action->len);
+		ieee802_11_rx_wnmsleep_resp(wpa_s, pos, end - pos);
 		break;
 	default:
 		wpa_printf(MSG_ERROR, "WNM: Unknown request");

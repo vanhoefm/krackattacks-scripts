@@ -9,9 +9,6 @@
 #ifndef WNM_STA_H
 #define WNM_STA_H
 
-struct rx_action;
-struct wpa_supplicant;
-
 struct tsf_info {
 	u8 present;
 	u8 tsf_offset[2];
@@ -78,7 +75,7 @@ int ieee802_11_send_wnmsleep_req(struct wpa_supplicant *wpa_s,
 				 u8 action, u16 intval, struct wpabuf *tfs_req);
 
 void ieee802_11_rx_wnm_action(struct wpa_supplicant *wpa_s,
-			      struct rx_action *action);
+			      const struct ieee80211_mgmt *mgmt, size_t len);
 
 void wnm_scan_response(struct wpa_supplicant *wpa_s,
 		       struct wpa_scan_results *scan_res);

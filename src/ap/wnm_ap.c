@@ -367,30 +367,36 @@ static void ieee802_11_rx_bss_trans_mgmt_resp(struct hostapd_data *hapd,
 
 
 int ieee802_11_rx_wnm_action_ap(struct hostapd_data *hapd,
-				struct rx_action *action)
+				const struct ieee80211_mgmt *mgmt, size_t len)
 {
-	if (action->len < 1 || action->data == NULL)
+	u8 action;
+	const u8 *payload;
+	size_t plen;
+
+	if (len < IEEE80211_HDRLEN + 2)
 		return -1;
 
-	switch (action->data[0]) {
+	payload = &mgmt->u.action.category;
+	payload++;
+	action = *payload++;
+	plen = (((const u8 *) mgmt) + len) - payload;
+
+	switch (action) {
 	case WNM_BSS_TRANS_MGMT_QUERY:
-		ieee802_11_rx_bss_trans_mgmt_query(hapd, action->sa,
-						   action->data + 1,
-						   action->len - 1);
+		ieee802_11_rx_bss_trans_mgmt_query(hapd, mgmt->sa, payload,
+						   plen);
 		return 0;
 	case WNM_BSS_TRANS_MGMT_RESP:
-		ieee802_11_rx_bss_trans_mgmt_resp(hapd, action->sa,
-						  action->data + 1,
-						  action->len - 1);
+		ieee802_11_rx_bss_trans_mgmt_resp(hapd, mgmt->sa, payload,
+						  plen);
 		return 0;
 	case WNM_SLEEP_MODE_REQ:
-		ieee802_11_rx_wnmsleep_req(hapd, action->sa, action->data + 1,
-					   action->len - 1);
+		ieee802_11_rx_wnmsleep_req(hapd, mgmt->sa, payload, plen);
 		return 0;
 	}
 
 	wpa_printf(MSG_DEBUG, "WNM: Unsupported WNM Action %u from " MACSTR,
-		   action->data[0], MAC2STR(action->sa));
+		   action, MAC2STR(mgmt->sa));
 	return -1;
 }
 

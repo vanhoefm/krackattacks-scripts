@@ -38,6 +38,71 @@ def test_ap_wps_init(dev, apdev):
     if status['key_mgmt'] != 'WPA2-PSK':
         raise Exception("Unexpected key_mgmt")
 
+def test_ap_wps_init_2ap_pbc(dev, apdev):
+    """Initial two-radio AP configuration with first WPS PBC Enrollee"""
+    ssid = "test-wps"
+    params = { "ssid": ssid, "eap_server": "1", "wps_state": "1" }
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[1]['ifname'], params)
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    logger.info("WPS provisioning step")
+    hapd.request("WPS_PBC")
+    dev[0].request("SET ignore_old_scan_res 1")
+    dev[0].scan(freq="2412")
+    bss = dev[0].get_bss(apdev[0]['bssid'])
+    if "[WPS-PBC]" not in bss['flags']:
+        raise Exception("WPS-PBC flag missing from AP1")
+    bss = dev[0].get_bss(apdev[1]['bssid'])
+    if "[WPS-PBC]" not in bss['flags']:
+        raise Exception("WPS-PBC flag missing from AP2")
+    dev[0].dump_monitor()
+    dev[0].request("WPS_PBC")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
+    if ev is None:
+        raise Exception("Association with the AP timed out")
+
+    dev[1].request("SET ignore_old_scan_res 1")
+    dev[1].scan(freq="2412")
+    bss = dev[1].get_bss(apdev[0]['bssid'])
+    if "[WPS-PBC]" in bss['flags']:
+        raise Exception("WPS-PBC flag not cleared from AP1")
+    bss = dev[1].get_bss(apdev[1]['bssid'])
+    if "[WPS-PBC]" in bss['flags']:
+        raise Exception("WPS-PBC flag bit ckeared from AP2")
+
+def test_ap_wps_init_2ap_pin(dev, apdev):
+    """Initial two-radio AP configuration with first WPS PIN Enrollee"""
+    ssid = "test-wps"
+    params = { "ssid": ssid, "eap_server": "1", "wps_state": "1" }
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_ap(apdev[1]['ifname'], params)
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    logger.info("WPS provisioning step")
+    pin = dev[0].wps_read_pin()
+    hapd.request("WPS_PIN any " + pin)
+    dev[0].request("SET ignore_old_scan_res 1")
+    dev[0].scan(freq="2412")
+    bss = dev[0].get_bss(apdev[0]['bssid'])
+    if "[WPS-AUTH]" not in bss['flags']:
+        raise Exception("WPS-AUTH flag missing from AP1")
+    bss = dev[0].get_bss(apdev[1]['bssid'])
+    if "[WPS-AUTH]" not in bss['flags']:
+        raise Exception("WPS-AUTH flag missing from AP2")
+    dev[0].dump_monitor()
+    dev[0].request("WPS_PIN any " + pin)
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
+    if ev is None:
+        raise Exception("Association with the AP timed out")
+
+    dev[1].request("SET ignore_old_scan_res 1")
+    dev[1].scan(freq="2412")
+    bss = dev[1].get_bss(apdev[0]['bssid'])
+    if "[WPS-AUTH]" in bss['flags']:
+        raise Exception("WPS-AUTH flag not cleared from AP1")
+    bss = dev[1].get_bss(apdev[1]['bssid'])
+    if "[WPS-AUTH]" in bss['flags']:
+        raise Exception("WPS-AUTH flag bit ckeared from AP2")
+
 def test_ap_wps_conf(dev, apdev):
     """WPS PBC provisioning with configured AP"""
     ssid = "test-wps-conf"

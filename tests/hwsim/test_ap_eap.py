@@ -19,14 +19,17 @@ def eap_connect(dev, method, identity, anonymous_identity=None, password=None,
                 phase1=None, phase2=None, ca_cert=None,
                 domain_suffix_match=None, password_hex=None,
                 client_cert=None, private_key=None, sha256=False):
-    dev.connect("test-wpa2-eap", key_mgmt="WPA-EAP WPA-EAP-SHA256", eap=method,
-                identity=identity, anonymous_identity=anonymous_identity,
-                password=password, phase1=phase1, phase2=phase2,
-                ca_cert=ca_cert, domain_suffix_match=domain_suffix_match,
-                wait_connect=False, scan_freq="2412", password_hex=password_hex,
-                client_cert=client_cert, private_key=private_key,
-                ieee80211w="1")
+    id = dev.connect("test-wpa2-eap", key_mgmt="WPA-EAP WPA-EAP-SHA256",
+                     eap=method, identity=identity,
+                     anonymous_identity=anonymous_identity,
+                     password=password, phase1=phase1, phase2=phase2,
+                     ca_cert=ca_cert, domain_suffix_match=domain_suffix_match,
+                     wait_connect=False, scan_freq="2412",
+                     password_hex=password_hex,
+                     client_cert=client_cert, private_key=private_key,
+                     ieee80211w="1")
     eap_check_auth(dev, method, True, sha256=sha256)
+    return id
 
 def eap_check_auth(dev, method, initial, rsn=True, sha256=False):
     ev = dev.wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
@@ -343,8 +346,27 @@ def test_ap_wpa2_eap_eke(dev, apdev):
     """WPA2-Enterprise connection using EAP-EKE"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
-    eap_connect(dev[0], "EKE", "eke user", password="hello")
+    id = eap_connect(dev[0], "EKE", "eke user", password="hello")
     eap_reauth(dev[0], "EKE")
+
+    logger.info("Test forced algorithm selection")
+    for phase1 in [ "dhgroup=5 encr=1 prf=2 mac=2",
+                    "dhgroup=4 encr=1 prf=2 mac=2",
+                    "dhgroup=3 encr=1 prf=2 mac=2",
+                    "dhgroup=3 encr=1 prf=1 mac=1" ]:
+        dev[0].set_network_quoted(id, "phase1", phase1)
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=10)
+        if ev is None:
+            raise Exception("EAP success timed out")
+        ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
+        if ev is None:
+            raise Exception("Association with the AP timed out")
+
+    logger.info("Test failed algorithm negotiation")
+    dev[0].set_network_quoted(id, "phase1", "dhgroup=9 encr=9 prf=9 mac=9")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=10)
+    if ev is None:
+        raise Exception("EAP failure timed out")
 
 def test_ap_wpa2_eap_ikev2(dev, apdev):
     """WPA2-Enterprise connection using EAP-IKEv2"""

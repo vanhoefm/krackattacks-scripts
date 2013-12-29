@@ -28,7 +28,6 @@
 #include "common/ieee802_11_defs.h"
 #include "crypto/sha1.h"
 #include "l2_packet/l2_packet.h"
-#include "p2p/p2p.h"
 #include "wps/wps.h"
 #include "driver.h"
 
@@ -102,20 +101,6 @@ struct wpa_driver_test_data {
 	unsigned int remain_on_channel_duration;
 
 	int current_freq;
-
-	struct p2p_data *p2p;
-	unsigned int off_channel_freq;
-	struct wpabuf *pending_action_tx;
-	u8 pending_action_src[ETH_ALEN];
-	u8 pending_action_dst[ETH_ALEN];
-	u8 pending_action_bssid[ETH_ALEN];
-	unsigned int pending_action_freq;
-	unsigned int pending_action_no_cck;
-	unsigned int pending_listen_freq;
-	unsigned int pending_listen_duration;
-	int pending_p2p_scan;
-	struct sockaddr *probe_from;
-	socklen_t probe_from_len;
 };
 
 
@@ -125,7 +110,6 @@ static int wpa_driver_test_attach(struct wpa_driver_test_data *drv,
 static void wpa_driver_test_close_test_socket(
 	struct wpa_driver_test_data *drv);
 static void test_remain_on_channel_timeout(void *eloop_ctx, void *timeout_ctx);
-static int wpa_driver_test_init_p2p(struct wpa_driver_test_data *drv);
 
 
 static void test_driver_free_bss(struct test_driver_bss *bss)
@@ -479,34 +463,6 @@ static int wpa_driver_test_send_mlme(void *priv, const u8 *data,
 	event.tx_status.ack = ret >= 0;
 	wpa_supplicant_event(drv->ctx, EVENT_TX_STATUS, &event);
 
-#ifdef CONFIG_P2P
-	if (drv->p2p &&
-	    WLAN_FC_GET_TYPE(fc) == WLAN_FC_TYPE_MGMT &&
-	    WLAN_FC_GET_STYPE(fc) == WLAN_FC_STYPE_ACTION) {
-		if (drv->pending_action_tx == NULL) {
-			wpa_printf(MSG_DEBUG, "P2P: Ignore Action TX status - "
-				   "no pending operation");
-			return ret;
-		}
-
-		if (os_memcmp(hdr->addr1, drv->pending_action_dst, ETH_ALEN) !=
-		    0) {
-			wpa_printf(MSG_DEBUG, "P2P: Ignore Action TX status - "
-				   "unknown destination address");
-			return ret;
-		}
-
-		wpabuf_free(drv->pending_action_tx);
-		drv->pending_action_tx = NULL;
-
-		p2p_send_action_cb(drv->p2p, drv->pending_action_freq,
-				   drv->pending_action_dst,
-				   drv->pending_action_src,
-				   drv->pending_action_bssid,
-				   ret >= 0);
-	}
-#endif /* CONFIG_P2P */
-
 	return ret;
 }
 
@@ -553,10 +509,6 @@ static void test_driver_scan(struct wpa_driver_test_data *drv,
 		event.rx_probe_req.ie = ie;
 		event.rx_probe_req.ie_len = ielen;
 		wpa_supplicant_event(drv->ctx, EVENT_RX_PROBE_REQ, &event);
-#ifdef CONFIG_P2P
-		if (drv->p2p)
-			p2p_probe_req_rx(drv->p2p, sa, NULL, NULL, ie, ielen);
-#endif /* CONFIG_P2P */
 	}
 
 	dl_list_for_each(bss, &drv->bss, struct test_driver_bss, list) {
@@ -1313,25 +1265,7 @@ static void wpa_driver_test_poll(void *eloop_ctx, void *timeout_ctx)
 
 static void wpa_driver_test_scan_timeout(void *eloop_ctx, void *timeout_ctx)
 {
-	struct wpa_driver_test_data *drv = eloop_ctx;
 	wpa_printf(MSG_DEBUG, "Scan timeout - try to get results");
-	if (drv->pending_p2p_scan && drv->p2p) {
-#ifdef CONFIG_P2P
-		size_t i;
-		struct os_reltime now;
-		os_get_reltime(&now);
-		for (i = 0; i < drv->num_scanres; i++) {
-			struct wpa_scan_res *bss = drv->scanres[i];
-			if (p2p_scan_res_handler(drv->p2p, bss->bssid,
-						 bss->freq, &now, bss->level,
-						 (const u8 *) (bss + 1),
-						 bss->ie_len) > 0)
-				return;
-		}
-		p2p_scan_res_handled(drv->p2p);
-#endif /* CONFIG_P2P */
-		return;
-	}
 	wpa_supplicant_event(timeout_ctx, EVENT_SCAN_RESULTS, NULL);
 }
 
@@ -1949,30 +1883,8 @@ static void wpa_driver_test_mlme(struct wpa_driver_test_data *drv,
 				data_len - (mgmt->u.probe_req.variable - data);
 			wpa_supplicant_event(drv->ctx, EVENT_RX_PROBE_REQ,
 					     &event);
-#ifdef CONFIG_P2P
-			if (drv->p2p)
-				p2p_probe_req_rx(drv->p2p, mgmt->sa,
-						 mgmt->da, mgmt->bssid,
-						 event.rx_probe_req.ie,
-						 event.rx_probe_req.ie_len);
-#endif /* CONFIG_P2P */
 		}
 	}
-
-#ifdef CONFIG_P2P
-	if (drv->p2p &&
-	    WLAN_FC_GET_TYPE(fc) == WLAN_FC_TYPE_MGMT &&
-	    WLAN_FC_GET_STYPE(fc) == WLAN_FC_STYPE_ACTION) {
-		size_t hdr_len;
-		hdr_len = (const u8 *)
-			&mgmt->u.action.u.vs_public_action.action - data;
-		p2p_rx_action(drv->p2p, mgmt->da, mgmt->sa, mgmt->bssid,
-			      mgmt->u.action.category,
-			      &mgmt->u.action.u.vs_public_action.action,
-			      data_len - hdr_len, freq);
-	}
-#endif /* CONFIG_P2P */
-
 }
 
 
@@ -1988,29 +1900,6 @@ static void wpa_driver_test_scan_cmd(struct wpa_driver_test_data *drv,
 	bss = dl_list_first(&drv->bss, struct test_driver_bss, list);
 
 	/* data: optional [ STA-addr | ' ' | IEs(hex) ] */
-#ifdef CONFIG_P2P
-	if (drv->probe_req_report && drv->p2p && data_len) {
-		const char *d = (const char *) data;
-		u8 sa[ETH_ALEN];
-		u8 ie[512];
-		size_t ielen;
-
-		if (hwaddr_aton(d, sa))
-			return;
-		d += 18;
-		while (*d == ' ')
-			d++;
-		ielen = os_strlen(d) / 2;
-		if (ielen > sizeof(ie))
-			ielen = sizeof(ie);
-		if (hexstr2bin(d, ie, ielen) < 0)
-			ielen = 0;
-		drv->probe_from = from;
-		drv->probe_from_len = fromlen;
-		p2p_probe_req_rx(drv->p2p, sa, NULL, NULL, ie, ielen);
-		drv->probe_from = NULL;
-	}
-#endif /* CONFIG_P2P */
 
 	if (!drv->ibss)
 		return;
@@ -2166,12 +2055,6 @@ static void wpa_driver_test_deinit(void *priv)
 	struct wpa_driver_test_data *drv = dbss->drv;
 	struct test_client_socket *cli, *prev;
 	int i;
-
-#ifdef CONFIG_P2P
-	if (drv->p2p)
-		p2p_deinit(drv->p2p);
-	wpabuf_free(drv->pending_action_tx);
-#endif /* CONFIG_P2P */
 
 	cli = drv->cli;
 	while (cli) {
@@ -2369,13 +2252,6 @@ static int wpa_driver_test_set_param(void *priv, const char *param)
 		drv->use_associnfo = 1;
 	}
 
-	if (os_strstr(param, "p2p_mgmt=1")) {
-		wpa_printf(MSG_DEBUG, "test_driver: Use internal P2P "
-			   "management");
-		if (wpa_driver_test_init_p2p(drv) < 0)
-			return -1;
-	}
-
 	return 0;
 }
 
@@ -2465,8 +2341,6 @@ static int wpa_driver_test_send_eapol(void *priv, const u8 *dest, u16 proto,
 
 static int wpa_driver_test_get_capa(void *priv, struct wpa_driver_capa *capa)
 {
-	struct test_driver_bss *dbss = priv;
-	struct wpa_driver_test_data *drv = dbss->drv;
 	os_memset(capa, 0, sizeof(*capa));
 	capa->key_mgmt = WPA_DRIVER_CAPA_KEY_MGMT_WPA |
 		WPA_DRIVER_CAPA_KEY_MGMT_WPA2 |
@@ -2482,8 +2356,6 @@ static int wpa_driver_test_get_capa(void *priv, struct wpa_driver_capa *capa)
 	capa->auth = WPA_DRIVER_AUTH_OPEN |
 		WPA_DRIVER_AUTH_SHARED |
 		WPA_DRIVER_AUTH_LEAP;
-	if (drv->p2p)
-		capa->flags |= WPA_DRIVER_FLAGS_P2P_MGMT;
 	capa->flags |= WPA_DRIVER_FLAGS_AP;
 	capa->flags |= WPA_DRIVER_FLAGS_P2P_CONCURRENT;
 	capa->flags |= WPA_DRIVER_FLAGS_P2P_DEDICATED_INTERFACE;
@@ -2691,33 +2563,6 @@ static int wpa_driver_test_send_action(void *priv, unsigned int freq,
 }
 
 
-#ifdef CONFIG_P2P
-static void test_send_action_cb(void *eloop_ctx, void *timeout_ctx)
-{
-	struct wpa_driver_test_data *drv = eloop_ctx;
-
-	if (drv->pending_action_tx == NULL)
-		return;
-
-	if (drv->off_channel_freq != drv->pending_action_freq) {
-		wpa_printf(MSG_DEBUG, "P2P: Pending Action frame TX "
-			   "waiting for another freq=%u",
-			   drv->pending_action_freq);
-		return;
-	}
-	wpa_printf(MSG_DEBUG, "P2P: Sending pending Action frame to "
-		   MACSTR, MAC2STR(drv->pending_action_dst));
-	wpa_driver_test_send_action(drv, drv->pending_action_freq, 0,
-				    drv->pending_action_dst,
-				    drv->pending_action_src,
-				    drv->pending_action_bssid,
-				    wpabuf_head(drv->pending_action_tx),
-				    wpabuf_len(drv->pending_action_tx),
-				    drv->pending_action_no_cck);
-}
-#endif /* CONFIG_P2P */
-
-
 static void test_remain_on_channel_timeout(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_driver_test_data *drv = eloop_ctx;
@@ -2728,9 +2573,6 @@ static void test_remain_on_channel_timeout(void *eloop_ctx, void *timeout_ctx)
 	os_memset(&data, 0, sizeof(data));
 	data.remain_on_channel.freq = drv->remain_on_channel_freq;
 	data.remain_on_channel.duration = drv->remain_on_channel_duration;
-
-	if (drv->p2p)
-		drv->off_channel_freq = 0;
 
 	drv->remain_on_channel_freq = 0;
 
@@ -2765,18 +2607,6 @@ static int wpa_driver_test_remain_on_channel(void *priv, unsigned int freq,
 	data.remain_on_channel.duration = duration;
 	wpa_supplicant_event(drv->ctx, EVENT_REMAIN_ON_CHANNEL, &data);
 
-#ifdef CONFIG_P2P
-	if (drv->p2p) {
-		drv->off_channel_freq = drv->remain_on_channel_freq;
-		test_send_action_cb(drv, NULL);
-		if (drv->off_channel_freq == drv->pending_listen_freq) {
-			p2p_listen_cb(drv->p2p, drv->pending_listen_freq,
-				      drv->pending_listen_duration);
-			drv->pending_listen_freq = 0;
-		}
-	}
-#endif /* CONFIG_P2P */
-
 	return 0;
 }
 
@@ -2801,470 +2631,6 @@ static int wpa_driver_test_probe_req_report(void *priv, int report)
 	wpa_printf(MSG_DEBUG, "%s(report=%d)", __func__, report);
 	drv->probe_req_report = report;
 	return 0;
-}
-
-
-#ifdef CONFIG_P2P
-
-static int wpa_driver_test_p2p_find(void *priv, unsigned int timeout, int type)
-{
-	struct test_driver_bss *dbss = priv;
-	struct wpa_driver_test_data *drv = dbss->drv;
-	wpa_printf(MSG_DEBUG, "%s(timeout=%u)", __func__, timeout);
-	if (!drv->p2p)
-		return -1;
-	return p2p_find(drv->p2p, timeout, type, 0, NULL, NULL, 0);
-}
-
-
-static int wpa_driver_test_p2p_stop_find(void *priv)
-{
-	struct test_driver_bss *dbss = priv;
-	struct wpa_driver_test_data *drv = dbss->drv;
-	wpa_printf(MSG_DEBUG, "%s", __func__);
-	if (!drv->p2p)
-		return -1;
-	p2p_stop_find(drv->p2p);
-	return 0;
-}
-
-
-static int wpa_driver_test_p2p_listen(void *priv, unsigned int timeout)
-{
-	struct test_driver_bss *dbss = priv;
-	struct wpa_driver_test_data *drv = dbss->drv;
-	wpa_printf(MSG_DEBUG, "%s(timeout=%u)", __func__, timeout);
-	if (!drv->p2p)
-		return -1;
-	return p2p_listen(drv->p2p, timeout);
-}
-
-
-static int wpa_driver_test_p2p_connect(void *priv, const u8 *peer_addr,
-				       int wps_method, int go_intent,
-				       const u8 *own_interface_addr,
-				       unsigned int force_freq,
-				       int persistent_group)
-{
-	struct test_driver_bss *dbss = priv;
-	struct wpa_driver_test_data *drv = dbss->drv;
-	wpa_printf(MSG_DEBUG, "%s(peer_addr=" MACSTR " wps_method=%d "
-		   "go_intent=%d "
-		   "own_interface_addr=" MACSTR " force_freq=%u "
-		   "persistent_group=%d)",
-		   __func__, MAC2STR(peer_addr), wps_method, go_intent,
-		   MAC2STR(own_interface_addr), force_freq, persistent_group);
-	if (!drv->p2p)
-		return -1;
-	return p2p_connect(drv->p2p, peer_addr, wps_method, go_intent,
-			   own_interface_addr, force_freq, persistent_group,
-			   NULL, 0, 0, 0);
-}
-
-
-static int wpa_driver_test_wps_success_cb(void *priv, const u8 *peer_addr)
-{
-	struct test_driver_bss *dbss = priv;
-	struct wpa_driver_test_data *drv = dbss->drv;
-	wpa_printf(MSG_DEBUG, "%s(peer_addr=" MACSTR ")",
-		   __func__, MAC2STR(peer_addr));
-	if (!drv->p2p)
-		return -1;
-	p2p_wps_success_cb(drv->p2p, peer_addr);
-	return 0;
-}
-
-
-static int wpa_driver_test_p2p_group_formation_failed(void *priv)
-{
-	struct test_driver_bss *dbss = priv;
-	struct wpa_driver_test_data *drv = dbss->drv;
-	wpa_printf(MSG_DEBUG, "%s", __func__);
-	if (!drv->p2p)
-		return -1;
-	p2p_group_formation_failed(drv->p2p);
-	return 0;
-}
-
-
-static int wpa_driver_test_p2p_set_params(void *priv,
-					  const struct p2p_params *params)
-{
-	struct test_driver_bss *dbss = priv;
-	struct wpa_driver_test_data *drv = dbss->drv;
-	wpa_printf(MSG_DEBUG, "%s", __func__);
-	if (!drv->p2p)
-		return -1;
-	if (p2p_set_dev_name(drv->p2p, params->dev_name) < 0 ||
-	    p2p_set_pri_dev_type(drv->p2p, params->pri_dev_type) < 0 ||
-	    p2p_set_sec_dev_types(drv->p2p, params->sec_dev_type,
-				  params->num_sec_dev_types) < 0)
-		return -1;
-	return 0;
-}
-
-
-static int test_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
-			 unsigned int num_req_dev_types,
-			 const u8 *req_dev_types, const u8 *dev_id, u16 pw_id)
-{
-	struct wpa_driver_test_data *drv = ctx;
-	struct wpa_driver_scan_params params;
-	int ret;
-	struct wpabuf *wps_ie, *ies;
-	int social_channels[] = { 2412, 2437, 2462, 0, 0 };
-	size_t ielen;
-
-	wpa_printf(MSG_DEBUG, "%s(type=%d freq=%d)",
-		   __func__, type, freq);
-
-	os_memset(&params, 0, sizeof(params));
-
-	/* P2P Wildcard SSID */
-	params.num_ssids = 1;
-	params.ssids[0].ssid = (u8 *) P2P_WILDCARD_SSID;
-	params.ssids[0].ssid_len = P2P_WILDCARD_SSID_LEN;
-
-#if 0 /* TODO: WPS IE */
-	wpa_s->wps->dev.p2p = 1;
-	wps_ie = wps_build_probe_req_ie(pw_id, &wpa_s->wps->dev,
-					wpa_s->wps->uuid, WPS_REQ_ENROLLEE);
-#else
-	wps_ie = wpabuf_alloc(1);
-#endif
-	if (wps_ie == NULL)
-		return -1;
-
-	ielen = p2p_scan_ie_buf_len(drv->p2p);
-	ies = wpabuf_alloc(wpabuf_len(wps_ie) + ielen);
-	if (ies == NULL) {
-		wpabuf_free(wps_ie);
-		return -1;
-	}
-	wpabuf_put_buf(ies, wps_ie);
-	wpabuf_free(wps_ie);
-
-	p2p_scan_ie(drv->p2p, ies, dev_id);
-
-	params.extra_ies = wpabuf_head(ies);
-	params.extra_ies_len = wpabuf_len(ies);
-
-	switch (type) {
-	case P2P_SCAN_SOCIAL:
-		params.freqs = social_channels;
-		break;
-	case P2P_SCAN_FULL:
-		break;
-	case P2P_SCAN_SOCIAL_PLUS_ONE:
-		social_channels[3] = freq;
-		params.freqs = social_channels;
-		break;
-	}
-
-	drv->pending_p2p_scan = 1;
-	ret = wpa_driver_test_scan(drv, &params);
-
-	wpabuf_free(ies);
-
-	return ret;
-}
-
-
-static int test_send_action(void *ctx, unsigned int freq, const u8 *dst,
-			    const u8 *src, const u8 *bssid, const u8 *buf,
-			    size_t len, unsigned int wait_time)
-{
-	struct wpa_driver_test_data *drv = ctx;
-
-	wpa_printf(MSG_DEBUG, "%s(freq=%u dst=" MACSTR " src=" MACSTR
-		   " bssid=" MACSTR " len=%d",
-		   __func__, freq, MAC2STR(dst), MAC2STR(src), MAC2STR(bssid),
-		   (int) len);
-	if (freq <= 0) {
-		wpa_printf(MSG_WARNING, "P2P: No frequency specified for "
-			   "action frame TX");
-		return -1;
-	}
-
-	if (drv->pending_action_tx) {
-		wpa_printf(MSG_DEBUG, "P2P: Dropped pending Action frame TX "
-			   "to " MACSTR, MAC2STR(drv->pending_action_dst));
-		wpabuf_free(drv->pending_action_tx);
-	}
-	drv->pending_action_tx = wpabuf_alloc(len);
-	if (drv->pending_action_tx == NULL)
-		return -1;
-	wpabuf_put_data(drv->pending_action_tx, buf, len);
-	os_memcpy(drv->pending_action_src, src, ETH_ALEN);
-	os_memcpy(drv->pending_action_dst, dst, ETH_ALEN);
-	os_memcpy(drv->pending_action_bssid, bssid, ETH_ALEN);
-	drv->pending_action_freq = freq;
-	drv->pending_action_no_cck = 1;
-
-	if (drv->off_channel_freq == freq) {
-		/* Already on requested channel; send immediately */
-		/* TODO: Would there ever be need to extend the current
-		 * duration on the channel? */
-		eloop_cancel_timeout(test_send_action_cb, drv, NULL);
-		eloop_register_timeout(0, 0, test_send_action_cb, drv, NULL);
-		return 0;
-	}
-
-	wpa_printf(MSG_DEBUG, "P2P: Schedule Action frame to be transmitted "
-		   "once the driver gets to the requested channel");
-	if (wpa_driver_test_remain_on_channel(drv, freq, wait_time) < 0) {
-		wpa_printf(MSG_DEBUG, "P2P: Failed to request driver "
-			   "to remain on channel (%u MHz) for Action "
-			   "Frame TX", freq);
-		return -1;
-	}
-
-	return 0;
-}
-
-
-static void test_send_action_done(void *ctx)
-{
-	wpa_printf(MSG_DEBUG, "%s", __func__);
-	/* TODO */
-}
-
-
-static void test_go_neg_completed(void *ctx, struct p2p_go_neg_results *res)
-{
-	struct wpa_driver_test_data *drv = ctx;
-	union wpa_event_data event;
-	wpa_printf(MSG_DEBUG, "%s", __func__);
-	os_memset(&event, 0, sizeof(event));
-	event.p2p_go_neg_completed.res = res;
-	wpa_supplicant_event(drv->ctx, EVENT_P2P_GO_NEG_COMPLETED, &event);
-}
-
-
-static void test_go_neg_req_rx(void *ctx, const u8 *src, u16 dev_passwd_id)
-{
-	struct wpa_driver_test_data *drv = ctx;
-	union wpa_event_data event;
-	wpa_printf(MSG_DEBUG, "%s(src=" MACSTR ")", __func__, MAC2STR(src));
-	os_memset(&event, 0, sizeof(event));
-	event.p2p_go_neg_req_rx.src = src;
-	event.p2p_go_neg_req_rx.dev_passwd_id = dev_passwd_id;
-	wpa_supplicant_event(drv->ctx, EVENT_P2P_GO_NEG_REQ_RX, &event);
-}
-
-
-static void test_dev_found(void *ctx, const u8 *addr,
-			   const struct p2p_peer_info *info, int new_device)
-{
-	struct wpa_driver_test_data *drv = ctx;
-	union wpa_event_data event;
-	char devtype[WPS_DEV_TYPE_BUFSIZE];
-	wpa_printf(MSG_DEBUG, "%s(" MACSTR " p2p_dev_addr=" MACSTR
-		   " pri_dev_type=%s name='%s' config_methods=0x%x "
-		   "dev_capab=0x%x group_capab=0x%x)",
-		   __func__, MAC2STR(addr), MAC2STR(info->p2p_device_addr),
-		   wps_dev_type_bin2str(info->pri_dev_type, devtype,
-					sizeof(devtype)),
-		   info->device_name, info->config_methods, info->dev_capab,
-		   info->group_capab);
-
-	os_memset(&event, 0, sizeof(event));
-	event.p2p_dev_found.addr = addr;
-	event.p2p_dev_found.dev_addr = info->p2p_device_addr;
-	event.p2p_dev_found.pri_dev_type = info->pri_dev_type;
-	event.p2p_dev_found.dev_name = info->device_name;
-	event.p2p_dev_found.config_methods = info->config_methods;
-	event.p2p_dev_found.dev_capab = info->dev_capab;
-	event.p2p_dev_found.group_capab = info->group_capab;
-	wpa_supplicant_event(drv->ctx, EVENT_P2P_DEV_FOUND, &event);
-}
-
-
-static int test_start_listen(void *ctx, unsigned int freq,
-			     unsigned int duration,
-			     const struct wpabuf *probe_resp_ie)
-{
-	struct wpa_driver_test_data *drv = ctx;
-
-	wpa_printf(MSG_DEBUG, "%s(freq=%u duration=%u)",
-		   __func__, freq, duration);
-
-	if (wpa_driver_test_probe_req_report(drv, 1) < 0)
-		return -1;
-
-	drv->pending_listen_freq = freq;
-	drv->pending_listen_duration = duration;
-
-	if (wpa_driver_test_remain_on_channel(drv, freq, duration) < 0) {
-		drv->pending_listen_freq = 0;
-		return -1;
-	}
-
-	return 0;
-}
-
-
-static void test_stop_listen(void *ctx)
-{
-	wpa_printf(MSG_DEBUG, "%s", __func__);
-	/* TODO */
-}
-
-
-static int test_send_probe_resp(void *ctx, const struct wpabuf *buf)
-{
-	struct wpa_driver_test_data *drv = ctx;
-	char resp[512], *pos, *end;
-	int ret;
-	const struct ieee80211_mgmt *mgmt;
-	const u8 *ie, *ie_end;
-
-	wpa_printf(MSG_DEBUG, "%s", __func__);
-	wpa_hexdump_buf(MSG_MSGDUMP, "Probe Response", buf);
-	if (wpabuf_len(buf) < 24)
-		return -1;
-	if (!drv->probe_from) {
-		wpa_printf(MSG_DEBUG, "%s: probe_from not set", __func__);
-		return -1;
-	}
-
-	pos = resp;
-	end = resp + sizeof(resp);
-
-	mgmt = wpabuf_head(buf);
-
-	/* reply: SCANRESP BSSID SSID IEs */
-	ret = os_snprintf(pos, end - pos, "SCANRESP " MACSTR " ",
-			  MAC2STR(mgmt->bssid));
-	if (ret < 0 || ret >= end - pos)
-		return -1;
-	pos += ret;
-
-	ie = mgmt->u.probe_resp.variable;
-	ie_end = wpabuf_head_u8(buf) + wpabuf_len(buf);
-	if (ie_end - ie < 2 || ie[0] != WLAN_EID_SSID ||
-	    ie + 2 + ie[1] > ie_end)
-		return -1;
-	pos += wpa_snprintf_hex(pos, end - pos, ie + 2, ie[1]);
-
-	ret = os_snprintf(pos, end - pos, " ");
-	if (ret < 0 || ret >= end - pos)
-		return -1;
-	pos += ret;
-	pos += wpa_snprintf_hex(pos, end - pos, ie, ie_end - ie);
-
-	sendto(drv->test_socket, resp, pos - resp, 0,
-	       drv->probe_from, drv->probe_from_len);
-
-	return 0;
-}
-
-
-static void test_sd_request(void *ctx, int freq, const u8 *sa, u8 dialog_token,
-			    u16 update_indic, const u8 *tlvs, size_t tlvs_len)
-{
-	wpa_printf(MSG_DEBUG, "%s", __func__);
-	/* TODO */
-}
-
-
-static void test_sd_response(void *ctx, const u8 *sa, u16 update_indic,
-			     const u8 *tlvs, size_t tlvs_len)
-{
-	wpa_printf(MSG_DEBUG, "%s", __func__);
-	/* TODO */
-}
-
-
-static void test_prov_disc_req(void *ctx, const u8 *peer, u16 config_methods,
-			       const u8 *dev_addr, const u8 *pri_dev_type,
-			       const char *dev_name, u16 supp_config_methods,
-			       u8 dev_capab, u8 group_capab,
-			       const u8 *group_id, size_t group_id_len)
-{
-	wpa_printf(MSG_DEBUG, "%s(peer=" MACSTR " config_methods=0x%x)",
-		   __func__, MAC2STR(peer), config_methods);
-	/* TODO */
-}
-
-
-static void test_prov_disc_resp(void *ctx, const u8 *peer, u16 config_methods)
-{
-	wpa_printf(MSG_DEBUG, "%s(peer=" MACSTR " config_methods=0x%x)",
-		   __func__, MAC2STR(peer), config_methods);
-	/* TODO */
-}
-
-
-static void test_p2p_debug_print(void *ctx, int level, const char *msg)
-{
-	wpa_printf(level, "P2P: %s", msg);
-}
-
-#endif /* CONFIG_P2P */
-
-
-static int wpa_driver_test_init_p2p(struct wpa_driver_test_data *drv)
-{
-#ifdef CONFIG_P2P
-	struct p2p_config p2p;
-	unsigned int r;
-	int i;
-
-	os_memset(&p2p, 0, sizeof(p2p));
-	p2p.cb_ctx = drv;
-	p2p.debug_print = test_p2p_debug_print;
-	p2p.p2p_scan = test_p2p_scan;
-	p2p.send_action = test_send_action;
-	p2p.send_action_done = test_send_action_done;
-	p2p.go_neg_completed = test_go_neg_completed;
-	p2p.go_neg_req_rx = test_go_neg_req_rx;
-	p2p.dev_found = test_dev_found;
-	p2p.start_listen = test_start_listen;
-	p2p.stop_listen = test_stop_listen;
-	p2p.send_probe_resp = test_send_probe_resp;
-	p2p.sd_request = test_sd_request;
-	p2p.sd_response = test_sd_response;
-	p2p.prov_disc_req = test_prov_disc_req;
-	p2p.prov_disc_resp = test_prov_disc_resp;
-
-	os_memcpy(p2p.dev_addr, drv->own_addr, ETH_ALEN);
-
-	p2p.reg_class = 12; /* TODO: change depending on location */
-	/*
-	 * Pick one of the social channels randomly as the listen
-	 * channel.
-	 */
-	os_get_random((u8 *) &r, sizeof(r));
-	p2p.channel = 1 + (r % 3) * 5;
-
-	/* TODO: change depending on location */
-	p2p.op_reg_class = 12;
-	/*
-	 * For initial tests, pick the operation channel randomly.
-	 * TODO: Use scan results (etc.) to select the best channel.
-	 */
-	p2p.op_channel = 1 + r % 11;
-
-	os_memcpy(p2p.country, "US ", 3);
-
-	/* FIX: fetch available channels from the driver */
-	p2p.channels.reg_classes = 1;
-	p2p.channels.reg_class[0].reg_class = 12; /* US/12 = 2.4 GHz band */
-	p2p.channels.reg_class[0].channels = 11;
-	for (i = 0; i < 11; i++)
-		p2p.channels.reg_class[0].channel[i] = i + 1;
-
-	p2p.max_peers = 100;
-
-	drv->p2p = p2p_init(&p2p);
-	if (drv->p2p == NULL)
-		return -1;
-	return 0;
-#else /* CONFIG_P2P */
-	wpa_printf(MSG_INFO, "driver_test: P2P support not included");
-	return -1;
-#endif /* CONFIG_P2P */
 }
 
 
@@ -3309,14 +2675,4 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	.remain_on_channel = wpa_driver_test_remain_on_channel,
 	.cancel_remain_on_channel = wpa_driver_test_cancel_remain_on_channel,
 	.probe_req_report = wpa_driver_test_probe_req_report,
-#ifdef CONFIG_P2P
-	.p2p_find = wpa_driver_test_p2p_find,
-	.p2p_stop_find = wpa_driver_test_p2p_stop_find,
-	.p2p_listen = wpa_driver_test_p2p_listen,
-	.p2p_connect = wpa_driver_test_p2p_connect,
-	.wps_success_cb = wpa_driver_test_wps_success_cb,
-	.p2p_group_formation_failed =
-	wpa_driver_test_p2p_group_formation_failed,
-	.p2p_set_params = wpa_driver_test_p2p_set_params,
-#endif /* CONFIG_P2P */
 };

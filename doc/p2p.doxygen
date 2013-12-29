@@ -178,30 +178,6 @@ the standard station/AP mode events when the P2P module resides within
 - wpa_event_type::EVENT_CANCEL_REMAIN_ON_CHANNEL
 - wpa_event_type::EVENT_RX_PROBE_REQ
 
-The following driver wrapper functions are needed for P2P in addition
-to the standard station/AP mode operations when the P2P module resides
-in the driver or firmware:
-- wpa_driver_ops::if_add()
-- wpa_driver_ops::if_remove()
-- wpa_driver_ops::alloc_interface_addr()
-- wpa_driver_ops::release_interface_addr()
-- wpa_driver_ops::disable_11b_rates()
-- wpa_driver_ops::p2p_find()
-- wpa_driver_ops::p2p_stop_find()
-- wpa_driver_ops::p2p_listen()
-- wpa_driver_ops::p2p_connect()
-- wpa_driver_ops::p2p_reject()
-- wpa_driver_ops::wps_success_cb()
-- wpa_driver_ops::p2p_group_formation_failed()
-- wpa_driver_ops::p2p_set_params()
-
-The following driver wrapper events are needed for P2P in addition to
-the standard station/AP mode events when the P2P module resides in the
-driver or firmware:
-- wpa_event_type::EVENT_P2P_DEV_FOUND
-- wpa_event_type::EVENT_P2P_GO_NEG_REQ_RX
-- wpa_event_type::EVENT_P2P_GO_NEG_COMPLETED
-
 
 \section p2p_go_neg P2P device discovery and group formation
 

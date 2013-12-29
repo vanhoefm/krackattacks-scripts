@@ -862,8 +862,7 @@ struct wpa_driver_capa {
 #define WPA_DRIVER_FLAGS_AP		0x00000040
 /* Driver needs static WEP key setup after association has been completed */
 #define WPA_DRIVER_FLAGS_SET_KEYS_AFTER_ASSOC_DONE	0x00000080
-/* Driver takes care of P2P management operations */
-#define WPA_DRIVER_FLAGS_P2P_MGMT	0x00000100
+/* unused: 0x00000100 */
 /* Driver supports concurrent P2P operations */
 #define WPA_DRIVER_FLAGS_P2P_CONCURRENT	0x00000200
 /*
@@ -1106,17 +1105,6 @@ struct wpa_bss_params {
 #define WPA_STA_SHORT_PREAMBLE BIT(2)
 #define WPA_STA_MFP BIT(3)
 #define WPA_STA_TDLS_PEER BIT(4)
-
-/**
- * struct p2p_params - P2P parameters for driver-based P2P management
- */
-struct p2p_params {
-	const char *dev_name;
-	u8 pri_dev_type[8];
-#define DRV_MAX_SEC_DEV_TYPES 5
-	u8 sec_dev_type[DRV_MAX_SEC_DEV_TYPES][8];
-	size_t num_sec_dev_types;
-};
 
 enum tdls_oper {
 	TDLS_DISCOVERY_REQ,
@@ -2398,222 +2386,6 @@ struct wpa_driver_ops {
 	const char * (*get_radio_name)(void *priv);
 
 	/**
-	 * p2p_find - Start P2P Device Discovery
-	 * @priv: Private driver interface data
-	 * @timeout: Timeout for find operation in seconds or 0 for no timeout
-	 * @type: Device Discovery type (enum p2p_discovery_type)
-	 * Returns: 0 on success, -1 on failure
-	 *
-	 * This function is only used if the driver implements P2P management,
-	 * i.e., if it sets WPA_DRIVER_FLAGS_P2P_MGMT in
-	 * struct wpa_driver_capa.
-	 */
-	int (*p2p_find)(void *priv, unsigned int timeout, int type);
-
-	/**
-	 * p2p_stop_find - Stop P2P Device Discovery
-	 * @priv: Private driver interface data
-	 * Returns: 0 on success, -1 on failure
-	 *
-	 * This function is only used if the driver implements P2P management,
-	 * i.e., if it sets WPA_DRIVER_FLAGS_P2P_MGMT in
-	 * struct wpa_driver_capa.
-	 */
-	int (*p2p_stop_find)(void *priv);
-
-	/**
-	 * p2p_listen - Start P2P Listen state for specified duration
-	 * @priv: Private driver interface data
-	 * @timeout: Listen state duration in milliseconds
-	 * Returns: 0 on success, -1 on failure
-	 *
-	 * This function can be used to request the P2P module to keep the
-	 * device discoverable on the listen channel for an extended set of
-	 * time. At least in its current form, this is mainly used for testing
-	 * purposes and may not be of much use for normal P2P operations.
-	 *
-	 * This function is only used if the driver implements P2P management,
-	 * i.e., if it sets WPA_DRIVER_FLAGS_P2P_MGMT in
-	 * struct wpa_driver_capa.
-	 */
-	int (*p2p_listen)(void *priv, unsigned int timeout);
-
-	/**
-	 * p2p_connect - Start P2P group formation (GO negotiation)
-	 * @priv: Private driver interface data
-	 * @peer_addr: MAC address of the peer P2P client
-	 * @wps_method: enum p2p_wps_method value indicating config method
-	 * @go_intent: Local GO intent value (1..15)
-	 * @own_interface_addr: Intended interface address to use with the
-	 *	group
-	 * @force_freq: The only allowed channel frequency in MHz or 0
-	 * @persistent_group: Whether to create persistent group
-	 * Returns: 0 on success, -1 on failure
-	 *
-	 * This function is only used if the driver implements P2P management,
-	 * i.e., if it sets WPA_DRIVER_FLAGS_P2P_MGMT in
-	 * struct wpa_driver_capa.
-	 */
-	int (*p2p_connect)(void *priv, const u8 *peer_addr, int wps_method,
-			   int go_intent, const u8 *own_interface_addr,
-			   unsigned int force_freq, int persistent_group);
-
-	/**
-	 * wps_success_cb - Report successfully completed WPS provisioning
-	 * @priv: Private driver interface data
-	 * @peer_addr: Peer address
-	 * Returns: 0 on success, -1 on failure
-	 *
-	 * This function is used to report successfully completed WPS
-	 * provisioning during group formation in both GO/Registrar and
-	 * client/Enrollee roles.
-	 *
-	 * This function is only used if the driver implements P2P management,
-	 * i.e., if it sets WPA_DRIVER_FLAGS_P2P_MGMT in
-	 * struct wpa_driver_capa.
-	 */
-	int (*wps_success_cb)(void *priv, const u8 *peer_addr);
-
-	/**
-	 * p2p_group_formation_failed - Report failed WPS provisioning
-	 * @priv: Private driver interface data
-	 * Returns: 0 on success, -1 on failure
-	 *
-	 * This function is used to report failed group formation. This can
-	 * happen either due to failed WPS provisioning or due to 15 second
-	 * timeout during the provisioning phase.
-	 *
-	 * This function is only used if the driver implements P2P management,
-	 * i.e., if it sets WPA_DRIVER_FLAGS_P2P_MGMT in
-	 * struct wpa_driver_capa.
-	 */
-	int (*p2p_group_formation_failed)(void *priv);
-
-	/**
-	 * p2p_set_params - Set P2P parameters
-	 * @priv: Private driver interface data
-	 * @params: P2P parameters
-	 * Returns: 0 on success, -1 on failure
-	 *
-	 * This function is only used if the driver implements P2P management,
-	 * i.e., if it sets WPA_DRIVER_FLAGS_P2P_MGMT in
-	 * struct wpa_driver_capa.
-	 */
-	int (*p2p_set_params)(void *priv, const struct p2p_params *params);
-
-	/**
-	 * p2p_prov_disc_req - Send Provision Discovery Request
-	 * @priv: Private driver interface data
-	 * @peer_addr: MAC address of the peer P2P client
-	 * @config_methods: WPS Config Methods value (only one bit set)
-	 * Returns: 0 on success, -1 on failure
-	 *
-	 * This function can be used to request a discovered P2P peer to
-	 * display a PIN (config_methods = WPS_CONFIG_DISPLAY) or be prepared
-	 * to enter a PIN from us (config_methods = WPS_CONFIG_KEYPAD). The
-	 * Provision Discovery Request frame is transmitted once immediately
-	 * and if no response is received, the frame will be sent again
-	 * whenever the target device is discovered during device dsicovery
-	 * (start with a p2p_find() call). Response from the peer is indicated
-	 * with the EVENT_P2P_PROV_DISC_RESPONSE event.
-	 *
-	 * This function is only used if the driver implements P2P management,
-	 * i.e., if it sets WPA_DRIVER_FLAGS_P2P_MGMT in
-	 * struct wpa_driver_capa.
-	 */
-	int (*p2p_prov_disc_req)(void *priv, const u8 *peer_addr,
-				 u16 config_methods, int join);
-
-	/**
-	 * p2p_sd_request - Schedule a service discovery query
-	 * @priv: Private driver interface data
-	 * @dst: Destination peer or %NULL to apply for all peers
-	 * @tlvs: P2P Service Query TLV(s)
-	 * Returns: Reference to the query or 0 on failure
-	 *
-	 * Response to the query is indicated with the
-	 * EVENT_P2P_SD_RESPONSE driver event.
-	 *
-	 * This function is only used if the driver implements P2P management,
-	 * i.e., if it sets WPA_DRIVER_FLAGS_P2P_MGMT in
-	 * struct wpa_driver_capa.
-	 */
-	u64 (*p2p_sd_request)(void *priv, const u8 *dst,
-			      const struct wpabuf *tlvs);
-
-	/**
-	 * p2p_sd_cancel_request - Cancel a pending service discovery query
-	 * @priv: Private driver interface data
-	 * @req: Query reference from p2p_sd_request()
-	 * Returns: 0 on success, -1 on failure
-	 *
-	 * This function is only used if the driver implements P2P management,
-	 * i.e., if it sets WPA_DRIVER_FLAGS_P2P_MGMT in
-	 * struct wpa_driver_capa.
-	 */
-	int (*p2p_sd_cancel_request)(void *priv, u64 req);
-
-	/**
-	 * p2p_sd_response - Send response to a service discovery query
-	 * @priv: Private driver interface data
-	 * @freq: Frequency from EVENT_P2P_SD_REQUEST event
-	 * @dst: Destination address from EVENT_P2P_SD_REQUEST event
-	 * @dialog_token: Dialog token from EVENT_P2P_SD_REQUEST event
-	 * @resp_tlvs: P2P Service Response TLV(s)
-	 * Returns: 0 on success, -1 on failure
-	 *
-	 * This function is called as a response to the request indicated with
-	 * the EVENT_P2P_SD_REQUEST driver event.
-	 *
-	 * This function is only used if the driver implements P2P management,
-	 * i.e., if it sets WPA_DRIVER_FLAGS_P2P_MGMT in
-	 * struct wpa_driver_capa.
-	 */
-	int (*p2p_sd_response)(void *priv, int freq, const u8 *dst,
-			       u8 dialog_token,
-			       const struct wpabuf *resp_tlvs);
-
-	/**
-	 * p2p_service_update - Indicate a change in local services
-	 * @priv: Private driver interface data
-	 * Returns: 0 on success, -1 on failure
-	 *
-	 * This function needs to be called whenever there is a change in
-	 * availability of the local services. This will increment the
-	 * Service Update Indicator value which will be used in SD Request and
-	 * Response frames.
-	 *
-	 * This function is only used if the driver implements P2P management,
-	 * i.e., if it sets WPA_DRIVER_FLAGS_P2P_MGMT in
-	 * struct wpa_driver_capa.
-	 */
-	int (*p2p_service_update)(void *priv);
-
-	/**
-	 * p2p_reject - Reject peer device (explicitly block connections)
-	 * @priv: Private driver interface data
-	 * @addr: MAC address of the peer
-	 * Returns: 0 on success, -1 on failure
-	 */
-	int (*p2p_reject)(void *priv, const u8 *addr);
-
-	/**
-	 * p2p_invite - Invite a P2P Device into a group
-	 * @priv: Private driver interface data
-	 * @peer: Device Address of the peer P2P Device
-	 * @role: Local role in the group
-	 * @bssid: Group BSSID or %NULL if not known
-	 * @ssid: Group SSID
-	 * @ssid_len: Length of ssid in octets
-	 * @go_dev_addr: Forced GO Device Address or %NULL if none
-	 * @persistent_group: Whether this is to reinvoke a persistent group
-	 * Returns: 0 on success, -1 on failure
-	 */
-	int (*p2p_invite)(void *priv, const u8 *peer, int role,
-			  const u8 *bssid, const u8 *ssid, size_t ssid_len,
-			  const u8 *go_dev_addr, int persistent_group);
-
-	/**
 	 * send_tdls_mgmt - for sending TDLS management packets
 	 * @priv: private driver interface data
 	 * @dst: Destination (peer) MAC address
@@ -3248,38 +3020,6 @@ enum wpa_event_type {
 	EVENT_STATION_LOW_ACK,
 
 	/**
-	 * EVENT_P2P_DEV_FOUND - Report a discovered P2P device
-	 *
-	 * This event is used only if the driver implements P2P management
-	 * internally. Event data is stored in
-	 * union wpa_event_data::p2p_dev_found.
-	 */
-	EVENT_P2P_DEV_FOUND,
-
-	/**
-	 * EVENT_P2P_GO_NEG_REQ_RX - Report reception of GO Negotiation Request
-	 *
-	 * This event is used only if the driver implements P2P management
-	 * internally. Event data is stored in
-	 * union wpa_event_data::p2p_go_neg_req_rx.
-	 */
-	EVENT_P2P_GO_NEG_REQ_RX,
-
-	/**
-	 * EVENT_P2P_GO_NEG_COMPLETED - Report completion of GO Negotiation
-	 *
-	 * This event is used only if the driver implements P2P management
-	 * internally. Event data is stored in
-	 * union wpa_event_data::p2p_go_neg_completed.
-	 */
-	EVENT_P2P_GO_NEG_COMPLETED,
-
-	EVENT_P2P_PROV_DISC_REQUEST,
-	EVENT_P2P_PROV_DISC_RESPONSE,
-	EVENT_P2P_SD_REQUEST,
-	EVENT_P2P_SD_RESPONSE,
-
-	/**
 	 * EVENT_IBSS_PEER_LOST - IBSS peer not reachable anymore
 	 */
 	EVENT_IBSS_PEER_LOST,
@@ -3902,66 +3642,6 @@ union wpa_event_data {
 	struct low_ack {
 		u8 addr[ETH_ALEN];
 	} low_ack;
-
-	/**
-	 * struct p2p_dev_found - Data for EVENT_P2P_DEV_FOUND
-	 */
-	struct p2p_dev_found {
-		const u8 *addr;
-		const u8 *dev_addr;
-		const u8 *pri_dev_type;
-		const char *dev_name;
-		u16 config_methods;
-		u8 dev_capab;
-		u8 group_capab;
-	} p2p_dev_found;
-
-	/**
-	 * struct p2p_go_neg_req_rx - Data for EVENT_P2P_GO_NEG_REQ_RX
-	 */
-	struct p2p_go_neg_req_rx {
-		const u8 *src;
-		u16 dev_passwd_id;
-	} p2p_go_neg_req_rx;
-
-	/**
-	 * struct p2p_go_neg_completed - Data for EVENT_P2P_GO_NEG_COMPLETED
-	 */
-	struct p2p_go_neg_completed {
-		struct p2p_go_neg_results *res;
-	} p2p_go_neg_completed;
-
-	struct p2p_prov_disc_req {
-		const u8 *peer;
-		u16 config_methods;
-		const u8 *dev_addr;
-		const u8 *pri_dev_type;
-		const char *dev_name;
-		u16 supp_config_methods;
-		u8 dev_capab;
-		u8 group_capab;
-	} p2p_prov_disc_req;
-
-	struct p2p_prov_disc_resp {
-		const u8 *peer;
-		u16 config_methods;
-	} p2p_prov_disc_resp;
-
-	struct p2p_sd_req {
-		int freq;
-		const u8 *sa;
-		u8 dialog_token;
-		u16 update_indic;
-		const u8 *tlvs;
-		size_t tlvs_len;
-	} p2p_sd_req;
-
-	struct p2p_sd_resp {
-		const u8 *sa;
-		u16 update_indic;
-		const u8 *tlvs;
-		size_t tlvs_len;
-	} p2p_sd_resp;
 
 	/**
 	 * struct ibss_peer_lost - Data for EVENT_IBSS_PEER_LOST

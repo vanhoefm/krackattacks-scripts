@@ -74,22 +74,7 @@ void wpas_p2p_rx_action(struct wpa_supplicant *wpa_s, const u8 *da,
 			u8 category, const u8 *data, size_t len, int freq);
 void wpas_p2p_scan_ie(struct wpa_supplicant *wpa_s, struct wpabuf *ies);
 void wpas_p2p_group_deinit(struct wpa_supplicant *wpa_s);
-void wpas_dev_found(void *ctx, const u8 *addr,
-		    const struct p2p_peer_info *info,
-		    int new_device);
 void wpas_p2p_group_formation_failed(struct wpa_supplicant *wpa_s);
-void wpas_go_neg_completed(void *ctx, struct p2p_go_neg_results *res);
-void wpas_go_neg_req_rx(void *ctx, const u8 *src, u16 dev_passwd_id);
-void wpas_prov_disc_req(void *ctx, const u8 *peer, u16 config_methods,
-			const u8 *dev_addr, const u8 *pri_dev_type,
-			const char *dev_name, u16 supp_config_methods,
-			u8 dev_capab, u8 group_capab, const u8 *group_id,
-			size_t group_id_len);
-void wpas_prov_disc_resp(void *ctx, const u8 *peer, u16 config_methods);
-void wpas_sd_request(void *ctx, int freq, const u8 *sa, u8 dialog_token,
-		     u16 update_indic, const u8 *tlvs, size_t tlvs_len);
-void wpas_sd_response(void *ctx, const u8 *sa, u16 update_indic,
-		      const u8 *tlvs, size_t tlvs_len);
 u64 wpas_p2p_sd_request(struct wpa_supplicant *wpa_s, const u8 *dst,
 			const struct wpabuf *tlvs);
 u64 wpas_p2p_sd_request_upnp(struct wpa_supplicant *wpa_s, const u8 *dst,

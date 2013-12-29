@@ -22,6 +22,8 @@ def test_ap_wps_init(dev, apdev):
     hapd = hostapd.Hostapd(apdev[0]['ifname'])
     logger.info("WPS provisioning step")
     hapd.request("WPS_PBC")
+    if "PBC Status: Active" not in hapd.request("WPS_GET_STATUS"):
+        raise Exception("PBC status not shown correctly")
     dev[0].request("SET ignore_old_scan_res 1")
     dev[0].dump_monitor()
     dev[0].request("WPS_PBC")
@@ -37,6 +39,14 @@ def test_ap_wps_init(dev, apdev):
         raise Exception("Unexpected encryption configuration")
     if status['key_mgmt'] != 'WPA2-PSK':
         raise Exception("Unexpected key_mgmt")
+
+    status = hapd.request("WPS_GET_STATUS")
+    if "PBC Status: Disabled" not in status:
+        raise Exception("PBC status not shown correctly")
+    if "Last WPS result: Success" not in status:
+        raise Exception("Last WPS result not shown correctly")
+    if "Peer Address: " + dev[0].p2p_interface_addr() not in status:
+        raise Exception("Peer address not shown correctly")
 
 def test_ap_wps_init_2ap_pbc(dev, apdev):
     """Initial two-radio AP configuration with first WPS PBC Enrollee"""
@@ -207,6 +217,10 @@ def test_ap_wps_incorrect_pin(dev, apdev):
     dev[0].request("WPS_CANCEL")
     # if a scan was in progress, wait for it to complete before trying WPS again
     ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], 5)
+
+    status = hapd.request("WPS_GET_STATUS")
+    if "Last WPS result: Failed" not in status:
+        raise Exception("WPS failure result not shown correctly")
 
     logger.info("WPS provisioning attempt 2")
     hapd.request("WPS_PIN any 12345670")
@@ -438,6 +452,13 @@ def test_ap_wps_setup_locked(dev, apdev):
         time.sleep(0.1)
     if not ap_setup_locked:
         raise Exception("AP setup was not locked")
+
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    status = hapd.request("WPS_GET_STATUS")
+    if "Last WPS result: Failed" not in status:
+        raise Exception("WPS failure result not shown correctly")
+    if "Peer Address: " + dev[0].p2p_interface_addr() not in status:
+        raise Exception("Peer address not shown correctly")
 
     time.sleep(0.5)
     dev[0].dump_monitor()

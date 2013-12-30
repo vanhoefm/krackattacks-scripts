@@ -8523,6 +8523,12 @@ static int wpa_driver_nl80211_set_supp_port(void *priv, int authorized)
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct nl_msg *msg;
 	struct nl80211_sta_flag_update upd;
+	int ret = -ENOBUFS;
+
+	if (!drv->associated && is_zero_ether_addr(drv->bssid) && !authorized) {
+		wpa_printf(MSG_DEBUG, "nl80211: Skip set_supp_port(unauthorized) while not associated");
+		return 0;
+	}
 
 	wpa_printf(MSG_DEBUG, "nl80211: Set supplicant port %sauthorized for "
 		   MACSTR, authorized ? "" : "un", MAC2STR(drv->bssid));
@@ -8543,10 +8549,15 @@ static int wpa_driver_nl80211_set_supp_port(void *priv, int authorized)
 		upd.set = BIT(NL80211_STA_FLAG_AUTHORIZED);
 	NLA_PUT(msg, NL80211_ATTR_STA_FLAGS2, sizeof(upd), &upd);
 
-	return send_and_recv_msgs(drv, msg, NULL, NULL);
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	msg = NULL;
+	if (!ret)
+		return 0;
  nla_put_failure:
 	nlmsg_free(msg);
-	return -ENOBUFS;
+	wpa_printf(MSG_DEBUG, "nl80211: Failed to set STA flag: %d (%s)",
+		   ret, strerror(-ret));
+	return ret;
 }
 
 

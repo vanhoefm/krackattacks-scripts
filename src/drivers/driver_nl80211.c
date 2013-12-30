@@ -10139,6 +10139,18 @@ static int nl80211_set_param(void *priv, const char *param)
 	}
 #endif /* CONFIG_P2P */
 
+	if (os_strstr(param, "use_monitor=1")) {
+		struct i802_bss *bss = priv;
+		struct wpa_driver_nl80211_data *drv = bss->drv;
+		drv->use_monitor = 1;
+	}
+
+	if (os_strstr(param, "force_connect_cmd=1")) {
+		struct i802_bss *bss = priv;
+		struct wpa_driver_nl80211_data *drv = bss->drv;
+		drv->capa.flags &= ~WPA_DRIVER_FLAGS_SME;
+	}
+
 	return 0;
 }
 

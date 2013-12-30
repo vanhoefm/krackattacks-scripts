@@ -134,42 +134,6 @@ enum wpa_alg {
 };
 
 /**
- * enum wpa_cipher - Cipher suites
- */
-enum wpa_cipher {
-	CIPHER_NONE,
-	CIPHER_WEP40,
-	CIPHER_TKIP,
-	CIPHER_CCMP,
-	CIPHER_WEP104,
-	CIPHER_GCMP,
-	CIPHER_SMS4,
-	CIPHER_GCMP_256,
-	CIPHER_CCMP_256
-};
-
-/**
- * enum wpa_key_mgmt - Key management suites
- */
-enum wpa_key_mgmt {
-	KEY_MGMT_802_1X,
-	KEY_MGMT_PSK,
-	KEY_MGMT_NONE,
-	KEY_MGMT_802_1X_NO_WPA,
-	KEY_MGMT_WPA_NONE,
-	KEY_MGMT_FT_802_1X,
-	KEY_MGMT_FT_PSK,
-	KEY_MGMT_802_1X_SHA256,
-	KEY_MGMT_PSK_SHA256,
-	KEY_MGMT_WPS,
-	KEY_MGMT_SAE,
-	KEY_MGMT_FT_SAE,
-	KEY_MGMT_WAPI_PSK,
-	KEY_MGMT_WAPI_CERT,
-	KEY_MGMT_CCKM
-};
-
-/**
  * enum wpa_states - wpa_supplicant state
  *
  * These enumeration values are used to indicate the current wpa_supplicant

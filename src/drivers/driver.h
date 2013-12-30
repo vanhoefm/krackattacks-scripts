@@ -442,25 +442,25 @@ struct wpa_driver_associate_params {
 	unsigned int wpa_proto;
 
 	/**
-	 * pairwise_suite - Selected pairwise cipher suite
+	 * pairwise_suite - Selected pairwise cipher suite (WPA_CIPHER_*)
 	 *
 	 * This is usually ignored if @wpa_ie is used.
 	 */
-	enum wpa_cipher pairwise_suite;
+	unsigned int pairwise_suite;
 
 	/**
-	 * group_suite - Selected group cipher suite
+	 * group_suite - Selected group cipher suite (WPA_CIPHER_*)
 	 *
 	 * This is usually ignored if @wpa_ie is used.
 	 */
-	enum wpa_cipher group_suite;
+	unsigned int group_suite;
 
 	/**
-	 * key_mgmt_suite - Selected key management suite
+	 * key_mgmt_suite - Selected key management suite (WPA_KEY_MGMT_*)
 	 *
 	 * This is usually ignored if @wpa_ie is used.
 	 */
-	enum wpa_key_mgmt key_mgmt_suite;
+	unsigned int key_mgmt_suite;
 
 	/**
 	 * auth_alg - Allowed authentication algorithms

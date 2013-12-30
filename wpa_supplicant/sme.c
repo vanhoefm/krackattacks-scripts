@@ -651,9 +651,8 @@ void sme_associate(struct wpa_supplicant *wpa_s, enum wpas_mode mode,
 	params.wpa_ie = wpa_s->sme.assoc_req_ie_len ?
 		wpa_s->sme.assoc_req_ie : NULL;
 	params.wpa_ie_len = wpa_s->sme.assoc_req_ie_len;
-	params.pairwise_suite =
-		wpa_cipher_to_suite_driver(wpa_s->pairwise_cipher);
-	params.group_suite = wpa_cipher_to_suite_driver(wpa_s->group_cipher);
+	params.pairwise_suite = wpa_s->pairwise_cipher;
+	params.group_suite = wpa_s->group_cipher;
 #ifdef CONFIG_HT_OVERRIDES
 	os_memset(&htcaps, 0, sizeof(htcaps));
 	os_memset(&htcaps_mask, 0, sizeof(htcaps_mask));

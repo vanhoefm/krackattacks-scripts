@@ -865,34 +865,6 @@ static void wpa_supplicant_reconfig(int sig, void *signal_ctx)
 }
 
 
-enum wpa_key_mgmt key_mgmt2driver(int key_mgmt)
-{
-	switch (key_mgmt) {
-	case WPA_KEY_MGMT_NONE:
-		return KEY_MGMT_NONE;
-	case WPA_KEY_MGMT_IEEE8021X_NO_WPA:
-		return KEY_MGMT_802_1X_NO_WPA;
-	case WPA_KEY_MGMT_IEEE8021X:
-		return KEY_MGMT_802_1X;
-	case WPA_KEY_MGMT_WPA_NONE:
-		return KEY_MGMT_WPA_NONE;
-	case WPA_KEY_MGMT_FT_IEEE8021X:
-		return KEY_MGMT_FT_802_1X;
-	case WPA_KEY_MGMT_FT_PSK:
-		return KEY_MGMT_FT_PSK;
-	case WPA_KEY_MGMT_IEEE8021X_SHA256:
-		return KEY_MGMT_802_1X_SHA256;
-	case WPA_KEY_MGMT_PSK_SHA256:
-		return KEY_MGMT_PSK_SHA256;
-	case WPA_KEY_MGMT_WPS:
-		return KEY_MGMT_WPS;
-	case WPA_KEY_MGMT_PSK:
-	default:
-		return KEY_MGMT_PSK;
-	}
-}
-
-
 static int wpa_supplicant_suites_from_ai(struct wpa_supplicant *wpa_s,
 					 struct wpa_ssid *ssid,
 					 struct wpa_ie_data *ie)
@@ -1290,7 +1262,7 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	size_t wpa_ie_len;
 	int use_crypt, ret, i, bssid_changed;
 	int algs = WPA_AUTH_ALG_OPEN;
-	enum wpa_cipher cipher_pairwise, cipher_group;
+	unsigned int cipher_pairwise, cipher_group;
 	struct wpa_driver_associate_params params;
 	int wep_keys_set = 0;
 	int assoc_failed = 0;
@@ -1531,8 +1503,8 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 
 	wpa_clear_keys(wpa_s, bss ? bss->bssid : NULL);
 	use_crypt = 1;
-	cipher_pairwise = wpa_cipher_to_suite_driver(wpa_s->pairwise_cipher);
-	cipher_group = wpa_cipher_to_suite_driver(wpa_s->group_cipher);
+	cipher_pairwise = wpa_s->pairwise_cipher;
+	cipher_group = wpa_s->group_cipher;
 	if (wpa_s->key_mgmt == WPA_KEY_MGMT_NONE ||
 	    wpa_s->key_mgmt == WPA_KEY_MGMT_IEEE8021X_NO_WPA) {
 		if (wpa_s->key_mgmt == WPA_KEY_MGMT_NONE)
@@ -1556,7 +1528,7 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 			/* Assume that dynamic WEP-104 keys will be used and
 			 * set cipher suites in order for drivers to expect
 			 * encryption. */
-			cipher_pairwise = cipher_group = CIPHER_WEP104;
+			cipher_pairwise = cipher_group = WPA_CIPHER_WEP104;
 		}
 	}
 #endif /* IEEE8021X_EAPOL */
@@ -1597,7 +1569,7 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	params.wpa_ie_len = wpa_ie_len;
 	params.pairwise_suite = cipher_pairwise;
 	params.group_suite = cipher_group;
-	params.key_mgmt_suite = key_mgmt2driver(wpa_s->key_mgmt);
+	params.key_mgmt_suite = wpa_s->key_mgmt;
 	params.wpa_proto = wpa_s->wpa_proto;
 	params.auth_alg = algs;
 	params.mode = ssid->mode;
@@ -1610,8 +1582,8 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	params.wep_tx_keyidx = ssid->wep_tx_keyidx;
 
 	if ((wpa_s->drv_flags & WPA_DRIVER_FLAGS_4WAY_HANDSHAKE) &&
-	    (params.key_mgmt_suite == KEY_MGMT_PSK ||
-	     params.key_mgmt_suite == KEY_MGMT_FT_PSK)) {
+	    (params.key_mgmt_suite == WPA_KEY_MGMT_PSK ||
+	     params.key_mgmt_suite == WPA_KEY_MGMT_FT_PSK)) {
 		params.passphrase = ssid->passphrase;
 		if (ssid->psk_set)
 			params.psk = ssid->psk;

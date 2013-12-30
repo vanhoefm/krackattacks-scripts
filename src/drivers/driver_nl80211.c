@@ -5270,33 +5270,6 @@ static int wpa_cipher_to_cipher_suites(unsigned int ciphers, u32 suites[],
 }
 
 
-static u32 cipher_to_cipher_suite(enum wpa_cipher cipher)
-{
-	switch (cipher) {
-	case CIPHER_SMS4:
-		return WLAN_CIPHER_SUITE_SMS4;
-	case CIPHER_WEP40:
-		return WLAN_CIPHER_SUITE_WEP40;
-	case CIPHER_WEP104:
-		return WLAN_CIPHER_SUITE_WEP104;
-	case CIPHER_CCMP:
-		return WLAN_CIPHER_SUITE_CCMP;
-	case CIPHER_GCMP:
-		return WLAN_CIPHER_SUITE_GCMP;
-	case CIPHER_CCMP_256:
-		return WLAN_CIPHER_SUITE_CCMP_256;
-	case CIPHER_GCMP_256:
-		return WLAN_CIPHER_SUITE_GCMP_256;
-	case CIPHER_TKIP:
-		return WLAN_CIPHER_SUITE_TKIP;
-	case CIPHER_NONE:
-		return 0;
-	}
-
-	return 0;
-}
-
-
 static int wpa_driver_nl80211_set_key(const char *ifname, struct i802_bss *bss,
 				      enum wpa_alg alg, const u8 *addr,
 				      int key_idx, int set_tx,
@@ -8053,10 +8026,10 @@ retry:
 		NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, params->bssid);
 	}
 
-	if (params->key_mgmt_suite == KEY_MGMT_802_1X ||
-	    params->key_mgmt_suite == KEY_MGMT_PSK ||
-	    params->key_mgmt_suite == KEY_MGMT_802_1X_SHA256 ||
-	    params->key_mgmt_suite == KEY_MGMT_PSK_SHA256) {
+	if (params->key_mgmt_suite == WPA_KEY_MGMT_IEEE8021X ||
+	    params->key_mgmt_suite == WPA_KEY_MGMT_PSK ||
+	    params->key_mgmt_suite == WPA_KEY_MGMT_IEEE8021X_SHA256 ||
+	    params->key_mgmt_suite == WPA_KEY_MGMT_PSK_SHA256) {
 		wpa_printf(MSG_DEBUG, "  * control port");
 		NLA_PUT_FLAG(msg, NL80211_ATTR_CONTROL_PORT);
 	}
@@ -8183,37 +8156,37 @@ skip_auth_type:
 		NLA_PUT_U32(msg, NL80211_ATTR_WPA_VERSIONS, ver);
 	}
 
-	if (params->pairwise_suite != CIPHER_NONE) {
+	if (params->pairwise_suite != WPA_CIPHER_NONE) {
 		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITES_PAIRWISE,
-			    cipher_to_cipher_suite(params->pairwise_suite));
+			    wpa_cipher_to_cipher_suite(params->pairwise_suite));
 	}
 
-	if (params->group_suite != CIPHER_NONE) {
+	if (params->group_suite != WPA_CIPHER_NONE) {
 		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITE_GROUP,
-			    cipher_to_cipher_suite(params->group_suite));
+			    wpa_cipher_to_cipher_suite(params->group_suite));
 	}
 
-	if (params->key_mgmt_suite == KEY_MGMT_802_1X ||
-	    params->key_mgmt_suite == KEY_MGMT_PSK ||
-	    params->key_mgmt_suite == KEY_MGMT_FT_802_1X ||
-	    params->key_mgmt_suite == KEY_MGMT_FT_PSK ||
-	    params->key_mgmt_suite == KEY_MGMT_CCKM) {
+	if (params->key_mgmt_suite == WPA_KEY_MGMT_IEEE8021X ||
+	    params->key_mgmt_suite == WPA_KEY_MGMT_PSK ||
+	    params->key_mgmt_suite == WPA_KEY_MGMT_FT_IEEE8021X ||
+	    params->key_mgmt_suite == WPA_KEY_MGMT_FT_PSK ||
+	    params->key_mgmt_suite == WPA_KEY_MGMT_CCKM) {
 		int mgmt = WLAN_AKM_SUITE_PSK;
 
 		switch (params->key_mgmt_suite) {
-		case KEY_MGMT_CCKM:
+		case WPA_KEY_MGMT_CCKM:
 			mgmt = WLAN_AKM_SUITE_CCKM;
 			break;
-		case KEY_MGMT_802_1X:
+		case WPA_KEY_MGMT_IEEE8021X:
 			mgmt = WLAN_AKM_SUITE_8021X;
 			break;
-		case KEY_MGMT_FT_802_1X:
+		case WPA_KEY_MGMT_FT_IEEE8021X:
 			mgmt = WLAN_AKM_SUITE_FT_8021X;
 			break;
-		case KEY_MGMT_FT_PSK:
+		case WPA_KEY_MGMT_FT_PSK:
 			mgmt = WLAN_AKM_SUITE_FT_PSK;
 			break;
-		case KEY_MGMT_PSK:
+		case WPA_KEY_MGMT_PSK:
 		default:
 			mgmt = WLAN_AKM_SUITE_PSK;
 			break;
@@ -8362,14 +8335,14 @@ static int wpa_driver_nl80211_associate(
 		NLA_PUT(msg, NL80211_ATTR_IE, params->wpa_ie_len,
 			params->wpa_ie);
 
-	if (params->pairwise_suite != CIPHER_NONE) {
-		u32 cipher = cipher_to_cipher_suite(params->pairwise_suite);
+	if (params->pairwise_suite != WPA_CIPHER_NONE) {
+		u32 cipher = wpa_cipher_to_cipher_suite(params->pairwise_suite);
 		wpa_printf(MSG_DEBUG, "  * pairwise=0x%x", cipher);
 		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITES_PAIRWISE, cipher);
 	}
 
-	if (params->group_suite != CIPHER_NONE) {
-		u32 cipher = cipher_to_cipher_suite(params->group_suite);
+	if (params->group_suite != WPA_CIPHER_NONE) {
+		u32 cipher = wpa_cipher_to_cipher_suite(params->group_suite);
 		wpa_printf(MSG_DEBUG, "  * group=0x%x", cipher);
 		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITE_GROUP, cipher);
 	}

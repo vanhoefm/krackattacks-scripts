@@ -1110,9 +1110,9 @@ wpa_driver_bsd_associate(void *priv, struct wpa_driver_associate_params *params)
 	if (wpa_driver_bsd_set_wpa_ie(drv, params->wpa_ie, params->wpa_ie_len) < 0)
 		return -1;
 
-	privacy = !(params->pairwise_suite == CIPHER_NONE &&
-	    params->group_suite == CIPHER_NONE &&
-	    params->key_mgmt_suite == KEY_MGMT_NONE &&
+	privacy = !(params->pairwise_suite == WPA_CIPHER_NONE &&
+	    params->group_suite == WPA_CIPHER_NONE &&
+	    params->key_mgmt_suite == WPA_KEY_MGMT_NONE &&
 	    params->wpa_ie_len == 0);
 	wpa_printf(MSG_DEBUG, "%s: set PRIVACY %u", __func__, privacy);
 

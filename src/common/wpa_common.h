@@ -403,7 +403,6 @@ int wpa_ft_parse_ies(const u8 *ies, size_t ies_len, struct wpa_ft_ies *parse);
 int wpa_cipher_key_len(int cipher);
 int wpa_cipher_rsc_len(int cipher);
 int wpa_cipher_to_alg(int cipher);
-enum wpa_cipher wpa_cipher_to_suite_driver(int cipher);
 int wpa_cipher_valid_pairwise(int cipher);
 u32 wpa_cipher_to_suite(int proto, int cipher);
 int rsn_cipher_put_suites(u8 *pos, int ciphers);

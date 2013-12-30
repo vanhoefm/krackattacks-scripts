@@ -17,18 +17,46 @@ logger = logging.getLogger()
 wpas_ctrl = '/var/run/wpa_supplicant'
 
 class WpaSupplicant:
-    def __init__(self, ifname, global_iface=None):
-        self.ifname = ifname
+    def __init__(self, ifname=None, global_iface=None):
         self.group_ifname = None
-        self.ctrl = wpaspy.Ctrl(os.path.join(wpas_ctrl, ifname))
-        self.mon = wpaspy.Ctrl(os.path.join(wpas_ctrl, ifname))
-        self.mon.attach()
+        if ifname:
+            self.set_ifname(ifname)
+        else:
+            self.ifname = None
 
         self.global_iface = global_iface
         if global_iface:
             self.global_ctrl = wpaspy.Ctrl(global_iface)
             self.global_mon = wpaspy.Ctrl(global_iface)
             self.global_mon.attach()
+
+    def set_ifname(self, ifname):
+        self.ifname = ifname
+        self.ctrl = wpaspy.Ctrl(os.path.join(wpas_ctrl, ifname))
+        self.mon = wpaspy.Ctrl(os.path.join(wpas_ctrl, ifname))
+        self.mon.attach()
+
+    def remove_ifname(self):
+        if self.ifname:
+            self.mon.detach()
+            self.mon = None
+            self.ctrl = None
+            self.ifname = None
+
+    def interface_add(self, ifname, driver="nl80211"):
+        try:
+            groups = subprocess.check_output(["id"])
+            group = "admin" if "(admin)" in groups else "adm"
+        except Exception, e:
+            group = "admin"
+        cmd = "INTERFACE_ADD " + ifname + "\t\t" + driver + "\tDIR=/var/run/wpa_supplicant GROUP=" + group
+        if "FAIL" in self.global_request(cmd):
+            raise Exception("Failed to add a dynamic wpa_supplicant interface")
+        self.set_ifname(ifname)
+
+    def interface_remove(self, ifname):
+        self.remove_ifname()
+        self.global_request("INTERFACE_REMOVE " + ifname)
 
     def request(self, cmd):
         logger.debug(self.ifname + ": CTRL: " + cmd)
@@ -38,7 +66,8 @@ class WpaSupplicant:
         if self.global_iface is None:
             self.request(cmd)
         else:
-            logger.debug(self.ifname + ": CTRL: " + cmd)
+            ifname = self.ifname or self.global_iface
+            logger.debug(ifname + ": CTRL: " + cmd)
             return self.global_ctrl.request(cmd)
 
     def group_request(self, cmd):

@@ -56,14 +56,16 @@ for i in `pidof valgrind.bin`; do
     fi
 done
 
-for i in /tmp/wpas-wlan0 /tmp/wpas-wlan1 /tmp/wpas-wlan2 /var/run/hostapd-global /tmp/hlr_auc_gw.sock /tmp/wpa_ctrl_* /tmp/eap_sim_db_*; do
-    if [ -e $i ]; then
+count=0
+for i in /tmp/wpas-wlan0 /tmp/wpas-wlan1 /tmp/wpas-wlan2 /tmp/wpas-wlan5 /var/run/hostapd-global /tmp/hlr_auc_gw.sock /tmp/wpa_ctrl_* /tmp/eap_sim_db_*; do
+    count=$(($count + 1))
+    if [ $count -lt 7 -a -e $i ]; then
 	echo "Waiting for ctrl_iface $i to disappear"
 	sleep 1
-	if [ -e $i ]; then
-	    echo "Control interface file $i exists - remove it"
-	    sudo rm $i
-	fi
+    fi
+    if [ -e $i ]; then
+	echo "Control interface file $i exists - remove it"
+	sudo rm $i
     fi
 done
 

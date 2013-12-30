@@ -1273,7 +1273,9 @@ static u16 wps_fix_config_methods(u16 config_methods)
 static void wpas_wps_set_uuid(struct wpa_supplicant *wpa_s,
 			      struct wps_context *wps)
 {
-	wpa_printf(MSG_DEBUG, "WPS: Set UUID for interface %s", wpa_s->ifname);
+	char buf[50];
+	const char *src;
+
 	if (is_nil_uuid(wpa_s->conf->uuid)) {
 		struct wpa_supplicant *first;
 		first = wpa_s->global->ifaces;
@@ -1284,18 +1286,18 @@ static void wpas_wps_set_uuid(struct wpa_supplicant *wpa_s,
 				os_memcpy(wps->uuid,
 					  wpa_s->global->ifaces->wps->uuid,
 					  WPS_UUID_LEN);
-			wpa_hexdump(MSG_DEBUG, "WPS: UUID from the first "
-				    "interface", wps->uuid, WPS_UUID_LEN);
+			src = "from the first interface";
 		} else {
 			uuid_gen_mac_addr(wpa_s->own_addr, wps->uuid);
-			wpa_hexdump(MSG_DEBUG, "WPS: UUID based on MAC "
-				    "address", wps->uuid, WPS_UUID_LEN);
+			src = "based on MAC address";
 		}
 	} else {
 		os_memcpy(wps->uuid, wpa_s->conf->uuid, WPS_UUID_LEN);
-		wpa_hexdump(MSG_DEBUG, "WPS: UUID based on configuration",
-			    wps->uuid, WPS_UUID_LEN);
+		src = "based on configuration";
 	}
+
+	uuid_bin2str(wps->uuid, buf, sizeof(buf));
+	wpa_dbg(wpa_s, MSG_DEBUG, "WPS: UUID %s: %s", src, buf);
 }
 
 

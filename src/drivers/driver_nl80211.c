@@ -3976,15 +3976,16 @@ static int nl80211_register_frame(struct i802_bss *bss,
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct nl_msg *msg;
 	int ret = -1;
+	char buf[30];
 
 	msg = nlmsg_alloc();
 	if (!msg)
 		return -1;
 
-	wpa_printf(MSG_DEBUG, "nl80211: Register frame type=0x%x nl_handle=%p",
-		   type, nl_handle);
-	wpa_hexdump(MSG_DEBUG, "nl80211: Register frame match",
-		    match, match_len);
+	buf[0] = '\0';
+	wpa_snprintf_hex(buf, sizeof(buf), match, match_len);
+	wpa_printf(MSG_DEBUG, "nl80211: Register frame type=0x%x nl_handle=%p match=%s",
+		   type, nl_handle, buf);
 
 	nl80211_cmd(drv, msg, 0, NL80211_CMD_REGISTER_ACTION);
 

@@ -6215,23 +6215,10 @@ static void nl80211_set_ht40_mode_sec(struct hostapd_hw_modes *mode, int start,
 }
 
 
-static void nl80211_reg_rule_max_eirp(struct nlattr *tb[],
+static void nl80211_reg_rule_max_eirp(u32 start, u32 end, u32 max_eirp,
 				      struct phy_info_arg *results)
 {
-	u32 start, end, max_eirp;
 	u16 m;
-
-	if (tb[NL80211_ATTR_FREQ_RANGE_START] == NULL ||
-	    tb[NL80211_ATTR_FREQ_RANGE_END] == NULL ||
-	    tb[NL80211_ATTR_POWER_RULE_MAX_EIRP] == NULL)
-		return;
-
-	start = nla_get_u32(tb[NL80211_ATTR_FREQ_RANGE_START]) / 1000;
-	end = nla_get_u32(tb[NL80211_ATTR_FREQ_RANGE_END]) / 1000;
-	max_eirp = nla_get_u32(tb[NL80211_ATTR_POWER_RULE_MAX_EIRP]) / 100;
-
-	wpa_printf(MSG_DEBUG, "nl80211: %u-%u @ %u mBm",
-		   start, end, max_eirp);
 
 	for (m = 0; m < *results->num_modes; m++) {
 		int c;
@@ -6247,25 +6234,10 @@ static void nl80211_reg_rule_max_eirp(struct nlattr *tb[],
 }
 
 
-static void nl80211_reg_rule_ht40(struct nlattr *tb[],
+static void nl80211_reg_rule_ht40(u32 start, u32 end,
 				  struct phy_info_arg *results)
 {
-	u32 start, end, max_bw;
 	u16 m;
-
-	if (tb[NL80211_ATTR_FREQ_RANGE_START] == NULL ||
-	    tb[NL80211_ATTR_FREQ_RANGE_END] == NULL ||
-	    tb[NL80211_ATTR_FREQ_RANGE_MAX_BW] == NULL)
-		return;
-
-	start = nla_get_u32(tb[NL80211_ATTR_FREQ_RANGE_START]) / 1000;
-	end = nla_get_u32(tb[NL80211_ATTR_FREQ_RANGE_END]) / 1000;
-	max_bw = nla_get_u32(tb[NL80211_ATTR_FREQ_RANGE_MAX_BW]) / 1000;
-
-	wpa_printf(MSG_DEBUG, "nl80211: %u-%u @ %u MHz",
-		   start, end, max_bw);
-	if (max_bw < 40)
-		return;
 
 	for (m = 0; m < *results->num_modes; m++) {
 		if (!(results->modes[m].ht_capab &
@@ -6387,10 +6359,26 @@ static int nl80211_get_reg(struct nl_msg *msg, void *arg)
 
 	nla_for_each_nested(nl_rule, tb_msg[NL80211_ATTR_REG_RULES], rem_rule)
 	{
+		u32 start, end, max_eirp = 0, max_bw = 0;
 		nla_parse(tb_rule, NL80211_FREQUENCY_ATTR_MAX,
 			  nla_data(nl_rule), nla_len(nl_rule), reg_policy);
-		nl80211_reg_rule_ht40(tb_rule, results);
-		nl80211_reg_rule_max_eirp(tb_rule, results);
+		if (tb_rule[NL80211_ATTR_FREQ_RANGE_START] == NULL ||
+		    tb_rule[NL80211_ATTR_FREQ_RANGE_END] == NULL)
+			continue;
+		start = nla_get_u32(tb_rule[NL80211_ATTR_FREQ_RANGE_START]) / 1000;
+		end = nla_get_u32(tb_rule[NL80211_ATTR_FREQ_RANGE_END]) / 1000;
+		if (tb_rule[NL80211_ATTR_POWER_RULE_MAX_EIRP])
+			max_eirp = nla_get_u32(tb_rule[NL80211_ATTR_POWER_RULE_MAX_EIRP]) / 100;
+		if (tb_rule[NL80211_ATTR_FREQ_RANGE_MAX_BW])
+			max_bw = nla_get_u32(tb_rule[NL80211_ATTR_FREQ_RANGE_MAX_BW]) / 1000;
+
+		wpa_printf(MSG_DEBUG, "nl80211: %u-%u @ %u MHz %u mBm",
+			   start, end, max_bw, max_eirp);
+		if (max_bw >= 40)
+			nl80211_reg_rule_ht40(start, end, results);
+		if (tb_rule[NL80211_ATTR_POWER_RULE_MAX_EIRP])
+			nl80211_reg_rule_max_eirp(start, end, max_eirp,
+						  results);
 	}
 
 	nla_for_each_nested(nl_rule, tb_msg[NL80211_ATTR_REG_RULES], rem_rule)

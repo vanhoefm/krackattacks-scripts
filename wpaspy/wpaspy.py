@@ -30,7 +30,11 @@ class Ctrl:
 
     def close(self):
         if self.attached:
-            self.detach()
+            try:
+                self.detach()
+            except Exception, e:
+                # Need to ignore this allow the socket to be closed
+                pass
         if self.started:
             self.s.close()
             os.unlink(self.local)
@@ -48,6 +52,7 @@ class Ctrl:
             return None
         res = self.request("ATTACH")
         if "OK" in res:
+            self.attached = True
             return None
         raise Exception("ATTACH failed")
 
@@ -56,6 +61,7 @@ class Ctrl:
             return None
         res = self.request("DETACH")
         if "OK" in res:
+            self.attached = False
             return None
         raise Exception("DETACH failed")
 

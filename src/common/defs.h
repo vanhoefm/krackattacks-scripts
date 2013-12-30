@@ -23,9 +23,7 @@ typedef enum { FALSE = 0, TRUE = 1 } Boolean;
 #define WPA_CIPHER_WEP104 BIT(2)
 #define WPA_CIPHER_TKIP BIT(3)
 #define WPA_CIPHER_CCMP BIT(4)
-#ifdef CONFIG_IEEE80211W
 #define WPA_CIPHER_AES_128_CMAC BIT(5)
-#endif /* CONFIG_IEEE80211W */
 #define WPA_CIPHER_GCMP BIT(6)
 #define WPA_CIPHER_SMS4 BIT(7)
 #define WPA_CIPHER_GCMP_256 BIT(8)

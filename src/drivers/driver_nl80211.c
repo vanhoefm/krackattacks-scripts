@@ -8067,40 +8067,32 @@ nla_put_failure:
 }
 
 
-static int wpa_driver_nl80211_try_connect(
-	struct wpa_driver_nl80211_data *drv,
-	struct wpa_driver_associate_params *params)
+static int nl80211_connect_common(struct wpa_driver_nl80211_data *drv,
+				  struct wpa_driver_associate_params *params,
+				  struct nl_msg *msg)
 {
-	struct nl_msg *msg;
-	enum nl80211_auth_type type;
-	int ret = 0;
-	int algs;
-
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -1;
-
-	wpa_printf(MSG_DEBUG, "nl80211: Connect (ifindex=%d)", drv->ifindex);
-	nl80211_cmd(drv, msg, 0, NL80211_CMD_CONNECT);
-
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+
 	if (params->bssid) {
 		wpa_printf(MSG_DEBUG, "  * bssid=" MACSTR,
 			   MAC2STR(params->bssid));
 		NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, params->bssid);
 	}
+
 	if (params->freq) {
 		wpa_printf(MSG_DEBUG, "  * freq=%d", params->freq);
 		NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, params->freq);
 		drv->assoc_freq = params->freq;
 	} else
 		drv->assoc_freq = 0;
+
 	if (params->bg_scan_period >= 0) {
 		wpa_printf(MSG_DEBUG, "  * bg scan period=%d",
 			   params->bg_scan_period);
 		NLA_PUT_U16(msg, NL80211_ATTR_BG_SCAN_PERIOD,
 			    params->bg_scan_period);
 	}
+
 	if (params->ssid) {
 		wpa_hexdump_ascii(MSG_DEBUG, "  * SSID",
 				  params->ssid, params->ssid_len);
@@ -8111,39 +8103,12 @@ static int wpa_driver_nl80211_try_connect(
 		os_memcpy(drv->ssid, params->ssid, params->ssid_len);
 		drv->ssid_len = params->ssid_len;
 	}
+
 	wpa_hexdump(MSG_DEBUG, "  * IEs", params->wpa_ie, params->wpa_ie_len);
 	if (params->wpa_ie)
 		NLA_PUT(msg, NL80211_ATTR_IE, params->wpa_ie_len,
 			params->wpa_ie);
 
-	algs = 0;
-	if (params->auth_alg & WPA_AUTH_ALG_OPEN)
-		algs++;
-	if (params->auth_alg & WPA_AUTH_ALG_SHARED)
-		algs++;
-	if (params->auth_alg & WPA_AUTH_ALG_LEAP)
-		algs++;
-	if (algs > 1) {
-		wpa_printf(MSG_DEBUG, "  * Leave out Auth Type for automatic "
-			   "selection");
-		goto skip_auth_type;
-	}
-
-	if (params->auth_alg & WPA_AUTH_ALG_OPEN)
-		type = NL80211_AUTHTYPE_OPEN_SYSTEM;
-	else if (params->auth_alg & WPA_AUTH_ALG_SHARED)
-		type = NL80211_AUTHTYPE_SHARED_KEY;
-	else if (params->auth_alg & WPA_AUTH_ALG_LEAP)
-		type = NL80211_AUTHTYPE_NETWORK_EAP;
-	else if (params->auth_alg & WPA_AUTH_ALG_FT)
-		type = NL80211_AUTHTYPE_FT;
-	else
-		goto nla_put_failure;
-
-	wpa_printf(MSG_DEBUG, "  * Auth Type %d", type);
-	NLA_PUT_U32(msg, NL80211_ATTR_AUTH_TYPE, type);
-
-skip_auth_type:
 	if (params->wpa_proto) {
 		enum nl80211_wpa_versions ver = 0;
 
@@ -8157,13 +8122,15 @@ skip_auth_type:
 	}
 
 	if (params->pairwise_suite != WPA_CIPHER_NONE) {
-		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITES_PAIRWISE,
-			    wpa_cipher_to_cipher_suite(params->pairwise_suite));
+		u32 cipher = wpa_cipher_to_cipher_suite(params->pairwise_suite);
+		wpa_printf(MSG_DEBUG, "  * pairwise=0x%x", cipher);
+		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITES_PAIRWISE, cipher);
 	}
 
 	if (params->group_suite != WPA_CIPHER_NONE) {
-		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITE_GROUP,
-			    wpa_cipher_to_cipher_suite(params->group_suite));
+		u32 cipher = wpa_cipher_to_cipher_suite(params->group_suite);
+		wpa_printf(MSG_DEBUG, "  * group=0x%x", cipher);
+		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITE_GROUP, cipher);
 	}
 
 	if (params->key_mgmt_suite == WPA_KEY_MGMT_IEEE8021X ||
@@ -8194,12 +8161,10 @@ skip_auth_type:
 		NLA_PUT_U32(msg, NL80211_ATTR_AKM_SUITES, mgmt);
 	}
 
-#ifdef CONFIG_IEEE80211W
+	NLA_PUT_FLAG(msg, NL80211_ATTR_CONTROL_PORT);
+
 	if (params->mgmt_frame_protection == MGMT_FRAME_PROTECTION_REQUIRED)
 		NLA_PUT_U32(msg, NL80211_ATTR_USE_MFP, NL80211_MFP_REQUIRED);
-#endif /* CONFIG_IEEE80211W */
-
-	NLA_PUT_FLAG(msg, NL80211_ATTR_CONTROL_PORT);
 
 	if (params->disable_ht)
 		NLA_PUT_FLAG(msg, NL80211_ATTR_DISABLE_HT);
@@ -8225,6 +8190,63 @@ skip_auth_type:
 	}
 #endif /* CONFIG_VHT_OVERRIDES */
 
+	if (params->p2p)
+		wpa_printf(MSG_DEBUG, "  * P2P group");
+
+	return 0;
+nla_put_failure:
+	return -1;
+}
+
+
+static int wpa_driver_nl80211_try_connect(
+	struct wpa_driver_nl80211_data *drv,
+	struct wpa_driver_associate_params *params)
+{
+	struct nl_msg *msg;
+	enum nl80211_auth_type type;
+	int ret;
+	int algs;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -1;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Connect (ifindex=%d)", drv->ifindex);
+	nl80211_cmd(drv, msg, 0, NL80211_CMD_CONNECT);
+
+	ret = nl80211_connect_common(drv, params, msg);
+	if (ret)
+		goto nla_put_failure;
+
+	algs = 0;
+	if (params->auth_alg & WPA_AUTH_ALG_OPEN)
+		algs++;
+	if (params->auth_alg & WPA_AUTH_ALG_SHARED)
+		algs++;
+	if (params->auth_alg & WPA_AUTH_ALG_LEAP)
+		algs++;
+	if (algs > 1) {
+		wpa_printf(MSG_DEBUG, "  * Leave out Auth Type for automatic "
+			   "selection");
+		goto skip_auth_type;
+	}
+
+	if (params->auth_alg & WPA_AUTH_ALG_OPEN)
+		type = NL80211_AUTHTYPE_OPEN_SYSTEM;
+	else if (params->auth_alg & WPA_AUTH_ALG_SHARED)
+		type = NL80211_AUTHTYPE_SHARED_KEY;
+	else if (params->auth_alg & WPA_AUTH_ALG_LEAP)
+		type = NL80211_AUTHTYPE_NETWORK_EAP;
+	else if (params->auth_alg & WPA_AUTH_ALG_FT)
+		type = NL80211_AUTHTYPE_FT;
+	else
+		goto nla_put_failure;
+
+	wpa_printf(MSG_DEBUG, "  * Auth Type %d", type);
+	NLA_PUT_U32(msg, NL80211_ATTR_AUTH_TYPE, type);
+
+skip_auth_type:
 	ret = nl80211_set_conn_keys(params, msg);
 	if (ret)
 		goto nla_put_failure;
@@ -8274,7 +8296,7 @@ static int wpa_driver_nl80211_associate(
 {
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
-	int ret = -1;
+	int ret;
 	struct nl_msg *msg;
 
 	if (params->mode == IEEE80211_MODE_AP)
@@ -8302,57 +8324,9 @@ static int wpa_driver_nl80211_associate(
 		   drv->ifindex);
 	nl80211_cmd(drv, msg, 0, NL80211_CMD_ASSOCIATE);
 
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
-	if (params->bssid) {
-		wpa_printf(MSG_DEBUG, "  * bssid=" MACSTR,
-			   MAC2STR(params->bssid));
-		NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, params->bssid);
-	}
-	if (params->freq) {
-		wpa_printf(MSG_DEBUG, "  * freq=%d", params->freq);
-		NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, params->freq);
-		drv->assoc_freq = params->freq;
-	} else
-		drv->assoc_freq = 0;
-	if (params->bg_scan_period >= 0) {
-		wpa_printf(MSG_DEBUG, "  * bg scan period=%d",
-			   params->bg_scan_period);
-		NLA_PUT_U16(msg, NL80211_ATTR_BG_SCAN_PERIOD,
-			    params->bg_scan_period);
-	}
-	if (params->ssid) {
-		wpa_hexdump_ascii(MSG_DEBUG, "  * SSID",
-				  params->ssid, params->ssid_len);
-		NLA_PUT(msg, NL80211_ATTR_SSID, params->ssid_len,
-			params->ssid);
-		if (params->ssid_len > sizeof(drv->ssid))
-			goto nla_put_failure;
-		os_memcpy(drv->ssid, params->ssid, params->ssid_len);
-		drv->ssid_len = params->ssid_len;
-	}
-	wpa_hexdump(MSG_DEBUG, "  * IEs", params->wpa_ie, params->wpa_ie_len);
-	if (params->wpa_ie)
-		NLA_PUT(msg, NL80211_ATTR_IE, params->wpa_ie_len,
-			params->wpa_ie);
-
-	if (params->pairwise_suite != WPA_CIPHER_NONE) {
-		u32 cipher = wpa_cipher_to_cipher_suite(params->pairwise_suite);
-		wpa_printf(MSG_DEBUG, "  * pairwise=0x%x", cipher);
-		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITES_PAIRWISE, cipher);
-	}
-
-	if (params->group_suite != WPA_CIPHER_NONE) {
-		u32 cipher = wpa_cipher_to_cipher_suite(params->group_suite);
-		wpa_printf(MSG_DEBUG, "  * group=0x%x", cipher);
-		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITE_GROUP, cipher);
-	}
-
-#ifdef CONFIG_IEEE80211W
-	if (params->mgmt_frame_protection == MGMT_FRAME_PROTECTION_REQUIRED)
-		NLA_PUT_U32(msg, NL80211_ATTR_USE_MFP, NL80211_MFP_REQUIRED);
-#endif /* CONFIG_IEEE80211W */
-
-	NLA_PUT_FLAG(msg, NL80211_ATTR_CONTROL_PORT);
+	ret = nl80211_connect_common(drv, params, msg);
+	if (ret)
+		goto nla_put_failure;
 
 	if (params->prev_bssid) {
 		wpa_printf(MSG_DEBUG, "  * prev_bssid=" MACSTR,
@@ -8360,33 +8334,6 @@ static int wpa_driver_nl80211_associate(
 		NLA_PUT(msg, NL80211_ATTR_PREV_BSSID, ETH_ALEN,
 			params->prev_bssid);
 	}
-
-	if (params->disable_ht)
-		NLA_PUT_FLAG(msg, NL80211_ATTR_DISABLE_HT);
-
-	if (params->htcaps && params->htcaps_mask) {
-		int sz = sizeof(struct ieee80211_ht_capabilities);
-		NLA_PUT(msg, NL80211_ATTR_HT_CAPABILITY, sz, params->htcaps);
-		NLA_PUT(msg, NL80211_ATTR_HT_CAPABILITY_MASK, sz,
-			params->htcaps_mask);
-	}
-
-#ifdef CONFIG_VHT_OVERRIDES
-	if (params->disable_vht) {
-		wpa_printf(MSG_DEBUG, "  * VHT disabled");
-		NLA_PUT_FLAG(msg, NL80211_ATTR_DISABLE_VHT);
-	}
-
-	if (params->vhtcaps && params->vhtcaps_mask) {
-		int sz = sizeof(struct ieee80211_vht_capabilities);
-		NLA_PUT(msg, NL80211_ATTR_VHT_CAPABILITY, sz, params->vhtcaps);
-		NLA_PUT(msg, NL80211_ATTR_VHT_CAPABILITY_MASK, sz,
-			params->vhtcaps_mask);
-	}
-#endif /* CONFIG_VHT_OVERRIDES */
-
-	if (params->p2p)
-		wpa_printf(MSG_DEBUG, "  * P2P group");
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	msg = NULL;

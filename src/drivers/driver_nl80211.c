@@ -5181,6 +5181,122 @@ static void nl80211_dump_scan(struct wpa_driver_nl80211_data *drv)
 }
 
 
+static u32 wpa_alg_to_cipher_suite(enum wpa_alg alg, size_t key_len)
+{
+	switch (alg) {
+	case WPA_ALG_WEP:
+		if (key_len == 5)
+			return WLAN_CIPHER_SUITE_WEP40;
+		return WLAN_CIPHER_SUITE_WEP104;
+	case WPA_ALG_TKIP:
+		return WLAN_CIPHER_SUITE_TKIP;
+	case WPA_ALG_CCMP:
+		return WLAN_CIPHER_SUITE_CCMP;
+	case WPA_ALG_GCMP:
+		return WLAN_CIPHER_SUITE_GCMP;
+	case WPA_ALG_CCMP_256:
+		return WLAN_CIPHER_SUITE_CCMP_256;
+	case WPA_ALG_GCMP_256:
+		return WLAN_CIPHER_SUITE_GCMP_256;
+	case WPA_ALG_IGTK:
+		return WLAN_CIPHER_SUITE_AES_CMAC;
+	case WPA_ALG_BIP_GMAC_128:
+		return WLAN_CIPHER_SUITE_BIP_GMAC_128;
+	case WPA_ALG_BIP_GMAC_256:
+		return WLAN_CIPHER_SUITE_BIP_GMAC_256;
+	case WPA_ALG_BIP_CMAC_256:
+		return WLAN_CIPHER_SUITE_BIP_CMAC_256;
+	case WPA_ALG_SMS4:
+		return WLAN_CIPHER_SUITE_SMS4;
+	case WPA_ALG_KRK:
+		return WLAN_CIPHER_SUITE_KRK;
+	case WPA_ALG_NONE:
+	case WPA_ALG_PMK:
+		wpa_printf(MSG_ERROR, "nl80211: Unexpected encryption algorithm %d",
+			   alg);
+		return 0;
+	}
+
+	wpa_printf(MSG_ERROR, "nl80211: Unsupported encryption algorithm %d",
+		   alg);
+	return 0;
+}
+
+
+static u32 wpa_cipher_to_cipher_suite(unsigned int cipher)
+{
+	switch (cipher) {
+	case WPA_CIPHER_CCMP_256:
+		return WLAN_CIPHER_SUITE_CCMP_256;
+	case WPA_CIPHER_GCMP_256:
+		return WLAN_CIPHER_SUITE_GCMP_256;
+	case WPA_CIPHER_CCMP:
+		return WLAN_CIPHER_SUITE_CCMP;
+	case WPA_CIPHER_GCMP:
+		return WLAN_CIPHER_SUITE_GCMP;
+	case WPA_CIPHER_TKIP:
+		return WLAN_CIPHER_SUITE_TKIP;
+	case WPA_CIPHER_WEP104:
+		return WLAN_CIPHER_SUITE_WEP104;
+	case WPA_CIPHER_WEP40:
+		return WLAN_CIPHER_SUITE_WEP40;
+	}
+
+	return 0;
+}
+
+
+static int wpa_cipher_to_cipher_suites(unsigned int ciphers, u32 suites[],
+				       int max_suites)
+{
+	int num_suites = 0;
+
+	if (num_suites < max_suites && ciphers & WPA_CIPHER_CCMP_256)
+		suites[num_suites++] = WLAN_CIPHER_SUITE_CCMP_256;
+	if (num_suites < max_suites && ciphers & WPA_CIPHER_GCMP_256)
+		suites[num_suites++] = WLAN_CIPHER_SUITE_GCMP_256;
+	if (num_suites < max_suites && ciphers & WPA_CIPHER_CCMP)
+		suites[num_suites++] = WLAN_CIPHER_SUITE_CCMP;
+	if (num_suites < max_suites && ciphers & WPA_CIPHER_GCMP)
+		suites[num_suites++] = WLAN_CIPHER_SUITE_GCMP;
+	if (num_suites < max_suites && ciphers & WPA_CIPHER_TKIP)
+		suites[num_suites++] = WLAN_CIPHER_SUITE_TKIP;
+	if (num_suites < max_suites && ciphers & WPA_CIPHER_WEP104)
+		suites[num_suites++] = WLAN_CIPHER_SUITE_WEP104;
+	if (num_suites < max_suites && ciphers & WPA_CIPHER_WEP40)
+		suites[num_suites++] = WLAN_CIPHER_SUITE_WEP40;
+
+	return num_suites;
+}
+
+
+static u32 cipher_to_cipher_suite(enum wpa_cipher cipher)
+{
+	switch (cipher) {
+	case CIPHER_SMS4:
+		return WLAN_CIPHER_SUITE_SMS4;
+	case CIPHER_WEP40:
+		return WLAN_CIPHER_SUITE_WEP40;
+	case CIPHER_WEP104:
+		return WLAN_CIPHER_SUITE_WEP104;
+	case CIPHER_CCMP:
+		return WLAN_CIPHER_SUITE_CCMP;
+	case CIPHER_GCMP:
+		return WLAN_CIPHER_SUITE_GCMP;
+	case CIPHER_CCMP_256:
+		return WLAN_CIPHER_SUITE_CCMP_256;
+	case CIPHER_GCMP_256:
+		return WLAN_CIPHER_SUITE_GCMP_256;
+	case CIPHER_TKIP:
+		return WLAN_CIPHER_SUITE_TKIP;
+	case CIPHER_NONE:
+		return 0;
+	}
+
+	return 0;
+}
+
+
 static int wpa_driver_nl80211_set_key(const char *ifname, struct i802_bss *bss,
 				      enum wpa_alg alg, const u8 *addr,
 				      int key_idx, int set_tx,
@@ -5218,65 +5334,8 @@ static int wpa_driver_nl80211_set_key(const char *ifname, struct i802_bss *bss,
 	} else {
 		nl80211_cmd(drv, msg, 0, NL80211_CMD_NEW_KEY);
 		NLA_PUT(msg, NL80211_ATTR_KEY_DATA, key_len, key);
-		switch (alg) {
-		case WPA_ALG_WEP:
-			if (key_len == 5)
-				NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
-					    WLAN_CIPHER_SUITE_WEP40);
-			else
-				NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
-					    WLAN_CIPHER_SUITE_WEP104);
-			break;
-		case WPA_ALG_TKIP:
-			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
-				    WLAN_CIPHER_SUITE_TKIP);
-			break;
-		case WPA_ALG_CCMP:
-			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
-				    WLAN_CIPHER_SUITE_CCMP);
-			break;
-		case WPA_ALG_GCMP:
-			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
-				    WLAN_CIPHER_SUITE_GCMP);
-			break;
-		case WPA_ALG_CCMP_256:
-			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
-				    WLAN_CIPHER_SUITE_CCMP_256);
-			break;
-		case WPA_ALG_GCMP_256:
-			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
-				    WLAN_CIPHER_SUITE_GCMP_256);
-			break;
-		case WPA_ALG_IGTK:
-			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
-				    WLAN_CIPHER_SUITE_AES_CMAC);
-			break;
-		case WPA_ALG_BIP_GMAC_128:
-			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
-				    WLAN_CIPHER_SUITE_BIP_GMAC_128);
-			break;
-		case WPA_ALG_BIP_GMAC_256:
-			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
-				    WLAN_CIPHER_SUITE_BIP_GMAC_256);
-			break;
-		case WPA_ALG_BIP_CMAC_256:
-			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
-				    WLAN_CIPHER_SUITE_BIP_CMAC_256);
-			break;
-		case WPA_ALG_SMS4:
-			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
-				    WLAN_CIPHER_SUITE_SMS4);
-			break;
-		case WPA_ALG_KRK:
-			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
-				    WLAN_CIPHER_SUITE_KRK);
-			break;
-		default:
-			wpa_printf(MSG_ERROR, "%s: Unsupported encryption "
-				   "algorithm %d", __func__, alg);
-			nlmsg_free(msg);
-			return -1;
-		}
+		NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
+			    wpa_alg_to_cipher_suite(alg, key_len));
 	}
 
 	if (seq && seq_len)
@@ -5381,53 +5440,8 @@ static int nl_add_key(struct nl_msg *msg, enum wpa_alg alg,
 
 	NLA_PUT_U8(msg, NL80211_KEY_IDX, key_idx);
 
-	switch (alg) {
-	case WPA_ALG_WEP:
-		if (key_len == 5)
-			NLA_PUT_U32(msg, NL80211_KEY_CIPHER,
-				    WLAN_CIPHER_SUITE_WEP40);
-		else
-			NLA_PUT_U32(msg, NL80211_KEY_CIPHER,
-				    WLAN_CIPHER_SUITE_WEP104);
-		break;
-	case WPA_ALG_TKIP:
-		NLA_PUT_U32(msg, NL80211_KEY_CIPHER, WLAN_CIPHER_SUITE_TKIP);
-		break;
-	case WPA_ALG_CCMP:
-		NLA_PUT_U32(msg, NL80211_KEY_CIPHER, WLAN_CIPHER_SUITE_CCMP);
-		break;
-	case WPA_ALG_GCMP:
-		NLA_PUT_U32(msg, NL80211_KEY_CIPHER, WLAN_CIPHER_SUITE_GCMP);
-		break;
-	case WPA_ALG_CCMP_256:
-		NLA_PUT_U32(msg, NL80211_KEY_CIPHER,
-			    WLAN_CIPHER_SUITE_CCMP_256);
-		break;
-	case WPA_ALG_GCMP_256:
-		NLA_PUT_U32(msg, NL80211_KEY_CIPHER,
-			    WLAN_CIPHER_SUITE_GCMP_256);
-		break;
-	case WPA_ALG_IGTK:
-		NLA_PUT_U32(msg, NL80211_KEY_CIPHER,
-			    WLAN_CIPHER_SUITE_AES_CMAC);
-		break;
-	case WPA_ALG_BIP_GMAC_128:
-		NLA_PUT_U32(msg, NL80211_KEY_CIPHER,
-			    WLAN_CIPHER_SUITE_BIP_GMAC_128);
-		break;
-	case WPA_ALG_BIP_GMAC_256:
-		NLA_PUT_U32(msg, NL80211_KEY_CIPHER,
-			    WLAN_CIPHER_SUITE_BIP_GMAC_256);
-		break;
-	case WPA_ALG_BIP_CMAC_256:
-		NLA_PUT_U32(msg, NL80211_KEY_CIPHER,
-			    WLAN_CIPHER_SUITE_BIP_CMAC_256);
-		break;
-	default:
-		wpa_printf(MSG_ERROR, "%s: Unsupported encryption "
-			   "algorithm %d", __func__, alg);
-		return -1;
-	}
+	NLA_PUT_U32(msg, NL80211_KEY_CIPHER,
+		    wpa_alg_to_cipher_suite(alg, key_len));
 
 	if (seq && seq_len)
 		NLA_PUT(msg, NL80211_KEY_SEQ, seq_len, seq);
@@ -6738,7 +6752,7 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 	int beacon_set;
 	int ifindex = if_nametoindex(bss->ifname);
 	int num_suites;
-	u32 suites[10];
+	u32 suites[10], suite;
 	u32 ver;
 
 	beacon_set = bss->beacon_set;
@@ -6833,21 +6847,8 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 
 	wpa_printf(MSG_DEBUG, "nl80211: pairwise_ciphers=0x%x",
 		   params->pairwise_ciphers);
-	num_suites = 0;
-	if (params->pairwise_ciphers & WPA_CIPHER_CCMP_256)
-		suites[num_suites++] = WLAN_CIPHER_SUITE_CCMP_256;
-	if (params->pairwise_ciphers & WPA_CIPHER_GCMP_256)
-		suites[num_suites++] = WLAN_CIPHER_SUITE_GCMP_256;
-	if (params->pairwise_ciphers & WPA_CIPHER_CCMP)
-		suites[num_suites++] = WLAN_CIPHER_SUITE_CCMP;
-	if (params->pairwise_ciphers & WPA_CIPHER_GCMP)
-		suites[num_suites++] = WLAN_CIPHER_SUITE_GCMP;
-	if (params->pairwise_ciphers & WPA_CIPHER_TKIP)
-		suites[num_suites++] = WLAN_CIPHER_SUITE_TKIP;
-	if (params->pairwise_ciphers & WPA_CIPHER_WEP104)
-		suites[num_suites++] = WLAN_CIPHER_SUITE_WEP104;
-	if (params->pairwise_ciphers & WPA_CIPHER_WEP40)
-		suites[num_suites++] = WLAN_CIPHER_SUITE_WEP40;
+	num_suites = wpa_cipher_to_cipher_suites(params->pairwise_ciphers,
+						 suites, ARRAY_SIZE(suites));
 	if (num_suites) {
 		NLA_PUT(msg, NL80211_ATTR_CIPHER_SUITES_PAIRWISE,
 			num_suites * sizeof(u32), suites);
@@ -6855,36 +6856,9 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 
 	wpa_printf(MSG_DEBUG, "nl80211: group_cipher=0x%x",
 		   params->group_cipher);
-	switch (params->group_cipher) {
-	case WPA_CIPHER_CCMP_256:
-		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITE_GROUP,
-			    WLAN_CIPHER_SUITE_CCMP_256);
-		break;
-	case WPA_CIPHER_GCMP_256:
-		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITE_GROUP,
-			    WLAN_CIPHER_SUITE_GCMP_256);
-		break;
-	case WPA_CIPHER_CCMP:
-		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITE_GROUP,
-			    WLAN_CIPHER_SUITE_CCMP);
-		break;
-	case WPA_CIPHER_GCMP:
-		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITE_GROUP,
-			    WLAN_CIPHER_SUITE_GCMP);
-		break;
-	case WPA_CIPHER_TKIP:
-		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITE_GROUP,
-			    WLAN_CIPHER_SUITE_TKIP);
-		break;
-	case WPA_CIPHER_WEP104:
-		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITE_GROUP,
-			    WLAN_CIPHER_SUITE_WEP104);
-		break;
-	case WPA_CIPHER_WEP40:
-		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITE_GROUP,
-			    WLAN_CIPHER_SUITE_WEP40);
-		break;
-	}
+	suite = wpa_cipher_to_cipher_suite(params->group_cipher);
+	if (suite)
+		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITE_GROUP, suite);
 
 	if (params->beacon_ies) {
 		wpa_hexdump_buf(MSG_DEBUG, "nl80211: beacon_ies",
@@ -8210,69 +8184,13 @@ skip_auth_type:
 	}
 
 	if (params->pairwise_suite != CIPHER_NONE) {
-		int cipher;
-
-		switch (params->pairwise_suite) {
-		case CIPHER_SMS4:
-			cipher = WLAN_CIPHER_SUITE_SMS4;
-			break;
-		case CIPHER_WEP40:
-			cipher = WLAN_CIPHER_SUITE_WEP40;
-			break;
-		case CIPHER_WEP104:
-			cipher = WLAN_CIPHER_SUITE_WEP104;
-			break;
-		case CIPHER_CCMP:
-			cipher = WLAN_CIPHER_SUITE_CCMP;
-			break;
-		case CIPHER_GCMP:
-			cipher = WLAN_CIPHER_SUITE_GCMP;
-			break;
-		case CIPHER_CCMP_256:
-			cipher = WLAN_CIPHER_SUITE_CCMP_256;
-			break;
-		case CIPHER_GCMP_256:
-			cipher = WLAN_CIPHER_SUITE_GCMP_256;
-			break;
-		case CIPHER_TKIP:
-		default:
-			cipher = WLAN_CIPHER_SUITE_TKIP;
-			break;
-		}
-		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITES_PAIRWISE, cipher);
+		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITES_PAIRWISE,
+			    cipher_to_cipher_suite(params->pairwise_suite));
 	}
 
 	if (params->group_suite != CIPHER_NONE) {
-		int cipher;
-
-		switch (params->group_suite) {
-		case CIPHER_SMS4:
-			cipher = WLAN_CIPHER_SUITE_SMS4;
-			break;
-		case CIPHER_WEP40:
-			cipher = WLAN_CIPHER_SUITE_WEP40;
-			break;
-		case CIPHER_WEP104:
-			cipher = WLAN_CIPHER_SUITE_WEP104;
-			break;
-		case CIPHER_CCMP:
-			cipher = WLAN_CIPHER_SUITE_CCMP;
-			break;
-		case CIPHER_GCMP:
-			cipher = WLAN_CIPHER_SUITE_GCMP;
-			break;
-		case CIPHER_CCMP_256:
-			cipher = WLAN_CIPHER_SUITE_CCMP_256;
-			break;
-		case CIPHER_GCMP_256:
-			cipher = WLAN_CIPHER_SUITE_GCMP_256;
-			break;
-		case CIPHER_TKIP:
-		default:
-			cipher = WLAN_CIPHER_SUITE_TKIP;
-			break;
-		}
-		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITE_GROUP, cipher);
+		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITE_GROUP,
+			    cipher_to_cipher_suite(params->group_suite));
 	}
 
 	if (params->key_mgmt_suite == KEY_MGMT_802_1X ||
@@ -8445,63 +8363,13 @@ static int wpa_driver_nl80211_associate(
 			params->wpa_ie);
 
 	if (params->pairwise_suite != CIPHER_NONE) {
-		int cipher;
-
-		switch (params->pairwise_suite) {
-		case CIPHER_WEP40:
-			cipher = WLAN_CIPHER_SUITE_WEP40;
-			break;
-		case CIPHER_WEP104:
-			cipher = WLAN_CIPHER_SUITE_WEP104;
-			break;
-		case CIPHER_CCMP:
-			cipher = WLAN_CIPHER_SUITE_CCMP;
-			break;
-		case CIPHER_GCMP:
-			cipher = WLAN_CIPHER_SUITE_GCMP;
-			break;
-		case CIPHER_CCMP_256:
-			cipher = WLAN_CIPHER_SUITE_CCMP_256;
-			break;
-		case CIPHER_GCMP_256:
-			cipher = WLAN_CIPHER_SUITE_GCMP_256;
-			break;
-		case CIPHER_TKIP:
-		default:
-			cipher = WLAN_CIPHER_SUITE_TKIP;
-			break;
-		}
+		u32 cipher = cipher_to_cipher_suite(params->pairwise_suite);
 		wpa_printf(MSG_DEBUG, "  * pairwise=0x%x", cipher);
 		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITES_PAIRWISE, cipher);
 	}
 
 	if (params->group_suite != CIPHER_NONE) {
-		int cipher;
-
-		switch (params->group_suite) {
-		case CIPHER_WEP40:
-			cipher = WLAN_CIPHER_SUITE_WEP40;
-			break;
-		case CIPHER_WEP104:
-			cipher = WLAN_CIPHER_SUITE_WEP104;
-			break;
-		case CIPHER_CCMP:
-			cipher = WLAN_CIPHER_SUITE_CCMP;
-			break;
-		case CIPHER_GCMP:
-			cipher = WLAN_CIPHER_SUITE_GCMP;
-			break;
-		case CIPHER_CCMP_256:
-			cipher = WLAN_CIPHER_SUITE_CCMP_256;
-			break;
-		case CIPHER_GCMP_256:
-			cipher = WLAN_CIPHER_SUITE_GCMP_256;
-			break;
-		case CIPHER_TKIP:
-		default:
-			cipher = WLAN_CIPHER_SUITE_TKIP;
-			break;
-		}
+		u32 cipher = cipher_to_cipher_suite(params->group_suite);
 		wpa_printf(MSG_DEBUG, "  * group=0x%x", cipher);
 		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITE_GROUP, cipher);
 	}

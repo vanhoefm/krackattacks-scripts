@@ -1110,6 +1110,8 @@ int wpa_config_write(const char *name, struct wpa_config *config)
 	wpa_config_write_global(f, config);
 
 	for (cred = config->cred; cred; cred = cred->next) {
+		if (cred->temporary)
+			continue;
 		fprintf(f, "\ncred={\n");
 		wpa_config_write_cred(f, cred);
 		fprintf(f, "}\n");

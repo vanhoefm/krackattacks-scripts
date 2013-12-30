@@ -2393,6 +2393,11 @@ int wpa_config_set_cred(struct wpa_cred *cred, const char *var,
 	char *val;
 	size_t len;
 
+	if (os_strcmp(var, "temporary") == 0) {
+		cred->temporary = atoi(value);
+		return 0;
+	}
+
 	if (os_strcmp(var, "priority") == 0) {
 		cred->priority = atoi(value);
 		return 0;

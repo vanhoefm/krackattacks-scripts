@@ -109,6 +109,8 @@ Credentials can be pre-configured for automatic network selection:
 #
 # credential fields:
 #
+# temporary: Whether this credential is temporary and not to be saved
+#
 # priority: Priority group
 #	By default, all networks and credentials get the same priority group
 #	(0). This field can be used to give higher priority for credentials
@@ -268,6 +270,8 @@ OK
 > set_cred 0 password "password"
 OK
 > set_cred 0 priority 1
+OK
+> set_cred 0 temporary 1
 OK
 
 Add a SIM credential using a simulated SIM/USIM card for testing:

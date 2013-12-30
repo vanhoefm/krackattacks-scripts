@@ -52,6 +52,11 @@ struct wpa_cred {
 	int id;
 
 	/**
+	 * temporary - Whether this credential is temporary and not to be saved
+	 */
+	int temporary;
+
+	/**
 	 * priority - Priority group
 	 *
 	 * By default, all networks and credentials get the same priority group

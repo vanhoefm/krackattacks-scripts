@@ -22,9 +22,6 @@
 #include "config_file.h"
 
 
-extern struct wpa_driver_ops *wpa_drivers[];
-
-
 #ifndef CONFIG_NO_VLAN
 static int hostapd_config_read_vlan_file(struct hostapd_bss_config *bss,
 					 const char *fname)

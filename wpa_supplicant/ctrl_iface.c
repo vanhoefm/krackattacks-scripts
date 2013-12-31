@@ -41,8 +41,6 @@
 #include "autoscan.h"
 #include "wnm_sta.h"
 
-extern struct wpa_driver_ops *wpa_drivers[];
-
 static int wpa_supplicant_global_iface_list(struct wpa_global *global,
 					    char *buf, int len);
 static int wpa_supplicant_global_iface_interfaces(struct wpa_global *global,

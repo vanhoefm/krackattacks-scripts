@@ -33,8 +33,6 @@ extern int wpa_debug_level;
 extern int wpa_debug_show_keys;
 extern int wpa_debug_timestamp;
 
-extern struct wpa_driver_ops *wpa_drivers[];
-
 
 struct hapd_global {
 	void **drv_priv;

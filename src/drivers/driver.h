@@ -3803,4 +3803,7 @@ void wpa_scan_results_free(struct wpa_scan_results *res);
 /* Convert wpa_event_type to a string for logging */
 const char * event_to_string(enum wpa_event_type event);
 
+/* NULL terminated array of linked in driver wrappers */
+extern struct wpa_driver_ops *wpa_drivers[];
+
 #endif /* DRIVER_H */

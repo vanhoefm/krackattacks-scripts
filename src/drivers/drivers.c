@@ -6,8 +6,9 @@
  * See README for more details.
  */
 
-#include "includes.h"
-
+#include "utils/includes.h"
+#include "utils/common.h"
+#include "driver.h"
 
 #ifdef CONFIG_DRIVER_WEXT
 extern struct wpa_driver_ops wpa_driver_wext_ops; /* driver_wext.c */

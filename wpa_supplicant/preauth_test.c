@@ -27,9 +27,6 @@
 #include "drivers/driver.h"
 
 
-extern int wpa_debug_level;
-extern int wpa_debug_show_keys;
-
 struct wpa_driver_ops *wpa_drivers[] = { NULL };
 
 

@@ -1750,9 +1750,6 @@ static int wpa_supplicant_ctrl_iface_blacklist(struct wpa_supplicant *wpa_s,
 }
 
 
-extern int wpa_debug_level;
-extern int wpa_debug_timestamp;
-
 static const char * debug_level_str(int level)
 {
 	switch (level) {

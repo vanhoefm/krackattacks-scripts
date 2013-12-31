@@ -13,8 +13,6 @@
 #include "radius/radius.h"
 #include "radius/radius_client.h"
 
-extern int wpa_debug_level;
-
 struct radius_ctx {
 	struct radius_client_data *radius;
 	struct hostapd_radius_servers conf;

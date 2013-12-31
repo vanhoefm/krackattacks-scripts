@@ -29,11 +29,6 @@
 #include "ctrl_iface.h"
 
 
-extern int wpa_debug_level;
-extern int wpa_debug_show_keys;
-extern int wpa_debug_timestamp;
-
-
 struct hapd_global {
 	void **drv_priv;
 	size_t drv_count;

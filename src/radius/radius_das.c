@@ -16,9 +16,6 @@
 #include "radius_das.h"
 
 
-extern int wpa_debug_level;
-
-
 struct radius_das_data {
 	int sock;
 	u8 *shared_secret;

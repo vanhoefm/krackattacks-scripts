@@ -12,9 +12,6 @@
 #include "common.h"
 #include "crypto/tls.h"
 
-extern int wpa_debug_level;
-extern int wpa_debug_show_keys;
-
 
 static void https_tls_event_cb(void *ctx, enum tls_event ev,
 			       union tls_event_data *data)

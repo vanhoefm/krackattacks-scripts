@@ -2319,8 +2319,6 @@ int wpas_wps_nfc_report_handover(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_WPS_NFC */
 
 
-extern int wpa_debug_level;
-
 static void wpas_wps_dump_ap_info(struct wpa_supplicant *wpa_s)
 {
 	size_t i;

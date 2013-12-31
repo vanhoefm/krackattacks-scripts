@@ -104,10 +104,6 @@ const char *wpa_supplicant_full_license5 =
 "\n";
 #endif /* CONFIG_NO_STDOUT_DEBUG */
 
-extern int wpa_debug_level;
-extern int wpa_debug_show_keys;
-extern int wpa_debug_timestamp;
-
 /* Configure default/group WEP keys for static WEP */
 int wpa_set_wep_keys(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid)
 {

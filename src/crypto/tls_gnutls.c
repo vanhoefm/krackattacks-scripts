@@ -125,8 +125,6 @@ static void tls_log_func(int level, const char *msg)
 }
 
 
-extern int wpa_debug_show_keys;
-
 void * tls_init(const struct tls_config *conf)
 {
 	struct tls_global *global;

@@ -11,8 +11,6 @@
 #include "common.h"
 #include "tls/asn1.h"
 
-extern int wpa_debug_level;
-
 
 static const char * asn1_class_str(int class)
 {

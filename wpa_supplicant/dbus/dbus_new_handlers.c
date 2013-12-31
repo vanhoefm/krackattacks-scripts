@@ -28,10 +28,6 @@
 #include "dbus_dict_helpers.h"
 #include "dbus_common_i.h"
 
-extern int wpa_debug_level;
-extern int wpa_debug_show_keys;
-extern int wpa_debug_timestamp;
-
 static const char *debug_strings[] = {
 	"excessive", "msgdump", "debug", "info", "warning", "error", NULL
 };

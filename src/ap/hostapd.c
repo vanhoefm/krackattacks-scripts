@@ -41,8 +41,6 @@ static int hostapd_broadcast_wep_clear(struct hostapd_data *hapd);
 static int setup_interface2(struct hostapd_iface *iface);
 static void channel_list_update_timeout(void *eloop_ctx, void *timeout_ctx);
 
-extern int wpa_debug_level;
-
 
 int hostapd_for_each_interface(struct hapd_interfaces *interfaces,
 			       int (*cb)(struct hostapd_iface *iface,

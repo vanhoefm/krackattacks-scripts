@@ -19,8 +19,6 @@
 #include "rsn_supp/wpa_ie.h"
 #include "wlantest.h"
 
-extern int wpa_debug_level;
-
 
 static int is_zero(const u8 *buf, size_t len)
 {

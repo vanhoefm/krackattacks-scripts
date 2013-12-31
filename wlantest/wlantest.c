@@ -13,11 +13,6 @@
 #include "wlantest.h"
 
 
-extern int wpa_debug_level;
-extern int wpa_debug_show_keys;
-extern int wpa_debug_timestamp;
-
-
 static void wlantest_terminate(int sig, void *signal_ctx)
 {
 	eloop_terminate();

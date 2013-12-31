@@ -944,8 +944,6 @@ static void usage(void)
 }
 
 
-extern int wpa_debug_level;
-
 int main(int argc, char *argv[])
 {
 	int c, i;

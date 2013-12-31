@@ -298,8 +298,6 @@ struct radius_server_data {
 };
 
 
-extern int wpa_debug_level;
-
 #define RADIUS_DEBUG(args...) \
 wpa_printf(MSG_DEBUG, "RADIUS SRV: " args)
 #define RADIUS_ERROR(args...) \

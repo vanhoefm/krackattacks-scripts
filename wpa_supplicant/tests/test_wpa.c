@@ -17,10 +17,6 @@
 #include "ap/wpa_auth.h"
 
 
-extern int wpa_debug_level;
-extern int wpa_debug_show_keys;
-
-
 struct wpa {
 	u8 auth_addr[ETH_ALEN];
 	u8 supp_addr[ETH_ALEN];

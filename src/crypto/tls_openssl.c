@@ -2901,7 +2901,6 @@ int tls_connection_get_write_alerts(void *ssl_ctx, struct tls_connection *conn)
 static void ocsp_debug_print_resp(OCSP_RESPONSE *rsp)
 {
 #ifndef CONFIG_NO_STDOUT_DEBUG
-	extern int wpa_debug_level;
 	BIO *out;
 	size_t rlen;
 	char *txt;

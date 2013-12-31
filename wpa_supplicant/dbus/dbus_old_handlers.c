@@ -25,10 +25,6 @@
 #include "dbus_old_handlers.h"
 #include "dbus_dict_helpers.h"
 
-extern int wpa_debug_level;
-extern int wpa_debug_show_keys;
-extern int wpa_debug_timestamp;
-
 /**
  * wpas_dbus_new_invalid_opts_error - Return a new invalid options error message
  * @message: Pointer to incoming dbus message this error refers to

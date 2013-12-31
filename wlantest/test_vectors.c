@@ -13,10 +13,6 @@
 #include "wlantest.h"
 
 
-extern int wpa_debug_level;
-extern int wpa_debug_show_keys;
-
-
 static void test_vector_tkip(void)
 {
 	u8 tk[] = {

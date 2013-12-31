@@ -23,8 +23,6 @@ void eap_example_server_deinit(void);
 int eap_example_server_step(void);
 
 
-extern int wpa_debug_level;
-
 int main(int argc, char *argv[])
 {
 	int res_s, res_p;

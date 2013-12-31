@@ -14,8 +14,6 @@
 #include "common/ieee802_11_defs.h"
 #include "wlantest.h"
 
-extern int wpa_debug_level;
-
 
 static const char * data_stype(u16 stype)
 {

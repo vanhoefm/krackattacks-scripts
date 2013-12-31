@@ -5,9 +5,6 @@
 #include "crypto/milenage.h"
 
 
-extern int wpa_debug_level;
-
-
 /**
  * milenage_opc - Determine OPc from OP and K
  * @op: OP = 128-bit operator variant algorithm configuration field

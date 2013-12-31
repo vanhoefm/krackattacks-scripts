@@ -11,8 +11,6 @@
 #include "common.h"
 #include "tls/x509v3.h"
 
-extern int wpa_debug_level;
-
 
 int main(int argc, char *argv[])
 {

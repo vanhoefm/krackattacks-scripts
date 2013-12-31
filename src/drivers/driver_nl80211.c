@@ -4050,6 +4050,7 @@ static int nl80211_register_action_frame(struct i802_bss *bss,
 static int nl80211_mgmt_subscribe_non_ap(struct i802_bss *bss)
 {
 	struct wpa_driver_nl80211_data *drv = bss->drv;
+	int ret = 0;
 
 	if (nl80211_alloc_mgmt_handle(bss))
 		return -1;
@@ -4066,65 +4067,65 @@ static int nl80211_mgmt_subscribe_non_ap(struct i802_bss *bss)
 #ifdef CONFIG_INTERWORKING
 	/* QoS Map Configure */
 	if (nl80211_register_action_frame(bss, (u8 *) "\x01\x04", 2) < 0)
-		return -1;
+		ret = -1;
 #endif /* CONFIG_INTERWORKING */
 #if defined(CONFIG_P2P) || defined(CONFIG_INTERWORKING)
 	/* GAS Initial Request */
 	if (nl80211_register_action_frame(bss, (u8 *) "\x04\x0a", 2) < 0)
-		return -1;
+		ret = -1;
 	/* GAS Initial Response */
 	if (nl80211_register_action_frame(bss, (u8 *) "\x04\x0b", 2) < 0)
-		return -1;
+		ret = -1;
 	/* GAS Comeback Request */
 	if (nl80211_register_action_frame(bss, (u8 *) "\x04\x0c", 2) < 0)
-		return -1;
+		ret = -1;
 	/* GAS Comeback Response */
 	if (nl80211_register_action_frame(bss, (u8 *) "\x04\x0d", 2) < 0)
-		return -1;
+		ret = -1;
 #endif /* CONFIG_P2P || CONFIG_INTERWORKING */
 #ifdef CONFIG_P2P
 	/* P2P Public Action */
 	if (nl80211_register_action_frame(bss,
 					  (u8 *) "\x04\x09\x50\x6f\x9a\x09",
 					  6) < 0)
-		return -1;
+		ret = -1;
 	/* P2P Action */
 	if (nl80211_register_action_frame(bss,
 					  (u8 *) "\x7f\x50\x6f\x9a\x09",
 					  5) < 0)
-		return -1;
+		ret = -1;
 #endif /* CONFIG_P2P */
 #ifdef CONFIG_IEEE80211W
 	/* SA Query Response */
 	if (nl80211_register_action_frame(bss, (u8 *) "\x08\x01", 2) < 0)
-		return -1;
+		ret = -1;
 #endif /* CONFIG_IEEE80211W */
 #ifdef CONFIG_TDLS
 	if ((drv->capa.flags & WPA_DRIVER_FLAGS_TDLS_SUPPORT)) {
 		/* TDLS Discovery Response */
 		if (nl80211_register_action_frame(bss, (u8 *) "\x04\x0e", 2) <
 		    0)
-			return -1;
+			ret = -1;
 	}
 #endif /* CONFIG_TDLS */
 
 	/* FT Action frames */
 	if (nl80211_register_action_frame(bss, (u8 *) "\x06", 1) < 0)
-		return -1;
+		ret = -1;
 	else
 		drv->capa.key_mgmt |= WPA_DRIVER_CAPA_KEY_MGMT_FT |
 			WPA_DRIVER_CAPA_KEY_MGMT_FT_PSK;
 
 	/* WNM - BSS Transition Management Request */
 	if (nl80211_register_action_frame(bss, (u8 *) "\x0a\x07", 2) < 0)
-		return -1;
+		ret = -1;
 	/* WNM-Sleep Mode Response */
 	if (nl80211_register_action_frame(bss, (u8 *) "\x0a\x11", 2) < 0)
-		return -1;
+		ret = -1;
 
 	nl80211_mgmt_handle_register_eloop(bss);
 
-	return 0;
+	return ret;
 }
 
 

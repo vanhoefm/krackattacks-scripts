@@ -4996,7 +4996,8 @@ static int bss_info_handler(struct nl_msg *msg, void *arg)
 	 * BSSID,SSID pair is seen on multiple channels. wpa_supplicant does
 	 * not use frequency as a separate key in the BSS table, so filter out
 	 * duplicated entries. Prefer associated BSS entry in such a case in
-	 * order to get the correct frequency into the BSS table.
+	 * order to get the correct frequency into the BSS table. Similarly,
+	 * prefer newer entries over older.
 	 */
 	for (i = 0; i < res->num; i++) {
 		const u8 *s1, *s2;
@@ -5014,8 +5015,9 @@ static int bss_info_handler(struct nl_msg *msg, void *arg)
 		wpa_printf(MSG_DEBUG, "nl80211: Remove duplicated scan result "
 			   "for " MACSTR, MAC2STR(r->bssid));
 
-		if ((r->flags & WPA_SCAN_ASSOCIATED) &&
-		    !(res->res[i]->flags & WPA_SCAN_ASSOCIATED)) {
+		if (((r->flags & WPA_SCAN_ASSOCIATED) &&
+		     !(res->res[i]->flags & WPA_SCAN_ASSOCIATED)) ||
+		    r->age < res->res[i]->age) {
 			os_free(res->res[i]);
 			res->res[i] = r;
 		} else

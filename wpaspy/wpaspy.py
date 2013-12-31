@@ -22,7 +22,12 @@ class Ctrl:
         self.local = "/tmp/wpa_ctrl_" + str(os.getpid()) + '-' + str(counter)
         counter += 1
         self.s.bind(self.local)
-        self.s.connect(self.dest)
+        try:
+            self.s.connect(self.dest)
+        except Exception, e:
+            self.s.close()
+            os.unlink(self.local)
+            raise
         self.started = True
 
     def __del__(self):

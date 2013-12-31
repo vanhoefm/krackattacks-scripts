@@ -15,7 +15,9 @@ import hwsim_utils
 import hostapd
 from wlantest import Wlantest
 
-def check_qos_map(ap, dev, dscp, tid):
+def check_qos_map(ap, dev, dscp, tid, ap_tid=None):
+    if not ap_tid:
+        ap_tid = tid
     bssid = ap['bssid']
     sta = dev.p2p_interface_addr()
     wt = Wlantest()
@@ -25,8 +27,8 @@ def check_qos_map(ap, dev, dscp, tid):
     if tx[tid] == 0:
         logger.info("Expected TX DSCP " + str(dscp) + " with TID " + str(tid) + " but counters: " + str(tx))
         raise Exception("No STA->AP data frame using the expected TID")
-    if rx[tid] == 0:
-        logger.info("Expected RX DSCP " + str(dscp) + " with TID " + str(tid) + " but counters: " + str(rx))
+    if rx[ap_tid] == 0:
+        logger.info("Expected RX DSCP " + str(dscp) + " with TID " + str(ap_tid) + " but counters: " + str(rx))
         raise Exception("No AP->STA data frame using the expected TID")
 
 def test_ap_qosmap(dev, apdev):
@@ -71,3 +73,37 @@ def test_ap_qosmap_default(dev, apdev):
     dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
     for dscp in [ 0, 7, 8, 15, 16, 23, 24, 31, 32, 39, 40, 47, 48, 55, 56, 63]:
         check_qos_map(apdev[0], dev[0], dscp, dscp >> 3)
+
+def test_ap_qosmap_default_acm(dev, apdev):
+    """QoS mapping with default values and ACM=1 for VO/VI"""
+    ssid = "test-qosmap-default"
+    params = { "ssid": ssid,
+               "wmm_ac_bk_aifs": "7",
+               "wmm_ac_bk_cwmin": "4",
+               "wmm_ac_bk_cwmax": "10",
+               "wmm_ac_bk_txop_limit": "0",
+               "wmm_ac_bk_acm": "0",
+               "wmm_ac_be_aifs": "3",
+               "wmm_ac_be_cwmin": "4",
+               "wmm_ac_be_cwmax": "10",
+               "wmm_ac_be_txop_limit": "0",
+               "wmm_ac_be_acm": "0",
+               "wmm_ac_vi_aifs": "2",
+               "wmm_ac_vi_cwmin": "3",
+               "wmm_ac_vi_cwmax": "4",
+               "wmm_ac_vi_txop_limit": "94",
+               "wmm_ac_vi_acm": "1",
+               "wmm_ac_vo_aifs": "2",
+               "wmm_ac_vo_cwmin": "2",
+               "wmm_ac_vo_cwmax": "2",
+               "wmm_ac_vo_txop_limit": "47",
+               "wmm_ac_vo_acm": "1"  }
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
+    for dscp in [ 0, 7, 8, 15, 16, 23, 24, 31, 32, 39, 40, 47, 48, 55, 56, 63]:
+        ap_tid = dscp >> 3
+        tid = ap_tid
+        # downgrade VI/VO to BE
+        if tid in [ 4, 5, 6, 7 ]:
+            tid = 3
+        check_qos_map(apdev[0], dev[0], dscp, tid, ap_tid)

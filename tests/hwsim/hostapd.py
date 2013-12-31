@@ -193,6 +193,15 @@ class Hostapd:
                 vals[name] = value
         return vals
 
+    def get_mib(self):
+        res = self.request("MIB")
+        lines = res.splitlines()
+        vals = dict()
+        for l in lines:
+            [name,value] = l.split('=', 1)
+            vals[name] = value
+        return vals
+
 def add_ap(ifname, params, wait_enabled=True):
         logger.info("Starting AP " + ifname)
         hapd_global = HostapdGlobal()
@@ -204,7 +213,8 @@ def add_ap(ifname, params, wait_enabled=True):
         hapd.set_defaults()
         fields = [ "ssid", "wpa_passphrase", "nas_identifier", "wpa_key_mgmt",
                    "wpa",
-                   "wpa_pairwise", "rsn_pairwise", "auth_server_addr" ]
+                   "wpa_pairwise", "rsn_pairwise", "auth_server_addr",
+                   "acct_server_addr" ]
         for field in fields:
             if field in params:
                 hapd.set(field, params[field])

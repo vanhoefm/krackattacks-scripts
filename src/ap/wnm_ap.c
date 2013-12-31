@@ -73,7 +73,7 @@ static int ieee802_11_send_wnmsleep_resp(struct hostapd_data *hapd,
 	wnmsleep_ie.len = wnmsleep_ie_len - 2;
 	wnmsleep_ie.action_type = action_type;
 	wnmsleep_ie.status = WNM_STATUS_SLEEP_ACCEPT;
-	wnmsleep_ie.intval = intval;
+	wnmsleep_ie.intval = host_to_le16(intval);
 
 	/* TFS IE(s) */
 	wnmtfs_ie = os_zalloc(MAX_TFS_IE_LEN);
@@ -236,7 +236,7 @@ static void ieee802_11_rx_wnmsleep_req(struct hostapd_data *hapd,
 
 	ieee802_11_send_wnmsleep_resp(hapd, addr, dialog_token,
 				      wnmsleep_ie->action_type,
-				      wnmsleep_ie->intval);
+				      le_to_host16(wnmsleep_ie->intval));
 
 	if (wnmsleep_ie->action_type == WNM_SLEEP_MODE_EXIT) {
 		/* clear the tfs after sending the resp frame */

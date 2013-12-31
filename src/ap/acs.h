@@ -13,7 +13,6 @@
 #ifdef CONFIG_ACS
 
 enum hostapd_chan_status acs_init(struct hostapd_iface *iface);
-int hostapd_acs_completed(struct hostapd_iface *iface, int err);
 
 #else /* CONFIG_ACS */
 

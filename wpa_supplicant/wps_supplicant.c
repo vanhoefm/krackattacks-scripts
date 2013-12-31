@@ -2224,8 +2224,9 @@ struct wpabuf * wpas_wps_nfc_handover_req(struct wpa_supplicant *wpa_s, int cr)
 
 
 #ifdef CONFIG_WPS_NFC
-struct wpabuf * wpas_wps_er_nfc_handover_sel(struct wpa_supplicant *wpa_s,
-					     int ndef, const char *uuid)
+static struct wpabuf *
+wpas_wps_er_nfc_handover_sel(struct wpa_supplicant *wpa_s, int ndef,
+			     const char *uuid)
 {
 #ifdef CONFIG_WPS_ER
 	struct wpabuf *ret;

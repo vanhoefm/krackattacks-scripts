@@ -280,7 +280,7 @@ static void acs_cleanup(struct hostapd_iface *iface)
 }
 
 
-void acs_fail(struct hostapd_iface *iface)
+static void acs_fail(struct hostapd_iface *iface)
 {
 	wpa_printf(MSG_ERROR, "ACS: Failed to start");
 	acs_cleanup(iface);

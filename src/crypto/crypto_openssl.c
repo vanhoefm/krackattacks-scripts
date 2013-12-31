@@ -26,6 +26,8 @@
 #include "common.h"
 #include "wpabuf.h"
 #include "dh_group5.h"
+#include "sha1.h"
+#include "sha256.h"
 #include "crypto.h"
 
 #if OPENSSL_VERSION_NUMBER < 0x00907000

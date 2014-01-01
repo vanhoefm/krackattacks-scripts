@@ -326,6 +326,16 @@ def test_ap_wps_reg_connect(dev, apdev):
     if status['key_mgmt'] != 'WPA2-PSK':
         raise Exception("Unexpected key_mgmt")
 
+def check_wps_reg_failure(dev, ap, appin):
+    dev.request("WPS_REG " + ap['bssid'] + " " + appin)
+    ev = dev.wait_event(["WPS-SUCCESS", "WPS-FAIL"], timeout=15)
+    if ev is None:
+        raise Exception("WPS operation timed out")
+    if "WPS-SUCCESS" in ev:
+        raise Exception("WPS operation succeeded unexpectedly")
+    if "config_error=15" not in ev:
+        raise Exception("WPS setup locked state was not reported correctly")
+
 def test_ap_wps_random_ap_pin(dev, apdev):
     """WPS registrar using random AP PIN"""
     ssid = "test-wps-reg-random-ap-pin"
@@ -353,14 +363,33 @@ def test_ap_wps_random_ap_pin(dev, apdev):
     hapd.request("WPS_AP_PIN disable")
     logger.info("WPS provisioning step with AP PIN disabled")
     dev[1].request("SET ignore_old_scan_res 1")
-    dev[1].request("WPS_REG " + apdev[0]['bssid'] + " " + appin)
-    ev = dev[1].wait_event(["WPS-SUCCESS", "WPS-FAIL"], timeout=15)
-    if ev is None:
-        raise Exception("WPS operation timed out")
-    if "WPS-SUCCESS" in ev:
-        raise Exception("WPS operation succeeded unexpectedly")
-    if "config_error=15" not in ev:
-        raise Exception("WPS setup locked state was not reported correctly")
+    check_wps_reg_failure(dev[1], apdev[0], appin)
+
+    logger.info("WPS provisioning step with AP PIN reset")
+    appin = "12345670"
+    hapd.request("WPS_AP_PIN set " + appin)
+    dev[1].wps_reg(apdev[0]['bssid'], appin)
+    dev[0].request("REMOVE_NETWORK all")
+    dev[1].request("REMOVE_NETWORK all")
+    dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"])
+    dev[1].wait_event(["CTRL-EVENT-DISCONNECTED"])
+
+    logger.info("WPS provisioning step after AP PIN timeout")
+    hapd.request("WPS_AP_PIN disable")
+    appin = hapd.request("WPS_AP_PIN random 1")
+    time.sleep(1.1)
+    if "FAIL" not in hapd.request("WPS_AP_PIN get"):
+        raise Exception("AP PIN unexpectedly still enabled")
+    check_wps_reg_failure(dev[0], apdev[0], appin)
+
+    logger.info("WPS provisioning step after AP PIN timeout(2)")
+    hapd.request("WPS_AP_PIN disable")
+    appin = "12345670"
+    hapd.request("WPS_AP_PIN set " + appin + " 1")
+    time.sleep(1.1)
+    if "FAIL" not in hapd.request("WPS_AP_PIN get"):
+        raise Exception("AP PIN unexpectedly still enabled")
+    check_wps_reg_failure(dev[1], apdev[0], appin)
 
 def test_ap_wps_reg_config(dev, apdev):
     """WPS registrar configuring and AP using AP PIN"""

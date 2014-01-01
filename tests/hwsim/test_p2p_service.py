@@ -62,20 +62,22 @@ def run_sd(dev, dst, query, exp_query=None, fragment=False):
 
 def test_p2p_service_discovery(dev):
     """P2P service discovery"""
-    ev = run_sd(dev, "00:00:00:00:00:00", "02000001")
-    if "0b5f6166706f766572746370c00c000c01" not in ev:
-        raise Exception("Unexpected service discovery response contents (Bonjour)")
-    if "496e7465726e6574" not in ev:
-        raise Exception("Unexpected service discovery response contents (UPnP)")
-
-def test_p2p_service_discovery_fragmentation(dev):
-    """P2P service discovery with fragmentation"""
-    ev = run_sd(dev, "00:00:00:00:00:00", "02000001", fragment=True)
-    if not "long response" in ev:
+    for dst in [ "00:00:00:00:00:00", dev[0].p2p_dev_addr() ]:
+        ev = run_sd(dev, dst, "02000001")
         if "0b5f6166706f766572746370c00c000c01" not in ev:
             raise Exception("Unexpected service discovery response contents (Bonjour)")
         if "496e7465726e6574" not in ev:
             raise Exception("Unexpected service discovery response contents (UPnP)")
+
+def test_p2p_service_discovery_fragmentation(dev):
+    """P2P service discovery with fragmentation"""
+    for dst in [ "00:00:00:00:00:00", dev[0].p2p_dev_addr() ]:
+        ev = run_sd(dev, dst, "02000001", fragment=True)
+        if not "long response" in ev:
+            if "0b5f6166706f766572746370c00c000c01" not in ev:
+                raise Exception("Unexpected service discovery response contents (Bonjour)")
+            if "496e7465726e6574" not in ev:
+                raise Exception("Unexpected service discovery response contents (UPnP)")
 
 def test_p2p_service_discovery_bonjour(dev):
     """P2P service discovery (Bonjour)"""

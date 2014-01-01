@@ -89,3 +89,33 @@ def test_discovery_group_client(dev):
     logger.info("Try to discover a P2P client in a group")
     if not dev[2].discover_peer(dev[1].p2p_dev_addr(), social=False):
         raise Exception("Could not discover group client")
+
+    # This is not really perfect, but something to get a bit more testing
+    # coverage.. For proper discoverability mechanism validation, the P2P
+    # client would need to go to sleep to avoid acknowledging the GO Negotiation
+    # Request frame. Offchannel Listen mode operation on the P2P Client with
+    # mac80211_hwsim is apparently not enough to avoid the acknowledgement on
+    # the operating channel, so need to disconnect from the group which removes
+    # the GO-to-P2P Client part of the discoverability exchange in practice.
+
+    pin = dev[2].wps_read_pin()
+    # make group client non-responsive on operating channel
+    dev[1].dump_monitor()
+    dev[1].group_request("DISCONNECT")
+    ev = dev[1].wait_event(["CTRL-EVENT-DISCONNECTED"])
+    if ev is None:
+        raise Exception("Timeout on waiting disconnection")
+    dev[2].request("P2P_CONNECT {} {} display".format(dev[1].p2p_dev_addr(),
+                                                      pin))
+    ev = dev[1].wait_event(["P2P-GO-NEG-REQUEST"], timeout=2)
+    if ev:
+        raise Exception("Unexpected frame RX on P2P client")
+    # make group client available on operating channe
+    dev[1].request("REASSOCIATE")
+    ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED", "P2P-GO-NEG-REQUEST"])
+    if ev is None:
+        raise Exception("Timeout on reconnection to group")
+    if "P2P-GO-NEG-REQUEST" not in ev:
+        ev = dev[1].wait_event(["P2P-GO-NEG-REQUEST"])
+        if ev is None:
+            raise Exception("Timeout on waiting for GO Negotiation Request")

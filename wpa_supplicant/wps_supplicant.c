@@ -866,6 +866,7 @@ static void wpas_clear_wps(struct wpa_supplicant *wpa_s)
 	wpas_wps_reenable_networks(wpa_s);
 
 	eloop_cancel_timeout(wpas_wps_timeout, wpa_s, NULL);
+	eloop_cancel_timeout(wpas_wps_clear_timeout, wpa_s, NULL);
 
 	/* Remove any existing WPS network from configuration */
 	ssid = wpa_s->conf->ssid;
@@ -1135,6 +1136,9 @@ int wpas_wps_cancel(struct wpa_supplicant *wpa_s)
 	} else {
 		wpas_wps_reenable_networks(wpa_s);
 		wpas_wps_clear_ap_info(wpa_s);
+		if (eloop_cancel_timeout(wpas_wps_clear_timeout, wpa_s, NULL) >
+		    0)
+			wpas_clear_wps(wpa_s);
 	}
 
 	wpa_s->after_wps = 0;

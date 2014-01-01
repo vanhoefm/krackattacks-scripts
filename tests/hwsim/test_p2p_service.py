@@ -8,6 +8,7 @@
 
 import logging
 logger = logging.getLogger()
+import uuid
 
 import hwsim_utils
 
@@ -24,11 +25,17 @@ def add_upnp_services(dev):
     dev.request("P2P_SERVICE_ADD upnp 10 uuid:5566d33e-9774-09ab-4822-333456785632::urn:schemas-upnp-org:service:ContentDirectory:2")
     dev.request("P2P_SERVICE_ADD upnp 10 uuid:6859dede-8574-59ab-9332-123456789012::urn:schemas-upnp-org:device:InternetGatewayDevice:1")
 
-def run_sd(dev, dst, query, exp_query=None):
+def add_extra_services(dev):
+    for i in range(0, 100):
+        dev.request("P2P_SERVICE_ADD upnp 10 uuid:" + str(uuid.uuid4()) + "::upnp:rootdevice")
+
+def run_sd(dev, dst, query, exp_query=None, fragment=False):
     addr0 = dev[0].p2p_dev_addr()
     addr1 = dev[1].p2p_dev_addr()
     add_bonjour_services(dev[0])
     add_upnp_services(dev[0])
+    if fragment:
+        add_extra_services(dev[0])
     dev[0].p2p_listen()
 
     dev[1].request("P2P_FLUSH")
@@ -60,6 +67,15 @@ def test_p2p_service_discovery(dev):
         raise Exception("Unexpected service discovery response contents (Bonjour)")
     if "496e7465726e6574" not in ev:
         raise Exception("Unexpected service discovery response contents (UPnP)")
+
+def test_p2p_service_discovery_fragmentation(dev):
+    """P2P service discovery with fragmentation"""
+    ev = run_sd(dev, "00:00:00:00:00:00", "02000001", fragment=True)
+    if not "long response" in ev:
+        if "0b5f6166706f766572746370c00c000c01" not in ev:
+            raise Exception("Unexpected service discovery response contents (Bonjour)")
+        if "496e7465726e6574" not in ev:
+            raise Exception("Unexpected service discovery response contents (UPnP)")
 
 def test_p2p_service_discovery_bonjour(dev):
     """P2P service discovery (Bonjour)"""

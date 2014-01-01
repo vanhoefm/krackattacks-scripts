@@ -48,6 +48,14 @@ def test_autogo(dev):
     res = dev[1].request("BSS RANGE=" + id + "- MASK=0x1")
     if "id=" + id not in res:
         raise Exception("Could not find BSS entry based on id range")
+
+    # Presence request to increase testing coverage
+    if "FAIL" in dev[1].group_request("P2P_PRESENCE_REQ 30000 102400"):
+        raise Exception("Could not send presence request")
+    ev = dev[1].wait_event(["P2P-PRESENCE-RESPONSE"])
+    if ev is None:
+        raise Exception("Timeout while waiting for Presence Response")
+
     dev[0].remove_group()
     dev[1].wait_go_ending_session()
 

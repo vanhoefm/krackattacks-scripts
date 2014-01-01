@@ -47,6 +47,15 @@ def test_ap_wps_init(dev, apdev):
         raise Exception("Last WPS result not shown correctly")
     if "Peer Address: " + dev[0].p2p_interface_addr() not in status:
         raise Exception("Peer address not shown correctly")
+    conf = hapd.request("GET_CONFIG")
+    if "wps_state=configured" not in conf:
+        raise Exception("AP not in WPS configured state")
+    if "rsn_pairwise_cipher=CCMP TKIP" not in conf:
+        raise Exception("Unexpected rsn_pairwise_cipher")
+    if "wpa_pairwise_cipher=CCMP TKIP" not in conf:
+        raise Exception("Unexpected wpa_pairwise_cipher")
+    if "group_cipher=TKIP" not in conf:
+        raise Exception("Unexpected group_cipher")
 
 def test_ap_wps_init_2ap_pbc(dev, apdev):
     """Initial two-radio AP configuration with first WPS PBC Enrollee"""

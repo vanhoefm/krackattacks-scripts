@@ -813,3 +813,22 @@ def test_ap_wps_new_version_ap(dev, apdev):
     hapd.request("SET wps_version_number 0x20")
     if ev is None:
         raise Exception("Association with the AP timed out")
+
+def test_ap_wps_check_pin(dev, apdev):
+    """Verify PIN checking through control interface"""
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": "wps", "eap_server": "1", "wps_state": "2",
+                     "wpa_passphrase": "12345678", "wpa": "2",
+                     "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP" })
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    for t in [ ("12345670", "12345670"),
+               ("12345678", "FAIL-CHECKSUM"),
+               ("1234-5670", "12345670"),
+               ("1234 5670", "12345670"),
+               ("1-2.3:4 5670", "12345670") ]:
+        res = hapd.request("WPS_CHECK_PIN " + t[0]).rstrip('\n')
+        res2 = dev[0].request("WPS_CHECK_PIN " + t[0]).rstrip('\n')
+        if res != res2:
+            raise Exception("Unexpected difference in WPS_CHECK_PIN responses")
+        if res != t[1]:
+            raise Exception("Incorrect WPS_CHECK_PIN response {} (expected {})".format(res, t[1]))

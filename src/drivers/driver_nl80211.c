@@ -300,7 +300,6 @@ struct wpa_driver_nl80211_data {
 	unsigned int hostapd:1;
 	unsigned int start_mode_ap:1;
 	unsigned int start_iface_up:1;
-	unsigned int channel_switch_supported:1;
 
 	u64 remain_on_chan_cookie;
 	u64 send_action_cookie;
@@ -3628,6 +3627,9 @@ static int wpa_driver_nl80211_get_info(struct wpa_driver_nl80211_data *drv,
 	if (!drv->capa.max_remain_on_chan)
 		drv->capa.max_remain_on_chan = 5000;
 
+	if (info->channel_switch_supported)
+		drv->capa.flags |= WPA_DRIVER_FLAGS_AP_CSA;
+
 	return 0;
 nla_put_failure:
 	nlmsg_free(msg);
@@ -3670,7 +3672,6 @@ static int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 	drv->device_ap_sme = info.device_ap_sme;
 	drv->poll_command_supported = info.poll_command_supported;
 	drv->data_tx_status = info.data_tx_status;
-	drv->channel_switch_supported = info.channel_switch_supported;
 	if (info.set_qos_map_supported)
 		drv->capa.flags |= WPA_DRIVER_FLAGS_QOS_MAPPING;
 
@@ -11361,7 +11362,7 @@ static int nl80211_switch_channel(void *priv, struct csa_settings *settings)
 		   settings->freq_params.center_freq1,
 		   settings->freq_params.center_freq2);
 
-	if (!drv->channel_switch_supported) {
+	if (!(drv->capa.flags & WPA_DRIVER_FLAGS_AP_CSA)) {
 		wpa_printf(MSG_DEBUG, "nl80211: Driver does not support channel switch command");
 		return -EOPNOTSUPP;
 	}

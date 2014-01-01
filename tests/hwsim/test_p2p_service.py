@@ -122,3 +122,20 @@ def test_p2p_service_discovery_ws(dev):
         raise Exception("Unexpected service discovery response contents (UPnP not expected)")
     if "0300030101" not in ev:
         raise Exception("Unexpected service discovery response contents (WS)")
+
+def test_p2p_service_discovery_req_cancel(dev):
+    """Cancel a P2P service discovery request"""
+    if "FAIL" not in dev[0].request("P2P_SERV_DISC_CANCEL_REQ ab"):
+        raise Exception("Unexpected SD cancel success")
+    query = dev[0].request("P2P_SERV_DISC_REQ " + dev[1].p2p_dev_addr() + " 02000001")
+    if "OK" not in dev[0].request("P2P_SERV_DISC_CANCEL_REQ " + query):
+        raise Exception("Unexpected SD cancel failure")
+    query1 = dev[0].request("P2P_SERV_DISC_REQ " + dev[1].p2p_dev_addr() + " 02000001")
+    query2 = dev[0].request("P2P_SERV_DISC_REQ " + dev[1].p2p_dev_addr() + " 02000002")
+    query3 = dev[0].request("P2P_SERV_DISC_REQ " + dev[1].p2p_dev_addr() + " 02000003")
+    if "OK" not in dev[0].request("P2P_SERV_DISC_CANCEL_REQ " + query2):
+        raise Exception("Unexpected SD cancel failure")
+    if "OK" not in dev[0].request("P2P_SERV_DISC_CANCEL_REQ " + query1):
+        raise Exception("Unexpected SD cancel failure")
+    if "OK" not in dev[0].request("P2P_SERV_DISC_CANCEL_REQ " + query3):
+        raise Exception("Unexpected SD cancel failure")

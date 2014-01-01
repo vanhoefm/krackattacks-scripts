@@ -489,6 +489,8 @@ static int wpas_p2p_group_delete(struct wpa_supplicant *wpa_s,
 	os_free(wpa_s->go_params);
 	wpa_s->go_params = NULL;
 
+	wpa_s->waiting_presence_resp = 0;
+
 	wpa_printf(MSG_DEBUG, "P2P: Remove temporary group network");
 	if (ssid && (ssid->p2p_group ||
 		     ssid->mode == WPAS_MODE_P2P_GROUP_FORMATION ||
@@ -3364,6 +3366,28 @@ int wpas_p2p_add_p2pdev_interface(struct wpa_supplicant *wpa_s)
 }
 
 
+static void wpas_presence_resp(void *ctx, const u8 *src, u8 status,
+			       const u8 *noa, size_t noa_len)
+{
+	struct wpa_supplicant *wpa_s, *intf = ctx;
+	char hex[100];
+
+	for (wpa_s = intf->global->ifaces; wpa_s; wpa_s = wpa_s->next) {
+		if (wpa_s->waiting_presence_resp)
+			break;
+	}
+	if (!wpa_s) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "P2P: No group interface was waiting for presence response");
+		return;
+	}
+	wpa_s->waiting_presence_resp = 0;
+
+	wpa_snprintf_hex(hex, sizeof(hex), noa, noa_len);
+	wpa_msg(wpa_s, MSG_INFO, P2P_EVENT_PRESENCE_RESPONSE "src=" MACSTR
+		" status=%u noa=%s", MAC2STR(src), status, hex);
+}
+
+
 /**
  * wpas_p2p_init - Initialize P2P module for %wpa_supplicant
  * @global: Pointer to global data from wpa_supplicant_init()
@@ -3409,6 +3433,7 @@ int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s)
 	p2p.invitation_result = wpas_invitation_result;
 	p2p.get_noa = wpas_get_noa;
 	p2p.go_connected = wpas_go_connected;
+	p2p.presence_resp = wpas_presence_resp;
 
 	os_memcpy(wpa_s->global->p2p_dev_addr, wpa_s->own_addr, ETH_ALEN);
 	os_memcpy(p2p.dev_addr, wpa_s->global->p2p_dev_addr, ETH_ALEN);
@@ -5434,6 +5459,8 @@ done:
 int wpas_p2p_presence_req(struct wpa_supplicant *wpa_s, u32 duration1,
 			  u32 interval1, u32 duration2, u32 interval2)
 {
+	int ret;
+
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
 		return -1;
 
@@ -5442,9 +5469,13 @@ int wpas_p2p_presence_req(struct wpa_supplicant *wpa_s, u32 duration1,
 	    wpa_s->current_ssid->mode != WPAS_MODE_INFRA)
 		return -1;
 
-	return p2p_presence_req(wpa_s->global->p2p, wpa_s->bssid,
-				wpa_s->own_addr, wpa_s->assoc_freq,
-				duration1, interval1, duration2, interval2);
+	ret = p2p_presence_req(wpa_s->global->p2p, wpa_s->bssid,
+			       wpa_s->own_addr, wpa_s->assoc_freq,
+			       duration1, interval1, duration2, interval2);
+	if (ret == 0)
+		wpa_s->waiting_presence_resp = 1;
+
+	return ret;
 }
 
 

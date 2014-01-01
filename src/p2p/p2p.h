@@ -778,6 +778,17 @@ struct p2p_config {
 	 * or 0 if not.
 	 */
 	int (*go_connected)(void *ctx, const u8 *dev_addr);
+
+	/**
+	 * presence_resp - Callback on Presence Response
+	 * @ctx: Callback context from cb_ctx
+	 * @src: Source address (GO's P2P Interface Address)
+	 * @status: Result of the request (P2P_SC_*)
+	 * @noa: Returned NoA value
+	 * @noa_len: Length of the NoA buffer in octets
+	 */
+	void (*presence_resp)(void *ctx, const u8 *src, u8 status,
+			      const u8 *noa, size_t noa_len);
 };
 
 

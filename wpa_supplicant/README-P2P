@@ -418,9 +418,11 @@ p2p_presence_req [<duration> <interval>] [<duration> <interval>]
 Send a P2P Presence Request to the GO (this is only available when
 acting as a P2P client). If no duration/interval pairs are given, the
 request indicates that this client has no special needs for GO
-presence. the first parameter pair gives the preferred duration and
+presence. The first parameter pair gives the preferred duration and
 interval values in microseconds. If the second pair is included, that
-indicates which value would be acceptable.
+indicates which value would be acceptable. This command returns OK
+immediately and the response from the GO is indicated in a
+P2P-PRESENCE-RESPONSE event message.
 
 Parameters
 

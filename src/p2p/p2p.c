@@ -3770,6 +3770,11 @@ static void p2p_process_presence_resp(struct p2p_data *p2p, const u8 *da,
 		return;
 	}
 
+	if (p2p->cfg->presence_resp) {
+		p2p->cfg->presence_resp(p2p->cfg->cb_ctx, sa, *msg.status,
+					msg.noa, msg.noa_len);
+	}
+
 	if (*msg.status) {
 		p2p_dbg(p2p, "P2P Presence Request was rejected: status %u",
 			*msg.status);

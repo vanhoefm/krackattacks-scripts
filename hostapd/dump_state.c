@@ -10,8 +10,6 @@
 #include <time.h>
 
 #include "utils/common.h"
-#include "radius/radius_client.h"
-#include "radius/radius_server.h"
 #include "eapol_auth/eapol_auth_sm.h"
 #include "eapol_auth/eapol_auth_sm_i.h"
 #include "eap_server/eap.h"
@@ -22,41 +20,12 @@
 #include "ap/ap_drv_ops.h"
 
 
-static void fprint_char(FILE *f, char c)
-{
-	if (c >= 32 && c < 127)
-		fprintf(f, "%c", c);
-	else
-		fprintf(f, "<%02x>", c);
-}
-
-
 static void ieee802_1x_dump_state(FILE *f, const char *prefix,
 				  struct sta_info *sta)
 {
 	struct eapol_state_machine *sm = sta->eapol_sm;
 	if (sm == NULL)
 		return;
-
-	fprintf(f, "%sIEEE 802.1X:\n", prefix);
-
-	if (sm->identity) {
-		size_t i;
-		fprintf(f, "%sidentity=", prefix);
-		for (i = 0; i < sm->identity_len; i++)
-			fprint_char(f, sm->identity[i]);
-		fprintf(f, "\n");
-	}
-
-	fprintf(f, "%slast EAP type: Authentication Server: %d (%s) "
-		"Supplicant: %d (%s)\n", prefix,
-		sm->eap_type_authsrv,
-		eap_server_get_name(0, sm->eap_type_authsrv),
-		sm->eap_type_supp, eap_server_get_name(0, sm->eap_type_supp));
-
-	fprintf(f, "%scached_packets=%s\n", prefix,
-		sm->last_recv_radius ? "[RX RADIUS]" : "");
-
 	eapol_auth_dump_state(f, prefix, sm);
 }
 
@@ -69,11 +38,6 @@ static void hostapd_dump_state(struct hostapd_data *hapd)
 	FILE *f;
 	time_t now;
 	struct sta_info *sta;
-	int i;
-#ifndef CONFIG_NO_RADIUS
-	char *buf;
-#endif /* CONFIG_NO_RADIUS */
-	struct hostap_sta_driver_data data;
 
 	if (!hapd->conf->dump_log_name) {
 		wpa_printf(MSG_DEBUG, "Dump file not defined - ignoring dump "
@@ -92,73 +56,12 @@ static void hostapd_dump_state(struct hostapd_data *hapd)
 
 	time(&now);
 	fprintf(f, "hostapd state dump - %s", ctime(&now));
-	fprintf(f, "num_sta=%d num_sta_non_erp=%d "
-		"num_sta_no_short_slot_time=%d\n"
-		"num_sta_no_short_preamble=%d\n",
-		hapd->num_sta, hapd->iface->num_sta_non_erp,
-		hapd->iface->num_sta_no_short_slot_time,
-		hapd->iface->num_sta_no_short_preamble);
 
 	for (sta = hapd->sta_list; sta != NULL; sta = sta->next) {
-		char flags[200];
-
 		fprintf(f, "\nSTA=" MACSTR "\n", MAC2STR(sta->addr));
-
-		ap_sta_flags_txt(sta->flags, flags, sizeof(flags));
-		fprintf(f,
-			"  AID=%d flags=0x%x %s\n"
-			"  capability=0x%x listen_interval=%d\n",
-			sta->aid,
-			sta->flags,
-			flags,
-			sta->capability,
-			sta->listen_interval);
-
-		fprintf(f, "  supported_rates=");
-		for (i = 0; i < sta->supported_rates_len; i++)
-			fprintf(f, "%02x ", sta->supported_rates[i]);
-		fprintf(f, "\n");
-
-		fprintf(f,
-			"  timeout_next=%s\n",
-			(sta->timeout_next == STA_NULLFUNC ? "NULLFUNC POLL" :
-			 (sta->timeout_next == STA_DISASSOC ? "DISASSOC" :
-			  "DEAUTH")));
-
 		ieee802_1x_dump_state(f, "  ", sta);
-
-		if (hostapd_drv_read_sta_data(hapd, &data, sta->addr) == 0) {
-			fprintf(f, "  rx_pkt=%lu tx_pkt=%lu\n"
-				"  rx_byte=%lu tx_byte=%lu\n",
-				data.rx_packets, data.tx_packets,
-				data.rx_bytes, data.tx_bytes);
-		}
 	}
 
-#ifndef CONFIG_NO_RADIUS
-	buf = os_malloc(4096);
-	if (buf) {
-		int count = radius_client_get_mib(hapd->radius, buf, 4096);
-		if (count < 0)
-			count = 0;
-		else if (count > 4095)
-			count = 4095;
-		buf[count] = '\0';
-		fprintf(f, "%s", buf);
-
-#ifdef RADIUS_SERVER
-		count = radius_server_get_mib(hapd->radius_srv, buf, 4096);
-		if (count < 0)
-			count = 0;
-		else if (count > 4095)
-			count = 4095;
-		buf[count] = '\0';
-		fprintf(f, "%s", buf);
-#endif /* RADIUS_SERVER */
-
-		os_free(buf);
-	}
-#endif /* CONFIG_NO_RADIUS */
 	fclose(f);
 }
 

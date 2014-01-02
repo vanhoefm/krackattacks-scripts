@@ -149,12 +149,23 @@ def test_ap_wpa2_eap_ttls_mschapv2(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/MSCHAPv2"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
     eap_connect(dev[0], "TTLS", "DOMAIN\mschapv2 user",
                 anonymous_identity="ttls", password="password",
                 ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
                 domain_suffix_match="w1.fi")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    sta1 = hapd.get_sta(dev[0].p2p_interface_addr())
+    eapol1 = hapd.get_sta(dev[0].p2p_interface_addr(), info="eapol")
     eap_reauth(dev[0], "TTLS")
+    sta2 = hapd.get_sta(dev[0].p2p_interface_addr())
+    eapol2 = hapd.get_sta(dev[0].p2p_interface_addr(), info="eapol")
+    if int(sta2['dot1xAuthEapolFramesRx']) <= int(sta1['dot1xAuthEapolFramesRx']):
+        raise Exception("dot1xAuthEapolFramesRx did not increase")
+    if int(eapol2['authAuthEapStartsWhileAuthenticated']) < 1:
+        raise Exception("authAuthEapStartsWhileAuthenticated did not increase")
+    if int(eapol2['backendAuthSuccesses']) <= int(eapol1['backendAuthSuccesses']):
+        raise Exception("backendAuthSuccesses did not increase")
 
 def test_ap_wpa2_eap_ttls_eap_gtc(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/EAP-GTC"""

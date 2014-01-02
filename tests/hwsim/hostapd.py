@@ -179,8 +179,11 @@ class Hostapd:
         hdr = struct.pack('<HH6B6B6BH', *t)
         self.request("MGMT_TX " + binascii.hexlify(hdr + msg['payload']))
 
-    def get_sta(self, addr):
-        res = self.request("STA " + addr)
+    def get_sta(self, addr, info=None):
+        if info:
+            res = self.request("STA " + addr + " " + info)
+        else:
+            res = self.request("STA " + addr)
         lines = res.splitlines()
         vals = dict()
         first = True

@@ -20,13 +20,17 @@
 #include "ap/ap_drv_ops.h"
 
 
-static void ieee802_1x_dump_state(FILE *f, const char *prefix,
-				  struct sta_info *sta)
+static void ieee802_1x_dump_state(FILE *f, struct sta_info *sta)
 {
 	struct eapol_state_machine *sm = sta->eapol_sm;
+	char buf[4096];
+	int res;
+
 	if (sm == NULL)
 		return;
-	eapol_auth_dump_state(f, prefix, sm);
+	res = eapol_auth_dump_state(sm, buf, sizeof(buf));
+	if (res > 0)
+		fprintf(f, "%s", buf);
 }
 
 
@@ -59,7 +63,7 @@ static void hostapd_dump_state(struct hostapd_data *hapd)
 
 	for (sta = hapd->sta_list; sta != NULL; sta = sta->next) {
 		fprintf(f, "\nSTA=" MACSTR "\n", MAC2STR(sta->addr));
-		ieee802_1x_dump_state(f, "  ", sta);
+		ieee802_1x_dump_state(f, sta);
 	}
 
 	fclose(f);

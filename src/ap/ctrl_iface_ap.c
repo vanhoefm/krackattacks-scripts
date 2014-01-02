@@ -21,24 +21,61 @@
 #include "ap_drv_ops.h"
 
 
+static int hostapd_get_sta_tx_rx(struct hostapd_data *hapd,
+				 struct sta_info *sta,
+				 char *buf, size_t buflen)
+{
+	struct hostap_sta_driver_data data;
+	int ret;
+
+	if (hostapd_drv_read_sta_data(hapd, &data, sta->addr) < 0)
+		return 0;
+
+	ret = os_snprintf(buf, buflen, "rx_packets=%lu\ntx_packets=%lu\n"
+			  "rx_bytes=%lu\ntx_bytes=%lu\n",
+			  data.rx_packets, data.tx_packets,
+			  data.rx_bytes, data.tx_bytes);
+	if (ret < 0 || (size_t) ret >= buflen)
+		return 0;
+	return ret;
+}
+
+
 static int hostapd_get_sta_conn_time(struct sta_info *sta,
 				     char *buf, size_t buflen)
 {
 	struct os_reltime age;
-	int len = 0, ret;
+	int ret;
 
 	if (!sta->connected_time.sec)
 		return 0;
 
 	os_reltime_age(&sta->connected_time, &age);
 
-	ret = os_snprintf(buf + len, buflen - len, "connected_time=%u\n",
+	ret = os_snprintf(buf, buflen, "connected_time=%u\n",
 			  (unsigned int) age.sec);
-	if (ret < 0 || (size_t) ret >= buflen - len)
-		return len;
-	len += ret;
+	if (ret < 0 || (size_t) ret >= buflen)
+		return 0;
+	return ret;
+}
 
-	return len;
+
+static const char * timeout_next_str(int val)
+{
+	switch (val) {
+	case STA_NULLFUNC:
+		return "NULLFUNC POLL";
+	case STA_DISASSOC:
+		return "DISASSOC";
+	case STA_DEAUTH:
+		return "DEAUTH";
+	case STA_REMOVE:
+		return "REMOVE";
+	case STA_DISASSOC_FROM_CLI:
+		return "DISASSOC_FROM_CLI";
+	}
+
+	return "?";
 }
 
 
@@ -46,7 +83,7 @@ static int hostapd_ctrl_iface_sta_mib(struct hostapd_data *hapd,
 				      struct sta_info *sta,
 				      char *buf, size_t buflen)
 {
-	int len, res, ret;
+	int len, res, ret, i;
 
 	if (sta == NULL) {
 		ret = os_snprintf(buf, buflen, "FAIL\n");
@@ -67,7 +104,24 @@ static int hostapd_ctrl_iface_sta_mib(struct hostapd_data *hapd,
 		return len;
 	len += ret;
 
-	ret = os_snprintf(buf + len, buflen - len, "\n");
+	ret = os_snprintf(buf + len, buflen - len, "\naid=%d\ncapability=0x%x\n"
+			  "listen_interval=%d\nsupported_rates=",
+			  sta->aid, sta->capability, sta->listen_interval);
+	if (ret < 0 || (size_t) ret >= buflen - len)
+		return len;
+	len += ret;
+
+	for (i = 0; i < sta->supported_rates_len; i++) {
+		ret = os_snprintf(buf + len, buflen - len, "%02x%s",
+				  sta->supported_rates[i],
+				  i + 1 < sta->supported_rates_len ? " " : "");
+		if (ret < 0 || (size_t) ret >= buflen - len)
+			return len;
+		len += ret;
+	}
+
+	ret = os_snprintf(buf + len, buflen - len, "\ntimeout_next=%s\n",
+			  timeout_next_str(sta->timeout_next));
 	if (ret < 0 || (size_t) ret >= buflen - len)
 		return len;
 	len += ret;
@@ -89,9 +143,8 @@ static int hostapd_ctrl_iface_sta_mib(struct hostapd_data *hapd,
 	if (res >= 0)
 		len += res;
 
-	res = hostapd_get_sta_conn_time(sta, buf + len, buflen - len);
-	if (res >= 0)
-		len += res;
+	len += hostapd_get_sta_tx_rx(hapd, sta, buf + len, buflen - len);
+	len += hostapd_get_sta_conn_time(sta, buf + len, buflen - len);
 
 	return len;
 }

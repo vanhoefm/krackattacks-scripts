@@ -137,6 +137,9 @@ struct eapol_sm {
 	Boolean cached_pmk;
 
 	Boolean unicast_key_received, broadcast_key_received;
+
+	Boolean force_authorized_update;
+
 #ifdef CONFIG_EAP_PROXY
 	Boolean use_eap_proxy;
 	struct eap_proxy_sm *eap_proxy;
@@ -210,7 +213,6 @@ SM_STATE(SUPP_PAE, LOGOFF)
 	SM_ENTRY(SUPP_PAE, LOGOFF);
 	eapol_sm_txLogoff(sm);
 	sm->logoffSent = TRUE;
-	sm->suppPortStatus = Unauthorized;
 	eapol_sm_set_port_unauthorized(sm);
 }
 
@@ -221,7 +223,6 @@ SM_STATE(SUPP_PAE, DISCONNECTED)
 	sm->sPortMode = Auto;
 	sm->startCount = 0;
 	sm->logoffSent = FALSE;
-	sm->suppPortStatus = Unauthorized;
 	eapol_sm_set_port_unauthorized(sm);
 	sm->suppAbort = TRUE;
 
@@ -286,7 +287,6 @@ SM_STATE(SUPP_PAE, HELD)
 	SM_ENTRY(SUPP_PAE, HELD);
 	sm->heldWhile = sm->heldPeriod;
 	eapol_enable_timer_tick(sm);
-	sm->suppPortStatus = Unauthorized;
 	eapol_sm_set_port_unauthorized(sm);
 	sm->cb_status = EAPOL_CB_FAILURE;
 }
@@ -295,7 +295,6 @@ SM_STATE(SUPP_PAE, HELD)
 SM_STATE(SUPP_PAE, AUTHENTICATED)
 {
 	SM_ENTRY(SUPP_PAE, AUTHENTICATED);
-	sm->suppPortStatus = Authorized;
 	eapol_sm_set_port_authorized(sm);
 	sm->cb_status = EAPOL_CB_SUCCESS;
 }
@@ -311,7 +310,6 @@ SM_STATE(SUPP_PAE, RESTART)
 SM_STATE(SUPP_PAE, S_FORCE_AUTH)
 {
 	SM_ENTRY(SUPP_PAE, S_FORCE_AUTH);
-	sm->suppPortStatus = Authorized;
 	eapol_sm_set_port_authorized(sm);
 	sm->sPortMode = ForceAuthorized;
 }
@@ -320,7 +318,6 @@ SM_STATE(SUPP_PAE, S_FORCE_AUTH)
 SM_STATE(SUPP_PAE, S_FORCE_UNAUTH)
 {
 	SM_ENTRY(SUPP_PAE, S_FORCE_UNAUTH);
-	sm->suppPortStatus = Unauthorized;
 	eapol_sm_set_port_unauthorized(sm);
 	sm->sPortMode = ForceUnauthorized;
 	eapol_sm_txLogoff(sm);
@@ -879,14 +876,24 @@ static void eapol_sm_step_timeout(void *eloop_ctx, void *timeout_ctx)
 
 static void eapol_sm_set_port_authorized(struct eapol_sm *sm)
 {
-	if (sm->ctx->port_cb)
+	int cb;
+
+	cb = sm->suppPortStatus != Authorized || sm->force_authorized_update;
+	sm->force_authorized_update = FALSE;
+	sm->suppPortStatus = Authorized;
+	if (cb && sm->ctx->port_cb)
 		sm->ctx->port_cb(sm->ctx->ctx, 1);
 }
 
 
 static void eapol_sm_set_port_unauthorized(struct eapol_sm *sm)
 {
-	if (sm->ctx->port_cb)
+	int cb;
+
+	cb = sm->suppPortStatus != Unauthorized || sm->force_authorized_update;
+	sm->force_authorized_update = FALSE;
+	sm->suppPortStatus = Unauthorized;
+	if (cb && sm->ctx->port_cb)
 		sm->ctx->port_cb(sm->ctx->ctx, 0);
 }
 
@@ -1370,6 +1377,8 @@ void eapol_sm_notify_portEnabled(struct eapol_sm *sm, Boolean enabled)
 		return;
 	wpa_printf(MSG_DEBUG, "EAPOL: External notification - "
 		   "portEnabled=%d", enabled);
+	if (sm->portEnabled != enabled)
+		sm->force_authorized_update = TRUE;
 	sm->portEnabled = enabled;
 	eapol_sm_step(sm);
 }
@@ -1608,7 +1617,6 @@ static void eapol_sm_abort_cached(struct eapol_sm *sm)
 		return;
 	sm->cached_pmk = FALSE;
 	sm->SUPP_PAE_state = SUPP_PAE_CONNECTING;
-	sm->suppPortStatus = Unauthorized;
 	eapol_sm_set_port_unauthorized(sm);
 
 	/* Make sure we do not start sending EAPOL-Start frames first, but
@@ -2002,6 +2010,7 @@ struct eapol_sm *eapol_sm_init(struct eapol_ctx *ctx)
 #endif /* CONFIG_EAP_PROXY */
 
 	/* Initialize EAPOL state machines */
+	sm->force_authorized_update = TRUE;
 	sm->initialize = TRUE;
 	eapol_sm_step(sm);
 	sm->initialize = FALSE;

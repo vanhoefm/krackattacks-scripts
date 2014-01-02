@@ -20,6 +20,7 @@
 #include "common/ieee802_11_defs.h"
 #include "drivers/driver.h"
 #include "radius/radius_client.h"
+#include "radius/radius_server.h"
 #include "ap/hostapd.h"
 #include "ap/ap_config.h"
 #include "ap/ieee802_1x.h"
@@ -1083,6 +1084,19 @@ static int hostapd_ctrl_iface_chan_switch(struct hostapd_data *hapd, char *pos)
 }
 
 
+static int hostapd_ctrl_iface_mib(struct hostapd_data *hapd, char *reply,
+				  int reply_size, const char *param)
+{
+#ifdef RADIUS_SERVER
+	if (os_strcmp(param, "radius_server") == 0) {
+		return radius_server_get_mib(hapd->radius_srv, reply,
+					     reply_size);
+	}
+#endif /* RADIUS_SERVER */
+	return -1;
+}
+
+
 static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 				       void *sock_ctx)
 {
@@ -1155,6 +1169,9 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 				reply_len += res;
 		}
 #endif /* CONFIG_NO_RADIUS */
+	} else if (os_strncmp(buf, "MIB ", 4) == 0) {
+		reply_len = hostapd_ctrl_iface_mib(hapd, reply, reply_size,
+						   buf + 4);
 	} else if (os_strcmp(buf, "STA-FIRST") == 0) {
 		reply_len = hostapd_ctrl_iface_sta_first(hapd, reply,
 							 reply_size);

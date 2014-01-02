@@ -224,6 +224,11 @@ static int hostapd_cli_cmd_status(struct wpa_ctrl *ctrl, int argc, char *argv[])
 
 static int hostapd_cli_cmd_mib(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
+	if (argc > 0) {
+		char buf[100];
+		os_snprintf(buf, sizeof(buf), "MIB %s", argv[0]);
+		return wpa_ctrl_command(ctrl, buf);
+	}
 	return wpa_ctrl_command(ctrl, "MIB");
 }
 

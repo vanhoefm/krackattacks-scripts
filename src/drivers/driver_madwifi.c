@@ -1,5 +1,5 @@
 /*
- * WPA Supplicant - driver interaction with MADWIFI 802.11 driver
+ * hostapd - driver interaction with MADWIFI 802.11 driver
  * Copyright (c) 2004, Sam Leffler <sam@errno.com>
  * Copyright (c) 2004, Video54 Technologies
  * Copyright (c) 2004-2007, Jouni Malinen <j@w1.fi>
@@ -7,10 +7,9 @@
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
  *
- * While this driver wrapper supports both AP (hostapd) and station
- * (wpa_supplicant) operations, the station side is deprecated and
- * driver_wext.c should be used instead. This driver wrapper should only be
- * used with hostapd for AP mode functionality.
+ * This driver wrapper is only for hostapd AP mode functionality. Station
+ * (wpa_supplicant) operations with madwifi are supported by the driver_wext.c
+ * wrapper.
  */
 
 #include "includes.h"

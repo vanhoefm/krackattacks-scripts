@@ -10,6 +10,7 @@
 
 #include "utils/common.h"
 #include "common/ieee802_11_defs.h"
+#include "eapol_auth/eapol_auth_sm.h"
 #include "hostapd.h"
 #include "ieee802_1x.h"
 #include "wpa_auth.h"
@@ -85,13 +86,6 @@ static int hostapd_ctrl_iface_sta_mib(struct hostapd_data *hapd,
 {
 	int len, res, ret, i;
 
-	if (sta == NULL) {
-		ret = os_snprintf(buf, buflen, "FAIL\n");
-		if (ret < 0 || (size_t) ret >= buflen)
-			return 0;
-		return ret;
-	}
-
 	len = 0;
 	ret = os_snprintf(buf + len, buflen - len, MACSTR "\nflags=",
 			  MAC2STR(sta->addr));
@@ -162,6 +156,8 @@ int hostapd_ctrl_iface_sta(struct hostapd_data *hapd, const char *txtaddr,
 {
 	u8 addr[ETH_ALEN];
 	int ret;
+	const char *pos;
+	struct sta_info *sta;
 
 	if (hwaddr_aton(txtaddr, addr)) {
 		ret = os_snprintf(buf, buflen, "FAIL\n");
@@ -169,8 +165,28 @@ int hostapd_ctrl_iface_sta(struct hostapd_data *hapd, const char *txtaddr,
 			return 0;
 		return ret;
 	}
-	return hostapd_ctrl_iface_sta_mib(hapd, ap_get_sta(hapd, addr),
-					  buf, buflen);
+
+	sta = ap_get_sta(hapd, addr);
+	if (sta == NULL)
+		return -1;
+
+	pos = os_strchr(txtaddr, ' ');
+	if (pos) {
+		pos++;
+
+#ifdef HOSTAPD_DUMP_STATE
+		if (os_strcmp(pos, "eapol") == 0) {
+			if (sta->eapol_sm == NULL)
+				return -1;
+			return eapol_auth_dump_state(sta->eapol_sm, buf,
+						     buflen);
+		}
+#endif /* HOSTAPD_DUMP_STATE */
+
+		return -1;
+	}
+
+	return hostapd_ctrl_iface_sta_mib(hapd, sta, buf, buflen);
 }
 
 

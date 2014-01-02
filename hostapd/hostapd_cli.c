@@ -281,12 +281,15 @@ static void hostapd_cli_action_process(char *msg, size_t len)
 static int hostapd_cli_cmd_sta(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	char buf[64];
-	if (argc != 1) {
-		printf("Invalid 'sta' command - exactly one argument, STA "
+	if (argc < 1) {
+		printf("Invalid 'sta' command - at least one argument, STA "
 		       "address, is required.\n");
 		return -1;
 	}
-	snprintf(buf, sizeof(buf), "STA %s", argv[0]);
+	if (argc > 1)
+		snprintf(buf, sizeof(buf), "STA %s %s", argv[0], argv[1]);
+	else
+		snprintf(buf, sizeof(buf), "STA %s", argv[0]);
 	return wpa_ctrl_command(ctrl, buf);
 }
 

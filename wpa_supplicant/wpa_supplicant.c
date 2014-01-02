@@ -495,29 +495,23 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
  */
 void wpa_clear_keys(struct wpa_supplicant *wpa_s, const u8 *addr)
 {
-	if (wpa_s->keys_cleared) {
-		/* Some drivers (e.g., ndiswrapper & NDIS drivers) seem to have
-		 * timing issues with keys being cleared just before new keys
-		 * are set or just after association or something similar. This
-		 * shows up in group key handshake failing often because of the
-		 * client not receiving the first encrypted packets correctly.
-		 * Skipping some of the extra key clearing steps seems to help
-		 * in completing group key handshake more reliably. */
-		wpa_dbg(wpa_s, MSG_DEBUG, "No keys have been configured - "
-			"skip key clearing");
-		return;
-	}
+	int i, max;
+
+#ifdef CONFIG_IEEE80211W
+	max = 6;
+#else /* CONFIG_IEEE80211W */
+	max = 4;
+#endif /* CONFIG_IEEE80211W */
 
 	/* MLME-DELETEKEYS.request */
-	wpa_drv_set_key(wpa_s, WPA_ALG_NONE, NULL, 0, 0, NULL, 0, NULL, 0);
-	wpa_drv_set_key(wpa_s, WPA_ALG_NONE, NULL, 1, 0, NULL, 0, NULL, 0);
-	wpa_drv_set_key(wpa_s, WPA_ALG_NONE, NULL, 2, 0, NULL, 0, NULL, 0);
-	wpa_drv_set_key(wpa_s, WPA_ALG_NONE, NULL, 3, 0, NULL, 0, NULL, 0);
-#ifdef CONFIG_IEEE80211W
-	wpa_drv_set_key(wpa_s, WPA_ALG_NONE, NULL, 4, 0, NULL, 0, NULL, 0);
-	wpa_drv_set_key(wpa_s, WPA_ALG_NONE, NULL, 5, 0, NULL, 0, NULL, 0);
-#endif /* CONFIG_IEEE80211W */
-	if (addr) {
+	for (i = 0; i < max; i++) {
+		if (wpa_s->keys_cleared & BIT(i))
+			continue;
+		wpa_drv_set_key(wpa_s, WPA_ALG_NONE, NULL, i, 0, NULL, 0,
+				NULL, 0);
+	}
+	if (!(wpa_s->keys_cleared & BIT(0)) && addr &&
+	    !is_zero_ether_addr(addr)) {
 		wpa_drv_set_key(wpa_s, WPA_ALG_NONE, addr, 0, 0, NULL, 0, NULL,
 				0);
 		/* MLME-SETPROTECTION.request(None) */
@@ -526,7 +520,7 @@ void wpa_clear_keys(struct wpa_supplicant *wpa_s, const u8 *addr)
 			MLME_SETPROTECTION_PROTECT_TYPE_NONE,
 			MLME_SETPROTECTION_KEY_TYPE_PAIRWISE);
 	}
-	wpa_s->keys_cleared = 1;
+	wpa_s->keys_cleared = (u32) -1;
 }
 
 

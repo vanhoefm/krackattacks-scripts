@@ -117,11 +117,16 @@ static inline int wpa_drv_get_ssid(struct wpa_supplicant *wpa_s, u8 *ssid)
 static inline int wpa_drv_set_key(struct wpa_supplicant *wpa_s,
 				  enum wpa_alg alg, const u8 *addr,
 				  int key_idx, int set_tx,
-				   const u8 *seq, size_t seq_len,
-				   const u8 *key, size_t key_len)
+				  const u8 *seq, size_t seq_len,
+				  const u8 *key, size_t key_len)
 {
+	if (alg != WPA_ALG_NONE) {
+		if (key_idx >= 0 && key_idx <= 6)
+			wpa_s->keys_cleared &= ~BIT(key_idx);
+		else
+			wpa_s->keys_cleared = 0;
+	}
 	if (wpa_s->driver->set_key) {
-		wpa_s->keys_cleared = 0;
 		return wpa_s->driver->set_key(wpa_s->ifname, wpa_s->drv_priv,
 					      alg, addr, key_idx, set_tx,
 					      seq, seq_len, key, key_len);

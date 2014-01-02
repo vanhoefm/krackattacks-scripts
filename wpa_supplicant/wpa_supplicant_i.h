@@ -432,7 +432,8 @@ struct wpa_supplicant {
 
 	unsigned char last_eapol_src[ETH_ALEN];
 
-	int keys_cleared;
+	unsigned int keys_cleared; /* bitfield of key indexes that the driver is
+				    * known not to be configured with a key */
 
 	struct wpa_blacklist *blacklist;
 

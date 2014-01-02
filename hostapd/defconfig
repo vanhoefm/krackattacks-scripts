@@ -179,7 +179,7 @@ CONFIG_IPV6=y
 # Note: This requires libnl 3.1 or newer.
 #CONFIG_VLAN_NETLINK=y
 
-# Remove support for dumping state into a file on SIGUSR1 signal
+# Remove support for dumping internal state through control interface commands
 # This can be used to reduce binary size at the cost of disabling a debugging
 # option.
 #CONFIG_NO_DUMP_STATE=y

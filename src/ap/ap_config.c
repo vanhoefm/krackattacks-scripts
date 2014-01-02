@@ -433,7 +433,6 @@ void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 	}
 	os_free(conf->eap_user_sqlite);
 
-	os_free(conf->dump_log_name);
 	os_free(conf->eap_req_id_text);
 	os_free(conf->accept_mac);
 	os_free(conf->deny_mac);

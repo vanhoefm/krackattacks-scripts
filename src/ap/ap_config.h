@@ -189,8 +189,6 @@ struct hostapd_bss_config {
 	unsigned int logger_syslog; /* module bitfield */
 	unsigned int logger_stdout; /* module bitfield */
 
-	char *dump_log_name; /* file name for state dump (SIGUSR1) */
-
 	int max_num_sta; /* maximum number of STAs in station table */
 
 	int dtim_period;

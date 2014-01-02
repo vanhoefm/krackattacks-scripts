@@ -25,7 +25,6 @@
 #include "ap/ap_drv_ops.h"
 #include "config_file.h"
 #include "eap_register.h"
-#include "dump_state.h"
 #include "ctrl_iface.h"
 
 
@@ -295,10 +294,7 @@ static void handle_reload(int sig, void *signal_ctx)
 
 static void handle_dump_state(int sig, void *signal_ctx)
 {
-#ifdef HOSTAPD_DUMP_STATE
-	struct hapd_interfaces *interfaces = signal_ctx;
-	hostapd_for_each_interface(interfaces, handle_dump_state_iface, NULL);
-#endif /* HOSTAPD_DUMP_STATE */
+	/* Not used anymore - ignore signal */
 }
 #endif /* CONFIG_NATIVE_WINDOWS */
 

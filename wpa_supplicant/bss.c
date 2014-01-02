@@ -820,6 +820,8 @@ void wpa_bss_flush(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_bss *bss, *n;
 
+	wpa_s->clear_driver_scan_cache = 1;
+
 	if (wpa_s->bss.next == NULL)
 		return; /* BSS table not yet initialized */
 

@@ -155,6 +155,8 @@ int wpa_supplicant_trigger_scan(struct wpa_supplicant *wpa_s,
 
 	wpa_supplicant_notify_scanning(wpa_s, 1);
 
+	if (wpa_s->clear_driver_scan_cache)
+		params->only_new_results = 1;
 	ret = wpa_drv_scan(wpa_s, params);
 	if (ret) {
 		wpa_supplicant_notify_scanning(wpa_s, 0);
@@ -164,6 +166,7 @@ int wpa_supplicant_trigger_scan(struct wpa_supplicant *wpa_s,
 		wpa_s->scan_runs++;
 		wpa_s->normal_scans++;
 		wpa_s->own_scan_requested = 1;
+		params->only_new_results = 0;
 	}
 
 	return ret;
@@ -726,6 +729,10 @@ ssid_list_set:
 
 	wpa_supplicant_optimize_freqs(wpa_s, &params);
 	extra_ie = wpa_supplicant_extra_ies(wpa_s);
+
+	if (wpa_s->last_scan_req == MANUAL_SCAN_REQ &&
+	    wpa_s->manual_scan_only_new)
+		params.only_new_results = 1;
 
 	if (wpa_s->last_scan_req == MANUAL_SCAN_REQ && params.freqs == NULL &&
 	    wpa_s->manual_scan_freqs) {

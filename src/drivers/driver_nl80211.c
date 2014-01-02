@@ -4679,6 +4679,12 @@ nl80211_scan_common(struct wpa_driver_nl80211_data *drv, u8 cmd,
 	params->filter_ssids = NULL;
 	drv->num_filter_ssids = params->num_filter_ssids;
 
+	if (params->only_new_results) {
+		wpa_printf(MSG_DEBUG, "nl80211: Add NL80211_SCAN_FLAG_FLUSH");
+		NLA_PUT_U32(msg, NL80211_ATTR_SCAN_FLAGS,
+			    NL80211_SCAN_FLAG_FLUSH);
+	}
+
 	return msg;
 
 fail:

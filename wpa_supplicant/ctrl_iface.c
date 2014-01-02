@@ -5278,6 +5278,7 @@ static void wpas_ctrl_scan(struct wpa_supplicant *wpa_s, char *params,
 
 	wpa_s->manual_scan_passive = 0;
 	wpa_s->manual_scan_use_id = 0;
+	wpa_s->manual_scan_only_new = 0;
 
 	if (params) {
 		if (os_strncasecmp(params, "TYPE=ONLY", 9) == 0)
@@ -5296,6 +5297,10 @@ static void wpas_ctrl_scan(struct wpa_supplicant *wpa_s, char *params,
 		pos = os_strstr(params, "use_id=");
 		if (pos)
 			wpa_s->manual_scan_use_id = atoi(pos + 7);
+
+		pos = os_strstr(params, "only_new=1");
+		if (pos)
+			wpa_s->manual_scan_only_new = 1;
 	} else {
 		os_free(wpa_s->manual_scan_freqs);
 		wpa_s->manual_scan_freqs = NULL;

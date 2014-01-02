@@ -340,6 +340,15 @@ struct wpa_driver_scan_params {
 	 * and not to transmit the frames at any of those rates.
 	 */
 	u8 p2p_probe;
+
+	/**
+	 * only_new_results - Request driver to report only new results
+	 *
+	 * This is used to request the driver to report only BSSes that have
+	 * been detected after this scan request has been started, i.e., to
+	 * flush old cached BSS entries.
+	 */
+	int only_new_results;
 };
 
 /**

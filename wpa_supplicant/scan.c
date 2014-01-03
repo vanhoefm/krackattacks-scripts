@@ -166,7 +166,7 @@ int wpa_supplicant_trigger_scan(struct wpa_supplicant *wpa_s,
 		wpa_s->scan_runs++;
 		wpa_s->normal_scans++;
 		wpa_s->own_scan_requested = 1;
-		params->only_new_results = 0;
+		wpa_s->clear_driver_scan_cache = 0;
 	}
 
 	return ret;

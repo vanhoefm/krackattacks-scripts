@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - Scanning
- * Copyright (c) 2003-2012, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -1705,4 +1705,83 @@ void scan_only_handler(struct wpa_supplicant *wpa_s,
 int wpas_scan_scheduled(struct wpa_supplicant *wpa_s)
 {
 	return eloop_is_timeout_registered(wpa_supplicant_scan, wpa_s, NULL);
+}
+
+
+struct wpa_driver_scan_params *
+wpa_scan_clone_params(const struct wpa_driver_scan_params *src)
+{
+	struct wpa_driver_scan_params *params;
+	size_t i;
+	u8 *n;
+
+	params = os_zalloc(sizeof(*params));
+	if (params == NULL)
+		return NULL;
+
+	for (i = 0; i < src->num_ssids; i++) {
+		if (src->ssids[i].ssid) {
+			n = os_malloc(src->ssids[i].ssid_len);
+			if (n == NULL)
+				goto failed;
+			os_memcpy(n, src->ssids[i].ssid,
+				  src->ssids[i].ssid_len);
+			params->ssids[i].ssid = n;
+			params->ssids[i].ssid_len = src->ssids[i].ssid_len;
+		}
+	}
+	params->num_ssids = src->num_ssids;
+
+	if (src->extra_ies) {
+		n = os_malloc(src->extra_ies_len);
+		if (n == NULL)
+			goto failed;
+		os_memcpy(n, src->extra_ies, src->extra_ies_len);
+		params->extra_ies = n;
+		params->extra_ies_len = src->extra_ies_len;
+	}
+
+	if (src->freqs) {
+		int len = int_array_len(src->freqs);
+		params->freqs = os_malloc((len + 1) * sizeof(int));
+		if (params->freqs == NULL)
+			goto failed;
+		os_memcpy(params->freqs, src->freqs, (len + 1) * sizeof(int));
+	}
+
+	if (src->filter_ssids) {
+		params->filter_ssids = os_malloc(sizeof(params->filter_ssids) *
+						 src->num_filter_ssids);
+		if (params->filter_ssids == NULL)
+			goto failed;
+		os_memcpy(params->filter_ssids, src->filter_ssids,
+			  sizeof(params->filter_ssids) * src->num_filter_ssids);
+		params->num_filter_ssids = src->num_filter_ssids;
+	}
+
+	params->filter_rssi = src->filter_rssi;
+	params->p2p_probe = src->p2p_probe;
+	params->only_new_results = src->only_new_results;
+
+	return params;
+
+failed:
+	wpa_scan_free_params(params);
+	return NULL;
+}
+
+
+void wpa_scan_free_params(struct wpa_driver_scan_params *params)
+{
+	size_t i;
+
+	if (params == NULL)
+		return;
+
+	for (i = 0; i < params->num_ssids; i++)
+		os_free((u8 *) params->ssids[i].ssid);
+	os_free((u8 *) params->extra_ies);
+	os_free(params->freqs);
+	os_free(params->filter_ssids);
+	os_free(params);
 }

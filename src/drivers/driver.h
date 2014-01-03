@@ -1,6 +1,6 @@
 /*
  * Driver interface definition
- * Copyright (c) 2003-2012, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -349,6 +349,12 @@ struct wpa_driver_scan_params {
 	 * flush old cached BSS entries.
 	 */
 	int only_new_results;
+
+	/*
+	 * NOTE: Whenever adding new parameters here, please make sure
+	 * wpa_scan_clone_params() and wpa_scan_free_params() get updated with
+	 * matching changes.
+	 */
 };
 
 /**

@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - Scanning
- * Copyright (c) 2003-2010, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -43,5 +43,8 @@ int wpa_supplicant_start_sched_scan(struct wpa_supplicant *wpa_s,
 				    struct wpa_driver_scan_params *params,
 				    int interval);
 int wpa_supplicant_stop_sched_scan(struct wpa_supplicant *wpa_s);
+struct wpa_driver_scan_params *
+wpa_scan_clone_params(const struct wpa_driver_scan_params *src);
+void wpa_scan_free_params(struct wpa_driver_scan_params *params);
 
 #endif /* SCAN_H */

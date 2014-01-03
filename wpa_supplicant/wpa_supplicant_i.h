@@ -305,6 +305,17 @@ void radio_work_done(struct wpa_radio_work *work);
 void radio_remove_unstarted_work(struct wpa_supplicant *wpa_s,
 				 const char *type);
 
+struct wpa_connect_work {
+	unsigned int sme:1;
+	struct wpa_bss *bss;
+	struct wpa_ssid *ssid;
+};
+
+int wpas_valid_bss_ssid(struct wpa_supplicant *wpa_s, struct wpa_bss *test_bss,
+			struct wpa_ssid *test_ssid);
+void wpas_connect_work_free(struct wpa_connect_work *cwork);
+void wpas_connect_work_done(struct wpa_supplicant *wpa_s);
+
 /**
  * offchannel_send_action_result - Result of offchannel send Action frame
  */
@@ -775,6 +786,7 @@ struct wpa_supplicant {
 #endif /* CONFIG_TESTING_GET_GTK */
 
 	unsigned int num_multichan_concurrent;
+	struct wpa_radio_work *connect_work;
 };
 
 

@@ -1,6 +1,6 @@
 /*
  * wpa_supplicant - SME
- * Copyright (c) 2009-2012, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2009-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -157,6 +157,7 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 	if (bss == NULL) {
 		wpa_msg(wpa_s, MSG_ERROR, "SME: No scan result available for "
 			"the network");
+		wpas_connect_work_done(wpa_s);
 		return;
 	}
 
@@ -244,6 +245,7 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 					      &wpa_s->sme.assoc_req_ie_len)) {
 			wpa_msg(wpa_s, MSG_WARNING, "SME: Failed to set WPA "
 				"key management and encryption suites");
+			wpas_connect_work_done(wpa_s);
 			return;
 		}
 	} else if ((ssid->key_mgmt & WPA_KEY_MGMT_IEEE8021X_NO_WPA) &&
@@ -263,6 +265,7 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 			wpa_msg(wpa_s, MSG_WARNING, "SME: Failed to set WPA "
 				"key management and encryption suites (no "
 				"scan results)");
+			wpas_connect_work_done(wpa_s);
 			return;
 		}
 #ifdef CONFIG_WPS
@@ -386,8 +389,10 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 							 bss->bssid);
 		else
 			resp = sme_auth_build_sae_confirm(wpa_s);
-		if (resp == NULL)
+		if (resp == NULL) {
+			wpas_connect_work_done(wpa_s);
 			return;
+		}
 		params.sae_data = wpabuf_head(resp);
 		params.sae_data_len = wpabuf_len(resp);
 		wpa_s->sme.sae.state = start ? SAE_COMMITTED : SAE_CONFIRMED;
@@ -417,6 +422,7 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 		wpas_connection_failed(wpa_s, bss->bssid);
 		wpa_supplicant_mark_disassoc(wpa_s);
 		wpabuf_free(resp);
+		wpas_connect_work_done(wpa_s);
 		return;
 	}
 
@@ -432,15 +438,56 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 }
 
 
+static void sme_auth_start_cb(struct wpa_radio_work *work, int deinit)
+{
+	struct wpa_connect_work *cwork = work->ctx;
+	struct wpa_supplicant *wpa_s = work->wpa_s;
+
+	if (deinit) {
+		wpas_connect_work_free(cwork);
+		return;
+	}
+
+	wpa_s->connect_work = work;
+
+	if (!wpas_valid_bss_ssid(wpa_s, cwork->bss, cwork->ssid)) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "SME: BSS/SSID entry for authentication not valid anymore - drop connection attempt");
+		wpas_connect_work_done(wpa_s);
+		return;
+	}
+
+	sme_send_authentication(wpa_s, cwork->bss, cwork->ssid, 1);
+}
+
+
 void sme_authenticate(struct wpa_supplicant *wpa_s,
 		      struct wpa_bss *bss, struct wpa_ssid *ssid)
 {
+	struct wpa_connect_work *cwork;
+
+	if (bss == NULL || ssid == NULL)
+		return;
+	if (wpa_s->connect_work) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "SME: Reject sme_authenticate() call since connect_work exist");
+		return;
+	}
+
+	cwork = os_zalloc(sizeof(*cwork));
+	if (cwork == NULL)
+		return;
+	cwork->bss = bss;
+	cwork->ssid = ssid;
+	cwork->sme = 1;
+
 #ifdef CONFIG_SAE
 	wpa_s->sme.sae.state = SAE_NOTHING;
 	wpa_s->sme.sae.send_confirm = 0;
 	wpa_s->sme.sae_group_index = 0;
 #endif /* CONFIG_SAE */
-	sme_send_authentication(wpa_s, bss, ssid, 1);
+
+	if (radio_add_work(wpa_s, bss->freq, "sme-connect", 1,
+			   sme_auth_start_cb, cwork) < 0)
+		wpas_connect_work_free(cwork);
 }
 
 

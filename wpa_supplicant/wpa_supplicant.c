@@ -649,6 +649,9 @@ void wpa_supplicant_set_state(struct wpa_supplicant *wpa_s,
 		wpa_supplicant_state_txt(wpa_s->wpa_state),
 		wpa_supplicant_state_txt(state));
 
+	if (state == WPA_COMPLETED)
+		wpas_connect_work_done(wpa_s);
+
 	if (state != WPA_SCANNING)
 		wpa_supplicant_notify_scanning(wpa_s, 0);
 
@@ -1234,6 +1237,70 @@ int wpas_build_ext_capab(struct wpa_supplicant *wpa_s, u8 *buf)
 }
 
 
+static int wpas_valid_bss(struct wpa_supplicant *wpa_s,
+			  struct wpa_bss *test_bss)
+{
+	struct wpa_bss *bss;
+
+	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {
+		if (bss == test_bss)
+			return 1;
+	}
+
+	return 0;
+}
+
+
+static int wpas_valid_ssid(struct wpa_supplicant *wpa_s,
+			   struct wpa_ssid *test_ssid)
+{
+	struct wpa_ssid *ssid;
+
+	for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next) {
+		if (ssid == test_ssid)
+			return 1;
+	}
+
+	return 0;
+}
+
+
+int wpas_valid_bss_ssid(struct wpa_supplicant *wpa_s, struct wpa_bss *test_bss,
+			struct wpa_ssid *test_ssid)
+{
+	if (test_bss && !wpas_valid_bss(wpa_s, test_bss))
+		return 0;
+
+	return test_ssid == NULL || wpas_valid_ssid(wpa_s, test_ssid);
+}
+
+
+void wpas_connect_work_free(struct wpa_connect_work *cwork)
+{
+	if (cwork == NULL)
+		return;
+	os_free(cwork);
+}
+
+
+void wpas_connect_work_done(struct wpa_supplicant *wpa_s)
+{
+	struct wpa_connect_work *cwork;
+	struct wpa_radio_work *work = wpa_s->connect_work;
+
+	if (!work)
+		return;
+
+	wpa_s->connect_work = NULL;
+	cwork = work->ctx;
+	work->ctx = NULL;
+	wpas_connect_work_free(cwork);
+	radio_work_done(work);
+}
+
+
+static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit);
+
 /**
  * wpa_supplicant_associate - Request association
  * @wpa_s: Pointer to wpa_supplicant data
@@ -1245,19 +1312,7 @@ int wpas_build_ext_capab(struct wpa_supplicant *wpa_s, u8 *buf)
 void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 			      struct wpa_bss *bss, struct wpa_ssid *ssid)
 {
-	u8 wpa_ie[200];
-	size_t wpa_ie_len;
-	int use_crypt, ret, i, bssid_changed;
-	int algs = WPA_AUTH_ALG_OPEN;
-	unsigned int cipher_pairwise, cipher_group;
-	struct wpa_driver_associate_params params;
-	int wep_keys_set = 0;
-	int assoc_failed = 0;
-	struct wpa_ssid *old_ssid;
-#ifdef CONFIG_HT_OVERRIDES
-	struct ieee80211_ht_capabilities htcaps;
-	struct ieee80211_ht_capabilities htcaps_mask;
-#endif /* CONFIG_HT_OVERRIDES */
+	struct wpa_connect_work *cwork;
 
 #ifdef CONFIG_IBSS_RSN
 	ibss_rsn_deinit(wpa_s->ibss_rsn);
@@ -1295,6 +1350,58 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	if ((wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME) &&
 	    ssid->mode == IEEE80211_MODE_INFRA) {
 		sme_authenticate(wpa_s, bss, ssid);
+		return;
+	}
+
+	if (wpa_s->connect_work) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "Reject wpa_supplicant_associate() call since connect_work exist");
+		return;
+	}
+
+	cwork = os_zalloc(sizeof(*cwork));
+	if (cwork == NULL)
+		return;
+
+	cwork->bss = bss;
+	cwork->ssid = ssid;
+
+	if (radio_add_work(wpa_s, bss ? bss->freq : 0, "connect", 1,
+			   wpas_start_assoc_cb, cwork) < 0) {
+		os_free(cwork);
+	}
+}
+
+
+static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
+{
+	struct wpa_connect_work *cwork = work->ctx;
+	struct wpa_bss *bss = cwork->bss;
+	struct wpa_ssid *ssid = cwork->ssid;
+	struct wpa_supplicant *wpa_s = work->wpa_s;
+	u8 wpa_ie[200];
+	size_t wpa_ie_len;
+	int use_crypt, ret, i, bssid_changed;
+	int algs = WPA_AUTH_ALG_OPEN;
+	unsigned int cipher_pairwise, cipher_group;
+	struct wpa_driver_associate_params params;
+	int wep_keys_set = 0;
+	int assoc_failed = 0;
+	struct wpa_ssid *old_ssid;
+#ifdef CONFIG_HT_OVERRIDES
+	struct ieee80211_ht_capabilities htcaps;
+	struct ieee80211_ht_capabilities htcaps_mask;
+#endif /* CONFIG_HT_OVERRIDES */
+
+	if (deinit) {
+		wpas_connect_work_free(cwork);
+		return;
+	}
+
+	wpa_s->connect_work = work;
+
+	if (!wpas_valid_bss_ssid(wpa_s, bss, ssid)) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "BSS/SSID entry for association not valid anymore - drop connection attempt");
+		wpas_connect_work_done(wpa_s);
 		return;
 	}
 
@@ -3886,6 +3993,8 @@ void wpas_connection_failed(struct wpa_supplicant *wpa_s, const u8 *bssid)
 	int timeout;
 	int count;
 	int *freqs = NULL;
+
+	wpas_connect_work_done(wpa_s);
 
 	/*
 	 * Remove possible authentication timeout since the connection failed.

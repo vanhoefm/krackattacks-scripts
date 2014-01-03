@@ -4346,42 +4346,6 @@ void wpas_request_connection(struct wpa_supplicant *wpa_s)
 }
 
 
-static int wpas_conn_in_progress(struct wpa_supplicant *wpa_s)
-{
-	return wpa_s->wpa_state >= WPA_AUTHENTICATING &&
-		wpa_s->wpa_state != WPA_COMPLETED;
-}
-
-
-/**
- * wpas_wpa_is_in_progress - Check whether a connection is in progress
- * @wpa_s: Pointer to wpa_supplicant data
- * @include_current: Whether to consider specified interface
- *
- * This function is to check if the wpa state is in beginning of the connection
- * during 4-way handshake or group key handshake with WPA on any shared
- * interface.
- */
-int wpas_wpa_is_in_progress(struct wpa_supplicant *wpa_s, int include_current)
-{
-	struct wpa_supplicant *ifs;
-
-	dl_list_for_each(ifs, &wpa_s->radio->ifaces, struct wpa_supplicant,
-			 radio_list) {
-		if (!include_current && ifs == wpa_s)
-			continue;
-
-		if (wpas_conn_in_progress(ifs)) {
-			wpa_dbg(wpa_s, MSG_DEBUG, "Connection is in progress "
-				"on interface %s - defer", ifs->ifname);
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
-
 void dump_freq_array(struct wpa_supplicant *wpa_s, const char *title,
 		     int *freq_array, unsigned int len)
 {

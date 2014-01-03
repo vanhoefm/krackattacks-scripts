@@ -23,8 +23,6 @@
 
 /** GAS query timeout in seconds */
 #define GAS_QUERY_TIMEOUT_PERIOD 2
-/** Retry period for GAS query requests in milliseconds */
-#define GAS_SERVICE_RETRY_PERIOD_MS 500
 
 
 /**
@@ -63,7 +61,6 @@ struct gas_query {
 
 static void gas_query_tx_comeback_timeout(void *eloop_data, void *user_ctx);
 static void gas_query_timeout(void *eloop_data, void *user_ctx);
-static void gas_service_timeout(void *eloop_data, void *user_ctx);
 
 
 /**
@@ -142,7 +139,6 @@ static void gas_query_done(struct gas_query *gas,
 		offchannel_send_action_done(gas->wpa_s);
 	eloop_cancel_timeout(gas_query_tx_comeback_timeout, gas, query);
 	eloop_cancel_timeout(gas_query_timeout, gas, query);
-	eloop_cancel_timeout(gas_service_timeout, gas, query);
 	dl_list_del(&query->list);
 	query->cb(query->ctx, query->addr, query->dialog_token, result,
 		  query->adv_proto, query->resp, query->status_code);
@@ -527,38 +523,6 @@ static void gas_query_timeout(void *eloop_data, void *user_ctx)
 }
 
 
-static void gas_service_timeout(void *eloop_data, void *user_ctx)
-{
-	struct gas_query *gas = eloop_data;
-	struct wpa_supplicant *wpa_s = gas->wpa_s;
-	struct gas_query_pending *query = user_ctx;
-	int conn;
-
-	conn = wpas_wpa_is_in_progress(wpa_s, 1);
-	if (conn) {
-		wpa_printf(MSG_DEBUG, "GAS: Delaying GAS query Tx while connection operation is in progress");
-		eloop_register_timeout(
-			GAS_SERVICE_RETRY_PERIOD_MS / 1000,
-			(GAS_SERVICE_RETRY_PERIOD_MS % 1000) * 1000,
-			gas_service_timeout, gas, query);
-		return;
-	}
-
-	if (gas_query_tx(gas, query, query->req) < 0) {
-		wpa_printf(MSG_DEBUG, "GAS: Failed to send Action frame to "
-			   MACSTR, MAC2STR(query->addr));
-		gas_query_free(query, 1);
-		return;
-	}
-	gas->current = query;
-
-	wpa_printf(MSG_DEBUG, "GAS: Starting query timeout for dialog token %u",
-		   query->dialog_token);
-	eloop_register_timeout(GAS_QUERY_TIMEOUT_PERIOD, 0,
-			       gas_query_timeout, gas, query);
-}
-
-
 static int gas_query_dialog_token_available(struct gas_query *gas,
 					    const u8 *dst, u8 dialog_token)
 {
@@ -576,14 +540,28 @@ static int gas_query_dialog_token_available(struct gas_query *gas,
 static void gas_query_start_cb(struct wpa_radio_work *work, int deinit)
 {
 	struct gas_query_pending *query = work->ctx;
+	struct gas_query *gas = query->gas;
 
 	if (deinit) {
 		gas_query_free(query, 1);
 		return;
 	}
 
-	query->gas->work = work;
-	gas_service_timeout(query->gas, query);
+	gas->work = work;
+
+	if (gas_query_tx(gas, query, query->req) < 0) {
+		wpa_printf(MSG_DEBUG, "GAS: Failed to send Action frame to "
+			   MACSTR, MAC2STR(query->addr));
+		gas_query_free(query, 1);
+		return;
+	}
+	gas->current = query;
+
+	wpa_printf(MSG_DEBUG, "GAS: Starting query timeout for dialog token %u",
+		   query->dialog_token);
+	eloop_register_timeout(GAS_QUERY_TIMEOUT_PERIOD, 0,
+			       gas_query_timeout, gas, query);
+
 }
 
 

@@ -205,16 +205,6 @@ struct p2p_data {
 		 * P2P_INVITE_LISTEN - Listen during Invite
 		 */
 		P2P_INVITE_LISTEN,
-
-		/**
-		 * P2P_SEARCH_WHEN_READY - Waiting to start Search
-		 */
-		P2P_SEARCH_WHEN_READY,
-
-		/**
-		 * P2P_CONTINUE_SEARCH_WHEN_READY - Waiting to continue Search
-		 */
-		P2P_CONTINUE_SEARCH_WHEN_READY,
 	} state;
 
 	/**

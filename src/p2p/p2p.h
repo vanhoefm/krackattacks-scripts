@@ -1826,13 +1826,6 @@ int p2p_set_no_go_freq(struct p2p_data *p2p,
  */
 int p2p_in_progress(struct p2p_data *p2p);
 
-/**
- * p2p_other_scan_completed - Notify completion of non-P2P scan
- * @p2p: P2P module context from p2p_init()
- * Returns: 0 if P2P module is idle or 1 if an operation was started
- */
-int p2p_other_scan_completed(struct p2p_data *p2p);
-
 const char * p2p_wps_method_text(enum p2p_wps_method method);
 
 /**
@@ -1843,8 +1836,6 @@ const char * p2p_wps_method_text(enum p2p_wps_method method);
  */
 void p2p_set_config_timeout(struct p2p_data *p2p, u8 go_timeout,
 			    u8 client_timeout);
-
-void p2p_increase_search_delay(struct p2p_data *p2p, unsigned int delay);
 
 int p2p_set_wfd_ie_beacon(struct p2p_data *p2p, struct wpabuf *ie);
 int p2p_set_wfd_ie_probe_req(struct p2p_data *p2p, struct wpabuf *ie);

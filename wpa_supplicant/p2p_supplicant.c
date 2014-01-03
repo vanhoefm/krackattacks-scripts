@@ -1,6 +1,7 @@
 /*
  * wpa_supplicant - P2P
  * Copyright (c) 2009-2010, Atheros Communications
+ * Copyright (c) 2010-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -196,6 +197,12 @@ static void wpas_p2p_scan_res_handler(struct wpa_supplicant *wpa_s,
 {
 	size_t i;
 
+	if (wpa_s->p2p_scan_work) {
+		struct wpa_radio_work *work = wpa_s->p2p_scan_work;
+		wpa_s->p2p_scan_work = NULL;
+		radio_work_done(work);
+	}
+
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
 		return;
 
@@ -234,95 +241,125 @@ static void wpas_p2p_scan_res_handler(struct wpa_supplicant *wpa_s,
 }
 
 
+static void wpas_p2p_trigger_scan_cb(struct wpa_radio_work *work, int deinit)
+{
+	struct wpa_supplicant *wpa_s = work->wpa_s;
+	struct wpa_driver_scan_params *params = work->ctx;
+	int ret;
+
+	if (deinit) {
+		wpa_scan_free_params(params);
+		return;
+	}
+
+	ret = wpa_drv_scan(wpa_s, params);
+	wpa_scan_free_params(params);
+	work->ctx = NULL;
+	if (ret) {
+		radio_work_done(work);
+		return;
+	}
+
+	os_get_reltime(&wpa_s->scan_trigger_time);
+	wpa_s->scan_res_handler = wpas_p2p_scan_res_handler;
+	wpa_s->own_scan_requested = 1;
+	wpa_s->p2p_scan_work = work;
+}
+
+
 static int wpas_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 			 unsigned int num_req_dev_types,
 			 const u8 *req_dev_types, const u8 *dev_id, u16 pw_id)
 {
 	struct wpa_supplicant *wpa_s = ctx;
-	struct wpa_supplicant *ifs;
-	struct wpa_driver_scan_params params;
-	int ret;
+	struct wpa_driver_scan_params *params = NULL;
 	struct wpabuf *wps_ie, *ies;
-	int social_channels[] = { 2412, 2437, 2462, 0, 0 };
 	size_t ielen;
+	u8 *n;
 
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
 		return -1;
 
-	for (ifs = wpa_s->global->ifaces; ifs; ifs = ifs->next) {
-		if (ifs->sta_scan_pending &&
-		    (wpas_scan_scheduled(ifs) || ifs->scanning) &&
-		    wpas_p2p_in_progress(wpa_s) == 2) {
-			wpa_printf(MSG_DEBUG, "Delaying P2P scan to allow "
-				   "pending station mode scan to be "
-				   "completed on interface %s", ifs->ifname);
-			wpa_s->global->p2p_cb_on_scan_complete = 1;
-			wpa_supplicant_req_scan(ifs, 0, 0);
-			return 1;
-		}
+	if (wpa_s->p2p_scan_work) {
+		wpa_dbg(wpa_s, MSG_INFO, "P2P: Reject scan trigger since one is already pending");
+		return -1;
 	}
 
-	os_memset(&params, 0, sizeof(params));
+	params = os_zalloc(sizeof(*params));
+	if (params == NULL)
+		return -1;
 
 	/* P2P Wildcard SSID */
-	params.num_ssids = 1;
-	params.ssids[0].ssid = (u8 *) P2P_WILDCARD_SSID;
-	params.ssids[0].ssid_len = P2P_WILDCARD_SSID_LEN;
+	params->num_ssids = 1;
+	n = os_malloc(P2P_WILDCARD_SSID_LEN);
+	if (n == NULL)
+		goto fail;
+	os_memcpy(n, P2P_WILDCARD_SSID, P2P_WILDCARD_SSID_LEN);
+	params->ssids[0].ssid = n;
+	params->ssids[0].ssid_len = P2P_WILDCARD_SSID_LEN;
 
 	wpa_s->wps->dev.p2p = 1;
 	wps_ie = wps_build_probe_req_ie(pw_id, &wpa_s->wps->dev,
 					wpa_s->wps->uuid, WPS_REQ_ENROLLEE,
 					num_req_dev_types, req_dev_types);
 	if (wps_ie == NULL)
-		return -1;
+		goto fail;
 
 	ielen = p2p_scan_ie_buf_len(wpa_s->global->p2p);
 	ies = wpabuf_alloc(wpabuf_len(wps_ie) + ielen);
 	if (ies == NULL) {
 		wpabuf_free(wps_ie);
-		return -1;
+		goto fail;
 	}
 	wpabuf_put_buf(ies, wps_ie);
 	wpabuf_free(wps_ie);
 
 	p2p_scan_ie(wpa_s->global->p2p, ies, dev_id);
 
-	params.p2p_probe = 1;
-	params.extra_ies = wpabuf_head(ies);
-	params.extra_ies_len = wpabuf_len(ies);
+	params->p2p_probe = 1;
+	n = os_malloc(wpabuf_len(ies));
+	if (n == NULL) {
+		wpabuf_free(ies);
+		goto fail;
+	}
+	os_memcpy(n, wpabuf_head(ies), wpabuf_len(ies));
+	params->extra_ies = n;
+	params->extra_ies_len = wpabuf_len(ies);
+	wpabuf_free(ies);
 
 	switch (type) {
 	case P2P_SCAN_SOCIAL:
-		params.freqs = social_channels;
+		params->freqs = os_malloc(4 * sizeof(int));
+		if (params->freqs == NULL)
+			goto fail;
+		params->freqs[0] = 2412;
+		params->freqs[1] = 2437;
+		params->freqs[2] = 2462;
+		params->freqs[3] = 0;
 		break;
 	case P2P_SCAN_FULL:
 		break;
 	case P2P_SCAN_SOCIAL_PLUS_ONE:
-		social_channels[3] = freq;
-		params.freqs = social_channels;
+		params->freqs = os_malloc(5 * sizeof(int));
+		if (params->freqs == NULL)
+			goto fail;
+		params->freqs[0] = 2412;
+		params->freqs[1] = 2437;
+		params->freqs[2] = 2462;
+		params->freqs[3] = freq;
+		params->freqs[4] = 0;
 		break;
 	}
 
-	ret = wpa_drv_scan(wpa_s, &params);
+	radio_remove_unstarted_work(wpa_s, "p2p-scan");
+	if (radio_add_work(wpa_s, 0, "p2p-scan", 0, wpas_p2p_trigger_scan_cb,
+			   params) < 0)
+		goto fail;
+	return 0;
 
-	wpabuf_free(ies);
-
-	if (ret) {
-		for (ifs = wpa_s->global->ifaces; ifs; ifs = ifs->next) {
-			if (ifs->scanning ||
-			    ifs->scan_res_handler == wpas_p2p_scan_res_handler) {
-				wpa_s->global->p2p_cb_on_scan_complete = 1;
-				ret = 1;
-				break;
-			}
-		}
-	} else {
-		os_get_reltime(&wpa_s->scan_trigger_time);
-		wpa_s->scan_res_handler = wpas_p2p_scan_res_handler;
-		wpa_s->own_scan_requested = 1;
-	}
-
-	return ret;
+fail:
+	wpa_scan_free_params(params);
+	return -1;
 }
 
 
@@ -513,7 +550,6 @@ static int wpas_p2p_group_delete(struct wpa_supplicant *wpa_s,
 		wpa_config_remove_network(wpa_s->conf, id);
 		wpa_supplicant_clear_status(wpa_s);
 		wpa_supplicant_cancel_sched_scan(wpa_s);
-		wpa_s->sta_scan_pending = 0;
 	} else {
 		wpa_printf(MSG_DEBUG, "P2P: Temporary group network not "
 			   "found");
@@ -5092,7 +5128,6 @@ static int wpas_p2p_stop_find_oper(struct wpa_supplicant *wpa_s)
 	wpa_s->p2p_long_listen = 0;
 	eloop_cancel_timeout(wpas_p2p_long_listen_timeout, wpa_s, NULL);
 	eloop_cancel_timeout(wpas_p2p_join_scan, wpa_s, NULL);
-	wpa_s->global->p2p_cb_on_scan_complete = 0;
 
 	if (wpa_s->global->p2p)
 		p2p_stop_find(wpa_s->global->p2p);
@@ -5408,7 +5443,7 @@ void wpas_p2p_completed(struct wpa_supplicant *wpa_s)
 	}
 
 	if (!wpa_s->show_group_started || !ssid)
-		goto done;
+		return;
 
 	wpa_s->show_group_started = 0;
 
@@ -5450,9 +5485,6 @@ void wpas_p2p_completed(struct wpa_supplicant *wpa_s)
 	if (network_id < 0)
 		network_id = ssid->id;
 	wpas_notify_p2p_group_started(wpa_s, ssid, network_id, 1);
-
-done:
-	wpas_p2p_continue_after_scan(wpa_s);
 }
 
 
@@ -6247,30 +6279,6 @@ unsigned int wpas_p2p_search_delay(struct wpa_supplicant *wpa_s)
 	}
 
 	return 0;
-}
-
-
-void wpas_p2p_continue_after_scan(struct wpa_supplicant *wpa_s)
-{
-	wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Station mode scan operation not "
-		"pending anymore (sta_scan_pending=%d "
-		"p2p_cb_on_scan_complete=%d)", wpa_s->sta_scan_pending,
-		wpa_s->global->p2p_cb_on_scan_complete);
-	wpa_s->sta_scan_pending = 0;
-
-	if (!wpa_s->global->p2p_cb_on_scan_complete)
-		return;
-	wpa_s->global->p2p_cb_on_scan_complete = 0;
-
-	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
-		return;
-
-	if (p2p_other_scan_completed(wpa_s->global->p2p) == 1) {
-		wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Pending P2P operation "
-			"continued after successful connection");
-		p2p_increase_search_delay(wpa_s->global->p2p,
-					  wpas_p2p_search_delay(wpa_s));
-	}
 }
 
 

@@ -127,10 +127,6 @@ static const char * p2p_state_txt(int state)
 		return "INVITE";
 	case P2P_INVITE_LISTEN:
 		return "INVITE_LISTEN";
-	case P2P_SEARCH_WHEN_READY:
-		return "SEARCH_WHEN_READY";
-	case P2P_CONTINUE_SEARCH_WHEN_READY:
-		return "CONTINUE_SEARCH_WHEN_READY";
 	default:
 		return "?";
 	}
@@ -884,9 +880,6 @@ static void p2p_search(struct p2p_data *p2p)
 	if (res < 0) {
 		p2p_dbg(p2p, "Scan request failed");
 		p2p_continue_find(p2p);
-	} else if (res == 1) {
-		p2p_dbg(p2p, "Could not start p2p_scan at this point - will try again after previous scan completes");
-		p2p_set_state(p2p, P2P_CONTINUE_SEARCH_WHEN_READY);
 	} else {
 		p2p_dbg(p2p, "Running p2p_scan");
 		p2p->p2p_scan_running = 1;
@@ -1041,11 +1034,9 @@ int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 		eloop_cancel_timeout(p2p_scan_timeout, p2p, NULL);
 		eloop_register_timeout(P2P_SCAN_TIMEOUT, 0, p2p_scan_timeout,
 				       p2p, NULL);
-	} else if (res == 1) {
-		p2p_dbg(p2p, "Could not start p2p_scan at this point - will try again after previous scan completes");
-		res = 0;
-		p2p_set_state(p2p, P2P_SEARCH_WHEN_READY);
-		eloop_cancel_timeout(p2p_find_timeout, p2p, NULL);
+	} else if (p2p->p2p_scan_running) {
+		p2p_dbg(p2p, "Failed to start p2p_scan - another p2p_scan was already running");
+		/* wait for the previous p2p_scan to complete */
 	} else {
 		p2p_dbg(p2p, "Failed to start p2p_scan");
 		p2p_set_state(p2p, P2P_IDLE);
@@ -1056,34 +1047,12 @@ int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 }
 
 
-int p2p_other_scan_completed(struct p2p_data *p2p)
-{
-	if (p2p->state == P2P_CONTINUE_SEARCH_WHEN_READY) {
-		p2p_set_state(p2p, P2P_SEARCH);
-		p2p_search(p2p);
-		return 1;
-	}
-	if (p2p->state != P2P_SEARCH_WHEN_READY)
-		return 0;
-	p2p_dbg(p2p, "Starting pending P2P find now that previous scan was completed");
-	if (p2p_find(p2p, p2p->last_p2p_find_timeout, p2p->find_type,
-		     p2p->num_req_dev_types, p2p->req_dev_types,
-		     p2p->find_dev_id, p2p->search_delay) < 0) {
-		p2p->cfg->find_stopped(p2p->cfg->cb_ctx);
-		return 0;
-	}
-	return 1;
-}
-
-
 void p2p_stop_find_for_freq(struct p2p_data *p2p, int freq)
 {
 	p2p_dbg(p2p, "Stopping find");
 	eloop_cancel_timeout(p2p_find_timeout, p2p, NULL);
 	p2p_clear_timeout(p2p);
-	if (p2p->state == P2P_SEARCH ||
-	    p2p->state == P2P_CONTINUE_SEARCH_WHEN_READY ||
-	    p2p->state == P2P_SEARCH_WHEN_READY)
+	if (p2p->state == P2P_SEARCH)
 		p2p->cfg->find_stopped(p2p->cfg->cb_ctx);
 	p2p_set_state(p2p, P2P_IDLE);
 	p2p_free_req_dev_types(p2p);
@@ -3369,10 +3338,6 @@ static void p2p_state_timeout(void *eloop_ctx, void *timeout_ctx)
 	case P2P_INVITE_LISTEN:
 		p2p_timeout_invite_listen(p2p);
 		break;
-	case P2P_SEARCH_WHEN_READY:
-		break;
-	case P2P_CONTINUE_SEARCH_WHEN_READY:
-		break;
 	}
 }
 
@@ -4183,8 +4148,7 @@ int p2p_in_progress(struct p2p_data *p2p)
 {
 	if (p2p == NULL)
 		return 0;
-	if (p2p->state == P2P_SEARCH || p2p->state == P2P_SEARCH_WHEN_READY ||
-	    p2p->state == P2P_CONTINUE_SEARCH_WHEN_READY)
+	if (p2p->state == P2P_SEARCH)
 		return 2;
 	return p2p->state != P2P_IDLE && p2p->state != P2P_PROVISIONING;
 }
@@ -4197,13 +4161,6 @@ void p2p_set_config_timeout(struct p2p_data *p2p, u8 go_timeout,
 		p2p->go_timeout = go_timeout;
 		p2p->client_timeout = client_timeout;
 	}
-}
-
-
-void p2p_increase_search_delay(struct p2p_data *p2p, unsigned int delay)
-{
-	if (p2p && p2p->search_delay < delay)
-		p2p->search_delay = delay;
 }
 
 

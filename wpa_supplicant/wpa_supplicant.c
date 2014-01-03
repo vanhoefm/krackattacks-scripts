@@ -195,8 +195,6 @@ static void wpa_supplicant_timeout(void *eloop_ctx, void *timeout_ctx)
 	 * So, wait a second until scanning again.
 	 */
 	wpa_supplicant_req_scan(wpa_s, 1, 0);
-
-	wpas_p2p_continue_after_scan(wpa_s);
 }
 
 
@@ -2910,6 +2908,15 @@ static void radio_work_free(struct wpa_radio_work *work)
 		work->wpa_s->scan_work = NULL;
 	}
 
+#ifdef CONFIG_P2P
+	if (work->wpa_s->p2p_scan_work == work) {
+		/* This should not really happen. */
+		wpa_dbg(work->wpa_s, MSG_INFO, "Freeing radio work '%s'@%p (started=%d) that is marked as p2p_scan_work",
+			work->type, work, work->started);
+		work->wpa_s->p2p_scan_work = NULL;
+	}
+#endif /* CONFIG_P2P */
+
 	dl_list_del(&work->list);
 	os_free(work);
 }
@@ -3966,8 +3973,6 @@ void wpas_connection_failed(struct wpa_supplicant *wpa_s, const u8 *bssid)
 	 */
 	wpa_supplicant_req_scan(wpa_s, timeout / 1000,
 				1000 * (timeout % 1000));
-
-	wpas_p2p_continue_after_scan(wpa_s);
 }
 
 

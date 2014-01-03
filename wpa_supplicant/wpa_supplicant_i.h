@@ -257,7 +257,6 @@ struct wpa_global {
 		WPA_CONC_PREF_STA,
 		WPA_CONC_PREF_P2P
 	} conc_pref;
-	unsigned int p2p_cb_on_scan_complete:1;
 	unsigned int p2p_per_sta_psk:1;
 
 #ifdef CONFIG_WIFI_DISPLAY
@@ -680,7 +679,6 @@ struct wpa_supplicant {
 	 */
 	char cross_connect_uplink[100];
 
-	unsigned int sta_scan_pending:1;
 	unsigned int p2p_auto_join:1;
 	unsigned int p2p_auto_pd:1;
 	unsigned int p2p_persistent_group:1;
@@ -698,6 +696,7 @@ struct wpa_supplicant {
 	int p2p_connect_freq;
 	struct os_reltime p2p_auto_started;
 	struct wpa_ssid *p2p_last_4way_hs_fail;
+	struct wpa_radio_work *p2p_scan_work;
 #endif /* CONFIG_P2P */
 
 	struct wpa_ssid *bgscan_ssid;

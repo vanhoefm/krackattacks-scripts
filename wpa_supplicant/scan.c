@@ -524,14 +524,12 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 
 	if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Skip scan - interface disabled");
-		wpas_p2p_continue_after_scan(wpa_s);
 		return;
 	}
 
 	if (wpa_s->disconnected && wpa_s->scan_req == NORMAL_SCAN_REQ) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Disconnected - do not scan");
 		wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
-		wpas_p2p_continue_after_scan(wpa_s);
 		return;
 	}
 
@@ -560,7 +558,6 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	    wpa_s->scan_req == NORMAL_SCAN_REQ) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "No enabled networks - do not scan");
 		wpa_supplicant_set_state(wpa_s, WPA_INACTIVE);
-		wpas_p2p_continue_after_scan(wpa_s);
 		return;
 	}
 
@@ -579,18 +576,9 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 
 #ifdef CONFIG_P2P
 	if (wpas_p2p_in_progress(wpa_s) || wpas_wpa_is_in_progress(wpa_s, 0)) {
-		if (wpa_s->sta_scan_pending &&
-		    wpas_p2p_in_progress(wpa_s) == 2 &&
-		    wpa_s->global->p2p_cb_on_scan_complete) {
-			wpa_dbg(wpa_s, MSG_DEBUG, "Process pending station "
-				"mode scan during P2P search");
-		} else {
-			wpa_dbg(wpa_s, MSG_DEBUG, "Delay station mode scan "
-				"while P2P operation is in progress");
-			wpa_s->sta_scan_pending = 1;
-			wpa_supplicant_req_scan(wpa_s, 5, 0);
-			return;
-		}
+		wpa_dbg(wpa_s, MSG_DEBUG, "Delay station mode scan while P2P operation is in progress");
+		wpa_supplicant_req_scan(wpa_s, 5, 0);
+		return;
 	}
 #endif /* CONFIG_P2P */
 
@@ -1202,7 +1190,6 @@ void wpa_supplicant_cancel_scan(struct wpa_supplicant *wpa_s)
 {
 	wpa_dbg(wpa_s, MSG_DEBUG, "Cancelling scan request");
 	eloop_cancel_timeout(wpa_supplicant_scan, wpa_s, NULL);
-	wpas_p2p_continue_after_scan(wpa_s);
 }
 
 

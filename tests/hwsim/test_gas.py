@@ -2,6 +2,7 @@
 #
 # GAS tests
 # Copyright (c) 2013, Qualcomm Atheros, Inc.
+# Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -103,7 +104,8 @@ def test_gas_concurrent_scan(dev, apdev):
     params['hessid'] = bssid
     hostapd.add_ap(apdev[0]['ifname'], params)
 
-    dev[0].scan()
+    # get BSS entry available to allow GAS query
+    dev[0].scan(freq="2412")
 
     logger.info("Request concurrent operations")
     req = dev[0].request("GAS_REQUEST " + bssid + " 00 000102000101")
@@ -112,7 +114,7 @@ def test_gas_concurrent_scan(dev, apdev):
     req = dev[0].request("GAS_REQUEST " + bssid + " 00 000102000801")
     if "FAIL" in req:
         raise Exception("GAS query request rejected")
-    dev[0].request("SCAN")
+    dev[0].scan(no_wait=True)
     req = dev[0].request("GAS_REQUEST " + bssid + " 00 000102000201")
     if "FAIL" in req:
         raise Exception("GAS query request rejected")
@@ -140,13 +142,14 @@ def test_gas_concurrent_connect(dev, apdev):
     params['hessid'] = bssid
     hostapd.add_ap(apdev[0]['ifname'], params)
 
-    dev[0].scan()
+    dev[0].scan(freq="2412")
 
     logger.debug("Start concurrent connect and GAS request")
     dev[0].connect("test-gas", key_mgmt="WPA-EAP", eap="TTLS",
                    identity="DOMAIN\mschapv2 user", anonymous_identity="ttls",
                    password="password", phase2="auth=MSCHAPV2",
-                   ca_cert="auth_serv/ca.pem", wait_connect=False)
+                   ca_cert="auth_serv/ca.pem", wait_connect=False,
+                   scan_freq="2412")
     req = dev[0].request("GAS_REQUEST " + bssid + " 00 000102000101")
     if "FAIL" in req:
         raise Exception("GAS query request rejected")

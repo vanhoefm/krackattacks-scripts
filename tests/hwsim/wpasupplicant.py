@@ -1,7 +1,7 @@
 #!/usr/bin/python
 #
 # Python class for controlling wpa_supplicant
-# Copyright (c) 2013, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -627,16 +627,19 @@ class WpaSupplicant:
             self.select_network(id)
         return id
 
-    def scan(self, type=None, freq=None):
+    def scan(self, type=None, freq=None, no_wait=False):
         if type:
             cmd = "SCAN TYPE=" + type
         else:
             cmd = "SCAN"
         if freq:
             cmd = cmd + " freq=" + freq
-        self.dump_monitor()
+        if not no_wait:
+            self.dump_monitor()
         if not "OK" in self.request(cmd):
             raise Exception("Failed to trigger scan")
+        if no_wait:
+            return
         ev = self.wait_event(["CTRL-EVENT-SCAN-RESULTS"], 15)
         if ev is None:
             raise Exception("Scan timed out")

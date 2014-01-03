@@ -24,7 +24,6 @@ def test_ap_wps_init(dev, apdev):
     hapd.request("WPS_PBC")
     if "PBC Status: Active" not in hapd.request("WPS_GET_STATUS"):
         raise Exception("PBC status not shown correctly")
-    dev[0].request("SET ignore_old_scan_res 1")
     dev[0].dump_monitor()
     dev[0].request("WPS_PBC")
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
@@ -66,7 +65,6 @@ def test_ap_wps_init_2ap_pbc(dev, apdev):
     hapd = hostapd.Hostapd(apdev[0]['ifname'])
     logger.info("WPS provisioning step")
     hapd.request("WPS_PBC")
-    dev[0].request("SET ignore_old_scan_res 1")
     dev[0].scan(freq="2412")
     bss = dev[0].get_bss(apdev[0]['bssid'])
     if "[WPS-PBC]" not in bss['flags']:
@@ -80,7 +78,6 @@ def test_ap_wps_init_2ap_pbc(dev, apdev):
     if ev is None:
         raise Exception("Association with the AP timed out")
 
-    dev[1].request("SET ignore_old_scan_res 1")
     dev[1].scan(freq="2412")
     bss = dev[1].get_bss(apdev[0]['bssid'])
     if "[WPS-PBC]" in bss['flags']:
@@ -99,7 +96,6 @@ def test_ap_wps_init_2ap_pin(dev, apdev):
     logger.info("WPS provisioning step")
     pin = dev[0].wps_read_pin()
     hapd.request("WPS_PIN any " + pin)
-    dev[0].request("SET ignore_old_scan_res 1")
     dev[0].scan(freq="2412")
     bss = dev[0].get_bss(apdev[0]['bssid'])
     if "[WPS-AUTH]" not in bss['flags']:
@@ -113,7 +109,6 @@ def test_ap_wps_init_2ap_pin(dev, apdev):
     if ev is None:
         raise Exception("Association with the AP timed out")
 
-    dev[1].request("SET ignore_old_scan_res 1")
     dev[1].scan(freq="2412")
     bss = dev[1].get_bss(apdev[0]['bssid'])
     if "[WPS-AUTH]" in bss['flags']:
@@ -174,7 +169,6 @@ def test_ap_wps_twice(dev, apdev):
     hapd = hostapd.Hostapd(apdev[0]['ifname'])
     logger.info("WPS provisioning step")
     hapd.request("WPS_PBC")
-    dev[0].request("SET ignore_old_scan_res 1")
     dev[0].dump_monitor()
     dev[0].request("WPS_PBC")
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
@@ -210,7 +204,6 @@ def test_ap_wps_incorrect_pin(dev, apdev):
 
     logger.info("WPS provisioning attempt 1")
     hapd.request("WPS_PIN any 12345670")
-    dev[0].request("SET ignore_old_scan_res 1")
     dev[0].dump_monitor()
     dev[0].request("WPS_PIN any 55554444")
     ev = dev[0].wait_event(["WPS-FAIL"], timeout=30)
@@ -257,7 +250,6 @@ def test_ap_wps_conf_pin(dev, apdev):
     logger.info("WPS provisioning step")
     pin = dev[0].wps_read_pin()
     hapd.request("WPS_PIN any " + pin)
-    dev[0].request("SET ignore_old_scan_res 1")
     dev[0].dump_monitor()
     dev[0].request("WPS_PIN any " + pin)
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
@@ -273,7 +265,6 @@ def test_ap_wps_conf_pin(dev, apdev):
     if status['key_mgmt'] != 'WPA2-PSK':
         raise Exception("Unexpected key_mgmt")
 
-    dev[1].request("SET ignore_old_scan_res 1")
     dev[1].scan(freq="2412")
     bss = dev[1].get_bss(apdev[0]['bssid'])
     if "[WPS-AUTH]" in bss['flags']:
@@ -299,9 +290,7 @@ def test_ap_wps_conf_pin_2sta(dev, apdev):
     pin2 = "55554444"
     hapd.request("WPS_PIN " + dev[0].get_status_field("uuid") + " " + pin)
     hapd.request("WPS_PIN " + dev[1].get_status_field("uuid") + " " + pin)
-    dev[0].request("SET ignore_old_scan_res 1")
     dev[0].dump_monitor()
-    dev[1].request("SET ignore_old_scan_res 1")
     dev[1].dump_monitor()
     dev[0].request("WPS_PIN any " + pin)
     dev[1].request("WPS_PIN any " + pin)
@@ -322,7 +311,6 @@ def test_ap_wps_reg_connect(dev, apdev):
                      "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
                      "ap_pin": appin})
     logger.info("WPS provisioning step")
-    dev[0].request("SET ignore_old_scan_res 1")
     dev[0].dump_monitor()
     dev[0].wps_reg(apdev[0]['bssid'], appin)
     status = dev[0].get_status()
@@ -366,12 +354,10 @@ def test_ap_wps_random_ap_pin(dev, apdev):
     if appin not in hapd.request("WPS_AP_PIN get"):
         raise Exception("Could not fetch current AP PIN")
     logger.info("WPS provisioning step")
-    dev[0].request("SET ignore_old_scan_res 1")
     dev[0].wps_reg(apdev[0]['bssid'], appin)
 
     hapd.request("WPS_AP_PIN disable")
     logger.info("WPS provisioning step with AP PIN disabled")
-    dev[1].request("SET ignore_old_scan_res 1")
     check_wps_reg_failure(dev[1], apdev[0], appin)
 
     logger.info("WPS provisioning step with AP PIN reset")
@@ -408,7 +394,6 @@ def test_ap_wps_reg_config(dev, apdev):
                    { "ssid": ssid, "eap_server": "1", "wps_state": "2",
                      "ap_pin": appin})
     logger.info("WPS configuration step")
-    dev[0].request("SET ignore_old_scan_res 1")
     dev[0].dump_monitor()
     new_ssid = "wps-new-ssid"
     new_passphrase = "1234567890"
@@ -432,7 +417,6 @@ def test_ap_wps_reg_config_tkip(dev, apdev):
                    { "ssid": ssid, "eap_server": "1", "wps_state": "1",
                      "ap_pin": appin})
     logger.info("WPS configuration step")
-    dev[0].request("SET ignore_old_scan_res 1")
     dev[0].request("SET wps_version_number 0x10")
     dev[0].dump_monitor()
     new_ssid = "wps-new-ssid-with-tkip"
@@ -464,7 +448,6 @@ def test_ap_wps_setup_locked(dev, apdev):
                      "wpa_passphrase": "12345678", "wpa": "2",
                      "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
                      "ap_pin": appin})
-    dev[0].request("SET ignore_old_scan_res 1")
     new_ssid = "wps-new-ssid-test"
     new_passphrase = "1234567890"
 
@@ -545,8 +528,6 @@ def test_ap_wps_pbc_overlap_2sta(dev, apdev):
     hapd = hostapd.Hostapd(apdev[0]['ifname'])
     logger.info("WPS provisioning step")
     hapd.request("WPS_PBC")
-    dev[0].request("SET ignore_old_scan_res 1")
-    dev[1].request("SET ignore_old_scan_res 1")
     dev[0].dump_monitor()
     dev[1].dump_monitor()
     dev[0].request("WPS_PBC")
@@ -574,7 +555,6 @@ def test_ap_wps_cancel(dev, apdev):
 
     logger.info("Verify PBC enable/cancel")
     hapd.request("WPS_PBC")
-    dev[0].request("SET ignore_old_scan_res 1")
     dev[0].scan(freq="2412")
     bss = dev[0].get_bss(apdev[0]['bssid'])
     if "[WPS-PBC]" not in bss['flags']:
@@ -615,7 +595,6 @@ def test_ap_wps_er_add_enrollee(dev, apdev):
     logger.info("WPS configuration step")
     new_passphrase = "1234567890"
     dev[0].dump_monitor()
-    dev[0].request("SET ignore_old_scan_res 1")
     dev[0].wps_reg(apdev[0]['bssid'], ap_pin, ssid, "WPA2PSK", "CCMP",
                    new_passphrase)
     status = dev[0].get_status()
@@ -653,7 +632,6 @@ def test_ap_wps_er_add_enrollee(dev, apdev):
     pin = dev[1].wps_read_pin()
     dev[0].dump_monitor()
     dev[0].request("WPS_ER_PIN any " + pin + " " + dev[1].p2p_interface_addr())
-    dev[1].request("SET ignore_old_scan_res 1")
     dev[1].dump_monitor()
     dev[1].request("WPS_PIN any " + pin)
     ev = dev[1].wait_event(["WPS-SUCCESS"], timeout=30)
@@ -705,7 +683,6 @@ def test_ap_wps_er_add_enrollee_pbc(dev, apdev):
                      "ap_pin": ap_pin, "uuid": ap_uuid, "upnp_iface": "lo"})
     logger.info("Learn AP configuration")
     dev[0].dump_monitor()
-    dev[0].request("SET ignore_old_scan_res 1")
     dev[0].wps_reg(apdev[0]['bssid'], ap_pin)
     status = dev[0].get_status()
     if status['wpa_state'] != 'COMPLETED' or status['bssid'] != apdev[0]['bssid']:
@@ -725,7 +702,6 @@ def test_ap_wps_er_add_enrollee_pbc(dev, apdev):
     logger.info("Add Enrollee using ER and PBC")
     dev[0].dump_monitor()
     enrollee = dev[1].p2p_interface_addr()
-    dev[1].request("SET ignore_old_scan_res 1")
     dev[1].dump_monitor()
     dev[1].request("WPS_PBC")
 
@@ -799,7 +775,6 @@ def test_ap_wps_fragmentation(dev, apdev):
     hapd = hostapd.Hostapd(apdev[0]['ifname'])
     logger.info("WPS provisioning step")
     hapd.request("WPS_PBC")
-    dev[0].request("SET ignore_old_scan_res 1")
     dev[0].dump_monitor()
     dev[0].request("SET wps_fragment_size 50")
     dev[0].request("WPS_PBC")
@@ -824,7 +799,6 @@ def test_ap_wps_new_version_sta(dev, apdev):
     hapd = hostapd.Hostapd(apdev[0]['ifname'])
     logger.info("WPS provisioning step")
     hapd.request("WPS_PBC")
-    dev[0].request("SET ignore_old_scan_res 1")
     dev[0].dump_monitor()
     dev[0].request("SET wps_version_number 0x43")
     dev[0].request("WPS_PBC")
@@ -844,7 +818,6 @@ def test_ap_wps_new_version_ap(dev, apdev):
     if "FAIL" in hapd.request("SET wps_version_number 0x43"):
         raise Exception("Failed to enable test functionality")
     hapd.request("WPS_PBC")
-    dev[0].request("SET ignore_old_scan_res 1")
     dev[0].dump_monitor()
     dev[0].request("WPS_PBC")
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)

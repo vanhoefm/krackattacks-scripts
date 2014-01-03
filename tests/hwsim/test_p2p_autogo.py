@@ -184,7 +184,6 @@ def test_autogo_legacy(dev):
     logger.info("Connect legacy WPS client")
     pin = dev[2].wps_read_pin()
     dev[0].p2p_go_authorize_client(pin)
-    dev[2].request("SET ignore_old_scan_res 1")
     dev[2].request("P2P_SET disabled 1")
     dev[2].dump_monitor()
     dev[2].request("WPS_PIN any " + pin)

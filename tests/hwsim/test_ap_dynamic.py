@@ -66,8 +66,6 @@ def multi_check(dev, check):
 
 def test_ap_bss_add_remove(dev, apdev):
     """Dynamic BSS add/remove operations with hostapd"""
-    for d in dev:
-        d.request("SET ignore_old_scan_res 1")
     ifname1 = apdev[0]['ifname']
     ifname2 = apdev[0]['ifname'] + '-2'
     ifname3 = apdev[0]['ifname'] + '-3'
@@ -129,8 +127,6 @@ def test_ap_bss_add_remove(dev, apdev):
 
 def test_ap_bss_add_remove_during_ht_scan(dev, apdev):
     """Dynamic BSS add during HT40 co-ex scan"""
-    for d in dev:
-        d.request("SET ignore_old_scan_res 1")
     ifname1 = apdev[0]['ifname']
     ifname2 = apdev[0]['ifname'] + '-2'
     hostapd.add_bss('phy3', ifname1, 'bss-ht40-1.conf')
@@ -152,8 +148,6 @@ def test_ap_bss_add_remove_during_ht_scan(dev, apdev):
 
 def test_ap_multi_bss_config(dev, apdev):
     """hostapd start with a multi-BSS configuration file"""
-    for d in dev:
-        d.request("SET ignore_old_scan_res 1")
     ifname1 = apdev[0]['ifname']
     ifname2 = apdev[0]['ifname'] + '-2'
     ifname3 = apdev[0]['ifname'] + '-3'

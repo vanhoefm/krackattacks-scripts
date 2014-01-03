@@ -1243,7 +1243,8 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 	}
 #endif /* CONFIG_NO_RANDOM_POOL */
 
-	if (own_request && wpa_s->scan_res_handler) {
+	if (own_request && wpa_s->scan_res_handler &&
+	    (wpa_s->own_scan_running || !wpa_s->external_scan_running)) {
 		void (*scan_res_handler)(struct wpa_supplicant *wpa_s,
 					 struct wpa_scan_results *scan_res);
 

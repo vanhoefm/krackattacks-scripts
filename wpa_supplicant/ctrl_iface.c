@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant / Control interface (shared code for all backends)
- * Copyright (c) 2004-2013, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -5350,10 +5350,19 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	int reply_len;
 
 	if (os_strncmp(buf, WPA_CTRL_RSP, os_strlen(WPA_CTRL_RSP)) == 0 ||
-	    os_strncmp(buf, "SET_NETWORK ", 12) == 0 ||
-	    os_strncmp(buf, "WPS_NFC_TAG_READ", 16) == 0 ||
-	    os_strncmp(buf, "NFC_REPORT_HANDOVER", 19) == 0 ||
-	    os_strncmp(buf, "NFC_RX_HANDOVER_SEL", 19) == 0) {
+	    os_strncmp(buf, "SET_NETWORK ", 12) == 0) {
+		if (wpa_debug_show_keys)
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"Control interface command '%s'", buf);
+		else
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"Control interface command '%s [REMOVED]'",
+				os_strncmp(buf, WPA_CTRL_RSP,
+					   os_strlen(WPA_CTRL_RSP)) == 0 ?
+				WPA_CTRL_RSP : "SET_NETWORK");
+	} else if (os_strncmp(buf, "WPS_NFC_TAG_READ", 16) == 0 ||
+		   os_strncmp(buf, "NFC_REPORT_HANDOVER", 19) == 0 ||
+		   os_strncmp(buf, "NFC_RX_HANDOVER_SEL", 19) == 0) {
 		wpa_hexdump_ascii_key(MSG_DEBUG, "RX ctrl_iface",
 				      (const u8 *) buf, os_strlen(buf));
 	} else {

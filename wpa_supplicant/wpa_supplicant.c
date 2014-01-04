@@ -3034,6 +3034,7 @@ static void radio_start_next_work(void *eloop_ctx, void *timeout_ctx)
 	struct wpa_radio *radio = eloop_ctx;
 	struct wpa_radio_work *work;
 	struct os_reltime now, diff;
+	struct wpa_supplicant *wpa_s;
 
 	work = dl_list_first(&radio->work, struct wpa_radio_work, list);
 	if (work == NULL)
@@ -3041,6 +3042,13 @@ static void radio_start_next_work(void *eloop_ctx, void *timeout_ctx)
 
 	if (work->started)
 		return; /* already started and still in progress */
+
+	wpa_s = dl_list_first(&radio->ifaces, struct wpa_supplicant,
+			      radio_list);
+	if (wpa_s && wpa_s->external_scan_running) {
+		wpa_printf(MSG_DEBUG, "Delay radio work start until externally triggered scan completes");
+		return;
+	}
 
 	os_get_reltime(&now);
 	os_reltime_sub(&now, &work->time, &diff);
@@ -3097,7 +3105,7 @@ static void radio_remove_interface(struct wpa_supplicant *wpa_s)
 }
 
 
-static void radio_work_check_next(struct wpa_supplicant *wpa_s)
+void radio_work_check_next(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_radio *radio = wpa_s->radio;
 

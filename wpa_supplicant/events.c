@@ -2863,6 +2863,7 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		wpa_supplicant_event_scan_results(wpa_s, data);
 		wpa_s->own_scan_running = 0;
 		wpa_s->external_scan_running = 0;
+		radio_work_check_next(wpa_s);
 		break;
 #endif /* CONFIG_NO_SCAN_PROCESSING */
 	case EVENT_ASSOCINFO:

@@ -1529,32 +1529,104 @@ static void wpas_find_stopped(void *ctx)
 }
 
 
+struct wpas_p2p_listen_work {
+	unsigned int freq;
+	unsigned int duration;
+	struct wpabuf *probe_resp_ie;
+};
+
+
+static void wpas_p2p_listen_work_free(struct wpas_p2p_listen_work *lwork)
+{
+	if (lwork == NULL)
+		return;
+	wpabuf_free(lwork->probe_resp_ie);
+	os_free(lwork);
+}
+
+
+static void wpas_p2p_listen_work_done(struct wpa_supplicant *wpa_s)
+{
+	struct wpas_p2p_listen_work *lwork;
+
+	if (!wpa_s->p2p_listen_work)
+		return;
+
+	lwork = wpa_s->p2p_listen_work->ctx;
+	wpas_p2p_listen_work_free(lwork);
+	radio_work_done(wpa_s->p2p_listen_work);
+	wpa_s->p2p_listen_work = NULL;
+}
+
+
+static void wpas_start_listen_cb(struct wpa_radio_work *work, int deinit)
+{
+	struct wpa_supplicant *wpa_s = work->wpa_s;
+	struct wpas_p2p_listen_work *lwork = work->ctx;
+
+	if (deinit) {
+		wpas_p2p_listen_work_free(lwork);
+		return;
+	}
+
+	wpa_s->p2p_listen_work = work;
+
+	wpa_drv_set_ap_wps_ie(wpa_s, NULL, lwork->probe_resp_ie, NULL);
+
+	if (wpa_drv_probe_req_report(wpa_s, 1) < 0) {
+		wpa_printf(MSG_DEBUG, "P2P: Failed to request the driver to "
+			   "report received Probe Request frames");
+		wpas_p2p_listen_work_done(wpa_s);
+		return;
+	}
+
+	wpa_s->pending_listen_freq = lwork->freq;
+	wpa_s->pending_listen_duration = lwork->duration;
+
+	if (wpa_drv_remain_on_channel(wpa_s, lwork->freq, lwork->duration) < 0)
+	{
+		wpa_printf(MSG_DEBUG, "P2P: Failed to request the driver "
+			   "to remain on channel (%u MHz) for Listen "
+			   "state", lwork->freq);
+		wpas_p2p_listen_work_done(wpa_s);
+		wpa_s->pending_listen_freq = 0;
+		return;
+	}
+	wpa_s->off_channel_freq = 0;
+	wpa_s->roc_waiting_drv_freq = lwork->freq;
+}
+
+
 static int wpas_start_listen(void *ctx, unsigned int freq,
 			     unsigned int duration,
 			     const struct wpabuf *probe_resp_ie)
 {
 	struct wpa_supplicant *wpa_s = ctx;
+	struct wpas_p2p_listen_work *lwork;
 
-	wpa_drv_set_ap_wps_ie(wpa_s, NULL, probe_resp_ie, NULL);
-
-	if (wpa_drv_probe_req_report(wpa_s, 1) < 0) {
-		wpa_printf(MSG_DEBUG, "P2P: Failed to request the driver to "
-			   "report received Probe Request frames");
+	if (wpa_s->p2p_listen_work) {
+		wpa_printf(MSG_DEBUG, "P2P: Reject start_listen since p2p_listen_work already exists");
 		return -1;
 	}
 
-	wpa_s->pending_listen_freq = freq;
-	wpa_s->pending_listen_duration = duration;
+	lwork = os_zalloc(sizeof(*lwork));
+	if (lwork == NULL)
+		return -1;
+	lwork->freq = freq;
+	lwork->duration = duration;
+	if (probe_resp_ie) {
+		lwork->probe_resp_ie = wpabuf_dup(probe_resp_ie);
+		if (lwork->probe_resp_ie == NULL) {
+			wpas_p2p_listen_work_free(lwork);
+			return -1;
+		}
+	}
 
-	if (wpa_drv_remain_on_channel(wpa_s, freq, duration) < 0) {
-		wpa_printf(MSG_DEBUG, "P2P: Failed to request the driver "
-			   "to remain on channel (%u MHz) for Listen "
-			   "state", freq);
-		wpa_s->pending_listen_freq = 0;
+	if (radio_add_work(wpa_s, freq, "p2p-listen", 0, wpas_start_listen_cb,
+			   lwork) < 0) {
+		wpas_p2p_listen_work_free(lwork);
 		return -1;
 	}
-	wpa_s->off_channel_freq = 0;
-	wpa_s->roc_waiting_drv_freq = freq;
 
 	return 0;
 }
@@ -1570,6 +1642,7 @@ static void wpas_stop_listen(void *ctx)
 	}
 	wpa_drv_set_ap_wps_ie(wpa_s, NULL, NULL, NULL);
 	wpa_drv_probe_req_report(wpa_s, 0);
+	wpas_p2p_listen_work_done(wpa_s);
 }
 
 
@@ -3606,6 +3679,7 @@ void wpas_p2p_deinit(struct wpa_supplicant *wpa_s)
 	eloop_cancel_timeout(wpas_p2p_group_idle_timeout, wpa_s, NULL);
 	wpas_p2p_remove_pending_group_interface(wpa_s);
 	eloop_cancel_timeout(wpas_p2p_group_freq_conflict, wpa_s, NULL);
+	wpas_p2p_listen_work_done(wpa_s);
 
 	/* TODO: remove group interface from the driver if this wpa_s instance
 	 * is on top of a P2P group interface */
@@ -4437,6 +4511,7 @@ void wpas_p2p_cancel_remain_on_channel_cb(struct wpa_supplicant *wpa_s,
 	wpa_printf(MSG_DEBUG, "P2P: Cancel remain-on-channel callback "
 		   "(p2p_long_listen=%d ms pending_action_tx=%p)",
 		   wpa_s->p2p_long_listen, offchannel_pending_action_tx(wpa_s));
+	wpas_p2p_listen_work_done(wpa_s);
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
 		return;
 	if (p2p_listen_end(wpa_s->global->p2p, freq) > 0)

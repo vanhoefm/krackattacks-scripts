@@ -697,6 +697,7 @@ struct wpa_supplicant {
 	struct os_reltime p2p_auto_started;
 	struct wpa_ssid *p2p_last_4way_hs_fail;
 	struct wpa_radio_work *p2p_scan_work;
+	struct wpa_radio_work *p2p_listen_work;
 #endif /* CONFIG_P2P */
 
 	struct wpa_ssid *bgscan_ssid;

@@ -5360,8 +5360,6 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		int level = MSG_DEBUG;
 		if (os_strcmp(buf, "PING") == 0)
 			level = MSG_EXCESSIVE;
-		wpa_hexdump_ascii(level, "RX ctrl_iface",
-				  (const u8 *) buf, os_strlen(buf));
 		wpa_dbg(wpa_s, level, "Control interface command '%s'", buf);
 	}
 

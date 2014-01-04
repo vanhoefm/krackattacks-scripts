@@ -2426,6 +2426,12 @@ static int wpa_cli_cmd_flush(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+static int wpa_cli_cmd_radio_work(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "RADIO_WORK", 1, argc, argv);
+}
+
+
 enum wpa_cli_cmd_flags {
 	cli_cmd_flag_none		= 0x00,
 	cli_cmd_flag_sensitive		= 0x01
@@ -2893,6 +2899,8 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "driver", wpa_cli_cmd_driver, NULL, cli_cmd_flag_none,
 	  "<command> = driver private commands" },
 #endif /* ANDROID */
+	{ "radio_work", wpa_cli_cmd_radio_work, NULL, cli_cmd_flag_none,
+	  "= radio_work <show/add/done>" },
 	{ NULL, NULL, NULL, cli_cmd_flag_none, NULL }
 };
 

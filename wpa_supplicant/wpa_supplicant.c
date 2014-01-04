@@ -3185,13 +3185,16 @@ void radio_work_done(struct wpa_radio_work *work)
 {
 	struct wpa_supplicant *wpa_s = work->wpa_s;
 	struct os_reltime now, diff;
+	unsigned int started = work->started;
 
 	os_get_reltime(&now);
 	os_reltime_sub(&now, &work->time, &diff);
-	wpa_dbg(wpa_s, MSG_DEBUG, "Radio work '%s'@%p done in %ld.%06ld seconds",
-		work->type, work, diff.sec, diff.usec);
+	wpa_dbg(wpa_s, MSG_DEBUG, "Radio work '%s'@%p %s in %ld.%06ld seconds",
+		work->type, work, started ? "done" : "canceled",
+		diff.sec, diff.usec);
 	radio_work_free(work);
-	radio_work_check_next(wpa_s);
+	if (started)
+		radio_work_check_next(wpa_s);
 }
 
 
@@ -3514,6 +3517,7 @@ static void wpa_supplicant_deinit_iface(struct wpa_supplicant *wpa_s,
 	}
 #endif /* CONFIG_P2P */
 
+	wpas_ctrl_radio_work_flush(wpa_s);
 	radio_remove_interface(wpa_s);
 
 	if (wpa_s->drv_priv)

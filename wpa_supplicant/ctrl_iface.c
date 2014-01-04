@@ -5221,6 +5221,186 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 }
 
 
+static int wpas_ctrl_radio_work_show(struct wpa_supplicant *wpa_s,
+				     char *buf, size_t buflen)
+{
+	struct wpa_radio_work *work;
+	char *pos, *end;
+	struct os_reltime now, diff;
+
+	pos = buf;
+	end = buf + buflen;
+
+	os_get_reltime(&now);
+
+	dl_list_for_each(work, &wpa_s->radio->work, struct wpa_radio_work, list)
+	{
+		int ret;
+
+		os_reltime_sub(&now, &work->time, &diff);
+		ret = os_snprintf(pos, end - pos, "%s@%s:%u:%u:%ld.%06ld\n",
+				  work->type, work->wpa_s->ifname, work->freq,
+				  work->started, diff.sec, diff.usec);
+		if (ret < 0 || ret >= end - pos)
+			break;
+		pos += ret;
+	}
+
+	return pos - buf;
+}
+
+
+static void wpas_ctrl_radio_work_timeout(void *eloop_ctx, void *timeout_ctx)
+{
+	struct wpa_radio_work *work = eloop_ctx;
+	struct wpa_external_work *ework = work->ctx;
+
+	wpa_dbg(work->wpa_s, MSG_DEBUG,
+		"Timing out external radio work %u (%s)",
+		ework->id, work->type);
+	wpa_msg(work->wpa_s, MSG_INFO, EXT_RADIO_WORK_TIMEOUT "%u", ework->id);
+	os_free(ework);
+	radio_work_done(work);
+}
+
+
+static void wpas_ctrl_radio_work_cb(struct wpa_radio_work *work, int deinit)
+{
+	struct wpa_external_work *ework = work->ctx;
+
+	if (deinit) {
+		os_free(ework);
+		return;
+	}
+
+	wpa_dbg(work->wpa_s, MSG_DEBUG, "Starting external radio work %u (%s)",
+		ework->id, ework->type);
+	wpa_msg(work->wpa_s, MSG_INFO, EXT_RADIO_WORK_START "%u", ework->id);
+	if (!ework->timeout)
+		ework->timeout = 10;
+	eloop_register_timeout(ework->timeout, 0, wpas_ctrl_radio_work_timeout,
+			       work, NULL);
+}
+
+
+static int wpas_ctrl_radio_work_add(struct wpa_supplicant *wpa_s, char *cmd,
+				    char *buf, size_t buflen)
+{
+	struct wpa_external_work *ework;
+	char *pos, *pos2;
+	size_t type_len;
+	int ret;
+	unsigned int freq = 0;
+
+	/* format: <name> [freq=<MHz>] [timeout=<seconds>] */
+
+	ework = os_zalloc(sizeof(*ework));
+	if (ework == NULL)
+		return -1;
+
+	pos = os_strchr(cmd, ' ');
+	if (pos) {
+		type_len = pos - cmd;
+		pos++;
+
+		pos2 = os_strstr(pos, "freq=");
+		if (pos2)
+			freq = atoi(pos2 + 5);
+
+		pos2 = os_strstr(pos, "timeout=");
+		if (pos2)
+			ework->timeout = atoi(pos2 + 8);
+	} else {
+		type_len = os_strlen(cmd);
+	}
+	if (4 + type_len >= sizeof(ework->type))
+		type_len = sizeof(ework->type) - 4 - 1;
+	os_strlcpy(ework->type, "ext:", sizeof(ework->type));
+	os_memcpy(ework->type + 4, cmd, type_len);
+	ework->type[4 + type_len] = '\0';
+
+	wpa_s->ext_work_id++;
+	if (wpa_s->ext_work_id == 0)
+		wpa_s->ext_work_id++;
+	ework->id = wpa_s->ext_work_id;
+
+	if (radio_add_work(wpa_s, freq, ework->type, 0, wpas_ctrl_radio_work_cb,
+			   ework) < 0) {
+		os_free(ework);
+		return -1;
+	}
+
+	ret = os_snprintf(buf, buflen, "%u", ework->id);
+	if (ret < 0 || (size_t) ret >= buflen)
+		return -1;
+	return ret;
+}
+
+
+static int wpas_ctrl_radio_work_done(struct wpa_supplicant *wpa_s, char *cmd)
+{
+	struct wpa_radio_work *work;
+	unsigned int id = atoi(cmd);
+
+	dl_list_for_each(work, &wpa_s->radio->work, struct wpa_radio_work, list)
+	{
+		struct wpa_external_work *ework;
+
+		if (os_strncmp(work->type, "ext:", 4) != 0)
+			continue;
+		ework = work->ctx;
+		if (id && ework->id != id)
+			continue;
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"Completed external radio work %u (%s)",
+			ework->id, ework->type);
+		eloop_cancel_timeout(wpas_ctrl_radio_work_timeout, work, NULL);
+		os_free(ework);
+		radio_work_done(work);
+		return 3; /* "OK\n" */
+	}
+
+	return -1;
+}
+
+
+static int wpas_ctrl_radio_work(struct wpa_supplicant *wpa_s, char *cmd,
+				char *buf, size_t buflen)
+{
+	if (os_strcmp(cmd, "show") == 0)
+		return wpas_ctrl_radio_work_show(wpa_s, buf, buflen);
+	if (os_strncmp(cmd, "add ", 4) == 0)
+		return wpas_ctrl_radio_work_add(wpa_s, cmd + 4, buf, buflen);
+	if (os_strncmp(cmd, "done ", 5) == 0)
+		return wpas_ctrl_radio_work_done(wpa_s, cmd + 4);
+	return -1;
+}
+
+
+void wpas_ctrl_radio_work_flush(struct wpa_supplicant *wpa_s)
+{
+	struct wpa_radio_work *work, *tmp;
+
+	dl_list_for_each_safe(work, tmp, &wpa_s->radio->work,
+			      struct wpa_radio_work, list) {
+		struct wpa_external_work *ework;
+
+		if (os_strncmp(work->type, "ext:", 4) != 0)
+			continue;
+		ework = work->ctx;
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"Flushing %sexternal radio work %u (%s)",
+			work->started ? " started" : "", ework->id,
+			ework->type);
+		if (work->started)
+			eloop_cancel_timeout(wpas_ctrl_radio_work_timeout,
+					     work, NULL);
+		os_free(ework);
+		radio_work_done(work);
+	}
+}
+
+
 static void wpas_ctrl_eapol_response(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_supplicant *wpa_s = eloop_ctx;
@@ -5873,6 +6053,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_WNM */
 	} else if (os_strcmp(buf, "FLUSH") == 0) {
 		wpa_supplicant_ctrl_iface_flush(wpa_s);
+	} else if (os_strncmp(buf, "RADIO_WORK ", 11) == 0) {
+		reply_len = wpas_ctrl_radio_work(wpa_s, buf + 11, reply,
+						 reply_size);
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);
 		reply_len = 16;

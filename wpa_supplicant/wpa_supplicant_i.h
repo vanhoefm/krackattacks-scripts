@@ -317,6 +317,12 @@ int wpas_valid_bss_ssid(struct wpa_supplicant *wpa_s, struct wpa_bss *test_bss,
 void wpas_connect_work_free(struct wpa_connect_work *cwork);
 void wpas_connect_work_done(struct wpa_supplicant *wpa_s);
 
+struct wpa_external_work {
+	unsigned int id;
+	char type[100];
+	unsigned int timeout;
+};
+
 /**
  * offchannel_send_action_result - Result of offchannel send Action frame
  */
@@ -788,6 +794,8 @@ struct wpa_supplicant {
 
 	unsigned int num_multichan_concurrent;
 	struct wpa_radio_work *connect_work;
+
+	unsigned int ext_work_id;
 };
 
 

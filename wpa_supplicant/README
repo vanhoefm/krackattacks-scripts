@@ -983,3 +983,71 @@ directory could be created before starting the wpa_supplicant and set to
 suitable mode to allow wpa_supplicant to create sockets
 there. Alternatively, other directory or abstract socket namespace could
 be used for the control interface.
+
+
+External requests for radio control
+-----------------------------------
+
+External programs can request wpa_supplicant to not start offchannel
+operations during other tasks that may need exclusive control of the
+radio. The RADIO_WORK control interface command can be used for this.
+
+"RADIO_WORK add <name> [freq=<MHz>] [timeout=<seconds>]" command can be
+used to reserve a slot for radio access. If freq is specified, other
+radio work items on the same channel may be completed in
+parallel. Otherwise, all other radio work items are blocked during
+execution. Timeout is set to 10 seconds by default to avoid blocking
+wpa_supplicant operations for excessive time. If a longer (or shorter)
+safety timeout is needed, that can be specified with the optional
+timeout parameter. This command returns an identifier for the radio work
+item.
+
+Once the radio work item has been started, "EXT-RADIO-WORK-START <id>"
+event message is indicated that the external processing can start. Once
+the operation has been completed, "RADIO_WORK done <id>" is used to
+indicate that to wpa_supplicant. This allows other radio works to be
+performed. If this command is forgotten (e.g., due to the external
+program terminating), wpa_supplicant will time out the radio owrk item
+and send "EXT-RADIO-WORK-TIMEOUT <id>" event ot indicate that this has
+happened. "RADIO_WORK done <id>" can also be used to cancel items that
+have not yet been started.
+
+For example, in wpa_cli interactive mode:
+
+> radio_work add test
+1
+<3>EXT-RADIO-WORK-START 1
+> radio_work show
+ext:test@wlan0:0:1:2.487797
+> radio_work done 1
+OK
+> radio_work show
+
+
+> radio_work done 3
+OK
+> radio_work show
+ext:test freq=2412 timeout=30@wlan0:2412:1:28.583483
+<3>EXT-RADIO-WORK-TIMEOUT 2
+
+
+> radio_work add test2 freq=2412 timeout=60
+5
+<3>EXT-RADIO-WORK-START 5
+> radio_work add test3
+6
+> radio_work add test4
+7
+> radio_work show
+ext:test2 freq=2412 timeout=60@wlan0:2412:1:9.751844
+ext:test3@wlan0:0:0:5.071812
+ext:test4@wlan0:0:0:3.143870
+> radio_work done 6
+OK
+> radio_work show
+ext:test2 freq=2412 timeout=60@wlan0:2412:1:16.287869
+ext:test4@wlan0:0:0:9.679895
+> radio_work done 5
+OK
+<3>EXT-RADIO-WORK-START 7
+<3>EXT-RADIO-WORK-TIMEOUT 7

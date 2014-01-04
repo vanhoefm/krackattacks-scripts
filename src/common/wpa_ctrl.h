@@ -162,6 +162,9 @@ extern "C" {
 /* parameters: <addr> <dialog_token> <freq> <status_code> <result> */
 #define GAS_QUERY_DONE "GAS-QUERY-DONE "
 
+#define EXT_RADIO_WORK_START "EXT-RADIO-WORK-START "
+#define EXT_RADIO_WORK_TIMEOUT "EXT-RADIO-WORK-TIMEOUT "
+
 /* hostapd control interface - fixed message prefixes */
 #define WPS_EVENT_PIN_NEEDED "WPS-PIN-NEEDED "
 #define WPS_EVENT_NEW_AP_SETTINGS "WPS-NEW-AP-SETTINGS "

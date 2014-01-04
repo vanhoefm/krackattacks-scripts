@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant / UNIX domain socket -based control interface
- * Copyright (c) 2004-2013, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -75,6 +75,7 @@ static int wpa_supplicant_ctrl_iface_attach(struct dl_list *ctrl_dst,
 					    socklen_t fromlen)
 {
 	struct wpa_ctrl_dst *dst;
+	char addr_txt[200];
 
 	dst = os_zalloc(sizeof(*dst));
 	if (dst == NULL)
@@ -83,9 +84,10 @@ static int wpa_supplicant_ctrl_iface_attach(struct dl_list *ctrl_dst,
 	dst->addrlen = fromlen;
 	dst->debug_level = MSG_INFO;
 	dl_list_add(ctrl_dst, &dst->list);
-	wpa_hexdump(MSG_DEBUG, "CTRL_IFACE monitor attached",
-		    (u8 *) from->sun_path,
-		    fromlen - offsetof(struct sockaddr_un, sun_path));
+	printf_encode(addr_txt, sizeof(addr_txt),
+		      (u8 *) from->sun_path,
+		      fromlen - offsetof(struct sockaddr_un, sun_path));
+	wpa_printf(MSG_DEBUG, "CTRL_IFACE monitor attached %s", addr_txt);
 	return 0;
 }
 
@@ -101,10 +103,13 @@ static int wpa_supplicant_ctrl_iface_detach(struct dl_list *ctrl_dst,
 		    os_memcmp(from->sun_path, dst->addr.sun_path,
 			      fromlen - offsetof(struct sockaddr_un, sun_path))
 		    == 0) {
-			wpa_hexdump(MSG_DEBUG, "CTRL_IFACE monitor detached",
-				    (u8 *) from->sun_path,
-				    fromlen -
-				    offsetof(struct sockaddr_un, sun_path));
+			char addr_txt[200];
+			printf_encode(addr_txt, sizeof(addr_txt),
+				      (u8 *) from->sun_path,
+				      fromlen -
+				      offsetof(struct sockaddr_un, sun_path));
+			wpa_printf(MSG_DEBUG, "CTRL_IFACE monitor detached %s",
+				   addr_txt);
 			dl_list_del(&dst->list);
 			os_free(dst);
 			return 0;
@@ -128,11 +133,13 @@ static int wpa_supplicant_ctrl_iface_level(struct ctrl_iface_priv *priv,
 		    os_memcmp(from->sun_path, dst->addr.sun_path,
 			      fromlen - offsetof(struct sockaddr_un, sun_path))
 		    == 0) {
-			wpa_hexdump(MSG_DEBUG, "CTRL_IFACE changed monitor "
-				    "level", (u8 *) from->sun_path,
-				    fromlen -
-				    offsetof(struct sockaddr_un, sun_path));
+			char addr_txt[200];
 			dst->debug_level = atoi(level);
+			printf_encode(addr_txt, sizeof(addr_txt),
+				      (u8 *) from->sun_path, fromlen -
+				      offsetof(struct sockaddr_un, sun_path));
+			wpa_printf(MSG_DEBUG, "CTRL_IFACE changed monitor level to %d for %s",
+				   dst->debug_level, addr_txt);
 			return 0;
 		}
 	}
@@ -676,32 +683,33 @@ static void wpa_supplicant_ctrl_iface_send(struct wpa_supplicant *wpa_s,
 	msg.msg_iov = io;
 	msg.msg_iovlen = idx;
 
-	idx = -1;
 	dl_list_for_each_safe(dst, next, ctrl_dst, struct wpa_ctrl_dst, list) {
 		int _errno;
+		char addr_txt[200];
 
-		idx++;
 		if (level < dst->debug_level)
 			continue;
 
-		wpa_hexdump(MSG_DEBUG, "CTRL_IFACE monitor send",
-			    (u8 *) dst->addr.sun_path, dst->addrlen -
-			    offsetof(struct sockaddr_un, sun_path));
+		printf_encode(addr_txt, sizeof(addr_txt),
+			      (u8 *) dst->addr.sun_path, dst->addrlen -
+			      offsetof(struct sockaddr_un, sun_path));
 		msg.msg_name = (void *) &dst->addr;
 		msg.msg_namelen = dst->addrlen;
 		if (sendmsg(sock, &msg, MSG_DONTWAIT) >= 0) {
+			wpa_printf(MSG_DEBUG, "CTRL_IFACE monitor sent successfully to %s",
+				   addr_txt);
 			dst->errors = 0;
-			idx++;
 			continue;
 		}
 
 		_errno = errno;
-		wpa_printf(MSG_INFO, "CTRL_IFACE monitor[%d]: %d - %s",
-			   idx, errno, strerror(errno));
+		wpa_printf(MSG_DEBUG, "CTRL_IFACE monitor[%s]: %d - %s",
+			   addr_txt, errno, strerror(errno));
 		dst->errors++;
 
 		if (dst->errors > 10 || _errno == ENOENT || _errno == EPERM) {
-			wpa_printf(MSG_INFO, "CTRL_IFACE: Detach monitor that cannot receive messages");
+			wpa_printf(MSG_INFO, "CTRL_IFACE: Detach monitor %s that cannot receive messages",
+				addr_txt);
 			wpa_supplicant_ctrl_iface_detach(ctrl_dst, &dst->addr,
 							 dst->addrlen);
 		}

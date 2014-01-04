@@ -1,7 +1,7 @@
 #!/usr/bin/python
 #
 # AP tests
-# Copyright (c) 2013, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -52,7 +52,24 @@ def reset_devs(dev, apdev):
         ok = False
     return ok
 
-def report(conn, prefill, build, commit, run, test, result, duration):
+def add_log_file(conn, test, run, type, path):
+    if not os.path.exists(path):
+        return
+    contents = None
+    with open(path, 'r') as f:
+        contents = f.read()
+    if contents is None:
+        return
+    sql = "INSERT INTO logs(test,run,type,contents) VALUES(?, ?, ?, ?)"
+    params = (test, run, type, contents)
+    try:
+        conn.execute(sql, params)
+        conn.commit()
+    except Exception, e:
+        print "sqlite: " + str(e)
+        print "sql: %r" % (params, )
+
+def report(conn, prefill, build, commit, run, test, result, duration, logdir):
     if conn:
         if not build:
             build = ''
@@ -68,6 +85,12 @@ def report(conn, prefill, build, commit, run, test, result, duration):
         except Exception, e:
             print "sqlite: " + str(e)
             print "sql: %r" % (params, )
+
+        if result == "FAIL":
+            for log in [ "log", "log0", "log1", "log2", "log3", "log5",
+                         "hostapd", "dmesg", "hwsim0", "hwsim0.pcapng" ]:
+                add_log_file(conn, test, run, log,
+                             logdir + "/" + test + "." + log)
 
 class DataCollector(object):
     def __init__(self, logdir, testname, tracing, dmesg):
@@ -197,6 +220,7 @@ def main():
         conn = sqlite3.connect(args.database)
         conn.execute('CREATE TABLE IF NOT EXISTS results (test,result,run,time,duration,build,commitid)')
         conn.execute('CREATE TABLE IF NOT EXISTS tests (test,description)')
+        conn.execute('CREATE TABLE IF NOT EXISTS logs (test,run,type,contents)')
     else:
         conn = None
 
@@ -266,7 +290,8 @@ def main():
     if conn and args.prefill:
         for t in tests_to_run:
             name = t.__name__.replace('test_', '', 1)
-            report(conn, False, args.build, args.commit, run, name, 'NOTRUN', 0)
+            report(conn, False, args.build, args.commit, run, name, 'NOTRUN', 0,
+                   args.logdir)
 
     if args.shuffle_tests:
         from random import shuffle
@@ -368,7 +393,8 @@ def main():
         else:
             failed.append(name)
 
-        report(conn, args.prefill, args.build, args.commit, run, name, result, diff.total_seconds())
+        report(conn, args.prefill, args.build, args.commit, run, name, result,
+               diff.total_seconds(), args.logdir)
         result = "{} {} {} {}".format(result, name, diff.total_seconds(), end)
         logger.info(result)
         if args.loglevel == logging.WARNING:

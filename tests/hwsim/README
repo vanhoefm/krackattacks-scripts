@@ -181,4 +181,7 @@ CREATE TABLE results (test,result,run,time,duration,build,commitid);
 CREATE INDEX results_idx ON results (test);
 CREATE INDEX results_idx2 ON results (run);
 CREATE TABLE tests (test,description);
+CREATE TABLE logs (test,run,type,contents);
+CREATE INDEX logs_idx ON logs (test);
+CREATE INDEX logs_idx2 ON logs (run);
 EOF

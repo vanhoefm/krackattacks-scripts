@@ -20,7 +20,8 @@ def eap_connect(dev, ap, method, identity, anonymous_identity=None,
                 phase1=None, phase2=None, ca_cert=None,
                 domain_suffix_match=None, password_hex=None,
                 client_cert=None, private_key=None, sha256=False,
-                fragment_size=None):
+                fragment_size=None, expect_failure=False,
+                local_error_report=False):
     hapd = hostapd.Hostapd(ap['ifname'])
     id = dev.connect("test-wpa2-eap", key_mgmt="WPA-EAP WPA-EAP-SHA256",
                      eap=method, identity=identity,
@@ -31,13 +32,18 @@ def eap_connect(dev, ap, method, identity, anonymous_identity=None,
                      password_hex=password_hex,
                      client_cert=client_cert, private_key=private_key,
                      ieee80211w="1", fragment_size=fragment_size)
-    eap_check_auth(dev, method, True, sha256=sha256)
+    eap_check_auth(dev, method, True, sha256=sha256,
+                   expect_failure=expect_failure,
+                   local_error_report=local_error_report)
+    if expect_failure:
+        return id
     ev = hapd.wait_event([ "AP-STA-CONNECTED" ], timeout=5)
     if ev is None:
         raise Exception("No connection event received from hostapd")
     return id
 
-def eap_check_auth(dev, method, initial, rsn=True, sha256=False):
+def eap_check_auth(dev, method, initial, rsn=True, sha256=False,
+                   expect_failure=False, local_error_report=False):
     ev = dev.wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
     if ev is None:
         raise Exception("Association and EAP start timed out")
@@ -46,6 +52,17 @@ def eap_check_auth(dev, method, initial, rsn=True, sha256=False):
         raise Exception("EAP method selection timed out")
     if method not in ev:
         raise Exception("Unexpected EAP method")
+    if expect_failure:
+        ev = dev.wait_event(["CTRL-EVENT-EAP-FAILURE"])
+        if ev is None:
+            raise Exception("EAP failure timed out")
+        ev = dev.wait_event(["CTRL-EVENT-DISCONNECTED"])
+        if ev is None:
+            raise Exception("Disconnection timed out")
+        if not local_error_report:
+            if "reason=23" not in ev:
+                raise Exception("Proper reason code for disconnection not reported")
+        return
     ev = dev.wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=10)
     if ev is None:
         raise Exception("EAP success timed out")
@@ -89,6 +106,12 @@ def test_ap_wpa2_eap_sim(dev, apdev):
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
     eap_reauth(dev[0], "SIM")
 
+    logger.info("Negative test with incorrect key")
+    dev[0].request("REMOVE_NETWORK all")
+    eap_connect(dev[0], apdev[0], "SIM", "1232010000000000",
+                password="ffdca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581",
+                expect_failure=True)
+
 def test_ap_wpa2_eap_aka(dev, apdev):
     """WPA2-Enterprise connection using EAP-AKA"""
     if not os.path.exists("/tmp/hlr_auc_gw.sock"):
@@ -101,6 +124,12 @@ def test_ap_wpa2_eap_aka(dev, apdev):
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
     eap_reauth(dev[0], "AKA")
 
+    logger.info("Negative test with incorrect key")
+    dev[0].request("REMOVE_NETWORK all")
+    eap_connect(dev[0], apdev[0], "AKA", "0232010000000000",
+                password="ffdca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581:000000000123",
+                expect_failure=True)
+
 def test_ap_wpa2_eap_aka_prime(dev, apdev):
     """WPA2-Enterprise connection using EAP-AKA'"""
     if not os.path.exists("/tmp/hlr_auc_gw.sock"):
@@ -112,6 +141,12 @@ def test_ap_wpa2_eap_aka_prime(dev, apdev):
                 password="5122250214c33e723a5dd523fc145fc0:981d464c7c52eb6e5036234984ad0bcf:000000000123")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
     eap_reauth(dev[0], "AKA'")
+
+    logger.info("Negative test with incorrect key")
+    dev[0].request("REMOVE_NETWORK all")
+    eap_connect(dev[0], apdev[0], "AKA'", "6555444333222111",
+                password="ff22250214c33e723a5dd523fc145fc0:981d464c7c52eb6e5036234984ad0bcf:000000000123",
+                expect_failure=True)
 
 def test_ap_wpa2_eap_ttls_pap(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/PAP"""
@@ -171,6 +206,13 @@ def test_ap_wpa2_eap_ttls_mschapv2(dev, apdev):
     if int(eapol2['backendAuthSuccesses']) <= int(eapol1['backendAuthSuccesses']):
         raise Exception("backendAuthSuccesses did not increase")
 
+    logger.info("Negative test with incorrect password")
+    dev[0].request("REMOVE_NETWORK all")
+    eap_connect(dev[0], apdev[0], "TTLS", "DOMAIN\mschapv2 user",
+                anonymous_identity="ttls", password="password1",
+                ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                expect_failure=True)
+
 def test_ap_wpa2_eap_ttls_eap_gtc(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/EAP-GTC"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
@@ -201,6 +243,13 @@ def test_ap_wpa2_eap_ttls_eap_mschapv2(dev, apdev):
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
     eap_reauth(dev[0], "TTLS")
 
+    logger.info("Negative test with incorrect password")
+    dev[0].request("REMOVE_NETWORK all")
+    eap_connect(dev[0], apdev[0], "TTLS", "user",
+                anonymous_identity="ttls", password="password1",
+                ca_cert="auth_serv/ca.pem", phase2="autheap=MSCHAPV2",
+                expect_failure=True)
+
 def test_ap_wpa2_eap_peap_eap_mschapv2(dev, apdev):
     """WPA2-Enterprise connection using EAP-PEAP/EAP-MSCHAPv2"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
@@ -215,6 +264,13 @@ def test_ap_wpa2_eap_peap_eap_mschapv2(dev, apdev):
                 anonymous_identity="peap", password="password",
                 ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
                 fragment_size="200")
+
+    logger.info("Negative test with incorrect password")
+    dev[0].request("REMOVE_NETWORK all")
+    eap_connect(dev[0], apdev[0], "PEAP", "user",
+                anonymous_identity="peap", password="password1",
+                ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                expect_failure=True)
 
 def test_ap_wpa2_eap_peap_crypto_binding(dev, apdev):
     """WPA2-Enterprise connection using EAP-PEAPv0/EAP-MSCHAPv2 and crypto binding"""
@@ -350,6 +406,11 @@ def test_ap_wpa2_eap_pwd(dev, apdev):
     eap_connect(dev[0], apdev[0], "PWD", "pwd user", password="secret password",
                 fragment_size="90")
 
+    logger.info("Negative test with incorrect password")
+    dev[0].request("REMOVE_NETWORK all")
+    eap_connect(dev[0], apdev[0], "PWD", "pwd user", password="secret-password",
+                expect_failure=True, local_error_report=True)
+
 def test_ap_wpa2_eap_gpsk(dev, apdev):
     """WPA2-Enterprise connection using EAP-GPSK"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
@@ -374,6 +435,12 @@ def test_ap_wpa2_eap_gpsk(dev, apdev):
     if ev is None:
         raise Exception("EAP failure timed out")
 
+    logger.info("Negative test with incorrect password")
+    dev[0].request("REMOVE_NETWORK all")
+    eap_connect(dev[0], apdev[0], "GPSK", "gpsk user",
+                password="ffcdefghijklmnop0123456789abcdef",
+                expect_failure=True)
+
 def test_ap_wpa2_eap_sake(dev, apdev):
     """WPA2-Enterprise connection using EAP-SAKE"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
@@ -381,6 +448,12 @@ def test_ap_wpa2_eap_sake(dev, apdev):
     eap_connect(dev[0], apdev[0], "SAKE", "sake user",
                 password_hex="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")
     eap_reauth(dev[0], "SAKE")
+
+    logger.info("Negative test with incorrect password")
+    dev[0].request("REMOVE_NETWORK all")
+    eap_connect(dev[0], apdev[0], "SAKE", "sake user",
+                password_hex="ff23456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+                expect_failure=True)
 
 def test_ap_wpa2_eap_eke(dev, apdev):
     """WPA2-Enterprise connection using EAP-EKE"""
@@ -408,6 +481,11 @@ def test_ap_wpa2_eap_eke(dev, apdev):
     if ev is None:
         raise Exception("EAP failure timed out")
 
+    logger.info("Negative test with incorrect password")
+    dev[0].request("REMOVE_NETWORK all")
+    eap_connect(dev[0], apdev[0], "EKE", "eke user", password="hello1",
+                expect_failure=True)
+
 def test_ap_wpa2_eap_ikev2(dev, apdev):
     """WPA2-Enterprise connection using EAP-IKEv2"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
@@ -419,6 +497,11 @@ def test_ap_wpa2_eap_ikev2(dev, apdev):
     eap_connect(dev[0], apdev[0], "IKEV2", "ikev2 user",
                 password="ike password", fragment_size="250")
 
+    logger.info("Negative test with incorrect password")
+    dev[0].request("REMOVE_NETWORK all")
+    eap_connect(dev[0], apdev[0], "IKEV2", "ikev2 user",
+                password="ike-password", expect_failure=True)
+
 def test_ap_wpa2_eap_pax(dev, apdev):
     """WPA2-Enterprise connection using EAP-PAX"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
@@ -426,6 +509,12 @@ def test_ap_wpa2_eap_pax(dev, apdev):
     eap_connect(dev[0], apdev[0], "PAX", "pax.user@example.com",
                 password_hex="0123456789abcdef0123456789abcdef")
     eap_reauth(dev[0], "PAX")
+
+    logger.info("Negative test with incorrect password")
+    dev[0].request("REMOVE_NETWORK all")
+    eap_connect(dev[0], apdev[0], "PAX", "pax.user@example.com",
+                password_hex="ff23456789abcdef0123456789abcdef",
+                expect_failure=True)
 
 def test_ap_wpa2_eap_psk(dev, apdev):
     """WPA2-Enterprise connection using EAP-PSK"""
@@ -436,6 +525,12 @@ def test_ap_wpa2_eap_psk(dev, apdev):
     eap_connect(dev[0], apdev[0], "PSK", "psk.user@example.com",
                 password_hex="0123456789abcdef0123456789abcdef", sha256=True)
     eap_reauth(dev[0], "PSK", sha256=True)
+
+    logger.info("Negative test with incorrect password")
+    dev[0].request("REMOVE_NETWORK all")
+    eap_connect(dev[0], apdev[0], "PSK", "psk.user@example.com",
+                password_hex="ff23456789abcdef0123456789abcdef", sha256=True,
+                expect_failure=True)
 
 def test_ap_wpa_eap_peap_eap_mschapv2(dev, apdev):
     """WPA-Enterprise connection using EAP-PEAP/EAP-MSCHAPv2"""

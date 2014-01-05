@@ -289,6 +289,7 @@ static struct wpabuf * eap_gpsk_process_gpsk_1(struct eap_sm *sm,
 	pos = eap_gpsk_process_csuite_list(sm, data, &csuite_list,
 					   &csuite_list_len, pos, end);
 	if (pos == NULL) {
+		ret->methodState = METHOD_DONE;
 		eap_gpsk_state(data, FAILURE);
 		return NULL;
 	}

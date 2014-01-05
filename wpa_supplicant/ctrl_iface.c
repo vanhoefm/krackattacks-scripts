@@ -5167,6 +5167,7 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 	wpas_p2p_stop_find(wpa_s);
 	p2p_ctrl_flush(wpa_s);
 	wpas_p2p_group_remove(wpa_s, "*");
+	wpas_p2p_service_flush(wpa_s);
 #endif /* CONFIG_P2P */
 
 #ifdef CONFIG_WPS_TESTING

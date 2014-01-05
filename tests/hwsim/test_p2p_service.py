@@ -40,7 +40,7 @@ def run_sd(dev, dst, query, exp_query=None, fragment=False):
 
     dev[1].request("P2P_FLUSH")
     dev[1].request("P2P_SERV_DISC_REQ " + dst + " " + query)
-    if not dev[1].discover_peer(addr0, social=True):
+    if not dev[1].discover_peer(addr0, social=True, force_find=True):
         raise Exception("Peer " + addr0 + " not found")
 
     ev = dev[0].wait_event(["P2P-SERV-DISC-REQ"], timeout=10)

@@ -299,9 +299,9 @@ class WpaSupplicant:
             return True
         return "[PROBE_REQ_ONLY]" not in res
 
-    def discover_peer(self, peer, full=True, timeout=15, social=True):
+    def discover_peer(self, peer, full=True, timeout=15, social=True, force_find=False):
         logger.info(self.ifname + ": Trying to discover peer " + peer)
-        if self.peer_known(peer, full):
+        if not force_find and self.peer_known(peer, full):
             return True
         self.p2p_find(social)
         count = 0

@@ -88,7 +88,7 @@ def test_gas_generic(dev, apdev):
     params['hessid'] = bssid
     hostapd.add_ap(apdev[0]['ifname'], params)
 
-    dev[0].scan()
+    dev[0].scan(freq="2412")
     req = dev[0].request("GAS_REQUEST " + bssid + " 00 000102000101")
     if "FAIL" in req:
         raise Exception("GAS query request rejected")
@@ -176,6 +176,7 @@ def test_gas_concurrent_connect(dev, apdev):
 
     logger.debug("Wait six seconds for expiration of connect-without-scan")
     time.sleep(6)
+    dev[0].dump_monitor()
 
     logger.debug("Start concurrent GAS request and connect")
     req = dev[0].request("GAS_REQUEST " + bssid + " 00 000102000101")

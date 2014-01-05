@@ -92,11 +92,7 @@ class WpaSupplicant:
         self.request("SET p2p_add_cli_chan 0")
         self.request("SET p2p_no_go_freq ")
         self.request("SET p2p_pref_chan ")
-        self.request("SET disallow_aps ")
         self.request("SET p2p_no_group_iface 1")
-        self.request("P2P_SET per_sta_psk 0")
-        self.request("P2P_SET disabled 0")
-        self.request("P2P_SERVICE_FLUSH")
         self.group_ifname = None
         self.dump_monitor()
 

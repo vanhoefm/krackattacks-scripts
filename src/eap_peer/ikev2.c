@@ -1257,6 +1257,7 @@ static struct wpabuf * ikev2_build_notify(struct ikev2_responder_data *data)
 			wpabuf_free(msg);
 			return NULL;
 		}
+		wpabuf_free(plain);
 		data->state = IKEV2_FAILED;
 	} else {
 		/* HDR, N */

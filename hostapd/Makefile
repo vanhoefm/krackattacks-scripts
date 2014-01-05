@@ -332,7 +332,7 @@ ifdef CONFIG_EAP_GPSK
 CFLAGS += -DEAP_SERVER_GPSK
 OBJS += ../src/eap_server/eap_server_gpsk.o ../src/eap_common/eap_gpsk_common.o
 ifdef CONFIG_EAP_GPSK_SHA256
-CFLAGS += -DEAP_SERVER_GPSK_SHA256
+CFLAGS += -DEAP_GPSK_SHA256
 endif
 NEED_SHA256=y
 NEED_AES_OMAC1=y

@@ -1,7 +1,7 @@
 #!/usr/bin/python
 #
 # Python class for controlling hostapd
-# Copyright (c) 2013, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -121,16 +121,20 @@ class Hostapd:
             logger.debug(self.ifname + ": " + ev)
 
     def wait_event(self, events, timeout):
-        count = 0
-        while count < timeout * 10:
-            count = count + 1
-            time.sleep(0.1)
+        start = os.times()[4]
+        while True:
             while self.mon.pending():
                 ev = self.mon.recv()
                 logger.debug(self.ifname + ": " + ev)
                 for event in events:
                     if event in ev:
                         return ev
+            now = os.times()[4]
+            remaining = start + timeout - now
+            if remaining <= 0:
+                break
+            if not self.mon.pending(timeout=remaining):
+                break
         return None
 
     def get_status(self):

@@ -447,32 +447,40 @@ class WpaSupplicant:
         raise Exception("P2P_CONNECT failed")
 
     def wait_event(self, events, timeout=10):
-        count = 0
-        while count < timeout * 10:
-            count = count + 1
-            time.sleep(0.1)
+        start = os.times()[4]
+        while True:
             while self.mon.pending():
                 ev = self.mon.recv()
                 logger.debug(self.ifname + ": " + ev)
                 for event in events:
                     if event in ev:
                         return ev
+            now = os.times()[4]
+            remaining = start + timeout - now
+            if remaining <= 0:
+                break
+            if not self.mon.pending(timeout=remaining):
+                break
         return None
 
     def wait_global_event(self, events, timeout):
         if self.global_iface is None:
             self.wait_event(events, timeout)
         else:
-            count = 0
-            while count < timeout * 10:
-                count = count + 1
-                time.sleep(0.1)
+            start = os.times()[4]
+            while True:
                 while self.global_mon.pending():
                     ev = self.global_mon.recv()
                     logger.debug(self.ifname + "(global): " + ev)
                     for event in events:
                         if event in ev:
                             return ev
+                now = os.times()[4]
+                remaining = start + timeout - now
+                if remaining <= 0:
+                    break
+                if not self.global_mon.pending(timeout=remaining):
+                    break
         return None
 
     def wait_go_ending_session(self):

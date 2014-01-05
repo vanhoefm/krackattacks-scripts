@@ -569,7 +569,8 @@ class WpaSupplicant:
                 domain_suffix_match=None, password_hex=None,
                 client_cert=None, private_key=None, peerkey=False, okc=False,
                 eapol_flags=None, fragment_size=None,
-                wait_connect=True, only_add_network=False):
+                wait_connect=True, only_add_network=False,
+                ca_cert2=None, client_cert2=None, private_key2=None):
         logger.info("Connect STA " + self.ifname + " to AP")
         id = self.add_network()
         if ssid:
@@ -609,6 +610,12 @@ class WpaSupplicant:
             self.set_network_quoted(id, "client_cert", client_cert)
         if private_key:
             self.set_network_quoted(id, "private_key", private_key)
+        if ca_cert2:
+            self.set_network_quoted(id, "ca_cert2", ca_cert2)
+        if client_cert2:
+            self.set_network_quoted(id, "client_cert2", client_cert2)
+        if private_key2:
+            self.set_network_quoted(id, "private_key2", private_key2)
         if phase1:
             self.set_network_quoted(id, "phase1", phase1)
         if phase2:

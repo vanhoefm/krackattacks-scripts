@@ -568,7 +568,7 @@ class WpaSupplicant:
                 password=None, phase1=None, phase2=None, ca_cert=None,
                 domain_suffix_match=None, password_hex=None,
                 client_cert=None, private_key=None, peerkey=False, okc=False,
-                eapol_flags=None,
+                eapol_flags=None, fragment_size=None,
                 wait_connect=True, only_add_network=False):
         logger.info("Connect STA " + self.ifname + " to AP")
         id = self.add_network()
@@ -622,6 +622,8 @@ class WpaSupplicant:
             self.set_network(id, "proactive_key_caching", "1")
         if eapol_flags:
             self.set_network(id, "eapol_flags", eapol_flags)
+        if fragment_size:
+            self.set_network(id, "fragment_size", fragment_size)
         if only_add_network:
             return id
         if wait_connect:

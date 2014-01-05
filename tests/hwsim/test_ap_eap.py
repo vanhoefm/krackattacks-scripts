@@ -19,7 +19,8 @@ def eap_connect(dev, ap, method, identity, anonymous_identity=None,
                 password=None,
                 phase1=None, phase2=None, ca_cert=None,
                 domain_suffix_match=None, password_hex=None,
-                client_cert=None, private_key=None, sha256=False):
+                client_cert=None, private_key=None, sha256=False,
+                fragment_size=None):
     hapd = hostapd.Hostapd(ap['ifname'])
     id = dev.connect("test-wpa2-eap", key_mgmt="WPA-EAP WPA-EAP-SHA256",
                      eap=method, identity=identity,
@@ -29,7 +30,7 @@ def eap_connect(dev, ap, method, identity, anonymous_identity=None,
                      wait_connect=False, scan_freq="2412",
                      password_hex=password_hex,
                      client_cert=client_cert, private_key=private_key,
-                     ieee80211w="1")
+                     ieee80211w="1", fragment_size=fragment_size)
     eap_check_auth(dev, method, True, sha256=sha256)
     ev = hapd.wait_event([ "AP-STA-CONNECTED" ], timeout=5)
     if ev is None:
@@ -142,6 +143,11 @@ def test_ap_wpa2_eap_ttls_mschap(dev, apdev):
                 domain_suffix_match="server.w1.fi")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
     eap_reauth(dev[0], "TTLS")
+    dev[0].request("REMOVE_NETWORK all")
+    eap_connect(dev[0], apdev[0], "TTLS", "mschap user",
+                anonymous_identity="ttls", password="password",
+                ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAP",
+                fragment_size="200")
 
 def test_ap_wpa2_eap_ttls_mschapv2(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/MSCHAPv2"""
@@ -204,6 +210,11 @@ def test_ap_wpa2_eap_peap_eap_mschapv2(dev, apdev):
                 ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
     eap_reauth(dev[0], "PEAP")
+    dev[0].request("REMOVE_NETWORK all")
+    eap_connect(dev[0], apdev[0], "PEAP", "user",
+                anonymous_identity="peap", password="password",
+                ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                fragment_size="200")
 
 def test_ap_wpa2_eap_peap_crypto_binding(dev, apdev):
     """WPA2-Enterprise connection using EAP-PEAPv0/EAP-MSCHAPv2 and crypto binding"""
@@ -335,6 +346,10 @@ def test_ap_wpa2_eap_pwd(dev, apdev):
     eap_connect(dev[0], apdev[0], "PWD", "pwd user", password="secret password")
     eap_reauth(dev[0], "PWD")
 
+    dev[0].request("REMOVE_NETWORK all")
+    eap_connect(dev[0], apdev[0], "PWD", "pwd user", password="secret password",
+                fragment_size="90")
+
 def test_ap_wpa2_eap_gpsk(dev, apdev):
     """WPA2-Enterprise connection using EAP-GPSK"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
@@ -400,6 +415,9 @@ def test_ap_wpa2_eap_ikev2(dev, apdev):
     eap_connect(dev[0], apdev[0], "IKEV2", "ikev2 user",
                 password="ike password")
     eap_reauth(dev[0], "IKEV2")
+    dev[0].request("REMOVE_NETWORK all")
+    eap_connect(dev[0], apdev[0], "IKEV2", "ikev2 user",
+                password="ike password", fragment_size="250")
 
 def test_ap_wpa2_eap_pax(dev, apdev):
     """WPA2-Enterprise connection using EAP-PAX"""

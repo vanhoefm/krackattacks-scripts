@@ -209,6 +209,13 @@ def test_ap_wpa2_eap_ttls_mschapv2(dev, apdev):
     if int(eapol2['backendAuthSuccesses']) <= int(eapol1['backendAuthSuccesses']):
         raise Exception("backendAuthSuccesses did not increase")
 
+    logger.info("Password as hash value")
+    dev[0].request("REMOVE_NETWORK all")
+    eap_connect(dev[0], apdev[0], "TTLS", "DOMAIN\mschapv2 user",
+                anonymous_identity="ttls",
+                password_hex="hash:8846f7eaee8fb117ad06bdd830b7586c",
+                ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2")
+
     logger.info("Negative test with incorrect password")
     dev[0].request("REMOVE_NETWORK all")
     eap_connect(dev[0], apdev[0], "TTLS", "DOMAIN\mschapv2 user",
@@ -267,6 +274,13 @@ def test_ap_wpa2_eap_peap_eap_mschapv2(dev, apdev):
                 anonymous_identity="peap", password="password",
                 ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
                 fragment_size="200")
+
+    logger.info("Password as hash value")
+    dev[0].request("REMOVE_NETWORK all")
+    eap_connect(dev[0], apdev[0], "PEAP", "user",
+                anonymous_identity="peap",
+                password_hex="hash:8846f7eaee8fb117ad06bdd830b7586c",
+                ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2")
 
     logger.info("Negative test with incorrect password")
     dev[0].request("REMOVE_NETWORK all")

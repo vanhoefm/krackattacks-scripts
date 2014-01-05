@@ -4664,7 +4664,68 @@ static int p2p_ctrl_remove_client(struct wpa_supplicant *wpa_s, const char *cmd)
 #endif /* CONFIG_P2P */
 
 
+static int * freq_range_to_channel_list(struct wpa_supplicant *wpa_s, char *val)
+{
+	struct wpa_freq_range_list ranges;
+	int *freqs = NULL;
+	struct hostapd_hw_modes *mode;
+	u16 i;
+
+	if (wpa_s->hw.modes == NULL)
+		return NULL;
+
+	os_memset(&ranges, 0, sizeof(ranges));
+	if (freq_range_list_parse(&ranges, val) < 0)
+		return NULL;
+
+	for (i = 0; i < wpa_s->hw.num_modes; i++) {
+		int j;
+
+		mode = &wpa_s->hw.modes[i];
+		for (j = 0; j < mode->num_channels; j++) {
+			unsigned int freq;
+
+			if (mode->channels[j].flag & HOSTAPD_CHAN_DISABLED)
+				continue;
+
+			freq = mode->channels[j].freq;
+			if (!freq_range_list_includes(&ranges, freq))
+				continue;
+
+			int_array_add_unique(&freqs, freq);
+		}
+	}
+
+	os_free(ranges.range);
+	return freqs;
+}
+
+
 #ifdef CONFIG_INTERWORKING
+
+static int ctrl_interworking_select(struct wpa_supplicant *wpa_s, char *param)
+{
+	int auto_sel = 0;
+	int *freqs = NULL;
+
+	if (param) {
+		char *pos;
+
+		auto_sel = os_strstr(param, "auto") != NULL;
+
+		pos = os_strstr(param, "freq=");
+		if (pos) {
+			freqs = freq_range_to_channel_list(wpa_s, pos + 5);
+			if (freqs == NULL)
+				return -1;
+		}
+
+	}
+
+	return interworking_select(wpa_s, auto_sel, freqs);
+}
+
+
 static int ctrl_interworking_connect(struct wpa_supplicant *wpa_s, char *dst)
 {
 	u8 bssid[ETH_ALEN];
@@ -5413,37 +5474,12 @@ static void wpas_ctrl_eapol_response(void *eloop_ctx, void *timeout_ctx)
 
 static int set_scan_freqs(struct wpa_supplicant *wpa_s, char *val)
 {
-	struct wpa_freq_range_list ranges;
 	int *freqs = NULL;
-	struct hostapd_hw_modes *mode;
-	u16 i;
 
-	if (wpa_s->hw.modes == NULL)
+	freqs = freq_range_to_channel_list(wpa_s, val);
+	if (freqs == NULL)
 		return -1;
 
-	os_memset(&ranges, 0, sizeof(ranges));
-	if (freq_range_list_parse(&ranges, val) < 0)
-		return -1;
-
-	for (i = 0; i < wpa_s->hw.num_modes; i++) {
-		int j;
-
-		mode = &wpa_s->hw.modes[i];
-		for (j = 0; j < mode->num_channels; j++) {
-			unsigned int freq;
-
-			if (mode->channels[j].flag & HOSTAPD_CHAN_DISABLED)
-				continue;
-
-			freq = mode->channels[j].freq;
-			if (!freq_range_list_includes(&ranges, freq))
-				continue;
-
-			int_array_add_unique(&freqs, freq);
-		}
-	}
-
-	os_free(ranges.range);
 	os_free(wpa_s->manual_scan_freqs);
 	wpa_s->manual_scan_freqs = freqs;
 
@@ -5847,9 +5883,11 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 			reply_len = -1;
 	} else if (os_strcmp(buf, "STOP_FETCH_ANQP") == 0) {
 		interworking_stop_fetch_anqp(wpa_s);
-	} else if (os_strncmp(buf, "INTERWORKING_SELECT", 19) == 0) {
-		if (interworking_select(wpa_s, os_strstr(buf + 19, "auto") !=
-					NULL) < 0)
+	} else if (os_strcmp(buf, "INTERWORKING_SELECT") == 0) {
+		if (ctrl_interworking_select(wpa_s, NULL) < 0)
+			reply_len = -1;
+	} else if (os_strncmp(buf, "INTERWORKING_SELECT ", 20) == 0) {
+		if (ctrl_interworking_select(wpa_s, buf + 20) < 0)
 			reply_len = -1;
 	} else if (os_strncmp(buf, "INTERWORKING_CONNECT ", 21) == 0) {
 		if (ctrl_interworking_connect(wpa_s, buf + 21) < 0)

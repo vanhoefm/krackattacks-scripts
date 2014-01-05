@@ -2202,7 +2202,8 @@ static void interworking_scan_res_handler(struct wpa_supplicant *wpa_s,
 }
 
 
-int interworking_select(struct wpa_supplicant *wpa_s, int auto_select)
+int interworking_select(struct wpa_supplicant *wpa_s, int auto_select,
+			int *freqs)
 {
 	interworking_stop_fetch_anqp(wpa_s);
 	wpa_s->network_select = 1;
@@ -2214,6 +2215,8 @@ int interworking_select(struct wpa_supplicant *wpa_s, int auto_select)
 	wpa_s->scan_res_handler = interworking_scan_res_handler;
 	wpa_s->normal_scans = 0;
 	wpa_s->scan_req = MANUAL_SCAN_REQ;
+	os_free(wpa_s->manual_scan_freqs);
+	wpa_s->manual_scan_freqs = freqs;
 	wpa_s->after_wps = 0;
 	wpa_s->known_wps_freq = 0;
 	wpa_supplicant_req_scan(wpa_s, 0, 0);

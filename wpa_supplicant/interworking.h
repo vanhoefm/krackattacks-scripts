@@ -22,7 +22,8 @@ int gas_send_request(struct wpa_supplicant *wpa_s, const u8 *dst,
 		     const struct wpabuf *query);
 int interworking_fetch_anqp(struct wpa_supplicant *wpa_s);
 void interworking_stop_fetch_anqp(struct wpa_supplicant *wpa_s);
-int interworking_select(struct wpa_supplicant *wpa_s, int auto_select);
+int interworking_select(struct wpa_supplicant *wpa_s, int auto_select,
+			int *freqs);
 int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss);
 void interworking_start_fetch_anqp(struct wpa_supplicant *wpa_s);
 int interworking_home_sp_cred(struct wpa_supplicant *wpa_s,

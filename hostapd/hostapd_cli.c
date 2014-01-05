@@ -1,6 +1,6 @@
 /*
  * hostapd - command line interface for hostapd daemon
- * Copyright (c) 2004-2013, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -218,6 +218,8 @@ static int hostapd_cli_cmd_relog(struct wpa_ctrl *ctrl, int argc, char *argv[])
 
 static int hostapd_cli_cmd_status(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
+	if (argc > 0 && os_strcmp(argv[0], "driver") == 0)
+		return wpa_ctrl_command(ctrl, "STATUS-DRIVER");
 	return wpa_ctrl_command(ctrl, "STATUS");
 }
 

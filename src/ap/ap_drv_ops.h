@@ -1,6 +1,6 @@
 /*
  * hostapd - Driver operations
- * Copyright (c) 2009-2013, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2009-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -270,6 +270,14 @@ static inline int hostapd_drv_switch_channel(struct hostapd_data *hapd,
 		return -ENOTSUP;
 
 	return hapd->driver->switch_channel(hapd->drv_priv, settings);
+}
+
+static inline int hostapd_drv_status(struct hostapd_data *hapd, char *buf,
+				     size_t buflen)
+{
+	if (hapd->driver == NULL || hapd->driver->status == NULL)
+		return -1;
+	return hapd->driver->status(hapd->drv_priv, buf, buflen);
 }
 
 #endif /* AP_DRV_OPS */

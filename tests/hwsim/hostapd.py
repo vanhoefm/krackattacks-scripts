@@ -62,7 +62,6 @@ class Hostapd:
         return "PONG" in self.request("PING")
 
     def set(self, field, value):
-        logger.debug(self.ifname + ": SET " + field + "=" + value)
         if not "OK" in self.request("SET " + field + " " + value):
             raise Exception("Failed to set hostapd parameter " + field)
 
@@ -109,11 +108,11 @@ class Hostapd:
         self.set("wep_key0", key)
 
     def enable(self):
-        if not "OK" in self.ctrl.request("ENABLE"):
+        if not "OK" in self.request("ENABLE"):
             raise Exception("Failed to enable hostapd interface " + self.ifname)
 
     def disable(self):
-        if not "OK" in self.ctrl.request("ENABLE"):
+        if not "OK" in self.request("ENABLE"):
             raise Exception("Failed to disable hostapd interface " + self.ifname)
 
     def dump_monitor(self):

@@ -1,6 +1,6 @@
 /*
  * EAP peer method: EAP-GPSK (RFC 5433)
- * Copyright (c) 2006-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2006-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -33,6 +33,7 @@ struct eap_gpsk_data {
 	int specifier; /* CSuite/Specifier */
 	u8 *psk;
 	size_t psk_len;
+	u16 forced_cipher; /* force cipher or 0 to allow all supported */
 };
 
 
@@ -80,6 +81,7 @@ static void * eap_gpsk_init(struct eap_sm *sm)
 	struct eap_gpsk_data *data;
 	const u8 *identity, *password;
 	size_t identity_len, password_len;
+	const char *phase1;
 
 	password = eap_get_config_password(sm, &password_len);
 	if (password == NULL) {
@@ -101,6 +103,18 @@ static void * eap_gpsk_init(struct eap_sm *sm)
 		}
 		os_memcpy(data->id_peer, identity, identity_len);
 		data->id_peer_len = identity_len;
+	}
+
+	phase1 = eap_get_config_phase1(sm);
+	if (phase1) {
+		const char *pos;
+
+		pos = os_strstr(phase1, "cipher=");
+		if (pos) {
+			data->forced_cipher = atoi(pos + 7);
+			wpa_printf(MSG_DEBUG, "EAP-GPSK: Forced cipher %u",
+				   data->forced_cipher);
+		}
 	}
 
 	data->psk = os_malloc(password_len);
@@ -195,7 +209,9 @@ static int eap_gpsk_select_csuite(struct eap_sm *sm,
 			   i, vendor, specifier);
 		if (data->vendor == EAP_GPSK_VENDOR_IETF &&
 		    data->specifier == EAP_GPSK_CIPHER_RESERVED &&
-		    eap_gpsk_supported_ciphersuite(vendor, specifier)) {
+		    eap_gpsk_supported_ciphersuite(vendor, specifier) &&
+		    (!data->forced_cipher || data->forced_cipher == specifier))
+		{
 			data->vendor = vendor;
 			data->specifier = specifier;
 		}

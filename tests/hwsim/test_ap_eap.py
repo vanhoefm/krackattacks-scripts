@@ -430,3 +430,46 @@ def test_ap_wpa_eap_peap_eap_mschapv2(dev, apdev):
     eap_check_auth(dev[0], "PEAP", True, rsn=False)
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
     eap_reauth(dev[0], "PEAP", rsn=False)
+
+def test_ap_wpa2_eap_interactive(dev, apdev):
+    """WPA2-Enterprise connection using interactive identity/password entry"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+
+    tests = [ ("Connection with dynamic TTLS/MSCHAPv2 password entry",
+               "TTLS", "ttls", "DOMAIN\mschapv2 user", "auth=MSCHAPV2",
+               None, "password"),
+              ("Connection with dynamic TTLS/MSCHAPv2 identity and password entry",
+               "TTLS", "ttls", None, "auth=MSCHAPV2",
+               "DOMAIN\mschapv2 user", "password"),
+              ("Connection with dynamic TTLS/EAP-MSCHAPv2 password entry",
+               "TTLS", "ttls", "user", "autheap=MSCHAPV2", None, "password"),
+              ("Connection with dynamic TTLS/EAP-MD5 password entry",
+               "TTLS", "ttls", "user", "autheap=MD5", None, "password"),
+              ("Connection with dynamic PEAP/EAP-MSCHAPv2 password entry",
+               "PEAP", None, "user", "auth=MSCHAPV2", None, "password"),
+              ("Connection with dynamic PEAP/EAP-GTC password entry",
+               "PEAP", None, "user", "auth=GTC", None, "password") ]
+    for [desc,eap,anon,identity,phase2,req_id,req_pw] in tests:
+        logger.info(desc)
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap=eap,
+                       anonymous_identity=anon, identity=identity,
+                       ca_cert="auth_serv/ca.pem", phase2=phase2,
+                       wait_connect=False, scan_freq="2412")
+        if req_id:
+            ev = dev[0].wait_event(["CTRL-REQ-IDENTITY"])
+            if ev is None:
+                raise Exception("Request for identity timed out")
+            id = ev.split(':')[0].split('-')[-1]
+            dev[0].request("CTRL-RSP-IDENTITY-" + id + ":" + req_id)
+        ev = dev[0].wait_event(["CTRL-REQ-PASSWORD","CTRL-REQ-OTP"])
+        if ev is None:
+            raise Exception("Request for password timed out")
+        id = ev.split(':')[0].split('-')[-1]
+        type = "OTP" if "CTRL-REQ-OTP" in ev else "PASSWORD"
+        dev[0].request("CTRL-RSP-" + type + "-" + id + ":" + req_pw)
+        ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
+        if ev is None:
+            raise Exception("Connection timed out")
+        dev[0].request("REMOVE_NETWORK all")

@@ -152,6 +152,21 @@ class Hostapd:
             return vals[field]
         return None
 
+    def get_driver_status(self):
+        res = self.request("STATUS-DRIVER")
+        lines = res.splitlines()
+        vals = dict()
+        for l in lines:
+            [name,value] = l.split('=', 1)
+            vals[name] = value
+        return vals
+
+    def get_driver_status_field(self, field):
+        vals = self.get_driver_status()
+        if field in vals:
+            return vals[field]
+        return None
+
     def mgmt_rx(self, timeout=5):
         ev = self.wait_event(["MGMT-RX"], timeout=timeout)
         if ev is None:

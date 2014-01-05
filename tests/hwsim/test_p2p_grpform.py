@@ -1,7 +1,7 @@
 #!/usr/bin/python
 #
 # P2P group formation test cases
-# Copyright (c) 2013, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -35,8 +35,12 @@ def check_grpform_results(i_res, r_res):
 
 def go_neg_init(i_dev, r_dev, pin, i_method, i_intent, res):
     logger.debug("Initiate GO Negotiation from i_dev")
-    i_res = i_dev.p2p_go_neg_init(r_dev.p2p_dev_addr(), pin, i_method, timeout=20, go_intent=i_intent)
-    logger.debug("i_res: " + str(i_res))
+    try:
+        i_res = i_dev.p2p_go_neg_init(r_dev.p2p_dev_addr(), pin, i_method, timeout=20, go_intent=i_intent)
+        logger.debug("i_res: " + str(i_res))
+    except Exception, e:
+        i_res = None
+        logger.info("go_neg_init thread caught an exception from p2p_go_neg_init: " + str(e))
     res.put(i_res)
 
 def go_neg_pin(i_dev, r_dev, i_intent=None, r_intent=None, i_method='enter', r_method='display'):
@@ -59,6 +63,8 @@ def go_neg_pin(i_dev, r_dev, i_intent=None, r_intent=None, i_method='enter', r_m
     r_dev.dump_monitor()
     t.join()
     i_res = res.get()
+    if i_res is None:
+        raise Exception("go_neg_init thread failed")
     logger.debug("i_res: " + str(i_res))
     logger.info("Group formed")
     hwsim_utils.test_connectivity_p2p(r_dev, i_dev)
@@ -91,9 +97,13 @@ def go_neg_pin_authorized(i_dev, r_dev, i_intent=None, r_intent=None, expect_fai
 
 def go_neg_init_pbc(i_dev, r_dev, i_intent, res, freq):
     logger.debug("Initiate GO Negotiation from i_dev")
-    i_res = i_dev.p2p_go_neg_init(r_dev.p2p_dev_addr(), None, "pbc",
-                                  timeout=20, go_intent=i_intent, freq=freq)
-    logger.debug("i_res: " + str(i_res))
+    try:
+        i_res = i_dev.p2p_go_neg_init(r_dev.p2p_dev_addr(), None, "pbc",
+                                      timeout=20, go_intent=i_intent, freq=freq)
+        logger.debug("i_res: " + str(i_res))
+    except Exception, e:
+        i_res = None
+        logger.info("go_neg_init_pbc thread caught an exception from p2p_go_neg_init: " + str(e))
     res.put(i_res)
 
 def go_neg_pbc(i_dev, r_dev, i_intent=None, r_intent=None, i_freq=None, r_freq=None):
@@ -116,6 +126,8 @@ def go_neg_pbc(i_dev, r_dev, i_intent=None, r_intent=None, i_freq=None, r_freq=N
     r_dev.dump_monitor()
     t.join()
     i_res = res.get()
+    if i_res is None:
+        raise Exception("go_neg_init_pbc thread failed")
     logger.debug("i_res: " + str(i_res))
     logger.info("Group formed")
     hwsim_utils.test_connectivity_p2p(r_dev, i_dev)

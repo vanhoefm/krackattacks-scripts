@@ -16,6 +16,7 @@ import hwsim_utils
 import utils
 
 def test_wifi_display(dev):
+    """Wi-Fi Display extensions to P2P"""
     wfd_devinfo = "00011c440028"
     dev[0].request("SET wifi_display 1")
     dev[0].request("WFD_SUBELEM_SET 0 0006" + wfd_devinfo)

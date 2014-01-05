@@ -229,7 +229,8 @@ int eloop_is_timeout_registered(eloop_timeout_handler handler,
  * @handler: Matching callback function
  * @eloop_data: Matching eloop_data
  * @user_data: Matching user_data
- * Returns: 1 if the timeout is depleted, 0 if no change is made
+ * Returns: 1 if the timeout is depleted, 0 if no change is made, -1 if no
+ * timeout matched
  *
  * Find a registered matching <handler,eloop_data,user_data> timeout. If found,
  * deplete the timeout if remaining time is more than the requested time.
@@ -245,7 +246,8 @@ int eloop_deplete_timeout(unsigned int req_secs, unsigned int req_usecs,
  * @handler: Matching callback function
  * @eloop_data: Matching eloop_data
  * @user_data: Matching user_data
- * Returns: 1 if the timeout is replenished, 0 if no change is made
+ * Returns: 1 if the timeout is replenished, 0 if no change is made, -1 if no
+ * timeout matched
  *
  * Find a registered matching <handler,eloop_data,user_data> timeout. If found,
  * replenish the timeout if remaining time is less than the requested time.

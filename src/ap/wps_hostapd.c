@@ -295,7 +295,8 @@ void hostapd_wps_eap_completed(struct hostapd_data *hapd)
 	 * timeout to happen after EAP completion rather than the originally
 	 * scheduled 100 ms after new configuration became known.
 	 */
-	if (eloop_deplete_timeout(0, 0, wps_reload_config, hapd->iface, NULL))
+	if (eloop_deplete_timeout(0, 0, wps_reload_config, hapd->iface, NULL) ==
+	    1)
 		wpa_printf(MSG_DEBUG, "WPS: Reschedule immediate configuration reload");
 }
 

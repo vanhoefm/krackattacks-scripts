@@ -623,10 +623,11 @@ int eloop_deplete_timeout(unsigned int req_secs, unsigned int req_usecs,
 						       user_data);
 				return 1;
 			}
+			return 0;
 		}
 	}
 
-	return 0;
+	return -1;
 }
 
 
@@ -654,10 +655,11 @@ int eloop_replenish_timeout(unsigned int req_secs, unsigned int req_usecs,
 						       user_data);
 				return 1;
 			}
+			return 0;
 		}
 	}
 
-	return 0;
+	return -1;
 }
 
 

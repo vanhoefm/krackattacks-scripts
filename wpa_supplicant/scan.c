@@ -888,17 +888,19 @@ void wpa_supplicant_update_scan_int(struct wpa_supplicant *wpa_s, int sec)
  */
 void wpa_supplicant_req_scan(struct wpa_supplicant *wpa_s, int sec, int usec)
 {
-	if (eloop_deplete_timeout(sec, usec, wpa_supplicant_scan, wpa_s, NULL))
-	{
-		wpa_dbg(wpa_s, MSG_DEBUG, "Rescheduling scan request: %d sec %d usec",
+	int res = eloop_deplete_timeout(sec, usec, wpa_supplicant_scan, wpa_s,
+					NULL);
+	if (res == 1) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "Rescheduling scan request: %d.%06d sec",
 			sec, usec);
-		return;
+	} else if (res == 0) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "Ignore new scan request for %d.%06d sec since an earlier request is scheduled to trigger sooner",
+			sec, usec);
+	} else {
+		wpa_dbg(wpa_s, MSG_DEBUG, "Setting scan request: %d.%06d sec",
+			sec, usec);
+		eloop_register_timeout(sec, usec, wpa_supplicant_scan, wpa_s, NULL);
 	}
-
-	wpa_dbg(wpa_s, MSG_DEBUG, "Setting scan request: %d sec %d usec",
-		sec, usec);
-	eloop_cancel_timeout(wpa_supplicant_scan, wpa_s, NULL);
-	eloop_register_timeout(sec, usec, wpa_supplicant_scan, wpa_s, NULL);
 }
 
 

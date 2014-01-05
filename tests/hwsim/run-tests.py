@@ -230,7 +230,10 @@ def main():
     if args.update_tests_db:
         for t in tests:
             name = t.__name__.replace('test_', '', 1)
-            print name + " - " + t.__doc__
+            if t.__doc__ is None:
+                print name + " - MISSING DESCRIPTION"
+            else:
+                print name + " - " + t.__doc__
             if conn:
                 sql = 'INSERT OR REPLACE INTO tests(test,description) VALUES (?, ?)'
                 params = (name, t.__doc__)

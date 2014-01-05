@@ -1,7 +1,7 @@
 #!/usr/bin/python
 #
 # Hotspot 2.0 tests
-# Copyright (c) 2013, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -45,9 +45,10 @@ def hs20_ap_params():
     params['anqp_3gpp_cell_net'] = "244,91"
     return params
 
-def interworking_select(dev, bssid, type=None, no_match=False):
+def interworking_select(dev, bssid, type=None, no_match=False, freq=None):
     dev.dump_monitor()
-    dev.request("INTERWORKING_SELECT")
+    freq_extra = " freq=" + freq if freq else ""
+    dev.request("INTERWORKING_SELECT" + freq_extra)
     ev = dev.wait_event(["INTERWORKING-AP", "INTERWORKING-NO-MATCH"],
                         timeout=15)
     if ev is None:
@@ -152,7 +153,7 @@ def test_ap_anqp_sharing(dev, apdev):
                                   'password': "secret",
                                   'domain': "example.com" })
     logger.info("Normal network selection with shared ANQP results")
-    interworking_select(dev[0], None, "home")
+    interworking_select(dev[0], None, "home", freq="2412")
     dev[0].dump_monitor()
 
     res1 = dev[0].get_bss(bssid)
@@ -264,10 +265,10 @@ def test_ap_hs20_select(dev, apdev):
     id = dev[0].add_cred_values({ 'realm': "example.com", 'username': "test",
                                   'password': "secret",
                                   'domain': "no.match.example.com" })
-    interworking_select(dev[0], bssid, "roaming")
+    interworking_select(dev[0], bssid, "roaming", freq="2412")
 
     dev[0].set_cred_quoted(id, "realm", "no.match.example.com");
-    interworking_select(dev[0], bssid, no_match=True)
+    interworking_select(dev[0], bssid, no_match=True, freq="2412")
 
 def hs20_simulated_sim(dev, ap, method):
     bssid = ap['bssid']
@@ -280,7 +281,7 @@ def hs20_simulated_sim(dev, ap, method):
     dev.hs20_enable()
     dev.add_cred_values({ 'imsi': "555444-333222111", 'eap': method,
                           'milenage': "5122250214c33e723a5dd523fc145fc0:981d464c7c52eb6e5036234984ad0bcf:000000000123"})
-    interworking_select(dev, "home")
+    interworking_select(dev, "home", freq="2412")
     interworking_connect(dev, bssid, method)
     check_sp_type(dev, "home")
 
@@ -316,7 +317,7 @@ def test_ap_hs20_ext_sim(dev, apdev):
     dev[0].hs20_enable()
     dev[0].request("SET external_sim 1")
     dev[0].add_cred_values({ 'imsi': "23201-0000000000", 'eap': "SIM" })
-    interworking_select(dev[0], "home")
+    interworking_select(dev[0], "home", freq="2412")
     interworking_ext_sim_connect(dev[0], bssid, "SIM")
     check_sp_type(dev[0], "home")
 
@@ -334,7 +335,7 @@ def test_ap_hs20_ext_sim_roaming(dev, apdev):
     dev[0].hs20_enable()
     dev[0].request("SET external_sim 1")
     dev[0].add_cred_values({ 'imsi': "23201-0000000000", 'eap': "SIM" })
-    interworking_select(dev[0], "roaming")
+    interworking_select(dev[0], "roaming", freq="2412")
     interworking_ext_sim_connect(dev[0], bssid, "SIM")
     check_sp_type(dev[0], "roaming")
 
@@ -350,7 +351,7 @@ def test_ap_hs20_username(dev, apdev):
                                   'username': "hs20-test",
                                   'password': "password",
                                   'domain': "example.com" })
-    interworking_select(dev[0], bssid, "home")
+    interworking_select(dev[0], bssid, "home", freq="2412")
     interworking_connect(dev[0], bssid, "TTLS")
     check_sp_type(dev[0], "home")
 
@@ -364,7 +365,7 @@ def eap_test(dev, ap, eap_params, method, user):
     dev.add_cred_values({ 'realm': "example.com",
                           'username': user,
                           'password': "password" })
-    interworking_select(dev, bssid)
+    interworking_select(dev, bssid, freq="2412")
     interworking_connect(dev, bssid, method)
 
 def test_ap_hs20_eap_peap_mschapv2(dev, apdev):
@@ -408,7 +409,7 @@ def test_ap_hs20_eap_tls(dev, apdev):
                              'ca_cert': "auth_serv/ca.pem",
                              'client_cert': "auth_serv/user.pem",
                              'private_key': "auth_serv/user.key"})
-    interworking_select(dev[0], bssid)
+    interworking_select(dev[0], bssid, freq="2412")
     interworking_connect(dev[0], bssid, "TLS")
 
 def test_ap_hs20_nai_realms(dev, apdev):
@@ -424,7 +425,7 @@ def test_ap_hs20_nai_realms(dev, apdev):
                                   'username': "pap user",
                                   'password': "password",
                                   'domain': "example.com" })
-    interworking_select(dev[0], bssid, "home")
+    interworking_select(dev[0], bssid, "home", freq="2412")
     interworking_connect(dev[0], bssid, "TTLS")
     check_sp_type(dev[0], "home")
 
@@ -442,7 +443,7 @@ def test_ap_hs20_roaming_consortium(dev, apdev):
                                   'domain': "example.com",
                                   'roaming_consortium': "fedcba",
                                   'eap': "PEAP" })
-    interworking_select(dev[0], bssid, "home")
+    interworking_select(dev[0], bssid, "home", freq="2412")
     interworking_connect(dev[0], bssid, "PEAP")
     check_sp_type(dev[0], "home")
 
@@ -462,7 +463,7 @@ def test_ap_hs20_username_roaming(dev, apdev):
                                   'username': "hs20-test",
                                   'password': "password",
                                   'domain': "example.com" })
-    interworking_select(dev[0], bssid, "roaming")
+    interworking_select(dev[0], bssid, "roaming", freq="2412")
     interworking_connect(dev[0], bssid, "TTLS")
     check_sp_type(dev[0], "roaming")
 
@@ -477,7 +478,7 @@ def test_ap_hs20_username_unknown(dev, apdev):
     id = dev[0].add_cred_values({ 'realm': "example.com",
                                   'username': "hs20-test",
                                   'password': "password" })
-    interworking_select(dev[0], bssid, "unknown")
+    interworking_select(dev[0], bssid, "unknown", freq="2412")
     interworking_connect(dev[0], bssid, "TTLS")
     check_sp_type(dev[0], "unknown")
 
@@ -494,7 +495,7 @@ def test_ap_hs20_username_unknown2(dev, apdev):
                                   'username': "hs20-test",
                                   'password': "password",
                                   'domain': "example.com" })
-    interworking_select(dev[0], bssid, "unknown")
+    interworking_select(dev[0], bssid, "unknown", freq="2412")
     interworking_connect(dev[0], bssid, "TTLS")
     check_sp_type(dev[0], "unknown")
 
@@ -510,7 +511,7 @@ def test_ap_hs20_gas_while_associated(dev, apdev):
                                   'username': "hs20-test",
                                   'password': "password",
                                   'domain': "example.com" })
-    interworking_select(dev[0], bssid, "home")
+    interworking_select(dev[0], bssid, "home", freq="2412")
     interworking_connect(dev[0], bssid, "TTLS")
 
     logger.info("Verifying GAS query while associated")
@@ -534,7 +535,7 @@ def test_ap_hs20_gas_frag_while_associated(dev, apdev):
                                   'username': "hs20-test",
                                   'password': "password",
                                   'domain': "example.com" })
-    interworking_select(dev[0], bssid, "home")
+    interworking_select(dev[0], bssid, "home", freq="2412")
     interworking_connect(dev[0], bssid, "TTLS")
 
     logger.info("Verifying GAS query while associated")
@@ -560,7 +561,7 @@ def test_ap_hs20_multiple_connects(dev, apdev):
 
     for i in range(0, 3):
         logger.info("Starting Interworking network selection")
-        dev[0].request("INTERWORKING_SELECT auto")
+        dev[0].request("INTERWORKING_SELECT auto freq=2412")
         while True:
             ev = dev[0].wait_event(["INTERWORKING-NO-MATCH",
                                     "INTERWORKING-ALREADY-CONNECTED",
@@ -605,7 +606,7 @@ def test_ap_hs20_disallow_aps(dev, apdev):
 
     logger.info("Verify disallow_aps ssid")
     dev[0].request("SET disallow_aps ssid 746573742d68733230")
-    dev[0].request("INTERWORKING_SELECT auto")
+    dev[0].request("INTERWORKING_SELECT auto freq=2412")
     ev = dev[0].wait_event(["INTERWORKING-NO-MATCH"], timeout=15)
     if ev is None:
         raise Exception("Network selection timed out")
@@ -613,7 +614,7 @@ def test_ap_hs20_disallow_aps(dev, apdev):
 
     logger.info("Verify disallow_aps clear")
     dev[0].request("SET disallow_aps ")
-    interworking_select(dev[0], bssid, "home")
+    interworking_select(dev[0], bssid, "home", freq="2412")
 
     dev[0].request("SET disallow_aps bssid " + bssid.translate(None, ':'))
     ret = dev[0].request("INTERWORKING_CONNECT " + bssid)
@@ -626,7 +627,7 @@ def policy_test(dev, ap, values, only_one=True):
     bssid = ap['bssid']
     dev.hs20_enable()
     id = dev.add_cred_values(values)
-    dev.request("INTERWORKING_SELECT auto")
+    dev.request("INTERWORKING_SELECT auto freq=2412")
     while True:
         ev = dev.wait_event(["INTERWORKING-AP", "INTERWORKING-NO-MATCH",
                              "CTRL-EVENT-CONNECTED"], timeout=15)

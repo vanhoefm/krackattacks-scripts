@@ -1,7 +1,7 @@
 #!/usr/bin/python
 #
 # WPA2-Enterprise tests
-# Copyright (c) 2013, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -46,20 +46,13 @@ def eap_check_auth(dev, method, initial, rsn=True, sha256=False):
 
     if initial:
         ev = dev.wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
-        if ev is None:
-            raise Exception("Association with the AP timed out")
-        status = dev.get_status()
-        if status["wpa_state"] != "COMPLETED":
-            raise Exception("Connection not completed")
     else:
-        # no connected event since already connected
-        for i in range(0, 30):
-            status = dev.get_status()
-            if status["wpa_state"] == "COMPLETED":
-                break
-            time.sleep(0.1)
-        if status["wpa_state"] != "COMPLETED":
-            raise Exception("Connection not completed")
+        ev = dev.wait_event(["WPA: Key negotiation completed"], timeout=10)
+    if ev is None:
+        raise Exception("Association with the AP timed out")
+    status = dev.get_status()
+    if status["wpa_state"] != "COMPLETED":
+        raise Exception("Connection not completed")
 
     if status["suppPortStatus"] != "Authorized":
         raise Exception("Port not authorized")

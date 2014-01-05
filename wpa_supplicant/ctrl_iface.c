@@ -5168,6 +5168,8 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 	p2p_ctrl_flush(wpa_s);
 	wpas_p2p_group_remove(wpa_s, "*");
 	wpas_p2p_service_flush(wpa_s);
+	wpa_s->global->p2p_disabled = 0;
+	wpa_s->global->p2p_per_sta_psk = 0;
 #endif /* CONFIG_P2P */
 
 #ifdef CONFIG_WPS_TESTING

@@ -1,7 +1,7 @@
 #!/usr/bin/python
 #
 # WPS tests
-# Copyright (c) 2013, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -705,11 +705,14 @@ def test_ap_wps_er_add_enrollee_pbc(dev, apdev):
     dev[1].dump_monitor()
     dev[1].request("WPS_PBC")
 
-    ev = dev[0].wait_event(["WPS-ER-ENROLLEE-ADD"], timeout=15)
-    if ev is None:
-        raise Exception("Enrollee discovery timed out")
-    if enrollee not in ev:
-        raise Exception("Expected Enrollee not found")
+    for i in range(0, 2):
+        ev = dev[0].wait_event(["WPS-ER-ENROLLEE-ADD"], timeout=15)
+        if ev is None:
+            raise Exception("Enrollee discovery timed out")
+        if enrollee in ev:
+            break
+        if i == 1:
+            raise Exception("Expected Enrollee not found")
     dev[0].request("WPS_ER_PBC " + enrollee)
 
     ev = dev[1].wait_event(["WPS-SUCCESS"], timeout=15)

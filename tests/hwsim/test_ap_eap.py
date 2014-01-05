@@ -334,9 +334,25 @@ def test_ap_wpa2_eap_gpsk(dev, apdev):
     """WPA2-Enterprise connection using EAP-GPSK"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
-    eap_connect(dev[0], "GPSK", "gpsk user",
-                password="abcdefghijklmnop0123456789abcdef")
+    id = eap_connect(dev[0], "GPSK", "gpsk user",
+                     password="abcdefghijklmnop0123456789abcdef")
     eap_reauth(dev[0], "GPSK")
+
+    logger.info("Test forced algorithm selection")
+    for phase1 in [ "cipher=1", "cipher=2" ]:
+        dev[0].set_network_quoted(id, "phase1", phase1)
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=10)
+        if ev is None:
+            raise Exception("EAP success timed out")
+        ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
+        if ev is None:
+            raise Exception("Association with the AP timed out")
+
+    logger.info("Test failed algorithm negotiation")
+    dev[0].set_network_quoted(id, "phase1", "cipher=9")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=10)
+    if ev is None:
+        raise Exception("EAP failure timed out")
 
 def test_ap_wpa2_eap_sake(dev, apdev):
     """WPA2-Enterprise connection using EAP-SAKE"""

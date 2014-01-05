@@ -3453,7 +3453,7 @@ int wps_registrar_config_ap(struct wps_registrar *reg,
 			    struct wps_credential *cred)
 {
 #ifdef CONFIG_WPS2
-	printf("encr_type=0x%x\n", cred->encr_type);
+	wpa_printf(MSG_DEBUG, "WPS: encr_type=0x%x", cred->encr_type);
 	if (!(cred->encr_type & (WPS_ENCR_NONE | WPS_ENCR_TKIP |
 				 WPS_ENCR_AES))) {
 		if (cred->encr_type & WPS_ENCR_WEP) {

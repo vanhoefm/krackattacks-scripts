@@ -600,3 +600,10 @@ def test_ap_wpa2_eap_interactive(dev, apdev):
         if ev is None:
             raise Exception("Connection timed out")
         dev[0].request("REMOVE_NETWORK all")
+
+def test_ap_wpa2_eap_vendor_test(dev, apdev):
+    """WPA2-Enterprise connection using EAP vendor test"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "VENDOR-TEST", "vendor-test")
+    eap_reauth(dev[0], "VENDOR-TEST")

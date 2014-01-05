@@ -81,6 +81,7 @@ static void * eap_pwd_init(struct eap_sm *sm)
 	struct eap_pwd_data *data;
 	const u8 *identity, *password;
 	size_t identity_len, password_len;
+	int fragment_size;
 
 	password = eap_get_config_password(sm, &password_len);
 	if (password == NULL) {
@@ -127,7 +128,11 @@ static void * eap_pwd_init(struct eap_sm *sm)
 
 	data->out_frag_pos = data->in_frag_pos = 0;
 	data->inbuf = data->outbuf = NULL;
-	data->mtu = 1020; /* default from RFC 5931, make it configurable! */
+	fragment_size = eap_get_config_fragment_size(sm);
+	if (fragment_size <= 0)
+		data->mtu = 1020; /* default from RFC 5931 */
+	else
+		data->mtu = fragment_size;
 
 	data->state = PWD_ID_Req;
 

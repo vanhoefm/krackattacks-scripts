@@ -70,8 +70,8 @@ class Ctrl:
             return None
         raise Exception("DETACH failed")
 
-    def pending(self):
-        [r, w, e] = select.select([self.s], [], [], 0)
+    def pending(self, timeout=0):
+        [r, w, e] = select.select([self.s], [], [], timeout)
         if r:
             return True
         return False

@@ -1,6 +1,6 @@
 /*
  * EAP-IKEv2 peer (RFC 5106)
- * Copyright (c) 2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2007-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -60,6 +60,7 @@ static void * eap_ikev2_init(struct eap_sm *sm)
 	struct eap_ikev2_data *data;
 	const u8 *identity, *password;
 	size_t identity_len, password_len;
+	int fragment_size;
 
 	identity = eap_get_config_identity(sm, &identity_len);
 	if (identity == NULL) {
@@ -71,7 +72,11 @@ static void * eap_ikev2_init(struct eap_sm *sm)
 	if (data == NULL)
 		return NULL;
 	data->state = WAIT_START;
-	data->fragment_size = IKEV2_FRAGMENT_SIZE;
+	fragment_size = eap_get_config_fragment_size(sm);
+	if (fragment_size <= 0)
+		data->fragment_size = IKEV2_FRAGMENT_SIZE;
+	else
+		data->fragment_size = fragment_size;
 	data->ikev2.state = SA_INIT;
 	data->ikev2.peer_auth = PEER_AUTH_SECRET;
 	data->ikev2.key_pad = (u8 *) os_strdup("Key Pad for EAP-IKEv2");

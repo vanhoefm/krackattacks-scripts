@@ -1,7 +1,7 @@
 #!/usr/bin/python
 #
 # Python class for controlling wlantest
-# Copyright (c) 2013, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -50,17 +50,17 @@ class Wlantest:
         return res
 
     def get_bss_counter(self, field, bssid):
-        res = subprocess.check_output([self.wlantest_cli, "get_bss_counter",
-                                       field, bssid]);
+        try:
+            res = subprocess.check_output([self.wlantest_cli, "get_bss_counter",
+                                           field, bssid]);
+        except Exception, e:
+            return 0
         if "FAIL" in res:
-            raise Exception("wlantest_cli command failed")
+            return 0
         return int(res)
 
     def clear_bss_counters(self, bssid):
-        res = subprocess.check_output([self.wlantest_cli, "clear_bss_counters",
-                                       bssid]);
-        if "FAIL" in res:
-            raise Exception("wlantest_cli command failed")
+        subprocess.call([self.wlantest_cli, "clear_bss_counters", bssid]);
 
     def info_sta(self, field, bssid, addr):
         res = subprocess.check_output([self.wlantest_cli, "info_sta",

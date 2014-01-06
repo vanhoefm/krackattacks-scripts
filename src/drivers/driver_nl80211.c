@@ -7208,6 +7208,22 @@ static int wpa_driver_nl80211_sta_add(void *priv,
 			params->ext_capab_len, params->ext_capab);
 	}
 
+	if (params->supp_channels) {
+		wpa_hexdump(MSG_DEBUG, "  * supported channels",
+			    params->supp_channels, params->supp_channels_len);
+		NLA_PUT(msg, NL80211_ATTR_STA_SUPPORTED_CHANNELS,
+			params->supp_channels_len, params->supp_channels);
+	}
+
+	if (params->supp_oper_classes) {
+		wpa_hexdump(MSG_DEBUG, "  * supported operating classes",
+			    params->supp_oper_classes,
+			    params->supp_oper_classes_len);
+		NLA_PUT(msg, NL80211_ATTR_STA_SUPPORTED_OPER_CLASSES,
+			params->supp_oper_classes_len,
+			params->supp_oper_classes);
+	}
+
 	os_memset(&upd, 0, sizeof(upd));
 	upd.mask = sta_flags_nl80211(params->flags);
 	upd.set = upd.mask;

@@ -1,6 +1,6 @@
 /*
  * Driver interaction with Linux nl80211/cfg80211
- * Copyright (c) 2002-2012, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2014, Jouni Malinen <j@w1.fi>
  * Copyright (c) 2003-2004, Instant802 Networks, Inc.
  * Copyright (c) 2005-2006, Devicescape Software, Inc.
  * Copyright (c) 2007, Johannes Berg <johannes@sipsolutions.net>
@@ -1049,49 +1049,55 @@ static int wpa_driver_nl80211_get_ssid(void *priv, u8 *ssid)
 }
 
 
-static void wpa_driver_nl80211_event_link(struct wpa_driver_nl80211_data *drv,
-					  char *buf, size_t len, int del)
+static void wpa_driver_nl80211_event_newlink(
+	struct wpa_driver_nl80211_data *drv, char *ifname)
 {
 	union wpa_event_data event;
 
-	os_memset(&event, 0, sizeof(event));
-	if (len > sizeof(event.interface_status.ifname))
-		len = sizeof(event.interface_status.ifname) - 1;
-	os_memcpy(event.interface_status.ifname, buf, len);
-	event.interface_status.ievent = del ? EVENT_INTERFACE_REMOVED :
-		EVENT_INTERFACE_ADDED;
-
-	wpa_printf(MSG_DEBUG, "RTM_%sLINK, IFLA_IFNAME: Interface '%s' %s",
-		   del ? "DEL" : "NEW",
-		   event.interface_status.ifname,
-		   del ? "removed" : "added");
-
-	if (os_strcmp(drv->first_bss->ifname, event.interface_status.ifname) ==
-	    0) {
-		if (del) {
-			if (drv->if_removed) {
-				wpa_printf(MSG_DEBUG, "nl80211: if_removed "
-					   "already set - ignore event");
-				return;
-			}
-			drv->if_removed = 1;
-		} else {
-			if (if_nametoindex(drv->first_bss->ifname) == 0) {
-				wpa_printf(MSG_DEBUG, "nl80211: Interface %s "
-					   "does not exist - ignore "
-					   "RTM_NEWLINK",
-					   drv->first_bss->ifname);
-				return;
-			}
-			if (!drv->if_removed) {
-				wpa_printf(MSG_DEBUG, "nl80211: if_removed "
-					   "already cleared - ignore event");
-				return;
-			}
-			drv->if_removed = 0;
+	if (os_strcmp(drv->first_bss->ifname, ifname) == 0) {
+		if (if_nametoindex(drv->first_bss->ifname) == 0) {
+			wpa_printf(MSG_DEBUG, "nl80211: Interface %s does not exist - ignore RTM_NEWLINK",
+				   drv->first_bss->ifname);
+			return;
 		}
+		if (!drv->if_removed)
+			return;
+		wpa_printf(MSG_DEBUG, "nl80211: Mark if_removed=0 for %s based on RTM_NEWLINK event",
+			   drv->first_bss->ifname);
+		drv->if_removed = 0;
 	}
 
+	os_memset(&event, 0, sizeof(event));
+	os_strlcpy(event.interface_status.ifname, ifname,
+		   sizeof(event.interface_status.ifname));
+	event.interface_status.ievent = EVENT_INTERFACE_ADDED;
+	wpa_supplicant_event(drv->ctx, EVENT_INTERFACE_STATUS, &event);
+}
+
+
+static void wpa_driver_nl80211_event_dellink(
+	struct wpa_driver_nl80211_data *drv, char *ifname)
+{
+	union wpa_event_data event;
+
+	if (os_strcmp(drv->first_bss->ifname, ifname) == 0) {
+		if (drv->if_removed) {
+			wpa_printf(MSG_DEBUG, "nl80211: if_removed already set - ignore RTM_DELLINK event for %s",
+				   ifname);
+			return;
+		}
+		wpa_printf(MSG_DEBUG, "RTM_DELLINK: Interface '%s' removed - mark if_removed=1",
+			   ifname);
+		drv->if_removed = 1;
+	} else {
+		wpa_printf(MSG_DEBUG, "RTM_DELLINK: Interface '%s' removed",
+			   ifname);
+	}
+
+	os_memset(&event, 0, sizeof(event));
+	os_strlcpy(event.interface_status.ifname, ifname,
+		   sizeof(event.interface_status.ifname));
+	event.interface_status.ievent = EVENT_INTERFACE_REMOVED;
 	wpa_supplicant_event(drv->ctx, EVENT_INTERFACE_STATUS, &event);
 }
 
@@ -1158,21 +1164,57 @@ static void wpa_driver_nl80211_event_rtm_newlink(void *ctx,
 {
 	struct nl80211_global *global = ctx;
 	struct wpa_driver_nl80211_data *drv;
-	int attrlen, rta_len;
+	int attrlen;
 	struct rtattr *attr;
 	u32 brid = 0;
 	char namebuf[IFNAMSIZ];
+	char ifname[IFNAMSIZ + 1];
+	char extra[100], *pos, *end;
 
 	drv = nl80211_find_drv(global, ifi->ifi_index, buf, len);
 	if (!drv) {
-		wpa_printf(MSG_DEBUG, "nl80211: Ignore event for foreign "
-			   "ifindex %d", ifi->ifi_index);
+		wpa_printf(MSG_DEBUG, "nl80211: Ignore RTM_NEWLINK event for foreign ifindex %d",
+			   ifi->ifi_index);
 		return;
 	}
 
-	wpa_printf(MSG_DEBUG, "RTM_NEWLINK: operstate=%d ifi_flags=0x%x "
-		   "(%s%s%s%s)",
-		   drv->operstate, ifi->ifi_flags,
+	extra[0] = '\0';
+	pos = extra;
+	end = pos + sizeof(extra);
+	ifname[0] = '\0';
+
+	attrlen = len;
+	attr = (struct rtattr *) buf;
+	while (RTA_OK(attr, attrlen)) {
+		switch (attr->rta_type) {
+		case IFLA_IFNAME:
+			if (RTA_PAYLOAD(attr) >= IFNAMSIZ)
+				break;
+			os_memcpy(ifname, RTA_DATA(attr), RTA_PAYLOAD(attr));
+			ifname[RTA_PAYLOAD(attr)] = '\0';
+			break;
+		case IFLA_MASTER:
+			brid = nla_get_u32((struct nlattr *) attr);
+			pos += os_snprintf(pos, end - pos, " master=%u", brid);
+			break;
+		case IFLA_WIRELESS:
+			pos += os_snprintf(pos, end - pos, " wext");
+			break;
+		case IFLA_OPERSTATE:
+			pos += os_snprintf(pos, end - pos, " operstate=%u",
+					   nla_get_u32((struct nlattr *) attr));
+			break;
+		case IFLA_LINKMODE:
+			pos += os_snprintf(pos, end - pos, " linkmode=%u",
+					   nla_get_u32((struct nlattr *) attr));
+			break;
+		}
+		attr = RTA_NEXT(attr, attrlen);
+	}
+	extra[sizeof(extra) - 1] = '\0';
+
+	wpa_printf(MSG_DEBUG, "RTM_NEWLINK: ifi_index=%d ifname=%s%s ifi_flags=0x%x (%s%s%s%s)",
+		   ifi->ifi_index, ifname, extra, ifi->ifi_flags,
 		   (ifi->ifi_flags & IFF_UP) ? "[UP]" : "",
 		   (ifi->ifi_flags & IFF_RUNNING) ? "[RUNNING]" : "",
 		   (ifi->ifi_flags & IFF_LOWER_UP) ? "[LOWER_UP]" : "",
@@ -1229,23 +1271,14 @@ static void wpa_driver_nl80211_event_rtm_newlink(void *ctx,
 	 */
 	if (drv->operstate == 1 &&
 	    (ifi->ifi_flags & (IFF_LOWER_UP | IFF_DORMANT)) == IFF_LOWER_UP &&
-	    !(ifi->ifi_flags & IFF_RUNNING))
+	    !(ifi->ifi_flags & IFF_RUNNING)) {
+		wpa_printf(MSG_DEBUG, "nl80211: Set IF_OPER_UP again based on ifi_flags and expected operstate");
 		netlink_send_oper_ifla(drv->global->netlink, drv->ifindex,
 				       -1, IF_OPER_UP);
-
-	attrlen = len;
-	attr = (struct rtattr *) buf;
-	rta_len = RTA_ALIGN(sizeof(struct rtattr));
-	while (RTA_OK(attr, attrlen)) {
-		if (attr->rta_type == IFLA_IFNAME) {
-			wpa_driver_nl80211_event_link(
-				drv,
-				((char *) attr) + rta_len,
-				attr->rta_len - rta_len, 0);
-		} else if (attr->rta_type == IFLA_MASTER)
-			brid = nla_get_u32((struct nlattr *) attr);
-		attr = RTA_NEXT(attr, attrlen);
 	}
+
+	if (ifname[0])
+		wpa_driver_nl80211_event_newlink(drv, ifname);
 
 	if (ifi->ifi_family == AF_BRIDGE && brid) {
 		/* device has been added to bridge */
@@ -1263,31 +1296,39 @@ static void wpa_driver_nl80211_event_rtm_dellink(void *ctx,
 {
 	struct nl80211_global *global = ctx;
 	struct wpa_driver_nl80211_data *drv;
-	int attrlen, rta_len;
+	int attrlen;
 	struct rtattr *attr;
 	u32 brid = 0;
+	char ifname[IFNAMSIZ + 1];
 
 	drv = nl80211_find_drv(global, ifi->ifi_index, buf, len);
 	if (!drv) {
-		wpa_printf(MSG_DEBUG, "nl80211: Ignore dellink event for "
-			   "foreign ifindex %d", ifi->ifi_index);
+		wpa_printf(MSG_DEBUG, "nl80211: Ignore RTM_DELLINK event for foreign ifindex %d",
+			   ifi->ifi_index);
 		return;
 	}
 
+	ifname[0] = '\0';
+
 	attrlen = len;
 	attr = (struct rtattr *) buf;
-
-	rta_len = RTA_ALIGN(sizeof(struct rtattr));
 	while (RTA_OK(attr, attrlen)) {
-		if (attr->rta_type == IFLA_IFNAME) {
-			wpa_driver_nl80211_event_link(
-				drv,
-				((char *) attr) + rta_len,
-				attr->rta_len - rta_len, 1);
-		} else if (attr->rta_type == IFLA_MASTER)
+		switch (attr->rta_type) {
+		case IFLA_IFNAME:
+			if (RTA_PAYLOAD(attr) >= IFNAMSIZ)
+				break;
+			os_memcpy(ifname, RTA_DATA(attr), RTA_PAYLOAD(attr));
+			ifname[RTA_PAYLOAD(attr)] = '\0';
+			break;
+		case IFLA_MASTER:
 			brid = nla_get_u32((struct nlattr *) attr);
+			break;
+		}
 		attr = RTA_NEXT(attr, attrlen);
 	}
+
+	if (ifname[0])
+		wpa_driver_nl80211_event_dellink(drv, ifname);
 
 	if (ifi->ifi_family == AF_BRIDGE && brid) {
 		/* device has been removed from bridge */
@@ -8611,8 +8652,9 @@ static int wpa_driver_nl80211_set_operstate(void *priv, int state)
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 
-	wpa_printf(MSG_DEBUG, "%s: operstate %d->%d (%s)",
-		   __func__, drv->operstate, state, state ? "UP" : "DORMANT");
+	wpa_printf(MSG_DEBUG, "nl80211: Set %s operstate %d->%d (%s)",
+		   bss->ifname, drv->operstate, state,
+		   state ? "UP" : "DORMANT");
 	drv->operstate = state;
 	return netlink_send_oper_ifla(drv->global->netlink, drv->ifindex, -1,
 				      state ? IF_OPER_UP : IF_OPER_DORMANT);

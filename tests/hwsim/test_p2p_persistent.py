@@ -10,6 +10,7 @@ import logging
 logger = logging.getLogger()
 
 import hwsim_utils
+from test_p2p_autogo import connect_cli
 
 def go_neg_pin_authorized_persistent(i_dev, r_dev, i_intent=None, r_intent=None, i_method='enter', r_method='display', test_data=True):
     r_dev.p2p_listen()
@@ -279,3 +280,58 @@ def test_persistent_group_and_role_change(dev):
 
     logger.info("Re-invoke the persistent group")
     invite_from_go(dev[0], dev[1])
+
+def test_persistent_go_client_list(dev):
+    """P2P GO and list of clients in persistent group"""
+    addr0 = dev[0].p2p_dev_addr()
+    addr1 = dev[1].p2p_dev_addr()
+    addr2 = dev[2].p2p_dev_addr()
+
+    res = dev[0].p2p_start_go(persistent=True)
+    id = None
+    for n in dev[0].list_networks():
+        if "[P2P-PERSISTENT]" in n['flags']:
+            id = n['id']
+            break
+    if id is None:
+        raise Exception("Could not find persistent group entry")
+
+    connect_cli(dev[0], dev[1])
+    clients = dev[0].request("GET_NETWORK " + id + " p2p_client_list").rstrip()
+    if clients != addr1:
+        raise Exception("Unexpected p2p_client_list entry(2): " + clients)
+    connect_cli(dev[0], dev[2])
+    clients = dev[0].request("GET_NETWORK " + id + " p2p_client_list").rstrip()
+    if clients != addr2 + " " + addr1:
+        raise Exception("Unexpected p2p_client_list entry(3): " + clients)
+
+    peer = dev[1].get_peer(res['go_dev_addr'])
+    dev[1].remove_group()
+    dev[1].request("P2P_GROUP_ADD persistent=" + peer['persistent'])
+    ev = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=30)
+    if ev is None:
+        raise Exception("Timeout on group restart (on client)")
+    clients = dev[0].request("GET_NETWORK " + id + " p2p_client_list").rstrip()
+    if clients != addr1 + " " + addr2:
+        raise Exception("Unexpected p2p_client_list entry(4): " + clients)
+
+    dev[2].remove_group()
+    dev[1].remove_group()
+    dev[0].remove_group()
+
+    clients = dev[0].request("GET_NETWORK " + id + " p2p_client_list").rstrip()
+    if clients != addr1 + " " + addr2:
+        raise Exception("Unexpected p2p_client_list entry(5): " + clients)
+
+    dev[1].p2p_listen()
+    dev[2].p2p_listen()
+    dev[0].request("P2P_FLUSH")
+    dev[0].discover_peer(addr1, social=True)
+    peer = dev[0].get_peer(addr1)
+    if 'persistent' not in peer or peer['persistent'] != id:
+        raise Exception("Persistent group client not recognized(1)")
+
+    dev[0].discover_peer(addr2, social=True)
+    peer = dev[0].get_peer(addr2)
+    if 'persistent' not in peer or peer['persistent'] != id:
+        raise Exception("Persistent group client not recognized(2)")

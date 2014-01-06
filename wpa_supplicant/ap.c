@@ -680,6 +680,8 @@ void ap_eapol_tx_status(void *ctx, const u8 *dst,
 {
 #ifdef NEED_AP_MLME
 	struct wpa_supplicant *wpa_s = ctx;
+	if (!wpa_s->ap_iface)
+		return;
 	hostapd_tx_status(wpa_s->ap_iface->bss[0], dst, data, len, ack);
 #endif /* NEED_AP_MLME */
 }

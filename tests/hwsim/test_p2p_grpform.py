@@ -421,3 +421,21 @@ def test_grpform_incorrect_pin(dev):
     ev = dev[0].wait_event(["P2P-GROUP-FORMATION-FAILURE"], timeout=5)
     if ev is None:
         raise Exception("Group formation failure timed out")
+
+def test_grpform_reject(dev):
+    """User rejecting group formation attempt by a P2P peer"""
+    addr0 = dev[0].p2p_dev_addr()
+    dev[0].p2p_listen()
+    dev[1].p2p_go_neg_init(addr0, None, "pbc")
+    ev = dev[0].wait_global_event(["P2P-GO-NEG-REQUEST"], timeout=15)
+    if ev is None:
+        raise Exception("GO Negotiation timed out")
+    if "FAIL" in dev[0].global_request("P2P_REJECT " + ev.split(' ')[1]):
+        raise Exception("P2P_REJECT failed")
+    dev[1].request("P2P_STOP_FIND")
+    dev[1].p2p_go_neg_init(addr0, None, "pbc")
+    ev = dev[1].wait_global_event(["GO-NEG-FAILURE"], timeout=10)
+    if ev is None:
+        raise Exception("Rejection not reported")
+    if "status=11" not in ev:
+        raise Exception("Unexpected status code in rejection")

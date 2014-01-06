@@ -405,3 +405,19 @@ def test_grpform_no_5ghz_add_cli4(dev):
     if int(i_res['freq']) > 4000:
         raise Exception("Unexpected channel - did not follow world roaming rules")
     remove_group(dev[0], dev[1])
+
+def test_grpform_incorrect_pin(dev):
+    """P2P GO Negotiation with incorrect PIN"""
+    dev[1].p2p_listen()
+    pin = dev[1].wps_read_pin()
+    addr1 = dev[1].p2p_dev_addr()
+    if not dev[0].discover_peer(addr1):
+        raise Exception("Peer not found")
+    dev[1].p2p_go_neg_auth(dev[0].p2p_dev_addr(), pin, 'display', go_intent=0)
+    dev[0].request("P2P_CONNECT " + addr1 + " 00000000 enter go_intent=15")
+    ev = dev[1].wait_event(["P2P-GROUP-FORMATION-FAILURE"], timeout=10)
+    if ev is None:
+        raise Exception("Group formation failure timed out")
+    ev = dev[0].wait_event(["P2P-GROUP-FORMATION-FAILURE"], timeout=5)
+    if ev is None:
+        raise Exception("Group formation failure timed out")

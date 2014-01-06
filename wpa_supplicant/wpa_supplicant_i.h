@@ -770,9 +770,9 @@ struct wpa_supplicant {
 
 	struct ext_password_data *ext_pw;
 
-	struct wpabuf *last_gas_resp;
-	u8 last_gas_addr[ETH_ALEN];
-	u8 last_gas_dialog_token;
+	struct wpabuf *last_gas_resp, *prev_gas_resp;
+	u8 last_gas_addr[ETH_ALEN], prev_gas_addr[ETH_ALEN];
+	u8 last_gas_dialog_token, prev_gas_dialog_token;
 
 	unsigned int no_keep_alive:1;
 

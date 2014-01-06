@@ -1,6 +1,7 @@
 /*
  * Interworking (IEEE 802.11u)
  * Copyright (c) 2011-2013, Qualcomm Atheros, Inc.
+ * Copyright (c) 2011-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -2231,6 +2232,7 @@ static void gas_resp_cb(void *ctx, const u8 *addr, u8 dialog_token,
 			const struct wpabuf *resp, u16 status_code)
 {
 	struct wpa_supplicant *wpa_s = ctx;
+	struct wpabuf *n;
 
 	wpa_msg(wpa_s, MSG_INFO, GAS_RESPONSE_INFO "addr=" MACSTR
 		" dialog_token=%d status_code=%d resp_len=%d",
@@ -2239,10 +2241,14 @@ static void gas_resp_cb(void *ctx, const u8 *addr, u8 dialog_token,
 	if (!resp)
 		return;
 
-	wpabuf_free(wpa_s->last_gas_resp);
-	wpa_s->last_gas_resp = wpabuf_dup(resp);
-	if (wpa_s->last_gas_resp == NULL)
+	n = wpabuf_dup(resp);
+	if (n == NULL)
 		return;
+	wpabuf_free(wpa_s->prev_gas_resp);
+	wpa_s->prev_gas_resp = wpa_s->last_gas_resp;
+	os_memcpy(wpa_s->prev_gas_addr, wpa_s->last_gas_addr, ETH_ALEN);
+	wpa_s->prev_gas_dialog_token = wpa_s->last_gas_dialog_token;
+	wpa_s->last_gas_resp = n;
 	os_memcpy(wpa_s->last_gas_addr, addr, ETH_ALEN);
 	wpa_s->last_gas_dialog_token = dialog_token;
 }

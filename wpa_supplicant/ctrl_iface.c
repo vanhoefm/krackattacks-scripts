@@ -4849,9 +4849,8 @@ static int gas_response_get(struct wpa_supplicant *wpa_s, char *cmd, char *buf,
 	int used;
 	char *pos;
 	size_t resp_len, start, requested_len;
-
-	if (!wpa_s->last_gas_resp)
-		return -1;
+	struct wpabuf *resp;
+	int ret;
 
 	used = hwaddr_aton2(cmd, addr);
 	if (used < 0)
@@ -4862,11 +4861,18 @@ static int gas_response_get(struct wpa_supplicant *wpa_s, char *cmd, char *buf,
 		pos++;
 	dialog_token = atoi(pos);
 
-	if (os_memcmp(addr, wpa_s->last_gas_addr, ETH_ALEN) != 0 ||
-	    dialog_token != wpa_s->last_gas_dialog_token)
+	if (wpa_s->last_gas_resp &&
+	    os_memcmp(addr, wpa_s->last_gas_addr, ETH_ALEN) == 0 &&
+	    dialog_token == wpa_s->last_gas_dialog_token)
+		resp = wpa_s->last_gas_resp;
+	else if (wpa_s->prev_gas_resp &&
+		 os_memcmp(addr, wpa_s->prev_gas_addr, ETH_ALEN) == 0 &&
+		 dialog_token == wpa_s->prev_gas_dialog_token)
+		resp = wpa_s->prev_gas_resp;
+	else
 		return -1;
 
-	resp_len = wpabuf_len(wpa_s->last_gas_resp);
+	resp_len = wpabuf_len(resp);
 	start = 0;
 	requested_len = resp_len;
 
@@ -4887,9 +4893,24 @@ static int gas_response_get(struct wpa_supplicant *wpa_s, char *cmd, char *buf,
 	if (requested_len * 2 + 1 > buflen)
 		return os_snprintf(buf, buflen, "FAIL-Too long response");
 
-	return wpa_snprintf_hex(buf, buflen,
-				wpabuf_head_u8(wpa_s->last_gas_resp) + start,
-				requested_len);
+	ret = wpa_snprintf_hex(buf, buflen, wpabuf_head_u8(resp) + start,
+			       requested_len);
+
+	if (start + requested_len == resp_len) {
+		/*
+		 * Free memory by dropping the response after it has been
+		 * fetched.
+		 */
+		if (resp == wpa_s->prev_gas_resp) {
+			wpabuf_free(wpa_s->prev_gas_resp);
+			wpa_s->prev_gas_resp = NULL;
+		} else {
+			wpabuf_free(wpa_s->last_gas_resp);
+			wpa_s->last_gas_resp = NULL;
+		}
+	}
+
+	return ret;
 }
 #endif /* CONFIG_INTERWORKING */
 

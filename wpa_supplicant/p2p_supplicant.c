@@ -1497,6 +1497,17 @@ void wpas_p2p_group_formation_failed(struct wpa_supplicant *wpa_s)
 }
 
 
+static void wpas_p2p_grpform_fail_after_wps(struct wpa_supplicant *wpa_s)
+{
+	wpa_printf(MSG_DEBUG, "P2P: Reject group formation due to WPS provisioning failure");
+	eloop_cancel_timeout(wpas_p2p_group_formation_timeout,
+			     wpa_s->parent, NULL);
+	eloop_register_timeout(0, 0, wpas_p2p_group_formation_timeout,
+			       wpa_s->parent, NULL);
+	wpa_s->global->p2p_fail_on_wps_complete = 0;
+}
+
+
 void wpas_p2p_ap_setup_failed(struct wpa_supplicant *wpa_s)
 {
 	if (wpa_s->global->p2p_group_formation != wpa_s)
@@ -4496,6 +4507,8 @@ int wpas_p2p_connect(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 	os_free(wpa_s->global->add_psk);
 	wpa_s->global->add_psk = NULL;
 
+	wpa_s->global->p2p_fail_on_wps_complete = 0;
+
 	if (go_intent < 0)
 		go_intent = wpa_s->conf->p2p_go_intent;
 
@@ -5123,9 +5136,14 @@ static void wpas_p2p_idle_update(void *ctx, int idle)
 	if (!wpa_s->ap_iface)
 		return;
 	wpa_printf(MSG_DEBUG, "P2P: GO - group %sidle", idle ? "" : "not ");
-	if (idle)
+	if (idle) {
+		if (wpa_s->global->p2p_fail_on_wps_complete &&
+		    wpa_s->p2p_in_provisioning) {
+			wpas_p2p_grpform_fail_after_wps(wpa_s);
+			return;
+		}
 		wpas_p2p_set_group_idle_timeout(wpa_s);
-	else
+	} else
 		eloop_cancel_timeout(wpas_p2p_group_idle_timeout, wpa_s, NULL);
 }
 
@@ -5244,6 +5262,31 @@ void wpas_p2p_wps_failed(struct wpa_supplicant *wpa_s,
 	}
 
 	wpas_notify_p2p_wps_failed(wpa_s, fail);
+
+	if (wpa_s == wpa_s->global->p2p_group_formation) {
+		/*
+		 * Allow some time for the failed WPS negotiation exchange to
+		 * complete, but remove the group since group formation cannot
+		 * succeed after provisioning failure.
+		 */
+		wpa_printf(MSG_DEBUG, "P2P: WPS step failed during group formation - reject connection from timeout");
+		wpa_s->global->p2p_fail_on_wps_complete = 1;
+		eloop_deplete_timeout(0, 50000,
+				      wpas_p2p_group_formation_timeout,
+				      wpa_s->parent, NULL);
+	}
+}
+
+
+int wpas_p2p_wps_eapol_cb(struct wpa_supplicant *wpa_s)
+{
+	if (!wpa_s->global->p2p_fail_on_wps_complete ||
+	    !wpa_s->p2p_in_provisioning)
+		return 0;
+
+	wpas_p2p_grpform_fail_after_wps(wpa_s);
+
+	return 1;
 }
 
 

@@ -128,6 +128,7 @@ int wpas_p2p_unauthorize(struct wpa_supplicant *wpa_s, const char *addr);
 int wpas_p2p_disconnect(struct wpa_supplicant *wpa_s);
 void wpas_p2p_wps_failed(struct wpa_supplicant *wpa_s,
 			 struct wps_event_fail *fail);
+int wpas_p2p_wps_eapol_cb(struct wpa_supplicant *wpa_s);
 int wpas_p2p_in_progress(struct wpa_supplicant *wpa_s);
 void wpas_p2p_network_removed(struct wpa_supplicant *wpa_s,
 			      struct wpa_ssid *ssid);

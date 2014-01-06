@@ -1,6 +1,6 @@
 /*
  * wpa_supplicant / WPS integration
- * Copyright (c) 2008-2013, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2008-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -54,6 +54,11 @@ static void wpas_wps_clear_ap_info(struct wpa_supplicant *wpa_s)
 
 int wpas_wps_eapol_cb(struct wpa_supplicant *wpa_s)
 {
+#ifdef CONFIG_P2P
+	if (wpas_p2p_wps_eapol_cb(wpa_s) > 0)
+		return 1;
+#endif /* CONFIG_P2P */
+
 	if (!wpa_s->wps_success &&
 	    wpa_s->current_ssid &&
 	    eap_is_wps_pin_enrollee(&wpa_s->current_ssid->eap)) {

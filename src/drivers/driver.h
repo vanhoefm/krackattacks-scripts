@@ -1012,6 +1012,10 @@ struct hostapd_sta_add_params {
 	u8 qosinfo;
 	const u8 *ext_capab;
 	size_t ext_capab_len;
+	const u8 *supp_channels;
+	size_t supp_channels_len;
+	const u8 *supp_oper_classes;
+	size_t supp_oper_classes_len;
 };
 
 struct hostapd_freq_params {

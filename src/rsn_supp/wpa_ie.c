@@ -434,6 +434,12 @@ int wpa_supplicant_parse_ies(const u8 *buf, size_t len,
 			ie->vht_capabilities_len = pos[1];
 		} else if (*pos == WLAN_EID_QOS && pos[1] >= 1) {
 			ie->qosinfo = pos[2];
+		} else if (*pos == WLAN_EID_SUPPORTED_CHANNELS) {
+			ie->supp_channels = pos + 2;
+			ie->supp_channels_len = pos[1];
+		} else if (*pos == WLAN_EID_SUPPORTED_OPERATING_CLASSES) {
+			ie->supp_oper_classes = pos + 2;
+			ie->supp_oper_classes_len = pos[1];
 		} else if (*pos == WLAN_EID_VENDOR_SPECIFIC) {
 			ret = wpa_parse_generic(pos, end, ie);
 			if (ret < 0)

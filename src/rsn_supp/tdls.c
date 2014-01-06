@@ -136,6 +136,12 @@ struct wpa_tdls_peer {
 
 	u8 *ext_capab;
 	size_t ext_capab_len;
+
+	u8 *supp_channels;
+	size_t supp_channels_len;
+
+	u8 *supp_oper_classes;
+	size_t supp_oper_classes_len;
 };
 
 
@@ -633,6 +639,10 @@ static void wpa_tdls_peer_free(struct wpa_sm *sm, struct wpa_tdls_peer *peer)
 	peer->vht_capabilities = NULL;
 	os_free(peer->ext_capab);
 	peer->ext_capab = NULL;
+	os_free(peer->supp_channels);
+	peer->supp_channels = NULL;
+	os_free(peer->supp_oper_classes);
+	peer->supp_oper_classes = NULL;
 	peer->rsnie_i_len = peer->rsnie_p_len = 0;
 	peer->cipher = 0;
 	peer->tpk_set = peer->tpk_success = 0;
@@ -1456,6 +1466,58 @@ static int copy_peer_ext_capab(const struct wpa_eapol_ie_parse *kde,
 }
 
 
+static int copy_peer_supp_channels(const struct wpa_eapol_ie_parse *kde,
+				   struct wpa_tdls_peer *peer)
+{
+	if (!kde->supp_channels) {
+		wpa_printf(MSG_DEBUG, "TDLS: No supported channels received");
+		return 0;
+	}
+
+	if (!peer->supp_channels ||
+	    peer->supp_channels_len < kde->supp_channels_len) {
+		os_free(peer->supp_channels);
+		peer->supp_channels = os_zalloc(kde->supp_channels_len);
+		if (peer->supp_channels == NULL)
+			return -1;
+	}
+
+	peer->supp_channels_len = kde->supp_channels_len;
+
+	os_memcpy(peer->supp_channels, kde->supp_channels,
+		  peer->supp_channels_len);
+	wpa_hexdump(MSG_DEBUG, "TDLS: Peer Supported Channels",
+		    (u8 *) peer->supp_channels, peer->supp_channels_len);
+	return 0;
+}
+
+
+static int copy_peer_supp_oper_classes(const struct wpa_eapol_ie_parse *kde,
+				       struct wpa_tdls_peer *peer)
+{
+	if (!kde->supp_oper_classes) {
+		wpa_printf(MSG_DEBUG, "TDLS: No supported operating classes received");
+		return 0;
+	}
+
+	if (!peer->supp_oper_classes ||
+	    peer->supp_oper_classes_len < kde->supp_oper_classes_len) {
+		os_free(peer->supp_oper_classes);
+		peer->supp_oper_classes = os_zalloc(kde->supp_oper_classes_len);
+		if (peer->supp_oper_classes == NULL)
+			return -1;
+	}
+
+	peer->supp_oper_classes_len = kde->supp_oper_classes_len;
+	os_memcpy(peer->supp_oper_classes, kde->supp_oper_classes,
+		  peer->supp_oper_classes_len);
+	wpa_hexdump(MSG_DEBUG, "TDLS: Peer Supported Operating Classes",
+		    (u8 *) peer->supp_oper_classes,
+		    peer->supp_oper_classes_len);
+	return 0;
+}
+
+
 static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 				   const u8 *buf, size_t len)
 {
@@ -1566,6 +1628,12 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 		goto error;
 
 	if (copy_peer_ext_capab(&kde, peer) < 0)
+		goto error;
+
+	if (copy_peer_supp_channels(&kde, peer) < 0)
+		goto error;
+
+	if (copy_peer_supp_oper_classes(&kde, peer) < 0)
 		goto error;
 
 	peer->qos_info = kde.qosinfo;
@@ -1761,7 +1829,7 @@ skip_rsn:
 skip_rsn_check:
 	/* add the peer to the driver as a "setup in progress" peer */
 	wpa_sm_tdls_peer_addset(sm, peer->addr, 1, 0, 0, NULL, 0, NULL, NULL, 0,
-				NULL, 0);
+				NULL, 0, NULL, 0, NULL, 0);
 	peer->tpk_in_progress = 1;
 
 	wpa_printf(MSG_DEBUG, "TDLS: Sending TDLS Setup Response / TPK M2");
@@ -1810,7 +1878,11 @@ static int wpa_tdls_enable_link(struct wpa_sm *sm, struct wpa_tdls_peer *peer)
 				    peer->ht_capabilities,
 				    peer->vht_capabilities,
 				    peer->qos_info, peer->ext_capab,
-				    peer->ext_capab_len) < 0)
+				    peer->ext_capab_len,
+				    peer->supp_channels,
+				    peer->supp_channels_len,
+				    peer->supp_oper_classes,
+				    peer->supp_oper_classes_len) < 0)
 		return -1;
 
 	if (peer->reconfig_key && wpa_tdls_set_key(sm, peer) < 0) {
@@ -1936,6 +2008,12 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 		goto error;
 
 	if (copy_peer_ext_capab(&kde, peer) < 0)
+		goto error;
+
+	if (copy_peer_supp_channels(&kde, peer) < 0)
+		goto error;
+
+	if (copy_peer_supp_oper_classes(&kde, peer) < 0)
 		goto error;
 
 	peer->qos_info = kde.qosinfo;
@@ -2289,7 +2367,7 @@ int wpa_tdls_start(struct wpa_sm *sm, const u8 *addr)
 
 	/* add the peer to the driver as a "setup in progress" peer */
 	wpa_sm_tdls_peer_addset(sm, peer->addr, 1, 0, 0, NULL, 0, NULL, NULL, 0,
-				NULL, 0);
+				NULL, 0, NULL, 0, NULL, 0);
 
 	peer->tpk_in_progress = 1;
 

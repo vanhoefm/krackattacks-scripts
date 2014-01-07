@@ -849,3 +849,26 @@ def test_ap_wps_check_pin(dev, apdev):
             raise Exception("Unexpected difference in WPS_CHECK_PIN responses")
         if res != t[1]:
             raise Exception("Incorrect WPS_CHECK_PIN response {} (expected {})".format(res, t[1]))
+
+def test_ap_wps_wep_config(dev, apdev):
+    """WPS 2.0 AP rejecting WEP configuration"""
+    ssid = "test-wps-config"
+    appin = "12345670"
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                     "ap_pin": appin})
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    dev[0].wps_reg(apdev[0]['bssid'], appin, "wps-new-ssid-wep", "OPEN", "WEP",
+                   "hello", no_wait=True)
+    ev = hapd.wait_event(["WPS-FAIL"], timeout=15)
+    if ev is None:
+        raise Exception("WPS-FAIL timed out")
+    if "reason=2" not in ev:
+        raise Exception("Unexpected reason code in WPS-FAIL")
+    status = hapd.request("WPS_GET_STATUS")
+    if "Last WPS result: Failed" not in status:
+        raise Exception("WPS failure result not shown correctly")
+    if "Failure Reason: WEP Prohibited" not in status:
+        raise Exception("Failure reason not reported correctly")
+    if "Peer Address: " + dev[0].p2p_interface_addr() not in status:
+        raise Exception("Peer address not shown correctly")

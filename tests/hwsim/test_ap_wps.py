@@ -808,6 +808,7 @@ def test_ap_wps_new_version_sta(dev, apdev):
     hapd.request("WPS_PBC")
     dev[0].dump_monitor()
     dev[0].request("SET wps_version_number 0x43")
+    dev[0].request("SET wps_vendor_ext_m1 000137100100020001")
     dev[0].request("WPS_PBC")
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
     if ev is None:

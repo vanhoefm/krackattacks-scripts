@@ -62,6 +62,8 @@ struct bsd_driver_data {
 	int	prev_privacy;	/* privacy state to restore on deinit */
 	int	prev_wpa;	/* wpa state to restore on deinit */
 	enum ieee80211_opmode opmode;	/* operation mode */
+	char	*event_buf;
+	size_t	event_buf_len;
 };
 
 /* Generic functions for hostapd and wpa_supplicant */
@@ -642,7 +644,7 @@ bsd_set_opt_ie(void *priv, const u8 *ie, size_t ie_len)
 	return 0;
 }
 
-static int
+static size_t
 rtbuf_len(void)
 {
 	size_t len;
@@ -779,37 +781,26 @@ static void
 bsd_wireless_event_receive(int sock, void *ctx, void *sock_ctx)
 {
 	struct bsd_driver_data *drv = ctx;
-	char *buf;
 	struct if_announcemsghdr *ifan;
 	struct rt_msghdr *rtm;
 	struct ieee80211_michael_event *mic;
 	struct ieee80211_join_event *join;
 	struct ieee80211_leave_event *leave;
-	int n, len;
+	int n;
 	union wpa_event_data data;
 
-	len = rtbuf_len();
-
-	buf = os_malloc(len);
-	if (buf == NULL) {
-		wpa_printf(MSG_ERROR, "%s os_malloc() failed\n", __func__);
-		return;
-	}
-
-	n = read(sock, buf, len);
+	n = read(sock, drv->event_buf, drv->event_buf_len);
 	if (n < 0) {
 		if (errno != EINTR && errno != EAGAIN)
 			wpa_printf(MSG_ERROR, "%s read() failed: %s\n",
 				   __func__, strerror(errno));
-		os_free(buf);
 		return;
 	}
 
-	rtm = (struct rt_msghdr *) buf;
+	rtm = (struct rt_msghdr *) drv->event_buf;
 	if (rtm->rtm_version != RTM_VERSION) {
 		wpa_printf(MSG_DEBUG, "Invalid routing message version=%d",
 			   rtm->rtm_version);
-		os_free(buf);
 		return;
 	}
 	ifan = (struct if_announcemsghdr *) rtm;
@@ -850,7 +841,6 @@ bsd_wireless_event_receive(int sock, void *ctx, void *sock_ctx)
 		}
 		break;
 	}
-	os_free(buf);
 }
 
 static void
@@ -868,6 +858,14 @@ bsd_init(struct hostapd_data *hapd, struct wpa_init_params *params)
 	drv = os_zalloc(sizeof(struct bsd_driver_data));
 	if (drv == NULL) {
 		printf("Could not allocate memory for bsd driver data\n");
+		goto bad;
+	}
+
+	drv->event_buf_len = rtbuf_len();
+
+	drv->event_buf = os_malloc(drv->event_buf_len);
+	if (drv->event_buf == NULL) {
+		wpa_printf(MSG_ERROR, "%s: os_malloc() failed", __func__);
 		goto bad;
 	}
 
@@ -910,6 +908,7 @@ bad:
 		l2_packet_deinit(drv->sock_xmit);
 	if (drv->sock >= 0)
 		close(drv->sock);
+	os_free(drv->event_buf);
 	if (drv != NULL)
 		os_free(drv);
 	return NULL;
@@ -930,6 +929,7 @@ bsd_deinit(void *priv)
 		close(drv->sock);
 	if (drv->sock_xmit != NULL)
 		l2_packet_deinit(drv->sock_xmit);
+	os_free(drv->event_buf);
 	os_free(drv);
 }
 
@@ -1208,7 +1208,6 @@ static void
 wpa_driver_bsd_event_receive(int sock, void *ctx, void *sock_ctx)
 {
 	struct bsd_driver_data *drv = sock_ctx;
-	char *buf;
 	struct if_announcemsghdr *ifan;
 	struct if_msghdr *ifm;
 	struct rt_msghdr *rtm;
@@ -1216,30 +1215,20 @@ wpa_driver_bsd_event_receive(int sock, void *ctx, void *sock_ctx)
 	struct ieee80211_michael_event *mic;
 	struct ieee80211_leave_event *leave;
 	struct ieee80211_join_event *join;
-	int n, len;
+	int n;
 
-	len = rtbuf_len();
-
-	buf = os_malloc(len);
-	if (buf == NULL) {
-		wpa_printf(MSG_ERROR, "%s os_malloc() failed\n", __func__);
-		return;
-	}
-
-	n = read(sock, buf, len);
+	n = read(sock, drv->event_buf, drv->event_buf_len);
 	if (n < 0) {
 		if (errno != EINTR && errno != EAGAIN)
 			wpa_printf(MSG_ERROR, "%s read() failed: %s\n",
 				   __func__, strerror(errno));
-		os_free(buf);
 		return;
 	}
 
-	rtm = (struct rt_msghdr *) buf;
+	rtm = (struct rt_msghdr *) drv->event_buf;
 	if (rtm->rtm_version != RTM_VERSION) {
 		wpa_printf(MSG_DEBUG, "Invalid routing message version=%d",
 			   rtm->rtm_version);
-		os_free(buf);
 		return;
 	}
 	os_memset(&event, 0, sizeof(event));
@@ -1254,7 +1243,6 @@ wpa_driver_bsd_event_receive(int sock, void *ctx, void *sock_ctx)
 		case IFAN_DEPARTURE:
 			event.interface_status.ievent = EVENT_INTERFACE_REMOVED;
 		default:
-			os_free(buf);
 			return;
 		}
 		wpa_printf(MSG_DEBUG, "RTM_IFANNOUNCE: Interface '%s' %s",
@@ -1327,7 +1315,6 @@ wpa_driver_bsd_event_receive(int sock, void *ctx, void *sock_ctx)
 		}
 		break;
 	}
-	os_free(buf);
 }
 
 static void
@@ -1508,6 +1495,15 @@ wpa_driver_bsd_init(void *ctx, const char *ifname)
 	drv = os_zalloc(sizeof(*drv));
 	if (drv == NULL)
 		return NULL;
+
+	drv->event_buf_len = rtbuf_len();
+
+	drv->event_buf = os_malloc(drv->event_buf_len);
+	if (drv->event_buf == NULL) {
+		wpa_printf(MSG_ERROR, "%s: os_malloc() failed", __func__);
+		goto fail1;
+	}
+
 	/*
 	 * NB: We require the interface name be mappable to an index.
 	 *     This implies we do not support having wpa_supplicant
@@ -1562,6 +1558,7 @@ wpa_driver_bsd_init(void *ctx, const char *ifname)
 fail:
 	close(drv->sock);
 fail1:
+	os_free(drv->event_buf);
 	os_free(drv);
 	return NULL;
 #undef GETPARAM
@@ -1587,6 +1584,7 @@ wpa_driver_bsd_deinit(void *priv)
 		l2_packet_deinit(drv->sock_xmit);
 	(void) close(drv->route);		/* ioctl socket */
 	(void) close(drv->sock);		/* event socket */
+	os_free(drv->event_buf);
 	os_free(drv);
 }
 

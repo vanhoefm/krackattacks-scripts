@@ -897,6 +897,32 @@ static void wpas_group_formation_completed(struct wpa_supplicant *wpa_s,
 }
 
 
+struct send_action_work {
+	unsigned int freq;
+	u8 dst[ETH_ALEN];
+	u8 src[ETH_ALEN];
+	u8 bssid[ETH_ALEN];
+	size_t len;
+	unsigned int wait_time;
+	u8 buf[0];
+};
+
+
+static void wpas_p2p_send_action_work_timeout(void *eloop_ctx,
+					      void *timeout_ctx)
+{
+	struct wpa_supplicant *wpa_s = eloop_ctx;
+
+	if (!wpa_s->p2p_send_action_work)
+		return;
+
+	wpa_printf(MSG_DEBUG, "P2P: Send Action frame radio work timed out");
+	os_free(wpa_s->p2p_send_action_work->ctx);
+	radio_work_done(wpa_s->p2p_send_action_work);
+	wpa_s->p2p_send_action_work = NULL;
+}
+
+
 static void wpas_p2p_send_action_tx_status(struct wpa_supplicant *wpa_s,
 					   unsigned int freq,
 					   const u8 *dst, const u8 *src,
@@ -906,6 +932,29 @@ static void wpas_p2p_send_action_tx_status(struct wpa_supplicant *wpa_s,
 					   result)
 {
 	enum p2p_send_action_result res = P2P_SEND_ACTION_SUCCESS;
+
+	if (wpa_s->p2p_send_action_work) {
+		struct send_action_work *awork;
+		awork = wpa_s->p2p_send_action_work->ctx;
+		if (awork->wait_time == 0) {
+			os_free(awork);
+			radio_work_done(wpa_s->p2p_send_action_work);
+			wpa_s->p2p_send_action_work = NULL;
+		} else {
+			/*
+			 * In theory, this should not be needed, but number of
+			 * places in the P2P code is still using non-zero wait
+			 * time for the last Action frame in the sequence and
+			 * some of these do not call send_action_done().
+			 */
+			eloop_cancel_timeout(wpas_p2p_send_action_work_timeout,
+					     wpa_s, NULL);
+			eloop_register_timeout(
+				0, awork->wait_time * 1000,
+				wpas_p2p_send_action_work_timeout,
+				wpa_s, NULL);
+		}
+	}
 
 	if (wpa_s->global->p2p == NULL || wpa_s->global->p2p_disabled)
 		return;
@@ -938,11 +987,81 @@ static void wpas_p2p_send_action_tx_status(struct wpa_supplicant *wpa_s,
 }
 
 
+static void wpas_send_action_cb(struct wpa_radio_work *work, int deinit)
+{
+	struct wpa_supplicant *wpa_s = work->wpa_s;
+	struct send_action_work *awork = work->ctx;
+
+	if (deinit) {
+		os_free(awork);
+		return;
+	}
+
+	if (offchannel_send_action(wpa_s, awork->freq, awork->dst, awork->src,
+				   awork->bssid, awork->buf, awork->len,
+				   awork->wait_time,
+				   wpas_p2p_send_action_tx_status, 1) < 0) {
+		os_free(awork);
+		radio_work_done(work);
+		return;
+	}
+	wpa_s->p2p_send_action_work = work;
+}
+
+
+static int wpas_send_action_work(struct wpa_supplicant *wpa_s,
+				 unsigned int freq, const u8 *dst,
+				 const u8 *src, const u8 *bssid, const u8 *buf,
+				 size_t len, unsigned int wait_time)
+{
+	struct send_action_work *awork;
+
+	if (wpa_s->p2p_send_action_work) {
+		wpa_printf(MSG_DEBUG, "P2P: Cannot schedule new p2p-send-action work since one is already pending");
+		return -1;
+	}
+
+	awork = os_zalloc(sizeof(*awork) + len);
+	if (awork == NULL)
+		return -1;
+
+	awork->freq = freq;
+	os_memcpy(awork->dst, dst, ETH_ALEN);
+	os_memcpy(awork->src, src, ETH_ALEN);
+	os_memcpy(awork->bssid, bssid, ETH_ALEN);
+	awork->len = len;
+	awork->wait_time = wait_time;
+	os_memcpy(awork->buf, buf, len);
+
+	if (radio_add_work(wpa_s, freq, "p2p-send-action", 0,
+			   wpas_send_action_cb, awork) < 0) {
+		os_free(awork);
+		return -1;
+	}
+
+	return 0;
+}
+
+
 static int wpas_send_action(void *ctx, unsigned int freq, const u8 *dst,
 			    const u8 *src, const u8 *bssid, const u8 *buf,
 			    size_t len, unsigned int wait_time)
 {
 	struct wpa_supplicant *wpa_s = ctx;
+	int listen_freq = -1, send_freq = -1;
+
+	if (wpa_s->p2p_listen_work)
+		listen_freq = wpa_s->p2p_listen_work->freq;
+	if (wpa_s->p2p_send_action_work)
+		send_freq = wpa_s->p2p_send_action_work->freq;
+	if (listen_freq != (int) freq && send_freq != (int) freq) {
+		wpa_printf(MSG_DEBUG, "P2P: Schedule new radio work for Action frame TX (listen_freq=%d send_freq=%d)",
+			   listen_freq, send_freq);
+		return wpas_send_action_work(wpa_s, freq, dst, src, bssid, buf,
+					     len, wait_time);
+	}
+
+	wpa_printf(MSG_DEBUG, "P2P: Use ongoing radio work for Action frame TX");
 	return offchannel_send_action(wpa_s, freq, dst, src, bssid, buf, len,
 				      wait_time,
 				      wpas_p2p_send_action_tx_status, 1);
@@ -952,6 +1071,15 @@ static int wpas_send_action(void *ctx, unsigned int freq, const u8 *dst,
 static void wpas_send_action_done(void *ctx)
 {
 	struct wpa_supplicant *wpa_s = ctx;
+
+	if (wpa_s->p2p_send_action_work) {
+		eloop_cancel_timeout(wpas_p2p_send_action_work_timeout,
+				     wpa_s, NULL);
+		os_free(wpa_s->p2p_send_action_work->ctx);
+		radio_work_done(wpa_s->p2p_send_action_work);
+		wpa_s->p2p_send_action_work = NULL;
+	}
+
 	offchannel_send_action_done(wpa_s);
 }
 
@@ -3680,6 +3808,12 @@ void wpas_p2p_deinit(struct wpa_supplicant *wpa_s)
 	wpas_p2p_remove_pending_group_interface(wpa_s);
 	eloop_cancel_timeout(wpas_p2p_group_freq_conflict, wpa_s, NULL);
 	wpas_p2p_listen_work_done(wpa_s);
+	if (wpa_s->p2p_send_action_work) {
+		os_free(wpa_s->p2p_send_action_work->ctx);
+		radio_work_done(wpa_s->p2p_send_action_work);
+		wpa_s->p2p_send_action_work = NULL;
+	}
+	eloop_cancel_timeout(wpas_p2p_send_action_work_timeout, wpa_s, NULL);
 
 	/* TODO: remove group interface from the driver if this wpa_s instance
 	 * is on top of a P2P group interface */

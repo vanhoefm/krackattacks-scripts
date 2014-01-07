@@ -1040,6 +1040,7 @@ fail:
 			    wpabuf_head(conf), wpabuf_len(conf), 0) < 0) {
 		p2p_dbg(p2p, "Failed to send Action frame");
 		p2p_go_neg_failed(p2p, dev, -1);
+		p2p->cfg->send_action_done(p2p->cfg->cb_ctx);
 	}
 	wpabuf_free(conf);
 	if (status != P2P_SC_SUCCESS) {

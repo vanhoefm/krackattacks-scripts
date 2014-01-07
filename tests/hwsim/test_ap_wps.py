@@ -660,6 +660,9 @@ def test_ap_wps_er_add_enrollee(dev, apdev):
     ev = dev[0].wait_event(["WPS-ER-AP-REMOVE"])
     if ev is None:
         raise Exception("WPS ER unsubscription timed out")
+    # It takes some time for the UPnP UNSUBSCRIBE command to go through, so wait
+    # a bit before verifying that the scan results have change.
+    time.sleep(0.2)
 
     dev[1].scan(freq="2412")
     bss = dev[1].get_bss(apdev[0]['bssid'])

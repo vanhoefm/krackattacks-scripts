@@ -10,6 +10,7 @@ import time
 import subprocess
 import logging
 logger = logging.getLogger()
+import re
 
 import hwsim_utils
 import hostapd
@@ -872,3 +873,27 @@ def test_ap_wps_wep_config(dev, apdev):
         raise Exception("Failure reason not reported correctly")
     if "Peer Address: " + dev[0].p2p_interface_addr() not in status:
         raise Exception("Peer address not shown correctly")
+
+def test_ap_wps_ie_fragmentation(dev, apdev):
+    """WPS AP using fragmented WPS IE"""
+    ssid = "test-wps-ie-fragmentation"
+    params = { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+               "wpa_passphrase": "12345678", "wpa": "2",
+               "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+               "device_name": "1234567890abcdef1234567890abcdef",
+               "manufacturer": "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+               "model_name": "1234567890abcdef1234567890abcdef",
+               "model_number": "1234567890abcdef1234567890abcdef",
+               "serial_number": "1234567890abcdef1234567890abcdef" }
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd.request("WPS_PBC")
+    dev[0].request("WPS_PBC")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
+    if ev is None:
+        raise Exception("Association with the AP timed out")
+    bss = dev[0].get_bss(apdev[0]['bssid'])
+    if "wps_device_name" not in bss or bss['wps_device_name'] != "1234567890abcdef1234567890abcdef":
+        raise Exception("Device Name not received correctly")
+    if len(re.findall("dd..0050f204", bss['ie'])) != 2:
+        raise Exception("Unexpected number of WPS IEs")

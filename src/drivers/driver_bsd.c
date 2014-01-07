@@ -857,8 +857,8 @@ bsd_init(struct hostapd_data *hapd, struct wpa_init_params *params)
 
 	drv = os_zalloc(sizeof(struct bsd_driver_data));
 	if (drv == NULL) {
-		printf("Could not allocate memory for bsd driver data\n");
-		goto bad;
+		wpa_printf(MSG_ERROR, "Could not allocate memory for bsd driver data");
+		return NULL;
 	}
 
 	drv->event_buf_len = rtbuf_len();

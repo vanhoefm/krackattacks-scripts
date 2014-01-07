@@ -1037,7 +1037,7 @@ fail:
 	else
 		freq = dev->listen_freq;
 	if (p2p_send_action(p2p, freq, sa, p2p->cfg->dev_addr, sa,
-			    wpabuf_head(conf), wpabuf_len(conf), 0) < 0) {
+			    wpabuf_head(conf), wpabuf_len(conf), 200) < 0) {
 		p2p_dbg(p2p, "Failed to send Action frame");
 		p2p_go_neg_failed(p2p, dev, -1);
 		p2p->cfg->send_action_done(p2p->cfg->cb_ctx);

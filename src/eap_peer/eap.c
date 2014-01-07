@@ -2046,6 +2046,8 @@ const u8 * eap_get_config_password2(struct eap_sm *sm, size_t *len, int *hash)
 	if (config->flags & EAP_CONFIG_FLAGS_EXT_PASSWORD) {
 		if (eap_get_ext_password(sm, config) < 0)
 			return NULL;
+		if (hash)
+			*hash = 0;
 		*len = wpabuf_len(sm->ext_pw_buf);
 		return wpabuf_head(sm->ext_pw_buf);
 	}

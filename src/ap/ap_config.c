@@ -1,6 +1,6 @@
 /*
  * hostapd / Configuration helper functions
- * Copyright (c) 2003-2013, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -670,9 +670,10 @@ const u8 * hostapd_get_psk(const struct hostapd_bss_config *conf,
 
 
 static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
-				    struct hostapd_config *conf)
+				    struct hostapd_config *conf,
+				    int full_config)
 {
-	if (bss->ieee802_1x && !bss->eap_server &&
+	if (full_config && bss->ieee802_1x && !bss->eap_server &&
 	    !bss->radius->auth_servers) {
 		wpa_printf(MSG_ERROR, "Invalid IEEE 802.1X configuration (no "
 			   "EAP authenticator configured).");
@@ -697,14 +698,15 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 		}
 	}
 
-	if (bss->wpa && bss->wpa_psk_radius != PSK_RADIUS_IGNORED &&
+	if (full_config && bss->wpa &&
+	    bss->wpa_psk_radius != PSK_RADIUS_IGNORED &&
 	    bss->macaddr_acl != USE_EXTERNAL_RADIUS_AUTH) {
 		wpa_printf(MSG_ERROR, "WPA-PSK using RADIUS enabled, but no "
 			   "RADIUS checking (macaddr_acl=2) enabled.");
 		return -1;
 	}
 
-	if (bss->wpa && (bss->wpa_key_mgmt & WPA_KEY_MGMT_PSK) &&
+	if (full_config && bss->wpa && (bss->wpa_key_mgmt & WPA_KEY_MGMT_PSK) &&
 	    bss->ssid.wpa_psk == NULL && bss->ssid.wpa_passphrase == NULL &&
 	    bss->ssid.wpa_psk_file == NULL &&
 	    (bss->wpa_psk_radius != PSK_RADIUS_REQUIRED ||
@@ -714,7 +716,7 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 		return -1;
 	}
 
-	if (hostapd_mac_comp_empty(bss->bssid) != 0) {
+	if (full_config && hostapd_mac_comp_empty(bss->bssid) != 0) {
 		size_t i;
 
 		for (i = 0; i < conf->num_bss; i++) {
@@ -731,7 +733,7 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 	}
 
 #ifdef CONFIG_IEEE80211R
-	if (wpa_key_mgmt_ft(bss->wpa_key_mgmt) &&
+	if (full_config && wpa_key_mgmt_ft(bss->wpa_key_mgmt) &&
 	    (bss->nas_identifier == NULL ||
 	     os_strlen(bss->nas_identifier) < 1 ||
 	     os_strlen(bss->nas_identifier) > FT_R0KH_ID_MAX_LEN)) {
@@ -743,20 +745,21 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 #endif /* CONFIG_IEEE80211R */
 
 #ifdef CONFIG_IEEE80211N
-	if (conf->ieee80211n && conf->hw_mode == HOSTAPD_MODE_IEEE80211B) {
+	if (full_config && conf->ieee80211n &&
+	    conf->hw_mode == HOSTAPD_MODE_IEEE80211B) {
 		bss->disable_11n = 1;
 		wpa_printf(MSG_ERROR, "HT (IEEE 802.11n) in 11b mode is not "
 			   "allowed, disabling HT capabilites");
 	}
 
-	if (conf->ieee80211n &&
+	if (full_config && conf->ieee80211n &&
 	    bss->ssid.security_policy == SECURITY_STATIC_WEP) {
 		bss->disable_11n = 1;
 		wpa_printf(MSG_ERROR, "HT (IEEE 802.11n) with WEP is not "
 			   "allowed, disabling HT capabilities");
 	}
 
-	if (conf->ieee80211n && bss->wpa &&
+	if (full_config && conf->ieee80211n && bss->wpa &&
 	    !(bss->wpa_pairwise & WPA_CIPHER_CCMP) &&
 	    !(bss->rsn_pairwise & (WPA_CIPHER_CCMP | WPA_CIPHER_GCMP |
 				   WPA_CIPHER_CCMP_256 | WPA_CIPHER_GCMP_256)))
@@ -769,19 +772,20 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 #endif /* CONFIG_IEEE80211N */
 
 #ifdef CONFIG_WPS2
-	if (bss->wps_state && bss->ignore_broadcast_ssid) {
+	if (full_config && bss->wps_state && bss->ignore_broadcast_ssid) {
 		wpa_printf(MSG_INFO, "WPS: ignore_broadcast_ssid "
 			   "configuration forced WPS to be disabled");
 		bss->wps_state = 0;
 	}
 
-	if (bss->wps_state && bss->ssid.wep.keys_set && bss->wpa == 0) {
+	if (full_config && bss->wps_state &&
+	    bss->ssid.wep.keys_set && bss->wpa == 0) {
 		wpa_printf(MSG_INFO, "WPS: WEP configuration forced WPS to be "
 			   "disabled");
 		bss->wps_state = 0;
 	}
 
-	if (bss->wps_state && bss->wpa &&
+	if (full_config && bss->wps_state && bss->wpa &&
 	    (!(bss->wpa & 2) ||
 	     !(bss->rsn_pairwise & WPA_CIPHER_CCMP))) {
 		wpa_printf(MSG_INFO, "WPS: WPA/TKIP configuration without "
@@ -791,7 +795,7 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 #endif /* CONFIG_WPS2 */
 
 #ifdef CONFIG_HS20
-	if (bss->hs20 &&
+	if (full_config && bss->hs20 &&
 	    (!(bss->wpa & 2) ||
 	     !(bss->rsn_pairwise & (WPA_CIPHER_CCMP | WPA_CIPHER_GCMP |
 				    WPA_CIPHER_CCMP_256 |
@@ -807,24 +811,25 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 }
 
 
-int hostapd_config_check(struct hostapd_config *conf)
+int hostapd_config_check(struct hostapd_config *conf, int full_config)
 {
 	size_t i;
 
-	if (conf->ieee80211d && (!conf->country[0] || !conf->country[1])) {
+	if (full_config && conf->ieee80211d &&
+	    (!conf->country[0] || !conf->country[1])) {
 		wpa_printf(MSG_ERROR, "Cannot enable IEEE 802.11d without "
 			   "setting the country_code");
 		return -1;
 	}
 
-	if (conf->ieee80211h && !conf->ieee80211d) {
+	if (full_config && conf->ieee80211h && !conf->ieee80211d) {
 		wpa_printf(MSG_ERROR, "Cannot enable IEEE 802.11h without "
 			   "IEEE 802.11d enabled");
 		return -1;
 	}
 
 	for (i = 0; i < conf->num_bss; i++) {
-		if (hostapd_config_check_bss(conf->bss[i], conf))
+		if (hostapd_config_check_bss(conf->bss[i], conf, full_config))
 			return -1;
 	}
 

@@ -1,6 +1,6 @@
 /*
  * hostapd / Initialization and configuration
- * Copyright (c) 2002-2013, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -1537,6 +1537,11 @@ int hostapd_enable_iface(struct hostapd_iface *hapd_iface)
 	wpa_printf(MSG_DEBUG, "Enable interface %s",
 		   hapd_iface->conf->bss[0]->iface);
 
+	if (hostapd_config_check(hapd_iface->conf, 1) < 0) {
+		wpa_printf(MSG_INFO, "Invalid configuration - cannot enable");
+		return -1;
+	}
+
 	if (hapd_iface->interfaces == NULL ||
 	    hapd_iface->interfaces->driver_init == NULL ||
 	    hapd_iface->interfaces->driver_init(hapd_iface))
@@ -1569,7 +1574,7 @@ int hostapd_reload_iface(struct hostapd_iface *hapd_iface)
 		   hapd_iface->conf->bss[0]->iface);
 	for (j = 0; j < hapd_iface->num_bss; j++)
 		hostapd_set_security_params(hapd_iface->conf->bss[j]);
-	if (hostapd_config_check(hapd_iface->conf) < 0) {
+	if (hostapd_config_check(hapd_iface->conf, 1) < 0) {
 		wpa_printf(MSG_ERROR, "Updated configuration is invalid");
 		return -1;
 	}

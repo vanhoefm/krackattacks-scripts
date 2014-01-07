@@ -2989,7 +2989,7 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 	for (i = 0; i < conf->num_bss; i++)
 		hostapd_set_security_params(conf->bss[i]);
 
-	if (hostapd_config_check(conf))
+	if (hostapd_config_check(conf, 1))
 		errors++;
 
 #ifndef WPA_IGNORE_CONFIG_ERRORS
@@ -3021,7 +3021,7 @@ int hostapd_set_iface(struct hostapd_config *conf,
 	for (i = 0; i < conf->num_bss; i++)
 		hostapd_set_security_params(conf->bss[i]);
 
-	if (hostapd_config_check(conf)) {
+	if (hostapd_config_check(conf, 0)) {
 		wpa_printf(MSG_ERROR, "Configuration check failed");
 		return -1;
 	}

@@ -278,10 +278,15 @@ class WpaSupplicant:
     def p2p_listen(self):
         return self.global_request("P2P_LISTEN")
 
-    def p2p_find(self, social=False):
+    def p2p_find(self, social=False, dev_id=None, dev_type=None):
+        cmd = "P2P_FIND"
         if social:
-            return self.global_request("P2P_FIND type=social")
-        return self.global_request("P2P_FIND")
+            cmd = cmd + " type=social"
+        if dev_id:
+            cmd = cmd + " dev_id=" + dev_id
+        if dev_type:
+            cmd = cmd + " dev_type=" + dev_type
+        return self.global_request(cmd)
 
     def p2p_stop_find(self):
         return self.global_request("P2P_STOP_FIND")

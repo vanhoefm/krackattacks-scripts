@@ -119,3 +119,64 @@ def test_discovery_group_client(dev):
         ev = dev[1].wait_event(["P2P-GO-NEG-REQUEST"])
         if ev is None:
             raise Exception("Timeout on waiting for GO Negotiation Request")
+
+def test_discovery_dev_type(dev):
+    """P2P device discovery with Device Type filter"""
+    dev[1].request("SET sec_device_type 1-0050F204-2")
+    dev[1].p2p_listen()
+    dev[0].p2p_find(social=True, dev_type="5-0050F204-1")
+    ev = dev[0].wait_event(['P2P-DEVICE-FOUND'], timeout=1)
+    if ev:
+        raise Exception("Unexpected P2P device found")
+    dev[0].p2p_find(social=True, dev_type="1-0050F204-2")
+    ev = dev[0].wait_event(['P2P-DEVICE-FOUND'], timeout=1)
+    if ev is None:
+        raise Exception("P2P device not found")
+
+def test_discovery_dev_type_go(dev):
+    """P2P device discovery with Device Type filter on GO"""
+    addr1 = dev[1].p2p_dev_addr()
+    dev[1].request("SET sec_device_type 1-0050F204-2")
+    res = dev[0].p2p_start_go(freq="2412")
+    pin = dev[1].wps_read_pin()
+    dev[0].p2p_go_authorize_client(pin)
+    dev[1].p2p_connect_group(dev[0].p2p_dev_addr(), pin, timeout=60)
+
+    dev[2].p2p_find(social=True, dev_type="5-0050F204-1")
+    ev = dev[2].wait_event(['P2P-DEVICE-FOUND'], timeout=1)
+    if ev:
+        raise Exception("Unexpected P2P device found")
+    dev[2].p2p_find(social=True, dev_type="1-0050F204-2")
+    ev = dev[2].wait_event(['P2P-DEVICE-FOUND ' + addr1], timeout=1)
+    if ev is None:
+        raise Exception("P2P device not found")
+
+def test_discovery_dev_id(dev):
+    """P2P device discovery with Device ID filter"""
+    addr1 = dev[1].p2p_dev_addr()
+    dev[1].p2p_listen()
+    dev[0].p2p_find(social=True, dev_id="02:03:04:05:06:07")
+    ev = dev[0].wait_event(['P2P-DEVICE-FOUND'], timeout=1)
+    if ev:
+        raise Exception("Unexpected P2P device found")
+    dev[0].p2p_find(social=True, dev_id=addr1)
+    ev = dev[0].wait_event(['P2P-DEVICE-FOUND'], timeout=1)
+    if ev is None:
+        raise Exception("P2P device not found")
+
+def test_discovery_dev_id_go(dev):
+    """P2P device discovery with Device ID filter on GO"""
+    addr1 = dev[1].p2p_dev_addr()
+    res = dev[0].p2p_start_go(freq="2412")
+    pin = dev[1].wps_read_pin()
+    dev[0].p2p_go_authorize_client(pin)
+    dev[1].p2p_connect_group(dev[0].p2p_dev_addr(), pin, timeout=60)
+
+    dev[2].p2p_find(social=True, dev_id="02:03:04:05:06:07")
+    ev = dev[2].wait_event(['P2P-DEVICE-FOUND'], timeout=1)
+    if ev:
+        raise Exception("Unexpected P2P device found")
+    dev[2].p2p_find(social=True, dev_id=addr1)
+    ev = dev[2].wait_event(['P2P-DEVICE-FOUND ' + addr1], timeout=1)
+    if ev is None:
+        raise Exception("P2P device not found")

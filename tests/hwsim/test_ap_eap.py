@@ -23,7 +23,8 @@ def eap_connect(dev, ap, method, identity, anonymous_identity=None,
                 fragment_size=None, expect_failure=False,
                 local_error_report=False,
                 ca_cert2=None, client_cert2=None, private_key2=None,
-                pac_file=None, subject_match=None, altsubject_match=None):
+                pac_file=None, subject_match=None, altsubject_match=None,
+                private_key_passwd=None):
     hapd = hostapd.Hostapd(ap['ifname'])
     id = dev.connect("test-wpa2-eap", key_mgmt="WPA-EAP WPA-EAP-SHA256",
                      eap=method, identity=identity,
@@ -37,7 +38,8 @@ def eap_connect(dev, ap, method, identity, anonymous_identity=None,
                      ca_cert2=ca_cert2, client_cert2=client_cert2,
                      private_key2=private_key2, pac_file=pac_file,
                      subject_match=subject_match,
-                     altsubject_match=altsubject_match)
+                     altsubject_match=altsubject_match,
+                     private_key_passwd=private_key_passwd)
     eap_check_auth(dev, method, True, sha256=sha256,
                    expect_failure=expect_failure,
                    local_error_report=local_error_report)
@@ -324,6 +326,28 @@ def test_ap_wpa2_eap_tls(dev, apdev):
                 client_cert="auth_serv/user.pem",
                 private_key="auth_serv/user.key")
     eap_reauth(dev[0], "TLS")
+
+def test_ap_wpa2_eap_tls_pkcs12(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TLS and PKCS#12"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "TLS", "tls user", ca_cert="auth_serv/ca.pem",
+                private_key="auth_serv/user.pkcs12",
+                private_key_passwd="whatever")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
+                   identity="tls user",
+                   ca_cert="auth_serv/ca.pem",
+                   private_key="auth_serv/user.pkcs12",
+                   wait_connect=False, scan_freq="2412")
+    ev = dev[0].wait_event(["CTRL-REQ-PASSPHRASE"])
+    if ev is None:
+        raise Exception("Request for private key passphrase timed out")
+    id = ev.split(':')[0].split('-')[-1]
+    dev[0].request("CTRL-RSP-PASSPHRASE-" + id + ":whatever")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("Connection timed out")
 
 def test_ap_wpa2_eap_tls_neg_incorrect_trust_root(dev, apdev):
     """WPA2-Enterprise negative test - incorrect trust root"""

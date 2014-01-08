@@ -72,7 +72,8 @@ over the main control interface.
 Device Discovery
 
 p2p_find [timeout in seconds] [type=<social|progressive>] \
-	[dev_id=<addr>] [delay=<search delay in ms>]
+	[dev_id=<addr>] [dev_type=<device type>] \
+	[delay=<search delay in ms>]
 
 The default behavior is to run a single full scan in the beginning and
 then scan only social channels. type=social will scan only social
@@ -86,6 +87,10 @@ The optional dev_id option can be used to specify a single P2P peer to
 search for. The optional delay parameter can be used to request an extra
 delay to be used between search iterations (e.g., to free up radio
 resources for concurrent operations).
+
+The optional dev_type option can be used to specify a single device type
+(primary or secondary) to search for, e.g.,
+"p2p_find dev_type=1-0050F204-1".
 
 p2p_listen [timeout in seconds]
 

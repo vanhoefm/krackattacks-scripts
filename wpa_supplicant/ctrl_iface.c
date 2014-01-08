@@ -3652,6 +3652,7 @@ static int p2p_ctrl_find(struct wpa_supplicant *wpa_s, char *cmd)
 	unsigned int timeout = atoi(cmd);
 	enum p2p_discovery_type type = P2P_FIND_START_WITH_FULL;
 	u8 dev_id[ETH_ALEN], *_dev_id = NULL;
+	u8 dev_type[WPS_DEV_TYPE_LEN], *_dev_type = NULL;
 	char *pos;
 	unsigned int search_delay;
 
@@ -3668,6 +3669,14 @@ static int p2p_ctrl_find(struct wpa_supplicant *wpa_s, char *cmd)
 		_dev_id = dev_id;
 	}
 
+	pos = os_strstr(cmd, "dev_type=");
+	if (pos) {
+		pos += 9;
+		if (wps_dev_type_str2bin(pos, dev_type) < 0)
+			return -1;
+		_dev_type = dev_type;
+	}
+
 	pos = os_strstr(cmd, "delay=");
 	if (pos) {
 		pos += 6;
@@ -3675,8 +3684,8 @@ static int p2p_ctrl_find(struct wpa_supplicant *wpa_s, char *cmd)
 	} else
 		search_delay = wpas_p2p_search_delay(wpa_s);
 
-	return wpas_p2p_find(wpa_s, timeout, type, 0, NULL, _dev_id,
-			     search_delay);
+	return wpas_p2p_find(wpa_s, timeout, type, _dev_type != NULL, _dev_type,
+			     _dev_id, search_delay);
 }
 
 

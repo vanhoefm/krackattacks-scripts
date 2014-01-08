@@ -172,7 +172,7 @@ def test_ap_wpa2_eap_ttls_chap(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], apdev[0], "TTLS", "chap user",
                 anonymous_identity="ttls", password="password",
-                ca_cert="auth_serv/ca.pem", phase2="auth=CHAP")
+                ca_cert="auth_serv/ca.der", phase2="auth=CHAP")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
     eap_reauth(dev[0], "TTLS")
 

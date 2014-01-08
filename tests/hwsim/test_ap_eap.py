@@ -23,7 +23,7 @@ def eap_connect(dev, ap, method, identity, anonymous_identity=None,
                 fragment_size=None, expect_failure=False,
                 local_error_report=False,
                 ca_cert2=None, client_cert2=None, private_key2=None,
-                pac_file=None):
+                pac_file=None, subject_match=None, altsubject_match=None):
     hapd = hostapd.Hostapd(ap['ifname'])
     id = dev.connect("test-wpa2-eap", key_mgmt="WPA-EAP WPA-EAP-SHA256",
                      eap=method, identity=identity,
@@ -35,7 +35,9 @@ def eap_connect(dev, ap, method, identity, anonymous_identity=None,
                      client_cert=client_cert, private_key=private_key,
                      ieee80211w="1", fragment_size=fragment_size,
                      ca_cert2=ca_cert2, client_cert2=client_cert2,
-                     private_key2=private_key2, pac_file=pac_file)
+                     private_key2=private_key2, pac_file=pac_file,
+                     subject_match=subject_match,
+                     altsubject_match=altsubject_match)
     eap_check_auth(dev, method, True, sha256=sha256,
                    expect_failure=expect_failure,
                    local_error_report=local_error_report)
@@ -158,7 +160,9 @@ def test_ap_wpa2_eap_ttls_pap(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], apdev[0], "TTLS", "pap user",
                 anonymous_identity="ttls", password="password",
-                ca_cert="auth_serv/ca.pem", phase2="auth=PAP")
+                ca_cert="auth_serv/ca.pem", phase2="auth=PAP",
+                subject_match="/C=FI/O=w1.fi/CN=server.w1.fi",
+                altsubject_match="EMAIL:noone@example.com;DNS:server.w1.fi;URI:http://example.com/")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
     eap_reauth(dev[0], "TTLS")
 
@@ -403,6 +407,112 @@ def test_ap_wpa2_eap_tls_neg_suffix_match(dev, apdev):
         raise Exception("TLS certificate error not reported")
     if "Domain suffix mismatch" not in ev:
         raise Exception("Domain suffix mismatch not reported")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS",
+                            "CTRL-EVENT-EAP-FAILURE",
+                            "CTRL-EVENT-CONNECTED",
+                            "CTRL-EVENT-DISCONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("EAP result(2) timed out")
+    if "CTRL-EVENT-EAP-FAILURE" not in ev:
+        raise Exception("EAP failure not reported")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED",
+                            "CTRL-EVENT-DISCONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("EAP result(3) timed out")
+    if "CTRL-EVENT-DISCONNECTED" not in ev:
+        raise Exception("Disconnection not reported")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-SSID-TEMP-DISABLED"], timeout=10)
+    if ev is None:
+        raise Exception("Network block disabling not reported")
+
+def test_ap_wpa2_eap_tls_neg_subject_match(dev, apdev):
+    """WPA2-Enterprise negative test - subject mismatch"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="DOMAIN\mschapv2 user", anonymous_identity="ttls",
+                   password="password", phase2="auth=MSCHAPV2",
+                   ca_cert="auth_serv/ca.pem",
+                   subject_match="/C=FI/O=w1.fi/CN=example.com",
+                   wait_connect=False, scan_freq="2412")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
+    if ev is None:
+        raise Exception("Association and EAP start timed out")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=10)
+    if ev is None:
+        raise Exception("EAP method selection timed out")
+    if "TTLS" not in ev:
+        raise Exception("Unexpected EAP method")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-TLS-CERT-ERROR",
+                            "CTRL-EVENT-EAP-SUCCESS",
+                            "CTRL-EVENT-EAP-FAILURE",
+                            "CTRL-EVENT-CONNECTED",
+                            "CTRL-EVENT-DISCONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("EAP result timed out")
+    if "CTRL-EVENT-EAP-TLS-CERT-ERROR" not in ev:
+        raise Exception("TLS certificate error not reported")
+    if "Subject mismatch" not in ev:
+        raise Exception("Subject mismatch not reported")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS",
+                            "CTRL-EVENT-EAP-FAILURE",
+                            "CTRL-EVENT-CONNECTED",
+                            "CTRL-EVENT-DISCONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("EAP result(2) timed out")
+    if "CTRL-EVENT-EAP-FAILURE" not in ev:
+        raise Exception("EAP failure not reported")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED",
+                            "CTRL-EVENT-DISCONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("EAP result(3) timed out")
+    if "CTRL-EVENT-DISCONNECTED" not in ev:
+        raise Exception("Disconnection not reported")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-SSID-TEMP-DISABLED"], timeout=10)
+    if ev is None:
+        raise Exception("Network block disabling not reported")
+
+def test_ap_wpa2_eap_tls_neg_altsubject_match(dev, apdev):
+    """WPA2-Enterprise negative test - altsubject mismatch"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="DOMAIN\mschapv2 user", anonymous_identity="ttls",
+                   password="password", phase2="auth=MSCHAPV2",
+                   ca_cert="auth_serv/ca.pem",
+                   altsubject_match="incorrect.example.com",
+                   wait_connect=False, scan_freq="2412")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
+    if ev is None:
+        raise Exception("Association and EAP start timed out")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=10)
+    if ev is None:
+        raise Exception("EAP method selection timed out")
+    if "TTLS" not in ev:
+        raise Exception("Unexpected EAP method")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-TLS-CERT-ERROR",
+                            "CTRL-EVENT-EAP-SUCCESS",
+                            "CTRL-EVENT-EAP-FAILURE",
+                            "CTRL-EVENT-CONNECTED",
+                            "CTRL-EVENT-DISCONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("EAP result timed out")
+    if "CTRL-EVENT-EAP-TLS-CERT-ERROR" not in ev:
+        raise Exception("TLS certificate error not reported")
+    if "AltSubject mismatch" not in ev:
+        raise Exception("altsubject mismatch not reported")
 
     ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS",
                             "CTRL-EVENT-EAP-FAILURE",

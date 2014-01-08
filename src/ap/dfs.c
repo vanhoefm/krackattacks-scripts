@@ -176,6 +176,7 @@ static int dfs_find_channel(struct hostapd_iface *iface,
 
 static void dfs_adjust_vht_center_freq(struct hostapd_iface *iface,
 				       struct hostapd_channel_data *chan,
+				       int secondary_channel,
 				       u8 *vht_oper_centr_freq_seg0_idx,
 				       u8 *vht_oper_centr_freq_seg1_idx)
 {
@@ -189,9 +190,9 @@ static void dfs_adjust_vht_center_freq(struct hostapd_iface *iface,
 
 	switch (iface->conf->vht_oper_chwidth) {
 	case VHT_CHANWIDTH_USE_HT:
-		if (iface->conf->secondary_channel == 1)
+		if (secondary_channel == 1)
 			*vht_oper_centr_freq_seg0_idx = chan->chan + 2;
-		else if (iface->conf->secondary_channel == -1)
+		else if (secondary_channel == -1)
 			*vht_oper_centr_freq_seg0_idx = chan->chan - 2;
 		else
 			*vht_oper_centr_freq_seg0_idx = chan->chan;
@@ -366,6 +367,7 @@ dfs_get_valid_channel(struct hostapd_iface *iface,
 		*secondary_channel = 0;
 
 	dfs_adjust_vht_center_freq(iface, chan,
+				   *secondary_channel,
 				   vht_oper_centr_freq_seg0_idx,
 				   vht_oper_centr_freq_seg1_idx);
 

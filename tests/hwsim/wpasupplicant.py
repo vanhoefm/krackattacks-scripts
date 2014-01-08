@@ -571,7 +571,7 @@ class WpaSupplicant:
                 eapol_flags=None, fragment_size=None,
                 wait_connect=True, only_add_network=False,
                 ca_cert2=None, client_cert2=None, private_key2=None,
-                scan_ssid=None, raw_psk=None):
+                scan_ssid=None, raw_psk=None, pac_file=None):
         logger.info("Connect STA " + self.ifname + " to AP")
         id = self.add_network()
         if ssid:
@@ -636,6 +636,8 @@ class WpaSupplicant:
             self.set_network(id, "fragment_size", fragment_size)
         if scan_ssid:
             self.set_network(id, "scan_ssid", scan_ssid)
+        if pac_file:
+            self.set_network_quoted(id, "pac_file", pac_file)
         if only_add_network:
             return id
         if wait_connect:

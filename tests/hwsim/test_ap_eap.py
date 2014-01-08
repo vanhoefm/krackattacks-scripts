@@ -22,7 +22,8 @@ def eap_connect(dev, ap, method, identity, anonymous_identity=None,
                 client_cert=None, private_key=None, sha256=False,
                 fragment_size=None, expect_failure=False,
                 local_error_report=False,
-                ca_cert2=None, client_cert2=None, private_key2=None):
+                ca_cert2=None, client_cert2=None, private_key2=None,
+                pac_file=None):
     hapd = hostapd.Hostapd(ap['ifname'])
     id = dev.connect("test-wpa2-eap", key_mgmt="WPA-EAP WPA-EAP-SHA256",
                      eap=method, identity=identity,
@@ -34,7 +35,7 @@ def eap_connect(dev, ap, method, identity, anonymous_identity=None,
                      client_cert=client_cert, private_key=private_key,
                      ieee80211w="1", fragment_size=fragment_size,
                      ca_cert2=ca_cert2, client_cert2=client_cert2,
-                     private_key2=private_key2)
+                     private_key2=private_key2, pac_file=pac_file)
     eap_check_auth(dev, method, True, sha256=sha256,
                    expect_failure=expect_failure,
                    local_error_report=local_error_report)
@@ -632,3 +633,25 @@ def test_ap_wpa2_eap_vendor_test(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], apdev[0], "VENDOR-TEST", "vendor-test")
     eap_reauth(dev[0], "VENDOR-TEST")
+
+def test_ap_wpa2_eap_fast_mschapv2_unauth_prov(dev, apdev):
+    """WPA2-Enterprise connection using EAP-FAST/MSCHAPv2 and unauthenticated provisioning"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "FAST", "user",
+                anonymous_identity="FAST", password="password",
+                ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                phase1="fast_provisioning=1", pac_file="blob://fast_pac")
+    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    eap_reauth(dev[0], "FAST")
+
+def test_ap_wpa2_eap_fast_gtc_auth_prov(dev, apdev):
+    """WPA2-Enterprise connection using EAP-FAST/GTC and authenticated provisioning"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "FAST", "user",
+                anonymous_identity="FAST", password="password",
+                ca_cert="auth_serv/ca.pem", phase2="auth=GTC",
+                phase1="fast_provisioning=2", pac_file="blob://fast_pac_auth")
+    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    eap_reauth(dev[0], "FAST")

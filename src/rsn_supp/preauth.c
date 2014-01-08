@@ -70,13 +70,14 @@ static void rsn_preauth_receive(void *ctx, const u8 *src_addr,
 }
 
 
-static void rsn_preauth_eapol_cb(struct eapol_sm *eapol, int success,
+static void rsn_preauth_eapol_cb(struct eapol_sm *eapol,
+				 enum eapol_supp_result result,
 				 void *ctx)
 {
 	struct wpa_sm *sm = ctx;
 	u8 pmk[PMK_LEN];
 
-	if (success) {
+	if (result == EAPOL_SUPP_RESULT_SUCCESS) {
 		int res, pmk_len;
 		pmk_len = PMK_LEN;
 		res = eapol_sm_get_key(eapol, pmk, PMK_LEN);
@@ -100,13 +101,14 @@ static void rsn_preauth_eapol_cb(struct eapol_sm *eapol, int success,
 			wpa_msg(sm->ctx->msg_ctx, MSG_INFO,
 				"RSN: failed to get master session key from "
 				"pre-auth EAPOL state machines");
-			success = 0;
+			result = EAPOL_SUPP_RESULT_FAILURE;
 		}
 	}
 
 	wpa_msg(sm->ctx->msg_ctx, MSG_INFO, "RSN: pre-authentication with "
 		MACSTR " %s", MAC2STR(sm->preauth_bssid),
-		success ? "completed successfully" : "failed");
+		result == EAPOL_SUPP_RESULT_SUCCESS ? "completed successfully" :
+		"failed");
 
 	rsn_preauth_deinit(sm);
 	rsn_preauth_candidate_process(sm);

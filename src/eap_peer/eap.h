@@ -320,6 +320,7 @@ int eap_is_wps_pin_enrollee(struct eap_peer_config *conf);
 struct ext_password_data;
 void eap_sm_set_ext_pw_ctx(struct eap_sm *sm, struct ext_password_data *ext);
 void eap_set_anon_id(struct eap_sm *sm, const u8 *id, size_t len);
+int eap_peer_was_failure_expected(struct eap_sm *sm);
 
 #endif /* IEEE8021X_EAPOL */
 

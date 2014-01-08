@@ -2547,10 +2547,11 @@ static void wpas_event_disconnect(struct wpa_supplicant *wpa_s, const u8 *addr,
 
 	wpa_supplicant_event_disassoc(wpa_s, reason_code, locally_generated);
 
-	if (reason_code == WLAN_REASON_IEEE_802_1X_AUTH_FAILED ||
-	    ((wpa_key_mgmt_wpa_ieee8021x(wpa_s->key_mgmt) ||
-	      (wpa_s->key_mgmt & WPA_KEY_MGMT_IEEE8021X_NO_WPA)) &&
-	     eapol_sm_failed(wpa_s->eapol)))
+	if (((reason_code == WLAN_REASON_IEEE_802_1X_AUTH_FAILED ||
+	      ((wpa_key_mgmt_wpa_ieee8021x(wpa_s->key_mgmt) ||
+		(wpa_s->key_mgmt & WPA_KEY_MGMT_IEEE8021X_NO_WPA)) &&
+	       eapol_sm_failed(wpa_s->eapol))) &&
+	     !wpa_s->eap_expected_failure))
 		wpas_auth_failed(wpa_s);
 
 #ifdef CONFIG_P2P

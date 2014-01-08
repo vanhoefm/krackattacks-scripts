@@ -940,9 +940,15 @@ void eapol_sm_step(struct eapol_sm *sm)
 	}
 
 	if (sm->ctx->cb && sm->cb_status != EAPOL_CB_IN_PROGRESS) {
-		int success = sm->cb_status == EAPOL_CB_SUCCESS ? 1 : 0;
+		enum eapol_supp_result result;
+		if (sm->cb_status == EAPOL_CB_SUCCESS)
+			result = EAPOL_SUPP_RESULT_SUCCESS;
+		else if (eap_peer_was_failure_expected(sm->eap))
+			result = EAPOL_SUPP_RESULT_EXPECTED_FAILURE;
+		else
+			result = EAPOL_SUPP_RESULT_FAILURE;
 		sm->cb_status = EAPOL_CB_IN_PROGRESS;
-		sm->ctx->cb(sm, success, sm->ctx->cb_ctx);
+		sm->ctx->cb(sm, result, sm->ctx->cb_ctx);
 	}
 }
 

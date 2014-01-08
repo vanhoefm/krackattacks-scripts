@@ -365,10 +365,11 @@ static int eapol_test_compare_pmk(struct eapol_test_data *e)
 }
 
 
-static void eapol_sm_cb(struct eapol_sm *eapol, int success, void *ctx)
+static void eapol_sm_cb(struct eapol_sm *eapol, enum eapol_supp_result result,
+			void *ctx)
 {
 	struct eapol_test_data *e = ctx;
-	printf("eapol_sm_cb: success=%d\n", success);
+	printf("eapol_sm_cb: result=%d\n", result);
 	e->eapol_test_num_reauths--;
 	if (e->eapol_test_num_reauths < 0)
 		eloop_terminate();

@@ -350,6 +350,8 @@ struct eap_sm {
 	struct wpabuf *ext_pw_buf;
 
 	int external_sim;
+
+	unsigned int expected_failure:1;
 };
 
 const u8 * eap_get_config_identity(struct eap_sm *sm, size_t *len);

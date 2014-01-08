@@ -1055,6 +1055,7 @@ static struct wpabuf * eap_fast_process_pac(struct eap_sm *sm,
 		}
 		wpa_printf(MSG_DEBUG, "EAP-FAST: Send PAC-Acknowledgement TLV "
 			   "- Provisioning completed successfully");
+		sm->expected_failure = 1;
 	} else {
 		/*
 		 * This is PAC refreshing, i.e., normal authentication that is
@@ -1252,6 +1253,7 @@ static int eap_fast_process_decrypted(struct eap_sm *sm,
 				   "provisioning completed successfully.");
 			ret->methodState = METHOD_DONE;
 			ret->decision = DECISION_FAIL;
+			sm->expected_failure = 1;
 		} else {
 			wpa_printf(MSG_DEBUG, "EAP-FAST: Authentication "
 				   "completed successfully.");

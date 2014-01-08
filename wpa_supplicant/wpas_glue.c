@@ -216,20 +216,38 @@ static void wpa_supplicant_aborted_cached(void *ctx)
 }
 
 
-static void wpa_supplicant_eapol_cb(struct eapol_sm *eapol, int success,
+static const char * result_str(enum eapol_supp_result result)
+{
+	switch (result) {
+	case EAPOL_SUPP_RESULT_FAILURE:
+		return "FAILURE";
+	case EAPOL_SUPP_RESULT_SUCCESS:
+		return "SUCCESS";
+	case EAPOL_SUPP_RESULT_EXPECTED_FAILURE:
+		return "EXPECTED_FAILURE";
+	}
+	return "?";
+}
+
+
+static void wpa_supplicant_eapol_cb(struct eapol_sm *eapol,
+				    enum eapol_supp_result result,
 				    void *ctx)
 {
 	struct wpa_supplicant *wpa_s = ctx;
 	int res, pmk_len;
 	u8 pmk[PMK_LEN];
 
-	wpa_printf(MSG_DEBUG, "EAPOL authentication completed %ssuccessfully",
-		   success ? "" : "un");
+	wpa_printf(MSG_DEBUG, "EAPOL authentication completed - result=%s",
+		   result_str(result));
 
 	if (wpas_wps_eapol_cb(wpa_s) > 0)
 		return;
 
-	if (!success) {
+	wpa_s->eap_expected_failure = result ==
+		EAPOL_SUPP_RESULT_EXPECTED_FAILURE;
+
+	if (result != EAPOL_SUPP_RESULT_SUCCESS) {
 		/*
 		 * Make sure we do not get stuck here waiting for long EAPOL
 		 * timeout if the AP does not disconnect in case of
@@ -238,7 +256,8 @@ static void wpa_supplicant_eapol_cb(struct eapol_sm *eapol, int success,
 		wpa_supplicant_req_auth_timeout(wpa_s, 2, 0);
 	}
 
-	if (!success || !(wpa_s->drv_flags & WPA_DRIVER_FLAGS_4WAY_HANDSHAKE))
+	if (result != EAPOL_SUPP_RESULT_SUCCESS ||
+	    !(wpa_s->drv_flags & WPA_DRIVER_FLAGS_4WAY_HANDSHAKE))
 		return;
 
 	if (!wpa_key_mgmt_wpa_ieee8021x(wpa_s->key_mgmt))

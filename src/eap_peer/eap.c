@@ -179,6 +179,7 @@ SM_STATE(EAP, INITIALIZE)
 	eapol_set_bool(sm, EAPOL_eapNoResp, FALSE);
 	sm->num_rounds = 0;
 	sm->prev_failure = 0;
+	sm->expected_failure = 0;
 }
 
 
@@ -2416,4 +2417,10 @@ void eap_set_anon_id(struct eap_sm *sm, const u8 *id, size_t len)
 {
 	if (sm->eapol_cb->set_anon_id)
 		sm->eapol_cb->set_anon_id(sm->eapol_ctx, id, len);
+}
+
+
+int eap_peer_was_failure_expected(struct eap_sm *sm)
+{
+	return sm->expected_failure;
 }

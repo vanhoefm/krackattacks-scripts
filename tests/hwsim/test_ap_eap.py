@@ -24,7 +24,7 @@ def eap_connect(dev, ap, method, identity, anonymous_identity=None,
                 local_error_report=False,
                 ca_cert2=None, client_cert2=None, private_key2=None,
                 pac_file=None, subject_match=None, altsubject_match=None,
-                private_key_passwd=None):
+                private_key_passwd=None, ocsp=None):
     hapd = hostapd.Hostapd(ap['ifname'])
     id = dev.connect("test-wpa2-eap", key_mgmt="WPA-EAP WPA-EAP-SHA256",
                      eap=method, identity=identity,
@@ -39,7 +39,8 @@ def eap_connect(dev, ap, method, identity, anonymous_identity=None,
                      private_key2=private_key2, pac_file=pac_file,
                      subject_match=subject_match,
                      altsubject_match=altsubject_match,
-                     private_key_passwd=private_key_passwd)
+                     private_key_passwd=private_key_passwd,
+                     ocsp=ocsp)
     eap_check_auth(dev, method, True, sha256=sha256,
                    expect_failure=expect_failure,
                    local_error_report=local_error_report)
@@ -838,3 +839,41 @@ def test_ap_wpa2_eap_fast_gtc_auth_prov(dev, apdev):
                 phase1="fast_provisioning=2", pac_file="blob://fast_pac_auth")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
     eap_reauth(dev[0], "FAST")
+
+def test_ap_wpa2_eap_tls_ocsp(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TLS and verifying OCSP"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "TLS", "tls user", ca_cert="auth_serv/ca.pem",
+                private_key="auth_serv/user.pkcs12",
+                private_key_passwd="whatever", ocsp=2)
+
+def test_ap_wpa2_eap_tls_ocsp_invalid(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TLS and invalid OCSP response"""
+    params = { "ssid": "test-wpa2-eap", "wpa": "2", "wpa_key_mgmt": "WPA-EAP",
+               "rsn_pairwise": "CCMP", "ieee8021x": "1",
+               "eap_server": "1", "eap_user_file": "auth_serv/eap_user.conf",
+               "ca_cert": "auth_serv/ca.pem",
+               "server_cert": "auth_serv/server.pem",
+               "private_key": "auth_serv/server.key",
+               "ocsp_stapling_response": "auth_serv/ocsp-server-cache.der-invalid" }
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
+                   identity="tls user", ca_cert="auth_serv/ca.pem",
+                   private_key="auth_serv/user.pkcs12",
+                   private_key_passwd="whatever", ocsp=2,
+                   wait_connect=False, scan_freq="2412")
+    count = 0
+    while True:
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-STATUS"])
+        if ev is None:
+            raise Exception("Timeout on EAP status")
+        if 'bad certificate status response' in ev:
+            break
+        count = count + 1
+        if count > 10:
+            raise Exception("Unexpected number of EAP status messages")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"])
+    if ev is None:
+        raise Exception("Timeout on EAP failure report")

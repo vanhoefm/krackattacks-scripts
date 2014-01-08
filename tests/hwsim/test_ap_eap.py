@@ -439,6 +439,17 @@ def test_ap_wpa2_eap_pwd(dev, apdev):
     eap_connect(dev[0], apdev[0], "PWD", "pwd user", password="secret-password",
                 expect_failure=True, local_error_report=True)
 
+def test_ap_wpa2_eap_pwd_groups(dev, apdev):
+    """WPA2-Enterprise connection using various EAP-pwd groups"""
+    params = { "ssid": "test-wpa2-eap", "wpa": "2", "wpa_key_mgmt": "WPA-EAP",
+               "rsn_pairwise": "CCMP", "ieee8021x": "1",
+               "eap_server": "1", "eap_user_file": "auth_serv/eap_user.conf" }
+    for i in [ 19, 20, 21, 25, 26 ]:
+        params['pwd_group'] = str(i)
+        hostapd.add_ap(apdev[0]['ifname'], params)
+        dev[0].request("REMOVE_NETWORK all")
+        eap_connect(dev[0], apdev[0], "PWD", "pwd user", password="secret password")
+
 def test_ap_wpa2_eap_gpsk(dev, apdev):
     """WPA2-Enterprise connection using EAP-GPSK"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")

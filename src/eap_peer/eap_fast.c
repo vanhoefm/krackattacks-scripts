@@ -196,14 +196,22 @@ static void * eap_fast_init(struct eap_sm *sm)
 			   "workarounds");
 	}
 
+	if (!config->pac_file) {
+		wpa_printf(MSG_INFO, "EAP-FAST: No PAC file configured");
+		eap_fast_deinit(sm, data);
+		return NULL;
+	}
+
 	if (data->use_pac_binary_format &&
 	    eap_fast_load_pac_bin(sm, &data->pac, config->pac_file) < 0) {
+		wpa_printf(MSG_INFO, "EAP-FAST: Failed to load PAC file");
 		eap_fast_deinit(sm, data);
 		return NULL;
 	}
 
 	if (!data->use_pac_binary_format &&
 	    eap_fast_load_pac(sm, &data->pac, config->pac_file) < 0) {
+		wpa_printf(MSG_INFO, "EAP-FAST: Failed to load PAC file");
 		eap_fast_deinit(sm, data);
 		return NULL;
 	}

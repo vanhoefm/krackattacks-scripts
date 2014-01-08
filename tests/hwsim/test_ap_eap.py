@@ -534,6 +534,55 @@ def test_ap_wpa2_eap_tls_neg_altsubject_match(dev, apdev):
     if ev is None:
         raise Exception("Network block disabling not reported")
 
+def test_ap_wpa2_eap_ttls_server_cert_hash(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TTLS and server certificate hash"""
+    srv_cert_hash = "0a3f81f63569226657a069855bb13f3b922670437a2b87585a4734f70ac7315b"
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="probe", ca_cert="probe://",
+                   wait_connect=False, scan_freq="2412")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
+    if ev is None:
+        raise Exception("Association and EAP start timed out")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-PEER-CERT depth=0"], timeout=10)
+    if ev is None:
+        raise Exception("No peer server certificate event seen")
+    if "hash=" + srv_cert_hash not in ev:
+        raise Exception("Expected server certificate hash not reported")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-TLS-CERT-ERROR"], timeout=10)
+    if ev is None:
+        raise Exception("EAP result timed out")
+    if "Server certificate chain probe" not in ev:
+        raise Exception("Server certificate probe not reported")
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("Disconnection event not seen")
+    dev[0].request("REMOVE_NETWORK all")
+
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="DOMAIN\mschapv2 user", anonymous_identity="ttls",
+                   password="password", phase2="auth=MSCHAPV2",
+                   ca_cert="hash://server/sha256/5a1bc1296205e6fdbe3979728efe3920798885c1c4590b5f90f43222d239ca6a",
+                   wait_connect=False, scan_freq="2412")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
+    if ev is None:
+        raise Exception("Association and EAP start timed out")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-TLS-CERT-ERROR"], timeout=10)
+    if ev is None:
+        raise Exception("EAP result timed out")
+    if "Server certificate mismatch" not in ev:
+        raise Exception("Server certificate mismatch not reported")
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("Disconnection event not seen")
+    dev[0].request("REMOVE_NETWORK all")
+
+    eap_connect(dev[0], apdev[0], "TTLS", "DOMAIN\mschapv2 user",
+                anonymous_identity="ttls", password="password",
+                ca_cert="hash://server/sha256/" + srv_cert_hash,
+                phase2="auth=MSCHAPV2")
+
 def test_ap_wpa2_eap_pwd(dev, apdev):
     """WPA2-Enterprise connection using EAP-pwd"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")

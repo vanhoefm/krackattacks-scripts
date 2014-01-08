@@ -979,6 +979,7 @@ void wpa_config_set_blob(struct wpa_config *config,
 			 struct wpa_config_blob *blob);
 void wpa_config_free_blob(struct wpa_config_blob *blob);
 int wpa_config_remove_blob(struct wpa_config *config, const char *name);
+void wpa_config_flush_blobs(struct wpa_config *config);
 
 struct wpa_cred * wpa_config_get_cred(struct wpa_config *config, int id);
 struct wpa_cred * wpa_config_add_cred(struct wpa_config *config);

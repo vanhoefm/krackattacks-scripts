@@ -1926,6 +1926,22 @@ void wpa_config_free_cred(struct wpa_cred *cred)
 }
 
 
+void wpa_config_flush_blobs(struct wpa_config *config)
+{
+#ifndef CONFIG_NO_CONFIG_BLOBS
+	struct wpa_config_blob *blob, *prev;
+
+	blob = config->blobs;
+	config->blobs = NULL;
+	while (blob) {
+		prev = blob;
+		blob = blob->next;
+		wpa_config_free_blob(prev);
+	}
+#endif /* CONFIG_NO_CONFIG_BLOBS */
+}
+
+
 /**
  * wpa_config_free - Free configuration data
  * @config: Configuration data from wpa_config_read()
@@ -1935,9 +1951,6 @@ void wpa_config_free_cred(struct wpa_cred *cred)
  */
 void wpa_config_free(struct wpa_config *config)
 {
-#ifndef CONFIG_NO_CONFIG_BLOBS
-	struct wpa_config_blob *blob, *prevblob;
-#endif /* CONFIG_NO_CONFIG_BLOBS */
 	struct wpa_ssid *ssid, *prev = NULL;
 	struct wpa_cred *cred, *cprev;
 
@@ -1955,15 +1968,7 @@ void wpa_config_free(struct wpa_config *config)
 		wpa_config_free_cred(cprev);
 	}
 
-#ifndef CONFIG_NO_CONFIG_BLOBS
-	blob = config->blobs;
-	prevblob = NULL;
-	while (blob) {
-		prevblob = blob;
-		blob = blob->next;
-		wpa_config_free_blob(prevblob);
-	}
-#endif /* CONFIG_NO_CONFIG_BLOBS */
+	wpa_config_flush_blobs(config);
 
 	wpabuf_free(config->wps_vendor_ext_m1);
 	os_free(config->ctrl_interface);

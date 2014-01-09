@@ -141,7 +141,6 @@ ifndef CONFIG_NO_DUMP_STATE
 # through control interface commands (undefine it, if you want to save in
 # binary size)
 L_CFLAGS += -DHOSTAPD_DUMP_STATE
-OBJS += dump_state.c
 OBJS += src/eapol_auth/eapol_auth_dump.c
 endif
 

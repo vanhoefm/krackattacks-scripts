@@ -670,6 +670,8 @@ struct wpa_supplicant {
 	u8 pending_join_iface_addr[ETH_ALEN];
 	u8 pending_join_dev_addr[ETH_ALEN];
 	int pending_join_wps_method;
+	u8 p2p_join_ssid[32];
+	size_t p2p_join_ssid_len;
 	int p2p_join_scan_count;
 	int auto_pd_scan_retry;
 	int force_long_sd;

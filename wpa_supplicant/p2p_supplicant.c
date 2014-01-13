@@ -104,11 +104,12 @@ static struct wpa_supplicant *
 wpas_p2p_get_group_iface(struct wpa_supplicant *wpa_s, int addr_allocated,
 			 int go);
 static int wpas_p2p_join_start(struct wpa_supplicant *wpa_s);
-static void wpas_p2p_join_scan_req(struct wpa_supplicant *wpa_s, int freq);
+static void wpas_p2p_join_scan_req(struct wpa_supplicant *wpa_s, int freq,
+				   const u8 *ssid, size_t ssid_len);
 static void wpas_p2p_join_scan(void *eloop_ctx, void *timeout_ctx);
 static int wpas_p2p_join(struct wpa_supplicant *wpa_s, const u8 *iface_addr,
 			 const u8 *dev_addr, enum p2p_wps_method wps_method,
-			 int auto_join);
+			 int auto_join, const u8 *ssid, size_t ssid_len);
 static int wpas_p2p_create_iface(struct wpa_supplicant *wpa_s);
 static void wpas_p2p_cross_connect_setup(struct wpa_supplicant *wpa_s);
 static void wpas_p2p_group_idle_timeout(void *eloop_ctx, void *timeout_ctx);
@@ -2868,7 +2869,8 @@ static u8 wpas_invitation_process(void *ctx, const u8 *sa, const u8 *bssid,
 
 	if (!persistent_group) {
 		wpa_printf(MSG_DEBUG, "P2P: Invitation from " MACSTR
-			   " to join an active group", MAC2STR(sa));
+			   " to join an active group (SSID: %s)",
+			   MAC2STR(sa), wpa_ssid_txt(ssid, ssid_len));
 		if (!is_zero_ether_addr(wpa_s->p2p_auth_invite) &&
 		    (os_memcmp(go_dev_addr, wpa_s->p2p_auth_invite, ETH_ALEN)
 		     == 0 ||
@@ -2991,8 +2993,8 @@ static void wpas_invitation_received(void *ctx, const u8 *sa, const u8 *bssid,
 
 	if (status == P2P_SC_SUCCESS) {
 		wpa_printf(MSG_DEBUG, "P2P: Invitation from peer " MACSTR
-			   " was accepted; op_freq=%d MHz",
-			   MAC2STR(sa), op_freq);
+			   " was accepted; op_freq=%d MHz, SSID=%s",
+			   MAC2STR(sa), op_freq, wpa_ssid_txt(ssid, ssid_len));
 		if (s) {
 			int go = s->mode == WPAS_MODE_P2P_GO;
 			wpas_p2p_group_add_persistent(
@@ -3001,7 +3003,8 @@ static void wpas_invitation_received(void *ctx, const u8 *sa, const u8 *bssid,
 		} else if (bssid) {
 			wpa_s->user_initiated_pd = 0;
 			wpas_p2p_join(wpa_s, bssid, go_dev_addr,
-				      wpa_s->p2p_wps_method, 0);
+				      wpa_s->p2p_wps_method, 0,
+				      ssid, ssid_len);
 		}
 		return;
 	}
@@ -4031,7 +4034,7 @@ static int wpas_p2p_peer_go(struct wpa_supplicant *wpa_s,
 static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 				   struct wpa_scan_results *scan_res)
 {
-	struct wpa_bss *bss;
+	struct wpa_bss *bss = NULL;
 	int freq;
 	u8 iface_addr[ETH_ALEN];
 
@@ -4063,7 +4066,7 @@ static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 					   MAC2STR(wpa_s->
 						   pending_join_dev_addr),
 					   freq);
-				wpas_p2p_join_scan_req(wpa_s, freq);
+				wpas_p2p_join_scan_req(wpa_s, freq, NULL, 0);
 				return;
 			}
 		}
@@ -4136,7 +4139,22 @@ static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 		wpa_printf(MSG_DEBUG, "P2P: Target GO operating frequency "
 			   "from P2P peer table: %d MHz", freq);
 	}
-	bss = wpa_bss_get_bssid_latest(wpa_s, wpa_s->pending_join_iface_addr);
+	if (wpa_s->p2p_join_ssid_len) {
+		wpa_printf(MSG_DEBUG, "P2P: Trying to find target GO BSS entry based on BSSID "
+			   MACSTR " and SSID %s",
+			   MAC2STR(wpa_s->pending_join_iface_addr),
+			   wpa_ssid_txt(wpa_s->p2p_join_ssid,
+					wpa_s->p2p_join_ssid_len));
+		bss = wpa_bss_get(wpa_s, wpa_s->pending_join_iface_addr,
+				  wpa_s->p2p_join_ssid,
+				  wpa_s->p2p_join_ssid_len);
+	}
+	if (!bss) {
+		wpa_printf(MSG_DEBUG, "P2P: Trying to find target GO BSS entry based on BSSID "
+			   MACSTR, MAC2STR(wpa_s->pending_join_iface_addr));
+		bss = wpa_bss_get_bssid_latest(wpa_s,
+					       wpa_s->pending_join_iface_addr);
+	}
 	if (bss) {
 		freq = bss->freq;
 		wpa_printf(MSG_DEBUG, "P2P: Target GO operating frequency "
@@ -4213,7 +4231,8 @@ start:
 }
 
 
-static void wpas_p2p_join_scan_req(struct wpa_supplicant *wpa_s, int freq)
+static void wpas_p2p_join_scan_req(struct wpa_supplicant *wpa_s, int freq,
+				   const u8 *ssid, size_t ssid_len)
 {
 	int ret;
 	struct wpa_driver_scan_params params;
@@ -4225,8 +4244,16 @@ static void wpas_p2p_join_scan_req(struct wpa_supplicant *wpa_s, int freq)
 
 	/* P2P Wildcard SSID */
 	params.num_ssids = 1;
-	params.ssids[0].ssid = (u8 *) P2P_WILDCARD_SSID;
-	params.ssids[0].ssid_len = P2P_WILDCARD_SSID_LEN;
+	if (ssid && ssid_len) {
+		params.ssids[0].ssid = ssid;
+		params.ssids[0].ssid_len = ssid_len;
+		os_memcpy(wpa_s->p2p_join_ssid, ssid, ssid_len);
+		wpa_s->p2p_join_ssid_len = ssid_len;
+	} else {
+		params.ssids[0].ssid = (u8 *) P2P_WILDCARD_SSID;
+		params.ssids[0].ssid_len = P2P_WILDCARD_SSID_LEN;
+		wpa_s->p2p_join_ssid_len = 0;
+	}
 
 	wpa_s->wps->dev.p2p = 1;
 	wps_ie = wps_build_probe_req_ie(DEV_PW_DEFAULT, &wpa_s->wps->dev,
@@ -4283,18 +4310,22 @@ static void wpas_p2p_join_scan_req(struct wpa_supplicant *wpa_s, int freq)
 static void wpas_p2p_join_scan(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_supplicant *wpa_s = eloop_ctx;
-	wpas_p2p_join_scan_req(wpa_s, 0);
+	wpas_p2p_join_scan_req(wpa_s, 0, NULL, 0);
 }
 
 
 static int wpas_p2p_join(struct wpa_supplicant *wpa_s, const u8 *iface_addr,
 			 const u8 *dev_addr, enum p2p_wps_method wps_method,
-			 int auto_join)
+			 int auto_join, const u8 *ssid, size_t ssid_len)
 {
 	wpa_printf(MSG_DEBUG, "P2P: Request to join existing group (iface "
 		   MACSTR " dev " MACSTR ")%s",
 		   MAC2STR(iface_addr), MAC2STR(dev_addr),
 		   auto_join ? " (auto_join)" : "");
+	if (ssid && ssid_len) {
+		wpa_printf(MSG_DEBUG, "P2P: Group SSID specified: %s",
+			   wpa_ssid_txt(ssid, ssid_len));
+	}
 
 	wpa_s->p2p_auto_pd = 0;
 	wpa_s->p2p_auto_join = !!auto_join;
@@ -4306,7 +4337,7 @@ static int wpas_p2p_join(struct wpa_supplicant *wpa_s, const u8 *iface_addr,
 	wpas_p2p_stop_find(wpa_s);
 
 	wpa_s->p2p_join_scan_count = 0;
-	wpas_p2p_join_scan(wpa_s, NULL);
+	wpas_p2p_join_scan_req(wpa_s, 0, ssid, ssid_len);
 	return 0;
 }
 
@@ -4561,7 +4592,7 @@ int wpas_p2p_connect(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 		}
 		wpa_s->user_initiated_pd = 1;
 		if (wpas_p2p_join(wpa_s, iface_addr, dev_addr, wps_method,
-				  auto_join) < 0)
+				  auto_join, NULL, 0) < 0)
 			return -1;
 		return ret;
 	}

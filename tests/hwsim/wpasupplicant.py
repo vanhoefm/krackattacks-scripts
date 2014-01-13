@@ -120,6 +120,10 @@ class WpaSupplicant:
             except subprocess.CalledProcessError, e:
                 logger.info("ifconfig failed: " + str(e.returncode))
                 logger.info(e.output)
+        if iter > 0:
+            # The ongoing scan could have discovered BSSes or P2P peers
+            logger.info("Run FLUSH again since scan was in progress")
+            self.request("FLUSH")
 
         if not self.ping():
             logger.info("No PING response from " + self.ifname + " after reset")

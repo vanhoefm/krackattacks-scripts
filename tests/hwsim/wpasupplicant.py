@@ -220,10 +220,10 @@ class WpaSupplicant:
             raise Exception("SELECT_NETWORK failed")
         return None
 
-    def connect_network(self, id):
+    def connect_network(self, id, timeout=10):
         self.dump_monitor()
         self.select_network(id)
-        ev = self.wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
+        ev = self.wait_event(["CTRL-EVENT-CONNECTED"], timeout=timeout)
         if ev is None:
             raise Exception("Association with the AP timed out")
         self.dump_monitor()
@@ -663,7 +663,10 @@ class WpaSupplicant:
         if only_add_network:
             return id
         if wait_connect:
-            self.connect_network(id)
+            if eap:
+                self.connect_network(id, timeout=20)
+            else:
+                self.connect_network(id)
         else:
             self.dump_monitor()
             self.select_network(id)

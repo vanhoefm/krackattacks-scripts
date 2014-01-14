@@ -23,6 +23,7 @@ def check_qos_map(ap, dev, dscp, tid, ap_tid=None):
     wt = Wlantest()
     wt.clear_sta_counters(bssid, sta)
     hwsim_utils.test_connectivity(dev.ifname, ap['ifname'], dscp=dscp)
+    time.sleep(0.02)
     [ tx, rx ] = wt.get_tid_counters(bssid, sta)
     if tx[tid] == 0:
         logger.info("Expected TX DSCP " + str(dscp) + " with TID " + str(tid) + " but counters: " + str(tx))
@@ -41,6 +42,7 @@ def test_ap_qosmap(dev, apdev):
     params['qos_map_set'] = '53,2,22,6,8,15,0,7,255,255,16,31,32,39,255,255,40,47,48,55'
     hostapd.add_ap(apdev[0]['ifname'], params)
     dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
+    time.sleep(0.1)
     check_qos_map(apdev[0], dev[0], 53, 2)
     check_qos_map(apdev[0], dev[0], 22, 6)
     check_qos_map(apdev[0], dev[0], 8, 0)

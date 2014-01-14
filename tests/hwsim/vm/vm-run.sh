@@ -29,6 +29,7 @@ KVMOUT=ttyS1
 CHANNELS=1
 
 test -f vm-config && . vm-config
+test -f ~/.wpas-vm-config && . ~/.wpas-vm-config
 
 if [ -z "$KERNEL" ] && [ -z "$KERNELDIR" ] ; then
 	echo "You need to set a KERNEL or KERNELDIR (in the environment or vm-config)"

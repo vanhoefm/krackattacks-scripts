@@ -4279,6 +4279,18 @@ static void wpas_p2p_join_scan_req(struct wpa_supplicant *wpa_s, int freq,
 	params.p2p_probe = 1;
 	params.extra_ies = wpabuf_head(ies);
 	params.extra_ies_len = wpabuf_len(ies);
+
+	if (!freq) {
+		int oper_freq;
+		/*
+		 * If freq is not provided, check the operating freq of the GO
+		 * and use a single channel scan on if possible.
+		 */
+		oper_freq = p2p_get_oper_freq(wpa_s->global->p2p,
+					      wpa_s->pending_join_iface_addr);
+		if (oper_freq > 0)
+			freq = oper_freq;
+	}
 	if (freq > 0) {
 		freqs[0] = freq;
 		params.freqs = freqs;

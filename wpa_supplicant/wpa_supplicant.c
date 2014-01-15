@@ -2623,6 +2623,10 @@ int wpa_supplicant_driver_init(struct wpa_supplicant *wpa_s)
 	wpa_s->prev_scan_wildcard = 0;
 
 	if (wpa_supplicant_enabled_networks(wpa_s)) {
+		if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED) {
+			wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
+			interface_count = 0;
+		}
 		if (wpa_supplicant_delayed_sched_scan(wpa_s, interface_count,
 						      100000))
 			wpa_supplicant_req_scan(wpa_s, interface_count,

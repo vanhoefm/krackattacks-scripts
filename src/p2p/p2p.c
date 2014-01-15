@@ -56,6 +56,15 @@ static void p2p_expire_peers(struct p2p_data *p2p)
 		if (dev->last_seen.sec + P2P_PEER_EXPIRATION_AGE >= now.sec)
 			continue;
 
+		if (dev == p2p->go_neg_peer) {
+			/*
+			 * GO Negotiation is in progress with the peer, so
+			 * don't expire the peer entry until GO Negotiation
+			 * fails or times out.
+			 */
+			continue;
+		}
+
 		if (p2p->cfg->go_connected &&
 		    p2p->cfg->go_connected(p2p->cfg->cb_ctx,
 					   dev->info.p2p_device_addr)) {

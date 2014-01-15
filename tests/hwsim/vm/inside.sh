@@ -18,6 +18,7 @@ sysctl kernel.panic=1
 
 # get extra command line variables from /proc/cmdline
 TESTDIR=$(sed 's/.*testdir=\([^ ]*\) .*/\1/' /proc/cmdline)
+TIMEWARP=$(sed 's/.*timewarp=\([^ ]*\) .*/\1/' /proc/cmdline)
 EPATH=$(sed 's/.*EPATH=\([^ ]*\) .*/\1/' /proc/cmdline)
 ARGS=$(sed 's/.*ARGS=//' /proc/cmdline)
 
@@ -55,6 +56,14 @@ ip link set lo up
 # create logs mountpoint and mount the logshare
 mkdir /tmp/logs
 mount -t 9p -o trans=virtio,rw logshare /tmp/logs
+
+if [ "$TIMEWARP" = "1" ] ; then
+    (
+        while sleep 1 ; do
+            date --set "@$(($(date +%s) + 19))"
+        done
+    ) &
+fi
 
 # check if we're rebooting due to a kernel panic ...
 if grep -q 'Kernel panic' /tmp/logs/console ; then

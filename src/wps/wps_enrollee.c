@@ -265,7 +265,8 @@ static int wps_build_cred_encr_type(struct wps_data *wps, struct wpabuf *msg)
 
 static int wps_build_cred_network_key(struct wps_data *wps, struct wpabuf *msg)
 {
-	wpa_printf(MSG_DEBUG, "WPS:  * Network Key");
+	wpa_printf(MSG_DEBUG, "WPS:  * Network Key (len=%u)",
+		   (unsigned int) wps->wps->network_key_len);
 	wpabuf_put_be16(msg, ATTR_NETWORK_KEY);
 	wpabuf_put_be16(msg, wps->wps->network_key_len);
 	wpabuf_put_data(msg, wps->wps->network_key, wps->wps->network_key_len);
@@ -285,6 +286,9 @@ static int wps_build_cred_mac_addr(struct wps_data *wps, struct wpabuf *msg)
 
 static int wps_build_ap_settings(struct wps_data *wps, struct wpabuf *plain)
 {
+	const u8 *start, *end;
+	int ret;
+
 	if (wps->wps->ap_settings) {
 		wpa_printf(MSG_DEBUG, "WPS:  * AP Settings (pre-configured)");
 		wpabuf_put_data(plain, wps->wps->ap_settings,
@@ -292,11 +296,19 @@ static int wps_build_ap_settings(struct wps_data *wps, struct wpabuf *plain)
 		return 0;
 	}
 
-	return wps_build_cred_ssid(wps, plain) ||
+	wpa_printf(MSG_DEBUG, "WPS:  * AP Settings based on current configuration");
+	start = wpabuf_put(plain, 0);
+	ret = wps_build_cred_ssid(wps, plain) ||
 		wps_build_cred_mac_addr(wps, plain) ||
 		wps_build_cred_auth_type(wps, plain) ||
 		wps_build_cred_encr_type(wps, plain) ||
 		wps_build_cred_network_key(wps, plain);
+	end = wpabuf_put(plain, 0);
+
+	wpa_hexdump_key(MSG_DEBUG, "WPS: Plaintext AP Settings",
+			start, end - start);
+
+	return ret;
 }
 
 

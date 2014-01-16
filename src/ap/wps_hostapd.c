@@ -471,6 +471,8 @@ static int hapd_wps_cred_cb(struct hostapd_data *hapd, void *ctx)
 	hapd->wps->ssid_len = cred->ssid_len;
 	hapd->wps->encr_types = cred->encr_type;
 	hapd->wps->auth_types = cred->auth_type;
+	hapd->wps->ap_encr_type = cred->encr_type;
+	hapd->wps->ap_auth_type = cred->auth_type;
 	if (cred->key_len == 0) {
 		os_free(hapd->wps->network_key);
 		hapd->wps->network_key = NULL;
@@ -1146,6 +1148,8 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 		wps->psk_set = 1;
 	}
 
+	wps->ap_auth_type = wps->auth_types;
+	wps->ap_encr_type = wps->encr_types;
 	if (conf->wps_state == WPS_STATE_NOT_CONFIGURED) {
 		/* Override parameters to enable security by default */
 		wps->auth_types = WPS_AUTH_WPA2PSK | WPS_AUTH_WPAPSK;

@@ -668,6 +668,16 @@ struct wps_context {
 	u16 auth_types;
 
 	/**
+	 * encr_types - Current AP encryption type (WPS_ENCR_*)
+	 */
+	u16 ap_encr_type;
+
+	/**
+	 * ap_auth_type - Current AP authentication types (WPS_AUTH_*)
+	 */
+	u16 ap_auth_type;
+
+	/**
 	 * network_key - The current Network Key (PSK) or %NULL to generate new
 	 *
 	 * If %NULL, Registrar will generate per-device PSK. In addition, AP

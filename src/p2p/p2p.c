@@ -41,7 +41,9 @@ static void p2p_scan_timeout(void *eloop_ctx, void *timeout_ctx);
  * P2P_PEER_EXPIRATION_AGE - Number of seconds after which inactive peer
  * entries will be removed
  */
-#define P2P_PEER_EXPIRATION_AGE 300
+#ifndef P2P_PEER_EXPIRATION_AGE
+#define P2P_PEER_EXPIRATION_AGE 60
+#endif /* P2P_PEER_EXPIRATION_AGE */
 
 #define P2P_PEER_EXPIRATION_INTERVAL (P2P_PEER_EXPIRATION_AGE / 2)
 

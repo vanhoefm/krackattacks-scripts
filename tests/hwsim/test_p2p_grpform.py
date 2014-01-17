@@ -439,3 +439,47 @@ def test_grpform_reject(dev):
         raise Exception("Rejection not reported")
     if "status=11" not in ev:
         raise Exception("Unexpected status code in rejection")
+
+def test_grpform_pd_no_probe_resp(dev):
+    """GO Negotiation after PD, but no Probe Response"""
+    addr0 = dev[0].p2p_dev_addr()
+    addr1 = dev[1].p2p_dev_addr()
+    dev[0].p2p_listen()
+    if not dev[1].discover_peer(addr0):
+        raise Exception("Peer not found")
+    dev[1].p2p_stop_find()
+    dev[0].p2p_stop_find()
+    peer = dev[0].get_peer(addr1)
+    if peer['listen_freq'] == '0':
+        raise Exception("Peer listen frequency not learned from Probe Request")
+    time.sleep(0.3)
+    dev[0].request("P2P_FLUSH")
+    dev[0].p2p_listen()
+    dev[1].global_request("P2P_PROV_DISC " + addr0 + " display")
+    ev = dev[0].wait_global_event(["P2P-PROV-DISC-SHOW-PIN"], timeout=5)
+    if ev is None:
+        raise Exception("PD Request timed out")
+    ev = dev[1].wait_global_event(["P2P-PROV-DISC-ENTER-PIN"], timeout=5)
+    if ev is None:
+        raise Exception("PD Response timed out")
+    peer = dev[0].get_peer(addr1)
+    if peer['listen_freq'] != '0':
+        raise Exception("Peer listen frequency learned unexpectedly from PD Request")
+
+    pin = dev[0].wps_read_pin()
+    if "FAIL" in dev[1].request("P2P_CONNECT " + addr0 + " " + pin + " enter"):
+        raise Exception("P2P_CONNECT on initiator failed")
+    ev = dev[0].wait_global_event(["P2P-GO-NEG-REQUEST"], timeout=5)
+    if ev is None:
+        raise Exception("GO Negotiation start timed out")
+    peer = dev[0].get_peer(addr1)
+    if peer['listen_freq'] == '0':
+        raise Exception("Peer listen frequency not learned from PD followed by GO Neg Req")
+    if "FAIL" in dev[0].request("P2P_CONNECT " + addr1 + " " + pin + " display"):
+        raise Exception("P2P_CONNECT on responder failed")
+    ev = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
+    if ev is None:
+        raise Exception("Group formation timed out")
+    ev = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
+    if ev is None:
+        raise Exception("Group formation timed out")

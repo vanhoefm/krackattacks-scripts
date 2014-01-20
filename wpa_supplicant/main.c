@@ -22,13 +22,24 @@ static void usage(void)
 	int i;
 	printf("%s\n\n%s\n"
 	       "usage:\n"
-	       "  wpa_supplicant [-BddhKLqqstuvW] [-P<pid file>] "
+	       "  wpa_supplicant [-BddhKLqq"
+#ifdef CONFIG_DEBUG_SYSLOG
+	       "s"
+#endif /* CONFIG_DEBUG_SYSLOG */
+	       "t"
+#ifdef CONFIG_DBUS
+	       "u"
+#endif /* CONFIG_DBUS */
+	       "vW] [-P<pid file>] "
 	       "[-g<global ctrl>] \\\n"
 	       "        [-G<group>] \\\n"
 	       "        -i<ifname> -c<config file> [-C<ctrl>] [-D<driver>] "
 	       "[-p<driver_param>] \\\n"
-	       "        [-b<br_ifname>] [-f<debug file>] [-e<entropy file>] "
-	       "\\\n"
+	       "        [-b<br_ifname>] [-e<entropy file>]"
+#ifdef CONFIG_DEBUG_FILE
+	       " [-f<debug file>]"
+#endif /* CONFIG_DEBUG_FILE */
+	       " \\\n"
 	       "        [-o<override driver>] [-O<override ctrl>] \\\n"
 	       "        [-N -i<ifname> -c<conf> [-C<ctrl>] "
 	       "[-D<driver>] \\\n"

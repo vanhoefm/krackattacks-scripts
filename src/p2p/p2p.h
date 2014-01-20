@@ -789,6 +789,15 @@ struct p2p_config {
 	 */
 	void (*presence_resp)(void *ctx, const u8 *src, u8 status,
 			      const u8 *noa, size_t noa_len);
+
+	/**
+	 * is_concurrent_session_active - Check whether concurrent session is
+	 * active on other virtual interfaces
+	 * @ctx: Callback context from cb_ctx
+	 * Returns: 1 if concurrent session is active on other virtual interface
+	 * or 0 if not.
+	 */
+	int (*is_concurrent_session_active)(void *ctx);
 };
 
 

@@ -3149,13 +3149,13 @@ static void p2p_timeout_connect_listen(struct p2p_data *p2p)
 
 static void p2p_timeout_wait_peer_connect(struct p2p_data *p2p)
 {
-	/*
-	 * TODO: could remain constantly in Listen state for some time if there
-	 * are no other concurrent uses for the radio. For now, go to listen
-	 * state once per second to give other uses a chance to use the radio.
-	 */
 	p2p_set_state(p2p, P2P_WAIT_PEER_IDLE);
-	p2p_set_timeout(p2p, 0, 500000);
+
+	if (p2p->cfg->is_concurrent_session_active &&
+	    p2p->cfg->is_concurrent_session_active(p2p->cfg->cb_ctx))
+		p2p_set_timeout(p2p, 0, 500000);
+	else
+		p2p_set_timeout(p2p, 0, 200000);
 }
 
 

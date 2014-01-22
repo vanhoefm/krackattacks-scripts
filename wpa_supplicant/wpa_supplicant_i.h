@@ -768,6 +768,7 @@ struct wpa_supplicant {
 	} hw;
 
 	int pno;
+	int pno_sched_pending;
 
 	/* WLAN_REASON_* reason codes. Negative if locally generated. */
 	int disconnect_reason;

@@ -5477,6 +5477,9 @@ void wpas_ctrl_radio_work_flush(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_radio_work *work, *tmp;
 
+	if (!wpa_s || !wpa_s->radio)
+		return;
+
 	dl_list_for_each_safe(work, tmp, &wpa_s->radio->work,
 			      struct wpa_radio_work, list) {
 		struct wpa_external_work *ework;

@@ -3584,7 +3584,7 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 
 		nla_for_each_nested(nl, tb[NL80211_ATTR_VENDOR_DATA], rem) {
 			struct nl80211_vendor_cmd_info *vinfo;
-			if (nla_len(nl) != sizeof(vinfo)) {
+			if (nla_len(nl) != sizeof(*vinfo)) {
 				wpa_printf(MSG_DEBUG, "nl80211: Unexpected vendor data info");
 				continue;
 			}
@@ -3600,7 +3600,7 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 
 		nla_for_each_nested(nl, tb[NL80211_ATTR_VENDOR_EVENTS], rem) {
 			struct nl80211_vendor_cmd_info *vinfo;
-			if (nla_len(nl) != sizeof(vinfo)) {
+			if (nla_len(nl) != sizeof(*vinfo)) {
 				wpa_printf(MSG_DEBUG, "nl80211: Unexpected vendor data info");
 				continue;
 			}

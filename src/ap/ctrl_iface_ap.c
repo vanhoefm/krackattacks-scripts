@@ -86,6 +86,9 @@ static int hostapd_ctrl_iface_sta_mib(struct hostapd_data *hapd,
 {
 	int len, res, ret, i;
 
+	if (!sta)
+		return 0;
+
 	len = 0;
 	ret = os_snprintf(buf + len, buflen - len, MACSTR "\nflags=",
 			  MAC2STR(sta->addr));
@@ -203,7 +206,11 @@ int hostapd_ctrl_iface_sta_next(struct hostapd_data *hapd, const char *txtaddr,
 		if (ret < 0 || (size_t) ret >= buflen)
 			return 0;
 		return ret;
-	}		
+	}
+
+	if (!sta->next)
+		return 0;
+
 	return hostapd_ctrl_iface_sta_mib(hapd, sta->next, buf, buflen);
 }
 

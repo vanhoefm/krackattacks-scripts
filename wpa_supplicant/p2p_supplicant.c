@@ -1342,6 +1342,7 @@ static void wpas_p2p_clone_config(struct wpa_supplicant *dst,
 	d->pbc_in_m1 = s->pbc_in_m1;
 	d->ignore_old_scan_res = s->ignore_old_scan_res;
 	d->beacon_int = s->beacon_int;
+	d->dtim_period = s->dtim_period;
 	d->disassoc_low_ack = s->disassoc_low_ack;
 	d->disable_scan_offload = s->disable_scan_offload;
 }

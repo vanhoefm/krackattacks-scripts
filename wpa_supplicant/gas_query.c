@@ -1,7 +1,7 @@
 /*
  * Generic advertisement service (GAS) query
  * Copyright (c) 2009, Atheros Communications
- * Copyright (c) 2011-2013, Qualcomm Atheros, Inc.
+ * Copyright (c) 2011-2014, Qualcomm Atheros, Inc.
  * Copyright (c) 2011-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
@@ -15,6 +15,7 @@
 #include "common/ieee802_11_defs.h"
 #include "common/gas.h"
 #include "common/wpa_ctrl.h"
+#include "rsn_supp/wpa.h"
 #include "wpa_supplicant_i.h"
 #include "driver_i.h"
 #include "offchannel.h"
@@ -228,13 +229,28 @@ static void gas_query_tx_status(struct wpa_supplicant *wpa_s,
 }
 
 
+static int pmf_in_use(struct wpa_supplicant *wpa_s, const u8 *addr)
+{
+	if (wpa_s->current_ssid == NULL ||
+	    wpa_s->wpa_state < WPA_4WAY_HANDSHAKE ||
+	    os_memcmp(addr, wpa_s->bssid, ETH_ALEN) != 0)
+		return 0;
+	return wpa_sm_pmf_enabled(wpa_s->wpa);
+}
+
+
 static int gas_query_tx(struct gas_query *gas, struct gas_query_pending *query,
 			struct wpabuf *req)
 {
-	int res;
+	int res, prot = pmf_in_use(gas->wpa_s, query->addr);
+
 	wpa_printf(MSG_DEBUG, "GAS: Send action frame to " MACSTR " len=%u "
-		   "freq=%d", MAC2STR(query->addr),
-		   (unsigned int) wpabuf_len(req), query->freq);
+		   "freq=%d prot=%d", MAC2STR(query->addr),
+		   (unsigned int) wpabuf_len(req), query->freq, prot);
+	if (prot) {
+		u8 *categ = wpabuf_mhead_u8(req);
+		*categ = WLAN_ACTION_PROTECTED_DUAL;
+	}
 	res = offchannel_send_action(gas->wpa_s, query->freq, query->addr,
 				     gas->wpa_s->own_addr, query->addr,
 				     wpabuf_head(req), wpabuf_len(req), 1000,
@@ -386,26 +402,40 @@ static void gas_query_rx_comeback(struct gas_query *gas,
 
 
 /**
- * gas_query_rx - Indicate reception of a Public Action frame
+ * gas_query_rx - Indicate reception of a Public Action or Protected Dual frame
  * @gas: GAS query data from gas_query_init()
  * @da: Destination MAC address of the Action frame
  * @sa: Source MAC address of the Action frame
  * @bssid: BSSID of the Action frame
+ * @categ: Category of the Action frame
  * @data: Payload of the Action frame
  * @len: Length of @data
  * @freq: Frequency (in MHz) on which the frame was received
  * Returns: 0 if the Public Action frame was a GAS frame or -1 if not
  */
 int gas_query_rx(struct gas_query *gas, const u8 *da, const u8 *sa,
-		 const u8 *bssid, const u8 *data, size_t len, int freq)
+		 const u8 *bssid, u8 categ, const u8 *data, size_t len,
+		 int freq)
 {
 	struct gas_query_pending *query;
 	u8 action, dialog_token, frag_id = 0, more_frags = 0;
 	u16 comeback_delay, resp_len;
 	const u8 *pos, *adv_proto;
+	int prot, pmf;
 
 	if (gas == NULL || len < 4)
 		return -1;
+
+	prot = categ == WLAN_ACTION_PROTECTED_DUAL;
+	pmf = pmf_in_use(gas->wpa_s, bssid);
+	if (prot && !pmf) {
+		wpa_printf(MSG_DEBUG, "GAS: Drop unexpected protected GAS frame when PMF is disabled");
+		return 0;
+	}
+	if (!prot && pmf) {
+		wpa_printf(MSG_DEBUG, "GAS: Drop unexpected unprotected GAS frame when PMF is enabled");
+		return 0;
+	}
 
 	pos = data;
 	action = *pos++;

@@ -2735,8 +2735,10 @@ static void wpas_event_rx_mgmt_action(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_WNM */
 
 #ifdef CONFIG_GAS
-	if (mgmt->u.action.category == WLAN_ACTION_PUBLIC &&
+	if ((mgmt->u.action.category == WLAN_ACTION_PUBLIC ||
+	     mgmt->u.action.category == WLAN_ACTION_PROTECTED_DUAL) &&
 	    gas_query_rx(wpa_s->gas, mgmt->da, mgmt->sa, mgmt->bssid,
+			 mgmt->u.action.category,
 			 payload, plen, freq) == 0)
 		return;
 #endif /* CONFIG_GAS */

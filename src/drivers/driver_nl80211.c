@@ -4216,6 +4216,18 @@ static int nl80211_mgmt_subscribe_non_ap(struct i802_bss *bss)
 	/* GAS Comeback Response */
 	if (nl80211_register_action_frame(bss, (u8 *) "\x04\x0d", 2) < 0)
 		ret = -1;
+	/* Protected GAS Initial Request */
+	if (nl80211_register_action_frame(bss, (u8 *) "\x09\x0a", 2) < 0)
+		ret = -1;
+	/* Protected GAS Initial Response */
+	if (nl80211_register_action_frame(bss, (u8 *) "\x09\x0b", 2) < 0)
+		ret = -1;
+	/* Protected GAS Comeback Request */
+	if (nl80211_register_action_frame(bss, (u8 *) "\x09\x0c", 2) < 0)
+		ret = -1;
+	/* Protected GAS Comeback Response */
+	if (nl80211_register_action_frame(bss, (u8 *) "\x09\x0d", 2) < 0)
+		ret = -1;
 #endif /* CONFIG_P2P || CONFIG_INTERWORKING */
 #ifdef CONFIG_P2P
 	/* P2P Public Action */

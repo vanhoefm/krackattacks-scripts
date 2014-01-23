@@ -1588,8 +1588,8 @@ static int handle_action(struct hostapd_data *hapd,
 
 #ifdef CONFIG_IEEE80211W
 	if (sta && (sta->flags & WLAN_STA_MFP) &&
-	    !(mgmt->frame_control & host_to_le16(WLAN_FC_ISWEP) &&
-	      robust_action_frame(mgmt->u.action.category))) {
+	    !(mgmt->frame_control & host_to_le16(WLAN_FC_ISWEP)) &&
+	    robust_action_frame(mgmt->u.action.category)) {
 		hostapd_logger(hapd, mgmt->sa, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_DEBUG,
 			       "Dropped unprotected Robust Action frame from "

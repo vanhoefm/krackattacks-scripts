@@ -50,6 +50,7 @@ struct gas_dialog_info {
 	size_t sd_resp_pos; /* Offset in sd_resp */
 	u8 sd_frag_id;
 	u16 comeback_delay;
+	int prot; /* whether Protected Dual of Public Action frame is used */
 
 	unsigned int requested;
 	unsigned int received;

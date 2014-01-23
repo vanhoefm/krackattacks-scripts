@@ -360,6 +360,8 @@ static void ap_public_action_rx(void *ctx, const u8 *buf, size_t len, int freq)
 	hdr_len = (const u8 *) &mgmt->u.action.u.vs_public_action.action - buf;
 	if (hdr_len > len)
 		return;
+	if (mgmt->u.action.category != WLAN_ACTION_PUBLIC)
+		return;
 	wpas_p2p_rx_action(wpa_s, mgmt->da, mgmt->sa, mgmt->bssid,
 			   mgmt->u.action.category,
 			   &mgmt->u.action.u.vs_public_action.action,

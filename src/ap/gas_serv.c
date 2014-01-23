@@ -1,6 +1,6 @@
 /*
  * Generic advertisement service (GAS) server
- * Copyright (c) 2011-2012, Qualcomm Atheros, Inc.
+ * Copyright (c) 2011-2014, Qualcomm Atheros, Inc.
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -17,6 +17,13 @@
 #include "ap_drv_ops.h"
 #include "sta_info.h"
 #include "gas_serv.h"
+
+
+static void convert_to_protected_dual(struct wpabuf *msg)
+{
+	u8 *categ = wpabuf_mhead_u8(msg);
+	*categ = WLAN_ACTION_PROTECTED_DUAL;
+}
 
 
 static struct gas_dialog_info *
@@ -774,7 +781,7 @@ static void rx_anqp_vendor_specific(struct hostapd_data *hapd,
 
 static void gas_serv_req_local_processing(struct hostapd_data *hapd,
 					  const u8 *sa, u8 dialog_token,
-					  struct anqp_query_info *qi)
+					  struct anqp_query_info *qi, int prot)
 {
 	struct wpabuf *buf, *tx_buf;
 
@@ -806,6 +813,7 @@ static void gas_serv_req_local_processing(struct hostapd_data *hapd,
 			wpabuf_free(buf);
 			return;
 		}
+		di->prot = prot;
 		di->sd_resp = buf;
 		di->sd_resp_pos = 0;
 		tx_buf = gas_anqp_build_initial_resp_buf(
@@ -819,7 +827,8 @@ static void gas_serv_req_local_processing(struct hostapd_data *hapd,
 	}
 	if (!tx_buf)
 		return;
-
+	if (prot)
+		convert_to_protected_dual(tx_buf);
 	hostapd_drv_send_action(hapd, hapd->iface->freq, 0, sa,
 				wpabuf_head(tx_buf), wpabuf_len(tx_buf));
 	wpabuf_free(tx_buf);
@@ -828,7 +837,7 @@ static void gas_serv_req_local_processing(struct hostapd_data *hapd,
 
 static void gas_serv_rx_gas_initial_req(struct hostapd_data *hapd,
 					const u8 *sa,
-					const u8 *data, size_t len)
+					const u8 *data, size_t len, int prot)
 {
 	const u8 *pos = data;
 	const u8 *end = data + len;
@@ -878,6 +887,8 @@ static void gas_serv_rx_gas_initial_req(struct hostapd_data *hapd,
 			return;
 		wpabuf_put_data(buf, adv_proto, 2 + slen);
 		wpabuf_put_le16(buf, 0); /* Query Response Length */
+		if (prot)
+			convert_to_protected_dual(buf);
 		hostapd_drv_send_action(hapd, hapd->iface->freq, 0, sa,
 					wpabuf_head(buf), wpabuf_len(buf));
 		wpabuf_free(buf);
@@ -929,7 +940,7 @@ static void gas_serv_rx_gas_initial_req(struct hostapd_data *hapd,
 		pos += elen;
 	}
 
-	gas_serv_req_local_processing(hapd, sa, dialog_token, &qi);
+	gas_serv_req_local_processing(hapd, sa, dialog_token, &qi, prot);
 }
 
 
@@ -975,6 +986,8 @@ void gas_serv_tx_gas_response(struct hostapd_data *hapd, const u8 *dst,
 		if (tx_buf) {
 			wpa_msg(hapd->msg_ctx, MSG_DEBUG,
 				"GAS: Tx GAS Initial Resp (comeback = 10TU)");
+			if (dialog->prot)
+				convert_to_protected_dual(tx_buf);
 			hostapd_drv_send_action(hapd, hapd->iface->freq, 0,
 						dst,
 						wpabuf_head(tx_buf),
@@ -1012,6 +1025,8 @@ void gas_serv_tx_gas_response(struct hostapd_data *hapd, const u8 *dst,
 		dialog->sd_frag_id, (int) frag_len);
 	dialog->sd_frag_id++;
 
+	if (dialog->prot)
+		convert_to_protected_dual(tx_buf);
 	hostapd_drv_send_action(hapd, hapd->iface->freq, 0, dst,
 				wpabuf_head(tx_buf), wpabuf_len(tx_buf));
 	wpabuf_free(tx_buf);
@@ -1022,7 +1037,7 @@ tx_gas_response_done:
 
 static void gas_serv_rx_gas_comeback_req(struct hostapd_data *hapd,
 					 const u8 *sa,
-					 const u8 *data, size_t len)
+					 const u8 *data, size_t len, int prot)
 {
 	struct gas_dialog_info *dialog;
 	struct wpabuf *buf, *tx_buf;
@@ -1120,6 +1135,8 @@ static void gas_serv_rx_gas_comeback_req(struct hostapd_data *hapd,
 	}
 
 send_resp:
+	if (prot)
+		convert_to_protected_dual(tx_buf);
 	hostapd_drv_send_action(hapd, hapd->iface->freq, 0, sa,
 				wpabuf_head(tx_buf), wpabuf_len(tx_buf));
 	wpabuf_free(tx_buf);
@@ -1137,22 +1154,30 @@ static void gas_serv_rx_public_action(void *ctx, const u8 *buf, size_t len,
 	const struct ieee80211_mgmt *mgmt;
 	size_t hdr_len;
 	const u8 *sa, *data;
+	int prot;
 
 	mgmt = (const struct ieee80211_mgmt *) buf;
 	hdr_len = (const u8 *) &mgmt->u.action.u.vs_public_action.action - buf;
 	if (hdr_len > len)
 		return;
-	if (mgmt->u.action.category != WLAN_ACTION_PUBLIC)
+	if (mgmt->u.action.category != WLAN_ACTION_PUBLIC &&
+	    mgmt->u.action.category != WLAN_ACTION_PROTECTED_DUAL)
 		return;
+	/*
+	 * Note: Public Action and Protected Dual of Public Action frames share
+	 * the same payload structure, so it is fine to use definitions of
+	 * Public Action frames to process both.
+	 */
+	prot = mgmt->u.action.category == WLAN_ACTION_PROTECTED_DUAL;
 	sa = mgmt->sa;
 	len -= hdr_len;
 	data = &mgmt->u.action.u.public_action.action;
 	switch (data[0]) {
 	case WLAN_PA_GAS_INITIAL_REQ:
-		gas_serv_rx_gas_initial_req(hapd, sa, data + 1, len - 1);
+		gas_serv_rx_gas_initial_req(hapd, sa, data + 1, len - 1, prot);
 		break;
 	case WLAN_PA_GAS_COMEBACK_REQ:
-		gas_serv_rx_gas_comeback_req(hapd, sa, data + 1, len - 1);
+		gas_serv_rx_gas_comeback_req(hapd, sa, data + 1, len - 1, prot);
 		break;
 	}
 }

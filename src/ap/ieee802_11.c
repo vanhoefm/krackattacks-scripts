@@ -1619,6 +1619,7 @@ static int handle_action(struct hostapd_data *hapd,
 		return 1;
 #endif /* CONFIG_WNM */
 	case WLAN_ACTION_PUBLIC:
+	case WLAN_ACTION_PROTECTED_DUAL:
 		if (hapd->public_action_cb) {
 			hapd->public_action_cb(hapd->public_action_cb_ctx,
 					       (u8 *) mgmt, len,

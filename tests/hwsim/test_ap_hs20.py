@@ -527,6 +527,35 @@ def test_ap_hs20_gas_while_associated(dev, apdev):
         if ev is None:
             raise Exception("Operation timed out")
 
+def test_ap_hs20_gas_while_associated_with_pmf(dev, apdev):
+    """Hotspot 2.0 connection with GAS query while associated and using PMF"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    bssid2 = apdev[1]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid2
+    params['nai_realm'] = [ "0,no-match.example.org,13[5:6],21[2:4][5:7]" ]
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    dev[0].hs20_enable()
+    dev[0].request("SET pmf 2")
+    id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'username': "hs20-test",
+                                  'password': "password",
+                                  'domain': "example.com" })
+    interworking_select(dev[0], bssid, "home", freq="2412")
+    interworking_connect(dev[0], bssid, "TTLS")
+
+    logger.info("Verifying GAS query while associated")
+    dev[0].request("FETCH_ANQP")
+    for i in range(0, 2 * 6):
+        ev = dev[0].wait_event(["RX-ANQP"], timeout=5)
+        if ev is None:
+            raise Exception("Operation timed out")
+
 def test_ap_hs20_gas_frag_while_associated(dev, apdev):
     """Hotspot 2.0 connection with fragmented GAS query while associated"""
     bssid = apdev[0]['bssid']

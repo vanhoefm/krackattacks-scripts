@@ -6582,6 +6582,23 @@ static void nl80211_reg_rule_vht(struct nlattr *tb[],
 }
 
 
+static const char * dfs_domain_name(enum nl80211_dfs_regions region)
+{
+	switch (region) {
+	case NL80211_DFS_UNSET:
+		return "DFS-UNSET";
+	case NL80211_DFS_FCC:
+		return "DFS-FCC";
+	case NL80211_DFS_ETSI:
+		return "DFS-ETSI";
+	case NL80211_DFS_JP:
+		return "DFS-JP";
+	default:
+		return "DFS-invalid";
+	}
+}
+
+
 static int nl80211_get_reg(struct nl_msg *msg, void *arg)
 {
 	struct phy_info_arg *results = arg;
@@ -6608,8 +6625,16 @@ static int nl80211_get_reg(struct nl_msg *msg, void *arg)
 		return NL_SKIP;
 	}
 
-	wpa_printf(MSG_DEBUG, "nl80211: Regulatory information - country=%s",
-		   (char *) nla_data(tb_msg[NL80211_ATTR_REG_ALPHA2]));
+	if (tb_msg[NL80211_ATTR_DFS_REGION]) {
+		enum nl80211_dfs_regions dfs_domain;
+		dfs_domain = nla_get_u8(tb_msg[NL80211_ATTR_DFS_REGION]);
+		wpa_printf(MSG_DEBUG, "nl80211: Regulatory information - country=%s (%s)",
+			   (char *) nla_data(tb_msg[NL80211_ATTR_REG_ALPHA2]),
+			   dfs_domain_name(dfs_domain));
+	} else {
+		wpa_printf(MSG_DEBUG, "nl80211: Regulatory information - country=%s",
+			   (char *) nla_data(tb_msg[NL80211_ATTR_REG_ALPHA2]));
+	}
 
 	nla_for_each_nested(nl_rule, tb_msg[NL80211_ATTR_REG_RULES], rem_rule)
 	{

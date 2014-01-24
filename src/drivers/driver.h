@@ -3147,7 +3147,16 @@ enum wpa_event_type {
 	 * EVENT_SCAN_RESULTS is used to indicate when the scan has been
 	 * completed (either successfully or by getting cancelled).
 	 */
-	EVENT_SCAN_STARTED
+	EVENT_SCAN_STARTED,
+
+	/**
+	 * EVENT_AVOID_FREQUENCIES - Received avoid frequency range
+	 *
+	 * This event indicates a set of frequency ranges that should be avoided
+	 * to reduce issues due to interference or internal co-existence
+	 * information in the driver.
+	 */
+	EVENT_AVOID_FREQUENCIES
 };
 
 
@@ -3766,6 +3775,13 @@ union wpa_event_data {
 	struct channel_list_changed {
 		enum reg_change_initiator initiator;
 	} channel_list_changed;
+
+	/**
+	 * freq_range - List of frequency ranges
+	 *
+	 * This is used as the data with EVENT_AVOID_FREQUENCIES.
+	 */
+	struct wpa_freq_range_list freq_range;
 };
 
 /**

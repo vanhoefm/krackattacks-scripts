@@ -78,6 +78,7 @@ const char * event_to_string(enum wpa_event_type event)
 	E2S(DFS_NOP_FINISHED);
 	E2S(SURVEY);
 	E2S(SCAN_STARTED);
+	E2S(AVOID_FREQUENCIES);
 	}
 
 	return "UNKNOWN";

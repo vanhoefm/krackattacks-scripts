@@ -74,6 +74,8 @@ extern "C" {
  * be used again.
  */
 #define WPA_EVENT_FREQ_CONFLICT "CTRL-EVENT-FREQ-CONFLICT "
+/** Frequency ranges that the driver recommends to avoid */
+#define WPA_EVENT_AVOID_FREQ "CTRL-EVENT-AVOID-FREQ "
 /** WPS overlap detected in PBC mode */
 #define WPS_EVENT_OVERLAP "WPS-OVERLAP-DETECTED "
 /** Available WPS AP with active PBC found in scan results */
@@ -151,6 +153,7 @@ extern "C" {
 
 /* parameters: <PMF enabled> <timeout in ms> <Session Information URL> */
 #define ESS_DISASSOC_IMMINENT "ESS-DISASSOC-IMMINENT "
+#define P2P_EVENT_REMOVE_AND_REFORM_GROUP "P2P-REMOVE-AND-REFORM-GROUP "
 
 #define INTERWORKING_AP "INTERWORKING-AP "
 #define INTERWORKING_NO_MATCH "INTERWORKING-NO-MATCH "

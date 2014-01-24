@@ -24,10 +24,28 @@
  * @QCA_NL80211_VENDOR_SUBCMD_UNSPEC: Reserved value 0
  *
  * @QCA_NL80211_VENDOR_SUBCMD_TEST: Test command/event
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_AVOID_FREQUENCY: Recommendation of frequency
+ *	ranges to avoid to reduce issues due to interference or internal
+ *	co-existence information in the driver. The event data structure is
+ *	defined in struct qca_avoid_freq_list.
  */
 enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
 	QCA_NL80211_VENDOR_SUBCMD_TEST = 1,
+	/* subcmds 2..9 not yet allocated */
+	QCA_NL80211_VENDOR_SUBCMD_AVOID_FREQUENCY = 10,
 };
+
+
+struct qca_avoid_freq_range {
+	u32 start_freq;
+	u32 end_freq;
+} STRUCT_PACKED;
+
+struct qca_avoid_freq_list {
+	u32 count;
+	struct qca_avoid_freq_range range[0];
+} STRUCT_PACKED;
 
 #endif /* QCA_VENDOR_H */

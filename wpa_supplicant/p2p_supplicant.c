@@ -3190,6 +3190,8 @@ static void wpas_invitation_result(void *ctx, int status, const u8 *bssid,
 static int wpas_p2p_disallowed_freq(struct wpa_global *global,
 				    unsigned int freq)
 {
+	if (freq_range_list_includes(&global->p2p_go_avoid_freq, freq))
+		return 1;
 	return freq_range_list_includes(&global->p2p_disallow_freq, freq);
 }
 

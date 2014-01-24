@@ -4995,10 +4995,20 @@ static int wpa_driver_nl80211_sched_scan(void *priv,
 			NLA_PUT(msg, NL80211_ATTR_SCHED_SCAN_MATCH_SSID,
 				drv->filter_ssids[i].ssid_len,
 				drv->filter_ssids[i].ssid);
+			if (params->filter_rssi)
+				NLA_PUT_U32(msg,
+					    NL80211_SCHED_SCAN_MATCH_ATTR_RSSI,
+					    params->filter_rssi);
 
 			nla_nest_end(msg, match_set_ssid);
 		}
 
+		/*
+		 * Due to backward compatibility code, newer kernels treat this
+		 * matchset (with only an RSSI filter) as the default for all
+		 * other matchsets, unless it's the only one, in which case the
+		 * matchset will actually allow all SSIDs above the RSSI.
+		 */
 		if (params->filter_rssi) {
 			struct nlattr *match_set_rssi;
 			match_set_rssi = nla_nest_start(msg, 0);

@@ -28,6 +28,7 @@
 #include "common.h"
 #include "eloop.h"
 #include "utils/list.h"
+#include "common/qca-vendor.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
 #include "l2_packet/l2_packet.h"
@@ -2716,6 +2717,19 @@ static void nl80211_spurious_frame(struct i802_bss *bss, struct nlattr **tb,
 }
 
 
+static void nl80211_vendor_event_qca(struct wpa_driver_nl80211_data *drv,
+				     u32 subcmd, u8 *data, size_t len)
+{
+	switch (subcmd) {
+	default:
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Ignore unsupported QCA vendor event %u",
+			   subcmd);
+		break;
+	}
+}
+
+
 static void nl80211_vendor_event(struct wpa_driver_nl80211_data *drv,
 				 struct nlattr **tb)
 {
@@ -2751,6 +2765,9 @@ static void nl80211_vendor_event(struct wpa_driver_nl80211_data *drv,
 	}
 
 	switch (vendor_id) {
+	case OUI_QCA:
+		nl80211_vendor_event_qca(drv, subcmd, data, len);
+		break;
 	default:
 		wpa_printf(MSG_DEBUG, "nl80211: Ignore unsupported vendor event");
 		break;

@@ -1028,7 +1028,7 @@ static int setup_interface(struct hostapd_iface *iface)
 		if (os_strncmp(previous_country, country, 2) != 0) {
 			wpa_printf(MSG_DEBUG, "Continue interface setup after channel list update");
 			iface->wait_channel_update = 1;
-			eloop_register_timeout(1, 0,
+			eloop_register_timeout(5, 0,
 					       channel_list_update_timeout,
 					       iface, NULL);
 			return 0;

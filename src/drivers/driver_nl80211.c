@@ -3525,6 +3525,9 @@ static void wiphy_info_cipher_suites(struct wiphy_info_data *info,
 		case WLAN_CIPHER_SUITE_BIP_CMAC_256:
 			info->capa->enc |= WPA_DRIVER_CAPA_ENC_BIP_CMAC_256;
 			break;
+		case WLAN_CIPHER_SUITE_NO_GROUP_ADDR:
+			info->capa->enc |= WPA_DRIVER_CAPA_ENC_GTK_NOT_USED;
+			break;
 		}
 	}
 }
@@ -5511,6 +5514,8 @@ static u32 wpa_cipher_to_cipher_suite(unsigned int cipher)
 		return WLAN_CIPHER_SUITE_WEP104;
 	case WPA_CIPHER_WEP40:
 		return WLAN_CIPHER_SUITE_WEP40;
+	case WPA_CIPHER_GTK_NOT_USED:
+		return WLAN_CIPHER_SUITE_NO_GROUP_ADDR;
 	}
 
 	return 0;
@@ -8470,7 +8475,14 @@ static int nl80211_connect_common(struct wpa_driver_nl80211_data *drv,
 		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITES_PAIRWISE, cipher);
 	}
 
-	if (params->group_suite != WPA_CIPHER_NONE) {
+	if (params->group_suite == WPA_CIPHER_GTK_NOT_USED &&
+	    !(drv->capa.enc & WPA_DRIVER_CAPA_ENC_GTK_NOT_USED)) {
+		/*
+		 * This is likely to work even though many drivers do not
+		 * advertise support for operations without GTK.
+		 */
+		wpa_printf(MSG_DEBUG, "  * skip group cipher configuration for GTK_NOT_USED due to missing driver support advertisement");
+	} else if (params->group_suite != WPA_CIPHER_NONE) {
 		u32 cipher = wpa_cipher_to_cipher_suite(params->group_suite);
 		wpa_printf(MSG_DEBUG, "  * group=0x%x", cipher);
 		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITE_GROUP, cipher);

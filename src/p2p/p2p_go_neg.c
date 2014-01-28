@@ -1136,6 +1136,7 @@ void p2p_process_go_neg_conf(struct p2p_data *p2p, const u8 *sa,
 
 	if (!(dev->flags & P2P_DEV_WAIT_GO_NEG_CONFIRM)) {
 		p2p_dbg(p2p, "Was not expecting GO Negotiation Confirm - ignore");
+		p2p_parse_free(&msg);
 		return;
 	}
 	dev->flags &= ~P2P_DEV_WAIT_GO_NEG_CONFIRM;

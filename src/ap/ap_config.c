@@ -140,6 +140,7 @@ struct hostapd_config * hostapd_config_defaults(void)
 
 	bss->radius = os_zalloc(sizeof(*bss->radius));
 	if (bss->radius == NULL) {
+		os_free(conf->bss);
 		os_free(conf);
 		os_free(bss);
 		return NULL;

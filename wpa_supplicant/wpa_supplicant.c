@@ -2083,7 +2083,7 @@ int wpas_set_pkcs11_engine_and_module_path(struct wpa_supplicant *wpa_s,
 	}
 	if (pkcs11_module_path != NULL) {
 		pkcs11_module_path_copy = os_strdup(pkcs11_module_path);
-		if (pkcs11_engine_path_copy == NULL) {
+		if (pkcs11_module_path_copy == NULL) {
 			os_free(pkcs11_engine_path_copy);
 			return -1;
 		}

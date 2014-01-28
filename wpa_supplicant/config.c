@@ -2912,6 +2912,7 @@ static int wpa_config_process_bgscan(const struct global_parse_data *data,
 {
 	size_t len;
 	char *tmp;
+	int res;
 
 	tmp = wpa_config_parse_string(pos, &len);
 	if (tmp == NULL) {
@@ -2920,7 +2921,9 @@ static int wpa_config_process_bgscan(const struct global_parse_data *data,
 		return -1;
 	}
 
-	return wpa_global_config_parse_str(data, config, line, tmp);
+	res = wpa_global_config_parse_str(data, config, line, tmp);
+	os_free(tmp);
+	return res;
 }
 
 

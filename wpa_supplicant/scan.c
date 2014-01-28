@@ -1765,12 +1765,13 @@ wpa_scan_clone_params(const struct wpa_driver_scan_params *src)
 	}
 
 	if (src->filter_ssids) {
-		params->filter_ssids = os_malloc(sizeof(params->filter_ssids) *
+		params->filter_ssids = os_malloc(sizeof(*params->filter_ssids) *
 						 src->num_filter_ssids);
 		if (params->filter_ssids == NULL)
 			goto failed;
 		os_memcpy(params->filter_ssids, src->filter_ssids,
-			  sizeof(params->filter_ssids) * src->num_filter_ssids);
+			  sizeof(*params->filter_ssids) *
+			  src->num_filter_ssids);
 		params->num_filter_ssids = src->num_filter_ssids;
 	}
 

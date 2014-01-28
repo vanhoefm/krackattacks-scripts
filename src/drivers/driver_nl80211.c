@@ -1550,6 +1550,33 @@ static void mlme_event_disconnect(struct wpa_driver_nl80211_data *drv,
 }
 
 
+static int calculate_chan_offset(int width, int freq, int cf1, int cf2)
+{
+	int freq1 = 0;
+
+	switch (convert2width(width)) {
+	case CHAN_WIDTH_20_NOHT:
+	case CHAN_WIDTH_20:
+		return 0;
+	case CHAN_WIDTH_40:
+		freq1 = cf1 - 10;
+		break;
+	case CHAN_WIDTH_80:
+		freq1 = cf1 - 30;
+		break;
+	case CHAN_WIDTH_160:
+		freq1 = cf1 - 70;
+		break;
+	case CHAN_WIDTH_UNKNOWN:
+	case CHAN_WIDTH_80P80:
+		/* FIXME: implement this */
+		return 0;
+	}
+
+	return (abs(freq - freq1) / 20) % 2 == 0 ? 1 : -1;
+}
+
+
 static void mlme_event_ch_switch(struct wpa_driver_nl80211_data *drv,
 				 struct nlattr *ifindex, struct nlattr *freq,
 				 struct nlattr *type, struct nlattr *bw,
@@ -1591,6 +1618,14 @@ static void mlme_event_ch_switch(struct wpa_driver_nl80211_data *drv,
 			chan_offset = -1;
 			break;
 		}
+	} else if (bw && cf1) {
+		/* This can happen for example with VHT80 ch switch */
+		chan_offset = calculate_chan_offset(nla_get_u32(bw),
+						    nla_get_u32(freq),
+						    nla_get_u32(cf1),
+						    cf2 ? nla_get_u32(cf2) : 0);
+	} else {
+		wpa_printf(MSG_WARNING, "nl80211: Unknown secondary channel information - following channel definition calculations may fail");
 	}
 
 	os_memset(&data, 0, sizeof(data));

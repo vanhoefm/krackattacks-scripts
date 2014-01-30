@@ -10619,6 +10619,9 @@ static int survey_handler(struct nl_msg *msg, void *arg)
 	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
 		  genlmsg_attrlen(gnlh, 0), NULL);
 
+	if (!tb[NL80211_ATTR_IFINDEX])
+		return NL_SKIP;
+
 	ifidx = nla_get_u32(tb[NL80211_ATTR_IFINDEX]);
 
 	if (!tb[NL80211_ATTR_SURVEY_INFO])

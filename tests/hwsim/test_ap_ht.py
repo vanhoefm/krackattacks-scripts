@@ -104,3 +104,11 @@ def test_olbc(dev, apdev):
     status = hapd.get_status()
     if status['olbc'] != '1' or status['olbc_ht'] != '1':
         raise Exception("Missing OLBC information")
+
+def test_ap_require_ht(dev, apdev):
+    """Require HT"""
+    params = { "ssid": "require-ht",
+               "require_ht": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params, wait_enabled=False)
+
+    dev[0].connect("require-ht", key_mgmt="NONE", scan_freq="2412")

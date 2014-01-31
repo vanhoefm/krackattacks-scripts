@@ -636,6 +636,8 @@ void sme_event_auth(struct wpa_supplicant *wpa_s, union wpa_event_data *data)
 			return;
 		}
 
+		wpas_connect_work_done(wpa_s);
+
 		switch (data->auth.auth_type) {
 		case WLAN_AUTH_OPEN:
 			wpa_s->current_ssid->auth_alg = WPA_AUTH_ALG_SHARED;

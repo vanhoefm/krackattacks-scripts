@@ -9,6 +9,7 @@
 import time
 import logging
 logger = logging.getLogger()
+import struct
 
 import hostapd
 
@@ -45,3 +46,41 @@ def test_ap_ht40_scan(dev, apdev):
         raise Exception("Unexpected secondary channel")
 
     dev[0].connect("test-ht40", key_mgmt="NONE", scan_freq=freq)
+
+def test_obss_scan(dev, apdev):
+    """Overlapping BSS scan request"""
+    params = { "ssid": "obss-scan",
+               "channel": "6",
+               "ht_capab": "[HT40-]",
+               "obss_interval": "10" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("obss-scan", key_mgmt="NONE", scan_freq="2437")
+    hapd.set("ext_mgmt_frame_handling", "1")
+    logger.info("Waiting for OBSS scan to occur")
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-STARTED"], timeout=15)
+    if ev is None:
+        raise Exception("Timed out while waiting for OBSS scan to start")
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], timeout=10)
+    if ev is None:
+        raise Exception("Timed out while waiting for OBSS scan results")
+    received = False
+    for i in range(0, 4):
+        frame = hapd.mgmt_rx(timeout=5)
+        if frame is None:
+            raise Exception("MGMT RX wait timed out")
+        if frame['subtype'] != 13:
+            continue
+        payload = frame['payload']
+        if len(payload) < 3:
+            continue
+        (category, action, ie) = struct.unpack('BBB', payload[0:3])
+        if category != 4:
+            continue
+        if action != 0:
+            continue
+        if ie == 72:
+            logger.info("20/40 BSS Coexistence report received")
+            received = True
+            break
+    if not received:
+        raise Exception("20/40 BSS Coexistence report not seen")

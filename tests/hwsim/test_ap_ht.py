@@ -84,3 +84,23 @@ def test_obss_scan(dev, apdev):
             break
     if not received:
         raise Exception("20/40 BSS Coexistence report not seen")
+
+def test_olbc(dev, apdev):
+    """OLBC detection"""
+    params = { "ssid": "test-olbc",
+               "channel": "6",
+               "ht_capab": "[HT40-]" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    status = hapd.get_status()
+    if status['olbc'] != '0' or status['olbc_ht'] != '0':
+        raise Exception("Unexpected OLBC information")
+
+    params = { "ssid": "olbc-ap",
+               "hw_mode": "b",
+               "channel": "6",
+               "wmm_enabled": "0" }
+    hostapd.add_ap(apdev[1]['ifname'], params)
+    time.sleep(0.5)
+    status = hapd.get_status()
+    if status['olbc'] != '1' or status['olbc_ht'] != '1':
+        raise Exception("Missing OLBC information")

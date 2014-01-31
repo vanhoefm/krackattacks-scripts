@@ -1,8 +1,40 @@
 ChangeLog for hostapd
 
-????-??-?? - v2.1
-	* added support for simulataneous authentication of equals (SAE) for
+2014-02-04 - v2.1
+	* added support for simultaneous authentication of equals (SAE) for
 	  stronger password-based authentication with WPA2-Personal
+	* added nl80211 functionality
+	  - VHT configuration for nl80211
+	  - support split wiphy dump
+	  - driver-based MAC ACL
+	  - QoS Mapping configuration
+	* added fully automated regression testing with mac80211_hwsim
+	* allow ctrl_iface group to be specified on command line (-G<group>)
+	* allow single hostapd process to control independent WPS interfaces
+	  (wps_independent=1) instead of synchronized operations through all
+	  configured interfaces within a process
+	* avoid processing received management frames multiple times when using
+	  nl80211 with multiple BSSes
+	* added support for DFS (processing radar detection events, CAC, channel
+	  re-selection)
+	* added EAP-EKE server
+	* added automatic channel selection (ACS)
+	* added option for using per-BSS (vif) configuration files with
+	  -b<phyname>:<config file name>
+	* extended global control interface ADD/REMOVE commands to allow BSSes
+	  of a radio to be removed individually without having to add/remove all
+	  other BSSes of the radio at the same time
+	* added support for sending debug info to Linux tracing (-T on command
+	  line)
+	* replace dump_file functionality with same information being available
+	  through the hostapd control interface
+	* added support for using Protected Dual of Public Action frames for
+	  GAS/ANQP exchanges when PMF is enabled
+	* added support for WPS+NFC updates
+	  - improved protocol
+	  - option to fetch and report alternative carrier records for external
+	    NFC operations
+	* various bug fixes
 
 2013-01-12 - v2.0
 	* added AP-STA-DISCONNECTED ctrl_iface event

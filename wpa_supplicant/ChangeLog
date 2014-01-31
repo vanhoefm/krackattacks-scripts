@@ -1,8 +1,113 @@
 ChangeLog for wpa_supplicant
 
-????-??-?? - v2.1
-	* added support for simulataneous authentication of equals (SAE) for
+2014-02-04 - v2.1
+	* added support for simultaneous authentication of equals (SAE) for
 	  stronger password-based authentication with WPA2-Personal
+	* improved P2P negotiation and group formation robustness
+	  - avoid unnecessary Dialog Token value changes during retries
+	  - avoid more concurrent scanning cases during full group formation
+	    sequence
+	  - do not use potentially obsolete scan result data from driver
+	    cache for peer discovery/updates
+	  - avoid undesired re-starting of GO negotiation based on Probe
+	    Request frames
+	  - increase GO Negotiation and Invitation timeouts to address busy
+	    environments and peers that take long time to react to messages,
+	    e.g., due to power saving
+	  - P2P Device interface type
+	* improved P2P channel selection (use more peer information and allow
+	  more local options)
+	* added support for optional per-device PSK assignment by P2P GO
+	  (wpa_cli p2p_set per_sta_psk <0/1>)
+	* added P2P_REMOVE_CLIENT for removing a client from P2P groups
+	  (including persistent groups); this can be used to securely remove
+	  a client from a group if per-device PSKs are used
+	* added more configuration flexibility for allowed P2P GO/client
+	  channels (p2p_no_go_freq list and p2p_add_cli_chan=0/1)
+	* added nl80211 functionality
+	  - VHT configuration for nl80211
+	  - MFP (IEEE 802.11w) information for nl80211 command API
+	  - support split wiphy dump
+	  - FT (IEEE 802.11r) with driver-based SME
+	  - use advertised number of supported concurrent channels
+	  - QoS Mapping configuration
+	* improved TDLS negotiation robustness
+	* added more TDLS peer parameters to be configured to the driver
+	* optimized connection time by allowing recently received scan results
+	  to be used instead of having to run through a new scan
+	* fixed ctrl_iface BSS command iteration with RANGE argument and no
+	  exact matches; also fixed argument parsing for some cases with
+	  multiple arguments
+	* added 'SCAN TYPE=ONLY' ctrl_iface command to request manual scan
+	  without executing roaming/network re-selection on scan results
+	* added Session-Id derivation for EAP peer methods
+	* added fully automated regression testing with mac80211_hwsim
+	* changed configuration parser to reject invalid integer values
+	* allow AP/Enrollee to be specified with BSSID instead of UUID for
+	  WPS ER operations
+	* disable network block temporarily on repeated connection failures
+	* changed the default driver interface from wext to nl80211 if both are
+	  included in the build
+	* remove duplicate networks if WPS provisioning is run multiple times
+	* remove duplicate networks when Interworking network selection uses the
+	  same network
+	* added global freq_list configuration to allow scan frequencies to be
+	  limited for all cases instead of just for a specific network block
+	* added support for BSS Transition Management
+	* added option to use "IFNAME=<ifname> " prefix to use the global
+	  control interface connection to perform per-interface commands;
+	  similarly, allow global control interface to be used as a monitor
+	  interface to receive events from all interfaces
+	* fixed OKC-based PMKSA cache entry clearing
+	* fixed TKIP group key configuration with FT
+	* added support for using OCSP stapling to validate server certificate
+	  (ocsp=1 as optional and ocsp=2 as mandatory)
+	* added EAP-EKE peer
+	* added peer restart detection for IBSS RSN
+	* added domain_suffix_match (and domain_suffix_match2 for Phase 2
+	  EAP-TLS) to specify additional constraint for the server certificate
+	  domain name
+	* added support for external SIM/USIM processing in EAP-SIM, EAP-AKA,
+	  and EAP-AKA' (CTRL-REQ-SIM and CTRL-RSP-SIM commands over control
+	  interface)
+	* added global bgscan configuration option as a default for all network
+	  blocks that do not specify their own bgscan parameters
+	* added D-Bus methods for TDLS
+	* added more control to scan requests
+	  - "SCAN freq=<freq list>" can be used to specify which channels are
+	    scanned (comma-separated frequency ranges in MHz)
+	  - "SCAN passive=1" can be used to request a passive scan (no Probe
+	    Request frames are sent)
+	  - "SCAN use_id" can be used to request a scan id to be returned and
+	    included in event messages related to this specific scan operation
+	  - "SCAN only_new=1" can be used to request the driver/cfg80211 to
+	    report only BSS entries that have been updated during this scan
+	    round
+	  - these optional arguments to the SCAN command can be combined with
+	    each other
+	* modified behavior on externally triggered scans
+	  - avoid concurrent operations requiring full control of the radio when
+	    an externally triggered scan is detected
+	  - do not use results for internal roaming decision
+	* added a new cred block parameter 'temporary' to allow credential
+	  blocks to be stored separately even if wpa_supplicant configuration
+	  file is used to maintain other network information
+	* added "radio work" framework to schedule exclusive radio operations
+	  for off-channel functionality
+	  - reduce issues with concurrent operations that try to control which
+	    channel is used
+	  - allow external programs to request exclusive radio control in a way
+	    that avoids conflicts with wpa_supplicant
+	* added support for using Protected Dual of Public Action frames for
+	  GAS/ANQP exchanges when associated with PMF
+	* added support for WPS+NFC updates and P2P+NFC
+	  - improved protocol for WPS
+	  - P2P group formation/join based on NFC connection handover
+	  - new IPv4 address assignment for P2P groups (ip_addr_* configuration
+	    parameters on the GO) to replace DHCP
+	  - option to fetch and report alternative carrier records for external
+	    NFC operations
+	* various bug fixes
 
 2013-01-12 - v2.0
 	* removed Qt3-based wpa_gui (obsoleted by wpa_qui-qt4)

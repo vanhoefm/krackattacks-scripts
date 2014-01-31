@@ -177,6 +177,39 @@ def test_ap_anqp_sharing(dev, apdev):
     if res1['anqp_nai_realm'] == res2['anqp_nai_realm']:
         raise Exception("ANQP results were not unshared")
 
+def test_ap_nai_home_realm_query(dev, apdev):
+    """NAI Home Realm Query"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['nai_realm'] = [ "0,example.com,13[5:6],21[2:4][5:7]",
+                            "0,another.example.org" ]
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].scan(freq="2412")
+    dev[0].request("HS20_GET_NAI_HOME_REALM_LIST " + bssid + " realm=example.com")
+    ev = dev[0].wait_event(["RX-ANQP"], timeout=5)
+    if ev is None:
+        raise Exception("ANQP operation timed out")
+    nai1 = dev[0].get_bss(bssid)['anqp_nai_realm']
+    dev[0].dump_monitor()
+
+    dev[0].request("ANQP_GET " + bssid + " 263")
+    ev = dev[0].wait_event(["RX-ANQP"], timeout=5)
+    if ev is None:
+        raise Exception("ANQP operation timed out")
+    nai2 = dev[0].get_bss(bssid)['anqp_nai_realm']
+
+    if len(nai1) >= len(nai2):
+        raise Exception("Unexpected NAI Realm list response lengths")
+    if "example.com".encode('hex') not in nai1:
+        raise Exception("Home realm not reported")
+    if "example.org".encode('hex') in nai1:
+        raise Exception("Non-home realm reported")
+    if "example.com".encode('hex') not in nai2:
+        raise Exception("Home realm not reported in wildcard query")
+    if "example.org".encode('hex') not in nai2:
+        raise Exception("Non-home realm not reported in wildcard query ")
+
 def test_ap_interworking_scan_filtering(dev, apdev):
     """Interworking scan filtering with HESSID and access network type"""
     bssid = apdev[0]['bssid']

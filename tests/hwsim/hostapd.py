@@ -200,11 +200,14 @@ class Hostapd:
         hdr = struct.pack('<HH6B6B6BH', *t)
         self.request("MGMT_TX " + binascii.hexlify(hdr + msg['payload']))
 
-    def get_sta(self, addr, info=None):
-        if info:
-            res = self.request("STA " + addr + " " + info)
+    def get_sta(self, addr, info=None, next=False):
+        cmd = "STA-NEXT " if next else "STA "
+        if addr is None:
+            res = self.request("STA-FIRST")
+        elif info:
+            res = self.request(cmd + addr + " " + info)
         else:
-            res = self.request("STA " + addr)
+            res = self.request(cmd + addr)
         lines = res.splitlines()
         vals = dict()
         first = True

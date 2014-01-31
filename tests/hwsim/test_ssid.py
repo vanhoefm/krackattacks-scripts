@@ -45,11 +45,22 @@ def test_ssid_32_octets(dev, apdev):
 
 def test_ssid_utf8(dev, apdev):
     """SSID with UTF8 encoding"""
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid": 'testi-åäöÅÄÖ-testi',
-                                         "utf8_ssid": "1" })
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": 'testi-åäöÅÄÖ-testi',
+                                                "utf8_ssid": "1" })
     dev[0].connect("testi-åäöÅÄÖ-testi", key_mgmt="NONE", scan_freq="2412")
     dev[1].connect(ssid2="74657374692dc3a5c3a4c3b6c385c384c3962d7465737469",
                    key_mgmt="NONE", scan_freq="2412")
+    # verify ctrl_iface for coverage
+    addrs = [ dev[0].p2p_interface_addr(), dev[1].p2p_interface_addr() ]
+    sta = hapd.get_sta(None)
+    if sta['addr'] not in addrs:
+        raise Exception("Unexpected STA address")
+    sta2 = hapd.get_sta(sta['addr'], next=True)
+    if sta2['addr'] not in addrs:
+        raise Exception("Unexpected STA2 address")
+    sta3 = hapd.get_sta(sta2['addr'], next=True)
+    if len(sta3) != 0:
+        raise Exception("Unexpected STA iteration result (did not stop)")
 
 def test_ssid_hidden(dev, apdev):
     """Hidden SSID"""

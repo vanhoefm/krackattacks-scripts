@@ -178,21 +178,6 @@ u16 hostapd_own_capab_info(struct hostapd_data *hapd, struct sta_info *sta,
 }
 
 
-void ieee802_11_print_ssid(char *buf, const u8 *ssid, u8 len)
-{
-	int i;
-	if (len > HOSTAPD_MAX_SSID_LEN)
-		len = HOSTAPD_MAX_SSID_LEN;
-	for (i = 0; i < len; i++) {
-		if (ssid[i] >= 32 && ssid[i] < 127)
-			buf[i] = ssid[i];
-		else
-			buf[i] = '.';
-	}
-	buf[len] = '\0';
-}
-
-
 static u16 auth_shared_key(struct hostapd_data *hapd, struct sta_info *sta,
 			   u16 auth_transaction, const u8 *challenge,
 			   int iswep)
@@ -781,12 +766,10 @@ static u16 check_ssid(struct hostapd_data *hapd, struct sta_info *sta,
 
 	if (ssid_ie_len != hapd->conf->ssid.ssid_len ||
 	    os_memcmp(ssid_ie, hapd->conf->ssid.ssid, ssid_ie_len) != 0) {
-		char ssid_txt[33];
-		ieee802_11_print_ssid(ssid_txt, ssid_ie, ssid_ie_len);
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_INFO,
 			       "Station tried to associate with unknown SSID "
-			       "'%s'", ssid_txt);
+			       "'%s'", wpa_ssid_txt(ssid_ie, ssid_ie_len));
 		return WLAN_STATUS_UNSPECIFIED_FAILURE;
 	}
 

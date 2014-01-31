@@ -520,12 +520,10 @@ void handle_probe_req(struct hostapd_data *hapd,
 			sta->ssid_probe = &hapd->conf->ssid;
 	} else {
 		if (!(mgmt->da[0] & 0x01)) {
-			char ssid_txt[33];
-			ieee802_11_print_ssid(ssid_txt, elems.ssid,
-					      elems.ssid_len);
 			wpa_printf(MSG_MSGDUMP, "Probe Request from " MACSTR
 				   " for foreign SSID '%s' (DA " MACSTR ")%s",
-				   MAC2STR(mgmt->sa), ssid_txt,
+				   MAC2STR(mgmt->sa),
+				   wpa_ssid_txt(elems.ssid, elems.ssid_len),
 				   MAC2STR(mgmt->da),
 				   elems.ssid_list ? " (SSID list)" : "");
 		}

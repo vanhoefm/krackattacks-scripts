@@ -543,6 +543,10 @@ def test_ap_wps_pbc_overlap_2sta(dev, apdev):
         raise Exception("PBC session overlap not detected (dev1)")
     if "config_error=12" not in ev:
         raise Exception("PBC session overlap not correctly reported (dev1)")
+    hapd.request("WPS_CANCEL")
+    ret = hapd.request("WPS_PBC")
+    if "FAIL" not in ret:
+        raise Exception("PBC mode allowed to be started while PBC overlap still active")
 
 def test_ap_wps_cancel(dev, apdev):
     """WPS AP cancelling enabled config method"""

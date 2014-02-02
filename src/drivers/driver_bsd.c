@@ -68,34 +68,6 @@ struct bsd_driver_data {
 
 /* Generic functions for hostapd and wpa_supplicant */
 
-static enum ieee80211_opmode
-get80211opmode(struct bsd_driver_data *drv)
-{
-	struct ifmediareq ifmr;
-
-	(void) memset(&ifmr, 0, sizeof(ifmr));
-	(void) os_strlcpy(ifmr.ifm_name, drv->ifname, sizeof(ifmr.ifm_name));
-
-	if (ioctl(drv->sock, SIOCGIFMEDIA, (caddr_t)&ifmr) >= 0) {
-		if (ifmr.ifm_current & IFM_IEEE80211_ADHOC) {
-			if (ifmr.ifm_current & IFM_FLAG0)
-				return IEEE80211_M_AHDEMO;
-			else
-				return IEEE80211_M_IBSS;
-		}
-		if (ifmr.ifm_current & IFM_IEEE80211_HOSTAP)
-			return IEEE80211_M_HOSTAP;
-		if (ifmr.ifm_current & IFM_IEEE80211_MONITOR)
-			return IEEE80211_M_MONITOR;
-#ifdef IEEE80211_M_MBSS
-		if (ifmr.ifm_current & IFM_IEEE80211_MBSS)
-			return IEEE80211_M_MBSS;
-#endif /* IEEE80211_M_MBSS */
-	}
-	return IEEE80211_M_STA;
-}
-
-
 static int
 bsd_set80211(void *priv, int op, int val, const void *arg, int arg_len)
 {
@@ -314,14 +286,6 @@ bsd_ctrl_iface(void *priv, int enable)
 	return 0;
 }
 
-#ifdef HOSTAPD
-static int
-bsd_commit(void *priv)
-{
-	return bsd_ctrl_iface(priv, 1);
-}
-#endif /* HOSTAPD */
-
 static int
 bsd_set_key(const char *ifname, void *priv, enum wpa_alg alg,
 	    const unsigned char *addr, int key_idx, int set_tx, const u8 *seq,
@@ -529,28 +493,6 @@ bsd_set_ieee8021x(void *priv, struct wpa_bss_params *params)
 	}
 	return bsd_ctrl_iface(priv, 1);
 }
-
-#ifdef HOSTAPD
-static int
-bsd_set_sta_authorized(void *priv, const u8 *addr,
-		       int total_flags, int flags_or, int flags_and)
-{
-	int authorized = -1;
-
-	/* For now, only support setting Authorized flag */
-	if (flags_or & WPA_STA_AUTHORIZED)
-		authorized = 1;
-	if (!(flags_and & WPA_STA_AUTHORIZED))
-		authorized = 0;
-
-	if (authorized < 0)
-		return 0;
-
-	return bsd_send_mlme_param(priv, authorized ?
-				   IEEE80211_MLME_AUTHORIZE :
-				   IEEE80211_MLME_UNAUTHORIZE, 0, addr);
-}
-#endif /* HOSTAPD */
 
 static void
 bsd_new_sta(void *priv, void *ctx, u8 addr[IEEE80211_ADDR_LEN])
@@ -933,6 +875,33 @@ bsd_deinit(void *priv)
 	os_free(drv);
 }
 
+
+static int
+bsd_commit(void *priv)
+{
+	return bsd_ctrl_iface(priv, 1);
+}
+
+
+static int
+bsd_set_sta_authorized(void *priv, const u8 *addr,
+		       int total_flags, int flags_or, int flags_and)
+{
+	int authorized = -1;
+
+	/* For now, only support setting Authorized flag */
+	if (flags_or & WPA_STA_AUTHORIZED)
+		authorized = 1;
+	if (!(flags_and & WPA_STA_AUTHORIZED))
+		authorized = 0;
+
+	if (authorized < 0)
+		return 0;
+
+	return bsd_send_mlme_param(priv, authorized ?
+				   IEEE80211_MLME_AUTHORIZE :
+				   IEEE80211_MLME_UNAUTHORIZE, 0, addr);
+}
 #else /* HOSTAPD */
 
 static int
@@ -1483,6 +1452,33 @@ static int wpa_driver_bsd_capa(struct bsd_driver_data *drv)
 		WPA_DRIVER_AUTH_SHARED |
 		WPA_DRIVER_AUTH_LEAP;
 	return 0;
+}
+
+static enum ieee80211_opmode
+get80211opmode(struct bsd_driver_data *drv)
+{
+	struct ifmediareq ifmr;
+
+	(void) memset(&ifmr, 0, sizeof(ifmr));
+	(void) os_strlcpy(ifmr.ifm_name, drv->ifname, sizeof(ifmr.ifm_name));
+
+	if (ioctl(drv->sock, SIOCGIFMEDIA, (caddr_t)&ifmr) >= 0) {
+		if (ifmr.ifm_current & IFM_IEEE80211_ADHOC) {
+			if (ifmr.ifm_current & IFM_FLAG0)
+				return IEEE80211_M_AHDEMO;
+			else
+				return IEEE80211_M_IBSS;
+		}
+		if (ifmr.ifm_current & IFM_IEEE80211_HOSTAP)
+			return IEEE80211_M_HOSTAP;
+		if (ifmr.ifm_current & IFM_IEEE80211_MONITOR)
+			return IEEE80211_M_MONITOR;
+#ifdef IEEE80211_M_MBSS
+		if (ifmr.ifm_current & IFM_IEEE80211_MBSS)
+			return IEEE80211_M_MBSS;
+#endif /* IEEE80211_M_MBSS */
+	}
+	return IEEE80211_M_STA;
 }
 
 static void *

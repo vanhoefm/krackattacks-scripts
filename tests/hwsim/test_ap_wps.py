@@ -646,6 +646,25 @@ def test_ap_wps_er_add_enrollee(dev, apdev):
         raise Exception("WPS ER did not report success")
     hwsim_utils.test_connectivity_sta(dev[0], dev[1])
 
+    logger.info("Add a specific Enrollee using ER")
+    pin = dev[2].wps_read_pin()
+    addr2 = dev[2].p2p_interface_addr()
+    dev[0].dump_monitor()
+    dev[2].dump_monitor()
+    dev[2].request("WPS_PIN any " + pin)
+    ev = dev[0].wait_event(["WPS-ER-ENROLLEE-ADD"], timeout=10)
+    if ev is None:
+        raise Exception("Enrollee not seen")
+    if addr2 not in ev:
+        raise Exception("Unexpected Enrollee MAC address")
+    dev[0].request("WPS_ER_PIN " + addr2 + " " + pin + " " + addr2)
+    ev = dev[2].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Association with the AP timed out")
+    ev = dev[0].wait_event(["WPS-SUCCESS"], timeout=15)
+    if ev is None:
+        raise Exception("WPS ER did not report success")
+
     logger.info("Verify registrar selection behavior")
     dev[0].request("WPS_ER_PIN any " + pin + " " + dev[1].p2p_interface_addr())
     dev[1].request("DISCONNECT")

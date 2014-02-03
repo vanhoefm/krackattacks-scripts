@@ -782,3 +782,23 @@ class WpaSupplicant:
             vals['opportunistic'] = opportunistic
             return vals
         return None
+
+    def get_sta(self, addr, info=None, next=False):
+        cmd = "STA-NEXT " if next else "STA "
+        if addr is None:
+            res = self.request("STA-FIRST")
+        elif info:
+            res = self.request(cmd + addr + " " + info)
+        else:
+            res = self.request(cmd + addr)
+        lines = res.splitlines()
+        vals = dict()
+        first = True
+        for l in lines:
+            if first:
+                vals['addr'] = l
+                first = False
+            else:
+                [name,value] = l.split('=', 1)
+                vals[name] = value
+        return vals

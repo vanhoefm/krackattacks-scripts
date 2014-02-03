@@ -3167,10 +3167,13 @@ static int ctrl_iface_get_capability_freq(struct wpa_supplicant *wpa_s,
 		for (i = 0; i < wpa_s->hw.modes[j].num_channels; i++) {
 			if (chnl[i].flag & HOSTAPD_CHAN_DISABLED)
 				continue;
-			ret = os_snprintf(pos, end - pos, " %d = %d MHz%s\n",
+			ret = os_snprintf(pos, end - pos, " %d = %d MHz%s%s\n",
 					  chnl[i].chan, chnl[i].freq,
 					  chnl[i].flag & HOSTAPD_CHAN_NO_IBSS ?
-					  " (NO_IBSS)" : "");
+					  " (NO_IBSS)" : "",
+					  chnl[i].flag & HOSTAPD_CHAN_RADAR ?
+					  " (DFS)" : "");
+
 			if (ret < 0 || ret >= end - pos)
 				return pos - buf;
 			pos += ret;

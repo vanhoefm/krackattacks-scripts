@@ -757,6 +757,54 @@ def test_ap_wps_er_add_enrollee_pbc(dev, apdev):
     if "FAIL" in dev[0].request("WPS_ER_SET_CONFIG " + apdev[0]['bssid'] + " 0"):
         raise Exception("Could not select AP based on BSSID")
 
+def test_ap_wps_er_v10_add_enrollee_pin(dev, apdev):
+    """WPS v1.0 ER connected to AP and adding a new enrollee using PIN"""
+    ssid = "wps-er-add-enrollee-pbc"
+    ap_pin = "12345670"
+    ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                     "wpa_passphrase": "12345678", "wpa": "2",
+                     "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+                     "device_name": "Wireless AP", "manufacturer": "Company",
+                     "model_name": "WAP", "model_number": "123",
+                     "serial_number": "12345", "device_type": "6-0050F204-1",
+                     "os_version": "01020300",
+                     "config_methods": "label push_button",
+                     "ap_pin": ap_pin, "uuid": ap_uuid, "upnp_iface": "lo"})
+    logger.info("Learn AP configuration")
+    dev[0].request("SET wps_version_number 0x10")
+    dev[0].dump_monitor()
+    dev[0].wps_reg(apdev[0]['bssid'], ap_pin)
+    status = dev[0].get_status()
+    if status['wpa_state'] != 'COMPLETED' or status['bssid'] != apdev[0]['bssid']:
+        raise Exception("Not fully connected")
+
+    logger.info("Start ER")
+    dev[0].request("WPS_ER_START ifname=lo")
+    ev = dev[0].wait_event(["WPS-ER-AP-ADD"], timeout=15)
+    if ev is None:
+        raise Exception("AP discovery timed out")
+    if ap_uuid not in ev:
+        raise Exception("Expected AP UUID not found")
+
+    logger.info("Use learned network configuration on ER")
+    dev[0].request("WPS_ER_SET_CONFIG " + ap_uuid + " 0")
+
+    logger.info("Add Enrollee using ER and PIN")
+    enrollee = dev[1].p2p_interface_addr()
+    pin = dev[1].wps_read_pin()
+    dev[0].dump_monitor()
+    dev[0].request("WPS_ER_PIN any " + pin + " " + enrollee)
+    dev[1].dump_monitor()
+    dev[1].request("WPS_PIN any " + pin)
+    ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Association with the AP timed out")
+    ev = dev[0].wait_event(["WPS-SUCCESS"], timeout=15)
+    if ev is None:
+        raise Exception("WPS ER did not report success")
+
 def test_ap_wps_er_config_ap(dev, apdev):
     """WPS ER configuring AP over UPnP"""
     ssid = "wps-er-ap-config"

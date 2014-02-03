@@ -3000,8 +3000,10 @@ static void do_process_drv_event(struct i802_bss *bss, int cmd,
 		break;
 	case NL80211_CMD_REG_BEACON_HINT:
 		wpa_printf(MSG_DEBUG, "nl80211: Regulatory beacon hint");
+		os_memset(&data, 0, sizeof(data));
+		data.channel_list_changed.initiator = REGDOM_BEACON_HINT;
 		wpa_supplicant_event(drv->ctx, EVENT_CHANNEL_LIST_CHANGED,
-				     NULL);
+				     &data);
 		break;
 	case NL80211_CMD_NEW_STATION:
 		nl80211_new_station_event(drv, tb);

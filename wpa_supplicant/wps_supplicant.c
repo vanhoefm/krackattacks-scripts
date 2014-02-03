@@ -489,9 +489,6 @@ static int wpa_supplicant_wps_cred(void *ctx,
 
 	wpas_wps_security_workaround(wpa_s, ssid, cred);
 
-	if (cred->ap_channel)
-		wpa_s->wps_ap_channel = cred->ap_channel;
-
 	wpas_wps_remove_dup_network(wpa_s, ssid);
 
 #ifndef CONFIG_NO_CONFIG_WRITE
@@ -2197,8 +2194,6 @@ int wpas_wps_start_nfc(struct wpa_supplicant *wpa_s, const u8 *go_dev_addr,
 static int wpas_wps_use_cred(struct wpa_supplicant *wpa_s,
 			     struct wps_parse_attr *attr)
 {
-	wpa_s->wps_ap_channel = 0;
-
 	/*
 	 * Disable existing networks temporarily to allow the newly learned
 	 * credential to be preferred. Enable the temporarily disabled networks
@@ -2214,18 +2209,8 @@ static int wpas_wps_use_cred(struct wpa_supplicant *wpa_s,
 	if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED)
 		return 0;
 
-	if (!wpa_s->wps_ap_channel && attr->ap_channel) {
-		wpa_s->wps_ap_channel = WPA_GET_BE16(attr->ap_channel);
-		wpa_printf(MSG_DEBUG, "WPS: Credential container indicated AP Channel %d",
-			   wpa_s->wps_ap_channel);
-	}
-
-	wpa_printf(MSG_DEBUG, "WPS: Request reconnection with new network "
-		   "based on the received credential added");
-	wpa_s->normal_scans = 0;
-	wpa_supplicant_reinit_autoscan(wpa_s);
-	if (wpa_s->wps_ap_channel) {
-		u16 chan = wpa_s->wps_ap_channel;
+	if (attr->ap_channel) {
+		u16 chan = WPA_GET_BE16(attr->ap_channel);
 		int freq = 0;
 
 		if (chan >= 1 && chan <= 13)
@@ -2236,12 +2221,17 @@ static int wpas_wps_use_cred(struct wpa_supplicant *wpa_s,
 			freq = 5000 + 5 * chan;
 
 		if (freq) {
-			wpa_printf(MSG_DEBUG, "WPS: Credential indicated "
-				   "AP channel %u -> %u MHz", chan, freq);
+			wpa_printf(MSG_DEBUG, "WPS: Credential container indicated AP channel %u -> %u MHz",
+				   chan, freq);
 			wpa_s->after_wps = 5;
 			wpa_s->wps_freq = freq;
 		}
 	}
+
+	wpa_printf(MSG_DEBUG, "WPS: Request reconnection with new network "
+		   "based on the received credential added");
+	wpa_s->normal_scans = 0;
+	wpa_supplicant_reinit_autoscan(wpa_s);
 	wpa_s->disconnected = 0;
 	wpa_s->reassociate = 1;
 

@@ -751,7 +751,6 @@ struct wpa_supplicant {
 	int after_wps;
 	int known_wps_freq;
 	unsigned int wps_freq;
-	u16 wps_ap_channel;
 	int wps_fragment_size;
 	int auto_reconnect_disabled;
 

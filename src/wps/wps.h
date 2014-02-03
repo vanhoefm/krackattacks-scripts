@@ -42,7 +42,6 @@ struct wps_parse_attr;
  * @cred_attr: Unparsed Credential attribute data (used only in cred_cb());
  *	this may be %NULL, if not used
  * @cred_attr_len: Length of cred_attr in octets
- * @ap_channel: AP channel
  */
 struct wps_credential {
 	u8 ssid[32];
@@ -55,7 +54,6 @@ struct wps_credential {
 	u8 mac_addr[ETH_ALEN];
 	const u8 *cred_attr;
 	size_t cred_attr_len;
-	u16 ap_channel;
 };
 
 #define WPS_DEV_TYPE_LEN 8

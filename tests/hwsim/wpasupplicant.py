@@ -142,6 +142,12 @@ class WpaSupplicant:
             raise Exception("REMOVE_NETWORK failed")
         return None
 
+    def get_network(self, id, field):
+        res = self.request("GET_NETWORK " + str(id) + " " + field)
+        if res == "FAIL\n":
+            return None
+        return res
+
     def set_network(self, id, field, value):
         res = self.request("SET_NETWORK " + str(id) + " " + field + " " + value)
         if "FAIL" in res:

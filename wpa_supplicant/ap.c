@@ -505,17 +505,13 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 	params.ssid = ssid->ssid;
 	params.ssid_len = ssid->ssid_len;
 	switch (ssid->mode) {
-	case WPAS_MODE_INFRA:
-		params.mode = IEEE80211_MODE_INFRA;
-		break;
-	case WPAS_MODE_IBSS:
-		params.mode = IEEE80211_MODE_IBSS;
-		break;
 	case WPAS_MODE_AP:
 	case WPAS_MODE_P2P_GO:
 	case WPAS_MODE_P2P_GROUP_FORMATION:
 		params.mode = IEEE80211_MODE_AP;
 		break;
+	default:
+		return -1;
 	}
 	if (ssid->frequency == 0)
 		ssid->frequency = 2462; /* default channel 11 */

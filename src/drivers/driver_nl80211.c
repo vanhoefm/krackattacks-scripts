@@ -4901,6 +4901,8 @@ static int wpa_driver_nl80211_scan(struct i802_bss *bss,
 		wpa_printf(MSG_DEBUG, "nl80211: Scan trigger failed: ret=%d "
 			   "(%s)", ret, strerror(-ret));
 		if (drv->hostapd && is_ap_interface(drv->nlmode)) {
+			enum nl80211_iftype old_mode = drv->nlmode;
+
 			/*
 			 * mac80211 does not allow scan requests in AP mode, so
 			 * try to do this in station mode.
@@ -4915,7 +4917,7 @@ static int wpa_driver_nl80211_scan(struct i802_bss *bss,
 			}
 
 			/* Restore AP mode when processing scan results */
-			drv->ap_scan_as_station = drv->nlmode;
+			drv->ap_scan_as_station = old_mode;
 			ret = 0;
 		} else
 			goto nla_put_failure;

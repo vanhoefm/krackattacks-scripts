@@ -241,8 +241,11 @@ class WpaSupplicant:
         lines = res.splitlines()
         vals = dict()
         for l in lines:
-            [name,value] = l.split('=', 1)
-            vals[name] = value
+            try:
+                [name,value] = l.split('=', 1)
+                vals[name] = value
+            except ValueError, e:
+                logger.info(self.ifname + ": Ignore unexpected STATUS line: " + l)
         return vals
 
     def get_status_field(self, field):

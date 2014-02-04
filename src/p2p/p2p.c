@@ -2125,6 +2125,7 @@ p2p_probe_req_rx(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 
 	if ((p2p->state == P2P_INVITE || p2p->state == P2P_INVITE_LISTEN) &&
 	    p2p->invite_peer &&
+	    (p2p->invite_peer->flags & P2P_DEV_WAIT_INV_REQ_ACK) &&
 	    os_memcmp(addr, p2p->invite_peer->info.p2p_device_addr, ETH_ALEN)
 	    == 0) {
 		/* Received a Probe Request from Invite peer */

@@ -97,6 +97,7 @@ struct p2p_device {
 #define P2P_DEV_PREFER_PERSISTENT_RECONN BIT(16)
 #define P2P_DEV_PD_BEFORE_GO_NEG BIT(17)
 #define P2P_DEV_NO_PREF_CHAN BIT(18)
+#define P2P_DEV_WAIT_INV_REQ_ACK BIT(19)
 	unsigned int flags;
 
 	int status; /* enum p2p_status_code */

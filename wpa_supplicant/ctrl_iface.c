@@ -440,7 +440,11 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 		ret = wpa_drv_set_p2p_powersave(wpa_s, atoi(value), -1, -1);
 #ifdef CONFIG_WIFI_DISPLAY
 	} else if (os_strcasecmp(cmd, "wifi_display") == 0) {
-		wifi_display_enable(wpa_s->global, !!atoi(value));
+		int enabled = !!atoi(value);
+		if (enabled && !wpa_s->global->p2p)
+			ret = -1;
+		else
+			wifi_display_enable(wpa_s->global, enabled);
 #endif /* CONFIG_WIFI_DISPLAY */
 	} else if (os_strcasecmp(cmd, "bssid_filter") == 0) {
 		ret = set_bssid_filter(wpa_s, value);
@@ -475,8 +479,13 @@ static int wpa_supplicant_ctrl_iface_get(struct wpa_supplicant *wpa_s,
 					  wpa_s->conf->country[1]);
 #ifdef CONFIG_WIFI_DISPLAY
 	} else if (os_strcasecmp(cmd, "wifi_display") == 0) {
-		res = os_snprintf(buf, buflen, "%d",
-				  wpa_s->global->wifi_display);
+		int enabled;
+		if (wpa_s->global->p2p == NULL ||
+		    wpa_s->global->p2p_disabled)
+			enabled = 0;
+		else
+			enabled = wpa_s->global->wifi_display;
+		res = os_snprintf(buf, buflen, "%d", enabled);
 		if (res < 0 || (unsigned int) res >= buflen)
 			return -1;
 		return res;

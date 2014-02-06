@@ -41,6 +41,9 @@ static int wifi_display_update_wfd_ie(struct wpa_global *global)
 	struct wpabuf *ie, *buf;
 	size_t len, plen;
 
+	if (global->p2p == NULL)
+		return 0;
+
 	wpa_printf(MSG_DEBUG, "WFD: Update WFD IE");
 
 	if (!global->wifi_display) {

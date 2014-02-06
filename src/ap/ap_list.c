@@ -32,7 +32,8 @@ static int ap_list_beacon_olbc(struct hostapd_iface *iface, struct ap_info *ap)
 {
 	int i;
 
-	if (iface->current_mode->mode != HOSTAPD_MODE_IEEE80211G ||
+	if (iface->current_mode == NULL ||
+	    iface->current_mode->mode != HOSTAPD_MODE_IEEE80211G ||
 	    iface->conf->channel != ap->channel)
 		return 0;
 

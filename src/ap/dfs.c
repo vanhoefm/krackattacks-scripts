@@ -748,9 +748,33 @@ static int hostapd_dfs_start_channel_switch(struct hostapd_iface *iface)
 					skip_radar);
 
 	if (!channel) {
-		/* FIXME: Wait for channel(s) to become available */
+		/*
+		 * If there is no channel to switch immediately to, check if
+		 * there is another channel where we can switch even if it
+		 * requires to perform a CAC first.
+		 */
+		skip_radar = 0;
+		channel = dfs_get_valid_channel(iface, &secondary_channel,
+						&vht_oper_centr_freq_seg0_idx,
+						&vht_oper_centr_freq_seg1_idx,
+						skip_radar);
+		if (!channel) {
+			/* FIXME: Wait for channel(s) to become available */
+			hostapd_disable_iface(iface);
+			return err;
+		}
+
+		iface->freq = channel->freq;
+		iface->conf->channel = channel->chan;
+		iface->conf->secondary_channel = secondary_channel;
+		iface->conf->vht_oper_centr_freq_seg0_idx =
+			vht_oper_centr_freq_seg0_idx;
+		iface->conf->vht_oper_centr_freq_seg1_idx =
+			vht_oper_centr_freq_seg1_idx;
+
 		hostapd_disable_iface(iface);
-		return err;
+		hostapd_enable_iface(iface);
+		return 0;
 	}
 
 	wpa_printf(MSG_DEBUG, "DFS will switch to a new channel %d",

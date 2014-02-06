@@ -139,6 +139,22 @@ static int dfs_chan_range_available(struct hostapd_hw_modes *mode,
 }
 
 
+static int is_in_chanlist(struct hostapd_iface *iface,
+			  struct hostapd_channel_data *chan)
+{
+	int *entry;
+
+	if (!iface->conf->chanlist)
+		return 1;
+
+	for (entry = iface->conf->chanlist; *entry != -1; entry++) {
+		if (*entry == chan->chan)
+			return 1;
+	}
+	return 0;
+}
+
+
 /*
  * The function assumes HT40+ operation.
  * Make sure to adjust the following variables after calling this:
@@ -169,6 +185,9 @@ static int dfs_find_channel(struct hostapd_iface *iface,
 
 		/* Skip incompatible chandefs */
 		if (!dfs_chan_range_available(mode, i, n_chans, skip_radar))
+			continue;
+
+		if (!is_in_chanlist(iface, chan))
 			continue;
 
 		if (ret_chan && idx == channel_idx) {

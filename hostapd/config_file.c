@@ -2486,6 +2486,13 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 				conf->channel = 0;
 			} else
 				conf->channel = atoi(pos);
+		} else if (os_strcmp(buf, "chanlist") == 0) {
+			if (hostapd_parse_intlist(&conf->chanlist, pos)) {
+				wpa_printf(MSG_ERROR,
+					   "Line %d: invalid channel list",
+					   line);
+				errors++;
+			}
 		} else if (os_strcmp(buf, "beacon_int") == 0) {
 			int val = atoi(pos);
 			/* MIB defines range as 1..65535, but very small values

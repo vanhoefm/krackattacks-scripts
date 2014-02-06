@@ -50,9 +50,11 @@ static int dfs_channel_available(struct hostapd_channel_data *chan,
 	/*
 	 * When radar detection happens, CSA is performed. However, there's no
 	 * time for CAC, so radar channels must be skipped when finding a new
-	 * channel for CSA.
+	 * channel for CSA, unless they are available for immediate use.
 	 */
-	if (skip_radar && chan->flag & HOSTAPD_CHAN_RADAR)
+	if (skip_radar && (chan->flag & HOSTAPD_CHAN_RADAR) &&
+	    ((chan->flag & HOSTAPD_CHAN_DFS_MASK) !=
+	     HOSTAPD_CHAN_DFS_AVAILABLE))
 		return 0;
 
 	if (chan->flag & HOSTAPD_CHAN_DISABLED)

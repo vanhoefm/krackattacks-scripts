@@ -594,6 +594,25 @@ void p2p_process_go_neg_req(struct p2p_data *p2p, const u8 *sa,
 	if (msg.status && *msg.status) {
 		p2p_dbg(p2p, "Unexpected Status attribute (%d) in GO Negotiation Request",
 			*msg.status);
+		if (dev && p2p->go_neg_peer == dev &&
+		    *msg.status == P2P_SC_FAIL_REJECTED_BY_USER) {
+			/*
+			 * This mechanism for using Status attribute in GO
+			 * Negotiation Request is not compliant with the P2P
+			 * specification, but some deployed devices use it to
+			 * indicate rejection of GO Negotiation in a case where
+			 * they have sent out GO Negotiation Response with
+			 * status 1. The P2P specification explicitly disallows
+			 * this. To avoid unnecessary interoperability issues
+			 * and extra frames, mark the pending negotiation as
+			 * failed and do not reply to this GO Negotiation
+			 * Request frame.
+			 */
+			p2p->cfg->send_action_done(p2p->cfg->cb_ctx);
+			p2p_go_neg_failed(p2p, dev, *msg.status);
+			p2p_parse_free(&msg);
+			return;
+		}
 		goto fail;
 	}
 

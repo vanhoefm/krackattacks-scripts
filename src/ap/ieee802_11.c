@@ -1129,8 +1129,7 @@ static void send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 	reply->u.assoc_resp.capab_info =
 		host_to_le16(hostapd_own_capab_info(hapd, sta, 0));
 	reply->u.assoc_resp.status_code = host_to_le16(status_code);
-	reply->u.assoc_resp.aid = host_to_le16((sta ? sta->aid : 0)
-					       | BIT(14) | BIT(15));
+	reply->u.assoc_resp.aid = host_to_le16(sta->aid | BIT(14) | BIT(15));
 	/* Supported rates */
 	p = hostapd_eid_supp_rates(hapd, reply->u.assoc_resp.variable);
 	/* Extended supported rates */

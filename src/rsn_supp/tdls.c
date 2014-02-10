@@ -1466,6 +1466,29 @@ static int copy_peer_ext_capab(const struct wpa_eapol_ie_parse *kde,
 }
 
 
+static int copy_peer_wmm_capab(const struct wpa_eapol_ie_parse *kde,
+			       struct wpa_tdls_peer *peer)
+{
+	struct wmm_information_element *wmm;
+
+	if (!kde->wmm) {
+		wpa_printf(MSG_DEBUG, "TDLS: No supported WMM capabilities received");
+		return 0;
+	}
+
+	if (kde->wmm_len < sizeof(struct wmm_information_element)) {
+		wpa_printf(MSG_DEBUG, "TDLS: Invalid supported WMM capabilities received");
+		return -1;
+	}
+
+	wmm = (struct wmm_information_element *) kde->wmm;
+	peer->qos_info = wmm->qos_info;
+
+	wpa_printf(MSG_DEBUG, "TDLS: Peer WMM QOS Info 0x%x", peer->qos_info);
+	return 0;
+}
+
+
 static int copy_peer_supp_channels(const struct wpa_eapol_ie_parse *kde,
 				   struct wpa_tdls_peer *peer)
 {
@@ -1637,6 +1660,10 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 		goto error;
 
 	peer->qos_info = kde.qosinfo;
+
+	/* Overwrite with the qos_info obtained in WMM IE */
+	if (copy_peer_wmm_capab(&kde, peer) < 0)
+		goto error;
 
 	peer->aid = kde.aid;
 
@@ -2017,6 +2044,10 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 		goto error;
 
 	peer->qos_info = kde.qosinfo;
+
+	/* Overwrite with the qos_info obtained in WMM IE */
+	if (copy_peer_wmm_capab(&kde, peer) < 0)
+		goto error;
 
 	peer->aid = kde.aid;
 

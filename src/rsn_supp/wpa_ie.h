@@ -59,6 +59,8 @@ struct wpa_eapol_ie_parse {
 	size_t supp_oper_classes_len;
 	u8 qosinfo;
 	u16 aid;
+	const u8 *wmm;
+	size_t wmm_len;
 #ifdef CONFIG_P2P
 	const u8 *ip_addr_req;
 	const u8 *ip_addr_alloc;

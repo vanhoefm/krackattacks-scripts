@@ -3504,8 +3504,10 @@ static int print_bss_info(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 						  WFD_IE_VENDOR_TYPE);
 		if (wfd) {
 			ret = os_snprintf(pos, end - pos, "wfd_subelems=");
-			if (ret < 0 || ret >= end - pos)
+			if (ret < 0 || ret >= end - pos) {
+				wpabuf_free(wfd);
 				return 0;
+			}
 			pos += ret;
 
 			pos += wpa_snprintf_hex(pos, end - pos,

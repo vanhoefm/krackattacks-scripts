@@ -1953,6 +1953,8 @@ int ieee802_1x_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 	int len = 0, ret;
 	struct eapol_state_machine *sm = sta->eapol_sm;
 	struct os_reltime diff;
+	const char *name1;
+	const char *name2;
 
 	if (sm == NULL)
 		return 0;
@@ -2088,13 +2090,15 @@ int ieee802_1x_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 		return len;
 	len += ret;
 
+	name1 = eap_server_get_name(0, sm->eap_type_authsrv);
+	name2 = eap_server_get_name(0, sm->eap_type_supp);
 	ret = os_snprintf(buf + len, buflen - len,
 			  "last_eap_type_as=%d (%s)\n"
 			  "last_eap_type_sta=%d (%s)\n",
 			  sm->eap_type_authsrv,
-			  eap_server_get_name(0, sm->eap_type_authsrv),
+			  name1 ? name1 : "",
 			  sm->eap_type_supp,
-			  eap_server_get_name(0, sm->eap_type_supp));
+			  name2 ? name2 : "");
 	if (ret < 0 || (size_t) ret >= buflen - len)
 		return len;
 	len += ret;

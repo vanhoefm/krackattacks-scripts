@@ -764,6 +764,13 @@ struct ieee80211_vht_operation {
 #define VHT_CAP_RX_ANTENNA_PATTERN                  ((u32) BIT(28))
 #define VHT_CAP_TX_ANTENNA_PATTERN                  ((u32) BIT(29))
 
+#define VHT_OPMODE_CHANNEL_WIDTH_MASK		    ((u8) BIT(0) | BIT(1))
+#define VHT_OPMODE_CHANNEL_RxNSS_MASK		    ((u8) BIT(4) | BIT(5) | \
+						     BIT(6))
+#define VHT_OPMODE_NOTIF_RX_NSS_SHIFT		    4
+
+#define VHT_RX_NSS_MAX_STREAMS			    8
+
 /* VHT channel widths */
 #define VHT_CHANWIDTH_USE_HT	0
 #define VHT_CHANWIDTH_80MHZ	1

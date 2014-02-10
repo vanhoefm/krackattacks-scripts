@@ -7351,6 +7351,12 @@ static int wpa_driver_nl80211_sta_add(void *priv,
 			params->vht_capabilities);
 	}
 
+	if (params->vht_opmode_enabled) {
+		wpa_printf(MSG_DEBUG, "  * opmode=%u", params->vht_opmode);
+		NLA_PUT_U8(msg, NL80211_ATTR_OPMODE_NOTIF,
+			   params->vht_opmode);
+	}
+
 	wpa_printf(MSG_DEBUG, "  * capability=0x%x", params->capability);
 	NLA_PUT_U16(msg, NL80211_ATTR_STA_CAPABILITY, params->capability);
 

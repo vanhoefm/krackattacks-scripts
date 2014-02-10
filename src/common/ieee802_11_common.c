@@ -252,6 +252,11 @@ ParseRes ieee802_11_parse_elems(const u8 *start, size_t len,
 			elems->vht_operation = pos;
 			elems->vht_operation_len = elen;
 			break;
+		case WLAN_EID_VHT_OPERATING_MODE_NOTIFICATION:
+			if (elen != 1)
+				break;
+			elems->vht_opmode_notif = pos;
+			break;
 		case WLAN_EID_LINK_ID:
 			if (elen < 18)
 				break;

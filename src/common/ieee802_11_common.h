@@ -30,6 +30,7 @@ struct ieee802_11_elems {
 	const u8 *ht_operation;
 	const u8 *vht_capabilities;
 	const u8 *vht_operation;
+	const u8 *vht_opmode_notif;
 	const u8 *vendor_ht_cap;
 	const u8 *p2p;
 	const u8 *wfd;

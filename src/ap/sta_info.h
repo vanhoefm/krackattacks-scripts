@@ -27,6 +27,7 @@
 #define WLAN_STA_GAS BIT(17)
 #define WLAN_STA_VHT BIT(18)
 #define WLAN_STA_WNM_SLEEP_MODE BIT(19)
+#define WLAN_STA_VHT_OPMODE_ENABLED BIT(20)
 #define WLAN_STA_PENDING_DISASSOC_CB BIT(29)
 #define WLAN_STA_PENDING_DEAUTH_CB BIT(30)
 #define WLAN_STA_NONERP BIT(31)
@@ -103,6 +104,7 @@ struct sta_info {
 
 	struct ieee80211_ht_capabilities *ht_capabilities;
 	struct ieee80211_vht_capabilities *vht_capabilities;
+	u8 vht_opmode;
 
 #ifdef CONFIG_IEEE80211W
 	int sa_query_count; /* number of pending SA Query requests;

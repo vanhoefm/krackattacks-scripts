@@ -895,6 +895,11 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 				  elems.vht_capabilities_len);
 	if (resp != WLAN_STATUS_SUCCESS)
 		return resp;
+
+	resp = set_sta_vht_opmode(hapd, sta, elems.vht_opmode_notif);
+	if (resp != WLAN_STATUS_SUCCESS)
+		return resp;
+
 	if (hapd->iconf->ieee80211ac && hapd->iconf->require_vht &&
 	    !(sta->flags & WLAN_STA_VHT)) {
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
@@ -1937,7 +1942,7 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 			    sta->listen_interval,
 			    sta->flags & WLAN_STA_HT ? &ht_cap : NULL,
 			    sta->flags & WLAN_STA_VHT ? &vht_cap : NULL,
-			    sta->flags, sta->qosinfo)) {
+			    sta->flags, sta->qosinfo, sta->vht_opmode)) {
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_NOTICE,
 			       "Could not add STA to kernel driver");

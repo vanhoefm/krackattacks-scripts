@@ -1028,6 +1028,8 @@ struct hostapd_sta_add_params {
 	u16 listen_interval;
 	const struct ieee80211_ht_capabilities *ht_capabilities;
 	const struct ieee80211_vht_capabilities *vht_capabilities;
+	int vht_opmode_enabled;
+	u8 vht_opmode;
 	u32 flags; /* bitmask of WPA_STA_* flags */
 	int set; /* Set STA parameters instead of add */
 	u8 qosinfo;

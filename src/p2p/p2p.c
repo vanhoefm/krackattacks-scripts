@@ -1049,6 +1049,7 @@ int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 	} else if (p2p->p2p_scan_running) {
 		p2p_dbg(p2p, "Failed to start p2p_scan - another p2p_scan was already running");
 		/* wait for the previous p2p_scan to complete */
+		res = 0; /* do not report failure */
 	} else {
 		p2p_dbg(p2p, "Failed to start p2p_scan");
 		p2p_set_state(p2p, P2P_IDLE);

@@ -3461,7 +3461,7 @@ static enum chan_allowed wpas_p2p_verify_channel(struct wpa_supplicant *wpa_s,
 						 struct hostapd_hw_modes *mode,
 						 u8 channel, u8 bw)
 {
-	int flag;
+	int flag = 0;
 	enum chan_allowed res, res2;
 
 	res2 = res = has_channel(wpa_s->global, mode, channel, &flag);

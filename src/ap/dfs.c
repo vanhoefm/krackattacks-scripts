@@ -566,8 +566,8 @@ int hostapd_handle_dfs(struct hostapd_iface *iface)
 		wpa_printf(MSG_DEBUG, "DFS %d chans unavailable - choose other channel: %s",
 			   res, res ? "yes": "no");
 		if (res) {
-			int sec;
-			u8 cf1, cf2;
+			int sec = 0;
+			u8 cf1 = 0, cf2 = 0;
 
 			channel = dfs_get_valid_channel(iface, &sec, &cf1, &cf2,
 							skip_radar);
@@ -633,8 +633,8 @@ static int hostapd_dfs_start_channel_switch_cac(struct hostapd_iface *iface)
 {
 	struct hostapd_channel_data *channel;
 	int secondary_channel;
-	u8 vht_oper_centr_freq_seg0_idx;
-	u8 vht_oper_centr_freq_seg1_idx;
+	u8 vht_oper_centr_freq_seg0_idx = 0;
+	u8 vht_oper_centr_freq_seg1_idx = 0;
 	int skip_radar = 0;
 	int err = 1;
 

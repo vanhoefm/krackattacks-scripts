@@ -15,6 +15,7 @@ HWSIM_CMD_DESTROY_RADIO		= 5
 
 HWSIM_ATTR_CHANNELS		= 9
 HWSIM_ATTR_RADIO_ID		= 10
+HWSIM_ATTR_USE_CHANCTX		= 15
 
 # the controller class
 class HWSimController(object):
@@ -22,10 +23,13 @@ class HWSimController(object):
         self._conn = netlink.Connection(netlink.NETLINK_GENERIC)
         self._fid = netlink.genl_controller.get_family_id('MAC80211_HWSIM')
 
-    def create_radio(self, n_channels=None):
+    def create_radio(self, n_channels=None, use_chanctx=False):
         attrs = []
         if n_channels:
             attrs.append(netlink.U32Attr(HWSIM_ATTR_CHANNELS, n_channels))
+        if use_chanctx:
+            attrs.append(netlink.FlagAttr(HWSIM_ATTR_USE_CHANCTX))
+
         msg = netlink.GenlMessage(self._fid, HWSIM_CMD_CREATE_RADIO,
                                   flags = netlink.NLM_F_REQUEST |
                                           netlink.NLM_F_ACK,
@@ -40,14 +44,41 @@ class HWSimController(object):
                                   attrs = attrs)
         msg.send_and_recv(self._conn)
 
+def create(args):
+    print 'Created radio %d' % c.create_radio(n_channels=args.channels,
+                                              use_chanctx=args.chanctx)
+
+def destroy(args):
+    print c.destroy_radio(args.radio)
+
 if __name__ == '__main__':
-    import sys
+    import argparse
     c = HWSimController()
-    if sys.argv[1] == 'create':
-        if len(sys.argv) > 2:
-            n_channels = int(sys.argv[2])
-        else:
-            n_channels = 0
-        print 'Created radio %d' % c.create_radio(n_channels=n_channels)
-    elif sys.argv[1] == 'destroy':
-        print c.destroy_radio(int(sys.argv[2]))
+
+    parser = argparse.ArgumentParser(description='send hwsim control commands')
+    subparsers = parser.add_subparsers(help="Commands", dest='command')
+    parser_create = subparsers.add_parser('create', help='create a radio')
+    parser_create.add_argument('--channels', metavar='<number_of_channels>', type=int,
+                               default=0,
+                               help='Number of concurrent channels supported ' +
+                               'by the radio. If not specified, the number ' +
+                               'of channels specified in the ' +
+                               'mac80211_hwsim.channels module parameter is ' +
+                               'used')
+    parser_create.add_argument('--chanctx', action="store_true",
+                               help='Use channel contexts, regardless of ' +
+                               'whether the number of channels is 1 or ' +
+                               'greater. By default channel contexts are ' +
+                               'only used if the number of channels is ' +
+                               'greater than 1.')
+    parser_create.set_defaults(func=create)
+
+    parser_destroy = subparsers.add_parser('destroy', help='destroy a radio')
+    parser_destroy.add_argument('radio', metavar='<radio>', type=int,
+                                default=0,
+                                help='The number of the radio to be ' +
+                                'destroyed (i.e., 0 for phy0, 1 for phy1...)')
+    parser_destroy.set_defaults(func=destroy)
+
+    args = parser.parse_args()
+    args.func(args)

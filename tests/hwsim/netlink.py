@@ -69,6 +69,10 @@ class U8Attr(Attr):
     def __init__(self, attr_type, val):
         Attr.__init__(self, attr_type, "B", val)
 
+class FlagAttr(Attr):
+    def __init__(self, attr_type):
+        Attr.__init__(self, attr_type, "")
+
 class Nested(Attr):
     def __init__(self, attr_type, attrs):
         self.attrs = attrs

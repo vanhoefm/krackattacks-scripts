@@ -330,6 +330,8 @@ static const char * eap_fast_parse_end(struct eap_fast_pac **pac_root,
 static const char * eap_fast_parse_pac_type(struct eap_fast_pac *pac,
 					    char *pos)
 {
+	if (!pos)
+		return "Cannot parse pac type";
 	pac->pac_type = atoi(pos);
 	if (pac->pac_type != PAC_TYPE_TUNNEL_PAC &&
 	    pac->pac_type != PAC_TYPE_USER_AUTHORIZATION &&

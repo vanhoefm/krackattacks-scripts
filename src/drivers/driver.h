@@ -3585,6 +3585,15 @@ union wpa_event_data {
 		u32 datarate;
 
 		/**
+		 * drv_priv - Pointer to store driver private BSS information
+		 *
+		 * If not set to NULL, this is used for comparison with
+		 * hostapd_data->drv_priv to determine which BSS should process
+		 * the frame.
+		 */
+		void *drv_priv;
+
+		/**
 		 * freq - Frequency (in MHz) on which the frame was received
 		 */
 		int freq;

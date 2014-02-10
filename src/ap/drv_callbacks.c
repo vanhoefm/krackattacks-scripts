@@ -721,6 +721,12 @@ static int hostapd_mgmt_rx(struct hostapd_data *hapd, struct rx_mgmt *rx_mgmt)
 		size_t i;
 		ret = 0;
 		for (i = 0; i < iface->num_bss; i++) {
+			/* if bss is set, driver will call this function for
+			 * each bss individually. */
+			if (rx_mgmt->drv_priv &&
+			    (iface->bss[i]->drv_priv != rx_mgmt->drv_priv))
+				continue;
+
 			if (ieee802_11_mgmt(iface->bss[i], rx_mgmt->frame,
 					    rx_mgmt->frame_len, &fi) > 0)
 				ret = 1;

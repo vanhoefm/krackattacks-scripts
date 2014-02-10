@@ -1681,10 +1681,11 @@ static void mlme_timeout_event(struct wpa_driver_nl80211_data *drv,
 }
 
 
-static void mlme_event_mgmt(struct wpa_driver_nl80211_data *drv,
+static void mlme_event_mgmt(struct i802_bss *bss,
 			    struct nlattr *freq, struct nlattr *sig,
 			    const u8 *frame, size_t len)
 {
+	struct wpa_driver_nl80211_data *drv = bss->drv;
 	const struct ieee80211_mgmt *mgmt;
 	union wpa_event_data event;
 	u16 fc, stype;
@@ -1715,6 +1716,7 @@ static void mlme_event_mgmt(struct wpa_driver_nl80211_data *drv,
 	event.rx_mgmt.frame = frame;
 	event.rx_mgmt.frame_len = len;
 	event.rx_mgmt.ssi_signal = ssi_signal;
+	event.rx_mgmt.drv_priv = bss;
 	wpa_supplicant_event(drv->ctx, EVENT_RX_MGMT, &event);
 }
 
@@ -1939,7 +1941,7 @@ static void mlme_event(struct i802_bss *bss,
 					   nla_data(frame), nla_len(frame));
 		break;
 	case NL80211_CMD_FRAME:
-		mlme_event_mgmt(drv, freq, sig, nla_data(frame),
+		mlme_event_mgmt(bss, freq, sig, nla_data(frame),
 				nla_len(frame));
 		break;
 	case NL80211_CMD_FRAME_TX_STATUS:

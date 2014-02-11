@@ -77,16 +77,19 @@ def wpas_get_handover_req():
     wpas = wpas_connect()
     if (wpas == None):
         return None
-    res = wpas.request("NFC_GET_HANDOVER_REQ NDEF P2P-CR").rstrip().decode("hex")
+    res = wpas.request("NFC_GET_HANDOVER_REQ NDEF P2P-CR").rstrip()
     if "FAIL" in res:
         return None
-    return res
+    return res.decode("hex")
 
 def wpas_get_handover_req_wps():
     wpas = wpas_connect()
     if (wpas == None):
         return None
-    return wpas.request("NFC_GET_HANDOVER_REQ NDEF WPS-CR").rstrip().decode("hex")
+    res = wpas.request("NFC_GET_HANDOVER_REQ NDEF WPS-CR").rstrip()
+    if "FAIL" in res:
+        return None
+    return res.decode("hex")
 
 
 def wpas_get_handover_sel(tag=False):
@@ -94,8 +97,12 @@ def wpas_get_handover_sel(tag=False):
     if (wpas == None):
         return None
     if tag:
-        return wpas.request("NFC_GET_HANDOVER_SEL NDEF P2P-CR-TAG").rstrip().decode("hex")
-    return wpas.request("NFC_GET_HANDOVER_SEL NDEF P2P-CR").rstrip().decode("hex")
+        res = wpas.request("NFC_GET_HANDOVER_SEL NDEF P2P-CR-TAG").rstrip()
+    else:
+	res = wpas.request("NFC_GET_HANDOVER_SEL NDEF P2P-CR").rstrip()
+    if "FAIL" in res:
+        return None
+    return res.decode("hex")
 
 
 def wpas_get_handover_sel_wps():

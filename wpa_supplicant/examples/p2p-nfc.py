@@ -511,6 +511,8 @@ def main():
                         help='do not use stdout input to initiate handover')
     parser.add_argument('--tag-read-only', '-t', action='store_true',
                         help='tag read only (do not allow connection handover)')
+    parser.add_argument('--handover-only', action='store_true',
+                        help='connection handover only (do not allow tag read)')
     parser.add_argument('--freq', '-f',
                         help='forced frequency of operating channel in MHz')
     parser.add_argument('command', choices=['write-p2p-sel'],
@@ -563,6 +565,11 @@ def main():
             try:
                 if args.tag_read_only:
                     if not clf.connect(rdwr={'on-connect': rdwr_connected}):
+                        break
+                elif args.handover_only:
+                    if not clf.connect(llcp={'on-startup': llcp_startup,
+                                             'on-connect': llcp_connected},
+                                       terminate=terminate_loop):
                         break
                 else:
                     if not clf.connect(rdwr={'on-connect': rdwr_connected},

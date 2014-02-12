@@ -471,6 +471,7 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 				       HOSTAPD_LEVEL_DEBUG,
 				       "SAE confirm before commit");
 			resp = WLAN_STATUS_UNKNOWN_AUTH_TRANSACTION;
+			goto failed;
 		}
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_DEBUG,
@@ -502,6 +503,7 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 		resp = WLAN_STATUS_UNKNOWN_AUTH_TRANSACTION;
 	}
 
+failed:
 	sta->auth_alg = WLAN_AUTH_SAE;
 
 	send_auth_reply(hapd, mgmt->sa, mgmt->bssid, WLAN_AUTH_SAE,

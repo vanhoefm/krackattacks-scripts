@@ -503,6 +503,8 @@ int sae_prepare_commit(const u8 *addr1, const u8 *addr2,
 		       const u8 *password, size_t password_len,
 		       struct sae_data *sae)
 {
+	if (sae->tmp == NULL)
+		return -1;
 	if (sae->tmp->ec && sae_derive_pwe_ecc(sae, addr1, addr2, password,
 					  password_len) < 0)
 		return -1;
@@ -634,7 +636,8 @@ fail:
 int sae_process_commit(struct sae_data *sae)
 {
 	u8 k[SAE_MAX_PRIME_LEN];
-	if ((sae->tmp->ec && sae_derive_k_ecc(sae, k) < 0) ||
+	if (sae->tmp == NULL ||
+	    (sae->tmp->ec && sae_derive_k_ecc(sae, k) < 0) ||
 	    (sae->tmp->dh && sae_derive_k_ffc(sae, k) < 0) ||
 	    sae_derive_keys(sae, k) < 0)
 		return -1;
@@ -646,6 +649,10 @@ void sae_write_commit(struct sae_data *sae, struct wpabuf *buf,
 		      const struct wpabuf *token)
 {
 	u8 *pos;
+
+	if (sae->tmp == NULL)
+		return;
+
 	wpabuf_put_le16(buf, sae->group); /* Finite Cyclic Group */
 	if (token)
 		wpabuf_put_buf(buf, token);
@@ -990,6 +997,9 @@ void sae_write_confirm(struct sae_data *sae, struct wpabuf *buf)
 {
 	const u8 *sc;
 
+	if (sae->tmp == NULL)
+		return;
+
 	/* Send-Confirm */
 	sc = wpabuf_put(buf, 0);
 	wpabuf_put_le16(buf, sae->send_confirm);
@@ -1020,6 +1030,11 @@ int sae_check_confirm(struct sae_data *sae, const u8 *data, size_t len)
 	}
 
 	wpa_printf(MSG_DEBUG, "SAE: peer-send-confirm %u", WPA_GET_LE16(data));
+
+	if (sae->tmp == NULL) {
+		wpa_printf(MSG_DEBUG, "SAE: Temporary data not yet available");
+		return -1;
+	}
 
 	if (sae->tmp->ec)
 		sae_cn_confirm_ecc(sae, data, sae->peer_commit_scalar,

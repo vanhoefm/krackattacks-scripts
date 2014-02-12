@@ -22,6 +22,20 @@ import wpaspy
 
 wpas_ctrl = '/var/run/hostapd'
 continue_loop = True
+summary_file = None
+success_file = None
+
+def summary(txt):
+    print txt
+    if summary_file:
+        with open(summary_file, 'a') as f:
+            f.write(txt + "\n")
+
+def success_report(txt):
+    summary(txt)
+    if success_file:
+        with open(success_file, 'a') as f:
+            f.write(txt + "\n")
 
 def wpas_connect():
     ifaces = []
@@ -48,7 +62,7 @@ def wpas_connect():
 def wpas_tag_read(message):
     wpas = wpas_connect()
     if (wpas == None):
-        return
+        return False
     if "FAIL" in wpas.request("WPS_NFC_TAG_READ " + str(message).encode("hex")):
         return False
     return True
@@ -58,21 +72,30 @@ def wpas_get_config_token():
     wpas = wpas_connect()
     if (wpas == None):
         return None
-    return wpas.request("WPS_NFC_CONFIG_TOKEN NDEF").rstrip().decode("hex")
+    ret = wpas.request("WPS_NFC_CONFIG_TOKEN NDEF")
+    if "FAIL" in ret:
+        return None
+    return ret.rstrip().decode("hex")
 
 
 def wpas_get_password_token():
     wpas = wpas_connect()
     if (wpas == None):
         return None
-    return wpas.request("WPS_NFC_TOKEN NDEF").rstrip().decode("hex")
+    ret = wpas.request("WPS_NFC_TOKEN NDEF")
+    if "FAIL" in ret:
+        return None
+    return ret.rstrip().decode("hex")
 
 
 def wpas_get_handover_sel():
     wpas = wpas_connect()
     if (wpas == None):
         return None
-    return wpas.request("NFC_GET_HANDOVER_SEL NDEF WPS-CR").rstrip().decode("hex")
+    ret = wpas.request("NFC_GET_HANDOVER_SEL NDEF WPS-CR")
+    if "FAIL" in ret:
+        return None
+    return ret.rstrip().decode("hex")
 
 
 def wpas_report_handover(req, sel):
@@ -91,7 +114,7 @@ class HandoverServer(nfc.handover.HandoverServer):
         self.success = False
 
     def process_request(self, request):
-        print "HandoverServer - request received"
+        summary("HandoverServer - request received")
         try:
             print "Parsed handover request: " + request.pretty()
         except Exception, e:
@@ -103,14 +126,17 @@ class HandoverServer(nfc.handover.HandoverServer):
         for carrier in request.carriers:
             print "Remote carrier type: " + carrier.type
             if carrier.type == "application/vnd.wfa.wsc":
-                print "WPS carrier type match - add WPS carrier record"
+                summary("WPS carrier type match - add WPS carrier record")
                 data = wpas_get_handover_sel()
                 if data is None:
-                    print "Could not get handover select carrier record from hostapd"
+                    summary("Could not get handover select carrier record from hostapd")
                     continue
                 print "Handover select carrier record from hostapd:"
                 print data.encode("hex")
-                wpas_report_handover(carrier.record, data)
+                if "OK" in wpas_report_handover(carrier.record, data):
+                    success_report("Handover reported successfully")
+                else:
+                    summary("Handover report rejected")
 
                 message = nfc.ndef.Message(data);
                 sel.add_carrier(message[0], "active", message[1:])
@@ -122,7 +148,7 @@ class HandoverServer(nfc.handover.HandoverServer):
             print e
         print str(sel).encode("hex")
 
-        print "Sending handover select"
+        summary("Sending handover select")
         self.success = True
         return sel
 
@@ -133,19 +159,23 @@ def wps_tag_read(tag):
         for record in tag.ndef.message:
             print "record type " + record.type
             if record.type == "application/vnd.wfa.wsc":
-                print "WPS tag - send to hostapd"
+                summary("WPS tag - send to hostapd")
                 success = wpas_tag_read(tag.ndef.message)
                 break
     else:
-        print "Empty tag"
+        summary("Empty tag")
+
+    if success:
+        success_report("Tag read succeeded")
 
     return success
 
 
 def rdwr_connected_write(tag):
-    print "Tag found - writing"
+    summary("Tag found - writing - " + str(tag))
     global write_data
     tag.ndef.message = str(write_data)
+    success_report("Tag write succeeded")
     print "Done - remove tag"
     global only_one
     if only_one:
@@ -156,12 +186,12 @@ def rdwr_connected_write(tag):
         time.sleep(0.1)
 
 def wps_write_config_tag(clf, wait_remove=True):
-    print "Write WPS config token"
+    summary("Write WPS config token")
     global write_data, write_wait_remove
     write_wait_remove = wait_remove
     write_data = wpas_get_config_token()
     if write_data == None:
-        print "Could not get WPS config token from hostapd"
+        summary("Could not get WPS config token from hostapd")
         return
 
     print "Touch an NFC tag"
@@ -169,12 +199,12 @@ def wps_write_config_tag(clf, wait_remove=True):
 
 
 def wps_write_password_tag(clf, wait_remove=True):
-    print "Write WPS password token"
+    summary("Write WPS password token")
     global write_data, write_wait_remove
     write_wait_remove = wait_remove
     write_data = wpas_get_password_token()
     if write_data == None:
-        print "Could not get WPS password token from hostapd"
+        summary("Could not get WPS password token from hostapd")
         return
 
     print "Touch an NFC tag"
@@ -183,7 +213,7 @@ def wps_write_password_tag(clf, wait_remove=True):
 
 def rdwr_connected(tag):
     global only_one, no_wait
-    print "Tag connected: " + str(tag)
+    summary("Tag connected: " + str(tag))
 
     if tag.ndef:
         print "NDEF tag: " + tag.type
@@ -196,7 +226,8 @@ def rdwr_connected(tag):
             global continue_loop
             continue_loop = False
     else:
-        print "Not an NDEF tag - remove tag"
+        summary("Not an NDEF tag - remove tag")
+        return True
 
     return not no_wait
 
@@ -229,6 +260,10 @@ def main():
                         help='run only one operation and exit')
     parser.add_argument('--no-wait', action='store_true',
                         help='do not wait for tag to be removed before exiting')
+    parser.add_argument('--summary',
+                        help='summary file for writing status updates')
+    parser.add_argument('--success',
+                        help='success file for writing success update')
     parser.add_argument('command', choices=['write-config',
                                             'write-password'],
                         nargs='?')
@@ -239,6 +274,14 @@ def main():
 
     global no_wait
     no_wait = args.no_wait
+
+    if args.summary:
+        global summary_file
+        summary_file = args.summary
+
+    if args.success:
+        global success_file
+        success_file = args.success
 
     logging.basicConfig(level=args.loglevel)
 

@@ -26,6 +26,20 @@ wpas_ctrl = '/var/run/wpa_supplicant'
 srv = None
 continue_loop = True
 terminate_now = False
+summary_file = None
+success_file = None
+
+def summary(txt):
+    print txt
+    if summary_file:
+        with open(summary_file, 'a') as f:
+            f.write(txt + "\n")
+
+def success_report(txt):
+    summary(txt)
+    if success_file:
+        with open(success_file, 'a') as f:
+            f.write(txt + "\n")
 
 def wpas_connect():
     ifaces = []
@@ -84,14 +98,19 @@ def wpas_get_password_token():
     wpas = wpas_connect()
     if (wpas == None):
         return None
-    return wpas.request("WPS_NFC_TOKEN NDEF").rstrip().decode("hex")
-
+    ret = wpas.request("WPS_NFC_TOKEN NDEF")
+    if "FAIL" in ret:
+        return None
+    return ret.rstrip().decode("hex")
 
 def wpas_get_handover_req():
     wpas = wpas_connect()
     if (wpas == None):
         return None
-    return wpas.request("NFC_GET_HANDOVER_REQ NDEF WPS-CR").rstrip().decode("hex")
+    ret = wpas.request("NFC_GET_HANDOVER_REQ NDEF WPS-CR")
+    if "FAIL" in ret:
+        return None
+    return ret.rstrip().decode("hex")
 
 
 def wpas_get_handover_sel(uuid):
@@ -125,7 +144,7 @@ class HandoverServer(nfc.handover.HandoverServer):
 
     def process_request(self, request):
         self.ho_server_processing = True
-        print "HandoverServer - request received"
+        summary("HandoverServer - request received")
         try:
             print "Parsed handover request: " + request.pretty()
         except Exception, e:
@@ -136,15 +155,18 @@ class HandoverServer(nfc.handover.HandoverServer):
         for carrier in request.carriers:
             print "Remote carrier type: " + carrier.type
             if carrier.type == "application/vnd.wfa.wsc":
-                print "WPS carrier type match - add WPS carrier record"
+                summary("WPS carrier type match - add WPS carrier record")
                 data = wpas_get_handover_sel(self.uuid)
                 if data is None:
-                    print "Could not get handover select carrier record from wpa_supplicant"
+                    summary("Could not get handover select carrier record from wpa_supplicant")
                     continue
                 print "Handover select carrier record from wpa_supplicant:"
                 print data.encode("hex")
                 self.sent_carrier = data
-                wpas_report_handover(carrier.record, self.sent_carrier, "RESP")
+                if "OK" in wpas_report_handover(carrier.record, self.sent_carrier, "RESP"):
+                    success_report("Handover reported successfully (responder)")
+                else:
+                    summary("Handover report rejected (responder)")
 
                 message = nfc.ndef.Message(data);
                 sel.add_carrier(message[0], "active", message[1:])
@@ -156,17 +178,17 @@ class HandoverServer(nfc.handover.HandoverServer):
             print e
         print str(sel).encode("hex")
 
-        print "Sending handover select"
+        summary("Sending handover select")
         self.success = True
         return sel
 
 
 def wps_handover_init(llc):
-    print "Trying to initiate WPS handover"
+    summary("Trying to initiate WPS handover")
 
     data = wpas_get_handover_req()
     if (data == None):
-        print "Could not get handover request carrier record from wpa_supplicant"
+        summary("Could not get handover request carrier record from wpa_supplicant")
         return
     print "Handover request carrier record from wpa_supplicant: " + data.encode("hex")
 
@@ -184,27 +206,33 @@ def wps_handover_init(llc):
 
     client = nfc.handover.HandoverClient(llc)
     try:
-        print "Trying handover";
+        summary("Trying to initiate NFC connection handover")
         client.connect()
-        print "Connected for handover"
+        summary("Connected for handover")
     except nfc.llcp.ConnectRefused:
-        print "Handover connection refused"
+        summary("Handover connection refused")
+        client.close()
+        return
+    except Exception, e:
+        summary("Other exception: " + str(e))
         client.close()
         return
 
-    print "Sending handover request"
+    summary("Sending handover request")
 
     if not client.send(message):
-        print "Failed to send handover request"
+        summary("Failed to send handover request")
+        client.close()
+        return
 
-    print "Receiving handover response"
+    summary("Receiving handover response")
     message = client._recv()
     if message is None:
-        print "No response received"
+        summary("No response received")
         client.close()
         return
     if message.type != "urn:nfc:wkt:Hs":
-        print "Response was not Hs - received: " + message.type
+        summary("Response was not Hs - received: " + message.type)
         client.close()
         return
 
@@ -215,7 +243,7 @@ def wps_handover_init(llc):
         print e
     print str(message).encode("hex")
     message = nfc.ndef.HandoverSelectMessage(message)
-    print "Handover select received"
+    summary("Handover select received")
     try:
         print message.pretty()
     except Exception, e:
@@ -225,7 +253,10 @@ def wps_handover_init(llc):
         print "Remote carrier type: " + carrier.type
         if carrier.type == "application/vnd.wfa.wsc":
             print "WPS carrier type match - send to wpa_supplicant"
-            wpas_report_handover(data, carrier.record, "INIT")
+            if "OK" in wpas_report_handover(data, carrier.record, "INIT"):
+                success_report("Handover reported successfully (initiator)")
+            else:
+                summary("Handover report rejected (initiator)")
             # nfcpy does not support the new format..
             #wifi = nfc.ndef.WifiConfigRecord(carrier.record)
             #print wifi.pretty()
@@ -250,11 +281,14 @@ def wps_tag_read(tag, wait_remove=True):
         for record in tag.ndef.message:
             print "record type " + record.type
             if record.type == "application/vnd.wfa.wsc":
-                print "WPS tag - send to wpa_supplicant"
+                summary("WPS tag - send to wpa_supplicant")
                 success = wpas_tag_read(tag.ndef.message)
                 break
     else:
-        print "Empty tag"
+        summary("Empty tag")
+
+    if success:
+        success_report("Tag read succeeded")
 
     if wait_remove:
         print "Remove tag"
@@ -265,9 +299,10 @@ def wps_tag_read(tag, wait_remove=True):
 
 
 def rdwr_connected_write(tag):
-    print "Tag found - writing"
+    summary("Tag found - writing - " + str(tag))
     global write_data
     tag.ndef.message = str(write_data)
+    success_report("Tag write succeeded")
     print "Done - remove tag"
     global only_one
     if only_one:
@@ -318,7 +353,7 @@ def wps_write_password_tag(clf, wait_remove=True):
 
 def rdwr_connected(tag):
     global only_one, no_wait
-    print "Tag connected: " + str(tag)
+    summary("Tag connected: " + str(tag))
 
     if tag.ndef:
         print "NDEF tag: " + tag.type
@@ -331,7 +366,8 @@ def rdwr_connected(tag):
             global continue_loop
             continue_loop = False
     else:
-        print "Not an NDEF tag - remove tag"
+        summary("Not an NDEF tag - remove tag")
+        return True
 
     return not no_wait
 
@@ -398,6 +434,10 @@ def main():
                         help='UUID of an AP (used for WPS ER operations)')
     parser.add_argument('--id',
                         help='network id (used for WPS ER operations)')
+    parser.add_argument('--summary',
+                        help='summary file for writing status updates')
+    parser.add_argument('--success',
+                        help='success file for writing success update')
     parser.add_argument('command', choices=['write-config',
                                             'write-er-config',
                                             'write-password'],
@@ -412,6 +452,14 @@ def main():
 
     global no_wait
     no_wait = args.no_wait
+
+    if args.summary:
+        global summary_file
+        summary_file = args.summary
+
+    if args.success:
+        global success_file
+        success_file = args.success
 
     logging.basicConfig(level=args.loglevel)
 

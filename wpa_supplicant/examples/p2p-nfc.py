@@ -263,6 +263,23 @@ class HandoverServer(nfc.handover.HandoverServer):
         self.ho_server_processing = False
         self.success = False
 
+    # override to avoid parser error in request/response.pretty() in nfcpy
+    # due to new WSC handover format
+    def _process_request(self, request):
+        summary("received handover request {}".format(request.type))
+        response = nfc.ndef.Message("\xd1\x02\x01Hs\x12")
+        if not request.type == 'urn:nfc:wkt:Hr':
+            summary("not a handover request")
+        else:
+            try:
+                request = nfc.ndef.HandoverRequestMessage(request)
+            except nfc.ndef.DecodeError as e:
+                summary("error decoding 'Hr' message: {}".format(e))
+            else:
+                response = self.process_request(request)
+        summary("send handover response {}".format(response.type))
+        return response
+
     def process_request(self, request):
         self.ho_server_processing = True
         clear_raw_mode()

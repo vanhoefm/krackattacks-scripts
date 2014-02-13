@@ -8391,12 +8391,25 @@ static int nl80211_connect_common(struct wpa_driver_nl80211_data *drv,
 		NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, params->bssid);
 	}
 
+	if (params->bssid_hint) {
+		wpa_printf(MSG_DEBUG, "  * bssid_hint=" MACSTR,
+			   MAC2STR(params->bssid_hint));
+		NLA_PUT(msg, NL80211_ATTR_MAC_HINT, ETH_ALEN,
+			params->bssid_hint);
+	}
+
 	if (params->freq) {
 		wpa_printf(MSG_DEBUG, "  * freq=%d", params->freq);
 		NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, params->freq);
 		drv->assoc_freq = params->freq;
 	} else
 		drv->assoc_freq = 0;
+
+	if (params->freq_hint) {
+		wpa_printf(MSG_DEBUG, "  * freq_hint=%d", params->freq_hint);
+		NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ_HINT,
+			    params->freq_hint);
+	}
 
 	if (params->bg_scan_period >= 0) {
 		wpa_printf(MSG_DEBUG, "  * bg scan period=%d",

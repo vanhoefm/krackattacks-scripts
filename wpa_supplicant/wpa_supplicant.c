@@ -1656,6 +1656,8 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 			params.bssid = bss->bssid;
 			params.freq = bss->freq;
 		}
+		params.bssid_hint = bss->bssid;
+		params.freq_hint = bss->freq;
 	} else {
 		params.ssid = ssid->ssid;
 		params.ssid_len = ssid->ssid_len;

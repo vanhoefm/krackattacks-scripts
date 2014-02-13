@@ -404,6 +404,16 @@ struct wpa_driver_associate_params {
 	const u8 *bssid;
 
 	/**
+	 * bssid_hint - BSSID of a proposed AP
+	 *
+	 * This indicates which BSS has been found a suitable candidate for
+	 * initial association for drivers that use driver/firmwate-based BSS
+	 * selection. Unlike the @bssid parameter, @bssid_hint does not limit
+	 * the driver from selecting other BSSes in the ESS.
+	 */
+	const u8 *bssid_hint;
+
+	/**
 	 * ssid - The selected SSID
 	 */
 	const u8 *ssid;
@@ -419,6 +429,16 @@ struct wpa_driver_associate_params {
 	 * reported in the scan results)
 	 */
 	int freq;
+
+	/**
+	 * freq_hint - Frequency of the channel the proposed AP is using
+	 *
+	 * This provides a channel on which a suitable BSS has been found as a
+	 * hint for the driver. Unlike the @freq parameter, @freq_hint does not
+	 * limit the driver from selecting other channels for
+	 * driver/firmware-based BSS selection.
+	 */
+	int freq_hint;
 
 	/**
 	 * bg_scan_period - Background scan period in seconds, 0 to disable

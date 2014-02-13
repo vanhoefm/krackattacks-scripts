@@ -8,10 +8,29 @@ clear record of contributions and terms under which they are licensed.
 To help with this, following procedure is used to allow acceptance and
 recording of the terms.
 
-These terms are similar to the process used in Linux kernel development.
-The items (a) through (d) are identical to the Developer's Certificate
-of Origin 1.1. To enable cleaner licensing option to be provided in the
-future, an additional item (e) is included.
+All contributions are expected to be licensed under the modified BSD
+license (see below). Acknowledgment of the terms is tracked through
+inclusion of Signed-off-by tag in the contributions at the end of the
+commit log message. This tag indicates that the contributor agrees with
+the Developer Certificate of Origin (DCO) version 1.1 terms (see below;
+also available from http://developercertificate.org/).
+
+
+The current requirements for contributions to hostap.git
+--------------------------------------------------------
+
+To indicate your acceptance of Developer's Certificate of Origin 1.1
+terms, please add the following line to the end of the commit message
+for each contribution you make to the project:
+
+Signed-off-by: Your Name <your@email.example.org>
+
+using your real name. Pseudonyms or anonymous contributions cannot
+unfortunately be accepted.
+
+
+History of license and contributions terms
+------------------------------------------
 
 Until February 11, 2012, in case of most files in hostap.git, "under the
 open source license indicated in the file" means that the contribution
@@ -27,15 +46,39 @@ licensed until GPL v2. In case of most files in hostap.git, "under the
 open source license indicated in the file" means that the contribution
 is licensed under the modified BSD license (see below).
 
+Until February 13, 2014, the project used an extended version of the DCO
+that included the identical items (a) through (d) from DCO 1.1 and an
+additional item (e):
 
-The additional item (e) is used to collect explicit approval to license
-the contribution with only the modified BSD license (see below), i.e.,
-without the GPL v2 option. This was done to allow simpler licensing
-terms to be used in the future. It should be noted that the modified BSD
-license is compatible with GNU GPL and as such, this possible move to
-simpler licensing option does not prevent use of this software in
-GPL projects.
+(e) The contribution can be licensed under the modified BSD license
+    as shown below even in case of files that are currently licensed
+    under other terms.
 
+This was used during the period when some of the files included the old
+license terms. Acceptance of this extended DCO version was indicated
+with a Signed-hostap tag in the commit message. This additional item (e)
+was used to collect explicit approval to license the contribution with
+only the modified BSD license (see below), i.e., without the GPL v2
+option. This was done to allow simpler licensing terms to be used in the
+future. It should be noted that the modified BSD license is compatible
+with GNU GPL and as such, this possible move to simpler licensing option
+does not prevent use of this software in GPL projects.
+
+
+===[ start quote from http://developercertificate.org/ ]=======================
+
+Developer Certificate of Origin
+Version 1.1
+
+Copyright (C) 2004, 2006 The Linux Foundation and its contributors.
+660 York Street, Suite 102,
+San Francisco, CA 94110 USA
+
+Everyone is permitted to copy and distribute verbatim copies of this
+license document, but changing it is not allowed.
+
+
+Developer's Certificate of Origin 1.1
 
 By making a contribution to this project, I certify that:
 
@@ -61,22 +104,11 @@ By making a contribution to this project, I certify that:
     maintained indefinitely and may be redistributed consistent with
     this project or the open source license(s) involved.
 
-Additionally, I certify that:
-
-(e) The contribution can be licensed under the modified BSD license
-    as shown below even in case of files that are currently licensed
-    under other terms.
+===[ end quote from http://developercertificate.org/ ]=========================
 
 
-To indicate your acceptance of these terms, please add the following
-line to each contribution you make to the project:
-
-Signed-hostap: Your Name <your@email.example.org>
-
-using your real name. Pseudonyms or anonymous contributions cannot
-unfortunately be accepted.
-
-
+The license terms used for hostap.git files
+-------------------------------------------
 
 Modified BSD license (no advertisement clause):
 

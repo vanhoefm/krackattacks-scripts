@@ -123,6 +123,7 @@ static void wpas_p2p_group_freq_conflict(void *eloop_ctx, void *timeout_ctx);
 static void wpas_p2p_fallback_to_go_neg(struct wpa_supplicant *wpa_s,
 					int group_added);
 static int wpas_p2p_stop_find_oper(struct wpa_supplicant *wpa_s);
+static void wpas_stop_listen(void *ctx);
 
 
 /*
@@ -252,7 +253,12 @@ static void wpas_p2p_trigger_scan_cb(struct wpa_radio_work *work, int deinit)
 	int ret;
 
 	if (deinit) {
-		wpa_scan_free_params(params);
+		if (!work->started) {
+			wpa_scan_free_params(params);
+			return;
+		}
+
+		wpa_s->p2p_scan_work = NULL;
 		return;
 	}
 
@@ -355,7 +361,7 @@ static int wpas_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 		break;
 	}
 
-	radio_remove_unstarted_work(wpa_s, "p2p-scan");
+	radio_remove_works(wpa_s, "p2p-scan", 0);
 	if (radio_add_work(wpa_s, 0, "p2p-scan", 0, wpas_p2p_trigger_scan_cb,
 			   params) < 0)
 		goto fail;
@@ -1001,6 +1007,12 @@ static void wpas_send_action_cb(struct wpa_radio_work *work, int deinit)
 	struct send_action_work *awork = work->ctx;
 
 	if (deinit) {
+		if (work->started) {
+			eloop_cancel_timeout(wpas_p2p_send_action_work_timeout,
+					     wpa_s, NULL);
+			wpa_s->p2p_send_action_work = NULL;
+			offchannel_send_action_done(wpa_s);
+		}
 		os_free(awork);
 		return;
 	}
@@ -1746,6 +1758,10 @@ static void wpas_start_listen_cb(struct wpa_radio_work *work, int deinit)
 	struct wpas_p2p_listen_work *lwork = work->ctx;
 
 	if (deinit) {
+		if (work->started) {
+			wpa_s->p2p_listen_work = NULL;
+			wpas_stop_listen(wpa_s);
+		}
 		wpas_p2p_listen_work_free(lwork);
 		return;
 	}

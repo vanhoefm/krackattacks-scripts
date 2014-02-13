@@ -1401,6 +1401,13 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 #endif /* CONFIG_HT_OVERRIDES */
 
 	if (deinit) {
+		if (work->started) {
+			wpa_s->connect_work = NULL;
+
+			/* cancel possible auth. timeout */
+			eloop_cancel_timeout(wpa_supplicant_timeout, wpa_s,
+					     NULL);
+		}
 		wpas_connect_work_free(cwork);
 		return;
 	}
@@ -3077,25 +3084,40 @@ static void radio_start_next_work(void *eloop_ctx, void *timeout_ctx)
 }
 
 
-void radio_remove_unstarted_work(struct wpa_supplicant *wpa_s, const char *type)
+/*
+ * This function removes both started and pending radio works running on
+ * the provided interface's radio.
+ * Prior to the removal of the radio work, its callback (cb) is called with
+ * deinit set to be 1. Each work's callback is responsible for clearing its
+ * internal data and restoring to a correct state.
+ * @wpa_s: wpa_supplicant data
+ * @type: type of works to be removed
+ * @remove_all: 1 to remove all the works on this radio, 0 to remove only
+ * this interface's works.
+ */
+void radio_remove_works(struct wpa_supplicant *wpa_s,
+			const char *type, int remove_all)
 {
 	struct wpa_radio_work *work, *tmp;
 	struct wpa_radio *radio = wpa_s->radio;
 
 	dl_list_for_each_safe(work, tmp, &radio->work, struct wpa_radio_work,
 			      list) {
-		if (type && (work->started || os_strcmp(type, work->type) != 0))
+		if (type && os_strcmp(type, work->type) != 0)
 			continue;
-		if (work->started) {
-			wpa_dbg(wpa_s, MSG_DEBUG, "Leaving started radio work '%s'@%p in the list",
-				work->type, work);
+
+		/* skip other ifaces' works */
+		if (!remove_all && work->wpa_s != wpa_s)
 			continue;
-		}
-		wpa_dbg(wpa_s, MSG_DEBUG, "Remove unstarted radio work '%s'@%p",
-			work->type, work);
+
+		wpa_dbg(wpa_s, MSG_DEBUG, "Remove radio work '%s'@%p%s",
+			work->type, work, work->started ? " (started)" : "");
 		work->cb(work, 1);
 		radio_work_free(work);
 	}
+
+	/* in case we removed the started work */
+	radio_work_check_next(wpa_s);
 }
 
 
@@ -3115,7 +3137,7 @@ static void radio_remove_interface(struct wpa_supplicant *wpa_s)
 	}
 
 	wpa_printf(MSG_DEBUG, "Remove radio %s", radio->name);
-	radio_remove_unstarted_work(wpa_s, NULL);
+	radio_remove_works(wpa_s, NULL, 0);
 	eloop_cancel_timeout(radio_start_next_work, radio, NULL);
 	wpa_s->radio = NULL;
 	os_free(radio);

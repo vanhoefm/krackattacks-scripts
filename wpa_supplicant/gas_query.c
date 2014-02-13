@@ -573,6 +573,12 @@ static void gas_query_start_cb(struct wpa_radio_work *work, int deinit)
 	struct gas_query *gas = query->gas;
 
 	if (deinit) {
+		if (work->started) {
+			gas->work = NULL;
+			gas_query_done(gas, query, GAS_QUERY_DELETED_AT_DEINIT);
+			return;
+		}
+
 		gas_query_free(query, 1);
 		return;
 	}

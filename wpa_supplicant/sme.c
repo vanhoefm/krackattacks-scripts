@@ -444,6 +444,9 @@ static void sme_auth_start_cb(struct wpa_radio_work *work, int deinit)
 	struct wpa_supplicant *wpa_s = work->wpa_s;
 
 	if (deinit) {
+		if (work->started)
+			wpa_s->connect_work = NULL;
+
 		wpas_connect_work_free(cwork);
 		return;
 	}

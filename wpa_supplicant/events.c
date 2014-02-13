@@ -3231,6 +3231,8 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 #endif /* CONFIG_P2P */
 
 		wpa_supplicant_mark_disassoc(wpa_s);
+		radio_remove_works(wpa_s, NULL, 0);
+
 		wpa_supplicant_set_state(wpa_s, WPA_INTERFACE_DISABLED);
 		break;
 	case EVENT_CHANNEL_LIST_CHANGED:

@@ -95,6 +95,7 @@ ifeq ($(CONFIG_ELOOP), eloop)
 LIBS += -lrt
 LIBS_c += -lrt
 LIBS_h += -lrt
+LIBS_n += -lrt
 endif
 
 OBJS += ../src/utils/common.o

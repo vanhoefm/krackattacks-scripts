@@ -23,7 +23,9 @@ else
     fi
     if [ -e $LOGDIR/alt-hostapd-as/hostapd/hostapd ]; then
 	HAPD_AS=$LOGDIR/alt-hostapd-as/hostapd/hostapd
-	HLR_AUC_GW=$LOGDIR/alt-hostapd-as/hostapd/hlr_auc_gw
+    fi
+    if [ -e $LOGDIR/alt-hlr_auc_gw/hostapd/hlr_auc_gw ]; then
+	HLR_AUC_GW=$LOGDIR/alt-hlr_auc_gw/hostapd/hlr_auc_gw
     fi
 fi
 

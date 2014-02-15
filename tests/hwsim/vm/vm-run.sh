@@ -72,7 +72,10 @@ if [ "$1" = "--codecov" ]; then
     cp hostapd.config alt-hostapd/hostapd/.config
     tar xf hostap.tar
     mv hostap alt-hostapd-as
-    mv hostapd.config alt-hostapd-as/hostapd/.config
+    cp hostapd.config alt-hostapd-as/hostapd/.config
+    tar xf hostap.tar
+    mv hostap alt-hlr_auc_gw
+    mv hostapd.config alt-hlr_auc_gw/hostapd/.config
     rm hostap.tar
 
     cd /tmp/logs/alt-wpa_supplicant/wpa_supplicant
@@ -84,14 +87,19 @@ if [ "$1" = "--codecov" ]; then
     make -j8 hostapd > /dev/null
 
     cd /tmp/logs/alt-hostapd-as/hostapd
-    echo "Building hostapd/hlr_auc_gw (AS)"
-    make -j8 hostapd hlr_auc_gw > /dev/null
+    echo "Building hostapd (AS)"
+    make -j8 hostapd > /dev/null
+
+    cd /tmp/logs/alt-hlr_auc_gw/hostapd
+    echo "Building hlr_auc_gw"
+    make -j8 hlr_auc_gw > /dev/null
 
     cd $DIR
 
     mv /tmp/logs/alt-wpa_supplicant $LOGDIR
     mv /tmp/logs/alt-hostapd $LOGDIR
     mv /tmp/logs/alt-hostapd-as $LOGDIR
+    mv /tmp/logs/alt-hlr_auc_gw $LOGDIR
 else
     CODECOV=no
 fi
@@ -119,6 +127,7 @@ if [ $CODECOV = "yes" ]; then
     mv $LOGDIR/alt-wpa_supplicant /tmp/logs
     mv $LOGDIR/alt-hostapd /tmp/logs
     mv $LOGDIR/alt-hostapd-as /tmp/logs
+    mv $LOGDIR/alt-hlr_auc_gw /tmp/logs
 
     echo "Generating code coverage report for wpa_supplicant"
     cd /tmp/logs/alt-wpa_supplicant/wpa_supplicant
@@ -132,25 +141,32 @@ if [ $CODECOV = "yes" ]; then
     genhtml -t "hostapd hwsim test run $DATE" lcov.info --output-directory $LOGDIR/lcov-hostapd >> lcov.log 2>&1
     mv lcov.info lcov.log $LOGDIR/lcov-hostapd
 
-    echo "Generating code coverage report for hostapd/hlr_auc_gw (AS)"
+    echo "Generating code coverage report for hostapd (AS)"
     cd /tmp/logs/alt-hostapd-as/hostapd
     lcov -c -d .. > lcov.info 2> lcov.log
-    genhtml -t "hostapd/hlr_auc_gw (AS) hwsim test run $DATE" lcov.info --output-directory $LOGDIR/lcov-hostapd-as >> lcov.log 2>&1
+    genhtml -t "hostapd (AS) hwsim test run $DATE" lcov.info --output-directory $LOGDIR/lcov-hostapd-as >> lcov.log 2>&1
     mv lcov.info lcov.log $LOGDIR/lcov-hostapd-as
+
+    echo "Generating code coverage report for hlr_auc_gw"
+    cd /tmp/logs/alt-hlr_auc_gw/hostapd
+    lcov -c -d .. > lcov.info 2> lcov.log
+    genhtml -t "hlr_auc_gw hwsim test run $DATE" lcov.info --output-directory $LOGDIR/lcov-hlr_auc_gw >> lcov.log 2>&1
+    mv lcov.info lcov.log $LOGDIR/lcov-hlr_auc_gw
 
     echo "Generating combined code coverage report"
     mkdir $LOGDIR/lcov-combined
-    for i in wpa_supplicant hostapd hostapd-as; do
+    for i in wpa_supplicant hostapd hostapd-as hlr_auc_gw; do
 	sed s%SF:/tmp/logs/alt-[^/]*/%SF:/tmp/logs/alt-wpa_supplicant/% < $LOGDIR/lcov-$i/lcov.info > $LOGDIR/lcov-combined/$i.info
     done
     cd $LOGDIR/lcov-combined
-    lcov -a wpa_supplicant.info -a hostapd.info -a hostapd-as.info -o combined.info > lcov.log 2>&1
+    lcov -a wpa_supplicant.info -a hostapd.info -a hostapd-as.info -a hlr_auc_gw.info -o combined.info > lcov.log 2>&1
     genhtml -t "wpa_supplicant/hostapd combined for hwsim test run $DATE" combined.info --output-directory . >> lcov.log 2>&1
 
     cd $DIR
     rm -r /tmp/logs/alt-wpa_supplicant
     rm -r /tmp/logs/alt-hostapd
     rm -r /tmp/logs/alt-hostapd-as
+    rm -r /tmp/logs/alt-hlr_auc_gw
     rmdir /tmp/logs
 fi
 
@@ -161,6 +177,7 @@ if [ $CODECOV = "yes" ]; then
     echo "Code coverage reports:"
     echo "wpa_supplicant: file://$LOGDIR/lcov-wpa_supplicant/index.html"
     echo "hostapd: file://$LOGDIR/lcov-hostapd/index.html"
-    echo "hostapd/hlr_auc_gw (AS): file://$LOGDIR/lcov-hostapd-as/index.html"
+    echo "hostapd (AS): file://$LOGDIR/lcov-hostapd-as/index.html"
+    echo "hlr_auc_gw: file://$LOGDIR/lcov-hlr_auc_gw/index.html"
     echo "combined: file://$LOGDIR/lcov-combined/index.html"
 fi

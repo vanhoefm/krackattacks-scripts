@@ -24,7 +24,7 @@ def eap_connect(dev, ap, method, identity, anonymous_identity=None,
                 local_error_report=False,
                 ca_cert2=None, client_cert2=None, private_key2=None,
                 pac_file=None, subject_match=None, altsubject_match=None,
-                private_key_passwd=None, ocsp=None):
+                private_key_passwd=None, ocsp=None, dh_file=None):
     hapd = hostapd.Hostapd(ap['ifname'])
     id = dev.connect("test-wpa2-eap", key_mgmt="WPA-EAP WPA-EAP-SHA256",
                      eap=method, identity=identity,
@@ -40,7 +40,7 @@ def eap_connect(dev, ap, method, identity, anonymous_identity=None,
                      subject_match=subject_match,
                      altsubject_match=altsubject_match,
                      private_key_passwd=private_key_passwd,
-                     ocsp=ocsp)
+                     ocsp=ocsp, dh_file=dh_file)
     eap_check_auth(dev, method, True, sha256=sha256,
                    expect_failure=expect_failure,
                    local_error_report=local_error_report)
@@ -964,3 +964,12 @@ def test_ap_wpa2_eap_ttls_server_cert_eku_client(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"])
     if ev is None:
         raise Exception("Timeout on EAP failure report")
+
+def test_ap_wpa2_eap_ttls_dh_params(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TTLS/CHAP and setting DH params"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "TTLS", "chap user",
+                anonymous_identity="ttls", password="password",
+                ca_cert="auth_serv/ca.der", phase2="auth=CHAP",
+                dh_file="auth_serv/dh.conf")

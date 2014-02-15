@@ -220,13 +220,17 @@ class Hostapd:
                 vals[name] = value
         return vals
 
-    def get_mib(self):
-        res = self.request("MIB")
+    def get_mib(self, param=None):
+        if param:
+            res = self.request("MIB " + param)
+        else:
+            res = self.request("MIB")
         lines = res.splitlines()
         vals = dict()
         for l in lines:
-            [name,value] = l.split('=', 1)
-            vals[name] = value
+            name_val = l.split('=', 1)
+            if len(name_val) > 1:
+                vals[name_val[0]] = name_val[1]
         return vals
 
 def add_ap(ifname, params, wait_enabled=True):

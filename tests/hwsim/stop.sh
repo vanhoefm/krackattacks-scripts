@@ -19,7 +19,7 @@ if grep -q hwsim0 /proc/net/dev; then
     sudo ifconfig hwsim0 down
 fi
 
-killall -q hlr_auc_gw
+sudo killall -q hlr_auc_gw
 
 if [ "$RUNNING" = "yes" ]; then
     # give some time for hostapd and wpa_supplicant to complete deinit
@@ -38,7 +38,7 @@ if pidof wpa_supplicant hostapd hlr_auc_gw > /dev/null; then
     echo "wpa_supplicant/hostapd/hlr_auc_gw did not exit - try to force them to die"
     sudo killall -9 -q hostapd
     sudo killall -9 -q wpa_supplicant
-    killall -9 -q hlr_auc_gw
+    sudo killall -9 -q hlr_auc_gw
     for i in `seq 1 5`; do
 	if pidof wpa_supplicant hostapd hlr_auc_gw > /dev/null; then
 	    echo "Waiting for processes to exit (2)"

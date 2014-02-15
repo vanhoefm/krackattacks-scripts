@@ -39,6 +39,8 @@ for i in 0 1 2; do
     sed "s/ GROUP=.*$/ GROUP=$GROUP/" "$DIR/p2p$i.conf" > "$LOGDIR/p2p$i.conf"
 done
 
+sed "s/group=admin/group=$GROUP/" "$DIR/auth_serv/as.conf" > "$LOGDIR/as.conf"
+
 if [ "$1" = "valgrind" ]; then
     VALGRIND=y
     VALGRIND_WPAS="valgrind --log-file=$LOGDIR/valgrind-wlan%d"
@@ -78,10 +80,10 @@ if [ "x$VALGRIND" = "xy" ]; then
 fi
 
 if [ -x $HLR_AUC_GW ]; then
-    $HLR_AUC_GW -m $DIR/auth_serv/hlr_auc_gw.milenage_db > $LOGDIR/hlr_auc_gw &
+    sudo $HLR_AUC_GW -m $DIR/auth_serv/hlr_auc_gw.milenage_db > $LOGDIR/hlr_auc_gw &
 fi
 
-$HAPD_AS -ddKt $DIR/auth_serv/as.conf > $LOGDIR/auth_serv &
+sudo $HAPD_AS -ddKt $LOGDIR/as.conf > $LOGDIR/auth_serv &
 
 # wait for programs to be fully initialized
 for i in 0 1 2; do

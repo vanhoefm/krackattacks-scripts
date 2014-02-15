@@ -59,6 +59,8 @@ def test_radius_acct_unreachable(dev, apdev):
 
 def test_radius_acct(dev, apdev):
     """RADIUS Accounting"""
+    as_hapd = hostapd.Hostapd("as")
+    as_mib_start = as_hapd.get_mib(param="radius_server")
     params = hostapd.wpa2_eap_params(ssid="radius-acct")
     params['acct_server_addr'] = "127.0.0.1"
     params['acct_server_port'] = "1813"
@@ -79,3 +81,15 @@ def test_radius_acct(dev, apdev):
 
     if int(mib['radiusAccClientRetransmissions']) > 0:
         raise Exception("Unexpected Accounting-Request retransmission")
+
+    as_mib_end = as_hapd.get_mib(param="radius_server")
+
+    req_s = int(as_mib_start['radiusAccServTotalRequests'])
+    req_e = int(as_mib_end['radiusAccServTotalRequests'])
+    if req_e < req_s + 2:
+        raise Exception("Unexpected RADIUS server acct MIB value")
+
+    acc_s = int(as_mib_start['radiusAuthServAccessAccepts'])
+    acc_e = int(as_mib_end['radiusAuthServAccessAccepts'])
+    if acc_e < acc_s + 1:
+        raise Exception("Unexpected RADIUS server auth MIB value")

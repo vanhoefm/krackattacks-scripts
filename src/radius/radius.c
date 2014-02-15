@@ -249,25 +249,17 @@ static struct radius_attr_type *radius_get_attr_type(u8 type)
 }
 
 
-static void print_char(char c)
-{
-	if (c >= 32 && c < 127)
-		printf("%c", c);
-	else
-		printf("<%02x>", c);
-}
-
-
 static void radius_msg_dump_attr(struct radius_attr_hdr *hdr)
 {
 	struct radius_attr_type *attr;
-	int i, len;
+	int len;
 	unsigned char *pos;
+	char buf[1000];
 
 	attr = radius_get_attr_type(hdr->type);
 
-	printf("   Attribute %d (%s) length=%d\n",
-	       hdr->type, attr ? attr->name : "?Unknown?", hdr->length);
+	wpa_printf(MSG_INFO, "   Attribute %d (%s) length=%d",
+		   hdr->type, attr ? attr->name : "?Unknown?", hdr->length);
 
 	if (attr == NULL || hdr->length < sizeof(struct radius_attr_hdr))
 		return;
@@ -277,47 +269,50 @@ static void radius_msg_dump_attr(struct radius_attr_hdr *hdr)
 
 	switch (attr->data_type) {
 	case RADIUS_ATTR_TEXT:
-		printf("      Value: '");
-		for (i = 0; i < len; i++)
-			print_char(pos[i]);
-		printf("'\n");
+		printf_encode(buf, sizeof(buf), pos, len);
+		wpa_printf(MSG_INFO, "      Value: '%s'", buf);
 		break;
 
 	case RADIUS_ATTR_IP:
 		if (len == 4) {
 			struct in_addr addr;
 			os_memcpy(&addr, pos, 4);
-			printf("      Value: %s\n", inet_ntoa(addr));
-		} else
-			printf("      Invalid IP address length %d\n", len);
+			wpa_printf(MSG_INFO, "      Value: %s",
+				   inet_ntoa(addr));
+		} else {
+			wpa_printf(MSG_INFO, "      Invalid IP address length %d",
+				   len);
+		}
 		break;
 
 #ifdef CONFIG_IPV6
 	case RADIUS_ATTR_IPV6:
 		if (len == 16) {
-			char buf[128];
 			const char *atxt;
 			struct in6_addr *addr = (struct in6_addr *) pos;
 			atxt = inet_ntop(AF_INET6, addr, buf, sizeof(buf));
-			printf("      Value: %s\n", atxt ? atxt : "?");
-		} else
-			printf("      Invalid IPv6 address length %d\n", len);
+			wpa_printf(MSG_INFO, "      Value: %s",
+				   atxt ? atxt : "?");
+		} else {
+			wpa_printf(MSG_INFO, "      Invalid IPv6 address length %d",
+				   len);
+		}
 		break;
 #endif /* CONFIG_IPV6 */
 
 	case RADIUS_ATTR_HEXDUMP:
 	case RADIUS_ATTR_UNDIST:
-		printf("      Value:");
-		for (i = 0; i < len; i++)
-			printf(" %02x", pos[i]);
-		printf("\n");
+		wpa_snprintf_hex(buf, sizeof(buf), pos, len);
+		wpa_printf(MSG_INFO, "      Value: %s", buf);
 		break;
 
 	case RADIUS_ATTR_INT32:
 		if (len == 4)
-			printf("      Value: %u\n", WPA_GET_BE32(pos));
+			wpa_printf(MSG_INFO, "      Value: %u",
+				   WPA_GET_BE32(pos));
 		else
-			printf("      Invalid INT32 length %d\n", len);
+			wpa_printf(MSG_INFO, "      Invalid INT32 length %d",
+				   len);
 		break;
 
 	default:
@@ -330,9 +325,9 @@ void radius_msg_dump(struct radius_msg *msg)
 {
 	size_t i;
 
-	printf("RADIUS message: code=%d (%s) identifier=%d length=%d\n",
-	       msg->hdr->code, radius_code_string(msg->hdr->code),
-	       msg->hdr->identifier, be_to_host16(msg->hdr->length));
+	wpa_printf(MSG_INFO, "RADIUS message: code=%d (%s) identifier=%d length=%d",
+		   msg->hdr->code, radius_code_string(msg->hdr->code),
+		   msg->hdr->identifier, be_to_host16(msg->hdr->length));
 
 	for (i = 0; i < msg->attr_used; i++) {
 		struct radius_attr_hdr *attr = radius_get_attr_hdr(msg, i);
@@ -384,7 +379,7 @@ int radius_msg_finish_srv(struct radius_msg *msg, const u8 *secret,
 	attr = radius_msg_add_attr(msg, RADIUS_ATTR_MESSAGE_AUTHENTICATOR,
 				   auth, MD5_MAC_LEN);
 	if (attr == NULL) {
-		printf("WARNING: Could not add Message-Authenticator\n");
+		wpa_printf(MSG_ERROR, "WARNING: Could not add Message-Authenticator");
 		return -1;
 	}
 	msg->hdr->length = host_to_be16(wpabuf_len(msg->buf));
@@ -606,7 +601,7 @@ struct radius_attr_hdr *radius_msg_add_attr(struct radius_msg *msg, u8 type,
 	struct radius_attr_hdr *attr;
 
 	if (data_len > RADIUS_MAX_ATTR_LEN) {
-		printf("radius_msg_add_attr: too long attribute (%lu bytes)\n",
+		wpa_printf(MSG_ERROR, "radius_msg_add_attr: too long attribute (%lu bytes)",
 		       (unsigned long) data_len);
 		return NULL;
 	}
@@ -777,8 +772,7 @@ int radius_msg_verify_msg_auth(struct radius_msg *msg, const u8 *secret,
 		tmp = radius_get_attr_hdr(msg, i);
 		if (tmp->type == RADIUS_ATTR_MESSAGE_AUTHENTICATOR) {
 			if (attr != NULL) {
-				printf("Multiple Message-Authenticator "
-				       "attributes in RADIUS message\n");
+				wpa_printf(MSG_INFO, "Multiple Message-Authenticator attributes in RADIUS message");
 				return 1;
 			}
 			attr = tmp;
@@ -786,7 +780,7 @@ int radius_msg_verify_msg_auth(struct radius_msg *msg, const u8 *secret,
 	}
 
 	if (attr == NULL) {
-		printf("No Message-Authenticator attribute found\n");
+		wpa_printf(MSG_INFO, "No Message-Authenticator attribute found");
 		return 1;
 	}
 
@@ -807,7 +801,7 @@ int radius_msg_verify_msg_auth(struct radius_msg *msg, const u8 *secret,
 	}
 
 	if (os_memcmp(orig, auth, MD5_MAC_LEN) != 0) {
-		printf("Invalid Message-Authenticator!\n");
+		wpa_printf(MSG_INFO, "Invalid Message-Authenticator!");
 		return 1;
 	}
 
@@ -823,7 +817,7 @@ int radius_msg_verify(struct radius_msg *msg, const u8 *secret,
 	u8 hash[MD5_MAC_LEN];
 
 	if (sent_msg == NULL) {
-		printf("No matching Access-Request message found\n");
+		wpa_printf(MSG_INFO, "No matching Access-Request message found");
 		return 1;
 	}
 
@@ -844,7 +838,7 @@ int radius_msg_verify(struct radius_msg *msg, const u8 *secret,
 	len[3] = secret_len;
 	md5_vector(4, addr, len, hash);
 	if (os_memcmp(hash, msg->hdr->authenticator, MD5_MAC_LEN) != 0) {
-		printf("Response Authenticator invalid!\n");
+		wpa_printf(MSG_INFO, "Response Authenticator invalid!");
 		return 1;
 	}
 
@@ -983,7 +977,8 @@ static u8 * decrypt_ms_key(const u8 *key, size_t len,
 	pos = key + 2;
 	left = len - 2;
 	if (left % 16) {
-		printf("Invalid ms key len %lu\n", (unsigned long) left);
+		wpa_printf(MSG_INFO, "Invalid ms key len %lu",
+			   (unsigned long) left);
 		return NULL;
 	}
 
@@ -1017,7 +1012,7 @@ static u8 * decrypt_ms_key(const u8 *key, size_t len,
 	}
 
 	if (plain[0] == 0 || plain[0] > plen - 1) {
-		printf("Failed to decrypt MPPE key\n");
+		wpa_printf(MSG_INFO, "Failed to decrypt MPPE key");
 		os_free(plain);
 		return NULL;
 	}

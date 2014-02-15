@@ -534,16 +534,6 @@ int crypto_bignum_exptmod(const struct crypto_bignum *a,
 			  struct crypto_bignum *d);
 
 /**
- * crypto_bignum_rshift - b = a >> n
- * @a: Bignum
- * @n: Number of bits to shift
- * @b: Bignum; used to store the result of a >> n
- * Returns: 0 on success, -1 on failure
- */
-int crypto_bignum_rshift(const struct crypto_bignum *a, int n,
-			 struct crypto_bignum *b);
-
-/**
  * crypto_bignum_inverse - Inverse a bignum so that a * c = 1 (mod b)
  * @a: Bignum
  * @b: Bignum

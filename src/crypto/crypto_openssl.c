@@ -916,13 +916,6 @@ int crypto_bignum_exptmod(const struct crypto_bignum *a,
 }
 
 
-int crypto_bignum_rshift(const struct crypto_bignum *a, int n,
-			 struct crypto_bignum *b)
-{
-	return BN_rshift((BIGNUM *) b, (const BIGNUM *) a, n) ? 0 : -1;
-}
-
-
 int crypto_bignum_inverse(const struct crypto_bignum *a,
 			  const struct crypto_bignum *b,
 			  struct crypto_bignum *c)

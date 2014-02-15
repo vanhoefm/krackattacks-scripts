@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 #
 # WPA2-Enterprise tests
 # Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
@@ -230,6 +231,19 @@ def test_ap_wpa2_eap_ttls_mschapv2(dev, apdev):
                 anonymous_identity="ttls", password="password1",
                 ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
                 expect_failure=True)
+
+def test_ap_wpa2_eap_ttls_mschapv2_utf8(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TTLS/MSCHAPv2 and UTF-8 password"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    eap_connect(dev[0], apdev[0], "TTLS", "utf8-user-hash",
+                anonymous_identity="ttls", password="secret-åäö-€-password",
+                ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2")
+    eap_connect(dev[1], apdev[0], "TTLS", "utf8-user",
+                anonymous_identity="ttls",
+                password_hex="hash:bd5844fad2489992da7fe8c5a01559cf",
+                ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2")
 
 def test_ap_wpa2_eap_ttls_eap_gtc(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/EAP-GTC"""

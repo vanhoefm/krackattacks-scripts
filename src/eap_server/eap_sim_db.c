@@ -639,6 +639,11 @@ static int eap_sim_db_open_socket(struct eap_sim_db_data *data)
 		    "/tmp/eap_sim_db_%d-%d", getpid(), counter++);
 	os_free(data->local_sock);
 	data->local_sock = os_strdup(addr.sun_path);
+	if (data->local_sock == NULL) {
+		close(data->sock);
+		data->sock = -1;
+		return -1;
+	}
 	if (bind(data->sock, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
 		wpa_printf(MSG_INFO, "bind(eap_sim_db): %s", strerror(errno));
 		close(data->sock);
@@ -657,6 +662,9 @@ static int eap_sim_db_open_socket(struct eap_sim_db_data *data)
 				  os_strlen(addr.sun_path));
 		close(data->sock);
 		data->sock = -1;
+		unlink(data->local_sock);
+		os_free(data->local_sock);
+		data->local_sock = NULL;
 		return -1;
 	}
 

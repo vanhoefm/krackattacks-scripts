@@ -949,3 +949,18 @@ def test_ap_wpa2_eap_ttls_ignore_expired_cert(dev, apdev):
                    ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAP",
                    phase1="tls_disable_time_checks=1",
                    scan_freq="2412")
+
+def test_ap_wpa2_eap_ttls_server_cert_eku_client(dev, apdev):
+    """WPA2-Enterprise using EAP-TTLS and server cert with client EKU"""
+    params = int_eap_server_params()
+    params["server_cert"] = "auth_serv/server-eku-client.pem"
+    params["private_key"] = "auth_serv/server-eku-client.key"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="mschap user", password="password",
+                   ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAP",
+                   wait_connect=False,
+                   scan_freq="2412")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"])
+    if ev is None:
+        raise Exception("Timeout on EAP failure report")

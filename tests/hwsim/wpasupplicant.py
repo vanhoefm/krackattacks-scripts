@@ -591,105 +591,44 @@ class WpaSupplicant:
             raise Exception("Failed to request TDLS teardown")
         return None
 
-    def connect(self, ssid=None, ssid2=None, psk=None, proto=None,
-                key_mgmt=None, wep_key0=None,
-                ieee80211w=None, pairwise=None, group=None, scan_freq=None,
-                eap=None, identity=None, anonymous_identity=None,
-                password=None, phase1=None, phase2=None, ca_cert=None,
-                domain_suffix_match=None, password_hex=None,
-                client_cert=None, private_key=None, peerkey=False, okc=False,
-                eapol_flags=None, fragment_size=None,
-                wait_connect=True, only_add_network=False,
-                ca_cert2=None, client_cert2=None, private_key2=None,
-                scan_ssid=None, raw_psk=None, pac_file=None,
-                subject_match=None, altsubject_match=None,
-                private_key_passwd=None, ocsp=None, auth_alg=None,
-                dh_file=None):
+    def connect(self, ssid=None, ssid2=None, **kwargs):
         logger.info("Connect STA " + self.ifname + " to AP")
         id = self.add_network()
         if ssid:
             self.set_network_quoted(id, "ssid", ssid)
         elif ssid2:
             self.set_network(id, "ssid", ssid2)
-        if psk:
-            self.set_network_quoted(id, "psk", psk)
-        if raw_psk:
-            self.set_network(id, "psk", raw_psk)
-        if proto:
-            self.set_network(id, "proto", proto)
-        if key_mgmt:
-            self.set_network(id, "key_mgmt", key_mgmt)
-        if ieee80211w:
-            self.set_network(id, "ieee80211w", ieee80211w)
-        if pairwise:
-            self.set_network(id, "pairwise", pairwise)
-        if group:
-            self.set_network(id, "group", group)
-        if wep_key0:
-            self.set_network(id, "wep_key0", wep_key0)
-        if scan_freq:
-            self.set_network(id, "scan_freq", scan_freq)
-        if eap:
-            self.set_network(id, "eap", eap)
-        if identity:
-            self.set_network_quoted(id, "identity", identity)
-        if anonymous_identity:
-            self.set_network_quoted(id, "anonymous_identity",
-                                    anonymous_identity)
-        if password:
-            self.set_network_quoted(id, "password", password)
-        if password_hex:
-            self.set_network(id, "password", password_hex)
-        if ca_cert:
-            self.set_network_quoted(id, "ca_cert", ca_cert)
-        if client_cert:
-            self.set_network_quoted(id, "client_cert", client_cert)
-        if private_key:
-            self.set_network_quoted(id, "private_key", private_key)
-        if private_key_passwd:
-            self.set_network_quoted(id, "private_key_passwd",
-                                    private_key_passwd)
-        if ca_cert2:
-            self.set_network_quoted(id, "ca_cert2", ca_cert2)
-        if client_cert2:
-            self.set_network_quoted(id, "client_cert2", client_cert2)
-        if private_key2:
-            self.set_network_quoted(id, "private_key2", private_key2)
-        if phase1:
-            self.set_network_quoted(id, "phase1", phase1)
-        if phase2:
-            self.set_network_quoted(id, "phase2", phase2)
-        if domain_suffix_match:
-            self.set_network_quoted(id, "domain_suffix_match",
-                                    domain_suffix_match)
-        if altsubject_match:
-            self.set_network_quoted(id, "altsubject_match",
-                                    altsubject_match)
-        if subject_match:
-            self.set_network_quoted(id, "subject_match",
-                                    subject_match)
-        if peerkey:
+
+        quoted = [ "psk", "identity", "anonymous_identity", "password",
+                   "ca_cert", "client_cert", "private_key",
+                   "private_key_passwd", "ca_cert2", "client_cert2",
+                   "private_key2", "phase1", "phase2", "domain_suffix_match",
+                   "altsubject_match", "subject_match", "pac_file", "dh_file" ]
+        for field in quoted:
+            if field in kwargs and kwargs[field]:
+                self.set_network_quoted(id, field, kwargs[field])
+
+        not_quoted = [ "proto", "key_mgmt", "ieee80211w", "pairwise",
+                       "group", "wep_key0", "scan_freq", "eap",
+                       "eapol_flags", "fragment_size", "scan_ssid", "auth_alg" ]
+        for field in not_quoted:
+            if field in kwargs and kwargs[field]:
+                self.set_network(id, field, kwargs[field])
+
+        if "raw_psk" in kwargs and kwargs['raw_psk']:
+            self.set_network(id, "psk", kwargs['raw_psk'])
+        if "password_hex" in kwargs and kwargs['password_hex']:
+            self.set_network(id, "password", kwargs['password_hex'])
+        if "peerkey" in kwargs and kwargs['peerkey']:
             self.set_network(id, "peerkey", "1")
-        if okc:
+        if "okc" in kwargs and kwargs['okc']:
             self.set_network(id, "proactive_key_caching", "1")
-        if eapol_flags:
-            self.set_network(id, "eapol_flags", eapol_flags)
-        if fragment_size:
-            self.set_network(id, "fragment_size", fragment_size)
-        if scan_ssid:
-            self.set_network(id, "scan_ssid", scan_ssid)
-        if pac_file:
-            self.set_network_quoted(id, "pac_file", pac_file)
-        if ocsp:
-            self.set_network(id, "ocsp", str(ocsp))
-        if auth_alg:
-            self.set_network(id, "auth_alg", auth_alg)
-        if dh_file:
-            self.set_network_quoted(id, "dh_file", dh_file)
-        if only_add_network:
+        if "ocsp" in kwargs and kwargs['ocsp']:
+            self.set_network(id, "ocsp", str(kwargs['ocsp']))
+        if "only_add_network" in kwargs and kwargs['only_add_network']:
             return id
-        if wait_connect:
-            if eap:
+        if "wait_connect" not in kwargs or kwargs['wait_connect']:
+            if "eap" in kwargs:
                 self.connect_network(id, timeout=20)
             else:
                 self.connect_network(id)

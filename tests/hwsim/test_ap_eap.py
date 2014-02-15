@@ -16,32 +16,14 @@ import os.path
 import hwsim_utils
 import hostapd
 
-def eap_connect(dev, ap, method, identity, anonymous_identity=None,
-                password=None,
-                phase1=None, phase2=None, ca_cert=None,
-                domain_suffix_match=None, password_hex=None,
-                client_cert=None, private_key=None, sha256=False,
-                fragment_size=None, expect_failure=False,
-                local_error_report=False,
-                ca_cert2=None, client_cert2=None, private_key2=None,
-                pac_file=None, subject_match=None, altsubject_match=None,
-                private_key_passwd=None, ocsp=None, dh_file=None):
+def eap_connect(dev, ap, method, identity,
+                sha256=False, expect_failure=False, local_error_report=False,
+                **kwargs):
     hapd = hostapd.Hostapd(ap['ifname'])
     id = dev.connect("test-wpa2-eap", key_mgmt="WPA-EAP WPA-EAP-SHA256",
                      eap=method, identity=identity,
-                     anonymous_identity=anonymous_identity,
-                     password=password, phase1=phase1, phase2=phase2,
-                     ca_cert=ca_cert, domain_suffix_match=domain_suffix_match,
-                     wait_connect=False, scan_freq="2412",
-                     password_hex=password_hex,
-                     client_cert=client_cert, private_key=private_key,
-                     ieee80211w="1", fragment_size=fragment_size,
-                     ca_cert2=ca_cert2, client_cert2=client_cert2,
-                     private_key2=private_key2, pac_file=pac_file,
-                     subject_match=subject_match,
-                     altsubject_match=altsubject_match,
-                     private_key_passwd=private_key_passwd,
-                     ocsp=ocsp, dh_file=dh_file)
+                     wait_connect=False, scan_freq="2412", ieee80211w="1",
+                     **kwargs)
     eap_check_auth(dev, method, True, sha256=sha256,
                    expect_failure=expect_failure,
                    local_error_report=local_error_report)

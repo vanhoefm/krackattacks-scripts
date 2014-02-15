@@ -917,3 +917,35 @@ def test_ap_wpa2_eap_tls_domain_suffix_mismatch_cn(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"])
     if ev is None:
         raise Exception("Timeout on EAP failure report")
+
+def test_ap_wpa2_eap_ttls_expired_cert(dev, apdev):
+    """WPA2-Enterprise using EAP-TTLS and expired certificate"""
+    params = int_eap_server_params()
+    params["server_cert"] = "auth_serv/server-expired.pem"
+    params["private_key"] = "auth_serv/server-expired.key"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="mschap user", password="password",
+                   ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAP",
+                   wait_connect=False,
+                   scan_freq="2412")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-TLS-CERT-ERROR"])
+    if ev is None:
+        raise Exception("Timeout on EAP certificate error report")
+    if "reason=4" not in ev or "certificate has expired" not in ev:
+        raise Exception("Unexpected failure reason: " + ev)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"])
+    if ev is None:
+        raise Exception("Timeout on EAP failure report")
+
+def test_ap_wpa2_eap_ttls_ignore_expired_cert(dev, apdev):
+    """WPA2-Enterprise using EAP-TTLS and ignore certificate expiration"""
+    params = int_eap_server_params()
+    params["server_cert"] = "auth_serv/server-expired.pem"
+    params["private_key"] = "auth_serv/server-expired.key"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="mschap user", password="password",
+                   ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAP",
+                   phase1="tls_disable_time_checks=1",
+                   scan_freq="2412")

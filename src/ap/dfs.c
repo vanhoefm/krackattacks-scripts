@@ -78,6 +78,11 @@ static int dfs_is_chan_allowed(struct hostapd_channel_data *chan, int n_chans)
 	 * 42, 58, 106, 122, 138, 155
 	 */
 	int allowed_80[] = { 36, 52, 100, 116, 132, 149 };
+	/*
+	 * VHT160 valid channels based on center frequency:
+	 * 50, 114
+	 */
+	int allowed_160[] = { 36, 100 };
 	int *allowed = allowed_40;
 	unsigned int i, allowed_no = 0;
 
@@ -89,6 +94,10 @@ static int dfs_is_chan_allowed(struct hostapd_channel_data *chan, int n_chans)
 	case 4:
 		allowed = allowed_80;
 		allowed_no = ARRAY_SIZE(allowed_80);
+		break;
+	case 8:
+		allowed = allowed_160;
+		allowed_no = ARRAY_SIZE(allowed_160);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "Unknown width for %d channels", n_chans);

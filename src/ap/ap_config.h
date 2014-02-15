@@ -311,6 +311,7 @@ struct hostapd_bss_config {
 
 	char *radius_server_clients;
 	int radius_server_auth_port;
+	int radius_server_acct_port;
 	int radius_server_ipv6;
 
 	char *test_socket; /* UNIX domain socket path for driver_test */

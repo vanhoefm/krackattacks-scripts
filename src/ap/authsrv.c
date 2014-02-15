@@ -92,6 +92,7 @@ static int hostapd_setup_radius_srv(struct hostapd_data *hapd)
 	os_memset(&srv, 0, sizeof(srv));
 	srv.client_file = conf->radius_server_clients;
 	srv.auth_port = conf->radius_server_auth_port;
+	srv.acct_port = conf->radius_server_acct_port;
 	srv.conf_ctx = hapd;
 	srv.eap_sim_db_priv = hapd->eap_sim_db_priv;
 	srv.ssl_ctx = hapd->ssl_ctx;

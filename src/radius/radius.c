@@ -1,6 +1,6 @@
 /*
  * RADIUS message processing
- * Copyright (c) 2002-2009, 2011-2012, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2009, 2011-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -460,6 +460,27 @@ void radius_msg_finish_acct(struct radius_msg *msg, const u8 *secret,
 
 	msg->hdr->length = host_to_be16(wpabuf_len(msg->buf));
 	os_memset(msg->hdr->authenticator, 0, MD5_MAC_LEN);
+	addr[0] = wpabuf_head(msg->buf);
+	len[0] = wpabuf_len(msg->buf);
+	addr[1] = secret;
+	len[1] = secret_len;
+	md5_vector(2, addr, len, msg->hdr->authenticator);
+
+	if (wpabuf_len(msg->buf) > 0xffff) {
+		wpa_printf(MSG_WARNING, "RADIUS: Too long messages (%lu)",
+			   (unsigned long) wpabuf_len(msg->buf));
+	}
+}
+
+
+void radius_msg_finish_acct_resp(struct radius_msg *msg, const u8 *secret,
+				 size_t secret_len, const u8 *req_authenticator)
+{
+	const u8 *addr[2];
+	size_t len[2];
+
+	msg->hdr->length = host_to_be16(wpabuf_len(msg->buf));
+	os_memcpy(msg->hdr->authenticator, req_authenticator, MD5_MAC_LEN);
 	addr[0] = wpabuf_head(msg->buf);
 	len[0] = wpabuf_len(msg->buf);
 	addr[1] = secret;

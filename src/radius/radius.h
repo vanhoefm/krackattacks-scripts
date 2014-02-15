@@ -1,6 +1,6 @@
 /*
  * RADIUS message processing
- * Copyright (c) 2002-2009, 2012, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2009, 2012, 2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -204,6 +204,9 @@ int radius_msg_finish_das_resp(struct radius_msg *msg, const u8 *secret,
 			       const struct radius_hdr *req_hdr);
 void radius_msg_finish_acct(struct radius_msg *msg, const u8 *secret,
 			    size_t secret_len);
+void radius_msg_finish_acct_resp(struct radius_msg *msg, const u8 *secret,
+				 size_t secret_len,
+				 const u8 *req_authenticator);
 int radius_msg_verify_acct_req(struct radius_msg *msg, const u8 *secret,
 			       size_t secret_len);
 int radius_msg_verify_das_req(struct radius_msg *msg, const u8 *secret,

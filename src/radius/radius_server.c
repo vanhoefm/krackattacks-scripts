@@ -1,6 +1,6 @@
 /*
  * RADIUS authentication server
- * Copyright (c) 2005-2009, 2011, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2005-2009, 2011-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -49,6 +49,13 @@ struct radius_server_counters {
 	u32 bad_authenticators;
 	u32 packets_dropped;
 	u32 unknown_types;
+
+	u32 acct_requests;
+	u32 invalid_acct_requests;
+	u32 acct_responses;
+	u32 malformed_acct_requests;
+	u32 acct_bad_authenticators;
+	u32 unknown_acct_types;
 };
 
 /**
@@ -97,6 +104,11 @@ struct radius_server_data {
 	 * auth_sock - Socket for RADIUS authentication messages
 	 */
 	int auth_sock;
+
+	/**
+	 * acct_sock - Socket for RADIUS accounting messages
+	 */
+	int acct_sock;
 
 	/**
 	 * clients - List of authorized RADIUS clients
@@ -979,6 +991,140 @@ fail:
 }
 
 
+static void radius_server_receive_acct(int sock, void *eloop_ctx,
+				       void *sock_ctx)
+{
+	struct radius_server_data *data = eloop_ctx;
+	u8 *buf = NULL;
+	union {
+		struct sockaddr_storage ss;
+		struct sockaddr_in sin;
+#ifdef CONFIG_IPV6
+		struct sockaddr_in6 sin6;
+#endif /* CONFIG_IPV6 */
+	} from;
+	socklen_t fromlen;
+	int len, res;
+	struct radius_client *client = NULL;
+	struct radius_msg *msg = NULL, *resp = NULL;
+	char abuf[50];
+	int from_port = 0;
+	struct radius_hdr *hdr;
+	struct wpabuf *rbuf;
+
+	buf = os_malloc(RADIUS_MAX_MSG_LEN);
+	if (buf == NULL) {
+		goto fail;
+	}
+
+	fromlen = sizeof(from);
+	len = recvfrom(sock, buf, RADIUS_MAX_MSG_LEN, 0,
+		       (struct sockaddr *) &from.ss, &fromlen);
+	if (len < 0) {
+		wpa_printf(MSG_INFO, "recvfrom[radius_server]: %s",
+			   strerror(errno));
+		goto fail;
+	}
+
+#ifdef CONFIG_IPV6
+	if (data->ipv6) {
+		if (inet_ntop(AF_INET6, &from.sin6.sin6_addr, abuf,
+			      sizeof(abuf)) == NULL)
+			abuf[0] = '\0';
+		from_port = ntohs(from.sin6.sin6_port);
+		RADIUS_DEBUG("Received %d bytes from %s:%d",
+			     len, abuf, from_port);
+
+		client = radius_server_get_client(data,
+						  (struct in_addr *)
+						  &from.sin6.sin6_addr, 1);
+	}
+#endif /* CONFIG_IPV6 */
+
+	if (!data->ipv6) {
+		os_strlcpy(abuf, inet_ntoa(from.sin.sin_addr), sizeof(abuf));
+		from_port = ntohs(from.sin.sin_port);
+		RADIUS_DEBUG("Received %d bytes from %s:%d",
+			     len, abuf, from_port);
+
+		client = radius_server_get_client(data, &from.sin.sin_addr, 0);
+	}
+
+	RADIUS_DUMP("Received data", buf, len);
+
+	if (client == NULL) {
+		RADIUS_DEBUG("Unknown client %s - packet ignored", abuf);
+		data->counters.invalid_acct_requests++;
+		goto fail;
+	}
+
+	msg = radius_msg_parse(buf, len);
+	if (msg == NULL) {
+		RADIUS_DEBUG("Parsing incoming RADIUS frame failed");
+		data->counters.malformed_acct_requests++;
+		client->counters.malformed_acct_requests++;
+		goto fail;
+	}
+
+	os_free(buf);
+	buf = NULL;
+
+	if (wpa_debug_level <= MSG_MSGDUMP) {
+		radius_msg_dump(msg);
+	}
+
+	if (radius_msg_get_hdr(msg)->code != RADIUS_CODE_ACCOUNTING_REQUEST) {
+		RADIUS_DEBUG("Unexpected RADIUS code %d",
+			     radius_msg_get_hdr(msg)->code);
+		data->counters.unknown_acct_types++;
+		client->counters.unknown_acct_types++;
+		goto fail;
+	}
+
+	data->counters.acct_requests++;
+	client->counters.acct_requests++;
+
+	if (radius_msg_verify_acct_req(msg, (u8 *) client->shared_secret,
+				       client->shared_secret_len)) {
+		RADIUS_DEBUG("Invalid Authenticator from %s", abuf);
+		data->counters.acct_bad_authenticators++;
+		client->counters.acct_bad_authenticators++;
+		goto fail;
+	}
+
+	/* TODO: Write accounting information to a file or database */
+
+	hdr = radius_msg_get_hdr(msg);
+
+	resp = radius_msg_new(RADIUS_CODE_ACCOUNTING_RESPONSE, hdr->identifier);
+	if (resp == NULL)
+		goto fail;
+
+	radius_msg_finish_acct_resp(resp, (u8 *) client->shared_secret,
+				    client->shared_secret_len,
+				    hdr->authenticator);
+
+	RADIUS_DEBUG("Reply to %s:%d", abuf, from_port);
+	if (wpa_debug_level <= MSG_MSGDUMP) {
+		radius_msg_dump(resp);
+	}
+	rbuf = radius_msg_get_buf(resp);
+	data->counters.acct_responses++;
+	client->counters.acct_responses++;
+	res = sendto(data->acct_sock, wpabuf_head(rbuf), wpabuf_len(rbuf), 0,
+		     (struct sockaddr *) &from.ss, fromlen);
+	if (res < 0) {
+		wpa_printf(MSG_INFO, "sendto[RADIUS SRV]: %s",
+			   strerror(errno));
+	}
+
+fail:
+	radius_msg_free(resp);
+	radius_msg_free(msg);
+	os_free(buf);
+}
+
+
 static int radius_server_disable_pmtu_discovery(int s)
 {
 	int r = -1;
@@ -1329,6 +1475,29 @@ radius_server_init(struct radius_server_conf *conf)
 		return NULL;
 	}
 
+	if (conf->acct_port) {
+#ifdef CONFIG_IPV6
+		if (conf->ipv6)
+			data->acct_sock = radius_server_open_socket6(
+				conf->acct_port);
+		else
+#endif /* CONFIG_IPV6 */
+		data->acct_sock = radius_server_open_socket(conf->acct_port);
+		if (data->acct_sock < 0) {
+			wpa_printf(MSG_ERROR, "Failed to open UDP socket for RADIUS accounting server");
+			radius_server_deinit(data);
+			return NULL;
+		}
+		if (eloop_register_read_sock(data->acct_sock,
+					     radius_server_receive_acct,
+					     data, NULL)) {
+			radius_server_deinit(data);
+			return NULL;
+		}
+	} else {
+		data->acct_sock = -1;
+	}
+
 	return data;
 }
 
@@ -1345,6 +1514,11 @@ void radius_server_deinit(struct radius_server_data *data)
 	if (data->auth_sock >= 0) {
 		eloop_unregister_read_sock(data->auth_sock);
 		close(data->auth_sock);
+	}
+
+	if (data->acct_sock >= 0) {
+		eloop_unregister_read_sock(data->acct_sock);
+		close(data->acct_sock);
 	}
 
 	radius_server_free_clients(data, data->clients);
@@ -1410,7 +1584,13 @@ int radius_server_get_mib(struct radius_server_data *data, char *buf,
 			  "radiusAuthServTotalMalformedAccessRequests=%u\n"
 			  "radiusAuthServTotalBadAuthenticators=%u\n"
 			  "radiusAuthServTotalPacketsDropped=%u\n"
-			  "radiusAuthServTotalUnknownTypes=%u\n",
+			  "radiusAuthServTotalUnknownTypes=%u\n"
+			  "radiusAccServTotalRequests=%u\n"
+			  "radiusAccServTotalInvalidRequests=%u\n"
+			  "radiusAccServTotalResponses=%u\n"
+			  "radiusAccServTotalMalformedRequests=%u\n"
+			  "radiusAccServTotalBadAuthenticators=%u\n"
+			  "radiusAccServTotalUnknownTypes=%u\n",
 			  data->counters.access_requests,
 			  data->counters.invalid_requests,
 			  data->counters.dup_access_requests,
@@ -1420,7 +1600,13 @@ int radius_server_get_mib(struct radius_server_data *data, char *buf,
 			  data->counters.malformed_access_requests,
 			  data->counters.bad_authenticators,
 			  data->counters.packets_dropped,
-			  data->counters.unknown_types);
+			  data->counters.unknown_types,
+			  data->counters.acct_requests,
+			  data->counters.invalid_acct_requests,
+			  data->counters.acct_responses,
+			  data->counters.malformed_acct_requests,
+			  data->counters.acct_bad_authenticators,
+			  data->counters.unknown_acct_types);
 	if (ret < 0 || ret >= end - pos) {
 		*pos = '\0';
 		return pos - buf;
@@ -1455,7 +1641,13 @@ int radius_server_get_mib(struct radius_server_data *data, char *buf,
 				  "radiusAuthServMalformedAccessRequests=%u\n"
 				  "radiusAuthServBadAuthenticators=%u\n"
 				  "radiusAuthServPacketsDropped=%u\n"
-				  "radiusAuthServUnknownTypes=%u\n",
+				  "radiusAuthServUnknownTypes=%u\n"
+				  "radiusAccServTotalRequests=%u\n"
+				  "radiusAccServTotalInvalidRequests=%u\n"
+				  "radiusAccServTotalResponses=%u\n"
+				  "radiusAccServTotalMalformedRequests=%u\n"
+				  "radiusAccServTotalBadAuthenticators=%u\n"
+				  "radiusAccServTotalUnknownTypes=%u\n",
 				  idx,
 				  abuf, mbuf,
 				  cli->counters.access_requests,
@@ -1466,7 +1658,13 @@ int radius_server_get_mib(struct radius_server_data *data, char *buf,
 				  cli->counters.malformed_access_requests,
 				  cli->counters.bad_authenticators,
 				  cli->counters.packets_dropped,
-				  cli->counters.unknown_types);
+				  cli->counters.unknown_types,
+				  cli->counters.acct_requests,
+				  cli->counters.invalid_acct_requests,
+				  cli->counters.acct_responses,
+				  cli->counters.malformed_acct_requests,
+				  cli->counters.acct_bad_authenticators,
+				  cli->counters.unknown_acct_types);
 		if (ret < 0 || ret >= end - pos) {
 			*pos = '\0';
 			return pos - buf;

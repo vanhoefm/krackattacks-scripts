@@ -1,6 +1,6 @@
 /*
  * hostapd / Configuration file parser
- * Copyright (c) 2003-2013, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -2188,6 +2188,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			bss->radius_server_clients = os_strdup(pos);
 		} else if (os_strcmp(buf, "radius_server_auth_port") == 0) {
 			bss->radius_server_auth_port = atoi(pos);
+		} else if (os_strcmp(buf, "radius_server_acct_port") == 0) {
+			bss->radius_server_acct_port = atoi(pos);
 		} else if (os_strcmp(buf, "radius_server_ipv6") == 0) {
 			bss->radius_server_ipv6 = atoi(pos);
 #endif /* RADIUS_SERVER */

@@ -307,3 +307,46 @@ def test_radius_das_disconnect(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"])
     if ev is None:
         raise Exception("Timeout while waiting for re-connection")
+
+def test_radius_das_coa(dev, apdev):
+    """RADIUS Dynamic Authorization Extensions - CoA"""
+    try:
+        import pyrad.client
+        import pyrad.packet
+        import pyrad.dictionary
+        import radius_das
+    except ImportError:
+        return "skip"
+
+    params = hostapd.wpa2_eap_params(ssid="radius-das")
+    params['radius_das_port'] = "3799"
+    params['radius_das_client'] = "127.0.0.1 secret"
+    params['radius_das_require_event_timestamp'] = "1"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    connect(dev[0], "radius-das")
+    addr = dev[0].p2p_interface_addr()
+    sta = hapd.get_sta(addr)
+    id = sta['dot1xAuthSessionId']
+
+    dict = pyrad.dictionary.Dictionary("dictionary.radius")
+
+    srv = pyrad.client.Client(server="127.0.0.1", acctport=3799,
+                              secret="secret", dict=dict)
+    srv.retries = 1
+    srv.timeout = 1
+
+    # hostapd does not currently support CoA-Request, so NAK is expected
+    logger.info("CoA-Request with matching Acct-Session-Id")
+    req = radius_das.CoAPacket(dict=dict, secret="secret",
+                               Acct_Session_Id=id,
+                               Event_Timestamp=int(time.time()))
+    reply = srv.SendPacket(req)
+    logger.debug("RADIUS response from hostapd")
+    for i in reply.keys():
+        logger.debug("%s: %s" % (i, reply[i]))
+    if reply.code != pyrad.packet.CoANAK:
+        raise Exception("Unexpected response code")
+    if 'Error-Cause' not in reply:
+        raise Exception("Missing Error-Cause")
+    if reply['Error-Cause'][0] != 405:
+        raise Exception("Unexpected Error-Cause: {}".format(reply['Error-Cause']))

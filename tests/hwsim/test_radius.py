@@ -56,3 +56,26 @@ def test_radius_acct_unreachable(dev, apdev):
         raise Exception("Missing RADIUS Accounting retransmissions")
     if int(mib["radiusAccClientPendingRequests"]) < 2:
         raise Exception("Missing pending RADIUS Accounting requests")
+
+def test_radius_acct(dev, apdev):
+    """RADIUS Accounting"""
+    params = hostapd.wpa2_eap_params(ssid="radius-acct")
+    params['acct_server_addr'] = "127.0.0.1"
+    params['acct_server_port'] = "1813"
+    params['acct_server_shared_secret'] = "radius"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    connect(dev[0], "radius-acct")
+    logger.info("Checking for RADIUS counters")
+    count = 0
+    while True:
+        mib = hapd.get_mib()
+        if int(mib['radiusAccClientResponses']) >= 2:
+            break
+        time.sleep(0.1)
+        count += 1
+        if count > 10:
+            raise Exception("Did not receive Accounting-Response packets")
+
+    if int(mib['radiusAccClientRetransmissions']) > 0:
+        raise Exception("Unexpected Accounting-Request retransmission")

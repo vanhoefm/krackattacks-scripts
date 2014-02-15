@@ -2410,14 +2410,6 @@ struct wpabuf * wpas_wps_nfc_handover_sel(struct wpa_supplicant *wpa_s,
 }
 
 
-int wpas_wps_nfc_rx_handover_req(struct wpa_supplicant *wpa_s,
-				 const struct wpabuf *data)
-{
-	/* TODO */
-	return -1;
-}
-
-
 int wpas_wps_nfc_rx_handover_sel(struct wpa_supplicant *wpa_s,
 				 const struct wpabuf *data)
 {

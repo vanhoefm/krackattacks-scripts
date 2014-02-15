@@ -836,32 +836,6 @@ static int wpa_cli_cmd_nfc_get_handover_sel(struct wpa_ctrl *ctrl, int argc,
 }
 
 
-static int wpa_cli_cmd_nfc_rx_handover_req(struct wpa_ctrl *ctrl, int argc,
-					   char *argv[])
-{
-	int ret;
-	char *buf;
-	size_t buflen;
-
-	if (argc != 1) {
-		printf("Invalid 'nfc_rx_handover_req' command - one argument "
-		       "is required.\n");
-		return -1;
-	}
-
-	buflen = 21 + os_strlen(argv[0]);
-	buf = os_malloc(buflen);
-	if (buf == NULL)
-		return -1;
-	os_snprintf(buf, buflen, "NFC_RX_HANDOVER_REQ %s", argv[0]);
-
-	ret = wpa_ctrl_command(ctrl, buf);
-	os_free(buf);
-
-	return ret;
-}
-
-
 static int wpa_cli_cmd_nfc_rx_handover_sel(struct wpa_ctrl *ctrl, int argc,
 					   char *argv[])
 {
@@ -2667,9 +2641,6 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "nfc_get_handover_sel", wpa_cli_cmd_nfc_get_handover_sel, NULL,
 	  cli_cmd_flag_none,
 	  "<NDEF> <WPS> = create NFC handover select" },
-	{ "nfc_rx_handover_req", wpa_cli_cmd_nfc_rx_handover_req, NULL,
-	  cli_cmd_flag_none,
-	  "<hexdump of payload> = report received NFC handover request" },
 	{ "nfc_rx_handover_sel", wpa_cli_cmd_nfc_rx_handover_sel, NULL,
 	  cli_cmd_flag_none,
 	  "<hexdump of payload> = report received NFC handover select" },

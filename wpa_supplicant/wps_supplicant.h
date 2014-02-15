@@ -75,8 +75,6 @@ struct wpabuf * wpas_wps_nfc_handover_req(struct wpa_supplicant *wpa_s,
 					  int ndef);
 struct wpabuf * wpas_wps_nfc_handover_sel(struct wpa_supplicant *wpa_s,
 					  int ndef, int cr, const char *uuid);
-int wpas_wps_nfc_rx_handover_req(struct wpa_supplicant *wpa_s,
-				 const struct wpabuf *data);
 int wpas_wps_nfc_rx_handover_sel(struct wpa_supplicant *wpa_s,
 				 const struct wpabuf *data);
 int wpas_wps_nfc_report_handover(struct wpa_supplicant *wpa_s,

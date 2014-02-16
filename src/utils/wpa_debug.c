@@ -596,9 +596,13 @@ void wpa_msg(void *ctx, int level, const char *fmt, ...)
 {
 	va_list ap;
 	char *buf;
-	const int buflen = 2048;
+	int buflen;
 	int len;
 	char prefix[130];
+
+	va_start(ap, fmt);
+	buflen = vsnprintf(NULL, 0, fmt, ap) + 1;
+	va_end(ap);
 
 	buf = os_malloc(buflen);
 	if (buf == NULL) {
@@ -630,11 +634,15 @@ void wpa_msg_ctrl(void *ctx, int level, const char *fmt, ...)
 {
 	va_list ap;
 	char *buf;
-	const int buflen = 2048;
+	int buflen;
 	int len;
 
 	if (!wpa_msg_cb)
 		return;
+
+	va_start(ap, fmt);
+	buflen = vsnprintf(NULL, 0, fmt, ap) + 1;
+	va_end(ap);
 
 	buf = os_malloc(buflen);
 	if (buf == NULL) {
@@ -654,8 +662,12 @@ void wpa_msg_global(void *ctx, int level, const char *fmt, ...)
 {
 	va_list ap;
 	char *buf;
-	const int buflen = 2048;
+	int buflen;
 	int len;
+
+	va_start(ap, fmt);
+	buflen = vsnprintf(NULL, 0, fmt, ap) + 1;
+	va_end(ap);
 
 	buf = os_malloc(buflen);
 	if (buf == NULL) {
@@ -677,8 +689,12 @@ void wpa_msg_no_global(void *ctx, int level, const char *fmt, ...)
 {
 	va_list ap;
 	char *buf;
-	const int buflen = 2048;
+	int buflen;
 	int len;
+
+	va_start(ap, fmt);
+	buflen = vsnprintf(NULL, 0, fmt, ap) + 1;
+	va_end(ap);
 
 	buf = os_malloc(buflen);
 	if (buf == NULL) {
@@ -712,8 +728,12 @@ void hostapd_logger(void *ctx, const u8 *addr, unsigned int module, int level,
 {
 	va_list ap;
 	char *buf;
-	const int buflen = 2048;
+	int buflen;
 	int len;
+
+	va_start(ap, fmt);
+	buflen = vsnprintf(NULL, 0, fmt, ap) + 1;
+	va_end(ap);
 
 	buf = os_malloc(buflen);
 	if (buf == NULL) {

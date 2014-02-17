@@ -129,7 +129,7 @@ def test_discovery_dev_type(dev):
     if ev:
         raise Exception("Unexpected P2P device found")
     dev[0].p2p_find(social=True, dev_type="1-0050F204-2")
-    ev = dev[0].wait_event(['P2P-DEVICE-FOUND'], timeout=1)
+    ev = dev[0].wait_event(['P2P-DEVICE-FOUND'], timeout=2)
     if ev is None:
         raise Exception("P2P device not found")
 
@@ -147,7 +147,7 @@ def test_discovery_dev_type_go(dev):
     if ev:
         raise Exception("Unexpected P2P device found")
     dev[2].p2p_find(social=True, dev_type="1-0050F204-2")
-    ev = dev[2].wait_event(['P2P-DEVICE-FOUND ' + addr1], timeout=1)
+    ev = dev[2].wait_event(['P2P-DEVICE-FOUND ' + addr1], timeout=2)
     if ev is None:
         raise Exception("P2P device not found")
 
@@ -160,7 +160,7 @@ def test_discovery_dev_id(dev):
     if ev:
         raise Exception("Unexpected P2P device found")
     dev[0].p2p_find(social=True, dev_id=addr1)
-    ev = dev[0].wait_event(['P2P-DEVICE-FOUND'], timeout=1)
+    ev = dev[0].wait_event(['P2P-DEVICE-FOUND'], timeout=2)
     if ev is None:
         raise Exception("P2P device not found")
 
@@ -177,6 +177,6 @@ def test_discovery_dev_id_go(dev):
     if ev:
         raise Exception("Unexpected P2P device found")
     dev[2].p2p_find(social=True, dev_id=addr1)
-    ev = dev[2].wait_event(['P2P-DEVICE-FOUND ' + addr1], timeout=1)
+    ev = dev[2].wait_event(['P2P-DEVICE-FOUND ' + addr1], timeout=2)
     if ev is None:
         raise Exception("P2P device not found")

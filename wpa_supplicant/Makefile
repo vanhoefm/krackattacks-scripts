@@ -106,7 +106,7 @@ OBJS_priv += ../src/utils/trace.o
 LDFLAGS += -rdynamic
 CFLAGS += -funwind-tables
 ifdef CONFIG_WPA_TRACE_BFD
-CFLAGS += -DWPA_TRACE_BFD
+CFLAGS += -DPACKAGE="wpa_supplicant" -DWPA_TRACE_BFD
 LIBS += -lbfd
 LIBS_p += -lbfd
 LIBS_c += -lbfd

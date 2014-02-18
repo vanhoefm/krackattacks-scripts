@@ -2182,7 +2182,12 @@ static void wpa_supplicant_event_disassoc_finish(struct wpa_supplicant *wpa_s,
 		wpa_s->current_ssid = last_ssid;
 	}
 
-	if (fast_reconnect) {
+	if (fast_reconnect &&
+	    !wpas_network_disabled(wpa_s, fast_reconnect_ssid) &&
+	    !disallowed_bssid(wpa_s, fast_reconnect->bssid) &&
+	    !disallowed_ssid(wpa_s, fast_reconnect->ssid,
+			     fast_reconnect->ssid_len) &&
+	    !wpas_temp_disabled(wpa_s, fast_reconnect_ssid)) {
 #ifndef CONFIG_NO_SCAN_PROCESSING
 		wpa_dbg(wpa_s, MSG_DEBUG, "Try to reconnect to the same BSS");
 		if (wpa_supplicant_connect(wpa_s, fast_reconnect,
@@ -2191,6 +2196,14 @@ static void wpa_supplicant_event_disassoc_finish(struct wpa_supplicant *wpa_s,
 			wpa_supplicant_req_scan(wpa_s, 0, 100000);
 		}
 #endif /* CONFIG_NO_SCAN_PROCESSING */
+	} else if (fast_reconnect) {
+		/*
+		 * Could not reconnect to the same BSS due to network being
+		 * disabled. Use a new scan to match the alternative behavior
+		 * above, i.e., to continue automatic reconnection attempt in a
+		 * way that enforces disabled network rules.
+		 */
+		wpa_supplicant_req_scan(wpa_s, 0, 100000);
 	}
 }
 

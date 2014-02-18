@@ -1019,3 +1019,51 @@ def test_ap_hs20_multi_cred_sp_prio2(dev, apdev):
     conn_bssid = dev[0].get_status_field("bssid")
     if conn_bssid != bssid2:
         raise Exception("Connected to incorrect BSS")
+
+def test_ap_hs20_deauth_req_ess(dev, apdev):
+    """Hotspot 2.0 connection and deauthentication request for ESS"""
+    dev[0].request("SET pmf 2")
+    eap_test(dev[0], apdev[0], "21[3:26]", "TTLS", "user")
+    dev[0].dump_monitor()
+    addr = dev[0].p2p_interface_addr()
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd.request("HS20_DEAUTH_REQ " + addr + " 1 120 http://example.com/")
+    ev = dev[0].wait_event(["HS20-DEAUTH-IMMINENT-NOTICE"])
+    if ev is None:
+        raise Exception("Timeout on deauth imminent notice")
+    if "1 120 http://example.com/" not in ev:
+        raise Exception("Unexpected deauth imminent notice: " + ev)
+    hapd.request("DEAUTHENTICATE " + addr)
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"])
+    if ev is None:
+        raise Exception("Timeout on disconnection")
+    ev = dev[0].wait_event(["SME: Trying to authenticate",
+                            "Trying to associate",
+                            "CTRL-EVENT-CONNECTED"], timeout=5)
+    if ev is not None:
+        raise Exception("Unexpected connection attempt")
+
+def test_ap_hs20_deauth_req_bss(dev, apdev):
+    """Hotspot 2.0 connection and deauthentication request for BSS"""
+    dev[0].request("SET pmf 2")
+    eap_test(dev[0], apdev[0], "21[3:26]", "TTLS", "user")
+    dev[0].dump_monitor()
+    addr = dev[0].p2p_interface_addr()
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd.request("HS20_DEAUTH_REQ " + addr + " 0 120 http://example.com/")
+    ev = dev[0].wait_event(["HS20-DEAUTH-IMMINENT-NOTICE"])
+    if ev is None:
+        raise Exception("Timeout on deauth imminent notice")
+    if "0 120 http://example.com/" not in ev:
+        raise Exception("Unexpected deauth imminent notice: " + ev)
+    hapd.request("DEAUTHENTICATE " + addr + " reason=4")
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"])
+    if ev is None:
+        raise Exception("Timeout on disconnection")
+    if "reason=4" not in ev:
+        raise Exception("Unexpected disconnection reason")
+    ev = dev[0].wait_event(["SME: Trying to authenticate",
+                            "Trying to associate",
+                            "CTRL-EVENT-CONNECTED"], timeout=5)
+    if ev is not None:
+        raise Exception("Unexpected connection attempt")

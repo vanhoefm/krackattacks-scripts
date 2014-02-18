@@ -983,7 +983,37 @@ static int hostapd_ctrl_iface_set(struct hostapd_data *hapd, char *cmd)
 		hapd->ext_mgmt_frame_handling = atoi(value);
 #endif /* CONFIG_TESTING_OPTIONS */
 	} else {
+		struct sta_info *sta;
+		int vlan_id;
+
 		ret = hostapd_set_iface(hapd->iconf, hapd->conf, cmd, value);
+		if (ret)
+			return ret;
+
+		if (os_strcasecmp(cmd, "deny_mac_file") == 0) {
+			for (sta = hapd->sta_list; sta; sta = sta->next) {
+				if (hostapd_maclist_found(
+					    hapd->conf->deny_mac,
+					    hapd->conf->num_deny_mac, sta->addr,
+					    &vlan_id) &&
+				    (!vlan_id || vlan_id == sta->vlan_id))
+					ap_sta_deauthenticate(
+						hapd, sta,
+						WLAN_REASON_UNSPECIFIED);
+			}
+		} else if (hapd->conf->macaddr_acl == DENY_UNLESS_ACCEPTED &&
+			   os_strcasecmp(cmd, "accept_mac_file") == 0) {
+			for (sta = hapd->sta_list; sta; sta = sta->next) {
+				if (!hostapd_maclist_found(
+					    hapd->conf->accept_mac,
+					    hapd->conf->num_accept_mac,
+					    sta->addr, &vlan_id) ||
+				    (vlan_id && vlan_id != sta->vlan_id))
+					ap_sta_deauthenticate(
+						hapd, sta,
+						WLAN_REASON_UNSPECIFIED);
+			}
+		}
 	}
 
 	return ret;

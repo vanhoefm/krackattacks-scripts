@@ -78,9 +78,9 @@ LDFLAGS += -rdynamic
 CFLAGS += -funwind-tables
 ifdef CONFIG_WPA_TRACE_BFD
 CFLAGS += -DPACKAGE="hostapd" -DWPA_TRACE_BFD
-LIBS += -lbfd
-LIBS_c += -lbfd
-LIBS_h += -lbfd
+LIBS += -lbfd -ldl -liberty -lz
+LIBS_c += -lbfd -ldl -liberty -lz
+LIBS_h += -lbfd -ldl -liberty -lz
 endif
 endif
 

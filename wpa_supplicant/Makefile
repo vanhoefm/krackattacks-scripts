@@ -107,9 +107,9 @@ LDFLAGS += -rdynamic
 CFLAGS += -funwind-tables
 ifdef CONFIG_WPA_TRACE_BFD
 CFLAGS += -DPACKAGE="wpa_supplicant" -DWPA_TRACE_BFD
-LIBS += -lbfd
-LIBS_p += -lbfd
-LIBS_c += -lbfd
+LIBS += -lbfd -ldl -liberty -lz
+LIBS_p += -lbfd -ldl -liberty -lz
+LIBS_c += -lbfd -ldl -liberty -lz
 endif
 endif
 

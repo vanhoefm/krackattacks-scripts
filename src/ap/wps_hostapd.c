@@ -1479,6 +1479,16 @@ static int hostapd_rx_req_put_wlan_response(
 		return 0;
 	}
 
+	if (!sta->eapol_sm) {
+		/*
+		 * This can happen, e.g., if an ER sends an extra message after
+		 * the station has disassociated (but not fully
+		 * deauthenticated).
+		 */
+		wpa_printf(MSG_DEBUG, "WPS UPnP: Matching STA did not have EAPOL state machine initialized");
+		return 0;
+	}
+
 	p = os_zalloc(sizeof(*p));
 	if (p == NULL)
 		return -1;

@@ -18,6 +18,13 @@ enum radius_das_res {
 };
 
 struct radius_das_attrs {
+	/* NAS identification attributes */
+	const u8 *nas_ip_addr;
+	const u8 *nas_identifier;
+	size_t nas_identifier_len;
+	const u8 *nas_ipv6_addr;
+
+	/* Session identification attributes */
 	const u8 *sta_addr;
 	const u8 *user_name;
 	size_t user_name_len;

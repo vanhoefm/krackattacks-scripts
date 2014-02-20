@@ -529,7 +529,34 @@ static int mac_in_conf(struct hostapd_config *conf, const void *a)
 static int hostapd_das_nas_mismatch(struct hostapd_data *hapd,
 				    struct radius_das_attrs *attr)
 {
-	/* TODO */
+	if (attr->nas_identifier &&
+	    (!hapd->conf->nas_identifier ||
+	     os_strlen(hapd->conf->nas_identifier) !=
+	     attr->nas_identifier_len ||
+	     os_memcmp(hapd->conf->nas_identifier, attr->nas_identifier,
+		       attr->nas_identifier_len) != 0)) {
+		wpa_printf(MSG_DEBUG, "RADIUS DAS: NAS-Identifier mismatch");
+		return 1;
+	}
+
+	if (attr->nas_ip_addr &&
+	    (hapd->conf->own_ip_addr.af != AF_INET ||
+	     os_memcmp(&hapd->conf->own_ip_addr.u.v4, attr->nas_ip_addr, 4) !=
+	     0)) {
+		wpa_printf(MSG_DEBUG, "RADIUS DAS: NAS-IP-Address mismatch");
+		return 1;
+	}
+
+#ifdef CONFIG_IPV6
+	if (attr->nas_ipv6_addr &&
+	    (hapd->conf->own_ip_addr.af != AF_INET6 ||
+	     os_memcmp(&hapd->conf->own_ip_addr.u.v6, attr->nas_ipv6_addr, 16)
+	     != 0)) {
+		wpa_printf(MSG_DEBUG, "RADIUS DAS: NAS-IPv6-Address mismatch");
+		return 1;
+	}
+#endif /* CONFIG_IPV6 */
+
 	return 0;
 }
 

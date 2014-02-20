@@ -1971,7 +1971,8 @@ p2p_reply_probe(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 
 	if (!p2p->in_listen || !p2p->drv_in_listen) {
 		/* not in Listen state - ignore Probe Request */
-		p2p_dbg(p2p, "Not in Listen state - ignore Probe Request");
+		p2p_dbg(p2p, "Not in Listen state (in_listen=%d drv_in_listen=%d) - ignore Probe Request",
+			p2p->in_listen, p2p->drv_in_listen);
 		return P2P_PREQ_NOT_LISTEN;
 	}
 

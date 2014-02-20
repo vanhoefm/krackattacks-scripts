@@ -285,9 +285,14 @@ def test_radius_das_disconnect(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"])
     if ev is None:
         raise Exception("Timeout while waiting for disconnection")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"])
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED", "CTRL-EVENT-CONNECTED"])
     if ev is None:
         raise Exception("Timeout while waiting for re-connection")
+    if "CTRL-EVENT-EAP-STARTED" not in ev:
+        raise Exception("Unexpected skipping of EAP authentication in reconnection")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"])
+    if ev is None:
+        raise Exception("Timeout while waiting for re-connection to complete")
 
     logger.info("Disconnect-Request with matching Calling-Station-Id and non-matching CUI")
     req = radius_das.DisconnectPacket(dict=dict, secret="secret",

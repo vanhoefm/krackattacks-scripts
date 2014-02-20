@@ -316,7 +316,7 @@ static int eap_aka_umts_auth(struct eap_sm *sm, struct eap_aka_data *data)
 
 #else /* CONFIG_USIM_HARDCODED */
 
-	wpa_printf(MSG_DEBUG, "EAP-AKA: No UMTS authentication algorith "
+	wpa_printf(MSG_DEBUG, "EAP-AKA: No UMTS authentication algorithm "
 		   "enabled");
 	return -1;
 

@@ -12,6 +12,17 @@
 
 int wpas_module_tests(void)
 {
+	int ret = 0;
+
 	wpa_printf(MSG_INFO, "wpa_supplicant module tests");
-	return 0;
+
+#ifdef CONFIG_WPS
+	{
+		int wps_module_tests(void);
+		if (wps_module_tests() < 0)
+			ret = -1;
+	}
+#endif /* CONFIG_WPS */
+
+	return ret;
 }

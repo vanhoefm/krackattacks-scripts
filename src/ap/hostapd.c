@@ -596,6 +596,8 @@ hostapd_das_disconnect(void *ctx, struct radius_das_attrs *attr)
 	if (sta == NULL)
 		return RADIUS_DAS_SESSION_NOT_FOUND;
 
+	wpa_auth_pmksa_remove(hapd->wpa_auth, sta->addr);
+
 	hostapd_drv_sta_deauth(hapd, sta->addr,
 			       WLAN_REASON_PREV_AUTH_NOT_VALID);
 	ap_sta_deauthenticate(hapd, sta, WLAN_REASON_PREV_AUTH_NOT_VALID);

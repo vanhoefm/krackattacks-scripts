@@ -1,5 +1,6 @@
 ATTRIBUTE	User-Name		1	string
 ATTRIBUTE	User-Password		2	string
+ATTRIBUTE	NAS-IP-Address		4	ipaddr
 ATTRIBUTE	Calling-Station-Id	31	string
 ATTRIBUTE	NAS-Identifier		32	string
 ATTRIBUTE	Acct-Session-Id		44	string

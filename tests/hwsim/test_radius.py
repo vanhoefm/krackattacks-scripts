@@ -108,6 +108,8 @@ def test_radius_das_disconnect(dev, apdev):
     params['radius_das_port'] = "3799"
     params['radius_das_client'] = "127.0.0.1 secret"
     params['radius_das_require_event_timestamp'] = "1"
+    params['own_ip_addr'] = "127.0.0.1"
+    params['nas_identifier'] = "nas.example.com"
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     connect(dev[0], "radius-das")
     addr = dev[0].p2p_interface_addr()
@@ -235,8 +237,46 @@ def test_radius_das_disconnect(dev, apdev):
     if ev is not None:
         raise Exception("Unexpected disconnection")
 
+    logger.info("Disconnect-Request with mismatching NAS-IP-Address")
+    req = radius_das.DisconnectPacket(dict=dict, secret="secret",
+                                      NAS_IP_Address="192.168.3.4",
+                                      Acct_Session_Id=id,
+                                      Event_Timestamp=int(time.time()))
+    reply = srv.SendPacket(req)
+    logger.debug("RADIUS response from hostapd")
+    for i in reply.keys():
+        logger.debug("%s: %s" % (i, reply[i]))
+    if reply.code != pyrad.packet.DisconnectNAK:
+        raise Exception("Unexpected response code")
+    if 'Error-Cause' not in reply:
+        raise Exception("Missing Error-Cause")
+    if reply['Error-Cause'][0] != 403:
+        raise Exception("Unexpected Error-Cause: {}".format(reply['Error-Cause']))
+
+    logger.info("Disconnect-Request with mismatching NAS-Identifier")
+    req = radius_das.DisconnectPacket(dict=dict, secret="secret",
+                                      NAS_Identifier="unknown.example.com",
+                                      Acct_Session_Id=id,
+                                      Event_Timestamp=int(time.time()))
+    reply = srv.SendPacket(req)
+    logger.debug("RADIUS response from hostapd")
+    for i in reply.keys():
+        logger.debug("%s: %s" % (i, reply[i]))
+    if reply.code != pyrad.packet.DisconnectNAK:
+        raise Exception("Unexpected response code")
+    if 'Error-Cause' not in reply:
+        raise Exception("Missing Error-Cause")
+    if reply['Error-Cause'][0] != 403:
+        raise Exception("Unexpected Error-Cause: {}".format(reply['Error-Cause']))
+
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=1)
+    if ev is not None:
+        raise Exception("Unexpected disconnection")
+
     logger.info("Disconnect-Request with matching Acct-Session-Id")
     req = radius_das.DisconnectPacket(dict=dict, secret="secret",
+                                      NAS_IP_Address="127.0.0.1",
+                                      NAS_Identifier="nas.example.com",
                                       Acct_Session_Id=id,
                                       Event_Timestamp=int(time.time()))
     reply = srv.SendPacket(req)
@@ -255,6 +295,7 @@ def test_radius_das_disconnect(dev, apdev):
 
     logger.info("Disconnect-Request with matching User-Name")
     req = radius_das.DisconnectPacket(dict=dict, secret="secret",
+                                      NAS_Identifier="nas.example.com",
                                       User_Name="psk.user@example.com",
                                       Event_Timestamp=int(time.time()))
     reply = srv.SendPacket(req)
@@ -273,6 +314,7 @@ def test_radius_das_disconnect(dev, apdev):
 
     logger.info("Disconnect-Request with matching Calling-Station-Id")
     req = radius_das.DisconnectPacket(dict=dict, secret="secret",
+                                      NAS_IP_Address="127.0.0.1",
                                       Calling_Station_Id=addr,
                                       Event_Timestamp=int(time.time()))
     reply = srv.SendPacket(req)

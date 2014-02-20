@@ -733,9 +733,6 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq,
 
 	p2p_parse_free(&msg);
 
-	if (p2p_pending_sd_req(p2p, dev))
-		dev->flags |= P2P_DEV_SD_SCHEDULE;
-
 	if (dev->flags & P2P_DEV_REPORTED)
 		return 0;
 
@@ -2406,6 +2403,7 @@ struct p2p_data * p2p_init(const struct p2p_config *cfg)
 
 	p2p->go_timeout = 100;
 	p2p->client_timeout = 20;
+	p2p->num_p2p_sd_queries = 0;
 
 	p2p_dbg(p2p, "initialized");
 	p2p_channels_dump(p2p, "channels", &p2p->cfg->channels);
@@ -2641,13 +2639,16 @@ void p2p_continue_find(struct p2p_data *p2p)
 	struct p2p_device *dev;
 	p2p_set_state(p2p, P2P_SEARCH);
 	dl_list_for_each(dev, &p2p->devices, struct p2p_device, list) {
-		if (dev->flags & P2P_DEV_SD_SCHEDULE) {
-			if (p2p_start_sd(p2p, dev) == 0)
-				return;
-			else
-				break;
-		} else if (dev->req_config_methods &&
-			   !(dev->flags & P2P_DEV_PD_FOR_JOIN)) {
+		if (dev->sd_pending_bcast_queries == 0) {
+			/* Initialize with total number of registered broadcast
+			 * SD queries. */
+			dev->sd_pending_bcast_queries = p2p->num_p2p_sd_queries;
+		}
+
+		if (p2p_start_sd(p2p, dev) == 0)
+			return;
+		if (dev->req_config_methods &&
+		    !(dev->flags & P2P_DEV_PD_FOR_JOIN)) {
 			p2p_dbg(p2p, "Send pending Provision Discovery Request to "
 				MACSTR " (config methods 0x%x)",
 				MAC2STR(dev->info.p2p_device_addr),
@@ -2668,10 +2669,7 @@ static void p2p_sd_cb(struct p2p_data *p2p, int success)
 	p2p->pending_action_state = P2P_NO_PENDING_ACTION;
 
 	if (!success) {
-		if (p2p->sd_peer) {
-			p2p->sd_peer->flags &= ~P2P_DEV_SD_SCHEDULE;
-			p2p->sd_peer = NULL;
-		}
+		p2p->sd_peer = NULL;
 		p2p_continue_find(p2p);
 		return;
 	}
@@ -3216,7 +3214,6 @@ static void p2p_timeout_sd_during_find(struct p2p_data *p2p)
 	p2p_dbg(p2p, "Service Discovery Query timeout");
 	if (p2p->sd_peer) {
 		p2p->cfg->send_action_done(p2p->cfg->cb_ctx);
-		p2p->sd_peer->flags &= ~P2P_DEV_SD_SCHEDULE;
 		p2p->sd_peer = NULL;
 	}
 	p2p_continue_find(p2p);
@@ -3487,7 +3484,7 @@ int p2p_get_peer_info_txt(const struct p2p_peer_info *info,
 			  "country=%c%c\n"
 			  "oper_freq=%d\n"
 			  "req_config_methods=0x%x\n"
-			  "flags=%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n"
+			  "flags=%s%s%s%s%s%s%s%s%s%s%s%s%s\n"
 			  "status=%d\n"
 			  "wait_count=%u\n"
 			  "invitation_reqs=%u\n",
@@ -3510,9 +3507,6 @@ int p2p_get_peer_info_txt(const struct p2p_peer_info *info,
 			  dev->flags & P2P_DEV_REPORTED ? "[REPORTED]" : "",
 			  dev->flags & P2P_DEV_NOT_YET_READY ?
 			  "[NOT_YET_READY]" : "",
-			  dev->flags & P2P_DEV_SD_INFO ? "[SD_INFO]" : "",
-			  dev->flags & P2P_DEV_SD_SCHEDULE ? "[SD_SCHEDULE]" :
-			  "",
 			  dev->flags & P2P_DEV_PD_PEER_DISPLAY ?
 			  "[PD_PEER_DISPLAY]" : "",
 			  dev->flags & P2P_DEV_PD_PEER_KEYPAD ?

@@ -81,8 +81,6 @@ struct p2p_device {
 #define P2P_DEV_PROBE_REQ_ONLY BIT(0)
 #define P2P_DEV_REPORTED BIT(1)
 #define P2P_DEV_NOT_YET_READY BIT(2)
-#define P2P_DEV_SD_INFO BIT(3)
-#define P2P_DEV_SD_SCHEDULE BIT(4)
 #define P2P_DEV_PD_PEER_DISPLAY BIT(5)
 #define P2P_DEV_PD_PEER_KEYPAD BIT(6)
 #define P2P_DEV_USER_REJECTED BIT(7)
@@ -110,6 +108,7 @@ struct p2p_device {
 
 	u8 go_timeout;
 	u8 client_timeout;
+	int sd_pending_bcast_queries;
 };
 
 struct p2p_sd_query {
@@ -255,6 +254,12 @@ struct p2p_data {
 	 * sd_query - Pointer to Service Discovery query
 	 */
 	struct p2p_sd_query *sd_query;
+
+	/**
+	 * num_p2p_sd_queries - Total number of broadcast SD queries present in
+	 * the list
+	 */
+	int num_p2p_sd_queries;
 
 	/* GO Negotiation data */
 

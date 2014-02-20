@@ -230,9 +230,8 @@ discovery protocols and requests this to be sent to all discovered
 peers (note: this can result in long response frames). The pending
 requests are sent during device discovery (see p2p_find).
 
-Only a single pending wildcard query is supported, but there can be
-multiple pending peer device specific queries (each will be sent in
-sequence whenever the peer is found).
+There can be multiple pending peer device specific queries (each will be
+sent in sequence whenever the peer is found).
 
 This command returns an identifier for the pending query (e.g.,
 "1f77628") that can be used to cancel the request. Directed requests

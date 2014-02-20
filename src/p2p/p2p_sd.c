@@ -52,6 +52,7 @@ struct p2p_sd_query * p2p_pending_sd_req(struct p2p_data *p2p,
 {
 	struct p2p_sd_query *q;
 	int wsd = 0;
+	int count = 0;
 
 	if (!(dev->info.dev_capab & P2P_DEV_CAPAB_SERVICE_DISCOVERY))
 		return NULL; /* peer does not support SD */
@@ -64,8 +65,19 @@ struct p2p_sd_query * p2p_pending_sd_req(struct p2p_data *p2p,
 		/* Use WSD only if the peer indicates support or it */
 		if (q->wsd && !wsd)
 			continue;
-		if (q->for_all_peers && !(dev->flags & P2P_DEV_SD_INFO))
-			return q;
+		/* if the query is a broadcast query */
+		if (q->for_all_peers) {
+			/*
+			 * check if there are any broadcast queries pending for
+			 * this device
+			 */
+			if (dev->sd_pending_bcast_queries <= 0)
+				return NULL;
+			/* query number that needs to be send to the device */
+			if (count == dev->sd_pending_bcast_queries - 1)
+				return q;
+			count++;
+		}
 		if (!q->for_all_peers &&
 		    os_memcmp(q->peer, dev->info.p2p_device_addr, ETH_ALEN) ==
 		    0)
@@ -76,14 +88,37 @@ struct p2p_sd_query * p2p_pending_sd_req(struct p2p_data *p2p,
 }
 
 
+static void p2p_decrease_sd_bc_queries(struct p2p_data *p2p, int query_number)
+{
+	struct p2p_device *dev;
+
+	p2p->num_p2p_sd_queries--;
+	dl_list_for_each(dev, &p2p->devices, struct p2p_device, list) {
+		if (query_number <= dev->sd_pending_bcast_queries - 1) {
+			/*
+			 * Query not yet sent to the device and it is to be
+			 * removed, so update the pending count.
+			*/
+			dev->sd_pending_bcast_queries--;
+		}
+	}
+}
+
+
 static int p2p_unlink_sd_query(struct p2p_data *p2p,
 			       struct p2p_sd_query *query)
 {
 	struct p2p_sd_query *q, *prev;
+	int query_number = 0;
+
 	q = p2p->sd_queries;
 	prev = NULL;
 	while (q) {
 		if (q == query) {
+			/* If the query is a broadcast query, decrease one from
+			 * all the devices */
+			if (query->for_all_peers)
+				p2p_decrease_sd_bc_queries(p2p, query_number);
 			if (prev)
 				prev->next = q->next;
 			else
@@ -92,6 +127,8 @@ static int p2p_unlink_sd_query(struct p2p_data *p2p,
 				p2p->sd_query = NULL;
 			return 1;
 		}
+		if (q->for_all_peers)
+			query_number++;
 		prev = q;
 		q = q->next;
 	}
@@ -118,6 +155,7 @@ void p2p_free_sd_queries(struct p2p_data *p2p)
 		q = q->next;
 		p2p_free_sd_query(prev);
 	}
+	p2p->num_p2p_sd_queries = 0;
 }
 
 
@@ -261,6 +299,16 @@ int p2p_start_sd(struct p2p_data *p2p, struct p2p_device *dev)
 		p2p_dbg(p2p, "Failed to send Action frame");
 		ret = -1;
 	}
+
+	/* Update the pending broadcast SD query count for this device */
+	dev->sd_pending_bcast_queries--;
+
+	/*
+	 * If there are no pending broadcast queries for this device, mark it as
+	 * done (-1).
+	 */
+	if (dev->sd_pending_bcast_queries == 0)
+		dev->sd_pending_bcast_queries = -1;
 
 	wpabuf_free(req);
 
@@ -541,8 +589,6 @@ void p2p_rx_gas_initial_resp(struct p2p_data *p2p, const u8 *sa,
 	p2p_dbg(p2p, "Service Update Indicator: %u", update_indic);
 	pos += 2;
 
-	p2p->sd_peer->flags |= P2P_DEV_SD_INFO;
-	p2p->sd_peer->flags &= ~P2P_DEV_SD_SCHEDULE;
 	p2p->sd_peer = NULL;
 
 	if (p2p->sd_query) {
@@ -787,8 +833,6 @@ skip_nqp_header:
 		return;
 	}
 
-	p2p->sd_peer->flags |= P2P_DEV_SD_INFO;
-	p2p->sd_peer->flags &= ~P2P_DEV_SD_SCHEDULE;
 	p2p->sd_peer = NULL;
 
 	if (p2p->sd_query) {
@@ -841,8 +885,16 @@ void * p2p_sd_request(struct p2p_data *p2p, const u8 *dst,
 
 	if (dst == NULL) {
 		struct p2p_device *dev;
-		dl_list_for_each(dev, &p2p->devices, struct p2p_device, list)
-			dev->flags &= ~P2P_DEV_SD_INFO;
+
+		p2p->num_p2p_sd_queries++;
+
+		/* Update all the devices for the newly added broadcast query */
+		dl_list_for_each(dev, &p2p->devices, struct p2p_device, list) {
+			if (dev->sd_pending_bcast_queries <= 0)
+				dev->sd_pending_bcast_queries = 1;
+			else
+				dev->sd_pending_bcast_queries++;
+		}
 	}
 
 	return q;

@@ -519,6 +519,13 @@ struct hostapd_config {
 
 	int ieee80211h; /* DFS */
 
+	/*
+	 * Local power constraint is an octet encoded as an unsigned integer in
+	 * units of decibels. Invalid value -1 indicates that Power Constraint
+	 * element will not be added.
+	 */
+	int local_pwr_constraint;
+
 	struct hostapd_tx_queue_params tx_queue[NUM_TX_QUEUES];
 
 	/*

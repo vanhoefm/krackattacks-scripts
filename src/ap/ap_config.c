@@ -154,6 +154,8 @@ struct hostapd_config * hostapd_config_defaults(void)
 	conf->rts_threshold = -1; /* use driver default: 2347 */
 	conf->fragm_threshold = -1; /* user driver default: 2346 */
 	conf->send_probe_response = 1;
+	/* Set to invalid value means do not add Power Constraint IE */
+	conf->local_pwr_constraint = -1;
 
 	conf->wmm_ac_params[0] = ac_be;
 	conf->wmm_ac_params[1] = ac_bk;
@@ -826,6 +828,12 @@ int hostapd_config_check(struct hostapd_config *conf, int full_config)
 	if (full_config && conf->ieee80211h && !conf->ieee80211d) {
 		wpa_printf(MSG_ERROR, "Cannot enable IEEE 802.11h without "
 			   "IEEE 802.11d enabled");
+		return -1;
+	}
+
+	if (full_config && conf->local_pwr_constraint != -1 &&
+	    !conf->ieee80211d) {
+		wpa_printf(MSG_ERROR, "Cannot add Power Constraint element without Country element");
 		return -1;
 	}
 

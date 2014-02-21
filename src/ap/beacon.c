@@ -102,6 +102,36 @@ static u8 * hostapd_eid_erp_info(struct hostapd_data *hapd, u8 *eid)
 }
 
 
+static u8 * hostapd_eid_pwr_constraint(struct hostapd_data *hapd, u8 *eid)
+{
+	u8 *pos = eid;
+
+	if (hapd->iconf->local_pwr_constraint == -1 ||
+	    hapd->iface->current_mode == NULL ||
+	    hapd->iface->current_mode->mode != HOSTAPD_MODE_IEEE80211A)
+		return eid;
+
+	/*
+	 * A STA that is not an AP shall use a transmit power less than or
+	 * equal to the local maximum transmit power level for the channel.
+	 * The local maximum transmit power can be calculated from the formula:
+	 * local max TX pwr = max TX pwr - local pwr constraint
+	 * Where max TX pwr is maximum transmit power level specified for
+	 * channel in Country element and local pwr constraint is specified
+	 * for channel in this Power Constraint element.
+	 */
+
+	/* Element ID */
+	*pos++ = WLAN_EID_PWR_CONSTRAINT;
+	/* Length */
+	*pos++ = 1;
+	/* Local Power Constraint */
+	*pos++ = hapd->iconf->local_pwr_constraint;
+
+	return pos;
+}
+
+
 static u8 * hostapd_eid_country_add(u8 *pos, u8 *end, int chan_spacing,
 				    struct hostapd_channel_data *start,
 				    struct hostapd_channel_data *prev)
@@ -314,6 +344,9 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 	pos = hostapd_eid_ds_params(hapd, pos);
 
 	pos = hostapd_eid_country(hapd, pos, epos - pos);
+
+	/* Power Constraint element */
+	pos = hostapd_eid_pwr_constraint(hapd, pos);
 
 	/* ERP Information element */
 	pos = hostapd_eid_erp_info(hapd, pos);
@@ -720,6 +753,9 @@ int ieee802_11_build_ap_params(struct hostapd_data *hapd,
 
 	tailpos = hostapd_eid_country(hapd, tailpos,
 				      tail + BEACON_TAIL_BUF_SIZE - tailpos);
+
+	/* Power Constraint element */
+	tailpos = hostapd_eid_pwr_constraint(hapd, tailpos);
 
 	/* ERP Information element */
 	tailpos = hostapd_eid_erp_info(hapd, tailpos);

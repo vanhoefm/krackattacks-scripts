@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # Test cases for dynamic BSS changes with hostapd
 # Copyright (c) 2013, Qualcomm Atheros, Inc.
 #

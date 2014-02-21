@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # Test cases for HT operations with hostapd
 # Copyright (c) 2013, Jouni Malinen <j@w1.fi>
 #

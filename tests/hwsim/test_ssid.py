@@ -1,6 +1,4 @@
-#!/usr/bin/python
 # -*- coding: utf-8 -*-
-#
 # SSID contents and encoding tests
 # Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
 #

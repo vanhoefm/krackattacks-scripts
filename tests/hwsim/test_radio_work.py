@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # Radio work tests
 # Copyright (c) 2014, Jouni Malinen <j@w1.fi>
 #

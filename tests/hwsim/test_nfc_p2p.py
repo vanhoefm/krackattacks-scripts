@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # P2P+NFC tests
 # Copyright (c) 2013, Qualcomm Atheros, Inc.
 #

@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # wpa_supplicant AP mode tests
 # Copyright (c) 2014, Qualcomm Atheros, Inc.
 #

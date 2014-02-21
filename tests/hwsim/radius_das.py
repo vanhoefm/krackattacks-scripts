@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # RADIUS DAS extensions to pyrad
 # Copyright (c) 2014, Jouni Malinen <j@w1.fi>
 #

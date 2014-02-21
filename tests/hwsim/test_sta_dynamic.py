@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # Dynamic wpa_supplicant interface
 # Copyright (c) 2013, Jouni Malinen <j@w1.fi>
 #

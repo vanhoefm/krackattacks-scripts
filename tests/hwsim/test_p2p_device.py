@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # cfg80211 P2P Device
 # Copyright (c) 2013, Jouni Malinen <j@w1.fi>
 #

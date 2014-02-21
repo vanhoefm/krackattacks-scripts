@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # RADIUS tests
 # Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
 #

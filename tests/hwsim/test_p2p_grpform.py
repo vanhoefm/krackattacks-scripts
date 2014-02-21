@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # P2P group formation test cases
 # Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
 #

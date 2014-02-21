@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # Module tests
 # Copyright (c) 2014, Jouni Malinen <j@w1.fi>
 #

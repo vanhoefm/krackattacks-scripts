@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # WPS+NFC tests
 # Copyright (c) 2013, Jouni Malinen <j@w1.fi>
 #

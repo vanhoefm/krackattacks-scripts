@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # External password storage
 # Copyright (c) 2014, Jouni Malinen <j@w1.fi>
 #

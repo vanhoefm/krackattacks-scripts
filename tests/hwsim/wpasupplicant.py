@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # Python class for controlling wpa_supplicant
 # Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
 #

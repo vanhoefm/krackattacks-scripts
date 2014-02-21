@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # GAS tests
 # Copyright (c) 2013, Qualcomm Atheros, Inc.
 # Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>

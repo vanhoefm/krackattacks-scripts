@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # WPA2-Personal tests
 # Copyright (c) 2014, Qualcomm Atheros, Inc.
 #

@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # Test various AP mode parameters
 # Copyright (c) 2014, Qualcomm Atheros, Inc.
 #

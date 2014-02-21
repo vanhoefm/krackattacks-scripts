@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # Scanning tests
 # Copyright (c) 2013, Jouni Malinen <j@w1.fi>
 #

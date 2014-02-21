@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # Wi-Fi Display test cases
 # Copyright (c) 2013, Jouni Malinen <j@w1.fi>
 #

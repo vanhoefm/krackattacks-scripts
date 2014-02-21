@@ -1,5 +1,3 @@
-#!/usr/bin/python
-#
 # Deprecated WEXT driver interface in wpa_supplicant
 # Copyright (c) 2013, Jouni Malinen <j@w1.fi>
 #

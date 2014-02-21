@@ -526,6 +526,9 @@ struct hostapd_config {
 	 */
 	int local_pwr_constraint;
 
+	/* Control Spectrum Management bit */
+	int spectrum_mgmt_required;
+
 	struct hostapd_tx_queue_params tx_queue[NUM_TX_QUEUES];
 
 	/*

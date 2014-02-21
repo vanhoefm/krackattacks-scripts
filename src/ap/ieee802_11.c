@@ -38,6 +38,7 @@
 #include "ap_drv_ops.h"
 #include "wnm_ap.h"
 #include "ieee802_11.h"
+#include "dfs.h"
 
 
 u8 * hostapd_eid_supp_rates(struct hostapd_data *hapd, u8 *eid)
@@ -137,6 +138,15 @@ u16 hostapd_own_capab_info(struct hostapd_data *hapd, struct sta_info *sta,
 {
 	int capab = WLAN_CAPABILITY_ESS;
 	int privacy;
+	int dfs;
+
+	/* Check if any of configured channels require DFS */
+	dfs = hostapd_is_dfs_required(hapd->iface);
+	if (dfs < 0) {
+		wpa_printf(MSG_WARNING, "Failed to check if DFS is required; ret=%d",
+			   dfs);
+		dfs = 0;
+	}
 
 	if (hapd->iface->num_sta_no_short_preamble == 0 &&
 	    hapd->iconf->preamble == SHORT_PREAMBLE)
@@ -173,6 +183,17 @@ u16 hostapd_own_capab_info(struct hostapd_data *hapd, struct sta_info *sta,
 	    hapd->iface->current_mode->mode == HOSTAPD_MODE_IEEE80211G &&
 	    hapd->iface->num_sta_no_short_slot_time == 0)
 		capab |= WLAN_CAPABILITY_SHORT_SLOT_TIME;
+
+	/*
+	 * Currently, Spectrum Management capability bit is set when directly
+	 * requested in configuration by spectrum_mgmt_required or when AP is
+	 * running on DFS channel.
+	 * TODO: Also consider driver support for TPC to set Spectrum Mgmt bit
+	 */
+	if (hapd->iface->current_mode &&
+	    hapd->iface->current_mode->mode == HOSTAPD_MODE_IEEE80211A &&
+	    (hapd->iconf->spectrum_mgmt_required || dfs))
+		capab |= WLAN_CAPABILITY_SPECTRUM_MGMT;
 
 	return capab;
 }

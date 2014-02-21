@@ -801,3 +801,23 @@ int hostapd_dfs_nop_finished(struct hostapd_iface *iface, int freq,
 		      cf1, cf2, HOSTAPD_CHAN_DFS_USABLE);
 	return 0;
 }
+
+
+int hostapd_is_dfs_required(struct hostapd_iface *iface)
+{
+	int n_chans, start_chan_idx;
+
+	if (!iface->current_mode)
+		return -1;
+
+	/* Get start (first) channel for current configuration */
+	start_chan_idx = dfs_get_start_chan_idx(iface);
+	if (start_chan_idx == -1)
+		return -1;
+
+	/* Get number of used channels, depend on width */
+	n_chans = dfs_get_used_n_chans(iface);
+
+	/* Check if any of configured channels require DFS */
+	return dfs_check_chans_radar(iface, start_chan_idx, n_chans);
+}

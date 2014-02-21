@@ -27,6 +27,7 @@
 #include "ap_drv_ops.h"
 #include "beacon.h"
 #include "hs20.h"
+#include "dfs.h"
 
 
 #ifdef NEED_AP_MLME
@@ -105,11 +106,42 @@ static u8 * hostapd_eid_erp_info(struct hostapd_data *hapd, u8 *eid)
 static u8 * hostapd_eid_pwr_constraint(struct hostapd_data *hapd, u8 *eid)
 {
 	u8 *pos = eid;
+	u8 local_pwr_constraint = 0;
+	int dfs;
 
-	if (hapd->iconf->local_pwr_constraint == -1 ||
-	    hapd->iface->current_mode == NULL ||
+	if (hapd->iface->current_mode == NULL ||
 	    hapd->iface->current_mode->mode != HOSTAPD_MODE_IEEE80211A)
 		return eid;
+
+	/*
+	 * There is no DFS support and power constraint was not directly
+	 * requested by config option.
+	 */
+	if (!hapd->iconf->ieee80211h &&
+	    hapd->iconf->local_pwr_constraint == -1)
+		return eid;
+
+	/* Check if DFS is required by regulatory. */
+	dfs = hostapd_is_dfs_required(hapd->iface);
+	if (dfs < 0) {
+		wpa_printf(MSG_WARNING, "Failed to check if DFS is required; ret=%d",
+			   dfs);
+		dfs = 0;
+	}
+
+	if (dfs == 0 && hapd->iconf->local_pwr_constraint == -1)
+		return eid;
+
+	/*
+	 * ieee80211h (DFS) is enabled so Power Constraint element shall
+	 * be added when running on DFS channel whenever local_pwr_constraint
+	 * is configured or not. In order to meet regulations when TPC is not
+	 * implemented using a transmit power that is below the legal maximum
+	 * (including any mitigation factor) should help. In this case,
+	 * indicate 3 dB below maximum allowed transmit power.
+	 */
+	if (hapd->iconf->local_pwr_constraint == -1)
+		local_pwr_constraint = 3;
 
 	/*
 	 * A STA that is not an AP shall use a transmit power less than or
@@ -126,7 +158,10 @@ static u8 * hostapd_eid_pwr_constraint(struct hostapd_data *hapd, u8 *eid)
 	/* Length */
 	*pos++ = 1;
 	/* Local Power Constraint */
-	*pos++ = hapd->iconf->local_pwr_constraint;
+	if (local_pwr_constraint)
+		*pos++ = local_pwr_constraint;
+	else
+		*pos++ = hapd->iconf->local_pwr_constraint;
 
 	return pos;
 }

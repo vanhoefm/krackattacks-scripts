@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python2
 #
 # AP tests
 # Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>

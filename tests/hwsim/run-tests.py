@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 #
-# AP tests
+# Test case executor
 # Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.

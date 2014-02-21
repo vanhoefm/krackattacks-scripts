@@ -75,7 +75,7 @@ static int wps_parse_vendor_ext_wfa(struct wps_parse_attr *attr, const u8 *pos,
 	const u8 *end = pos + len;
 	u8 id, elen;
 
-	while (pos + 2 < end) {
+	while (pos + 2 <= end) {
 		id = *pos++;
 		elen = *pos++;
 		if (pos + elen > end)

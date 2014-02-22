@@ -14,7 +14,6 @@ for i in `pidof valgrind.bin`; do
     fi
 done
 sudo killall -q wlantest
-sudo killall -q tcpdump
 if grep -q hwsim0 /proc/net/dev; then
     sudo ifconfig hwsim0 down
 fi

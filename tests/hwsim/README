@@ -12,8 +12,8 @@ functionality for that matter) to be tested.
 mac80211_hwsim is loaded with five simulated radios to allow different
 device combinations to be tested. wlantest is used analyze raw packets
 captured through the hwsim0 monitor interface that capture all frames
-sent on all channels. tcpdump is used to store the frames for
-analysis. Three wpa_supplicant processed are used to control three
+sent on all channels. wlantest is used to store the frames for
+analysis. Three wpa_supplicant processes are used to control three
 virtual radios and one hostapd process is used to dynamically control
 the other two virtual radios. hwsim_test is used to verify that data
 connection (both unicast and broadcast) works between two netdevs.

@@ -9,6 +9,7 @@ import subprocess
 import logging
 logger = logging.getLogger()
 import re
+import socket
 
 import hwsim_utils
 import hostapd
@@ -967,3 +968,298 @@ def test_ap_wps_ie_fragmentation(dev, apdev):
         raise Exception("Device Name not received correctly")
     if len(re.findall("dd..0050f204", bss['ie'])) != 2:
         raise Exception("Unexpected number of WPS IEs")
+
+def add_ssdp_ap(ifname, ap_uuid):
+    ssid = "wps-ssdp"
+    ap_pin = "12345670"
+    hostapd.add_ap(ifname,
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                     "wpa_passphrase": "12345678", "wpa": "2",
+                     "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+                     "device_name": "Wireless AP", "manufacturer": "Company",
+                     "model_name": "WAP", "model_number": "123",
+                     "serial_number": "12345", "device_type": "6-0050F204-1",
+                     "os_version": "01020300",
+                     "config_methods": "label push_button",
+                     "ap_pin": ap_pin, "uuid": ap_uuid, "upnp_iface": "lo",
+                     "friendly_name": "WPS Access Point",
+                     "manufacturer_url": "http://www.example.com/",
+                     "model_description": "Wireless Access Point",
+                     "model_url": "http://www.example.com/model/",
+                     "upc": "123456789012" })
+
+def ssdp_send(msg, no_recv=False):
+    socket.setdefaulttimeout(1)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
+    sock.bind(("127.0.0.1", 0))
+    sock.sendto(msg, ("239.255.255.250", 1900))
+    if no_recv:
+        return None
+    return sock.recv(1000)
+
+def ssdp_send_msearch(st):
+    msg = '\r\n'.join([
+            'M-SEARCH * HTTP/1.1',
+            'HOST: 239.255.255.250:1900',
+            'MX: 1',
+            'MAN: "ssdp:discover"',
+            'ST: ' + st,
+            '', ''])
+    ssdp_send(msg)
+
+def test_ap_wps_ssdp_msearch(dev, apdev):
+    """WPS AP and SSDP M-SEARCH messages"""
+    ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
+    add_ssdp_ap(apdev[0]['ifname'], ap_uuid)
+
+    msg = '\r\n'.join([
+            'M-SEARCH * HTTP/1.1',
+            'Host: 239.255.255.250:1900',
+            'Mx: 1',
+            'Man: "ssdp:discover"',
+            'St: urn:schemas-wifialliance-org:device:WFADevice:1',
+            '', ''])
+    ssdp_send(msg)
+
+    msg = '\r\n'.join([
+            'M-SEARCH * HTTP/1.1',
+            'host:\t239.255.255.250:1900\t\t\t\t \t\t',
+            'mx: \t1\t\t   ',
+            'man: \t \t "ssdp:discover"   ',
+            'st: urn:schemas-wifialliance-org:device:WFADevice:1\t\t',
+            '', ''])
+    ssdp_send(msg)
+
+    ssdp_send_msearch("ssdp:all")
+    ssdp_send_msearch("upnp:rootdevice")
+    ssdp_send_msearch("uuid:" + ap_uuid)
+    ssdp_send_msearch("urn:schemas-wifialliance-org:service:WFAWLANConfig:1")
+    ssdp_send_msearch("urn:schemas-wifialliance-org:device:WFADevice:1");
+
+    msg = '\r\n'.join([
+            'M-SEARCH * HTTP/1.1',
+            'HOST:\t239.255.255.250:1900',
+            'MAN: "ssdp:discover"',
+            'MX: 130',
+            'ST: urn:schemas-wifialliance-org:device:WFADevice:1',
+            '', ''])
+    ssdp_send(msg, no_recv=True)
+
+def test_ap_wps_ssdp_invalid_msearch(dev, apdev):
+    """WPS AP and invalid SSDP M-SEARCH messages"""
+    ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
+    add_ssdp_ap(apdev[0]['ifname'], ap_uuid)
+
+    socket.setdefaulttimeout(1)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
+    sock.bind(("127.0.0.1", 0))
+
+    logger.debug("Missing MX")
+    msg = '\r\n'.join([
+            'M-SEARCH * HTTP/1.1',
+            'HOST: 239.255.255.250:1900',
+            'MAN: "ssdp:discover"',
+            'ST: urn:schemas-wifialliance-org:device:WFADevice:1',
+            '', ''])
+    sock.sendto(msg, ("239.255.255.250", 1900))
+
+    logger.debug("Negative MX")
+    msg = '\r\n'.join([
+            'M-SEARCH * HTTP/1.1',
+            'HOST: 239.255.255.250:1900',
+            'MX: -1',
+            'MAN: "ssdp:discover"',
+            'ST: urn:schemas-wifialliance-org:device:WFADevice:1',
+            '', ''])
+    sock.sendto(msg, ("239.255.255.250", 1900))
+
+    logger.debug("Invalid MX")
+    msg = '\r\n'.join([
+            'M-SEARCH * HTTP/1.1',
+            'HOST: 239.255.255.250:1900',
+            'MX; 1',
+            'MAN: "ssdp:discover"',
+            'ST: urn:schemas-wifialliance-org:device:WFADevice:1',
+            '', ''])
+    sock.sendto(msg, ("239.255.255.250", 1900))
+
+    logger.debug("Missing MAN")
+    msg = '\r\n'.join([
+            'M-SEARCH * HTTP/1.1',
+            'HOST: 239.255.255.250:1900',
+            'MX: 1',
+            'ST: urn:schemas-wifialliance-org:device:WFADevice:1',
+            '', ''])
+    sock.sendto(msg, ("239.255.255.250", 1900))
+
+    logger.debug("Invalid MAN")
+    msg = '\r\n'.join([
+            'M-SEARCH * HTTP/1.1',
+            'HOST: 239.255.255.250:1900',
+            'MX: 1',
+            'MAN: foo',
+            'ST: urn:schemas-wifialliance-org:device:WFADevice:1',
+            '', ''])
+    sock.sendto(msg, ("239.255.255.250", 1900))
+    msg = '\r\n'.join([
+            'M-SEARCH * HTTP/1.1',
+            'HOST: 239.255.255.250:1900',
+            'MX: 1',
+            'MAN; "ssdp:discover"',
+            'ST: urn:schemas-wifialliance-org:device:WFADevice:1',
+            '', ''])
+    sock.sendto(msg, ("239.255.255.250", 1900))
+
+    logger.debug("Missing HOST")
+    msg = '\r\n'.join([
+            'M-SEARCH * HTTP/1.1',
+            'MAN: "ssdp:discover"',
+            'MX: 1',
+            'ST: urn:schemas-wifialliance-org:device:WFADevice:1',
+            '', ''])
+    sock.sendto(msg, ("239.255.255.250", 1900))
+
+    logger.debug("Missing ST")
+    msg = '\r\n'.join([
+            'M-SEARCH * HTTP/1.1',
+            'HOST: 239.255.255.250:1900',
+            'MAN: "ssdp:discover"',
+            'MX: 1',
+            '', ''])
+    sock.sendto(msg, ("239.255.255.250", 1900))
+
+    logger.debug("Mismatching ST")
+    msg = '\r\n'.join([
+            'M-SEARCH * HTTP/1.1',
+            'HOST: 239.255.255.250:1900',
+            'MAN: "ssdp:discover"',
+            'MX: 1',
+            'ST: uuid:16d5f8a9-4ee4-4f5e-81f9-cc6e2f47f42d',
+            '', ''])
+    sock.sendto(msg, ("239.255.255.250", 1900))
+    msg = '\r\n'.join([
+            'M-SEARCH * HTTP/1.1',
+            'HOST: 239.255.255.250:1900',
+            'MAN: "ssdp:discover"',
+            'MX: 1',
+            'ST: foo:bar',
+            '', ''])
+    sock.sendto(msg, ("239.255.255.250", 1900))
+    msg = '\r\n'.join([
+            'M-SEARCH * HTTP/1.1',
+            'HOST: 239.255.255.250:1900',
+            'MAN: "ssdp:discover"',
+            'MX: 1',
+            'ST: foobar',
+            '', ''])
+    sock.sendto(msg, ("239.255.255.250", 1900))
+
+    logger.debug("Invalid ST")
+    msg = '\r\n'.join([
+            'M-SEARCH * HTTP/1.1',
+            'HOST: 239.255.255.250:1900',
+            'MAN: "ssdp:discover"',
+            'MX: 1',
+            'ST; urn:schemas-wifialliance-org:device:WFADevice:1',
+            '', ''])
+    sock.sendto(msg, ("239.255.255.250", 1900))
+
+    logger.debug("Invalid M-SEARCH")
+    msg = '\r\n'.join([
+            'M+SEARCH * HTTP/1.1',
+            'HOST: 239.255.255.250:1900',
+            'MAN: "ssdp:discover"',
+            'MX: 1',
+            'ST: urn:schemas-wifialliance-org:device:WFADevice:1',
+            '', ''])
+    sock.sendto(msg, ("239.255.255.250", 1900))
+    msg = '\r\n'.join([
+            'M-SEARCH-* HTTP/1.1',
+            'HOST: 239.255.255.250:1900',
+            'MAN: "ssdp:discover"',
+            'MX: 1',
+            'ST: urn:schemas-wifialliance-org:device:WFADevice:1',
+            '', ''])
+    sock.sendto(msg, ("239.255.255.250", 1900))
+
+    logger.debug("Invalid message format")
+    sock.sendto("NOTIFY * HTTP/1.1", ("239.255.255.250", 1900))
+    msg = '\r'.join([
+            'M-SEARCH * HTTP/1.1',
+            'HOST: 239.255.255.250:1900',
+            'MAN: "ssdp:discover"',
+            'MX: 1',
+            'ST: urn:schemas-wifialliance-org:device:WFADevice:1',
+            '', ''])
+    sock.sendto(msg, ("239.255.255.250", 1900))
+
+    try:
+        r = sock.recv(1000)
+        raise Exception("Unexpected M-SEARCH response: " + r)
+    except socket.timeout:
+        pass
+
+    logger.debug("Valid M-SEARCH")
+    msg = '\r\n'.join([
+            'M-SEARCH * HTTP/1.1',
+            'HOST: 239.255.255.250:1900',
+            'MAN: "ssdp:discover"',
+            'MX: 1',
+            'ST: urn:schemas-wifialliance-org:device:WFADevice:1',
+            '', ''])
+    sock.sendto(msg, ("239.255.255.250", 1900))
+
+    try:
+        r = sock.recv(1000)
+        pass
+    except socket.timeout:
+        raise Exception("No SSDP response")
+
+def test_ap_wps_ssdp_burst(dev, apdev):
+    """WPS AP and SSDP burst"""
+    ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
+    add_ssdp_ap(apdev[0]['ifname'], ap_uuid)
+
+    msg = '\r\n'.join([
+            'M-SEARCH * HTTP/1.1',
+            'HOST: 239.255.255.250:1900',
+            'MAN: "ssdp:discover"',
+            'MX: 1',
+            'ST: urn:schemas-wifialliance-org:device:WFADevice:1',
+            '', ''])
+    socket.setdefaulttimeout(1)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
+    sock.bind(("127.0.0.1", 0))
+    for i in range(0, 25):
+        sock.sendto(msg, ("239.255.255.250", 1900))
+    resp = 0
+    while True:
+        try:
+            r = sock.recv(1000)
+            if not r.startswith("HTTP/1.1 200 OK\r\n"):
+                raise Exception("Unexpected message: " + r)
+            resp += 1
+        except socket.timeout:
+            break
+    if resp < 20:
+        raise Exception("Too few SSDP responses")
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
+    sock.bind(("127.0.0.1", 0))
+    for i in range(0, 25):
+        sock.sendto(msg, ("239.255.255.250", 1900))
+    while True:
+        try:
+            r = sock.recv(1000)
+            if ap_uuid in r:
+                break
+        except socket.timeout:
+            raise Exception("No SSDP response")

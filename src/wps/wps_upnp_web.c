@@ -324,8 +324,6 @@ static void web_connection_parse_get(struct upnp_wps_device_sm *sm,
 	 * It is not required that filenames be case insensitive but it is
 	 * allowed and cannot hurt here.
 	 */
-	if (filename == NULL)
-		filename = "(null)"; /* just in case */
 	if (os_strcasecmp(filename, UPNP_WPS_DEVICE_XML_FILE) == 0) {
 		wpa_printf(MSG_DEBUG, "WPS UPnP: HTTP GET for device XML");
 		req = GET_DEVICE_XML_FILE;

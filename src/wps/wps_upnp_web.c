@@ -1207,6 +1207,10 @@ static void web_connection_parse_unsubscribe(struct upnp_wps_device_sm *sm,
 				   sa->domain_and_port : "-null-");
 			dl_list_del(&s->list);
 			subscription_destroy(s);
+		} else {
+			wpa_printf(MSG_INFO, "WPS UPnP: Could not find matching subscription to unsubscribe");
+			ret = HTTP_PRECONDITION_FAILED;
+			goto send_msg;
 		}
 	} else {
 		wpa_printf(MSG_INFO, "WPS UPnP: Unsubscribe fails (not "

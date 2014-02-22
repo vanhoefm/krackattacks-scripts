@@ -1171,7 +1171,6 @@ static void web_connection_parse_unsubscribe(struct upnp_wps_device_sm *sm,
 			.....
 		}
 #endif
-		/* SID is only for renewal */
 		match = "SID:";
 		match_len = os_strlen(match);
 		if (os_strncasecmp(h, match, match_len) == 0) {
@@ -1193,6 +1192,20 @@ static void web_connection_parse_unsubscribe(struct upnp_wps_device_sm *sm,
 			}
 			got_uuid = 1;
 			continue;
+		}
+
+		match = "NT:";
+		match_len = os_strlen(match);
+		if (os_strncasecmp(h, match, match_len) == 0) {
+			ret = HTTP_BAD_REQUEST;
+			goto send_msg;
+		}
+
+		match = "CALLBACK:";
+		match_len = os_strlen(match);
+		if (os_strncasecmp(h, match, match_len) == 0) {
+			ret = HTTP_BAD_REQUEST;
+			goto send_msg;
 		}
 	}
 

@@ -39,5 +39,4 @@ def test_ap_fragmentation_wpa2(dev, apdev):
     params['fragm_threshold'] = "1000"
     hostapd.add_ap(apdev[0]['ifname'], params)
     dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
-    # TODO: figure out why this fails.. mac80211 bug?
-    #hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])

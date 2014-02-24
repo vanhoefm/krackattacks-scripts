@@ -1366,6 +1366,11 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
+	if (radio_work_pending(wpa_s, "connect")) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "Reject wpa_supplicant_associate() call since pending work exist");
+		return;
+	}
+
 	cwork = os_zalloc(sizeof(*cwork));
 	if (cwork == NULL)
 		return;
@@ -3234,6 +3239,20 @@ void radio_work_done(struct wpa_radio_work *work)
 	radio_work_free(work);
 	if (started)
 		radio_work_check_next(wpa_s);
+}
+
+
+int radio_work_pending(struct wpa_supplicant *wpa_s, const char *type)
+{
+	struct wpa_radio_work *work;
+	struct wpa_radio *radio = wpa_s->radio;
+
+	dl_list_for_each(work, &radio->work, struct wpa_radio_work, list) {
+		if (work->wpa_s == wpa_s && os_strcmp(work->type, type) == 0)
+			return 1;
+	}
+
+	return 0;
 }
 
 

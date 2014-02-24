@@ -475,6 +475,11 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
+	if (radio_work_pending(wpa_s, "sme-connect")) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "SME: Reject sme_authenticate() call since pending work exist");
+		return;
+	}
+
 	cwork = os_zalloc(sizeof(*cwork));
 	if (cwork == NULL)
 		return;

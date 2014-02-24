@@ -25,6 +25,10 @@
 #include "private/android_filesystem_config.h"
 #endif /* ANDROID */
 
+#ifdef CONFIG_CTRL_IFACE_UDP_IPV6
+#include <net/if.h>
+#endif /* CONFIG_CTRL_IFACE_UDP_IPV6 */
+
 #include "wpa_ctrl.h"
 #include "common.h"
 
@@ -46,8 +50,13 @@
 struct wpa_ctrl {
 #ifdef CONFIG_CTRL_IFACE_UDP
 	int s;
+#ifdef CONFIG_CTRL_IFACE_UDP_IPV6
+	struct sockaddr_in6 local;
+	struct sockaddr_in6 dest;
+#else /* CONFIG_CTRL_IFACE_UDP_IPV6 */
 	struct sockaddr_in local;
 	struct sockaddr_in dest;
+#endif /* CONFIG_CTRL_IFACE_UDP_IPV6 */
 	char *cookie;
 	char *remote_ifname;
 	char *remote_ip;
@@ -279,19 +288,33 @@ struct wpa_ctrl * wpa_ctrl_open(const char *ctrl_path)
 		return NULL;
 	os_memset(ctrl, 0, sizeof(*ctrl));
 
+#ifdef CONFIG_CTRL_IFACE_UDP_IPV6
+	ctrl->s = socket(PF_INET6, SOCK_DGRAM, 0);
+#else /* CONFIG_CTRL_IFACE_UDP_IPV6 */
 	ctrl->s = socket(PF_INET, SOCK_DGRAM, 0);
+#endif /* CONFIG_CTRL_IFACE_UDP_IPV6 */
 	if (ctrl->s < 0) {
 		perror("socket");
 		os_free(ctrl);
 		return NULL;
 	}
 
+#ifdef CONFIG_CTRL_IFACE_UDP_IPV6
+	ctrl->local.sin6_family = AF_INET6;
+#ifdef CONFIG_CTRL_IFACE_UDP_REMOTE
+	ctrl->local.sin6_addr = in6addr_any;
+#else /* CONFIG_CTRL_IFACE_UDP_REMOTE */
+	inet_pton(AF_INET6, "::1", &ctrl->local.sin6_addr);
+#endif /* CONFIG_CTRL_IFACE_UDP_REMOTE */
+#else /* CONFIG_CTRL_IFACE_UDP_IPV6 */
 	ctrl->local.sin_family = AF_INET;
 #ifdef CONFIG_CTRL_IFACE_UDP_REMOTE
 	ctrl->local.sin_addr.s_addr = INADDR_ANY;
 #else /* CONFIG_CTRL_IFACE_UDP_REMOTE */
 	ctrl->local.sin_addr.s_addr = htonl((127 << 24) | 1);
 #endif /* CONFIG_CTRL_IFACE_UDP_REMOTE */
+#endif /* CONFIG_CTRL_IFACE_UDP_IPV6 */
+
 	if (bind(ctrl->s, (struct sockaddr *) &ctrl->local,
 		 sizeof(ctrl->local)) < 0) {
 		close(ctrl->s);
@@ -299,14 +322,24 @@ struct wpa_ctrl * wpa_ctrl_open(const char *ctrl_path)
 		return NULL;
 	}
 
+#ifdef CONFIG_CTRL_IFACE_UDP_IPV6
+	ctrl->dest.sin6_family = AF_INET6;
+	inet_pton(AF_INET6, "::1", &ctrl->dest.sin6_addr);
+	ctrl->dest.sin6_port = htons(WPA_CTRL_IFACE_PORT);
+#else /* CONFIG_CTRL_IFACE_UDP_IPV6 */
 	ctrl->dest.sin_family = AF_INET;
 	ctrl->dest.sin_addr.s_addr = htonl((127 << 24) | 1);
 	ctrl->dest.sin_port = htons(WPA_CTRL_IFACE_PORT);
+#endif /* CONFIG_CTRL_IFACE_UDP_IPV6 */
 
 #ifdef CONFIG_CTRL_IFACE_UDP_REMOTE
 	if (ctrl_path) {
 		char *port, *name;
 		int port_id;
+#ifdef CONFIG_CTRL_IFACE_UDP_IPV6
+		char *scope;
+		int scope_id = 0;
+#endif /* CONFIG_CTRL_IFACE_UDP_IPV6 */
 
 		name = os_strdup(ctrl_path);
 		if (name == NULL) {
@@ -314,7 +347,11 @@ struct wpa_ctrl * wpa_ctrl_open(const char *ctrl_path)
 			os_free(ctrl);
 			return NULL;
 		}
+#ifdef CONFIG_CTRL_IFACE_UDP_IPV6
+		port = os_strchr(name, ',');
+#else /* CONFIG_CTRL_IFACE_UDP_IPV6 */
 		port = os_strchr(name, ':');
+#endif /* CONFIG_CTRL_IFACE_UDP_IPV6 */
 
 		if (port) {
 			port_id = atoi(&port[1]);
@@ -322,7 +359,16 @@ struct wpa_ctrl * wpa_ctrl_open(const char *ctrl_path)
 		} else
 			port_id = WPA_CTRL_IFACE_PORT;
 
+#ifdef CONFIG_CTRL_IFACE_UDP_IPV6
+		scope = os_strchr(name, '%');
+		if (scope) {
+			scope_id = if_nametoindex(&scope[1]);
+			scope[0] = '\0';
+		}
+		h = gethostbyname2(name, AF_INET6);
+#else /* CONFIG_CTRL_IFACE_UDP_IPV6 */
 		h = gethostbyname(name);
+#endif /* CONFIG_CTRL_IFACE_UDP_IPV6 */
 		ctrl->remote_ip = os_strdup(name);
 		os_free(name);
 		if (h == NULL) {
@@ -332,16 +378,33 @@ struct wpa_ctrl * wpa_ctrl_open(const char *ctrl_path)
 			os_free(ctrl);
 			return NULL;
 		}
+#ifdef CONFIG_CTRL_IFACE_UDP_IPV6
+		ctrl->dest.sin6_scope_id = scope_id;
+		ctrl->dest.sin6_port = htons(port_id);
+		os_memcpy(&ctrl->dest.sin6_addr, h->h_addr, h->h_length);
+#else /* CONFIG_CTRL_IFACE_UDP_IPV6 */
 		ctrl->dest.sin_port = htons(port_id);
-		os_memcpy(h->h_addr, (char *) &ctrl->dest.sin_addr.s_addr,
-			  h->h_length);
+		os_memcpy(&ctrl->dest.sin_addr.s_addr, h->h_addr, h->h_length);
+#endif /* CONFIG_CTRL_IFACE_UDP_IPV6 */
 	} else
 		ctrl->remote_ip = os_strdup("localhost");
 #endif /* CONFIG_CTRL_IFACE_UDP_REMOTE */
 
 	if (connect(ctrl->s, (struct sockaddr *) &ctrl->dest,
 		    sizeof(ctrl->dest)) < 0) {
-		perror("connect");
+#ifdef CONFIG_CTRL_IFACE_UDP_IPV6
+		char addr[INET6_ADDRSTRLEN];
+		wpa_printf(MSG_ERROR, "connect(%s:%d) failed: %s",
+			   inet_ntop(AF_INET6, &ctrl->dest.sin6_addr, addr,
+				     sizeof(ctrl->dest)),
+			   ntohs(ctrl->dest.sin6_port),
+			   strerror(errno));
+#else /* CONFIG_CTRL_IFACE_UDP_IPV6 */
+		wpa_printf(MSG_ERROR, "connect(%s:%d) failed: %s",
+			   inet_ntoa(ctrl->dest.sin_addr),
+			   ntohs(ctrl->dest.sin_port),
+			   strerror(errno));
+#endif /* CONFIG_CTRL_IFACE_UDP_IPV6 */
 		close(ctrl->s);
 		os_free(ctrl->remote_ip);
 		os_free(ctrl);

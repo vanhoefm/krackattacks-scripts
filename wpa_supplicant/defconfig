@@ -192,8 +192,10 @@ CONFIG_SMARTCARD=y
 # Select control interface backend for external programs, e.g, wpa_cli:
 # unix = UNIX domain sockets (default for Linux/*BSD)
 # udp = UDP sockets using localhost (127.0.0.1)
+# udp6 = UDP IPv6 sockets using localhost (::1)
 # named_pipe = Windows Named Pipe (default for Windows)
 # udp-remote = UDP sockets with remote access (only for tests systems/purpose)
+# udp6-remote = UDP IPv6 sockets with remote access (only for tests purpose)
 # y = use default (backwards compatibility)
 # If this option is commented out, control interface is not included in the
 # build.

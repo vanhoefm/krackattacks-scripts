@@ -84,6 +84,7 @@ class WpaSupplicant:
         res = self.request("FLUSH")
         if not "OK" in res:
             logger.info("FLUSH to " + self.ifname + " failed: " + res)
+        self.request("WPS_ER_STOP")
         self.request("SET external_sim 0")
         self.request("SET hessid 00:00:00:00:00:00")
         self.request("SET access_network_type 15")

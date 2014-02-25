@@ -32,7 +32,7 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 					 char *buf, size_t *resp_len);
 
 /**
- * wpa_supplicant_ctrl_iface_process - Process global ctrl_iface command
+ * wpa_supplicant_global_ctrl_iface_process - Process global ctrl_iface command
  * @global: Pointer to global data from wpa_supplicant_init()
  * @buf: Received command buffer (nul terminated string)
  * @resp_len: Variable to be set to the response length

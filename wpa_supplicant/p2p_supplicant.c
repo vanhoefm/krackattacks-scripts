@@ -722,12 +722,10 @@ static int wpas_p2p_store_persistent_group(struct wpa_supplicant *wpa_s,
 		changed = 1;
 	}
 
-#ifndef CONFIG_NO_CONFIG_WRITE
 	if (changed && wpa_s->conf->update_config &&
 	    wpa_config_write(wpa_s->confname, wpa_s->conf)) {
 		wpa_printf(MSG_DEBUG, "P2P: Failed to update configuration");
 	}
-#endif /* CONFIG_NO_CONFIG_WRITE */
 
 	return s->id;
 }
@@ -795,11 +793,9 @@ static void wpas_p2p_add_persistent_group_client(struct wpa_supplicant *wpa_s,
 			  addr, ETH_ALEN);
 	}
 
-#ifndef CONFIG_NO_CONFIG_WRITE
 	if (wpa_s->parent->conf->update_config &&
 	    wpa_config_write(wpa_s->parent->confname, wpa_s->parent->conf))
 		wpa_printf(MSG_DEBUG, "P2P: Failed to update configuration");
-#endif /* CONFIG_NO_CONFIG_WRITE */
 }
 
 
@@ -3152,11 +3148,9 @@ static void wpas_remove_persistent_peer(struct wpa_supplicant *wpa_s,
 		   ssid->p2p_client_list + (i + 1) * ETH_ALEN,
 		   (ssid->num_p2p_clients - i - 1) * ETH_ALEN);
 	ssid->num_p2p_clients--;
-#ifndef CONFIG_NO_CONFIG_WRITE
 	if (wpa_s->parent->conf->update_config &&
 	    wpa_config_write(wpa_s->parent->confname, wpa_s->parent->conf))
 		wpa_printf(MSG_DEBUG, "P2P: Failed to update configuration");
-#endif /* CONFIG_NO_CONFIG_WRITE */
 }
 
 
@@ -6816,11 +6810,9 @@ void wpas_p2p_new_psk_cb(struct wpa_supplicant *wpa_s, const u8 *mac_addr,
 	}
 	dl_list_add(&persistent->psk_list, &p->list);
 
-#ifndef CONFIG_NO_CONFIG_WRITE
 	if (wpa_s->parent->conf->update_config &&
 	    wpa_config_write(wpa_s->parent->confname, wpa_s->parent->conf))
 		wpa_printf(MSG_DEBUG, "P2P: Failed to update configuration");
-#endif /* CONFIG_NO_CONFIG_WRITE */
 }
 
 
@@ -6831,14 +6823,10 @@ static void wpas_p2p_remove_psk(struct wpa_supplicant *wpa_s,
 	int res;
 
 	res = wpas_p2p_remove_psk_entry(wpa_s, s, addr, iface_addr);
-	if (res > 0) {
-#ifndef CONFIG_NO_CONFIG_WRITE
-		if (wpa_s->conf->update_config &&
-		    wpa_config_write(wpa_s->confname, wpa_s->conf))
-			wpa_dbg(wpa_s, MSG_DEBUG,
-				"P2P: Failed to update configuration");
-#endif /* CONFIG_NO_CONFIG_WRITE */
-	}
+	if (res > 0 && wpa_s->conf->update_config &&
+	    wpa_config_write(wpa_s->confname, wpa_s->conf))
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"P2P: Failed to update configuration");
 }
 
 

@@ -5462,6 +5462,8 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 	eapol_sm_notify_logoff(wpa_s->eapol, FALSE);
 
 	radio_remove_works(wpa_s, NULL, 1);
+
+	wpa_s->next_ssid = NULL;
 }
 
 

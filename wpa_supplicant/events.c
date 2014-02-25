@@ -728,7 +728,8 @@ static int bss_is_ess(struct wpa_bss *bss)
 
 static struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 					    int i, struct wpa_bss *bss,
-					    struct wpa_ssid *group)
+					    struct wpa_ssid *group,
+					    int only_first_ssid)
 {
 	u8 wpa_ie_len, rsn_ie_len;
 	int wpa;
@@ -789,7 +790,7 @@ static struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 
 	wpa = wpa_ie_len > 0 || rsn_ie_len > 0;
 
-	for (ssid = group; ssid; ssid = ssid->pnext) {
+	for (ssid = group; ssid; ssid = only_first_ssid ? NULL : ssid->pnext) {
 		int check_ssid = wpa ? 1 : (ssid->ssid_len != 0);
 		int res;
 
@@ -938,16 +939,22 @@ static struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 static struct wpa_bss *
 wpa_supplicant_select_bss(struct wpa_supplicant *wpa_s,
 			  struct wpa_ssid *group,
-			  struct wpa_ssid **selected_ssid)
+			  struct wpa_ssid **selected_ssid,
+			  int only_first_ssid)
 {
 	unsigned int i;
 
-	wpa_dbg(wpa_s, MSG_DEBUG, "Selecting BSS from priority group %d",
-		group->priority);
+	if (only_first_ssid)
+		wpa_dbg(wpa_s, MSG_DEBUG, "Try to find BSS matching pre-selected network id=%d",
+			group->id);
+	else
+		wpa_dbg(wpa_s, MSG_DEBUG, "Selecting BSS from priority group %d",
+			group->priority);
 
 	for (i = 0; i < wpa_s->last_scan_res_used; i++) {
 		struct wpa_bss *bss = wpa_s->last_scan_res[i];
-		*selected_ssid = wpa_scan_res_match(wpa_s, i, bss, group);
+		*selected_ssid = wpa_scan_res_match(wpa_s, i, bss, group,
+						    only_first_ssid);
 		if (!*selected_ssid)
 			continue;
 		wpa_dbg(wpa_s, MSG_DEBUG, "   selected BSS " MACSTR
@@ -972,10 +979,27 @@ struct wpa_bss * wpa_supplicant_pick_network(struct wpa_supplicant *wpa_s,
 		return NULL; /* no scan results from last update */
 
 	while (selected == NULL) {
+		if (wpa_s->next_ssid) {
+			struct wpa_ssid *ssid;
+
+			/* check that next_ssid is still valid */
+			for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next)
+				if (ssid == wpa_s->next_ssid)
+					break;
+			wpa_s->next_ssid = NULL;
+
+			if (ssid) {
+				selected = wpa_supplicant_select_bss(
+					wpa_s, ssid, selected_ssid, 1);
+				if (selected)
+					break;
+			}
+		}
+
 		for (prio = 0; prio < wpa_s->conf->num_prio; prio++) {
 			selected = wpa_supplicant_select_bss(
 				wpa_s, wpa_s->conf->pssid[prio],
-				selected_ssid);
+				selected_ssid, 0);
 			if (selected)
 				break;
 		}

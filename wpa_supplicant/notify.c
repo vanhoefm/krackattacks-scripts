@@ -252,6 +252,8 @@ void wpas_notify_persistent_group_removed(struct wpa_supplicant *wpa_s,
 void wpas_notify_network_removed(struct wpa_supplicant *wpa_s,
 				 struct wpa_ssid *ssid)
 {
+	if (wpa_s->next_ssid == ssid)
+		wpa_s->next_ssid = NULL;
 	if (wpa_s->wpa)
 		wpa_sm_pmksa_cache_flush(wpa_s->wpa, ssid);
 	if (!ssid->p2p_group && wpa_s->global->p2p_group_formation != wpa_s)

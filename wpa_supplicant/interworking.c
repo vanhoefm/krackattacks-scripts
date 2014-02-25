@@ -918,6 +918,7 @@ static int interworking_connect_3gpp(struct wpa_supplicant *wpa_s,
 	    wpa_config_set_quoted(ssid, "password", cred->password) < 0)
 		goto fail;
 
+	wpa_s->next_ssid = ssid;
 	wpa_config_update_prio_list(wpa_s->conf);
 	interworking_reconnect(wpa_s);
 
@@ -1241,6 +1242,7 @@ static int interworking_connect_roaming_consortium(
 		    cred->eap_method->method == EAP_TYPE_TTLS) < 0)
 		goto fail;
 
+	wpa_s->next_ssid = ssid;
 	wpa_config_update_prio_list(wpa_s->conf);
 	interworking_reconnect(wpa_s);
 
@@ -1443,6 +1445,7 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 
 	nai_realm_free(realm, count);
 
+	wpa_s->next_ssid = ssid;
 	wpa_config_update_prio_list(wpa_s->conf);
 	interworking_reconnect(wpa_s);
 

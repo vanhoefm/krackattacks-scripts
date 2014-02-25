@@ -420,6 +420,9 @@ struct wpa_supplicant {
 
 	enum { WPA_SETBAND_AUTO, WPA_SETBAND_5G, WPA_SETBAND_2G } setband;
 
+	/* Preferred network for the next connection attempt */
+	struct wpa_ssid *next_ssid;
+
 	/* previous scan was wildcard when interleaving between
 	 * wildcard scans and specific SSID scan when max_ssids=1 */
 	int prev_scan_wildcard;

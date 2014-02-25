@@ -108,8 +108,12 @@ class DataCollector(object):
                                                stderr=open('/dev/null', 'w'),
                                                cwd=self._logdir)
             l = self._trace_cmd.stdout.read(7)
-            while not 'STARTED' in l:
+            while self._trace_cmd.poll() is None and not 'STARTED' in l:
                 l += self._trace_cmd.stdout.read(1)
+            res = self._trace_cmd.returncode
+            if res:
+                print "Failed calling trace-cmd: returned exit status %d" % res
+                sys.exit(1)
     def __exit__(self, type, value, traceback):
         if self._tracing:
             self._trace_cmd.stdin.write('DONE\n')

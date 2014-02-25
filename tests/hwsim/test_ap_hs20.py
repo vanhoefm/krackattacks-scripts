@@ -799,3 +799,31 @@ def test_ap_hs20_roam_to_higher_prio(dev, apdev):
         raise Exception("Unexpected AP selected")
     if bssid2 not in ev:
         raise Exception("Unexpected BSSID after reconnection")
+
+def test_ap_hs20_domain_suffix_match(dev, apdev):
+    """Hotspot 2.0 and domain_suffix_match"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'username': "hs20-test",
+                                  'password': "password",
+                                  'domain': "example.com",
+                                  'domain_suffix_match': "w1.fi" })
+    interworking_select(dev[0], bssid, "home", freq="2412")
+    dev[0].dump_monitor()
+    interworking_connect(dev[0], bssid, "TTLS")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].dump_monitor()
+
+    dev[0].set_cred_quoted(id, "domain_suffix_match", "no-match.example.com")
+    interworking_select(dev[0], bssid, "home", freq="2412")
+    dev[0].dump_monitor()
+    dev[0].request("INTERWORKING_CONNECT " + bssid)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-TLS-CERT-ERROR"])
+    if ev is None:
+        raise Exception("TLS certificate error not reported")
+    if "Domain suffix mismatch" not in ev:
+        raise Exception("Domain suffix mismatch not reported")

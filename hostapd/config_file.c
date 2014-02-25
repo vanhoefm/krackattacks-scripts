@@ -129,6 +129,8 @@ static int hostapd_config_read_maclist(const char *fname,
 	}
 
 	while (fgets(buf, sizeof(buf), f)) {
+		int i, rem = 0;
+
 		line++;
 
 		if (buf[0] == '#')
@@ -143,14 +145,32 @@ static int hostapd_config_read_maclist(const char *fname,
 		}
 		if (buf[0] == '\0')
 			continue;
+		pos = buf;
+		if (buf[0] == '-') {
+			rem = 1;
+			pos++;
+		}
 
-		if (hwaddr_aton(buf, addr)) {
+		if (hwaddr_aton(pos, addr)) {
 			wpa_printf(MSG_ERROR, "Invalid MAC address '%s' at "
-				   "line %d in '%s'", buf, line, fname);
+				   "line %d in '%s'", pos, line, fname);
 			fclose(f);
 			return -1;
 		}
 
+		if (rem) {
+			i = 0;
+			while (i < *num) {
+				if (os_memcmp((*acl)[i].addr, addr, ETH_ALEN) ==
+				    0) {
+					os_remove_in_array(*acl, *num,
+							   sizeof(**acl), i);
+					(*num)--;
+				} else
+					i++;
+			}
+			continue;
+		}
 		vlan_id = 0;
 		pos = buf;
 		while (*pos != '\0' && *pos != ' ' && *pos != '\t')

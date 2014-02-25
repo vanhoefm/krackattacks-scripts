@@ -549,6 +549,21 @@ static inline void * os_realloc_array(void *ptr, size_t nmemb, size_t size)
 	return os_realloc(ptr, nmemb * size);
 }
 
+/**
+ * os_remove_in_array - Remove a member from an array by index
+ * @ptr: Pointer to the array
+ * @nmemb: Current member count of the array
+ * @size: The size per member of the array
+ * @idx: Index of the member to be removed
+ */
+static inline void os_remove_in_array(void *ptr, size_t nmemb, size_t size,
+				      size_t idx)
+{
+	if (idx < nmemb - 1)
+		os_memmove(((unsigned char *) ptr) + idx * size,
+			   ((unsigned char *) ptr) + (idx + 1) * size,
+			   (nmemb - idx - 1) * size);
+}
 
 /**
  * os_strlcpy - Copy a string with size bound and NUL-termination

@@ -6642,7 +6642,7 @@ static int nl80211_get_reg(struct nl_msg *msg, void *arg)
 
 	nla_for_each_nested(nl_rule, tb_msg[NL80211_ATTR_REG_RULES], rem_rule)
 	{
-		u32 start, end, max_eirp = 0, max_bw = 0;
+		u32 start, end, max_eirp = 0, max_bw = 0, flags = 0;
 		nla_parse(tb_rule, NL80211_FREQUENCY_ATTR_MAX,
 			  nla_data(nl_rule), nla_len(nl_rule), reg_policy);
 		if (tb_rule[NL80211_ATTR_FREQ_RANGE_START] == NULL ||
@@ -6654,9 +6654,20 @@ static int nl80211_get_reg(struct nl_msg *msg, void *arg)
 			max_eirp = nla_get_u32(tb_rule[NL80211_ATTR_POWER_RULE_MAX_EIRP]) / 100;
 		if (tb_rule[NL80211_ATTR_FREQ_RANGE_MAX_BW])
 			max_bw = nla_get_u32(tb_rule[NL80211_ATTR_FREQ_RANGE_MAX_BW]) / 1000;
+		if (tb_rule[NL80211_ATTR_REG_RULE_FLAGS])
+			flags = nla_get_u32(tb_rule[NL80211_ATTR_REG_RULE_FLAGS]);
 
-		wpa_printf(MSG_DEBUG, "nl80211: %u-%u @ %u MHz %u mBm",
-			   start, end, max_bw, max_eirp);
+		wpa_printf(MSG_DEBUG, "nl80211: %u-%u @ %u MHz %u mBm%s%s%s%s%s%s%s%s",
+			   start, end, max_bw, max_eirp,
+			   flags & NL80211_RRF_NO_OFDM ? " (no OFDM)" : "",
+			   flags & NL80211_RRF_NO_CCK ? " (no CCK)" : "",
+			   flags & NL80211_RRF_NO_INDOOR ? " (no indoor)" : "",
+			   flags & NL80211_RRF_NO_OUTDOOR ? " (no outdoor)" :
+			   "",
+			   flags & NL80211_RRF_DFS ? " (DFS)" : "",
+			   flags & NL80211_RRF_PTP_ONLY ? " (PTP only)" : "",
+			   flags & NL80211_RRF_PTMP_ONLY ? " (PTMP only)" : "",
+			   flags & NL80211_RRF_NO_IR ? " (no IR)" : "");
 		if (max_bw >= 40)
 			nl80211_reg_rule_ht40(start, end, results);
 		if (tb_rule[NL80211_ATTR_POWER_RULE_MAX_EIRP])

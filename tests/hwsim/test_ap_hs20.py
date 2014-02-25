@@ -307,6 +307,18 @@ def test_ap_hs20_select(dev, apdev):
     dev[0].set_cred_quoted(id, "realm", "no.match.example.com");
     interworking_select(dev[0], bssid, no_match=True, freq="2412")
 
+    bssid2 = apdev[1]['bssid']
+    params = hs20_ap_params()
+    params['nai_realm'] = [ "0,example.org,21" ]
+    params['hessid'] = bssid2
+    params['domain_name'] = "example.org"
+    hostapd.add_ap(apdev[1]['ifname'], params)
+    dev[0].remove_cred(id)
+    id = dev[0].add_cred_values({ 'realm': "example.org", 'username': "test",
+                                  'password': "secret",
+                                  'domain': "example.org" })
+    interworking_select(dev[0], bssid2, "home", freq="2412")
+
 def hs20_simulated_sim(dev, ap, method):
     bssid = ap['bssid']
     params = hs20_ap_params()

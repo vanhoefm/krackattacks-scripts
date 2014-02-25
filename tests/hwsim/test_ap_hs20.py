@@ -14,8 +14,8 @@ import subprocess
 import hostapd
 from wlantest import Wlantest
 
-def hs20_ap_params():
-    params = hostapd.wpa2_params(ssid="test-hs20")
+def hs20_ap_params(ssid="test-hs20"):
+    params = hostapd.wpa2_params(ssid=ssid)
     params['wpa_key_mgmt'] = "WPA-EAP"
     params['ieee80211w'] = "1"
     params['ieee8021x'] = "1"
@@ -751,3 +751,39 @@ def test_ap_hs20_excluded_ssid(dev, apdev):
     policy_test(dev[0], apdev[1], values)
     values['excluded_ssid'] = "test-hs20-other"
     policy_test(dev[0], apdev[0], values)
+
+def test_ap_hs20_roam_to_higher_prio(dev, apdev):
+    """Hotspot 2.0 and roaming from current to higher priority network"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params(ssid="test-hs20-visited")
+    params['domain_name'] = "visited.example.org"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'username': "hs20-test",
+                                  'password': "password",
+                                  'domain': "example.com" })
+    logger.info("Connect to the only network option")
+    interworking_select(dev[0], bssid, "roaming", freq="2412")
+    dev[0].dump_monitor()
+    interworking_connect(dev[0], bssid, "TTLS")
+
+    logger.info("Start another AP (home operator) and reconnect")
+    bssid2 = apdev[1]['bssid']
+    params = hs20_ap_params(ssid="test-hs20-home")
+    params['domain_name'] = "example.com"
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    dev[0].request("INTERWORKING_SELECT auto freq=2412")
+    ev = dev[0].wait_event(["INTERWORKING-NO-MATCH",
+                            "INTERWORKING-ALREADY-CONNECTED",
+                            "CTRL-EVENT-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Connection timed out")
+    if "INTERWORKING-NO-MATCH" in ev:
+        raise Exception("Matching AP not found")
+    if "INTERWORKING-ALREADY-CONNECTED" in ev:
+        raise Exception("Unexpected AP selected")
+    if bssid2 not in ev:
+        raise Exception("Unexpected BSSID after reconnection")

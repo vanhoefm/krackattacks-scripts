@@ -303,7 +303,7 @@ static int dfs_check_chans_available(struct hostapd_iface *iface,
 
 	mode = iface->current_mode;
 
-	for(i = 0; i < n_chans; i++) {
+	for (i = 0; i < n_chans; i++) {
 		channel = &mode->channels[start_chan_idx + i];
 
 		if (channel->flag & HOSTAPD_CHAN_DISABLED)
@@ -332,7 +332,7 @@ static int dfs_check_chans_unavailable(struct hostapd_iface *iface,
 
 	mode = iface->current_mode;
 
-	for(i = 0; i < n_chans; i++) {
+	for (i = 0; i < n_chans; i++) {
 		channel = &mode->channels[start_chan_idx + i];
 		if (channel->flag & HOSTAPD_CHAN_DISABLED)
 			res++;

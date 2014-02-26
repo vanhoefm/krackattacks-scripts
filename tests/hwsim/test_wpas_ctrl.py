@@ -180,3 +180,15 @@ def test_wpas_ctrl_tdls_discover(dev):
         raise Exception("Unexpected success on invalid TDLS_DISCOVER")
     if "FAIL" not in dev[0].request("TDLS_DISCOVER 00:11:22:33:44:55"):
         raise Exception("Unexpected success on TDLS_DISCOVER")
+
+def test_wpas_ctrl_config_parser(dev):
+    """wpa_supplicant ctrl_iface SET config parser"""
+    if "FAIL" not in dev[0].request("SET pbc_in_m1 qwerty"):
+        raise Exception("Non-number accepted as integer")
+    if "FAIL" not in dev[0].request("SET eapol_version 0"):
+        raise Exception("Out-of-range value accepted")
+    if "FAIL" not in dev[0].request("SET eapol_version 10"):
+        raise Exception("Out-of-range value accepted")
+
+    if "FAIL" not in dev[0].request("SET serial_number 0123456789abcdef0123456789abcdef0"):
+        raise Exception("Too long string accepted")

@@ -1822,6 +1822,9 @@ int wpas_start_pno(struct wpa_supplicant *wpa_s)
 	struct wpa_ssid *ssid;
 	struct wpa_driver_scan_params params;
 
+	if (!wpa_s->sched_scan_supported)
+		return -1;
+
 	if (wpa_s->pno || wpa_s->pno_sched_pending)
 		return 0;
 
@@ -1894,6 +1897,8 @@ int wpas_start_pno(struct wpa_supplicant *wpa_s)
 	os_free(params.filter_ssids);
 	if (ret == 0)
 		wpa_s->pno = 1;
+	else
+		wpa_msg(wpa_s, MSG_ERROR, "Failed to schedule PNO");
 	return ret;
 }
 
@@ -1902,11 +1907,12 @@ int wpas_stop_pno(struct wpa_supplicant *wpa_s)
 {
 	int ret = 0;
 
-	if (wpa_s->pno || wpa_s->sched_scanning) {
-		wpa_s->pno = 0;
-		ret = wpa_supplicant_stop_sched_scan(wpa_s);
-	}
+	if (!wpa_s->pno)
+		return 0;
 
+	ret = wpa_supplicant_stop_sched_scan(wpa_s);
+
+	wpa_s->pno = 0;
 	wpa_s->pno_sched_pending = 0;
 
 	if (wpa_s->wpa_state == WPA_SCANNING)

@@ -1028,6 +1028,50 @@ def test_ap_hs20_multi_cred_sp_prio2(dev, apdev):
     if conn_bssid != bssid2:
         raise Exception("Connected to incorrect BSS")
 
+def test_ap_hs20_req_conn_capab(dev, apdev):
+    """Hotspot 2.0 network selection with req_conn_capab"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    logger.info("Not used in home network")
+    id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'username': "hs20-test",
+                                  'password': "password",
+                                  'domain': "example.com",
+                                  'req_conn_capab': "6:1234" })
+    dev[0].request("INTERWORKING_SELECT freq=2412")
+    ev = dev[0].wait_event(["INTERWORKING-AP"])
+    if ev is None:
+        raise Exception("Network selection timed out");
+    if "type=home" not in ev:
+        raise Exception("Unexpected network type")
+    if "conn_capab_missing=1" in ev:
+        raise Exception("req_conn_capab used in home network")
+
+    logger.info("Used in roaming network")
+    dev[0].remove_cred(id)
+    id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'username': "hs20-test",
+                                  'password': "password",
+                                  'domain': "example.org",
+                                  'req_conn_capab': "6:1234" })
+    dev[0].request("INTERWORKING_SELECT freq=2412")
+    ev = dev[0].wait_event(["INTERWORKING-AP"])
+    if ev is None:
+        raise Exception("Network selection timed out");
+    if "type=roaming" not in ev:
+        raise Exception("Unexpected network type")
+    if "conn_capab_missing=1" not in ev:
+        raise Exception("Missing conn_capab not reported")
+
+    logger.info("Verify that req_conn_capab does not prevent connection if no other network is available")
+    dev[0].request("INTERWORKING_SELECT auto freq=2412")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Connection timed out")
+
 def test_ap_hs20_deauth_req_ess(dev, apdev):
     """Hotspot 2.0 connection and deauthentication request for ESS"""
     dev[0].request("SET pmf 2")

@@ -767,6 +767,14 @@ def test_ap_hs20_req_roaming_consortium(dev, apdev):
     values['required_roaming_consortium'] = "112233"
     policy_test(dev[0], apdev[0], values)
 
+    id = dev[0].add_cred()
+    dev[0].set_cred(id, "required_roaming_consortium", "112233")
+    dev[0].set_cred(id, "required_roaming_consortium", "112233445566778899aabbccddeeff")
+
+    for val in [ "", "1", "11", "1122", "1122334", "112233445566778899aabbccddeeff00" ]:
+        if "FAIL" not in dev[0].request('SET_CRED {} required_roaming_consortium {}'.format(id, val)):
+            raise Exception("Invalid roaming consortium value accepted: " + val)
+
 def test_ap_hs20_excluded_ssid(dev, apdev):
     """Hotspot 2.0 exclusion based on SSID"""
     params = hs20_ap_params()

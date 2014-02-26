@@ -171,8 +171,7 @@ static struct wpabuf * p2p_build_sd_query(u16 update_indic,
 
 	/* ANQP Query Request Frame */
 	len_pos = gas_anqp_add_element(buf, ANQP_VENDOR_SPECIFIC);
-	wpabuf_put_be24(buf, OUI_WFA);
-	wpabuf_put_u8(buf, P2P_OUI_TYPE);
+	wpabuf_put_be32(buf, P2P_IE_VENDOR_TYPE);
 	wpabuf_put_le16(buf, update_indic); /* Service Update Indicator */
 	wpabuf_put_buf(buf, tlvs);
 	gas_anqp_set_element_len(buf, len_pos);
@@ -218,8 +217,7 @@ static struct wpabuf * p2p_build_sd_response(u8 dialog_token, u16 status_code,
 	if (tlvs) {
 		/* ANQP Query Response Frame */
 		len_pos = gas_anqp_add_element(buf, ANQP_VENDOR_SPECIFIC);
-		wpabuf_put_be24(buf, OUI_WFA);
-		wpabuf_put_u8(buf, P2P_OUI_TYPE);
+		wpabuf_put_be32(buf, P2P_IE_VENDOR_TYPE);
 		 /* Service Update Indicator */
 		wpabuf_put_le16(buf, update_indic);
 		wpabuf_put_buf(buf, tlvs);
@@ -250,8 +248,7 @@ static struct wpabuf * p2p_build_gas_comeback_resp(u8 dialog_token,
 		/* ANQP Query Response Frame */
 		wpabuf_put_le16(buf, ANQP_VENDOR_SPECIFIC); /* Info ID */
 		wpabuf_put_le16(buf, 3 + 1 + 2 + total_len);
-		wpabuf_put_be24(buf, OUI_WFA);
-		wpabuf_put_u8(buf, P2P_OUI_TYPE);
+		wpabuf_put_be32(buf, P2P_IE_VENDOR_TYPE);
 		/* Service Update Indicator */
 		wpabuf_put_le16(buf, update_indic);
 	}
@@ -393,17 +390,12 @@ void p2p_rx_gas_initial_req(struct p2p_data *p2p, const u8 *sa,
 		return;
 	}
 
-	if (WPA_GET_BE24(pos) != OUI_WFA) {
-		p2p_dbg(p2p, "Unsupported ANQP OUI %06x", WPA_GET_BE24(pos));
+	if (WPA_GET_BE32(pos) != P2P_IE_VENDOR_TYPE) {
+		p2p_dbg(p2p, "Unsupported ANQP vendor OUI-type %08x",
+			WPA_GET_BE32(pos));
 		return;
 	}
-	pos += 3;
-
-	if (*pos != P2P_OUI_TYPE) {
-		p2p_dbg(p2p, "Unsupported ANQP vendor type %u", *pos);
-		return;
-	}
-	pos++;
+	pos += 4;
 
 	if (pos + 2 > end)
 		return;
@@ -571,17 +563,12 @@ void p2p_rx_gas_initial_resp(struct p2p_data *p2p, const u8 *sa,
 		return;
 	}
 
-	if (WPA_GET_BE24(pos) != OUI_WFA) {
-		p2p_dbg(p2p, "Unsupported ANQP OUI %06x", WPA_GET_BE24(pos));
+	if (WPA_GET_BE32(pos) != P2P_IE_VENDOR_TYPE) {
+		p2p_dbg(p2p, "Unsupported ANQP vendor OUI-type %08x",
+			WPA_GET_BE32(pos));
 		return;
 	}
-	pos += 3;
-
-	if (*pos != P2P_OUI_TYPE) {
-		p2p_dbg(p2p, "Unsupported ANQP vendor type %u", *pos);
-		return;
-	}
-	pos++;
+	pos += 4;
 
 	if (pos + 2 > end)
 		return;
@@ -795,17 +782,12 @@ void p2p_rx_gas_comeback_resp(struct p2p_data *p2p, const u8 *sa,
 	if (pos + 4 > end)
 		return;
 
-	if (WPA_GET_BE24(pos) != OUI_WFA) {
-		p2p_dbg(p2p, "Unsupported ANQP OUI %06x", WPA_GET_BE24(pos));
+	if (WPA_GET_BE32(pos) != P2P_IE_VENDOR_TYPE) {
+		p2p_dbg(p2p, "Unsupported ANQP vendor OUI-type %08x",
+			WPA_GET_BE32(pos));
 		return;
 	}
-	pos += 3;
-
-	if (*pos != P2P_OUI_TYPE) {
-		p2p_dbg(p2p, "Unsupported ANQP vendor type %u", *pos);
-		return;
-	}
-	pos++;
+	pos += 4;
 
 	if (pos + 2 > end)
 		return;

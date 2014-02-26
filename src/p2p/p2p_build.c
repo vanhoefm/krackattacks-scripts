@@ -17,8 +17,7 @@
 void p2p_buf_add_action_hdr(struct wpabuf *buf, u8 subtype, u8 dialog_token)
 {
 	wpabuf_put_u8(buf, WLAN_ACTION_VENDOR_SPECIFIC);
-	wpabuf_put_be24(buf, OUI_WFA);
-	wpabuf_put_u8(buf, P2P_OUI_TYPE);
+	wpabuf_put_be32(buf, P2P_IE_VENDOR_TYPE);
 
 	wpabuf_put_u8(buf, subtype); /* OUI Subtype */
 	wpabuf_put_u8(buf, dialog_token);
@@ -31,8 +30,7 @@ void p2p_buf_add_public_action_hdr(struct wpabuf *buf, u8 subtype,
 {
 	wpabuf_put_u8(buf, WLAN_ACTION_PUBLIC);
 	wpabuf_put_u8(buf, WLAN_PA_VENDOR_SPECIFIC);
-	wpabuf_put_be24(buf, OUI_WFA);
-	wpabuf_put_u8(buf, P2P_OUI_TYPE);
+	wpabuf_put_be32(buf, P2P_IE_VENDOR_TYPE);
 
 	wpabuf_put_u8(buf, subtype); /* OUI Subtype */
 	wpabuf_put_u8(buf, dialog_token);
@@ -47,8 +45,7 @@ u8 * p2p_buf_add_ie_hdr(struct wpabuf *buf)
 	/* P2P IE header */
 	wpabuf_put_u8(buf, WLAN_EID_VENDOR_SPECIFIC);
 	len = wpabuf_put(buf, 1); /* IE length to be filled */
-	wpabuf_put_be24(buf, OUI_WFA);
-	wpabuf_put_u8(buf, P2P_OUI_TYPE);
+	wpabuf_put_be32(buf, P2P_IE_VENDOR_TYPE);
 	wpa_printf(MSG_DEBUG, "P2P: * P2P IE header");
 	return len;
 }

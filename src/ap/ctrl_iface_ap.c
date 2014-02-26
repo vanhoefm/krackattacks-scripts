@@ -250,9 +250,8 @@ static int p2p_manager_disconnect(struct hostapd_data *hapd, u16 stype,
 
 	*pos++ = WLAN_EID_VENDOR_SPECIFIC;
 	*pos++ = 4 + 3 + 1;
-	WPA_PUT_BE24(pos, OUI_WFA);
-	pos += 3;
-	*pos++ = P2P_OUI_TYPE;
+	WPA_PUT_BE32(pos, P2P_IE_VENDOR_TYPE);
+	pos += 4;
 
 	*pos++ = P2P_ATTR_MINOR_REASON_CODE;
 	WPA_PUT_LE16(pos, 1);

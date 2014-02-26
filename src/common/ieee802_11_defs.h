@@ -758,7 +758,14 @@ struct ieee80211_vht_operation {
 #define VHT_CAP_MU_BEAMFORMEE_CAPABLE               ((u32) BIT(20))
 #define VHT_CAP_VHT_TXOP_PS                         ((u32) BIT(21))
 #define VHT_CAP_HTC_VHT                             ((u32) BIT(22))
-#define VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT          ((u32) BIT(23) | \
+
+#define VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT_1        ((u32) BIT(23))
+#define VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT_2        ((u32) BIT(24))
+#define VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT_3        ((u32) BIT(23) | BIT(24))
+#define VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT_4        ((u32) BIT(25))
+#define VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT_5        ((u32) BIT(23) | BIT(25))
+#define VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT_6        ((u32) BIT(24) | BIT(25))
+#define VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT_MAX      ((u32) BIT(23) | \
 							   BIT(24) | BIT(25))
 #define VHT_CAP_VHT_LINK_ADAPTATION_VHT_UNSOL_MFB   ((u32) BIT(27))
 #define VHT_CAP_VHT_LINK_ADAPTATION_VHT_MRQ_MFB     ((u32) BIT(26) | BIT(27))

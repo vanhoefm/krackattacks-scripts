@@ -1096,8 +1096,20 @@ static int hostapd_config_vht_capab(struct hostapd_config *conf,
 		conf->vht_capab |= VHT_CAP_VHT_TXOP_PS;
 	if (os_strstr(capab, "[HTC-VHT]"))
 		conf->vht_capab |= VHT_CAP_HTC_VHT;
-	if (os_strstr(capab, "[MAX-A-MPDU-LEN-EXP0]"))
-		conf->vht_capab |= VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT;
+	if (os_strstr(capab, "[MAX-A-MPDU-LEN-EXP7]"))
+		conf->vht_capab |= VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT_MAX;
+	else if (os_strstr(capab, "[MAX-A-MPDU-LEN-EXP6]"))
+		conf->vht_capab |= VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT_6;
+	else if (os_strstr(capab, "[MAX-A-MPDU-LEN-EXP5]"))
+		conf->vht_capab |= VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT_5;
+	else if (os_strstr(capab, "[MAX-A-MPDU-LEN-EXP4]"))
+		conf->vht_capab |= VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT_4;
+	else if (os_strstr(capab, "[MAX-A-MPDU-LEN-EXP3]"))
+		conf->vht_capab |= VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT_3;
+	else if (os_strstr(capab, "[MAX-A-MPDU-LEN-EXP2]"))
+		conf->vht_capab |= VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT_2;
+	else if (os_strstr(capab, "[MAX-A-MPDU-LEN-EXP1]"))
+		conf->vht_capab |= VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT_1;
 	if (os_strstr(capab, "[VHT-LINK-ADAPT2]") &&
 	    (conf->vht_capab & VHT_CAP_HTC_VHT))
 		conf->vht_capab |= VHT_CAP_VHT_LINK_ADAPTATION_VHT_UNSOL_MFB;

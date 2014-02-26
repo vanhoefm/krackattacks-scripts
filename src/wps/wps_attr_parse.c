@@ -59,6 +59,14 @@ static int wps_set_vendor_ext_wfa_subelem(struct wps_parse_attr *attr,
 		}
 		attr->settings_delay_time = pos;
 		break;
+	case WFA_ELEM_REGISTRAR_CONFIGURATION_METHODS:
+		if (len != 2) {
+			wpa_printf(MSG_DEBUG, "WPS: Invalid Registrar Configuration Methods length %u",
+				   len);
+			return -1;
+		}
+		attr->registrar_configuration_methods = pos;
+		break;
 	default:
 		wpa_printf(MSG_MSGDUMP, "WPS: Skipped unknown WFA Vendor "
 			   "Extension subelement %u", id);

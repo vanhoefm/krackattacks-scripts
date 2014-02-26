@@ -260,7 +260,7 @@ Credentials can be pre-configured for automatic network selection:
 #	Format: <protocol>[:<comma-separated list of ports]
 #	Multiple entries can be used to list multiple requirements.
 #	For example, number of common TCP protocols:
-#	req_conn_capab=6,22,80,443
+#	req_conn_capab=6:22,80,443
 #	For example, IPSec/IKE:
 #	req_conn_capab=17:500
 #	req_conn_capab=50

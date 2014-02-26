@@ -1067,3 +1067,18 @@ def test_ap_hs20_deauth_req_bss(dev, apdev):
                             "CTRL-EVENT-CONNECTED"], timeout=5)
     if ev is not None:
         raise Exception("Unexpected connection attempt")
+
+def test_ap_hs20_osen(dev, apdev):
+    """Hotspot 2.0 OSEN connection"""
+    params = { 'ssid': "osen",
+               'osen': "1",
+               'auth_server_addr': "127.0.0.1",
+               'auth_server_port': "1812",
+               'auth_server_shared_secret': "radius" }
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].connect("osen", proto="OSEN", key_mgmt="OSEN", pairwise="CCMP",
+                   group="GTK_NOT_USED",
+                   eap="WFA-UNAUTH-TLS", identity="osen@example.com",
+                   ca_cert="auth_serv/ca.pem",
+                   scan_freq="2412")

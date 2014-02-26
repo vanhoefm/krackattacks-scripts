@@ -46,5 +46,7 @@ int wpa_supplicant_stop_sched_scan(struct wpa_supplicant *wpa_s);
 struct wpa_driver_scan_params *
 wpa_scan_clone_params(const struct wpa_driver_scan_params *src);
 void wpa_scan_free_params(struct wpa_driver_scan_params *params);
+int wpas_start_pno(struct wpa_supplicant *wpa_s);
+int wpas_stop_pno(struct wpa_supplicant *wpa_s);
 
 #endif /* SCAN_H */

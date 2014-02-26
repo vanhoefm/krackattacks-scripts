@@ -1813,3 +1813,104 @@ void wpa_scan_free_params(struct wpa_driver_scan_params *params)
 	os_free(params->filter_ssids);
 	os_free(params);
 }
+
+
+int wpas_start_pno(struct wpa_supplicant *wpa_s)
+{
+	int ret, interval;
+	size_t i, num_ssid;
+	struct wpa_ssid *ssid;
+	struct wpa_driver_scan_params params;
+
+	if (wpa_s->pno || wpa_s->pno_sched_pending)
+		return 0;
+
+	if ((wpa_s->wpa_state > WPA_SCANNING) &&
+	    (wpa_s->wpa_state <= WPA_COMPLETED)) {
+		wpa_printf(MSG_ERROR, "PNO: In assoc process");
+		return -EAGAIN;
+	}
+
+	if (wpa_s->wpa_state == WPA_SCANNING) {
+		wpa_supplicant_cancel_scan(wpa_s);
+		if (wpa_s->sched_scanning) {
+			wpa_printf(MSG_DEBUG, "Schedule PNO on completion of "
+				   "ongoing sched scan");
+			wpa_supplicant_cancel_sched_scan(wpa_s);
+			wpa_s->pno_sched_pending = 1;
+			return 0;
+		}
+	}
+
+	os_memset(&params, 0, sizeof(params));
+
+	num_ssid = 0;
+	ssid = wpa_s->conf->ssid;
+	while (ssid) {
+		if (!wpas_network_disabled(wpa_s, ssid))
+			num_ssid++;
+		ssid = ssid->next;
+	}
+	if (num_ssid > WPAS_MAX_SCAN_SSIDS) {
+		wpa_printf(MSG_DEBUG, "PNO: Use only the first %u SSIDs from "
+			   "%u", WPAS_MAX_SCAN_SSIDS, (unsigned int) num_ssid);
+		num_ssid = WPAS_MAX_SCAN_SSIDS;
+	}
+
+	if (num_ssid == 0) {
+		wpa_printf(MSG_DEBUG, "PNO: No configured SSIDs");
+		return -1;
+	}
+
+	params.filter_ssids = os_malloc(sizeof(struct wpa_driver_scan_filter) *
+					num_ssid);
+	if (params.filter_ssids == NULL)
+		return -1;
+	i = 0;
+	ssid = wpa_s->conf->ssid;
+	while (ssid) {
+		if (!wpas_network_disabled(wpa_s, ssid)) {
+			params.ssids[i].ssid = ssid->ssid;
+			params.ssids[i].ssid_len = ssid->ssid_len;
+			params.num_ssids++;
+			os_memcpy(params.filter_ssids[i].ssid, ssid->ssid,
+				  ssid->ssid_len);
+			params.filter_ssids[i].ssid_len = ssid->ssid_len;
+			params.num_filter_ssids++;
+			i++;
+			if (i == num_ssid)
+				break;
+		}
+		ssid = ssid->next;
+	}
+
+	if (wpa_s->conf->filter_rssi)
+		params.filter_rssi = wpa_s->conf->filter_rssi;
+
+	interval = wpa_s->conf->sched_scan_interval ?
+		wpa_s->conf->sched_scan_interval : 10;
+
+	ret = wpa_supplicant_start_sched_scan(wpa_s, &params, interval);
+	os_free(params.filter_ssids);
+	if (ret == 0)
+		wpa_s->pno = 1;
+	return ret;
+}
+
+
+int wpas_stop_pno(struct wpa_supplicant *wpa_s)
+{
+	int ret = 0;
+
+	if (wpa_s->pno || wpa_s->sched_scanning) {
+		wpa_s->pno = 0;
+		ret = wpa_supplicant_stop_sched_scan(wpa_s);
+	}
+
+	wpa_s->pno_sched_pending = 0;
+
+	if (wpa_s->wpa_state == WPA_SCANNING)
+		wpa_supplicant_req_scan(wpa_s, 0, 0);
+
+	return ret;
+}

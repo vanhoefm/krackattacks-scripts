@@ -409,6 +409,11 @@ def test_ap_hs20_username(dev, apdev):
     interworking_select(dev[0], bssid, "home", freq="2412")
     interworking_connect(dev[0], bssid, "TTLS")
     check_sp_type(dev[0], "home")
+    status = dev[0].get_status()
+    if status['pairwise_cipher'] != "CCMP":
+        raise Exception("Unexpected pairwise cipher")
+    if status['hs20'] != "2":
+        raise Exception("Unexpected HS 2.0 support indication")
 
     dev[1].connect("test-hs20", key_mgmt="WPA-EAP", eap="TTLS",
                    identity="hs20-test", password="password",

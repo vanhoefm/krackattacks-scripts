@@ -762,6 +762,23 @@ def default_cred():
              'username': "hs20-test",
              'password': "password" }
 
+def test_ap_hs20_prefer_home(dev, apdev):
+    """Hotspot 2.0 required roaming consortium"""
+    params = hs20_ap_params()
+    params['domain_name'] = "example.org"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    params = hs20_ap_params()
+    params['ssid'] = "test-hs20-other"
+    params['domain_name'] = "example.com"
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    values = default_cred()
+    values['domain'] = "example.com"
+    policy_test(dev[0], apdev[1], values, only_one=False)
+    values['domain'] = "example.org"
+    policy_test(dev[0], apdev[0], values, only_one=False)
+
 def test_ap_hs20_req_roaming_consortium(dev, apdev):
     """Hotspot 2.0 required roaming consortium"""
     params = hs20_ap_params()

@@ -993,30 +993,33 @@ struct wpa_bss * wpa_supplicant_pick_network(struct wpa_supplicant *wpa_s,
 {
 	struct wpa_bss *selected = NULL;
 	int prio;
+	struct wpa_ssid *next_ssid = NULL;
 
 	if (wpa_s->last_scan_res == NULL ||
 	    wpa_s->last_scan_res_used == 0)
 		return NULL; /* no scan results from last update */
 
+	if (wpa_s->next_ssid) {
+		struct wpa_ssid *ssid;
+
+		/* check that next_ssid is still valid */
+		for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next) {
+			if (ssid == wpa_s->next_ssid)
+				break;
+		}
+		next_ssid = ssid;
+		wpa_s->next_ssid = NULL;
+	}
+
 	while (selected == NULL) {
-		if (wpa_s->next_ssid) {
-			struct wpa_ssid *ssid;
-
-			/* check that next_ssid is still valid */
-			for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next)
-				if (ssid == wpa_s->next_ssid)
-					break;
-			wpa_s->next_ssid = NULL;
-
-			if (ssid) {
+		for (prio = 0; prio < wpa_s->conf->num_prio; prio++) {
+			if (next_ssid && next_ssid->priority ==
+			    wpa_s->conf->pssid[prio]->priority) {
 				selected = wpa_supplicant_select_bss(
-					wpa_s, ssid, selected_ssid, 1);
+					wpa_s, next_ssid, selected_ssid, 1);
 				if (selected)
 					break;
 			}
-		}
-
-		for (prio = 0; prio < wpa_s->conf->num_prio; prio++) {
 			selected = wpa_supplicant_select_bss(
 				wpa_s, wpa_s->conf->pssid[prio],
 				selected_ssid, 0);

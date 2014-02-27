@@ -224,7 +224,8 @@ out:
 			    p2p->cfg->dev_addr,
 			    wpabuf_head(resp), wpabuf_len(resp), 200) < 0) {
 		p2p_dbg(p2p, "Failed to send Action frame");
-	}
+	} else
+		p2p->send_action_in_progress = 1;
 
 	wpabuf_free(resp);
 

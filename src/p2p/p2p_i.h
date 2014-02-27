@@ -389,6 +389,7 @@ struct p2p_data {
 	u8 after_scan_peer[ETH_ALEN];
 	struct p2p_pending_action_tx *after_scan_tx;
 	unsigned int after_scan_tx_in_progress:1;
+	unsigned int send_action_in_progress:1;
 
 	/* Requested device types for find/search */
 	unsigned int num_req_dev_types;

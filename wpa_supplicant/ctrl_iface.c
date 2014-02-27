@@ -6843,6 +6843,9 @@ static char * wpas_global_ctrl_iface_redir_p2p(struct wpa_global *global,
 		"P2P_PRESENCE_REQ ",
 		"P2P_EXT_LISTEN ",
 		"P2P_REMOVE_CLIENT ",
+		"NFC_GET_HANDOVER_SEL ",
+		"NFC_GET_HANDOVER_REQ ",
+		"NFC_REPORT_HANDOVER ",
 		NULL
 	};
 	int found = 0;

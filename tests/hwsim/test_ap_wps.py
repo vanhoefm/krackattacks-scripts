@@ -130,6 +130,14 @@ def test_ap_wps_init_through_wps_config(dev, apdev):
     hapd = hostapd.Hostapd(apdev[0]['ifname'])
     if "FAIL" in hapd.request("WPS_CONFIG " + ssid.encode("hex") + " WPA2PSK CCMP " + "12345678".encode("hex")):
         raise Exception("WPS_CONFIG command failed")
+    ev = hapd.wait_event(["WPS-NEW-AP-SETTINGS"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on WPS-NEW-AP-SETTINGS events")
+    # It takes some time for the AP to update Beacon and Probe Response frames,
+    # so wait here before requesting the scan to be started to avoid adding
+    # extra five second wait to the test due to fetching obsolete scan results.
+    hapd.ping()
+    time.sleep(0.2)
     dev[0].connect(ssid, psk="12345678", scan_freq="2412", proto="WPA2",
                    pairwise="CCMP", group="CCMP")
 

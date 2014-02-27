@@ -403,11 +403,17 @@ def test_ap_hs20_username(dev, apdev):
     id = dev[0].add_cred_values({ 'realm': "example.com",
                                   'username': "hs20-test",
                                   'password': "password",
+                                  'ca_cert': "auth_serv/ca.pem",
                                   'domain': "example.com",
                                   'update_identifier': "1234" })
     interworking_select(dev[0], bssid, "home", freq="2412")
     interworking_connect(dev[0], bssid, "TTLS")
     check_sp_type(dev[0], "home")
+
+    dev[1].connect("test-hs20", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="hs20-test", password="password",
+                   ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                   scan_freq="2412")
 
 def eap_test(dev, ap, eap_params, method, user):
     bssid = ap['bssid']

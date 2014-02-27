@@ -814,7 +814,8 @@ static int set_root_nai(struct wpa_ssid *ssid, const char *imsi, char prefix)
 static int already_connected(struct wpa_supplicant *wpa_s,
 			     struct wpa_cred *cred, struct wpa_bss *bss)
 {
-	struct wpa_ssid *ssid;
+	struct wpa_ssid *ssid, *sel_ssid;
+	struct wpa_bss *selected;
 
 	if (wpa_s->wpa_state < WPA_ASSOCIATED || wpa_s->current_ssid == NULL)
 		return 0;
@@ -826,6 +827,11 @@ static int already_connected(struct wpa_supplicant *wpa_s,
 	if (ssid->ssid_len != bss->ssid_len ||
 	    os_memcmp(ssid->ssid, bss->ssid, bss->ssid_len) != 0)
 		return 0;
+
+	sel_ssid = NULL;
+	selected = wpa_supplicant_pick_network(wpa_s, &sel_ssid);
+	if (selected && sel_ssid && sel_ssid->priority > ssid->priority)
+		return 0; /* higher priority network in scan results */
 
 	return 1;
 }

@@ -1220,3 +1220,43 @@ def test_ap_hs20_network_preference2(dev, apdev):
         raise Exception("No roam to higher priority network")
     if bssid not in ev:
         raise Exception("Unexpected network selected")
+
+def test_ap_hs20_network_preference3(dev, apdev):
+    """Hotspot 2.0 network selection with two credential (one preferred)"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    bssid2 = apdev[1]['bssid']
+    params = hs20_ap_params(ssid="test-hs20b")
+    params['nai_realm'] = "0,example.org,13[5:6],21[2:4][5:7]"
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    dev[0].hs20_enable()
+    values = { 'realm': "example.com",
+               'username': "hs20-test",
+               'password': "password",
+               'priority': "1" }
+    dev[0].add_cred_values(values)
+    values = { 'realm': "example.org",
+               'username': "hs20-test",
+               'password': "password" }
+    id = dev[0].add_cred_values(values)
+
+    dev[0].request("INTERWORKING_SELECT auto freq=2412")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Connection timed out")
+    if bssid not in ev:
+        raise Exception("Unexpected network selected")
+
+    dev[0].set_cred(id, "priority", "2")
+    dev[0].request("INTERWORKING_SELECT auto freq=2412")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED",
+                            "INTERWORKING-ALREADY-CONNECTED" ], timeout=15)
+    if ev is None:
+        raise Exception("Connection timed out")
+    if "INTERWORKING-ALREADY-CONNECTED" in ev:
+        raise Exception("No roam to higher priority network")
+    if bssid2 not in ev:
+        raise Exception("Unexpected network selected")

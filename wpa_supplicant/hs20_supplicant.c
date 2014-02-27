@@ -885,8 +885,8 @@ void hs20_rx_deauth_imminent_notice(struct wpa_supplicant *wpa_s, u8 code,
 		/* TODO: For now, disable full ESS since some drivers may not
 		 * support disabling per BSS. */
 		if (wpa_s->current_ssid) {
-			struct os_time now;
-			os_get_time(&now);
+			struct os_reltime now;
+			os_get_reltime(&now);
 			if (now.sec + reauth_delay <=
 			    wpa_s->current_ssid->disabled_until.sec)
 				return;
@@ -898,8 +898,8 @@ void hs20_rx_deauth_imminent_notice(struct wpa_supplicant *wpa_s, u8 code,
 	}
 
 	if (code == HS20_DEAUTH_REASON_CODE_ESS && wpa_s->current_ssid) {
-		struct os_time now;
-		os_get_time(&now);
+		struct os_reltime now;
+		os_get_reltime(&now);
 		if (now.sec + reauth_delay <=
 		    wpa_s->current_ssid->disabled_until.sec)
 			return;

@@ -1134,3 +1134,83 @@ def test_ap_hs20_osen(dev, apdev):
                    eap="WFA-UNAUTH-TLS", identity="osen@example.com",
                    ca_cert="auth_serv/ca.pem",
                    scan_freq="2412")
+
+def test_ap_hs20_network_preference(dev, apdev):
+    """Hotspot 2.0 network selection with preferred home network"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    values = { 'realm': "example.com",
+               'username': "hs20-test",
+               'password': "password",
+               'domain': "example.com" }
+    dev[0].add_cred_values(values)
+
+    id = dev[0].add_network()
+    dev[0].set_network_quoted(id, "ssid", "home")
+    dev[0].set_network_quoted(id, "psk", "12345678")
+    dev[0].set_network(id, "priority", "1")
+    dev[0].request("ENABLE_NETWORK %s no-connect" % id)
+
+    dev[0].request("INTERWORKING_SELECT auto freq=2412")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Connection timed out")
+    if bssid not in ev:
+        raise Exception("Unexpected network selected")
+
+    bssid2 = apdev[1]['bssid']
+    params = hostapd.wpa2_params(ssid="home", passphrase="12345678")
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    dev[0].request("INTERWORKING_SELECT auto freq=2412")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED",
+                            "INTERWORKING-ALREADY-CONNECTED" ], timeout=15)
+    if ev is None:
+        raise Exception("Connection timed out")
+    if "INTERWORKING-ALREADY-CONNECTED" in ev:
+        raise Exception("No roam to higher priority network")
+    if bssid2 not in ev:
+        raise Exception("Unexpected network selected")
+
+def test_ap_hs20_network_preference2(dev, apdev):
+    """Hotspot 2.0 network selection with preferred credential"""
+    bssid2 = apdev[1]['bssid']
+    params = hostapd.wpa2_params(ssid="home", passphrase="12345678")
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    dev[0].hs20_enable()
+    values = { 'realm': "example.com",
+               'username': "hs20-test",
+               'password': "password",
+               'domain': "example.com",
+               'priority': "1" }
+    dev[0].add_cred_values(values)
+
+    id = dev[0].add_network()
+    dev[0].set_network_quoted(id, "ssid", "home")
+    dev[0].set_network_quoted(id, "psk", "12345678")
+    dev[0].request("ENABLE_NETWORK %s no-connect" % id)
+
+    dev[0].request("INTERWORKING_SELECT auto freq=2412")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Connection timed out")
+    if bssid2 not in ev:
+        raise Exception("Unexpected network selected")
+
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].request("INTERWORKING_SELECT auto freq=2412")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED",
+                            "INTERWORKING-ALREADY-CONNECTED" ], timeout=15)
+    if ev is None:
+        raise Exception("Connection timed out")
+    if "INTERWORKING-ALREADY-CONNECTED" in ev:
+        raise Exception("No roam to higher priority network")
+    if bssid not in ev:
+        raise Exception("Unexpected network selected")

@@ -395,3 +395,29 @@ def test_radius_das_coa(dev, apdev):
         raise Exception("Missing Error-Cause")
     if reply['Error-Cause'][0] != 405:
         raise Exception("Unexpected Error-Cause: {}".format(reply['Error-Cause']))
+
+def test_radius_ipv6(dev, apdev):
+    """RADIUS connection over IPv6"""
+    params = {}
+    params['ssid'] = 'as'
+    params['beacon_int'] = '2000'
+    params['radius_server_clients'] = 'auth_serv/radius_clients_ipv6.conf'
+    params['radius_server_ipv6'] = '1'
+    params['radius_server_auth_port'] = '18129'
+    params['radius_server_acct_port'] = '18139'
+    params['eap_server'] = '1'
+    params['eap_user_file'] = 'auth_serv/eap_user.conf'
+    params['ca_cert'] = 'auth_serv/ca.pem'
+    params['server_cert'] = 'auth_serv/server.pem'
+    params['private_key'] = 'auth_serv/server.key'
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    params = hostapd.wpa2_eap_params(ssid="radius-ipv6")
+    params['auth_server_addr'] = "::0"
+    params['auth_server_port'] = "18129"
+    params['acct_server_addr'] = "::0"
+    params['acct_server_port'] = "18139"
+    params['acct_server_shared_secret'] = "radius"
+    params['own_ip_addr'] = "::0"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    connect(dev[0], "radius-ipv6")

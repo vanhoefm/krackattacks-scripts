@@ -14,6 +14,9 @@ def test_wpas_ctrl_network(dev):
              ("auth_alg", "OPEN SHARED LEAP"),
              ("scan_freq", "1 2 3 4 5 6 7 8 9 10 11 12 13 14 15"),
              ("freq_list", "2412 2417"),
+             ("scan_ssid", "1"),
+             ("bssid", "00:11:22:33:44:55"),
+             ("proto", "WPA RSN OSEN"),
              ("eap", "TLS"),
              ("go_p2p_dev_addr", "22:33:44:55:66:aa"),
              ("p2p_client_list", "22:33:44:55:66:bb 02:11:22:33:44:55"))
@@ -95,6 +98,74 @@ def test_wpas_ctrl_network(dev):
 
     if dev[0].get_network(id, "psk_list"):
         raise Exception("Unexpected psk_list get response")
+
+    if dev[0].list_networks()[0]['ssid'] != "test":
+        raise Exception("Unexpected ssid in LIST_NETWORKS")
+    dev[0].set_network(id, "ssid", "NULL")
+    if dev[0].list_networks()[0]['ssid'] != "":
+        raise Exception("Unexpected ssid in LIST_NETWORKS after clearing it")
+
+    if "FAIL" not in dev[0].request('SET_NETWORK ' + str(id) + ' ssid "0123456789abcdef0123456789abcdef0"'):
+        raise Exception("Too long SSID accepted")
+    if "FAIL" not in dev[0].request('SET_NETWORK ' + str(id) + ' scan_ssid qwerty'):
+        raise Exception("Invalid integer accepted")
+    if "FAIL" not in dev[0].request('SET_NETWORK ' + str(id) + ' scan_ssid 2'):
+        raise Exception("Too large integer accepted")
+    if "FAIL" not in dev[0].request('SET_NETWORK ' + str(id) + ' psk 12345678'):
+        raise Exception("Invalid PSK accepted")
+    if "FAIL" not in dev[0].request('SET_NETWORK ' + str(id) + ' psk "1234567"'):
+        raise Exception("Too short PSK accepted")
+    if "FAIL" not in dev[0].request('SET_NETWORK ' + str(id) + ' psk "1234567890123456789012345678901234567890123456789012345678901234"'):
+        raise Exception("Too long PSK accepted")
+    dev[0].set_network_quoted(id, "psk", "123456768");
+    dev[0].set_network_quoted(id, "psk", "123456789012345678901234567890123456789012345678901234567890123");
+    if dev[0].get_network(id, "psk") != '*':
+        raise Exception("Unexpected psk read result");
+
+    if "FAIL" not in dev[0].request('SET_NETWORK ' + str(id) + ' eap UNKNOWN'):
+        raise Exception("Unknown EAP method accepted")
+
+    if "FAIL" not in dev[0].request('SET_NETWORK ' + str(id) + ' password "foo'):
+        raise Exception("Invalid password accepted")
+
+    if "FAIL" not in dev[0].request('SET_NETWORK ' + str(id) + ' wep_key0 "foo'):
+        raise Exception("Invalid WEP key accepted")
+    if "FAIL" not in dev[0].request('SET_NETWORK ' + str(id) + ' wep_key0 "12345678901234567"'):
+        raise Exception("Too long WEP key accepted")
+    # too short WEP key is ignored
+    dev[0].set_network_quoted(id, "wep_key0", "1234")
+    dev[0].set_network_quoted(id, "wep_key1", "12345")
+    dev[0].set_network_quoted(id, "wep_key2", "1234567890123")
+    dev[0].set_network_quoted(id, "wep_key3", "1234567890123456")
+
+    dev[0].set_network(id, "go_p2p_dev_addr", "any")
+    if dev[0].get_network(id, "go_p2p_dev_addr") is not None:
+        raise Exception("Unexpected go_p2p_dev_addr value")
+    if "FAIL" not in dev[0].request('SET_NETWORK ' + str(id) + ' go_p2p_dev_addr 00:11:22:33:44'):
+        raise Exception("Invalid go_p2p_dev_addr accepted")
+    if "FAIL" not in dev[0].request('SET_NETWORK ' + str(id) + ' p2p_client_list 00:11:22:33:44'):
+        raise Exception("Invalid p2p_client_list accepted")
+    if "FAIL" in dev[0].request('SET_NETWORK ' + str(id) + ' p2p_client_list 00:11:22:33:44:55 00:1'):
+        raise Exception("p2p_client_list truncation workaround failed")
+    if dev[0].get_network(id, "p2p_client_list") != "00:11:22:33:44:55":
+        raise Exception("p2p_client_list truncation workaround did not work")
+
+    if "FAIL" not in dev[0].request('SET_NETWORK ' + str(id) + ' auth_alg '):
+        raise Exception("Empty auth_alg accepted")
+    if "FAIL" not in dev[0].request('SET_NETWORK ' + str(id) + ' auth_alg FOO'):
+        raise Exception("Invalid auth_alg accepted")
+
+    if "FAIL" not in dev[0].request('SET_NETWORK ' + str(id) + ' proto '):
+        raise Exception("Empty proto accepted")
+    if "FAIL" not in dev[0].request('SET_NETWORK ' + str(id) + ' proto FOO'):
+        raise Exception("Invalid proto accepted")
+
+    if "FAIL" not in dev[0].request('SET_NETWORK ' + str(id) + ' pairwise '):
+        raise Exception("Empty pairwise accepted")
+    if "FAIL" not in dev[0].request('SET_NETWORK ' + str(id) + ' pairwise FOO'):
+        raise Exception("Invalid pairwise accepted")
+    if "FAIL" not in dev[0].request('SET_NETWORK ' + str(id) + ' pairwise WEP40'):
+        raise Exception("Invalid pairwise accepted")
 
 def test_wpas_ctrl_cred(dev):
     """wpa_supplicant ctrl_iface cred set"""

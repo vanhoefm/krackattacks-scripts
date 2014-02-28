@@ -9431,8 +9431,8 @@ static int i802_set_wds_sta(void *priv, const u8 *addr, int aid, int val,
 					name);
 
 		i802_set_sta_vlan(priv, addr, bss->ifname, 0);
-		return wpa_driver_nl80211_if_remove(priv, WPA_IF_AP_VLAN,
-						    name);
+		nl80211_remove_iface(drv, if_nametoindex(name));
+		return 0;
 	}
 }
 

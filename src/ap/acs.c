@@ -639,23 +639,26 @@ acs_find_ideal_chan(struct hostapd_iface *iface)
 
 static void acs_adjust_vht_center_freq(struct hostapd_iface *iface)
 {
+	int offset;
+
 	wpa_printf(MSG_DEBUG, "ACS: Adjusting VHT center frequency");
 
 	switch (iface->conf->vht_oper_chwidth) {
 	case VHT_CHANWIDTH_USE_HT:
-		iface->conf->vht_oper_centr_freq_seg0_idx =
-			iface->conf->channel + 2;
+		offset = 2 * iface->conf->secondary_channel;
 		break;
 	case VHT_CHANWIDTH_80MHZ:
-		iface->conf->vht_oper_centr_freq_seg0_idx =
-			iface->conf->channel + 6;
+		offset = 6;
 		break;
 	default:
 		/* TODO: How can this be calculated? Adjust
 		 * acs_find_ideal_chan() */
 		wpa_printf(MSG_INFO, "ACS: Only VHT20/40/80 is supported now");
-		break;
+		return;
 	}
+
+	iface->conf->vht_oper_centr_freq_seg0_idx =
+		iface->conf->channel + offset;
 }
 
 

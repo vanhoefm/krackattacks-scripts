@@ -40,6 +40,11 @@ struct radius_server_conf {
 	char *client_file;
 
 	/**
+	 * sqlite_file - SQLite database for storing debug log information
+	 */
+	const char *sqlite_file;
+
+	/**
 	 * conf_ctx - Context pointer for callbacks
 	 *
 	 * This is used as the ctx argument in get_eap_user() calls.

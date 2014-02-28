@@ -8,6 +8,9 @@
 
 #include "includes.h"
 #include <net/if.h>
+#ifdef CONFIG_SQLITE
+#include <sqlite3.h>
+#endif /* CONFIG_SQLITE */
 
 #include "common.h"
 #include "radius.h"
@@ -69,6 +72,8 @@ struct radius_session {
 	unsigned int sess_id;
 	struct eap_sm *eap;
 	struct eap_eapol_interface *eap_if;
+	char *username; /* from User-Name attribute */
+	char *nas_ip;
 
 	struct radius_msg *last_msg;
 	char *last_from_addr;
@@ -315,6 +320,10 @@ struct radius_server_data {
 
 	char *subscr_remediation_url;
 	u8 subscr_remediation_method;
+
+#ifdef CONFIG_SQLITE
+	sqlite3 *db;
+#endif /* CONFIG_SQLITE */
 };
 
 
@@ -331,6 +340,52 @@ wpa_hexdump_ascii(MSG_MSGDUMP, "RADIUS SRV: " args)
 static void radius_server_session_timeout(void *eloop_ctx, void *timeout_ctx);
 static void radius_server_session_remove_timeout(void *eloop_ctx,
 						 void *timeout_ctx);
+
+void srv_log(struct radius_session *sess, const char *fmt, ...)
+PRINTF_FORMAT(2, 3);
+
+void srv_log(struct radius_session *sess, const char *fmt, ...)
+{
+	va_list ap;
+	char *buf;
+	int buflen;
+
+	va_start(ap, fmt);
+	buflen = vsnprintf(NULL, 0, fmt, ap) + 1;
+	va_end(ap);
+
+	buf = os_malloc(buflen);
+	if (buf == NULL)
+		return;
+	va_start(ap, fmt);
+	vsnprintf(buf, buflen, fmt, ap);
+	va_end(ap);
+
+	RADIUS_DEBUG("[0x%x %s] %s", sess->sess_id, sess->nas_ip, buf);
+
+#ifdef CONFIG_SQLITE
+	if (sess->server->db) {
+		char *sql;
+		sql = sqlite3_mprintf("INSERT INTO authlog"
+				      "(timestamp,session,nas_ip,username,note)"
+				      " VALUES ("
+				      "strftime('%%Y-%%m-%%d %%H:%%M:%%f',"
+				      "'now'),%u,%Q,%Q,%Q)",
+				      sess->sess_id, sess->nas_ip,
+				      sess->username, buf);
+		if (sql) {
+			if (sqlite3_exec(sess->server->db, sql, NULL, NULL,
+					 NULL) != SQLITE_OK) {
+				RADIUS_ERROR("Failed to add authlog entry into sqlite database: %s",
+					     sqlite3_errmsg(sess->server->db));
+			}
+			sqlite3_free(sql);
+		}
+	}
+#endif /* CONFIG_SQLITE */
+
+	os_free(buf);
+}
 
 
 static struct radius_client *
@@ -397,6 +452,8 @@ static void radius_server_session_free(struct radius_server_data *data,
 	radius_msg_free(sess->last_msg);
 	os_free(sess->last_from_addr);
 	radius_msg_free(sess->last_reply);
+	os_free(sess->username);
+	os_free(sess->nas_ip);
 	os_free(sess);
 	data->num_sess--;
 }
@@ -479,7 +536,7 @@ radius_server_new_session(struct radius_server_data *data,
 static struct radius_session *
 radius_server_get_new_session(struct radius_server_data *data,
 			      struct radius_client *client,
-			      struct radius_msg *msg)
+			      struct radius_msg *msg, const char *from_addr)
 {
 	u8 *user;
 	size_t user_len;
@@ -490,36 +547,44 @@ radius_server_get_new_session(struct radius_server_data *data,
 
 	RADIUS_DEBUG("Creating a new session");
 
-	user = os_malloc(256);
-	if (user == NULL) {
-		return NULL;
-	}
-	res = radius_msg_get_attr(msg, RADIUS_ATTR_USER_NAME, user, 256);
-	if (res < 0 || res > 256) {
+	if (radius_msg_get_attr_ptr(msg, RADIUS_ATTR_USER_NAME, &user,
+				    &user_len, NULL) < 0) {
 		RADIUS_DEBUG("Could not get User-Name");
-		os_free(user);
 		return NULL;
 	}
-	user_len = res;
 	RADIUS_DUMP_ASCII("User-Name", user, user_len);
 
 	os_memset(&tmp, 0, sizeof(tmp));
 	res = data->get_eap_user(data->conf_ctx, user, user_len, 0, &tmp);
 	os_free(tmp.password);
-	os_free(user);
 
-	if (res == 0) {
-		RADIUS_DEBUG("Matching user entry found");
-		sess = radius_server_new_session(data, client);
-		if (sess == NULL) {
-			RADIUS_DEBUG("Failed to create a new session");
-			return NULL;
-		}
-		sess->accept_attr = tmp.accept_attr;
-	} else {
+	if (res != 0) {
 		RADIUS_DEBUG("User-Name not found from user database");
 		return NULL;
 	}
+
+	RADIUS_DEBUG("Matching user entry found");
+	sess = radius_server_new_session(data, client);
+	if (sess == NULL) {
+		RADIUS_DEBUG("Failed to create a new session");
+		return NULL;
+	}
+	sess->accept_attr = tmp.accept_attr;
+
+	sess->username = os_malloc(user_len * 2 + 1);
+	if (sess->username == NULL) {
+		radius_server_session_free(data, sess);
+		return NULL;
+	}
+	printf_encode(sess->username, user_len * 2 + 1, user, user_len);
+
+	sess->nas_ip = os_strdup(from_addr);
+	if (sess->nas_ip == NULL) {
+		radius_server_session_free(data, sess);
+		return NULL;
+	}
+
+	srv_log(sess, "New session created");
 
 	os_memset(&eap_conf, 0, sizeof(eap_conf));
 	eap_conf.ssl_ctx = data->ssl_ctx;
@@ -789,7 +854,8 @@ static int radius_server_request(struct radius_server_data *data,
 				     from_addr, from_port);
 		return -1;
 	} else {
-		sess = radius_server_get_new_session(data, client, msg);
+		sess = radius_server_get_new_session(data, client, msg,
+						     from_addr);
 		if (sess == NULL) {
 			RADIUS_DEBUG("Could not create a new session");
 			radius_server_reject(data, client, msg, from, fromlen,
@@ -875,6 +941,10 @@ static int radius_server_request(struct radius_server_data *data,
 
 	if (sess->eap_if->eapSuccess || sess->eap_if->eapFail)
 		is_complete = 1;
+	if (sess->eap_if->eapFail)
+		srv_log(sess, "EAP authentication failed");
+	else if (sess->eap_if->eapSuccess)
+		srv_log(sess, "EAP authentication succeeded");
 
 	reply = radius_server_encapsulate_eap(data, client, sess, msg);
 
@@ -889,10 +959,12 @@ static int radius_server_request(struct radius_server_data *data,
 
 		switch (radius_msg_get_hdr(reply)->code) {
 		case RADIUS_CODE_ACCESS_ACCEPT:
+			srv_log(sess, "Sending Access-Accept");
 			data->counters.access_accepts++;
 			client->counters.access_accepts++;
 			break;
 		case RADIUS_CODE_ACCESS_REJECT:
+			srv_log(sess, "Sending Access-Reject");
 			data->counters.access_rejects++;
 			client->counters.access_rejects++;
 			break;
@@ -1502,6 +1574,17 @@ radius_server_init(struct radius_server_conf *conf)
 			os_strdup(conf->subscr_remediation_url);
 	}
 
+#ifdef CONFIG_SQLITE
+	if (conf->sqlite_file) {
+		if (sqlite3_open(conf->sqlite_file, &data->db)) {
+			RADIUS_ERROR("Could not open SQLite file '%s'",
+				     conf->sqlite_file);
+			radius_server_deinit(data);
+			return NULL;
+		}
+	}
+#endif /* CONFIG_SQLITE */
+
 #ifdef CONFIG_RADIUS_TEST
 	if (conf->dump_msk_file)
 		data->dump_msk_file = os_strdup(conf->dump_msk_file);
@@ -1589,6 +1672,12 @@ void radius_server_deinit(struct radius_server_data *data)
 	os_free(data->dump_msk_file);
 #endif /* CONFIG_RADIUS_TEST */
 	os_free(data->subscr_remediation_url);
+
+#ifdef CONFIG_SQLITE
+	if (data->db)
+		sqlite3_close(data->db);
+#endif /* CONFIG_SQLITE */
+
 	os_free(data);
 }
 

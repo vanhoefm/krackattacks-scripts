@@ -1282,3 +1282,45 @@ def test_ap_hs20_network_preference3(dev, apdev):
         raise Exception("No roam to higher priority network")
     if bssid2 not in ev:
         raise Exception("Unexpected network selected")
+
+def test_ap_hs20_network_preference4(dev, apdev):
+    """Hotspot 2.0 network selection with username vs. SIM credential"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    bssid2 = apdev[1]['bssid']
+    params = hs20_ap_params(ssid="test-hs20b")
+    params['hessid'] = bssid2
+    params['anqp_3gpp_cell_net'] = "555,444"
+    params['domain_name'] = "wlan.mnc444.mcc555.3gppnetwork.org"
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    dev[0].hs20_enable()
+    values = { 'realm': "example.com",
+               'username': "hs20-test",
+               'password': "password",
+               'priority': "1" }
+    dev[0].add_cred_values(values)
+    values = { 'imsi': "555444-333222111",
+               'eap': "SIM",
+               'milenage': "5122250214c33e723a5dd523fc145fc0:981d464c7c52eb6e5036234984ad0bcf:000000000123" }
+    id = dev[0].add_cred_values(values)
+
+    dev[0].request("INTERWORKING_SELECT auto freq=2412")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Connection timed out")
+    if bssid not in ev:
+        raise Exception("Unexpected network selected")
+
+    dev[0].set_cred(id, "priority", "2")
+    dev[0].request("INTERWORKING_SELECT auto freq=2412")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED",
+                            "INTERWORKING-ALREADY-CONNECTED" ], timeout=15)
+    if ev is None:
+        raise Exception("Connection timed out")
+    if "INTERWORKING-ALREADY-CONNECTED" in ev:
+        raise Exception("No roam to higher priority network")
+    if bssid2 not in ev:
+        raise Exception("Unexpected network selected")

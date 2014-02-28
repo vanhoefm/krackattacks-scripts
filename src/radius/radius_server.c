@@ -1851,10 +1851,18 @@ static const char * radius_server_get_eap_req_id_text(void *ctx, size_t *len)
 }
 
 
+static void radius_server_log_msg(void *ctx, const char *msg)
+{
+	struct radius_session *sess = ctx;
+	srv_log(sess, "EAP: %s", msg);
+}
+
+
 static struct eapol_callbacks radius_server_eapol_cb =
 {
 	.get_eap_user = radius_server_get_eap_user,
 	.get_eap_req_id_text = radius_server_get_eap_req_id_text,
+	.log_msg = radius_server_log_msg,
 };
 
 

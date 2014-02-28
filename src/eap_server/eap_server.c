@@ -119,6 +119,32 @@ int eap_user_get(struct eap_sm *sm, const u8 *identity, size_t identity_len,
 }
 
 
+void eap_log_msg(struct eap_sm *sm, const char *fmt, ...)
+{
+	va_list ap;
+	char *buf;
+	int buflen;
+
+	if (sm == NULL || sm->eapol_cb == NULL || sm->eapol_cb->log_msg == NULL)
+		return;
+
+	va_start(ap, fmt);
+	buflen = vsnprintf(NULL, 0, fmt, ap) + 1;
+	va_end(ap);
+
+	buf = os_malloc(buflen);
+	if (buf == NULL)
+		return;
+	va_start(ap, fmt);
+	vsnprintf(buf, buflen, fmt, ap);
+	va_end(ap);
+
+	sm->eapol_cb->log_msg(sm->eapol_ctx, buf);
+
+	os_free(buf);
+}
+
+
 SM_STATE(EAP, DISABLED)
 {
 	SM_ENTRY(EAP, DISABLED);
@@ -366,6 +392,7 @@ try_another_method:
 	}
 	if (sm->m == NULL) {
 		wpa_printf(MSG_DEBUG, "EAP: Could not find suitable EAP method");
+		eap_log_msg(sm, "Could not find suitable EAP method");
 		sm->decision = DECISION_FAILURE;
 		return;
 	}
@@ -377,6 +404,8 @@ try_another_method:
 
 	wpa_msg(sm->msg_ctx, MSG_INFO, WPA_EVENT_EAP_PROPOSED_METHOD
 		"vendor=%u method=%u", vendor, sm->currentMethod);
+	eap_log_msg(sm, "Propose EAP method vendor=%u method=%u",
+		    vendor, sm->currentMethod);
 }
 
 
@@ -693,6 +722,7 @@ SM_STEP(EAP)
 				   "respMethod=%d currentMethod=%d",
 				   sm->rxResp, sm->respId, sm->currentId,
 				   sm->respMethod, sm->currentMethod);
+			eap_log_msg(sm, "Discard received EAP message");
 			SM_ENTER(EAP, DISCARD);
 		}
 		break;

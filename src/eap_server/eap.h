@@ -81,6 +81,7 @@ struct eapol_callbacks {
 	int (*get_eap_user)(void *ctx, const u8 *identity, size_t identity_len,
 			    int phase2, struct eap_user *user);
 	const char * (*get_eap_req_id_text)(void *ctx, size_t *len);
+	void (*log_msg)(void *ctx, const char *msg);
 };
 
 struct eap_config {

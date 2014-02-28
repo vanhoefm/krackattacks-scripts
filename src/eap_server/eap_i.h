@@ -195,6 +195,8 @@ struct eap_sm {
 
 int eap_user_get(struct eap_sm *sm, const u8 *identity, size_t identity_len,
 		 int phase2);
+void eap_log_msg(struct eap_sm *sm, const char *fmt, ...)
+PRINTF_FORMAT(2, 3);
 void eap_sm_process_nak(struct eap_sm *sm, const u8 *nak_list, size_t len);
 
 #endif /* EAP_I_H */

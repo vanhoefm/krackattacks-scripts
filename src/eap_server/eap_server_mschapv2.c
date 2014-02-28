@@ -290,6 +290,7 @@ static void eap_mschapv2_process_response(struct eap_sm *sm,
 	const u8 *username, *user;
 	size_t username_len, user_len;
 	int res;
+	char *buf;
 
 	pos = eap_hdr_validate(EAP_VENDOR_IETF, EAP_TYPE_MSCHAPV2, respData,
 			       &len);
@@ -328,6 +329,13 @@ static void eap_mschapv2_process_response(struct eap_sm *sm,
 	wpa_hexdump(MSG_MSGDUMP, "EAP-MSCHAPV2: NT-Response", nt_response, 24);
 	wpa_printf(MSG_MSGDUMP, "EAP-MSCHAPV2: Flags 0x%x", flags);
 	wpa_hexdump_ascii(MSG_MSGDUMP, "EAP-MSCHAPV2: Name", name, name_len);
+
+	buf = os_malloc(name_len * 3 + 1);
+	if (buf) {
+		printf_encode(buf, name_len * 3 + 1, name, name_len);
+		eap_log_msg(sm, "EAP-MSCHAPV2 Name '%s'", buf);
+		os_free(buf);
+	}
 
 	/* MSCHAPv2 does not include optional domain name in the
 	 * challenge-response calculation, so remove domain prefix

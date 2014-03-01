@@ -43,6 +43,15 @@ def hs20_ap_params(ssid="test-hs20"):
     params['anqp_3gpp_cell_net'] = "244,91"
     return params
 
+def check_auto_select(dev, bssid):
+    dev.request("INTERWORKING_SELECT auto freq=2412")
+    ev = dev.wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Connection timed out")
+    if bssid not in ev:
+        raise Exception("Connected to incorrect network")
+    dev.request("REMOVE_NETWORK all")
+
 def interworking_select(dev, bssid, type=None, no_match=False, freq=None):
     dev.dump_monitor()
     freq_extra = " freq=" + freq if freq else ""
@@ -757,10 +766,13 @@ def policy_test(dev, ap, values, only_one=True):
     dev.dump_monitor()
     return events
 
-def default_cred():
-    return { 'realm': "example.com",
+def default_cred(domain=None):
+    cred = { 'realm': "example.com",
              'username': "hs20-test",
              'password': "password" }
+    if domain:
+        cred['domain'] = domain
+    return cred
 
 def test_ap_hs20_prefer_home(dev, apdev):
     """Hotspot 2.0 required roaming consortium"""
@@ -1099,6 +1111,135 @@ def test_ap_hs20_req_conn_capab(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
     if ev is None:
         raise Exception("Connection timed out")
+
+def check_bandwidth_selection(dev, type, below):
+    dev.request("INTERWORKING_SELECT freq=2412")
+    ev = dev.wait_event(["INTERWORKING-AP"])
+    if ev is None:
+        raise Exception("Network selection timed out");
+    if "type=" + type not in ev:
+        raise Exception("Unexpected network type")
+    if below and "below_min_backhaul=1" not in ev:
+        raise Exception("below_min_backhaul not reported")
+    if not below and "below_min_backhaul=1" in ev:
+        raise Exception("below_min_backhaul reported unexpectedly")
+
+def bw_cred(domain=None, dl_home=None, ul_home=None, dl_roaming=None, ul_roaming=None):
+    cred = default_cred(domain=domain)
+    if dl_home:
+        cred['min_dl_bandwidth_home'] = str(dl_home)
+    if ul_home:
+        cred['min_ul_bandwidth_home'] = str(ul_home)
+    if dl_roaming:
+        cred['min_dl_bandwidth_roaming'] = str(dl_roaming)
+    if ul_roaming:
+        cred['min_ul_bandwidth_roaming'] = str(ul_roaming)
+    return cred
+
+def test_ap_hs20_min_bandwidth_home(dev, apdev):
+    """Hotspot 2.0 network selection with min bandwidth (home)"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    values = bw_cred(domain="example.com", dl_home=5490, ul_home=58)
+    id = dev[0].add_cred_values(values)
+    check_bandwidth_selection(dev[0], "home", False)
+    dev[0].remove_cred(id)
+
+    values = bw_cred(domain="example.com", dl_home=5491, ul_home=58)
+    id = dev[0].add_cred_values(values)
+    check_bandwidth_selection(dev[0], "home", True)
+    dev[0].remove_cred(id)
+
+    values = bw_cred(domain="example.com", dl_home=5490, ul_home=59)
+    id = dev[0].add_cred_values(values)
+    check_bandwidth_selection(dev[0], "home", True)
+    dev[0].remove_cred(id)
+
+    values = bw_cred(domain="example.com", dl_home=5491, ul_home=59)
+    id = dev[0].add_cred_values(values)
+    check_bandwidth_selection(dev[0], "home", True)
+    check_auto_select(dev[0], bssid)
+
+    bssid2 = apdev[1]['bssid']
+    params = hs20_ap_params(ssid="test-hs20-b")
+    params['hs20_wan_metrics'] = "01:8000:1000:1:1:3000"
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    check_auto_select(dev[0], bssid2)
+
+def test_ap_hs20_min_bandwidth_roaming(dev, apdev):
+    """Hotspot 2.0 network selection with min bandwidth (roaming)"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    values = bw_cred(domain="example.org", dl_roaming=5490, ul_roaming=58)
+    id = dev[0].add_cred_values(values)
+    check_bandwidth_selection(dev[0], "roaming", False)
+    dev[0].remove_cred(id)
+
+    values = bw_cred(domain="example.org", dl_roaming=5491, ul_roaming=58)
+    id = dev[0].add_cred_values(values)
+    check_bandwidth_selection(dev[0], "roaming", True)
+    dev[0].remove_cred(id)
+
+    values = bw_cred(domain="example.org", dl_roaming=5490, ul_roaming=59)
+    id = dev[0].add_cred_values(values)
+    check_bandwidth_selection(dev[0], "roaming", True)
+    dev[0].remove_cred(id)
+
+    values = bw_cred(domain="example.org", dl_roaming=5491, ul_roaming=59)
+    id = dev[0].add_cred_values(values)
+    check_bandwidth_selection(dev[0], "roaming", True)
+    check_auto_select(dev[0], bssid)
+
+    bssid2 = apdev[1]['bssid']
+    params = hs20_ap_params(ssid="test-hs20-b")
+    params['hs20_wan_metrics'] = "01:8000:1000:1:1:3000"
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    check_auto_select(dev[0], bssid2)
+
+def test_ap_hs20_min_bandwidth_and_roaming_partner_preference(dev, apdev):
+    """Hotspot 2.0 and minimum bandwidth with roaming partner preference"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['domain_name'] = "roaming.example.org"
+    params['hs20_wan_metrics'] = "01:8000:1000:1:1:3000"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    bssid2 = apdev[1]['bssid']
+    params = hs20_ap_params(ssid="test-hs20-b")
+    params['domain_name'] = "roaming.example.net"
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    values = default_cred()
+    values['roaming_partner'] = "roaming.example.net,1,127,*"
+    id = dev[0].add_cred_values(values)
+    check_auto_select(dev[0], bssid2)
+
+    dev[0].set_cred(id, "min_dl_bandwidth_roaming", "6000")
+    check_auto_select(dev[0], bssid)
+
+    dev[0].set_cred(id, "min_dl_bandwidth_roaming", "10000")
+    check_auto_select(dev[0], bssid2)
+
+def test_ap_hs20_min_bandwidth_no_wan_metrics(dev, apdev):
+    """Hotspot 2.0 network selection with min bandwidth but no WAN Metrics"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    del params['hs20_wan_metrics']
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    values = bw_cred(domain="example.com", dl_home=10000, ul_home=10000,
+                     dl_roaming=10000, ul_roaming=10000)
+    dev[0].add_cred_values(values)
+    check_bandwidth_selection(dev[0], "home", False)
 
 def test_ap_hs20_deauth_req_ess(dev, apdev):
     """Hotspot 2.0 connection and deauthentication request for ESS"""

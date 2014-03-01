@@ -818,11 +818,14 @@ def test_ap_hs20_req_roaming_consortium(dev, apdev):
 def test_ap_hs20_excluded_ssid(dev, apdev):
     """Hotspot 2.0 exclusion based on SSID"""
     params = hs20_ap_params()
+    params['roaming_consortium'] = [ "223344" ]
+    params['anqp_3gpp_cell_net'] = "555,444"
     hostapd.add_ap(apdev[0]['ifname'], params)
 
     params = hs20_ap_params()
     params['ssid'] = "test-hs20-other"
     params['roaming_consortium'] = [ "223344" ]
+    params['anqp_3gpp_cell_net'] = "555,444"
     hostapd.add_ap(apdev[1]['ifname'], params)
 
     values = default_cred()
@@ -834,6 +837,24 @@ def test_ap_hs20_excluded_ssid(dev, apdev):
     values['excluded_ssid'] = "test-hs20-other"
     events = policy_test(dev[0], apdev[0], values)
     ev = [e for e in events if "INTERWORKING-BLACKLISTED " + apdev[1]['bssid'] in e]
+    if len(ev) != 1:
+        raise Exception("Excluded network not reported")
+
+    values = default_cred()
+    values['roaming_consortium'] = "223344"
+    values['eap'] = "TTLS"
+    values['phase2'] = "auth=MSCHAPV2"
+    values['excluded_ssid'] = "test-hs20"
+    events = policy_test(dev[0], apdev[1], values)
+    ev = [e for e in events if "INTERWORKING-BLACKLISTED " + apdev[0]['bssid'] in e]
+    if len(ev) != 1:
+        raise Exception("Excluded network not reported")
+
+    values = { 'imsi': "555444-333222111", 'eap': "SIM",
+               'milenage': "5122250214c33e723a5dd523fc145fc0:981d464c7c52eb6e5036234984ad0bcf:000000000123",
+               'excluded_ssid': "test-hs20" }
+    events = policy_test(dev[0], apdev[1], values)
+    ev = [e for e in events if "INTERWORKING-BLACKLISTED " + apdev[0]['bssid'] in e]
     if len(ev) != 1:
         raise Exception("Excluded network not reported")
 

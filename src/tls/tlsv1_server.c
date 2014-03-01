@@ -315,6 +315,16 @@ int tlsv1_server_decrypt(struct tlsv1_server *conn,
 			return -1;
 		}
 
+#ifdef CONFIG_TESTING_OPTIONS
+		if ((conn->test_flags &&
+		     (TLS_BREAK_VERIFY_DATA | TLS_BREAK_SRV_KEY_X_HASH |
+		      TLS_BREAK_SRV_KEY_X_SIGNATURE)) &&
+		    !conn->test_failure_reported) {
+			tlsv1_server_log(conn, "TEST-FAILURE: Client ApplData received after invalid handshake");
+			conn->test_failure_reported = 1;
+		}
+#endif /* CONFIG_TESTING_OPTIONS */
+
 		out_pos += olen;
 		if (out_pos > out_end) {
 			wpa_printf(MSG_DEBUG, "TLSv1: Buffer not large enough "
@@ -656,3 +666,11 @@ void tlsv1_server_set_log_cb(struct tlsv1_server *conn,
 	conn->log_cb = cb;
 	conn->log_cb_ctx = ctx;
 }
+
+
+#ifdef CONFIG_TESTING_OPTIONS
+void tlsv1_server_set_test_flags(struct tlsv1_server *conn, u32 flags)
+{
+	conn->test_flags = flags;
+}
+#endif /* CONFIG_TESTING_OPTIONS */

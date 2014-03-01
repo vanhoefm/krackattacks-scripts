@@ -502,6 +502,12 @@ static int tls_write_server_key_exchange(struct tlsv1_server *conn,
 
 		wpa_hexdump(MSG_MSGDUMP, "TLS: ServerKeyExchange signed_params hash",
 			    hash, hlen);
+#ifdef CONFIG_TESTING_OPTIONS
+		if (conn->test_flags & TLS_BREAK_SRV_KEY_X_HASH) {
+			tlsv1_server_log(conn, "TESTING: Break ServerKeyExchange signed params hash");
+			hash[hlen - 1] ^= 0x80;
+		}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 		/*
 		 * RFC 2246, 4.7:
@@ -527,6 +533,12 @@ static int tls_write_server_key_exchange(struct tlsv1_server *conn,
 			return -1;
 		}
 		WPA_PUT_BE16(signed_start, clen);
+#ifdef CONFIG_TESTING_OPTIONS
+		if (conn->test_flags & TLS_BREAK_SRV_KEY_X_SIGNATURE) {
+			tlsv1_server_log(conn, "TESTING: Break ServerKeyExchange signed params signature");
+			pos[clen - 1] ^= 0x80;
+		}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 		pos += clen;
 	}
@@ -754,6 +766,12 @@ static int tls_write_server_finished(struct tlsv1_server *conn,
 	}
 	wpa_hexdump_key(MSG_DEBUG, "TLSv1: verify_data (server)",
 			verify_data + 1 + 3, TLS_VERIFY_DATA_LEN);
+#ifdef CONFIG_TESTING_OPTIONS
+	if (conn->test_flags & TLS_BREAK_VERIFY_DATA) {
+		tlsv1_server_log(conn, "TESTING: Break verify_data (server)");
+		verify_data[1 + 3 + 1] ^= 0x80;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	/* Handshake */
 	pos = hs_start = verify_data;

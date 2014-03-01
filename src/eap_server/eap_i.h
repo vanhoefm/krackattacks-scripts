@@ -191,6 +191,10 @@ struct eap_sm {
 
 	const u8 *server_id;
 	size_t server_id_len;
+
+#ifdef CONFIG_TESTING_OPTIONS
+	u32 tls_test_flags;
+#endif /* CONFIG_TESTING_OPTIONS */
 };
 
 int eap_user_get(struct eap_sm *sm, const u8 *identity, size_t identity_len,

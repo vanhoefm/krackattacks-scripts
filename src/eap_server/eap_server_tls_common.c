@@ -63,6 +63,9 @@ int eap_server_tls_ssl_init(struct eap_sm *sm, struct eap_ssl_data *data,
 
 #ifdef CONFIG_TLS_INTERNAL
 	tls_connection_set_log_cb(data->conn, eap_server_tls_log_cb, sm);
+#ifdef CONFIG_TESTING_OPTIONS
+	tls_connection_set_test_flags(data->conn, sm->tls_test_flags);
+#endif /* CONFIG_TESTING_OPTIONS */
 #endif /* CONFIG_TLS_INTERNAL */
 
 	if (tls_connection_set_verify(sm->ssl_ctx, data->conn, verify_peer)) {

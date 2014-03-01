@@ -17,6 +17,7 @@
 #include "eloop.h"
 #include "eap_server/eap.h"
 #include "ap/ap_config.h"
+#include "crypto/tls.h"
 #include "radius_server.h"
 
 /**
@@ -533,6 +534,51 @@ radius_server_new_session(struct radius_server_data *data,
 }
 
 
+#ifdef CONFIG_TESTING_OPTIONS
+static void radius_server_testing_options_tls(struct radius_session *sess,
+					      const char *tls,
+					      struct eap_config *eap_conf)
+{
+	int test = atoi(tls);
+
+	switch (test) {
+	case 1:
+		srv_log(sess, "TLS test - break VerifyData");
+		eap_conf->tls_test_flags = TLS_BREAK_VERIFY_DATA;
+		break;
+	case 2:
+		srv_log(sess, "TLS test - break ServerKeyExchange ServerParams hash");
+		eap_conf->tls_test_flags = TLS_BREAK_SRV_KEY_X_HASH;
+		break;
+	case 3:
+		srv_log(sess, "TLS test - break ServerKeyExchange ServerParams Signature");
+		eap_conf->tls_test_flags = TLS_BREAK_SRV_KEY_X_SIGNATURE;
+		break;
+	default:
+		srv_log(sess, "Unrecognized TLS test");
+		break;
+	}
+}
+#endif /* CONFIG_TESTING_OPTIONS */
+
+static void radius_server_testing_options(struct radius_session *sess,
+					  struct eap_config *eap_conf)
+{
+#ifdef CONFIG_TESTING_OPTIONS
+	const char *pos;
+
+	pos = os_strstr(sess->username, "@test-");
+	if (pos == NULL)
+		return;
+	pos += 6;
+	if (os_strncmp(pos, "tls-", 4) == 0)
+		radius_server_testing_options_tls(sess, pos + 4, eap_conf);
+	else
+		srv_log(sess, "Unrecognized test: %s", pos);
+#endif /* CONFIG_TESTING_OPTIONS */
+}
+
+
 static struct radius_session *
 radius_server_get_new_session(struct radius_server_data *data,
 			      struct radius_client *client,
@@ -605,6 +651,7 @@ radius_server_get_new_session(struct radius_server_data *data,
 	eap_conf.pwd_group = data->pwd_group;
 	eap_conf.server_id = (const u8 *) data->server_id;
 	eap_conf.server_id_len = os_strlen(data->server_id);
+	radius_server_testing_options(sess, &eap_conf);
 	sess->eap = eap_server_sm_init(sess, &radius_server_eapol_cb,
 				       &eap_conf);
 	if (sess->eap == NULL) {

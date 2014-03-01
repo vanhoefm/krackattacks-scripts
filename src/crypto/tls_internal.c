@@ -111,6 +111,17 @@ struct tls_connection * tls_connection_init(void *tls_ctx)
 }
 
 
+#ifdef CONFIG_TESTING_OPTIONS
+#ifdef CONFIG_TLS_INTERNAL_SERVER
+void tls_connection_set_test_flags(struct tls_connection *conn, u32 flags)
+{
+	if (conn->server)
+		tlsv1_server_set_test_flags(conn->server, flags);
+}
+#endif /* CONFIG_TLS_INTERNAL_SERVER */
+#endif /* CONFIG_TESTING_OPTIONS */
+
+
 void tls_connection_set_log_cb(struct tls_connection *conn,
 			       void (*log_cb)(void *ctx, const char *msg),
 			       void *ctx)

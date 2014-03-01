@@ -27,6 +27,23 @@ static int tls_process_change_cipher_spec(struct tlsv1_server *conn,
 					  size_t *in_len);
 
 
+static int testing_cipher_suite_filter(struct tlsv1_server *conn, u16 suite)
+{
+#ifdef CONFIG_TESTING_OPTIONS
+	if ((conn->test_flags &
+	     (TLS_BREAK_SRV_KEY_X_HASH | TLS_BREAK_SRV_KEY_X_SIGNATURE)) &&
+	    suite != TLS_DHE_RSA_WITH_AES_256_CBC_SHA256 &&
+	    suite != TLS_DHE_RSA_WITH_AES_256_CBC_SHA &&
+	    suite != TLS_DHE_RSA_WITH_AES_128_CBC_SHA256 &&
+	    suite != TLS_DHE_RSA_WITH_AES_128_CBC_SHA &&
+	    suite != TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA)
+		return 1;
+#endif /* CONFIG_TESTING_OPTIONS */
+
+	return 0;
+}
+
+
 static int tls_process_client_hello(struct tlsv1_server *conn, u8 ct,
 				    const u8 *in_data, size_t *in_len)
 {
@@ -137,6 +154,8 @@ static int tls_process_client_hello(struct tlsv1_server *conn, u8 ct,
 
 	cipher_suite = 0;
 	for (i = 0; !cipher_suite && i < conn->num_cipher_suites; i++) {
+		if (testing_cipher_suite_filter(conn, conn->cipher_suites[i]))
+			continue;
 		c = pos;
 		for (j = 0; j < num_suites; j++) {
 			u16 tmp = WPA_GET_BE16(c);
@@ -967,6 +986,15 @@ static int tls_process_client_finished(struct tlsv1_server *conn, u8 ct,
 	size_t left, len, hlen;
 	u8 verify_data[TLS_VERIFY_DATA_LEN];
 	u8 hash[MD5_MAC_LEN + SHA1_MAC_LEN];
+
+#ifdef CONFIG_TESTING_OPTIONS
+	if ((conn->test_flags &
+	     (TLS_BREAK_SRV_KEY_X_HASH | TLS_BREAK_SRV_KEY_X_SIGNATURE)) &&
+	    !conn->test_failure_reported) {
+		tlsv1_server_log(conn, "TEST-FAILURE: Client Finished received after invalid ServerKeyExchange");
+		conn->test_failure_reported = 1;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	if (ct != TLS_CONTENT_TYPE_HANDSHAKE) {
 		tlsv1_server_log(conn, "Expected Finished; received content type 0x%x",

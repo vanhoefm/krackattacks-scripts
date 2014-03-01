@@ -58,6 +58,11 @@ struct tlsv1_server {
 
 	u8 *dh_secret;
 	size_t dh_secret_len;
+
+#ifdef CONFIG_TESTING_OPTIONS
+	u32 test_flags;
+	int test_failure_reported;
+#endif /* CONFIG_TESTING_OPTIONS */
 };
 
 

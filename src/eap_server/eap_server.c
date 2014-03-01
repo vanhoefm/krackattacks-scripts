@@ -1327,6 +1327,10 @@ struct eap_sm * eap_server_sm_init(void *eapol_ctx,
 	sm->server_id = conf->server_id;
 	sm->server_id_len = conf->server_id_len;
 
+#ifdef CONFIG_TESTING_OPTIONS
+	sm->tls_test_flags = conf->tls_test_flags;
+#endif /* CONFIG_TESTING_OPTIONS */
+
 	wpa_printf(MSG_DEBUG, "EAP: Server state machine created");
 
 	return sm;

@@ -28,6 +28,7 @@ struct tls_global {
 struct tls_connection {
 	struct tlsv1_client *client;
 	struct tlsv1_server *server;
+	struct tls_global *global;
 };
 
 
@@ -85,6 +86,7 @@ struct tls_connection * tls_connection_init(void *tls_ctx)
 	conn = os_zalloc(sizeof(*conn));
 	if (conn == NULL)
 		return NULL;
+	conn->global = global;
 
 #ifdef CONFIG_TLS_INTERNAL_CLIENT
 	if (!global->server) {
@@ -106,6 +108,17 @@ struct tls_connection * tls_connection_init(void *tls_ctx)
 #endif /* CONFIG_TLS_INTERNAL_SERVER */
 
 	return conn;
+}
+
+
+void tls_connection_set_log_cb(struct tls_connection *conn,
+			       void (*log_cb)(void *ctx, const char *msg),
+			       void *ctx)
+{
+#ifdef CONFIG_TLS_INTERNAL_SERVER
+	if (conn->server)
+		tlsv1_server_set_log_cb(conn->server, log_cb, ctx);
+#endif /* CONFIG_TLS_INTERNAL_SERVER */
 }
 
 

@@ -48,7 +48,7 @@ static int tls_write_server_hello(struct tlsv1_server *conn,
 
 	pos = *msgpos;
 
-	wpa_printf(MSG_DEBUG, "TLSv1: Send ServerHello");
+	tlsv1_server_log(conn, "Send ServerHello");
 	rhdr = pos;
 	pos += TLS_RECORD_HEADER_LEN;
 
@@ -104,8 +104,7 @@ static int tls_write_server_hello(struct tlsv1_server *conn,
 			conn->client_random, conn->server_random,
 			conn->master_secret);
 		if (res < 0) {
-			wpa_printf(MSG_DEBUG, "TLSv1: SessionTicket callback "
-				   "indicated failure");
+			tlsv1_server_log(conn, "SessionTicket callback indicated failure");
 			tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 					   TLS_ALERT_HANDSHAKE_FAILURE);
 			return -1;
@@ -170,7 +169,7 @@ static int tls_write_server_certificate(struct tlsv1_server *conn,
 
 	pos = *msgpos;
 
-	wpa_printf(MSG_DEBUG, "TLSv1: Send Certificate");
+	tlsv1_server_log(conn, "Send Certificate");
 	rhdr = pos;
 	pos += TLS_RECORD_HEADER_LEN;
 
@@ -353,7 +352,7 @@ static int tls_write_server_key_exchange(struct tlsv1_server *conn,
 
 	pos = *msgpos;
 
-	wpa_printf(MSG_DEBUG, "TLSv1: Send ServerKeyExchange");
+	tlsv1_server_log(conn, "Send ServerKeyExchange");
 	rhdr = pos;
 	pos += TLS_RECORD_HEADER_LEN;
 
@@ -565,7 +564,7 @@ static int tls_write_server_certificate_request(struct tlsv1_server *conn,
 
 	pos = *msgpos;
 
-	wpa_printf(MSG_DEBUG, "TLSv1: Send CertificateRequest");
+	tlsv1_server_log(conn, "Send CertificateRequest");
 	rhdr = pos;
 	pos += TLS_RECORD_HEADER_LEN;
 
@@ -625,7 +624,7 @@ static int tls_write_server_hello_done(struct tlsv1_server *conn,
 	size_t rlen;
 	u8 payload[4];
 
-	wpa_printf(MSG_DEBUG, "TLSv1: Send ServerHelloDone");
+	tlsv1_server_log(conn, "Send ServerHelloDone");
 
 	/* opaque fragment[TLSPlaintext.length] */
 
@@ -661,7 +660,7 @@ static int tls_write_server_change_cipher_spec(struct tlsv1_server *conn,
 	size_t rlen;
 	u8 payload[1];
 
-	wpa_printf(MSG_DEBUG, "TLSv1: Send ChangeCipherSpec");
+	tlsv1_server_log(conn, "Send ChangeCipherSpec");
 
 	payload[0] = TLS_CHANGE_CIPHER_SPEC;
 
@@ -698,7 +697,7 @@ static int tls_write_server_finished(struct tlsv1_server *conn,
 
 	pos = *msgpos;
 
-	wpa_printf(MSG_DEBUG, "TLSv1: Send Finished");
+	tlsv1_server_log(conn, "Send Finished");
 
 	/* Encrypted Handshake Message: Finished */
 
@@ -856,7 +855,7 @@ static u8 * tls_send_change_cipher_spec(struct tlsv1_server *conn,
 
 	*out_len = pos - msg;
 
-	wpa_printf(MSG_DEBUG, "TLSv1: Handshake completed successfully");
+	tlsv1_server_log(conn, "Handshake completed successfully");
 	conn->state = ESTABLISHED;
 
 	return msg;
@@ -875,8 +874,8 @@ u8 * tlsv1_server_handshake_write(struct tlsv1_server *conn, size_t *out_len)
 			/* Abbreviated handshake was already completed. */
 			return NULL;
 		}
-		wpa_printf(MSG_DEBUG, "TLSv1: Unexpected state %d while "
-			   "generating reply", conn->state);
+		tlsv1_server_log(conn, "Unexpected state %d while generating reply",
+				 conn->state);
 		return NULL;
 	}
 }
@@ -887,7 +886,7 @@ u8 * tlsv1_server_send_alert(struct tlsv1_server *conn, u8 level,
 {
 	u8 *alert, *pos, *length;
 
-	wpa_printf(MSG_DEBUG, "TLSv1: Send Alert(%d:%d)", level, description);
+	tlsv1_server_log(conn, "Send Alert(%d:%d)", level, description);
 	*out_len = 0;
 
 	alert = os_malloc(10);

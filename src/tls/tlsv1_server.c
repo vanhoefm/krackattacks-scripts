@@ -21,6 +21,31 @@
  */
 
 
+void tlsv1_server_log(struct tlsv1_server *conn, const char *fmt, ...)
+{
+	va_list ap;
+	char *buf;
+	int buflen;
+
+	va_start(ap, fmt);
+	buflen = vsnprintf(NULL, 0, fmt, ap) + 1;
+	va_end(ap);
+
+	buf = os_malloc(buflen);
+	if (buf == NULL)
+		return;
+	va_start(ap, fmt);
+	vsnprintf(buf, buflen, fmt, ap);
+	va_end(ap);
+
+	wpa_printf(MSG_DEBUG, "TLSv1: %s", buf);
+	if (conn->log_cb)
+		conn->log_cb(conn->log_cb_ctx, buf);
+
+	os_free(buf);
+}
+
+
 void tlsv1_server_alert(struct tlsv1_server *conn, u8 level, u8 description)
 {
 	conn->alert_level = level;
@@ -250,8 +275,7 @@ int tlsv1_server_decrypt(struct tlsv1_server *conn,
 		used = tlsv1_record_receive(&conn->rl, pos, in_end - pos,
 					    out_pos, &olen, &alert);
 		if (used < 0) {
-			wpa_printf(MSG_DEBUG, "TLSv1: Record layer processing "
-				   "failed");
+			tlsv1_server_log(conn, "Record layer processing failed");
 			tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL, alert);
 			return -1;
 		}
@@ -265,14 +289,13 @@ int tlsv1_server_decrypt(struct tlsv1_server *conn,
 
 		if (ct == TLS_CONTENT_TYPE_ALERT) {
 			if (olen < 2) {
-				wpa_printf(MSG_DEBUG, "TLSv1: Alert "
-					   "underflow");
+				tlsv1_server_log(conn, "Alert underflow");
 				tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 						   TLS_ALERT_DECODE_ERROR);
 				return -1;
 			}
-			wpa_printf(MSG_DEBUG, "TLSv1: Received alert %d:%d",
-				   out_pos[0], out_pos[1]);
+			tlsv1_server_log(conn, "Received alert %d:%d",
+					 out_pos[0], out_pos[1]);
 			if (out_pos[0] == TLS_ALERT_LEVEL_WARNING) {
 				/* Continue processing */
 				pos += used;
@@ -285,8 +308,8 @@ int tlsv1_server_decrypt(struct tlsv1_server *conn,
 		}
 
 		if (ct != TLS_CONTENT_TYPE_APPLICATION_DATA) {
-			wpa_printf(MSG_DEBUG, "TLSv1: Unexpected content type "
-				   "0x%x", pos[0]);
+			tlsv1_server_log(conn, "Unexpected content type 0x%x",
+					 pos[0]);
 			tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 					   TLS_ALERT_UNEXPECTED_MESSAGE);
 			return -1;
@@ -624,4 +647,12 @@ void tlsv1_server_set_session_ticket_cb(struct tlsv1_server *conn,
 		   cb, ctx);
 	conn->session_ticket_cb = cb;
 	conn->session_ticket_cb_ctx = ctx;
+}
+
+
+void tlsv1_server_set_log_cb(struct tlsv1_server *conn,
+			     void (*cb)(void *ctx, const char *msg), void *ctx)
+{
+	conn->log_cb = cb;
+	conn->log_cb_ctx = ctx;
 }

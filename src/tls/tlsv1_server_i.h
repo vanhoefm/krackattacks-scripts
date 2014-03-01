@@ -51,12 +51,18 @@ struct tlsv1_server {
 	tlsv1_server_session_ticket_cb session_ticket_cb;
 	void *session_ticket_cb_ctx;
 
+	void (*log_cb)(void *ctx, const char *msg);
+	void *log_cb_ctx;
+
 	int use_session_ticket;
 
 	u8 *dh_secret;
 	size_t dh_secret_len;
 };
 
+
+void tlsv1_server_log(struct tlsv1_server *conn, const char *fmt, ...)
+PRINTF_FORMAT(2, 3);
 
 void tlsv1_server_alert(struct tlsv1_server *conn, u8 level, u8 description);
 int tlsv1_server_derive_keys(struct tlsv1_server *conn,

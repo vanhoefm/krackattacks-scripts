@@ -38,8 +38,8 @@ static int tls_process_client_hello(struct tlsv1_server *conn, u8 ct,
 	u16 ext_type, ext_len;
 
 	if (ct != TLS_CONTENT_TYPE_HANDSHAKE) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Expected Handshake; "
-			   "received content type 0x%x", ct);
+		tlsv1_server_log(conn, "Expected Handshake; received content type 0x%x",
+				 ct);
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				   TLS_ALERT_UNEXPECTED_MESSAGE);
 		return -1;
@@ -53,13 +53,13 @@ static int tls_process_client_hello(struct tlsv1_server *conn, u8 ct,
 
 	/* HandshakeType msg_type */
 	if (*pos != TLS_HANDSHAKE_TYPE_CLIENT_HELLO) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Received unexpected handshake "
-			   "message %d (expected ClientHello)", *pos);
+		tlsv1_server_log(conn, "Received unexpected handshake message %d (expected ClientHello)",
+				 *pos);
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				   TLS_ALERT_UNEXPECTED_MESSAGE);
 		return -1;
 	}
-	wpa_printf(MSG_DEBUG, "TLSv1: Received ClientHello");
+	tlsv1_server_log(conn, "Received ClientHello");
 	pos++;
 	/* uint24 length */
 	len = WPA_GET_BE24(pos);
@@ -78,13 +78,13 @@ static int tls_process_client_hello(struct tlsv1_server *conn, u8 ct,
 	if (end - pos < 2)
 		goto decode_error;
 	conn->client_version = WPA_GET_BE16(pos);
-	wpa_printf(MSG_DEBUG, "TLSv1: Client version %d.%d",
-		   conn->client_version >> 8, conn->client_version & 0xff);
+	tlsv1_server_log(conn, "Client version %d.%d",
+			 conn->client_version >> 8,
+			 conn->client_version & 0xff);
 	if (conn->client_version < TLS_VERSION_1) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Unexpected protocol version in "
-			   "ClientHello %u.%u",
-			   conn->client_version >> 8,
-			   conn->client_version & 0xff);
+		tlsv1_server_log(conn, "Unexpected protocol version in ClientHello %u.%u",
+				 conn->client_version >> 8,
+				 conn->client_version & 0xff);
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				   TLS_ALERT_PROTOCOL_VERSION);
 		return -1;
@@ -101,8 +101,8 @@ static int tls_process_client_hello(struct tlsv1_server *conn, u8 ct,
 		conn->rl.tls_version = TLS_VERSION_1_1;
 	else
 		conn->rl.tls_version = conn->client_version;
-	wpa_printf(MSG_DEBUG, "TLSv1: Using TLS v%s",
-		   tls_version_str(conn->rl.tls_version));
+	tlsv1_server_log(conn, "Using TLS v%s",
+			 tls_version_str(conn->rl.tls_version));
 
 	/* Random random */
 	if (end - pos < TLS_RANDOM_LEN)
@@ -149,8 +149,7 @@ static int tls_process_client_hello(struct tlsv1_server *conn, u8 ct,
 	}
 	pos += num_suites * 2;
 	if (!cipher_suite) {
-		wpa_printf(MSG_INFO, "TLSv1: No supported cipher suite "
-			   "available");
+		tlsv1_server_log(conn, "No supported cipher suite available");
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				   TLS_ALERT_ILLEGAL_PARAMETER);
 		return -1;
@@ -180,16 +179,15 @@ static int tls_process_client_hello(struct tlsv1_server *conn, u8 ct,
 			compr_null_found = 1;
 	}
 	if (!compr_null_found) {
-		wpa_printf(MSG_INFO, "TLSv1: Client does not accept NULL "
-			   "compression");
+		tlsv1_server_log(conn, "Client does not accept NULL compression");
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				   TLS_ALERT_ILLEGAL_PARAMETER);
 		return -1;
 	}
 
 	if (end - pos == 1) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Unexpected extra octet in the "
-			    "end of ClientHello: 0x%02x", *pos);
+		tlsv1_server_log(conn, "Unexpected extra octet in the end of ClientHello: 0x%02x",
+				 *pos);
 		goto decode_error;
 	}
 
@@ -198,12 +196,11 @@ static int tls_process_client_hello(struct tlsv1_server *conn, u8 ct,
 		ext_len = WPA_GET_BE16(pos);
 		pos += 2;
 
-		wpa_printf(MSG_DEBUG, "TLSv1: %u bytes of ClientHello "
-			   "extensions", ext_len);
+		tlsv1_server_log(conn, "%u bytes of ClientHello extensions",
+				 ext_len);
 		if (end - pos != ext_len) {
-			wpa_printf(MSG_DEBUG, "TLSv1: Invalid ClientHello "
-				   "extension list length %u (expected %u)",
-				   ext_len, (unsigned int) (end - pos));
+			tlsv1_server_log(conn, "Invalid ClientHello extension list length %u (expected %u)",
+					 ext_len, (unsigned int) (end - pos));
 			goto decode_error;
 		}
 
@@ -216,8 +213,7 @@ static int tls_process_client_hello(struct tlsv1_server *conn, u8 ct,
 
 		while (pos < end) {
 			if (end - pos < 2) {
-				wpa_printf(MSG_DEBUG, "TLSv1: Invalid "
-					   "extension_type field");
+				tlsv1_server_log(conn, "Invalid extension_type field");
 				goto decode_error;
 			}
 
@@ -225,8 +221,7 @@ static int tls_process_client_hello(struct tlsv1_server *conn, u8 ct,
 			pos += 2;
 
 			if (end - pos < 2) {
-				wpa_printf(MSG_DEBUG, "TLSv1: Invalid "
-					   "extension_data length field");
+				tlsv1_server_log(conn, "Invalid extension_data length field");
 				goto decode_error;
 			}
 
@@ -234,13 +229,12 @@ static int tls_process_client_hello(struct tlsv1_server *conn, u8 ct,
 			pos += 2;
 
 			if (end - pos < ext_len) {
-				wpa_printf(MSG_DEBUG, "TLSv1: Invalid "
-					   "extension_data field");
+				tlsv1_server_log(conn, "Invalid extension_data field");
 				goto decode_error;
 			}
 
-			wpa_printf(MSG_DEBUG, "TLSv1: ClientHello Extension "
-				   "type %u", ext_type);
+			tlsv1_server_log(conn, "ClientHello Extension type %u",
+					 ext_type);
 			wpa_hexdump(MSG_MSGDUMP, "TLSv1: ClientHello "
 				    "Extension data", pos, ext_len);
 
@@ -260,14 +254,13 @@ static int tls_process_client_hello(struct tlsv1_server *conn, u8 ct,
 
 	*in_len = end - in_data;
 
-	wpa_printf(MSG_DEBUG, "TLSv1: ClientHello OK - proceed to "
-		   "ServerHello");
+	tlsv1_server_log(conn, "ClientHello OK - proceed to ServerHello");
 	conn->state = SERVER_HELLO;
 
 	return 0;
 
 decode_error:
-	wpa_printf(MSG_DEBUG, "TLSv1: Failed to decode ClientHello");
+	tlsv1_server_log(conn, "Failed to decode ClientHello");
 	tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 			   TLS_ALERT_DECODE_ERROR);
 	return -1;
@@ -284,8 +277,8 @@ static int tls_process_certificate(struct tlsv1_server *conn, u8 ct,
 	int reason;
 
 	if (ct != TLS_CONTENT_TYPE_HANDSHAKE) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Expected Handshake; "
-			   "received content type 0x%x", ct);
+		tlsv1_server_log(conn, "Expected Handshake; received content type 0x%x",
+				 ct);
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				   TLS_ALERT_UNEXPECTED_MESSAGE);
 		return -1;
@@ -295,8 +288,8 @@ static int tls_process_certificate(struct tlsv1_server *conn, u8 ct,
 	left = *in_len;
 
 	if (left < 4) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Too short Certificate message "
-			   "(len=%lu)", (unsigned long) left);
+		tlsv1_server_log(conn, "Too short Certificate message (len=%lu)",
+				 (unsigned long) left);
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				   TLS_ALERT_DECODE_ERROR);
 		return -1;
@@ -308,9 +301,8 @@ static int tls_process_certificate(struct tlsv1_server *conn, u8 ct,
 	left -= 4;
 
 	if (len > left) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Unexpected Certificate message "
-			   "length (len=%lu != left=%lu)",
-			   (unsigned long) len, (unsigned long) left);
+		tlsv1_server_log(conn, "Unexpected Certificate message length (len=%lu != left=%lu)",
+				 (unsigned long) len, (unsigned long) left);
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				   TLS_ALERT_DECODE_ERROR);
 		return -1;
@@ -318,8 +310,7 @@ static int tls_process_certificate(struct tlsv1_server *conn, u8 ct,
 
 	if (type == TLS_HANDSHAKE_TYPE_CLIENT_KEY_EXCHANGE) {
 		if (conn->verify_peer) {
-			wpa_printf(MSG_DEBUG, "TLSv1: Client did not include "
-				   "Certificate");
+			tlsv1_server_log(conn, "Client did not include Certificate");
 			tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 					   TLS_ALERT_UNEXPECTED_MESSAGE);
 			return -1;
@@ -329,17 +320,15 @@ static int tls_process_certificate(struct tlsv1_server *conn, u8 ct,
 						       in_len);
 	}
 	if (type != TLS_HANDSHAKE_TYPE_CERTIFICATE) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Received unexpected handshake "
-			   "message %d (expected Certificate/"
-			   "ClientKeyExchange)", type);
+		tlsv1_server_log(conn, "Received unexpected handshake message %d (expected Certificate/ClientKeyExchange)",
+				 type);
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				   TLS_ALERT_UNEXPECTED_MESSAGE);
 		return -1;
 	}
 
-	wpa_printf(MSG_DEBUG,
-		   "TLSv1: Received Certificate (certificate_list len %lu)",
-		   (unsigned long) len);
+	tlsv1_server_log(conn, "Received Certificate (certificate_list len %lu)",
+			 (unsigned long) len);
 
 	/*
 	 * opaque ASN.1Cert<2^24-1>;
@@ -352,8 +341,8 @@ static int tls_process_certificate(struct tlsv1_server *conn, u8 ct,
 	end = pos + len;
 
 	if (end - pos < 3) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Too short Certificate "
-			   "(left=%lu)", (unsigned long) left);
+		tlsv1_server_log(conn, "Too short Certificate (left=%lu)",
+				 (unsigned long) left);
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				   TLS_ALERT_DECODE_ERROR);
 		return -1;
@@ -363,10 +352,9 @@ static int tls_process_certificate(struct tlsv1_server *conn, u8 ct,
 	pos += 3;
 
 	if ((size_t) (end - pos) != list_len) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Unexpected certificate_list "
-			   "length (len=%lu left=%lu)",
-			   (unsigned long) list_len,
-			   (unsigned long) (end - pos));
+		tlsv1_server_log(conn, "Unexpected certificate_list length (len=%lu left=%lu)",
+				 (unsigned long) list_len,
+				 (unsigned long) (end - pos));
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				   TLS_ALERT_DECODE_ERROR);
 		return -1;
@@ -375,8 +363,7 @@ static int tls_process_certificate(struct tlsv1_server *conn, u8 ct,
 	idx = 0;
 	while (pos < end) {
 		if (end - pos < 3) {
-			wpa_printf(MSG_DEBUG, "TLSv1: Failed to parse "
-				   "certificate_list");
+			tlsv1_server_log(conn, "Failed to parse certificate_list");
 			tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 					   TLS_ALERT_DECODE_ERROR);
 			x509_certificate_chain_free(chain);
@@ -387,25 +374,23 @@ static int tls_process_certificate(struct tlsv1_server *conn, u8 ct,
 		pos += 3;
 
 		if ((size_t) (end - pos) < cert_len) {
-			wpa_printf(MSG_DEBUG, "TLSv1: Unexpected certificate "
-				   "length (len=%lu left=%lu)",
-				   (unsigned long) cert_len,
-				   (unsigned long) (end - pos));
+			tlsv1_server_log(conn, "Unexpected certificate length (len=%lu left=%lu)",
+					 (unsigned long) cert_len,
+					 (unsigned long) (end - pos));
 			tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 					   TLS_ALERT_DECODE_ERROR);
 			x509_certificate_chain_free(chain);
 			return -1;
 		}
 
-		wpa_printf(MSG_DEBUG, "TLSv1: Certificate %lu (len %lu)",
-			   (unsigned long) idx, (unsigned long) cert_len);
+		tlsv1_server_log(conn, "Certificate %lu (len %lu)",
+				 (unsigned long) idx, (unsigned long) cert_len);
 
 		if (idx == 0) {
 			crypto_public_key_free(conn->client_rsa_key);
 			if (tls_parse_cert(pos, cert_len,
 					   &conn->client_rsa_key)) {
-				wpa_printf(MSG_DEBUG, "TLSv1: Failed to parse "
-					   "the certificate");
+				tlsv1_server_log(conn, "Failed to parse the certificate");
 				tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 						   TLS_ALERT_BAD_CERTIFICATE);
 				x509_certificate_chain_free(chain);
@@ -415,8 +400,7 @@ static int tls_process_certificate(struct tlsv1_server *conn, u8 ct,
 
 		cert = x509_certificate_parse(pos, cert_len);
 		if (cert == NULL) {
-			wpa_printf(MSG_DEBUG, "TLSv1: Failed to parse "
-				   "the certificate");
+			tlsv1_server_log(conn, "Failed to parse the certificate");
 			tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 					   TLS_ALERT_BAD_CERTIFICATE);
 			x509_certificate_chain_free(chain);
@@ -436,8 +420,8 @@ static int tls_process_certificate(struct tlsv1_server *conn, u8 ct,
 	if (x509_certificate_chain_validate(conn->cred->trusted_certs, chain,
 					    &reason, 0) < 0) {
 		int tls_reason;
-		wpa_printf(MSG_DEBUG, "TLSv1: Server certificate chain "
-			   "validation failed (reason=%d)", reason);
+		tlsv1_server_log(conn, "Server certificate chain validation failed (reason=%d)",
+				 reason);
 		switch (reason) {
 		case X509_VALIDATE_BAD_CERTIFICATE:
 			tls_reason = TLS_ALERT_BAD_CERTIFICATE;
@@ -494,9 +478,8 @@ static int tls_process_client_key_exchange_rsa(
 	encr_len = WPA_GET_BE16(pos);
 	pos += 2;
 	if (pos + encr_len > end) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Invalid ClientKeyExchange "
-			   "format: encr_len=%u left=%u",
-			   encr_len, (unsigned int) (end - pos));
+		tlsv1_server_log(conn, "Invalid ClientKeyExchange format: encr_len=%u left=%u",
+				 encr_len, (unsigned int) (end - pos));
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				   TLS_ALERT_DECODE_ERROR);
 		return -1;
@@ -539,15 +522,13 @@ static int tls_process_client_key_exchange_rsa(
 	}
 
 	if (!use_random && outlen != TLS_PRE_MASTER_SECRET_LEN) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Unexpected PreMasterSecret "
-			   "length %lu", (unsigned long) outlen);
+		tlsv1_server_log(conn, "Unexpected PreMasterSecret length %lu",
+				 (unsigned long) outlen);
 		use_random = 1;
 	}
 
 	if (!use_random && WPA_GET_BE16(out) != conn->client_version) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Client version in "
-			   "ClientKeyExchange does not match with version in "
-			   "ClientHello");
+		tlsv1_server_log(conn, "Client version in ClientKeyExchange does not match with version in ClientHello");
 		use_random = 1;
 	}
 
@@ -600,6 +581,7 @@ static int tls_process_client_key_exchange_dh(
 	 * } ClientDiffieHellmanPublic;
 	 */
 
+	tlsv1_server_log(conn, "ClientDiffieHellmanPublic received");
 	wpa_hexdump(MSG_MSGDUMP, "TLSv1: ClientDiffieHellmanPublic",
 		    pos, end - pos);
 
@@ -612,8 +594,7 @@ static int tls_process_client_key_exchange_dh(
 	}
 
 	if (end - pos < 3) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Invalid client public value "
-			   "length");
+		tlsv1_server_log(conn, "Invalid client public value length");
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				   TLS_ALERT_DECODE_ERROR);
 		return -1;
@@ -623,8 +604,8 @@ static int tls_process_client_key_exchange_dh(
 	dh_yc = pos + 2;
 
 	if (dh_yc + dh_yc_len > end) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Client public value overflow "
-			   "(length %d)", dh_yc_len);
+		tlsv1_server_log(conn, "Client public value overflow (length %d)",
+				 dh_yc_len);
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				   TLS_ALERT_DECODE_ERROR);
 		return -1;
@@ -695,8 +676,8 @@ static int tls_process_client_key_exchange(struct tlsv1_server *conn, u8 ct,
 	const struct tls_cipher_suite *suite;
 
 	if (ct != TLS_CONTENT_TYPE_HANDSHAKE) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Expected Handshake; "
-			   "received content type 0x%x", ct);
+		tlsv1_server_log(conn, "Expected Handshake; received content type 0x%x",
+				 ct);
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				   TLS_ALERT_UNEXPECTED_MESSAGE);
 		return -1;
@@ -706,8 +687,8 @@ static int tls_process_client_key_exchange(struct tlsv1_server *conn, u8 ct,
 	left = *in_len;
 
 	if (left < 4) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Too short ClientKeyExchange "
-			   "(Left=%lu)", (unsigned long) left);
+		tlsv1_server_log(conn, "Too short ClientKeyExchange (Left=%lu)",
+				 (unsigned long) left);
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				   TLS_ALERT_DECODE_ERROR);
 		return -1;
@@ -719,9 +700,8 @@ static int tls_process_client_key_exchange(struct tlsv1_server *conn, u8 ct,
 	left -= 4;
 
 	if (len > left) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Mismatch in ClientKeyExchange "
-			   "length (len=%lu != left=%lu)",
-			   (unsigned long) len, (unsigned long) left);
+		tlsv1_server_log(conn, "Mismatch in ClientKeyExchange length (len=%lu != left=%lu)",
+				 (unsigned long) len, (unsigned long) left);
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				   TLS_ALERT_DECODE_ERROR);
 		return -1;
@@ -730,14 +710,14 @@ static int tls_process_client_key_exchange(struct tlsv1_server *conn, u8 ct,
 	end = pos + len;
 
 	if (type != TLS_HANDSHAKE_TYPE_CLIENT_KEY_EXCHANGE) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Received unexpected handshake "
-			   "message %d (expected ClientKeyExchange)", type);
+		tlsv1_server_log(conn, "Received unexpected handshake message %d (expected ClientKeyExchange)",
+				 type);
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				   TLS_ALERT_UNEXPECTED_MESSAGE);
 		return -1;
 	}
 
-	wpa_printf(MSG_DEBUG, "TLSv1: Received ClientKeyExchange");
+	tlsv1_server_log(conn, "Received ClientKeyExchange");
 
 	wpa_hexdump(MSG_DEBUG, "TLSv1: ClientKeyExchange", pos, len);
 
@@ -776,8 +756,7 @@ static int tls_process_certificate_verify(struct tlsv1_server *conn, u8 ct,
 
 	if (ct == TLS_CONTENT_TYPE_CHANGE_CIPHER_SPEC) {
 		if (conn->verify_peer) {
-			wpa_printf(MSG_DEBUG, "TLSv1: Client did not include "
-				   "CertificateVerify");
+			tlsv1_server_log(conn, "Client did not include CertificateVerify");
 			tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 					   TLS_ALERT_UNEXPECTED_MESSAGE);
 			return -1;
@@ -788,8 +767,8 @@ static int tls_process_certificate_verify(struct tlsv1_server *conn, u8 ct,
 	}
 
 	if (ct != TLS_CONTENT_TYPE_HANDSHAKE) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Expected Handshake; "
-			   "received content type 0x%x", ct);
+		tlsv1_server_log(conn, "Expected Handshake; received content type 0x%x",
+				 ct);
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				   TLS_ALERT_UNEXPECTED_MESSAGE);
 		return -1;
@@ -799,8 +778,8 @@ static int tls_process_certificate_verify(struct tlsv1_server *conn, u8 ct,
 	left = *in_len;
 
 	if (left < 4) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Too short CertificateVerify "
-			   "message (len=%lu)", (unsigned long) left);
+		tlsv1_server_log(conn, "Too short CertificateVerify message (len=%lu)",
+				 (unsigned long) left);
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				   TLS_ALERT_DECODE_ERROR);
 		return -1;
@@ -812,9 +791,8 @@ static int tls_process_certificate_verify(struct tlsv1_server *conn, u8 ct,
 	left -= 4;
 
 	if (len > left) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Unexpected CertificateVerify "
-			   "message length (len=%lu != left=%lu)",
-			   (unsigned long) len, (unsigned long) left);
+		tlsv1_server_log(conn, "Unexpected CertificateVerify message length (len=%lu != left=%lu)",
+				 (unsigned long) len, (unsigned long) left);
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				   TLS_ALERT_DECODE_ERROR);
 		return -1;
@@ -823,14 +801,14 @@ static int tls_process_certificate_verify(struct tlsv1_server *conn, u8 ct,
 	end = pos + len;
 
 	if (type != TLS_HANDSHAKE_TYPE_CERTIFICATE_VERIFY) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Received unexpected handshake "
-			   "message %d (expected CertificateVerify)", type);
+		tlsv1_server_log(conn, "Received unexpected handshake message %d (expected CertificateVerify)",
+				 type);
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				   TLS_ALERT_UNEXPECTED_MESSAGE);
 		return -1;
 	}
 
-	wpa_printf(MSG_DEBUG, "TLSv1: Received CertificateVerify");
+	tlsv1_server_log(conn, "Received CertificateVerify");
 
 	/*
 	 * struct {
@@ -919,6 +897,7 @@ static int tls_process_certificate_verify(struct tlsv1_server *conn, u8 ct,
 
 	if (tls_verify_signature(conn->rl.tls_version, conn->client_rsa_key,
 				 hash, hlen, pos, end - pos, &alert) < 0) {
+		tlsv1_server_log(conn, "Invalid Signature in CertificateVerify");
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL, alert);
 		return -1;
 	}
@@ -939,8 +918,8 @@ static int tls_process_change_cipher_spec(struct tlsv1_server *conn,
 	size_t left;
 
 	if (ct != TLS_CONTENT_TYPE_CHANGE_CIPHER_SPEC) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Expected ChangeCipherSpec; "
-			   "received content type 0x%x", ct);
+		tlsv1_server_log(conn, "Expected ChangeCipherSpec; received content type 0x%x",
+				 ct);
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				   TLS_ALERT_UNEXPECTED_MESSAGE);
 		return -1;
@@ -950,21 +929,21 @@ static int tls_process_change_cipher_spec(struct tlsv1_server *conn,
 	left = *in_len;
 
 	if (left < 1) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Too short ChangeCipherSpec");
+		tlsv1_server_log(conn, "Too short ChangeCipherSpec");
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				   TLS_ALERT_DECODE_ERROR);
 		return -1;
 	}
 
 	if (*pos != TLS_CHANGE_CIPHER_SPEC) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Expected ChangeCipherSpec; "
-			   "received data 0x%x", *pos);
+		tlsv1_server_log(conn, "Expected ChangeCipherSpec; received data 0x%x",
+				 *pos);
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				   TLS_ALERT_UNEXPECTED_MESSAGE);
 		return -1;
 	}
 
-	wpa_printf(MSG_DEBUG, "TLSv1: Received ChangeCipherSpec");
+	tlsv1_server_log(conn, "Received ChangeCipherSpec");
 	if (tlsv1_record_change_read_cipher(&conn->rl) < 0) {
 		wpa_printf(MSG_DEBUG, "TLSv1: Failed to change read cipher "
 			   "for record layer");
@@ -990,8 +969,8 @@ static int tls_process_client_finished(struct tlsv1_server *conn, u8 ct,
 	u8 hash[MD5_MAC_LEN + SHA1_MAC_LEN];
 
 	if (ct != TLS_CONTENT_TYPE_HANDSHAKE) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Expected Finished; "
-			   "received content type 0x%x", ct);
+		tlsv1_server_log(conn, "Expected Finished; received content type 0x%x",
+				 ct);
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				   TLS_ALERT_UNEXPECTED_MESSAGE);
 		return -1;
@@ -1001,9 +980,8 @@ static int tls_process_client_finished(struct tlsv1_server *conn, u8 ct,
 	left = *in_len;
 
 	if (left < 4) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Too short record (left=%lu) for "
-			   "Finished",
-			   (unsigned long) left);
+		tlsv1_server_log(conn, "Too short record (left=%lu) forFinished",
+				 (unsigned long) left);
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				   TLS_ALERT_DECODE_ERROR);
 		return -1;
@@ -1023,18 +1001,16 @@ static int tls_process_client_finished(struct tlsv1_server *conn, u8 ct,
 	left -= 4;
 
 	if (len > left) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Too short buffer for Finished "
-			   "(len=%lu > left=%lu)",
-			   (unsigned long) len, (unsigned long) left);
+		tlsv1_server_log(conn, "Too short buffer for Finished (len=%lu > left=%lu)",
+				 (unsigned long) len, (unsigned long) left);
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				   TLS_ALERT_DECODE_ERROR);
 		return -1;
 	}
 	end = pos + len;
 	if (len != TLS_VERIFY_DATA_LEN) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Unexpected verify_data length "
-			   "in Finished: %lu (expected %d)",
-			   (unsigned long) len, TLS_VERIFY_DATA_LEN);
+		tlsv1_server_log(conn, "Unexpected verify_data length in Finished: %lu (expected %d)",
+				 (unsigned long) len, TLS_VERIFY_DATA_LEN);
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				   TLS_ALERT_DECODE_ERROR);
 		return -1;
@@ -1097,18 +1073,17 @@ static int tls_process_client_finished(struct tlsv1_server *conn, u8 ct,
 			verify_data, TLS_VERIFY_DATA_LEN);
 
 	if (os_memcmp(pos, verify_data, TLS_VERIFY_DATA_LEN) != 0) {
-		wpa_printf(MSG_INFO, "TLSv1: Mismatch in verify_data");
+		tlsv1_server_log(conn, "Mismatch in verify_data");
 		return -1;
 	}
 
-	wpa_printf(MSG_DEBUG, "TLSv1: Received Finished");
+	tlsv1_server_log(conn, "Received Finished");
 
 	*in_len = end - in_data;
 
 	if (conn->use_session_ticket) {
 		/* Abbreviated handshake using session ticket; RFC 4507 */
-		wpa_printf(MSG_DEBUG, "TLSv1: Abbreviated handshake completed "
-			   "successfully");
+		tlsv1_server_log(conn, "Abbreviated handshake completed successfully");
 		conn->state = ESTABLISHED;
 	} else {
 		/* Full handshake */
@@ -1124,13 +1099,12 @@ int tlsv1_server_process_handshake(struct tlsv1_server *conn, u8 ct,
 {
 	if (ct == TLS_CONTENT_TYPE_ALERT) {
 		if (*len < 2) {
-			wpa_printf(MSG_DEBUG, "TLSv1: Alert underflow");
+			tlsv1_server_log(conn, "Alert underflow");
 			tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 					   TLS_ALERT_DECODE_ERROR);
 			return -1;
 		}
-		wpa_printf(MSG_DEBUG, "TLSv1: Received alert %d:%d",
-			   buf[0], buf[1]);
+		tlsv1_server_log(conn, "Received alert %d:%d", buf[0], buf[1]);
 		*len = 2;
 		conn->state = FAILED;
 		return -1;
@@ -1162,9 +1136,8 @@ int tlsv1_server_process_handshake(struct tlsv1_server *conn, u8 ct,
 			return -1;
 		break;
 	default:
-		wpa_printf(MSG_DEBUG, "TLSv1: Unexpected state %d "
-			   "while processing received message",
-			   conn->state);
+		tlsv1_server_log(conn, "Unexpected state %d while processing received message",
+				 conn->state);
 		return -1;
 	}
 

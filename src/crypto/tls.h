@@ -537,4 +537,8 @@ int __must_check  tls_connection_set_session_ticket_cb(
 	void *tls_ctx, struct tls_connection *conn,
 	tls_session_ticket_cb cb, void *ctx);
 
+void tls_connection_set_log_cb(struct tls_connection *conn,
+			       void (*log_cb)(void *ctx, const char *msg),
+			       void *ctx);
+
 #endif /* TLS_H */

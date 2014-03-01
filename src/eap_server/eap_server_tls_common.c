@@ -34,6 +34,15 @@ struct wpabuf * eap_tls_msg_alloc(EapType type, size_t payload_len,
 }
 
 
+#ifdef CONFIG_TLS_INTERNAL
+static void eap_server_tls_log_cb(void *ctx, const char *msg)
+{
+	struct eap_sm *sm = ctx;
+	eap_log_msg(sm, "TLS: %s", msg);
+}
+#endif /* CONFIG_TLS_INTERNAL */
+
+
 int eap_server_tls_ssl_init(struct eap_sm *sm, struct eap_ssl_data *data,
 			    int verify_peer)
 {
@@ -51,6 +60,10 @@ int eap_server_tls_ssl_init(struct eap_sm *sm, struct eap_ssl_data *data,
 			   "connection");
 		return -1;
 	}
+
+#ifdef CONFIG_TLS_INTERNAL
+	tls_connection_set_log_cb(data->conn, eap_server_tls_log_cb, sm);
+#endif /* CONFIG_TLS_INTERNAL */
 
 	if (tls_connection_set_verify(sm->ssl_ctx, data->conn, verify_peer)) {
 		wpa_printf(MSG_INFO, "SSL: Failed to configure verification "

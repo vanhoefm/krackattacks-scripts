@@ -352,6 +352,10 @@ def test_ap_hs20_sim(dev, apdev):
     if not hlr_auc_gw_available():
         return "skip"
     hs20_simulated_sim(dev[0], apdev[0], "SIM")
+    dev[0].request("INTERWORKING_SELECT auto freq=2412")
+    ev = dev[0].wait_event(["INTERWORKING-ALREADY-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on already-connected event")
 
 def test_ap_hs20_aka(dev, apdev):
     """Hotspot 2.0 with simulated USIM and EAP-AKA"""
@@ -520,6 +524,10 @@ def test_ap_hs20_roaming_consortium(dev, apdev):
     interworking_select(dev[0], bssid, "home", freq="2412")
     interworking_connect(dev[0], bssid, "PEAP")
     check_sp_type(dev[0], "home")
+    dev[0].request("INTERWORKING_SELECT auto freq=2412")
+    ev = dev[0].wait_event(["INTERWORKING-ALREADY-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on already-connected event")
 
 def test_ap_hs20_username_roaming(dev, apdev):
     """Hotspot 2.0 connection in username/password credential (roaming)"""

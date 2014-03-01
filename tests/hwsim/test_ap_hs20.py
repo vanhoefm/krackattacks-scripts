@@ -516,19 +516,20 @@ def test_ap_hs20_roaming_consortium(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
 
     dev[0].hs20_enable()
-    id = dev[0].add_cred_values({ 'realm': "example.com",
-                                  'username': "user",
-                                  'password': "password",
-                                  'domain': "example.com",
-                                  'roaming_consortium': "fedcba",
-                                  'eap': "PEAP" })
-    interworking_select(dev[0], bssid, "home", freq="2412")
-    interworking_connect(dev[0], bssid, "PEAP")
-    check_sp_type(dev[0], "home")
-    dev[0].request("INTERWORKING_SELECT auto freq=2412")
-    ev = dev[0].wait_event(["INTERWORKING-ALREADY-CONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("Timeout on already-connected event")
+    for consortium in [ "112233", "1020304050", "010203040506", "fedcba" ]:
+        id = dev[0].add_cred_values({ 'username': "user",
+                                      'password': "password",
+                                      'domain': "example.com",
+                                      'roaming_consortium': consortium,
+                                      'eap': "PEAP" })
+        interworking_select(dev[0], bssid, "home", freq="2412")
+        interworking_connect(dev[0], bssid, "PEAP")
+        check_sp_type(dev[0], "home")
+        dev[0].request("INTERWORKING_SELECT auto freq=2412")
+        ev = dev[0].wait_event(["INTERWORKING-ALREADY-CONNECTED"], timeout=15)
+        if ev is None:
+            raise Exception("Timeout on already-connected event")
+        dev[0].remove_cred(id)
 
 def test_ap_hs20_username_roaming(dev, apdev):
     """Hotspot 2.0 connection in username/password credential (roaming)"""

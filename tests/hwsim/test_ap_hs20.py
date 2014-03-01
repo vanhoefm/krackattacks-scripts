@@ -8,6 +8,7 @@ import time
 import subprocess
 import logging
 logger = logging.getLogger()
+import os
 import os.path
 import subprocess
 
@@ -1550,3 +1551,73 @@ def test_ap_hs20_network_preference4(dev, apdev):
         raise Exception("No roam to higher priority network")
     if bssid2 not in ev:
         raise Exception("Unexpected network selected")
+
+def test_ap_hs20_fetch_osu(dev, apdev):
+    """Hotspot 2.0 OSU provider and icon fetch"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hs20_icon'] = "128:80:zxx:image/png:w1fi_logo:w1fi_logo.png"
+    params['osu_ssid'] = '"HS 2.0 OSU open"'
+    params['osu_method_list'] = "1"
+    params['osu_friendly_name'] = [ "eng:Test OSU", "fin:Testi-OSU" ]
+    params['osu_icon'] = "w1fi_logo"
+    params['osu_service_desc'] = [ "eng:Example services", "fin:Esimerkkipalveluja" ]
+    params['osu_server_uri'] = "https://example.com/osu/"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    bssid2 = apdev[1]['bssid']
+    params = hs20_ap_params(ssid="test-hs20b")
+    params['hessid'] = bssid2
+    params['hs20_icon'] = "128:80:zxx:image/png:w1fi_logo:w1fi_logo.png"
+    params['osu_ssid'] = '"HS 2.0 OSU OSEN"'
+    params['osu_method_list'] = "0"
+    params['osu_friendly_name'] = [ "eng:Test2 OSU", "fin:Testi2-OSU" ]
+    params['osu_icon'] = "w1fi_logo"
+    params['osu_service_desc'] = [ "eng:Example services2", "fin:Esimerkkipalveluja2" ]
+    params['osu_server_uri'] = "https://example.org/osu/"
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    with open("w1fi_logo.png", "r") as f:
+        orig_logo = f.read()
+    dev[0].hs20_enable()
+    dir = "/tmp/osu-fetch"
+    if os.path.isdir(dir):
+       files = [ f for f in os.listdir(dir) if f.startswith("osu-") ]
+       for f in files:
+           os.remove(dir + "/" + f)
+    else:
+        try:
+            os.makedirs(dir)
+        except:
+            pass
+    try:
+        dev[0].request("SET osu_dir " + dir)
+        dev[0].request("FETCH_OSU")
+        icons = 0
+        while True:
+            ev = dev[0].wait_event(["OSU provider fetch completed",
+                                    "RX-HS20-ANQP-ICON"], timeout=15)
+            if ev is None:
+                raise Exception("Timeout on OSU fetch")
+            if "OSU provider fetch completed" in ev:
+                break
+            if "RX-HS20-ANQP-ICON" in ev:
+                with open(ev.split(' ')[1], "r") as f:
+                    logo = f.read()
+                    if logo == orig_logo:
+                        icons += 1
+
+        with open(dir + "/osu-providers.txt", "r") as f:
+            prov = f.read()
+        if "OSU-PROVIDER " + bssid not in prov:
+            raise Exception("Missing OSU_PROVIDER")
+        if "OSU-PROVIDER " + bssid2 not in prov:
+            raise Exception("Missing OSU_PROVIDER")
+    finally:
+        files = [ f for f in os.listdir(dir) if f.startswith("osu-") ]
+        for f in files:
+            os.remove(dir + "/" + f)
+        os.rmdir(dir)
+
+    if icons != 2:
+        raise Exception("Unexpected number of icons fetched")

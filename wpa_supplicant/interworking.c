@@ -978,10 +978,6 @@ static int interworking_connect_3gpp(struct wpa_supplicant *wpa_s,
 			goto fail;
 	}
 
-	if (cred->password && cred->password[0] &&
-	    wpa_config_set_quoted(ssid, "password", cred->password) < 0)
-		goto fail;
-
 	wpa_s->next_ssid = ssid;
 	wpa_config_update_prio_list(wpa_s->conf);
 	interworking_reconnect(wpa_s);

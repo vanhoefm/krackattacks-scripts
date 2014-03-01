@@ -982,8 +982,6 @@ int hostapd_select_hw_mode(struct hostapd_iface *iface)
 		hostapd_notify_bad_chans(iface);
 		return -3;
 	}
-
-	return 0;
 }
 
 

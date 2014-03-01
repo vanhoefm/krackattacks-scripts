@@ -447,13 +447,39 @@ def eap_test(dev, ap, eap_params, method, user):
     interworking_select(dev, bssid, freq="2412")
     interworking_connect(dev, bssid, method)
 
+def test_ap_hs20_eap_unknown(dev, apdev):
+    """Hotspot 2.0 connection with unknown EAP method"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['nai_realm'] = "0,example.com,99"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    dev[0].add_cred_values(default_cred())
+    interworking_select(dev[0], None, no_match=True, freq="2412")
+
 def test_ap_hs20_eap_peap_mschapv2(dev, apdev):
     """Hotspot 2.0 connection with PEAP/MSCHAPV2"""
     eap_test(dev[0], apdev[0], "25[3:26]", "PEAP", "user")
 
+def test_ap_hs20_eap_peap_default(dev, apdev):
+    """Hotspot 2.0 connection with PEAP/MSCHAPV2 (as default)"""
+    eap_test(dev[0], apdev[0], "25", "PEAP", "user")
+
 def test_ap_hs20_eap_peap_gtc(dev, apdev):
     """Hotspot 2.0 connection with PEAP/GTC"""
     eap_test(dev[0], apdev[0], "25[3:6]", "PEAP", "user")
+
+def test_ap_hs20_eap_peap_unknown(dev, apdev):
+    """Hotspot 2.0 connection with PEAP/unknown"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['nai_realm'] = "0,example.com,25[3:99]"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    dev[0].add_cred_values(default_cred())
+    interworking_select(dev[0], None, no_match=True, freq="2412")
 
 def test_ap_hs20_eap_ttls_chap(dev, apdev):
     """Hotspot 2.0 connection with TTLS/CHAP"""
@@ -465,7 +491,40 @@ def test_ap_hs20_eap_ttls_mschap(dev, apdev):
 
 def test_ap_hs20_eap_ttls_eap_mschapv2(dev, apdev):
     """Hotspot 2.0 connection with TTLS/EAP-MSCHAPv2"""
-    eap_test(dev[0], apdev[0], "21[3:26]", "TTLS", "user")
+    eap_test(dev[0], apdev[0], "21[3:26][6:7][99:99]", "TTLS", "user")
+
+def test_ap_hs20_eap_ttls_eap_unknown(dev, apdev):
+    """Hotspot 2.0 connection with TTLS/EAP-unknown"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['nai_realm'] = "0,example.com,21[3:99]"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    dev[0].add_cred_values(default_cred())
+    interworking_select(dev[0], None, no_match=True, freq="2412")
+
+def test_ap_hs20_eap_ttls_eap_unsupported(dev, apdev):
+    """Hotspot 2.0 connection with TTLS/EAP-OTP(unsupported)"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['nai_realm'] = "0,example.com,21[3:5]"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    dev[0].add_cred_values(default_cred())
+    interworking_select(dev[0], None, no_match=True, freq="2412")
+
+def test_ap_hs20_eap_ttls_unknown(dev, apdev):
+    """Hotspot 2.0 connection with TTLS/unknown"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['nai_realm'] = "0,example.com,21[2:5]"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    dev[0].add_cred_values(default_cred())
+    interworking_select(dev[0], None, no_match=True, freq="2412")
 
 def test_ap_hs20_eap_fast_mschapv2(dev, apdev):
     """Hotspot 2.0 connection with FAST/EAP-MSCHAPV2"""
@@ -490,6 +549,48 @@ def test_ap_hs20_eap_tls(dev, apdev):
                              'private_key': "auth_serv/user.key"})
     interworking_select(dev[0], bssid, freq="2412")
     interworking_connect(dev[0], bssid, "TLS")
+
+def test_ap_hs20_eap_cert_unknown(dev, apdev):
+    """Hotspot 2.0 connection with certificate, but unknown EAP method"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['nai_realm'] = [ "0,example.com,99[5:6]" ]
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    dev[0].add_cred_values({ 'realm': "example.com",
+                             'username': "certificate-user",
+                             'ca_cert': "auth_serv/ca.pem",
+                             'client_cert': "auth_serv/user.pem",
+                             'private_key': "auth_serv/user.key"})
+    interworking_select(dev[0], None, no_match=True, freq="2412")
+
+def test_ap_hs20_eap_cert_unsupported(dev, apdev):
+    """Hotspot 2.0 connection with certificate, but unsupported TTLS"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['nai_realm'] = [ "0,example.com,21[5:6]" ]
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    dev[0].add_cred_values({ 'realm': "example.com",
+                             'username': "certificate-user",
+                             'ca_cert': "auth_serv/ca.pem",
+                             'client_cert': "auth_serv/user.pem",
+                             'private_key': "auth_serv/user.key"})
+    interworking_select(dev[0], None, no_match=True, freq="2412")
+
+def test_ap_hs20_eap_invalid_cred(dev, apdev):
+    """Hotspot 2.0 connection with invalid cred configuration"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    dev[0].add_cred_values({ 'realm': "example.com",
+                             'username': "certificate-user",
+                             'client_cert': "auth_serv/user.pem" })
+    interworking_select(dev[0], None, no_match=True, freq="2412")
 
 def test_ap_hs20_nai_realms(dev, apdev):
     """Hotspot 2.0 connection and multiple NAI realms and TTLS/PAP"""

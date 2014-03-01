@@ -1006,7 +1006,7 @@ def test_ap_hs20_multi_cred_sp_prio(dev, apdev):
                                    'provisioning_sp': "example.com",
                                    'sp_priority': "2" })
     dev[0].dump_monitor()
-    dev[0].request("INTERWORKING_SELECT auto")
+    dev[0].request("INTERWORKING_SELECT auto freq=2412")
     interworking_ext_sim_auth(dev[0], "SIM")
     check_sp_type(dev[0], "unknown")
     dev[0].request("REMOVE_NETWORK all")
@@ -1014,7 +1014,7 @@ def test_ap_hs20_multi_cred_sp_prio(dev, apdev):
     dev[0].set_cred(id1, "sp_priority", "2")
     dev[0].set_cred(id2, "sp_priority", "1")
     dev[0].dump_monitor()
-    dev[0].request("INTERWORKING_SELECT auto")
+    dev[0].request("INTERWORKING_SELECT auto freq=2412")
     interworking_auth(dev[0], "TTLS")
     check_sp_type(dev[0], "unknown")
 
@@ -1050,7 +1050,7 @@ def test_ap_hs20_multi_cred_sp_prio2(dev, apdev):
                                    'provisioning_sp': "example.com",
                                    'sp_priority': "2" })
     dev[0].dump_monitor()
-    dev[0].request("INTERWORKING_SELECT auto")
+    dev[0].request("INTERWORKING_SELECT auto freq=2412")
     interworking_ext_sim_auth(dev[0], "SIM")
     check_sp_type(dev[0], "unknown")
     conn_bssid = dev[0].get_status_field("bssid")
@@ -1061,7 +1061,7 @@ def test_ap_hs20_multi_cred_sp_prio2(dev, apdev):
     dev[0].set_cred(id1, "sp_priority", "2")
     dev[0].set_cred(id2, "sp_priority", "1")
     dev[0].dump_monitor()
-    dev[0].request("INTERWORKING_SELECT auto")
+    dev[0].request("INTERWORKING_SELECT auto freq=2412")
     interworking_auth(dev[0], "TTLS")
     check_sp_type(dev[0], "unknown")
     conn_bssid = dev[0].get_status_field("bssid")

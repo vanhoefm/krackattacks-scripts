@@ -1068,6 +1068,24 @@ def test_ap_hs20_multi_cred_sp_prio2(dev, apdev):
     if conn_bssid != bssid2:
         raise Exception("Connected to incorrect BSS")
 
+def check_conn_capab_selection(dev, type, missing):
+    dev.request("INTERWORKING_SELECT freq=2412")
+    ev = dev.wait_event(["INTERWORKING-AP"])
+    if ev is None:
+        raise Exception("Network selection timed out");
+    if "type=" + type not in ev:
+        raise Exception("Unexpected network type")
+    if missing and "conn_capab_missing=1" not in ev:
+        raise Exception("conn_capab_missing not reported")
+    if not missing and "conn_capab_missing=1" in ev:
+        raise Exception("conn_capab_missing reported unexpectedly")
+
+def conn_capab_cred(domain=None, req_conn_capab=None):
+    cred = default_cred(domain=domain)
+    if req_conn_capab:
+        cred['req_conn_capab'] = req_conn_capab
+    return cred
+
 def test_ap_hs20_req_conn_capab(dev, apdev):
     """Hotspot 2.0 network selection with req_conn_capab"""
     bssid = apdev[0]['bssid']
@@ -1076,41 +1094,75 @@ def test_ap_hs20_req_conn_capab(dev, apdev):
 
     dev[0].hs20_enable()
     logger.info("Not used in home network")
-    id = dev[0].add_cred_values({ 'realm': "example.com",
-                                  'username': "hs20-test",
-                                  'password': "password",
-                                  'domain': "example.com",
-                                  'req_conn_capab': "6:1234" })
-    dev[0].request("INTERWORKING_SELECT freq=2412")
-    ev = dev[0].wait_event(["INTERWORKING-AP"])
-    if ev is None:
-        raise Exception("Network selection timed out");
-    if "type=home" not in ev:
-        raise Exception("Unexpected network type")
-    if "conn_capab_missing=1" in ev:
-        raise Exception("req_conn_capab used in home network")
+    values = conn_capab_cred(domain="example.com", req_conn_capab="6:1234")
+    id = dev[0].add_cred_values(values)
+    check_conn_capab_selection(dev[0], "home", False)
 
     logger.info("Used in roaming network")
     dev[0].remove_cred(id)
-    id = dev[0].add_cred_values({ 'realm': "example.com",
-                                  'username': "hs20-test",
-                                  'password': "password",
-                                  'domain': "example.org",
-                                  'req_conn_capab': "6:1234" })
-    dev[0].request("INTERWORKING_SELECT freq=2412")
-    ev = dev[0].wait_event(["INTERWORKING-AP"])
-    if ev is None:
-        raise Exception("Network selection timed out");
-    if "type=roaming" not in ev:
-        raise Exception("Unexpected network type")
-    if "conn_capab_missing=1" not in ev:
-        raise Exception("Missing conn_capab not reported")
+    values = conn_capab_cred(domain="example.org", req_conn_capab="6:1234")
+    id = dev[0].add_cred_values(values)
+    check_conn_capab_selection(dev[0], "roaming", True)
 
     logger.info("Verify that req_conn_capab does not prevent connection if no other network is available")
-    dev[0].request("INTERWORKING_SELECT auto freq=2412")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("Connection timed out")
+    check_auto_select(dev[0], bssid)
+
+    logger.info("Additional req_conn_capab checks")
+
+    dev[0].remove_cred(id)
+    values = conn_capab_cred(domain="example.org", req_conn_capab="1:0")
+    id = dev[0].add_cred_values(values)
+    check_conn_capab_selection(dev[0], "roaming", True)
+
+    dev[0].remove_cred(id)
+    values = conn_capab_cred(domain="example.org", req_conn_capab="17:5060")
+    id = dev[0].add_cred_values(values)
+    check_conn_capab_selection(dev[0], "roaming", True)
+
+    bssid2 = apdev[1]['bssid']
+    params = hs20_ap_params(ssid="test-hs20b")
+    params['hs20_conn_capab'] = [ "1:0:2", "6:22:1", "17:5060:0", "50:0:1" ]
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    dev[0].remove_cred(id)
+    values = conn_capab_cred(domain="example.org", req_conn_capab="50")
+    id = dev[0].add_cred_values(values)
+    dev[0].set_cred(id, "req_conn_capab", "6:22")
+    dev[0].request("INTERWORKING_SELECT freq=2412")
+    for i in range(0, 2):
+        ev = dev[0].wait_event(["INTERWORKING-AP"])
+        if ev is None:
+            raise Exception("Network selection timed out");
+        if bssid in ev and "conn_capab_missing=1" not in ev:
+            raise Exception("Missing protocol connection capability not reported")
+        if bssid2 in ev and "conn_capab_missing=1" in ev:
+            raise Exception("Protocol connection capability not reported correctly")
+
+def test_ap_hs20_req_conn_capab_and_roaming_partner_preference(dev, apdev):
+    """Hotspot 2.0 and req_conn_capab with roaming partner preference"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['domain_name'] = "roaming.example.org"
+    params['hs20_conn_capab'] = [ "1:0:2", "6:22:1", "17:5060:0", "50:0:1" ]
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    bssid2 = apdev[1]['bssid']
+    params = hs20_ap_params(ssid="test-hs20-b")
+    params['domain_name'] = "roaming.example.net"
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    values = default_cred()
+    values['roaming_partner'] = "roaming.example.net,1,127,*"
+    id = dev[0].add_cred_values(values)
+    check_auto_select(dev[0], bssid2)
+
+    dev[0].set_cred(id, "req_conn_capab", "50")
+    check_auto_select(dev[0], bssid)
+
+    dev[0].remove_cred(id)
+    id = dev[0].add_cred_values(values)
+    dev[0].set_cred(id, "req_conn_capab", "51")
+    check_auto_select(dev[0], bssid2)
 
 def check_bandwidth_selection(dev, type, below):
     dev.request("INTERWORKING_SELECT freq=2412")

@@ -301,6 +301,7 @@ struct wpa_driver_nl80211_data {
 	unsigned int hostapd:1;
 	unsigned int start_mode_ap:1;
 	unsigned int start_iface_up:1;
+	unsigned int test_use_roc_tx:1;
 
 	u64 remain_on_chan_cookie;
 	u64 send_action_cookie;
@@ -9926,7 +9927,8 @@ static int nl80211_send_frame_cmd(struct i802_bss *bss,
 		NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, freq);
 	if (wait)
 		NLA_PUT_U32(msg, NL80211_ATTR_DURATION, wait);
-	if (offchanok && (drv->capa.flags & WPA_DRIVER_FLAGS_OFFCHANNEL_TX))
+	if (offchanok && ((drv->capa.flags & WPA_DRIVER_FLAGS_OFFCHANNEL_TX) ||
+			  drv->test_use_roc_tx))
 		NLA_PUT_FLAG(msg, NL80211_ATTR_OFFCHANNEL_TX_OK);
 	if (no_cck)
 		NLA_PUT_FLAG(msg, NL80211_ATTR_TX_NO_CCK_RATE);
@@ -10508,6 +10510,13 @@ static int nl80211_set_param(void *priv, const char *param)
 		struct i802_bss *bss = priv;
 		struct wpa_driver_nl80211_data *drv = bss->drv;
 		drv->capa.flags &= ~WPA_DRIVER_FLAGS_SME;
+	}
+
+	if (os_strstr(param, "no_offchannel_tx=1")) {
+		struct i802_bss *bss = priv;
+		struct wpa_driver_nl80211_data *drv = bss->drv;
+		drv->capa.flags &= ~WPA_DRIVER_FLAGS_OFFCHANNEL_TX;
+		drv->test_use_roc_tx = 1;
 	}
 
 	return 0;

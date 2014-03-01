@@ -487,7 +487,10 @@ int gas_query_rx(struct gas_query *gas, const u8 *da, const u8 *sa,
 	query->status_code = WPA_GET_LE16(pos);
 	pos += 2;
 
-	if (query->status_code != WLAN_STATUS_SUCCESS) {
+	if (query->status_code == WLAN_STATUS_QUERY_RESP_OUTSTANDING &&
+	    action == WLAN_PA_GAS_COMEBACK_RESP) {
+		wpa_printf(MSG_DEBUG, "GAS: Allow non-zero status for outstanding comeback response");
+	} else if (query->status_code != WLAN_STATUS_SUCCESS) {
 		wpa_printf(MSG_DEBUG, "GAS: Query to " MACSTR " dialog token "
 			   "%u failed - status code %u",
 			   MAC2STR(sa), dialog_token, query->status_code);

@@ -1339,6 +1339,8 @@ def test_ap_hs20_deauth_req_ess(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"])
     if ev is None:
         raise Exception("Timeout on disconnection")
+    if "[TEMP-DISABLED]" not in dev[0].list_networks()[0]['flags']:
+        raise Exception("Network not marked temporarily disabled")
     ev = dev[0].wait_event(["SME: Trying to authenticate",
                             "Trying to associate",
                             "CTRL-EVENT-CONNECTED"], timeout=5)
@@ -1364,6 +1366,8 @@ def test_ap_hs20_deauth_req_bss(dev, apdev):
         raise Exception("Timeout on disconnection")
     if "reason=4" not in ev:
         raise Exception("Unexpected disconnection reason")
+    if "[TEMP-DISABLED]" not in dev[0].list_networks()[0]['flags']:
+        raise Exception("Network not marked temporarily disabled")
     ev = dev[0].wait_event(["SME: Trying to authenticate",
                             "Trying to associate",
                             "CTRL-EVENT-CONNECTED"], timeout=5)

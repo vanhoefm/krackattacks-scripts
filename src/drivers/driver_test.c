@@ -1529,7 +1529,8 @@ static int wpa_driver_test_associate(
 #endif /* DRIVER_TEST_UNIX */
 
 	if (params->mode == IEEE80211_MODE_AP) {
-		os_memcpy(dbss->ssid, params->ssid, params->ssid_len);
+		if (params->ssid)
+			os_memcpy(dbss->ssid, params->ssid, params->ssid_len);
 		dbss->ssid_len = params->ssid_len;
 		os_memcpy(dbss->bssid, drv->own_addr, ETH_ALEN);
 		if (params->wpa_ie && params->wpa_ie_len) {
@@ -1550,8 +1551,9 @@ static int wpa_driver_test_associate(
 				  MAC2STR(drv->own_addr));
 		if (ret >= 0 && ret < end - pos)
 			pos += ret;
-		pos += wpa_snprintf_hex(pos, end - pos, params->ssid,
-					params->ssid_len);
+		if (params->ssid)
+			pos += wpa_snprintf_hex(pos, end - pos, params->ssid,
+						params->ssid_len);
 		ret = os_snprintf(pos, end - pos, " ");
 		if (ret >= 0 && ret < end - pos)
 			pos += ret;
@@ -1575,12 +1577,15 @@ static int wpa_driver_test_associate(
 			return -1;
 		}
 
-		os_memcpy(dbss->ssid, params->ssid, params->ssid_len);
+		if (params->ssid)
+			os_memcpy(dbss->ssid, params->ssid, params->ssid_len);
 		dbss->ssid_len = params->ssid_len;
 	} else {
 		drv->associated = 1;
 		if (params->mode == IEEE80211_MODE_IBSS) {
-			os_memcpy(dbss->ssid, params->ssid, params->ssid_len);
+			if (params->ssid)
+				os_memcpy(dbss->ssid, params->ssid,
+					  params->ssid_len);
 			dbss->ssid_len = params->ssid_len;
 			if (params->bssid)
 				os_memcpy(dbss->bssid, params->bssid,

@@ -244,7 +244,7 @@ static char * wpa_supplicant_ctrl_iface_path(struct wpa_supplicant *wpa_s)
 {
 	char *buf;
 	size_t len;
-	char *pbuf, *dir = NULL, *gid_str = NULL;
+	char *pbuf, *dir = NULL;
 	int res;
 
 	if (wpa_s->conf->ctrl_interface == NULL)
@@ -254,12 +254,11 @@ static char * wpa_supplicant_ctrl_iface_path(struct wpa_supplicant *wpa_s)
 	if (pbuf == NULL)
 		return NULL;
 	if (os_strncmp(pbuf, "DIR=", 4) == 0) {
+		char *gid_str;
 		dir = pbuf + 4;
 		gid_str = os_strstr(dir, " GROUP=");
-		if (gid_str) {
+		if (gid_str)
 			*gid_str = '\0';
-			gid_str += 7;
-		}
 	} else
 		dir = pbuf;
 
@@ -573,7 +572,7 @@ void wpa_supplicant_ctrl_iface_deinit(struct ctrl_iface_priv *priv)
 
 	if (priv->sock > -1) {
 		char *fname;
-		char *buf, *dir = NULL, *gid_str = NULL;
+		char *buf, *dir = NULL;
 		eloop_unregister_read_sock(priv->sock);
 		if (!dl_list_empty(&priv->ctrl_dst)) {
 			/*
@@ -599,12 +598,11 @@ void wpa_supplicant_ctrl_iface_deinit(struct ctrl_iface_priv *priv)
 		if (buf == NULL)
 			goto free_dst;
 		if (os_strncmp(buf, "DIR=", 4) == 0) {
+			char *gid_str;
 			dir = buf + 4;
 			gid_str = os_strstr(dir, " GROUP=");
-			if (gid_str) {
+			if (gid_str)
 				*gid_str = '\0';
-				gid_str += 7;
-			}
 		} else
 			dir = buf;
 

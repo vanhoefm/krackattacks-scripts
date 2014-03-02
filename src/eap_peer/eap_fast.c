@@ -149,14 +149,16 @@ static void * eap_fast_init(struct eap_sm *sm)
 	struct eap_fast_data *data;
 	struct eap_peer_config *config = eap_get_config(sm);
 
+	if (config == NULL)
+		return NULL;
+
 	data = os_zalloc(sizeof(*data));
 	if (data == NULL)
 		return NULL;
 	data->fast_version = EAP_FAST_VERSION;
 	data->max_pac_list_len = 10;
 
-	if (config && config->phase1 &&
-	    eap_fast_parse_phase1(data, config->phase1) < 0) {
+	if (config->phase1 && eap_fast_parse_phase1(data, config->phase1) < 0) {
 		eap_fast_deinit(sm, data);
 		return NULL;
 	}

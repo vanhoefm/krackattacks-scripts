@@ -221,8 +221,8 @@ static void wpa_send_smk_m5(struct wpa_authenticator *wpa_auth,
 		return;
 
 	/* Peer RSN IE */
-	os_memcpy(buf, kde->rsn_ie, kde->rsn_ie_len);
-	pos = buf + kde->rsn_ie_len;
+	os_memcpy(pos, kde->rsn_ie, kde->rsn_ie_len);
+	pos += kde->rsn_ie_len;
 
 	/* Peer MAC Address */
 	pos = wpa_add_kde(pos, RSN_KEY_DATA_MAC_ADDR, peer, ETH_ALEN, NULL, 0);

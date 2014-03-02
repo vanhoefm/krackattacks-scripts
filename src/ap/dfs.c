@@ -214,6 +214,7 @@ static void dfs_adjust_vht_center_freq(struct hostapd_iface *iface,
 		break;
 	default:
 		wpa_printf(MSG_INFO, "DFS only VHT20/40/80/160 is supported now");
+		*vht_oper_centr_freq_seg0_idx = 0;
 		break;
 	}
 
@@ -359,6 +360,9 @@ dfs_get_valid_channel(struct hostapd_iface *iface,
 	u32 _rand;
 
 	wpa_printf(MSG_DEBUG, "DFS: Selecting random channel");
+	*secondary_channel = 0;
+	*vht_oper_centr_freq_seg0_idx = 0;
+	*vht_oper_centr_freq_seg1_idx = 0;
 
 	if (iface->current_mode == NULL)
 		return NULL;

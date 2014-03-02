@@ -187,6 +187,7 @@ static void wpa_trace_bfd_addr(void *pc)
 		wpa_printf(MSG_INFO, "     %s() %s:%u",
 			   name, filename, data.line);
 		free(aname);
+		aname = NULL;
 
 		data.found = bfd_find_inliner_info(abfd, &data.filename,
 						   &data.function, &data.line);

@@ -2074,7 +2074,8 @@ static char * wpa_supplicant_ie_txt(char *pos, char *end, const char *proto,
 				    const u8 *ie, size_t ie_len)
 {
 	struct wpa_ie_data data;
-	int first, ret;
+	char *start;
+	int ret;
 
 	ret = os_snprintf(pos, end - pos, "[%s-", proto);
 	if (ret < 0 || ret >= end - pos)
@@ -2089,62 +2090,58 @@ static char * wpa_supplicant_ie_txt(char *pos, char *end, const char *proto,
 		return pos;
 	}
 
-	first = 1;
+	start = pos;
 	if (data.key_mgmt & WPA_KEY_MGMT_IEEE8021X) {
-		ret = os_snprintf(pos, end - pos, "%sEAP", first ? "" : "+");
+		ret = os_snprintf(pos, end - pos, "%sEAP",
+				  pos == start ? "" : "+");
 		if (ret < 0 || ret >= end - pos)
 			return pos;
 		pos += ret;
-		first = 0;
 	}
 	if (data.key_mgmt & WPA_KEY_MGMT_PSK) {
-		ret = os_snprintf(pos, end - pos, "%sPSK", first ? "" : "+");
+		ret = os_snprintf(pos, end - pos, "%sPSK",
+				  pos == start ? "" : "+");
 		if (ret < 0 || ret >= end - pos)
 			return pos;
 		pos += ret;
-		first = 0;
 	}
 	if (data.key_mgmt & WPA_KEY_MGMT_WPA_NONE) {
-		ret = os_snprintf(pos, end - pos, "%sNone", first ? "" : "+");
+		ret = os_snprintf(pos, end - pos, "%sNone",
+				  pos == start ? "" : "+");
 		if (ret < 0 || ret >= end - pos)
 			return pos;
 		pos += ret;
-		first = 0;
 	}
 #ifdef CONFIG_IEEE80211R
 	if (data.key_mgmt & WPA_KEY_MGMT_FT_IEEE8021X) {
 		ret = os_snprintf(pos, end - pos, "%sFT/EAP",
-				  first ? "" : "+");
+				  pos == start ? "" : "+");
 		if (ret < 0 || ret >= end - pos)
 			return pos;
 		pos += ret;
-		first = 0;
 	}
 	if (data.key_mgmt & WPA_KEY_MGMT_FT_PSK) {
 		ret = os_snprintf(pos, end - pos, "%sFT/PSK",
-				  first ? "" : "+");
+				  pos == start ? "" : "+");
 		if (ret < 0 || ret >= end - pos)
 			return pos;
 		pos += ret;
-		first = 0;
 	}
 #endif /* CONFIG_IEEE80211R */
 #ifdef CONFIG_IEEE80211W
 	if (data.key_mgmt & WPA_KEY_MGMT_IEEE8021X_SHA256) {
 		ret = os_snprintf(pos, end - pos, "%sEAP-SHA256",
-				  first ? "" : "+");
+				  pos == start ? "" : "+");
 		if (ret < 0 || ret >= end - pos)
 			return pos;
 		pos += ret;
-		first = 0;
 	}
 	if (data.key_mgmt & WPA_KEY_MGMT_PSK_SHA256) {
 		ret = os_snprintf(pos, end - pos, "%sPSK-SHA256",
-				  first ? "" : "+");
+				  pos == start ? "" : "+");
 		if (ret < 0 || ret >= end - pos)
 			return pos;
 		pos += ret;
-		first = 0;
 	}
 #endif /* CONFIG_IEEE80211W */
 
@@ -2862,7 +2859,7 @@ static int ctrl_iface_get_capability_pairwise(int res, char *strict,
 					      struct wpa_driver_capa *capa,
 					      char *buf, size_t buflen)
 {
-	int ret, first = 1;
+	int ret;
 	char *pos, *end;
 	size_t len;
 	unsigned int i;
@@ -2882,11 +2879,11 @@ static int ctrl_iface_get_capability_pairwise(int res, char *strict,
 	for (i = 0; i < ARRAY_SIZE(ciphers); i++) {
 		if (!ciphers[i].group_only && capa->enc & ciphers[i].capa) {
 			ret = os_snprintf(pos, end - pos, "%s%s",
-					  first ? "" : " ", ciphers[i].name);
+					  pos == buf ? "" : " ",
+					  ciphers[i].name);
 			if (ret < 0 || ret >= end - pos)
 				return pos - buf;
 			pos += ret;
-			first = 0;
 		}
 	}
 
@@ -2898,7 +2895,7 @@ static int ctrl_iface_get_capability_group(int res, char *strict,
 					   struct wpa_driver_capa *capa,
 					   char *buf, size_t buflen)
 {
-	int ret, first = 1;
+	int ret;
 	char *pos, *end;
 	size_t len;
 	unsigned int i;
@@ -2918,11 +2915,11 @@ static int ctrl_iface_get_capability_group(int res, char *strict,
 	for (i = 0; i < ARRAY_SIZE(ciphers); i++) {
 		if (capa->enc & ciphers[i].capa) {
 			ret = os_snprintf(pos, end - pos, "%s%s",
-					  first ? "" : " ", ciphers[i].name);
+					  pos == buf ? "" : " ",
+					  ciphers[i].name);
 			if (ret < 0 || ret >= end - pos)
 				return pos - buf;
 			pos += ret;
-			first = 0;
 		}
 	}
 
@@ -2987,7 +2984,7 @@ static int ctrl_iface_get_capability_proto(int res, char *strict,
 					   struct wpa_driver_capa *capa,
 					   char *buf, size_t buflen)
 {
-	int ret, first = 1;
+	int ret;
 	char *pos, *end;
 	size_t len;
 
@@ -3005,20 +3002,20 @@ static int ctrl_iface_get_capability_proto(int res, char *strict,
 
 	if (capa->key_mgmt & (WPA_DRIVER_CAPA_KEY_MGMT_WPA2 |
 			      WPA_DRIVER_CAPA_KEY_MGMT_WPA2_PSK)) {
-		ret = os_snprintf(pos, end - pos, "%sRSN", first ? "" : " ");
+		ret = os_snprintf(pos, end - pos, "%sRSN",
+				  pos == buf ? "" : " ");
 		if (ret < 0 || ret >= end - pos)
 			return pos - buf;
 		pos += ret;
-		first = 0;
 	}
 
 	if (capa->key_mgmt & (WPA_DRIVER_CAPA_KEY_MGMT_WPA |
 			      WPA_DRIVER_CAPA_KEY_MGMT_WPA_PSK)) {
-		ret = os_snprintf(pos, end - pos, "%sWPA", first ? "" : " ");
+		ret = os_snprintf(pos, end - pos, "%sWPA",
+				  pos == buf ? "" : " ");
 		if (ret < 0 || ret >= end - pos)
 			return pos - buf;
 		pos += ret;
-		first = 0;
 	}
 
 	return pos - buf;
@@ -3029,7 +3026,7 @@ static int ctrl_iface_get_capability_auth_alg(int res, char *strict,
 					      struct wpa_driver_capa *capa,
 					      char *buf, size_t buflen)
 {
-	int ret, first = 1;
+	int ret;
 	char *pos, *end;
 	size_t len;
 
@@ -3046,28 +3043,27 @@ static int ctrl_iface_get_capability_auth_alg(int res, char *strict,
 	}
 
 	if (capa->auth & (WPA_DRIVER_AUTH_OPEN)) {
-		ret = os_snprintf(pos, end - pos, "%sOPEN", first ? "" : " ");
+		ret = os_snprintf(pos, end - pos, "%sOPEN",
+				  pos == buf ? "" : " ");
 		if (ret < 0 || ret >= end - pos)
 			return pos - buf;
 		pos += ret;
-		first = 0;
 	}
 
 	if (capa->auth & (WPA_DRIVER_AUTH_SHARED)) {
 		ret = os_snprintf(pos, end - pos, "%sSHARED",
-				  first ? "" : " ");
+				  pos == buf ? "" : " ");
 		if (ret < 0 || ret >= end - pos)
 			return pos - buf;
 		pos += ret;
-		first = 0;
 	}
 
 	if (capa->auth & (WPA_DRIVER_AUTH_LEAP)) {
-		ret = os_snprintf(pos, end - pos, "%sLEAP", first ? "" : " ");
+		ret = os_snprintf(pos, end - pos, "%sLEAP",
+				  pos == buf ? "" : " ");
 		if (ret < 0 || ret >= end - pos)
 			return pos - buf;
 		pos += ret;
-		first = 0;
 	}
 
 	return pos - buf;
@@ -3078,7 +3074,7 @@ static int ctrl_iface_get_capability_modes(int res, char *strict,
 					   struct wpa_driver_capa *capa,
 					   char *buf, size_t buflen)
 {
-	int ret, first = 1;
+	int ret;
 	char *pos, *end;
 	size_t len;
 
@@ -3095,19 +3091,19 @@ static int ctrl_iface_get_capability_modes(int res, char *strict,
 	}
 
 	if (capa->flags & WPA_DRIVER_FLAGS_IBSS) {
-		ret = os_snprintf(pos, end - pos, "%sIBSS", first ? "" : " ");
+		ret = os_snprintf(pos, end - pos, "%sIBSS",
+				  pos == buf ? "" : " ");
 		if (ret < 0 || ret >= end - pos)
 			return pos - buf;
 		pos += ret;
-		first = 0;
 	}
 
 	if (capa->flags & WPA_DRIVER_FLAGS_AP) {
-		ret = os_snprintf(pos, end - pos, "%sAP", first ? "" : " ");
+		ret = os_snprintf(pos, end - pos, "%sAP",
+				  pos == buf ? "" : " ");
 		if (ret < 0 || ret >= end - pos)
 			return pos - buf;
 		pos += ret;
-		first = 0;
 	}
 
 	return pos - buf;

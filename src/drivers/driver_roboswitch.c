@@ -260,17 +260,17 @@ static int wpa_driver_roboswitch_join(struct wpa_driver_roboswitch_data *drv,
 					    ROBO_ARLCTRL_CONF, read1, 1);
 	} else {
 		/* if both multiport addresses are the same we can add */
-		wpa_driver_roboswitch_read(drv, ROBO_ARLCTRL_PAGE,
-					   ROBO_ARLCTRL_ADDR_1, read1, 3);
-		wpa_driver_roboswitch_read(drv, ROBO_ARLCTRL_PAGE,
-					   ROBO_ARLCTRL_ADDR_2, read2, 3);
-		if (os_memcmp(read1, read2, 6) != 0)
+		if (wpa_driver_roboswitch_read(drv, ROBO_ARLCTRL_PAGE,
+					       ROBO_ARLCTRL_ADDR_1, read1, 3) ||
+		    wpa_driver_roboswitch_read(drv, ROBO_ARLCTRL_PAGE,
+					       ROBO_ARLCTRL_ADDR_2, read2, 3) ||
+		    os_memcmp(read1, read2, 6) != 0)
 			return -1;
-		wpa_driver_roboswitch_read(drv, ROBO_ARLCTRL_PAGE,
-					   ROBO_ARLCTRL_VEC_1, read1, 1);
-		wpa_driver_roboswitch_read(drv, ROBO_ARLCTRL_PAGE,
-					   ROBO_ARLCTRL_VEC_2, read2, 1);
-		if (read1[0] != read2[0])
+		if (wpa_driver_roboswitch_read(drv, ROBO_ARLCTRL_PAGE,
+					       ROBO_ARLCTRL_VEC_1, read1, 1) ||
+		    wpa_driver_roboswitch_read(drv, ROBO_ARLCTRL_PAGE,
+					       ROBO_ARLCTRL_VEC_2, read2, 1) ||
+		    read1[0] != read2[0])
 			return -1;
 		wpa_driver_roboswitch_write(drv, ROBO_ARLCTRL_PAGE,
 					    ROBO_ARLCTRL_ADDR_1, addr_be16, 3);

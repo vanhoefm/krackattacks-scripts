@@ -1371,8 +1371,8 @@ radius_server_read_clients(const char *client_file, int ipv6)
 			break;
 		}
 		entry->shared_secret_len = os_strlen(entry->shared_secret);
-		entry->addr.s_addr = addr.s_addr;
 		if (!ipv6) {
+			entry->addr.s_addr = addr.s_addr;
 			val = 0;
 			for (i = 0; i < mask; i++)
 				val |= 1 << (31 - i);

@@ -678,6 +678,20 @@ static int hostapd_mgmt_rx(struct hostapd_data *hapd, struct rx_mgmt *rx_mgmt)
 	struct hostapd_frame_info fi;
 	int ret;
 
+#ifdef CONFIG_TESTING_OPTIONS
+	if (hapd->ext_mgmt_frame_handling) {
+		size_t hex_len = 2 * rx_mgmt->frame_len + 1;
+		char *hex = os_malloc(hex_len);
+		if (hex) {
+			wpa_snprintf_hex(hex, hex_len, rx_mgmt->frame,
+					 rx_mgmt->frame_len);
+			wpa_msg(hapd->msg_ctx, MSG_INFO, "MGMT-RX %s", hex);
+			os_free(hex);
+		}
+		return 1;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
+
 	hdr = (const struct ieee80211_hdr *) rx_mgmt->frame;
 	bssid = get_hdr_bssid(hdr, rx_mgmt->frame_len);
 	if (bssid == NULL)

@@ -1738,19 +1738,6 @@ int ieee802_11_mgmt(struct hostapd_data *hapd, const u8 *buf, size_t len,
 	u16 fc, stype;
 	int ret = 0;
 
-#ifdef CONFIG_TESTING_OPTIONS
-	if (hapd->ext_mgmt_frame_handling) {
-		size_t hex_len = 2 * len + 1;
-		char *hex = os_malloc(hex_len);
-		if (hex) {
-			wpa_snprintf_hex(hex, hex_len, buf, len);
-			wpa_msg(hapd->msg_ctx, MSG_INFO, "MGMT-RX %s", hex);
-			os_free(hex);
-		}
-		return 1;
-	}
-#endif /* CONFIG_TESTING_OPTIONS */
-
 	if (len < 24)
 		return 0;
 

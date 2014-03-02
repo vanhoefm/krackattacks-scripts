@@ -1995,25 +1995,29 @@ DBusMessage * wpas_dbus_handler_eap_logon(DBusMessage *message,
 
 #ifdef CONFIG_TDLS
 
-static DBusMessage * get_peer_hwaddr_helper(DBusMessage *message,
-					    const char *func_name,
-					    u8 *peer_address)
+static int get_peer_hwaddr_helper(DBusMessage *message, const char *func_name,
+				  u8 *peer_address, DBusMessage **error)
 {
 	const char *peer_string;
 
+	*error = NULL;
+
 	if (!dbus_message_get_args(message, NULL,
 				   DBUS_TYPE_STRING, &peer_string,
-				   DBUS_TYPE_INVALID))
-		return wpas_dbus_error_invalid_args(message, NULL);
+				   DBUS_TYPE_INVALID)) {
+		*error = wpas_dbus_error_invalid_args(message, NULL);
+		return -1;
+	}
 
 	if (hwaddr_aton(peer_string, peer_address)) {
 		wpa_printf(MSG_DEBUG, "%s: invalid address '%s'",
 			   func_name, peer_string);
-		return wpas_dbus_error_invalid_args(
+		*error = wpas_dbus_error_invalid_args(
 			message, "Invalid hardware address format");
+		return -1;
 	}
 
-	return NULL;
+	return 0;
 }
 
 
@@ -2032,8 +2036,7 @@ DBusMessage * wpas_dbus_handler_tdls_discover(DBusMessage *message,
 	DBusMessage *error_reply;
 	int ret;
 
-	error_reply = get_peer_hwaddr_helper(message, __func__, peer);
-	if (error_reply)
+	if (get_peer_hwaddr_helper(message, __func__, peer, &error_reply) < 0)
 		return error_reply;
 
 	wpa_printf(MSG_DEBUG, "DBUS TDLS_DISCOVER " MACSTR, MAC2STR(peer));
@@ -2067,8 +2070,7 @@ DBusMessage * wpas_dbus_handler_tdls_setup(DBusMessage *message,
 	DBusMessage *error_reply;
 	int ret;
 
-	error_reply = get_peer_hwaddr_helper(message, __func__, peer);
-	if (error_reply)
+	if (get_peer_hwaddr_helper(message, __func__, peer, &error_reply) < 0)
 		return error_reply;
 
 	wpa_printf(MSG_DEBUG, "DBUS TDLS_SETUP " MACSTR, MAC2STR(peer));
@@ -2103,8 +2105,7 @@ DBusMessage * wpas_dbus_handler_tdls_status(DBusMessage *message,
 	DBusMessage *reply;
 	const char *tdls_status;
 
-	reply = get_peer_hwaddr_helper(message, __func__, peer);
-	if (reply)
+	if (get_peer_hwaddr_helper(message, __func__, peer, &reply) < 0)
 		return reply;
 
 	wpa_printf(MSG_DEBUG, "DBUS TDLS_STATUS " MACSTR, MAC2STR(peer));
@@ -2133,8 +2134,7 @@ DBusMessage * wpas_dbus_handler_tdls_teardown(DBusMessage *message,
 	DBusMessage *error_reply;
 	int ret;
 
-	error_reply = get_peer_hwaddr_helper(message, __func__, peer);
-	if (error_reply)
+	if (get_peer_hwaddr_helper(message, __func__, peer, &error_reply) < 0)
 		return error_reply;
 
 	wpa_printf(MSG_DEBUG, "DBUS TDLS_TEARDOWN " MACSTR, MAC2STR(peer));

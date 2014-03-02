@@ -840,7 +840,6 @@ void wpa_dbus_flush_object_changed_properties(DBusConnection *con,
 		return;
 	eloop_cancel_timeout(flush_object_timeout_handler, con, obj_desc);
 
-	dsc = obj_desc->properties;
 	for (dsc = obj_desc->properties, i = 0; dsc && dsc->dbus_property;
 	     dsc++, i++) {
 		if (obj_desc->prop_changed_flags == NULL ||

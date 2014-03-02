@@ -148,7 +148,8 @@ static struct wpabuf * ndef_build_record(u8 flags, void *type,
 
 static int wifi_filter(struct ndef_record *record)
 {
-	if (record->type_length != os_strlen(wifi_handover_type))
+	if (record->type == NULL ||
+	    record->type_length != os_strlen(wifi_handover_type))
 		return 0;
 	if (os_memcmp(record->type, wifi_handover_type,
 		      os_strlen(wifi_handover_type)) != 0)
@@ -173,7 +174,8 @@ struct wpabuf * ndef_build_wifi(const struct wpabuf *buf)
 
 static int p2p_filter(struct ndef_record *record)
 {
-	if (record->type_length != os_strlen(p2p_handover_type))
+	if (record->type == NULL ||
+	    record->type_length != os_strlen(p2p_handover_type))
 		return 0;
 	if (os_memcmp(record->type, p2p_handover_type,
 		      os_strlen(p2p_handover_type)) != 0)

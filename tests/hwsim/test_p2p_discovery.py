@@ -73,6 +73,20 @@ def test_discovery(dev):
     dev[0].p2p_stop_find
     dev[1].p2p_stop_find
 
+def test_discovery_pd_retries(dev):
+    """P2P device discovery and provision discovery retries"""
+    addr0 = dev[0].p2p_dev_addr()
+    addr1 = dev[1].p2p_dev_addr()
+    dev[1].p2p_listen()
+    if not dev[0].discover_peer(addr1):
+        raise Exception("Device discovery timed out")
+    dev[1].p2p_stop_find()
+    dev[0].p2p_stop_find()
+    dev[0].global_request("P2P_PROV_DISC " + addr1 + " display")
+    ev = dev[0].wait_event(["P2P-PROV-DISC-FAILURE"], timeout=60)
+    if ev is None:
+        raise Exception("No PD failure reported")
+
 def test_discovery_group_client(dev):
     """P2P device discovery for a client in a group"""
     logger.info("Start autonomous GO " + dev[0].ifname)

@@ -946,7 +946,7 @@ static void web_connection_parse_subscribe(struct upnp_wps_device_sm *sm,
 	wpa_printf(MSG_DEBUG, "WPS UPnP: HTTP SUBSCRIBE for event");
 	end = os_strchr(h, '\n');
 
-	for (; end != NULL; h = end + 1) {
+	while (end) {
 		/* Option line by option line */
 		h = end + 1;
 		end = os_strchr(h, '\n');
@@ -1153,7 +1153,7 @@ static void web_connection_parse_unsubscribe(struct upnp_wps_device_sm *sm,
 	wpa_printf(MSG_DEBUG, "WPS UPnP: HTTP UNSUBSCRIBE for event");
 	end = os_strchr(h, '\n');
 
-	for (; end != NULL; h = end + 1) {
+	while (end) {
 		/* Option line by option line */
 		h = end + 1;
 		end = os_strchr(h, '\n');

@@ -17,7 +17,21 @@ from test_p2p_grpform import remove_group
 
 def test_connect_cmd_open(dev, apdev):
     """Open connection using cfg80211 connect command"""
-    params = { "ssid": "sta-connect" }
+    params = { "ssid": "sta-connect",
+               "manage_p2p": "1",
+               "allow_cross_connection": "1" }
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
+    wpas.connect("sta-connect", key_mgmt="NONE", scan_freq="2412")
+    wpas.request("DISCONNECT")
+
+def test_connect_cmd_p2p_management(dev, apdev):
+    """Open connection using cfg80211 connect command and AP using P2P management"""
+    params = { "ssid": "sta-connect",
+               "manage_p2p": "1",
+               "allow_cross_connection": "0" }
     hostapd.add_ap(apdev[0]['ifname'], params)
 
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')

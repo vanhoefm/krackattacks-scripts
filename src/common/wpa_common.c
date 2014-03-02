@@ -558,8 +558,9 @@ int wpa_parse_wpa_ie_rsn(const u8 *rsn_ie, size_t rsn_ie_len,
 #endif /* CONFIG_IEEE80211W */
 
 	if (left > 0) {
-		wpa_printf(MSG_DEBUG, "%s: ie has %u trailing bytes - ignored",
-			   __func__, left);
+		wpa_hexdump(MSG_DEBUG,
+			    "wpa_parse_wpa_ie_rsn: ignore trailing bytes",
+			    pos, left);
 	}
 
 	return 0;
@@ -696,8 +697,9 @@ int wpa_parse_wpa_ie_wpa(const u8 *wpa_ie, size_t wpa_ie_len,
 	}
 
 	if (left > 0) {
-		wpa_printf(MSG_DEBUG, "%s: ie has %u trailing bytes - ignored",
-			   __func__, left);
+		wpa_hexdump(MSG_DEBUG,
+			    "wpa_parse_wpa_ie_wpa: ignore trailing bytes",
+			    pos, left);
 	}
 
 	return 0;

@@ -4642,26 +4642,25 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv,
 		return -1;
 	}
 
-	if (nlmode == NL80211_IFTYPE_P2P_DEVICE) {
-		int ret = nl80211_set_p2pdev(bss, 1);
-		if (ret < 0)
-			wpa_printf(MSG_ERROR, "nl80211: Could not start P2P device");
+	if (nlmode == NL80211_IFTYPE_P2P_DEVICE)
 		nl80211_get_macaddr(bss);
-		return ret;
-	}
 
-	if (linux_set_iface_flags(drv->global->ioctl_sock, bss->ifname, 1)) {
-		if (rfkill_is_blocked(drv->rfkill)) {
-			wpa_printf(MSG_DEBUG, "nl80211: Could not yet enable "
-				   "interface '%s' due to rfkill",
-				   bss->ifname);
-			drv->if_disabled = 1;
-			send_rfkill_event = 1;
-		} else {
+	if (!rfkill_is_blocked(drv->rfkill)) {
+		int ret = i802_set_iface_flags(bss, 1);
+		if (ret) {
 			wpa_printf(MSG_ERROR, "nl80211: Could not set "
 				   "interface '%s' UP", bss->ifname);
-			return -1;
+			return ret;
 		}
+		if (nlmode == NL80211_IFTYPE_P2P_DEVICE)
+			return ret;
+	} else {
+		wpa_printf(MSG_DEBUG, "nl80211: Could not yet enable "
+			   "interface '%s' due to rfkill", bss->ifname);
+		if (nlmode == NL80211_IFTYPE_P2P_DEVICE)
+			return 0;
+		drv->if_disabled = 1;
+		send_rfkill_event = 1;
 	}
 
 	if (!drv->hostapd)

@@ -1239,6 +1239,16 @@ static void wpa_driver_nl80211_event_rtm_newlink(void *ctx,
 			drv->if_disabled = 1;
 			wpa_supplicant_event(drv->ctx,
 					     EVENT_INTERFACE_DISABLED, NULL);
+
+			/*
+			 * Try to get drv again, since it may be removed as
+			 * part of the EVENT_INTERFACE_DISABLED handling for
+			 * dynamic interfaces
+			 */
+			drv = nl80211_find_drv(global, ifi->ifi_index,
+					       buf, len);
+			if (!drv)
+				return;
 		}
 	}
 

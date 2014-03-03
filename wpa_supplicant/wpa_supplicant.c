@@ -579,6 +579,10 @@ static void wpa_supplicant_start_bgscan(struct wpa_supplicant *wpa_s)
 		return;
 	if (wpa_s->current_ssid == wpa_s->bgscan_ssid)
 		return;
+#ifdef CONFIG_P2P
+	if (wpa_s->p2p_group_interface != NOT_P2P_GROUP_INTERFACE)
+		return;
+#endif /* CONFIG_P2P */
 
 	bgscan_deinit(wpa_s);
 	if (wpa_s->current_ssid) {

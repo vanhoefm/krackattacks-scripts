@@ -604,4 +604,14 @@ static inline int wpa_drv_set_qos_map(struct wpa_supplicant *wpa_s,
 					  qos_map_set_len);
 }
 
+static inline int wpa_drv_vendor_cmd(struct wpa_supplicant *wpa_s,
+				     int vendor_id, int subcmd, const u8 *data,
+				     size_t data_len, struct wpabuf *buf)
+{
+	if (!wpa_s->driver->vendor_cmd)
+		return -1;
+	return wpa_s->driver->vendor_cmd(wpa_s->drv_priv, vendor_id, subcmd,
+					 data, data_len, buf);
+}
+
 #endif /* DRIVER_I_H */

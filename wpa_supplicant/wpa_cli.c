@@ -2426,6 +2426,12 @@ static int wpa_cli_cmd_driver(struct wpa_ctrl *ctrl, int argc, char *argv[])
 #endif /* ANDROID */
 
 
+static int wpa_cli_cmd_vendor(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "VENDOR", 1, argc, argv);
+}
+
+
 static int wpa_cli_cmd_flush(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	return wpa_ctrl_command(ctrl, "FLUSH");
@@ -2912,6 +2918,9 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 #endif /* ANDROID */
 	{ "radio_work", wpa_cli_cmd_radio_work, NULL, cli_cmd_flag_none,
 	  "= radio_work <show/add/done>" },
+	{ "vendor", wpa_cli_cmd_vendor, NULL, cli_cmd_flag_none,
+	  "<vendor id> <command id> [<hex formatted command argument>] = Send vendor command"
+	},
 	{ NULL, NULL, NULL, cli_cmd_flag_none, NULL }
 };
 

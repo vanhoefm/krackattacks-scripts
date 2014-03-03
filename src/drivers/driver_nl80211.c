@@ -11710,6 +11710,70 @@ error:
 }
 
 
+static int vendor_reply_handler(struct nl_msg *msg, void *arg)
+{
+	struct nlattr *tb[NL80211_ATTR_MAX + 1];
+	struct nlattr *nl_vendor_reply, *nl;
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+	struct wpabuf *buf = arg;
+	int rem;
+
+	if (!buf)
+		return NL_SKIP;
+
+	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+	nl_vendor_reply = tb[NL80211_ATTR_VENDOR_DATA];
+
+	if (!nl_vendor_reply)
+		return NL_SKIP;
+
+	if ((size_t) nla_len(nl_vendor_reply) > wpabuf_tailroom(buf)) {
+		wpa_printf(MSG_INFO, "nl80211: Vendor command: insufficient buffer space for reply");
+		return NL_SKIP;
+	}
+
+	nla_for_each_nested(nl, nl_vendor_reply, rem) {
+		wpabuf_put_data(buf, nla_data(nl), nla_len(nl));
+	}
+
+	return NL_SKIP;
+}
+
+
+static int nl80211_vendor_cmd(void *priv, unsigned int vendor_id,
+			      unsigned int subcmd, const u8 *data,
+			      size_t data_len, struct wpabuf *buf)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg;
+	int ret;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -ENOMEM;
+
+	nl80211_cmd(drv, msg, 0, NL80211_CMD_VENDOR);
+	if (nl80211_set_iface_id(msg, bss) < 0)
+		goto nla_put_failure;
+	NLA_PUT_U32(msg, NL80211_ATTR_VENDOR_ID, vendor_id);
+	NLA_PUT_U32(msg, NL80211_ATTR_VENDOR_SUBCMD, subcmd);
+	if (data)
+		NLA_PUT(msg, NL80211_ATTR_VENDOR_DATA, data_len, data);
+
+	ret = send_and_recv_msgs(drv, msg, vendor_reply_handler, buf);
+	if (ret)
+		wpa_printf(MSG_DEBUG, "nl80211: vendor command failed err=%d",
+			   ret);
+	return ret;
+
+nla_put_failure:
+	nlmsg_free(msg);
+	return -ENOBUFS;
+}
+
+
 static int nl80211_set_qos_map(void *priv, const u8 *qos_map_set,
 			       u8 qos_map_set_len)
 {
@@ -11829,5 +11893,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 #ifdef ANDROID
 	.driver_cmd = wpa_driver_nl80211_driver_cmd,
 #endif /* ANDROID */
+	.vendor_cmd = nl80211_vendor_cmd,
 	.set_qos_map = nl80211_set_qos_map,
 };

@@ -440,7 +440,7 @@ class WpaSupplicant:
         self.dump_monitor()
         return self.group_form_result(ev, expect_failure, go_neg_res)
 
-    def p2p_go_neg_init(self, peer, pin, method, timeout=0, go_intent=None, expect_failure=False, persistent=False, freq=None):
+    def p2p_go_neg_init(self, peer, pin, method, timeout=0, go_intent=None, expect_failure=False, persistent=False, freq=None, provdisc=False):
         if not self.discover_peer(peer):
             raise Exception("Peer " + peer + " not found")
         self.dump_monitor()
@@ -454,6 +454,8 @@ class WpaSupplicant:
             cmd = cmd + ' freq=' + str(freq)
         if persistent:
             cmd = cmd + " persistent"
+        if provdisc:
+            cmd = cmd + " provdisc"
         if "OK" in self.global_request(cmd):
             if timeout == 0:
                 self.dump_monitor()

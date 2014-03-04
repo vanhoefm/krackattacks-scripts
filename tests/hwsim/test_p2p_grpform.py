@@ -93,24 +93,28 @@ def go_neg_pin_authorized(i_dev, r_dev, i_intent=None, r_intent=None, expect_fai
         hwsim_utils.test_connectivity_p2p(r_dev, i_dev)
     return [i_res, r_res]
 
-def go_neg_init_pbc(i_dev, r_dev, i_intent, res, freq):
+def go_neg_init_pbc(i_dev, r_dev, i_intent, res, freq, provdisc):
     logger.debug("Initiate GO Negotiation from i_dev")
     try:
         i_res = i_dev.p2p_go_neg_init(r_dev.p2p_dev_addr(), None, "pbc",
-                                      timeout=20, go_intent=i_intent, freq=freq)
+                                      timeout=20, go_intent=i_intent, freq=freq,
+                                      provdisc=provdisc)
         logger.debug("i_res: " + str(i_res))
     except Exception, e:
         i_res = None
         logger.info("go_neg_init_pbc thread caught an exception from p2p_go_neg_init: " + str(e))
     res.put(i_res)
 
-def go_neg_pbc(i_dev, r_dev, i_intent=None, r_intent=None, i_freq=None, r_freq=None):
-    r_dev.p2p_find(social=True)
+def go_neg_pbc(i_dev, r_dev, i_intent=None, r_intent=None, i_freq=None, r_freq=None, provdisc=False, r_listen=False):
+    if r_listen:
+        r_dev.p2p_listen()
+    else:
+        r_dev.p2p_find(social=True)
     i_dev.p2p_find(social=True)
     logger.info("Start GO negotiation " + i_dev.ifname + " -> " + r_dev.ifname)
     r_dev.dump_monitor()
     res = Queue.Queue()
-    t = threading.Thread(target=go_neg_init_pbc, args=(i_dev, r_dev, i_intent, res, i_freq))
+    t = threading.Thread(target=go_neg_init_pbc, args=(i_dev, r_dev, i_intent, res, i_freq, provdisc))
     t.start()
     logger.debug("Wait for GO Negotiation Request on r_dev")
     ev = r_dev.wait_global_event(["P2P-GO-NEG-REQUEST"], timeout=15)
@@ -225,6 +229,12 @@ def test_grpform_pbc(dev):
     check_grpform_results(i_res, r_res)
     if i_res['role'] != 'GO' or r_res['role'] != 'client':
         raise Exception("Unexpected device roles")
+    remove_group(dev[0], dev[1])
+
+def test_grpform_pd(dev):
+    """P2P group formation with PD-before-GO-Neg workaround"""
+    [i_res, r_res] = go_neg_pbc(i_dev=dev[0], provdisc=True, r_dev=dev[1], r_listen=True)
+    check_grpform_results(i_res, r_res)
     remove_group(dev[0], dev[1])
 
 def test_both_go_intent_15(dev):

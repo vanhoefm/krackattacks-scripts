@@ -71,11 +71,16 @@ def check_result(go, cli):
         raise Exception("Persistent group not re-invoked as persistent (cli)")
     return [go_res, cli_res]
 
-def form(go, cli, test_data=True):
+def form(go, cli, test_data=True, reverse_init=False):
     logger.info("Form a persistent group")
-    [i_res, r_res] = go_neg_pin_authorized_persistent(i_dev=go, i_intent=15,
-                                                      r_dev=cli, r_intent=0,
-                                                      test_data=test_data)
+    if reverse_init:
+        [i_res, r_res] = go_neg_pin_authorized_persistent(i_dev=cli, i_intent=0,
+                                                          r_dev=go, r_intent=15,
+                                                          test_data=test_data)
+    else:
+        [i_res, r_res] = go_neg_pin_authorized_persistent(i_dev=go, i_intent=15,
+                                                          r_dev=cli, r_intent=0,
+                                                          test_data=test_data)
     if not i_res['persistent'] or not r_res['persistent']:
         raise Exception("Formed group was not persistent")
     terminate_group(go, cli)
@@ -97,6 +102,12 @@ def invite_from_go(go, cli):
 def test_persistent_group(dev):
     """P2P persistent group formation and re-invocation"""
     form(dev[0], dev[1])
+    invite_from_cli(dev[0], dev[1])
+    invite_from_go(dev[0], dev[1])
+
+def test_persistent_group2(dev):
+    """P2P persistent group formation with reverse roles"""
+    form(dev[0], dev[1], reverse_init=True)
     invite_from_cli(dev[0], dev[1])
     invite_from_go(dev[0], dev[1])
 

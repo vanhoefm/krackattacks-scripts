@@ -608,19 +608,25 @@ int hostapd_handle_dfs(struct hostapd_iface *iface)
 	hostapd_set_state(iface, HAPD_IFACE_DFS);
 	wpa_printf(MSG_DEBUG, "DFS start CAC on %d MHz", iface->freq);
 	wpa_msg(iface->bss[0]->msg_ctx, MSG_INFO, DFS_EVENT_CAC_START
-		"freq=%d chan=%d sec_chan=%d",
+		"freq=%d chan=%d sec_chan=%d, width=%d, seg0=%d, seg1=%d",
 		iface->freq,
-		iface->conf->channel, iface->conf->secondary_channel);
-	if (hostapd_start_dfs_cac(iface, iface->conf->hw_mode,
-				  iface->freq,
-				  iface->conf->channel,
-				  iface->conf->ieee80211n,
-				  iface->conf->ieee80211ac,
-				  iface->conf->secondary_channel,
-				  iface->conf->vht_oper_chwidth,
-				  iface->conf->vht_oper_centr_freq_seg0_idx,
-				  iface->conf->vht_oper_centr_freq_seg1_idx)) {
-		wpa_printf(MSG_DEBUG, "DFS start_dfs_cac() failed");
+		iface->conf->channel, iface->conf->secondary_channel,
+		iface->conf->vht_oper_chwidth,
+		iface->conf->vht_oper_centr_freq_seg0_idx,
+		iface->conf->vht_oper_centr_freq_seg1_idx);
+
+	res = hostapd_start_dfs_cac(iface, iface->conf->hw_mode,
+				    iface->freq,
+				    iface->conf->channel,
+				    iface->conf->ieee80211n,
+				    iface->conf->ieee80211ac,
+				    iface->conf->secondary_channel,
+				    iface->conf->vht_oper_chwidth,
+				    iface->conf->vht_oper_centr_freq_seg0_idx,
+				    iface->conf->vht_oper_centr_freq_seg1_idx);
+
+	if (res) {
+		wpa_printf(MSG_ERROR, "DFS start_dfs_cac() failed, %d", res);
 		return -1;
 	}
 

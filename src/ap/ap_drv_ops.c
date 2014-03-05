@@ -767,8 +767,10 @@ int hostapd_start_dfs_cac(struct hostapd_iface *iface, int mode, int freq,
 				    vht_enabled, sec_channel_offset,
 				    vht_oper_chwidth, center_segment0,
 				    center_segment1,
-				    iface->current_mode->vht_capab))
+				    iface->current_mode->vht_capab)) {
+		wpa_printf(MSG_ERROR, "Can't set freq params");
 		return -1;
+	}
 
 	res = hapd->driver->start_dfs_cac(hapd->drv_priv, &data);
 	if (!res)

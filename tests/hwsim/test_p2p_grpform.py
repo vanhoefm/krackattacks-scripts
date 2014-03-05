@@ -249,6 +249,46 @@ def test_both_go_neg_enter(dev):
     """P2P GO Negotiation with both devices trying to enter PIN"""
     go_neg_pin_authorized(i_dev=dev[0], r_dev=dev[1], expect_failure=True, i_go_neg_status=10, i_method='enter', r_method='enter')
 
+def test_go_neg_pbc_vs_pin(dev):
+    """P2P GO Negotiation with one device using PBC and the other PIN"""
+    addr0 = dev[0].p2p_dev_addr()
+    addr1 = dev[1].p2p_dev_addr()
+    dev[1].p2p_listen()
+    if not dev[0].discover_peer(addr1):
+        raise Exception("Could not discover peer")
+    dev[0].p2p_listen()
+    if "OK" not in dev[0].request("P2P_CONNECT " + addr1 + " pbc auth"):
+        raise Exception("Failed to authorize GO Neg")
+    if not dev[1].discover_peer(addr0):
+        raise Exception("Could not discover peer")
+    if "OK" not in dev[1].request("P2P_CONNECT " + addr0 + " 12345670 display"):
+        raise Exception("Failed to initiate GO Neg")
+    ev = dev[1].wait_global_event(["P2P-GO-NEG-FAILURE"], timeout=10)
+    if ev is None:
+        raise Exception("GO Negotiation failure timed out")
+    if "status=10" not in ev:
+        raise Exception("Unexpected failure reason: " + ev)
+
+def test_go_neg_pin_vs_pbc(dev):
+    """P2P GO Negotiation with one device using PIN and the other PBC"""
+    addr0 = dev[0].p2p_dev_addr()
+    addr1 = dev[1].p2p_dev_addr()
+    dev[1].p2p_listen()
+    if not dev[0].discover_peer(addr1):
+        raise Exception("Could not discover peer")
+    dev[0].p2p_listen()
+    if "OK" not in dev[0].request("P2P_CONNECT " + addr1 + " 12345670 display auth"):
+        raise Exception("Failed to authorize GO Neg")
+    if not dev[1].discover_peer(addr0):
+        raise Exception("Could not discover peer")
+    if "OK" not in dev[1].request("P2P_CONNECT " + addr0 + " pbc"):
+        raise Exception("Failed to initiate GO Neg")
+    ev = dev[1].wait_global_event(["P2P-GO-NEG-FAILURE"], timeout=10)
+    if ev is None:
+        raise Exception("GO Negotiation failure timed out")
+    if "status=10" not in ev:
+        raise Exception("Unexpected failure reason: " + ev)
+
 def test_grpform_per_sta_psk(dev):
     """P2P group formation with per-STA PSKs"""
     dev[0].request("P2P_SET per_sta_psk 1")

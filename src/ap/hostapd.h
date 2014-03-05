@@ -273,6 +273,12 @@ struct hostapd_iface {
 	unsigned int wait_channel_update:1;
 	unsigned int cac_started:1;
 
+	/*
+	 * When set, indicates that the driver will handle the AP
+	 * teardown: delete global keys, station keys, and stations.
+	 */
+	unsigned int driver_ap_teardown:1;
+
 	int num_ap; /* number of entries in ap_list */
 	struct ap_info *ap_list; /* AP info list head */
 	struct ap_info *ap_hash[STA_HASH_SIZE];

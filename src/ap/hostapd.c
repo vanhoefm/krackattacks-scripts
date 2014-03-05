@@ -350,7 +350,7 @@ static void hostapd_cleanup_iface(struct hostapd_iface *iface)
 
 static void hostapd_clear_wep(struct hostapd_data *hapd)
 {
-	if (hapd->drv_priv) {
+	if (hapd->drv_priv && !hapd->iface->driver_ap_teardown) {
 		hostapd_set_privacy(hapd, 0);
 		hostapd_broadcast_wep_clear(hapd);
 	}
@@ -401,11 +401,15 @@ static int hostapd_flush_old_stations(struct hostapd_data *hapd, u16 reason)
 	if (hostapd_drv_none(hapd) || hapd->drv_priv == NULL)
 		return 0;
 
-	wpa_dbg(hapd->msg_ctx, MSG_DEBUG, "Flushing old station entries");
-	if (hostapd_flush(hapd)) {
-		wpa_msg(hapd->msg_ctx, MSG_WARNING, "Could not connect to "
-			"kernel driver");
-		ret = -1;
+	if (!hapd->iface->driver_ap_teardown) {
+		wpa_dbg(hapd->msg_ctx, MSG_DEBUG,
+			"Flushing old station entries");
+
+		if (hostapd_flush(hapd)) {
+			wpa_msg(hapd->msg_ctx, MSG_WARNING,
+				"Could not connect to kernel driver");
+			ret = -1;
+		}
 	}
 	wpa_dbg(hapd->msg_ctx, MSG_DEBUG, "Deauthenticate all stations");
 	os_memset(addr, 0xff, ETH_ALEN);
@@ -1008,6 +1012,15 @@ static int setup_interface(struct hostapd_iface *iface)
 {
 	struct hostapd_data *hapd = iface->bss[0];
 	size_t i;
+
+	/*
+	 * It is possible that setup_interface() is called after the interface
+	 * was disabled etc., in which case driver_ap_teardown is possibly set
+	 * to 1. Clear it here so any other key/station deletion, which is not
+	 * part of a teardown flow, would also call the relevant driver
+	 * callbacks.
+	 */
+	iface->driver_ap_teardown = 0;
 
 	if (!iface->phy[0]) {
 		const char *phy = hostapd_drv_get_radio_name(hapd);
@@ -1627,7 +1640,11 @@ int hostapd_disable_iface(struct hostapd_iface *hapd_iface)
 	driver = hapd_iface->bss[0]->driver;
 	drv_priv = hapd_iface->bss[0]->drv_priv;
 
-	/* whatever hostapd_interface_deinit does */
+	hapd_iface->driver_ap_teardown =
+		!!(hapd_iface->drv_flags &
+		   WPA_DRIVER_FLAGS_AP_TEARDOWN_SUPPORT);
+
+	/* same as hostapd_interface_deinit without deinitializing ctrl-iface */
 	for (j = 0; j < hapd_iface->num_bss; j++) {
 		struct hostapd_data *hapd = hapd_iface->bss[j];
 		hostapd_free_stas(hapd);
@@ -1943,6 +1960,10 @@ int hostapd_remove_iface(struct hapd_interfaces *interfaces, char *buf)
 			return -1;
 		if (!os_strcmp(hapd_iface->conf->bss[0]->iface, buf)) {
 			wpa_printf(MSG_INFO, "Remove interface '%s'", buf);
+			hapd_iface->driver_ap_teardown =
+				!!(hapd_iface->drv_flags &
+				   WPA_DRIVER_FLAGS_AP_TEARDOWN_SUPPORT);
+
 			hostapd_interface_deinit_free(hapd_iface);
 			k = i;
 			while (k < (interfaces->count - 1)) {
@@ -1955,8 +1976,12 @@ int hostapd_remove_iface(struct hapd_interfaces *interfaces, char *buf)
 		}
 
 		for (j = 0; j < hapd_iface->conf->num_bss; j++) {
-			if (!os_strcmp(hapd_iface->conf->bss[j]->iface, buf))
+			if (!os_strcmp(hapd_iface->conf->bss[j]->iface, buf)) {
+				hapd_iface->driver_ap_teardown =
+					!(hapd_iface->drv_flags &
+					  WPA_DRIVER_FLAGS_AP_TEARDOWN_SUPPORT);
 				return hostapd_remove_bss(hapd_iface, j);
+			}
 		}
 	}
 	return -1;

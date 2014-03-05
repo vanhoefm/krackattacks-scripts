@@ -669,6 +669,9 @@ void wpa_supplicant_ap_deinit(struct wpa_supplicant *wpa_s)
 		wpa_s->ap_iface->bss[0]->p2p_group = NULL;
 	wpas_p2p_group_deinit(wpa_s);
 #endif /* CONFIG_P2P */
+	wpa_s->ap_iface->driver_ap_teardown =
+		!!(wpa_s->drv_flags & WPA_DRIVER_FLAGS_AP_TEARDOWN_SUPPORT);
+
 	hostapd_interface_deinit(wpa_s->ap_iface);
 	hostapd_interface_free(wpa_s->ap_iface);
 	wpa_s->ap_iface = NULL;

@@ -728,8 +728,12 @@ int main(int argc, char *argv[])
  out:
 	hostapd_global_ctrl_iface_deinit(&interfaces);
 	/* Deinitialize all interfaces */
-	for (i = 0; i < interfaces.count; i++)
+	for (i = 0; i < interfaces.count; i++) {
+		interfaces.iface[i]->driver_ap_teardown =
+			!!(interfaces.iface[i]->drv_flags &
+			   WPA_DRIVER_FLAGS_AP_TEARDOWN_SUPPORT);
 		hostapd_interface_deinit_free(interfaces.iface[i]);
+	}
 	os_free(interfaces.iface);
 
 	hostapd_global_deinit(pid_file);

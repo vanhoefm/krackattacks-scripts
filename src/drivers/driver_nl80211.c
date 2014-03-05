@@ -3818,6 +3818,15 @@ static int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 	drv->capa.flags |= WPA_DRIVER_FLAGS_SET_KEYS_AFTER_ASSOC_DONE;
 	drv->capa.flags |= WPA_DRIVER_FLAGS_EAPOL_TX_STATUS;
 
+	/*
+	 * As all cfg80211 drivers must support cases where the AP interface is
+	 * removed without the knowledge of wpa_supplicant/hostapd, e.g., in
+	 * case that the user space daemon has crashed, they must be able to
+	 * cleanup all stations and key entries in the AP tear down flow. Thus,
+	 * this flag can/should always be set for cfg80211 drivers.
+	 */
+	drv->capa.flags |= WPA_DRIVER_FLAGS_AP_TEARDOWN_SUPPORT;
+
 	if (!info.device_ap_sme) {
 		drv->capa.flags |= WPA_DRIVER_FLAGS_DEAUTH_TX_STATUS;
 

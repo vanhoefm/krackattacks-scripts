@@ -958,6 +958,21 @@ def test_ap_wps_wep_config(dev, apdev):
     if "Peer Address: " + dev[0].p2p_interface_addr() not in status:
         raise Exception("Peer address not shown correctly")
 
+def test_ap_wps_wep_enroll(dev, apdev):
+    """WPS 2.0 STA rejecting WEP configuration"""
+    ssid = "test-wps-wep"
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                     "skip_cred_build": "1", "extra_cred": "wps-wep-cred" })
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd.request("WPS_PBC")
+    dev[0].request("WPS_PBC")
+    ev = dev[0].wait_event(["WPS-FAIL"], timeout=15)
+    if ev is None:
+        raise Exception("WPS-FAIL event timed out")
+    if "msg=12" not in ev or "reason=2 (WEP Prohibited)" not in ev:
+        raise Exception("Unexpected WPS-FAIL event: " + ev)
+
 def test_ap_wps_ie_fragmentation(dev, apdev):
     """WPS AP using fragmented WPS IE"""
     ssid = "test-wps-ie-fragmentation"

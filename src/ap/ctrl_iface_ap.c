@@ -423,6 +423,28 @@ int hostapd_ctrl_iface_status(struct hostapd_data *hapd, char *buf,
 		return len;
 	len += ret;
 
+	if (!iface->cac_started || !iface->dfs_cac_ms) {
+		ret = os_snprintf(buf + len, buflen - len,
+				  "cac_time_seconds=%d\n"
+				  "cac_time_left_seconds=N/A\n",
+				  iface->dfs_cac_ms / 1000);
+	} else {
+		/* CAC started and CAC time set - calculate remaining time */
+		struct os_reltime now;
+		unsigned int left_time;
+
+		os_reltime_age(&iface->dfs_cac_start, &now);
+		left_time = iface->dfs_cac_ms / 1000 - now.sec;
+		ret = os_snprintf(buf + len, buflen - len,
+				  "cac_time_seconds=%u\n"
+				  "cac_time_left_seconds=%u\n",
+				  iface->dfs_cac_ms / 1000,
+				  left_time);
+	}
+	if (ret < 0 || (size_t) ret >= buflen - len)
+		return len;
+	len += ret;
+
 	ret = os_snprintf(buf + len, buflen - len,
 			  "channel=%u\n"
 			  "secondary_channel=%d\n"

@@ -6200,6 +6200,7 @@ static void phy_info_freq(struct hostapd_hw_modes *mode,
 	u8 channel;
 	chan->freq = nla_get_u32(tb_freq[NL80211_FREQUENCY_ATTR_FREQ]);
 	chan->flag = 0;
+	chan->dfs_cac_ms = 0;
 	if (ieee80211_freq_to_chan(chan->freq, &channel) != NUM_HOSTAPD_MODES)
 		chan->chan = channel;
 
@@ -6225,6 +6226,11 @@ static void phy_info_freq(struct hostapd_hw_modes *mode,
 			chan->flag |= HOSTAPD_CHAN_DFS_UNAVAILABLE;
 			break;
 		}
+	}
+
+	if (tb_freq[NL80211_FREQUENCY_ATTR_DFS_CAC_TIME]) {
+		chan->dfs_cac_ms = nla_get_u32(
+			tb_freq[NL80211_FREQUENCY_ATTR_DFS_CAC_TIME]);
 	}
 }
 

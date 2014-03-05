@@ -573,6 +573,28 @@ static int dfs_are_channels_overlapped(struct hostapd_iface *iface, int freq,
 }
 
 
+static unsigned int dfs_get_cac_time(struct hostapd_iface *iface,
+				     int start_chan_idx, int n_chans)
+{
+	struct hostapd_channel_data *channel;
+	struct hostapd_hw_modes *mode;
+	int i;
+	unsigned int cac_time_ms = 0;
+
+	mode = iface->current_mode;
+
+	for (i = 0; i < n_chans; i++) {
+		channel = &mode->channels[start_chan_idx + i];
+		if (!(channel->flag & HOSTAPD_CHAN_RADAR))
+			continue;
+		if (channel->dfs_cac_ms > cac_time_ms)
+			cac_time_ms = channel->dfs_cac_ms;
+	}
+
+	return cac_time_ms;
+}
+
+
 /*
  * Main DFS handler
  * 1 - continue channel/ap setup
@@ -595,6 +617,10 @@ int hostapd_handle_dfs(struct hostapd_iface *iface)
 
 		/* Get number of used channels, depend on width */
 		n_chans = dfs_get_used_n_chans(iface);
+
+		/* Setup CAC time */
+		iface->dfs_cac_ms = dfs_get_cac_time(iface, start_chan_idx,
+						     n_chans);
 
 		/* Check if any of configured channels require DFS */
 		res = dfs_check_chans_radar(iface, start_chan_idx, n_chans);
@@ -640,12 +666,13 @@ int hostapd_handle_dfs(struct hostapd_iface *iface)
 	hostapd_set_state(iface, HAPD_IFACE_DFS);
 	wpa_printf(MSG_DEBUG, "DFS start CAC on %d MHz", iface->freq);
 	wpa_msg(iface->bss[0]->msg_ctx, MSG_INFO, DFS_EVENT_CAC_START
-		"freq=%d chan=%d sec_chan=%d, width=%d, seg0=%d, seg1=%d",
+		"freq=%d chan=%d sec_chan=%d, width=%d, seg0=%d, seg1=%d, cac_time=%ds",
 		iface->freq,
 		iface->conf->channel, iface->conf->secondary_channel,
 		iface->conf->vht_oper_chwidth,
 		iface->conf->vht_oper_centr_freq_seg0_idx,
-		iface->conf->vht_oper_centr_freq_seg1_idx);
+		iface->conf->vht_oper_centr_freq_seg1_idx,
+		iface->dfs_cac_ms / 1000);
 
 	res = hostapd_start_dfs_cac(iface, iface->conf->hw_mode,
 				    iface->freq,

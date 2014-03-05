@@ -93,6 +93,9 @@ struct hostapd_channel_data {
 	 */
 	long double interference_factor;
 #endif /* CONFIG_ACS */
+
+	/* DFS CAC time in milliseconds */
+	unsigned int dfs_cac_ms;
 };
 
 #define HOSTAPD_MODE_FLAG_HT_INFO_KNOWN BIT(0)

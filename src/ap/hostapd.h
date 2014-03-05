@@ -348,6 +348,9 @@ struct hostapd_iface {
 	unsigned int cs_c_off_proberesp;
 	int csa_in_progress;
 
+	unsigned int dfs_cac_ms;
+	struct os_reltime dfs_cac_start;
+
 #ifdef CONFIG_ACS
 	unsigned int acs_num_completed_scans;
 #endif /* CONFIG_ACS */

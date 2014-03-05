@@ -774,8 +774,10 @@ int hostapd_start_dfs_cac(struct hostapd_iface *iface, int mode, int freq,
 	}
 
 	res = hapd->driver->start_dfs_cac(hapd->drv_priv, &data);
-	if (!res)
+	if (!res) {
 		iface->cac_started = 1;
+		os_get_reltime(&iface->dfs_cac_start);
+	}
 
 	return res;
 }

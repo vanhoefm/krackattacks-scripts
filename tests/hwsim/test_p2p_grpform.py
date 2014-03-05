@@ -557,3 +557,31 @@ def test_grpform_pd_no_probe_resp(dev):
     ev = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
     if ev is None:
         raise Exception("Group formation timed out")
+
+def test_go_neg_two_peers(dev):
+    """P2P GO Negotiation rejected due to already started negotiation with another peer"""
+    addr0 = dev[0].p2p_dev_addr()
+    addr1 = dev[1].p2p_dev_addr()
+    addr2 = dev[2].p2p_dev_addr()
+    dev[1].p2p_listen()
+    dev[2].p2p_listen()
+    if not dev[0].discover_peer(addr1):
+        raise Exception("Could not discover peer")
+    if not dev[0].discover_peer(addr2):
+        raise Exception("Could not discover peer")
+    if "OK" not in dev[0].request("P2P_CONNECT " + addr2 + " pbc auth"):
+        raise Exception("Failed to authorize GO Neg")
+    dev[0].p2p_listen()
+    if not dev[2].discover_peer(addr0):
+        raise Exception("Could not discover peer")
+    if "OK" not in dev[0].request("P2P_CONNECT " + addr1 + " pbc"):
+        raise Exception("Failed to initiate GO Neg")
+    ev = dev[1].wait_global_event(["P2P-GO-NEG-REQUEST"], timeout=5)
+    if ev is None:
+        raise Exception("timeout on GO Neg RX event")
+    dev[2].request("P2P_CONNECT " + addr0 + " pbc")
+    ev = dev[2].wait_global_event(["GO-NEG-FAILURE"], timeout=10)
+    if ev is None:
+        raise Exception("Rejection not reported")
+    if "status=5" not in ev:
+        raise Exception("Unexpected status code in rejection: " + ev)

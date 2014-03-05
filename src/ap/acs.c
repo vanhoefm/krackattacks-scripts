@@ -367,6 +367,19 @@ static int acs_usable_ht40_chan(struct hostapd_channel_data *chan)
 }
 
 
+static int acs_usable_vht80_chan(struct hostapd_channel_data *chan)
+{
+	const int allowed[] = { 36, 52, 100, 116, 132, 149 };
+	unsigned int i;
+
+	for (i = 0; i < ARRAY_SIZE(allowed); i++)
+		if (chan->chan == allowed[i])
+			return 1;
+
+	return 0;
+}
+
+
 static int acs_survey_is_sufficient(struct freq_survey *survey)
 {
 	if (!(survey->filled & SURVEY_HAS_NF)) {
@@ -537,6 +550,15 @@ acs_find_ideal_chan(struct hostapd_iface *iface)
 		    iface->conf->secondary_channel &&
 		    !acs_usable_ht40_chan(chan)) {
 			wpa_printf(MSG_DEBUG, "ACS: Channel %d: not allowed as primary channel for HT40",
+				   chan->chan);
+			continue;
+		}
+
+		if (iface->current_mode->mode == HOSTAPD_MODE_IEEE80211A &&
+		    iface->conf->ieee80211ac &&
+		    iface->conf->vht_oper_chwidth == 1 &&
+		    !acs_usable_vht80_chan(chan)) {
+			wpa_printf(MSG_DEBUG, "ACS: Channel %d: not allowed as primary channel for VHT80",
 				   chan->chan);
 			continue;
 		}

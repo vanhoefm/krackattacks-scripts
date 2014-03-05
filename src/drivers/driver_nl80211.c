@@ -11720,6 +11720,28 @@ error:
 }
 
 
+#ifdef CONFIG_TESTING_OPTIONS
+static int cmd_reply_handler(struct nl_msg *msg, void *arg)
+{
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+	struct wpabuf *buf = arg;
+
+	if (!buf)
+		return NL_SKIP;
+
+	if ((size_t) genlmsg_attrlen(gnlh, 0) > wpabuf_tailroom(buf)) {
+		wpa_printf(MSG_INFO, "nl80211: insufficient buffer space for reply");
+		return NL_SKIP;
+	}
+
+	wpabuf_put_data(buf, genlmsg_attrdata(gnlh, 0),
+			genlmsg_attrlen(gnlh, 0));
+
+	return NL_SKIP;
+}
+#endif /* CONFIG_TESTING_OPTIONS */
+
+
 static int vendor_reply_handler(struct nl_msg *msg, void *arg)
 {
 	struct nlattr *tb[NL80211_ATTR_MAX + 1];
@@ -11763,6 +11785,20 @@ static int nl80211_vendor_cmd(void *priv, unsigned int vendor_id,
 	msg = nlmsg_alloc();
 	if (!msg)
 		return -ENOMEM;
+
+#ifdef CONFIG_TESTING_OPTIONS
+	if (vendor_id == 0xffffffff) {
+		nl80211_cmd(drv, msg, 0, subcmd);
+		if (nlmsg_append(msg, (void *) data, data_len, NLMSG_ALIGNTO) <
+		    0)
+			goto nla_put_failure;
+		ret = send_and_recv_msgs(drv, msg, cmd_reply_handler, buf);
+		if (ret)
+			wpa_printf(MSG_DEBUG, "nl80211: command failed err=%d",
+				   ret);
+		return ret;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	nl80211_cmd(drv, msg, 0, NL80211_CMD_VENDOR);
 	if (nl80211_set_iface_id(msg, bss) < 0)

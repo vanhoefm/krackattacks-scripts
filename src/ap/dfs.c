@@ -288,8 +288,19 @@ static int dfs_get_start_chan_idx(struct hostapd_iface *iface)
 		}
 	}
 
-	if (res == -1)
-		wpa_printf(MSG_DEBUG, "DFS chan_idx seems wrong: -1");
+	if (res == -1) {
+		wpa_printf(MSG_DEBUG,
+			   "DFS chan_idx seems wrong; num-ch: %d ch-no: %d conf-ch-no: %d 11n: %d sec-ch: %d vht-oper-width: %d",
+			   mode->num_channels, channel_no, iface->conf->channel,
+			   iface->conf->ieee80211n,
+			   iface->conf->secondary_channel,
+			   iface->conf->vht_oper_chwidth);
+
+		for (i = 0; i < mode->num_channels; i++) {
+			wpa_printf(MSG_DEBUG, "Available channel: %d",
+				   mode->channels[i].chan);
+		}
+	}
 
 	return res;
 }

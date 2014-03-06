@@ -46,7 +46,7 @@ def wait_4way_handshake2(dev1, dev2, dev3):
     if ev is None:
         raise Exception("4-way handshake in IBSS timed out")
 
-def add_ibss(dev, ssid, psk=None, proto=None, key_mgmt=None, pairwise=None, group=None):
+def add_ibss(dev, ssid, psk=None, proto=None, key_mgmt=None, pairwise=None, group=None, beacon_int=None):
     id = dev.add_network()
     dev.set_network(id, "mode", "1")
     dev.set_network(id, "frequency", "2412")
@@ -61,6 +61,8 @@ def add_ibss(dev, ssid, psk=None, proto=None, key_mgmt=None, pairwise=None, grou
         dev.set_network(id, "pairwise", pairwise)
     if group:
         dev.set_network(id, "group", group)
+    if beacon_int:
+        dev.set_network(id, "beacon_int", beacon_int)
     return id
 
 def add_ibss_rsn(dev, ssid):
@@ -161,3 +163,16 @@ def test_ibss_wpa_none(dev):
         hwsim_utils.test_connectivity(dev[1].ifname, dev[2].ifname)
     except Exception, e:
         logger.info("Ignoring known connectivity failure: " + str(e))
+
+def test_ibss_open(dev):
+    """IBSS open (no security)"""
+    ssid="ibss"
+    id = add_ibss(dev[0], ssid, key_mgmt="NONE", beacon_int="150")
+    connect_ibss_cmd(dev[0], id)
+    bssid0 = wait_ibss_connection(dev[0])
+
+    id = add_ibss(dev[1], ssid, key_mgmt="NONE", beacon_int="200")
+    connect_ibss_cmd(dev[1], id)
+    bssid1 = wait_ibss_connection(dev[1])
+    if bssid0 != bssid1:
+        logger.info("STA0 BSSID " + bssid0 + " differs from STA1 BSSID " + bssid1)

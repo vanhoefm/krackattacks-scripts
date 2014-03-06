@@ -2687,9 +2687,10 @@ int wpa_supplicant_driver_init(struct wpa_supplicant *wpa_s)
 			interface_count = 0;
 		}
 		if (!wpa_s->p2p_mgmt &&
-		    wpa_supplicant_delayed_sched_scan(wpa_s, interface_count,
+		    wpa_supplicant_delayed_sched_scan(wpa_s,
+						      interface_count % 3,
 						      100000))
-			wpa_supplicant_req_scan(wpa_s, interface_count,
+			wpa_supplicant_req_scan(wpa_s, interface_count % 3,
 						100000);
 		interface_count++;
 	} else

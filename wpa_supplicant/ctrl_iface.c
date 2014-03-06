@@ -5963,6 +5963,14 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 			reply_len = -1;
 		else
 			wpas_request_connection(wpa_s);
+	} else if (os_strcmp(buf, "REATTACH") == 0) {
+		if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED ||
+		    !wpa_s->current_ssid)
+			reply_len = -1;
+		else {
+			wpa_s->reattach = 1;
+			wpas_request_connection(wpa_s);
+		}
 	} else if (os_strcmp(buf, "RECONNECT") == 0) {
 		if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED)
 			reply_len = -1;

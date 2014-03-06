@@ -665,6 +665,36 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		 * wildcard SSID.
 		 */
 		ssid = NULL;
+	} else if (wpa_s->reattach && wpa_s->current_ssid != NULL) {
+		/*
+		 * Perform single-channel single-SSID scan for
+		 * reassociate-to-same-BSS operation.
+		 */
+		/* Setup SSID */
+		ssid = wpa_s->current_ssid;
+		wpa_hexdump_ascii(MSG_DEBUG, "Scan SSID",
+				  ssid->ssid, ssid->ssid_len);
+		params.ssids[0].ssid = ssid->ssid;
+		params.ssids[0].ssid_len = ssid->ssid_len;
+		params.num_ssids = 1;
+
+		/*
+		 * Allocate memory for frequency array, allocate one extra
+		 * slot for the zero-terminator.
+		 */
+		params.freqs = os_malloc(sizeof(int) * 2);
+		if (params.freqs == NULL) {
+			wpa_dbg(wpa_s, MSG_ERROR, "Memory allocation failed");
+			return;
+		}
+		params.freqs[0] = wpa_s->assoc_freq;
+		params.freqs[1] = 0;
+
+		/*
+		 * Reset the reattach flag so that we fall back to full scan if
+		 * this scan fails.
+		 */
+		wpa_s->reattach = 0;
 	} else {
 		struct wpa_ssid *start = ssid, *tssid;
 		int freqs_set = 0;

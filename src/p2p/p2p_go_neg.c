@@ -618,7 +618,8 @@ void p2p_process_go_neg_req(struct p2p_data *p2p, const u8 *sa,
 
 	if (dev == NULL)
 		dev = p2p_add_dev_from_go_neg_req(p2p, sa, &msg);
-	else if (dev->flags & P2P_DEV_PROBE_REQ_ONLY)
+	else if ((dev->flags & P2P_DEV_PROBE_REQ_ONLY) ||
+		  !(dev->flags & P2P_DEV_REPORTED))
 		p2p_add_dev_info(p2p, sa, dev, &msg);
 	else if (!dev->listen_freq && !dev->oper_freq) {
 		/*

@@ -8377,6 +8377,12 @@ retry:
 	wpa_printf(MSG_DEBUG, "  * freq=%d", params->freq);
 	NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, params->freq);
 
+	if (params->beacon_int > 0) {
+		wpa_printf(MSG_DEBUG, "  * beacon_int=%d", params->beacon_int);
+		NLA_PUT_U32(msg, NL80211_ATTR_BEACON_INTERVAL,
+			    params->beacon_int);
+	}
+
 	ret = nl80211_set_conn_keys(params, msg);
 	if (ret)
 		goto nla_put_failure;

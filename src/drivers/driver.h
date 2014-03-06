@@ -448,6 +448,11 @@ struct wpa_driver_associate_params {
 	int bg_scan_period;
 
 	/**
+	 * beacon_int - Beacon interval for IBSS or 0 to use driver default
+	 */
+	int beacon_int;
+
+	/**
 	 * wpa_ie - WPA information element for (Re)Association Request
 	 * WPA information element to be included in (Re)Association
 	 * Request (including information element id and length). Use

@@ -1714,6 +1714,14 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 	if (ssid->mode == WPAS_MODE_IBSS && ssid->frequency > 0 &&
 	    params.freq == 0)
 		params.freq = ssid->frequency; /* Initial channel for IBSS */
+
+	if (ssid->mode == WPAS_MODE_IBSS) {
+		if (ssid->beacon_int)
+			params.beacon_int = ssid->beacon_int;
+		else
+			params.beacon_int = wpa_s->conf->beacon_int;
+	}
+
 	params.wpa_ie = wpa_ie;
 	params.wpa_ie_len = wpa_ie_len;
 	params.pairwise_suite = cipher_pairwise;

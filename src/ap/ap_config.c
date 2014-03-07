@@ -388,8 +388,9 @@ static void hostapd_config_free_radius_attr(struct hostapd_radius_attr *attr)
 }
 
 
-static void hostapd_config_free_eap_user(struct hostapd_eap_user *user)
+void hostapd_config_free_eap_user(struct hostapd_eap_user *user)
 {
+	hostapd_config_free_radius_attr(user->accept_attr);
 	os_free(user->identity);
 	os_free(user->password);
 	os_free(user);

@@ -13,6 +13,7 @@
 #include "radius.h"
 #include "eloop.h"
 #include "eap_server/eap.h"
+#include "ap/ap_config.h"
 #include "radius_server.h"
 
 /**
@@ -79,6 +80,8 @@ struct radius_session {
 	u8 last_authenticator[16];
 
 	unsigned int remediation:1;
+
+	struct hostapd_radius_attr *accept_attr;
 };
 
 /**
@@ -483,6 +486,7 @@ radius_server_get_new_session(struct radius_server_data *data,
 	int res;
 	struct radius_session *sess;
 	struct eap_config eap_conf;
+	struct eap_user tmp;
 
 	RADIUS_DEBUG("Creating a new session");
 
@@ -499,7 +503,9 @@ radius_server_get_new_session(struct radius_server_data *data,
 	user_len = res;
 	RADIUS_DUMP_ASCII("User-Name", user, user_len);
 
-	res = data->get_eap_user(data->conf_ctx, user, user_len, 0, NULL);
+	os_memset(&tmp, 0, sizeof(tmp));
+	res = data->get_eap_user(data->conf_ctx, user, user_len, 0, &tmp);
+	os_free(tmp.password);
 	os_free(user);
 
 	if (res == 0) {
@@ -509,6 +515,7 @@ radius_server_get_new_session(struct radius_server_data *data,
 			RADIUS_DEBUG("Failed to create a new session");
 			return NULL;
 		}
+		sess->accept_attr = tmp.accept_attr;
 	} else {
 		RADIUS_DEBUG("User-Name not found from user database");
 		return NULL;
@@ -659,6 +666,19 @@ radius_server_encapsulate_eap(struct radius_server_data *data,
 		RADIUS_DEBUG("Failed to copy Proxy-State attribute(s)");
 		radius_msg_free(msg);
 		return NULL;
+	}
+
+	if (code == RADIUS_CODE_ACCESS_ACCEPT) {
+		struct hostapd_radius_attr *attr;
+		for (attr = sess->accept_attr; attr; attr = attr->next) {
+			if (!radius_msg_add_attr(msg, attr->type,
+						 wpabuf_head(attr->val),
+						 wpabuf_len(attr->val))) {
+				wpa_printf(MSG_ERROR, "Could not add RADIUS attribute");
+				radius_msg_free(msg);
+				return NULL;
+			}
+		}
 	}
 
 	if (radius_msg_finish_srv(msg, (u8 *) client->shared_secret,
@@ -1725,8 +1745,10 @@ static int radius_server_get_eap_user(void *ctx, const u8 *identity,
 
 	ret = data->get_eap_user(data->conf_ctx, identity, identity_len,
 				 phase2, user);
-	if (ret == 0 && user)
+	if (ret == 0 && user) {
+		sess->accept_attr = user->accept_attr;
 		sess->remediation = user->remediation;
+	}
 	return ret;
 }
 

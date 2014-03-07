@@ -22,6 +22,14 @@
 #include "config_file.h"
 
 
+#ifndef CONFIG_NO_RADIUS
+#ifdef EAP_SERVER
+static struct hostapd_radius_attr *
+hostapd_parse_radius_attr(const char *value);
+#endif /* EAP_SERVER */
+#endif /* CONFIG_NO_RADIUS */
+
+
 #ifndef CONFIG_NO_VLAN
 static int hostapd_config_read_vlan_file(struct hostapd_bss_config *bss,
 					 const char *fname)
@@ -208,7 +216,7 @@ static int hostapd_config_read_eap_user(const char *fname,
 	FILE *f;
 	char buf[512], *pos, *start, *pos2;
 	int line = 0, ret = 0, num_methods;
-	struct hostapd_eap_user *user, *tail = NULL;
+	struct hostapd_eap_user *user = NULL, *tail = NULL;
 
 	if (!fname)
 		return 0;
@@ -241,6 +249,27 @@ static int hostapd_config_read_eap_user(const char *fname,
 		}
 		if (buf[0] == '\0')
 			continue;
+
+#ifndef CONFIG_NO_RADIUS
+		if (user && os_strncmp(buf, "radius_accept_attr=", 19) == 0) {
+			struct hostapd_radius_attr *attr, *a;
+			attr = hostapd_parse_radius_attr(buf + 19);
+			if (attr == NULL) {
+				wpa_printf(MSG_ERROR, "Invalid radius_auth_req_attr: %s",
+					   buf + 19);
+				goto failed;
+			}
+			if (user->accept_attr == NULL) {
+				user->accept_attr = attr;
+			} else {
+				a = user->accept_attr;
+				while (a->next)
+					a = a->next;
+				a->next = attr;
+			}
+			continue;
+		}
+#endif /* CONFIG_NO_RADIUS */
 
 		user = NULL;
 
@@ -468,11 +497,8 @@ static int hostapd_config_read_eap_user(const char *fname,
 		continue;
 
 	failed:
-		if (user) {
-			os_free(user->password);
-			os_free(user->identity);
-			os_free(user);
-		}
+		if (user)
+			hostapd_config_free_eap_user(user);
 		ret = -1;
 		break;
 	}

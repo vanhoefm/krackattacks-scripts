@@ -35,6 +35,7 @@ struct eap_user {
 	unsigned int remediation:1;
 	int ttls_auth; /* bitfield of
 			* EAP_TTLS_AUTH_{PAP,CHAP,MSCHAP,MSCHAPV2} */
+	struct hostapd_radius_attr *accept_attr;
 };
 
 struct eap_eapol_interface {

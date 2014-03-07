@@ -473,7 +473,6 @@ static void ap_handle_session_timer(void *eloop_ctx, void *timeout_ctx)
 {
 	struct hostapd_data *hapd = eloop_ctx;
 	struct sta_info *sta = timeout_ctx;
-	u8 addr[ETH_ALEN];
 
 	if (!(sta->flags & WLAN_STA_AUTH)) {
 		if (sta->flags & WLAN_STA_GAS) {
@@ -484,6 +483,8 @@ static void ap_handle_session_timer(void *eloop_ctx, void *timeout_ctx)
 		return;
 	}
 
+	hostapd_drv_sta_deauth(hapd, sta->addr,
+			       WLAN_REASON_PREV_AUTH_NOT_VALID);
 	mlme_deauthenticate_indication(hapd, sta,
 				       WLAN_REASON_PREV_AUTH_NOT_VALID);
 	hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
@@ -491,9 +492,7 @@ static void ap_handle_session_timer(void *eloop_ctx, void *timeout_ctx)
 		       "session timeout");
 	sta->acct_terminate_cause =
 		RADIUS_ACCT_TERMINATE_CAUSE_SESSION_TIMEOUT;
-	os_memcpy(addr, sta->addr, ETH_ALEN);
 	ap_free_sta(hapd, sta);
-	hostapd_drv_sta_deauth(hapd, addr, WLAN_REASON_PREV_AUTH_NOT_VALID);
 }
 
 

@@ -881,7 +881,7 @@ def check_p2p_response(hapd, dialog_token, status):
     if dialog_token != p2p['dialog_token']:
         raise Exception("Unexpected dialog token in response")
     if p2p['p2p_status'] != status:
-        raise Esception("Unexpected status code %s in response (expected %d)" % (p2p['p2p_status'], status))
+        raise Exception("Unexpected status code %s in response (expected %d)" % (p2p['p2p_status'], status))
 
 def test_p2p_msg_go_neg_both_start(dev, apdev):
     """P2P protocol test for simultaneous GO Neg initiation"""

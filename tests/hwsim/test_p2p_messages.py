@@ -1119,3 +1119,48 @@ def test_p2p_msg_go_neg_req(dev, apdev):
     msg['payload'] += ie_p2p(attrs)
     hapd.mgmt_tx(msg)
     check_p2p_response(hapd, dialog_token, P2P_SC_FAIL_INCOMPATIBLE_PROV_METHOD)
+
+def test_p2p_msg_go_neg_req_reject(dev, apdev):
+    """P2P protocol tests for user reject incorrectly in GO Neg Req"""
+    addr0 = dev[0].p2p_dev_addr()
+    addr1 = dev[1].p2p_dev_addr()
+    dev[0].p2p_listen()
+    dev[1].discover_peer(addr0)
+    dev[1].group_request("P2P_CONNECT " + addr0 + " pbc")
+    ev = dev[0].wait_global_event(["P2P-GO-NEG-REQUEST"], timeout=10)
+    if ev is None:
+        raise Exception("Timeout on GO Neg Req")
+
+    peer = dev[0].get_peer(addr1)
+    dev[0].p2p_stop_find()
+
+    msg = p2p_hdr(addr1, addr0, type=P2P_GO_NEG_REQ, dialog_token=123)
+    attrs = p2p_attr_capability()
+    attrs += p2p_attr_status(status=P2P_SC_FAIL_REJECTED_BY_USER)
+    attrs += p2p_attr_go_intent()
+    attrs += p2p_attr_config_timeout()
+    attrs += p2p_attr_listen_channel()
+    attrs += p2p_attr_ext_listen_timing()
+    attrs += p2p_attr_intended_interface_addr(addr0)
+    attrs += p2p_attr_channel_list()
+    attrs += p2p_attr_device_info(addr0, config_methods=0x0108)
+    attrs += p2p_attr_operating_channel()
+    msg['payload'] += ie_p2p(attrs)
+
+    for i in range(0, 20):
+        if "FAIL" in dev[0].request("MGMT_TX {} {} freq={} wait_time=10 no_cck=1 action={}".format(addr1, addr1, peer['listen_freq'], binascii.hexlify(msg['payload']))):
+            raise Exception("Failed to send Action frame")
+        ev = dev[0].wait_event(["MGMT-TX-STATUS"], timeout=10)
+        if ev is None:
+            raise Exception("Timeout on MGMT-TX-STATUS")
+        if "result=SUCCESS" in ev:
+            break
+        time.sleep(0.01)
+    if "result=SUCCESS" not in ev:
+        raise Exception("Peer did not ack GO Neg Req")
+
+    ev = dev[1].wait_global_event(["P2P-GO-NEG-FAILURE"], timeout=5)
+    if ev is None:
+        raise Exception("GO Negotiation failure not reported")
+    if "status=%d" % P2P_SC_FAIL_REJECTED_BY_USER not in ev:
+        raise Exception("Unexpected failure reason: " + ev)

@@ -760,7 +760,7 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 		return -1;
 	}
 
-	if (wpa_debug_level == MSG_MSGDUMP)
+	if (wpa_debug_level <= MSG_MSGDUMP)
 		conf->radius->msg_dumps = 1;
 #ifndef CONFIG_NO_RADIUS
 	hapd->radius = radius_client_init(hapd, conf->radius);

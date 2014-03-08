@@ -7,7 +7,9 @@
 import os
 import time
 import logging
+import binascii
 import re
+import struct
 import subprocess
 import wpaspy
 
@@ -759,3 +761,33 @@ class WpaSupplicant:
                 [name,value] = l.split('=', 1)
                 vals[name] = value
         return vals
+
+    def mgmt_rx(self, timeout=5):
+        ev = self.wait_event(["MGMT-RX"], timeout=timeout)
+        if ev is None:
+            return None
+        msg = {}
+        items = ev.split(' ')
+        field,val = items[1].split('=')
+        if field != "freq":
+            raise Exception("Unexpected MGMT-RX event format: " + ev)
+        msg['freq'] = val
+        frame = binascii.unhexlify(items[4])
+        msg['frame'] = frame
+
+        hdr = struct.unpack('<HH6B6B6BH', frame[0:24])
+        msg['fc'] = hdr[0]
+        msg['subtype'] = (hdr[0] >> 4) & 0xf
+        hdr = hdr[1:]
+        msg['duration'] = hdr[0]
+        hdr = hdr[1:]
+        msg['da'] = "%02x:%02x:%02x:%02x:%02x:%02x" % hdr[0:6]
+        hdr = hdr[6:]
+        msg['sa'] = "%02x:%02x:%02x:%02x:%02x:%02x" % hdr[0:6]
+        hdr = hdr[6:]
+        msg['bssid'] = "%02x:%02x:%02x:%02x:%02x:%02x" % hdr[0:6]
+        hdr = hdr[6:]
+        msg['seq_ctrl'] = hdr[0]
+        msg['payload'] = frame[24:]
+
+        return msg

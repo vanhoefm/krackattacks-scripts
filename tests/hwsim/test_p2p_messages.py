@@ -1158,6 +1158,52 @@ def test_p2p_msg_go_neg_req(dev, apdev):
     hapd.mgmt_tx(msg)
     check_p2p_response(hapd, dialog_token, P2P_SC_FAIL_INCOMPATIBLE_PROV_METHOD)
 
+def mgmt_tx(dev, msg):
+    for i in range(0, 20):
+        if "FAIL" in dev.request(msg):
+            raise Exception("Failed to send Action frame")
+        ev = dev.wait_event(["MGMT-TX-STATUS"], timeout=10)
+        if ev is None:
+            raise Exception("Timeout on MGMT-TX-STATUS")
+        if "result=SUCCESS" in ev:
+            break
+        time.sleep(0.01)
+    if "result=SUCCESS" not in ev:
+        raise Exception("Peer did not ack Action frame")
+
+def rx_go_neg_req(dev):
+    msg = dev.mgmt_rx()
+    if msg is None:
+        raise Exception("MGMT-RX timeout")
+    p2p = parse_p2p_public_action(msg['payload'])
+    if p2p is None:
+        raise Exception("Not a P2P Public Action frame " + str(dialog_token))
+    if p2p['subtype'] != P2P_GO_NEG_REQ:
+        raise Exception("Unexpected subtype %d" % p2p['subtype'])
+    p2p['freq'] = msg['freq']
+    return p2p
+
+def rx_go_neg_conf(dev, status=None, dialog_token=None):
+    msg = dev.mgmt_rx()
+    if msg is None:
+        raise Exception("MGMT-RX timeout")
+    p2p = parse_p2p_public_action(msg['payload'])
+    if p2p is None:
+        raise Exception("Not a P2P Public Action frame " + str(dialog_token))
+    if p2p['subtype'] != P2P_GO_NEG_CONF:
+        raise Exception("Unexpected subtype %d" % p2p['subtype'])
+    if dialog_token is not None and dialog_token != p2p['dialog_token']:
+        raise Exception("Unexpected dialog token")
+    if status is not None and p2p['p2p_status'] != status:
+        raise Exception("Unexpected status %d" % p2p['p2p_status'])
+
+def check_p2p_go_neg_fail_event(dev, status):
+    ev = dev.wait_global_event(["P2P-GO-NEG-FAILURE"], timeout=5)
+    if ev is None:
+        raise Exception("GO Negotiation failure not reported")
+    if "status=%d" % status not in ev:
+        raise Exception("Unexpected failure reason: " + ev)
+
 def test_p2p_msg_go_neg_req_reject(dev, apdev):
     """P2P protocol tests for user reject incorrectly in GO Neg Req"""
     addr0 = dev[0].p2p_dev_addr()
@@ -1185,20 +1231,284 @@ def test_p2p_msg_go_neg_req_reject(dev, apdev):
     attrs += p2p_attr_operating_channel()
     msg['payload'] += ie_p2p(attrs)
 
-    for i in range(0, 20):
-        if "FAIL" in dev[0].request("MGMT_TX {} {} freq={} wait_time=10 no_cck=1 action={}".format(addr1, addr1, peer['listen_freq'], binascii.hexlify(msg['payload']))):
-            raise Exception("Failed to send Action frame")
-        ev = dev[0].wait_event(["MGMT-TX-STATUS"], timeout=10)
-        if ev is None:
-            raise Exception("Timeout on MGMT-TX-STATUS")
-        if "result=SUCCESS" in ev:
-            break
-        time.sleep(0.01)
-    if "result=SUCCESS" not in ev:
-        raise Exception("Peer did not ack GO Neg Req")
+    mgmt_tx(dev[0], "MGMT_TX {} {} freq={} wait_time=10 no_cck=1 action={}".format(addr1, addr1, peer['listen_freq'], binascii.hexlify(msg['payload'])))
 
     ev = dev[1].wait_global_event(["P2P-GO-NEG-FAILURE"], timeout=5)
     if ev is None:
         raise Exception("GO Negotiation failure not reported")
     if "status=%d" % P2P_SC_FAIL_REJECTED_BY_USER not in ev:
         raise Exception("Unexpected failure reason: " + ev)
+
+def test_p2p_msg_unexpected_go_neg_resp(dev, apdev):
+    """P2P protocol tests for unexpected GO Neg Resp"""
+    addr0 = dev[0].p2p_dev_addr()
+    addr1 = dev[1].p2p_dev_addr()
+    dev[1].p2p_listen()
+    dev[0].discover_peer(addr1)
+    dev[0].p2p_stop_find()
+
+    peer = dev[0].get_peer(addr1)
+
+    logger.debug("GO Neg Resp without GO Neg session")
+    msg = p2p_hdr(addr1, addr0, type=P2P_GO_NEG_RESP, dialog_token=123)
+    attrs = p2p_attr_status()
+    attrs += p2p_attr_capability()
+    attrs += p2p_attr_go_intent()
+    attrs += p2p_attr_config_timeout()
+    attrs += p2p_attr_intended_interface_addr(addr0)
+    attrs += p2p_attr_channel_list()
+    attrs += p2p_attr_device_info(addr0, config_methods=0x0108)
+    attrs += p2p_attr_operating_channel()
+    msg['payload'] += ie_p2p(attrs)
+    mgmt_tx(dev[0], "MGMT_TX {} {} freq={} wait_time=10 no_cck=1 action={}".format(addr1, addr1, peer['listen_freq'], binascii.hexlify(msg['payload'])))
+
+    dev[0].p2p_listen()
+    dev[1].discover_peer(addr0)
+
+    logger.debug("Unexpected GO Neg Resp while waiting for new GO Neg session")
+    if "FAIL" in dev[1].global_request("P2P_CONNECT " + addr0 + " pbc"):
+        raise Exception("P2P_CONNECT failed")
+    ev = dev[0].wait_global_event(["P2P-GO-NEG-REQUEST"], timeout=10)
+    if ev is None:
+        raise Exception("Timeout on GO Neg Req")
+    dev[0].p2p_stop_find()
+    mgmt_tx(dev[0], "MGMT_TX {} {} freq={} wait_time=10 no_cck=1 action={}".format(addr1, addr1, peer['listen_freq'], binascii.hexlify(msg['payload'])))
+
+    logger.debug("Invalid attribute in GO Neg Response")
+    msg = p2p_hdr(addr1, addr0, type=P2P_GO_NEG_RESP, dialog_token=197)
+    attrs = struct.pack("<BB", P2P_ATTR_CAPABILITY, 0)
+    msg['payload'] += ie_p2p(attrs)
+    mgmt_tx(dev[0], "MGMT_TX {} {} freq={} wait_time=10 no_cck=1 action={}".format(addr1, addr1, peer['listen_freq'], binascii.hexlify(msg['payload'])))
+    frame = dev[0].mgmt_rx(timeout=0.1)
+    if frame is not None:
+        raise Exception("Unexpected GO Neg Confirm")
+
+    logger.debug("GO Neg Resp with unexpected dialog token")
+    dev[1].p2p_stop_find()
+    if "FAIL" in dev[0].request("SET ext_mgmt_frame_handling 1"):
+        raise Exception("Failed to enable external management frame handling")
+    dev[0].p2p_listen()
+    if "FAIL" in dev[1].global_request("P2P_CONNECT " + addr0 + " pbc"):
+        raise Exception("P2P_CONNECT failed(2)")
+    p2p = rx_go_neg_req(dev[0])
+    dev[0].p2p_stop_find()
+    dialog_token = p2p['dialog_token']
+    if dialog_token < 255:
+        dialog_token += 1
+    else:
+        dialog_token = 1
+    msg = p2p_hdr(addr1, addr0, type=P2P_GO_NEG_RESP, dialog_token=dialog_token)
+    attrs = p2p_attr_status()
+    attrs += p2p_attr_capability()
+    attrs += p2p_attr_go_intent()
+    attrs += p2p_attr_config_timeout()
+    attrs += p2p_attr_intended_interface_addr(addr0)
+    attrs += p2p_attr_channel_list()
+    attrs += p2p_attr_device_info(addr0, config_methods=0x0108)
+    attrs += p2p_attr_operating_channel()
+    msg['payload'] += ie_p2p(attrs)
+    mgmt_tx(dev[0], "MGMT_TX {} {} freq={} wait_time=200 no_cck=1 action={}".format(addr1, addr1, p2p['freq'], binascii.hexlify(msg['payload'])))
+
+    logger.debug("GO Neg Resp without Status")
+    dev[1].p2p_stop_find()
+    dev[0].p2p_listen()
+    if "FAIL" in dev[1].global_request("P2P_CONNECT " + addr0 + " pbc"):
+        raise Exception("P2P_CONNECT failed(2)")
+    p2p = rx_go_neg_req(dev[0])
+    dev[0].p2p_stop_find()
+    dialog_token = p2p['dialog_token']
+    msg = p2p_hdr(addr1, addr0, type=P2P_GO_NEG_RESP, dialog_token=dialog_token)
+    #attrs = p2p_attr_status()
+    attrs = p2p_attr_capability()
+    attrs += p2p_attr_go_intent()
+    attrs += p2p_attr_config_timeout()
+    attrs += p2p_attr_intended_interface_addr(addr0)
+    attrs += p2p_attr_channel_list()
+    attrs += p2p_attr_device_info(addr0, config_methods=0x0108)
+    attrs += p2p_attr_operating_channel()
+    msg['payload'] += ie_p2p(attrs)
+    mgmt_tx(dev[0], "MGMT_TX {} {} freq={} wait_time=200 no_cck=1 action={}".format(addr1, addr1, p2p['freq'], binascii.hexlify(msg['payload'])))
+    check_p2p_go_neg_fail_event(dev[1], P2P_SC_FAIL_INVALID_PARAMS)
+    rx_go_neg_conf(dev[0], P2P_SC_FAIL_INVALID_PARAMS, dialog_token)
+
+    logger.debug("GO Neg Resp without Intended Address")
+    dev[1].p2p_stop_find()
+    dev[0].p2p_listen()
+    if "FAIL" in dev[1].global_request("P2P_CONNECT " + addr0 + " pbc"):
+        raise Exception("P2P_CONNECT failed(2)")
+    p2p = rx_go_neg_req(dev[0])
+    dev[0].p2p_stop_find()
+    dialog_token = p2p['dialog_token']
+    msg = p2p_hdr(addr1, addr0, type=P2P_GO_NEG_RESP, dialog_token=dialog_token)
+    attrs = p2p_attr_status()
+    #attrs += p2p_attr_capability()
+    attrs += p2p_attr_go_intent()
+    attrs += p2p_attr_config_timeout()
+    #attrs += p2p_attr_intended_interface_addr(addr0)
+    attrs += p2p_attr_channel_list()
+    #attrs += p2p_attr_device_info(addr0, config_methods=0x0108)
+    attrs += p2p_attr_operating_channel()
+    msg['payload'] += ie_p2p(attrs)
+    mgmt_tx(dev[0], "MGMT_TX {} {} freq={} wait_time=200 no_cck=1 action={}".format(addr1, addr1, p2p['freq'], binascii.hexlify(msg['payload'])))
+    check_p2p_go_neg_fail_event(dev[1], P2P_SC_FAIL_INVALID_PARAMS)
+    rx_go_neg_conf(dev[0], P2P_SC_FAIL_INVALID_PARAMS, dialog_token)
+
+    logger.debug("GO Neg Resp without GO Intent")
+    dev[1].p2p_stop_find()
+    dev[0].p2p_listen()
+    if "FAIL" in dev[1].global_request("P2P_CONNECT " + addr0 + " pbc"):
+        raise Exception("P2P_CONNECT failed(2)")
+    p2p = rx_go_neg_req(dev[0])
+    dev[0].p2p_stop_find()
+    dialog_token = p2p['dialog_token']
+    msg = p2p_hdr(addr1, addr0, type=P2P_GO_NEG_RESP, dialog_token=dialog_token)
+    attrs = p2p_attr_status()
+    attrs += p2p_attr_capability()
+    #attrs += p2p_attr_go_intent()
+    attrs += p2p_attr_config_timeout()
+    attrs += p2p_attr_intended_interface_addr(addr0)
+    attrs += p2p_attr_channel_list()
+    attrs += p2p_attr_device_info(addr0, config_methods=0x0108)
+    attrs += p2p_attr_operating_channel()
+    msg['payload'] += ie_p2p(attrs)
+    mgmt_tx(dev[0], "MGMT_TX {} {} freq={} wait_time=200 no_cck=1 action={}".format(addr1, addr1, p2p['freq'], binascii.hexlify(msg['payload'])))
+    check_p2p_go_neg_fail_event(dev[1], P2P_SC_FAIL_INVALID_PARAMS)
+    rx_go_neg_conf(dev[0], P2P_SC_FAIL_INVALID_PARAMS, dialog_token)
+
+    logger.debug("GO Neg Resp with invalid GO Intent")
+    dev[1].p2p_stop_find()
+    dev[0].p2p_listen()
+    if "FAIL" in dev[1].global_request("P2P_CONNECT " + addr0 + " pbc"):
+        raise Exception("P2P_CONNECT failed(2)")
+    p2p = rx_go_neg_req(dev[0])
+    dev[0].p2p_stop_find()
+    dialog_token = p2p['dialog_token']
+    msg = p2p_hdr(addr1, addr0, type=P2P_GO_NEG_RESP, dialog_token=dialog_token)
+    attrs = p2p_attr_status()
+    attrs += p2p_attr_capability()
+    attrs += p2p_attr_go_intent(go_intent=16)
+    attrs += p2p_attr_config_timeout()
+    attrs += p2p_attr_intended_interface_addr(addr0)
+    attrs += p2p_attr_channel_list()
+    attrs += p2p_attr_device_info(addr0, config_methods=0x0108)
+    attrs += p2p_attr_operating_channel()
+    msg['payload'] += ie_p2p(attrs)
+    mgmt_tx(dev[0], "MGMT_TX {} {} freq={} wait_time=200 no_cck=1 action={}".format(addr1, addr1, p2p['freq'], binascii.hexlify(msg['payload'])))
+    check_p2p_go_neg_fail_event(dev[1], P2P_SC_FAIL_INVALID_PARAMS)
+    rx_go_neg_conf(dev[0], P2P_SC_FAIL_INVALID_PARAMS, dialog_token)
+
+    logger.debug("GO Neg Resp with incompatible GO Intent")
+    dev[1].p2p_stop_find()
+    dev[0].p2p_listen()
+    if "FAIL" in dev[1].global_request("P2P_CONNECT " + addr0 + " pbc go_intent=15"):
+        raise Exception("P2P_CONNECT failed(2)")
+    p2p = rx_go_neg_req(dev[0])
+    dev[0].p2p_stop_find()
+    dialog_token = p2p['dialog_token']
+    msg = p2p_hdr(addr1, addr0, type=P2P_GO_NEG_RESP, dialog_token=dialog_token)
+    attrs = p2p_attr_status()
+    attrs += p2p_attr_capability()
+    attrs += p2p_attr_go_intent(go_intent=15)
+    attrs += p2p_attr_config_timeout()
+    attrs += p2p_attr_intended_interface_addr(addr0)
+    attrs += p2p_attr_channel_list()
+    attrs += p2p_attr_device_info(addr0, config_methods=0x0108)
+    attrs += p2p_attr_operating_channel()
+    msg['payload'] += ie_p2p(attrs)
+    mgmt_tx(dev[0], "MGMT_TX {} {} freq={} wait_time=200 no_cck=1 action={}".format(addr1, addr1, p2p['freq'], binascii.hexlify(msg['payload'])))
+    check_p2p_go_neg_fail_event(dev[1], P2P_SC_FAIL_INCOMPATIBLE_PARAMS)
+    rx_go_neg_conf(dev[0], P2P_SC_FAIL_INCOMPATIBLE_PARAMS, dialog_token)
+
+    logger.debug("GO Neg Resp without P2P Group ID")
+    dev[1].p2p_stop_find()
+    dev[0].p2p_listen()
+    if "FAIL" in dev[1].global_request("P2P_CONNECT " + addr0 + " pbc go_intent=0"):
+        raise Exception("P2P_CONNECT failed(2)")
+    p2p = rx_go_neg_req(dev[0])
+    dev[0].p2p_stop_find()
+    dialog_token = p2p['dialog_token']
+    msg = p2p_hdr(addr1, addr0, type=P2P_GO_NEG_RESP, dialog_token=dialog_token)
+    attrs = p2p_attr_status()
+    attrs += p2p_attr_capability()
+    attrs += p2p_attr_go_intent(go_intent=15)
+    attrs += p2p_attr_config_timeout()
+    attrs += p2p_attr_intended_interface_addr(addr0)
+    attrs += p2p_attr_channel_list()
+    attrs += p2p_attr_device_info(addr0, config_methods=0x0108)
+    attrs += p2p_attr_operating_channel()
+    #attrs += p2p_attr_group_id(src, "DIRECT-foo")
+    msg['payload'] += ie_p2p(attrs)
+    mgmt_tx(dev[0], "MGMT_TX {} {} freq={} wait_time=200 no_cck=1 action={}".format(addr1, addr1, p2p['freq'], binascii.hexlify(msg['payload'])))
+    check_p2p_go_neg_fail_event(dev[1], P2P_SC_FAIL_INVALID_PARAMS)
+    rx_go_neg_conf(dev[0], P2P_SC_FAIL_INVALID_PARAMS, dialog_token)
+
+    logger.debug("GO Neg Resp without Operating Channel")
+    dev[1].p2p_stop_find()
+    dev[0].p2p_listen()
+    if "FAIL" in dev[1].global_request("P2P_CONNECT " + addr0 + " pbc go_intent=0"):
+        raise Exception("P2P_CONNECT failed(2)")
+    p2p = rx_go_neg_req(dev[0])
+    dev[0].p2p_stop_find()
+    dialog_token = p2p['dialog_token']
+    msg = p2p_hdr(addr1, addr0, type=P2P_GO_NEG_RESP, dialog_token=dialog_token)
+    attrs = p2p_attr_status()
+    attrs += p2p_attr_capability()
+    attrs += p2p_attr_go_intent(go_intent=15)
+    #attrs += p2p_attr_config_timeout()
+    attrs += p2p_attr_intended_interface_addr(addr0)
+    attrs += p2p_attr_channel_list()
+    attrs += p2p_attr_device_info(addr0, config_methods=0x0108)
+    #attrs += p2p_attr_operating_channel()
+    attrs += p2p_attr_group_id(addr0, "DIRECT-foo")
+    msg['payload'] += ie_p2p(attrs)
+    mgmt_tx(dev[0], "MGMT_TX {} {} freq={} wait_time=200 no_cck=1 action={}".format(addr1, addr1, p2p['freq'], binascii.hexlify(msg['payload'])))
+    check_p2p_go_neg_fail_event(dev[1], P2P_SC_FAIL_INVALID_PARAMS)
+    rx_go_neg_conf(dev[0], P2P_SC_FAIL_INVALID_PARAMS, dialog_token)
+
+    logger.debug("GO Neg Resp without Channel List")
+    dev[1].p2p_stop_find()
+    dev[0].p2p_listen()
+    if "FAIL" in dev[1].global_request("P2P_CONNECT " + addr0 + " pbc go_intent=0"):
+        raise Exception("P2P_CONNECT failed(2)")
+    p2p = rx_go_neg_req(dev[0])
+    dev[0].p2p_stop_find()
+    dialog_token = p2p['dialog_token']
+    msg = p2p_hdr(addr1, addr0, type=P2P_GO_NEG_RESP, dialog_token=dialog_token)
+    attrs = p2p_attr_status()
+    attrs += p2p_attr_capability()
+    attrs += p2p_attr_go_intent(go_intent=15)
+    attrs += p2p_attr_config_timeout()
+    attrs += p2p_attr_intended_interface_addr(addr0)
+    #attrs += p2p_attr_channel_list()
+    attrs += p2p_attr_device_info(addr0, config_methods=0x0108)
+    attrs += p2p_attr_operating_channel()
+    attrs += p2p_attr_group_id(addr0, "DIRECT-foo")
+    msg['payload'] += ie_p2p(attrs)
+    mgmt_tx(dev[0], "MGMT_TX {} {} freq={} wait_time=200 no_cck=1 action={}".format(addr1, addr1, p2p['freq'], binascii.hexlify(msg['payload'])))
+    check_p2p_go_neg_fail_event(dev[1], P2P_SC_FAIL_INVALID_PARAMS)
+    rx_go_neg_conf(dev[0], P2P_SC_FAIL_INVALID_PARAMS, dialog_token)
+
+    logger.debug("GO Neg Resp without common channels")
+    dev[1].p2p_stop_find()
+    dev[0].p2p_listen()
+    if "FAIL" in dev[1].global_request("P2P_CONNECT " + addr0 + " pbc go_intent=0"):
+        raise Exception("P2P_CONNECT failed(2)")
+    p2p = rx_go_neg_req(dev[0])
+    dev[0].p2p_stop_find()
+    dialog_token = p2p['dialog_token']
+    msg = p2p_hdr(addr1, addr0, type=P2P_GO_NEG_RESP, dialog_token=dialog_token)
+    attrs = p2p_attr_status()
+    attrs += p2p_attr_capability()
+    attrs += p2p_attr_go_intent(go_intent=15)
+    attrs += p2p_attr_config_timeout()
+    attrs += p2p_attr_intended_interface_addr(addr0)
+    attrs += struct.pack("<BH3BBB", P2P_ATTR_CHANNEL_LIST, 5,
+                         0x58, 0x58, 0x04,
+                         81, 0)
+    attrs += p2p_attr_device_info(addr0, config_methods=0x0108)
+    attrs += p2p_attr_operating_channel()
+    attrs += p2p_attr_group_id(addr0, "DIRECT-foo")
+    msg['payload'] += ie_p2p(attrs)
+    mgmt_tx(dev[0], "MGMT_TX {} {} freq={} wait_time=200 no_cck=1 action={}".format(addr1, addr1, p2p['freq'], binascii.hexlify(msg['payload'])))
+    check_p2p_go_neg_fail_event(dev[1], P2P_SC_FAIL_NO_COMMON_CHANNELS)
+    rx_go_neg_conf(dev[0], P2P_SC_FAIL_NO_COMMON_CHANNELS, dialog_token)

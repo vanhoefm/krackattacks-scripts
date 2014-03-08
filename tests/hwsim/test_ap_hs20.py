@@ -1501,6 +1501,26 @@ def test_ap_hs20_deauth_req_from_radius(dev, apdev):
     if ev is None:
         raise Exception("Timeout on disconnection")
 
+def test_ap_hs20_remediation_required(dev, apdev):
+    """Hotspot 2.0 connection and remediation required from RADIUS"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['nai_realm'] = [ "0,example.com,21[2:4]" ]
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].request("SET pmf 1")
+    dev[0].hs20_enable()
+    dev[0].add_cred_values({ 'realm': "example.com",
+                             'username': "hs20-subrem-test",
+                             'password': "password" })
+    interworking_select(dev[0], bssid, freq="2412")
+    interworking_connect(dev[0], bssid, "TTLS")
+    ev = dev[0].wait_event(["HS20-SUBSCRIPTION-REMEDIATION"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on subscription remediation notice")
+    if " 1 https://example.com/" not in ev:
+        raise Exception("Unexpected subscription remediation event contents")
+
 def test_ap_hs20_osen(dev, apdev):
     """Hotspot 2.0 OSEN connection"""
     params = { 'ssid': "osen",

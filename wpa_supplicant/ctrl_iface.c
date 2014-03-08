@@ -40,6 +40,7 @@
 #include "blacklist.h"
 #include "autoscan.h"
 #include "wnm_sta.h"
+#include "offchannel.h"
 
 static int wpa_supplicant_global_iface_list(struct wpa_global *global,
 					    char *buf, int len);
@@ -452,6 +453,10 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 		ret = set_disallow_aps(wpa_s, value);
 	} else if (os_strcasecmp(cmd, "no_keep_alive") == 0) {
 		wpa_s->no_keep_alive = !!atoi(value);
+#ifdef CONFIG_TESTING_OPTIONS
+	} else if (os_strcasecmp(cmd, "ext_mgmt_frame_handling") == 0) {
+		wpa_s->ext_mgmt_frame_handling = !!atoi(value);
+#endif /* CONFIG_TESTING_OPTIONS */
 	} else {
 		value[-1] = '=';
 		ret = wpa_config_process_global(wpa_s->conf, cmd, -1);
@@ -5591,6 +5596,8 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 #ifdef CONFIG_INTERWORKING
 	hs20_cancel_fetch_osu(wpa_s);
 #endif /* CONFIG_INTERWORKING */
+
+	wpa_s->ext_mgmt_frame_handling = 0;
 }
 
 
@@ -5877,6 +5884,103 @@ static void wpas_ctrl_scan(struct wpa_supplicant *wpa_s, char *params,
 		*reply_len = os_snprintf(reply, reply_size, "FAIL-BUSY\n");
 	}
 }
+
+
+#ifdef CONFIG_TESTING_OPTIONS
+
+static void wpas_ctrl_iface_mgmt_tx_cb(struct wpa_supplicant *wpa_s,
+				       unsigned int freq, const u8 *dst,
+				       const u8 *src, const u8 *bssid,
+				       const u8 *data, size_t data_len,
+				       enum offchannel_send_action_result
+				       result)
+{
+	wpa_msg(wpa_s, MSG_INFO, "MGMT-TX-STATUS freq=%u dst=" MACSTR
+		" src=" MACSTR " bssid=" MACSTR " result=%s",
+		freq, MAC2STR(dst), MAC2STR(src), MAC2STR(bssid),
+		result == OFFCHANNEL_SEND_ACTION_SUCCESS ?
+		"SUCCESS" : (result == OFFCHANNEL_SEND_ACTION_NO_ACK ?
+			     "NO_ACK" : "FAILED"));
+}
+
+
+static int wpas_ctrl_iface_mgmt_tx(struct wpa_supplicant *wpa_s, char *cmd)
+{
+	char *pos, *param;
+	size_t len;
+	u8 *buf, da[ETH_ALEN], bssid[ETH_ALEN];
+	int res, used;
+	int freq = 0, no_cck = 0, wait_time = 0;
+
+	/* <DA> <BSSID> [freq=<MHz>] [wait_time=<ms>] [no_cck=1]
+	 *    <action=Action frame payload> */
+
+	wpa_printf(MSG_DEBUG, "External MGMT TX: %s", cmd);
+
+	pos = cmd;
+	used = hwaddr_aton2(pos, da);
+	if (used < 0)
+		return -1;
+	pos += used;
+	while (*pos == ' ')
+		pos++;
+	used = hwaddr_aton2(pos, bssid);
+	if (used < 0)
+		return -1;
+	pos += used;
+
+	param = os_strstr(pos, " freq=");
+	if (param) {
+		param += 6;
+		freq = atoi(param);
+	}
+
+	param = os_strstr(pos, " no_cck=");
+	if (param) {
+		param += 8;
+		no_cck = atoi(param);
+	}
+
+	param = os_strstr(pos, " wait_time=");
+	if (param) {
+		param += 11;
+		wait_time = atoi(param);
+	}
+
+	param = os_strstr(pos, " action=");
+	if (param == NULL)
+		return -1;
+	param += 8;
+
+	len = os_strlen(param);
+	if (len & 1)
+		return -1;
+	len /= 2;
+
+	buf = os_malloc(len);
+	if (buf == NULL)
+		return -1;
+
+	if (hexstr2bin(param, buf, len) < 0) {
+		os_free(buf);
+		return -1;
+	}
+
+	res = offchannel_send_action(wpa_s, freq, da, wpa_s->own_addr, bssid,
+				     buf, len, wait_time,
+				     wpas_ctrl_iface_mgmt_tx_cb, no_cck);
+	os_free(buf);
+	return res;
+}
+
+
+static void wpas_ctrl_iface_mgmt_tx_done(struct wpa_supplicant *wpa_s)
+{
+	wpa_printf(MSG_DEBUG, "External MGMT TX - done waiting");
+	offchannel_send_action_done(wpa_s);
+}
+
+#endif /* CONFIG_TESTING_OPTIONS */
 
 
 char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
@@ -6421,6 +6525,13 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strncmp(buf, "RADIO_WORK ", 11) == 0) {
 		reply_len = wpas_ctrl_radio_work(wpa_s, buf + 11, reply,
 						 reply_size);
+#ifdef CONFIG_TESTING_OPTIONS
+	} else if (os_strncmp(buf, "MGMT_TX ", 8) == 0) {
+		if (wpas_ctrl_iface_mgmt_tx(wpa_s, buf + 8) < 0)
+			reply_len = -1;
+	} else if (os_strcmp(buf, "MGMT_TX_DONE") == 0) {
+		wpas_ctrl_iface_mgmt_tx_done(wpa_s);
+#endif /* CONFIG_TESTING_OPTIONS */
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);
 		reply_len = 16;

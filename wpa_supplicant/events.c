@@ -3137,6 +3137,23 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		u16 fc, stype;
 		const struct ieee80211_mgmt *mgmt;
 
+#ifdef CONFIG_TESTING_OPTIONS
+		if (wpa_s->ext_mgmt_frame_handling) {
+			struct rx_mgmt *rx = &data->rx_mgmt;
+			size_t hex_len = 2 * rx->frame_len + 1;
+			char *hex = os_malloc(hex_len);
+			if (hex) {
+				wpa_snprintf_hex(hex, hex_len,
+						 rx->frame, rx->frame_len);
+				wpa_msg(wpa_s, MSG_INFO, "MGMT-RX freq=%d datarate=%u ssi_signal=%d %s",
+					rx->freq, rx->datarate, rx->ssi_signal,
+					hex);
+				os_free(hex);
+			}
+			break;
+		}
+#endif /* CONFIG_TESTING_OPTIONS */
+
 		mgmt = (const struct ieee80211_mgmt *)
 			data->rx_mgmt.frame;
 		fc = le_to_host16(mgmt->frame_control);

@@ -818,6 +818,7 @@ struct wpa_supplicant {
 	u8 last_gas_dialog_token, prev_gas_dialog_token;
 
 	unsigned int no_keep_alive:1;
+	unsigned int ext_mgmt_frame_handling:1;
 
 #ifdef CONFIG_WNM
 	u8 wnm_dialog_token;

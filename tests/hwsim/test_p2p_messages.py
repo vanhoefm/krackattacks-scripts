@@ -883,6 +883,44 @@ def check_p2p_response(hapd, dialog_token, status):
     if p2p['p2p_status'] != status:
         raise Esception("Unexpected status code %s in response (expected %d)" % (p2p['p2p_status'], status))
 
+def test_p2p_msg_go_neg_both_start(dev, apdev):
+    """P2P protocol test for simultaneous GO Neg initiation"""
+    addr0 = dev[0].p2p_dev_addr()
+    addr1 = dev[1].p2p_dev_addr()
+    dev[0].p2p_listen()
+    dev[1].discover_peer(addr0)
+    dev[1].p2p_listen()
+    dev[0].discover_peer(addr1)
+    dev[0].p2p_listen()
+    if "FAIL" in dev[0].request("SET ext_mgmt_frame_handling 1"):
+        raise Exception("Failed to enable external management frame handling")
+    if "FAIL" in dev[1].request("SET ext_mgmt_frame_handling 1"):
+        raise Exception("Failed to enable external management frame handling")
+    dev[0].request("P2P_CONNECT {} pbc".format(addr1))
+    dev[1].request("P2P_CONNECT {} pbc".format(addr0))
+    msg = dev[0].mgmt_rx()
+    if msg is None:
+        raise Exception("MGMT-RX timeout")
+    msg = dev[1].mgmt_rx()
+    if msg is None:
+        raise Exception("MGMT-RX timeout(2)")
+    if "FAIL" in dev[0].request("SET ext_mgmt_frame_handling 0"):
+        raise Exception("Failed to disable external management frame handling")
+    ev = dev[0].wait_global_event(["P2P-GO-NEG-SUCCESS"], timeout=2)
+    if ev is not None:
+        raise Exception("Unexpected GO Neg success")
+    if "FAIL" in dev[1].request("SET ext_mgmt_frame_handling 0"):
+        raise Exception("Failed to disable external management frame handling")
+    ev = dev[0].wait_global_event(["P2P-GO-NEG-SUCCESS"], timeout=10)
+    if ev is None:
+        raise Exception("GO Neg did not succeed")
+    ev = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=5);
+    if ev is None:
+        raise Exception("Group formation not succeed")
+    ev = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=5);
+    if ev is None:
+        raise Exception("Group formation not succeed")
+
 def test_p2p_msg_go_neg_req(dev, apdev):
     """P2P protocol tests for invitation request from unknown peer"""
     dst, src, hapd, channel = start_p2p(dev, apdev)

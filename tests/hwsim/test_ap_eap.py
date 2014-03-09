@@ -1000,3 +1000,11 @@ def test_ap_wpa2_eap_reauth(dev, apdev):
         time.sleep(0.1)
     if state != "COMPLETED":
         raise Exception("Reauthentication did not complete")
+
+def test_ap_wpa2_eap_request_identity_message(dev, apdev):
+    """Optional displayable message in EAP Request-Identity"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    params['eap_message'] = 'hello\\0networkid=netw,nasid=foo,portid=0,NAIRealms=example.com'
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "PAX", "pax.user@example.com",
+                password_hex="0123456789abcdef0123456789abcdef")

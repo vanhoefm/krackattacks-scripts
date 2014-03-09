@@ -1,6 +1,6 @@
 /*
  * TLSv1 server - write handshake message
- * Copyright (c) 2006-2011, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2006-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -245,7 +245,7 @@ static int tls_write_server_key_exchange(struct tlsv1_server *conn,
 {
 	tls_key_exchange keyx;
 	const struct tls_cipher_suite *suite;
-	u8 *pos, *rhdr, *hs_start, *hs_length;
+	u8 *pos, *rhdr, *hs_start, *hs_length, *server_params;
 	size_t rlen;
 	u8 *dh_ys;
 	size_t dh_ys_len;
@@ -261,8 +261,7 @@ static int tls_write_server_key_exchange(struct tlsv1_server *conn,
 		return 0;
 	}
 
-	if (keyx != TLS_KEY_X_DH_anon) {
-		/* TODO? */
+	if (keyx != TLS_KEY_X_DH_anon && keyx != TLS_KEY_X_DHE_RSA) {
 		wpa_printf(MSG_DEBUG, "TLSv1: ServerKeyExchange not yet "
 			   "supported with key exchange type %d", keyx);
 		return -1;
@@ -369,6 +368,7 @@ static int tls_write_server_key_exchange(struct tlsv1_server *conn,
 	pos += 3;
 
 	/* body - ServerDHParams */
+	server_params = pos;
 	/* dh_p */
 	if (pos + 2 + conn->cred->dh_p_len > end) {
 		wpa_printf(MSG_DEBUG, "TLSv1: Not enough buffer space for "
@@ -411,6 +411,180 @@ static int tls_write_server_key_exchange(struct tlsv1_server *conn,
 	os_memcpy(pos, dh_ys, dh_ys_len);
 	pos += dh_ys_len;
 	os_free(dh_ys);
+
+	/*
+	 * select (SignatureAlgorithm)
+	 * {   case anonymous: struct { };
+	 *     case rsa:
+	 *         digitally-signed struct {
+	 *             opaque md5_hash[16];
+	 *             opaque sha_hash[20];
+	 *         };
+	 *     case dsa:
+	 *         digitally-signed struct {
+	 *             opaque sha_hash[20];
+	 *         };
+	 * } Signature;
+	 *
+	 * md5_hash
+	 *     MD5(ClientHello.random + ServerHello.random + ServerParams);
+	 *
+	 * sha_hash
+	 *     SHA(ClientHello.random + ServerHello.random + ServerParams);
+	 */
+
+	if (keyx == TLS_KEY_X_DHE_RSA) {
+		u8 hash[100], *hpos;
+		u8 *signed_start;
+		size_t hlen, clen;
+		enum { SIGN_ALG_RSA, SIGN_ALG_DSA } alg = SIGN_ALG_RSA;
+		struct crypto_hash *ctx;
+
+#ifdef CONFIG_TLSV12
+		if (conn->rl.tls_version == TLS_VERSION_1_2) {
+			ctx = crypto_hash_init(CRYPTO_HASH_ALG_SHA256, NULL, 0);
+			if (ctx == NULL) {
+				tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
+						   TLS_ALERT_INTERNAL_ERROR);
+				return -1;
+			}
+			crypto_hash_update(ctx, conn->client_random,
+					   TLS_RANDOM_LEN);
+			crypto_hash_update(ctx, conn->server_random,
+					   TLS_RANDOM_LEN);
+			crypto_hash_update(ctx, server_params,
+					   pos - server_params);
+			hlen = sizeof(hash) - 19;
+			if (crypto_hash_finish(ctx, hash + 19, &hlen) < 0) {
+				tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
+						   TLS_ALERT_INTERNAL_ERROR);
+				return -1;
+			}
+
+			/*
+			 * RFC 3447, A.2.4 RSASSA-PKCS1-v1_5
+			 *
+			 * DigestInfo ::= SEQUENCE {
+			 *   digestAlgorithm DigestAlgorithm,
+			 *   digest OCTET STRING
+			 * }
+			 *
+			 * SHA-256 OID: sha256WithRSAEncryption ::= {pkcs-1 11}
+			 *
+			 * DER encoded DigestInfo for SHA256 per RFC 3447:
+			 * 30 31 30 0d 06 09 60 86 48 01 65 03 04 02 01 05 00
+			 * 04 20 || H
+			 */
+			hlen += 19;
+			os_memcpy(hash,
+				  "\x30\x31\x30\x0d\x06\x09\x60\x86\x48\x01\x65"
+				  "\x03\x04\x02\x01\x05\x00\x04\x20", 19);
+		} else {
+#endif /* CONFIG_TLSV12 */
+			hpos = hash;
+
+			if (alg == SIGN_ALG_RSA) {
+				ctx = crypto_hash_init(CRYPTO_HASH_ALG_MD5,
+						       NULL, 0);
+				if (ctx == NULL) {
+					tlsv1_server_alert(
+						conn, TLS_ALERT_LEVEL_FATAL,
+						TLS_ALERT_INTERNAL_ERROR);
+					return -1;
+				}
+				crypto_hash_update(ctx, conn->client_random,
+						   TLS_RANDOM_LEN);
+				crypto_hash_update(ctx, conn->server_random,
+						   TLS_RANDOM_LEN);
+				crypto_hash_update(ctx, server_params,
+						   pos - server_params);
+				hlen = sizeof(hash);
+				if (crypto_hash_finish(ctx, hash, &hlen) < 0) {
+					tlsv1_server_alert(
+						conn, TLS_ALERT_LEVEL_FATAL,
+						TLS_ALERT_INTERNAL_ERROR);
+					return -1;
+				}
+				hpos += hlen;
+			}
+
+			ctx = crypto_hash_init(CRYPTO_HASH_ALG_SHA1, NULL, 0);
+			if (ctx == NULL) {
+				tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
+						   TLS_ALERT_INTERNAL_ERROR);
+				return -1;
+			}
+			crypto_hash_update(ctx, conn->client_random,
+					   TLS_RANDOM_LEN);
+			crypto_hash_update(ctx, conn->server_random,
+					   TLS_RANDOM_LEN);
+			crypto_hash_update(ctx, server_params,
+					   pos - server_params);
+			hlen = hash + sizeof(hash) - hpos;
+			if (crypto_hash_finish(ctx, hpos, &hlen) < 0) {
+				tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
+						   TLS_ALERT_INTERNAL_ERROR);
+				return -1;
+			}
+			hpos += hlen;
+			hlen = hpos - hash;
+#ifdef CONFIG_TLSV12
+		}
+#endif /* CONFIG_TLSV12 */
+
+		wpa_hexdump(MSG_MSGDUMP,
+			    "TLSv1: ServerKeyExchange signed_params hash",
+			    hash, hlen);
+
+#ifdef CONFIG_TLSV12
+		if (conn->rl.tls_version >= TLS_VERSION_1_2) {
+			/*
+			 * RFC 5246, 4.7:
+			 * TLS v1.2 adds explicit indication of the used
+			 * signature and hash algorithms.
+			 *
+			 * struct {
+			 *   HashAlgorithm hash;
+			 *   SignatureAlgorithm signature;
+			 * } SignatureAndHashAlgorithm;
+			 */
+			if (pos + 2 > end) {
+				tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
+						   TLS_ALERT_INTERNAL_ERROR);
+				return -1;
+			}
+			*pos++ = TLS_HASH_ALG_SHA256;
+			*pos++ = TLS_SIGN_ALG_RSA;
+		}
+#endif /* CONFIG_TLSV12 */
+
+		/*
+		 * RFC 2246, 4.7:
+		 * In digital signing, one-way hash functions are used as input
+		 * for a signing algorithm. A digitally-signed element is
+		 * encoded as an opaque vector <0..2^16-1>, where the length is
+		 * specified by the signing algorithm and key.
+		 *
+		 * In RSA signing, a 36-byte structure of two hashes (one SHA
+		 * and one MD5) is signed (encrypted with the private key). It
+		 * is encoded with PKCS #1 block type 0 or type 1 as described
+		 * in [PKCS1].
+		 */
+		signed_start = pos; /* length to be filled */
+		pos += 2;
+		clen = end - pos;
+		if (conn->cred == NULL ||
+		    crypto_private_key_sign_pkcs1(conn->cred->key, hash, hlen,
+						  pos, &clen) < 0) {
+			wpa_printf(MSG_DEBUG, "TLSv1: Failed to sign hash (PKCS #1)");
+			tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
+					   TLS_ALERT_INTERNAL_ERROR);
+			return -1;
+		}
+		WPA_PUT_BE16(signed_start, clen);
+
+		pos += clen;
+	}
 
 	WPA_PUT_BE24(hs_length, pos - hs_length - 3);
 

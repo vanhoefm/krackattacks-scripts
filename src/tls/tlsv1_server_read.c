@@ -1,6 +1,6 @@
 /*
  * TLSv1 server - read handshake message
- * Copyright (c) 2006-2011, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2006-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -582,7 +582,7 @@ static int tls_process_client_key_exchange_rsa(
 }
 
 
-static int tls_process_client_key_exchange_dh_anon(
+static int tls_process_client_key_exchange_dh(
 	struct tlsv1_server *conn, const u8 *pos, const u8 *end)
 {
 	const u8 *dh_yc;
@@ -747,11 +747,11 @@ static int tls_process_client_key_exchange(struct tlsv1_server *conn, u8 ct,
 	else
 		keyx = suite->key_exchange;
 
-	if (keyx == TLS_KEY_X_DH_anon &&
-	    tls_process_client_key_exchange_dh_anon(conn, pos, end) < 0)
+	if ((keyx == TLS_KEY_X_DH_anon || keyx == TLS_KEY_X_DHE_RSA) &&
+	    tls_process_client_key_exchange_dh(conn, pos, end) < 0)
 		return -1;
 
-	if (keyx != TLS_KEY_X_DH_anon &&
+	if (keyx != TLS_KEY_X_DH_anon && keyx != TLS_KEY_X_DHE_RSA &&
 	    tls_process_client_key_exchange_rsa(conn, pos, end) < 0)
 		return -1;
 

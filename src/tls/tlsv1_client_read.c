@@ -1,6 +1,6 @@
 /*
  * TLSv1 client - read handshake message
- * Copyright (c) 2006-2011, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2006-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -410,9 +410,10 @@ static int tls_process_certificate(struct tlsv1_client *conn, u8 ct,
 
 
 static int tlsv1_process_diffie_hellman(struct tlsv1_client *conn,
-					const u8 *buf, size_t len)
+					const u8 *buf, size_t len,
+					tls_key_exchange key_exchange)
 {
-	const u8 *pos, *end;
+	const u8 *pos, *end, *server_params, *server_params_end;
 
 	tlsv1_client_free_dh(conn);
 
@@ -421,6 +422,7 @@ static int tlsv1_process_diffie_hellman(struct tlsv1_client *conn,
 
 	if (end - pos < 3)
 		goto fail;
+	server_params = pos;
 	conn->dh_p_len = WPA_GET_BE16(pos);
 	pos += 2;
 	if (conn->dh_p_len == 0 || end - pos < (int) conn->dh_p_len) {
@@ -465,6 +467,153 @@ static int tlsv1_process_diffie_hellman(struct tlsv1_client *conn,
 	pos += conn->dh_ys_len;
 	wpa_hexdump(MSG_DEBUG, "TLSv1: DH Ys (server's public value)",
 		    conn->dh_ys, conn->dh_ys_len);
+	server_params_end = pos;
+
+	if (key_exchange == TLS_KEY_X_DHE_RSA) {
+		u8 hash[MD5_MAC_LEN + SHA1_MAC_LEN], *hpos, *sbuf;
+		size_t hlen, buflen;
+		enum { SIGN_ALG_RSA, SIGN_ALG_DSA } alg = SIGN_ALG_RSA;
+		u16 slen;
+		struct crypto_hash *ctx;
+
+		hpos = hash;
+
+#ifdef CONFIG_TLSV12
+		if (conn->rl.tls_version == TLS_VERSION_1_2) {
+			/*
+			 * RFC 5246, 4.7:
+			 * TLS v1.2 adds explicit indication of the used
+			 * signature and hash algorithms.
+			 *
+			 * struct {
+			 *   HashAlgorithm hash;
+			 *   SignatureAlgorithm signature;
+			 * } SignatureAndHashAlgorithm;
+			 */
+			if (end - pos < 2)
+				goto fail;
+			if (pos[0] != TLS_HASH_ALG_SHA256 ||
+			    pos[1] != TLS_SIGN_ALG_RSA) {
+				wpa_printf(MSG_DEBUG, "TLSv1.2: Unsupported hash(%u)/signature(%u) algorithm",
+					   pos[0], pos[1]);
+				goto fail;
+			}
+			pos += 2;
+
+			ctx = crypto_hash_init(CRYPTO_HASH_ALG_SHA256, NULL, 0);
+			if (ctx == NULL)
+				goto fail;
+			crypto_hash_update(ctx, conn->client_random,
+					   TLS_RANDOM_LEN);
+			crypto_hash_update(ctx, conn->server_random,
+					   TLS_RANDOM_LEN);
+			crypto_hash_update(ctx, server_params,
+					   server_params_end - server_params);
+			hlen = SHA256_MAC_LEN;
+			if (crypto_hash_finish(ctx, hpos, &hlen) < 0)
+				goto fail;
+		} else {
+#endif /* CONFIG_TLSV12 */
+		if (alg == SIGN_ALG_RSA) {
+			ctx = crypto_hash_init(CRYPTO_HASH_ALG_MD5, NULL, 0);
+			if (ctx == NULL)
+				goto fail;
+			crypto_hash_update(ctx, conn->client_random,
+					   TLS_RANDOM_LEN);
+			crypto_hash_update(ctx, conn->server_random,
+					   TLS_RANDOM_LEN);
+			crypto_hash_update(ctx, server_params,
+					   server_params_end - server_params);
+			hlen = sizeof(hash);
+			if (crypto_hash_finish(ctx, hash, &hlen) < 0)
+				goto fail;
+			hpos += hlen;
+		}
+		ctx = crypto_hash_init(CRYPTO_HASH_ALG_SHA1, NULL, 0);
+		if (ctx == NULL)
+			goto fail;
+		crypto_hash_update(ctx, conn->client_random, TLS_RANDOM_LEN);
+		crypto_hash_update(ctx, conn->server_random, TLS_RANDOM_LEN);
+		crypto_hash_update(ctx, server_params,
+				   server_params_end - server_params);
+		hlen = hash + sizeof(hash) - hpos;
+		if (crypto_hash_finish(ctx, hpos, &hlen) < 0)
+			goto fail;
+		hpos += hlen;
+		hlen = hpos - hash;
+#ifdef CONFIG_TLSV12
+		}
+#endif /* CONFIG_TLSV12 */
+
+		wpa_hexdump(MSG_MSGDUMP, "TLSv1: ServerKeyExchange hash",
+			    hash, hlen);
+
+		if (end - pos < 2)
+			goto fail;
+		slen = WPA_GET_BE16(pos);
+		pos += 2;
+		if (end - pos < slen)
+			goto fail;
+
+		wpa_hexdump(MSG_MSGDUMP, "TLSv1: Signature", pos, end - pos);
+		if (conn->server_rsa_key == NULL) {
+			wpa_printf(MSG_DEBUG, "TLSv1: No server public key to verify signature");
+			goto fail;
+		}
+
+		buflen = end - pos;
+		sbuf = os_malloc(end - pos);
+		if (crypto_public_key_decrypt_pkcs1(conn->server_rsa_key,
+						    pos, end - pos, sbuf,
+						    &buflen) < 0) {
+			wpa_printf(MSG_DEBUG, "TLSv1: Failed to decrypt signature");
+			os_free(sbuf);
+			goto fail;
+		}
+
+		wpa_hexdump_key(MSG_MSGDUMP, "TLSv1: Decrypted Signature",
+				sbuf, buflen);
+
+#ifdef CONFIG_TLSV12
+		if (conn->rl.tls_version >= TLS_VERSION_1_2) {
+			/*
+			 * RFC 3447, A.2.4 RSASSA-PKCS1-v1_5
+			 *
+			 * DigestInfo ::= SEQUENCE {
+			 *   digestAlgorithm DigestAlgorithm,
+			 *   digest OCTET STRING
+			 * }
+			 *
+			 * SHA-256 OID: sha256WithRSAEncryption ::= {pkcs-1 11}
+			 *
+			 * DER encoded DigestInfo for SHA256 per RFC 3447:
+			 * 30 31 30 0d 06 09 60 86 48 01 65 03 04 02 01 05 00
+			 * 04 20 || H
+			 */
+			if (buflen >= 19 + 32 &&
+			    os_memcmp(sbuf,
+				      "\x30\x31\x30\x0d\x06\x09\x60\x86\x48\x01"
+				      "\x65\x03\x04\x02\x01\x05\x00\x04\x20",
+				      19) == 0) {
+				wpa_printf(MSG_DEBUG, "TLSv1.2: DigestAlgorithn = SHA-256");
+				os_memmove(sbuf, sbuf + 19, buflen - 19);
+				buflen -= 19;
+			} else {
+				wpa_printf(MSG_DEBUG, "TLSv1.2: Unrecognized DigestInfo");
+				os_free(sbuf);
+				goto fail;
+			}
+		}
+#endif /* CONFIG_TLSV12 */
+
+		if (buflen != hlen || os_memcmp(sbuf, hash, buflen) != 0) {
+			wpa_printf(MSG_DEBUG, "TLSv1: Invalid Signature in ServerKeyExchange - did not match calculated hash");
+			os_free(sbuf);
+			goto fail;
+		}
+
+		os_free(sbuf);
+	}
 
 	return 0;
 
@@ -543,8 +692,10 @@ static int tls_process_server_key_exchange(struct tlsv1_client *conn, u8 ct,
 
 	wpa_hexdump(MSG_DEBUG, "TLSv1: ServerKeyExchange", pos, len);
 	suite = tls_get_cipher_suite(conn->rl.cipher_suite);
-	if (suite && suite->key_exchange == TLS_KEY_X_DH_anon) {
-		if (tlsv1_process_diffie_hellman(conn, pos, len) < 0) {
+	if (suite && (suite->key_exchange == TLS_KEY_X_DH_anon ||
+		      suite->key_exchange == TLS_KEY_X_DHE_RSA)) {
+		if (tlsv1_process_diffie_hellman(conn, pos, len,
+						 suite->key_exchange) < 0) {
 			tls_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				  TLS_ALERT_DECODE_ERROR);
 			return -1;

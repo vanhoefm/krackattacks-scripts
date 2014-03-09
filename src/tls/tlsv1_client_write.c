@@ -1,6 +1,6 @@
 /*
  * TLSv1 client - write handshake message
- * Copyright (c) 2006-2011, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2006-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -205,7 +205,7 @@ static int tls_write_client_certificate(struct tlsv1_client *conn,
 }
 
 
-static int tlsv1_key_x_anon_dh(struct tlsv1_client *conn, u8 **pos, u8 *end)
+static int tlsv1_key_x_dh(struct tlsv1_client *conn, u8 **pos, u8 *end)
 {
 	/* ClientDiffieHellmanPublic */
 	u8 *csecret, *csecret_start, *dh_yc, *shared;
@@ -399,8 +399,8 @@ static int tls_write_client_key_exchange(struct tlsv1_client *conn,
 	hs_length = pos;
 	pos += 3;
 	/* body - ClientKeyExchange */
-	if (keyx == TLS_KEY_X_DH_anon) {
-		if (tlsv1_key_x_anon_dh(conn, &pos, end) < 0)
+	if (keyx == TLS_KEY_X_DH_anon || keyx == TLS_KEY_X_DHE_RSA) {
+		if (tlsv1_key_x_dh(conn, &pos, end) < 0)
 			return -1;
 	} else {
 		if (tlsv1_key_x_rsa(conn, &pos, end) < 0)

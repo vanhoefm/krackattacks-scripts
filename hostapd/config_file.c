@@ -257,6 +257,7 @@ static int hostapd_config_read_eap_user(const char *fname,
 			if (attr == NULL) {
 				wpa_printf(MSG_ERROR, "Invalid radius_auth_req_attr: %s",
 					   buf + 19);
+				user = NULL; /* already in the BSS list */
 				goto failed;
 			}
 			if (user->accept_attr == NULL) {

@@ -434,32 +434,35 @@ static int tls_write_server_key_exchange(struct tlsv1_server *conn,
 	 */
 
 	if (keyx == TLS_KEY_X_DHE_RSA) {
-		u8 hash[100], *hpos;
+		u8 hash[100];
 		u8 *signed_start;
-		size_t hlen, clen;
-		enum { SIGN_ALG_RSA, SIGN_ALG_DSA } alg = SIGN_ALG_RSA;
-		struct crypto_hash *ctx;
+		size_t clen;
+		int hlen;
 
+		if (conn->rl.tls_version >= TLS_VERSION_1_2) {
 #ifdef CONFIG_TLSV12
-		if (conn->rl.tls_version == TLS_VERSION_1_2) {
-			ctx = crypto_hash_init(CRYPTO_HASH_ALG_SHA256, NULL, 0);
-			if (ctx == NULL) {
+			hlen = tlsv12_key_x_server_params_hash(
+				conn->rl.tls_version, conn->client_random,
+				conn->server_random, server_params,
+				pos - server_params, hash + 19);
+
+			/*
+			 * RFC 5246, 4.7:
+			 * TLS v1.2 adds explicit indication of the used
+			 * signature and hash algorithms.
+			 *
+			 * struct {
+			 *   HashAlgorithm hash;
+			 *   SignatureAlgorithm signature;
+			 * } SignatureAndHashAlgorithm;
+			 */
+			if (hlen < 0 || pos + 2 > end) {
 				tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 						   TLS_ALERT_INTERNAL_ERROR);
 				return -1;
 			}
-			crypto_hash_update(ctx, conn->client_random,
-					   TLS_RANDOM_LEN);
-			crypto_hash_update(ctx, conn->server_random,
-					   TLS_RANDOM_LEN);
-			crypto_hash_update(ctx, server_params,
-					   pos - server_params);
-			hlen = sizeof(hash) - 19;
-			if (crypto_hash_finish(ctx, hash + 19, &hlen) < 0) {
-				tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
-						   TLS_ALERT_INTERNAL_ERROR);
-				return -1;
-			}
+			*pos++ = TLS_HASH_ALG_SHA256;
+			*pos++ = TLS_SIGN_ALG_RSA;
 
 			/*
 			 * RFC 3447, A.2.4 RSASSA-PKCS1-v1_5
@@ -479,84 +482,27 @@ static int tls_write_server_key_exchange(struct tlsv1_server *conn,
 			os_memcpy(hash,
 				  "\x30\x31\x30\x0d\x06\x09\x60\x86\x48\x01\x65"
 				  "\x03\x04\x02\x01\x05\x00\x04\x20", 19);
+
+#else /* CONFIG_TLSV12 */
+			tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
+					   TLS_ALERT_INTERNAL_ERROR);
+			return -1;
+#endif /* CONFIG_TLSV12 */
 		} else {
-#endif /* CONFIG_TLSV12 */
-			hpos = hash;
-
-			if (alg == SIGN_ALG_RSA) {
-				ctx = crypto_hash_init(CRYPTO_HASH_ALG_MD5,
-						       NULL, 0);
-				if (ctx == NULL) {
-					tlsv1_server_alert(
-						conn, TLS_ALERT_LEVEL_FATAL,
-						TLS_ALERT_INTERNAL_ERROR);
-					return -1;
-				}
-				crypto_hash_update(ctx, conn->client_random,
-						   TLS_RANDOM_LEN);
-				crypto_hash_update(ctx, conn->server_random,
-						   TLS_RANDOM_LEN);
-				crypto_hash_update(ctx, server_params,
-						   pos - server_params);
-				hlen = sizeof(hash);
-				if (crypto_hash_finish(ctx, hash, &hlen) < 0) {
-					tlsv1_server_alert(
-						conn, TLS_ALERT_LEVEL_FATAL,
-						TLS_ALERT_INTERNAL_ERROR);
-					return -1;
-				}
-				hpos += hlen;
-			}
-
-			ctx = crypto_hash_init(CRYPTO_HASH_ALG_SHA1, NULL, 0);
-			if (ctx == NULL) {
-				tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
-						   TLS_ALERT_INTERNAL_ERROR);
-				return -1;
-			}
-			crypto_hash_update(ctx, conn->client_random,
-					   TLS_RANDOM_LEN);
-			crypto_hash_update(ctx, conn->server_random,
-					   TLS_RANDOM_LEN);
-			crypto_hash_update(ctx, server_params,
-					   pos - server_params);
-			hlen = hash + sizeof(hash) - hpos;
-			if (crypto_hash_finish(ctx, hpos, &hlen) < 0) {
-				tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
-						   TLS_ALERT_INTERNAL_ERROR);
-				return -1;
-			}
-			hpos += hlen;
-			hlen = hpos - hash;
-#ifdef CONFIG_TLSV12
+			hlen = tls_key_x_server_params_hash(
+				conn->rl.tls_version, conn->client_random,
+				conn->server_random, server_params,
+				pos - server_params, hash);
 		}
-#endif /* CONFIG_TLSV12 */
 
-		wpa_hexdump(MSG_MSGDUMP,
-			    "TLSv1: ServerKeyExchange signed_params hash",
+		if (hlen < 0) {
+			tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
+					   TLS_ALERT_INTERNAL_ERROR);
+			return -1;
+		}
+
+		wpa_hexdump(MSG_MSGDUMP, "TLS: ServerKeyExchange signed_params hash",
 			    hash, hlen);
-
-#ifdef CONFIG_TLSV12
-		if (conn->rl.tls_version >= TLS_VERSION_1_2) {
-			/*
-			 * RFC 5246, 4.7:
-			 * TLS v1.2 adds explicit indication of the used
-			 * signature and hash algorithms.
-			 *
-			 * struct {
-			 *   HashAlgorithm hash;
-			 *   SignatureAlgorithm signature;
-			 * } SignatureAndHashAlgorithm;
-			 */
-			if (pos + 2 > end) {
-				tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
-						   TLS_ALERT_INTERNAL_ERROR);
-				return -1;
-			}
-			*pos++ = TLS_HASH_ALG_SHA256;
-			*pos++ = TLS_SIGN_ALG_RSA;
-		}
-#endif /* CONFIG_TLSV12 */
 
 		/*
 		 * RFC 2246, 4.7:

@@ -470,16 +470,13 @@ static int tlsv1_process_diffie_hellman(struct tlsv1_client *conn,
 	server_params_end = pos;
 
 	if (key_exchange == TLS_KEY_X_DHE_RSA) {
-		u8 hash[MD5_MAC_LEN + SHA1_MAC_LEN], *hpos, *sbuf;
-		size_t hlen, buflen;
-		enum { SIGN_ALG_RSA, SIGN_ALG_DSA } alg = SIGN_ALG_RSA;
+		u8 hash[MD5_MAC_LEN + SHA1_MAC_LEN], *sbuf;
+		size_t buflen;
+		int hlen;
 		u16 slen;
-		struct crypto_hash *ctx;
 
-		hpos = hash;
-
-#ifdef CONFIG_TLSV12
 		if (conn->rl.tls_version == TLS_VERSION_1_2) {
+#ifdef CONFIG_TLSV12
 			/*
 			 * RFC 5246, 4.7:
 			 * TLS v1.2 adds explicit indication of the used
@@ -500,51 +497,22 @@ static int tlsv1_process_diffie_hellman(struct tlsv1_client *conn,
 			}
 			pos += 2;
 
-			ctx = crypto_hash_init(CRYPTO_HASH_ALG_SHA256, NULL, 0);
-			if (ctx == NULL)
-				goto fail;
-			crypto_hash_update(ctx, conn->client_random,
-					   TLS_RANDOM_LEN);
-			crypto_hash_update(ctx, conn->server_random,
-					   TLS_RANDOM_LEN);
-			crypto_hash_update(ctx, server_params,
-					   server_params_end - server_params);
-			hlen = SHA256_MAC_LEN;
-			if (crypto_hash_finish(ctx, hpos, &hlen) < 0)
-				goto fail;
+			hlen = tlsv12_key_x_server_params_hash(
+				conn->rl.tls_version, conn->client_random,
+				conn->server_random, server_params,
+				server_params_end - server_params, hash);
+#else /* CONFIG_TLSV12 */
+			goto fail;
+#endif /* CONFIG_TLSV12 */
 		} else {
-#endif /* CONFIG_TLSV12 */
-		if (alg == SIGN_ALG_RSA) {
-			ctx = crypto_hash_init(CRYPTO_HASH_ALG_MD5, NULL, 0);
-			if (ctx == NULL)
-				goto fail;
-			crypto_hash_update(ctx, conn->client_random,
-					   TLS_RANDOM_LEN);
-			crypto_hash_update(ctx, conn->server_random,
-					   TLS_RANDOM_LEN);
-			crypto_hash_update(ctx, server_params,
-					   server_params_end - server_params);
-			hlen = sizeof(hash);
-			if (crypto_hash_finish(ctx, hash, &hlen) < 0)
-				goto fail;
-			hpos += hlen;
+			hlen = tls_key_x_server_params_hash(
+				conn->rl.tls_version, conn->client_random,
+				conn->server_random, server_params,
+				server_params_end - server_params, hash);
 		}
-		ctx = crypto_hash_init(CRYPTO_HASH_ALG_SHA1, NULL, 0);
-		if (ctx == NULL)
-			goto fail;
-		crypto_hash_update(ctx, conn->client_random, TLS_RANDOM_LEN);
-		crypto_hash_update(ctx, conn->server_random, TLS_RANDOM_LEN);
-		crypto_hash_update(ctx, server_params,
-				   server_params_end - server_params);
-		hlen = hash + sizeof(hash) - hpos;
-		if (crypto_hash_finish(ctx, hpos, &hlen) < 0)
-			goto fail;
-		hpos += hlen;
-		hlen = hpos - hash;
-#ifdef CONFIG_TLSV12
-		}
-#endif /* CONFIG_TLSV12 */
 
+		if (hlen < 0)
+			goto fail;
 		wpa_hexdump(MSG_MSGDUMP, "TLSv1: ServerKeyExchange hash",
 			    hash, hlen);
 
@@ -606,7 +574,8 @@ static int tlsv1_process_diffie_hellman(struct tlsv1_client *conn,
 		}
 #endif /* CONFIG_TLSV12 */
 
-		if (buflen != hlen || os_memcmp(sbuf, hash, buflen) != 0) {
+		if (buflen != (unsigned int) hlen ||
+		    os_memcmp(sbuf, hash, buflen) != 0) {
 			wpa_printf(MSG_DEBUG, "TLSv1: Invalid Signature in ServerKeyExchange - did not match calculated hash");
 			os_free(sbuf);
 			goto fail;

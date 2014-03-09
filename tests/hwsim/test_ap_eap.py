@@ -978,3 +978,25 @@ def test_ap_wpa2_eap_ttls_dh_params(dev, apdev):
                 anonymous_identity="ttls", password="password",
                 ca_cert="auth_serv/ca.der", phase2="auth=CHAP",
                 dh_file="auth_serv/dh.conf")
+
+def test_ap_wpa2_eap_reauth(dev, apdev):
+    """WPA2-Enterprise and Authenticator forcing reauthentication"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    params['eap_reauth_period'] = '2'
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "PAX", "pax.user@example.com",
+                password_hex="0123456789abcdef0123456789abcdef")
+    logger.info("Wait for reauthentication")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
+    if ev is None:
+        raise Exception("Timeout on reauthentication")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=10)
+    if ev is None:
+        raise Exception("Timeout on reauthentication")
+    for i in range(0, 20):
+        state = dev[0].get_status_field("wpa_state")
+        if state == "COMPLETED":
+            break
+        time.sleep(0.1)
+    if state != "COMPLETED":
+        raise Exception("Reauthentication did not complete")

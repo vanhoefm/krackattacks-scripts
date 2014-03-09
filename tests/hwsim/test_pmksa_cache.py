@@ -6,6 +6,7 @@
 
 import logging
 logger = logging.getLogger()
+import time
 
 import hostapd
 
@@ -182,3 +183,48 @@ def test_pmksa_cache_expiration(dev, apdev):
     pmksa2 = dev[0].get_pmksa(bssid)
     if pmksa['pmkid'] == pmksa2['pmkid']:
         raise Exception("PMKID did not change")
+
+def test_pmksa_cache_and_cui(dev, apdev):
+    """PMKSA cache and Chargeable-User-Identity"""
+    params = hostapd.wpa2_eap_params(ssid="cui")
+    params['radius_request_cui'] = '1'
+    params['acct_server_addr'] = "127.0.0.1"
+    params['acct_server_port'] = "1813"
+    params['acct_server_shared_secret'] = "radius"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+    dev[0].connect("cui", proto="RSN", key_mgmt="WPA-EAP",
+                   eap="GPSK", identity="gpsk-cui",
+                   password="abcdefghijklmnop0123456789abcdef",
+                   scan_freq="2412")
+    pmksa = dev[0].get_pmksa(bssid)
+    if pmksa is None:
+        raise Exception("No PMKSA cache entry created")
+
+    dev[0].dump_monitor()
+    logger.info("Disconnect and reconnect to the same AP")
+    dev[0].request("DISCONNECT")
+    dev[0].request("RECONNECT")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED",
+                            "CTRL-EVENT-CONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("Reconnect timed out")
+    if "CTRL-EVENT-EAP-STARTED" in ev:
+        raise Exception("Unexpected EAP exchange")
+    pmksa1b = dev[0].get_pmksa(bssid)
+    if pmksa1b is None:
+        raise Exception("No PMKSA cache entry found")
+    if pmksa['pmkid'] != pmksa1b['pmkid']:
+        raise Exception("Unexpected PMKID change for AP1")
+
+    dev[0].request("REAUTHENTICATE")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=10)
+    if ev is None:
+        raise Exception("EAP success timed out")
+    for i in range(0, 20):
+        state = dev[0].get_status_field("wpa_state")
+        if state == "COMPLETED":
+            break
+        time.sleep(0.1)
+    if state != "COMPLETED":
+        raise Exception("Reauthentication did not complete")

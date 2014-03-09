@@ -414,6 +414,7 @@ static int tlsv1_process_diffie_hellman(struct tlsv1_client *conn,
 					tls_key_exchange key_exchange)
 {
 	const u8 *pos, *end, *server_params, *server_params_end;
+	u8 alert;
 
 	tlsv1_client_free_dh(conn);
 
@@ -470,10 +471,8 @@ static int tlsv1_process_diffie_hellman(struct tlsv1_client *conn,
 	server_params_end = pos;
 
 	if (key_exchange == TLS_KEY_X_DHE_RSA) {
-		u8 hash[MD5_MAC_LEN + SHA1_MAC_LEN], *sbuf;
-		size_t buflen;
+		u8 hash[MD5_MAC_LEN + SHA1_MAC_LEN];
 		int hlen;
-		u16 slen;
 
 		if (conn->rl.tls_version == TLS_VERSION_1_2) {
 #ifdef CONFIG_TLSV12
@@ -516,72 +515,11 @@ static int tlsv1_process_diffie_hellman(struct tlsv1_client *conn,
 		wpa_hexdump(MSG_MSGDUMP, "TLSv1: ServerKeyExchange hash",
 			    hash, hlen);
 
-		if (end - pos < 2)
+		if (tls_verify_signature(conn->rl.tls_version,
+					 conn->server_rsa_key,
+					 hash, hlen, pos, end - pos,
+					 &alert) < 0)
 			goto fail;
-		slen = WPA_GET_BE16(pos);
-		pos += 2;
-		if (end - pos < slen)
-			goto fail;
-
-		wpa_hexdump(MSG_MSGDUMP, "TLSv1: Signature", pos, end - pos);
-		if (conn->server_rsa_key == NULL) {
-			wpa_printf(MSG_DEBUG, "TLSv1: No server public key to verify signature");
-			goto fail;
-		}
-
-		buflen = end - pos;
-		sbuf = os_malloc(end - pos);
-		if (crypto_public_key_decrypt_pkcs1(conn->server_rsa_key,
-						    pos, end - pos, sbuf,
-						    &buflen) < 0) {
-			wpa_printf(MSG_DEBUG, "TLSv1: Failed to decrypt signature");
-			os_free(sbuf);
-			goto fail;
-		}
-
-		wpa_hexdump_key(MSG_MSGDUMP, "TLSv1: Decrypted Signature",
-				sbuf, buflen);
-
-#ifdef CONFIG_TLSV12
-		if (conn->rl.tls_version >= TLS_VERSION_1_2) {
-			/*
-			 * RFC 3447, A.2.4 RSASSA-PKCS1-v1_5
-			 *
-			 * DigestInfo ::= SEQUENCE {
-			 *   digestAlgorithm DigestAlgorithm,
-			 *   digest OCTET STRING
-			 * }
-			 *
-			 * SHA-256 OID: sha256WithRSAEncryption ::= {pkcs-1 11}
-			 *
-			 * DER encoded DigestInfo for SHA256 per RFC 3447:
-			 * 30 31 30 0d 06 09 60 86 48 01 65 03 04 02 01 05 00
-			 * 04 20 || H
-			 */
-			if (buflen >= 19 + 32 &&
-			    os_memcmp(sbuf,
-				      "\x30\x31\x30\x0d\x06\x09\x60\x86\x48\x01"
-				      "\x65\x03\x04\x02\x01\x05\x00\x04\x20",
-				      19) == 0) {
-				wpa_printf(MSG_DEBUG, "TLSv1.2: DigestAlgorithn = SHA-256");
-				os_memmove(sbuf, sbuf + 19, buflen - 19);
-				buflen -= 19;
-			} else {
-				wpa_printf(MSG_DEBUG, "TLSv1.2: Unrecognized DigestInfo");
-				os_free(sbuf);
-				goto fail;
-			}
-		}
-#endif /* CONFIG_TLSV12 */
-
-		if (buflen != (unsigned int) hlen ||
-		    os_memcmp(sbuf, hash, buflen) != 0) {
-			wpa_printf(MSG_DEBUG, "TLSv1: Invalid Signature in ServerKeyExchange - did not match calculated hash");
-			os_free(sbuf);
-			goto fail;
-		}
-
-		os_free(sbuf);
 	}
 
 	return 0;

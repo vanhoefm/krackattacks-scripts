@@ -769,10 +769,10 @@ static int tls_process_certificate_verify(struct tlsv1_server *conn, u8 ct,
 	const u8 *pos, *end;
 	size_t left, len;
 	u8 type;
-	size_t hlen, buflen;
-	u8 hash[MD5_MAC_LEN + SHA1_MAC_LEN], *hpos, *buf;
+	size_t hlen;
+	u8 hash[MD5_MAC_LEN + SHA1_MAC_LEN], *hpos;
 	enum { SIGN_ALG_RSA, SIGN_ALG_DSA } alg = SIGN_ALG_RSA;
-	u16 slen;
+	u8 alert;
 
 	if (ct == TLS_CONTENT_TYPE_CHANGE_CIPHER_SPEC) {
 		if (conn->verify_peer) {
@@ -917,89 +917,11 @@ static int tls_process_certificate_verify(struct tlsv1_server *conn, u8 ct,
 
 	wpa_hexdump(MSG_MSGDUMP, "TLSv1: CertificateVerify hash", hash, hlen);
 
-	if (end - pos < 2) {
-		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
-				   TLS_ALERT_DECODE_ERROR);
+	if (tls_verify_signature(conn->rl.tls_version, conn->client_rsa_key,
+				 hash, hlen, pos, end - pos, &alert) < 0) {
+		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL, alert);
 		return -1;
 	}
-	slen = WPA_GET_BE16(pos);
-	pos += 2;
-	if (end - pos < slen) {
-		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
-				   TLS_ALERT_DECODE_ERROR);
-		return -1;
-	}
-
-	wpa_hexdump(MSG_MSGDUMP, "TLSv1: Signature", pos, end - pos);
-	if (conn->client_rsa_key == NULL) {
-		wpa_printf(MSG_DEBUG, "TLSv1: No client public key to verify "
-			   "signature");
-		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
-				   TLS_ALERT_INTERNAL_ERROR);
-		return -1;
-	}
-
-	buflen = end - pos;
-	buf = os_malloc(end - pos);
-	if (crypto_public_key_decrypt_pkcs1(conn->client_rsa_key,
-					    pos, end - pos, buf, &buflen) < 0)
-	{
-		wpa_printf(MSG_DEBUG, "TLSv1: Failed to decrypt signature");
-		os_free(buf);
-		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
-				   TLS_ALERT_DECRYPT_ERROR);
-		return -1;
-	}
-
-	wpa_hexdump_key(MSG_MSGDUMP, "TLSv1: Decrypted Signature",
-			buf, buflen);
-
-#ifdef CONFIG_TLSV12
-	if (conn->rl.tls_version >= TLS_VERSION_1_2) {
-		/*
-		 * RFC 3447, A.2.4 RSASSA-PKCS1-v1_5
-		 *
-		 * DigestInfo ::= SEQUENCE {
-		 *   digestAlgorithm DigestAlgorithm,
-		 *   digest OCTET STRING
-		 * }
-		 *
-		 * SHA-256 OID: sha256WithRSAEncryption ::= {pkcs-1 11}
-		 *
-		 * DER encoded DigestInfo for SHA256 per RFC 3447:
-		 * 30 31 30 0d 06 09 60 86 48 01 65 03 04 02 01 05 00 04 20 ||
-		 * H
-		 */
-		if (buflen >= 19 + 32 &&
-		    os_memcmp(buf, "\x30\x31\x30\x0d\x06\x09\x60\x86\x48\x01"
-			      "\x65\x03\x04\x02\x01\x05\x00\x04\x20", 19) == 0)
-		{
-			wpa_printf(MSG_DEBUG, "TLSv1.2: DigestAlgorithn = "
-				   "SHA-256");
-			os_memmove(buf, buf + 19, buflen - 19);
-			buflen -= 19;
-		} else {
-			wpa_printf(MSG_DEBUG, "TLSv1.2: Unrecognized "
-				   "DigestInfo");
-			os_free(buf);
-			tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
-					   TLS_ALERT_DECRYPT_ERROR);
-			return -1;
-		}
-	}
-#endif /* CONFIG_TLSV12 */
-
-	if (buflen != hlen || os_memcmp(buf, hash, buflen) != 0) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Invalid Signature in "
-			   "CertificateVerify - did not match with calculated "
-			   "hash");
-		os_free(buf);
-		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
-				   TLS_ALERT_DECRYPT_ERROR);
-		return -1;
-	}
-
-	os_free(buf);
 
 	*in_len = end - in_data;
 

@@ -6,6 +6,7 @@
 
 import logging
 logger = logging.getLogger()
+import subprocess
 
 import hwsim_utils
 import hostapd
@@ -53,3 +54,20 @@ def test_ap_vendor_elements(dev, apdev):
     bss = dev[0].get_bss(bssid)
     if "dd0411223301" not in bss['ie']:
         raise Exception("Vendor element not shown in scan results")
+
+def test_ap_country(dev, apdev):
+    """WPA2-PSK AP setting country code and using 5 GHz band"""
+    try:
+        bssid = apdev[0]['bssid']
+        ssid = "test-wpa2-psk"
+        passphrase = 'qwertyuiop'
+        params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+        params['country_code'] = 'FI'
+        params['ieee80211d'] = '1'
+        params['hw_mode'] = 'a'
+        params['channel'] = '36'
+        hostapd.add_ap(apdev[0]['ifname'], params)
+        dev[0].connect(ssid, psk=passphrase, scan_freq="5180")
+        hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    finally:
+        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])

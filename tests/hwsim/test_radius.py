@@ -68,6 +68,9 @@ def test_radius_acct(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
     hapd = hostapd.Hostapd(apdev[0]['ifname'])
     connect(dev[0], "radius-acct")
+    dev[1].connect("radius-acct", key_mgmt="WPA-EAP", scan_freq="2412",
+                   eap="PAX", identity="test-class",
+                   password_hex="0123456789abcdef0123456789abcdef")
     logger.info("Checking for RADIUS counters")
     count = 0
     while True:

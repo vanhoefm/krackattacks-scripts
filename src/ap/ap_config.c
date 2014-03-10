@@ -338,20 +338,6 @@ int hostapd_setup_wpa_psk(struct hostapd_bss_config *conf)
 }
 
 
-int hostapd_wep_key_cmp(struct hostapd_wep_keys *a, struct hostapd_wep_keys *b)
-{
-	int i;
-
-	if (a->idx != b->idx || a->default_len != b->default_len)
-		return 1;
-	for (i = 0; i < NUM_WEP_KEYS; i++)
-		if (a->len[i] != b->len[i] ||
-		    os_memcmp(a->key[i], b->key[i], a->len[i]) != 0)
-			return 1;
-	return 0;
-}
-
-
 static void hostapd_config_free_radius(struct hostapd_radius_server *servers,
 				       int num_servers)
 {

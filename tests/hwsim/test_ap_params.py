@@ -40,3 +40,16 @@ def test_ap_fragmentation_wpa2(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
     dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+
+def test_ap_vendor_elements(dev, apdev):
+    """WPA2-PSK AP with vendor elements added"""
+    bssid = apdev[0]['bssid']
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+    params['vendor_elements'] = "dd0411223301"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
+    bss = dev[0].get_bss(bssid)
+    if "dd0411223301" not in bss['ie']:
+        raise Exception("Vendor element not shown in scan results")

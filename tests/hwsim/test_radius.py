@@ -63,6 +63,8 @@ def test_radius_acct(dev, apdev):
     params['acct_server_addr'] = "127.0.0.1"
     params['acct_server_port'] = "1813"
     params['acct_server_shared_secret'] = "radius"
+    params['radius_auth_req_attr'] = [ "126:s:Operator", "77:s:testing" ]
+    params['radius_acct_req_attr'] = [ "126:s:Operator", "77:s:testing" ]
     hostapd.add_ap(apdev[0]['ifname'], params)
     hapd = hostapd.Hostapd(apdev[0]['ifname'])
     connect(dev[0], "radius-acct")

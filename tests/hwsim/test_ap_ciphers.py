@@ -27,23 +27,23 @@ def check_cipher(dev, ap, cipher):
 
 def test_ap_cipher_tkip(dev, apdev):
     """WPA2-PSK/TKIP connection"""
-    check_cipher(dev[0], apdev[0], "TKIP")
+    return check_cipher(dev[0], apdev[0], "TKIP")
 
 def test_ap_cipher_ccmp(dev, apdev):
     """WPA2-PSK/CCMP connection"""
-    check_cipher(dev[0], apdev[0], "CCMP")
+    return check_cipher(dev[0], apdev[0], "CCMP")
 
 def test_ap_cipher_gcmp(dev, apdev):
     """WPA2-PSK/GCMP connection"""
-    check_cipher(dev[0], apdev[0], "GCMP")
+    return check_cipher(dev[0], apdev[0], "GCMP")
 
 def test_ap_cipher_ccmp_256(dev, apdev):
     """WPA2-PSK/CCMP-256 connection"""
-    check_cipher(dev[0], apdev[0], "CCMP-256")
+    return check_cipher(dev[0], apdev[0], "CCMP-256")
 
 def test_ap_cipher_gcmp_256(dev, apdev):
     """WPA2-PSK/GCMP-256 connection"""
-    check_cipher(dev[0], apdev[0], "GCMP-256")
+    return check_cipher(dev[0], apdev[0], "GCMP-256")
 
 def test_ap_cipher_mixed_wpa_wpa2(dev, apdev):
     """WPA2-PSK/CCMP/ and WPA-PSK/TKIP mixed configuration"""

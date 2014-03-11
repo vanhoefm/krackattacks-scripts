@@ -539,7 +539,8 @@ endif
 OBJS += src/crypto/crypto_gnutls.c
 HOBJS += src/crypto/crypto_gnutls.c
 ifdef NEED_FIPS186_2_PRF
-OBJS += src/crypto/fips_prf_gnutls.c
+OBJS += src/crypto/fips_prf_internal.c
+OBJS += src/crypto/sha1-internal.c
 endif
 LIBS += -lgcrypt
 LIBS_h += -lgcrypt
@@ -566,7 +567,8 @@ LIBS += -lssl3
 endif
 OBJS += src/crypto/crypto_nss.c
 ifdef NEED_FIPS186_2_PRF
-OBJS += src/crypto/fips_prf_nss.c
+OBJS += src/crypto/fips_prf_internal.c
+OBJS += src/crypto/sha1-internal.c
 endif
 LIBS += -lnss3
 LIBS_h += -lnss3

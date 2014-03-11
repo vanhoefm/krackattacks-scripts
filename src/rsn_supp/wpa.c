@@ -362,7 +362,7 @@ static int wpa_derive_ptk(struct wpa_sm *sm, const unsigned char *src_addr,
 			  const struct wpa_eapol_key *key,
 			  struct wpa_ptk *ptk)
 {
-	size_t ptk_len = sm->pairwise_cipher != WPA_CIPHER_TKIP ? 48 : 64;
+	size_t ptk_len = wpa_cipher_key_len(sm->pairwise_cipher) + 32;
 #ifdef CONFIG_IEEE80211R
 	if (wpa_key_mgmt_ft(sm->key_mgmt))
 		return wpa_derive_ptk_ft(sm, src_addr, key, ptk, ptk_len);
@@ -437,10 +437,12 @@ static void wpa_supplicant_process_1_of_4(struct wpa_sm *sm,
 	 * been verified when processing message 3/4. */
 	ptk = &sm->tptk;
 	wpa_derive_ptk(sm, src_addr, key, ptk);
-	/* Supplicant: swap tx/rx Mic keys */
-	os_memcpy(buf, ptk->u.auth.tx_mic_key, 8);
-	os_memcpy(ptk->u.auth.tx_mic_key, ptk->u.auth.rx_mic_key, 8);
-	os_memcpy(ptk->u.auth.rx_mic_key, buf, 8);
+	if (sm->pairwise_cipher == WPA_CIPHER_TKIP) {
+		/* Supplicant: swap tx/rx Mic keys */
+		os_memcpy(buf, ptk->u.auth.tx_mic_key, 8);
+		os_memcpy(ptk->u.auth.tx_mic_key, ptk->u.auth.rx_mic_key, 8);
+		os_memcpy(ptk->u.auth.rx_mic_key, buf, 8);
+	}
 	sm->tptk_set = 1;
 
 	kde = sm->assoc_wpa_ie;

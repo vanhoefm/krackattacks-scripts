@@ -36,3 +36,20 @@ def test_ap_roam_wpa2_psk(dev, apdev):
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[1]['ifname'])
     dev[0].roam(apdev[0]['bssid'])
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+
+def test_ap_reassociation_to_same_bss(dev, apdev):
+    """Reassociate to the same BSS"""
+    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
+    dev[0].connect("test-open", key_mgmt="NONE")
+
+    dev[0].request("REASSOCIATE")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("Reassociation with the AP timed out")
+    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+
+    dev[0].request("REATTACH")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("Reassociation (reattach) with the AP timed out")
+    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])

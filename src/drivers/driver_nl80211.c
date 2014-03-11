@@ -302,6 +302,7 @@ struct wpa_driver_nl80211_data {
 	unsigned int start_mode_ap:1;
 	unsigned int start_iface_up:1;
 	unsigned int test_use_roc_tx:1;
+	unsigned int ignore_deauth_event:1;
 
 	u64 remain_on_chan_cookie;
 	u64 send_action_cookie;
@@ -1827,6 +1828,11 @@ static void mlme_event_deauth_disassoc(struct wpa_driver_nl80211_data *drv,
 				mgmt->u.disassoc.variable;
 		}
 	} else {
+		if (drv->ignore_deauth_event) {
+			wpa_printf(MSG_DEBUG, "nl80211: Ignore deauth event due to previous forced deauth-during-auth");
+			drv->ignore_deauth_event = 0;
+			return;
+		}
 		event.deauth_info.locally_generated =
 			!os_memcmp(mgmt->sa, drv->first_bss->addr, ETH_ALEN);
 		event.deauth_info.addr = bssid;
@@ -5926,6 +5932,7 @@ static int wpa_driver_nl80211_authenticate(
 
 	is_retry = drv->retry_auth;
 	drv->retry_auth = 0;
+	drv->ignore_deauth_event = 0;
 
 	nl80211_mark_disconnected(drv);
 	os_memset(drv->auth_bssid, 0, ETH_ALEN);
@@ -6027,6 +6034,7 @@ retry:
 			 */
 			wpa_printf(MSG_DEBUG, "nl80211: Retry authentication "
 				   "after forced deauthentication");
+			drv->ignore_deauth_event = 1;
 			wpa_driver_nl80211_deauthenticate(
 				bss, params->bssid,
 				WLAN_REASON_PREV_AUTH_NOT_VALID);

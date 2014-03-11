@@ -422,6 +422,8 @@ IMPLEMENT_ASN1_FUNCTIONS(LogotypeExtn);
 #define sk_LogotypeInfo_value(st, i) SKM_sk_value(LogotypeInfo, (st), (i))
 #define sk_LogotypeImage_num(st) SKM_sk_num(LogotypeImage, (st))
 #define sk_LogotypeImage_value(st, i) SKM_sk_value(LogotypeImage, (st), (i))
+#define sk_LogotypeAudio_num(st) SKM_sk_num(LogotypeAudio, (st))
+#define sk_LogotypeAudio_value(st, i) SKM_sk_value(LogotypeAudio, (st), (i))
 #define sk_HashAlgAndValue_num(st) SKM_sk_num(HashAlgAndValue, (st))
 #define sk_HashAlgAndValue_value(st, i) SKM_sk_value(HashAlgAndValue, (st), (i))
 #define sk_ASN1_IA5STRING_num(st) SKM_sk_num(ASN1_IA5STRING, (st))
@@ -556,6 +558,187 @@ static void add_logo_indirect(struct http_ctx *ctx, struct http_cert *hcert,
 }
 
 
+static void i2r_HashAlgAndValue(HashAlgAndValue *hash, BIO *out, int indent)
+{
+	int i;
+	const unsigned char *data;
+
+	BIO_printf(out, "%*shashAlg: ", indent, "");
+	i2a_ASN1_OBJECT(out, hash->hashAlg->algorithm);
+	BIO_printf(out, "\n");
+
+	BIO_printf(out, "%*shashValue: ", indent, "");
+	data = hash->hashValue->data;
+	for (i = 0; i < hash->hashValue->length; i++)
+		BIO_printf(out, "%s%02x", i > 0 ? ":" : "", data[i]);
+	BIO_printf(out, "\n");
+}
+
+static void i2r_LogotypeDetails(LogotypeDetails *details, BIO *out, int indent)
+{
+	int i, num;
+
+	BIO_printf(out, "%*sLogotypeDetails\n", indent, "");
+	if (details->mediaType) {
+		BIO_printf(out, "%*smediaType: ", indent, "");
+		ASN1_STRING_print(out, details->mediaType);
+		BIO_printf(out, "\n");
+	}
+
+	num = details->logotypeHash ?
+		sk_HashAlgAndValue_num(details->logotypeHash) : 0;
+	for (i = 0; i < num; i++) {
+		HashAlgAndValue *hash;
+		hash = sk_HashAlgAndValue_value(details->logotypeHash, i);
+		i2r_HashAlgAndValue(hash, out, indent);
+	}
+
+	num = details->logotypeURI ?
+		sk_ASN1_IA5STRING_num(details->logotypeURI) : 0;
+	for (i = 0; i < num; i++) {
+		ASN1_IA5STRING *uri;
+		uri = sk_ASN1_IA5STRING_value(details->logotypeURI, i);
+		BIO_printf(out, "%*slogotypeURI: ", indent, "");
+		ASN1_STRING_print(out, uri);
+		BIO_printf(out, "\n");
+	}
+}
+
+static void i2r_LogotypeImageInfo(LogotypeImageInfo *info, BIO *out, int indent)
+{
+	long val;
+
+	BIO_printf(out, "%*sLogotypeImageInfo\n", indent, "");
+	if (info->type) {
+		val = ASN1_INTEGER_get(info->type);
+		BIO_printf(out, "%*stype: %ld\n", indent, "", val);
+	} else {
+		BIO_printf(out, "%*stype: default (1)\n", indent, "");
+	}
+	val = ASN1_INTEGER_get(info->xSize);
+	BIO_printf(out, "%*sxSize: %ld\n", indent, "", val);
+	val = ASN1_INTEGER_get(info->ySize);
+	BIO_printf(out, "%*sySize: %ld\n", indent, "", val);
+	if (info->resolution) {
+		BIO_printf(out, "%*sresolution\n", indent, "");
+		/* TODO */
+	}
+	if (info->language) {
+		BIO_printf(out, "%*slanguage: ", indent, "");
+		ASN1_STRING_print(out, info->language);
+		BIO_printf(out, "\n");
+	}
+}
+
+static void i2r_LogotypeImage(LogotypeImage *image, BIO *out, int indent)
+{
+	BIO_printf(out, "%*sLogotypeImage\n", indent, "");
+	if (image->imageDetails) {
+		i2r_LogotypeDetails(image->imageDetails, out, indent + 4);
+	}
+	if (image->imageInfo) {
+		i2r_LogotypeImageInfo(image->imageInfo, out, indent + 4);
+	}
+}
+
+static void i2r_LogotypeData(LogotypeData *data, const char *title, BIO *out,
+			     int indent)
+{
+	int i, num;
+
+	BIO_printf(out, "%*s%s - LogotypeData\n", indent, "", title);
+
+	num = data->image ? sk_LogotypeImage_num(data->image) : 0;
+	for (i = 0; i < num; i++) {
+		LogotypeImage *image = sk_LogotypeImage_value(data->image, i);
+		i2r_LogotypeImage(image, out, indent + 4);
+	}
+
+	num = data->audio ? sk_LogotypeAudio_num(data->audio) : 0;
+	for (i = 0; i < num; i++) {
+		BIO_printf(out, "%*saudio: TODO\n", indent, "");
+	}
+}
+
+static void i2r_LogotypeReference(LogotypeReference *ref, const char *title,
+				  BIO *out, int indent)
+{
+	int i, hash_num, uri_num;
+
+	BIO_printf(out, "%*s%s - LogotypeReference\n", indent, "", title);
+
+	hash_num = ref->refStructHash ?
+		sk_HashAlgAndValue_num(ref->refStructHash) : 0;
+	uri_num = ref->refStructURI ?
+		sk_ASN1_IA5STRING_num(ref->refStructURI) : 0;
+	if (hash_num != uri_num) {
+		BIO_printf(out, "%*sUnexpected LogotypeReference array size difference %d != %d\n",
+			   indent, "", hash_num, uri_num);
+		return;
+	}
+
+	for (i = 0; i < hash_num; i++) {
+		HashAlgAndValue *hash;
+		ASN1_IA5STRING *uri;
+
+		hash = sk_HashAlgAndValue_value(ref->refStructHash, i);
+		i2r_HashAlgAndValue(hash, out, indent);
+
+		uri = sk_ASN1_IA5STRING_value(ref->refStructURI, i);
+		BIO_printf(out, "%*srefStructURI: ", indent, "");
+		ASN1_STRING_print(out, uri);
+		BIO_printf(out, "\n");
+	}
+}
+
+static void i2r_LogotypeInfo(LogotypeInfo *info, const char *title, BIO *out,
+			     int indent)
+{
+	switch (info->type) {
+	case 0:
+		i2r_LogotypeData(info->d.direct, title, out, indent);
+		break;
+	case 1:
+		i2r_LogotypeReference(info->d.indirect, title, out, indent);
+		break;
+	}
+}
+
+static void debug_print_logotypeext(LogotypeExtn *logo)
+{
+	BIO *out;
+	int i, num;
+	int indent = 0;
+
+	out = BIO_new_fp(stdout, BIO_NOCLOSE);
+	if (out == NULL)
+		return;
+
+	if (logo->communityLogos) {
+		num = sk_LogotypeInfo_num(logo->communityLogos);
+		for (i = 0; i < num; i++) {
+			LogotypeInfo *info;
+			info = sk_LogotypeInfo_value(logo->communityLogos, i);
+			i2r_LogotypeInfo(info, "communityLogo", out, indent);
+		}
+	}
+
+	if (logo->issuerLogo) {
+		i2r_LogotypeInfo(logo->issuerLogo, "issuerLogo", out, indent );
+	}
+
+	if (logo->subjectLogo) {
+		i2r_LogotypeInfo(logo->subjectLogo, "subjectLogo", out, indent);
+	}
+
+	if (logo->otherLogos) {
+		BIO_printf(out, "%*sotherLogos - TODO\n", indent, "");
+	}
+
+	BIO_free(out);
+}
+
+
 static void add_logotype_ext(struct http_ctx *ctx, struct http_cert *hcert,
 			     X509 *cert)
 {
@@ -600,6 +783,9 @@ static void add_logotype_ext(struct http_ctx *ctx, struct http_cert *hcert,
 		return;
 	}
 
+	if (wpa_debug_level < MSG_INFO)
+		debug_print_logotypeext(logo);
+
 	if (!logo->communityLogos) {
 		wpa_printf(MSG_INFO, "No communityLogos included");
 		LogotypeExtn_free(logo);
@@ -624,17 +810,50 @@ static void add_logotype_ext(struct http_ctx *ctx, struct http_cert *hcert,
 }
 
 
+static void parse_cert(struct http_ctx *ctx, struct http_cert *hcert,
+		       X509 *cert, GENERAL_NAMES **names)
+{
+	os_memset(hcert, 0, sizeof(*hcert));
+
+	*names = X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
+	if (*names)
+		add_alt_names(ctx, hcert, *names);
+
+	add_logotype_ext(ctx, hcert, cert);
+}
+
+
+static void parse_cert_free(struct http_cert *hcert, GENERAL_NAMES *names)
+{
+	unsigned int i;
+
+	for (i = 0; i < hcert->num_dnsname; i++)
+		OPENSSL_free(hcert->dnsname[i]);
+	os_free(hcert->dnsname);
+
+	for (i = 0; i < hcert->num_othername; i++)
+		os_free(hcert->othername[i].oid);
+	os_free(hcert->othername);
+
+	for (i = 0; i < hcert->num_logo; i++) {
+		os_free(hcert->logo[i].alg_oid);
+		os_free(hcert->logo[i].hash);
+		os_free(hcert->logo[i].uri);
+	}
+	os_free(hcert->logo);
+
+	sk_GENERAL_NAME_pop_free(names, GENERAL_NAME_free);
+}
+
+
 static int validate_server_cert(struct http_ctx *ctx, X509 *cert)
 {
 	GENERAL_NAMES *names;
 	struct http_cert hcert;
-	unsigned int i;
 	int ret;
 
 	if (ctx->cert_cb == NULL)
 		return 0;
-
-	os_memset(&hcert, 0, sizeof(hcert));
 
 	if (0) {
 		BIO *out;
@@ -643,32 +862,72 @@ static int validate_server_cert(struct http_ctx *ctx, X509 *cert)
 		BIO_free(out);
 	}
 
-	names = X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
-	if (names)
-		add_alt_names(ctx, &hcert, names);
-
-	add_logotype_ext(ctx, &hcert, cert);
-
+	parse_cert(ctx, &hcert, cert, &names);
 	ret = ctx->cert_cb(ctx->cert_cb_ctx, &hcert);
-
-	for (i = 0; i < hcert.num_dnsname; i++)
-		OPENSSL_free(hcert.dnsname[i]);
-	os_free(hcert.dnsname);
-
-	for (i = 0; i < hcert.num_othername; i++)
-		os_free(hcert.othername[i].oid);
-	os_free(hcert.othername);
-
-	for (i = 0; i < hcert.num_logo; i++) {
-		os_free(hcert.logo[i].alg_oid);
-		os_free(hcert.logo[i].hash);
-		os_free(hcert.logo[i].uri);
-	}
-	os_free(hcert.logo);
-
-	sk_GENERAL_NAME_pop_free(names, GENERAL_NAME_free);
+	parse_cert_free(&hcert, names);
 
 	return ret;
+}
+
+
+void http_parse_x509_certificate(struct http_ctx *ctx, const char *fname)
+{
+	BIO *in, *out;
+	X509 *cert;
+	GENERAL_NAMES *names;
+	struct http_cert hcert;
+	unsigned int i;
+
+	in = BIO_new_file(fname, "r");
+	if (in == NULL) {
+		wpa_printf(MSG_ERROR, "Could not read '%s'", fname);
+		return;
+	}
+
+	cert = d2i_X509_bio(in, NULL);
+	BIO_free(in);
+
+	if (cert == NULL) {
+		wpa_printf(MSG_ERROR, "Could not parse certificate");
+		return;
+	}
+
+	out = BIO_new_fp(stdout, BIO_NOCLOSE);
+	if (out) {
+		X509_print_ex(out, cert, XN_FLAG_COMPAT,
+			      X509_FLAG_COMPAT);
+		BIO_free(out);
+	}
+
+	wpa_printf(MSG_INFO, "Additional parsing information:");
+	parse_cert(ctx, &hcert, cert, &names);
+	for (i = 0; i < hcert.num_othername; i++) {
+		if (os_strcmp(hcert.othername[i].oid,
+			      "1.3.6.1.4.1.40808.1.1.1") == 0) {
+			char *name = os_zalloc(hcert.othername[i].len + 1);
+			if (name) {
+				os_memcpy(name, hcert.othername[i].data,
+					  hcert.othername[i].len);
+				wpa_printf(MSG_INFO,
+					   "id-wfa-hotspot-friendlyName: %s",
+					   name);
+				os_free(name);
+			}
+			wpa_hexdump_ascii(MSG_INFO,
+					  "id-wfa-hotspot-friendlyName",
+					  hcert.othername[i].data,
+					  hcert.othername[i].len);
+		} else {
+			wpa_printf(MSG_INFO, "subjAltName[othername]: oid=%s",
+				   hcert.othername[i].oid);
+			wpa_hexdump_ascii(MSG_INFO, "unknown othername",
+					  hcert.othername[i].data,
+					  hcert.othername[i].len);
+		}
+	}
+	parse_cert_free(&hcert, names);
+
+	X509_free(cert);
 }
 
 

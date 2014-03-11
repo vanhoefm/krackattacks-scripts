@@ -58,5 +58,6 @@ void http_set_cert_cb(struct http_ctx *ctx,
 		      int (*cb)(void *ctx, struct http_cert *cert),
 		      void *cb_ctx);
 const char * http_get_err(struct http_ctx *ctx);
+void http_parse_x509_certificate(struct http_ctx *ctx, const char *fname);
 
 #endif /* HTTP_UTILS_H */

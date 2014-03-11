@@ -2945,6 +2945,7 @@ static void usage(void)
 	       "- dl_polupd_ca <PPS> <CA file>\n"
 	       "- dl_aaa_ca <PPS> <CA file>\n"
 	       "- browser <URL>\n"
+	       "- parse_cert <X.509 certificate (DER)>\n"
 	       "- osu_select <OSU info directory> [CA cert]\n");
 }
 
@@ -3172,6 +3173,15 @@ int main(int argc, char *argv[])
 			   argv[optind + 1]);
 		ret = hs20_web_browser(argv[optind + 1]);
 		wpa_printf(MSG_INFO, "Web browser result: %d", ret);
+	} else if (strcmp(argv[optind], "parse_cert") == 0) {
+		if (argc - optind < 2) {
+			usage();
+			exit(0);
+		}
+
+		wpa_debug_level = MSG_MSGDUMP;
+		http_parse_x509_certificate(ctx.http, argv[optind + 1]);
+		wpa_debug_level = MSG_INFO;
 	} else {
 		wpa_printf(MSG_INFO, "Unknown command '%s'", argv[optind]);
 	}

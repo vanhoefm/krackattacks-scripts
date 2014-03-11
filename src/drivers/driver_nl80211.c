@@ -5609,12 +5609,15 @@ static int wpa_driver_nl80211_set_key(const char *ifname, struct i802_bss *bss,
 	} else {
 		nl80211_cmd(drv, msg, 0, NL80211_CMD_NEW_KEY);
 		NLA_PUT(msg, NL80211_ATTR_KEY_DATA, key_len, key);
+		wpa_hexdump_key(MSG_DEBUG, "nl80211: KEY_DATA", key, key_len);
 		NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
 			    wpa_alg_to_cipher_suite(alg, key_len));
 	}
 
-	if (seq && seq_len)
+	if (seq && seq_len) {
 		NLA_PUT(msg, NL80211_ATTR_KEY_SEQ, seq_len, seq);
+		wpa_hexdump(MSG_DEBUG, "nl80211: KEY_SEQ", seq, seq_len);
+	}
 
 	if (addr && !is_broadcast_ether_addr(addr)) {
 		wpa_printf(MSG_DEBUG, "   addr=" MACSTR, MAC2STR(addr));

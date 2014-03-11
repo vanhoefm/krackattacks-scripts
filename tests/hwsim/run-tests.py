@@ -101,7 +101,7 @@ class DataCollector(object):
         self._dmesg = dmesg
     def __enter__(self):
         if self._tracing:
-            output = os.path.join(self._logdir, '%s.dat' % (self._testname, ))
+            output = os.path.abspath(os.path.join(self._logdir, '%s.dat' % (self._testname, )))
             self._trace_cmd = subprocess.Popen(['sudo', 'trace-cmd', 'record', '-o', output, '-e', 'mac80211', '-e', 'cfg80211', 'sh', '-c', 'echo STARTED ; read l'],
                                                stdin=subprocess.PIPE,
                                                stdout=subprocess.PIPE,

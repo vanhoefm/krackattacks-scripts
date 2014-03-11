@@ -57,7 +57,8 @@
 #ifndef P2P_MAX_INITIAL_CONN_WAIT
 /*
  * How many seconds to wait for initial 4-way handshake to get completed after
- * WPS provisioning step.
+ * WPS provisioning step or after the re-invocation of a persistent group on a
+ * P2P Client.
  */
 #define P2P_MAX_INITIAL_CONN_WAIT 10
 #endif /* P2P_MAX_INITIAL_CONN_WAIT */
@@ -5206,6 +5207,11 @@ static int wpas_start_p2p_client(struct wpa_supplicant *wpa_s,
 	wpa_s->p2p_in_invitation = 1;
 	wpa_s->p2p_invite_go_freq = freq;
 
+	eloop_cancel_timeout(wpas_p2p_group_formation_timeout, wpa_s->parent,
+			     NULL);
+	eloop_register_timeout(P2P_MAX_INITIAL_CONN_WAIT, 0,
+			       wpas_p2p_group_formation_timeout,
+			       wpa_s->parent, NULL);
 	wpa_supplicant_select_network(wpa_s, ssid);
 
 	return 0;

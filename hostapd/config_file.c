@@ -1884,10 +1884,9 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			wpa_printf(MSG_ERROR, "Line %d: invalid SSID '%s'",
 				   line, pos);
 			return 1;
-		} else {
-			os_memcpy(bss->ssid.ssid, pos, bss->ssid.ssid_len);
-			bss->ssid.ssid_set = 1;
 		}
+		os_memcpy(bss->ssid.ssid, pos, bss->ssid.ssid_len);
+		bss->ssid.ssid_set = 1;
 	} else if (os_strcmp(buf, "ssid2") == 0) {
 		size_t slen;
 		char *str = wpa_config_parse_string(pos, &slen);
@@ -1952,9 +1951,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 				   "Line %d: invalid EAPOL version (%d): '%s'.",
 				   line, bss->eapol_version, pos);
 			return 1;
-		} else
-			wpa_printf(MSG_DEBUG, "eapol_version=%d",
-				   bss->eapol_version);
+		}
+		wpa_printf(MSG_DEBUG, "eapol_version=%d", bss->eapol_version);
 #ifdef EAP_SERVER
 	} else if (os_strcmp(buf, "eap_authenticator") == 0) {
 		bss->eap_server = atoi(pos);
@@ -2006,16 +2004,18 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			wpa_printf(MSG_ERROR, "Line %d: Invalid eap_fast_a_id",
 				   line);
 			return 1;
-		} else {
+		}
+		os_free(bss->eap_fast_a_id);
+		bss->eap_fast_a_id = os_malloc(idlen / 2);
+		if (bss->eap_fast_a_id == NULL ||
+		    hexstr2bin(pos, bss->eap_fast_a_id, idlen / 2)) {
+			wpa_printf(MSG_ERROR, "Line %d: Failed to parse eap_fast_a_id",
+				   line);
 			os_free(bss->eap_fast_a_id);
-			bss->eap_fast_a_id = os_malloc(idlen / 2);
-			if (bss->eap_fast_a_id == NULL ||
-			    hexstr2bin(pos, bss->eap_fast_a_id, idlen / 2)) {
-				wpa_printf(MSG_ERROR, "Line %d: Failed to parse eap_fast_a_id",
-					   line);
-				return 1;
-			} else
-				bss->eap_fast_a_id_len = idlen / 2;
+			bss->eap_fast_a_id = NULL;
+			return 1;
+		} else {
+			bss->eap_fast_a_id_len = idlen / 2;
 		}
 	} else if (os_strcmp(buf, "eap_fast_a_id_info") == 0) {
 		os_free(bss->eap_fast_a_id_info);
@@ -2240,31 +2240,31 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			wpa_printf(MSG_ERROR, "Line %d: invalid WPA passphrase length %d (expected 8..63)",
 				   line, len);
 			return 1;
-		} else {
-			os_free(bss->ssid.wpa_passphrase);
-			bss->ssid.wpa_passphrase = os_strdup(pos);
-			if (bss->ssid.wpa_passphrase) {
-				os_free(bss->ssid.wpa_psk);
-				bss->ssid.wpa_psk = NULL;
-				bss->ssid.wpa_passphrase_set = 1;
-			}
+		}
+		os_free(bss->ssid.wpa_passphrase);
+		bss->ssid.wpa_passphrase = os_strdup(pos);
+		if (bss->ssid.wpa_passphrase) {
+			os_free(bss->ssid.wpa_psk);
+			bss->ssid.wpa_psk = NULL;
+			bss->ssid.wpa_passphrase_set = 1;
 		}
 	} else if (os_strcmp(buf, "wpa_psk") == 0) {
 		os_free(bss->ssid.wpa_psk);
 		bss->ssid.wpa_psk = os_zalloc(sizeof(struct hostapd_wpa_psk));
 		if (bss->ssid.wpa_psk == NULL)
 			return 1;
-		else if (hexstr2bin(pos, bss->ssid.wpa_psk->psk, PMK_LEN) ||
-			 pos[PMK_LEN * 2] != '\0') {
+		if (hexstr2bin(pos, bss->ssid.wpa_psk->psk, PMK_LEN) ||
+		    pos[PMK_LEN * 2] != '\0') {
 			wpa_printf(MSG_ERROR, "Line %d: Invalid PSK '%s'.",
 				   line, pos);
+			os_free(bss->ssid.wpa_psk);
+			bss->ssid.wpa_psk = NULL;
 			return 1;
-		} else {
-			bss->ssid.wpa_psk->group = 1;
-			os_free(bss->ssid.wpa_passphrase);
-			bss->ssid.wpa_passphrase = NULL;
-			bss->ssid.wpa_psk_set = 1;
 		}
+		bss->ssid.wpa_psk->group = 1;
+		os_free(bss->ssid.wpa_passphrase);
+		bss->ssid.wpa_passphrase = NULL;
+		bss->ssid.wpa_psk_set = 1;
 	} else if (os_strcmp(buf, "wpa_psk_file") == 0) {
 		os_free(bss->ssid.wpa_psk_file);
 		bss->ssid.wpa_psk_file = os_strdup(pos);
@@ -2291,9 +2291,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		bss->wpa_pairwise = hostapd_config_parse_cipher(line, pos);
 		if (bss->wpa_pairwise == -1 || bss->wpa_pairwise == 0)
 			return 1;
-		else if (bss->wpa_pairwise &
-			 (WPA_CIPHER_NONE | WPA_CIPHER_WEP40 |
-			  WPA_CIPHER_WEP104)) {
+		if (bss->wpa_pairwise &
+		    (WPA_CIPHER_NONE | WPA_CIPHER_WEP40 | WPA_CIPHER_WEP104)) {
 			wpa_printf(MSG_ERROR, "Line %d: unsupported pairwise cipher suite '%s'",
 				   bss->wpa_pairwise, pos);
 			return 1;
@@ -2302,9 +2301,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		bss->rsn_pairwise = hostapd_config_parse_cipher(line, pos);
 		if (bss->rsn_pairwise == -1 || bss->rsn_pairwise == 0)
 			return 1;
-		else if (bss->rsn_pairwise &
-			 (WPA_CIPHER_NONE | WPA_CIPHER_WEP40 |
-			  WPA_CIPHER_WEP104)) {
+		if (bss->rsn_pairwise &
+		    (WPA_CIPHER_NONE | WPA_CIPHER_WEP40 | WPA_CIPHER_WEP104)) {
 			wpa_printf(MSG_ERROR, "Line %d: unsupported pairwise cipher suite '%s'",
 				   bss->rsn_pairwise, pos);
 			return 1;
@@ -2461,8 +2459,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			wpa_printf(MSG_ERROR, "Line %d: invalid beacon_int %d (expected 15..65535)",
 				   line, val);
 			return 1;
-		} else
-			conf->beacon_int = val;
+		}
+		conf->beacon_int = val;
 #ifdef CONFIG_ACS
 	} else if (os_strcmp(buf, "acs_num_scans") == 0) {
 		int val = atoi(pos);
@@ -2470,8 +2468,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			wpa_printf(MSG_ERROR, "Line %d: invalid acs_num_scans %d (expected 1..100)",
 				   line, val);
 			return 1;
-		} else
-			conf->acs_num_scans = val;
+		}
+		conf->acs_num_scans = val;
 #endif /* CONFIG_ACS */
 	} else if (os_strcmp(buf, "dtim_period") == 0) {
 		bss->dtim_period = atoi(pos);
@@ -2502,8 +2500,9 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		if (val != 0 && val != 1) {
 			wpa_printf(MSG_ERROR, "Line %d: invalid send_probe_response %d (expected 0 or 1)",
 				   line, val);
-		} else
-			conf->send_probe_response = val;
+			return 1;
+		}
+		conf->send_probe_response = val;
 	} else if (os_strcmp(buf, "supported_rates") == 0) {
 		if (hostapd_parse_intlist(&conf->supported_rates, pos)) {
 			wpa_printf(MSG_ERROR, "Line %d: invalid rate list",
@@ -2798,8 +2797,7 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 #endif /* CONFIG_WPS */
 #ifdef CONFIG_P2P_MANAGER
 	} else if (os_strcmp(buf, "manage_p2p") == 0) {
-		int manage = atoi(pos);
-		if (manage)
+		if (atoi(pos))
 			bss->p2p |= P2P_MANAGE;
 		else
 			bss->p2p &= ~P2P_MANAGE;
@@ -2812,14 +2810,12 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 	} else if (os_strcmp(buf, "disassoc_low_ack") == 0) {
 		bss->disassoc_low_ack = atoi(pos);
 	} else if (os_strcmp(buf, "tdls_prohibit") == 0) {
-		int val = atoi(pos);
-		if (val)
+		if (atoi(pos))
 			bss->tdls |= TDLS_PROHIBIT;
 		else
 			bss->tdls &= ~TDLS_PROHIBIT;
 	} else if (os_strcmp(buf, "tdls_prohibit_chan_switch") == 0) {
-		int val = atoi(pos);
-		if (val)
+		if (atoi(pos))
 			bss->tdls |= TDLS_PROHIBIT_CHAN_SWITCH;
 		else
 			bss->tdls &= ~TDLS_PROHIBIT_CHAN_SWITCH;
@@ -2915,7 +2911,7 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			return 1;
 		}
 		bss->ipaddr_type_configured = 1;
-		} else if (os_strcmp(buf, "domain_name") == 0) {
+	} else if (os_strcmp(buf, "domain_name") == 0) {
 		int j, num_domains, domain_len, domain_list_len = 0;
 		char *tok_start, *tok_prev;
 		u8 *domain_list, *domain_ptr;

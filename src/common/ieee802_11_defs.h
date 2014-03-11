@@ -1124,6 +1124,12 @@ enum wifi_display_subelem {
 #define MESH_PATH_METRIC_AIRTIME	1
 #define MESH_PATH_METRIC_VENDOR		255
 
+enum plink_action_field {
+	PLINK_OPEN = 1,
+	PLINK_CONFIRM,
+	PLINK_CLOSE
+};
+
 #define OUI_BROADCOM 0x00904c /* Broadcom (Epigram) */
 
 #define VENDOR_HT_CAPAB_OUI_TYPE 0x33 /* 00-90-4c:0x33 */

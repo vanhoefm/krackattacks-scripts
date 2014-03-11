@@ -43,6 +43,7 @@
 #include "offchannel.h"
 #include "interworking.h"
 #include "mesh.h"
+#include "mesh_mpm.h"
 
 
 #ifndef CONFIG_NO_SCAN_PROCESSING
@@ -2840,6 +2841,8 @@ static void wpas_event_rx_mgmt_action(struct wpa_supplicant *wpa_s,
 
 	wpas_p2p_rx_action(wpa_s, mgmt->da, mgmt->sa, mgmt->bssid,
 			   category, payload, plen, freq);
+	if (wpa_s->ifmsh)
+		mesh_mpm_action_rx(wpa_s, mgmt, len);
 }
 
 
@@ -3209,7 +3212,9 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			}
 #endif /* CONFIG_P2P */
 #ifdef CONFIG_IBSS_RSN
-			if (stype == WLAN_FC_STYPE_AUTH &&
+			if (wpa_s->current_ssid &&
+			    wpa_s->current_ssid->mode == WPAS_MODE_IBSS &&
+			    stype == WLAN_FC_STYPE_AUTH &&
 			    data->rx_mgmt.frame_len >= 30) {
 				wpa_supplicant_event_ibss_auth(wpa_s, data);
 				break;
@@ -3221,6 +3226,11 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 					wpa_s, data->rx_mgmt.frame,
 					data->rx_mgmt.frame_len,
 					data->rx_mgmt.freq);
+				break;
+			}
+
+			if (wpa_s->ifmsh) {
+				mesh_mpm_mgmt_rx(wpa_s, &data->rx_mgmt);
 				break;
 			}
 

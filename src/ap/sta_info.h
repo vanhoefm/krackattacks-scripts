@@ -9,6 +9,11 @@
 #ifndef STA_INFO_H
 #define STA_INFO_H
 
+#ifdef CONFIG_MESH
+/* needed for mesh_plink_state enum */
+#include "common/defs.h"
+#endif /* CONFIG_MESH */
+
 /* STA flags */
 #define WLAN_STA_AUTH BIT(0)
 #define WLAN_STA_ASSOC BIT(1)
@@ -48,6 +53,14 @@ struct sta_info {
 	u8 supported_rates[WLAN_SUPP_RATES_MAX];
 	int supported_rates_len;
 	u8 qosinfo; /* Valid when WLAN_STA_WMM is set */
+
+#ifdef CONFIG_MESH
+	enum mesh_plink_state plink_state;
+	u16 peer_lid;
+	u16 my_lid;
+	u16 mpm_close_reason;
+	int mpm_retries;
+#endif /* CONFIG_MESH */
 
 	unsigned int nonerp_set:1;
 	unsigned int no_short_slot_time_set:1;

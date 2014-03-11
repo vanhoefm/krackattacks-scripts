@@ -1679,6 +1679,7 @@ static int hs20_parse_osu_ssid(struct hostapd_bss_config *bss,
 	str = wpa_config_parse_string(pos, &slen);
 	if (str == NULL || slen < 1 || slen > HOSTAPD_MAX_SSID_LEN) {
 		wpa_printf(MSG_ERROR, "Line %d: Invalid SSID '%s'", line, pos);
+		os_free(str);
 		return -1;
 	}
 
@@ -1893,12 +1894,12 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		if (str == NULL || slen < 1 || slen > HOSTAPD_MAX_SSID_LEN) {
 			wpa_printf(MSG_ERROR, "Line %d: invalid SSID '%s'",
 				   line, pos);
+			os_free(str);
 			return 1;
-		} else {
-			os_memcpy(bss->ssid.ssid, str, slen);
-			bss->ssid.ssid_len = slen;
-			bss->ssid.ssid_set = 1;
 		}
+		os_memcpy(bss->ssid.ssid, str, slen);
+		bss->ssid.ssid_len = slen;
+		bss->ssid.ssid_set = 1;
 		os_free(str);
 	} else if (os_strcmp(buf, "utf8_ssid") == 0) {
 		bss->ssid.utf8_ssid = atoi(pos) > 0;

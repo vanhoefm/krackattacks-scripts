@@ -257,9 +257,11 @@ def add_ap(ifname, params, wait_enabled=True):
                 hapd.set(f, v)
         hapd.enable()
         if wait_enabled:
-            ev = hapd.wait_event(["AP-ENABLED"], timeout=30)
+            ev = hapd.wait_event(["AP-ENABLED", "AP-DISABLED"], timeout=30)
             if ev is None:
                 raise Exception("AP startup timed out")
+            if "AP-ENABLED" not in ev:
+                raise Exception("AP startup failed")
         return hapd
 
 def add_bss(phy, ifname, confname, ignore_error=False):

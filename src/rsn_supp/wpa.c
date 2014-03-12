@@ -742,13 +742,15 @@ static int ieee80211w_set_keys(struct wpa_sm *sm,
 			       struct wpa_eapol_ie_parse *ie)
 {
 #ifdef CONFIG_IEEE80211W
-	if (sm->mgmt_group_cipher != WPA_CIPHER_AES_128_CMAC)
+	if (!wpa_cipher_valid_mgmt_group(sm->mgmt_group_cipher))
 		return 0;
 
 	if (ie->igtk) {
+		size_t len;
 		const struct wpa_igtk_kde *igtk;
 		u16 keyidx;
-		if (ie->igtk_len != sizeof(*igtk))
+		len = wpa_cipher_key_len(sm->mgmt_group_cipher);
+		if (ie->igtk_len != WPA_IGTK_KDE_PREFIX_LEN + len)
 			return -1;
 		igtk = (const struct wpa_igtk_kde *) ie->igtk;
 		keyidx = WPA_GET_LE16(igtk->keyid);
@@ -756,15 +758,16 @@ static int ieee80211w_set_keys(struct wpa_sm *sm,
 			"pn %02x%02x%02x%02x%02x%02x",
 			keyidx, MAC2STR(igtk->pn));
 		wpa_hexdump_key(MSG_DEBUG, "WPA: IGTK",
-				igtk->igtk, WPA_IGTK_LEN);
+				igtk->igtk, len);
 		if (keyidx > 4095) {
 			wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
 				"WPA: Invalid IGTK KeyID %d", keyidx);
 			return -1;
 		}
-		if (wpa_sm_set_key(sm, WPA_ALG_IGTK, broadcast_ether_addr,
+		if (wpa_sm_set_key(sm, wpa_cipher_to_alg(sm->mgmt_group_cipher),
+				   broadcast_ether_addr,
 				   keyidx, 0, igtk->pn, sizeof(igtk->pn),
-				   igtk->igtk, WPA_IGTK_LEN) < 0) {
+				   igtk->igtk, len) < 0) {
 			wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
 				"WPA: Failed to configure IGTK to the driver");
 			return -1;
@@ -1097,7 +1100,10 @@ static void wpa_supplicant_process_3_of_4(struct wpa_sm *sm,
 		goto failed;
 	}
 
-	if (ie.igtk && ie.igtk_len != sizeof(struct wpa_igtk_kde)) {
+	if (ie.igtk &&
+	    wpa_cipher_valid_mgmt_group(sm->mgmt_group_cipher) &&
+	    ie.igtk_len != WPA_IGTK_KDE_PREFIX_LEN +
+	    (unsigned int) wpa_cipher_key_len(sm->mgmt_group_cipher)) {
 		wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
 			"WPA: Invalid IGTK KDE length %lu",
 			(unsigned long) ie.igtk_len);
@@ -2748,17 +2754,19 @@ int wpa_wnmsleep_install_key(struct wpa_sm *sm, u8 subelem_id, u8 *buf)
 		}
 #ifdef CONFIG_IEEE80211W
 	} else if (subelem_id == WNM_SLEEP_SUBELEM_IGTK) {
+		keylen = wpa_cipher_key_len(sm->mgmt_group_cipher);
 		os_memcpy(igd.keyid, buf + 2, 2);
 		os_memcpy(igd.pn, buf + 4, 6);
 
 		keyidx = WPA_GET_LE16(igd.keyid);
-		os_memcpy(igd.igtk, buf + 10, WPA_IGTK_LEN);
+		os_memcpy(igd.igtk, buf + 10, keylen);
 
 		wpa_hexdump_key(MSG_DEBUG, "Install IGTK (WNM SLEEP)",
-				igd.igtk, WPA_IGTK_LEN);
-		if (wpa_sm_set_key(sm, WPA_ALG_IGTK, broadcast_ether_addr,
+				igd.igtk, keylen);
+		if (wpa_sm_set_key(sm, wpa_cipher_to_alg(sm->mgmt_group_cipher),
+				   broadcast_ether_addr,
 				   keyidx, 0, igd.pn, sizeof(igd.pn),
-				   igd.igtk, WPA_IGTK_LEN) < 0) {
+				   igd.igtk, keylen) < 0) {
 			wpa_printf(MSG_DEBUG, "Failed to install the IGTK in "
 				   "WNM mode");
 			return -1;

@@ -201,7 +201,7 @@ static int wpa_gen_wpa_ie_rsn(u8 *rsn_ie, size_t rsn_ie_len,
 	}
 
 #ifdef CONFIG_IEEE80211W
-	if (mgmt_group_cipher == WPA_CIPHER_AES_128_CMAC) {
+	if (wpa_cipher_valid_mgmt_group(mgmt_group_cipher)) {
 		if (!sm->cur_pmksa) {
 			/* PMKID Count */
 			WPA_PUT_LE16(pos, 0);
@@ -209,7 +209,8 @@ static int wpa_gen_wpa_ie_rsn(u8 *rsn_ie, size_t rsn_ie_len,
 		}
 
 		/* Management Group Cipher Suite */
-		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_AES_128_CMAC);
+		RSN_SELECTOR_PUT(pos, wpa_cipher_to_suite(WPA_PROTO_RSN,
+							  mgmt_group_cipher));
 		pos += RSN_SELECTOR_LEN;
 	}
 #endif /* CONFIG_IEEE80211W */

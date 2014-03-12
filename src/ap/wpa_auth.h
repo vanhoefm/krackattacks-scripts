@@ -142,6 +142,7 @@ struct wpa_auth_config {
 	int tx_status;
 #ifdef CONFIG_IEEE80211W
 	enum mfp_options ieee80211w;
+	int group_mgmt_cipher;
 #endif /* CONFIG_IEEE80211W */
 #ifdef CONFIG_IEEE80211R
 #define SSID_LEN 32

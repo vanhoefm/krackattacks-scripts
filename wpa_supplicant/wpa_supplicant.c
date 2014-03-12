@@ -1114,6 +1114,18 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 		wpa_s->mgmt_group_cipher = WPA_CIPHER_AES_128_CMAC;
 		wpa_dbg(wpa_s, MSG_DEBUG, "WPA: using MGMT group cipher "
 			"AES-128-CMAC");
+	} else if (sel & WPA_CIPHER_BIP_GMAC_128) {
+		wpa_s->mgmt_group_cipher = WPA_CIPHER_BIP_GMAC_128;
+		wpa_dbg(wpa_s, MSG_DEBUG, "WPA: using MGMT group cipher "
+			"BIP-GMAC-128");
+	} else if (sel & WPA_CIPHER_BIP_GMAC_256) {
+		wpa_s->mgmt_group_cipher = WPA_CIPHER_BIP_GMAC_256;
+		wpa_dbg(wpa_s, MSG_DEBUG, "WPA: using MGMT group cipher "
+			"BIP-GMAC-256");
+	} else if (sel & WPA_CIPHER_BIP_CMAC_256) {
+		wpa_s->mgmt_group_cipher = WPA_CIPHER_BIP_CMAC_256;
+		wpa_dbg(wpa_s, MSG_DEBUG, "WPA: using MGMT group cipher "
+			"BIP-CMAC-256");
 	} else {
 		wpa_s->mgmt_group_cipher = 0;
 		wpa_dbg(wpa_s, MSG_DEBUG, "WPA: not using MGMT group cipher");

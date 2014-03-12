@@ -77,9 +77,7 @@ RSN_SELECTOR(0x00, 0x0f, 0xac, 13)
 #endif
 #define RSN_CIPHER_SUITE_CCMP RSN_SELECTOR(0x00, 0x0f, 0xac, 4)
 #define RSN_CIPHER_SUITE_WEP104 RSN_SELECTOR(0x00, 0x0f, 0xac, 5)
-#ifdef CONFIG_IEEE80211W
 #define RSN_CIPHER_SUITE_AES_128_CMAC RSN_SELECTOR(0x00, 0x0f, 0xac, 6)
-#endif /* CONFIG_IEEE80211W */
 #define RSN_CIPHER_SUITE_NO_GROUP_ADDRESSED RSN_SELECTOR(0x00, 0x0f, 0xac, 7)
 #define RSN_CIPHER_SUITE_GCMP RSN_SELECTOR(0x00, 0x0f, 0xac, 8)
 #define RSN_CIPHER_SUITE_GCMP_256 RSN_SELECTOR(0x00, 0x0f, 0xac, 9)
@@ -130,6 +128,7 @@ RSN_SELECTOR(0x00, 0x0f, 0xac, 13)
 
 #ifdef CONFIG_IEEE80211W
 #define WPA_IGTK_LEN 16
+#define WPA_IGTK_MAX_LEN 32
 #endif /* CONFIG_IEEE80211W */
 
 
@@ -285,10 +284,11 @@ struct rsn_error_kde {
 } STRUCT_PACKED;
 
 #ifdef CONFIG_IEEE80211W
+#define WPA_IGTK_KDE_PREFIX_LEN (2 + 6)
 struct wpa_igtk_kde {
 	u8 keyid[2];
 	u8 pn[6];
-	u8 igtk[WPA_IGTK_LEN];
+	u8 igtk[WPA_IGTK_MAX_LEN];
 } STRUCT_PACKED;
 #endif /* CONFIG_IEEE80211W */
 
@@ -409,6 +409,7 @@ int wpa_cipher_key_len(int cipher);
 int wpa_cipher_rsc_len(int cipher);
 int wpa_cipher_to_alg(int cipher);
 int wpa_cipher_valid_pairwise(int cipher);
+int wpa_cipher_valid_mgmt_group(int cipher);
 u32 wpa_cipher_to_suite(int proto, int cipher);
 int rsn_cipher_put_suites(u8 *pos, int ciphers);
 int wpa_cipher_put_suites(u8 *pos, int ciphers);

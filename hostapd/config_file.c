@@ -2600,6 +2600,20 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 #ifdef CONFIG_IEEE80211W
 	} else if (os_strcmp(buf, "ieee80211w") == 0) {
 		bss->ieee80211w = atoi(pos);
+	} else if (os_strcmp(buf, "group_mgmt_cipher") == 0) {
+		if (os_strcmp(pos, "AES-128-CMAC") == 0) {
+			bss->group_mgmt_cipher = WPA_CIPHER_AES_128_CMAC;
+		} else if (os_strcmp(pos, "BIP-GMAC-128") == 0) {
+			bss->group_mgmt_cipher = WPA_CIPHER_BIP_GMAC_128;
+		} else if (os_strcmp(pos, "BIP-GMAC-256") == 0) {
+			bss->group_mgmt_cipher = WPA_CIPHER_BIP_GMAC_256;
+		} else if (os_strcmp(pos, "BIP-CMAC-256") == 0) {
+			bss->group_mgmt_cipher = WPA_CIPHER_BIP_CMAC_256;
+		} else {
+			wpa_printf(MSG_ERROR, "Line %d: invalid group_mgmt_cipher: %s",
+				   line, pos);
+			return 1;
+		}
 	} else if (os_strcmp(buf, "assoc_sa_query_max_timeout") == 0) {
 		bss->assoc_sa_query_max_timeout = atoi(pos);
 		if (bss->assoc_sa_query_max_timeout == 0) {

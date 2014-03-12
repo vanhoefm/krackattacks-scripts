@@ -261,7 +261,25 @@ int wpa_write_rsn_ie(struct wpa_auth_config *conf, u8 *buf, size_t len,
 		}
 
 		/* Management Group Cipher Suite */
-		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_AES_128_CMAC);
+		switch (conf->group_mgmt_cipher) {
+		case WPA_CIPHER_AES_128_CMAC:
+			RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_AES_128_CMAC);
+			break;
+		case WPA_CIPHER_BIP_GMAC_128:
+			RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_BIP_GMAC_128);
+			break;
+		case WPA_CIPHER_BIP_GMAC_256:
+			RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_BIP_GMAC_256);
+			break;
+		case WPA_CIPHER_BIP_CMAC_256:
+			RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_BIP_CMAC_256);
+			break;
+		default:
+			wpa_printf(MSG_DEBUG,
+				   "Invalid group management cipher (0x%x)",
+				   conf->group_mgmt_cipher);
+			return -1;
+		}
 		pos += RSN_SELECTOR_LEN;
 	}
 #endif /* CONFIG_IEEE80211W */
@@ -586,7 +604,8 @@ int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 			return WPA_MGMT_FRAME_PROTECTION_VIOLATION;
 		}
 
-		if (data.mgmt_group_cipher != WPA_CIPHER_AES_128_CMAC) {
+		if (data.mgmt_group_cipher != wpa_auth->conf.group_mgmt_cipher)
+		{
 			wpa_printf(MSG_DEBUG, "Unsupported management group "
 				   "cipher %d", data.mgmt_group_cipher);
 			return WPA_INVALID_MGMT_GROUP_CIPHER;

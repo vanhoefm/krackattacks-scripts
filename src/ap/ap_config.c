@@ -73,6 +73,7 @@ void hostapd_config_defaults_bss(struct hostapd_bss_config *bss)
 #ifdef CONFIG_IEEE80211W
 	bss->assoc_sa_query_max_timeout = 1000;
 	bss->assoc_sa_query_retry_timeout = 201;
+	bss->group_mgmt_cipher = WPA_CIPHER_AES_128_CMAC;
 #endif /* CONFIG_IEEE80211W */
 #ifdef EAP_SERVER_FAST
 	 /* both anonymous and authenticated provisioning */

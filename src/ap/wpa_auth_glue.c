@@ -49,6 +49,7 @@ static void hostapd_wpa_auth_conf(struct hostapd_bss_config *conf,
 	wconf->okc = conf->okc;
 #ifdef CONFIG_IEEE80211W
 	wconf->ieee80211w = conf->ieee80211w;
+	wconf->group_mgmt_cipher = conf->group_mgmt_cipher;
 #endif /* CONFIG_IEEE80211W */
 #ifdef CONFIG_IEEE80211R
 	wconf->ssid_len = conf->ssid.ssid_len;

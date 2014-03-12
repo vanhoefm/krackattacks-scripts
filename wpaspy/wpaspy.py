@@ -45,9 +45,9 @@ class Ctrl:
             os.unlink(self.local)
             self.started = False
 
-    def request(self, cmd):
+    def request(self, cmd, timeout=10):
         self.s.send(cmd)
-        [r, w, e] = select.select([self.s], [], [], 10)
+        [r, w, e] = select.select([self.s], [], [], timeout)
         if r:
             return self.s.recv(4096)
         raise Exception("Timeout on waiting response")

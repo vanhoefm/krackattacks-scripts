@@ -39,7 +39,7 @@ class HostapdGlobal:
                 raise Exception("Could not add hostapd BSS")
 
     def remove(self, ifname):
-        self.ctrl.request("REMOVE " + ifname)
+        self.ctrl.request("REMOVE " + ifname, timeout=30)
 
     def relog(self):
         self.ctrl.request("RELOG")

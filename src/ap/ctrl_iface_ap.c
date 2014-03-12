@@ -281,6 +281,10 @@ int hostapd_ctrl_iface_deauthenticate(struct hostapd_data *hapd,
 	if (hwaddr_aton(txtaddr, addr))
 		return -1;
 
+	pos = os_strstr(txtaddr, " reason=");
+	if (pos)
+		reason = atoi(pos + 8);
+
 	pos = os_strstr(txtaddr, " test=");
 	if (pos) {
 		struct ieee80211_mgmt mgmt;
@@ -295,8 +299,7 @@ int hostapd_ctrl_iface_deauthenticate(struct hostapd_data *hapd,
 		os_memcpy(mgmt.da, addr, ETH_ALEN);
 		os_memcpy(mgmt.sa, hapd->own_addr, ETH_ALEN);
 		os_memcpy(mgmt.bssid, hapd->own_addr, ETH_ALEN);
-		mgmt.u.deauth.reason_code =
-			host_to_le16(WLAN_REASON_PREV_AUTH_NOT_VALID);
+		mgmt.u.deauth.reason_code = host_to_le16(reason);
 		if (hapd->driver->send_frame(hapd->drv_priv, (u8 *) &mgmt,
 					     IEEE80211_HDRLEN +
 					     sizeof(mgmt.u.deauth),
@@ -312,10 +315,6 @@ int hostapd_ctrl_iface_deauthenticate(struct hostapd_data *hapd,
 					      atoi(pos + 5), addr);
 	}
 #endif /* CONFIG_P2P_MANAGER */
-
-	pos = os_strstr(txtaddr, " reason=");
-	if (pos)
-		reason = atoi(pos + 8);
 
 	hostapd_drv_sta_deauth(hapd, addr, reason);
 	sta = ap_get_sta(hapd, addr);
@@ -342,6 +341,10 @@ int hostapd_ctrl_iface_disassociate(struct hostapd_data *hapd,
 	if (hwaddr_aton(txtaddr, addr))
 		return -1;
 
+	pos = os_strstr(txtaddr, " reason=");
+	if (pos)
+		reason = atoi(pos + 8);
+
 	pos = os_strstr(txtaddr, " test=");
 	if (pos) {
 		struct ieee80211_mgmt mgmt;
@@ -356,8 +359,7 @@ int hostapd_ctrl_iface_disassociate(struct hostapd_data *hapd,
 		os_memcpy(mgmt.da, addr, ETH_ALEN);
 		os_memcpy(mgmt.sa, hapd->own_addr, ETH_ALEN);
 		os_memcpy(mgmt.bssid, hapd->own_addr, ETH_ALEN);
-		mgmt.u.disassoc.reason_code =
-			host_to_le16(WLAN_REASON_PREV_AUTH_NOT_VALID);
+		mgmt.u.disassoc.reason_code = host_to_le16(reason);
 		if (hapd->driver->send_frame(hapd->drv_priv, (u8 *) &mgmt,
 					     IEEE80211_HDRLEN +
 					     sizeof(mgmt.u.deauth),
@@ -373,10 +375,6 @@ int hostapd_ctrl_iface_disassociate(struct hostapd_data *hapd,
 					      atoi(pos + 5), addr);
 	}
 #endif /* CONFIG_P2P_MANAGER */
-
-	pos = os_strstr(txtaddr, " reason=");
-	if (pos)
-		reason = atoi(pos + 8);
 
 	hostapd_drv_sta_disassoc(hapd, addr, reason);
 	sta = ap_get_sta(hapd, addr);

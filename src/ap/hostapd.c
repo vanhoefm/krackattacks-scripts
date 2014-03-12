@@ -1093,7 +1093,7 @@ static int setup_interface2(struct hostapd_iface *iface)
 		if (ret < 0) {
 			wpa_printf(MSG_ERROR, "Could not select hw_mode and "
 				   "channel. (%d)", ret);
-			return -1;
+			goto fail;
 		}
 		if (ret == 1) {
 			wpa_printf(MSG_DEBUG, "Interface initialization will be completed in a callback (ACS)");
@@ -1101,7 +1101,7 @@ static int setup_interface2(struct hostapd_iface *iface)
 		}
 		ret = hostapd_check_ht_capab(iface);
 		if (ret < 0)
-			return -1;
+			goto fail;
 		if (ret == 1) {
 			wpa_printf(MSG_DEBUG, "Interface initialization will "
 				   "be completed in a callback");
@@ -1112,6 +1112,13 @@ static int setup_interface2(struct hostapd_iface *iface)
 			wpa_printf(MSG_DEBUG, "DFS support is enabled");
 	}
 	return hostapd_setup_interface_complete(iface, 0);
+
+fail:
+	hostapd_set_state(iface, HAPD_IFACE_DISABLED);
+	wpa_msg(iface->bss[0]->msg_ctx, MSG_INFO, AP_EVENT_DISABLED);
+	if (iface->interfaces && iface->interfaces->terminate_on_error)
+		eloop_terminate();
+	return -1;
 }
 
 
@@ -1129,13 +1136,8 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 	size_t j;
 	u8 *prev_addr;
 
-	if (err) {
-		wpa_printf(MSG_ERROR, "Interface initialization failed");
-		hostapd_set_state(iface, HAPD_IFACE_DISABLED);
-		if (iface->interfaces && iface->interfaces->terminate_on_error)
-			eloop_terminate();
-		return -1;
-	}
+	if (err)
+		goto fail;
 
 	wpa_printf(MSG_DEBUG, "Completing interface initialization");
 	if (iface->conf->channel) {
@@ -1152,8 +1154,11 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 #ifdef NEED_AP_MLME
 		/* Check DFS */
 		res = hostapd_handle_dfs(iface);
-		if (res <= 0)
+		if (res <= 0) {
+			if (res < 0)
+				goto fail;
 			return res;
+		}
 #endif /* NEED_AP_MLME */
 
 		if (hostapd_set_freq(hapd, hapd->iconf->hw_mode, iface->freq,
@@ -1166,7 +1171,7 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 				     hapd->iconf->vht_oper_centr_freq_seg1_idx)) {
 			wpa_printf(MSG_ERROR, "Could not set channel for "
 				   "kernel driver");
-			return -1;
+			goto fail;
 		}
 	}
 
@@ -1177,7 +1182,7 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 			hostapd_logger(hapd, NULL, HOSTAPD_MODULE_IEEE80211,
 				       HOSTAPD_LEVEL_WARNING,
 				       "Failed to prepare rates table.");
-			return -1;
+			goto fail;
 		}
 	}
 
@@ -1185,14 +1190,14 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 	    hostapd_set_rts(hapd, hapd->iconf->rts_threshold)) {
 		wpa_printf(MSG_ERROR, "Could not set RTS threshold for "
 			   "kernel driver");
-		return -1;
+		goto fail;
 	}
 
 	if (hapd->iconf->fragm_threshold > -1 &&
 	    hostapd_set_frag(hapd, hapd->iconf->fragm_threshold)) {
 		wpa_printf(MSG_ERROR, "Could not set fragmentation threshold "
 			   "for kernel driver");
-		return -1;
+		goto fail;
 	}
 
 	prev_addr = hapd->own_addr;
@@ -1202,7 +1207,7 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 		if (j)
 			os_memcpy(hapd->own_addr, prev_addr, ETH_ALEN);
 		if (hostapd_setup_bss(hapd, j == 0))
-			return -1;
+			goto fail;
 		if (hostapd_mac_comp_empty(hapd->conf->bssid) == 0)
 			prev_addr = hapd->own_addr;
 	}
@@ -1217,7 +1222,7 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 	if (hostapd_driver_commit(hapd) < 0) {
 		wpa_printf(MSG_ERROR, "%s: Failed to commit driver "
 			   "configuration", __func__);
-		return -1;
+		goto fail;
 	}
 
 	/*
@@ -1228,7 +1233,7 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 	 */
 	for (j = 0; j < iface->num_bss; j++) {
 		if (hostapd_init_wps_complete(iface->bss[j]))
-			return -1;
+			goto fail;
 	}
 
 	hostapd_set_state(iface, HAPD_IFACE_ENABLED);
@@ -1242,6 +1247,14 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 		iface->interfaces->terminate_on_error--;
 
 	return 0;
+
+fail:
+	wpa_printf(MSG_ERROR, "Interface initialization failed");
+	hostapd_set_state(iface, HAPD_IFACE_DISABLED);
+	wpa_msg(hapd->msg_ctx, MSG_INFO, AP_EVENT_DISABLED);
+	if (iface->interfaces && iface->interfaces->terminate_on_error)
+		eloop_terminate();
+	return -1;
 }
 
 

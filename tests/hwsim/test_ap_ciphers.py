@@ -8,6 +8,7 @@ import time
 import subprocess
 import logging
 logger = logging.getLogger()
+import os.path
 
 import hwsim_utils
 import hostapd
@@ -28,6 +29,82 @@ def check_cipher(dev, ap, cipher):
 def test_ap_cipher_tkip(dev, apdev):
     """WPA2-PSK/TKIP connection"""
     return check_cipher(dev[0], apdev[0], "TKIP")
+
+def test_ap_cipher_tkip_countermeasures_ap(dev, apdev):
+    """WPA-PSK/TKIP countermeasures (detected by AP)"""
+    testfile = "/sys/kernel/debug/ieee80211/%s/netdev:%s/tkip_mic_test" % (dev[0].get_driver_status_field("phyname"), dev[0].ifname)
+    if not os.path.exists(testfile):
+        return "skip"
+
+    params = { "ssid": "tkip-countermeasures",
+               "wpa_passphrase": "12345678",
+               "wpa": "1",
+               "wpa_key_mgmt": "WPA-PSK",
+               "wpa_pairwise": "TKIP" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].connect("tkip-countermeasures", psk="12345678",
+                   pairwise="TKIP", group="TKIP", scan_freq="2412")
+
+    dev[0].dump_monitor()
+    cmd = subprocess.Popen(["sudo", "tee", testfile],
+                           stdin=subprocess.PIPE)
+    cmd.stdin.write(apdev[0]['bssid'])
+    cmd.stdin.close()
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=1)
+    if ev is not None:
+        raise Exception("Unexpected disconnection on first Michael MIC failure")
+
+    cmd = subprocess.Popen(["sudo", "tee", testfile],
+                           stdin=subprocess.PIPE)
+    cmd.stdin.write("ff:ff:ff:ff:ff:ff")
+    cmd.stdin.close()
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("No disconnection after two Michael MIC failures")
+    if "reason=14" not in ev:
+        raise Exception("Unexpected disconnection reason: " + ev)
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
+    if ev is not None:
+        raise Exception("Unexpected connection during TKIP countermeasures")
+
+def test_ap_cipher_tkip_countermeasures_sta(dev, apdev):
+    """WPA-PSK/TKIP countermeasures (detected by STA)"""
+    params = { "ssid": "tkip-countermeasures",
+               "wpa_passphrase": "12345678",
+               "wpa": "1",
+               "wpa_key_mgmt": "WPA-PSK",
+               "wpa_pairwise": "TKIP" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    testfile = "/sys/kernel/debug/ieee80211/%s/netdev:%s/tkip_mic_test" % (hapd.get_driver_status_field("phyname"), apdev[0]['ifname'])
+    if not os.path.exists(testfile):
+        return "skip"
+
+    dev[0].connect("tkip-countermeasures", psk="12345678",
+                   pairwise="TKIP", group="TKIP", scan_freq="2412")
+
+    dev[0].dump_monitor()
+    cmd = subprocess.Popen(["sudo", "tee", testfile],
+                           stdin=subprocess.PIPE)
+    cmd.stdin.write(dev[0].p2p_dev_addr())
+    cmd.stdin.close()
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=1)
+    if ev is not None:
+        raise Exception("Unexpected disconnection on first Michael MIC failure")
+
+    cmd = subprocess.Popen(["sudo", "tee", testfile],
+                           stdin=subprocess.PIPE)
+    cmd.stdin.write("ff:ff:ff:ff:ff:ff")
+    cmd.stdin.close()
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("No disconnection after two Michael MIC failures")
+    if "reason=14 locally_generated=1" not in ev:
+        raise Exception("Unexpected disconnection reason: " + ev)
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
+    if ev is not None:
+        raise Exception("Unexpected connection during TKIP countermeasures")
 
 def test_ap_cipher_ccmp(dev, apdev):
     """WPA2-PSK/CCMP connection"""

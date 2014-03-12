@@ -170,6 +170,8 @@ static void hostapd_ext_capab_byte(struct hostapd_data *hapd, u8 *pos, int idx)
 
 	switch (idx) {
 	case 0: /* Bits 0-7 */
+		if (hapd->iconf->obss_interval)
+			*pos |= 0x01; /* Bit 0 - Coexistence management */
 		break;
 	case 1: /* Bits 8-15 */
 		break;
@@ -223,6 +225,8 @@ u8 * hostapd_eid_ext_capab(struct hostapd_data *hapd, u8 *eid)
 		len = 4;
 	if (len < 3 && hapd->conf->wnm_sleep_mode)
 		len = 3;
+	if (len < 1 && hapd->iconf->obss_interval)
+		len = 1;
 	if (len < 7 && hapd->conf->ssid.utf8_ssid)
 		len = 7;
 #ifdef CONFIG_WNM

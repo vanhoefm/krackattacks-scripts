@@ -113,7 +113,7 @@ class Hostapd:
             raise Exception("Failed to enable hostapd interface " + self.ifname)
 
     def disable(self):
-        if not "OK" in self.request("ENABLE"):
+        if not "OK" in self.request("DISABLE"):
             raise Exception("Failed to disable hostapd interface " + self.ifname)
 
     def dump_monitor(self):

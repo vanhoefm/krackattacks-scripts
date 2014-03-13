@@ -297,6 +297,11 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 		bss->wpa_group_rekey = 86400;
 	}
 
+#ifdef CONFIG_IEEE80211W
+	if (ssid->ieee80211w != MGMT_FRAME_PROTECTION_DEFAULT)
+		bss->ieee80211w = ssid->ieee80211w;
+#endif /* CONFIG_IEEE80211W */
+
 #ifdef CONFIG_WPS
 	/*
 	 * Enable WPS by default for open and WPA/WPA2-Personal network, but

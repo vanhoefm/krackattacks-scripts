@@ -538,6 +538,22 @@ static int wpa_supplicant_ctrl_iface_tdls_teardown(
 	return ret;
 }
 
+
+static int ctrl_iface_get_capability_tdls(
+	struct wpa_supplicant *wpa_s, char *buf, size_t buflen)
+{
+	int ret;
+
+	ret = os_snprintf(buf, buflen, "%s\n",
+			  wpa_s->drv_flags & WPA_DRIVER_FLAGS_TDLS_SUPPORT ?
+			  (wpa_s->drv_flags &
+			   WPA_DRIVER_FLAGS_TDLS_EXTERNAL_SETUP ?
+			   "EXTERNAL" : "INTERNAL") : "UNSUPPORTED");
+	if (ret < 0 || (size_t) ret > buflen)
+		return -1;
+	return ret;
+}
+
 #endif /* CONFIG_TDLS */
 
 
@@ -3179,6 +3195,11 @@ static int wpa_supplicant_ctrl_iface_get_capability(
 
 	if (os_strcmp(field, "freq") == 0)
 		return ctrl_iface_get_capability_freq(wpa_s, buf, buflen);
+
+#ifdef CONFIG_TDLS
+	if (os_strcmp(field, "tdls") == 0)
+		return ctrl_iface_get_capability_tdls(wpa_s, buf, buflen);
+#endif /* CONFIG_TDLS */
 
 	wpa_printf(MSG_DEBUG, "CTRL_IFACE: Unknown GET_CAPABILITY field '%s'",
 		   field);

@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+import os
 import time
 import subprocess
 import logging
@@ -996,6 +997,83 @@ def test_ap_wps_ie_fragmentation(dev, apdev):
         raise Exception("Device Name not received correctly")
     if len(re.findall("dd..0050f204", bss['ie'])) != 2:
         raise Exception("Unexpected number of WPS IEs")
+
+def get_psk(pskfile):
+    psks = {}
+    with open(pskfile, "r") as f:
+        lines = f.read().splitlines()
+        for l in lines:
+            if l == "# WPA PSKs":
+                continue
+            (addr,psk) = l.split(' ')
+            psks[addr] = psk
+    return psks
+
+def test_ap_wps_per_station_psk(dev, apdev):
+    """WPS PBC provisioning with per-station PSK"""
+    addr0 = dev[0].p2p_dev_addr()
+    addr1 = dev[1].p2p_dev_addr()
+    addr2 = dev[2].p2p_dev_addr()
+    ssid = "wps"
+    appin = "12345670"
+    pskfile = "/tmp/ap_wps_per_enrollee_psk.psk_file"
+    try:
+        os.remove(pskfile)
+    except:
+        pass
+
+    try:
+        with open(pskfile, "w") as f:
+            f.write("# WPA PSKs\n")
+
+        params = { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                   "wpa": "2", "wpa_key_mgmt": "WPA-PSK",
+                   "rsn_pairwise": "CCMP", "ap_pin": appin,
+                   "wpa_psk_file": pskfile }
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+        logger.info("First enrollee")
+        hapd.request("WPS_PBC")
+        dev[0].request("WPS_PBC")
+        ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"])
+        if ev is None:
+            raise Exception("Association with the AP timed out (1)")
+
+        logger.info("Second enrollee")
+        hapd.request("WPS_PBC")
+        dev[1].request("WPS_PBC")
+        ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"])
+        if ev is None:
+            raise Exception("Association with the AP timed out (2)")
+
+        logger.info("External registrar")
+        dev[2].wps_reg(apdev[0]['bssid'], appin)
+
+        logger.info("Verifying PSK results")
+        psks = get_psk(pskfile)
+        if addr0 not in psks:
+            raise Exception("No PSK recorded for sta0")
+        if addr1 not in psks:
+            raise Exception("No PSK recorded for sta1")
+        if addr2 not in psks:
+            raise Exception("No PSK recorded for sta2")
+        if psks[addr0] == psks[addr1]:
+            raise Exception("Same PSK recorded for sta0 and sta1")
+        if psks[addr0] == psks[addr2]:
+            raise Exception("Same PSK recorded for sta0 and sta2")
+        if psks[addr1] == psks[addr2]:
+            raise Exception("Same PSK recorded for sta1 and sta2")
+
+        dev[0].request("REMOVE_NETWORK all")
+        logger.info("Second external registrar")
+        dev[0].wps_reg(apdev[0]['bssid'], appin)
+        psks2 = get_psk(pskfile)
+        if addr0 not in psks2:
+            raise Exception("No PSK recorded for sta0(reg)")
+        if psks[addr0] == psks2[addr0]:
+            raise Exception("Same PSK recorded for sta0(enrollee) and sta0(reg)")
+    finally:
+        os.remove(pskfile)
 
 def add_ssdp_ap(ifname, ap_uuid):
     ssid = "wps-ssdp"

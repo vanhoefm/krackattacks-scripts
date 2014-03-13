@@ -71,3 +71,35 @@ def test_ap_country(dev, apdev):
         hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
     finally:
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+
+def test_ap_acl_accept(dev, apdev):
+    """MAC ACL accept list"""
+    ssid = "acl"
+    params = {}
+    params['ssid'] = ssid
+    params['accept_mac_file'] = "hostapd.macaddr"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
+    dev[1].connect(ssid, key_mgmt="NONE", scan_freq="2412")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[1].request("REMOVE_NETWORK all")
+    hapd.request("SET macaddr_acl 1")
+    dev[1].dump_monitor()
+    dev[1].connect(ssid, key_mgmt="NONE", scan_freq="2412", wait_connect=False)
+    dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
+    ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
+    if ev is not None:
+        raise Exception("Unexpected association")
+
+def test_ap_acl_deny(dev, apdev):
+    """MAC ACL deny list"""
+    ssid = "acl"
+    params = {}
+    params['ssid'] = ssid
+    params['deny_mac_file'] = "hostapd.macaddr"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412", wait_connect=False)
+    dev[1].connect(ssid, key_mgmt="NONE", scan_freq="2412")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
+    if ev is not None:
+        raise Exception("Unexpected association")

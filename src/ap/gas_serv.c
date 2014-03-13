@@ -71,7 +71,6 @@ gas_dialog_create(struct hostapd_data *hapd, const u8 *addr, u8 dialog_token)
 			continue;
 		dia = &sta->gas_dialog[i];
 		dia->valid = 1;
-		dia->index = i;
 		dia->dialog_token = dialog_token;
 		sta->gas_dialog_next = (++i == GAS_DIALOG_MAX) ? 0 : i;
 		return dia;
@@ -744,40 +743,21 @@ gas_serv_build_gas_resp_payload(struct hostapd_data *hapd,
 }
 
 
-static void gas_serv_clear_cached_ies(void *eloop_data, void *user_ctx)
-{
-	struct gas_dialog_info *dia = eloop_data;
-
-	wpa_printf(MSG_DEBUG, "GAS: Timeout triggered, clearing dialog for "
-		   "dialog token %d", dia->dialog_token);
-
-	gas_serv_dialog_clear(dia);
-}
-
-
 struct anqp_query_info {
 	unsigned int request;
-	unsigned int remote_request;
 	const u8 *home_realm_query;
 	size_t home_realm_query_len;
 	const u8 *icon_name;
 	size_t icon_name_len;
-	u16 remote_delay;
 };
 
 
 static void set_anqp_req(unsigned int bit, const char *name, int local,
-			 unsigned int remote, u16 remote_delay,
 			 struct anqp_query_info *qi)
 {
 	qi->request |= bit;
 	if (local) {
 		wpa_printf(MSG_DEBUG, "ANQP: %s (local)", name);
-	} else if (bit & remote) {
-		wpa_printf(MSG_DEBUG, "ANQP: %s (remote)", name);
-		qi->remote_request |= bit;
-		if (remote_delay > qi->remote_delay)
-			qi->remote_delay = remote_delay;
 	} else {
 		wpa_printf(MSG_DEBUG, "ANQP: %s not available", name);
 	}
@@ -789,43 +769,38 @@ static void rx_anqp_query_list_id(struct hostapd_data *hapd, u16 info_id,
 {
 	switch (info_id) {
 	case ANQP_CAPABILITY_LIST:
-		set_anqp_req(ANQP_REQ_CAPABILITY_LIST, "Capability List", 1, 0,
-			     0, qi);
+		set_anqp_req(ANQP_REQ_CAPABILITY_LIST, "Capability List", 1,
+			     qi);
 		break;
 	case ANQP_VENUE_NAME:
 		set_anqp_req(ANQP_REQ_VENUE_NAME, "Venue Name",
-			     hapd->conf->venue_name != NULL, 0, 0, qi);
+			     hapd->conf->venue_name != NULL, qi);
 		break;
 	case ANQP_NETWORK_AUTH_TYPE:
 		set_anqp_req(ANQP_REQ_NETWORK_AUTH_TYPE, "Network Auth Type",
-			     hapd->conf->network_auth_type != NULL,
-			     0, 0, qi);
+			     hapd->conf->network_auth_type != NULL, qi);
 		break;
 	case ANQP_ROAMING_CONSORTIUM:
 		set_anqp_req(ANQP_REQ_ROAMING_CONSORTIUM, "Roaming Consortium",
-			     hapd->conf->roaming_consortium != NULL, 0, 0, qi);
+			     hapd->conf->roaming_consortium != NULL, qi);
 		break;
 	case ANQP_IP_ADDR_TYPE_AVAILABILITY:
 		set_anqp_req(ANQP_REQ_IP_ADDR_TYPE_AVAILABILITY,
 			     "IP Addr Type Availability",
-			     hapd->conf->ipaddr_type_configured,
-			     0, 0, qi);
+			     hapd->conf->ipaddr_type_configured, qi);
 		break;
 	case ANQP_NAI_REALM:
 		set_anqp_req(ANQP_REQ_NAI_REALM, "NAI Realm",
-			     hapd->conf->nai_realm_data != NULL,
-			     0, 0, qi);
+			     hapd->conf->nai_realm_data != NULL, qi);
 		break;
 	case ANQP_3GPP_CELLULAR_NETWORK:
 		set_anqp_req(ANQP_REQ_3GPP_CELLULAR_NETWORK,
 			     "3GPP Cellular Network",
-			     hapd->conf->anqp_3gpp_cell_net != NULL,
-			     0, 0, qi);
+			     hapd->conf->anqp_3gpp_cell_net != NULL, qi);
 		break;
 	case ANQP_DOMAIN_NAME:
 		set_anqp_req(ANQP_REQ_DOMAIN_NAME, "Domain Name",
-			     hapd->conf->domain_name != NULL,
-			     0, 0, qi);
+			     hapd->conf->domain_name != NULL, qi);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "ANQP: Unsupported Info Id %u",
@@ -857,33 +832,30 @@ static void rx_anqp_hs_query_list(struct hostapd_data *hapd, u8 subtype,
 	switch (subtype) {
 	case HS20_STYPE_CAPABILITY_LIST:
 		set_anqp_req(ANQP_REQ_HS_CAPABILITY_LIST, "HS Capability List",
-			     1, 0, 0, qi);
+			     1, qi);
 		break;
 	case HS20_STYPE_OPERATOR_FRIENDLY_NAME:
 		set_anqp_req(ANQP_REQ_OPERATOR_FRIENDLY_NAME,
 			     "Operator Friendly Name",
-			     hapd->conf->hs20_oper_friendly_name != NULL,
-			     0, 0, qi);
+			     hapd->conf->hs20_oper_friendly_name != NULL, qi);
 		break;
 	case HS20_STYPE_WAN_METRICS:
 		set_anqp_req(ANQP_REQ_WAN_METRICS, "WAN Metrics",
-			     hapd->conf->hs20_wan_metrics != NULL,
-			     0, 0, qi);
+			     hapd->conf->hs20_wan_metrics != NULL, qi);
 		break;
 	case HS20_STYPE_CONNECTION_CAPABILITY:
 		set_anqp_req(ANQP_REQ_CONNECTION_CAPABILITY,
 			     "Connection Capability",
 			     hapd->conf->hs20_connection_capability != NULL,
-			     0, 0, qi);
+			     qi);
 		break;
 	case HS20_STYPE_OPERATING_CLASS:
 		set_anqp_req(ANQP_REQ_OPERATING_CLASS, "Operating Class",
-			     hapd->conf->hs20_operating_class != NULL,
-			     0, 0, qi);
+			     hapd->conf->hs20_operating_class != NULL, qi);
 		break;
 	case HS20_STYPE_OSU_PROVIDERS_LIST:
 		set_anqp_req(ANQP_REQ_OSU_PROVIDERS_LIST, "OSU Providers list",
-			     hapd->conf->hs20_osu_providers_count, 0, 0, qi);
+			     hapd->conf->hs20_osu_providers_count, qi);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "ANQP: Unsupported HS 2.0 subtype %u",
@@ -1150,97 +1122,6 @@ static void gas_serv_rx_gas_initial_req(struct hostapd_data *hapd,
 }
 
 
-void gas_serv_tx_gas_response(struct hostapd_data *hapd, const u8 *dst,
-			      struct gas_dialog_info *dialog)
-{
-	struct wpabuf *buf, *tx_buf;
-	u8 dialog_token = dialog->dialog_token;
-	size_t frag_len;
-
-	if (dialog->sd_resp == NULL) {
-		buf = gas_serv_build_gas_resp_payload(hapd,
-						      dialog->all_requested,
-						      dialog, NULL, 0, NULL, 0);
-		wpa_hexdump_buf(MSG_MSGDUMP, "ANQP: Generated ANQP responses",
-			buf);
-		if (!buf)
-			goto tx_gas_response_done;
-		dialog->sd_resp = buf;
-		dialog->sd_resp_pos = 0;
-	}
-	frag_len = wpabuf_len(dialog->sd_resp) - dialog->sd_resp_pos;
-	if (frag_len > hapd->gas_frag_limit || dialog->comeback_delay ||
-	    hapd->conf->gas_comeback_delay) {
-		u16 comeback_delay_tus = dialog->comeback_delay +
-			GAS_SERV_COMEBACK_DELAY_FUDGE;
-		u32 comeback_delay_secs, comeback_delay_usecs;
-
-		if (hapd->conf->gas_comeback_delay) {
-			/* Testing - allow overriding of the delay value */
-			comeback_delay_tus = hapd->conf->gas_comeback_delay;
-		}
-
-		wpa_printf(MSG_DEBUG, "GAS: Response frag_len %u (frag limit "
-			   "%u) and comeback delay %u, "
-			   "requesting comebacks", (unsigned int) frag_len,
-			   (unsigned int) hapd->gas_frag_limit,
-			   dialog->comeback_delay);
-		tx_buf = gas_anqp_build_initial_resp_buf(dialog_token,
-							 WLAN_STATUS_SUCCESS,
-							 comeback_delay_tus,
-							 NULL);
-		if (tx_buf) {
-			wpa_msg(hapd->msg_ctx, MSG_DEBUG,
-				"GAS: Tx GAS Initial Resp (comeback = 10TU)");
-			if (dialog->prot)
-				convert_to_protected_dual(tx_buf);
-			hostapd_drv_send_action(hapd, hapd->iface->freq, 0,
-						dst,
-						wpabuf_head(tx_buf),
-						wpabuf_len(tx_buf));
-		}
-		wpabuf_free(tx_buf);
-
-		/* start a timer of 1.5 * comeback-delay */
-		comeback_delay_tus = comeback_delay_tus +
-			(comeback_delay_tus / 2);
-		comeback_delay_secs = (comeback_delay_tus * 1024) / 1000000;
-		comeback_delay_usecs = (comeback_delay_tus * 1024) -
-			(comeback_delay_secs * 1000000);
-		eloop_register_timeout(comeback_delay_secs,
-				       comeback_delay_usecs,
-				       gas_serv_clear_cached_ies, dialog,
-				       NULL);
-		goto tx_gas_response_done;
-	}
-
-	buf = wpabuf_alloc_copy(wpabuf_head_u8(dialog->sd_resp) +
-				dialog->sd_resp_pos, frag_len);
-	if (buf == NULL) {
-		wpa_msg(hapd->msg_ctx, MSG_DEBUG, "GAS: Buffer allocation "
-			"failed");
-		goto tx_gas_response_done;
-	}
-	tx_buf = gas_anqp_build_initial_resp_buf(dialog_token,
-						 WLAN_STATUS_SUCCESS, 0, buf);
-	wpabuf_free(buf);
-	if (tx_buf == NULL)
-		goto tx_gas_response_done;
-	wpa_msg(hapd->msg_ctx, MSG_DEBUG, "GAS: Tx GAS Initial "
-		"Response (frag_id %d frag_len %d)",
-		dialog->sd_frag_id, (int) frag_len);
-	dialog->sd_frag_id++;
-
-	if (dialog->prot)
-		convert_to_protected_dual(tx_buf);
-	hostapd_drv_send_action(hapd, hapd->iface->freq, 0, dst,
-				wpabuf_head(tx_buf), wpabuf_len(tx_buf));
-	wpabuf_free(tx_buf);
-tx_gas_response_done:
-	gas_serv_clear_cached_ies(dialog, NULL);
-}
-
-
 static void gas_serv_rx_gas_comeback_req(struct hostapd_data *hapd,
 					 const u8 *sa,
 					 const u8 *data, size_t len, int prot)
@@ -1274,33 +1155,6 @@ static void gas_serv_rx_gas_comeback_req(struct hostapd_data *hapd,
 		goto send_resp;
 	}
 
-	if (dialog->sd_resp == NULL) {
-		wpa_printf(MSG_DEBUG, "GAS: Remote request 0x%x received 0x%x",
-			   dialog->requested, dialog->received);
-		if ((dialog->requested & dialog->received) !=
-		    dialog->requested) {
-			wpa_printf(MSG_DEBUG, "GAS: Did not receive response "
-				   "from remote processing");
-			gas_serv_dialog_clear(dialog);
-			tx_buf = gas_anqp_build_comeback_resp_buf(
-				dialog_token,
-				WLAN_STATUS_GAS_RESP_NOT_RECEIVED, 0, 0, 0,
-				NULL);
-			if (tx_buf == NULL)
-				return;
-			goto send_resp;
-		}
-
-		buf = gas_serv_build_gas_resp_payload(hapd,
-						      dialog->all_requested,
-						      dialog, NULL, 0, NULL, 0);
-		wpa_hexdump_buf(MSG_MSGDUMP, "ANQP: Generated ANQP responses",
-			buf);
-		if (!buf)
-			goto rx_gas_comeback_req_done;
-		dialog->sd_resp = buf;
-		dialog->sd_resp_pos = 0;
-	}
 	frag_len = wpabuf_len(dialog->sd_resp) - dialog->sd_resp_pos;
 	if (frag_len > hapd->gas_frag_limit) {
 		frag_len = hapd->gas_frag_limit;
@@ -1313,15 +1167,18 @@ static void gas_serv_rx_gas_comeback_req(struct hostapd_data *hapd,
 	if (buf == NULL) {
 		wpa_msg(hapd->msg_ctx, MSG_DEBUG, "GAS: Failed to allocate "
 			"buffer");
-		goto rx_gas_comeback_req_done;
+		gas_serv_dialog_clear(dialog);
+		return;
 	}
 	tx_buf = gas_anqp_build_comeback_resp_buf(dialog_token,
 						  WLAN_STATUS_SUCCESS,
 						  dialog->sd_frag_id,
 						  more, 0, buf);
 	wpabuf_free(buf);
-	if (tx_buf == NULL)
-		goto rx_gas_comeback_req_done;
+	if (tx_buf == NULL) {
+		gas_serv_dialog_clear(dialog);
+		return;
+	}
 	wpa_msg(hapd->msg_ctx, MSG_DEBUG, "GAS: Tx GAS Comeback Response "
 		"(frag_id %d more=%d frag_len=%d)",
 		dialog->sd_frag_id, more, (int) frag_len);
@@ -1346,10 +1203,6 @@ send_resp:
 	hostapd_drv_send_action(hapd, hapd->iface->freq, 0, sa,
 				wpabuf_head(tx_buf), wpabuf_len(tx_buf));
 	wpabuf_free(tx_buf);
-	return;
-
-rx_gas_comeback_req_done:
-	gas_serv_clear_cached_ies(dialog, NULL);
 }
 
 

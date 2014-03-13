@@ -1521,6 +1521,41 @@ def test_ap_hs20_remediation_required(dev, apdev):
     if " 1 https://example.com/" not in ev:
         raise Exception("Unexpected subscription remediation event contents")
 
+def test_ap_hs20_remediation_required_ctrl(dev, apdev):
+    """Hotspot 2.0 connection and subrem from ctrl_iface"""
+    bssid = apdev[0]['bssid']
+    addr = dev[0].p2p_dev_addr()
+    params = hs20_ap_params()
+    params['nai_realm'] = [ "0,example.com,21[2:4]" ]
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].request("SET pmf 1")
+    dev[0].hs20_enable()
+    dev[0].add_cred_values(default_cred())
+    interworking_select(dev[0], bssid, freq="2412")
+    interworking_connect(dev[0], bssid, "TTLS")
+
+    hapd.request("HS20_WNM_NOTIF " + addr + " https://example.com/")
+    ev = dev[0].wait_event(["HS20-SUBSCRIPTION-REMEDIATION"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on subscription remediation notice")
+    if " 1 https://example.com/" not in ev:
+        raise Exception("Unexpected subscription remediation event contents")
+
+    hapd.request("HS20_WNM_NOTIF " + addr)
+    ev = dev[0].wait_event(["HS20-SUBSCRIPTION-REMEDIATION"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on subscription remediation notice")
+    if not ev.endswith("HS20-SUBSCRIPTION-REMEDIATION "):
+        raise Exception("Unexpected subscription remediation event contents: " + ev)
+
+    if "FAIL" not in hapd.request("HS20_WNM_NOTIF "):
+        raise Exception("Unexpected HS20_WNM_NOTIF success")
+    if "FAIL" not in hapd.request("HS20_WNM_NOTIF foo"):
+        raise Exception("Unexpected HS20_WNM_NOTIF success")
+    if "FAIL" not in hapd.request("HS20_WNM_NOTIF " + addr + " https://12345678923456789842345678456783456712345678923456789842345678456783456712345678923456789842345678456783456712345678923456789842345678456783456712345678923456789842345678456783456712345678923456789842345678456783456712345678923456789842345678456783456712345678927.very.long.example.com/"):
+        raise Exception("Unexpected HS20_WNM_NOTIF success")
+
 def test_ap_hs20_session_info(dev, apdev):
     """Hotspot 2.0 connection and session information from RADIUS"""
     bssid = apdev[0]['bssid']

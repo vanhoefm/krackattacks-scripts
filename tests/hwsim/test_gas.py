@@ -575,3 +575,28 @@ def test_gas_comeback_resp_additional_delay(dev, apdev):
     resp['payload'] = anqp_comeback_resp(dialog_token, status_code=0) + struct.pack('<H', 0)
     send_gas_resp(hapd, resp)
     expect_gas_result(dev[0], "SUCCESS")
+
+def test_gas_unknown_adv_proto(dev, apdev):
+    """Unknown advertisement protocol id"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].scan(freq="2412")
+    req = dev[0].request("GAS_REQUEST " + bssid + " 42 000102000101")
+    if "FAIL" in req:
+        raise Exception("GAS query request rejected")
+    expect_gas_result(dev[0], "FAILURE", "59")
+    ev = dev[0].wait_event(["GAS-RESPONSE-INFO"], timeout=10)
+    if ev is None:
+        raise Exception("GAS query timed out")
+    exp = r'<.>(GAS-RESPONSE-INFO) addr=([0-9a-f:]*) dialog_token=([0-9]*) status_code=([0-9]*) resp_len=([\-0-9]*)'
+    res = re.split(exp, ev)
+    if len(res) < 6:
+        raise Exception("Could not parse GAS-RESPONSE-INFO")
+    if res[2] != bssid:
+        raise Exception("Unexpected BSSID in response")
+    status = res[4]
+    if status != "59":
+        raise Exception("Unexpected GAS-RESPONSE-INFO status")

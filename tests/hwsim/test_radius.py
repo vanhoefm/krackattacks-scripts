@@ -378,6 +378,32 @@ def test_radius_das_disconnect(dev, apdev):
     if ev is None:
         raise Exception("Timeout while waiting for re-connection")
 
+    logger.info("Disconnect-Request with matching CUI")
+    dev[1].connect("radius-das", key_mgmt="WPA-EAP",
+                   eap="GPSK", identity="gpsk-cui",
+                   password="abcdefghijklmnop0123456789abcdef",
+                   scan_freq="2412")
+    req = radius_das.DisconnectPacket(dict=dict, secret="secret",
+                                      Chargeable_User_Identity="gpsk-chargeable-user-identity",
+                                      Event_Timestamp=int(time.time()))
+    reply = srv.SendPacket(req)
+    logger.debug("RADIUS response from hostapd")
+    for i in reply.keys():
+        logger.debug("%s: %s" % (i, reply[i]))
+    if reply.code != pyrad.packet.DisconnectACK:
+        raise Exception("Unexpected response code")
+
+    ev = dev[1].wait_event(["CTRL-EVENT-DISCONNECTED"])
+    if ev is None:
+        raise Exception("Timeout while waiting for disconnection")
+    ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"])
+    if ev is None:
+        raise Exception("Timeout while waiting for re-connection")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=1)
+    if ev is not None:
+        raise Exception("Unexpected disconnection")
+
 def test_radius_das_coa(dev, apdev):
     """RADIUS Dynamic Authorization Extensions - CoA"""
     try:

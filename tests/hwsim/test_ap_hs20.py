@@ -411,6 +411,7 @@ def test_ap_hs20_username(dev, apdev):
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['hessid'] = bssid
+    params['disable_dgaf'] = '1'
     hostapd.add_ap(apdev[0]['ifname'], params)
 
     dev[0].hs20_enable()

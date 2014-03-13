@@ -265,6 +265,29 @@ static int wps_build_cred_encr_type(struct wps_data *wps, struct wpabuf *msg)
 
 static int wps_build_cred_network_key(struct wps_data *wps, struct wpabuf *msg)
 {
+	if ((wps->wps->ap_auth_type & (WPS_AUTH_WPAPSK | WPS_AUTH_WPA2PSK)) &&
+	    wps->wps->network_key_len == 0) {
+		char hex[65];
+		u8 psk[32];
+		/* Generate a random per-device PSK */
+		if (random_get_bytes(psk, sizeof(psk)) < 0)
+			return -1;
+		wpa_hexdump_key(MSG_DEBUG, "WPS: Generated per-device PSK",
+				psk, sizeof(psk));
+		wpa_printf(MSG_DEBUG, "WPS:  * Network Key (len=%u)",
+			   (unsigned int) wps->new_psk_len * 2);
+		wpa_snprintf_hex(hex, sizeof(hex), psk, sizeof(psk));
+		wpabuf_put_be16(msg, ATTR_NETWORK_KEY);
+		wpabuf_put_be16(msg, sizeof(psk) * 2);
+		wpabuf_put_data(msg, hex, sizeof(psk) * 2);
+		if (wps->wps->registrar) {
+			wps_cb_new_psk(wps->wps->registrar,
+				       wps->peer_dev.mac_addr,
+				       wps->p2p_dev_addr, psk, sizeof(psk));
+		}
+		return 0;
+	}
+
 	wpa_printf(MSG_DEBUG, "WPS:  * Network Key (len=%u)",
 		   (unsigned int) wps->wps->network_key_len);
 	wpabuf_put_be16(msg, ATTR_NETWORK_KEY);

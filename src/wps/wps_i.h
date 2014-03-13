@@ -212,5 +212,7 @@ int wps_registrar_pbc_overlap(struct wps_registrar *reg,
 			      const u8 *addr, const u8 *uuid_e);
 void wps_registrar_remove_nfc_pw_token(struct wps_registrar *reg,
 				       struct wps_nfc_pw_token *token);
+int wps_cb_new_psk(struct wps_registrar *reg, const u8 *mac_addr,
+		   const u8 *p2p_dev_addr, const u8 *psk, size_t psk_len);
 
 #endif /* WPS_I_H */

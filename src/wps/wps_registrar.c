@@ -1170,8 +1170,8 @@ void wps_registrar_probe_req_rx(struct wps_registrar *reg, const u8 *addr,
 }
 
 
-static int wps_cb_new_psk(struct wps_registrar *reg, const u8 *mac_addr,
-			  const u8 *p2p_dev_addr, const u8 *psk, size_t psk_len)
+int wps_cb_new_psk(struct wps_registrar *reg, const u8 *mac_addr,
+		   const u8 *p2p_dev_addr, const u8 *psk, size_t psk_len)
 {
 	if (reg->new_psk_cb == NULL)
 		return 0;

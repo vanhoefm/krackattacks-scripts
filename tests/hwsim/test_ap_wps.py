@@ -423,6 +423,23 @@ def test_ap_wps_reg_config(dev, apdev):
     if status['key_mgmt'] != 'WPA2-PSK':
         raise Exception("Unexpected key_mgmt")
 
+    logger.info("Re-configure back to open")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].request("BSS_FLUSH 0")
+    dev[0].request("SCAN freq=2412 only_new=1")
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], 15)
+    if ev is None:
+        raise Exception("Scan timed out")
+    dev[0].dump_monitor()
+    dev[0].wps_reg(apdev[0]['bssid'], appin, "wps-open", "OPEN", "NONE", "")
+    status = dev[0].get_status()
+    if status['wpa_state'] != 'COMPLETED' or status['bssid'] != apdev[0]['bssid']:
+        raise Exception("Not fully connected")
+    if status['ssid'] != "wps-open":
+        raise Exception("Unexpected SSID")
+    if status['key_mgmt'] != 'NONE':
+        raise Exception("Unexpected key_mgmt")
+
 def test_ap_wps_reg_config_tkip(dev, apdev):
     """WPS registrar configuring AP to use TKIP and AP upgrading to TKIP+CCMP"""
     ssid = "test-wps-init-ap"

@@ -55,7 +55,8 @@ def test_ap_vht80_params(dev, apdev):
                    "ieee80211ac": "1",
                    "vht_oper_chwidth": "1",
                    "vht_capab": "[MAX-MPDU-11454][RXLDPC][SHORT-GI-80][TX-STBC-2BY1][RX-STBC-1][MAX-A-MPDU-LEN-EXP0]",
-                   "vht_oper_centr_freq_seg0_idx": "42" }
+                   "vht_oper_centr_freq_seg0_idx": "42",
+                   "require_vht": "1" }
         hapd = hostapd.add_ap(apdev[0]['ifname'], params)
 
         dev[0].connect("vht", key_mgmt="NONE", scan_freq="5180")

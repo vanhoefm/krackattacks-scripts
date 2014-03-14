@@ -547,6 +547,7 @@ struct wpa_supplicant {
 	int scan_runs; /* number of scan runs since WPS was started */
 	int *next_scan_freqs;
 	int *manual_scan_freqs;
+	int *manual_sched_scan_freqs;
 	unsigned int manual_scan_passive:1;
 	unsigned int manual_scan_use_id:1;
 	unsigned int manual_scan_only_new:1;

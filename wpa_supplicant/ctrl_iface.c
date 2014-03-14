@@ -46,6 +46,8 @@ static int wpa_supplicant_global_iface_list(struct wpa_global *global,
 					    char *buf, int len);
 static int wpa_supplicant_global_iface_interfaces(struct wpa_global *global,
 						  char *buf, int len);
+static int * freq_range_to_channel_list(struct wpa_supplicant *wpa_s,
+					char *val);
 
 static int set_bssid_filter(struct wpa_supplicant *wpa_s, char *val)
 {
@@ -245,6 +247,33 @@ static int wpas_ctrl_set_blob(struct wpa_supplicant *wpa_s, char *pos)
 }
 #endif /* CONFIG_NO_CONFIG_BLOBS */
 
+
+static int wpas_ctrl_pno(struct wpa_supplicant *wpa_s, char *cmd)
+{
+	char *params;
+	char *pos;
+	int *freqs = NULL;
+	int ret;
+
+	if (atoi(cmd)) {
+		params = os_strchr(cmd, ' ');
+		os_free(wpa_s->manual_sched_scan_freqs);
+		if (params) {
+			params++;
+			pos = os_strstr(params, "freq=");
+			if (pos)
+				freqs = freq_range_to_channel_list(wpa_s,
+								   pos + 5);
+		}
+		wpa_s->manual_sched_scan_freqs = freqs;
+		ret = wpas_start_pno(wpa_s);
+	} else {
+		ret = wpas_stop_pno(wpa_s);
+	}
+	return ret;
+}
+
+
 static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 					 char *cmd)
 {
@@ -328,10 +357,7 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 		wpa_tdls_enable(wpa_s->wpa, !disabled);
 #endif /* CONFIG_TDLS */
 	} else if (os_strcasecmp(cmd, "pno") == 0) {
-		if (atoi(value))
-			ret = wpas_start_pno(wpa_s);
-		else
-			ret = wpas_stop_pno(wpa_s);
+		ret = wpas_ctrl_pno(wpa_s, value);
 	} else if (os_strcasecmp(cmd, "radio_disabled") == 0) {
 		int disabled = atoi(value);
 		if (wpa_drv_radio_disable(wpa_s, disabled) < 0)

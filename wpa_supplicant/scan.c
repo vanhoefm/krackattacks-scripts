@@ -1923,6 +1923,11 @@ int wpas_start_pno(struct wpa_supplicant *wpa_s)
 	interval = wpa_s->conf->sched_scan_interval ?
 		wpa_s->conf->sched_scan_interval : 10;
 
+	if (params.freqs == NULL && wpa_s->manual_sched_scan_freqs) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "Limit sched scan to specified channels");
+		params.freqs = wpa_s->manual_sched_scan_freqs;
+	}
+
 	ret = wpa_supplicant_start_sched_scan(wpa_s, &params, interval);
 	os_free(params.filter_ssids);
 	if (ret == 0)

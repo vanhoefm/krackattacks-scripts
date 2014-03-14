@@ -5658,8 +5658,8 @@ static int wpas_ctrl_radio_work_done(struct wpa_supplicant *wpa_s, char *cmd)
 			"Completed external radio work %u (%s)",
 			ework->id, ework->type);
 		eloop_cancel_timeout(wpas_ctrl_radio_work_timeout, work, NULL);
-		os_free(ework);
 		radio_work_done(work);
+		os_free(ework);
 		return 3; /* "OK\n" */
 	}
 

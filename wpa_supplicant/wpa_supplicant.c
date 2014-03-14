@@ -1438,6 +1438,10 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 	struct ieee80211_ht_capabilities htcaps;
 	struct ieee80211_ht_capabilities htcaps_mask;
 #endif /* CONFIG_HT_OVERRIDES */
+#ifdef CONFIG_VHT_OVERRIDES
+       struct ieee80211_vht_capabilities vhtcaps;
+       struct ieee80211_vht_capabilities vhtcaps_mask;
+#endif /* CONFIG_VHT_OVERRIDES */
 
 	if (deinit) {
 		if (work->started) {
@@ -1785,6 +1789,13 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 	params.htcaps_mask = (u8 *) &htcaps_mask;
 	wpa_supplicant_apply_ht_overrides(wpa_s, ssid, &params);
 #endif /* CONFIG_HT_OVERRIDES */
+#ifdef CONFIG_VHT_OVERRIDES
+	os_memset(&vhtcaps, 0, sizeof(vhtcaps));
+	os_memset(&vhtcaps_mask, 0, sizeof(vhtcaps_mask));
+	params.vhtcaps = &vhtcaps;
+	params.vhtcaps_mask = &vhtcaps_mask;
+	wpa_supplicant_apply_vht_overrides(wpa_s, wpa_s->current_ssid, &params);
+#endif /* CONFIG_VHT_OVERRIDES */
 
 #ifdef CONFIG_P2P
 	/*

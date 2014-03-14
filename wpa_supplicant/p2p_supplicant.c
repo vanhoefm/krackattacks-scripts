@@ -7545,7 +7545,16 @@ int wpas_p2p_nfc_tag_enabled(struct wpa_supplicant *wpa_s, int enabled)
 		return -1;
 	wpa_s->p2p_peer_oob_pk_hash_known = 0;
 
-	wpa_s->create_p2p_iface = wpas_p2p_create_iface(wpa_s);
+	if (wpa_s->p2p_group_interface == P2P_GROUP_INTERFACE_GO ||
+	    wpa_s->p2p_group_interface == P2P_GROUP_INTERFACE_CLIENT) {
+		/*
+		 * P2P Group Interface present and the command came on group
+		 * interface, so enable the token for the current interface.
+		 */
+		wpa_s->create_p2p_iface = 0;
+	} else {
+		wpa_s->create_p2p_iface = wpas_p2p_create_iface(wpa_s);
+	}
 
 	if (wpa_s->create_p2p_iface) {
 		enum wpa_driver_if_type iftype;

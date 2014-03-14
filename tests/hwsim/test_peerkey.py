@@ -29,3 +29,18 @@ def test_peerkey(dev, apdev):
     # mac80211_hwsim, so this operation fails at setting the keys after
     # successfully completed 4-way handshake. This test case does allow the
     # key negotiation part to be tested for coverage, though.
+
+def test_peerkey_unknown_peer(dev, apdev):
+    """RSN AP and PeerKey attempt with unknown peer"""
+    ssid = "test-peerkey"
+    passphrase = "12345678"
+    params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+    params['peerkey'] = "1"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].connect(ssid, psk=passphrase, scan_freq="2412", peerkey=True)
+    dev[1].connect(ssid, psk=passphrase, scan_freq="2412", peerkey=True)
+    hwsim_utils.test_connectivity_sta(dev[0], dev[1])
+
+    dev[0].request("STKSTART " + dev[2].p2p_interface_addr())
+    time.sleep(0.5)

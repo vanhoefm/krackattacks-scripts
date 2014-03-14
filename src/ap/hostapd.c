@@ -1837,6 +1837,7 @@ int hostapd_add_iface(struct hapd_interfaces *interfaces, char *buf)
 			if (start_ctrl_iface_bss(hapd) < 0 ||
 			    (hapd_iface->state == HAPD_IFACE_ENABLED &&
 			     hostapd_setup_bss(hapd, -1))) {
+				hostapd_cleanup(hapd);
 				hapd_iface->bss[hapd_iface->num_bss - 1] = NULL;
 				hapd_iface->conf->num_bss--;
 				hapd_iface->num_bss--;

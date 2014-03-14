@@ -1,12 +1,13 @@
 # Test cases for VHT operations with hostapd
 # Copyright (c) 2014, Qualcomm Atheros, Inc.
+# Copyright (c) 2013, Intel Corporation
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
 import logging
 logger = logging.getLogger()
-import subprocess
+import subprocess, time
 
 import hwsim_utils
 import hostapd
@@ -67,5 +68,27 @@ def test_ap_vht80_params(dev, apdev):
                 logger.info("80 MHz channel not supported in regulatory information")
                 return "skip"
         raise
+    finally:
+        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+
+def test_ap_vht_20(devs, apdevs):
+    dev = devs[0]
+    ap = apdevs[0]
+    try:
+        params = { "ssid": "test-vht20",
+                   "country_code": "DE",
+                   "hw_mode": "a",
+                   "channel": "36",
+                   "ieee80211n": "1",
+                   "ieee80211ac": "1",
+                   "ht_capab": "",
+                   "vht_capab": "",
+                   "vht_oper_chwidth": "0",
+                   "vht_oper_centr_freq_seg0_idx": "0",
+                   "require_vht": "1",
+                 }
+        hostapd.add_ap(ap['ifname'], params)
+        dev.connect("test-vht20", scan_freq="5180", key_mgmt="NONE")
+        hwsim_utils.test_connectivity(dev.ifname, ap['ifname'])
     finally:
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])

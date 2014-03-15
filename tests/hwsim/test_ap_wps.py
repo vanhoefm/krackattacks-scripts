@@ -401,7 +401,7 @@ def test_ap_wps_random_ap_pin(dev, apdev):
     check_wps_reg_failure(dev[1], apdev[0], appin)
 
 def test_ap_wps_reg_config(dev, apdev):
-    """WPS registrar configuring and AP using AP PIN"""
+    """WPS registrar configuring an AP using AP PIN"""
     ssid = "test-wps-init-ap-pin"
     appin = "12345670"
     hostapd.add_ap(apdev[0]['ifname'],
@@ -439,6 +439,32 @@ def test_ap_wps_reg_config(dev, apdev):
         raise Exception("Unexpected SSID")
     if status['key_mgmt'] != 'NONE':
         raise Exception("Unexpected key_mgmt")
+
+def test_ap_wps_reg_config_ext_processing(dev, apdev):
+    """WPS registrar configuring an AP with external config processing"""
+    ssid = "test-wps-init-ap-pin"
+    appin = "12345670"
+    params = { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+               "wps_cred_processing": "1", "ap_pin": appin}
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    new_ssid = "wps-new-ssid"
+    new_passphrase = "1234567890"
+    dev[0].wps_reg(apdev[0]['bssid'], appin, new_ssid, "WPA2PSK", "CCMP",
+                   new_passphrase, no_wait=True)
+    ev = dev[0].wait_event(["WPS-SUCCESS"], timeout=15)
+    if ev is None:
+        raise Exception("WPS registrar operation timed out")
+    ev = hapd.wait_event(["WPS-NEW-AP-SETTINGS"], timeout=15)
+    if ev is None:
+        raise Exception("WPS configuration timed out")
+    if "1026" not in ev:
+        raise Exception("AP Settings missing from event")
+    hapd.request("SET wps_cred_processing 0")
+    if "FAIL" in hapd.request("WPS_CONFIG " + new_ssid.encode("hex") + " WPA2PSK CCMP " + new_passphrase.encode("hex")):
+        raise Exception("WPS_CONFIG command failed")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Association with the AP timed out")
 
 def test_ap_wps_reg_config_tkip(dev, apdev):
     """WPS registrar configuring AP to use TKIP and AP upgrading to TKIP+CCMP"""

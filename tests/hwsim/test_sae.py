@@ -82,3 +82,27 @@ def test_sae_anti_clogging(dev, apdev):
         ev = dev[i].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
         if ev is None:
             raise Exception("Association with the AP timed out")
+
+def test_sae_forced_anti_clogging(dev, apdev):
+    """SAE anti clogging (forced)"""
+    params = hostapd.wpa2_params(ssid="test-sae", passphrase="12345678")
+    params['wpa_key_mgmt'] = 'SAE'
+    params['sae_anti_clogging_threshold'] = '0'
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    for i in range(0, 2):
+        dev[i].request("SET sae_groups ")
+        dev[i].connect("test-sae", psk="12345678", key_mgmt="SAE",
+                       scan_freq="2412")
+
+def test_sae_mixed(dev, apdev):
+    """Mixed SAE and non-SAE network"""
+    params = hostapd.wpa2_params(ssid="test-sae", passphrase="12345678")
+    params['wpa_key_mgmt'] = 'SAE WPA-PSK'
+    params['sae_anti_clogging_threshold'] = '0'
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[2].connect("test-sae", psk="12345678", scan_freq="2412")
+    for i in range(0, 2):
+        dev[i].request("SET sae_groups ")
+        dev[i].connect("test-sae", psk="12345678", key_mgmt="SAE",
+                       scan_freq="2412")

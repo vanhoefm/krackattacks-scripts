@@ -70,11 +70,11 @@ def go_neg_pin(i_dev, r_dev, i_intent=None, r_intent=None, i_method='enter', r_m
     return [i_res, r_res]
 
 def go_neg_pin_authorized(i_dev, r_dev, i_intent=None, r_intent=None, expect_failure=False, i_go_neg_status=None, i_method='enter', r_method='display', test_data=True, i_freq=None, r_freq=None):
-    r_dev.p2p_listen()
     i_dev.p2p_listen()
     pin = r_dev.wps_read_pin()
     logger.info("Start GO negotiation " + i_dev.ifname + " -> " + r_dev.ifname)
     r_dev.p2p_go_neg_auth(i_dev.p2p_dev_addr(), pin, r_method, go_intent=r_intent, freq=r_freq)
+    r_dev.p2p_listen()
     i_res = i_dev.p2p_go_neg_init(r_dev.p2p_dev_addr(), pin, i_method, timeout=20, go_intent=i_intent, expect_failure=expect_failure, freq=i_freq)
     r_res = r_dev.p2p_go_neg_auth_result(expect_failure=expect_failure)
     logger.debug("i_res: " + str(i_res))

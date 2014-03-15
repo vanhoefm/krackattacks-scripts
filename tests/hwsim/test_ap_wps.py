@@ -552,6 +552,13 @@ def test_ap_wps_setup_locked(dev, apdev):
     if ev is None:
         raise Exception("Association with the AP timed out")
 
+    appin = hapd.request("WPS_AP_PIN random")
+    if "FAIL" in appin:
+        raise Exception("Could not generate random AP PIN")
+    ev = hapd.wait_event(["WPS-AP-SETUP-UNLOCKED"], timeout=10)
+    if ev is None:
+        raise Exception("Failed to unlock AP PIN")
+
 def test_ap_wps_pbc_overlap_2ap(dev, apdev):
     """WPS PBC session overlap with two active APs"""
     hostapd.add_ap(apdev[0]['ifname'],

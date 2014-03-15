@@ -1,14 +1,16 @@
 # WPA2-Enterprise PMKSA caching tests
-# Copyright (c) 2013, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
 import logging
 logger = logging.getLogger()
+import subprocess
 import time
 
 import hostapd
+from test_ap_eap import eap_connect
 
 def test_pmksa_cache_on_roam_back(dev, apdev):
     """PMKSA cache to skip EAP on reassociation back to same AP"""
@@ -228,3 +230,49 @@ def test_pmksa_cache_and_cui(dev, apdev):
         time.sleep(0.1)
     if state != "COMPLETED":
         raise Exception("Reauthentication did not complete")
+
+def test_pmksa_cache_preauth(dev, apdev):
+    """RSN pre-authentication to generate PMKSA cache entry"""
+    try:
+        params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+        params['bridge'] = 'ap-br0'
+        hostapd.add_ap(apdev[0]['ifname'], params)
+        subprocess.call(['sudo', 'brctl', 'setfd', 'ap-br0', '0'])
+        subprocess.call(['sudo', 'ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
+        eap_connect(dev[0], apdev[0], "PAX", "pax.user@example.com",
+                    password_hex="0123456789abcdef0123456789abcdef")
+
+        params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+        params['bridge'] = 'ap-br0'
+        params['rsn_preauth'] = '1'
+        params['rsn_preauth_interfaces'] = 'ap-br0'
+        hostapd.add_ap(apdev[1]['ifname'], params)
+        bssid1 = apdev[1]['bssid']
+        dev[0].scan(freq="2412")
+        success = False
+        for i in range(0, 50):
+            time.sleep(0.1)
+            pmksa = dev[0].get_pmksa(bssid1)
+            if pmksa:
+                success = True
+                break
+        if not success:
+            raise Exception("No PMKSA cache entry created from pre-authentication")
+
+        dev[0].scan(freq="2412")
+        dev[0].request("ROAM " + bssid1)
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED",
+                                "CTRL-EVENT-CONNECTED"], timeout=10)
+        if ev is None:
+            raise Exception("Roaming with the AP timed out")
+        if "CTRL-EVENT-EAP-STARTED" in ev:
+            raise Exception("Unexpected EAP exchange")
+        pmksa2 = dev[0].get_pmksa(bssid1)
+        if pmksa2 is None:
+            raise Exception("No PMKSA cache entry")
+        if pmksa['pmkid'] != pmksa2['pmkid']:
+            raise Exception("Unexpected PMKID change")
+
+    finally:
+        subprocess.call(['sudo', 'ip', 'link', 'set', 'dev', 'ap-br0', 'down'])
+        subprocess.call(['sudo', 'brctl', 'delbr', 'ap-br0'])

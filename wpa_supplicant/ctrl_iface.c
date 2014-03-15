@@ -206,6 +206,45 @@ static int set_disallow_aps(struct wpa_supplicant *wpa_s, char *val)
 }
 
 
+#ifndef CONFIG_NO_CONFIG_BLOBS
+static int wpas_ctrl_set_blob(struct wpa_supplicant *wpa_s, char *pos)
+{
+	char *name = pos;
+	struct wpa_config_blob *blob;
+	size_t len;
+
+	pos = os_strchr(pos, ' ');
+	if (pos == NULL)
+		return -1;
+	*pos++ = '\0';
+	len = os_strlen(pos);
+	if (len & 1)
+		return -1;
+
+	wpa_printf(MSG_DEBUG, "CTRL: Set blob '%s'", name);
+	blob = os_zalloc(sizeof(*blob));
+	if (blob == NULL)
+		return -1;
+	blob->name = os_strdup(name);
+	blob->data = os_malloc(len / 2);
+	if (blob->name == NULL || blob->data == NULL) {
+		wpa_config_free_blob(blob);
+		return -1;
+	}
+
+	if (hexstr2bin(pos, blob->data, len / 2) < 0) {
+		wpa_printf(MSG_DEBUG, "CTRL: Invalid blob hex data");
+		wpa_config_free_blob(blob);
+		return -1;
+	}
+	blob->len = len / 2;
+
+	wpa_config_set_blob(wpa_s->conf, blob);
+
+	return 0;
+}
+#endif /* CONFIG_NO_CONFIG_BLOBS */
+
 static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 					 char *cmd)
 {
@@ -355,6 +394,10 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 	} else if (os_strcasecmp(cmd, "ext_mgmt_frame_handling") == 0) {
 		wpa_s->ext_mgmt_frame_handling = !!atoi(value);
 #endif /* CONFIG_TESTING_OPTIONS */
+#ifndef CONFIG_NO_CONFIG_BLOBS
+	} else if (os_strcmp(cmd, "blob") == 0) {
+		ret = wpas_ctrl_set_blob(wpa_s, value);
+#endif /* CONFIG_NO_CONFIG_BLOBS */
 	} else {
 		value[-1] = '=';
 		ret = wpa_config_process_global(wpa_s->conf, cmd, -1);

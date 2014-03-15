@@ -138,6 +138,14 @@ def teardown_tdls(sta0, sta1, ap):
     tdls_check_ap(sta0, sta1, bssid, addr0, addr1)
     check_connectivity(sta0, sta1, ap)
 
+def test_ap_tdls_discovery(dev, apdev):
+    """WPA2-PSK AP and two stations using TDLS discovery"""
+    start_ap_wpa2_psk(apdev[0]['ifname'])
+    wlantest_setup()
+    connect_2sta_wpa2_psk(dev, apdev[0]['ifname'])
+    dev[0].request("TDLS_DISCOVER " + dev[1].p2p_interface_addr())
+    time.sleep(0.2)
+
 def test_ap_wpa2_tdls(dev, apdev):
     """WPA2-PSK AP and two stations using TDLS"""
     start_ap_wpa2_psk(apdev[0]['ifname'])

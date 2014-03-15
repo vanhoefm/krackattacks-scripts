@@ -1092,6 +1092,40 @@ def test_ap_wps_per_station_psk(dev, apdev):
     finally:
         os.remove(pskfile)
 
+def test_ap_wps_pin_request_file(dev, apdev):
+    """WPS PIN provisioning with configured AP"""
+    ssid = "wps"
+    pinfile = "/tmp/ap_wps_pin_request_file.log"
+    if os.path.exists(pinfile):
+        subprocess.call(['sudo', 'rm', pinfile])
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                     "wps_pin_requests": pinfile,
+                     "wpa_passphrase": "12345678", "wpa": "2",
+                     "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP"})
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    uuid = dev[0].get_status_field("uuid")
+    pin = dev[0].wps_read_pin()
+    try:
+        dev[0].request("WPS_PIN any " + pin)
+        ev = hapd.wait_event(["WPS-PIN-NEEDED"], timeout=15)
+        if ev is None:
+            raise Exception("PIN needed event not shown")
+        if uuid not in ev:
+            raise Exception("UUID mismatch")
+        dev[0].request("WPS_CANCEL")
+        success = False
+        with open(pinfile, "r") as f:
+            lines = f.readlines()
+            for l in lines:
+                if uuid in l:
+                    success = True
+                    break
+        if not success:
+            raise Exception("PIN request entry not in the log file")
+    finally:
+        subprocess.call(['sudo', 'rm', pinfile])
+
 def add_ssdp_ap(ifname, ap_uuid):
     ssid = "wps-ssdp"
     ap_pin = "12345670"

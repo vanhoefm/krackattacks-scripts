@@ -327,7 +327,7 @@ static int ieee80211n_check_40mhz_5g(struct hostapd_iface *iface,
 	int match;
 
 	pri_chan = iface->conf->channel;
-	sec_chan = iface->conf->secondary_channel * 4;
+	sec_chan = pri_chan + iface->conf->secondary_channel * 4;
 	pri_freq = hostapd_hw_get_freq(iface->bss[0], pri_chan);
 	if (iface->conf->secondary_channel > 0)
 		sec_freq = pri_freq + 20;
@@ -351,6 +351,7 @@ static int ieee80211n_check_40mhz_5g(struct hostapd_iface *iface,
 			   "channel to get secondary channel with no Beacons "
 			   "from other BSSes");
 		ieee80211n_switch_pri_sec(iface);
+		return 1;
 	}
 
 	/*

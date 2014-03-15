@@ -124,3 +124,40 @@ def test_ap_wds_sta(dev, apdev):
         subprocess.call(['sudo', 'iw', dev[0].ifname, 'set', '4addr', 'off'])
         subprocess.call(['sudo', 'ip', 'link', 'set', 'dev', 'wds-br0', 'down'])
         subprocess.call(['sudo', 'brctl', 'delbr', 'wds-br0'])
+
+def test_ap_inactivity_poll(dev, apdev):
+    """AP using inactivity poll"""
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+    params['ap_max_inactivity'] = "1"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
+    hapd.set("ext_mgmt_frame_handling", "1")
+    dev[0].request("DISCONNECT")
+    ev = hapd.wait_event(["MGMT-RX"], timeout=5)
+    if ev is None:
+        raise Exception("MGMT RX wait timed out for Deauth")
+    hapd.set("ext_mgmt_frame_handling", "0")
+    ev = hapd.wait_event(["AP-STA-DISCONNECTED"], timeout=30)
+    if ev is None:
+        raise Exception("STA disconnection on inactivity was not reported")
+
+def test_ap_inactivity_disconnect(dev, apdev):
+    """AP using inactivity disconnect"""
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+    params['ap_max_inactivity'] = "1"
+    params['skip_inactivity_poll'] = "1"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
+    hapd.set("ext_mgmt_frame_handling", "1")
+    dev[0].request("DISCONNECT")
+    ev = hapd.wait_event(["MGMT-RX"], timeout=5)
+    if ev is None:
+        raise Exception("MGMT RX wait timed out for Deauth")
+    hapd.set("ext_mgmt_frame_handling", "0")
+    ev = hapd.wait_event(["AP-STA-DISCONNECTED"], timeout=30)
+    if ev is None:
+        raise Exception("STA disconnection on inactivity was not reported")

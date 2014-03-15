@@ -5,6 +5,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+import base64
 import time
 import subprocess
 import logging
@@ -13,6 +14,20 @@ import os.path
 
 import hwsim_utils
 import hostapd
+
+def read_pem(fname):
+    with open(fname, "r") as f:
+        lines = f.readlines()
+        copy = False
+        cert = ""
+        for l in lines:
+            if "-----END" in l:
+                break
+            if copy:
+                cert = cert + l
+            if "-----BEGIN" in l:
+                copy = True
+    return base64.b64decode(cert)
 
 def eap_connect(dev, ap, method, identity,
                 sha256=False, expect_failure=False, local_error_report=False,
@@ -322,6 +337,23 @@ def test_ap_wpa2_eap_tls(dev, apdev):
                 private_key="auth_serv/user.key")
     eap_reauth(dev[0], "TLS")
 
+def test_ap_wpa2_eap_tls_blob(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TLS and config blobs"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    cert = read_pem("auth_serv/ca.pem")
+    if "OK" not in dev[0].request("SET blob cacert " + cert.encode("hex")):
+        raise Exception("Could not set cacert blob")
+    cert = read_pem("auth_serv/user.pem")
+    if "OK" not in dev[0].request("SET blob usercert " + cert.encode("hex")):
+        raise Exception("Could not set usercert blob")
+    key = read_pem("auth_serv/user.key")
+    if "OK" not in dev[0].request("SET blob userkey " + key.encode("hex")):
+        raise Exception("Could not set cacert blob")
+    eap_connect(dev[0], apdev[0], "TLS", "tls user", ca_cert="blob://cacert",
+                client_cert="blob://usercert",
+                private_key="blob://userkey")
+
 def test_ap_wpa2_eap_tls_pkcs12(dev, apdev):
     """WPA2-Enterprise connection using EAP-TLS and PKCS#12"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
@@ -344,55 +376,78 @@ def test_ap_wpa2_eap_tls_pkcs12(dev, apdev):
     if ev is None:
         raise Exception("Connection timed out")
 
+def test_ap_wpa2_eap_tls_pkcs12_blob(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TLS and PKCS#12 from configuration blob"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    cert = read_pem("auth_serv/ca.pem")
+    if "OK" not in dev[0].request("SET blob cacert " + cert.encode("hex")):
+        raise Exception("Could not set cacert blob")
+    with open("auth_serv/user.pkcs12", "rb") as f:
+        if "OK" not in dev[0].request("SET blob pkcs12 " + f.read().encode("hex")):
+            raise Exception("Could not set pkcs12 blob")
+    eap_connect(dev[0], apdev[0], "TLS", "tls user", ca_cert="blob://cacert",
+                private_key="blob://pkcs12",
+                private_key_passwd="whatever")
+
 def test_ap_wpa2_eap_tls_neg_incorrect_trust_root(dev, apdev):
     """WPA2-Enterprise negative test - incorrect trust root"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
+    cert = read_pem("auth_serv/ca-incorrect.pem")
+    if "OK" not in dev[0].request("SET blob cacert " + cert.encode("hex")):
+        raise Exception("Could not set cacert blob")
     dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="DOMAIN\mschapv2 user", anonymous_identity="ttls",
+                   password="password", phase2="auth=MSCHAPV2",
+                   ca_cert="blob://cacert",
+                   wait_connect=False, scan_freq="2412")
+    dev[1].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
                    identity="DOMAIN\mschapv2 user", anonymous_identity="ttls",
                    password="password", phase2="auth=MSCHAPV2",
                    ca_cert="auth_serv/ca-incorrect.pem",
                    wait_connect=False, scan_freq="2412")
 
-    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
-    if ev is None:
-        raise Exception("Association and EAP start timed out")
+    for dev in (dev[0], dev[1]):
+        ev = dev.wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
+        if ev is None:
+            raise Exception("Association and EAP start timed out")
 
-    ev = dev[0].wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=10)
-    if ev is None:
-        raise Exception("EAP method selection timed out")
-    if "TTLS" not in ev:
-        raise Exception("Unexpected EAP method")
+        ev = dev.wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=10)
+        if ev is None:
+            raise Exception("EAP method selection timed out")
+        if "TTLS" not in ev:
+            raise Exception("Unexpected EAP method")
 
-    ev = dev[0].wait_event(["CTRL-EVENT-EAP-TLS-CERT-ERROR",
-                            "CTRL-EVENT-EAP-SUCCESS",
-                            "CTRL-EVENT-EAP-FAILURE",
-                            "CTRL-EVENT-CONNECTED",
-                            "CTRL-EVENT-DISCONNECTED"], timeout=10)
-    if ev is None:
-        raise Exception("EAP result timed out")
-    if "CTRL-EVENT-EAP-TLS-CERT-ERROR" not in ev:
-        raise Exception("TLS certificate error not reported")
+        ev = dev.wait_event(["CTRL-EVENT-EAP-TLS-CERT-ERROR",
+                             "CTRL-EVENT-EAP-SUCCESS",
+                             "CTRL-EVENT-EAP-FAILURE",
+                             "CTRL-EVENT-CONNECTED",
+                             "CTRL-EVENT-DISCONNECTED"], timeout=10)
+        if ev is None:
+            raise Exception("EAP result timed out")
+        if "CTRL-EVENT-EAP-TLS-CERT-ERROR" not in ev:
+            raise Exception("TLS certificate error not reported")
 
-    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS",
-                            "CTRL-EVENT-EAP-FAILURE",
-                            "CTRL-EVENT-CONNECTED",
-                            "CTRL-EVENT-DISCONNECTED"], timeout=10)
-    if ev is None:
-        raise Exception("EAP result(2) timed out")
-    if "CTRL-EVENT-EAP-FAILURE" not in ev:
-        raise Exception("EAP failure not reported")
+        ev = dev.wait_event(["CTRL-EVENT-EAP-SUCCESS",
+                             "CTRL-EVENT-EAP-FAILURE",
+                             "CTRL-EVENT-CONNECTED",
+                             "CTRL-EVENT-DISCONNECTED"], timeout=10)
+        if ev is None:
+            raise Exception("EAP result(2) timed out")
+        if "CTRL-EVENT-EAP-FAILURE" not in ev:
+            raise Exception("EAP failure not reported")
 
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED",
-                            "CTRL-EVENT-DISCONNECTED"], timeout=10)
-    if ev is None:
-        raise Exception("EAP result(3) timed out")
-    if "CTRL-EVENT-DISCONNECTED" not in ev:
-        raise Exception("Disconnection not reported")
+        ev = dev.wait_event(["CTRL-EVENT-CONNECTED",
+                             "CTRL-EVENT-DISCONNECTED"], timeout=10)
+        if ev is None:
+            raise Exception("EAP result(3) timed out")
+        if "CTRL-EVENT-DISCONNECTED" not in ev:
+            raise Exception("Disconnection not reported")
 
-    ev = dev[0].wait_event(["CTRL-EVENT-SSID-TEMP-DISABLED"], timeout=10)
-    if ev is None:
-        raise Exception("Network block disabling not reported")
+        ev = dev.wait_event(["CTRL-EVENT-SSID-TEMP-DISABLED"], timeout=10)
+        if ev is None:
+            raise Exception("Network block disabling not reported")
 
 def test_ap_wpa2_eap_tls_neg_suffix_match(dev, apdev):
     """WPA2-Enterprise negative test - domain suffix mismatch"""
@@ -978,6 +1033,18 @@ def test_ap_wpa2_eap_ttls_dh_params(dev, apdev):
                 anonymous_identity="ttls", password="password",
                 ca_cert="auth_serv/ca.der", phase2="auth=CHAP",
                 dh_file="auth_serv/dh.conf")
+
+def test_ap_wpa2_eap_ttls_dh_params_blob(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TTLS/CHAP and setting DH params from blob"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dh = read_pem("auth_serv/dh.conf")
+    if "OK" not in dev[0].request("SET blob dhparams " + dh.encode("hex")):
+        raise Exception("Could not set dhparams blob")
+    eap_connect(dev[0], apdev[0], "TTLS", "chap user",
+                anonymous_identity="ttls", password="password",
+                ca_cert="auth_serv/ca.der", phase2="auth=CHAP",
+                dh_file="blob://dhparams")
 
 def test_ap_wpa2_eap_reauth(dev, apdev):
     """WPA2-Enterprise and Authenticator forcing reauthentication"""

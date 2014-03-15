@@ -103,3 +103,24 @@ def test_ap_acl_deny(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
     if ev is not None:
         raise Exception("Unexpected association")
+
+def test_ap_wds_sta(dev, apdev):
+    """WPA2-PSK AP with STA using 4addr mode"""
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+    params['wds_sta'] = "1"
+    params['wds_bridge'] = "wds-br0"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    try:
+        subprocess.call(['sudo', 'brctl', 'addbr', 'wds-br0'])
+        subprocess.call(['sudo', 'brctl', 'setfd', 'wds-br0', '0'])
+        subprocess.call(['sudo', 'ip', 'link', 'set', 'dev', 'wds-br0', 'up'])
+        subprocess.call(['sudo', 'iw', dev[0].ifname, 'set', '4addr', 'on'])
+        dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
+        hwsim_utils.test_connectivity(dev[0].ifname, "wds-br0", max_tries=15)
+    finally:
+        subprocess.call(['sudo', 'iw', dev[0].ifname, 'set', '4addr', 'off'])
+        subprocess.call(['sudo', 'ip', 'link', 'set', 'dev', 'wds-br0', 'down'])
+        subprocess.call(['sudo', 'brctl', 'delbr', 'wds-br0'])

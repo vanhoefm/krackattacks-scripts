@@ -120,8 +120,6 @@ void mlme_associate_indication(struct hostapd_data *hapd, struct sta_info *sta)
  * reassociation procedure that was initiated by that specific peer MAC entity.
  *
  * PeerSTAAddress = sta->addr
- *
- * sta->previous_ap contains the "Current AP" information from ReassocReq.
  */
 void mlme_reassociate_indication(struct hostapd_data *hapd,
 				 struct sta_info *sta)

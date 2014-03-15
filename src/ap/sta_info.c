@@ -239,7 +239,6 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 		radius_client_flush_auth(hapd->radius, sta->addr);
 #endif /* CONFIG_NO_RADIUS */
 
-	os_free(sta->last_assoc_req);
 	os_free(sta->challenge);
 
 #ifdef CONFIG_IEEE80211W

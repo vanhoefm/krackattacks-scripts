@@ -242,14 +242,10 @@ static void iapp_send_layer2_update(struct iapp_data *iapp, u8 *addr)
  */
 void iapp_new_station(struct iapp_data *iapp, struct sta_info *sta)
 {
-	struct ieee80211_mgmt *assoc;
-	u16 seq;
+	u16 seq = 0; /* TODO */
 
 	if (iapp == NULL)
 		return;
-
-	assoc = sta->last_assoc_req;
-	seq = assoc ? WLAN_GET_SEQ_SEQ(le_to_host16(assoc->seq_ctrl)) : 0;
 
 	/* IAPP-ADD.request(MAC Address, Sequence Number, Timeout) */
 	hostapd_logger(iapp->hapd, sta->addr, HOSTAPD_MODULE_IAPP,
@@ -257,14 +253,11 @@ void iapp_new_station(struct iapp_data *iapp, struct sta_info *sta)
 	iapp_send_layer2_update(iapp, sta->addr);
 	iapp_send_add(iapp, sta->addr, seq);
 
-	if (assoc && WLAN_FC_GET_STYPE(le_to_host16(assoc->frame_control)) ==
-	    WLAN_FC_STYPE_REASSOC_REQ) {
-		/* IAPP-MOVE.request(MAC Address, Sequence Number, Old AP,
-		 *                   Context Block, Timeout)
-		 */
-		/* TODO: Send IAPP-MOVE to the old AP; Map Old AP BSSID to
-		 * IP address */
-	}
+	/* TODO: If this was reassociation:
+	 * IAPP-MOVE.request(MAC Address, Sequence Number, Old AP,
+	 *                   Context Block, Timeout)
+	 * TODO: Send IAPP-MOVE to the old AP; Map Old AP BSSID to
+	 * IP address */
 }
 
 

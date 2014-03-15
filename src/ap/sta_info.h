@@ -61,7 +61,6 @@ struct sta_info {
 	unsigned int hs20_deauth_requested:1;
 
 	u16 auth_alg;
-	u8 previous_ap[6];
 
 	enum {
 		STA_NULLFUNC = 0, STA_DISASSOC, STA_DEAUTH, STA_REMOVE,
@@ -73,9 +72,6 @@ struct sta_info {
 
 	/* IEEE 802.1X related data */
 	struct eapol_state_machine *eapol_sm;
-
-	/* IEEE 802.11f (IAPP) related data */
-	struct ieee80211_mgmt *last_assoc_req;
 
 	u32 acct_session_id_hi;
 	u32 acct_session_id_lo;

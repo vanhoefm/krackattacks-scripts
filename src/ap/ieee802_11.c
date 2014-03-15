@@ -1445,17 +1445,6 @@ static void handle_assoc(struct hostapd_data *hapd,
 	}
 #endif /* CONFIG_IEEE80211W */
 
-	if (reassoc) {
-		os_memcpy(sta->previous_ap, mgmt->u.reassoc_req.current_ap,
-			  ETH_ALEN);
-	}
-
-	if (sta->last_assoc_req)
-		os_free(sta->last_assoc_req);
-	sta->last_assoc_req = os_malloc(len);
-	if (sta->last_assoc_req)
-		os_memcpy(sta->last_assoc_req, mgmt, len);
-
 	/* Make sure that the previously registered inactivity timer will not
 	 * remove the STA immediately. */
 	sta->timeout_next = STA_NULLFUNC;
@@ -1924,7 +1913,7 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 		status = le_to_host16(mgmt->u.assoc_resp.status_code);
 
 	if (status != WLAN_STATUS_SUCCESS)
-		goto fail;
+		return;
 
 	/* Stop previous accounting session, if one is started, and allocate
 	 * new session id for the new session. */
@@ -1986,7 +1975,7 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 		ap_sta_disconnect(hapd, sta, sta->addr,
 				  WLAN_REASON_DISASSOC_AP_BUSY);
 
-		goto fail;
+		return;
 	}
 
 	if (sta->flags & WLAN_STA_WDS) {
@@ -2006,11 +1995,11 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 		 * interface selection is not going to change anymore.
 		 */
 		if (ap_sta_bind_vlan(hapd, sta, 0) < 0)
-			goto fail;
+			return;
 	} else if (sta->vlan_id) {
 		/* VLAN ID already set (e.g., by PMKSA caching), so bind STA */
 		if (ap_sta_bind_vlan(hapd, sta, 0) < 0)
-			goto fail;
+			return;
 	}
 
 	hostapd_set_sta_flags(hapd, sta);
@@ -2022,13 +2011,6 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 	hapd->new_assoc_sta_cb(hapd, sta, !new_assoc);
 
 	ieee802_1x_notify_port_enabled(sta->eapol_sm, 1);
-
- fail:
-	/* Copy of the association request is not needed anymore */
-	if (sta->last_assoc_req) {
-		os_free(sta->last_assoc_req);
-		sta->last_assoc_req = NULL;
-	}
 }
 
 

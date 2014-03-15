@@ -263,3 +263,11 @@ def test_wpas_ctrl_config_parser(dev):
 
     if "FAIL" not in dev[0].request("SET serial_number 0123456789abcdef0123456789abcdef0"):
         raise Exception("Too long string accepted")
+
+def test_wpas_ctrl_mib(dev):
+    """wpa_supplicant ctrl_iface MIB"""
+    mib = dev[0].get_mib()
+    if "dot11RSNAOptionImplemented" not in mib:
+        raise Exception("Missing MIB entry")
+    if mib["dot11RSNAOptionImplemented"] != "TRUE":
+        raise Exception("Unexpected dot11RSNAOptionImplemented value")

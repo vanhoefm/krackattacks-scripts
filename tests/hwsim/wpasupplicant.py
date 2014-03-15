@@ -290,6 +290,18 @@ class WpaSupplicant:
             return vals[field]
         return None
 
+    def get_mib(self):
+        res = self.request("MIB")
+        lines = res.splitlines()
+        vals = dict()
+        for l in lines:
+            try:
+                [name,value] = l.split('=', 1)
+                vals[name] = value
+            except ValueError, e:
+                logger.info(self.ifname + ": Ignore unexpected MIB line: " + l)
+        return vals
+
     def p2p_dev_addr(self):
         return self.get_status_field("p2p_device_address")
 

@@ -1,5 +1,5 @@
 # Test cases for HT operations with hostapd
-# Copyright (c) 2013, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -8,6 +8,7 @@ import time
 import logging
 logger = logging.getLogger()
 import struct
+import subprocess
 
 import hostapd
 
@@ -44,6 +45,228 @@ def test_ap_ht40_scan(dev, apdev):
         raise Exception("Unexpected secondary channel")
 
     dev[0].connect("test-ht40", key_mgmt="NONE", scan_freq=freq)
+
+def test_ap_ht40_scan_conflict(dev, apdev):
+    """HT40 co-ex scan conflict"""
+    params = { "ssid": "test-ht40",
+               "channel": "6",
+               "ht_capab": "[HT40+]"}
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    params = { "ssid": "test-ht40",
+               "channel": "5",
+               "ht_capab": "[HT40-]"}
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params, wait_enabled=False)
+
+    state = hapd.get_status_field("state")
+    if state != "HT_SCAN":
+        time.sleep(0.1)
+        state = hapd.get_status_field("state")
+        if state != "HT_SCAN":
+            raise Exception("Unexpected interface state - expected HT_SCAN")
+
+    ev = hapd.wait_event(["AP-ENABLED"], timeout=10)
+    if not ev:
+        raise Exception("AP setup timed out")
+
+    state = hapd.get_status_field("state")
+    if state != "ENABLED":
+        raise Exception("Unexpected interface state - expected ENABLED")
+
+    freq = hapd.get_status_field("freq")
+    if freq != "2432":
+        raise Exception("Unexpected frequency")
+    pri = hapd.get_status_field("channel")
+    if pri != "5":
+        raise Exception("Unexpected primary channel")
+    sec = hapd.get_status_field("secondary_channel")
+    if sec != "0":
+        raise Exception("Unexpected secondary channel: " + sec)
+
+    dev[0].connect("test-ht40", key_mgmt="NONE", scan_freq=freq)
+
+def test_ap_ht40_scan_match(dev, apdev):
+    """HT40 co-ex scan matching configuration"""
+    params = { "ssid": "test-ht40",
+               "channel": "5",
+               "ht_capab": "[HT40-]"}
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    params = { "ssid": "test-ht40",
+               "channel": "5",
+               "ht_capab": "[HT40-]"}
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params, wait_enabled=False)
+
+    state = hapd.get_status_field("state")
+    if state != "HT_SCAN":
+        time.sleep(0.1)
+        state = hapd.get_status_field("state")
+        if state != "HT_SCAN":
+            raise Exception("Unexpected interface state - expected HT_SCAN")
+
+    ev = hapd.wait_event(["AP-ENABLED"], timeout=10)
+    if not ev:
+        raise Exception("AP setup timed out")
+
+    state = hapd.get_status_field("state")
+    if state != "ENABLED":
+        raise Exception("Unexpected interface state - expected ENABLED")
+
+    freq = hapd.get_status_field("freq")
+    if freq != "2432":
+        raise Exception("Unexpected frequency")
+    pri = hapd.get_status_field("channel")
+    if pri != "5":
+        raise Exception("Unexpected primary channel")
+    sec = hapd.get_status_field("secondary_channel")
+    if sec != "-1":
+        raise Exception("Unexpected secondary channel: " + sec)
+
+    dev[0].connect("test-ht40", key_mgmt="NONE", scan_freq=freq)
+
+def test_ap_ht40_5ghz_match(dev, apdev):
+    """HT40 co-ex scan on 5 GHz with matching pri/sec channel"""
+    try:
+        params = { "ssid": "test-ht40",
+                   "hw_mode": "a",
+                   "channel": "36",
+                   "country_code": "US",
+                   "ht_capab": "[HT40+]"}
+        hostapd.add_ap(apdev[1]['ifname'], params)
+
+        params = { "ssid": "test-ht40",
+                   "hw_mode": "a",
+                   "channel": "36",
+                   "ht_capab": "[HT40+]"}
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params, wait_enabled=False)
+
+        state = hapd.get_status_field("state")
+        if state != "HT_SCAN":
+            time.sleep(0.1)
+            state = hapd.get_status_field("state")
+            if state != "HT_SCAN":
+                raise Exception("Unexpected interface state - expected HT_SCAN")
+
+        ev = hapd.wait_event(["AP-ENABLED"], timeout=10)
+        if not ev:
+            raise Exception("AP setup timed out")
+
+        state = hapd.get_status_field("state")
+        if state != "ENABLED":
+            raise Exception("Unexpected interface state - expected ENABLED")
+
+        freq = hapd.get_status_field("freq")
+        if freq != "5180":
+            raise Exception("Unexpected frequency")
+        pri = hapd.get_status_field("channel")
+        if pri != "36":
+            raise Exception("Unexpected primary channel")
+        sec = hapd.get_status_field("secondary_channel")
+        if sec != "1":
+            raise Exception("Unexpected secondary channel: " + sec)
+
+        dev[0].connect("test-ht40", key_mgmt="NONE", scan_freq=freq)
+    finally:
+        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+
+def test_ap_ht40_5ghz_switch(dev, apdev):
+    """HT40 co-ex scan on 5 GHz switching pri/sec channel"""
+    try:
+        params = { "ssid": "test-ht40",
+                   "hw_mode": "a",
+                   "channel": "36",
+                   "country_code": "US",
+                   "ht_capab": "[HT40+]"}
+        hostapd.add_ap(apdev[1]['ifname'], params)
+
+        params = { "ssid": "test-ht40",
+                   "hw_mode": "a",
+                   "channel": "40",
+                   "ht_capab": "[HT40-]"}
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params, wait_enabled=False)
+
+        state = hapd.get_status_field("state")
+        if state != "HT_SCAN":
+            time.sleep(0.1)
+            state = hapd.get_status_field("state")
+            if state != "HT_SCAN":
+                raise Exception("Unexpected interface state - expected HT_SCAN")
+
+        ev = hapd.wait_event(["AP-ENABLED"], timeout=10)
+        if not ev:
+            raise Exception("AP setup timed out")
+
+        state = hapd.get_status_field("state")
+        if state != "ENABLED":
+            raise Exception("Unexpected interface state - expected ENABLED")
+
+        freq = hapd.get_status_field("freq")
+        if freq != "5180":
+            raise Exception("Unexpected frequency: " + freq)
+        pri = hapd.get_status_field("channel")
+        if pri != "36":
+            raise Exception("Unexpected primary channel: " + pri)
+        sec = hapd.get_status_field("secondary_channel")
+        if sec != "1":
+            raise Exception("Unexpected secondary channel: " + sec)
+
+        dev[0].connect("test-ht40", key_mgmt="NONE", scan_freq=freq)
+    finally:
+        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+
+def test_ap_ht40_5ghz_switch2(dev, apdev):
+    """HT40 co-ex scan on 5 GHz switching pri/sec channel (2)"""
+    try:
+        params = { "ssid": "test-ht40",
+                   "hw_mode": "a",
+                   "channel": "36",
+                   "country_code": "US",
+                   "ht_capab": "[HT40+]"}
+        hostapd.add_ap(apdev[1]['ifname'], params)
+
+        id = dev[0].add_network()
+        dev[0].set_network(id, "mode", "2")
+        dev[0].set_network_quoted(id, "ssid", "wpas-ap-open")
+        dev[0].set_network(id, "key_mgmt", "NONE")
+        dev[0].set_network(id, "frequency", "5200")
+        dev[0].set_network(id, "scan_freq", "5200")
+        dev[0].select_network(id)
+        time.sleep(1)
+
+        params = { "ssid": "test-ht40",
+                   "hw_mode": "a",
+                   "channel": "40",
+                   "ht_capab": "[HT40-]"}
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params, wait_enabled=False)
+
+        state = hapd.get_status_field("state")
+        if state != "HT_SCAN":
+            time.sleep(0.1)
+            state = hapd.get_status_field("state")
+            if state != "HT_SCAN":
+                raise Exception("Unexpected interface state - expected HT_SCAN")
+
+        ev = hapd.wait_event(["AP-ENABLED"], timeout=10)
+        if not ev:
+            raise Exception("AP setup timed out")
+
+        state = hapd.get_status_field("state")
+        if state != "ENABLED":
+            raise Exception("Unexpected interface state - expected ENABLED")
+
+        freq = hapd.get_status_field("freq")
+        if freq != "5180":
+            raise Exception("Unexpected frequency: " + freq)
+        pri = hapd.get_status_field("channel")
+        if pri != "36":
+            raise Exception("Unexpected primary channel: " + pri)
+        sec = hapd.get_status_field("secondary_channel")
+        if sec != "1":
+            raise Exception("Unexpected secondary channel: " + sec)
+
+        dev[0].connect("test-ht40", key_mgmt="NONE", scan_freq=freq)
+    finally:
+        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
 
 def test_obss_scan(dev, apdev):
     """Overlapping BSS scan request"""

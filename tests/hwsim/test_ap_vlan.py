@@ -85,3 +85,18 @@ def test_ap_vlan_wpa2_radius_required(dev, apdev):
         raise Exception("Timeout on connection attempt")
     if "CTRL-EVENT-CONNECTED" in ev:
         raise Exception("Unexpected success without tunnel parameters")
+
+def test_ap_vlan_tagged(dev, apdev):
+    """AP VLAN with tagged interface"""
+    params = { "ssid": "test-vlan-open",
+               "dynamic_vlan": "1",
+               "vlan_tagged_interface": "lo",
+               "accept_mac_file": "hostapd.accept" }
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].connect("test-vlan-open", key_mgmt="NONE", scan_freq="2412")
+    dev[1].connect("test-vlan-open", key_mgmt="NONE", scan_freq="2412")
+    dev[2].connect("test-vlan-open", key_mgmt="NONE", scan_freq="2412")
+    hwsim_utils.test_connectivity(dev[0].ifname, "brlo.1")
+    hwsim_utils.test_connectivity(dev[1].ifname, "brlo.2")
+    hwsim_utils.test_connectivity(dev[2].ifname, apdev[0]['ifname'])

@@ -31,7 +31,9 @@ static int testing_cipher_suite_filter(struct tlsv1_server *conn, u16 suite)
 {
 #ifdef CONFIG_TESTING_OPTIONS
 	if ((conn->test_flags &
-	     (TLS_BREAK_SRV_KEY_X_HASH | TLS_BREAK_SRV_KEY_X_SIGNATURE)) &&
+	     (TLS_BREAK_SRV_KEY_X_HASH | TLS_BREAK_SRV_KEY_X_SIGNATURE |
+	      TLS_DHE_PRIME_511B | TLS_DHE_PRIME_767B | TLS_DHE_PRIME_15 |
+	      TLS_DHE_PRIME_58B | TLS_DHE_NON_PRIME)) &&
 	    suite != TLS_DHE_RSA_WITH_AES_256_CBC_SHA256 &&
 	    suite != TLS_DHE_RSA_WITH_AES_256_CBC_SHA &&
 	    suite != TLS_DHE_RSA_WITH_AES_128_CBC_SHA256 &&
@@ -590,6 +592,8 @@ static int tls_process_client_key_exchange_dh(
 	u8 *shared;
 	size_t shared_len;
 	int res;
+	const u8 *dh_p;
+	size_t dh_p_len;
 
 	/*
 	 * struct {
@@ -641,7 +645,9 @@ static int tls_process_client_key_exchange_dh(
 		return -1;
 	}
 
-	shared_len = conn->cred->dh_p_len;
+	tlsv1_server_get_dh_p(conn, &dh_p, &dh_p_len);
+
+	shared_len = dh_p_len;
 	shared = os_malloc(shared_len);
 	if (shared == NULL) {
 		wpa_printf(MSG_DEBUG, "TLSv1: Could not allocate memory for "
@@ -653,8 +659,7 @@ static int tls_process_client_key_exchange_dh(
 
 	/* shared = Yc^secret mod p */
 	if (crypto_mod_exp(dh_yc, dh_yc_len, conn->dh_secret,
-			   conn->dh_secret_len,
-			   conn->cred->dh_p, conn->cred->dh_p_len,
+			   conn->dh_secret_len, dh_p, dh_p_len,
 			   shared, &shared_len)) {
 		os_free(shared);
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
@@ -992,6 +997,36 @@ static int tls_process_client_finished(struct tlsv1_server *conn, u8 ct,
 	     (TLS_BREAK_SRV_KEY_X_HASH | TLS_BREAK_SRV_KEY_X_SIGNATURE)) &&
 	    !conn->test_failure_reported) {
 		tlsv1_server_log(conn, "TEST-FAILURE: Client Finished received after invalid ServerKeyExchange");
+		conn->test_failure_reported = 1;
+	}
+
+	if ((conn->test_flags & TLS_DHE_PRIME_15) &&
+	    !conn->test_failure_reported) {
+		tlsv1_server_log(conn, "TEST-FAILURE: Client Finished received after bogus DHE \"prime\" 15");
+		conn->test_failure_reported = 1;
+	}
+
+	if ((conn->test_flags & TLS_DHE_PRIME_58B) &&
+	    !conn->test_failure_reported) {
+		tlsv1_server_log(conn, "TEST-FAILURE: Client Finished received after short 58-bit DHE prime in long container");
+		conn->test_failure_reported = 1;
+	}
+
+	if ((conn->test_flags & TLS_DHE_PRIME_511B) &&
+	    !conn->test_failure_reported) {
+		tlsv1_server_log(conn, "TEST-WARNING: Client Finished received after short 511-bit DHE prime (insecure)");
+		conn->test_failure_reported = 1;
+	}
+
+	if ((conn->test_flags & TLS_DHE_PRIME_767B) &&
+	    !conn->test_failure_reported) {
+		tlsv1_server_log(conn, "TEST-NOTE: Client Finished received after 767-bit DHE prime (relatively insecure)");
+		conn->test_failure_reported = 1;
+	}
+
+	if ((conn->test_flags & TLS_DHE_NON_PRIME) &&
+	    !conn->test_failure_reported) {
+		tlsv1_server_log(conn, "TEST-NOTE: Client Finished received after non-prime claimed as DHE prime");
 		conn->test_failure_reported = 1;
 	}
 #endif /* CONFIG_TESTING_OPTIONS */

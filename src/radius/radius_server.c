@@ -554,6 +554,26 @@ static void radius_server_testing_options_tls(struct radius_session *sess,
 		srv_log(sess, "TLS test - break ServerKeyExchange ServerParams Signature");
 		eap_conf->tls_test_flags = TLS_BREAK_SRV_KEY_X_SIGNATURE;
 		break;
+	case 4:
+		srv_log(sess, "TLS test - RSA-DHE using a short 511-bit prime");
+		eap_conf->tls_test_flags = TLS_DHE_PRIME_511B;
+		break;
+	case 5:
+		srv_log(sess, "TLS test - RSA-DHE using a short 767-bit prime");
+		eap_conf->tls_test_flags = TLS_DHE_PRIME_767B;
+		break;
+	case 6:
+		srv_log(sess, "TLS test - RSA-DHE using a bogus 15 \"prime\"");
+		eap_conf->tls_test_flags = TLS_DHE_PRIME_15;
+		break;
+	case 7:
+		srv_log(sess, "TLS test - RSA-DHE using a short 58-bit prime in long container");
+		eap_conf->tls_test_flags = TLS_DHE_PRIME_58B;
+		break;
+	case 8:
+		srv_log(sess, "TLS test - RSA-DHE using a non-prime");
+		eap_conf->tls_test_flags = TLS_DHE_NON_PRIME;
+		break;
 	default:
 		srv_log(sess, "Unrecognized TLS test");
 		break;

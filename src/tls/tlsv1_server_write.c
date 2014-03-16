@@ -248,6 +248,8 @@ static int tls_write_server_key_exchange(struct tlsv1_server *conn,
 	size_t rlen;
 	u8 *dh_ys;
 	size_t dh_ys_len;
+	const u8 *dh_p;
+	size_t dh_p_len;
 
 	suite = tls_get_cipher_suite(conn->rl.cipher_suite);
 	if (suite == NULL)
@@ -273,8 +275,10 @@ static int tls_write_server_key_exchange(struct tlsv1_server *conn,
 		return -1;
 	}
 
+	tlsv1_server_get_dh_p(conn, &dh_p, &dh_p_len);
+
 	os_free(conn->dh_secret);
-	conn->dh_secret_len = conn->cred->dh_p_len;
+	conn->dh_secret_len = dh_p_len;
 	conn->dh_secret = os_malloc(conn->dh_secret_len);
 	if (conn->dh_secret == NULL) {
 		wpa_printf(MSG_DEBUG, "TLSv1: Failed to allocate "
@@ -293,8 +297,7 @@ static int tls_write_server_key_exchange(struct tlsv1_server *conn,
 		return -1;
 	}
 
-	if (os_memcmp(conn->dh_secret, conn->cred->dh_p, conn->dh_secret_len) >
-	    0)
+	if (os_memcmp(conn->dh_secret, dh_p, conn->dh_secret_len) > 0)
 		conn->dh_secret[0] = 0; /* make sure secret < p */
 
 	pos = conn->dh_secret;
@@ -309,7 +312,7 @@ static int tls_write_server_key_exchange(struct tlsv1_server *conn,
 			conn->dh_secret, conn->dh_secret_len);
 
 	/* Ys = g^secret mod p */
-	dh_ys_len = conn->cred->dh_p_len;
+	dh_ys_len = dh_p_len;
 	dh_ys = os_malloc(dh_ys_len);
 	if (dh_ys == NULL) {
 		wpa_printf(MSG_DEBUG, "TLSv1: Failed to allocate memory for "
@@ -320,8 +323,7 @@ static int tls_write_server_key_exchange(struct tlsv1_server *conn,
 	}
 	if (crypto_mod_exp(conn->cred->dh_g, conn->cred->dh_g_len,
 			   conn->dh_secret, conn->dh_secret_len,
-			   conn->cred->dh_p, conn->cred->dh_p_len,
-			   dh_ys, &dh_ys_len)) {
+			   dh_p, dh_p_len, dh_ys, &dh_ys_len)) {
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				   TLS_ALERT_INTERNAL_ERROR);
 		os_free(dh_ys);
@@ -369,7 +371,7 @@ static int tls_write_server_key_exchange(struct tlsv1_server *conn,
 	/* body - ServerDHParams */
 	server_params = pos;
 	/* dh_p */
-	if (pos + 2 + conn->cred->dh_p_len > end) {
+	if (pos + 2 + dh_p_len > end) {
 		wpa_printf(MSG_DEBUG, "TLSv1: Not enough buffer space for "
 			   "dh_p");
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
@@ -377,10 +379,10 @@ static int tls_write_server_key_exchange(struct tlsv1_server *conn,
 		os_free(dh_ys);
 		return -1;
 	}
-	WPA_PUT_BE16(pos, conn->cred->dh_p_len);
+	WPA_PUT_BE16(pos, dh_p_len);
 	pos += 2;
-	os_memcpy(pos, conn->cred->dh_p, conn->cred->dh_p_len);
-	pos += conn->cred->dh_p_len;
+	os_memcpy(pos, dh_p, dh_p_len);
+	pos += dh_p_len;
 
 	/* dh_g */
 	if (pos + 2 + conn->cred->dh_g_len > end) {

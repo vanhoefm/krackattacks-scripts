@@ -544,6 +544,11 @@ void tls_connection_set_log_cb(struct tls_connection *conn,
 #define TLS_BREAK_VERIFY_DATA BIT(0)
 #define TLS_BREAK_SRV_KEY_X_HASH BIT(1)
 #define TLS_BREAK_SRV_KEY_X_SIGNATURE BIT(2)
+#define TLS_DHE_PRIME_511B BIT(3)
+#define TLS_DHE_PRIME_767B BIT(4)
+#define TLS_DHE_PRIME_15 BIT(5)
+#define TLS_DHE_PRIME_58B BIT(6)
+#define TLS_DHE_NON_PRIME BIT(7)
 
 void tls_connection_set_test_flags(struct tls_connection *conn, u32 flags);
 

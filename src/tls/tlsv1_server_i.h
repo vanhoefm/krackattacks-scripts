@@ -78,5 +78,7 @@ u8 * tlsv1_server_send_alert(struct tlsv1_server *conn, u8 level,
 			     u8 description, size_t *out_len);
 int tlsv1_server_process_handshake(struct tlsv1_server *conn, u8 ct,
 				   const u8 *buf, size_t *len);
+void tlsv1_server_get_dh_p(struct tlsv1_server *conn, const u8 **dh_p,
+			   size_t *dh_p_len);
 
 #endif /* TLSV1_SERVER_I_H */

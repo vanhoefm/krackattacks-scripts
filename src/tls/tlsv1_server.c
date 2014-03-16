@@ -316,7 +316,7 @@ int tlsv1_server_decrypt(struct tlsv1_server *conn,
 		}
 
 #ifdef CONFIG_TESTING_OPTIONS
-		if ((conn->test_flags &&
+		if ((conn->test_flags &
 		     (TLS_BREAK_VERIFY_DATA | TLS_BREAK_SRV_KEY_X_HASH |
 		      TLS_BREAK_SRV_KEY_X_SIGNATURE)) &&
 		    !conn->test_failure_reported) {

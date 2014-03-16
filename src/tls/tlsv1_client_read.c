@@ -409,12 +409,37 @@ static int tls_process_certificate(struct tlsv1_client *conn, u8 ct,
 }
 
 
+static unsigned int count_bits(const u8 *val, size_t len)
+{
+	size_t i;
+	unsigned int bits;
+	u8 tmp;
+
+	for (i = 0; i < len; i++) {
+		if (val[i])
+			break;
+	}
+	if (i == len)
+		return 0;
+
+	bits = (len - i - 1) * 8;
+	tmp = val[i];
+	while (tmp) {
+		bits++;
+		tmp >>= 1;
+	}
+
+	return bits;
+}
+
+
 static int tlsv1_process_diffie_hellman(struct tlsv1_client *conn,
 					const u8 *buf, size_t len,
 					tls_key_exchange key_exchange)
 {
 	const u8 *pos, *end, *server_params, *server_params_end;
 	u8 alert;
+	unsigned int bits;
 
 	tlsv1_client_free_dh(conn);
 
@@ -429,6 +454,14 @@ static int tlsv1_process_diffie_hellman(struct tlsv1_client *conn,
 	if (conn->dh_p_len == 0 || end - pos < (int) conn->dh_p_len) {
 		wpa_printf(MSG_DEBUG, "TLSv1: Invalid dh_p length %lu",
 			   (unsigned long) conn->dh_p_len);
+		goto fail;
+	}
+	bits = count_bits(pos, conn->dh_p_len);
+	if (bits < 768) {
+		wpa_printf(MSG_INFO, "TLSv1: Reject under 768-bit DH prime (insecure; only %u bits)",
+			   bits);
+		wpa_hexdump(MSG_DEBUG, "TLSv1: Rejected DH prime",
+			    pos, conn->dh_p_len);
 		goto fail;
 	}
 	conn->dh_p = os_malloc(conn->dh_p_len);

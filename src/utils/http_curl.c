@@ -1,6 +1,6 @@
 /*
  * HTTP wrapper for libcurl
- * Copyright (c) 2012-2013, Qualcomm Atheros, Inc.
+ * Copyright (c) 2012-2014, Qualcomm Atheros, Inc.
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -82,15 +82,28 @@ static void clone_str(char **dst, const char *src)
 static void debug_dump(struct http_ctx *ctx, const char *title,
 		       const char *buf, size_t len)
 {
-	char *txt = os_malloc(len + 1);
+	char *txt;
+	size_t i;
+
+	for (i = 0; i < len; i++) {
+		if (buf[i] < 32 && buf[i] != '\t' && buf[i] != '\n' &&
+		    buf[i] != '\r') {
+			wpa_hexdump_ascii(MSG_MSGDUMP, title, buf, len);
+			return;
+		}
+	}
+
+	txt = os_malloc(len + 1);
 	if (txt == NULL)
 		return;
 	os_memcpy(txt, buf, len);
 	txt[len] = '\0';
 	while (len > 0) {
 		len--;
-		if (txt[len] == '\r' || txt[len] == '\n')
-		    txt[len] = '\0';
+		if (txt[len] == '\n' || txt[len] == '\r')
+			txt[len] = '\0';
+		else
+			break;
 	}
 	wpa_printf(MSG_MSGDUMP, "%s[%s]", title, txt);
 	os_free(txt);
@@ -134,21 +147,11 @@ static int curl_cb_debug(CURL *curl, curl_infotype info, char *buf, size_t len,
 }
 
 
-static size_t curl_cb_header(void *ptr, size_t size, size_t nmemb,
-			     void *userdata)
-{
-	struct http_ctx *ctx = userdata;
-	debug_dump(ctx, "curl header", ptr, size * nmemb);
-	return size * nmemb;
-}
-
-
 static size_t curl_cb_write(void *ptr, size_t size, size_t nmemb,
 			    void *userdata)
 {
 	struct http_ctx *ctx = userdata;
 	char *n;
-	debug_dump(ctx, "curl write", ptr, size * nmemb);
 	n = os_realloc(ctx->curl_buf, ctx->curl_buf_len + size * nmemb + 1);
 	if (n == NULL)
 		return 0;
@@ -1275,8 +1278,6 @@ static CURL * setup_curl_post(struct http_ctx *ctx, const char *address,
 	curl_easy_setopt(curl, CURLOPT_CERTINFO, 1L);
 	curl_easy_setopt(curl, CURLOPT_DEBUGFUNCTION, curl_cb_debug);
 	curl_easy_setopt(curl, CURLOPT_DEBUGDATA, ctx);
-	curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, curl_cb_header);
-	curl_easy_setopt(curl, CURLOPT_HEADERDATA, ctx);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_cb_write);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, ctx);
 	curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
@@ -1527,8 +1528,6 @@ int http_download_file(struct http_ctx *ctx, const char *url,
 	}
 	curl_easy_setopt(curl, CURLOPT_DEBUGFUNCTION, curl_cb_debug);
 	curl_easy_setopt(curl, CURLOPT_DEBUGDATA, ctx);
-	curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, curl_cb_header);
-	curl_easy_setopt(curl, CURLOPT_HEADERDATA, ctx);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, fwrite);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, f);
 	curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);

@@ -891,7 +891,7 @@ struct hostapd_vlan * vlan_add_dynamic(struct hostapd_data *hapd,
 				       struct hostapd_vlan *vlan,
 				       int vlan_id)
 {
-	struct hostapd_vlan *n;
+	struct hostapd_vlan *n = NULL;
 	char *ifname, *pos;
 
 	if (vlan == NULL || vlan_id <= 0 || vlan_id > MAX_VLAN_ID ||
@@ -904,28 +904,24 @@ struct hostapd_vlan * vlan_add_dynamic(struct hostapd_data *hapd,
 	if (ifname == NULL)
 		return NULL;
 	pos = os_strchr(ifname, '#');
-	if (pos == NULL) {
-		os_free(ifname);
-		return NULL;
-	}
+	if (pos == NULL)
+		goto free_ifname;
 	*pos++ = '\0';
 
 	n = os_zalloc(sizeof(*n));
-	if (n == NULL) {
-		os_free(ifname);
-		return NULL;
-	}
+	if (n == NULL)
+		goto free_ifname;
 
 	n->vlan_id = vlan_id;
 	n->dynamic_vlan = 1;
 
 	os_snprintf(n->ifname, sizeof(n->ifname), "%s%d%s", ifname, vlan_id,
 		    pos);
-	os_free(ifname);
 
 	if (hostapd_vlan_if_add(hapd, n->ifname)) {
 		os_free(n);
-		return NULL;
+		n = NULL;
+		goto free_ifname;
 	}
 
 	n->next = hapd->conf->vlan;
@@ -935,6 +931,8 @@ struct hostapd_vlan * vlan_add_dynamic(struct hostapd_data *hapd,
 	ifconfig_up(n->ifname);
 #endif /* CONFIG_FULL_DYNAMIC_VLAN */
 
+free_ifname:
+	os_free(ifname);
 	return n;
 }
 

@@ -1,6 +1,6 @@
 /*
  * Hotspot 2.0 OSU client
- * Copyright (c) 2012-2013, Qualcomm Atheros, Inc.
+ * Copyright (c) 2012-2014, Qualcomm Atheros, Inc.
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -1993,7 +1993,7 @@ static struct osu_data * parse_osu_providers(const char *fname, size_t *count)
 
 
 static int osu_connect(struct hs20_osu_client *ctx, const char *bssid,
-		       const char *ssid, const char *url, const char *ca_fname,
+		       const char *ssid, const char *url,
 		       unsigned int methods, int no_prod_assoc,
 		       const char *osu_nai)
 {
@@ -2068,9 +2068,9 @@ static int osu_connect(struct hs20_osu_client *ctx, const char *bssid,
 
 	ctx->no_reconnect = 1;
 	if (methods & 0x02)
-		res = cmd_prov(ctx, url, ca_fname);
+		res = cmd_prov(ctx, url);
 	else if (methods & 0x01)
-		res = cmd_oma_dm_prov(ctx, url, ca_fname);
+		res = cmd_oma_dm_prov(ctx, url);
 
 	wpa_printf(MSG_INFO, "Remove OSU network connection");
 	write_summary(ctx, "Remove OSU network connection");
@@ -2093,7 +2093,7 @@ static int osu_connect(struct hs20_osu_client *ctx, const char *bssid,
 
 
 static int cmd_osu_select(struct hs20_osu_client *ctx, const char *dir,
-			  int connect, const char *ca_fname, int no_prod_assoc,
+			  int connect, int no_prod_assoc,
 			  const char *friendly_name)
 {
 	char fname[255];
@@ -2264,14 +2264,14 @@ selected:
 
 		if (connect == 2) {
 			if (last->methods & 0x02)
-				ret = cmd_prov(ctx, last->url, ca_fname);
+				ret = cmd_prov(ctx, last->url);
 			else if (last->methods & 0x01)
-				ret = cmd_oma_dm_prov(ctx, last->url, ca_fname);
+				ret = cmd_oma_dm_prov(ctx, last->url);
 			else
 				ret = -1;
 		} else if (connect)
 			ret = osu_connect(ctx, last->bssid, last->osu_ssid,
-					  last->url, ca_fname, last->methods,
+					  last->url, last->methods,
 					  no_prod_assoc, last->osu_nai);
 	} else
 		ret = -1;
@@ -2282,8 +2282,8 @@ selected:
 }
 
 
-static int cmd_signup(struct hs20_osu_client *ctx, const char *ca_fname,
-		      int no_prod_assoc, const char *friendly_name)
+static int cmd_signup(struct hs20_osu_client *ctx, int no_prod_assoc,
+		      const char *friendly_name)
 {
 	char dir[255];
 	char fname[300], buf[400];
@@ -2334,8 +2334,7 @@ static int cmd_signup(struct hs20_osu_client *ctx, const char *ca_fname,
 	}
 	wpa_printf(MSG_INFO, "OSU provider fetch completed");
 
-	return cmd_osu_select(ctx, fname, 1, ca_fname, no_prod_assoc,
-			      friendly_name);
+	return cmd_osu_select(ctx, fname, 1, no_prod_assoc, friendly_name);
 }
 
 
@@ -2353,8 +2352,6 @@ static void cmd_sub_rem(struct hs20_osu_client *ctx, const char *address,
 	char client_key_buf[200];
 	char *client_key = NULL;
 	int spp;
-
-	ctx->ca_fname = ca_fname;
 
 	wpa_printf(MSG_INFO, "Subscription remediation requested with Server URL: %s",
 		   address);
@@ -2399,6 +2396,7 @@ static void cmd_sub_rem(struct hs20_osu_client *ctx, const char *address,
 		return;
 	}
 	wpa_printf(MSG_INFO, "Using server trust root: %s", ca_fname);
+	ctx->ca_fname = ca_fname;
 
 	pps = node_from_file(ctx->xml, pps_fname);
 	if (pps == NULL) {
@@ -2482,11 +2480,11 @@ static void cmd_sub_rem(struct hs20_osu_client *ctx, const char *address,
 	}
 
 	if (spp)
-		spp_sub_rem(ctx, address, pps_fname, ca_fname,
+		spp_sub_rem(ctx, address, pps_fname,
 			    client_cert, client_key,
 			    cred_username, cred_password, pps);
 	else
-		oma_dm_sub_rem(ctx, address, pps_fname, ca_fname,
+		oma_dm_sub_rem(ctx, address, pps_fname,
 			       client_cert, client_key,
 			       cred_username, cred_password, pps);
 
@@ -2555,6 +2553,7 @@ static int cmd_pol_upd(struct hs20_osu_client *ctx, const char *address,
 		return -1;
 	}
 	wpa_printf(MSG_INFO, "Using server trust root: %s", ca_fname);
+	ctx->ca_fname = ca_fname;
 
 	pps = node_from_file(ctx->xml, pps_fname);
 	if (pps == NULL) {
@@ -2628,11 +2627,11 @@ static int cmd_pol_upd(struct hs20_osu_client *ctx, const char *address,
 	}
 
 	if (spp)
-		spp_pol_upd(ctx, address, pps_fname, ca_fname,
+		spp_pol_upd(ctx, address, pps_fname,
 			    client_cert, client_key,
 			    cred_username, cred_password, pps);
 	else
-		oma_dm_pol_upd(ctx, address, pps_fname, ca_fname,
+		oma_dm_pol_upd(ctx, address, pps_fname,
 			       client_cert, client_key,
 			       cred_username, cred_password, pps);
 
@@ -3077,13 +3076,15 @@ int main(int argc, char *argv[])
 			usage();
 			exit(0);
 		}
-		cmd_prov(&ctx, argv[optind + 1], argv[optind + 2]);
+		ctx.ca_fname = argv[optind + 2];
+		cmd_prov(&ctx, argv[optind + 1]);
 	} else if (strcmp(argv[optind], "sim_prov") == 0) {
 		if (argc - optind < 2) {
 			usage();
 			exit(0);
 		}
-		cmd_sim_prov(&ctx, argv[optind + 1], argv[optind + 2]);
+		ctx.ca_fname = argv[optind + 2];
+		cmd_sim_prov(&ctx, argv[optind + 1]);
 	} else if (strcmp(argv[optind], "dl_osu_ca") == 0) {
 		if (argc - optind < 2) {
 			usage();
@@ -3107,13 +3108,11 @@ int main(int argc, char *argv[])
 			usage();
 			exit(0);
 		}
-		cmd_osu_select(&ctx, argv[optind + 1], 2,
-			       argc > optind + 2 ? argv[optind + 2] : NULL,
-			       1, NULL);
+		ctx.ca_fname = argc > optind + 2 ? argv[optind + 2] : NULL;
+		cmd_osu_select(&ctx, argv[optind + 1], 2, 1, NULL);
 	} else if (strcmp(argv[optind], "signup") == 0) {
-		ret = cmd_signup(&ctx,
-				 argc > optind + 1 ? argv[optind + 1] : NULL,
-				 no_prod_assoc, friendly_name);
+		ctx.ca_fname = argc > optind + 1 ? argv[optind + 1] : NULL;
+		ret = cmd_signup(&ctx, no_prod_assoc, friendly_name);
 	} else if (strcmp(argv[optind], "set_pps") == 0) {
 		if (argc - optind < 2) {
 			usage();
@@ -3131,14 +3130,15 @@ int main(int argc, char *argv[])
 			usage();
 			exit(0);
 		}
-		cmd_oma_dm_prov(&ctx, argv[optind + 1], argv[optind + 2]);
+		ctx.ca_fname = argv[optind + 2];
+		cmd_oma_dm_prov(&ctx, argv[optind + 1]);
 	} else if (strcmp(argv[optind], "oma_dm_sim_prov") == 0) {
 		if (argc - optind < 2) {
 			usage();
 			exit(0);
 		}
-		if (cmd_oma_dm_sim_prov(&ctx, argv[optind + 1],
-					argv[optind + 2]) < 0) {
+		ctx.ca_fname = argv[optind + 2];
+		if (cmd_oma_dm_sim_prov(&ctx, argv[optind + 1]) < 0) {
 			write_summary(&ctx, "Failed to complete OMA DM SIM provisioning");
 			return -1;
 		}

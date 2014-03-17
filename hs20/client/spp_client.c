@@ -1,6 +1,6 @@
 /*
  * Hotspot 2.0 SPP client
- * Copyright (c) 2012-2013, Qualcomm Atheros, Inc.
+ * Copyright (c) 2012-2014, Qualcomm Atheros, Inc.
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -776,7 +776,7 @@ static int spp_post_dev_data(struct hs20_osu_client *ctx,
 
 
 void spp_sub_rem(struct hs20_osu_client *ctx, const char *address,
-		 const char *pps_fname, const char *ca_fname,
+		 const char *pps_fname,
 		 const char *client_cert, const char *client_key,
 		 const char *cred_username, const char *cred_password,
 		 xml_node_t *pps)
@@ -787,7 +787,7 @@ void spp_sub_rem(struct hs20_osu_client *ctx, const char *address,
 	os_free(ctx->server_url);
 	ctx->server_url = os_strdup(address);
 
-	if (soap_init_client(ctx->http, address, ca_fname,
+	if (soap_init_client(ctx->http, address, ctx->ca_fname,
 			     cred_username, cred_password, client_cert,
 			     client_key) == 0) {
 		spp_post_dev_data(ctx, SPP_SUBSCRIPTION_REMEDIATION,
@@ -923,7 +923,7 @@ static int hs20_spp_update_response(struct hs20_osu_client *ctx,
 
 
 void spp_pol_upd(struct hs20_osu_client *ctx, const char *address,
-		 const char *pps_fname, const char *ca_fname,
+		 const char *pps_fname,
 		 const char *client_cert, const char *client_key,
 		 const char *cred_username, const char *cred_password,
 		 xml_node_t *pps)
@@ -934,7 +934,7 @@ void spp_pol_upd(struct hs20_osu_client *ctx, const char *address,
 	os_free(ctx->server_url);
 	ctx->server_url = os_strdup(address);
 
-	if (soap_init_client(ctx->http, address, ca_fname, cred_username,
+	if (soap_init_client(ctx->http, address, ctx->ca_fname, cred_username,
 			     cred_password, client_cert, client_key) == 0) {
 		spp_post_dev_data(ctx, SPP_POLICY_UPDATE, "Policy update",
 				  pps_fname, pps);
@@ -942,13 +942,10 @@ void spp_pol_upd(struct hs20_osu_client *ctx, const char *address,
 }
 
 
-int cmd_prov(struct hs20_osu_client *ctx, const char *url,
-	     const char *ca_fname)
+int cmd_prov(struct hs20_osu_client *ctx, const char *url)
 {
 	unlink("Cert/est_cert.der");
 	unlink("Cert/est_cert.pem");
-
-	ctx->ca_fname = ca_fname;
 
 	if (url == NULL) {
 		wpa_printf(MSG_INFO, "Invalid prov command (missing URL)");
@@ -960,8 +957,8 @@ int cmd_prov(struct hs20_osu_client *ctx, const char *url,
 	os_free(ctx->server_url);
 	ctx->server_url = os_strdup(url);
 
-	if (soap_init_client(ctx->http, url, ca_fname, NULL, NULL, NULL, NULL) <
-	    0)
+	if (soap_init_client(ctx->http, url, ctx->ca_fname, NULL, NULL, NULL,
+			     NULL) < 0)
 		return -1;
 	spp_post_dev_data(ctx, SPP_SUBSCRIPTION_REGISTRATION,
 			  "Subscription registration", NULL, NULL);
@@ -970,11 +967,8 @@ int cmd_prov(struct hs20_osu_client *ctx, const char *url,
 }
 
 
-int cmd_sim_prov(struct hs20_osu_client *ctx, const char *url,
-	     const char *ca_fname)
+int cmd_sim_prov(struct hs20_osu_client *ctx, const char *url)
 {
-	ctx->ca_fname = ca_fname;
-
 	if (url == NULL) {
 		wpa_printf(MSG_INFO, "Invalid prov command (missing URL)");
 		return -1;
@@ -991,8 +985,8 @@ int cmd_sim_prov(struct hs20_osu_client *ctx, const char *url,
 		wpa_printf(MSG_INFO, "Could not get IP address for WLAN - try connection anyway");
 	}
 
-	if (soap_init_client(ctx->http, url, ca_fname, NULL, NULL, NULL, NULL) <
-	    0)
+	if (soap_init_client(ctx->http, url, ctx->ca_fname, NULL, NULL, NULL,
+			     NULL) < 0)
 		return -1;
 	spp_post_dev_data(ctx, SPP_SUBSCRIPTION_REGISTRATION,
 			  "Subscription provisioning", NULL, NULL);

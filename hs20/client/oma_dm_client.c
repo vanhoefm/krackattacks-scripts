@@ -1,6 +1,6 @@
 /*
  * Hotspot 2.0 - OMA DM client
- * Copyright (c) 2013, Qualcomm Atheros, Inc.
+ * Copyright (c) 2013-2014, Qualcomm Atheros, Inc.
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -909,7 +909,7 @@ static int oma_dm_get_cmdid(struct hs20_osu_client *ctx, xml_node_t *node)
 
 static xml_node_t * oma_dm_send_recv(struct hs20_osu_client *ctx,
 				     const char *url, xml_node_t *syncml,
-				     const char *ext_hdr, const char *ca_fname,
+				     const char *ext_hdr,
 				     const char *username, const char *password,
 				     const char *client_cert,
 				     const char *client_key)
@@ -928,7 +928,7 @@ static xml_node_t * oma_dm_send_recv(struct hs20_osu_client *ctx,
 	os_free(ctx->server_url);
 	ctx->server_url = os_strdup(url);
 	res = http_post(ctx->http, url, str, "application/vnd.syncml.dm+xml",
-			ext_hdr, ca_fname, username, password,
+			ext_hdr, ctx->ca_fname, username, password,
 			client_cert, client_key, NULL);
 	os_free(str);
 	os_free(resp_uri);
@@ -1123,8 +1123,7 @@ static xml_node_t * oma_dm_process(struct hs20_osu_client *ctx, const char *url,
 }
 
 
-int cmd_oma_dm_prov(struct hs20_osu_client *ctx, const char *url,
-		    const char *ca_fname)
+int cmd_oma_dm_prov(struct hs20_osu_client *ctx, const char *url)
 {
 	xml_node_t *syncml, *resp;
 	char *resp_uri = NULL;
@@ -1145,8 +1144,7 @@ int cmd_oma_dm_prov(struct hs20_osu_client *ctx, const char *url,
 
 	while (syncml) {
 		resp = oma_dm_send_recv(ctx, resp_uri ? resp_uri : url,
-					syncml, NULL, ca_fname, NULL, NULL,
-					NULL, NULL);
+					syncml, NULL, NULL, NULL, NULL, NULL);
 		if (resp == NULL)
 			return -1;
 
@@ -1162,8 +1160,7 @@ int cmd_oma_dm_prov(struct hs20_osu_client *ctx, const char *url,
 }
 
 
-int cmd_oma_dm_sim_prov(struct hs20_osu_client *ctx, const char *url,
-			const char *ca_fname)
+int cmd_oma_dm_sim_prov(struct hs20_osu_client *ctx, const char *url)
 {
 	xml_node_t *syncml, *resp;
 	char *resp_uri = NULL;
@@ -1192,8 +1189,7 @@ int cmd_oma_dm_sim_prov(struct hs20_osu_client *ctx, const char *url,
 
 	while (syncml) {
 		resp = oma_dm_send_recv(ctx, resp_uri ? resp_uri : url,
-					syncml, NULL, ca_fname, NULL, NULL,
-					NULL, NULL);
+					syncml, NULL, NULL, NULL, NULL, NULL);
 		if (resp == NULL)
 			return -1;
 
@@ -1223,7 +1219,7 @@ int cmd_oma_dm_sim_prov(struct hs20_osu_client *ctx, const char *url,
 
 
 void oma_dm_pol_upd(struct hs20_osu_client *ctx, const char *address,
-		    const char *pps_fname, const char *ca_fname,
+		    const char *pps_fname,
 		    const char *client_cert, const char *client_key,
 		    const char *cred_username, const char *cred_password,
 		    xml_node_t *pps)
@@ -1242,7 +1238,7 @@ void oma_dm_pol_upd(struct hs20_osu_client *ctx, const char *address,
 
 	while (syncml) {
 		resp = oma_dm_send_recv(ctx, resp_uri ? resp_uri : address,
-					syncml, NULL, ca_fname, cred_username,
+					syncml, NULL, cred_username,
 					cred_password, client_cert, client_key);
 		if (resp == NULL)
 			return;
@@ -1270,7 +1266,7 @@ void oma_dm_pol_upd(struct hs20_osu_client *ctx, const char *address,
 
 
 void oma_dm_sub_rem(struct hs20_osu_client *ctx, const char *address,
-		    const char *pps_fname, const char *ca_fname,
+		    const char *pps_fname,
 		    const char *client_cert, const char *client_key,
 		    const char *cred_username, const char *cred_password,
 		    xml_node_t *pps)
@@ -1289,7 +1285,7 @@ void oma_dm_sub_rem(struct hs20_osu_client *ctx, const char *address,
 
 	while (syncml) {
 		resp = oma_dm_send_recv(ctx, resp_uri ? resp_uri : address,
-					syncml, NULL, ca_fname, cred_username,
+					syncml, NULL, cred_username,
 					cred_password, client_cert, client_key);
 		if (resp == NULL)
 			return;

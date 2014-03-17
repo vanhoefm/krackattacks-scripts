@@ -1,6 +1,6 @@
 /*
  * Hotspot 2.0 - OSU client
- * Copyright (c) 2013, Qualcomm Atheros, Inc.
+ * Copyright (c) 2013-2014, Qualcomm Atheros, Inc.
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -73,39 +73,35 @@ void cmd_set_pps(struct hs20_osu_client *ctx, const char *pps_fname);
 /* spp_client.c */
 
 void spp_sub_rem(struct hs20_osu_client *ctx, const char *address,
-		 const char *pps_fname, const char *ca_fname,
+		 const char *pps_fname,
 		 const char *client_cert, const char *client_key,
 		 const char *cred_username, const char *cred_password,
 		 xml_node_t *pps);
 void spp_pol_upd(struct hs20_osu_client *ctx, const char *address,
-		 const char *pps_fname, const char *ca_fname,
+		 const char *pps_fname,
 		 const char *client_cert, const char *client_key,
 		 const char *cred_username, const char *cred_password,
 		 xml_node_t *pps);
-int cmd_prov(struct hs20_osu_client *ctx, const char *url,
-	     const char *ca_fname);
-int cmd_sim_prov(struct hs20_osu_client *ctx, const char *url,
-		 const char *ca_fname);
+int cmd_prov(struct hs20_osu_client *ctx, const char *url);
+int cmd_sim_prov(struct hs20_osu_client *ctx, const char *url);
 
 
 /* oma_dm_client.c */
 
-int cmd_oma_dm_prov(struct hs20_osu_client *ctx, const char *url,
-		    const char *ca_fname);
-int cmd_oma_dm_sim_prov(struct hs20_osu_client *ctx, const char *url,
-			const char *ca_fname);
+int cmd_oma_dm_prov(struct hs20_osu_client *ctx, const char *url);
+int cmd_oma_dm_sim_prov(struct hs20_osu_client *ctx, const char *url);
 void oma_dm_sub_rem(struct hs20_osu_client *ctx, const char *address,
-		    const char *pps_fname, const char *ca_fname,
+		    const char *pps_fname,
 		    const char *client_cert, const char *client_key,
 		    const char *cred_username, const char *cred_password,
 		    xml_node_t *pps);
 void oma_dm_pol_upd(struct hs20_osu_client *ctx, const char *address,
-		    const char *pps_fname, const char *ca_fname,
+		    const char *pps_fname,
 		    const char *client_cert, const char *client_key,
 		    const char *cred_username, const char *cred_password,
 		    xml_node_t *pps);
 void cmd_oma_dm_sub_rem(struct hs20_osu_client *ctx, const char *address,
-			const char *pps_fname, const char *ca_fname);
+			const char *pps_fname);
 void cmd_oma_dm_add(struct hs20_osu_client *ctx, const char *pps_fname,
 		    const char *add_fname);
 void cmd_oma_dm_replace(struct hs20_osu_client *ctx, const char *pps_fname,

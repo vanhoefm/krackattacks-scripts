@@ -3193,11 +3193,11 @@ int main(int argc, char *argv[])
 		wpa_printf(MSG_INFO, "Unknown command '%s'", argv[optind]);
 	}
 
+	deinit_ctx(&ctx);
 	wpa_printf(MSG_DEBUG,
 		   "===[hs20-osu-client END ]======================");
 
 	wpa_debug_close_file();
-	deinit_ctx(&ctx);
 
 	return ret;
 }

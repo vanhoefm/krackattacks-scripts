@@ -1,6 +1,6 @@
 /*
  * Hotspot 2.0 OSU client - EST client
- * Copyright (c) 2012-2013, Qualcomm Atheros, Inc.
+ * Copyright (c) 2012-2014, Qualcomm Atheros, Inc.
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -108,8 +108,10 @@ int est_load_cacerts(struct hs20_osu_client *ctx, const char *url)
 	os_snprintf(buf, buflen, "%s/cacerts", url);
 	wpa_printf(MSG_INFO, "Download EST cacerts from %s", buf);
 	write_summary(ctx, "Download EST cacerts from %s", buf);
+	ctx->no_osu_cert_validation = 1;
 	res = http_download_file(ctx->http, buf, "Cert/est-cacerts.txt",
 				 ctx->ca_fname);
+	ctx->no_osu_cert_validation = 0;
 	if (res < 0) {
 		wpa_printf(MSG_INFO, "Failed to download EST cacerts from %s",
 			   buf);
@@ -550,8 +552,10 @@ int est_build_csr(struct hs20_osu_client *ctx, const char *url)
 	os_snprintf(buf, buflen, "%s/csrattrs", url);
 	wpa_printf(MSG_INFO, "Download csrattrs from %s", buf);
 	write_summary(ctx, "Download EST csrattrs from %s", buf);
+	ctx->no_osu_cert_validation = 1;
 	res = http_download_file(ctx->http, buf, "Cert/est-csrattrs.txt",
 				 ctx->ca_fname);
+	ctx->no_osu_cert_validation = 0;
 	os_free(buf);
 	if (res < 0) {
 		wpa_printf(MSG_INFO, "Failed to download EST csrattrs - assume no extra attributes are needed");
@@ -647,10 +651,12 @@ int est_simple_enroll(struct hs20_osu_client *ctx, const char *url,
 		os_snprintf(buf, buflen, "%s/simpleenroll", url);
 	wpa_printf(MSG_INFO, "EST simpleenroll URL: %s", buf);
 	write_summary(ctx, "EST simpleenroll URL: %s", buf);
+	ctx->no_osu_cert_validation = 1;
 	resp = http_post(ctx->http, buf, req, "application/pkcs10",
 			 "Content-Transfer-Encoding: base64",
 			 ctx->ca_fname, user, pw, client_cert, client_key,
 			 &resp_len);
+	ctx->no_osu_cert_validation = 0;
 	os_free(buf);
 	if (resp == NULL) {
 		wpa_printf(MSG_INFO, "EST certificate enrollment failed");

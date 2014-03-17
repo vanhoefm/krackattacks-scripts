@@ -34,6 +34,7 @@ struct hs20_osu_client {
 	const char *summary_file;
 	const char *ifname;
 	const char *ca_fname;
+	int no_osu_cert_validation; /* for EST operations */
 	char *fqdn;
 	char *server_url;
 	struct osu_lang_text friendly_name[MAX_OSU_VALS];

@@ -302,7 +302,9 @@ static int download_cert(struct hs20_osu_client *ctx, xml_node_t *params,
 	xml_node_get_text_free(ctx->xml, hash);
 
 	write_summary(ctx, "Download certificate from %s", url);
+	ctx->no_osu_cert_validation = 1;
 	res = http_download_file(ctx->http, url, TMP_CERT_DL_FILE, NULL);
+	ctx->no_osu_cert_validation = 0;
 	xml_node_get_text_free(ctx->xml, url);
 	if (res < 0)
 		return -1;
@@ -2692,7 +2694,8 @@ static int osu_cert_cb(void *_ctx, struct http_cert *cert)
 	int found;
 	char *host = NULL;
 
-	wpa_printf(MSG_INFO, "osu_cert_cb");
+	wpa_printf(MSG_INFO, "osu_cert_cb(osu_cert_validation=%d)",
+		   !ctx->no_osu_cert_validation);
 
 	host = get_hostname(ctx->server_url);
 
@@ -2736,7 +2739,8 @@ static int osu_cert_cb(void *_ctx, struct http_cert *cert)
 		}
 	}
 
-	for (j = 0; j < ctx->friendly_name_count; j++) {
+	for (j = 0; !ctx->no_osu_cert_validation &&
+		     j < ctx->friendly_name_count; j++) {
 		int found = 0;
 		for (i = 0; i < cert->num_othername; i++) {
 			if (os_strcmp(cert->othername[i].oid,
@@ -2775,7 +2779,7 @@ static int osu_cert_cb(void *_ctx, struct http_cert *cert)
 				  logo->hash, logo->hash_len);
 	}
 
-	for (j = 0; j < ctx->icon_count; j++) {
+	for (j = 0; !ctx->no_osu_cert_validation && j < ctx->icon_count; j++) {
 		int found = 0;
 		char *name = ctx->icon_filename[j];
 		size_t name_len = os_strlen(name);
@@ -2811,7 +2815,7 @@ static int osu_cert_cb(void *_ctx, struct http_cert *cert)
 		}
 	}
 
-	for (j = 0; j < ctx->icon_count; j++) {
+	for (j = 0; !ctx->no_osu_cert_validation && j < ctx->icon_count; j++) {
 		int found = 0;
 
 		for (i = 0; i < cert->num_logo; i++) {

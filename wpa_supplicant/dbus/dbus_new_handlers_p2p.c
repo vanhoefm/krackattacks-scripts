@@ -825,6 +825,11 @@ dbus_bool_t wpas_dbus_getter_p2p_device_config(DBusMessageIter *iter,
 					 wpa_s->conf->disassoc_low_ack))
 		goto err_no_mem;
 
+	/* No Group Iface */
+	if (!wpa_dbus_dict_append_bool(&dict_iter, "NoGroupIface",
+				       wpa_s->conf->p2p_no_group_iface))
+		goto err_no_mem;
+
 	if (!wpa_dbus_dict_close_write(&variant_iter, &dict_iter) ||
 	    !dbus_message_iter_close_container(iter, &variant_iter))
 		goto err_no_mem;
@@ -974,6 +979,9 @@ dbus_bool_t wpas_dbus_setter_p2p_device_config(DBusMessageIter *iter,
 		else if (os_strcmp(entry.key, "disassoc_low_ack") == 0 &&
 			 entry.type == DBUS_TYPE_UINT32)
 			wpa_s->conf->disassoc_low_ack = entry.uint32_value;
+		else if (os_strcmp(entry.key, "NoGroupIface") == 0 &&
+			 entry.type == DBUS_TYPE_BOOLEAN)
+			wpa_s->conf->p2p_no_group_iface = entry.bool_value;
 		else
 			goto error;
 

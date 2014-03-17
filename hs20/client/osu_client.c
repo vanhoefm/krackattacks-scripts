@@ -303,7 +303,10 @@ static int download_cert(struct hs20_osu_client *ctx, xml_node_t *params,
 
 	write_summary(ctx, "Download certificate from %s", url);
 	ctx->no_osu_cert_validation = 1;
+	http_ocsp_set(ctx->http, 1);
 	res = http_download_file(ctx->http, url, TMP_CERT_DL_FILE, NULL);
+	http_ocsp_set(ctx->http,
+		      (ctx->workarounds & WORKAROUND_OCSP_OPTIONAL) ? 1 : 2);
 	ctx->no_osu_cert_validation = 0;
 	xml_node_get_text_free(ctx->xml, url);
 	if (res < 0)

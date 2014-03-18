@@ -2900,6 +2900,16 @@ static void do_process_drv_event(struct i802_bss *bss, int cmd,
 	case NL80211_CMD_TRIGGER_SCAN:
 		wpa_dbg(drv->ctx, MSG_DEBUG, "nl80211: Scan trigger");
 		drv->scan_state = SCAN_STARTED;
+		if (drv->scan_for_auth) {
+			/*
+			 * Cannot indicate EVENT_SCAN_STARTED here since we skip
+			 * EVENT_SCAN_RESULTS in scan_for_auth case and the
+			 * upper layer implementation could get confused about
+			 * scanning state.
+			 */
+			wpa_printf(MSG_DEBUG, "nl80211: Do not indicate scan-start event due to internal scan_for_auth");
+			break;
+		}
 		wpa_supplicant_event(drv->ctx, EVENT_SCAN_STARTED, NULL);
 		break;
 	case NL80211_CMD_START_SCHED_SCAN:

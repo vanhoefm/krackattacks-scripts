@@ -206,6 +206,14 @@ static inline const char * wpa_drv_get_ifname(struct wpa_supplicant *wpa_s)
 	return NULL;
 }
 
+static inline const char *
+wpa_driver_get_radio_name(struct wpa_supplicant *wpa_s)
+{
+	if (wpa_s->driver->get_radio_name)
+		return wpa_s->driver->get_radio_name(wpa_s->drv_priv);
+	return NULL;
+}
+
 static inline const u8 * wpa_drv_get_mac_addr(struct wpa_supplicant *wpa_s)
 {
 	if (wpa_s->driver->get_mac_addr) {

@@ -658,6 +658,34 @@ def test_ap_wpa2_eap_ttls_server_cert_hash(dev, apdev):
                 ca_cert="hash://server/sha256/" + srv_cert_hash,
                 phase2="auth=MSCHAPV2")
 
+def test_ap_wpa2_eap_ttls_server_cert_hash_invalid(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TTLS and server certificate hash (invalid config)"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="DOMAIN\mschapv2 user", anonymous_identity="ttls",
+                   password="password", phase2="auth=MSCHAPV2",
+                   ca_cert="hash://server/md5/5a1bc1296205e6fdbe3979728efe3920798885c1c4590b5f90f43222d239ca6a",
+                   wait_connect=False, scan_freq="2412")
+    dev[1].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="DOMAIN\mschapv2 user", anonymous_identity="ttls",
+                   password="password", phase2="auth=MSCHAPV2",
+                   ca_cert="hash://server/sha256/5a1bc1296205e6fdbe3979728efe3920798885c1c4590b5f90f43222d239ca",
+                   wait_connect=False, scan_freq="2412")
+    dev[2].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="DOMAIN\mschapv2 user", anonymous_identity="ttls",
+                   password="password", phase2="auth=MSCHAPV2",
+                   ca_cert="hash://server/sha256/5a1bc1296205e6fdbe3979728efe3920798885c1c4590b5f90f43222d239ca6Q",
+                   wait_connect=False, scan_freq="2412")
+    for i in range(0, 3):
+        ev = dev[i].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
+        if ev is None:
+            raise Exception("Association and EAP start timed out")
+        timeout = 1 if i == 0 else 0.1
+        ev = dev[i].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=timeout)
+        if ev is not None:
+            raise Exception("Unexpected EAP start")
+
 def test_ap_wpa2_eap_pwd(dev, apdev):
     """WPA2-Enterprise connection using EAP-pwd"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")

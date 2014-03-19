@@ -964,9 +964,19 @@ def test_ap_wpa2_eap_tls_domain_suffix_mismatch_cn(dev, apdev):
                    domain_suffix_match="example.com",
                    wait_connect=False,
                    scan_freq="2412")
+    dev[1].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
+                   identity="tls user", ca_cert="auth_serv/ca.pem",
+                   private_key="auth_serv/user.pkcs12",
+                   private_key_passwd="whatever",
+                   domain_suffix_match="erver3.w1.fi",
+                   wait_connect=False,
+                   scan_freq="2412")
     ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"])
     if ev is None:
         raise Exception("Timeout on EAP failure report")
+    ev = dev[1].wait_event(["CTRL-EVENT-EAP-FAILURE"])
+    if ev is None:
+        raise Exception("Timeout on EAP failure report (2)")
 
 def test_ap_wpa2_eap_ttls_expired_cert(dev, apdev):
     """WPA2-Enterprise using EAP-TTLS and expired certificate"""

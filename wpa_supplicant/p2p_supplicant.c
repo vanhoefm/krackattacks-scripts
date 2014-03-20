@@ -1622,6 +1622,9 @@ static void wpas_go_neg_completed(void *ctx, struct p2p_go_neg_results *res)
 			wpas_p2p_init_group_interface(wpa_s, res->role_go);
 		if (group_wpa_s == NULL) {
 			wpas_p2p_remove_pending_group_interface(wpa_s);
+			eloop_cancel_timeout(wpas_p2p_long_listen_timeout,
+					     wpa_s, NULL);
+			wpas_p2p_group_formation_failed(wpa_s);
 			return;
 		}
 		if (group_wpa_s != wpa_s) {

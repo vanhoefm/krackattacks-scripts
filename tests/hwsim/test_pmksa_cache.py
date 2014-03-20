@@ -250,7 +250,12 @@ def test_pmksa_cache_preauth(dev, apdev):
         bssid1 = apdev[1]['bssid']
         dev[0].scan(freq="2412")
         success = False
+        status_seen = False
         for i in range(0, 50):
+            if not status_seen:
+                status = dev[0].request("STATUS")
+                if "Pre-authentication EAPOL state machines:" in status:
+                    status_seen = True
             time.sleep(0.1)
             pmksa = dev[0].get_pmksa(bssid1)
             if pmksa:
@@ -258,6 +263,8 @@ def test_pmksa_cache_preauth(dev, apdev):
                 break
         if not success:
             raise Exception("No PMKSA cache entry created from pre-authentication")
+        if not status_seen:
+            raise Exception("Pre-authentication EAPOL status was not available")
 
         dev[0].scan(freq="2412")
         dev[0].request("ROAM " + bssid1)

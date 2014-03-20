@@ -7,6 +7,7 @@
  */
 
 #include "includes.h"
+#include <assert.h>
 
 #include "common.h"
 #include "trace.h"
@@ -14,7 +15,6 @@
 #include "eloop.h"
 
 #ifdef CONFIG_ELOOP_POLL
-#include <assert.h>
 #include <poll.h>
 #endif /* CONFIG_ELOOP_POLL */
 
@@ -374,8 +374,10 @@ static void eloop_sock_table_set_fds(struct eloop_sock_table *table,
 	if (table->table == NULL)
 		return;
 
-	for (i = 0; i < table->count; i++)
+	for (i = 0; i < table->count; i++) {
+		assert(table->table[i].sock >= 0);
 		FD_SET(table->table[i].sock, fds);
+	}
 }
 
 
@@ -459,6 +461,7 @@ int eloop_register_sock(int sock, eloop_event_type type,
 {
 	struct eloop_sock_table *table;
 
+	assert(sock >= 0);
 	table = eloop_get_sock_table(type);
 	return eloop_sock_table_add_sock(table, sock, handler,
 					 eloop_data, user_data);

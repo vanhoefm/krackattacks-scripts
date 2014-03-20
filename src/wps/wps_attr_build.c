@@ -296,6 +296,9 @@ int wps_build_registrar_nonce(struct wps_data *wps, struct wpabuf *msg)
 int wps_build_auth_type_flags(struct wps_data *wps, struct wpabuf *msg)
 {
 	u16 auth_types = WPS_AUTH_TYPES;
+	/* WPA/WPA2-Enterprise enrollment not supported through WPS */
+	auth_types &= ~WPS_AUTH_WPA;
+	auth_types &= ~WPS_AUTH_WPA2;
 #ifdef CONFIG_WPS2
 	auth_types &= ~WPS_AUTH_SHARED;
 #endif /* CONFIG_WPS2 */

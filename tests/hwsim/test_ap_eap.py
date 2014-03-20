@@ -1125,3 +1125,40 @@ def test_ap_wpa2_eap_request_identity_message(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], apdev[0], "PAX", "pax.user@example.com",
                 password_hex="0123456789abcdef0123456789abcdef")
+
+def test_ap_wpa2_eap_sim_aka_result_ind(dev, apdev):
+    """WPA2-Enterprise using EAP-SIM/AKA and protected result indication"""
+    if not os.path.exists("/tmp/hlr_auc_gw.sock"):
+        logger.info("No hlr_auc_gw available");
+        return "skip"
+    params = int_eap_server_params()
+    params['eap_sim_db'] = "unix:/tmp/hlr_auc_gw.sock"
+    params['eap_sim_aka_result_ind'] = "1"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    eap_connect(dev[0], apdev[0], "SIM", "1232010000000000",
+                password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581",
+                phase1="result_ind=1")
+    eap_reauth(dev[0], "SIM")
+    eap_connect(dev[1], apdev[0], "SIM", "1232010000000000",
+                password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581")
+
+    dev[0].request("REMOVE_NETWORK all")
+    dev[1].request("REMOVE_NETWORK all")
+
+    eap_connect(dev[0], apdev[0], "AKA", "0232010000000000",
+                password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581:000000000123",
+                phase1="result_ind=1")
+    eap_reauth(dev[0], "AKA")
+    eap_connect(dev[1], apdev[0], "AKA", "0232010000000000",
+                password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581:000000000123")
+
+    dev[0].request("REMOVE_NETWORK all")
+    dev[1].request("REMOVE_NETWORK all")
+
+    eap_connect(dev[0], apdev[0], "AKA'", "6555444333222111",
+                password="5122250214c33e723a5dd523fc145fc0:981d464c7c52eb6e5036234984ad0bcf:000000000123",
+                phase1="result_ind=1")
+    eap_reauth(dev[0], "AKA'")
+    eap_connect(dev[1], apdev[0], "AKA'", "6555444333222111",
+                password="5122250214c33e723a5dd523fc145fc0:981d464c7c52eb6e5036234984ad0bcf:000000000123")

@@ -40,6 +40,7 @@ static int hostapd_wps_probe_req_rx(void *ctx, const u8 *addr, const u8 *da,
 				    const u8 *ie, size_t ie_len,
 				    int ssi_signal);
 static void hostapd_wps_ap_pin_timeout(void *eloop_data, void *user_ctx);
+static void hostapd_wps_nfc_clear(struct wps_context *wps);
 
 
 struct wps_for_each_data {
@@ -897,13 +898,16 @@ static int hostapd_wps_rf_band_cb(void *ctx)
 }
 
 
-static void hostapd_wps_clear_ies(struct hostapd_data *hapd)
+static void hostapd_wps_clear_ies(struct hostapd_data *hapd, int deinit_only)
 {
 	wpabuf_free(hapd->wps_beacon_ie);
 	hapd->wps_beacon_ie = NULL;
 
 	wpabuf_free(hapd->wps_probe_resp_ie);
 	hapd->wps_probe_resp_ie = NULL;
+
+	if (deinit_only)
+		return;
 
 	hostapd_set_ap_wps_ie(hapd);
 }
@@ -987,6 +991,21 @@ static int hostapd_wps_set_vendor_ext(struct hostapd_data *hapd,
 }
 
 
+static void hostapd_free_wps(struct wps_context *wps)
+{
+	int i;
+
+	for (i = 0; i < MAX_WPS_VENDOR_EXTENSIONS; i++)
+		wpabuf_free(wps->dev.vendor_ext[i]);
+	wps_device_data_free(&wps->dev);
+	os_free(wps->network_key);
+	hostapd_wps_nfc_clear(wps);
+	wpabuf_free(wps->dh_pubkey);
+	wpabuf_free(wps->dh_privkey);
+	os_free(wps);
+}
+
+
 int hostapd_init_wps(struct hostapd_data *hapd,
 		     struct hostapd_bss_config *conf)
 {
@@ -994,7 +1013,7 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 	struct wps_registrar_config cfg;
 
 	if (conf->wps_state == 0) {
-		hostapd_wps_clear_ies(hapd);
+		hostapd_wps_clear_ies(hapd, 0);
 		return 0;
 	}
 
@@ -1062,10 +1081,8 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 	os_memcpy(wps->dev.pri_dev_type, hapd->conf->device_type,
 		  WPS_DEV_TYPE_LEN);
 
-	if (hostapd_wps_set_vendor_ext(hapd, wps) < 0) {
-		os_free(wps);
-		return -1;
-	}
+	if (hostapd_wps_set_vendor_ext(hapd, wps) < 0)
+		goto fail;
 
 	wps->dev.os_version = WPA_GET_BE32(hapd->conf->os_version);
 
@@ -1125,19 +1142,15 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 		wps->network_key_len = os_strlen(conf->ssid.wpa_passphrase);
 	} else if (conf->ssid.wpa_psk) {
 		wps->network_key = os_malloc(2 * PMK_LEN + 1);
-		if (wps->network_key == NULL) {
-			os_free(wps);
-			return -1;
-		}
+		if (wps->network_key == NULL)
+			goto fail;
 		wpa_snprintf_hex((char *) wps->network_key, 2 * PMK_LEN + 1,
 				 conf->ssid.wpa_psk->psk, PMK_LEN);
 		wps->network_key_len = 2 * PMK_LEN;
 	} else if (conf->ssid.wep.keys_set && conf->ssid.wep.key[0]) {
 		wps->network_key = os_malloc(conf->ssid.wep.len[0]);
-		if (wps->network_key == NULL) {
-			os_free(wps);
-			return -1;
-		}
+		if (wps->network_key == NULL)
+			goto fail;
 		os_memcpy(wps->network_key, conf->ssid.wep.key[0],
 			  conf->ssid.wep.len[0]);
 		wps->network_key_len = conf->ssid.wep.len[0];
@@ -1183,9 +1196,7 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 	wps->registrar = wps_registrar_init(wps, &cfg);
 	if (wps->registrar == NULL) {
 		wpa_printf(MSG_ERROR, "Failed to initialize WPS Registrar");
-		os_free(wps->network_key);
-		os_free(wps);
-		return -1;
+		goto fail;
 	}
 
 #ifdef CONFIG_WPS_UPNP
@@ -1201,6 +1212,10 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 	hapd->wps = wps;
 
 	return 0;
+
+fail:
+	hostapd_free_wps(wps);
+	return -1;
 }
 
 
@@ -1215,8 +1230,7 @@ int hostapd_init_wps_complete(struct hostapd_data *hapd)
 	if (hostapd_wps_upnp_init(hapd, wps) < 0) {
 		wpa_printf(MSG_ERROR, "Failed to initialize WPS UPnP");
 		wps_registrar_deinit(wps->registrar);
-		os_free(wps->network_key);
-		os_free(wps);
+		hostapd_free_wps(wps);
 		hapd->wps = NULL;
 		return -1;
 	}
@@ -1246,21 +1260,18 @@ void hostapd_deinit_wps(struct hostapd_data *hapd)
 	eloop_cancel_timeout(hostapd_wps_reenable_ap_pin, hapd, NULL);
 	eloop_cancel_timeout(hostapd_wps_ap_pin_timeout, hapd, NULL);
 	eloop_cancel_timeout(wps_reload_config, hapd->iface, NULL);
-	if (hapd->wps == NULL)
+	if (hapd->wps == NULL) {
+		hostapd_wps_clear_ies(hapd, 1);
 		return;
+	}
 #ifdef CONFIG_WPS_UPNP
 	hostapd_wps_upnp_deinit(hapd);
 #endif /* CONFIG_WPS_UPNP */
 	wps_registrar_deinit(hapd->wps->registrar);
-	os_free(hapd->wps->network_key);
-	wps_device_data_free(&hapd->wps->dev);
-	wpabuf_free(hapd->wps->dh_pubkey);
-	wpabuf_free(hapd->wps->dh_privkey);
 	wps_free_pending_msgs(hapd->wps->upnp_msgs);
-	hostapd_wps_nfc_clear(hapd->wps);
-	os_free(hapd->wps);
+	hostapd_free_wps(hapd->wps);
 	hapd->wps = NULL;
-	hostapd_wps_clear_ies(hapd);
+	hostapd_wps_clear_ies(hapd, 1);
 }
 
 

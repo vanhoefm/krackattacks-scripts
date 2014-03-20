@@ -10018,6 +10018,8 @@ static int wpa_driver_nl80211_if_remove(struct i802_bss *bss,
 				/* Unsubscribe management frames */
 				nl80211_teardown_ap(bss);
 				nl80211_destroy_bss(bss);
+				if (!bss->added_if)
+					i802_set_iface_flags(bss, 0);
 				os_free(bss);
 				bss = NULL;
 				break;

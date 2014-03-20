@@ -9486,6 +9486,11 @@ static void add_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx)
 
 	wpa_printf(MSG_DEBUG, "nl80211: Add own interface ifindex %d",
 		   ifidx);
+	if (have_ifidx(drv, ifidx)) {
+		wpa_printf(MSG_DEBUG, "nl80211: ifindex %d already in the list",
+			   ifidx);
+		return;
+	}
 	for (i = 0; i < drv->num_if_indices; i++) {
 		if (drv->if_indices[i] == 0) {
 			drv->if_indices[i] = ifidx;
@@ -9965,6 +9970,9 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 	if (drv->global)
 		drv->global->if_add_ifindex = ifidx;
 
+	if (ifidx > 0)
+		add_ifidx(drv, ifidx);
+
 	return 0;
 }
 
@@ -9980,6 +9988,8 @@ static int wpa_driver_nl80211_if_remove(struct i802_bss *bss,
 		   __func__, type, ifname, ifindex, bss->added_if);
 	if (ifindex > 0 && (bss->added_if || bss->ifindex != ifindex))
 		nl80211_remove_iface(drv, ifindex);
+	else if (ifindex > 0 && !bss->added_if)
+		del_ifidx(drv, ifindex);
 
 	if (type != WPA_IF_AP_BSS)
 		return 0;

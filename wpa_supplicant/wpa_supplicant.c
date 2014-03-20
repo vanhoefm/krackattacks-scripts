@@ -3204,15 +3204,13 @@ static void radio_remove_interface(struct wpa_supplicant *wpa_s)
 	wpa_printf(MSG_DEBUG, "Remove interface %s from radio %s",
 		   wpa_s->ifname, radio->name);
 	dl_list_del(&wpa_s->radio_list);
-	if (!dl_list_empty(&radio->ifaces)) {
-		wpa_s->radio = NULL;
+	radio_remove_works(wpa_s, NULL, 0);
+	wpa_s->radio = NULL;
+	if (!dl_list_empty(&radio->ifaces))
 		return; /* Interfaces remain for this radio */
-	}
 
 	wpa_printf(MSG_DEBUG, "Remove radio %s", radio->name);
-	radio_remove_works(wpa_s, NULL, 0);
 	eloop_cancel_timeout(radio_start_next_work, radio, NULL);
-	wpa_s->radio = NULL;
 	os_free(radio);
 }
 

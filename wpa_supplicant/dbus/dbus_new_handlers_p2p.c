@@ -1478,12 +1478,25 @@ dbus_bool_t wpas_dbus_getter_p2p_peer_vendor_extension(DBusMessageIter *iter,
 dbus_bool_t wpas_dbus_getter_p2p_peer_ies(DBusMessageIter *iter,
 					  DBusError *error, void *user_data)
 {
-	dbus_bool_t success;
-	/* struct peer_handler_args *peer_args = user_data; */
+	struct peer_handler_args *peer_args = user_data;
+	const struct p2p_peer_info *info;
 
-	success = wpas_dbus_simple_array_property_getter(iter, DBUS_TYPE_BYTE,
-							 NULL, 0, error);
-	return success;
+	info = p2p_get_peer_found(peer_args->wpa_s->global->p2p,
+				  peer_args->p2p_device_addr, 0);
+	if (info == NULL) {
+		dbus_set_error(error, DBUS_ERROR_FAILED,
+			       "failed to find peer");
+		return FALSE;
+	}
+
+	if (info->wfd_subelems == NULL)
+		return wpas_dbus_simple_array_property_getter(iter,
+							      DBUS_TYPE_BYTE,
+							      NULL, 0, error);
+
+	return wpas_dbus_simple_array_property_getter(
+		iter, DBUS_TYPE_BYTE, (char *) info->wfd_subelems->buf,
+		info->wfd_subelems->used, error);
 }
 
 

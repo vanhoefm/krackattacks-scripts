@@ -171,6 +171,16 @@ int hostapd_reload_config(struct hostapd_iface *iface)
 	for (j = 0; j < iface->num_bss; j++) {
 		hapd = iface->bss[j];
 		hapd->iconf = newconf;
+		hapd->iconf->channel = oldconf->channel;
+		hapd->iconf->ieee80211n = oldconf->ieee80211n;
+		hapd->iconf->ieee80211ac = oldconf->ieee80211ac;
+		hapd->iconf->ht_capab = oldconf->ht_capab;
+		hapd->iconf->vht_capab = oldconf->vht_capab;
+		hapd->iconf->vht_oper_chwidth = oldconf->vht_oper_chwidth;
+		hapd->iconf->vht_oper_centr_freq_seg0_idx =
+			oldconf->vht_oper_centr_freq_seg0_idx;
+		hapd->iconf->vht_oper_centr_freq_seg1_idx =
+			oldconf->vht_oper_centr_freq_seg1_idx;
 		hapd->conf = newconf->bss[j];
 		hostapd_reload_bss(hapd);
 	}

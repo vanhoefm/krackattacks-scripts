@@ -2649,6 +2649,7 @@ static const struct wpa_dbus_method_desc wpas_dbus_interface_methods[] = {
 	  (WPADBusMethodHandler)wpas_dbus_handler_p2p_service_sd_req,
 	  {
 		  { "args", "a{sv}", ARG_IN },
+		  { "ref", "t", ARG_OUT },
 		  END_ARGS
 	  }
 	},

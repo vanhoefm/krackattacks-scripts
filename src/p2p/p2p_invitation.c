@@ -288,7 +288,9 @@ void p2p_process_invitation_req(struct p2p_data *p2p, const u8 *sa,
 			}
 		}
 
-		if (!p2p_channels_includes(&intersection, p2p->op_reg_class,
+		/* Reselect the channel only for the case of the GO */
+		if (go &&
+		    !p2p_channels_includes(&intersection, p2p->op_reg_class,
 					   p2p->op_channel)) {
 			p2p_dbg(p2p, "Initially selected channel (op_class %d channel %d) not in channel intersection - try to reselect",
 				p2p->op_reg_class, p2p->op_channel);
@@ -303,7 +305,7 @@ void p2p_process_invitation_req(struct p2p_data *p2p, const u8 *sa,
 				status = P2P_SC_FAIL_NO_COMMON_CHANNELS;
 				goto fail;
 			}
-		} else if (!(dev->flags & P2P_DEV_FORCE_FREQ) &&
+		} else if (go && !(dev->flags & P2P_DEV_FORCE_FREQ) &&
 			   !p2p->cfg->cfg_op_channel) {
 			p2p_dbg(p2p, "Try to reselect channel selection with peer information received; previously selected op_class %u channel %u",
 				p2p->op_reg_class, p2p->op_channel);
@@ -444,13 +446,23 @@ void p2p_process_invitation_resp(struct p2p_data *p2p, const u8 *sa,
 	}
 
 	if (p2p->cfg->invitation_result) {
+		int peer_oper_freq = 0;
 		int freq = p2p_channel_to_freq(p2p->op_reg_class,
 					       p2p->op_channel);
 		if (freq < 0)
 			freq = 0;
+
+		if (msg.operating_channel) {
+			peer_oper_freq = p2p_channel_to_freq(
+				msg.operating_channel[3],
+				msg.operating_channel[4]);
+			if (peer_oper_freq < 0)
+				peer_oper_freq = 0;
+		}
+
 		p2p->cfg->invitation_result(p2p->cfg->cb_ctx, *msg.status,
 					    msg.group_bssid, channels, sa,
-					    freq);
+					    freq, peer_oper_freq);
 	}
 
 	p2p_parse_free(&msg);

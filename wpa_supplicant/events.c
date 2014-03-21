@@ -1430,7 +1430,8 @@ static int wpas_select_network_from_last_scan(struct wpa_supplicant *wpa_s,
 				return 0;
 
 			if (wpa_s->p2p_in_provisioning ||
-			    wpa_s->show_group_started) {
+			    wpa_s->show_group_started ||
+			    wpa_s->p2p_in_invitation) {
 				/*
 				 * Use shorter wait during P2P Provisioning
 				 * state and during P2P join-a-group operation

@@ -326,6 +326,32 @@ static void wpa_supplicant_optimize_freqs(
 		}
 		wpa_s->p2p_in_provisioning++;
 	}
+
+	if (params->freqs == NULL && wpa_s->p2p_in_invitation) {
+		/*
+		 * Optimize scan based on GO information during persistent
+		 * group reinvocation
+		 */
+		if (wpa_s->p2p_in_invitation < 5 ||
+		    wpa_s->p2p_invite_go_freq > 0) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Scan only GO preferred frequency %d MHz during invitation",
+				wpa_s->p2p_invite_go_freq);
+			params->freqs = os_zalloc(2 * sizeof(int));
+			if (params->freqs)
+				params->freqs[0] = wpa_s->p2p_invite_go_freq;
+		}
+		wpa_s->p2p_in_invitation++;
+		if (wpa_s->p2p_in_invitation > 20) {
+			/*
+			 * This should not really happen since the variable is
+			 * cleared on group removal, but if it does happen, make
+			 * sure we do not get stuck in special invitation scan
+			 * mode.
+			 */
+			wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Clear p2p_in_invitation");
+			wpa_s->p2p_in_invitation = 0;
+		}
+	}
 #endif /* CONFIG_P2P */
 
 #ifdef CONFIG_WPS
@@ -637,6 +663,19 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		params.ssids[0].ssid = wpa_s->go_params->ssid;
 		params.ssids[0].ssid_len = wpa_s->go_params->ssid_len;
 		params.num_ssids = 1;
+		goto ssid_list_set;
+	}
+
+	if (wpa_s->p2p_in_invitation) {
+		if (wpa_s->current_ssid) {
+			wpa_printf(MSG_DEBUG, "P2P: Use specific SSID for scan during invitation");
+			params.ssids[0].ssid = wpa_s->current_ssid->ssid;
+			params.ssids[0].ssid_len =
+				wpa_s->current_ssid->ssid_len;
+			params.num_ssids = 1;
+		} else {
+			wpa_printf(MSG_DEBUG, "P2P: No specific SSID known for scan during invitation");
+		}
 		goto ssid_list_set;
 	}
 #endif /* CONFIG_P2P */

@@ -687,6 +687,8 @@ struct wpa_supplicant {
 	u8 p2p_auth_invite[ETH_ALEN];
 	int p2p_sd_over_ctrl_iface;
 	int p2p_in_provisioning;
+	int p2p_in_invitation;
+	int p2p_invite_go_freq;
 	int pending_invite_ssid_id;
 	int show_group_started;
 	u8 go_dev_addr[ETH_ALEN];

@@ -1487,6 +1487,27 @@ dbus_bool_t wpas_dbus_getter_p2p_peer_ies(DBusMessageIter *iter,
 }
 
 
+dbus_bool_t wpas_dbus_getter_p2p_peer_device_address(DBusMessageIter *iter,
+						     DBusError *error,
+						     void *user_data)
+{
+	struct peer_handler_args *peer_args = user_data;
+	const struct p2p_peer_info *info;
+
+	info = p2p_get_peer_found(peer_args->wpa_s->global->p2p,
+				  peer_args->p2p_device_addr, 0);
+	if (info == NULL) {
+		dbus_set_error(error, DBUS_ERROR_FAILED,
+			       "failed to find peer");
+		return FALSE;
+	}
+
+	return wpas_dbus_simple_array_property_getter(
+		iter, DBUS_TYPE_BYTE, (char *) peer_args->p2p_device_addr,
+		ETH_ALEN, error);
+}
+
+
 /**
  * wpas_dbus_getter_persistent_groups - Get array of persistent group objects
  * @iter: Pointer to incoming dbus message iter

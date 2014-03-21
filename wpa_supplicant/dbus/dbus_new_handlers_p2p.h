@@ -147,6 +147,10 @@ dbus_bool_t wpas_dbus_getter_p2p_peer_ies(DBusMessageIter *iter,
 					  DBusError *error,
 					  void *user_data);
 
+dbus_bool_t wpas_dbus_getter_p2p_peer_device_address(DBusMessageIter *iter,
+						     DBusError *error,
+						     void *user_data);
+
 /*
  * P2P Group properties
  */

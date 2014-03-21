@@ -2415,7 +2415,7 @@ DBusMessage * wpas_dbus_handler_p2p_service_sd_cancel_req(
 	if (req == 0)
 		goto error;
 
-	if (!wpas_p2p_sd_cancel_request(wpa_s, req))
+	if (wpas_p2p_sd_cancel_request(wpa_s, req) < 0)
 		goto error;
 
 	return NULL;

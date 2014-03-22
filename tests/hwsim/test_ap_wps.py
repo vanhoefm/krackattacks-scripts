@@ -1243,6 +1243,45 @@ def test_ap_wps_pin_request_file(dev, apdev):
     finally:
         subprocess.call(['sudo', 'rm', pinfile])
 
+def test_ap_wps_auto_setup_with_config_file(dev, apdev):
+    """WPS auto-setup with configuration file"""
+    conffile = "/tmp/ap_wps_auto_setup_with_config_file.conf"
+    ifname = apdev[0]['ifname']
+    try:
+        with open(conffile, "w") as f:
+            f.write("driver=nl80211\n")
+            f.write("hw_mode=g\n")
+            f.write("channel=1\n")
+            f.write("ieee80211n=1\n")
+            f.write("interface=%s\n" % ifname)
+            f.write("ctrl_interface=/var/run/hostapd\n")
+            f.write("ssid=wps\n")
+            f.write("eap_server=1\n")
+            f.write("wps_state=1\n")
+        hostapd.add_bss('phy3', ifname, conffile)
+        hapd = hostapd.Hostapd(ifname)
+        hapd.request("WPS_PBC")
+        dev[0].request("WPS_PBC")
+        ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
+        if ev is None:
+            raise Exception("Association with the AP timed out")
+        with open(conffile, "r") as f:
+            lines = f.read().splitlines()
+            vals = dict()
+            for l in lines:
+                try:
+                    [name,value] = l.split('=', 1)
+                    vals[name] = value
+                except ValueError, e:
+                    if "# WPS configuration" in l:
+                        pass
+                    else:
+                        raise Exception("Unexpected configuration line: " + l)
+        if vals['ieee80211n'] != '1' or vals['wps_state'] != '2' or "WPA-PSK" not in vals['wpa_key_mgmt']:
+            raise Exception("Incorrect configuration: " + str(vals))
+    finally:
+        subprocess.call(['sudo', 'rm', conffile])
+
 def add_ssdp_ap(ifname, ap_uuid):
     ssid = "wps-ssdp"
     ap_pin = "12345670"

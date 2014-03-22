@@ -594,6 +594,13 @@ static int hapd_wps_cred_cb(struct hostapd_data *hapd, void *ctx)
 
 		fprintf(nconf, "auth_algs=1\n");
 	} else {
+#ifdef CONFIG_WPS2
+		/*
+		 * WPS 2.0 does not allow WEP to be configured, so no need to
+		 * process that option here either.
+		 */
+		fprintf(nconf, "auth_algs=1\n");
+#else /* CONFIG_WPS2 */
 		if ((cred->auth_type & WPS_AUTH_OPEN) &&
 		    (cred->auth_type & WPS_AUTH_SHARED))
 			fprintf(nconf, "auth_algs=3\n");
@@ -619,6 +626,7 @@ static int hapd_wps_cred_cb(struct hostapd_data *hapd, void *ctx)
 			}
 			fprintf(nconf, "\n");
 		}
+#endif /* CONFIG_WPS2 */
 	}
 
 	fprintf(nconf, "# WPS configuration - END\n");

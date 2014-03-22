@@ -17,7 +17,10 @@ def test_sae(dev, apdev):
     params = hostapd.wpa2_params(ssid="test-sae",
                                  passphrase="12345678")
     params['wpa_key_mgmt'] = 'SAE'
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    key_mgmt = hapd.get_config()['key_mgmt']
+    if key_mgmt.split(' ')[0] != "SAE":
+        raise Exception("Unexpected GET_CONFIG(key_mgmt): " + key_mgmt)
 
     dev[0].request("SET sae_groups ")
     id = dev[0].connect("test-sae", psk="12345678", key_mgmt="SAE",

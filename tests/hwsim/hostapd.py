@@ -168,6 +168,15 @@ class Hostapd:
             return vals[field]
         return None
 
+    def get_config(self):
+        res = self.request("GET_CONFIG")
+        lines = res.splitlines()
+        vals = dict()
+        for l in lines:
+            [name,value] = l.split('=', 1)
+            vals[name] = value
+        return vals
+
     def mgmt_rx(self, timeout=5):
         ev = self.wait_event(["MGMT-RX"], timeout=timeout)
         if ev is None:

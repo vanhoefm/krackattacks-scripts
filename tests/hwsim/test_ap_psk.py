@@ -17,7 +17,10 @@ def test_ap_wpa2_psk(dev, apdev):
     psk = '602e323e077bc63bd80307ef4745b754b0ae0a925c2638ecd13a794b9527b9e6'
     params = hostapd.wpa2_params(ssid=ssid)
     params['wpa_psk'] = psk
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    key_mgmt = hapd.get_config()['key_mgmt']
+    if key_mgmt.split(' ')[0] != "WPA-PSK":
+        raise Exception("Unexpected GET_CONFIG(key_mgmt): " + key_mgmt)
     dev[0].connect(ssid, raw_psk=psk, scan_freq="2412")
     dev[1].connect(ssid, psk=passphrase, scan_freq="2412")
 

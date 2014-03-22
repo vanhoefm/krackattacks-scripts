@@ -116,7 +116,11 @@ def test_ap_ft_mixed(dev, apdev):
     passphrase="12345678"
 
     params = ft_params1(rsn=False, ssid=ssid, passphrase=passphrase)
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    key_mgmt = hapd.get_config()['key_mgmt']
+    vals = key_mgmt.split(' ')
+    if vals[0] != "WPA-PSK" or vals[1] != "FT-PSK":
+        raise Exception("Unexpected GET_CONFIG(key_mgmt): " + key_mgmt)
     params = ft_params2(rsn=False, ssid=ssid, passphrase=passphrase)
     hostapd.add_ap(apdev[1]['ifname'], params)
 
@@ -172,7 +176,10 @@ def test_ap_ft_sae(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
     params = ft_params2(ssid=ssid, passphrase=passphrase)
     params['wpa_key_mgmt'] = "FT-SAE"
-    hostapd.add_ap(apdev[1]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[1]['ifname'], params)
+    key_mgmt = hapd.get_config()['key_mgmt']
+    if key_mgmt.split(' ')[0] != "FT-SAE":
+        raise Exception("Unexpected GET_CONFIG(key_mgmt): " + key_mgmt)
 
     run_roams(dev[0], apdev, ssid, passphrase, sae=True)
 
@@ -200,7 +207,10 @@ def test_ap_ft_eap(dev, apdev):
     params['wpa_key_mgmt'] = "FT-EAP"
     params["ieee8021x"] = "1"
     params = dict(radius.items() + params.items())
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    key_mgmt = hapd.get_config()['key_mgmt']
+    if key_mgmt.split(' ')[0] != "FT-EAP":
+        raise Exception("Unexpected GET_CONFIG(key_mgmt): " + key_mgmt)
     params = ft_params2(ssid=ssid, passphrase=passphrase)
     params['wpa_key_mgmt'] = "FT-EAP"
     params["ieee8021x"] = "1"

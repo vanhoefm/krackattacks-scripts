@@ -156,7 +156,10 @@ def test_ap_wpa2_eap_aka_prime(dev, apdev):
 def test_ap_wpa2_eap_ttls_pap(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/PAP"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    key_mgmt = hapd.get_config()['key_mgmt']
+    if key_mgmt.split(' ')[0] != "WPA-EAP":
+        raise Exception("Unexpected GET_CONFIG(key_mgmt): " + key_mgmt)
     eap_connect(dev[0], apdev[0], "TTLS", "pap user",
                 anonymous_identity="ttls", password="password",
                 ca_cert="auth_serv/ca.pem", phase2="auth=PAP",

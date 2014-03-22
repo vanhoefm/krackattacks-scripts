@@ -13,6 +13,7 @@ import hwsim_utils
 import hostapd
 from wlantest import Wlantest
 from wpasupplicant import WpaSupplicant
+from test_ap_eap import eap_connect
 
 def test_ap_pmf_required(dev, apdev):
     """WPA2-PSK AP with PMF required"""
@@ -23,7 +24,10 @@ def test_ap_pmf_required(dev, apdev):
     params = hostapd.wpa2_params(ssid=ssid, passphrase="12345678")
     params["wpa_key_mgmt"] = "WPA-PSK-SHA256";
     params["ieee80211w"] = "2";
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    key_mgmt = hapd.get_config()['key_mgmt']
+    if key_mgmt.split(' ')[0] != "WPA-PSK-SHA256":
+        raise Exception("Unexpected GET_CONFIG(key_mgmt): " + key_mgmt)
     dev[0].connect(ssid, psk="12345678", ieee80211w="1",
                    key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2",
                    scan_freq="2412")
@@ -184,3 +188,17 @@ def test_ap_pmf_sta_sa_query(dev, apdev):
         raise Exception("STA did not send SA Query")
     if wt.get_sta_counter("valid_saqueryresp_rx", bssid, addr) < 1:
         raise Exception("AP did not reply to SA Query")
+
+def test_ap_pmf_required_eap(dev, apdev):
+    """WPA2-EAP AP with PMF required"""
+    ssid = "test-pmf-required-eap"
+    params = hostapd.wpa2_eap_params(ssid=ssid)
+    params["wpa_key_mgmt"] = "WPA-EAP-SHA256";
+    params["ieee80211w"] = "2";
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    key_mgmt = hapd.get_config()['key_mgmt']
+    if key_mgmt.split(' ')[0] != "WPA-EAP-SHA256":
+        raise Exception("Unexpected GET_CONFIG(key_mgmt): " + key_mgmt)
+    dev[0].connect("test-pmf-required-eap", key_mgmt="WPA-EAP-SHA256",
+                   ieee80211w="2", eap="PSK", identity="psk.user@example.com",
+                   password_hex="0123456789abcdef0123456789abcdef")

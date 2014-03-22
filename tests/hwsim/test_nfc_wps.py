@@ -141,6 +141,10 @@ def test_nfc_wps_password_token_ap(dev, apdev):
     if ev is None:
         raise Exception("Association with the AP timed out")
     check_wpa2_connection(dev[0], apdev[0], new_ssid, mixed=True)
+    if "FAIL" in hapd.request("WPS_NFC_TOKEN disable"):
+        raise Exception("Failed to disable AP password token")
+    if "FAIL" in hapd.request("WPS_NFC_TOKEN WPS"):
+        raise Exception("Unexpected WPS_NFC_TOKEN WPS failure")
 
 def test_nfc_wps_handover_init(dev, apdev):
     """Connect to WPS AP with NFC connection handover and move to configured state"""
@@ -167,6 +171,36 @@ def test_nfc_wps_handover_init(dev, apdev):
     if ev is None:
         raise Exception("Association with the AP timed out")
     check_wpa2_connection(dev[0], apdev[0], ssid, mixed=True)
+
+def test_nfc_wps_handover_errors(dev, apdev):
+    """WPS AP NFC handover report error cases"""
+    ssid = "test-wps-nfc-handover"
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "1" })
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    sel = hapd.request("NFC_GET_HANDOVER_SEL NDEF WPS-CR").rstrip()
+    if "FAIL" in sel:
+        raise Exception("Failed to generate NFC connection handover select")
+    if "FAIL" not in hapd.request("NFC_REPORT_HANDOVER "):
+        raise Exception("Unexpected handover report success")
+    if "FAIL" not in hapd.request("NFC_REPORT_HANDOVER RESP"):
+        raise Exception("Unexpected handover report success")
+    if "FAIL" not in hapd.request("NFC_REPORT_HANDOVER RESP WPS"):
+        raise Exception("Unexpected handover report success")
+    if "FAIL" not in hapd.request("NFC_REPORT_HANDOVER RESP WPS 001122"):
+        raise Exception("Unexpected handover report success")
+    if "FAIL" not in hapd.request("NFC_REPORT_HANDOVER RESP WPS 001122 00"):
+        raise Exception("Unexpected handover report success")
+    if "FAIL" not in hapd.request("NFC_REPORT_HANDOVER RESP WPS 0 00"):
+        raise Exception("Unexpected handover report success")
+    if "FAIL" not in hapd.request("NFC_REPORT_HANDOVER RESP WPS 001122 0"):
+        raise Exception("Unexpected handover report success")
+    if "FAIL" not in hapd.request("NFC_REPORT_HANDOVER RESP WPS 00q122 001122"):
+        raise Exception("Unexpected handover report success")
+    if "FAIL" not in hapd.request("NFC_REPORT_HANDOVER RESP WPS 001122 001q22"):
+        raise Exception("Unexpected handover report success")
+    if "FAIL" not in hapd.request("NFC_REPORT_HANDOVER RESP FOO 001122 00"):
+        raise Exception("Unexpected handover report success")
 
 def test_nfc_wps_handover(dev, apdev):
     """Connect to WPS AP with NFC connection handover"""

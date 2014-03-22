@@ -29,12 +29,16 @@
  *	ranges to avoid to reduce issues due to interference or internal
  *	co-existence information in the driver. The event data structure is
  *	defined in struct qca_avoid_freq_list.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_DFS_CAPABILITY: Command to check driver support
+ *	for DFS offloading.
  */
 enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
 	QCA_NL80211_VENDOR_SUBCMD_TEST = 1,
 	/* subcmds 2..9 not yet allocated */
 	QCA_NL80211_VENDOR_SUBCMD_AVOID_FREQUENCY = 10,
+	QCA_NL80211_VENDOR_SUBCMD_DFS_CAPABILITY =  11,
 };
 
 
@@ -47,5 +51,14 @@ struct qca_avoid_freq_list {
 	u32 count;
 	struct qca_avoid_freq_range range[0];
 } STRUCT_PACKED;
+
+enum qca_wlan_vendor_attr {
+	QCA_WLAN_VENDOR_ATTR_INVALID = 0,
+	/* used by QCA_NL80211_VENDOR_SUBCMD_DFS_CAPABILITY */
+	QCA_WLAN_VENDOR_ATTR_DFS     = 1,
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_MAX	= QCA_WLAN_VENDOR_ATTR_AFTER_LAST - 1,
+};
 
 #endif /* QCA_VENDOR_H */

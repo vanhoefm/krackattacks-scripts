@@ -897,7 +897,8 @@ struct wpa_driver_capa {
 #define WPA_DRIVER_FLAGS_DRIVER_IE	0x00000001
 /* Driver needs static WEP key setup after association command */
 #define WPA_DRIVER_FLAGS_SET_KEYS_AFTER_ASSOC 0x00000002
-/* unused: 0x00000004 */
+/* Driver takes care of all DFS operations */
+#define WPA_DRIVER_FLAGS_DFS_OFFLOAD			0x00000004
 /* Driver takes care of RSN 4-way handshake internally; PMK is configured with
  * struct wpa_driver_ops::set_key using alg = WPA_ALG_PMK */
 #define WPA_DRIVER_FLAGS_4WAY_HANDSHAKE 0x00000008

@@ -303,6 +303,7 @@ struct wpa_driver_nl80211_data {
 	unsigned int start_iface_up:1;
 	unsigned int test_use_roc_tx:1;
 	unsigned int ignore_deauth_event:1;
+	unsigned int dfs_vendor_cmd_avail:1;
 
 	u64 remain_on_chan_cookie;
 	u64 send_action_cookie;
@@ -3725,6 +3726,10 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 				continue;
 			}
 			vinfo = nla_data(nl);
+			if (vinfo->subcmd ==
+			    QCA_NL80211_VENDOR_SUBCMD_DFS_CAPABILITY)
+				drv->dfs_vendor_cmd_avail = 1;
+
 			wpa_printf(MSG_DEBUG, "nl80211: Supported vendor command: vendor_id=0x%x subcmd=%u",
 				   vinfo->vendor_id, vinfo->subcmd);
 		}
@@ -8889,11 +8894,44 @@ done:
 }
 
 
+static int dfs_info_handler(struct nl_msg *msg, void *arg)
+{
+	struct nlattr *tb[NL80211_ATTR_MAX + 1];
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+	int *dfs_capability_ptr = arg;
+
+	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+
+	if (tb[NL80211_ATTR_VENDOR_DATA]) {
+		struct nlattr *nl_vend = tb[NL80211_ATTR_VENDOR_DATA];
+		struct nlattr *tb_vendor[QCA_WLAN_VENDOR_ATTR_MAX + 1];
+
+		nla_parse(tb_vendor, QCA_WLAN_VENDOR_ATTR_MAX,
+			  nla_data(nl_vend), nla_len(nl_vend), NULL);
+
+		if (tb_vendor[QCA_WLAN_VENDOR_ATTR_DFS]) {
+			u32 val;
+			val = nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_DFS]);
+			wpa_printf(MSG_DEBUG, "nl80211: DFS offload capability: %u",
+				   val);
+			*dfs_capability_ptr = val;
+		}
+	}
+
+	return NL_SKIP;
+}
+
+
 static int wpa_driver_nl80211_get_capa(void *priv,
 				       struct wpa_driver_capa *capa)
 {
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg;
+	int dfs_capability = 0;
+	int ret = 0;
+
 	if (!drv->has_capability)
 		return -1;
 	os_memcpy(capa, &drv->capa, sizeof(*capa));
@@ -8909,7 +8947,31 @@ static int wpa_driver_nl80211_get_capa(void *priv,
 		capa->flags &= ~WPA_DRIVER_FLAGS_DEDICATED_P2P_DEVICE;
 	}
 
-	return 0;
+	if (drv->dfs_vendor_cmd_avail == 1) {
+		msg = nlmsg_alloc();
+		if (!msg)
+			return -ENOMEM;
+
+		nl80211_cmd(drv, msg, 0, NL80211_CMD_VENDOR);
+
+		NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+		NLA_PUT_U32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA);
+		NLA_PUT_U32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			    QCA_NL80211_VENDOR_SUBCMD_DFS_CAPABILITY);
+
+		ret = send_and_recv_msgs(drv, msg, dfs_info_handler,
+					 &dfs_capability);
+		if (!ret) {
+			if (dfs_capability)
+				capa->flags |= WPA_DRIVER_FLAGS_DFS_OFFLOAD;
+		}
+	}
+
+	return ret;
+
+ nla_put_failure:
+	nlmsg_free(msg);
+	return -ENOBUFS;
 }
 
 

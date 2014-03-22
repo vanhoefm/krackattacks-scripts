@@ -1160,6 +1160,55 @@ def test_ap_wps_per_station_psk(dev, apdev):
     finally:
         os.remove(pskfile)
 
+def test_ap_wps_per_station_psk_failure(dev, apdev):
+    """WPS PBC provisioning with per-station PSK (file not writable)"""
+    addr0 = dev[0].p2p_dev_addr()
+    addr1 = dev[1].p2p_dev_addr()
+    addr2 = dev[2].p2p_dev_addr()
+    ssid = "wps"
+    appin = "12345670"
+    pskfile = "/tmp/ap_wps_per_enrollee_psk.psk_file"
+    try:
+        os.remove(pskfile)
+    except:
+        pass
+
+    try:
+        with open(pskfile, "w") as f:
+            f.write("# WPA PSKs\n")
+
+        params = { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                   "wpa": "2", "wpa_key_mgmt": "WPA-PSK",
+                   "rsn_pairwise": "CCMP", "ap_pin": appin,
+                   "wpa_psk_file": pskfile }
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        if "FAIL" in hapd.request("SET wpa_psk_file /tmp/does/not/exists/ap_wps_per_enrollee_psk_failure.psk_file"):
+            raise Exception("Failed to set wpa_psk_file")
+
+        logger.info("First enrollee")
+        hapd.request("WPS_PBC")
+        dev[0].request("WPS_PBC")
+        ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"])
+        if ev is None:
+            raise Exception("Association with the AP timed out (1)")
+
+        logger.info("Second enrollee")
+        hapd.request("WPS_PBC")
+        dev[1].request("WPS_PBC")
+        ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"])
+        if ev is None:
+            raise Exception("Association with the AP timed out (2)")
+
+        logger.info("External registrar")
+        dev[2].wps_reg(apdev[0]['bssid'], appin)
+
+        logger.info("Verifying PSK results")
+        psks = get_psk(pskfile)
+        if len(psks) > 0:
+            raise Exception("PSK recorded unexpectedly")
+    finally:
+        os.remove(pskfile)
+
 def test_ap_wps_pin_request_file(dev, apdev):
     """WPS PIN provisioning with configured AP"""
     ssid = "wps"

@@ -588,6 +588,46 @@ def test_ap_wps_setup_locked(dev, apdev):
     if ev is None:
         raise Exception("Failed to unlock AP PIN")
 
+def test_ap_wps_setup_locked_timeout(dev, apdev):
+    """WPS re-enabling AP PIN after timeout"""
+    ssid = "test-wps-incorrect-ap-pin"
+    appin = "12345670"
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                     "wpa_passphrase": "12345678", "wpa": "2",
+                     "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+                     "ap_pin": appin})
+    new_ssid = "wps-new-ssid-test"
+    new_passphrase = "1234567890"
+
+    ap_setup_locked=False
+    for pin in ["55554444", "1234", "12345678", "00000000", "11111111"]:
+        dev[0].dump_monitor()
+        logger.info("Try incorrect AP PIN - attempt " + pin)
+        dev[0].wps_reg(apdev[0]['bssid'], pin, new_ssid, "WPA2PSK",
+                       "CCMP", new_passphrase, no_wait=True)
+        ev = dev[0].wait_event(["WPS-FAIL", "CTRL-EVENT-CONNECTED"])
+        if ev is None:
+            raise Exception("Timeout on receiving WPS operation failure event")
+        if "CTRL-EVENT-CONNECTED" in ev:
+            raise Exception("Unexpected connection")
+        if "config_error=15" in ev:
+            logger.info("AP Setup Locked")
+            ap_setup_locked=True
+            break
+        elif "config_error=18" not in ev:
+            raise Exception("config_error=18 not reported")
+        ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"])
+        if ev is None:
+            raise Exception("Timeout on disconnection event")
+        time.sleep(0.1)
+    if not ap_setup_locked:
+        raise Exception("AP setup was not locked")
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    ev = hapd.wait_event(["WPS-AP-SETUP-UNLOCKED"], timeout=80)
+    if ev is None:
+        raise Exception("AP PIN did not get unlocked on 60 second timeout")
+
 def test_ap_wps_pbc_overlap_2ap(dev, apdev):
     """WPS PBC session overlap with two active APs"""
     hostapd.add_ap(apdev[0]['ifname'],

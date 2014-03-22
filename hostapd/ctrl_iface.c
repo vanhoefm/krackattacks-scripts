@@ -940,6 +940,14 @@ static int hostapd_ctrl_iface_get_config(struct hostapd_data *hapd,
 				return pos - buf;
 			pos += ret;
 		}
+#ifdef CONFIG_SAE
+		if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_FT_SAE) {
+			ret = os_snprintf(pos, end - pos, "FT-SAE ");
+			if (ret < 0 || ret >= end - pos)
+				return pos - buf;
+			pos += ret;
+		}
+#endif /* CONFIG_SAE */
 #endif /* CONFIG_IEEE80211R */
 #ifdef CONFIG_IEEE80211W
 		if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_PSK_SHA256) {
@@ -955,6 +963,14 @@ static int hostapd_ctrl_iface_get_config(struct hostapd_data *hapd,
 			pos += ret;
 		}
 #endif /* CONFIG_IEEE80211W */
+#ifdef CONFIG_SAE
+		if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_SAE) {
+			ret = os_snprintf(pos, end - pos, "SAE ");
+			if (ret < 0 || ret >= end - pos)
+				return pos - buf;
+			pos += ret;
+		}
+#endif /* CONFIG_SAE */
 
 		ret = os_snprintf(pos, end - pos, "\n");
 		if (ret < 0 || ret >= end - pos)

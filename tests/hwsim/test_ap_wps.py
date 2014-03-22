@@ -1015,6 +1015,11 @@ def test_ap_wps_check_pin(dev, apdev):
         if res != t[1]:
             raise Exception("Incorrect WPS_CHECK_PIN response {} (expected {})".format(res, t[1]))
 
+    if "FAIL" not in hapd.request("WPS_CHECK_PIN 12345"):
+        raise Exception("Unexpected WPS_CHECK_PIN success")
+    if "FAIL" not in hapd.request("WPS_CHECK_PIN 123456789"):
+        raise Exception("Unexpected WPS_CHECK_PIN success")
+
 def test_ap_wps_wep_config(dev, apdev):
     """WPS 2.0 AP rejecting WEP configuration"""
     ssid = "test-wps-config"

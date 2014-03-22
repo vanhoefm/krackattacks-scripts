@@ -111,10 +111,13 @@ int hostapd_get_hw_features(struct hostapd_iface *iface)
 			if ((feature->channels[j].flag &
 			     HOSTAPD_CHAN_RADAR) && dfs_enabled) {
 				dfs = 1;
-			} else if (feature->channels[j].flag &
-				   (HOSTAPD_CHAN_NO_IBSS |
-				    HOSTAPD_CHAN_PASSIVE_SCAN |
-				    HOSTAPD_CHAN_RADAR)) {
+			} else if (((feature->channels[j].flag &
+				     HOSTAPD_CHAN_RADAR) &&
+				    !(iface->drv_flags &
+				      WPA_DRIVER_FLAGS_DFS_OFFLOAD)) ||
+				   (feature->channels[j].flag &
+				    (HOSTAPD_CHAN_NO_IBSS |
+				     HOSTAPD_CHAN_PASSIVE_SCAN))) {
 				feature->channels[j].flag |=
 					HOSTAPD_CHAN_DISABLED;
 			}

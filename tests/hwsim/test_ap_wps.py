@@ -1078,6 +1078,7 @@ def test_ap_wps_ie_fragmentation(dev, apdev):
         raise Exception("Association with the AP timed out")
     bss = dev[0].get_bss(apdev[0]['bssid'])
     if "wps_device_name" not in bss or bss['wps_device_name'] != "1234567890abcdef1234567890abcdef":
+        logger.info(bss)
         raise Exception("Device Name not received correctly")
     if len(re.findall("dd..0050f204", bss['ie'])) != 2:
         raise Exception("Unexpected number of WPS IEs")

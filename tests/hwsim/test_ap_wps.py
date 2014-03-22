@@ -315,6 +315,35 @@ def test_ap_wps_conf_pin_2sta(dev, apdev):
     if ev is None:
         raise Exception("Association with the AP timed out")
 
+def test_ap_wps_conf_pin_timeout(dev, apdev):
+    """WPS PIN provisioning with configured AP timing out PIN"""
+    ssid = "test-wps-conf-pin"
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                     "wpa_passphrase": "12345678", "wpa": "2",
+                     "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP"})
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    addr = dev[0].p2p_interface_addr()
+    pin = dev[0].wps_read_pin()
+    if "FAIL" not in hapd.request("WPS_PIN "):
+        raise Exception("Unexpected success on invalid WPS_PIN")
+    hapd.request("WPS_PIN any " + pin + " 1")
+    time.sleep(1.1)
+    dev[0].request("WPS_PIN any " + pin)
+    ev = hapd.wait_event(["WPS-PIN-NEEDED"], timeout=20)
+    if ev is None:
+        raise Exception("WPS-PIN-NEEDED event timed out")
+    ev = dev[0].wait_event(["WPS-M2D"])
+    if ev is None:
+        raise Exception("M2D not reported")
+    dev[0].request("WPS_CANCEL")
+
+    hapd.request("WPS_PIN any " + pin + " 20 " + addr)
+    dev[0].request("WPS_PIN any " + pin)
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
+    if ev is None:
+        raise Exception("Association with the AP timed out")
+
 def test_ap_wps_reg_connect(dev, apdev):
     """WPS registrar using AP PIN to connect"""
     ssid = "test-wps-reg-ap-pin"

@@ -1230,6 +1230,7 @@ static void p2p_prepare_channel_best(struct p2p_data *p2p)
 
 		if (num_channels) {
 			p2p_dbg(p2p, "Select random available social channel from 2.4 GHz band as operating channel preference");
+			p2p->op_reg_class = 81;
 			op_chan = op_chans;
 		} else {
 			struct p2p_reg_class *class;

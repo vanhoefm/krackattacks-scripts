@@ -469,9 +469,6 @@ int hostapd_parse_csa_settings(const char *pos,
 {
 	char *end;
 
-	if (!settings)
-		return -1;
-
 	os_memset(settings, 0, sizeof(*settings));
 	settings->cs_count = strtol(pos, &end, 10);
 	if (pos == end) {

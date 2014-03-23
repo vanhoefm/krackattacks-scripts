@@ -166,6 +166,20 @@ def test_ap_ft_pmf_over_ds(dev, apdev):
 
     run_roams(dev[0], apdev, ssid, passphrase, over_ds=True)
 
+def test_ap_ft_over_ds_pull(dev, apdev):
+    """WPA2-PSK-FT AP over DS (pull PMK)"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    params["pmk_r1_push"] = "0"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    params["pmk_r1_push"] = "0"
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    run_roams(dev[0], apdev, ssid, passphrase, over_ds=True)
+
 def test_ap_ft_sae(dev, apdev):
     """WPA2-PSK-FT-SAE AP"""
     ssid = "test-ft"
@@ -214,6 +228,30 @@ def test_ap_ft_eap(dev, apdev):
     params = ft_params2(ssid=ssid, passphrase=passphrase)
     params['wpa_key_mgmt'] = "FT-EAP"
     params["ieee8021x"] = "1"
+    params = dict(radius.items() + params.items())
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    run_roams(dev[0], apdev, ssid, passphrase, eap=True)
+
+def test_ap_ft_eap_pull(dev, apdev):
+    """WPA2-EAP-FT AP (pull PMK)"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    radius = hostapd.radius_params()
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    params['wpa_key_mgmt'] = "FT-EAP"
+    params["ieee8021x"] = "1"
+    params["pmk_r1_push"] = "0"
+    params = dict(radius.items() + params.items())
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    key_mgmt = hapd.get_config()['key_mgmt']
+    if key_mgmt.split(' ')[0] != "FT-EAP":
+        raise Exception("Unexpected GET_CONFIG(key_mgmt): " + key_mgmt)
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    params['wpa_key_mgmt'] = "FT-EAP"
+    params["ieee8021x"] = "1"
+    params["pmk_r1_push"] = "0"
     params = dict(radius.items() + params.items())
     hostapd.add_ap(apdev[1]['ifname'], params)
 

@@ -675,17 +675,29 @@ class WpaSupplicant:
         if ev is None:
             raise Exception("Scan timed out")
 
-    def roam(self, bssid):
+    def roam(self, bssid, fail_test=False):
         self.dump_monitor()
         self.request("ROAM " + bssid)
+        if fail_test:
+            ev = self.wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
+            if ev is not None:
+                raise Exception("Unexpected connection")
+            self.dump_monitor()
+            return
         ev = self.wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
         if ev is None:
             raise Exception("Roaming with the AP timed out")
         self.dump_monitor()
 
-    def roam_over_ds(self, bssid):
+    def roam_over_ds(self, bssid, fail_test=False):
         self.dump_monitor()
         self.request("FT_DS " + bssid)
+        if fail_test:
+            ev = self.wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
+            if ev is not None:
+                raise Exception("Unexpected connection")
+            self.dump_monitor()
+            return
         ev = self.wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
         if ev is None:
             raise Exception("Roaming with the AP timed out")

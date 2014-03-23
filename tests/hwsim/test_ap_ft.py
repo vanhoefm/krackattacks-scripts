@@ -60,7 +60,34 @@ def ft_params2(rsn=True, ssid=None, passphrase=None):
     params['r1kh'] = "02:00:00:00:03:00 00:01:02:03:04:05 300102030405060708090a0b0c0d0e0f"
     return params
 
-def run_roams(dev, apdev, ssid, passphrase, over_ds=False, sae=False, eap=False):
+def ft_params1_r0kh_mismatch(rsn=True, ssid=None, passphrase=None):
+    params = ft_params(rsn, ssid, passphrase)
+    params['nas_identifier'] = "nas1.w1.fi"
+    params['r1_key_holder'] = "000102030405"
+    params['r0kh'] = [ "02:00:00:00:03:00 nas1.w1.fi 100102030405060708090a0b0c0d0e0f",
+                       "12:00:00:00:04:00 nas2.w1.fi 300102030405060708090a0b0c0d0e0f" ]
+    params['r1kh'] = "12:00:00:00:04:00 10:01:02:03:04:06 200102030405060708090a0b0c0d0e0f"
+    return params
+
+def ft_params2_incorrect_rrb_key(rsn=True, ssid=None, passphrase=None):
+    params = ft_params(rsn, ssid, passphrase)
+    params['nas_identifier'] = "nas2.w1.fi"
+    params['r1_key_holder'] = "000102030406"
+    params['r0kh'] = [ "02:00:00:00:03:00 nas1.w1.fi 200102030405060708090a0b0c0d0ef1",
+                       "02:00:00:00:04:00 nas2.w1.fi 000102030405060708090a0b0c0d0ef2" ]
+    params['r1kh'] = "02:00:00:00:03:00 00:01:02:03:04:05 300102030405060708090a0b0c0d0ef3"
+    return params
+
+def ft_params2_r0kh_mismatch(rsn=True, ssid=None, passphrase=None):
+    params = ft_params(rsn, ssid, passphrase)
+    params['nas_identifier'] = "nas2.w1.fi"
+    params['r1_key_holder'] = "000102030406"
+    params['r0kh'] = [ "12:00:00:00:03:00 nas1.w1.fi 200102030405060708090a0b0c0d0e0f",
+                       "02:00:00:00:04:00 nas2.w1.fi 000102030405060708090a0b0c0d0e0f" ]
+    params['r1kh'] = "12:00:00:00:03:00 10:01:02:03:04:05 300102030405060708090a0b0c0d0e0f"
+    return params
+
+def run_roams(dev, apdev, ssid, passphrase, over_ds=False, sae=False, eap=False, fail_test=False):
     logger.info("Connect to first AP")
     if eap:
         dev.connect(ssid, key_mgmt="FT-EAP", proto="WPA2", ieee80211w="1",
@@ -82,9 +109,11 @@ def run_roams(dev, apdev, ssid, passphrase, over_ds=False, sae=False, eap=False)
 
     logger.info("Roam to the second AP")
     if over_ds:
-        dev.roam_over_ds(ap2['bssid'])
+        dev.roam_over_ds(ap2['bssid'], fail_test=fail_test)
     else:
-        dev.roam(ap2['bssid'])
+        dev.roam(ap2['bssid'], fail_test=fail_test)
+    if fail_test:
+        return
     if dev.get_status_field('bssid') != ap2['bssid']:
         raise Exception("Did not connect to correct AP")
     hwsim_utils.test_connectivity(dev.ifname, ap2['ifname'])
@@ -256,3 +285,59 @@ def test_ap_ft_eap_pull(dev, apdev):
     hostapd.add_ap(apdev[1]['ifname'], params)
 
     run_roams(dev[0], apdev, ssid, passphrase, eap=True)
+
+def test_ap_ft_mismatching_rrb_key_push(dev, apdev):
+    """WPA2-PSK-FT AP over DS with mismatching RRB key (push)"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    params["ieee80211w"] = "2";
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    params = ft_params2_incorrect_rrb_key(ssid=ssid, passphrase=passphrase)
+    params["ieee80211w"] = "2";
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    run_roams(dev[0], apdev, ssid, passphrase, over_ds=True, fail_test=True)
+
+def test_ap_ft_mismatching_rrb_key_pull(dev, apdev):
+    """WPA2-PSK-FT AP over DS with mismatching RRB key (pull)"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    params["pmk_r1_push"] = "0"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    params = ft_params2_incorrect_rrb_key(ssid=ssid, passphrase=passphrase)
+    params["pmk_r1_push"] = "0"
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    run_roams(dev[0], apdev, ssid, passphrase, over_ds=True, fail_test=True)
+
+def test_ap_ft_mismatching_rrb_r0kh_push(dev, apdev):
+    """WPA2-PSK-FT AP over DS with mismatching R0KH key (push)"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    params["ieee80211w"] = "2";
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    params = ft_params2_r0kh_mismatch(ssid=ssid, passphrase=passphrase)
+    params["ieee80211w"] = "2";
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    run_roams(dev[0], apdev, ssid, passphrase, over_ds=True, fail_test=True)
+
+def test_ap_ft_mismatching_rrb_r0kh_pull(dev, apdev):
+    """WPA2-PSK-FT AP over DS with mismatching R0KH key (pull)"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1_r0kh_mismatch(ssid=ssid, passphrase=passphrase)
+    params["pmk_r1_push"] = "0"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    params["pmk_r1_push"] = "0"
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    run_roams(dev[0], apdev, ssid, passphrase, over_ds=True, fail_test=True)

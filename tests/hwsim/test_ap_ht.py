@@ -275,6 +275,56 @@ def test_obss_scan(dev, apdev):
                "ht_capab": "[HT40-]",
                "obss_interval": "10" }
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    params = { "ssid": "another-bss",
+               "channel": "9",
+               "ieee80211n": "0" }
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    dev[0].connect("obss-scan", key_mgmt="NONE", scan_freq="2437")
+    hapd.set("ext_mgmt_frame_handling", "1")
+    logger.info("Waiting for OBSS scan to occur")
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-STARTED"], timeout=15)
+    if ev is None:
+        raise Exception("Timed out while waiting for OBSS scan to start")
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], timeout=10)
+    if ev is None:
+        raise Exception("Timed out while waiting for OBSS scan results")
+    received = False
+    for i in range(0, 4):
+        frame = hapd.mgmt_rx(timeout=5)
+        if frame is None:
+            raise Exception("MGMT RX wait timed out")
+        if frame['subtype'] != 13:
+            continue
+        payload = frame['payload']
+        if len(payload) < 3:
+            continue
+        (category, action, ie) = struct.unpack('BBB', payload[0:3])
+        if category != 4:
+            continue
+        if action != 0:
+            continue
+        if ie == 72:
+            logger.info("20/40 BSS Coexistence report received")
+            received = True
+            break
+    if not received:
+        raise Exception("20/40 BSS Coexistence report not seen")
+
+def test_obss_scan_40_intolerant(dev, apdev):
+    """Overlapping BSS scan request with 40 MHz intolerant AP"""
+    params = { "ssid": "obss-scan",
+               "channel": "6",
+               "ht_capab": "[HT40-]",
+               "obss_interval": "10" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    params = { "ssid": "another-bss",
+               "channel": "7",
+               "ht_capab": "[40-INTOLERANT]" }
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
     dev[0].connect("obss-scan", key_mgmt="NONE", scan_freq="2437")
     hapd.set("ext_mgmt_frame_handling", "1")
     logger.info("Waiting for OBSS scan to occur")

@@ -161,3 +161,38 @@ def test_ap_inactivity_disconnect(dev, apdev):
     ev = hapd.wait_event(["AP-STA-DISCONNECTED"], timeout=30)
     if ev is None:
         raise Exception("STA disconnection on inactivity was not reported")
+
+def test_ap_basic_rates(dev, apdev):
+    """Open AP with lots of basic rates"""
+    ssid = "basic rates"
+    params = {}
+    params['ssid'] = ssid
+    params['basic_rates'] = "10 20 55 110 60 90 120 180 240 360 480 540"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
+
+def test_ap_short_preamble(dev, apdev):
+    """Open AP with short preamble"""
+    ssid = "short preamble"
+    params = {}
+    params['ssid'] = ssid
+    params['preamble'] = "1"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
+
+def test_ap_spectrum_management_required(dev, apdev):
+    """Open AP with spectrum management required"""
+    ssid = "spectrum mgmt"
+    params = {}
+    params['ssid'] = ssid
+    params["country_code"] = "JP"
+    params["hw_mode"] = "a"
+    params["channel"] = "36"
+    params["ieee80211d"] = "1"
+    params["local_pwr_constraint"] = "3"
+    params['spectrum_mgmt_required'] = "1"
+    try:
+        hostapd.add_ap(apdev[0]['ifname'], params)
+        dev[0].connect(ssid, key_mgmt="NONE", scan_freq="5180")
+    finally:
+        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])

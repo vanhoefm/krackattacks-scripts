@@ -631,7 +631,7 @@ class WpaSupplicant:
         not_quoted = [ "proto", "key_mgmt", "ieee80211w", "pairwise",
                        "group", "wep_key0", "scan_freq", "eap",
                        "eapol_flags", "fragment_size", "scan_ssid", "auth_alg",
-                       "wpa_ptk_rekey" ]
+                       "wpa_ptk_rekey", "disable_ht", "disable_vht" ]
         for field in not_quoted:
             if field in kwargs and kwargs[field]:
                 self.set_network(id, field, kwargs[field])

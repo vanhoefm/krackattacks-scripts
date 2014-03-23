@@ -332,4 +332,11 @@ def test_ap_require_ht(dev, apdev):
                "require_ht": "1" }
     hapd = hostapd.add_ap(apdev[0]['ifname'], params, wait_enabled=False)
 
+    dev[1].connect("require-ht", key_mgmt="NONE", scan_freq="2412",
+                   disable_ht="1", wait_connect=False)
     dev[0].connect("require-ht", key_mgmt="NONE", scan_freq="2412")
+    ev = dev[1].wait_event(["CTRL-EVENT-ASSOC-REJECT"])
+    if ev is None:
+        raise Exception("Association rejection timed out")
+    if "status_code=27" not in ev:
+        raise Exception("Unexpected rejection status code")

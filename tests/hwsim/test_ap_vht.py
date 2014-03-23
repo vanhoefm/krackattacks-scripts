@@ -60,7 +60,15 @@ def test_ap_vht80_params(dev, apdev):
                    "require_vht": "1" }
         hapd = hostapd.add_ap(apdev[0]['ifname'], params)
 
+        dev[1].connect("vht", key_mgmt="NONE", scan_freq="5180",
+                       disable_vht="1", wait_connect=False)
         dev[0].connect("vht", key_mgmt="NONE", scan_freq="5180")
+        ev = dev[1].wait_event(["CTRL-EVENT-ASSOC-REJECT"])
+        if ev is None:
+            raise Exception("Association rejection timed out")
+        if "status_code=104" not in ev:
+            raise Exception("Unexpected rejection status code")
+        dev[1].request("DISCONNECT")
         hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
     except Exception, e:
         if isinstance(e, Exception) and str(e) == "AP startup failed":

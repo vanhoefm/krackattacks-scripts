@@ -621,6 +621,7 @@ static void wpa_free_sta_sm(struct wpa_state_machine *sm)
 	}
 #ifdef CONFIG_IEEE80211R
 	os_free(sm->assoc_resp_ftie);
+	wpabuf_free(sm->ft_pending_req_ies);
 #endif /* CONFIG_IEEE80211R */
 	os_free(sm->last_rx_eapol_key);
 	os_free(sm->wpa_ie);

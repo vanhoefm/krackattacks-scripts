@@ -1,6 +1,6 @@
 /*
  * hostapd - IEEE 802.11r - Fast BSS Transition
- * Copyright (c) 2004-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -9,6 +9,7 @@
 #include "utils/includes.h"
 
 #include "utils/common.h"
+#include "utils/eloop.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
 #include "crypto/aes_wrap.h"
@@ -21,6 +22,12 @@
 
 
 #ifdef CONFIG_IEEE80211R
+
+static int wpa_ft_send_rrb_auth_resp(struct wpa_state_machine *sm,
+				     const u8 *current_ap, const u8 *sta_addr,
+				     u16 status, const u8 *resp_ies,
+				     size_t resp_ies_len);
+
 
 static int wpa_ft_rrb_send(struct wpa_authenticator *wpa_auth, const u8 *dst,
 			   const u8 *data, size_t data_len)
@@ -293,22 +300,25 @@ static int wpa_ft_fetch_pmk_r1(struct wpa_authenticator *wpa_auth,
 }
 
 
-static int wpa_ft_pull_pmk_r1(struct wpa_authenticator *wpa_auth,
-			      const u8 *s1kh_id, const u8 *r0kh_id,
-			      size_t r0kh_id_len, const u8 *pmk_r0_name)
+static int wpa_ft_pull_pmk_r1(struct wpa_state_machine *sm,
+			      const u8 *ies, size_t ies_len,
+			      const u8 *pmk_r0_name)
 {
 	struct ft_remote_r0kh *r0kh;
 	struct ft_r0kh_r1kh_pull_frame frame, f;
 
-	r0kh = wpa_auth->conf.r0kh_list;
+	r0kh = sm->wpa_auth->conf.r0kh_list;
 	while (r0kh) {
-		if (r0kh->id_len == r0kh_id_len &&
-		    os_memcmp(r0kh->id, r0kh_id, r0kh_id_len) == 0)
+		if (r0kh->id_len == sm->r0kh_id_len &&
+		    os_memcmp(r0kh->id, sm->r0kh_id, sm->r0kh_id_len) == 0)
 			break;
 		r0kh = r0kh->next;
 	}
-	if (r0kh == NULL)
+	if (r0kh == NULL) {
+		wpa_hexdump(MSG_DEBUG, "FT: Did not find R0KH-ID",
+			    sm->r0kh_id, sm->r0kh_id_len);
 		return -1;
+	}
 
 	wpa_printf(MSG_DEBUG, "FT: Send PMK-R1 pull request to remote R0KH "
 		   "address " MACSTR, MAC2STR(r0kh->addr));
@@ -317,25 +327,32 @@ static int wpa_ft_pull_pmk_r1(struct wpa_authenticator *wpa_auth,
 	frame.frame_type = RSN_REMOTE_FRAME_TYPE_FT_RRB;
 	frame.packet_type = FT_PACKET_R0KH_R1KH_PULL;
 	frame.data_length = host_to_le16(FT_R0KH_R1KH_PULL_DATA_LEN);
-	os_memcpy(frame.ap_address, wpa_auth->addr, ETH_ALEN);
+	os_memcpy(frame.ap_address, sm->wpa_auth->addr, ETH_ALEN);
 
 	/* aes_wrap() does not support inplace encryption, so use a temporary
 	 * buffer for the data. */
-	if (random_get_bytes(f.nonce, sizeof(f.nonce))) {
+	if (random_get_bytes(f.nonce, FT_R0KH_R1KH_PULL_NONCE_LEN)) {
 		wpa_printf(MSG_DEBUG, "FT: Failed to get random data for "
 			   "nonce");
 		return -1;
 	}
+	os_memcpy(sm->ft_pending_pull_nonce, f.nonce,
+		  FT_R0KH_R1KH_PULL_NONCE_LEN);
 	os_memcpy(f.pmk_r0_name, pmk_r0_name, WPA_PMK_NAME_LEN);
-	os_memcpy(f.r1kh_id, wpa_auth->conf.r1_key_holder, FT_R1KH_ID_LEN);
-	os_memcpy(f.s1kh_id, s1kh_id, ETH_ALEN);
+	os_memcpy(f.r1kh_id, sm->wpa_auth->conf.r1_key_holder, FT_R1KH_ID_LEN);
+	os_memcpy(f.s1kh_id, sm->addr, ETH_ALEN);
 	os_memset(f.pad, 0, sizeof(f.pad));
 
 	if (aes_wrap(r0kh->key, (FT_R0KH_R1KH_PULL_DATA_LEN + 7) / 8,
 		     f.nonce, frame.nonce) < 0)
 		return -1;
 
-	wpa_ft_rrb_send(wpa_auth, r0kh->addr, (u8 *) &frame, sizeof(frame));
+	wpabuf_free(sm->ft_pending_req_ies);
+	sm->ft_pending_req_ies = wpabuf_alloc_copy(ies, ies_len);
+	if (sm->ft_pending_req_ies == NULL)
+		return -1;
+
+	wpa_ft_rrb_send(sm->wpa_auth, r0kh->addr, (u8 *) &frame, sizeof(frame));
 
 	return 0;
 }
@@ -777,7 +794,7 @@ void wpa_ft_install_ptk(struct wpa_state_machine *sm)
 }
 
 
-static u16 wpa_ft_process_auth_req(struct wpa_state_machine *sm,
+static int wpa_ft_process_auth_req(struct wpa_state_machine *sm,
 				   const u8 *ies, size_t ies_len,
 				   u8 **resp_ies, size_t *resp_ies_len)
 {
@@ -848,19 +865,13 @@ static u16 wpa_ft_process_auth_req(struct wpa_state_machine *sm,
 
 	if (wpa_ft_fetch_pmk_r1(sm->wpa_auth, sm->addr, pmk_r1_name, pmk_r1,
 		    &pairwise) < 0) {
-		if (wpa_ft_pull_pmk_r1(sm->wpa_auth, sm->addr, sm->r0kh_id,
-				       sm->r0kh_id_len, parse.rsn_pmkid) < 0) {
+		if (wpa_ft_pull_pmk_r1(sm, ies, ies_len, parse.rsn_pmkid) < 0) {
 			wpa_printf(MSG_DEBUG, "FT: Did not have matching "
 				   "PMK-R1 and unknown R0KH-ID");
 			return WLAN_STATUS_INVALID_PMKID;
 		}
 
-		/*
-		 * TODO: Should return "status pending" (and the caller should
-		 * not send out response now). The real response will be sent
-		 * once the response from R0KH is received.
-		 */
-		return WLAN_STATUS_INVALID_PMKID;
+		return -1; /* Status pending */
 	}
 
 	wpa_hexdump_key(MSG_DEBUG, "FT: Selected PMK-R1", pmk_r1, PMK_LEN);
@@ -940,6 +951,7 @@ void wpa_ft_process_auth(struct wpa_state_machine *sm, const u8 *bssid,
 	u16 status;
 	u8 *resp_ies;
 	size_t resp_ies_len;
+	int res;
 
 	if (sm == NULL) {
 		wpa_printf(MSG_DEBUG, "FT: Received authentication frame, but "
@@ -950,8 +962,16 @@ void wpa_ft_process_auth(struct wpa_state_machine *sm, const u8 *bssid,
 	wpa_printf(MSG_DEBUG, "FT: Received authentication frame: STA=" MACSTR
 		   " BSSID=" MACSTR " transaction=%d",
 		   MAC2STR(sm->addr), MAC2STR(bssid), auth_transaction);
-	status = wpa_ft_process_auth_req(sm, ies, ies_len, &resp_ies,
-					 &resp_ies_len);
+	sm->ft_pending_cb = cb;
+	sm->ft_pending_cb_ctx = ctx;
+	sm->ft_pending_auth_transaction = auth_transaction;
+	res = wpa_ft_process_auth_req(sm, ies, ies_len, &resp_ies,
+				      &resp_ies_len);
+	if (res < 0) {
+		wpa_printf(MSG_DEBUG, "FT: Callback postponed until response is available");
+		return;
+	}
+	status = res;
 
 	wpa_printf(MSG_DEBUG, "FT: FT authentication response: dst=" MACSTR
 		   " auth_transaction=%d status=%d",
@@ -1182,15 +1202,27 @@ int wpa_ft_action_rx(struct wpa_state_machine *sm, const u8 *data, size_t len)
 }
 
 
+static void wpa_ft_rrb_rx_request_cb(void *ctx, const u8 *dst, const u8 *bssid,
+				     u16 auth_transaction, u16 resp,
+				     const u8 *ies, size_t ies_len)
+{
+	struct wpa_state_machine *sm = ctx;
+	wpa_printf(MSG_DEBUG, "FT: Over-the-DS RX request cb for " MACSTR,
+		   MAC2STR(sm->addr));
+	wpa_ft_send_rrb_auth_resp(sm, sm->ft_pending_current_ap, sm->addr,
+				  WLAN_STATUS_SUCCESS, ies, ies_len);
+}
+
+
 static int wpa_ft_rrb_rx_request(struct wpa_authenticator *wpa_auth,
 				 const u8 *current_ap, const u8 *sta_addr,
 				 const u8 *body, size_t len)
 {
 	struct wpa_state_machine *sm;
 	u16 status;
-	u8 *resp_ies, *pos;
-	size_t resp_ies_len, rlen;
-	struct ft_rrb_frame *frame;
+	u8 *resp_ies;
+	size_t resp_ies_len;
+	int res;
 
 	sm = wpa_ft_add_sta(wpa_auth, sta_addr);
 	if (sm == NULL) {
@@ -1201,8 +1233,33 @@ static int wpa_ft_rrb_rx_request(struct wpa_authenticator *wpa_auth,
 
 	wpa_hexdump(MSG_MSGDUMP, "FT: RRB Request Frame body", body, len);
 
-	status = wpa_ft_process_auth_req(sm, body, len, &resp_ies,
-					 &resp_ies_len);
+	sm->ft_pending_cb = wpa_ft_rrb_rx_request_cb;
+	sm->ft_pending_cb_ctx = sm;
+	os_memcpy(sm->ft_pending_current_ap, current_ap, ETH_ALEN);
+	res = wpa_ft_process_auth_req(sm, body, len, &resp_ies,
+				      &resp_ies_len);
+	if (res < 0) {
+		wpa_printf(MSG_DEBUG, "FT: No immediate response available - wait for pull response");
+		return 0;
+	}
+	status = res;
+
+	res = wpa_ft_send_rrb_auth_resp(sm, current_ap, sta_addr, status,
+					resp_ies, resp_ies_len);
+	os_free(resp_ies);
+	return res;
+}
+
+
+static int wpa_ft_send_rrb_auth_resp(struct wpa_state_machine *sm,
+				     const u8 *current_ap, const u8 *sta_addr,
+				     u16 status, const u8 *resp_ies,
+				     size_t resp_ies_len)
+{
+	struct wpa_authenticator *wpa_auth = sm->wpa_auth;
+	size_t rlen;
+	struct ft_rrb_frame *frame;
+	u8 *pos;
 
 	wpa_printf(MSG_DEBUG, "FT: RRB authentication response: STA=" MACSTR
 		   " CurrentAP=" MACSTR " status=%d",
@@ -1218,10 +1275,8 @@ static int wpa_ft_rrb_rx_request(struct wpa_authenticator *wpa_auth,
 	rlen = 2 + 2 * ETH_ALEN + 2 + resp_ies_len;
 
 	frame = os_malloc(sizeof(*frame) + rlen);
-	if (frame == NULL) {
-		os_free(resp_ies);
+	if (frame == NULL)
 		return -1;
-	}
 	frame->frame_type = RSN_REMOTE_FRAME_TYPE_FT_RRB;
 	frame->packet_type = FT_PACKET_RESPONSE;
 	frame->action_length = host_to_le16(rlen);
@@ -1235,10 +1290,8 @@ static int wpa_ft_rrb_rx_request(struct wpa_authenticator *wpa_auth,
 	pos += ETH_ALEN;
 	WPA_PUT_LE16(pos, status);
 	pos += 2;
-	if (resp_ies) {
+	if (resp_ies)
 		os_memcpy(pos, resp_ies, resp_ies_len);
-		os_free(resp_ies);
-	}
 
 	wpa_ft_rrb_send(wpa_auth, current_ap, (u8 *) frame,
 			sizeof(*frame) + rlen);
@@ -1290,7 +1343,7 @@ static int wpa_ft_rrb_rx_pull(struct wpa_authenticator *wpa_auth,
 		    f.nonce, sizeof(f.nonce));
 	wpa_hexdump(MSG_DEBUG, "FT: PMK-R1 pull - PMKR0Name",
 		    f.pmk_r0_name, WPA_PMK_NAME_LEN);
-	wpa_printf(MSG_DEBUG, "FT: PMK-R1 pull - R1KH-ID=" MACSTR "S1KH-ID="
+	wpa_printf(MSG_DEBUG, "FT: PMK-R1 pull - R1KH-ID=" MACSTR " S1KH-ID="
 		   MACSTR, MAC2STR(f.r1kh_id), MAC2STR(f.s1kh_id));
 
 	os_memset(&resp, 0, sizeof(resp));
@@ -1333,13 +1386,58 @@ static int wpa_ft_rrb_rx_pull(struct wpa_authenticator *wpa_auth,
 }
 
 
+static void ft_pull_resp_cb_finish(void *eloop_ctx, void *timeout_ctx)
+{
+	struct wpa_state_machine *sm = eloop_ctx;
+	int res;
+	u8 *resp_ies;
+	size_t resp_ies_len;
+	u16 status;
+
+	res = wpa_ft_process_auth_req(sm, wpabuf_head(sm->ft_pending_req_ies),
+				      wpabuf_len(sm->ft_pending_req_ies),
+				      &resp_ies, &resp_ies_len);
+	wpabuf_free(sm->ft_pending_req_ies);
+	sm->ft_pending_req_ies = NULL;
+	if (res < 0)
+		res = WLAN_STATUS_UNSPECIFIED_FAILURE;
+	status = res;
+	wpa_printf(MSG_DEBUG, "FT: Postponed auth callback result for " MACSTR
+		   " - status %u", MAC2STR(sm->addr), status);
+
+	sm->ft_pending_cb(sm->ft_pending_cb_ctx, sm->addr, sm->wpa_auth->addr,
+			  sm->ft_pending_auth_transaction + 1, status,
+			  resp_ies, resp_ies_len);
+	os_free(resp_ies);
+}
+
+
+static int ft_pull_resp_cb(struct wpa_state_machine *sm, void *ctx)
+{
+	struct ft_r0kh_r1kh_resp_frame *frame = ctx;
+
+	if (os_memcmp(frame->s1kh_id, sm->addr, ETH_ALEN) != 0)
+		return 0;
+	if (os_memcmp(frame->nonce, sm->ft_pending_pull_nonce,
+		      FT_R0KH_R1KH_PULL_NONCE_LEN) != 0)
+		return 0;
+	if (sm->ft_pending_cb == NULL || sm->ft_pending_req_ies == NULL)
+		return 0;
+
+	wpa_printf(MSG_DEBUG, "FT: Response to a pending pull request for "
+		   MACSTR " - process from timeout", MAC2STR(sm->addr));
+	eloop_register_timeout(0, 0, ft_pull_resp_cb_finish, sm, NULL);
+	return 1;
+}
+
+
 static int wpa_ft_rrb_rx_resp(struct wpa_authenticator *wpa_auth,
 			      const u8 *src_addr,
 			      const u8 *data, size_t data_len)
 {
 	struct ft_r0kh_r1kh_resp_frame *frame, f;
 	struct ft_remote_r0kh *r0kh;
-	int pairwise;
+	int pairwise, res;
 
 	wpa_printf(MSG_DEBUG, "FT: Received PMK-R1 pull response");
 
@@ -1376,14 +1474,10 @@ static int wpa_ft_rrb_rx_resp(struct wpa_authenticator *wpa_auth,
 		return -1;
 	}
 
-	/* TODO: verify that <nonce,s1kh_id> matches with a pending request
-	 * and call this requests callback function to finish request
-	 * processing */
-
 	pairwise = le_to_host16(f.pairwise);
 	wpa_hexdump(MSG_DEBUG, "FT: PMK-R1 pull - nonce",
 		    f.nonce, sizeof(f.nonce));
-	wpa_printf(MSG_DEBUG, "FT: PMK-R1 pull - R1KH-ID=" MACSTR "S1KH-ID="
+	wpa_printf(MSG_DEBUG, "FT: PMK-R1 pull - R1KH-ID=" MACSTR " S1KH-ID="
 		   MACSTR " pairwise=0x%x",
 		   MAC2STR(f.r1kh_id), MAC2STR(f.s1kh_id), pairwise);
 	wpa_hexdump_key(MSG_DEBUG, "FT: PMK-R1 pull - PMK-R1",
@@ -1391,11 +1485,13 @@ static int wpa_ft_rrb_rx_resp(struct wpa_authenticator *wpa_auth,
 	wpa_hexdump(MSG_DEBUG, "FT: PMK-R1 pull - PMKR1Name",
 			f.pmk_r1_name, WPA_PMK_NAME_LEN);
 
-	wpa_ft_store_pmk_r1(wpa_auth, f.s1kh_id, f.pmk_r1, f.pmk_r1_name,
-			    pairwise);
+	res = wpa_ft_store_pmk_r1(wpa_auth, f.s1kh_id, f.pmk_r1, f.pmk_r1_name,
+				  pairwise);
+	wpa_printf(MSG_DEBUG, "FT: Look for pending pull request");
+	wpa_auth_for_each_sta(wpa_auth, ft_pull_resp_cb, &f);
 	os_memset(f.pmk_r1, 0, PMK_LEN);
 
-	return 0;
+	return res ? 0 : -1;
 }
 
 

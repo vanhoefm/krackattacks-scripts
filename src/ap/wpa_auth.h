@@ -42,6 +42,7 @@ struct ft_rrb_frame {
 #define FT_R0KH_R1KH_PULL_DATA_LEN 44
 #define FT_R0KH_R1KH_RESP_DATA_LEN 76
 #define FT_R0KH_R1KH_PUSH_DATA_LEN 88
+#define FT_R0KH_R1KH_PULL_NONCE_LEN 16
 
 struct ft_r0kh_r1kh_pull_frame {
 	u8 frame_type; /* RSN_REMOTE_FRAME_TYPE_FT_RRB */
@@ -49,7 +50,7 @@ struct ft_r0kh_r1kh_pull_frame {
 	le16 data_length; /* little endian length of data (44) */
 	u8 ap_address[ETH_ALEN];
 
-	u8 nonce[16];
+	u8 nonce[FT_R0KH_R1KH_PULL_NONCE_LEN];
 	u8 pmk_r0_name[WPA_PMK_NAME_LEN];
 	u8 r1kh_id[FT_R1KH_ID_LEN];
 	u8 s1kh_id[ETH_ALEN];
@@ -63,7 +64,7 @@ struct ft_r0kh_r1kh_resp_frame {
 	le16 data_length; /* little endian length of data (76) */
 	u8 ap_address[ETH_ALEN];
 
-	u8 nonce[16]; /* copied from pull */
+	u8 nonce[FT_R0KH_R1KH_PULL_NONCE_LEN]; /* copied from pull */
 	u8 r1kh_id[FT_R1KH_ID_LEN]; /* copied from pull */
 	u8 s1kh_id[ETH_ALEN]; /* copied from pull */
 	u8 pmk_r1[PMK_LEN];

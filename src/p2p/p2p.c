@@ -1214,46 +1214,19 @@ static void p2p_prepare_channel_best(struct p2p_data *p2p)
 		p2p_dbg(p2p, "Select pre-configured channel as operating channel preference");
 		p2p->op_reg_class = p2p->cfg->op_reg_class;
 		p2p->op_channel = p2p->cfg->op_channel;
+	} else if (p2p_channel_random_social(&p2p->cfg->channels,
+					     &p2p->op_reg_class,
+					     &p2p->op_channel) == 0) {
+		p2p_dbg(p2p, "Select random available social channel %d from 2.4 GHz band as operating channel preference",
+			p2p->op_channel);
 	} else {
-		u8 op_chans[3];
-		u8 *op_chan;
-		size_t num_channels = 0;
-		unsigned int r;
-
-		/* Try to find available social channels from 2.4 GHz */
-		if (p2p_channels_includes(&p2p->cfg->channels, 81, 1))
-			op_chans[num_channels++] = 1;
-		if (p2p_channels_includes(&p2p->cfg->channels, 81, 6))
-			op_chans[num_channels++] = 6;
-		if (p2p_channels_includes(&p2p->cfg->channels, 81, 11))
-			op_chans[num_channels++] = 11;
-
-		if (num_channels) {
-			p2p_dbg(p2p, "Select random available social channel from 2.4 GHz band as operating channel preference");
-			p2p->op_reg_class = 81;
-			op_chan = op_chans;
-		} else {
-			struct p2p_reg_class *class;
-
-			/* Select any random available channel from the first
-			 * operating class */
-			p2p_dbg(p2p, "Select random available channel from operating class %d as operating channel preference",
-				p2p->op_reg_class);
-			class = &p2p->cfg->channels.reg_class[0];
-			p2p->op_reg_class = class->reg_class;
-			op_chan = &class->channel[0];
-			num_channels = class->channels;
-			if (num_channels == 0) {
-				/* Should not happen, but make sure we do not
-				 * try to divide by zero */
-				op_chan = op_chans;
-				op_chans[0] = 1;
-				num_channels = 1;
-			}
-		}
-		os_get_random((u8 *) &r, sizeof(r));
-		r %= num_channels;
-		p2p->op_channel = op_chan[r];
+		/* Select any random available channel from the first available
+		 * operating class */
+		p2p_channel_select(&p2p->cfg->channels, NULL,
+				   &p2p->op_reg_class,
+				   &p2p->op_channel);
+		p2p_dbg(p2p, "Select random available channel %d from operating class %d as operating channel preference",
+			p2p->op_channel, p2p->op_reg_class);
 	}
 
 	os_memcpy(&p2p->channels, &p2p->cfg->channels,

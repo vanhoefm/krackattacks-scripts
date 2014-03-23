@@ -441,31 +441,65 @@ void p2p_channels_dump(struct p2p_data *p2p, const char *title,
 }
 
 
+static u8 p2p_channel_pick_random(const u8 *channels, unsigned int num_channels)
+{
+	unsigned int r;
+	os_get_random((u8 *) &r, sizeof(r));
+	r %= num_channels;
+	return channels[r];
+}
+
+
 int p2p_channel_select(struct p2p_channels *chans, const int *classes,
 		       u8 *op_class, u8 *op_channel)
 {
-	unsigned int i, j, r;
+	unsigned int i, j;
 
-	for (j = 0; classes[j]; j++) {
+	for (j = 0; classes == NULL || classes[j]; j++) {
 		for (i = 0; i < chans->reg_classes; i++) {
 			struct p2p_reg_class *c = &chans->reg_class[i];
 
 			if (c->channels == 0)
 				continue;
 
-			if (c->reg_class == classes[j]) {
+			if (classes == NULL || c->reg_class == classes[j]) {
 				/*
 				 * Pick one of the available channels in the
 				 * operating class at random.
 				 */
-				os_get_random((u8 *) &r, sizeof(r));
-				r %= c->channels;
 				*op_class = c->reg_class;
-				*op_channel = c->channel[r];
+				*op_channel = p2p_channel_pick_random(
+					c->channel, c->channels);
 				return 0;
 			}
 		}
+		if (classes == NULL)
+			break;
 	}
 
 	return -1;
+}
+
+
+int p2p_channel_random_social(struct p2p_channels *chans, u8 *op_class,
+			      u8 *op_channel)
+{
+	u8 chan[3];
+	unsigned int num_channels = 0;
+
+	/* Try to find available social channels from 2.4 GHz */
+	if (p2p_channels_includes(chans, 81, 1))
+		chan[num_channels++] = 1;
+	if (p2p_channels_includes(chans, 81, 6))
+		chan[num_channels++] = 6;
+	if (p2p_channels_includes(chans, 81, 11))
+		chan[num_channels++] = 11;
+
+	if (num_channels == 0)
+		return -1;
+
+	*op_class = 81;
+	*op_channel = p2p_channel_pick_random(chan, num_channels);
+
+	return 0;
 }

@@ -184,6 +184,7 @@ def main():
     parser.add_argument('--shuffle-tests', action='store_true',
                         dest='shuffle_tests',
                         help='Shuffle test cases to randomize order')
+    parser.add_argument('--split', help='split tests for parallel execution (<server number>/<total servers>)')
     parser.add_argument('--no-reset', action='store_true', dest='no_reset',
                         help='Do not reset devices at the end of the test')
     parser.add_argument('-f', dest='testmodules', metavar='<test module>',
@@ -300,6 +301,15 @@ def main():
             name = t.__name__.replace('test_', '', 1)
             report(conn, False, args.build, args.commit, run, name, 'NOTRUN', 0,
                    args.logdir)
+
+    if args.split:
+        vals = args.split.split('/')
+        split_server = int(vals[0])
+        split_total = int(vals[1])
+        logger.info("Parallel execution - %d/%d" % (split_server, split_total))
+        split_server -= 1
+        tests_to_run.sort(key=lambda t: t.__name__)
+        tests_to_run = [x for i,x in enumerate(tests_to_run) if i % split_total == split_server]
 
     if args.shuffle_tests:
         from random import shuffle

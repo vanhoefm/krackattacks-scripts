@@ -41,7 +41,13 @@ fi
 
 
 CMD=$TESTDIR/vm/inside.sh
-DATE=$(date +%s)
+if [ "$1" = "--ext" ]; then
+    shift
+    DATE=$(date +%s).$1
+    shift
+else
+    DATE=$(date +%s)
+fi
 LOGDIR=$LOGS/$DATE
 mkdir -p $LOGDIR
 

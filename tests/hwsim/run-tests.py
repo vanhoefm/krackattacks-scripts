@@ -340,7 +340,11 @@ def main():
                         conn = None
                     sys.exit(1)
             try:
-                if t.func_code.co_argcount > 1:
+                if t.func_code.co_argcount > 2:
+                    params = {}
+                    params['logdir'] = args.logdir
+                    res = t(dev, apdev, params)
+                elif t.func_code.co_argcount > 1:
                     res = t(dev, apdev)
                 else:
                     res = t(dev)

@@ -98,6 +98,10 @@ int p2p_channel_to_freq(int op_class, int channel)
 		if (channel < 36 || channel > 161)
 			return -1;
 		return 5000 + 5 * channel;
+	case 180: /* 60 GHz band, channels 1..4 */
+		if (channel < 1 || channel > 4)
+			return -1;
+		return 56160 + 2160 * channel;
 	}
 	return -1;
 }

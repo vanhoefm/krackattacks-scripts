@@ -183,3 +183,7 @@ def test_p2p_service_discovery_req_cancel(dev):
         raise Exception("Unexpected SD cancel failure")
     if "OK" not in dev[0].request("P2P_SERV_DISC_CANCEL_REQ " + query3):
         raise Exception("Unexpected SD cancel failure")
+
+    query = dev[0].request("P2P_SERV_DISC_REQ 00:00:00:00:00:00 02000001")
+    if "OK" not in dev[0].request("P2P_SERV_DISC_CANCEL_REQ " + query):
+        raise Exception("Unexpected SD(broadcast) cancel failure")

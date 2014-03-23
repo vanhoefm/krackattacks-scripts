@@ -968,8 +968,11 @@ static void sme_send_2040_bss_coex(struct wpa_supplicant *wpa_s,
 	struct ieee80211_2040_intol_chan_report *ic_report;
 	struct wpabuf *buf;
 
-	wpa_printf(MSG_DEBUG, "SME: Send 20/40 BSS Coexistence to " MACSTR,
-		   MAC2STR(wpa_s->bssid));
+	wpa_printf(MSG_DEBUG, "SME: Send 20/40 BSS Coexistence to " MACSTR
+		   " (num_channels=%u num_intol=%u)",
+		   MAC2STR(wpa_s->bssid), num_channels, num_intol);
+	wpa_hexdump(MSG_DEBUG, "SME: 20/40 BSS Intolerant Channels",
+		    chan_list, num_channels);
 
 	buf = wpabuf_alloc(2 + /* action.category + action_code */
 			   sizeof(struct ieee80211_2040_bss_coex_ie) +
@@ -1051,6 +1054,9 @@ int sme_proc_obss_scan(struct wpa_supplicant *wpa_s)
 
 		ie = wpa_bss_get_ie(bss, WLAN_EID_HT_CAP);
 		ht_cap = (ie && (ie[1] == 26)) ? WPA_GET_LE16(ie + 2) : 0;
+		wpa_printf(MSG_DEBUG, "SME OBSS scan BSS " MACSTR
+			   " freq=%u chan=%u ht_cap=0x%x",
+			   MAC2STR(bss->bssid), bss->freq, channel, ht_cap);
 
 		if (!ht_cap || (ht_cap & HT_CAP_INFO_40MHZ_INTOLERANT)) {
 			if (ht_cap & HT_CAP_INFO_40MHZ_INTOLERANT)

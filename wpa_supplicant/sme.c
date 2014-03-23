@@ -1053,6 +1053,9 @@ int sme_proc_obss_scan(struct wpa_supplicant *wpa_s)
 		ht_cap = (ie && (ie[1] == 26)) ? WPA_GET_LE16(ie + 2) : 0;
 
 		if (!ht_cap || (ht_cap & HT_CAP_INFO_40MHZ_INTOLERANT)) {
+			if (ht_cap & HT_CAP_INFO_40MHZ_INTOLERANT)
+				num_intol++;
+
 			/* Check whether the channel is already considered */
 			for (i = 0; i < num_channels; i++) {
 				if (channel == chan_list[i])
@@ -1060,9 +1063,6 @@ int sme_proc_obss_scan(struct wpa_supplicant *wpa_s)
 			}
 			if (i != num_channels)
 				continue;
-
-			if (ht_cap & HT_CAP_INFO_40MHZ_INTOLERANT)
-				num_intol++;
 
 			chan_list[num_channels++] = channel;
 		}

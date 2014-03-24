@@ -1591,6 +1591,27 @@ void hostapd_interface_deinit_free(struct hostapd_iface *iface)
 }
 
 
+static void hostapd_deinit_driver(const struct wpa_driver_ops *driver,
+				  void *drv_priv,
+				  struct hostapd_iface *hapd_iface)
+{
+	size_t j;
+
+	wpa_printf(MSG_DEBUG, "%s: driver=%p drv_priv=%p -> hapd_deinit",
+		   __func__, driver, drv_priv);
+	if (driver && driver->hapd_deinit && drv_priv) {
+		driver->hapd_deinit(drv_priv);
+		for (j = 0; j < hapd_iface->num_bss; j++) {
+			wpa_printf(MSG_DEBUG, "%s:bss[%d]->drv_priv=%p",
+				   __func__, (int) j,
+				   hapd_iface->bss[j]->drv_priv);
+			if (hapd_iface->bss[j]->drv_priv == drv_priv)
+				hapd_iface->bss[j]->drv_priv = NULL;
+		}
+	}
+}
+
+
 int hostapd_enable_iface(struct hostapd_iface *hapd_iface)
 {
 	if (hapd_iface->bss[0]->drv_priv != NULL) {
@@ -1613,17 +1634,9 @@ int hostapd_enable_iface(struct hostapd_iface *hapd_iface)
 		return -1;
 
 	if (hostapd_setup_interface(hapd_iface)) {
-		const struct wpa_driver_ops *driver;
-		void *drv_priv;
-
-		driver = hapd_iface->bss[0]->driver;
-		drv_priv = hapd_iface->bss[0]->drv_priv;
-		wpa_printf(MSG_DEBUG, "%s: driver=%p drv_priv=%p -> hapd_deinit",
-			   __func__, driver, drv_priv);
-		if (driver && driver->hapd_deinit && drv_priv) {
-			driver->hapd_deinit(drv_priv);
-			hapd_iface->bss[0]->drv_priv = NULL;
-		}
+		hostapd_deinit_driver(hapd_iface->bss[0]->driver,
+				      hapd_iface->bss[0]->drv_priv,
+				      hapd_iface);
 		return -1;
 	}
 
@@ -1676,12 +1689,7 @@ int hostapd_disable_iface(struct hostapd_iface *hapd_iface)
 		hostapd_free_hapd_data(hapd);
 	}
 
-	wpa_printf(MSG_DEBUG, "%s: driver=%p drv_priv=%p -> hapd_deinit",
-		   __func__, driver, drv_priv);
-	if (driver && driver->hapd_deinit && drv_priv) {
-		driver->hapd_deinit(drv_priv);
-		hapd_iface->bss[0]->drv_priv = NULL;
-	}
+	hostapd_deinit_driver(driver, drv_priv, hapd_iface);
 
 	/* From hostapd_cleanup_iface: These were initialized in
 	 * hostapd_setup_interface and hostapd_setup_interface_complete

@@ -749,7 +749,7 @@ static void acs_scan_complete(struct hostapd_iface *iface)
 	err = hostapd_drv_get_survey(iface->bss[0], 0);
 	if (err) {
 		wpa_printf(MSG_ERROR, "ACS: Failed to get survey data");
-		acs_fail(iface);
+		goto fail;
 	}
 
 	if (++iface->acs_num_completed_scans < iface->conf->acs_num_scans) {
@@ -801,6 +801,7 @@ static int acs_request_scan(struct hostapd_iface *iface)
 	if (hostapd_driver_scan(iface->bss[0], &params) < 0) {
 		wpa_printf(MSG_ERROR, "ACS: Failed to request initial scan");
 		acs_cleanup(iface);
+		os_free(params.freqs);
 		return -1;
 	}
 

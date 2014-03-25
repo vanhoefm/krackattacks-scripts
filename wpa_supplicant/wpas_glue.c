@@ -26,6 +26,7 @@
 #include "bss.h"
 #include "scan.h"
 #include "notify.h"
+#include "wpas_kay.h"
 
 
 #ifndef CONFIG_NO_CONFIG_BLOBS
@@ -254,6 +255,8 @@ static void wpa_supplicant_eapol_cb(struct eapol_sm *eapol,
 		 * authentication failure.
 		 */
 		wpa_supplicant_req_auth_timeout(wpa_s, 2, 0);
+	} else {
+		ieee802_1x_notify_create_actor(wpa_s, wpa_s->last_eapol_src);
 	}
 
 	if (result != EAPOL_SUPP_RESULT_SUCCESS ||

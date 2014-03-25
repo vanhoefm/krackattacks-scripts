@@ -736,6 +736,9 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 #endif /* CONFIG_P2P */
 	INT(dtim_period);
 	INT(beacon_int);
+#ifdef CONFIG_MACSEC
+	INT(macsec_policy);
+#endif /* CONFIG_MACSEC */
 
 #undef STR
 #undef INT

@@ -51,6 +51,7 @@
 #include "offchannel.h"
 #include "hs20_supplicant.h"
 #include "wnm_sta.h"
+#include "wpas_kay.h"
 
 const char *wpa_supplicant_version =
 "wpa_supplicant v" VERSION_STR "\n"
@@ -298,6 +299,8 @@ void wpa_supplicant_initiate_eapol(struct wpa_supplicant *wpa_s)
 	eapol_conf.external_sim = wpa_s->conf->external_sim;
 	eapol_sm_notify_config(wpa_s->eapol, &ssid->eap, &eapol_conf);
 #endif /* IEEE8021X_EAPOL */
+
+	ieee802_1x_alloc_kay_sm(wpa_s, ssid);
 }
 
 
@@ -467,6 +470,8 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 	wpa_s->gas = NULL;
 
 	free_hw_features(wpa_s);
+
+	ieee802_1x_dealloc_kay_sm(wpa_s);
 
 	os_free(wpa_s->bssid_filter);
 	wpa_s->bssid_filter = NULL;

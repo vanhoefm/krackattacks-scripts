@@ -808,6 +808,9 @@ struct wpa_supplicant {
 		u16 num_modes;
 		u16 flags;
 	} hw;
+#ifdef CONFIG_MACSEC
+	struct ieee802_1x_kay *kay;
+#endif /* CONFIG_MACSEC */
 
 	int pno;
 	int pno_sched_pending;

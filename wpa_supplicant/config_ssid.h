@@ -636,6 +636,17 @@ struct wpa_ssid {
 	 * dereferences since it may not be updated in all cases.
 	 */
 	void *parent_cred;
+
+#ifdef CONFIG_MACSEC
+	/**
+	 * macsec_policy - Determines the policy for MACsec secure session
+	 *
+	 * 0: MACsec not in use (default)
+	 * 1: MACsec enabled - Should secure, accept key server's advice to
+	 *    determine whether to use a secure session or not.
+	 */
+	int macsec_policy;
+#endif /* CONFIG_MACSEC */
 };
 
 #endif /* CONFIG_SSID_H */

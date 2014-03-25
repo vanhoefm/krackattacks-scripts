@@ -748,6 +748,19 @@ LIBS += -ldl -rdynamic
 endif
 endif
 
+ifdef CONFIG_MACSEC
+CFLAGS += -DCONFIG_MACSEC
+NEED_AES_ENCBLOCK=y
+NEED_AES_UNWRAP=y
+NEED_AES_WRAP=y
+NEED_AES_OMAC1=y
+OBJS += wpas_kay.o
+OBJS += ../src/pae/ieee802_1x_cp.o
+OBJS += ../src/pae/ieee802_1x_kay.o
+OBJS += ../src/pae/ieee802_1x_key.o
+OBJS += ../src/pae/ieee802_1x_secy_ops.o
+endif
+
 ifdef CONFIG_AP
 NEED_80211_COMMON=y
 NEED_EAP_COMMON=y

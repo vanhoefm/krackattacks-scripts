@@ -1733,6 +1733,9 @@ static const struct parse_data ssid_fields[] = {
 	{ INT(ap_max_inactivity) },
 	{ INT(dtim_period) },
 	{ INT(beacon_int) },
+#ifdef CONFIG_MACSEC
+	{ INT_RANGE(macsec_policy, 0, 1) },
+#endif /* CONFIG_MACSEC */
 };
 
 #undef OFFSET

@@ -111,6 +111,14 @@ def test_persistent_group2(dev):
     invite_from_cli(dev[0], dev[1])
     invite_from_go(dev[0], dev[1])
 
+def test_persistent_group3(dev):
+    """P2P persistent group formation and re-invocation with empty BSS table"""
+    form(dev[0], dev[1])
+    dev[1].request("BSS_FLUSH 0")
+    invite_from_cli(dev[0], dev[1])
+    dev[1].request("BSS_FLUSH 0")
+    invite_from_go(dev[0], dev[1])
+
 def test_persistent_group_per_sta_psk(dev):
     """P2P persistent group formation and re-invocation using per-client PSK"""
     addr0 = dev[0].p2p_dev_addr()

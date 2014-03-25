@@ -1557,6 +1557,24 @@ key_fetched:
 
 
 /**
+ * eapol_sm_get_session_id - Get EAP Session-Id
+ * @sm: Pointer to EAPOL state machine allocated with eapol_sm_init()
+ * @len: Pointer to variable that will be set to number of bytes in the session
+ * Returns: Pointer to the EAP Session-Id or %NULL on failure
+ *
+ * The Session-Id is available only after a successful authentication.
+ */
+const u8 * eapol_sm_get_session_id(struct eapol_sm *sm, size_t *len)
+{
+	if (sm == NULL || !eap_key_available(sm->eap)) {
+		wpa_printf(MSG_DEBUG, "EAPOL: EAP Session-Id not available");
+		return NULL;
+	}
+	return eap_get_eapSessionId(sm->eap, len);
+}
+
+
+/**
  * eapol_sm_notify_logoff - Notification of logon/logoff commands
  * @sm: Pointer to EAPOL state machine allocated with eapol_sm_init()
  * @logoff: Whether command was logoff

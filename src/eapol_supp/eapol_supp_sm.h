@@ -285,6 +285,7 @@ void eapol_sm_notify_config(struct eapol_sm *sm,
 			    struct eap_peer_config *config,
 			    const struct eapol_config *conf);
 int eapol_sm_get_key(struct eapol_sm *sm, u8 *key, size_t len);
+const u8 * eapol_sm_get_session_id(struct eapol_sm *sm, size_t *len);
 void eapol_sm_notify_logoff(struct eapol_sm *sm, Boolean logoff);
 void eapol_sm_notify_cached(struct eapol_sm *sm);
 void eapol_sm_notify_pmkid_attempt(struct eapol_sm *sm, int attempt);

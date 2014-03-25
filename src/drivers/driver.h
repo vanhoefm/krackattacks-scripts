@@ -1305,6 +1305,15 @@ enum tdls_peer_capability {
 	TDLS_PEER_WMM = BIT(2),
 };
 
+#ifdef CONFIG_MACSEC
+struct macsec_init_params {
+	Boolean always_include_sci;
+	Boolean use_es;
+	Boolean use_scb;
+};
+#endif /* CONFIG_MACSEC */
+
+
 /**
  * struct wpa_driver_ops - Driver interface API definition
  *
@@ -2786,6 +2795,203 @@ struct wpa_driver_ops {
 	 * Returns: Length of written status information or -1 on failure
 	 */
 	int (*status)(void *priv, char *buf, size_t buflen);
+
+#ifdef CONFIG_MACSEC
+	int (*macsec_init)(void *priv, struct macsec_init_params *params);
+
+	int (*macsec_deinit)(void *priv);
+
+	/**
+	 * enable_protect_frames - Set protect frames status
+	 * @priv: Private driver interface data
+	 * @enabled: TRUE = protect frames enabled
+	 *           FALSE = protect frames disabled
+	 * Returns: 0 on success, -1 on failure (or if not supported)
+	 */
+	int (*enable_protect_frames)(void *priv, Boolean enabled);
+
+	/**
+	 * set_replay_protect - Set replay protect status and window size
+	 * @priv: Private driver interface data
+	 * @enabled: TRUE = replay protect enabled
+	 *           FALSE = replay protect disabled
+	 * @window: replay window size, valid only when replay protect enabled
+	 * Returns: 0 on success, -1 on failure (or if not supported)
+	 */
+	int (*set_replay_protect)(void *priv, Boolean enabled, u32 window);
+
+	/**
+	 * set_current_cipher_suite - Set current cipher suite
+	 * @priv: Private driver interface data
+	 * @cs: EUI64 identifier
+	 * @cs_len: Length of the cs buffer in octets
+	 * Returns: 0 on success, -1 on failure (or if not supported)
+	 */
+	int (*set_current_cipher_suite)(void *priv, const u8 *cs,
+					size_t cs_len);
+
+	/**
+	 * enable_controlled_port - Set controlled port status
+	 * @priv: Private driver interface data
+	 * @enabled: TRUE = controlled port enabled
+	 *           FALSE = controlled port disabled
+	 * Returns: 0 on success, -1 on failure (or if not supported)
+	 */
+	int (*enable_controlled_port)(void *priv, Boolean enabled);
+
+	/**
+	 * get_receive_lowest_pn - Get receive lowest pn
+	 * @priv: Private driver interface data
+	 * @channel: secure channel
+	 * @an: association number
+	 * @lowest_pn: lowest accept pn
+	 * Returns: 0 on success, -1 on failure (or if not supported)
+	 */
+	int (*get_receive_lowest_pn)(void *priv, u32 channel, u8 an,
+				     u32 *lowest_pn);
+
+	/**
+	 * get_transmit_next_pn - Get transmit next pn
+	 * @priv: Private driver interface data
+	 * @channel: secure channel
+	 * @an: association number
+	 * @next_pn: next pn
+	 * Returns: 0 on success, -1 on failure (or if not supported)
+	 */
+	int (*get_transmit_next_pn)(void *priv, u32 channel, u8 an,
+				    u32 *next_pn);
+
+	/**
+	 * set_transmit_next_pn - Set transmit next pn
+	 * @priv: Private driver interface data
+	 * @channel: secure channel
+	 * @an: association number
+	 * @next_pn: next pn
+	 * Returns: 0 on success, -1 on failure (or if not supported)
+	 */
+	int (*set_transmit_next_pn)(void *priv, u32 channel, u8 an,
+				    u32 next_pn);
+
+	/**
+	 * get_available_receive_sc - get available receive channel
+	 * @priv: Private driver interface data
+	 * @channel: secure channel
+	 * Returns: 0 on success, -1 on failure (or if not supported)
+	 */
+	int (*get_available_receive_sc)(void *priv, u32 *channel);
+
+	/**
+	 * create_receive_sc - create secure channel for receiving
+	 * @priv: Private driver interface data
+	 * @channel: secure channel
+	 * @sci_addr: secure channel identifier - address
+	 * @sci_port: secure channel identifier - port
+	 * @conf_offset: confidentiality offset (0, 30, or 50)
+	 * @validation: frame validation policy (0 = Disabled, 1 = Checked,
+	 *	2 = Strict)
+	 * Returns: 0 on success, -1 on failure (or if not supported)
+	 */
+	int (*create_receive_sc)(void *priv, u32 channel, const u8 *sci_addr,
+				 u16 sci_port, unsigned int conf_offset,
+				 int validation);
+
+	/**
+	 * delete_receive_sc - delete secure connection for receiving
+	 * @priv: private driver interface data from init()
+	 * @channel: secure channel
+	 * Returns: 0 on success, -1 on failure
+	 */
+	int (*delete_receive_sc)(void *priv, u32 channel);
+
+	/**
+	 * create_receive_sa - create secure association for receive
+	 * @priv: private driver interface data from init()
+	 * @channel: secure channel
+	 * @an: association number
+	 * @lowest_pn: the lowest packet number can be received
+	 * @sak: the secure association key
+	 * Returns: 0 on success, -1 on failure
+	 */
+	int (*create_receive_sa)(void *priv, u32 channel, u8 an,
+				 u32 lowest_pn, const u8 *sak);
+
+	/**
+	 * enable_receive_sa - enable the SA for receive
+	 * @priv: private driver interface data from init()
+	 * @channel: secure channel
+	 * @an: association number
+	 * Returns: 0 on success, -1 on failure
+	 */
+	int (*enable_receive_sa)(void *priv, u32 channel, u8 an);
+
+	/**
+	 * disable_receive_sa - disable SA for receive
+	 * @priv: private driver interface data from init()
+	 * @channel: secure channel index
+	 * @an: association number
+	 * Returns: 0 on success, -1 on failure
+	 */
+	int (*disable_receive_sa)(void *priv, u32 channel, u8 an);
+
+	/**
+	 * get_available_transmit_sc - get available transmit channel
+	 * @priv: Private driver interface data
+	 * @channel: secure channel
+	 * Returns: 0 on success, -1 on failure (or if not supported)
+	 */
+	int (*get_available_transmit_sc)(void *priv, u32 *channel);
+
+	/**
+	 * create_transmit_sc - create secure connection for transmit
+	 * @priv: private driver interface data from init()
+	 * @channel: secure channel
+	 * @sci_addr: secure channel identifier - address
+	 * @sci_port: secure channel identifier - port
+	 * Returns: 0 on success, -1 on failure
+	 */
+	int (*create_transmit_sc)(void *priv, u32 channel, const u8 *sci_addr,
+				  u16 sci_port, unsigned int conf_offset);
+
+	/**
+	 * delete_transmit_sc - delete secure connection for transmit
+	 * @priv: private driver interface data from init()
+	 * @channel: secure channel
+	 * Returns: 0 on success, -1 on failure
+	 */
+	int (*delete_transmit_sc)(void *priv, u32 channel);
+
+	/**
+	 * create_transmit_sa - create secure association for transmit
+	 * @priv: private driver interface data from init()
+	 * @channel: secure channel index
+	 * @an: association number
+	 * @next_pn: the packet number used as next transmit packet
+	 * @confidentiality: True if the SA is to provide confidentiality
+	 *                   as well as integrity
+	 * @sak: the secure association key
+	 * Returns: 0 on success, -1 on failure
+	 */
+	int (*create_transmit_sa)(void *priv, u32 channel, u8 an, u32 next_pn,
+				  Boolean confidentiality, const u8 *sak);
+
+	/**
+	 * enable_transmit_sa - enable SA for transmit
+	 * @priv: private driver interface data from init()
+	 * @channel: secure channel
+	 * @an: association number
+	 * Returns: 0 on success, -1 on failure
+	 */
+	int (*enable_transmit_sa)(void *priv, u32 channel, u8 an);
+
+	/**
+	 * disable_transmit_sa - disable SA for transmit
+	 * @priv: private driver interface data from init()
+	 * @channel: secure channel
+	 * @an: association number
+	 * Returns: 0 on success, -1 on failure
+	 */
+	int (*disable_transmit_sa)(void *priv, u32 channel, u8 an);
+#endif /* CONFIG_MACSEC */
 };
 
 

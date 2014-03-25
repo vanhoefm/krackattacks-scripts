@@ -10,6 +10,11 @@ logger = logging.getLogger()
 
 import hwsim_utils
 
+def wait_ap_ready(dev):
+    ev = dev.wait_event(["CTRL-EVENT-CONNECTED"])
+    if ev is None:
+        raise Exception("AP failed to start")
+
 def test_wpas_ap_open(dev):
     """wpa_supplicant AP mode - open network"""
     id = dev[0].add_network()
@@ -19,6 +24,7 @@ def test_wpas_ap_open(dev):
     dev[0].set_network(id, "frequency", "2412")
     dev[0].set_network(id, "scan_freq", "2412")
     dev[0].select_network(id)
+    wait_ap_ready(dev[0])
 
     dev[1].connect("wpas-ap-open", key_mgmt="NONE", scan_freq="2412")
     dev[2].connect("wpas-ap-open", key_mgmt="NONE", scan_freq="2412")
@@ -61,6 +67,8 @@ def test_wpas_ap_open(dev):
     ev = dev[2].wait_event(["CTRL-EVENT-CONNECTED"])
     if ev is None:
         raise Exception("Reconnection timed out")
+    dev[1].request("DISCONNECT")
+    dev[2].request("DISCONNECT")
 
 def test_wpas_ap_wep(dev):
     """wpa_supplicant AP mode - WEP"""
@@ -72,10 +80,12 @@ def test_wpas_ap_wep(dev):
     dev[0].set_network(id, "scan_freq", "2412")
     dev[0].set_network_quoted(id, "wep_key0", "hello")
     dev[0].select_network(id)
+    wait_ap_ready(dev[0])
 
     dev[1].connect("wpas-ap-wep", key_mgmt="NONE", wep_key0='"hello"',
                    scan_freq="2412")
     hwsim_utils.test_connectivity(dev[0].ifname, dev[1].ifname)
+    dev[1].request("DISCONNECT")
 
 def test_wpas_ap_no_ssid(dev):
     """wpa_supplicant AP mode - invalid network configuration"""
@@ -97,10 +107,9 @@ def test_wpas_ap_default_frequency(dev):
     dev[0].set_network(id, "key_mgmt", "NONE")
     dev[0].set_network(id, "scan_freq", "2412")
     dev[0].select_network(id)
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"])
-    if ev is None:
-        raise Exception("AP failed to start")
+    wait_ap_ready(dev[0])
     dev[1].connect("wpas-ap-open", key_mgmt="NONE", scan_freq="2462")
+    dev[1].request("DISCONNECT")
 
 def test_wpas_ap_invalid_frequency(dev):
     """wpa_supplicant AP mode - invalid frequency configuration"""
@@ -124,9 +133,7 @@ def test_wpas_ap_wps(dev):
     dev[0].set_network(id, "frequency", "2412")
     dev[0].set_network(id, "scan_freq", "2412")
     dev[0].select_network(id)
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"])
-    if ev is None:
-        raise Exception("AP start timeout")
+    wait_ap_ready(dev[0])
     bssid = dev[0].p2p_interface_addr()
 
     logger.info("Test PBC mode start/stop")

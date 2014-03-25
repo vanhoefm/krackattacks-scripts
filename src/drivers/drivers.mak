@@ -17,6 +17,11 @@ DRV_CFLAGS += -DCONFIG_DRIVER_WIRED
 DRV_OBJS += ../src/drivers/driver_wired.o
 endif
 
+ifdef CONFIG_DRIVER_MACSEC_QCA
+DRV_CFLAGS += -DCONFIG_DRIVER_MACSEC_QCA
+DRV_OBJS += ../src/drivers/driver_macsec_qca.o
+endif
+
 ifdef CONFIG_DRIVER_NL80211
 DRV_CFLAGS += -DCONFIG_DRIVER_NL80211
 DRV_OBJS += ../src/drivers/driver_nl80211.o

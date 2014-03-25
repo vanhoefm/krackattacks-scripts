@@ -34,6 +34,10 @@ extern struct wpa_driver_ops wpa_driver_ndis_ops; /* driver_ndis.c */
 #ifdef CONFIG_DRIVER_WIRED
 extern struct wpa_driver_ops wpa_driver_wired_ops; /* driver_wired.c */
 #endif /* CONFIG_DRIVER_WIRED */
+#ifdef CONFIG_DRIVER_MACSEC_QCA
+ /* driver_macsec_qca.c */
+extern struct wpa_driver_ops wpa_driver_macsec_qca_ops;
+#endif /* CONFIG_DRIVER_MACSEC_QCA */
 #ifdef CONFIG_DRIVER_TEST
 extern struct wpa_driver_ops wpa_driver_test_ops; /* driver_test.c */
 #endif /* CONFIG_DRIVER_TEST */
@@ -75,6 +79,9 @@ struct wpa_driver_ops *wpa_drivers[] =
 #ifdef CONFIG_DRIVER_WIRED
 	&wpa_driver_wired_ops,
 #endif /* CONFIG_DRIVER_WIRED */
+#ifdef CONFIG_DRIVER_MACSEC_QCA
+	&wpa_driver_macsec_qca_ops,
+#endif /* CONFIG_DRIVER_MACSEC_QCA */
 #ifdef CONFIG_DRIVER_TEST
 	&wpa_driver_test_ops,
 #endif /* CONFIG_DRIVER_TEST */

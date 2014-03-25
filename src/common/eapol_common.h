@@ -22,6 +22,12 @@ struct ieee802_1x_hdr {
 	/* followed by length octets of data */
 } STRUCT_PACKED;
 
+struct ieee8023_hdr {
+	u8 dest[ETH_ALEN];
+	u8 src[ETH_ALEN];
+	u16 ethertype;
+} STRUCT_PACKED;
+
 #ifdef _MSC_VER
 #pragma pack(pop)
 #endif /* _MSC_VER */

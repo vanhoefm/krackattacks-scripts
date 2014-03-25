@@ -782,7 +782,7 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 	}
 #endif /* CONFIG_IEEE80211N */
 
-#ifdef CONFIG_WPS2
+#ifdef CONFIG_WPS
 	if (full_config && bss->wps_state && bss->ignore_broadcast_ssid) {
 		wpa_printf(MSG_INFO, "WPS: ignore_broadcast_ssid "
 			   "configuration forced WPS to be disabled");
@@ -803,7 +803,7 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 			   "WPA2/CCMP forced WPS to be disabled");
 		bss->wps_state = 0;
 	}
-#endif /* CONFIG_WPS2 */
+#endif /* CONFIG_WPS */
 
 #ifdef CONFIG_HS20
 	if (full_config && bss->hs20 &&

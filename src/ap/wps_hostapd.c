@@ -378,48 +378,11 @@ static int hapd_wps_reconfig_in_memory(struct hostapd_data *hapd,
 		}
 		bss->auth_algs = 1;
 	} else {
-#ifdef CONFIG_WPS2
 		/*
 		 * WPS 2.0 does not allow WEP to be configured, so no need to
 		 * process that option here either.
 		 */
 		bss->auth_algs = 1;
-#else /* CONFIG_WPS2 */
-		if ((cred->auth_type & WPS_AUTH_OPEN) &&
-		    (cred->auth_type & WPS_AUTH_SHARED))
-			bss->auth_algs = 3;
-		else if (cred->auth_type & WPS_AUTH_SHARED)
-			bss->auth_algs = 2;
-		else
-			bss->auth_algs = 1;
-		if (cred->encr_type & WPS_ENCR_WEP && cred->key_idx > 0 &&
-		    cred->key_idx <= 4) {
-			struct hostapd_wep_keys *wep = &bss->ssid.wep;
-			int idx = cred->key_idx;
-			if (idx)
-				idx--;
-			wep->idx = idx;
-			if (cred->key_len == 10 || cred->key_len == 26) {
-				os_free(wep->key[idx]);
-				wep->key[idx] = os_malloc(cred->key_len / 2);
-				if (wep->key[idx] == NULL ||
-				    hexstr2bin((const char *) cred->key,
-					       wep->key[idx],
-					       cred->key_len / 2))
-					return -1;
-				wep->len[idx] = cred->key_len / 2;
-			} else {
-				os_free(wep->key[idx]);
-				wep->key[idx] = os_malloc(cred->key_len);
-				if (wep->key[idx] == NULL)
-					return -1;
-				os_memcpy(wep->key[idx], cred->key,
-					  cred->key_len);
-				wep->len[idx] = cred->key_len;
-			}
-			wep->keys_set = 1;
-		}
-#endif /* CONFIG_WPS2 */
 	}
 
 	/* Schedule configuration reload after short period of time to allow
@@ -594,39 +557,11 @@ static int hapd_wps_cred_cb(struct hostapd_data *hapd, void *ctx)
 
 		fprintf(nconf, "auth_algs=1\n");
 	} else {
-#ifdef CONFIG_WPS2
 		/*
 		 * WPS 2.0 does not allow WEP to be configured, so no need to
 		 * process that option here either.
 		 */
 		fprintf(nconf, "auth_algs=1\n");
-#else /* CONFIG_WPS2 */
-		if ((cred->auth_type & WPS_AUTH_OPEN) &&
-		    (cred->auth_type & WPS_AUTH_SHARED))
-			fprintf(nconf, "auth_algs=3\n");
-		else if (cred->auth_type & WPS_AUTH_SHARED)
-			fprintf(nconf, "auth_algs=2\n");
-		else
-			fprintf(nconf, "auth_algs=1\n");
-
-		if (cred->encr_type & WPS_ENCR_WEP && cred->key_idx <= 4) {
-			int key_idx = cred->key_idx;
-			if (key_idx)
-				key_idx--;
-			fprintf(nconf, "wep_default_key=%d\n", key_idx);
-			fprintf(nconf, "wep_key%d=", key_idx);
-			if (cred->key_len == 10 || cred->key_len == 26) {
-				/* WEP key as a hex string */
-				for (i = 0; i < cred->key_len; i++)
-					fputc(cred->key[i], nconf);
-			} else {
-				/* Raw WEP key; convert to hex */
-				for (i = 0; i < cred->key_len; i++)
-					fprintf(nconf, "%02x", cred->key[i]);
-			}
-			fprintf(nconf, "\n");
-		}
-#endif /* CONFIG_WPS2 */
 	}
 
 	fprintf(nconf, "# WPS configuration - END\n");
@@ -1078,7 +1013,6 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 		os_strdup(hapd->conf->serial_number) : NULL;
 	wps->config_methods =
 		wps_config_methods_str2bin(hapd->conf->config_methods);
-#ifdef CONFIG_WPS2
 	if ((wps->config_methods &
 	     (WPS_CONFIG_DISPLAY | WPS_CONFIG_VIRT_DISPLAY |
 	      WPS_CONFIG_PHY_DISPLAY)) == WPS_CONFIG_DISPLAY) {
@@ -1093,7 +1027,6 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 			   "virtual_push_button for WPS 2.0 compliance");
 		wps->config_methods |= WPS_CONFIG_VIRT_PUSHBUTTON;
 	}
-#endif /* CONFIG_WPS2 */
 	os_memcpy(wps->dev.pri_dev_type, hapd->conf->device_type,
 		  WPS_DEV_TYPE_LEN);
 

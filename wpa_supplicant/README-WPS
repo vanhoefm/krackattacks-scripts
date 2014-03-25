@@ -60,7 +60,6 @@ driver interface:
 
 CONFIG_DRIVER_NL80211=y
 CONFIG_WPS=y
-CONFIG_WPS2=y
 
 If you want to enable WPS external registrar (ER) functionality, you
 will also need to add following line:

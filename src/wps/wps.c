@@ -511,13 +511,11 @@ struct wpabuf * wps_build_probe_req_ie(u16 pw_id, struct wps_device_data *dev,
 	    wps_build_assoc_state(NULL, ie) ||
 	    wps_build_config_error(ie, WPS_CFG_NO_ERROR) ||
 	    wps_build_dev_password_id(ie, pw_id) ||
-#ifdef CONFIG_WPS2
 	    wps_build_manufacturer(dev, ie) ||
 	    wps_build_model_name(dev, ie) ||
 	    wps_build_model_number(dev, ie) ||
 	    wps_build_dev_name(dev, ie) ||
 	    wps_build_wfa_ext(ie, req_type == WPS_REQ_ENROLLEE, NULL, 0) ||
-#endif /* CONFIG_WPS2 */
 	    wps_build_req_dev_type(dev, ie, num_req_dev_types, req_dev_types)
 	    ||
 	    wps_build_secondary_dev_type(dev, ie)
@@ -525,13 +523,6 @@ struct wpabuf * wps_build_probe_req_ie(u16 pw_id, struct wps_device_data *dev,
 		wpabuf_free(ie);
 		return NULL;
 	}
-
-#ifndef CONFIG_WPS2
-	if (dev->p2p && wps_build_dev_name(dev, ie)) {
-		wpabuf_free(ie);
-		return NULL;
-	}
-#endif /* CONFIG_WPS2 */
 
 	return wps_ie_encapsulate(ie);
 }

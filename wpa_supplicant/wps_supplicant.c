@@ -1301,7 +1301,6 @@ static void wpas_wps_set_sel_reg_cb(void *ctx, int sel_reg, u16 dev_passwd_id,
 
 static u16 wps_fix_config_methods(u16 config_methods)
 {
-#ifdef CONFIG_WPS2
 	if ((config_methods &
 	     (WPS_CONFIG_DISPLAY | WPS_CONFIG_VIRT_DISPLAY |
 	      WPS_CONFIG_PHY_DISPLAY)) == WPS_CONFIG_DISPLAY) {
@@ -1316,7 +1315,6 @@ static u16 wps_fix_config_methods(u16 config_methods)
 			   "virtual_push_button for WPS 2.0 compliance");
 		config_methods |= WPS_CONFIG_VIRT_PUSHBUTTON;
 	}
-#endif /* CONFIG_WPS2 */
 
 	return config_methods;
 }

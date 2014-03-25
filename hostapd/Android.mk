@@ -393,10 +393,6 @@ NEED_AES_UNWRAP=y
 endif
 
 ifdef CONFIG_WPS
-ifdef CONFIG_WPS2
-L_CFLAGS += -DCONFIG_WPS2
-endif
-
 L_CFLAGS += -DCONFIG_WPS -DEAP_SERVER_WSC
 OBJS += src/utils/uuid.c
 OBJS += src/ap/wps_hostapd.c

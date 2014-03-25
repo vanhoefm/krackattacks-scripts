@@ -538,7 +538,6 @@ static int wps_build_sel_pbc_reg_uuid_e(struct wps_registrar *reg,
 static void wps_set_pushbutton(u16 *methods, u16 conf_methods)
 {
 	*methods |= WPS_CONFIG_PUSHBUTTON;
-#ifdef CONFIG_WPS2
 	if ((conf_methods & WPS_CONFIG_VIRT_PUSHBUTTON) ==
 	    WPS_CONFIG_VIRT_PUSHBUTTON)
 		*methods |= WPS_CONFIG_VIRT_PUSHBUTTON;
@@ -556,7 +555,6 @@ static void wps_set_pushbutton(u16 *methods, u16 conf_methods)
 		 */
 		*methods |= WPS_CONFIG_PHY_PUSHBUTTON;
 	}
-#endif /* CONFIG_WPS2 */
 }
 
 
@@ -568,10 +566,8 @@ static int wps_build_sel_reg_config_methods(struct wps_registrar *reg,
 		return 0;
 	methods = reg->wps->config_methods;
 	methods &= ~WPS_CONFIG_PUSHBUTTON;
-#ifdef CONFIG_WPS2
 	methods &= ~(WPS_CONFIG_VIRT_PUSHBUTTON |
 		     WPS_CONFIG_PHY_PUSHBUTTON);
-#endif /* CONFIG_WPS2 */
 	if (reg->pbc)
 		wps_set_pushbutton(&methods, reg->wps->config_methods);
 	if (reg->sel_reg_config_methods_override >= 0)
@@ -594,10 +590,8 @@ static int wps_build_probe_config_methods(struct wps_registrar *reg,
 	 * external Registrars.
 	 */
 	methods = reg->wps->config_methods & ~WPS_CONFIG_PUSHBUTTON;
-#ifdef CONFIG_WPS2
 	methods &= ~(WPS_CONFIG_VIRT_PUSHBUTTON |
 		     WPS_CONFIG_PHY_PUSHBUTTON);
-#endif /* CONFIG_WPS2 */
 	wpa_printf(MSG_DEBUG, "WPS:  * Config Methods (%x)", methods);
 	wpabuf_put_be16(msg, ATTR_CONFIG_METHODS);
 	wpabuf_put_be16(msg, 2);
@@ -617,13 +611,11 @@ const u8 * wps_authorized_macs(struct wps_registrar *reg, size_t *count)
 {
 	*count = 0;
 
-#ifdef CONFIG_WPS2
 	while (*count < WPS_MAX_AUTHORIZED_MACS) {
 		if (is_zero_ether_addr(reg->authorized_macs_union[*count]))
 			break;
 		(*count)++;
 	}
-#endif /* CONFIG_WPS2 */
 
 	return (const u8 *) reg->authorized_macs_union;
 }
@@ -1217,10 +1209,8 @@ static void wps_cb_set_sel_reg(struct wps_registrar *reg)
 
 	if (reg->selected_registrar) {
 		methods = reg->wps->config_methods & ~WPS_CONFIG_PUSHBUTTON;
-#ifdef CONFIG_WPS2
 		methods &= ~(WPS_CONFIG_VIRT_PUSHBUTTON |
 			     WPS_CONFIG_PHY_PUSHBUTTON);
-#endif /* CONFIG_WPS2 */
 		if (reg->pbc)
 			wps_set_pushbutton(&methods, reg->wps->config_methods);
 	}
@@ -3446,10 +3436,8 @@ void wps_registrar_selected_registrar_changed(struct wps_registrar *reg,
 		u16 methods;
 
 		methods = reg->wps->config_methods & ~WPS_CONFIG_PUSHBUTTON;
-#ifdef CONFIG_WPS2
 		methods &= ~(WPS_CONFIG_VIRT_PUSHBUTTON |
 			     WPS_CONFIG_PHY_PUSHBUTTON);
-#endif /* CONFIG_WPS2 */
 		if (reg->pbc) {
 			reg->sel_reg_dev_password_id_override =
 				DEV_PW_PUSHBUTTON;
@@ -3510,7 +3498,6 @@ int wps_registrar_get_info(struct wps_registrar *reg, const u8 *addr,
 int wps_registrar_config_ap(struct wps_registrar *reg,
 			    struct wps_credential *cred)
 {
-#ifdef CONFIG_WPS2
 	wpa_printf(MSG_DEBUG, "WPS: encr_type=0x%x", cred->encr_type);
 	if (!(cred->encr_type & (WPS_ENCR_NONE | WPS_ENCR_TKIP |
 				 WPS_ENCR_AES))) {
@@ -3538,7 +3525,6 @@ int wps_registrar_config_ap(struct wps_registrar *reg,
 			   "WPAPSK+WPA2PSK");
 		cred->auth_type |= WPS_AUTH_WPA2PSK;
 	}
-#endif /* CONFIG_WPS2 */
 
 	if (reg->wps->cred_cb)
 		return reg->wps->cred_cb(reg->wps->cb_ctx, cred);

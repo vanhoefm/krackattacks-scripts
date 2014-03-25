@@ -18,11 +18,7 @@ extern int wps_corrupt_pkhash;
 
 #else /* CONFIG_WPS_TESTING */
 
-#ifdef CONFIG_WPS2
 #define WPS_VERSION 0x20
-#else /* CONFIG_WPS2 */
-#define WPS_VERSION 0x10
-#endif /* CONFIG_WPS2 */
 
 #endif /* CONFIG_WPS_TESTING */
 
@@ -246,12 +242,10 @@ enum wps_error_indication {
 #define WPS_CONFIG_NFC_INTERFACE 0x0040
 #define WPS_CONFIG_PUSHBUTTON 0x0080
 #define WPS_CONFIG_KEYPAD 0x0100
-#ifdef CONFIG_WPS2
 #define WPS_CONFIG_VIRT_PUSHBUTTON 0x0280
 #define WPS_CONFIG_PHY_PUSHBUTTON 0x0480
 #define WPS_CONFIG_VIRT_DISPLAY 0x2008
 #define WPS_CONFIG_PHY_DISPLAY 0x4008
-#endif /* CONFIG_WPS2 */
 
 /* Connection Type Flags */
 #define WPS_CONN_ESS 0x01

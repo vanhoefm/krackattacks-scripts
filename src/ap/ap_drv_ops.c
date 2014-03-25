@@ -128,14 +128,14 @@ int hostapd_build_ap_extra_ies(struct hostapd_data *hapd,
 	}
 #endif /* CONFIG_P2P_MANAGER */
 
-#ifdef CONFIG_WPS2
+#ifdef CONFIG_WPS
 	if (hapd->conf->wps_state) {
 		struct wpabuf *a = wps_build_assoc_resp_ie();
 		if (a && wpabuf_resize(&assocresp, wpabuf_len(a)) == 0)
 			wpabuf_put_buf(assocresp, a);
 		wpabuf_free(a);
 	}
-#endif /* CONFIG_WPS2 */
+#endif /* CONFIG_WPS */
 
 #ifdef CONFIG_P2P_MANAGER
 	if (hapd->conf->p2p & P2P_MANAGE) {

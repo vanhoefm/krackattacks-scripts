@@ -2163,10 +2163,8 @@ static char * wpa_supplicant_wps_ie_txt_buf(struct wpa_supplicant *wpa_s,
 		return pos;
 	if (wps_is_selected_pbc_registrar(wps_ie))
 		txt = "[WPS-PBC]";
-#ifdef CONFIG_WPS2
 	else if (wps_is_addr_authorized(wps_ie, wpa_s->own_addr, 0))
 		txt = "[WPS-AUTH]";
-#endif /* CONFIG_WPS2 */
 	else if (wps_is_selected_pin_registrar(wps_ie))
 		txt = "[WPS-PIN]";
 	else

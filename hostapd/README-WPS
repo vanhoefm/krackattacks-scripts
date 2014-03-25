@@ -63,7 +63,6 @@ includes WPS support and uses madwifi driver interface:
 CONFIG_DRIVER_MADWIFI=y
 CFLAGS += -I/usr/src/madwifi-0.9.3
 CONFIG_WPS=y
-CONFIG_WPS2=y
 CONFIG_WPS_UPNP=y
 
 Following parameter can be used to enable support for NFC config method:

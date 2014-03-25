@@ -311,12 +311,10 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 	if (bss->ssid.security_policy != SECURITY_WPA_PSK &&
 	    bss->ssid.security_policy != SECURITY_PLAINTEXT)
 		goto no_wps;
-#ifdef CONFIG_WPS2
 	if (bss->ssid.security_policy == SECURITY_WPA_PSK &&
 	    (!(bss->rsn_pairwise & WPA_CIPHER_CCMP) || !(bss->wpa & 2)))
 		goto no_wps; /* WPS2 does not allow WPA/TKIP-only
 			      * configuration */
-#endif /* CONFIG_WPS2 */
 	bss->eap_server = 1;
 
 	if (!ssid->ignore_broadcast_ssid)

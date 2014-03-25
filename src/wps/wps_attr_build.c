@@ -205,7 +205,6 @@ int wps_build_version(struct wpabuf *msg)
 int wps_build_wfa_ext(struct wpabuf *msg, int req_to_enroll,
 		      const u8 *auth_macs, size_t auth_macs_count)
 {
-#ifdef CONFIG_WPS2
 	u8 *len;
 
 #ifdef CONFIG_WPS_TESTING
@@ -246,7 +245,6 @@ int wps_build_wfa_ext(struct wpabuf *msg, int req_to_enroll,
 	}
 
 	WPA_PUT_BE16(len, (u8 *) wpabuf_put(msg, 0) - len - 2);
-#endif /* CONFIG_WPS2 */
 
 #ifdef CONFIG_WPS_TESTING
 	if (WPS_VERSION > 0x20) {
@@ -299,9 +297,7 @@ int wps_build_auth_type_flags(struct wps_data *wps, struct wpabuf *msg)
 	/* WPA/WPA2-Enterprise enrollment not supported through WPS */
 	auth_types &= ~WPS_AUTH_WPA;
 	auth_types &= ~WPS_AUTH_WPA2;
-#ifdef CONFIG_WPS2
 	auth_types &= ~WPS_AUTH_SHARED;
-#endif /* CONFIG_WPS2 */
 	wpa_printf(MSG_DEBUG, "WPS:  * Authentication Type Flags");
 	wpabuf_put_be16(msg, ATTR_AUTH_TYPE_FLAGS);
 	wpabuf_put_be16(msg, 2);
@@ -313,9 +309,7 @@ int wps_build_auth_type_flags(struct wps_data *wps, struct wpabuf *msg)
 int wps_build_encr_type_flags(struct wps_data *wps, struct wpabuf *msg)
 {
 	u16 encr_types = WPS_ENCR_TYPES;
-#ifdef CONFIG_WPS2
 	encr_types &= ~WPS_ENCR_WEP;
-#endif /* CONFIG_WPS2 */
 	wpa_printf(MSG_DEBUG, "WPS:  * Encryption Type Flags");
 	wpabuf_put_be16(msg, ATTR_ENCR_TYPE_FLAGS);
 	wpabuf_put_be16(msg, 2);

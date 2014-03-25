@@ -152,8 +152,6 @@ CONFIG_EAP_LEAP=y
 
 # Wi-Fi Protected Setup (WPS)
 #CONFIG_WPS=y
-# Enable WSC 2.0 support
-#CONFIG_WPS2=y
 # Enable WPS external registrar functionality
 #CONFIG_WPS_ER=y
 # Disable credentials for an open network by default when acting as a WPS

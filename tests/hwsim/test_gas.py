@@ -221,6 +221,38 @@ def test_gas_comeback_delay(dev, apdev):
         if ev is None:
             raise Exception("Operation timed out")
 
+def test_gas_anqp_get(dev, apdev):
+    """GAS/ANQP query for both IEEE 802.11 and Hotspot 2.0 elements"""
+    hapd = start_ap(apdev[0])
+    bssid = apdev[0]['bssid']
+
+    dev[0].scan(freq="2412")
+    dev[0].request("ANQP_GET " + bssid + " 258,268,hs20:3,hs20:4")
+
+    ev = dev[0].wait_event(["GAS-QUERY-START"], timeout=5)
+    if ev is None:
+        raise Exception("GAS query start timed out")
+
+    ev = dev[0].wait_event(["GAS-QUERY-DONE"], timeout=10)
+    if ev is None:
+        raise Exception("GAS query timed out")
+
+    ev = dev[0].wait_event(["RX-ANQP"], timeout=1)
+    if ev is None or "Venue Name" not in ev:
+        raise Exception("Did not receive Venue Name")
+
+    ev = dev[0].wait_event(["RX-ANQP"], timeout=1)
+    if ev is None or "Domain Name list" not in ev:
+        raise Exception("Did not receive Domain Name list")
+
+    ev = dev[0].wait_event(["RX-HS20-ANQP"], timeout=1)
+    if ev is None or "Operator Friendly Name" not in ev:
+        raise Exception("Did not receive Operator Friendly Name")
+
+    ev = dev[0].wait_event(["RX-HS20-ANQP"], timeout=1)
+    if ev is None or "WAN Metrics" not in ev:
+        raise Exception("Did not receive WAN Metrics")
+
 def expect_gas_result(dev, result, status=None):
     ev = dev.wait_event(["GAS-QUERY-DONE"], timeout=10)
     if ev is None:

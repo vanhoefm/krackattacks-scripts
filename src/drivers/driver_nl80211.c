@@ -9446,6 +9446,29 @@ static int i802_sta_disassoc(void *priv, const u8 *own_addr, const u8 *addr,
 }
 
 
+static void dump_ifidx(struct wpa_driver_nl80211_data *drv)
+{
+	char buf[200], *pos, *end;
+	int i, res;
+
+	pos = buf;
+	end = pos + sizeof(buf);
+
+	for (i = 0; i < drv->num_if_indices; i++) {
+		if (!drv->if_indices[i])
+			continue;
+		res = os_snprintf(pos, end - pos, " %d", drv->if_indices[i]);
+		if (res < 0 || res >= end - pos)
+			break;
+		pos += res;
+	}
+	*pos = '\0';
+
+	wpa_printf(MSG_DEBUG, "nl80211: if_indices[%d]:%s",
+		   drv->num_if_indices, buf);
+}
+
+
 static void add_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx)
 {
 	int i;
@@ -9456,6 +9479,7 @@ static void add_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx)
 	for (i = 0; i < drv->num_if_indices; i++) {
 		if (drv->if_indices[i] == 0) {
 			drv->if_indices[i] = ifidx;
+			dump_ifidx(drv);
 			return;
 		}
 	}
@@ -9481,6 +9505,7 @@ static void add_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx)
 			  sizeof(drv->default_if_indices));
 	drv->if_indices[drv->num_if_indices] = ifidx;
 	drv->num_if_indices++;
+	dump_ifidx(drv);
 }
 
 
@@ -9494,6 +9519,7 @@ static void del_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx)
 			break;
 		}
 	}
+	dump_ifidx(drv);
 }
 
 

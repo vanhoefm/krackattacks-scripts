@@ -14,6 +14,8 @@ int hs20_anqp_send_req(struct wpa_supplicant *wpa_s, const u8 *dst, u32 stypes,
 		       const u8 *payload, size_t payload_len);
 struct wpabuf * hs20_build_anqp_req(u32 stypes, const u8 *payload,
 				    size_t payload_len);
+void hs20_put_anqp_req(u32 stypes, const u8 *payload, size_t payload_len,
+		       struct wpabuf *buf);
 void hs20_parse_rx_hs20_anqp_resp(struct wpa_supplicant *wpa_s,
 				  const u8 *sa, const u8 *data, size_t slen);
 int is_hs20_network(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid,

@@ -121,15 +121,13 @@ int hs20_get_pps_mo_id(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid)
 }
 
 
-struct wpabuf * hs20_build_anqp_req(u32 stypes, const u8 *payload,
-				    size_t payload_len)
+void hs20_put_anqp_req(u32 stypes, const u8 *payload, size_t payload_len,
+		       struct wpabuf *buf)
 {
-	struct wpabuf *buf;
 	u8 *len_pos;
 
-	buf = gas_anqp_build_initial_req(0, 100 + payload_len);
 	if (buf == NULL)
-		return NULL;
+		return;
 
 	len_pos = gas_anqp_add_element(buf, ANQP_VENDOR_SPECIFIC);
 	wpabuf_put_be24(buf, OUI_WFA);
@@ -156,6 +154,19 @@ struct wpabuf * hs20_build_anqp_req(u32 stypes, const u8 *payload,
 	gas_anqp_set_element_len(buf, len_pos);
 
 	gas_anqp_set_len(buf);
+}
+
+
+struct wpabuf * hs20_build_anqp_req(u32 stypes, const u8 *payload,
+				    size_t payload_len)
+{
+	struct wpabuf *buf;
+
+	buf = gas_anqp_build_initial_req(0, 100 + payload_len);
+	if (buf == NULL)
+		return NULL;
+
+	hs20_put_anqp_req(stypes, payload, payload_len, buf);
 
 	return buf;
 }

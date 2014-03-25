@@ -2531,9 +2531,10 @@ void interworking_stop_fetch_anqp(struct wpa_supplicant *wpa_s)
 
 
 int anqp_send_req(struct wpa_supplicant *wpa_s, const u8 *dst,
-		  u16 info_ids[], size_t num_ids)
+		  u16 info_ids[], size_t num_ids, u32 subtypes)
 {
 	struct wpabuf *buf;
+	struct wpabuf *hs20_buf = NULL;
 	int ret = 0;
 	int freq;
 	struct wpa_bss *bss;
@@ -2551,7 +2552,17 @@ int anqp_send_req(struct wpa_supplicant *wpa_s, const u8 *dst,
 	wpa_printf(MSG_DEBUG, "ANQP: Query Request to " MACSTR " for %u id(s)",
 		   MAC2STR(dst), (unsigned int) num_ids);
 
-	buf = anqp_build_req(info_ids, num_ids, NULL);
+#ifdef CONFIG_HS20
+	if (subtypes != 0) {
+		hs20_buf = wpabuf_alloc(100);
+		if (hs20_buf == NULL)
+			return -1;
+		hs20_put_anqp_req(subtypes, NULL, 0, hs20_buf);
+	}
+#endif /* CONFIG_HS20 */
+
+	buf = anqp_build_req(info_ids, num_ids, hs20_buf);
+	wpabuf_free(hs20_buf);
 	if (buf == NULL)
 		return -1;
 

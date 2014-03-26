@@ -172,6 +172,7 @@ int hostapd_reload_config(struct hostapd_iface *iface)
 		hapd = iface->bss[j];
 		hapd->iconf = newconf;
 		hapd->iconf->channel = oldconf->channel;
+		hapd->iconf->secondary_channel = oldconf->secondary_channel;
 		hapd->iconf->ieee80211n = oldconf->ieee80211n;
 		hapd->iconf->ieee80211ac = oldconf->ieee80211ac;
 		hapd->iconf->ht_capab = oldconf->ht_capab;

@@ -532,12 +532,14 @@ static inline int wpa_drv_ampdu(struct wpa_supplicant *wpa_s, int ampdu)
 static inline int wpa_drv_send_tdls_mgmt(struct wpa_supplicant *wpa_s,
 					 const u8 *dst, u8 action_code,
 					 u8 dialog_token, u16 status_code,
-					 const u8 *buf, size_t len)
+					 u32 peer_capab, const u8 *buf,
+					 size_t len)
 {
 	if (wpa_s->driver->send_tdls_mgmt) {
 		return wpa_s->driver->send_tdls_mgmt(wpa_s->drv_priv, dst,
 						     action_code, dialog_token,
-						     status_code, buf, len);
+						     status_code, peer_capab,
+						     buf, len);
 	}
 	return -1;
 }

@@ -1269,6 +1269,13 @@ struct csa_settings {
 	u16 counter_offset_presp;
 };
 
+/* TDLS peer capabilities for send_tdls_mgmt() */
+enum tdls_peer_capability {
+	TDLS_PEER_HT = BIT(0),
+	TDLS_PEER_VHT = BIT(1),
+	TDLS_PEER_WMM = BIT(2),
+};
+
 /**
  * struct wpa_driver_ops - Driver interface API definition
  *
@@ -2449,6 +2456,7 @@ struct wpa_driver_ops {
 	 * @action_code: TDLS action code for the mssage
 	 * @dialog_token: Dialog Token to use in the message (if needed)
 	 * @status_code: Status Code or Reason Code to use (if needed)
+	 * @peer_capab: TDLS peer capability (TDLS_PEER_* bitfield)
 	 * @buf: TDLS IEs to add to the message
 	 * @len: Length of buf in octets
 	 * Returns: 0 on success, negative (<0) on failure
@@ -2457,7 +2465,7 @@ struct wpa_driver_ops {
 	 * responsible for receiving and sending all TDLS packets.
 	 */
 	int (*send_tdls_mgmt)(void *priv, const u8 *dst, u8 action_code,
-			      u8 dialog_token, u16 status_code,
+			      u8 dialog_token, u16 status_code, u32 peer_capab,
 			      const u8 *buf, size_t len);
 
 	/**

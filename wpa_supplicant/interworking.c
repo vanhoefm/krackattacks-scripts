@@ -2043,13 +2043,13 @@ int interworking_home_sp_cred(struct wpa_supplicant *wpa_s,
 	int mnc_len = 0;
 	if (cred->imsi)
 		imsi = cred->imsi;
-#ifdef CONFIG_PCSC
+#ifdef PCSC_FUNCS
 	else if (cred->pcsc && wpa_s->conf->pcsc_reader &&
 		 wpa_s->scard && wpa_s->imsi[0]) {
 		imsi = wpa_s->imsi;
 		mnc_len = wpa_s->mnc_len;
 	}
-#endif /* CONFIG_PCSC */
+#endif /* PCSC_FUNCS */
 #ifdef CONFIG_EAP_PROXY
 	else if (cred->pcsc && wpa_s->mnc_len > 0 && wpa_s->imsi[0]) {
 		imsi = wpa_s->imsi;

@@ -158,6 +158,7 @@ int wpas_p2p_nfc_report_handover(struct wpa_supplicant *wpa_s, int init,
 				 const struct wpabuf *req,
 				 const struct wpabuf *sel, int forced_freq);
 int wpas_p2p_nfc_tag_enabled(struct wpa_supplicant *wpa_s, int enabled);
+void wpas_p2p_pbc_overlap_cb(void *eloop_ctx, void *timeout_ctx);
 
 #ifdef CONFIG_P2P
 int wpas_p2p_4way_hs_failed(struct wpa_supplicant *wpa_s);

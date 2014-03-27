@@ -510,15 +510,6 @@ static int wpa_supplicant_wps_cred(void *ctx,
 }
 
 
-#ifdef CONFIG_P2P
-static void wpas_wps_pbc_overlap_cb(void *eloop_ctx, void *timeout_ctx)
-{
-	struct wpa_supplicant *wpa_s = eloop_ctx;
-	wpas_p2p_notif_pbc_overlap(wpa_s);
-}
-#endif /* CONFIG_P2P */
-
-
 static void wpa_supplicant_wps_event_m2d(struct wpa_supplicant *wpa_s,
 					 struct wps_event_m2d *m2d)
 {
@@ -537,7 +528,7 @@ static void wpa_supplicant_wps_event_m2d(struct wpa_supplicant *wpa_s,
 		 * Notify P2P from eloop timeout to avoid issues with the
 		 * interface getting removed while processing a message.
 		 */
-		eloop_register_timeout(0, 0, wpas_wps_pbc_overlap_cb, wpa_s,
+		eloop_register_timeout(0, 0, wpas_p2p_pbc_overlap_cb, wpa_s,
 				       NULL);
 	}
 #endif /* CONFIG_P2P */

@@ -280,4 +280,15 @@ static inline int hostapd_drv_status(struct hostapd_data *hapd, char *buf,
 	return hapd->driver->status(hapd->drv_priv, buf, buflen);
 }
 
+static inline int hostapd_drv_vendor_cmd(struct hostapd_data *hapd,
+					 int vendor_id, int subcmd,
+					 const u8 *data, size_t data_len,
+					 struct wpabuf *buf)
+{
+	if (hapd->driver == NULL || hapd->driver->vendor_cmd == NULL)
+		return -1;
+	return hapd->driver->vendor_cmd(hapd->drv_priv, vendor_id, subcmd, data,
+					data_len, buf);
+}
+
 #endif /* AP_DRV_OPS */

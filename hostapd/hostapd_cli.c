@@ -940,6 +940,27 @@ static int hostapd_cli_cmd_chan_switch(struct wpa_ctrl *ctrl,
 }
 
 
+static int hostapd_cli_cmd_vendor(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	char cmd[256];
+	int res;
+
+	if (argc < 2 || argc > 3) {
+		printf("Invalid vendor command\n"
+		       "usage: <vendor id> <command id> [<hex formatted command argument>]\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "VENDOR %s %s %s", argv[0], argv[1],
+			  argc == 3 ? argv[2] : "");
+	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		printf("Too long VENDOR command.\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
 struct hostapd_cli_cmd {
 	const char *cmd;
 	int (*handler)(struct wpa_ctrl *ctrl, int argc, char *argv[]);
@@ -988,6 +1009,7 @@ static struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	{ "chan_switch", hostapd_cli_cmd_chan_switch },
 	{ "hs20_wnm_notif", hostapd_cli_cmd_hs20_wnm_notif },
 	{ "hs20_deauth_req", hostapd_cli_cmd_hs20_deauth_req },
+	{ "vendor", hostapd_cli_cmd_vendor },
 	{ NULL, NULL }
 };
 

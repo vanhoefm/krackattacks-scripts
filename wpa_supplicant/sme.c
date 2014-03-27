@@ -477,8 +477,14 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 	}
 
 	if (radio_work_pending(wpa_s, "sme-connect")) {
-		wpa_dbg(wpa_s, MSG_DEBUG, "SME: Reject sme_authenticate() call since pending work exist");
-		return;
+		/*
+		 * The previous sme-connect work might no longer be valid due to
+		 * the fact that the BSS list was updated. In addition, it makes
+		 * sense to adhere to the 'newer' decision.
+		 */
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"SME: Remove previous pending sme-connect");
+		radio_remove_works(wpa_s, "sme-connect", 0);
 	}
 
 	cwork = os_zalloc(sizeof(*cwork));

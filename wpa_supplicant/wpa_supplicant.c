@@ -2957,6 +2957,10 @@ void wpa_supplicant_apply_vht_overrides(
 {
 	struct ieee80211_vht_capabilities *vhtcaps;
 	struct ieee80211_vht_capabilities *vhtcaps_mask;
+#ifdef CONFIG_HT_OVERRIDES
+	int max_ampdu;
+	const u32 max_ampdu_mask = VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT_MAX;
+#endif /* CONFIG_HT_OVERRIDES */
 
 	if (!ssid)
 		return;
@@ -2971,6 +2975,20 @@ void wpa_supplicant_apply_vht_overrides(
 
 	vhtcaps->vht_capabilities_info = ssid->vht_capa;
 	vhtcaps_mask->vht_capabilities_info = ssid->vht_capa_mask;
+
+#ifdef CONFIG_HT_OVERRIDES
+	/* if max ampdu is <= 3, we have to make the HT cap the same */
+	if (ssid->vht_capa_mask & max_ampdu_mask) {
+		max_ampdu = (ssid->vht_capa & max_ampdu_mask) >>
+			find_first_bit(max_ampdu_mask);
+
+		max_ampdu = max_ampdu < 3 ? max_ampdu : 3;
+		wpa_set_ampdu_factor(wpa_s,
+				     (void *) params->htcaps,
+				     (void *) params->htcaps_mask,
+				     max_ampdu);
+	}
+#endif /* CONFIG_HT_OVERRIDES */
 
 #define OVERRIDE_MCS(i)							\
 	if (ssid->vht_tx_mcs_nss_ ##i >= 0) {				\

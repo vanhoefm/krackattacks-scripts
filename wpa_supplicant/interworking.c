@@ -1750,6 +1750,31 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 }
 
 
+#ifdef PCSC_FUNCS
+static int interworking_pcsc_read_imsi(struct wpa_supplicant *wpa_s)
+{
+	size_t len;
+
+	if (wpa_s->imsi[0] && wpa_s->mnc_len)
+		return 0;
+
+	len = sizeof(wpa_s->imsi) - 1;
+	if (scard_get_imsi(wpa_s->scard, wpa_s->imsi, &len)) {
+		scard_deinit(wpa_s->scard);
+		wpa_s->scard = NULL;
+		wpa_msg(wpa_s, MSG_ERROR, "Could not read IMSI");
+		return -1;
+	}
+	wpa_s->imsi[len] = '\0';
+	wpa_s->mnc_len = scard_get_mnc_len(wpa_s->scard);
+	wpa_printf(MSG_DEBUG, "SCARD: IMSI %s (MNC length %d)",
+		   wpa_s->imsi, wpa_s->mnc_len);
+
+	return 0;
+}
+#endif /* PCSC_FUNCS */
+
+
 static struct wpa_cred * interworking_credentials_available_3gpp(
 	struct wpa_supplicant *wpa_s, struct wpa_bss *bss, int ignore_bw,
 	int *excluded)
@@ -1788,8 +1813,9 @@ static struct wpa_cred * interworking_credentials_available_3gpp(
 		size_t msin_len;
 
 #ifdef PCSC_FUNCS
-		if (cred->pcsc && wpa_s->conf->pcsc_reader && wpa_s->scard &&
-		    wpa_s->imsi[0]) {
+		if (cred->pcsc && wpa_s->scard) {
+			if (interworking_pcsc_read_imsi(wpa_s) < 0)
+				continue;
 			imsi = wpa_s->imsi;
 			mnc_len = wpa_s->mnc_len;
 			goto compare;
@@ -2046,8 +2072,9 @@ int interworking_home_sp_cred(struct wpa_supplicant *wpa_s,
 	if (cred->imsi)
 		imsi = cred->imsi;
 #ifdef PCSC_FUNCS
-	else if (cred->pcsc && wpa_s->conf->pcsc_reader &&
-		 wpa_s->scard && wpa_s->imsi[0]) {
+	else if (cred->pcsc && wpa_s->scard) {
+		if (interworking_pcsc_read_imsi(wpa_s) < 0)
+			return -1;
 		imsi = wpa_s->imsi;
 		mnc_len = wpa_s->mnc_len;
 	}

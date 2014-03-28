@@ -711,6 +711,7 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 	INT_DEF(eap_workaround, DEFAULT_EAP_WORKAROUND);
 	STR(pac_file);
 	INT_DEFe(fragment_size, DEFAULT_FRAGMENT_SIZE);
+	INTe(ocsp);
 #endif /* IEEE8021X_EAPOL */
 	INT(mode);
 	INT(frequency);

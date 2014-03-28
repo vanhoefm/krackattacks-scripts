@@ -10,6 +10,7 @@ import time
 import threading
 import Queue
 
+import hostapd
 import hwsim_utils
 import utils
 
@@ -585,3 +586,59 @@ def test_go_neg_two_peers(dev):
         raise Exception("Rejection not reported")
     if "status=5" not in ev:
         raise Exception("Unexpected status code in rejection: " + ev)
+
+def test_grpform_pbc_overlap(dev, apdev):
+    """P2P group formation during PBC overlap"""
+    params = { "ssid": "wps", "eap_server": "1", "wps_state": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd.request("WPS_PBC")
+    time.sleep(0.1)
+
+    addr0 = dev[0].p2p_dev_addr()
+    addr1 = dev[1].p2p_dev_addr()
+    dev[0].p2p_listen()
+    if not dev[1].discover_peer(addr0):
+        raise Exception("Could not discover peer")
+    dev[1].p2p_listen()
+    if not dev[0].discover_peer(addr1):
+        raise Exception("Could not discover peer")
+    dev[0].p2p_listen()
+    if "OK" not in dev[0].request("P2P_CONNECT " + addr1 + " pbc auth go_intent=0"):
+        raise Exception("Failed to authorize GO Neg")
+    if "OK" not in dev[1].request("P2P_CONNECT " + addr0 + " pbc go_intent=15 freq=2412"):
+        raise Exception("Failed to initiate GO Neg")
+    ev = dev[0].wait_global_event(["WPS-OVERLAP-DETECTED"], timeout=15)
+    if ev is None:
+        raise Exception("PBC overlap not reported")
+
+def test_grpform_pbc_overlap_group_iface(dev, apdev):
+    """P2P group formation during PBC overlap using group interfaces"""
+    # Note: Need to include P2P IE from the AP to get the P2P interface BSS
+    # update use this information.
+    params = { "ssid": "wps", "eap_server": "1", "wps_state": "1",
+               'manage_p2p': '1' }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd.request("WPS_PBC")
+
+    dev[0].request("SET p2p_no_group_iface 0")
+    dev[1].request("SET p2p_no_group_iface 0")
+
+    addr0 = dev[0].p2p_dev_addr()
+    addr1 = dev[1].p2p_dev_addr()
+    dev[0].p2p_listen()
+    if not dev[1].discover_peer(addr0):
+        raise Exception("Could not discover peer")
+    dev[1].p2p_listen()
+    if not dev[0].discover_peer(addr1):
+        raise Exception("Could not discover peer")
+    dev[0].p2p_stop_find()
+    dev[0].scan(freq="2412")
+    dev[0].p2p_listen()
+    if "OK" not in dev[0].request("P2P_CONNECT " + addr1 + " pbc auth go_intent=0"):
+        raise Exception("Failed to authorize GO Neg")
+    if "OK" not in dev[1].request("P2P_CONNECT " + addr0 + " pbc go_intent=15 freq=2412"):
+        raise Exception("Failed to initiate GO Neg")
+    ev = dev[0].wait_global_event(["WPS-OVERLAP-DETECTED",
+                                   "P2P-GROUP-FORMATION-SUCCESS"], timeout=15)
+    if ev is None or "WPS-OVERLAP-DETECTED" not in ev:
+        raise Exception("PBC overlap not reported")

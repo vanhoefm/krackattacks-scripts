@@ -260,8 +260,10 @@ static int interworking_anqp_send_req(struct wpa_supplicant *wpa_s,
 		info_ids[num_info_ids++] = ANQP_IP_ADDR_TYPE_AVAILABILITY;
 	if (all || cred_with_nai_realm(wpa_s))
 		info_ids[num_info_ids++] = ANQP_NAI_REALM;
-	if (all || cred_with_3gpp(wpa_s))
+	if (all || cred_with_3gpp(wpa_s)) {
 		info_ids[num_info_ids++] = ANQP_3GPP_CELLULAR_NETWORK;
+		wpa_supplicant_scard_init(wpa_s, NULL);
+	}
 	if (all || cred_with_domain(wpa_s))
 		info_ids[num_info_ids++] = ANQP_DOMAIN_NAME;
 	wpa_hexdump(MSG_DEBUG, "Interworking: ANQP Query info",

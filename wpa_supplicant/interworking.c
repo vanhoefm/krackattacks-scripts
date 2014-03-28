@@ -925,6 +925,7 @@ static int interworking_connect_3gpp(struct wpa_supplicant *wpa_s,
 		goto fail;
 	os_memcpy(ssid->ssid, bss->ssid, bss->ssid_len);
 	ssid->ssid_len = bss->ssid_len;
+	ssid->eap.sim_num = cred->sim_num;
 
 	if (interworking_set_hs20_params(wpa_s, ssid) < 0)
 		goto fail;

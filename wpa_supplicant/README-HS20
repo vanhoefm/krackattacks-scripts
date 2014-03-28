@@ -270,6 +270,8 @@ Credentials can be pre-configured for automatic network selection:
 #	1 = try to use OCSP stapling, but not require response
 #	2 = require valid OCSP stapling response
 #
+# sim_num: Identifier for which SIM to use in multi-SIM devices
+#
 # for example:
 #
 #cred={

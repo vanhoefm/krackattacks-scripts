@@ -288,6 +288,14 @@ struct wpa_cred {
 	 * 2 = require valid OCSP stapling response
 	 */
 	int ocsp;
+
+	/**
+	 * sim_num - User selected SIM identifier
+	 *
+	 * This variable is used for identifying which SIM is used if the system
+	 * has more than one.
+	 */
+	int sim_num;
 };
 
 

@@ -678,6 +678,14 @@ struct eap_peer_config {
 	 * SIM/USIM processing.
 	 */
 	char *external_sim_resp;
+
+	/**
+	 * sim_num - User selected SIM identifier
+	 *
+	 * This variable is used for identifying which SIM is used if the system
+	 * has more than one.
+	 */
+	int sim_num;
 };
 
 

@@ -219,6 +219,7 @@ static struct wpa_cred * wpa_config_read_cred(FILE *f, int *line, int id)
 	if (cred == NULL)
 		return NULL;
 	cred->id = id;
+	cred->sim_num = DEFAULT_USER_SELECTED_SIM;
 
 	while (wpa_config_get_line(buf, sizeof(buf), f, line, &pos)) {
 		if (os_strcmp(pos, "}") == 0) {
@@ -712,6 +713,7 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 	STR(pac_file);
 	INT_DEFe(fragment_size, DEFAULT_FRAGMENT_SIZE);
 	INTe(ocsp);
+	INT_DEFe(sim_num, DEFAULT_USER_SELECTED_SIM);
 #endif /* IEEE8021X_EAPOL */
 	INT(mode);
 	INT(frequency);
@@ -858,6 +860,9 @@ static void wpa_config_write_cred(FILE *f, struct wpa_cred *cred)
 				cred->required_roaming_consortium[i]);
 		fprintf(f, "\n");
 	}
+
+	if (cred->sim_num != DEFAULT_USER_SELECTED_SIM)
+		fprintf(f, "\tsim_num=%d\n", cred->sim_num);
 }
 
 

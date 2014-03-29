@@ -19,3 +19,19 @@ def test_ap_open(dev, apdev):
     ev = hapd.wait_event([ "AP-STA-DISCONNECTED" ], timeout=5)
     if ev is None:
         raise Exception("No disconnection event received from hostapd")
+
+def test_ap_open_packet_loss(dev, apdev):
+    """AP with open mode configuration and large packet loss"""
+    params = { "ssid": "open",
+               "ignore_probe_probability": "0.5",
+               "ignore_auth_probability": "0.5",
+               "ignore_assoc_probability": "0.5",
+               "ignore_reassoc_probability": "0.5" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    for i in range(0, 3):
+        dev[i].connect("open", key_mgmt="NONE", scan_freq="2412",
+                       wait_connect=False)
+    for i in range(0, 3):
+        ev = dev[i].wait_event(["CTRL-EVENT-CONNECTED"], timeout=20)
+        if ev is None:
+            raise Exception("Association with the AP timed out")

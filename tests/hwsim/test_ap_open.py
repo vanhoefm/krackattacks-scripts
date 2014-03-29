@@ -35,3 +35,17 @@ def test_ap_open_packet_loss(dev, apdev):
         ev = dev[i].wait_event(["CTRL-EVENT-CONNECTED"], timeout=20)
         if ev is None:
             raise Exception("Association with the AP timed out")
+
+def test_ap_open_unknown_action(dev, apdev):
+    """AP with open mode configuration and unknown Action frame"""
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+    bssid = apdev[0]['bssid']
+    cmd = "MGMT_TX {} {} freq=2412 action=765432".format(bssid, bssid)
+    if "FAIL" in dev[0].request(cmd):
+        raise Exception("Could not send test Action frame")
+    ev = dev[0].wait_event(["MGMT-TX-STATUS"], timeout=10)
+    if ev is None:
+        raise Exception("Timeout on MGMT-TX-STATUS")
+    if "result=SUCCESS" not in ev:
+        raise Exception("AP did not ack Action frame")

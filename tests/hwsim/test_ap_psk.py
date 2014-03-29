@@ -6,6 +6,7 @@
 
 import logging
 logger = logging.getLogger()
+import os
 
 import hostapd
 import hwsim_utils
@@ -55,3 +56,66 @@ def test_ap_wpa_ptk_rekey(dev, apdev):
     if ev is None:
         raise Exception("PTK rekey timed out")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+
+def test_ap_wpa2_psk_file(dev, apdev):
+    """WPA2-PSK AP with various PSK file error and success cases"""
+    addr0 = dev[0].p2p_dev_addr()
+    addr1 = dev[1].p2p_dev_addr()
+    addr2 = dev[2].p2p_dev_addr()
+    ssid = "psk"
+    pskfile = "/tmp/ap_wpa2_psk_file_errors.psk_file"
+    try:
+        os.remove(pskfile)
+    except:
+        pass
+
+    params = { "ssid": ssid, "wpa": "2", "wpa_key_mgmt": "WPA-PSK",
+               "rsn_pairwise": "CCMP", "wpa_psk_file": pskfile }
+
+    try:
+        # missing PSK file
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params, no_enable=True)
+        if "FAIL" not in hapd.request("ENABLE"):
+            raise Exception("Unexpected ENABLE success")
+        hapd.request("DISABLE")
+
+        # invalid MAC address
+        with open(pskfile, "w") as f:
+            f.write("\n")
+            f.write("foo\n")
+        if "FAIL" not in hapd.request("ENABLE"):
+            raise Exception("Unexpected ENABLE success")
+        hapd.request("DISABLE")
+
+        # no PSK on line
+        with open(pskfile, "w") as f:
+            f.write("00:11:22:33:44:55\n")
+        if "FAIL" not in hapd.request("ENABLE"):
+            raise Exception("Unexpected ENABLE success")
+        hapd.request("DISABLE")
+
+        # invalid PSK
+        with open(pskfile, "w") as f:
+            f.write("00:11:22:33:44:55 1234567\n")
+        if "FAIL" not in hapd.request("ENABLE"):
+            raise Exception("Unexpected ENABLE success")
+        hapd.request("DISABLE")
+
+        # valid PSK file
+        with open(pskfile, "w") as f:
+            f.write("00:11:22:33:44:55 12345678\n")
+            f.write(addr0 + " 123456789\n")
+            f.write(addr1 + " 123456789a\n")
+            f.write(addr2 + " 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\n")
+        if "FAIL" in hapd.request("ENABLE"):
+            raise Exception("Unexpected ENABLE failure")
+
+        dev[0].connect(ssid, psk="123456789", scan_freq="2412")
+        dev[1].connect(ssid, psk="123456789a", scan_freq="2412")
+        dev[2].connect(ssid, raw_psk="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", scan_freq="2412")
+
+    finally:
+        try:
+            os.remove(pskfile)
+        except:
+            pass

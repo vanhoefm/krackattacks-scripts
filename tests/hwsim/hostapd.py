@@ -240,7 +240,7 @@ class Hostapd:
                 vals[name_val[0]] = name_val[1]
         return vals
 
-def add_ap(ifname, params, wait_enabled=True):
+def add_ap(ifname, params, wait_enabled=True, no_enable=False):
         logger.info("Starting AP " + ifname)
         hapd_global = HostapdGlobal()
         hapd_global.remove(ifname)
@@ -264,6 +264,8 @@ def add_ap(ifname, params, wait_enabled=True):
                     hapd.set(f, val)
             else:
                 hapd.set(f, v)
+        if no_enable:
+            return hapd
         hapd.enable()
         if wait_enabled:
             ev = hapd.wait_event(["AP-ENABLED", "AP-DISABLED"], timeout=30)

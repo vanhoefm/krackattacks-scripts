@@ -210,3 +210,16 @@ def test_ap_max_listen_interval(dev, apdev):
         raise Exception("Association rejection not reported")
     if "status_code=51" not in ev:
         raise Exception("Unexpected ASSOC-REJECT reason")
+
+def test_ap_max_num_sta(dev, apdev):
+    """Open AP with maximum STA count"""
+    ssid = "max"
+    params = {}
+    params['ssid'] = ssid
+    params['max_num_sta'] = "1"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[1].connect(ssid, key_mgmt="NONE", scan_freq="2412")
+    dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412", wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
+    if ev is not None:
+        raise Exception("Unexpected association")

@@ -196,3 +196,17 @@ def test_ap_spectrum_management_required(dev, apdev):
         dev[0].connect(ssid, key_mgmt="NONE", scan_freq="5180")
     finally:
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+
+def test_ap_max_listen_interval(dev, apdev):
+    """Open AP with maximum listen interval limit"""
+    ssid = "listen"
+    params = {}
+    params['ssid'] = ssid
+    params['max_listen_interval'] = "1"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412", wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-ASSOC-REJECT"])
+    if ev is None:
+        raise Exception("Association rejection not reported")
+    if "status_code=51" not in ev:
+        raise Exception("Unexpected ASSOC-REJECT reason")

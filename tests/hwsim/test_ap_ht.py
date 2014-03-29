@@ -376,6 +376,33 @@ def test_olbc(dev, apdev):
     if status['olbc'] != '1' or status['olbc_ht'] != '1':
         raise Exception("Missing OLBC information")
 
+def test_olbc_5ghz(dev, apdev):
+    """OLBC detection on 5 GHz"""
+    try:
+        params = { "ssid": "test-olbc",
+                   "country_code": "FI",
+                   "hw_mode": "a",
+                   "channel": "36",
+                   "ht_capab": "[HT40+]" }
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        status = hapd.get_status()
+        if status['olbc'] != '0' or status['olbc_ht'] != '0':
+            raise Exception("Unexpected OLBC information")
+
+        params = { "ssid": "olbc-ap",
+                   "country_code": "FI",
+                   "hw_mode": "a",
+                   "channel": "36",
+                   "ieee80211n": "0",
+                   "wmm_enabled": "0" }
+        hostapd.add_ap(apdev[1]['ifname'], params)
+        time.sleep(0.5)
+        status = hapd.get_status()
+        if status['olbc_ht'] != '1':
+            raise Exception("Missing OLBC information")
+    finally:
+        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+
 def test_ap_require_ht(dev, apdev):
     """Require HT"""
     params = { "ssid": "require-ht",

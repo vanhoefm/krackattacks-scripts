@@ -476,3 +476,11 @@ def test_radius_ipv6(dev, apdev):
     params['own_ip_addr'] = "::0"
     hostapd.add_ap(apdev[0]['ifname'], params)
     connect(dev[0], "radius-ipv6")
+
+def test_radius_macacl(dev, apdev):
+    """RADIUS MAC ACL"""
+    params = hostapd.radius_params()
+    params["ssid"] = "radius"
+    params["macaddr_acl"] = "2"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("radius", key_mgmt="NONE", scan_freq="2412")

@@ -1593,6 +1593,10 @@ def test_ap_hs20_osen(dev, apdev):
                'auth_server_shared_secret': "radius" }
     hostapd.add_ap(apdev[0]['ifname'], params)
 
+    dev[1].connect("osen", key_mgmt="NONE", scan_freq="2412",
+                   wait_connect=False)
+    dev[2].connect("osen", key_mgmt="NONE", wep_key0='"hello"',
+                   scan_freq="2412", wait_connect=False)
     dev[0].connect("osen", proto="OSEN", key_mgmt="OSEN", pairwise="CCMP",
                    group="GTK_NOT_USED",
                    eap="WFA-UNAUTH-TLS", identity="osen@example.com",

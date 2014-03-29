@@ -360,7 +360,8 @@ def test_olbc(dev, apdev):
     """OLBC detection"""
     params = { "ssid": "test-olbc",
                "channel": "6",
-               "ht_capab": "[HT40-]" }
+               "ht_capab": "[HT40-]",
+               "ap_table_expiration_time": "2" }
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     status = hapd.get_status()
     if status['olbc'] != '0' or status['olbc_ht'] != '0':
@@ -375,6 +376,20 @@ def test_olbc(dev, apdev):
     status = hapd.get_status()
     if status['olbc'] != '1' or status['olbc_ht'] != '1':
         raise Exception("Missing OLBC information")
+
+    hapd_global = hostapd.HostapdGlobal()
+    hapd_global.remove(apdev[1]['ifname'])
+
+    logger.info("Waiting for OLBC state to time out")
+    cleared = False
+    for i in range(0, 15):
+        time.sleep(1)
+        status = hapd.get_status()
+        if status['olbc'] == '0' and status['olbc_ht'] == '0':
+            cleared = True
+            break
+    if not cleared:
+        raise Exception("OLBC state did nto time out")
 
 def test_olbc_5ghz(dev, apdev):
     """OLBC detection on 5 GHz"""

@@ -93,6 +93,7 @@ def test_ap_vht_20(devs, apdevs):
                    "vht_capab": "",
                    "vht_oper_chwidth": "0",
                    "vht_oper_centr_freq_seg0_idx": "0",
+                   "supported_rates": "60 120 240 360 480 540",
                    "require_vht": "1",
                  }
         hostapd.add_ap(ap['ifname'], params)

@@ -1247,30 +1247,28 @@ int radius_msg_add_wfa(struct radius_msg *msg, u8 subtype, const u8 *data,
 }
 
 
-/* Add User-Password attribute to a RADIUS message and encrypt it as specified
- * in RFC 2865, Chap. 5.2 */
-struct radius_attr_hdr *
-radius_msg_add_attr_user_password(struct radius_msg *msg,
-				  const u8 *data, size_t data_len,
-				  const u8 *secret, size_t secret_len)
+int radius_user_password_hide(struct radius_msg *msg,
+			      const u8 *data, size_t data_len,
+			      const u8 *secret, size_t secret_len,
+			      u8 *buf, size_t buf_len)
 {
-	u8 buf[128];
-	size_t padlen, i, buf_len, pos;
+	size_t padlen, i, pos;
 	const u8 *addr[2];
 	size_t len[2];
 	u8 hash[16];
 
-	if (data_len > 128)
-		return NULL;
+	if (data_len + 16 > buf_len)
+		return -1;
 
 	os_memcpy(buf, data, data_len);
-	buf_len = data_len;
 
 	padlen = data_len % 16;
-	if (padlen && data_len < sizeof(buf)) {
+	if (padlen && data_len < buf_len) {
 		padlen = 16 - padlen;
 		os_memset(buf + data_len, 0, padlen);
-		buf_len += padlen;
+		buf_len = data_len + padlen;
+	} else {
+		buf_len = data_len;
 	}
 
 	addr[0] = secret;
@@ -1296,8 +1294,27 @@ radius_msg_add_attr_user_password(struct radius_msg *msg,
 		pos += 16;
 	}
 
+	return buf_len;
+}
+
+
+/* Add User-Password attribute to a RADIUS message and encrypt it as specified
+ * in RFC 2865, Chap. 5.2 */
+struct radius_attr_hdr *
+radius_msg_add_attr_user_password(struct radius_msg *msg,
+				  const u8 *data, size_t data_len,
+				  const u8 *secret, size_t secret_len)
+{
+	u8 buf[128];
+	int res;
+
+	res = radius_user_password_hide(msg, data, data_len,
+					secret, secret_len, buf, sizeof(buf));
+	if (res < 0)
+		return NULL;
+
 	return radius_msg_add_attr(msg, RADIUS_ATTR_USER_PASSWORD,
-				   buf, buf_len);
+				   buf, res);
 }
 
 

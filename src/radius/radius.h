@@ -251,6 +251,10 @@ int radius_msg_add_mppe_keys(struct radius_msg *msg,
 			     const u8 *recv_key, size_t recv_key_len);
 int radius_msg_add_wfa(struct radius_msg *msg, u8 subtype, const u8 *data,
 		       size_t len);
+int radius_user_password_hide(struct radius_msg *msg,
+			      const u8 *data, size_t data_len,
+			      const u8 *secret, size_t secret_len,
+			      u8 *buf, size_t buf_len);
 struct radius_attr_hdr *
 radius_msg_add_attr_user_password(struct radius_msg *msg,
 				  const u8 *data, size_t data_len,

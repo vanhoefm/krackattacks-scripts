@@ -127,6 +127,7 @@ struct hostapd_eap_user {
 	unsigned int password_hash:1; /* whether password is hashed with
 				       * nt_password_hash() */
 	unsigned int remediation:1;
+	unsigned int macacl:1;
 	int ttls_auth; /* EAP_TTLS_AUTH_* bitfield */
 	struct hostapd_radius_attr *accept_attr;
 };

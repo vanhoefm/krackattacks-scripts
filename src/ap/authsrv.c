@@ -79,6 +79,7 @@ static int hostapd_radius_get_eap_user(void *ctx, const u8 *identity,
 		user->password_hash = eap_user->password_hash;
 	}
 	user->force_version = eap_user->force_version;
+	user->macacl = eap_user->macacl;
 	user->ttls_auth = eap_user->ttls_auth;
 	user->remediation = eap_user->remediation;
 	user->accept_attr = eap_user->accept_attr;

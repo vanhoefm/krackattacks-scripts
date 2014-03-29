@@ -366,6 +366,10 @@ static int hostapd_config_read_eap_user(const char *fname,
 						EAP_TTLS_AUTH_MSCHAPV2;
 					goto skip_eap;
 				}
+				if (os_strcmp(start, "MACACL") == 0) {
+					user->macacl = 1;
+					goto skip_eap;
+				}
 				wpa_printf(MSG_ERROR, "Unsupported EAP type "
 					   "'%s' on line %d in '%s'",
 					   start, line, fname);
@@ -380,7 +384,7 @@ static int hostapd_config_read_eap_user(const char *fname,
 				break;
 			start = pos3;
 		}
-		if (num_methods == 0 && user->ttls_auth == 0) {
+		if (num_methods == 0 && user->ttls_auth == 0 && !user->macacl) {
 			wpa_printf(MSG_ERROR, "No EAP types configured on "
 				   "line %d in '%s'", line, fname);
 			goto failed;

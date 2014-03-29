@@ -86,6 +86,7 @@ struct radius_session {
 	u8 last_authenticator[16];
 
 	unsigned int remediation:1;
+	unsigned int macacl:1;
 
 	struct hostapd_radius_attr *accept_attr;
 };
@@ -636,6 +637,7 @@ radius_server_get_new_session(struct radius_server_data *data,
 		return NULL;
 	}
 	sess->accept_attr = tmp.accept_attr;
+	sess->macacl = tmp.macacl;
 
 	sess->username = os_malloc(user_len * 2 + 1);
 	if (sess->username == NULL) {
@@ -823,6 +825,87 @@ radius_server_encapsulate_eap(struct radius_server_data *data,
 }
 
 
+static struct radius_msg *
+radius_server_macacl(struct radius_server_data *data,
+		     struct radius_client *client,
+		     struct radius_session *sess,
+		     struct radius_msg *request)
+{
+	struct radius_msg *msg;
+	int code;
+	struct radius_hdr *hdr = radius_msg_get_hdr(request);
+	u8 *pw;
+	size_t pw_len;
+
+	code = RADIUS_CODE_ACCESS_ACCEPT;
+
+	if (radius_msg_get_attr_ptr(request, RADIUS_ATTR_USER_PASSWORD, &pw,
+				    &pw_len, NULL) < 0) {
+		RADIUS_DEBUG("Could not get User-Password");
+		code = RADIUS_CODE_ACCESS_REJECT;
+	} else {
+		int res;
+		struct eap_user tmp;
+
+		os_memset(&tmp, 0, sizeof(tmp));
+		res = data->get_eap_user(data->conf_ctx, (u8 *) sess->username,
+					 os_strlen(sess->username), 0, &tmp);
+		if (res || !tmp.macacl || tmp.password == NULL) {
+			RADIUS_DEBUG("No MAC ACL user entry");
+			os_free(tmp.password);
+			code = RADIUS_CODE_ACCESS_REJECT;
+		} else {
+			u8 buf[128];
+			res = radius_user_password_hide(
+				request, tmp.password, tmp.password_len,
+				(u8 *) client->shared_secret,
+				client->shared_secret_len,
+				buf, sizeof(buf));
+			os_free(tmp.password);
+
+			if (res < 0 || pw_len != (size_t) res ||
+			    os_memcmp(pw, buf, res) != 0) {
+				RADIUS_DEBUG("Incorrect User-Password");
+				code = RADIUS_CODE_ACCESS_REJECT;
+			}
+		}
+	}
+
+	msg = radius_msg_new(code, hdr->identifier);
+	if (msg == NULL) {
+		RADIUS_DEBUG("Failed to allocate reply message");
+		return NULL;
+	}
+
+	if (radius_msg_copy_attr(msg, request, RADIUS_ATTR_PROXY_STATE) < 0) {
+		RADIUS_DEBUG("Failed to copy Proxy-State attribute(s)");
+		radius_msg_free(msg);
+		return NULL;
+	}
+
+	if (code == RADIUS_CODE_ACCESS_ACCEPT) {
+		struct hostapd_radius_attr *attr;
+		for (attr = sess->accept_attr; attr; attr = attr->next) {
+			if (!radius_msg_add_attr(msg, attr->type,
+						 wpabuf_head(attr->val),
+						 wpabuf_len(attr->val))) {
+				wpa_printf(MSG_ERROR, "Could not add RADIUS attribute");
+				radius_msg_free(msg);
+				return NULL;
+			}
+		}
+	}
+
+	if (radius_msg_finish_srv(msg, (u8 *) client->shared_secret,
+				  client->shared_secret_len,
+				  hdr->authenticator) < 0) {
+		RADIUS_DEBUG("Failed to add Message-Authenticator attribute");
+	}
+
+	return msg;
+}
+
+
 static int radius_server_reject(struct radius_server_data *data,
 				struct radius_client *client,
 				struct radius_msg *request,
@@ -958,6 +1041,12 @@ static int radius_server_request(struct radius_server_data *data,
 	}
 		      
 	eap = radius_msg_get_eap(msg);
+	if (eap == NULL && sess->macacl) {
+		reply = radius_server_macacl(data, client, sess, msg);
+		if (reply == NULL)
+			return -1;
+		goto send_reply;
+	}
 	if (eap == NULL) {
 		RADIUS_DEBUG("No EAP-Message in RADIUS packet from %s",
 			     from_addr);
@@ -1015,6 +1104,7 @@ static int radius_server_request(struct radius_server_data *data,
 
 	reply = radius_server_encapsulate_eap(data, client, sess, msg);
 
+send_reply:
 	if (reply) {
 		struct wpabuf *buf;
 		struct radius_hdr *hdr;
@@ -1904,6 +1994,7 @@ static int radius_server_get_eap_user(void *ctx, const u8 *identity,
 	if (ret == 0 && user) {
 		sess->accept_attr = user->accept_attr;
 		sess->remediation = user->remediation;
+		sess->macacl = user->macacl;
 	}
 	return ret;
 }

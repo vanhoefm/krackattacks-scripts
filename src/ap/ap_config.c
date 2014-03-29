@@ -651,12 +651,11 @@ const u8 * hostapd_get_psk(const struct hostapd_bss_config *conf,
 	struct hostapd_wpa_psk *psk;
 	int next_ok = prev_psk == NULL;
 
-	if (p2p_dev_addr) {
+	if (p2p_dev_addr && !is_zero_ether_addr(p2p_dev_addr)) {
 		wpa_printf(MSG_DEBUG, "Searching a PSK for " MACSTR
 			   " p2p_dev_addr=" MACSTR " prev_psk=%p",
 			   MAC2STR(addr), MAC2STR(p2p_dev_addr), prev_psk);
-		if (!is_zero_ether_addr(p2p_dev_addr))
-			addr = NULL; /* Use P2P Device Address for matching */
+		addr = NULL; /* Use P2P Device Address for matching */
 	} else {
 		wpa_printf(MSG_DEBUG, "Searching a PSK for " MACSTR
 			   " prev_psk=%p",

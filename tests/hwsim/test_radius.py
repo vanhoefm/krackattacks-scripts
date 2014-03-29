@@ -71,11 +71,15 @@ def test_radius_acct(dev, apdev):
     dev[1].connect("radius-acct", key_mgmt="WPA-EAP", scan_freq="2412",
                    eap="PAX", identity="test-class",
                    password_hex="0123456789abcdef0123456789abcdef")
+    dev[2].connect("radius-acct", key_mgmt="WPA-EAP",
+                   eap="GPSK", identity="gpsk-cui",
+                   password="abcdefghijklmnop0123456789abcdef",
+                   scan_freq="2412")
     logger.info("Checking for RADIUS counters")
     count = 0
     while True:
         mib = hapd.get_mib()
-        if int(mib['radiusAccClientResponses']) >= 2:
+        if int(mib['radiusAccClientResponses']) >= 3:
             break
         time.sleep(0.1)
         count += 1

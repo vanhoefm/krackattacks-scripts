@@ -163,3 +163,67 @@ def test_hapd_ctrl_unknown(dev, apdev):
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     if "UNKNOWN COMMAND" not in hapd.request("FOO"):
         raise Exception("Unexpected response")
+
+def test_hapd_ctrl_hs20_wnm_notif(dev, apdev):
+    """hostapd and HS20_WNM_NOTIF ctrl_iface command"""
+    ssid = "hapd-ctrl"
+    params = { "ssid": ssid }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    if "FAIL" not in hapd.request("HS20_WNM_NOTIF 00:11:22:33:44 http://example.com/"):
+        raise Exception("Unexpected HS20_WNM_NOTIF success")
+    if "FAIL" not in hapd.request("HS20_WNM_NOTIF 00:11:22:33:44:55http://example.com/"):
+        raise Exception("Unexpected HS20_WNM_NOTIF success")
+
+def test_hapd_ctrl_hs20_deauth_req(dev, apdev):
+    """hostapd and HS20_DEAUTH_REQ ctrl_iface command"""
+    ssid = "hapd-ctrl"
+    params = { "ssid": ssid }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    if "FAIL" not in hapd.request("HS20_DEAUTH_REQ 00:11:22:33:44 1 120 http://example.com/"):
+        raise Exception("Unexpected HS20_DEAUTH_REQ success")
+    if "FAIL" not in hapd.request("HS20_DEAUTH_REQ 00:11:22:33:44:55"):
+        raise Exception("Unexpected HS20_DEAUTH_REQ success")
+    if "FAIL" not in hapd.request("HS20_DEAUTH_REQ 00:11:22:33:44:55 1"):
+        raise Exception("Unexpected HS20_DEAUTH_REQ success")
+
+def test_hapd_ctrl_disassoc_imminent(dev, apdev):
+    """hostapd and DISASSOC_IMMINENT ctrl_iface command"""
+    ssid = "hapd-ctrl"
+    params = { "ssid": ssid }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    if "FAIL" not in hapd.request("DISASSOC_IMMINENT 00:11:22:33:44"):
+        raise Exception("Unexpected DISASSOC_IMMINENT success")
+    if "FAIL" not in hapd.request("DISASSOC_IMMINENT 00:11:22:33:44:55"):
+        raise Exception("Unexpected DISASSOC_IMMINENT success")
+    if "FAIL" not in hapd.request("DISASSOC_IMMINENT 00:11:22:33:44:55 2"):
+        raise Exception("Unexpected DISASSOC_IMMINENT success")
+    dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].p2p_interface_addr()
+    if "OK" not in hapd.request("DISASSOC_IMMINENT " + addr + " 2"):
+        raise Exception("Unexpected DISASSOC_IMMINENT failure")
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], 15)
+    if ev is None:
+        raise Exception("Scan timed out")
+
+def test_hapd_ctrl_ess_disassoc(dev, apdev):
+    """hostapd and ESS_DISASSOC ctrl_iface command"""
+    ssid = "hapd-ctrl"
+    params = { "ssid": ssid }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    if "FAIL" not in hapd.request("ESS_DISASSOC 00:11:22:33:44"):
+        raise Exception("Unexpected ESS_DISASSOCT success")
+    if "FAIL" not in hapd.request("ESS_DISASSOC 00:11:22:33:44:55"):
+        raise Exception("Unexpected ESS_DISASSOC success")
+    dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
+    addr = dev[0].p2p_interface_addr()
+    if "FAIL" not in hapd.request("ESS_DISASSOC " + addr):
+        raise Exception("Unexpected ESS_DISASSOC success")
+    if "FAIL" not in hapd.request("ESS_DISASSOC " + addr + " -1"):
+        raise Exception("Unexpected ESS_DISASSOC success")
+    if "FAIL" not in hapd.request("ESS_DISASSOC " + addr + " 1"):
+        raise Exception("Unexpected ESS_DISASSOC success")
+    if "OK" not in hapd.request("ESS_DISASSOC " + addr + " 20 http://example.com/"):
+        raise Exception("Unexpected ESS_DISASSOC failure")
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], 15)
+    if ev is None:
+        raise Exception("Scan timed out")

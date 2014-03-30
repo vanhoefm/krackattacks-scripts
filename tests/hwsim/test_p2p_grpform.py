@@ -587,6 +587,20 @@ def test_go_neg_two_peers(dev):
     if "status=5" not in ev:
         raise Exception("Unexpected status code in rejection: " + ev)
 
+def clear_pbc_overlap(dev, ifname):
+    hapd_global = hostapd.HostapdGlobal()
+    hapd_global.remove(ifname)
+    dev[0].p2p_stop_find()
+    dev[1].p2p_stop_find()
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
+    time.sleep(0.1)
+    dev[0].request("BSS_FLUSH 0")
+    dev[0].request("SCAN freq=2412 only_new=1")
+    dev[1].request("BSS_FLUSH 0")
+    dev[1].request("SCAN freq=2412 only_new=1")
+    time.sleep(1)
+
 def test_grpform_pbc_overlap(dev, apdev):
     """P2P group formation during PBC overlap"""
     params = { "ssid": "wps", "eap_server": "1", "wps_state": "1" }
@@ -610,6 +624,8 @@ def test_grpform_pbc_overlap(dev, apdev):
     ev = dev[0].wait_global_event(["WPS-OVERLAP-DETECTED"], timeout=15)
     if ev is None:
         raise Exception("PBC overlap not reported")
+
+    clear_pbc_overlap(dev, apdev[0]['ifname'])
 
 def test_grpform_pbc_overlap_group_iface(dev, apdev):
     """P2P group formation during PBC overlap using group interfaces"""
@@ -642,3 +658,5 @@ def test_grpform_pbc_overlap_group_iface(dev, apdev):
                                    "P2P-GROUP-FORMATION-SUCCESS"], timeout=15)
     if ev is None or "WPS-OVERLAP-DETECTED" not in ev:
         raise Exception("PBC overlap not reported")
+
+    clear_pbc_overlap(dev, apdev[0]['ifname'])

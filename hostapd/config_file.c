@@ -1260,7 +1260,7 @@ static int parse_3gpp_cell_net(struct hostapd_bss_config *bss, char *buf,
 
 	count = 1;
 	for (pos = buf; *pos; pos++) {
-		if ((*pos < '0' && *pos > '9') && *pos != ';' && *pos != ',')
+		if ((*pos < '0' || *pos > '9') && *pos != ';' && *pos != ',')
 			goto fail;
 		if (*pos == ';')
 			count++;

@@ -83,7 +83,7 @@ if [ "x$VALGRIND" = "xy" ]; then
 fi
 
 if [ -x $HLR_AUC_GW ]; then
-    sudo $HLR_AUC_GW -m $DIR/auth_serv/hlr_auc_gw.milenage_db > $LOGDIR/hlr_auc_gw &
+    sudo $HLR_AUC_GW -m $DIR/auth_serv/hlr_auc_gw.milenage_db -g $DIR/auth_serv/hlr_auc_gw.gsm > $LOGDIR/hlr_auc_gw &
 fi
 
 sudo $HAPD_AS -ddKt $LOGDIR/as.conf > $LOGDIR/auth_serv &

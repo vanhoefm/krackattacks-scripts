@@ -111,6 +111,12 @@ def test_ap_wpa2_eap_sim(dev, apdev):
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
     eap_reauth(dev[0], "SIM")
 
+    eap_connect(dev[1], apdev[0], "SIM", "1232010000000001",
+                password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581")
+    eap_connect(dev[2], apdev[0], "SIM", "1232010000000002",
+                password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581",
+                expect_failure=True)
+
     logger.info("Negative test with incorrect key")
     dev[0].request("REMOVE_NETWORK all")
     eap_connect(dev[0], apdev[0], "SIM", "1232010000000000",

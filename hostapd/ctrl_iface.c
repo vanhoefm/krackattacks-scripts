@@ -1090,8 +1090,8 @@ static int hostapd_ctrl_iface_set(struct hostapd_data *hapd, char *cmd)
 					    hapd->conf->num_deny_mac, sta->addr,
 					    &vlan_id) &&
 				    (!vlan_id || vlan_id == sta->vlan_id))
-					ap_sta_deauthenticate(
-						hapd, sta,
+					ap_sta_disconnect(
+						hapd, sta, sta->addr,
 						WLAN_REASON_UNSPECIFIED);
 			}
 		} else if (hapd->conf->macaddr_acl == DENY_UNLESS_ACCEPTED &&
@@ -1102,8 +1102,8 @@ static int hostapd_ctrl_iface_set(struct hostapd_data *hapd, char *cmd)
 					    hapd->conf->num_accept_mac,
 					    sta->addr, &vlan_id) ||
 				    (vlan_id && vlan_id != sta->vlan_id))
-					ap_sta_deauthenticate(
-						hapd, sta,
+					ap_sta_disconnect(
+						hapd, sta, sta->addr,
 						WLAN_REASON_UNSPECIFIED);
 			}
 		}

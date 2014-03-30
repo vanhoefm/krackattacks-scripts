@@ -1093,8 +1093,6 @@ static int hostapd_config_vht_capab(struct hostapd_config *conf,
 		conf->vht_capab |= VHT_CAP_SUPP_CHAN_WIDTH_160MHZ;
 	if (os_strstr(capab, "[VHT160-80PLUS80]"))
 		conf->vht_capab |= VHT_CAP_SUPP_CHAN_WIDTH_160_80PLUS80MHZ;
-	if (os_strstr(capab, "[VHT160-80PLUS80]"))
-		conf->vht_capab |= VHT_CAP_SUPP_CHAN_WIDTH_160_80PLUS80MHZ;
 	if (os_strstr(capab, "[RXLDPC]"))
 		conf->vht_capab |= VHT_CAP_RXLDPC;
 	if (os_strstr(capab, "[SHORT-GI-80]"))

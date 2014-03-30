@@ -1602,7 +1602,7 @@ static int hs20_parse_wan_metrics(struct hostapd_bss_config *bss, char *buf,
 
 fail:
 	wpa_printf(MSG_ERROR, "Line %d: Invalid hs20_wan_metrics '%s'",
-		   line, pos);
+		   line, buf);
 	os_free(wan_metrics);
 	return -1;
 }

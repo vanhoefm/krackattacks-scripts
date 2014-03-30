@@ -448,3 +448,12 @@ def test_ap_require_ht_limited_rates(dev, apdev):
         raise Exception("Association rejection timed out")
     if "status_code=27" not in ev:
         raise Exception("Unexpected rejection status code")
+
+def test_ap_ht_capab_not_supported(dev, apdev):
+    """HT configuration with driver not supporting all ht_capab entries"""
+    params = { "ssid": "test-ht40",
+               "channel": "5",
+               "ht_capab": "[HT40-][LDPC][SMPS-STATIC][SMPS-DYNAMIC][GF][SHORT-GI-20][SHORT-GI-40][TX-STBC][RX-STBC1][RX-STBC12][RX-STBC123][DELAYED-BA][MAX-AMSDU-7935][PSMP][DSSS_CCK-40][LSIG-TXOP-PROT]"}
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params, no_enable=True)
+    if "FAIL" not in hapd.request("ENABLE"):
+        raise Exception("Unexpected ENABLE success")

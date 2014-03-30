@@ -223,3 +223,20 @@ def test_ap_max_num_sta(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
     if ev is not None:
         raise Exception("Unexpected association")
+
+def test_ap_tx_queue_params(dev, apdev):
+    """Open AP with TX queue params set"""
+    ssid = "tx"
+    params = {}
+    params['ssid'] = ssid
+    params['tx_queue_data2_aifs'] = "4"
+    params['tx_queue_data2_cwmin'] = "7"
+    params['tx_queue_data2_cwmax'] = "1023"
+    params['tx_queue_data2_burst'] = "4.2"
+    params['tx_queue_data1_aifs'] = "4"
+    params['tx_queue_data1_cwmin'] = "7"
+    params['tx_queue_data1_cwmax'] = "1023"
+    params['tx_queue_data1_burst'] = "2"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
+    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])

@@ -1793,6 +1793,7 @@ def test_ap_hs20_fetch_osu(dev, apdev):
     params['hs20_icon'] = "128:80:zxx:image/png:w1fi_logo:w1fi_logo.png"
     params['osu_ssid'] = '"HS 2.0 OSU OSEN"'
     params['osu_method_list'] = "0"
+    params['osu_nai'] = "osen@example.com"
     params['osu_friendly_name'] = [ "eng:Test2 OSU", "fin:Testi2-OSU" ]
     params['osu_icon'] = "w1fi_logo"
     params['osu_service_desc'] = [ "eng:Example services2", "fin:Esimerkkipalveluja2" ]

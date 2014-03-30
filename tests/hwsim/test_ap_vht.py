@@ -101,3 +101,27 @@ def test_ap_vht_20(devs, apdevs):
         hwsim_utils.test_connectivity(dev.ifname, ap['ifname'])
     finally:
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+
+def test_ap_vht_capab_not_supported(dev, apdev):
+    """VHT configuration with driver not supporting all vht_capab entries"""
+    try:
+        params = { "ssid": "vht",
+                   "country_code": "FI",
+                   "hw_mode": "a",
+                   "channel": "36",
+                   "ht_capab": "[HT40+][SHORT-GI-40][DSS_CCK-40]",
+                   "ieee80211n": "1",
+                   "ieee80211ac": "1",
+                   "vht_oper_chwidth": "1",
+                   "vht_capab": "[MAX-MPDU-7991][MAX-MPDU-11454][VHT160][VHT160-80PLUS80][RXLDPC][SHORT-GI-80][SHORT-GI-160][TX-STBC-2BY1][RX-STBC-1][RX-STBC-12][RX-STBC-123][RX-STBC-1234][SU-BEAMFORMER][SU-BEAMFORMEE][BF-ANTENNA-2][SOUNDING-DIMENSION-2][MU-BEAMFORMER][MU-BEAMFORMEE][VHT-TXOP-PS][HTC-VHT][MAX-A-MPDU-LEN-EXP0][MAX-A-MPDU-LEN-EXP7][VHT-LINK-ADAPT2][VHT-LINK-ADAPT3][RX-ANTENNA-PATTERN][TX-ANTENNA-PATTERN]",
+                   "vht_oper_centr_freq_seg0_idx": "42",
+                   "require_vht": "1" }
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params, wait_enabled=False)
+        ev = hapd.wait_event(["AP-DISABLED"], timeout=5)
+        if ev is None:
+            raise Exception("Startup failure not reported")
+        for i in range(1, 7):
+            if "OK" not in hapd.request("SET vht_capab [MAX-A-MPDU-LEN-EXP%d]" % i):
+                raise Exception("Unexpected SET failure")
+    finally:
+        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])

@@ -227,3 +227,36 @@ def test_hapd_ctrl_ess_disassoc(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], 15)
     if ev is None:
         raise Exception("Scan timed out")
+
+def test_hapd_ctrl_set_deny_mac_file(dev, apdev):
+    """hostapd and SET deny_mac_file ctrl_iface command"""
+    ssid = "hapd-ctrl"
+    params = { "ssid": ssid }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
+    dev[1].connect(ssid, key_mgmt="NONE", scan_freq="2412")
+    if "OK" not in hapd.request("SET deny_mac_file hostapd.macaddr"):
+        raise Exception("Unexpected SET failure")
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], 15)
+    if ev is None:
+        raise Exception("Disconnection timeout")
+    ev = dev[1].wait_event(["CTRL-EVENT-DISCONNECTED"], 1)
+    if ev is not None:
+        raise Exception("Unexpected disconnection")
+
+def test_hapd_ctrl_set_accept_mac_file(dev, apdev):
+    """hostapd and SET accept_mac_file ctrl_iface command"""
+    ssid = "hapd-ctrl"
+    params = { "ssid": ssid }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
+    dev[1].connect(ssid, key_mgmt="NONE", scan_freq="2412")
+    hapd.request("SET macaddr_acl 1")
+    if "OK" not in hapd.request("SET accept_mac_file hostapd.macaddr"):
+        raise Exception("Unexpected SET failure")
+    ev = dev[1].wait_event(["CTRL-EVENT-DISCONNECTED"], 15)
+    if ev is None:
+        raise Exception("Disconnection timeout")
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], 1)
+    if ev is not None:
+        raise Exception("Unexpected disconnection")

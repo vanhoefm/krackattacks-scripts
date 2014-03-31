@@ -73,9 +73,6 @@ for (; \
 if (!xml_node_is_element(ctx, child)) \
 	continue
 
-typedef void (*debug_print_func)(void *ctx, int print, const char *fmt, ...)
-	__attribute__ ((format (printf, 3, 4)));
-
 
 struct xml_node_ctx * xml_node_init_ctx(void *upper_ctx,
 					const void *env);

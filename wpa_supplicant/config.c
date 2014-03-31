@@ -3784,7 +3784,11 @@ static const struct global_parse_data global_fields[] = {
 	{ FUNC_NO_VAR(no_ctrl_interface), 0 },
 	{ STR(ctrl_interface_group), 0 } /* deprecated */,
 #endif /* CONFIG_CTRL_IFACE */
+#ifdef CONFIG_MACSEC
+	{ INT_RANGE(eapol_version, 1, 3), 0 },
+#else /* CONFIG_MACSEC */
 	{ INT_RANGE(eapol_version, 1, 2), 0 },
+#endif /* CONFIG_MACSEC */
 	{ INT(ap_scan), 0 },
 	{ FUNC(bgscan), 0 },
 	{ INT(disable_scan_offload), 0 },

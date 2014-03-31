@@ -26,7 +26,11 @@ struct ieee802_1x_hdr {
 #pragma pack(pop)
 #endif /* _MSC_VER */
 
+#ifdef CONFIG_MACSEC
+#define EAPOL_VERSION 3
+#else /* CONFIG_MACSEC */
 #define EAPOL_VERSION 2
+#endif /* CONFIG_MACSEC */
 
 enum { IEEE802_1X_TYPE_EAP_PACKET = 0,
        IEEE802_1X_TYPE_EAPOL_START = 1,

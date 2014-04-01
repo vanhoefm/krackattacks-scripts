@@ -32,6 +32,10 @@
  *
  * @QCA_NL80211_VENDOR_SUBCMD_DFS_CAPABILITY: Command to check driver support
  *	for DFS offloading.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_NAN: NAN command/event which is used to pass
+ *	NAN Request/Response and NAN Indication messages. These messages are
+ *	interpreted between the framework and the firmware component.
  */
 enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
@@ -39,6 +43,7 @@ enum qca_nl80211_vendor_subcmds {
 	/* subcmds 2..9 not yet allocated */
 	QCA_NL80211_VENDOR_SUBCMD_AVOID_FREQUENCY = 10,
 	QCA_NL80211_VENDOR_SUBCMD_DFS_CAPABILITY =  11,
+	QCA_NL80211_VENDOR_SUBCMD_NAN =  12,
 };
 
 
@@ -56,6 +61,8 @@ enum qca_wlan_vendor_attr {
 	QCA_WLAN_VENDOR_ATTR_INVALID = 0,
 	/* used by QCA_NL80211_VENDOR_SUBCMD_DFS_CAPABILITY */
 	QCA_WLAN_VENDOR_ATTR_DFS     = 1,
+	/* used by QCA_NL80211_VENDOR_SUBCMD_NAN */
+	QCA_WLAN_VENDOR_ATTR_NAN     = 2,
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_MAX	= QCA_WLAN_VENDOR_ATTR_AFTER_LAST - 1,

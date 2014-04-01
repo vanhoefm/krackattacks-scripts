@@ -20,4 +20,5 @@ cd ../wlantest
 make clean
 make -j8
 cd ../mac80211_hwsim/tools
+make clean
 make -j8

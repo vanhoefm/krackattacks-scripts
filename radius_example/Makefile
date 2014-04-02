@@ -21,6 +21,7 @@ CFLAGS += -I../src/utils
 LIBS = ../src/radius/libradius.a
 LIBS += ../src/crypto/libcrypto.a
 LIBS += ../src/utils/libutils.a
+LLIBS = -lrt
 
 ../src/utils/libutils.a:
 	$(MAKE) -C ../src/utils
@@ -36,7 +37,7 @@ LIBS += ../src/utils/libutils.a
 OBJS_ex = radius_example.o
 
 radius_example: $(OBJS_ex) $(LIBS)
-	$(LDO) $(LDFLAGS) -o radius_example $(OBJS_ex) $(LIBS)
+	$(LDO) $(LDFLAGS) -o radius_example $(OBJS_ex) $(LIBS) $(LLIBS)
 
 clean:
 	$(MAKE) -C ../src clean

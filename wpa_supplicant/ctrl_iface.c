@@ -2305,9 +2305,10 @@ static int wpa_supplicant_ctrl_iface_select_network(
 {
 	int id;
 	struct wpa_ssid *ssid;
+	char *pos;
 
 	/* cmd: "<network id>" or "any" */
-	if (os_strcmp(cmd, "any") == 0) {
+	if (os_strncmp(cmd, "any", 3) == 0) {
 		wpa_printf(MSG_DEBUG, "CTRL_IFACE: SELECT_NETWORK any");
 		ssid = NULL;
 	} else {
@@ -2324,6 +2325,16 @@ static int wpa_supplicant_ctrl_iface_select_network(
 			wpa_printf(MSG_DEBUG, "CTRL_IFACE: Cannot use "
 				   "SELECT_NETWORK with persistent P2P group");
 			return -1;
+		}
+	}
+
+	pos = os_strstr(cmd, " freq=");
+	if (pos) {
+		int *freqs = freq_range_to_channel_list(wpa_s, pos + 6);
+		if (freqs) {
+			wpa_s->scan_req = MANUAL_SCAN_REQ;
+			os_free(wpa_s->manual_scan_freqs);
+			wpa_s->manual_scan_freqs = freqs;
 		}
 	}
 

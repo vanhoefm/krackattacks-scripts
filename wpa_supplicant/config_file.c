@@ -832,6 +832,32 @@ static void wpa_config_write_cred(FILE *f, struct wpa_cred *cred)
 
 	if (cred->ocsp)
 		fprintf(f, "\tocsp=%d\n", cred->ocsp);
+
+	if (cred->num_req_conn_capab) {
+		for (i = 0; i < cred->num_req_conn_capab; i++) {
+			int *ports;
+
+			fprintf(f, "\treq_conn_capab=%u",
+				cred->req_conn_capab_proto[i]);
+			ports = cred->req_conn_capab_port[i];
+			if (ports) {
+				int j;
+				for (j = 0; ports[j] != -1; j++) {
+					fprintf(f, "%s%d", j > 0 ? "," : ":",
+						ports[j]);
+				}
+			}
+			fprintf(f, "\n");
+		}
+	}
+
+	if (cred->required_roaming_consortium_len) {
+		fprintf(f, "\trequired_roaming_consortium=");
+		for (i = 0; i < cred->required_roaming_consortium_len; i++)
+			fprintf(f, "%02x",
+				cred->required_roaming_consortium[i]);
+		fprintf(f, "\n");
+	}
 }
 
 

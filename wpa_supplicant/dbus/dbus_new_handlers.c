@@ -1465,10 +1465,10 @@ err:
 
 
 /**
- * wpas_dbus_handler_reassociate - Reassociate to current AP
+ * wpas_dbus_handler_reassociate - Reassociate
  * @message: Pointer to incoming dbus message
  * @wpa_s: wpa_supplicant structure for a network interface
- * Returns: NotConnected DBus error message if not connected
+ * Returns: InterfaceDisabled DBus error message if disabled
  * or NULL otherwise.
  *
  * Handler function for "Reassociate" method call of network interface.
@@ -1476,13 +1476,13 @@ err:
 DBusMessage * wpas_dbus_handler_reassociate(DBusMessage *message,
 					    struct wpa_supplicant *wpa_s)
 {
-	if (wpa_s->current_ssid != NULL) {
+	if (wpa_s->wpa_state != WPA_INTERFACE_DISABLED) {
 		wpas_request_connection(wpa_s);
 		return NULL;
 	}
 
-	return dbus_message_new_error(message, WPAS_DBUS_ERROR_NOT_CONNECTED,
-				      "This interface is not connected");
+	return dbus_message_new_error(message, WPAS_DBUS_ERROR_IFACE_DISABLED,
+				      "This interface is disabled");
 }
 
 

@@ -91,6 +91,8 @@ enum wpas_dbus_bss_prop {
 
 #define WPAS_DBUS_ERROR_IFACE_EXISTS \
 	WPAS_DBUS_NEW_INTERFACE ".InterfaceExists"
+#define WPAS_DBUS_ERROR_IFACE_DISABLED            \
+	WPAS_DBUS_NEW_INTERFACE ".InterfaceDisabled"
 #define WPAS_DBUS_ERROR_IFACE_UNKNOWN \
 	WPAS_DBUS_NEW_INTERFACE ".InterfaceUnknown"
 

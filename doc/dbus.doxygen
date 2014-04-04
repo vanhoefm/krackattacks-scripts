@@ -267,6 +267,16 @@ fi.w1.wpa_supplicant1.CreateInterface.
       </li>
 
       <li>
+	<h3>Reassociate ( ) --> nothing</h3>
+	<p>Attempt reassociation.</p>
+	<h4>Possible errors</h4>
+	<dl>
+	  <dt>fi.w1.wpa_supplicant1.InterfaceDisabled</dt>
+	  <dd>The interface is disabled.</dd>
+	</dl>
+      </li>
+
+      <li>
 	<h3>AddBlob ( s : name, ay : data ) --> nothing</h3>
 	<p>Adds a blob to the interface.</p>
 	<h4>Arguments</h4>

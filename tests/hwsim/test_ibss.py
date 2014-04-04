@@ -13,7 +13,7 @@ import hwsim_utils
 
 def connect_ibss_cmd(dev, id):
     dev.dump_monitor()
-    dev.select_network(id)
+    dev.select_network(id, freq="2412")
 
 def wait_ibss_connection(dev):
     logger.info(dev.ifname + " waiting for IBSS start/join to complete")

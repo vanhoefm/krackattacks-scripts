@@ -231,8 +231,12 @@ class WpaSupplicant:
 
         return id;
 
-    def select_network(self, id):
-        id = self.request("SELECT_NETWORK " + str(id))
+    def select_network(self, id, freq=None):
+        if freq:
+            extra = " freq=" + freq
+        else:
+            extra = ""
+        id = self.request("SELECT_NETWORK " + str(id) + extra)
         if "FAIL" in id:
             raise Exception("SELECT_NETWORK failed")
         return None

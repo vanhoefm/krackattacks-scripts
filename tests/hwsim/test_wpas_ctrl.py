@@ -167,18 +167,55 @@ def test_wpas_ctrl_network(dev):
     if "FAIL" not in dev[0].request('SET_NETWORK ' + str(id) + ' pairwise WEP40'):
         raise Exception("Invalid pairwise accepted")
 
+def add_cred(dev):
+    id = dev.add_cred()
+    ev = dev.wait_event(["CRED-ADDED"])
+    if ev is None:
+        raise Exception("Missing CRED-ADDED event")
+    if " " + str(id) not in ev:
+        raise Exception("CRED-ADDED event without matching id")
+    return id
+
+def set_cred(dev, id, field, value):
+    dev.set_cred(id, field, value)
+    ev = dev.wait_event(["CRED-MODIFIED"])
+    if ev is None:
+        raise Exception("Missing CRED-MODIFIED event")
+    if " " + str(id) + " " not in ev:
+        raise Exception("CRED-MODIFIED event without matching id")
+    if field not in ev:
+        raise Exception("CRED-MODIFIED event without matching field")
+
+def set_cred_quoted(dev, id, field, value):
+    dev.set_cred_quoted(id, field, value)
+    ev = dev.wait_event(["CRED-MODIFIED"])
+    if ev is None:
+        raise Exception("Missing CRED-MODIFIED event")
+    if " " + str(id) + " " not in ev:
+        raise Exception("CRED-MODIFIED event without matching id")
+    if field not in ev:
+        raise Exception("CRED-MODIFIED event without matching field")
+
+def remove_cred(dev, id):
+    dev.remove_cred(id)
+    ev = dev.wait_event(["CRED-REMOVED"])
+    if ev is None:
+        raise Exception("Missing CRED-REMOVED event")
+    if " " + str(id) not in ev:
+        raise Exception("CRED-REMOVED event without matching id")
+
 def test_wpas_ctrl_cred(dev):
     """wpa_supplicant ctrl_iface cred set"""
-    id1 = dev[0].add_cred()
-    id = dev[0].add_cred()
-    id2 = dev[0].add_cred()
-    dev[0].set_cred(id, "temporary", "1")
-    dev[0].set_cred(id, "priority", "1")
-    dev[0].set_cred(id, "pcsc", "1")
-    dev[0].set_cred_quoted(id, "private_key_passwd", "test")
-    dev[0].set_cred_quoted(id, "domain_suffix_match", "test")
-    dev[0].set_cred_quoted(id, "phase1", "test")
-    dev[0].set_cred_quoted(id, "phase2", "test")
+    id1 = add_cred(dev[0])
+    id = add_cred(dev[0])
+    id2 = add_cred(dev[0])
+    set_cred(dev[0], id, "temporary", "1")
+    set_cred(dev[0], id, "priority", "1")
+    set_cred(dev[0], id, "pcsc", "1")
+    set_cred_quoted(dev[0], id, "private_key_passwd", "test")
+    set_cred_quoted(dev[0], id, "domain_suffix_match", "test")
+    set_cred_quoted(dev[0], id, "phase1", "test")
+    set_cred_quoted(dev[0], id, "phase2", "test")
 
     if "FAIL" not in dev[0].request("SET_CRED " + str(id) + " eap FOO"):
         raise Exception("Unexpected success on unknown EAP method")
@@ -197,16 +234,68 @@ def test_wpas_ctrl_cred(dev):
     if "FAIL" not in dev[0].request("SET_CRED " + str(id) + " foo 4142"):
         raise Exception("Unexpected success on unknown field")
 
-    id3 = dev[0].add_cred()
-    id4 = dev[0].add_cred()
+    id3 = add_cred(dev[0])
+    id4 = add_cred(dev[0])
 
-    dev[0].remove_cred(id1)
-    dev[0].remove_cred(id3)
-    dev[0].remove_cred(id4)
-    dev[0].remove_cred(id2)
-    dev[0].remove_cred(id)
+    remove_cred(dev[0], id1)
+    remove_cred(dev[0], id3)
+    remove_cred(dev[0], id4)
+    remove_cred(dev[0], id2)
+    remove_cred(dev[0], id)
     if "FAIL" not in dev[0].request("REMOVE_CRED 1"):
         raise Exception("Unexpected success on invalid remove cred")
+
+    id = add_cred(dev[0])
+    values = [ ("temporary", "1", False),
+               ("temporary", "0", False),
+               ("pcsc", "1", False),
+               ("realm", "example.com", True),
+               ("username", "user@example.com", True),
+               ("password", "foo", True, "*"),
+               ("ca_cert", "ca.pem", True),
+               ("client_cert", "user.pem", True),
+               ("private_key", "key.pem", True),
+               ("private_key_passwd", "foo", True, "*"),
+               ("imsi", "310026-000000000", True),
+               ("milenage", "foo", True, "*"),
+               ("domain_suffix_match", "example.com", True),
+               ("domain", "example.com", True),
+               ("domain", "example.org", True, "example.com\nexample.org"),
+               ("roaming_consortium", "0123456789", False),
+               ("required_roaming_consortium", "456789", False),
+               ("eap", "TTLS", False),
+               ("phase1", "foo=bar1", True),
+               ("phase2", "foo=bar2", True),
+               ("excluded_ssid", "test", True),
+               ("excluded_ssid", "foo", True, "test\nfoo"),
+               ("roaming_partner", "example.com,0,4,*", True),
+               ("roaming_partner", "example.org,1,2,US", True,
+                "example.com,0,4,*\nexample.org,1,2,US"),
+               ("update_identifier", "4", False),
+               ("provisioning_sp", "sp.example.com", True),
+               ("sp_priority", "7", False),
+               ("min_dl_bandwidth_home", "100", False),
+               ("min_ul_bandwidth_home", "101", False),
+               ("min_dl_bandwidth_roaming", "102", False),
+               ("min_ul_bandwidth_roaming", "103", False),
+               ("max_bss_load", "57", False),
+               ("req_conn_capab", "6:22,80,443", False),
+               ("req_conn_capab", "17:500", False, "6:22,80,443\n17:500"),
+               ("req_conn_capab", "50", False, "6:22,80,443\n17:500\n50"),
+               ("ocsp", "1", False) ]
+    for v in values:
+        if v[2]:
+            set_cred_quoted(dev[0], id, v[0], v[1])
+        else:
+            set_cred(dev[0], id, v[0], v[1])
+        val = dev[0].get_cred(id, v[0])
+        if len(v) == 4:
+            expect = v[3]
+        else:
+            expect = v[1]
+        if val != expect:
+            raise Exception("Unexpected GET_CRED value for {}: {} != {}".format(v[0], val, expect))
+    remove_cred(dev[0], id)
 
 def test_wpas_ctrl_pno(dev):
     """wpa_supplicant ctrl_iface pno"""

@@ -206,6 +206,9 @@ class WpaSupplicant:
             raise Exception("SET_CRED failed")
         return None
 
+    def get_cred(self, id, field):
+        return self.request("GET_CRED " + str(id) + " " + field)
+
     def add_cred_values(self, params):
         id = self.add_cred()
 

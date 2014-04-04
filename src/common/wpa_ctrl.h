@@ -164,6 +164,13 @@ extern "C" {
 #define INTERWORKING_ALREADY_CONNECTED "INTERWORKING-ALREADY-CONNECTED "
 #define INTERWORKING_SELECTED "INTERWORKING-SELECTED "
 
+/* Credential block added; parameters: <id> */
+#define CRED_ADDED "CRED-ADDED "
+/* Credential block modified; parameters: <id> <field> */
+#define CRED_MODIFIED "CRED-MODIFIED "
+/* Credential block removed; parameters: <id> */
+#define CRED_REMOVED "CRED-REMOVED "
+
 #define GAS_RESPONSE_INFO "GAS-RESPONSE-INFO "
 /* parameters: <addr> <dialog_token> <freq> */
 #define GAS_QUERY_START "GAS-QUERY-START "

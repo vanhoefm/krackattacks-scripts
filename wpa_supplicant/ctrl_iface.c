@@ -2660,6 +2660,8 @@ static int wpa_supplicant_ctrl_iface_add_cred(struct wpa_supplicant *wpa_s,
 	if (cred == NULL)
 		return -1;
 
+	wpa_msg(wpa_s, MSG_INFO, CRED_ADDED "%d", cred->id);
+
 	ret = os_snprintf(buf, buflen, "%d\n", cred->id);
 	if (ret < 0 || (size_t) ret >= buflen)
 		return -1;
@@ -2672,11 +2674,20 @@ static int wpas_ctrl_remove_cred(struct wpa_supplicant *wpa_s,
 {
 	struct wpa_ssid *ssid;
 	char str[20];
+	int id;
 
-	if (cred == NULL || wpa_config_remove_cred(wpa_s->conf, cred->id) < 0) {
+	if (cred == NULL) {
 		wpa_printf(MSG_DEBUG, "CTRL_IFACE: Could not find cred");
 		return -1;
 	}
+
+	id = cred->id;
+	if (wpa_config_remove_cred(wpa_s->conf, id) < 0) {
+		wpa_printf(MSG_DEBUG, "CTRL_IFACE: Could not find cred");
+		return -1;
+	}
+
+	wpa_msg(wpa_s, MSG_INFO, CRED_REMOVED "%d", id);
 
 	/* Remove any network entry created based on the removed credential */
 	ssid = wpa_s->conf->ssid;
@@ -2793,6 +2804,8 @@ static int wpa_supplicant_ctrl_iface_set_cred(struct wpa_supplicant *wpa_s,
 			   "variable '%s'", name);
 		return -1;
 	}
+
+	wpa_msg(wpa_s, MSG_INFO, CRED_MODIFIED "%d %s", cred->id, name);
 
 	return 0;
 }

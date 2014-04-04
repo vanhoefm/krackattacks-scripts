@@ -2796,6 +2796,275 @@ int wpa_config_set_cred(struct wpa_cred *cred, const char *var,
 }
 
 
+char * alloc_int_str(int val)
+{
+	char *buf;
+
+	buf = os_malloc(20);
+	if (buf == NULL)
+		return NULL;
+	os_snprintf(buf, 20, "%d", val);
+	return buf;
+}
+
+
+char * alloc_strdup(const char *str)
+{
+	if (str == NULL)
+		return NULL;
+	return os_strdup(str);
+}
+
+
+char * wpa_config_get_cred_no_key(struct wpa_cred *cred, const char *var)
+{
+	if (os_strcmp(var, "temporary") == 0)
+		return alloc_int_str(cred->temporary);
+
+	if (os_strcmp(var, "priority") == 0)
+		return alloc_int_str(cred->priority);
+
+	if (os_strcmp(var, "sp_priority") == 0)
+		return alloc_int_str(cred->sp_priority);
+
+	if (os_strcmp(var, "pcsc") == 0)
+		return alloc_int_str(cred->pcsc);
+
+	if (os_strcmp(var, "eap") == 0) {
+		if (!cred->eap_method)
+			return NULL;
+		return alloc_strdup(eap_get_name(cred->eap_method[0].vendor,
+						 cred->eap_method[0].method));
+	}
+
+	if (os_strcmp(var, "update_identifier") == 0)
+		return alloc_int_str(cred->update_identifier);
+
+	if (os_strcmp(var, "min_dl_bandwidth_home") == 0)
+		return alloc_int_str(cred->min_dl_bandwidth_home);
+
+	if (os_strcmp(var, "min_ul_bandwidth_home") == 0)
+		return alloc_int_str(cred->min_ul_bandwidth_home);
+
+	if (os_strcmp(var, "min_dl_bandwidth_roaming") == 0)
+		return alloc_int_str(cred->min_dl_bandwidth_roaming);
+
+	if (os_strcmp(var, "min_ul_bandwidth_roaming") == 0)
+		return alloc_int_str(cred->min_ul_bandwidth_roaming);
+
+	if (os_strcmp(var, "max_bss_load") == 0)
+		return alloc_int_str(cred->max_bss_load);
+
+	if (os_strcmp(var, "req_conn_capab") == 0) {
+		unsigned int i;
+		char *buf, *end, *pos;
+		int ret;
+
+		if (!cred->num_req_conn_capab)
+			return NULL;
+
+		buf = os_malloc(4000);
+		if (buf == NULL)
+			return NULL;
+		pos = buf;
+		end = pos + 4000;
+		for (i = 0; i < cred->num_req_conn_capab; i++) {
+			int *ports;
+
+			ret = os_snprintf(pos, end - pos, "%s%u",
+					  i > 0 ? "\n" : "",
+					  cred->req_conn_capab_proto[i]);
+			if (ret < 0 || ret >= end - pos)
+				return buf;
+			pos += ret;
+
+			ports = cred->req_conn_capab_port[i];
+			if (ports) {
+				int j;
+				for (j = 0; ports[j] != -1; j++) {
+					ret = os_snprintf(pos, end - pos,
+							  "%s%d",
+							  j > 0 ? "," : ":",
+							  ports[j]);
+					if (ret < 0 || ret >= end - pos)
+						return buf;
+					pos += ret;
+				}
+			}
+		}
+
+		return buf;
+	}
+
+	if (os_strcmp(var, "ocsp") == 0)
+		return alloc_int_str(cred->ocsp);
+
+	if (os_strcmp(var, "realm") == 0)
+		return alloc_strdup(cred->realm);
+
+	if (os_strcmp(var, "username") == 0)
+		return alloc_strdup(cred->username);
+
+	if (os_strcmp(var, "password") == 0) {
+		if (!cred->password)
+			return NULL;
+		return alloc_strdup("*");
+	}
+
+	if (os_strcmp(var, "ca_cert") == 0)
+		return alloc_strdup(cred->ca_cert);
+
+	if (os_strcmp(var, "client_cert") == 0)
+		return alloc_strdup(cred->client_cert);
+
+	if (os_strcmp(var, "private_key") == 0)
+		return alloc_strdup(cred->private_key);
+
+	if (os_strcmp(var, "private_key_passwd") == 0) {
+		if (!cred->private_key_passwd)
+			return NULL;
+		return alloc_strdup("*");
+	}
+
+	if (os_strcmp(var, "imsi") == 0)
+		return alloc_strdup(cred->imsi);
+
+	if (os_strcmp(var, "milenage") == 0) {
+		if (!(cred->milenage))
+			return NULL;
+		return alloc_strdup("*");
+	}
+
+	if (os_strcmp(var, "domain_suffix_match") == 0)
+		return alloc_strdup(cred->domain_suffix_match);
+
+	if (os_strcmp(var, "domain") == 0) {
+		unsigned int i;
+		char *buf, *end, *pos;
+		int ret;
+
+		if (!cred->num_domain)
+			return NULL;
+
+		buf = os_malloc(4000);
+		if (buf == NULL)
+			return NULL;
+		pos = buf;
+		end = pos + 4000;
+
+		for (i = 0; i < cred->num_domain; i++) {
+			ret = os_snprintf(pos, end - pos, "%s%s",
+					  i > 0 ? "\n" : "", cred->domain[i]);
+			if (ret < 0 || ret >= end - pos)
+				return buf;
+			pos += ret;
+		}
+
+		return buf;
+	}
+
+	if (os_strcmp(var, "phase1") == 0)
+		return alloc_strdup(cred->phase1);
+
+	if (os_strcmp(var, "phase2") == 0)
+		return alloc_strdup(cred->phase2);
+
+	if (os_strcmp(var, "roaming_consortium") == 0) {
+		size_t buflen;
+		char *buf;
+
+		if (!cred->roaming_consortium_len)
+			return NULL;
+		buflen = cred->roaming_consortium_len * 2 + 1;
+		buf = os_malloc(buflen);
+		if (buf == NULL)
+			return NULL;
+		wpa_snprintf_hex(buf, buflen, cred->roaming_consortium,
+				 cred->roaming_consortium_len);
+		return buf;
+	}
+
+	if (os_strcmp(var, "required_roaming_consortium") == 0) {
+		size_t buflen;
+		char *buf;
+
+		if (!cred->required_roaming_consortium_len)
+			return NULL;
+		buflen = cred->required_roaming_consortium_len * 2 + 1;
+		buf = os_malloc(buflen);
+		if (buf == NULL)
+			return NULL;
+		wpa_snprintf_hex(buf, buflen, cred->required_roaming_consortium,
+				 cred->required_roaming_consortium_len);
+		return buf;
+	}
+
+	if (os_strcmp(var, "excluded_ssid") == 0) {
+		unsigned int i;
+		char *buf, *end, *pos;
+
+		if (!cred->num_excluded_ssid)
+			return NULL;
+
+		buf = os_malloc(4000);
+		if (buf == NULL)
+			return NULL;
+		pos = buf;
+		end = pos + 4000;
+
+		for (i = 0; i < cred->num_excluded_ssid; i++) {
+			struct excluded_ssid *e;
+			int ret;
+
+			e = &cred->excluded_ssid[i];
+			ret = os_snprintf(pos, end - pos, "%s%s",
+					  i > 0 ? "\n" : "",
+					  wpa_ssid_txt(e->ssid, e->ssid_len));
+			if (ret < 0 || ret >= end - pos)
+				return buf;
+			pos += ret;
+		}
+
+		return buf;
+	}
+
+	if (os_strcmp(var, "roaming_partner") == 0) {
+		unsigned int i;
+		char *buf, *end, *pos;
+
+		if (!cred->num_roaming_partner)
+			return NULL;
+
+		buf = os_malloc(4000);
+		if (buf == NULL)
+			return NULL;
+		pos = buf;
+		end = pos + 4000;
+
+		for (i = 0; i < cred->num_roaming_partner; i++) {
+			struct roaming_partner *p;
+			int ret;
+
+			p = &cred->roaming_partner[i];
+			ret = os_snprintf(pos, end - pos, "%s%s,%d,%u,%s",
+					  i > 0 ? "\n" : "",
+					  p->fqdn, p->exact_match, p->priority,
+					  p->country);
+			if (ret < 0 || ret >= end - pos)
+				return buf;
+			pos += ret;
+		}
+
+		return buf;
+	}
+
+	if (os_strcmp(var, "provisioning_sp") == 0)
+		return alloc_strdup(cred->provisioning_sp);
+
+	return NULL;
+}
+
+
 struct wpa_cred * wpa_config_get_cred(struct wpa_config *config, int id)
 {
 	struct wpa_cred *cred;

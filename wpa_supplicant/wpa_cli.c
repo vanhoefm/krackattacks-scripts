@@ -1474,6 +1474,18 @@ static int wpa_cli_cmd_set_cred(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+static int wpa_cli_cmd_get_cred(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	if (argc != 2) {
+		printf("Invalid GET_CRED command: needs two arguments\n"
+		       "(cred id, variable name)\n");
+		return -1;
+	}
+
+	return wpa_cli_cmd(ctrl, "GET_CRED", 2, argc, argv);
+}
+
+
 static int wpa_cli_cmd_disconnect(struct wpa_ctrl *ctrl, int argc,
 				  char *argv[])
 {
@@ -2594,6 +2606,9 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "set_cred", wpa_cli_cmd_set_cred, NULL,
 	  cli_cmd_flag_sensitive,
 	  "<cred id> <variable> <value> = set credential variables" },
+	{ "get_cred", wpa_cli_cmd_get_cred, NULL,
+	  cli_cmd_flag_none,
+	  "<cred id> <variable> = get credential variables" },
 	{ "save_config", wpa_cli_cmd_save_config, NULL,
 	  cli_cmd_flag_none,
 	  "= save the current configuration" },

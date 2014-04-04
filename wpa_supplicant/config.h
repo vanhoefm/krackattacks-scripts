@@ -1053,6 +1053,7 @@ int wpa_config_remove_cred(struct wpa_config *config, int id);
 void wpa_config_free_cred(struct wpa_cred *cred);
 int wpa_config_set_cred(struct wpa_cred *cred, const char *var,
 			const char *value, int line);
+char * wpa_config_get_cred_no_key(struct wpa_cred *cred, const char *var);
 
 struct wpa_config * wpa_config_alloc_empty(const char *ctrl_interface,
 					   const char *driver_param);

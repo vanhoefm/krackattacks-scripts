@@ -704,15 +704,21 @@ def test_ap_wpa2_eap_pwd(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], apdev[0], "PWD", "pwd user", password="secret password")
     eap_reauth(dev[0], "PWD")
-
     dev[0].request("REMOVE_NETWORK all")
-    eap_connect(dev[0], apdev[0], "PWD", "pwd user", password="secret password",
+
+    eap_connect(dev[1], apdev[0], "PWD",
+                "pwd.user@test123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890.example.com",
+                password="secret password",
                 fragment_size="90")
 
     logger.info("Negative test with incorrect password")
-    dev[0].request("REMOVE_NETWORK all")
-    eap_connect(dev[0], apdev[0], "PWD", "pwd user", password="secret-password",
+    eap_connect(dev[2], apdev[0], "PWD", "pwd user", password="secret-password",
                 expect_failure=True, local_error_report=True)
+
+    eap_connect(dev[0], apdev[0], "PWD",
+                "pwd.user@test123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890.example.com",
+                password="secret password",
+                fragment_size="31")
 
 def test_ap_wpa2_eap_pwd_groups(dev, apdev):
     """WPA2-Enterprise connection using various EAP-pwd groups"""

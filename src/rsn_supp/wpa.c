@@ -1020,27 +1020,20 @@ static int wpa_supplicant_validate_ie(struct wpa_sm *sm,
  * @key: Pointer to the EAPOL-Key frame header
  * @ver: Version bits from EAPOL-Key Key Info
  * @key_info: Key Info
- * @kde: KDEs to include the EAPOL-Key frame
- * @kde_len: Length of KDEs
  * @ptk: PTK to use for keyed hash and encryption
  * Returns: 0 on success, -1 on failure
  */
 int wpa_supplicant_send_4_of_4(struct wpa_sm *sm, const unsigned char *dst,
 			       const struct wpa_eapol_key *key,
 			       u16 ver, u16 key_info,
-			       const u8 *kde, size_t kde_len,
 			       struct wpa_ptk *ptk)
 {
 	size_t rlen;
 	struct wpa_eapol_key *reply;
 	u8 *rbuf;
 
-	if (kde)
-		wpa_hexdump(MSG_DEBUG, "WPA: KDE for msg 4/4", kde, kde_len);
-
 	rbuf = wpa_sm_alloc_eapol(sm, IEEE802_1X_TYPE_EAPOL_KEY, NULL,
-				  sizeof(*reply) + kde_len,
-				  &rlen, (void *) &reply);
+				  sizeof(*reply), &rlen, (void *) &reply);
 	if (rbuf == NULL)
 		return -1;
 
@@ -1057,9 +1050,7 @@ int wpa_supplicant_send_4_of_4(struct wpa_sm *sm, const unsigned char *dst,
 	os_memcpy(reply->replay_counter, key->replay_counter,
 		  WPA_REPLAY_COUNTER_LEN);
 
-	WPA_PUT_BE16(reply->key_data_length, kde_len);
-	if (kde)
-		os_memcpy(reply + 1, kde, kde_len);
+	WPA_PUT_BE16(reply->key_data_length, 0);
 
 	wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG, "WPA: Sending EAPOL-Key 4/4");
 	wpa_eapol_key_send(sm, ptk->kck, ver, dst, ETH_P_EAPOL,
@@ -1140,7 +1131,7 @@ static void wpa_supplicant_process_3_of_4(struct wpa_sm *sm,
 #endif /* CONFIG_P2P */
 
 	if (wpa_supplicant_send_4_of_4(sm, sm->bssid, key, ver, key_info,
-				       NULL, 0, &sm->ptk)) {
+				       &sm->ptk)) {
 		goto failed;
 	}
 

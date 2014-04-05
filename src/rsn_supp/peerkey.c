@@ -858,7 +858,7 @@ static void wpa_supplicant_process_stk_3_of_4(struct wpa_sm *sm,
 
 	if (wpa_supplicant_send_4_of_4(sm, peerkey->addr, key, ver,
 				       WPA_GET_BE16(key->key_info),
-				       NULL, 0, &peerkey->stk))
+				       &peerkey->stk))
 		return;
 
 	_key = (u8 *) peerkey->stk.tk1;

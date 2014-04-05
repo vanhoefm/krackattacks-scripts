@@ -1,5 +1,5 @@
 # TDLS tests
-# Copyright (c) 2013, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -7,6 +7,7 @@
 import time
 import logging
 logger = logging.getLogger()
+import subprocess
 
 import hwsim_utils
 from hostapd import HostapdGlobal
@@ -264,3 +265,28 @@ def test_ap_open_tdls(dev, apdev):
     setup_tdls(dev[0], dev[1], apdev[0])
     teardown_tdls(dev[0], dev[1], apdev[0])
     setup_tdls(dev[1], dev[0], apdev[0])
+
+def test_ap_wpa2_tdls_bssid_mismatch(dev, apdev):
+    """TDLS failure due to BSSID mismatch"""
+    try:
+        ssid = "test-wpa2-psk"
+        passphrase = "12345678"
+        params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+        params['bridge'] = 'ap-br0'
+        hostapd.add_ap(apdev[0]['ifname'], params)
+        hostapd.add_ap(apdev[1]['ifname'], params)
+        wlantest_setup()
+        subprocess.call(['sudo', 'brctl', 'setfd', 'ap-br0', '0'])
+        subprocess.call(['sudo', 'ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
+        dev[0].connect(ssid, psk=passphrase, scan_freq="2412",
+                       bssid=apdev[0]['bssid'])
+        dev[1].connect(ssid, psk=passphrase, scan_freq="2412",
+                       bssid=apdev[1]['bssid'])
+        connectivity(dev, "ap-br0")
+        addr0 = dev[0].p2p_interface_addr()
+        dev[1].tdls_setup(addr0)
+        time.sleep(1)
+        hwsim_utils.test_connectivity_sta(dev[0], dev[1])
+    finally:
+        subprocess.call(['sudo', 'ip', 'link', 'set', 'dev', 'ap-br0', 'down'])
+        subprocess.call(['sudo', 'brctl', 'delbr', 'ap-br0'])

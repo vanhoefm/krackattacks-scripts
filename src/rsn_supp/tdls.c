@@ -33,6 +33,7 @@
 #define TDLS_TESTING_NO_TPK_EXPIRATION BIT(8)
 #define TDLS_TESTING_DECLINE_RESP BIT(9)
 #define TDLS_TESTING_IGNORE_AP_PROHIBIT BIT(10)
+#define TDLS_TESTING_WRONG_MIC BIT(11)
 unsigned int tdls_testing = 0;
 #endif /* CONFIG_TDLS_TESTING */
 
@@ -1213,6 +1214,12 @@ static int wpa_tdls_send_tpk_m2(struct wpa_sm *sm,
 	/* compute MIC before sending */
 	wpa_tdls_ftie_mic(peer->tpk.kck, 2, (u8 *) lnkid, peer->rsnie_p,
 			  (u8 *) &timeoutie, (u8 *) ftie, ftie->mic);
+#ifdef CONFIG_TDLS_TESTING
+	if (tdls_testing & TDLS_TESTING_WRONG_MIC) {
+		wpa_printf(MSG_DEBUG, "TDLS: Testing - use wrong MIC");
+		ftie->mic[0] ^= 0x01;
+	}
+#endif /* CONFIG_TDLS_TESTING */
 
 skip_ies:
 	status = wpa_tdls_tpk_send(sm, src_addr, WLAN_TDLS_SETUP_RESPONSE,
@@ -1296,6 +1303,12 @@ static int wpa_tdls_send_tpk_m3(struct wpa_sm *sm,
 	/* compute MIC before sending */
 	wpa_tdls_ftie_mic(peer->tpk.kck, 3, (u8 *) lnkid, peer->rsnie_p,
 			  (u8 *) &timeoutie, (u8 *) ftie, ftie->mic);
+#ifdef CONFIG_TDLS_TESTING
+	if (tdls_testing & TDLS_TESTING_WRONG_MIC) {
+		wpa_printf(MSG_DEBUG, "TDLS: Testing - use wrong MIC");
+		ftie->mic[0] ^= 0x01;
+	}
+#endif /* CONFIG_TDLS_TESTING */
 
 	if (peer->vht_capabilities)
 		peer_capab |= TDLS_PEER_VHT;

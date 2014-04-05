@@ -1738,10 +1738,12 @@ static int wpa_cli_cmd_resume(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+#ifdef CONFIG_TESTING_OPTIONS
 static int wpa_cli_cmd_drop_sa(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	return wpa_ctrl_command(ctrl, "DROP_SA");
 }
+#endif /* CONFIG_TESTING_OPTIONS */
 
 
 static int wpa_cli_cmd_roam(struct wpa_ctrl *ctrl, int argc, char *argv[])
@@ -2768,8 +2770,10 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	  "= notification of suspend/hibernate" },
 	{ "resume", wpa_cli_cmd_resume, NULL, cli_cmd_flag_none,
 	  "= notification of resume/thaw" },
+#ifdef CONFIG_TESTING_OPTIONS
 	{ "drop_sa", wpa_cli_cmd_drop_sa, NULL, cli_cmd_flag_none,
 	  "= drop SA without deauth/disassoc (test command)" },
+#endif /* CONFIG_TESTING_OPTIONS */
 	{ "roam", wpa_cli_cmd_roam, wpa_cli_complete_bss,
 	  cli_cmd_flag_none,
 	  "<addr> = roam to the specified BSS" },

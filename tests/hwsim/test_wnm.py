@@ -9,6 +9,7 @@ import logging
 logger = logging.getLogger()
 
 import hostapd
+from wlantest import Wlantest
 
 def test_wnm_bss_transition_mgmt(dev, apdev):
     """WNM BSS Transition Management"""
@@ -134,6 +135,9 @@ def test_wnm_sleep_mode_rsn(dev, apdev):
 
 def test_wnm_sleep_mode_rsn_pmf(dev, apdev):
     """WNM Sleep Mode - RSN with PMF"""
+    wt = Wlantest()
+    wt.flush()
+    wt.add_passphrase("12345678")
     params = hostapd.wpa2_params("test-wnm-rsn", "12345678")
     params["wpa_key_mgmt"] = "WPA-PSK-SHA256";
     params["ieee80211w"] = "2";

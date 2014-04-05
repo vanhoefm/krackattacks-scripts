@@ -225,6 +225,26 @@ def test_ap_wpa2_tdls_diff_rsnie(dev, apdev):
     setup_tdls(dev[1], dev[0], apdev[0])
     teardown_tdls(dev[1], dev[0], apdev[0])
 
+def test_ap_wpa2_tdls_wrong_tpk_m2_mic(dev, apdev):
+    """Incorrect MIC in TDLS Setup Response"""
+    start_ap_wpa2_psk(apdev[0]['ifname'])
+    wlantest_setup()
+    connect_2sta_wpa2_psk(dev, apdev[0]['ifname'])
+    dev[0].request("SET tdls_testing 0x800")
+    addr0 = dev[0].p2p_interface_addr()
+    dev[1].tdls_setup(addr0)
+    time.sleep(1)
+
+def test_ap_wpa2_tdls_wrong_tpk_m3_mic(dev, apdev):
+    """Incorrect MIC in TDLS Setup Confirm"""
+    start_ap_wpa2_psk(apdev[0]['ifname'])
+    wlantest_setup()
+    connect_2sta_wpa2_psk(dev, apdev[0]['ifname'])
+    dev[1].request("SET tdls_testing 0x800")
+    addr0 = dev[0].p2p_interface_addr()
+    dev[1].tdls_setup(addr0)
+    time.sleep(1)
+
 def test_ap_wpa_tdls(dev, apdev):
     """WPA-PSK AP and two stations using TDLS"""
     hostapd.add_ap(apdev[0]['ifname'],

@@ -2396,44 +2396,6 @@ int wpa_sm_set_param(struct wpa_sm *sm, enum wpa_sm_conf_params param,
 
 
 /**
- * wpa_sm_get_param - Get WPA state machine parameters
- * @sm: Pointer to WPA state machine data from wpa_sm_init()
- * @param: Parameter field
- * Returns: Parameter value
- */
-unsigned int wpa_sm_get_param(struct wpa_sm *sm, enum wpa_sm_conf_params param)
-{
-	if (sm == NULL)
-		return 0;
-
-	switch (param) {
-	case RSNA_PMK_LIFETIME:
-		return sm->dot11RSNAConfigPMKLifetime;
-	case RSNA_PMK_REAUTH_THRESHOLD:
-		return sm->dot11RSNAConfigPMKReauthThreshold;
-	case RSNA_SA_TIMEOUT:
-		return sm->dot11RSNAConfigSATimeout;
-	case WPA_PARAM_PROTO:
-		return sm->proto;
-	case WPA_PARAM_PAIRWISE:
-		return sm->pairwise_cipher;
-	case WPA_PARAM_GROUP:
-		return sm->group_cipher;
-	case WPA_PARAM_KEY_MGMT:
-		return sm->key_mgmt;
-#ifdef CONFIG_IEEE80211W
-	case WPA_PARAM_MGMT_GROUP:
-		return sm->mgmt_group_cipher;
-#endif /* CONFIG_IEEE80211W */
-	case WPA_PARAM_RSN_ENABLED:
-		return sm->rsn_enabled;
-	default:
-		return 0;
-	}
-}
-
-
-/**
  * wpa_sm_get_status - Get WPA state machine
  * @sm: Pointer to WPA state machine data from wpa_sm_init()
  * @buf: Buffer for status information

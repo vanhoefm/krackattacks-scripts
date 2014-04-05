@@ -123,8 +123,6 @@ int wpa_sm_get_mib(struct wpa_sm *sm, char *buf, size_t buflen);
 
 int wpa_sm_set_param(struct wpa_sm *sm, enum wpa_sm_conf_params param,
 		     unsigned int value);
-unsigned int wpa_sm_get_param(struct wpa_sm *sm,
-			      enum wpa_sm_conf_params param);
 
 int wpa_sm_get_status(struct wpa_sm *sm, char *buf, size_t buflen,
 		      int verbose);
@@ -238,12 +236,6 @@ static inline int wpa_sm_set_param(struct wpa_sm *sm,
 				   unsigned int value)
 {
 	return -1;
-}
-
-static inline unsigned int wpa_sm_get_param(struct wpa_sm *sm,
-					    enum wpa_sm_conf_params param)
-{
-	return 0;
 }
 
 static inline int wpa_sm_get_status(struct wpa_sm *sm, char *buf,

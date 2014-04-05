@@ -2049,6 +2049,7 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 #endif /* EAP_SERVER */
 	} else if (os_strcmp(buf, "eap_message") == 0) {
 		char *term;
+		os_free(bss->eap_req_id_text);
 		bss->eap_req_id_text = os_strdup(pos);
 		if (bss->eap_req_id_text == NULL) {
 			wpa_printf(MSG_ERROR, "Line %d: Failed to allocate memory for eap_req_id_text",
@@ -2112,6 +2113,7 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			return 1;
 		}
 	} else if (os_strcmp(buf, "nas_identifier") == 0) {
+		os_free(bss->nas_identifier);
 		bss->nas_identifier = os_strdup(pos);
 #ifndef CONFIG_NO_RADIUS
 	} else if (os_strcmp(buf, "auth_server_addr") == 0) {
@@ -2136,6 +2138,7 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 				   line);
 			return 1;
 		}
+		os_free(bss->radius->auth_server->shared_secret);
 		bss->radius->auth_server->shared_secret = (u8 *) os_strdup(pos);
 		bss->radius->auth_server->shared_secret_len = len;
 	} else if (os_strcmp(buf, "acct_server_addr") == 0) {
@@ -2160,6 +2163,7 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 				   line);
 			return 1;
 		}
+		os_free(bss->radius->acct_server->shared_secret);
 		bss->radius->acct_server->shared_secret = (u8 *) os_strdup(pos);
 		bss->radius->acct_server->shared_secret_len = len;
 	} else if (os_strcmp(buf, "radius_retry_primary_interval") == 0) {
@@ -2315,6 +2319,7 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 	} else if (os_strcmp(buf, "rsn_preauth") == 0) {
 		bss->rsn_preauth = atoi(pos);
 	} else if (os_strcmp(buf, "rsn_preauth_interfaces") == 0) {
+		os_free(bss->rsn_preauth_interfaces);
 		bss->rsn_preauth_interfaces = os_strdup(pos);
 #endif /* CONFIG_RSN_PREAUTH */
 #ifdef CONFIG_PEERKEY
@@ -2564,6 +2569,7 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		}
 #ifdef CONFIG_FULL_DYNAMIC_VLAN
 	} else if (os_strcmp(buf, "vlan_tagged_interface") == 0) {
+		os_free(bss->ssid.vlan_tagged_interface);
 		bss->ssid.vlan_tagged_interface = os_strdup(pos);
 #endif /* CONFIG_FULL_DYNAMIC_VLAN */
 #endif /* CONFIG_NO_VLAN */
@@ -2768,6 +2774,7 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			return 1;
 		}
 	} else if (os_strcmp(buf, "upnp_iface") == 0) {
+		os_free(bss->upnp_iface);
 		bss->upnp_iface = os_strdup(pos);
 	} else if (os_strcmp(buf, "friendly_name") == 0) {
 		os_free(bss->friendly_name);

@@ -186,6 +186,36 @@ def test_pmksa_cache_expiration(dev, apdev):
     if pmksa['pmkid'] == pmksa2['pmkid']:
         raise Exception("PMKID did not change")
 
+def test_pmksa_cache_expiration_disconnect(dev, apdev):
+    """PMKSA cache entry expiration (disconnect)"""
+    params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+    dev[0].request("SET dot11RSNAConfigPMKLifetime 2")
+    dev[0].request("SET dot11RSNAConfigPMKReauthThreshold 100")
+    dev[0].connect("test-pmksa-cache", proto="RSN", key_mgmt="WPA-EAP",
+                   eap="GPSK", identity="gpsk user",
+                   password="abcdefghijklmnop0123456789abcdef",
+                   scan_freq="2412")
+    pmksa = dev[0].get_pmksa(bssid)
+    if pmksa is None:
+        raise Exception("No PMKSA cache entry created")
+    hapd.request("SET auth_server_shared_secret incorrect")
+    logger.info("Wait for PMKSA cache entry to expire")
+    ev = dev[0].wait_event(["WPA: Key negotiation completed",
+                            "CTRL-EVENT-DISCONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("No EAP reauthentication seen")
+    if "CTRL-EVENT-DISCONNECTED" not in ev:
+        raise Exception("Missing disconnection")
+    hapd.request("SET auth_server_shared_secret radius")
+    ev = dev[0].wait_event(["WPA: Key negotiation completed"], timeout=15)
+    if ev is None:
+        raise Exception("No EAP reauthentication seen")
+    pmksa2 = dev[0].get_pmksa(bssid)
+    if pmksa['pmkid'] == pmksa2['pmkid']:
+        raise Exception("PMKID did not change")
+
 def test_pmksa_cache_and_cui(dev, apdev):
     """PMKSA cache and Chargeable-User-Identity"""
     params = hostapd.wpa2_eap_params(ssid="cui")

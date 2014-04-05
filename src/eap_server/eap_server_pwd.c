@@ -150,6 +150,8 @@ static void eap_pwd_reset(struct eap_sm *sm, void *priv)
 		BN_free(data->grp->prime);
 		os_free(data->grp);
 	}
+	wpabuf_free(data->inbuf);
+	wpabuf_free(data->outbuf);
 	os_free(data);
 }
 
@@ -523,6 +525,7 @@ eap_pwd_build_req(struct eap_sm *sm, void *priv, u8 id)
 	 */
 	if (data->out_frag_pos >= wpabuf_len(data->outbuf)) {
 		wpabuf_free(data->outbuf);
+		data->outbuf = NULL;
 		data->out_frag_pos = 0;
 	}
 
@@ -949,6 +952,7 @@ static void eap_pwd_process(struct eap_sm *sm, void *priv,
 	 */
 	if (data->in_frag_pos) {
 		wpabuf_free(data->inbuf);
+		data->inbuf = NULL;
 		data->in_frag_pos = 0;
 	}
 }

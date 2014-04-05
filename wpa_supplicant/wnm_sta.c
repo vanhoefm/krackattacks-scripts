@@ -235,15 +235,19 @@ static void ieee802_11_rx_wnmsleep_resp(struct wpa_supplicant *wpa_s,
 					const u8 *frm, int len)
 {
 	/*
-	 * Action [1] | Diaglog Token [1] | Key Data Len [2] | Key Data |
+	 * Action [1] | Dialog Token [1] | Key Data Len [2] | Key Data |
 	 * WNM-Sleep Mode IE | TFS Response IE
 	 */
 	u8 *pos = (u8 *) frm; /* point to payload after the action field */
-	u16 key_len_total = le_to_host16(*((u16 *)(frm+2)));
+	u16 key_len_total;
 	struct wnm_sleep_element *wnmsleep_ie = NULL;
 	/* multiple TFS Resp IE (assuming consecutive) */
 	u8 *tfsresp_ie_start = NULL;
 	u8 *tfsresp_ie_end = NULL;
+
+	if (len < 3)
+		return;
+	key_len_total = WPA_GET_LE16(frm + 1);
 
 	wpa_printf(MSG_DEBUG, "WNM-Sleep Mode Response token=%u key_len_total=%d",
 		   frm[0], key_len_total);

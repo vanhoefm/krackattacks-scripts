@@ -11,6 +11,12 @@ import os
 import hostapd
 import hwsim_utils
 
+def check_mib(dev, vals):
+    mib = dev.get_mib()
+    for v in vals:
+        if mib[v[0]] != v[1]:
+            raise Exception("Unexpected {} = {} (expected {})".format(v[0], mib[v[0]], v[1]))
+
 def test_ap_wpa2_psk(dev, apdev):
     """WPA2-PSK AP with PSK instead of passphrase"""
     ssid = "test-wpa2-psk"
@@ -70,6 +76,8 @@ def test_ap_wpa2_sha256_ptk_rekey(dev, apdev):
     if ev is None:
         raise Exception("PTK rekey timed out")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    check_mib(dev[0], [ ("dot11RSNAAuthenticationSuiteRequested", "00-0f-ac-6"),
+                        ("dot11RSNAAuthenticationSuiteSelected", "00-0f-ac-6") ])
 
 def test_ap_wpa_ptk_rekey(dev, apdev):
     """WPA-PSK/TKIP AP and PTK rekey enforced by station"""
@@ -92,6 +100,14 @@ def test_ap_wpa_ccmp(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
     dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    check_mib(dev[0], [ ("dot11RSNAConfigGroupCipherSize", "128"),
+                        ("dot11RSNAGroupCipherRequested", "00-50-f2-4"),
+                        ("dot11RSNAPairwiseCipherRequested", "00-50-f2-4"),
+                        ("dot11RSNAAuthenticationSuiteRequested", "00-50-f2-2"),
+                        ("dot11RSNAGroupCipherSelected", "00-50-f2-4"),
+                        ("dot11RSNAPairwiseCipherSelected", "00-50-f2-4"),
+                        ("dot11RSNAAuthenticationSuiteSelected", "00-50-f2-2"),
+                        ("dot1xSuppSuppControlledPortStatus", "Authorized") ])
 
 def test_ap_wpa2_psk_file(dev, apdev):
     """WPA2-PSK AP with various PSK file error and success cases"""

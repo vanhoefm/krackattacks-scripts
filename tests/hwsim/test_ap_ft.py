@@ -12,6 +12,7 @@ logger = logging.getLogger()
 import hwsim_utils
 import hostapd
 from wlantest import Wlantest
+from test_ap_psk import check_mib
 
 def ft_base_rsn():
     params = { "wpa": "2",
@@ -180,6 +181,8 @@ def test_ap_ft_over_ds(dev, apdev):
     hostapd.add_ap(apdev[1]['ifname'], params)
 
     run_roams(dev[0], apdev, ssid, passphrase, over_ds=True)
+    check_mib(dev[0], [ ("dot11RSNAAuthenticationSuiteRequested", "00-0f-ac-4"),
+                        ("dot11RSNAAuthenticationSuiteSelected", "00-0f-ac-4") ])
 
 def test_ap_ft_pmf_over_ds(dev, apdev):
     """WPA2-PSK-FT AP over DS with PMF"""
@@ -261,6 +264,8 @@ def test_ap_ft_eap(dev, apdev):
     hostapd.add_ap(apdev[1]['ifname'], params)
 
     run_roams(dev[0], apdev, ssid, passphrase, eap=True)
+    check_mib(dev[0], [ ("dot11RSNAAuthenticationSuiteRequested", "00-0f-ac-3"),
+                        ("dot11RSNAAuthenticationSuiteSelected", "00-0f-ac-3") ])
 
 def test_ap_ft_eap_pull(dev, apdev):
     """WPA2-EAP-FT AP (pull PMK)"""

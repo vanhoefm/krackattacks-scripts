@@ -14,6 +14,7 @@ import os.path
 
 import hwsim_utils
 import hostapd
+from test_ap_psk import check_mib
 
 def read_pem(fname):
     with open(fname, "r") as f:
@@ -173,6 +174,8 @@ def test_ap_wpa2_eap_ttls_pap(dev, apdev):
                 altsubject_match="EMAIL:noone@example.com;DNS:server.w1.fi;URI:http://example.com/")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
     eap_reauth(dev[0], "TTLS")
+    check_mib(dev[0], [ ("dot11RSNAAuthenticationSuiteRequested", "00-0f-ac-1"),
+                        ("dot11RSNAAuthenticationSuiteSelected", "00-0f-ac-1") ])
 
 def test_ap_wpa2_eap_ttls_chap(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/CHAP"""
@@ -836,6 +839,8 @@ def test_ap_wpa2_eap_psk(dev, apdev):
     eap_connect(dev[0], apdev[0], "PSK", "psk.user@example.com",
                 password_hex="0123456789abcdef0123456789abcdef", sha256=True)
     eap_reauth(dev[0], "PSK", sha256=True)
+    check_mib(dev[0], [ ("dot11RSNAAuthenticationSuiteRequested", "00-0f-ac-5"),
+                        ("dot11RSNAAuthenticationSuiteSelected", "00-0f-ac-5") ])
 
     logger.info("Negative test with incorrect password")
     dev[0].request("REMOVE_NETWORK all")
@@ -854,6 +859,8 @@ def test_ap_wpa_eap_peap_eap_mschapv2(dev, apdev):
     eap_check_auth(dev[0], "PEAP", True, rsn=False)
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
     eap_reauth(dev[0], "PEAP", rsn=False)
+    check_mib(dev[0], [ ("dot11RSNAAuthenticationSuiteRequested", "00-50-f2-1"),
+                        ("dot11RSNAAuthenticationSuiteSelected", "00-50-f2-1") ])
 
 def test_ap_wpa2_eap_interactive(dev, apdev):
     """WPA2-Enterprise connection using interactive identity/password entry"""

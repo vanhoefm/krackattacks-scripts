@@ -83,6 +83,16 @@ def test_ap_wpa_ptk_rekey(dev, apdev):
         raise Exception("PTK rekey timed out")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
 
+def test_ap_wpa_ccmp(dev, apdev):
+    """WPA-PSK/CCMP"""
+    ssid = "test-wpa-psk"
+    passphrase = 'qwertyuiop'
+    params = hostapd.wpa_params(ssid=ssid, passphrase=passphrase)
+    params['wpa_pairwise'] = "CCMP"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
+    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+
 def test_ap_wpa2_psk_file(dev, apdev):
     """WPA2-PSK AP with various PSK file error and success cases"""
     addr0 = dev[0].p2p_dev_addr()

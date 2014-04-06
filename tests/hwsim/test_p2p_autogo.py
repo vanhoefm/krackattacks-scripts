@@ -257,6 +257,8 @@ def test_autogo_tdls(dev):
 def test_autogo_legacy(dev):
     """P2P autonomous GO and legacy clients"""
     res = autogo(dev[0])
+    if dev[0].get_group_status_field("passphrase", extra="WPS") != res['passphrase']:
+        raise Exception("passphrase mismatch")
 
     logger.info("Connect P2P client")
     connect_cli(dev[0], dev[1])

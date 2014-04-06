@@ -249,8 +249,12 @@ class WpaSupplicant:
             raise Exception("Association with the AP timed out")
         self.dump_monitor()
 
-    def get_status(self):
-        res = self.request("STATUS")
+    def get_status(self, extra=None):
+        if extra:
+            extra = "-" + extra
+        else:
+            extra = ""
+        res = self.request("STATUS" + extra)
         lines = res.splitlines()
         vals = dict()
         for l in lines:
@@ -261,14 +265,18 @@ class WpaSupplicant:
                 logger.info(self.ifname + ": Ignore unexpected STATUS line: " + l)
         return vals
 
-    def get_status_field(self, field):
-        vals = self.get_status()
+    def get_status_field(self, field, extra=None):
+        vals = self.get_status(extra)
         if field in vals:
             return vals[field]
         return None
 
-    def get_group_status(self):
-        res = self.group_request("STATUS")
+    def get_group_status(self, extra=None):
+        if extra:
+            extra = "-" + extra
+        else:
+            extra = ""
+        res = self.group_request("STATUS" + extra)
         lines = res.splitlines()
         vals = dict()
         for l in lines:
@@ -276,8 +284,8 @@ class WpaSupplicant:
             vals[name] = value
         return vals
 
-    def get_group_status_field(self, field):
-        vals = self.get_group_status()
+    def get_group_status_field(self, field, extra=None):
+        vals = self.get_group_status(extra)
         if field in vals:
             return vals[field]
         return None

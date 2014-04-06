@@ -185,6 +185,24 @@ def test_autogo_2cli(dev):
     dev[0].remove_group()
     dev[2].wait_go_ending_session()
 
+def test_autogo_pbc(dev):
+    """P2P autonomous GO and PBC"""
+    dev[1].request("SET p2p_no_group_iface 0")
+    autogo(dev[0], freq="2412")
+    if "FAIL" not in dev[0].group_request("WPS_PBC p2p_dev_addr=00:11:22:33:44"):
+        raise Exception("Invalid WPS_PBC succeeded")
+    if "OK" not in dev[0].group_request("WPS_PBC p2p_dev_addr=" + dev[1].p2p_dev_addr()):
+        raise Exception("WPS_PBC failed")
+    dev[2].p2p_connect_group(dev[0].p2p_dev_addr(), "pbc", timeout=0,
+                             social=True)
+    ev = dev[2].wait_event(["WPS-M2D"], timeout=15)
+    if ev is None:
+        raise Exception("WPS-M2D not reported")
+    if "config_error=12" not in ev:
+        raise Exception("Unexpected config_error: " + ev)
+    dev[1].p2p_connect_group(dev[0].p2p_dev_addr(), "pbc", timeout=15,
+                             social=True)
+
 def test_autogo_tdls(dev):
     """P2P autonomous GO and two clients using TDLS"""
     wt = Wlantest()

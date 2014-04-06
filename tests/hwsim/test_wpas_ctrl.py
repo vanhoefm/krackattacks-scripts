@@ -484,3 +484,48 @@ def test_wpas_ctrl_set_uapsd(dev):
         raise Exception("Unexpected SET failure")
     if "OK" not in dev[0].request("SET uapsd disable"):
         raise Exception("Unexpected SET failure")
+
+def test_wpas_ctrl_get_capability(dev):
+    """wpa_supplicant ctrl_iface GET_CAPABILITY"""
+    res = dev[0].get_capability("eap")
+    if "TTLS" not in res:
+        raise Exception("Unexpected GET_CAPABILITY eap response: " + str(res))
+
+    res = dev[0].get_capability("pairwise")
+    if "CCMP" not in res:
+        raise Exception("Unexpected GET_CAPABILITY pairwise response: " + str(res))
+
+    res = dev[0].get_capability("group")
+    if "CCMP" not in res:
+        raise Exception("Unexpected GET_CAPABILITY group response: " + str(res))
+
+    res = dev[0].get_capability("key_mgmt")
+    if "WPA-PSK" not in res or "WPA-EAP" not in res:
+        raise Exception("Unexpected GET_CAPABILITY key_mgmt response: " + str(res))
+
+    res = dev[0].get_capability("proto")
+    if "WPA" not in res or "RSN" not in res:
+        raise Exception("Unexpected GET_CAPABILITY proto response: " + str(res))
+
+    res = dev[0].get_capability("auth_alg")
+    if "OPEN" not in res or "SHARED" not in res:
+        raise Exception("Unexpected GET_CAPABILITY auth_alg response: " + str(res))
+
+    res = dev[0].get_capability("modes")
+    if "IBSS" not in res or "AP" not in res:
+        raise Exception("Unexpected GET_CAPABILITY modes response: " + str(res))
+
+    res = dev[0].get_capability("channels")
+    if "8" not in res or "36" not in res:
+        raise Exception("Unexpected GET_CAPABILITY channels response: " + str(res))
+
+    res = dev[0].get_capability("freq")
+    if "2457" not in res or "5180" not in res:
+        raise Exception("Unexpected GET_CAPABILITY freq response: " + str(res))
+
+    res = dev[0].get_capability("tdls")
+    if "EXTERNAL" not in res[0]:
+        raise Exception("Unexpected GET_CAPABILITY tdls response: " + str(res))
+
+    if dev[0].get_capability("foo") is not None:
+        raise Exception("Unexpected GET_CAPABILITY foo response: " + str(res))

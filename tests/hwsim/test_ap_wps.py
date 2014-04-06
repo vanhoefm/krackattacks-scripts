@@ -30,7 +30,18 @@ def test_ap_wps_init(dev, apdev):
     hapd.request("WPS_PBC")
     if "PBC Status: Active" not in hapd.request("WPS_GET_STATUS"):
         raise Exception("PBC status not shown correctly")
-    dev[0].dump_monitor()
+
+    id = dev[0].add_network()
+    dev[0].set_network_quoted(id, "ssid", "home")
+    dev[0].set_network_quoted(id, "psk", "12345678")
+    dev[0].request("ENABLE_NETWORK %s no-connect" % id)
+
+    id = dev[0].add_network()
+    dev[0].set_network_quoted(id, "ssid", "home2")
+    dev[0].set_network(id, "bssid", "00:11:22:33:44:55")
+    dev[0].set_network(id, "key_mgmt", "NONE")
+    dev[0].request("ENABLE_NETWORK %s no-connect" % id)
+
     dev[0].request("WPS_PBC")
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
     if ev is None:
@@ -61,6 +72,9 @@ def test_ap_wps_init(dev, apdev):
         raise Exception("Unexpected wpa_pairwise_cipher")
     if "group_cipher=TKIP" not in conf:
         raise Exception("Unexpected group_cipher")
+
+    if len(dev[0].list_networks()) != 3:
+        raise Exception("Unexpected number of network blocks")
 
 def test_ap_wps_init_2ap_pbc(dev, apdev):
     """Initial two-radio AP configuration with first WPS PBC Enrollee"""

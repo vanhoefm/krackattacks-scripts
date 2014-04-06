@@ -4,6 +4,8 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+import hostapd
+
 def test_wpas_ctrl_network(dev):
     """wpa_supplicant ctrl_iface network set/get"""
     id = dev[0].add_network()
@@ -385,3 +387,29 @@ def test_wpas_ctrl_level(dev):
         dev[2].wait_event(["CTRL-EVENT-SCAN-RESULTS"], timeout=5)
     finally:
         dev[2].mon.request("LEVEL 3")
+
+def test_wpas_ctrl_bssid_filter(dev, apdev):
+    """wpa_supplicant bssid_filter"""
+    try:
+        if "OK" not in dev[2].request("SET bssid_filter " + apdev[0]['bssid']):
+            raise Exception("Failed to set bssid_filter")
+        params = { "ssid": "test" }
+        hostapd.add_ap(apdev[0]['ifname'], params)
+        hostapd.add_ap(apdev[1]['ifname'], params)
+        dev[2].scan(freq="2412")
+        bss = dev[2].get_bss(apdev[0]['bssid'])
+        if len(bss) == 0:
+            raise Exception("Missing BSS data")
+        bss = dev[2].get_bss(apdev[1]['bssid'])
+        if len(bss) != 0:
+            raise Exception("Unexpected BSS data")
+        dev[2].request("SET bssid_filter ")
+        dev[2].scan(freq="2412")
+        bss = dev[2].get_bss(apdev[0]['bssid'])
+        if len(bss) == 0:
+            raise Exception("Missing BSS data")
+        bss = dev[2].get_bss(apdev[1]['bssid'])
+        if len(bss) == 0:
+            raise Exception("Missing BSS data(2)")
+    finally:
+        dev[2].request("SET bssid_filter ")

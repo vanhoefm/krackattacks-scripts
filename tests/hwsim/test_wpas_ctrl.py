@@ -360,3 +360,13 @@ def test_wpas_ctrl_mib(dev):
         raise Exception("Missing MIB entry")
     if mib["dot11RSNAOptionImplemented"] != "TRUE":
         raise Exception("Unexpected dot11RSNAOptionImplemented value")
+
+def test_wpas_ctrl_set_wps_params(dev):
+    """wpa_supplicant ctrl_iface SET config_methods"""
+    ts = [ "config_methods label virtual_display virtual_push_button keypad",
+           "device_type 1-0050F204-1",
+           "os_version 01020300",
+           "uuid 12345678-9abc-def0-1234-56789abcdef0" ]
+    for t in ts:
+        if "OK" not in dev[2].request("SET " + t):
+            raise Exception("SET failed for: " + t)

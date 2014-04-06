@@ -1343,6 +1343,22 @@ def test_ap_wps_auto_setup_with_config_file(dev, apdev):
     finally:
         subprocess.call(['sudo', 'rm', conffile])
 
+def test_ap_wps_pbc_timeout(dev, apdev, params):
+    """wpa_supplicant PBC walk time [long]"""
+    if not params['long']:
+        logger.info("Skip test case with long duration due to --long not specified")
+        return "skip"
+    ssid = "test-wps"
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "1" })
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    logger.info("Start WPS_PBC and wait for PBC walk time expiration")
+    if "OK" not in dev[0].request("WPS_PBC"):
+        raise Exception("WPS_PBC failed")
+    ev = dev[0].wait_event(["WPS-TIMEOUT"], timeout=150)
+    if ev is None:
+        raise Exception("WPS-TIMEOUT not reported")
+
 def add_ssdp_ap(ifname, ap_uuid):
     ssid = "wps-ssdp"
     ap_pin = "12345670"

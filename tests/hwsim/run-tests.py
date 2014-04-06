@@ -187,6 +187,8 @@ def main():
     parser.add_argument('--split', help='split tests for parallel execution (<server number>/<total servers>)')
     parser.add_argument('--no-reset', action='store_true', dest='no_reset',
                         help='Do not reset devices at the end of the test')
+    parser.add_argument('--long', action='store_true',
+                        help='Include test cases that take long time')
     parser.add_argument('-f', dest='testmodules', metavar='<test module>',
                         help='execute only tests from these test modules',
                         type=str, choices=[[]] + test_modules, nargs='+')
@@ -353,6 +355,7 @@ def main():
                 if t.func_code.co_argcount > 2:
                     params = {}
                     params['logdir'] = args.logdir
+                    params['long'] = args.long
                     res = t(dev, apdev, params)
                 elif t.func_code.co_argcount > 1:
                     res = t(dev, apdev)

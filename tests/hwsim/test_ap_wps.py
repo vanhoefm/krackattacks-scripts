@@ -1138,6 +1138,7 @@ def test_ap_wps_check_pin(dev, apdev):
     hapd = hostapd.Hostapd(apdev[0]['ifname'])
     for t in [ ("12345670", "12345670"),
                ("12345678", "FAIL-CHECKSUM"),
+               ("12345", "FAIL"),
                ("1234-5670", "12345670"),
                ("1234 5670", "12345670"),
                ("1-2.3:4 5670", "12345670") ]:

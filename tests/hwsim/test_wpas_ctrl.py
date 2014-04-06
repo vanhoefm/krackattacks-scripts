@@ -469,3 +469,18 @@ def test_wpas_ctrl_blob(dev):
         raise Exception("Unexpected SET failure")
     if "OK" not in dev[0].request("SET blob foo 0011"):
         raise Exception("Unexpected SET failure")
+
+def test_wpas_ctrl_set_uapsd(dev):
+    """wpa_supplicant ctrl_iface SET uapsd"""
+    if "FAIL" not in dev[0].request("SET uapsd foo"):
+        raise Exception("Unexpected SET success")
+    if "FAIL" not in dev[0].request("SET uapsd 0,0,0"):
+        raise Exception("Unexpected SET success")
+    if "FAIL" not in dev[0].request("SET uapsd 0,0"):
+        raise Exception("Unexpected SET success")
+    if "FAIL" not in dev[0].request("SET uapsd 0"):
+        raise Exception("Unexpected SET success")
+    if "OK" not in dev[0].request("SET uapsd 0,0,0,0;0"):
+        raise Exception("Unexpected SET failure")
+    if "OK" not in dev[0].request("SET uapsd disable"):
+        raise Exception("Unexpected SET failure")

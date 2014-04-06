@@ -997,14 +997,15 @@ def test_ap_wps_er_config_ap(dev, apdev):
 def test_ap_wps_fragmentation(dev, apdev):
     """WPS with fragmentation in EAP-WSC and mixed mode WPA+WPA2"""
     ssid = "test-wps-fragmentation"
+    appin = "12345670"
     hostapd.add_ap(apdev[0]['ifname'],
                    { "ssid": ssid, "eap_server": "1", "wps_state": "2",
                      "wpa_passphrase": "12345678", "wpa": "3",
                      "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
-                     "wpa_pairwise": "TKIP",
+                     "wpa_pairwise": "TKIP", "ap_pin": appin,
                      "fragment_size": "50" })
     hapd = hostapd.Hostapd(apdev[0]['ifname'])
-    logger.info("WPS provisioning step")
+    logger.info("WPS provisioning step (PBC)")
     hapd.request("WPS_PBC")
     dev[0].dump_monitor()
     dev[0].request("SET wps_fragment_size 50")
@@ -1013,6 +1014,33 @@ def test_ap_wps_fragmentation(dev, apdev):
     if ev is None:
         raise Exception("Association with the AP timed out")
     status = dev[0].get_status()
+    if status['wpa_state'] != 'COMPLETED':
+        raise Exception("Not fully connected")
+    if status['pairwise_cipher'] != 'CCMP' or status['group_cipher'] != 'TKIP':
+        raise Exception("Unexpected encryption configuration")
+    if status['key_mgmt'] != 'WPA2-PSK':
+        raise Exception("Unexpected key_mgmt")
+
+    logger.info("WPS provisioning step (PIN)")
+    pin = dev[1].wps_read_pin()
+    hapd.request("WPS_PIN any " + pin)
+    dev[1].request("SET wps_fragment_size 50")
+    dev[1].request("WPS_PIN any " + pin)
+    ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
+    if ev is None:
+        raise Exception("Association with the AP timed out")
+    status = dev[1].get_status()
+    if status['wpa_state'] != 'COMPLETED':
+        raise Exception("Not fully connected")
+    if status['pairwise_cipher'] != 'CCMP' or status['group_cipher'] != 'TKIP':
+        raise Exception("Unexpected encryption configuration")
+    if status['key_mgmt'] != 'WPA2-PSK':
+        raise Exception("Unexpected key_mgmt")
+
+    logger.info("WPS connection as registrar")
+    dev[2].request("SET wps_fragment_size 50")
+    dev[2].wps_reg(apdev[0]['bssid'], appin)
+    status = dev[2].get_status()
     if status['wpa_state'] != 'COMPLETED':
         raise Exception("Not fully connected")
     if status['pairwise_cipher'] != 'CCMP' or status['group_cipher'] != 'TKIP':

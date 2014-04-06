@@ -227,6 +227,66 @@ def test_nfc_wps_handover(dev, apdev):
         raise Exception("Association with the AP timed out")
     check_wpa2_connection(dev[0], apdev[0], ssid)
 
+def test_nfc_wps_handover_5ghz(dev, apdev):
+    """Connect to WPS AP with NFC connection handover on 5 GHz band"""
+    try:
+        ssid = "test-wps-nfc-handover"
+        params = ap_wps_params(ssid)
+        params["country_code"] = "FI"
+        params["hw_mode"] = "a"
+        params["channel"] = "36"
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        logger.info("NFC connection handover")
+        req = dev[0].request("NFC_GET_HANDOVER_REQ NDEF WPS-CR").rstrip()
+        if "FAIL" in req:
+            raise Exception("Failed to generate NFC connection handover request")
+        sel = hapd.request("NFC_GET_HANDOVER_SEL NDEF WPS-CR").rstrip()
+        if "FAIL" in sel:
+            raise Exception("Failed to generate NFC connection handover select")
+        res = hapd.request("NFC_REPORT_HANDOVER RESP WPS " + req + " " + sel)
+        if "FAIL" in res:
+            raise Exception("Failed to report NFC connection handover to to hostapd")
+        dev[0].dump_monitor()
+        res = dev[0].request("NFC_REPORT_HANDOVER INIT WPS " + req + " " + sel)
+        if "FAIL" in res:
+            raise Exception("Failed to report NFC connection handover to to wpa_supplicant")
+        ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
+        if ev is None:
+            raise Exception("Association with the AP timed out")
+        check_wpa2_connection(dev[0], apdev[0], ssid)
+    finally:
+        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+
+def test_nfc_wps_handover_chan14(dev, apdev):
+    """Connect to WPS AP with NFC connection handover on channel 14"""
+    try:
+        ssid = "test-wps-nfc-handover"
+        params = ap_wps_params(ssid)
+        params["country_code"] = "JP"
+        params["hw_mode"] = "b"
+        params["channel"] = "14"
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        logger.info("NFC connection handover")
+        req = dev[0].request("NFC_GET_HANDOVER_REQ NDEF WPS-CR").rstrip()
+        if "FAIL" in req:
+            raise Exception("Failed to generate NFC connection handover request")
+        sel = hapd.request("NFC_GET_HANDOVER_SEL NDEF WPS-CR").rstrip()
+        if "FAIL" in sel:
+            raise Exception("Failed to generate NFC connection handover select")
+        res = hapd.request("NFC_REPORT_HANDOVER RESP WPS " + req + " " + sel)
+        if "FAIL" in res:
+            raise Exception("Failed to report NFC connection handover to to hostapd")
+        dev[0].dump_monitor()
+        res = dev[0].request("NFC_REPORT_HANDOVER INIT WPS " + req + " " + sel)
+        if "FAIL" in res:
+            raise Exception("Failed to report NFC connection handover to to wpa_supplicant")
+        ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
+        if ev is None:
+            raise Exception("Association with the AP timed out")
+        check_wpa2_connection(dev[0], apdev[0], ssid)
+    finally:
+        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+
 def test_nfc_wps_handover_with_pw_token_set(dev, apdev):
     """Connect to WPS AP with NFC connection handover (wps_nfc_* set)"""
     ssid = "test-wps-nfc-handover2"

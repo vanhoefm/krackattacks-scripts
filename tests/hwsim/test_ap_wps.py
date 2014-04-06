@@ -194,6 +194,50 @@ def test_ap_wps_conf(dev, apdev):
     if 'wpsDeviceName' not in sta or sta['wpsDeviceName'] != "Device A":
         raise Exception("Device name not available in STA command")
 
+def test_ap_wps_conf_5ghz(dev, apdev):
+    """WPS PBC provisioning with configured AP on 5 GHz band"""
+    try:
+        ssid = "test-wps-conf"
+        params = { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                   "wpa_passphrase": "12345678", "wpa": "2",
+                   "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+                   "country_code": "FI", "hw_mode": "a", "channel": "36" }
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        logger.info("WPS provisioning step")
+        hapd.request("WPS_PBC")
+        dev[0].request("WPS_PBC")
+        ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
+        if ev is None:
+            raise Exception("Association with the AP timed out")
+
+        sta = hapd.get_sta(dev[0].p2p_interface_addr())
+        if 'wpsDeviceName' not in sta or sta['wpsDeviceName'] != "Device A":
+            raise Exception("Device name not available in STA command")
+    finally:
+        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+
+def test_ap_wps_conf_chan14(dev, apdev):
+    """WPS PBC provisioning with configured AP on channel 14"""
+    try:
+        ssid = "test-wps-conf"
+        params = { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                   "wpa_passphrase": "12345678", "wpa": "2",
+                   "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+                   "country_code": "JP", "hw_mode": "b", "channel": "14" }
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        logger.info("WPS provisioning step")
+        hapd.request("WPS_PBC")
+        dev[0].request("WPS_PBC")
+        ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
+        if ev is None:
+            raise Exception("Association with the AP timed out")
+
+        sta = hapd.get_sta(dev[0].p2p_interface_addr())
+        if 'wpsDeviceName' not in sta or sta['wpsDeviceName'] != "Device A":
+            raise Exception("Device name not available in STA command")
+    finally:
+        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+
 def test_ap_wps_twice(dev, apdev):
     """WPS provisioning with twice to change passphrase"""
     ssid = "test-wps-twice"

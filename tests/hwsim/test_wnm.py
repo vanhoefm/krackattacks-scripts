@@ -1,9 +1,11 @@
 # WNM tests
-# Copyright (c) 2013, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+import binascii
+import struct
 import time
 import logging
 logger = logging.getLogger()
@@ -151,3 +153,143 @@ def test_wnm_sleep_mode_rsn_pmf(dev, apdev):
     dev[0].connect("test-wnm-rsn", psk="12345678", ieee80211w="2",
                    key_mgmt="WPA-PSK-SHA256", proto="WPA2", scan_freq="2412")
     check_wnm_sleep_mode_enter_exit(hapd, dev[0])
+
+MGMT_SUBTYPE_ACTION = 13
+ACTION_CATEG_WNM = 10
+WNM_ACT_BSS_TM_REQ = 7
+WNM_ACT_BSS_TM_RESP = 8
+
+def bss_tm_req(dst, src, dialog_token=1, req_mode=0, disassoc_timer=0,
+               validity_interval=1):
+    msg = {}
+    msg['fc'] = MGMT_SUBTYPE_ACTION << 4
+    msg['da'] = dst
+    msg['sa'] = src
+    msg['bssid'] = src
+    msg['payload'] = struct.pack("<BBBBHB",
+                                 ACTION_CATEG_WNM, WNM_ACT_BSS_TM_REQ,
+                                 dialog_token, req_mode, disassoc_timer,
+                                 validity_interval)
+    return msg
+
+def rx_bss_tm_resp(hapd, expect_dialog=None, expect_status=None):
+    for i in range(0, 100):
+        resp = hapd.mgmt_rx()
+        if resp is None:
+            raise Exception("No BSS TM Response received")
+        if resp['subtype'] == MGMT_SUBTYPE_ACTION:
+            break
+    if i == 99:
+        raise Exception("Not an Action frame")
+    payload = resp['payload']
+    if len(payload) < 2 + 3:
+        raise Exception("Too short payload")
+    (category, action) = struct.unpack('BB', payload[0:2])
+    if category != ACTION_CATEG_WNM or action != WNM_ACT_BSS_TM_RESP:
+        raise Exception("Not a BSS TM Response")
+    pos = payload[2:]
+    (dialog, status, bss_term_delay) = struct.unpack('BBB', pos[0:3])
+    resp['dialog'] = dialog
+    resp['status'] = status
+    resp['bss_term_delay'] = bss_term_delay
+    pos = pos[3:]
+    if len(pos) >= 6 and status == 0:
+        resp['target_bssid'] = binascii.hexlify(pos[0:6])
+        pos = pos[6:]
+    resp['candidates'] = pos
+    if expect_dialog is not None and dialog != expect_dialog:
+        raise Exception("Unexpected dialog token")
+    if expect_status is not None and status != expect_status:
+        raise Exception("Unexpected status code %d" % status)
+    return resp
+
+def except_ack(hapd):
+    ev = hapd.wait_event(["MGMT-TX-STATUS"], timeout=5)
+    if ev is None:
+        raise Exception("Missing TX status")
+    if "ok=1" not in ev:
+        raise Exception("Action frame not acknowledged")
+
+def test_wnm_bss_tm_req(dev, apdev):
+    """BSS Transition Management Request"""
+    params = { "ssid": "test-wnm", "bss_transition": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+
+    hapd.set("ext_mgmt_frame_handling", "1")
+
+    # truncated BSS TM Request
+    req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
+                     req_mode=0x08)
+    req['payload'] = struct.pack("<BBBBH",
+                                 ACTION_CATEG_WNM, WNM_ACT_BSS_TM_REQ,
+                                 1, 0, 0)
+    hapd.mgmt_tx(req)
+    except_ack(hapd)
+
+    # no disassociation and no candidate list
+    req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
+                     dialog_token=2)
+    hapd.mgmt_tx(req)
+    resp = rx_bss_tm_resp(hapd, expect_dialog=2, expect_status=1)
+
+    # truncated BSS Termination Duration
+    req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
+                     req_mode=0x08)
+    hapd.mgmt_tx(req)
+    except_ack(hapd)
+
+    # BSS Termination Duration with TSF=0 and Duration=10
+    req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
+                     req_mode=0x08, dialog_token=3)
+    req['payload'] += struct.pack("<BBQH", 4, 10, 0, 10)
+    hapd.mgmt_tx(req)
+    resp = rx_bss_tm_resp(hapd, expect_dialog=3, expect_status=1)
+
+    # truncated Session Information URL
+    req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
+                     req_mode=0x10)
+    hapd.mgmt_tx(req)
+    except_ack(hapd)
+    req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
+                     req_mode=0x10)
+    req['payload'] += struct.pack("<BBB", 3, 65, 66)
+    hapd.mgmt_tx(req)
+    except_ack(hapd)
+
+    # Session Information URL
+    req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
+                     req_mode=0x10, dialog_token=4)
+    req['payload'] += struct.pack("<BBB", 2, 65, 66)
+    hapd.mgmt_tx(req)
+    resp = rx_bss_tm_resp(hapd, expect_dialog=4, expect_status=0)
+
+    # Preferred Candidate List without any entries
+    req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
+                     req_mode=0x01, dialog_token=5)
+    hapd.mgmt_tx(req)
+    resp = rx_bss_tm_resp(hapd, expect_dialog=5, expect_status=1)
+
+    # Preferred Candidate List with a truncated entry
+    req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
+                     req_mode=0x01)
+    req['payload'] += struct.pack("<BB", 52, 1)
+    hapd.mgmt_tx(req)
+    except_ack(hapd)
+
+    # Preferred Candidate List with a too short entry
+    req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
+                     req_mode=0x01, dialog_token=6)
+    req['payload'] += struct.pack("<BB", 52, 0)
+    hapd.mgmt_tx(req)
+    resp = rx_bss_tm_resp(hapd, expect_dialog=6, expect_status=1)
+
+    # Preferred Candidate List with a non-matching entry
+    req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
+                     req_mode=0x01, dialog_token=6)
+    req['payload'] += struct.pack("<BB6BLBBB", 52, 13,
+                                  1, 2, 3, 4, 5, 6,
+                                  0, 81, 1, 7)
+    hapd.mgmt_tx(req)
+    resp = rx_bss_tm_resp(hapd, expect_dialog=6, expect_status=1)

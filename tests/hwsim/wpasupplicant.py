@@ -332,8 +332,9 @@ class WpaSupplicant:
         return self.global_request("P2P_STOP_FIND")
 
     def wps_read_pin(self):
-        #TODO: make this random
-        self.pin = "12345670"
+        self.pin = self.request("WPS_PIN get").rstrip("\n")
+        if "FAIL" in self.pin:
+            raise Exception("Could not generate PIN")
         return self.pin
 
     def peer_known(self, peer, full=True):

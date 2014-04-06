@@ -413,3 +413,42 @@ def test_wpas_ctrl_bssid_filter(dev, apdev):
             raise Exception("Missing BSS data(2)")
     finally:
         dev[2].request("SET bssid_filter ")
+
+def test_wpas_ctrl_disallow_aps(dev, apdev):
+    """wpa_supplicant ctrl_iface disallow_aps"""
+    params = { "ssid": "test" }
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    if "FAIL" not in dev[0].request("SET disallow_aps bssid "):
+        raise Exception("Unexpected success on invalid disallow_aps")
+    if "FAIL" not in dev[0].request("SET disallow_aps bssid 00:11:22:33:44"):
+        raise Exception("Unexpected success on invalid disallow_aps")
+    if "FAIL" not in dev[0].request("SET disallow_aps ssid 0"):
+        raise Exception("Unexpected success on invalid disallow_aps")
+    if "FAIL" not in dev[0].request("SET disallow_aps ssid 4q"):
+        raise Exception("Unexpected success on invalid disallow_aps")
+    if "FAIL" not in dev[0].request("SET disallow_aps ssid 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f00"):
+        raise Exception("Unexpected success on invalid disallow_aps")
+    if "FAIL" not in dev[0].request("SET disallow_aps foo 112233445566"):
+        raise Exception("Unexpected success on invalid disallow_aps")
+
+    dev[0].connect("test", key_mgmt="NONE", scan_freq="2412")
+    hostapd.add_ap(apdev[1]['ifname'], params)
+    dev[0].dump_monitor()
+    if "OK" not in dev[0].request("SET disallow_aps bssid " + apdev[0]['bssid']):
+        raise Exception("Failed to set disallow_aps")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Reassociation timed out")
+    if apdev[1]['bssid'] not in ev:
+        raise Exception("Unexpected BSSID")
+
+    dev[0].dump_monitor()
+    if "OK" not in dev[0].request("SET disallow_aps ssid " + "test".encode("hex")):
+        raise Exception("Failed to set disallow_aps")
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=5)
+    if ev is None:
+        raise Exception("Disconnection not seen")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
+    if ev is not None:
+        raise Exception("Unexpected reassociation")

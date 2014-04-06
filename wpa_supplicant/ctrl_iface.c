@@ -1094,33 +1094,6 @@ static int wpas_ctrl_nfc_get_handover_sel(struct wpa_supplicant *wpa_s,
 }
 
 
-static int wpas_ctrl_nfc_rx_handover_sel(struct wpa_supplicant *wpa_s,
-					 char *cmd)
-{
-	size_t len;
-	struct wpabuf *buf;
-	int ret;
-
-	len = os_strlen(cmd);
-	if (len & 0x01)
-		return -1;
-	len /= 2;
-
-	buf = wpabuf_alloc(len);
-	if (buf == NULL)
-		return -1;
-	if (hexstr2bin(cmd, wpabuf_put(buf, len), len) < 0) {
-		wpabuf_free(buf);
-		return -1;
-	}
-
-	ret = wpas_wps_nfc_rx_handover_sel(wpa_s, buf);
-	wpabuf_free(buf);
-
-	return ret;
-}
-
-
 static int wpas_ctrl_nfc_report_handover(struct wpa_supplicant *wpa_s,
 					 char *cmd)
 {
@@ -6071,8 +6044,7 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 					   os_strlen(WPA_CTRL_RSP)) == 0 ?
 				WPA_CTRL_RSP : "SET_NETWORK");
 	} else if (os_strncmp(buf, "WPS_NFC_TAG_READ", 16) == 0 ||
-		   os_strncmp(buf, "NFC_REPORT_HANDOVER", 19) == 0 ||
-		   os_strncmp(buf, "NFC_RX_HANDOVER_SEL", 19) == 0) {
+		   os_strncmp(buf, "NFC_REPORT_HANDOVER", 19) == 0) {
 		wpa_hexdump_ascii_key(MSG_DEBUG, "RX ctrl_iface",
 				      (const u8 *) buf, os_strlen(buf));
 	} else {
@@ -6210,9 +6182,6 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strncmp(buf, "NFC_GET_HANDOVER_SEL ", 21) == 0) {
 		reply_len = wpas_ctrl_nfc_get_handover_sel(
 			wpa_s, buf + 21, reply, reply_size);
-	} else if (os_strncmp(buf, "NFC_RX_HANDOVER_SEL ", 20) == 0) {
-		if (wpas_ctrl_nfc_rx_handover_sel(wpa_s, buf + 20))
-			reply_len = -1;
 	} else if (os_strncmp(buf, "NFC_REPORT_HANDOVER ", 20) == 0) {
 		if (wpas_ctrl_nfc_report_handover(wpa_s, buf + 20))
 			reply_len = -1;

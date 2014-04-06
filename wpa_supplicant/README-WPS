@@ -381,17 +381,6 @@ UUID|BSSID argument is included, this is a request to build the handover
 message for the specified AP when wpa_supplicant is operating as a WPS
 ER.
 
-"nfc_rx_handover_req <hexdump of payload>" is used to indicate receipt
-of NFC connection handover request. The payload may include multiple
-carriers the the applicable ones are matched based on the media
-type. The reply data is contents for the Handover Select Message
-(hexdump).
-
-"nfc_rx_handover_sel <hexdump of payload>" is used to indicate receipt
-of NFC connection handover select. The payload may include multiple
-carriers the the applicable ones are matched based on the media
-type.
-
 "nfc_report_handover <INIT/RESP> WPS <carrier from handover request>
 <carrier from handover select>" can be used as an alternative way for
 reporting completed NFC connection handover. The first parameter

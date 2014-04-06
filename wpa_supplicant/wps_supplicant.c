@@ -2362,8 +2362,8 @@ struct wpabuf * wpas_wps_nfc_handover_sel(struct wpa_supplicant *wpa_s,
 }
 
 
-int wpas_wps_nfc_rx_handover_sel(struct wpa_supplicant *wpa_s,
-				 const struct wpabuf *data)
+static int wpas_wps_nfc_rx_handover_sel(struct wpa_supplicant *wpa_s,
+					const struct wpabuf *data)
 {
 	struct wpabuf *wps;
 	int ret = -1;

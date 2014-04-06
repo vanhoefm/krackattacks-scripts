@@ -3444,10 +3444,12 @@ static int wiphy_info_iface_comb_process(struct wiphy_info_data *info,
 	}
 
 	if (combination_has_p2p && combination_has_mgd) {
-		info->p2p_concurrent = 1;
-		info->num_multichan_concurrent =
+		unsigned int num_channels =
 			nla_get_u32(tb_comb[NL80211_IFACE_COMB_NUM_CHANNELS]);
-		return 1;
+
+		info->p2p_concurrent = 1;
+		if (info->num_multichan_concurrent < num_channels)
+			info->num_multichan_concurrent = num_channels;
 	}
 
 	return 0;

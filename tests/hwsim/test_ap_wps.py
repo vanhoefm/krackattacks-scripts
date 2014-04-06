@@ -93,7 +93,14 @@ def test_ap_wps_init_2ap_pbc(dev, apdev):
     if "[WPS-PBC]" not in bss['flags']:
         raise Exception("WPS-PBC flag missing from AP2")
     dev[0].dump_monitor()
+    dev[0].request("SET wps_cred_processing 2")
     dev[0].request("WPS_PBC")
+    ev = dev[0].wait_event(["WPS-CRED-RECEIVED"], timeout=30)
+    dev[0].request("SET wps_cred_processing 0")
+    if ev is None:
+        raise Exception("WPS cred event not seen")
+    if "100e" not in ev:
+        raise Exception("WPS attributes not included in the cred event")
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
     if ev is None:
         raise Exception("Association with the AP timed out")

@@ -310,6 +310,10 @@ def test_wpas_ctrl_pno(dev):
     #mac80211_hwsim does not yet support PNO, so this fails
     if "FAIL" not in dev[0].request("SET pno 1"):
         raise Exception("Unexpected success in enabling PNO")
+    if "FAIL" not in dev[0].request("SET pno 1 freq=2000-3000,5180"):
+        raise Exception("Unexpected success in enabling PNO")
+    if "FAIL" not in dev[0].request("SET pno 1 freq=0-6000"):
+        raise Exception("Unexpected success in enabling PNO")
     if "FAIL" in dev[0].request("SET pno 0"):
         raise Exception("Unexpected failure in disabling PNO")
 

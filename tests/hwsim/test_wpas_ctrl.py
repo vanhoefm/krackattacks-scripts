@@ -370,3 +370,18 @@ def test_wpas_ctrl_set_wps_params(dev):
     for t in ts:
         if "OK" not in dev[2].request("SET " + t):
             raise Exception("SET failed for: " + t)
+
+def test_wpas_ctrl_level(dev):
+    """wpa_supplicant ctrl_iface LEVEL"""
+    try:
+        if "FAIL" not in dev[2].request("LEVEL 3"):
+            raise Exception("Unexpected LEVEL success")
+        if "OK" not in dev[2].mon.request("LEVEL 2"):
+            raise Exception("Unexpected LEVEL failure")
+        dev[2].request("SCAN freq=2412")
+        ev = dev[2].wait_event(["State:"], timeout=5)
+        if ev is None:
+            raise Exception("No debug message received")
+        dev[2].wait_event(["CTRL-EVENT-SCAN-RESULTS"], timeout=5)
+    finally:
+        dev[2].mon.request("LEVEL 3")

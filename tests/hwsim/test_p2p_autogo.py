@@ -12,6 +12,7 @@ logger = logging.getLogger()
 import hwsim_utils
 import utils
 from wlantest import Wlantest
+from wpasupplicant import WpaSupplicant
 
 def autogo(go, freq=None):
     logger.info("Start autonomous GO " + go.ifname)
@@ -109,6 +110,69 @@ def test_autogo4(dev):
         raise Exception("GO group interface netdev was not removed")
     if res2['ifname'] in ifnames:
         raise Exception("Client group interface netdev was not removed")
+
+def test_autogo_m2d(dev):
+    """P2P autonomous GO and clients not authorized"""
+    autogo(dev[0], freq="2412")
+    go_addr = dev[0].p2p_dev_addr()
+
+    dev[1].request("SET p2p_no_group_iface 0")
+    if not dev[1].discover_peer(go_addr, social=True):
+        raise Exception("GO " + go_addr + " not found")
+    dev[1].dump_monitor()
+
+    if not dev[2].discover_peer(go_addr, social=True):
+        raise Exception("GO " + go_addr + " not found")
+    dev[2].dump_monitor()
+
+    logger.info("Trying to join the group when GO has not authorized the client")
+    pin = dev[1].wps_read_pin()
+    cmd = "P2P_CONNECT " + go_addr + " " + pin + " join"
+    if "OK" not in dev[1].global_request(cmd):
+        raise Exception("P2P_CONNECT join failed")
+
+    pin = dev[2].wps_read_pin()
+    cmd = "P2P_CONNECT " + go_addr + " " + pin + " join"
+    if "OK" not in dev[2].global_request(cmd):
+        raise Exception("P2P_CONNECT join failed")
+
+    ev = dev[1].wait_global_event(["WPS-M2D"], timeout=10)
+    if ev is None:
+        raise Exception("No global M2D event")
+    ifaces = dev[1].request("INTERFACES").splitlines()
+    iface = ifaces[0] if "p2p-wlan" in ifaces[0] else ifaces[1]
+    wpas = WpaSupplicant(ifname=iface)
+    ev = wpas.wait_event(["WPS-M2D"], timeout=10)
+    if ev is None:
+        raise Exception("No M2D event on group interface")
+
+    ev = dev[2].wait_global_event(["WPS-M2D"], timeout=10)
+    if ev is None:
+        raise Exception("No global M2D event (2)")
+    ev = dev[2].wait_event(["WPS-M2D"], timeout=10)
+    if ev is None:
+        raise Exception("No M2D event on group interface (2)")
+
+def test_autogo_fail(dev):
+    """P2P autonomous GO and incorrect PIN"""
+    autogo(dev[0], freq="2412")
+    go_addr = dev[0].p2p_dev_addr()
+    dev[0].p2p_go_authorize_client("00000000")
+
+    dev[1].request("SET p2p_no_group_iface 0")
+    if not dev[1].discover_peer(go_addr, social=True):
+        raise Exception("GO " + go_addr + " not found")
+    dev[1].dump_monitor()
+
+    logger.info("Trying to join the group when GO has not authorized the client")
+    pin = dev[1].wps_read_pin()
+    cmd = "P2P_CONNECT " + go_addr + " " + pin + " join"
+    if "OK" not in dev[1].global_request(cmd):
+        raise Exception("P2P_CONNECT join failed")
+
+    ev = dev[1].wait_global_event(["WPS-FAIL"], timeout=10)
+    if ev is None:
+        raise Exception("No global WPS-FAIL event")
 
 def test_autogo_2cli(dev):
     """P2P autonomous GO and two clients joining group"""

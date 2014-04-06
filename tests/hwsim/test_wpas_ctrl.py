@@ -452,3 +452,16 @@ def test_wpas_ctrl_disallow_aps(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
     if ev is not None:
         raise Exception("Unexpected reassociation")
+
+def test_wpas_ctrl_blob(dev):
+    """wpa_supplicant ctrl_iface SET blob"""
+    if "FAIL" not in dev[0].request("SET blob foo"):
+        raise Exception("Unexpected SET success")
+    if "FAIL" not in dev[0].request("SET blob foo 0"):
+        raise Exception("Unexpected SET success")
+    if "FAIL" not in dev[0].request("SET blob foo 0q"):
+        raise Exception("Unexpected SET success")
+    if "OK" not in dev[0].request("SET blob foo 00"):
+        raise Exception("Unexpected SET failure")
+    if "OK" not in dev[0].request("SET blob foo 0011"):
+        raise Exception("Unexpected SET failure")

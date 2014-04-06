@@ -106,8 +106,10 @@ static int eap_wsc_new_ap_settings(struct wps_credential *cred,
 	}
 	if (os_strncmp(pos + 9, "NONE", 4) == 0)
 		cred->encr_type = WPS_ENCR_NONE;
+#ifdef CONFIG_TESTING_OPTIONS
 	else if (os_strncmp(pos + 9, "WEP", 3) == 0)
 		cred->encr_type = WPS_ENCR_WEP;
+#endif /* CONFIG_TESTING_OPTIONS */
 	else if (os_strncmp(pos + 9, "TKIP", 4) == 0)
 		cred->encr_type = WPS_ENCR_TKIP;
 	else if (os_strncmp(pos + 9, "CCMP", 4) == 0)

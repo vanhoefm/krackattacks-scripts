@@ -179,7 +179,7 @@ enum wps_msg_type {
 /* Authentication Type Flags */
 #define WPS_AUTH_OPEN 0x0001
 #define WPS_AUTH_WPAPSK 0x0002
-#define WPS_AUTH_SHARED 0x0004
+#define WPS_AUTH_SHARED 0x0004 /* deprecated */
 #define WPS_AUTH_WPA 0x0008
 #define WPS_AUTH_WPA2 0x0010
 #define WPS_AUTH_WPA2PSK 0x0020
@@ -188,7 +188,7 @@ enum wps_msg_type {
 
 /* Encryption Type Flags */
 #define WPS_ENCR_NONE 0x0001
-#define WPS_ENCR_WEP 0x0002
+#define WPS_ENCR_WEP 0x0002 /* deprecated */
 #define WPS_ENCR_TKIP 0x0004
 #define WPS_ENCR_AES 0x0008
 #define WPS_ENCR_TYPES (WPS_ENCR_NONE | WPS_ENCR_WEP | WPS_ENCR_TKIP | \

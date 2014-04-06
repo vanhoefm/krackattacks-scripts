@@ -1599,8 +1599,6 @@ int wps_build_cred(struct wps_data *wps, struct wpabuf *msg)
 		wps->auth_type = WPS_AUTH_WPAPSK;
 	else if (wps->auth_type & WPS_AUTH_OPEN)
 		wps->auth_type = WPS_AUTH_OPEN;
-	else if (wps->auth_type & WPS_AUTH_SHARED)
-		wps->auth_type = WPS_AUTH_SHARED;
 	else {
 		wpa_printf(MSG_DEBUG, "WPS: Unsupported auth_type 0x%x",
 			   wps->auth_type);
@@ -1620,10 +1618,12 @@ int wps_build_cred(struct wps_data *wps, struct wpabuf *msg)
 			return -1;
 		}
 	} else {
-		if (wps->encr_type & WPS_ENCR_WEP)
-			wps->encr_type = WPS_ENCR_WEP;
-		else if (wps->encr_type & WPS_ENCR_NONE)
+		if (wps->encr_type & WPS_ENCR_NONE)
 			wps->encr_type = WPS_ENCR_NONE;
+#ifdef CONFIG_TESTING_OPTIONS
+		else if (wps->encr_type & WPS_ENCR_WEP)
+			wps->encr_type = WPS_ENCR_WEP;
+#endif /* CONFIG_TESTING_OPTIONS */
 		else {
 			wpa_printf(MSG_DEBUG, "WPS: No suitable encryption "
 				   "type for non-WPA/WPA2 mode");

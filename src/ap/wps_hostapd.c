@@ -1070,18 +1070,6 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 	if (conf->ssid.security_policy == SECURITY_PLAINTEXT) {
 		wps->encr_types |= WPS_ENCR_NONE;
 		wps->auth_types |= WPS_AUTH_OPEN;
-	} else if (conf->ssid.security_policy == SECURITY_STATIC_WEP) {
-		wps->encr_types |= WPS_ENCR_WEP;
-		if (conf->auth_algs & WPA_AUTH_ALG_OPEN)
-			wps->auth_types |= WPS_AUTH_OPEN;
-		if (conf->auth_algs & WPA_AUTH_ALG_SHARED)
-			wps->auth_types |= WPS_AUTH_SHARED;
-	} else if (conf->ssid.security_policy == SECURITY_IEEE_802_1X) {
-		wps->auth_types |= WPS_AUTH_OPEN;
-		if (conf->default_wep_key_len)
-			wps->encr_types |= WPS_ENCR_WEP;
-		else
-			wps->encr_types |= WPS_ENCR_NONE;
 	}
 
 	if (conf->ssid.wpa_psk_file) {
@@ -1642,8 +1630,6 @@ int hostapd_wps_config_ap(struct hostapd_data *hapd, const char *ssid,
 	if (encr) {
 		if (os_strncmp(encr, "NONE", 4) == 0)
 			cred.encr_type = WPS_ENCR_NONE;
-		else if (os_strncmp(encr, "WEP", 3) == 0)
-			cred.encr_type = WPS_ENCR_WEP;
 		else if (os_strncmp(encr, "TKIP", 4) == 0)
 			cred.encr_type = WPS_ENCR_TKIP;
 		else if (os_strncmp(encr, "CCMP", 4) == 0)

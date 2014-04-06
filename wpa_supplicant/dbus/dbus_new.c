@@ -709,9 +709,9 @@ void wpas_dbus_signal_wps_cred(struct wpa_supplicant *wpa_s,
 	DBusMessage *msg;
 	DBusMessageIter iter, dict_iter;
 	struct wpas_dbus_priv *iface;
-	char *auth_type[6]; /* we have six possible authorization types */
+	char *auth_type[5]; /* we have five possible authentication types */
 	int at_num = 0;
-	char *encr_type[4]; /* we have four possible encryption types */
+	char *encr_type[3]; /* we have three possible encryption types */
 	int et_num = 0;
 
 	iface = wpa_s->global->dbus;
@@ -734,20 +734,15 @@ void wpas_dbus_signal_wps_cred(struct wpa_supplicant *wpa_s,
 		auth_type[at_num++] = "open";
 	if (cred->auth_type & WPS_AUTH_WPAPSK)
 		auth_type[at_num++] = "wpa-psk";
-	if (cred->auth_type & WPS_AUTH_SHARED)
-		auth_type[at_num++] = "shared";
 	if (cred->auth_type & WPS_AUTH_WPA)
 		auth_type[at_num++] = "wpa-eap";
 	if (cred->auth_type & WPS_AUTH_WPA2)
 		auth_type[at_num++] = "wpa2-eap";
 	if (cred->auth_type & WPS_AUTH_WPA2PSK)
-		auth_type[at_num++] =
-		"wpa2-psk";
+		auth_type[at_num++] = "wpa2-psk";
 
 	if (cred->encr_type & WPS_ENCR_NONE)
 		encr_type[et_num++] = "none";
-	if (cred->encr_type & WPS_ENCR_WEP)
-		encr_type[et_num++] = "wep";
 	if (cred->encr_type & WPS_ENCR_TKIP)
 		encr_type[et_num++] = "tkip";
 	if (cred->encr_type & WPS_ENCR_AES)

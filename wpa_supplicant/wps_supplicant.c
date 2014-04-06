@@ -278,7 +278,6 @@ static int wpa_supplicant_wps_cred(void *ctx,
 {
 	struct wpa_supplicant *wpa_s = ctx;
 	struct wpa_ssid *ssid = wpa_s->current_ssid;
-	u8 key_idx = 0;
 	u16 auth_type;
 #ifdef CONFIG_WPS_REG_DISABLE_OPEN
 	int registrar = 0;
@@ -324,7 +323,6 @@ static int wpa_supplicant_wps_cred(void *ctx,
 	}
 
 	if (auth_type != WPS_AUTH_OPEN &&
-	    auth_type != WPS_AUTH_SHARED &&
 	    auth_type != WPS_AUTH_WPAPSK &&
 	    auth_type != WPS_AUTH_WPA2PSK) {
 		wpa_printf(MSG_DEBUG, "WPS: Ignored credentials for "
@@ -387,38 +385,6 @@ static int wpa_supplicant_wps_cred(void *ctx,
 	switch (cred->encr_type) {
 	case WPS_ENCR_NONE:
 		break;
-	case WPS_ENCR_WEP:
-		if (cred->key_len <= 0)
-			break;
-		if (cred->key_len != 5 && cred->key_len != 13 &&
-		    cred->key_len != 10 && cred->key_len != 26) {
-			wpa_printf(MSG_ERROR, "WPS: Invalid WEP Key length "
-				   "%lu", (unsigned long) cred->key_len);
-			return -1;
-		}
-		if (cred->key_idx > NUM_WEP_KEYS) {
-			wpa_printf(MSG_ERROR, "WPS: Invalid WEP Key index %d",
-				   cred->key_idx);
-			return -1;
-		}
-		if (cred->key_idx)
-			key_idx = cred->key_idx - 1;
-		if (cred->key_len == 10 || cred->key_len == 26) {
-			if (hexstr2bin((char *) cred->key,
-				       ssid->wep_key[key_idx],
-				       cred->key_len / 2) < 0) {
-				wpa_printf(MSG_ERROR, "WPS: Invalid WEP Key "
-					   "%d", key_idx);
-				return -1;
-			}
-			ssid->wep_key_len[key_idx] = cred->key_len / 2;
-		} else {
-			os_memcpy(ssid->wep_key[key_idx], cred->key,
-				  cred->key_len);
-			ssid->wep_key_len[key_idx] = cred->key_len;
-		}
-		ssid->wep_tx_keyidx = key_idx;
-		break;
 	case WPS_ENCR_TKIP:
 		ssid->pairwise_cipher = WPA_CIPHER_TKIP;
 		break;
@@ -442,11 +408,6 @@ static int wpa_supplicant_wps_cred(void *ctx,
 			ssid->disabled = 1;
 		}
 #endif /* CONFIG_WPS_REG_DISABLE_OPEN */
-		break;
-	case WPS_AUTH_SHARED:
-		ssid->auth_alg = WPA_AUTH_ALG_SHARED;
-		ssid->key_mgmt = WPA_KEY_MGMT_NONE;
-		ssid->proto = 0;
 		break;
 	case WPS_AUTH_WPAPSK:
 		ssid->auth_alg = WPA_AUTH_ALG_OPEN;
@@ -1920,8 +1881,10 @@ int wpas_wps_er_config(struct wpa_supplicant *wpa_s, const char *uuid,
 
 	if (os_strcmp(settings->encr, "NONE") == 0)
 		cred.encr_type = WPS_ENCR_NONE;
+#ifdef CONFIG_TESTING_OPTIONS
 	else if (os_strcmp(settings->encr, "WEP") == 0)
 		cred.encr_type = WPS_ENCR_WEP;
+#endif /* CONFIG_TESTING_OPTIONS */
 	else if (os_strcmp(settings->encr, "TKIP") == 0)
 		cred.encr_type = WPS_ENCR_TKIP;
 	else if (os_strcmp(settings->encr, "CCMP") == 0)

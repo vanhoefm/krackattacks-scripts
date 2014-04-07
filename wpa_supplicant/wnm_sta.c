@@ -461,8 +461,15 @@ static void wnm_parse_neighbor_report(struct wpa_supplicant *wpa_s,
 
 		id = *pos++;
 		elen = *pos++;
+		wpa_printf(MSG_DEBUG, "WNM: Subelement id=%u len=%u", id, elen);
+		left -= 2;
+		if (elen > left) {
+			wpa_printf(MSG_DEBUG,
+				   "WNM: Truncated neighbor report subelement");
+			break;
+		}
 		wnm_parse_neighbor_report_elem(rep, id, elen, pos);
-		left -= 2 + elen;
+		left -= elen;
 		pos += elen;
 	}
 }
@@ -695,10 +702,12 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 				wpa_printf(MSG_DEBUG, "WNM: Truncated request");
 				return;
 			}
-			wnm_parse_neighbor_report(
-				wpa_s, pos, len,
-				&wpa_s->wnm_neighbor_report_elements[
-					wpa_s->wnm_num_neighbor_report]);
+			if (tag == WLAN_EID_NEIGHBOR_REPORT) {
+				struct neighbor_report *rep;
+				rep = &wpa_s->wnm_neighbor_report_elements[
+					wpa_s->wnm_num_neighbor_report];
+				wnm_parse_neighbor_report(wpa_s, pos, len, rep);
+			}
 
 			pos += len;
 			wpa_s->wnm_num_neighbor_report++;

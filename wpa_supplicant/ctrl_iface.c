@@ -5569,6 +5569,7 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 	wpa_dbg(wpa_s, MSG_DEBUG, "Flush all wpa_supplicant state");
 
 #ifdef CONFIG_P2P
+	wpas_p2p_cancel(wpa_s);
 	wpas_p2p_stop_find(wpa_s);
 	p2p_ctrl_flush(wpa_s);
 	wpas_p2p_group_remove(wpa_s, "*");

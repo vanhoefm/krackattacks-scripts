@@ -823,6 +823,7 @@ static void wpas_group_formation_completed(struct wpa_supplicant *wpa_s,
 		wpa_s->global->p2p_group_formation = NULL;
 		wpa_s->p2p_in_provisioning = 0;
 	}
+	wpa_s->p2p_in_invitation = 0;
 
 	if (!success) {
 		wpa_msg_global(wpa_s->parent, MSG_INFO,
@@ -6480,6 +6481,11 @@ int wpas_p2p_cancel(struct wpa_supplicant *wpa_s)
 			wpas_p2p_group_delete(wpa_s,
 					      P2P_GROUP_REMOVAL_REQUESTED);
 			break;
+		} else if (wpa_s->p2p_in_invitation) {
+			wpa_printf(MSG_DEBUG, "P2P: Interface %s in invitation found - cancelling",
+				   wpa_s->ifname);
+			found = 1;
+			wpas_p2p_group_formation_failed(wpa_s);
 		}
 	}
 
@@ -6669,6 +6675,7 @@ void wpas_p2p_notify_ap_sta_authorized(struct wpa_supplicant *wpa_s,
 		wpa_s->p2p_go_group_formation_completed = 1;
 		wpa_s->global->p2p_group_formation = NULL;
 		wpa_s->p2p_in_provisioning = 0;
+		wpa_s->p2p_in_invitation = 0;
 	}
 	wpa_s->global->p2p_go_wait_client.sec = 0;
 	if (addr == NULL)

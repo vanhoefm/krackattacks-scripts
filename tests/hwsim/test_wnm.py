@@ -293,3 +293,55 @@ def test_wnm_bss_tm_req(dev, apdev):
                                   0, 81, 1, 7)
     hapd.mgmt_tx(req)
     resp = rx_bss_tm_resp(hapd, expect_dialog=6, expect_status=1)
+
+    # Preferred Candidate List with a truncated subelement
+    req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
+                     req_mode=0x01, dialog_token=7)
+    req['payload'] += struct.pack("<BB6BLBBBBB", 52, 13 + 2,
+                                  1, 2, 3, 4, 5, 6,
+                                  0, 81, 1, 7,
+                                  1, 1)
+    hapd.mgmt_tx(req)
+    resp = rx_bss_tm_resp(hapd, expect_dialog=7, expect_status=1)
+
+    # Preferred Candidate List with lots of invalid optional subelements
+    req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
+                     req_mode=0x01, dialog_token=8)
+    subelems = struct.pack("<BBHB", 1, 3, 0, 100)
+    subelems += struct.pack("<BBB", 2, 1, 65)
+    subelems += struct.pack("<BB", 3, 0)
+    subelems += struct.pack("<BBQB", 4, 9, 0, 10)
+    subelems += struct.pack("<BBHLB", 5, 7, 0, 0, 0)
+    subelems += struct.pack("<BB", 66, 0)
+    subelems += struct.pack("<BBBBBB", 70, 4, 0, 0, 0, 0)
+    subelems += struct.pack("<BB", 71, 0)
+    req['payload'] += struct.pack("<BB6BLBBB", 52, 13 + len(subelems),
+                                  1, 2, 3, 4, 5, 6,
+                                  0, 81, 1, 7) + subelems
+    hapd.mgmt_tx(req)
+    resp = rx_bss_tm_resp(hapd, expect_dialog=8, expect_status=1)
+
+    # Preferred Candidate List with lots of valid optional subelements (twice)
+    req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
+                     req_mode=0x01, dialog_token=8)
+    # TSF Information
+    subelems = struct.pack("<BBHH", 1, 4, 0, 100)
+    # Condensed Country String
+    subelems += struct.pack("<BBBB", 2, 2, 65, 66)
+    # BSS Transition Candidate Preference
+    subelems += struct.pack("<BBB", 3, 1, 100)
+    # BSS Termination Duration
+    subelems += struct.pack("<BBQH", 4, 10, 0, 10)
+    # Bearing
+    subelems += struct.pack("<BBHLH", 5, 8, 0, 0, 0)
+    # Measurement Pilot Transmission
+    subelems += struct.pack("<BBBBB", 66, 3, 0, 0, 0)
+    # RM Enabled Capabilities
+    subelems += struct.pack("<BBBBBBB", 70, 5, 0, 0, 0, 0, 0)
+    # Multiple BSSID
+    subelems += struct.pack("<BBBB", 71, 2, 0, 0)
+    req['payload'] += struct.pack("<BB6BLBBB", 52, 13 + len(subelems) * 2,
+                                  1, 2, 3, 4, 5, 6,
+                                  0, 81, 1, 7) + subelems + subelems
+    hapd.mgmt_tx(req)
+    resp = rx_bss_tm_resp(hapd, expect_dialog=8, expect_status=1)

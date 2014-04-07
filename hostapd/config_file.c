@@ -1069,8 +1069,6 @@ static int hostapd_config_ht_capab(struct hostapd_config *conf,
 		conf->ht_capab |= HT_CAP_INFO_MAX_AMSDU_SIZE;
 	if (os_strstr(capab, "[DSSS_CCK-40]"))
 		conf->ht_capab |= HT_CAP_INFO_DSSS_CCK40MHZ;
-	if (os_strstr(capab, "[PSMP]"))
-		conf->ht_capab |= HT_CAP_INFO_PSMP_SUPP;
 	if (os_strstr(capab, "[40-INTOLERANT]"))
 		conf->ht_capab |= HT_CAP_INFO_40MHZ_INTOLERANT;
 	if (os_strstr(capab, "[LSIG-TXOP-PROT]"))

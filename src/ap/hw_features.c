@@ -679,12 +679,6 @@ static int ieee80211n_supported_ht_capab(struct hostapd_iface *iface)
 		return 0;
 	}
 
-	if ((conf & HT_CAP_INFO_PSMP_SUPP) && !(hw & HT_CAP_INFO_PSMP_SUPP)) {
-		wpa_printf(MSG_ERROR, "Driver does not support configured "
-			   "HT capability [PSMP]");
-		return 0;
-	}
-
 	if ((conf & HT_CAP_INFO_LSIG_TXOP_PROTECT_SUPPORT) &&
 	    !(hw & HT_CAP_INFO_LSIG_TXOP_PROTECT_SUPPORT)) {
 		wpa_printf(MSG_ERROR, "Driver does not support configured "

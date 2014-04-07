@@ -658,7 +658,7 @@ struct ieee80211_vht_operation {
 #define HT_CAP_INFO_DELAYED_BA			((u16) BIT(10))
 #define HT_CAP_INFO_MAX_AMSDU_SIZE		((u16) BIT(11))
 #define HT_CAP_INFO_DSSS_CCK40MHZ		((u16) BIT(12))
-#define HT_CAP_INFO_PSMP_SUPP			((u16) BIT(13))
+/* B13 - Reserved (was PSMP support during P802.11n development) */
 #define HT_CAP_INFO_40MHZ_INTOLERANT		((u16) BIT(14))
 #define HT_CAP_INFO_LSIG_TXOP_PROTECT_SUPPORT	((u16) BIT(15))
 

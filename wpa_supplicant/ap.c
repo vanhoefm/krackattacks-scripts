@@ -48,6 +48,7 @@ static void wpas_conf_ap_vht(struct wpa_supplicant *wpa_s,
 			     struct hostapd_config *conf,
 			     struct hostapd_hw_modes *mode)
 {
+#ifdef CONFIG_P2P
 	u8 center_chan = 0;
 	u8 channel = conf->channel;
 
@@ -66,6 +67,10 @@ static void wpas_conf_ap_vht(struct wpa_supplicant *wpa_s,
 no_vht:
 	conf->vht_oper_centr_freq_seg0_idx =
 		channel + conf->secondary_channel * 2;
+#else /* CONFIG_P2P */
+	conf->vht_oper_centr_freq_seg0_idx =
+		conf->channel + conf->secondary_channel * 2;
+#endif /* CONFIG_P2P */
 }
 #endif /* CONFIG_IEEE80211N */
 

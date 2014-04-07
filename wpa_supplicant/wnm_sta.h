@@ -27,7 +27,7 @@ struct bss_transition_candidate {
 
 struct bss_termination_duration {
 	u8 present;
-	u8 duration[12];
+	u8 duration[10];
 };
 
 struct bearing {
@@ -38,20 +38,20 @@ struct bearing {
 struct measurement_pilot {
 	u8 present;
 	u8 measurement_pilot;
-	u8 num_vendor_specific;
-	u8 vendor_specific[255];
+	u8 subelem_len;
+	u8 subelems[255];
 };
 
 struct rrm_enabled_capabilities {
 	u8 present;
-	u8 capabilities[4];
+	u8 capabilities[5];
 };
 
 struct multiple_bssid {
 	u8 present;
 	u8 max_bssid_indicator;
-	u8 num_vendor_specific;
-	u8 vendor_specific[255];
+	u8 subelem_len;
+	u8 subelems[255];
 };
 
 struct neighbor_report {

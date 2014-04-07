@@ -371,7 +371,7 @@ static void wnm_parse_neighbor_report_elem(struct neighbor_report *rep,
 		rep->bss_tran_can->preference = pos[0];
 		break;
 	case WNM_NEIGHBOR_BSS_TERMINATION_DURATION:
-		if (elen < 12) {
+		if (elen < 10) {
 			wpa_printf(MSG_DEBUG, "WNM: Too short BSS termination "
 				   "duration");
 			break;
@@ -382,7 +382,7 @@ static void wnm_parse_neighbor_report_elem(struct neighbor_report *rep,
 		if (rep->bss_term_dur == NULL)
 			break;
 		rep->bss_term_dur->present = 1;
-		os_memcpy(rep->bss_term_dur->duration, pos, 12);
+		os_memcpy(rep->bss_term_dur->duration, pos, 10);
 		break;
 	case WNM_NEIGHBOR_BEARING:
 		if (elen < 8) {
@@ -398,7 +398,7 @@ static void wnm_parse_neighbor_report_elem(struct neighbor_report *rep,
 		os_memcpy(rep->bearing->bearing, pos, 8);
 		break;
 	case WNM_NEIGHBOR_MEASUREMENT_PILOT:
-		if (elen < 2) {
+		if (elen < 1) {
 			wpa_printf(MSG_DEBUG, "WNM: Too short measurement "
 				   "pilot");
 			break;
@@ -409,11 +409,11 @@ static void wnm_parse_neighbor_report_elem(struct neighbor_report *rep,
 			break;
 		rep->meas_pilot->present = 1;
 		rep->meas_pilot->measurement_pilot = pos[0];
-		rep->meas_pilot->num_vendor_specific = pos[1];
-		os_memcpy(rep->meas_pilot->vendor_specific, pos + 2, elen - 2);
+		rep->meas_pilot->subelem_len = elen - 1;
+		os_memcpy(rep->meas_pilot->subelems, pos + 1, elen - 1);
 		break;
 	case WNM_NEIGHBOR_RRM_ENABLED_CAPABILITIES:
-		if (elen < 4) {
+		if (elen < 5) {
 			wpa_printf(MSG_DEBUG, "WNM: Too short RRM enabled "
 				   "capabilities");
 			break;
@@ -424,10 +424,10 @@ static void wnm_parse_neighbor_report_elem(struct neighbor_report *rep,
 		if (rep->rrm_cap == NULL)
 			break;
 		rep->rrm_cap->present = 1;
-		os_memcpy(rep->rrm_cap->capabilities, pos, 4);
+		os_memcpy(rep->rrm_cap->capabilities, pos, 5);
 		break;
 	case WNM_NEIGHBOR_MULTIPLE_BSSID:
-		if (elen < 2) {
+		if (elen < 1) {
 			wpa_printf(MSG_DEBUG, "WNM: Too short multiple BSSID");
 			break;
 		}
@@ -437,8 +437,8 @@ static void wnm_parse_neighbor_report_elem(struct neighbor_report *rep,
 			break;
 		rep->mul_bssid->present = 1;
 		rep->mul_bssid->max_bssid_indicator = pos[0];
-		rep->mul_bssid->num_vendor_specific = pos[1];
-		os_memcpy(rep->mul_bssid->vendor_specific, pos + 2, elen - 2);
+		rep->mul_bssid->subelem_len = elen - 1;
+		os_memcpy(rep->mul_bssid->subelems, pos + 1, elen - 1);
 		break;
 	}
 }

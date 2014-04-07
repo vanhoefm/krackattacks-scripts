@@ -308,8 +308,8 @@ static void ieee80211n_get_pri_sec_chan(struct wpa_scan_res *bss,
 	if (elems.ht_operation &&
 	    elems.ht_operation_len >= sizeof(*oper)) {
 		oper = (struct ieee80211_ht_operation *) elems.ht_operation;
-		*pri_chan = oper->control_chan;
-		if (oper->ht_param & HT_INFO_HT_PARAM_REC_TRANS_CHNL_WIDTH) {
+		*pri_chan = oper->primary_chan;
+		if (oper->ht_param & HT_INFO_HT_PARAM_STA_CHNL_WIDTH) {
 			int sec = oper->ht_param &
 				HT_INFO_HT_PARAM_SECONDARY_CHNL_OFF_MASK;
 			if (sec == HT_INFO_HT_PARAM_SECONDARY_CHNL_ABOVE)

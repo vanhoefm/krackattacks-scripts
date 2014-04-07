@@ -90,14 +90,14 @@ u8 * hostapd_eid_ht_operation(struct hostapd_data *hapd, u8 *eid)
 	oper = (struct ieee80211_ht_operation *) pos;
 	os_memset(oper, 0, sizeof(*oper));
 
-	oper->control_chan = hapd->iconf->channel;
+	oper->primary_chan = hapd->iconf->channel;
 	oper->operation_mode = host_to_le16(hapd->iface->ht_op_mode);
 	if (hapd->iconf->secondary_channel == 1)
 		oper->ht_param |= HT_INFO_HT_PARAM_SECONDARY_CHNL_ABOVE |
-			HT_INFO_HT_PARAM_REC_TRANS_CHNL_WIDTH;
+			HT_INFO_HT_PARAM_STA_CHNL_WIDTH;
 	if (hapd->iconf->secondary_channel == -1)
 		oper->ht_param |= HT_INFO_HT_PARAM_SECONDARY_CHNL_BELOW |
-			HT_INFO_HT_PARAM_REC_TRANS_CHNL_WIDTH;
+			HT_INFO_HT_PARAM_STA_CHNL_WIDTH;
 
 	pos += sizeof(*oper);
 
@@ -127,43 +127,40 @@ int hostapd_ht_operation_update(struct hostapd_iface *iface)
 	wpa_printf(MSG_DEBUG, "%s current operation mode=0x%X",
 		   __func__, iface->ht_op_mode);
 
-	if (!(iface->ht_op_mode & HT_INFO_OPERATION_MODE_NON_GF_DEVS_PRESENT)
+	if (!(iface->ht_op_mode & HT_OPER_OP_MODE_NON_GF_HT_STAS_PRESENT)
 	    && iface->num_sta_ht_no_gf) {
-		iface->ht_op_mode |=
-			HT_INFO_OPERATION_MODE_NON_GF_DEVS_PRESENT;
+		iface->ht_op_mode |= HT_OPER_OP_MODE_NON_GF_HT_STAS_PRESENT;
 		op_mode_changes++;
 	} else if ((iface->ht_op_mode &
-		    HT_INFO_OPERATION_MODE_NON_GF_DEVS_PRESENT) &&
+		    HT_OPER_OP_MODE_NON_GF_HT_STAS_PRESENT) &&
 		   iface->num_sta_ht_no_gf == 0) {
-		iface->ht_op_mode &=
-			~HT_INFO_OPERATION_MODE_NON_GF_DEVS_PRESENT;
+		iface->ht_op_mode &= ~HT_OPER_OP_MODE_NON_GF_HT_STAS_PRESENT;
 		op_mode_changes++;
 	}
 
-	if (!(iface->ht_op_mode & HT_INFO_OPERATION_MODE_NON_HT_STA_PRESENT) &&
+	if (!(iface->ht_op_mode & HT_OPER_OP_MODE_OBSS_NON_HT_STAS_PRESENT) &&
 	    (iface->num_sta_no_ht || iface->olbc_ht)) {
-		iface->ht_op_mode |= HT_INFO_OPERATION_MODE_NON_HT_STA_PRESENT;
+		iface->ht_op_mode |= HT_OPER_OP_MODE_OBSS_NON_HT_STAS_PRESENT;
 		op_mode_changes++;
 	} else if ((iface->ht_op_mode &
-		    HT_INFO_OPERATION_MODE_NON_HT_STA_PRESENT) &&
+		    HT_OPER_OP_MODE_OBSS_NON_HT_STAS_PRESENT) &&
 		   (iface->num_sta_no_ht == 0 && !iface->olbc_ht)) {
-		iface->ht_op_mode &=
-			~HT_INFO_OPERATION_MODE_NON_HT_STA_PRESENT;
+		iface->ht_op_mode &= ~HT_OPER_OP_MODE_OBSS_NON_HT_STAS_PRESENT;
 		op_mode_changes++;
 	}
 
 	if (iface->num_sta_no_ht)
-		new_op_mode = OP_MODE_MIXED;
+		new_op_mode = HT_PROT_NON_HT_MIXED;
 	else if (iface->conf->secondary_channel && iface->num_sta_ht_20mhz)
-		new_op_mode = OP_MODE_20MHZ_HT_STA_ASSOCED;
+		new_op_mode = HT_PROT_20MHZ_PROTECTION;
 	else if (iface->olbc_ht)
-		new_op_mode = OP_MODE_MAY_BE_LEGACY_STAS;
+		new_op_mode = HT_PROT_NONMEMBER_PROTECTION;
 	else
-		new_op_mode = OP_MODE_PURE;
+		new_op_mode = HT_PROT_NO_PROTECTION;
 
-	cur_op_mode = iface->ht_op_mode & HT_INFO_OPERATION_MODE_OP_MODE_MASK;
+	cur_op_mode = iface->ht_op_mode & HT_OPER_OP_MODE_HT_PROT_MASK;
 	if (cur_op_mode != new_op_mode) {
-		iface->ht_op_mode &= ~HT_INFO_OPERATION_MODE_OP_MODE_MASK;
+		iface->ht_op_mode &= ~HT_OPER_OP_MODE_HT_PROT_MASK;
 		iface->ht_op_mode |= new_op_mode;
 		op_mode_changes++;
 	}

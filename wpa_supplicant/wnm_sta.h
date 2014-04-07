@@ -10,45 +10,37 @@
 #define WNM_STA_H
 
 struct tsf_info {
-	u8 present;
 	u8 tsf_offset[2];
 	u8 beacon_interval[2];
 };
 
 struct condensed_country_string {
-	u8 present;
 	u8 country_string[2];
 };
 
 struct bss_transition_candidate {
-	u8 present;
 	u8 preference;
 };
 
 struct bss_termination_duration {
-	u8 present;
 	u8 duration[10];
 };
 
 struct bearing {
-	u8 present;
 	u8 bearing[8];
 };
 
 struct measurement_pilot {
-	u8 present;
 	u8 measurement_pilot;
 	u8 subelem_len;
 	u8 subelems[255];
 };
 
 struct rrm_enabled_capabilities {
-	u8 present;
 	u8 capabilities[5];
 };
 
 struct multiple_bssid {
-	u8 present;
 	u8 max_bssid_indicator;
 	u8 subelem_len;
 	u8 subelems[255];

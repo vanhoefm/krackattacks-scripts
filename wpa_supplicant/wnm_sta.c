@@ -338,7 +338,6 @@ static void wnm_parse_neighbor_report_elem(struct neighbor_report *rep,
 		rep->tsf_info = os_zalloc(sizeof(struct tsf_info));
 		if (rep->tsf_info == NULL)
 			break;
-		rep->tsf_info->present = 1;
 		os_memcpy(rep->tsf_info->tsf_offset, pos, 2);
 		os_memcpy(rep->tsf_info->beacon_interval, pos + 2, 2);
 		break;
@@ -353,7 +352,6 @@ static void wnm_parse_neighbor_report_elem(struct neighbor_report *rep,
 			os_zalloc(sizeof(struct condensed_country_string));
 		if (rep->con_coun_str == NULL)
 			break;
-		rep->con_coun_str->present = 1;
 		os_memcpy(rep->con_coun_str->country_string, pos, 2);
 		break;
 	case WNM_NEIGHBOR_BSS_TRANSITION_CANDIDATE:
@@ -367,7 +365,6 @@ static void wnm_parse_neighbor_report_elem(struct neighbor_report *rep,
 			os_zalloc(sizeof(struct bss_transition_candidate));
 		if (rep->bss_tran_can == NULL)
 			break;
-		rep->bss_tran_can->present = 1;
 		rep->bss_tran_can->preference = pos[0];
 		break;
 	case WNM_NEIGHBOR_BSS_TERMINATION_DURATION:
@@ -381,7 +378,6 @@ static void wnm_parse_neighbor_report_elem(struct neighbor_report *rep,
 			os_zalloc(sizeof(struct bss_termination_duration));
 		if (rep->bss_term_dur == NULL)
 			break;
-		rep->bss_term_dur->present = 1;
 		os_memcpy(rep->bss_term_dur->duration, pos, 10);
 		break;
 	case WNM_NEIGHBOR_BEARING:
@@ -394,7 +390,6 @@ static void wnm_parse_neighbor_report_elem(struct neighbor_report *rep,
 		rep->bearing = os_zalloc(sizeof(struct bearing));
 		if (rep->bearing == NULL)
 			break;
-		rep->bearing->present = 1;
 		os_memcpy(rep->bearing->bearing, pos, 8);
 		break;
 	case WNM_NEIGHBOR_MEASUREMENT_PILOT:
@@ -407,7 +402,6 @@ static void wnm_parse_neighbor_report_elem(struct neighbor_report *rep,
 		rep->meas_pilot = os_zalloc(sizeof(struct measurement_pilot));
 		if (rep->meas_pilot == NULL)
 			break;
-		rep->meas_pilot->present = 1;
 		rep->meas_pilot->measurement_pilot = pos[0];
 		rep->meas_pilot->subelem_len = elen - 1;
 		os_memcpy(rep->meas_pilot->subelems, pos + 1, elen - 1);
@@ -423,7 +417,6 @@ static void wnm_parse_neighbor_report_elem(struct neighbor_report *rep,
 			os_zalloc(sizeof(struct rrm_enabled_capabilities));
 		if (rep->rrm_cap == NULL)
 			break;
-		rep->rrm_cap->present = 1;
 		os_memcpy(rep->rrm_cap->capabilities, pos, 5);
 		break;
 	case WNM_NEIGHBOR_MULTIPLE_BSSID:
@@ -435,7 +428,6 @@ static void wnm_parse_neighbor_report_elem(struct neighbor_report *rep,
 		rep->mul_bssid = os_zalloc(sizeof(struct multiple_bssid));
 		if (rep->mul_bssid == NULL)
 			break;
-		rep->mul_bssid->present = 1;
 		rep->mul_bssid->max_bssid_indicator = pos[0];
 		rep->mul_bssid->subelem_len = elen - 1;
 		os_memcpy(rep->mul_bssid->subelems, pos + 1, elen - 1);

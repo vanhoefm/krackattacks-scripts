@@ -319,6 +319,7 @@ void wnm_deallocate_memory(struct wpa_supplicant *wpa_s)
 		os_free(wpa_s->wnm_neighbor_report_elements[i].mul_bssid);
 	}
 
+	wpa_s->wnm_num_neighbor_report = 0;
 	os_free(wpa_s->wnm_neighbor_report_elements);
 	wpa_s->wnm_neighbor_report_elements = NULL;
 }

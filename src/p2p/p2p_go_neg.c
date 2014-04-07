@@ -896,7 +896,6 @@ void p2p_process_go_neg_resp(struct p2p_data *p2p, const u8 *sa,
 			     const u8 *data, size_t len, int rx_freq)
 {
 	struct p2p_device *dev;
-	struct wpabuf *conf;
 	int go = -1;
 	struct p2p_message msg;
 	u8 status = P2P_SC_SUCCESS;
@@ -1101,10 +1100,13 @@ void p2p_process_go_neg_resp(struct p2p_data *p2p, const u8 *sa,
 	os_memcpy(dev->intended_addr, msg.intended_addr, ETH_ALEN);
 
 fail:
-	conf = p2p_build_go_neg_conf(p2p, dev, msg.dialog_token, status,
-				     msg.operating_channel, go);
+	/* Store GO Negotiation Confirmation to allow retransmission */
+	wpabuf_free(dev->go_neg_conf);
+	dev->go_neg_conf = p2p_build_go_neg_conf(p2p, dev, msg.dialog_token,
+						 status, msg.operating_channel,
+						 go);
 	p2p_parse_free(&msg);
-	if (conf == NULL)
+	if (dev->go_neg_conf == NULL)
 		return;
 	p2p_dbg(p2p, "Sending GO Negotiation Confirm");
 	if (status == P2P_SC_SUCCESS) {
@@ -1116,13 +1118,18 @@ fail:
 		freq = rx_freq;
 	else
 		freq = dev->listen_freq;
+
+	dev->go_neg_conf_freq = freq;
+	dev->go_neg_conf_sent = 0;
+
 	if (p2p_send_action(p2p, freq, sa, p2p->cfg->dev_addr, sa,
-			    wpabuf_head(conf), wpabuf_len(conf), 200) < 0) {
+			    wpabuf_head(dev->go_neg_conf),
+			    wpabuf_len(dev->go_neg_conf), 200) < 0) {
 		p2p_dbg(p2p, "Failed to send Action frame");
 		p2p_go_neg_failed(p2p, dev, -1);
 		p2p->cfg->send_action_done(p2p->cfg->cb_ctx);
-	}
-	wpabuf_free(conf);
+	} else
+		dev->go_neg_conf_sent++;
 	if (status != P2P_SC_SUCCESS) {
 		p2p_dbg(p2p, "GO Negotiation failed");
 		p2p_go_neg_failed(p2p, dev, status);

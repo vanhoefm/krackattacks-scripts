@@ -218,6 +218,8 @@ void p2p_go_neg_failed(struct p2p_data *p2p, struct p2p_device *peer,
 	os_memset(&res, 0, sizeof(res));
 	res.status = status;
 	if (peer) {
+		wpabuf_free(peer->go_neg_conf);
+		peer->go_neg_conf = NULL;
 		os_memcpy(res.peer_device_addr, peer->info.p2p_device_addr,
 			  ETH_ALEN);
 		os_memcpy(res.peer_interface_addr, peer->intended_addr,
@@ -802,6 +804,7 @@ static void p2p_device_free(struct p2p_data *p2p, struct p2p_device *dev)
 	}
 
 	wpabuf_free(dev->info.wfd_subelems);
+	wpabuf_free(dev->go_neg_conf);
 
 	os_free(dev);
 }
@@ -1611,6 +1614,8 @@ void p2p_go_complete(struct p2p_data *p2p, struct p2p_device *peer)
 	peer->go_neg_req_sent = 0;
 	peer->wps_method = WPS_NOT_READY;
 	peer->oob_pw_id = 0;
+	wpabuf_free(peer->go_neg_conf);
+	peer->go_neg_conf = NULL;
 
 	p2p_set_state(p2p, P2P_PROVISIONING);
 	p2p->cfg->go_neg_completed(p2p->cfg->cb_ctx, &res);
@@ -2952,12 +2957,43 @@ static void p2p_go_neg_conf_cb(struct p2p_data *p2p,
 	struct p2p_device *dev;
 
 	p2p_dbg(p2p, "GO Negotiation Confirm TX callback: result=%d", result);
-	p2p->cfg->send_action_done(p2p->cfg->cb_ctx);
 	if (result == P2P_SEND_ACTION_FAILED) {
+		p2p->cfg->send_action_done(p2p->cfg->cb_ctx);
 		p2p_go_neg_failed(p2p, p2p->go_neg_peer, -1);
 		return;
 	}
+
+	dev = p2p->go_neg_peer;
+
 	if (result == P2P_SEND_ACTION_NO_ACK) {
+		/*
+		 * Retry GO Negotiation Confirmation
+		 * P2P_GO_NEG_CNF_MAX_RETRY_COUNT times if we did not receive
+		 * ACK for confirmation.
+		 */
+		if (dev && dev->go_neg_conf &&
+		    dev->go_neg_conf_sent <= P2P_GO_NEG_CNF_MAX_RETRY_COUNT) {
+			p2p_dbg(p2p, "GO Negotiation Confirm retry %d",
+				dev->go_neg_conf_sent);
+			p2p->pending_action_state = P2P_PENDING_GO_NEG_CONFIRM;
+			if (p2p_send_action(p2p, dev->go_neg_conf_freq,
+					    dev->info.p2p_device_addr,
+					    p2p->cfg->dev_addr,
+					    dev->info.p2p_device_addr,
+					    wpabuf_head(dev->go_neg_conf),
+					    wpabuf_len(dev->go_neg_conf), 0) >=
+			    0) {
+				dev->go_neg_conf_sent++;
+				return;
+			}
+			p2p_dbg(p2p, "Failed to re-send Action frame");
+
+			/*
+			 * Continue with the assumption that the first attempt
+			 * went through and just the ACK frame was lost.
+			 */
+		}
+
 		/*
 		 * It looks like the TX status for GO Negotiation Confirm is
 		 * often showing failure even when the peer has actually
@@ -2971,7 +3007,8 @@ static void p2p_go_neg_conf_cb(struct p2p_data *p2p,
 		p2p_dbg(p2p, "Assume GO Negotiation Confirm TX was actually received by the peer even though Ack was not reported");
 	}
 
-	dev = p2p->go_neg_peer;
+	p2p->cfg->send_action_done(p2p->cfg->cb_ctx);
+
 	if (dev == NULL)
 		return;
 

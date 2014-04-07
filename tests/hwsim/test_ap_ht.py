@@ -453,7 +453,7 @@ def test_ap_ht_capab_not_supported(dev, apdev):
     """HT configuration with driver not supporting all ht_capab entries"""
     params = { "ssid": "test-ht40",
                "channel": "5",
-               "ht_capab": "[HT40-][LDPC][SMPS-STATIC][SMPS-DYNAMIC][GF][SHORT-GI-20][SHORT-GI-40][TX-STBC][RX-STBC1][RX-STBC12][RX-STBC123][DELAYED-BA][MAX-AMSDU-7935][PSMP][DSSS_CCK-40][LSIG-TXOP-PROT]"}
+               "ht_capab": "[HT40-][LDPC][SMPS-STATIC][SMPS-DYNAMIC][GF][SHORT-GI-20][SHORT-GI-40][TX-STBC][RX-STBC1][RX-STBC12][RX-STBC123][DELAYED-BA][MAX-AMSDU-7935][DSSS_CCK-40][LSIG-TXOP-PROT]"}
     hapd = hostapd.add_ap(apdev[0]['ifname'], params, no_enable=True)
     if "FAIL" not in hapd.request("ENABLE"):
         raise Exception("Unexpected ENABLE success")

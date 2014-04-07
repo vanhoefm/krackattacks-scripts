@@ -334,6 +334,7 @@ static void wnm_parse_neighbor_report_elem(struct neighbor_report *rep,
 			wpa_printf(MSG_DEBUG, "WNM: Too short TSF");
 			break;
 		}
+		os_free(rep->tsf_info);
 		rep->tsf_info = os_zalloc(sizeof(struct tsf_info));
 		if (rep->tsf_info == NULL)
 			break;
@@ -347,6 +348,7 @@ static void wnm_parse_neighbor_report_elem(struct neighbor_report *rep,
 				   "country string");
 			break;
 		}
+		os_free(rep->con_coun_str);
 		rep->con_coun_str =
 			os_zalloc(sizeof(struct condensed_country_string));
 		if (rep->con_coun_str == NULL)
@@ -360,6 +362,7 @@ static void wnm_parse_neighbor_report_elem(struct neighbor_report *rep,
 				   "candidate");
 			break;
 		}
+		os_free(rep->bss_tran_can);
 		rep->bss_tran_can =
 			os_zalloc(sizeof(struct bss_transition_candidate));
 		if (rep->bss_tran_can == NULL)
@@ -373,6 +376,7 @@ static void wnm_parse_neighbor_report_elem(struct neighbor_report *rep,
 				   "duration");
 			break;
 		}
+		os_free(rep->bss_term_dur);
 		rep->bss_term_dur =
 			os_zalloc(sizeof(struct bss_termination_duration));
 		if (rep->bss_term_dur == NULL)
@@ -386,6 +390,7 @@ static void wnm_parse_neighbor_report_elem(struct neighbor_report *rep,
 				   "bearing");
 			break;
 		}
+		os_free(rep->bearing);
 		rep->bearing = os_zalloc(sizeof(struct bearing));
 		if (rep->bearing == NULL)
 			break;
@@ -398,6 +403,7 @@ static void wnm_parse_neighbor_report_elem(struct neighbor_report *rep,
 				   "pilot");
 			break;
 		}
+		os_free(rep->meas_pilot);
 		rep->meas_pilot = os_zalloc(sizeof(struct measurement_pilot));
 		if (rep->meas_pilot == NULL)
 			break;
@@ -412,6 +418,7 @@ static void wnm_parse_neighbor_report_elem(struct neighbor_report *rep,
 				   "capabilities");
 			break;
 		}
+		os_free(rep->rrm_cap);
 		rep->rrm_cap =
 			os_zalloc(sizeof(struct rrm_enabled_capabilities));
 		if (rep->rrm_cap == NULL)
@@ -424,6 +431,7 @@ static void wnm_parse_neighbor_report_elem(struct neighbor_report *rep,
 			wpa_printf(MSG_DEBUG, "WNM: Too short multiple BSSID");
 			break;
 		}
+		os_free(rep->mul_bssid);
 		rep->mul_bssid = os_zalloc(sizeof(struct multiple_bssid));
 		if (rep->mul_bssid == NULL)
 			break;

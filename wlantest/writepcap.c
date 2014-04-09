@@ -12,6 +12,7 @@
 
 #include "utils/common.h"
 #include "wlantest.h"
+#include "common/qca-vendor.h"
 
 
 int write_pcap_init(struct wlantest *wt, const char *fname)
@@ -68,8 +69,10 @@ void write_pcap_decrypted(struct wlantest *wt, const u8 *buf1, size_t len1,
 	u8 rtap[] = {
 		0x00 /* rev */,
 		0x00 /* pad */,
-		0x08, 0x00, /* header len */
-		0x00, 0x00, 0x00, 0x00 /* present flags */
+		0x0e, 0x00, /* header len */
+		0x00, 0x00, 0x00, 0x40, /* present flags */
+		0x00, 0x13, 0x74, QCA_RADIOTAP_VID_WLANTEST,
+		0x00, 0x00
 	};
 	u8 *buf;
 	size_t len;

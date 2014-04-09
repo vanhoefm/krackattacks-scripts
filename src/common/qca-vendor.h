@@ -19,6 +19,13 @@
 #define OUI_QCA 0x001374
 
 /**
+ * enum qca_radiotap_vendor_ids - QCA radiotap vendor namespace IDs
+ */
+enum qca_radiotap_vendor_ids {
+	QCA_RADIOTAP_VID_WLANTEST = 0,
+};
+
+/**
  * enum qca_nl80211_vendor_subcmds - QCA nl80211 vendor command identifiers
  *
  * @QCA_NL80211_VENDOR_SUBCMD_UNSPEC: Reserved value 0

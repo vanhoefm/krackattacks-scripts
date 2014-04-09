@@ -12,6 +12,7 @@
 #include "utils/radiotap.h"
 #include "utils/radiotap_iter.h"
 #include "common/ieee802_11_defs.h"
+#include "common/qca-vendor.h"
 #include "wlantest.h"
 
 
@@ -305,14 +306,16 @@ void wlantest_process(struct wlantest *wt, const u8 *data, size_t len)
 			failed = le_to_host16((*(u16 *) iter.this_arg)) &
 				IEEE80211_RADIOTAP_F_TX_FAIL;
 			break;
-
+		case IEEE80211_RADIOTAP_VENDOR_NAMESPACE:
+			if (WPA_GET_BE24(iter.this_arg) == OUI_QCA &&
+			    iter.this_arg[3] == QCA_RADIOTAP_VID_WLANTEST) {
+				add_note(wt, MSG_DEBUG,
+					 "Skip frame inserted by wlantest");
+				return;
+			}
 		}
 	}
 
-	if (iter._max_length == 8) {
-		add_note(wt, MSG_DEBUG, "Skip frame inserted by wlantest");
-		return;
-	}
 	frame = data + iter._max_length;
 	frame_len = len - iter._max_length;
 

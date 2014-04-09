@@ -276,7 +276,7 @@ void wlantest_process(struct wlantest *wt, const u8 *data, size_t len)
 
 	wpa_hexdump(MSG_EXCESSIVE, "Process data", data, len);
 
-	if (ieee80211_radiotap_iterator_init(&iter, (void *) data, len)) {
+	if (ieee80211_radiotap_iterator_init(&iter, (void *) data, len, NULL)) {
 		add_note(wt, MSG_INFO, "Invalid radiotap frame");
 		return;
 	}
@@ -309,12 +309,12 @@ void wlantest_process(struct wlantest *wt, const u8 *data, size_t len)
 		}
 	}
 
-	if (iter.max_length == 8) {
+	if (iter._max_length == 8) {
 		add_note(wt, MSG_DEBUG, "Skip frame inserted by wlantest");
 		return;
 	}
-	frame = data + iter.max_length;
-	frame_len = len - iter.max_length;
+	frame = data + iter._max_length;
+	frame_len = len - iter._max_length;
 
 	if (fcs && frame_len >= 4) {
 		frame_len -= 4;

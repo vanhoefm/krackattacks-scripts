@@ -7841,7 +7841,7 @@ static void handle_monitor_read(int sock, void *eloop_ctx, void *sock_ctx)
 		return;
 	}
 
-	if (ieee80211_radiotap_iterator_init(&iter, (void*)buf, len)) {
+	if (ieee80211_radiotap_iterator_init(&iter, (void*)buf, len, NULL)) {
 		wpa_printf(MSG_INFO, "nl80211: received invalid radiotap frame");
 		return;
 	}
@@ -7886,11 +7886,11 @@ static void handle_monitor_read(int sock, void *eloop_ctx, void *sock_ctx)
 		return;
 
 	if (!injected)
-		handle_frame(drv, buf + iter.max_length,
-			     len - iter.max_length, datarate, ssi_signal);
+		handle_frame(drv, buf + iter._max_length,
+			     len - iter._max_length, datarate, ssi_signal);
 	else
-		handle_tx_callback(drv->ctx, buf + iter.max_length,
-				   len - iter.max_length, !failed);
+		handle_tx_callback(drv->ctx, buf + iter._max_length,
+				   len - iter._max_length, !failed);
 }
 
 

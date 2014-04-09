@@ -116,6 +116,27 @@ DBusMessage * wpas_dbus_error_invalid_args(DBusMessage *message,
 }
 
 
+/**
+ * wpas_dbus_error_scan_error - Return a new ScanError error message
+ * @message: Pointer to incoming dbus message this error refers to
+ * @error: Optional string to be used as the error message
+ * Returns: a dbus error message
+ *
+ * Convenience function to create and return a scan error
+ */
+DBusMessage * wpas_dbus_error_scan_error(DBusMessage *message,
+					 const char *error)
+{
+	DBusMessage *reply;
+
+	reply = dbus_message_new_error(message,
+				       WPAS_DBUS_ERROR_IFACE_SCAN_ERROR,
+				       error);
+
+	return reply;
+}
+
+
 static const char *dont_quote[] = {
 	"key_mgmt", "proto", "pairwise", "auth_alg", "group", "eap",
 	"opensc_engine_path", "pkcs11_engine_path", "pkcs11_module_path",
@@ -1330,7 +1351,10 @@ DBusMessage * wpas_dbus_handler_scan(DBusMessage *message,
 				"passive scan");
 			goto out;
 		} else if (params.freqs && params.freqs[0]) {
-			wpa_supplicant_trigger_scan(wpa_s, &params);
+			if (wpa_supplicant_trigger_scan(wpa_s, &params)) {
+				reply = wpas_dbus_error_scan_error(
+					message, "Scan request rejected");
+			}
 		} else {
 			wpa_s->scan_req = MANUAL_SCAN_REQ;
 			wpa_supplicant_req_scan(wpa_s, 0, 0);
@@ -1343,7 +1367,10 @@ DBusMessage * wpas_dbus_handler_scan(DBusMessage *message,
 #ifdef CONFIG_AUTOSCAN
 		autoscan_deinit(wpa_s);
 #endif /* CONFIG_AUTOSCAN */
-		wpa_supplicant_trigger_scan(wpa_s, &params);
+		if (wpa_supplicant_trigger_scan(wpa_s, &params)) {
+			reply = wpas_dbus_error_scan_error(
+				message, "Scan request rejected");
+		}
 	} else {
 		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
 			   "Unknown scan type: %s", type);

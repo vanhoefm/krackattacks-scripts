@@ -1594,11 +1594,12 @@ struct wpabuf * wpa_scan_get_vendor_ie_multi(const struct wpa_scan_res *res,
  */
 #define GREAT_SNR 30
 
+#define IS_5GHZ(n) (n > 4000)
+
 /* Compare function for sorting scan results. Return >0 if @b is considered
  * better. */
 static int wpa_scan_result_compar(const void *a, const void *b)
 {
-#define IS_5GHZ(n) (n > 4000)
 #define MIN(a,b) a < b ? a : b
 	struct wpa_scan_res **_wa = (void *) a;
 	struct wpa_scan_res **_wb = (void *) b;
@@ -1626,18 +1627,18 @@ static int wpa_scan_result_compar(const void *a, const void *b)
 	    (wb->caps & IEEE80211_CAP_PRIVACY) == 0)
 		return -1;
 
-	if ((wa->flags & wb->flags & WPA_SCAN_LEVEL_DBM) &&
-	    !((wa->flags | wb->flags) & WPA_SCAN_NOISE_INVALID)) {
+	if (wa->flags & wb->flags & WPA_SCAN_LEVEL_DBM) {
 		snr_a = MIN(wa->level - wa->noise, GREAT_SNR);
 		snr_b = MIN(wb->level - wb->noise, GREAT_SNR);
 	} else {
-		/* Not suitable information to calculate SNR, so use level */
+		/* Level is not in dBm, so we can't calculate
+		 * SNR. Just use raw level (units unknown). */
 		snr_a = wa->level;
 		snr_b = wb->level;
 	}
 
-	/* best/max rate preferred if SNR close enough */
-        if ((snr_a && snr_b && abs(snr_b - snr_a) < 5) ||
+	/* if SNR is close, decide by max rate or frequency band */
+	if ((snr_a && snr_b && abs(snr_b - snr_a) < 5) ||
 	    (wa->qual && wb->qual && abs(wb->qual - wa->qual) < 10)) {
 		maxrate_a = wpa_scan_get_max_rate(wa);
 		maxrate_b = wpa_scan_get_max_rate(wb);
@@ -1647,8 +1648,6 @@ static int wpa_scan_result_compar(const void *a, const void *b)
 			return IS_5GHZ(wa->freq) ? -1 : 1;
 	}
 
-	/* use freq for channel preference */
-
 	/* all things being equal, use SNR; if SNRs are
 	 * identical, use quality values since some drivers may only report
 	 * that value and leave the signal level zero */
@@ -1656,7 +1655,6 @@ static int wpa_scan_result_compar(const void *a, const void *b)
 		return wb->qual - wa->qual;
 	return snr_b - snr_a;
 #undef MIN
-#undef IS_5GHZ
 }
 
 
@@ -1721,15 +1719,15 @@ static void dump_scan_res(struct wpa_scan_results *scan_res)
 	for (i = 0; i < scan_res->num; i++) {
 		struct wpa_scan_res *r = scan_res->res[i];
 		u8 *pos;
-		if ((r->flags & (WPA_SCAN_LEVEL_DBM | WPA_SCAN_NOISE_INVALID))
-		    == WPA_SCAN_LEVEL_DBM) {
+		if (r->flags & WPA_SCAN_LEVEL_DBM) {
 			int snr = r->level - r->noise;
+			int noise_valid = !(r->flags & WPA_SCAN_NOISE_INVALID);
+
 			wpa_printf(MSG_EXCESSIVE, MACSTR " freq=%d qual=%d "
-				   "noise=%d level=%d snr=%d%s flags=0x%x "
-				   "age=%u",
+				   "noise=%d%s level=%d snr=%d%s flags=0x%x age=%u",
 				   MAC2STR(r->bssid), r->freq, r->qual,
-				   r->noise, r->level, snr,
-				   snr >= GREAT_SNR ? "*" : "", r->flags,
+				   r->noise, noise_valid ? "" : "~", r->level,
+				   snr, snr >= GREAT_SNR ? "*" : "", r->flags,
 				   r->age);
 		} else {
 			wpa_printf(MSG_EXCESSIVE, MACSTR " freq=%d qual=%d "
@@ -1802,6 +1800,14 @@ static void filter_scan_res(struct wpa_supplicant *wpa_s,
 }
 
 
+/*
+ * Noise floor values to use when we have signal strength
+ * measurements, but no noise floor measurments. These values were
+ * measured in an office environment with many APs.
+ */
+#define DEFAULT_NOISE_FLOOR_2GHZ (-89)
+#define DEFAULT_NOISE_FLOOR_5GHZ (-92)
+
 /**
  * wpa_supplicant_get_scan_results - Get scan results
  * @wpa_s: Pointer to wpa_supplicant data
@@ -1834,6 +1840,17 @@ wpa_supplicant_get_scan_results(struct wpa_supplicant *wpa_s,
 		os_get_reltime(&scan_res->fetch_time);
 	}
 	filter_scan_res(wpa_s, scan_res);
+
+	for (i = 0; i < scan_res->num; i++) {
+		struct wpa_scan_res *scan_res_item = scan_res->res[i];
+
+		if (scan_res_item->flags & WPA_SCAN_NOISE_INVALID) {
+			scan_res_item->noise =
+				IS_5GHZ(scan_res_item->freq) ?
+				DEFAULT_NOISE_FLOOR_5GHZ :
+				DEFAULT_NOISE_FLOOR_2GHZ;
+		}
+	}
 
 #ifdef CONFIG_WPS
 	if (wpas_wps_searching(wpa_s)) {

@@ -105,6 +105,7 @@ struct tls_connection {
 	unsigned int ca_cert_verify:1;
 	unsigned int cert_probe:1;
 	unsigned int server_cert_only:1;
+	unsigned int invalid_hb_used:1;
 
 	u8 srv_cert_hash[32];
 
@@ -984,6 +985,26 @@ int tls_get_errors(void *ssl_ctx)
 	return count;
 }
 
+
+static void tls_msg_cb(int write_p, int version, int content_type,
+		       const void *buf, size_t len, SSL *ssl, void *arg)
+{
+	struct tls_connection *conn = arg;
+	const u8 *pos = buf;
+
+	wpa_printf(MSG_DEBUG, "OpenSSL: %s ver=0x%x content_type=%d",
+		   write_p ? "TX" : "RX", version, content_type);
+	wpa_hexdump_key(MSG_MSGDUMP, "OpenSSL: Message", buf, len);
+	if (content_type == 24 && len >= 3 && pos[0] == 1) {
+		size_t payload_len = WPA_GET_BE16(pos + 1);
+		if (payload_len + 3 > len) {
+			wpa_printf(MSG_ERROR, "OpenSSL: Heartbeat attack detected");
+			conn->invalid_hb_used = 1;
+		}
+	}
+}
+
+
 struct tls_connection * tls_connection_init(void *ssl_ctx)
 {
 	SSL_CTX *ssl = ssl_ctx;
@@ -1008,6 +1029,8 @@ struct tls_connection * tls_connection_init(void *ssl_ctx)
 
 	conn->context = context;
 	SSL_set_app_data(conn->ssl, conn);
+	SSL_set_msg_callback(conn->ssl, tls_msg_cb);
+	SSL_set_msg_callback_arg(conn->ssl, conn);
 	options = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 |
 		SSL_OP_SINGLE_DH_USE;
 #ifdef SSL_OP_NO_COMPRESSION
@@ -2642,9 +2665,24 @@ openssl_connection_handshake(struct tls_connection *conn,
 	out_data = openssl_handshake(conn, in_data, server);
 	if (out_data == NULL)
 		return NULL;
+	if (conn->invalid_hb_used) {
+		wpa_printf(MSG_INFO, "TLS: Heartbeat attack detected - do not send response");
+		wpabuf_free(out_data);
+		return NULL;
+	}
 
 	if (SSL_is_init_finished(conn->ssl) && appl_data && in_data)
 		*appl_data = openssl_get_appl_data(conn, wpabuf_len(in_data));
+
+	if (conn->invalid_hb_used) {
+		wpa_printf(MSG_INFO, "TLS: Heartbeat attack detected - do not send response");
+		if (appl_data) {
+			wpabuf_free(*appl_data);
+			*appl_data = NULL;
+		}
+		wpabuf_free(out_data);
+		return NULL;
+	}
 
 	return out_data;
 }
@@ -2746,6 +2784,12 @@ struct wpabuf * tls_connection_decrypt(void *tls_ctx,
 		return NULL;
 	}
 	wpabuf_put(buf, res);
+
+	if (conn->invalid_hb_used) {
+		wpa_printf(MSG_INFO, "TLS: Heartbeat attack detected - do not send response");
+		wpabuf_free(buf);
+		return NULL;
+	}
 
 	return buf;
 }

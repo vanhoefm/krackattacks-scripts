@@ -5876,13 +5876,16 @@ static int wpa_driver_nl80211_deauthenticate(struct i802_bss *bss,
 					     const u8 *addr, int reason_code)
 {
 	struct wpa_driver_nl80211_data *drv = bss->drv;
+
+	if (drv->nlmode == NL80211_IFTYPE_ADHOC) {
+		nl80211_mark_disconnected(drv);
+		return nl80211_leave_ibss(drv);
+	}
 	if (!(drv->capa.flags & WPA_DRIVER_FLAGS_SME))
 		return wpa_driver_nl80211_disconnect(drv, reason_code);
 	wpa_printf(MSG_DEBUG, "%s(addr=" MACSTR " reason_code=%d)",
 		   __func__, MAC2STR(addr), reason_code);
 	nl80211_mark_disconnected(drv);
-	if (drv->nlmode == NL80211_IFTYPE_ADHOC)
-		return nl80211_leave_ibss(drv);
 	return wpa_driver_nl80211_mlme(drv, addr, NL80211_CMD_DEAUTHENTICATE,
 				       reason_code, 0);
 }

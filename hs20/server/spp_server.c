@@ -103,6 +103,28 @@ static void db_update_session_password(struct hs20_svc *ctx, const char *user,
 }
 
 
+static void db_update_session_machine_managed(struct hs20_svc *ctx,
+					      const char *user,
+					      const char *realm,
+					      const char *sessionid,
+					      const int pw_mm)
+{
+	char *sql;
+
+	sql = sqlite3_mprintf("UPDATE sessions SET machine_managed=%Q WHERE id=%Q AND user=%Q AND realm=%Q",
+			      pw_mm ? "1" : "0", sessionid, user, realm);
+	if (sql == NULL)
+		return;
+	debug_print(ctx, 1, "DB: %s", sql);
+	if (sqlite3_exec(ctx->db, sql, NULL, NULL, NULL) != SQLITE_OK) {
+		debug_print(ctx, 1,
+			    "Failed to update session machine_managed: %s",
+			    sqlite3_errmsg(ctx->db));
+	}
+	sqlite3_free(sql);
+}
+
+
 static void db_add_session_pps(struct hs20_svc *ctx, const char *user,
 			       const char *realm, const char *sessionid,
 			       xml_node_t *node)
@@ -1378,6 +1400,11 @@ static xml_node_t * hs20_user_input_registration(struct hs20_svc *ctx,
 
 	debug_print(ctx, 1, "Request DB subscription registration on success "
 		    "notification");
+	if (machine_managed) {
+		db_update_session_password(ctx, user, realm, session_id, pw);
+		db_update_session_machine_managed(ctx, user, realm, session_id,
+						  machine_managed);
+	}
 	db_add_session_pps(ctx, user, realm, session_id, pps);
 
 	hs20_eventlog_node(ctx, user, realm, session_id,

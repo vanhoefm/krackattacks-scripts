@@ -8,6 +8,7 @@ import logging
 logger = logging.getLogger()
 
 import hwsim_utils
+from wpasupplicant import WpaSupplicant
 
 def test_discovery(dev):
     """P2P device discovery and provision discovery"""
@@ -165,6 +166,12 @@ def test_discovery_dev_type_go(dev):
 
 def test_discovery_dev_id(dev):
     """P2P device discovery with Device ID filter"""
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5")
+    wpas.request("P2P_LISTEN 1")
+    status = wpas.global_request("STATUS")
+    if "p2p_state=LISTEN_ONLY" not in status:
+        raise Exception("Unexpected status: " + status)
     addr1 = dev[1].p2p_dev_addr()
     dev[1].p2p_listen()
     dev[0].p2p_find(social=True, dev_id="02:03:04:05:06:07")
@@ -175,6 +182,16 @@ def test_discovery_dev_id(dev):
     ev = dev[0].wait_event(['P2P-DEVICE-FOUND'], timeout=2)
     if ev is None:
         raise Exception("P2P device not found")
+    if addr1 not in ev:
+        raise Exception("Unexpected P2P peer found")
+    status = wpas.global_request("STATUS")
+    for i in range(0, 2):
+        if "p2p_state=IDLE" in status:
+            break
+        time.sleep(0.5)
+        status = wpas.global_request("STATUS")
+    if "p2p_state=IDLE" not in status:
+        raise Exception("Unexpected status: " + status)
 
 def test_discovery_dev_id_go(dev):
     """P2P device discovery with Device ID filter on GO"""

@@ -264,7 +264,7 @@ def test_ap_wps_twice(dev, apdev):
     logger.info("WPS provisioning step")
     hapd.request("WPS_PBC")
     dev[0].dump_monitor()
-    dev[0].request("WPS_PBC")
+    dev[0].request("WPS_PBC any")
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
     if ev is None:
         raise Exception("Association with the AP timed out")

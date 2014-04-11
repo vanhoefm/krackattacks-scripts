@@ -347,6 +347,25 @@ def test_wpas_ctrl_tdls_discover(dev):
     if "FAIL" not in dev[0].request("TDLS_DISCOVER 00:11:22:33:44:55"):
         raise Exception("Unexpected success on TDLS_DISCOVER")
 
+def test_wpas_ctrl_addr(dev):
+    """wpa_supplicant ctrl_iface invalid address"""
+    if "FAIL" not in dev[0].request("TDLS_SETUP "):
+        raise Exception("Unexpected success on invalid TDLS_SETUP")
+    if "FAIL" not in dev[0].request("TDLS_TEARDOWN "):
+        raise Exception("Unexpected success on invalid TDLS_TEARDOWN")
+    if "FAIL" not in dev[0].request("FT_DS "):
+        raise Exception("Unexpected success on invalid FT_DS")
+    if "FAIL" not in dev[0].request("WPS_PBC 00:11:22:33:44"):
+        raise Exception("Unexpected success on invalid WPS_PBC")
+    if "FAIL" not in dev[0].request("WPS_PIN 00:11:22:33:44"):
+        raise Exception("Unexpected success on invalid WPS_PIN")
+    if "FAIL" not in dev[0].request("WPS_NFC 00:11:22:33:44"):
+        raise Exception("Unexpected success on invalid WPS_NFC")
+    if "FAIL" not in dev[0].request("WPS_REG 12345670 00:11:22:33:44"):
+        raise Exception("Unexpected success on invalid WPS_REG")
+    if "FAIL" not in dev[0].request("IBSS_RSN 00:11:22:33:44"):
+        raise Exception("Unexpected success on invalid IBSS_RSN")
+
 def test_wpas_ctrl_config_parser(dev):
     """wpa_supplicant ctrl_iface SET config parser"""
     if "FAIL" not in dev[0].request("SET pbc_in_m1 qwerty"):

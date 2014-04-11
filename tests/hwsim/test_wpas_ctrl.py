@@ -415,6 +415,9 @@ def test_wpas_ctrl_bssid_filter(dev, apdev):
         bss = dev[2].get_bss(apdev[1]['bssid'])
         if len(bss) == 0:
             raise Exception("Missing BSS data(2)")
+
+        if "FAIL" not in dev[2].request("SET bssid_filter 00:11:22:33:44:55 00:11:22:33:44"):
+            raise Exception("Unexpected success for invalid SET bssid_filter")
     finally:
         dev[2].request("SET bssid_filter ")
 
@@ -431,6 +434,8 @@ def test_wpas_ctrl_disallow_aps(dev, apdev):
         raise Exception("Unexpected success on invalid disallow_aps")
     if "FAIL" not in dev[0].request("SET disallow_aps ssid 4q"):
         raise Exception("Unexpected success on invalid disallow_aps")
+    if "FAIL" not in dev[0].request("SET disallow_aps bssid 00:11:22:33:44:55 ssid 112233 ssid 123"):
+        raise Exception("Unexpected success on invalid disallow_aps")
     if "FAIL" not in dev[0].request("SET disallow_aps ssid 000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f00"):
         raise Exception("Unexpected success on invalid disallow_aps")
     if "FAIL" not in dev[0].request("SET disallow_aps foo 112233445566"):
@@ -439,6 +444,8 @@ def test_wpas_ctrl_disallow_aps(dev, apdev):
     dev[0].connect("test", key_mgmt="NONE", scan_freq="2412")
     hostapd.add_ap(apdev[1]['ifname'], params)
     dev[0].dump_monitor()
+    if "OK" not in dev[0].request("SET disallow_aps bssid 00:11:22:33:44:55 bssid 00:22:33:44:55:66"):
+        raise Exception("Failed to set disallow_aps")
     if "OK" not in dev[0].request("SET disallow_aps bssid " + apdev[0]['bssid']):
         raise Exception("Failed to set disallow_aps")
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
@@ -480,10 +487,35 @@ def test_wpas_ctrl_set_uapsd(dev):
         raise Exception("Unexpected SET success")
     if "FAIL" not in dev[0].request("SET uapsd 0"):
         raise Exception("Unexpected SET success")
+    if "OK" not in dev[0].request("SET uapsd 1,1,1,1;1"):
+        raise Exception("Unexpected SET failure")
     if "OK" not in dev[0].request("SET uapsd 0,0,0,0;0"):
         raise Exception("Unexpected SET failure")
     if "OK" not in dev[0].request("SET uapsd disable"):
         raise Exception("Unexpected SET failure")
+
+def test_wpas_ctrl_set(dev):
+    """wpa_supplicant ctrl_iface SET"""
+    vals = [ "foo",
+             "dot11RSNAConfigPMKLifetime 0",
+             "dot11RSNAConfigPMKReauthThreshold 101",
+             "dot11RSNAConfigSATimeout 0",
+             "wps_version_number -1",
+             "wps_version_number 256" ]
+    for val in vals:
+        if "FAIL" not in dev[0].request("SET " + val):
+            raise Exception("Unexpected SET success for " + val)
+
+    vals = [ "EAPOL::heldPeriod 60",
+             "EAPOL::authPeriod 30",
+             "EAPOL::startPeriod 30",
+             "EAPOL::maxStart 3",
+             "dot11RSNAConfigSATimeout 60",
+             "tdls_disabled 1",
+             "tdls_disabled 0" ]
+    for val in vals:
+        if "OK" not in dev[0].request("SET " + val):
+            raise Exception("Unexpected SET failure for " + val)
 
 def test_wpas_ctrl_get_capability(dev):
     """wpa_supplicant ctrl_iface GET_CAPABILITY"""

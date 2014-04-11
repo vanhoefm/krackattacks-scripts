@@ -608,3 +608,34 @@ def test_wpas_ctrl_nfc_report_handover(dev):
     for v in vals:
         if "FAIL" not in dev[0].request("NFC_REPORT_HANDOVER " + v):
             raise Exception("Unexpected NFC_REPORT_HANDOVER success for " + v)
+
+def get_blacklist(dev):
+    return dev.request("BLACKLIST").splitlines()
+
+def test_wpas_ctrl_blacklist(dev):
+    """wpa_supplicant ctrl_iface BLACKLIST"""
+    if "OK" not in dev[0].request("BLACKLIST clear"):
+        raise Exception("BLACKLIST clear failed")
+    b = get_blacklist(dev[0])
+    if len(b) != 0:
+        raise Exception("Unexpected blacklist contents: " + str(b))
+    if "OK" not in dev[0].request("BLACKLIST 00:11:22:33:44:55"):
+        raise Exception("BLACKLIST add failed")
+    b = get_blacklist(dev[0])
+    if "00:11:22:33:44:55" not in b:
+        raise Exception("Unexpected blacklist contents: " + str(b))
+    if "OK" not in dev[0].request("BLACKLIST 00:11:22:33:44:56"):
+        raise Exception("BLACKLIST add failed")
+    b = get_blacklist(dev[0])
+    if "00:11:22:33:44:55" not in b or "00:11:22:33:44:56" not in b:
+        raise Exception("Unexpected blacklist contents: " + str(b))
+    if "OK" not in dev[0].request("BLACKLIST 00:11:22:33:44:56"):
+        raise Exception("BLACKLIST add failed")
+    b = get_blacklist(dev[0])
+    if "00:11:22:33:44:55" not in b or "00:11:22:33:44:56" not in b or len(b) != 2:
+        raise Exception("Unexpected blacklist contents: " + str(b))
+
+    if "OK" not in dev[0].request("BLACKLIST clear"):
+        raise Exception("BLACKLIST clear failed")
+    if dev[0].request("BLACKLIST") != "":
+        raise Exception("Unexpected blacklist contents")

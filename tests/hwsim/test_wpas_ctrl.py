@@ -447,6 +447,13 @@ def test_wpas_ctrl_bssid_filter(dev, apdev):
         bss = dev[2].get_bss(apdev[1]['bssid'])
         if len(bss) == 0:
             raise Exception("Missing BSS data(2)")
+        res = dev[2].request("SCAN_RESULTS").splitlines()
+        if "test" not in res[1] or "test" not in res[2]:
+            raise Exception("SSID missing from SCAN_RESULTS")
+        if apdev[0]['bssid'] not in res[1] and apdev[1]['bssid'] not in res[1]:
+            raise Exception("BSS1 missing from SCAN_RESULTS")
+        if apdev[0]['bssid'] not in res[2] and apdev[1]['bssid'] not in res[2]:
+            raise Exception("BSS1 missing from SCAN_RESULTS")
 
         if "FAIL" not in dev[2].request("SET bssid_filter 00:11:22:33:44:55 00:11:22:33:44"):
             raise Exception("Unexpected success for invalid SET bssid_filter")

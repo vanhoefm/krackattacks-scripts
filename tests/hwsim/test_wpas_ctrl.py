@@ -251,6 +251,8 @@ def test_wpas_ctrl_cred(dev):
 
     id3 = add_cred(dev[0])
     id4 = add_cred(dev[0])
+    if len(dev[0].request("LIST_CREDS").splitlines()) != 6:
+        raise Exception("Unexpected LIST_CREDS result(1)")
 
     remove_cred(dev[0], id1)
     remove_cred(dev[0], id3)
@@ -259,6 +261,8 @@ def test_wpas_ctrl_cred(dev):
     remove_cred(dev[0], id)
     if "FAIL" not in dev[0].request("REMOVE_CRED 1"):
         raise Exception("Unexpected success on invalid remove cred")
+    if len(dev[0].request("LIST_CREDS").splitlines()) != 1:
+        raise Exception("Unexpected LIST_CREDS result(2)")
 
     id = add_cred(dev[0])
     values = [ ("temporary", "1", False),
@@ -310,7 +314,14 @@ def test_wpas_ctrl_cred(dev):
             expect = v[1]
         if val != expect:
             raise Exception("Unexpected GET_CRED value for {}: {} != {}".format(v[0], val, expect))
+    creds = dev[0].request("LIST_CREDS").splitlines()
+    if len(creds) != 2:
+        raise Exception("Unexpected LIST_CREDS result(3)")
+    if creds[1] != "0\texample.com\tuser@example.com\texample.com\t310026-000000000":
+        raise Exception("Unexpected LIST_CREDS value")
     remove_cred(dev[0], id)
+    if len(dev[0].request("LIST_CREDS").splitlines()) != 1:
+        raise Exception("Unexpected LIST_CREDS result(4)")
 
 def test_wpas_ctrl_pno(dev):
     """wpa_supplicant ctrl_iface pno"""

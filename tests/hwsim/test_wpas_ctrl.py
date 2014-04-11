@@ -580,3 +580,18 @@ def test_wpas_ctrl_get_capability(dev):
 
     if dev[0].get_capability("foo") is not None:
         raise Exception("Unexpected GET_CAPABILITY foo response: " + str(res))
+
+def test_wpas_ctrl_nfc_report_handover(dev):
+    """wpa_supplicant ctrl_iface NFC_REPORT_HANDOVER"""
+    vals = [ "FOO",
+             "ROLE freq=12345",
+             "ROLE TYPE",
+             "ROLE TYPE REQ",
+             "ROLE TYPE REQ SEL",
+             "ROLE TYPE 0Q SEL",
+             "ROLE TYPE 00 SEL",
+             "ROLE TYPE 00 0Q",
+             "ROLE TYPE 00 00" ]
+    for v in vals:
+        if "FAIL" not in dev[0].request("NFC_REPORT_HANDOVER " + v):
+            raise Exception("Unexpected NFC_REPORT_HANDOVER success for " + v)

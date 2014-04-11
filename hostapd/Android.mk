@@ -27,16 +27,10 @@ L_CFLAGS += -DANDROID_LOG_NAME=\"hostapd\"
 # Disable unused parameter warnings
 L_CFLAGS += -Wno-unused-parameter
 
-ifeq ($(BOARD_WLAN_DEVICE), bcmdhd)
+# Set Android extended P2P functionality
 L_CFLAGS += -DANDROID_P2P
-endif
-
-ifeq ($(BOARD_WLAN_DEVICE), qcwcn)
-L_CFLAGS += -DANDROID_P2P
-endif
-
-ifeq ($(BOARD_WLAN_DEVICE), mrvl)
-L_CFLAGS += -DANDROID_P2P
+ifeq ($(BOARD_HOSTAPD_PRIVATE_LIB),)
+L_CFLAGS += -DANDROID_P2P_STUB
 endif
 
 # Use Android specific directory for control interface sockets

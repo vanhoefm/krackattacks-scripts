@@ -27,22 +27,19 @@ L_CFLAGS += -DANDROID_LOG_NAME=\"wpa_supplicant\"
 # Disable unused parameter warnings
 L_CFLAGS += -Wno-unused-parameter
 
+# Set Android extended P2P functionality
+L_CFLAGS += -DANDROID_P2P
+ifeq ($(BOARD_WPA_SUPPLICANT_PRIVATE_LIB),)
+L_CFLAGS += -DANDROID_P2P_STUB
+endif
+
 # Disable roaming in wpa_supplicant
 ifdef CONFIG_NO_ROAMING
 L_CFLAGS += -DCONFIG_NO_ROAMING
 endif
 
 ifeq ($(BOARD_WLAN_DEVICE), bcmdhd)
-L_CFLAGS += -DANDROID_P2P
 L_CFLAGS += -DP2P_CONCURRENT_SEARCH_DELAY=0
-endif
-
-ifeq ($(BOARD_WLAN_DEVICE), qcwcn)
-L_CFLAGS += -DANDROID_P2P
-endif
-
-ifeq ($(BOARD_WLAN_DEVICE), mrvl)
-L_CFLAGS += -DANDROID_P2P
 endif
 
 # Use Android specific directory for control interface sockets

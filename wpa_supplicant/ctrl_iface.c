@@ -1861,10 +1861,10 @@ static int wpa_supplicant_ctrl_iface_blacklist(struct wpa_supplicant *wpa_s,
 	 * skipped when processing scan results.
 	 */
 	ret = wpa_blacklist_add(wpa_s, bssid);
-	if (ret != 0)
+	if (ret < 0)
 		return -1;
 	ret = wpa_blacklist_add(wpa_s, bssid);
-	if (ret != 0)
+	if (ret < 0)
 		return -1;
 	os_memcpy(buf, "OK\n", 3);
 	return 3;

@@ -639,3 +639,45 @@ def test_wpas_ctrl_blacklist(dev):
         raise Exception("BLACKLIST clear failed")
     if dev[0].request("BLACKLIST") != "":
         raise Exception("Unexpected blacklist contents")
+
+def test_wpas_ctrl_log_level(dev):
+    """wpa_supplicant ctrl_iface LOG_LEVEL"""
+    level = dev[2].request("LOG_LEVEL")
+    if "Current level: MSGDUMP" not in level:
+        raise Exception("Unexpected debug level(1): " + level)
+    if "Timestamp: 1" not in level:
+        raise Exception("Unexpected timestamp(1): " + level)
+
+    if "OK" not in dev[2].request("LOG_LEVEL  MSGDUMP  0"):
+        raise Exception("LOG_LEVEL failed")
+    level = dev[2].request("LOG_LEVEL")
+    if "Current level: MSGDUMP" not in level:
+        raise Exception("Unexpected debug level(2): " + level)
+    if "Timestamp: 0" not in level:
+        raise Exception("Unexpected timestamp(2): " + level)
+
+    if "OK" not in dev[2].request("LOG_LEVEL  MSGDUMP  1"):
+        raise Exception("LOG_LEVEL failed")
+    level = dev[2].request("LOG_LEVEL")
+    if "Current level: MSGDUMP" not in level:
+        raise Exception("Unexpected debug level(3): " + level)
+    if "Timestamp: 1" not in level:
+        raise Exception("Unexpected timestamp(3): " + level)
+
+    if "FAIL" not in dev[2].request("LOG_LEVEL FOO"):
+        raise Exception("Invalid LOG_LEVEL accepted")
+
+    for lev in [ "EXCESSIVE", "MSGDUMP", "DEBUG", "INFO", "WARNING", "ERROR" ]:
+        if "OK" not in dev[2].request("LOG_LEVEL " + lev):
+            raise Exception("LOG_LEVEL failed for " + lev)
+        level = dev[2].request("LOG_LEVEL")
+        if "Current level: " + lev not in level:
+            raise Exception("Unexpected debug level: " + level)
+
+    if "OK" not in dev[2].request("LOG_LEVEL  MSGDUMP  1"):
+        raise Exception("LOG_LEVEL failed")
+    level = dev[2].request("LOG_LEVEL")
+    if "Current level: MSGDUMP" not in level:
+        raise Exception("Unexpected debug level(3): " + level)
+    if "Timestamp: 1" not in level:
+        raise Exception("Unexpected timestamp(3): " + level)

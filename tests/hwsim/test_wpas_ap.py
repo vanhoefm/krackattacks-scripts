@@ -188,6 +188,14 @@ def test_wpas_ap_wps(dev):
     dev[1].request("REMOVE_NETWORK all")
     dev[1].dump_monitor()
 
+    dev[0].request("WPS_PIN any " + pin + " 100")
+    dev[1].request("WPS_PIN any " + pin)
+    ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
+    if ev is None:
+        raise Exception("Association with the AP timed out")
+    dev[1].request("REMOVE_NETWORK all")
+    dev[1].dump_monitor()
+
     dev[0].request("WPS_AP_PIN set 12345670")
     dev[0].dump_monitor()
 

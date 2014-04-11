@@ -349,12 +349,16 @@ def test_ap_wps_conf_pin(dev, apdev):
     if "[WPS-AUTH]" in bss['flags']:
         raise Exception("WPS-AUTH flag not cleared")
     logger.info("Try to connect from another station using the same PIN")
-    dev[1].request("WPS_PIN any " + pin)
+    pin = dev[1].request("WPS_PIN any")
     ev = dev[1].wait_event(["WPS-M2D","CTRL-EVENT-CONNECTED"], timeout=30)
     if ev is None:
         raise Exception("Operation timed out")
     if "WPS-M2D" not in ev:
         raise Exception("Unexpected WPS operation started")
+    hapd.request("WPS_PIN any " + pin)
+    ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
+    if ev is None:
+        raise Exception("Association with the AP timed out")
 
 def test_ap_wps_conf_pin_2sta(dev, apdev):
     """Two stations trying to use WPS PIN at the same time"""
@@ -1139,6 +1143,7 @@ def test_ap_wps_check_pin(dev, apdev):
     for t in [ ("12345670", "12345670"),
                ("12345678", "FAIL-CHECKSUM"),
                ("12345", "FAIL"),
+               ("123456789", "FAIL"),
                ("1234-5670", "12345670"),
                ("1234 5670", "12345670"),
                ("1-2.3:4 5670", "12345670") ]:

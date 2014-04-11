@@ -71,6 +71,19 @@ def run_sd(dev, dst, query, exp_query=None, fragment=False, query2=None):
             raise Exception("Service discovery timed out")
         if addr0 in ev:
             break
+
+    dev[0].p2p_stop_find()
+    dev[1].p2p_stop_find()
+
+    if "OK" not in dev[0].request("P2P_SERVICE_DEL upnp 10 uuid:6859dede-8574-59ab-9332-123456789012::upnp:rootdevice"):
+        raise Exception("Failed to delete a UPnP service")
+    if "FAIL" not in dev[0].request("P2P_SERVICE_DEL upnp 10 uuid:6859dede-8574-59ab-9332-123456789012::upnp:rootdevice"):
+        raise Exception("Unexpected deletion success for UPnP service")
+    if "OK" not in dev[0].request("P2P_SERVICE_DEL bonjour 0b5f6166706f766572746370c00c000c01"):
+        raise Exception("Failed to delete a Bonjour service")
+    if "FAIL" not in dev[0].request("P2P_SERVICE_DEL bonjour 0b5f6166706f766572746370c00c000c01"):
+        raise Exception("Unexpected deletion success for Bonjour service")
+
     return ev
 
 def test_p2p_service_discovery(dev):

@@ -31,6 +31,13 @@ def test_ap_wpa2_psk(dev, apdev):
     dev[0].connect(ssid, raw_psk=psk, scan_freq="2412")
     dev[1].connect(ssid, psk=passphrase, scan_freq="2412")
 
+    sig = dev[0].request("SIGNAL_POLL").splitlines()
+    pkt = dev[0].request("PKTCNT_POLL").splitlines()
+    if "FREQUENCY=2412" not in sig:
+        raise Exception("Unexpected SIGNAL_POLL value: " + str(sig))
+    if "TXBAD=0" not in pkt:
+        raise Exception("Unexpected TXBAD value: " + str(pkt))
+
 def test_ap_wpa2_psk_file(dev, apdev):
     """WPA2-PSK AP with PSK from a file"""
     ssid = "test-wpa2-psk"

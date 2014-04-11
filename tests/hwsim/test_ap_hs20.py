@@ -1814,8 +1814,11 @@ def test_ap_hs20_fetch_osu(dev, apdev):
         except:
             pass
     try:
+        dev[1].scan(freq="2412")
         dev[0].request("SET osu_dir " + dir)
         dev[0].request("FETCH_OSU")
+        if "OK" not in dev[1].request("HS20_ICON_REQUEST " + bssid + " w1fi_logo"):
+            raise Exception("HS20_ICON_REQUEST failed")
         icons = 0
         while True:
             ev = dev[0].wait_event(["OSU provider fetch completed",
@@ -1844,3 +1847,17 @@ def test_ap_hs20_fetch_osu(dev, apdev):
 
     if icons != 2:
         raise Exception("Unexpected number of icons fetched")
+
+    ev = dev[1].wait_event(["GAS-QUERY-START"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on GAS-QUERY-DONE")
+    ev = dev[1].wait_event(["GAS-QUERY-DONE"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on GAS-QUERY-DONE")
+    if "freq=2412 status_code=0 result=SUCCESS" not in ev:
+        raise Exception("Unexpected GAS-QUERY-DONE: " + ev)
+    ev = dev[1].wait_event(["RX-HS20-ANQP"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on icon fetch")
+    if "Icon Binary File" not in ev:
+        raise Exception("Unexpected ANQP element")

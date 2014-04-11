@@ -253,6 +253,16 @@ def test_gas_anqp_get(dev, apdev):
     if ev is None or "WAN Metrics" not in ev:
         raise Exception("Did not receive WAN Metrics")
 
+    dev[0].request("HS20_ANQP_GET " + bssid + " 3,4")
+
+    ev = dev[0].wait_event(["RX-HS20-ANQP"], timeout=1)
+    if ev is None or "Operator Friendly Name" not in ev:
+        raise Exception("Did not receive Operator Friendly Name")
+
+    ev = dev[0].wait_event(["RX-HS20-ANQP"], timeout=1)
+    if ev is None or "WAN Metrics" not in ev:
+        raise Exception("Did not receive WAN Metrics")
+
 def expect_gas_result(dev, result, status=None):
     ev = dev.wait_event(["GAS-QUERY-DONE"], timeout=10)
     if ev is None:

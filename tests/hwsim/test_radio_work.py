@@ -53,3 +53,13 @@ def test_ext_radio_work(dev, apdev):
     if "ext:" in items:
         logger.info("Pending radio work items:\n" + items)
         raise Exception("Unexpected remaining radio work item")
+
+    id = dev[0].request("RADIO_WORK add test-work timeout=1")
+    ev = dev[0].wait_event(["EXT-RADIO-WORK-START"])
+    if ev is None:
+        raise Exception("Timeout while waiting radio work to start")
+    ev = dev[0].wait_event(["EXT-RADIO-WORK-TIMEOUT"], timeout=2)
+    if ev is None:
+        raise Exception("Timeout while waiting radio work to time out")
+    if id not in ev:
+        raise Exception("Radio work id mismatch")

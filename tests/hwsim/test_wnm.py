@@ -91,13 +91,19 @@ def test_wnm_ess_disassoc_imminent_pmf(dev, apdev):
     if ev is None:
         raise Exception("Timeout while waiting for re-connection scan")
 
-def check_wnm_sleep_mode_enter_exit(hapd, dev):
+def check_wnm_sleep_mode_enter_exit(hapd, dev, interval=None, tfs_req=None):
     addr = dev.p2p_interface_addr()
     sta = hapd.get_sta(addr)
     if "[WNM_SLEEP_MODE]" in sta['flags']:
         raise Exception("Station unexpectedly in WNM-Sleep Mode")
     logger.info("Going to WNM Sleep Mode")
-    dev.request("WNM_SLEEP enter")
+    extra = ""
+    if interval is not None:
+        extra += " interval=" + str(interval)
+    if tfs_req:
+        extra += " tfs_req=" + tfs_req
+    if "OK" not in dev.request("WNM_SLEEP enter" + extra):
+        raise Exception("WNM_SLEEP failed")
     time.sleep(0.5)
     sta = hapd.get_sta(addr)
     if "[WNM_SLEEP_MODE]" not in sta['flags']:
@@ -121,6 +127,8 @@ def test_wnm_sleep_mode_open(dev, apdev):
 
     dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
     check_wnm_sleep_mode_enter_exit(hapd, dev[0])
+    check_wnm_sleep_mode_enter_exit(hapd, dev[0], interval=100)
+    check_wnm_sleep_mode_enter_exit(hapd, dev[0], tfs_req="5b17010001130e110000071122334455661122334455661234")
 
 def test_wnm_sleep_mode_rsn(dev, apdev):
     """WNM Sleep Mode - RSN"""

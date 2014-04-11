@@ -169,6 +169,19 @@ def test_wpas_ctrl_network(dev):
     if "FAIL" not in dev[0].request('SET_NETWORK ' + str(id) + ' pairwise WEP40'):
         raise Exception("Invalid pairwise accepted")
 
+    if "OK" not in dev[0].request('BSSID ' + str(id) + ' 00:11:22:33:44:55'):
+        raise Exception("Unexpected BSSID failure")
+    if dev[0].request("GET_NETWORK 0 bssid") != '00:11:22:33:44:55':
+        raise Exception("BSSID command did not set network bssid")
+    if "OK" not in dev[0].request('BSSID ' + str(id) + ' 00:00:00:00:00:00'):
+        raise Exception("Unexpected BSSID failure")
+    if "FAIL" not in dev[0].request("GET_NETWORK 0 bssid"):
+        raise Exception("bssid claimed configured after clearing")
+    if "FAIL" not in dev[0].request('BSSID 123 00:11:22:33:44:55'):
+        raise Exception("Unexpected BSSID success")
+    if "FAIL" not in dev[0].request('BSSID ' + str(id) + ' 00:11:22:33:44'):
+        raise Exception("Unexpected BSSID success")
+
 def add_cred(dev):
     id = dev.add_cred()
     ev = dev.wait_event(["CRED-ADDED"])

@@ -8,6 +8,7 @@ import logging
 logger = logging.getLogger()
 
 import hostapd
+from wpasupplicant import WpaSupplicant
 from test_ap_hs20 import hs20_ap_params
 from test_ap_hs20 import interworking_select
 from test_ap_hs20 import interworking_connect
@@ -18,6 +19,38 @@ def test_ext_password_psk(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
     dev[0].request("SET ext_password_backend test:psk1=12345678")
     dev[0].connect("ext-pw-psk", raw_psk="ext:psk1", scan_freq="2412")
+
+def test_ext_password_psk_not_found(dev, apdev):
+    """External password storage for PSK and PSK not found"""
+    params = hostapd.wpa2_params(ssid="ext-pw-psk", passphrase="12345678")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].request("SET ext_password_backend test:psk1=12345678")
+    dev[0].connect("ext-pw-psk", raw_psk="ext:psk2", scan_freq="2412",
+                   wait_connect=False)
+    dev[1].request("SET ext_password_backend test:psk1=1234567")
+    dev[1].connect("ext-pw-psk", raw_psk="ext:psk1", scan_freq="2412",
+                   wait_connect=False)
+    dev[2].request("SET ext_password_backend test:psk1=1234567890123456789012345678901234567890123456789012345678901234567890")
+    dev[2].connect("ext-pw-psk", raw_psk="ext:psk1", scan_freq="2412",
+                   wait_connect=False)
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5")
+    wpas.request("SET ext_password_backend test:psk1=123456789012345678901234567890123456789012345678901234567890123q")
+    wpas.connect("ext-pw-psk", raw_psk="ext:psk1", scan_freq="2412",
+                 wait_connect=False)
+
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
+    if ev is not None:
+        raise Exception("Unexpected association")
+    ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=0.1)
+    if ev is not None:
+        raise Exception("Unexpected association")
+    ev = dev[2].wait_event(["CTRL-EVENT-CONNECTED"], timeout=0.1)
+    if ev is not None:
+        raise Exception("Unexpected association")
+    ev = wpas.wait_event(["CTRL-EVENT-CONNECTED"], timeout=0.1)
+    if ev is not None:
+        raise Exception("Unexpected association")
 
 def test_ext_password_eap(dev, apdev):
     """External password storage for EAP password"""

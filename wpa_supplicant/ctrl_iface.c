@@ -5819,7 +5819,7 @@ void wpas_ctrl_radio_work_flush(struct wpa_supplicant *wpa_s)
 			continue;
 		ework = work->ctx;
 		wpa_dbg(wpa_s, MSG_DEBUG,
-			"Flushing %sexternal radio work %u (%s)",
+			"Flushing%s external radio work %u (%s)",
 			work->started ? " started" : "", ework->id,
 			ework->type);
 		if (work->started)

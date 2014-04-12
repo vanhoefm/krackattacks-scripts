@@ -673,3 +673,18 @@ def test_grpform_pbc_overlap_group_iface(dev, apdev):
         logger.info("PBC overlap not reported")
 
     clear_pbc_overlap(dev, apdev[0]['ifname'])
+
+def test_grpform_goneg_fail_with_group_iface(dev):
+    """P2P group formation fails while using group interface"""
+    dev[0].request("SET p2p_no_group_iface 0")
+    dev[1].p2p_listen()
+    peer = dev[1].p2p_dev_addr()
+    if not dev[0].discover_peer(peer):
+        raise Exception("Peer " + peer + " not found")
+    if "OK" not in dev[1].request("P2P_REJECT " + dev[0].p2p_dev_addr()):
+        raise Exception("P2P_REJECT failed")
+    if "OK" not in dev[0].request("P2P_CONNECT " + peer + " pbc"):
+        raise Exception("P2P_CONNECT failed")
+    ev = dev[0].wait_global_event(["P2P-GO-NEG-FAILURE"], timeout=10)
+    if ev is None:
+        raise Exception("GO Negotiation failure timed out")

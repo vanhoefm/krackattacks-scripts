@@ -4,6 +4,8 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+import time
+
 import hostapd
 
 def test_wpas_ctrl_network(dev):
@@ -699,3 +701,39 @@ def test_wpas_ctrl_log_level(dev):
         raise Exception("Unexpected debug level(3): " + level)
     if "Timestamp: 1" not in level:
         raise Exception("Unexpected timestamp(3): " + level)
+
+def test_wpas_ctrl_enable_disable_network(dev, apdev):
+    """wpa_supplicant ctrl_iface ENABLE/DISABLE_NETWORK"""
+    params = { "ssid": "test" }
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    id = dev[0].connect("test", key_mgmt="NONE", scan_freq="2412",
+                        only_add_network=True)
+    if "OK" not in dev[0].request("DISABLE_NETWORK " + str(id)):
+        raise Exception("Failed to disable network")
+    if "OK" not in dev[0].request("ENABLE_NETWORK " + str(id) + " no-connect"):
+        raise Exception("Failed to enable network")
+    if "OK" not in dev[0].request("DISABLE_NETWORK all"):
+        raise Exception("Failed to disable networks")
+    if "OK" not in dev[0].request("ENABLE_NETWORK " + str(id)):
+        raise Exception("Failed to enable network")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("Association with the AP timed out")
+    if "OK" not in dev[0].request("DISABLE_NETWORK " + str(id)):
+        raise Exception("Failed to disable network")
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("Disconnection with the AP timed out")
+    time.sleep(0.1)
+
+    if "OK" not in dev[0].request("ENABLE_NETWORK all"):
+        raise Exception("Failed to enable network")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("Association with the AP timed out")
+    if "OK" not in dev[0].request("DISABLE_NETWORK all"):
+        raise Exception("Failed to disable network")
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("Disconnection with the AP timed out")

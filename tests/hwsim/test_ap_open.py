@@ -49,3 +49,15 @@ def test_ap_open_unknown_action(dev, apdev):
         raise Exception("Timeout on MGMT-TX-STATUS")
     if "result=SUCCESS" not in ev:
         raise Exception("AP did not ack Action frame")
+
+def test_ap_open_reconnect_on_inactivity_disconnect(dev, apdev):
+    """Reconnect to open mode AP after inactivity related disconnection"""
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+    hapd.request("DEAUTHENTICATE " + dev[0].p2p_interface_addr() + " reason=4")
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on disconnection")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=2)
+    if ev is None:
+        raise Exception("Timeout on reconnection")

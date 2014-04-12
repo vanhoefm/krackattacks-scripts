@@ -106,3 +106,47 @@ def test_scan_external_trigger(dev, apdev):
     bssid = apdev[0]['bssid']
     subprocess.call(['sudo', 'iw', dev[0].ifname, 'scan', 'trigger'])
     check_scan(dev[0], "use_id=1", other_started=True)
+
+def test_scan_bss_expiration_count(dev, apdev):
+    """BSS entry expiration based on scan results without match"""
+    if "FAIL" not in dev[0].request("BSS_EXPIRE_COUNT 0"):
+        raise Exception("Invalid BSS_EXPIRE_COUNT accepted")
+    if "OK" not in dev[0].request("BSS_EXPIRE_COUNT 2"):
+        raise Exception("BSS_EXPIRE_COUNT failed")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan" })
+    bssid = apdev[0]['bssid']
+    dev[0].scan(freq="2412", only_new=True)
+    if bssid not in dev[0].request("SCAN_RESULTS"):
+        raise Exception("BSS not found in initial scan")
+    hapd.request("DISABLE")
+    dev[0].scan(freq="2412", only_new=True)
+    if bssid not in dev[0].request("SCAN_RESULTS"):
+        raise Exception("BSS not found in first scan without match")
+    dev[0].scan(freq="2412", only_new=True)
+    if bssid in dev[0].request("SCAN_RESULTS"):
+        raise Exception("BSS found after two scans without match")
+
+def test_scan_bss_expiration_age(dev, apdev):
+    """BSS entry expiration based on age"""
+    try:
+        if "FAIL" not in dev[0].request("BSS_EXPIRE_AGE COUNT 9"):
+            raise Exception("Invalid BSS_EXPIRE_AGE accepted")
+        if "OK" not in dev[0].request("BSS_EXPIRE_AGE 10"):
+            raise Exception("BSS_EXPIRE_AGE failed")
+        hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan" })
+        bssid = apdev[0]['bssid']
+        dev[0].scan(freq="2412")
+        if bssid not in dev[0].request("SCAN_RESULTS"):
+            raise Exception("BSS not found in initial scan")
+        hapd.request("DISABLE")
+        logger.info("Waiting for BSS entry to expire")
+        time.sleep(7)
+        if bssid not in dev[0].request("SCAN_RESULTS"):
+            raise Exception("BSS expired too quickly")
+        ev = dev[0].wait_event(["CTRL-EVENT-BSS-REMOVED"], timeout=15)
+        if ev is None:
+            raise Exception("BSS entry expiration timed out")
+        if bssid in dev[0].request("SCAN_RESULTS"):
+            raise Exception("BSS not removed after expiration time")
+    finally:
+        dev[0].request("BSS_EXPIRE_AGE 180")

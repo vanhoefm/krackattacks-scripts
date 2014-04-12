@@ -675,13 +675,15 @@ class WpaSupplicant:
             self.select_network(id)
         return id
 
-    def scan(self, type=None, freq=None, no_wait=False):
+    def scan(self, type=None, freq=None, no_wait=False, only_new=False):
         if type:
             cmd = "SCAN TYPE=" + type
         else:
             cmd = "SCAN"
         if freq:
             cmd = cmd + " freq=" + freq
+        if only_new:
+            cmd += " only_new=1"
         if not no_wait:
             self.dump_monitor()
         if not "OK" in self.request(cmd):

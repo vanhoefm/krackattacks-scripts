@@ -146,10 +146,19 @@ def remove_group(dev1, dev2):
 
 def test_grpform(dev):
     """P2P group formation using PIN and authorized connection (init -> GO)"""
-    [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
-                                           r_dev=dev[1], r_intent=0)
-    check_grpform_results(i_res, r_res)
-    remove_group(dev[0], dev[1])
+    try:
+        dev[0].request("SET p2p_group_idle 2")
+        [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
+                                               r_dev=dev[1], r_intent=0)
+        check_grpform_results(i_res, r_res)
+        dev[1].remove_group()
+        ev = dev[0].wait_global_event(["P2P-GROUP-REMOVED"], timeout=10)
+        if ev is None:
+            raise Exception("GO did not remove group on idle timeout")
+        if "GO reason=IDLE" not in ev:
+            raise Exception("Unexpected group removal event: " + ev)
+    finally:
+        dev[0].request("SET p2p_group_idle 0")
 
 def test_grpform_a(dev):
     """P2P group formation using PIN and authorized connection (init -> GO) (init: group iface)"""

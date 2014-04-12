@@ -178,3 +178,14 @@ def test_ap_wpa2_psk_file(dev, apdev):
             os.remove(pskfile)
         except:
             pass
+
+def test_ap_wpa2_psk_wildcard_ssid(dev, apdev):
+    """WPA2-PSK AP and wildcard SSID configuration"""
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    psk = '602e323e077bc63bd80307ef4745b754b0ae0a925c2638ecd13a794b9527b9e6'
+    params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("", bssid=apdev[0]['bssid'], psk=passphrase,
+                   scan_freq="2412")
+    dev[1].connect("", bssid=apdev[0]['bssid'], raw_psk=psk, scan_freq="2412")

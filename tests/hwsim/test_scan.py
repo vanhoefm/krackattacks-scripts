@@ -150,3 +150,21 @@ def test_scan_bss_expiration_age(dev, apdev):
             raise Exception("BSS not removed after expiration time")
     finally:
         dev[0].request("BSS_EXPIRE_AGE 180")
+
+def test_scan_filter(dev, apdev):
+    """Filter scan results based on SSID"""
+    try:
+        if "OK" not in dev[0].request("SET filter_ssids 1"):
+            raise Exception("SET failed")
+        dev[0].connect("test-scan", key_mgmt="NONE", only_add_network=True)
+        hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan" })
+        bssid = apdev[0]['bssid']
+        hostapd.add_ap(apdev[1]['ifname'], { "ssid": "test-scan2" })
+        bssid2 = apdev[1]['bssid']
+        dev[0].scan(freq="2412", only_new=True)
+        if bssid not in dev[0].request("SCAN_RESULTS"):
+            raise Exception("BSS not found in scan results")
+        if bssid2 in dev[0].request("SCAN_RESULTS"):
+            raise Exception("Unexpected BSS found in scan results")
+    finally:
+        dev[0].request("SET filter_ssids 0")

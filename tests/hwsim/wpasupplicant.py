@@ -646,7 +646,7 @@ class WpaSupplicant:
                    "private_key_passwd", "ca_cert2", "client_cert2",
                    "private_key2", "phase1", "phase2", "domain_suffix_match",
                    "altsubject_match", "subject_match", "pac_file", "dh_file",
-                   "bgscan" ]
+                   "bgscan", "ht_mcs" ]
         for field in quoted:
             if field in kwargs and kwargs[field]:
                 self.set_network_quoted(id, field, kwargs[field])
@@ -654,7 +654,9 @@ class WpaSupplicant:
         not_quoted = [ "proto", "key_mgmt", "ieee80211w", "pairwise",
                        "group", "wep_key0", "scan_freq", "eap",
                        "eapol_flags", "fragment_size", "scan_ssid", "auth_alg",
-                       "wpa_ptk_rekey", "disable_ht", "disable_vht", "bssid" ]
+                       "wpa_ptk_rekey", "disable_ht", "disable_vht", "bssid",
+                       "disable_max_amsdu", "ampdu_factor", "ampdu_density",
+                       "disable_ht40", "disable_sgi", "disable_ldpc" ]
         for field in not_quoted:
             if field in kwargs and kwargs[field]:
                 self.set_network(id, field, kwargs[field])

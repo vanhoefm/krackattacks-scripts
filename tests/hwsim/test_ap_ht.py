@@ -432,6 +432,11 @@ def test_ap_require_ht(dev, apdev):
         raise Exception("Association rejection timed out")
     if "status_code=27" not in ev:
         raise Exception("Unexpected rejection status code")
+    dev[2].connect("require-ht", key_mgmt="NONE", scan_freq="2412",
+                   ht_mcs="0x01 00 00 00 00 00 00 00 00 00",
+                   disable_max_amsdu="1", ampdu_factor="2",
+                   ampdu_density="1", disable_ht40="1", disable_sgi="1",
+                   disable_ldpc="1")
 
 def test_ap_require_ht_limited_rates(dev, apdev):
     """Require HT with limited supported rates"""

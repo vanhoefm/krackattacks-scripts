@@ -178,9 +178,13 @@ class WpaSupplicant:
             networks.append(network)
         return networks
 
-    def hs20_enable(self):
+    def hs20_enable(self, auto_interworking=False):
         self.request("SET interworking 1")
         self.request("SET hs20 1")
+        if auto_interworking:
+            self.request("SET auto_interworking 1")
+        else:
+            self.request("SET auto_interworking 0")
 
     def add_cred(self):
         id = self.request("ADD_CRED")

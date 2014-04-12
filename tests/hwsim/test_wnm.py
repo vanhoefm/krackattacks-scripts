@@ -353,3 +353,12 @@ def test_wnm_bss_tm_req(dev, apdev):
                                   0, 81, 1, 7) + subelems + subelems
     hapd.mgmt_tx(req)
     resp = rx_bss_tm_resp(hapd, expect_dialog=8, expect_status=1)
+
+def test_wnm_bss_keep_alive(dev, apdev):
+    """WNM keep-alive"""
+    params = { "ssid": "test-wnm",
+               "ap_max_inactivity": "1" }
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
+    time.sleep(2)

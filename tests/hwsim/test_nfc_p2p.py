@@ -605,3 +605,22 @@ def test_nfc_p2p_ip_addr_assignment2(dev):
     print "Client 2 IP address: " + res['ip_addr']
     if res['ip_addr'] == res0['ip_addr']:
         raise Exception("Same IP address assigned to both clients")
+
+def test_nfc_p2p_tag_enable_disable(dev):
+    """NFC tag enable/disable for P2P"""
+    if "FAIL" in dev[0].request("WPS_NFC_TOKEN NDEF").rstrip():
+        raise Exception("Failed to generate password token")
+    if "OK" not in dev[0].request("P2P_SET nfc_tag 1"):
+        raise Exception("Failed to enable NFC Tag for P2P static handover")
+    if "OK" not in dev[0].request("P2P_SET nfc_tag 0"):
+        raise Exception("Failed to disable NFC Tag for P2P static handover")
+
+    dev[0].request("SET p2p_no_group_iface 0")
+    if "OK" not in dev[0].request("P2P_SET nfc_tag 1"):
+        raise Exception("Failed to enable NFC Tag for P2P static handover")
+    if "OK" not in dev[0].request("P2P_SET nfc_tag 0"):
+        raise Exception("Failed to disable NFC Tag for P2P static handover")
+    if "OK" not in dev[0].request("P2P_SET nfc_tag 1"):
+        raise Exception("Failed to enable NFC Tag for P2P static handover")
+    if "OK" not in dev[0].request("P2P_SET nfc_tag 0"):
+        raise Exception("Failed to disable NFC Tag for P2P static handover")

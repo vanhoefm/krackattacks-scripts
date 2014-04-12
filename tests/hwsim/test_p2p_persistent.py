@@ -1,11 +1,12 @@
 # P2P persistent group test cases
-# Copyright (c) 2013, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
 import logging
 logger = logging.getLogger()
+import time
 
 import hwsim_utils
 from test_p2p_autogo import connect_cli
@@ -104,6 +105,30 @@ def test_persistent_group(dev):
     form(dev[0], dev[1])
     invite_from_cli(dev[0], dev[1])
     invite_from_go(dev[0], dev[1])
+
+    logger.info("Remove group on the client and try to invite from GO")
+    id = None
+    for n in dev[0].list_networks():
+        if "[P2P-PERSISTENT]" in n['flags']:
+            id = n['id']
+            break
+    if id is None:
+        raise Exception("Could not find persistent group entry")
+    clients = dev[0].request("GET_NETWORK " + id + " p2p_client_list").rstrip()
+    if dev[1].p2p_dev_addr() not in clients:
+        raise Exception("Peer missing from client list")
+    dev[1].request("REMOVE_NETWORK all")
+    if len(dev[1].list_networks()) > 0:
+        raise Exception("Unexpected network block remaining")
+    invite(dev[0], dev[1])
+    ev = dev[0].wait_global_event(["P2P-INVITATION-RESULT"], timeout=10)
+    if ev is None:
+        raise Exception("No invitation result seen")
+    if "status=8" not in ev:
+        raise Exception("Unexpected invitation result: " + ev)
+    clients = dev[0].request("GET_NETWORK " + id + " p2p_client_list").rstrip()
+    if dev[1].p2p_dev_addr() in clients:
+        raise Exception("Peer was still in client list")
 
 def test_persistent_group2(dev):
     """P2P persistent group formation with reverse roles"""

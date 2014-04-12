@@ -64,6 +64,8 @@ extern "C" {
 #define WPA_EVENT_BSS_ADDED "CTRL-EVENT-BSS-ADDED "
 /** A BSS entry was removed (followed by BSS entry id and BSSID) */
 #define WPA_EVENT_BSS_REMOVED "CTRL-EVENT-BSS-REMOVED "
+/** Change in the signal level was reported by the driver */
+#define WPA_EVENT_SIGNAL_CHANGE "CTRL-EVENT-SIGNAL-CHANGE "
 
 /** RSN IBSS 4-way handshakes completed with specified peer */
 #define IBSS_RSN_COMPLETED "IBSS-RSN-COMPLETED "

@@ -108,6 +108,20 @@ def test_ibss_rsn(dev):
     hwsim_utils.test_connectivity(dev[0].ifname, dev[2].ifname)
     hwsim_utils.test_connectivity(dev[1].ifname, dev[2].ifname)
 
+    dev[1].request("REMOVE_NETWORK all")
+    time.sleep(1)
+    id = add_ibss_rsn(dev[1], ssid)
+    connect_ibss_cmd(dev[1], id)
+    bssid1 = wait_ibss_connection(dev[1])
+    if bssid0 != bssid1:
+        logger.info("STA0 BSSID " + bssid0 + " differs from STA1 BSSID " + bssid1)
+        # try to merge with a scan
+        dev[1].scan()
+    wait_4way_handshake(dev[0], dev[1])
+    wait_4way_handshake(dev[1], dev[0])
+    time.sleep(3)
+    hwsim_utils.test_connectivity(dev[0].ifname, dev[1].ifname)
+
 def test_ibss_wpa_none(dev):
     """IBSS WPA-None"""
     ssid="ibss-wpa-none"

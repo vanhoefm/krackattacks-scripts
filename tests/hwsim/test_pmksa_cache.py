@@ -10,6 +10,7 @@ import subprocess
 import time
 
 import hostapd
+from wpasupplicant import WpaSupplicant
 from test_ap_eap import eap_connect
 
 def test_pmksa_cache_on_roam_back(dev, apdev):
@@ -157,6 +158,58 @@ def test_pmksa_cache_opportunistic(dev, apdev):
         raise Exception("Unexpected EAP exchange")
 
     pmksa1b = dev[0].get_pmksa(bssid)
+    if pmksa1b is None:
+        raise Exception("No PMKSA cache entry found")
+    if pmksa['pmkid'] != pmksa1b['pmkid']:
+        raise Exception("Unexpected PMKID change for AP1")
+
+def test_pmksa_cache_opportunistic_connect(dev, apdev):
+    """Opportunistic PMKSA caching with connect API"""
+    params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
+    params['okc'] = "1"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
+    wpas.connect("test-pmksa-cache", proto="RSN", key_mgmt="WPA-EAP",
+                 eap="GPSK", identity="gpsk user",
+                 password="abcdefghijklmnop0123456789abcdef", okc=True,
+                 scan_freq="2412")
+    pmksa = wpas.get_pmksa(bssid)
+    if pmksa is None:
+        raise Exception("No PMKSA cache entry created")
+    if pmksa['opportunistic'] != '0':
+        raise Exception("Unexpected opportunistic PMKSA cache entry")
+
+    hostapd.add_ap(apdev[1]['ifname'], params)
+    bssid2 = apdev[1]['bssid']
+
+    wpas.dump_monitor()
+    logger.info("Roam to AP2")
+    wpas.scan(freq="2412")
+    wpas.request("ROAM " + bssid2)
+    ev = wpas.wait_event(["CTRL-EVENT-EAP-STARTED",
+                            "CTRL-EVENT-CONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("Roaming with the AP timed out")
+    if "CTRL-EVENT-EAP-STARTED" in ev:
+        raise Exception("Unexpected EAP exchange")
+    pmksa2 = wpas.get_pmksa(bssid2)
+    if pmksa2 is None:
+        raise Exception("No PMKSA cache entry created")
+
+    wpas.dump_monitor()
+    logger.info("Roam back to AP1")
+    wpas.scan(freq="2412")
+    wpas.request("ROAM " + bssid)
+    ev = wpas.wait_event(["CTRL-EVENT-EAP-STARTED",
+                            "CTRL-EVENT-CONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("Roaming with the AP timed out")
+    if "CTRL-EVENT-EAP-STARTED" in ev:
+        raise Exception("Unexpected EAP exchange")
+
+    pmksa1b = wpas.get_pmksa(bssid)
     if pmksa1b is None:
         raise Exception("No PMKSA cache entry found")
     if pmksa['pmkid'] != pmksa1b['pmkid']:

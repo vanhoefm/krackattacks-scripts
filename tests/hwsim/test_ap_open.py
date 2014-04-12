@@ -4,6 +4,10 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+import logging
+logger = logging.getLogger()
+import struct
+
 import hostapd
 import hwsim_utils
 
@@ -61,3 +65,45 @@ def test_ap_open_reconnect_on_inactivity_disconnect(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=2)
     if ev is None:
         raise Exception("Timeout on reconnection")
+
+def test_ap_open_assoc_timeout(dev, apdev):
+    """AP timing out association"""
+    ssid = "test"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    dev[0].scan(freq="2412")
+    hapd.set("ext_mgmt_frame_handling", "1")
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412",
+                   wait_connect=False)
+    for i in range(0, 10):
+        req = hapd.mgmt_rx()
+        if req is None:
+            raise Exception("MGMT RX wait timed out")
+        if req['subtype'] == 11:
+            break
+        req = None
+    if not req:
+        raise Exception("Authentication frame not received")
+
+    resp = {}
+    resp['fc'] = req['fc']
+    resp['da'] = req['sa']
+    resp['sa'] = req['da']
+    resp['bssid'] = req['bssid']
+    resp['payload'] = struct.pack('<HHH', 0, 2, 0)
+    hapd.mgmt_tx(resp)
+
+    assoc = 0
+    for i in range(0, 10):
+        req = hapd.mgmt_rx()
+        if req is None:
+            raise Exception("MGMT RX wait timed out")
+        if req['subtype'] == 0:
+            assoc += 1
+            if assoc == 3:
+                break
+    if assoc != 3:
+        raise Exception("Association Request frames not received: assoc=%d" % assoc)
+    hapd.set("ext_mgmt_frame_handling", "0")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on connection")

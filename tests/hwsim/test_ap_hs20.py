@@ -436,6 +436,32 @@ def test_ap_hs20_username(dev, apdev):
                    ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
                    scan_freq="2412")
 
+def test_ap_hs20_connect_api(dev, apdev):
+    """Hotspot 2.0 connection with connect API"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    params['disable_dgaf'] = '1'
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
+    wpas.hs20_enable()
+    id = wpas.add_cred_values({ 'realm': "example.com",
+                                  'username': "hs20-test",
+                                  'password': "password",
+                                  'ca_cert': "auth_serv/ca.pem",
+                                  'domain': "example.com",
+                                  'update_identifier': "1234" })
+    interworking_select(wpas, bssid, "home", freq="2412")
+    interworking_connect(wpas, bssid, "TTLS")
+    check_sp_type(wpas, "home")
+    status = wpas.get_status()
+    if status['pairwise_cipher'] != "CCMP":
+        raise Exception("Unexpected pairwise cipher")
+    if status['hs20'] != "2":
+        raise Exception("Unexpected HS 2.0 support indication")
+
 def test_ap_hs20_auto_interworking(dev, apdev):
     """Hotspot 2.0 connection with auto_interworking=1"""
     bssid = apdev[0]['bssid']

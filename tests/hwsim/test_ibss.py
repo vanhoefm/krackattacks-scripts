@@ -71,6 +71,9 @@ def add_ibss_rsn(dev, ssid):
 def add_ibss_wpa_none(dev, ssid):
     return add_ibss(dev, ssid, "12345678", "WPA", "WPA-NONE", "TKIP", "TKIP")
 
+def add_ibss_wpa_none_ccmp(dev, ssid):
+    return add_ibss(dev, ssid, "12345678", "WPA", "WPA-NONE", "CCMP", "CCMP")
+
 def test_ibss_rsn(dev):
     """IBSS RSN"""
     ssid="ibss-rsn"
@@ -131,13 +134,6 @@ def test_ibss_wpa_none(dev):
     connect_ibss_cmd(dev[0], id)
     bssid0 = wait_ibss_connection(dev[0])
 
-    logger.info("Join two STAs to the IBSS")
-
-    id = add_ibss_wpa_none(dev[1], ssid)
-    connect_ibss_cmd(dev[1], id)
-    id = add_ibss_wpa_none(dev[2], ssid)
-    connect_ibss_cmd(dev[2], id)
-
     # This is a bit ugly, but no one really cares about WPA-None, so there may
     # not be enough justification to clean this up.. For now, wpa_supplicant
     # will show two connection events with mac80211_hwsim where the first one
@@ -145,6 +141,13 @@ def test_ibss_wpa_none(dev):
     if bssid0 == "00:00:00:00:00:00":
         logger.info("Waiting for real BSSID on the first STA")
         bssid0 = wait_ibss_connection(dev[0])
+
+    logger.info("Join two STAs to the IBSS")
+
+    id = add_ibss_wpa_none(dev[1], ssid)
+    connect_ibss_cmd(dev[1], id)
+    id = add_ibss_wpa_none(dev[2], ssid)
+    connect_ibss_cmd(dev[2], id)
 
     bssid1 = wait_ibss_connection(dev[1])
     if bssid0 != bssid1:
@@ -175,6 +178,46 @@ def test_ibss_wpa_none(dev):
         logger.info("Ignoring known connectivity failure: " + str(e))
     try:
         hwsim_utils.test_connectivity(dev[1].ifname, dev[2].ifname)
+    except Exception, e:
+        logger.info("Ignoring known connectivity failure: " + str(e))
+
+def test_ibss_wpa_none_ccmp(dev):
+    """IBSS WPA-None/CCMP"""
+    ssid="ibss-wpa-none"
+
+    logger.info("Start IBSS on the first STA")
+    id = add_ibss_wpa_none(dev[0], ssid)
+    connect_ibss_cmd(dev[0], id)
+    bssid0 = wait_ibss_connection(dev[0])
+
+    # This is a bit ugly, but no one really cares about WPA-None, so there may
+    # not be enough justification to clean this up.. For now, wpa_supplicant
+    # will show two connection events with mac80211_hwsim where the first one
+    # comes with all zeros address.
+    if bssid0 == "00:00:00:00:00:00":
+        logger.info("Waiting for real BSSID on the first STA")
+        bssid0 = wait_ibss_connection(dev[0])
+
+
+    logger.info("Join a STA to the IBSS")
+    id = add_ibss_wpa_none(dev[1], ssid)
+    connect_ibss_cmd(dev[1], id)
+
+    bssid1 = wait_ibss_connection(dev[1])
+    if bssid0 != bssid1:
+        logger.info("STA0 BSSID " + bssid0 + " differs from STA1 BSSID " + bssid1)
+        bssid1 = wait_ibss_connection(dev[1])
+
+    print bssid0
+    print bssid1
+
+    # Allow some time for all peers to complete key setup
+    time.sleep(1)
+
+    # This is supposed to work, but looks like WPA-None does not work with
+    # mac80211 currently..
+    try:
+        hwsim_utils.test_connectivity(dev[0].ifname, dev[1].ifname)
     except Exception, e:
         logger.info("Ignoring known connectivity failure: " + str(e))
 

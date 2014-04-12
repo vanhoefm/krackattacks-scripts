@@ -46,7 +46,7 @@ def wait_4way_handshake2(dev1, dev2, dev3):
     if ev is None:
         raise Exception("4-way handshake in IBSS timed out")
 
-def add_ibss(dev, ssid, psk=None, proto=None, key_mgmt=None, pairwise=None, group=None, beacon_int=None):
+def add_ibss(dev, ssid, psk=None, proto=None, key_mgmt=None, pairwise=None, group=None, beacon_int=None, bssid=None):
     id = dev.add_network()
     dev.set_network(id, "mode", "1")
     dev.set_network(id, "frequency", "2412")
@@ -63,6 +63,9 @@ def add_ibss(dev, ssid, psk=None, proto=None, key_mgmt=None, pairwise=None, grou
         dev.set_network(id, "group", group)
     if beacon_int:
         dev.set_network(id, "beacon_int", beacon_int)
+    if bssid:
+        dev.set_network(id, "bssid", bssid)
+    dev.request("ENABLE_NETWORK " + str(id) + " no-connect")
     return id
 
 def add_ibss_rsn(dev, ssid):
@@ -233,3 +236,26 @@ def test_ibss_open(dev):
     bssid1 = wait_ibss_connection(dev[1])
     if bssid0 != bssid1:
         logger.info("STA0 BSSID " + bssid0 + " differs from STA1 BSSID " + bssid1)
+
+def test_ibss_open_fixed_bssid(dev):
+    """IBSS open (no security) and fixed BSSID"""
+    ssid="ibss"
+    bssid="02:11:22:33:44:55"
+    try:
+        dev[0].request("AP_SCAN 2")
+        add_ibss(dev[0], ssid, key_mgmt="NONE", bssid=bssid, beacon_int="150")
+        dev[0].request("REASSOCIATE")
+
+        dev[1].request("AP_SCAN 2")
+        add_ibss(dev[1], ssid, key_mgmt="NONE", bssid=bssid, beacon_int="200")
+        dev[1].request("REASSOCIATE")
+
+        bssid0 = wait_ibss_connection(dev[0])
+        bssid1 = wait_ibss_connection(dev[1])
+        if bssid0 != bssid:
+            raise Exception("STA0 BSSID " + bssid0 + " differs from fixed BSSID " + bssid)
+        if bssid1 != bssid:
+            raise Exception("STA0 BSSID " + bssid0 + " differs from fixed BSSID " + bssid)
+    finally:
+        dev[0].request("AP_SCAN 1")
+        dev[1].request("AP_SCAN 1")

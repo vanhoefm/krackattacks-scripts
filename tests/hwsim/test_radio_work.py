@@ -10,6 +10,7 @@ logger = logging.getLogger()
 import subprocess
 
 import hostapd
+from wpasupplicant import WpaSupplicant
 
 def test_ext_radio_work(dev, apdev):
     """External radio work item"""
@@ -63,3 +64,27 @@ def test_ext_radio_work(dev, apdev):
         raise Exception("Timeout while waiting radio work to time out")
     if id not in ev:
         raise Exception("Radio work id mismatch")
+
+def test_radio_work_cancel(dev, apdev):
+    """Radio work items cancelled on interface removal"""
+    params = hostapd.wpa2_params(ssid="radio", passphrase="12345678")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5")
+    wpas.scan(freq="2412")
+
+    id = wpas.request("RADIO_WORK add test-work-a")
+    if "FAIL" in id:
+        raise Exception("Failed to add radio work")
+    ev = wpas.wait_event(["EXT-RADIO-WORK-START"])
+    if ev is None:
+        raise Exception("Timeout while waiting radio work to start")
+    if "EXT-RADIO-WORK-START " + id not in ev:
+        raise Exception("Unexpected radio work start id")
+
+    wpas.connect("radio", psk="12345678", scan_freq="2412",
+                   wait_connect=False)
+    time.sleep(1)
+    wpas.interface_remove("wlan5")
+    # add to allow log file renaming
+    wpas.interface_add("wlan5")

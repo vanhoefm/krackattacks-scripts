@@ -370,6 +370,17 @@ static int wpa_supplicant_wps_cred(void *ctx,
 		ssid = wpa_config_add_network(wpa_s->conf);
 		if (ssid == NULL)
 			return -1;
+		if (wpa_s->current_ssid) {
+			/*
+			 * Should the GO issue multiple credentials for some
+			 * reason, each credential should be marked as a
+			 * temporary P2P group similarly to the one that gets
+			 * marked as such based on the pre-configured values
+			 * used for the WPS network block.
+			 */
+			ssid->p2p_group = wpa_s->current_ssid->p2p_group;
+			ssid->temporary = wpa_s->current_ssid->temporary;
+		}
 		wpas_notify_network_added(wpa_s, ssid);
 	}
 

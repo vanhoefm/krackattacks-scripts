@@ -401,6 +401,53 @@ def test_nfc_p2p_static_handover_tagdev_go(dev):
     hwsim_utils.test_connectivity_p2p(dev[0], dev[1])
     check_ip_addr(res0)
 
+def test_nfc_p2p_static_handover_tagdev_go_forced_freq(dev):
+    """NFC static handover to form a new P2P group on forced channel (NFC Tag device becomes GO)"""
+
+    set_ip_addr_info(dev[1])
+
+    logger.info("Perform NFC connection handover")
+
+    res = dev[1].request("SET p2p_listen_reg_class 81")
+    res2 = dev[1].request("SET p2p_listen_channel 6")
+    if "FAIL" in res or "FAIL" in res2:
+        raise Exception("Could not set Listen channel")
+    pw = dev[1].request("WPS_NFC_TOKEN NDEF").rstrip()
+    if "FAIL" in pw:
+        raise Exception("Failed to generate password token")
+    res = dev[1].request("P2P_SET nfc_tag 1").rstrip()
+    if "FAIL" in res:
+        raise Exception("Failed to enable NFC Tag for P2P static handover")
+    sel = dev[1].request("NFC_GET_HANDOVER_SEL NDEF P2P-CR-TAG").rstrip()
+    if "FAIL" in sel:
+        raise Exception("Failed to generate NFC connection handover select")
+    res = dev[1].request("P2P_LISTEN")
+    if "FAIL" in res:
+        raise Exception("Failed to start Listen mode")
+    dev[1].dump_monitor()
+
+    dev[0].dump_monitor()
+    dev[0].request("SET p2p_go_intent 3")
+    res = dev[0].request("WPS_NFC_TAG_READ " + sel + " freq=2442")
+    if "FAIL" in res:
+        raise Exception("Failed to provide NFC tag contents to wpa_supplicant")
+
+    ev = dev[0].wait_event(grpform_events, timeout=15)
+    if ev is None:
+        raise Exception("Group formation timed out")
+    res0 = dev[0].group_form_result(ev)
+
+    ev = dev[1].wait_event(grpform_events, timeout=1)
+    if ev is None:
+        raise Exception("Group formation timed out")
+    res1 = dev[1].group_form_result(ev)
+    logger.info("Group formed")
+
+    if res0['role'] != 'client' or res1['role'] != 'GO':
+        raise Exception("Unexpected roles negotiated")
+    hwsim_utils.test_connectivity_p2p(dev[0], dev[1])
+    check_ip_addr(res0)
+
 def test_nfc_p2p_static_handover_join_tagdev_go(dev):
     """NFC static handover to join a P2P group (NFC Tag device is the GO)"""
 

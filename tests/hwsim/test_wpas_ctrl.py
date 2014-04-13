@@ -630,6 +630,14 @@ def test_wpas_ctrl_nfc_report_handover(dev):
         if "FAIL" not in dev[0].request("NFC_REPORT_HANDOVER " + v):
             raise Exception("Unexpected NFC_REPORT_HANDOVER success for " + v)
 
+def test_wpas_ctrl_nfc_tag_read(dev):
+    """wpa_supplicant ctrl_iface WPS_NFC_TAG_READ"""
+    vals = [ "FOO", "0Q", "00", "000000", "10000001", "10000000", "00000000",
+             "100e0000", "100e0001ff", "100e000411110000", "100e0004100e0001" ]
+    for v in vals:
+        if "FAIL" not in dev[0].request("WPS_NFC_TAG_READ " + v):
+            raise Exception("Unexpected WPS_NFC_TAG_READ success for " + v)
+
 def get_blacklist(dev):
     return dev.request("BLACKLIST").splitlines()
 

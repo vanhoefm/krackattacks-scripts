@@ -297,6 +297,7 @@ struct wpa_driver_nl80211_data {
 	unsigned int retry_auth:1;
 	unsigned int use_monitor:1;
 	unsigned int ignore_next_local_disconnect:1;
+	unsigned int ignore_next_local_deauth:1;
 	unsigned int allow_p2p_device:1;
 	unsigned int hostapd:1;
 	unsigned int start_mode_ap:1;
@@ -1836,6 +1837,14 @@ static void mlme_event_deauth_disassoc(struct wpa_driver_nl80211_data *drv,
 		}
 		event.deauth_info.locally_generated =
 			!os_memcmp(mgmt->sa, drv->first_bss->addr, ETH_ALEN);
+		if (drv->ignore_next_local_deauth) {
+			drv->ignore_next_local_deauth = 0;
+			if (event.deauth_info.locally_generated) {
+				wpa_printf(MSG_DEBUG, "nl80211: Ignore deauth event triggered due to own deauth request");
+				return;
+			}
+			wpa_printf(MSG_WARNING, "nl80211: Was expecting local deauth but got another disconnect event first");
+		}
 		event.deauth_info.addr = bssid;
 		event.deauth_info.reason_code = reason_code;
 		if (frame + len > mgmt->u.deauth.variable) {
@@ -5878,6 +5887,7 @@ static int wpa_driver_nl80211_deauthenticate(struct i802_bss *bss,
 					     const u8 *addr, int reason_code)
 {
 	struct wpa_driver_nl80211_data *drv = bss->drv;
+	int ret;
 
 	if (drv->nlmode == NL80211_IFTYPE_ADHOC) {
 		nl80211_mark_disconnected(drv);
@@ -5888,8 +5898,14 @@ static int wpa_driver_nl80211_deauthenticate(struct i802_bss *bss,
 	wpa_printf(MSG_DEBUG, "%s(addr=" MACSTR " reason_code=%d)",
 		   __func__, MAC2STR(addr), reason_code);
 	nl80211_mark_disconnected(drv);
-	return wpa_driver_nl80211_mlme(drv, addr, NL80211_CMD_DEAUTHENTICATE,
-				       reason_code, 0);
+	ret = wpa_driver_nl80211_mlme(drv, addr, NL80211_CMD_DEAUTHENTICATE,
+				      reason_code, 0);
+	/*
+	 * For locally generated deauthenticate, supplicant already generates a
+	 * DEAUTH event, so ignore the event from NL80211.
+	 */
+	drv->ignore_next_local_deauth = ret == 0;
+	return ret;
 }
 
 
@@ -11692,7 +11708,7 @@ static int wpa_driver_nl80211_status(void *priv, char *buf, size_t buflen)
 			  "monitor_refcount=%d\n"
 			  "last_mgmt_freq=%u\n"
 			  "eapol_tx_sock=%d\n"
-			  "%s%s%s%s%s%s%s%s%s%s%s%s%s",
+			  "%s%s%s%s%s%s%s%s%s%s%s%s%s%s",
 			  drv->phyname,
 			  drv->ifindex,
 			  drv->operstate,
@@ -11726,6 +11742,8 @@ static int wpa_driver_nl80211_status(void *priv, char *buf, size_t buflen)
 			  drv->use_monitor ? "use_monitor=1\n" : "",
 			  drv->ignore_next_local_disconnect ?
 			  "ignore_next_local_disconnect=1\n" : "",
+			  drv->ignore_next_local_deauth ?
+			  "ignore_next_local_deauth=1\n" : "",
 			  drv->allow_p2p_device ? "allow_p2p_device=1\n" : "");
 	if (res < 0 || res >= end - pos)
 		return pos - buf;

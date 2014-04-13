@@ -2889,6 +2889,69 @@ static void nl80211_vendor_event(struct wpa_driver_nl80211_data *drv,
 }
 
 
+static void nl80211_reg_change_event(struct wpa_driver_nl80211_data *drv,
+				     struct nlattr *tb[])
+{
+	union wpa_event_data data;
+	enum nl80211_reg_initiator init;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Regulatory domain change");
+
+	if (tb[NL80211_ATTR_REG_INITIATOR] == NULL)
+		return;
+
+	os_memset(&data, 0, sizeof(data));
+	init = nla_get_u8(tb[NL80211_ATTR_REG_INITIATOR]);
+	wpa_printf(MSG_DEBUG, " * initiator=%d", init);
+	switch (init) {
+	case NL80211_REGDOM_SET_BY_CORE:
+		data.channel_list_changed.initiator = REGDOM_SET_BY_CORE;
+		break;
+	case NL80211_REGDOM_SET_BY_USER:
+		data.channel_list_changed.initiator = REGDOM_SET_BY_USER;
+		break;
+	case NL80211_REGDOM_SET_BY_DRIVER:
+		data.channel_list_changed.initiator = REGDOM_SET_BY_DRIVER;
+		break;
+	case NL80211_REGDOM_SET_BY_COUNTRY_IE:
+		data.channel_list_changed.initiator = REGDOM_SET_BY_COUNTRY_IE;
+		break;
+	}
+
+	if (tb[NL80211_ATTR_REG_TYPE]) {
+		enum nl80211_reg_type type;
+		type = nla_get_u8(tb[NL80211_ATTR_REG_TYPE]);
+		wpa_printf(MSG_DEBUG, " * type=%d", type);
+		switch (type) {
+		case NL80211_REGDOM_TYPE_COUNTRY:
+			data.channel_list_changed.type = REGDOM_TYPE_COUNTRY;
+			break;
+		case NL80211_REGDOM_TYPE_WORLD:
+			data.channel_list_changed.type = REGDOM_TYPE_WORLD;
+			break;
+		case NL80211_REGDOM_TYPE_CUSTOM_WORLD:
+			data.channel_list_changed.type =
+				REGDOM_TYPE_CUSTOM_WORLD;
+			break;
+		case NL80211_REGDOM_TYPE_INTERSECTION:
+			data.channel_list_changed.type =
+				REGDOM_TYPE_INTERSECTION;
+			break;
+		}
+	}
+
+	if (tb[NL80211_ATTR_REG_ALPHA2]) {
+		os_strlcpy(data.channel_list_changed.alpha2,
+			   nla_get_string(tb[NL80211_ATTR_REG_ALPHA2]),
+			   sizeof(data.channel_list_changed.alpha2));
+		wpa_printf(MSG_DEBUG, " * alpha2=%s",
+			   data.channel_list_changed.alpha2);
+	}
+
+	wpa_supplicant_event(drv->ctx, EVENT_CHANNEL_LIST_CHANGED, &data);
+}
+
+
 static void do_process_drv_event(struct i802_bss *bss, int cmd,
 				 struct nlattr **tb)
 {
@@ -3008,34 +3071,7 @@ static void do_process_drv_event(struct i802_bss *bss, int cmd,
 		nl80211_cqm_event(drv, tb);
 		break;
 	case NL80211_CMD_REG_CHANGE:
-		wpa_printf(MSG_DEBUG, "nl80211: Regulatory domain change");
-		if (tb[NL80211_ATTR_REG_INITIATOR] == NULL)
-			break;
-		os_memset(&data, 0, sizeof(data));
-		switch (nla_get_u8(tb[NL80211_ATTR_REG_INITIATOR])) {
-		case NL80211_REGDOM_SET_BY_CORE:
-			data.channel_list_changed.initiator =
-				REGDOM_SET_BY_CORE;
-			break;
-		case NL80211_REGDOM_SET_BY_USER:
-			data.channel_list_changed.initiator =
-				REGDOM_SET_BY_USER;
-			break;
-		case NL80211_REGDOM_SET_BY_DRIVER:
-			data.channel_list_changed.initiator =
-				REGDOM_SET_BY_DRIVER;
-			break;
-		case NL80211_REGDOM_SET_BY_COUNTRY_IE:
-			data.channel_list_changed.initiator =
-				REGDOM_SET_BY_COUNTRY_IE;
-			break;
-		default:
-			wpa_printf(MSG_DEBUG, "nl80211: Unknown reg change initiator %d received",
-				   nla_get_u8(tb[NL80211_ATTR_REG_INITIATOR]));
-			break;
-		}
-		wpa_supplicant_event(drv->ctx, EVENT_CHANNEL_LIST_CHANGED,
-				     &data);
+		nl80211_reg_change_event(drv, tb);
 		break;
 	case NL80211_CMD_REG_BEACON_HINT:
 		wpa_printf(MSG_DEBUG, "nl80211: Regulatory beacon hint");

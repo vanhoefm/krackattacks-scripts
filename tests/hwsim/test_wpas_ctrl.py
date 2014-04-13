@@ -774,6 +774,11 @@ def test_wpas_ctrl_enable_disable_network(dev, apdev):
 def test_wpas_ctrl_country(dev, apdev):
     """wpa_supplicant SET/GET country code"""
     try:
+        # work around issues with possible pending regdom event from the end of
+        # the previous test case
+        time.sleep(0.2)
+        dev[0].dump_monitor()
+
         if "OK" not in dev[0].request("SET country FI"):
             raise Exception("Failed to set country code")
         if dev[0].request("GET country") != "FI":

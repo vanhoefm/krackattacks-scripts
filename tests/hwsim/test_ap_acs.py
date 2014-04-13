@@ -1,5 +1,5 @@
 # Test cases for automatic channel selection with hostapd
-# Copyright (c) 2013, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -7,6 +7,7 @@
 import logging
 logger = logging.getLogger()
 import subprocess
+import time
 
 import hostapd
 
@@ -55,6 +56,15 @@ def test_ap_acs(dev, apdev):
 def test_ap_multi_bss_acs(dev, apdev):
     """hostapd start with a multi-BSS configuration file using ACS"""
     ifname = apdev[0]['ifname']
+
+    # make sure the current channel is on 2.4 GHz band as a workaround for the
+    # limited survey functionality in mac80211_hwsim
+    hostapd.add_ap(ifname, { "ssid": "test" })
+    time.sleep(0.1)
+    hapd_global = hostapd.HostapdGlobal()
+    hapd_global.remove(ifname)
+
+    # start the actual test
     hostapd.add_iface(ifname, 'multi-bss-acs.conf')
     hapd = hostapd.Hostapd(ifname)
     hapd.enable()

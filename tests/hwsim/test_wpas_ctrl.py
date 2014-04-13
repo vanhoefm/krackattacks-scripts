@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+import subprocess
 import time
 
 import hostapd
@@ -737,3 +738,26 @@ def test_wpas_ctrl_enable_disable_network(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=10)
     if ev is None:
         raise Exception("Disconnection with the AP timed out")
+
+def test_wpas_ctrl_country(dev, apdev):
+    """wpa_supplicant SET/GET country code"""
+    try:
+        if "OK" not in dev[0].request("SET country FI"):
+            raise Exception("Failed to set country code")
+        if dev[0].request("GET country") != "FI":
+            raise Exception("Country code set failed")
+        ev = dev[0].wait_event(["CTRL-EVENT-REGDOM-CHANGE"])
+        if ev is None:
+            raise Exception("regdom change event not seen")
+        if "init=USER type=COUNTRY alpha2=FI" not in ev:
+            raise Exception("Unexpected event contents: " + ev)
+        dev[0].request("SET country 00")
+        if dev[0].request("GET country") != "00":
+            raise Exception("Country code set failed")
+        ev = dev[0].wait_event(["CTRL-EVENT-REGDOM-CHANGE"])
+        if ev is None:
+            raise Exception("regdom change event not seen")
+        if "init=DRIVER type=WORLD" not in ev:
+            raise Exception("Unexpected event contents: " + ev)
+    finally:
+        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])

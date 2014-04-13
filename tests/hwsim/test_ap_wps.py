@@ -1223,8 +1223,17 @@ def test_ap_wps_ie_fragmentation(dev, apdev):
         raise Exception("Association with the AP timed out")
     bss = dev[0].get_bss(apdev[0]['bssid'])
     if "wps_device_name" not in bss or bss['wps_device_name'] != "1234567890abcdef1234567890abcdef":
+        logger.info("Device Name not received correctly")
         logger.info(bss)
-        raise Exception("Device Name not received correctly")
+        # This can fail if Probe Response frame is missed and Beacon frame was
+        # used to fill in the BSS entry. This can happen, e.g., during heavy
+        # load every now and then and is not really an error, so try to
+        # workaround by runnign another scan.
+        dev[0].scan(freq="2412", only_new=True)
+        bss = dev[0].get_bss(apdev[0]['bssid'])
+        if "wps_device_name" not in bss or bss['wps_device_name'] != "1234567890abcdef1234567890abcdef":
+            logger.info(bss)
+            raise Exception("Device Name not received correctly")
     if len(re.findall("dd..0050f204", bss['ie'])) != 2:
         raise Exception("Unexpected number of WPS IEs")
 

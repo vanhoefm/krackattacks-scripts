@@ -1,5 +1,5 @@
 # P2P autonomous GO test cases
-# Copyright (c) 2013, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -308,3 +308,12 @@ def test_autogo_chan_switch(dev):
     dev[1].dump_monitor()
     time.sleep(0.1)
     hwsim_utils.test_connectivity_p2p(dev[0], dev[1])
+
+def test_autogo_extra_cred(dev):
+    """P2P autonomous GO sending two WPS credentials"""
+    if "FAIL" in dev[0].request("SET wps_testing_dummy_cred 1"):
+        raise Exception("Failed to enable test mode")
+    autogo(dev[0])
+    connect_cli(dev[0], dev[1])
+    dev[0].remove_group()
+    dev[1].wait_go_ending_session()

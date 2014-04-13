@@ -638,6 +638,30 @@ def test_wpas_ctrl_nfc_tag_read(dev):
         if "FAIL" not in dev[0].request("WPS_NFC_TAG_READ " + v):
             raise Exception("Unexpected WPS_NFC_TAG_READ success for " + v)
 
+def test_wpas_ctrl_nfc_get_handover(dev):
+    """wpa_supplicant ctrl_iface NFC_GET_HANDOVER"""
+    vals = [ "FOO", "FOO BAR", "WPS WPS", "WPS WPS-CR", "WPS FOO", "NDEF P2P" ]
+    for v in vals:
+        if "FAIL" not in dev[0].request("NFC_GET_HANDOVER_REQ " + v):
+            raise Exception("Unexpected NFC_GET_HANDOVER_REQ success for " + v)
+
+    vals = [ "NDEF WPS", "NDEF P2P-CR", "WPS P2P-CR" ]
+    for v in vals:
+        if "FAIL" in dev[0].request("NFC_GET_HANDOVER_REQ " + v):
+            raise Exception("Unexpected NFC_GET_HANDOVER_REQ failure for " + v)
+
+    vals = [ "FOO", "FOO BAR", "WPS WPS", "WPS WPS-CR", "WPS FOO", "NDEF P2P",
+             "NDEF WPS", "NDEF WPS uuid" ]
+    for v in vals:
+        if "FAIL" not in dev[0].request("NFC_GET_HANDOVER_SEL " + v):
+            raise Exception("Unexpected NFC_GET_HANDOVER_SEL success for " + v)
+
+    vals = [ "NDEF P2P-CR", "WPS P2P-CR", "NDEF P2P-CR-TAG",
+             "WPS P2P-CR-TAG" ]
+    for v in vals:
+        if "FAIL" in dev[0].request("NFC_GET_HANDOVER_SEL " + v):
+            raise Exception("Unexpected NFC_GET_HANDOVER_SEL failure for " + v)
+
 def get_blacklist(dev):
     return dev.request("BLACKLIST").splitlines()
 

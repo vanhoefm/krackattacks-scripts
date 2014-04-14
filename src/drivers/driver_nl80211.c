@@ -236,6 +236,7 @@ struct i802_bss {
 	u8 addr[ETH_ALEN];
 
 	int freq;
+	int bandwidth;
 	int if_dynamic;
 
 	void *ctx;
@@ -386,6 +387,8 @@ static int wpa_driver_nl80211_if_remove(struct i802_bss *bss,
 					enum wpa_driver_if_type type,
 					const char *ifname);
 
+static int nl80211_set_channel(struct i802_bss *bss,
+			       struct hostapd_freq_params *freq, int set_chan);
 static int wpa_driver_nl80211_set_freq(struct i802_bss *bss,
 				       struct hostapd_freq_params *freq);
 static int nl80211_disable_11b_rates(struct wpa_driver_nl80211_data *drv,
@@ -3657,6 +3660,9 @@ static void wiphy_info_feature_flags(struct wiphy_info_data *info,
 
 	if (flags & NL80211_FEATURE_NEED_OBSS_SCAN)
 		capa->flags |= WPA_DRIVER_FLAGS_OBSS_SCAN;
+
+	if (flags & NL80211_FEATURE_AP_MODE_CHAN_WIDTH_CHANGE)
+		capa->flags |= WPA_DRIVER_FLAGS_HT_2040_COEX;
 }
 
 
@@ -7300,6 +7306,30 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 		nl80211_set_bss(bss, params->cts_protect, params->preamble,
 				params->short_slot_time, params->ht_opmode,
 				params->isolate, params->basic_rates);
+		if (beacon_set && params->freq &&
+		    params->freq->bandwidth != bss->bandwidth) {
+			wpa_printf(MSG_DEBUG,
+				   "nl80211: Update BSS %s bandwidth: %d -> %d",
+				   bss->ifname, bss->bandwidth,
+				   params->freq->bandwidth);
+			ret = nl80211_set_channel(bss, params->freq, 1);
+			if (ret) {
+				wpa_printf(MSG_DEBUG,
+					   "nl80211: Frequency set failed: %d (%s)",
+					   ret, strerror(-ret));
+			} else {
+				wpa_printf(MSG_DEBUG,
+					   "nl80211: Frequency set succeeded for ht2040 coex");
+				bss->bandwidth = params->freq->bandwidth;
+			}
+		} else if (!beacon_set) {
+			/*
+			 * cfg80211 updates the driver on frequence change in AP
+			 * mode only at the point when beaconing is started, so
+			 * set the initial value here.
+			 */
+			bss->bandwidth = params->freq->bandwidth;
+		}
 	}
 	return ret;
  nla_put_failure:
@@ -7364,8 +7394,8 @@ nla_put_failure:
 }
 
 
-static int wpa_driver_nl80211_set_freq(struct i802_bss *bss,
-				       struct hostapd_freq_params *freq)
+static int nl80211_set_channel(struct i802_bss *bss,
+			       struct hostapd_freq_params *freq, int set_chan)
 {
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct nl_msg *msg;
@@ -7379,7 +7409,8 @@ static int wpa_driver_nl80211_set_freq(struct i802_bss *bss,
 	if (!msg)
 		return -1;
 
-	nl80211_cmd(drv, msg, 0, NL80211_CMD_SET_WIPHY);
+	nl80211_cmd(drv, msg, 0, set_chan ? NL80211_CMD_SET_CHANNEL :
+		    NL80211_CMD_SET_WIPHY);
 
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
 	if (nl80211_put_freq_params(msg, freq) < 0)
@@ -7396,6 +7427,13 @@ static int wpa_driver_nl80211_set_freq(struct i802_bss *bss,
 nla_put_failure:
 	nlmsg_free(msg);
 	return -1;
+}
+
+
+static int wpa_driver_nl80211_set_freq(struct i802_bss *bss,
+				       struct hostapd_freq_params *freq)
+{
+	return nl80211_set_channel(bss, freq, 0);
 }
 
 

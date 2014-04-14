@@ -213,17 +213,22 @@ def test_discovery_dev_id_go(dev):
 def test_discovery_social_plus_one(dev):
     """P2P device discovery with social-plus-one"""
     logger.info("Start autonomous GO " + dev[0].ifname)
-    dev[2].p2p_start_go(freq="2422")
-    go = dev[2].p2p_dev_addr()
     dev[1].p2p_find(social=True)
     dev[0].p2p_find(progressive=True)
-    ev = dev[0].wait_event(["P2P-DEVICE-FOUND"])
+    logger.info("Wait for initial progressive find phases")
+    dev[0].wait_event(["CTRL-EVENT-SCAN-STARTED"])
+    dev[0].wait_event(["CTRL-EVENT-SCAN-STARTED"])
+    go = dev[2].p2p_dev_addr()
+    dev[2].p2p_start_go(freq="2422")
+    logger.info("Verify whether the GO on non-social channel can be found")
+    ev = dev[0].wait_global_event(["P2P-DEVICE-FOUND"], timeout=15)
     if ev is None:
         raise Exception("Peer not found")
-    ev = dev[0].wait_event(["P2P-DEVICE-FOUND"])
-    if ev is None:
-        raise Exception("Peer not found")
-    ev = dev[1].wait_event(["P2P-DEVICE-FOUND"])
+    if go not in ev:
+        ev = dev[0].wait_global_event(["P2P-DEVICE-FOUND"], timeout=15)
+        if ev is None:
+            raise Exception("Peer not found")
+    ev = dev[1].wait_global_event(["P2P-DEVICE-FOUND"], timeout=15)
     if ev is None:
         raise Exception("Peer not found")
     dev[0].p2p_stop_find()

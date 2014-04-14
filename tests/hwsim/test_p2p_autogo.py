@@ -317,3 +317,20 @@ def test_autogo_extra_cred(dev):
     connect_cli(dev[0], dev[1])
     dev[0].remove_group()
     dev[1].wait_go_ending_session()
+
+def test_autogo_ifdown(dev):
+    """P2P autonomous GO and external ifdown"""
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5")
+    res = autogo(wpas)
+    wpas.dump_monitor()
+    wpas.interface_remove("wlan5")
+    wpas.interface_add("wlan5")
+    res = autogo(wpas)
+    wpas.dump_monitor()
+    subprocess.call(['sudo', 'ifconfig', res['ifname'], 'down'])
+    ev = wpas.wait_global_event(["P2P-GROUP-REMOVED"], timeout=10)
+    if ev is None:
+        raise Exception("Group removal not reported")
+    if res['ifname'] not in ev:
+        raise Exception("Unexpected group removal event: " + ev)

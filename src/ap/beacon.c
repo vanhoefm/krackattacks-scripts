@@ -951,6 +951,9 @@ void ieee802_11_free_ap_params(struct wpa_driver_ap_params *params)
 int ieee802_11_set_beacon(struct hostapd_data *hapd)
 {
 	struct wpa_driver_ap_params params;
+	struct hostapd_freq_params freq;
+	struct hostapd_iface *iface = hapd->iface;
+	struct hostapd_config *iconf = iface->conf;
 	struct wpabuf *beacon, *proberesp, *assocresp;
 	int res, ret = -1;
 
@@ -971,6 +974,17 @@ int ieee802_11_set_beacon(struct hostapd_data *hapd)
 	params.beacon_ies = beacon;
 	params.proberesp_ies = proberesp;
 	params.assocresp_ies = assocresp;
+
+	if (iface->current_mode &&
+	    hostapd_set_freq_params(&freq, iconf->hw_mode, iface->freq,
+				    iconf->channel, iconf->ieee80211n,
+				    iconf->ieee80211ac,
+				    iconf->secondary_channel,
+				    iconf->vht_oper_chwidth,
+				    iconf->vht_oper_centr_freq_seg0_idx,
+				    iconf->vht_oper_centr_freq_seg1_idx,
+				    iface->current_mode->vht_capab) == 0)
+		params.freq = &freq;
 
 	res = hostapd_drv_set_ap(hapd, &params);
 	hostapd_free_ap_extra_ies(hapd, beacon, proberesp, assocresp);

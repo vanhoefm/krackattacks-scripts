@@ -868,6 +868,11 @@ struct wpa_driver_ap_params {
 	 * osen - Whether OSEN security is enabled
 	 */
 	int osen;
+
+	/**
+	 * freq - Channel parameters for dynamic bandwidth changes
+	 */
+	struct hostapd_freq_params *freq;
 };
 
 /**
@@ -921,7 +926,8 @@ struct wpa_driver_capa {
 #define WPA_DRIVER_FLAGS_AP		0x00000040
 /* Driver needs static WEP key setup after association has been completed */
 #define WPA_DRIVER_FLAGS_SET_KEYS_AFTER_ASSOC_DONE	0x00000080
-/* unused: 0x00000100 */
+/* Driver supports dynamic HT 20/40 MHz channel changes during BSS lifetime */
+#define WPA_DRIVER_FLAGS_HT_2040_COEX			0x00000100
 /* Driver supports concurrent P2P operations */
 #define WPA_DRIVER_FLAGS_P2P_CONCURRENT	0x00000200
 /*

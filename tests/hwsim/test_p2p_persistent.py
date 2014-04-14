@@ -377,3 +377,24 @@ def test_persistent_go_client_list(dev):
     peer = dev[0].get_peer(addr2)
     if 'persistent' not in peer or peer['persistent'] != id:
         raise Exception("Persistent group client not recognized(2)")
+
+def test_persistent_group_in_grpform(dev):
+    """P2P persistent group parameters re-used in group formation"""
+    addr0 = dev[0].p2p_dev_addr()
+    addr1 = dev[1].p2p_dev_addr()
+    form(dev[0], dev[1])
+    dev[1].p2p_listen()
+    if not dev[0].discover_peer(addr1, social=True):
+        raise Exception("Could not discover peer")
+    peer = dev[0].get_peer(addr1)
+    if "persistent" not in peer:
+        raise Exception("Could not map peer to a persistent group")
+
+    pin = dev[1].wps_read_pin()
+    dev[1].p2p_go_neg_auth(addr0, pin, "display", go_intent=0)
+    i_res = dev[0].p2p_go_neg_init(addr1, pin, "enter", timeout=20,
+                                   go_intent=15,
+                                   persistent_id=peer['persistent'])
+    r_res = dev[1].p2p_go_neg_auth_result()
+    logger.debug("i_res: " + str(i_res))
+    logger.debug("r_res: " + str(r_res))

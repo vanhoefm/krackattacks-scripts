@@ -4,10 +4,13 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+import logging
+logger = logging.getLogger()
 import subprocess
 import time
 
 import hostapd
+from wpasupplicant import WpaSupplicant
 
 def test_wpas_ctrl_network(dev):
     """wpa_supplicant ctrl_iface network set/get"""
@@ -798,3 +801,70 @@ def test_wpas_ctrl_country(dev, apdev):
             raise Exception("Unexpected event contents: " + ev)
     finally:
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+
+def test_wpas_ctrl_suspend_resume(dev):
+    """wpa_supplicant SUSPEND/RESUME"""
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5")
+    if "OK" not in wpas.global_request("SUSPEND"):
+        raise Exception("SUSPEND failed")
+    time.sleep(1)
+    if "OK" not in wpas.global_request("RESUME"):
+        raise Exception("RESUME failed")
+    if "OK" not in wpas.request("SUSPEND"):
+        raise Exception("Per-interface SUSPEND failed")
+    if "OK" not in wpas.request("RESUME"):
+        raise Exception("Per-interface RESUME failed")
+    ev = wpas.wait_event(["CTRL-EVENT-SCAN-RESULTS"], timeout=10)
+    if ev is None:
+        raise Exception("Scan not completed")
+
+def test_wpas_ctrl_global(dev):
+    """wpa_supplicant global control interface"""
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5")
+
+    if "PONG" not in wpas.global_request("PING"):
+        raise Exception("PING failed")
+    if "wlan5" not in wpas.global_request("INTERFACES"):
+        raise Exception("Interface not found")
+    if "UNKNOWN COMMAND" not in wpas.global_request("FOO"):
+        raise Exception("Unexpected response to unknown command")
+    if "PONG" not in wpas.global_request("IFNAME=wlan5 PING"):
+        raise Exception("Per-interface PING failed")
+    if "FAIL-NO-IFNAME-MATCH" not in wpas.global_request("IFNAME=notfound PING"):
+        raise Exception("Unknown interface not reported correctly")
+    if "FAIL" not in wpas.global_request("SAVE_CONFIG"):
+        raise Exception("SAVE_CONFIG succeeded unexpectedly")
+    if "OK" not in wpas.global_request("SET wifi_display 0"):
+        raise Exception("SET failed")
+    if "wifi_display=0" not in wpas.global_request("STATUS"):
+        raise Exception("wifi_display not disabled")
+    if "OK" not in wpas.global_request("SET wifi_display 1"):
+        raise Exception("SET failed")
+    if "wifi_display=1" not in wpas.global_request("STATUS"):
+        raise Exception("wifi_display not enabled")
+    if "FAIL" not in wpas.global_request("SET foo 1"):
+        raise Exception("SET succeeded unexpectedly")
+
+    if "p2p_state=IDLE" not in wpas.global_request("STATUS"):
+        raise Exception("P2P was disabled")
+    wpas.request("P2P_SET disabled 1")
+    if "p2p_state=DISABLED" not in wpas.global_request("STATUS"):
+        raise Exception("P2P was not disabled")
+    wpas.request("P2P_SET disabled 0")
+    if "p2p_state=IDLE" not in wpas.global_request("STATUS"):
+        raise Exception("P2P was not enabled")
+
+    # driver_nl80211.c does not support interface list, so do not fail because
+    # of that
+    logger.debug(wpas.global_request("INTERFACE_LIST"))
+
+    if "FAIL" not in wpas.global_request("INTERFACE_ADD "):
+        raise Exception("INTERFACE_ADD succeeded unexpectedly")
+    if "FAIL" not in wpas.global_request("INTERFACE_ADD FOO"):
+        raise Exception("INTERFACE_ADD succeeded unexpectedly")
+    if "FAIL" not in wpas.global_request("INTERFACE_ADD FOO	conf	driver	ctrliface	driverparam	bridge"):
+        raise Exception("INTERFACE_ADD succeeded unexpectedly")
+    if "FAIL" not in wpas.global_request("INTERFACE_ADD FOO					"):
+        raise Exception("INTERFACE_ADD succeeded unexpectedly")

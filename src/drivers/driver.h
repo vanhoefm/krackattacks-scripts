@@ -2164,7 +2164,7 @@ struct wpa_driver_ops {
 	 * @session_timeout: Session timeout for the station
 	 * Returns: 0 on success, -1 on failure
 	 */
-	int (*set_radius_acl_auth)(void *priv, const u8 *mac, int accepted, 
+	int (*set_radius_acl_auth)(void *priv, const u8 *mac, int accepted,
 				   u32 session_timeout);
 
 	/**
@@ -2228,7 +2228,7 @@ struct wpa_driver_ops {
 	 * Returns: 0 on success, -1 on failure
 	 */
 	int (*set_wds_sta)(void *priv, const u8 *addr, int aid, int val,
-	                   const char *bridge_ifname, char *ifname_wds);
+			   const char *bridge_ifname, char *ifname_wds);
 
 	/**
 	 * send_action - Transmit an Action frame
@@ -2516,7 +2516,7 @@ struct wpa_driver_ops {
 	 * signal_poll - Get current connection information
 	 * @priv: Private driver interface data
 	 * @signal_info: Connection info structure
-         */
+	 */
 	int (*signal_poll)(void *priv, struct wpa_signal_info *signal_info);
 
 	/**

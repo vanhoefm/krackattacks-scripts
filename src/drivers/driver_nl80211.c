@@ -537,22 +537,22 @@ static enum chan_width convert2width(int width)
 
 static int is_ap_interface(enum nl80211_iftype nlmode)
 {
-	return (nlmode == NL80211_IFTYPE_AP ||
-		nlmode == NL80211_IFTYPE_P2P_GO);
+	return nlmode == NL80211_IFTYPE_AP ||
+		nlmode == NL80211_IFTYPE_P2P_GO;
 }
 
 
 static int is_sta_interface(enum nl80211_iftype nlmode)
 {
-	return (nlmode == NL80211_IFTYPE_STATION ||
-		nlmode == NL80211_IFTYPE_P2P_CLIENT);
+	return nlmode == NL80211_IFTYPE_STATION ||
+		nlmode == NL80211_IFTYPE_P2P_CLIENT;
 }
 
 
 static int is_p2p_net_interface(enum nl80211_iftype nlmode)
 {
-	return (nlmode == NL80211_IFTYPE_P2P_CLIENT ||
-		nlmode == NL80211_IFTYPE_P2P_GO);
+	return nlmode == NL80211_IFTYPE_P2P_CLIENT ||
+		nlmode == NL80211_IFTYPE_P2P_GO;
 }
 
 
@@ -4523,7 +4523,7 @@ static int nl80211_mgmt_subscribe_ap(struct i802_bss *bss)
  * it isn't per interface ... maybe just dump the scan
  * results periodically for OLBC?
  */
-//		WLAN_FC_STYPE_BEACON,
+		/* WLAN_FC_STYPE_BEACON, */
 	};
 	unsigned int i;
 
@@ -7842,7 +7842,7 @@ static void handle_monitor_read(int sock, void *eloop_ctx, void *sock_ctx)
 		return;
 	}
 
-	if (ieee80211_radiotap_iterator_init(&iter, (void*)buf, len, NULL)) {
+	if (ieee80211_radiotap_iterator_init(&iter, (void *) buf, len, NULL)) {
 		wpa_printf(MSG_INFO, "nl80211: received invalid radiotap frame");
 		return;
 	}
@@ -9621,7 +9621,7 @@ static int have_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx)
 
 
 static int i802_set_wds_sta(void *priv, const u8 *addr, int aid, int val,
-                            const char *bridge_ifname, char *ifname_wds)
+			    const char *bridge_ifname, char *ifname_wds)
 {
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;

@@ -54,6 +54,7 @@ struct sta_info {
 	unsigned int no_short_preamble_set:1;
 	unsigned int no_ht_gf_set:1;
 	unsigned int no_ht_set:1;
+	unsigned int ht40_intolerant_set:1;
 	unsigned int ht_20mhz_set:1;
 	unsigned int no_p2p_set:1;
 	unsigned int qos_map_enabled:1;

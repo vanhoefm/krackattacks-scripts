@@ -646,6 +646,7 @@ struct ieee80211_vht_operation {
 #define ERP_INFO_USE_PROTECTION BIT(1)
 #define ERP_INFO_BARKER_PREAMBLE_MODE BIT(2)
 
+#define OVERLAPPING_BSS_TRANS_DELAY_FACTOR 5
 
 /* HT Capabilities Info field within HT Capabilities element */
 #define HT_CAP_INFO_LDPC_CODING_CAP		((u16) BIT(0))

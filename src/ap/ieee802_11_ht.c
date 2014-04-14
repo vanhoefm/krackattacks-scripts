@@ -10,12 +10,15 @@
 #include "utils/includes.h"
 
 #include "utils/common.h"
+#include "utils/eloop.h"
 #include "common/ieee802_11_defs.h"
 #include "hostapd.h"
 #include "ap_config.h"
 #include "sta_info.h"
 #include "beacon.h"
 #include "ieee802_11.h"
+#include "hw_features.h"
+#include "ap_drv_ops.h"
 
 
 u8 * hostapd_eid_ht_capabilities(struct hostapd_data *hapd, u8 *eid)
@@ -200,6 +203,52 @@ u16 copy_sta_ht_capab(struct hostapd_data *hapd, struct sta_info *sta,
 }
 
 
+void ht40_intolerant_add(struct hostapd_iface *iface, struct sta_info *sta)
+{
+	if (iface->current_mode->mode != HOSTAPD_MODE_IEEE80211G)
+		return;
+
+	wpa_printf(MSG_INFO, "HT: Forty MHz Intolerant is set by STA " MACSTR
+		   " in Association Request", MAC2STR(sta->addr));
+
+	if (sta->ht40_intolerant_set)
+		return;
+
+	sta->ht40_intolerant_set = 1;
+	iface->num_sta_ht40_intolerant++;
+	eloop_cancel_timeout(ap_ht2040_timeout, iface, NULL);
+
+	if (iface->conf->secondary_channel &&
+	    (iface->drv_flags & WPA_DRIVER_FLAGS_HT_2040_COEX)) {
+		iface->conf->secondary_channel = 0;
+		ieee802_11_set_beacons(iface);
+	}
+}
+
+
+void ht40_intolerant_remove(struct hostapd_iface *iface, struct sta_info *sta)
+{
+	if (!sta->ht40_intolerant_set)
+		return;
+
+	sta->ht40_intolerant_set = 0;
+	iface->num_sta_ht40_intolerant--;
+
+	if (iface->num_sta_ht40_intolerant == 0 &&
+	    (iface->conf->ht_capab & HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET) &&
+	    (iface->drv_flags & WPA_DRIVER_FLAGS_HT_2040_COEX)) {
+		unsigned int delay_time = OVERLAPPING_BSS_TRANS_DELAY_FACTOR *
+			iface->conf->obss_interval;
+		wpa_printf(MSG_DEBUG,
+			   "HT: Start 20->40 MHz transition timer (%d seconds)",
+			   delay_time);
+		eloop_cancel_timeout(ap_ht2040_timeout, iface, NULL);
+		eloop_register_timeout(delay_time, 0, ap_ht2040_timeout,
+				       iface, NULL);
+	}
+}
+
+
 static void update_sta_ht(struct hostapd_data *hapd, struct sta_info *sta)
 {
 	u16 ht_capab;
@@ -227,6 +276,9 @@ static void update_sta_ht(struct hostapd_data *hapd, struct sta_info *sta)
 			   __func__, MAC2STR(sta->addr),
 			   hapd->iface->num_sta_ht_20mhz);
 	}
+
+	if (ht_capab & HT_CAP_INFO_40MHZ_INTOLERANT)
+		ht40_intolerant_add(hapd->iface, sta);
 }
 
 
@@ -287,4 +339,15 @@ void hostapd_get_ht_capab(struct hostapd_data *hapd,
 		cap &= ~HT_CAP_INFO_RX_STBC_MASK;
 
 	neg_ht_cap->ht_capabilities_info = host_to_le16(cap);
+}
+
+
+void ap_ht2040_timeout(void *eloop_data, void *user_data)
+{
+	struct hostapd_iface *iface = eloop_data;
+
+	wpa_printf(MSG_INFO, "Switching to 40 MHz operation");
+
+	iface->conf->secondary_channel = iface->secondary_ch;
+	ieee802_11_set_beacons(iface);
 }

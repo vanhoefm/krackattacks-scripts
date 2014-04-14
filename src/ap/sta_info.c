@@ -206,6 +206,10 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 		hapd->iface->num_sta_ht_20mhz--;
 	}
 
+#ifdef CONFIG_IEEE80211N
+	ht40_intolerant_remove(hapd->iface, sta);
+#endif /* CONFIG_IEEE80211N */
+
 #ifdef CONFIG_P2P
 	if (sta->no_p2p_set) {
 		sta->no_p2p_set = 0;

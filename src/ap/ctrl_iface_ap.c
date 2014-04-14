@@ -405,6 +405,7 @@ int hostapd_ctrl_iface_status(struct hostapd_data *hapd, char *buf,
 			  "num_sta_ht_no_gf=%d\n"
 			  "num_sta_no_ht=%d\n"
 			  "num_sta_ht_20_mhz=%d\n"
+			  "num_sta_ht40_intolerant=%d\n"
 			  "olbc_ht=%d\n"
 			  "ht_op_mode=0x%x\n",
 			  hostapd_state_text(iface->state),
@@ -417,6 +418,7 @@ int hostapd_ctrl_iface_status(struct hostapd_data *hapd, char *buf,
 			  iface->num_sta_ht_no_gf,
 			  iface->num_sta_no_ht,
 			  iface->num_sta_ht_20mhz,
+			  iface->num_sta_ht40_intolerant,
 			  iface->olbc_ht,
 			  iface->ht_op_mode);
 	if (ret < 0 || (size_t) ret >= buflen - len)

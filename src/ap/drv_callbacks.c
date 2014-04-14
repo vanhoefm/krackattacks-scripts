@@ -9,6 +9,7 @@
 #include "utils/includes.h"
 
 #include "utils/common.h"
+#include "utils/eloop.h"
 #include "radius/radius.h"
 #include "drivers/driver.h"
 #include "common/ieee802_11_defs.h"
@@ -30,6 +31,7 @@
 #include "ap_config.h"
 #include "hw_features.h"
 #include "dfs.h"
+#include "beacon.h"
 
 
 int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
@@ -120,6 +122,24 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 			p2p_dev_addr = p2p_get_go_dev_addr(sta->p2p_ie);
 	}
 #endif /* CONFIG_P2P */
+
+#ifdef CONFIG_IEEE80211N
+#ifdef NEED_AP_MLME
+	if (elems.ht_capabilities &&
+	    elems.ht_capabilities_len >=
+	    sizeof(struct ieee80211_ht_capabilities) &&
+	    (hapd->iface->conf->ht_capab &
+	     HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET)) {
+		struct ieee80211_ht_capabilities *ht_cap =
+			(struct ieee80211_ht_capabilities *)
+			elems.ht_capabilities;
+
+		if (le_to_host16(ht_cap->ht_capabilities_info) &
+		    HT_CAP_INFO_40MHZ_INTOLERANT)
+			ht40_intolerant_add(hapd->iface, sta);
+	}
+#endif /* NEED_AP_MLME */
+#endif /* CONFIG_IEEE80211N */
 
 #ifdef CONFIG_INTERWORKING
 	if (elems.ext_capab && elems.ext_capab_len > 4) {

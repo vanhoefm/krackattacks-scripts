@@ -39,6 +39,7 @@ static inline int ieee802_11_get_mib_sta(struct hostapd_data *hapd,
 #endif /* NEED_AP_MLME */
 u16 hostapd_own_capab_info(struct hostapd_data *hapd, struct sta_info *sta,
 			   int probe);
+void ap_ht2040_timeout(void *eloop_data, void *user_data);
 u8 * hostapd_eid_ext_capab(struct hostapd_data *hapd, u8 *eid);
 u8 * hostapd_eid_qos_map_set(struct hostapd_data *hapd, u8 *eid);
 u8 * hostapd_eid_supp_rates(struct hostapd_data *hapd, u8 *eid);
@@ -59,6 +60,8 @@ void hostapd_get_vht_capab(struct hostapd_data *hapd,
 u16 copy_sta_ht_capab(struct hostapd_data *hapd, struct sta_info *sta,
 		      const u8 *ht_capab, size_t ht_capab_len);
 void update_ht_state(struct hostapd_data *hapd, struct sta_info *sta);
+void ht40_intolerant_add(struct hostapd_iface *iface, struct sta_info *sta);
+void ht40_intolerant_remove(struct hostapd_iface *iface, struct sta_info *sta);
 u16 copy_sta_vht_capab(struct hostapd_data *hapd, struct sta_info *sta,
 		       const u8 *vht_capab, size_t vht_capab_len);
 u16 set_sta_vht_opmode(struct hostapd_data *hapd, struct sta_info *sta,

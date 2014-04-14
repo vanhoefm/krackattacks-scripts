@@ -327,6 +327,9 @@ struct hostapd_iface {
 	/* Number of HT associated stations 20 MHz */
 	int num_sta_ht_20mhz;
 
+	/* Number of HT40 intolerant stations */
+	int num_sta_ht40_intolerant;
+
 	/* Overlapping BSS information */
 	int olbc_ht;
 
@@ -350,6 +353,10 @@ struct hostapd_iface {
 
 	unsigned int dfs_cac_ms;
 	struct os_reltime dfs_cac_start;
+
+	/* Latched with the actual secondary channel information and will be
+	 * used while juggling between HT20 and HT40 modes. */
+	int secondary_ch;
 
 #ifdef CONFIG_ACS
 	unsigned int acs_num_completed_scans;

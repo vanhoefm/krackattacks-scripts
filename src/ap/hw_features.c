@@ -19,6 +19,8 @@
 #include "ap_config.h"
 #include "ap_drv_ops.h"
 #include "acs.h"
+#include "ieee802_11.h"
+#include "beacon.h"
 #include "hw_features.h"
 
 
@@ -414,6 +416,7 @@ static int ieee80211n_check_40mhz_2g4(struct hostapd_iface *iface,
 		int pri = bss->freq;
 		int sec = pri;
 		int sec_chan, pri_chan;
+		struct ieee802_11_elems elems;
 
 		ieee80211n_get_pri_sec_chan(bss, &pri_chan, &sec_chan);
 
@@ -445,7 +448,23 @@ static int ieee80211n_check_40mhz_2g4(struct hostapd_iface *iface,
 			}
 		}
 
-		/* TODO: 40 MHz intolerant */
+		ieee802_11_parse_elems((u8 *) (bss + 1), bss->ie_len, &elems,
+				       0);
+		if (elems.ht_capabilities &&
+		    elems.ht_capabilities_len >=
+		    sizeof(struct ieee80211_ht_capabilities)) {
+			struct ieee80211_ht_capabilities *ht_cap =
+				(struct ieee80211_ht_capabilities *)
+				elems.ht_capabilities;
+
+			if (le_to_host16(ht_cap->ht_capabilities_info) &
+			    HT_CAP_INFO_40MHZ_INTOLERANT) {
+				wpa_printf(MSG_DEBUG,
+					   "40 MHz Intolerant is set on channel %d in BSS "
+					   MACSTR, pri, MAC2STR(bss->bssid));
+				return 0;
+			}
+		}
 	}
 
 	return 1;
@@ -475,6 +494,7 @@ static void ieee80211n_check_scan(struct hostapd_iface *iface)
 		oper40 = ieee80211n_check_40mhz_2g4(iface, scan_res);
 	wpa_scan_results_free(scan_res);
 
+	iface->secondary_ch = iface->conf->secondary_channel;
 	if (!oper40) {
 		wpa_printf(MSG_INFO, "20/40 MHz operation not permitted on "
 			   "channel pri=%d sec=%d based on overlapping BSSes",
@@ -482,9 +502,21 @@ static void ieee80211n_check_scan(struct hostapd_iface *iface)
 			   iface->conf->channel +
 			   iface->conf->secondary_channel * 4);
 		iface->conf->secondary_channel = 0;
+		if (iface->drv_flags & WPA_DRIVER_FLAGS_HT_2040_COEX) {
+			/*
+			 * TODO: Could consider scheduling another scan to check
+			 * if channel width can be changed if no coex reports
+			 * are received from associating stations.
+			 */
+		}
 	}
 
 	res = ieee80211n_allowed_ht40_channel_pair(iface);
+	if (!res) {
+		iface->conf->secondary_channel = 0;
+		wpa_printf(MSG_INFO, "Fallback to 20 MHz");
+	}
+
 	hostapd_setup_interface_complete(iface, !res);
 }
 

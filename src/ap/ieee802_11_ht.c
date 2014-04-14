@@ -175,6 +175,117 @@ int hostapd_ht_operation_update(struct hostapd_iface *iface)
 }
 
 
+static int is_40_allowed(struct hostapd_iface *iface, int channel)
+{
+	int pri_freq, sec_freq;
+	int affected_start, affected_end;
+	int pri = 2407 + 5 * channel;
+
+	if (iface->current_mode->mode != HOSTAPD_MODE_IEEE80211G)
+		return 1;
+
+	pri_freq = hostapd_hw_get_freq(iface->bss[0], iface->conf->channel);
+
+	if (iface->conf->secondary_channel > 0)
+		sec_freq = pri_freq + 20;
+	else
+		sec_freq = pri_freq - 20;
+
+	affected_start = (pri_freq + sec_freq) / 2 - 25;
+	affected_end = (pri_freq + sec_freq) / 2 + 25;
+	if ((pri < affected_start || pri > affected_end))
+		return 1; /* not within affected channel range */
+
+	wpa_printf(MSG_ERROR, "40 MHz affected channel range: [%d,%d] MHz",
+		   affected_start, affected_end);
+	wpa_printf(MSG_ERROR, "Neighboring BSS: freq=%d", pri);
+	return 0;
+}
+
+
+void hostapd_2040_coex_action(struct hostapd_data *hapd,
+			      const struct ieee80211_mgmt *mgmt, size_t len)
+{
+	struct hostapd_iface *iface = hapd->iface;
+	struct ieee80211_2040_bss_coex_ie *bc_ie;
+	struct ieee80211_2040_intol_chan_report *ic_report;
+	int is_ht_allowed = 1;
+	int i;
+	const u8 *data = (const u8 *) &mgmt->u.action.u.public_action.action;
+	size_t hdr_len;
+
+	hostapd_logger(hapd, mgmt->sa, HOSTAPD_MODULE_IEEE80211,
+		       HOSTAPD_LEVEL_DEBUG, "hostapd_public_action - action=%d",
+		       mgmt->u.action.u.public_action.action);
+
+	if (!(iface->conf->ht_capab & HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET))
+		return;
+
+	hdr_len = data - (u8 *) mgmt;
+	if (hdr_len > len)
+		return;
+	data++;
+
+	bc_ie = (struct ieee80211_2040_bss_coex_ie *) &data[0];
+	ic_report = (struct ieee80211_2040_intol_chan_report *)
+		(&data[0] + sizeof(*bc_ie));
+
+	if (bc_ie->coex_param & WLAN_20_40_BSS_COEX_20MHZ_WIDTH_REQ) {
+		hostapd_logger(hapd, mgmt->sa,
+			       HOSTAPD_MODULE_IEEE80211,
+			       HOSTAPD_LEVEL_DEBUG,
+			       "20 MHz BSS width request bit is set in BSS coexistence information field");
+		is_ht_allowed = 0;
+	}
+
+	if (bc_ie->coex_param & WLAN_20_40_BSS_COEX_40MHZ_INTOL) {
+		hostapd_logger(hapd, mgmt->sa,
+			       HOSTAPD_MODULE_IEEE80211,
+			       HOSTAPD_LEVEL_DEBUG,
+			       "40 MHz intolerant bit is set in BSS coexistence information field");
+		is_ht_allowed = 0;
+	}
+
+	if (ic_report &&
+	    (ic_report->element_id == WLAN_EID_20_40_BSS_INTOLERANT)) {
+		/* Go through the channel report to find any BSS there in the
+		 * affected channel range */
+		for (i = 0; i < ic_report->length - 1; i++) {
+			if (is_40_allowed(iface, ic_report->variable[i]))
+				continue;
+			hostapd_logger(hapd, mgmt->sa,
+				       HOSTAPD_MODULE_IEEE80211,
+				       HOSTAPD_LEVEL_DEBUG,
+				       "20_40_INTOLERANT channel %d reported",
+				       ic_report->variable[i]);
+			is_ht_allowed = 0;
+			break;
+		}
+	}
+
+	if (!is_ht_allowed &&
+	    (iface->drv_flags & WPA_DRIVER_FLAGS_HT_2040_COEX)) {
+		if (iface->conf->secondary_channel) {
+			hostapd_logger(hapd, mgmt->sa,
+				       HOSTAPD_MODULE_IEEE80211,
+				       HOSTAPD_LEVEL_INFO,
+				       "Switching to 20 MHz operation");
+			iface->conf->secondary_channel = 0;
+			ieee802_11_set_beacons(iface);
+		}
+		if (!iface->num_sta_ht40_intolerant) {
+			unsigned int delay_time;
+			delay_time = OVERLAPPING_BSS_TRANS_DELAY_FACTOR *
+				iface->conf->obss_interval;
+			eloop_cancel_timeout(ap_ht2040_timeout, hapd->iface,
+					     NULL);
+			eloop_register_timeout(delay_time, 0, ap_ht2040_timeout,
+					       hapd->iface, NULL);
+		}
+	}
+}
+
+
 u16 copy_sta_ht_capab(struct hostapd_data *hapd, struct sta_info *sta,
 		      const u8 *ht_capab, size_t ht_capab_len)
 {

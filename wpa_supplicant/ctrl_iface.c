@@ -6802,7 +6802,6 @@ static char * wpas_global_ctrl_iface_redir_p2p(struct wpa_global *global,
 #ifdef CONFIG_P2P
 	static const char * cmd[] = {
 		"LIST_NETWORKS",
-		"SAVE_CONFIG",
 		"P2P_FIND",
 		"P2P_STOP_FIND",
 		"P2P_LISTEN",
@@ -6929,7 +6928,7 @@ static int wpas_global_ctrl_iface_set(struct wpa_global *global, char *cmd)
 #ifndef CONFIG_NO_CONFIG_WRITE
 static int wpas_global_ctrl_iface_save_config(struct wpa_global *global)
 {
-	int ret = 0;
+	int ret = 0, saved = 0;
 	struct wpa_supplicant *wpa_s;
 
 	for (wpa_s = global->ifaces; wpa_s; wpa_s = wpa_s->next) {
@@ -6943,7 +6942,14 @@ static int wpas_global_ctrl_iface_save_config(struct wpa_global *global)
 			ret = 1;
 		} else {
 			wpa_dbg(wpa_s, MSG_DEBUG, "CTRL_IFACE: SAVE_CONFIG - Configuration updated");
+			saved++;
 		}
+	}
+
+	if (!saved && !ret) {
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"CTRL_IFACE: SAVE_CONFIG - No configuration files could be updated");
+		ret = 1;
 	}
 
 	return ret;

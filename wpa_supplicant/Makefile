@@ -515,7 +515,7 @@ endif
 ifdef CONFIG_EAP_PROXY
 CFLAGS += -DCONFIG_EAP_PROXY
 OBJS += ../src/eap_peer/eap_proxy_$(CONFIG_EAP_PROXY).o
-include eap_proxy_$(CONFIG_EAP_PROXY).mk
+include eap_proxy_$(CONFIG_EAP_PROXY).mak
 CONFIG_IEEE8021X_EAPOL=y
 endif
 

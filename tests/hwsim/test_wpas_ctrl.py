@@ -864,7 +864,17 @@ def test_wpas_ctrl_global(dev):
         raise Exception("INTERFACE_ADD succeeded unexpectedly")
     if "FAIL" not in wpas.global_request("INTERFACE_ADD FOO"):
         raise Exception("INTERFACE_ADD succeeded unexpectedly")
+    if "FAIL" not in wpas.global_request("INTERFACE_ADD FOO	conf"):
+        raise Exception("INTERFACE_ADD succeeded unexpectedly")
+    if "FAIL" not in wpas.global_request("INTERFACE_ADD FOO	conf	driver"):
+        raise Exception("INTERFACE_ADD succeeded unexpectedly")
+    if "FAIL" not in wpas.global_request("INTERFACE_ADD FOO	conf	driver	ctrliface"):
+        raise Exception("INTERFACE_ADD succeeded unexpectedly")
+    if "FAIL" not in wpas.global_request("INTERFACE_ADD FOO	conf	driver	ctrliface	driverparam"):
+        raise Exception("INTERFACE_ADD succeeded unexpectedly")
     if "FAIL" not in wpas.global_request("INTERFACE_ADD FOO	conf	driver	ctrliface	driverparam	bridge"):
+        raise Exception("INTERFACE_ADD succeeded unexpectedly")
+    if "FAIL" not in wpas.global_request("INTERFACE_ADD FOO	conf	driver	ctrliface	driverparam	bridge	foo"):
         raise Exception("INTERFACE_ADD succeeded unexpectedly")
     if "FAIL" not in wpas.global_request("INTERFACE_ADD FOO					"):
         raise Exception("INTERFACE_ADD succeeded unexpectedly")

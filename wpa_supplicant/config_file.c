@@ -809,7 +809,7 @@ static void wpa_config_write_cred(FILE *f, struct wpa_cred *cred)
 		fprintf(f, "\tupdate_identifier=%d\n", cred->update_identifier);
 
 	if (cred->provisioning_sp)
-		fprintf(f, "\tprovisioning_sp=%s\n", cred->provisioning_sp);
+		fprintf(f, "\tprovisioning_sp=\"%s\"\n", cred->provisioning_sp);
 	if (cred->sp_priority)
 		fprintf(f, "\tsp_priority=%d\n", cred->sp_priority);
 

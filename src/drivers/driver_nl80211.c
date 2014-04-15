@@ -8663,7 +8663,10 @@ static int nl80211_connect_common(struct wpa_driver_nl80211_data *drv,
 
 	if (params->htcaps && params->htcaps_mask) {
 		int sz = sizeof(struct ieee80211_ht_capabilities);
+		wpa_hexdump(MSG_DEBUG, "  * htcaps", params->htcaps, sz);
 		NLA_PUT(msg, NL80211_ATTR_HT_CAPABILITY, sz, params->htcaps);
+		wpa_hexdump(MSG_DEBUG, "  * htcaps_mask",
+			    params->htcaps_mask, sz);
 		NLA_PUT(msg, NL80211_ATTR_HT_CAPABILITY_MASK, sz,
 			params->htcaps_mask);
 	}
@@ -8676,7 +8679,10 @@ static int nl80211_connect_common(struct wpa_driver_nl80211_data *drv,
 
 	if (params->vhtcaps && params->vhtcaps_mask) {
 		int sz = sizeof(struct ieee80211_vht_capabilities);
+		wpa_hexdump(MSG_DEBUG, "  * vhtcaps", params->vhtcaps, sz);
 		NLA_PUT(msg, NL80211_ATTR_VHT_CAPABILITY, sz, params->vhtcaps);
+		wpa_hexdump(MSG_DEBUG, "  * vhtcaps_mask",
+			    params->vhtcaps_mask, sz);
 		NLA_PUT(msg, NL80211_ATTR_VHT_CAPABILITY_MASK, sz,
 			params->vhtcaps_mask);
 	}

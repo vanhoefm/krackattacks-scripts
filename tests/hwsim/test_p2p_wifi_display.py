@@ -137,6 +137,13 @@ def test_wifi_display(dev):
     if dev[0].request("WFD_SUBELEM_GET 8") != "":
         raise Exception("Unexpected WFD_SUBELEM_GET 8 response")
 
+    if dev[0].global_request("WFD_SUBELEM_GET 2") != audio:
+        raise Exception("Unexpected WFD_SUBELEM_GET 2 value from global interface")
+    if "OK" not in dev[0].global_request("WFD_SUBELEM_SET 1 0006020304050608"):
+        raise Exception("WFD_SUBELEM_SET failed on global interface")
+    if dev[0].request("WFD_SUBELEM_GET 1") != "0006020304050608":
+        raise Exception("Unexpected WFD_SUBELEM_GET 1 value (per-interface)")
+
     dev[0].request("SET wifi_display 0")
     dev[1].request("SET wifi_display 0")
     dev[2].request("SET wifi_display 0")

@@ -6821,7 +6821,6 @@ static char * wpas_global_ctrl_iface_redir_p2p(struct wpa_global *global,
 #endif /* ANDROID */
 		"GET_NETWORK ",
 		"REMOVE_NETWORK ",
-		"SET ",
 		"P2P_FIND ",
 		"P2P_CONNECT ",
 		"P2P_LISTEN ",
@@ -6920,6 +6919,9 @@ static int wpas_global_ctrl_iface_set(struct wpa_global *global, char *cmd)
 		return 0;
 	}
 #endif /* CONFIG_WIFI_DISPLAY */
+
+	/* Restore cmd to its original value to allow redirection */
+	value[-1] = ' ';
 
 	return -1;
 }
@@ -7064,8 +7066,19 @@ char * wpa_supplicant_global_ctrl_iface_process(struct wpa_global *global,
 	} else if (os_strcmp(buf, "RESUME") == 0) {
 		wpas_notify_resume(global);
 	} else if (os_strncmp(buf, "SET ", 4) == 0) {
-		if (wpas_global_ctrl_iface_set(global, buf + 4))
+		if (wpas_global_ctrl_iface_set(global, buf + 4)) {
+#ifdef CONFIG_P2P
+			if (global->p2p_init_wpa_s) {
+				os_free(reply);
+				/* Check if P2P redirection would work for this
+				 * command. */
+				return wpa_supplicant_ctrl_iface_process(
+					global->p2p_init_wpa_s,
+					buf, resp_len);
+			}
+#endif /* CONFIG_P2P */
 			reply_len = -1;
+		}
 #ifndef CONFIG_NO_CONFIG_WRITE
 	} else if (os_strcmp(buf, "SAVE_CONFIG") == 0) {
 		if (wpas_global_ctrl_iface_save_config(global))

@@ -658,7 +658,8 @@ class WpaSupplicant:
                        "eapol_flags", "fragment_size", "scan_ssid", "auth_alg",
                        "wpa_ptk_rekey", "disable_ht", "disable_vht", "bssid",
                        "disable_max_amsdu", "ampdu_factor", "ampdu_density",
-                       "disable_ht40", "disable_sgi", "disable_ldpc" ]
+                       "disable_ht40", "disable_sgi", "disable_ldpc",
+                       "ht40_intolerant" ]
         for field in not_quoted:
             if field in kwargs and kwargs[field]:
                 self.set_network(id, field, kwargs[field])

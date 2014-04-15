@@ -383,7 +383,6 @@ static void wpa_supplicant_process_1_of_4(struct wpa_sm *sm,
 {
 	struct wpa_eapol_ie_parse ie;
 	struct wpa_ptk *ptk;
-	u8 buf[8];
 	int res;
 	u8 *kde, *kde_buf = NULL;
 	size_t kde_len;
@@ -438,10 +437,12 @@ static void wpa_supplicant_process_1_of_4(struct wpa_sm *sm,
 	ptk = &sm->tptk;
 	wpa_derive_ptk(sm, src_addr, key, ptk);
 	if (sm->pairwise_cipher == WPA_CIPHER_TKIP) {
+		u8 buf[8];
 		/* Supplicant: swap tx/rx Mic keys */
 		os_memcpy(buf, ptk->u.auth.tx_mic_key, 8);
 		os_memcpy(ptk->u.auth.tx_mic_key, ptk->u.auth.rx_mic_key, 8);
 		os_memcpy(ptk->u.auth.rx_mic_key, buf, 8);
+		os_memset(buf, 0, sizeof(buf));
 	}
 	sm->tptk_set = 1;
 
@@ -657,6 +658,7 @@ static int wpa_supplicant_install_gtk(struct wpa_sm *sm,
 			wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
 				"WPA: Failed to set GTK to the driver "
 				"(Group only)");
+			os_memset(gtk_buf, 0, sizeof(gtk_buf));
 			return -1;
 		}
 	} else if (wpa_sm_set_key(sm, gd->alg, broadcast_ether_addr,
@@ -666,8 +668,10 @@ static int wpa_supplicant_install_gtk(struct wpa_sm *sm,
 			"WPA: Failed to set GTK to "
 			"the driver (alg=%d keylen=%d keyidx=%d)",
 			gd->alg, gd->gtk_len, gd->keyidx);
+		os_memset(gtk_buf, 0, sizeof(gtk_buf));
 		return -1;
 	}
+	os_memset(gtk_buf, 0, sizeof(gtk_buf));
 
 	return 0;
 }
@@ -729,8 +733,10 @@ static int wpa_supplicant_pairwise_gtk(struct wpa_sm *sm,
 	     wpa_supplicant_install_gtk(sm, &gd, key->key_rsc))) {
 		wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG,
 			"RSN: Failed to install GTK");
+		os_memset(&gd, 0, sizeof(gd));
 		return -1;
 	}
+	os_memset(&gd, 0, sizeof(gd));
 
 	wpa_supplicant_key_neg_complete(sm, sm->bssid,
 					key_info & WPA_KEY_INFO_SECURE);
@@ -1237,7 +1243,6 @@ static int wpa_supplicant_process_1_of_2_wpa(struct wpa_sm *sm,
 					     struct wpa_gtk_data *gd)
 {
 	size_t maxkeylen;
-	u8 ek[32];
 
 	gd->gtk_len = WPA_GET_BE16(key->key_length);
 	maxkeylen = keydatalen;
@@ -1266,20 +1271,23 @@ static int wpa_supplicant_process_1_of_2_wpa(struct wpa_sm *sm,
 	gd->keyidx = (key_info & WPA_KEY_INFO_KEY_INDEX_MASK) >>
 		WPA_KEY_INFO_KEY_INDEX_SHIFT;
 	if (ver == WPA_KEY_INFO_TYPE_HMAC_MD5_RC4) {
-		os_memcpy(ek, key->key_iv, 16);
-		os_memcpy(ek + 16, sm->ptk.kek, 16);
+		u8 ek[32];
 		if (keydatalen > sizeof(gd->gtk)) {
 			wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
 				"WPA: RC4 key data too long (%lu)",
 				(unsigned long) keydatalen);
 			return -1;
 		}
+		os_memcpy(ek, key->key_iv, 16);
+		os_memcpy(ek + 16, sm->ptk.kek, 16);
 		os_memcpy(gd->gtk, key + 1, keydatalen);
 		if (rc4_skip(ek, 32, 256, gd->gtk, keydatalen)) {
+			os_memset(ek, 0, sizeof(ek));
 			wpa_msg(sm->ctx->msg_ctx, MSG_ERROR,
 				"WPA: RC4 failed");
 			return -1;
 		}
+		os_memset(ek, 0, sizeof(ek));
 	} else if (ver == WPA_KEY_INFO_TYPE_HMAC_SHA1_AES) {
 		if (keydatalen % 8) {
 			wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
@@ -1430,6 +1438,7 @@ static int wpa_supplicant_verify_eapol_key_mic(struct wpa_sm *sm,
 			sm->tptk_set = 0;
 			sm->ptk_set = 1;
 			os_memcpy(&sm->ptk, &sm->tptk, sizeof(sm->ptk));
+			os_memset(&sm->tptk, 0, sizeof(sm->tptk));
 		}
 	}
 
@@ -1482,10 +1491,12 @@ static int wpa_supplicant_decrypt_key_data(struct wpa_sm *sm,
 		os_memcpy(ek, key->key_iv, 16);
 		os_memcpy(ek + 16, sm->ptk.kek, 16);
 		if (rc4_skip(ek, 32, 256, (u8 *) (key + 1), keydatalen)) {
+			os_memset(ek, 0, sizeof(ek));
 			wpa_msg(sm->ctx->msg_ctx, MSG_ERROR,
 				"WPA: RC4 failed");
 			return -1;
 		}
+		os_memset(ek, 0, sizeof(ek));
 	} else if (ver == WPA_KEY_INFO_TYPE_HMAC_SHA1_AES ||
 		   ver == WPA_KEY_INFO_TYPE_AES_128_CMAC ||
 		   sm->key_mgmt == WPA_KEY_MGMT_OSEN) {
@@ -2133,7 +2144,9 @@ void wpa_sm_notify_assoc(struct wpa_sm *sm, const u8 *bssid)
 		 */
 		wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG, "WPA: Clear old PTK");
 		sm->ptk_set = 0;
+		os_memset(&sm->ptk, 0, sizeof(sm->ptk));
 		sm->tptk_set = 0;
+		os_memset(&sm->tptk, 0, sizeof(sm->tptk));
 	}
 
 #ifdef CONFIG_TDLS
@@ -2663,29 +2676,22 @@ void wpa_sm_pmksa_cache_flush(struct wpa_sm *sm, void *network_ctx)
 #ifdef CONFIG_WNM
 int wpa_wnmsleep_install_key(struct wpa_sm *sm, u8 subelem_id, u8 *buf)
 {
-	struct wpa_gtk_data gd;
-#ifdef CONFIG_IEEE80211W
-	struct wpa_igtk_kde igd;
-	u16 keyidx;
-#endif /* CONFIG_IEEE80211W */
 	u16 keyinfo;
 	u8 keylen;  /* plaintext key len */
 	u8 *key_rsc;
 
-	os_memset(&gd, 0, sizeof(gd));
-#ifdef CONFIG_IEEE80211W
-	os_memset(&igd, 0, sizeof(igd));
-#endif /* CONFIG_IEEE80211W */
-
-	keylen = wpa_cipher_key_len(sm->group_cipher);
-	gd.key_rsc_len = wpa_cipher_rsc_len(sm->group_cipher);
-	gd.alg = wpa_cipher_to_alg(sm->group_cipher);
-	if (gd.alg == WPA_ALG_NONE) {
-		wpa_printf(MSG_DEBUG, "Unsupported group cipher suite");
-		return -1;
-	}
-
 	if (subelem_id == WNM_SLEEP_SUBELEM_GTK) {
+		struct wpa_gtk_data gd;
+
+		os_memset(&gd, 0, sizeof(gd));
+		keylen = wpa_cipher_key_len(sm->group_cipher);
+		gd.key_rsc_len = wpa_cipher_rsc_len(sm->group_cipher);
+		gd.alg = wpa_cipher_to_alg(sm->group_cipher);
+		if (gd.alg == WPA_ALG_NONE) {
+			wpa_printf(MSG_DEBUG, "Unsupported group cipher suite");
+			return -1;
+		}
+
 		key_rsc = buf + 5;
 		keyinfo = WPA_GET_LE16(buf + 2);
 		gd.gtk_len = keylen;
@@ -2703,12 +2709,18 @@ int wpa_wnmsleep_install_key(struct wpa_sm *sm, u8 subelem_id, u8 *buf)
 		wpa_hexdump_key(MSG_DEBUG, "Install GTK (WNM SLEEP)",
 				gd.gtk, gd.gtk_len);
 		if (wpa_supplicant_install_gtk(sm, &gd, key_rsc)) {
+			os_memset(&gd, 0, sizeof(gd));
 			wpa_printf(MSG_DEBUG, "Failed to install the GTK in "
 				   "WNM mode");
 			return -1;
 		}
+		os_memset(&gd, 0, sizeof(gd));
 #ifdef CONFIG_IEEE80211W
 	} else if (subelem_id == WNM_SLEEP_SUBELEM_IGTK) {
+		struct wpa_igtk_kde igd;
+		u16 keyidx;
+
+		os_memset(&igd, 0, sizeof(igd));
 		keylen = wpa_cipher_key_len(sm->mgmt_group_cipher);
 		os_memcpy(igd.keyid, buf + 2, 2);
 		os_memcpy(igd.pn, buf + 4, 6);
@@ -2724,8 +2736,10 @@ int wpa_wnmsleep_install_key(struct wpa_sm *sm, u8 subelem_id, u8 *buf)
 				   igd.igtk, keylen) < 0) {
 			wpa_printf(MSG_DEBUG, "Failed to install the IGTK in "
 				   "WNM mode");
+			os_memset(&igd, 0, sizeof(igd));
 			return -1;
 		}
+		os_memset(&igd, 0, sizeof(igd));
 #endif /* CONFIG_IEEE80211W */
 	} else {
 		wpa_printf(MSG_DEBUG, "Unknown element id");

@@ -534,6 +534,11 @@ struct wpa_ssid {
 	int disable_ldpc;
 
 	/**
+	 * ht40_intolerant - Indicate 40 MHz intolerant for this network
+	 */
+	int ht40_intolerant;
+
+	/**
 	 * disable_max_amsdu - Disable MAX A-MSDU
 	 *
 	 * A-MDSU will be 3839 bytes when disabled, or 7935

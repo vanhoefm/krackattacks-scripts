@@ -1702,6 +1702,7 @@ static const struct parse_data ssid_fields[] = {
 	{ INT_RANGE(disable_ht40, -1, 1) },
 	{ INT_RANGE(disable_sgi, 0, 1) },
 	{ INT_RANGE(disable_ldpc, 0, 1) },
+	{ INT_RANGE(ht40_intolerant, 0, 1) },
 	{ INT_RANGE(disable_max_amsdu, -1, 1) },
 	{ INT_RANGE(ampdu_factor, -1, 3) },
 	{ INT_RANGE(ampdu_density, -1, 7) },

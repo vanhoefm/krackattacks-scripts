@@ -2967,6 +2967,12 @@ void wpa_supplicant_apply_ht_overrides(
 	wpa_set_disable_ht40(wpa_s, htcaps, htcaps_mask, ssid->disable_ht40);
 	wpa_set_disable_sgi(wpa_s, htcaps, htcaps_mask, ssid->disable_sgi);
 	wpa_set_disable_ldpc(wpa_s, htcaps, htcaps_mask, ssid->disable_ldpc);
+
+	if (ssid->ht40_intolerant) {
+		u16 bit = host_to_le16(HT_CAP_INFO_40MHZ_INTOLERANT);
+		htcaps->ht_capabilities_info |= bit;
+		htcaps_mask->ht_capabilities_info |= bit;
+	}
 }
 
 #endif /* CONFIG_HT_OVERRIDES */

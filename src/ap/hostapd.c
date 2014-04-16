@@ -1355,6 +1355,7 @@ void hostapd_interface_deinit(struct hostapd_iface *iface)
 
 #ifdef CONFIG_IEEE80211N
 #ifdef NEED_AP_MLME
+	hostapd_stop_setup_timers(iface);
 	eloop_cancel_timeout(ap_ht2040_timeout, iface, NULL);
 #endif /* NEED_AP_MLME */
 #endif /* CONFIG_IEEE80211N */

@@ -363,6 +363,7 @@ struct hostapd_iface {
 #endif /* CONFIG_ACS */
 
 	void (*scan_cb)(struct hostapd_iface *iface);
+	int num_ht40_scan_tries;
 };
 
 /* hostapd.c */

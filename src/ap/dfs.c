@@ -916,8 +916,9 @@ int hostapd_is_dfs_required(struct hostapd_iface *iface)
 {
 	int n_chans, start_chan_idx;
 
-	if (!iface->current_mode)
-		return -1;
+	if (!iface->conf->ieee80211h || !iface->current_mode ||
+	    iface->current_mode->mode != HOSTAPD_MODE_IEEE80211A)
+		return 0;
 
 	/* Get start (first) channel for current configuration */
 	start_chan_idx = dfs_get_start_chan_idx(iface);

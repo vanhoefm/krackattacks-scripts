@@ -18,11 +18,9 @@ static struct dl_list active_references =
 
 #ifdef WPA_TRACE_BFD
 #include <bfd.h>
-#ifdef __linux__
-#include <demangle.h>
-#else /* __linux__ */
-#include <libiberty/demangle.h>
-#endif /* __linux__ */
+
+#define DMGL_PARAMS      (1 << 0)
+#define DMGL_ANSI        (1 << 1)
 
 static char *prg_fname = NULL;
 static bfd *cached_abfd = NULL;

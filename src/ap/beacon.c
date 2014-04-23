@@ -600,7 +600,8 @@ void handle_probe_req(struct hostapd_data *hapd,
 	}
 
 #ifdef CONFIG_INTERWORKING
-	if (elems.interworking && elems.interworking_len >= 1) {
+	if (hapd->conf->interworking &&
+	    elems.interworking && elems.interworking_len >= 1) {
 		u8 ant = elems.interworking[0] & 0x0f;
 		if (ant != INTERWORKING_ANT_WILDCARD &&
 		    ant != hapd->conf->access_network_type) {
@@ -611,7 +612,7 @@ void handle_probe_req(struct hostapd_data *hapd,
 		}
 	}
 
-	if (elems.interworking &&
+	if (hapd->conf->interworking && elems.interworking &&
 	    (elems.interworking_len == 7 || elems.interworking_len == 9)) {
 		const u8 *hessid;
 		if (elems.interworking_len == 7)

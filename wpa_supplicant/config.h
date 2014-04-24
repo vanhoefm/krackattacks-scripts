@@ -1022,6 +1022,13 @@ struct wpa_config {
 	 * directory.
 	 */
 	char *osu_dir;
+
+	/**
+	 * wowlan_triggers - Wake-on-WLAN triggers
+	 *
+	 * If set, these wowlan triggers will be configured.
+	 */
+	char *wowlan_triggers;
 };
 
 

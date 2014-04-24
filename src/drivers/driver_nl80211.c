@@ -3697,6 +3697,35 @@ static void wiphy_info_probe_resp_offload(struct wpa_driver_capa *capa,
 }
 
 
+static void wiphy_info_wowlan_triggers(struct wpa_driver_capa *capa,
+				       struct nlattr *tb)
+{
+	struct nlattr *triggers[MAX_NL80211_WOWLAN_TRIG + 1];
+
+	if (tb == NULL)
+		return;
+
+	if (nla_parse_nested(triggers, MAX_NL80211_WOWLAN_TRIG,
+			     tb, NULL))
+		return;
+
+	if (triggers[NL80211_WOWLAN_TRIG_ANY])
+		capa->wowlan_triggers.any = 1;
+	if (triggers[NL80211_WOWLAN_TRIG_DISCONNECT])
+		capa->wowlan_triggers.disconnect = 1;
+	if (triggers[NL80211_WOWLAN_TRIG_MAGIC_PKT])
+		capa->wowlan_triggers.magic_pkt = 1;
+	if (triggers[NL80211_WOWLAN_TRIG_GTK_REKEY_FAILURE])
+		capa->wowlan_triggers.gtk_rekey_failure = 1;
+	if (triggers[NL80211_WOWLAN_TRIG_EAP_IDENT_REQUEST])
+		capa->wowlan_triggers.eap_identity_req = 1;
+	if (triggers[NL80211_WOWLAN_TRIG_4WAY_HANDSHAKE])
+		capa->wowlan_triggers.four_way_handshake = 1;
+	if (triggers[NL80211_WOWLAN_TRIG_RFKILL_RELEASE])
+		capa->wowlan_triggers.rfkill_release = 1;
+}
+
+
 static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 {
 	struct nlattr *tb[NL80211_ATTR_MAX + 1];
@@ -3819,6 +3848,9 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 				   vinfo->vendor_id, vinfo->subcmd);
 		}
 	}
+
+	wiphy_info_wowlan_triggers(capa,
+				   tb[NL80211_ATTR_WOWLAN_TRIGGERS_SUPPORTED]);
 
 	return NL_SKIP;
 }
@@ -12137,6 +12169,57 @@ nla_put_failure:
 }
 
 
+static int nl80211_set_wowlan(void *priv,
+			      const struct wowlan_triggers *triggers)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg;
+	struct nlattr *wowlan_triggers;
+	int ret;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -ENOMEM;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Setting wowlan");
+
+	nl80211_cmd(drv, msg, 0, NL80211_CMD_SET_WOWLAN);
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+
+	wowlan_triggers = nla_nest_start(msg, NL80211_ATTR_WOWLAN_TRIGGERS);
+	if (!wowlan_triggers)
+		goto nla_put_failure;
+
+	if (triggers->any)
+		NLA_PUT_FLAG(msg, NL80211_WOWLAN_TRIG_ANY);
+	if (triggers->disconnect)
+		NLA_PUT_FLAG(msg, NL80211_WOWLAN_TRIG_DISCONNECT);
+	if (triggers->magic_pkt)
+		NLA_PUT_FLAG(msg, NL80211_WOWLAN_TRIG_MAGIC_PKT);
+	if (triggers->gtk_rekey_failure)
+		NLA_PUT_FLAG(msg, NL80211_WOWLAN_TRIG_GTK_REKEY_FAILURE);
+	if (triggers->eap_identity_req)
+		NLA_PUT_FLAG(msg, NL80211_WOWLAN_TRIG_EAP_IDENT_REQUEST);
+	if (triggers->four_way_handshake)
+		NLA_PUT_FLAG(msg, NL80211_WOWLAN_TRIG_4WAY_HANDSHAKE);
+	if (triggers->rfkill_release)
+		NLA_PUT_FLAG(msg, NL80211_WOWLAN_TRIG_RFKILL_RELEASE);
+
+	nla_nest_end(msg, wowlan_triggers);
+
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	if (ret)
+		wpa_printf(MSG_DEBUG, "nl80211: Setting wowlan failed");
+
+	return ret;
+
+nla_put_failure:
+	nlmsg_free(msg);
+	return -ENOBUFS;
+}
+
+
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
@@ -12227,4 +12310,5 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 #endif /* ANDROID */
 	.vendor_cmd = nl80211_vendor_cmd,
 	.set_qos_map = nl80211_set_qos_map,
+	.set_wowlan = nl80211_set_wowlan,
 };

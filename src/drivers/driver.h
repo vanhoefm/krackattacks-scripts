@@ -682,6 +682,16 @@ enum hide_ssid {
 	HIDDEN_SSID_ZERO_CONTENTS
 };
 
+struct wowlan_triggers {
+	u8 any;
+	u8 disconnect;
+	u8 magic_pkt;
+	u8 gtk_rekey_failure;
+	u8 eap_identity_req;
+	u8 four_way_handshake;
+	u8 rfkill_release;
+};
+
 struct wpa_driver_ap_params {
 	/**
 	 * head - Beacon head from IEEE 802.11 header to IEs before TIM IE
@@ -1032,6 +1042,8 @@ struct wpa_driver_capa {
 	 */
 	const u8 *extended_capa, *extended_capa_mask;
 	unsigned int extended_capa_len;
+
+	struct wowlan_triggers wowlan_triggers;
 };
 
 
@@ -2517,6 +2529,13 @@ struct wpa_driver_ops {
 	 */
 	int (*set_qos_map)(void *priv, const u8 *qos_map_set,
 			   u8 qos_map_set_len);
+
+	/**
+	 * set_wowlan - Set wake-on-wireless triggers
+	 * @priv: Private driver interface data
+	 * @triggers: wowlan triggers
+	 */
+	int (*set_wowlan)(void *priv, const struct wowlan_triggers *triggers);
 
 	/**
 	 * signal_poll - Get current connection information

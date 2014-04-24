@@ -614,6 +614,14 @@ static inline int wpa_drv_set_qos_map(struct wpa_supplicant *wpa_s,
 					  qos_map_set_len);
 }
 
+static inline int wpa_drv_wowlan(struct wpa_supplicant *wpa_s,
+				 const struct wowlan_triggers *triggers)
+{
+	if (!wpa_s->driver->set_wowlan)
+		return -1;
+	return wpa_s->driver->set_wowlan(wpa_s->drv_priv, triggers);
+}
+
 static inline int wpa_drv_vendor_cmd(struct wpa_supplicant *wpa_s,
 				     int vendor_id, int subcmd, const u8 *data,
 				     size_t data_len, struct wpabuf *buf)

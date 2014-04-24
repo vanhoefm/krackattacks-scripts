@@ -762,9 +762,6 @@ skip_ies:
 			  reason_code, 0, rbuf, pos - rbuf);
 	os_free(rbuf);
 
-	/* clear the Peerkey statemachine */
-	wpa_tdls_peer_free(sm, peer);
-
 	return 0;
 }
 
@@ -2592,8 +2589,8 @@ void wpa_tdls_teardown_peers(struct wpa_sm *sm)
 		wpa_printf(MSG_DEBUG, "TDLS: Tear down peer " MACSTR,
 			   MAC2STR(peer->addr));
 		if (sm->tdls_external_setup)
-			wpa_tdls_send_teardown(sm, peer->addr,
-					       WLAN_REASON_DEAUTH_LEAVING);
+			wpa_tdls_do_teardown(sm, peer,
+					     WLAN_REASON_DEAUTH_LEAVING);
 		else
 			wpa_sm_tdls_oper(sm, TDLS_TEARDOWN, peer->addr);
 

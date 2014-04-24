@@ -416,6 +416,32 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 	if (old_ssid != wpa_s->current_ssid)
 		wpas_notify_network_changed(wpa_s);
 
+#ifdef CONFIG_P2P
+	/*
+	 * If multi-channel concurrency is not supported, check for any
+	 * frequency conflict. In case of any frequency conflict, remove the
+	 * least prioritized connection.
+	 */
+	if (wpa_s->num_multichan_concurrent < 2) {
+		int freq, num;
+		num = get_shared_radio_freqs(wpa_s, &freq, 1);
+		if (num > 0 && freq > 0 && freq != params.freq) {
+			wpa_printf(MSG_DEBUG,
+				   "Conflicting frequency found (%d != %d)",
+				   freq, params.freq);
+			if (wpas_p2p_handle_frequency_conflicts(wpa_s,
+								params.freq,
+								ssid) < 0) {
+				wpas_connection_failed(wpa_s, bss->bssid);
+				wpa_supplicant_mark_disassoc(wpa_s);
+				wpabuf_free(resp);
+				wpas_connect_work_done(wpa_s);
+				return;
+			}
+		}
+	}
+#endif /* CONFIG_P2P */
+
 	wpa_s->sme.auth_alg = params.auth_alg;
 	if (wpa_drv_authenticate(wpa_s, &params) < 0) {
 		wpa_msg(wpa_s, MSG_INFO, "SME: Authentication request to the "

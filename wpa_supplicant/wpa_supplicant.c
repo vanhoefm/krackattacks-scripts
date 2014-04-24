@@ -1822,9 +1822,11 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 	 * least prioritized connection.
 	 */
 	if (wpa_s->num_multichan_concurrent < 2) {
-		int freq = wpa_drv_shared_freq(wpa_s);
-		if (freq > 0 && freq != params.freq) {
-			wpa_printf(MSG_DEBUG, "Shared interface with conflicting frequency found (%d != %d)",
+		int freq, num;
+		num = get_shared_radio_freqs(wpa_s, &freq, 1);
+		if (num > 0 && freq > 0 && freq != params.freq) {
+			wpa_printf(MSG_DEBUG,
+				   "Assoc conflicting freq found (%d != %d)",
 				   freq, params.freq);
 			if (wpas_p2p_handle_frequency_conflicts(wpa_s,
 								params.freq,

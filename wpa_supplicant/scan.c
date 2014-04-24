@@ -714,11 +714,6 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	size_t max_ssids;
 	int connect_without_scan = 0;
 
-	if (wpa_s->pno || wpa_s->pno_sched_pending) {
-		wpa_dbg(wpa_s, MSG_DEBUG, "Skip scan - PNO is in progress");
-		return;
-	}
-
 	if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Skip scan - interface disabled");
 		return;
@@ -776,6 +771,21 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	     (ssid->mode != WPAS_MODE_AP && ssid->mode != WPAS_MODE_P2P_GO))) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Delay station mode scan while P2P operation is in progress");
 		wpa_supplicant_req_scan(wpa_s, 5, 0);
+		return;
+	}
+
+	/*
+	 * Don't cancel the scan based on ongoing PNO; defer it. Some scans are
+	 * used for changing modes inside wpa_supplicant (roaming,
+	 * auto-reconnect, etc). Discarding the scan might hurt these processes.
+	 * The normal use case for PNO is to suspend the host immediately after
+	 * starting PNO, so the periodic 100 ms attempts to run the scan do not
+	 * normally happen in practice multiple times, i.e., this is simply
+	 * restarting scanning once the host is woken up and PNO stopped.
+	 */
+	if (wpa_s->pno || wpa_s->pno_sched_pending) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "Defer scan - PNO is in progress");
+		wpa_supplicant_req_scan(wpa_s, 0, 100000);
 		return;
 	}
 

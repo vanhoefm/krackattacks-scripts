@@ -4,6 +4,8 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+import logging
+logger = logging.getLogger()
 import os
 import subprocess
 
@@ -105,7 +107,9 @@ def test_wpas_config_file(dev):
         data2 = check_config(config)
 
         if data1 != data2:
-            raise Esception("Unexpected configuration change")
+            logger.debug(data1)
+            logger.debug(data2)
+            raise Exception("Unexpected configuration change")
 
     finally:
         subprocess.call(['sudo', 'rm', config])

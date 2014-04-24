@@ -673,8 +673,11 @@ void wpa_supplicant_set_state(struct wpa_supplicant *wpa_s,
 		wpa_s->normal_scans = 0;
 	}
 
-	if (state == WPA_COMPLETED)
+	if (state == WPA_COMPLETED) {
 		wpas_connect_work_done(wpa_s);
+		/* Reinitialize normal_scan counter */
+		wpa_s->normal_scans = 0;
+	}
 
 	if (state != WPA_SCANNING)
 		wpa_supplicant_notify_scanning(wpa_s, 0);

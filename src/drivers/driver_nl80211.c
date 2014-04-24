@@ -7705,6 +7705,12 @@ static int nl80211_create_iface_once(struct wpa_driver_nl80211_data *drv,
 		NLA_PUT_U8(msg, NL80211_ATTR_4ADDR, wds);
 	}
 
+	/*
+	 * Tell cfg80211 that the interface belongs to the socket that created
+	 * it, and the interface should be deleted when the socket is closed.
+	 */
+	NLA_PUT_FLAG(msg, NL80211_ATTR_IFACE_SOCKET_OWNER);
+
 	ret = send_and_recv_msgs(drv, msg, handler, arg);
 	msg = NULL;
 	if (ret) {

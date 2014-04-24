@@ -2463,7 +2463,8 @@ void wpa_tdls_remove(struct wpa_sm *sm, const u8 *addr)
 		 * Disable previous link to allow renegotiation to be completed
 		 * on AP path.
 		 */
-		wpa_tdls_disable_peer_link(sm, peer);
+		wpa_tdls_do_teardown(sm, peer,
+				     WLAN_REASON_TDLS_TEARDOWN_UNSPECIFIED);
 	}
 }
 

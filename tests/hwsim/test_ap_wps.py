@@ -886,11 +886,17 @@ def test_ap_wps_er_add_enrollee(dev, apdev):
     if ev is None:
         raise Exception("WPS ER unsubscription timed out")
     # It takes some time for the UPnP UNSUBSCRIBE command to go through, so wait
-    # a bit before verifying that the scan results have change.
+    # a bit before verifying that the scan results have changed.
     time.sleep(0.2)
 
-    dev[1].scan(freq="2412")
-    bss = dev[1].get_bss(apdev[0]['bssid'])
+    for i in range(0, 10):
+        dev[1].request("BSS_FLUSH 0")
+        dev[1].scan(freq="2412", only_new=True)
+        bss = dev[1].get_bss(apdev[0]['bssid'])
+        if bss and 'flags' in bss and "[WPS-AUTH]" not in bss['flags']:
+            break
+        logger.debug("WPS-AUTH flag was still in place - wait a bit longer")
+        time.sleep(0.1)
     if "[WPS-AUTH]" in bss['flags']:
         raise Exception("WPS-AUTH flag not removed")
 

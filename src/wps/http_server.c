@@ -244,7 +244,13 @@ struct http_server * http_server_init(struct in_addr *addr, int port,
 	if (srv->fd < 0)
 		goto fail;
 
-	setsockopt(srv->fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+	if (setsockopt(srv->fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0)
+	{
+		wpa_printf(MSG_DEBUG,
+			   "HTTP: setsockopt(SO_REUSEADDR) failed: %s",
+			   strerror(errno));
+		/* try to continue anyway */
+	}
 
 	if (fcntl(srv->fd, F_SETFL, O_NONBLOCK) < 0)
 		goto fail;

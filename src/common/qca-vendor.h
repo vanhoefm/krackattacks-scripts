@@ -55,16 +55,6 @@ enum qca_nl80211_vendor_subcmds {
 };
 
 
-struct qca_avoid_freq_range {
-	u32 start_freq;
-	u32 end_freq;
-} STRUCT_PACKED;
-
-struct qca_avoid_freq_list {
-	u32 count;
-	struct qca_avoid_freq_range range[0];
-} STRUCT_PACKED;
-
 enum qca_wlan_vendor_attr {
 	QCA_WLAN_VENDOR_ATTR_INVALID = 0,
 	/* used by QCA_NL80211_VENDOR_SUBCMD_DFS_CAPABILITY */

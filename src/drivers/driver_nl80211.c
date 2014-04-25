@@ -389,8 +389,6 @@ static int wpa_driver_nl80211_if_remove(struct i802_bss *bss,
 
 static int nl80211_set_channel(struct i802_bss *bss,
 			       struct hostapd_freq_params *freq, int set_chan);
-static int wpa_driver_nl80211_set_freq(struct i802_bss *bss,
-				       struct hostapd_freq_params *freq);
 static int nl80211_disable_11b_rates(struct wpa_driver_nl80211_data *drv,
 				     int ifindex, int disabled);
 
@@ -7430,13 +7428,6 @@ nla_put_failure:
 }
 
 
-static int wpa_driver_nl80211_set_freq(struct i802_bss *bss,
-				       struct hostapd_freq_params *freq)
-{
-	return nl80211_set_channel(bss, freq, 0);
-}
-
-
 static u32 sta_flags_nl80211(int flags)
 {
 	u32 f = 0;
@@ -8434,7 +8425,7 @@ static int wpa_driver_nl80211_ap(struct wpa_driver_nl80211_data *drv,
 		return -1;
 	}
 
-	if (wpa_driver_nl80211_set_freq(drv->first_bss, &freq)) {
+	if (nl80211_set_channel(drv->first_bss, &freq, 0)) {
 		if (old_mode != nlmode)
 			wpa_driver_nl80211_set_mode(drv->first_bss, old_mode);
 		nl80211_remove_monitor_interface(drv);
@@ -9160,7 +9151,7 @@ static int wpa_driver_nl80211_set_supp_port(void *priv, int authorized)
 static int i802_set_freq(void *priv, struct hostapd_freq_params *freq)
 {
 	struct i802_bss *bss = priv;
-	return wpa_driver_nl80211_set_freq(bss, freq);
+	return nl80211_set_channel(bss, freq, 0);
 }
 
 

@@ -674,7 +674,8 @@ void wpa_bss_update_scan_res(struct wpa_supplicant *wpa_s,
 		wpa_s->last_scan_res_size = siz;
 	}
 
-	wpa_s->last_scan_res[wpa_s->last_scan_res_used++] = bss;
+	if (wpa_s->last_scan_res)
+		wpa_s->last_scan_res[wpa_s->last_scan_res_used++] = bss;
 }
 
 

@@ -691,6 +691,10 @@ def test_wpas_ctrl_set(dev):
 
 def test_wpas_ctrl_get_capability(dev):
     """wpa_supplicant ctrl_iface GET_CAPABILITY"""
+    if "FAIL" not in dev[0].request("GET_CAPABILITY 1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890"):
+        raise Exception("Unexpected success on invalid GET_CAPABILITY")
+    if "AP" not in dev[0].request("GET_CAPABILITY modes strict"):
+        raise Exception("Unexpected GET_CAPABILITY response")
     res = dev[0].get_capability("eap")
     if "TTLS" not in res:
         raise Exception("Unexpected GET_CAPABILITY eap response: " + str(res))

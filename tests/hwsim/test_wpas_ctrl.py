@@ -395,6 +395,8 @@ def test_wpas_ctrl_addr(dev):
         raise Exception("Unexpected success on invalid WPS_REG")
     if "FAIL" not in dev[0].request("IBSS_RSN 00:11:22:33:44"):
         raise Exception("Unexpected success on invalid IBSS_RSN")
+    if "FAIL" not in dev[0].request("BLACKLIST 00:11:22:33:44"):
+        raise Exception("Unexpected success on invalid BLACKLIST")
 
 def test_wpas_ctrl_wps_errors(dev):
     """wpa_supplicant ctrl_iface WPS error cases"""

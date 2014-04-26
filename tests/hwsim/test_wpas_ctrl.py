@@ -239,6 +239,18 @@ def remove_cred(dev, id):
 def test_wpas_ctrl_cred(dev):
     """wpa_supplicant ctrl_iface cred set"""
     id1 = add_cred(dev[0])
+    if "FAIL" not in dev[0].request("SET_CRED " + str(id1 + 1) + " temporary 1"):
+        raise Exception("SET_CRED succeeded unexpectedly on unknown cred id")
+    if "FAIL" not in dev[0].request("SET_CRED " + str(id1)):
+        raise Exception("Invalid SET_CRED succeeded unexpectedly")
+    if "FAIL" not in dev[0].request("SET_CRED " + str(id1) + " temporary"):
+        raise Exception("Invalid SET_CRED succeeded unexpectedly")
+    if "FAIL" not in dev[0].request("GET_CRED " + str(id1 + 1) + " temporary"):
+        raise Exception("GET_CRED succeeded unexpectedly on unknown cred id")
+    if "FAIL" not in dev[0].request("GET_CRED " + str(id1)):
+        raise Exception("Invalid GET_CRED succeeded unexpectedly")
+    if "FAIL" not in dev[0].request("GET_CRED " + str(id1) + " foo"):
+        raise Exception("Invalid GET_CRED succeeded unexpectedly")
     id = add_cred(dev[0])
     id2 = add_cred(dev[0])
     set_cred(dev[0], id, "temporary", "1")

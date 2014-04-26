@@ -1001,6 +1001,8 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		break;
 #endif /* NEED_AP_MLME */
 	case EVENT_RX_MGMT:
+		if (!data->rx_mgmt.frame)
+			break;
 #ifdef NEED_AP_MLME
 		if (hostapd_mgmt_rx(hapd, &data->rx_mgmt) > 0)
 			break;

@@ -645,7 +645,7 @@ void handle_probe_req(struct hostapd_data *hapd,
 	 * with AP configuration */
 
 #ifdef CONFIG_TESTING_OPTIONS
-	if (hapd->iconf->ignore_probe_probability > 0.0d &&
+	if (hapd->iconf->ignore_probe_probability > 0.0 &&
 	    drand48() < hapd->iconf->ignore_probe_probability) {
 		wpa_printf(MSG_INFO,
 			   "TESTING: ignoring probe request from " MACSTR,

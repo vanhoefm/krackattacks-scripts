@@ -3075,8 +3075,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		char *end;					\
 								\
 		conf->_val = strtod(pos, &end);			\
-		if (*end || conf->_val < 0.0d ||		\
-		    conf->_val > 1.0d) {			\
+		if (*end || conf->_val < 0.0 ||			\
+		    conf->_val > 1.0) {				\
 			wpa_printf(MSG_ERROR,			\
 				   "Line %d: Invalid value '%s'", \
 				   line, pos);			\

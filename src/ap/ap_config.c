@@ -174,11 +174,11 @@ struct hostapd_config * hostapd_config_defaults(void)
 	conf->ap_table_expiration_time = 60;
 
 #ifdef CONFIG_TESTING_OPTIONS
-	conf->ignore_probe_probability = 0.0d;
-	conf->ignore_auth_probability = 0.0d;
-	conf->ignore_assoc_probability = 0.0d;
-	conf->ignore_reassoc_probability = 0.0d;
-	conf->corrupt_gtk_rekey_mic_probability = 0.0d;
+	conf->ignore_probe_probability = 0.0;
+	conf->ignore_auth_probability = 0.0;
+	conf->ignore_assoc_probability = 0.0;
+	conf->ignore_reassoc_probability = 0.0;
+	conf->corrupt_gtk_rekey_mic_probability = 0.0;
 #endif /* CONFIG_TESTING_OPTIONS */
 
 #ifdef CONFIG_ACS

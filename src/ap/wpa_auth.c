@@ -1421,7 +1421,7 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 				  key->key_mic);
 #ifdef CONFIG_TESTING_OPTIONS
 		if (!pairwise &&
-		    wpa_auth->conf.corrupt_gtk_rekey_mic_probability > 0.0d &&
+		    wpa_auth->conf.corrupt_gtk_rekey_mic_probability > 0.0 &&
 		    drand48() <
 		    wpa_auth->conf.corrupt_gtk_rekey_mic_probability) {
 			wpa_auth_logger(wpa_auth, sm->addr, LOGGER_INFO,

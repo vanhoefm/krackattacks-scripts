@@ -565,7 +565,7 @@ static void handle_auth(struct hostapd_data *hapd,
 	}
 
 #ifdef CONFIG_TESTING_OPTIONS
-	if (hapd->iconf->ignore_auth_probability > 0.0d &&
+	if (hapd->iconf->ignore_auth_probability > 0.0 &&
 	    drand48() < hapd->iconf->ignore_auth_probability) {
 		wpa_printf(MSG_INFO,
 			   "TESTING: ignoring auth frame from " MACSTR,
@@ -1291,7 +1291,7 @@ static void handle_assoc(struct hostapd_data *hapd,
 
 #ifdef CONFIG_TESTING_OPTIONS
 	if (reassoc) {
-		if (hapd->iconf->ignore_reassoc_probability > 0.0d &&
+		if (hapd->iconf->ignore_reassoc_probability > 0.0 &&
 		    drand48() < hapd->iconf->ignore_reassoc_probability) {
 			wpa_printf(MSG_INFO,
 				   "TESTING: ignoring reassoc request from "
@@ -1299,7 +1299,7 @@ static void handle_assoc(struct hostapd_data *hapd,
 			return;
 		}
 	} else {
-		if (hapd->iconf->ignore_assoc_probability > 0.0d &&
+		if (hapd->iconf->ignore_assoc_probability > 0.0 &&
 		    drand48() < hapd->iconf->ignore_assoc_probability) {
 			wpa_printf(MSG_INFO,
 				   "TESTING: ignoring assoc request from "

@@ -62,7 +62,6 @@ u8 * hostapd_eid_supp_rates(struct hostapd_data *hapd, u8 *eid)
 	}
 
 	*pos++ = num;
-	count = 0;
 	for (i = 0, count = 0; i < hapd->iface->num_rates && count < num;
 	     i++) {
 		count++;
@@ -105,7 +104,6 @@ u8 * hostapd_eid_ext_supp_rates(struct hostapd_data *hapd, u8 *eid)
 
 	*pos++ = WLAN_EID_EXT_SUPP_RATES;
 	*pos++ = num;
-	count = 0;
 	for (i = 0, count = 0; i < hapd->iface->num_rates && count < num + 8;
 	     i++) {
 		count++;

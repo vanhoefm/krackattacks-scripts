@@ -352,8 +352,8 @@ struct wpa_config * wpa_config_read(const char *name, struct wpa_config *cfgp)
 	FILE *f;
 	char buf[512], *pos;
 	int errors = 0, line = 0;
-	struct wpa_ssid *ssid, *tail = NULL, *head = NULL;
-	struct wpa_cred *cred, *cred_tail = NULL, *cred_head = NULL;
+	struct wpa_ssid *ssid, *tail, *head;
+	struct wpa_cred *cred, *cred_tail, *cred_head;
 	struct wpa_config *config;
 	int id = 0;
 	int cred_id = 0;
@@ -369,8 +369,12 @@ struct wpa_config * wpa_config_read(const char *name, struct wpa_config *cfgp)
 			   "structure");
 		return NULL;
 	}
-	head = config->ssid;
-	cred_head = config->cred;
+	tail = head = config->ssid;
+	while (tail && tail->next)
+		tail = tail->next;
+	cred_tail = cred_head = config->cred;
+	while (cred_tail && cred_tail->next)
+		cred_tail = cred_tail->next;
 
 	wpa_printf(MSG_DEBUG, "Reading configuration file '%s'", name);
 	f = fopen(name, "r");

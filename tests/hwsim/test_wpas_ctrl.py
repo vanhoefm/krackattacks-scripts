@@ -340,6 +340,23 @@ def test_wpas_ctrl_cred(dev):
     if len(dev[0].request("LIST_CREDS").splitlines()) != 1:
         raise Exception("Unexpected LIST_CREDS result(4)")
 
+    # Test large number of creds and LIST_CREDS truncation
+    dev[0].dump_monitor()
+    for i in range(0, 100):
+        id = add_cred(dev[0])
+        set_cred_quoted(dev[0], id, "realm", "relatively.long.realm.test%d.example.com" % i)
+        dev[0].dump_monitor()
+    creds = dev[0].request("LIST_CREDS")
+    for i in range(0, 100):
+        dev[0].remove_cred(i)
+        dev[0].dump_monitor()
+    if len(creds) < 3900 or len(creds) > 4100:
+        raise Exception("Unexpected LIST_CREDS length: %d" % len(creds))
+    if "test10.example.com" not in creds:
+        raise Exception("Missing credential")
+    if len(creds.splitlines()) > 95:
+        raise Exception("Too many LIST_CREDS entries in the buffer")
+
 def test_wpas_ctrl_pno(dev):
     """wpa_supplicant ctrl_iface pno"""
     if "FAIL" not in dev[0].request("SET pno 1"):

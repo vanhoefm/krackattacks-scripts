@@ -31,6 +31,8 @@ def test_ap_pmf_required(dev, apdev):
     dev[0].connect(ssid, psk="12345678", ieee80211w="1",
                    key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2",
                    scan_freq="2412")
+    if "[WPA2-PSK-SHA256-CCMP]" not in dev[0].request("SCAN_RESULTS"):
+        raise Exception("Scan results missing RSN element info")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
     dev[1].connect(ssid, psk="12345678", ieee80211w="2",
                    key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2",

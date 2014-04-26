@@ -350,6 +350,8 @@ def test_pmksa_cache_preauth(dev, apdev):
             raise Exception("Pre-authentication EAPOL status was not available")
 
         dev[0].scan(freq="2412")
+        if "[WPA2-EAP-CCMP-preauth]" not in dev[0].request("SCAN_RESULTS"):
+            raise Exception("Scan results missing RSN element info")
         dev[0].request("ROAM " + bssid1)
         ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED",
                                 "CTRL-EVENT-CONNECTED"], timeout=10)

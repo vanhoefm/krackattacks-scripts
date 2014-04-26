@@ -139,6 +139,8 @@ def test_ap_ft(dev, apdev):
     hostapd.add_ap(apdev[1]['ifname'], params)
 
     run_roams(dev[0], apdev, ssid, passphrase)
+    if "[WPA2-FT/PSK-CCMP]" not in dev[0].request("SCAN_RESULTS"):
+        raise Exception("Scan results missing RSN element info")
 
 def test_ap_ft_mixed(dev, apdev):
     """WPA2-PSK-FT mixed-mode AP"""
@@ -264,6 +266,8 @@ def test_ap_ft_eap(dev, apdev):
     hostapd.add_ap(apdev[1]['ifname'], params)
 
     run_roams(dev[0], apdev, ssid, passphrase, eap=True)
+    if "[WPA2-FT/EAP-CCMP]" not in dev[0].request("SCAN_RESULTS"):
+        raise Exception("Scan results missing RSN element info")
     check_mib(dev[0], [ ("dot11RSNAAuthenticationSuiteRequested", "00-0f-ac-3"),
                         ("dot11RSNAAuthenticationSuiteSelected", "00-0f-ac-3") ])
 

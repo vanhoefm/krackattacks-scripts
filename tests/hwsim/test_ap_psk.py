@@ -93,6 +93,8 @@ def test_ap_wpa_ptk_rekey(dev, apdev):
     params = hostapd.wpa_params(ssid=ssid, passphrase=passphrase)
     hostapd.add_ap(apdev[0]['ifname'], params)
     dev[0].connect(ssid, psk=passphrase, wpa_ptk_rekey="1", scan_freq="2412")
+    if "[WPA-PSK-TKIP]" not in dev[0].request("SCAN_RESULTS"):
+        raise Exception("Scan results missing WPA element info")
     ev = dev[0].wait_event(["WPA: Key negotiation completed"])
     if ev is None:
         raise Exception("PTK rekey timed out")

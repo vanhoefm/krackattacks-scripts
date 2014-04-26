@@ -15,6 +15,8 @@ def test_wep_open_auth(dev, apdev):
     dev[0].connect("wep-open", key_mgmt="NONE", wep_key0='"hello"',
                    scan_freq="2412")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    if "[WEP]" not in dev[0].request("SCAN_RESULTS"):
+        raise Exception("WEP flag not indicated in scan results")
 
 def test_wep_shared_key_auth(dev, apdev):
     """WEP Shared Key authentication"""

@@ -998,3 +998,15 @@ def test_wpas_ctrl_global(dev):
         raise Exception("INTERFACE_ADD succeeded unexpectedly")
     if "FAIL" not in wpas.global_request("INTERFACE_ADD FOO					"):
         raise Exception("INTERFACE_ADD succeeded unexpectedly")
+
+def test_wpas_ctrl_roam(dev, apdev):
+    """wpa_supplicant ctrl_iface ROAM error cases"""
+    if "FAIL" not in dev[0].request("ROAM 00:11:22:33:44"):
+        raise Exception("Unexpected success")
+    if "FAIL" not in dev[0].request("ROAM 00:11:22:33:44:55"):
+        raise Exception("Unexpected success")
+    params = { "ssid": "test" }
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    id = dev[0].connect("test", key_mgmt="NONE", scan_freq="2412")
+    if "FAIL" not in dev[0].request("ROAM 00:11:22:33:44:55"):
+        raise Exception("Unexpected success")

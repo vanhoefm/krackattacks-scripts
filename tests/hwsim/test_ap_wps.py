@@ -106,12 +106,17 @@ def test_ap_wps_init_2ap_pbc(dev, apdev):
         raise Exception("Association with the AP timed out")
 
     dev[1].scan(freq="2412")
+    for i in range(0, 10):
+        if 'flags' in dev[1].get_bss(apdev[0]['bssid']) and 'flags' in dev[1].get_bss(apdev[1]['bssid']):
+            break
+        logger.info("Scan again since scan did not include both BSSes")
+        dev[1].scan(freq="2412")
     bss = dev[1].get_bss(apdev[0]['bssid'])
     if "[WPS-PBC]" in bss['flags']:
         raise Exception("WPS-PBC flag not cleared from AP1")
     bss = dev[1].get_bss(apdev[1]['bssid'])
     if "[WPS-PBC]" in bss['flags']:
-        raise Exception("WPS-PBC flag bit ckeared from AP2")
+        raise Exception("WPS-PBC flag not cleared from AP2")
 
 def test_ap_wps_init_2ap_pin(dev, apdev):
     """Initial two-radio AP configuration with first WPS PIN Enrollee"""
@@ -137,12 +142,17 @@ def test_ap_wps_init_2ap_pin(dev, apdev):
         raise Exception("Association with the AP timed out")
 
     dev[1].scan(freq="2412")
+    for i in range(0, 10):
+        if 'flags' in dev[1].get_bss(apdev[0]['bssid']) and 'flags' in dev[1].get_bss(apdev[1]['bssid']):
+            break
+        logger.info("Scan again since scan did not include both BSSes")
+        dev[1].scan(freq="2412")
     bss = dev[1].get_bss(apdev[0]['bssid'])
     if "[WPS-AUTH]" in bss['flags']:
         raise Exception("WPS-AUTH flag not cleared from AP1")
     bss = dev[1].get_bss(apdev[1]['bssid'])
     if "[WPS-AUTH]" in bss['flags']:
-        raise Exception("WPS-AUTH flag bit ckeared from AP2")
+        raise Exception("WPS-AUTH flag not cleared from AP2")
 
 def test_ap_wps_init_through_wps_config(dev, apdev):
     """Initial AP configuration using wps_config command"""

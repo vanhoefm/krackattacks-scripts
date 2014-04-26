@@ -617,7 +617,6 @@ static void httpread_read_handler(int sd, void *eloop_ctx, void *sock_ctx)
 		 * We do NOT support trailers except to skip them --
 		 * this is supported (generally) by the http spec.
 		 */
-		bbp = h->body + h->body_nbytes;
 		for (;;) {
 			int c;
 			if (nread <= 0)

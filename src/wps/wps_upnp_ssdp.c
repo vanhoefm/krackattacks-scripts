@@ -134,6 +134,8 @@ next_advertisement(struct upnp_wps_device_sm *sm,
 	*islast = 0;
 	iface = dl_list_first(&sm->interfaces,
 			      struct upnp_wps_device_interface, list);
+	if (!iface)
+		return NULL;
 	uuid_bin2str(iface->wps->uuid, uuid_string, sizeof(uuid_string));
 	msg = wpabuf_alloc(800); /* more than big enough */
 	if (msg == NULL)
@@ -587,6 +589,8 @@ static void ssdp_parse_msearch(struct upnp_wps_device_sm *sm,
 					&sm->interfaces,
 					struct upnp_wps_device_interface,
 					list);
+				if (!iface)
+					continue;
 				data += os_strlen("uuid:");
 				uuid_bin2str(iface->wps->uuid, uuid_string,
 					     sizeof(uuid_string));

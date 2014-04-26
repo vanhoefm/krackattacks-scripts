@@ -4210,7 +4210,7 @@ p2p_get_peer_found(struct p2p_data *p2p, const u8 *addr, int next)
 				dev = dl_list_first(&dev->list,
 						    struct p2p_device,
 						    list);
-				if (&dev->list == &p2p->devices)
+				if (!dev || &dev->list == &p2p->devices)
 					return NULL;
 			} while (dev->flags & P2P_DEV_PROBE_REQ_ONLY);
 		}
@@ -4222,7 +4222,7 @@ p2p_get_peer_found(struct p2p_data *p2p, const u8 *addr, int next)
 			dev = dl_list_first(&dev->list,
 					    struct p2p_device,
 					    list);
-			if (&dev->list == &p2p->devices)
+			if (!dev || &dev->list == &p2p->devices)
 				return NULL;
 		}
 	}

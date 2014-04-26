@@ -179,15 +179,12 @@ static const char *wps_device_xml_postfix =
 /* format_wps_device_xml -- produce content of "file" wps_device.xml
  * (UPNP_WPS_DEVICE_XML_FILE)
  */
-static void format_wps_device_xml(struct upnp_wps_device_sm *sm,
+static void format_wps_device_xml(struct upnp_wps_device_interface *iface,
+				  struct upnp_wps_device_sm *sm,
 				  struct wpabuf *buf)
 {
 	const char *s;
 	char uuid_string[80];
-	struct upnp_wps_device_interface *iface;
-
-	iface = dl_list_first(&sm->interfaces,
-			      struct upnp_wps_device_interface, list);
 
 	wpabuf_put_str(buf, wps_device_xml_prefix);
 
@@ -319,6 +316,10 @@ static void web_connection_parse_get(struct upnp_wps_device_sm *sm,
 
 	iface = dl_list_first(&sm->interfaces,
 			      struct upnp_wps_device_interface, list);
+	if (iface == NULL) {
+		http_request_deinit(hreq);
+		return;
+	}
 
 	/*
 	 * It is not required that filenames be case insensitive but it is
@@ -391,7 +392,7 @@ static void web_connection_parse_get(struct upnp_wps_device_sm *sm,
 
 	switch (req) {
 	case GET_DEVICE_XML_FILE:
-		format_wps_device_xml(sm, buf);
+		format_wps_device_xml(iface, sm, buf);
 		break;
 	case GET_SCPD_XML_FILE:
 		wpabuf_put_str(buf, wps_scpd_xml);
@@ -419,12 +420,13 @@ web_process_get_device_info(struct upnp_wps_device_sm *sm,
 
 	iface = dl_list_first(&sm->interfaces,
 			      struct upnp_wps_device_interface, list);
-	peer = &iface->peer;
 
 	wpa_printf(MSG_DEBUG, "WPS UPnP: GetDeviceInfo");
 
-	if (iface->ctx->ap_pin == NULL)
+	if (!iface || iface->ctx->ap_pin == NULL)
 		return HTTP_INTERNAL_SERVER_ERROR;
+
+	peer = &iface->peer;
 
 	/*
 	 * Request for DeviceInfo, i.e., M1 TLVs. This is a start of WPS
@@ -473,6 +475,8 @@ web_process_put_message(struct upnp_wps_device_sm *sm, char *data,
 
 	iface = dl_list_first(&sm->interfaces,
 			      struct upnp_wps_device_interface, list);
+	if (!iface)
+		return HTTP_INTERNAL_SERVER_ERROR;
 
 	/*
 	 * PutMessage is used by external UPnP-based Registrar to perform WPS

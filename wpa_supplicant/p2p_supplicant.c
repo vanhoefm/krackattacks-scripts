@@ -6781,7 +6781,7 @@ void wpas_p2p_new_psk_cb(struct wpa_supplicant *wpa_s, const u8 *mac_addr,
 {
 	struct wpa_ssid *ssid = wpa_s->current_ssid;
 	struct wpa_ssid *persistent;
-	struct psk_list_entry *p;
+	struct psk_list_entry *p, *last;
 
 	if (psk_len != sizeof(p->psk))
 		return;
@@ -6841,10 +6841,9 @@ void wpas_p2p_new_psk_cb(struct wpa_supplicant *wpa_s, const u8 *mac_addr,
 	}
 	os_memcpy(p->psk, psk, psk_len);
 
-	if (dl_list_len(&persistent->psk_list) > P2P_MAX_STORED_CLIENTS) {
-		struct psk_list_entry *last;
-		last = dl_list_last(&persistent->psk_list,
-				    struct psk_list_entry, list);
+	if (dl_list_len(&persistent->psk_list) > P2P_MAX_STORED_CLIENTS &&
+	    (last = dl_list_last(&persistent->psk_list,
+				 struct psk_list_entry, list))) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Remove oldest PSK entry for "
 			MACSTR " (p2p=%u) to make room for a new one",
 			MAC2STR(last->addr), last->p2p);

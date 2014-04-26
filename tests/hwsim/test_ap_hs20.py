@@ -67,7 +67,15 @@ def interworking_select(dev, bssid, type=None, no_match=False, freq=None):
             raise Exception("Unexpected network match")
         return
     if "INTERWORKING-NO-MATCH" in ev:
-        raise Exception("Matching network not found")
+        logger.info("Matching network not found - try again")
+        dev.dump_monitor()
+        dev.request("INTERWORKING_SELECT" + freq_extra)
+        ev = dev.wait_event(["INTERWORKING-AP", "INTERWORKING-NO-MATCH"],
+                            timeout=15)
+        if ev is None:
+            raise Exception("Network selection timed out");
+        if "INTERWORKING-NO-MATCH" in ev:
+            raise Exception("Matching network not found")
     if bssid and bssid not in ev:
         raise Exception("Unexpected BSSID in match")
     if type and "type=" + type not in ev:

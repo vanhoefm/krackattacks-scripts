@@ -4824,6 +4824,7 @@ static void wpa_driver_nl80211_deinit(struct i802_bss *bss)
 
 	netlink_send_oper_ifla(drv->global->netlink, drv->ifindex, 0,
 			       IF_OPER_UP);
+	eloop_cancel_timeout(wpa_driver_nl80211_send_rfkill, drv, drv->ctx);
 	rfkill_deinit(drv->rfkill);
 
 	eloop_cancel_timeout(wpa_driver_nl80211_scan_timeout, drv, drv->ctx);

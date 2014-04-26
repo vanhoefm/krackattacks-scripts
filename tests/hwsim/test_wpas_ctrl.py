@@ -16,6 +16,17 @@ def test_wpas_ctrl_network(dev):
     """wpa_supplicant ctrl_iface network set/get"""
     id = dev[0].add_network()
 
+    if "FAIL" not in dev[0].request("SET_NETWORK " + str(id)):
+        raise Exception("Unexpected success for invalid SET_NETWORK")
+    if "FAIL" not in dev[0].request("SET_NETWORK " + str(id) + " name"):
+        raise Exception("Unexpected success for invalid SET_NETWORK")
+    if "FAIL" not in dev[0].request("SET_NETWORK " + str(id + 1) + " proto OPEN"):
+        raise Exception("Unexpected success for invalid network id")
+    if "FAIL" not in dev[0].request("GET_NETWORK " + str(id)):
+        raise Exception("Unexpected success for invalid GET_NETWORK")
+    if "FAIL" not in dev[0].request("GET_NETWORK " + str(id + 1) + " proto"):
+        raise Exception("Unexpected success for invalid network id")
+
     tests = (("key_mgmt", "WPA-PSK WPA-EAP IEEE8021X NONE WPA-NONE FT-PSK FT-EAP WPA-PSK-SHA256 WPA-EAP-SHA256"),
              ("pairwise", "CCMP-256 GCMP-256 CCMP GCMP TKIP"),
              ("group", "CCMP-256 GCMP-256 CCMP GCMP TKIP WEP104 WEP40"),

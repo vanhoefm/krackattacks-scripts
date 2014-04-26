@@ -117,6 +117,20 @@ def test_persistent_group(dev):
     clients = dev[0].request("GET_NETWORK " + id + " p2p_client_list").rstrip()
     if dev[1].p2p_dev_addr() not in clients:
         raise Exception("Peer missing from client list")
+    if "FAIL" not in dev[1].request("SELECT_NETWORK " + str(id)):
+        raise Exception("SELECT_NETWORK succeeded unexpectedly")
+    if "FAIL" not in dev[1].request("SELECT_NETWORK 1234567"):
+        raise Exception("SELECT_NETWORK succeeded unexpectedly(2)")
+    if "FAIL" not in dev[1].request("ENABLE_NETWORK " + str(id)):
+        raise Exception("ENABLE_NETWORK succeeded unexpectedly")
+    if "FAIL" not in dev[1].request("ENABLE_NETWORK 1234567"):
+        raise Exception("ENABLE_NETWORK succeeded unexpectedly(2)")
+    if "FAIL" not in dev[1].request("DISABLE_NETWORK " + str(id)):
+        raise Exception("DISABLE_NETWORK succeeded unexpectedly")
+    if "FAIL" not in dev[1].request("DISABLE_NETWORK 1234567"):
+        raise Exception("DISABLE_NETWORK succeeded unexpectedly(2)")
+    if "FAIL" not in dev[1].request("REMOVE_NETWORK 1234567"):
+        raise Exception("REMOVE_NETWORK succeeded unexpectedly")
     dev[1].request("REMOVE_NETWORK all")
     if len(dev[1].list_networks()) > 0:
         raise Exception("Unexpected network block remaining")

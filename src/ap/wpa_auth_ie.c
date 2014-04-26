@@ -675,7 +675,7 @@ int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 			break;
 		}
 	}
-	if (sm->pmksa) {
+	if (sm->pmksa && pmkid) {
 		wpa_auth_vlogger(wpa_auth, sm->addr, LOGGER_DEBUG,
 				 "PMKID found from PMKSA cache "
 				 "eap_type=%d vlan_id=%d",

@@ -3362,6 +3362,14 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		}
 #endif /* CONFIG_P2P */
 
+		if (wpa_s->wpa_state >= WPA_AUTHENTICATING) {
+			/*
+			 * Indicate disconnection to keep ctrl_iface events
+			 * consistent.
+			 */
+			wpa_supplicant_event_disassoc(
+				wpa_s, WLAN_REASON_DEAUTH_LEAVING, 1);
+		}
 		wpa_supplicant_mark_disassoc(wpa_s);
 		radio_remove_works(wpa_s, NULL, 0);
 

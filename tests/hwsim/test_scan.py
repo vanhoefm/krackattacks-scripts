@@ -197,3 +197,55 @@ def test_scan_int(dev, apdev):
             raise Exception("Unexpected scan timing: " + str(times))
     finally:
         dev[0].request("SCAN_INTERVAL 5")
+
+def test_scan_bss_operations(dev, apdev):
+    """Control interface behavior on BSS parameters"""
+    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan" })
+    bssid = apdev[0]['bssid']
+    hostapd.add_ap(apdev[1]['ifname'], { "ssid": "test2-scan" })
+    bssid2 = apdev[1]['bssid']
+
+    dev[0].scan(freq="2412")
+    dev[0].scan(freq="2412")
+    dev[0].scan(freq="2412")
+
+    res = dev[0].request("BSS RANGE=ALL MASK=0x20001")
+    if "id=0" not in res:
+        raise Exception("Missing BSS 0")
+    if "id=1" not in res:
+        raise Exception("Missing BSS 1")
+    if "====" not in res:
+        raise Exception("Missing delim")
+    if "####" not in res:
+        raise Exception("Missing end")
+
+    res = dev[0].request("BSS RANGE=ALL MASK=0x1").splitlines()
+    if len(res) != 2:
+        raise Exception("Unexpected result")
+    res = dev[0].request("BSS FIRST MASK=0x1")
+    if "id=0" not in res:
+        raise Exception("Unexpected result: " + res)
+    res = dev[0].request("BSS LAST MASK=0x1")
+    if "id=1" not in res:
+        raise Exception("Unexpected result: " + res)
+    res = dev[0].request("BSS ID-0 MASK=0x1")
+    if "id=0" not in res:
+        raise Exception("Unexpected result: " + res)
+    res = dev[0].request("BSS NEXT-0 MASK=0x1")
+    if "id=1" not in res:
+        raise Exception("Unexpected result: " + res)
+
+    if len(dev[0].request("BSS RANGE=1 MASK=0x1").splitlines()) != 0:
+        raise Exception("Unexpected RANGE=1 result")
+    if len(dev[0].request("BSS RANGE=0- MASK=0x1").splitlines()) != 2:
+        raise Exception("Unexpected RANGE=0- result")
+    if len(dev[0].request("BSS RANGE=-1 MASK=0x1").splitlines()) != 2:
+        raise Exception("Unexpected RANGE=-1 result")
+    if len(dev[0].request("BSS RANGE=0-1 MASK=0x1").splitlines()) != 2:
+        raise Exception("Unexpected RANGE=0-1 result")
+    if len(dev[0].request("BSS RANGE=1-1 MASK=0x1").splitlines()) != 1:
+        raise Exception("Unexpected RANGE=1-1 result")
+    if len(dev[0].request("BSS RANGE=2-10 MASK=0x1").splitlines()) != 0:
+        raise Exception("Unexpected RANGE=2-10 result")
+    if len(dev[0].request("BSS RANGE=0-10 MASK=0x1").splitlines()) != 2:
+        raise Exception("Unexpected RANGE=0-10 result")

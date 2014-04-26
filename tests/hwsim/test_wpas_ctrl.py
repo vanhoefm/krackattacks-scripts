@@ -391,10 +391,51 @@ def test_wpas_ctrl_addr(dev):
         raise Exception("Unexpected success on invalid WPS_PIN")
     if "FAIL" not in dev[0].request("WPS_NFC 00:11:22:33:44"):
         raise Exception("Unexpected success on invalid WPS_NFC")
-    if "FAIL" not in dev[0].request("WPS_REG 12345670 00:11:22:33:44"):
+    if "FAIL" not in dev[0].request("WPS_REG 00:11:22:33:44 12345670"):
         raise Exception("Unexpected success on invalid WPS_REG")
     if "FAIL" not in dev[0].request("IBSS_RSN 00:11:22:33:44"):
         raise Exception("Unexpected success on invalid IBSS_RSN")
+
+def test_wpas_ctrl_wps_errors(dev):
+    """wpa_supplicant ctrl_iface WPS error cases"""
+    if "FAIL" not in dev[0].request("WPS_REG 00:11:22:33:44:55"):
+        raise Exception("Unexpected success on invalid WPS_REG")
+    if "FAIL" not in dev[0].request("WPS_REG 00:11:22:33:44:55 12345670 2233"):
+        raise Exception("Unexpected success on invalid WPS_REG")
+    if "FAIL" not in dev[0].request("WPS_REG 00:11:22:33:44:55 12345670 2233 OPEN"):
+        raise Exception("Unexpected success on invalid WPS_REG")
+    if "FAIL" not in dev[0].request("WPS_REG 00:11:22:33:44:55 12345670 2233 OPEN NONE"):
+        raise Exception("Unexpected success on invalid WPS_REG")
+
+    if "FAIL" not in dev[0].request("WPS_AP_PIN random"):
+        raise Exception("Unexpected success on WPS_AP_PIN in non-AP mode")
+
+    if "FAIL" not in dev[0].request("WPS_ER_PIN any"):
+        raise Exception("Unexpected success on invalid WPS_ER_PIN")
+
+    if "FAIL" not in dev[0].request("WPS_ER_LEARN 00:11:22:33:44:55"):
+        raise Exception("Unexpected success on invalid WPS_ER_LEARN")
+
+    if "FAIL" not in dev[0].request("WPS_ER_SET_CONFIG 00:11:22:33:44:55"):
+        raise Exception("Unexpected success on invalid WPS_ER_SET_CONFIG")
+
+    if "FAIL" not in dev[0].request("WPS_ER_CONFIG 00:11:22:33:44:55"):
+        raise Exception("Unexpected success on invalid WPS_ER_CONFIG")
+    if "FAIL" not in dev[0].request("WPS_ER_CONFIG 00:11:22:33:44:55 12345670"):
+        raise Exception("Unexpected success on invalid WPS_ER_CONFIG")
+    if "FAIL" not in dev[0].request("WPS_ER_CONFIG 00:11:22:33:44:55 12345670 2233"):
+        raise Exception("Unexpected success on invalid WPS_ER_CONFIG")
+    if "FAIL" not in dev[0].request("WPS_ER_CONFIG 00:11:22:33:44:55 12345670 2233 OPEN"):
+        raise Exception("Unexpected success on invalid WPS_ER_CONFIG")
+    if "FAIL" not in dev[0].request("WPS_ER_CONFIG 00:11:22:33:44:55 12345670 2233 OPEN NONE"):
+        raise Exception("Unexpected success on invalid WPS_ER_CONFIG")
+
+    if "FAIL" not in dev[0].request("WPS_ER_NFC_CONFIG_TOKEN WPS"):
+        raise Exception("Unexpected success on invalid WPS_ER_NFC_CONFIG_TOKEN")
+    if "FAIL" not in dev[0].request("WPS_ER_NFC_CONFIG_TOKEN FOO 00:11:22:33:44:55"):
+        raise Exception("Unexpected success on invalid WPS_ER_NFC_CONFIG_TOKEN")
+    if "FAIL" not in dev[0].request("WPS_ER_NFC_CONFIG_TOKEN NDEF 00:11:22:33:44:55"):
+        raise Exception("Unexpected success on invalid WPS_ER_NFC_CONFIG_TOKEN")
 
 def test_wpas_ctrl_config_parser(dev):
     """wpa_supplicant ctrl_iface SET config parser"""

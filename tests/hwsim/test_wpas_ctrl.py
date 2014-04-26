@@ -340,6 +340,39 @@ def test_wpas_ctrl_cred(dev):
     if len(dev[0].request("LIST_CREDS").splitlines()) != 1:
         raise Exception("Unexpected LIST_CREDS result(4)")
 
+    id = add_cred(dev[0])
+    set_cred_quoted(dev[0], id, "domain", "foo.example.com")
+    id = add_cred(dev[0])
+    set_cred_quoted(dev[0], id, "domain", "bar.example.com")
+    id = add_cred(dev[0])
+    set_cred_quoted(dev[0], id, "domain", "foo.example.com")
+    if "OK" not in dev[0].request("REMOVE_CRED sp_fqdn=foo.example.com"):
+        raise Exception("REMOVE_CRED failed")
+    creds = dev[0].request("LIST_CREDS")
+    if "foo.example.com" in creds:
+        raise Exception("REMOVE_CRED sp_fqdn did not remove cred")
+    if "bar.example.com" not in creds:
+        raise Exception("REMOVE_CRED sp_fqdn removed incorrect cred")
+    dev[0].request("REMOVE_CRED all")
+
+    id = add_cred(dev[0])
+    set_cred_quoted(dev[0], id, "domain", "foo.example.com")
+    set_cred_quoted(dev[0], id, "provisioning_sp", "sp.foo.example.com")
+    id = add_cred(dev[0])
+    set_cred_quoted(dev[0], id, "domain", "bar.example.com")
+    set_cred_quoted(dev[0], id, "provisioning_sp", "sp.bar.example.com")
+    id = add_cred(dev[0])
+    set_cred_quoted(dev[0], id, "domain", "foo.example.com")
+    set_cred_quoted(dev[0], id, "provisioning_sp", "sp.foo.example.com")
+    if "OK" not in dev[0].request("REMOVE_CRED provisioning_sp=sp.foo.example.com"):
+        raise Exception("REMOVE_CRED failed")
+    creds = dev[0].request("LIST_CREDS")
+    if "foo.example.com" in creds:
+        raise Exception("REMOVE_CRED provisioning_sp did not remove cred")
+    if "bar.example.com" not in creds:
+        raise Exception("REMOVE_CRED provisioning_sp removed incorrect cred")
+    dev[0].request("REMOVE_CRED all")
+
     # Test large number of creds and LIST_CREDS truncation
     dev[0].dump_monitor()
     for i in range(0, 100):

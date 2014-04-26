@@ -107,3 +107,16 @@ def test_ap_open_assoc_timeout(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
     if ev is None:
         raise Exception("Timeout on connection")
+
+def test_ap_open_id_str(dev, apdev):
+    """AP with open mode and id_str"""
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412", id_str="foo",
+                   wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"])
+    if ev is None:
+        raise Exception("Association with the AP timed out")
+    if "id_str=foo" not in ev:
+        raise Exception("CTRL-EVENT-CONNECT did not have matching id_str: " + ev)
+    if dev[0].get_status_field("id_str") != "foo":
+        raise Exception("id_str mismatch")

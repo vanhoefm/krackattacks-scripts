@@ -1626,7 +1626,8 @@ static int handle_action(struct hostapd_data *hapd,
 	switch (mgmt->u.action.category) {
 #ifdef CONFIG_IEEE80211R
 	case WLAN_ACTION_FT:
-		if (wpa_ft_action_rx(sta->wpa_sm, (u8 *) &mgmt->u.action,
+		if (!sta ||
+		    wpa_ft_action_rx(sta->wpa_sm, (u8 *) &mgmt->u.action,
 				     len - IEEE80211_HDRLEN))
 			break;
 		return 1;

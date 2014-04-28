@@ -775,7 +775,7 @@ static void wpa_config_write_cred(FILE *f, struct wpa_cred *cred)
 	for (i = 0; i < cred->num_domain; i++)
 		fprintf(f, "\tdomain=\"%s\"\n", cred->domain[i]);
 	if (cred->domain_suffix_match)
-		fprintf(f, "\tdomain_suffix_match=\"%s\"",
+		fprintf(f, "\tdomain_suffix_match=\"%s\"\n",
 			cred->domain_suffix_match);
 	if (cred->roaming_consortium_len) {
 		fprintf(f, "\troaming_consortium=");

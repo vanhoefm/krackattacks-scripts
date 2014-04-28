@@ -39,6 +39,7 @@ class Ctrl:
                 self.detach()
             except Exception, e:
                 # Need to ignore this allow the socket to be closed
+                self.attached = False
                 pass
         if self.started:
             self.s.close()
@@ -64,8 +65,10 @@ class Ctrl:
     def detach(self):
         if not self.attached:
             return None
+        while self.pending():
+            ev = self.recv()
         res = self.request("DETACH")
-        if "OK" in res:
+        if "FAIL" not in res:
             self.attached = False
             return None
         raise Exception("DETACH failed")

@@ -77,6 +77,8 @@ def test_wpas_config_file(dev):
         wpas.set_cred(id, "req_conn_capab", "6:1234")
         wpas.set_cred_quoted(id, "realm", "example.com")
         wpas.set_cred_quoted(id, "provisioning_sp", "example.com")
+        wpas.set_cred_quoted(id, "domain", "example.com")
+        wpas.set_cred_quoted(id, "domain_suffix_match", "example.com")
         wpas.set_cred(id, "roaming_consortium", "112233")
         wpas.set_cred(id, "required_roaming_consortium", "112233")
         wpas.set_cred_quoted(id, "roaming_partner",

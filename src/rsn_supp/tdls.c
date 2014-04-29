@@ -84,6 +84,8 @@ static void wpa_tdls_tpk_retry_timeout(void *eloop_ctx, void *timeout_ctx);
 static void wpa_tdls_peer_free(struct wpa_sm *sm, struct wpa_tdls_peer *peer);
 static void wpa_tdls_disable_peer_link(struct wpa_sm *sm,
 				       struct wpa_tdls_peer *peer);
+static int wpa_tdls_send_teardown(struct wpa_sm *sm, const u8 *addr,
+				  u16 reason_code);
 
 
 #define TDLS_MAX_IE_LEN 80
@@ -677,7 +679,8 @@ static void wpa_tdls_linkid(struct wpa_sm *sm, struct wpa_tdls_peer *peer,
 }
 
 
-int wpa_tdls_send_teardown(struct wpa_sm *sm, const u8 *addr, u16 reason_code)
+static int wpa_tdls_send_teardown(struct wpa_sm *sm, const u8 *addr,
+				  u16 reason_code)
 {
 	struct wpa_tdls_peer *peer;
 	struct wpa_tdls_ftie *ftie;

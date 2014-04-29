@@ -5534,7 +5534,7 @@ static int wpa_supplicant_vendor_cmd(struct wpa_supplicant *wpa_s, char *cmd,
 		data_len /= 2;
 		data = os_malloc(data_len);
 		if (!data)
-			return -ENOBUFS;
+			return -1;
 
 		if (hexstr2bin(pos, data, data_len)) {
 			wpa_printf(MSG_DEBUG,
@@ -5547,7 +5547,7 @@ static int wpa_supplicant_vendor_cmd(struct wpa_supplicant *wpa_s, char *cmd,
 	reply = wpabuf_alloc((buflen - 1) / 2);
 	if (!reply) {
 		os_free(data);
-		return -ENOBUFS;
+		return -1;
 	}
 
 	ret = wpa_drv_vendor_cmd(wpa_s, vendor_id, subcmd, data, data_len,

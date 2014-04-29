@@ -2495,6 +2495,39 @@ static int wpa_supplicant_ctrl_iface_remove_network(
 }
 
 
+static int wpa_supplicant_ctrl_iface_update_network(
+	struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid,
+	char *name, char *value)
+{
+	if (wpa_config_set(ssid, name, value, 0) < 0) {
+		wpa_printf(MSG_DEBUG, "CTRL_IFACE: Failed to set network "
+			   "variable '%s'", name);
+		return -1;
+	}
+
+	if (os_strcmp(name, "bssid") != 0 &&
+	    os_strcmp(name, "priority") != 0)
+		wpa_sm_pmksa_cache_flush(wpa_s->wpa, ssid);
+
+	if (wpa_s->current_ssid == ssid || wpa_s->current_ssid == NULL) {
+		/*
+		 * Invalidate the EAP session cache if anything in the current
+		 * or previously used configuration changes.
+		 */
+		eapol_sm_invalidate_cached_session(wpa_s->eapol);
+	}
+
+	if ((os_strcmp(name, "psk") == 0 &&
+	     value[0] == '"' && ssid->ssid_len) ||
+	    (os_strcmp(name, "ssid") == 0 && ssid->passphrase))
+		wpa_config_update_psk(ssid);
+	else if (os_strcmp(name, "priority") == 0)
+		wpa_config_update_prio_list(wpa_s->conf);
+
+	return 0;
+}
+
+
 static int wpa_supplicant_ctrl_iface_set_network(
 	struct wpa_supplicant *wpa_s, char *cmd)
 {
@@ -2526,32 +2559,8 @@ static int wpa_supplicant_ctrl_iface_set_network(
 		return -1;
 	}
 
-	if (wpa_config_set(ssid, name, value, 0) < 0) {
-		wpa_printf(MSG_DEBUG, "CTRL_IFACE: Failed to set network "
-			   "variable '%s'", name);
-		return -1;
-	}
-
-	if (os_strcmp(name, "bssid") != 0 &&
-	    os_strcmp(name, "priority") != 0)
-		wpa_sm_pmksa_cache_flush(wpa_s->wpa, ssid);
-
-	if (wpa_s->current_ssid == ssid || wpa_s->current_ssid == NULL) {
-		/*
-		 * Invalidate the EAP session cache if anything in the current
-		 * or previously used configuration changes.
-		 */
-		eapol_sm_invalidate_cached_session(wpa_s->eapol);
-	}
-
-	if ((os_strcmp(name, "psk") == 0 &&
-	     value[0] == '"' && ssid->ssid_len) ||
-	    (os_strcmp(name, "ssid") == 0 && ssid->passphrase))
-		wpa_config_update_psk(ssid);
-	else if (os_strcmp(name, "priority") == 0)
-		wpa_config_update_prio_list(wpa_s->conf);
-
-	return 0;
+	return wpa_supplicant_ctrl_iface_update_network(wpa_s, ssid, name,
+							value);
 }
 
 
@@ -2596,6 +2605,59 @@ static int wpa_supplicant_ctrl_iface_get_network(
 	os_free(value);
 
 	return res;
+}
+
+
+static int wpa_supplicant_ctrl_iface_dup_network(
+	struct wpa_supplicant *wpa_s, char *cmd)
+{
+	struct wpa_ssid *ssid_s, *ssid_d;
+	char *name, *id, *value;
+	int id_s, id_d, ret;
+
+	/* cmd: "<src network id> <dst network id> <variable name>" */
+	id = os_strchr(cmd, ' ');
+	if (id == NULL)
+		return -1;
+	*id++ = '\0';
+
+	name = os_strchr(id, ' ');
+	if (name == NULL)
+		return -1;
+	*name++ = '\0';
+
+	id_s = atoi(cmd);
+	id_d = atoi(id);
+	wpa_printf(MSG_DEBUG, "CTRL_IFACE: DUP_NETWORK id=%d -> %d name='%s'",
+		   id_s, id_d, name);
+
+	ssid_s = wpa_config_get_network(wpa_s->conf, id_s);
+	if (ssid_s == NULL) {
+		wpa_printf(MSG_DEBUG, "CTRL_IFACE: Could not find "
+			   "network id=%d", id_s);
+		return -1;
+	}
+
+	ssid_d = wpa_config_get_network(wpa_s->conf, id_d);
+	if (ssid_d == NULL) {
+		wpa_printf(MSG_DEBUG, "CTRL_IFACE: Could not find "
+			   "network id=%d", id_s);
+		return -1;
+	}
+
+	value = wpa_config_get(ssid_s, name);
+	if (value == NULL) {
+		wpa_printf(MSG_DEBUG, "CTRL_IFACE: Failed to get network "
+			   "variable '%s'", name);
+		return -1;
+	}
+
+	ret = wpa_supplicant_ctrl_iface_update_network(wpa_s, ssid_d, name,
+						       value);
+
+	os_free(value);
+
+	return ret;
 }
 
 
@@ -6450,6 +6512,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strncmp(buf, "GET_NETWORK ", 12) == 0) {
 		reply_len = wpa_supplicant_ctrl_iface_get_network(
 			wpa_s, buf + 12, reply, reply_size);
+	} else if (os_strncmp(buf, "DUP_NETWORK ", 12) == 0) {
+		if (wpa_supplicant_ctrl_iface_dup_network(wpa_s, buf + 12))
+			reply_len = -1;
 	} else if (os_strcmp(buf, "LIST_CREDS") == 0) {
 		reply_len = wpa_supplicant_ctrl_iface_list_creds(
 			wpa_s, reply, reply_size);

@@ -1416,6 +1416,24 @@ static int wpa_cli_cmd_get_network(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int wpa_cli_cmd_dup_network(struct wpa_ctrl *ctrl, int argc,
+				   char *argv[])
+{
+	if (argc == 0) {
+		wpa_cli_show_network_variables();
+		return 0;
+	}
+
+	if (argc < 3) {
+		printf("Invalid DUP_NETWORK command: needs three arguments\n"
+		       "(src netid, dest netid, and variable name)\n");
+		return -1;
+	}
+
+	return wpa_cli_cmd(ctrl, "DUP_NETWORK", 3, argc, argv);
+}
+
+
 static int wpa_cli_cmd_list_creds(struct wpa_ctrl *ctrl, int argc,
 				  char *argv[])
 {
@@ -2570,6 +2588,10 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "get_network", wpa_cli_cmd_get_network, NULL,
 	  cli_cmd_flag_none,
 	  "<network id> <variable> = get network variables" },
+	{ "dup_network", wpa_cli_cmd_dup_network, NULL,
+	  cli_cmd_flag_none,
+	  "<src network id> <dst network id> <variable> = duplicate network variables"
+	},
 	{ "list_creds", wpa_cli_cmd_list_creds, NULL,
 	  cli_cmd_flag_none,
 	  "= list configured credentials" },

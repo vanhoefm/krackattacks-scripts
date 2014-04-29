@@ -69,7 +69,7 @@ class WpaSupplicant:
             self.request(cmd)
         else:
             ifname = self.ifname or self.global_iface
-            logger.debug(ifname + ": CTRL: " + cmd)
+            logger.debug(ifname + ": CTRL(global): " + cmd)
             return self.global_ctrl.request(cmd)
 
     def group_request(self, cmd):
@@ -82,7 +82,11 @@ class WpaSupplicant:
     def ping(self):
         return "PONG" in self.request("PING")
 
+    def global_ping(self):
+        return "PONG" in self.global_request("PING")
+
     def reset(self):
+        self.dump_monitor()
         res = self.request("FLUSH")
         if not "OK" in res:
             logger.info("FLUSH to " + self.ifname + " failed: " + res)

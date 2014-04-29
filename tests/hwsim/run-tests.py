@@ -342,6 +342,11 @@ def main():
             start = datetime.now()
             for d in dev:
                 try:
+                    d.dump_monitor()
+                    if not d.ping():
+                        raise Exception("PING failed for {}".format(d.ifname))
+                    if not d.global_ping():
+                        raise Exception("Global PING failed for {}".format(d.ifname))
                     d.request("NOTE TEST-START " + name)
                 except Exception, e:
                     logger.info("Failed to issue TEST-START before " + name + " for " + d.ifname)
@@ -370,6 +375,7 @@ def main():
                 result = "FAIL"
             for d in dev:
                 try:
+                    d.dump_monitor()
                     d.request("NOTE TEST-STOP " + name)
                 except Exception, e:
                     logger.info("Failed to issue TEST-STOP after {} for {}".format(name, d.ifname))
@@ -377,6 +383,7 @@ def main():
                     result = "FAIL"
             try:
                 wpas = WpaSupplicant("wlan5", "/tmp/wpas-wlan5")
+                d.dump_monitor()
                 rename_log(args.logdir, 'log5', name, wpas)
                 if not args.no_reset:
                     wpas.remove_ifname()

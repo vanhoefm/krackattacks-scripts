@@ -933,6 +933,27 @@ static int hostapd_cli_cmd_chan_switch(struct wpa_ctrl *ctrl,
 }
 
 
+static int hostapd_cli_cmd_enable(struct wpa_ctrl *ctrl, int argc,
+				      char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "ENABLE");
+}
+
+
+static int hostapd_cli_cmd_reload(struct wpa_ctrl *ctrl, int argc,
+				      char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "RELOAD");
+}
+
+
+static int hostapd_cli_cmd_disable(struct wpa_ctrl *ctrl, int argc,
+				      char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "DISABLE");
+}
+
+
 static int hostapd_cli_cmd_vendor(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	char cmd[256];
@@ -1003,6 +1024,9 @@ static struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	{ "hs20_wnm_notif", hostapd_cli_cmd_hs20_wnm_notif },
 	{ "hs20_deauth_req", hostapd_cli_cmd_hs20_deauth_req },
 	{ "vendor", hostapd_cli_cmd_vendor },
+	{ "enable", hostapd_cli_cmd_enable },
+	{ "reload", hostapd_cli_cmd_reload },
+	{ "disable", hostapd_cli_cmd_disable },
 	{ NULL, NULL }
 };
 

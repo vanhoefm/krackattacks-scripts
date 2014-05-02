@@ -14,6 +14,10 @@
 #include "list.h"
 #include "eloop.h"
 
+#ifndef CONFIG_ELOOP_POLL
+#define CONFIG_ELOOP_SELECT
+#endif /* CONFIG_ELOOP_POLL */
+
 #ifdef CONFIG_ELOOP_POLL
 #include <poll.h>
 #endif /* CONFIG_ELOOP_POLL */
@@ -362,7 +366,9 @@ static void eloop_sock_table_dispatch(struct eloop_sock_table *readers,
 					max_pollfd_map, POLLERR | POLLHUP);
 }
 
-#else /* CONFIG_ELOOP_POLL */
+#endif /* CONFIG_ELOOP_POLL */
+
+#ifdef CONFIG_ELOOP_SELECT
 
 static void eloop_sock_table_set_fds(struct eloop_sock_table *table,
 				     fd_set *fds)
@@ -401,7 +407,7 @@ static void eloop_sock_table_dispatch(struct eloop_sock_table *table,
 	}
 }
 
-#endif /* CONFIG_ELOOP_POLL */
+#endif /* CONFIG_ELOOP_SELECT */
 
 
 static void eloop_sock_table_destroy(struct eloop_sock_table *table)
@@ -776,20 +782,21 @@ void eloop_run(void)
 #ifdef CONFIG_ELOOP_POLL
 	int num_poll_fds;
 	int timeout_ms = 0;
-#else /* CONFIG_ELOOP_POLL */
+#endif /* CONFIG_ELOOP_POLL */
+#ifdef CONFIG_ELOOP_SELECT
 	fd_set *rfds, *wfds, *efds;
 	struct timeval _tv;
-#endif /* CONFIG_ELOOP_POLL */
+#endif /* CONFIG_ELOOP_SELECT */
 	int res;
 	struct os_reltime tv, now;
 
-#ifndef CONFIG_ELOOP_POLL
+#ifdef CONFIG_ELOOP_SELECT
 	rfds = os_malloc(sizeof(*rfds));
 	wfds = os_malloc(sizeof(*wfds));
 	efds = os_malloc(sizeof(*efds));
 	if (rfds == NULL || wfds == NULL || efds == NULL)
 		goto out;
-#endif /* CONFIG_ELOOP_POLL */
+#endif /* CONFIG_ELOOP_SELECT */
 
 	while (!eloop.terminate &&
 	       (!dl_list_empty(&eloop.timeout) || eloop.readers.count > 0 ||
@@ -805,10 +812,11 @@ void eloop_run(void)
 				tv.sec = tv.usec = 0;
 #ifdef CONFIG_ELOOP_POLL
 			timeout_ms = tv.sec * 1000 + tv.usec / 1000;
-#else /* CONFIG_ELOOP_POLL */
+#endif /* CONFIG_ELOOP_POLL */
+#ifdef CONFIG_ELOOP_SELECT
 			_tv.tv_sec = tv.sec;
 			_tv.tv_usec = tv.usec;
-#endif /* CONFIG_ELOOP_POLL */
+#endif /* CONFIG_ELOOP_SELECT */
 		}
 
 #ifdef CONFIG_ELOOP_POLL
@@ -824,7 +832,8 @@ void eloop_run(void)
 				   strerror(errno));
 			goto out;
 		}
-#else /* CONFIG_ELOOP_POLL */
+#endif /* CONFIG_ELOOP_POLL */
+#ifdef CONFIG_ELOOP_SELECT
 		eloop_sock_table_set_fds(&eloop.readers, rfds);
 		eloop_sock_table_set_fds(&eloop.writers, wfds);
 		eloop_sock_table_set_fds(&eloop.exceptions, efds);
@@ -835,7 +844,7 @@ void eloop_run(void)
 				   strerror(errno));
 			goto out;
 		}
-#endif /* CONFIG_ELOOP_POLL */
+#endif /* CONFIG_ELOOP_SELECT */
 		eloop_process_pending_signals();
 
 		/* check if some registered timeouts have occurred */
@@ -861,20 +870,21 @@ void eloop_run(void)
 		eloop_sock_table_dispatch(&eloop.readers, &eloop.writers,
 					  &eloop.exceptions, eloop.pollfds_map,
 					  eloop.max_pollfd_map);
-#else /* CONFIG_ELOOP_POLL */
+#endif /* CONFIG_ELOOP_POLL */
+#ifdef CONFIG_ELOOP_SELECT
 		eloop_sock_table_dispatch(&eloop.readers, rfds);
 		eloop_sock_table_dispatch(&eloop.writers, wfds);
 		eloop_sock_table_dispatch(&eloop.exceptions, efds);
-#endif /* CONFIG_ELOOP_POLL */
+#endif /* CONFIG_ELOOP_SELECT */
 	}
 
 	eloop.terminate = 0;
 out:
-#ifndef CONFIG_ELOOP_POLL
+#ifdef CONFIG_ELOOP_SELECT
 	os_free(rfds);
 	os_free(wfds);
 	os_free(efds);
-#endif /* CONFIG_ELOOP_POLL */
+#endif /* CONFIG_ELOOP_SELECT */
 	return;
 }
 
@@ -940,7 +950,8 @@ void eloop_wait_for_read_sock(int sock)
 	pfd.events = POLLIN;
 
 	poll(&pfd, 1, -1);
-#else /* CONFIG_ELOOP_POLL */
+#endif /* CONFIG_ELOOP_POLL */
+#ifdef CONFIG_ELOOP_SELECT
 	fd_set rfds;
 
 	if (sock < 0)
@@ -949,5 +960,9 @@ void eloop_wait_for_read_sock(int sock)
 	FD_ZERO(&rfds);
 	FD_SET(sock, &rfds);
 	select(sock + 1, &rfds, NULL, NULL, NULL);
-#endif /* CONFIG_ELOOP_POLL */
+#endif /* CONFIG_ELOOP_SELECT */
 }
+
+#ifdef CONFIG_ELOOP_SELECT
+#undef CONFIG_ELOOP_SELECT
+#endif /* CONFIG_ELOOP_SELECT */

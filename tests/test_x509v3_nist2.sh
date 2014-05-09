@@ -56,8 +56,17 @@ function run_test
 		    OK=0
 		fi
 	    else
-		echo "$NUM failed - expected validation failure; other type of error detected"
-		OK=0
+		if [ $RES -eq -1 ]; then
+		    if grep -q "Failed to parse X.509 certificate" $TMPOUT.$NUM; then
+			OK=1
+		    else
+			echo "$NUM failed - expected parsing failure; other type of error detected"
+			OK=0
+		    fi
+		else
+		    echo "$NUM failed - expected validation failure; other type of error detected"
+		    OK=0
+		fi
 	    fi
 	fi
     fi
@@ -152,6 +161,9 @@ run_test 4.8.17 0 UserNoticeQualifierTest17EE.crt GoodCACert.crt
 run_test 4.8.18 0 UserNoticeQualifierTest18EE.crt PoliciesP12CACert.crt
 run_test 4.8.19 0 UserNoticeQualifierTest19EE.crt TrustAnchorRootCertificate.crt
 run_test 4.8.20 0 CPSPointerQualifierTest20EE.crt GoodCACert.crt
+
+run_test 4.16.1 0 ValidUnknownNotCriticalCertificateExtensionTest1EE.crt
+run_test 4.16.2 -1 InvalidUnknownCriticalCertificateExtensionTest2EE.crt
 
 if false; then
 # DSA tests

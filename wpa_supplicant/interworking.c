@@ -27,6 +27,7 @@
 #include "bss.h"
 #include "scan.h"
 #include "notify.h"
+#include "driver_i.h"
 #include "gas_query.h"
 #include "hs20_supplicant.h"
 #include "interworking.h"
@@ -875,9 +876,23 @@ static void remove_duplicate_network(struct wpa_supplicant *wpa_s,
 static int interworking_set_hs20_params(struct wpa_supplicant *wpa_s,
 					struct wpa_ssid *ssid)
 {
-	if (wpa_config_set(ssid, "key_mgmt",
-			   wpa_s->conf->pmf != NO_MGMT_FRAME_PROTECTION ?
-			   "WPA-EAP WPA-EAP-SHA256" : "WPA-EAP", 0) < 0)
+	const char *key_mgmt = NULL;
+#ifdef CONFIG_IEEE80211R
+	int res;
+	struct wpa_driver_capa capa;
+
+	res = wpa_drv_get_capa(wpa_s, &capa);
+	if (res == 0 && capa.key_mgmt & WPA_DRIVER_CAPA_KEY_MGMT_FT) {
+		key_mgmt = wpa_s->conf->pmf != NO_MGMT_FRAME_PROTECTION ?
+			"WPA-EAP WPA-EAP-SHA256 FT-EAP" :
+			"WPA-EAP FT-EAP";
+	}
+#endif /* CONFIG_IEEE80211R */
+
+	if (!key_mgmt)
+		key_mgmt = wpa_s->conf->pmf != NO_MGMT_FRAME_PROTECTION ?
+			"WPA-EAP WPA-EAP-SHA256" : "WPA-EAP";
+	if (wpa_config_set(ssid, "key_mgmt", key_mgmt, 0) < 0)
 		return -1;
 	if (wpa_config_set(ssid, "proto", "RSN", 0) < 0)
 		return -1;

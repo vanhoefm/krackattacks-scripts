@@ -1198,3 +1198,27 @@ def test_ap_wpa2_eap_too_many_roundtrips(dev, apdev):
     ev = dev[0].wait_event(["EAP: more than"], timeout=20)
     if ev is None:
         raise Exception("EAP roundtrip limit not reached")
+
+def test_ap_wpa2_eap_expanded_nak(dev, apdev):
+    """WPA2-Enterprise connection with EAP resulting in expanded NAK"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP WPA-EAP-SHA256",
+                   eap="PSK", identity="vendor-test",
+                   password_hex="ff23456789abcdef0123456789abcdef",
+                   wait_connect=False)
+
+    found = False
+    for i in range(0, 5):
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-STATUS"], timeout=10)
+        if ev is None:
+            raise Exception("Association and EAP start timed out")
+        if "refuse proposed method" in ev:
+            found = True
+            break
+    if not found:
+        raise Exception("Unexpected EAP status: " + ev)
+
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"])
+    if ev is None:
+        raise Exception("EAP failure timed out")

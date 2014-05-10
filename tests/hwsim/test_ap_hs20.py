@@ -1921,3 +1921,24 @@ def test_ap_hs20_fetch_osu(dev, apdev):
         raise Exception("Timeout on icon fetch")
     if "Icon Binary File" not in ev:
         raise Exception("Unexpected ANQP element")
+
+def test_ap_hs20_ft(dev, apdev):
+    """Hotspot 2.0 connection with FT"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['wpa_key_mgmt'] = "FT-EAP"
+    params['nas_identifier'] = "nas1.w1.fi"
+    params['r1_key_holder'] = "000102030405"
+    params["mobility_domain"] = "a1b2"
+    params["reassociation_deadline"] = "1000"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'username': "hs20-test",
+                                  'password': "password",
+                                  'ca_cert': "auth_serv/ca.pem",
+                                  'domain': "example.com",
+                                  'update_identifier': "1234" })
+    interworking_select(dev[0], bssid, "home", freq="2412")
+    interworking_connect(dev[0], bssid, "TTLS")

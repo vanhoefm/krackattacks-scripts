@@ -43,6 +43,7 @@ for i in 0 1 2; do
 done
 
 sed "s/group=admin/group=$GROUP/" "$DIR/auth_serv/as.conf" > "$LOGDIR/as.conf"
+sed "s/group=admin/group=$GROUP/;s%LOGDIR%$LOGDIR%" "$DIR/auth_serv/as2.conf" > "$LOGDIR/as2.conf"
 
 if [ "$1" = "valgrind" ]; then
     VALGRIND=y
@@ -87,7 +88,8 @@ if [ -x $HLR_AUC_GW ]; then
     sudo $HLR_AUC_GW -u -m $LOGDIR/hlr_auc_gw.milenage_db -g $DIR/auth_serv/hlr_auc_gw.gsm > $LOGDIR/hlr_auc_gw &
 fi
 
-sudo $HAPD_AS -ddKt $LOGDIR/as.conf > $LOGDIR/auth_serv &
+touch $LOGDIR/hostapd.db
+sudo $HAPD_AS -ddKt $LOGDIR/as.conf $LOGDIR/as2.conf > $LOGDIR/auth_serv &
 
 # wait for programs to be fully initialized
 for i in 0 1 2; do

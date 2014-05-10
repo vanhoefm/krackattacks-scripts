@@ -96,9 +96,10 @@ def eap_check_auth(dev, method, initial, rsn=True, sha256=False,
     if status["key_mgmt"] != e:
         raise Exception("Unexpected key_mgmt status: " + status["key_mgmt"])
 
-def eap_reauth(dev, method, rsn=True, sha256=False):
+def eap_reauth(dev, method, rsn=True, sha256=False, expect_failure=False):
     dev.request("REAUTHENTICATE")
-    eap_check_auth(dev, method, False, rsn=rsn, sha256=sha256)
+    eap_check_auth(dev, method, False, rsn=rsn, sha256=sha256,
+                   expect_failure=expect_failure)
 
 def test_ap_wpa2_eap_sim(dev, apdev):
     """WPA2-Enterprise connection using EAP-SIM"""
@@ -124,6 +125,66 @@ def test_ap_wpa2_eap_sim(dev, apdev):
                 password="ffdca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581",
                 expect_failure=True)
 
+def test_ap_wpa2_eap_sim_sql(dev, apdev, params):
+    """WPA2-Enterprise connection using EAP-SIM (SQL)"""
+    if not os.path.exists("/tmp/hlr_auc_gw.sock"):
+        logger.info("No hlr_auc_gw available");
+        return "skip"
+    try:
+        import sqlite3
+    except ImportError:
+        return "skip"
+    con = sqlite3.connect(os.path.join(params['logdir'], "hostapd.db"))
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    params['auth_server_port'] = "1814"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "SIM", "1232010000000000",
+                password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581")
+
+    logger.info("SIM fast re-authentication")
+    eap_reauth(dev[0], "SIM")
+
+    logger.info("SIM full auth with pseudonym")
+    with con:
+        cur = con.cursor()
+        cur.execute("DELETE FROM reauth WHERE permanent='1232010000000000'")
+    eap_reauth(dev[0], "SIM")
+
+    logger.info("SIM full auth with permanent identity")
+    with con:
+        cur = con.cursor()
+        cur.execute("DELETE FROM reauth WHERE permanent='1232010000000000'")
+        cur.execute("DELETE FROM pseudonyms WHERE permanent='1232010000000000'")
+    eap_reauth(dev[0], "SIM")
+
+    logger.info("SIM reauth with mismatching MK")
+    with con:
+        cur = con.cursor()
+        cur.execute("UPDATE reauth SET mk='0000000000000000000000000000000000000000' WHERE permanent='1232010000000000'")
+    eap_reauth(dev[0], "SIM", expect_failure=True)
+    dev[0].request("REMOVE_NETWORK all")
+
+    eap_connect(dev[0], apdev[0], "SIM", "1232010000000000",
+                password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581")
+    with con:
+        cur = con.cursor()
+        cur.execute("UPDATE reauth SET counter='10' WHERE permanent='1232010000000000'")
+    eap_reauth(dev[0], "SIM")
+    with con:
+        cur = con.cursor()
+        cur.execute("UPDATE reauth SET counter='10' WHERE permanent='1232010000000000'")
+    logger.info("SIM reauth with mismatching counter")
+    eap_reauth(dev[0], "SIM")
+    dev[0].request("REMOVE_NETWORK all")
+
+    eap_connect(dev[0], apdev[0], "SIM", "1232010000000000",
+                password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581")
+    with con:
+        cur = con.cursor()
+        cur.execute("UPDATE reauth SET counter='1001' WHERE permanent='1232010000000000'")
+    logger.info("SIM reauth with max reauth count reached")
+    eap_reauth(dev[0], "SIM")
+
 def test_ap_wpa2_eap_aka(dev, apdev):
     """WPA2-Enterprise connection using EAP-AKA"""
     if not os.path.exists("/tmp/hlr_auc_gw.sock"):
@@ -142,6 +203,66 @@ def test_ap_wpa2_eap_aka(dev, apdev):
                 password="ffdca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581:000000000123",
                 expect_failure=True)
 
+def test_ap_wpa2_eap_aka_sql(dev, apdev, params):
+    """WPA2-Enterprise connection using EAP-AKA (SQL)"""
+    if not os.path.exists("/tmp/hlr_auc_gw.sock"):
+        logger.info("No hlr_auc_gw available");
+        return "skip"
+    try:
+        import sqlite3
+    except ImportError:
+        return "skip"
+    con = sqlite3.connect(os.path.join(params['logdir'], "hostapd.db"))
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    params['auth_server_port'] = "1814"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "AKA", "0232010000000000",
+                password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581:000000000123")
+
+    logger.info("AKA fast re-authentication")
+    eap_reauth(dev[0], "AKA")
+
+    logger.info("AKA full auth with pseudonym")
+    with con:
+        cur = con.cursor()
+        cur.execute("DELETE FROM reauth WHERE permanent='0232010000000000'")
+    eap_reauth(dev[0], "AKA")
+
+    logger.info("AKA full auth with permanent identity")
+    with con:
+        cur = con.cursor()
+        cur.execute("DELETE FROM reauth WHERE permanent='0232010000000000'")
+        cur.execute("DELETE FROM pseudonyms WHERE permanent='0232010000000000'")
+    eap_reauth(dev[0], "AKA")
+
+    logger.info("AKA reauth with mismatching MK")
+    with con:
+        cur = con.cursor()
+        cur.execute("UPDATE reauth SET mk='0000000000000000000000000000000000000000' WHERE permanent='0232010000000000'")
+    eap_reauth(dev[0], "AKA", expect_failure=True)
+    dev[0].request("REMOVE_NETWORK all")
+
+    eap_connect(dev[0], apdev[0], "AKA", "0232010000000000",
+                password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581:000000000123")
+    with con:
+        cur = con.cursor()
+        cur.execute("UPDATE reauth SET counter='10' WHERE permanent='0232010000000000'")
+    eap_reauth(dev[0], "AKA")
+    with con:
+        cur = con.cursor()
+        cur.execute("UPDATE reauth SET counter='10' WHERE permanent='0232010000000000'")
+    logger.info("AKA reauth with mismatching counter")
+    eap_reauth(dev[0], "AKA")
+    dev[0].request("REMOVE_NETWORK all")
+
+    eap_connect(dev[0], apdev[0], "AKA", "0232010000000000",
+                password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581:000000000123")
+    with con:
+        cur = con.cursor()
+        cur.execute("UPDATE reauth SET counter='1001' WHERE permanent='0232010000000000'")
+    logger.info("AKA reauth with max reauth count reached")
+    eap_reauth(dev[0], "AKA")
+
 def test_ap_wpa2_eap_aka_prime(dev, apdev):
     """WPA2-Enterprise connection using EAP-AKA'"""
     if not os.path.exists("/tmp/hlr_auc_gw.sock"):
@@ -159,6 +280,66 @@ def test_ap_wpa2_eap_aka_prime(dev, apdev):
     eap_connect(dev[0], apdev[0], "AKA'", "6555444333222111",
                 password="ff22250214c33e723a5dd523fc145fc0:981d464c7c52eb6e5036234984ad0bcf:000000000123",
                 expect_failure=True)
+
+def test_ap_wpa2_eap_aka_prime_sql(dev, apdev, params):
+    """WPA2-Enterprise connection using EAP-AKA' (SQL)"""
+    if not os.path.exists("/tmp/hlr_auc_gw.sock"):
+        logger.info("No hlr_auc_gw available");
+        return "skip"
+    try:
+        import sqlite3
+    except ImportError:
+        return "skip"
+    con = sqlite3.connect(os.path.join(params['logdir'], "hostapd.db"))
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    params['auth_server_port'] = "1814"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "AKA'", "6555444333222111",
+                password="5122250214c33e723a5dd523fc145fc0:981d464c7c52eb6e5036234984ad0bcf:000000000123")
+
+    logger.info("AKA' fast re-authentication")
+    eap_reauth(dev[0], "AKA'")
+
+    logger.info("AKA' full auth with pseudonym")
+    with con:
+        cur = con.cursor()
+        cur.execute("DELETE FROM reauth WHERE permanent='6555444333222111'")
+    eap_reauth(dev[0], "AKA'")
+
+    logger.info("AKA' full auth with permanent identity")
+    with con:
+        cur = con.cursor()
+        cur.execute("DELETE FROM reauth WHERE permanent='6555444333222111'")
+        cur.execute("DELETE FROM pseudonyms WHERE permanent='6555444333222111'")
+    eap_reauth(dev[0], "AKA'")
+
+    logger.info("AKA' reauth with mismatching k_aut")
+    with con:
+        cur = con.cursor()
+        cur.execute("UPDATE reauth SET k_aut='0000000000000000000000000000000000000000000000000000000000000000' WHERE permanent='6555444333222111'")
+    eap_reauth(dev[0], "AKA'", expect_failure=True)
+    dev[0].request("REMOVE_NETWORK all")
+
+    eap_connect(dev[0], apdev[0], "AKA'", "6555444333222111",
+                password="5122250214c33e723a5dd523fc145fc0:981d464c7c52eb6e5036234984ad0bcf:000000000123")
+    with con:
+        cur = con.cursor()
+        cur.execute("UPDATE reauth SET counter='10' WHERE permanent='6555444333222111'")
+    eap_reauth(dev[0], "AKA'")
+    with con:
+        cur = con.cursor()
+        cur.execute("UPDATE reauth SET counter='10' WHERE permanent='6555444333222111'")
+    logger.info("AKA' reauth with mismatching counter")
+    eap_reauth(dev[0], "AKA'")
+    dev[0].request("REMOVE_NETWORK all")
+
+    eap_connect(dev[0], apdev[0], "AKA'", "6555444333222111",
+                password="5122250214c33e723a5dd523fc145fc0:981d464c7c52eb6e5036234984ad0bcf:000000000123")
+    with con:
+        cur = con.cursor()
+        cur.execute("UPDATE reauth SET counter='1001' WHERE permanent='6555444333222111'")
+    logger.info("AKA' reauth with max reauth count reached")
+    eap_reauth(dev[0], "AKA'")
 
 def test_ap_wpa2_eap_ttls_pap(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/PAP"""

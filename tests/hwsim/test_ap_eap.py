@@ -1184,3 +1184,17 @@ def test_ap_wpa2_eap_sim_aka_result_ind(dev, apdev):
     eap_reauth(dev[0], "AKA'")
     eap_connect(dev[1], apdev[0], "AKA'", "6555444333222111",
                 password="5122250214c33e723a5dd523fc145fc0:981d464c7c52eb6e5036234984ad0bcf:000000000123")
+
+def test_ap_wpa2_eap_too_many_roundtrips(dev, apdev):
+    """WPA2-Enterprise connection resulting in too many EAP roundtrips"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP WPA-EAP-SHA256",
+                   eap="TTLS", identity="mschap user",
+                   wait_connect=False, scan_freq="2412", ieee80211w="1",
+                   anonymous_identity="ttls", password="password",
+                   ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAP",
+                   fragment_size="10")
+    ev = dev[0].wait_event(["EAP: more than"], timeout=20)
+    if ev is None:
+        raise Exception("EAP roundtrip limit not reached")

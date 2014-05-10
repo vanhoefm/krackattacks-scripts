@@ -1348,7 +1348,8 @@ static int x509_parse_tbs_certificate(const u8 *buf, size_t len,
 		wpa_printf(MSG_DEBUG, "X509: issuerUniqueID");
 		/* TODO: parse UniqueIdentifier ::= BIT STRING */
 
-		if (hdr.payload + hdr.length == end)
+		pos = hdr.payload + hdr.length;
+		if (pos == end)
 			return 0;
 
 		if (asn1_get_next(pos, end - pos, &hdr) < 0 ||
@@ -1366,7 +1367,8 @@ static int x509_parse_tbs_certificate(const u8 *buf, size_t len,
 		wpa_printf(MSG_DEBUG, "X509: subjectUniqueID");
 		/* TODO: parse UniqueIdentifier ::= BIT STRING */
 
-		if (hdr.payload + hdr.length == end)
+		pos = hdr.payload + hdr.length;
+		if (pos == end)
 			return 0;
 
 		if (asn1_get_next(pos, end - pos, &hdr) < 0 ||

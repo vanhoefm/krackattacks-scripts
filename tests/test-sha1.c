@@ -412,7 +412,7 @@ int main(int argc, char *argv[])
 		u8 psk[32];
 		struct passphrase_test *test = &passphrase_tests[i];
 		pbkdf2_sha1(test->passphrase,
-			    test->ssid, strlen(test->ssid),
+			    (const u8 *) test->ssid, strlen(test->ssid),
 			    4096, psk, 32);
 		if (memcmp(psk, test->psk, 32) == 0)
 			printf("Test case %d - OK\n", i);
@@ -426,8 +426,8 @@ int main(int argc, char *argv[])
 	for (i = 0; i < NUM_RFC6070_TESTS; i++) {
 		u8 dk[25];
 		struct rfc6070_test *test = &rfc6070_tests[i];
-		pbkdf2_sha1(test->p, test->s, strlen(test->s), test->c,
-			    dk, test->dk_len);
+		pbkdf2_sha1(test->p, (const u8 *) test->s, strlen(test->s),
+			    test->c, dk, test->dk_len);
 		if (memcmp(dk, test->dk, test->dk_len) == 0)
 			printf("Test case %d - OK\n", i);
 		else {

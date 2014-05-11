@@ -952,9 +952,11 @@ static struct wpabuf * eap_sim_process_reauthentication(
 	}
 
 	if (eattr.counter < 0 || (size_t) eattr.counter <= data->counter) {
+		struct wpabuf *res;
 		wpa_printf(MSG_INFO, "EAP-SIM: (encr) Invalid counter "
 			   "(%d <= %d)", eattr.counter, data->counter);
 		data->counter_too_small = eattr.counter;
+
 		/* Reply using Re-auth w/ AT_COUNTER_TOO_SMALL. The current
 		 * reauth_id must not be used to start a new reauthentication.
 		 * However, since it was used in the last EAP-Response-Identity
@@ -965,8 +967,11 @@ static struct wpabuf * eap_sim_process_reauthentication(
 		data->last_eap_identity_len = data->reauth_id_len;
 		data->reauth_id = NULL;
 		data->reauth_id_len = 0;
+
+		res = eap_sim_response_reauth(data, id, 1, eattr.nonce_s);
 		os_free(decrypted);
-		return eap_sim_response_reauth(data, id, 1, eattr.nonce_s);
+
+		return res;
 	}
 	data->counter = eattr.counter;
 

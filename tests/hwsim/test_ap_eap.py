@@ -1174,6 +1174,31 @@ def test_ap_wpa2_eap_fast_binary_pac(dev, apdev):
                 pac_file="blob://fast_pac_bin")
     eap_reauth(dev[0], "FAST")
 
+def test_ap_wpa2_eap_fast_missing_pac_config(dev, apdev):
+    """WPA2-Enterprise connection using EAP-FAST and missing PAC config"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="FAST",
+                   identity="user", anonymous_identity="FAST",
+                   password="password",
+                   ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                   pac_file="blob://fast_pac_not_in_use",
+                   wait_connect=False, scan_freq="2412")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"])
+    if ev is None:
+        raise Exception("Timeout on EAP failure report")
+    dev[0].request("REMOVE_NETWORK all")
+
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="FAST",
+                   identity="user", anonymous_identity="FAST",
+                   password="password",
+                   ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                   wait_connect=False, scan_freq="2412")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"])
+    if ev is None:
+        raise Exception("Timeout on EAP failure report")
+
 def test_ap_wpa2_eap_fast_gtc_auth_prov(dev, apdev):
     """WPA2-Enterprise connection using EAP-FAST/GTC and authenticated provisioning"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")

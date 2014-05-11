@@ -256,7 +256,8 @@ static Boolean eap_ikev2_check(struct eap_sm *sm, void *priv,
 
 static int eap_ikev2_process_icv(struct eap_ikev2_data *data,
 				 const struct wpabuf *respData,
-				 u8 flags, const u8 *pos, const u8 **end)
+				 u8 flags, const u8 *pos, const u8 **end,
+				 int frag_ack)
 {
 	if (flags & IKEV2_FLAGS_ICV_INCLUDED) {
 		int icv_len = eap_ikev2_validate_icv(
@@ -266,7 +267,7 @@ static int eap_ikev2_process_icv(struct eap_ikev2_data *data,
 			return -1;
 		/* Hide Integrity Checksum Data from further processing */
 		*end -= icv_len;
-	} else if (data->keys_ready) {
+	} else if (data->keys_ready && !frag_ack) {
 		wpa_printf(MSG_INFO, "EAP-IKEV2: The message should have "
 			   "included integrity checksum");
 		return -1;
@@ -365,7 +366,9 @@ static void eap_ikev2_process(struct eap_sm *sm, void *priv,
 	} else
 		flags = *pos++;
 
-	if (eap_ikev2_process_icv(data, respData, flags, pos, &end) < 0) {
+	if (eap_ikev2_process_icv(data, respData, flags, pos, &end,
+				  data->state == WAIT_FRAG_ACK && len == 0) < 0)
+	{
 		eap_ikev2_state(data, FAIL);
 		return;
 	}

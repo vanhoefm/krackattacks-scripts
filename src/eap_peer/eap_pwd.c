@@ -43,6 +43,7 @@ struct eap_pwd_data {
 
 	u8 msk[EAP_MSK_LEN];
 	u8 emsk[EAP_EMSK_LEN];
+	u8 session_id[1 + SHA256_MAC_LEN];
 
 	BN_CTX *bnctx;
 };
@@ -186,6 +187,25 @@ static u8 * eap_pwd_getkey(struct eap_sm *sm, void *priv, size_t *len)
 	*len = EAP_MSK_LEN;
 
 	return key;
+}
+
+
+static u8 * eap_pwd_get_session_id(struct eap_sm *sm, void *priv, size_t *len)
+{
+	struct eap_pwd_data *data = priv;
+	u8 *id;
+
+	if (data->state != SUCCESS)
+		return NULL;
+
+	id = os_malloc(1 + SHA256_MAC_LEN);
+	if (id == NULL)
+		return NULL;
+
+	os_memcpy(id, data->session_id, 1 + SHA256_MAC_LEN);
+	*len = 1 + SHA256_MAC_LEN;
+
+	return id;
 }
 
 
@@ -647,7 +667,7 @@ eap_pwd_perform_confirm_exchange(struct eap_sm *sm, struct eap_pwd_data *data,
 
 	if (compute_keys(data->grp, data->bnctx, data->k,
 			 data->my_scalar, data->server_scalar, conf, ptr,
-			 &cs, data->msk, data->emsk) < 0) {
+			 &cs, data->msk, data->emsk, data->session_id) < 0) {
 		wpa_printf(MSG_INFO, "EAP-PWD (peer): unable to compute MSK | "
 			   "EMSK");
 		goto fin;
@@ -934,6 +954,7 @@ int eap_peer_pwd_register(void)
 	eap->process = eap_pwd_process;
 	eap->isKeyAvailable = eap_pwd_key_available;
 	eap->getKey = eap_pwd_getkey;
+	eap->getSessionId = eap_pwd_get_session_id;
 	eap->get_emsk = eap_pwd_get_emsk;
 
 	ret = eap_peer_method_register(eap);

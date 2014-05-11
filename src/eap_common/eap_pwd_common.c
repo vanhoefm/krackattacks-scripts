@@ -284,11 +284,10 @@ int compute_password_element(EAP_PWD_group *grp, u16 num,
 int compute_keys(EAP_PWD_group *grp, BN_CTX *bnctx, BIGNUM *k,
 		 BIGNUM *peer_scalar, BIGNUM *server_scalar,
 		 u8 *confirm_peer, u8 *confirm_server,
-		 u32 *ciphersuite, u8 *msk, u8 *emsk)
+		 u32 *ciphersuite, u8 *msk, u8 *emsk, u8 *session_id)
 {
 	struct crypto_hash *hash;
 	u8 mk[SHA256_MAC_LEN], *cruft;
-	u8 session_id[SHA256_MAC_LEN + 1];
 	u8 msk_emsk[EAP_MSK_LEN + EAP_EMSK_LEN];
 	int offset;
 

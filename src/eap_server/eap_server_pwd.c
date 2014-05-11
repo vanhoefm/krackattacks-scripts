@@ -45,6 +45,7 @@ struct eap_pwd_data {
 
 	u8 msk[EAP_MSK_LEN];
 	u8 emsk[EAP_EMSK_LEN];
+	u8 session_id[1 + SHA256_MAC_LEN];
 
 	BN_CTX *bnctx;
 };
@@ -841,7 +842,8 @@ eap_pwd_process_confirm_resp(struct eap_sm *sm, struct eap_pwd_data *data,
 	wpa_printf(MSG_DEBUG, "EAP-pwd (server): confirm verified");
 	if (compute_keys(data->grp, data->bnctx, data->k,
 			 data->peer_scalar, data->my_scalar, conf,
-			 data->my_confirm, &cs, data->msk, data->emsk) < 0)
+			 data->my_confirm, &cs, data->msk, data->emsk,
+			 data->session_id) < 0)
 		eap_pwd_state(data, FAILURE);
 	else
 		eap_pwd_state(data, SUCCESS);

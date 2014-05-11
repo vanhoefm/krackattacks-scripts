@@ -1163,6 +1163,17 @@ def test_ap_wpa2_eap_fast_mschapv2_unauth_prov(dev, apdev):
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
     eap_reauth(dev[0], "FAST")
 
+def test_ap_wpa2_eap_fast_binary_pac(dev, apdev):
+    """WPA2-Enterprise connection using EAP-FAST and binary PAC format"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "FAST", "user",
+                anonymous_identity="FAST", password="password",
+                ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                phase1="fast_provisioning=1 fast_max_pac_list_len=1 fast_pac_format=binary",
+                pac_file="blob://fast_pac_bin")
+    eap_reauth(dev[0], "FAST")
+
 def test_ap_wpa2_eap_fast_gtc_auth_prov(dev, apdev):
     """WPA2-Enterprise connection using EAP-FAST/GTC and authenticated provisioning"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")

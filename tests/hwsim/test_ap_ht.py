@@ -12,8 +12,15 @@ import subprocess
 
 import hostapd
 
+def clear_scan_cache(ifname):
+    subprocess.call(['sudo', 'ifconfig', ifname, 'up'])
+    subprocess.call(['sudo', 'iw', ifname, 'scan', 'freq', '2412', 'flush'])
+    time.sleep(0.1)
+    subprocess.call(['sudo', 'ifconfig', ifname, 'down'])
+
 def test_ap_ht40_scan(dev, apdev):
     """HT40 co-ex scan"""
+    clear_scan_cache(apdev[0]['ifname'])
     params = { "ssid": "test-ht40",
                "channel": "5",
                "ht_capab": "[HT40-]"}
@@ -48,6 +55,7 @@ def test_ap_ht40_scan(dev, apdev):
 
 def test_ap_ht40_scan_conflict(dev, apdev):
     """HT40 co-ex scan conflict"""
+    clear_scan_cache(apdev[0]['ifname'])
     params = { "ssid": "test-ht40",
                "channel": "6",
                "ht_capab": "[HT40+]"}
@@ -87,6 +95,7 @@ def test_ap_ht40_scan_conflict(dev, apdev):
 
 def test_ap_ht40_scan_match(dev, apdev):
     """HT40 co-ex scan matching configuration"""
+    clear_scan_cache(apdev[0]['ifname'])
     params = { "ssid": "test-ht40",
                "channel": "5",
                "ht_capab": "[HT40-]"}
@@ -126,6 +135,7 @@ def test_ap_ht40_scan_match(dev, apdev):
 
 def test_ap_ht40_5ghz_match(dev, apdev):
     """HT40 co-ex scan on 5 GHz with matching pri/sec channel"""
+    clear_scan_cache(apdev[0]['ifname'])
     try:
         params = { "ssid": "test-ht40",
                    "hw_mode": "a",
@@ -171,6 +181,7 @@ def test_ap_ht40_5ghz_match(dev, apdev):
 
 def test_ap_ht40_5ghz_switch(dev, apdev):
     """HT40 co-ex scan on 5 GHz switching pri/sec channel"""
+    clear_scan_cache(apdev[0]['ifname'])
     try:
         params = { "ssid": "test-ht40",
                    "hw_mode": "a",
@@ -216,6 +227,7 @@ def test_ap_ht40_5ghz_switch(dev, apdev):
 
 def test_ap_ht40_5ghz_switch2(dev, apdev):
     """HT40 co-ex scan on 5 GHz switching pri/sec channel (2)"""
+    clear_scan_cache(apdev[0]['ifname'])
     try:
         params = { "ssid": "test-ht40",
                    "hw_mode": "a",
@@ -465,6 +477,7 @@ def test_ap_ht_capab_not_supported(dev, apdev):
 
 def test_ap_ht_40mhz_intolerant_sta(dev, apdev):
     """Associated STA indicating 40 MHz intolerant"""
+    clear_scan_cache(apdev[0]['ifname'])
     params = { "ssid": "intolerant",
                "channel": "6",
                "ht_capab": "[HT40-]" }
@@ -497,6 +510,7 @@ def test_ap_ht_40mhz_intolerant_sta(dev, apdev):
 
 def test_ap_ht_40mhz_intolerant_ap(dev, apdev):
     """Associated STA reports 40 MHz intolerant AP after association"""
+    clear_scan_cache(apdev[0]['ifname'])
     params = { "ssid": "ht",
                "channel": "6",
                "ht_capab": "[HT40-]",

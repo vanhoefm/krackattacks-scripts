@@ -185,6 +185,37 @@ def test_ap_wpa2_eap_sim_sql(dev, apdev, params):
     logger.info("SIM reauth with max reauth count reached")
     eap_reauth(dev[0], "SIM")
 
+def test_ap_wpa2_eap_sim_config(dev, apdev):
+    """EAP-SIM configuration options"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="SIM",
+                   identity="1232010000000000",
+                   password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581",
+                   phase1="sim_min_num_chal=1",
+                   wait_connect=False, scan_freq="2412")
+    ev = dev[0].wait_event(["EAP: Failed to initialize EAP method: vendor 0 method 18 (SIM)"], timeout=10)
+    if ev is None:
+        raise Exception("No EAP error message seen")
+    dev[0].request("REMOVE_NETWORK all")
+
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="SIM",
+                   identity="1232010000000000",
+                   password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581",
+                   phase1="sim_min_num_chal=4",
+                   wait_connect=False, scan_freq="2412")
+    ev = dev[0].wait_event(["EAP: Failed to initialize EAP method: vendor 0 method 18 (SIM)"], timeout=10)
+    if ev is None:
+        raise Exception("No EAP error message seen (2)")
+    dev[0].request("REMOVE_NETWORK all")
+
+    eap_connect(dev[0], apdev[0], "SIM", "1232010000000000",
+                password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581",
+                phase1="sim_min_num_chal=2")
+    eap_connect(dev[1], apdev[0], "SIM", "1232010000000000",
+                password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581",
+                anonymous_identity="345678")
+
 def test_ap_wpa2_eap_aka(dev, apdev):
     """WPA2-Enterprise connection using EAP-AKA"""
     if not os.path.exists("/tmp/hlr_auc_gw.sock"):
@@ -262,6 +293,14 @@ def test_ap_wpa2_eap_aka_sql(dev, apdev, params):
         cur.execute("UPDATE reauth SET counter='1001' WHERE permanent='0232010000000000'")
     logger.info("AKA reauth with max reauth count reached")
     eap_reauth(dev[0], "AKA")
+
+def test_ap_wpa2_eap_aka_config(dev, apdev):
+    """EAP-AKA configuration options"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "AKA", "0232010000000000",
+                password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581:000000000123",
+                anonymous_identity="2345678")
 
 def test_ap_wpa2_eap_aka_prime(dev, apdev):
     """WPA2-Enterprise connection using EAP-AKA'"""

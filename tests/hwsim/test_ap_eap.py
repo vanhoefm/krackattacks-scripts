@@ -1049,12 +1049,24 @@ def test_ap_wpa2_eap_ikev2(dev, apdev):
     eap_reauth(dev[0], "IKEV2")
     dev[0].request("REMOVE_NETWORK all")
     eap_connect(dev[0], apdev[0], "IKEV2", "ikev2 user",
-                password="ike password", fragment_size="250")
+                password="ike password", fragment_size="50")
 
     logger.info("Negative test with incorrect password")
     dev[0].request("REMOVE_NETWORK all")
     eap_connect(dev[0], apdev[0], "IKEV2", "ikev2 user",
                 password="ike-password", expect_failure=True)
+
+def test_ap_wpa2_eap_ikev2_as_frag(dev, apdev):
+    """WPA2-Enterprise connection using EAP-IKEv2 with server fragmentation"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    params = { "ssid": "test-wpa2-eap", "wpa": "2", "wpa_key_mgmt": "WPA-EAP",
+               "rsn_pairwise": "CCMP", "ieee8021x": "1",
+               "eap_server": "1", "eap_user_file": "auth_serv/eap_user.conf",
+               "fragment_size": "50" }
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "IKEV2", "ikev2 user",
+                password="ike password")
+    eap_reauth(dev[0], "IKEV2")
 
 def test_ap_wpa2_eap_pax(dev, apdev):
     """WPA2-Enterprise connection using EAP-PAX"""

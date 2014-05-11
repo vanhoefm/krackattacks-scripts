@@ -124,7 +124,8 @@ static void * eap_pwd_init(struct eap_sm *sm)
 
 	data->in_frag_pos = data->out_frag_pos = 0;
 	data->inbuf = data->outbuf = NULL;
-	data->mtu = 1020; /* default from RFC 5931, make it configurable! */
+	/* use default MTU from RFC 5931 if not configured otherwise */
+	data->mtu = sm->fragment_size > 0 ? sm->fragment_size : 1020;
 
 	return data;
 }

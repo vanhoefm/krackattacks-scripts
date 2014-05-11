@@ -965,6 +965,16 @@ def test_ap_wpa2_eap_pwd_invalid_group(dev, apdev):
     if ev is None:
         raise Exception("Timeout on EAP failure report")
 
+def test_ap_wpa2_eap_pwd_as_frag(dev, apdev):
+    """WPA2-Enterprise connection using EAP-pwd with server fragmentation"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    params = { "ssid": "test-wpa2-eap", "wpa": "2", "wpa_key_mgmt": "WPA-EAP",
+               "rsn_pairwise": "CCMP", "ieee8021x": "1",
+               "eap_server": "1", "eap_user_file": "auth_serv/eap_user.conf",
+               "pwd_group": "19", "fragment_size": "40" }
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "PWD", "pwd user", password="secret password")
+
 def test_ap_wpa2_eap_gpsk(dev, apdev):
     """WPA2-Enterprise connection using EAP-GPSK"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")

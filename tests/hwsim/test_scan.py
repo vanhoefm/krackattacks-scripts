@@ -209,11 +209,14 @@ def test_scan_bss_operations(dev, apdev):
     dev[0].scan(freq="2412")
     dev[0].scan(freq="2412")
 
+    id1 = dev[0].request("BSS FIRST MASK=0x1").splitlines()[0].split('=')[1]
+    id2 = dev[0].request("BSS LAST MASK=0x1").splitlines()[0].split('=')[1]
+
     res = dev[0].request("BSS RANGE=ALL MASK=0x20001")
-    if "id=0" not in res:
-        raise Exception("Missing BSS 0")
-    if "id=1" not in res:
-        raise Exception("Missing BSS 1")
+    if "id=" + id1 not in res:
+        raise Exception("Missing BSS " + id1)
+    if "id=" + id2 not in res:
+        raise Exception("Missing BSS " + id2)
     if "====" not in res:
         raise Exception("Missing delim")
     if "####" not in res:
@@ -223,29 +226,29 @@ def test_scan_bss_operations(dev, apdev):
     if len(res) != 2:
         raise Exception("Unexpected result")
     res = dev[0].request("BSS FIRST MASK=0x1")
-    if "id=0" not in res:
+    if "id=" + id1 not in res:
         raise Exception("Unexpected result: " + res)
     res = dev[0].request("BSS LAST MASK=0x1")
-    if "id=1" not in res:
+    if "id=" + id2 not in res:
         raise Exception("Unexpected result: " + res)
-    res = dev[0].request("BSS ID-0 MASK=0x1")
-    if "id=0" not in res:
+    res = dev[0].request("BSS ID-" + id1 + " MASK=0x1")
+    if "id=" + id1 not in res:
         raise Exception("Unexpected result: " + res)
-    res = dev[0].request("BSS NEXT-0 MASK=0x1")
-    if "id=1" not in res:
+    res = dev[0].request("BSS NEXT-" + id1 + " MASK=0x1")
+    if "id=" + id2 not in res:
         raise Exception("Unexpected result: " + res)
 
-    if len(dev[0].request("BSS RANGE=1 MASK=0x1").splitlines()) != 0:
+    if len(dev[0].request("BSS RANGE=" + id2 + " MASK=0x1").splitlines()) != 0:
         raise Exception("Unexpected RANGE=1 result")
-    if len(dev[0].request("BSS RANGE=0- MASK=0x1").splitlines()) != 2:
+    if len(dev[0].request("BSS RANGE=" + id1 + "- MASK=0x1").splitlines()) != 2:
         raise Exception("Unexpected RANGE=0- result")
-    if len(dev[0].request("BSS RANGE=-1 MASK=0x1").splitlines()) != 2:
+    if len(dev[0].request("BSS RANGE=-" + id2 + " MASK=0x1").splitlines()) != 2:
         raise Exception("Unexpected RANGE=-1 result")
-    if len(dev[0].request("BSS RANGE=0-1 MASK=0x1").splitlines()) != 2:
+    if len(dev[0].request("BSS RANGE=" + id1 + "-" + id2 + " MASK=0x1").splitlines()) != 2:
         raise Exception("Unexpected RANGE=0-1 result")
-    if len(dev[0].request("BSS RANGE=1-1 MASK=0x1").splitlines()) != 1:
+    if len(dev[0].request("BSS RANGE=" + id2 + "-" + id2 + " MASK=0x1").splitlines()) != 1:
         raise Exception("Unexpected RANGE=1-1 result")
-    if len(dev[0].request("BSS RANGE=2-10 MASK=0x1").splitlines()) != 0:
+    if len(dev[0].request("BSS RANGE=" + str(int(id2) + 1) + "-" + str(int(id2) + 10) + " MASK=0x1").splitlines()) != 0:
         raise Exception("Unexpected RANGE=2-10 result")
-    if len(dev[0].request("BSS RANGE=0-10 MASK=0x1").splitlines()) != 2:
+    if len(dev[0].request("BSS RANGE=0-" + str(int(id2) + 10) + " MASK=0x1").splitlines()) != 2:
         raise Exception("Unexpected RANGE=0-10 result")

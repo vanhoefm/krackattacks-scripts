@@ -841,6 +841,14 @@ def test_ap_wpa2_eap_tls_neg_altsubject_match(dev, apdev):
     if ev is None:
         raise Exception("Network block disabling not reported")
 
+def test_ap_wpa2_eap_unauth_tls(dev, apdev):
+    """WPA2-Enterprise connection using UNAUTH-TLS"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "UNAUTH-TLS", "unauth-tls",
+                ca_cert="auth_serv/ca.pem")
+    eap_reauth(dev[0], "UNAUTH-TLS")
+
 def test_ap_wpa2_eap_ttls_server_cert_hash(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS and server certificate hash"""
     srv_cert_hash = "0a3f81f63569226657a069855bb13f3b922670437a2b87585a4734f70ac7315b"

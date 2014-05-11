@@ -46,6 +46,7 @@ struct eapol_test_data {
 	int eapol_test_num_reauths;
 	int no_mppe_keys;
 	int num_mppe_ok, num_mppe_mismatch;
+	int req_eap_key_name;
 
 	u8 radius_identifier;
 	struct radius_msg *last_recv_radius;
@@ -58,6 +59,8 @@ struct eapol_test_data {
 
 	u8 authenticator_pmk[PMK_LEN];
 	size_t authenticator_pmk_len;
+	u8 authenticator_eap_key_name[256];
+	size_t authenticator_eap_key_name_len;
 	int radius_access_accept_received;
 	int radius_access_reject_received;
 	int auth_timed_out;
@@ -208,6 +211,13 @@ static void ieee802_1x_encapsulate_radius(struct eapol_test_data *e,
 		goto fail;
 	}
 
+	if (e->req_eap_key_name &&
+	    !radius_msg_add_attr(msg, RADIUS_ATTR_EAP_KEY_NAME, (u8 *) "\0",
+				 1)) {
+		printf("Could not add EAP-Key-Name\n");
+		goto fail;
+	}
+
 	if (!find_extra_attr(e->extra_attrs, RADIUS_ATTR_NAS_IP_ADDRESS) &&
 	    !radius_msg_add_attr(msg, RADIUS_ATTR_NAS_IP_ADDRESS,
 				 (u8 *) &e->own_ip_addr, 4)) {
@@ -333,6 +343,8 @@ static int eapol_test_compare_pmk(struct eapol_test_data *e)
 {
 	u8 pmk[PMK_LEN];
 	int ret = 1;
+	const u8 *sess_id;
+	size_t sess_id_len;
 
 	if (eapol_sm_get_key(e->wpa_s->eapol, pmk, PMK_LEN) == 0) {
 		wpa_hexdump(MSG_DEBUG, "PMK from EAPOL", pmk, PMK_LEN);
@@ -360,6 +372,28 @@ static int eapol_test_compare_pmk(struct eapol_test_data *e)
 		e->num_mppe_mismatch++;
 	else if (!e->no_mppe_keys)
 		e->num_mppe_ok++;
+
+	sess_id = eapol_sm_get_session_id(e->wpa_s->eapol, &sess_id_len);
+	if (!sess_id)
+		return ret;
+	if (e->authenticator_eap_key_name_len == 0) {
+		wpa_printf(MSG_INFO, "No EAP-Key-Name received from server");
+		return ret;
+	}
+
+	if (e->authenticator_eap_key_name_len != sess_id_len ||
+	    os_memcmp(e->authenticator_eap_key_name, sess_id, sess_id_len) != 0)
+	{
+		wpa_printf(MSG_INFO,
+			   "Locally derived EAP Session-Id does not match EAP-Key-Name from server");
+		wpa_hexdump(MSG_DEBUG, "EAP Session-Id", sess_id, sess_id_len);
+		wpa_hexdump(MSG_DEBUG, "EAP-Key-Name from server",
+			    e->authenticator_eap_key_name,
+			    e->authenticator_eap_key_name_len);
+	} else {
+		wpa_printf(MSG_INFO,
+			   "Locally derived EAP Session-Id matches EAP-Key-Name from server");
+	}
 
 	return ret;
 }
@@ -749,6 +783,8 @@ static void ieee802_1x_get_keys(struct eapol_test_data *e,
 				size_t shared_secret_len)
 {
 	struct radius_ms_mppe_keys *keys;
+	u8 *buf;
+	size_t len;
 
 	keys = radius_msg_get_ms_keys(msg, req, shared_secret,
 				      shared_secret_len);
@@ -786,6 +822,14 @@ static void ieee802_1x_get_keys(struct eapol_test_data *e,
 		os_free(keys->send);
 		os_free(keys->recv);
 		os_free(keys);
+	}
+
+	if (radius_msg_get_attr_ptr(msg, RADIUS_ATTR_EAP_KEY_NAME, &buf, &len,
+				    NULL) == 0) {
+		os_memcpy(e->authenticator_eap_key_name, buf, len);
+		e->authenticator_eap_key_name_len = len;
+	} else {
+		e->authenticator_eap_key_name_len = 0;
 	}
 }
 
@@ -1095,7 +1139,7 @@ static void eapol_test_terminate(int sig, void *signal_ctx)
 static void usage(void)
 {
 	printf("usage:\n"
-	       "eapol_test [-nWS] -c<conf> [-a<AS IP>] [-p<AS port>] "
+	       "eapol_test [-enWS] -c<conf> [-a<AS IP>] [-p<AS port>] "
 	       "[-s<AS secret>]\\\n"
 	       "           [-r<count>] [-t<timeout>] [-C<Connect-Info>] \\\n"
 	       "           [-M<client MAC address>] [-o<server cert file] \\\n"
@@ -1115,6 +1159,7 @@ static void usage(void)
 	       "  -A<client IP> = IP address of the client, default: select "
 	       "automatically\n"
 	       "  -r<count> = number of re-authentications\n"
+	       "  -e = Request EAP-Key-Name\n"
 	       "  -W = wait for a control interface monitor before starting\n"
 	       "  -S = save configuration after authentication\n"
 	       "  -n = no MPPE keys expected\n"
@@ -1168,7 +1213,7 @@ int main(int argc, char *argv[])
 	wpa_debug_show_keys = 1;
 
 	for (;;) {
-		c = getopt(argc, argv, "a:A:c:C:M:nN:o:p:r:s:St:W");
+		c = getopt(argc, argv, "a:A:c:C:eM:nN:o:p:r:s:St:W");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -1183,6 +1228,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'C':
 			eapol_test.connect_info = optarg;
+			break;
+		case 'e':
+			eapol_test.req_eap_key_name = 1;
 			break;
 		case 'M':
 			if (hwaddr_aton(optarg, eapol_test.own_addr)) {

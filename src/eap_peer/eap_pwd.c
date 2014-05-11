@@ -252,8 +252,8 @@ eap_pwd_perform_id_exchange(struct eap_sm *sm, struct eap_pwd_data *data,
 	wpa_hexdump_ascii(MSG_INFO, "EAP-PWD (peer): server sent id of",
 			  data->id_server, data->id_server_len);
 
-	if ((data->grp = (EAP_PWD_group *) os_malloc(sizeof(EAP_PWD_group))) ==
-	    NULL) {
+	data->grp = os_zalloc(sizeof(EAP_PWD_group));
+	if (data->grp == NULL) {
 		wpa_printf(MSG_INFO, "EAP-PWD: failed to allocate memory for "
 			   "group");
 		eap_pwd_state(data, FAILURE);
@@ -858,8 +858,11 @@ eap_pwd_process(struct eap_sm *sm, void *priv, struct eap_method_ret *ret,
 		data->in_frag_pos = 0;
 	}
 
-	if (data->outbuf == NULL)
+	if (data->outbuf == NULL) {
+		ret->methodState = METHOD_DONE;
+		ret->decision = DECISION_FAIL;
 		return NULL;        /* generic failure */
+	}
 
 	/*
 	 * we have output! Do we need to fragment it?

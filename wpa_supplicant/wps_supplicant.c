@@ -1465,6 +1465,10 @@ void wpas_wps_deinit(struct wpa_supplicant *wpa_s)
 	eloop_cancel_timeout(wpas_wps_reenable_networks_cb, wpa_s, NULL);
 	wpas_wps_clear_ap_info(wpa_s);
 
+#ifdef CONFIG_P2P
+	eloop_cancel_timeout(wpas_p2p_pbc_overlap_cb, wpa_s, NULL);
+#endif /* CONFIG_P2P */
+
 	if (wpa_s->wps == NULL)
 		return;
 

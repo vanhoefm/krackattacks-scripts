@@ -498,7 +498,7 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 	wpa_s->last_scan_res = NULL;
 
 #ifdef CONFIG_HS20
-	hs20_free_osu_prov(wpa_s);
+	hs20_deinit(wpa_s);
 #endif /* CONFIG_HS20 */
 }
 

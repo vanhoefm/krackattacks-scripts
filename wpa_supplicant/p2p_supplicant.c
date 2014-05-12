@@ -125,6 +125,7 @@ static void wpas_p2p_fallback_to_go_neg(struct wpa_supplicant *wpa_s,
 					int group_added);
 static int wpas_p2p_stop_find_oper(struct wpa_supplicant *wpa_s);
 static void wpas_stop_listen(void *ctx);
+static void wpas_p2p_psk_failure_removal(void *eloop_ctx, void *timeout_ctx);
 
 
 /*
@@ -3932,6 +3933,7 @@ void wpas_p2p_deinit(struct wpa_supplicant *wpa_s)
 
 	os_free(wpa_s->go_params);
 	wpa_s->go_params = NULL;
+	eloop_cancel_timeout(wpas_p2p_psk_failure_removal, wpa_s, NULL);
 	eloop_cancel_timeout(wpas_p2p_group_formation_timeout, wpa_s, NULL);
 	eloop_cancel_timeout(wpas_p2p_join_scan, wpa_s, NULL);
 	wpa_s->p2p_long_listen = 0;

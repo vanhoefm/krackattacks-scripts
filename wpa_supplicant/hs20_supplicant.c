@@ -920,3 +920,10 @@ void hs20_rx_deauth_imminent_notice(struct wpa_supplicant *wpa_s, u8 code,
 			now.sec + reauth_delay;
 	}
 }
+
+
+void hs20_deinit(struct wpa_supplicant *wpa_s)
+{
+	eloop_cancel_timeout(hs20_continue_icon_fetch, wpa_s, NULL);
+	hs20_free_osu_prov(wpa_s);
+}

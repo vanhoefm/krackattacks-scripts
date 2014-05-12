@@ -320,6 +320,8 @@ static void wpas_dbus_deinit_common(struct wpas_dbus_priv *priv)
 	if (priv->con) {
 		eloop_cancel_timeout(dispatch_initial_dbus_messages,
 				     priv->con, NULL);
+		eloop_cancel_timeout(process_timeout, priv, ELOOP_ALL_CTX);
+
 		dbus_connection_set_watch_functions(priv->con, NULL, NULL,
 						    NULL, NULL, NULL);
 		dbus_connection_set_timeout_functions(priv->con, NULL, NULL,

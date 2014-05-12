@@ -1583,16 +1583,6 @@ DBusMessage * wpas_dbus_handler_remove_network(DBusMessage *message,
 
 	wpas_notify_network_removed(wpa_s, ssid);
 
-	if (wpa_config_remove_network(wpa_s->conf, id) < 0) {
-		wpa_printf(MSG_ERROR,
-			   "wpas_dbus_handler_remove_network[dbus]: "
-			   "error occurred when removing network %d", id);
-		reply = wpas_dbus_error_unknown_error(
-			message, "error removing the specified network on "
-			"this interface.");
-		goto out;
-	}
-
 	if (ssid == wpa_s->current_ssid)
 		wpa_supplicant_deauthenticate(wpa_s,
 					      WLAN_REASON_DEAUTH_LEAVING);
@@ -1603,6 +1593,15 @@ DBusMessage * wpas_dbus_handler_remove_network(DBusMessage *message,
 		wpa_supplicant_req_scan(wpa_s, 0, 0);
 	}
 
+	if (wpa_config_remove_network(wpa_s->conf, id) < 0) {
+		wpa_printf(MSG_ERROR,
+			   "wpas_dbus_handler_remove_network[dbus]: "
+			   "error occurred when removing network %d", id);
+		reply = wpas_dbus_error_unknown_error(
+			message, "error removing the specified network on "
+			"this interface.");
+		goto out;
+	}
 
 out:
 	os_free(iface);

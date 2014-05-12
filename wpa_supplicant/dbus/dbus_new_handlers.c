@@ -3546,11 +3546,22 @@ dbus_bool_t wpas_dbus_getter_bss_mode(DBusMessageIter *iter, DBusError *error,
 	res = get_bss_helper(args, error, __func__);
 	if (!res)
 		return FALSE;
-
-	if (res->caps & IEEE80211_CAP_IBSS)
-		mode = "ad-hoc";
-	else
-		mode = "infrastructure";
+	if (bss_is_dmg(res)) {
+		switch (res->caps & IEEE80211_CAP_DMG_MASK) {
+		case IEEE80211_CAP_DMG_PBSS:
+		case IEEE80211_CAP_DMG_IBSS:
+			mode = "ad-hoc";
+			break;
+		case IEEE80211_CAP_DMG_AP:
+			mode = "infrastructure";
+			break;
+		}
+	} else {
+		if (res->caps & IEEE80211_CAP_IBSS)
+			mode = "ad-hoc";
+		else
+			mode = "infrastructure";
+	}
 
 	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_STRING,
 						&mode, error);

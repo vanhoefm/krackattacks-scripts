@@ -130,4 +130,9 @@ int wpa_bss_get_bit_rates(const struct wpa_bss *bss, u8 **rates);
 struct wpa_bss_anqp * wpa_bss_anqp_alloc(void);
 int wpa_bss_anqp_unshare_alloc(struct wpa_bss *bss);
 
+static inline int bss_is_dmg(const struct wpa_bss *bss)
+{
+	return bss->freq > 45000;
+}
+
 #endif /* BSS_H */

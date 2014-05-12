@@ -713,12 +713,6 @@ static int rate_match(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 }
 
 
-static int bss_is_dmg(struct wpa_bss *bss)
-{
-	return bss->freq > 45000;
-}
-
-
 /*
  * Test whether BSS is in an ESS.
  * This is done differently in DMG (60 GHz) and non-DMG bands

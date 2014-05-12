@@ -2204,17 +2204,43 @@ static int wpa_supplicant_ctrl_iface_scan_result(
 			return -1;
 		pos += ret;
 	}
-	if (bss->caps & IEEE80211_CAP_IBSS) {
-		ret = os_snprintf(pos, end - pos, "[IBSS]");
+	if (bss_is_dmg(bss)) {
+		const char *s;
+		ret = os_snprintf(pos, end - pos, "[DMG]");
 		if (ret < 0 || ret >= end - pos)
 			return -1;
 		pos += ret;
-	}
-	if (bss->caps & IEEE80211_CAP_ESS) {
-		ret = os_snprintf(pos, end - pos, "[ESS]");
+		switch (bss->caps & IEEE80211_CAP_DMG_MASK) {
+		case IEEE80211_CAP_DMG_IBSS:
+			s = "[IBSS]";
+			break;
+		case IEEE80211_CAP_DMG_AP:
+			s = "[ESS]";
+			break;
+		case IEEE80211_CAP_DMG_PBSS:
+			s = "[PBSS]";
+			break;
+		default:
+			s = "";
+			break;
+		}
+		ret = os_snprintf(pos, end - pos, "%s", s);
 		if (ret < 0 || ret >= end - pos)
 			return -1;
 		pos += ret;
+	} else {
+		if (bss->caps & IEEE80211_CAP_IBSS) {
+			ret = os_snprintf(pos, end - pos, "[IBSS]");
+			if (ret < 0 || ret >= end - pos)
+				return -1;
+			pos += ret;
+		}
+		if (bss->caps & IEEE80211_CAP_ESS) {
+			ret = os_snprintf(pos, end - pos, "[ESS]");
+			if (ret < 0 || ret >= end - pos)
+				return -1;
+			pos += ret;
+		}
 	}
 	if (p2p) {
 		ret = os_snprintf(pos, end - pos, "[P2P]");
@@ -3544,17 +3570,43 @@ static int print_bss_info(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 				return 0;
 			pos += ret;
 		}
-		if (bss->caps & IEEE80211_CAP_IBSS) {
-			ret = os_snprintf(pos, end - pos, "[IBSS]");
+		if (bss_is_dmg(bss)) {
+			const char *s;
+			ret = os_snprintf(pos, end - pos, "[DMG]");
 			if (ret < 0 || ret >= end - pos)
 				return 0;
 			pos += ret;
-		}
-		if (bss->caps & IEEE80211_CAP_ESS) {
-			ret = os_snprintf(pos, end - pos, "[ESS]");
+			switch (bss->caps & IEEE80211_CAP_DMG_MASK) {
+			case IEEE80211_CAP_DMG_IBSS:
+				s = "[IBSS]";
+				break;
+			case IEEE80211_CAP_DMG_AP:
+				s = "[ESS]";
+				break;
+			case IEEE80211_CAP_DMG_PBSS:
+				s = "[PBSS]";
+				break;
+			default:
+				s = "";
+				break;
+			}
+			ret = os_snprintf(pos, end - pos, "%s", s);
 			if (ret < 0 || ret >= end - pos)
 				return 0;
 			pos += ret;
+		} else {
+			if (bss->caps & IEEE80211_CAP_IBSS) {
+				ret = os_snprintf(pos, end - pos, "[IBSS]");
+				if (ret < 0 || ret >= end - pos)
+					return 0;
+				pos += ret;
+			}
+			if (bss->caps & IEEE80211_CAP_ESS) {
+				ret = os_snprintf(pos, end - pos, "[ESS]");
+				if (ret < 0 || ret >= end - pos)
+					return 0;
+				pos += ret;
+			}
 		}
 		if (wpa_bss_get_vendor_ie(bss, P2P_IE_VENDOR_TYPE) ||
 		    wpa_bss_get_vendor_ie_beacon(bss, P2P_IE_VENDOR_TYPE)) {

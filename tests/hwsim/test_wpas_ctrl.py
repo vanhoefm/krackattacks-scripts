@@ -199,6 +199,23 @@ def test_wpas_ctrl_network(dev):
     if "FAIL" not in dev[0].request('BSSID ' + str(id) + ' 00:11:22:33:44'):
         raise Exception("Unexpected BSSID success")
 
+def test_wpas_ctrl_dup_network(dev, apdev):
+    """wpa_supplicant ctrl_iface DUP_NETWORK"""
+    ssid = "target"
+    passphrase = 'qwertyuiop'
+    params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    src = dev[0].connect("another", psk=passphrase, scan_freq="2412",
+                         only_add_network=True)
+    id = dev[0].add_network()
+    dev[0].set_network_quoted(id, "ssid", ssid)
+    for f in [ "key_mgmt", "psk", "scan_freq" ]:
+        res = dev[0].request("DUP_NETWORK {} {} {}".format(src, id, f))
+        if "OK" not in res:
+            raise Exception("DUP_NETWORK failed")
+    dev[0].connect_network(id)
+
 def add_cred(dev):
     id = dev.add_cred()
     ev = dev.wait_event(["CRED-ADDED"])

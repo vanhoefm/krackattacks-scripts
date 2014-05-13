@@ -584,18 +584,18 @@ def test_wpas_ctrl_bssid_filter(dev, apdev):
         hostapd.add_ap(apdev[1]['ifname'], params)
         dev[2].scan(freq="2412")
         bss = dev[2].get_bss(apdev[0]['bssid'])
-        if len(bss) == 0:
+        if bss is None or len(bss) == 0:
             raise Exception("Missing BSS data")
         bss = dev[2].get_bss(apdev[1]['bssid'])
-        if len(bss) != 0:
+        if bss and len(bss) != 0:
             raise Exception("Unexpected BSS data")
         dev[2].request("SET bssid_filter ")
         dev[2].scan(freq="2412")
         bss = dev[2].get_bss(apdev[0]['bssid'])
-        if len(bss) == 0:
+        if bss is None or len(bss) == 0:
             raise Exception("Missing BSS data")
         bss = dev[2].get_bss(apdev[1]['bssid'])
-        if len(bss) == 0:
+        if bss is None or len(bss) == 0:
             raise Exception("Missing BSS data(2)")
         res = dev[2].request("SCAN_RESULTS").splitlines()
         if "test" not in res[1] or "test" not in res[2]:

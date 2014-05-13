@@ -779,11 +779,15 @@ class WpaSupplicant:
 
     def get_bss(self, bssid):
         res = self.request("BSS " + bssid)
+        if "FAIL" in res:
+            return None
         lines = res.splitlines()
         vals = dict()
         for l in lines:
             [name,value] = l.split('=', 1)
             vals[name] = value
+        if len(vals) == 0:
+            return None
         return vals
 
     def get_pmksa(self, bssid):

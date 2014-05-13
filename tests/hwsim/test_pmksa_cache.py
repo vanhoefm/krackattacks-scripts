@@ -33,7 +33,15 @@ def test_pmksa_cache_on_roam_back(dev, apdev):
 
     dev[0].dump_monitor()
     logger.info("Roam to AP2")
-    dev[0].scan(freq="2412")
+    # It can take some time for the second AP to become ready to reply to Probe
+    # Request frames especially under heavy CPU load, so allow couple of rounds
+    # of scanning to avoid reporting errors incorrectly just because of scans
+    # not having seen the target AP.
+    for i in range(0, 10):
+        dev[0].scan(freq="2412")
+        if dev[0].get_bss(bssid2) is not None:
+            break
+        logger.info("Scan again to find target AP")
     dev[0].request("ROAM " + bssid2)
     ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=10)
     if ev is None:

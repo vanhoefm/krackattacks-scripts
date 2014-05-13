@@ -587,6 +587,7 @@ struct nl80211_bss_info_arg {
 	struct wpa_driver_nl80211_data *drv;
 	struct wpa_scan_results *res;
 	unsigned int assoc_freq;
+	unsigned int ibss_freq;
 	u8 assoc_bssid[ETH_ALEN];
 };
 
@@ -1424,11 +1425,12 @@ static unsigned int nl80211_get_assoc_freq(struct wpa_driver_nl80211_data *drv)
 	ret = send_and_recv_msgs(drv, msg, bss_info_handler, &arg);
 	msg = NULL;
 	if (ret == 0) {
+		unsigned int freq = drv->nlmode == NL80211_IFTYPE_ADHOC ?
+			arg.ibss_freq : arg.assoc_freq;
 		wpa_printf(MSG_DEBUG, "nl80211: Operating frequency for the "
-			   "associated BSS from scan results: %u MHz",
-			   arg.assoc_freq);
-		if (arg.assoc_freq)
-			drv->assoc_freq = arg.assoc_freq;
+			   "associated BSS from scan results: %u MHz", freq);
+		if (freq)
+			drv->assoc_freq = freq;
 		return drv->assoc_freq;
 	}
 	wpa_printf(MSG_DEBUG, "nl80211: Scan result fetch failed: ret=%d "
@@ -2036,6 +2038,8 @@ static void mlme_event_michael_mic_failure(struct i802_bss *bss,
 static void mlme_event_join_ibss(struct wpa_driver_nl80211_data *drv,
 				 struct nlattr *tb[])
 {
+	unsigned int freq;
+
 	if (tb[NL80211_ATTR_MAC] == NULL) {
 		wpa_printf(MSG_DEBUG, "nl80211: No address in IBSS joined "
 			   "event");
@@ -2046,6 +2050,13 @@ static void mlme_event_join_ibss(struct wpa_driver_nl80211_data *drv,
 	drv->associated = 1;
 	wpa_printf(MSG_DEBUG, "nl80211: IBSS " MACSTR " joined",
 		   MAC2STR(drv->bssid));
+
+	freq = nl80211_get_assoc_freq(drv);
+	if (freq) {
+		wpa_printf(MSG_DEBUG, "nl80211: IBSS on frequency %u MHz",
+			   freq);
+		drv->first_bss->freq = freq;
+	}
 
 	wpa_supplicant_event(drv->ctx, EVENT_ASSOC, NULL);
 }
@@ -5337,6 +5348,13 @@ static int bss_info_handler(struct nl_msg *msg, void *arg)
 			wpa_printf(MSG_DEBUG, "nl80211: Associated on %u MHz",
 				   _arg->assoc_freq);
 		}
+		if (status == NL80211_BSS_STATUS_IBSS_JOINED &&
+		    bss[NL80211_BSS_FREQUENCY]) {
+			_arg->ibss_freq =
+				nla_get_u32(bss[NL80211_BSS_FREQUENCY]);
+			wpa_printf(MSG_DEBUG, "nl80211: IBSS-joined on %u MHz",
+				   _arg->ibss_freq);
+		}
 		if (status == NL80211_BSS_STATUS_ASSOCIATED &&
 		    bss[NL80211_BSS_BSSID]) {
 			os_memcpy(_arg->assoc_bssid,
@@ -6996,6 +7014,12 @@ static int wpa_driver_nl80211_send_frame(struct i802_bss *bss,
 	u64 cookie;
 	int res;
 
+	if (freq == 0 && drv->nlmode == NL80211_IFTYPE_ADHOC) {
+		freq = nl80211_get_assoc_freq(drv);
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: send_frame - Use assoc_freq=%u for IBSS",
+			   freq);
+	}
 	if (freq == 0) {
 		wpa_printf(MSG_DEBUG, "nl80211: send_frame - Use bss->freq=%u",
 			   bss->freq);

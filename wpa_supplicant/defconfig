@@ -253,7 +253,7 @@ CONFIG_BACKEND=file
 # main_none = Very basic example (development use only)
 #CONFIG_MAIN=main
 
-# Select wrapper for operatins system and C library specific functions
+# Select wrapper for operating system and C library specific functions
 # unix = UNIX/POSIX like systems (default)
 # win32 = Windows systems
 # none = Empty template
@@ -266,6 +266,9 @@ CONFIG_BACKEND=file
 
 # Should we use poll instead of select? Select is used by default.
 #CONFIG_ELOOP_POLL=y
+
+# Should we use epoll instead of select? Select is used by default.
+#CONFIG_ELOOP_EPOLL=y
 
 # Select layer 2 packet implementation
 # linux = Linux packet socket (default)

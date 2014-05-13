@@ -617,6 +617,17 @@ def test_grpform_pbc_overlap(dev, apdev):
     hapd.request("WPS_PBC")
     time.sleep(0.1)
 
+    # Since P2P Client scan case is now optimzied to use a specific SSID, the
+    # WPS AP will not reply to that and the scan after GO Negotiation can quite
+    # likely miss the AP due to dwell time being short enoguh to miss the Beacon
+    # frame. This has made the test case somewhat pointless, but keep it here
+    # for now with an additional scan to confirm that PBC detection works if
+    # there is a BSS entry for a overlapping AP.
+    for i in range(0, 5):
+        dev[0].scan(freq="2412")
+        if dev[0].get_bss(apdev[0]['bssid']) is not None:
+            break
+
     addr0 = dev[0].p2p_dev_addr()
     addr1 = dev[1].p2p_dev_addr()
     dev[0].p2p_listen()

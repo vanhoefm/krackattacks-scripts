@@ -334,3 +334,16 @@ def test_autogo_ifdown(dev):
         raise Exception("Group removal not reported")
     if res['ifname'] not in ev:
         raise Exception("Unexpected group removal event: " + ev)
+
+def test_autogo_start_during_scan(dev):
+    """P2P autonomous GO started during ongoing manual scan"""
+    try:
+        # use autoscan to set scan_req = MANUAL_SCAN_REQ
+        if "OK" not in dev[0].request("AUTOSCAN periodic:1"):
+            raise Exception("Failed to set autoscan")
+        autogo(dev[0])
+        connect_cli(dev[0], dev[1])
+        dev[0].remove_group()
+        dev[1].wait_go_ending_session()
+    finally:
+        dev[0].request("AUTOSCAN ")

@@ -1220,7 +1220,7 @@ nomem:
 
 /**
  *
- * Method to emit GONeogtiation Success or Failure signals based
+ * Method to emit GONegotiation Success or Failure signals based
  * on status.
  * @status: Status of the GO neg request. 0 for success, other for errors.
  */
@@ -3047,12 +3047,13 @@ static const struct wpa_dbus_signal_desc wpas_dbus_interface_signals[] = {
 	},
 	{ "GONegotiationSuccess", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
 	  {
+		  { "properties", "a{sv}", ARG_OUT },
 		  END_ARGS
 	  }
 	},
 	{ "GONegotiationFailure", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
 	  {
-		  { "status", "i", ARG_OUT },
+		  { "properties", "a{sv}", ARG_OUT },
 		  END_ARGS
 	  }
 	},

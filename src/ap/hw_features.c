@@ -395,6 +395,36 @@ static int ieee80211n_check_40mhz_5g(struct hostapd_iface *iface,
 }
 
 
+static int ieee80211n_check_20mhz_bss(struct wpa_scan_res *bss, int pri_freq,
+				      int start, int end)
+{
+	struct ieee802_11_elems elems;
+	struct ieee80211_ht_operation *oper;
+
+	if (bss->freq < start || bss->freq > end || bss->freq == pri_freq)
+		return 0;
+
+	ieee802_11_parse_elems((u8 *) (bss + 1), bss->ie_len, &elems, 0);
+	if (!elems.ht_capabilities) {
+		wpa_printf(MSG_DEBUG, "Found overlapping legacy BSS: "
+			   MACSTR " freq=%d", MAC2STR(bss->bssid), bss->freq);
+		return 1;
+	}
+
+	if (elems.ht_operation &&
+	    elems.ht_operation_len >= sizeof(*oper)) {
+		oper = (struct ieee80211_ht_operation *) elems.ht_operation;
+		if (oper->ht_param & HT_INFO_HT_PARAM_SECONDARY_CHNL_OFF_MASK)
+			return 0;
+
+		wpa_printf(MSG_DEBUG, "Found overlapping 20 MHz HT BSS: "
+			   MACSTR " freq=%d", MAC2STR(bss->bssid), bss->freq);
+		return 1;
+	}
+	return 0;
+}
+
+
 static int ieee80211n_check_40mhz_2g4(struct hostapd_iface *iface,
 				      struct wpa_scan_results *scan_res)
 {
@@ -417,6 +447,14 @@ static int ieee80211n_check_40mhz_2g4(struct hostapd_iface *iface,
 		int sec = pri;
 		int sec_chan, pri_chan;
 		struct ieee802_11_elems elems;
+
+		/* Check for overlapping 20 MHz BSS */
+		if (ieee80211n_check_20mhz_bss(bss, pri_freq, affected_start,
+					       affected_end)) {
+			wpa_printf(MSG_DEBUG,
+				   "Overlapping 20 MHz BSS is found");
+			return 0;
+		}
 
 		ieee80211n_get_pri_sec_chan(bss, &pri_chan, &sec_chan);
 

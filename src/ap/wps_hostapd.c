@@ -1290,7 +1290,7 @@ static int wps_button_pushed(struct hostapd_data *hapd, void *ctx)
 {
 	const u8 *p2p_dev_addr = ctx;
 	if (hapd->wps == NULL)
-		return 0;
+		return -1;
 	return wps_registrar_button_pushed(hapd->wps->registrar, p2p_dev_addr);
 }
 
@@ -1306,7 +1306,7 @@ int hostapd_wps_button_pushed(struct hostapd_data *hapd,
 static int wps_cancel(struct hostapd_data *hapd, void *ctx)
 {
 	if (hapd->wps == NULL)
-		return 0;
+		return -1;
 
 	wps_registrar_wps_cancel(hapd->wps->registrar);
 	ap_for_each_sta(hapd, ap_sta_wps_cancel, NULL);

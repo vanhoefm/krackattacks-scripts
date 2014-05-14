@@ -921,10 +921,9 @@ def test_ap_wpa2_eap_ttls_server_cert_hash_invalid(dev, apdev):
         ev = dev[i].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
         if ev is None:
             raise Exception("Association and EAP start timed out")
-        timeout = 1 if i == 0 else 0.1
-        ev = dev[i].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=timeout)
-        if ev is not None:
-            raise Exception("Unexpected EAP start")
+        ev = dev[i].wait_event(["EAP: Failed to initialize EAP method: vendor 0 method 21 (TTLS)"], timeout=5)
+        if ev is None:
+            raise Exception("Did not report EAP method initialization failure")
 
 def test_ap_wpa2_eap_pwd(dev, apdev):
     """WPA2-Enterprise connection using EAP-pwd"""

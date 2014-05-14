@@ -101,6 +101,7 @@ struct p2p_device {
 	unsigned int flags;
 
 	int status; /* enum p2p_status_code */
+	struct os_reltime go_neg_wait_started;
 	unsigned int wait_count;
 	unsigned int connect_reqs;
 	unsigned int invitation_reqs;

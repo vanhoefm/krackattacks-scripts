@@ -939,7 +939,7 @@ void p2p_process_go_neg_resp(struct p2p_data *p2p, const u8 *sa,
 		if (*msg.status == P2P_SC_FAIL_INFO_CURRENTLY_UNAVAILABLE) {
 			p2p_dbg(p2p, "Wait for the peer to become ready for GO Negotiation");
 			dev->flags |= P2P_DEV_NOT_YET_READY;
-			dev->wait_count = 0;
+			os_get_reltime(&dev->go_neg_wait_started);
 			p2p_set_state(p2p, P2P_WAIT_PEER_IDLE);
 			p2p_set_timeout(p2p, 0, 0);
 		} else {

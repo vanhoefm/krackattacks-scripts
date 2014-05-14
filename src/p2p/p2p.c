@@ -3238,14 +3238,15 @@ static void p2p_timeout_wait_peer_connect(struct p2p_data *p2p)
 static void p2p_timeout_wait_peer_idle(struct p2p_data *p2p)
 {
 	struct p2p_device *dev = p2p->go_neg_peer;
+	struct os_reltime now;
 
 	if (dev == NULL) {
 		p2p_dbg(p2p, "Unknown GO Neg peer - stop GO Neg wait");
 		return;
 	}
 
-	dev->wait_count++;
-	if (dev->wait_count >= 120) {
+	os_get_reltime(&now);
+	if (os_reltime_expired(&now, &dev->go_neg_wait_started, 120)) {
 		p2p_dbg(p2p, "Timeout on waiting peer to become ready for GO Negotiation");
 		p2p_go_neg_failed(p2p, dev, -1);
 		return;
@@ -3534,7 +3535,6 @@ int p2p_get_peer_info_txt(const struct p2p_peer_info *info,
 			  "req_config_methods=0x%x\n"
 			  "flags=%s%s%s%s%s%s%s%s%s%s%s%s%s\n"
 			  "status=%d\n"
-			  "wait_count=%u\n"
 			  "invitation_reqs=%u\n",
 			  (int) (now.sec - dev->last_seen.sec),
 			  dev->listen_freq,
@@ -3576,7 +3576,6 @@ int p2p_get_peer_info_txt(const struct p2p_peer_info *info,
 			  dev->flags & P2P_DEV_PD_FOR_JOIN ?
 			  "[PD_FOR_JOIN]" : "",
 			  dev->status,
-			  dev->wait_count,
 			  dev->invitation_reqs);
 	if (res < 0 || res >= end - pos)
 		return pos - buf;

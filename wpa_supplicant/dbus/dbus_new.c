@@ -2984,7 +2984,6 @@ static const struct wpa_dbus_signal_desc wpas_dbus_interface_signals[] = {
 	{ "DeviceFound", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
 	  {
 		  { "path", "o", ARG_OUT },
-		  { "properties", "a{sv}", ARG_OUT },
 		  END_ARGS
 	  }
 	},

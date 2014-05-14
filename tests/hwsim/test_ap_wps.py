@@ -85,7 +85,8 @@ def test_ap_wps_init_2ap_pbc(dev, apdev):
     hapd = hostapd.Hostapd(apdev[0]['ifname'])
     logger.info("WPS provisioning step")
     hapd.request("WPS_PBC")
-    dev[0].scan(freq="2412")
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412", force_scan=True)
+    dev[0].scan_for_bss(apdev[1]['bssid'], freq="2412")
     bss = dev[0].get_bss(apdev[0]['bssid'])
     if "[WPS-PBC]" not in bss['flags']:
         raise Exception("WPS-PBC flag missing from AP1")
@@ -105,12 +106,8 @@ def test_ap_wps_init_2ap_pbc(dev, apdev):
     if ev is None:
         raise Exception("Association with the AP timed out")
 
-    dev[1].scan(freq="2412")
-    for i in range(0, 10):
-        if 'flags' in dev[1].get_bss(apdev[0]['bssid']) and 'flags' in dev[1].get_bss(apdev[1]['bssid']):
-            break
-        logger.info("Scan again since scan did not include both BSSes")
-        dev[1].scan(freq="2412")
+    dev[1].scan_for_bss(apdev[0]['bssid'], freq="2412", force_scan=True)
+    dev[1].scan_for_bss(apdev[1]['bssid'], freq="2412")
     bss = dev[1].get_bss(apdev[0]['bssid'])
     if "[WPS-PBC]" in bss['flags']:
         raise Exception("WPS-PBC flag not cleared from AP1")
@@ -128,7 +125,8 @@ def test_ap_wps_init_2ap_pin(dev, apdev):
     logger.info("WPS provisioning step")
     pin = dev[0].wps_read_pin()
     hapd.request("WPS_PIN any " + pin)
-    dev[0].scan(freq="2412")
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412", force_scan=True)
+    dev[0].scan_for_bss(apdev[1]['bssid'], freq="2412")
     bss = dev[0].get_bss(apdev[0]['bssid'])
     if "[WPS-AUTH]" not in bss['flags']:
         raise Exception("WPS-AUTH flag missing from AP1")
@@ -141,12 +139,8 @@ def test_ap_wps_init_2ap_pin(dev, apdev):
     if ev is None:
         raise Exception("Association with the AP timed out")
 
-    dev[1].scan(freq="2412")
-    for i in range(0, 10):
-        if 'flags' in dev[1].get_bss(apdev[0]['bssid']) and 'flags' in dev[1].get_bss(apdev[1]['bssid']):
-            break
-        logger.info("Scan again since scan did not include both BSSes")
-        dev[1].scan(freq="2412")
+    dev[1].scan_for_bss(apdev[0]['bssid'], freq="2412", force_scan=True)
+    dev[1].scan_for_bss(apdev[1]['bssid'], freq="2412")
     bss = dev[1].get_bss(apdev[0]['bssid'])
     if "[WPS-AUTH]" in bss['flags']:
         raise Exception("WPS-AUTH flag not cleared from AP1")
@@ -354,7 +348,7 @@ def test_ap_wps_conf_pin(dev, apdev):
     if status['key_mgmt'] != 'WPA2-PSK':
         raise Exception("Unexpected key_mgmt")
 
-    dev[1].scan(freq="2412")
+    dev[1].scan_for_bss(apdev[0]['bssid'], freq="2412", force_scan=True)
     bss = dev[1].get_bss(apdev[0]['bssid'])
     if "[WPS-AUTH]" in bss['flags']:
         raise Exception("WPS-AUTH flag not cleared")
@@ -752,7 +746,8 @@ def test_ap_wps_pbc_overlap_2ap(dev, apdev):
     hapd2 = hostapd.Hostapd(apdev[1]['ifname'])
     hapd2.request("WPS_PBC")
     logger.info("WPS provisioning step")
-    dev[0].dump_monitor()
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412", force_scan=True)
+    dev[0].scan_for_bss(apdev[1]['bssid'], freq="2412")
     dev[0].request("WPS_PBC")
     ev = dev[0].wait_event(["WPS-OVERLAP-DETECTED"], timeout=15)
     if ev is None:
@@ -800,11 +795,13 @@ def test_ap_wps_cancel(dev, apdev):
     logger.info("Verify PBC enable/cancel")
     hapd.request("WPS_PBC")
     dev[0].scan(freq="2412")
+    dev[0].scan(freq="2412")
     bss = dev[0].get_bss(apdev[0]['bssid'])
     if "[WPS-PBC]" not in bss['flags']:
         raise Exception("WPS-PBC flag missing")
     if "FAIL" in hapd.request("WPS_CANCEL"):
         raise Exception("WPS_CANCEL failed")
+    dev[0].scan(freq="2412")
     dev[0].scan(freq="2412")
     bss = dev[0].get_bss(apdev[0]['bssid'])
     if "[WPS-PBC]" in bss['flags']:
@@ -813,11 +810,13 @@ def test_ap_wps_cancel(dev, apdev):
     logger.info("Verify PIN enable/cancel")
     hapd.request("WPS_PIN any 12345670")
     dev[0].scan(freq="2412")
+    dev[0].scan(freq="2412")
     bss = dev[0].get_bss(apdev[0]['bssid'])
     if "[WPS-AUTH]" not in bss['flags']:
         raise Exception("WPS-AUTH flag missing")
     if "FAIL" in hapd.request("WPS_CANCEL"):
         raise Exception("WPS_CANCEL failed")
+    dev[0].scan(freq="2412")
     dev[0].scan(freq="2412")
     bss = dev[0].get_bss(apdev[0]['bssid'])
     if "[WPS-AUTH]" in bss['flags']:
@@ -912,6 +911,7 @@ def test_ap_wps_er_add_enrollee(dev, apdev):
     dev[0].request("WPS_ER_PIN any " + pin + " " + dev[1].p2p_interface_addr())
     dev[1].request("DISCONNECT")
     dev[1].wait_event(["CTRL-EVENT-DISCONNECTED"])
+    dev[1].scan_for_bss(apdev[0]['bssid'], freq="2412")
     dev[1].scan(freq="2412")
     bss = dev[1].get_bss(apdev[0]['bssid'])
     if "[WPS-AUTH]" not in bss['flags']:
@@ -1275,7 +1275,7 @@ def test_ap_wps_ie_fragmentation(dev, apdev):
         # workaround by runnign another scan.
         dev[0].scan(freq="2412", only_new=True)
         bss = dev[0].get_bss(apdev[0]['bssid'])
-        if "wps_device_name" not in bss or bss['wps_device_name'] != "1234567890abcdef1234567890abcdef":
+        if not bss or "wps_device_name" not in bss or bss['wps_device_name'] != "1234567890abcdef1234567890abcdef":
             logger.info(bss)
             raise Exception("Device Name not received correctly")
     if len(re.findall("dd..0050f204", bss['ie'])) != 2:

@@ -45,6 +45,13 @@ def check_scan(dev, params, other_started=False):
     if "id=" + str(id) not in ev:
         raise Exception("Scan id not included in completed event")
 
+def check_scan_retry(dev, params, bssid):
+    for i in range(0, 5):
+        check_scan(dev, "freq=2412-2462,5180 use_id=1")
+        if int(dev.get_bss(bssid)['age']) <= 1:
+            return
+    raise Exception("Unexpectedly old BSS entry")
+
 def test_scan(dev, apdev):
     """Control interface behavior on scan parameters"""
     hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan" })
@@ -54,9 +61,7 @@ def test_scan(dev, apdev):
     check_scan(dev[0], "use_id=1")
 
     logger.info("Limited channel scan")
-    check_scan(dev[0], "freq=2412-2462,5180 use_id=1")
-    if int(dev[0].get_bss(bssid)['age']) > 1:
-        raise Exception("Unexpectedly old BSS entry")
+    check_scan_retry(dev[0], "freq=2412-2462,5180 use_id=1", bssid)
 
     # wait long enough to allow next scans to be verified not to find the AP
     time.sleep(2)
@@ -69,9 +74,7 @@ def test_scan(dev, apdev):
         raise Exception("Unexpectedly updated BSS entry")
 
     logger.info("Active single-channel scan on AP's operating channel")
-    check_scan(dev[0], "freq=2412 passive=0 use_id=1")
-    if int(dev[0].get_bss(bssid)['age']) > 1:
-        raise Exception("Unexpectedly old BSS entry")
+    check_scan_retry(dev[0], "freq=2412 passive=0 use_id=1", bssid)
 
 def test_scan_only(dev, apdev):
     """Control interface behavior on scan parameters with type=only"""
@@ -82,9 +85,7 @@ def test_scan_only(dev, apdev):
     check_scan(dev[0], "type=only use_id=1")
 
     logger.info("Limited channel scan")
-    check_scan(dev[0], "type=only freq=2412-2462,5180 use_id=1")
-    if int(dev[0].get_bss(bssid)['age']) > 1:
-        raise Exception("Unexpectedly old BSS entry")
+    check_scan_retry(dev[0], "type=only freq=2412-2462,5180 use_id=1", bssid)
 
     # wait long enough to allow next scans to be verified not to find the AP
     time.sleep(2)
@@ -97,9 +98,7 @@ def test_scan_only(dev, apdev):
         raise Exception("Unexpectedly updated BSS entry")
 
     logger.info("Active single-channel scan on AP's operating channel")
-    check_scan(dev[0], "type=only freq=2412 passive=0 use_id=1")
-    if int(dev[0].get_bss(bssid)['age']) > 1:
-        raise Exception("Unexpectedly old BSS entry")
+    check_scan_retry(dev[0], "type=only freq=2412 passive=0 use_id=1", bssid)
 
 def test_scan_external_trigger(dev, apdev):
     """Avoid operations during externally triggered scan"""

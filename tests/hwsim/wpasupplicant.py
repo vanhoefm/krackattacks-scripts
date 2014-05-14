@@ -720,7 +720,8 @@ class WpaSupplicant:
 
     def roam(self, bssid, fail_test=False):
         self.dump_monitor()
-        self.request("ROAM " + bssid)
+        if "OK" not in self.request("ROAM " + bssid):
+            raise Exception("ROAM failed")
         if fail_test:
             ev = self.wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
             if ev is not None:
@@ -734,7 +735,8 @@ class WpaSupplicant:
 
     def roam_over_ds(self, bssid, fail_test=False):
         self.dump_monitor()
-        self.request("FT_DS " + bssid)
+        if "OK" not in self.request("FT_DS " + bssid):
+            raise Exception("FT_DS failed")
         if fail_test:
             ev = self.wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
             if ev is not None:

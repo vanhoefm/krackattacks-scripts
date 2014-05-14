@@ -109,6 +109,7 @@ def run_roams(dev, apdev, ssid, passphrase, over_ds=False, sae=False, eap=False,
     hwsim_utils.test_connectivity(dev.ifname, ap1['ifname'])
 
     logger.info("Roam to the second AP")
+    dev.scan_for_bss(ap2['bssid'], freq="2412")
     if over_ds:
         dev.roam_over_ds(ap2['bssid'], fail_test=fail_test)
     else:

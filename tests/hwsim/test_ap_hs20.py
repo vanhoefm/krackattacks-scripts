@@ -46,6 +46,7 @@ def hs20_ap_params(ssid="test-hs20"):
     return params
 
 def check_auto_select(dev, bssid):
+    dev.scan_for_bss(bssid, freq="2412")
     dev.request("INTERWORKING_SELECT auto freq=2412")
     ev = dev.wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
     if ev is None:
@@ -56,6 +57,8 @@ def check_auto_select(dev, bssid):
 
 def interworking_select(dev, bssid, type=None, no_match=False, freq=None):
     dev.dump_monitor()
+    if bssid and freq and not no_match:
+        dev.scan_for_bss(bssid, freq=freq)
     freq_extra = " freq=" + freq if freq else ""
     dev.request("INTERWORKING_SELECT" + freq_extra)
     ev = dev.wait_event(["INTERWORKING-AP", "INTERWORKING-NO-MATCH"],
@@ -174,6 +177,8 @@ def test_ap_anqp_sharing(dev, apdev):
                                   'password': "secret",
                                   'domain': "example.com" })
     logger.info("Normal network selection with shared ANQP results")
+    dev[0].scan_for_bss(bssid, freq="2412")
+    dev[0].scan_for_bss(bssid2, freq="2412")
     interworking_select(dev[0], None, "home", freq="2412")
     dev[0].dump_monitor()
 
@@ -835,6 +840,8 @@ def test_ap_hs20_multiple_connects(dev, apdev):
                'domain': "example.com" }
     id = dev[0].add_cred_values(values)
 
+    dev[0].scan_for_bss(bssid, freq="2412")
+
     for i in range(0, 3):
         logger.info("Starting Interworking network selection")
         dev[0].request("INTERWORKING_SELECT auto freq=2412")
@@ -872,6 +879,8 @@ def test_ap_hs20_disallow_aps(dev, apdev):
                'domain': "example.com" }
     id = dev[0].add_cred_values(values)
 
+    dev[0].scan_for_bss(bssid, freq="2412")
+
     logger.info("Verify disallow_aps bssid")
     dev[0].request("SET disallow_aps bssid " + bssid.translate(None, ':'))
     dev[0].request("INTERWORKING_SELECT auto")
@@ -902,6 +911,7 @@ def policy_test(dev, ap, values, only_one=True):
     if ap:
         logger.info("Verify network selection to AP " + ap['ifname'])
         bssid = ap['bssid']
+        dev.scan_for_bss(bssid, freq="2412")
     else:
         logger.info("Verify network selection")
         bssid = None
@@ -1054,6 +1064,7 @@ def test_ap_hs20_roam_to_higher_prio(dev, apdev):
     params['domain_name'] = "example.com"
     hostapd.add_ap(apdev[1]['ifname'], params)
 
+    dev[0].scan_for_bss(bssid2, freq="2412", force_scan=True)
     dev[0].request("INTERWORKING_SELECT auto freq=2412")
     ev = dev[0].wait_event(["INTERWORKING-NO-MATCH",
                             "INTERWORKING-ALREADY-CONNECTED",
@@ -1322,6 +1333,7 @@ def test_ap_hs20_req_conn_capab(dev, apdev):
     values = conn_capab_cred(domain="example.org", req_conn_capab="50")
     id = dev[0].add_cred_values(values)
     dev[0].set_cred(id, "req_conn_capab", "6:22")
+    dev[0].scan_for_bss(bssid2, freq="2412")
     dev[0].request("INTERWORKING_SELECT freq=2412")
     for i in range(0, 2):
         ev = dev[0].wait_event(["INTERWORKING-AP"])

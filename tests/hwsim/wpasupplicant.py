@@ -709,6 +709,15 @@ class WpaSupplicant:
         if ev is None:
             raise Exception("Scan timed out")
 
+    def scan_for_bss(self, bssid, freq=None, force_scan=False):
+        if not force_scan and self.get_bss(bssid) is not None:
+            return
+        for i in range(0, 10):
+            self.scan(freq=freq)
+            if self.get_bss(bssid) is not None:
+                return
+        raise Exception("Could not find BSS " + bssid + " in scan")
+
     def roam(self, bssid, fail_test=False):
         self.dump_monitor()
         self.request("ROAM " + bssid)

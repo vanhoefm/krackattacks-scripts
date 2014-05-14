@@ -1516,7 +1516,7 @@ dbus_bool_t wpas_dbus_getter_p2p_peer_device_address(DBusMessageIter *iter,
 	}
 
 	return wpas_dbus_simple_array_property_getter(
-		iter, DBUS_TYPE_BYTE, (char *) peer_args->p2p_device_addr,
+		iter, DBUS_TYPE_BYTE, (char *) info->p2p_device_addr,
 		ETH_ALEN, error);
 }
 

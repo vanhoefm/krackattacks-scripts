@@ -582,6 +582,7 @@ def test_wpas_ctrl_bssid_filter(dev, apdev):
         params = { "ssid": "test" }
         hostapd.add_ap(apdev[0]['ifname'], params)
         hostapd.add_ap(apdev[1]['ifname'], params)
+        dev[2].scan_for_bss(apdev[0]['bssid'], freq="2412")
         dev[2].scan(freq="2412")
         bss = dev[2].get_bss(apdev[0]['bssid'])
         if bss is None or len(bss) == 0:

@@ -3933,6 +3933,11 @@ static int p2p_ctrl_find(struct wpa_supplicant *wpa_s, char *cmd)
 	char *pos;
 	unsigned int search_delay;
 
+	if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED) {
+		wpa_dbg(wpa_s, MSG_INFO,
+			"Reject P2P_FIND since interface is disabled");
+		return -1;
+	}
 	if (os_strstr(cmd, "type=social"))
 		type = P2P_FIND_ONLY_SOCIAL;
 	else if (os_strstr(cmd, "type=progressive"))
@@ -4084,6 +4089,11 @@ static int p2p_ctrl_connect(struct wpa_supplicant *wpa_s, char *cmd,
 static int p2p_ctrl_listen(struct wpa_supplicant *wpa_s, char *cmd)
 {
 	unsigned int timeout = atoi(cmd);
+	if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED) {
+		wpa_dbg(wpa_s, MSG_INFO,
+			"Reject P2P_LISTEN since interface is disabled");
+		return -1;
+	}
 	return wpas_p2p_listen(wpa_s, timeout);
 }
 

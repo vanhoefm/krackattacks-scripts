@@ -251,3 +251,24 @@ def test_scan_bss_operations(dev, apdev):
         raise Exception("Unexpected RANGE=2-10 result")
     if len(dev[0].request("BSS RANGE=0-" + str(int(id2) + 10) + " MASK=0x1").splitlines()) != 2:
         raise Exception("Unexpected RANGE=0-10 result")
+
+def test_scan_and_interface_disabled(dev, apdev):
+    """Scan operation when interface gets disabled"""
+    try:
+        dev[0].request("SCAN")
+        ev = dev[0].wait_event(["CTRL-EVENT-SCAN-STARTED"])
+        if ev is None:
+            raise Exception("Scan did not start")
+        dev[0].request("DRIVER_EVENT INTERFACE_DISABLED")
+        ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], timeout=7)
+        if ev is not None:
+            raise Exception("Scan completed unexpectedly")
+
+        # verify that scan is rejected
+        if "FAIL" not in dev[0].request("SCAN"):
+            raise Exception("New scan request was accepted unexpectedly")
+
+        dev[0].request("DRIVER_EVENT INTERFACE_ENABLED")
+        dev[0].scan(freq="2412")
+    finally:
+        dev[0].request("DRIVER_EVENT INTERFACE_ENABLED")

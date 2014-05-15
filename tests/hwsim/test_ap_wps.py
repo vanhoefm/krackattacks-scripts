@@ -2092,3 +2092,13 @@ def test_ap_wps_upnp_subscribe(dev, apdev):
         raise Exception("Unexpected HTTP response: %s" % resp.status)
     sid = resp.getheader("sid")
     logger.debug("Subscription SID " + sid)
+
+def test_ap_wps_disabled(dev, apdev):
+    """WPS operations while WPS is disabled"""
+    ssid = "test-wps-disabled"
+    hostapd.add_ap(apdev[0]['ifname'], { "ssid": ssid })
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    if "FAIL" not in hapd.request("WPS_PBC"):
+        raise Exception("WPS_PBC succeeded unexpectedly")
+    if "FAIL" not in hapd.request("WPS_CANCEL"):
+        raise Exception("WPS_CANCEL succeeded unexpectedly")

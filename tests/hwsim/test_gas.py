@@ -86,7 +86,7 @@ def test_gas_generic(dev, apdev):
     params['hessid'] = bssid
     hostapd.add_ap(apdev[0]['ifname'], params)
 
-    dev[0].scan(freq="2412")
+    dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
     req = dev[0].request("GAS_REQUEST " + bssid + " 00 000102000101")
     if "FAIL" in req:
         raise Exception("GAS query request rejected")
@@ -103,7 +103,7 @@ def test_gas_concurrent_scan(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
 
     # get BSS entry available to allow GAS query
-    dev[0].scan(freq="2412")
+    dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
 
     logger.info("Request concurrent operations")
     req = dev[0].request("GAS_REQUEST " + bssid + " 00 000102000101")
@@ -140,7 +140,7 @@ def test_gas_concurrent_connect(dev, apdev):
     params['hessid'] = bssid
     hostapd.add_ap(apdev[0]['ifname'], params)
 
-    dev[0].scan(freq="2412")
+    dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
 
     logger.debug("Start concurrent connect and GAS request")
     dev[0].connect("test-gas", key_mgmt="WPA-EAP", eap="TTLS",
@@ -202,7 +202,7 @@ def test_gas_fragment(dev, apdev):
     hapd = start_ap(apdev[0])
     hapd.set("gas_frag_limit", "50")
 
-    dev[0].scan(freq="2412")
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412", force_scan=True)
     dev[0].request("FETCH_ANQP")
     for i in range(0, 13):
         ev = dev[0].wait_event(["RX-ANQP", "RX-HS20-ANQP"], timeout=5)
@@ -214,7 +214,7 @@ def test_gas_comeback_delay(dev, apdev):
     hapd = start_ap(apdev[0])
     hapd.set("gas_comeback_delay", "500")
 
-    dev[0].scan(freq="2412")
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412", force_scan=True)
     dev[0].request("FETCH_ANQP")
     for i in range(0, 6):
         ev = dev[0].wait_event(["RX-ANQP"], timeout=5)
@@ -226,8 +226,9 @@ def test_gas_anqp_get(dev, apdev):
     hapd = start_ap(apdev[0])
     bssid = apdev[0]['bssid']
 
-    dev[0].scan(freq="2412")
-    dev[0].request("ANQP_GET " + bssid + " 258,268,hs20:3,hs20:4")
+    dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
+    if "OK" not in dev[0].request("ANQP_GET " + bssid + " 258,268,hs20:3,hs20:4"):
+        raise Exception("ANQP_GET command failed")
 
     ev = dev[0].wait_event(["GAS-QUERY-START"], timeout=5)
     if ev is None:
@@ -253,7 +254,8 @@ def test_gas_anqp_get(dev, apdev):
     if ev is None or "WAN Metrics" not in ev:
         raise Exception("Did not receive WAN Metrics")
 
-    dev[0].request("HS20_ANQP_GET " + bssid + " 3,4")
+    if "OK" not in dev[0].request("HS20_ANQP_GET " + bssid + " 3,4"):
+        raise Exception("ANQP_GET command failed")
 
     ev = dev[0].wait_event(["RX-HS20-ANQP"], timeout=1)
     if ev is None or "Operator Friendly Name" not in ev:
@@ -273,7 +275,8 @@ def expect_gas_result(dev, result, status=None):
         raise Exception("Unexpected GAS status code")
 
 def anqp_get(dev, bssid, id):
-    dev.request("ANQP_GET " + bssid + " " + str(id))
+    if "OK" not in dev.request("ANQP_GET " + bssid + " " + str(id)):
+        raise Exception("ANQP_GET command failed")
     ev = dev.wait_event(["GAS-QUERY-START"], timeout=5)
     if ev is None:
         raise Exception("GAS query start timed out")
@@ -283,7 +286,7 @@ def test_gas_timeout(dev, apdev):
     hapd = start_ap(apdev[0])
     bssid = apdev[0]['bssid']
 
-    dev[0].scan(freq="2412")
+    dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
     hapd.set("ext_mgmt_frame_handling", "1")
 
     anqp_get(dev[0], bssid, 263)
@@ -377,7 +380,7 @@ def test_gas_invalid_response_type(dev, apdev):
     hapd = start_ap(apdev[0])
     bssid = apdev[0]['bssid']
 
-    dev[0].scan(freq="2412")
+    dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
     hapd.set("ext_mgmt_frame_handling", "1")
 
     anqp_get(dev[0], bssid, 263)
@@ -398,7 +401,7 @@ def test_gas_failure_status_code(dev, apdev):
     hapd = start_ap(apdev[0])
     bssid = apdev[0]['bssid']
 
-    dev[0].scan(freq="2412")
+    dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
     hapd.set("ext_mgmt_frame_handling", "1")
 
     anqp_get(dev[0], bssid, 263)
@@ -417,7 +420,7 @@ def test_gas_malformed(dev, apdev):
     hapd = start_ap(apdev[0])
     bssid = apdev[0]['bssid']
 
-    dev[0].scan(freq="2412")
+    dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
     hapd.set("ext_mgmt_frame_handling", "1")
 
     anqp_get(dev[0], bssid, 263)
@@ -495,7 +498,7 @@ def test_gas_malformed_comeback_resp(dev, apdev):
     hapd = start_ap(apdev[0])
     bssid = apdev[0]['bssid']
 
-    dev[0].scan(freq="2412")
+    dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
     hapd.set("ext_mgmt_frame_handling", "1")
 
     logger.debug("Non-zero status code in comeback response")
@@ -599,7 +602,7 @@ def test_gas_comeback_resp_additional_delay(dev, apdev):
     hapd = start_ap(apdev[0])
     bssid = apdev[0]['bssid']
 
-    dev[0].scan(freq="2412")
+    dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
     hapd.set("ext_mgmt_frame_handling", "1")
 
     query, dialog_token = init_gas(hapd, bssid, dev[0])
@@ -625,7 +628,7 @@ def test_gas_unknown_adv_proto(dev, apdev):
     params['hessid'] = bssid
     hostapd.add_ap(apdev[0]['ifname'], params)
 
-    dev[0].scan(freq="2412")
+    dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
     req = dev[0].request("GAS_REQUEST " + bssid + " 42 000102000101")
     if "FAIL" in req:
         raise Exception("GAS query request rejected")

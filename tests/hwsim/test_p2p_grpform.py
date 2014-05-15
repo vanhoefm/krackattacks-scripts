@@ -9,6 +9,7 @@ logger = logging.getLogger()
 import time
 import threading
 import Queue
+import os
 
 import hostapd
 import hwsim_utils
@@ -699,3 +700,24 @@ def test_grpform_goneg_fail_with_group_iface(dev):
     ev = dev[0].wait_global_event(["P2P-GO-NEG-FAILURE"], timeout=10)
     if ev is None:
         raise Exception("GO Negotiation failure timed out")
+
+def test_grpform_cred_ready_timeout(dev, apdev, params):
+    """P2P GO Negotiation wait for credentials to become ready [long]"""
+    if not params['long']:
+        logger.info("Skip test case with long duration due to --long not specified")
+        return "skip"
+
+    dev[1].p2p_listen()
+    addr1 = dev[1].p2p_dev_addr()
+    if not dev[0].discover_peer(addr1):
+        raise Exception("Peer " + addr1 + " not found")
+    start = os.times()[4]
+    if "OK" not in dev[0].request("P2P_CONNECT " + addr1 + " 12345670 display"):
+        raise Exception("Failed to initiate GO Neg")
+    ev = dev[0].wait_global_event(["P2P-GO-NEG-FAILURE"], timeout=200)
+    if ev is None:
+        raise Exception("GO Negotiation failure timed out")
+    end = os.times()[4]
+    logger.info("GO Negotiation wait time: {} seconds".format(end - start))
+    if end - start < 120:
+        raise Exception("Too short GO Negotiation wait time: {}".format(end - start))

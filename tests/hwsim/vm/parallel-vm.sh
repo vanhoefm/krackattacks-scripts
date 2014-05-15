@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 cd "$(dirname $0)"
 
@@ -14,13 +14,20 @@ mkdir -p $LOGS
 DATE=$(date +%s)
 
 for i in `seq 1 $NUM`; do
-    echo "Starting virtual machine $i/$NUM"
+    printf "\rStarting virtual machine $i/$NUM"
     ./vm-run.sh --ext srv.$i --split $i/$NUM $* >> $LOGS/parallel-$DATE.srv.$i 2>&1 &
 done
+echo
 
 echo "Waiting for virtual machines to complete testing"
-wait
-echo "Testing completed"
+count=$NUM
+for i in `seq 1 $NUM`; do
+    printf "\r$count VM(s) remaining   "
+    wait -n
+    count=$((count-1))
+done
+printf "\rTesting completed       "
+echo
 
 echo -n "PASS count: "
 grep ^PASS $LOGS/parallel-$DATE.srv.* | wc -l

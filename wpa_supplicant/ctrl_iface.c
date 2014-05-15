@@ -6085,6 +6085,39 @@ static void wpas_ctrl_iface_mgmt_tx_done(struct wpa_supplicant *wpa_s)
 	offchannel_send_action_done(wpa_s);
 }
 
+
+static int wpas_ctrl_iface_driver_event(struct wpa_supplicant *wpa_s, char *cmd)
+{
+	char *pos, *param;
+	union wpa_event_data event;
+	enum wpa_event_type ev;
+
+	/* <event name> [parameters..] */
+
+	wpa_dbg(wpa_s, MSG_DEBUG, "Testing - external driver event: %s", cmd);
+
+	pos = cmd;
+	param = os_strchr(pos, ' ');
+	if (param)
+		*param++ = '\0';
+
+	os_memset(&event, 0, sizeof(event));
+
+	if (os_strcmp(cmd, "INTERFACE_ENABLED") == 0) {
+		ev = EVENT_INTERFACE_ENABLED;
+	} else if (os_strcmp(cmd, "INTERFACE_DISABLED") == 0) {
+		ev = EVENT_INTERFACE_DISABLED;
+	} else {
+		wpa_dbg(wpa_s, MSG_DEBUG, "Testing - unknown driver event: %s",
+			cmd);
+		return -1;
+	}
+
+	wpa_supplicant_event(wpa_s, ev, &event);
+
+	return 0;
+}
+
 #endif /* CONFIG_TESTING_OPTIONS */
 
 
@@ -6649,6 +6682,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 			reply_len = -1;
 	} else if (os_strcmp(buf, "MGMT_TX_DONE") == 0) {
 		wpas_ctrl_iface_mgmt_tx_done(wpa_s);
+	} else if (os_strncmp(buf, "DRIVER_EVENT ", 13) == 0) {
+		if (wpas_ctrl_iface_driver_event(wpa_s, buf + 13) < 0)
+			reply_len = -1;
 #endif /* CONFIG_TESTING_OPTIONS */
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);

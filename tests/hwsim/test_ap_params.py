@@ -79,7 +79,9 @@ def test_ap_acl_accept(dev, apdev):
     params['ssid'] = ssid
     params['accept_mac_file'] = "hostapd.macaddr"
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")
     dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412")
+    dev[1].scan_for_bss(apdev[0]['bssid'], freq="2412")
     dev[1].connect(ssid, key_mgmt="NONE", scan_freq="2412")
     dev[0].request("REMOVE_NETWORK all")
     dev[1].request("REMOVE_NETWORK all")
@@ -98,7 +100,9 @@ def test_ap_acl_deny(dev, apdev):
     params['ssid'] = ssid
     params['deny_mac_file'] = "hostapd.macaddr"
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")
     dev[0].connect(ssid, key_mgmt="NONE", scan_freq="2412", wait_connect=False)
+    dev[1].scan_for_bss(apdev[0]['bssid'], freq="2412")
     dev[1].connect(ssid, key_mgmt="NONE", scan_freq="2412")
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
     if ev is not None:

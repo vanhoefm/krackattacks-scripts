@@ -3849,8 +3849,10 @@ static void p2p_ext_listen_timeout(void *eloop_ctx, void *timeout_ctx)
 				       p2p_ext_listen_timeout, p2p, NULL);
 	}
 
-	if (p2p->cfg->is_p2p_in_progress &&
-	    p2p->cfg->is_p2p_in_progress(p2p->cfg->cb_ctx)) {
+	if ((p2p->cfg->is_p2p_in_progress &&
+	     p2p->cfg->is_p2p_in_progress(p2p->cfg->cb_ctx)) ||
+	    (p2p->pending_action_state == P2P_PENDING_PD &&
+	     p2p->pd_retries > 0)) {
 		p2p_dbg(p2p, "Operation in progress - skip Extended Listen timeout (%s)",
 			p2p_state_txt(p2p->state));
 		return;

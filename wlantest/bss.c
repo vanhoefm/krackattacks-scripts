@@ -154,6 +154,26 @@ void bss_update(struct wlantest *wt, struct wlantest_bss *bss,
 		bss_add_pmk(wt, bss);
 	}
 
+	if (elems->osen == NULL) {
+		if (bss->osenie[0]) {
+			add_note(wt, MSG_INFO, "BSS " MACSTR
+				 " - OSEN IE removed", MAC2STR(bss->bssid));
+			bss->rsnie[0] = 0;
+			update = 1;
+		}
+	} else {
+		if (bss->osenie[0] == 0 ||
+		    os_memcmp(bss->osenie, elems->osen - 2,
+			      elems->osen_len + 2) != 0) {
+			wpa_printf(MSG_INFO, "BSS " MACSTR " - OSEN IE "
+				   "stored", MAC2STR(bss->bssid));
+			wpa_hexdump(MSG_DEBUG, "OSEN IE", elems->osen - 2,
+				    elems->osen_len + 2);
+			update = 1;
+		}
+		os_memcpy(bss->osenie, elems->osen - 2,
+			  elems->osen_len + 2);
+	}
 
 	if (elems->rsn_ie == NULL) {
 		if (bss->rsnie[0]) {
@@ -238,25 +258,33 @@ void bss_update(struct wlantest *wt, struct wlantest_bss *bss,
 		}
 	}
 
+	if (bss->osenie[0]) {
+		bss->proto |= WPA_PROTO_OSEN;
+		bss->pairwise_cipher |= WPA_CIPHER_CCMP;
+		bss->group_cipher |= WPA_CIPHER_CCMP;
+		bss->key_mgmt |= WPA_KEY_MGMT_OSEN;
+	}
+
 	if (!(bss->proto & WPA_PROTO_RSN) ||
 	    !(bss->rsn_capab & WPA_CAPABILITY_MFPC))
 		bss->mgmt_group_cipher = 0;
 
-	if (!bss->wpaie[0] && !bss->rsnie[0] &&
+	if (!bss->wpaie[0] && !bss->rsnie[0] && !bss->osenie[0] &&
 	    (bss->capab_info & WLAN_CAPABILITY_PRIVACY))
 		bss->group_cipher = WPA_CIPHER_WEP40;
 
 	wpa_printf(MSG_INFO, "BSS " MACSTR
-		   " proto=%s%s%s"
+		   " proto=%s%s%s%s"
 		   "pairwise=%s%s%s%s"
 		   "group=%s%s%s%s%s%s"
 		   "mgmt_group_cipher=%s"
-		   "key_mgmt=%s%s%s%s%s%s%s%s"
+		   "key_mgmt=%s%s%s%s%s%s%s%s%s"
 		   "rsn_capab=%s%s%s%s%s",
 		   MAC2STR(bss->bssid),
 		   bss->proto == 0 ? "OPEN " : "",
 		   bss->proto & WPA_PROTO_WPA ? "WPA " : "",
 		   bss->proto & WPA_PROTO_RSN ? "WPA2 " : "",
+		   bss->proto & WPA_PROTO_OSEN ? "OSEN " : "",
 		   bss->pairwise_cipher == 0 ? "N/A " : "",
 		   bss->pairwise_cipher & WPA_CIPHER_NONE ? "NONE " : "",
 		   bss->pairwise_cipher & WPA_CIPHER_TKIP ? "TKIP " : "",
@@ -279,6 +307,7 @@ void bss_update(struct wlantest *wt, struct wlantest_bss *bss,
 		   "EAP-SHA256 " : "",
 		   bss->key_mgmt & WPA_KEY_MGMT_PSK_SHA256 ?
 		   "PSK-SHA256 " : "",
+		   bss->key_mgmt & WPA_KEY_MGMT_OSEN ? "OSEN " : "",
 		   bss->rsn_capab & WPA_CAPABILITY_PREAUTH ? "PREAUTH " : "",
 		   bss->rsn_capab & WPA_CAPABILITY_NO_PAIRWISE ?
 		   "NO_PAIRWISE " : "",

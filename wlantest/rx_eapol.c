@@ -144,8 +144,8 @@ static void derive_ptk(struct wlantest *wt, struct wlantest_bss *bss,
 {
 	struct wlantest_pmk *pmk;
 
-	wpa_printf(MSG_DEBUG, "Trying to derive PTK for " MACSTR,
-		   MAC2STR(sta->addr));
+	wpa_printf(MSG_DEBUG, "Trying to derive PTK for " MACSTR " (ver %u)",
+		   MAC2STR(sta->addr), ver);
 	dl_list_for_each(pmk, &bss->pmk, struct wlantest_pmk, list) {
 		wpa_printf(MSG_DEBUG, "Try per-BSS PMK");
 		if (try_pmk(wt, bss, sta, ver, data, len, pmk) == 0)
@@ -371,6 +371,9 @@ static u8 * decrypt_eapol_key_data(struct wlantest *wt, const u8 *kek, u16 ver,
 		return decrypt_eapol_key_data_rc4(wt, kek, hdr, len);
 	case WPA_KEY_INFO_TYPE_HMAC_SHA1_AES:
 	case WPA_KEY_INFO_TYPE_AES_128_CMAC:
+		return decrypt_eapol_key_data_aes(wt, kek, hdr, len);
+	case WPA_KEY_INFO_TYPE_AKM_DEFINED:
+		/* For now, assume this is OSEN */
 		return decrypt_eapol_key_data_aes(wt, kek, hdr, len);
 	default:
 		add_note(wt, MSG_INFO,
@@ -916,7 +919,8 @@ static void rx_data_eapol_key(struct wlantest *wt, const u8 *dst,
 
 	if (ver != WPA_KEY_INFO_TYPE_HMAC_MD5_RC4 &&
 	    ver != WPA_KEY_INFO_TYPE_HMAC_SHA1_AES &&
-	    ver != WPA_KEY_INFO_TYPE_AES_128_CMAC) {
+	    ver != WPA_KEY_INFO_TYPE_AES_128_CMAC &&
+	    ver != WPA_KEY_INFO_TYPE_AKM_DEFINED) {
 		wpa_printf(MSG_INFO, "Unsupported EAPOL-Key Key Descriptor "
 			   "Version %u from " MACSTR, ver, MAC2STR(src));
 		return;

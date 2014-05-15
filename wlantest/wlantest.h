@@ -61,6 +61,7 @@ struct wlantest_sta {
 	} state;
 	u16 aid;
 	u8 rsnie[257]; /* WPA/RSN IE */
+	u8 osenie[257]; /* OSEN IE */
 	int proto;
 	int pairwise_cipher;
 	int group_cipher;
@@ -130,6 +131,7 @@ struct wlantest_bss {
 	int parse_error_reported;
 	u8 wpaie[257];
 	u8 rsnie[257];
+	u8 osenie[257];
 	int proto;
 	int pairwise_cipher;
 	int group_cipher;

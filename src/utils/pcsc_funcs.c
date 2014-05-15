@@ -1237,6 +1237,7 @@ int scard_gsm_auth(struct scard_data *scard, const unsigned char *_rand,
 		cmd[4] = 17;
 		cmd[5] = 16;
 		os_memcpy(cmd + 6, _rand, 16);
+		get_resp[0] = USIM_CLA;
 	}
 	len = sizeof(resp);
 	ret = scard_transmit(scard, cmd, cmdlen, resp, &len);

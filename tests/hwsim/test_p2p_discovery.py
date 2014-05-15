@@ -100,8 +100,10 @@ def test_discovery_group_client(dev):
     logger.info("Client connected")
     hwsim_utils.test_connectivity_p2p(dev[0], dev[1])
     logger.info("Try to discover a P2P client in a group")
-    if not dev[2].discover_peer(dev[1].p2p_dev_addr(), social=False):
-        raise Exception("Could not discover group client")
+    if not dev[2].discover_peer(dev[1].p2p_dev_addr(), social=False, timeout=10):
+        if not dev[2].discover_peer(dev[1].p2p_dev_addr(), social=False, timeout=10):
+            if not dev[2].discover_peer(dev[1].p2p_dev_addr(), social=False, timeout=10):
+                raise Exception("Could not discover group client")
 
     # This is not really perfect, but something to get a bit more testing
     # coverage.. For proper discoverability mechanism validation, the P2P

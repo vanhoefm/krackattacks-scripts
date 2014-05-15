@@ -6,6 +6,7 @@
 
 import logging
 logger = logging.getLogger()
+import time
 
 import hwsim_utils
 from wpasupplicant import WpaSupplicant
@@ -239,3 +240,31 @@ def test_discovery_social_plus_one(dev):
         raise Exception("GO not found in progressive scan")
     if dev[1].peer_known(go):
         raise Exception("GO found in social-only scan")
+
+def test_discovery_and_interface_disabled(dev):
+    """P2P device discovery with interface getting didabled"""
+    try:
+        if "OK" not in dev[0].p2p_find():
+            raise Exception("Failed to start P2P find")
+        ev = dev[0].wait_event(["CTRL-EVENT-SCAN-STARTED"])
+        if ev is None:
+            raise Exception("Scan did not start")
+        dev[0].request("DRIVER_EVENT INTERFACE_DISABLED")
+        time.sleep(1)
+
+        # verify that P2P_FIND is rejected
+        if "FAIL" not in dev[0].p2p_find():
+            raise Exception("New P2P_FIND request was accepted unexpectedly")
+
+        dev[0].request("DRIVER_EVENT INTERFACE_ENABLED")
+        time.sleep(3)
+        dev[0].scan(freq="2412")
+        if "OK" not in dev[0].p2p_find():
+            raise Exception("Failed to start P2P find")
+        dev[0].dump_monitor()
+        dev[1].p2p_listen()
+        ev = dev[0].wait_global_event(["P2P-DEVICE-FOUND"], timeout=15)
+        if ev is None:
+            raise Exception("Peer not found")
+    finally:
+        dev[0].request("DRIVER_EVENT INTERFACE_ENABLED")

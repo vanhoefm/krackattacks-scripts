@@ -1115,6 +1115,9 @@ int tncs_global_init(void)
 {
 	struct tnc_if_imv *imv;
 
+	if (tncs_global_data)
+		return 0;
+
 	tncs_global_data = os_zalloc(sizeof(*tncs_global_data));
 	if (tncs_global_data == NULL)
 		return -1;

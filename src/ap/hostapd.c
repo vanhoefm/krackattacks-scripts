@@ -14,6 +14,7 @@
 #include "common/wpa_ctrl.h"
 #include "radius/radius_client.h"
 #include "radius/radius_das.h"
+#include "eap_server/tncs.h"
 #include "hostapd.h"
 #include "authsrv.h"
 #include "sta_info.h"
@@ -672,6 +673,13 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 
 	wpa_printf(MSG_DEBUG, "%s(hapd=%p (%s), first=%d)",
 		   __func__, hapd, hapd->conf->iface, first);
+
+#ifdef EAP_SERVER_TNC
+	if (hapd->conf->tnc && tncs_global_init() < 0) {
+		wpa_printf(MSG_ERROR, "Failed to initialize TNCS");
+		return -1;
+	}
+#endif /* EAP_SERVER_TNC */
 
 	if (hapd->started) {
 		wpa_printf(MSG_ERROR, "%s: Interface %s was already started",

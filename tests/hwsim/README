@@ -51,9 +51,20 @@ make
 cd ../mac80211_hwsim/tools
 make
 
+Alternatively, the build.sh script here can be used to run these steps
+with conditional creation of .config files only if they do not exist.
+
 The test scripts can find the binaries in the locations where they were
 built. It is also possible to install hwsim_test and wlantest_cli
 somewhat on the path to use pre-built tools.
+
+Please note that some of the configuration parameters used to enable
+more testing coverage may require development packages that may not be
+installed by default in many distributions. For example, following
+Debian/Ubuntu packages are likely to be needed:
+- binutils-dev
+- libsqlite3-dev
+- libpcap-dev
 
 
 wpaspy
@@ -101,6 +112,16 @@ any wireless LAN driver before running the tests and make sure that
 wlan0..4 gets assigned as the interface names for the mac80211_hwsim
 radios. It may also be possible to rename the interface expectations in
 run-tests.py to allow other names to be used.
+
+Please also note that some commonly enabled tools, like NetworkManager,
+may end up trying to control new network interfaces automatically. This
+can result in conflicts with the test scripts and you may need to
+disable such network services or at least mark the mac80211_hwsim wlan#
+interfaces as umanaged. As an example, this can be done in
+/etc/NetworkManager/NetworkManager.conf with following addition:
+
+[keyfile]
+unmanaged-devices=mac:02:00:00:00:00:00;mac:02:00:00:00:01:00;mac:02:00:00:00:02:00;mac:02:00:00:00:03:00;mac:02:00:00:00:04:00
 
 
 Running tests

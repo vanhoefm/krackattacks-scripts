@@ -32,10 +32,43 @@ typedef TNC_Result (*TNC_TNCS_BindFunctionPointer)(
 	TNC_IMVID imvID,
 	char *functionName,
 	void **pOutfunctionPointer);
+typedef TNC_Result (*TNC_TNCS_ReportMessageTypesPointer)(
+	TNC_IMVID imvID,
+	TNC_MessageTypeList supportedTypes,
+	TNC_UInt32 typeCount);
+typedef TNC_Result (*TNC_TNCS_SendMessagePointer)(
+	TNC_IMVID imvID,
+	TNC_ConnectionID connectionID,
+	TNC_BufferReference message,
+	TNC_UInt32 messageLength,
+	TNC_MessageType messageType);
+typedef TNC_Result (*TNC_TNCS_RequestHandshakeRetryPointer)(
+	TNC_IMVID imvID,
+	TNC_ConnectionID connectionID,
+	TNC_RetryReason reason);
+typedef TNC_Result (*TNC_TNCS_ProvideRecommendationPointer)(
+	TNC_IMVID imvID,
+	TNC_ConnectionID connectionID,
+	TNC_IMV_Action_Recommendation recommendation,
+	TNC_IMV_Evaluation_Result evaluation);
 typedef TNC_Result (*TNC_TNCC_BindFunctionPointer)(
 	TNC_IMCID imcID,
 	char *functionName,
 	void **pOutfunctionPointer);
+typedef TNC_Result (*TNC_TNCC_SendMessagePointer)(
+	TNC_IMCID imcID,
+	TNC_ConnectionID connectionID,
+	TNC_BufferReference message,
+	TNC_UInt32 messageLength,
+	TNC_MessageType messageType);
+typedef TNC_Result (*TNC_TNCC_ReportMessageTypesPointer)(
+	TNC_IMCID imcID,
+	TNC_MessageTypeList supportedTypes,
+	TNC_UInt32 typeCount);
+typedef TNC_Result (*TNC_TNCC_RequestHandshakeRetryPointer)(
+	TNC_IMCID imcID,
+	TNC_ConnectionID connectionID,
+	TNC_RetryReason reason);
 
 #define TNC_IFIMV_VERSION_1 1
 #define TNC_IFIMC_VERSION_1 1

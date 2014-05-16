@@ -11,6 +11,7 @@
 
 #include "common.h"
 #include "base64.h"
+#include "common/tnc.h"
 #include "tncs.h"
 #include "eap_common/eap_tlv_common.h"
 #include "eap_common/eap_defs.h"
@@ -32,75 +33,6 @@
 #define IF_TNCCS_END "\n</TNCCS-Batch>"
 
 /* TNC IF-IMV */
-
-typedef unsigned long TNC_UInt32;
-typedef unsigned char *TNC_BufferReference;
-
-typedef TNC_UInt32 TNC_IMVID;
-typedef TNC_UInt32 TNC_ConnectionID;
-typedef TNC_UInt32 TNC_ConnectionState;
-typedef TNC_UInt32 TNC_RetryReason;
-typedef TNC_UInt32 TNC_IMV_Action_Recommendation;
-typedef TNC_UInt32 TNC_IMV_Evaluation_Result;
-typedef TNC_UInt32 TNC_MessageType;
-typedef TNC_MessageType *TNC_MessageTypeList;
-typedef TNC_UInt32 TNC_VendorID;
-typedef TNC_UInt32 TNC_Subtype;
-typedef TNC_UInt32 TNC_Version;
-typedef TNC_UInt32 TNC_Result;
-typedef TNC_UInt32 TNC_AttributeID;
-
-typedef TNC_Result (*TNC_TNCS_BindFunctionPointer)(
-	TNC_IMVID imvID,
-	char *functionName,
-	void **pOutfunctionPointer);
-
-#define TNC_RESULT_SUCCESS 0
-#define TNC_RESULT_NOT_INITIALIZED 1
-#define TNC_RESULT_ALREADY_INITIALIZED 2
-#define TNC_RESULT_NO_COMMON_VERSION 3
-#define TNC_RESULT_CANT_RETRY 4
-#define TNC_RESULT_WONT_RETRY 5
-#define TNC_RESULT_INVALID_PARAMETER 6
-#define TNC_RESULT_CANT_RESPOND 7
-#define TNC_RESULT_ILLEGAL_OPERATION 8
-#define TNC_RESULT_OTHER 9
-#define TNC_RESULT_FATAL 10
-
-#define TNC_CONNECTION_STATE_CREATE 0
-#define TNC_CONNECTION_STATE_HANDSHAKE 1
-#define TNC_CONNECTION_STATE_ACCESS_ALLOWED 2
-#define TNC_CONNECTION_STATE_ACCESS_ISOLATED 3
-#define TNC_CONNECTION_STATE_ACCESS_NONE 4
-#define TNC_CONNECTION_STATE_DELETE 5
-
-#define TNC_IFIMV_VERSION_1 1
-
-#define TNC_VENDORID_ANY ((TNC_VendorID) 0xffffff)
-#define TNC_SUBTYPE_ANY ((TNC_Subtype) 0xff)
-
-/* TNCC-TNCS Message Types */
-#define TNC_TNCCS_RECOMMENDATION		0x00000001
-#define TNC_TNCCS_ERROR				0x00000002
-#define TNC_TNCCS_PREFERREDLANGUAGE		0x00000003
-#define TNC_TNCCS_REASONSTRINGS			0x00000004
-
-/* Possible TNC_IMV_Action_Recommendation values: */
-enum IMV_Action_Recommendation {
-	TNC_IMV_ACTION_RECOMMENDATION_ALLOW,
-	TNC_IMV_ACTION_RECOMMENDATION_NO_ACCESS,
-	TNC_IMV_ACTION_RECOMMENDATION_ISOLATE,
-	TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION
-};
-
-/* Possible TNC_IMV_Evaluation_Result values: */
-enum IMV_Evaluation_Result {
-	TNC_IMV_EVALUATION_RESULT_COMPLIANT,
-	TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR,
-	TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MAJOR,
-	TNC_IMV_EVALUATION_RESULT_ERROR,
-	TNC_IMV_EVALUATION_RESULT_DONT_KNOW
-};
 
 struct tnc_if_imv {
 	struct tnc_if_imv *next;

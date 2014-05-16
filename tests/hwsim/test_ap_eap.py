@@ -302,6 +302,54 @@ def test_ap_wpa2_eap_aka_config(dev, apdev):
                 password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581:000000000123",
                 anonymous_identity="2345678")
 
+def test_ap_wpa2_eap_aka_ext(dev, apdev):
+    """WPA2-Enterprise connection using EAP-AKA and external UMTS auth"""
+    if not os.path.exists("/tmp/hlr_auc_gw.sock"):
+        logger.info("No hlr_auc_gw available");
+        return "skip"
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].request("SET external_sim 1")
+    id = dev[0].connect("test-wpa2-eap", eap="AKA", key_mgmt="WPA-EAP",
+                        identity="0232010000000000",
+                        password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581:000000000123",
+                        wait_connect=False, scan_freq="2412")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=15)
+    if ev is None:
+        raise Exception("Network connected timed out")
+
+    ev = dev[0].wait_event(["CTRL-REQ-SIM"], timeout=15)
+    if ev is None:
+        raise Exception("Wait for external SIM processing request timed out")
+    p = ev.split(':', 2)
+    if p[1] != "UMTS-AUTH":
+        raise Exception("Unexpected CTRL-REQ-SIM type")
+    rid = p[0].split('-')[3]
+
+    # IK:CK:RES
+    resp = "00112233445566778899aabbccddeeff:00112233445566778899aabbccddeeff:0011223344"
+    # This will fail during processing, but the ctrl_iface command succeeds
+    dev[0].request("CTRL-RSP-SIM-" + rid + ":GSM-AUTH:" + resp)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=15)
+    if ev is None:
+        raise Exception("EAP failure not reported")
+    dev[0].request("DISCONNECT")
+
+    dev[0].request("REASSOCIATE")
+    ev = dev[0].wait_event(["CTRL-REQ-SIM"], timeout=15)
+    if ev is None:
+        raise Exception("Wait for external SIM processing request timed out")
+    p = ev.split(':', 2)
+    if p[1] != "UMTS-AUTH":
+        raise Exception("Unexpected CTRL-REQ-SIM type")
+    rid = p[0].split('-')[3]
+    # This will fail during UMTS auth validation
+    if "OK" not in dev[0].request("CTRL-RSP-SIM-" + rid + ":UMTS-AUTH:" + resp):
+        raise Exception("CTRL-RSP-SIM failed")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=15)
+    if ev is None:
+        raise Exception("EAP failure not reported")
+
 def test_ap_wpa2_eap_aka_prime(dev, apdev):
     """WPA2-Enterprise connection using EAP-AKA'"""
     if not os.path.exists("/tmp/hlr_auc_gw.sock"):

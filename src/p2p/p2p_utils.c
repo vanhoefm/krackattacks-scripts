@@ -384,23 +384,14 @@ unsigned int p2p_get_pref_freq(struct p2p_data *p2p,
 			       const struct p2p_channels *channels)
 {
 	unsigned int i;
-	int freq = 0;
-
-	if (channels == NULL) {
-		if (p2p->cfg->num_pref_chan) {
-			freq = p2p_channel_to_freq(
-				p2p->cfg->pref_chan[0].op_class,
-				p2p->cfg->pref_chan[0].chan);
-			if (freq < 0)
-				freq = 0;
-		}
-		return freq;
-	}
+	int freq;
 
 	for (i = 0; p2p->cfg->pref_chan && i < p2p->cfg->num_pref_chan; i++) {
 		freq = p2p_channel_to_freq(p2p->cfg->pref_chan[i].op_class,
 					   p2p->cfg->pref_chan[i].chan);
-		if (p2p_channels_includes_freq(channels, freq))
+		if (freq <= 0)
+			continue;
+		if (!channels || p2p_channels_includes_freq(channels, freq))
 			return freq;
 	}
 

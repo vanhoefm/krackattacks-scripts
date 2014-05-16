@@ -19,7 +19,9 @@
 /* TODO: TNCS must be thread-safe; review the code and add locking etc. if
  * needed.. */
 
+#ifndef TNC_CONFIG_FILE
 #define TNC_CONFIG_FILE "/etc/tnc_config"
+#endif /* TNC_CONFIG_FILE */
 #define IF_TNCCS_START \
 "<?xml version=\"1.0\"?>\n" \
 "<TNCCS-Batch BatchId=\"%d\" Recipient=\"TNCS\" " \

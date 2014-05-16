@@ -25,7 +25,9 @@
 #endif /* UNICODE */
 
 
+#ifndef TNC_CONFIG_FILE
 #define TNC_CONFIG_FILE "/etc/tnc_config"
+#endif /* TNC_CONFIG_FILE */
 #define TNC_WINREG_PATH TEXT("SOFTWARE\\Trusted Computing Group\\TNC\\IMCs")
 #define IF_TNCCS_START \
 "<?xml version=\"1.0\"?>\n" \

@@ -607,6 +607,35 @@ def test_ap_wpa2_eap_ttls_eap_mschapv2(dev, apdev):
                 ca_cert="auth_serv/ca.pem", phase2="autheap=MSCHAPV2",
                 expect_failure=True)
 
+def test_ap_wpa2_eap_ttls_eap_aka(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TTLS/EAP-AKA"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "TTLS", "0232010000000000",
+                anonymous_identity="0232010000000000@ttls",
+                password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581:000000000123",
+                ca_cert="auth_serv/ca.pem", phase2="autheap=AKA")
+
+def test_ap_wpa2_eap_peap_eap_aka(dev, apdev):
+    """WPA2-Enterprise connection using EAP-PEAP/EAP-AKA"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "PEAP", "0232010000000000",
+                anonymous_identity="0232010000000000@peap",
+                password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581:000000000123",
+                ca_cert="auth_serv/ca.pem", phase2="auth=AKA")
+
+def test_ap_wpa2_eap_fast_eap_aka(dev, apdev):
+    """WPA2-Enterprise connection using EAP-FAST/EAP-AKA"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "FAST", "0232010000000000",
+                anonymous_identity="0232010000000000@fast",
+                password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581:000000000123",
+                phase1="fast_provisioning=2",
+                pac_file="blob://fast_pac_auth_aka",
+                ca_cert="auth_serv/ca.pem", phase2="auth=AKA")
+
 def test_ap_wpa2_eap_peap_eap_mschapv2(dev, apdev):
     """WPA2-Enterprise connection using EAP-PEAP/EAP-MSCHAPv2"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")

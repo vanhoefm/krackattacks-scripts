@@ -445,6 +445,19 @@ def test_ap_wpa2_eap_ttls_pap(dev, apdev):
     check_mib(dev[0], [ ("dot11RSNAAuthenticationSuiteRequested", "00-0f-ac-1"),
                         ("dot11RSNAAuthenticationSuiteSelected", "00-0f-ac-1") ])
 
+def test_ap_wpa2_eap_ttls_pap_incorrect_password(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TTLS/PAP - incorrect password"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "TTLS", "pap user",
+                anonymous_identity="ttls", password="wrong",
+                ca_cert="auth_serv/ca.pem", phase2="auth=PAP",
+                expect_failure=True)
+    eap_connect(dev[1], apdev[0], "TTLS", "user",
+                anonymous_identity="ttls", password="password",
+                ca_cert="auth_serv/ca.pem", phase2="auth=PAP",
+                expect_failure=True)
+
 def test_ap_wpa2_eap_ttls_chap(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/CHAP"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
@@ -455,6 +468,19 @@ def test_ap_wpa2_eap_ttls_chap(dev, apdev):
                 altsubject_match="EMAIL:noone@example.com;URI:http://example.com/;DNS:server.w1.fi")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
     eap_reauth(dev[0], "TTLS")
+
+def test_ap_wpa2_eap_ttls_chap_incorrect_password(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TTLS/CHAP - incorrect password"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "TTLS", "chap user",
+                anonymous_identity="ttls", password="wrong",
+                ca_cert="auth_serv/ca.pem", phase2="auth=CHAP",
+                expect_failure=True)
+    eap_connect(dev[1], apdev[0], "TTLS", "user",
+                anonymous_identity="ttls", password="password",
+                ca_cert="auth_serv/ca.pem", phase2="auth=CHAP",
+                expect_failure=True)
 
 def test_ap_wpa2_eap_ttls_mschap(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/MSCHAP"""
@@ -471,6 +497,23 @@ def test_ap_wpa2_eap_ttls_mschap(dev, apdev):
                 anonymous_identity="ttls", password="password",
                 ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAP",
                 fragment_size="200")
+
+def test_ap_wpa2_eap_ttls_mschap_incorrect_password(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TTLS/CHAP - incorrect password"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "TTLS", "mschap user",
+                anonymous_identity="ttls", password="wrong",
+                ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAP",
+                expect_failure=True)
+    eap_connect(dev[1], apdev[0], "TTLS", "user",
+                anonymous_identity="ttls", password="password",
+                ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAP",
+                expect_failure=True)
+    eap_connect(dev[2], apdev[0], "TTLS", "no such user",
+                anonymous_identity="ttls", password="password",
+                ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAP",
+                expect_failure=True)
 
 def test_ap_wpa2_eap_ttls_mschapv2(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/MSCHAPv2"""
@@ -501,10 +544,16 @@ def test_ap_wpa2_eap_ttls_mschapv2(dev, apdev):
                 password_hex="hash:8846f7eaee8fb117ad06bdd830b7586c",
                 ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2")
 
-    logger.info("Negative test with incorrect password")
-    dev[0].request("REMOVE_NETWORK all")
+def test_ap_wpa2_eap_ttls_mschapv2_incorrect_password(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TTLS/MSCHAPv2 - incorrect password"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], apdev[0], "TTLS", "DOMAIN\mschapv2 user",
                 anonymous_identity="ttls", password="password1",
+                ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                expect_failure=True)
+    eap_connect(dev[1], apdev[0], "TTLS", "user",
+                anonymous_identity="ttls", password="password",
                 ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
                 expect_failure=True)
 

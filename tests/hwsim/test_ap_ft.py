@@ -1,5 +1,5 @@
 # Fast BSS Transition tests
-# Copyright (c) 2013, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -323,6 +323,24 @@ def test_ap_ft_mismatching_rrb_key_pull(dev, apdev):
     hostapd.add_ap(apdev[1]['ifname'], params)
 
     run_roams(dev[0], apdev, ssid, passphrase, over_ds=True, fail_test=True)
+
+def test_ap_ft_mismatching_r0kh_id_pull(dev, apdev):
+    """WPA2-PSK-FT AP over DS with mismatching R0KH-ID (pull)"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    params["pmk_r1_push"] = "0"
+    params["nas_identifier"] = "nas0.w1.fi"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2")
+
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    params["pmk_r1_push"] = "0"
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    dev[0].scan_for_bss(apdev[1]['bssid'], freq="2412")
+    dev[0].roam_over_ds(apdev[1]['bssid'], fail_test=True)
 
 def test_ap_ft_mismatching_rrb_r0kh_push(dev, apdev):
     """WPA2-PSK-FT AP over DS with mismatching R0KH key (push)"""

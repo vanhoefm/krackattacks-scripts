@@ -362,6 +362,15 @@ def test_ap_wpa2_eap_aka_prime(dev, apdev):
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
     eap_reauth(dev[0], "AKA'")
 
+    logger.info("EAP-AKA' bidding protection when EAP-AKA enabled as well")
+    dev[1].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="AKA' AKA",
+                   identity="6555444333222111@both",
+                   password="5122250214c33e723a5dd523fc145fc0:981d464c7c52eb6e5036234984ad0bcf:000000000123",
+                   wait_connect=False, scan_freq="2412")
+    ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Connection with the AP timed out")
+
     logger.info("Negative test with incorrect key")
     dev[0].request("REMOVE_NETWORK all")
     eap_connect(dev[0], apdev[0], "AKA'", "6555444333222111",

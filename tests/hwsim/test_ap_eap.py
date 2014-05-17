@@ -685,6 +685,15 @@ def test_ap_wpa2_eap_peap_crypto_binding(dev, apdev):
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
     eap_reauth(dev[0], "PEAP")
 
+    eap_connect(dev[1], apdev[0], "PEAP", "user", password="password",
+                ca_cert="auth_serv/ca.pem",
+                phase1="peapver=0 crypto_binding=1",
+                phase2="auth=MSCHAPV2")
+    eap_connect(dev[2], apdev[0], "PEAP", "user", password="password",
+                ca_cert="auth_serv/ca.pem",
+                phase1="peapver=0 crypto_binding=0",
+                phase2="auth=MSCHAPV2")
+
 def test_ap_wpa2_eap_peap_eap_tls(dev, apdev):
     """WPA2-Enterprise connection using EAP-PEAP/EAP-TLS"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")

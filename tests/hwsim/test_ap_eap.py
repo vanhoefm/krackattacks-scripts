@@ -10,7 +10,7 @@ import time
 import subprocess
 import logging
 logger = logging.getLogger()
-import os.path
+import os
 
 import hwsim_utils
 import hostapd
@@ -1326,6 +1326,45 @@ def test_ap_wpa2_eap_fast_mschapv2_unauth_prov(dev, apdev):
                 phase1="fast_provisioning=1", pac_file="blob://fast_pac")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
     eap_reauth(dev[0], "FAST")
+
+def test_ap_wpa2_eap_fast_pac_file(dev, apdev, params):
+    """WPA2-Enterprise connection using EAP-FAST/MSCHAPv2 and PAC file"""
+    pac_file = os.path.join(params['logdir'], "fast.pac")
+    pac_file2 = os.path.join(params['logdir'], "fast-bin.pac")
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    try:
+        eap_connect(dev[0], apdev[0], "FAST", "user",
+                    anonymous_identity="FAST", password="password",
+                    ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                    phase1="fast_provisioning=1", pac_file=pac_file)
+        with open(pac_file, "r") as f:
+            data = f.read()
+            if "wpa_supplicant EAP-FAST PAC file - version 1" not in data:
+                raise Exception("PAC file header missing")
+            if "PAC-Key=" not in data:
+                raise Exception("PAC-Key missing from PAC file")
+        dev[0].request("REMOVE_NETWORK all")
+        eap_connect(dev[0], apdev[0], "FAST", "user",
+                    anonymous_identity="FAST", password="password",
+                    ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                    pac_file=pac_file)
+
+        eap_connect(dev[1], apdev[0], "FAST", "user",
+                    anonymous_identity="FAST", password="password",
+                    ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                    phase1="fast_provisioning=1 fast_pac_format=binary",
+                    pac_file=pac_file2)
+        dev[1].request("REMOVE_NETWORK all")
+        eap_connect(dev[1], apdev[0], "FAST", "user",
+                    anonymous_identity="FAST", password="password",
+                    ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                    phase1="fast_pac_format=binary",
+                    pac_file=pac_file2)
+    finally:
+        subprocess.call(['sudo', 'rm', pac_file])
+        subprocess.call(['sudo', 'rm', pac_file2])
 
 def test_ap_wpa2_eap_fast_binary_pac(dev, apdev):
     """WPA2-Enterprise connection using EAP-FAST and binary PAC format"""

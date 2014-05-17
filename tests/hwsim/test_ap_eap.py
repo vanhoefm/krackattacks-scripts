@@ -694,6 +694,37 @@ def test_ap_wpa2_eap_peap_crypto_binding(dev, apdev):
                 phase1="peapver=0 crypto_binding=0",
                 phase2="auth=MSCHAPV2")
 
+def test_ap_wpa2_eap_peap_params(dev, apdev):
+    """WPA2-Enterprise connection using EAP-PEAPv0/EAP-MSCHAPv2 and various parameters"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "PEAP", "user",
+                anonymous_identity="peap", password="password",
+                ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                phase1="peapver=0 peaplabel=1",
+                expect_failure=True)
+    dev[0].request("REMOVE_NETWORK all")
+    eap_connect(dev[1], apdev[0], "PEAP", "user", password="password",
+                ca_cert="auth_serv/ca.pem",
+                phase1="peap_outer_success=1",
+                phase2="auth=MSCHAPV2")
+    eap_connect(dev[2], apdev[0], "PEAP", "user", password="password",
+                ca_cert="auth_serv/ca.pem",
+                phase1="peap_outer_success=2",
+                phase2="auth=MSCHAPV2")
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="PEAP",
+                   identity="user",
+                   anonymous_identity="peap", password="password",
+                   ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                   phase1="peapver=1 peaplabel=1",
+                   wait_connect=False, scan_freq="2412")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=15)
+    if ev is None:
+        raise Exception("No EAP success seen")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
+    if ev is not None:
+        raise Exception("Unexpected connection")
+
 def test_ap_wpa2_eap_peap_eap_tls(dev, apdev):
     """WPA2-Enterprise connection using EAP-PEAP/EAP-TLS"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")

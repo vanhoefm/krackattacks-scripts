@@ -113,6 +113,11 @@ int pkcs1_v15_private_key_decrypt(struct crypto_rsa_key *key,
 		pos++;
 	if (pos == end)
 		return -1;
+	if (pos - out - 2 < 8) {
+		/* PKCS #1 v1.5, 8.1: At least eight octets long PS */
+		wpa_printf(MSG_INFO, "LibTomCrypt: Too short padding");
+		return -1;
+	}
 	pos++;
 
 	*outlen -= pos - out;

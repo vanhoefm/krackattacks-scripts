@@ -365,6 +365,14 @@ struct wpa_ssid_value {
 	size_t ssid_len;
 };
 
+#define WPA_FREQ_USED_BY_INFRA_STATION BIT(0)
+#define WPA_FREQ_USED_BY_P2P_CLIENT BIT(1)
+
+struct wpa_used_freq_data {
+	int freq;
+	unsigned int flags;
+};
+
 /**
  * struct wpa_supplicant - Internal data for wpa_supplicant interface
  *
@@ -989,6 +997,13 @@ int wpas_init_ext_pw(struct wpa_supplicant *wpa_s);
 
 void dump_freq_array(struct wpa_supplicant *wpa_s, const char *title,
 		     int *freq_array, unsigned int len);
+void dump_freq_data(struct wpa_supplicant *wpa_s, const char *title,
+		    struct wpa_used_freq_data *freqs_data,
+		    unsigned int len);
+
+int get_shared_radio_freqs_data(struct wpa_supplicant *wpa_s,
+				struct wpa_used_freq_data *freqs_data,
+				unsigned int len);
 int get_shared_radio_freqs(struct wpa_supplicant *wpa_s,
 			   int *freq_array, unsigned int len);
 

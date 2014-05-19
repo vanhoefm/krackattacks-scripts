@@ -4652,12 +4652,30 @@ void dump_freq_array(struct wpa_supplicant *wpa_s, const char *title,
 }
 
 
+void dump_freq_data(struct wpa_supplicant *wpa_s, const char *title,
+		    struct wpa_used_freq_data *freqs_data,
+		    unsigned int len)
+{
+	unsigned int i;
+
+	wpa_dbg(wpa_s, MSG_DEBUG, "Shared frequencies (len=%u): %s",
+		len, title);
+	for (i = 0; i < len; i++) {
+		struct wpa_used_freq_data *cur = &freqs_data[i];
+		wpa_dbg(wpa_s, MSG_DEBUG, "freq[%u]: %d, flags=0x%X",
+			i, cur->freq, cur->flags);
+	}
+}
+
+
 /*
  * Find the operating frequencies of any of the virtual interfaces that
- * are using the same radio as the current interface.
+ * are using the same radio as the current interface, and in addition, get
+ * information about the interface types that are using the frequency.
  */
-int get_shared_radio_freqs(struct wpa_supplicant *wpa_s,
-			   int *freq_array, unsigned int len)
+int get_shared_radio_freqs_data(struct wpa_supplicant *wpa_s,
+				struct wpa_used_freq_data *freqs_data,
+				unsigned int len)
 {
 	struct wpa_supplicant *ifs;
 	u8 bssid[ETH_ALEN];
@@ -4666,19 +4684,28 @@ int get_shared_radio_freqs(struct wpa_supplicant *wpa_s,
 
 	wpa_dbg(wpa_s, MSG_DEBUG,
 		"Determining shared radio frequencies (max len %u)", len);
-	os_memset(freq_array, 0, sizeof(int) * len);
+	os_memset(freqs_data, 0, sizeof(struct wpa_used_freq_data) * len);
 
 	/* First add the frequency of the local interface */
 	if (wpa_s->current_ssid != NULL && wpa_s->assoc_freq != 0) {
 		if (wpa_s->current_ssid->mode == WPAS_MODE_AP ||
 		    wpa_s->current_ssid->mode == WPAS_MODE_P2P_GO)
-			freq_array[idx++] = wpa_s->current_ssid->frequency;
+			freqs_data[idx++].freq = wpa_s->current_ssid->frequency;
 		else if (wpa_drv_get_bssid(wpa_s, bssid) == 0)
-			freq_array[idx++] = wpa_s->assoc_freq;
+			freqs_data[idx++].freq = wpa_s->assoc_freq;
+
+		if (idx && wpa_s->current_ssid->mode == WPAS_MODE_INFRA) {
+			freqs_data[0].flags = wpa_s->current_ssid->p2p_group ?
+				WPA_FREQ_USED_BY_P2P_CLIENT :
+				WPA_FREQ_USED_BY_INFRA_STATION;
+		}
 	}
 
 	dl_list_for_each(ifs, &wpa_s->radio->ifaces, struct wpa_supplicant,
 			 radio_list) {
+		if (idx == len)
+			break;
+
 		if (wpa_s == ifs)
 			continue;
 
@@ -4695,13 +4722,45 @@ int get_shared_radio_freqs(struct wpa_supplicant *wpa_s,
 
 		/* Hold only distinct freqs */
 		for (i = 0; i < idx; i++)
-			if (freq_array[i] == freq)
+			if (freqs_data[i].freq == freq)
 				break;
 
 		if (i == idx)
-			freq_array[idx++] = freq;
+			freqs_data[idx++].freq = freq;
+
+		if (ifs->current_ssid->mode == WPAS_MODE_INFRA) {
+			freqs_data[i].flags = ifs->current_ssid->p2p_group ?
+				WPA_FREQ_USED_BY_P2P_CLIENT :
+				WPA_FREQ_USED_BY_INFRA_STATION;
+		}
 	}
 
-	dump_freq_array(wpa_s, "completed iteration", freq_array, idx);
+	dump_freq_data(wpa_s, "completed iteration", freqs_data, idx);
 	return idx;
+}
+
+
+/*
+ * Find the operating frequencies of any of the virtual interfaces that
+ * are using the same radio as the current interface.
+ */
+int get_shared_radio_freqs(struct wpa_supplicant *wpa_s,
+			   int *freq_array, unsigned int len)
+{
+	struct wpa_used_freq_data *freqs_data;
+	int num, i;
+
+	os_memset(freq_array, 0, sizeof(int) * len);
+
+	freqs_data = os_calloc(len, sizeof(struct wpa_used_freq_data));
+	if (!freqs_data)
+		return -1;
+
+	num = get_shared_radio_freqs_data(wpa_s, freqs_data, len);
+	for (i = 0; i < num; i++)
+		freq_array[i] = freqs_data[i].freq;
+
+	os_free(freqs_data);
+
+	return num;
 }

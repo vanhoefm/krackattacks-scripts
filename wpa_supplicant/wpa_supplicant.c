@@ -4674,28 +4674,10 @@ int get_shared_radio_freqs_data(struct wpa_supplicant *wpa_s,
 		"Determining shared radio frequencies (max len %u)", len);
 	os_memset(freqs_data, 0, sizeof(struct wpa_used_freq_data) * len);
 
-	/* First add the frequency of the local interface */
-	if (wpa_s->current_ssid != NULL && wpa_s->assoc_freq != 0) {
-		if (wpa_s->current_ssid->mode == WPAS_MODE_AP ||
-		    wpa_s->current_ssid->mode == WPAS_MODE_P2P_GO)
-			freqs_data[idx++].freq = wpa_s->current_ssid->frequency;
-		else if (wpa_drv_get_bssid(wpa_s, bssid) == 0)
-			freqs_data[idx++].freq = wpa_s->assoc_freq;
-
-		if (idx && wpa_s->current_ssid->mode == WPAS_MODE_INFRA) {
-			freqs_data[0].flags = wpa_s->current_ssid->p2p_group ?
-				WPA_FREQ_USED_BY_P2P_CLIENT :
-				WPA_FREQ_USED_BY_INFRA_STATION;
-		}
-	}
-
 	dl_list_for_each(ifs, &wpa_s->radio->ifaces, struct wpa_supplicant,
 			 radio_list) {
 		if (idx == len)
 			break;
-
-		if (wpa_s == ifs)
-			continue;
 
 		if (ifs->current_ssid == NULL || ifs->assoc_freq == 0)
 			continue;

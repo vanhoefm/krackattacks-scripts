@@ -142,35 +142,26 @@ int pkcs1_decrypt_public_key(struct crypto_rsa_key *key,
 	 * BT = 00 or 01
 	 * PS = k-3-||D|| times (00 if BT=00) or (FF if BT=01)
 	 * k = length of modulus in octets
+	 *
+	 * Based on 10.1.3, "The block type shall be 01" for a signature.
 	 */
 
 	if (len < 3 + 8 + 16 /* min hash len */ ||
-	    plain[0] != 0x00 || (plain[1] != 0x00 && plain[1] != 0x01)) {
+	    plain[0] != 0x00 || plain[1] != 0x01) {
 		wpa_printf(MSG_INFO, "LibTomCrypt: Invalid signature EB "
 			   "structure");
 		return -1;
 	}
 
 	pos = plain + 3;
-	if (plain[1] == 0x00) {
-		/* BT = 00 */
-		if (plain[2] != 0x00) {
-			wpa_printf(MSG_INFO, "LibTomCrypt: Invalid signature "
-				   "PS (BT=00)");
-			return -1;
-		}
-		while (pos + 1 < plain + len && *pos == 0x00 && pos[1] == 0x00)
-			pos++;
-	} else {
-		/* BT = 01 */
-		if (plain[2] != 0xff) {
-			wpa_printf(MSG_INFO, "LibTomCrypt: Invalid signature "
-				   "PS (BT=01)");
-			return -1;
-		}
-		while (pos < plain + len && *pos == 0xff)
-			pos++;
+	/* BT = 01 */
+	if (plain[2] != 0xff) {
+		wpa_printf(MSG_INFO, "LibTomCrypt: Invalid signature "
+			   "PS (BT=01)");
+		return -1;
 	}
+	while (pos < plain + len && *pos == 0xff)
+		pos++;
 
 	if (pos - plain - 2 < 8) {
 		/* PKCS #1 v1.5, 8.1: At least eight octets long PS */

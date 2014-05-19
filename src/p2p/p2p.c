@@ -183,6 +183,14 @@ void p2p_set_state(struct p2p_data *p2p, int new_state)
 	p2p_dbg(p2p, "State %s -> %s",
 		p2p_state_txt(p2p->state), p2p_state_txt(new_state));
 	p2p->state = new_state;
+
+	if (new_state == P2P_IDLE && p2p->pending_channel) {
+		p2p_dbg(p2p, "Apply change in listen channel");
+		p2p->cfg->reg_class = p2p->pending_reg_class;
+		p2p->cfg->channel = p2p->pending_channel;
+		p2p->pending_reg_class = 0;
+		p2p->pending_channel = 0;
+	}
 }
 
 
@@ -3991,17 +3999,40 @@ void p2p_set_managed_oper(struct p2p_data *p2p, int enabled)
 }
 
 
-int p2p_set_listen_channel(struct p2p_data *p2p, u8 reg_class, u8 channel)
+int p2p_set_listen_channel(struct p2p_data *p2p, u8 reg_class, u8 channel,
+			   u8 forced)
 {
 	if (p2p_channel_to_freq(reg_class, channel) < 0)
 		return -1;
 
 	p2p_dbg(p2p, "Set Listen channel: reg_class %u channel %u",
 		reg_class, channel);
-	p2p->cfg->reg_class = reg_class;
-	p2p->cfg->channel = channel;
+
+	/*
+	 * Listen channel was set in configuration or set by control interface;
+	 * cannot override it.
+	 */
+	if (p2p->cfg->channel_forced && forced == 0)
+		return -1;
+
+	if (p2p->state == P2P_IDLE) {
+		p2p->cfg->reg_class = reg_class;
+		p2p->cfg->channel = channel;
+		p2p->cfg->channel_forced = forced;
+	} else {
+		p2p_dbg(p2p, "Defer setting listen channel");
+		p2p->pending_reg_class = reg_class;
+		p2p->pending_channel = channel;
+		p2p->pending_channel_forced = forced;
+	}
 
 	return 0;
+}
+
+
+u8 p2p_get_listen_channel(struct p2p_data *p2p)
+{
+	return p2p->cfg->channel;
 }
 
 

@@ -4760,7 +4760,7 @@ static int p2p_ctrl_set(struct wpa_supplicant *wpa_s, char *cmd)
 
 	if (os_strcmp(cmd, "listen_channel") == 0) {
 		return p2p_set_listen_channel(wpa_s->global->p2p, 81,
-					      atoi(param));
+					      atoi(param), 1);
 	}
 
 	if (os_strcmp(cmd, "ssid_postfix") == 0) {

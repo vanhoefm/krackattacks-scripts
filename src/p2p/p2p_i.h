@@ -480,6 +480,10 @@ struct p2p_data {
 	unsigned int search_delay;
 	int in_search_delay;
 
+	u8 pending_reg_class;
+	u8 pending_channel;
+	u8 pending_channel_forced;
+
 #ifdef CONFIG_WIFI_DISPLAY
 	struct wpabuf *wfd_ie_beacon;
 	struct wpabuf *wfd_ie_probe_req;

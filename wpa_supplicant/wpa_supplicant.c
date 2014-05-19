@@ -737,6 +737,14 @@ void wpa_supplicant_set_state(struct wpa_supplicant *wpa_s,
 	if (wpa_s->wpa_state != old_state) {
 		wpas_notify_state_changed(wpa_s, wpa_s->wpa_state, old_state);
 
+#ifdef CONFIG_P2P
+		/*
+		 * Notify the P2P Device interface about a state change in one
+		 * of the interfaces.
+		 */
+		wpas_p2p_indicate_state_change(wpa_s);
+#endif /* CONFIG_P2P */
+
 		if (wpa_s->wpa_state == WPA_COMPLETED ||
 		    old_state == WPA_COMPLETED)
 			wpas_notify_auth_changed(wpa_s);

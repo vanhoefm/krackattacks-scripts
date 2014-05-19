@@ -3872,6 +3872,7 @@ int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s)
 	    wpa_s->conf->p2p_listen_channel) {
 		p2p.reg_class = wpa_s->conf->p2p_listen_reg_class;
 		p2p.channel = wpa_s->conf->p2p_listen_channel;
+		p2p.channel_forced = 1;
 	} else {
 		p2p.reg_class = 81;
 		/*
@@ -3880,6 +3881,7 @@ int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s)
 		 */
 		os_get_random((u8 *) &r, sizeof(r));
 		p2p.channel = 1 + (r % 3) * 5;
+		p2p.channel_forced = 0;
 	}
 	wpa_printf(MSG_DEBUG, "P2P: Own listen channel: %d", p2p.channel);
 
@@ -6270,10 +6272,13 @@ void wpas_p2p_update_config(struct wpa_supplicant *wpa_s)
 		u8 reg_class, channel;
 		int ret;
 		unsigned int r;
+		u8 channel_forced;
+
 		if (wpa_s->conf->p2p_listen_reg_class &&
 		    wpa_s->conf->p2p_listen_channel) {
 			reg_class = wpa_s->conf->p2p_listen_reg_class;
 			channel = wpa_s->conf->p2p_listen_channel;
+			channel_forced = 1;
 		} else {
 			reg_class = 81;
 			/*
@@ -6282,8 +6287,10 @@ void wpas_p2p_update_config(struct wpa_supplicant *wpa_s)
 			 */
 			os_get_random((u8 *) &r, sizeof(r));
 			channel = 1 + (r % 3) * 5;
+			channel_forced = 0;
 		}
-		ret = p2p_set_listen_channel(p2p, reg_class, channel);
+		ret = p2p_set_listen_channel(p2p, reg_class, channel,
+					     channel_forced);
 		if (ret)
 			wpa_printf(MSG_ERROR, "P2P: Own listen channel update "
 				   "failed: %d", ret);
@@ -7766,3 +7773,60 @@ int wpas_p2p_nfc_tag_enabled(struct wpa_supplicant *wpa_s, int enabled)
 }
 
 #endif /* CONFIG_WPS_NFC */
+
+
+static void wpas_p2p_optimize_listen_channel(struct wpa_supplicant *wpa_s,
+					     struct wpa_used_freq_data *freqs,
+					     unsigned int num)
+{
+	u8 curr_chan, cand, chan;
+	unsigned int i;
+
+	curr_chan = p2p_get_listen_channel(wpa_s->global->p2p);
+	for (i = 0, cand = 0; i < num; i++) {
+		ieee80211_freq_to_chan(freqs[i].freq, &chan);
+		if (curr_chan == chan) {
+			cand = 0;
+			break;
+		}
+
+		if (chan == 1 || chan == 6 || chan == 11)
+			cand = chan;
+	}
+
+	if (cand) {
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"P2P: Update Listen channel to %u baased on operating channel",
+			cand);
+		p2p_set_listen_channel(wpa_s->global->p2p, 81, cand, 0);
+	}
+}
+
+
+void wpas_p2p_indicate_state_change(struct wpa_supplicant *wpa_s)
+{
+	struct wpa_used_freq_data *freqs;
+	unsigned int num = wpa_s->num_multichan_concurrent;
+
+	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
+		return;
+
+	/*
+	 * If possible, optimize the Listen channel to be a channel that is
+	 * already used by one of the other interfaces.
+	 */
+	if (!wpa_s->conf->p2p_optimize_listen_chan)
+		return;
+
+	if (!wpa_s->current_ssid || wpa_s->wpa_state != WPA_COMPLETED)
+		return;
+
+	freqs = os_calloc(num, sizeof(struct wpa_used_freq_data));
+	if (!freqs)
+		return;
+
+	num = get_shared_radio_freqs_data(wpa_s, freqs, num);
+
+	wpas_p2p_optimize_listen_channel(wpa_s, freqs, num);
+	os_free(freqs);
+}

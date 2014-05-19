@@ -19,6 +19,7 @@
 #define DEFAULT_P2P_GO_INTENT 7
 #define DEFAULT_P2P_INTRA_BSS 1
 #define DEFAULT_P2P_GO_MAX_INACTIVITY (5 * 60)
+#define DEFAULT_P2P_OPTIMIZE_LISTEN_CHAN 0
 #define DEFAULT_BSS_MAX_COUNT 200
 #define DEFAULT_BSS_EXPIRATION_AGE 180
 #define DEFAULT_BSS_EXPIRATION_SCAN_COUNT 2
@@ -686,6 +687,7 @@ struct wpa_config {
 	struct wpa_freq_range_list p2p_no_go_freq;
 	int p2p_add_cli_chan;
 	int p2p_ignore_shared_freq;
+	int p2p_optimize_listen_chan;
 
 	struct wpabuf *wps_vendor_ext_m1;
 

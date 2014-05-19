@@ -1035,6 +1035,10 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 	}
 	if (config->p2p_add_cli_chan)
 		fprintf(f, "p2p_add_cli_chan=%d\n", config->p2p_add_cli_chan);
+	if (config->p2p_optimize_listen_chan !=
+	    DEFAULT_P2P_OPTIMIZE_LISTEN_CHAN)
+		fprintf(f, "p2p_optimize_listen_chan=%d\n",
+			config->p2p_optimize_listen_chan);
 	if (config->p2p_go_ht40)
 		fprintf(f, "p2p_go_ht40=%u\n", config->p2p_go_ht40);
 	if (config->p2p_go_vht)

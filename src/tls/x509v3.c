@@ -1783,6 +1783,15 @@ skip_digest_oid:
 		return -1;
 	}
 
+	if (hdr.payload + hdr.length < data + data_len) {
+		wpa_hexdump(MSG_INFO,
+			    "X509: Extra data after certificate signature hash",
+			    hdr.payload + hdr.length,
+			    data + data_len - hdr.payload - hdr.length);
+		os_free(data);
+		return -1;
+	}
+
 	os_free(data);
 
 	wpa_printf(MSG_DEBUG, "X509: Certificate Digest matches with "

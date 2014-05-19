@@ -271,6 +271,10 @@ struct crypto_private_key;
  */
 struct crypto_public_key * crypto_public_key_import(const u8 *key, size_t len);
 
+struct crypto_public_key *
+crypto_public_key_import_parts(const u8 *n, size_t n_len,
+			       const u8 *e, size_t e_len);
+
 /**
  * crypto_private_key_import - Import an RSA private key
  * @key: Key buffer (DER encoded RSA private key)

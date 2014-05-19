@@ -4677,16 +4677,6 @@ int get_shared_radio_freqs(struct wpa_supplicant *wpa_s,
 			freq_array[idx++] = wpa_s->assoc_freq;
 	}
 
-	/* If get_radio_name is not supported, use only the local freq */
-	if (!wpa_driver_get_radio_name(wpa_s)) {
-		freq = wpa_drv_shared_freq(wpa_s);
-		if (freq > 0 && idx < len &&
-		    (idx == 0 || freq_array[0] != freq))
-			freq_array[idx++] = freq;
-		dump_freq_array(wpa_s, "No get_radio_name", freq_array, idx);
-		return idx;
-	}
-
 	dl_list_for_each(ifs, &wpa_s->radio->ifaces, struct wpa_supplicant,
 			 radio_list) {
 		if (wpa_s == ifs)

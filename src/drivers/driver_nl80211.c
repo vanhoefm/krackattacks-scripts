@@ -8739,7 +8739,9 @@ static int nl80211_connect_common(struct wpa_driver_nl80211_data *drv,
 	    params->key_mgmt_suite == WPA_KEY_MGMT_FT_IEEE8021X ||
 	    params->key_mgmt_suite == WPA_KEY_MGMT_FT_PSK ||
 	    params->key_mgmt_suite == WPA_KEY_MGMT_CCKM ||
-	    params->key_mgmt_suite == WPA_KEY_MGMT_OSEN) {
+	    params->key_mgmt_suite == WPA_KEY_MGMT_OSEN ||
+	    params->key_mgmt_suite == WPA_KEY_MGMT_IEEE8021X_SHA256 ||
+	    params->key_mgmt_suite == WPA_KEY_MGMT_PSK_SHA256) {
 		int mgmt = WLAN_AKM_SUITE_PSK;
 
 		switch (params->key_mgmt_suite) {
@@ -8754,6 +8756,12 @@ static int nl80211_connect_common(struct wpa_driver_nl80211_data *drv,
 			break;
 		case WPA_KEY_MGMT_FT_PSK:
 			mgmt = WLAN_AKM_SUITE_FT_PSK;
+			break;
+		case WPA_KEY_MGMT_IEEE8021X_SHA256:
+			mgmt = WLAN_AKM_SUITE_8021X_SHA256;
+			break;
+		case WPA_KEY_MGMT_PSK_SHA256:
+			mgmt = WLAN_AKM_SUITE_PSK_SHA256;
 			break;
 		case WPA_KEY_MGMT_OSEN:
 			mgmt = WLAN_AKM_SUITE_OSEN;

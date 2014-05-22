@@ -238,6 +238,12 @@ static void p2p_listen_in_find(struct p2p_data *p2p, int dev_disc)
 	p2p_dbg(p2p, "Starting short listen state (state=%s)",
 		p2p_state_txt(p2p->state));
 
+	if (p2p->pending_listen_freq) {
+		/* We have a pending p2p_listen request */
+		p2p_dbg(p2p, "p2p_listen command pending already");
+		return;
+	}
+
 	freq = p2p_channel_to_freq(p2p->cfg->reg_class, p2p->cfg->channel);
 	if (freq < 0) {
 		p2p_dbg(p2p, "Unknown regulatory class/channel");
@@ -260,13 +266,13 @@ static void p2p_listen_in_find(struct p2p_data *p2p, int dev_disc)
 		return;
 	}
 
-	p2p->pending_listen_freq = freq;
-	p2p->pending_listen_sec = 0;
-	p2p->pending_listen_usec = 1024 * tu;
-
 	ies = p2p_build_probe_resp_ies(p2p);
 	if (ies == NULL)
 		return;
+
+	p2p->pending_listen_freq = freq;
+	p2p->pending_listen_sec = 0;
+	p2p->pending_listen_usec = 1024 * tu;
 
 	if (p2p->cfg->start_listen(p2p->cfg->cb_ctx, freq, 1024 * tu / 1000,
 		    ies) < 0) {
@@ -284,13 +290,18 @@ int p2p_listen(struct p2p_data *p2p, unsigned int timeout)
 
 	p2p_dbg(p2p, "Going to listen(only) state");
 
+	if (p2p->pending_listen_freq) {
+		/* We have a pending p2p_listen request */
+		p2p_dbg(p2p, "p2p_listen command pending already");
+		return -1;
+	}
+
 	freq = p2p_channel_to_freq(p2p->cfg->reg_class, p2p->cfg->channel);
 	if (freq < 0) {
 		p2p_dbg(p2p, "Unknown regulatory class/channel");
 		return -1;
 	}
 
-	p2p->pending_listen_freq = freq;
 	p2p->pending_listen_sec = timeout / 1000;
 	p2p->pending_listen_usec = (timeout % 1000) * 1000;
 
@@ -307,6 +318,8 @@ int p2p_listen(struct p2p_data *p2p, unsigned int timeout)
 	ies = p2p_build_probe_resp_ies(p2p);
 	if (ies == NULL)
 		return -1;
+
+	p2p->pending_listen_freq = freq;
 
 	if (p2p->cfg->start_listen(p2p->cfg->cb_ctx, freq, timeout, ies) < 0) {
 		p2p_dbg(p2p, "Failed to start listen mode");
@@ -1116,6 +1129,7 @@ void p2p_stop_listen(struct p2p_data *p2p)
 
 void p2p_stop_find(struct p2p_data *p2p)
 {
+	p2p->pending_listen_freq = 0;
 	p2p_stop_find_for_freq(p2p, 0);
 }
 

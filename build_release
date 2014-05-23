@@ -30,13 +30,13 @@ mkdir $TMP
 mkdir -p $RELDIR
 
 git archive --format=tar --prefix=wpa-$VER/ HEAD \
-	README COPYING patches src wpa_supplicant hostapd |
+	README COPYING patches src wpa_supplicant hostapd hs20 |
 	gzip > $RELDIR/wpa-$VER.tar.gz
 git archive --format=tar --prefix=hostapd-$VER/ HEAD \
 	README COPYING patches src hostapd |
 	gzip > $RELDIR/hostapd-$VER.tar.gz
 git archive --format=tar --prefix=wpa_supplicant-$VER/ HEAD \
-	README COPYING patches src wpa_supplicant |
+	README COPYING patches src wpa_supplicant hs20/client |
 	tar --directory=$TMP -xf -
 
 cd $TMP

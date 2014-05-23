@@ -388,17 +388,19 @@ unsigned int p2p_get_pref_freq(struct p2p_data *p2p,
 			       const struct p2p_channels *channels)
 {
 	unsigned int i;
-	int freq;
+	int freq = 0;
+	const struct p2p_channels *tmpc = channels ?
+		channels : &p2p->cfg->channels;
+
+	if (tmpc == NULL)
+		return 0;
 
 	for (i = 0; p2p->cfg->pref_chan && i < p2p->cfg->num_pref_chan; i++) {
 		freq = p2p_channel_to_freq(p2p->cfg->pref_chan[i].op_class,
 					   p2p->cfg->pref_chan[i].chan);
-		if (freq <= 0)
-			continue;
-		if (!channels || p2p_channels_includes_freq(channels, freq))
+		if (p2p_channels_includes_freq(tmpc, freq))
 			return freq;
 	}
-
 	return 0;
 }
 

@@ -652,7 +652,7 @@ static int send_and_recv(struct nl80211_global *global,
 
 	while (err > 0) {
 		int res = nl_recvmsgs(nl_handle, cb);
-		if (res) {
+		if (res < 0) {
 			wpa_printf(MSG_INFO,
 				   "nl80211: %s->nl_recvmsgs failed: %d",
 				   __func__, res);
@@ -910,7 +910,7 @@ static void nl80211_recv_beacons(int sock, void *eloop_ctx, void *handle)
 	wpa_printf(MSG_EXCESSIVE, "nl80211: Beacon event message available");
 
 	res = nl_recvmsgs(handle, w->nl_cb);
-	if (res) {
+	if (res < 0) {
 		wpa_printf(MSG_INFO, "nl80211: %s->nl_recvmsgs failed: %d",
 			   __func__, res);
 	}
@@ -3276,7 +3276,7 @@ static void wpa_driver_nl80211_event_receive(int sock, void *eloop_ctx,
 	wpa_printf(MSG_MSGDUMP, "nl80211: Event message available");
 
 	res = nl_recvmsgs(handle, cb);
-	if (res) {
+	if (res < 0) {
 		wpa_printf(MSG_INFO, "nl80211: %s->nl_recvmsgs failed: %d",
 			   __func__, res);
 	}

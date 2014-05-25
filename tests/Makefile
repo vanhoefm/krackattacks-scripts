@@ -1,6 +1,5 @@
 TESTS=test-base64 test-md4 test-md5 test-milenage test-ms_funcs \
 	test-bitfield \
-	test-printf \
 	test-rsa-sig-ver \
 	test-sha1 \
 	test-sha256 test-aes test-asn1 test-x509 test-x509v3 test-list test-rc4
@@ -73,9 +72,6 @@ test-milenage: test-milenage.o $(LIBS)
 test-ms_funcs: test-ms_funcs.o $(LIBS)
 	$(LDO) $(LDFLAGS) -o $@ $^ $(LLIBS)
 
-test-printf: test-printf.o $(LIBS)
-	$(LDO) $(LDFLAGS) -o $@ $^ $(LLIBS)
-
 test-rc4: test-rc4.o $(LIBS)
 	$(LDO) $(LDFLAGS) -o $@ $^ $(LLIBS)
 
@@ -102,7 +98,6 @@ run-tests: $(TESTS)
 	./test-md4
 	./test-md5
 	./test-milenage
-	./test-printf
 	./test-rsa-sig-ver
 	./test-sha1
 	./test-sha256

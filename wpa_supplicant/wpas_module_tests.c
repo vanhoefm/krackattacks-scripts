@@ -86,5 +86,11 @@ int wpas_module_tests(void)
 	}
 #endif /* CONFIG_WPS */
 
+	{
+		int utils_module_tests(void);
+		if (utils_module_tests() < 0)
+			ret = -1;
+	}
+
 	return ret;
 }

@@ -100,6 +100,7 @@ OBJS_c += ../src/utils/os_$(CONFIG_OS).o
 ifdef CONFIG_MODULE_TESTS
 CFLAGS += -DCONFIG_MODULE_TESTS
 OBJS += wpas_module_tests.o
+OBJS += ../src/utils/utils_module_tests.o
 ifdef CONFIG_WPS
 OBJS += ../src/wps/wps_module_tests.o
 endif

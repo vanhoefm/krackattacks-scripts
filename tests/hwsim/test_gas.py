@@ -365,6 +365,15 @@ def parse_gas(payload):
         (status_code, comeback_delay) = struct.unpack('<HH', pos[0:4])
         gas['status_code'] = status_code
         gas['comeback_delay'] = comeback_delay
+
+    if action == GAS_COMEBACK_RESPONSE:
+        if len(pos) < 5:
+            return None
+        (status_code, frag, comeback_delay) = struct.unpack('<HBH', pos[0:5])
+        gas['status_code'] = status_code
+        gas['frag'] = frag
+        gas['comeback_delay'] = comeback_delay
+
     return gas
 
 def action_response(req):
@@ -691,3 +700,31 @@ def test_gas_max_pending(dev, apdev):
             raise Exception("Unexpected failure status code {} for dialog token {}".format(status_code, dialog_token))
         if dialog_token > 8 and status_code == 0:
             raise Exception("Unexpected success status code {} for dialog token {}".format(status_code, dialog_token))
+
+def test_gas_no_pending(dev, apdev):
+    """GAS and no pending query for comeback request"""
+    hapd = start_ap(apdev[0])
+    bssid = apdev[0]['bssid']
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5")
+    if "OK" not in wpas.request("P2P_SET listen_channel 1"):
+        raise Exception("Failed to set listen channel")
+    if "OK" not in wpas.p2p_listen():
+        raise Exception("Failed to start listen state")
+    if "FAIL" in wpas.request("SET ext_mgmt_frame_handling 1"):
+        raise Exception("Failed to enable external management frame handling")
+
+    msg = struct.pack('<BBB', ACTION_CATEG_PUBLIC, GAS_COMEBACK_REQUEST, 1)
+    req = "MGMT_TX {} {} freq=2412 wait_time=10 action={}".format(bssid, bssid, binascii.hexlify(msg))
+    if "OK" not in wpas.request(req):
+        raise Exception("Could not send management frame")
+    resp = wpas.mgmt_rx()
+    if resp is None:
+        raise Exception("MGMT-RX timeout")
+    if 'payload' not in resp:
+        raise Exception("Missing payload")
+    gresp = parse_gas(resp['payload'])
+    status_code = gresp['status_code']
+    if status_code != 60:
+        raise Exception("Unexpected status code {} (expected 60)".format(status_code))

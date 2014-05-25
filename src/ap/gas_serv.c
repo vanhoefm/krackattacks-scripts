@@ -989,14 +989,17 @@ static void gas_serv_req_local_processing(struct hostapd_data *hapd,
 				   "for " MACSTR " (dialog token %u)",
 				   MAC2STR(sa), dialog_token);
 			wpabuf_free(buf);
-			return;
+			tx_buf = gas_anqp_build_initial_resp_buf(
+				dialog_token, WLAN_STATUS_UNSPECIFIED_FAILURE,
+				0, NULL);
+		} else {
+			di->prot = prot;
+			di->sd_resp = buf;
+			di->sd_resp_pos = 0;
+			tx_buf = gas_anqp_build_initial_resp_buf(
+				dialog_token, WLAN_STATUS_SUCCESS,
+				comeback_delay, NULL);
 		}
-		di->prot = prot;
-		di->sd_resp = buf;
-		di->sd_resp_pos = 0;
-		tx_buf = gas_anqp_build_initial_resp_buf(
-			dialog_token, WLAN_STATUS_SUCCESS, comeback_delay,
-			NULL);
 	} else {
 		wpa_printf(MSG_DEBUG, "ANQP: Initial response (no comeback)");
 		tx_buf = gas_anqp_build_initial_resp_buf(

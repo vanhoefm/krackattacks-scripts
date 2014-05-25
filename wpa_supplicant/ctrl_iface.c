@@ -5650,6 +5650,8 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 	wpa_s->global->p2p_per_sta_psk = 0;
 	wpa_s->conf->num_sec_device_types = 0;
 	wpa_s->p2p_disable_ip_addr_req = 0;
+	os_free(wpa_s->global->p2p_go_avoid_freq.range);
+	wpa_s->global->p2p_go_avoid_freq.range = NULL;
 #endif /* CONFIG_P2P */
 
 #ifdef CONFIG_WPS_TESTING
@@ -6117,6 +6119,15 @@ static int wpas_ctrl_iface_driver_event(struct wpa_supplicant *wpa_s, char *cmd)
 		ev = EVENT_INTERFACE_ENABLED;
 	} else if (os_strcmp(cmd, "INTERFACE_DISABLED") == 0) {
 		ev = EVENT_INTERFACE_DISABLED;
+	} else if (os_strcmp(cmd, "AVOID_FREQUENCIES") == 0) {
+		ev = EVENT_AVOID_FREQUENCIES;
+		if (param == NULL)
+			param = "";
+		if (freq_range_list_parse(&event.freq_range, param) < 0)
+			return -1;
+		wpa_supplicant_event(wpa_s, ev, &event);
+		os_free(event.freq_range.range);
+		return 0;
 	} else {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Testing - unknown driver event: %s",
 			cmd);

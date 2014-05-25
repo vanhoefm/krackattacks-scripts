@@ -157,15 +157,46 @@ static int bitfield_tests(void)
 }
 
 
+static int int_array_tests(void)
+{
+	int test1[] = { 1, 2, 3, 4, 5, 6, 0 };
+	int test2[] = { 1, -1, 0 };
+	int test3[] = { 1, 1, 1, -1, 2, 3, 4, 1, 2, 0 };
+	int test3_res[] = { -1, 1, 2, 3, 4, 0 };
+	int errors = 0;
+	int len;
+
+	wpa_printf(MSG_INFO, "int_array tests");
+
+	if (int_array_len(test1) != 6 ||
+	    int_array_len(test2) != 2)
+		errors++;
+
+	int_array_sort_unique(test3);
+	len = int_array_len(test3_res);
+	if (int_array_len(test3) != len)
+		errors++;
+	else if (os_memcmp(test3, test3_res, len * sizeof(int)) != 0)
+		errors++;
+
+	if (errors) {
+		wpa_printf(MSG_ERROR, "%d int_array test(s) failed", errors);
+		return -1;
+	}
+
+	return 0;
+}
+
+
 int utils_module_tests(void)
 {
 	int ret = 0;
 
 	wpa_printf(MSG_INFO, "utils module tests");
 
-	if (printf_encode_decode_tests() < 0)
-		ret = -1;
-	if (bitfield_tests() < 0)
+	if (printf_encode_decode_tests() < 0 ||
+	    bitfield_tests() < 0 ||
+	    int_array_tests() < 0)
 		ret = -1;
 
 	return ret;

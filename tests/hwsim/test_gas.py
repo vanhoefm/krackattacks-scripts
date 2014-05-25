@@ -13,6 +13,7 @@ import re
 import struct
 
 import hostapd
+from wpasupplicant import WpaSupplicant
 
 def hs20_ap_params():
     params = hostapd.wpa2_params(ssid="test-gas")
@@ -357,6 +358,13 @@ def parse_gas(payload):
         return None
 
     gas['dialog_token'] = dialog_token
+
+    if action == GAS_INITIAL_RESPONSE:
+        if len(pos) < 4:
+            return None
+        (status_code, comeback_delay) = struct.unpack('<HH', pos[0:4])
+        gas['status_code'] = status_code
+        gas['comeback_delay'] = comeback_delay
     return gas
 
 def action_response(req):
@@ -645,3 +653,41 @@ def test_gas_unknown_adv_proto(dev, apdev):
     status = res[4]
     if status != "59":
         raise Exception("Unexpected GAS-RESPONSE-INFO status")
+
+def test_gas_max_pending(dev, apdev):
+    """GAS and maximum pending query limit"""
+    hapd = start_ap(apdev[0])
+    hapd.set("gas_frag_limit", "50")
+    bssid = apdev[0]['bssid']
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5")
+    if "OK" not in wpas.request("P2P_SET listen_channel 1"):
+        raise Exception("Failed to set listen channel")
+    if "OK" not in wpas.p2p_listen():
+        raise Exception("Failed to start listen state")
+    if "FAIL" in wpas.request("SET ext_mgmt_frame_handling 1"):
+        raise Exception("Failed to enable external management frame handling")
+
+    anqp_query = struct.pack('<HHHHHHHHHH', 256, 16, 257, 258, 260, 261, 262, 263, 264, 268)
+    gas = struct.pack('<H', len(anqp_query)) + anqp_query
+
+    for dialog_token in range(1, 10):
+        msg = struct.pack('<BBB', ACTION_CATEG_PUBLIC, GAS_INITIAL_REQUEST,
+                          dialog_token) + anqp_adv_proto() + gas
+        req = "MGMT_TX {} {} freq=2412 wait_time=10 action={}".format(bssid, bssid, binascii.hexlify(msg))
+        if "OK" not in wpas.request(req):
+            raise Exception("Could not send management frame")
+        resp = wpas.mgmt_rx()
+        if resp is None:
+            raise Exception("MGMT-RX timeout")
+        if 'payload' not in resp:
+            raise Exception("Missing payload")
+        gresp = parse_gas(resp['payload'])
+        if gresp['dialog_token'] != dialog_token:
+            raise Exception("Dialog token mismatch")
+        status_code = gresp['status_code']
+        if dialog_token < 9 and status_code != 0:
+            raise Exception("Unexpected failure status code {} for dialog token {}".format(status_code, dialog_token))
+        if dialog_token > 8 and status_code == 0:
+            raise Exception("Unexpected success status code {} for dialog token {}".format(status_code, dialog_token))

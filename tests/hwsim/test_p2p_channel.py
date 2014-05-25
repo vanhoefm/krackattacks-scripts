@@ -140,3 +140,41 @@ def test_p2p_channel_random_social_with_op_class_change(dev, apdev, params):
         dev[0].request("P2P_SET disallow_freq ")
         dev[0].request("SET p2p_oper_reg_class 81")
         dev[0].request("SET p2p_oper_channel 11")
+
+def test_p2p_channel_avoid(dev):
+    """P2P and avoid frequencies driver event"""
+    try:
+        set_country("US")
+        if "OK" not in dev[0].request("DRIVER_EVENT AVOID_FREQUENCIES 5000-6000,2412,2437,2462"):
+            raise Exception("Could not simulate driver event")
+        ev = dev[0].wait_event(["CTRL-EVENT-AVOID-FREQ"], timeout=10)
+        if ev is None:
+            raise Exception("No CTRL-EVENT-AVOID-FREQ event")
+        [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
+                                               r_dev=dev[1], r_intent=0,
+                                               test_data=False)
+        check_grpform_results(i_res, r_res)
+        freq = int(i_res['freq'])
+        if freq > 2500 or freq in [ 2412, 2437, 2462 ]:
+            raise Exception("Unexpected channel %d MHz" % freq)
+
+        if "OK" not in dev[0].request("DRIVER_EVENT AVOID_FREQUENCIES"):
+            raise Exception("Could not simulate driver event(2)")
+        ev = dev[0].wait_event(["CTRL-EVENT-AVOID-FREQ"], timeout=10)
+        if ev is None:
+            raise Exception("No CTRL-EVENT-AVOID-FREQ event")
+        ev = dev[0].wait_event(["P2P-REMOVE-AND-REFORM-GROUP"], timeout=1)
+        if ev is not None:
+            raise Exception("Unexpected P2P-REMOVE-AND-REFORM-GROUP event")
+
+        if "OK" not in dev[0].request("DRIVER_EVENT AVOID_FREQUENCIES " + str(freq)):
+            raise Exception("Could not simulate driver event(3)")
+        ev = dev[0].wait_event(["CTRL-EVENT-AVOID-FREQ"], timeout=10)
+        if ev is None:
+            raise Exception("No CTRL-EVENT-AVOID-FREQ event")
+        ev = dev[0].wait_event(["P2P-REMOVE-AND-REFORM-GROUP"], timeout=10)
+        if ev is None:
+            raise Exception("No P2P-REMOVE-AND-REFORM-GROUP event")
+    finally:
+        set_country("00")
+        dev[0].request("DRIVER_EVENT AVOID_FREQUENCIES")

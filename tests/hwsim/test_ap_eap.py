@@ -1735,3 +1735,47 @@ def test_ap_wpa2_eap_expanded_nak(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"])
     if ev is None:
         raise Exception("EAP failure timed out")
+
+def test_ap_wpa2_eap_sql(dev, apdev, params):
+    """WPA2-Enterprise connection using SQLite for user DB"""
+    try:
+        import sqlite3
+    except ImportError:
+        return "skip"
+    dbfile = os.path.join(params['logdir'], "eap-user.db")
+    try:
+        os.remove(dbfile)
+    except:
+        pass
+    con = sqlite3.connect(dbfile)
+    with con:
+        cur = con.cursor()
+        cur.execute("CREATE TABLE users(identity TEXT PRIMARY KEY, methods TEXT, password TEXT, remediation TEXT, phase2 INTEGER)")
+        cur.execute("CREATE TABLE wildcards(identity TEXT PRIMARY KEY, methods TEXT)")
+        cur.execute("INSERT INTO users(identity,methods,password,phase2) VALUES ('user-pap','TTLS-PAP','password',1)")
+        cur.execute("INSERT INTO users(identity,methods,password,phase2) VALUES ('user-chap','TTLS-CHAP','password',1)")
+        cur.execute("INSERT INTO users(identity,methods,password,phase2) VALUES ('user-mschap','TTLS-MSCHAP','password',1)")
+        cur.execute("INSERT INTO users(identity,methods,password,phase2) VALUES ('user-mschapv2','TTLS-MSCHAPV2','password',1)")
+        cur.execute("INSERT INTO wildcards(identity,methods) VALUES ('','TTLS,TLS')")
+        cur.execute("CREATE TABLE authlog(timestamp TEXT, session TEXT, nas_ip TEXT, username TEXT, note TEXT)")
+
+    try:
+        params = int_eap_server_params()
+        params["eap_user_file"] = "sqlite:" + dbfile
+        hostapd.add_ap(apdev[0]['ifname'], params)
+        eap_connect(dev[0], apdev[0], "TTLS", "user-mschapv2",
+                    anonymous_identity="ttls", password="password",
+                    ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2")
+        dev[0].request("REMOVE_NETWORK all")
+        eap_connect(dev[1], apdev[0], "TTLS", "user-mschap",
+                    anonymous_identity="ttls", password="password",
+                    ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAP")
+        dev[1].request("REMOVE_NETWORK all")
+        eap_connect(dev[0], apdev[0], "TTLS", "user-chap",
+                    anonymous_identity="ttls", password="password",
+                    ca_cert="auth_serv/ca.pem", phase2="auth=CHAP")
+        eap_connect(dev[1], apdev[0], "TTLS", "user-pap",
+                    anonymous_identity="ttls", password="password",
+                    ca_cert="auth_serv/ca.pem", phase2="auth=PAP")
+    finally:
+        os.remove(dbfile)

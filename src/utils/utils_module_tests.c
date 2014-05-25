@@ -9,6 +9,7 @@
 #include "utils/includes.h"
 
 #include "utils/common.h"
+#include "utils/bitfield.h"
 
 
 struct printf_test_data {
@@ -73,6 +74,89 @@ static int printf_encode_decode_tests(void)
 }
 
 
+static int bitfield_tests(void)
+{
+	struct bitfield *bf;
+	int i;
+	int errors = 0;
+
+	wpa_printf(MSG_INFO, "bitfield tests");
+
+	bf = bitfield_alloc(123);
+	if (bf == NULL)
+		return -1;
+
+	for (i = 0; i < 123; i++) {
+		if (bitfield_is_set(bf, i) || bitfield_is_set(bf, i + 1))
+			errors++;
+		if (i > 0 && bitfield_is_set(bf, i - 1))
+			errors++;
+		bitfield_set(bf, i);
+		if (!bitfield_is_set(bf, i))
+			errors++;
+		bitfield_clear(bf, i);
+		if (bitfield_is_set(bf, i))
+			errors++;
+	}
+
+	for (i = 123; i < 200; i++) {
+		if (bitfield_is_set(bf, i) || bitfield_is_set(bf, i + 1))
+			errors++;
+		if (i > 0 && bitfield_is_set(bf, i - 1))
+			errors++;
+		bitfield_set(bf, i);
+		if (bitfield_is_set(bf, i))
+			errors++;
+		bitfield_clear(bf, i);
+		if (bitfield_is_set(bf, i))
+			errors++;
+	}
+
+	for (i = 0; i < 123; i++) {
+		if (bitfield_is_set(bf, i) || bitfield_is_set(bf, i + 1))
+			errors++;
+		bitfield_set(bf, i);
+		if (!bitfield_is_set(bf, i))
+			errors++;
+	}
+
+	for (i = 0; i < 123; i++) {
+		if (!bitfield_is_set(bf, i))
+			errors++;
+		bitfield_clear(bf, i);
+		if (bitfield_is_set(bf, i))
+			errors++;
+	}
+
+	for (i = 0; i < 123; i++) {
+		if (bitfield_get_first_zero(bf) != i)
+			errors++;
+		bitfield_set(bf, i);
+	}
+	if (bitfield_get_first_zero(bf) != -1)
+		errors++;
+	for (i = 0; i < 123; i++) {
+		if (!bitfield_is_set(bf, i))
+			errors++;
+		bitfield_clear(bf, i);
+		if (bitfield_get_first_zero(bf) != i)
+			errors++;
+		bitfield_set(bf, i);
+	}
+	if (bitfield_get_first_zero(bf) != -1)
+		errors++;
+
+	bitfield_free(bf);
+
+	if (errors) {
+		wpa_printf(MSG_ERROR, "%d bitfield test(s) failed", errors);
+		return -1;
+	}
+
+	return 0;
+}
+
+
 int utils_module_tests(void)
 {
 	int ret = 0;
@@ -80,6 +164,8 @@ int utils_module_tests(void)
 	wpa_printf(MSG_INFO, "utils module tests");
 
 	if (printf_encode_decode_tests() < 0)
+		ret = -1;
+	if (bitfield_tests() < 0)
 		ret = -1;
 
 	return ret;

@@ -11,6 +11,7 @@
 #include "utils/common.h"
 #include "utils/bitfield.h"
 #include "utils/ext_password.h"
+#include "utils/trace.h"
 
 
 struct printf_test_data {
@@ -220,6 +221,17 @@ static int ext_password_tests(void)
 }
 
 
+static int trace_tests(void)
+{
+	wpa_printf(MSG_INFO, "trace tests");
+
+	wpa_trace_show("test backtrace");
+	wpa_trace_dump_funcname("test funcname", trace_tests);
+
+	return 0;
+}
+
+
 int utils_module_tests(void)
 {
 	int ret = 0;
@@ -228,6 +240,7 @@ int utils_module_tests(void)
 
 	if (printf_encode_decode_tests() < 0 ||
 	    ext_password_tests() < 0 ||
+	    trace_tests() < 0 ||
 	    bitfield_tests() < 0 ||
 	    int_array_tests() < 0)
 		ret = -1;

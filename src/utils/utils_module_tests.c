@@ -10,6 +10,7 @@
 
 #include "utils/common.h"
 #include "utils/bitfield.h"
+#include "utils/ext_password.h"
 
 
 struct printf_test_data {
@@ -188,6 +189,37 @@ static int int_array_tests(void)
 }
 
 
+static int ext_password_tests(void)
+{
+	struct ext_password_data *data;
+	int ret = 0;
+	struct wpabuf *pw;
+
+	wpa_printf(MSG_INFO, "ext_password tests");
+
+	data = ext_password_init("unknown", "foo");
+	if (data != NULL)
+		return -1;
+
+	data = ext_password_init("test", NULL);
+	if (data == NULL)
+		return -1;
+	pw = ext_password_get(data, "foo");
+	if (pw != NULL)
+		ret = -1;
+	ext_password_free(pw);
+
+	ext_password_deinit(data);
+
+	pw = ext_password_get(NULL, "foo");
+	if (pw != NULL)
+		ret = -1;
+	ext_password_free(pw);
+
+	return ret;
+}
+
+
 int utils_module_tests(void)
 {
 	int ret = 0;
@@ -195,6 +227,7 @@ int utils_module_tests(void)
 	wpa_printf(MSG_INFO, "utils module tests");
 
 	if (printf_encode_decode_tests() < 0 ||
+	    ext_password_tests() < 0 ||
 	    bitfield_tests() < 0 ||
 	    int_array_tests() < 0)
 		ret = -1;

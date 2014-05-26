@@ -4640,18 +4640,6 @@ void wpas_request_connection(struct wpa_supplicant *wpa_s)
 }
 
 
-void dump_freq_array(struct wpa_supplicant *wpa_s, const char *title,
-		     int *freq_array, unsigned int len)
-{
-	unsigned int i;
-
-	wpa_dbg(wpa_s, MSG_DEBUG, "Shared frequencies (len=%u): %s",
-		len, title);
-	for (i = 0; i < len; i++)
-		wpa_dbg(wpa_s, MSG_DEBUG, "freq[%u]: %d", i, freq_array[i]);
-}
-
-
 void dump_freq_data(struct wpa_supplicant *wpa_s, const char *title,
 		    struct wpa_used_freq_data *freqs_data,
 		    unsigned int len)

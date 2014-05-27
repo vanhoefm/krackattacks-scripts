@@ -116,7 +116,7 @@ static int ieee802_11_parse_vendor_specific(const u8 *pos, size_t elen,
 		default:
 			wpa_printf(MSG_MSGDUMP, "Unknown WFA "
 				   "information element ignored "
-				   "(type=%d len=%lu)\n",
+				   "(type=%d len=%lu)",
 				   pos[3], (unsigned long) elen);
 			return -1;
 		}

@@ -1954,3 +1954,65 @@ def test_ap_hs20_ft(dev, apdev):
                                   'update_identifier': "1234" })
     interworking_select(dev[0], bssid, "home", freq="2412")
     interworking_connect(dev[0], bssid, "TTLS")
+
+def test_ap_hs20_remediation_sql(dev, apdev, params):
+    """Hotspot 2.0 connection and remediation required using SQLite for user DB"""
+    try:
+        import sqlite3
+    except ImportError:
+        return "skip"
+    dbfile = os.path.join(params['logdir'], "eap-user.db")
+    try:
+        os.remove(dbfile)
+    except:
+        pass
+    con = sqlite3.connect(dbfile)
+    with con:
+        cur = con.cursor()
+        cur.execute("CREATE TABLE users(identity TEXT PRIMARY KEY, methods TEXT, password TEXT, remediation TEXT, phase2 INTEGER)")
+        cur.execute("CREATE TABLE wildcards(identity TEXT PRIMARY KEY, methods TEXT)")
+        cur.execute("INSERT INTO users(identity,methods,password,phase2,remediation) VALUES ('user-mschapv2','TTLS-MSCHAPV2','password',1,'user')")
+        cur.execute("INSERT INTO wildcards(identity,methods) VALUES ('','TTLS,TLS')")
+        cur.execute("CREATE TABLE authlog(timestamp TEXT, session TEXT, nas_ip TEXT, username TEXT, note TEXT)")
+
+    try:
+        params = { "ssid": "as", "beacon_int": "2000",
+                   "radius_server_clients": "auth_serv/radius_clients.conf",
+                   "radius_server_auth_port": '18128',
+                   "eap_server": "1",
+                   "eap_user_file": "sqlite:" + dbfile,
+                   "ca_cert": "auth_serv/ca.pem",
+                   "server_cert": "auth_serv/server.pem",
+                   "private_key": "auth_serv/server.key",
+                   "subscr_remediation_url": "https://example.org/",
+                   "subscr_remediation_method": "1" }
+        hostapd.add_ap(apdev[1]['ifname'], params)
+
+        bssid = apdev[0]['bssid']
+        params = hs20_ap_params()
+        params['auth_server_port'] = "18128"
+        hostapd.add_ap(apdev[0]['ifname'], params)
+
+        dev[0].request("SET pmf 1")
+        dev[0].hs20_enable()
+        id = dev[0].add_cred_values({ 'realm': "example.com",
+                                      'username': "user-mschapv2",
+                                      'password': "password",
+                                      'ca_cert': "auth_serv/ca.pem" })
+        interworking_select(dev[0], bssid, freq="2412")
+        interworking_connect(dev[0], bssid, "TTLS")
+        ev = dev[0].wait_event(["HS20-SUBSCRIPTION-REMEDIATION"], timeout=5)
+        if ev is None:
+            raise Exception("Timeout on subscription remediation notice")
+        if " 1 https://example.org/" not in ev:
+            raise Exception("Unexpected subscription remediation event contents")
+
+        with con:
+            cur = con.cursor()
+            cur.execute("SELECT * from authlog")
+            rows = cur.fetchall()
+            if len(rows) < 1:
+                raise Exception("No authlog entries")
+
+    finally:
+        os.remove(dbfile)

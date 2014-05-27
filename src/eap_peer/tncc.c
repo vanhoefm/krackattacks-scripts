@@ -1092,8 +1092,10 @@ static int tncc_read_config(struct tncc_data *tncc)
 			int error = 0;
 
 			imc = tncc_parse_imc(pos + 4, line_end, &error);
-			if (error)
+			if (error) {
+				os_free(config);
 				return -1;
+			}
 			if (imc) {
 				if (last == NULL)
 					tncc->imc = imc;

@@ -92,5 +92,11 @@ int wpas_module_tests(void)
 			ret = -1;
 	}
 
+	{
+		int common_module_tests(void);
+		if (common_module_tests() < 0)
+			ret = -1;
+	}
+
 	return ret;
 }

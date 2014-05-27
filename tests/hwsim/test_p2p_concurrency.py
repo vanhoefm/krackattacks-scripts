@@ -14,6 +14,9 @@ from test_p2p_grpform import go_neg_pin_authorized
 from test_p2p_grpform import go_neg_pbc
 from test_p2p_grpform import check_grpform_results
 from test_p2p_grpform import remove_group
+from test_p2p_persistent import form
+from test_p2p_persistent import invite_from_cli
+from test_p2p_persistent import invite_from_go
 
 def test_concurrent_autogo(dev, apdev):
     """Concurrent P2P autonomous GO"""
@@ -145,3 +148,19 @@ def test_concurrent_grpform_while_connecting3(dev, apdev):
     logger.info("Confirm AP connection after P2P group removal")
     dev[0].wait_completed()
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+
+def test_concurrent_persistent_group(dev, apdev):
+    """Concurrent P2P persistent group"""
+    logger.info("Connect to an infrastructure AP")
+    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open", "channel": "2" })
+    dev[0].request("SET p2p_no_group_iface 0")
+    dev[0].connect("test-open", key_mgmt="NONE", scan_freq="2417")
+
+    logger.info("Run persistent group test while associated to an AP")
+    form(dev[0], dev[1])
+    [go_res, cli_res] = invite_from_cli(dev[0], dev[1])
+    if go_res['freq'] != '2417':
+        raise Exception("Unexpected channel selected: " + go_res['freq'])
+    [go_res, cli_res] = invite_from_go(dev[0], dev[1])
+    if go_res['freq'] != '2417':
+        raise Exception("Unexpected channel selected: " + go_res['freq'])

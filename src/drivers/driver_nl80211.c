@@ -7693,11 +7693,14 @@ static void nl80211_remove_iface(struct wpa_driver_nl80211_data *drv,
 				 int ifidx)
 {
 	struct nl_msg *msg;
+	struct wpa_driver_nl80211_data *drv2;
 
 	wpa_printf(MSG_DEBUG, "nl80211: Remove interface ifindex=%d", ifidx);
 
 	/* stop listening for EAPOL on this interface */
-	del_ifidx(drv, ifidx);
+	dl_list_for_each(drv2, &drv->global->interfaces,
+			 struct wpa_driver_nl80211_data, list)
+		del_ifidx(drv2, ifidx);
 
 	msg = nlmsg_alloc();
 	if (!msg)
@@ -10179,8 +10182,12 @@ static int wpa_driver_nl80211_if_remove(struct i802_bss *bss,
 		   __func__, type, ifname, ifindex, bss->added_if);
 	if (ifindex > 0 && (bss->added_if || bss->ifindex != ifindex))
 		nl80211_remove_iface(drv, ifindex);
-	else if (ifindex > 0 && !bss->added_if)
-		del_ifidx(drv, ifindex);
+	else if (ifindex > 0 && !bss->added_if) {
+		struct wpa_driver_nl80211_data *drv2;
+		dl_list_for_each(drv2, &drv->global->interfaces,
+				 struct wpa_driver_nl80211_data, list)
+			del_ifidx(drv2, ifindex);
+	}
 
 	if (type != WPA_IF_AP_BSS)
 		return 0;

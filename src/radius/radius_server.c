@@ -1730,6 +1730,7 @@ radius_server_init(struct radius_server_conf *conf)
 		data->subscr_remediation_url =
 			os_strdup(conf->subscr_remediation_url);
 	}
+	data->subscr_remediation_method = conf->subscr_remediation_method;
 
 #ifdef CONFIG_SQLITE
 	if (conf->sqlite_file) {

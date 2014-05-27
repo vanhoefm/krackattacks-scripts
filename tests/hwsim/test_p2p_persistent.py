@@ -487,3 +487,19 @@ def test_persistent_group_without_persistent_reconnect(dev):
         raise Exception("Invitation command failed")
     [go_res, cli_res] = check_result(dev[0], dev[1])
     terminate_group(dev[0], dev[1])
+
+def test_persistent_group_already_running(dev):
+    """P2P persistent group formation and invitation while GO already running"""
+    form(dev[0], dev[1])
+    peer = dev[1].get_peer(dev[0].p2p_dev_addr())
+    listen_freq = peer['listen_freq']
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
+    networks = dev[0].list_networks()
+    if len(networks) != 1:
+        raise Exception("Unexpected number of networks")
+    if "[P2P-PERSISTENT]" not in networks[0]['flags']:
+        raise Exception("Not the persistent group data")
+    if "OK" not in dev[0].global_request("P2P_GROUP_ADD persistent=" + networks[0]['id'] + " freq=" + listen_freq):
+        raise Exception("Could not state GO")
+    invite_from_cli(dev[0], dev[1])

@@ -6,6 +6,7 @@
 
 import logging
 logger = logging.getLogger()
+import re
 import time
 
 import hwsim_utils
@@ -36,9 +37,12 @@ def terminate_group(go, cli):
     go.remove_group()
     cli.wait_go_ending_session()
 
-def invite(inv, resp, extra=None):
+def invite(inv, resp, extra=None, persistent_reconnect=True):
     addr = resp.p2p_dev_addr()
-    resp.request("SET persistent_reconnect 1")
+    if persistent_reconnect:
+        resp.request("SET persistent_reconnect 1")
+    else:
+        resp.request("SET persistent_reconnect 0")
     resp.p2p_listen()
     if not inv.discover_peer(addr, social=True):
         raise Exception("Peer " + addr + " not found")
@@ -412,3 +416,72 @@ def test_persistent_group_in_grpform(dev):
     r_res = dev[1].p2p_go_neg_auth_result()
     logger.debug("i_res: " + str(i_res))
     logger.debug("r_res: " + str(r_res))
+
+def test_persistent_group_without_persistent_reconnect(dev):
+    """P2P persistent group re-invocation without persistent reconnect"""
+    form(dev[0], dev[1])
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
+
+    logger.info("Re-invoke persistent group from client")
+    invite(dev[1], dev[0], persistent_reconnect=False)
+
+    ev = dev[0].wait_global_event(["P2P-INVITATION-RECEIVED"], timeout=15)
+    if ev is None:
+        raise Exception("No invitation request reported");
+    if "persistent=" not in ev:
+        raise Exception("Invalid invitation type reported: " + ev)
+
+    ev2 = dev[1].wait_global_event(["P2P-INVITATION-RESULT"], timeout=15)
+    if ev2 is None:
+        raise Exception("No invitation response reported");
+    if "status=1" not in ev2:
+        raise Exception("Unexpected status: " + ev2)
+    dev[1].p2p_listen()
+
+    exp = r'<.>(P2P-INVITATION-RECEIVED) sa=([0-9a-f:]*) persistent=([0-9]*) freq=([0-9]*)'
+    s = re.split(exp, ev)
+    if len(s) < 5:
+        raise Exception("Could not parse invitation event")
+    sa = s[2]
+    id = s[3]
+    freq = s[4]
+    logger.info("Re-initiate invitation based on upper layer acceptance")
+    if "OK" not in dev[0].global_request("P2P_INVITE persistent=" + id + " peer=" + sa + " freq=" + freq):
+        raise Exception("Invitation command failed")
+    [go_res, cli_res] = check_result(dev[0], dev[1])
+    if go_res['freq'] != freq:
+        raise Exception("Unexpected channel on GO: {} MHz, expected {} MHz".format(go_res['freq'], freq))
+    if cli_res['freq'] != freq:
+        raise Exception("Unexpected channel on CLI: {} MHz, expected {} MHz".format(cli_res['freq'], freq))
+    terminate_group(dev[0], dev[1])
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
+
+    logger.info("Re-invoke persistent group from GO")
+    invite(dev[0], dev[1], persistent_reconnect=False)
+
+    ev = dev[1].wait_global_event(["P2P-INVITATION-RECEIVED"], timeout=15)
+    if ev is None:
+        raise Exception("No invitation request reported");
+    if "persistent=" not in ev:
+        raise Exception("Invalid invitation type reported: " + ev)
+
+    ev2 = dev[0].wait_global_event(["P2P-INVITATION-RESULT"], timeout=15)
+    if ev2 is None:
+        raise Exception("No invitation response reported");
+    if "status=1" not in ev2:
+        raise Exception("Unexpected status: " + ev2)
+    dev[0].p2p_listen()
+
+    exp = r'<.>(P2P-INVITATION-RECEIVED) sa=([0-9a-f:]*) persistent=([0-9]*)'
+    s = re.split(exp, ev)
+    if len(s) < 4:
+        raise Exception("Could not parse invitation event")
+    sa = s[2]
+    id = s[3]
+    logger.info("Re-initiate invitation based on upper layer acceptance")
+    if "OK" not in dev[1].global_request("P2P_INVITE persistent=" + id + " peer=" + sa + " freq=" + freq):
+        raise Exception("Invitation command failed")
+    [go_res, cli_res] = check_result(dev[0], dev[1])
+    terminate_group(dev[0], dev[1])

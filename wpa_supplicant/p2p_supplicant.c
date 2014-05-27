@@ -2977,6 +2977,7 @@ static u8 wpas_invitation_process(void *ctx, const u8 *sa, const u8 *bssid,
 	    os_memcmp(sa, wpa_s->p2p_auth_invite, ETH_ALEN) == 0) {
 		wpa_printf(MSG_DEBUG, "P2P: Accept previously initiated "
 			   "invitation to re-invoke a persistent group");
+		os_memset(wpa_s->p2p_auth_invite, 0, ETH_ALEN);
 	} else if (!wpa_s->conf->persistent_reconnect)
 		return P2P_SC_FAIL_INFO_CURRENTLY_UNAVAILABLE;
 

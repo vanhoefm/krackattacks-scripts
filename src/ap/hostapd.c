@@ -1230,8 +1230,17 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 		hapd = iface->bss[j];
 		if (j)
 			os_memcpy(hapd->own_addr, prev_addr, ETH_ALEN);
-		if (hostapd_setup_bss(hapd, j == 0))
+		if (hostapd_setup_bss(hapd, j == 0)) {
+			do {
+				hapd = iface->bss[j];
+				hostapd_free_stas(hapd);
+				hostapd_flush_old_stations(
+					hapd, WLAN_REASON_DEAUTH_LEAVING);
+				hostapd_clear_wep(hapd);
+				hostapd_free_hapd_data(hapd);
+			} while (j-- > 0);
 			goto fail;
+		}
 		if (hostapd_mac_comp_empty(hapd->conf->bssid) == 0)
 			prev_addr = hapd->own_addr;
 	}

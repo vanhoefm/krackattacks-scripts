@@ -10107,19 +10107,22 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 
 		if (linux_get_ifhwaddr(drv->global->ioctl_sock, ifname,
 				       new_addr) < 0) {
-			nl80211_remove_iface(drv, ifidx);
+			if (added)
+				nl80211_remove_iface(drv, ifidx);
 			return -1;
 		}
 		if (nl80211_addr_in_use(drv->global, new_addr)) {
 			wpa_printf(MSG_DEBUG, "nl80211: Allocate new address "
 				   "for P2P group interface");
 			if (nl80211_p2p_interface_addr(drv, new_addr) < 0) {
-				nl80211_remove_iface(drv, ifidx);
+				if (added)
+					nl80211_remove_iface(drv, ifidx);
 				return -1;
 			}
 			if (linux_set_ifhwaddr(drv->global->ioctl_sock, ifname,
 					       new_addr) < 0) {
-				nl80211_remove_iface(drv, ifidx);
+				if (added)
+					nl80211_remove_iface(drv, ifidx);
 				return -1;
 			}
 		}
@@ -10148,7 +10151,8 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 
 		if (linux_set_iface_flags(drv->global->ioctl_sock, ifname, 1))
 		{
-			nl80211_remove_iface(drv, ifidx);
+			if (added)
+				nl80211_remove_iface(drv, ifidx);
 			os_free(new_bss);
 			return -1;
 		}

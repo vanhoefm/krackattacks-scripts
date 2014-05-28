@@ -12,6 +12,8 @@ import Queue
 
 import hwsim_utils
 import utils
+from test_p2p_autogo import connect_cli
+from test_p2p_persistent import form, invite_from_cli, invite_from_go
 
 def test_wifi_display(dev):
     """Wi-Fi Display extensions to P2P"""
@@ -147,3 +149,83 @@ def test_wifi_display(dev):
     dev[0].request("SET wifi_display 0")
     dev[1].request("SET wifi_display 0")
     dev[2].request("SET wifi_display 0")
+
+def enable_wifi_display(dev):
+    dev.request("SET wifi_display 1")
+    dev.request("WFD_SUBELEM_SET 0 000600411c440028")
+
+def test_wifi_display_go_invite(dev):
+    """P2P GO with Wi-Fi Display inviting a client to join"""
+    addr0 = dev[0].p2p_dev_addr()
+    addr1 = dev[1].p2p_dev_addr()
+
+    try:
+        enable_wifi_display(dev[0])
+        enable_wifi_display(dev[1])
+        enable_wifi_display(dev[2])
+
+        dev[1].p2p_listen()
+        if not dev[0].discover_peer(addr1, social=True):
+            raise Exception("Peer " + addr1 + " not found")
+        dev[0].p2p_listen()
+        if not dev[1].discover_peer(addr0, social=True):
+            raise Exception("Peer " + addr0 + " not found")
+        dev[1].p2p_listen()
+
+        logger.info("Authorize invitation")
+        pin = dev[1].wps_read_pin()
+        dev[1].global_request("P2P_CONNECT " + addr0 + " " + pin + " join auth")
+
+        dev[0].p2p_start_go(freq=2412)
+
+        # Add test client to the group
+        connect_cli(dev[0], dev[2])
+
+        logger.info("Invite peer to join the group")
+        dev[0].p2p_go_authorize_client(pin)
+        dev[0].global_request("P2P_INVITE group=" + dev[0].group_ifname + " peer=" + addr1)
+        ev = dev[1].wait_global_event(["P2P-INVITATION-RECEIVED",
+                                       "P2P-GROUP-STARTED"], timeout=20)
+        if ev is None:
+            raise Exception("Timeout on invitation on peer")
+        if "P2P-INVITATION-RECEIVED" in ev:
+            raise Exception("Unexpected request to accept pre-authorized invitation")
+
+        dev[0].remove_group()
+        dev[1].wait_go_ending_session()
+        dev[2].wait_go_ending_session()
+
+    finally:
+        dev[0].request("SET wifi_display 0")
+        dev[1].request("SET wifi_display 0")
+        dev[2].request("SET wifi_display 0")
+
+def test_wifi_display_persistent_group(dev):
+    """P2P persistent group formation and re-invocation with Wi-Fi Display enabled"""
+    try:
+        enable_wifi_display(dev[0])
+        enable_wifi_display(dev[1])
+        enable_wifi_display(dev[2])
+
+        form(dev[0], dev[1])
+        peer = dev[1].get_peer(dev[0].p2p_dev_addr())
+        listen_freq = peer['listen_freq']
+        invite_from_cli(dev[0], dev[1])
+        invite_from_go(dev[0], dev[1])
+
+        dev[0].dump_monitor()
+        dev[1].dump_monitor()
+        networks = dev[0].list_networks()
+        if len(networks) != 1:
+            raise Exception("Unexpected number of networks")
+        if "[P2P-PERSISTENT]" not in networks[0]['flags']:
+            raise Exception("Not the persistent group data")
+        if "OK" not in dev[0].global_request("P2P_GROUP_ADD persistent=" + networks[0]['id'] + " freq=" + listen_freq):
+            raise Exception("Could not state GO")
+        connect_cli(dev[0], dev[2])
+        invite_from_cli(dev[0], dev[1])
+
+    finally:
+        dev[0].request("SET wifi_display 0")
+        dev[1].request("SET wifi_display 0")
+        dev[2].request("SET wifi_display 0")

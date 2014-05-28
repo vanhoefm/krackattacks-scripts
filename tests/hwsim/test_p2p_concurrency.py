@@ -17,6 +17,7 @@ from test_p2p_grpform import remove_group
 from test_p2p_persistent import form
 from test_p2p_persistent import invite_from_cli
 from test_p2p_persistent import invite_from_go
+from test_p2p_persistent import invite
 
 def test_concurrent_autogo(dev, apdev):
     """Concurrent P2P autonomous GO"""
@@ -164,3 +165,20 @@ def test_concurrent_persistent_group(dev, apdev):
     [go_res, cli_res] = invite_from_go(dev[0], dev[1])
     if go_res['freq'] != '2417':
         raise Exception("Unexpected channel selected: " + go_res['freq'])
+
+def test_concurrent_invitation_channel_mismatch(dev, apdev):
+    """P2P persistent group invitation and channel mismatch"""
+    form(dev[0], dev[1])
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
+
+    logger.info("Connect to an infrastructure AP")
+    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open", "channel": "2" })
+    dev[0].request("SET p2p_no_group_iface 0")
+    dev[0].connect("test-open", key_mgmt="NONE", scan_freq="2417")
+    invite(dev[1], dev[0], extra="freq=2412")
+    ev = dev[1].wait_global_event(["P2P-INVITATION-RESULT"], timeout=15)
+    if ev is None:
+        raise Exception("P2P invitation result not received")
+    if "status=7" not in ev:
+        raise Exception("Unexpected P2P invitation result: " + ev)

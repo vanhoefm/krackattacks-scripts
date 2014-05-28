@@ -102,3 +102,34 @@ def test_p2p_go_invite_auth(dev):
     logger.info("Terminate group")
     dev[0].remove_group()
     dev[1].wait_go_ending_session()
+
+def test_p2p_go_invite_unknown(dev):
+    """P2P GO inviting a client that has not discovered the GO"""
+    try:
+        addr0 = dev[0].p2p_dev_addr()
+        addr1 = dev[1].p2p_dev_addr()
+
+        dev[1].p2p_listen()
+        if not dev[0].discover_peer(addr1, social=True):
+            raise Exception("Peer " + addr1 + " not found")
+        dev[1].global_request("P2P_FLUSH")
+        dev[1].p2p_listen()
+
+        dev[0].p2p_start_go(freq=2412)
+
+        logger.info("Invite peer to join the group")
+        # Prevent peer entry from being added for testing coverage
+        if "OK" not in dev[1].global_request("P2P_SET peer_filter 00:11:22:33:44:55"):
+            raise Exception("Failed to set peer_filter")
+        dev[0].p2p_go_authorize_client("12345670")
+        dev[0].global_request("P2P_INVITE group=" + dev[0].group_ifname + " peer=" + addr1)
+        ev = dev[1].wait_global_event(["P2P-INVITATION-RECEIVED"], timeout=15)
+        if ev is None:
+            raise Exception("Invitation Request not received")
+        ev = dev[0].wait_global_event(["P2P-INVITATION-RESULT"], timeout=15)
+        if ev is None:
+            raise Exception("Invitation Response not received")
+        if "status=1" not in ev:
+            raise Exception("Unexpected invitation result: " + ev)
+    finally:
+        dev[1].global_request("P2P_SET peer_filter 00:00:00:00:00:00")

@@ -1692,6 +1692,13 @@ int hostapd_disable_iface(struct hostapd_iface *hapd_iface)
 
 	if (hapd_iface == NULL)
 		return -1;
+
+	if (hapd_iface->bss[0]->drv_priv == NULL) {
+		wpa_printf(MSG_INFO, "Interface %s already disabled",
+			   hapd_iface->conf->bss[0]->iface);
+		return -1;
+	}
+
 	wpa_msg(hapd_iface->bss[0]->msg_ctx, MSG_INFO, AP_EVENT_DISABLED);
 	driver = hapd_iface->bss[0]->driver;
 	drv_priv = hapd_iface->bss[0]->drv_priv;

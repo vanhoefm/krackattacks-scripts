@@ -277,10 +277,14 @@ static void hostapd_free_hapd_data(struct hostapd_data *hapd)
 
 	authsrv_deinit(hapd);
 
-	if (hapd->interface_added &&
-	    hostapd_if_remove(hapd, WPA_IF_AP_BSS, hapd->conf->iface)) {
-		wpa_printf(MSG_WARNING, "Failed to remove BSS interface %s",
-			   hapd->conf->iface);
+	if (hapd->interface_added) {
+		hapd->interface_added = 0;
+		if (hostapd_if_remove(hapd, WPA_IF_AP_BSS, hapd->conf->iface)) {
+			wpa_printf(MSG_WARNING,
+				   "Failed to remove BSS interface %s",
+				   hapd->conf->iface);
+			hapd->interface_added = 1;
+		}
 	}
 
 	os_free(hapd->probereq_cb);

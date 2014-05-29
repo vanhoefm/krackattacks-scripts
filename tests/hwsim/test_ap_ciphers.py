@@ -48,17 +48,21 @@ def test_ap_cipher_tkip_countermeasures_ap(dev, apdev):
 
     dev[0].dump_monitor()
     cmd = subprocess.Popen(["sudo", "tee", testfile],
-                           stdin=subprocess.PIPE)
+                           stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     cmd.stdin.write(apdev[0]['bssid'])
     cmd.stdin.close()
+    cmd.stdout.read()
+    cmd.stdout.close()
     ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=1)
     if ev is not None:
         raise Exception("Unexpected disconnection on first Michael MIC failure")
 
     cmd = subprocess.Popen(["sudo", "tee", testfile],
-                           stdin=subprocess.PIPE)
+                           stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     cmd.stdin.write("ff:ff:ff:ff:ff:ff")
     cmd.stdin.close()
+    cmd.stdout.read()
+    cmd.stdout.close()
     ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=10)
     if ev is None:
         raise Exception("No disconnection after two Michael MIC failures")
@@ -86,17 +90,21 @@ def test_ap_cipher_tkip_countermeasures_sta(dev, apdev):
 
     dev[0].dump_monitor()
     cmd = subprocess.Popen(["sudo", "tee", testfile],
-                           stdin=subprocess.PIPE)
+                           stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     cmd.stdin.write(dev[0].p2p_dev_addr())
     cmd.stdin.close()
+    cmd.stdout.read()
+    cmd.stdout.close()
     ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=1)
     if ev is not None:
         raise Exception("Unexpected disconnection on first Michael MIC failure")
 
     cmd = subprocess.Popen(["sudo", "tee", testfile],
-                           stdin=subprocess.PIPE)
+                           stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     cmd.stdin.write("ff:ff:ff:ff:ff:ff")
     cmd.stdin.close()
+    cmd.stdout.read()
+    cmd.stdout.close()
     ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=10)
     if ev is None:
         raise Exception("No disconnection after two Michael MIC failures")

@@ -133,3 +133,44 @@ def test_p2p_go_invite_unknown(dev):
             raise Exception("Unexpected invitation result: " + ev)
     finally:
         dev[1].global_request("P2P_SET peer_filter 00:00:00:00:00:00")
+
+def test_p2p_cli_invite(dev):
+    """P2P Client inviting a device to join"""
+    addr0 = dev[0].p2p_dev_addr()
+    addr1 = dev[1].p2p_dev_addr()
+    addr2 = dev[2].p2p_dev_addr()
+
+    dev[0].p2p_start_go(freq=2412)
+    pin = dev[1].wps_read_pin()
+    dev[0].p2p_go_authorize_client(pin)
+    dev[1].p2p_connect_group(addr0, pin, timeout=60)
+
+    dev[2].p2p_listen()
+    if not dev[1].discover_peer(addr2, social=True):
+        raise Exception("Peer " + addr2 + " not found")
+
+    if "OK" not in dev[1].global_request("P2P_INVITE group=" + dev[1].group_ifname + " peer=" + addr2):
+        raise Exception("Unexpected failure of P2P_INVITE to known peer")
+    ev = dev[2].wait_global_event(["P2P-INVITATION-RECEIVED"], timeout=10)
+    if ev is None:
+        raise Exception("Timeout on invitation invited peer")
+    if "sa=" + addr1 not in ev:
+        raise Exception("Incorrect source address")
+    if "go_dev_addr=" + addr0 not in ev:
+        raise Exception("Incorrect GO address")
+    ev = dev[1].wait_global_event(["P2P-INVITATION-RESULT"], timeout=10)
+    if ev is None:
+        raise Exception("Timeout on invitation on inviting client")
+    if "status=1" not in ev:
+        raise Exception("Unexpected invitation result")
+
+    pin = dev[2].wps_read_pin()
+    dev[0].p2p_go_authorize_client(pin)
+    dev[2].p2p_connect_group(addr0, pin, timeout=60)
+
+    if "FAIL" not in dev[1].global_request("P2P_INVITE group=" + dev[1].group_ifname + " peer=00:11:22:33:44:55"):
+        raise Exception("Unexpected success of P2P_INVITE to unknown peer")
+
+    dev[0].remove_group()
+    dev[1].wait_go_ending_session()
+    dev[2].wait_go_ending_session()

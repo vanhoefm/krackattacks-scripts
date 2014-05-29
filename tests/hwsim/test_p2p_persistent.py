@@ -89,6 +89,10 @@ def form(go, cli, test_data=True, reverse_init=False):
     if not i_res['persistent'] or not r_res['persistent']:
         raise Exception("Formed group was not persistent")
     terminate_group(go, cli)
+    if reverse_init:
+        return r_res
+    else:
+        return i_res
 
 def invite_from_cli(go, cli):
     logger.info("Re-invoke persistent group from client")

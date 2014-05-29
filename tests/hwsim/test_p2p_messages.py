@@ -700,6 +700,97 @@ def test_p2p_msg_invitation_req(dev, apdev):
     if hapd.mgmt_rx(timeout=1) is None:
         raise Exception("No invitation response " + str(dialog_token))
 
+    # Unusable peer operating channel preference
+    time.sleep(0.1)
+    dev[0].dump_monitor()
+    dialog_token += 1
+    msg = p2p_hdr(dst, src, type=P2P_INVITATION_REQ, dialog_token=dialog_token)
+    attrs = p2p_attr_config_timeout()
+    attrs = p2p_attr_invitation_flags()
+    attrs += p2p_attr_operating_channel(chan=15)
+    attrs += p2p_attr_group_bssid(src)
+    attrs += p2p_attr_channel_list()
+    attrs += p2p_attr_group_id(src, "DIRECT-foo")
+    attrs += p2p_attr_device_info(src, config_methods=0x0108)
+    msg['payload'] += ie_p2p(attrs)
+    hapd.mgmt_tx(msg)
+    if hapd.mgmt_rx(timeout=1) is None:
+        raise Exception("No invitation response " + str(dialog_token))
+
+def test_p2p_msg_invitation_req_to_go(dev, apdev):
+    """P2P protocol tests for invitation request processing on GO device"""
+    res = form(dev[0], dev[1])
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()
+    addr0 = dev[0].p2p_dev_addr()
+    addr1 = dev[1].p2p_dev_addr()
+    peer = dev[1].get_peer(addr0)
+    listen_freq = peer['listen_freq']
+
+    if "FAIL" in dev[1].request("SET ext_mgmt_frame_handling 1"):
+        raise Exception("Failed to enable external management frame handling")
+
+    networks = dev[0].list_networks()
+    if len(networks) != 1:
+        raise Exception("Unexpected number of networks")
+    if "[P2P-PERSISTENT]" not in networks[0]['flags']:
+        raise Exception("Not the persistent group data")
+    if "OK" not in dev[0].global_request("P2P_GROUP_ADD persistent=" + networks[0]['id'] + " freq=" + listen_freq):
+        raise Exception("Could not state GO")
+
+    dialog_token = 0
+
+    # Unusable peer operating channel preference
+    dialog_token += 1
+    msg = p2p_hdr(addr0, addr1, type=P2P_INVITATION_REQ,
+                  dialog_token=dialog_token)
+    attrs = p2p_attr_config_timeout()
+    attrs = p2p_attr_invitation_flags(bitmap=1)
+    attrs += p2p_attr_operating_channel(chan=15)
+    attrs += p2p_attr_channel_list()
+    attrs += p2p_attr_group_id(res['go_dev_addr'], res['ssid'])
+    attrs += p2p_attr_device_info(addr1, config_methods=0x0108)
+    msg['payload'] += ie_p2p(attrs)
+
+    mgmt_tx(dev[1], "MGMT_TX {} {} freq={} wait_time=50 no_cck=1 action={}".format(addr0, addr0, peer['listen_freq'], binascii.hexlify(msg['payload'])))
+
+    rx_msg = dev[1].mgmt_rx()
+    if rx_msg is None:
+        raise Exception("MGMT-RX timeout")
+    p2p = parse_p2p_public_action(rx_msg['payload'])
+    if p2p is None:
+        raise Exception("Not a P2P Public Action frame " + str(dialog_token))
+    if p2p['subtype'] != P2P_INVITATION_RESP:
+        raise Exception("Unexpected subtype %d" % p2p['subtype'])
+    if p2p['p2p_status'] != 0:
+        raise Exception("Unexpected status %d" % p2p['p2p_status'])
+
+    # Forced channel re-selection due to channel list
+    dialog_token += 1
+    msg = p2p_hdr(addr0, addr1, type=P2P_INVITATION_REQ,
+                  dialog_token=dialog_token)
+    attrs = p2p_attr_config_timeout()
+    attrs = p2p_attr_invitation_flags(bitmap=1)
+    attrs += struct.pack("<BH3BBBB", P2P_ATTR_CHANNEL_LIST, 6,
+                         0x58, 0x58, 0x04,
+                         81, 1, 3)
+    attrs += p2p_attr_group_id(res['go_dev_addr'], res['ssid'])
+    attrs += p2p_attr_device_info(addr1, config_methods=0x0108)
+    msg['payload'] += ie_p2p(attrs)
+
+    mgmt_tx(dev[1], "MGMT_TX {} {} freq={} wait_time=50 no_cck=1 action={}".format(addr0, addr0, peer['listen_freq'], binascii.hexlify(msg['payload'])))
+
+    rx_msg = dev[1].mgmt_rx()
+    if rx_msg is None:
+        raise Exception("MGMT-RX timeout")
+    p2p = parse_p2p_public_action(rx_msg['payload'])
+    if p2p is None:
+        raise Exception("Not a P2P Public Action frame " + str(dialog_token))
+    if p2p['subtype'] != P2P_INVITATION_RESP:
+        raise Exception("Unexpected subtype %d" % p2p['subtype'])
+    if p2p['p2p_status'] != 7:
+        raise Exception("Unexpected status %d" % p2p['p2p_status'])
+
 def test_p2p_msg_invitation_req_unknown(dev, apdev):
     """P2P protocol tests for invitation request from unknown peer"""
     dst, src, hapd, channel = start_p2p(dev, apdev)

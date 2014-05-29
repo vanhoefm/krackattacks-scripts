@@ -2968,6 +2968,41 @@ static void ocsp_debug_print_resp(OCSP_RESPONSE *rsp)
 }
 
 
+static void debug_print_cert(X509 *cert, const char *title)
+{
+#ifndef CONFIG_NO_STDOUT_DEBUG
+	BIO *out;
+	size_t rlen;
+	char *txt;
+	int res;
+
+	if (wpa_debug_level > MSG_DEBUG)
+		return;
+
+	out = BIO_new(BIO_s_mem());
+	if (!out)
+		return;
+
+	X509_print(out, cert);
+	rlen = BIO_ctrl_pending(out);
+	txt = os_malloc(rlen + 1);
+	if (!txt) {
+		BIO_free(out);
+		return;
+	}
+
+	res = BIO_read(out, txt, rlen);
+	if (res > 0) {
+		txt[res] = '\0';
+		wpa_printf(MSG_DEBUG, "OpenSSL: %s\n%s", title, txt);
+	}
+	os_free(txt);
+
+	BIO_free(out);
+#endif /* CONFIG_NO_STDOUT_DEBUG */
+}
+
+
 static int ocsp_resp_cb(SSL *s, void *arg)
 {
 	struct tls_connection *conn = arg;
@@ -3011,8 +3046,7 @@ static int ocsp_resp_cb(SSL *s, void *arg)
 
 	store = SSL_CTX_get_cert_store(s->ctx);
 	if (conn->peer_issuer) {
-		wpa_printf(MSG_DEBUG, "OpenSSL: Add issuer");
-		X509_print_fp(stdout, conn->peer_issuer);
+		debug_print_cert(conn->peer_issuer, "Add OCSP issuer");
 
 		if (X509_STORE_add_cert(store, conn->peer_issuer) != 1) {
 			tls_show_errors(MSG_INFO, __func__,

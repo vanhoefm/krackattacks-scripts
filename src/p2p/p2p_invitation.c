@@ -227,8 +227,11 @@ void p2p_process_invitation_req(struct p2p_data *p2p, const u8 *sa,
 		goto fail;
 	}
 
+	p2p_channels_dump(p2p, "own channels", &p2p->cfg->channels);
+	p2p_channels_dump(p2p, "peer channels", &dev->channels);
 	p2p_channels_intersect(&p2p->cfg->channels, &dev->channels,
 			       &intersection);
+	p2p_channels_dump(p2p, "intersection", &intersection);
 
 	if (p2p->cfg->invitation_process) {
 		status = p2p->cfg->invitation_process(

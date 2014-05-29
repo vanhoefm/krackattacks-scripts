@@ -295,8 +295,12 @@ int radius_client_register(struct radius_client_data *radius,
 }
 
 
-static void radius_client_handle_send_error(struct radius_client_data *radius,
-					    int s, RadiusType msg_type)
+/*
+ * Returns >0 if message queue was flushed (i.e., the message that triggered
+ * the error is not available anymore)
+ */
+static int radius_client_handle_send_error(struct radius_client_data *radius,
+					   int s, RadiusType msg_type)
 {
 #ifndef CONFIG_NATIVE_WINDOWS
 	int _errno = errno;
@@ -309,12 +313,18 @@ static void radius_client_handle_send_error(struct radius_client_data *radius,
 			       " try to connect again");
 		eloop_unregister_read_sock(s);
 		close(s);
-		if (msg_type == RADIUS_ACCT || msg_type == RADIUS_ACCT_INTERIM)
+		if (msg_type == RADIUS_ACCT ||
+		    msg_type == RADIUS_ACCT_INTERIM) {
 			radius_client_init_acct(radius);
-		else
+			return 0;
+		} else {
 			radius_client_init_auth(radius);
+			return 1;
+		}
 	}
 #endif /* CONFIG_NATIVE_WINDOWS */
+
+	return 0;
 }
 
 
@@ -353,8 +363,11 @@ static int radius_client_retransmit(struct radius_client_data *radius,
 
 	os_get_reltime(&entry->last_attempt);
 	buf = radius_msg_get_buf(entry->msg);
-	if (send(s, wpabuf_head(buf), wpabuf_len(buf), 0) < 0)
-		radius_client_handle_send_error(radius, s, entry->msg_type);
+	if (send(s, wpabuf_head(buf), wpabuf_len(buf), 0) < 0) {
+		if (radius_client_handle_send_error(radius, s, entry->msg_type)
+		    > 0)
+			return 0;
+	}
 
 	entry->next_try = now + entry->next_wait;
 	entry->next_wait *= 2;
@@ -378,6 +391,7 @@ static void radius_client_timer(void *eloop_ctx, void *timeout_ctx)
 	struct radius_msg_list *entry, *prev, *tmp;
 	int auth_failover = 0, acct_failover = 0;
 	char abuf[50];
+	size_t prev_num_msgs;
 
 	entry = radius->msgs;
 	if (!entry)
@@ -388,6 +402,7 @@ static void radius_client_timer(void *eloop_ctx, void *timeout_ctx)
 
 	prev = NULL;
 	while (entry) {
+		prev_num_msgs = radius->num_msgs;
 		if (now.sec >= entry->next_try &&
 		    radius_client_retransmit(radius, entry, now.sec)) {
 			if (prev)
@@ -399,6 +414,14 @@ static void radius_client_timer(void *eloop_ctx, void *timeout_ctx)
 			entry = entry->next;
 			radius_client_msg_free(tmp);
 			radius->num_msgs--;
+			continue;
+		}
+
+		if (prev_num_msgs != radius->num_msgs) {
+			wpa_printf(MSG_DEBUG,
+				   "RADIUS: Message removed from queue - restart from beginning");
+			entry = radius->msgs;
+			prev = NULL;
 			continue;
 		}
 

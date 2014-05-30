@@ -390,6 +390,7 @@ static void radius_client_timer(void *eloop_ctx, void *timeout_ctx)
 	int auth_failover = 0, acct_failover = 0;
 	char abuf[50];
 	size_t prev_num_msgs;
+	int s;
 
 	entry = radius->msgs;
 	if (!entry)
@@ -423,7 +424,10 @@ static void radius_client_timer(void *eloop_ctx, void *timeout_ctx)
 			continue;
 		}
 
-		if (entry->attempts > RADIUS_CLIENT_NUM_FAILOVER) {
+		s = entry->msg_type == RADIUS_AUTH ? radius->auth_sock :
+			radius->acct_sock;
+		if (entry->attempts > RADIUS_CLIENT_NUM_FAILOVER ||
+		    (s < 0 && entry->attempts > 0)) {
 			if (entry->msg_type == RADIUS_ACCT ||
 			    entry->msg_type == RADIUS_ACCT_INTERIM)
 				acct_failover++;

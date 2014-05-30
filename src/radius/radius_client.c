@@ -311,8 +311,6 @@ static int radius_client_handle_send_error(struct radius_client_data *radius,
 			       HOSTAPD_LEVEL_INFO,
 			       "Send failed - maybe interface status changed -"
 			       " try to connect again");
-		eloop_unregister_read_sock(s);
-		close(s);
 		if (msg_type == RADIUS_ACCT ||
 		    msg_type == RADIUS_ACCT_INTERIM) {
 			radius_client_init_acct(radius);
@@ -1151,10 +1149,50 @@ static int radius_client_disable_pmtu_discovery(int s)
 }
 
 
+static void radius_close_auth_sockets(struct radius_client_data *radius)
+{
+	radius->auth_sock = -1;
+
+	if (radius->auth_serv_sock >= 0) {
+		eloop_unregister_read_sock(radius->auth_serv_sock);
+		close(radius->auth_serv_sock);
+		radius->auth_serv_sock = -1;
+	}
+#ifdef CONFIG_IPV6
+	if (radius->auth_serv_sock6 >= 0) {
+		eloop_unregister_read_sock(radius->auth_serv_sock6);
+		close(radius->auth_serv_sock6);
+		radius->auth_serv_sock6 = -1;
+	}
+#endif /* CONFIG_IPV6 */
+}
+
+
+static void radius_close_acct_sockets(struct radius_client_data *radius)
+{
+	radius->acct_sock = -1;
+
+	if (radius->acct_serv_sock >= 0) {
+		eloop_unregister_read_sock(radius->acct_serv_sock);
+		close(radius->acct_serv_sock);
+		radius->acct_serv_sock = -1;
+	}
+#ifdef CONFIG_IPV6
+	if (radius->acct_serv_sock6 >= 0) {
+		eloop_unregister_read_sock(radius->acct_serv_sock6);
+		close(radius->acct_serv_sock6);
+		radius->acct_serv_sock6 = -1;
+	}
+#endif /* CONFIG_IPV6 */
+}
+
+
 static int radius_client_init_auth(struct radius_client_data *radius)
 {
 	struct hostapd_radius_servers *conf = radius->conf;
 	int ok = 0;
+
+	radius_close_auth_sockets(radius);
 
 	radius->auth_serv_sock = socket(PF_INET, SOCK_DGRAM, 0);
 	if (radius->auth_serv_sock < 0)
@@ -1186,6 +1224,7 @@ static int radius_client_init_auth(struct radius_client_data *radius)
 				     radius_client_receive, radius,
 				     (void *) RADIUS_AUTH)) {
 		wpa_printf(MSG_INFO, "RADIUS: Could not register read socket for authentication server");
+		radius_close_auth_sockets(radius);
 		return -1;
 	}
 
@@ -1195,6 +1234,7 @@ static int radius_client_init_auth(struct radius_client_data *radius)
 				     radius_client_receive, radius,
 				     (void *) RADIUS_AUTH)) {
 		wpa_printf(MSG_INFO, "RADIUS: Could not register read socket for authentication server");
+		radius_close_auth_sockets(radius);
 		return -1;
 	}
 #endif /* CONFIG_IPV6 */
@@ -1207,6 +1247,8 @@ static int radius_client_init_acct(struct radius_client_data *radius)
 {
 	struct hostapd_radius_servers *conf = radius->conf;
 	int ok = 0;
+
+	radius_close_acct_sockets(radius);
 
 	radius->acct_serv_sock = socket(PF_INET, SOCK_DGRAM, 0);
 	if (radius->acct_serv_sock < 0)
@@ -1238,6 +1280,7 @@ static int radius_client_init_acct(struct radius_client_data *radius)
 				     radius_client_receive, radius,
 				     (void *) RADIUS_ACCT)) {
 		wpa_printf(MSG_INFO, "RADIUS: Could not register read socket for accounting server");
+		radius_close_acct_sockets(radius);
 		return -1;
 	}
 
@@ -1247,6 +1290,7 @@ static int radius_client_init_acct(struct radius_client_data *radius)
 				     radius_client_receive, radius,
 				     (void *) RADIUS_ACCT)) {
 		wpa_printf(MSG_INFO, "RADIUS: Could not register read socket for accounting server");
+		radius_close_acct_sockets(radius);
 		return -1;
 	}
 #endif /* CONFIG_IPV6 */
@@ -1308,16 +1352,8 @@ void radius_client_deinit(struct radius_client_data *radius)
 	if (!radius)
 		return;
 
-	if (radius->auth_serv_sock >= 0)
-		eloop_unregister_read_sock(radius->auth_serv_sock);
-	if (radius->acct_serv_sock >= 0)
-		eloop_unregister_read_sock(radius->acct_serv_sock);
-#ifdef CONFIG_IPV6
-	if (radius->auth_serv_sock6 >= 0)
-		eloop_unregister_read_sock(radius->auth_serv_sock6);
-	if (radius->acct_serv_sock6 >= 0)
-		eloop_unregister_read_sock(radius->acct_serv_sock6);
-#endif /* CONFIG_IPV6 */
+	radius_close_auth_sockets(radius);
+	radius_close_acct_sockets(radius);
 
 	eloop_cancel_timeout(radius_retry_primary_timer, radius, NULL);
 

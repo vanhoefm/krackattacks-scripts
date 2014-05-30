@@ -6,6 +6,7 @@
 
 import logging
 logger = logging.getLogger()
+import subprocess
 import time
 
 import hostapd
@@ -36,6 +37,28 @@ def test_radius_auth_unreachable(dev, apdev):
     if int(mib["radiusAuthClientPendingRequests"]) < 1:
         raise Exception("Missing pending RADIUS Authentication request")
 
+def test_radius_auth_unreachable2(dev, apdev):
+    """RADIUS Authentication server unreachable (2)"""
+    subprocess.call(['sudo', 'ip', 'ro', 'replace', '192.168.213.17', 'dev',
+                     'lo'])
+    params = hostapd.wpa2_eap_params(ssid="radius-auth")
+    params['auth_server_addr'] = "192.168.213.17"
+    params['auth_server_port'] = "18139"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    subprocess.call(['sudo', 'ip', 'ro', 'del', '192.168.213.17', 'dev', 'lo'])
+    connect(dev[0], "radius-auth", wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"])
+    if ev is None:
+        raise Exception("Timeout on EAP start")
+    logger.info("Checking for RADIUS retries")
+    time.sleep(4)
+    mib = hapd.get_mib()
+    if "radiusAuthClientAccessRequests" not in mib:
+        raise Exception("Missing MIB fields")
+    if int(mib["radiusAuthClientAccessRetransmissions"]) < 1:
+        raise Exception("Missing RADIUS Authentication retransmission")
+
 def test_radius_acct_unreachable(dev, apdev):
     """RADIUS Accounting server unreachable"""
     params = hostapd.wpa2_eap_params(ssid="radius-acct")
@@ -54,6 +77,26 @@ def test_radius_acct_unreachable(dev, apdev):
         raise Exception("Missing RADIUS Accounting retransmissions")
     if int(mib["radiusAccClientPendingRequests"]) < 2:
         raise Exception("Missing pending RADIUS Accounting requests")
+
+def test_radius_acct_unreachable2(dev, apdev):
+    """RADIUS Accounting server unreachable(2)"""
+    subprocess.call(['sudo', 'ip', 'ro', 'replace', '192.168.213.17', 'dev',
+                     'lo'])
+    params = hostapd.wpa2_eap_params(ssid="radius-acct")
+    params['acct_server_addr'] = "192.168.213.17"
+    params['acct_server_port'] = "18139"
+    params['acct_server_shared_secret'] = "radius"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    subprocess.call(['sudo', 'ip', 'ro', 'del', '192.168.213.17', 'dev', 'lo'])
+    connect(dev[0], "radius-acct")
+    logger.info("Checking for RADIUS retries")
+    time.sleep(4)
+    mib = hapd.get_mib()
+    if "radiusAccClientRetransmissions" not in mib:
+        raise Exception("Missing MIB fields")
+    if int(mib["radiusAccClientRetransmissions"]) < 1 and int(mib["radiusAccClientPendingRequests"]) < 1:
+        raise Exception("Missing pending or retransmitted RADIUS Accounting requests")
 
 def test_radius_acct(dev, apdev):
     """RADIUS Accounting"""

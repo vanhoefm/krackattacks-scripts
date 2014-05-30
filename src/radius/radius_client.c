@@ -633,7 +633,7 @@ int radius_client_send(struct radius_client_data *radius,
 	}
 
 	if (msg_type == RADIUS_ACCT || msg_type == RADIUS_ACCT_INTERIM) {
-		if (conf->acct_server == NULL) {
+		if (conf->acct_server == NULL || radius->acct_sock < 0) {
 			hostapd_logger(radius->ctx, NULL,
 				       HOSTAPD_MODULE_RADIUS,
 				       HOSTAPD_LEVEL_INFO,
@@ -647,7 +647,7 @@ int radius_client_send(struct radius_client_data *radius,
 		s = radius->acct_sock;
 		conf->acct_server->requests++;
 	} else {
-		if (conf->auth_server == NULL) {
+		if (conf->auth_server == NULL || radius->auth_sock < 0) {
 			hostapd_logger(radius->ctx, NULL,
 				       HOSTAPD_MODULE_RADIUS,
 				       HOSTAPD_LEVEL_INFO,

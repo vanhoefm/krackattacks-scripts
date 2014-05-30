@@ -527,3 +527,48 @@ def test_radius_macacl(dev, apdev):
     params["macaddr_acl"] = "2"
     hostapd.add_ap(apdev[0]['ifname'], params)
     dev[0].connect("radius", key_mgmt="NONE", scan_freq="2412")
+
+def test_radius_failover(dev, apdev):
+    """RADIUS Authentication and Accounting server failover"""
+    subprocess.call(['sudo', 'ip', 'ro', 'replace', '192.168.213.17', 'dev',
+                     'lo'])
+    as_hapd = hostapd.Hostapd("as")
+    as_mib_start = as_hapd.get_mib(param="radius_server")
+    params = hostapd.wpa2_eap_params(ssid="radius-failover")
+    params["auth_server_addr"] = "192.168.213.17"
+    params["auth_server_port"] = "1812"
+    params["auth_server_shared_secret"] = "testing"
+    params['acct_server_addr'] = "192.168.213.17"
+    params['acct_server_port'] = "1813"
+    params['acct_server_shared_secret'] = "testing"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params, no_enable=True)
+    hapd.set("auth_server_addr", "127.0.0.1")
+    hapd.set("auth_server_port", "1812")
+    hapd.set("auth_server_shared_secret", "radius")
+    hapd.set('acct_server_addr', "127.0.0.1")
+    hapd.set('acct_server_port', "1813")
+    hapd.set('acct_server_shared_secret', "radius")
+    hapd.enable()
+    ev = hapd.wait_event(["AP-ENABLED", "AP-DISABLED"], timeout=30)
+    if ev is None:
+        raise Exception("AP startup timed out")
+        if "AP-ENABLED" not in ev:
+            raise Exception("AP startup failed")
+
+    try:
+        subprocess.call(['sudo', 'ip', 'ro', 'replace', 'prohibit',
+                         '192.168.213.17'])
+        dev[0].request("SET EAPOL::authPeriod 5")
+        connect(dev[0], "radius-failover", wait_connect=False)
+        ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=60)
+        if ev is None:
+            raise Exception("Connection with the AP timed out")
+    finally:
+        dev[0].request("SET EAPOL::authPeriod 30")
+        subprocess.call(['sudo', 'ip', 'ro', 'del', '192.168.213.17'])
+
+    as_mib_end = as_hapd.get_mib(param="radius_server")
+    req_s = int(as_mib_start['radiusAccServTotalRequests'])
+    req_e = int(as_mib_end['radiusAccServTotalRequests'])
+    if req_e <= req_s:
+        raise Exception("Unexpected RADIUS server acct MIB value")

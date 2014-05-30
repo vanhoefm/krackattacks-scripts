@@ -1630,6 +1630,8 @@ static void hostapd_deinit_driver(const struct wpa_driver_ops *driver,
 
 int hostapd_enable_iface(struct hostapd_iface *hapd_iface)
 {
+	size_t j;
+
 	if (hapd_iface->bss[0]->drv_priv != NULL) {
 		wpa_printf(MSG_ERROR, "Interface %s already enabled",
 			   hapd_iface->conf->bss[0]->iface);
@@ -1639,6 +1641,8 @@ int hostapd_enable_iface(struct hostapd_iface *hapd_iface)
 	wpa_printf(MSG_DEBUG, "Enable interface %s",
 		   hapd_iface->conf->bss[0]->iface);
 
+	for (j = 0; j < hapd_iface->num_bss; j++)
+		hostapd_set_security_params(hapd_iface->conf->bss[j], 1);
 	if (hostapd_config_check(hapd_iface->conf, 1) < 0) {
 		wpa_printf(MSG_INFO, "Invalid configuration - cannot enable");
 		return -1;
@@ -1667,7 +1671,7 @@ int hostapd_reload_iface(struct hostapd_iface *hapd_iface)
 	wpa_printf(MSG_DEBUG, "Reload interface %s",
 		   hapd_iface->conf->bss[0]->iface);
 	for (j = 0; j < hapd_iface->num_bss; j++)
-		hostapd_set_security_params(hapd_iface->conf->bss[j]);
+		hostapd_set_security_params(hapd_iface->conf->bss[j], 1);
 	if (hostapd_config_check(hapd_iface->conf, 1) < 0) {
 		wpa_printf(MSG_ERROR, "Updated configuration is invalid");
 		return -1;

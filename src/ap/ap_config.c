@@ -859,7 +859,8 @@ int hostapd_config_check(struct hostapd_config *conf, int full_config)
 }
 
 
-void hostapd_set_security_params(struct hostapd_bss_config *bss)
+void hostapd_set_security_params(struct hostapd_bss_config *bss,
+				 int full_config)
 {
 	if (bss->individual_wep_key_len == 0) {
 		/* individual keys are not use; can use key idx0 for
@@ -872,8 +873,10 @@ void hostapd_set_security_params(struct hostapd_bss_config *bss)
 	bss->wpa_group = wpa_select_ap_group_cipher(bss->wpa, bss->wpa_pairwise,
 						    bss->rsn_pairwise);
 
-	bss->radius->auth_server = bss->radius->auth_servers;
-	bss->radius->acct_server = bss->radius->acct_servers;
+	if (full_config) {
+		bss->radius->auth_server = bss->radius->auth_servers;
+		bss->radius->acct_server = bss->radius->acct_servers;
+	}
 
 	if (bss->wpa && bss->ieee802_1x) {
 		bss->ssid.security_policy = SECURITY_WPA;

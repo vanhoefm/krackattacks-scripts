@@ -972,9 +972,10 @@ radius_change_server(struct radius_client_data *radius,
 		       hostapd_ip_txt(&nserv->addr, abuf, sizeof(abuf)),
 		       nserv->port);
 
-	if (!oserv || nserv->shared_secret_len != oserv->shared_secret_len ||
-	    os_memcmp(nserv->shared_secret, oserv->shared_secret,
-		      nserv->shared_secret_len) != 0) {
+	if (oserv && oserv != nserv &&
+	    (nserv->shared_secret_len != oserv->shared_secret_len ||
+	     os_memcmp(nserv->shared_secret, oserv->shared_secret,
+		       nserv->shared_secret_len) != 0)) {
 		/* Pending RADIUS packets used different shared secret, so
 		 * they need to be modified. Update accounting message
 		 * authenticators here. Authentication messages are removed
@@ -992,7 +993,8 @@ radius_change_server(struct radius_client_data *radius,
 	}
 
 	/* Reset retry counters for the new server */
-	for (entry = radius->msgs; entry; entry = entry->next) {
+	for (entry = radius->msgs; oserv && oserv != nserv && entry;
+	     entry = entry->next) {
 		if ((auth && entry->msg_type != RADIUS_AUTH) ||
 		    (!auth && entry->msg_type != RADIUS_ACCT))
 			continue;

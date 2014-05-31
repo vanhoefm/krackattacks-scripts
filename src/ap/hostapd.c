@@ -437,6 +437,14 @@ static int hostapd_flush_old_stations(struct hostapd_data *hapd, u16 reason)
 }
 
 
+static void hostapd_bss_deinit_no_free(struct hostapd_data *hapd)
+{
+	hostapd_free_stas(hapd);
+	hostapd_flush_old_stations(hapd, WLAN_REASON_DEAUTH_LEAVING);
+	hostapd_clear_wep(hapd);
+}
+
+
 /**
  * hostapd_validate_bssid_configuration - Validate BSSID configuration
  * @iface: Pointer to interface data
@@ -1233,10 +1241,7 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 		if (hostapd_setup_bss(hapd, j == 0)) {
 			do {
 				hapd = iface->bss[j];
-				hostapd_free_stas(hapd);
-				hostapd_flush_old_stations(
-					hapd, WLAN_REASON_DEAUTH_LEAVING);
-				hostapd_clear_wep(hapd);
+				hostapd_bss_deinit_no_free(hapd);
 				hostapd_free_hapd_data(hapd);
 			} while (j-- > 0);
 			goto fail;
@@ -1359,9 +1364,7 @@ static void hostapd_bss_deinit(struct hostapd_data *hapd)
 {
 	wpa_printf(MSG_DEBUG, "%s: deinit bss %s", __func__,
 		   hapd->conf->iface);
-	hostapd_free_stas(hapd);
-	hostapd_flush_old_stations(hapd, WLAN_REASON_DEAUTH_LEAVING);
-	hostapd_clear_wep(hapd);
+	hostapd_bss_deinit_no_free(hapd);
 	hostapd_cleanup(hapd);
 }
 
@@ -1723,9 +1726,7 @@ int hostapd_disable_iface(struct hostapd_iface *hapd_iface)
 	/* same as hostapd_interface_deinit without deinitializing ctrl-iface */
 	for (j = 0; j < hapd_iface->num_bss; j++) {
 		struct hostapd_data *hapd = hapd_iface->bss[j];
-		hostapd_free_stas(hapd);
-		hostapd_flush_old_stations(hapd, WLAN_REASON_DEAUTH_LEAVING);
-		hostapd_clear_wep(hapd);
+		hostapd_bss_deinit_no_free(hapd);
 		hostapd_free_hapd_data(hapd);
 	}
 

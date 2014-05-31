@@ -314,3 +314,16 @@ def test_ap_enable_disable_reenable(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"])
     if ev is None:
         raise Exception("STA connect event timed out")
+
+def test_ap_double_disable(dev, apdev):
+    """Double DISABLE regression test"""
+    hostapd.add_bss('phy3', apdev[0]['ifname'], 'bss-1.conf')
+    hostapd.add_bss('phy3', apdev[0]['ifname'] + '-2', 'bss-2.conf')
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd.disable()
+    if "FAIL" not in hapd.request("DISABLE"):
+        raise Exception("Second DISABLE accepted unexpectedly")
+    hapd.enable()
+    hapd.disable()
+    if "FAIL" not in hapd.request("DISABLE"):
+        raise Exception("Second DISABLE accepted unexpectedly")

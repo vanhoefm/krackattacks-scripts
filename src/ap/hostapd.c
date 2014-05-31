@@ -284,6 +284,13 @@ static void hostapd_free_hapd_data(struct hostapd_data *hapd)
 				   "Failed to remove BSS interface %s",
 				   hapd->conf->iface);
 			hapd->interface_added = 1;
+		} else {
+			/*
+			 * Since this was a dynamically added interface, the
+			 * driver wrapper may have removed its internal instance
+			 * and hapd->drv_priv is not valid anymore.
+			 */
+			hapd->drv_priv = NULL;
 		}
 	}
 
@@ -1617,8 +1624,10 @@ void hostapd_interface_deinit_free(struct hostapd_iface *iface)
 	hostapd_interface_deinit(iface);
 	wpa_printf(MSG_DEBUG, "%s: driver=%p drv_priv=%p -> hapd_deinit",
 		   __func__, driver, drv_priv);
-	if (driver && driver->hapd_deinit && drv_priv)
+	if (driver && driver->hapd_deinit && drv_priv) {
 		driver->hapd_deinit(drv_priv);
+		iface->bss[0]->drv_priv = NULL;
+	}
 	hostapd_interface_free(iface);
 }
 

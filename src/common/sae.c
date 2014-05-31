@@ -134,8 +134,10 @@ static struct crypto_bignum * sae_get_rand(struct sae_data *sae)
 			return NULL;
 		if (crypto_bignum_is_zero(bn) ||
 		    crypto_bignum_is_one(bn) ||
-		    crypto_bignum_cmp(bn, sae->tmp->order) >= 0)
+		    crypto_bignum_cmp(bn, sae->tmp->order) >= 0) {
+			crypto_bignum_deinit(bn, 0);
 			continue;
+		}
 		break;
 	}
 

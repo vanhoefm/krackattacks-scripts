@@ -5808,8 +5808,8 @@ static void wpas_ctrl_radio_work_timeout(void *eloop_ctx, void *timeout_ctx)
 		"Timing out external radio work %u (%s)",
 		ework->id, work->type);
 	wpa_msg(work->wpa_s, MSG_INFO, EXT_RADIO_WORK_TIMEOUT "%u", ework->id);
-	os_free(ework);
 	radio_work_done(work);
+	os_free(ework);
 }
 
 
@@ -5951,8 +5951,8 @@ void wpas_ctrl_radio_work_flush(struct wpa_supplicant *wpa_s)
 		if (work->started)
 			eloop_cancel_timeout(wpas_ctrl_radio_work_timeout,
 					     work, NULL);
-		os_free(ework);
 		radio_work_done(work);
+		os_free(ework);
 	}
 }
 

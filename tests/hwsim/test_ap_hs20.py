@@ -501,6 +501,28 @@ def test_ap_hs20_auto_interworking(dev, apdev):
     if status['hs20'] != "2":
         raise Exception("Unexpected HS 2.0 support indication")
 
+def test_ap_hs20_auto_interworking_no_cred_match(dev, apdev):
+    """Hotspot 2.0 connection with auto_interworking=1 but no cred match"""
+    bssid = apdev[0]['bssid']
+    params = { "ssid": "test" }
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable(auto_interworking=True)
+    dev[0].add_cred_values({ 'realm': "example.com",
+                             'username': "hs20-test",
+                             'password': "password",
+                             'ca_cert': "auth_serv/ca.pem",
+                             'domain': "example.com" })
+
+    id = dev[0].connect("test", psk="12345678", only_add_network=True)
+    dev[0].request("ENABLE_NETWORK %s" % id)
+    logger.info("Verify that scanning continues when there is partial network block match")
+    for i in range(0, 2):
+        ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], 10)
+        if ev is None:
+            raise Exception("Scan timed out")
+        logger.info("Scan completed")
+
 def eap_test(dev, ap, eap_params, method, user):
     bssid = ap['bssid']
     params = hs20_ap_params()

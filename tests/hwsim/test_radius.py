@@ -164,6 +164,24 @@ def test_radius_acct_interim(dev, apdev):
     if req_e < req_s + 3:
         raise Exception("Unexpected RADIUS server acct MIB value")
 
+def test_radius_acct_interim_unreachable(dev, apdev):
+    """RADIUS Accounting interim update with unreachable server"""
+    params = hostapd.wpa2_eap_params(ssid="radius-acct")
+    params['acct_server_addr'] = "127.0.0.1"
+    params['acct_server_port'] = "18139"
+    params['acct_server_shared_secret'] = "radius"
+    params['radius_acct_interim_interval'] = "1"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    start = hapd.get_mib()
+    connect(dev[0], "radius-acct")
+    logger.info("Waiting for interium accounting updates")
+    time.sleep(3.1)
+    end = hapd.get_mib()
+    req_s = int(start['radiusAccClientTimeouts'])
+    req_e = int(end['radiusAccClientTimeouts'])
+    if req_e < req_s + 2:
+        raise Exception("Unexpected RADIUS server acct MIB value")
+
 def test_radius_das_disconnect(dev, apdev):
     """RADIUS Dynamic Authorization Extensions - Disconnect"""
     try:

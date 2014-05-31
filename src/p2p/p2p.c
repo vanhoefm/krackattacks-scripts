@@ -4638,10 +4638,9 @@ int p2p_process_nfc_connection_handover(struct p2p_data *p2p,
 			  params->go_ssid_len);
 	}
 
-	p2p_parse_free(&msg);
-
 	if (dev->flags & P2P_DEV_USER_REJECTED) {
 		p2p_dbg(p2p, "Do not report rejected device");
+		p2p_parse_free(&msg);
 		return 0;
 	}
 
@@ -4650,6 +4649,7 @@ int p2p_process_nfc_connection_handover(struct p2p_data *p2p,
 				    !(dev->flags & P2P_DEV_REPORTED_ONCE));
 		dev->flags |= P2P_DEV_REPORTED | P2P_DEV_REPORTED_ONCE;
 	}
+	p2p_parse_free(&msg);
 
 	if (role == P2P_GO_IN_A_GROUP && p2p->num_groups > 0)
 		params->next_step = BOTH_GO;

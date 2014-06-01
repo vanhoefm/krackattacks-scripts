@@ -369,3 +369,35 @@ def test_ap_ft_mismatching_rrb_r0kh_pull(dev, apdev):
     hostapd.add_ap(apdev[1]['ifname'], params)
 
     run_roams(dev[0], apdev, ssid, passphrase, over_ds=True, fail_test=True)
+
+def test_ap_ft_gtk_rekey(dev, apdev):
+    """WPA2-PSK-FT AP and GTK rekey"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    params['wpa_group_rekey'] = '1'
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
+                   ieee80211w="1")
+
+    ev = dev[0].wait_event(["WPA: Group rekeying completed"], timeout=2)
+    if ev is None:
+        raise Exception("GTK rekey timed out after initial association")
+    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    params['wpa_group_rekey'] = '1'
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    dev[0].scan_for_bss(apdev[1]['bssid'], freq="2412")
+    dev[0].roam(apdev[1]['bssid'])
+    if dev[0].get_status_field('bssid') != apdev[1]['bssid']:
+        raise Exception("Did not connect to correct AP")
+    hwsim_utils.test_connectivity(dev[0].ifname, apdev[1]['ifname'])
+
+    ev = dev[0].wait_event(["WPA: Group rekeying completed"], timeout=2)
+    if ev is None:
+        raise Exception("GTK rekey timed out after FT protocol")
+    hwsim_utils.test_connectivity(dev[0].ifname, apdev[1]['ifname'])

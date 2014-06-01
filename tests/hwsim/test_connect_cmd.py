@@ -87,3 +87,23 @@ def test_connect_cmd_reject_assoc(dev, apdev):
             raise Exception("Association rejection timed out")
         if "status_code=27" not in ev:
             raise Exception("Unexpected rejection status code")
+
+def test_connect_cmd_disconnect_event(dev, apdev):
+    """Connection using cfg80211 connect command getting disconnected by the AP"""
+    params = { "ssid": "sta-connect" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
+    wpas.connect("sta-connect", key_mgmt="NONE", scan_freq="2412")
+
+    if "OK" not in hapd.request("DEAUTHENTICATE " + wpas.p2p_interface_addr()):
+        raise Exception("DEAUTHENTICATE command failed")
+    ev = wpas.wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=5)
+    if ev is None:
+        raise Exception("Disconnection event timed out")
+    # This event was actually based on deauthenticate event since we force
+    # connect command to be used with a driver that supports auth+assoc for
+    # testing purposes. Anyway, wait some time to allow the debug log to capture
+    # the following NL80211_CMD_DISCONNECT event.
+    time.sleep(0.1)

@@ -68,3 +68,22 @@ def test_connect_cmd_concurrent_grpform_while_connecting(dev, apdev):
 
     logger.info("Confirm AP connection after P2P group removal")
     hwsim_utils.test_connectivity(wpas.ifname, apdev[0]['ifname'])
+
+def test_connect_cmd_reject_assoc(dev, apdev):
+    """Connection using cfg80211 connect command getting rejected"""
+    params = { "ssid": "sta-connect",
+               "require_ht": "1" }
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
+    wpas.connect("sta-connect", key_mgmt="NONE", scan_freq="2412",
+                 disable_ht="1", wait_connect=False)
+    # Reject event gets reported twice since we force connect command to be used
+    # with a driver that supports auth+assoc for testing purposes.
+    for i in range(0, 2):
+        ev = wpas.wait_event(["CTRL-EVENT-ASSOC-REJECT"], timeout=15)
+        if ev is None:
+            raise Exception("Association rejection timed out")
+        if "status_code=27" not in ev:
+            raise Exception("Unexpected rejection status code")

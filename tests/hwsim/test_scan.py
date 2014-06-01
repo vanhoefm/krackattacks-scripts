@@ -272,3 +272,29 @@ def test_scan_and_interface_disabled(dev, apdev):
         dev[0].scan(freq="2412")
     finally:
         dev[0].request("DRIVER_EVENT INTERFACE_ENABLED")
+
+def test_scan_for_auth(dev, apdev):
+    """cfg80211 workaround with scan-for-auth"""
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")
+    # Block sme-connect radio work with an external radio work item, so that
+    # SELECT_NETWORK can decide to use fast associate without a new scan while
+    # cfg80211 still has the matching BSS entry, but the actual connection is
+    # not yet started.
+    id = dev[0].request("RADIO_WORK add block-work")
+    ev = dev[0].wait_event(["EXT-RADIO-WORK-START"])
+    if ev is None:
+        raise Exception("Timeout while waiting radio work to start")
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412",
+                   wait_connect=False)
+    # Clear cfg80211 BSS table.
+    subprocess.call(['sudo', 'iw', dev[0].ifname, 'scan', 'trigger',
+                     'freq', '2462', 'flush'])
+    time.sleep(0.1)
+    # Release blocking radio work to allow connection to go through with the
+    # cfg80211 BSS entry missing.
+    dev[0].request("RADIO_WORK done " + id)
+
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Association with the AP timed out")

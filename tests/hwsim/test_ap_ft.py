@@ -88,7 +88,7 @@ def ft_params2_r0kh_mismatch(rsn=True, ssid=None, passphrase=None):
     params['r1kh'] = "12:00:00:00:03:00 10:01:02:03:04:05 300102030405060708090a0b0c0d0e0f"
     return params
 
-def run_roams(dev, apdev, ssid, passphrase, over_ds=False, sae=False, eap=False, fail_test=False):
+def run_roams(dev, apdev, ssid, passphrase, over_ds=False, sae=False, eap=False, fail_test=False, roams=1):
     logger.info("Connect to first AP")
     if eap:
         dev.connect(ssid, key_mgmt="FT-EAP", proto="WPA2", ieee80211w="1",
@@ -108,26 +108,30 @@ def run_roams(dev, apdev, ssid, passphrase, over_ds=False, sae=False, eap=False,
         ap2 = apdev[0]
     hwsim_utils.test_connectivity(dev.ifname, ap1['ifname'])
 
-    logger.info("Roam to the second AP")
     dev.scan_for_bss(ap2['bssid'], freq="2412")
-    if over_ds:
-        dev.roam_over_ds(ap2['bssid'], fail_test=fail_test)
-    else:
-        dev.roam(ap2['bssid'], fail_test=fail_test)
-    if fail_test:
-        return
-    if dev.get_status_field('bssid') != ap2['bssid']:
-        raise Exception("Did not connect to correct AP")
-    hwsim_utils.test_connectivity(dev.ifname, ap2['ifname'])
 
-    logger.info("Roam back to the first AP")
-    if over_ds:
-        dev.roam_over_ds(ap1['bssid'])
-    else:
-        dev.roam(ap1['bssid'])
-    if dev.get_status_field('bssid') != ap1['bssid']:
-        raise Exception("Did not connect to correct AP")
-    hwsim_utils.test_connectivity(dev.ifname, ap1['ifname'])
+    for i in range(0, roams):
+        logger.info("Roam to the second AP")
+        if over_ds:
+            dev.roam_over_ds(ap2['bssid'], fail_test=fail_test)
+        else:
+            dev.roam(ap2['bssid'], fail_test=fail_test)
+        if fail_test:
+            return
+        if dev.get_status_field('bssid') != ap2['bssid']:
+            raise Exception("Did not connect to correct AP")
+        if i == 0 or i == roams - 1:
+            hwsim_utils.test_connectivity(dev.ifname, ap2['ifname'])
+
+        logger.info("Roam back to the first AP")
+        if over_ds:
+            dev.roam_over_ds(ap1['bssid'])
+        else:
+            dev.roam(ap1['bssid'])
+        if dev.get_status_field('bssid') != ap1['bssid']:
+            raise Exception("Did not connect to correct AP")
+        if i == 0 or i == roams - 1:
+            hwsim_utils.test_connectivity(dev.ifname, ap1['ifname'])
 
 def test_ap_ft(dev, apdev):
     """WPA2-PSK-FT AP"""
@@ -142,6 +146,18 @@ def test_ap_ft(dev, apdev):
     run_roams(dev[0], apdev, ssid, passphrase)
     if "[WPA2-FT/PSK-CCMP]" not in dev[0].request("SCAN_RESULTS"):
         raise Exception("Scan results missing RSN element info")
+
+def test_ap_ft_many(dev, apdev):
+    """WPA2-PSK-FT AP multiple times"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    run_roams(dev[0], apdev, ssid, passphrase, roams=50)
 
 def test_ap_ft_mixed(dev, apdev):
     """WPA2-PSK-FT mixed-mode AP"""
@@ -186,6 +202,18 @@ def test_ap_ft_over_ds(dev, apdev):
     run_roams(dev[0], apdev, ssid, passphrase, over_ds=True)
     check_mib(dev[0], [ ("dot11RSNAAuthenticationSuiteRequested", "00-0f-ac-4"),
                         ("dot11RSNAAuthenticationSuiteSelected", "00-0f-ac-4") ])
+
+def test_ap_ft_over_ds_many(dev, apdev):
+    """WPA2-PSK-FT AP over DS multiple times"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    run_roams(dev[0], apdev, ssid, passphrase, over_ds=True, roams=50)
 
 def test_ap_ft_pmf_over_ds(dev, apdev):
     """WPA2-PSK-FT AP over DS with PMF"""

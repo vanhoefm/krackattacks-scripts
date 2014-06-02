@@ -67,6 +67,23 @@ static int printf_encode_decode_tests(void)
 		}
 	}
 
+	buf[5] = 'A';
+	printf_encode(buf, 5, (const u8 *) "abcde", 5);
+	if (buf[5] != 'A') {
+		wpa_printf(MSG_ERROR, "Error in bounds checking#1");
+		errors++;
+	}
+
+	for (i = 5; i < 10; i++) {
+		buf[i] = 'A';
+		printf_encode(buf, i, (const u8 *) "\xdd\xdd\xdd\xdd\xdd", 5);
+		if (buf[i] != 'A') {
+			wpa_printf(MSG_ERROR, "Error in bounds checking#2(%d)",
+				   i);
+			errors++;
+		}
+	}
+
 	if (errors) {
 		wpa_printf(MSG_ERROR, "%d printf test(s) failed", errors);
 		return -1;

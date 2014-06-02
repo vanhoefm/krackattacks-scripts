@@ -1779,3 +1779,35 @@ def test_ap_wpa2_eap_sql(dev, apdev, params):
                     ca_cert="auth_serv/ca.pem", phase2="auth=PAP")
     finally:
         os.remove(dbfile)
+
+def test_ap_wpa2_eap_non_ascii_identity(dev, apdev):
+    """WPA2-Enterprise connection attempt using non-ASCII identity"""
+    params = int_eap_server_params()
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="\x80", password="password", wait_connect=False)
+    dev[1].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="a\x80", password="password", wait_connect=False)
+    for i in range(0, 2):
+        ev = dev[i].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
+        if ev is None:
+            raise Exception("Association and EAP start timed out")
+        ev = dev[i].wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=10)
+        if ev is None:
+            raise Exception("EAP method selection timed out")
+
+def test_ap_wpa2_eap_non_ascii_identity2(dev, apdev):
+    """WPA2-Enterprise connection attempt using non-ASCII identity"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="\x80", password="password", wait_connect=False)
+    dev[1].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="a\x80", password="password", wait_connect=False)
+    for i in range(0, 2):
+        ev = dev[i].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
+        if ev is None:
+            raise Exception("Association and EAP start timed out")
+        ev = dev[i].wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=10)
+        if ev is None:
+            raise Exception("EAP method selection timed out")

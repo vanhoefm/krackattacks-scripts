@@ -3684,10 +3684,31 @@ static int wpas_get_noa(void *ctx, const u8 *interface_addr, u8 *buf,
 }
 
 
-static int wpas_go_connected(void *ctx, const u8 *dev_addr)
+struct wpa_supplicant * wpas_get_p2p_go_iface(struct wpa_supplicant *wpa_s,
+					      const u8 *ssid, size_t ssid_len)
 {
-	struct wpa_supplicant *wpa_s = ctx;
+	for (wpa_s = wpa_s->global->ifaces; wpa_s; wpa_s = wpa_s->next) {
+		struct wpa_ssid *s = wpa_s->current_ssid;
+		if (s == NULL)
+			continue;
+		if (s->mode != WPAS_MODE_P2P_GO &&
+		    s->mode != WPAS_MODE_AP &&
+		    s->mode != WPAS_MODE_P2P_GROUP_FORMATION)
+			continue;
+		if (s->ssid_len != ssid_len ||
+		    os_memcmp(s, s->ssid, ssid_len) != 0)
+			continue;
+		return wpa_s;
+	}
 
+	return NULL;
+
+}
+
+
+struct wpa_supplicant * wpas_get_p2p_client_iface(struct wpa_supplicant *wpa_s,
+						  const u8 *peer_dev_addr)
+{
 	for (wpa_s = wpa_s->global->ifaces; wpa_s; wpa_s = wpa_s->next) {
 		struct wpa_ssid *ssid = wpa_s->current_ssid;
 		if (ssid == NULL)
@@ -3697,11 +3718,19 @@ static int wpas_go_connected(void *ctx, const u8 *dev_addr)
 		if (wpa_s->wpa_state != WPA_COMPLETED &&
 		    wpa_s->wpa_state != WPA_GROUP_HANDSHAKE)
 			continue;
-		if (os_memcmp(wpa_s->go_dev_addr, dev_addr, ETH_ALEN) == 0)
-			return 1;
+		if (os_memcmp(wpa_s->go_dev_addr, peer_dev_addr, ETH_ALEN) == 0)
+			return wpa_s;
 	}
 
-	return 0;
+	return NULL;
+}
+
+
+static int wpas_go_connected(void *ctx, const u8 *dev_addr)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+
+	return wpas_get_p2p_client_iface(wpa_s, dev_addr) != NULL;
 }
 
 

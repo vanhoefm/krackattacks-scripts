@@ -24,6 +24,7 @@
 #include "dbus_common_i.h"
 #include "dbus_new_handlers_p2p.h"
 #include "p2p/p2p.h"
+#include "../p2p_supplicant.h"
 
 #ifdef CONFIG_AP /* until needed by something else */
 
@@ -1151,6 +1152,69 @@ static int wpas_dbus_get_group_obj_path(struct wpa_supplicant *wpa_s,
 }
 
 
+struct group_changed_data {
+	struct wpa_supplicant *wpa_s;
+	struct p2p_peer_info *info;
+};
+
+
+static int match_group_where_peer_is_client(struct p2p_group *group,
+					    void *user_data)
+{
+	struct group_changed_data *data = user_data;
+	const struct p2p_group_config *cfg;
+	struct wpa_supplicant *wpa_s_go;
+
+	if (!p2p_group_is_client_connected(group, data->info->p2p_device_addr))
+		return 1;
+
+	cfg = p2p_group_get_config(group);
+
+	wpa_s_go = wpas_get_p2p_go_iface(data->wpa_s, cfg->ssid,
+					 cfg->ssid_len);
+	if (wpa_s_go != NULL && wpa_s_go == data->wpa_s) {
+		wpas_dbus_signal_peer_groups_changed(
+			data->wpa_s->parent, data->info->p2p_device_addr);
+		return 0;
+	}
+
+	return 1;
+}
+
+
+static void signal_peer_groups_changed(struct p2p_peer_info *info,
+				       void *user_data)
+{
+	struct group_changed_data *data = user_data;
+	struct wpa_supplicant *wpa_s_go;
+
+	wpa_s_go = wpas_get_p2p_client_iface(data->wpa_s,
+					     info->p2p_device_addr);
+	if (wpa_s_go != NULL && wpa_s_go == data->wpa_s) {
+		wpas_dbus_signal_peer_groups_changed(data->wpa_s->parent,
+						     info->p2p_device_addr);
+		return;
+	}
+
+	data->info = info;
+	p2p_loop_on_all_groups(data->wpa_s->global->p2p,
+			       match_group_where_peer_is_client, data);
+	data->info = NULL;
+}
+
+
+static void peer_groups_changed(struct wpa_supplicant *wpa_s)
+{
+	struct group_changed_data data;
+
+	os_memset(&data, 0, sizeof(data));
+	data.wpa_s = wpa_s;
+
+	p2p_loop_on_known_peers(wpa_s->global->p2p,
+				signal_peer_groups_changed, &data);
+}
+
+
 /**
  * wpas_dbus_signal_p2p_group_started - Signals P2P group has
  * started. Emitted when a group is successfully started
@@ -1210,6 +1274,9 @@ void wpas_dbus_signal_p2p_group_started(struct wpa_supplicant *wpa_s,
 		goto nomem;
 
 	dbus_connection_send(iface->con, msg, NULL);
+
+	if (client)
+		peer_groups_changed(wpa_s);
 
 nomem:
 	dbus_message_unref(msg);
@@ -1435,8 +1502,10 @@ void wpas_dbus_signal_p2p_peer_joined(struct wpa_supplicant *wpa_s,
 		goto err;
 
 	dbus_connection_send(iface->con, msg, NULL);
-
 	dbus_message_unref(msg);
+
+	wpas_dbus_signal_peer_groups_changed(wpa_s->parent, peer_addr);
+
 	return;
 
 err:
@@ -1489,8 +1558,10 @@ void wpas_dbus_signal_p2p_peer_disconnected(struct wpa_supplicant *wpa_s,
 		goto err;
 
 	dbus_connection_send(iface->con, msg, NULL);
-
 	dbus_message_unref(msg);
+
+	wpas_dbus_signal_peer_groups_changed(wpa_s->parent, peer_addr);
+
 	return;
 
 err:
@@ -3279,7 +3350,13 @@ static const struct wpa_dbus_property_desc wpas_dbus_p2p_peer_properties[] = {
 };
 
 static const struct wpa_dbus_signal_desc wpas_dbus_p2p_peer_signals[] = {
-
+	/* Deprecated: use org.freedesktop.DBus.Properties.PropertiesChanged */
+	{ "PropertiesChanged", WPAS_DBUS_NEW_IFACE_P2P_PEER,
+	  {
+		  { "properties", "a{sv}", ARG_OUT },
+		  END_ARGS
+	  }
+	},
 	{ NULL, NULL, { END_ARGS } }
 };
 
@@ -3463,6 +3540,20 @@ int wpas_dbus_unregister_peer(struct wpa_supplicant *wpa_s,
 }
 
 
+void wpas_dbus_signal_peer_groups_changed(struct wpa_supplicant *wpa_s,
+					  const u8 *dev_addr)
+{
+	char peer_obj_path[WPAS_DBUS_OBJECT_PATH_MAX];
+
+	os_snprintf(peer_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
+		    "%s/" WPAS_DBUS_NEW_P2P_PEERS_PART "/" COMPACT_MACSTR,
+		    wpa_s->dbus_new_path, MAC2STR(dev_addr));
+
+	wpa_dbus_mark_property_changed(wpa_s->global->dbus, peer_obj_path,
+				       WPAS_DBUS_NEW_IFACE_P2P_PEER, "Groups");
+}
+
+
 static const struct wpa_dbus_property_desc wpas_dbus_p2p_group_properties[] = {
 	{ "Members", WPAS_DBUS_NEW_IFACE_P2P_GROUP, "ao",
 	  wpas_dbus_getter_p2p_group_members,
@@ -3607,6 +3698,8 @@ void wpas_dbus_unregister_p2p_group(struct wpa_supplicant *wpa_s,
 			   __func__, wpa_s->dbus_groupobj_path);
 		return;
 	}
+
+	peer_groups_changed(wpa_s);
 
 	wpa_printf(MSG_DEBUG, "dbus: Unregister group object '%s'",
 		   wpa_s->dbus_groupobj_path);

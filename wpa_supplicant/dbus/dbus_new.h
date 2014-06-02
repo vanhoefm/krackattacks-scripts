@@ -173,6 +173,8 @@ int wpas_dbus_unregister_peer(struct wpa_supplicant *wpa_s,
 				  const u8 *dev_addr);
 void wpas_dbus_signal_peer_device_lost(struct wpa_supplicant *wpa_s,
 					   const u8 *dev_addr);
+void wpas_dbus_signal_peer_groups_changed(struct wpa_supplicant *wpa_s,
+					  const u8 *dev_addr);
 void wpas_dbus_signal_p2p_group_removed(struct wpa_supplicant *wpa_s,
 					const char *role);
 void wpas_dbus_signal_p2p_provision_discovery(struct wpa_supplicant *wpa_s,
@@ -349,6 +351,12 @@ static inline int wpas_dbus_unregister_peer(struct wpa_supplicant *wpa_s,
 					    const u8 *dev_addr)
 {
 	return 0;
+}
+
+static inline void
+wpas_dbus_signal_peer_groups_changed(struct wpa_supplicant *wpa_s,
+				     const u8 *dev_addr)
+{
 }
 
 static inline void

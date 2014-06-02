@@ -1734,9 +1734,8 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 				"version for non-CCMP group keys");
 		} else
 			goto out;
-	}
-	if (sm->pairwise_cipher == WPA_CIPHER_GCMP &&
-	    ver != WPA_KEY_INFO_TYPE_HMAC_SHA1_AES) {
+	} else if (sm->pairwise_cipher == WPA_CIPHER_GCMP &&
+		   ver != WPA_KEY_INFO_TYPE_HMAC_SHA1_AES) {
 		wpa_msg(sm->ctx->msg_ctx, MSG_INFO,
 			"WPA: GCMP is used, but EAPOL-Key "
 			"descriptor version (%d) is not 2", ver);

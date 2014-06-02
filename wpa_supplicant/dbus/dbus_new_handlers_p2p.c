@@ -1530,6 +1530,106 @@ dbus_bool_t wpas_dbus_getter_p2p_peer_device_address(DBusMessageIter *iter,
 }
 
 
+struct peer_group_data {
+	struct wpa_supplicant *wpa_s;
+	const struct p2p_peer_info *info;
+	char **paths;
+	unsigned int nb_paths;
+	int error;
+};
+
+
+static int match_group_where_peer_is_client(struct p2p_group *group,
+					    void *user_data)
+{
+	struct peer_group_data *data = user_data;
+	const struct p2p_group_config *cfg;
+	struct wpa_supplicant *wpa_s_go;
+	char **paths;
+
+	if (!p2p_group_is_client_connected(group, data->info->p2p_device_addr))
+		return 1;
+
+	cfg = p2p_group_get_config(group);
+
+	wpa_s_go = wpas_get_p2p_go_iface(data->wpa_s, cfg->ssid,
+					 cfg->ssid_len);
+	if (wpa_s_go == NULL)
+		return 1;
+
+	paths = os_realloc_array(data->paths, data->nb_paths + 1,
+				 sizeof(char *));
+	if (paths == NULL)
+		goto out_of_memory;
+
+	data->paths = paths;
+	data->paths[data->nb_paths] = wpa_s_go->dbus_groupobj_path;
+	data->nb_paths++;
+
+	return 1;
+
+out_of_memory:
+	data->error = ENOMEM;
+	return 0;
+}
+
+
+dbus_bool_t wpas_dbus_getter_p2p_peer_groups(DBusMessageIter *iter,
+					     DBusError *error,
+					     void *user_data)
+{
+	struct peer_handler_args *peer_args = user_data;
+	const struct p2p_peer_info *info;
+	struct peer_group_data data;
+	struct wpa_supplicant *wpa_s_go;
+	dbus_bool_t success = FALSE;
+
+	info = p2p_get_peer_found(peer_args->wpa_s->global->p2p,
+				  peer_args->p2p_device_addr, 0);
+	if (info == NULL) {
+		dbus_set_error(error, DBUS_ERROR_FAILED,
+			       "failed to find peer");
+		return FALSE;
+	}
+
+	os_memset(&data, 0, sizeof(data));
+	wpa_s_go = wpas_get_p2p_client_iface(peer_args->wpa_s,
+					     info->p2p_device_addr);
+	if (wpa_s_go) {
+		data.paths = os_calloc(1, sizeof(char *));
+		if (data.paths == NULL)
+			goto out_of_memory;
+		data.paths[0] = wpa_s_go->dbus_groupobj_path;
+		data.nb_paths = 1;
+	}
+
+	data.wpa_s = peer_args->wpa_s;
+	data.info = info;
+
+	p2p_loop_on_all_groups(peer_args->wpa_s->global->p2p,
+			       match_group_where_peer_is_client, &data);
+	if (data.error)
+		goto out_of_memory;
+
+	if (data.paths == NULL) {
+		return wpas_dbus_simple_array_property_getter(
+			iter, DBUS_TYPE_OBJECT_PATH, NULL, 0, error);
+	}
+
+	success = wpas_dbus_simple_array_property_getter(iter,
+							 DBUS_TYPE_OBJECT_PATH,
+							 data.paths,
+							 data.nb_paths, error);
+	goto out;
+
+out_of_memory:
+	dbus_set_error_const(error, DBUS_ERROR_NO_MEMORY, "no memory");
+out:
+	os_free(data.paths);
+	return success;
+}
+
+
 /**
  * wpas_dbus_getter_persistent_groups - Get array of persistent group objects
  * @iter: Pointer to incoming dbus message iter

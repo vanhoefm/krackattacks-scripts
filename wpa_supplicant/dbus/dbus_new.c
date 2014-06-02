@@ -3271,6 +3271,10 @@ static const struct wpa_dbus_property_desc wpas_dbus_p2p_peer_properties[] = {
 	  wpas_dbus_getter_p2p_peer_device_address,
 	  NULL
 	},
+	{ "Groups", WPAS_DBUS_NEW_IFACE_P2P_PEER, "ao",
+	  wpas_dbus_getter_p2p_peer_groups,
+	  NULL
+	},
 	{ NULL, NULL, NULL, NULL, NULL }
 };
 

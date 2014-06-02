@@ -1979,9 +1979,9 @@ dbus_bool_t wpas_dbus_getter_p2p_group_members(DBusMessageIter *iter,
 		if (!paths[i])
 			goto out_of_memory;
 		os_snprintf(paths[i], WPAS_DBUS_OBJECT_PATH_MAX,
-			    "%s/" WPAS_DBUS_NEW_P2P_GROUPMEMBERS_PART
+			    "%s/" WPAS_DBUS_NEW_P2P_PEERS_PART
 			    "/" COMPACT_MACSTR,
-			    wpa_s->dbus_groupobj_path, MAC2STR(addr));
+			    wpa_s->parent->dbus_new_path, MAC2STR(addr));
 		i++;
 	}
 

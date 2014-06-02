@@ -14,11 +14,6 @@ struct peer_handler_args {
 	u8 p2p_device_addr[ETH_ALEN];
 };
 
-struct groupmember_handler_args {
-	struct wpa_supplicant *wpa_s;
-	u8 member_addr[ETH_ALEN];
-};
-
 /*
  * P2P Device methods
  */

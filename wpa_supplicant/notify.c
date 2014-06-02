@@ -537,17 +537,10 @@ static void wpas_notify_ap_sta_authorized(struct wpa_supplicant *wpa_s,
 	wpas_p2p_notify_ap_sta_authorized(wpa_s, p2p_dev_addr);
 
 	/*
-	 * Register a group member object corresponding to this peer and
-	 * emit a PeerJoined signal. This will check if it really is a
-	 * P2P group.
-	 */
-	wpas_dbus_register_p2p_groupmember(wpa_s, sta);
-
-	/*
 	 * Create 'peer-joined' signal on group object -- will also
 	 * check P2P itself.
 	 */
-	wpas_dbus_signal_p2p_peer_joined(wpa_s, sta);
+	wpas_dbus_signal_p2p_peer_joined(wpa_s, p2p_dev_addr);
 #endif /* CONFIG_P2P */
 
 	/* Notify listeners a new station has been authorized */
@@ -556,20 +549,15 @@ static void wpas_notify_ap_sta_authorized(struct wpa_supplicant *wpa_s,
 
 
 static void wpas_notify_ap_sta_deauthorized(struct wpa_supplicant *wpa_s,
-					    const u8 *sta)
+					    const u8 *sta,
+					    const u8 *p2p_dev_addr)
 {
 #ifdef CONFIG_P2P
-	/*
-	 * Unregister a group member object corresponding to this peer
-	 * if this is a P2P group.
-	 */
-	wpas_dbus_unregister_p2p_groupmember(wpa_s, sta);
-
 	/*
 	 * Create 'peer-disconnected' signal on group object if this
 	 * is a P2P group.
 	 */
-	wpas_dbus_signal_p2p_peer_disconnected(wpa_s, sta);
+	wpas_dbus_signal_p2p_peer_disconnected(wpa_s, p2p_dev_addr);
 #endif /* CONFIG_P2P */
 
 	/* Notify listeners a station has been deauthorized */
@@ -584,7 +572,7 @@ void wpas_notify_sta_authorized(struct wpa_supplicant *wpa_s,
 	if (authorized)
 		wpas_notify_ap_sta_authorized(wpa_s, mac_addr, p2p_dev_addr);
 	else
-		wpas_notify_ap_sta_deauthorized(wpa_s, mac_addr);
+		wpas_notify_ap_sta_deauthorized(wpa_s, mac_addr, p2p_dev_addr);
 }
 
 

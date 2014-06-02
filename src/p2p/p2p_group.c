@@ -973,7 +973,7 @@ const u8 * p2p_iterate_group_members(struct p2p_group *group, void **next)
 	if (!iter)
 		return NULL;
 
-	return iter->addr;
+	return iter->dev_addr;
 }
 
 

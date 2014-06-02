@@ -1398,15 +1398,15 @@ nomem:
  * constructed using p2p i/f addr used for connecting.
  *
  * @wpa_s: %wpa_supplicant network interface data
- * @member_addr: addr (p2p i/f) of the peer joining the group
+ * @peer_addr: P2P Device Address of the peer joining the group
  */
 void wpas_dbus_signal_p2p_peer_joined(struct wpa_supplicant *wpa_s,
-				      const u8 *member)
+				      const u8 *peer_addr)
 {
 	struct wpas_dbus_priv *iface;
 	DBusMessage *msg;
 	DBusMessageIter iter;
-	char groupmember_obj_path[WPAS_DBUS_OBJECT_PATH_MAX], *path;
+	char peer_obj_path[WPAS_DBUS_OBJECT_PATH_MAX], *path;
 
 	iface = wpa_s->global->dbus;
 
@@ -1417,10 +1417,10 @@ void wpas_dbus_signal_p2p_peer_joined(struct wpa_supplicant *wpa_s,
 	if (!wpa_s->dbus_groupobj_path)
 		return;
 
-	os_snprintf(groupmember_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
-			"%s/"  WPAS_DBUS_NEW_P2P_GROUPMEMBERS_PART "/"
+	os_snprintf(peer_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
+			"%s/" WPAS_DBUS_NEW_P2P_PEERS_PART "/"
 			COMPACT_MACSTR,
-			wpa_s->dbus_groupobj_path, MAC2STR(member));
+			wpa_s->parent->dbus_new_path, MAC2STR(peer_addr));
 
 	msg = dbus_message_new_signal(wpa_s->dbus_groupobj_path,
 				      WPAS_DBUS_NEW_IFACE_P2P_GROUP,
@@ -1429,7 +1429,7 @@ void wpas_dbus_signal_p2p_peer_joined(struct wpa_supplicant *wpa_s,
 		return;
 
 	dbus_message_iter_init_append(msg, &iter);
-	path = groupmember_obj_path;
+	path = peer_obj_path;
 	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_OBJECT_PATH,
 					    &path))
 		goto err;
@@ -1449,18 +1449,18 @@ err:
  *
  * Method to emit a signal for a peer disconnecting the group.
  * The signal will carry path to the group member object
- * constructed using p2p i/f addr used for connecting.
+ * constructed using the P2P Device Address of the peer.
  *
  * @wpa_s: %wpa_supplicant network interface data
- * @member_addr: addr (p2p i/f) of the peer joining the group
+ * @peer_addr: P2P Device Address of the peer joining the group
  */
 void wpas_dbus_signal_p2p_peer_disconnected(struct wpa_supplicant *wpa_s,
-				      const u8 *member)
+					    const u8 *peer_addr)
 {
 	struct wpas_dbus_priv *iface;
 	DBusMessage *msg;
 	DBusMessageIter iter;
-	char groupmember_obj_path[WPAS_DBUS_OBJECT_PATH_MAX], *path;
+	char peer_obj_path[WPAS_DBUS_OBJECT_PATH_MAX], *path;
 
 	iface = wpa_s->global->dbus;
 
@@ -1471,10 +1471,10 @@ void wpas_dbus_signal_p2p_peer_disconnected(struct wpa_supplicant *wpa_s,
 	if (!wpa_s->dbus_groupobj_path)
 		return;
 
-	os_snprintf(groupmember_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
-			"%s/"  WPAS_DBUS_NEW_P2P_GROUPMEMBERS_PART "/"
+	os_snprintf(peer_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
+			"%s/" WPAS_DBUS_NEW_P2P_PEERS_PART "/"
 			COMPACT_MACSTR,
-			wpa_s->dbus_groupobj_path, MAC2STR(member));
+			wpa_s->dbus_groupobj_path, MAC2STR(peer_addr));
 
 	msg = dbus_message_new_signal(wpa_s->dbus_groupobj_path,
 				      WPAS_DBUS_NEW_IFACE_P2P_GROUP,
@@ -1483,7 +1483,7 @@ void wpas_dbus_signal_p2p_peer_disconnected(struct wpa_supplicant *wpa_s,
 		return;
 
 	dbus_message_iter_init_append(msg, &iter);
-	path = groupmember_obj_path;
+	path = peer_obj_path;
 	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_OBJECT_PATH,
 					    &path))
 		goto err;
@@ -3617,109 +3617,6 @@ void wpas_dbus_unregister_p2p_group(struct wpa_supplicant *wpa_s,
 	os_free(wpa_s->dbus_groupobj_path);
 	wpa_s->dbus_groupobj_path = NULL;
 }
-
-static const struct wpa_dbus_property_desc
-wpas_dbus_p2p_groupmember_properties[] = {
-	{ NULL, NULL, NULL, NULL, NULL }
-};
-
-/**
- * wpas_dbus_register_p2p_groupmember - Register a p2p groupmember
- * object with dbus
- * @wpa_s: wpa_supplicant interface structure
- * @p2p_if_addr: i/f addr of the device joining this group
- *
- * Registers p2p groupmember representing object with dbus
- */
-void wpas_dbus_register_p2p_groupmember(struct wpa_supplicant *wpa_s,
-					const u8 *p2p_if_addr)
-{
-	struct wpas_dbus_priv *ctrl_iface;
-	struct wpa_dbus_object_desc *obj_desc = NULL;
-	struct groupmember_handler_args *arg;
-	char groupmember_obj_path[WPAS_DBUS_OBJECT_PATH_MAX];
-
-	/* Do nothing if the control interface is not turned on */
-	if (wpa_s == NULL || wpa_s->global == NULL)
-		return;
-
-	ctrl_iface = wpa_s->global->dbus;
-	if (ctrl_iface == NULL)
-		return;
-
-	if (!wpa_s->dbus_groupobj_path)
-		return;
-
-	os_snprintf(groupmember_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
-		"%s/" WPAS_DBUS_NEW_P2P_GROUPMEMBERS_PART "/" COMPACT_MACSTR,
-		wpa_s->dbus_groupobj_path, MAC2STR(p2p_if_addr));
-
-	obj_desc = os_zalloc(sizeof(struct wpa_dbus_object_desc));
-	if (!obj_desc) {
-		wpa_printf(MSG_ERROR, "Not enough memory "
-			   "to create object description");
-		goto err;
-	}
-
-	/* allocate memory for handlers arguments */
-	arg = os_zalloc(sizeof(struct groupmember_handler_args));
-	if (!arg) {
-		wpa_printf(MSG_ERROR, "Not enough memory "
-			   "to create arguments for method");
-		goto err;
-	}
-
-	arg->wpa_s = wpa_s;
-	os_memcpy(arg->member_addr, p2p_if_addr, ETH_ALEN);
-
-	wpas_dbus_register(obj_desc, arg, wpa_dbus_free, NULL,
-			   wpas_dbus_p2p_groupmember_properties, NULL);
-
-	if (wpa_dbus_register_object_per_iface(ctrl_iface, groupmember_obj_path,
-					       wpa_s->ifname, obj_desc))
-		goto err;
-
-	wpa_printf(MSG_INFO,
-		   "dbus: Registered group member object '%s' successfully",
-		   groupmember_obj_path);
-	return;
-
-err:
-	free_dbus_object_desc(obj_desc);
-}
-
-/**
- * wpas_dbus_unregister_p2p_groupmember - Unregister a p2p groupmember
- * object with dbus
- * @wpa_s: wpa_supplicant interface structure
- * @p2p_if_addr: i/f addr of the device joining this group
- *
- * Unregisters p2p groupmember representing object with dbus
- */
-void wpas_dbus_unregister_p2p_groupmember(struct wpa_supplicant *wpa_s,
-					  const u8 *p2p_if_addr)
-{
-	struct wpas_dbus_priv *ctrl_iface;
-	char groupmember_obj_path[WPAS_DBUS_OBJECT_PATH_MAX];
-
-	/* Do nothing if the control interface is not turned on */
-	if (wpa_s == NULL || wpa_s->global == NULL)
-		return;
-
-	ctrl_iface = wpa_s->global->dbus;
-	if (ctrl_iface == NULL)
-		return;
-
-	if (!wpa_s->dbus_groupobj_path)
-		return;
-
-	os_snprintf(groupmember_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
-		"%s/" WPAS_DBUS_NEW_P2P_GROUPMEMBERS_PART "/" COMPACT_MACSTR,
-		wpa_s->dbus_groupobj_path, MAC2STR(p2p_if_addr));
-
-	wpa_dbus_unregister_object_per_iface(ctrl_iface, groupmember_obj_path);
-}
-
 
 static const struct wpa_dbus_property_desc
 	wpas_dbus_persistent_group_properties[] = {

@@ -1788,7 +1788,7 @@ unsigned int p2p_get_group_num_members(struct p2p_group *group);
  * @group: P2P group context from p2p_group_init()
  * @next: iteration pointer, must be a pointer to a void * that is set to %NULL
  *	on the first call and not modified later
- * Returns: A P2P Interface Address for each call and %NULL for no more members
+ * Returns: A P2P Device Address for each call and %NULL for no more members
  */
 const u8 * p2p_iterate_group_members(struct p2p_group *group, void **next);
 

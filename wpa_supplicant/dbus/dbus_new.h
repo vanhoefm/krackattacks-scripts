@@ -79,10 +79,6 @@ enum wpas_dbus_bss_prop {
 #define WPAS_DBUS_NEW_P2P_PEERS_PART	"Peers"
 #define	WPAS_DBUS_NEW_IFACE_P2P_PEER WPAS_DBUS_NEW_INTERFACE ".Peer"
 
-#define WPAS_DBUS_NEW_P2P_GROUPMEMBERS_PART	"Members"
-#define	WPAS_DBUS_NEW_IFACE_P2P_GROUPMEMBER \
-	WPAS_DBUS_NEW_INTERFACE ".GroupMember"
-
 /* Top-level Errors */
 #define WPAS_DBUS_ERROR_UNKNOWN_ERROR \
 	WPAS_DBUS_NEW_INTERFACE ".UnknownError"
@@ -201,10 +197,6 @@ int wpas_dbus_unregister_persistent_group(struct wpa_supplicant *wpa_s,
 					  int nid);
 void wpas_dbus_signal_p2p_invitation_result(struct wpa_supplicant *wpa_s,
 					    int status, const u8 *bssid);
-void wpas_dbus_register_p2p_groupmember(struct wpa_supplicant *wpa_s,
-					const u8 *p2p_if_addr);
-void wpas_dbus_unregister_p2p_groupmember(struct wpa_supplicant *wpa_s,
-					  const u8 *p2p_if_addr);
 void wpas_dbus_signal_p2p_peer_disconnected(struct wpa_supplicant *wpa_s,
 					    const u8 *member);
 void wpas_dbus_signal_p2p_sd_request(struct wpa_supplicant *wpa_s,

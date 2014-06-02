@@ -639,12 +639,12 @@ radius_server_get_new_session(struct radius_server_data *data,
 	sess->accept_attr = tmp.accept_attr;
 	sess->macacl = tmp.macacl;
 
-	sess->username = os_malloc(user_len * 2 + 1);
+	sess->username = os_malloc(user_len * 4 + 1);
 	if (sess->username == NULL) {
 		radius_server_session_free(data, sess);
 		return NULL;
 	}
-	printf_encode(sess->username, user_len * 2 + 1, user, user_len);
+	printf_encode(sess->username, user_len * 4 + 1, user, user_len);
 
 	sess->nas_ip = os_strdup(from_addr);
 	if (sess->nas_ip == NULL) {

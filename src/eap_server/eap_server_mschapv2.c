@@ -330,9 +330,9 @@ static void eap_mschapv2_process_response(struct eap_sm *sm,
 	wpa_printf(MSG_MSGDUMP, "EAP-MSCHAPV2: Flags 0x%x", flags);
 	wpa_hexdump_ascii(MSG_MSGDUMP, "EAP-MSCHAPV2: Name", name, name_len);
 
-	buf = os_malloc(name_len * 3 + 1);
+	buf = os_malloc(name_len * 4 + 1);
 	if (buf) {
-		printf_encode(buf, name_len * 3 + 1, name, name_len);
+		printf_encode(buf, name_len * 4 + 1, name, name_len);
 		eap_log_msg(sm, "EAP-MSCHAPV2 Name '%s'", buf);
 		os_free(buf);
 	}

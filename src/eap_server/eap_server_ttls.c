@@ -985,9 +985,9 @@ static void eap_ttls_process_phase2(struct eap_sm *sm,
 
 	if (parse.user_name) {
 		char *nbuf;
-		nbuf = os_malloc(parse.user_name_len * 3 + 1);
+		nbuf = os_malloc(parse.user_name_len * 4 + 1);
 		if (nbuf) {
-			printf_encode(nbuf, parse.user_name_len * 3 + 1,
+			printf_encode(nbuf, parse.user_name_len * 4 + 1,
 				      parse.user_name,
 				      parse.user_name_len);
 			eap_log_msg(sm, "TTLS-User-Name '%s'", nbuf);

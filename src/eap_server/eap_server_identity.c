@@ -120,9 +120,9 @@ static void eap_identity_process(struct eap_sm *sm, void *priv,
 		return; /* Should not happen - frame already validated */
 
 	wpa_hexdump_ascii(MSG_DEBUG, "EAP-Identity: Peer identity", pos, len);
-	buf = os_malloc(len * 3 + 1);
+	buf = os_malloc(len * 4 + 1);
 	if (buf) {
-		printf_encode(buf, len * 3 + 1, pos, len);
+		printf_encode(buf, len * 4 + 1, pos, len);
 		eap_log_msg(sm, "EAP-Response/Identity '%s'", buf);
 		os_free(buf);
 	}

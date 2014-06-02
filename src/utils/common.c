@@ -350,7 +350,7 @@ void printf_encode(char *txt, size_t maxlen, const u8 *data, size_t len)
 	size_t i;
 
 	for (i = 0; i < len; i++) {
-		if (txt + 4 > end)
+		if (txt + 4 >= end)
 			break;
 
 		switch (data[i]) {

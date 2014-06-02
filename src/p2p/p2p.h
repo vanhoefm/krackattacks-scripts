@@ -1990,4 +1990,9 @@ void p2p_set_authorized_oob_dev_pw_id(struct p2p_data *p2p, u16 dev_pw_id,
 
 int p2p_set_passphrase_len(struct p2p_data *p2p, unsigned int len);
 
+void p2p_loop_on_known_peers(struct p2p_data *p2p,
+			     void (*peer_callback)(struct p2p_peer_info *peer,
+						   void *user_data),
+			     void *user_data);
+
 #endif /* P2P_H */

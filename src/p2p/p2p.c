@@ -4494,6 +4494,19 @@ void p2p_err(struct p2p_data *p2p, const char *fmt, ...)
 }
 
 
+void p2p_loop_on_known_peers(struct p2p_data *p2p,
+			     void (*peer_callback)(struct p2p_peer_info *peer,
+						   void *user_data),
+			     void *user_data)
+{
+	struct p2p_device *dev, *n;
+
+	dl_list_for_each_safe(dev, n, &p2p->devices, struct p2p_device, list) {
+		peer_callback(&dev->info, user_data);
+	}
+}
+
+
 #ifdef CONFIG_WPS_NFC
 
 static struct wpabuf * p2p_build_nfc_handover(struct p2p_data *p2p,

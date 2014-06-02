@@ -1817,6 +1817,19 @@ int p2p_group_is_client_connected(struct p2p_group *group, const u8 *dev_addr);
 const struct p2p_group_config * p2p_group_get_config(struct p2p_group *group);
 
 /**
+ * p2p_loop_on_all_groups - Run the given callback on all groups
+ * @p2p: P2P module context from p2p_init()
+ * @group_callback: The callback function pointer
+ * @user_data: Some user data pointer which can be %NULL
+ *
+ * The group_callback function can stop the iteration by returning 0.
+ */
+void p2p_loop_on_all_groups(struct p2p_data *p2p,
+			    int (*group_callback)(struct p2p_group *group,
+						  void *user_data),
+			    void *user_data);
+
+/**
  * p2p_get_peer_found - Get P2P peer info structure of a found peer
  * @p2p: P2P module context from p2p_init()
  * @addr: P2P Device Address of the peer or %NULL to indicate the first peer

@@ -1013,3 +1013,9 @@ int p2p_group_get_freq(struct p2p_group *group)
 {
 	return group->cfg->freq;
 }
+
+
+const struct p2p_group_config * p2p_group_get_config(struct p2p_group *group)
+{
+	return group->cfg;
+}

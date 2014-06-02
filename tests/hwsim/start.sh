@@ -51,6 +51,8 @@ if [ "$1" = "valgrind" ]; then
     VALGRIND_HAPD="valgrind --log-file=$LOGDIR/valgrind-hostapd"
     chmod -f a+rx $WPAS
     chmod -f a+rx $HAPD
+    chmod -f a+rx $HAPD_AS
+    HAPD_AS="valgrind --log-file=$LOGDIR/valgrind-auth-serv $HAPD_AS"
     shift
 else
     unset VALGRIND
@@ -79,9 +81,6 @@ sudo $VALGRIND_HAPD $HAPD -ddKt$TRACE -g /var/run/hostapd-global -G $GROUP -ddKt
 
 sleep 1
 sudo chown -f $USER $LOGDIR/hwsim0.pcapng $LOGDIR/hwsim0 $LOGDIR/log* $LOGDIR/hostapd
-if [ "x$VALGRIND" = "xy" ]; then
-    sudo chown -f $USER $LOGDIR/*valgrind*
-fi
 
 if [ -x $HLR_AUC_GW ]; then
     cp $DIR/auth_serv/hlr_auc_gw.milenage_db $LOGDIR/hlr_auc_gw.milenage_db
@@ -90,6 +89,10 @@ fi
 
 touch $LOGDIR/hostapd.db
 sudo $HAPD_AS -ddKt $LOGDIR/as.conf $LOGDIR/as2.conf > $LOGDIR/auth_serv &
+if [ "x$VALGRIND" = "xy" ]; then
+    sleep 1
+    sudo chown -f $USER $LOGDIR/*valgrind*
+fi
 
 # wait for programs to be fully initialized
 for i in 0 1 2; do

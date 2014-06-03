@@ -654,6 +654,7 @@ struct wpa_supplicant {
 	unsigned int pending_action_freq;
 	int pending_action_no_cck;
 	int pending_action_without_roc;
+	unsigned int pending_action_tx_done:1;
 	void (*pending_action_tx_status_cb)(struct wpa_supplicant *wpa_s,
 					    unsigned int freq, const u8 *dst,
 					    const u8 *src, const u8 *bssid,

@@ -55,11 +55,12 @@ static void wpas_send_action_cb(void *eloop_ctx, void *timeout_ctx)
 
 	without_roc = wpa_s->pending_action_without_roc;
 	wpa_s->pending_action_without_roc = 0;
-	wpa_printf(MSG_DEBUG, "Off-channel: Send Action callback "
-		   "(without_roc=%d pending_action_tx=%p)",
-		   without_roc, wpa_s->pending_action_tx);
+	wpa_printf(MSG_DEBUG,
+		   "Off-channel: Send Action callback (without_roc=%d pending_action_tx=%p pending_action_tx_done=%d)",
+		   without_roc, wpa_s->pending_action_tx,
+		   !!wpa_s->pending_action_tx_done);
 
-	if (wpa_s->pending_action_tx == NULL)
+	if (wpa_s->pending_action_tx == NULL || wpa_s->pending_action_tx_done)
 		return;
 
 	/*
@@ -235,6 +236,7 @@ int offchannel_send_action(struct wpa_supplicant *wpa_s, unsigned int freq,
 			   MAC2STR(wpa_s->pending_action_dst));
 		wpabuf_free(wpa_s->pending_action_tx);
 	}
+	wpa_s->pending_action_tx_done = 0;
 	wpa_s->pending_action_tx = wpabuf_alloc(len);
 	if (wpa_s->pending_action_tx == NULL) {
 		wpa_printf(MSG_DEBUG, "Off-channel: Failed to allocate Action "
@@ -251,18 +253,22 @@ int offchannel_send_action(struct wpa_supplicant *wpa_s, unsigned int freq,
 
 	if (freq != 0 && wpa_s->drv_flags & WPA_DRIVER_FLAGS_OFFCHANNEL_TX) {
 		struct wpa_supplicant *iface;
+		int ret;
 
 		iface = wpas_get_tx_interface(wpa_s,
 					      wpa_s->pending_action_src);
 		wpa_s->action_tx_wait_time = wait_time;
 
-		return wpa_drv_send_action(
+		ret = wpa_drv_send_action(
 			iface, wpa_s->pending_action_freq,
 			wait_time, wpa_s->pending_action_dst,
 			wpa_s->pending_action_src, wpa_s->pending_action_bssid,
 			wpabuf_head(wpa_s->pending_action_tx),
 			wpabuf_len(wpa_s->pending_action_tx),
 			wpa_s->pending_action_no_cck);
+		if (ret == 0)
+			wpa_s->pending_action_tx_done = 1;
+		return ret;
 	}
 
 	if (freq) {

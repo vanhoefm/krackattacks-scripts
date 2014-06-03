@@ -1,5 +1,125 @@
 ChangeLog for wpa_supplicant
 
+2014-06-04 - v2.2
+	* added DFS indicator to get_capability freq
+	* added/fixed nl80211 functionality
+	  - BSSID/frequency hint for driver-based BSS selection
+	  - fix tearing down WDS STA interfaces
+	  - support vendor specific driver command
+	    (VENDOR <vendor id> <sub command id> [<hex formatted data>])
+	  - GO interface teardown optimization
+	  - allow beacon interval to be configured for IBSS
+	  - add SHA256-based AKM suites to CONNECT/ASSOCIATE commands
+	* removed unused NFC_RX_HANDOVER_REQ and NFC_RX_HANDOVER_SEL control
+	  interface commands (the more generic NFC_REPORT_HANDOVER is now used)
+	* fixed MSCHAP UTF-8 to UCS-2 conversion for three-byte encoding;
+	  this fixes password with include UTF-8 characters that use
+	  three-byte encoding EAP methods that use NtPasswordHash
+	* fixed couple of sequencies where radio work items could get stuck,
+	  e.g., when rfkill blocking happens during scanning or when
+	  scan-for-auth workaround is used
+	* P2P enhancements/fixes
+	  - enable enable U-APSD on GO automatically if the driver indicates
+	    support for this
+	  - fixed some service discovery cases with broadcast queries not being
+	    sent to all stations
+	  - fixed Probe Request frame triggering invitation to trigger only a
+	    single invitation instance even if multiple Probe Request frames are
+	    received
+	  - fixed a potential NULL pointer dereference crash when processing an
+	    invalid Invitation Request frame
+	  - add optional configuration file for the P2P_DEVICE parameters
+	  - optimize scan for GO during persistent group invocation
+	  - fix possible segmentation fault when PBC overlap is detected while
+	    using a separate P2P group interface
+	  - improve GO Negotiation robustness by allowing GO Negotiation
+	    Confirmation to be retransmitted
+	  - do use freed memory on device found event when P2P NFC
+	* added phase1 network parameter options for disabling TLS v1.1 and v1.2
+	  to allow workarounds with misbehaving AAA servers
+	  (tls_disable_tlsv1_1=1 and tls_disable_tlsv1_2=1)
+	* added support for OCSP stapling to validate AAA server certificate
+	  during TLS exchange
+	* Interworking/Hotspot 2.0 enhancements
+	  - prefer the last added network in Interworking connection to make the
+	    behavior more consistent with likely user expectation
+	  - roaming partner configuration (roaming_partner within a cred block)
+	  - support Hotspot 2.0 Release 2
+	    * "hs20_anqp_get <BSSID> 8" to request OSU Providers list
+	    * "hs20_icon_request <BSSID> <icon filename>" to request icon files
+	    * "fetch_osu" and "cancel_osu_fetch" to start/stop full OSU provider
+	      search (all suitable APs in scan results)
+	    * OSEN network for online signup connection
+	    * min_{dl,ul}_bandwidth_{home,roaming} cred parameters
+	    * max_bss_load cred parameter
+	    * req_conn_capab cred parameter
+	    * sp_priority cred parameter
+	    * ocsp cred parameter
+	    * slow down automatic connection attempts on EAP failure to meet
+	      required behavior (no more than 10 retries within a 10-minute
+	      interval)
+	    * sample implementation of online signup client (both SPP and
+	      OMA-DM protocols) (hs20/client/*)
+	  - fixed GAS indication for additional comeback delay with status
+	    code 95
+	  - extend ANQP_GET to accept Hotspot 2.0 subtypes
+	    ANQP_GET <addr> <info id>[,<info id>]...
+	    [,hs20:<subtype>][...,hs20:<subtype>]
+	  - add control interface events CRED-ADDED <id>,
+	    CRED-MODIFIED <id> <field>, CRED-REMOVED <id>
+	  - add "GET_CRED <id> <field>" command
+	  - enable FT for the connection automatically if the AP advertises
+	    support for this
+	  - fix a case where auto_interworking=1 could end up stopping scanning
+	* fixed TDLS interoperability issues with supported operating class in
+	  some deployed stations
+	* internal TLS implementation enhancements/fixes
+	  - add SHA256-based cipher suites
+	  - add DHE-RSA cipher suites
+	  - fix X.509 validation of PKCS#1 signature to check for extra data
+	* fixed PTK derivation for CCMP-256 and GCMP-256
+	* added "reattach" command for fast reassociate-back-to-same-BSS
+	* allow PMF to be enabled for AP mode operation with the ieee80211w
+	  parameter
+	* added "get_capability tdls" command
+	* added option to set config blobs through control interface with
+	  "SET blob <name> <hexdump>"
+	* D-Bus interface extensions/fixes
+	  - make p2p_no_group_iface configurable
+	  - declare ServiceDiscoveryRequest method properly
+	  - export peer's device address as a property
+	  - make reassociate command behave like the control interface one,
+	    i.e., to allow connection from disconnected state
+	* added optional "freq=<channel ranges>" parameter to SET pno
+	* added optional "freq=<channel ranges>" parameter to SELECT_NETWORK
+	* fixed OBSS scan result processing for 20/40 MHz co-ex report
+	* remove WPS 1.0 only support, i.e., WSC 2.0 support is now enabled
+	  whenever CONFIG_WPS=y is set
+	* fixed regression in parsing of WNM Sleep Mode exit key data
+	* fixed potential segmentation fault and memory leaks in WNM neighbor
+	  report processing
+	* EAP-pwd fixes
+	  - fragmentation of PWD-Confirm-Resp
+	  - fix memory leak when fragmentation is used
+	  - fix possible segmentation fault on EAP method deinit if an invalid
+	    group is negotiated
+	* added MACsec/IEEE Std 802.1X-2010 PAE implementation (currently
+	  available only with the macsec_qca driver wrapper)
+	* fixed EAP-SIM counter-too-small message
+	* added 'dup_network <id_s> <id_d> <name>' command; this can be used to
+	  clone the psk field without having toextract it from wpa_supplicant
+	* fixed GSM authentication on USIM
+	* added support for usin epoll in eloop (CONFIG_ELOOP_EPOLL=y)
+	* fixed some concurrent virtual interface cases with dedicated P2P
+	  management interface to not catch events from removed interface (this
+	  could result in the management interface getting disabled)
+	* fixed a memory leak in SAE random number generation
+	* fixed off-by-one bounds checking in printf_encode()
+	  - this could result in some control interface ATTACH command cases
+	    terminating wpa_supplicant
+	* fixed EAPOL-Key exchange when GCMP is used with SHA256-based AKM
+	* various bug fixes
+
 2014-02-04 - v2.1
 	* added support for simultaneous authentication of equals (SAE) for
 	  stronger password-based authentication with WPA2-Personal

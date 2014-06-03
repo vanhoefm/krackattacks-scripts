@@ -1,5 +1,92 @@
 ChangeLog for hostapd
 
+2014-06-04 - v2.2
+	* fixed SAE confirm-before-commit validation to avoid a potential
+	  segmentation fault in an unexpected message sequence that could be
+	  triggered remotely
+	* extended VHT support
+	  - Operating Mode Notification
+	  - Power Constraint element (local_pwr_constraint)
+	  - Spectrum management capability (spectrum_mgmt_required=1)
+	  - fix VHT80 segment picking in ACS
+	  - fix vht_capab 'Maximum A-MPDU Length Exponent' handling
+	  - fix VHT20
+	* fixed HT40 co-ex scan for some pri/sec channel switches
+	* extended HT40 co-ex support to allow dynamic channel width changes
+	  during the lifetime of the BSS
+	* fixed HT40 co-ex support to check for overlapping 20 MHz BSS
+	* fixed MSCHAP UTF-8 to UCS-2 conversion for three-byte encoding;
+	  this fixes password with include UTF-8 characters that use
+	  three-byte encoding EAP methods that use NtPasswordHash
+	* reverted TLS certificate validation step change in v2.1 that rejected
+	  any AAA server certificate with id-kp-clientAuth even if
+	  id-kp-serverAuth EKU was included
+	* fixed STA validation step for WPS ER commands to prevent a potential
+	  crash if an ER sends an unexpected PutWLANResponse to a station that
+	  is disassociated, but not fully removed
+	* enforce full EAP authentication after RADIUS Disconnect-Request by
+	  removing the PMKSA cache entry
+	* added support for NAS-IP-Address, NAS-identifier, and NAS-IPv6-Address
+	  in RADIUS Disconnect-Request
+	* added mechanism for removing addresses for MAC ACLs by prefixing an
+	  entry with "-"
+	* Interworking/Hotspot 2.0 enhancements
+	  - support Hotspot 2.0 Release 2
+	    * OSEN network for online signup connection
+	    * subscription remediation (based on RADIUS server request or
+	      control interface HS20_WNM_NOTIF for testing purposes)
+	    * Hotspot 2.0 release number indication in WFA RADIUS VSA
+	    * deauthentication request (based on RADIUS server request or
+	      control interface WNM_DEAUTH_REQ for testing purposes)
+	    * Session Info URL RADIUS AVP to trigger ESS Disassociation Imminent
+	    * hs20_icon config parameter to configure icon files for OSU
+	    * osu_* config parameters for OSU Providers list
+	  - do not use Interworking filtering rules on Probe Request if
+	    Interworking is disabled to avoid interop issues
+	* added/fixed nl80211 functionality
+	  - AP interface teardown optimization
+	  - support vendor specific driver command
+	    (VENDOR <vendor id> <sub command id> [<hex formatted data>])
+	* fixed PMF protection of Deauthentication frame when this is triggered
+	  by session timeout
+	* internal TLS implementation enhancements/fixes
+	  - add SHA256-based cipher suites
+	  - add DHE-RSA cipher suites
+	  - fix X.509 validation of PKCS#1 signature to check for extra data
+	* RADIUS server functionality
+	  - add minimal RADIUS accounting server support (hostapd-as-server);
+	    this is mainly to enable testing coverage with hwsim scripts
+	  - allow authentication log to be written into SQLite databse
+	  - added option for TLS protocol testing of an EAP peer by simulating
+	    various misbehaviors/known attacks
+	  - MAC ACL support for testing purposes
+	* fixed PTK derivation for CCMP-256 and GCMP-256
+	* extended WPS per-station PSK to support ER case
+	* added option to configure the management group cipher
+	  (group_mgmt_cipher=AES-128-CMAC (default), BIP-GMAC-128, BIP-GMAC-256,
+	  BIP-CMAC-256)
+	* fixed AP mode default TXOP Limit values for AC_VI and AC_VO (these
+	  were rounded incorrectly)
+	* added support for postponing FT response in case PMK-R1 needs to be
+	  pulled from R0KH
+	* added option to advertise 40 MHz intolerant HT capability with
+	  ht_capab=[40-INTOLERANT]
+	* remove WPS 1.0 only support, i.e., WSC 2.0 support is now enabled
+	  whenever CONFIG_WPS=y is set
+	* EAP-pwd fixes
+	  - fix possible segmentation fault on EAP method deinit if an invalid
+	    group is negotiated
+	* fixed RADIUS client retransmit/failover behavior
+	  - there was a potential ctash due to freed memory being accessed
+	  - failover to a backup server mechanism did not work properly
+	* fixed a possible crash on double DISABLE command when multiple BSSes
+	  are enabled
+	* fixed a memory leak in SAE random number generation
+	* fixed GTK rekeying when the station uses FT protocol
+	* fixed off-by-one bounds checking in printf_encode()
+	  - this could result in deinial of service in some EAP server cases
+	* various bug fixes
+
 2014-02-04 - v2.1
 	* added support for simultaneous authentication of equals (SAE) for
 	  stronger password-based authentication with WPA2-Personal

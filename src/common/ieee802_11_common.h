@@ -98,4 +98,5 @@ enum hostapd_hw_mode ieee80211_freq_to_chan(int freq, u8 *channel);
 
 int supp_rates_11b_only(struct ieee802_11_elems *elems);
 
+const char * fc2str(u16 fc);
 #endif /* IEEE802_11_COMMON_H */

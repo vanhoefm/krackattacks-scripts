@@ -230,11 +230,12 @@ static int p2p_manager_disconnect(struct hostapd_data *hapd, u16 stype,
 	if (mgmt == NULL)
 		return -1;
 
-	wpa_dbg(hapd->msg_ctx, MSG_DEBUG, "P2P: Disconnect STA " MACSTR
-		" with minor reason code %u (stype=%u)",
-		MAC2STR(addr), minor_reason_code, stype);
-
 	mgmt->frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT, stype);
+	wpa_dbg(hapd->msg_ctx, MSG_DEBUG, "P2P: Disconnect STA " MACSTR
+		" with minor reason code %u (stype=%u (%s))",
+		MAC2STR(addr), minor_reason_code, stype,
+		fc2str(mgmt->frame_control));
+
 	os_memcpy(mgmt->da, addr, ETH_ALEN);
 	os_memcpy(mgmt->sa, hapd->own_addr, ETH_ALEN);
 	os_memcpy(mgmt->bssid, hapd->own_addr, ETH_ALEN);

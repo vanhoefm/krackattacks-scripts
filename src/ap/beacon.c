@@ -882,8 +882,8 @@ int ieee802_11_build_ap_params(struct hostapd_data *hapd,
 	params->basic_rates = hapd->iface->basic_rates;
 	params->ssid = hapd->conf->ssid.ssid;
 	params->ssid_len = hapd->conf->ssid.ssid_len;
-	params->pairwise_ciphers = hapd->conf->rsn_pairwise ?
-		hapd->conf->rsn_pairwise : hapd->conf->wpa_pairwise;
+	params->pairwise_ciphers = hapd->conf->wpa_pairwise |
+		hapd->conf->rsn_pairwise;
 	params->group_cipher = hapd->conf->wpa_group;
 	params->key_mgmt_suites = hapd->conf->wpa_key_mgmt;
 	params->auth_algs = hapd->conf->auth_algs;

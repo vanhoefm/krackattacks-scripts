@@ -280,7 +280,8 @@ int hostapd_set_drv_ieee8021x(struct hostapd_data *hapd, const char *ifname,
 		params.wpa = hapd->conf->wpa;
 		params.ieee802_1x = hapd->conf->ieee802_1x;
 		params.wpa_group = hapd->conf->wpa_group;
-		params.wpa_pairwise = hapd->conf->wpa_pairwise;
+		params.wpa_pairwise = hapd->conf->wpa_pairwise |
+			hapd->conf->rsn_pairwise;
 		params.wpa_key_mgmt = hapd->conf->wpa_key_mgmt;
 		params.rsn_preauth = hapd->conf->rsn_preauth;
 #ifdef CONFIG_IEEE80211W

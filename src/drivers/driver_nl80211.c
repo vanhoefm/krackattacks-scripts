@@ -1736,8 +1736,9 @@ static void mlme_event_mgmt(struct i802_bss *bss,
 		rx_freq = drv->last_mgmt_freq = event.rx_mgmt.freq;
 	}
 	wpa_printf(MSG_DEBUG,
-		   "nl80211: RX frame freq=%d ssi_signal=%d stype=%u (%s) len=%u",
-		   rx_freq, ssi_signal, stype, fc2str(fc),
+		   "nl80211: RX frame sa=" MACSTR
+		   " freq=%d ssi_signal=%d stype=%u (%s) len=%u",
+		   MAC2STR(mgmt->sa), rx_freq, ssi_signal, stype, fc2str(fc),
 		   (unsigned int) len);
 	event.rx_mgmt.frame = frame;
 	event.rx_mgmt.frame_len = len;
@@ -7086,8 +7087,10 @@ static int wpa_driver_nl80211_send_mlme(struct i802_bss *bss, const u8 *data,
 
 	mgmt = (struct ieee80211_mgmt *) data;
 	fc = le_to_host16(mgmt->frame_control);
-	wpa_printf(MSG_DEBUG, "nl80211: send_mlme - noack=%d freq=%u no_cck=%d offchanok=%d wait_time=%u fc=0x%x (%s) nlmode=%d",
-		   noack, freq, no_cck, offchanok, wait_time, fc, fc2str(fc), drv->nlmode);
+	wpa_printf(MSG_DEBUG, "nl80211: send_mlme - da= " MACSTR
+		   " noack=%d freq=%u no_cck=%d offchanok=%d wait_time=%u fc=0x%x (%s) nlmode=%d",
+		   MAC2STR(mgmt->da), noack, freq, no_cck, offchanok, wait_time,
+		   fc, fc2str(fc), drv->nlmode);
 
 	if ((is_sta_interface(drv->nlmode) ||
 	     drv->nlmode == NL80211_IFTYPE_P2P_DEVICE) &&

@@ -351,7 +351,7 @@ struct wpa_driver_scan_params {
 	 * Mbps from the support rates element(s) in the Probe Request frames
 	 * and not to transmit the frames at any of those rates.
 	 */
-	u8 p2p_probe;
+	unsigned int p2p_probe:1;
 
 	/**
 	 * only_new_results - Request driver to report only new results
@@ -360,7 +360,15 @@ struct wpa_driver_scan_params {
 	 * been detected after this scan request has been started, i.e., to
 	 * flush old cached BSS entries.
 	 */
-	int only_new_results;
+	unsigned int only_new_results:1;
+
+	/**
+	 * low_priority - Requests driver to use a lower scan priority
+	 *
+	 * This is used to request the driver to use a lower scan priority
+	 * if it supports such a thing.
+	 */
+	unsigned int low_priority:1;
 
 	/*
 	 * NOTE: Whenever adding new parameters here, please make sure

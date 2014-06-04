@@ -1857,6 +1857,7 @@ wpa_scan_clone_params(const struct wpa_driver_scan_params *src)
 	params->filter_rssi = src->filter_rssi;
 	params->p2p_probe = src->p2p_probe;
 	params->only_new_results = src->only_new_results;
+	params->low_priority = src->low_priority;
 
 	return params;
 

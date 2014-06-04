@@ -307,6 +307,7 @@ struct wpa_driver_nl80211_data {
 	unsigned int test_use_roc_tx:1;
 	unsigned int ignore_deauth_event:1;
 	unsigned int dfs_vendor_cmd_avail:1;
+	unsigned int have_low_prio_scan:1;
 
 	u64 remain_on_chan_cookie;
 	u64 send_action_cookie;
@@ -3411,6 +3412,7 @@ struct wiphy_info_data {
 	unsigned int p2p_concurrent:1;
 	unsigned int channel_switch_supported:1;
 	unsigned int set_qos_map_supported:1;
+	unsigned int have_low_prio_scan:1;
 };
 
 
@@ -3689,6 +3691,9 @@ static void wiphy_info_feature_flags(struct wiphy_info_data *info,
 
 	if (flags & NL80211_FEATURE_AP_MODE_CHAN_WIDTH_CHANGE)
 		capa->flags |= WPA_DRIVER_FLAGS_HT_2040_COEX;
+
+	if (flags & NL80211_FEATURE_LOW_PRIORITY_SCAN)
+		info->have_low_prio_scan = 1;
 }
 
 
@@ -3981,6 +3986,7 @@ static int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 	drv->data_tx_status = info.data_tx_status;
 	if (info.set_qos_map_supported)
 		drv->capa.flags |= WPA_DRIVER_FLAGS_QOS_MAPPING;
+	drv->have_low_prio_scan = info.have_low_prio_scan;
 
 	/*
 	 * If poll command and tx status are supported, mac80211 is new enough
@@ -4949,6 +4955,7 @@ nl80211_scan_common(struct wpa_driver_nl80211_data *drv, u8 cmd,
 {
 	struct nl_msg *msg;
 	size_t i;
+	u32 scan_flags = 0;
 
 	msg = nlmsg_alloc();
 	if (!msg)
@@ -5007,9 +5014,17 @@ nl80211_scan_common(struct wpa_driver_nl80211_data *drv, u8 cmd,
 
 	if (params->only_new_results) {
 		wpa_printf(MSG_DEBUG, "nl80211: Add NL80211_SCAN_FLAG_FLUSH");
-		NLA_PUT_U32(msg, NL80211_ATTR_SCAN_FLAGS,
-			    NL80211_SCAN_FLAG_FLUSH);
+		scan_flags |= NL80211_SCAN_FLAG_FLUSH;
 	}
+
+	if (params->low_priority && drv->have_low_prio_scan) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Add NL80211_SCAN_FLAG_LOW_PRIORITY");
+		scan_flags |= NL80211_SCAN_FLAG_LOW_PRIORITY;
+	}
+
+	if (scan_flags)
+		NLA_PUT_U32(msg, NL80211_ATTR_SCAN_FLAGS, scan_flags);
 
 	return msg;
 

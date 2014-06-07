@@ -2098,6 +2098,13 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 	wpa_hexdump(MSG_DEBUG, "TDLS: RSN IE Received from TPK M2",
 		    kde.rsn_ie, kde.rsn_ie_len);
 
+	if (kde.rsn_ie_len > TDLS_MAX_IE_LEN) {
+		wpa_printf(MSG_INFO,
+			   "TDLS: Too long Responder RSN IE in TPK M2");
+		status = WLAN_STATUS_INVALID_RSNIE;
+		goto error;
+	}
+
 	/*
 	 * FIX: bitwise comparison of RSN IE is not the correct way of
 	 * validation this. It can be different, but certain fields must

@@ -1523,7 +1523,7 @@ int eapol_sm_get_key(struct eapol_sm *sm, u8 *key, size_t len)
 	size_t eap_len;
 
 #ifdef CONFIG_EAP_PROXY
-	if (sm->use_eap_proxy) {
+	if (sm && sm->use_eap_proxy) {
 		/* Get key from EAP proxy */
 		if (sm == NULL || !eap_proxy_key_available(sm->eap_proxy)) {
 			wpa_printf(MSG_DEBUG, "EAPOL: EAP key not available");

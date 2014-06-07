@@ -579,12 +579,15 @@ static void wps_er_parse_device_description(struct wps_er_ap *ap,
 	wpa_printf(MSG_DEBUG, "WPS ER: serialNumber='%s'", ap->serial_number);
 
 	ap->udn = xml_get_first_item(data, "UDN");
-	wpa_printf(MSG_DEBUG, "WPS ER: UDN='%s'", ap->udn);
-	pos = os_strstr(ap->udn, "uuid:");
-	if (pos) {
-		pos += 5;
-		if (uuid_str2bin(pos, ap->uuid) < 0)
-			wpa_printf(MSG_DEBUG, "WPS ER: Invalid UUID in UDN");
+	if (ap->udn) {
+		wpa_printf(MSG_DEBUG, "WPS ER: UDN='%s'", ap->udn);
+		pos = os_strstr(ap->udn, "uuid:");
+		if (pos) {
+			pos += 5;
+			if (uuid_str2bin(pos, ap->uuid) < 0)
+				wpa_printf(MSG_DEBUG,
+					   "WPS ER: Invalid UUID in UDN");
+		}
 	}
 
 	ap->upc = xml_get_first_item(data, "UPC");

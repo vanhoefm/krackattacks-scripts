@@ -1872,6 +1872,8 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 
 #ifdef CONFIG_AP
 	if (wpa_s->ap_iface) {
+		if (!data)
+			return;
 		hostapd_notif_assoc(wpa_s->ap_iface->bss[0],
 				    data->assoc_info.addr,
 				    data->assoc_info.req_ies,

@@ -1515,6 +1515,7 @@ static int interworking_connect_helper(struct wpa_supplicant *wpa_s,
 	u16 count, i;
 	char buf[100];
 	int excluded = 0, *excl = allow_excluded ? &excluded : NULL;
+	const char *name;
 
 	if (wpa_s->conf->cred == NULL || bss == NULL)
 		return -1;
@@ -1728,11 +1729,12 @@ static int interworking_connect_helper(struct wpa_supplicant *wpa_s,
 		if (wpa_config_set(ssid, "pac_file",
 				   "\"blob://pac_interworking\"", 0) < 0)
 			goto fail;
-		os_snprintf(buf, sizeof(buf), "\"auth=%s\"",
-			    eap_get_name(EAP_VENDOR_IETF,
-					 eap->inner_method ?
-					 eap->inner_method :
-					 EAP_TYPE_MSCHAPV2));
+		name = eap_get_name(EAP_VENDOR_IETF,
+				    eap->inner_method ? eap->inner_method :
+				    EAP_TYPE_MSCHAPV2);
+		if (name == NULL)
+			goto fail;
+		os_snprintf(buf, sizeof(buf), "\"auth=%s\"", name);
 		if (wpa_config_set(ssid, "phase2", buf, 0) < 0)
 			goto fail;
 		break;

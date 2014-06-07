@@ -686,7 +686,6 @@ static void anqp_add_icon_binary_file(struct hostapd_data *hapd,
 static struct wpabuf *
 gas_serv_build_gas_resp_payload(struct hostapd_data *hapd,
 				unsigned int request,
-				struct gas_dialog_info *di,
 				const u8 *home_realm, size_t home_realm_len,
 				const u8 *icon_name, size_t icon_name_len)
 {
@@ -962,7 +961,7 @@ static void gas_serv_req_local_processing(struct hostapd_data *hapd,
 {
 	struct wpabuf *buf, *tx_buf;
 
-	buf = gas_serv_build_gas_resp_payload(hapd, qi->request, NULL,
+	buf = gas_serv_build_gas_resp_payload(hapd, qi->request,
 					      qi->home_realm_query,
 					      qi->home_realm_query_len,
 					      qi->icon_name, qi->icon_name_len);

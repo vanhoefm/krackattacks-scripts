@@ -220,7 +220,7 @@ static u8 * hostapd_eid_country(struct hostapd_data *hapd, u8 *eid,
 			continue; /* can use same entry */
 		}
 
-		if (start) {
+		if (start && prev) {
 			pos = hostapd_eid_country_add(pos, end, chan_spacing,
 						      start, prev);
 			start = NULL;

@@ -414,7 +414,7 @@ static void anqp_add_nai_realm(struct hostapd_data *hapd, struct wpabuf *buf,
 			gas_anqp_set_element_len(buf, realm_data_len);
 		}
 		gas_anqp_set_element_len(buf, len);
-	} else if (nai_home_realm && hapd->conf->nai_realm_data) {
+	} else if (nai_home_realm && hapd->conf->nai_realm_data && home_realm) {
 		hs20_add_nai_home_realm_matches(hapd, buf, home_realm,
 						home_realm_len);
 	}

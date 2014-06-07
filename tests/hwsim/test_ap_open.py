@@ -7,6 +7,8 @@
 import logging
 logger = logging.getLogger()
 import struct
+import subprocess
+import time
 
 import hostapd
 import hwsim_utils
@@ -137,3 +139,28 @@ def test_ap_open_select_any(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"])
     if ev is None:
         raise Exception("Association with the AP timed out")
+
+def test_ap_open_unexpected_assoc_event(dev, apdev):
+    """AP with open mode and unexpected association event"""
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+    dev[0].request("DISCONNECT")
+    time.sleep(0.1)
+    dev[0].dump_monitor()
+    # This will be accepted due to matching network
+    subprocess.call(['sudo', 'iw', 'dev', dev[0].ifname, 'connect', 'open',
+                     "2412", apdev[0]['bssid']])
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Association with the AP timed out")
+    dev[0].dump_monitor()
+
+    dev[0].request("REMOVE_NETWORK all")
+    time.sleep(0.1)
+    dev[0].dump_monitor()
+    # This will result in disconnection due to no matching network
+    subprocess.call(['sudo', 'iw', 'dev', dev[0].ifname, 'connect', 'open',
+                     "2412", apdev[0]['bssid']])
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Disconnection with the AP timed out")

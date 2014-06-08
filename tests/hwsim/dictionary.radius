@@ -5,6 +5,7 @@ ATTRIBUTE	Calling-Station-Id	31	string
 ATTRIBUTE	NAS-Identifier		32	string
 ATTRIBUTE	Acct-Session-Id		44	string
 ATTRIBUTE	Event-Timestamp		55	date
+ATTRIBUTE	EAP-Message		79	string
 ATTRIBUTE	Message-Authenticator	80	octets
 ATTRIBUTE	Chargeable-User-Identity 89	string
 ATTRIBUTE	Error-Cause		101	integer

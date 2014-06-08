@@ -52,22 +52,12 @@ struct wpabuf * eap_ikev2_build_frag_ack(u8 id, u8 code)
 {
 	struct wpabuf *msg;
 
-#ifdef CCNS_PL
-	msg = eap_msg_alloc(EAP_VENDOR_IETF, EAP_TYPE_IKEV2, 1, code, id);
-	if (msg == NULL) {
-		wpa_printf(MSG_ERROR, "EAP-IKEV2: Failed to allocate memory "
-			   "for fragment ack");
-		return NULL;
-	}
-	wpabuf_put_u8(msg, 0); /* Flags */
-#else /* CCNS_PL */
 	msg = eap_msg_alloc(EAP_VENDOR_IETF, EAP_TYPE_IKEV2, 0, code, id);
 	if (msg == NULL) {
 		wpa_printf(MSG_ERROR, "EAP-IKEV2: Failed to allocate memory "
 			   "for fragment ack");
 		return NULL;
 	}
-#endif /* CCNS_PL */
 
 	wpa_printf(MSG_DEBUG, "EAP-IKEV2: Send fragment ack");
 

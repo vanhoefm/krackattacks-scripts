@@ -173,46 +173,12 @@ const struct ikev2_encr_alg * ikev2_get_encr(int id)
 }
 
 
-#ifdef CCNS_PL
-/* from des.c */
-struct des3_key_s {
-	u32 ek[3][32];
-	u32 dk[3][32];
-};
-
-void des3_key_setup(const u8 *key, struct des3_key_s *dkey);
-void des3_encrypt(const u8 *plain, const struct des3_key_s *key, u8 *crypt);
-void des3_decrypt(const u8 *crypt, const struct des3_key_s *key, u8 *plain);
-#endif /* CCNS_PL */
-
-
 int ikev2_encr_encrypt(int alg, const u8 *key, size_t key_len, const u8 *iv,
 		       const u8 *plain, u8 *crypt, size_t len)
 {
 	struct crypto_cipher *cipher;
 	int encr_alg;
 
-#ifdef CCNS_PL
-	if (alg == ENCR_3DES) {
-		struct des3_key_s des3key;
-		size_t i, blocks;
-		u8 *pos;
-
-		/* ECB mode is used incorrectly for 3DES!? */
-		if (key_len != 24) {
-			wpa_printf(MSG_INFO, "IKEV2: Invalid encr key length");
-			return -1;
-		}
-		des3_key_setup(key, &des3key);
-
-		blocks = len / 8;
-		pos = crypt;
-		for (i = 0; i < blocks; i++) {
-			des3_encrypt(pos, &des3key, pos);
-			pos += 8;
-		}
-	} else {
-#endif /* CCNS_PL */
 	switch (alg) {
 	case ENCR_3DES:
 		encr_alg = CRYPTO_CIPHER_ALG_3DES;
@@ -237,9 +203,6 @@ int ikev2_encr_encrypt(int alg, const u8 *key, size_t key_len, const u8 *iv,
 		return -1;
 	}
 	crypto_cipher_deinit(cipher);
-#ifdef CCNS_PL
-	}
-#endif /* CCNS_PL */
 
 	return 0;
 }
@@ -251,31 +214,6 @@ int ikev2_encr_decrypt(int alg, const u8 *key, size_t key_len, const u8 *iv,
 	struct crypto_cipher *cipher;
 	int encr_alg;
 
-#ifdef CCNS_PL
-	if (alg == ENCR_3DES) {
-		struct des3_key_s des3key;
-		size_t i, blocks;
-
-		/* ECB mode is used incorrectly for 3DES!? */
-		if (key_len != 24) {
-			wpa_printf(MSG_INFO, "IKEV2: Invalid encr key length");
-			return -1;
-		}
-		des3_key_setup(key, &des3key);
-
-		if (len % 8) {
-			wpa_printf(MSG_INFO, "IKEV2: Invalid encrypted "
-				   "length");
-			return -1;
-		}
-		blocks = len / 8;
-		for (i = 0; i < blocks; i++) {
-			des3_decrypt(crypt, &des3key, plain);
-			plain += 8;
-			crypt += 8;
-		}
-	} else {
-#endif /* CCNS_PL */
 	switch (alg) {
 	case ENCR_3DES:
 		encr_alg = CRYPTO_CIPHER_ALG_3DES;
@@ -300,9 +238,6 @@ int ikev2_encr_decrypt(int alg, const u8 *key, size_t key_len, const u8 *iv,
 		return -1;
 	}
 	crypto_cipher_deinit(cipher);
-#ifdef CCNS_PL
-	}
-#endif /* CCNS_PL */
 
 	return 0;
 }
@@ -706,10 +641,6 @@ int ikev2_derive_sk_keys(const struct ikev2_prf_alg *prf,
 	keys->SK_integ_len = integ->key_len;
 	keys->SK_encr_len = encr->key_len;
 	keys->SK_prf_len = prf->key_len;
-#ifdef CCNS_PL
-	/* Uses encryption key length for SK_d; should be PRF length */
-	keys->SK_d_len = keys->SK_encr_len;
-#endif /* CCNS_PL */
 
 	keybuf_len = keys->SK_d_len + 2 * keys->SK_integ_len +
 		2 * keys->SK_encr_len + 2 * keys->SK_prf_len;

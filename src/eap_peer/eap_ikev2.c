@@ -154,12 +154,6 @@ static struct wpabuf * eap_ikev2_build_msg(struct eap_ikev2_data *data,
 			send_len -= 4;
 		}
 	}
-#ifdef CCNS_PL
-	/* Some issues figuring out the length of the message if Message Length
-	 * field not included?! */
-	if (!(flags & IKEV2_FLAGS_LENGTH_INCLUDED))
-		flags |= IKEV2_FLAGS_LENGTH_INCLUDED;
-#endif /* CCNS_PL */
 
 	plen = 1 + send_len;
 	if (flags & IKEV2_FLAGS_LENGTH_INCLUDED)
@@ -381,12 +375,7 @@ static struct wpabuf * eap_ikev2_process(struct eap_sm *sm, void *priv,
 		   "Message Length %u", flags, message_length);
 
 	if (data->state == WAIT_FRAG_ACK) {
-#ifdef CCNS_PL
-		if (len > 1) /* Empty Flags field included in ACK */
-#else /* CCNS_PL */
-		if (len != 0)
-#endif /* CCNS_PL */
-		{
+		if (len != 0) {
 			wpa_printf(MSG_DEBUG, "EAP-IKEV2: Unexpected payload "
 				   "in WAIT_FRAG_ACK state");
 			ret->ignore = TRUE;

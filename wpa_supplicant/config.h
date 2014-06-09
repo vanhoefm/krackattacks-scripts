@@ -25,6 +25,7 @@
 #define DEFAULT_MAX_NUM_STA 128
 #define DEFAULT_ACCESS_NETWORK_TYPE 15
 #define DEFAULT_SCAN_CUR_FREQ 0
+#define DEFAULT_P2P_SEARCH_DELAY 500
 
 #include "config_ssid.h"
 #include "wps/wps.h"
@@ -1029,6 +1030,16 @@ struct wpa_config {
 	 * If set, these wowlan triggers will be configured.
 	 */
 	char *wowlan_triggers;
+
+	/**
+	 * p2p_search_delay - Extra delay between concurrent search iterations
+	 *
+	 * Add extra delay (in milliseconds) between search iterations when
+	 * there is a concurrent operation to make p2p_find friendlier to
+	 * concurrent operations by avoiding it from taking 100% of radio
+	 * resources.
+	 */
+	unsigned int p2p_search_delay;
 };
 
 

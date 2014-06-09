@@ -82,10 +82,6 @@
 #define P2P_MAX_INITIAL_CONN_WAIT_GO_REINVOKE 15
 #endif /* P2P_MAX_INITIAL_CONN_WAIT_GO_REINVOKE */
 
-#ifndef P2P_CONCURRENT_SEARCH_DELAY
-#define P2P_CONCURRENT_SEARCH_DELAY 500
-#endif /* P2P_CONCURRENT_SEARCH_DELAY */
-
 #define P2P_MGMT_DEVICE_PREFIX		"p2p-dev-"
 
 enum p2p_group_removal_reason {
@@ -6764,8 +6760,8 @@ unsigned int wpas_p2p_search_delay(struct wpa_supplicant *wpa_s)
 	if (wpa_s->wpa_state > WPA_SCANNING) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Use %u ms search delay due to "
 			"concurrent operation",
-			P2P_CONCURRENT_SEARCH_DELAY);
-		return P2P_CONCURRENT_SEARCH_DELAY;
+			wpa_s->conf->p2p_search_delay);
+		return wpa_s->conf->p2p_search_delay;
 	}
 
 	dl_list_for_each(ifs, &wpa_s->radio->ifaces, struct wpa_supplicant,
@@ -6774,8 +6770,9 @@ unsigned int wpas_p2p_search_delay(struct wpa_supplicant *wpa_s)
 			wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Use %u ms search "
 				"delay due to concurrent operation on "
 				"interface %s",
-				P2P_CONCURRENT_SEARCH_DELAY, ifs->ifname);
-			return P2P_CONCURRENT_SEARCH_DELAY;
+				wpa_s->conf->p2p_search_delay,
+				ifs->ifname);
+			return wpa_s->conf->p2p_search_delay;
 		}
 	}
 

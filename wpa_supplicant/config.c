@@ -3266,6 +3266,7 @@ struct wpa_config * wpa_config_alloc_empty(const char *ctrl_interface,
 	config->wmm_ac_params[1] = ac_bk;
 	config->wmm_ac_params[2] = ac_vi;
 	config->wmm_ac_params[3] = ac_vo;
+	config->p2p_search_delay = DEFAULT_P2P_SEARCH_DELAY;
 
 	if (ctrl_interface)
 		config->ctrl_interface = os_strdup(ctrl_interface);
@@ -3884,6 +3885,7 @@ static const struct global_parse_data global_fields[] = {
 	{ INT(tdls_external_control), 0},
 	{ STR(osu_dir), 0 },
 	{ STR(wowlan_triggers), 0 },
+	{ INT(p2p_search_delay), 0},
 };
 
 #undef FUNC

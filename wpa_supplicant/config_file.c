@@ -1165,6 +1165,10 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 
 	if (config->bgscan)
 		fprintf(f, "bgscan=\"%s\"\n", config->bgscan);
+
+	if (config->p2p_search_delay != DEFAULT_P2P_SEARCH_DELAY)
+		fprintf(f, "p2p_search_delay=%u\n",
+			config->p2p_search_delay);
 }
 
 #endif /* CONFIG_NO_CONFIG_WRITE */

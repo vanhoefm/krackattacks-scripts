@@ -554,6 +554,13 @@ set country <two character country code>
 
 Set country code (this is included in some P2P messages).
 
+set p2p_search_delay <delay>
+
+Set p2p_search_delay which adds extra delay in milliseconds between
+concurrent search iterations to make p2p_find friendlier to concurrent
+operations by avoiding it from taking 100% of radio resources. The
+default value is 500 ms.
+
 Status
 
 p2p_peers [discovered]

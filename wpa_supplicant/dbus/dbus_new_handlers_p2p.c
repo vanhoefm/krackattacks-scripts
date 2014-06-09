@@ -834,6 +834,11 @@ dbus_bool_t wpas_dbus_getter_p2p_device_config(DBusMessageIter *iter,
 	    !dbus_message_iter_close_container(iter, &variant_iter))
 		goto err_no_mem;
 
+	/* P2P Search Delay */
+	if (!wpa_dbus_dict_append_uint32(&dict_iter, "p2p_search_delay",
+					 wpa_s->conf->p2p_search_delay))
+		goto err_no_mem;
+
 	return TRUE;
 
 err_no_mem:
@@ -982,6 +987,9 @@ dbus_bool_t wpas_dbus_setter_p2p_device_config(DBusMessageIter *iter,
 		else if (os_strcmp(entry.key, "NoGroupIface") == 0 &&
 			 entry.type == DBUS_TYPE_BOOLEAN)
 			wpa_s->conf->p2p_no_group_iface = entry.bool_value;
+		else if (os_strcmp(entry.key, "p2p_search_delay") == 0 &&
+			 entry.type == DBUS_TYPE_UINT32)
+			wpa_s->conf->p2p_search_delay = entry.uint32_value;
 		else
 			goto error;
 

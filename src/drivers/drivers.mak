@@ -105,6 +105,9 @@ DRV_AP_OBJS += ../src/drivers/driver_atheros.o
 CONFIG_L2_PACKET=linux
 NEED_NETLINK=y
 NEED_LINUX_IOCTL=y
+ifdef ATH_GCM_SUPPORT
+CFLAGS += -DATH_GCM_SUPPORT
+endif
 endif
 
 ##### PURE CLIENT DRIVERS

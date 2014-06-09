@@ -260,6 +260,17 @@ atheros_configure_wpa(struct atheros_driver_data *drv,
 	case WPA_CIPHER_CCMP:
 		v = IEEE80211_CIPHER_AES_CCM;
 		break;
+#ifdef ATH_GCM_SUPPORT
+	case WPA_CIPHER_CCMP_256:
+		v = IEEE80211_CIPHER_AES_CCM_256;
+		break;
+	case WPA_CIPHER_GCMP:
+		v = IEEE80211_CIPHER_AES_GCM;
+		break;
+	case WPA_CIPHER_GCMP_256:
+		v = IEEE80211_CIPHER_AES_GCM_256;
+		break;
+#endif /* ATH_GCM_SUPPORT */
 	case WPA_CIPHER_TKIP:
 		v = IEEE80211_CIPHER_TKIP;
 		break;
@@ -294,6 +305,14 @@ atheros_configure_wpa(struct atheros_driver_data *drv,
 	v = 0;
 	if (params->wpa_pairwise & WPA_CIPHER_CCMP)
 		v |= 1<<IEEE80211_CIPHER_AES_CCM;
+#ifdef ATH_GCM_SUPPORT
+	if (params->wpa_pairwise & WPA_CIPHER_CCMP_256)
+		v |= 1<<IEEE80211_CIPHER_AES_CCM_256;
+	if (params->wpa_pairwise & WPA_CIPHER_GCMP)
+		v |= 1<<IEEE80211_CIPHER_AES_GCM;
+	if (params->wpa_pairwise & WPA_CIPHER_GCMP_256)
+		v |= 1<<IEEE80211_CIPHER_AES_GCM_256;
+#endif /* ATH_GCM_SUPPORT */
 	if (params->wpa_pairwise & WPA_CIPHER_TKIP)
 		v |= 1<<IEEE80211_CIPHER_TKIP;
 	if (params->wpa_pairwise & WPA_CIPHER_NONE)
@@ -471,10 +490,32 @@ atheros_set_key(const char *ifname, void *priv, enum wpa_alg alg,
 	case WPA_ALG_CCMP:
 		cipher = IEEE80211_CIPHER_AES_CCM;
 		break;
+#ifdef ATH_GCM_SUPPORT
+	case WPA_ALG_CCMP_256:
+		cipher = IEEE80211_CIPHER_AES_CCM_256;
+		break;
+	case WPA_ALG_GCMP:
+		cipher = IEEE80211_CIPHER_AES_GCM;
+		break;
+	case WPA_ALG_GCMP_256:
+		cipher = IEEE80211_CIPHER_AES_GCM_256;
+		break;
+#endif /* ATH_GCM_SUPPORT */
 #ifdef CONFIG_IEEE80211W
 	case WPA_ALG_IGTK:
 		cipher = IEEE80211_CIPHER_AES_CMAC;
 		break;
+#ifdef ATH_GCM_SUPPORT
+	case WPA_ALG_BIP_CMAC_256:
+		cipher = IEEE80211_CIPHER_AES_CMAC_256;
+		break;
+	case WPA_ALG_BIP_GMAC_128:
+		cipher = IEEE80211_CIPHER_AES_GMAC;
+		break;
+	case WPA_ALG_BIP_GMAC_256:
+		cipher = IEEE80211_CIPHER_AES_GMAC_256;
+		break;
+#endif /* ATH_GCM_SUPPORT */
 #endif /* CONFIG_IEEE80211W */
 	default:
 		printf("%s: unknown/unsupported algorithm %d\n",

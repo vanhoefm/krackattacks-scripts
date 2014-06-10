@@ -382,3 +382,30 @@ def test_go_pref_chan_bss_on_disallowed_chan(dev, apdev):
     finally:
         dev[0].request("P2P_SET disallow_freq ")
         dev[0].request("SET p2p_pref_chan ")
+
+def test_no_go_freq(dev, apdev):
+    """P2P channel selection: no GO freq"""
+    try:
+       dev[0].request("SET p2p_no_go_freq 2412")
+       # dev[0] as client, channel 1 is ok
+       [i_res, r_res] = go_neg_pbc(i_dev=dev[0], i_intent=1,
+                                   r_dev=dev[1], r_intent=14, r_freq=2412)
+       check_grpform_results(i_res, r_res)
+       if i_res['freq'] != "2412":
+          raise Exception("P2P group not formed on forced freq")
+
+       dev[1].remove_group(r_res['ifname'])
+       fail = False
+       # dev[0] as GO, channel 1 is not allowed
+       try:
+          dev[0].request("SET p2p_no_go_freq 2412")
+          [i_res2, r_res2] = go_neg_pbc(i_dev=dev[0], i_intent=14,
+                                        r_dev=dev[1], r_intent=1, r_freq=2412)
+          check_grpform_results(i_res2, r_res2)
+          fail = True
+       except:
+           pass
+       if fail:
+           raise Exception("GO set on a disallowed freq")
+    finally:
+       dev[0].request("SET p2p_no_go_freq ")

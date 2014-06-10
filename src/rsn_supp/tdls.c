@@ -1848,7 +1848,6 @@ skip_rsn:
 		if (os_get_random(peer->rnonce, WPA_NONCE_LEN)) {
 			wpa_msg(sm->ctx->ctx, MSG_WARNING,
 				"TDLS: Failed to get random data for responder nonce");
-			wpa_tdls_peer_free(sm, peer);
 			goto error;
 		}
 	}
@@ -1904,8 +1903,10 @@ skip_rsn:
 
 skip_rsn_check:
 	/* add the peer to the driver as a "setup in progress" peer */
-	wpa_sm_tdls_peer_addset(sm, peer->addr, 1, 0, 0, NULL, 0, NULL, NULL, 0,
-				NULL, 0, NULL, 0, NULL, 0);
+	if (wpa_sm_tdls_peer_addset(sm, peer->addr, 1, 0, 0, NULL, 0, NULL,
+				    NULL, 0, NULL, 0, NULL, 0, NULL, 0))
+		goto error;
+
 	peer->tpk_in_progress = 1;
 
 	wpa_printf(MSG_DEBUG, "TDLS: Sending TDLS Setup Response / TPK M2");
@@ -1919,6 +1920,7 @@ skip_rsn_check:
 error:
 	wpa_tdls_send_error(sm, src_addr, WLAN_TDLS_SETUP_RESPONSE, dtoken,
 			    status);
+	wpa_tdls_peer_free(sm, peer);
 	return -1;
 }
 

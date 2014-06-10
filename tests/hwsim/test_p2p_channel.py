@@ -253,3 +253,39 @@ def test_autogo_with_bss_on_disallowed_chan(dev, apdev):
         hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
     finally:
         dev[0].request("P2P_SET disallow_freq ")
+
+def test_go_neg_with_bss_on_disallowed_chan(dev, apdev):
+    """P2P channel selection: GO negotiation with station interface on a disallowed channel"""
+
+    dev[0].request("SET p2p_no_group_iface 0")
+
+    if dev[0].get_mcc() < 2:
+       logger.info("Skipping test because driver does not support MCC")
+       return "skip"
+    try:
+        hostapd.add_ap(apdev[0]['ifname'], { "ssid": 'bss-2.4ghz', "channel": '1' })
+        dev[0].connect("bss-2.4ghz", key_mgmt="NONE", scan_freq="2412")
+        dev[0].request("P2P_SET disallow_freq 2412")
+
+        #dev[0] as GO
+        [i_res, r_res] = go_neg_pbc(i_dev=dev[0], i_intent=10, r_dev=dev[1],
+                                    r_intent=1)
+        check_grpform_results(i_res, r_res)
+        if i_res['role'] != "GO":
+           raise Exception("GO not selected according to go_intent")
+        if i_res['freq'] == "2412":
+           raise Exception("Group formed on a disallowed channel")
+        hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+        dev[0].remove_group(i_res['ifname'])
+
+        #dev[0] as client
+        [i_res2, r_res2] = go_neg_pbc(i_dev=dev[0], i_intent=1, r_dev=dev[1],
+                                      r_intent=10)
+        check_grpform_results(i_res2, r_res2)
+        if i_res2['role'] != "client":
+           raise Exception("GO not selected according to go_intent")
+        if i_res2['freq'] == "2412":
+           raise Exception("Group formed on a disallowed channel")
+        hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    finally:
+        dev[0].request("P2P_SET disallow_freq ")

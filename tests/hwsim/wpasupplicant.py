@@ -313,6 +313,10 @@ class WpaSupplicant:
             return vals[field]
         return None
 
+    def get_mcc(self):
+	mcc = int(self.get_driver_status_field('capa.num_multichan_concurrent'))
+	return 1 if mcc < 2 else mcc
+
     def get_mib(self):
         res = self.request("MIB")
         lines = res.splitlines()

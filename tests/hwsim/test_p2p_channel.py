@@ -417,3 +417,19 @@ def test_go_neg_peers_force_diff_freq(dev, apdev):
     except Exception, e:
         return
     raise Exception("Unexpected group formation success")
+
+def test_autogo_random_channel(dev, apdev):
+    """P2P channel selection: GO instantiated on random channel 1, 6, 11"""
+    freqs = []
+    go_freqs = ["2412", "2437", "2462"]
+    for i in range(0, 20):
+        result = autogo(dev[0])
+        if result['freq'] not in go_freqs:
+           raise Exception("Unexpected frequency selected: " + result['freq'])
+        if result['freq'] not in freqs:
+            freqs.append(result['freq'])
+        if len(freqs) == 3:
+            break
+        dev[0].remove_group(result['ifname'])
+    if i == 20:
+       raise Exception("GO created 20 times and not all social channels were selected. freqs not selected: " + str(list(set(go_freqs) - set(freqs))))

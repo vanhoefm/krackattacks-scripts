@@ -343,3 +343,20 @@ def test_go_neg_forced_freq_diff_than_bss_freq(dev, apdev):
     if r_res2['role'] != "client":
        raise Exception("GO not selected according to go_intent")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+
+def test_go_pref_chan_bss_on_diff_chan(dev, apdev):
+    """P2P channel selection: Station on different channel than GO configured pref channel"""
+
+    dev[0].request("SET p2p_no_group_iface 0")
+
+    try:
+        hostapd.add_ap(apdev[0]['ifname'], { "ssid": 'bss-2.4ghz',
+                                             "channel": '1' })
+        dev[0].request("SET p2p_pref_chan 81:2")
+        dev[0].connect("bss-2.4ghz", key_mgmt="NONE", scan_freq="2412")
+        res = autogo(dev[0])
+        if res['freq'] != "2412":
+           raise Exception("GO channel did not follow BSS")
+        hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    finally:
+        dev[0].request("SET p2p_pref_chan ")

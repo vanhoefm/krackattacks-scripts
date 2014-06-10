@@ -307,3 +307,39 @@ def test_autogo_force_diff_channel(dev, apdev):
         if int(res_go['freq']) == 2412:
             raise Exception("Group operation channel is: 2412 excepted: " + res_go['freq'])
         dev[0].remove_group(res_go['ifname'])
+
+def test_go_neg_forced_freq_diff_than_bss_freq(dev, apdev):
+    """P2P channel selection: GO negotiation with forced freq different than station interface"""
+    if dev[0].get_mcc() < 2:
+       logger.info("Skipping test because driver does not support MCC")
+       return "skip"
+
+    dev[0].request("SET p2p_no_group_iface 0")
+
+    hostapd.add_ap(apdev[0]['ifname'], { "country_code": 'US',
+                                         "ssid": 'bss-5ghz', "hw_mode": 'a',
+                                         "channel": '40' })
+    dev[0].connect("bss-5ghz", key_mgmt="NONE", scan_freq="5200")
+
+    # GO and peer force the same freq, different than BSS freq,
+    # dev[0] to become GO
+    [i_res, r_res] = go_neg_pbc(i_dev=dev[1], i_intent=1, i_freq=5180,
+                                r_dev=dev[0], r_intent=14, r_freq=5180)
+    check_grpform_results(i_res, r_res)
+    if i_res['freq'] != "5180":
+       raise Exception("P2P group formed on unexpected frequency: " + i_res['freq'])
+    if r_res['role'] != "GO":
+       raise Exception("GO not selected according to go_intent")
+    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    dev[0].remove_group(r_res['ifname'])
+
+    # GO and peer force the same freq, different than BSS freq, dev[0] to
+    # become client
+    [i_res2, r_res2] = go_neg_pbc(i_dev=dev[1], i_intent=14, i_freq=2422,
+                                  r_dev=dev[0], r_intent=1, r_freq=2422)
+    check_grpform_results(i_res2, r_res2)
+    if i_res2['freq'] != "2422":
+       raise Exception("P2P group formed on unexpected frequency: " + i_res2['freq'])
+    if r_res2['role'] != "client":
+       raise Exception("GO not selected according to go_intent")
+    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])

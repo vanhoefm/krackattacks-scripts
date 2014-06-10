@@ -69,7 +69,8 @@ def start_radius_server(eap_handler):
                     logger.info("Need to fragment EAP-Message")
                     # TODO: fragment
                 reply.AddAttribute("EAP-Message", eap_req)
-            logger.info("No EAP request available")
+            else:
+                logger.info("No EAP request available")
             reply.code = pyrad.packet.AccessChallenge
 
             hmac_obj = hmac.new(reply.secret)
@@ -327,5 +328,173 @@ def test_eap_proto_sake(dev, apdev):
         if ev is None:
             raise Exception("Timeout on EAP start")
         time.sleep(0.1)
+    finally:
+        stop_radius_server(srv)
+
+def test_eap_proto_leap(dev, apdev):
+    """EAP-LEAP protocol tests"""
+    def leap_handler(ctx, req):
+        logger.info("leap_handler - RX " + req.encode("hex"))
+        if 'num' not in ctx:
+            ctx['num'] = 0
+        ctx['num'] = ctx['num'] + 1
+        if 'id' not in ctx:
+            ctx['id'] = 1
+        ctx['id'] = (ctx['id'] + 1) % 256
+
+        if ctx['num'] == 1:
+            logger.info("Test: Missing payload")
+            return struct.pack(">BBHB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1,
+                               EAP_TYPE_LEAP)
+
+        if ctx['num'] == 2:
+            logger.info("Test: Unexpected version")
+            return struct.pack(">BBHBBBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3,
+                               EAP_TYPE_LEAP,
+                               0, 0, 0)
+
+        if ctx['num'] == 3:
+            logger.info("Test: Invalid challenge length")
+            return struct.pack(">BBHBBBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3,
+                               EAP_TYPE_LEAP,
+                               1, 0, 0)
+
+        if ctx['num'] == 4:
+            logger.info("Test: Truncated challenge")
+            return struct.pack(">BBHBBBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3,
+                               EAP_TYPE_LEAP,
+                               1, 0, 8)
+
+        if ctx['num'] == 5:
+            logger.info("Test: Valid challenge")
+            return struct.pack(">BBHBBBBLL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_LEAP,
+                               1, 0, 8, 0, 0)
+        if ctx['num'] == 6:
+            logger.info("Test: Missing payload in Response")
+            return struct.pack(">BBHB", EAP_CODE_RESPONSE, ctx['id'],
+                               4 + 1,
+                               EAP_TYPE_LEAP)
+
+        if ctx['num'] == 7:
+            logger.info("Test: Valid challenge")
+            return struct.pack(">BBHBBBBLL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_LEAP,
+                               1, 0, 8, 0, 0)
+        if ctx['num'] == 8:
+            logger.info("Test: Unexpected version in Response")
+            return struct.pack(">BBHBBBB", EAP_CODE_RESPONSE, ctx['id'],
+                               4 + 1 + 3,
+                               EAP_TYPE_LEAP,
+                               0, 0, 8)
+
+        if ctx['num'] == 9:
+            logger.info("Test: Valid challenge")
+            return struct.pack(">BBHBBBBLL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_LEAP,
+                               1, 0, 8, 0, 0)
+        if ctx['num'] == 10:
+            logger.info("Test: Invalid challenge length in Response")
+            return struct.pack(">BBHBBBB", EAP_CODE_RESPONSE, ctx['id'],
+                               4 + 1 + 3,
+                               EAP_TYPE_LEAP,
+                               1, 0, 0)
+
+        if ctx['num'] == 11:
+            logger.info("Test: Valid challenge")
+            return struct.pack(">BBHBBBBLL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_LEAP,
+                               1, 0, 8, 0, 0)
+        if ctx['num'] == 12:
+            logger.info("Test: Truncated challenge in Response")
+            return struct.pack(">BBHBBBB", EAP_CODE_RESPONSE, ctx['id'],
+                               4 + 1 + 3,
+                               EAP_TYPE_LEAP,
+                               1, 0, 24)
+
+        if ctx['num'] == 13:
+            logger.info("Test: Valid challenge")
+            return struct.pack(">BBHBBBBLL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_LEAP,
+                               1, 0, 8, 0, 0)
+        if ctx['num'] == 14:
+            logger.info("Test: Invalid challange value in Response")
+            return struct.pack(">BBHBBBB6L", EAP_CODE_RESPONSE, ctx['id'],
+                               4 + 1 + 3 + 24,
+                               EAP_TYPE_LEAP,
+                               1, 0, 24,
+                               0, 0, 0, 0, 0, 0)
+
+        if ctx['num'] == 15:
+            logger.info("Test: Valid challenge")
+            return struct.pack(">BBHBBBBLL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_LEAP,
+                               1, 0, 8, 0, 0)
+        if ctx['num'] == 16:
+            logger.info("Test: Valid challange value in Response")
+            return struct.pack(">BBHBBBB24B", EAP_CODE_RESPONSE, ctx['id'],
+                               4 + 1 + 3 + 24,
+                               EAP_TYPE_LEAP,
+                               1, 0, 24,
+                               0x48, 0x4e, 0x46, 0xe3, 0x88, 0x49, 0x46, 0xbd,
+                               0x28, 0x48, 0xf8, 0x53, 0x82, 0x50, 0x00, 0x04,
+                               0x93, 0x50, 0x30, 0xd7, 0x25, 0xea, 0x5f, 0x66)
+
+        if ctx['num'] == 17:
+            logger.info("Test: Valid challenge")
+            return struct.pack(">BBHBBBBLL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_LEAP,
+                               1, 0, 8, 0, 0)
+        if ctx['num'] == 18:
+            logger.info("Test: Success")
+            return struct.pack(">BBHB", EAP_CODE_SUCCESS, ctx['id'],
+                               4 + 1,
+                               EAP_TYPE_LEAP)
+        # hostapd will drop the next frame in the sequence
+
+        if ctx['num'] == 19:
+            logger.info("Test: Valid challenge")
+            return struct.pack(">BBHBBBBLL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_LEAP,
+                               1, 0, 8, 0, 0)
+        if ctx['num'] == 20:
+            logger.info("Test: Failure")
+            return struct.pack(">BBHB", EAP_CODE_FAILURE, ctx['id'],
+                               4 + 1,
+                               EAP_TYPE_LEAP)
+
+        return None
+
+    srv = start_radius_server(leap_handler)
+    if srv is None:
+        return "skip"
+
+    try:
+        hapd = start_ap(apdev[0]['ifname'])
+
+        for i in range(0, 12):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="LEAP", identity="user", password="password",
+                           wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"], timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            time.sleep(0.1)
+            if i == 10:
+                logger.info("Wait for additional roundtrip")
+                time.sleep(1)
+            dev[0].request("REMOVE_NETWORK all")
     finally:
         stop_radius_server(srv)

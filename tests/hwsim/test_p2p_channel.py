@@ -10,9 +10,12 @@ import os
 import subprocess
 import time
 
+import hostapd
+import hwsim_utils
 from test_p2p_grpform import go_neg_pin_authorized
 from test_p2p_grpform import check_grpform_results
 from test_p2p_grpform import remove_group
+from test_p2p_autogo import autogo
 
 def set_country(country):
     subprocess.call(['sudo', 'iw', 'reg', 'set', country])
@@ -178,3 +181,22 @@ def test_p2p_channel_avoid(dev):
     finally:
         set_country("00")
         dev[0].request("DRIVER_EVENT AVOID_FREQUENCIES")
+
+def test_autogo_following_bss(dev, apdev):
+    """P2P autonomous GO operate on the same channel as station interface"""
+    if dev[0].get_mcc() > 1:
+        logger.info("test mode: MCC")
+
+    dev[0].request("SET p2p_no_group_iface 0")
+
+    channels = { 3 : "2422", 5 : "2432", 9 : "2452" }
+    for key in channels:
+        hostapd.add_ap(apdev[0]['ifname'], { "ssid" : 'ap-test',
+                                             "channel" : str(key) })
+        dev[0].connect("ap-test", key_mgmt="NONE",
+                       scan_freq=str(channels[key]))
+        res_go = autogo(dev[0])
+        if res_go['freq'] != channels[key]:
+            raise Exception("Group operation channel is not the same as on connected station interface")
+        hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+        dev[0].remove_group(res_go['ifname'])

@@ -68,7 +68,16 @@ else
 fi
 
 $DIR/stop.sh
-test -f /proc/modules && sudo modprobe mac80211_hwsim radios=6
+
+TMP=$1
+if [ x${TMP%=[0-9]*} = "xchannels" ]; then
+	NUM_CH=${TMP#channels=}
+	shift
+else
+	NUM_CH=1
+fi
+
+test -f /proc/modules && sudo modprobe mac80211_hwsim radios=6 channels=$NUM_CH
 sudo ifconfig hwsim0 up
 sudo $WLANTEST -i hwsim0 -n $LOGDIR/hwsim0.pcapng -c -dt -L $LOGDIR/hwsim0 &
 for i in 0 1 2; do

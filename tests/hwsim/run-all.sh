@@ -43,7 +43,14 @@ else
 	unset TRACE_ARGS
 fi
 
-if ! ./start.sh $VALGRIND $TRACE; then
+NUM_CH=$1
+if [ x${NUM_CH%=[0-9]*} = "xchannels" ]; then
+	shift
+else
+	unset NUM_CH
+fi
+
+if ! ./start.sh $VALGRIND $TRACE $NUM_CH; then
 	if ! [ -z "$LOGBASEDIR" ] ; then
 		echo "Could not start test environment" > $LOGDIR/run
 	fi

@@ -146,6 +146,9 @@ conditions:
 # run normal test cases with Linux tracing
 ./run-all.sh trace
 
+# run normal test cases with multi channel support (see details below)
+./run-all.sh channels=<num of channels>
+
 run-all.sh directs debug logs into the logs subdirectory (or $LOGDIR if
 present in the environment). Log file names include the current UNIX
 timestamp and a postfix to identify the specific log:
@@ -169,6 +172,12 @@ line. "-f <module name>" (pointing to file test_<module name>.py) can be
 used to specify that all test cases from a single file are to be
 run. Test name as the last command line argument can be specified that a
 single test case is to be run (e.g., "./run-tests.py ap_pmf_required").
+
+Notice that some tests require the driver to support concurrent
+operation on multi channels in order to run. These tests will be skipped
+in case the driver does not support multi channels. To enable support
+for multi channel, the number of supported channel is passed as an
+argument to run-all.sh or start.sh
 
 
 Adding/modifying test cases

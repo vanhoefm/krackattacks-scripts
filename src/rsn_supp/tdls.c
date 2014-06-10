@@ -1378,10 +1378,17 @@ wpa_tdls_process_discovery_request(struct wpa_sm *sm, const u8 *addr,
 
 	dialog_token = buf[sizeof(struct wpa_tdls_frame)];
 
+	/*
+	 * Some APs will tack on a weird IE to the end of a TDLS
+	 * discovery request packet. This needn't fail the response,
+	 * since the required IE are verified separately.
+	 */
 	if (wpa_supplicant_parse_ies(buf + sizeof(struct wpa_tdls_frame) + 1,
 				     len - (sizeof(struct wpa_tdls_frame) + 1),
-				     &kde) < 0)
-		return -1;
+				     &kde) < 0) {
+		wpa_printf(MSG_DEBUG,
+			   "TDLS: Failed to parse IEs in Discovery Request - ignore as an interop workaround");
+	}
 
 	if (!kde.lnkid) {
 		wpa_printf(MSG_DEBUG, "TDLS: Link ID not found in Discovery "

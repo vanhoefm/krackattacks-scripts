@@ -498,3 +498,62 @@ def test_eap_proto_leap(dev, apdev):
             dev[0].request("REMOVE_NETWORK all")
     finally:
         stop_radius_server(srv)
+
+def test_eap_proto_md5(dev, apdev):
+    """EAP-MD5 protocol tests"""
+    def md5_handler(ctx, req):
+        logger.info("md5_handler - RX " + req.encode("hex"))
+        if 'num' not in ctx:
+            ctx['num'] = 0
+        ctx['num'] = ctx['num'] + 1
+        if 'id' not in ctx:
+            ctx['id'] = 1
+        ctx['id'] = (ctx['id'] + 1) % 256
+
+        if ctx['num'] == 1:
+            logger.info("Test: Missing payload")
+            return struct.pack(">BBHB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1,
+                               EAP_TYPE_MD5)
+
+        if ctx['num'] == 2:
+            logger.info("Test: Zero-length challenge")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_MD5,
+                               0)
+
+        if ctx['num'] == 3:
+            logger.info("Test: Truncated challenge")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_MD5,
+                               1)
+
+        if ctx['num'] == 4:
+            logger.info("Test: Shortest possible challenge and name")
+            return struct.pack(">BBHBBBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3,
+                               EAP_TYPE_MD5,
+                               1, 0xaa, ord('n'))
+
+        return None
+
+    srv = start_radius_server(md5_handler)
+    if srv is None:
+        return "skip"
+
+    try:
+        hapd = start_ap(apdev[0]['ifname'])
+
+        for i in range(0, 4):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="MD5", identity="user", password="password",
+                           wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"], timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            time.sleep(0.1)
+            dev[0].request("REMOVE_NETWORK all")
+    finally:
+        stop_radius_server(srv)

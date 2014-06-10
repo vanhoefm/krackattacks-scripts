@@ -15,6 +15,7 @@ import hwsim_utils
 from test_p2p_grpform import go_neg_pin_authorized
 from test_p2p_grpform import check_grpform_results
 from test_p2p_grpform import remove_group
+from test_p2p_grpform import go_neg_pbc
 from test_p2p_autogo import autogo
 
 def set_country(country):
@@ -200,3 +201,35 @@ def test_autogo_following_bss(dev, apdev):
             raise Exception("Group operation channel is not the same as on connected station interface")
         hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
         dev[0].remove_group(res_go['ifname'])
+
+def test_go_neg_with_bss_connected(dev, apdev):
+    """P2P channel selection: GO negotiation when station interface is connected"""
+
+    dev[0].request("SET p2p_no_group_iface 0")
+
+    hostapd.add_ap(apdev[0]['ifname'], { "ssid": 'bss-2.4ghz', "channel": '5' })
+    dev[0].connect("bss-2.4ghz", key_mgmt="NONE", scan_freq="2432")
+    #dev[0] as GO
+    [i_res, r_res] = go_neg_pbc(i_dev=dev[0], i_intent=10, r_dev=dev[1],
+                                r_intent=1)
+    check_grpform_results(i_res, r_res)
+    if i_res['role'] != "GO":
+       raise Exception("GO not selected according to go_intent")
+    if i_res['freq'] != "2432":
+       raise Exception("Group formed on a different frequency than BSS")
+    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    dev[0].remove_group(i_res['ifname'])
+
+    if dev[0].get_mcc() > 1:
+        logger.info("Skip as-client case due to MCC being enabled")
+        return;
+
+    #dev[0] as client
+    [i_res2, r_res2] = go_neg_pbc(i_dev=dev[0], i_intent=1, r_dev=dev[1],
+                                  r_intent=10)
+    check_grpform_results(i_res2, r_res2)
+    if i_res2['role'] != "client":
+       raise Exception("GO not selected according to go_intent")
+    if i_res2['freq'] != "2432":
+       raise Exception("Group formed on a different frequency than BSS")
+    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])

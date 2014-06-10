@@ -584,6 +584,13 @@ static int wpa_supplicant_ctrl_iface_tdls_teardown(
 	u8 peer[ETH_ALEN];
 	int ret;
 
+	if (os_strcmp(addr, "*") == 0) {
+		/* remove everyone */
+		wpa_printf(MSG_DEBUG, "CTRL_IFACE TDLS_TEARDOWN *");
+		wpa_tdls_teardown_peers(wpa_s->wpa);
+		return 0;
+	}
+
 	if (hwaddr_aton(addr, peer)) {
 		wpa_printf(MSG_DEBUG, "CTRL_IFACE TDLS_TEARDOWN: invalid "
 			   "address '%s'", addr);

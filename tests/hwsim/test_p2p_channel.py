@@ -360,3 +360,25 @@ def test_go_pref_chan_bss_on_diff_chan(dev, apdev):
         hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
     finally:
         dev[0].request("SET p2p_pref_chan ")
+
+def test_go_pref_chan_bss_on_disallowed_chan(dev, apdev):
+    """P2P channel selection: Station interface on different channel than GO configured pref channel, and station channel is disallowed"""
+    if dev[0].get_mcc() < 2:
+       logger.info("Skipping test because driver does not support MCC")
+       return "skip"
+
+    dev[0].request("SET p2p_no_group_iface 0")
+
+    try:
+        hostapd.add_ap(apdev[0]['ifname'], { "ssid": 'bss-2.4ghz',
+                                             "channel": '1' })
+        dev[0].request("P2P_SET disallow_freq 2412")
+        dev[0].request("SET p2p_pref_chan 81:2")
+        dev[0].connect("bss-2.4ghz", key_mgmt="NONE", scan_freq="2412")
+        res2 = autogo(dev[0])
+        if res2['freq'] != "2417":
+           raise Exception("GO channel did not follow pref_chan configuration")
+        hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    finally:
+        dev[0].request("P2P_SET disallow_freq ")
+        dev[0].request("SET p2p_pref_chan ")

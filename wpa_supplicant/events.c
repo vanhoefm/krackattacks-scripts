@@ -3402,7 +3402,8 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 #endif /* CONFIG_AP */
 #ifdef CONFIG_TDLS
 		if (data)
-			wpa_tdls_disable_link(wpa_s->wpa, data->low_ack.addr);
+			wpa_tdls_disable_unreachable_link(wpa_s->wpa,
+							  data->low_ack.addr);
 #endif /* CONFIG_TDLS */
 		break;
 	case EVENT_IBSS_PEER_LOST:

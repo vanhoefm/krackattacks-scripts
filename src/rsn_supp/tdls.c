@@ -802,7 +802,7 @@ static void wpa_tdls_disable_peer_link(struct wpa_sm *sm,
 }
 
 
-void wpa_tdls_disable_link(struct wpa_sm *sm, const u8 *addr)
+void wpa_tdls_disable_unreachable_link(struct wpa_sm *sm, const u8 *addr)
 {
 	struct wpa_tdls_peer *peer;
 
@@ -811,8 +811,25 @@ void wpa_tdls_disable_link(struct wpa_sm *sm, const u8 *addr)
 			break;
 	}
 
-	if (peer)
+	if (!peer || !peer->tpk_success) {
+		wpa_printf(MSG_DEBUG, "TDLS: Peer " MACSTR
+			   " not connected - cannot teardown unreachable link",
+			   MAC2STR(addr));
+		return;
+	}
+
+	if (wpa_tdls_is_external_setup(sm)) {
+		/*
+		 * Disable the link, send a teardown packet through the
+		 * AP, and then reset link data.
+		 */
+		wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK, addr);
+		wpa_tdls_send_teardown(sm, addr,
+				       WLAN_REASON_TDLS_TEARDOWN_UNREACHABLE);
+		wpa_tdls_peer_free(sm, peer);
+	} else {
 		wpa_tdls_disable_peer_link(sm, peer);
+	}
 }
 
 

@@ -289,3 +289,21 @@ def test_go_neg_with_bss_on_disallowed_chan(dev, apdev):
         hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
     finally:
         dev[0].request("P2P_SET disallow_freq ")
+
+def test_autogo_force_diff_channel(dev, apdev):
+    """P2P autonomous GO and station interface operate on different channels"""
+    if dev[0].get_mcc() < 2:
+        logger.info("Skiping test because the driver doesn't support MCC")
+        return "skip"
+
+    dev[0].request("SET p2p_no_group_iface 0")
+
+    hostapd.add_ap(apdev[0]['ifname'], {"ssid" : 'ap-test', "channel" : '1'})
+    dev[0].connect("ap-test", key_mgmt = "NONE", scan_freq = "2412")
+    channels = { 2 : 2417, 5 : 2432, 9 : 2452 }
+    for key in channels:
+        res_go = autogo(dev[0], channels[key])
+        hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+        if int(res_go['freq']) == 2412:
+            raise Exception("Group operation channel is: 2412 excepted: " + res_go['freq'])
+        dev[0].remove_group(res_go['ifname'])

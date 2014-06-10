@@ -433,3 +433,17 @@ def test_autogo_random_channel(dev, apdev):
         dev[0].remove_group(result['ifname'])
     if i == 20:
        raise Exception("GO created 20 times and not all social channels were selected. freqs not selected: " + str(list(set(go_freqs) - set(freqs))))
+
+def test_p2p_autogo_pref_chan_disallowed(dev, apdev):
+    """P2P channel selection: GO preferred channels are disallowed"""
+    try:
+       dev[0].request("SET p2p_pref_chan 81:1,81:3,81:6,81:9,81:11")
+       dev[0].request("P2P_SET disallow_freq 2412,2422,2437,2452,2462")
+       for i in range(0, 5):
+           res = autogo(dev[0])
+           if res['freq'] in [ "2412", "2422", "2437", "2452", "2462" ]:
+               raise Exception("GO channel is disallowed")
+           dev[0].remove_group(res['ifname'])
+    finally:
+       dev[0].request("P2P_SET disallow_freq ")
+       dev[0].request("SET p2p_pref_chan ")

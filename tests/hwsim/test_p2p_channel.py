@@ -233,3 +233,23 @@ def test_go_neg_with_bss_connected(dev, apdev):
     if i_res2['freq'] != "2432":
        raise Exception("Group formed on a different frequency than BSS")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+
+def test_autogo_with_bss_on_disallowed_chan(dev, apdev):
+    """P2P channel selection: Autonomous GO with BSS on a disallowed channel"""
+
+    dev[0].request("SET p2p_no_group_iface 0")
+
+    if dev[0].get_mcc() < 2:
+       logger.info("Skipping test because driver does not support MCC")
+       return "skip"
+    try:
+        hostapd.add_ap(apdev[0]['ifname'], { "ssid": 'bss-2.4ghz',
+                                             "channel": '1' })
+        dev[0].request("P2P_SET disallow_freq 2412")
+        dev[0].connect("bss-2.4ghz", key_mgmt="NONE", scan_freq="2412")
+        res = autogo(dev[0])
+        if res['freq'] == "2412":
+           raise Exception("GO set on a disallowed channel")
+        hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    finally:
+        dev[0].request("P2P_SET disallow_freq ")

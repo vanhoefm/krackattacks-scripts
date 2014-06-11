@@ -622,3 +622,451 @@ def test_eap_proto_otp(dev, apdev):
             raise Exception("Success not reported")
     finally:
         stop_radius_server(srv)
+
+EAP_GPSK_OPCODE_GPSK_1 = 1
+EAP_GPSK_OPCODE_GPSK_2 = 2
+EAP_GPSK_OPCODE_GPSK_3 = 3
+EAP_GPSK_OPCODE_GPSK_4 = 4
+EAP_GPSK_OPCODE_FAIL = 5
+EAP_GPSK_OPCODE_PROTECTED_FAIL = 6
+
+def test_eap_proto_gpsk(dev, apdev):
+    """EAP-GPSK protocol tests"""
+    def gpsk_handler(ctx, req):
+        logger.info("gpsk_handler - RX " + req.encode("hex"))
+        if 'num' not in ctx:
+            ctx['num'] = 0
+        ctx['num'] = ctx['num'] + 1
+        if 'id' not in ctx:
+            ctx['id'] = 1
+        ctx['id'] = (ctx['id'] + 1) % 256
+
+        idx = 0
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Missing payload")
+            return struct.pack(">BBHB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1,
+                               EAP_TYPE_GPSK)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unknown opcode")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_GPSK,
+                               255)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unexpected GPSK-3")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_GPSK,
+                               EAP_GPSK_OPCODE_GPSK_3)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-1 Too short GPSK-1")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_GPSK,
+                               EAP_GPSK_OPCODE_GPSK_1)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-1 Truncated ID_Server")
+            return struct.pack(">BBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2,
+                               EAP_TYPE_GPSK,
+                               EAP_GPSK_OPCODE_GPSK_1, 1)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-1 Missing RAND_Server")
+            return struct.pack(">BBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2,
+                               EAP_TYPE_GPSK,
+                               EAP_GPSK_OPCODE_GPSK_1, 0)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-1 Missing CSuite_List")
+            return struct.pack(">BBHBBH8L", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2 + 32,
+                               EAP_TYPE_GPSK,
+                               EAP_GPSK_OPCODE_GPSK_1, 0,
+                               0, 0, 0, 0, 0, 0, 0, 0)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-1 Truncated CSuite_List")
+            return struct.pack(">BBHBBH8LH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2 + 32 + 2,
+                               EAP_TYPE_GPSK,
+                               EAP_GPSK_OPCODE_GPSK_1, 0,
+                               0, 0, 0, 0, 0, 0, 0, 0,
+                               1)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-1 Empty CSuite_List")
+            return struct.pack(">BBHBBH8LH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2 + 32 + 2,
+                               EAP_TYPE_GPSK,
+                               EAP_GPSK_OPCODE_GPSK_1, 0,
+                               0, 0, 0, 0, 0, 0, 0, 0,
+                               0)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-1 Invalid CSuite_List")
+            return struct.pack(">BBHBBH8LHB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2 + 32 + 2 + 1,
+                               EAP_TYPE_GPSK,
+                               EAP_GPSK_OPCODE_GPSK_1, 0,
+                               0, 0, 0, 0, 0, 0, 0, 0,
+                               1, 0)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-1 No supported CSuite")
+            return struct.pack(">BBHBBH8LHLH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2 + 32 + 2 + 6,
+                               EAP_TYPE_GPSK,
+                               EAP_GPSK_OPCODE_GPSK_1, 0,
+                               0, 0, 0, 0, 0, 0, 0, 0,
+                               6, 0, 0)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-1 Supported CSuite")
+            return struct.pack(">BBHBBH8LHLH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2 + 32 + 2 + 6,
+                               EAP_TYPE_GPSK,
+                               EAP_GPSK_OPCODE_GPSK_1, 0,
+                               0, 0, 0, 0, 0, 0, 0, 0,
+                               6, 0, 1)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unexpected GPSK-1")
+            return struct.pack(">BBHBBH8LHLH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2 + 32 + 2 + 6,
+                               EAP_TYPE_GPSK,
+                               EAP_GPSK_OPCODE_GPSK_1, 0,
+                               0, 0, 0, 0, 0, 0, 0, 0,
+                               6, 0, 1)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-1 Supported CSuite but too short key")
+            return struct.pack(">BBHBBH8LHLH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2 + 32 + 2 + 6,
+                               EAP_TYPE_GPSK,
+                               EAP_GPSK_OPCODE_GPSK_1, 0,
+                               0, 0, 0, 0, 0, 0, 0, 0,
+                               6, 0, 1)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-1 Supported CSuite")
+            return struct.pack(">BBHBBH8LHLH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2 + 32 + 2 + 6,
+                               EAP_TYPE_GPSK,
+                               EAP_GPSK_OPCODE_GPSK_1, 0,
+                               0, 0, 0, 0, 0, 0, 0, 0,
+                               6, 0, 1)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Too short GPSK-3")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_GPSK,
+                               EAP_GPSK_OPCODE_GPSK_3)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-1 Supported CSuite")
+            return struct.pack(">BBHBBH8LHLH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2 + 32 + 2 + 6,
+                               EAP_TYPE_GPSK,
+                               EAP_GPSK_OPCODE_GPSK_1, 0,
+                               0, 0, 0, 0, 0, 0, 0, 0,
+                               6, 0, 1)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-3 Mismatch in RAND_Peer")
+            return struct.pack(">BBHBB8L", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 32,
+                               EAP_TYPE_GPSK,
+                               EAP_GPSK_OPCODE_GPSK_3,
+                               0, 0, 0, 0, 0, 0, 0, 0)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-1 Supported CSuite")
+            return struct.pack(">BBHBBH8LHLH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2 + 32 + 2 + 6,
+                               EAP_TYPE_GPSK,
+                               EAP_GPSK_OPCODE_GPSK_1, 0,
+                               0, 0, 0, 0, 0, 0, 0, 0,
+                               6, 0, 1)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-3 Missing RAND_Server")
+            msg = struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                              4 + 1 + 1 + 32,
+                              EAP_TYPE_GPSK,
+                              EAP_GPSK_OPCODE_GPSK_3)
+            msg += req[14:46]
+            return msg
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-1 Supported CSuite")
+            return struct.pack(">BBHBBH8LHLH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2 + 32 + 2 + 6,
+                               EAP_TYPE_GPSK,
+                               EAP_GPSK_OPCODE_GPSK_1, 0,
+                               0, 0, 0, 0, 0, 0, 0, 0,
+                               6, 0, 1)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-3 Mismatch in RAND_Server")
+            msg = struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                              4 + 1 + 1 + 32 + 32,
+                              EAP_TYPE_GPSK,
+                              EAP_GPSK_OPCODE_GPSK_3)
+            msg += req[14:46]
+            msg += struct.pack(">8L", 1, 1, 1, 1, 1, 1, 1, 1)
+            return msg
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-1 Supported CSuite")
+            return struct.pack(">BBHBBH8LHLH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2 + 32 + 2 + 6,
+                               EAP_TYPE_GPSK,
+                               EAP_GPSK_OPCODE_GPSK_1, 0,
+                               0, 0, 0, 0, 0, 0, 0, 0,
+                               6, 0, 1)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-3 Missing ID_Server")
+            msg = struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                              4 + 1 + 1 + 32 + 32,
+                              EAP_TYPE_GPSK,
+                              EAP_GPSK_OPCODE_GPSK_3)
+            msg += req[14:46]
+            msg += struct.pack(">8L", 0, 0, 0, 0, 0, 0, 0, 0)
+            return msg
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-1 Supported CSuite")
+            return struct.pack(">BBHBBH8LHLH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2 + 32 + 2 + 6,
+                               EAP_TYPE_GPSK,
+                               EAP_GPSK_OPCODE_GPSK_1, 0,
+                               0, 0, 0, 0, 0, 0, 0, 0,
+                               6, 0, 1)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-3 Truncated ID_Server")
+            msg = struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                              4 + 1 + 1 + 32 + 32 + 2,
+                              EAP_TYPE_GPSK,
+                              EAP_GPSK_OPCODE_GPSK_3)
+            msg += req[14:46]
+            msg += struct.pack(">8LH", 0, 0, 0, 0, 0, 0, 0, 0, 1)
+            return msg
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-1 Supported CSuite")
+            return struct.pack(">BBHBBH8LHLH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2 + 32 + 2 + 6,
+                               EAP_TYPE_GPSK,
+                               EAP_GPSK_OPCODE_GPSK_1, 0,
+                               0, 0, 0, 0, 0, 0, 0, 0,
+                               6, 0, 1)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-3 Mismatch in ID_Server")
+            msg = struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                              4 + 1 + 1 + 32 + 32 + 3,
+                              EAP_TYPE_GPSK,
+                              EAP_GPSK_OPCODE_GPSK_3)
+            msg += req[14:46]
+            msg += struct.pack(">8LHB", 0, 0, 0, 0, 0, 0, 0, 0, 1, ord('B'))
+            return msg
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-1 Supported CSuite")
+            return struct.pack(">BBHBBHB8LHLH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 3 + 32 + 2 + 6,
+                               EAP_TYPE_GPSK,
+                               EAP_GPSK_OPCODE_GPSK_1, 1, ord('A'),
+                               0, 0, 0, 0, 0, 0, 0, 0,
+                               6, 0, 1)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-3 Mismatch in ID_Server (same length)")
+            msg = struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                              4 + 1 + 1 + 32 + 32 + 3,
+                              EAP_TYPE_GPSK,
+                              EAP_GPSK_OPCODE_GPSK_3)
+            msg += req[15:47]
+            msg += struct.pack(">8LHB", 0, 0, 0, 0, 0, 0, 0, 0, 1, ord('B'))
+            return msg
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-1 Supported CSuite")
+            return struct.pack(">BBHBBH8LHLH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2 + 32 + 2 + 6,
+                               EAP_TYPE_GPSK,
+                               EAP_GPSK_OPCODE_GPSK_1, 0,
+                               0, 0, 0, 0, 0, 0, 0, 0,
+                               6, 0, 1)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-3 Missing CSuite_Sel")
+            msg = struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                              4 + 1 + 1 + 32 + 32 + 2,
+                              EAP_TYPE_GPSK,
+                              EAP_GPSK_OPCODE_GPSK_3)
+            msg += req[14:46]
+            msg += struct.pack(">8LH", 0, 0, 0, 0, 0, 0, 0, 0, 0)
+            return msg
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-1 Supported CSuite")
+            return struct.pack(">BBHBBH8LHLH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2 + 32 + 2 + 6,
+                               EAP_TYPE_GPSK,
+                               EAP_GPSK_OPCODE_GPSK_1, 0,
+                               0, 0, 0, 0, 0, 0, 0, 0,
+                               6, 0, 1)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-3 Mismatch in CSuite_Sel")
+            msg = struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                              4 + 1 + 1 + 32 + 32 + 2 + 6,
+                              EAP_TYPE_GPSK,
+                              EAP_GPSK_OPCODE_GPSK_3)
+            msg += req[14:46]
+            msg += struct.pack(">8LHLH", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2)
+            return msg
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-1 Supported CSuite")
+            return struct.pack(">BBHBBH8LHLH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2 + 32 + 2 + 6,
+                               EAP_TYPE_GPSK,
+                               EAP_GPSK_OPCODE_GPSK_1, 0,
+                               0, 0, 0, 0, 0, 0, 0, 0,
+                               6, 0, 1)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-3 Missing len(PD_Payload_Block)")
+            msg = struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                              4 + 1 + 1 + 32 + 32 + 2 + 6,
+                              EAP_TYPE_GPSK,
+                              EAP_GPSK_OPCODE_GPSK_3)
+            msg += req[14:46]
+            msg += struct.pack(">8LHLH", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1)
+            return msg
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-1 Supported CSuite")
+            return struct.pack(">BBHBBH8LHLH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2 + 32 + 2 + 6,
+                               EAP_TYPE_GPSK,
+                               EAP_GPSK_OPCODE_GPSK_1, 0,
+                               0, 0, 0, 0, 0, 0, 0, 0,
+                               6, 0, 1)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-3 Truncated PD_Payload_Block")
+            msg = struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                              4 + 1 + 1 + 32 + 32 + 2 + 6 + 2,
+                              EAP_TYPE_GPSK,
+                              EAP_GPSK_OPCODE_GPSK_3)
+            msg += req[14:46]
+            msg += struct.pack(">8LHLHH", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1)
+            return msg
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-1 Supported CSuite")
+            return struct.pack(">BBHBBH8LHLH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2 + 32 + 2 + 6,
+                               EAP_TYPE_GPSK,
+                               EAP_GPSK_OPCODE_GPSK_1, 0,
+                               0, 0, 0, 0, 0, 0, 0, 0,
+                               6, 0, 1)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-3 Missing MAC")
+            msg = struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                              4 + 1 + 1 + 32 + 32 + 2 + 6 + 3,
+                              EAP_TYPE_GPSK,
+                              EAP_GPSK_OPCODE_GPSK_3)
+            msg += req[14:46]
+            msg += struct.pack(">8LHLHHB",
+                               0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 123)
+            return msg
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-1 Supported CSuite")
+            return struct.pack(">BBHBBH8LHLH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2 + 32 + 2 + 6,
+                               EAP_TYPE_GPSK,
+                               EAP_GPSK_OPCODE_GPSK_1, 0,
+                               0, 0, 0, 0, 0, 0, 0, 0,
+                               6, 0, 1)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: GPSK-3 Incorrect MAC")
+            msg = struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                              4 + 1 + 1 + 32 + 32 + 2 + 6 + 3 + 16,
+                              EAP_TYPE_GPSK,
+                              EAP_GPSK_OPCODE_GPSK_3)
+            msg += req[14:46]
+            msg += struct.pack(">8LHLHHB4L",
+                               0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 123,
+                               0, 0, 0, 0)
+            return msg
+
+        return None
+
+    srv = start_radius_server(gpsk_handler)
+    if srv is None:
+        return "skip"
+
+    try:
+        hapd = start_ap(apdev[0]['ifname'])
+
+        for i in range(0, 27):
+            if i == 12:
+                pw = "short"
+            else:
+                pw = "abcdefghijklmnop0123456789abcdef"
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="GPSK", identity="user", password=pw,
+                           wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"],
+                                   timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            time.sleep(0.05)
+            dev[0].request("REMOVE_NETWORK all")
+    finally:
+        stop_radius_server(srv)

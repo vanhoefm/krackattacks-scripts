@@ -557,3 +557,68 @@ def test_eap_proto_md5(dev, apdev):
             dev[0].request("REMOVE_NETWORK all")
     finally:
         stop_radius_server(srv)
+
+def test_eap_proto_otp(dev, apdev):
+    """EAP-OTP protocol tests"""
+    def otp_handler(ctx, req):
+        logger.info("otp_handler - RX " + req.encode("hex"))
+        if 'num' not in ctx:
+            ctx['num'] = 0
+        ctx['num'] = ctx['num'] + 1
+        if 'id' not in ctx:
+            ctx['id'] = 1
+        ctx['id'] = (ctx['id'] + 1) % 256
+
+        if ctx['num'] == 1:
+            logger.info("Test: Empty payload")
+            return struct.pack(">BBHB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1,
+                               EAP_TYPE_OTP)
+        if ctx['num'] == 2:
+            logger.info("Test: Success")
+            return struct.pack(">BBH", EAP_CODE_SUCCESS, ctx['id'],
+                               4)
+
+        if ctx['num'] == 3:
+            logger.info("Test: Challenge included")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_OTP,
+                               ord('A'))
+        if ctx['num'] == 4:
+            logger.info("Test: Success")
+            return struct.pack(">BBH", EAP_CODE_SUCCESS, ctx['id'],
+                               4)
+
+        return None
+
+    srv = start_radius_server(otp_handler)
+    if srv is None:
+        return "skip"
+
+    try:
+        hapd = start_ap(apdev[0]['ifname'])
+
+        for i in range(0, 1):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="OTP", identity="user", password="password",
+                           wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"],
+                                   timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            time.sleep(0.1)
+            dev[0].request("REMOVE_NETWORK all")
+
+        dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                       eap="OTP", identity="user", wait_connect=False)
+        ev = dev[0].wait_event(["CTRL-REQ-OTP"])
+        if ev is None:
+            raise Exception("Request for password timed out")
+        id = ev.split(':')[0].split('-')[-1]
+        dev[0].request("CTRL-RSP-OTP-" + id + ":password")
+        ev = dev[0].wait_event("CTRL-EVENT-EAP-SUCCESS")
+        if ev is None:
+            raise Exception("Success not reported")
+    finally:
+        stop_radius_server(srv)

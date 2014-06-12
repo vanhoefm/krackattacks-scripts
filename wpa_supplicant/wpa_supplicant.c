@@ -984,6 +984,7 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 	} else if (bss_osen && (ssid->proto & WPA_PROTO_OSEN)) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "HS 2.0: using OSEN");
 		/* TODO: parse OSEN element */
+		os_memset(&ie, 0, sizeof(ie));
 		ie.group_cipher = WPA_CIPHER_CCMP;
 		ie.pairwise_cipher = WPA_CIPHER_CCMP;
 		ie.key_mgmt = WPA_KEY_MGMT_OSEN;

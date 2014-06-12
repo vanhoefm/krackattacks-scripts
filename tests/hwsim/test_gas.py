@@ -728,3 +728,30 @@ def test_gas_no_pending(dev, apdev):
     status_code = gresp['status_code']
     if status_code != 60:
         raise Exception("Unexpected status code {} (expected 60)".format(status_code))
+
+def test_gas_missing_payload(dev, apdev):
+    """No action code in the query frame"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
+
+    cmd = "MGMT_TX {} {} freq=2412 action=040A".format(bssid, bssid)
+    if "FAIL" in dev[0].request(cmd):
+        raise Exception("Could not send test Action frame")
+    ev = dev[0].wait_event(["MGMT-TX-STATUS"], timeout=10)
+    if ev is None:
+        raise Exception("Timeout on MGMT-TX-STATUS")
+    if "result=SUCCESS" not in ev:
+        raise Exception("AP did not ack Action frame")
+
+    cmd = "MGMT_TX {} {} freq=2412 action=04".format(bssid, bssid)
+    if "FAIL" in dev[0].request(cmd):
+        raise Exception("Could not send test Action frame")
+    ev = dev[0].wait_event(["MGMT-TX-STATUS"], timeout=10)
+    if ev is None:
+        raise Exception("Timeout on MGMT-TX-STATUS")
+    if "result=SUCCESS" not in ev:
+        raise Exception("AP did not ack Action frame")

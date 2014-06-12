@@ -68,6 +68,7 @@ int p2p_send_dev_disc_req(struct p2p_data *p2p, struct p2p_device *dev)
 {
 	struct p2p_device *go;
 	struct wpabuf *req;
+	unsigned int wait_time;
 
 	go = p2p_get_device(p2p, dev->member_in_go_dev);
 	if (go == NULL || dev->oper_freq <= 0) {
@@ -88,9 +89,12 @@ int p2p_send_dev_disc_req(struct p2p_data *p2p, struct p2p_device *dev)
 	os_memcpy(p2p->pending_client_disc_addr, dev->info.p2p_device_addr,
 		  ETH_ALEN);
 	p2p->pending_action_state = P2P_PENDING_DEV_DISC_REQUEST;
+	wait_time = 1000;
+	if (p2p->cfg->max_listen && wait_time > p2p->cfg->max_listen)
+		wait_time = p2p->cfg->max_listen;
 	if (p2p_send_action(p2p, dev->oper_freq, go->info.p2p_device_addr,
 			    p2p->cfg->dev_addr, go->info.p2p_device_addr,
-			    wpabuf_head(req), wpabuf_len(req), 1000) < 0) {
+			    wpabuf_head(req), wpabuf_len(req), wait_time) < 0) {
 		p2p_dbg(p2p, "Failed to send Action frame");
 		wpabuf_free(req);
 		/* TODO: how to recover from failure? */

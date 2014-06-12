@@ -376,10 +376,9 @@ int ieee802_11_rx_wnm_action_ap(struct hostapd_data *hapd,
 	if (len < IEEE80211_HDRLEN + 2)
 		return -1;
 
-	payload = &mgmt->u.action.category;
-	payload++;
+	payload = ((const u8 *) mgmt) + IEEE80211_HDRLEN + 1;
 	action = *payload++;
-	plen = (((const u8 *) mgmt) + len) - payload;
+	plen = len - IEEE80211_HDRLEN - 2;
 
 	switch (action) {
 	case WNM_BSS_TRANS_MGMT_QUERY:

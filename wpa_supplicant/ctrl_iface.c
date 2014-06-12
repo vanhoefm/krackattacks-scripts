@@ -5368,7 +5368,7 @@ static int hs20_get_nai_home_realm_list(struct wpa_supplicant *wpa_s,
 	if (len == 0 && cred && cred->realm)
 		return hs20_nai_home_realm_list(wpa_s, dst_addr, cred->realm);
 
-	if (len % 1)
+	if (len & 1)
 		return -1;
 	len /= 2;
 	buf = os_malloc(len);

@@ -2027,11 +2027,9 @@ dbus_bool_t wpas_dbus_getter_p2p_group_vendor_ext(DBusMessageIter *iter,
 		/* Parse WPS Vendor Extensions sent in Beacon/Probe Response */
 		for (i = 0; i < MAX_WPS_VENDOR_EXTENSIONS; i++) {
 			if (hapd->conf->wps_vendor_ext[i] == NULL)
-				vendor_ext[i] = NULL;
-			else {
-				vendor_ext[num_vendor_ext++] =
-					hapd->conf->wps_vendor_ext[i];
-			}
+				continue;
+			vendor_ext[num_vendor_ext++] =
+				hapd->conf->wps_vendor_ext[i];
 		}
 	}
 
@@ -2040,7 +2038,7 @@ dbus_bool_t wpas_dbus_getter_p2p_group_vendor_ext(DBusMessageIter *iter,
 							    DBUS_TYPE_BYTE,
 							    vendor_ext,
 							    num_vendor_ext,
-						 error);
+							    error);
 }
 
 

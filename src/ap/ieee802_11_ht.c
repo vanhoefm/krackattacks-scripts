@@ -211,8 +211,7 @@ void hostapd_2040_coex_action(struct hostapd_data *hapd,
 	struct ieee80211_2040_intol_chan_report *ic_report;
 	int is_ht_allowed = 1;
 	int i;
-	const u8 *data = (const u8 *) &mgmt->u.action.u.public_action.action;
-	size_t hdr_len;
+	const u8 *data = ((const u8 *) mgmt) + 1;
 
 	hostapd_logger(hapd, mgmt->sa, HOSTAPD_MODULE_IEEE80211,
 		       HOSTAPD_LEVEL_DEBUG, "hostapd_public_action - action=%d",
@@ -221,8 +220,7 @@ void hostapd_2040_coex_action(struct hostapd_data *hapd,
 	if (!(iface->conf->ht_capab & HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET))
 		return;
 
-	hdr_len = data - (u8 *) mgmt;
-	if (hdr_len > len)
+	if (len < IEEE80211_HDRLEN + 1)
 		return;
 	data++;
 

@@ -373,18 +373,16 @@ static void ap_public_action_rx(void *ctx, const u8 *buf, size_t len, int freq)
 #ifdef CONFIG_P2P
 	struct wpa_supplicant *wpa_s = ctx;
 	const struct ieee80211_mgmt *mgmt;
-	size_t hdr_len;
 
 	mgmt = (const struct ieee80211_mgmt *) buf;
-	hdr_len = (const u8 *) &mgmt->u.action.u.vs_public_action.action - buf;
-	if (hdr_len > len)
+	if (len < IEEE80211_HDRLEN + 1)
 		return;
 	if (mgmt->u.action.category != WLAN_ACTION_PUBLIC)
 		return;
 	wpas_p2p_rx_action(wpa_s, mgmt->da, mgmt->sa, mgmt->bssid,
 			   mgmt->u.action.category,
-			   &mgmt->u.action.u.vs_public_action.action,
-			   len - hdr_len, freq);
+			   buf + IEEE80211_HDRLEN + 1,
+			   len - IEEE80211_HDRLEN - 1, freq);
 #endif /* CONFIG_P2P */
 }
 

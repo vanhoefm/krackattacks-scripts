@@ -921,8 +921,7 @@ void ieee802_11_rx_wnm_action(struct wpa_supplicant *wpa_s,
 	if (len < IEEE80211_HDRLEN + 2)
 		return;
 
-	pos = &mgmt->u.action.category;
-	pos++;
+	pos = ((const u8 *) mgmt) + IEEE80211_HDRLEN + 1;
 	act = *pos++;
 	end = ((const u8 *) mgmt) + len;
 

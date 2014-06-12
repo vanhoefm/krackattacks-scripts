@@ -113,24 +113,28 @@ DBusMessage * wpas_dbus_global_add_interface(DBusMessage *message,
 				goto error;
 			if (!strcmp(entry.key, "driver") &&
 			    (entry.type == DBUS_TYPE_STRING)) {
+				os_free(driver);
 				driver = os_strdup(entry.str_value);
 				wpa_dbus_dict_entry_clear(&entry);
 				if (driver == NULL)
 					goto error;
 			} else if (!strcmp(entry.key, "driver-params") &&
 				   (entry.type == DBUS_TYPE_STRING)) {
+				os_free(driver_param);
 				driver_param = os_strdup(entry.str_value);
 				wpa_dbus_dict_entry_clear(&entry);
 				if (driver_param == NULL)
 					goto error;
 			} else if (!strcmp(entry.key, "config-file") &&
 				   (entry.type == DBUS_TYPE_STRING)) {
+				os_free(confname);
 				confname = os_strdup(entry.str_value);
 				wpa_dbus_dict_entry_clear(&entry);
 				if (confname == NULL)
 					goto error;
 			} else if (!strcmp(entry.key, "bridge-ifname") &&
 				   (entry.type == DBUS_TYPE_STRING)) {
+				os_free(bridge_ifname);
 				bridge_ifname = os_strdup(entry.str_value);
 				wpa_dbus_dict_entry_clear(&entry);
 				if (bridge_ifname == NULL)
@@ -1200,16 +1204,19 @@ DBusMessage * wpas_dbus_iface_set_smartcard_modules(
 			goto error;
 		if (!strcmp(entry.key, "opensc_engine_path") &&
 		    (entry.type == DBUS_TYPE_STRING)) {
+			os_free(opensc_engine_path);
 			opensc_engine_path = os_strdup(entry.str_value);
 			if (opensc_engine_path == NULL)
 				goto error;
 		} else if (!strcmp(entry.key, "pkcs11_engine_path") &&
 			   (entry.type == DBUS_TYPE_STRING)) {
+			os_free(pkcs11_engine_path);
 			pkcs11_engine_path = os_strdup(entry.str_value);
 			if (pkcs11_engine_path == NULL)
 				goto error;
 		} else if (!strcmp(entry.key, "pkcs11_module_path") &&
 				 (entry.type == DBUS_TYPE_STRING)) {
+			os_free(pkcs11_module_path);
 			pkcs11_module_path = os_strdup(entry.str_value);
 			if (pkcs11_module_path == NULL)
 				goto error;

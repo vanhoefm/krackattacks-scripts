@@ -256,6 +256,7 @@ static int pmf_in_use(struct wpa_supplicant *wpa_s, const u8 *addr)
 static int gas_query_tx(struct gas_query *gas, struct gas_query_pending *query,
 			struct wpabuf *req)
 {
+	unsigned int wait_time;
 	int res, prot = pmf_in_use(gas->wpa_s, query->addr);
 
 	wpa_printf(MSG_DEBUG, "GAS: Send action frame to " MACSTR " len=%u "
@@ -266,10 +267,14 @@ static int gas_query_tx(struct gas_query *gas, struct gas_query_pending *query,
 		*categ = WLAN_ACTION_PROTECTED_DUAL;
 	}
 	os_get_reltime(&query->last_oper);
+	wait_time = 1000;
+	if (gas->wpa_s->max_remain_on_chan &&
+	    wait_time > gas->wpa_s->max_remain_on_chan)
+		wait_time = gas->wpa_s->max_remain_on_chan;
 	res = offchannel_send_action(gas->wpa_s, query->freq, query->addr,
 				     gas->wpa_s->own_addr, query->addr,
-				     wpabuf_head(req), wpabuf_len(req), 1000,
-				     gas_query_tx_status, 0);
+				     wpabuf_head(req), wpabuf_len(req),
+				     wait_time, gas_query_tx_status, 0);
 	if (res == 0)
 		query->offchannel_tx_started = 1;
 	return res;

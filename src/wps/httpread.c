@@ -413,8 +413,8 @@ static void httpread_read_handler(int sd, void *eloop_ctx, void *sock_ctx)
 		 */
 		if (httpread_debug >= 10)
 			wpa_printf(MSG_DEBUG, "httpread ok eof(%p)", h);
-			h->got_body = 1;
-			goto got_file;
+		h->got_body = 1;
+		goto got_file;
 	}
 	rbp = readbuf;
 

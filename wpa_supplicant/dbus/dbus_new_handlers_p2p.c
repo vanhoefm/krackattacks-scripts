@@ -1143,6 +1143,7 @@ dbus_bool_t wpas_dbus_getter_p2p_role(DBusMessageIter *iter, DBusError *error,
 		break;
 	default:
 		str = "device";
+		break;
 	}
 
 	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_STRING, &str,

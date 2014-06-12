@@ -934,6 +934,7 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_array(
 		break;
 	case DBUS_TYPE_ARRAY:
 		success = _wpa_dbus_dict_entry_get_binarray(&iter_array, entry);
+		break;
 	default:
 		break;
 	}

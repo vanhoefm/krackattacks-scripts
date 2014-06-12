@@ -2788,9 +2788,9 @@ static void wpa_supplicant_update_channel_list(
 
 
 static void wpas_event_rx_mgmt_action(struct wpa_supplicant *wpa_s,
-				      const struct ieee80211_mgmt *mgmt,
-				      size_t len, int freq)
+				      const u8 *frame, size_t len, int freq)
 {
+	const struct ieee80211_mgmt *mgmt;
 	const u8 *payload;
 	size_t plen;
 	u8 category;
@@ -2798,9 +2798,10 @@ static void wpas_event_rx_mgmt_action(struct wpa_supplicant *wpa_s,
 	if (len < IEEE80211_HDRLEN + 2)
 		return;
 
-	payload = &mgmt->u.action.category;
+	mgmt = (const struct ieee80211_mgmt *) frame;
+	payload = frame + IEEE80211_HDRLEN;
 	category = *payload++;
-	plen = (((const u8 *) mgmt) + len) - payload;
+	plen = len - IEEE80211_HDRLEN - 1;
 
 	wpa_dbg(wpa_s, MSG_DEBUG, "Received Action frame: SA=" MACSTR
 		" Category=%u DataLen=%d freq=%d MHz",
@@ -3223,7 +3224,8 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 
 			if (stype == WLAN_FC_STYPE_ACTION) {
 				wpas_event_rx_mgmt_action(
-					wpa_s, mgmt, data->rx_mgmt.frame_len,
+					wpa_s, data->rx_mgmt.frame,
+					data->rx_mgmt.frame_len,
 					data->rx_mgmt.freq);
 				break;
 			}

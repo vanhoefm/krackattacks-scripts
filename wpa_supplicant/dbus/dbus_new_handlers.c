@@ -271,6 +271,7 @@ dbus_bool_t set_network_properties(struct wpa_supplicant *wpa_s,
 			wpa_config_update_prio_list(wpa_s->conf);
 
 		os_free(value);
+		value = NULL;
 		wpa_dbus_dict_entry_clear(&entry);
 	}
 

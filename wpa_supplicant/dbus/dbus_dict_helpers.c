@@ -881,6 +881,8 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_binarray(
 		}
 
 		dbus_message_iter_recurse(iter, &iter_array);
+		os_memset(&tmpentry, 0, sizeof(tmpentry));
+		tmpentry.type = DBUS_TYPE_ARRAY;
 		if (_wpa_dbus_dict_entry_get_byte_array(&iter_array, &tmpentry)
 					== FALSE)
 			goto cleanup;

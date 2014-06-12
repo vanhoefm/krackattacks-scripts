@@ -1213,13 +1213,11 @@ static void gas_serv_rx_public_action(void *ctx, const u8 *buf, size_t len,
 {
 	struct hostapd_data *hapd = ctx;
 	const struct ieee80211_mgmt *mgmt;
-	size_t hdr_len;
 	const u8 *sa, *data;
 	int prot;
 
 	mgmt = (const struct ieee80211_mgmt *) buf;
-	hdr_len = (const u8 *) &mgmt->u.action.u.vs_public_action.action - buf;
-	if (hdr_len > len)
+	if (len < IEEE80211_HDRLEN + 2)
 		return;
 	if (mgmt->u.action.category != WLAN_ACTION_PUBLIC &&
 	    mgmt->u.action.category != WLAN_ACTION_PROTECTED_DUAL)
@@ -1231,8 +1229,8 @@ static void gas_serv_rx_public_action(void *ctx, const u8 *buf, size_t len,
 	 */
 	prot = mgmt->u.action.category == WLAN_ACTION_PROTECTED_DUAL;
 	sa = mgmt->sa;
-	len -= hdr_len;
-	data = &mgmt->u.action.u.public_action.action;
+	len -= IEEE80211_HDRLEN + 1;
+	data = buf + IEEE80211_HDRLEN + 1;
 	switch (data[0]) {
 	case WLAN_PA_GAS_INITIAL_REQ:
 		gas_serv_rx_gas_initial_req(hapd, sa, data + 1, len - 1, prot);

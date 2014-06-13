@@ -276,6 +276,8 @@ char * wifi_display_subelem_hex(const struct wpabuf *wfd_subelems, u8 id)
 
 	while (i + WIFI_DISPLAY_SUBELEM_HEADER_LEN < buflen) {
 		elen = WPA_GET_BE16(buf + i + 1);
+		if (i + WIFI_DISPLAY_SUBELEM_HEADER_LEN + elen > buflen)
+			break; /* truncated subelement */
 
 		if (buf[i] == id) {
 			subelem = os_zalloc(2 * elen + 1);

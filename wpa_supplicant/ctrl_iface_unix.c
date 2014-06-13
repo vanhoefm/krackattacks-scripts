@@ -990,7 +990,13 @@ static int wpas_global_ctrl_iface_open_sock(struct wpa_global *global,
 			goto fail;
 		}
 	} else {
-		chmod(ctrl, S_IRWXU);
+		if (chmod(ctrl, S_IRWXU) < 0) {
+			wpa_printf(MSG_DEBUG,
+				   "chmod[global_ctrl_interface=%s](S_IRWXU): %s",
+				   ctrl, strerror(errno));
+			/* continue anyway since group change was not required
+			 */
+		}
 	}
 
 havesock:

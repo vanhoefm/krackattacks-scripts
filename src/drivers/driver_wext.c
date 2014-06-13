@@ -2027,7 +2027,11 @@ int wpa_driver_wext_associate(void *priv,
 		 * Stop cfg80211 from trying to associate before we are done
 		 * with all parameters.
 		 */
-		wpa_driver_wext_set_ssid(drv, (u8 *) "", 0);
+		if (wpa_driver_wext_set_ssid(drv, (u8 *) "", 0) < 0) {
+			wpa_printf(MSG_DEBUG,
+				   "WEXT: Failed to clear SSID to stop pending cfg80211 association attempts (if any)");
+			/* continue anyway */
+		}
 	}
 
 	if (wpa_driver_wext_set_drop_unencrypted(drv, params->drop_unencrypted)

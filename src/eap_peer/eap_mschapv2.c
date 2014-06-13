@@ -309,10 +309,13 @@ static void eap_mschapv2_password_changed(struct eap_sm *sm,
 		} else if (config->flags & EAP_CONFIG_FLAGS_PASSWORD_NTHASH) {
 			config->password = os_malloc(16);
 			config->password_len = 16;
-			if (config->password) {
-				nt_password_hash(config->new_password,
-						 config->new_password_len,
-						 config->password);
+			if (config->password &&
+			    nt_password_hash(config->new_password,
+					     config->new_password_len,
+					     config->password)) {
+				os_free(config->password);
+				config->password = NULL;
+				config->password_len = 0;
 			}
 			os_free(config->new_password);
 		} else {
@@ -549,15 +552,17 @@ static struct wpabuf * eap_mschapv2_change_password(
 	/* Encrypted-Hash */
 	if (pwhash) {
 		u8 new_password_hash[16];
-		nt_password_hash(new_password, new_password_len,
-				 new_password_hash);
+		if (nt_password_hash(new_password, new_password_len,
+				     new_password_hash))
+			goto fail;
 		nt_password_hash_encrypted_with_block(password,
 						      new_password_hash,
 						      cp->encr_hash);
 	} else {
-		old_nt_password_hash_encrypted_with_new_nt_password_hash(
-			new_password, new_password_len,
-			password, password_len, cp->encr_hash);
+		if (old_nt_password_hash_encrypted_with_new_nt_password_hash(
+			    new_password, new_password_len,
+			    password, password_len, cp->encr_hash))
+			goto fail;
 	}
 
 	/* Peer-Challenge */
@@ -594,9 +599,13 @@ static struct wpabuf * eap_mschapv2_change_password(
 
 	/* Likewise, generate master_key here since we have the needed data
 	 * available. */
-	nt_password_hash(new_password, new_password_len, password_hash);
-	hash_nt_password_hash(password_hash, password_hash_hash);
-	get_master_key(password_hash_hash, cp->nt_response, data->master_key);
+	if (nt_password_hash(new_password, new_password_len, password_hash) ||
+	    hash_nt_password_hash(password_hash, password_hash_hash) ||
+	    get_master_key(password_hash_hash, cp->nt_response,
+			   data->master_key)) {
+		data->auth_response_valid = 0;
+		goto fail;
+	}
 	data->master_key_valid = 1;
 
 	/* Flags */

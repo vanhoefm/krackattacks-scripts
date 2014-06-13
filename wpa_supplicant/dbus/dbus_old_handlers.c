@@ -350,7 +350,7 @@ DBusMessage * wpas_dbus_iface_scan(DBusMessage *message,
 DBusMessage * wpas_dbus_iface_scan_results(DBusMessage *message,
 					   struct wpa_supplicant *wpa_s)
 {
-	DBusMessage *reply = NULL;
+	DBusMessage *reply;
 	DBusMessageIter iter;
 	DBusMessageIter sub_iter;
 	struct wpa_bss *bss;
@@ -358,9 +358,10 @@ DBusMessage * wpas_dbus_iface_scan_results(DBusMessage *message,
 	/* Create and initialize the return message */
 	reply = dbus_message_new_method_return(message);
 	dbus_message_iter_init_append(reply, &iter);
-	dbus_message_iter_open_container(&iter, DBUS_TYPE_ARRAY,
-					 DBUS_TYPE_OBJECT_PATH_AS_STRING,
-					 &sub_iter);
+	if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_ARRAY,
+					      DBUS_TYPE_OBJECT_PATH_AS_STRING,
+					      &sub_iter))
+		goto error;
 
 	/* Loop through scan results and append each result's object path */
 	dl_list_for_each(bss, &wpa_s->bss_id, struct wpa_bss, list_id) {
@@ -374,13 +375,21 @@ DBusMessage * wpas_dbus_iface_scan_results(DBusMessage *message,
 			    "%s/" WPAS_DBUS_BSSIDS_PART "/"
 			    WPAS_DBUS_BSSID_FORMAT,
 			    wpa_s->dbus_path, MAC2STR(bss->bssid));
-		dbus_message_iter_append_basic(&sub_iter,
-					       DBUS_TYPE_OBJECT_PATH, &path);
+		if (!dbus_message_iter_append_basic(&sub_iter,
+						    DBUS_TYPE_OBJECT_PATH,
+						    &path))
+			goto error;
 	}
 
-	dbus_message_iter_close_container(&iter, &sub_iter);
+	if (!dbus_message_iter_close_container(&iter, &sub_iter))
+		goto error;
 
 	return reply;
+
+error:
+	dbus_message_unref(reply);
+	return dbus_message_new_error(message, WPAS_ERROR_INTERNAL_ERROR,
+				      "an internal error occurred returning scan results");
 }
 
 

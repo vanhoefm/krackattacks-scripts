@@ -229,3 +229,24 @@ def test_wifi_display_persistent_group(dev):
         dev[0].request("SET wifi_display 0")
         dev[1].request("SET wifi_display 0")
         dev[2].request("SET wifi_display 0")
+
+def test_wifi_display_invalid_subelem(dev):
+    """Wi-Fi Display and invalid subelement parsing"""
+    addr1 = dev[1].p2p_dev_addr()
+
+    try:
+        enable_wifi_display(dev[0])
+        enable_wifi_display(dev[1])
+        dev[1].request("WFD_SUBELEM_SET 0 ffff00411c440028")
+
+        dev[1].p2p_listen()
+        dev[0].p2p_find(social=True)
+        ev = dev[0].wait_global_event(["P2P-DEVICE-FOUND"], timeout=10)
+        if ev is None:
+            raise Exception("Device discovery timed out")
+        if "wfd_dev_info=" in ev:
+            raise Exception("Invalid WFD subelement was shown")
+
+    finally:
+        dev[0].request("SET wifi_display 0")
+        dev[1].request("SET wifi_display 0")

@@ -1501,7 +1501,7 @@ static int wpa_supplicant_decrypt_key_data(struct wpa_sm *sm,
 		   ver == WPA_KEY_INFO_TYPE_AES_128_CMAC ||
 		   sm->key_mgmt == WPA_KEY_MGMT_OSEN) {
 		u8 *buf;
-		if (keydatalen % 8) {
+		if (keydatalen < 8 || keydatalen % 8) {
 			wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
 				"WPA: Unsupported AES-WRAP len %d",
 				keydatalen);

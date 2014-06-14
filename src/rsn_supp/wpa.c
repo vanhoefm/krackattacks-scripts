@@ -1606,10 +1606,10 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 		    const u8 *buf, size_t len)
 {
 	size_t plen, data_len, extra_len;
-	struct ieee802_1x_hdr *hdr;
+	const struct ieee802_1x_hdr *hdr;
 	struct wpa_eapol_key *key;
 	u16 key_info, ver;
-	u8 *tmp;
+	u8 *tmp = NULL;
 	int ret = -1;
 	struct wpa_peerkey *peerkey = NULL;
 
@@ -1626,13 +1626,7 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 		return 0;
 	}
 
-	tmp = os_malloc(len);
-	if (tmp == NULL)
-		return -1;
-	os_memcpy(tmp, buf, len);
-
-	hdr = (struct ieee802_1x_hdr *) tmp;
-	key = (struct wpa_eapol_key *) (hdr + 1);
+	hdr = (const struct ieee802_1x_hdr *) buf;
 	plen = be_to_host16(hdr->length);
 	data_len = plen + sizeof(*hdr);
 	wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG,
@@ -1649,6 +1643,7 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 		ret = 0;
 		goto out;
 	}
+	wpa_hexdump(MSG_MSGDUMP, "WPA: RX EAPOL-Key", buf, len);
 	if (plen > len - sizeof(*hdr) || plen < sizeof(*key)) {
 		wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG,
 			"WPA: EAPOL frame payload size %lu "
@@ -1657,6 +1652,21 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 		ret = 0;
 		goto out;
 	}
+	if (data_len < len) {
+		wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG,
+			"WPA: ignoring %lu bytes after the IEEE 802.1X data",
+			(unsigned long) len - data_len);
+	}
+
+	/*
+	 * Make a copy of the frame since we need to modify the buffer during
+	 * MAC validation and Key Data decryption.
+	 */
+	tmp = os_malloc(data_len);
+	if (tmp == NULL)
+		goto out;
+	os_memcpy(tmp, buf, data_len);
+	key = (struct wpa_eapol_key *) (tmp + sizeof(struct ieee802_1x_hdr));
 
 	if (key->type != EAPOL_KEY_TYPE_WPA && key->type != EAPOL_KEY_TYPE_RSN)
 	{
@@ -1668,13 +1678,16 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 	}
 	wpa_eapol_key_dump(sm, key);
 
-	eapol_sm_notify_lower_layer_success(sm->eapol, 0);
-	wpa_hexdump(MSG_MSGDUMP, "WPA: RX EAPOL-Key", tmp, len);
-	if (data_len < len) {
-		wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG,
-			"WPA: ignoring %lu bytes after the IEEE 802.1X data",
-			(unsigned long) len - data_len);
+	extra_len = WPA_GET_BE16(key->key_data_length);
+	if (extra_len > plen - sizeof(struct wpa_eapol_key)) {
+		wpa_msg(sm->ctx->msg_ctx, MSG_INFO, "WPA: Invalid EAPOL-Key "
+			"frame - key_data overflow (%u > %u)",
+			(unsigned int) extra_len,
+			(unsigned int) (plen - sizeof(struct wpa_eapol_key)));
+		goto out;
 	}
+
+	eapol_sm_notify_lower_layer_success(sm->eapol, 0);
 	key_info = WPA_GET_BE16(key->key_info);
 	ver = key_info & WPA_KEY_INFO_TYPE_MASK;
 	if (ver != WPA_KEY_INFO_TYPE_HMAC_MD5_RC4 &&
@@ -1814,22 +1827,13 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 		goto out;
 #endif /* CONFIG_PEERKEY */
 
-	extra_len = data_len - sizeof(*hdr) - sizeof(*key);
-
-	if (WPA_GET_BE16(key->key_data_length) > extra_len) {
-		wpa_msg(sm->ctx->msg_ctx, MSG_INFO, "WPA: Invalid EAPOL-Key "
-			"frame - key_data overflow (%d > %lu)",
-			WPA_GET_BE16(key->key_data_length),
-			(unsigned long) extra_len);
-		goto out;
-	}
-	extra_len = WPA_GET_BE16(key->key_data_length);
-
 	if ((sm->proto == WPA_PROTO_RSN || sm->proto == WPA_PROTO_OSEN) &&
 	    (key_info & WPA_KEY_INFO_ENCR_KEY_DATA)) {
 		if (wpa_supplicant_decrypt_key_data(sm, key, ver))
 			goto out;
 		extra_len = WPA_GET_BE16(key->key_data_length);
+		if (extra_len > plen - sizeof(struct wpa_eapol_key))
+			goto out;
 	}
 
 	if (key_info & WPA_KEY_INFO_KEY_TYPE) {

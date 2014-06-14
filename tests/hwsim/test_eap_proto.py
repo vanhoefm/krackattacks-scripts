@@ -1070,3 +1070,314 @@ def test_eap_proto_gpsk(dev, apdev):
             dev[0].request("REMOVE_NETWORK all")
     finally:
         stop_radius_server(srv)
+
+EAP_EKE_ID = 1
+EAP_EKE_COMMIT = 2
+EAP_EKE_CONFIRM = 3
+EAP_EKE_FAILURE = 4
+
+def test_eap_proto_eke(dev, apdev):
+    """EAP-EKE protocol tests"""
+    def eke_handler(ctx, req):
+        logger.info("eke_handler - RX " + req.encode("hex"))
+        if 'num' not in ctx:
+            ctx['num'] = 0
+        ctx['num'] = ctx['num'] + 1
+        if 'id' not in ctx:
+            ctx['id'] = 1
+        ctx['id'] = (ctx['id'] + 1) % 256
+
+        idx = 0
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Missing payload")
+            return struct.pack(">BBHB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1,
+                               EAP_TYPE_EKE)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unknown exchange")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_EKE,
+                               255)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: No NumProposals in EAP-EKE-ID/Request")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_EKE,
+                               EAP_EKE_ID)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: NumProposals=0 in EAP-EKE-ID/Request")
+            return struct.pack(">BBHBBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 1,
+                               EAP_TYPE_EKE,
+                               EAP_EKE_ID,
+                               0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Truncated Proposals list in EAP-EKE-ID/Request")
+            return struct.pack(">BBHBBBB4B", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2 + 4,
+                               EAP_TYPE_EKE,
+                               EAP_EKE_ID,
+                               2, 0, 0, 0, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unsupported proposals in EAP-EKE-ID/Request")
+            return struct.pack(">BBHBBBB4B4B4B4B", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2 + 4 * 4,
+                               EAP_TYPE_EKE,
+                               EAP_EKE_ID,
+                               4, 0,
+                               0, 0, 0, 0,
+                               3, 0, 0, 0,
+                               3, 1, 0, 0,
+                               3, 1, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Missing IDType/Identity in EAP-EKE-ID/Request")
+            return struct.pack(">BBHBBBB4B4B4B4B4B",
+                               EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2 + 5 * 4,
+                               EAP_TYPE_EKE,
+                               EAP_EKE_ID,
+                               5, 0,
+                               0, 0, 0, 0,
+                               3, 0, 0, 0,
+                               3, 1, 0, 0,
+                               3, 1, 1, 0,
+                               3, 1, 1, 1)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid EAP-EKE-ID/Request")
+            return struct.pack(">BBHBBBB4BB",
+                               EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2 + 4 + 1,
+                               EAP_TYPE_EKE,
+                               EAP_EKE_ID,
+                               1, 0,
+                               3, 1, 1, 1,
+                               255)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unexpected EAP-EKE-ID/Request")
+            return struct.pack(">BBHBBBB4BB",
+                               EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2 + 4 + 1,
+                               EAP_TYPE_EKE,
+                               EAP_EKE_ID,
+                               1, 0,
+                               3, 1, 1, 1,
+                               255)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid EAP-EKE-ID/Request")
+            return struct.pack(">BBHBBBB4BB",
+                               EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2 + 4 + 1,
+                               EAP_TYPE_EKE,
+                               EAP_EKE_ID,
+                               1, 0,
+                               3, 1, 1, 1,
+                               255)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unexpected EAP-EKE-Confirm/Request")
+            return struct.pack(">BBHBB",
+                               EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_EKE,
+                               EAP_EKE_CONFIRM)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Too short EAP-EKE-Failure/Request")
+            return struct.pack(">BBHBB",
+                               EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_EKE,
+                               EAP_EKE_FAILURE)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unexpected EAP-EKE-Commit/Request")
+            return struct.pack(">BBHBB",
+                               EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_EKE,
+                               EAP_EKE_COMMIT)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid EAP-EKE-ID/Request")
+            return struct.pack(">BBHBBBB4BB",
+                               EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2 + 4 + 1,
+                               EAP_TYPE_EKE,
+                               EAP_EKE_ID,
+                               1, 0,
+                               3, 1, 1, 1,
+                               255)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Too short EAP-EKE-Commit/Request")
+            return struct.pack(">BBHBB",
+                               EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_EKE,
+                               EAP_EKE_COMMIT)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid EAP-EKE-ID/Request")
+            return struct.pack(">BBHBBBB4BB",
+                               EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2 + 4 + 1,
+                               EAP_TYPE_EKE,
+                               EAP_EKE_ID,
+                               1, 0,
+                               1, 1, 1, 1,
+                               255)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: All zeroes DHComponent_S and empty CBvalue in EAP-EKE-Commit/Request")
+            return struct.pack(">BBHBB4L32L",
+                               EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 16 + 128,
+                               EAP_TYPE_EKE,
+                               EAP_EKE_COMMIT,
+                               0, 0, 0, 0,
+                               0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                               0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Too short EAP-EKE-Confirm/Request")
+            return struct.pack(">BBHBB",
+                               EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_EKE,
+                               EAP_EKE_CONFIRM)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid EAP-EKE-ID/Request")
+            return struct.pack(">BBHBBBB4BB",
+                               EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 2 + 4 + 1,
+                               EAP_TYPE_EKE,
+                               EAP_EKE_ID,
+                               1, 0,
+                               1, 1, 1, 1,
+                               255)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: All zeroes DHComponent_S and empty CBvalue in EAP-EKE-Commit/Request")
+            return struct.pack(">BBHBB4L32L",
+                               EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 16 + 128,
+                               EAP_TYPE_EKE,
+                               EAP_EKE_COMMIT,
+                               0, 0, 0, 0,
+                               0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                               0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Invalid PNonce_PS and Auth_S values in EAP-EKE-Confirm/Request")
+            return struct.pack(">BBHBB4L8L5L5L",
+                               EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 16 + 2 * 16 + 20 + 20,
+                               EAP_TYPE_EKE,
+                               EAP_EKE_CONFIRM,
+                               0, 0, 0, 0,
+                               0, 0, 0, 0, 0, 0, 0, 0,
+                               0, 0, 0, 0, 0,
+                               0, 0, 0, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        return None
+
+    srv = start_radius_server(eke_handler)
+    if srv is None:
+        return "skip"
+
+    try:
+        hapd = start_ap(apdev[0]['ifname'])
+
+        for i in range(0, 14):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="EKE", identity="user", password="password",
+                           wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"],
+                                   timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            if i in [ 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 ]:
+                ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"],
+                                       timeout=10)
+                if ev is None:
+                    raise Exception("Timeout on EAP failure")
+            else:
+                time.sleep(0.05)
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].dump_monitor()
+    finally:
+        stop_radius_server(srv)

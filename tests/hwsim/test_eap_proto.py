@@ -1381,3 +1381,344 @@ def test_eap_proto_eke(dev, apdev):
             dev[0].dump_monitor()
     finally:
         stop_radius_server(srv)
+
+EAP_PAX_OP_STD_1 = 0x01
+EAP_PAX_OP_STD_2 = 0x02
+EAP_PAX_OP_STD_3 = 0x03
+EAP_PAX_OP_SEC_1 = 0x11
+EAP_PAX_OP_SEC_2 = 0x12
+EAP_PAX_OP_SEC_3 = 0x13
+EAP_PAX_OP_SEC_4 = 0x14
+EAP_PAX_OP_SEC_5 = 0x15
+EAP_PAX_OP_ACK = 0x21
+
+EAP_PAX_FLAGS_MF = 0x01
+EAP_PAX_FLAGS_CE = 0x02
+EAP_PAX_FLAGS_AI = 0x04
+
+EAP_PAX_MAC_HMAC_SHA1_128 = 0x01
+EAP_PAX_HMAC_SHA256_128 = 0x02
+
+EAP_PAX_DH_GROUP_NONE = 0x00
+EAP_PAX_DH_GROUP_2048_MODP = 0x01
+EAP_PAX_DH_GROUP_3072_MODP = 0x02
+EAP_PAX_DH_GROUP_NIST_ECC_P_256 = 0x03
+
+EAP_PAX_PUBLIC_KEY_NONE = 0x00
+EAP_PAX_PUBLIC_KEY_RSAES_OAEP = 0x01
+EAP_PAX_PUBLIC_KEY_RSA_PKCS1_V1_5 = 0x02
+EAP_PAX_PUBLIC_KEY_EL_GAMAL_NIST_ECC = 0x03
+
+EAP_PAX_ADE_VENDOR_SPECIFIC = 0x01
+EAP_PAX_ADE_CLIENT_CHANNEL_BINDING = 0x02
+EAP_PAX_ADE_SERVER_CHANNEL_BINDING = 0x03
+
+def test_eap_proto_pax(dev, apdev):
+    """EAP-PAX protocol tests"""
+    def pax_std_1(ctx):
+            logger.info("Test: STD-1")
+            ctx['id'] = 10
+            return struct.pack(">BBHBBBBBBH8L16B", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 5 + 2 + 32 + 16,
+                               EAP_TYPE_PAX,
+                               EAP_PAX_OP_STD_1, 0, EAP_PAX_MAC_HMAC_SHA1_128,
+                               EAP_PAX_DH_GROUP_NONE, EAP_PAX_PUBLIC_KEY_NONE,
+                               32, 0, 0, 0, 0, 0, 0, 0, 0,
+                               0x16, 0xc9, 0x08, 0x9d, 0x98, 0xa5, 0x6e, 0x1f,
+                               0xf0, 0xac, 0xcf, 0xc4, 0x66, 0xcd, 0x2d, 0xbf)
+
+    def pax_handler(ctx, req):
+        logger.info("pax_handler - RX " + req.encode("hex"))
+        if 'num' not in ctx:
+            ctx['num'] = 0
+        ctx['num'] = ctx['num'] + 1
+        if 'id' not in ctx:
+            ctx['id'] = 1
+        ctx['id'] = (ctx['id'] + 1) % 256
+
+        idx = 0
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Missing payload")
+            return struct.pack(">BBHB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1,
+                               EAP_TYPE_PAX)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Minimum length payload")
+            return struct.pack(">BBHB4L", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 16,
+                               EAP_TYPE_PAX,
+                               0, 0, 0, 0)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unsupported MAC ID")
+            return struct.pack(">BBHBBBBBB4L", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 5 + 16,
+                               EAP_TYPE_PAX,
+                               EAP_PAX_OP_STD_1, 0, 255, EAP_PAX_DH_GROUP_NONE,
+                               EAP_PAX_PUBLIC_KEY_NONE,
+                               0, 0, 0, 0)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unsupported DH Group ID")
+            return struct.pack(">BBHBBBBBB4L", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 5 + 16,
+                               EAP_TYPE_PAX,
+                               EAP_PAX_OP_STD_1, 0, EAP_PAX_MAC_HMAC_SHA1_128,
+                               255, EAP_PAX_PUBLIC_KEY_NONE,
+                               0, 0, 0, 0)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unsupported Public Key ID")
+            return struct.pack(">BBHBBBBBB4L", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 5 + 16,
+                               EAP_TYPE_PAX,
+                               EAP_PAX_OP_STD_1, 0, EAP_PAX_MAC_HMAC_SHA1_128,
+                               EAP_PAX_DH_GROUP_NONE, 255,
+                               0, 0, 0, 0)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: More fragments")
+            return struct.pack(">BBHBBBBBB4L", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 5 + 16,
+                               EAP_TYPE_PAX,
+                               EAP_PAX_OP_STD_1, EAP_PAX_FLAGS_MF,
+                               EAP_PAX_MAC_HMAC_SHA1_128,
+                               EAP_PAX_DH_GROUP_NONE, EAP_PAX_PUBLIC_KEY_NONE,
+                               0, 0, 0, 0)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Invalid ICV")
+            return struct.pack(">BBHBBBBBB4L", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 5 + 16,
+                               EAP_TYPE_PAX,
+                               EAP_PAX_OP_STD_1, 0, EAP_PAX_MAC_HMAC_SHA1_128,
+                               EAP_PAX_DH_GROUP_NONE, EAP_PAX_PUBLIC_KEY_NONE,
+                               0, 0, 0, 0)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Invalid ICV in short frame")
+            return struct.pack(">BBHBBBBBB3L", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 5 + 12,
+                               EAP_TYPE_PAX,
+                               EAP_PAX_OP_STD_1, 0, EAP_PAX_MAC_HMAC_SHA1_128,
+                               EAP_PAX_DH_GROUP_NONE, EAP_PAX_PUBLIC_KEY_NONE,
+                               0, 0, 0)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Correct ICV - unsupported op_code")
+            ctx['id'] = 10
+            return struct.pack(">BBHBBBBBB16B", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 5 + 16,
+                               EAP_TYPE_PAX,
+                               255, 0, EAP_PAX_MAC_HMAC_SHA1_128,
+                               EAP_PAX_DH_GROUP_NONE, EAP_PAX_PUBLIC_KEY_NONE,
+                               0x90, 0x78, 0x97, 0x38, 0x29, 0x94, 0x32, 0xd4,
+                               0x81, 0x27, 0xe0, 0xf6, 0x3b, 0x0d, 0xb2, 0xb2)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Correct ICV - CE flag in STD-1")
+            ctx['id'] = 10
+            return struct.pack(">BBHBBBBBB16B", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 5 + 16,
+                               EAP_TYPE_PAX,
+                               EAP_PAX_OP_STD_1, EAP_PAX_FLAGS_CE,
+                               EAP_PAX_MAC_HMAC_SHA1_128,
+                               EAP_PAX_DH_GROUP_NONE, EAP_PAX_PUBLIC_KEY_NONE,
+                               0x9c, 0x98, 0xb4, 0x0b, 0x94, 0x90, 0xde, 0x88,
+                               0xb7, 0x72, 0x63, 0x44, 0x1d, 0xe3, 0x7c, 0x5c)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Correct ICV - too short STD-1 payload")
+            ctx['id'] = 10
+            return struct.pack(">BBHBBBBBB16B", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 5 + 16,
+                               EAP_TYPE_PAX,
+                               EAP_PAX_OP_STD_1, 0, EAP_PAX_MAC_HMAC_SHA1_128,
+                               EAP_PAX_DH_GROUP_NONE, EAP_PAX_PUBLIC_KEY_NONE,
+                               0xda, 0xab, 0x2c, 0xe7, 0x84, 0x41, 0xb5, 0x5c,
+                               0xee, 0xcf, 0x62, 0x03, 0xc5, 0x69, 0xcb, 0xf4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Correct ICV - incorrect A length in STD-1")
+            ctx['id'] = 10
+            return struct.pack(">BBHBBBBBBH8L16B", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 5 + 2 + 32 + 16,
+                               EAP_TYPE_PAX,
+                               EAP_PAX_OP_STD_1, 0, EAP_PAX_MAC_HMAC_SHA1_128,
+                               EAP_PAX_DH_GROUP_NONE, EAP_PAX_PUBLIC_KEY_NONE,
+                               0, 0, 0, 0, 0, 0, 0, 0, 0,
+                               0xc4, 0xb0, 0x81, 0xe4, 0x6c, 0x8c, 0x20, 0x23,
+                               0x60, 0x46, 0x89, 0xea, 0x94, 0x60, 0xf3, 0x2a)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Correct ICV - extra data in STD-1")
+            ctx['id'] = 10
+            return struct.pack(">BBHBBBBBBH8LB16B", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 5 + 2 + 32 + 1 + 16,
+                               EAP_TYPE_PAX,
+                               EAP_PAX_OP_STD_1, 0, EAP_PAX_MAC_HMAC_SHA1_128,
+                               EAP_PAX_DH_GROUP_NONE, EAP_PAX_PUBLIC_KEY_NONE,
+                               32, 0, 0, 0, 0, 0, 0, 0, 0,
+                               1,
+                               0x61, 0x49, 0x65, 0x37, 0x21, 0xe8, 0xd8, 0xbf,
+                               0xf3, 0x02, 0x01, 0xe5, 0x42, 0x51, 0xd3, 0x34)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unexpected STD-1")
+            return struct.pack(">BBHBBBBBBH8L16B", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 5 + 2 + 32 + 16,
+                               EAP_TYPE_PAX,
+                               EAP_PAX_OP_STD_1, 0, EAP_PAX_MAC_HMAC_SHA1_128,
+                               EAP_PAX_DH_GROUP_NONE, EAP_PAX_PUBLIC_KEY_NONE,
+                               32, 0, 0, 0, 0, 0, 0, 0, 0,
+                               0xe5, 0x1d, 0xbf, 0xb8, 0x70, 0x20, 0x5c, 0xba,
+                               0x41, 0xbb, 0x34, 0xda, 0x1a, 0x08, 0xe6, 0x8d)
+
+        idx += 1
+        if ctx['num'] == idx:
+            return pax_std_1(ctx)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: MAC ID changed during session")
+            return struct.pack(">BBHBBBBBBH8L16B", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 5 + 2 + 32 + 16,
+                               EAP_TYPE_PAX,
+                               EAP_PAX_OP_STD_1, 0, EAP_PAX_HMAC_SHA256_128,
+                               EAP_PAX_DH_GROUP_NONE, EAP_PAX_PUBLIC_KEY_NONE,
+                               32, 0, 0, 0, 0, 0, 0, 0, 0,
+                               0xee, 0x00, 0xbf, 0xb8, 0x70, 0x20, 0x5c, 0xba,
+                               0x41, 0xbb, 0x34, 0xda, 0x1a, 0x08, 0xe6, 0x8d)
+
+        idx += 1
+        if ctx['num'] == idx:
+            return pax_std_1(ctx)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: DH Group ID changed during session")
+            return struct.pack(">BBHBBBBBBH8L16B", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 5 + 2 + 32 + 16,
+                               EAP_TYPE_PAX,
+                               EAP_PAX_OP_STD_1, 0, EAP_PAX_MAC_HMAC_SHA1_128,
+                               EAP_PAX_DH_GROUP_2048_MODP,
+                               EAP_PAX_PUBLIC_KEY_NONE,
+                               32, 0, 0, 0, 0, 0, 0, 0, 0,
+                               0xee, 0x01, 0xbf, 0xb8, 0x70, 0x20, 0x5c, 0xba,
+                               0x41, 0xbb, 0x34, 0xda, 0x1a, 0x08, 0xe6, 0x8d)
+
+        idx += 1
+        if ctx['num'] == idx:
+            return pax_std_1(ctx)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Public Key ID changed during session")
+            return struct.pack(">BBHBBBBBBH8L16B", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 5 + 2 + 32 + 16,
+                               EAP_TYPE_PAX,
+                               EAP_PAX_OP_STD_1, 0, EAP_PAX_MAC_HMAC_SHA1_128,
+                               EAP_PAX_DH_GROUP_NONE,
+                               EAP_PAX_PUBLIC_KEY_RSAES_OAEP,
+                               32, 0, 0, 0, 0, 0, 0, 0, 0,
+                               0xee, 0x02, 0xbf, 0xb8, 0x70, 0x20, 0x5c, 0xba,
+                               0x41, 0xbb, 0x34, 0xda, 0x1a, 0x08, 0xe6, 0x8d)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unexpected STD-3")
+            ctx['id'] = 10
+            return struct.pack(">BBHBBBBBBH8L16B", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 5 + 2 + 32 + 16,
+                               EAP_TYPE_PAX,
+                               EAP_PAX_OP_STD_3, 0, EAP_PAX_MAC_HMAC_SHA1_128,
+                               EAP_PAX_DH_GROUP_NONE, EAP_PAX_PUBLIC_KEY_NONE,
+                               32, 0, 0, 0, 0, 0, 0, 0, 0,
+                               0x47, 0xbb, 0xc0, 0xf9, 0xb9, 0x69, 0xf5, 0xcb,
+                               0x3a, 0xe8, 0xe7, 0xd6, 0x80, 0x28, 0xf2, 0x59)
+
+        idx += 1
+        if ctx['num'] == idx:
+            return pax_std_1(ctx)
+        idx += 1
+        if ctx['num'] == idx:
+            # TODO: MAC calculation; for now, this gets dropped due to incorrect
+            # ICV
+            logger.info("Test: STD-3 with CE flag")
+            return struct.pack(">BBHBBBBBBH8L16B", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 5 + 2 + 32 + 16,
+                               EAP_TYPE_PAX,
+                               EAP_PAX_OP_STD_3, EAP_PAX_FLAGS_CE,
+                               EAP_PAX_MAC_HMAC_SHA1_128,
+                               EAP_PAX_DH_GROUP_NONE, EAP_PAX_PUBLIC_KEY_NONE,
+                               32, 0, 0, 0, 0, 0, 0, 0, 0,
+                               0x8a, 0xc2, 0xf9, 0xf4, 0x8b, 0x75, 0x72, 0xa2,
+                               0x4d, 0xd3, 0x1e, 0x54, 0x77, 0x04, 0x05, 0xe2)
+
+        idx += 1
+        if ctx['num'] & 0x1 == idx & 0x1:
+            logger.info("Test: Default request")
+            return struct.pack(">BBHB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1,
+                               EAP_TYPE_PAX)
+        else:
+            logger.info("Test: Default EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+    srv = start_radius_server(pax_handler)
+    if srv is None:
+        return "skip"
+
+    try:
+        hapd = start_ap(apdev[0]['ifname'])
+
+        for i in range(0, 18):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="PAX", identity="user",
+                           password_hex="0123456789abcdef0123456789abcdef",
+                           wait_connect=False)
+            logger.info("Waiting for EAP method to start")
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"],
+                                   timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            time.sleep(0.05)
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].dump_monitor()
+
+        logger.info("Too short password")
+        dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                       eap="PAX", identity="user",
+                       password_hex="0123456789abcdef0123456789abcd",
+                       wait_connect=False)
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"], timeout=15)
+        if ev is None:
+            raise Exception("Timeout on EAP start")
+        time.sleep(0.1)
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].dump_monitor()
+
+        logger.info("No password")
+        dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                       eap="PAX", identity="user",
+                       wait_connect=False)
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"], timeout=15)
+        if ev is None:
+            raise Exception("Timeout on EAP start")
+        time.sleep(0.1)
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].dump_monitor()
+    finally:
+        stop_radius_server(srv)

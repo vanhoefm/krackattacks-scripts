@@ -79,12 +79,10 @@ void wpas_notify_state_changed(struct wpa_supplicant *wpa_s,
 	/* notify the new DBus API */
 	wpas_dbus_signal_prop_changed(wpa_s, WPAS_DBUS_PROP_STATE);
 
-#ifdef CONFIG_P2P
 	if (new_state == WPA_COMPLETED)
 		wpas_p2p_notif_connected(wpa_s);
 	else if (old_state >= WPA_ASSOCIATED && new_state < WPA_ASSOCIATED)
 		wpas_p2p_notif_disconnected(wpa_s);
-#endif /* CONFIG_P2P */
 
 	sme_state_changed(wpa_s);
 
@@ -258,9 +256,7 @@ void wpas_notify_network_removed(struct wpa_supplicant *wpa_s,
 		wpa_sm_pmksa_cache_flush(wpa_s->wpa, ssid);
 	if (!ssid->p2p_group && wpa_s->global->p2p_group_formation != wpa_s)
 		wpas_dbus_unregister_network(wpa_s, ssid->id);
-#ifdef CONFIG_P2P
 	wpas_p2p_network_removed(wpa_s, ssid);
-#endif /* CONFIG_P2P */
 }
 
 

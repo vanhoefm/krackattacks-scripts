@@ -73,10 +73,8 @@ static void wpas_wps_assoc_with_cred_cancel(struct wpa_supplicant *wpa_s)
 
 int wpas_wps_eapol_cb(struct wpa_supplicant *wpa_s)
 {
-#ifdef CONFIG_P2P
 	if (wpas_p2p_wps_eapol_cb(wpa_s) > 0)
 		return 1;
-#endif /* CONFIG_P2P */
 
 	if (!wpa_s->wps_success &&
 	    wpa_s->current_ssid &&
@@ -576,9 +574,7 @@ static void wpa_supplicant_wps_event_fail(struct wpa_supplicant *wpa_s,
 	eloop_register_timeout(0, 100000, wpas_wps_clear_timeout, wpa_s, NULL);
 
 	wpas_notify_wps_event_fail(wpa_s, fail);
-#ifdef CONFIG_P2P
 	wpas_p2p_wps_failed(wpa_s, fail);
-#endif /* CONFIG_P2P */
 }
 
 
@@ -637,9 +633,7 @@ static void wpa_supplicant_wps_event_success(struct wpa_supplicant *wpa_s)
 	eloop_register_timeout(10, 0, wpas_wps_reenable_networks_cb, wpa_s,
 			       NULL);
 
-#ifdef CONFIG_P2P
 	wpas_p2p_wps_success(wpa_s, wpa_s->bssid, 0);
-#endif /* CONFIG_P2P */
 }
 
 

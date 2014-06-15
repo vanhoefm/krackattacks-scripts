@@ -447,9 +447,7 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 	wpa_supplicant_ap_deinit(wpa_s);
 #endif /* CONFIG_AP */
 
-#ifdef CONFIG_P2P
 	wpas_p2p_deinit(wpa_s);
-#endif /* CONFIG_P2P */
 
 #ifdef CONFIG_OFFCHANNEL
 	offchannel_deinit(wpa_s);
@@ -705,9 +703,7 @@ void wpa_supplicant_set_state(struct wpa_supplicant *wpa_s,
 #endif /* IEEE8021X_EAPOL */
 		wpa_s->after_wps = 0;
 		wpa_s->known_wps_freq = 0;
-#ifdef CONFIG_P2P
 		wpas_p2p_completed(wpa_s);
-#endif /* CONFIG_P2P */
 
 		sme_sched_obss_scan(wpa_s, 1);
 	} else if (state == WPA_DISCONNECTED || state == WPA_ASSOCIATING ||
@@ -737,13 +733,11 @@ void wpa_supplicant_set_state(struct wpa_supplicant *wpa_s,
 	if (wpa_s->wpa_state != old_state) {
 		wpas_notify_state_changed(wpa_s, wpa_s->wpa_state, old_state);
 
-#ifdef CONFIG_P2P
 		/*
 		 * Notify the P2P Device interface about a state change in one
 		 * of the interfaces.
 		 */
 		wpas_p2p_indicate_state_change(wpa_s);
-#endif /* CONFIG_P2P */
 
 		if (wpa_s->wpa_state == WPA_COMPLETED ||
 		    old_state == WPA_COMPLETED)
@@ -3733,12 +3727,10 @@ static int wpa_supplicant_init_iface(struct wpa_supplicant *wpa_s,
 		return -1;
 	}
 
-#ifdef CONFIG_P2P
 	if (iface->p2p_mgmt && wpas_p2p_init(wpa_s->global, wpa_s) < 0) {
 		wpa_msg(wpa_s, MSG_ERROR, "Failed to init P2P");
 		return -1;
 	}
-#endif /* CONFIG_P2P */
 
 	if (wpa_bss_init(wpa_s) < 0)
 		return -1;
@@ -3789,16 +3781,7 @@ static void wpa_supplicant_deinit_iface(struct wpa_supplicant *wpa_s,
 	}
 
 	wpa_supplicant_cleanup(wpa_s);
-
-#ifdef CONFIG_P2P
-	if (wpa_s == wpa_s->parent)
-		wpas_p2p_group_remove(wpa_s, "*");
-	if (wpa_s == wpa_s->global->p2p_init_wpa_s && wpa_s->global->p2p) {
-		wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Disable P2P since removing "
-			"the management interface is being removed");
-		wpas_p2p_deinit_global(wpa_s->global);
-	}
-#endif /* CONFIG_P2P */
+	wpas_p2p_deinit_iface(wpa_s);
 
 	wpas_ctrl_radio_work_flush(wpa_s);
 	radio_remove_interface(wpa_s);
@@ -4227,11 +4210,7 @@ void wpa_supplicant_update_config(struct wpa_supplicant *wpa_s)
 #ifdef CONFIG_WPS
 	wpas_wps_update_config(wpa_s);
 #endif /* CONFIG_WPS */
-
-#ifdef CONFIG_P2P
 	wpas_p2p_update_config(wpa_s);
-#endif /* CONFIG_P2P */
-
 	wpa_s->conf->changed_parameters = 0;
 }
 

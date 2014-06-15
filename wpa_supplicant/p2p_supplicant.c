@@ -122,6 +122,7 @@ static void wpas_p2p_fallback_to_go_neg(struct wpa_supplicant *wpa_s,
 static int wpas_p2p_stop_find_oper(struct wpa_supplicant *wpa_s);
 static void wpas_stop_listen(void *ctx);
 static void wpas_p2p_psk_failure_removal(void *eloop_ctx, void *timeout_ctx);
+static void wpas_p2p_group_deinit(struct wpa_supplicant *wpa_s);
 
 
 /*
@@ -4016,7 +4017,7 @@ void wpas_p2p_deinit(struct wpa_supplicant *wpa_s)
  *
  * This function deinitializes the global (per device) P2P module.
  */
-void wpas_p2p_deinit_global(struct wpa_global *global)
+static void wpas_p2p_deinit_global(struct wpa_global *global)
 {
 	struct wpa_supplicant *wpa_s, *tmp;
 
@@ -5807,7 +5808,7 @@ void wpas_p2p_scan_ie(struct wpa_supplicant *wpa_s, struct wpabuf *ies)
 }
 
 
-void wpas_p2p_group_deinit(struct wpa_supplicant *wpa_s)
+static void wpas_p2p_group_deinit(struct wpa_supplicant *wpa_s)
 {
 	p2p_group_deinit(wpa_s->p2p_group);
 	wpa_s->p2p_group = NULL;
@@ -7829,4 +7830,24 @@ void wpas_p2p_indicate_state_change(struct wpa_supplicant *wpa_s)
 
 	wpas_p2p_optimize_listen_channel(wpa_s, freqs, num);
 	os_free(freqs);
+}
+
+
+void wpas_p2p_deinit_iface(struct wpa_supplicant *wpa_s)
+{
+	if (wpa_s == wpa_s->parent)
+		wpas_p2p_group_remove(wpa_s, "*");
+	if (wpa_s == wpa_s->global->p2p_init_wpa_s && wpa_s->global->p2p) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Disable P2P since removing "
+			"the management interface is being removed");
+		wpas_p2p_deinit_global(wpa_s->global);
+	}
+}
+
+
+void wpas_p2p_ap_deinit(struct wpa_supplicant *wpa_s)
+{
+	if (wpa_s->ap_iface->bss)
+		wpa_s->ap_iface->bss[0]->p2p_group = NULL;
+	wpas_p2p_group_deinit(wpa_s);
 }

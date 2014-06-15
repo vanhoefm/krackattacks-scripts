@@ -455,23 +455,17 @@ static int ap_probe_req_rx(void *ctx, const u8 *sa, const u8 *da,
 			   const u8 *bssid, const u8 *ie, size_t ie_len,
 			   int ssi_signal)
 {
-#ifdef CONFIG_P2P
 	struct wpa_supplicant *wpa_s = ctx;
 	return wpas_p2p_probe_req_rx(wpa_s, sa, da, bssid, ie, ie_len,
 				     ssi_signal);
-#else /* CONFIG_P2P */
-	return 0;
-#endif /* CONFIG_P2P */
 }
 
 
 static void ap_wps_reg_success_cb(void *ctx, const u8 *mac_addr,
 				  const u8 *uuid_e)
 {
-#ifdef CONFIG_P2P
 	struct wpa_supplicant *wpa_s = ctx;
 	wpas_p2p_wps_success(wpa_s, mac_addr, 1);
-#endif /* CONFIG_P2P */
 }
 
 
@@ -668,11 +662,7 @@ void wpa_supplicant_ap_deinit(struct wpa_supplicant *wpa_s)
 	wpa_s->current_ssid = NULL;
 	eapol_sm_notify_config(wpa_s->eapol, NULL, NULL);
 	wpa_s->assoc_freq = 0;
-#ifdef CONFIG_P2P
-	if (wpa_s->ap_iface->bss)
-		wpa_s->ap_iface->bss[0]->p2p_group = NULL;
-	wpas_p2p_group_deinit(wpa_s);
-#endif /* CONFIG_P2P */
+	wpas_p2p_ap_deinit(wpa_s);
 	wpa_s->ap_iface->driver_ap_teardown =
 		!!(wpa_s->drv_flags & WPA_DRIVER_FLAGS_AP_TEARDOWN_SUPPORT);
 

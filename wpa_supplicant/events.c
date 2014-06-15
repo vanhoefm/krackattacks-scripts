@@ -2766,9 +2766,7 @@ static void wpa_supplicant_update_channel_list(
 	wpa_s->hw.modes = wpa_drv_get_hw_feature_data(
 		wpa_s, &wpa_s->hw.num_modes, &wpa_s->hw.flags);
 
-#ifdef CONFIG_P2P
 	wpas_p2p_update_channel_list(wpa_s);
-#endif /* CONFIG_P2P */
 
 	/*
 	 * Check other interfaces to see if they share the same radio. If
@@ -2864,10 +2862,8 @@ static void wpas_event_rx_mgmt_action(struct wpa_supplicant *wpa_s,
 	}
 #endif /* CONFIG_INTERWORKING */
 
-#ifdef CONFIG_P2P
 	wpas_p2p_rx_action(wpa_s, mgmt->da, mgmt->sa, mgmt->bssid,
 			   category, payload, plen, freq);
-#endif /* CONFIG_P2P */
 }
 
 
@@ -3268,14 +3264,12 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			break;
 		}
 #endif /* CONFIG_AP */
-#ifdef CONFIG_P2P
 		wpas_p2p_probe_req_rx(wpa_s, data->rx_probe_req.sa,
 				      data->rx_probe_req.da,
 				      data->rx_probe_req.bssid,
 				      data->rx_probe_req.ie,
 				      data->rx_probe_req.ie_len,
 				      data->rx_probe_req.ssi_signal);
-#endif /* CONFIG_P2P */
 		break;
 	case EVENT_REMAIN_ON_CHANNEL:
 #ifdef CONFIG_OFFCHANNEL
@@ -3283,21 +3277,17 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			wpa_s, data->remain_on_channel.freq,
 			data->remain_on_channel.duration);
 #endif /* CONFIG_OFFCHANNEL */
-#ifdef CONFIG_P2P
 		wpas_p2p_remain_on_channel_cb(
 			wpa_s, data->remain_on_channel.freq,
 			data->remain_on_channel.duration);
-#endif /* CONFIG_P2P */
 		break;
 	case EVENT_CANCEL_REMAIN_ON_CHANNEL:
 #ifdef CONFIG_OFFCHANNEL
 		offchannel_cancel_remain_on_channel_cb(
 			wpa_s, data->remain_on_channel.freq);
 #endif /* CONFIG_OFFCHANNEL */
-#ifdef CONFIG_P2P
 		wpas_p2p_cancel_remain_on_channel_cb(
 			wpa_s, data->remain_on_channel.freq);
-#endif /* CONFIG_P2P */
 		break;
 	case EVENT_EAPOL_RX:
 		wpa_supplicant_rx_eapol(wpa_s, data->eapol_rx.src,
@@ -3382,9 +3372,7 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			wpa_s, &data->channel_list_changed);
 		break;
 	case EVENT_INTERFACE_UNAVAILABLE:
-#ifdef CONFIG_P2P
 		wpas_p2p_interface_unavailable(wpa_s);
-#endif /* CONFIG_P2P */
 		break;
 	case EVENT_BEST_CHANNEL:
 		wpa_dbg(wpa_s, MSG_DEBUG, "Best channel event received "
@@ -3394,11 +3382,9 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		wpa_s->best_24_freq = data->best_chan.freq_24;
 		wpa_s->best_5_freq = data->best_chan.freq_5;
 		wpa_s->best_overall_freq = data->best_chan.freq_overall;
-#ifdef CONFIG_P2P
 		wpas_p2p_update_best_channels(wpa_s, data->best_chan.freq_24,
 					      data->best_chan.freq_5,
 					      data->best_chan.freq_overall);
-#endif /* CONFIG_P2P */
 		break;
 	case EVENT_UNPROT_DEAUTH:
 		wpa_supplicant_event_unprot_deauth(wpa_s,

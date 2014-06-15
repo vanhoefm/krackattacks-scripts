@@ -135,6 +135,229 @@ def start_ap(ifname):
     hapd = hostapd.add_ap(ifname, params)
     return hapd
 
+def test_eap_proto(dev, apdev):
+    """EAP protocol tests"""
+    def eap_handler(ctx, req):
+        logger.info("eap_handler - RX " + req.encode("hex"))
+        if 'num' not in ctx:
+            ctx['num'] = 0
+        ctx['num'] = ctx['num'] + 1
+        if 'id' not in ctx:
+            ctx['id'] = 1
+        ctx['id'] = (ctx['id'] + 1) % 256
+        idx = 0
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: MD5 challenge")
+            return struct.pack(">BBHBBBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3,
+                               EAP_TYPE_MD5,
+                               1, 0xaa, ord('n'))
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Success - id off by 2")
+            return struct.pack(">BBH", EAP_CODE_SUCCESS, ctx['id'] + 1, 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: MD5 challenge")
+            return struct.pack(">BBHBBBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3,
+                               EAP_TYPE_MD5,
+                               1, 0xaa, ord('n'))
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Success - id off by 3")
+            return struct.pack(">BBH", EAP_CODE_SUCCESS, ctx['id'] + 2, 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: MD5 challenge")
+            return struct.pack(">BBHBBBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3,
+                               EAP_TYPE_MD5,
+                               1, 0xaa, ord('n'))
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Notification/Request")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_NOTIFICATION,
+                               ord('A'))
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Success")
+            return struct.pack(">BBH", EAP_CODE_SUCCESS, ctx['id'] - 1, 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Notification/Request")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_NOTIFICATION,
+                               ord('B'))
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: MD5 challenge")
+            return struct.pack(">BBHBBBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3,
+                               EAP_TYPE_MD5,
+                               1, 0xaa, ord('n'))
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Success")
+            return struct.pack(">BBH", EAP_CODE_SUCCESS, ctx['id'] - 1, 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Notification/Request")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_NOTIFICATION,
+                               ord('C'))
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: MD5 challenge")
+            return struct.pack(">BBHBBBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3,
+                               EAP_TYPE_MD5,
+                               1, 0xaa, ord('n'))
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Notification/Request")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_NOTIFICATION,
+                               ord('D'))
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Success")
+            return struct.pack(">BBH", EAP_CODE_SUCCESS, ctx['id'] - 1, 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Notification/Request")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_NOTIFICATION,
+                               ord('E'))
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Notification/Request (same id)")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'] - 1,
+                               4 + 1 + 1,
+                               EAP_TYPE_NOTIFICATION,
+                               ord('F'))
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unexpected EAP-Success")
+            return struct.pack(">BBH", EAP_CODE_SUCCESS, ctx['id'] - 2, 4)
+
+        return None
+
+    srv = start_radius_server(eap_handler)
+    if srv is None:
+        return "skip"
+
+    try:
+        hapd = start_ap(apdev[0]['ifname'])
+
+        dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                       eap="MD5", identity="user", password="password",
+                       wait_connect=False)
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"], timeout=15)
+        if ev is None:
+            raise Exception("Timeout on EAP start")
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=15)
+        if ev is None:
+            raise Exception("Timeout on EAP success")
+        dev[0].request("REMOVE_NETWORK all")
+
+        dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                       eap="MD5", identity="user", password="password",
+                       wait_connect=False)
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"], timeout=15)
+        if ev is None:
+            raise Exception("Timeout on EAP start")
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=1)
+        if ev is not None:
+            raise Exception("Unexpected EAP success")
+        dev[0].request("REMOVE_NETWORK all")
+
+        dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                       eap="MD5", identity="user", password="password",
+                       wait_connect=False)
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"], timeout=15)
+        if ev is None:
+            raise Exception("Timeout on EAP start")
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-NOTIFICATION"], timeout=10)
+        if ev is None:
+            raise Exception("Timeout on EAP notification")
+        if ev != "<3>CTRL-EVENT-EAP-NOTIFICATION A":
+            raise Exception("Unexpected notification contents: " + ev)
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=15)
+        if ev is None:
+            raise Exception("Timeout on EAP success")
+        dev[0].request("REMOVE_NETWORK all")
+
+        dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                       eap="MD5", identity="user", password="password",
+                       wait_connect=False)
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-NOTIFICATION"], timeout=10)
+        if ev is None:
+            raise Exception("Timeout on EAP notification")
+        if ev != "<3>CTRL-EVENT-EAP-NOTIFICATION B":
+            raise Exception("Unexpected notification contents: " + ev)
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"], timeout=15)
+        if ev is None:
+            raise Exception("Timeout on EAP start")
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=15)
+        if ev is None:
+            raise Exception("Timeout on EAP success")
+        dev[0].request("REMOVE_NETWORK all")
+
+        dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                       eap="MD5", identity="user", password="password",
+                       wait_connect=False)
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-NOTIFICATION"], timeout=10)
+        if ev is None:
+            raise Exception("Timeout on EAP notification")
+        if ev != "<3>CTRL-EVENT-EAP-NOTIFICATION C":
+            raise Exception("Unexpected notification contents: " + ev)
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"], timeout=15)
+        if ev is None:
+            raise Exception("Timeout on EAP start")
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-NOTIFICATION"], timeout=10)
+        if ev is None:
+            raise Exception("Timeout on EAP notification")
+        if ev != "<3>CTRL-EVENT-EAP-NOTIFICATION D":
+            raise Exception("Unexpected notification contents: " + ev)
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=15)
+        if ev is None:
+            raise Exception("Timeout on EAP success")
+        dev[0].request("REMOVE_NETWORK all")
+
+        dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                       eap="MD5", identity="user", password="password",
+                       wait_connect=False)
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-NOTIFICATION"], timeout=10)
+        if ev is None:
+            raise Exception("Timeout on EAP notification")
+        if ev != "<3>CTRL-EVENT-EAP-NOTIFICATION E":
+            raise Exception("Unexpected notification contents: " + ev)
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-NOTIFICATION"], timeout=10)
+        if ev is None:
+            raise Exception("Timeout on EAP notification")
+        if ev != "<3>CTRL-EVENT-EAP-NOTIFICATION F":
+            raise Exception("Unexpected notification contents: " + ev)
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=15)
+        if ev is None:
+            raise Exception("Timeout on EAP failure")
+        dev[0].request("REMOVE_NETWORK all")
+    finally:
+        stop_radius_server(srv)
+
 EAP_SAKE_VERSION = 2
 
 EAP_SAKE_SUBTYPE_CHALLENGE = 1

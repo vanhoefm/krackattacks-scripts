@@ -1920,7 +1920,8 @@ skip_rsn_check:
 error:
 	wpa_tdls_send_error(sm, src_addr, WLAN_TDLS_SETUP_RESPONSE, dtoken,
 			    status);
-	wpa_tdls_peer_free(sm, peer);
+	if (peer)
+		wpa_tdls_peer_free(sm, peer);
 	return -1;
 }
 

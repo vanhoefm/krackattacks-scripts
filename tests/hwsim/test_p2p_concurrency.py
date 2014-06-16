@@ -119,6 +119,8 @@ def test_concurrent_grpform_while_connecting2(dev, apdev):
     logger.info("Start connection to an infrastructure AP")
     hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
     dev[0].connect("test-open", key_mgmt="NONE", wait_connect=False)
+    dev[1].request("BSS_FLUSH 0")
+    dev[1].scan(freq="2412", only_new=True)
 
     logger.info("Form a P2P group while connecting to an AP")
     dev[0].request("SET p2p_no_group_iface 0")

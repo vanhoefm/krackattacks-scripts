@@ -946,35 +946,24 @@ static void hostapd_set_acl(struct hostapd_data *hapd)
 
 	if (hapd->iface->drv_max_acl_mac_addrs == 0)
 		return;
-	if (!(conf->bss[0]->num_accept_mac || conf->bss[0]->num_deny_mac))
-		return;
 
 	if (conf->bss[0]->macaddr_acl == DENY_UNLESS_ACCEPTED) {
-		if (conf->bss[0]->num_accept_mac) {
-			accept_acl = 1;
-			err = hostapd_set_acl_list(hapd,
-						   conf->bss[0]->accept_mac,
-						   conf->bss[0]->num_accept_mac,
-						   accept_acl);
-			if (err) {
-				wpa_printf(MSG_DEBUG, "Failed to set accept acl");
-				return;
-			}
-		} else {
-			wpa_printf(MSG_DEBUG, "Mismatch between ACL Policy & Accept/deny lists file");
+		accept_acl = 1;
+		err = hostapd_set_acl_list(hapd, conf->bss[0]->accept_mac,
+					   conf->bss[0]->num_accept_mac,
+					   accept_acl);
+		if (err) {
+			wpa_printf(MSG_DEBUG, "Failed to set accept acl");
+			return;
 		}
 	} else if (conf->bss[0]->macaddr_acl == ACCEPT_UNLESS_DENIED) {
-		if (conf->bss[0]->num_deny_mac) {
-			accept_acl = 0;
-			err = hostapd_set_acl_list(hapd, conf->bss[0]->deny_mac,
-						   conf->bss[0]->num_deny_mac,
-						   accept_acl);
-			if (err) {
-				wpa_printf(MSG_DEBUG, "Failed to set deny acl");
-				return;
-			}
-		} else {
-			wpa_printf(MSG_DEBUG, "Mismatch between ACL Policy & Accept/deny lists file");
+		accept_acl = 0;
+		err = hostapd_set_acl_list(hapd, conf->bss[0]->deny_mac,
+					   conf->bss[0]->num_deny_mac,
+					   accept_acl);
+		if (err) {
+			wpa_printf(MSG_DEBUG, "Failed to set deny acl");
+			return;
 		}
 	}
 }

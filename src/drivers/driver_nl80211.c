@@ -10177,7 +10177,15 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 	if (drv->global)
 		drv->global->if_add_ifindex = ifidx;
 
-	if (ifidx > 0)
+	/*
+	 * Some virtual interfaces need to process EAPOL packets and events on
+	 * the parent interface. This is used mainly with hostapd.
+	 */
+	if (ifidx > 0 &&
+	    (drv->hostapd ||
+	     nlmode == NL80211_IFTYPE_AP_VLAN ||
+	     nlmode == NL80211_IFTYPE_WDS ||
+	     nlmode == NL80211_IFTYPE_MONITOR))
 		add_ifidx(drv, ifidx);
 
 	return 0;

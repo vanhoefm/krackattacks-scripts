@@ -1945,3 +1945,129 @@ def test_eap_proto_pax(dev, apdev):
         dev[0].dump_monitor()
     finally:
         stop_radius_server(srv)
+
+def test_eap_proto_psk(dev, apdev):
+    """EAP-PSK protocol tests"""
+    def psk_handler(ctx, req):
+        logger.info("psk_handler - RX " + req.encode("hex"))
+        if 'num' not in ctx:
+            ctx['num'] = 0
+        ctx['num'] = ctx['num'] + 1
+        if 'id' not in ctx:
+            ctx['id'] = 1
+        ctx['id'] = (ctx['id'] + 1) % 256
+
+        idx = 0
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Missing payload")
+            return struct.pack(">BBHB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1,
+                               EAP_TYPE_PSK)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Non-zero T in first message")
+            return struct.pack(">BBHBB4L", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 16,
+                               EAP_TYPE_PSK, 0xc0, 0, 0, 0, 0)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid first message")
+            return struct.pack(">BBHBB4L", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 16,
+                               EAP_TYPE_PSK, 0, 0, 0, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Too short third message")
+            return struct.pack(">BBHB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1,
+                               EAP_TYPE_PSK)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid first message")
+            return struct.pack(">BBHBB4L", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 16,
+                               EAP_TYPE_PSK, 0, 0, 0, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Incorrect T in third message")
+            return struct.pack(">BBHBB4L4L", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 16 + 16,
+                               EAP_TYPE_PSK, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid first message")
+            return struct.pack(">BBHBB4L", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 16,
+                               EAP_TYPE_PSK, 0, 0, 0, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Missing PCHANNEL in third message")
+            return struct.pack(">BBHBB4L4L", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 16 + 16,
+                               EAP_TYPE_PSK, 0x80, 0, 0, 0, 0, 0, 0, 0, 0)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid first message")
+            return struct.pack(">BBHBB4L", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 16,
+                               EAP_TYPE_PSK, 0, 0, 0, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Invalic MAC_S in third message")
+            return struct.pack(">BBHBB4L4L5LB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 16 + 16 + 21,
+                               EAP_TYPE_PSK, 0x80, 0, 0, 0, 0, 0, 0, 0, 0,
+                               0, 0, 0, 0, 0, 0)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Valid first message")
+            return struct.pack(">BBHBB4L", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 16,
+                               EAP_TYPE_PSK, 0, 0, 0, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        return None
+
+    srv = start_radius_server(psk_handler)
+    if srv is None:
+        return "skip"
+
+    try:
+        hapd = start_ap(apdev[0]['ifname'])
+
+        for i in range(0, 6):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="PSK", identity="user",
+                           password_hex="0123456789abcdef0123456789abcdef",
+                           wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"],
+                                   timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            time.sleep(0.1)
+            dev[0].request("REMOVE_NETWORK all")
+
+        logger.info("Test: Invalid PSK length")
+        dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                       eap="PSK", identity="user",
+                       password_hex="0123456789abcdef0123456789abcd",
+                       wait_connect=False)
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"],
+                               timeout=15)
+        if ev is None:
+            raise Exception("Timeout on EAP start")
+        time.sleep(0.1)
+        dev[0].request("REMOVE_NETWORK all")
+    finally:
+        stop_radius_server(srv)

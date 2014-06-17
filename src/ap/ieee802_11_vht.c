@@ -112,23 +112,9 @@ u16 copy_sta_vht_capab(struct hostapd_data *hapd, struct sta_info *sta,
 u16 set_sta_vht_opmode(struct hostapd_data *hapd, struct sta_info *sta,
 		       const u8 *vht_oper_notif)
 {
-	u8 channel_width;
-
 	if (!vht_oper_notif) {
 		sta->flags &= ~WLAN_STA_VHT_OPMODE_ENABLED;
 		return WLAN_STATUS_SUCCESS;
-	}
-
-	channel_width = *vht_oper_notif & VHT_OPMODE_CHANNEL_WIDTH_MASK;
-
-	if (channel_width != VHT_CHANWIDTH_USE_HT &&
-	    channel_width != VHT_CHANWIDTH_80MHZ &&
-	    channel_width != VHT_CHANWIDTH_160MHZ &&
-	    channel_width != VHT_CHANWIDTH_80P80MHZ &&
-	    ((*vht_oper_notif & VHT_OPMODE_CHANNEL_RxNSS_MASK) >>
-	     VHT_OPMODE_NOTIF_RX_NSS_SHIFT) > VHT_RX_NSS_MAX_STREAMS - 1) {
-		sta->flags &= ~WLAN_STA_VHT_OPMODE_ENABLED;
-		return WLAN_STATUS_UNSPECIFIED_FAILURE;
 	}
 
 	sta->flags |= WLAN_STA_VHT_OPMODE_ENABLED;

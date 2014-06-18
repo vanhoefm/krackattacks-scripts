@@ -236,6 +236,8 @@ static const u8 * eap_gpsk_process_csuite_list(struct eap_sm *sm,
 					       size_t *list_len,
 					       const u8 *pos, const u8 *end)
 {
+	size_t len;
+
 	if (pos == NULL)
 		return NULL;
 
@@ -243,22 +245,24 @@ static const u8 * eap_gpsk_process_csuite_list(struct eap_sm *sm,
 		wpa_printf(MSG_DEBUG, "EAP-GPSK: Too short GPSK-1 packet");
 		return NULL;
 	}
-	*list_len = WPA_GET_BE16(pos);
+	len = WPA_GET_BE16(pos);
 	pos += 2;
-	if (end - pos < (int) *list_len) {
+	if (len > (size_t) (end - pos)) {
 		wpa_printf(MSG_DEBUG, "EAP-GPSK: CSuite_List overflow");
 		return NULL;
 	}
-	if (*list_len == 0 || (*list_len % sizeof(struct eap_gpsk_csuite))) {
+	if (len == 0 || (len % sizeof(struct eap_gpsk_csuite))) {
 		wpa_printf(MSG_DEBUG, "EAP-GPSK: Invalid CSuite_List len %lu",
-			   (unsigned long) *list_len);
+			   (unsigned long) len);
 		return NULL;
 	}
-	*list = pos;
-	pos += *list_len;
 
-	if (eap_gpsk_select_csuite(sm, data, *list, *list_len) < 0)
+	if (eap_gpsk_select_csuite(sm, data, pos, len) < 0)
 		return NULL;
+
+	*list = pos;
+	*list_len = len;
+	pos += len;
 
 	return pos;
 }

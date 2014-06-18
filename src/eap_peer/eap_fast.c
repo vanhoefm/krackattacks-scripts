@@ -1080,7 +1080,8 @@ static int eap_fast_parse_decrypted(struct wpabuf *decrypted,
 				    struct eap_fast_tlv_parse *tlv,
 				    struct wpabuf **resp)
 {
-	int mandatory, tlv_type, len, res;
+	int mandatory, tlv_type, res;
+	size_t len;
 	u8 *pos, *end;
 
 	os_memset(tlv, 0, sizeof(*tlv));
@@ -1094,13 +1095,14 @@ static int eap_fast_parse_decrypted(struct wpabuf *decrypted,
 		pos += 2;
 		len = WPA_GET_BE16(pos);
 		pos += 2;
-		if (pos + len > end) {
+		if (len > (size_t) (end - pos)) {
 			wpa_printf(MSG_INFO, "EAP-FAST: TLV overflow");
 			return -1;
 		}
 		wpa_printf(MSG_DEBUG, "EAP-FAST: Received Phase 2: "
-			   "TLV type %d length %d%s",
-			   tlv_type, len, mandatory ? " (mandatory)" : "");
+			   "TLV type %d length %u%s",
+			   tlv_type, (unsigned int) len,
+			   mandatory ? " (mandatory)" : "");
 
 		res = eap_fast_parse_tlv(tlv, tlv_type, pos, len);
 		if (res == -2)

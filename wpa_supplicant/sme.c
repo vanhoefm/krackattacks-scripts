@@ -1344,6 +1344,7 @@ void sme_event_unprot_disconnect(struct wpa_supplicant *wpa_s, const u8 *sa,
 				 const u8 *da, u16 reason_code)
 {
 	struct wpa_ssid *ssid;
+	struct os_reltime now;
 
 	if (wpa_s->wpa_state != WPA_COMPLETED)
 		return;
@@ -1359,6 +1360,12 @@ void sme_event_unprot_disconnect(struct wpa_supplicant *wpa_s, const u8 *sa,
 		return;
 	if (wpa_s->sme.sa_query_count > 0)
 		return;
+
+	os_get_reltime(&now);
+	if (wpa_s->sme.last_unprot_disconnect.sec &&
+	    !os_reltime_expired(&now, &wpa_s->sme.last_unprot_disconnect, 10))
+		return; /* limit SA Query procedure frequency */
+	wpa_s->sme.last_unprot_disconnect = now;
 
 	wpa_dbg(wpa_s, MSG_DEBUG, "SME: Unprotected disconnect dropped - "
 		"possible AP/STA state mismatch - trigger SA Query");

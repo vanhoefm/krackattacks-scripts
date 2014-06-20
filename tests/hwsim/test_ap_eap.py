@@ -125,6 +125,35 @@ def test_ap_wpa2_eap_sim(dev, apdev):
                 password="ffdca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581",
                 expect_failure=True)
 
+    logger.info("Invalid GSM-Milenage key")
+    dev[0].request("REMOVE_NETWORK all")
+    eap_connect(dev[0], apdev[0], "SIM", "1232010000000000",
+                password="ffdca4eda45b53cf0f12d7c9c3bc6a",
+                expect_failure=True)
+
+    logger.info("Invalid GSM-Milenage key(2)")
+    dev[0].request("REMOVE_NETWORK all")
+    eap_connect(dev[0], apdev[0], "SIM", "1232010000000000",
+                password="ffdca4eda45b53cf0f12d7c9c3bc6a8q:cb9cccc4b9258e6dca4760379fb82581",
+                expect_failure=True)
+
+    logger.info("Invalid GSM-Milenage key(3)")
+    dev[0].request("REMOVE_NETWORK all")
+    eap_connect(dev[0], apdev[0], "SIM", "1232010000000000",
+                password="ffdca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb8258q",
+                expect_failure=True)
+
+    logger.info("Invalid GSM-Milenage key(4)")
+    dev[0].request("REMOVE_NETWORK all")
+    eap_connect(dev[0], apdev[0], "SIM", "1232010000000000",
+                password="ffdca4eda45b53cf0f12d7c9c3bc6a89qcb9cccc4b9258e6dca4760379fb82581",
+                expect_failure=True)
+
+    logger.info("Missing key configuration")
+    dev[0].request("REMOVE_NETWORK all")
+    eap_connect(dev[0], apdev[0], "SIM", "1232010000000000",
+                expect_failure=True)
+
 def test_ap_wpa2_eap_sim_sql(dev, apdev, params):
     """WPA2-Enterprise connection using EAP-SIM (SQL)"""
     if not os.path.exists("/tmp/hlr_auc_gw.sock"):
@@ -232,6 +261,44 @@ def test_ap_wpa2_eap_aka(dev, apdev):
     dev[0].request("REMOVE_NETWORK all")
     eap_connect(dev[0], apdev[0], "AKA", "0232010000000000",
                 password="ffdca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581:000000000123",
+                expect_failure=True)
+
+    logger.info("Invalid Milenage key")
+    dev[0].request("REMOVE_NETWORK all")
+    eap_connect(dev[0], apdev[0], "AKA", "0232010000000000",
+                password="ffdca4eda45b53cf0f12d7c9c3bc6a",
+                expect_failure=True)
+
+    logger.info("Invalid Milenage key(2)")
+    eap_connect(dev[0], apdev[0], "AKA", "0232010000000000",
+                password="ffdca4eda45b53cf0f12d7c9c3bc6a8q:cb9cccc4b9258e6dca4760379fb82581:000000000123",
+                expect_failure=True)
+
+    logger.info("Invalid Milenage key(3)")
+    eap_connect(dev[0], apdev[0], "AKA", "0232010000000000",
+                password="ffdca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb8258q:000000000123",
+                expect_failure=True)
+
+    logger.info("Invalid Milenage key(4)")
+    eap_connect(dev[0], apdev[0], "AKA", "0232010000000000",
+                password="ffdca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581:00000000012q",
+                expect_failure=True)
+
+    logger.info("Invalid Milenage key(5)")
+    dev[0].request("REMOVE_NETWORK all")
+    eap_connect(dev[0], apdev[0], "AKA", "0232010000000000",
+                password="ffdca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581q000000000123",
+                expect_failure=True)
+
+    logger.info("Invalid Milenage key(6)")
+    dev[0].request("REMOVE_NETWORK all")
+    eap_connect(dev[0], apdev[0], "AKA", "0232010000000000",
+                password="ffdca4eda45b53cf0f12d7c9c3bc6a89qcb9cccc4b9258e6dca4760379fb82581q000000000123",
+                expect_failure=True)
+
+    logger.info("Missing key configuration")
+    dev[0].request("REMOVE_NETWORK all")
+    eap_connect(dev[0], apdev[0], "AKA", "0232010000000000",
                 expect_failure=True)
 
 def test_ap_wpa2_eap_aka_sql(dev, apdev, params):

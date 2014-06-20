@@ -2071,3 +2071,1493 @@ def test_eap_proto_psk(dev, apdev):
         dev[0].request("REMOVE_NETWORK all")
     finally:
         stop_radius_server(srv)
+
+EAP_SIM_SUBTYPE_START = 10
+EAP_SIM_SUBTYPE_CHALLENGE = 11
+EAP_SIM_SUBTYPE_NOTIFICATION = 12
+EAP_SIM_SUBTYPE_REAUTHENTICATION = 13
+EAP_SIM_SUBTYPE_CLIENT_ERROR = 14
+
+EAP_AKA_SUBTYPE_CHALLENGE = 1
+EAP_AKA_SUBTYPE_AUTHENTICATION_REJECT = 2
+EAP_AKA_SUBTYPE_SYNCHRONIZATION_FAILURE = 4
+EAP_AKA_SUBTYPE_IDENTITY = 5
+EAP_AKA_SUBTYPE_NOTIFICATION = 12
+EAP_AKA_SUBTYPE_REAUTHENTICATION = 13
+EAP_AKA_SUBTYPE_CLIENT_ERROR = 14
+
+EAP_SIM_AT_RAND = 1
+EAP_SIM_AT_AUTN = 2
+EAP_SIM_AT_RES = 3
+EAP_SIM_AT_AUTS = 4
+EAP_SIM_AT_PADDING = 6
+EAP_SIM_AT_NONCE_MT = 7
+EAP_SIM_AT_PERMANENT_ID_REQ = 10
+EAP_SIM_AT_MAC = 11
+EAP_SIM_AT_NOTIFICATION = 12
+EAP_SIM_AT_ANY_ID_REQ = 13
+EAP_SIM_AT_IDENTITY = 14
+EAP_SIM_AT_VERSION_LIST = 15
+EAP_SIM_AT_SELECTED_VERSION = 16
+EAP_SIM_AT_FULLAUTH_ID_REQ = 17
+EAP_SIM_AT_COUNTER = 19
+EAP_SIM_AT_COUNTER_TOO_SMALL = 20
+EAP_SIM_AT_NONCE_S = 21
+EAP_SIM_AT_CLIENT_ERROR_CODE = 22
+EAP_SIM_AT_KDF_INPUT = 23
+EAP_SIM_AT_KDF = 24
+EAP_SIM_AT_IV = 129
+EAP_SIM_AT_ENCR_DATA = 130
+EAP_SIM_AT_NEXT_PSEUDONYM = 132
+EAP_SIM_AT_NEXT_REAUTH_ID = 133
+EAP_SIM_AT_CHECKCODE = 134
+EAP_SIM_AT_RESULT_IND = 135
+EAP_SIM_AT_BIDDING = 136
+
+def test_eap_proto_aka(dev, apdev):
+    """EAP-AKA protocol tests"""
+    def aka_handler(ctx, req):
+        logger.info("aka_handler - RX " + req.encode("hex"))
+        if 'num' not in ctx:
+            ctx['num'] = 0
+        ctx['num'] = ctx['num'] + 1
+        if 'id' not in ctx:
+            ctx['id'] = 1
+        ctx['id'] = (ctx['id'] + 1) % 256
+
+        idx = 0
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Missing payload")
+            return struct.pack(">BBHB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1,
+                               EAP_TYPE_AKA)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unknown subtype")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_AKA, 255)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Client Error")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_CLIENT_ERROR)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Too short attribute header")
+            return struct.pack(">BBHBBHB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 3,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0, 255)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Truncated attribute")
+            return struct.pack(">BBHBBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0, 255,
+                               255)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Too short attribute data")
+            return struct.pack(">BBHBBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0, 255,
+                               0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Skippable/non-skippable unrecognzized attribute")
+            return struct.pack(">BBHBBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1 + 10,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               255, 1, 0, 127, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Identity request without ID type")
+            return struct.pack(">BBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Identity request ANY_ID")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_ANY_ID_REQ, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Identity request ANY_ID (duplicate)")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_ANY_ID_REQ, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Identity request ANY_ID")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_ANY_ID_REQ, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Identity request FULLAUTH_ID")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_FULLAUTH_ID_REQ, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Identity request FULLAUTH_ID (duplicate)")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_FULLAUTH_ID_REQ, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Identity request ANY_ID")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_ANY_ID_REQ, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Identity request FULLAUTH_ID")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_FULLAUTH_ID_REQ, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Identity request PERMANENT_ID")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_PERMANENT_ID_REQ, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Identity request PERMANENT_ID (duplicate)")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_PERMANENT_ID_REQ, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Challenge with no attributes")
+            return struct.pack(">BBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_CHALLENGE, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: AKA Challenge with BIDDING")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_CHALLENGE, 0,
+                               EAP_SIM_AT_BIDDING, 1, 0x8000)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Notification with no attributes")
+            return struct.pack(">BBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_NOTIFICATION, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Notification indicating success, but no MAC")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_NOTIFICATION, 0,
+                               EAP_SIM_AT_NOTIFICATION, 1, 32768)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Notification indicating success, but invalid MAC value")
+            return struct.pack(">BBHBBHBBHBBH4L", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4 + 20,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_NOTIFICATION, 0,
+                               EAP_SIM_AT_NOTIFICATION, 1, 32768,
+                               EAP_SIM_AT_MAC, 5, 0, 0, 0, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Notification indicating success with zero-key MAC")
+            return struct.pack(">BBHBBHBBHBBH16B", EAP_CODE_REQUEST,
+                               ctx['id'] - 2,
+                               4 + 1 + 3 + 4 + 20,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_NOTIFICATION, 0,
+                               EAP_SIM_AT_NOTIFICATION, 1, 32768,
+                               EAP_SIM_AT_MAC, 5, 0,
+                               0xbe, 0x2e, 0xbb, 0xa9, 0xfa, 0x2e, 0x82, 0x36,
+                               0x37, 0x8c, 0x32, 0x41, 0xb7, 0xc7, 0x58, 0xa3)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Success")
+            return struct.pack(">BBH", EAP_CODE_SUCCESS, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Notification before auth")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_NOTIFICATION, 0,
+                               EAP_SIM_AT_NOTIFICATION, 1, 16384)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Notification before auth")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_NOTIFICATION, 0,
+                               EAP_SIM_AT_NOTIFICATION, 1, 16385)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Notification with unrecognized non-failure")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_NOTIFICATION, 0,
+                               EAP_SIM_AT_NOTIFICATION, 1, 0xc000)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Notification before auth (duplicate)")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_NOTIFICATION, 0,
+                               EAP_SIM_AT_NOTIFICATION, 1, 0xc000)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Re-authentication (unexpected) with no attributes")
+            return struct.pack(">BBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_REAUTHENTICATION,
+                               0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: AKA Challenge with Checkcode claiming identity round was used")
+            return struct.pack(">BBHBBHBBH5L", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 24,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_CHALLENGE, 0,
+                               EAP_SIM_AT_CHECKCODE, 6, 0, 0, 0, 0, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Identity request ANY_ID")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_ANY_ID_REQ, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: AKA Challenge with Checkcode claiming no identity round was used")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_CHALLENGE, 0,
+                               EAP_SIM_AT_CHECKCODE, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Identity request ANY_ID")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_ANY_ID_REQ, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: AKA Challenge with mismatching Checkcode value")
+            return struct.pack(">BBHBBHBBH5L", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 24,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_CHALLENGE, 0,
+                               EAP_SIM_AT_CHECKCODE, 6, 0, 0, 0, 0, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Re-authentication (unexpected) with Checkcode claimin identity round was used")
+            return struct.pack(">BBHBBHBBH5L", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 24,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_REAUTHENTICATION,
+                               0,
+                               EAP_SIM_AT_CHECKCODE, 6, 0, 0, 0, 0, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Invalid AT_RAND length")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_RAND, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Invalid AT_AUTN length")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_AUTN, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unencrypted AT_PADDING")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_PADDING, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Invalid AT_NONCE_MT length")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_NONCE_MT, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Invalid AT_MAC length")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_MAC, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Invalid AT_NOTIFICATION length")
+            return struct.pack(">BBHBBHBBHL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_NOTIFICATION, 2, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: AT_IDENTITY overflow")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_IDENTITY, 1, 0xffff)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unexpected AT_VERSION_LIST")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_VERSION_LIST, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Invalid AT_SELECTED_VERSION length")
+            return struct.pack(">BBHBBHBBHL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_SELECTED_VERSION, 2, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unencrypted AT_COUNTER")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_COUNTER, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unencrypted AT_COUNTER_TOO_SMALL")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_COUNTER_TOO_SMALL, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unencrypted AT_NONCE_S")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_NONCE_S, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Invalid AT_CLIENT_ERROR_CODE length")
+            return struct.pack(">BBHBBHBBHL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_CLIENT_ERROR_CODE, 2, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Invalid AT_IV length")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_IV, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Invalid AT_ENCR_DATA length")
+            return struct.pack(">BBHBBHBBHL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_ENCR_DATA, 2, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unencrypted AT_NEXT_PSEUDONYM")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_NEXT_PSEUDONYM, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unencrypted AT_NEXT_REAUTH_ID")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_NEXT_REAUTH_ID, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Invalid AT_RES length")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_RES, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Invalid AT_RES length")
+            return struct.pack(">BBHBBHBBH5L", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 24,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_RES, 6, 0xffff, 0, 0, 0, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Invalid AT_AUTS length")
+            return struct.pack(">BBHBBHBBHL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_AUTS, 2, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Invalid AT_CHECKCODE length")
+            return struct.pack(">BBHBBHBBHL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_CHECKCODE, 2, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Invalid AT_RESULT_IND length")
+            return struct.pack(">BBHBBHBBHL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_RESULT_IND, 2, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unexpected AT_KDF_INPUT")
+            return struct.pack(">BBHBBHBBHL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_KDF_INPUT, 2, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unexpected AT_KDF")
+            return struct.pack(">BBHBBHBBHL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_KDF, 2, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Invalid AT_BIDDING length")
+            return struct.pack(">BBHBBHBBHL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_BIDDING, 2, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        return None
+
+    srv = start_radius_server(aka_handler)
+    if srv is None:
+        return "skip"
+
+    try:
+        hapd = start_ap(apdev[0]['ifname'])
+
+        for i in range(0, 49):
+            eap = "AKA AKA'" if i == 11 else "AKA"
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap=eap, identity="0232010000000000",
+                           password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581:000000000123",
+                           wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"],
+                                   timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            if i in [ 0, 15 ]:
+                time.sleep(0.1)
+            else:
+                ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"],
+                                       timeout=10)
+                if ev is None:
+                    raise Exception("Timeout on EAP failure")
+            dev[0].request("REMOVE_NETWORK all")
+    finally:
+        stop_radius_server(srv)
+
+def test_eap_proto_aka_prime(dev, apdev):
+    """EAP-AKA' protocol tests"""
+    def aka_prime_handler(ctx, req):
+        logger.info("aka_prime_handler - RX " + req.encode("hex"))
+        if 'num' not in ctx:
+            ctx['num'] = 0
+        ctx['num'] = ctx['num'] + 1
+        if 'id' not in ctx:
+            ctx['id'] = 1
+        ctx['id'] = (ctx['id'] + 1) % 256
+
+        idx = 0
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Missing payload")
+            return struct.pack(">BBHB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1,
+                               EAP_TYPE_AKA_PRIME)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Challenge with no attributes")
+            return struct.pack(">BBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3,
+                               EAP_TYPE_AKA_PRIME, EAP_AKA_SUBTYPE_CHALLENGE, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Challenge with empty AT_KDF_INPUT")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_AKA_PRIME, EAP_AKA_SUBTYPE_CHALLENGE, 0,
+                               EAP_SIM_AT_KDF_INPUT, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Challenge with AT_KDF_INPUT")
+            return struct.pack(">BBHBBHBBHBBBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_AKA_PRIME, EAP_AKA_SUBTYPE_CHALLENGE, 0,
+                               EAP_SIM_AT_KDF_INPUT, 2, 1, ord('a'), ord('b'),
+                               ord('c'), ord('d'))
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Challenge with duplicated KDF")
+            return struct.pack(">BBHBBHBBHBBBBBBHBBHBBH",
+                               EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8 + 3 * 4,
+                               EAP_TYPE_AKA_PRIME, EAP_AKA_SUBTYPE_CHALLENGE, 0,
+                               EAP_SIM_AT_KDF_INPUT, 2, 1, ord('a'), ord('b'),
+                               ord('c'), ord('d'),
+                               EAP_SIM_AT_KDF, 1, 1,
+                               EAP_SIM_AT_KDF, 1, 2,
+                               EAP_SIM_AT_KDF, 1, 1)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Challenge with multiple KDF proposals")
+            return struct.pack(">BBHBBHBBHBBBBBBHBBHBBH",
+                               EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8 + 3 * 4,
+                               EAP_TYPE_AKA_PRIME, EAP_AKA_SUBTYPE_CHALLENGE, 0,
+                               EAP_SIM_AT_KDF_INPUT, 2, 1, ord('a'), ord('b'),
+                               ord('c'), ord('d'),
+                               EAP_SIM_AT_KDF, 1, 255,
+                               EAP_SIM_AT_KDF, 1, 254,
+                               EAP_SIM_AT_KDF, 1, 1)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Challenge with incorrect KDF selected")
+            return struct.pack(">BBHBBHBBHBBBBBBHBBHBBHBBH",
+                               EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8 + 4 * 4,
+                               EAP_TYPE_AKA_PRIME, EAP_AKA_SUBTYPE_CHALLENGE, 0,
+                               EAP_SIM_AT_KDF_INPUT, 2, 1, ord('a'), ord('b'),
+                               ord('c'), ord('d'),
+                               EAP_SIM_AT_KDF, 1, 255,
+                               EAP_SIM_AT_KDF, 1, 255,
+                               EAP_SIM_AT_KDF, 1, 254,
+                               EAP_SIM_AT_KDF, 1, 1)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Challenge with multiple KDF proposals")
+            return struct.pack(">BBHBBHBBHBBBBBBHBBHBBH",
+                               EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8 + 3 * 4,
+                               EAP_TYPE_AKA_PRIME, EAP_AKA_SUBTYPE_CHALLENGE, 0,
+                               EAP_SIM_AT_KDF_INPUT, 2, 1, ord('a'), ord('b'),
+                               ord('c'), ord('d'),
+                               EAP_SIM_AT_KDF, 1, 255,
+                               EAP_SIM_AT_KDF, 1, 254,
+                               EAP_SIM_AT_KDF, 1, 1)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Challenge with selected KDF not duplicated")
+            return struct.pack(">BBHBBHBBHBBBBBBHBBHBBH",
+                               EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8 + 3 * 4,
+                               EAP_TYPE_AKA_PRIME, EAP_AKA_SUBTYPE_CHALLENGE, 0,
+                               EAP_SIM_AT_KDF_INPUT, 2, 1, ord('a'), ord('b'),
+                               ord('c'), ord('d'),
+                               EAP_SIM_AT_KDF, 1, 1,
+                               EAP_SIM_AT_KDF, 1, 255,
+                               EAP_SIM_AT_KDF, 1, 254)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Challenge with multiple KDF proposals")
+            return struct.pack(">BBHBBHBBHBBBBBBHBBHBBH",
+                               EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8 + 3 * 4,
+                               EAP_TYPE_AKA_PRIME, EAP_AKA_SUBTYPE_CHALLENGE, 0,
+                               EAP_SIM_AT_KDF_INPUT, 2, 1, ord('a'), ord('b'),
+                               ord('c'), ord('d'),
+                               EAP_SIM_AT_KDF, 1, 255,
+                               EAP_SIM_AT_KDF, 1, 254,
+                               EAP_SIM_AT_KDF, 1, 1)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Challenge with selected KDF duplicated (missing MAC, RAND, AUTN)")
+            return struct.pack(">BBHBBHBBHBBBBBBHBBHBBHBBH",
+                               EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8 + 4 * 4,
+                               EAP_TYPE_AKA_PRIME, EAP_AKA_SUBTYPE_CHALLENGE, 0,
+                               EAP_SIM_AT_KDF_INPUT, 2, 1, ord('a'), ord('b'),
+                               ord('c'), ord('d'),
+                               EAP_SIM_AT_KDF, 1, 1,
+                               EAP_SIM_AT_KDF, 1, 255,
+                               EAP_SIM_AT_KDF, 1, 254,
+                               EAP_SIM_AT_KDF, 1, 1)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Challenge with multiple unsupported KDF proposals")
+            return struct.pack(">BBHBBHBBHBBBBBBHBBH",
+                               EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8 + 2 * 4,
+                               EAP_TYPE_AKA_PRIME, EAP_AKA_SUBTYPE_CHALLENGE, 0,
+                               EAP_SIM_AT_KDF_INPUT, 2, 1, ord('a'), ord('b'),
+                               ord('c'), ord('d'),
+                               EAP_SIM_AT_KDF, 1, 255,
+                               EAP_SIM_AT_KDF, 1, 254)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Challenge with multiple KDF proposals")
+            return struct.pack(">BBHBBHBBHBBBBBBHBBHBBH",
+                               EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8 + 3 * 4,
+                               EAP_TYPE_AKA_PRIME, EAP_AKA_SUBTYPE_CHALLENGE, 0,
+                               EAP_SIM_AT_KDF_INPUT, 2, 1, ord('a'), ord('b'),
+                               ord('c'), ord('d'),
+                               EAP_SIM_AT_KDF, 1, 255,
+                               EAP_SIM_AT_KDF, 1, 254,
+                               EAP_SIM_AT_KDF, 1, 1)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Challenge with invalid MAC, RAND, AUTN values)")
+            return struct.pack(">BBHBBHBBHBBBBBBHBBHBBHBBHBBH4LBBH4LBBH4L",
+                               EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8 + 4 * 4 + 20 + 20 + 20,
+                               EAP_TYPE_AKA_PRIME, EAP_AKA_SUBTYPE_CHALLENGE, 0,
+                               EAP_SIM_AT_KDF_INPUT, 2, 1, ord('a'), ord('b'),
+                               ord('c'), ord('d'),
+                               EAP_SIM_AT_KDF, 1, 1,
+                               EAP_SIM_AT_KDF, 1, 255,
+                               EAP_SIM_AT_KDF, 1, 254,
+                               EAP_SIM_AT_KDF, 1, 1,
+                               EAP_SIM_AT_MAC, 5, 0, 0, 0, 0, 0,
+                               EAP_SIM_AT_RAND, 5, 0, 0, 0, 0, 0,
+                               EAP_SIM_AT_AUTN, 5, 0, 0, 0, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Challenge - AMF separation bit not set)")
+            return struct.pack(">BBHBBHBBHBBBBBBHBBH4LBBH4LBBH4L",
+                               EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8 + 4 + 20 + 20 + 20,
+                               EAP_TYPE_AKA_PRIME, EAP_AKA_SUBTYPE_CHALLENGE, 0,
+                               EAP_SIM_AT_KDF_INPUT, 2, 1, ord('a'), ord('b'),
+                               ord('c'), ord('d'),
+                               EAP_SIM_AT_KDF, 1, 1,
+                               EAP_SIM_AT_MAC, 5, 0, 1, 2, 3, 4,
+                               EAP_SIM_AT_RAND, 5, 0, 5, 6, 7, 8,
+                               EAP_SIM_AT_AUTN, 5, 0, 9, 10,
+                               0x2fda8ef7, 0xbba518cc)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Challenge - Invalid MAC")
+            return struct.pack(">BBHBBHBBHBBBBBBHBBH4LBBH4LBBH4L",
+                               EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8 + 4 + 20 + 20 + 20,
+                               EAP_TYPE_AKA_PRIME, EAP_AKA_SUBTYPE_CHALLENGE, 0,
+                               EAP_SIM_AT_KDF_INPUT, 2, 1, ord('a'), ord('b'),
+                               ord('c'), ord('d'),
+                               EAP_SIM_AT_KDF, 1, 1,
+                               EAP_SIM_AT_MAC, 5, 0, 1, 2, 3, 4,
+                               EAP_SIM_AT_RAND, 5, 0, 5, 6, 7, 8,
+                               EAP_SIM_AT_AUTN, 5, 0, 0xffffffff, 0xffffffff,
+                               0xd1f90322, 0x40514cb4)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Challenge - Valid MAC")
+            return struct.pack(">BBHBBHBBHBBBBBBHBBH4LBBH4LBBH4L",
+                               EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8 + 4 + 20 + 20 + 20,
+                               EAP_TYPE_AKA_PRIME, EAP_AKA_SUBTYPE_CHALLENGE, 0,
+                               EAP_SIM_AT_KDF_INPUT, 2, 1, ord('a'), ord('b'),
+                               ord('c'), ord('d'),
+                               EAP_SIM_AT_KDF, 1, 1,
+                               EAP_SIM_AT_MAC, 5, 0,
+                               0xf4a3c1d3, 0x7c901401, 0x34bd8b01, 0x6f7fa32f,
+                               EAP_SIM_AT_RAND, 5, 0, 5, 6, 7, 8,
+                               EAP_SIM_AT_AUTN, 5, 0, 0xffffffff, 0xffffffff,
+                               0xd1f90322, 0x40514cb4)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Invalid AT_KDF_INPUT length")
+            return struct.pack(">BBHBBHBBHL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_AKA_PRIME, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_KDF_INPUT, 2, 0xffff, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Invalid AT_KDF length")
+            return struct.pack(">BBHBBHBBHL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_AKA_PRIME, EAP_AKA_SUBTYPE_IDENTITY, 0,
+                               EAP_SIM_AT_KDF, 2, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Challenge with large number of KDF proposals")
+            return struct.pack(">BBHBBHBBHBBHBBHBBHBBHBBHBBHBBHBBHBBHBBHBBH",
+                               EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 12 * 4,
+                               EAP_TYPE_AKA_PRIME, EAP_AKA_SUBTYPE_CHALLENGE, 0,
+                               EAP_SIM_AT_KDF, 1, 255,
+                               EAP_SIM_AT_KDF, 1, 254,
+                               EAP_SIM_AT_KDF, 1, 253,
+                               EAP_SIM_AT_KDF, 1, 252,
+                               EAP_SIM_AT_KDF, 1, 251,
+                               EAP_SIM_AT_KDF, 1, 250,
+                               EAP_SIM_AT_KDF, 1, 249,
+                               EAP_SIM_AT_KDF, 1, 248,
+                               EAP_SIM_AT_KDF, 1, 247,
+                               EAP_SIM_AT_KDF, 1, 246,
+                               EAP_SIM_AT_KDF, 1, 245,
+                               EAP_SIM_AT_KDF, 1, 244)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        return None
+
+    srv = start_radius_server(aka_prime_handler)
+    if srv is None:
+        return "skip"
+
+    try:
+        hapd = start_ap(apdev[0]['ifname'])
+
+        for i in range(0, 16):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="AKA'", identity="6555444333222111",
+                           password="5122250214c33e723a5dd523fc145fc0:981d464c7c52eb6e5036234984ad0bcf:000000000123",
+                           wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"],
+                                   timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            if i in [ 0 ]:
+                time.sleep(0.1)
+            else:
+                ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"],
+                                       timeout=10)
+                if ev is None:
+                    raise Exception("Timeout on EAP failure")
+            dev[0].request("REMOVE_NETWORK all")
+    finally:
+        stop_radius_server(srv)
+
+def test_eap_proto_sim(dev, apdev):
+    """EAP-SIM protocol tests"""
+    def sim_handler(ctx, req):
+        logger.info("sim_handler - RX " + req.encode("hex"))
+        if 'num' not in ctx:
+            ctx['num'] = 0
+        ctx['num'] = ctx['num'] + 1
+        if 'id' not in ctx:
+            ctx['id'] = 1
+        ctx['id'] = (ctx['id'] + 1) % 256
+
+        idx = 0
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Missing payload")
+            return struct.pack(">BBHB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1,
+                               EAP_TYPE_SIM)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unexpected AT_AUTN")
+            return struct.pack(">BBHBBHBBHL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_SIM, EAP_SIM_SUBTYPE_START, 0,
+                               EAP_SIM_AT_AUTN, 2, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Too short AT_VERSION_LIST")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_SIM, EAP_SIM_SUBTYPE_START, 0,
+                               EAP_SIM_AT_VERSION_LIST, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: AT_VERSION_LIST overflow")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_SIM, EAP_SIM_SUBTYPE_START, 0,
+                               EAP_SIM_AT_VERSION_LIST, 1, 0xffff)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unexpected AT_AUTS")
+            return struct.pack(">BBHBBHBBHL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_SIM, EAP_SIM_SUBTYPE_START, 0,
+                               EAP_SIM_AT_AUTS, 2, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unexpected AT_CHECKCODE")
+            return struct.pack(">BBHBBHBBHL", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_SIM, EAP_SIM_SUBTYPE_START, 0,
+                               EAP_SIM_AT_CHECKCODE, 2, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: No AT_VERSION_LIST in Start")
+            return struct.pack(">BBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3,
+                               EAP_TYPE_SIM, EAP_SIM_SUBTYPE_START, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: No support version in AT_VERSION_LIST")
+            return struct.pack(">BBHBBHBBH4B", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_SIM, EAP_SIM_SUBTYPE_START, 0,
+                               EAP_SIM_AT_VERSION_LIST, 2, 3, 2, 3, 4, 5)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Identity request without ID type")
+            return struct.pack(">BBHBBHBBH2H", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8,
+                               EAP_TYPE_SIM, EAP_SIM_SUBTYPE_START, 0,
+                               EAP_SIM_AT_VERSION_LIST, 2, 2, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Identity request ANY_ID")
+            return struct.pack(">BBHBBHBBH2HBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8 + 4,
+                               EAP_TYPE_SIM, EAP_SIM_SUBTYPE_START, 0,
+                               EAP_SIM_AT_VERSION_LIST, 2, 2, 1, 0,
+                               EAP_SIM_AT_ANY_ID_REQ, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Identity request ANY_ID (duplicate)")
+            return struct.pack(">BBHBBHBBH2HBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8 + 4,
+                               EAP_TYPE_SIM, EAP_SIM_SUBTYPE_START, 0,
+                               EAP_SIM_AT_VERSION_LIST, 2, 2, 1, 0,
+                               EAP_SIM_AT_ANY_ID_REQ, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Identity request ANY_ID")
+            return struct.pack(">BBHBBHBBH2HBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8 + 4,
+                               EAP_TYPE_SIM, EAP_SIM_SUBTYPE_START, 0,
+                               EAP_SIM_AT_VERSION_LIST, 2, 2, 1, 0,
+                               EAP_SIM_AT_ANY_ID_REQ, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Identity request FULLAUTH_ID")
+            return struct.pack(">BBHBBHBBH2HBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8 + 4,
+                               EAP_TYPE_SIM, EAP_SIM_SUBTYPE_START, 0,
+                               EAP_SIM_AT_VERSION_LIST, 2, 2, 1, 0,
+                               EAP_SIM_AT_FULLAUTH_ID_REQ, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Identity request FULLAUTH_ID (duplicate)")
+            return struct.pack(">BBHBBHBBH2HBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8 + 4,
+                               EAP_TYPE_SIM, EAP_SIM_SUBTYPE_START, 0,
+                               EAP_SIM_AT_VERSION_LIST, 2, 2, 1, 0,
+                               EAP_SIM_AT_FULLAUTH_ID_REQ, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Identity request ANY_ID")
+            return struct.pack(">BBHBBHBBH2HBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8 + 4,
+                               EAP_TYPE_SIM, EAP_SIM_SUBTYPE_START, 0,
+                               EAP_SIM_AT_VERSION_LIST, 2, 2, 1, 0,
+                               EAP_SIM_AT_ANY_ID_REQ, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Identity request FULLAUTH_ID")
+            return struct.pack(">BBHBBHBBH2HBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8 + 4,
+                               EAP_TYPE_SIM, EAP_SIM_SUBTYPE_START, 0,
+                               EAP_SIM_AT_VERSION_LIST, 2, 2, 1, 0,
+                               EAP_SIM_AT_FULLAUTH_ID_REQ, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Identity request PERMANENT_ID")
+            return struct.pack(">BBHBBHBBH2HBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8 + 4,
+                               EAP_TYPE_SIM, EAP_SIM_SUBTYPE_START, 0,
+                               EAP_SIM_AT_VERSION_LIST, 2, 2, 1, 0,
+                               EAP_SIM_AT_PERMANENT_ID_REQ, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Identity request PERMANENT_ID (duplicate)")
+            return struct.pack(">BBHBBHBBH2HBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 8 + 4,
+                               EAP_TYPE_SIM, EAP_SIM_SUBTYPE_START, 0,
+                               EAP_SIM_AT_VERSION_LIST, 2, 2, 1, 0,
+                               EAP_SIM_AT_PERMANENT_ID_REQ, 1, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: No AT_MAC and AT_RAND in Challenge")
+            return struct.pack(">BBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3,
+                               EAP_TYPE_SIM, EAP_SIM_SUBTYPE_CHALLENGE, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: No AT_RAND in Challenge")
+            return struct.pack(">BBHBBHBBH4L", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 20,
+                               EAP_TYPE_SIM, EAP_SIM_SUBTYPE_CHALLENGE, 0,
+                               EAP_SIM_AT_MAC, 5, 0, 0, 0, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Insufficient number of challenges in Challenge")
+            return struct.pack(">BBHBBHBBH4LBBH4L", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 20 + 20,
+                               EAP_TYPE_SIM, EAP_SIM_SUBTYPE_CHALLENGE, 0,
+                               EAP_SIM_AT_RAND, 5, 0, 0, 0, 0, 0,
+                               EAP_SIM_AT_MAC, 5, 0, 0, 0, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Too many challenges in Challenge")
+            return struct.pack(">BBHBBHBBH4L4L4L4LBBH4L", EAP_CODE_REQUEST,
+                               ctx['id'],
+                               4 + 1 + 3 + 4 + 4 * 16 + 20,
+                               EAP_TYPE_SIM, EAP_SIM_SUBTYPE_CHALLENGE, 0,
+                               EAP_SIM_AT_RAND, 17, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                               0, 0, 0, 0, 0, 0, 0, 0,
+                               EAP_SIM_AT_MAC, 5, 0, 0, 0, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Same RAND multiple times in Challenge")
+            return struct.pack(">BBHBBHBBH4L4L4LBBH4L", EAP_CODE_REQUEST,
+                               ctx['id'],
+                               4 + 1 + 3 + 4 + 3 * 16 + 20,
+                               EAP_TYPE_SIM, EAP_SIM_SUBTYPE_CHALLENGE, 0,
+                               EAP_SIM_AT_RAND, 13, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+                               0, 0, 0, 0,
+                               EAP_SIM_AT_MAC, 5, 0, 0, 0, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Notification with no attributes")
+            return struct.pack(">BBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3,
+                               EAP_TYPE_SIM, EAP_SIM_SUBTYPE_NOTIFICATION, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Notification indicating success, but no MAC")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_SIM, EAP_SIM_SUBTYPE_NOTIFICATION, 0,
+                               EAP_SIM_AT_NOTIFICATION, 1, 32768)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Notification indicating success, but invalid MAC value")
+            return struct.pack(">BBHBBHBBHBBH4L", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4 + 20,
+                               EAP_TYPE_SIM, EAP_SIM_SUBTYPE_NOTIFICATION, 0,
+                               EAP_SIM_AT_NOTIFICATION, 1, 32768,
+                               EAP_SIM_AT_MAC, 5, 0, 0, 0, 0, 0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Notification before auth")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_SIM, EAP_SIM_SUBTYPE_NOTIFICATION, 0,
+                               EAP_SIM_AT_NOTIFICATION, 1, 16384)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Notification before auth")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_SIM, EAP_SIM_SUBTYPE_NOTIFICATION, 0,
+                               EAP_SIM_AT_NOTIFICATION, 1, 16385)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Notification with unrecognized non-failure")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_SIM, EAP_SIM_SUBTYPE_NOTIFICATION, 0,
+                               EAP_SIM_AT_NOTIFICATION, 1, 0xc000)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Notification before auth (duplicate)")
+            return struct.pack(">BBHBBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3 + 4,
+                               EAP_TYPE_SIM, EAP_SIM_SUBTYPE_NOTIFICATION, 0,
+                               EAP_SIM_AT_NOTIFICATION, 1, 0xc000)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Re-authentication (unexpected) with no attributes")
+            return struct.pack(">BBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3,
+                               EAP_TYPE_SIM, EAP_SIM_SUBTYPE_REAUTHENTICATION,
+                               0)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Client Error")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_SIM, EAP_SIM_SUBTYPE_CLIENT_ERROR)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: Unknown subtype")
+            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 1,
+                               EAP_TYPE_SIM, 255)
+        idx += 1
+        if ctx['num'] == idx:
+            logger.info("Test: EAP-Failure")
+            return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
+
+        return None
+
+    srv = start_radius_server(sim_handler)
+    if srv is None:
+        return "skip"
+
+    try:
+        hapd = start_ap(apdev[0]['ifname'])
+
+        for i in range(0, 25):
+            dev[0].connect("eap-test", key_mgmt="WPA-EAP", scan_freq="2412",
+                           eap="SIM", identity="1232010000000000",
+                           password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581",
+                           wait_connect=False)
+            ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD"],
+                                   timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAP start")
+            if i in [ 0 ]:
+                time.sleep(0.1)
+            else:
+                ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"],
+                                       timeout=10)
+                if ev is None:
+                    raise Exception("Timeout on EAP failure")
+            dev[0].request("REMOVE_NETWORK all")
+    finally:
+        stop_radius_server(srv)

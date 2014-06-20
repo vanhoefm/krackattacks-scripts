@@ -42,7 +42,7 @@ struct eap_aka_data {
 	u8 *last_eap_identity;
 	size_t last_eap_identity_len;
 	enum {
-		CONTINUE, RESULT_SUCCESS, RESULT_FAILURE, SUCCESS, FAILURE
+		CONTINUE, RESULT_SUCCESS, SUCCESS, FAILURE
 	} state;
 
 	struct wpabuf *id_msgs;
@@ -64,8 +64,6 @@ static const char * eap_aka_state_txt(int state)
 		return "CONTINUE";
 	case RESULT_SUCCESS:
 		return "RESULT_SUCCESS";
-	case RESULT_FAILURE:
-		return "RESULT_FAILURE";
 	case SUCCESS:
 		return "SUCCESS";
 	case FAILURE:
@@ -1025,7 +1023,7 @@ static struct wpabuf * eap_aka_process_challenge(struct eap_sm *sm,
 	if (data->result_ind && attr->result_ind)
 		data->use_result_ind = 1;
 
-	if (data->state != FAILURE && data->state != RESULT_FAILURE) {
+	if (data->state != FAILURE) {
 		eap_aka_state(data, data->use_result_ind ?
 			      RESULT_SUCCESS : SUCCESS);
 	}
@@ -1241,7 +1239,7 @@ static struct wpabuf * eap_aka_process_reauthentication(
 	if (data->result_ind && attr->result_ind)
 		data->use_result_ind = 1;
 
-	if (data->state != FAILURE && data->state != RESULT_FAILURE) {
+	if (data->state != FAILURE) {
 		eap_aka_state(data, data->use_result_ind ?
 			      RESULT_SUCCESS : SUCCESS);
 	}
@@ -1347,9 +1345,7 @@ done:
 		 */
 		ret->methodState = data->use_result_ind ?
 			METHOD_DONE : METHOD_MAY_CONT;
-	} else if (data->state == RESULT_FAILURE)
-		ret->methodState = METHOD_CONT;
-	else if (data->state == RESULT_SUCCESS)
+	} else if (data->state == RESULT_SUCCESS)
 		ret->methodState = METHOD_CONT;
 
 	if (ret->methodState == METHOD_DONE) {

@@ -893,7 +893,7 @@ int eap_sim_parse_attr(const u8 *start, const u8 *end,
 			if (attr->kdf_count == EAP_AKA_PRIME_KDF_MAX) {
 				wpa_printf(MSG_DEBUG, "EAP-AKA': Too many "
 					   "AT_KDF attributes - ignore this");
-				continue;
+				break;
 			}
 			attr->kdf[attr->kdf_count] = WPA_GET_BE16(apos);
 			attr->kdf_count++;

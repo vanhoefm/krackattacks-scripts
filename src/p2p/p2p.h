@@ -395,6 +395,14 @@ struct p2p_config {
 	unsigned int max_listen;
 
 	/**
+	 * passphrase_len - Passphrase length (8..63)
+	 *
+	 * This parameter controls the length of the random passphrase that is
+	 * generated at the GO.
+	 */
+	unsigned int passphrase_len;
+
+	/**
 	 * cb_ctx - Context to use with callback functions
 	 */
 	void *cb_ctx;
@@ -1959,5 +1967,7 @@ int p2p_process_nfc_connection_handover(struct p2p_data *p2p,
 void p2p_set_authorized_oob_dev_pw_id(struct p2p_data *p2p, u16 dev_pw_id,
 				      int go_intent,
 				      const u8 *own_interface_addr);
+
+int p2p_set_passphrase_len(struct p2p_data *p2p, unsigned int len);
 
 #endif /* P2P_H */

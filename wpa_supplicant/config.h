@@ -317,6 +317,7 @@ struct wpa_cred {
 #define CFG_CHANGED_P2P_PREF_CHAN BIT(13)
 #define CFG_CHANGED_EXT_PW_BACKEND BIT(14)
 #define CFG_CHANGED_NFC_PASSWORD_TOKEN BIT(15)
+#define CFG_CHANGED_P2P_PASSPHRASE_LEN BIT(16)
 
 /**
  * struct wpa_config - wpa_supplicant configuration data
@@ -714,6 +715,14 @@ struct wpa_config {
 	 * connection has been established.
 	 */
 	int p2p_group_idle;
+
+	/**
+	 * p2p_passphrase_len - Passphrase length (8..63) for P2P GO
+	 *
+	 * This parameter controls the length of the random passphrase that is
+	 * generated at the GO.
+	 */
+	unsigned int p2p_passphrase_len;
 
 	/**
 	 * bss_max_count - Maximum number of BSS entries to keep in memory

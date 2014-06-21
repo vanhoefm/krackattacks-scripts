@@ -1561,7 +1561,7 @@ void p2p_build_ssid(struct p2p_data *p2p, u8 *ssid, size_t *ssid_len)
 int p2p_go_params(struct p2p_data *p2p, struct p2p_go_neg_results *params)
 {
 	p2p_build_ssid(p2p, params->ssid, &params->ssid_len);
-	p2p_random(params->passphrase, 8);
+	p2p_random(params->passphrase, p2p->cfg->passphrase_len);
 	return 0;
 }
 
@@ -1595,7 +1595,7 @@ void p2p_go_complete(struct p2p_data *p2p, struct p2p_device *peer)
 					       p2p->op_channel);
 		os_memcpy(res.ssid, p2p->ssid, p2p->ssid_len);
 		res.ssid_len = p2p->ssid_len;
-		p2p_random(res.passphrase, 8);
+		p2p_random(res.passphrase, p2p->cfg->passphrase_len);
 	} else {
 		res.freq = peer->oper_freq;
 		if (p2p->ssid_len) {
@@ -2388,7 +2388,8 @@ struct p2p_data * p2p_init(const struct p2p_config *cfg)
 {
 	struct p2p_data *p2p;
 
-	if (cfg->max_peers < 1)
+	if (cfg->max_peers < 1 ||
+	    cfg->passphrase_len < 8 || cfg->passphrase_len > 63)
 		return NULL;
 
 	p2p = os_zalloc(sizeof(*p2p) + sizeof(*cfg));
@@ -4719,3 +4720,12 @@ void p2p_set_authorized_oob_dev_pw_id(struct p2p_data *p2p, u16 dev_pw_id,
 }
 
 #endif /* CONFIG_WPS_NFC */
+
+
+int p2p_set_passphrase_len(struct p2p_data *p2p, unsigned int len)
+{
+	if (len < 8 || len > 63)
+		return -1;
+	p2p->cfg->passphrase_len = len;
+	return 0;
+}

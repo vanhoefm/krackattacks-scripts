@@ -3836,6 +3836,8 @@ static const struct global_parse_data global_fields[] = {
 	{ INT_RANGE(persistent_reconnect, 0, 1), 0 },
 	{ INT_RANGE(p2p_intra_bss, 0, 1), CFG_CHANGED_P2P_INTRA_BSS },
 	{ INT(p2p_group_idle), 0 },
+	{ INT_RANGE(p2p_passphrase_len, 8, 63),
+	  CFG_CHANGED_P2P_PASSPHRASE_LEN },
 	{ FUNC(p2p_pref_chan), CFG_CHANGED_P2P_PREF_CHAN },
 	{ FUNC(p2p_no_go_freq), CFG_CHANGED_P2P_PREF_CHAN },
 	{ INT_RANGE(p2p_add_cli_chan, 0, 1), 0 },

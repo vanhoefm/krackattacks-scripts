@@ -3949,6 +3949,12 @@ int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s)
 
 	p2p.max_listen = wpa_s->max_remain_on_chan;
 
+	if (wpa_s->conf->p2p_passphrase_len >= 8 &&
+	    wpa_s->conf->p2p_passphrase_len <= 63)
+		p2p.passphrase_len = wpa_s->conf->p2p_passphrase_len;
+	else
+		p2p.passphrase_len = 8;
+
 	global->p2p = p2p_init(&p2p);
 	if (global->p2p == NULL)
 		return -1;
@@ -6334,6 +6340,9 @@ void wpas_p2p_update_config(struct wpa_supplicant *wpa_s)
 				   "update failed");
 		}
 	}
+
+	if (wpa_s->conf->changed_parameters & CFG_CHANGED_P2P_PASSPHRASE_LEN)
+		p2p_set_passphrase_len(p2p, wpa_s->conf->p2p_passphrase_len);
 }
 
 

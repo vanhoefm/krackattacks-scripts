@@ -245,6 +245,133 @@ def test_ap_wpa2_eap_sim_config(dev, apdev):
                 password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581",
                 anonymous_identity="345678")
 
+def test_ap_wpa2_eap_sim_ext(dev, apdev):
+    """WPA2-Enterprise connection using EAP-SIM and external GSM auth"""
+    if not os.path.exists("/tmp/hlr_auc_gw.sock"):
+        logger.info("No hlr_auc_gw available");
+        return "skip"
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].request("SET external_sim 1")
+    id = dev[0].connect("test-wpa2-eap", eap="SIM", key_mgmt="WPA-EAP",
+                        identity="1232010000000000",
+                        wait_connect=False, scan_freq="2412")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=15)
+    if ev is None:
+        raise Exception("Network connected timed out")
+
+    ev = dev[0].wait_event(["CTRL-REQ-SIM"], timeout=15)
+    if ev is None:
+        raise Exception("Wait for external SIM processing request timed out")
+    p = ev.split(':', 2)
+    if p[1] != "GSM-AUTH":
+        raise Exception("Unexpected CTRL-REQ-SIM type")
+    rid = p[0].split('-')[3]
+
+    # IK:CK:RES
+    resp = "00112233445566778899aabbccddeeff:00112233445566778899aabbccddeeff:0011223344"
+    # This will fail during processing, but the ctrl_iface command succeeds
+    dev[0].request("CTRL-RSP-SIM-" + rid + ":UMTS-AUTH:" + resp)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=15)
+    if ev is None:
+        raise Exception("EAP failure not reported")
+    dev[0].request("DISCONNECT")
+
+    dev[0].select_network(id, freq="2412")
+    ev = dev[0].wait_event(["CTRL-REQ-SIM"], timeout=15)
+    if ev is None:
+        raise Exception("Wait for external SIM processing request timed out")
+    p = ev.split(':', 2)
+    if p[1] != "GSM-AUTH":
+        raise Exception("Unexpected CTRL-REQ-SIM type")
+    rid = p[0].split('-')[3]
+    # This will fail during GSM auth validation
+    if "OK" not in dev[0].request("CTRL-RSP-SIM-" + rid + ":GSM-AUTH:q"):
+        raise Exception("CTRL-RSP-SIM failed")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=15)
+    if ev is None:
+        raise Exception("EAP failure not reported")
+    dev[0].request("DISCONNECT")
+
+    dev[0].select_network(id, freq="2412")
+    ev = dev[0].wait_event(["CTRL-REQ-SIM"], timeout=15)
+    if ev is None:
+        raise Exception("Wait for external SIM processing request timed out")
+    p = ev.split(':', 2)
+    if p[1] != "GSM-AUTH":
+        raise Exception("Unexpected CTRL-REQ-SIM type")
+    rid = p[0].split('-')[3]
+    # This will fail during GSM auth validation
+    if "OK" not in dev[0].request("CTRL-RSP-SIM-" + rid + ":GSM-AUTH:34"):
+        raise Exception("CTRL-RSP-SIM failed")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=15)
+    if ev is None:
+        raise Exception("EAP failure not reported")
+    dev[0].request("DISCONNECT")
+
+    dev[0].select_network(id, freq="2412")
+    ev = dev[0].wait_event(["CTRL-REQ-SIM"], timeout=15)
+    if ev is None:
+        raise Exception("Wait for external SIM processing request timed out")
+    p = ev.split(':', 2)
+    if p[1] != "GSM-AUTH":
+        raise Exception("Unexpected CTRL-REQ-SIM type")
+    rid = p[0].split('-')[3]
+    # This will fail during GSM auth validation
+    if "OK" not in dev[0].request("CTRL-RSP-SIM-" + rid + ":GSM-AUTH:0011223344556677"):
+        raise Exception("CTRL-RSP-SIM failed")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=15)
+    if ev is None:
+        raise Exception("EAP failure not reported")
+    dev[0].request("DISCONNECT")
+
+    dev[0].select_network(id, freq="2412")
+    ev = dev[0].wait_event(["CTRL-REQ-SIM"], timeout=15)
+    if ev is None:
+        raise Exception("Wait for external SIM processing request timed out")
+    p = ev.split(':', 2)
+    if p[1] != "GSM-AUTH":
+        raise Exception("Unexpected CTRL-REQ-SIM type")
+    rid = p[0].split('-')[3]
+    # This will fail during GSM auth validation
+    if "OK" not in dev[0].request("CTRL-RSP-SIM-" + rid + ":GSM-AUTH:0011223344556677:q"):
+        raise Exception("CTRL-RSP-SIM failed")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=15)
+    if ev is None:
+        raise Exception("EAP failure not reported")
+    dev[0].request("DISCONNECT")
+
+    dev[0].select_network(id, freq="2412")
+    ev = dev[0].wait_event(["CTRL-REQ-SIM"], timeout=15)
+    if ev is None:
+        raise Exception("Wait for external SIM processing request timed out")
+    p = ev.split(':', 2)
+    if p[1] != "GSM-AUTH":
+        raise Exception("Unexpected CTRL-REQ-SIM type")
+    rid = p[0].split('-')[3]
+    # This will fail during GSM auth validation
+    if "OK" not in dev[0].request("CTRL-RSP-SIM-" + rid + ":GSM-AUTH:0011223344556677:00112233"):
+        raise Exception("CTRL-RSP-SIM failed")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=15)
+    if ev is None:
+        raise Exception("EAP failure not reported")
+    dev[0].request("DISCONNECT")
+
+    dev[0].select_network(id, freq="2412")
+    ev = dev[0].wait_event(["CTRL-REQ-SIM"], timeout=15)
+    if ev is None:
+        raise Exception("Wait for external SIM processing request timed out")
+    p = ev.split(':', 2)
+    if p[1] != "GSM-AUTH":
+        raise Exception("Unexpected CTRL-REQ-SIM type")
+    rid = p[0].split('-')[3]
+    # This will fail during GSM auth validation
+    if "OK" not in dev[0].request("CTRL-RSP-SIM-" + rid + ":GSM-AUTH:0011223344556677:00112233:q"):
+        raise Exception("CTRL-RSP-SIM failed")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=15)
+    if ev is None:
+        raise Exception("EAP failure not reported")
+
 def test_ap_wpa2_eap_aka(dev, apdev):
     """WPA2-Enterprise connection using EAP-AKA"""
     if not os.path.exists("/tmp/hlr_auc_gw.sock"):

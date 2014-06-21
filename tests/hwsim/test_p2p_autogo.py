@@ -347,3 +347,45 @@ def test_autogo_start_during_scan(dev):
         dev[1].wait_go_ending_session()
     finally:
         dev[0].request("AUTOSCAN ")
+
+def test_autogo_passphrase_len(dev):
+    """P2P autonomous GO and longer passphrase"""
+    try:
+        if "OK" not in dev[0].request("SET p2p_passphrase_len 13"):
+            raise Exception("Failed to set passphrase length")
+        res = autogo(dev[0])
+        if len(res['passphrase']) != 13:
+            raise Exception("Unexpected passphrase length")
+        if dev[0].get_group_status_field("passphrase", extra="WPS") != res['passphrase']:
+            raise Exception("passphrase mismatch")
+
+        logger.info("Connect P2P client")
+        connect_cli(dev[0], dev[1])
+
+        logger.info("Connect legacy WPS client")
+        pin = dev[2].wps_read_pin()
+        dev[0].p2p_go_authorize_client(pin)
+        dev[2].request("P2P_SET disabled 1")
+        dev[2].dump_monitor()
+        dev[2].request("WPS_PIN any " + pin)
+        ev = dev[2].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
+        if ev is None:
+            raise Exception("Association with the GO timed out")
+        status = dev[2].get_status()
+        if status['wpa_state'] != 'COMPLETED':
+            raise Exception("Not fully connected")
+        dev[2].request("DISCONNECT")
+
+        logger.info("Connect legacy non-WPS client")
+        dev[2].request("FLUSH")
+        dev[2].request("P2P_SET disabled 1")
+        dev[2].connect(ssid=res['ssid'], psk=res['passphrase'], proto='RSN',
+                       key_mgmt='WPA-PSK', pairwise='CCMP', group='CCMP',
+                       scan_freq=res['freq'])
+        hwsim_utils.test_connectivity_p2p_sta(dev[1], dev[2])
+        dev[2].request("DISCONNECT")
+
+        dev[0].remove_group()
+        dev[1].wait_go_ending_session()
+    finally:
+        dev[0].request("SET p2p_passphrase_len 8")

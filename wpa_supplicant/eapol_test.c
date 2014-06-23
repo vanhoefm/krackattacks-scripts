@@ -1267,6 +1267,7 @@ int main(int argc, char *argv[])
 			break;
 		case 'R':
 			eapol_test.pcsc_reader = optarg;
+			break;
 		case 's':
 			as_secret = optarg;
 			break;

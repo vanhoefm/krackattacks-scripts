@@ -1946,8 +1946,17 @@ skip_rsn:
 
 skip_rsn_check:
 	/* add the peer to the driver as a "setup in progress" peer */
-	if (wpa_sm_tdls_peer_addset(sm, peer->addr, 1, 0, 0, NULL, 0, NULL,
-				    NULL, 0, NULL, 0, NULL, 0, NULL, 0))
+	if (wpa_sm_tdls_peer_addset(sm, peer->addr, 1, peer->aid,
+				    peer->capability,
+				    peer->supp_rates, peer->supp_rates_len,
+				    peer->ht_capabilities,
+				    peer->vht_capabilities,
+				    peer->qos_info, peer->ext_capab,
+				    peer->ext_capab_len,
+				    peer->supp_channels,
+				    peer->supp_channels_len,
+				    peer->supp_oper_classes,
+				    peer->supp_oper_classes_len))
 		goto error;
 
 	peer->tpk_in_progress = 1;
@@ -1992,20 +2001,6 @@ static int wpa_tdls_enable_link(struct wpa_sm *sm, struct wpa_tdls_peer *peer)
 	}
 #endif /* CONFIG_TDLS_TESTING */
 	}
-
-	/* add supported rates, capabilities, and qos_info to the TDLS peer */
-	if (wpa_sm_tdls_peer_addset(sm, peer->addr, 0, peer->aid,
-				    peer->capability,
-				    peer->supp_rates, peer->supp_rates_len,
-				    peer->ht_capabilities,
-				    peer->vht_capabilities,
-				    peer->qos_info, peer->ext_capab,
-				    peer->ext_capab_len,
-				    peer->supp_channels,
-				    peer->supp_channels_len,
-				    peer->supp_oper_classes,
-				    peer->supp_oper_classes_len) < 0)
-		return -1;
 
 	if (peer->reconfig_key && wpa_tdls_set_key(sm, peer) < 0) {
 		wpa_printf(MSG_INFO, "TDLS: Could not configure key to the "
@@ -2260,6 +2255,20 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 skip_rsn:
 	peer->dtoken = dtoken;
 
+	/* add supported rates, capabilities, and qos_info to the TDLS peer */
+	if (wpa_sm_tdls_peer_addset(sm, peer->addr, 0, peer->aid,
+				    peer->capability,
+				    peer->supp_rates, peer->supp_rates_len,
+				    peer->ht_capabilities,
+				    peer->vht_capabilities,
+				    peer->qos_info, peer->ext_capab,
+				    peer->ext_capab_len,
+				    peer->supp_channels,
+				    peer->supp_channels_len,
+				    peer->supp_oper_classes,
+				    peer->supp_oper_classes_len) < 0)
+		goto error;
+
 	wpa_printf(MSG_DEBUG, "TDLS: Sending TDLS Setup Confirm / "
 		   "TPK Handshake Message 3");
 	if (wpa_tdls_send_tpk_m3(sm, src_addr, dtoken, lnkid, peer) < 0)
@@ -2425,6 +2434,20 @@ static int wpa_tdls_process_tpk_m3(struct wpa_sm *sm, const u8 *src_addr,
 	}
 
 skip_rsn:
+	/* add supported rates, capabilities, and qos_info to the TDLS peer */
+	if (wpa_sm_tdls_peer_addset(sm, peer->addr, 0, peer->aid,
+				    peer->capability,
+				    peer->supp_rates, peer->supp_rates_len,
+				    peer->ht_capabilities,
+				    peer->vht_capabilities,
+				    peer->qos_info, peer->ext_capab,
+				    peer->ext_capab_len,
+				    peer->supp_channels,
+				    peer->supp_channels_len,
+				    peer->supp_oper_classes,
+				    peer->supp_oper_classes_len) < 0)
+		goto error;
+
 	if (!peer->tpk_success) {
 		/*
 		 * Enable Link only when tpk_success is 0, signifying that this

@@ -631,7 +631,33 @@ static void wpa_tdls_tpk_timeout(void *eloop_ctx, void *timeout_ctx)
 }
 
 
-static void wpa_tdls_peer_free(struct wpa_sm *sm, struct wpa_tdls_peer *peer)
+static void wpa_tdls_peer_remove_from_list(struct wpa_sm *sm,
+					   struct wpa_tdls_peer *peer)
+{
+	struct wpa_tdls_peer *cur, *prev;
+
+	cur = sm->tdls;
+	prev = NULL;
+	while (cur && cur != peer) {
+		prev = cur;
+		cur = cur->next;
+	}
+
+	if (cur != peer) {
+		wpa_printf(MSG_ERROR, "TDLS: Could not find peer " MACSTR
+			   " to remove it from the list",
+			   MAC2STR(peer->addr));
+		return;
+	}
+
+	if (prev)
+		prev->next = peer->next;
+	else
+		sm->tdls = peer->next;
+}
+
+
+static void wpa_tdls_peer_clear(struct wpa_sm *sm, struct wpa_tdls_peer *peer)
 {
 	wpa_printf(MSG_DEBUG, "TDLS: Clear state for peer " MACSTR,
 		   MAC2STR(peer->addr));
@@ -660,6 +686,14 @@ static void wpa_tdls_peer_free(struct wpa_sm *sm, struct wpa_tdls_peer *peer)
 	os_memset(&peer->tpk, 0, sizeof(peer->tpk));
 	os_memset(peer->inonce, 0, WPA_NONCE_LEN);
 	os_memset(peer->rnonce, 0, WPA_NONCE_LEN);
+}
+
+
+static void wpa_tdls_peer_free(struct wpa_sm *sm, struct wpa_tdls_peer *peer)
+{
+	wpa_tdls_peer_clear(sm, peer);
+	wpa_tdls_peer_remove_from_list(sm, peer);
+	os_free(peer);
 }
 
 
@@ -1644,16 +1678,16 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 			wpa_printf(MSG_DEBUG, "TDLS: TDLS Setup Request while "
 				   "direct link is enabled - tear down the "
 				   "old link first");
-			wpa_tdls_disable_peer_link(sm, peer);
-		}
-
-		/*
-		 * An entry is already present, so check if we already sent a
-		 * TDLS Setup Request. If so, compare MAC addresses and let the
-		 * STA with the lower MAC address continue as the initiator.
-		 * The other negotiation is terminated.
-		 */
-		if (peer->initiator) {
+			wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK, peer->addr);
+			wpa_tdls_peer_clear(sm, peer);
+		} else if (peer->initiator) {
+			/*
+			 * An entry is already present, so check if we already
+			 * sent a TDLS Setup Request. If so, compare MAC
+			 * addresses and let the STA with the lower MAC address
+			 * continue as the initiator. The other negotiation is
+			 * terminated.
+			 */
 			if (os_memcmp(sm->own_addr, src_addr, ETH_ALEN) < 0) {
 				wpa_printf(MSG_DEBUG, "TDLS: Discard request "
 					   "from peer with higher address "
@@ -1665,7 +1699,9 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 					   MACSTR " (terminate previously "
 					   "initiated negotiation",
 					   MAC2STR(src_addr));
-				wpa_tdls_disable_peer_link(sm, peer);
+				wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK,
+						 peer->addr);
+				wpa_tdls_peer_clear(sm, peer);
 			}
 		}
 	}
@@ -1918,7 +1954,7 @@ skip_rsn_check:
 
 	wpa_printf(MSG_DEBUG, "TDLS: Sending TDLS Setup Response / TPK M2");
 	if (wpa_tdls_send_tpk_m2(sm, src_addr, dtoken, lnkid, peer) < 0) {
-		wpa_tdls_disable_peer_link(sm, peer);
+		wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK, peer->addr);
 		goto error;
 	}
 
@@ -2226,10 +2262,8 @@ skip_rsn:
 
 	wpa_printf(MSG_DEBUG, "TDLS: Sending TDLS Setup Confirm / "
 		   "TPK Handshake Message 3");
-	if (wpa_tdls_send_tpk_m3(sm, src_addr, dtoken, lnkid, peer) < 0) {
-		wpa_tdls_disable_peer_link(sm, peer);
-		return -1;
-	}
+	if (wpa_tdls_send_tpk_m3(sm, src_addr, dtoken, lnkid, peer) < 0)
+		goto error;
 
 	if (!peer->tpk_success) {
 		/*
@@ -2621,13 +2655,14 @@ int wpa_tdls_init(struct wpa_sm *sm)
 
 void wpa_tdls_teardown_peers(struct wpa_sm *sm)
 {
-	struct wpa_tdls_peer *peer;
+	struct wpa_tdls_peer *peer, *tmp;
 
 	peer = sm->tdls;
 
 	wpa_printf(MSG_DEBUG, "TDLS: Tear down peers");
 
 	while (peer) {
+		tmp = peer->next;
 		wpa_printf(MSG_DEBUG, "TDLS: Tear down peer " MACSTR,
 			   MAC2STR(peer->addr));
 		if (sm->tdls_external_setup)
@@ -2636,7 +2671,7 @@ void wpa_tdls_teardown_peers(struct wpa_sm *sm)
 		else
 			wpa_sm_tdls_oper(sm, TDLS_TEARDOWN, peer->addr);
 
-		peer = peer->next;
+		peer = tmp;
 	}
 }
 
@@ -2646,7 +2681,6 @@ static void wpa_tdls_remove_peers(struct wpa_sm *sm)
 	struct wpa_tdls_peer *peer, *tmp;
 
 	peer = sm->tdls;
-	sm->tdls = NULL;
 
 	while (peer) {
 		int res;
@@ -2655,7 +2689,6 @@ static void wpa_tdls_remove_peers(struct wpa_sm *sm)
 		wpa_printf(MSG_DEBUG, "TDLS: Remove peer " MACSTR " (res=%d)",
 			   MAC2STR(peer->addr), res);
 		wpa_tdls_peer_free(sm, peer);
-		os_free(peer);
 		peer = tmp;
 	}
 }

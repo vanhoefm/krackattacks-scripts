@@ -2457,14 +2457,12 @@ skip_rsn:
 		ret = wpa_tdls_enable_link(sm, peer);
 		if (ret < 0) {
 			wpa_printf(MSG_DEBUG, "TDLS: Could not enable link");
-			wpa_tdls_do_teardown(
-				sm, peer,
-				WLAN_REASON_TDLS_TEARDOWN_UNSPECIFIED);
+			goto error;
 		}
 	}
 	return ret;
 error:
-	wpa_tdls_disable_peer_link(sm, peer);
+	wpa_tdls_do_teardown(sm, peer, WLAN_REASON_TDLS_TEARDOWN_UNSPECIFIED);
 	return -1;
 }
 

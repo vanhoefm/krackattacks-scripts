@@ -2527,8 +2527,11 @@ int wpa_tdls_start(struct wpa_sm *sm, const u8 *addr)
 	peer->initiator = 1;
 
 	/* add the peer to the driver as a "setup in progress" peer */
-	wpa_sm_tdls_peer_addset(sm, peer->addr, 1, 0, 0, NULL, 0, NULL, NULL, 0,
-				NULL, 0, NULL, 0, NULL, 0);
+	if (wpa_sm_tdls_peer_addset(sm, peer->addr, 1, 0, 0, NULL, 0, NULL,
+				    NULL, 0, NULL, 0, NULL, 0, NULL, 0)) {
+		wpa_tdls_disable_peer_link(sm, peer);
+		return -1;
+	}
 
 	peer->tpk_in_progress = 1;
 

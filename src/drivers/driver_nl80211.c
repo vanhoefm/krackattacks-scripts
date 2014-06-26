@@ -9043,18 +9043,19 @@ static int wpa_driver_nl80211_set_mode(struct i802_bss *bss,
 	int i;
 	int was_ap = is_ap_interface(drv->nlmode);
 	int res;
+	int mode_switch_res;
 
-	res = nl80211_set_mode(drv, drv->ifindex, nlmode);
-	if (res && nlmode == nl80211_get_ifmode(bss))
-		res = 0;
+	mode_switch_res = nl80211_set_mode(drv, drv->ifindex, nlmode);
+	if (mode_switch_res && nlmode == nl80211_get_ifmode(bss))
+		mode_switch_res = 0;
 
-	if (res == 0) {
+	if (mode_switch_res == 0) {
 		drv->nlmode = nlmode;
 		ret = 0;
 		goto done;
 	}
 
-	if (res == -ENODEV)
+	if (mode_switch_res == -ENODEV)
 		return -1;
 
 	if (nlmode == drv->nlmode) {
@@ -9074,21 +9075,22 @@ static int wpa_driver_nl80211_set_mode(struct i802_bss *bss,
 		res = i802_set_iface_flags(bss, 0);
 		if (res == -EACCES || res == -ENODEV)
 			break;
-		if (res == 0) {
-			/* Try to set the mode again while the interface is
-			 * down */
-			ret = nl80211_set_mode(drv, drv->ifindex, nlmode);
-			if (ret == -EACCES)
-				break;
-			res = i802_set_iface_flags(bss, 1);
-			if (res && !ret)
-				ret = -1;
-			else if (ret != -EBUSY)
-				break;
-		} else
+		if (res != 0) {
 			wpa_printf(MSG_DEBUG, "nl80211: Failed to set "
 				   "interface down");
-		os_sleep(0, 100000);
+			os_sleep(0, 100000);
+			continue;
+		}
+		/* Try to set the mode again while the interface is down */
+		mode_switch_res = nl80211_set_mode(drv, drv->ifindex, nlmode);
+		if (mode_switch_res == -EBUSY) {
+			wpa_printf(MSG_DEBUG,
+				   "nl80211: Delaying mode set while interface going down");
+			os_sleep(0, 100000);
+			continue;
+		}
+		ret = mode_switch_res;
+		break;
 	}
 
 	if (!ret) {
@@ -9096,6 +9098,14 @@ static int wpa_driver_nl80211_set_mode(struct i802_bss *bss,
 			   "interface is down");
 		drv->nlmode = nlmode;
 		drv->ignore_if_down_event = 1;
+	}
+
+	/* Bring the interface back up */
+	res = linux_set_iface_flags(drv->global->ioctl_sock, bss->ifname, 1);
+	if (res != 0) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Failed to set interface up after switching mode");
+		ret = -1;
 	}
 
 done:

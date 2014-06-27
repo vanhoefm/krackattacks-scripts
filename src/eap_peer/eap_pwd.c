@@ -148,10 +148,10 @@ static void eap_pwd_deinit(struct eap_sm *sm, void *priv)
 {
 	struct eap_pwd_data *data = priv;
 
-	BN_free(data->private_value);
-	BN_free(data->server_scalar);
-	BN_free(data->my_scalar);
-	BN_free(data->k);
+	BN_clear_free(data->private_value);
+	BN_clear_free(data->server_scalar);
+	BN_clear_free(data->my_scalar);
+	BN_clear_free(data->k);
 	BN_CTX_free(data->bnctx);
 	EC_POINT_free(data->my_element);
 	EC_POINT_free(data->server_element);
@@ -161,8 +161,8 @@ static void eap_pwd_deinit(struct eap_sm *sm, void *priv)
 	if (data->grp) {
 		EC_GROUP_free(data->grp->group);
 		EC_POINT_free(data->grp->pwe);
-		BN_free(data->grp->order);
-		BN_free(data->grp->prime);
+		BN_clear_free(data->grp->order);
+		BN_clear_free(data->grp->prime);
 		os_free(data->grp);
 	}
 	wpabuf_free(data->inbuf);
@@ -336,7 +336,7 @@ eap_pwd_perform_commit_exchange(struct eap_sm *sm, struct eap_pwd_data *data,
 		wpa_printf(MSG_INFO, "EAP-PWD (peer): element inversion fail");
 		goto fin;
 	}
-	BN_free(mask);
+	BN_clear_free(mask);
 
 	if (((x = BN_new()) == NULL) ||
 	    ((y = BN_new()) == NULL)) {
@@ -471,9 +471,9 @@ eap_pwd_perform_commit_exchange(struct eap_sm *sm, struct eap_pwd_data *data,
 fin:
 	os_free(scalar);
 	os_free(element);
-	BN_free(x);
-	BN_free(y);
-	BN_free(cofactor);
+	BN_clear_free(x);
+	BN_clear_free(y);
+	BN_clear_free(cofactor);
 	EC_POINT_free(K);
 	EC_POINT_free(point);
 	if (data->outbuf == NULL)
@@ -681,8 +681,8 @@ eap_pwd_perform_confirm_exchange(struct eap_sm *sm, struct eap_pwd_data *data,
 
 fin:
 	os_free(cruft);
-	BN_free(x);
-	BN_free(y);
+	BN_clear_free(x);
+	BN_clear_free(y);
 	if (data->outbuf == NULL) {
 		ret->methodState = METHOD_DONE;
 		ret->decision = DECISION_FAIL;

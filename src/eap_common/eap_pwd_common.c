@@ -265,16 +265,16 @@ int compute_password_element(EAP_PWD_group *grp, u16 num,
 		grp->group = NULL;
 		EC_POINT_free(grp->pwe);
 		grp->pwe = NULL;
-		BN_free(grp->order);
+		BN_clear_free(grp->order);
 		grp->order = NULL;
-		BN_free(grp->prime);
+		BN_clear_free(grp->prime);
 		grp->prime = NULL;
 		ret = 1;
 	}
 	/* cleanliness and order.... */
-	BN_free(cofactor);
-	BN_free(x_candidate);
-	BN_free(rnd);
+	BN_clear_free(cofactor);
+	BN_clear_free(x_candidate);
+	BN_clear_free(rnd);
 	os_free(prfbuf);
 
 	return ret;

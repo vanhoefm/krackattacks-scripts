@@ -340,10 +340,10 @@ int crypto_mod_exp(const u8 *base, size_t base_len,
 	ret = 0;
 
 error:
-	BN_free(bn_base);
-	BN_free(bn_exp);
-	BN_free(bn_modulus);
-	BN_free(bn_result);
+	BN_clear_free(bn_base);
+	BN_clear_free(bn_exp);
+	BN_clear_free(bn_modulus);
+	BN_clear_free(bn_result);
 	BN_CTX_free(ctx);
 	return ret;
 }
@@ -571,12 +571,12 @@ struct wpabuf * dh5_derive_shared(void *ctx, const struct wpabuf *peer_public,
 	if (keylen < 0)
 		goto err;
 	wpabuf_put(res, keylen);
-	BN_free(pub_key);
+	BN_clear_free(pub_key);
 
 	return res;
 
 err:
-	BN_free(pub_key);
+	BN_clear_free(pub_key);
 	wpabuf_free(res);
 	return NULL;
 }
@@ -1066,7 +1066,7 @@ void crypto_ec_deinit(struct crypto_ec *e)
 {
 	if (e == NULL)
 		return;
-	BN_free(e->order);
+	BN_clear_free(e->order);
 	EC_GROUP_free(e->group);
 	BN_CTX_free(e->bnctx);
 	os_free(e);
@@ -1138,8 +1138,8 @@ int crypto_ec_point_to_bin(struct crypto_ec *e,
 		ret = 0;
 	}
 
-	BN_free(x_bn);
-	BN_free(y_bn);
+	BN_clear_free(x_bn);
+	BN_clear_free(y_bn);
 	return ret;
 }
 
@@ -1155,8 +1155,8 @@ struct crypto_ec_point * crypto_ec_point_from_bin(struct crypto_ec *e,
 	y = BN_bin2bn(val + len, len, NULL);
 	elem = EC_POINT_new(e->group);
 	if (x == NULL || y == NULL || elem == NULL) {
-		BN_free(x);
-		BN_free(y);
+		BN_clear_free(x);
+		BN_clear_free(y);
 		EC_POINT_free(elem);
 		return NULL;
 	}
@@ -1167,8 +1167,8 @@ struct crypto_ec_point * crypto_ec_point_from_bin(struct crypto_ec *e,
 		elem = NULL;
 	}
 
-	BN_free(x);
-	BN_free(y);
+	BN_clear_free(x);
+	BN_clear_free(y);
 
 	return (struct crypto_ec_point *) elem;
 }

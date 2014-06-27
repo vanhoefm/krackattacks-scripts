@@ -885,6 +885,20 @@ static void hostapd_event_get_survey(struct hostapd_data *hapd,
 
 #ifdef NEED_AP_MLME
 
+static void hostapd_event_iface_unavailable(struct hostapd_data *hapd)
+{
+	wpa_printf(MSG_DEBUG, "Interface %s is unavailable -- stopped",
+		   hapd->conf->iface);
+
+	if (hapd->csa_in_progress) {
+		wpa_printf(MSG_INFO, "CSA failed (%s was stopped)",
+			   hapd->conf->iface);
+		hostapd_switch_channel_fallback(hapd->iface,
+						&hapd->cs_freq_params);
+	}
+}
+
+
 static void hostapd_event_dfs_radar_detected(struct hostapd_data *hapd,
 					     struct dfs_event *radar)
 {
@@ -1072,6 +1086,9 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		hostapd_event_get_survey(hapd, &data->survey_results);
 		break;
 #ifdef NEED_AP_MLME
+	case EVENT_INTERFACE_UNAVAILABLE:
+		hostapd_event_iface_unavailable(hapd);
+		break;
 	case EVENT_DFS_RADAR_DETECTED:
 		if (!data)
 			break;

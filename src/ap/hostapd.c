@@ -2280,12 +2280,12 @@ static int hostapd_change_config_freq(struct hostapd_data *hapd,
 
 	if (!params->channel) {
 		/* check if the new channel is supported by hw */
-		channel = hostapd_hw_get_channel(hapd, params->freq);
-		if (!channel)
-			return -1;
-	} else {
-		channel = params->channel;
+		params->channel = hostapd_hw_get_channel(hapd, params->freq);
 	}
+
+	channel = params->channel;
+	if (!channel)
+		return -1;
 
 	/* if a pointer to old_params is provided we save previous state */
 	if (old_params) {
@@ -2379,6 +2379,62 @@ int hostapd_switch_channel(struct hostapd_data *hapd,
 
 	hapd->csa_in_progress = 1;
 	return 0;
+}
+
+
+void
+hostapd_switch_channel_fallback(struct hostapd_iface *iface,
+				const struct hostapd_freq_params *freq_params)
+{
+	int vht_seg0_idx = 0, vht_seg1_idx = 0, vht_bw = VHT_CHANWIDTH_USE_HT;
+	unsigned int i;
+
+	wpa_printf(MSG_DEBUG, "Restarting all CSA-related BSSes");
+
+	if (freq_params->center_freq1)
+		vht_seg0_idx = 36 + (freq_params->center_freq1 - 5180) / 5;
+	if (freq_params->center_freq2)
+		vht_seg1_idx = 36 + (freq_params->center_freq2 - 5180) / 5;
+
+	switch (freq_params->bandwidth) {
+	case 0:
+	case 20:
+	case 40:
+		vht_bw = VHT_CHANWIDTH_USE_HT;
+		break;
+	case 80:
+		if (freq_params->center_freq2)
+			vht_bw = VHT_CHANWIDTH_80P80MHZ;
+		else
+			vht_bw = VHT_CHANWIDTH_80MHZ;
+		break;
+	case 160:
+		vht_bw = VHT_CHANWIDTH_160MHZ;
+		break;
+	default:
+		wpa_printf(MSG_WARNING, "Unknown CSA bandwidth: %d",
+			   freq_params->bandwidth);
+		break;
+	}
+
+	iface->freq = freq_params->freq;
+	iface->conf->channel = freq_params->channel;
+	iface->conf->secondary_channel = freq_params->sec_channel_offset;
+	iface->conf->vht_oper_centr_freq_seg0_idx = vht_seg0_idx;
+	iface->conf->vht_oper_centr_freq_seg1_idx = vht_seg1_idx;
+	iface->conf->vht_oper_chwidth = vht_bw;
+	iface->conf->ieee80211n = freq_params->ht_enabled;
+	iface->conf->ieee80211ac = freq_params->vht_enabled;
+
+	/*
+	 * cs_params must not be cleared earlier because the freq_params
+	 * argument may actually point to one of these.
+	 */
+	for (i = 0; i < iface->num_bss; i++)
+		hostapd_cleanup_cs_params(iface->bss[i]);
+
+	hostapd_disable_iface(iface);
+	hostapd_enable_iface(iface);
 }
 
 #endif /* NEED_AP_MLME */

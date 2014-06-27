@@ -397,6 +397,9 @@ void hostapd_set_state(struct hostapd_iface *iface, enum hostapd_iface_state s);
 const char * hostapd_state_text(enum hostapd_iface_state s);
 int hostapd_switch_channel(struct hostapd_data *hapd,
 			   struct csa_settings *settings);
+void
+hostapd_switch_channel_fallback(struct hostapd_iface *iface,
+				const struct hostapd_freq_params *freq_params);
 void hostapd_cleanup_cs_params(struct hostapd_data *hapd);
 
 /* utils.c */

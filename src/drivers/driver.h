@@ -3316,7 +3316,8 @@ enum wpa_event_type {
 	 * the driver does not support radar detection and another virtual
 	 * interfaces caused the operating channel to change. Other similar
 	 * resource conflicts could also trigger this for station mode
-	 * interfaces.
+	 * interfaces. This event can be propagated when channel switching
+	 * fails.
 	 */
 	EVENT_INTERFACE_UNAVAILABLE,
 

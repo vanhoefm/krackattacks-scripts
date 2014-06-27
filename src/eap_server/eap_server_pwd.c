@@ -210,11 +210,15 @@ static void eap_pwd_build_commit_req(struct eap_sm *sm,
 		goto fin;
 	}
 
-	BN_rand_range(data->private_value, data->grp->order);
-	BN_rand_range(mask, data->grp->order);
-	BN_add(data->my_scalar, data->private_value, mask);
-	BN_mod(data->my_scalar, data->my_scalar, data->grp->order,
-	       data->bnctx);
+	if (BN_rand_range(data->private_value, data->grp->order) != 1 ||
+	    BN_rand_range(mask, data->grp->order) != 1 ||
+	    BN_add(data->my_scalar, data->private_value, mask) != 1 ||
+	    BN_mod(data->my_scalar, data->my_scalar, data->grp->order,
+		   data->bnctx) != 1) {
+		wpa_printf(MSG_INFO,
+			   "EAP-pwd (server): unable to get randomness");
+		goto fin;
+	}
 
 	if (!EC_POINT_mul(data->grp->group, data->my_element, NULL,
 			  data->grp->pwe, mask, data->bnctx)) {

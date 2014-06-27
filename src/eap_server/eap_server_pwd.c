@@ -140,14 +140,14 @@ static void eap_pwd_reset(struct eap_sm *sm, void *priv)
 	BN_clear_free(data->my_scalar);
 	BN_clear_free(data->k);
 	BN_CTX_free(data->bnctx);
-	EC_POINT_free(data->my_element);
-	EC_POINT_free(data->peer_element);
+	EC_POINT_clear_free(data->my_element);
+	EC_POINT_clear_free(data->peer_element);
 	os_free(data->id_peer);
 	os_free(data->id_server);
 	bin_clear_free(data->password, data->password_len);
 	if (data->grp) {
 		EC_GROUP_free(data->grp->group);
-		EC_POINT_free(data->grp->pwe);
+		EC_POINT_clear_free(data->grp->pwe);
 		BN_clear_free(data->grp->order);
 		BN_clear_free(data->grp->prime);
 		os_free(data->grp);
@@ -724,8 +724,8 @@ eap_pwd_process_commit_resp(struct eap_sm *sm, struct eap_pwd_data *data,
 	res = 1;
 
 fin:
-	EC_POINT_free(K);
-	EC_POINT_free(point);
+	EC_POINT_clear_free(K);
+	EC_POINT_clear_free(point);
 	BN_clear_free(cofactor);
 	BN_clear_free(x);
 	BN_clear_free(y);

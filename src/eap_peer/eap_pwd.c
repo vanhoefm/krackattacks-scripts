@@ -153,14 +153,14 @@ static void eap_pwd_deinit(struct eap_sm *sm, void *priv)
 	BN_clear_free(data->my_scalar);
 	BN_clear_free(data->k);
 	BN_CTX_free(data->bnctx);
-	EC_POINT_free(data->my_element);
-	EC_POINT_free(data->server_element);
+	EC_POINT_clear_free(data->my_element);
+	EC_POINT_clear_free(data->server_element);
 	os_free(data->id_peer);
 	os_free(data->id_server);
 	bin_clear_free(data->password, data->password_len);
 	if (data->grp) {
 		EC_GROUP_free(data->grp->group);
-		EC_POINT_free(data->grp->pwe);
+		EC_POINT_clear_free(data->grp->pwe);
 		BN_clear_free(data->grp->order);
 		BN_clear_free(data->grp->prime);
 		os_free(data->grp);
@@ -474,8 +474,8 @@ fin:
 	BN_clear_free(x);
 	BN_clear_free(y);
 	BN_clear_free(cofactor);
-	EC_POINT_free(K);
-	EC_POINT_free(point);
+	EC_POINT_clear_free(K);
+	EC_POINT_clear_free(point);
 	if (data->outbuf == NULL)
 		eap_pwd_state(data, FAILURE);
 	else

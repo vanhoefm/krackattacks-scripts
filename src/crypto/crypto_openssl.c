@@ -1157,13 +1157,13 @@ struct crypto_ec_point * crypto_ec_point_from_bin(struct crypto_ec *e,
 	if (x == NULL || y == NULL || elem == NULL) {
 		BN_clear_free(x);
 		BN_clear_free(y);
-		EC_POINT_free(elem);
+		EC_POINT_clear_free(elem);
 		return NULL;
 	}
 
 	if (!EC_POINT_set_affine_coordinates_GFp(e->group, elem, x, y,
 						 e->bnctx)) {
-		EC_POINT_free(elem);
+		EC_POINT_clear_free(elem);
 		elem = NULL;
 	}
 

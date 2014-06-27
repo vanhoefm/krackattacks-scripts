@@ -210,6 +210,14 @@ struct hostapd_data {
 			   size_t psk_len);
 	void *new_psk_cb_ctx;
 
+	/* channel switch parameters */
+	struct hostapd_freq_params cs_freq_params;
+	u8 cs_count;
+	int cs_block_tx;
+	unsigned int cs_c_off_beacon;
+	unsigned int cs_c_off_proberesp;
+	int csa_in_progress;
+
 #ifdef CONFIG_P2P
 	struct p2p_data *p2p;
 	struct p2p_group *p2p_group;
@@ -342,14 +350,6 @@ struct hostapd_iface {
 
 	/* lowest observed noise floor in dBm */
 	s8 lowest_nf;
-
-	/* channel switch parameters */
-	struct hostapd_freq_params cs_freq_params;
-	u8 cs_count;
-	int cs_block_tx;
-	unsigned int cs_c_off_beacon;
-	unsigned int cs_c_off_proberesp;
-	int csa_in_progress;
 
 	unsigned int dfs_cac_ms;
 	struct os_reltime dfs_cac_start;

@@ -1680,7 +1680,7 @@ static void mlme_event_ch_switch(struct wpa_driver_nl80211_data *drv,
 
 	bss->freq = data.ch_switch.freq;
 
-	wpa_supplicant_event(drv->ctx, EVENT_CH_SWITCH, &data);
+	wpa_supplicant_event(bss->ctx, EVENT_CH_SWITCH, &data);
 }
 
 
@@ -12118,7 +12118,7 @@ static int nl80211_switch_channel(void *priv, struct csa_settings *settings)
 		return -ENOMEM;
 
 	nl80211_cmd(drv, msg, 0, NL80211_CMD_CHANNEL_SWITCH);
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, bss->ifindex);
 	NLA_PUT_U32(msg, NL80211_ATTR_CH_SWITCH_COUNT, settings->cs_count);
 	ret = nl80211_put_freq_params(msg, &settings->freq_params);
 	if (ret)

@@ -140,7 +140,7 @@ static struct wpabuf * eap_sim_build_start(struct eap_sm *sm,
 	ver[1] = EAP_SIM_VERSION;
 	eap_sim_msg_add(msg, EAP_SIM_AT_VERSION_LIST, sizeof(ver),
 			ver, sizeof(ver));
-	return eap_sim_msg_finish(msg, NULL, NULL, 0);
+	return eap_sim_msg_finish(msg, EAP_TYPE_SIM, NULL, NULL, 0);
 }
 
 
@@ -240,8 +240,8 @@ static struct wpabuf * eap_sim_build_challenge(struct eap_sm *sm,
 
 	wpa_printf(MSG_DEBUG, "   AT_MAC");
 	eap_sim_msg_add_mac(msg, EAP_SIM_AT_MAC);
-	return eap_sim_msg_finish(msg, data->k_aut, data->nonce_mt,
-				  EAP_SIM_NONCE_MT_LEN);
+	return eap_sim_msg_finish(msg, EAP_TYPE_SIM, data->k_aut,
+				  data->nonce_mt, EAP_SIM_NONCE_MT_LEN);
 }
 
 
@@ -278,7 +278,7 @@ static struct wpabuf * eap_sim_build_reauth(struct eap_sm *sm,
 
 	wpa_printf(MSG_DEBUG, "   AT_MAC");
 	eap_sim_msg_add_mac(msg, EAP_SIM_AT_MAC);
-	return eap_sim_msg_finish(msg, data->k_aut, NULL, 0);
+	return eap_sim_msg_finish(msg, EAP_TYPE_SIM, data->k_aut, NULL, 0);
 }
 
 
@@ -317,7 +317,7 @@ static struct wpabuf * eap_sim_build_notification(struct eap_sm *sm,
 		wpa_printf(MSG_DEBUG, "   AT_MAC");
 		eap_sim_msg_add_mac(msg, EAP_SIM_AT_MAC);
 	}
-	return eap_sim_msg_finish(msg, data->k_aut, NULL, 0);
+	return eap_sim_msg_finish(msg, EAP_TYPE_SIM, data->k_aut, NULL, 0);
 }
 
 

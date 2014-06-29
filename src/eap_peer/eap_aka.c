@@ -532,7 +532,7 @@ static struct wpabuf * eap_aka_client_error(struct eap_aka_data *data, u8 id,
 	msg = eap_sim_msg_init(EAP_CODE_RESPONSE, id, data->eap_method,
 			       EAP_AKA_SUBTYPE_CLIENT_ERROR);
 	eap_sim_msg_add(msg, EAP_SIM_AT_CLIENT_ERROR_CODE, err, NULL, 0);
-	return eap_sim_msg_finish(msg, NULL, NULL, 0);
+	return eap_sim_msg_finish(msg, data->eap_method, NULL, NULL, 0);
 }
 
 
@@ -549,7 +549,7 @@ static struct wpabuf * eap_aka_authentication_reject(struct eap_aka_data *data,
 		   "(id=%d)", id);
 	msg = eap_sim_msg_init(EAP_CODE_RESPONSE, id, data->eap_method,
 			       EAP_AKA_SUBTYPE_AUTHENTICATION_REJECT);
-	return eap_sim_msg_finish(msg, NULL, NULL, 0);
+	return eap_sim_msg_finish(msg, data->eap_method, NULL, NULL, 0);
 }
 
 
@@ -568,7 +568,7 @@ static struct wpabuf * eap_aka_synchronization_failure(
 	wpa_printf(MSG_DEBUG, "   AT_AUTS");
 	eap_sim_msg_add_full(msg, EAP_SIM_AT_AUTS, data->auts,
 			     EAP_AKA_AUTS_LEN);
-	return eap_sim_msg_finish(msg, NULL, NULL, 0);
+	return eap_sim_msg_finish(msg, data->eap_method, NULL, NULL, 0);
 }
 
 
@@ -612,7 +612,7 @@ static struct wpabuf * eap_aka_response_identity(struct eap_sm *sm,
 				identity, identity_len);
 	}
 
-	return eap_sim_msg_finish(msg, NULL, NULL, 0);
+	return eap_sim_msg_finish(msg, data->eap_method, NULL, NULL, 0);
 }
 
 
@@ -634,7 +634,8 @@ static struct wpabuf * eap_aka_response_challenge(struct eap_aka_data *data,
 	}
 	wpa_printf(MSG_DEBUG, "   AT_MAC");
 	eap_sim_msg_add_mac(msg, EAP_SIM_AT_MAC);
-	return eap_sim_msg_finish(msg, data->k_aut, (u8 *) "", 0);
+	return eap_sim_msg_finish(msg, data->eap_method, data->k_aut, (u8 *) "",
+				  0);
 }
 
 
@@ -676,7 +677,7 @@ static struct wpabuf * eap_aka_response_reauth(struct eap_aka_data *data,
 	}
 	wpa_printf(MSG_DEBUG, "   AT_MAC");
 	eap_sim_msg_add_mac(msg, EAP_SIM_AT_MAC);
-	return eap_sim_msg_finish(msg, data->k_aut, nonce_s,
+	return eap_sim_msg_finish(msg, data->eap_method, data->k_aut, nonce_s,
 				  EAP_SIM_NONCE_S_LEN);
 }
 
@@ -710,7 +711,7 @@ static struct wpabuf * eap_aka_response_notification(struct eap_aka_data *data,
 		wpa_printf(MSG_DEBUG, "   AT_MAC");
 		eap_sim_msg_add_mac(msg, EAP_SIM_AT_MAC);
 	}
-	return eap_sim_msg_finish(msg, k_aut, (u8 *) "", 0);
+	return eap_sim_msg_finish(msg, data->eap_method, k_aut, (u8 *) "", 0);
 }
 
 
@@ -790,7 +791,7 @@ static struct wpabuf * eap_aka_prime_kdf_select(struct eap_aka_data *data,
 			       EAP_AKA_SUBTYPE_CHALLENGE);
 	wpa_printf(MSG_DEBUG, "   AT_KDF");
 	eap_sim_msg_add(msg, EAP_SIM_AT_KDF, kdf, NULL, 0);
-	return eap_sim_msg_finish(msg, NULL, NULL, 0);
+	return eap_sim_msg_finish(msg, data->eap_method, NULL, NULL, 0);
 }
 
 

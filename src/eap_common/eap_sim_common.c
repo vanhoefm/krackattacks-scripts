@@ -972,7 +972,6 @@ u8 * eap_sim_parse_encr(const u8 *k_encr, const u8 *encr_data,
 struct eap_sim_msg {
 	struct wpabuf *buf;
 	size_t mac, iv, encr; /* index from buf */
-	int type;
 };
 
 
@@ -986,7 +985,6 @@ struct eap_sim_msg * eap_sim_msg_init(int code, int id, int type, int subtype)
 	if (msg == NULL)
 		return NULL;
 
-	msg->type = type;
 	msg->buf = wpabuf_alloc(EAP_SIM_INIT_LEN);
 	if (msg->buf == NULL) {
 		os_free(msg);
@@ -1006,7 +1004,8 @@ struct eap_sim_msg * eap_sim_msg_init(int code, int id, int type, int subtype)
 }
 
 
-struct wpabuf * eap_sim_msg_finish(struct eap_sim_msg *msg, const u8 *k_aut,
+struct wpabuf * eap_sim_msg_finish(struct eap_sim_msg *msg, int type,
+				   const u8 *k_aut,
 				   const u8 *extra, size_t extra_len)
 {
 	struct eap_hdr *eap;
@@ -1019,7 +1018,7 @@ struct wpabuf * eap_sim_msg_finish(struct eap_sim_msg *msg, const u8 *k_aut,
 	eap->length = host_to_be16(wpabuf_len(msg->buf));
 
 #if defined(EAP_AKA_PRIME) || defined(EAP_SERVER_AKA_PRIME)
-	if (k_aut && msg->mac && msg->type == EAP_TYPE_AKA_PRIME) {
+	if (k_aut && msg->mac && type == EAP_TYPE_AKA_PRIME) {
 		eap_sim_add_mac_sha256(k_aut, (u8 *) wpabuf_head(msg->buf),
 				       wpabuf_len(msg->buf),
 				       (u8 *) wpabuf_mhead(msg->buf) +

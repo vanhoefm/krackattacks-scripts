@@ -377,7 +377,7 @@ static struct wpabuf * eap_aka_build_identity(struct eap_sm *sm,
 		wpa_printf(MSG_DEBUG, "   AT_PERMANENT_ID_REQ");
 		eap_sim_msg_add(msg, EAP_SIM_AT_PERMANENT_ID_REQ, 0, NULL, 0);
 	}
-	buf = eap_sim_msg_finish(msg, NULL, NULL, 0);
+	buf = eap_sim_msg_finish(msg, data->eap_method, NULL, NULL, 0);
 	if (eap_aka_add_id_msg(data, buf) < 0) {
 		wpabuf_free(buf);
 		return NULL;
@@ -534,7 +534,7 @@ static struct wpabuf * eap_aka_build_challenge(struct eap_sm *sm,
 
 	wpa_printf(MSG_DEBUG, "   AT_MAC");
 	eap_sim_msg_add_mac(msg, EAP_SIM_AT_MAC);
-	return eap_sim_msg_finish(msg, data->k_aut, NULL, 0);
+	return eap_sim_msg_finish(msg, data->eap_method, data->k_aut, NULL, 0);
 }
 
 
@@ -581,7 +581,7 @@ static struct wpabuf * eap_aka_build_reauth(struct eap_sm *sm,
 
 	wpa_printf(MSG_DEBUG, "   AT_MAC");
 	eap_sim_msg_add_mac(msg, EAP_SIM_AT_MAC);
-	return eap_sim_msg_finish(msg, data->k_aut, NULL, 0);
+	return eap_sim_msg_finish(msg, data->eap_method, data->k_aut, NULL, 0);
 }
 
 
@@ -620,7 +620,7 @@ static struct wpabuf * eap_aka_build_notification(struct eap_sm *sm,
 		wpa_printf(MSG_DEBUG, "   AT_MAC");
 		eap_sim_msg_add_mac(msg, EAP_SIM_AT_MAC);
 	}
-	return eap_sim_msg_finish(msg, data->k_aut, NULL, 0);
+	return eap_sim_msg_finish(msg, data->eap_method, data->k_aut, NULL, 0);
 }
 
 

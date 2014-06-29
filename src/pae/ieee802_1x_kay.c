@@ -2942,8 +2942,9 @@ static int ieee802_1x_kay_mkpdu_sanity_check(struct ieee802_1x_kay *kay,
 						 mka_msg_len);
 
 	if (msg_icv) {
-		if (os_memcmp(msg_icv, icv,
-			      mka_alg_tbl[kay->mka_algindex].icv_len) != 0) {
+		if (os_memcmp_const(msg_icv, icv,
+				    mka_alg_tbl[kay->mka_algindex].icv_len) !=
+		    0) {
 			wpa_printf(MSG_ERROR,
 				   "KaY: Computed ICV is not equal to Received ICV");
 		return -1;

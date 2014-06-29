@@ -268,7 +268,7 @@ static Boolean eap_pax_check(struct eap_sm *sm, void *priv,
 			    wpabuf_mhead(respData),
 			    wpabuf_len(respData) - EAP_PAX_ICV_LEN,
 			    NULL, 0, NULL, 0, icvbuf);
-		if (os_memcmp(icvbuf, icv, EAP_PAX_ICV_LEN) != 0) {
+		if (os_memcmp_const(icvbuf, icv, EAP_PAX_ICV_LEN) != 0) {
 			wpa_printf(MSG_INFO, "EAP-PAX: Invalid ICV");
 			wpa_hexdump(MSG_MSGDUMP, "EAP-PAX: Expected ICV",
 				    icvbuf, EAP_PAX_ICV_LEN);
@@ -395,7 +395,7 @@ static void eap_pax_process_std_2(struct eap_sm *sm,
 		    data->rand.r.x, EAP_PAX_RAND_LEN,
 		    data->rand.r.y, EAP_PAX_RAND_LEN,
 		    (u8 *) data->cid, data->cid_len, mac);
-	if (os_memcmp(mac, pos, EAP_PAX_MAC_LEN) != 0) {
+	if (os_memcmp_const(mac, pos, EAP_PAX_MAC_LEN) != 0) {
 		wpa_printf(MSG_INFO, "EAP-PAX: Invalid MAC_CK(A, B, CID) in "
 			   "PAX_STD-2");
 		wpa_hexdump(MSG_MSGDUMP, "EAP-PAX: Expected MAC_CK(A, B, CID)",
@@ -417,7 +417,7 @@ static void eap_pax_process_std_2(struct eap_sm *sm,
 		    wpabuf_head(respData),
 		    wpabuf_len(respData) - EAP_PAX_ICV_LEN, NULL, 0, NULL, 0,
 		    icvbuf);
-	if (os_memcmp(icvbuf, pos, EAP_PAX_ICV_LEN) != 0) {
+	if (os_memcmp_const(icvbuf, pos, EAP_PAX_ICV_LEN) != 0) {
 		wpa_printf(MSG_INFO, "EAP-PAX: Invalid ICV in PAX_STD-2");
 		wpa_hexdump(MSG_MSGDUMP, "EAP-PAX: Expected ICV",
 			    icvbuf, EAP_PAX_ICV_LEN);

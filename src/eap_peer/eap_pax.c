@@ -278,7 +278,7 @@ static struct wpabuf * eap_pax_process_std_3(struct eap_pax_data *data,
 	eap_pax_mac(data->mac_id, data->ck, EAP_PAX_CK_LEN,
 		    data->rand.r.y, EAP_PAX_RAND_LEN,
 		    (u8 *) data->cid, data->cid_len, NULL, 0, mac);
-	if (os_memcmp(pos, mac, EAP_PAX_MAC_LEN) != 0) {
+	if (os_memcmp_const(pos, mac, EAP_PAX_MAC_LEN) != 0) {
 		wpa_printf(MSG_INFO, "EAP-PAX: Invalid MAC_CK(B, CID) "
 			   "received");
 		wpa_hexdump(MSG_MSGDUMP, "EAP-PAX: expected MAC_CK(B, CID)",
@@ -415,7 +415,7 @@ static struct wpabuf * eap_pax_process(struct eap_sm *sm, void *priv,
 			    wpabuf_head(reqData), mlen, NULL, 0, NULL, 0,
 			    icvbuf);
 	}
-	if (os_memcmp(icv, icvbuf, EAP_PAX_ICV_LEN) != 0) {
+	if (os_memcmp_const(icv, icvbuf, EAP_PAX_ICV_LEN) != 0) {
 		wpa_printf(MSG_DEBUG, "EAP-PAX: invalid ICV - ignoring the "
 			   "message");
 		wpa_hexdump(MSG_MSGDUMP, "EAP-PAX: expected ICV",

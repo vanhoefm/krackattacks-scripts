@@ -41,7 +41,8 @@ int peerkey_verify_eapol_key_mic(struct wpa_sm *sm,
 				 struct wpa_eapol_key *key, u16 ver,
 				 const u8 *buf, size_t len);
 void peerkey_rx_eapol_4way(struct wpa_sm *sm, struct wpa_peerkey *peerkey,
-			   struct wpa_eapol_key *key, u16 key_info, u16 ver);
+			   struct wpa_eapol_key *key, u16 key_info, u16 ver,
+			   const u8 *key_data, size_t key_data_len);
 void peerkey_rx_eapol_smk(struct wpa_sm *sm, const u8 *src_addr,
 			  struct wpa_eapol_key *key, size_t extra_len,
 			  u16 key_info, u16 ver);
@@ -60,7 +61,8 @@ peerkey_verify_eapol_key_mic(struct wpa_sm *sm,
 
 static inline void
 peerkey_rx_eapol_4way(struct wpa_sm *sm, struct wpa_peerkey *peerkey,
-		      struct wpa_eapol_key *key, u16 key_info, u16 ver)
+		      struct wpa_eapol_key *key, u16 key_info, u16 ver,
+		      const u8 *key_data, size_t key_data_len)
 {
 }
 

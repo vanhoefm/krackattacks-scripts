@@ -1833,7 +1833,8 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 		}
 		if (peerkey) {
 			/* PeerKey 4-Way Handshake */
-			peerkey_rx_eapol_4way(sm, peerkey, key, key_info, ver);
+			peerkey_rx_eapol_4way(sm, peerkey, key, key_info, ver,
+					      key_data, key_data_len);
 		} else if (key_info & WPA_KEY_INFO_MIC) {
 			/* 3/4 4-Way Handshake */
 			wpa_supplicant_process_3_of_4(sm, key, ver, key_data,

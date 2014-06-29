@@ -467,6 +467,11 @@ static char * wpa_config_write_proto(const struct parse_data *data,
 		pos += ret;
 	}
 
+	if (pos == buf) {
+		os_free(buf);
+		buf = NULL;
+	}
+
 	return buf;
 }
 #endif /* NO_CONFIG_WRITE */
@@ -672,6 +677,11 @@ static char * wpa_config_write_key_mgmt(const struct parse_data *data,
 	}
 #endif /* CONFIG_WPS */
 
+	if (pos == buf) {
+		os_free(buf);
+		buf = NULL;
+	}
+
 	return buf;
 }
 #endif /* NO_CONFIG_WRITE */
@@ -861,6 +871,11 @@ static char * wpa_config_write_auth_alg(const struct parse_data *data,
 			return buf;
 		}
 		pos += ret;
+	}
+
+	if (pos == buf) {
+		os_free(buf);
+		buf = NULL;
 	}
 
 	return buf;

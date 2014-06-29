@@ -635,8 +635,8 @@ static void eap_eke_process_confirm(struct eap_sm *sm,
 		return;
 	}
 	wpa_hexdump(MSG_DEBUG, "EAP-EKE: Auth_P", auth_p, data->sess.prf_len);
-	if (os_memcmp(auth_p, payload + data->sess.pnonce_len,
-		      data->sess.prf_len) != 0) {
+	if (os_memcmp_const(auth_p, payload + data->sess.pnonce_len,
+			    data->sess.prf_len) != 0) {
 		wpa_printf(MSG_INFO, "EAP-EKE: Auth_P does not match");
 		eap_eke_fail(data, EAP_EKE_FAIL_AUTHENTICATION_FAIL);
 		return;

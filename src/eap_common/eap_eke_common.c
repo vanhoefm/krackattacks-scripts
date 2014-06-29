@@ -692,7 +692,7 @@ int eap_eke_decrypt_prot(struct eap_eke_session *sess,
 	if (eap_eke_mac(sess->mac, sess->ki, prot + block_size,
 			prot_len - block_size - icv_len, icv) < 0)
 		return -1;
-	if (os_memcmp(icv, prot + prot_len - icv_len, icv_len) != 0) {
+	if (os_memcmp_const(icv, prot + prot_len - icv_len, icv_len) != 0) {
 		wpa_printf(MSG_INFO, "EAP-EKE: ICV mismatch in Prot() data");
 		return -1;
 	}

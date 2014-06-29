@@ -566,8 +566,8 @@ static struct wpabuf * eap_eke_process_confirm(struct eap_eke_data *data,
 					  EAP_EKE_FAIL_PRIVATE_INTERNAL_ERROR);
 	}
 	wpa_hexdump(MSG_DEBUG, "EAP-EKE: Auth_S", auth_s, data->sess.prf_len);
-	if (os_memcmp(auth_s, pos + data->sess.pnonce_ps_len,
-		      data->sess.prf_len) != 0) {
+	if (os_memcmp_const(auth_s, pos + data->sess.pnonce_ps_len,
+			    data->sess.prf_len) != 0) {
 		wpa_printf(MSG_INFO, "EAP-EKE: Auth_S does not match");
 		return eap_eke_build_fail(data, ret, reqData,
 					  EAP_EKE_FAIL_AUTHENTICATION_FAIL);

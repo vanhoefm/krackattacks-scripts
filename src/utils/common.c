@@ -827,3 +827,22 @@ void int_array_add_unique(int **res, int a)
 
 	*res = n;
 }
+
+
+void str_clear_free(char *str)
+{
+	if (str) {
+		size_t len = os_strlen(str);
+		os_memset(str, 0, len);
+		os_free(str);
+	}
+}
+
+
+void bin_clear_free(void *bin, size_t len)
+{
+	if (bin) {
+		os_memset(bin, 0, len);
+		os_free(bin);
+	}
+}

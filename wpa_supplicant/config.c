@@ -286,7 +286,7 @@ static int wpa_config_parse_psk(const struct parse_data *data,
 {
 #ifdef CONFIG_EXT_PASSWORD
 	if (os_strncmp(value, "ext:", 4) == 0) {
-		os_free(ssid->passphrase);
+		str_clear_free(ssid->passphrase);
 		ssid->passphrase = NULL;
 		ssid->psk_set = 0;
 		os_free(ssid->ext_psk);
@@ -322,7 +322,7 @@ static int wpa_config_parse_psk(const struct parse_data *data,
 		    os_memcmp(ssid->passphrase, value, len) == 0)
 			return 0;
 		ssid->psk_set = 0;
-		os_free(ssid->passphrase);
+		str_clear_free(ssid->passphrase);
 		ssid->passphrase = dup_binstr(value, len);
 		if (ssid->passphrase == NULL)
 			return -1;
@@ -341,7 +341,7 @@ static int wpa_config_parse_psk(const struct parse_data *data,
 		return -1;
 	}
 
-	os_free(ssid->passphrase);
+	str_clear_free(ssid->passphrase);
 	ssid->passphrase = NULL;
 
 	ssid->psk_set = 1;
@@ -1130,7 +1130,7 @@ static int wpa_config_parse_password(const struct parse_data *data,
 
 	if (os_strcmp(value, "NULL") == 0) {
 		wpa_printf(MSG_DEBUG, "Unset configuration string 'password'");
-		os_free(ssid->eap.password);
+		bin_clear_free(ssid->eap.password, ssid->eap.password_len);
 		ssid->eap.password = NULL;
 		ssid->eap.password_len = 0;
 		return 0;
@@ -1141,7 +1141,7 @@ static int wpa_config_parse_password(const struct parse_data *data,
 		char *name = os_strdup(value + 4);
 		if (name == NULL)
 			return -1;
-		os_free(ssid->eap.password);
+		bin_clear_free(ssid->eap.password, ssid->eap.password_len);
 		ssid->eap.password = (u8 *) name;
 		ssid->eap.password_len = os_strlen(name);
 		ssid->eap.flags &= ~EAP_CONFIG_FLAGS_PASSWORD_NTHASH;
@@ -1163,7 +1163,7 @@ static int wpa_config_parse_password(const struct parse_data *data,
 		wpa_hexdump_ascii_key(MSG_MSGDUMP, data->name,
 				      (u8 *) tmp, res_len);
 
-		os_free(ssid->eap.password);
+		bin_clear_free(ssid->eap.password, ssid->eap.password_len);
 		ssid->eap.password = (u8 *) tmp;
 		ssid->eap.password_len = res_len;
 		ssid->eap.flags &= ~EAP_CONFIG_FLAGS_PASSWORD_NTHASH;
@@ -1192,7 +1192,7 @@ static int wpa_config_parse_password(const struct parse_data *data,
 
 	wpa_hexdump_key(MSG_MSGDUMP, data->name, hash, 16);
 
-	os_free(ssid->eap.password);
+	bin_clear_free(ssid->eap.password, ssid->eap.password_len);
 	ssid->eap.password = hash;
 	ssid->eap.password_len = 16;
 	ssid->eap.flags |= EAP_CONFIG_FLAGS_PASSWORD_NTHASH;
@@ -1262,7 +1262,7 @@ static int wpa_config_parse_wep_key(u8 *key, size_t *len, int line,
 			   line, (unsigned int) *len);
 	}
 	os_memcpy(key, buf, *len);
-	os_free(buf);
+	str_clear_free(buf);
 	res = os_snprintf(title, sizeof(title), "wep_key%d", idx);
 	if (res >= 0 && (size_t) res < sizeof(title))
 		wpa_hexdump_key(MSG_MSGDUMP, title, key, *len);
@@ -1860,14 +1860,14 @@ int wpa_config_update_prio_list(struct wpa_config *config)
 static void eap_peer_config_free(struct eap_peer_config *eap)
 {
 	os_free(eap->eap_methods);
-	os_free(eap->identity);
+	bin_clear_free(eap->identity, eap->identity_len);
 	os_free(eap->anonymous_identity);
-	os_free(eap->password);
+	bin_clear_free(eap->password, eap->password_len);
 	os_free(eap->ca_cert);
 	os_free(eap->ca_path);
 	os_free(eap->client_cert);
 	os_free(eap->private_key);
-	os_free(eap->private_key_passwd);
+	str_clear_free(eap->private_key_passwd);
 	os_free(eap->dh_file);
 	os_free(eap->subject_match);
 	os_free(eap->altsubject_match);
@@ -1876,7 +1876,7 @@ static void eap_peer_config_free(struct eap_peer_config *eap)
 	os_free(eap->ca_path2);
 	os_free(eap->client_cert2);
 	os_free(eap->private_key2);
-	os_free(eap->private_key2_passwd);
+	str_clear_free(eap->private_key2_passwd);
 	os_free(eap->dh_file2);
 	os_free(eap->subject_match2);
 	os_free(eap->altsubject_match2);
@@ -1884,7 +1884,7 @@ static void eap_peer_config_free(struct eap_peer_config *eap)
 	os_free(eap->phase1);
 	os_free(eap->phase2);
 	os_free(eap->pcsc);
-	os_free(eap->pin);
+	str_clear_free(eap->pin);
 	os_free(eap->engine_id);
 	os_free(eap->key_id);
 	os_free(eap->cert_id);
@@ -1892,13 +1892,13 @@ static void eap_peer_config_free(struct eap_peer_config *eap)
 	os_free(eap->key2_id);
 	os_free(eap->cert2_id);
 	os_free(eap->ca_cert2_id);
-	os_free(eap->pin2);
+	str_clear_free(eap->pin2);
 	os_free(eap->engine2_id);
 	os_free(eap->otp);
 	os_free(eap->pending_req_otp);
 	os_free(eap->pac_file);
-	os_free(eap->new_password);
-	os_free(eap->external_sim_resp);
+	bin_clear_free(eap->new_password, eap->new_password_len);
+	str_clear_free(eap->external_sim_resp);
 }
 #endif /* IEEE8021X_EAPOL */
 
@@ -1915,7 +1915,8 @@ void wpa_config_free_ssid(struct wpa_ssid *ssid)
 	struct psk_list_entry *psk;
 
 	os_free(ssid->ssid);
-	os_free(ssid->passphrase);
+	os_memset(ssid->psk, 0, sizeof(ssid->psk));
+	str_clear_free(ssid->passphrase);
 	os_free(ssid->ext_psk);
 #ifdef IEEE8021X_EAPOL
 	eap_peer_config_free(&ssid->eap);
@@ -1942,14 +1943,14 @@ void wpa_config_free_cred(struct wpa_cred *cred)
 	size_t i;
 
 	os_free(cred->realm);
-	os_free(cred->username);
-	os_free(cred->password);
+	str_clear_free(cred->username);
+	str_clear_free(cred->password);
 	os_free(cred->ca_cert);
 	os_free(cred->client_cert);
 	os_free(cred->private_key);
-	os_free(cred->private_key_passwd);
+	str_clear_free(cred->private_key_passwd);
 	os_free(cred->imsi);
-	os_free(cred->milenage);
+	str_clear_free(cred->milenage);
 	for (i = 0; i < cred->num_domain; i++)
 		os_free(cred->domain[i]);
 	os_free(cred->domain);
@@ -2019,7 +2020,7 @@ void wpa_config_free(struct wpa_config *config)
 	os_free(config->pkcs11_engine_path);
 	os_free(config->pkcs11_module_path);
 	os_free(config->pcsc_reader);
-	os_free(config->pcsc_pin);
+	str_clear_free(config->pcsc_pin);
 	os_free(config->driver_param);
 	os_free(config->device_name);
 	os_free(config->manufacturer);
@@ -2403,7 +2404,7 @@ char * wpa_config_get_no_key(struct wpa_ssid *ssid, const char *var)
 					wpa_printf(MSG_DEBUG, "Do not allow "
 						   "key_data field to be "
 						   "exposed");
-					os_free(res);
+					str_clear_free(res);
 					return os_strdup("*");
 				}
 
@@ -2549,7 +2550,7 @@ int wpa_config_set_cred(struct wpa_cred *cred, const char *var,
 
 	if (os_strcmp(var, "password") == 0 &&
 	    os_strncmp(value, "ext:", 4) == 0) {
-		os_free(cred->password);
+		str_clear_free(cred->password);
 		cred->password = os_strdup(value);
 		cred->ext_password = 1;
 		return 0;
@@ -2612,13 +2613,13 @@ int wpa_config_set_cred(struct wpa_cred *cred, const char *var,
 	}
 
 	if (os_strcmp(var, "username") == 0) {
-		os_free(cred->username);
+		str_clear_free(cred->username);
 		cred->username = val;
 		return 0;
 	}
 
 	if (os_strcmp(var, "password") == 0) {
-		os_free(cred->password);
+		str_clear_free(cred->password);
 		cred->password = val;
 		cred->ext_password = 0;
 		return 0;
@@ -2643,7 +2644,7 @@ int wpa_config_set_cred(struct wpa_cred *cred, const char *var,
 	}
 
 	if (os_strcmp(var, "private_key_passwd") == 0) {
-		os_free(cred->private_key_passwd);
+		str_clear_free(cred->private_key_passwd);
 		cred->private_key_passwd = val;
 		return 0;
 	}
@@ -2655,7 +2656,7 @@ int wpa_config_set_cred(struct wpa_cred *cred, const char *var,
 	}
 
 	if (os_strcmp(var, "milenage") == 0) {
-		os_free(cred->milenage);
+		str_clear_free(cred->milenage);
 		cred->milenage = val;
 		return 0;
 	}
@@ -3207,7 +3208,7 @@ void wpa_config_free_blob(struct wpa_config_blob *blob)
 {
 	if (blob) {
 		os_free(blob->name);
-		os_free(blob->data);
+		bin_clear_free(blob->data, blob->len);
 		os_free(blob);
 	}
 }

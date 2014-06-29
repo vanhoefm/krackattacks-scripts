@@ -4395,7 +4395,7 @@ int wpa_supplicant_ctrl_iface_ctrl_rsp_handle(struct wpa_supplicant *wpa_s,
 			wpa_s->reassociate = 1;
 		break;
 	case WPA_CTRL_REQ_EAP_PASSWORD:
-		os_free(eap->password);
+		bin_clear_free(eap->password, eap->password_len);
 		eap->password = (u8 *) os_strdup(value);
 		eap->password_len = os_strlen(value);
 		eap->pending_req_password = 0;
@@ -4403,7 +4403,7 @@ int wpa_supplicant_ctrl_iface_ctrl_rsp_handle(struct wpa_supplicant *wpa_s,
 			wpa_s->reassociate = 1;
 		break;
 	case WPA_CTRL_REQ_EAP_NEW_PASSWORD:
-		os_free(eap->new_password);
+		bin_clear_free(eap->new_password, eap->new_password_len);
 		eap->new_password = (u8 *) os_strdup(value);
 		eap->new_password_len = os_strlen(value);
 		eap->pending_req_new_password = 0;
@@ -4411,14 +4411,14 @@ int wpa_supplicant_ctrl_iface_ctrl_rsp_handle(struct wpa_supplicant *wpa_s,
 			wpa_s->reassociate = 1;
 		break;
 	case WPA_CTRL_REQ_EAP_PIN:
-		os_free(eap->pin);
+		str_clear_free(eap->pin);
 		eap->pin = os_strdup(value);
 		eap->pending_req_pin = 0;
 		if (ssid == wpa_s->current_ssid)
 			wpa_s->reassociate = 1;
 		break;
 	case WPA_CTRL_REQ_EAP_OTP:
-		os_free(eap->otp);
+		bin_clear_free(eap->otp, eap->otp_len);
 		eap->otp = (u8 *) os_strdup(value);
 		eap->otp_len = os_strlen(value);
 		os_free(eap->pending_req_otp);
@@ -4426,14 +4426,14 @@ int wpa_supplicant_ctrl_iface_ctrl_rsp_handle(struct wpa_supplicant *wpa_s,
 		eap->pending_req_otp_len = 0;
 		break;
 	case WPA_CTRL_REQ_EAP_PASSPHRASE:
-		os_free(eap->private_key_passwd);
-		eap->private_key_passwd = (u8 *) os_strdup(value);
+		str_clear_free(eap->private_key_passwd);
+		eap->private_key_passwd = os_strdup(value);
 		eap->pending_req_passphrase = 0;
 		if (ssid == wpa_s->current_ssid)
 			wpa_s->reassociate = 1;
 		break;
 	case WPA_CTRL_REQ_SIM:
-		os_free(eap->external_sim_resp);
+		str_clear_free(eap->external_sim_resp);
 		eap->external_sim_resp = os_strdup(value);
 		break;
 	default:

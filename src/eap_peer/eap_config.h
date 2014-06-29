@@ -157,7 +157,7 @@ struct eap_peer_config {
 	 *
 	 * If left out, this will be asked through control interface.
 	 */
-	u8 *private_key_passwd;
+	char *private_key_passwd;
 
 	/**
 	 * dh_file - File path to DH/DSA parameters file (in PEM format)
@@ -289,7 +289,7 @@ struct eap_peer_config {
 	 * This field is like private_key_passwd, but used for phase 2 (inside
 	 * EAP-TTLS/PEAP/FAST tunnel) authentication.
 	 */
-	u8 *private_key2_passwd;
+	char *private_key2_passwd;
 
 	/**
 	 * dh_file2 - File path to DH/DSA parameters file (in PEM format)

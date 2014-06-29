@@ -535,6 +535,10 @@ void int_array_add_unique(int **res, int a);
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 
 
+void str_clear_free(char *str);
+void bin_clear_free(void *bin, size_t len);
+
+
 /*
  * gcc 4.4 ends up generating strict-aliasing warnings about some very common
  * networking socket uses that do not really result in a real problem and

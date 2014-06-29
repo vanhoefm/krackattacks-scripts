@@ -351,7 +351,7 @@ static void eap_sake_process_challenge(struct eap_sm *sm,
 			     data->peerid, data->peerid_len, 1,
 			     wpabuf_head(respData), wpabuf_len(respData),
 			     attr.mic_p, mic_p);
-	if (os_memcmp(attr.mic_p, mic_p, EAP_SAKE_MIC_LEN) != 0) {
+	if (os_memcmp_const(attr.mic_p, mic_p, EAP_SAKE_MIC_LEN) != 0) {
 		wpa_printf(MSG_INFO, "EAP-SAKE: Incorrect AT_MIC_P");
 		eap_sake_state(data, FAILURE);
 		return;
@@ -388,7 +388,7 @@ static void eap_sake_process_confirm(struct eap_sm *sm,
 			     data->peerid, data->peerid_len, 1,
 			     wpabuf_head(respData), wpabuf_len(respData),
 			     attr.mic_p, mic_p);
-	if (os_memcmp(attr.mic_p, mic_p, EAP_SAKE_MIC_LEN) != 0) {
+	if (os_memcmp_const(attr.mic_p, mic_p, EAP_SAKE_MIC_LEN) != 0) {
 		wpa_printf(MSG_INFO, "EAP-SAKE: Incorrect AT_MIC_P");
 		eap_sake_state(data, FAILURE);
 	} else

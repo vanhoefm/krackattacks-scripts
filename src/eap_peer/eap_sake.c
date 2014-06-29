@@ -315,7 +315,7 @@ static struct wpabuf * eap_sake_process_confirm(struct eap_sm *sm,
 			     data->peerid, data->peerid_len, 0,
 			     wpabuf_head(reqData), wpabuf_len(reqData),
 			     attr.mic_s, mic_s);
-	if (os_memcmp(attr.mic_s, mic_s, EAP_SAKE_MIC_LEN) != 0) {
+	if (os_memcmp_const(attr.mic_s, mic_s, EAP_SAKE_MIC_LEN) != 0) {
 		wpa_printf(MSG_INFO, "EAP-SAKE: Incorrect AT_MIC_S");
 		eap_sake_state(data, FAILURE);
 		ret->methodState = METHOD_DONE;

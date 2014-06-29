@@ -767,7 +767,7 @@ static struct wpabuf * eap_fast_process_crypto_binding(
 		    "MAC calculation", (u8 *) _bind, bind_len);
 	hmac_sha1(cmk, EAP_FAST_CMK_LEN, (u8 *) _bind, bind_len,
 		  _bind->compound_mac);
-	res = os_memcmp(cmac, _bind->compound_mac, sizeof(cmac));
+	res = os_memcmp_const(cmac, _bind->compound_mac, sizeof(cmac));
 	wpa_hexdump(MSG_MSGDUMP, "EAP-FAST: Received Compound MAC",
 		    cmac, sizeof(cmac));
 	wpa_hexdump(MSG_MSGDUMP, "EAP-FAST: Calculated Compound MAC",

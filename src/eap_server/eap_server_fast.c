@@ -1198,7 +1198,7 @@ static int eap_fast_validate_crypto_binding(
 		return -1;
 	}
 
-	if (os_memcmp(data->crypto_binding_nonce, b->nonce, 31) != 0 ||
+	if (os_memcmp_const(data->crypto_binding_nonce, b->nonce, 31) != 0 ||
 	    (data->crypto_binding_nonce[31] | 1) != b->nonce[31]) {
 		wpa_printf(MSG_DEBUG, "EAP-FAST: Invalid nonce in "
 			   "Crypto-Binding");
@@ -1212,7 +1212,7 @@ static int eap_fast_validate_crypto_binding(
 		    (u8 *) b, bind_len);
 	hmac_sha1(data->cmk, EAP_FAST_CMK_LEN, (u8 *) b, bind_len,
 		  b->compound_mac);
-	if (os_memcmp(cmac, b->compound_mac, sizeof(cmac)) != 0) {
+	if (os_memcmp_const(cmac, b->compound_mac, sizeof(cmac)) != 0) {
 		wpa_hexdump(MSG_MSGDUMP,
 			    "EAP-FAST: Calculated Compound MAC",
 			    b->compound_mac, sizeof(cmac));

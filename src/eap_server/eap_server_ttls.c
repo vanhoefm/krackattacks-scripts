@@ -509,8 +509,8 @@ static void eap_ttls_process_phase2_pap(struct eap_sm *sm,
 	}
 
 	if (sm->user->password_len != user_password_len ||
-	    os_memcmp(sm->user->password, user_password, user_password_len) !=
-	    0) {
+	    os_memcmp_const(sm->user->password, user_password,
+			    user_password_len) != 0) {
 		wpa_printf(MSG_DEBUG, "EAP-TTLS/PAP: Invalid user password");
 		eap_ttls_state(data, FAILURE);
 		return;
@@ -558,7 +558,8 @@ static void eap_ttls_process_phase2_chap(struct eap_sm *sm,
 		return;
 	}
 
-	if (os_memcmp(challenge, chal, EAP_TTLS_CHAP_CHALLENGE_LEN) != 0 ||
+	if (os_memcmp_const(challenge, chal, EAP_TTLS_CHAP_CHALLENGE_LEN)
+	    != 0 ||
 	    password[0] != chal[EAP_TTLS_CHAP_CHALLENGE_LEN]) {
 		wpa_printf(MSG_DEBUG, "EAP-TTLS/CHAP: Challenge mismatch");
 		os_free(chal);
@@ -571,7 +572,8 @@ static void eap_ttls_process_phase2_chap(struct eap_sm *sm,
 	chap_md5(password[0], sm->user->password, sm->user->password_len,
 		 challenge, challenge_len, hash);
 
-	if (os_memcmp(hash, password + 1, EAP_TTLS_CHAP_PASSWORD_LEN) == 0) {
+	if (os_memcmp_const(hash, password + 1, EAP_TTLS_CHAP_PASSWORD_LEN) ==
+	    0) {
 		wpa_printf(MSG_DEBUG, "EAP-TTLS/CHAP: Correct user password");
 		eap_ttls_state(data, SUCCESS);
 	} else {
@@ -616,7 +618,8 @@ static void eap_ttls_process_phase2_mschap(struct eap_sm *sm,
 		return;
 	}
 
-	if (os_memcmp(challenge, chal, EAP_TTLS_MSCHAP_CHALLENGE_LEN) != 0 ||
+	if (os_memcmp_const(challenge, chal, EAP_TTLS_MSCHAP_CHALLENGE_LEN)
+	    != 0 ||
 	    response[0] != chal[EAP_TTLS_MSCHAP_CHALLENGE_LEN]) {
 		wpa_printf(MSG_DEBUG, "EAP-TTLS/MSCHAP: Challenge mismatch");
 		os_free(chal);
@@ -631,7 +634,7 @@ static void eap_ttls_process_phase2_mschap(struct eap_sm *sm,
 		nt_challenge_response(challenge, sm->user->password,
 				      sm->user->password_len, nt_response);
 
-	if (os_memcmp(nt_response, response + 2 + 24, 24) == 0) {
+	if (os_memcmp_const(nt_response, response + 2 + 24, 24) == 0) {
 		wpa_printf(MSG_DEBUG, "EAP-TTLS/MSCHAP: Correct response");
 		eap_ttls_state(data, SUCCESS);
 	} else {
@@ -703,7 +706,8 @@ static void eap_ttls_process_phase2_mschapv2(struct eap_sm *sm,
 		return;
 	}
 
-	if (os_memcmp(challenge, chal, EAP_TTLS_MSCHAPV2_CHALLENGE_LEN) != 0 ||
+	if (os_memcmp_const(challenge, chal, EAP_TTLS_MSCHAPV2_CHALLENGE_LEN)
+	    != 0 ||
 	    response[0] != chal[EAP_TTLS_MSCHAPV2_CHALLENGE_LEN]) {
 		wpa_printf(MSG_DEBUG, "EAP-TTLS/MSCHAPV2: Challenge mismatch");
 		os_free(chal);
@@ -736,7 +740,7 @@ static void eap_ttls_process_phase2_mschapv2(struct eap_sm *sm,
 	}
 
 	rx_resp = response + 2 + EAP_TTLS_MSCHAPV2_CHALLENGE_LEN + 8;
-	if (os_memcmp(nt_response, rx_resp, 24) == 0) {
+	if (os_memcmp_const(nt_response, rx_resp, 24) == 0) {
 		wpa_printf(MSG_DEBUG, "EAP-TTLS/MSCHAPV2: Correct "
 			   "NT-Response");
 		data->mschapv2_resp_ok = 1;

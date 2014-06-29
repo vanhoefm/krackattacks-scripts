@@ -1051,7 +1051,7 @@ int sae_check_confirm(struct sae_data *sae, const u8 *data, size_t len)
 				   sae->tmp->own_commit_element_ffc,
 				   verifier);
 
-	if (os_memcmp(verifier, data + 2, SHA256_MAC_LEN) != 0) {
+	if (os_memcmp_const(verifier, data + 2, SHA256_MAC_LEN) != 0) {
 		wpa_printf(MSG_DEBUG, "SAE: Confirm mismatch");
 		wpa_hexdump(MSG_DEBUG, "SAE: Received confirm",
 			    data + 2, SHA256_MAC_LEN);

@@ -403,7 +403,7 @@ static int check_sae_token(struct hostapd_data *hapd, const u8 *addr,
 		return -1;
 	if (hmac_sha256(hapd->sae_token_key, sizeof(hapd->sae_token_key),
 			addr, ETH_ALEN, mac) < 0 ||
-	    os_memcmp(token, mac, SHA256_MAC_LEN) != 0)
+	    os_memcmp_const(token, mac, SHA256_MAC_LEN) != 0)
 		return -1;
 
 	return 0;

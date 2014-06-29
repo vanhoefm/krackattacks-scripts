@@ -1455,7 +1455,7 @@ dbus_bool_t wpas_dbus_getter_p2p_peer_vendor_extension(DBusMessageIter *iter,
 						       void *user_data)
 {
 	struct wpabuf *vendor_extension[P2P_MAX_WPS_VENDOR_EXT];
-	int i, num;
+	unsigned int i, num = 0;
 	struct peer_handler_args *peer_args = user_data;
 	const struct p2p_peer_info *info;
 
@@ -1468,7 +1468,8 @@ dbus_bool_t wpas_dbus_getter_p2p_peer_vendor_extension(DBusMessageIter *iter,
 	}
 
 	/* Add WPS vendor extensions attribute */
-	for (i = 0, num = 0; i < P2P_MAX_WPS_VENDOR_EXT; i++) {
+	os_memset(vendor_extension, 0, sizeof(vendor_extension));
+	for (i = 0; i < P2P_MAX_WPS_VENDOR_EXT; i++) {
 		if (info->wps_vendor_ext[i] == NULL)
 			continue;
 		vendor_extension[num] = info->wps_vendor_ext[i];
@@ -2115,8 +2116,9 @@ dbus_bool_t wpas_dbus_getter_p2p_group_vendor_ext(DBusMessageIter *iter,
 	struct wpa_supplicant *wpa_s = user_data;
 	struct hostapd_data *hapd;
 	struct wpabuf *vendor_ext[MAX_WPS_VENDOR_EXTENSIONS];
-	int num_vendor_ext = 0;
-	int i;
+	unsigned int i, num_vendor_ext = 0;
+
+	os_memset(vendor_ext, 0, sizeof(vendor_ext));
 
 	/* Verify correct role for this property */
 	if (wpas_get_p2p_role(wpa_s) == WPAS_P2P_ROLE_GO) {

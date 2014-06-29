@@ -512,7 +512,7 @@ dbus_bool_t wpas_dbus_simple_array_array_property_getter(DBusMessageIter *iter,
 		return FALSE;
 	}
 
-	for (i = 0; i < array_len; i++) {
+	for (i = 0; i < array_len && array[i]; i++) {
 		wpa_dbus_dict_bin_array_add_element(&array_iter,
 						    wpabuf_head(array[i]),
 						    wpabuf_len(array[i]));

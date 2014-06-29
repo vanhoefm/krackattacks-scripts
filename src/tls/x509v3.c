@@ -1776,7 +1776,7 @@ skip_digest_oid:
 	}
 
 	if (hdr.length != hash_len ||
-	    os_memcmp(hdr.payload, hash, hdr.length) != 0) {
+	    os_memcmp_const(hdr.payload, hash, hdr.length) != 0) {
 		wpa_printf(MSG_INFO, "X509: Certificate Digest does not match "
 			   "with calculated tbsCertificate hash");
 		os_free(data);

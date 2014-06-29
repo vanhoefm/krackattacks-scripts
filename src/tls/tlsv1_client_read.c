@@ -962,7 +962,7 @@ static int tls_process_server_finished(struct tlsv1_client *conn, u8 ct,
 	wpa_hexdump_key(MSG_DEBUG, "TLSv1: verify_data (server)",
 			verify_data, TLS_VERIFY_DATA_LEN);
 
-	if (os_memcmp(pos, verify_data, TLS_VERIFY_DATA_LEN) != 0) {
+	if (os_memcmp_const(pos, verify_data, TLS_VERIFY_DATA_LEN) != 0) {
 		wpa_printf(MSG_INFO, "TLSv1: Mismatch in verify_data");
 		tls_alert(conn, TLS_ALERT_LEVEL_FATAL,
 			  TLS_ALERT_DECRYPT_ERROR);

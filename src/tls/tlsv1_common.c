@@ -481,7 +481,8 @@ int tls_verify_signature(u16 tls_version, struct crypto_public_key *pk,
 	}
 #endif /* CONFIG_TLSV12 */
 
-	if (buflen != data_len || os_memcmp(decrypted, data, data_len) != 0) {
+	if (buflen != data_len ||
+	    os_memcmp_const(decrypted, data, data_len) != 0) {
 		wpa_printf(MSG_DEBUG, "TLSv1: Invalid Signature in CertificateVerify - did not match calculated hash");
 		os_free(buf);
 		*alert = TLS_ALERT_DECRYPT_ERROR;

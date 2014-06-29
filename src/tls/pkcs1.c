@@ -298,7 +298,7 @@ int pkcs1_v15_sig_ver(struct crypto_public_key *pk,
 		    hdr.payload, hdr.length);
 
 	if (hdr.length != hash_len ||
-	    os_memcmp(hdr.payload, hash, hdr.length) != 0) {
+	    os_memcmp_const(hdr.payload, hash, hdr.length) != 0) {
 		wpa_printf(MSG_INFO, "PKCS #1: Digest value does not match calculated hash");
 		os_free(decrypted);
 		return -1;

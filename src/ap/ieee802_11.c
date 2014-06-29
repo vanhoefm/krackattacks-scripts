@@ -236,7 +236,8 @@ static u16 auth_shared_key(struct hostapd_data *hapd, struct sta_info *sta,
 
 	/* Transaction 3 */
 	if (!iswep || !sta->challenge || !challenge ||
-	    os_memcmp(sta->challenge, challenge, WLAN_AUTH_CHALLENGE_LEN)) {
+	    os_memcmp_const(sta->challenge, challenge,
+			    WLAN_AUTH_CHALLENGE_LEN)) {
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_INFO,
 			       "shared key authentication - invalid "

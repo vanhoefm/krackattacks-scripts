@@ -336,7 +336,7 @@ static int eap_aka_verify_checkcode(struct eap_aka_data *data,
 	else
 		sha1_vector(1, &addr, &len, hash);
 
-	if (os_memcmp(hash, checkcode, hash_len) != 0) {
+	if (os_memcmp_const(hash, checkcode, hash_len) != 0) {
 		wpa_printf(MSG_DEBUG, "EAP-AKA: Mismatch in AT_CHECKCODE");
 		return -1;
 	}
@@ -963,7 +963,7 @@ static void eap_aka_process_challenge(struct eap_sm *sm,
 	 */
 	if (attr->res == NULL || attr->res_len < data->res_len ||
 	    attr->res_len_bits != data->res_len * 8 ||
-	    os_memcmp(attr->res, data->res, data->res_len) != 0) {
+	    os_memcmp_const(attr->res, data->res, data->res_len) != 0) {
 		wpa_printf(MSG_WARNING, "EAP-AKA: Challenge message did not "
 			   "include valid AT_RES (attr len=%lu, res len=%lu "
 			   "bits, expected %lu bits)",

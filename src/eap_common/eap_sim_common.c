@@ -198,7 +198,7 @@ int eap_sim_verify_mac(const u8 *k_aut, const struct wpabuf *req,
 		    hmac, EAP_SIM_MAC_LEN);
 	os_free(tmp);
 
-	return (os_memcmp(hmac, mac, EAP_SIM_MAC_LEN) == 0) ? 0 : 1;
+	return (os_memcmp_const(hmac, mac, EAP_SIM_MAC_LEN) == 0) ? 0 : 1;
 }
 
 
@@ -393,7 +393,7 @@ int eap_sim_verify_mac_sha256(const u8 *k_aut, const struct wpabuf *req,
 		    hmac, EAP_SIM_MAC_LEN);
 	os_free(tmp);
 
-	return (os_memcmp(hmac, mac, EAP_SIM_MAC_LEN) == 0) ? 0 : 1;
+	return (os_memcmp_const(hmac, mac, EAP_SIM_MAC_LEN) == 0) ? 0 : 1;
 }
 
 

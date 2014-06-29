@@ -294,7 +294,7 @@ static int eap_aka_umts_auth(struct eap_sm *sm, struct eap_aka_data *data)
 	{
 		u8 autn[EAP_AKA_AUTN_LEN];
 		os_memset(autn, '1', EAP_AKA_AUTN_LEN);
-		if (os_memcmp(autn, data->autn, EAP_AKA_AUTN_LEN) != 0) {
+		if (os_memcmp_const(autn, data->autn, EAP_AKA_AUTN_LEN) != 0) {
 			wpa_printf(MSG_WARNING, "EAP-AKA: AUTN did not match "
 				   "with expected value");
 			return -1;
@@ -509,7 +509,7 @@ static int eap_aka_verify_checkcode(struct eap_aka_data *data,
 #endif /* EAP_AKA_PRIME */
 		sha1_vector(1, &addr, &len, hash);
 
-	if (os_memcmp(hash, checkcode, hash_len) != 0) {
+	if (os_memcmp_const(hash, checkcode, hash_len) != 0) {
 		wpa_printf(MSG_DEBUG, "EAP-AKA: Mismatch in AT_CHECKCODE");
 		return -1;
 	}

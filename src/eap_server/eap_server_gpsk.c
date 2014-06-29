@@ -433,7 +433,7 @@ static void eap_gpsk_process_gpsk_2(struct eap_sm *sm,
 		eap_gpsk_state(data, FAILURE);
 		return;
 	}
-	if (os_memcmp(mic, pos, miclen) != 0) {
+	if (os_memcmp_const(mic, pos, miclen) != 0) {
 		wpa_printf(MSG_INFO, "EAP-GPSK: Incorrect MIC in GPSK-2");
 		wpa_hexdump(MSG_DEBUG, "EAP-GPSK: Received MIC", pos, miclen);
 		wpa_hexdump(MSG_DEBUG, "EAP-GPSK: Computed MIC", mic, miclen);
@@ -502,7 +502,7 @@ static void eap_gpsk_process_gpsk_4(struct eap_sm *sm,
 		eap_gpsk_state(data, FAILURE);
 		return;
 	}
-	if (os_memcmp(mic, pos, miclen) != 0) {
+	if (os_memcmp_const(mic, pos, miclen) != 0) {
 		wpa_printf(MSG_INFO, "EAP-GPSK: Incorrect MIC in GPSK-4");
 		wpa_hexdump(MSG_DEBUG, "EAP-GPSK: Received MIC", pos, miclen);
 		wpa_hexdump(MSG_DEBUG, "EAP-GPSK: Computed MIC", mic, miclen);

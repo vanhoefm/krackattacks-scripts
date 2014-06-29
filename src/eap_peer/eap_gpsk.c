@@ -565,7 +565,7 @@ static const u8 * eap_gpsk_validate_gpsk_3_mic(struct eap_gpsk_data *data,
 		wpa_printf(MSG_DEBUG, "EAP-GPSK: Failed to compute MIC");
 		return NULL;
 	}
-	if (os_memcmp(mic, pos, miclen) != 0) {
+	if (os_memcmp_const(mic, pos, miclen) != 0) {
 		wpa_printf(MSG_INFO, "EAP-GPSK: Incorrect MIC in GPSK-3");
 		wpa_hexdump(MSG_DEBUG, "EAP-GPSK: Received MIC", pos, miclen);
 		wpa_hexdump(MSG_DEBUG, "EAP-GPSK: Computed MIC", mic, miclen);

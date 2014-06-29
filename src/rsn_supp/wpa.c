@@ -162,7 +162,7 @@ static int wpa_supplicant_get_pmk(struct wpa_sm *sm,
 	}
 
 	if (pmkid && sm->cur_pmksa &&
-	    os_memcmp(pmkid, sm->cur_pmksa->pmkid, PMKID_LEN) == 0) {
+	    os_memcmp_const(pmkid, sm->cur_pmksa->pmkid, PMKID_LEN) == 0) {
 		wpa_hexdump(MSG_DEBUG, "RSN: matched PMKID", pmkid, PMKID_LEN);
 		wpa_sm_set_pmk_from_pmksa(sm);
 		wpa_hexdump_key(MSG_DEBUG, "RSN: PMK from PMKSA cache",
@@ -906,7 +906,8 @@ static int ft_validate_rsnie(struct wpa_sm *sm,
 		return -1;
 	}
 
-	if (os_memcmp(rsn.pmkid, sm->pmk_r1_name, WPA_PMK_NAME_LEN) != 0) {
+	if (os_memcmp_const(rsn.pmkid, sm->pmk_r1_name, WPA_PMK_NAME_LEN) != 0)
+	{
 		wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG,
 			"FT: PMKR1Name mismatch in "
 			"FT 4-way handshake message 3/4");
@@ -1418,7 +1419,7 @@ static int wpa_supplicant_verify_eapol_key_mic(struct wpa_sm *sm,
 		os_memset(key->key_mic, 0, 16);
 		wpa_eapol_key_mic(sm->tptk.kck, ver, buf, len,
 				  key->key_mic);
-		if (os_memcmp(mic, key->key_mic, 16) != 0) {
+		if (os_memcmp_const(mic, key->key_mic, 16) != 0) {
 			wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
 				"WPA: Invalid EAPOL-Key MIC "
 				"when using TPTK - ignoring TPTK");
@@ -1435,7 +1436,7 @@ static int wpa_supplicant_verify_eapol_key_mic(struct wpa_sm *sm,
 		os_memset(key->key_mic, 0, 16);
 		wpa_eapol_key_mic(sm->ptk.kck, ver, buf, len,
 				  key->key_mic);
-		if (os_memcmp(mic, key->key_mic, 16) != 0) {
+		if (os_memcmp_const(mic, key->key_mic, 16) != 0) {
 			wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
 				"WPA: Invalid EAPOL-Key MIC - "
 				"dropping packet");

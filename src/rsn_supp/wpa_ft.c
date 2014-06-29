@@ -442,7 +442,8 @@ int wpa_ft_process_response(struct wpa_sm *sm, const u8 *ies, size_t ies_len,
 	}
 
 	if (parse.r0kh_id_len != sm->r0kh_id_len ||
-	    os_memcmp(parse.r0kh_id, sm->r0kh_id, parse.r0kh_id_len) != 0) {
+	    os_memcmp_const(parse.r0kh_id, sm->r0kh_id, parse.r0kh_id_len) != 0)
+	{
 		wpa_printf(MSG_DEBUG, "FT: R0KH-ID in FTIE did not match with "
 			   "the current R0KH-ID");
 		wpa_hexdump(MSG_DEBUG, "FT: R0KH-ID in FTIE",
@@ -458,7 +459,8 @@ int wpa_ft_process_response(struct wpa_sm *sm, const u8 *ies, size_t ies_len,
 	}
 
 	if (parse.rsn_pmkid == NULL ||
-	    os_memcmp(parse.rsn_pmkid, sm->pmk_r0_name, WPA_PMK_NAME_LEN)) {
+	    os_memcmp_const(parse.rsn_pmkid, sm->pmk_r0_name, WPA_PMK_NAME_LEN))
+	{
 		wpa_printf(MSG_DEBUG, "FT: No matching PMKR0Name (PMKID) in "
 			   "RSNIE");
 		return -1;
@@ -727,7 +729,8 @@ int wpa_ft_validate_reassoc_resp(struct wpa_sm *sm, const u8 *ies,
 	}
 
 	if (parse.r0kh_id_len != sm->r0kh_id_len ||
-	    os_memcmp(parse.r0kh_id, sm->r0kh_id, parse.r0kh_id_len) != 0) {
+	    os_memcmp_const(parse.r0kh_id, sm->r0kh_id, parse.r0kh_id_len) != 0)
+	{
 		wpa_printf(MSG_DEBUG, "FT: R0KH-ID in FTIE did not match with "
 			   "the current R0KH-ID");
 		wpa_hexdump(MSG_DEBUG, "FT: R0KH-ID in FTIE",
@@ -742,14 +745,15 @@ int wpa_ft_validate_reassoc_resp(struct wpa_sm *sm, const u8 *ies,
 		return -1;
 	}
 
-	if (os_memcmp(parse.r1kh_id, sm->r1kh_id, FT_R1KH_ID_LEN) != 0) {
+	if (os_memcmp_const(parse.r1kh_id, sm->r1kh_id, FT_R1KH_ID_LEN) != 0) {
 		wpa_printf(MSG_DEBUG, "FT: Unknown R1KH-ID used in "
 			   "ReassocResp");
 		return -1;
 	}
 
 	if (parse.rsn_pmkid == NULL ||
-	    os_memcmp(parse.rsn_pmkid, sm->pmk_r1_name, WPA_PMK_NAME_LEN)) {
+	    os_memcmp_const(parse.rsn_pmkid, sm->pmk_r1_name, WPA_PMK_NAME_LEN))
+	{
 		wpa_printf(MSG_DEBUG, "FT: No matching PMKR1Name (PMKID) in "
 			   "RSNIE (pmkid=%d)", !!parse.rsn_pmkid);
 		return -1;
@@ -775,7 +779,7 @@ int wpa_ft_validate_reassoc_resp(struct wpa_sm *sm, const u8 *ies,
 		return -1;
 	}
 
-	if (os_memcmp(mic, ftie->mic, 16) != 0) {
+	if (os_memcmp_const(mic, ftie->mic, 16) != 0) {
 		wpa_printf(MSG_DEBUG, "FT: Invalid MIC in FTIE");
 		wpa_hexdump(MSG_MSGDUMP, "FT: Received MIC", ftie->mic, 16);
 		wpa_hexdump(MSG_MSGDUMP, "FT: Calculated MIC", mic, 16);

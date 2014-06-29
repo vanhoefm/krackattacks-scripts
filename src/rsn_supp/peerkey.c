@@ -674,7 +674,7 @@ static void wpa_supplicant_process_stk_1_of_4(struct wpa_sm *sm,
 		wpa_printf(MSG_DEBUG, "RSN: No SMKID in STK 1/4");
 		return;
 	}
-	if (os_memcmp(ie.pmkid, peerkey->smkid, PMKID_LEN) != 0) {
+	if (os_memcmp_const(ie.pmkid, peerkey->smkid, PMKID_LEN) != 0) {
 		wpa_hexdump(MSG_DEBUG, "RSN: Unknown SMKID in STK 1/4",
 			    ie.pmkid, PMKID_LEN);
 		return;
@@ -778,7 +778,7 @@ static void wpa_supplicant_process_stk_2_of_4(struct wpa_sm *sm,
 		return;
 	}
 
-	if (os_memcmp(kde.pmkid, peerkey->smkid, PMKID_LEN) != 0) {
+	if (os_memcmp_const(kde.pmkid, peerkey->smkid, PMKID_LEN) != 0) {
 		wpa_hexdump(MSG_DEBUG, "RSN: Unknown SMKID in STK 2/4",
 			    kde.pmkid, PMKID_LEN);
 		return;
@@ -929,7 +929,7 @@ int peerkey_verify_eapol_key_mic(struct wpa_sm *sm,
 		os_memset(key->key_mic, 0, 16);
 		wpa_eapol_key_mic(peerkey->tstk.kck, ver, buf, len,
 				  key->key_mic);
-		if (os_memcmp(mic, key->key_mic, 16) != 0) {
+		if (os_memcmp_const(mic, key->key_mic, 16) != 0) {
 			wpa_printf(MSG_WARNING, "RSN: Invalid EAPOL-Key MIC "
 				   "when using TSTK - ignoring TSTK");
 		} else {
@@ -945,7 +945,7 @@ int peerkey_verify_eapol_key_mic(struct wpa_sm *sm,
 		os_memset(key->key_mic, 0, 16);
 		wpa_eapol_key_mic(peerkey->stk.kck, ver, buf, len,
 				  key->key_mic);
-		if (os_memcmp(mic, key->key_mic, 16) != 0) {
+		if (os_memcmp_const(mic, key->key_mic, 16) != 0) {
 			wpa_printf(MSG_WARNING, "RSN: Invalid EAPOL-Key MIC "
 				   "- dropping packet");
 			return -1;

@@ -564,7 +564,7 @@ static int wpa_supplicant_verify_tdls_mic(u8 trans_seq,
 		wpa_tdls_ftie_mic(peer->tpk.kck, trans_seq, lnkid,
 				  peer->rsnie_p, timeoutie, (u8 *) ftie,
 				  mic);
-		if (os_memcmp(mic, ftie->mic, 16) != 0) {
+		if (os_memcmp_const(mic, ftie->mic, 16) != 0) {
 			wpa_printf(MSG_INFO, "TDLS: Invalid MIC in FTIE - "
 				   "dropping packet");
 			wpa_hexdump(MSG_DEBUG, "TDLS: Received MIC",
@@ -591,7 +591,7 @@ static int wpa_supplicant_verify_tdls_mic_teardown(
 	if (peer->tpk_set) {
 		wpa_tdls_key_mic_teardown(peer->tpk.kck, trans_seq, rcode,
 					  dtoken, lnkid, (u8 *) ftie, mic);
-		if (os_memcmp(mic, ftie->mic, 16) != 0) {
+		if (os_memcmp_const(mic, ftie->mic, 16) != 0) {
 			wpa_printf(MSG_INFO, "TDLS: Invalid MIC in Teardown - "
 				   "dropping packet");
 			return -1;

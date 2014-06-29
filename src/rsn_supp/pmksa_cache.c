@@ -152,9 +152,9 @@ pmksa_cache_add(struct rsn_pmksa_cache *pmksa, const u8 *pmk, size_t pmk_len,
 	while (pos) {
 		if (os_memcmp(aa, pos->aa, ETH_ALEN) == 0) {
 			if (pos->pmk_len == pmk_len &&
-			    os_memcmp(pos->pmk, pmk, pmk_len) == 0 &&
-			    os_memcmp(pos->pmkid, entry->pmkid, PMKID_LEN) ==
-			    0) {
+			    os_memcmp_const(pos->pmk, pmk, pmk_len) == 0 &&
+			    os_memcmp_const(pos->pmkid, entry->pmkid,
+					    PMKID_LEN) == 0) {
 				wpa_printf(MSG_DEBUG, "WPA: reusing previous "
 					   "PMKSA entry");
 				os_free(entry);

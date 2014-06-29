@@ -237,7 +237,7 @@ static struct wpabuf * eap_psk_process_3(struct eap_psk_data *data,
 		return NULL;
 	}
 	os_free(buf);
-	if (os_memcmp(mac, hdr3->mac_s, EAP_PSK_MAC_LEN) != 0) {
+	if (os_memcmp_const(mac, hdr3->mac_s, EAP_PSK_MAC_LEN) != 0) {
 		wpa_printf(MSG_WARNING, "EAP-PSK: Invalid MAC_S in third "
 			   "message");
 		ret->methodState = METHOD_DONE;

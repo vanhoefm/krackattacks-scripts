@@ -314,7 +314,7 @@ static void eap_psk_process_2(struct eap_sm *sm,
 	}
 	os_free(buf);
 	wpa_hexdump(MSG_DEBUG, "EAP-PSK: MAC_P", resp->mac_p, EAP_PSK_MAC_LEN);
-	if (os_memcmp(mac, resp->mac_p, EAP_PSK_MAC_LEN) != 0) {
+	if (os_memcmp_const(mac, resp->mac_p, EAP_PSK_MAC_LEN) != 0) {
 		wpa_printf(MSG_INFO, "EAP-PSK: Invalid MAC_P");
 		wpa_hexdump(MSG_MSGDUMP, "EAP-PSK: Expected MAC_P",
 			    mac, EAP_PSK_MAC_LEN);

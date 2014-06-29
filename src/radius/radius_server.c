@@ -864,7 +864,7 @@ radius_server_macacl(struct radius_server_data *data,
 			os_free(tmp.password);
 
 			if (res < 0 || pw_len != (size_t) res ||
-			    os_memcmp(pw, buf, res) != 0) {
+			    os_memcmp_const(pw, buf, res) != 0) {
 				RADIUS_DEBUG("Incorrect User-Password");
 				code = RADIUS_CODE_ACCESS_REJECT;
 			}

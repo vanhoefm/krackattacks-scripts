@@ -244,7 +244,7 @@ static struct wpabuf * eap_leap_process_response(struct eap_sm *sm, void *priv,
 	ret->methodState = METHOD_DONE;
 	ret->allowNotifications = FALSE;
 
-	if (os_memcmp(pos, expected, LEAP_RESPONSE_LEN) != 0) {
+	if (os_memcmp_const(pos, expected, LEAP_RESPONSE_LEN) != 0) {
 		wpa_printf(MSG_WARNING, "EAP-LEAP: AP sent an invalid "
 			   "response - authentication failed");
 		wpa_hexdump(MSG_DEBUG, "EAP-LEAP: Expected response from AP",

@@ -1406,6 +1406,12 @@ int scard_umts_auth(struct scard_data *scard, const unsigned char *_rand,
 		pos += IK_LEN;
 		wpa_hexdump(MSG_DEBUG, "SCARD: IK", ik, IK_LEN);
 
+		if (end > pos) {
+			wpa_hexdump(MSG_DEBUG,
+				    "SCARD: Ignore extra data in end",
+				    pos, end - pos);
+		}
+
 		return 0;
 	}
 

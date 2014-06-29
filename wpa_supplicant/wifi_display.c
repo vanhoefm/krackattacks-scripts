@@ -280,6 +280,16 @@ char * wifi_display_subelem_hex(const struct wpabuf *wfd_subelems, u8 id)
 			break; /* truncated subelement */
 
 		if (buf[i] == id) {
+			/*
+			 * Limit explicitly to an arbitrary length to avoid
+			 * unnecessarily large allocations. In practice, this
+			 * is limited to maximum frame length anyway, so the
+			 * maximum memory allocation here is not really that
+			 * large. Anyway, the Wi-Fi Display subelements that
+			 * are fetched with this function are even shorter.
+			 */
+			if (elen > 1000)
+				break;
 			subelem = os_zalloc(2 * elen + 1);
 			if (!subelem)
 				return NULL;

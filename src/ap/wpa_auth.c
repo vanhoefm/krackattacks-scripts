@@ -1490,7 +1490,7 @@ static int wpa_verify_key_mic(struct wpa_ptk *PTK, u8 *data, size_t data_len)
 	os_memset(key->key_mic, 0, 16);
 	if (wpa_eapol_key_mic(PTK->kck, key_info & WPA_KEY_INFO_TYPE_MASK,
 			      data, data_len, key->key_mic) ||
-	    os_memcmp(mic, key->key_mic, 16) != 0)
+	    os_memcmp_const(mic, key->key_mic, 16) != 0)
 		ret = -1;
 	os_memcpy(key->key_mic, mic, 16);
 	return ret;
@@ -1877,8 +1877,8 @@ SM_STATE(WPA_PTK, PTKCALCNEGOTIATING)
 		 * Verify that PMKR1Name from EAPOL-Key message 2/4 matches
 		 * with the value we derived.
 		 */
-		if (os_memcmp(sm->sup_pmk_r1_name, sm->pmk_r1_name,
-			      WPA_PMK_NAME_LEN) != 0) {
+		if (os_memcmp_const(sm->sup_pmk_r1_name, sm->pmk_r1_name,
+				    WPA_PMK_NAME_LEN) != 0) {
 			wpa_auth_logger(sm->wpa_auth, sm->addr, LOGGER_DEBUG,
 					"PMKR1Name mismatch in FT 4-way "
 					"handshake");

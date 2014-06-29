@@ -235,8 +235,8 @@ static int wpa_ft_fetch_pmk_r0(struct wpa_authenticator *wpa_auth,
 	r0 = cache->pmk_r0;
 	while (r0) {
 		if (os_memcmp(r0->spa, spa, ETH_ALEN) == 0 &&
-		    os_memcmp(r0->pmk_r0_name, pmk_r0_name, WPA_PMK_NAME_LEN)
-		    == 0) {
+		    os_memcmp_const(r0->pmk_r0_name, pmk_r0_name,
+				    WPA_PMK_NAME_LEN) == 0) {
 			os_memcpy(pmk_r0, r0->pmk_r0, PMK_LEN);
 			if (pairwise)
 				*pairwise = r0->pairwise;
@@ -285,8 +285,8 @@ static int wpa_ft_fetch_pmk_r1(struct wpa_authenticator *wpa_auth,
 	r1 = cache->pmk_r1;
 	while (r1) {
 		if (os_memcmp(r1->spa, spa, ETH_ALEN) == 0 &&
-		    os_memcmp(r1->pmk_r1_name, pmk_r1_name, WPA_PMK_NAME_LEN)
-		    == 0) {
+		    os_memcmp_const(r1->pmk_r1_name, pmk_r1_name,
+				    WPA_PMK_NAME_LEN) == 0) {
 			os_memcpy(pmk_r1, r1->pmk_r1, PMK_LEN);
 			if (pairwise)
 				*pairwise = r1->pairwise;
@@ -310,7 +310,8 @@ static int wpa_ft_pull_pmk_r1(struct wpa_state_machine *sm,
 	r0kh = sm->wpa_auth->conf.r0kh_list;
 	while (r0kh) {
 		if (r0kh->id_len == sm->r0kh_id_len &&
-		    os_memcmp(r0kh->id, sm->r0kh_id, sm->r0kh_id_len) == 0)
+		    os_memcmp_const(r0kh->id, sm->r0kh_id, sm->r0kh_id_len) ==
+		    0)
 			break;
 		r0kh = r0kh->next;
 	}
@@ -1013,8 +1014,8 @@ u16 wpa_ft_validate_reassoc(struct wpa_state_machine *sm, const u8 *ies,
 		return WLAN_STATUS_INVALID_PMKID;
 	}
 
-	if (os_memcmp(parse.rsn_pmkid, sm->pmk_r1_name, WPA_PMK_NAME_LEN) != 0)
-	{
+	if (os_memcmp_const(parse.rsn_pmkid, sm->pmk_r1_name, WPA_PMK_NAME_LEN)
+	    != 0) {
 		wpa_printf(MSG_DEBUG, "FT: PMKID in Reassoc Req did not match "
 			   "with the PMKR1Name derived from auth request");
 		return WLAN_STATUS_INVALID_PMKID;
@@ -1060,7 +1061,8 @@ u16 wpa_ft_validate_reassoc(struct wpa_state_machine *sm, const u8 *ies,
 	}
 
 	if (parse.r0kh_id_len != sm->r0kh_id_len ||
-	    os_memcmp(parse.r0kh_id, sm->r0kh_id, parse.r0kh_id_len) != 0) {
+	    os_memcmp_const(parse.r0kh_id, sm->r0kh_id, parse.r0kh_id_len) != 0)
+	{
 		wpa_printf(MSG_DEBUG, "FT: R0KH-ID in FTIE did not match with "
 			   "the current R0KH-ID");
 		wpa_hexdump(MSG_DEBUG, "FT: R0KH-ID in FTIE",
@@ -1075,8 +1077,8 @@ u16 wpa_ft_validate_reassoc(struct wpa_state_machine *sm, const u8 *ies,
 		return -1;
 	}
 
-	if (os_memcmp(parse.r1kh_id, sm->wpa_auth->conf.r1_key_holder,
-		      FT_R1KH_ID_LEN) != 0) {
+	if (os_memcmp_const(parse.r1kh_id, sm->wpa_auth->conf.r1_key_holder,
+			    FT_R1KH_ID_LEN) != 0) {
 		wpa_printf(MSG_DEBUG, "FT: Unknown R1KH-ID used in "
 			   "ReassocReq");
 		wpa_hexdump(MSG_DEBUG, "FT: R1KH-ID in FTIE",
@@ -1087,7 +1089,8 @@ u16 wpa_ft_validate_reassoc(struct wpa_state_machine *sm, const u8 *ies,
 	}
 
 	if (parse.rsn_pmkid == NULL ||
-	    os_memcmp(parse.rsn_pmkid, sm->pmk_r1_name, WPA_PMK_NAME_LEN)) {
+	    os_memcmp_const(parse.rsn_pmkid, sm->pmk_r1_name, WPA_PMK_NAME_LEN))
+	{
 		wpa_printf(MSG_DEBUG, "FT: No matching PMKR1Name (PMKID) in "
 			   "RSNIE (pmkid=%d)", !!parse.rsn_pmkid);
 		return -1;
@@ -1113,7 +1116,7 @@ u16 wpa_ft_validate_reassoc(struct wpa_state_machine *sm, const u8 *ies,
 		return WLAN_STATUS_UNSPECIFIED_FAILURE;
 	}
 
-	if (os_memcmp(mic, ftie->mic, 16) != 0) {
+	if (os_memcmp_const(mic, ftie->mic, 16) != 0) {
 		wpa_printf(MSG_DEBUG, "FT: Invalid MIC in FTIE");
 		wpa_printf(MSG_DEBUG, "FT: addr=" MACSTR " auth_addr=" MACSTR,
 			   MAC2STR(sm->addr), MAC2STR(sm->wpa_auth->addr));
@@ -1468,8 +1471,8 @@ static int wpa_ft_rrb_rx_resp(struct wpa_authenticator *wpa_auth,
 		return -1;
 	}
 
-	if (os_memcmp(f.r1kh_id, wpa_auth->conf.r1_key_holder, FT_R1KH_ID_LEN)
-	    != 0) {
+	if (os_memcmp_const(f.r1kh_id, wpa_auth->conf.r1_key_holder,
+			    FT_R1KH_ID_LEN) != 0) {
 		wpa_printf(MSG_DEBUG, "FT: PMK-R1 pull response did not use a "
 			   "matching R1KH-ID");
 		return -1;
@@ -1544,8 +1547,8 @@ static int wpa_ft_rrb_rx_push(struct wpa_authenticator *wpa_auth,
 		return -1;
 	}
 
-	if (os_memcmp(f.r1kh_id, wpa_auth->conf.r1_key_holder, FT_R1KH_ID_LEN)
-	    != 0) {
+	if (os_memcmp_const(f.r1kh_id, wpa_auth->conf.r1_key_holder,
+			    FT_R1KH_ID_LEN) != 0) {
 		wpa_printf(MSG_DEBUG, "FT: PMK-R1 push did not use a matching "
 			   "R1KH-ID (received " MACSTR " own " MACSTR ")",
 			   MAC2STR(f.r1kh_id),

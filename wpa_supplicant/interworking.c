@@ -796,8 +796,8 @@ static int build_root_nai(char *nai, size_t nai_len, const char *imsi,
 		*pos++ = imsi[4];
 		*pos++ = imsi[5];
 	}
-	pos += os_snprintf(pos, end - pos, ".mcc%c%c%c.3gppnetwork.org",
-			   imsi[0], imsi[1], imsi[2]);
+	os_snprintf(pos, end - pos, ".mcc%c%c%c.3gppnetwork.org",
+		    imsi[0], imsi[1], imsi[2]);
 
 	return 0;
 }

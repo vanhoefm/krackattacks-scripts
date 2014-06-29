@@ -477,7 +477,7 @@ u8 * ikev2_decrypt_payload(int encr_id, int integ_id,
 			   "hash");
 		return NULL;
 	}
-	if (os_memcmp(integ, hash, integ_alg->hash_len) != 0) {
+	if (os_memcmp_const(integ, hash, integ_alg->hash_len) != 0) {
 		wpa_printf(MSG_INFO, "IKEV2: Incorrect Integrity Checksum "
 			   "Data");
 		return NULL;

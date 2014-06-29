@@ -100,7 +100,7 @@ int eap_ikev2_validate_icv(int integ_alg, struct ikev2_keys *keys,
 		return -1;
 	}
 
-	if (os_memcmp(icv, end - icv_len, icv_len) != 0) {
+	if (os_memcmp_const(icv, end - icv_len, icv_len) != 0) {
 		wpa_printf(MSG_INFO, "EAP-IKEV2: Invalid ICV");
 		wpa_hexdump(MSG_DEBUG, "EAP-IKEV2: Calculated ICV",
 			    icv, icv_len);

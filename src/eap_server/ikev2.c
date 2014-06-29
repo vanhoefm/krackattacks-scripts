@@ -633,7 +633,7 @@ static int ikev2_process_auth_secret(struct ikev2_initiator_data *data,
 		return -1;
 
 	if (auth_len != prf->hash_len ||
-	    os_memcmp(auth, auth_data, auth_len) != 0) {
+	    os_memcmp_const(auth, auth_data, auth_len) != 0) {
 		wpa_printf(MSG_INFO, "IKEV2: Invalid Authentication Data");
 		wpa_hexdump(MSG_DEBUG, "IKEV2: Received Authentication Data",
 			    auth, auth_len);

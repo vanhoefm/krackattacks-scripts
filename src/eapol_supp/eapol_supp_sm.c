@@ -719,8 +719,8 @@ static void eapol_sm_processKey(struct eapol_sm *sm)
 	hmac_md5(keydata.sign_key, sign_key_len,
 		 sm->last_rx_key, sizeof(*hdr) + be_to_host16(hdr->length),
 		 key->key_signature);
-	if (os_memcmp(orig_key_sign, key->key_signature,
-		      IEEE8021X_KEY_SIGN_LEN) != 0) {
+	if (os_memcmp_const(orig_key_sign, key->key_signature,
+			    IEEE8021X_KEY_SIGN_LEN) != 0) {
 		wpa_printf(MSG_DEBUG, "EAPOL: Invalid key signature in "
 			   "EAPOL-Key packet");
 		os_memcpy(key->key_signature, orig_key_sign,

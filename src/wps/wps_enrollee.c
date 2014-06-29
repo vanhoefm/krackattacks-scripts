@@ -525,8 +525,8 @@ static int wps_process_pubkey(struct wps_data *wps, const u8 *pk,
 	if (wps->peer_pubkey_hash_set) {
 		u8 hash[WPS_HASH_LEN];
 		sha256_vector(1, &pk, &pk_len, hash);
-		if (os_memcmp(hash, wps->peer_pubkey_hash,
-			      WPS_OOB_PUBKEY_HASH_LEN) != 0) {
+		if (os_memcmp_const(hash, wps->peer_pubkey_hash,
+				    WPS_OOB_PUBKEY_HASH_LEN) != 0) {
 			wpa_printf(MSG_ERROR, "WPS: Public Key hash mismatch");
 			wpa_hexdump(MSG_DEBUG, "WPS: Received public key",
 				    pk, pk_len);
@@ -605,7 +605,7 @@ static int wps_process_r_snonce1(struct wps_data *wps, const u8 *r_snonce1)
 	len[3] = wpabuf_len(wps->dh_pubkey_r);
 	hmac_sha256_vector(wps->authkey, WPS_AUTHKEY_LEN, 4, addr, len, hash);
 
-	if (os_memcmp(wps->peer_hash1, hash, WPS_HASH_LEN) != 0) {
+	if (os_memcmp_const(wps->peer_hash1, hash, WPS_HASH_LEN) != 0) {
 		wpa_printf(MSG_DEBUG, "WPS: R-Hash1 derived from R-S1 does "
 			   "not match with the pre-committed value");
 		wps->config_error = WPS_CFG_DEV_PASSWORD_AUTH_FAILURE;
@@ -645,7 +645,7 @@ static int wps_process_r_snonce2(struct wps_data *wps, const u8 *r_snonce2)
 	len[3] = wpabuf_len(wps->dh_pubkey_r);
 	hmac_sha256_vector(wps->authkey, WPS_AUTHKEY_LEN, 4, addr, len, hash);
 
-	if (os_memcmp(wps->peer_hash2, hash, WPS_HASH_LEN) != 0) {
+	if (os_memcmp_const(wps->peer_hash2, hash, WPS_HASH_LEN) != 0) {
 		wpa_printf(MSG_DEBUG, "WPS: R-Hash2 derived from R-S2 does "
 			   "not match with the pre-committed value");
 		wps->config_error = WPS_CFG_DEV_PASSWORD_AUTH_FAILURE;

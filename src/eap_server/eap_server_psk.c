@@ -47,7 +47,7 @@ static void eap_psk_reset(struct eap_sm *sm, void *priv)
 {
 	struct eap_psk_data *data = priv;
 	os_free(data->id_p);
-	os_free(data);
+	bin_clear_free(data, sizeof(*data));
 }
 
 

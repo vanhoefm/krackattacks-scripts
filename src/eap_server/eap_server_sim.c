@@ -94,7 +94,7 @@ static void eap_sim_reset(struct eap_sm *sm, void *priv)
 	struct eap_sim_data *data = priv;
 	os_free(data->next_pseudonym);
 	os_free(data->next_reauth_id);
-	os_free(data);
+	bin_clear_free(data, sizeof(*data));
 }
 
 

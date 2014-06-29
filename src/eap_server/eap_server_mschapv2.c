@@ -91,7 +91,7 @@ static void eap_mschapv2_reset(struct eap_sm *sm, void *priv)
 		return;
 
 	os_free(data->peer_challenge);
-	os_free(data);
+	bin_clear_free(data, sizeof(*data));
 }
 
 

@@ -95,7 +95,7 @@ static void eap_gpsk_reset(struct eap_sm *sm, void *priv)
 {
 	struct eap_gpsk_data *data = priv;
 	os_free(data->id_peer);
-	os_free(data);
+	bin_clear_free(data, sizeof(*data));
 }
 
 

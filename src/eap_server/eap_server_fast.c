@@ -511,7 +511,7 @@ static void eap_fast_reset(struct eap_sm *sm, void *priv)
 	os_free(data->key_block_p);
 	wpabuf_free(data->pending_phase2_resp);
 	os_free(data->identity);
-	os_free(data);
+	bin_clear_free(data, sizeof(*data));
 }
 
 

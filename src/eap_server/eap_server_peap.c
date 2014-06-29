@@ -172,7 +172,7 @@ static void eap_peap_reset(struct eap_sm *sm, void *priv)
 	wpabuf_free(data->pending_phase2_resp);
 	os_free(data->phase2_key);
 	wpabuf_free(data->soh_response);
-	os_free(data);
+	bin_clear_free(data, sizeof(*data));
 }
 
 

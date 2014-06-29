@@ -336,7 +336,7 @@ static void eap_ttls_reset(struct eap_sm *sm, void *priv)
 		data->phase2_method->reset(sm, data->phase2_priv);
 	eap_server_tls_ssl_deinit(sm, &data->ssl);
 	wpabuf_free(data->pending_phase2_eap_resp);
-	os_free(data);
+	bin_clear_free(data, sizeof(*data));
 }
 
 

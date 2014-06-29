@@ -104,7 +104,7 @@ static void eap_eke_reset(struct eap_sm *sm, void *priv)
 	eap_eke_session_clean(&data->sess);
 	os_free(data->peerid);
 	wpabuf_free(data->msgs);
-	os_free(data);
+	bin_clear_free(data, sizeof(*data));
 }
 
 

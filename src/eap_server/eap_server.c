@@ -168,7 +168,7 @@ SM_STATE(EAP, INITIALIZE)
 	sm->eap_if.eapSuccess = FALSE;
 	sm->eap_if.eapFail = FALSE;
 	sm->eap_if.eapTimeout = FALSE;
-	os_free(sm->eap_if.eapKeyData);
+	bin_clear_free(sm->eap_if.eapKeyData, sm->eap_if.eapKeyDataLen);
 	sm->eap_if.eapKeyData = NULL;
 	sm->eap_if.eapKeyDataLen = 0;
 	sm->eap_if.eapKeyAvailable = FALSE;
@@ -346,7 +346,7 @@ SM_STATE(EAP, METHOD_RESPONSE)
 	sm->m->process(sm, sm->eap_method_priv, sm->eap_if.eapRespData);
 	if (sm->m->isDone(sm, sm->eap_method_priv)) {
 		eap_sm_Policy_update(sm, NULL, 0);
-		os_free(sm->eap_if.eapKeyData);
+		bin_clear_free(sm->eap_if.eapKeyData, sm->eap_if.eapKeyDataLen);
 		if (sm->m->getKey) {
 			sm->eap_if.eapKeyData = sm->m->getKey(
 				sm, sm->eap_method_priv,
@@ -632,7 +632,7 @@ SM_STATE(EAP, SUCCESS2)
 	if (sm->eap_if.aaaEapKeyAvailable) {
 		EAP_COPY(&sm->eap_if.eapKeyData, sm->eap_if.aaaEapKeyData);
 	} else {
-		os_free(sm->eap_if.eapKeyData);
+		bin_clear_free(sm->eap_if.eapKeyData, sm->eap_if.eapKeyDataLen);
 		sm->eap_if.eapKeyData = NULL;
 		sm->eap_if.eapKeyDataLen = 0;
 	}
@@ -1260,7 +1260,7 @@ static void eap_user_free(struct eap_user *user)
 {
 	if (user == NULL)
 		return;
-	os_free(user->password);
+	bin_clear_free(user->password, user->password_len);
 	user->password = NULL;
 	os_free(user);
 }
@@ -1352,7 +1352,7 @@ void eap_server_sm_deinit(struct eap_sm *sm)
 	if (sm->m && sm->eap_method_priv)
 		sm->m->reset(sm, sm->eap_method_priv);
 	wpabuf_free(sm->eap_if.eapReqData);
-	os_free(sm->eap_if.eapKeyData);
+	bin_clear_free(sm->eap_if.eapKeyData, sm->eap_if.eapKeyDataLen);
 	wpabuf_free(sm->lastReqData);
 	wpabuf_free(sm->eap_if.eapRespData);
 	os_free(sm->identity);
@@ -1361,7 +1361,7 @@ void eap_server_sm_deinit(struct eap_sm *sm)
 	os_free(sm->eap_fast_a_id_info);
 	wpabuf_free(sm->eap_if.aaaEapReqData);
 	wpabuf_free(sm->eap_if.aaaEapRespData);
-	os_free(sm->eap_if.aaaEapKeyData);
+	bin_clear_free(sm->eap_if.aaaEapKeyData, sm->eap_if.aaaEapKeyDataLen);
 	eap_user_free(sm->user);
 	wpabuf_free(sm->assoc_wps_ie);
 	wpabuf_free(sm->assoc_p2p_ie);

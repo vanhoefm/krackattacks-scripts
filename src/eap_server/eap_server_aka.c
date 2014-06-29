@@ -241,7 +241,7 @@ static void eap_aka_reset(struct eap_sm *sm, void *priv)
 	os_free(data->next_reauth_id);
 	wpabuf_free(data->id_msgs);
 	os_free(data->network_name);
-	os_free(data);
+	bin_clear_free(data, sizeof(*data));
 }
 
 

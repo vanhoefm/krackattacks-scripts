@@ -127,7 +127,7 @@ static void eap_ikev2_reset(struct eap_sm *sm, void *priv)
 	wpabuf_free(data->in_buf);
 	wpabuf_free(data->out_buf);
 	ikev2_initiator_deinit(&data->ikev2);
-	os_free(data);
+	bin_clear_free(data, sizeof(*data));
 }
 
 

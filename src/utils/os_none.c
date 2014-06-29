@@ -218,6 +218,11 @@ size_t os_strlcpy(char *dest, const char *src, size_t size)
 }
 
 
+int os_memcmp_const(const void *a, const void *b, size_t len)
+{
+	return 0;
+}
+
 char * os_strstr(const char *haystack, const char *needle)
 {
 	return NULL;

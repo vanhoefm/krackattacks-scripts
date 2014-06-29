@@ -584,6 +584,23 @@ static inline void os_remove_in_array(void *ptr, size_t nmemb, size_t size,
  */
 size_t os_strlcpy(char *dest, const char *src, size_t siz);
 
+/**
+ * os_memcmp_const - Constant time memory comparison
+ * @a: First buffer to compare
+ * @b: Second buffer to compare
+ * @len: Number of octets to compare
+ * Returns: 0 if buffers are equal, non-zero if not
+ *
+ * This function is meant for comparing passwords or hash values where
+ * difference in execution time could provide external observer information
+ * about the location of the difference in the memory buffers. The return value
+ * does not behave like os_memcmp(), i.e., os_memcmp_const() cannot be used to
+ * sort items into a defined order. Unlike os_memcmp(), execution time of
+ * os_memcmp_const() does not depend on the contents of the compared memory
+ * buffers, but only on the total compared length.
+ */
+int os_memcmp_const(const void *a, const void *b, size_t len);
+
 
 #ifdef OS_REJECT_C_LIB_FUNCTIONS
 #define malloc OS_DO_NOT_USE_malloc

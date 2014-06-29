@@ -463,6 +463,20 @@ size_t os_strlcpy(char *dest, const char *src, size_t siz)
 }
 
 
+int os_memcmp_const(const void *a, const void *b, size_t len)
+{
+	const u8 *aa = a;
+	const u8 *bb = b;
+	size_t i;
+	u8 res;
+
+	for (res = 0, i = 0; i < len; i++)
+		res |= aa[i] ^ bb[i];
+
+	return res;
+}
+
+
 char * os_strstr(const char *haystack, const char *needle)
 {
 	size_t len = os_strlen(needle);

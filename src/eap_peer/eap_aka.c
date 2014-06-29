@@ -151,7 +151,7 @@ static int eap_aka_ext_sim_req(struct eap_sm *sm, struct eap_aka_data *data)
 	pos += os_snprintf(pos, end - pos, ":");
 	pos += wpa_snprintf_hex(pos, end - pos, data->rand, EAP_AKA_RAND_LEN);
 	pos += os_snprintf(pos, end - pos, ":");
-	pos += wpa_snprintf_hex(pos, end - pos, data->autn, EAP_AKA_AUTN_LEN);
+	wpa_snprintf_hex(pos, end - pos, data->autn, EAP_AKA_AUTN_LEN);
 
 	eap_sm_request_sim(sm, req);
 	return 1;

@@ -435,7 +435,7 @@ static int wpa_config_parse_proto(const struct parse_data *data,
 static char * wpa_config_write_proto(const struct parse_data *data,
 				     struct wpa_ssid *ssid)
 {
-	int first = 1, ret;
+	int ret;
 	char *buf, *pos, *end;
 
 	pos = buf = os_zalloc(20);
@@ -444,27 +444,27 @@ static char * wpa_config_write_proto(const struct parse_data *data,
 	end = buf + 20;
 
 	if (ssid->proto & WPA_PROTO_WPA) {
-		ret = os_snprintf(pos, end - pos, "%sWPA", first ? "" : " ");
+		ret = os_snprintf(pos, end - pos, "%sWPA",
+				  pos == buf ? "" : " ");
 		if (ret < 0 || ret >= end - pos)
 			return buf;
 		pos += ret;
-		first = 0;
 	}
 
 	if (ssid->proto & WPA_PROTO_RSN) {
-		ret = os_snprintf(pos, end - pos, "%sRSN", first ? "" : " ");
+		ret = os_snprintf(pos, end - pos, "%sRSN",
+				  pos == buf ? "" : " ");
 		if (ret < 0 || ret >= end - pos)
 			return buf;
 		pos += ret;
-		first = 0;
 	}
 
 	if (ssid->proto & WPA_PROTO_OSEN) {
-		ret = os_snprintf(pos, end - pos, "%sOSEN", first ? "" : " ");
+		ret = os_snprintf(pos, end - pos, "%sOSEN",
+				  pos == buf ? "" : " ");
 		if (ret < 0 || ret >= end - pos)
 			return buf;
 		pos += ret;
-		first = 0;
 	}
 
 	return buf;

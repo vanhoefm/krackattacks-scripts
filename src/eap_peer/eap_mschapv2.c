@@ -140,7 +140,7 @@ static void eap_mschapv2_deinit(struct eap_sm *sm, void *priv)
 	os_free(data->peer_challenge);
 	os_free(data->auth_challenge);
 	wpabuf_free(data->prev_challenge);
-	os_free(data);
+	bin_clear_free(data, sizeof(*data));
 }
 
 
@@ -303,7 +303,7 @@ static void eap_mschapv2_password_changed(struct eap_sm *sm,
 			WPA_EVENT_PASSWORD_CHANGED
 			"EAP-MSCHAPV2: Password changed successfully");
 		data->prev_error = 0;
-		os_free(config->password);
+		bin_clear_free(config->password, config->password_len);
 		if (config->flags & EAP_CONFIG_FLAGS_EXT_PASSWORD) {
 			/* TODO: update external storage */
 		} else if (config->flags & EAP_CONFIG_FLAGS_PASSWORD_NTHASH) {
@@ -313,11 +313,13 @@ static void eap_mschapv2_password_changed(struct eap_sm *sm,
 			    nt_password_hash(config->new_password,
 					     config->new_password_len,
 					     config->password)) {
-				os_free(config->password);
+				bin_clear_free(config->password,
+					       config->password_len);
 				config->password = NULL;
 				config->password_len = 0;
 			}
-			os_free(config->new_password);
+			bin_clear_free(config->new_password,
+				       config->new_password_len);
 		} else {
 			config->password = config->new_password;
 			config->password_len = config->new_password_len;

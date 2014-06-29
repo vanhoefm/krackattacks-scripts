@@ -383,6 +383,9 @@ static u8 * eap_leap_getKey(struct eap_sm *sm, void *priv, size_t *len)
 	wpa_hexdump_key(MSG_DEBUG, "EAP-LEAP: master key", key, LEAP_KEY_LEN);
 	*len = LEAP_KEY_LEN;
 
+	os_memset(pw_hash, 0, sizeof(pw_hash));
+	os_memset(pw_hash_hash, 0, sizeof(pw_hash_hash));
+
 	return key;
 }
 

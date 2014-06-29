@@ -130,6 +130,20 @@ static void * eap_sim_init(struct eap_sm *sm)
 }
 
 
+static void eap_sim_clear_keys(struct eap_sim_data *data, int reauth)
+{
+	if (!reauth) {
+		os_memset(data->mk, 0, EAP_SIM_MK_LEN);
+		os_memset(data->k_aut, 0, EAP_SIM_K_AUT_LEN);
+		os_memset(data->k_encr, 0, EAP_SIM_K_ENCR_LEN);
+	}
+	os_memset(data->kc, 0, 3 * EAP_SIM_KC_LEN);
+	os_memset(data->sres, 0, 3 * EAP_SIM_SRES_LEN);
+	os_memset(data->msk, 0, EAP_SIM_KEYING_DATA_LEN);
+	os_memset(data->emsk, 0, EAP_EMSK_LEN);
+}
+
+
 static void eap_sim_deinit(struct eap_sm *sm, void *priv)
 {
 	struct eap_sim_data *data = priv;
@@ -138,6 +152,7 @@ static void eap_sim_deinit(struct eap_sm *sm, void *priv)
 		os_free(data->pseudonym);
 		os_free(data->reauth_id);
 		os_free(data->last_eap_identity);
+		eap_sim_clear_keys(data, 0);
 		os_free(data);
 	}
 }
@@ -1110,6 +1125,7 @@ static void eap_sim_deinit_for_reauth(struct eap_sm *sm, void *priv)
 	struct eap_sim_data *data = priv;
 	eap_sim_clear_identities(sm, data, CLEAR_EAP_ID);
 	data->use_result_ind = 0;
+	eap_sim_clear_keys(data, 1);
 }
 
 

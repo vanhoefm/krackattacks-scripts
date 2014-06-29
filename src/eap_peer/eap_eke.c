@@ -138,7 +138,7 @@ static void eap_eke_deinit(struct eap_sm *sm, void *priv)
 	os_free(data->serverid);
 	os_free(data->peerid);
 	wpabuf_free(data->msgs);
-	os_free(data);
+	bin_clear_free(data, sizeof(*data));
 }
 
 

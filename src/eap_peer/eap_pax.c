@@ -86,7 +86,7 @@ static void eap_pax_deinit(struct eap_sm *sm, void *priv)
 {
 	struct eap_pax_data *data = priv;
 	os_free(data->cid);
-	os_free(data);
+	bin_clear_free(data, sizeof(*data));
 }
 
 

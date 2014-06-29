@@ -92,6 +92,15 @@ static void eap_notify_status(struct eap_sm *sm, const char *status,
 }
 
 
+static void eap_sm_free_key(struct eap_sm *sm)
+{
+	if (sm->eapKeyData) {
+		bin_clear_free(sm->eapKeyData, sm->eapKeyDataLen);
+		sm->eapKeyData = NULL;
+	}
+}
+
+
 static void eap_deinit_prev_method(struct eap_sm *sm, const char *txt)
 {
 	ext_password_free(sm->ext_pw_buf);
@@ -159,8 +168,7 @@ SM_STATE(EAP, INITIALIZE)
 	eapol_set_int(sm, EAPOL_idleWhile, sm->ClientTimeout);
 	eapol_set_bool(sm, EAPOL_eapSuccess, FALSE);
 	eapol_set_bool(sm, EAPOL_eapFail, FALSE);
-	os_free(sm->eapKeyData);
-	sm->eapKeyData = NULL;
+	eap_sm_free_key(sm);
 	os_free(sm->eapSessionId);
 	sm->eapSessionId = NULL;
 	sm->eapKeyAvailable = FALSE;
@@ -404,7 +412,7 @@ SM_STATE(EAP, METHOD)
 
 	if (sm->m->isKeyAvailable && sm->m->getKey &&
 	    sm->m->isKeyAvailable(sm, sm->eap_method_priv)) {
-		os_free(sm->eapKeyData);
+		eap_sm_free_key(sm);
 		sm->eapKeyData = sm->m->getKey(sm, sm->eap_method_priv,
 					       &sm->eapKeyDataLen);
 		os_free(sm->eapSessionId);
@@ -1488,8 +1496,7 @@ void eap_sm_abort(struct eap_sm *sm)
 	sm->lastRespData = NULL;
 	wpabuf_free(sm->eapRespData);
 	sm->eapRespData = NULL;
-	os_free(sm->eapKeyData);
-	sm->eapKeyData = NULL;
+	eap_sm_free_key(sm);
 	os_free(sm->eapSessionId);
 	sm->eapSessionId = NULL;
 

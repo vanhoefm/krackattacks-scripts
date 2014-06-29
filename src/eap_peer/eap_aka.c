@@ -126,6 +126,21 @@ static void * eap_aka_prime_init(struct eap_sm *sm)
 #endif /* EAP_AKA_PRIME */
 
 
+static void eap_aka_clear_keys(struct eap_aka_data *data, int reauth)
+{
+	if (!reauth) {
+		os_memset(data->mk, 0, EAP_SIM_MK_LEN);
+		os_memset(data->k_aut, 0, EAP_AKA_PRIME_K_AUT_LEN);
+		os_memset(data->k_encr, 0, EAP_SIM_K_ENCR_LEN);
+		os_memset(data->k_re, 0, EAP_AKA_PRIME_K_RE_LEN);
+	}
+	os_memset(data->msk, 0, EAP_SIM_KEYING_DATA_LEN);
+	os_memset(data->emsk, 0, EAP_EMSK_LEN);
+	os_memset(data->autn, 0, EAP_AKA_AUTN_LEN);
+	os_memset(data->auts, 0, EAP_AKA_AUTS_LEN);
+}
+
+
 static void eap_aka_deinit(struct eap_sm *sm, void *priv)
 {
 	struct eap_aka_data *data = priv;
@@ -135,6 +150,7 @@ static void eap_aka_deinit(struct eap_sm *sm, void *priv)
 		os_free(data->last_eap_identity);
 		wpabuf_free(data->id_msgs);
 		os_free(data->network_name);
+		eap_aka_clear_keys(data, 0);
 		os_free(data);
 	}
 }
@@ -1373,6 +1389,7 @@ static void eap_aka_deinit_for_reauth(struct eap_sm *sm, void *priv)
 	data->id_msgs = NULL;
 	data->use_result_ind = 0;
 	data->kdf_negotiation = 0;
+	eap_aka_clear_keys(data, 1);
 }
 
 

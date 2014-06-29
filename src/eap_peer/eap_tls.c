@@ -125,13 +125,22 @@ static void * eap_wfa_unauth_tls_init(struct eap_sm *sm)
 #endif /* CONFIG_HS20 */
 
 
+static void eap_tls_free_key(struct eap_tls_data *data)
+{
+	if (data->key_data) {
+		bin_clear_free(data->key_data, EAP_TLS_KEY_LEN + EAP_EMSK_LEN);
+		data->key_data = NULL;
+	}
+}
+
+
 static void eap_tls_deinit(struct eap_sm *sm, void *priv)
 {
 	struct eap_tls_data *data = priv;
 	if (data == NULL)
 		return;
 	eap_peer_tls_ssl_deinit(sm, &data->ssl);
-	os_free(data->key_data);
+	eap_tls_free_key(data);
 	os_free(data->session_id);
 	os_free(data);
 }
@@ -181,7 +190,7 @@ static void eap_tls_success(struct eap_sm *sm, struct eap_tls_data *data,
 	ret->methodState = METHOD_DONE;
 	ret->decision = DECISION_UNCOND_SUCC;
 
-	os_free(data->key_data);
+	eap_tls_free_key(data);
 	data->key_data = eap_peer_tls_derive_key(sm, &data->ssl,
 						 "client EAP encryption",
 						 EAP_TLS_KEY_LEN +
@@ -267,8 +276,7 @@ static void eap_tls_deinit_for_reauth(struct eap_sm *sm, void *priv)
 static void * eap_tls_init_for_reauth(struct eap_sm *sm, void *priv)
 {
 	struct eap_tls_data *data = priv;
-	os_free(data->key_data);
-	data->key_data = NULL;
+	eap_tls_free_key(data);
 	os_free(data->session_id);
 	data->session_id = NULL;
 	if (eap_peer_tls_reauth_init(sm, &data->ssl)) {

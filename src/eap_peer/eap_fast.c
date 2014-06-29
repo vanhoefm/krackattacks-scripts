@@ -250,6 +250,8 @@ static void eap_fast_deinit(struct eap_sm *sm, void *priv)
 		pac = pac->next;
 		eap_fast_free_pac(prev);
 	}
+	os_memset(data->key_data, 0, EAP_FAST_KEY_LEN);
+	os_memset(data->emsk, 0, EAP_EMSK_LEN);
 	os_free(data->session_id);
 	wpabuf_free(data->pending_phase2_req);
 	os_free(data);
@@ -1636,6 +1638,8 @@ static void * eap_fast_init_for_reauth(struct eap_sm *sm, void *priv)
 		os_free(data);
 		return NULL;
 	}
+	os_memset(data->key_data, 0, EAP_FAST_KEY_LEN);
+	os_memset(data->emsk, 0, EAP_EMSK_LEN);
 	os_free(data->session_id);
 	data->session_id = NULL;
 	if (data->phase2_priv && data->phase2_method &&

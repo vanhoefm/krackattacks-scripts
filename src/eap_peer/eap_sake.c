@@ -108,7 +108,7 @@ static void eap_sake_deinit(struct eap_sm *sm, void *priv)
 	struct eap_sake_data *data = priv;
 	os_free(data->serverid);
 	os_free(data->peerid);
-	os_free(data);
+	bin_clear_free(data, sizeof(*data));
 }
 
 

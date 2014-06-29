@@ -134,8 +134,11 @@ static void eap_gpsk_deinit(struct eap_sm *sm, void *priv)
 	struct eap_gpsk_data *data = priv;
 	os_free(data->id_server);
 	os_free(data->id_peer);
-	os_free(data->psk);
-	os_free(data);
+	if (data->psk) {
+		os_memset(data->psk, 0, data->psk_len);
+		os_free(data->psk);
+	}
+	bin_clear_free(data, sizeof(*data));
 }
 
 

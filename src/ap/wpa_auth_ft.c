@@ -1689,6 +1689,11 @@ int wpa_ft_rrb_rx(struct wpa_authenticator *wpa_auth, const u8 *src_addr,
 		return -1;
 	}
 
+	if (end > pos) {
+		wpa_hexdump(MSG_DEBUG, "FT: Ignore extra data in end",
+			    pos, end - pos);
+	}
+
 	return 0;
 }
 

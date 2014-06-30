@@ -930,6 +930,9 @@ static int wpa_config_write_network(HKEY hk, struct wpa_ssid *ssid, int id)
 		  MGMT_FRAME_PROTECTION_DEFAULT);
 #endif /* CONFIG_IEEE80211W */
 	STR(id_str);
+#ifdef CONFIG_HS20
+	INT(update_identifier);
+#endif /* CONFIG_HS20 */
 
 #undef STR
 #undef INT

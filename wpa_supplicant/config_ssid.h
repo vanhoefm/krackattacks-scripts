@@ -647,6 +647,10 @@ struct wpa_ssid {
 	 */
 	int macsec_policy;
 #endif /* CONFIG_MACSEC */
+
+#ifdef CONFIG_HS20
+	int update_identifier;
+#endif /* CONFIG_HS20 */
 };
 
 #endif /* CONFIG_SSID_H */

@@ -109,7 +109,13 @@ int hs20_get_pps_mo_id(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid)
 {
 	struct wpa_cred *cred;
 
-	if (ssid == NULL || ssid->parent_cred == NULL)
+	if (ssid == NULL)
+		return 0;
+
+	if (ssid->update_identifier)
+		return ssid->update_identifier;
+
+	if (ssid->parent_cred == NULL)
 		return 0;
 
 	for (cred = wpa_s->conf->cred; cred; cred = cred->next) {

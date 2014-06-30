@@ -1751,6 +1751,9 @@ static const struct parse_data ssid_fields[] = {
 #ifdef CONFIG_MACSEC
 	{ INT_RANGE(macsec_policy, 0, 1) },
 #endif /* CONFIG_MACSEC */
+#ifdef CONFIG_HS20
+	{ INT(update_identifier) },
+#endif /* CONFIG_HS20 */
 };
 
 #undef OFFSET

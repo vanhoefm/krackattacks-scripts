@@ -568,6 +568,9 @@ struct wpa_supplicant {
 	int normal_scans; /* normal scans run before sched_scan */
 	int scan_for_connection; /* whether the scan request was triggered for
 				  * finding a connection */
+#define MAX_SCAN_ID 16
+	int scan_id[MAX_SCAN_ID];
+	unsigned int scan_id_count;
 
 	unsigned int drv_flags;
 	unsigned int drv_enc;

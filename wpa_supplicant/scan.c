@@ -548,6 +548,47 @@ static void wpa_setband_scan_freqs(struct wpa_supplicant *wpa_s,
 }
 
 
+static void wpa_set_scan_ssids(struct wpa_supplicant *wpa_s,
+			       struct wpa_driver_scan_params *params,
+			       size_t max_ssids)
+{
+	unsigned int i;
+	struct wpa_ssid *ssid;
+
+	for (i = 0; i < wpa_s->scan_id_count; i++) {
+		unsigned int j;
+
+		ssid = wpa_config_get_network(wpa_s->conf, wpa_s->scan_id[i]);
+		if (!ssid || !ssid->scan_ssid)
+			continue;
+
+		for (j = 0; j < params->num_ssids; j++) {
+			if (params->ssids[j].ssid_len == ssid->ssid_len &&
+			    params->ssids[j].ssid &&
+			    os_memcmp(params->ssids[j].ssid, ssid->ssid,
+				      ssid->ssid_len) == 0)
+				break;
+		}
+		if (j < params->num_ssids)
+			continue; /* already in the list */
+
+		if (params->num_ssids + 1 > max_ssids) {
+			wpa_printf(MSG_DEBUG,
+				   "Over max scan SSIDs for manual request");
+			break;
+		}
+
+		wpa_printf(MSG_DEBUG, "Scan SSID (manual request): %s",
+			   wpa_ssid_txt(ssid->ssid, ssid->ssid_len));
+		params->ssids[params->num_ssids].ssid = ssid->ssid;
+		params->ssids[params->num_ssids].ssid_len = ssid->ssid_len;
+		params->num_ssids++;
+	}
+
+	wpa_s->scan_id_count = 0;
+}
+
+
 static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_supplicant *wpa_s = eloop_ctx;
@@ -757,6 +798,10 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 			    start != wpa_s->conf->ssid)
 				ssid = wpa_s->conf->ssid;
 		}
+
+		if (wpa_s->scan_id_count &&
+		    wpa_s->last_scan_req == MANUAL_SCAN_REQ)
+			wpa_set_scan_ssids(wpa_s, &params, max_ssids);
 
 		for (tssid = wpa_s->conf->ssid; tssid; tssid = tssid->next) {
 			if (wpas_network_disabled(wpa_s, tssid))

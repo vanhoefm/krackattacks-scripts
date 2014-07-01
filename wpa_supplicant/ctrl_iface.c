@@ -5986,6 +5986,25 @@ static int set_scan_freqs(struct wpa_supplicant *wpa_s, char *val)
 }
 
 
+static int scan_id_list_parse(struct wpa_supplicant *wpa_s, const char *value)
+{
+	const char *pos = value;
+
+	while (pos) {
+		if (*pos == ' ' || *pos == '\0')
+			break;
+		if (wpa_s->scan_id_count == MAX_SCAN_ID)
+			return -1;
+		wpa_s->scan_id[wpa_s->scan_id_count++] = atoi(pos);
+		pos = os_strchr(pos, ',');
+		if (pos)
+			pos++;
+	}
+
+	return 0;
+}
+
+
 static void wpas_ctrl_scan(struct wpa_supplicant *wpa_s, char *params,
 			   char *reply, int reply_size, int *reply_len)
 {
@@ -5999,6 +6018,7 @@ static void wpas_ctrl_scan(struct wpa_supplicant *wpa_s, char *params,
 	wpa_s->manual_scan_passive = 0;
 	wpa_s->manual_scan_use_id = 0;
 	wpa_s->manual_scan_only_new = 0;
+	wpa_s->scan_id_count = 0;
 
 	if (params) {
 		if (os_strncasecmp(params, "TYPE=ONLY", 9) == 0)
@@ -6021,6 +6041,12 @@ static void wpas_ctrl_scan(struct wpa_supplicant *wpa_s, char *params,
 		pos = os_strstr(params, "only_new=1");
 		if (pos)
 			wpa_s->manual_scan_only_new = 1;
+
+		pos = os_strstr(params, "scan_id=");
+		if (pos && scan_id_list_parse(wpa_s, pos + 8) < 0) {
+			*reply_len = -1;
+			return;
+		}
 	} else {
 		os_free(wpa_s->manual_scan_freqs);
 		wpa_s->manual_scan_freqs = NULL;

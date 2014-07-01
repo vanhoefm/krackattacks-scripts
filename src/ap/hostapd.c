@@ -311,8 +311,10 @@ static void hostapd_free_hapd_data(struct hostapd_data *hapd)
 #endif /* CONFIG_INTERWORKING */
 
 #ifdef CONFIG_SQLITE
-	os_free(hapd->tmp_eap_user.identity);
-	os_free(hapd->tmp_eap_user.password);
+	bin_clear_free(hapd->tmp_eap_user.identity,
+		       hapd->tmp_eap_user.identity_len);
+	bin_clear_free(hapd->tmp_eap_user.password,
+		       hapd->tmp_eap_user.password_len);
 #endif /* CONFIG_SQLITE */
 }
 

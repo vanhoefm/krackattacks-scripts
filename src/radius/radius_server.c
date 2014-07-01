@@ -623,7 +623,7 @@ radius_server_get_new_session(struct radius_server_data *data,
 
 	os_memset(&tmp, 0, sizeof(tmp));
 	res = data->get_eap_user(data->conf_ctx, user, user_len, 0, &tmp);
-	os_free(tmp.password);
+	bin_clear_free(tmp.password, tmp.password_len);
 
 	if (res != 0) {
 		RADIUS_DEBUG("User-Name not found from user database");
@@ -852,7 +852,7 @@ radius_server_macacl(struct radius_server_data *data,
 					 os_strlen(sess->username), 0, &tmp);
 		if (res || !tmp.macacl || tmp.password == NULL) {
 			RADIUS_DEBUG("No MAC ACL user entry");
-			os_free(tmp.password);
+			bin_clear_free(tmp.password, tmp.password_len);
 			code = RADIUS_CODE_ACCESS_REJECT;
 		} else {
 			u8 buf[128];
@@ -861,7 +861,7 @@ radius_server_macacl(struct radius_server_data *data,
 				(u8 *) client->shared_secret,
 				client->shared_secret_len,
 				buf, sizeof(buf));
-			os_free(tmp.password);
+			bin_clear_free(tmp.password, tmp.password_len);
 
 			if (res < 0 || pw_len != (size_t) res ||
 			    os_memcmp_const(pw, buf, res) != 0) {

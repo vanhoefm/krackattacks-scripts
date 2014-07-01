@@ -83,7 +83,7 @@ static int get_user_cb(void *ctx, int argc, char *argv[], char *col[])
 
 	for (i = 0; i < argc; i++) {
 		if (os_strcmp(col[i], "password") == 0 && argv[i]) {
-			os_free(user->password);
+			bin_clear_free(user->password, user->password_len);
 			user->password_len = os_strlen(argv[i]);
 			user->password = (u8 *) os_strdup(argv[i]);
 			user->next = (void *) 1;
@@ -118,7 +118,7 @@ static int get_wildcard_cb(void *ctx, int argc, char *argv[], char *col[])
 	if (len <= user->identity_len &&
 	    os_memcmp(argv[id], user->identity, len) == 0 &&
 	    (user->password == NULL || len > user->password_len)) {
-		os_free(user->password);
+		bin_clear_free(user->password, user->password_len);
 		user->password_len = os_strlen(argv[id]);
 		user->password = (u8 *) os_strdup(argv[id]);
 		user->next = (void *) 1;
@@ -158,8 +158,10 @@ eap_user_sqlite_get(struct hostapd_data *hapd, const u8 *identity,
 		return NULL;
 	}
 
-	os_free(hapd->tmp_eap_user.identity);
-	os_free(hapd->tmp_eap_user.password);
+	bin_clear_free(hapd->tmp_eap_user.identity,
+		       hapd->tmp_eap_user.identity_len);
+	bin_clear_free(hapd->tmp_eap_user.password,
+		       hapd->tmp_eap_user.password_len);
 	os_memset(&hapd->tmp_eap_user, 0, sizeof(hapd->tmp_eap_user));
 	hapd->tmp_eap_user.phase2 = phase2;
 	hapd->tmp_eap_user.identity = os_zalloc(identity_len + 1);

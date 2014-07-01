@@ -1368,8 +1368,8 @@ int soap_reinit_client(struct http_ctx *ctx)
 			       client_cert, client_key);
 	os_free(address);
 	os_free(ca_fname);
-	os_free(username);
-	os_free(password);
+	str_clear_free(username);
+	str_clear_free(password);
 	os_free(client_cert);
 	os_free(client_key);
 	return ret;
@@ -1487,8 +1487,8 @@ void http_deinit_ctx(struct http_ctx *ctx)
 
 	os_free(ctx->svc_address);
 	os_free(ctx->svc_ca_fname);
-	os_free(ctx->svc_username);
-	os_free(ctx->svc_password);
+	str_clear_free(ctx->svc_username);
+	str_clear_free(ctx->svc_password);
 	os_free(ctx->svc_client_cert);
 	os_free(ctx->svc_client_key);
 

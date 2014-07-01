@@ -2495,7 +2495,7 @@ static void cmd_sub_rem(struct hs20_osu_client *ctx, const char *address,
 
 	xml_node_get_text_free(ctx->xml, sub_rem_uri);
 	xml_node_get_text_free(ctx->xml, cred_username);
-	os_free(cred_password);
+	str_clear_free(cred_password);
 	xml_node_free(ctx->xml, pps);
 }
 
@@ -2642,7 +2642,7 @@ static int cmd_pol_upd(struct hs20_osu_client *ctx, const char *address,
 
 	xml_node_get_text_free(ctx->xml, uri);
 	xml_node_get_text_free(ctx->xml, cred_username);
-	os_free(cred_password);
+	str_clear_free(cred_password);
 	xml_node_free(ctx->xml, pps);
 
 	return 0;

@@ -298,3 +298,27 @@ def test_scan_for_auth(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
     if ev is None:
         raise Exception("Association with the AP timed out")
+
+def test_scan_hidden(dev, apdev):
+    """Control interface behavior on scan parameters"""
+    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan",
+                                         "ignore_broadcast_ssid": "1" })
+    bssid = apdev[0]['bssid']
+
+    check_scan(dev[0], "freq=2412 use_id=1")
+    if "test-scan" in dev[0].request("SCAN_RESULTS"):
+        raise Exception("BSS unexpectedly found in initial scan")
+
+    id1 = dev[0].connect("foo", key_mgmt="NONE", scan_ssid="1",
+                         only_add_network=True)
+    id2 = dev[0].connect("test-scan", key_mgmt="NONE", scan_ssid="1",
+                         only_add_network=True)
+    id3 = dev[0].connect("bar", key_mgmt="NONE", only_add_network=True)
+
+    check_scan(dev[0], "freq=2412 use_id=1")
+    if "test-scan" in dev[0].request("SCAN_RESULTS"):
+        raise Exception("BSS unexpectedly found in scan")
+
+    check_scan(dev[0], "scan_id=%d,%d,%d freq=2412 use_id=1" % (id1, id2, id3))
+    if "test-scan" not in dev[0].request("SCAN_RESULTS"):
+        raise Exception("BSS not found in scan")

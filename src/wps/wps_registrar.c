@@ -42,7 +42,7 @@ struct wps_nfc_pw_token {
 static void wps_remove_nfc_pw_token(struct wps_nfc_pw_token *token)
 {
 	dl_list_del(&token->list);
-	os_free(token);
+	bin_clear_free(token, sizeof(*token));
 }
 
 
@@ -91,7 +91,7 @@ struct wps_uuid_pin {
 
 static void wps_free_pin(struct wps_uuid_pin *pin)
 {
-	os_free(pin->pin);
+	bin_clear_free(pin->pin, pin->pin_len);
 	os_free(pin);
 }
 
@@ -1343,7 +1343,7 @@ static int wps_get_dev_password(struct wps_data *wps)
 	const u8 *pin;
 	size_t pin_len = 0;
 
-	os_free(wps->dev_password);
+	bin_clear_free(wps->dev_password, wps->dev_password_len);
 	wps->dev_password = NULL;
 
 	if (wps->pbc) {

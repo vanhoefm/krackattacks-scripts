@@ -892,7 +892,7 @@ static int wps_process_dev_pw_id(struct wps_data *wps, const u8 *dev_pw_id)
 
 	if (wps->alt_dev_password && wps->alt_dev_pw_id == id) {
 		wpa_printf(MSG_DEBUG, "WPS: Found a matching Device Password");
-		os_free(wps->dev_password);
+		bin_clear_free(wps->dev_password, wps->dev_password_len);
 		wps->dev_pw_id = wps->alt_dev_pw_id;
 		wps->dev_password = wps->alt_dev_password;
 		wps->dev_password_len = wps->alt_dev_password_len;

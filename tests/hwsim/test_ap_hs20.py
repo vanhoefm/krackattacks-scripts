@@ -2038,3 +2038,19 @@ def test_ap_hs20_remediation_sql(dev, apdev, params):
 
     finally:
         os.remove(dbfile)
+
+def test_ap_hs20_external_selection(dev, apdev):
+    """Hotspot 2.0 connection using external network selection and creation"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    params['disable_dgaf'] = '1'
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    dev[0].connect("test-hs20", proto="RSN", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="hs20-test", password="password",
+                   ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                   scan_freq="2412", update_identifier="54321")
+    if dev[0].get_status_field("hs20") != "2":
+        raise Exception("Unexpected hs20 indication")

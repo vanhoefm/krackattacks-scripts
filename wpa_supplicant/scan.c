@@ -1931,7 +1931,7 @@ void wpa_scan_free_params(struct wpa_driver_scan_params *params)
 int wpas_start_pno(struct wpa_supplicant *wpa_s)
 {
 	int ret, interval;
-	size_t i, num_ssid;
+	size_t i, num_ssid, num_match_ssid;
 	struct wpa_ssid *ssid;
 	struct wpa_driver_scan_params params;
 
@@ -1960,41 +1960,58 @@ int wpas_start_pno(struct wpa_supplicant *wpa_s)
 
 	os_memset(&params, 0, sizeof(params));
 
-	num_ssid = 0;
+	num_ssid = num_match_ssid = 0;
 	ssid = wpa_s->conf->ssid;
 	while (ssid) {
-		if (!wpas_network_disabled(wpa_s, ssid))
-			num_ssid++;
+		if (!wpas_network_disabled(wpa_s, ssid)) {
+			num_match_ssid++;
+			if (ssid->scan_ssid)
+				num_ssid++;
+		}
 		ssid = ssid->next;
 	}
+
+	if (num_match_ssid == 0) {
+		wpa_printf(MSG_DEBUG, "PNO: No configured SSIDs");
+		return -1;
+	}
+
+	if (num_match_ssid > num_ssid) {
+		params.num_ssids++; /* wildcard */
+		num_ssid++;
+	}
+
 	if (num_ssid > WPAS_MAX_SCAN_SSIDS) {
 		wpa_printf(MSG_DEBUG, "PNO: Use only the first %u SSIDs from "
 			   "%u", WPAS_MAX_SCAN_SSIDS, (unsigned int) num_ssid);
 		num_ssid = WPAS_MAX_SCAN_SSIDS;
 	}
 
-	if (num_ssid == 0) {
-		wpa_printf(MSG_DEBUG, "PNO: No configured SSIDs");
-		return -1;
+	if (num_match_ssid > wpa_s->max_match_sets) {
+		num_match_ssid = wpa_s->max_match_sets;
+		wpa_dbg(wpa_s, MSG_DEBUG, "PNO: Too many SSIDs to match");
 	}
-
-	params.filter_ssids = os_malloc(sizeof(struct wpa_driver_scan_filter) *
-					num_ssid);
+	params.filter_ssids = os_calloc(num_match_ssid,
+					sizeof(struct wpa_driver_scan_filter));
 	if (params.filter_ssids == NULL)
 		return -1;
 	i = 0;
 	ssid = wpa_s->conf->ssid;
 	while (ssid) {
 		if (!wpas_network_disabled(wpa_s, ssid)) {
-			params.ssids[i].ssid = ssid->ssid;
-			params.ssids[i].ssid_len = ssid->ssid_len;
-			params.num_ssids++;
+			if (ssid->scan_ssid && params.num_ssids < num_ssid) {
+				params.ssids[params.num_ssids].ssid =
+					ssid->ssid;
+				params.ssids[params.num_ssids].ssid_len =
+					 ssid->ssid_len;
+				params.num_ssids++;
+			}
 			os_memcpy(params.filter_ssids[i].ssid, ssid->ssid,
 				  ssid->ssid_len);
 			params.filter_ssids[i].ssid_len = ssid->ssid_len;
 			params.num_filter_ssids++;
 			i++;
-			if (i == num_ssid)
+			if (i == num_match_ssid)
 				break;
 		}
 		ssid = ssid->next;

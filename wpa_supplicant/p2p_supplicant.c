@@ -786,7 +786,7 @@ static void wpas_p2p_add_persistent_group_client(struct wpa_supplicant *wpa_s,
 		os_memcpy(n + s->num_p2p_clients * ETH_ALEN, addr, ETH_ALEN);
 		s->p2p_client_list = n;
 		s->num_p2p_clients++;
-	} else if (!found) {
+	} else if (!found && s->p2p_client_list) {
 		/* Not enough room for an additional entry - drop the oldest
 		 * entry */
 		os_memmove(s->p2p_client_list,
@@ -3188,7 +3188,7 @@ static void wpas_remove_persistent_peer(struct wpa_supplicant *wpa_s,
 			      ETH_ALEN) == 0)
 			break;
 	}
-	if (i >= ssid->num_p2p_clients) {
+	if (i >= ssid->num_p2p_clients || !ssid->p2p_client_list) {
 		if (ssid->mode != WPAS_MODE_P2P_GO &&
 		    os_memcmp(ssid->bssid, peer, ETH_ALEN) == 0) {
 			wpa_printf(MSG_DEBUG, "P2P: Remove persistent group %d "

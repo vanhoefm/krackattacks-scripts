@@ -2824,7 +2824,7 @@ int wpa_config_set_cred(struct wpa_cred *cred, const char *var,
 }
 
 
-char * alloc_int_str(int val)
+static char * alloc_int_str(int val)
 {
 	char *buf;
 
@@ -2836,7 +2836,7 @@ char * alloc_int_str(int val)
 }
 
 
-char * alloc_strdup(const char *str)
+static char * alloc_strdup(const char *str)
 {
 	if (str == NULL)
 		return NULL;

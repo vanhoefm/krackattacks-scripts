@@ -2756,7 +2756,7 @@ static void wpa_supplicant_update_channel_list(
 	struct wpa_supplicant *ifs;
 
 	wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_REGDOM_CHANGE "init=%s type=%s%s%s",
-		reg_init_str(info->type), reg_type_str(info->type),
+		reg_init_str(info->initiator), reg_type_str(info->type),
 		info->alpha2[0] ? " alpha2=" : "",
 		info->alpha2[0] ? info->alpha2 : "");
 

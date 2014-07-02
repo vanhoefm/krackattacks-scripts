@@ -428,7 +428,7 @@ DBusMessage * wpas_dbus_bssid_properties(DBusMessage *message,
 		if (!wpa_dbus_dict_append_byte_array(&iter_dict, "ssid",
 						     (const char *) (ie + 2),
 						     ie[1]))
-		goto error;
+			goto error;
 	}
 
 	ie = wpa_bss_get_vendor_ie(bss, WPA_IE_VENDOR_TYPE);

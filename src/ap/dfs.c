@@ -897,9 +897,8 @@ int hostapd_dfs_radar_detected(struct hostapd_iface *iface, int freq,
 		freq, ht_enabled, chan_offset, chan_width, cf1, cf2);
 
 	/* mark radar frequency as invalid */
-	res = set_dfs_state(iface, freq, ht_enabled, chan_offset,
-			    chan_width, cf1, cf2,
-			    HOSTAPD_CHAN_DFS_UNAVAILABLE);
+	set_dfs_state(iface, freq, ht_enabled, chan_offset, chan_width,
+		      cf1, cf2, HOSTAPD_CHAN_DFS_UNAVAILABLE);
 
 	/* Skip if reported radar event not overlapped our channels */
 	res = dfs_are_channels_overlapped(iface, freq, chan_width, cf1, cf2);

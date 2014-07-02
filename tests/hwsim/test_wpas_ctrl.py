@@ -935,7 +935,7 @@ def test_wpas_ctrl_country(dev, apdev):
         ev = dev[0].wait_event(["CTRL-EVENT-REGDOM-CHANGE"])
         if ev is None:
             raise Exception("regdom change event not seen")
-        if "init=DRIVER type=WORLD" not in ev:
+        if "init=CORE type=WORLD" not in ev:
             raise Exception("Unexpected event contents: " + ev)
     finally:
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])

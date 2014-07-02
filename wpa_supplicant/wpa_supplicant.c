@@ -3155,8 +3155,8 @@ static int wpas_check_wowlan_trigger(const char *start, const char *trigger,
 }
 
 
-int wpas_set_wowlan_triggers(struct wpa_supplicant *wpa_s,
-			     struct wpa_driver_capa *capa)
+static int wpas_set_wowlan_triggers(struct wpa_supplicant *wpa_s,
+				    struct wpa_driver_capa *capa)
 {
 	struct wowlan_triggers triggers;
 	char *start, *end, *buf;

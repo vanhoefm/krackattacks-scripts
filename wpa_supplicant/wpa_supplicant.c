@@ -2835,7 +2835,7 @@ static int wpa_disable_max_amsdu(struct wpa_supplicant *wpa_s,
 				 struct ieee80211_ht_capabilities *htcaps_mask,
 				 int disabled)
 {
-	u16 msk;
+	le16 msk;
 
 	wpa_msg(wpa_s, MSG_DEBUG, "set_disable_max_amsdu: %d", disabled);
 
@@ -2908,8 +2908,8 @@ static int wpa_set_disable_ht40(struct wpa_supplicant *wpa_s,
 				int disabled)
 {
 	/* Masking these out disables HT40 */
-	u16 msk = host_to_le16(HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET |
-			       HT_CAP_INFO_SHORT_GI40MHZ);
+	le16 msk = host_to_le16(HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET |
+				HT_CAP_INFO_SHORT_GI40MHZ);
 
 	wpa_msg(wpa_s, MSG_DEBUG, "set_disable_ht40: %d", disabled);
 
@@ -2930,8 +2930,8 @@ static int wpa_set_disable_sgi(struct wpa_supplicant *wpa_s,
 			       int disabled)
 {
 	/* Masking these out disables SGI */
-	u16 msk = host_to_le16(HT_CAP_INFO_SHORT_GI20MHZ |
-			       HT_CAP_INFO_SHORT_GI40MHZ);
+	le16 msk = host_to_le16(HT_CAP_INFO_SHORT_GI20MHZ |
+				HT_CAP_INFO_SHORT_GI40MHZ);
 
 	wpa_msg(wpa_s, MSG_DEBUG, "set_disable_sgi: %d", disabled);
 
@@ -2952,7 +2952,7 @@ static int wpa_set_disable_ldpc(struct wpa_supplicant *wpa_s,
 			       int disabled)
 {
 	/* Masking these out disables LDPC */
-	u16 msk = host_to_le16(HT_CAP_INFO_LDPC_CODING_CAP);
+	le16 msk = host_to_le16(HT_CAP_INFO_LDPC_CODING_CAP);
 
 	wpa_msg(wpa_s, MSG_DEBUG, "set_disable_ldpc: %d", disabled);
 
@@ -2993,7 +2993,7 @@ void wpa_supplicant_apply_ht_overrides(
 	wpa_set_disable_ldpc(wpa_s, htcaps, htcaps_mask, ssid->disable_ldpc);
 
 	if (ssid->ht40_intolerant) {
-		u16 bit = host_to_le16(HT_CAP_INFO_40MHZ_INTOLERANT);
+		le16 bit = host_to_le16(HT_CAP_INFO_40MHZ_INTOLERANT);
 		htcaps->ht_capabilities_info |= bit;
 		htcaps_mask->ht_capabilities_info |= bit;
 	}

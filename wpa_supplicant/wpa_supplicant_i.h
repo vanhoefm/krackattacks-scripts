@@ -12,6 +12,7 @@
 #include "utils/list.h"
 #include "common/defs.h"
 #include "common/sae.h"
+#include "common/wpa_ctrl.h"
 #include "wps/wps_defs.h"
 #include "config_ssid.h"
 
@@ -860,6 +861,8 @@ struct wpa_supplicant {
 	struct wpa_radio_work *connect_work;
 
 	unsigned int ext_work_id;
+
+	struct wpabuf *vendor_elem[NUM_VENDOR_ELEM_FRAMES];
 };
 
 

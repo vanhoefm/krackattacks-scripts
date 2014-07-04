@@ -1995,4 +1995,6 @@ void p2p_loop_on_known_peers(struct p2p_data *p2p,
 						   void *user_data),
 			     void *user_data);
 
+void p2p_set_vendor_elems(struct p2p_data *p2p, struct wpabuf **vendor_elem);
+
 #endif /* P2P_H */

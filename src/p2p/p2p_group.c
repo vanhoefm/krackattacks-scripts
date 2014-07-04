@@ -11,6 +11,7 @@
 #include "common.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
+#include "common/wpa_ctrl.h"
 #include "wps/wps_defs.h"
 #include "wps/wps_i.h"
 #include "p2p_i.h"
@@ -214,6 +215,10 @@ static struct wpabuf * p2p_group_build_beacon_ie(struct p2p_group *group)
 		extra = wpabuf_len(group->p2p->wfd_ie_beacon);
 #endif /* CONFIG_WIFI_DISPLAY */
 
+	if (group->p2p->vendor_elem &&
+	    group->p2p->vendor_elem[VENDOR_ELEM_BEACON_P2P_GO])
+		extra += wpabuf_len(group->p2p->vendor_elem[VENDOR_ELEM_BEACON_P2P_GO]);
+
 	ie = wpabuf_alloc(257 + extra);
 	if (ie == NULL)
 		return NULL;
@@ -222,6 +227,11 @@ static struct wpabuf * p2p_group_build_beacon_ie(struct p2p_group *group)
 	if (group->p2p->wfd_ie_beacon)
 		wpabuf_put_buf(ie, group->p2p->wfd_ie_beacon);
 #endif /* CONFIG_WIFI_DISPLAY */
+
+	if (group->p2p->vendor_elem &&
+	    group->p2p->vendor_elem[VENDOR_ELEM_BEACON_P2P_GO])
+		wpabuf_put_buf(ie,
+			       group->p2p->vendor_elem[VENDOR_ELEM_BEACON_P2P_GO]);
 
 	len = p2p_buf_add_ie_hdr(ie);
 	p2p_group_add_common_ies(group, ie);
@@ -448,6 +458,13 @@ static struct wpabuf * p2p_group_build_probe_resp_ie(struct p2p_group *group)
 	ie = p2p_group_encaps_probe_resp(p2p_subelems);
 	wpabuf_free(p2p_subelems);
 
+	if (group->p2p->vendor_elem &&
+	    group->p2p->vendor_elem[VENDOR_ELEM_PROBE_RESP_P2P_GO]) {
+		struct wpabuf *extra;
+		extra = wpabuf_dup(group->p2p->vendor_elem[VENDOR_ELEM_PROBE_RESP_P2P_GO]);
+		ie = wpabuf_concat(extra, ie);
+	}
+
 #ifdef CONFIG_WIFI_DISPLAY
 	if (group->wfd_ie) {
 		struct wpabuf *wfd = wpabuf_dup(group->wfd_ie);
@@ -634,6 +651,10 @@ struct wpabuf * p2p_group_assoc_resp_ie(struct p2p_group *group, u8 status)
 		extra = wpabuf_len(group->wfd_ie);
 #endif /* CONFIG_WIFI_DISPLAY */
 
+	if (group->p2p->vendor_elem &&
+	    group->p2p->vendor_elem[VENDOR_ELEM_P2P_ASSOC_RESP])
+		extra += wpabuf_len(group->p2p->vendor_elem[VENDOR_ELEM_P2P_ASSOC_RESP]);
+
 	/*
 	 * (Re)Association Response - P2P IE
 	 * Status attribute (shall be present when association request is
@@ -648,6 +669,11 @@ struct wpabuf * p2p_group_assoc_resp_ie(struct p2p_group *group, u8 status)
 	if (group->wfd_ie)
 		wpabuf_put_buf(resp, group->wfd_ie);
 #endif /* CONFIG_WIFI_DISPLAY */
+
+	if (group->p2p->vendor_elem &&
+	    group->p2p->vendor_elem[VENDOR_ELEM_P2P_ASSOC_RESP])
+		wpabuf_put_buf(resp,
+			       group->p2p->vendor_elem[VENDOR_ELEM_P2P_ASSOC_RESP]);
 
 	rlen = p2p_buf_add_ie_hdr(resp);
 	if (status != P2P_SC_SUCCESS)

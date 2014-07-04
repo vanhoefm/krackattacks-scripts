@@ -499,6 +499,8 @@ struct p2p_data {
 #endif /* CONFIG_WIFI_DISPLAY */
 
 	u16 authorized_oob_dev_pw_id;
+
+	struct wpabuf **vendor_elem;
 };
 
 /**

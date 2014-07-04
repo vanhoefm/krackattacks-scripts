@@ -6227,6 +6227,210 @@ static int wpas_ctrl_iface_driver_event(struct wpa_supplicant *wpa_s, char *cmd)
 #endif /* CONFIG_TESTING_OPTIONS */
 
 
+static void wpas_ctrl_vendor_elem_update(struct wpa_supplicant *wpa_s)
+{
+	unsigned int i;
+	char buf[30];
+
+	wpa_printf(MSG_DEBUG, "Update vendor elements");
+
+	for (i = 0; i < NUM_VENDOR_ELEM_FRAMES; i++) {
+		if (wpa_s->vendor_elem[i]) {
+			os_snprintf(buf, sizeof(buf), "frame[%u]", i);
+			wpa_hexdump_buf(MSG_DEBUG, buf, wpa_s->vendor_elem[i]);
+		}
+	}
+
+#ifdef CONFIG_P2P
+	if (wpa_s->parent == wpa_s &&
+	    wpa_s->global->p2p &&
+	    !wpa_s->global->p2p_disabled)
+		p2p_set_vendor_elems(wpa_s->global->p2p, wpa_s->vendor_elem);
+#endif /* CONFIG_P2P */
+}
+
+
+static struct wpa_supplicant *
+wpas_ctrl_vendor_elem_iface(struct wpa_supplicant *wpa_s,
+			    enum wpa_vendor_elem_frame frame)
+{
+	switch (frame) {
+#ifdef CONFIG_P2P
+	case VENDOR_ELEM_PROBE_REQ_P2P:
+	case VENDOR_ELEM_PROBE_RESP_P2P:
+	case VENDOR_ELEM_PROBE_RESP_P2P_GO:
+	case VENDOR_ELEM_BEACON_P2P_GO:
+	case VENDOR_ELEM_P2P_PD_REQ:
+	case VENDOR_ELEM_P2P_PD_RESP:
+	case VENDOR_ELEM_P2P_GO_NEG_REQ:
+	case VENDOR_ELEM_P2P_GO_NEG_RESP:
+	case VENDOR_ELEM_P2P_GO_NEG_CONF:
+	case VENDOR_ELEM_P2P_INV_REQ:
+	case VENDOR_ELEM_P2P_INV_RESP:
+	case VENDOR_ELEM_P2P_ASSOC_REQ:
+		return wpa_s->parent;
+#endif /* CONFIG_P2P */
+	default:
+		return wpa_s;
+	}
+}
+
+
+static int wpas_ctrl_vendor_elem_add(struct wpa_supplicant *wpa_s, char *cmd)
+{
+	char *pos = cmd;
+	int frame;
+	size_t len;
+	struct wpabuf *buf;
+	struct ieee802_11_elems elems;
+
+	frame = atoi(pos);
+	if (frame < 0 || frame >= NUM_VENDOR_ELEM_FRAMES)
+		return -1;
+	wpa_s = wpas_ctrl_vendor_elem_iface(wpa_s, frame);
+
+	pos = os_strchr(pos, ' ');
+	if (pos == NULL)
+		return -1;
+	pos++;
+
+	len = os_strlen(pos);
+	if (len == 0)
+		return 0;
+	if (len & 1)
+		return -1;
+	len /= 2;
+
+	buf = wpabuf_alloc(len);
+	if (buf == NULL)
+		return -1;
+
+	if (hexstr2bin(pos, wpabuf_put(buf, len), len) < 0) {
+		wpabuf_free(buf);
+		return -1;
+	}
+
+	if (ieee802_11_parse_elems(wpabuf_head_u8(buf), len, &elems, 0) ==
+	    ParseFailed) {
+		wpabuf_free(buf);
+		return -1;
+	}
+
+	if (wpa_s->vendor_elem[frame] == NULL) {
+		wpa_s->vendor_elem[frame] = buf;
+		wpas_ctrl_vendor_elem_update(wpa_s);
+		return 0;
+	}
+
+	if (wpabuf_resize(&wpa_s->vendor_elem[frame], len) < 0) {
+		wpabuf_free(buf);
+		return -1;
+	}
+
+	wpabuf_put_buf(wpa_s->vendor_elem[frame], buf);
+	wpabuf_free(buf);
+	wpas_ctrl_vendor_elem_update(wpa_s);
+
+	return 0;
+}
+
+
+static int wpas_ctrl_vendor_elem_get(struct wpa_supplicant *wpa_s, char *cmd,
+				     char *buf, size_t buflen)
+{
+	int frame = atoi(cmd);
+
+	if (frame < 0 || frame >= NUM_VENDOR_ELEM_FRAMES)
+		return -1;
+	wpa_s = wpas_ctrl_vendor_elem_iface(wpa_s, frame);
+
+	if (wpa_s->vendor_elem[frame] == NULL)
+		return 0;
+
+	return wpa_snprintf_hex(buf, buflen,
+				wpabuf_head_u8(wpa_s->vendor_elem[frame]),
+				wpabuf_len(wpa_s->vendor_elem[frame]));
+}
+
+
+static int wpas_ctrl_vendor_elem_remove(struct wpa_supplicant *wpa_s, char *cmd)
+{
+	char *pos = cmd;
+	int frame;
+	size_t len;
+	u8 *buf;
+	struct ieee802_11_elems elems;
+	u8 *ie, *end;
+
+	frame = atoi(pos);
+	if (frame < 0 || frame >= NUM_VENDOR_ELEM_FRAMES)
+		return -1;
+	wpa_s = wpas_ctrl_vendor_elem_iface(wpa_s, frame);
+
+	pos = os_strchr(pos, ' ');
+	if (pos == NULL)
+		return -1;
+	pos++;
+
+	if (*pos == '*') {
+		wpabuf_free(wpa_s->vendor_elem[frame]);
+		wpa_s->vendor_elem[frame] = NULL;
+		wpas_ctrl_vendor_elem_update(wpa_s);
+		return 0;
+	}
+
+	if (wpa_s->vendor_elem[frame] == NULL)
+		return -1;
+
+	len = os_strlen(pos);
+	if (len == 0)
+		return 0;
+	if (len & 1)
+		return -1;
+	len /= 2;
+
+	buf = os_malloc(len);
+	if (buf == NULL)
+		return -1;
+
+	if (hexstr2bin(pos, buf, len) < 0) {
+		os_free(buf);
+		return -1;
+	}
+
+	if (ieee802_11_parse_elems(buf, len, &elems, 0) == ParseFailed) {
+		os_free(buf);
+		return -1;
+	}
+
+	ie = wpabuf_mhead_u8(wpa_s->vendor_elem[frame]);
+	end = ie + wpabuf_len(wpa_s->vendor_elem[frame]);
+
+	for (; ie + 1 < end; ie += 2 + ie[1]) {
+		if (ie + len > end)
+			break;
+		if (os_memcmp(ie, buf, len) != 0)
+			continue;
+
+		if (wpabuf_len(wpa_s->vendor_elem[frame]) == len) {
+			wpabuf_free(wpa_s->vendor_elem[frame]);
+			wpa_s->vendor_elem[frame] = NULL;
+		} else {
+			os_memmove(ie, ie + len,
+				   wpabuf_len(wpa_s->vendor_elem[frame]) - len);
+			wpa_s->vendor_elem[frame]->used -= len;
+		}
+		os_free(buf);
+		wpas_ctrl_vendor_elem_update(wpa_s);
+		return 0;
+	}
+
+	os_free(buf);
+
+	return -1;
+}
+
+
 char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 					 char *buf, size_t *resp_len)
 {
@@ -6792,6 +6996,15 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		if (wpas_ctrl_iface_driver_event(wpa_s, buf + 13) < 0)
 			reply_len = -1;
 #endif /* CONFIG_TESTING_OPTIONS */
+	} else if (os_strncmp(buf, "VENDOR_ELEM_ADD ", 16) == 0) {
+		if (wpas_ctrl_vendor_elem_add(wpa_s, buf + 16) < 0)
+			reply_len = -1;
+	} else if (os_strncmp(buf, "VENDOR_ELEM_GET ", 16) == 0) {
+		reply_len = wpas_ctrl_vendor_elem_get(wpa_s, buf + 16, reply,
+						      reply_size);
+	} else if (os_strncmp(buf, "VENDOR_ELEM_REMOVE ", 19) == 0) {
+		if (wpas_ctrl_vendor_elem_remove(wpa_s, buf + 19) < 0)
+			reply_len = -1;
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);
 		reply_len = 16;

@@ -10,6 +10,7 @@
 
 #include "common.h"
 #include "common/ieee802_11_defs.h"
+#include "common/wpa_ctrl.h"
 #include "wps/wps_defs.h"
 #include "p2p_i.h"
 #include "p2p.h"
@@ -53,6 +54,9 @@ static struct wpabuf * p2p_build_prov_disc_req(struct p2p_data *p2p,
 		extra = wpabuf_len(p2p->wfd_ie_prov_disc_req);
 #endif /* CONFIG_WIFI_DISPLAY */
 
+	if (p2p->vendor_elem && p2p->vendor_elem[VENDOR_ELEM_P2P_PD_REQ])
+		extra += wpabuf_len(p2p->vendor_elem[VENDOR_ELEM_P2P_PD_REQ]);
+
 	buf = wpabuf_alloc(1000 + extra);
 	if (buf == NULL)
 		return NULL;
@@ -76,6 +80,9 @@ static struct wpabuf * p2p_build_prov_disc_req(struct p2p_data *p2p,
 	if (p2p->wfd_ie_prov_disc_req)
 		wpabuf_put_buf(buf, p2p->wfd_ie_prov_disc_req);
 #endif /* CONFIG_WIFI_DISPLAY */
+
+	if (p2p->vendor_elem && p2p->vendor_elem[VENDOR_ELEM_P2P_PD_REQ])
+		wpabuf_put_buf(buf, p2p->vendor_elem[VENDOR_ELEM_P2P_PD_REQ]);
 
 	return buf;
 }
@@ -111,6 +118,9 @@ static struct wpabuf * p2p_build_prov_disc_resp(struct p2p_data *p2p,
 		extra = wpabuf_len(wfd_ie);
 #endif /* CONFIG_WIFI_DISPLAY */
 
+	if (p2p->vendor_elem && p2p->vendor_elem[VENDOR_ELEM_P2P_PD_RESP])
+		extra += wpabuf_len(p2p->vendor_elem[VENDOR_ELEM_P2P_PD_RESP]);
+
 	buf = wpabuf_alloc(100 + extra);
 	if (buf == NULL)
 		return NULL;
@@ -124,6 +134,9 @@ static struct wpabuf * p2p_build_prov_disc_resp(struct p2p_data *p2p,
 	if (wfd_ie)
 		wpabuf_put_buf(buf, wfd_ie);
 #endif /* CONFIG_WIFI_DISPLAY */
+
+	if (p2p->vendor_elem && p2p->vendor_elem[VENDOR_ELEM_P2P_PD_RESP])
+		wpabuf_put_buf(buf, p2p->vendor_elem[VENDOR_ELEM_P2P_PD_RESP]);
 
 	return buf;
 }

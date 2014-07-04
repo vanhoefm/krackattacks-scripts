@@ -375,6 +375,8 @@ void free_hw_features(struct wpa_supplicant *wpa_s)
 
 static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 {
+	int i;
+
 	bgscan_deinit(wpa_s);
 	autoscan_deinit(wpa_s);
 	scard_deinit(wpa_s->scard);
@@ -498,6 +500,11 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 #ifdef CONFIG_HS20
 	hs20_deinit(wpa_s);
 #endif /* CONFIG_HS20 */
+
+	for (i = 0; i < NUM_VENDOR_ELEM_FRAMES; i++) {
+		wpabuf_free(wpa_s->vendor_elem[i]);
+		wpa_s->vendor_elem[i] = NULL;
+	}
 }
 
 

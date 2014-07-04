@@ -230,6 +230,14 @@ struct p2p_peer_info {
 	 * wfd_subelems - Wi-Fi Display subelements from WFD IE(s)
 	 */
 	struct wpabuf *wfd_subelems;
+
+	/**
+	 * vendor_elems - Unrecognized vendor elements
+	 *
+	 * This buffer includes any other vendor element than P2P, WPS, and WFD
+	 * IE(s) from the frame that was used to discover the peer.
+	 */
+	struct wpabuf *vendor_elems;
 };
 
 enum p2p_prov_disc_status {

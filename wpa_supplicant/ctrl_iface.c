@@ -4715,6 +4715,22 @@ static int p2p_ctrl_peer(struct wpa_supplicant *wpa_s, char *cmd,
 		return pos - buf;
 	pos += res;
 
+	if (info->vendor_elems) {
+		res = os_snprintf(pos, end - pos, "vendor_elems=");
+		if (res < 0 || res >= end - pos)
+			return pos - buf;
+		pos += res;
+
+		pos += wpa_snprintf_hex(pos, end - pos,
+					wpabuf_head(info->vendor_elems),
+					wpabuf_len(info->vendor_elems));
+
+		res = os_snprintf(pos, end - pos, "\n");
+		if (res < 0 || res >= end - pos)
+			return pos - buf;
+		pos += res;
+	}
+
 	return pos - buf;
 }
 

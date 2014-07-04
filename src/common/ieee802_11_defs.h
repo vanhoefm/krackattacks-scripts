@@ -809,6 +809,7 @@ struct ieee80211_vht_operation {
 #define OUI_MICROSOFT 0x0050f2 /* Microsoft (also used in Wi-Fi specs)
 				* 00:50:F2 */
 #define WPA_IE_VENDOR_TYPE 0x0050f201
+#define WMM_IE_VENDOR_TYPE 0x0050f202
 #define WPS_IE_VENDOR_TYPE 0x0050f204
 #define OUI_WFA 0x506f9a
 #define P2P_IE_VENDOR_TYPE 0x506f9a09

@@ -609,6 +609,46 @@ static void p2p_copy_wps_info(struct p2p_data *p2p, struct p2p_device *dev,
 }
 
 
+static void p2p_update_peer_vendor_elems(struct p2p_device *dev, const u8 *ies,
+					 size_t ies_len)
+{
+	const u8 *pos, *end;
+	u8 id, len;
+
+	wpabuf_free(dev->info.vendor_elems);
+	dev->info.vendor_elems = NULL;
+
+	end = ies + ies_len;
+
+	for (pos = ies; pos + 1 < end; pos += len) {
+		id = *pos++;
+		len = *pos++;
+
+		if (pos + len > end)
+			break;
+
+		if (id != WLAN_EID_VENDOR_SPECIFIC || len < 3)
+			continue;
+
+		if (len >= 4) {
+			u32 type = WPA_GET_BE32(pos);
+
+			if (type == WPA_IE_VENDOR_TYPE ||
+			    type == WMM_IE_VENDOR_TYPE ||
+			    type == WPS_IE_VENDOR_TYPE ||
+			    type == P2P_IE_VENDOR_TYPE ||
+			    type == WFD_IE_VENDOR_TYPE)
+				continue;
+		}
+
+		/* Unknown vendor element - make raw IE data available */
+		if (wpabuf_resize(&dev->info.vendor_elems, 2 + len) < 0)
+			break;
+		wpabuf_put_data(dev->info.vendor_elems, pos - 2, 2 + len);
+	}
+}
+
+
 /**
  * p2p_add_device - Add peer entries based on scan results or P2P frames
  * @p2p: P2P module context from p2p_init()
@@ -757,6 +797,8 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq,
 
 	p2p_parse_free(&msg);
 
+	p2p_update_peer_vendor_elems(dev, ies, ies_len);
+
 	if (dev->flags & P2P_DEV_REPORTED)
 		return 0;
 
@@ -826,6 +868,7 @@ static void p2p_device_free(struct p2p_data *p2p, struct p2p_device *dev)
 	}
 
 	wpabuf_free(dev->info.wfd_subelems);
+	wpabuf_free(dev->info.vendor_elems);
 	wpabuf_free(dev->go_neg_conf);
 
 	os_free(dev);

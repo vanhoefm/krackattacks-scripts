@@ -5607,6 +5607,8 @@ int wpas_p2p_group_add_persistent(struct wpa_supplicant *wpa_s,
 	if (wpa_s == NULL)
 		return -1;
 
+	p2p_channels_to_freqs(channels, params.freq_list, P2P_MAX_CHANNELS);
+
 	wpa_s->p2p_first_connection_timeout = connection_timeout;
 	wpas_start_wps_go(wpa_s, &params, 0);
 

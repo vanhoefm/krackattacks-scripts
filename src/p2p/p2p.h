@@ -1738,6 +1738,9 @@ void p2p_set_intra_bss_dist(struct p2p_data *p2p, int enabled);
 int p2p_channels_includes_freq(const struct p2p_channels *channels,
 			       unsigned int freq);
 
+int p2p_channels_to_freqs(const struct p2p_channels *channels,
+			  int *freq_list, unsigned int max_len);
+
 /**
  * p2p_supported_freq - Check whether channel is supported for P2P
  * @p2p: P2P module context from p2p_init()

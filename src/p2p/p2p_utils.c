@@ -517,3 +517,35 @@ int p2p_channel_random_social(struct p2p_channels *chans, u8 *op_class,
 
 	return 0;
 }
+
+
+int p2p_channels_to_freqs(const struct p2p_channels *channels, int *freq_list,
+			  unsigned int max_len)
+{
+	unsigned int i, idx;
+
+	if (!channels || max_len == 0)
+		return 0;
+
+	for (i = 0, idx = 0; i < channels->reg_classes; i++) {
+		const struct p2p_reg_class *c = &channels->reg_class[i];
+		unsigned int j;
+
+		if (idx + 1 == max_len)
+			break;
+		for (j = 0; j < c->channels; j++) {
+			int freq;
+			if (idx + 1 == max_len)
+				break;
+			freq = p2p_channel_to_freq(c->reg_class,
+						   c->channel[j]);
+			if (freq < 0)
+				continue;
+			freq_list[idx++] = freq;
+		}
+	}
+
+	freq_list[idx] = 0;
+
+	return idx;
+}

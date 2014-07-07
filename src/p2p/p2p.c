@@ -1639,8 +1639,6 @@ void p2p_go_complete(struct p2p_data *p2p, struct p2p_device *peer)
 	struct p2p_go_neg_results res;
 	int go = peer->go_state == LOCAL_GO;
 	struct p2p_channels intersection;
-	int freqs;
-	size_t i, j;
 
 	p2p_dbg(p2p, "GO Negotiation with " MACSTR " completed (%s will be GO)",
 		MAC2STR(peer->info.p2p_device_addr), go ? "local end" : "peer");
@@ -1681,21 +1679,9 @@ void p2p_go_complete(struct p2p_data *p2p, struct p2p_device *peer)
 		p2p_channels_dump(p2p, "intersection after no-GO removal",
 				  &intersection);
 	}
-	freqs = 0;
-	for (i = 0; i < intersection.reg_classes; i++) {
-		struct p2p_reg_class *c = &intersection.reg_class[i];
-		if (freqs + 1 == P2P_MAX_CHANNELS)
-			break;
-		for (j = 0; j < c->channels; j++) {
-			int freq;
-			if (freqs + 1 == P2P_MAX_CHANNELS)
-				break;
-			freq = p2p_channel_to_freq(c->reg_class, c->channel[j]);
-			if (freq < 0)
-				continue;
-			res.freq_list[freqs++] = freq;
-		}
-	}
+
+	p2p_channels_to_freqs(&intersection, res.freq_list,
+			      P2P_MAX_CHANNELS);
 
 	res.peer_config_timeout = go ? peer->client_timeout : peer->go_timeout;
 

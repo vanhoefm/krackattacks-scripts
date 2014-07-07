@@ -3387,8 +3387,8 @@ static int ctrl_iface_get_capability_freq(struct wpa_supplicant *wpa_s,
 				continue;
 			ret = os_snprintf(pos, end - pos, " %d = %d MHz%s%s\n",
 					  chnl[i].chan, chnl[i].freq,
-					  chnl[i].flag & HOSTAPD_CHAN_NO_IBSS ?
-					  " (NO_IBSS)" : "",
+					  chnl[i].flag & HOSTAPD_CHAN_NO_IR ?
+					  " (NO_IR)" : "",
 					  chnl[i].flag & HOSTAPD_CHAN_RADAR ?
 					  " (DFS)" : "");
 

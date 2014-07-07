@@ -3513,7 +3513,7 @@ static struct hostapd_hw_modes * get_mode(struct hostapd_hw_modes *modes,
 
 
 enum chan_allowed {
-	NOT_ALLOWED, PASSIVE_ONLY, ALLOWED
+	NOT_ALLOWED, NO_IR, ALLOWED
 };
 
 static int has_channel(struct wpa_global *global,
@@ -3535,10 +3535,8 @@ static int has_channel(struct wpa_global *global,
 			    (HOSTAPD_CHAN_DISABLED |
 			     HOSTAPD_CHAN_RADAR))
 				return NOT_ALLOWED;
-			if (mode->channels[i].flag &
-			    (HOSTAPD_CHAN_PASSIVE_SCAN |
-			     HOSTAPD_CHAN_NO_IBSS))
-				return PASSIVE_ONLY;
+			if (mode->channels[i].flag & HOSTAPD_CHAN_NO_IR)
+				return NO_IR;
 			return ALLOWED;
 		}
 	}
@@ -3627,8 +3625,8 @@ static enum chan_allowed wpas_p2p_verify_80mhz(struct wpa_supplicant *wpa_s,
 		res = has_channel(wpa_s->global, mode, adj_chan, &flags);
 		if (res == NOT_ALLOWED)
 			return NOT_ALLOWED;
-		if (res == PASSIVE_ONLY)
-			ret = PASSIVE_ONLY;
+		if (res == NO_IR)
+			ret = NO_IR;
 
 		if (i == 0 && !(flags & HOSTAPD_CHAN_VHT_10_70))
 			return NOT_ALLOWED;
@@ -3666,8 +3664,8 @@ static enum chan_allowed wpas_p2p_verify_channel(struct wpa_supplicant *wpa_s,
 
 	if (res == NOT_ALLOWED || res2 == NOT_ALLOWED)
 		return NOT_ALLOWED;
-	if (res == PASSIVE_ONLY || res2 == PASSIVE_ONLY)
-		return PASSIVE_ONLY;
+	if (res == NO_IR || res2 == NO_IR)
+		return NO_IR;
 	return res;
 }
 
@@ -3711,7 +3709,7 @@ static int wpas_p2p_setup_channels(struct wpa_supplicant *wpa_s,
 				}
 				reg->channel[reg->channels] = ch;
 				reg->channels++;
-			} else if (res == PASSIVE_ONLY &&
+			} else if (res == NO_IR &&
 				   wpa_s->conf->p2p_add_cli_chan) {
 				if (cli_reg == NULL) {
 					wpa_printf(MSG_DEBUG, "P2P: Add operating class %u (client only)",

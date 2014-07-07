@@ -779,6 +779,10 @@ struct wpa_supplicant {
 					* formation */
 	u8 p2p_peer_oob_pubkey_hash[WPS_OOB_PUBKEY_HASH_LEN];
 	u8 p2p_ip_addr_info[3 * 4];
+
+	/* group common frequencies */
+	int *p2p_group_common_freqs;
+	unsigned int p2p_group_common_freqs_num;
 #endif /* CONFIG_P2P */
 
 	struct wpa_ssid *bgscan_ssid;

@@ -6675,6 +6675,10 @@ static void phy_info_freq(struct hostapd_hw_modes *mode,
 		chan->flag |= HOSTAPD_CHAN_NO_IR;
 	if (tb_freq[NL80211_FREQUENCY_ATTR_RADAR])
 		chan->flag |= HOSTAPD_CHAN_RADAR;
+	if (tb_freq[NL80211_FREQUENCY_ATTR_INDOOR_ONLY])
+		chan->flag |= HOSTAPD_CHAN_INDOOR_ONLY;
+	if (tb_freq[NL80211_FREQUENCY_ATTR_GO_CONCURRENT])
+		chan->flag |= HOSTAPD_CHAN_GO_CONCURRENT;
 
 	if (tb_freq[NL80211_FREQUENCY_ATTR_DFS_STATE]) {
 		enum nl80211_dfs_state state =

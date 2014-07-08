@@ -946,37 +946,49 @@ void wpas_dbus_signal_sta_deauthorized(struct wpa_supplicant *wpa_s,
 void wpas_dbus_signal_p2p_group_removed(struct wpa_supplicant *wpa_s,
 					const char *role)
 {
-
+	int error = 1;
 	DBusMessage *msg;
-	DBusMessageIter iter;
+	DBusMessageIter iter, dict_iter;
 	struct wpas_dbus_priv *iface = wpa_s->global->dbus;
-	char *ifname = wpa_s->ifname;
 
 	/* Do nothing if the control interface is not turned on */
 	if (iface == NULL)
 		return;
 
-	msg = dbus_message_new_signal(wpa_s->dbus_new_path,
+	if (!wpa_s->dbus_groupobj_path)
+		return;
+
+	msg = dbus_message_new_signal(wpa_s->parent->dbus_new_path,
 				      WPAS_DBUS_NEW_IFACE_P2PDEVICE,
 				      "GroupFinished");
 	if (msg == NULL)
 		return;
 
 	dbus_message_iter_init_append(msg, &iter);
+	if (!wpa_dbus_dict_open_write(&iter, &dict_iter))
+		goto nomem;
 
-	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &ifname)) {
-		wpa_printf(MSG_ERROR, "dbus: Failed to construct GroupFinished"
-				      "signal -not enough memory for ifname ");
-		goto err;
-	}
+	if (!wpa_dbus_dict_append_object_path(&dict_iter,
+					      "interface_object",
+					      wpa_s->dbus_new_path))
+		goto nomem;
 
-	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &role))
-		wpa_printf(MSG_ERROR, "dbus: Failed to construct GroupFinished"
-				      "signal -not enough memory for role ");
-	else
-		dbus_connection_send(iface->con, msg, NULL);
+	if (!wpa_dbus_dict_append_string(&dict_iter, "role", role))
+		goto nomem;
 
-err:
+	if (!wpa_dbus_dict_append_object_path(&dict_iter, "group_object",
+					      wpa_s->dbus_groupobj_path) ||
+	    !wpa_dbus_dict_close_write(&iter, &dict_iter))
+		goto nomem;
+
+	error = 0;
+	dbus_connection_send(iface->con, msg, NULL);
+
+nomem:
+	if (error > 0)
+		wpa_printf(MSG_ERROR,
+			   "dbus: Failed to construct GroupFinished");
+
 	dbus_message_unref(msg);
 }
 
@@ -3140,8 +3152,7 @@ static const struct wpa_dbus_signal_desc wpas_dbus_interface_signals[] = {
 	},
 	{ "GroupFinished", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
 	  {
-		  { "ifname", "s", ARG_OUT },
-		  { "role", "s", ARG_OUT },
+		  { "properties", "a{sv}", ARG_OUT },
 		  END_ARGS
 	  }
 	},

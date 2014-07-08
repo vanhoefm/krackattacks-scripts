@@ -438,9 +438,9 @@ void wpas_notify_p2p_group_removed(struct wpa_supplicant *wpa_s,
 				   const struct wpa_ssid *ssid,
 				   const char *role)
 {
-	wpas_dbus_unregister_p2p_group(wpa_s, ssid);
-
 	wpas_dbus_signal_p2p_group_removed(wpa_s, role);
+
+	wpas_dbus_unregister_p2p_group(wpa_s, ssid);
 }
 
 

@@ -8,7 +8,11 @@ INCLUDES += external/openssl/include
 INCLUDES += external/libxml2/include
 INCLUDES += external/curl/include
 INCLUDES += external/webkit/Source/WebKit/gtk
+ifneq ($(wildcard external/icu),)
+INCLUDES += external/icu/icu4c/source/common
+else
 INCLUDES += external/icu4c/common
+endif
 
 
 #GTKCFLAGS := $(shell pkg-config --cflags gtk+-2.0 webkit-1.0)

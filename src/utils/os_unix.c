@@ -12,7 +12,7 @@
 
 #ifdef ANDROID
 #include <sys/capability.h>
-#include <linux/prctl.h>
+#include <sys/prctl.h>
 #include <private/android_filesystem_config.h>
 #endif /* ANDROID */
 

@@ -1170,7 +1170,7 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 			config->tdls_external_control);
 
 	if (config->wowlan_triggers)
-		fprintf(f, "wowlan_triggers=\"%s\"\n",
+		fprintf(f, "wowlan_triggers=%s\n",
 			config->wowlan_triggers);
 
 	if (config->bgscan)

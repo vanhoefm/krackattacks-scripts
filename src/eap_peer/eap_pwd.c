@@ -123,7 +123,7 @@ static void * eap_pwd_init(struct eap_sm *sm)
 	if ((data->password = os_malloc(password_len)) == NULL) {
 		wpa_printf(MSG_INFO, "EAP-PWD: memory allocation psk fail");
 		BN_CTX_free(data->bnctx);
-		os_free(data->id_peer);
+		bin_clear_free(data->id_peer, data->id_peer_len);
 		os_free(data);
 		return NULL;
 	}
@@ -155,8 +155,8 @@ static void eap_pwd_deinit(struct eap_sm *sm, void *priv)
 	BN_CTX_free(data->bnctx);
 	EC_POINT_clear_free(data->my_element);
 	EC_POINT_clear_free(data->server_element);
-	os_free(data->id_peer);
-	os_free(data->id_server);
+	bin_clear_free(data->id_peer, data->id_peer_len);
+	bin_clear_free(data->id_server, data->id_server_len);
 	bin_clear_free(data->password, data->password_len);
 	if (data->grp) {
 		EC_GROUP_free(data->grp->group);
@@ -684,7 +684,7 @@ eap_pwd_perform_confirm_exchange(struct eap_sm *sm, struct eap_pwd_data *data,
 	wpabuf_put_data(data->outbuf, conf, SHA256_MAC_LEN);
 
 fin:
-	os_free(cruft);
+	bin_clear_free(cruft, BN_num_bytes(data->grp->prime));
 	BN_clear_free(x);
 	BN_clear_free(y);
 	if (data->outbuf == NULL) {

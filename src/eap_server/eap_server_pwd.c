@@ -106,7 +106,7 @@ static void * eap_pwd_init(struct eap_sm *sm)
 	if (data->password == NULL) {
 		wpa_printf(MSG_INFO, "EAP-PWD: Memory allocation password "
 			   "fail");
-		os_free(data->id_server);
+		bin_clear_free(data->id_server, data->id_server_len);
 		os_free(data);
 		return NULL;
 	}
@@ -117,7 +117,7 @@ static void * eap_pwd_init(struct eap_sm *sm)
 	if (data->bnctx == NULL) {
 		wpa_printf(MSG_INFO, "EAP-PWD: bn context allocation fail");
 		bin_clear_free(data->password, data->password_len);
-		os_free(data->id_server);
+		bin_clear_free(data->id_server, data->id_server_len);
 		os_free(data);
 		return NULL;
 	}
@@ -142,8 +142,8 @@ static void eap_pwd_reset(struct eap_sm *sm, void *priv)
 	BN_CTX_free(data->bnctx);
 	EC_POINT_clear_free(data->my_element);
 	EC_POINT_clear_free(data->peer_element);
-	os_free(data->id_peer);
-	os_free(data->id_server);
+	bin_clear_free(data->id_peer, data->id_peer_len);
+	bin_clear_free(data->id_server, data->id_server_len);
 	bin_clear_free(data->password, data->password_len);
 	if (data->grp) {
 		EC_GROUP_free(data->grp->group);
@@ -410,7 +410,7 @@ static void eap_pwd_build_confirm_req(struct eap_sm *sm,
 	wpabuf_put_data(data->outbuf, conf, SHA256_MAC_LEN);
 
 fin:
-	os_free(cruft);
+	bin_clear_free(cruft, BN_num_bytes(data->grp->prime));
 	BN_clear_free(x);
 	BN_clear_free(y);
 	if (data->outbuf == NULL)
@@ -855,7 +855,7 @@ eap_pwd_process_confirm_resp(struct eap_sm *sm, struct eap_pwd_data *data,
 		eap_pwd_state(data, SUCCESS);
 
 fin:
-	os_free(cruft);
+	bin_clear_free(cruft, BN_num_bytes(data->grp->prime));
 	BN_clear_free(x);
 	BN_clear_free(y);
 }

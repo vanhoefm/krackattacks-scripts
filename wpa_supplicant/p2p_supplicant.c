@@ -803,11 +803,46 @@ static void wpas_p2p_add_persistent_group_client(struct wpa_supplicant *wpa_s,
 }
 
 
+static void wpas_p2p_group_started(struct wpa_supplicant *wpa_s,
+				   int go, struct wpa_ssid *ssid, int freq,
+				   const u8 *psk, const char *passphrase,
+				   const u8 *go_dev_addr, int persistent,
+				   const char *extra)
+{
+	const char *ssid_txt;
+	char psk_txt[65];
+
+	if (psk)
+		wpa_snprintf_hex(psk_txt, sizeof(psk_txt), psk, 32);
+	else
+		psk_txt[0] = '\0';
+
+	if (ssid)
+		ssid_txt = wpa_ssid_txt(ssid->ssid, ssid->ssid_len);
+	else
+		ssid_txt = "";
+
+	if (passphrase && passphrase[0] == '\0')
+		passphrase = NULL;
+
+	wpa_msg_global(wpa_s->parent, MSG_INFO,
+		       P2P_EVENT_GROUP_STARTED
+		       "%s %s ssid=\"%s\" freq=%d%s%s%s%s%s go_dev_addr="
+		       MACSTR "%s%s",
+		       wpa_s->ifname, go ? "GO" : "client", ssid_txt, freq,
+		       psk ? " psk=" : "", psk_txt,
+		       passphrase ? " passphrase=\"" : "",
+		       passphrase ? passphrase : "",
+		       passphrase ? "\"" : "",
+		       MAC2STR(go_dev_addr),
+		       persistent ? " [PERSISTENT]" : "", extra);
+}
+
+
 static void wpas_group_formation_completed(struct wpa_supplicant *wpa_s,
 					   int success)
 {
 	struct wpa_ssid *ssid;
-	const char *ssid_txt;
 	int client;
 	int persistent;
 	u8 go_dev_addr[ETH_ALEN];
@@ -846,7 +881,6 @@ static void wpas_group_formation_completed(struct wpa_supplicant *wpa_s,
 
 	persistent = 0;
 	if (ssid) {
-		ssid_txt = wpa_ssid_txt(ssid->ssid, ssid->ssid_len);
 		client = ssid->mode == WPAS_MODE_INFRA;
 		if (ssid->mode == WPAS_MODE_P2P_GO) {
 			persistent = ssid->p2p_persistent_group;
@@ -858,7 +892,6 @@ static void wpas_group_formation_completed(struct wpa_supplicant *wpa_s,
 							       ssid->ssid,
 							       ssid->ssid_len);
 	} else {
-		ssid_txt = "";
 		client = wpa_s->p2p_group_interface ==
 			P2P_GROUP_INTERFACE_CLIENT;
 		os_memset(go_dev_addr, 0, ETH_ALEN);
@@ -872,26 +905,13 @@ static void wpas_group_formation_completed(struct wpa_supplicant *wpa_s,
 		 * packets.
 		 */
 		wpa_s->show_group_started = 1;
-	} else if (ssid && ssid->passphrase == NULL && ssid->psk_set) {
-		char psk[65];
-		wpa_snprintf_hex(psk, sizeof(psk), ssid->psk, 32);
-		wpa_msg_global(wpa_s->parent, MSG_INFO, P2P_EVENT_GROUP_STARTED
-			       "%s GO ssid=\"%s\" freq=%d psk=%s go_dev_addr="
-			       MACSTR "%s",
-			       wpa_s->ifname, ssid_txt, ssid->frequency, psk,
-			       MAC2STR(go_dev_addr),
-			       persistent ? " [PERSISTENT]" : "");
-		wpas_p2p_cross_connect_setup(wpa_s);
-		wpas_p2p_set_group_idle_timeout(wpa_s);
 	} else {
-		wpa_msg_global(wpa_s->parent, MSG_INFO, P2P_EVENT_GROUP_STARTED
-			       "%s GO ssid=\"%s\" freq=%d passphrase=\"%s\" "
-			       "go_dev_addr=" MACSTR "%s",
-			       wpa_s->ifname, ssid_txt,
-			       ssid ? ssid->frequency : 0,
-			       ssid && ssid->passphrase ? ssid->passphrase : "",
-			       MAC2STR(go_dev_addr),
-			       persistent ? " [PERSISTENT]" : "");
+		wpas_p2p_group_started(wpa_s, 1, ssid,
+				       ssid ? ssid->frequency : 0,
+				       ssid && ssid->passphrase == NULL &&
+				       ssid->psk_set ? ssid->psk : NULL,
+				       ssid ? ssid->passphrase : NULL,
+				       go_dev_addr, persistent, "");
 		wpas_p2p_cross_connect_setup(wpa_s);
 		wpas_p2p_set_group_idle_timeout(wpa_s);
 	}
@@ -1203,32 +1223,12 @@ static void p2p_go_configured(void *ctx, void *data)
 		wpa_printf(MSG_DEBUG, "P2P: Group setup without provisioning");
 		if (wpa_s->global->p2p_group_formation == wpa_s)
 			wpa_s->global->p2p_group_formation = NULL;
-		if (os_strlen(params->passphrase) > 0) {
-			wpa_msg_global(wpa_s->parent, MSG_INFO,
-				       P2P_EVENT_GROUP_STARTED
-				       "%s GO ssid=\"%s\" freq=%d "
-				       "passphrase=\"%s\" go_dev_addr=" MACSTR
-				       "%s", wpa_s->ifname,
-				       wpa_ssid_txt(ssid->ssid, ssid->ssid_len),
-				       ssid->frequency, params->passphrase,
-				       MAC2STR(wpa_s->global->p2p_dev_addr),
-				       params->persistent_group ?
-				       " [PERSISTENT]" : "");
-		} else {
-			char psk[65];
-			wpa_snprintf_hex(psk, sizeof(psk), params->psk,
-					 sizeof(params->psk));
-			wpa_msg_global(wpa_s->parent, MSG_INFO,
-				       P2P_EVENT_GROUP_STARTED
-				       "%s GO ssid=\"%s\" freq=%d psk=%s "
-				       "go_dev_addr=" MACSTR "%s",
-				       wpa_s->ifname,
-				       wpa_ssid_txt(ssid->ssid, ssid->ssid_len),
-				       ssid->frequency, psk,
-				       MAC2STR(wpa_s->global->p2p_dev_addr),
-				       params->persistent_group ?
-				       " [PERSISTENT]" : "");
-		}
+		wpas_p2p_group_started(wpa_s, 1, ssid, ssid->frequency,
+				       params->passphrase[0] == '\0' ?
+				       params->psk : NULL,
+				       params->passphrase,
+				       wpa_s->global->p2p_dev_addr,
+				       params->persistent_group, "");
 
 		os_get_reltime(&wpa_s->global->p2p_go_wait_client);
 		if (params->persistent_group) {
@@ -6010,7 +6010,6 @@ int wpas_p2p_invite_group(struct wpa_supplicant *wpa_s, const char *ifname,
 void wpas_p2p_completed(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_ssid *ssid = wpa_s->current_ssid;
-	const char *ssid_txt;
 	u8 go_dev_addr[ETH_ALEN];
 	int network_id = -1;
 	int persistent;
@@ -6028,7 +6027,6 @@ void wpas_p2p_completed(struct wpa_supplicant *wpa_s)
 
 	wpa_s->show_group_started = 0;
 
-	ssid_txt = wpa_ssid_txt(ssid->ssid, ssid->ssid_len);
 	os_memset(go_dev_addr, 0, ETH_ALEN);
 	if (ssid->bssid_set)
 		os_memcpy(go_dev_addr, ssid->bssid, ETH_ALEN);
@@ -6051,24 +6049,11 @@ void wpas_p2p_completed(struct wpa_supplicant *wpa_s)
 			    ip[8], ip[9], ip[10], ip[11]);
 	}
 
-	if (ssid->passphrase == NULL && ssid->psk_set) {
-		char psk[65];
-		wpa_snprintf_hex(psk, sizeof(psk), ssid->psk, 32);
-		wpa_msg_global(wpa_s->parent, MSG_INFO, P2P_EVENT_GROUP_STARTED
-			       "%s client ssid=\"%s\" freq=%d psk=%s "
-			       "go_dev_addr=" MACSTR "%s%s",
-			       wpa_s->ifname, ssid_txt, freq, psk,
-			       MAC2STR(go_dev_addr),
-			       persistent ? " [PERSISTENT]" : "", ip_addr);
-	} else {
-		wpa_msg_global(wpa_s->parent, MSG_INFO, P2P_EVENT_GROUP_STARTED
-			       "%s client ssid=\"%s\" freq=%d "
-			       "passphrase=\"%s\" go_dev_addr=" MACSTR "%s%s",
-			       wpa_s->ifname, ssid_txt, freq,
-			       ssid->passphrase ? ssid->passphrase : "",
-			       MAC2STR(go_dev_addr),
-			       persistent ? " [PERSISTENT]" : "", ip_addr);
-	}
+	wpas_p2p_group_started(wpa_s, 0, ssid, freq,
+			       ssid->passphrase == NULL && ssid->psk_set ?
+			       ssid->psk : NULL,
+			       ssid->passphrase, go_dev_addr, persistent,
+			       ip_addr);
 
 	if (persistent)
 		network_id = wpas_p2p_store_persistent_group(wpa_s->parent,

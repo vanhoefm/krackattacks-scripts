@@ -187,7 +187,7 @@ static int eap_fast_session_ticket_cb(void *ctx, const u8 *ticket, size_t len,
 		switch (*pos) {
 		case PAC_OPAQUE_TYPE_PAD:
 			pos = end;
-			break;
+			goto done;
 		case PAC_OPAQUE_TYPE_KEY:
 			if (pos[1] != EAP_FAST_PAC_KEY_LEN) {
 				wpa_printf(MSG_DEBUG, "EAP-FAST: Invalid "
@@ -218,6 +218,7 @@ static int eap_fast_session_ticket_cb(void *ctx, const u8 *ticket, size_t len,
 
 		pos += 2 + pos[1];
 	}
+done:
 
 	if (pac_key == NULL) {
 		wpa_printf(MSG_DEBUG, "EAP-FAST: No PAC-Key included in "

@@ -1173,6 +1173,87 @@ def test_ap_wpa2_eap_tls_neg_incorrect_trust_root(dev, apdev):
         if ev is None:
             raise Exception("Network block disabling not reported")
 
+def test_ap_wpa2_eap_tls_diff_ca_trust(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TTLS/PAP and different CA trust"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="pap user", anonymous_identity="ttls",
+                   password="password", phase2="auth=PAP",
+                   ca_cert="auth_serv/ca.pem",
+                   wait_connect=True, scan_freq="2412")
+    id = dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                        identity="pap user", anonymous_identity="ttls",
+                        password="password", phase2="auth=PAP",
+                        ca_cert="auth_serv/ca-incorrect.pem",
+                        only_add_network=True, scan_freq="2412")
+
+    dev[0].request("DISCONNECT")
+    dev[0].dump_monitor()
+    dev[0].select_network(id, freq="2412")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD vendor=0 method=21"], timeout=15)
+    if ev is None:
+        raise Exception("EAP-TTLS not re-started")
+    
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Disconnection timed out")
+    if "reason=23" not in ev:
+        raise Exception("Proper reason code for disconnection not reported")
+
+def test_ap_wpa2_eap_tls_diff_ca_trust2(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TTLS/PAP and different CA trust"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="pap user", anonymous_identity="ttls",
+                   password="password", phase2="auth=PAP",
+                   wait_connect=True, scan_freq="2412")
+    id = dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                        identity="pap user", anonymous_identity="ttls",
+                        password="password", phase2="auth=PAP",
+                        ca_cert="auth_serv/ca-incorrect.pem",
+                        only_add_network=True, scan_freq="2412")
+
+    dev[0].request("DISCONNECT")
+    dev[0].dump_monitor()
+    dev[0].select_network(id, freq="2412")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD vendor=0 method=21"], timeout=15)
+    if ev is None:
+        raise Exception("EAP-TTLS not re-started")
+    
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Disconnection timed out")
+    if "reason=23" not in ev:
+        raise Exception("Proper reason code for disconnection not reported")
+
+def test_ap_wpa2_eap_tls_diff_ca_trust3(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TTLS/PAP and different CA trust"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    id = dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                        identity="pap user", anonymous_identity="ttls",
+                        password="password", phase2="auth=PAP",
+                        ca_cert="auth_serv/ca.pem",
+                        wait_connect=True, scan_freq="2412")
+    dev[0].request("DISCONNECT")
+    dev[0].dump_monitor()
+    dev[0].set_network_quoted(id, "ca_cert", "auth_serv/ca-incorrect.pem")
+    dev[0].select_network(id, freq="2412")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-PROPOSED-METHOD vendor=0 method=21"], timeout=15)
+    if ev is None:
+        raise Exception("EAP-TTLS not re-started")
+    
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Disconnection timed out")
+    if "reason=23" not in ev:
+        raise Exception("Proper reason code for disconnection not reported")
+
 def test_ap_wpa2_eap_tls_neg_suffix_match(dev, apdev):
     """WPA2-Enterprise negative test - domain suffix mismatch"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")

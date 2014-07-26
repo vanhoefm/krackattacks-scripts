@@ -825,17 +825,26 @@ static void wpas_p2p_group_started(struct wpa_supplicant *wpa_s,
 	if (passphrase && passphrase[0] == '\0')
 		passphrase = NULL;
 
-	wpa_msg_global(wpa_s->parent, MSG_INFO,
-		       P2P_EVENT_GROUP_STARTED
-		       "%s %s ssid=\"%s\" freq=%d%s%s%s%s%s go_dev_addr="
-		       MACSTR "%s%s",
-		       wpa_s->ifname, go ? "GO" : "client", ssid_txt, freq,
-		       psk ? " psk=" : "", psk_txt,
-		       passphrase ? " passphrase=\"" : "",
-		       passphrase ? passphrase : "",
-		       passphrase ? "\"" : "",
-		       MAC2STR(go_dev_addr),
-		       persistent ? " [PERSISTENT]" : "", extra);
+	/*
+	 * Include PSK/passphrase only in the control interface message and
+	 * leave it out from the debug log entry.
+	 */
+	wpa_msg_global_ctrl(wpa_s->parent, MSG_INFO,
+			    P2P_EVENT_GROUP_STARTED
+			    "%s %s ssid=\"%s\" freq=%d%s%s%s%s%s go_dev_addr="
+			    MACSTR "%s%s",
+			    wpa_s->ifname, go ? "GO" : "client", ssid_txt, freq,
+			    psk ? " psk=" : "", psk_txt,
+			    passphrase ? " passphrase=\"" : "",
+			    passphrase ? passphrase : "",
+			    passphrase ? "\"" : "",
+			    MAC2STR(go_dev_addr),
+			    persistent ? " [PERSISTENT]" : "", extra);
+	wpa_printf(MSG_INFO, P2P_EVENT_GROUP_STARTED
+		   "%s %s ssid=\"%s\" freq=%d go_dev_addr=" MACSTR "%s%s",
+		   wpa_s->ifname, go ? "GO" : "client", ssid_txt, freq,
+		   MAC2STR(go_dev_addr), persistent ? " [PERSISTENT]" : "",
+		   extra);
 }
 
 

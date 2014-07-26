@@ -345,6 +345,7 @@ struct eap_sm {
 	struct wps_context *wps;
 
 	int prev_failure;
+	struct eap_peer_config *last_config;
 
 	struct ext_password_data *ext_pw;
 	struct wpabuf *ext_pw_buf;

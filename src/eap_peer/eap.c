@@ -153,11 +153,13 @@ SM_STATE(EAP, INITIALIZE)
 	SM_ENTRY(EAP, INITIALIZE);
 	if (sm->fast_reauth && sm->m && sm->m->has_reauth_data &&
 	    sm->m->has_reauth_data(sm, sm->eap_method_priv) &&
-	    !sm->prev_failure) {
+	    !sm->prev_failure &&
+	    sm->last_config == eap_get_config(sm)) {
 		wpa_printf(MSG_DEBUG, "EAP: maintaining EAP method data for "
 			   "fast reauthentication");
 		sm->m->deinit_for_reauth(sm, sm->eap_method_priv);
 	} else {
+		sm->last_config = eap_get_config(sm);
 		eap_deinit_prev_method(sm, "INITIALIZE");
 	}
 	sm->selectedMethod = EAP_TYPE_NONE;

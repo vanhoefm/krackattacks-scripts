@@ -2901,7 +2901,7 @@ int gas_send_request(struct wpa_supplicant *wpa_s, const u8 *dst,
 	struct wpa_bss *bss;
 	int res;
 	size_t len;
-	u8 query_resp_len_limit = 0, pame_bi = 0;
+	u8 query_resp_len_limit = 0;
 
 	freq = wpa_s->assoc_freq;
 	bss = wpa_bss_get_bssid(wpa_s, dst);
@@ -2925,8 +2925,7 @@ int gas_send_request(struct wpa_supplicant *wpa_s, const u8 *dst,
 	/* Advertisement Protocol IE */
 	wpabuf_put_u8(buf, WLAN_EID_ADV_PROTO);
 	wpabuf_put_u8(buf, 1 + wpabuf_len(adv_proto)); /* Length */
-	wpabuf_put_u8(buf, (query_resp_len_limit & 0x7f) |
-		      (pame_bi ? 0x80 : 0));
+	wpabuf_put_u8(buf, query_resp_len_limit & 0x7f);
 	wpabuf_put_buf(buf, adv_proto);
 
 	/* GAS Query */

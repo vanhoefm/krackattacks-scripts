@@ -967,16 +967,8 @@ static void wpas_p2p_send_action_work_timeout(void *eloop_ctx,
 }
 
 
-static void wpas_p2p_send_action_tx_status(struct wpa_supplicant *wpa_s,
-					   unsigned int freq,
-					   const u8 *dst, const u8 *src,
-					   const u8 *bssid,
-					   const u8 *data, size_t data_len,
-					   enum offchannel_send_action_result
-					   result)
+static void wpas_p2p_action_tx_clear(struct wpa_supplicant *wpa_s)
 {
-	enum p2p_send_action_result res = P2P_SEND_ACTION_SUCCESS;
-
 	if (wpa_s->p2p_send_action_work) {
 		struct send_action_work *awork;
 		awork = wpa_s->p2p_send_action_work->ctx;
@@ -999,6 +991,20 @@ static void wpas_p2p_send_action_tx_status(struct wpa_supplicant *wpa_s,
 				wpa_s, NULL);
 		}
 	}
+}
+
+
+static void wpas_p2p_send_action_tx_status(struct wpa_supplicant *wpa_s,
+					   unsigned int freq,
+					   const u8 *dst, const u8 *src,
+					   const u8 *bssid,
+					   const u8 *data, size_t data_len,
+					   enum offchannel_send_action_result
+					   result)
+{
+	enum p2p_send_action_result res = P2P_SEND_ACTION_SUCCESS;
+
+	wpas_p2p_action_tx_clear(wpa_s);
 
 	if (wpa_s->global->p2p == NULL || wpa_s->global->p2p_disabled)
 		return;
@@ -5683,6 +5689,8 @@ static void wpas_p2p_clear_pending_action_tx(struct wpa_supplicant *wpa_s)
 {
 	if (!offchannel_pending_action_tx(wpa_s))
 		return;
+
+	wpas_p2p_action_tx_clear(wpa_s);
 
 	wpa_printf(MSG_DEBUG, "P2P: Drop pending Action TX due to new "
 		   "operation request");

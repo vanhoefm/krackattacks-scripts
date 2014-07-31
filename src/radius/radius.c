@@ -235,6 +235,7 @@ static struct radius_attr_type radius_attrs[] =
 	{ RADIUS_ATTR_EAP_KEY_NAME, "EAP-Key-Name", RADIUS_ATTR_HEXDUMP },
 	{ RADIUS_ATTR_MOBILITY_DOMAIN_ID, "Mobility-Domain-Id",
 	  RADIUS_ATTR_INT32 },
+	{ RADIUS_ATTR_WLAN_HESSID, "WLAN-HESSID", RADIUS_ATTR_TEXT },
 };
 #define RADIUS_ATTRS ARRAY_SIZE(radius_attrs)
 

@@ -435,6 +435,22 @@ int add_common_radius_attr(struct hostapd_data *hapd,
 		return -1;
 	}
 
+#ifdef CONFIG_INTERWORKING
+	if (hapd->conf->interworking &&
+	    !is_zero_ether_addr(hapd->conf->hessid)) {
+		os_snprintf(buf, sizeof(buf), RADIUS_802_1X_ADDR_FORMAT,
+			    MAC2STR(hapd->conf->hessid));
+		buf[sizeof(buf) - 1] = '\0';
+		if (!hostapd_config_get_radius_attr(req_attr,
+						    RADIUS_ATTR_WLAN_HESSID) &&
+		    !radius_msg_add_attr(msg, RADIUS_ATTR_WLAN_HESSID,
+					 (u8 *) buf, os_strlen(buf))) {
+			wpa_printf(MSG_ERROR, "Could not add WLAN-HESSID");
+			return -1;
+		}
+	}
+#endif /* CONFIG_INTERWORKING */
+
 	if (sta && add_common_radius_sta_attr(hapd, req_attr, sta, msg) < 0)
 		return -1;
 

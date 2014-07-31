@@ -357,6 +357,21 @@ static int add_common_radius_sta_attr(struct hostapd_data *hapd,
 		}
 	}
 
+#ifdef CONFIG_IEEE80211R
+	if (hapd->conf->wpa && wpa_key_mgmt_ft(hapd->conf->wpa_key_mgmt) &&
+	    sta->wpa_sm &&
+	    (wpa_key_mgmt_ft(wpa_auth_sta_key_mgmt(sta->wpa_sm)) ||
+	     sta->auth_alg == WLAN_AUTH_FT) &&
+	    !hostapd_config_get_radius_attr(req_attr,
+					    RADIUS_ATTR_MOBILITY_DOMAIN_ID) &&
+	    !radius_msg_add_attr_int32(msg, RADIUS_ATTR_MOBILITY_DOMAIN_ID,
+				       WPA_GET_BE16(
+					       hapd->conf->mobility_domain))) {
+		wpa_printf(MSG_ERROR, "Could not add Mobility-Domain-Id");
+		return -1;
+	}
+#endif /* CONFIG_IEEE80211R */
+
 	return 0;
 }
 

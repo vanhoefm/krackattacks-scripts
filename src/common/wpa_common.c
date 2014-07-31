@@ -1002,6 +1002,30 @@ const char * wpa_key_mgmt_txt(int key_mgmt, int proto)
 }
 
 
+u32 wpa_akm_to_suite(int akm)
+{
+	if (akm & WPA_KEY_MGMT_FT_IEEE8021X)
+		return WLAN_AKM_SUITE_FT_8021X;
+	if (akm & WPA_KEY_MGMT_FT_PSK)
+		return WLAN_AKM_SUITE_FT_PSK;
+	if (akm & WPA_KEY_MGMT_IEEE8021X)
+		return WLAN_AKM_SUITE_8021X;
+	if (akm & WPA_KEY_MGMT_IEEE8021X_SHA256)
+		return WLAN_AKM_SUITE_8021X_SHA256;
+	if (akm & WPA_KEY_MGMT_IEEE8021X)
+		return WLAN_AKM_SUITE_8021X;
+	if (akm & WPA_KEY_MGMT_PSK_SHA256)
+		return WLAN_AKM_SUITE_PSK_SHA256;
+	if (akm & WPA_KEY_MGMT_PSK)
+		return WLAN_AKM_SUITE_PSK;
+	if (akm & WPA_KEY_MGMT_CCKM)
+		return WLAN_AKM_SUITE_CCKM;
+	if (akm & WPA_KEY_MGMT_OSEN)
+		return WLAN_AKM_SUITE_OSEN;
+	return 0;
+}
+
+
 int wpa_compare_rsn_ie(int ft_initial_assoc,
 		       const u8 *ie1, size_t ie1len,
 		       const u8 *ie2, size_t ie2len)

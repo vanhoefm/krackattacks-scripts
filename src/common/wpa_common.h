@@ -377,6 +377,7 @@ void rsn_pmkid(const u8 *pmk, size_t pmk_len, const u8 *aa, const u8 *spa,
 
 const char * wpa_cipher_txt(int cipher);
 const char * wpa_key_mgmt_txt(int key_mgmt, int proto);
+u32 wpa_akm_to_suite(int akm);
 int wpa_compare_rsn_ie(int ft_initial_assoc,
 		       const u8 *ie1, size_t ie1len,
 		       const u8 *ie2, size_t ie2len);

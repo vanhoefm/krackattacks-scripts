@@ -306,6 +306,67 @@ static void ieee802_1x_learn_identity(struct hostapd_data *hapd,
 }
 
 
+static int add_common_radius_sta_attr_rsn(struct hostapd_data *hapd,
+					  struct hostapd_radius_attr *req_attr,
+					  struct sta_info *sta,
+					  struct radius_msg *msg)
+{
+	u32 suite;
+	int ver, val;
+
+	ver = wpa_auth_sta_wpa_version(sta->wpa_sm);
+	val = wpa_auth_get_pairwise(sta->wpa_sm);
+	suite = wpa_cipher_to_suite(ver, val);
+	if (val != -1 &&
+	    !hostapd_config_get_radius_attr(req_attr,
+					    RADIUS_ATTR_WLAN_PAIRWISE_CIPHER) &&
+	    !radius_msg_add_attr_int32(msg, RADIUS_ATTR_WLAN_PAIRWISE_CIPHER,
+				       suite)) {
+		wpa_printf(MSG_ERROR, "Could not add WLAN-Pairwise-Cipher");
+		return -1;
+	}
+
+	suite = wpa_cipher_to_suite((hapd->conf->wpa & 0x2) ?
+				    WPA_PROTO_RSN : WPA_PROTO_WPA,
+				    hapd->conf->wpa_group);
+	if (!hostapd_config_get_radius_attr(req_attr,
+					    RADIUS_ATTR_WLAN_GROUP_CIPHER) &&
+	    !radius_msg_add_attr_int32(msg, RADIUS_ATTR_WLAN_GROUP_CIPHER,
+				       suite)) {
+		wpa_printf(MSG_ERROR, "Could not add WLAN-Group-Cipher");
+		return -1;
+	}
+
+	val = wpa_auth_sta_key_mgmt(sta->wpa_sm);
+	suite = wpa_akm_to_suite(val);
+	if (val != -1 &&
+	    !hostapd_config_get_radius_attr(req_attr,
+					    RADIUS_ATTR_WLAN_AKM_SUITE) &&
+	    !radius_msg_add_attr_int32(msg, RADIUS_ATTR_WLAN_AKM_SUITE,
+				       suite)) {
+		wpa_printf(MSG_ERROR, "Could not add WLAN-AKM-Suite");
+		return -1;
+	}
+
+#ifdef CONFIG_IEEE80211W
+	if (hapd->conf->ieee80211w != NO_MGMT_FRAME_PROTECTION) {
+		suite = wpa_cipher_to_suite(WPA_PROTO_RSN,
+					    hapd->conf->group_mgmt_cipher);
+		if (!hostapd_config_get_radius_attr(
+			    req_attr, RADIUS_ATTR_WLAN_GROUP_MGMT_CIPHER) &&
+		    !radius_msg_add_attr_int32(
+			    msg, RADIUS_ATTR_WLAN_GROUP_MGMT_CIPHER, suite)) {
+			wpa_printf(MSG_ERROR,
+				   "Could not add WLAN-Group-Mgmt-Cipher");
+			return -1;
+		}
+	}
+#endif /* CONFIG_IEEE80211W */
+
+	return 0;
+}
+
+
 static int add_common_radius_sta_attr(struct hostapd_data *hapd,
 				      struct hostapd_radius_attr *req_attr,
 				      struct sta_info *sta,
@@ -371,6 +432,10 @@ static int add_common_radius_sta_attr(struct hostapd_data *hapd,
 		return -1;
 	}
 #endif /* CONFIG_IEEE80211R */
+
+	if (hapd->conf->wpa && sta->wpa_sm &&
+	    add_common_radius_sta_attr_rsn(hapd, req_attr, sta, msg) < 0)
+		return -1;
 
 	return 0;
 }

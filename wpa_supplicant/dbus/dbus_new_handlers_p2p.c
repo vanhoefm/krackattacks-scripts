@@ -830,13 +830,13 @@ dbus_bool_t wpas_dbus_getter_p2p_device_config(DBusMessageIter *iter,
 				       wpa_s->conf->p2p_no_group_iface))
 		goto err_no_mem;
 
-	if (!wpa_dbus_dict_close_write(&variant_iter, &dict_iter) ||
-	    !dbus_message_iter_close_container(iter, &variant_iter))
-		goto err_no_mem;
-
 	/* P2P Search Delay */
 	if (!wpa_dbus_dict_append_uint32(&dict_iter, "p2p_search_delay",
 					 wpa_s->conf->p2p_search_delay))
+		goto err_no_mem;
+
+	if (!wpa_dbus_dict_close_write(&variant_iter, &dict_iter) ||
+	    !dbus_message_iter_close_container(iter, &variant_iter))
 		goto err_no_mem;
 
 	return TRUE;

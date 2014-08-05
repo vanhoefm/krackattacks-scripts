@@ -21,6 +21,28 @@ def mac2tuple(mac):
 class HostapdGlobal:
     def __init__(self):
         self.ctrl = wpaspy.Ctrl(hapd_global)
+        self.mon = wpaspy.Ctrl(hapd_global)
+        self.mon.attach()
+
+    def request(self, cmd):
+        return self.ctrl.request(cmd)
+
+    def wait_event(self, events, timeout):
+        start = os.times()[4]
+        while True:
+            while self.mon.pending():
+                ev = self.mon.recv()
+                logger.debug("(global): " + ev)
+                for event in events:
+                    if event in ev:
+                        return ev
+            now = os.times()[4]
+            remaining = start + timeout - now
+            if remaining <= 0:
+                break
+            if not self.mon.pending(timeout=remaining):
+                break
+        return None
 
     def add(self, ifname):
         res = self.ctrl.request("ADD " + ifname + " " + hapd_ctrl)

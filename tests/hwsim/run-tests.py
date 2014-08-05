@@ -487,6 +487,10 @@ def main():
             wt = Wlantest()
             rename_log(args.logdir, 'hwsim0.pcapng', name, wt)
             rename_log(args.logdir, 'hwsim0', name, wt)
+            if os.path.exists(os.path.join(args.logdir, 'fst-wpa_supplicant')):
+                rename_log(args.logdir, 'fst-wpa_supplicant', name, None)
+            if os.path.exists(os.path.join(args.logdir, 'fst-hostapd')):
+                rename_log(args.logdir, 'fst-hostapd', name, None)
 
         end = datetime.now()
         diff = end - start

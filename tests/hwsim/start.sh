@@ -100,7 +100,8 @@ else
 	NUM_CH=1
 fi
 
-test -f /proc/modules && sudo modprobe mac80211_hwsim radios=6 channels=$NUM_CH support_p2p_device=0
+test -f /proc/modules && sudo modprobe mac80211_hwsim radios=7 channels=$NUM_CH support_p2p_device=0
+
 sudo ifconfig hwsim0 up
 sudo $WLANTEST -i hwsim0 -n $LOGDIR/hwsim0.pcapng -c -dt -L $LOGDIR/hwsim0 &
 for i in 0 1 2; do

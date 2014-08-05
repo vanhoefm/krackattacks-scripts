@@ -10570,7 +10570,8 @@ static int wpa_driver_nl80211_probe_req_report(struct i802_bss *bss, int report)
 
 	if (!report) {
 		if (bss->nl_preq && drv->device_ap_sme &&
-		    is_ap_interface(drv->nlmode) && !bss->in_deinit) {
+		    is_ap_interface(drv->nlmode) && !bss->in_deinit &&
+		    !bss->static_ap) {
 			/*
 			 * Do not disable Probe Request reporting that was
 			 * enabled in nl80211_setup_ap().

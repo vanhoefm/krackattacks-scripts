@@ -232,6 +232,7 @@ struct i802_bss {
 	unsigned int in_deinit:1;
 	unsigned int wdev_id_set:1;
 	unsigned int added_if:1;
+	unsigned int static_ap:1;
 
 	u8 addr[ETH_ALEN];
 
@@ -4763,6 +4764,9 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv,
 	bss->if_dynamic = bss->if_dynamic || drv->global->if_add_wdevid_set;
 	drv->global->if_add_wdevid_set = 0;
 
+	if (!bss->if_dynamic && nl80211_get_ifmode(bss) == NL80211_IFTYPE_AP)
+		bss->static_ap = 1;
+
 	if (wpa_driver_nl80211_capa(drv))
 		return -1;
 
@@ -4778,7 +4782,7 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv,
 	if (first && nl80211_get_ifmode(bss) == NL80211_IFTYPE_AP)
 		drv->start_mode_ap = 1;
 
-	if (drv->hostapd)
+	if (drv->hostapd || bss->static_ap)
 		nlmode = NL80211_IFTYPE_AP;
 	else if (bss->if_dynamic)
 		nlmode = nl80211_get_ifmode(bss);

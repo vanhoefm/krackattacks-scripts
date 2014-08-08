@@ -2320,6 +2320,37 @@ static const char * wext_get_radio_name(void *priv)
 }
 
 
+static int wpa_driver_wext_signal_poll(void *priv, struct wpa_signal_info *si)
+{
+	struct wpa_driver_wext_data *drv = priv;
+	struct iw_statistics stats;
+	struct iwreq iwr;
+
+	os_memset(si, 0, sizeof(*si));
+	si->current_signal = -9999;
+	si->current_noise = 9999;
+	si->chanwidth = CHAN_WIDTH_UNKNOWN;
+
+	os_memset(&iwr, 0, sizeof(iwr));
+	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
+	iwr.u.data.pointer = (caddr_t) &stats;
+	iwr.u.data.length = sizeof(stats);
+	iwr.u.data.flags = 1;
+
+	if (ioctl(drv->ioctl_sock, SIOCGIWSTATS, &iwr) < 0) {
+		wpa_printf(MSG_ERROR, "WEXT: SIOCGIWSTATS: %s",
+			   strerror(errno));
+		return -1;
+	}
+
+	si->current_signal = stats.qual.level -
+		((stats.qual.updated & IW_QUAL_DBM) ? 0x100 : 0);
+	si->current_noise = stats.qual.noise -
+		((stats.qual.updated & IW_QUAL_DBM) ? 0x100 : 0);
+	return 0;
+}
+
+
 const struct wpa_driver_ops wpa_driver_wext_ops = {
 	.name = "wext",
 	.desc = "Linux wireless extensions (generic)",
@@ -2339,4 +2370,5 @@ const struct wpa_driver_ops wpa_driver_wext_ops = {
 	.get_capa = wpa_driver_wext_get_capa,
 	.set_operstate = wpa_driver_wext_set_operstate,
 	.get_radio_name = wext_get_radio_name,
+	.signal_poll = wpa_driver_wext_signal_poll,
 };

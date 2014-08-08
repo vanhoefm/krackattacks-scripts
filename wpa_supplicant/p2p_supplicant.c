@@ -3712,7 +3712,7 @@ struct wpa_supplicant * wpas_get_p2p_go_iface(struct wpa_supplicant *wpa_s,
 		    s->mode != WPAS_MODE_P2P_GROUP_FORMATION)
 			continue;
 		if (s->ssid_len != ssid_len ||
-		    os_memcmp(s, s->ssid, ssid_len) != 0)
+		    os_memcmp(ssid, s->ssid, ssid_len) != 0)
 			continue;
 		return wpa_s;
 	}

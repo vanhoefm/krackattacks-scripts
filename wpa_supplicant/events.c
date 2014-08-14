@@ -2986,15 +2986,17 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			wpa_s->own_scan_running = 1;
 			if (wpa_s->last_scan_req == MANUAL_SCAN_REQ &&
 			    wpa_s->manual_scan_use_id) {
-				wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_SCAN_STARTED "id=%u",
-					wpa_s->manual_scan_id);
+				wpa_msg_ctrl(wpa_s, MSG_INFO,
+					     WPA_EVENT_SCAN_STARTED "id=%u",
+					     wpa_s->manual_scan_id);
 			} else {
-				wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_SCAN_STARTED);
+				wpa_msg_ctrl(wpa_s, MSG_INFO,
+					     WPA_EVENT_SCAN_STARTED);
 			}
 		} else {
 			wpa_dbg(wpa_s, MSG_DEBUG, "External program started a scan");
 			wpa_s->external_scan_running = 1;
-			wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_SCAN_STARTED);
+			wpa_msg_ctrl(wpa_s, MSG_INFO, WPA_EVENT_SCAN_STARTED);
 		}
 		break;
 	case EVENT_SCAN_RESULTS:

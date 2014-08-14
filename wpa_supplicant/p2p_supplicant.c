@@ -4354,8 +4354,8 @@ static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 	    p2p_get_interface_addr(wpa_s->global->p2p,
 				   wpa_s->pending_join_dev_addr,
 				   iface_addr) == 0 &&
-	    os_memcmp(iface_addr, wpa_s->pending_join_dev_addr, ETH_ALEN) != 0)
-	{
+	    os_memcmp(iface_addr, wpa_s->pending_join_dev_addr, ETH_ALEN) != 0
+	    && !wpa_bss_get_bssid(wpa_s, wpa_s->pending_join_iface_addr)) {
 		wpa_printf(MSG_DEBUG, "P2P: Overwrite pending interface "
 			   "address for join from " MACSTR " to " MACSTR
 			   " based on newly discovered P2P peer entry",

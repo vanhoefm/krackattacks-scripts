@@ -83,14 +83,31 @@ static struct wpa_bss * wpa_supplicant_get_new_bss(
 }
 
 
+static void wpa_supplicant_update_current_bss(struct wpa_supplicant *wpa_s)
+{
+	struct wpa_bss *bss = wpa_supplicant_get_new_bss(wpa_s, wpa_s->bssid);
+
+	if (!bss) {
+		wpa_supplicant_update_scan_results(wpa_s);
+
+		/* Get the BSS from the new scan results */
+		bss = wpa_supplicant_get_new_bss(wpa_s, wpa_s->bssid);
+	}
+
+	if (bss)
+		wpa_s->current_bss = bss;
+}
+
+
 static int wpa_supplicant_select_config(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_ssid *ssid, *old_ssid;
-	struct wpa_bss *bss;
 	int res;
 
-	if (wpa_s->conf->ap_scan == 1 && wpa_s->current_ssid)
+	if (wpa_s->conf->ap_scan == 1 && wpa_s->current_ssid) {
+		wpa_supplicant_update_current_bss(wpa_s);
 		return 0;
+	}
 
 	wpa_dbg(wpa_s, MSG_DEBUG, "Select network based on association "
 		"information");
@@ -136,16 +153,7 @@ static int wpa_supplicant_select_config(struct wpa_supplicant *wpa_s)
 	old_ssid = wpa_s->current_ssid;
 	wpa_s->current_ssid = ssid;
 
-	bss = wpa_supplicant_get_new_bss(wpa_s, wpa_s->bssid);
-	if (!bss) {
-		wpa_supplicant_update_scan_results(wpa_s);
-
-		/* Get the BSS from the new scan results */
-		bss = wpa_supplicant_get_new_bss(wpa_s, wpa_s->bssid);
-	}
-
-	if (bss)
-		wpa_s->current_bss = bss;
+	wpa_supplicant_update_current_bss(wpa_s);
 
 	wpa_supplicant_rsn_supp_set_config(wpa_s, wpa_s->current_ssid);
 	wpa_supplicant_initiate_eapol(wpa_s);

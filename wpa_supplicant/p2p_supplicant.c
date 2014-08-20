@@ -5090,8 +5090,7 @@ void wpas_p2p_remain_on_channel_cb(struct wpa_supplicant *wpa_s,
 }
 
 
-static int wpas_p2p_listen_start(struct wpa_supplicant *wpa_s,
-				 unsigned int timeout)
+int wpas_p2p_listen_start(struct wpa_supplicant *wpa_s, unsigned int timeout)
 {
 	/* Limit maximum Listen state time based on driver limitation. */
 	if (timeout > wpa_s->max_remain_on_chan)
@@ -5119,12 +5118,12 @@ void wpas_p2p_cancel_remain_on_channel_cb(struct wpa_supplicant *wpa_s,
 	wpas_p2p_listen_work_done(wpa_s);
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
 		return;
+	if (wpa_s->p2p_long_listen > 0)
+		wpa_s->p2p_long_listen -= wpa_s->max_remain_on_chan;
 	if (p2p_listen_end(wpa_s->global->p2p, freq) > 0)
 		return; /* P2P module started a new operation */
 	if (offchannel_pending_action_tx(wpa_s))
 		return;
-	if (wpa_s->p2p_long_listen > 0)
-		wpa_s->p2p_long_listen -= wpa_s->max_remain_on_chan;
 	if (wpa_s->p2p_long_listen > 0) {
 		wpa_printf(MSG_DEBUG, "P2P: Continuing long Listen state");
 		wpas_p2p_listen_start(wpa_s, wpa_s->p2p_long_listen);

@@ -449,11 +449,16 @@ static int wpas_p2p_group_delete(struct wpa_supplicant *wpa_s,
 		 (ssid && ssid->mode == WPAS_MODE_INFRA)) {
 		wpa_s->reassociate = 0;
 		wpa_s->disconnected = 1;
-		wpa_supplicant_deauthenticate(wpa_s,
-					      WLAN_REASON_DEAUTH_LEAVING);
 		gtype = "client";
 	} else
 		gtype = "GO";
+
+	if (removal_reason != P2P_GROUP_REMOVAL_SILENT && ssid)
+		wpas_notify_p2p_group_removed(wpa_s, ssid, gtype);
+
+	if (os_strcmp(gtype, "client") == 0)
+		wpa_supplicant_deauthenticate(wpa_s, WLAN_REASON_DEAUTH_LEAVING);
+
 	if (wpa_s->cross_connect_in_use) {
 		wpa_s->cross_connect_in_use = 0;
 		wpa_msg_global(wpa_s->parent, MSG_INFO,
@@ -510,9 +515,6 @@ static int wpas_p2p_group_delete(struct wpa_supplicant *wpa_s,
 	 * group has been removed.
 	 */
 	wpa_s->global->p2p_go_wait_client.sec = 0;
-
-	if (removal_reason != P2P_GROUP_REMOVAL_SILENT && ssid)
-		wpas_notify_p2p_group_removed(wpa_s, ssid, gtype);
 
 	if (wpa_s->p2p_group_interface != NOT_P2P_GROUP_INTERFACE) {
 		struct wpa_global *global;

@@ -447,3 +447,27 @@ def test_p2p_autogo_pref_chan_disallowed(dev, apdev):
     finally:
        dev[0].request("P2P_SET disallow_freq ")
        dev[0].request("SET p2p_pref_chan ")
+
+def test_p2p_autogo_pref_chan_not_in_regulatory(dev, apdev):
+    """P2P channel selection: GO preferred channel not allowed in the regulatory rules"""
+    try:
+        set_country("US")
+        dev[0].request("SET p2p_pref_chan 124:149")
+        res = autogo(dev[0], persistent=True)
+        if res['freq'] != "5745":
+            raise Exception("Unexpected channel selected: " + res['freq'])
+        dev[0].remove_group(res['ifname'])
+
+        netw = dev[0].list_networks()
+        if len(netw) != 1:
+            raise Exception("Unexpected number of network blocks: " + str(netw))
+        id = netw[0]['id']
+
+        set_country("DE")
+        res = autogo(dev[0], persistent=id)
+        if res['freq'] == "5745":
+            raise Exception("Unexpected channel selected(2): " + res['freq'])
+        dev[0].remove_group(res['ifname'])
+    finally:
+        dev[0].request("SET p2p_pref_chan ")
+        set_country("00")

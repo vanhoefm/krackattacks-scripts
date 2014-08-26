@@ -14,9 +14,9 @@ import utils
 from wlantest import Wlantest
 from wpasupplicant import WpaSupplicant
 
-def autogo(go, freq=None):
+def autogo(go, freq=None, persistent=None):
     logger.info("Start autonomous GO " + go.ifname)
-    res = go.p2p_start_go(freq=freq)
+    res = go.p2p_start_go(freq=freq, persistent=persistent)
     logger.debug("res: " + str(res))
     return res
 

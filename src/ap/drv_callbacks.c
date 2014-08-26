@@ -1044,6 +1044,8 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 				       data->eapol_rx.data_len);
 		break;
 	case EVENT_ASSOC:
+		if (!data)
+			return;
 		hostapd_notif_assoc(hapd, data->assoc_info.addr,
 				    data->assoc_info.req_ies,
 				    data->assoc_info.req_ies_len,

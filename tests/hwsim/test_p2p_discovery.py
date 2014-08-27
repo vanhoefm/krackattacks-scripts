@@ -148,6 +148,9 @@ def test_discovery_dev_type(dev):
     ev = dev[0].wait_event(['P2P-DEVICE-FOUND'], timeout=2)
     if ev is None:
         raise Exception("P2P device not found")
+    peer = dev[0].get_peer(dev[1].p2p_dev_addr())
+    if "1-0050F204-2" not in peer['sec_dev_type']:
+        raise Exception("sec_device_type not reported properly")
 
 def test_discovery_dev_type_go(dev):
     """P2P device discovery with Device Type filter on GO"""

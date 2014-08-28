@@ -1382,11 +1382,85 @@ static int wpa_tdls_send_discovery_response(struct wpa_sm *sm,
 					    struct wpa_tdls_peer *peer,
 					    u8 dialog_token)
 {
+	size_t buf_len = 0;
+	struct wpa_tdls_timeoutie timeoutie;
+	u16 rsn_capab;
+	u8 *rbuf, *pos, *count_pos;
+	u16 count;
+	struct rsn_ie_hdr *hdr;
+	int status;
+
 	wpa_printf(MSG_DEBUG, "TDLS: Sending TDLS Discovery Response "
 		   "(peer " MACSTR ")", MAC2STR(peer->addr));
+	if (!wpa_tdls_get_privacy(sm))
+		goto skip_rsn_ies;
 
-	return wpa_tdls_tpk_send(sm, peer->addr, WLAN_TDLS_DISCOVERY_RESPONSE,
-				 dialog_token, 0, 0, NULL, 0);
+	/* Filling RSN IE */
+	hdr = (struct rsn_ie_hdr *) peer->rsnie_i;
+	hdr->elem_id = WLAN_EID_RSN;
+	WPA_PUT_LE16(hdr->version, RSN_VERSION);
+	pos = (u8 *) (hdr + 1);
+	RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_NO_GROUP_ADDRESSED);
+	pos += RSN_SELECTOR_LEN;
+	count_pos = pos;
+	pos += 2;
+	count = 0;
+
+	/*
+	* AES-CCMP is the default encryption preferred for TDLS, so
+	* RSN IE is filled only with CCMP cipher suite.
+	* Note: TKIP is not used to encrypt TDLS link.
+	*
+	* Regardless of the cipher used on the AP connection, select CCMP
+	* here.
+	*/
+	RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_CCMP);
+	pos += RSN_SELECTOR_LEN;
+	count++;
+	WPA_PUT_LE16(count_pos, count);
+	WPA_PUT_LE16(pos, 1);
+	pos += 2;
+	RSN_SELECTOR_PUT(pos, RSN_AUTH_KEY_MGMT_TPK_HANDSHAKE);
+	pos += RSN_SELECTOR_LEN;
+
+	rsn_capab = WPA_CAPABILITY_PEERKEY_ENABLED;
+	rsn_capab |= RSN_NUM_REPLAY_COUNTERS_16 << 2;
+	WPA_PUT_LE16(pos, rsn_capab);
+	pos += 2;
+	hdr->len = (pos - (u8 *) hdr) - 2;
+	peer->rsnie_i_len = pos - peer->rsnie_i;
+
+	wpa_hexdump(MSG_DEBUG, "TDLS: RSN IE for Discovery Response",
+		    (u8 *) hdr, hdr->len + 2);
+skip_rsn_ies:
+	buf_len = 0;
+	if (wpa_tdls_get_privacy(sm)) {
+		/* Peer RSN IE, Lifetime */
+		buf_len += peer->rsnie_i_len +
+			sizeof(struct wpa_tdls_timeoutie);
+	}
+	rbuf = os_zalloc(buf_len + 1);
+	if (rbuf == NULL) {
+		wpa_tdls_peer_free(sm, peer);
+		return -1;
+	}
+	pos = rbuf;
+
+	if (!wpa_tdls_get_privacy(sm))
+		goto skip_ies;
+	/* Initiator RSN IE */
+	pos = wpa_add_ie(pos, peer->rsnie_i, peer->rsnie_i_len);
+	/* Lifetime */
+	peer->lifetime = TPK_LIFETIME;
+	pos = wpa_add_tdls_timeoutie(pos, (u8 *) &timeoutie,
+				     sizeof(timeoutie), peer->lifetime);
+	wpa_printf(MSG_DEBUG, "TDLS: TPK lifetime %u seconds", peer->lifetime);
+skip_ies:
+	status = wpa_tdls_tpk_send(sm, peer->addr, WLAN_TDLS_DISCOVERY_RESPONSE,
+				   dialog_token, 0, 0,  rbuf, pos - rbuf);
+	os_free(rbuf);
+
+	return status;
 }
 
 

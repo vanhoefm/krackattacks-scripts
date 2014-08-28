@@ -97,14 +97,15 @@ static void hostapd_logger_cb(void *ctx, const u8 *addr, unsigned int module,
 	else if (hapd && hapd->conf)
 		os_snprintf(format, maxlen, "%s:%s%s %s",
 			    hapd->conf->iface, module_str ? " " : "",
-			    module_str, txt);
+			    module_str ? module_str : "", txt);
 	else if (addr)
 		os_snprintf(format, maxlen, "STA " MACSTR "%s%s: %s",
 			    MAC2STR(addr), module_str ? " " : "",
-			    module_str, txt);
+			    module_str ? module_str : "", txt);
 	else
 		os_snprintf(format, maxlen, "%s%s%s",
-			    module_str, module_str ? ": " : "", txt);
+			    module_str ? module_str : "",
+			    module_str ? ": " : "", txt);
 
 	if ((conf_stdout & module) && level >= conf_stdout_level) {
 		wpa_debug_print_timestamp();

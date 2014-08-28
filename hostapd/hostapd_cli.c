@@ -844,6 +844,8 @@ static int hostapd_cli_cmd_interface(struct wpa_ctrl *ctrl, int argc,
 	hostapd_cli_close_connection();
 	os_free(ctrl_ifname);
 	ctrl_ifname = os_strdup(argv[0]);
+	if (ctrl_ifname == NULL)
+		return -1;
 
 	if (hostapd_cli_open_connection(ctrl_ifname)) {
 		printf("Connected to interface '%s.\n", ctrl_ifname);

@@ -96,7 +96,10 @@ static int try_pmk(struct wlantest *wt, struct wlantest_bss *bss,
 		   struct wlantest_pmk *pmk)
 {
 	struct wpa_ptk ptk;
-	size_t ptk_len = sta->pairwise_cipher == WPA_CIPHER_TKIP ? 64 : 48;
+	size_t ptk_len;
+
+	ptk_len = wpa_cipher_key_len(sta->pairwise_cipher) + 32;
+
 	wpa_pmk_to_ptk(pmk->pmk, sizeof(pmk->pmk),
 		       "Pairwise key expansion",
 		       bss->bssid, sta->addr, sta->anonce, sta->snonce,
@@ -105,6 +108,7 @@ static int try_pmk(struct wlantest *wt, struct wlantest_bss *bss,
 	if (check_mic(ptk.kck, ver, data, len) < 0)
 		return -1;
 
+	sta->tk_len = wpa_cipher_key_len(sta->pairwise_cipher);
 	wpa_printf(MSG_INFO, "Derived PTK for STA " MACSTR " BSSID " MACSTR,
 		   MAC2STR(sta->addr), MAC2STR(bss->bssid));
 	sta->counters[WLANTEST_STA_COUNTER_PTK_LEARNED]++;
@@ -170,6 +174,8 @@ static void derive_ptk(struct wlantest *wt, struct wlantest_bss *bss,
 				   MACSTR " BSSID " MACSTR,
 				   MAC2STR(sta->addr), MAC2STR(bss->bssid));
 			add_note(wt, MSG_DEBUG, "Using pre-set PTK");
+			ptk->ptk_len = 32 +
+				wpa_cipher_key_len(sta->pairwise_cipher);
 			os_memcpy(&sta->ptk, &ptk->ptk, sizeof(ptk->ptk));
 			wpa_hexdump(MSG_DEBUG, "PTK:KCK", sta->ptk.kck, 16);
 			wpa_hexdump(MSG_DEBUG, "PTK:KEK", sta->ptk.kek, 16);

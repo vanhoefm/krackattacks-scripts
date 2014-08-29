@@ -72,6 +72,7 @@ OBJS += ctrl.o
 OBJS += inject.o
 OBJS += wep.o
 OBJS += bip.o
+OBJS += gcmp.o
 
 LIBS += -lpcap
 

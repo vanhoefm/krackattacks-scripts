@@ -103,14 +103,24 @@ static u8 * try_all_ptk(struct wlantest *wt, int pairwise_cipher,
 
 	wpa_debug_level = MSG_WARNING;
 	dl_list_for_each(ptk, &wt->ptk, struct wlantest_ptk, list) {
+		unsigned int tk_len = ptk->ptk_len - 32;
 		decrypted = NULL;
 		if ((pairwise_cipher == WPA_CIPHER_CCMP ||
-		     pairwise_cipher == 0) && ptk->ptk_len == 48) {
+		     pairwise_cipher == 0) && tk_len == 16) {
 			decrypted = ccmp_decrypt(ptk->ptk.tk1, hdr, data,
 						 data_len, decrypted_len);
-		}
-		if ((pairwise_cipher == WPA_CIPHER_TKIP ||
-		     pairwise_cipher == 0) && ptk->ptk_len == 64) {
+		} else if ((pairwise_cipher == WPA_CIPHER_CCMP_256 ||
+			    pairwise_cipher == 0) && tk_len == 32) {
+			decrypted = ccmp_256_decrypt(ptk->ptk.tk1, hdr, data,
+						     data_len, decrypted_len);
+		} else if ((pairwise_cipher == WPA_CIPHER_GCMP ||
+			    pairwise_cipher == WPA_CIPHER_GCMP_256 ||
+			    pairwise_cipher == 0) &&
+			   (tk_len == 16 || tk_len == 32)) {
+			decrypted = gcmp_decrypt(ptk->ptk.tk1, tk_len, hdr,
+						 data, data_len, decrypted_len);
+		} else if ((pairwise_cipher == WPA_CIPHER_TKIP ||
+			    pairwise_cipher == 0) && tk_len == 32) {
 			decrypted = tkip_decrypt(ptk->ptk.tk1, hdr, data,
 						 data_len, decrypted_len);
 		}
@@ -133,7 +143,7 @@ static void rx_data_bss_prot_group(struct wlantest *wt,
 {
 	struct wlantest_bss *bss;
 	int keyid;
-	u8 *decrypted;
+	u8 *decrypted = NULL;
 	size_t dlen;
 	u8 pn[6];
 
@@ -209,9 +219,17 @@ skip_replay_det:
 					 &dlen);
 	else if (bss->group_cipher == WPA_CIPHER_WEP40)
 		decrypted = wep_decrypt(wt, hdr, data, len, &dlen);
-	else
+	else if (bss->group_cipher == WPA_CIPHER_CCMP)
 		decrypted = ccmp_decrypt(bss->gtk[keyid], hdr, data, len,
 					 &dlen);
+	else if (bss->group_cipher == WPA_CIPHER_CCMP_256)
+		decrypted = ccmp_256_decrypt(bss->gtk[keyid], hdr, data, len,
+					     &dlen);
+	else if (bss->group_cipher == WPA_CIPHER_GCMP ||
+		 bss->group_cipher == WPA_CIPHER_GCMP_256)
+		decrypted = gcmp_decrypt(bss->gtk[keyid], bss->gtk_len[keyid],
+					 hdr, data, len, &dlen);
+
 	if (decrypted) {
 		rx_data_process(wt, bss->bssid, NULL, dst, src, decrypted,
 				dlen, 1, NULL);
@@ -383,15 +401,31 @@ static void rx_data_bss_prot(struct wlantest *wt,
 	}
 
 skip_replay_det:
-	if (tk)
-		decrypted = ccmp_decrypt(tk, hdr, data, len, &dlen);
-	else if (sta->pairwise_cipher == WPA_CIPHER_TKIP)
+	if (tk) {
+		if (sta->pairwise_cipher == WPA_CIPHER_CCMP_256)
+			decrypted = ccmp_256_decrypt(tk, hdr, data, len, &dlen);
+		else if (sta->pairwise_cipher == WPA_CIPHER_GCMP ||
+			 sta->pairwise_cipher == WPA_CIPHER_GCMP_256)
+			decrypted = gcmp_decrypt(tk, sta->tk_len, hdr, data,
+						 len, &dlen);
+		else
+			decrypted = ccmp_decrypt(tk, hdr, data, len, &dlen);
+	} else if (sta->pairwise_cipher == WPA_CIPHER_TKIP) {
 		decrypted = tkip_decrypt(sta->ptk.tk1, hdr, data, len, &dlen);
-	else if (sta->pairwise_cipher == WPA_CIPHER_WEP40)
+	} else if (sta->pairwise_cipher == WPA_CIPHER_WEP40) {
 		decrypted = wep_decrypt(wt, hdr, data, len, &dlen);
-	else if (sta->ptk_set)
-		decrypted = ccmp_decrypt(sta->ptk.tk1, hdr, data, len, &dlen);
-	else {
+	} else if (sta->ptk_set) {
+		if (sta->pairwise_cipher == WPA_CIPHER_CCMP_256)
+			decrypted = ccmp_256_decrypt(sta->ptk.tk1, hdr, data,
+						     len, &dlen);
+		else if (sta->pairwise_cipher == WPA_CIPHER_GCMP ||
+			 sta->pairwise_cipher == WPA_CIPHER_GCMP_256)
+			decrypted = gcmp_decrypt(sta->ptk.tk1, sta->tk_len,
+						 hdr, data, len, &dlen);
+		else
+			decrypted = ccmp_decrypt(sta->ptk.tk1, hdr, data, len,
+						 &dlen);
+	} else {
 		decrypted = try_all_ptk(wt, sta->pairwise_cipher, hdr, data,
 					len, &dlen);
 		ptk_iter_done = 1;

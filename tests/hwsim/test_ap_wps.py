@@ -2102,3 +2102,26 @@ def test_ap_wps_disabled(dev, apdev):
         raise Exception("WPS_PBC succeeded unexpectedly")
     if "FAIL" not in hapd.request("WPS_CANCEL"):
         raise Exception("WPS_CANCEL succeeded unexpectedly")
+
+def test_ap_wps_mixed_cred(dev, apdev):
+    """WPS 2.0 STA merging mixed mode WPA/WPA2 credentials"""
+    ssid = "test-wps-wep"
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                     "skip_cred_build": "1", "extra_cred": "wps-mixed-cred" })
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    hapd.request("WPS_PBC")
+    dev[0].request("WPS_PBC")
+    ev = dev[0].wait_event(["WPS-SUCCESS"], timeout=15)
+    if ev is None:
+        raise Exception("WPS-SUCCESS event timed out")
+    nets = dev[0].list_networks()
+    if len(nets) != 1:
+        raise Exception("Unexpected number of network blocks")
+    id = nets[0]['id']
+    proto = dev[0].get_network(id, "proto")
+    if proto != "WPA RSN":
+        raise Exception("Unexpected merged proto field value: " + proto)
+    pairwise = dev[0].get_network(id, "pairwise")
+    if pairwise != "CCMP TKIP":
+        raise Exception("Unexpected merged pairwise field value: " + pairwise)

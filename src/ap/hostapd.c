@@ -693,10 +693,10 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 	u8 if_addr[ETH_ALEN];
 
 	wpa_printf(MSG_DEBUG, "%s(hapd=%p (%s), first=%d)",
-		   __func__, hapd, hapd->conf->iface, first);
+		   __func__, hapd, conf->iface, first);
 
 #ifdef EAP_SERVER_TNC
-	if (hapd->conf->tnc && tncs_global_init() < 0) {
+	if (conf->tnc && tncs_global_init() < 0) {
 		wpa_printf(MSG_ERROR, "Failed to initialize TNCS");
 		return -1;
 	}
@@ -704,37 +704,37 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 
 	if (hapd->started) {
 		wpa_printf(MSG_ERROR, "%s: Interface %s was already started",
-			   __func__, hapd->conf->iface);
+			   __func__, conf->iface);
 		return -1;
 	}
 	hapd->started = 1;
 
 	if (!first || first == -1) {
-		if (hostapd_mac_comp_empty(hapd->conf->bssid) == 0) {
+		if (hostapd_mac_comp_empty(conf->bssid) == 0) {
 			/* Allocate the next available BSSID. */
 			do {
 				inc_byte_array(hapd->own_addr, ETH_ALEN);
 			} while (mac_in_conf(hapd->iconf, hapd->own_addr));
 		} else {
 			/* Allocate the configured BSSID. */
-			os_memcpy(hapd->own_addr, hapd->conf->bssid, ETH_ALEN);
+			os_memcpy(hapd->own_addr, conf->bssid, ETH_ALEN);
 
 			if (hostapd_mac_comp(hapd->own_addr,
 					     hapd->iface->bss[0]->own_addr) ==
 			    0) {
 				wpa_printf(MSG_ERROR, "BSS '%s' may not have "
 					   "BSSID set to the MAC address of "
-					   "the radio", hapd->conf->iface);
+					   "the radio", conf->iface);
 				return -1;
 			}
 		}
 
 		hapd->interface_added = 1;
 		if (hostapd_if_add(hapd->iface->bss[0], WPA_IF_AP_BSS,
-				   hapd->conf->iface, hapd->own_addr, hapd,
+				   conf->iface, hapd->own_addr, hapd,
 				   &hapd->drv_priv, force_ifname, if_addr,
-				   hapd->conf->bridge[0] ? hapd->conf->bridge :
-				   NULL, first == -1)) {
+				   conf->bridge[0] ? conf->bridge : NULL,
+				   first == -1)) {
 			wpa_printf(MSG_ERROR, "Failed to add BSS (BSSID="
 				   MACSTR ")", MAC2STR(hapd->own_addr));
 			hapd->interface_added = 0;
@@ -749,7 +749,7 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 	hostapd_set_privacy(hapd, 0);
 
 	hostapd_broadcast_wep_clear(hapd);
-	if (hostapd_setup_encryption(hapd->conf->iface, hapd))
+	if (hostapd_setup_encryption(conf->iface, hapd))
 		return -1;
 
 	/*
@@ -783,9 +783,8 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 	if (!hostapd_drv_none(hapd)) {
 		wpa_printf(MSG_ERROR, "Using interface %s with hwaddr " MACSTR
 			   " and ssid \"%s\"",
-			   hapd->conf->iface, MAC2STR(hapd->own_addr),
-			   wpa_ssid_txt(hapd->conf->ssid.ssid,
-					hapd->conf->ssid.ssid_len));
+			   conf->iface, MAC2STR(hapd->own_addr),
+			   wpa_ssid_txt(conf->ssid.ssid, conf->ssid.ssid_len));
 	}
 
 	if (hostapd_setup_wpa_psk(conf)) {
@@ -810,17 +809,17 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 		return -1;
 	}
 
-	if (hapd->conf->radius_das_port) {
+	if (conf->radius_das_port) {
 		struct radius_das_conf das_conf;
 		os_memset(&das_conf, 0, sizeof(das_conf));
-		das_conf.port = hapd->conf->radius_das_port;
-		das_conf.shared_secret = hapd->conf->radius_das_shared_secret;
+		das_conf.port = conf->radius_das_port;
+		das_conf.shared_secret = conf->radius_das_shared_secret;
 		das_conf.shared_secret_len =
-			hapd->conf->radius_das_shared_secret_len;
-		das_conf.client_addr = &hapd->conf->radius_das_client_addr;
-		das_conf.time_window = hapd->conf->radius_das_time_window;
+			conf->radius_das_shared_secret_len;
+		das_conf.client_addr = &conf->radius_das_client_addr;
+		das_conf.time_window = conf->radius_das_time_window;
 		das_conf.require_event_timestamp =
-			hapd->conf->radius_das_require_event_timestamp;
+			conf->radius_das_require_event_timestamp;
 		das_conf.ctx = hapd;
 		das_conf.disconnect = hostapd_das_disconnect;
 		hapd->radius_das = radius_das_init(&das_conf);
@@ -847,7 +846,7 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 		return -1;
 	}
 
-	if ((hapd->conf->wpa || hapd->conf->osen) && hostapd_setup_wpa(hapd))
+	if ((conf->wpa || conf->osen) && hostapd_setup_wpa(hapd))
 		return -1;
 
 	if (accounting_init(hapd)) {
@@ -855,8 +854,8 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 		return -1;
 	}
 
-	if (hapd->conf->ieee802_11f &&
-	    (hapd->iapp = iapp_init(hapd, hapd->conf->iapp_iface)) == NULL) {
+	if (conf->ieee802_11f &&
+	    (hapd->iapp = iapp_init(hapd, conf->iapp_iface)) == NULL) {
 		wpa_printf(MSG_ERROR, "IEEE 802.11F (IAPP) initialization "
 			   "failed.");
 		return -1;
@@ -881,7 +880,7 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 		return -1;
 	}
 
-	if (!hapd->conf->start_disabled && ieee802_11_set_beacon(hapd) < 0)
+	if (!conf->start_disabled && ieee802_11_set_beacon(hapd) < 0)
 		return -1;
 
 	if (hapd->wpa_auth && wpa_init_keys(hapd->wpa_auth) < 0)

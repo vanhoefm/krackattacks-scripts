@@ -930,11 +930,13 @@ static u8 * mgmt_ccmp_decrypt(struct wlantest *wt, const u8 *data, size_t len,
 	if (os_memcmp(pn, rsc, 6) <= 0) {
 		u16 seq_ctrl = le_to_host16(hdr->seq_ctrl);
 		add_note(wt, MSG_INFO, "CCMP/TKIP replay detected: A1=" MACSTR
-			 " A2=" MACSTR " A3=" MACSTR " seq=%u frag=%u",
+			 " A2=" MACSTR " A3=" MACSTR " seq=%u frag=%u%s",
 			 MAC2STR(hdr->addr1), MAC2STR(hdr->addr2),
 			 MAC2STR(hdr->addr3),
 			 WLAN_GET_SEQ_SEQ(seq_ctrl),
-			 WLAN_GET_SEQ_FRAG(seq_ctrl));
+			 WLAN_GET_SEQ_FRAG(seq_ctrl),
+			 (le_to_host16(hdr->frame_control) & WLAN_FC_RETRY) ?
+			 " Retry" : "");
 		wpa_hexdump(MSG_INFO, "RX PN", pn, 6);
 		wpa_hexdump(MSG_INFO, "RSC", rsc, 6);
 	}

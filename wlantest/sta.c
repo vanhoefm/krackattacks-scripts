@@ -169,7 +169,7 @@ void sta_update_assoc(struct wlantest_sta *sta, struct ieee802_11_elems *elems)
 skip_rsn_wpa:
 	wpa_printf(MSG_INFO, "STA " MACSTR
 		   " proto=%s%s%s%s"
-		   "pairwise=%s%s%s%s"
+		   "pairwise=%s%s%s%s%s%s%s"
 		   "key_mgmt=%s%s%s%s%s%s%s%s%s"
 		   "rsn_capab=%s%s%s%s%s",
 		   MAC2STR(sta->addr),
@@ -181,6 +181,11 @@ skip_rsn_wpa:
 		   sta->pairwise_cipher & WPA_CIPHER_NONE ? "NONE " : "",
 		   sta->pairwise_cipher & WPA_CIPHER_TKIP ? "TKIP " : "",
 		   sta->pairwise_cipher & WPA_CIPHER_CCMP ? "CCMP " : "",
+		   bss->pairwise_cipher & WPA_CIPHER_CCMP_256 ? "CCMP-256 " :
+		   "",
+		   bss->pairwise_cipher & WPA_CIPHER_GCMP ? "GCMP " : "",
+		   bss->pairwise_cipher & WPA_CIPHER_GCMP_256 ? "GCMP-256 " :
+		   "",
 		   sta->key_mgmt == 0 ? "N/A " : "",
 		   sta->key_mgmt & WPA_KEY_MGMT_IEEE8021X ? "EAP " : "",
 		   sta->key_mgmt & WPA_KEY_MGMT_PSK ? "PSK " : "",

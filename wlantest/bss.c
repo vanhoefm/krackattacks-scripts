@@ -275,8 +275,8 @@ void bss_update(struct wlantest *wt, struct wlantest_bss *bss,
 
 	wpa_printf(MSG_INFO, "BSS " MACSTR
 		   " proto=%s%s%s%s"
-		   "pairwise=%s%s%s%s"
-		   "group=%s%s%s%s%s%s"
+		   "pairwise=%s%s%s%s%s%s%s"
+		   "group=%s%s%s%s%s%s%s%s%s"
 		   "mgmt_group_cipher=%s"
 		   "key_mgmt=%s%s%s%s%s%s%s%s%s"
 		   "rsn_capab=%s%s%s%s%s",
@@ -289,12 +289,20 @@ void bss_update(struct wlantest *wt, struct wlantest_bss *bss,
 		   bss->pairwise_cipher & WPA_CIPHER_NONE ? "NONE " : "",
 		   bss->pairwise_cipher & WPA_CIPHER_TKIP ? "TKIP " : "",
 		   bss->pairwise_cipher & WPA_CIPHER_CCMP ? "CCMP " : "",
+		   bss->pairwise_cipher & WPA_CIPHER_CCMP_256 ? "CCMP-256 " :
+		   "",
+		   bss->pairwise_cipher & WPA_CIPHER_GCMP ? "GCMP " : "",
+		   bss->pairwise_cipher & WPA_CIPHER_GCMP_256 ? "GCMP-256 " :
+		   "",
 		   bss->group_cipher == 0 ? "N/A " : "",
 		   bss->group_cipher & WPA_CIPHER_NONE ? "NONE " : "",
 		   bss->group_cipher & WPA_CIPHER_WEP40 ? "WEP40 " : "",
 		   bss->group_cipher & WPA_CIPHER_WEP104 ? "WEP104 " : "",
 		   bss->group_cipher & WPA_CIPHER_TKIP ? "TKIP " : "",
 		   bss->group_cipher & WPA_CIPHER_CCMP ? "CCMP " : "",
+		   bss->group_cipher & WPA_CIPHER_CCMP_256 ? "CCMP-256 " : "",
+		   bss->group_cipher & WPA_CIPHER_GCMP ? "GCMP " : "",
+		   bss->group_cipher & WPA_CIPHER_GCMP_256 ? "GCMP-256 " : "",
 		   bss->mgmt_group_cipher & WPA_CIPHER_AES_128_CMAC ? "BIP " :
 		   "N/A ",
 		   bss->key_mgmt == 0 ? "N/A " : "",

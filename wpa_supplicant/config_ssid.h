@@ -651,6 +651,8 @@ struct wpa_ssid {
 #ifdef CONFIG_HS20
 	int update_identifier;
 #endif /* CONFIG_HS20 */
+
+	unsigned int wps_run;
 };
 
 #endif /* CONFIG_SSID_H */

@@ -7930,10 +7930,13 @@ static int wpa_driver_nl80211_sta_add(void *priv,
 
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(bss->ifname));
 	NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, params->addr);
-	NLA_PUT(msg, NL80211_ATTR_STA_SUPPORTED_RATES, params->supp_rates_len,
-		params->supp_rates);
-	wpa_hexdump(MSG_DEBUG, "  * supported rates", params->supp_rates,
-		    params->supp_rates_len);
+
+	if (!params->set || (params->flags & WPA_STA_TDLS_PEER)) {
+		NLA_PUT(msg, NL80211_ATTR_STA_SUPPORTED_RATES,
+			params->supp_rates_len, params->supp_rates);
+		wpa_hexdump(MSG_DEBUG, "  * supported rates",
+			    params->supp_rates, params->supp_rates_len);
+	}
 	if (!params->set) {
 		if (params->aid) {
 			wpa_printf(MSG_DEBUG, "  * aid=%u", params->aid);

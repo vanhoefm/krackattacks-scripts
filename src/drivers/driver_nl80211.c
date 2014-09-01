@@ -1367,7 +1367,7 @@ static void wpa_driver_nl80211_event_rtm_dellink(void *ctx,
 		attr = RTA_NEXT(attr, attrlen);
 	}
 
-	if (ifname[0])
+	if (ifname[0] && (ifi->ifi_family != AF_BRIDGE || !brid))
 		wpa_driver_nl80211_event_dellink(drv, ifname);
 
 	if (ifi->ifi_family == AF_BRIDGE && brid) {

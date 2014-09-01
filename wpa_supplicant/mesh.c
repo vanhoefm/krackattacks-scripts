@@ -257,6 +257,19 @@ void wpa_mesh_notify_peer(struct wpa_supplicant *wpa_s, const u8 *addr,
 }
 
 
+void wpa_supplicant_mesh_add_scan_ie(struct wpa_supplicant *wpa_s,
+				     struct wpabuf **extra_ie)
+{
+	/* EID + 0-length (wildcard) mesh-id */
+	size_t ielen = 2;
+
+	if (wpabuf_resize(extra_ie, ielen) == 0) {
+		wpabuf_put_u8(*extra_ie, WLAN_EID_MESH_ID);
+		wpabuf_put_u8(*extra_ie, 0);
+	}
+}
+
+
 int wpa_supplicant_join_mesh(struct wpa_supplicant *wpa_s,
 			     struct wpa_ssid *ssid)
 {

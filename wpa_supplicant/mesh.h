@@ -19,12 +19,19 @@ void wpa_supplicant_mesh_iface_deinit(struct wpa_supplicant *wpa_s,
 
 void wpa_mesh_notify_peer(struct wpa_supplicant *wpa_s, const u8 *addr,
 			  const u8 *ies, size_t ie_len);
+void wpa_supplicant_mesh_add_scan_ie(struct wpa_supplicant *wpa_s,
+				     struct wpabuf **extra_ie);
 
 #else /* CONFIG_MESH */
 
 static inline void wpa_mesh_notify_peer(struct wpa_supplicant *wpa_s,
 					const u8 *addr,
 					const u8 *ies, size_t ie_len)
+{
+}
+
+static inline void wpa_supplicant_mesh_add_scan_ie(struct wpa_supplicant *wpa_s,
+						   struct wpabuf **extra_ie)
 {
 }
 

@@ -22,6 +22,7 @@
 #include "notify.h"
 #include "bss.h"
 #include "scan.h"
+#include "mesh.h"
 
 
 static void wpa_supplicant_gen_assoc_event(struct wpa_supplicant *wpa_s)
@@ -459,6 +460,8 @@ static struct wpabuf * wpa_supplicant_extra_ies(struct wpa_supplicant *wpa_s)
 			wpas_p2p_scan_ie(wpa_s, extra_ie);
 	}
 #endif /* CONFIG_P2P */
+
+	wpa_supplicant_mesh_add_scan_ie(wpa_s, &extra_ie);
 
 #endif /* CONFIG_WPS */
 

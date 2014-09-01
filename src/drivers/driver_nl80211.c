@@ -7872,6 +7872,8 @@ static u32 sta_flags_nl80211(int flags)
 		f |= BIT(NL80211_STA_FLAG_MFP);
 	if (flags & WPA_STA_TDLS_PEER)
 		f |= BIT(NL80211_STA_FLAG_TDLS_PEER);
+	if (flags & WPA_STA_AUTHENTICATED)
+		f |= BIT(NL80211_STA_FLAG_AUTHENTICATED);
 
 	return f;
 }

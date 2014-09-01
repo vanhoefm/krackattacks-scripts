@@ -1247,6 +1247,7 @@ struct wpa_bss_params {
 #define WPA_STA_SHORT_PREAMBLE BIT(2)
 #define WPA_STA_MFP BIT(3)
 #define WPA_STA_TDLS_PEER BIT(4)
+#define WPA_STA_AUTHENTICATED BIT(5)
 
 enum tdls_oper {
 	TDLS_DISCOVERY_REQ,

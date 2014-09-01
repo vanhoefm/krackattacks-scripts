@@ -1243,8 +1243,9 @@ static void wpa_driver_nl80211_event_rtm_newlink(void *ctx,
 	}
 	extra[sizeof(extra) - 1] = '\0';
 
-	wpa_printf(MSG_DEBUG, "RTM_NEWLINK: ifi_index=%d ifname=%s%s ifi_flags=0x%x (%s%s%s%s)",
-		   ifi->ifi_index, ifname, extra, ifi->ifi_flags,
+	wpa_printf(MSG_DEBUG, "RTM_NEWLINK: ifi_index=%d ifname=%s%s ifi_family=%d ifi_flags=0x%x (%s%s%s%s)",
+		   ifi->ifi_index, ifname, extra, ifi->ifi_family,
+		   ifi->ifi_flags,
 		   (ifi->ifi_flags & IFF_UP) ? "[UP]" : "",
 		   (ifi->ifi_flags & IFF_RUNNING) ? "[RUNNING]" : "",
 		   (ifi->ifi_flags & IFF_LOWER_UP) ? "[LOWER_UP]" : "",
@@ -1340,6 +1341,7 @@ static void wpa_driver_nl80211_event_rtm_dellink(void *ctx,
 	struct rtattr *attr;
 	u32 brid = 0;
 	char ifname[IFNAMSIZ + 1];
+	char extra[100], *pos, *end;
 
 	drv = nl80211_find_drv(global, ifi->ifi_index, buf, len);
 	if (!drv) {
@@ -1348,6 +1350,9 @@ static void wpa_driver_nl80211_event_rtm_dellink(void *ctx,
 		return;
 	}
 
+	extra[0] = '\0';
+	pos = extra;
+	end = pos + sizeof(extra);
 	ifname[0] = '\0';
 
 	attrlen = len;
@@ -1362,10 +1367,28 @@ static void wpa_driver_nl80211_event_rtm_dellink(void *ctx,
 			break;
 		case IFLA_MASTER:
 			brid = nla_get_u32((struct nlattr *) attr);
+			pos += os_snprintf(pos, end - pos, " master=%u", brid);
+			break;
+		case IFLA_OPERSTATE:
+			pos += os_snprintf(pos, end - pos, " operstate=%u",
+					   nla_get_u32((struct nlattr *) attr));
+			break;
+		case IFLA_LINKMODE:
+			pos += os_snprintf(pos, end - pos, " linkmode=%u",
+					   nla_get_u32((struct nlattr *) attr));
 			break;
 		}
 		attr = RTA_NEXT(attr, attrlen);
 	}
+	extra[sizeof(extra) - 1] = '\0';
+
+	wpa_printf(MSG_DEBUG, "RTM_DELLINK: ifi_index=%d ifname=%s%s ifi_family=%d ifi_flags=0x%x (%s%s%s%s)",
+		   ifi->ifi_index, ifname, extra, ifi->ifi_family,
+		   ifi->ifi_flags,
+		   (ifi->ifi_flags & IFF_UP) ? "[UP]" : "",
+		   (ifi->ifi_flags & IFF_RUNNING) ? "[RUNNING]" : "",
+		   (ifi->ifi_flags & IFF_LOWER_UP) ? "[LOWER_UP]" : "",
+		   (ifi->ifi_flags & IFF_DORMANT) ? "[DORMANT]" : "");
 
 	if (ifname[0] && (ifi->ifi_family != AF_BRIDGE || !brid))
 		wpa_driver_nl80211_event_dellink(drv, ifname);

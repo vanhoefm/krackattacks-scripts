@@ -170,6 +170,7 @@ struct hostapd_hw_modes {
 #define IEEE80211_MODE_INFRA	0
 #define IEEE80211_MODE_IBSS	1
 #define IEEE80211_MODE_AP	2
+#define IEEE80211_MODE_MESH	5
 
 #define IEEE80211_CAP_ESS	0x0001
 #define IEEE80211_CAP_IBSS	0x0002

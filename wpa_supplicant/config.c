@@ -1730,7 +1730,11 @@ static const struct parse_data ssid_fields[] = {
 	{ INTe(fragment_size) },
 	{ INTe(ocsp) },
 #endif /* IEEE8021X_EAPOL */
+#ifdef CONFIG_MESH
+	{ INT_RANGE(mode, 0, 5) },
+#else /* CONFIG_MESH */
 	{ INT_RANGE(mode, 0, 4) },
+#endif /* CONFIG_MESH */
 	{ INT_RANGE(proactive_key_caching, 0, 1) },
 	{ INT_RANGE(disabled, 0, 2) },
 	{ STR(id_str) },

@@ -52,6 +52,7 @@
 #include "hs20_supplicant.h"
 #include "wnm_sta.h"
 #include "wpas_kay.h"
+#include "mesh.h"
 
 const char *wpa_supplicant_version =
 "wpa_supplicant v" VERSION_STR "\n"
@@ -1532,6 +1533,31 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
+	if (ssid->mode == WPAS_MODE_MESH) {
+#ifdef CONFIG_MESH
+		if (!(wpa_s->drv_flags & WPA_DRIVER_FLAGS_MESH)) {
+			wpa_msg(wpa_s, MSG_INFO,
+				"Driver does not support mesh mode");
+			return;
+		}
+		if (bss)
+			ssid->frequency = bss->freq;
+		if (wpa_supplicant_join_mesh(wpa_s, ssid) < 0) {
+			wpa_msg(wpa_s, MSG_ERROR, "Could not join mesh");
+			return;
+		}
+		wpa_s->current_bss = bss;
+		wpa_msg_ctrl(wpa_s, MSG_INFO, MESH_GROUP_STARTED
+			     "ssid=\"%s\" id=%d",
+			     wpa_ssid_txt(ssid->ssid, ssid->ssid_len),
+			     ssid->id);
+#else /* CONFIG_MESH */
+		wpa_msg(wpa_s, MSG_ERROR,
+			"mesh mode support not included in the build");
+#endif /* CONFIG_MESH */
+		return;
+	}
+
 #ifdef CONFIG_TDLS
 	if (bss)
 		wpa_tdls_ap_ies(wpa_s->wpa, (const u8 *) (bss + 1),
@@ -1879,8 +1905,9 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 		params.fixed_bssid = 1;
 	}
 
-	if (ssid->mode == WPAS_MODE_IBSS && ssid->frequency > 0 &&
-	    params.freq.freq == 0) {
+	/* Initial frequency for IBSS/mesh */
+	if ((ssid->mode == WPAS_MODE_IBSS || ssid->mode == WPAS_MODE_MESH) &&
+	    ssid->frequency > 0 && params.freq.freq == 0) {
 		enum hostapd_hw_mode hw_mode;
 		u8 channel;
 
@@ -2143,6 +2170,14 @@ void wpa_supplicant_deauthenticate(struct wpa_supplicant *wpa_s,
 	wpa_tdls_teardown_peers(wpa_s->wpa);
 #endif /* CONFIG_TDLS */
 
+#ifdef CONFIG_MESH
+	if (wpa_s->ifmsh) {
+		wpa_msg_ctrl(wpa_s, MSG_INFO, MESH_GROUP_REMOVED "%s",
+			     wpa_s->ifname);
+		wpa_supplicant_leave_mesh(wpa_s);
+	}
+#endif /* CONFIG_MESH */
+
 	if (addr) {
 		wpa_drv_deauthenticate(wpa_s, addr, reason_code);
 		os_memset(&event, 0, sizeof(event));
@@ -2308,8 +2343,12 @@ void wpa_supplicant_select_network(struct wpa_supplicant *wpa_s,
 	if (ssid) {
 		wpa_s->current_ssid = ssid;
 		eapol_sm_notify_config(wpa_s->eapol, NULL, NULL);
+		wpa_s->connect_without_scan =
+			(ssid->mode == WPAS_MODE_MESH) ? ssid : NULL;
+	} else {
+		wpa_s->connect_without_scan = NULL;
 	}
-	wpa_s->connect_without_scan = NULL;
+
 	wpa_s->disconnected = 0;
 	wpa_s->reassociate = 1;
 
@@ -3927,6 +3966,13 @@ static void wpa_supplicant_deinit_iface(struct wpa_supplicant *wpa_s,
 		wpa_supplicant_ctrl_iface_deinit(wpa_s->ctrl_iface);
 		wpa_s->ctrl_iface = NULL;
 	}
+
+#ifdef CONFIG_MESH
+	if (wpa_s->ifmsh) {
+		wpa_supplicant_mesh_iface_deinit(wpa_s, wpa_s->ifmsh);
+		wpa_s->ifmsh = NULL;
+	}
+#endif /* CONFIG_MESH */
 
 	if (wpa_s->conf != NULL) {
 		wpa_config_free(wpa_s->conf);

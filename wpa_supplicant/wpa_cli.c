@@ -1752,6 +1752,24 @@ static int wpa_cli_cmd_roam(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+#ifdef CONFIG_MESH
+
+static int wpa_cli_cmd_mesh_group_add(struct wpa_ctrl *ctrl, int argc,
+				      char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "MESH_GROUP_ADD", 1, argc, argv);
+}
+
+
+static int wpa_cli_cmd_mesh_group_remove(struct wpa_ctrl *ctrl, int argc,
+					 char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "MESH_GROUP_REMOVE", 1, argc, argv);
+}
+
+#endif /* CONFIG_MESH */
+
+
 #ifdef CONFIG_P2P
 
 static int wpa_cli_cmd_p2p_find(struct wpa_ctrl *ctrl, int argc, char *argv[])
@@ -2781,6 +2799,14 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "roam", wpa_cli_cmd_roam, wpa_cli_complete_bss,
 	  cli_cmd_flag_none,
 	  "<addr> = roam to the specified BSS" },
+#ifdef CONFIG_MESH
+	{ "mesh_group_add", wpa_cli_cmd_mesh_group_add, NULL,
+	  cli_cmd_flag_none,
+	  "<network id> = join a mesh network (disable others)" },
+	{ "mesh_group_remove", wpa_cli_cmd_mesh_group_remove, NULL,
+	  cli_cmd_flag_none,
+	  "<ifname> = Remove mesh group interface" },
+#endif /* CONFIG_MESH */
 #ifdef CONFIG_P2P
 	{ "p2p_find", wpa_cli_cmd_p2p_find, wpa_cli_complete_p2p_find,
 	  cli_cmd_flag_none,

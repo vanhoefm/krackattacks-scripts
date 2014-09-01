@@ -1020,7 +1020,9 @@ struct wpa_driver_capa {
 #define WPA_DRIVER_FLAGS_QOS_MAPPING			0x40000000
 /* Driver supports CSA in AP mode */
 #define WPA_DRIVER_FLAGS_AP_CSA				0x80000000
-	unsigned int flags;
+/* Driver supports mesh */
+#define WPA_DRIVER_FLAGS_MESH			0x0000000100000000ULL
+	u64 flags;
 
 	int max_scan_ssids;
 	int max_sched_scan_ssids;

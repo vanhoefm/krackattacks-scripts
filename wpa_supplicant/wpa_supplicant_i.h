@@ -571,7 +571,7 @@ struct wpa_supplicant {
 	int scan_id[MAX_SCAN_ID];
 	unsigned int scan_id_count;
 
-	unsigned int drv_flags;
+	u64 drv_flags;
 	unsigned int drv_enc;
 
 	/*

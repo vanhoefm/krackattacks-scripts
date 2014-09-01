@@ -604,6 +604,12 @@ static struct i802_bss * get_bss_ifindex(struct wpa_driver_nl80211_data *drv,
 }
 
 
+static int is_mesh_interface(enum nl80211_iftype nlmode)
+{
+	return nlmode == NL80211_IFTYPE_MESH_POINT;
+}
+
+
 static void nl80211_mark_disconnected(struct wpa_driver_nl80211_data *drv)
 {
 	if (drv->associated)
@@ -4762,6 +4768,40 @@ static int nl80211_mgmt_subscribe_non_ap(struct i802_bss *bss)
 	if (nl80211_register_action_frame(bss, (u8 *) "\x0a\x1a", 2) < 0)
 		ret = -1;
 #endif /* CONFIG_HS20 */
+
+	nl80211_mgmt_handle_register_eloop(bss);
+
+	return ret;
+}
+
+
+static int nl80211_mgmt_subscribe_mesh(struct i802_bss *bss)
+{
+	int ret = 0;
+
+	if (nl80211_alloc_mgmt_handle(bss))
+		return -1;
+
+	wpa_printf(MSG_DEBUG,
+		   "nl80211: Subscribe to mgmt frames with mesh handle %p",
+		   bss->nl_mgmt);
+
+	/* Auth frames for mesh SAE */
+	if (nl80211_register_frame(bss, bss->nl_mgmt,
+				   (WLAN_FC_TYPE_MGMT << 2) |
+				   (WLAN_FC_STYPE_AUTH << 4),
+				   NULL, 0) < 0)
+		ret = -1;
+
+	/* Mesh peering open */
+	if (nl80211_register_action_frame(bss, (u8 *) "\x0f\x01", 2) < 0)
+		ret = -1;
+	/* Mesh peering confirm */
+	if (nl80211_register_action_frame(bss, (u8 *) "\x0f\x02", 2) < 0)
+		ret = -1;
+	/* Mesh peering close */
+	if (nl80211_register_action_frame(bss, (u8 *) "\x0f\x03", 2) < 0)
+		ret = -1;
 
 	nl80211_mgmt_handle_register_eloop(bss);
 
@@ -9509,7 +9549,12 @@ done:
 		nl80211_mgmt_unsubscribe(bss, "mode change");
 	}
 
+	if (is_mesh_interface(nlmode) &&
+	    nl80211_mgmt_subscribe_mesh(bss))
+		return -1;
+
 	if (!bss->in_deinit && !is_ap_interface(nlmode) &&
+	    !is_mesh_interface(nlmode) &&
 	    nl80211_mgmt_subscribe_non_ap(bss) < 0)
 		wpa_printf(MSG_DEBUG, "nl80211: Failed to register Action "
 			   "frame processing - ignore for now");

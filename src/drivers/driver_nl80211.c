@@ -10078,6 +10078,9 @@ static int i802_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr,
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct ieee80211_mgmt mgmt;
 
+	if (is_mesh_interface(drv->nlmode))
+		return -1;
+
 	if (drv->device_ap_sme)
 		return wpa_driver_nl80211_sta_remove(bss, addr, 1, reason);
 
@@ -10101,6 +10104,9 @@ static int i802_sta_disassoc(void *priv, const u8 *own_addr, const u8 *addr,
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct ieee80211_mgmt mgmt;
+
+	if (is_mesh_interface(drv->nlmode))
+		return -1;
 
 	if (drv->device_ap_sme)
 		return wpa_driver_nl80211_sta_remove(bss, addr, 0, reason);

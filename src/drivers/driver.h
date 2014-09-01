@@ -910,6 +910,30 @@ struct wpa_driver_ap_params {
 	struct hostapd_freq_params *freq;
 };
 
+struct wpa_driver_mesh_bss_params {
+#define WPA_DRIVER_MESH_CONF_FLAG_AUTO_PLINKS	0x00000001
+	/*
+	 * TODO: Other mesh configuration parameters would go here.
+	 * See NL80211_MESHCONF_* for all the mesh config parameters.
+	 */
+	unsigned int flags;
+};
+
+struct wpa_driver_mesh_join_params {
+	const u8 *meshid;
+	int meshid_len;
+	const int *basic_rates;
+	const u8 *ies;
+	int ie_len;
+	int freq;
+	struct wpa_driver_mesh_bss_params conf;
+#define WPA_DRIVER_MESH_FLAG_USER_MPM	0x00000001
+#define WPA_DRIVER_MESH_FLAG_DRIVER_MPM	0x00000002
+#define WPA_DRIVER_MESH_FLAG_SAE_AUTH	0x00000004
+#define WPA_DRIVER_MESH_FLAG_AMPE	0x00000008
+	unsigned int flags;
+};
+
 /**
  * struct wpa_driver_capa - Driver capability information
  */
@@ -3025,6 +3049,29 @@ struct wpa_driver_ops {
 	 */
 	int (*disable_transmit_sa)(void *priv, u32 channel, u8 an);
 #endif /* CONFIG_MACSEC */
+
+	/**
+	 * init_mesh - Driver specific initialization for mesh
+	 * @priv: Private driver interface data
+	 * Returns: 0 on success, -1 on failure
+	 */
+	int (*init_mesh)(void *priv);
+
+	/**
+	 * join_mesh - Join a mesh network
+	 * @priv: Private driver interface data
+	 * @params: Mesh configuration parameters
+	 * Returns: 0 on success, -1 on failure
+	 */
+	int (*join_mesh)(void *priv,
+			 struct wpa_driver_mesh_join_params *params);
+
+	/**
+	 * leave_mesh - Leave a mesh network
+	 * @priv: Private driver interface data
+	 * Returns 0 on success, -1 on failure
+	 */
+	int (*leave_mesh)(void *priv);
 };
 
 

@@ -65,6 +65,28 @@ static inline int wpa_drv_associate(struct wpa_supplicant *wpa_s,
 	return -1;
 }
 
+static inline int wpa_drv_init_mesh(struct wpa_supplicant *wpa_s)
+{
+	if (wpa_s->driver->init_mesh)
+		return wpa_s->driver->init_mesh(wpa_s->drv_priv);
+	return -1;
+}
+
+static inline int wpa_drv_join_mesh(struct wpa_supplicant *wpa_s,
+				    struct wpa_driver_mesh_join_params *params)
+{
+	if (wpa_s->driver->join_mesh)
+		return wpa_s->driver->join_mesh(wpa_s->drv_priv, params);
+	return -1;
+}
+
+static inline int wpa_drv_leave_mesh(struct wpa_supplicant *wpa_s)
+{
+	if (wpa_s->driver->leave_mesh)
+		return wpa_s->driver->leave_mesh(wpa_s->drv_priv);
+	return -1;
+}
+
 static inline int wpa_drv_scan(struct wpa_supplicant *wpa_s,
 			       struct wpa_driver_scan_params *params)
 {

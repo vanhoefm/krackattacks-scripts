@@ -12588,6 +12588,145 @@ static int nl80211_set_mac_addr(void *priv, const u8 *addr)
 }
 
 
+#ifdef CONFIG_MESH
+
+static int wpa_driver_nl80211_init_mesh(void *priv)
+{
+	if (wpa_driver_nl80211_set_mode(priv, NL80211_IFTYPE_MESH_POINT)) {
+		wpa_printf(MSG_INFO,
+			   "nl80211: Failed to set interface into mesh mode");
+		return -1;
+	}
+	return 0;
+}
+
+
+static int
+wpa_driver_nl80211_join_mesh(void *priv,
+			     struct wpa_driver_mesh_join_params *params)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg;
+	struct nlattr *container;
+	int ret = 0;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -1;
+
+	wpa_printf(MSG_DEBUG, "nl80211: mesh join (ifindex=%d)", drv->ifindex);
+	nl80211_cmd(drv, msg, 0, NL80211_CMD_JOIN_MESH);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+	/* XXX: need chtype too in case we want HT */
+	if (params->freq) {
+		wpa_printf(MSG_DEBUG, "  * freq=%d", params->freq);
+		NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, params->freq);
+	}
+
+	if (params->basic_rates) {
+		u8 rates[NL80211_MAX_SUPP_RATES];
+		u8 rates_len = 0;
+		int i;
+
+		for (i = 0; i < NL80211_MAX_SUPP_RATES; i++) {
+			if (params->basic_rates[i] < 0)
+				break;
+			rates[rates_len++] = params->basic_rates[i] / 5;
+		}
+
+		NLA_PUT(msg, NL80211_ATTR_BSS_BASIC_RATES, rates_len, rates);
+	}
+
+	if (params->meshid) {
+		wpa_hexdump_ascii(MSG_DEBUG, "  * SSID",
+				  params->meshid, params->meshid_len);
+		NLA_PUT(msg, NL80211_ATTR_MESH_ID, params->meshid_len,
+			params->meshid);
+	}
+
+	wpa_printf(MSG_DEBUG, "  * flags=%08X", params->flags);
+
+	container = nla_nest_start(msg, NL80211_ATTR_MESH_SETUP);
+	if (!container)
+		goto nla_put_failure;
+
+	if (params->ies) {
+		wpa_hexdump(MSG_DEBUG, "  * IEs", params->ies, params->ie_len);
+		NLA_PUT(msg, NL80211_MESH_SETUP_IE, params->ie_len,
+			params->ies);
+	}
+	/* WPA_DRIVER_MESH_FLAG_OPEN_AUTH is treated as default by nl80211 */
+	if (params->flags & WPA_DRIVER_MESH_FLAG_SAE_AUTH) {
+		NLA_PUT_U8(msg, NL80211_MESH_SETUP_AUTH_PROTOCOL, 0x1);
+		NLA_PUT_FLAG(msg, NL80211_MESH_SETUP_USERSPACE_AUTH);
+	}
+	if (params->flags & WPA_DRIVER_MESH_FLAG_AMPE)
+		NLA_PUT_FLAG(msg, NL80211_MESH_SETUP_USERSPACE_AMPE);
+	if (params->flags & WPA_DRIVER_MESH_FLAG_USER_MPM)
+		NLA_PUT_FLAG(msg, NL80211_MESH_SETUP_USERSPACE_MPM);
+	nla_nest_end(msg, container);
+
+	container = nla_nest_start(msg, NL80211_ATTR_MESH_CONFIG);
+	if (!container)
+		goto nla_put_failure;
+
+	if (!(params->conf.flags & WPA_DRIVER_MESH_CONF_FLAG_AUTO_PLINKS))
+		NLA_PUT_U32(msg, NL80211_MESHCONF_AUTO_OPEN_PLINKS, 0);
+	nla_nest_end(msg, container);
+
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	msg = NULL;
+	if (ret) {
+		wpa_printf(MSG_DEBUG, "nl80211: mesh join failed: ret=%d (%s)",
+			   ret, strerror(-ret));
+		goto nla_put_failure;
+	}
+	ret = 0;
+	bss->freq = params->freq;
+	wpa_printf(MSG_DEBUG, "nl80211: mesh join request send successfully");
+
+
+nla_put_failure:
+	nlmsg_free(msg);
+	return ret;
+}
+
+
+static int wpa_driver_nl80211_leave_mesh(void *priv)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg;
+	int ret = 0;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -1;
+
+	wpa_printf(MSG_DEBUG, "nl80211: mesh leave (ifindex=%d)", drv->ifindex);
+	nl80211_cmd(drv, msg, 0, NL80211_CMD_LEAVE_MESH);
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	msg = NULL;
+	if (ret) {
+		wpa_printf(MSG_DEBUG, "nl80211: mesh leave failed: ret=%d (%s)",
+			   ret, strerror(-ret));
+		goto nla_put_failure;
+	}
+	ret = 0;
+	wpa_printf(MSG_DEBUG, "nl80211: mesh leave request send successfully");
+
+nla_put_failure:
+	nlmsg_free(msg);
+	return ret;
+}
+
+#endif /* CONFIG_MESH */
+
+
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
@@ -12681,4 +12820,9 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.set_wowlan = nl80211_set_wowlan,
 	.roaming = nl80211_roaming,
 	.set_mac_addr = nl80211_set_mac_addr,
+#ifdef CONFIG_MESH
+	.init_mesh = wpa_driver_nl80211_init_mesh,
+	.join_mesh = wpa_driver_nl80211_join_mesh,
+	.leave_mesh = wpa_driver_nl80211_leave_mesh,
+#endif /* CONFIG_MESH */
 };

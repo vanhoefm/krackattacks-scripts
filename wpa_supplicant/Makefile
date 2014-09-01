@@ -198,6 +198,11 @@ NEED_SHA256=y
 NEED_AES_OMAC1=y
 endif
 
+ifdef CONFIG_MESH
+NEED_80211_COMMON=y
+CFLAGS += -DCONFIG_MESH
+endif
+
 ifdef CONFIG_SAE
 CFLAGS += -DCONFIG_SAE
 OBJS += ../src/common/sae.o

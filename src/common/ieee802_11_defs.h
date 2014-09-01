@@ -194,6 +194,16 @@
 #define WLAN_REASON_TDLS_TEARDOWN_UNSPECIFIED 26
 /* IEEE 802.11e */
 #define WLAN_REASON_DISASSOC_LOW_ACK 34
+/* IEEE 802.11s */
+#define WLAN_REASON_MESH_PEERING_CANCELLED 52
+#define WLAN_REASON_MESH_MAX_PEERS 53
+#define WLAN_REASON_MESH_CONFIG_POLICY_VIOLATION 54
+#define WLAN_REASON_MESH_CLOSE_RCVD 55
+#define WLAN_REASON_MESH_MAX_RETRIES 56
+#define WLAN_REASON_MESH_CONFIRM_TIMEOUT 57
+#define WLAN_REASON_MESH_INVALID_GTK 58
+#define WLAN_REASON_MESH_INCONSISTENT_PARAMS 59
+#define WLAN_REASON_MESH_INVALID_SECURITY_CAP 60
 
 
 /* Information Element IDs */
@@ -249,7 +259,12 @@
 #define WLAN_EID_ADV_PROTO 108
 #define WLAN_EID_QOS_MAP_SET 110
 #define WLAN_EID_ROAMING_CONSORTIUM 111
+#define WLAN_EID_MESH_CONFIG 113
+#define WLAN_EID_MESH_ID 114
+#define WLAN_EID_PEER_MGMT 117
 #define WLAN_EID_EXT_CAPAB 127
+#define WLAN_EID_AMPE 139
+#define WLAN_EID_MIC 140
 #define WLAN_EID_CCKM 156
 #define WLAN_EID_VHT_CAP 191
 #define WLAN_EID_VHT_OPERATION 192
@@ -277,6 +292,7 @@
 #define WLAN_ACTION_WNM 10
 #define WLAN_ACTION_UNPROTECTED_WNM 11
 #define WLAN_ACTION_TDLS 12
+#define WLAN_ACTION_SELF_PROTECTED 15
 #define WLAN_ACTION_WMM 17 /* WMM Specification 1.1 */
 #define WLAN_ACTION_VENDOR_SPECIFIC 127
 
@@ -577,6 +593,10 @@ struct ieee80211_mgmt {
 					 * Entries (optional) */
 					u8 variable[0];
 				} STRUCT_PACKED bss_tm_query;
+				struct {
+					u8 action; /* 15 */
+					u8 variable[0];
+				} STRUCT_PACKED slf_prot_action;
 			} u;
 		} STRUCT_PACKED action;
 	} u;
@@ -636,6 +656,15 @@ struct ieee80211_vht_operation {
 	u8 vht_op_info_chan_center_freq_seg0_idx;
 	u8 vht_op_info_chan_center_freq_seg1_idx;
 	le16 vht_basic_mcs_set;
+} STRUCT_PACKED;
+
+struct ieee80211_ampe_ie {
+	u8 selected_pairwise_suite[4];
+	u8 local_nonce[32];
+	u8 peer_nonce[32];
+	u8 mgtk[16];
+	u8 key_rsc[8];
+	u8 key_expiration[4];
 } STRUCT_PACKED;
 
 #ifdef _MSC_VER
@@ -1087,6 +1116,13 @@ enum wifi_display_subelem {
 	WFD_SUBELEM_SESSION_INFO = 9
 };
 
+/* 802.11s */
+#define MESH_SYNC_METHOD_NEIGHBOR_OFFSET 1
+#define MESH_SYNC_METHOD_VENDOR		255
+#define MESH_PATH_PROTOCOL_HWMP		1
+#define MESH_PATH_PROTOCOL_VENDOR	255
+#define MESH_PATH_METRIC_AIRTIME	1
+#define MESH_PATH_METRIC_VENDOR		255
 
 #define OUI_BROADCOM 0x00904c /* Broadcom (Epigram) */
 

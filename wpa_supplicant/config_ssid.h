@@ -413,6 +413,12 @@ struct wpa_ssid {
 	 */
 	int mesh_ht_mode;
 
+	/**
+	 * mesh_basic_rates - BSS Basic rate set for mesh network
+	 *
+	 */
+	int *mesh_basic_rates;
+
 	int ht40;
 
 	int vht;

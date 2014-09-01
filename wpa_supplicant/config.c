@@ -1617,7 +1617,31 @@ static int wpa_config_parse_mesh_ht_mode(const struct parse_data *data,
 }
 
 
+static int wpa_config_parse_mesh_basic_rates(const struct parse_data *data,
+					     struct wpa_ssid *ssid, int line,
+					     const char *value)
+{
+	int *rates = wpa_config_parse_int_array(value);
+
+	if (rates == NULL) {
+		wpa_printf(MSG_ERROR, "Line %d: Invalid mesh_basic_rates '%s'",
+			   line, value);
+		return -1;
+	}
+	if (rates[0] == 0) {
+		os_free(rates);
+		rates = NULL;
+	}
+
+	os_free(ssid->mesh_basic_rates);
+	ssid->mesh_basic_rates = rates;
+
+	return 0;
+}
+
+
 #ifndef NO_CONFIG_WRITE
+
 static char * wpa_config_write_mesh_ht_mode(const struct parse_data *data,
 					    struct wpa_ssid *ssid)
 {
@@ -1641,6 +1665,13 @@ static char * wpa_config_write_mesh_ht_mode(const struct parse_data *data,
 		break;
 	}
 	return val ? os_strdup(val) : NULL;
+}
+
+
+static char * wpa_config_write_mesh_basic_rates(const struct parse_data *data,
+						struct wpa_ssid *ssid)
+{
+	return wpa_config_write_freqs(data, ssid->mesh_basic_rates);
 }
 
 #endif /* NO_CONFIG_WRITE */
@@ -1819,6 +1850,7 @@ static const struct parse_data ssid_fields[] = {
 	{ INT_RANGE(frequency, 0, 65000) },
 #ifdef CONFIG_MESH
 	{ FUNC(mesh_ht_mode) },
+	{ FUNC(mesh_basic_rates) },
 #endif /* CONFIG_MESH */
 	{ INT(wpa_ptk_rekey) },
 	{ STR(bgscan) },
@@ -2049,6 +2081,9 @@ void wpa_config_free_ssid(struct wpa_ssid *ssid)
 #ifdef CONFIG_HT_OVERRIDES
 	os_free(ssid->ht_mcs);
 #endif /* CONFIG_HT_OVERRIDES */
+#ifdef CONFIG_MESH
+	os_free(ssid->mesh_basic_rates);
+#endif /* CONFIG_MESH */
 	while ((psk = dl_list_first(&ssid->psk_list, struct psk_list_entry,
 				    list))) {
 		dl_list_del(&psk->list);

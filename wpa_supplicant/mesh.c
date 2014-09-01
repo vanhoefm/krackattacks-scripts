@@ -122,6 +122,7 @@ static int wpa_supplicant_mesh_init(struct wpa_supplicant *wpa_s,
 	int basic_rates_erp[] = { 10, 20, 55, 60, 110, 120, 240, -1 };
 	static int default_groups[] = { 19, 20, 21, 25, 26, -1 };
 	size_t len;
+	int rate_len;
 
 	if (!wpa_s->conf->user_mpm) {
 		/* not much for us to do here */
@@ -186,19 +187,34 @@ static int wpa_supplicant_mesh_init(struct wpa_supplicant *wpa_s,
 		goto out_free;
 	}
 
-	/*
-	 * XXX: Hack! This is so an MPM which correctly sets the ERP mandatory
-	 * rates as BSSBasicRateSet doesn't reject us. We could add a new
-	 * hw_mode HOSTAPD_MODE_IEEE80211G_ERP, but this is way easier. This
-	 * also makes our BSSBasicRateSet advertised in Beacon frames match the
-	 * one in peering frames, sigh.
-	 */
-	if (conf->hw_mode == HOSTAPD_MODE_IEEE80211G) {
-		conf->basic_rates = os_malloc(sizeof(basic_rates_erp));
-		if (!conf->basic_rates)
+	if (ssid->mesh_basic_rates == NULL) {
+		/*
+		 * XXX: Hack! This is so an MPM which correctly sets the ERP
+		 * mandatory rates as BSSBasicRateSet doesn't reject us. We
+		 * could add a new hw_mode HOSTAPD_MODE_IEEE80211G_ERP, but
+		 * this is way easier. This also makes our BSSBasicRateSet
+		 * advertised in beacons match the one in peering frames, sigh.
+		 */
+		if (conf->hw_mode == HOSTAPD_MODE_IEEE80211G) {
+			conf->basic_rates = os_malloc(sizeof(basic_rates_erp));
+			if (!conf->basic_rates)
+				goto out_free;
+			os_memcpy(conf->basic_rates, basic_rates_erp,
+				  sizeof(basic_rates_erp));
+		}
+	} else {
+		rate_len = 0;
+		while (1) {
+			if (ssid->mesh_basic_rates[rate_len] < 1)
+				break;
+			rate_len++;
+		}
+		conf->basic_rates = os_calloc(rate_len + 1, sizeof(int));
+		if (conf->basic_rates == NULL)
 			goto out_free;
-		os_memcpy(conf->basic_rates, basic_rates_erp,
-			  sizeof(basic_rates_erp));
+		os_memcpy(conf->basic_rates, ssid->mesh_basic_rates,
+			  rate_len * sizeof(int));
+		conf->basic_rates[rate_len] = -1;
 	}
 
 	if (hostapd_setup_interface(ifmsh)) {

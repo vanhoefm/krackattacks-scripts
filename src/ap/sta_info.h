@@ -66,6 +66,7 @@ struct sta_info {
 	u8 aek[32];	/* SHA256 digest length */
 	u8 mtk[16];
 	u8 mgtk[16];
+	u8 sae_auth_retry;
 #endif /* CONFIG_MESH */
 
 	unsigned int nonerp_set:1;

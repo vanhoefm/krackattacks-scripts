@@ -31,5 +31,6 @@ int mesh_rsn_protect_frame(struct mesh_rsn *rsn, struct sta_info *sta,
 int mesh_rsn_process_ampe(struct wpa_supplicant *wpa_s, struct sta_info *sta,
 			  struct ieee802_11_elems *elems, const u8 *cat,
 			  const u8 *start, size_t elems_len);
+void mesh_auth_timer(void *eloop_ctx, void *user_data);
 
 #endif /* MESH_RSN_H */

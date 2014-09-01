@@ -227,6 +227,11 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 		set_beacon++;
 #endif /* NEED_AP_MLME && CONFIG_IEEE80211N */
 
+#ifdef CONFIG_MESH
+	if (hapd->mesh_sta_free_cb)
+		hapd->mesh_sta_free_cb(sta);
+#endif /* CONFIG_MESH */
+
 	if (set_beacon)
 		ieee802_11_set_beacons(hapd->iface);
 

@@ -247,6 +247,7 @@ struct hostapd_data {
 #ifdef CONFIG_MESH
 	int num_plinks;
 	int max_plinks;
+	void (*mesh_sta_free_cb)(struct sta_info *sta);
 #endif /* CONFIG_MESH */
 
 #ifdef CONFIG_SQLITE

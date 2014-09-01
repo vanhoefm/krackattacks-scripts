@@ -147,6 +147,7 @@ static int wpa_supplicant_mesh_init(struct wpa_supplicant *wpa_s,
 	bss->driver = wpa_s->driver;
 	bss->drv_priv = wpa_s->drv_priv;
 	bss->iface = ifmsh;
+	bss->mesh_sta_free_cb = mesh_mpm_free_sta;
 	wpa_s->assoc_freq = ssid->frequency;
 	wpa_s->current_ssid = ssid;
 

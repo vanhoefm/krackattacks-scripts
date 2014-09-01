@@ -9,6 +9,7 @@
 #include "utils/includes.h"
 
 #include "utils/common.h"
+#include "utils/eloop.h"
 #include "crypto/sha256.h"
 #include "crypto/random.h"
 #include "crypto/aes.h"
@@ -22,6 +23,29 @@
 #include "wpas_glue.h"
 #include "mesh_mpm.h"
 #include "mesh_rsn.h"
+
+#define MESH_AUTH_TIMEOUT 10
+#define MESH_AUTH_RETRY 3
+
+void mesh_auth_timer(void *eloop_ctx, void *user_data)
+{
+	struct wpa_supplicant *wpa_s = eloop_ctx;
+	struct sta_info *sta = user_data;
+
+	if (sta->sae->state != SAE_ACCEPTED) {
+		wpa_printf(MSG_DEBUG, "AUTH: Re-authenticate with " MACSTR
+			   " (attempt %d) ",
+			   MAC2STR(sta->addr), sta->sae_auth_retry);
+		if (sta->sae_auth_retry < MESH_AUTH_RETRY) {
+			mesh_rsn_auth_sae_sta(wpa_s, sta);
+		} else {
+			/* block the STA if exceeded the number of attempts */
+			sta->plink_state = PLINK_BLOCKED;
+			sta->sae->state = SAE_NOTHING;
+		}
+		sta->sae_auth_retry++;
+	}
+}
 
 
 static void auth_logger(void *ctx, const u8 *addr, logger_level level,
@@ -81,9 +105,16 @@ static int auth_set_key(void *ctx, int vlan_id, enum wpa_alg alg,
 static int auth_start_ampe(void *ctx, const u8 *addr)
 {
 	struct mesh_rsn *mesh_rsn = ctx;
+	struct hostapd_data *hapd;
+	struct sta_info *sta;
 
 	if (mesh_rsn->wpa_s->current_ssid->mode != WPAS_MODE_MESH)
 		return -1;
+
+	hapd = mesh_rsn->wpa_s->ifmsh->bss[0];
+	sta = ap_get_sta(hapd, addr);
+	if (sta)
+		eloop_cancel_timeout(mesh_auth_timer, mesh_rsn->wpa_s, sta);
 
 	mesh_mpm_auth_peer(mesh_rsn->wpa_s, addr);
 	return 0;
@@ -296,6 +327,7 @@ int mesh_rsn_auth_sae_sta(struct wpa_supplicant *wpa_s,
 {
 	struct wpa_ssid *ssid = wpa_s->current_ssid;
 	struct wpabuf *buf;
+	unsigned int rnd;
 
 	if (!sta->sae) {
 		sta->sae = os_zalloc(sizeof(*sta->sae));
@@ -317,6 +349,9 @@ int mesh_rsn_auth_sae_sta(struct wpa_supplicant *wpa_s,
 	mesh_rsn_send_auth(wpa_s, sta->addr, wpa_s->own_addr,
 			   1, WLAN_STATUS_SUCCESS, buf);
 
+	rnd = rand() % MESH_AUTH_TIMEOUT;
+	eloop_register_timeout(MESH_AUTH_TIMEOUT + rnd, 0, mesh_auth_timer,
+			       wpa_s, sta);
 	wpabuf_free(buf);
 
 	return 0;

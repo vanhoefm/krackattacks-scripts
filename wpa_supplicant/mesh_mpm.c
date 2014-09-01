@@ -490,6 +490,7 @@ void wpa_mesh_new_mesh_peer(struct wpa_supplicant *wpa_s, const u8 *addr,
 	struct mesh_conf *conf = wpa_s->ifmsh->mconf;
 	struct hostapd_data *data = wpa_s->ifmsh->bss[0];
 	struct sta_info *sta;
+	struct wpa_ssid *ssid = wpa_s->current_ssid;
 	int ret = 0;
 
 	sta = ap_get_sta(data, addr);
@@ -529,6 +530,12 @@ void wpa_mesh_new_mesh_peer(struct wpa_supplicant *wpa_s, const u8 *addr,
 		wpa_msg(wpa_s, MSG_ERROR,
 			"Driver failed to insert " MACSTR ": %d",
 			MAC2STR(addr), ret);
+		return;
+	}
+
+	if (ssid && ssid->no_auto_peer) {
+		wpa_msg(wpa_s, MSG_INFO, "will not initiate new peer link with "
+			MACSTR " because of no_auto_peer", MAC2STR(addr));
 		return;
 	}
 

@@ -249,6 +249,18 @@ ParseRes ieee802_11_parse_elems(const u8 *start, size_t len,
 			elems->ht_operation = pos;
 			elems->ht_operation_len = elen;
 			break;
+		case WLAN_EID_MESH_CONFIG:
+			elems->mesh_config = pos;
+			elems->mesh_config_len = elen;
+			break;
+		case WLAN_EID_MESH_ID:
+			elems->mesh_id = pos;
+			elems->mesh_id_len = elen;
+			break;
+		case WLAN_EID_PEER_MGMT:
+			elems->peer_mgmt = pos;
+			elems->peer_mgmt_len = elen;
+			break;
 		case WLAN_EID_VHT_CAP:
 			elems->vht_capabilities = pos;
 			elems->vht_capabilities_len = elen;
@@ -289,6 +301,16 @@ ParseRes ieee802_11_parse_elems(const u8 *start, size_t len,
 		case WLAN_EID_SSID_LIST:
 			elems->ssid_list = pos;
 			elems->ssid_list_len = elen;
+			break;
+		case WLAN_EID_AMPE:
+			elems->ampe = pos;
+			elems->ampe_len = elen;
+			break;
+		case WLAN_EID_MIC:
+			elems->mic = pos;
+			elems->mic_len = elen;
+			/* after mic everything is encrypted, so stop. */
+			left = elen;
 			break;
 		default:
 			unknown++;

@@ -7764,8 +7764,8 @@ static int wpa_driver_nl80211_sta_add(void *priv,
 	}
 
 	os_memset(&upd, 0, sizeof(upd));
-	upd.mask = sta_flags_nl80211(params->flags);
-	upd.set = upd.mask;
+	upd.set = sta_flags_nl80211(params->flags);
+	upd.mask = upd.set | sta_flags_nl80211(params->flags_mask);
 	wpa_printf(MSG_DEBUG, "  * flags set=0x%x mask=0x%x",
 		   upd.set, upd.mask);
 	NLA_PUT(msg, NL80211_ATTR_STA_FLAGS2, sizeof(upd), &upd);

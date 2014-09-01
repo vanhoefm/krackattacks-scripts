@@ -1124,6 +1124,7 @@ struct hostapd_sta_add_params {
 	int vht_opmode_enabled;
 	u8 vht_opmode;
 	u32 flags; /* bitmask of WPA_STA_* flags */
+	u32 flags_mask; /* unset bits in flags */
 	int set; /* Set STA parameters instead of add */
 	u8 qosinfo;
 	const u8 *ext_capab;

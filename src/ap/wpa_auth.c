@@ -136,6 +136,17 @@ wpa_auth_send_eapol(struct wpa_authenticator *wpa_auth, const u8 *addr,
 }
 
 
+#ifdef CONFIG_MESH
+static inline int wpa_auth_start_ampe(struct wpa_authenticator *wpa_auth,
+				      const u8 *addr)
+{
+	if (wpa_auth->cb.start_ampe == NULL)
+		return -1;
+	return wpa_auth->cb.start_ampe(wpa_auth->cb.ctx, addr);
+}
+#endif /* CONFIG_MESH */
+
+
 int wpa_auth_for_each_sta(struct wpa_authenticator *wpa_auth,
 			  int (*cb)(struct wpa_state_machine *sm, void *ctx),
 			  void *cb_ctx)
@@ -1534,6 +1545,14 @@ int wpa_auth_sm_event(struct wpa_state_machine *sm, wpa_event event)
 
 	switch (event) {
 	case WPA_AUTH:
+#ifdef CONFIG_MESH
+		/* PTKs are derived through AMPE */
+		if (wpa_auth_start_ampe(sm->wpa_auth, sm->addr)) {
+			/* not mesh */
+			break;
+		}
+		return 0;
+#endif /* CONFIG_MESH */
 	case WPA_ASSOC:
 		break;
 	case WPA_DEAUTH:

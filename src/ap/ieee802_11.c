@@ -802,10 +802,20 @@ static void handle_auth(struct hostapd_data *hapd,
 		return;
 	}
 
-	sta = ap_sta_add(hapd, mgmt->sa);
-	if (!sta) {
-		resp = WLAN_STATUS_AP_UNABLE_TO_HANDLE_NEW_STA;
-		goto fail;
+#ifdef CONFIG_MESH
+	if (hapd->conf->mesh & MESH_ENABLED) {
+		/* if the mesh peer is not available, we don't do auth. */
+		sta = ap_get_sta(hapd, mgmt->sa);
+		if (!sta)
+			return;
+	} else
+#endif /* CONFIG_MESH */
+	{
+		sta = ap_sta_add(hapd, mgmt->sa);
+		if (!sta) {
+			resp = WLAN_STATUS_AP_UNABLE_TO_HANDLE_NEW_STA;
+			goto fail;
+		}
 	}
 
 	if (vlan_id > 0) {
@@ -890,6 +900,20 @@ static void handle_auth(struct hostapd_data *hapd,
 #endif /* CONFIG_IEEE80211R */
 #ifdef CONFIG_SAE
 	case WLAN_AUTH_SAE:
+#ifdef CONFIG_MESH
+		if (hapd->conf->mesh & MESH_ENABLED) {
+			if (sta->wpa_sm == NULL)
+				sta->wpa_sm =
+					wpa_auth_sta_init(hapd->wpa_auth,
+							  sta->addr, NULL);
+			if (sta->wpa_sm == NULL) {
+				wpa_printf(MSG_DEBUG,
+					   "SAE: Failed to initialize WPA state machine");
+				resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+				goto fail;
+			}
+		}
+#endif /* CONFIG_MESH */
 		handle_auth_sae(hapd, sta, mgmt, len, auth_transaction);
 		return;
 #endif /* CONFIG_SAE */

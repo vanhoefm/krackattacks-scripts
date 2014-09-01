@@ -389,3 +389,34 @@ def test_autogo_passphrase_len(dev):
         dev[1].wait_go_ending_session()
     finally:
         dev[0].request("SET p2p_passphrase_len 8")
+
+def test_autogo_bridge(dev):
+    """P2P autonomous GO in a bridge"""
+    try:
+        # use autoscan to set scan_req = MANUAL_SCAN_REQ
+        if "OK" not in dev[0].request("AUTOSCAN periodic:1"):
+            raise Exception("Failed to set autoscan")
+        autogo(dev[0])
+        subprocess.call(['sudo', 'brctl', 'addbr', 'p2p-br0'])
+        subprocess.call(['sudo', 'brctl', 'setfd', 'p2p-br0', '0'])
+        subprocess.call(['sudo', 'brctl', 'addif', 'p2p-br0', dev[0].ifname])
+        subprocess.call(['sudo', 'ip', 'link', 'set', 'dev', 'p2p-br0', 'up'])
+        time.sleep(0.1)
+        subprocess.call(['sudo', 'brctl', 'delif', 'p2p-br0', dev[0].ifname])
+        time.sleep(0.1)
+        subprocess.call(['sudo', 'ip', 'link', 'set', 'dev', 'p2p-br0', 'down'])
+        time.sleep(0.1)
+        subprocess.call(['sudo', 'brctl', 'delbr', 'p2p-br0'])
+        ev = dev[0].wait_global_event(["P2P-GROUP-REMOVED"], timeout=1)
+        if ev is not None:
+            raise Exception("P2P group removed unexpectedly")
+        if dev[0].get_status_field('wpa_state') != "COMPLETED":
+            raise Exception("Unexpected wpa_state")
+        dev[0].remove_group()
+    finally:
+        subprocess.Popen(['sudo', 'brctl', 'delif', 'p2p-br0', dev[0].ifname],
+                         stderr=open('/dev/null', 'w'))
+        subprocess.Popen(['sudo', 'ip', 'link', 'set', 'dev', 'p2p-br0', 'down'],
+                         stderr=open('/dev/null', 'w'))
+        subprocess.Popen(['sudo', 'brctl', 'delbr', 'p2p-br0'],
+                         stderr=open('/dev/null', 'w'))

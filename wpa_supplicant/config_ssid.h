@@ -27,6 +27,7 @@
 #define DEFAULT_FRAGMENT_SIZE 1398
 
 #define DEFAULT_BG_SCAN_PERIOD -1
+#define DEFAULT_MESH_HT_MODE CHAN_UNDEFINED /* undefined */
 #define DEFAULT_DISABLE_HT 0
 #define DEFAULT_DISABLE_HT40 0
 #define DEFAULT_DISABLE_SGI 0
@@ -402,6 +403,15 @@ struct wpa_ssid {
 	 * will be used instead of this configured value.
 	 */
 	int frequency;
+
+	/**
+	 * mesh_ht_mode - definition of HT mode in mesh mode
+	 *
+	 * Use the given HT mode for mesh networks. The driver will
+	 * adapt to other stations if neccesary, but advertise the
+	 * configured HT mode (HT20/HT40-/HT40+/NOHT).
+	 */
+	int mesh_ht_mode;
 
 	int ht40;
 

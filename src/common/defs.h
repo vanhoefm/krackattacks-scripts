@@ -308,6 +308,17 @@ enum wpa_ctrl_req_type {
 /* Maximum number of EAP methods to store for EAP server user information */
 #define EAP_MAX_METHODS 8
 
+/**
+ * enum ht_mode - channel width and offset
+ */
+enum ht_mode {
+	CHAN_UNDEFINED = 0,
+	CHAN_NO_HT,
+	CHAN_HT20,
+	CHAN_HT40PLUS,
+	CHAN_HT40MINUS,
+};
+
 enum mesh_plink_state {
 	PLINK_LISTEN = 1,
 	PLINK_OPEN_SENT,

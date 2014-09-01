@@ -213,6 +213,9 @@ static void mesh_mpm_send_plink_action(struct wpa_supplicant *wpa_s,
 	struct hostapd_data *bss = ifmsh->bss[0];
 	struct mesh_conf *conf = ifmsh->mconf;
 	u8 supp_rates[2 + 2 + 32];
+#ifdef CONFIG_IEEE80211N
+	u8 ht_capa_oper[2 + 26 + 2 + 22];
+#endif /* CONFIG_IEEE80211N */
 	u8 *pos, *cat;
 	u8 ie_len, add_plid = 0;
 	int ret;
@@ -243,6 +246,7 @@ static void mesh_mpm_send_plink_action(struct wpa_supplicant *wpa_s,
 		/* capability info */
 		wpabuf_put_le16(buf, ampe ? IEEE80211_CAP_PRIVACY : 0);
 
+		/* aid */
 		if (type == PLINK_CONFIRM)
 			wpabuf_put_le16(buf, sta->peer_lid);
 
@@ -309,7 +313,14 @@ static void mesh_mpm_send_plink_action(struct wpa_supplicant *wpa_s,
 		mesh_rsn_get_pmkid(wpa_s->mesh_rsn, sta,
 				   wpabuf_put(buf, PMKID_LEN));
 
-	/* TODO HT IEs */
+#ifdef CONFIG_IEEE80211N
+	if (type != PLINK_CLOSE &&
+	    wpa_s->current_ssid->mesh_ht_mode != CHAN_NO_HT) {
+		pos = hostapd_eid_ht_capabilities(bss, ht_capa_oper);
+		pos = hostapd_eid_ht_operation(bss, pos);
+		wpabuf_put_data(buf, ht_capa_oper, pos - ht_capa_oper);
+	}
+#endif /* CONFIG_IEEE80211N */
 
 	if (ampe && mesh_rsn_protect_frame(wpa_s->mesh_rsn, sta, cat, buf)) {
 		wpa_msg(wpa_s, MSG_INFO,
@@ -520,6 +531,12 @@ void wpa_mesh_new_mesh_peer(struct wpa_supplicant *wpa_s, const u8 *addr,
 
 	mesh_mpm_init_link(wpa_s, sta);
 
+#ifdef CONFIG_IEEE80211N
+	copy_sta_ht_capab(data, sta, elems->ht_capabilities,
+			elems->ht_capabilities_len);
+	update_ht_state(data, sta);
+#endif /* CONFIG_IEEE80211N */
+
 	/* insert into driver */
 	os_memset(&params, 0, sizeof(params));
 	params.supp_rates = sta->supported_rates;
@@ -528,7 +545,7 @@ void wpa_mesh_new_mesh_peer(struct wpa_supplicant *wpa_s, const u8 *addr,
 	params.plink_state = sta->plink_state;
 	params.aid = sta->peer_lid;
 	params.listen_interval = 100;
-	/* TODO: HT capabilities */
+	params.ht_capabilities = sta->ht_capabilities;
 	params.flags |= WPA_STA_WMM;
 	params.flags_mask |= WPA_STA_AUTHENTICATED;
 	if (conf->security == MESH_CONF_SEC_NONE) {

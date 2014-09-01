@@ -8732,10 +8732,36 @@ wpa_driver_nl80211_join_mesh(void *priv,
 	nl80211_cmd(drv, msg, 0, NL80211_CMD_JOIN_MESH);
 
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
-	/* XXX: need chtype too in case we want HT */
 	if (params->freq) {
 		wpa_printf(MSG_DEBUG, "  * freq=%d", params->freq);
 		NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, params->freq);
+	}
+
+	if (params->ht_mode) {
+		unsigned int ht_value;
+		char *ht_mode = "";
+
+		switch (params->ht_mode) {
+		default:
+		case CHAN_NO_HT:
+			ht_value = NL80211_CHAN_NO_HT;
+			ht_mode = "NOHT";
+			break;
+		case CHAN_HT20:
+			ht_value = NL80211_CHAN_HT20;
+			ht_mode = "HT20";
+			break;
+		case CHAN_HT40PLUS:
+			ht_value = NL80211_CHAN_HT40PLUS;
+			ht_mode = "HT40+";
+			break;
+		case CHAN_HT40MINUS:
+			ht_value = NL80211_CHAN_HT40MINUS;
+			ht_mode = "HT40-";
+			break;
+		}
+		wpa_printf(MSG_DEBUG, "  * ht_mode=%s", ht_mode);
+		NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_CHANNEL_TYPE, ht_value);
 	}
 
 	if (params->basic_rates) {

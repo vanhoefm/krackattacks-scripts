@@ -1588,6 +1588,66 @@ static char * wpa_config_write_psk_list(const struct parse_data *data,
 
 #endif /* CONFIG_P2P */
 
+
+#ifdef CONFIG_MESH
+
+static int wpa_config_parse_mesh_ht_mode(const struct parse_data *data,
+					 struct wpa_ssid *ssid, int line,
+					 const char *value)
+{
+	int htval = 0;
+
+	if (os_strcmp(value, "NOHT") == 0)
+		htval = CHAN_NO_HT;
+	else if (os_strcmp(value, "HT20") == 0)
+		htval = CHAN_HT20;
+	else if (os_strcmp(value, "HT40-") == 0)
+		htval = CHAN_HT40MINUS;
+	else if (os_strcmp(value, "HT40+") == 0)
+		htval = CHAN_HT40PLUS;
+	else {
+		wpa_printf(MSG_ERROR,
+			   "Line %d: no ht_mode configured.", line);
+		return -1;
+	}
+
+	wpa_printf(MSG_MSGDUMP, "mesh_ht_mode: 0x%x", htval);
+	ssid->mesh_ht_mode = htval;
+	return 0;
+}
+
+
+#ifndef NO_CONFIG_WRITE
+static char * wpa_config_write_mesh_ht_mode(const struct parse_data *data,
+					    struct wpa_ssid *ssid)
+{
+	char *val;
+
+	switch (ssid->mesh_ht_mode) {
+	default:
+		val = NULL;
+		break;
+	case CHAN_NO_HT:
+		val = "NOHT";
+		break;
+	case CHAN_HT20:
+		val = "HT20";
+		break;
+	case CHAN_HT40MINUS:
+		val = "HT40-";
+		break;
+	case CHAN_HT40PLUS:
+		val = "HT40+";
+		break;
+	}
+	return val ? os_strdup(val) : NULL;
+}
+
+#endif /* NO_CONFIG_WRITE */
+
+#endif /* CONFIG_MESH */
+
+
 /* Helper macros for network block parser */
 
 #ifdef OFFSET
@@ -1757,6 +1817,9 @@ static const struct parse_data ssid_fields[] = {
 	{ INT_RANGE(peerkey, 0, 1) },
 	{ INT_RANGE(mixed_cell, 0, 1) },
 	{ INT_RANGE(frequency, 0, 65000) },
+#ifdef CONFIG_MESH
+	{ FUNC(mesh_ht_mode) },
+#endif /* CONFIG_MESH */
 	{ INT(wpa_ptk_rekey) },
 	{ STR(bgscan) },
 	{ INT_RANGE(ignore_broadcast_ssid, 0, 2) },
@@ -2235,6 +2298,9 @@ void wpa_config_set_network_defaults(struct wpa_ssid *ssid)
 	ssid->eap.fragment_size = DEFAULT_FRAGMENT_SIZE;
 	ssid->eap.sim_num = DEFAULT_USER_SELECTED_SIM;
 #endif /* IEEE8021X_EAPOL */
+#ifdef CONFIG_MESH
+	ssid->mesh_ht_mode = DEFAULT_MESH_HT_MODE;
+#endif /* CONFIG_MESH */
 #ifdef CONFIG_HT_OVERRIDES
 	ssid->disable_ht = DEFAULT_DISABLE_HT;
 	ssid->disable_ht40 = DEFAULT_DISABLE_HT40;

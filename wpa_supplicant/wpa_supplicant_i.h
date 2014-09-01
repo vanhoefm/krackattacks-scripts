@@ -668,6 +668,9 @@ struct wpa_supplicant {
 #endif /* CONFIG_AP */
 
 	struct hostapd_iface *ifmsh;
+#ifdef CONFIG_MESH
+	struct mesh_rsn *mesh_rsn;
+#endif /* CONFIG_MESH */
 
 	unsigned int off_channel_freq;
 	struct wpabuf *pending_action_tx;

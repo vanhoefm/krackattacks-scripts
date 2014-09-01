@@ -213,6 +213,9 @@ struct wpa_auth_callbacks {
 	int (*add_tspec)(void *ctx, const u8 *sta_addr, u8 *tspec_ie,
 			 size_t tspec_ielen);
 #endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_MESH
+	int (*start_ampe)(void *ctx, const u8 *sta_addr);
+#endif /* CONFIG_MESH */
 };
 
 struct wpa_authenticator * wpa_init(const u8 *addr,

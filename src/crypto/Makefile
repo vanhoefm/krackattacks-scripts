@@ -26,6 +26,7 @@ LIB_OBJS= \
 	aes-internal-dec.o \
 	aes-internal-enc.o \
 	aes-omac1.o \
+	aes-siv.o \
 	aes-unwrap.o \
 	aes-wrap.o \
 	des-internal.o \

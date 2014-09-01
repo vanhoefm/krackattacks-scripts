@@ -1143,6 +1143,9 @@ ifdef CONFIG_INTERNAL_AES
 AESOBJS += src/crypto/aes-internal-enc.c
 endif
 endif
+ifdef NEED_AES_SIV
+AESOBJS += src/crypto/aes-siv.c
+endif
 ifdef NEED_AES
 OBJS += $(AESOBJS)
 endif

@@ -1145,6 +1145,9 @@ else
 AESOBJS += ../src/crypto/aes-omac1.o
 endif
 endif
+ifdef NEED_AES_SIV
+AESOBJS += ../src/crypto/aes-siv.o
+endif
 ifdef NEED_AES_WRAP
 NEED_AES_ENC=y
 AESOBJS += ../src/crypto/aes-wrap.o

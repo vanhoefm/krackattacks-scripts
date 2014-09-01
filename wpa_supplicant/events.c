@@ -1382,6 +1382,13 @@ static int wpas_select_network_from_last_scan(struct wpa_supplicant *wpa_s,
 		 */
 		return 1;
 	} else {
+#ifdef CONFIG_MESH
+		if (wpa_s->ifmsh) {
+			wpa_msg(wpa_s, MSG_INFO,
+				"Avoiding join because we already joined a mesh group");
+			return 0;
+		}
+#endif /* CONFIG_MESH */
 		wpa_dbg(wpa_s, MSG_DEBUG, "No suitable network found");
 		ssid = wpa_supplicant_pick_new_network(wpa_s);
 		if (ssid) {

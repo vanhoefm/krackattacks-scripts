@@ -694,6 +694,7 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 	int ssid_len, set_ssid;
 	char force_ifname[IFNAMSIZ];
 	u8 if_addr[ETH_ALEN];
+	int flush_old_stations = 1;
 
 	wpa_printf(MSG_DEBUG, "%s(hapd=%p (%s), first=%d)",
 		   __func__, hapd, conf->iface, first);
@@ -748,7 +749,14 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 	if (conf->wmm_enabled < 0)
 		conf->wmm_enabled = hapd->iconf->ieee80211n;
 
-	hostapd_flush_old_stations(hapd, WLAN_REASON_PREV_AUTH_NOT_VALID);
+#ifdef CONFIG_MESH
+	if (hapd->iface->mconf == NULL)
+		flush_old_stations = 0;
+#endif /* CONFIG_MESH */
+
+	if (flush_old_stations)
+		hostapd_flush_old_stations(hapd,
+					   WLAN_REASON_PREV_AUTH_NOT_VALID);
 	hostapd_set_privacy(hapd, 0);
 
 	hostapd_broadcast_wep_clear(hapd);
@@ -906,6 +914,11 @@ static void hostapd_tx_queue_params(struct hostapd_iface *iface)
 	struct hostapd_data *hapd = iface->bss[0];
 	int i;
 	struct hostapd_tx_queue_params *p;
+
+#ifdef CONFIG_MESH
+	if (iface->mconf == NULL)
+		return;
+#endif /* CONFIG_MESH */
 
 	for (i = 0; i < NUM_TX_QUEUES; i++) {
 		p = &iface->conf->tx_queue[i];
@@ -1172,6 +1185,7 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 	struct hostapd_data *hapd = iface->bss[0];
 	size_t j;
 	u8 *prev_addr;
+	int delay_apply_cfg = 0;
 
 	if (err)
 		goto fail;
@@ -1201,7 +1215,17 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 		}
 #endif /* NEED_AP_MLME */
 
-		if (hostapd_set_freq(hapd, hapd->iconf->hw_mode, iface->freq,
+#ifdef CONFIG_MESH
+		if (iface->mconf != NULL) {
+			wpa_printf(MSG_DEBUG,
+				   "%s: Mesh configuration will be applied while joining the mesh network",
+				   iface->bss[0]->conf->iface);
+			delay_apply_cfg = 1;
+		}
+#endif /* CONFIG_MESH */
+
+		if (!delay_apply_cfg &&
+		    hostapd_set_freq(hapd, hapd->iconf->hw_mode, iface->freq,
 				     hapd->iconf->channel,
 				     hapd->iconf->ieee80211n,
 				     hapd->iconf->ieee80211ac,

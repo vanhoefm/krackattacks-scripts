@@ -47,6 +47,7 @@
 #include "wnm_sta.h"
 #include "offchannel.h"
 #include "drivers/driver.h"
+#include "mesh.h"
 
 static int wpa_supplicant_global_iface_list(struct wpa_global *global,
 					    char *buf, int len);
@@ -3867,6 +3868,16 @@ static int print_bss_info(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 #endif /* CONFIG_HS20 */
 	}
 #endif /* CONFIG_INTERWORKING */
+
+#ifdef CONFIG_MESH
+	if (mask & WPA_BSS_MASK_MESH_SCAN) {
+		ie = (const u8 *) (bss + 1);
+		ret = wpas_mesh_scan_result_text(ie, bss->ie_len, pos, end);
+		if (ret < 0 || ret >= end - pos)
+			return 0;
+		pos += ret;
+	}
+#endif /* CONFIG_MESH */
 
 	if (mask & WPA_BSS_MASK_DELIM) {
 		ret = os_snprintf(pos, end - pos, "====\n");

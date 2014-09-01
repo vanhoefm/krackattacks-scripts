@@ -375,3 +375,97 @@ int wpa_supplicant_leave_mesh(struct wpa_supplicant *wpa_s)
 
 	return ret;
 }
+
+
+static int mesh_attr_text(const u8 *ies, size_t ies_len, char *buf, char *end)
+{
+	struct ieee802_11_elems elems;
+	char *mesh_id, *pos = buf;
+	u8 *bss_basic_rate_set;
+	int bss_basic_rate_set_len, ret, i;
+
+	if (ieee802_11_parse_elems(ies, ies_len, &elems, 0) == ParseFailed)
+		return -1;
+
+	if (elems.mesh_id_len < 1)
+		return 0;
+
+	mesh_id = os_malloc(elems.mesh_id_len + 1);
+	if (mesh_id == NULL)
+		return -1;
+
+	os_memcpy(mesh_id, elems.mesh_id, elems.mesh_id_len);
+	mesh_id[elems.mesh_id_len] = '\0';
+	ret = os_snprintf(pos, end - pos, "mesh_id=%s\n", mesh_id);
+	os_free(mesh_id);
+	if (ret < 0 || ret >= end - pos)
+		return pos - buf;
+	pos += ret;
+
+	if (elems.mesh_config_len > 6) {
+		ret = os_snprintf(pos, end - pos,
+				  "active_path_selection_protocol_id=0x%02x\n"
+				  "active_path_selection_metric_id=0x%02x\n"
+				  "congestion_control_mode_id=0x%02x\n"
+				  "synchronization_method_id=0x%02x\n"
+				  "authentication_protocol_id=0x%02x\n"
+				  "mesh_formation_info=0x%02x\n"
+				  "mesh_capability=0x%02x\n",
+				  elems.mesh_config[0], elems.mesh_config[1],
+				  elems.mesh_config[2], elems.mesh_config[3],
+				  elems.mesh_config[4], elems.mesh_config[5],
+				  elems.mesh_config[6]);
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+	}
+
+	bss_basic_rate_set = os_malloc(elems.supp_rates_len +
+		elems.ext_supp_rates_len);
+	if (bss_basic_rate_set == NULL)
+		return -1;
+
+	bss_basic_rate_set_len = 0;
+	for (i = 0; i < elems.supp_rates_len; i++) {
+		if (elems.supp_rates[i] & 0x80) {
+			bss_basic_rate_set[bss_basic_rate_set_len++] =
+				(elems.supp_rates[i] & 0x7f) * 5;
+		}
+	}
+	for (i = 0; i < elems.ext_supp_rates_len; i++) {
+		if (elems.ext_supp_rates[i] & 0x80) {
+			bss_basic_rate_set[bss_basic_rate_set_len++] =
+				(elems.ext_supp_rates[i] & 0x7f) * 5;
+		}
+	}
+	if (bss_basic_rate_set_len > 0) {
+		ret = os_snprintf(pos, end - pos, "bss_basic_rate_set=%d",
+				  bss_basic_rate_set[0]);
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+
+		for (i = 1; i < bss_basic_rate_set_len; i++) {
+			ret = os_snprintf(pos, end - pos, " %d",
+					  bss_basic_rate_set[i]);
+			if (ret < 0 || ret >= end - pos)
+				return pos - buf;
+			pos += ret;
+		}
+
+		ret = os_snprintf(pos, end - pos, "\n");
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+	}
+	os_free(bss_basic_rate_set);
+
+	return pos - buf;
+}
+
+
+int wpas_mesh_scan_result_text(const u8 *ies, size_t ies_len, char *buf,
+			       char *end)
+{
+	return mesh_attr_text(ies, ies_len, buf, end);
+}

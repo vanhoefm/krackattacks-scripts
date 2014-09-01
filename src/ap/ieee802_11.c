@@ -1774,6 +1774,9 @@ int ieee802_11_mgmt(struct hostapd_data *hapd, const u8 *buf, size_t len,
 	    !((hapd->conf->p2p & P2P_GROUP_OWNER) &&
 	      stype == WLAN_FC_STYPE_ACTION) &&
 #endif /* CONFIG_P2P */
+#ifdef CONFIG_MESH
+	    !(hapd->conf->mesh & MESH_ENABLED) &&
+#endif /* CONFIG_MESH */
 	    os_memcmp(mgmt->bssid, hapd->own_addr, ETH_ALEN) != 0) {
 		wpa_printf(MSG_INFO, "MGMT: BSSID=" MACSTR " not our address",
 			   MAC2STR(mgmt->bssid));

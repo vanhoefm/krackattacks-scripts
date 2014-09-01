@@ -42,6 +42,7 @@
 #include "scan.h"
 #include "offchannel.h"
 #include "interworking.h"
+#include "mesh.h"
 
 
 #ifndef CONFIG_NO_SCAN_PROCESSING
@@ -3454,6 +3455,11 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			data->connect_failed_reason.addr,
 			data->connect_failed_reason.code);
 #endif /* CONFIG_AP */
+		break;
+	case EVENT_NEW_PEER_CANDIDATE:
+		wpa_mesh_notify_peer(wpa_s, data->mesh_peer.peer,
+				     data->mesh_peer.ies,
+				     data->mesh_peer.ie_len);
 		break;
 	default:
 		wpa_msg(wpa_s, MSG_INFO, "Unknown event %d", event);

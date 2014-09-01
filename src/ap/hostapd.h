@@ -22,6 +22,9 @@ struct ieee80211_ht_capabilities;
 struct full_dynamic_vlan;
 enum wps_event;
 union wps_event_data;
+#ifdef CONFIG_MESH
+struct mesh_conf;
+#endif /* CONFIG_MESH */
 
 struct hostapd_iface;
 
@@ -277,6 +280,10 @@ struct hostapd_iface {
 		HAPD_IFACE_DFS,
 		HAPD_IFACE_ENABLED
 	} state;
+
+#ifdef CONFIG_MESH
+	struct mesh_conf *mconf;
+#endif /* CONFIG_MESH */
 
 	size_t num_bss;
 	struct hostapd_data **bss;

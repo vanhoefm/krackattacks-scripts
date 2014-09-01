@@ -1195,6 +1195,9 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 
 	if (config->key_mgmt_offload != DEFAULT_KEY_MGMT_OFFLOAD)
 		fprintf(f, "key_mgmt_offload=%u\n", config->key_mgmt_offload);
+
+	if (config->user_mpm != DEFAULT_USER_MPM)
+		fprintf(f, "user_mpm=%d\n", config->user_mpm);
 }
 
 #endif /* CONFIG_NO_CONFIG_WRITE */

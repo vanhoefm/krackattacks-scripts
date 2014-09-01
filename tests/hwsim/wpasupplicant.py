@@ -257,6 +257,18 @@ class WpaSupplicant:
             raise Exception("SELECT_NETWORK failed")
         return None
 
+    def mesh_group_add(self, id):
+        id = self.request("MESH_GROUP_ADD " + str(id))
+        if "FAIL" in id:
+            raise Exception("MESH_GROUP_ADD failed")
+        return None
+
+    def mesh_group_remove(self):
+        id = self.request("MESH_GROUP_REMOVE " + str(self.ifname))
+        if "FAIL" in id:
+            raise Exception("MESH_GROUP_REMOVE failed")
+        return None
+
     def connect_network(self, id, timeout=10):
         self.dump_monitor()
         self.select_network(id)

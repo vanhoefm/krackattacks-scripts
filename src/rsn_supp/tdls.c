@@ -1817,7 +1817,7 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 	lnkid = (struct wpa_tdls_lnkid *) kde.lnkid;
 	if (os_memcmp(sm->bssid, lnkid->bssid, ETH_ALEN) != 0) {
 		wpa_printf(MSG_INFO, "TDLS: TPK M1 from diff BSS");
-		status = WLAN_STATUS_NOT_IN_SAME_BSS;
+		status = WLAN_STATUS_REQUEST_DECLINED;
 		goto error;
 	}
 

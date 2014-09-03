@@ -3172,6 +3172,9 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		conf->local_pwr_constraint = val;
 	} else if (os_strcmp(buf, "spectrum_mgmt_required") == 0) {
 		conf->spectrum_mgmt_required = atoi(pos);
+	} else if (os_strcmp(buf, "wowlan_triggers") == 0) {
+		os_free(bss->wowlan_triggers);
+		bss->wowlan_triggers = os_strdup(pos);
 	} else {
 		wpa_printf(MSG_ERROR,
 			   "Line %d: unknown configuration item '%s'",

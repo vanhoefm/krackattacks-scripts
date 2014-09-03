@@ -535,6 +535,8 @@ struct hostapd_bss_config {
 	unsigned int sae_anti_clogging_threshold;
 	int *sae_groups;
 
+	char *wowlan_triggers; /* Wake-on-WLAN triggers */
+
 #ifdef CONFIG_TESTING_OPTIONS
 	u8 bss_load_test[5];
 	u8 bss_load_test_set;

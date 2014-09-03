@@ -542,6 +542,8 @@ void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 
 	os_free(conf->sae_groups);
 
+	os_free(conf->wowlan_triggers);
+
 	os_free(conf->server_id);
 
 	os_free(conf);

@@ -212,6 +212,8 @@ static int hostapd_driver_init(struct hostapd_iface *iface)
 
 	if (hapd->driver->get_capa &&
 	    hapd->driver->get_capa(hapd->drv_priv, &capa) == 0) {
+		struct wowlan_triggers *triggs;
+
 		iface->drv_flags = capa.flags;
 		iface->smps_modes = capa.smps_modes;
 		iface->probe_resp_offloads = capa.probe_resp_offloads;
@@ -219,6 +221,13 @@ static int hostapd_driver_init(struct hostapd_iface *iface)
 		iface->extended_capa_mask = capa.extended_capa_mask;
 		iface->extended_capa_len = capa.extended_capa_len;
 		iface->drv_max_acl_mac_addrs = capa.max_acl_mac_addrs;
+
+		triggs = wpa_get_wowlan_triggers(conf->wowlan_triggers, &capa);
+		if (triggs && hapd->driver->set_wowlan) {
+			if (hapd->driver->set_wowlan(hapd->drv_priv, triggs))
+				wpa_printf(MSG_ERROR, "set_wowlan failed");
+		}
+		os_free(triggs);
 	}
 
 	return 0;

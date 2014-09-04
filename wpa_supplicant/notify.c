@@ -345,6 +345,12 @@ void wpas_notify_bss_rates_changed(struct wpa_supplicant *wpa_s,
 }
 
 
+void wpas_notify_bss_seen(struct wpa_supplicant *wpa_s, unsigned int id)
+{
+	wpas_dbus_bss_signal_prop_changed(wpa_s, WPAS_DBUS_BSS_PROP_AGE, id);
+}
+
+
 void wpas_notify_blob_added(struct wpa_supplicant *wpa_s, const char *name)
 {
 	wpas_dbus_signal_blob_added(wpa_s, name);

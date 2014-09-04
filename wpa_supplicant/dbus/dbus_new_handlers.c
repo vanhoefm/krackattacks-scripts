@@ -3955,6 +3955,35 @@ dbus_bool_t wpas_dbus_getter_bss_ies(DBusMessageIter *iter, DBusError *error,
 
 
 /**
+ * wpas_dbus_getter_bss_age - Return time in seconds since BSS was last seen
+ * @iter: Pointer to incoming dbus message iter
+ * @error: Location to store error on failure
+ * @user_data: Function specific data
+ * Returns: TRUE on success, FALSE on failure
+ *
+ * Getter for BSS age
+ */
+dbus_bool_t wpas_dbus_getter_bss_age(DBusMessageIter *iter, DBusError *error,
+				     void *user_data)
+{
+	struct bss_handler_args *args = user_data;
+	struct wpa_bss *res;
+	struct os_reltime now, diff = { 0, 0 };
+	u32 age;
+
+	res = get_bss_helper(args, error, __func__);
+	if (!res)
+		return FALSE;
+
+	os_get_reltime(&now);
+	os_reltime_sub(&now, &res->last_update, &diff);
+	age = diff.sec > 0 ? diff.sec : 0;
+	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_UINT32, &age,
+						error);
+}
+
+
+/**
  * wpas_dbus_getter_enabled - Check whether network is enabled or disabled
  * @iter: Pointer to incoming dbus message iter
  * @error: Location to store error on failure

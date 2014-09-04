@@ -489,6 +489,8 @@ static void notify_bss_changes(struct wpa_supplicant *wpa_s, u32 changes,
 
 	if (changes & WPA_BSS_RATES_CHANGED_FLAG)
 		wpas_notify_bss_rates_changed(wpa_s, bss->id);
+
+	wpas_notify_bss_seen(wpa_s, bss->id);
 }
 
 

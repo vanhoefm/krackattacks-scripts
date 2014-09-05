@@ -16,6 +16,13 @@
 
 enum p2p_role_indication;
 
+/*
+ * To force Service Instances to fit within a single P2P Tag, MAX_SVC_ADV_LEN
+ * must equal 248 or less. Must have a minimum size of 19.
+ */
+#define MAX_SVC_ADV_LEN	600
+#define MAX_SVC_ADV_IE_LEN (9 + MAX_SVC_ADV_LEN + (5 * (MAX_SVC_ADV_LEN / 240)))
+
 enum p2p_go_state {
 	UNKNOWN_GO,
 	LOCAL_GO,
@@ -736,6 +743,9 @@ void p2p_buf_add_service_hash(struct wpabuf *buf, struct p2p_data *p2p);
 void p2p_buf_add_session_info(struct wpabuf *buf, const char *info);
 void p2p_buf_add_connection_capability(struct wpabuf *buf, u8 connection_cap);
 void p2p_buf_add_advertisement_id(struct wpabuf *buf, u32 id, const u8 *mac);
+void p2p_buf_add_service_instance(struct wpabuf *buf, struct p2p_data *p2p,
+				  u8 count, const u8 *hash,
+				  struct p2ps_advertisement *adv_list);
 void p2p_buf_add_session_id(struct wpabuf *buf, u32 id, const u8 *mac);
 void p2p_buf_add_feature_capability(struct wpabuf *buf, u16 len,
 				    const u8 *mask);

@@ -404,6 +404,156 @@ void p2p_buf_add_advertisement_id(struct wpabuf *buf, u32 id, const u8 *mac)
 }
 
 
+void p2p_buf_add_service_instance(struct wpabuf *buf, struct p2p_data *p2p,
+				  u8 hash_count, const u8 *hash,
+				  struct p2ps_advertisement *adv_list)
+{
+	struct p2ps_advertisement *adv;
+	struct wpabuf *tmp_buf;
+	u8 *tag_len = NULL, *ie_len = NULL;
+	size_t svc_len = 0, remaining = 0, total_len = 0;
+
+	if (!adv_list || !hash)
+		return;
+
+	/* Allocate temp buffer, allowing for overflow of 1 instance */
+	tmp_buf = wpabuf_alloc(MAX_SVC_ADV_IE_LEN + 256 + P2PS_HASH_LEN);
+	if (!tmp_buf)
+		return;
+
+	for (adv = adv_list; adv && total_len <= MAX_SVC_ADV_LEN;
+	     adv = adv->next) {
+		u8 count = hash_count;
+		const u8 *test = hash;
+
+		while (count--) {
+			/* Check for wildcard */
+			if (os_memcmp(test, p2p->wild_card_hash,
+				      P2PS_HASH_LEN) == 0) {
+				total_len = MAX_SVC_ADV_LEN + 1;
+				goto wild_hash;
+			}
+
+			if (os_memcmp(test, adv->hash, P2PS_HASH_LEN) == 0)
+				goto hash_match;
+
+			test += P2PS_HASH_LEN;
+		}
+
+		/* No matches found - Skip this Adv Instance */
+		continue;
+
+hash_match:
+		if (!tag_len) {
+			tag_len = p2p_buf_add_ie_hdr(tmp_buf);
+			remaining = 255 - 4;
+			if (!ie_len) {
+				wpabuf_put_u8(tmp_buf,
+					      P2P_ATTR_ADVERTISED_SERVICE);
+				ie_len = wpabuf_put(tmp_buf, sizeof(u16));
+				remaining -= (sizeof(u8) + sizeof(u16));
+			}
+		}
+
+		svc_len = os_strlen(adv->svc_name);
+
+		if (7 + svc_len + total_len > MAX_SVC_ADV_LEN) {
+			/* Can't fit... return wildcard */
+			total_len = MAX_SVC_ADV_LEN + 1;
+			break;
+		}
+
+		if (remaining <= (sizeof(adv->id) +
+				  sizeof(adv->config_methods))) {
+			size_t front = remaining;
+			size_t back = (sizeof(adv->id) +
+				       sizeof(adv->config_methods)) - front;
+			u8 holder[sizeof(adv->id) +
+				  sizeof(adv->config_methods)];
+
+			/* This works even if front or back == 0 */
+			WPA_PUT_LE32(holder, adv->id);
+			WPA_PUT_BE16(&holder[sizeof(adv->id)],
+				     adv->config_methods);
+			wpabuf_put_data(tmp_buf, holder, front);
+			p2p_buf_update_ie_hdr(tmp_buf, tag_len);
+			tag_len = p2p_buf_add_ie_hdr(tmp_buf);
+			wpabuf_put_data(tmp_buf, &holder[front], back);
+			remaining = 255 - (sizeof(adv->id) +
+					   sizeof(adv->config_methods)) - back;
+		} else {
+			wpabuf_put_le32(tmp_buf, adv->id);
+			wpabuf_put_be16(tmp_buf, adv->config_methods);
+			remaining -= (sizeof(adv->id) +
+				      sizeof(adv->config_methods));
+		}
+
+		/* We are guaranteed at least one byte for svc_len */
+		wpabuf_put_u8(tmp_buf, svc_len);
+		remaining -= sizeof(u8);
+
+		if (remaining < svc_len) {
+			size_t front = remaining;
+			size_t back = svc_len - front;
+
+			wpabuf_put_data(tmp_buf, adv->svc_name, front);
+			p2p_buf_update_ie_hdr(tmp_buf, tag_len);
+			tag_len = p2p_buf_add_ie_hdr(tmp_buf);
+
+			/* In rare cases, we must split across 3 attributes */
+			if (back > 255 - 4) {
+				wpabuf_put_data(tmp_buf,
+						&adv->svc_name[front], 255 - 4);
+				back -= 255 - 4;
+				front += 255 - 4;
+				p2p_buf_update_ie_hdr(tmp_buf, tag_len);
+				tag_len = p2p_buf_add_ie_hdr(tmp_buf);
+			}
+
+			wpabuf_put_data(tmp_buf, &adv->svc_name[front], back);
+			remaining = 255 - 4 - back;
+		} else {
+			wpabuf_put_data(tmp_buf, adv->svc_name, svc_len);
+			remaining -= svc_len;
+		}
+
+		/*           adv_id      config_methods     svc_string */
+		total_len += sizeof(u32) + sizeof(u16) + sizeof(u8) + svc_len;
+	}
+
+	if (tag_len)
+		p2p_buf_update_ie_hdr(tmp_buf, tag_len);
+
+	if (ie_len)
+		WPA_PUT_LE16(ie_len, (u16) total_len);
+
+wild_hash:
+	/* If all fit, return matching instances, otherwise the wildcard */
+	if (total_len <= MAX_SVC_ADV_LEN) {
+		wpabuf_put_buf(buf, tmp_buf);
+	} else {
+		char *wild_card = P2PS_WILD_HASH_STR;
+		u8 wild_len;
+
+		/* Insert wildcard instance */
+		tag_len = p2p_buf_add_ie_hdr(buf);
+		wpabuf_put_u8(buf, P2P_ATTR_ADVERTISED_SERVICE);
+		ie_len = wpabuf_put(buf, sizeof(u16));
+
+		wild_len = (u8) os_strlen(wild_card);
+		wpabuf_put_le32(buf, 0);
+		wpabuf_put_be16(buf, 0);
+		wpabuf_put_u8(buf, wild_len);
+		wpabuf_put_data(buf, wild_card, wild_len);
+
+		WPA_PUT_LE16(ie_len, 4 + 2 + 1 + wild_len);
+		p2p_buf_update_ie_hdr(buf, tag_len);
+	}
+
+	wpabuf_free(tmp_buf);
+}
+
+
 void p2p_buf_add_session_id(struct wpabuf *buf, u32 id, const u8 *mac)
 {
 	if (!buf || !mac)

@@ -2116,6 +2116,9 @@ struct wpabuf * p2p_build_probe_resp_ies(struct p2p_data *p2p)
 	if (p2p->vendor_elem && p2p->vendor_elem[VENDOR_ELEM_PROBE_RESP_P2P])
 		extra += wpabuf_len(p2p->vendor_elem[VENDOR_ELEM_PROBE_RESP_P2P]);
 
+	if (p2p->query_count)
+		extra += MAX_SVC_ADV_IE_LEN;
+
 	buf = wpabuf_alloc(1000 + extra);
 	if (buf == NULL)
 		return NULL;
@@ -2149,6 +2152,12 @@ struct wpabuf * p2p_build_probe_resp_ies(struct p2p_data *p2p)
 					      p2p->ext_listen_interval);
 	p2p_buf_add_device_info(buf, p2p, NULL);
 	p2p_buf_update_ie_hdr(buf, len);
+
+	if (p2p->query_count) {
+		p2p_buf_add_service_instance(buf, p2p, p2p->query_count,
+					     p2p->query_hash,
+					     p2p->p2ps_adv_list);
+	}
 
 	return buf;
 }
@@ -2391,6 +2400,7 @@ p2p_probe_req_rx(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 	p2p_add_dev_from_probe_req(p2p, addr, ie, ie_len);
 
 	res = p2p_reply_probe(p2p, addr, dst, bssid, ie, ie_len);
+	p2p->query_count = 0;
 
 	if ((p2p->state == P2P_CONNECT || p2p->state == P2P_CONNECT_LISTEN) &&
 	    p2p->go_neg_peer &&

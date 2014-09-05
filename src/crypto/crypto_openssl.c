@@ -1067,6 +1067,7 @@ void crypto_ec_deinit(struct crypto_ec *e)
 	if (e == NULL)
 		return;
 	BN_clear_free(e->order);
+	BN_clear_free(e->prime);
 	EC_GROUP_free(e->group);
 	BN_CTX_free(e->bnctx);
 	os_free(e);

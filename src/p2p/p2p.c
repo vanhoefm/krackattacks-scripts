@@ -3074,6 +3074,7 @@ void p2p_scan_res_handled(struct p2p_data *p2p)
 
 void p2p_scan_ie(struct p2p_data *p2p, struct wpabuf *ies, const u8 *dev_id)
 {
+	u8 dev_capab;
 	u8 *len;
 
 #ifdef CONFIG_WIFI_DISPLAY
@@ -3086,8 +3087,15 @@ void p2p_scan_ie(struct p2p_data *p2p, struct wpabuf *ies, const u8 *dev_id)
 			       p2p->vendor_elem[VENDOR_ELEM_PROBE_REQ_P2P]);
 
 	len = p2p_buf_add_ie_hdr(ies);
-	p2p_buf_add_capability(ies, p2p->dev_capab &
-			       ~P2P_DEV_CAPAB_CLIENT_DISCOVERABILITY, 0);
+
+	dev_capab = p2p->dev_capab & ~P2P_DEV_CAPAB_CLIENT_DISCOVERABILITY;
+
+	/* P2PS requires Probe Request frames to include SD bit */
+	if (p2p->p2ps_seek && p2p->p2ps_seek_count)
+		dev_capab |= P2P_DEV_CAPAB_SERVICE_DISCOVERY;
+
+	p2p_buf_add_capability(ies, dev_capab, 0);
+
 	if (dev_id)
 		p2p_buf_add_device_id(ies, dev_id);
 	if (p2p->cfg->reg_class && p2p->cfg->channel)
@@ -3097,6 +3105,10 @@ void p2p_scan_ie(struct p2p_data *p2p, struct wpabuf *ies, const u8 *dev_id)
 	if (p2p->ext_listen_interval)
 		p2p_buf_add_ext_listen_timing(ies, p2p->ext_listen_period,
 					      p2p->ext_listen_interval);
+
+	if (p2p->p2ps_seek && p2p->p2ps_seek_count)
+		p2p_buf_add_service_hash(ies, p2p);
+
 	/* TODO: p2p_buf_add_operating_channel() if GO */
 	p2p_buf_update_ie_hdr(ies, len);
 }

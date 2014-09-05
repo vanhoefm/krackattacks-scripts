@@ -586,6 +586,31 @@ struct p2p_message {
 
 	/* SSID IE */
 	const u8 *ssid;
+
+	/* P2PS */
+	u8 service_hash_count;
+	const u8 *service_hash;
+
+	const u8 *session_info;
+	size_t session_info_len;
+
+	const u8 *conn_cap;
+
+	const u8 *adv_id;
+	const u8 *adv_mac;
+
+	const u8 *adv_service_instance;
+	size_t adv_service_instance_len;
+
+	const u8 *session_id;
+	const u8 *session_mac;
+
+	const u8 *feature_cap;
+	size_t feature_cap_len;
+
+	const u8 *persistent_dev;
+	const u8 *persistent_ssid;
+	size_t persistent_ssid_len;
 };
 
 

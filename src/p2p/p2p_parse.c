@@ -281,6 +281,112 @@ static int p2p_parse_attribute(u8 id, const u8 *data, u16 len,
 			   data[0], data[1], data[2], data[3], data[4],
 			   data[5]);
 		break;
+	case P2P_ATTR_SERVICE_HASH:
+		if (len < P2PS_HASH_LEN) {
+			wpa_printf(MSG_DEBUG,
+				   "P2P: Too short Service Hash (length %u)",
+				   len);
+			return -1;
+		}
+		msg->service_hash_count = len / P2PS_HASH_LEN;
+		msg->service_hash = data;
+		wpa_hexdump(MSG_DEBUG, "P2P: * Service Hash(s)", data, len);
+		break;
+	case P2P_ATTR_SESSION_INFORMATION_DATA:
+		msg->session_info = data;
+		msg->session_info_len = len;
+		wpa_printf(MSG_DEBUG, "P2P: * Service Instance: %u bytes - %p",
+			   len, data);
+		break;
+	case P2P_ATTR_CONNECTION_CAPABILITY:
+		if (len < 1) {
+			wpa_printf(MSG_DEBUG,
+				   "P2P: Too short Connection Capability (length %u)",
+				   len);
+			return -1;
+		}
+		msg->conn_cap = data;
+		wpa_printf(MSG_DEBUG, "P2P: * Connection Capability: 0x%x",
+			   *msg->conn_cap);
+		break;
+	case P2P_ATTR_ADVERTISEMENT_ID:
+		if (len < 10) {
+			wpa_printf(MSG_DEBUG,
+				   "P2P: Too short Advertisement ID (length %u)",
+				   len);
+			return -1;
+		}
+		msg->adv_id = data;
+		msg->adv_mac = &data[sizeof(u32)];
+		wpa_printf(MSG_DEBUG, "P2P: * Advertisement ID %x",
+			   WPA_GET_LE32(data));
+		break;
+	case P2P_ATTR_ADVERTISED_SERVICE:
+		if (len < 8) {
+			wpa_printf(MSG_DEBUG,
+				   "P2P: Too short Service Instance (length %u)",
+				   len);
+			return -1;
+		}
+		msg->adv_service_instance = data;
+		msg->adv_service_instance_len = len;
+		if (len <= 255 + 8) {
+			char str[256];
+			u8 namelen;
+
+			namelen = data[6];
+			if (namelen > len - 7)
+				break;
+			os_memcpy(str, &data[7], namelen);
+			str[namelen] = '\0';
+			wpa_printf(MSG_DEBUG, "P2P: * Service Instance: %x-%s",
+				   WPA_GET_LE32(data), str);
+		} else {
+			wpa_printf(MSG_DEBUG, "P2P: * Service Instance: %p",
+				   data);
+		}
+		break;
+	case P2P_ATTR_SESSION_ID:
+		if (len < sizeof(u32) + ETH_ALEN) {
+			wpa_printf(MSG_DEBUG,
+				   "P2P: Too short Session ID Info (length %u)",
+				   len);
+			return -1;
+		}
+		msg->session_id = data;
+		msg->session_mac = &data[sizeof(u32)];
+		wpa_printf(MSG_DEBUG, "P2P: * Session ID: %x " MACSTR,
+			   WPA_GET_LE32(data), MAC2STR(msg->session_mac));
+		break;
+	case P2P_ATTR_FEATURE_CAPABILITY:
+		if (!len) {
+			wpa_printf(MSG_DEBUG,
+				   "P2P: Too short Feature Capability (length %u)",
+				   len);
+			return -1;
+		}
+		msg->feature_cap = data;
+		msg->feature_cap_len = len;
+		wpa_printf(MSG_DEBUG, "P2P: * Feature Cap (length=%u)", len);
+		break;
+	case P2P_ATTR_PERSISTENT_GROUP:
+	{
+		if (len < ETH_ALEN) {
+			wpa_printf(MSG_DEBUG,
+				   "P2P: Too short Persistent Group Info (length %u)",
+				   len);
+			return -1;
+		}
+
+		msg->persistent_dev = data;
+		msg->persistent_ssid_len = len - ETH_ALEN;
+		msg->persistent_ssid = &data[ETH_ALEN];
+		wpa_printf(MSG_DEBUG, "P2P: * Persistent Group: " MACSTR " %s",
+			   MAC2STR(msg->persistent_dev),
+			   wpa_ssid_txt(msg->persistent_ssid,
+					msg->persistent_ssid_len));
+		break;
+	}
 	default:
 		wpa_printf(MSG_DEBUG, "P2P: Skipped unknown attribute %d "
 			   "(length %d)", id, len);

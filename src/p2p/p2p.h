@@ -11,6 +11,8 @@
 
 #include "wps/wps_defs.h"
 
+#define P2PS_HASH_LEN 6
+
 /**
  * P2P_MAX_REG_CLASSES - Maximum number of regulatory classes
  */

@@ -976,3 +976,89 @@ char * str_token(char *str, const char *delim, char **context)
 	*context = end;
 	return pos;
 }
+
+
+size_t utf8_unescape(const char *inp, size_t in_size,
+		     char *outp, size_t out_size)
+{
+	size_t res_size = 0;
+
+	if (!inp || !outp)
+		return 0;
+
+	if (!in_size)
+		in_size = os_strlen(inp);
+
+	/* Advance past leading single quote */
+	if (*inp == '\'' && in_size) {
+		inp++;
+		in_size--;
+	}
+
+	while (in_size--) {
+		if (res_size >= out_size)
+			return 0;
+
+		switch (*inp) {
+		case '\'':
+			/* Terminate on bare single quote */
+			*outp = '\0';
+			return res_size;
+
+		case '\\':
+			if (!in_size--)
+				return 0;
+			inp++;
+			/* fall through */
+
+		default:
+			*outp++ = *inp++;
+			res_size++;
+		}
+	}
+
+	/* NUL terminate if space allows */
+	if (res_size < out_size)
+		*outp = '\0';
+
+	return res_size;
+}
+
+
+size_t utf8_escape(const char *inp, size_t in_size,
+		   char *outp, size_t out_size)
+{
+	size_t res_size = 0;
+
+	if (!inp || !outp)
+		return 0;
+
+	/* inp may or may not be NUL terminated, but must be if 0 size
+	 * is specified */
+	if (!in_size)
+		in_size = os_strlen(inp);
+
+	while (in_size--) {
+		if (res_size++ >= out_size)
+			return 0;
+
+		switch (*inp) {
+		case '\\':
+		case '\'':
+			if (res_size++ >= out_size)
+				return 0;
+			*outp++ = '\\';
+			/* fall through */
+
+		default:
+			*outp++ = *inp++;
+			break;
+		}
+	}
+
+	/* NUL terminate if space allows */
+	if (res_size < out_size)
+		*outp = '\0';
+
+	return res_size;
+}

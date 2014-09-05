@@ -492,6 +492,12 @@ struct p2p_data {
 	u8 pending_channel;
 	u8 pending_channel_forced;
 
+	/* ASP Support */
+	u8 wild_card_hash[P2PS_HASH_LEN];
+	u8 query_hash[P2P_MAX_QUERY_HASH * P2PS_HASH_LEN];
+	u8 p2ps_seek;
+	u8 p2ps_seek_count;
+
 #ifdef CONFIG_WIFI_DISPLAY
 	struct wpabuf *wfd_ie_beacon;
 	struct wpabuf *wfd_ie_probe_req;

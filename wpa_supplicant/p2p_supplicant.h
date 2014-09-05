@@ -55,7 +55,8 @@ enum p2p_discovery_type;
 int wpas_p2p_find(struct wpa_supplicant *wpa_s, unsigned int timeout,
 		  enum p2p_discovery_type type,
 		  unsigned int num_req_dev_types, const u8 *req_dev_types,
-		  const u8 *dev_id, unsigned int search_delay);
+		  const u8 *dev_id, unsigned int search_delay,
+		  u8 seek_cnt, const char **seek_string);
 void wpas_p2p_stop_find(struct wpa_supplicant *wpa_s);
 int wpas_p2p_listen(struct wpa_supplicant *wpa_s, unsigned int timeout);
 int wpas_p2p_listen_start(struct wpa_supplicant *wpa_s, unsigned int timeout);

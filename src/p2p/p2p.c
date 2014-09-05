@@ -13,6 +13,8 @@
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
 #include "common/wpa_ctrl.h"
+#include "crypto/sha256.h"
+#include "crypto/crypto.h"
 #include "wps/wps_i.h"
 #include "p2p_i.h"
 #include "p2p.h"
@@ -1083,10 +1085,44 @@ static void p2p_free_req_dev_types(struct p2p_data *p2p)
 }
 
 
+static int p2ps_gen_hash(struct p2p_data *p2p, const char *str, u8 *hash)
+{
+	u8 buf[SHA256_MAC_LEN];
+	char str_buf[256];
+	const u8 *adv_array;
+	size_t i, adv_len;
+
+	if (!str || !hash)
+		return 0;
+
+	if (!str[0]) {
+		os_memcpy(hash, p2p->wild_card_hash, P2PS_HASH_LEN);
+		return 1;
+	}
+
+	adv_array = (u8 *) str_buf;
+	adv_len = os_strlen(str);
+
+	for (i = 0; str[i] && i < adv_len; i++) {
+		if (str[i] >= 'A' && str[i] <= 'Z')
+			str_buf[i] = str[i] - 'A' + 'a';
+		else
+			str_buf[i] = str[i];
+	}
+
+	if (sha256_vector(1, &adv_array, &adv_len, buf))
+		return 0;
+
+	os_memcpy(hash, buf, P2PS_HASH_LEN);
+	return 1;
+}
+
+
 int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 	     enum p2p_discovery_type type,
 	     unsigned int num_req_dev_types, const u8 *req_dev_types,
-	     const u8 *dev_id, unsigned int search_delay)
+	     const u8 *dev_id, unsigned int search_delay,
+	     u8 seek_count, const char **seek)
 {
 	int res;
 
@@ -1112,6 +1148,47 @@ int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 		p2p->find_dev_id = p2p->find_dev_id_buf;
 	} else
 		p2p->find_dev_id = NULL;
+
+	if (seek_count == 0 || !seek) {
+		/* Not an ASP search */
+		p2p->p2ps_seek = 0;
+	} else if (seek_count == 1 && seek && (!seek[0] || !seek[0][0])) {
+		/*
+		 * An empty seek string means no hash values, but still an ASP
+		 * search.
+		 */
+		p2p->p2ps_seek_count = 0;
+		p2p->p2ps_seek = 1;
+	} else if (seek && seek_count <= P2P_MAX_QUERY_HASH) {
+		u8 buf[P2PS_HASH_LEN];
+		int i;
+
+		p2p->p2ps_seek_count = seek_count;
+		for (i = 0; i < seek_count; i++) {
+			if (!p2ps_gen_hash(p2p, seek[i], buf))
+				continue;
+
+			/* If asking for wildcard, don't do others */
+			if (os_memcmp(buf, p2p->wild_card_hash,
+				      P2PS_HASH_LEN) == 0) {
+				p2p->p2ps_seek_count = 0;
+				break;
+			}
+
+			os_memcpy(&p2p->query_hash[i * P2PS_HASH_LEN], buf,
+				  P2PS_HASH_LEN);
+		}
+		p2p->p2ps_seek = 1;
+	} else {
+		p2p->p2ps_seek_count = 0;
+		p2p->p2ps_seek = 1;
+	}
+
+	/* Special case to perform wildcard search */
+	if (p2p->p2ps_seek_count == 0 && p2p->p2ps_seek) {
+		p2p->p2ps_seek_count = 1;
+		os_memcpy(&p2p->query_hash, p2p->wild_card_hash, P2PS_HASH_LEN);
+	}
 
 	p2p->start_after_scan = P2P_AFTER_SCAN_NOTHING;
 	p2p_clear_timeout(p2p);
@@ -1165,6 +1242,9 @@ void p2p_stop_find_for_freq(struct p2p_data *p2p, int freq)
 	p2p_clear_timeout(p2p);
 	if (p2p->state == P2P_SEARCH)
 		p2p->cfg->find_stopped(p2p->cfg->cb_ctx);
+
+	p2p->p2ps_seek_count = 0;
+
 	p2p_set_state(p2p, P2P_IDLE);
 	p2p_free_req_dev_types(p2p);
 	p2p->start_after_scan = P2P_AFTER_SCAN_NOTHING;
@@ -2507,6 +2587,8 @@ struct p2p_data * p2p_init(const struct p2p_config *cfg)
 		} else
 			p2p->cfg->num_pref_chan = 0;
 	}
+
+	p2ps_gen_hash(p2p, P2PS_WILD_HASH_STR, p2p->wild_card_hash);
 
 	p2p->min_disc_int = 1;
 	p2p->max_disc_int = 3;

@@ -11,7 +11,9 @@
 
 #include "wps/wps_defs.h"
 
+#define P2PS_WILD_HASH_STR "org.wi-fi.wfds"
 #define P2PS_HASH_LEN 6
+#define P2P_MAX_QUERY_HASH 6
 
 /**
  * P2P_MAX_REG_CLASSES - Maximum number of regulatory classes
@@ -943,12 +945,15 @@ enum p2p_discovery_type {
  *	requested device types.
  * @dev_id: Device ID to search for or %NULL to find all devices
  * @search_delay: Extra delay in milliseconds between search iterations
+ * @seek_count: Number of ASP Service Strings in the seek_string array
+ * @seek_string: ASP Service Strings to query for in Probe Requests
  * Returns: 0 on success, -1 on failure
  */
 int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 	     enum p2p_discovery_type type,
 	     unsigned int num_req_dev_types, const u8 *req_dev_types,
-	     const u8 *dev_id, unsigned int search_delay);
+	     const u8 *dev_id, unsigned int search_delay,
+	     u8 seek_count, const char **seek_string);
 
 /**
  * p2p_notify_scan_trigger_status - Indicate scan trigger status

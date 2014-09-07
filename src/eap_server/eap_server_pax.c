@@ -287,7 +287,7 @@ static void eap_pax_process_std_2(struct eap_sm *sm,
 	struct eap_pax_hdr *resp;
 	u8 mac[EAP_PAX_MAC_LEN], icvbuf[EAP_PAX_ICV_LEN];
 	const u8 *pos;
-	size_t len, left;
+	size_t len, left, cid_len;
 	int i;
 
 	if (data->state != PAX_STD_1)
@@ -320,7 +320,12 @@ static void eap_pax_process_std_2(struct eap_sm *sm,
 		wpa_printf(MSG_INFO, "EAP-PAX: Too short PAX_STD-2 (CID)");
 		return;
 	}
-	data->cid_len = WPA_GET_BE16(pos);
+	cid_len = WPA_GET_BE16(pos);
+	if (cid_len > 1500) {
+		wpa_printf(MSG_INFO, "EAP-PAX: Too long CID");
+		return;
+	}
+	data->cid_len = cid_len;
 	os_free(data->cid);
 	data->cid = os_malloc(data->cid_len);
 	if (data->cid == NULL) {

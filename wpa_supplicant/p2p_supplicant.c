@@ -5075,7 +5075,8 @@ static int wpas_p2p_select_freq_no_pref(struct wpa_supplicant *wpa_s,
 	unsigned int i, r;
 
 	/* first try some random selection of the social channels */
-	os_get_random((u8 *) &r, sizeof(r));
+	if (os_get_random((u8 *) &r, sizeof(r)) < 0)
+		return -1;
 
 	for (i = 0; i < 3; i++) {
 		params->freq = 2412 + ((r + i) % 3) * 25;

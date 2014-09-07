@@ -1318,7 +1318,10 @@ static void sme_sa_query_timer(void *eloop_ctx, void *timeout_ctx)
 	wpa_s->sme.sa_query_trans_id = nbuf;
 	wpa_s->sme.sa_query_count++;
 
-	os_get_random(trans_id, WLAN_SA_QUERY_TR_ID_LEN);
+	if (os_get_random(trans_id, WLAN_SA_QUERY_TR_ID_LEN) < 0) {
+		wpa_printf(MSG_DEBUG, "Could not generate SA Query ID");
+		return;
+	}
 
 	timeout = sa_query_retry_timeout;
 	sec = ((timeout / 1000) * 1024) / 1000;

@@ -1010,7 +1010,7 @@ static int hostapd_ctrl_iface_get_config(struct hostapd_data *hapd,
 			return pos - buf;
 		pos += ret;
 
-		ret = wpa_write_ciphers(pos, end, hapd->conf->rsn_pairwise,
+		ret = wpa_write_ciphers(pos, end, hapd->conf->wpa_pairwise,
 					" ");
 		if (ret < 0)
 			return pos - buf;

@@ -1926,7 +1926,7 @@ int radius_server_get_mib(struct radius_server_data *data, char *buf,
 			if (inet_ntop(AF_INET6, &cli->addr6, abuf,
 				      sizeof(abuf)) == NULL)
 				abuf[0] = '\0';
-			if (inet_ntop(AF_INET6, &cli->mask6, abuf,
+			if (inet_ntop(AF_INET6, &cli->mask6, mbuf,
 				      sizeof(mbuf)) == NULL)
 				mbuf[0] = '\0';
 		}

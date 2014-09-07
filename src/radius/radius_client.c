@@ -1080,19 +1080,23 @@ radius_change_server(struct radius_client_data *radius,
 	switch (nserv->addr.af) {
 	case AF_INET:
 		claddrlen = sizeof(claddr);
-		getsockname(sel_sock, (struct sockaddr *) &claddr, &claddrlen);
-		wpa_printf(MSG_DEBUG, "RADIUS local address: %s:%u",
-			   inet_ntoa(claddr.sin_addr), ntohs(claddr.sin_port));
+		if (getsockname(sel_sock, (struct sockaddr *) &claddr,
+				&claddrlen) == 0) {
+			wpa_printf(MSG_DEBUG, "RADIUS local address: %s:%u",
+				   inet_ntoa(claddr.sin_addr),
+				   ntohs(claddr.sin_port));
+		}
 		break;
 #ifdef CONFIG_IPV6
 	case AF_INET6: {
 		claddrlen = sizeof(claddr6);
-		getsockname(sel_sock, (struct sockaddr *) &claddr6,
-			    &claddrlen);
-		wpa_printf(MSG_DEBUG, "RADIUS local address: %s:%u",
-			   inet_ntop(AF_INET6, &claddr6.sin6_addr,
-				     abuf, sizeof(abuf)),
-			   ntohs(claddr6.sin6_port));
+		if (getsockname(sel_sock, (struct sockaddr *) &claddr6,
+				&claddrlen) == 0) {
+			wpa_printf(MSG_DEBUG, "RADIUS local address: %s:%u",
+				   inet_ntop(AF_INET6, &claddr6.sin6_addr,
+					     abuf, sizeof(abuf)),
+				   ntohs(claddr6.sin6_port));
+		}
 		break;
 	}
 #endif /* CONFIG_IPV6 */

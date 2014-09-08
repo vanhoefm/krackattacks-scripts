@@ -259,3 +259,10 @@ void l2_packet_notify_auth_start(struct l2_packet_data *l2)
 {
 	wpa_priv_cmd(l2, PRIVSEP_CMD_L2_NOTIFY_AUTH_START, NULL, 0);
 }
+
+
+int l2_packet_set_packet_filter(struct l2_packet_data *l2,
+				enum l2_packet_filter_type type)
+{
+	return -1;
+}

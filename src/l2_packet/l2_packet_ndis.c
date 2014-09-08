@@ -514,3 +514,10 @@ int l2_packet_get_ip_addr(struct l2_packet_data *l2, char *buf, size_t len)
 void l2_packet_notify_auth_start(struct l2_packet_data *l2)
 {
 }
+
+
+int l2_packet_set_packet_filter(struct l2_packet_data *l2,
+				enum l2_packet_filter_type type)
+{
+	return -1;
+}

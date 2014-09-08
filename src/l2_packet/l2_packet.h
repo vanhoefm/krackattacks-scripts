@@ -39,6 +39,10 @@ struct l2_ethhdr {
 #pragma pack(pop)
 #endif /* _MSC_VER */
 
+enum l2_packet_filter_type {
+	L2_PACKET_FILTER_DHCP,
+};
+
 /**
  * l2_packet_init - Initialize l2_packet interface
  * @ifname: Interface name
@@ -120,5 +124,17 @@ int l2_packet_get_ip_addr(struct l2_packet_data *l2, char *buf, size_t len);
  * from knowing about the starting authentication.
  */
 void l2_packet_notify_auth_start(struct l2_packet_data *l2);
+
+/**
+ * l2_packet_set_packet_filter - Set socket filter for l2_packet
+ * @l2: Pointer to internal l2_packet data from l2_packet_init()
+ * @type: enum l2_packet_filter_type, type of filter
+ * Returns: 0 on success, -1 on failure
+ *
+ * This function is used to set the socket filter for l2_packet socket.
+ *
+ */
+int l2_packet_set_packet_filter(struct l2_packet_data *l2,
+				enum l2_packet_filter_type type);
 
 #endif /* L2_PACKET_H */

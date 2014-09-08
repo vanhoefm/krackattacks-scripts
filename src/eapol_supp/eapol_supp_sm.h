@@ -58,6 +58,11 @@ struct eapol_config {
 	 * external_sim - Use external processing for SIM/USIM operations
 	 */
 	int external_sim;
+
+	/**
+	 * wps - Whether this connection is used for WPS
+	 */
+	int wps;
 };
 
 struct eapol_sm;

@@ -255,12 +255,14 @@ SM_STATE(SUPP_PAE, CONNECTING)
 		 * delay authentication. Use a short timeout to send the first
 		 * EAPOL-Start if Authenticator does not start authentication.
 		 */
-#ifdef CONFIG_WPS
-		/* Reduce latency on starting WPS negotiation. */
-		sm->startWhen = 1;
-#else /* CONFIG_WPS */
-		sm->startWhen = 3;
-#endif /* CONFIG_WPS */
+		if (sm->conf.wps) {
+			/* Reduce latency on starting WPS negotiation. */
+			wpa_printf(MSG_DEBUG,
+				   "EAPOL: Using shorter startWhen for WPS");
+			sm->startWhen = 1;
+		} else {
+			sm->startWhen = 2;
+		}
 	}
 	eapol_enable_timer_tick(sm);
 	sm->eapolEap = FALSE;
@@ -1242,7 +1244,7 @@ int eapol_sm_rx_eapol(struct eapol_sm *sm, const u8 *src, const u8 *buf,
 		return 0;
 	}
 #ifdef CONFIG_WPS
-	if (sm->conf.workaround &&
+	if (sm->conf.wps && sm->conf.workaround &&
 	    plen < len - sizeof(*hdr) &&
 	    hdr->type == IEEE802_1X_TYPE_EAP_PACKET &&
 	    len - sizeof(*hdr) > sizeof(struct eap_hdr)) {
@@ -1491,6 +1493,7 @@ void eapol_sm_notify_config(struct eapol_sm *sm,
 	sm->conf.required_keys = conf->required_keys;
 	sm->conf.fast_reauth = conf->fast_reauth;
 	sm->conf.workaround = conf->workaround;
+	sm->conf.wps = conf->wps;
 #ifdef CONFIG_EAP_PROXY
 	if (sm->use_eap_proxy) {
 		/* Using EAP Proxy, so skip EAP state machine update */

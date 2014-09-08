@@ -142,11 +142,29 @@ static int wpa_supplicant_eapol_send(void *ctx, int type, const u8 *buf,
 
 	if (pmksa_cache_get_current(wpa_s->wpa) &&
 	    type == IEEE802_1X_TYPE_EAPOL_START) {
-		/* Trying to use PMKSA caching - do not send EAPOL-Start frames
-		 * since they will trigger full EAPOL authentication. */
-		wpa_printf(MSG_DEBUG, "RSN: PMKSA caching - do not send "
-			   "EAPOL-Start");
-		return -1;
+		/*
+		 * We were trying to use PMKSA caching and sending EAPOL-Start
+		 * would abort that and trigger full EAPOL authentication.
+		 * However, we've already waited for the AP/Authenticator to
+		 * start 4-way handshake or EAP authentication, and apparently
+		 * it has not done so since the startWhen timer has reached zero
+		 * to get the state machine sending EAPOL-Start. This is not
+		 * really supposed to happen, but an interoperability issue with
+		 * a deployed AP has been identified where the connection fails
+		 * due to that AP failing to operate correctly if PMKID is
+		 * included in the Association Request frame. To work around
+		 * this, assume PMKSA caching failed and try to initiate full
+		 * EAP authentication.
+		 */
+		if (!wpa_s->current_ssid ||
+		    wpa_s->current_ssid->eap_workaround) {
+			wpa_printf(MSG_DEBUG,
+				   "RSN: Timeout on waiting for the AP to initiate 4-way handshake for PMKSA caching or EAP authentication - try to force it to start EAP authentication");
+		} else {
+			wpa_printf(MSG_DEBUG,
+				   "RSN: PMKSA caching - do not send EAPOL-Start");
+			return -1;
+		}
 	}
 
 	if (is_zero_ether_addr(wpa_s->bssid)) {

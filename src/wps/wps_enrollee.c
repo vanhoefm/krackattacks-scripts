@@ -175,6 +175,12 @@ static struct wpabuf * wps_build_m3(struct wps_data *wps)
 	}
 	wps_derive_psk(wps, wps->dev_password, wps->dev_password_len);
 
+	if (wps->wps->ap && random_pool_ready() != 1) {
+		wpa_printf(MSG_INFO,
+			   "WPS: Not enough entropy in random pool to proceed - do not allow AP PIN to be used");
+		return NULL;
+	}
+
 	msg = wpabuf_alloc(1000);
 	if (msg == NULL)
 		return NULL;
@@ -268,8 +274,12 @@ static int wps_build_cred_network_key(struct wps_data *wps, struct wpabuf *msg)
 		char hex[65];
 		u8 psk[32];
 		/* Generate a random per-device PSK */
-		if (random_get_bytes(psk, sizeof(psk)) < 0)
+		if (random_pool_ready() != 1 ||
+		    random_get_bytes(psk, sizeof(psk)) < 0) {
+			wpa_printf(MSG_INFO,
+				   "WPS: Could not generate random PSK");
 			return -1;
+		}
 		wpa_hexdump_key(MSG_DEBUG, "WPS: Generated per-device PSK",
 				psk, sizeof(psk));
 		wpa_printf(MSG_DEBUG, "WPS:  * Network Key (len=%u)",

@@ -1640,8 +1640,12 @@ int wps_build_cred(struct wps_data *wps, struct wpabuf *msg)
 	    !wps->wps->registrar->disable_auto_conf) {
 		u8 r[16];
 		/* Generate a random passphrase */
-		if (random_get_bytes(r, sizeof(r)) < 0)
+		if (random_pool_ready() != 1 ||
+		    random_get_bytes(r, sizeof(r)) < 0) {
+			wpa_printf(MSG_INFO,
+				   "WPS: Could not generate random PSK");
 			return -1;
+		}
 		os_free(wps->new_psk);
 		wps->new_psk = base64_encode(r, sizeof(r), &wps->new_psk_len);
 		if (wps->new_psk == NULL)
@@ -1674,7 +1678,10 @@ int wps_build_cred(struct wps_data *wps, struct wpabuf *msg)
 		wps->new_psk = os_malloc(wps->new_psk_len);
 		if (wps->new_psk == NULL)
 			return -1;
-		if (random_get_bytes(wps->new_psk, wps->new_psk_len) < 0) {
+		if (random_pool_ready() != 1 ||
+		    random_get_bytes(wps->new_psk, wps->new_psk_len) < 0) {
+			wpa_printf(MSG_INFO,
+				   "WPS: Could not generate random PSK");
 			os_free(wps->new_psk);
 			wps->new_psk = NULL;
 			return -1;

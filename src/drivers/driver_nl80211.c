@@ -19,6 +19,9 @@
 #include <netlink/genl/genl.h>
 #include <netlink/genl/family.h>
 #include <netlink/genl/ctrl.h>
+#ifdef CONFIG_LIBNL3_ROUTE
+#include <netlink/route/neighbour.h>
+#endif /* CONFIG_LIBNL3_ROUTE */
 #include <linux/rtnetlink.h>
 #include <netpacket/packet.h>
 #include <linux/filter.h>
@@ -327,6 +330,8 @@ struct wpa_driver_nl80211_data {
 	int eapol_tx_sock;
 
 	int eapol_sock; /* socket for EAPOL frames */
+
+	struct nl_sock *rtnl_sk; /* nl_sock for NETLINK_ROUTE */
 
 	int default_if_indices[16];
 	int *if_indices;
@@ -4932,6 +4937,8 @@ static void wpa_driver_nl80211_deinit(struct i802_bss *bss)
 			wpa_printf(MSG_INFO, "nl80211: Failed to remove "
 				   "interface %s from bridge %s: %s",
 				   bss->ifname, bss->brname, strerror(errno));
+		if (drv->rtnl_sk)
+			nl_socket_free(drv->rtnl_sk);
 	}
 	if (bss->added_bridge) {
 		if (linux_br_del(drv->global->ioctl_sock, bss->brname) < 0)
@@ -7751,6 +7758,43 @@ static int wpa_driver_nl80211_sta_add(void *priv,
 }
 
 
+static void rtnl_neigh_delete_fdb_entry(struct i802_bss *bss, const u8 *addr)
+{
+#ifdef CONFIG_LIBNL3_ROUTE
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct rtnl_neigh *rn;
+	struct nl_addr *nl_addr;
+	int err;
+
+	rn = rtnl_neigh_alloc();
+	if (!rn)
+		return;
+
+	rtnl_neigh_set_family(rn, AF_BRIDGE);
+	rtnl_neigh_set_ifindex(rn, bss->ifindex);
+	nl_addr = nl_addr_build(AF_BRIDGE, (void *) addr, ETH_ALEN);
+	if (!nl_addr) {
+		rtnl_neigh_put(rn);
+		return;
+	}
+	rtnl_neigh_set_lladdr(rn, nl_addr);
+
+	err = rtnl_neigh_delete(drv->rtnl_sk, rn, 0);
+	if (err < 0) {
+		wpa_printf(MSG_DEBUG, "nl80211: bridge FDB entry delete for "
+			   MACSTR " ifindex=%d failed: %s", MAC2STR(addr),
+			   bss->ifindex, nl_geterror(err));
+	} else {
+		wpa_printf(MSG_DEBUG, "nl80211: deleted bridge FDB entry for "
+			   MACSTR, MAC2STR(addr));
+	}
+
+	nl_addr_put(nl_addr);
+	rtnl_neigh_put(rn);
+#endif /* CONFIG_LIBNL3_ROUTE */
+}
+
+
 static int wpa_driver_nl80211_sta_remove(struct i802_bss *bss, const u8 *addr)
 {
 	struct wpa_driver_nl80211_data *drv = bss->drv;
@@ -7771,6 +7815,10 @@ static int wpa_driver_nl80211_sta_remove(struct i802_bss *bss, const u8 *addr)
 	wpa_printf(MSG_DEBUG, "nl80211: sta_remove -> DEL_STATION %s " MACSTR
 		   " --> %d (%s)",
 		   bss->ifname, MAC2STR(addr), ret, strerror(-ret));
+
+	if (drv->rtnl_sk)
+		rtnl_neigh_delete_fdb_entry(bss, addr);
+
 	if (ret == -ENOENT)
 		return 0;
 	return ret;
@@ -10053,6 +10101,22 @@ static void *i802_init(struct hostapd_data *hapd,
 	if (params->num_bridge && params->bridge[0] &&
 	    i802_check_bridge(drv, bss, params->bridge[0], params->ifname) < 0)
 		goto failed;
+
+#ifdef CONFIG_LIBNL3_ROUTE
+	if (bss->added_if_into_bridge) {
+		drv->rtnl_sk = nl_socket_alloc();
+		if (drv->rtnl_sk == NULL) {
+			wpa_printf(MSG_ERROR, "nl80211: Failed to allocate nl_sock");
+			goto failed;
+		}
+
+		if (nl_connect(drv->rtnl_sk, NETLINK_ROUTE)) {
+			wpa_printf(MSG_ERROR, "nl80211: Failed to connect nl_sock to NETLINK_ROUTE: %s",
+				   strerror(errno));
+			goto failed;
+		}
+	}
+#endif /* CONFIG_LIBNL3_ROUTE */
 
 	drv->eapol_sock = socket(PF_PACKET, SOCK_DGRAM, htons(ETH_P_PAE));
 	if (drv->eapol_sock < 0) {

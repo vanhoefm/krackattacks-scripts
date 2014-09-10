@@ -6302,12 +6302,13 @@ static int i802_check_bridge(struct wpa_driver_nl80211_data *drv,
 			     struct i802_bss *bss,
 			     const char *brname, const char *ifname)
 {
-	int ifindex;
+	int br_ifindex;
 	char in_br[IFNAMSIZ];
 
 	os_strlcpy(bss->brname, brname, IFNAMSIZ);
-	ifindex = if_nametoindex(brname);
-	if (ifindex == 0) {
+	br_ifindex = if_nametoindex(brname);
+	bss->br_ifindex = br_ifindex;
+	if (br_ifindex == 0) {
 		/*
 		 * Bridge was configured, but the bridge device does
 		 * not exist. Try to add it now.
@@ -6379,6 +6380,7 @@ static void *i802_init(struct hostapd_data *hapd,
 		brname[0] = '\0';
 		br_ifindex = 0;
 	}
+	bss->br_ifindex = br_ifindex;
 
 	for (i = 0; i < params->num_bridge; i++) {
 		if (params->bridge[i]) {

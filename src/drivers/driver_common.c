@@ -84,3 +84,24 @@ const char * event_to_string(enum wpa_event_type event)
 	return "UNKNOWN";
 #undef E2S
 }
+
+
+const char * channel_width_to_string(enum chan_width width)
+{
+	switch (width) {
+	case CHAN_WIDTH_20_NOHT:
+		return "20 MHz (no HT)";
+	case CHAN_WIDTH_20:
+		return "20 MHz";
+	case CHAN_WIDTH_40:
+		return "40 MHz";
+	case CHAN_WIDTH_80:
+		return "80 MHz";
+	case CHAN_WIDTH_80P80:
+		return "80+80 MHz";
+	case CHAN_WIDTH_160:
+		return "160 MHz";
+	default:
+		return "unknown";
+	}
+}

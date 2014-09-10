@@ -41,6 +41,7 @@
 #include "autoscan.h"
 #include "wnm_sta.h"
 #include "offchannel.h"
+#include "drivers/driver.h"
 
 static int wpa_supplicant_global_iface_list(struct wpa_global *global,
 					    char *buf, int len);
@@ -5553,28 +5554,6 @@ static int wpas_ctrl_iface_wnm_bss_query(struct wpa_supplicant *wpa_s, char *cmd
 #endif /* CONFIG_WNM */
 
 
-/* Get string representation of channel width */
-static const char * channel_width_name(enum chan_width width)
-{
-	switch (width) {
-	case CHAN_WIDTH_20_NOHT:
-		return "20 MHz (no HT)";
-	case CHAN_WIDTH_20:
-		return "20 MHz";
-	case CHAN_WIDTH_40:
-		return "40 MHz";
-	case CHAN_WIDTH_80:
-		return "80 MHz";
-	case CHAN_WIDTH_80P80:
-		return "80+80 MHz";
-	case CHAN_WIDTH_160:
-		return "160 MHz";
-	default:
-		return "unknown";
-	}
-}
-
-
 static int wpa_supplicant_signal_poll(struct wpa_supplicant *wpa_s, char *buf,
 				      size_t buflen)
 {
@@ -5599,7 +5578,7 @@ static int wpa_supplicant_signal_poll(struct wpa_supplicant *wpa_s, char *buf,
 
 	if (si.chanwidth != CHAN_WIDTH_UNKNOWN) {
 		ret = os_snprintf(pos, end - pos, "WIDTH=%s\n",
-				  channel_width_name(si.chanwidth));
+				  channel_width_to_string(si.chanwidth));
 		if (ret < 0 || ret > end - pos)
 			return -1;
 		pos += ret;

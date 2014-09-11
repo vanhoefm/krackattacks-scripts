@@ -632,6 +632,14 @@ static inline int wpa_drv_vendor_cmd(struct wpa_supplicant *wpa_s,
 					 data, data_len, buf);
 }
 
+static inline int wpa_drv_roaming(struct wpa_supplicant *wpa_s, int allowed,
+				  const u8 *bssid)
+{
+	if (!wpa_s->driver->roaming)
+		return -1;
+	return wpa_s->driver->roaming(wpa_s->drv_priv, allowed, bssid);
+}
+
 
 #ifdef CONFIG_MACSEC
 

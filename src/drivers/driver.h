@@ -2804,6 +2804,22 @@ struct wpa_driver_ops {
 	 */
 	int (*status)(void *priv, char *buf, size_t buflen);
 
+	/**
+	 * roaming - Set roaming policy for driver-based BSS selection
+	 * @priv: Private driver interface data
+	 * @allowed: Whether roaming within ESS is allowed
+	 * @bssid: Forced BSSID if roaming is disabled or %NULL if not set
+	 * Returns: Length of written status information or -1 on failure
+	 *
+	 * This optional callback can be used to update roaming policy from the
+	 * associate() command (bssid being set there indicates that the driver
+	 * should not roam before getting this roaming() call to allow roaming.
+	 * If the driver does not indicate WPA_DRIVER_FLAGS_BSS_SELECTION
+	 * capability, roaming policy is handled within wpa_supplicant and there
+	 * is no need to implement or react to this callback.
+	 */
+	int (*roaming)(void *priv, int allowed, const u8 *bssid);
+
 #ifdef CONFIG_MACSEC
 	int (*macsec_init)(void *priv, struct macsec_init_params *params);
 

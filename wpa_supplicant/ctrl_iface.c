@@ -2564,9 +2564,10 @@ static int wpa_supplicant_ctrl_iface_update_network(
 static int wpa_supplicant_ctrl_iface_set_network(
 	struct wpa_supplicant *wpa_s, char *cmd)
 {
-	int id;
+	int id, ret, prev_bssid_set;
 	struct wpa_ssid *ssid;
 	char *name, *value;
+	u8 prev_bssid[ETH_ALEN];
 
 	/* cmd: "<network id> <variable name> <value>" */
 	name = os_strchr(cmd, ' ');
@@ -2592,8 +2593,15 @@ static int wpa_supplicant_ctrl_iface_set_network(
 		return -1;
 	}
 
-	return wpa_supplicant_ctrl_iface_update_network(wpa_s, ssid, name,
-							value);
+	prev_bssid_set = ssid->bssid_set;
+	os_memcpy(prev_bssid, ssid->bssid, ETH_ALEN);
+	ret = wpa_supplicant_ctrl_iface_update_network(wpa_s, ssid, name,
+						       value);
+	if (ret == 0 &&
+	    (ssid->bssid_set != prev_bssid_set ||
+	     os_memcmp(ssid->bssid, prev_bssid, ETH_ALEN) != 0))
+		wpas_notify_network_bssid_set_changed(wpa_s, ssid);
+	return ret;
 }
 
 

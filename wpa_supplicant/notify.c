@@ -633,3 +633,18 @@ void wpas_notify_eap_status(struct wpa_supplicant *wpa_s, const char *status,
 		     "status='%s' parameter='%s'",
 		     status, parameter);
 }
+
+
+void wpas_notify_network_bssid_set_changed(struct wpa_supplicant *wpa_s,
+					   struct wpa_ssid *ssid)
+{
+	if (wpa_s->current_ssid != ssid)
+		return;
+
+	wpa_dbg(wpa_s, MSG_DEBUG,
+		"Network bssid config changed for the current network - within-ESS roaming %s",
+		ssid->bssid_set ? "disabled" : "enabled");
+
+	wpa_drv_roaming(wpa_s, !ssid->bssid_set,
+			ssid->bssid_set ? ssid->bssid : NULL);
+}

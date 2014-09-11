@@ -2578,6 +2578,7 @@ static enum wps_process_res wps_process_m1(struct wps_data *wps,
 
 	if (wps->dev_pw_id < 0x10 &&
 	    wps->dev_pw_id != DEV_PW_DEFAULT &&
+	    wps->dev_pw_id != DEV_PW_P2PS_DEFAULT &&
 	    wps->dev_pw_id != DEV_PW_USER_SPECIFIED &&
 	    wps->dev_pw_id != DEV_PW_MACHINE_SPECIFIED &&
 	    wps->dev_pw_id != DEV_PW_REGISTRAR_SPECIFIED &&

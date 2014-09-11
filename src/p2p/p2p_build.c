@@ -164,15 +164,18 @@ void p2p_buf_add_device_info(struct wpabuf *buf, struct p2p_data *p2p,
 		if (peer->wps_method == WPS_PBC)
 			methods |= WPS_CONFIG_PUSHBUTTON;
 		else if (peer->wps_method == WPS_PIN_DISPLAY ||
-			 peer->wps_method == WPS_PIN_KEYPAD)
+			 peer->wps_method == WPS_PIN_KEYPAD) {
 			methods |= WPS_CONFIG_DISPLAY | WPS_CONFIG_KEYPAD;
+			methods |= WPS_CONFIG_P2PS;
+		}
 	} else if (p2p->cfg->config_methods) {
 		methods |= p2p->cfg->config_methods &
 			(WPS_CONFIG_PUSHBUTTON | WPS_CONFIG_DISPLAY |
-			 WPS_CONFIG_KEYPAD);
+			 WPS_CONFIG_KEYPAD | WPS_CONFIG_P2PS);
 	} else {
 		methods |= WPS_CONFIG_PUSHBUTTON;
 		methods |= WPS_CONFIG_DISPLAY | WPS_CONFIG_KEYPAD;
+		methods |= WPS_CONFIG_P2PS;
 	}
 	wpabuf_put_be16(buf, methods);
 

@@ -107,6 +107,8 @@ u16 p2p_wps_method_pw_id(enum p2p_wps_method wps_method)
 		return DEV_PW_PUSHBUTTON;
 	case WPS_NFC:
 		return DEV_PW_NFC_CONNECTION_HANDOVER;
+	case WPS_P2PS:
+		return DEV_PW_P2PS_DEFAULT;
 	default:
 		return DEV_PW_DEFAULT;
 	}
@@ -124,6 +126,8 @@ static const char * p2p_wps_method_str(enum p2p_wps_method wps_method)
 		return "PBC";
 	case WPS_NFC:
 		return "NFC";
+	case WPS_P2PS:
+		return "P2PS";
 	default:
 		return "??";
 	}
@@ -218,6 +222,8 @@ int p2p_connect_send(struct p2p_data *p2p, struct p2p_device *dev)
 			config_method = WPS_CONFIG_DISPLAY;
 		else if (dev->wps_method == WPS_PBC)
 			config_method = WPS_CONFIG_PUSHBUTTON;
+		else if (dev->wps_method == WPS_P2PS)
+			config_method = WPS_CONFIG_P2PS;
 		else
 			return -1;
 		return p2p_prov_disc_req(p2p, dev->info.p2p_device_addr,
@@ -743,6 +749,16 @@ void p2p_process_go_neg_req(struct p2p_data *p2p, const u8 *sa,
 				goto fail;
 			}
 			break;
+		case DEV_PW_P2PS_DEFAULT:
+			p2p_dbg(p2p, "Peer using P2PS pin");
+			if (dev->wps_method != WPS_P2PS) {
+				p2p_dbg(p2p,
+					"We have wps_method=%s -> incompatible",
+					p2p_wps_method_str(dev->wps_method));
+				status = P2P_SC_FAIL_INCOMPATIBLE_PROV_METHOD;
+				goto fail;
+			}
+			break;
 		default:
 			if (msg.dev_password_id &&
 			    msg.dev_password_id == dev->oob_pw_id) {
@@ -1096,6 +1112,15 @@ void p2p_process_go_neg_resp(struct p2p_data *p2p, const u8 *sa,
 	case DEV_PW_PUSHBUTTON:
 		p2p_dbg(p2p, "Peer using pushbutton");
 		if (dev->wps_method != WPS_PBC) {
+			p2p_dbg(p2p, "We have wps_method=%s -> incompatible",
+				p2p_wps_method_str(dev->wps_method));
+			status = P2P_SC_FAIL_INCOMPATIBLE_PROV_METHOD;
+			goto fail;
+		}
+		break;
+	case DEV_PW_P2PS_DEFAULT:
+		p2p_dbg(p2p, "P2P: Peer using P2PS default pin");
+		if (dev->wps_method != WPS_P2PS) {
 			p2p_dbg(p2p, "We have wps_method=%s -> incompatible",
 				p2p_wps_method_str(dev->wps_method));
 			status = P2P_SC_FAIL_INCOMPATIBLE_PROV_METHOD;

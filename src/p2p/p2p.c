@@ -3723,6 +3723,8 @@ const char * p2p_wps_method_text(enum p2p_wps_method method)
 		return "PBC";
 	case WPS_NFC:
 		return "NFC";
+	case WPS_P2PS:
+		return "P2PS";
 	}
 
 	return "??";

@@ -1268,6 +1268,8 @@ static void wpas_start_wps_enrollee(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_WPS_NFC */
 	} else {
 		u16 dev_pw_id = DEV_PW_DEFAULT;
+		if (wpa_s->p2p_wps_method == WPS_P2PS)
+			dev_pw_id = DEV_PW_P2PS_DEFAULT;
 		if (wpa_s->p2p_wps_method == WPS_PIN_KEYPAD)
 			dev_pw_id = DEV_PW_REGISTRAR_SPECIFIED;
 		wpas_wps_start_pin(wpa_s, res->peer_interface_addr,

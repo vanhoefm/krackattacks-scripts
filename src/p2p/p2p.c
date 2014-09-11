@@ -772,6 +772,12 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq,
 		dev->oper_ssid_len = msg.ssid[1];
 	}
 
+	if (msg.adv_service_instance && msg.adv_service_instance_len) {
+		wpabuf_free(dev->info.p2ps_instance);
+		dev->info.p2ps_instance = wpabuf_alloc_copy(
+			msg.adv_service_instance, msg.adv_service_instance_len);
+	}
+
 	if (freq >= 2412 && freq <= 2484 && msg.ds_params &&
 	    *msg.ds_params >= 1 && *msg.ds_params <= 14) {
 		int ds_freq;
@@ -831,7 +837,9 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq,
 
 	p2p_update_peer_vendor_elems(dev, ies, ies_len);
 
-	if (dev->flags & P2P_DEV_REPORTED && !wfd_changed)
+	if (dev->flags & P2P_DEV_REPORTED && !wfd_changed &&
+	    (!msg.adv_service_instance ||
+	     (dev->flags & P2P_DEV_P2PS_REPORTED)))
 		return 0;
 
 	p2p_dbg(p2p, "Peer found with Listen frequency %d MHz (rx_time=%u.%06u)",
@@ -867,6 +875,9 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq,
 			    !(dev->flags & P2P_DEV_REPORTED_ONCE));
 	dev->flags |= P2P_DEV_REPORTED | P2P_DEV_REPORTED_ONCE;
 
+	if (msg.adv_service_instance)
+		dev->flags |= P2P_DEV_P2PS_REPORTED;
+
 	return 0;
 }
 
@@ -901,6 +912,7 @@ static void p2p_device_free(struct p2p_data *p2p, struct p2p_device *dev)
 	wpabuf_free(dev->info.wfd_subelems);
 	wpabuf_free(dev->info.vendor_elems);
 	wpabuf_free(dev->go_neg_conf);
+	wpabuf_free(dev->info.p2ps_instance);
 
 	os_free(dev);
 }

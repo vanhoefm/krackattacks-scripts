@@ -289,6 +289,11 @@ struct p2p_peer_info {
 	 * IE(s) from the frame that was used to discover the peer.
 	 */
 	struct wpabuf *vendor_elems;
+
+	/**
+	 * p2ps_instance - P2PS Application Service Info
+	 */
+	struct wpabuf *p2ps_instance;
 };
 
 enum p2p_prov_disc_status {

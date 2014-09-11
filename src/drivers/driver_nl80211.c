@@ -8503,6 +8503,11 @@ static int wpa_driver_nl80211_sta_set_flags(void *priv, const u8 *addr,
 	struct nlattr *flags;
 	struct nl80211_sta_flag_update upd;
 
+	wpa_printf(MSG_DEBUG, "nl80211: Set STA flags - ifname=%s addr=" MACSTR
+		   " total_flags=0x%x flags_or=0x%x flags_and=0x%x authorized=%d",
+		   bss->ifname, MAC2STR(addr), total_flags, flags_or, flags_and,
+		   !!(total_flags & WPA_STA_AUTHORIZED));
+
 	msg = nlmsg_alloc();
 	if (!msg)
 		return -ENOMEM;

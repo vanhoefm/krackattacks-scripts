@@ -981,6 +981,9 @@ u8 p2p_group_presence_req(struct p2p_group *group,
 
 unsigned int p2p_get_group_num_members(struct p2p_group *group)
 {
+	if (!group)
+		return 0;
+
 	return group->num_members;
 }
 

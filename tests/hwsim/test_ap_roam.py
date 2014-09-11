@@ -53,3 +53,19 @@ def test_ap_reassociation_to_same_bss(dev, apdev):
     if ev is None:
         raise Exception("Reassociation (reattach) with the AP timed out")
     hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+
+def test_ap_roam_set_bssid(dev, apdev):
+    """Roam control"""
+    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
+    hostapd.add_ap(apdev[1]['ifname'], { "ssid": "test-open" })
+    id = dev[0].connect("test-open", key_mgmt="NONE", bssid=apdev[1]['bssid'],
+                        scan_freq="2412")
+    if dev[0].get_status_field('bssid') != apdev[1]['bssid']:
+        raise Exception("Unexpected BSS")
+    # for now, these are just verifying that the code path to indicate
+    # within-ESS roaming changes can be executed; the actual results of those
+    # operations are not currently verified (that would require a test driver
+    # that does BSS selection)
+    dev[0].set_network(id, "bssid", "")
+    dev[0].set_network(id, "bssid", apdev[0]['bssid'])
+    dev[0].set_network(id, "bssid", apdev[1]['bssid'])

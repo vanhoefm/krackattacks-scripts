@@ -32,6 +32,13 @@ enum qca_radiotap_vendor_ids {
  *
  * @QCA_NL80211_VENDOR_SUBCMD_TEST: Test command/event
  *
+ * @QCA_NL80211_VENDOR_SUBCMD_ROAMING: Set roaming policy for drivers that use
+ *	internal BSS-selection. This command uses
+ *	@QCA_WLAN_VENDOR_ATTR_ROAMING_POLICY to specify the new roaming policy
+ *	for the current connection (i.e., changes policy set by the nl80211
+ *	Connect command). @QCA_WLAN_VENDOR_ATTR_MAC_ADDR may optionally be
+ *	included to indicate which BSS to use in case roaming is disabled.
+ *
  * @QCA_NL80211_VENDOR_SUBCMD_AVOID_FREQUENCY: Recommendation of frequency
  *	ranges to avoid to reduce issues due to interference or internal
  *	co-existence information in the driver. The event data structure is
@@ -47,7 +54,8 @@ enum qca_radiotap_vendor_ids {
 enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
 	QCA_NL80211_VENDOR_SUBCMD_TEST = 1,
-	/* subcmds 2..9 not yet allocated */
+	/* subcmds 2..8 not yet allocated */
+	QCA_NL80211_VENDOR_SUBCMD_ROAMING = 9,
 	QCA_NL80211_VENDOR_SUBCMD_AVOID_FREQUENCY = 10,
 	QCA_NL80211_VENDOR_SUBCMD_DFS_CAPABILITY =  11,
 	QCA_NL80211_VENDOR_SUBCMD_NAN =  12,
@@ -66,9 +74,19 @@ enum qca_wlan_vendor_attr {
 	QCA_WLAN_VENDOR_ATTR_STATS_EXT     = 3,
 	/* used by QCA_NL80211_VENDOR_SUBCMD_STATS_EXT */
 	QCA_WLAN_VENDOR_ATTR_IFINDEX     = 4,
+	/* used by QCA_NL80211_VENDOR_SUBCMD_ROAMING, u32 with values defined
+	 * by enum qca_roaming_policy. */
+	QCA_WLAN_VENDOR_ATTR_ROAMING_POLICY = 5,
+	QCA_WLAN_VENDOR_ATTR_MAC_ADDR = 6,
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_MAX	= QCA_WLAN_VENDOR_ATTR_AFTER_LAST - 1,
+};
+
+
+enum qca_roaming_policy {
+	QCA_ROAMING_NOT_ALLOWED,
+	QCA_ROAMING_ALLOWED_WITHIN_ESS,
 };
 
 #endif /* QCA_VENDOR_H */

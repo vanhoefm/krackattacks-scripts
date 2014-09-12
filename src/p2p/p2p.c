@@ -3542,6 +3542,10 @@ static void p2p_state_timeout(void *eloop_ctx, void *timeout_ctx)
 	p2p_dbg(p2p, "Timeout (state=%s)", p2p_state_txt(p2p->state));
 
 	p2p->in_listen = 0;
+	if (p2p->drv_in_listen) {
+		p2p_dbg(p2p, "Driver is still in listen state - stop it");
+		p2p->cfg->stop_listen(p2p->cfg->cb_ctx);
+	}
 
 	switch (p2p->state) {
 	case P2P_IDLE:

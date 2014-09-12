@@ -340,6 +340,9 @@ skip_wpa_check:
 					sta->auth_alg, req_ies, req_ies_len);
 
 	hostapd_sta_assoc(hapd, addr, reassoc, status, buf, p - buf);
+
+	if (sta->auth_alg == WLAN_AUTH_FT)
+		ap_sta_set_authorized(hapd, sta, 1);
 #else /* CONFIG_IEEE80211R */
 	/* Keep compiler silent about unused variables */
 	if (status) {
@@ -349,6 +352,8 @@ skip_wpa_check:
 	new_assoc = (sta->flags & WLAN_STA_ASSOC) == 0;
 	sta->flags |= WLAN_STA_AUTH | WLAN_STA_ASSOC;
 	sta->flags &= ~WLAN_STA_WNM_SLEEP_MODE;
+
+	hostapd_set_sta_flags(hapd, sta);
 
 	if (reassoc && (sta->auth_alg == WLAN_AUTH_FT))
 		wpa_auth_sm_event(sta->wpa_sm, WPA_ASSOC_FT);

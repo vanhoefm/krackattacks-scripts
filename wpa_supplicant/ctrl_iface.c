@@ -1540,6 +1540,11 @@ static int wpa_supplicant_ctrl_iface_status(struct wpa_supplicant *wpa_s,
 		if (ret < 0 || ret >= end - pos)
 			return pos - buf;
 		pos += ret;
+		ret = os_snprintf(pos, end - pos, "freq=%u\n",
+				  wpa_s->assoc_freq);
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
 		if (ssid) {
 			u8 *_ssid = ssid->ssid;
 			size_t ssid_len = ssid->ssid_len;

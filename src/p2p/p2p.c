@@ -259,7 +259,8 @@ static void p2p_listen_in_find(struct p2p_data *p2p, int dev_disc)
 		return;
 	}
 
-	os_get_random((u8 *) &r, sizeof(r));
+	if (os_get_random((u8 *) &r, sizeof(r)) < 0)
+		r = 0;
 	tu = (r % ((p2p->max_disc_int - p2p->min_disc_int) + 1) +
 	      p2p->min_disc_int) * 100;
 	if (p2p->max_disc_tu >= 0 && tu > (unsigned int) p2p->max_disc_tu)
@@ -2480,7 +2481,8 @@ struct p2p_data * p2p_init(const struct p2p_config *cfg)
 	p2p->max_disc_int = 3;
 	p2p->max_disc_tu = -1;
 
-	os_get_random(&p2p->next_tie_breaker, 1);
+	if (os_get_random(&p2p->next_tie_breaker, 1) < 0)
+		p2p->next_tie_breaker = 0;
 	p2p->next_tie_breaker &= 0x01;
 	if (cfg->sd_request)
 		p2p->dev_capab |= P2P_DEV_CAPAB_SERVICE_DISCOVERY;
@@ -3003,7 +3005,8 @@ static void p2p_go_neg_req_cb(struct p2p_data *p2p, int success)
 		 * make it less likely to hit cases where we could end up in
 		 * sync with peer not listening.
 		 */
-		os_get_random((u8 *) &r, sizeof(r));
+		if (os_get_random((u8 *) &r, sizeof(r)) < 0)
+			r = 0;
 		timeout += r % 100000;
 	}
 	p2p_set_timeout(p2p, 0, timeout);

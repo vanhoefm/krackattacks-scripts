@@ -441,7 +441,8 @@ void p2p_channels_dump(struct p2p_data *p2p, const char *title,
 static u8 p2p_channel_pick_random(const u8 *channels, unsigned int num_channels)
 {
 	unsigned int r;
-	os_get_random((u8 *) &r, sizeof(r));
+	if (os_get_random((u8 *) &r, sizeof(r)) < 0)
+		r = 0;
 	r %= num_channels;
 	return channels[r];
 }

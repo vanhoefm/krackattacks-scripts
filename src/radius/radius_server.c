@@ -2048,8 +2048,6 @@ void radius_server_eap_pending_cb(struct radius_server_data *data, void *ctx)
 				sess = s;
 				break;
 			}
-			if (sess)
-				break;
 		}
 		if (sess)
 			break;

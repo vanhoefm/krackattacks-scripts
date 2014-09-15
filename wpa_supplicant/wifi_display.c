@@ -36,6 +36,34 @@ void wifi_display_deinit(struct wpa_global *global)
 }
 
 
+struct wpabuf * wifi_display_get_wfd_ie(struct wpa_global *global)
+{
+	struct wpabuf *ie;
+	size_t len;
+	int i;
+
+	if (global->p2p == NULL)
+		return NULL;
+
+	len = 0;
+	for (i = 0; i < MAX_WFD_SUBELEMS; i++) {
+		if (global->wfd_subelem[i])
+			len += wpabuf_len(global->wfd_subelem[i]);
+	}
+
+	ie = wpabuf_alloc(len);
+	if (ie == NULL)
+		return NULL;
+
+	for (i = 0; i < MAX_WFD_SUBELEMS; i++) {
+		if (global->wfd_subelem[i])
+			wpabuf_put_buf(ie, global->wfd_subelem[i]);
+	}
+
+	return ie;
+}
+
+
 static int wifi_display_update_wfd_ie(struct wpa_global *global)
 {
 	struct wpabuf *ie, *buf;

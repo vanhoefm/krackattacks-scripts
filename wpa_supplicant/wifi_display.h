@@ -13,6 +13,7 @@
 int wifi_display_init(struct wpa_global *global);
 void wifi_display_deinit(struct wpa_global *global);
 void wifi_display_enable(struct wpa_global *global, int enabled);
+struct wpabuf *wifi_display_get_wfd_ie(struct wpa_global *global);
 int wifi_display_subelem_set(struct wpa_global *global, char *cmd);
 int wifi_display_subelem_get(struct wpa_global *global, char *cmd,
 			     char *buf, size_t buflen);

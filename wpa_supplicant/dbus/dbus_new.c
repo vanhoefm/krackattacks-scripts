@@ -2097,6 +2097,12 @@ static const struct wpa_dbus_property_desc wpas_dbus_global_properties[] = {
 	  wpas_dbus_getter_global_capabilities,
 	  NULL
 	},
+#ifdef CONFIG_WIFI_DISPLAY
+	{ "WFDIEs", WPAS_DBUS_NEW_INTERFACE, "ay",
+	  wpas_dbus_getter_global_wfd_ies,
+	  wpas_dbus_setter_global_wfd_ies
+	},
+#endif /* CONFIG_WIFI_DISPLAY */
 	{ NULL, NULL, NULL, NULL, NULL }
 };
 

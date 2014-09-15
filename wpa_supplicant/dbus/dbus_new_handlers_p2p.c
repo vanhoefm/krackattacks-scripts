@@ -26,6 +26,7 @@
 #include "ap/wps_hostapd.h"
 
 #include "../p2p_supplicant.h"
+#include "../wifi_display.h"
 
 /**
  * Parses out the mac address from the peer object path.
@@ -2589,3 +2590,77 @@ DBusMessage * wpas_dbus_handler_p2p_serv_disc_external(
 	return NULL;
 
 }
+
+
+#ifdef CONFIG_WIFI_DISPLAY
+
+dbus_bool_t wpas_dbus_getter_global_wfd_ies(DBusMessageIter *iter,
+					    DBusError *error, void *user_data)
+{
+	struct wpa_global *global = user_data;
+	struct wpabuf *ie;
+	dbus_bool_t ret;
+
+	ie = wifi_display_get_wfd_ie(global);
+	if (ie == NULL)
+		return wpas_dbus_simple_array_property_getter(iter,
+							      DBUS_TYPE_BYTE,
+							      NULL, 0, error);
+
+	ret = wpas_dbus_simple_array_property_getter(iter, DBUS_TYPE_BYTE,
+						     wpabuf_head(ie),
+						     wpabuf_len(ie), error);
+	wpabuf_free(ie);
+
+	return ret;
+}
+
+
+dbus_bool_t wpas_dbus_setter_global_wfd_ies(DBusMessageIter *iter,
+					    DBusError *error, void *user_data)
+{
+	struct wpa_global *global = user_data;
+	DBusMessageIter variant, array;
+	struct wpabuf *ie = NULL;
+	const u8 *data;
+	int len;
+
+	if (dbus_message_iter_get_arg_type(iter) != DBUS_TYPE_VARIANT)
+		goto err;
+
+	dbus_message_iter_recurse(iter, &variant);
+	if (dbus_message_iter_get_arg_type(&variant) != DBUS_TYPE_ARRAY)
+		goto err;
+
+	dbus_message_iter_recurse(&variant, &array);
+	dbus_message_iter_get_fixed_array(&array, &data, &len);
+	if (len == 0) {
+		wifi_display_enable(global, 0);
+		wifi_display_deinit(global);
+
+		return TRUE;
+	}
+
+	ie = wpabuf_alloc(len);
+	if (ie == NULL)
+		goto err;
+
+	wpabuf_put_data(ie, data, len);
+	if (wifi_display_subelem_set_from_ies(global, ie) != 0)
+		goto err;
+
+	if (global->wifi_display == 0)
+		wifi_display_enable(global, 1);
+
+	wpabuf_free(ie);
+
+	return TRUE;
+err:
+	wpabuf_free(ie);
+
+	dbus_set_error_const(error, DBUS_ERROR_INVALID_ARGS,
+			     "invalid message format");
+	return FALSE;
+}
+
+#endif /* CONFIG_WIFI_DISPLAY */

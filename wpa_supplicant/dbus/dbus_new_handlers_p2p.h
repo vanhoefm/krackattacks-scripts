@@ -210,5 +210,16 @@ DBusMessage * wpas_dbus_handler_remove_persistent_group(
 DBusMessage * wpas_dbus_handler_remove_all_persistent_groups(
 	DBusMessage *message, struct wpa_supplicant *wpa_s);
 
+#ifdef CONFIG_WIFI_DISPLAY
+
+dbus_bool_t wpas_dbus_getter_global_wfd_ies(DBusMessageIter *iter,
+					    DBusError *error,
+					    void *user_data);
+
+dbus_bool_t wpas_dbus_setter_global_wfd_ies(DBusMessageIter *iter,
+					    DBusError *error,
+					    void *user_data);
+
+#endif /* CONFIG_WIFI_DISPLAY */
 
 #endif /* DBUS_NEW_HANDLERS_P2P_H */

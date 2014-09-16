@@ -362,7 +362,7 @@ void printf_encode(char *txt, size_t maxlen, const u8 *data, size_t len)
 			*txt++ = '\\';
 			*txt++ = '\\';
 			break;
-		case '\e':
+		case '\033':
 			*txt++ = '\\';
 			*txt++ = 'e';
 			break;
@@ -427,7 +427,7 @@ size_t printf_decode(u8 *buf, size_t maxlen, const char *str)
 				pos++;
 				break;
 			case 'e':
-				buf[len++] = '\e';
+				buf[len++] = '\033';
 				pos++;
 				break;
 			case 'x':

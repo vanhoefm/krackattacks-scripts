@@ -40,7 +40,7 @@
 
 static BIGNUM * get_group5_prime(void)
 {
-#if OPENSSL_VERSION_NUMBER < 0x00908000
+#if OPENSSL_VERSION_NUMBER < 0x00908000 || defined(OPENSSL_IS_BORINGSSL)
 	static const unsigned char RFC3526_PRIME_1536[] = {
 		0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xC9,0x0F,0xDA,0xA2,
 		0x21,0x68,0xC2,0x34,0xC4,0xC6,0x62,0x8B,0x80,0xDC,0x1C,0xD1,
@@ -130,7 +130,7 @@ void des_encrypt(const u8 *clear, const u8 *key, u8 *cypher)
 	}
 	pkey[i] = next | 1;
 
-	DES_set_key(&pkey, &ks);
+	DES_set_key((DES_cblock *) &pkey, &ks);
 	DES_ecb_encrypt((DES_cblock *) clear, (DES_cblock *) cypher, &ks,
 			DES_ENCRYPT);
 }
@@ -199,8 +199,10 @@ static const EVP_CIPHER * aes_get_evp_cipher(size_t keylen)
 	switch (keylen) {
 	case 16:
 		return EVP_aes_128_ecb();
+#ifndef OPENSSL_IS_BORINGSSL
 	case 24:
 		return EVP_aes_192_ecb();
+#endif /* OPENSSL_IS_BORINGSSL */
 	case 32:
 		return EVP_aes_256_ecb();
 	}
@@ -378,9 +380,11 @@ struct crypto_cipher * crypto_cipher_init(enum crypto_cipher_alg alg,
 		case 16:
 			cipher = EVP_aes_128_cbc();
 			break;
+#ifndef OPENSSL_IS_BORINGSSL
 		case 24:
 			cipher = EVP_aes_192_cbc();
 			break;
+#endif /* OPENSSL_IS_BORINGSSL */
 		case 32:
 			cipher = EVP_aes_256_cbc();
 			break;

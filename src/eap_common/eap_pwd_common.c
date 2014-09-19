@@ -106,9 +106,11 @@ int compute_password_element(EAP_PWD_group *grp, u16 num,
         case 21:
 		nid = NID_secp521r1;
 		break;
+#ifndef OPENSSL_IS_BORINGSSL
         case 25:
 		nid = NID_X9_62_prime192v1;
 		break;
+#endif /* OPENSSL_IS_BORINGSSL */
         case 26:
 		nid = NID_secp224r1;
 		break;

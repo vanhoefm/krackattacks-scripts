@@ -38,14 +38,26 @@
 #define OPENSSL_SUPPORTS_CTX_APP_DATA
 #endif
 
-#ifdef SSL_F_SSL_SET_SESSION_TICKET_EXT
-#ifdef SSL_OP_NO_TICKET
+#if OPENSSL_VERSION_NUMBER < 0x10000000L
+/* ERR_remove_thread_state replaces ERR_remove_state and the latter is
+ * deprecated. However, OpenSSL 0.9.8 doesn't include
+ * ERR_remove_thread_state. */
+#define ERR_remove_thread_state(tid) ERR_remove_state(0)
+#endif
+
+#if OPENSSL_VERSION_NUMBER >= 0x10000000L
 /*
  * Session ticket override patch was merged into OpenSSL 0.9.9 tree on
  * 2008-11-15. This version uses a bit different API compared to the old patch.
  */
 #define CONFIG_OPENSSL_TICKET_OVERRIDE
 #endif
+
+#if defined(OPENSSL_IS_BORINGSSL)
+/* stack_index_t is the return type of OpenSSL's sk_XXX_num() functions. */
+typedef size_t stack_index_t;
+#else
+typedef int stack_index_t;
 #endif
 
 #ifdef SSL_set_tlsext_status_type
@@ -853,7 +865,7 @@ void tls_deinit(void *ssl_ctx)
 		ENGINE_cleanup();
 #endif /* OPENSSL_NO_ENGINE */
 		CRYPTO_cleanup_all_ex_data();
-		ERR_remove_state(0);
+		ERR_remove_thread_state(NULL);
 		ERR_free_strings();
 		EVP_cleanup();
 		os_free(tls_global->ocsp_stapling_response);
@@ -1102,7 +1114,8 @@ static int tls_match_altsubject_component(X509 *cert, int type,
 {
 	GENERAL_NAME *gen;
 	void *ext;
-	int i, found = 0;
+	int found = 0;
+	stack_index_t i;
 
 	ext = X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
 
@@ -1211,7 +1224,7 @@ static int tls_match_suffix(X509 *cert, const char *match)
 
 	ext = X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
 
-	for (i = 0; ext && i < sk_GENERAL_NAME_num(ext); i++) {
+	for (i = 0; ext && i < (int) sk_GENERAL_NAME_num(ext); i++) {
 		gen = sk_GENERAL_NAME_value(ext, i);
 		if (gen->type != GEN_DNS)
 			continue;
@@ -1639,7 +1652,7 @@ static int tls_connection_ca_cert(void *_ssl_ctx, struct tls_connection *conn,
 	if (ca_cert && os_strncmp("keystore://", ca_cert, 11) == 0) {
 		BIO *bio = BIO_from_keystore(&ca_cert[11]);
 		STACK_OF(X509_INFO) *stack = NULL;
-		int i;
+		stack_index_t i;
 
 		if (bio) {
 			stack = PEM_X509_INFO_read_bio(bio, NULL, NULL, NULL);
@@ -3386,9 +3399,15 @@ unsigned int tls_capabilities(void *tls_ctx)
  * commented out unless explicitly needed for EAP-FAST in order to be able to
  * build this file with unmodified openssl. */
 
+#ifdef OPENSSL_IS_BORINGSSL
+static int tls_sess_sec_cb(SSL *s, void *secret, int *secret_len,
+			   STACK_OF(SSL_CIPHER) *peer_ciphers,
+			   const SSL_CIPHER **cipher, void *arg)
+#else /* OPENSSL_IS_BORINGSSL */
 static int tls_sess_sec_cb(SSL *s, void *secret, int *secret_len,
 			   STACK_OF(SSL_CIPHER) *peer_ciphers,
 			   SSL_CIPHER **cipher, void *arg)
+#endif /* OPENSSL_IS_BORINGSSL */
 {
 	struct tls_connection *conn = arg;
 	int ret;

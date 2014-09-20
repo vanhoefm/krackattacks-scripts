@@ -4080,9 +4080,6 @@ static void wpas_p2p_deinit_global(struct wpa_global *global)
 
 	wpas_p2p_service_flush(global->p2p_init_wpa_s);
 
-	if (global->p2p == NULL)
-		return;
-
 	/* Remove remaining P2P group interfaces */
 	while (wpa_s && wpa_s->p2p_group_interface != NOT_P2P_GROUP_INTERFACE)
 		wpa_s = wpa_s->next;

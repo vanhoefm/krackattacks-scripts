@@ -4077,8 +4077,8 @@ static void wpas_p2p_deinit_global(struct wpa_global *global)
 	struct wpa_supplicant *wpa_s, *tmp;
 
 	wpa_s = global->ifaces;
-	if (wpa_s)
-		wpas_p2p_service_flush(wpa_s);
+
+	wpas_p2p_service_flush(global->p2p_init_wpa_s);
 
 	if (global->p2p == NULL)
 		return;

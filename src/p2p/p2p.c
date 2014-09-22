@@ -2788,6 +2788,19 @@ static void p2p_sd_cb(struct p2p_data *p2p, int success)
 		return;
 	}
 
+	if (p2p->sd_query->for_all_peers) {
+		/* Update the pending broadcast SD query count for this device
+		 */
+		p2p->sd_peer->sd_pending_bcast_queries--;
+
+		/*
+		 * If there are no pending broadcast queries for this device,
+		 * mark it as done (-1).
+		 */
+		if (p2p->sd_peer->sd_pending_bcast_queries == 0)
+			p2p->sd_peer->sd_pending_bcast_queries = -1;
+	}
+
 	/* Wait for response from the peer */
 	p2p_set_state(p2p, P2P_SD_DURING_FIND);
 	p2p_set_timeout(p2p, 0, 200000);

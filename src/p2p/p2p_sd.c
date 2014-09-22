@@ -301,16 +301,6 @@ int p2p_start_sd(struct p2p_data *p2p, struct p2p_device *dev)
 		ret = -1;
 	}
 
-	/* Update the pending broadcast SD query count for this device */
-	dev->sd_pending_bcast_queries--;
-
-	/*
-	 * If there are no pending broadcast queries for this device, mark it as
-	 * done (-1).
-	 */
-	if (dev->sd_pending_bcast_queries == 0)
-		dev->sd_pending_bcast_queries = -1;
-
 	wpabuf_free(req);
 
 	return ret;

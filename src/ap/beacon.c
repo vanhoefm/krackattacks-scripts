@@ -113,6 +113,10 @@ static u8 * hostapd_eid_pwr_constraint(struct hostapd_data *hapd, u8 *eid)
 	    hapd->iface->current_mode->mode != HOSTAPD_MODE_IEEE80211A)
 		return eid;
 
+	/* Let host drivers add this IE if DFS support is offloaded */
+	if (hapd->iface->drv_flags & WPA_DRIVER_FLAGS_DFS_OFFLOAD)
+		return eid;
+
 	/*
 	 * There is no DFS support and power constraint was not directly
 	 * requested by config option.

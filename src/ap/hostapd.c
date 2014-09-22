@@ -1182,12 +1182,15 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 			   iface->conf->channel, iface->freq);
 
 #ifdef NEED_AP_MLME
-		/* Check DFS */
-		res = hostapd_handle_dfs(iface);
-		if (res <= 0) {
-			if (res < 0)
-				goto fail;
-			return res;
+		/* Handle DFS only if it is not offloaded to the driver */
+		if (!(iface->drv_flags & WPA_DRIVER_FLAGS_DFS_OFFLOAD)) {
+			/* Check DFS */
+			res = hostapd_handle_dfs(iface);
+			if (res <= 0) {
+				if (res < 0)
+					goto fail;
+				return res;
+			}
 		}
 #endif /* NEED_AP_MLME */
 

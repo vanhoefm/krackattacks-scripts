@@ -956,12 +956,12 @@ void ap_sta_set_authorized(struct hostapd_data *hapd, struct sta_info *sta,
 			dev_addr = addr;
 	} else
 		dev_addr = p2p_group_get_dev_addr(hapd->p2p_group, sta->addr);
-#endif /* CONFIG_P2P */
 
 	if (dev_addr)
 		os_snprintf(buf, sizeof(buf), MACSTR " p2p_dev_addr=" MACSTR,
 			    MAC2STR(sta->addr), MAC2STR(dev_addr));
 	else
+#endif /* CONFIG_P2P */
 		os_snprintf(buf, sizeof(buf), MACSTR, MAC2STR(sta->addr));
 
 	if (authorized) {

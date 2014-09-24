@@ -2601,6 +2601,25 @@ struct wpa_driver_ops {
 			   u8 qos_map_set_len);
 
 	/**
+	 * br_add_ip_neigh - Add a neigh to the bridge ip neigh table
+	 * @priv: Private driver interface data
+	 * @ipaddr: IPv4 address for the neigh entry
+	 * @prefixlen: IPv4 address netmask prefix length
+	 * @addr: Corresponding MAC address
+	 * Returns: 0 on success, negative (<0) on failure
+	 */
+	int (*br_add_ip_neigh)(void *priv, be32 ipaddr, int prefixlen,
+			       const u8 *addr);
+
+	/**
+	 * br_delete_ip_neigh - Remove a neigh from the bridge ip neigh table
+	 * @priv: Private driver interface data
+	 * @ipaddr: IPv4 address for the neigh entry
+	 * Returns: 0 on success, negative (<0) on failure
+	 */
+	int (*br_delete_ip_neigh)(void *priv, be32 ipaddr);
+
+	/**
 	 * set_wowlan - Set wake-on-wireless triggers
 	 * @priv: Private driver interface data
 	 * @triggers: wowlan triggers

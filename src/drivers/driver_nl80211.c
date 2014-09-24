@@ -8835,6 +8835,145 @@ nla_put_failure:
 #endif /* CONFIG_MESH */
 
 
+static int wpa_driver_br_add_ip_neigh(void *priv, be32 ipaddr,
+				      int prefixlen, const u8 *addr)
+{
+#ifdef CONFIG_LIBNL3_ROUTE
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct rtnl_neigh *rn;
+	struct nl_addr *nl_ipaddr = NULL;
+	struct nl_addr *nl_lladdr = NULL;
+	int res;
+
+	if (ipaddr == 0 || prefixlen == 0 || !addr)
+		return -EINVAL;
+
+	if (bss->br_ifindex == 0) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: bridge must be set before adding an ip neigh to it");
+		return -1;
+	}
+
+	if (!drv->rtnl_sk) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: nl_sock for NETLINK_ROUTE is not initialized");
+		return -1;
+	}
+
+	rn = rtnl_neigh_alloc();
+	if (rn == NULL)
+		return -ENOMEM;
+
+	/* set the destination ip address for neigh */
+	nl_ipaddr = nl_addr_build(AF_INET, &ipaddr, sizeof(ipaddr));
+	if (nl_ipaddr == NULL) {
+		wpa_printf(MSG_DEBUG, "nl80211: nl_ipaddr build failed");
+		res = -ENOMEM;
+		goto errout;
+	}
+	nl_addr_set_prefixlen(nl_ipaddr, prefixlen);
+	res = rtnl_neigh_set_dst(rn, nl_ipaddr);
+	if (res) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: neigh set destination addr failed");
+		goto errout;
+	}
+
+	/* set the corresponding lladdr for neigh */
+	nl_lladdr = nl_addr_build(AF_BRIDGE, (u8 *) addr, ETH_ALEN);
+	if (nl_lladdr == NULL) {
+		wpa_printf(MSG_DEBUG, "nl80211: neigh set lladdr failed");
+		res = -ENOMEM;
+		goto errout;
+	}
+	rtnl_neigh_set_lladdr(rn, nl_lladdr);
+
+	rtnl_neigh_set_ifindex(rn, bss->br_ifindex);
+	rtnl_neigh_set_state(rn, NUD_PERMANENT);
+
+	res = rtnl_neigh_add(drv->rtnl_sk, rn, NLM_F_CREATE);
+	if (res) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Adding bridge ip neigh failed: %s",
+			   strerror(errno));
+	}
+errout:
+	if (nl_lladdr)
+		nl_addr_put(nl_lladdr);
+	if (nl_ipaddr)
+		nl_addr_put(nl_ipaddr);
+	if (rn)
+		rtnl_neigh_put(rn);
+	return res;
+#else /* CONFIG_LIBNL3_ROUTE */
+	return -1;
+#endif /* CONFIG_LIBNL3_ROUTE */
+}
+
+
+static int wpa_driver_br_delete_ip_neigh(void *priv, be32 ipaddr)
+{
+#ifdef CONFIG_LIBNL3_ROUTE
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct rtnl_neigh *rn;
+	struct nl_addr *nl_ipaddr;
+	int res;
+
+	if (ipaddr == 0)
+		return -EINVAL;
+
+	if (bss->br_ifindex == 0) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: bridge must be set to delete an ip neigh");
+		return -1;
+	}
+
+	if (!drv->rtnl_sk) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: nl_sock for NETLINK_ROUTE is not initialized");
+		return -1;
+	}
+
+	rn = rtnl_neigh_alloc();
+	if (rn == NULL)
+		return -ENOMEM;
+
+	/* set the destination ip address for neigh */
+	nl_ipaddr = nl_addr_build(AF_INET, &ipaddr, sizeof(ipaddr));
+	if (nl_ipaddr == NULL) {
+		wpa_printf(MSG_DEBUG, "nl80211: nl_ipaddr build failed");
+		res = -ENOMEM;
+		goto errout;
+	}
+	res = rtnl_neigh_set_dst(rn, nl_ipaddr);
+	if (res) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: neigh set destination addr failed");
+		goto errout;
+	}
+
+	rtnl_neigh_set_ifindex(rn, bss->br_ifindex);
+
+	res = rtnl_neigh_delete(drv->rtnl_sk, rn, 0);
+	if (res) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Deleting bridge ip neigh failed: %s",
+			   strerror(errno));
+	}
+errout:
+	if (nl_ipaddr)
+		nl_addr_put(nl_ipaddr);
+	if (rn)
+		rtnl_neigh_put(rn);
+	return res;
+#else /* CONFIG_LIBNL3_ROUTE */
+	return -1;
+#endif /* CONFIG_LIBNL3_ROUTE */
+}
+
+
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
@@ -8933,4 +9072,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.join_mesh = wpa_driver_nl80211_join_mesh,
 	.leave_mesh = wpa_driver_nl80211_leave_mesh,
 #endif /* CONFIG_MESH */
+	.br_add_ip_neigh = wpa_driver_br_add_ip_neigh,
+	.br_delete_ip_neigh = wpa_driver_br_delete_ip_neigh,
 };

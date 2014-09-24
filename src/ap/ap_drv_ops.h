@@ -280,6 +280,26 @@ static inline int hostapd_drv_status(struct hostapd_data *hapd, char *buf,
 	return hapd->driver->status(hapd->drv_priv, buf, buflen);
 }
 
+static inline int hostapd_drv_br_add_ip_neigh(struct hostapd_data *hapd,
+					      be32 ipaddr, int prefixlen,
+					      const u8 *addr)
+{
+	if (hapd->driver == NULL || hapd->drv_priv == NULL ||
+	    hapd->driver->br_add_ip_neigh == NULL)
+		return -1;
+	return hapd->driver->br_add_ip_neigh(hapd->drv_priv, ipaddr, prefixlen,
+					     addr);
+}
+
+static inline int hostapd_drv_br_delete_ip_neigh(struct hostapd_data *hapd,
+						 be32 ipaddr)
+{
+	if (hapd->driver == NULL || hapd->drv_priv == NULL ||
+	    hapd->driver->br_delete_ip_neigh == NULL)
+		return -1;
+	return hapd->driver->br_delete_ip_neigh(hapd->drv_priv, ipaddr);
+}
+
 static inline int hostapd_drv_vendor_cmd(struct hostapd_data *hapd,
 					 int vendor_id, int subcmd,
 					 const u8 *data, size_t data_len,

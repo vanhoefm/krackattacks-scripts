@@ -329,6 +329,9 @@ static inline void WPA_PUT_LE64(u8 *a, u64 val)
 #ifndef ETH_ALEN
 #define ETH_ALEN 6
 #endif
+#ifndef ETH_HLEN
+#define ETH_HLEN 14
+#endif
 #ifndef IFNAMSIZ
 #define IFNAMSIZ 16
 #endif

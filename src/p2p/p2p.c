@@ -1287,8 +1287,8 @@ static void p2p_prepare_channel_best(struct p2p_data *p2p)
 	} else if (p2p_channel_random_social(&p2p->cfg->channels,
 					     &p2p->op_reg_class,
 					     &p2p->op_channel) == 0) {
-		p2p_dbg(p2p, "Select random available social channel %d from 2.4 GHz band as operating channel preference",
-			p2p->op_channel);
+		p2p_dbg(p2p, "Select random available social channel (op_class %u channel %u) as operating channel preference",
+			p2p->op_reg_class, p2p->op_channel);
 	} else {
 		/* Select any random available channel from the first available
 		 * operating class */
@@ -4092,6 +4092,13 @@ void p2p_set_managed_oper(struct p2p_data *p2p, int enabled)
 		p2p_dbg(p2p, "Managed P2P Device operations disabled");
 		p2p->dev_capab &= ~P2P_DEV_CAPAB_INFRA_MANAGED;
 	}
+}
+
+
+int p2p_config_get_random_social(struct p2p_config *p2p, u8 *op_class,
+				 u8 *op_channel)
+{
+	return p2p_channel_random_social(&p2p->channels, op_class, op_channel);
 }
 
 

@@ -149,6 +149,15 @@ int p2p_freq_to_channel(unsigned int freq, u8 *op_class, u8 *channel)
 		return 0;
 	}
 
+	if (freq >= 58320 && freq <= 64800) {
+		if ((freq - 58320) % 2160)
+			return -1;
+
+		*op_class = 180; /* 60 GHz, channels 1..4 */
+		*channel = (freq - 56160) / 2160;
+		return 0;
+	}
+
 	return -1;
 }
 
@@ -482,7 +491,7 @@ int p2p_channel_select(struct p2p_channels *chans, const int *classes,
 int p2p_channel_random_social(struct p2p_channels *chans, u8 *op_class,
 			      u8 *op_channel)
 {
-	u8 chan[3];
+	u8 chan[4];
 	unsigned int num_channels = 0;
 
 	/* Try to find available social channels from 2.4 GHz */
@@ -493,11 +502,18 @@ int p2p_channel_random_social(struct p2p_channels *chans, u8 *op_class,
 	if (p2p_channels_includes(chans, 81, 11))
 		chan[num_channels++] = 11;
 
+	/* Try to find available social channels from 60 GHz */
+	if (p2p_channels_includes(chans, 180, 2))
+		chan[num_channels++] = 2;
+
 	if (num_channels == 0)
 		return -1;
 
-	*op_class = 81;
 	*op_channel = p2p_channel_pick_random(chan, num_channels);
+	if (*op_channel == 2)
+		*op_class = 180;
+	else
+		*op_class = 81;
 
 	return 0;
 }

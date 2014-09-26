@@ -532,6 +532,13 @@ static int wpa_cli_cmd_pmksa(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+static int wpa_cli_cmd_pmksa_flush(struct wpa_ctrl *ctrl, int argc,
+				   char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "PMKSA_FLUSH");
+}
+
+
 static int wpa_cli_cmd_help(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	print_help(argc > 0 ? argv[0] : NULL);
@@ -2519,6 +2526,9 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "pmksa", wpa_cli_cmd_pmksa, NULL,
 	  cli_cmd_flag_none,
 	  "= show PMKSA cache" },
+	{ "pmksa_flush", wpa_cli_cmd_pmksa_flush, NULL,
+	  cli_cmd_flag_none,
+	  "= flush PMKSA cache entries" },
 	{ "reassociate", wpa_cli_cmd_reassociate, NULL,
 	  cli_cmd_flag_none,
 	  "= force reassociation" },

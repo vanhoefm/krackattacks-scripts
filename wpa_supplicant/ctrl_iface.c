@@ -6507,6 +6507,8 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strcmp(buf, "PMKSA") == 0) {
 		reply_len = wpa_sm_pmksa_cache_list(wpa_s->wpa, reply,
 						    reply_size);
+	} else if (os_strcmp(buf, "PMKSA_FLUSH") == 0) {
+		wpa_sm_pmksa_cache_flush(wpa_s->wpa, NULL);
 	} else if (os_strncmp(buf, "SET ", 4) == 0) {
 		if (wpa_supplicant_ctrl_iface_set(wpa_s, buf + 4))
 			reply_len = -1;

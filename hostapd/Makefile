@@ -188,6 +188,11 @@ endif
 
 ifdef CONFIG_HS20
 NEED_AES_OMAC1=y
+CONFIG_PROXYARP=y
+endif
+
+ifdef CONFIG_PROXYARP
+CONFIG_L2_PACKET=y
 endif
 
 ifdef CONFIG_IEEE80211W
@@ -838,6 +843,11 @@ ifdef CONFIG_INTERWORKING
 CFLAGS += -DCONFIG_INTERWORKING
 OBJS += ../src/common/gas.o
 OBJS += ../src/ap/gas_serv.o
+endif
+
+ifdef CONFIG_PROXYARP
+CFLAGS += -DCONFIG_PROXYARP
+OBJS += ../src/ap/dhcp_snoop.o
 endif
 
 OBJS += ../src/drivers/driver_common.o

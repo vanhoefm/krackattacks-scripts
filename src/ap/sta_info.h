@@ -46,6 +46,7 @@ struct sta_info {
 	struct sta_info *next; /* next entry in sta list */
 	struct sta_info *hnext; /* next entry in hash table list */
 	u8 addr[6];
+	be32 ipaddr;
 	u16 aid; /* STA's unique AID (1 .. 2007) or 0 if not yet assigned */
 	u32 flags; /* Bitfield of WLAN_STA_* */
 	u16 capability;

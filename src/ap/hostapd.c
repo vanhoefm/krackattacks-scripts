@@ -36,6 +36,7 @@
 #include "dfs.h"
 #include "ieee802_11.h"
 #include "bss_load.h"
+#include "dhcp_snoop.h"
 
 
 static int hostapd_flush_old_stations(struct hostapd_data *hapd, u16 reason);
@@ -312,6 +313,7 @@ static void hostapd_free_hapd_data(struct hostapd_data *hapd)
 #endif /* CONFIG_INTERWORKING */
 
 	bss_load_update_deinit(hapd);
+	dhcp_snoop_deinit(hapd);
 
 #ifdef CONFIG_SQLITE
 	bin_clear_free(hapd->tmp_eap_user.identity,
@@ -888,6 +890,11 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 
 	if (conf->bss_load_update_period && bss_load_update_init(hapd)) {
 		wpa_printf(MSG_ERROR, "BSS Load initialization failed");
+		return -1;
+	}
+
+	if (conf->proxy_arp && dhcp_snoop_init(hapd)) {
+		wpa_printf(MSG_ERROR, "DHCP snooping initialization failed");
 		return -1;
 	}
 

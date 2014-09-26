@@ -1502,6 +1502,8 @@ static void handle_disassoc(struct hostapd_data *hapd,
 	 * authenticated. */
 	accounting_sta_stop(hapd, sta);
 	ieee802_1x_free_station(sta);
+	if (sta->ipaddr)
+		hostapd_drv_br_delete_ip_neigh(hapd, sta->ipaddr);
 	hostapd_drv_sta_remove(hapd, sta->addr);
 
 	if (sta->timeout_next == STA_NULLFUNC ||

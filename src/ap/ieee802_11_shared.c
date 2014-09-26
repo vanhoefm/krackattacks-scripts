@@ -174,6 +174,8 @@ static void hostapd_ext_capab_byte(struct hostapd_data *hapd, u8 *pos, int idx)
 			*pos |= 0x01; /* Bit 0 - Coexistence management */
 		break;
 	case 1: /* Bits 8-15 */
+		if (hapd->conf->proxy_arp)
+			*pos |= 0x10; /* Bit 12 - Proxy ARP */
 		break;
 	case 2: /* Bits 16-23 */
 		if (hapd->conf->wnm_sleep_mode)

@@ -484,6 +484,7 @@ struct hostapd_bss_config {
 	unsigned int qos_map_set_len;
 
 	int osen;
+	int proxy_arp;
 #ifdef CONFIG_HS20
 	int hs20;
 	int disable_dgaf;

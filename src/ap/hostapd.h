@@ -241,6 +241,9 @@ struct hostapd_data {
 #ifdef CONFIG_INTERWORKING
 	size_t gas_frag_limit;
 #endif /* CONFIG_INTERWORKING */
+#ifdef CONFIG_PROXYARP
+	struct l2_packet_data *sock_dhcp;
+#endif /* CONFIG_PROXYARP */
 #ifdef CONFIG_MESH
 	int num_plinks;
 	int max_plinks;

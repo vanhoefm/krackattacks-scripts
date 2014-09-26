@@ -3385,7 +3385,7 @@ static void wpa_cli_recv_pending(struct wpa_ctrl *ctrl, int action_monitor)
 		return;
 	}
 	while (wpa_ctrl_pending(ctrl) > 0) {
-		char buf[256];
+		char buf[4096];
 		size_t len = sizeof(buf) - 1;
 		if (wpa_ctrl_recv(ctrl, buf, &len) == 0) {
 			buf[len] = '\0';

@@ -3449,10 +3449,18 @@ static int tokenize_cmd(char *cmd, char *argv[])
 
 static void wpa_cli_ping(void *eloop_ctx, void *timeout_ctx)
 {
-	if (ctrl_conn && _wpa_ctrl_command(ctrl_conn, "PING", 0)) {
-		printf("Connection to wpa_supplicant lost - trying to "
-		       "reconnect\n");
-		wpa_cli_close_connection();
+	if (ctrl_conn) {
+		int res;
+		char *prefix = ifname_prefix;
+
+		ifname_prefix = NULL;
+		res = _wpa_ctrl_command(ctrl_conn, "PING", 0);
+		ifname_prefix = prefix;
+		if (res) {
+			printf("Connection to wpa_supplicant lost - trying to "
+			       "reconnect\n");
+			wpa_cli_close_connection();
+		}
 	}
 	if (!ctrl_conn)
 		wpa_cli_reconnect();

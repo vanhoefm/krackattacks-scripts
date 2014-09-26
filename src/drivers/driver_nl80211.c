@@ -12,6 +12,7 @@
 
 #include "includes.h"
 #include <sys/types.h>
+#include <fcntl.h>
 #include <net/if.h>
 #include <netlink/genl/genl.h>
 #include <netlink/genl/ctrl.h>
@@ -8974,6 +8975,66 @@ errout:
 }
 
 
+static int linux_write_system_file(const char *path, unsigned int val)
+{
+	char buf[50];
+	int fd, len;
+
+	len = os_snprintf(buf, sizeof(buf), "%u\n", val);
+	if (len < 0)
+		return -1;
+
+	fd = open(path, O_WRONLY);
+	if (fd < 0)
+		return -1;
+
+	if (write(fd, buf, len) < 0) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Failed to write Linux system file: %s with the value of %d",
+			   path, val);
+		close(fd);
+		return -1;
+	}
+	close(fd);
+
+	return 0;
+}
+
+
+static const char * drv_br_port_attr_str(enum drv_br_port_attr attr)
+{
+	switch (attr) {
+	case DRV_BR_PORT_ATTR_PROXYARP:
+		return "proxyarp";
+	case DRV_BR_PORT_ATTR_HAIRPIN_MODE:
+		return "hairpin_mode";
+	}
+
+	return NULL;
+}
+
+
+static int wpa_driver_br_port_set_attr(void *priv, enum drv_br_port_attr attr,
+				       unsigned int val)
+{
+	struct i802_bss *bss = priv;
+	char path[128];
+	const char *attr_txt;
+
+	attr_txt = drv_br_port_attr_str(attr);
+	if (attr_txt == NULL)
+		return -EINVAL;
+
+	os_snprintf(path, sizeof(path), "/sys/class/net/%s/brport/%s",
+		    bss->ifname, attr_txt);
+
+	if (linux_write_system_file(path, val))
+		return -1;
+
+	return 0;
+}
+
+
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
@@ -9074,4 +9135,5 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 #endif /* CONFIG_MESH */
 	.br_add_ip_neigh = wpa_driver_br_add_ip_neigh,
 	.br_delete_ip_neigh = wpa_driver_br_delete_ip_neigh,
+	.br_port_set_attr = wpa_driver_br_port_set_attr,
 };

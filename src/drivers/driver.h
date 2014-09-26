@@ -1373,6 +1373,11 @@ struct macsec_init_params {
 };
 #endif /* CONFIG_MACSEC */
 
+enum drv_br_port_attr {
+	DRV_BR_PORT_ATTR_PROXYARP,
+	DRV_BR_PORT_ATTR_HAIRPIN_MODE,
+};
+
 
 /**
  * struct wpa_driver_ops - Driver interface API definition
@@ -2618,6 +2623,15 @@ struct wpa_driver_ops {
 	 * Returns: 0 on success, negative (<0) on failure
 	 */
 	int (*br_delete_ip_neigh)(void *priv, be32 ipaddr);
+
+	/**
+	 * br_port_set_attr - Set a bridge port attribute
+	 * @attr: Bridge port attribute to set
+	 * @val: Value to be set
+	 * Returns: 0 on success, negative (<0) on failure
+	 */
+	int (*br_port_set_attr)(void *priv, enum drv_br_port_attr attr,
+				unsigned int val);
 
 	/**
 	 * set_wowlan - Set wake-on-wireless triggers

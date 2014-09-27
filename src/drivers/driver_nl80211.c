@@ -310,6 +310,7 @@ struct wpa_driver_nl80211_data {
 	unsigned int roaming_vendor_cmd_avail:1;
 	unsigned int dfs_vendor_cmd_avail:1;
 	unsigned int have_low_prio_scan:1;
+	unsigned int force_connect_cmd:1;
 
 	u64 remain_on_chan_cookie;
 	u64 send_action_cookie;
@@ -1411,6 +1412,17 @@ static void mlme_event_auth(struct wpa_driver_nl80211_data *drv,
 	const struct ieee80211_mgmt *mgmt;
 	union wpa_event_data event;
 
+	if (!(drv->capa.flags & WPA_DRIVER_FLAGS_SME) &&
+	    drv->force_connect_cmd) {
+		/*
+		 * Avoid reporting two association events that would confuse
+		 * the core code.
+		 */
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Ignore auth event when using driver SME");
+		return;
+	}
+
 	wpa_printf(MSG_DEBUG, "nl80211: Authenticate event");
 	mgmt = (const struct ieee80211_mgmt *) frame;
 	if (len < 24 + sizeof(mgmt->u.auth)) {
@@ -1476,6 +1488,17 @@ static void mlme_event_assoc(struct wpa_driver_nl80211_data *drv,
 	const struct ieee80211_mgmt *mgmt;
 	union wpa_event_data event;
 	u16 status;
+
+	if (!(drv->capa.flags & WPA_DRIVER_FLAGS_SME) &&
+	    drv->force_connect_cmd) {
+		/*
+		 * Avoid reporting two association events that would confuse
+		 * the core code.
+		 */
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Ignore assoc event when using driver SME");
+		return;
+	}
 
 	wpa_printf(MSG_DEBUG, "nl80211: Associate event");
 	mgmt = (const struct ieee80211_mgmt *) frame;
@@ -10993,6 +11016,7 @@ static int nl80211_set_param(void *priv, const char *param)
 		struct i802_bss *bss = priv;
 		struct wpa_driver_nl80211_data *drv = bss->drv;
 		drv->capa.flags &= ~WPA_DRIVER_FLAGS_SME;
+		drv->force_connect_cmd = 1;
 	}
 
 	if (os_strstr(param, "no_offchannel_tx=1")) {

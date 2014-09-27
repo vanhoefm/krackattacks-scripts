@@ -101,7 +101,7 @@ def check_connectivity(sta0, sta1, ap):
     hwsim_utils.test_connectivity(sta0.ifname, ap['ifname'])
     hwsim_utils.test_connectivity(sta1.ifname, ap['ifname'])
 
-def setup_tdls(sta0, sta1, ap, reverse=False, expect_fail=False):
+def setup_tdls(sta0, sta1, ap, reverse=False, expect_fail=False, allow_skip=False):
     logger.info("Setup TDLS")
     check_connectivity(sta0, sta1, ap)
     bssid = ap['bssid']
@@ -118,7 +118,12 @@ def setup_tdls(sta0, sta1, ap, reverse=False, expect_fail=False):
     if reverse:
         addr1 = sta0.p2p_interface_addr()
         addr0 = sta1.p2p_interface_addr()
-    conf = wt.get_tdls_counter("setup_conf_ok", bssid, addr0, addr1);
+    try:
+        conf = wt.get_tdls_counter("setup_conf_ok", bssid, addr0, addr1);
+    except:
+        if allow_skip:
+            return "skip"
+        raise Exception("Could not get setup_conf_ok counter from wlantest")
     if conf == 0:
         raise Exception("No TDLS Setup Confirm (success) seen")
     tdls_check_dl(sta0, sta1, bssid, addr0, addr1)
@@ -163,7 +168,11 @@ def test_ap_wpa2_tdls_concurrent_init(dev, apdev):
     wlantest_setup()
     connect_2sta_wpa2_psk(dev, apdev[0]['ifname'])
     dev[0].request("SET tdls_testing 0x80")
-    setup_tdls(dev[1], dev[0], apdev[0], reverse=True)
+    res = setup_tdls(dev[1], dev[0], apdev[0], reverse=True, allow_skip=True)
+    if res == "skip":
+        # mac80211 validation change ended up breaking this test functionality
+        logger.info("Assume kernel did not support concurrent TDLS init testing")
+        return "skip"
 
 def test_ap_wpa2_tdls_concurrent_init2(dev, apdev):
     """Concurrent TDLS setup initiation (reverse)"""

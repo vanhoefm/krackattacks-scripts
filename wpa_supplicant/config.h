@@ -27,6 +27,7 @@
 #define DEFAULT_ACCESS_NETWORK_TYPE 15
 #define DEFAULT_SCAN_CUR_FREQ 0
 #define DEFAULT_P2P_SEARCH_DELAY 500
+#define DEFAULT_RAND_ADDR_LIFETIME 60
 
 #include "config_ssid.h"
 #include "wps/wps.h"
@@ -1051,6 +1052,31 @@ struct wpa_config {
 	 * resources.
 	 */
 	unsigned int p2p_search_delay;
+
+	/**
+	 * mac_addr - MAC address policy default
+	 *
+	 * 0 = use permanent MAC address
+	 * 1 = use random MAC address for each ESS connection
+	 *
+	 * By default, permanent MAC address is used unless policy is changed by
+	 * the per-network mac_addr parameter. Global mac_addr=1 can be used to
+	 * change this default behavior.
+	 */
+	int mac_addr;
+
+	/**
+	 * rand_addr_lifetime - Lifetime of random MAC address in seconds
+	 */
+	unsigned int rand_addr_lifetime;
+
+	/**
+	 * preassoc_mac_addr - Pre-association MAC address policy
+	 *
+	 * 0 = use permanent MAC address
+	 * 1 = use random MAC address
+	 */
+	int preassoc_mac_addr;
 };
 
 

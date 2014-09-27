@@ -653,6 +653,18 @@ struct wpa_ssid {
 #endif /* CONFIG_HS20 */
 
 	unsigned int wps_run;
+
+	/**
+	 * mac_addr - MAC address policy
+	 *
+	 * 0 = use permanent MAC address
+	 * 1 = use random MAC address for each ESS connection
+	 *
+	 * Internally, special value -1 is used to indicate that the parameter
+	 * was not specified in the configuration (i.e., default behavior is
+	 * followed).
+	 */
+	int mac_addr;
 };
 
 #endif /* CONFIG_SSID_H */

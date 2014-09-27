@@ -742,6 +742,7 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 #ifdef CONFIG_HS20
 	INT(update_identifier);
 #endif /* CONFIG_HS20 */
+	write_int(f, "mac_addr", ssid->mac_addr, -1);
 
 #undef STR
 #undef INT
@@ -1179,6 +1180,16 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 	if (config->p2p_search_delay != DEFAULT_P2P_SEARCH_DELAY)
 		fprintf(f, "p2p_search_delay=%u\n",
 			config->p2p_search_delay);
+
+	if (config->mac_addr)
+		fprintf(f, "mac_addr=%d\n", config->mac_addr);
+
+	if (config->rand_addr_lifetime != DEFAULT_RAND_ADDR_LIFETIME)
+		fprintf(f, "rand_addr_lifetime=%u\n",
+			config->rand_addr_lifetime);
+
+	if (config->preassoc_mac_addr)
+		fprintf(f, "preassoc_mac_addr=%d\n", config->preassoc_mac_addr);
 }
 
 #endif /* CONFIG_NO_CONFIG_WRITE */

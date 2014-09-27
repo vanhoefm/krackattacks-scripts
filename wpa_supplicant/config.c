@@ -1754,6 +1754,7 @@ static const struct parse_data ssid_fields[] = {
 #ifdef CONFIG_HS20
 	{ INT(update_identifier) },
 #endif /* CONFIG_HS20 */
+	{ INT_RANGE(mac_addr, 0, 1) },
 };
 
 #undef OFFSET
@@ -2211,6 +2212,7 @@ void wpa_config_set_network_defaults(struct wpa_ssid *ssid)
 #ifdef CONFIG_IEEE80211W
 	ssid->ieee80211w = MGMT_FRAME_PROTECTION_DEFAULT;
 #endif /* CONFIG_IEEE80211W */
+	ssid->mac_addr = -1;
 }
 
 
@@ -3287,6 +3289,7 @@ struct wpa_config * wpa_config_alloc_empty(const char *ctrl_interface,
 	config->wmm_ac_params[2] = ac_vi;
 	config->wmm_ac_params[3] = ac_vo;
 	config->p2p_search_delay = DEFAULT_P2P_SEARCH_DELAY;
+	config->rand_addr_lifetime = DEFAULT_RAND_ADDR_LIFETIME;
 
 	if (ctrl_interface)
 		config->ctrl_interface = os_strdup(ctrl_interface);
@@ -3909,6 +3912,9 @@ static const struct global_parse_data global_fields[] = {
 	{ STR(osu_dir), 0 },
 	{ STR(wowlan_triggers), 0 },
 	{ INT(p2p_search_delay), 0},
+	{ INT(mac_addr), 0 },
+	{ INT(rand_addr_lifetime), 0 },
+	{ INT(preassoc_mac_addr), 0 },
 };
 
 #undef FUNC

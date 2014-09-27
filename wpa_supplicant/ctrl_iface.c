@@ -2480,6 +2480,8 @@ static int wpa_supplicant_ctrl_iface_remove_network(
 			struct wpa_ssid *remove_ssid = ssid;
 			id = ssid->id;
 			ssid = ssid->next;
+			if (wpa_s->last_ssid == remove_ssid)
+				wpa_s->last_ssid = NULL;
 			wpas_notify_network_removed(wpa_s, remove_ssid);
 			wpa_config_remove_network(wpa_s->conf, id);
 		}
@@ -2497,6 +2499,9 @@ static int wpa_supplicant_ctrl_iface_remove_network(
 			   "id=%d", id);
 		return -1;
 	}
+
+	if (wpa_s->last_ssid == ssid)
+		wpa_s->last_ssid = NULL;
 
 	if (ssid == wpa_s->current_ssid || wpa_s->current_ssid == NULL) {
 #ifdef CONFIG_SME

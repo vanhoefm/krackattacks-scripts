@@ -597,6 +597,7 @@ static void gas_query_start_cb(struct wpa_radio_work *work, int deinit)
 {
 	struct gas_query_pending *query = work->ctx;
 	struct gas_query *gas = query->gas;
+	struct wpa_supplicant *wpa_s = gas->wpa_s;
 
 	if (deinit) {
 		if (work->started) {
@@ -606,6 +607,14 @@ static void gas_query_start_cb(struct wpa_radio_work *work, int deinit)
 		}
 
 		gas_query_free(query, 1);
+		return;
+	}
+
+	if (wpas_update_random_addr_disassoc(wpa_s) < 0) {
+		wpa_msg(wpa_s, MSG_INFO,
+			"Failed to assign random MAC address for GAS");
+		gas_query_free(query, 1);
+		radio_work_done(work);
 		return;
 	}
 

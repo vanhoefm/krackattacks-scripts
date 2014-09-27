@@ -1222,6 +1222,7 @@ def test_ap_hs20_multi_cred_sp_prio(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
 
     dev[0].hs20_enable()
+    dev[0].scan_for_bss(bssid, freq="2412")
     dev[0].request("SET external_sim 1")
     id1 = dev[0].add_cred_values({ 'imsi': "23201-0000000000", 'eap': "SIM",
                                    'provisioning_sp': "example.com",
@@ -1233,6 +1234,7 @@ def test_ap_hs20_multi_cred_sp_prio(dev, apdev):
                                    'provisioning_sp': "example.com",
                                    'sp_priority': "2" })
     dev[0].dump_monitor()
+    dev[0].scan_for_bss(bssid, freq="2412")
     dev[0].request("INTERWORKING_SELECT auto freq=2412")
     interworking_ext_sim_auth(dev[0], "SIM")
     check_sp_type(dev[0], "unknown")
@@ -1277,6 +1279,8 @@ def test_ap_hs20_multi_cred_sp_prio2(dev, apdev):
                                    'provisioning_sp': "example.com",
                                    'sp_priority': "2" })
     dev[0].dump_monitor()
+    dev[0].scan_for_bss(bssid, freq="2412")
+    dev[0].scan_for_bss(bssid2, freq="2412")
     dev[0].request("INTERWORKING_SELECT auto freq=2412")
     interworking_ext_sim_auth(dev[0], "SIM")
     check_sp_type(dev[0], "unknown")
@@ -1320,6 +1324,7 @@ def test_ap_hs20_req_conn_capab(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
 
     dev[0].hs20_enable()
+    dev[0].scan_for_bss(bssid, freq="2412")
     logger.info("Not used in home network")
     values = conn_capab_cred(domain="example.com", req_conn_capab="6:1234")
     id = dev[0].add_cred_values(values)
@@ -1423,6 +1428,7 @@ def test_ap_hs20_min_bandwidth_home(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
 
     dev[0].hs20_enable()
+    dev[0].scan_for_bss(bssid, freq="2412")
     values = bw_cred(domain="example.com", dl_home=5490, ul_home=58)
     id = dev[0].add_cred_values(values)
     check_bandwidth_selection(dev[0], "home", False)
@@ -1457,6 +1463,7 @@ def test_ap_hs20_min_bandwidth_roaming(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
 
     dev[0].hs20_enable()
+    dev[0].scan_for_bss(bssid, freq="2412")
     values = bw_cred(domain="example.org", dl_roaming=5490, ul_roaming=58)
     id = dev[0].add_cred_values(values)
     check_bandwidth_selection(dev[0], "roaming", False)
@@ -1516,6 +1523,7 @@ def test_ap_hs20_min_bandwidth_no_wan_metrics(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
 
     dev[0].hs20_enable()
+    dev[0].scan_for_bss(bssid, freq="2412")
     values = bw_cred(domain="example.com", dl_home=10000, ul_home=10000,
                      dl_roaming=10000, ul_roaming=10000)
     dev[0].add_cred_values(values)
@@ -1725,6 +1733,7 @@ def test_ap_hs20_network_preference(dev, apdev):
     dev[0].set_network(id, "priority", "1")
     dev[0].request("ENABLE_NETWORK %s no-connect" % id)
 
+    dev[0].scan_for_bss(bssid, freq="2412")
     dev[0].request("INTERWORKING_SELECT auto freq=2412")
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
     if ev is None:
@@ -1736,6 +1745,7 @@ def test_ap_hs20_network_preference(dev, apdev):
     params = hostapd.wpa2_params(ssid="home", passphrase="12345678")
     hostapd.add_ap(apdev[1]['ifname'], params)
 
+    dev[0].scan_for_bss(bssid2, freq="2412")
     dev[0].request("INTERWORKING_SELECT auto freq=2412")
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED",
                             "INTERWORKING-ALREADY-CONNECTED" ], timeout=15)
@@ -1765,6 +1775,7 @@ def test_ap_hs20_network_preference2(dev, apdev):
     dev[0].set_network_quoted(id, "psk", "12345678")
     dev[0].request("ENABLE_NETWORK %s no-connect" % id)
 
+    dev[0].scan_for_bss(bssid2, freq="2412")
     dev[0].request("INTERWORKING_SELECT auto freq=2412")
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
     if ev is None:
@@ -1776,6 +1787,7 @@ def test_ap_hs20_network_preference2(dev, apdev):
     params = hs20_ap_params()
     hostapd.add_ap(apdev[0]['ifname'], params)
 
+    dev[0].scan_for_bss(bssid, freq="2412")
     dev[0].request("INTERWORKING_SELECT auto freq=2412")
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED",
                             "INTERWORKING-ALREADY-CONNECTED" ], timeout=15)
@@ -1808,6 +1820,8 @@ def test_ap_hs20_network_preference3(dev, apdev):
                'password': "password" }
     id = dev[0].add_cred_values(values)
 
+    dev[0].scan_for_bss(bssid, freq="2412")
+    dev[0].scan_for_bss(bssid2, freq="2412")
     dev[0].request("INTERWORKING_SELECT auto freq=2412")
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
     if ev is None:
@@ -1850,6 +1864,8 @@ def test_ap_hs20_network_preference4(dev, apdev):
                'milenage': "5122250214c33e723a5dd523fc145fc0:981d464c7c52eb6e5036234984ad0bcf:000000000123" }
     id = dev[0].add_cred_values(values)
 
+    dev[0].scan_for_bss(bssid, freq="2412")
+    dev[0].scan_for_bss(bssid2, freq="2412")
     dev[0].request("INTERWORKING_SELECT auto freq=2412")
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
     if ev is None:

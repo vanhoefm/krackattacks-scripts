@@ -846,3 +846,13 @@ void bin_clear_free(void *bin, size_t len)
 		os_free(bin);
 	}
 }
+
+
+int random_mac_addr(u8 *addr)
+{
+	if (os_get_random(addr, ETH_ALEN) < 0)
+		return -1;
+	addr[0] &= 0xfe; /* unicast */
+	addr[0] |= 0x02; /* locally administered */
+	return 0;
+}

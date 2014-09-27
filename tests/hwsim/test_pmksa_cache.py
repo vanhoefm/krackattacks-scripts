@@ -71,6 +71,18 @@ def test_pmksa_cache_on_roam_back(dev, apdev):
     if pmksa['pmkid'] != pmksa1b['pmkid']:
         raise Exception("Unexpected PMKID change for AP1")
 
+    dev[0].dump_monitor()
+    if "FAIL" in dev[0].request("PMKSA_FLUSH"):
+        raise Exception("PMKSA_FLUSH failed")
+    if dev[0].get_pmksa(bssid) is not None or dev[0].get_pmksa(bssid2) is not None:
+        raise Exception("PMKSA_FLUSH did not remove PMKSA entries")
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=5)
+    if ev is None:
+        raise Exception("Disconnection event timed out")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Reconnection timed out")
+
 def test_pmksa_cache_opportunistic_only_on_sta(dev, apdev):
     """Opportunistic PMKSA caching enabled only on station"""
     params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")

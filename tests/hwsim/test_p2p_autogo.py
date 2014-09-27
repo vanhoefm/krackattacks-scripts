@@ -414,6 +414,7 @@ def test_autogo_bridge(dev):
             raise Exception("Unexpected wpa_state")
         dev[0].remove_group()
     finally:
+        dev[0].request("AUTOSCAN ")
         subprocess.Popen(['sudo', 'brctl', 'delif', 'p2p-br0', dev[0].ifname],
                          stderr=open('/dev/null', 'w'))
         subprocess.Popen(['sudo', 'ip', 'link', 'set', 'dev', 'p2p-br0', 'down'],

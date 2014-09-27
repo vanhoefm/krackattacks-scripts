@@ -2070,3 +2070,38 @@ def test_ap_hs20_external_selection(dev, apdev):
                    scan_freq="2412", update_identifier="54321")
     if dev[0].get_status_field("hs20") != "2":
         raise Exception("Unexpected hs20 indication")
+
+def test_ap_hs20_random_mac_addr(dev, apdev):
+    """Hotspot 2.0 connection with random MAC address"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    params['disable_dgaf'] = '1'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5")
+    addr = wpas.p2p_interface_addr()
+    wpas.request("SET mac_addr 1")
+    wpas.request("SET preassoc_mac_addr 1")
+    wpas.request("SET rand_addr_lifetime 60")
+    wpas.hs20_enable()
+    id = wpas.add_cred_values({ 'realm': "example.com",
+                                  'username': "hs20-test",
+                                  'password': "password",
+                                  'ca_cert': "auth_serv/ca.pem",
+                                  'domain': "example.com",
+                                  'update_identifier': "1234" })
+    interworking_select(wpas, bssid, "home", freq="2412")
+    interworking_connect(wpas, bssid, "TTLS")
+    check_sp_type(wpas, "home")
+    addr1 = wpas.get_driver_status_field("addr")
+    if addr == addr1:
+        raise Exception("Did not use random MAC address")
+
+    sta = hapd.get_sta(addr)
+    if sta['addr'] != "FAIL":
+        raise Exception("Unexpected STA association with permanent address")
+    sta = hapd.get_sta(addr1)
+    if sta['addr'] != addr1:
+        raise Exception("STA association with random address not found")

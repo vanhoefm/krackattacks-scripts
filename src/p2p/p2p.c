@@ -1831,6 +1831,11 @@ static void p2p_go_neg_start(void *eloop_ctx, void *timeout_ctx)
 	}
 	p2p->cfg->stop_listen(p2p->cfg->cb_ctx);
 	p2p->go_neg_peer->status = P2P_SC_SUCCESS;
+	/*
+	 * Set new timeout to make sure a previously set one does not expire
+	 * too quickly while waiting for the GO Negotiation to complete.
+	 */
+	p2p_set_timeout(p2p, 0, 500000);
 	p2p_connect_send(p2p, p2p->go_neg_peer);
 }
 

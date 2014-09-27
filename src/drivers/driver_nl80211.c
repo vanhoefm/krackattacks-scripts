@@ -253,6 +253,7 @@ struct wpa_driver_nl80211_data {
 	struct dl_list list;
 	struct dl_list wiphy_list;
 	char phyname[32];
+	u8 perm_addr[ETH_ALEN];
 	void *ctx;
 	int ifindex;
 	int if_removed;
@@ -311,6 +312,7 @@ struct wpa_driver_nl80211_data {
 	unsigned int dfs_vendor_cmd_avail:1;
 	unsigned int have_low_prio_scan:1;
 	unsigned int force_connect_cmd:1;
+	unsigned int addr_changed:1;
 
 	u64 remain_on_chan_cookie;
 	u64 send_action_cookie;
@@ -4874,6 +4876,7 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv,
 	if (linux_get_ifhwaddr(drv->global->ioctl_sock, bss->ifname,
 			       bss->addr))
 		return -1;
+	os_memcpy(drv->perm_addr, bss->addr, ETH_ALEN);
 
 	if (send_rfkill_event) {
 		eloop_register_timeout(0, 0, wpa_driver_nl80211_send_rfkill,
@@ -4962,6 +4965,16 @@ static void wpa_driver_nl80211_deinit(struct i802_bss *bss)
 
 	if (!drv->start_iface_up)
 		(void) i802_set_iface_flags(bss, 0);
+
+	if (drv->addr_changed) {
+		linux_set_iface_flags(drv->global->ioctl_sock, bss->ifname, 0);
+		if (linux_set_ifhwaddr(drv->global->ioctl_sock, bss->ifname,
+				       drv->perm_addr) < 0) {
+			wpa_printf(MSG_DEBUG,
+				   "nl80211: Could not restore permanent MAC address");
+		}
+	}
+
 	if (drv->nlmode != NL80211_IFTYPE_P2P_DEVICE) {
 		if (!drv->hostapd || !drv->start_mode_ap)
 			wpa_driver_nl80211_set_mode(bss,
@@ -10057,6 +10070,7 @@ static void *i802_init(struct hostapd_data *hapd,
 	if (linux_get_ifhwaddr(drv->global->ioctl_sock, bss->ifname,
 			       params->own_addr))
 		goto failed;
+	os_memcpy(drv->perm_addr, params->own_addr, ETH_ALEN);
 
 	memcpy(bss->addr, params->own_addr, ETH_ALEN);
 
@@ -12012,6 +12026,7 @@ static int wpa_driver_nl80211_status(void *priv, char *buf, size_t buflen)
 
 	res = os_snprintf(pos, end - pos,
 			  "phyname=%s\n"
+			  "perm_addr=" MACSTR "\n"
 			  "drv_ifindex=%d\n"
 			  "operstate=%d\n"
 			  "scan_state=%s\n"
@@ -12028,6 +12043,7 @@ static int wpa_driver_nl80211_status(void *priv, char *buf, size_t buflen)
 			  "eapol_tx_sock=%d\n"
 			  "%s%s%s%s%s%s%s%s%s%s%s%s%s%s",
 			  drv->phyname,
+			  MAC2STR(drv->perm_addr),
 			  drv->ifindex,
 			  drv->operstate,
 			  scan_state_str(drv->scan_state),
@@ -12454,6 +12470,46 @@ static int nl80211_roaming(void *priv, int allowed, const u8 *bssid)
 }
 
 
+static int nl80211_set_mac_addr(void *priv, const u8 *addr)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	int new_addr = addr != NULL;
+
+	if (!addr)
+		addr = drv->perm_addr;
+
+	if (linux_set_iface_flags(drv->global->ioctl_sock, bss->ifname, 0) < 0)
+		return -1;
+
+	if (linux_set_ifhwaddr(drv->global->ioctl_sock, bss->ifname, addr) < 0)
+	{
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: failed to set_mac_addr for %s to " MACSTR,
+			   bss->ifname, MAC2STR(addr));
+		if (linux_set_iface_flags(drv->global->ioctl_sock, bss->ifname,
+					  1) < 0) {
+			wpa_printf(MSG_DEBUG,
+				   "nl80211: Could not restore interface UP after failed set_mac_addr");
+		}
+		return -1;
+	}
+
+	wpa_printf(MSG_DEBUG, "nl80211: set_mac_addr for %s to " MACSTR,
+		   bss->ifname, MAC2STR(addr));
+	drv->addr_changed = new_addr;
+	os_memcpy(bss->addr, addr, ETH_ALEN);
+
+	if (linux_set_iface_flags(drv->global->ioctl_sock, bss->ifname, 1) < 0)
+	{
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Could not restore interface UP after set_mac_addr");
+	}
+
+	return 0;
+}
+
+
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
@@ -12546,4 +12602,5 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.set_qos_map = nl80211_set_qos_map,
 	.set_wowlan = nl80211_set_wowlan,
 	.roaming = nl80211_roaming,
+	.set_mac_addr = nl80211_set_mac_addr,
 };

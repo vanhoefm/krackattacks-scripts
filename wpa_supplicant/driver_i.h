@@ -640,6 +640,14 @@ static inline int wpa_drv_roaming(struct wpa_supplicant *wpa_s, int allowed,
 	return wpa_s->driver->roaming(wpa_s->drv_priv, allowed, bssid);
 }
 
+static inline int wpa_drv_set_mac_addr(struct wpa_supplicant *wpa_s,
+				       const u8 *addr)
+{
+	if (!wpa_s->driver->set_mac_addr)
+		return -1;
+	return wpa_s->driver->set_mac_addr(wpa_s->drv_priv, addr);
+}
+
 
 #ifdef CONFIG_MACSEC
 

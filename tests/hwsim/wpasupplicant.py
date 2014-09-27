@@ -718,7 +718,7 @@ class WpaSupplicant:
         if not force_scan and self.get_bss(bssid) is not None:
             return
         for i in range(0, 10):
-            self.scan(freq=freq)
+            self.scan(freq=freq, type="ONLY")
             if self.get_bss(bssid) is not None:
                 return
         raise Exception("Could not find BSS " + bssid + " in scan")

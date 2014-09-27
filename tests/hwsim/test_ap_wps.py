@@ -915,7 +915,12 @@ def test_ap_wps_er_add_enrollee(dev, apdev):
     dev[1].scan(freq="2412")
     bss = dev[1].get_bss(apdev[0]['bssid'])
     if "[WPS-AUTH]" not in bss['flags']:
-        raise Exception("WPS-AUTH flag missing")
+        # It is possible for scan to miss an update especially when running
+        # tests under load with multiple VMs, so allow another attempt.
+        dev[1].scan(freq="2412")
+        bss = dev[1].get_bss(apdev[0]['bssid'])
+        if "[WPS-AUTH]" not in bss['flags']:
+            raise Exception("WPS-AUTH flag missing")
 
     logger.info("Stop ER")
     dev[0].dump_monitor()

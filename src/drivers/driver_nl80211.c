@@ -9035,6 +9035,47 @@ static int wpa_driver_br_port_set_attr(void *priv, enum drv_br_port_attr attr,
 }
 
 
+static const char * drv_br_net_param_str(enum drv_br_net_param param)
+{
+	switch (param) {
+	case DRV_BR_NET_PARAM_GARP_ACCEPT:
+		return "arp_accept";
+	}
+
+	return NULL;
+}
+
+
+static int wpa_driver_br_set_net_param(void *priv, enum drv_br_net_param param,
+				       unsigned int val)
+{
+	struct i802_bss *bss = priv;
+	char path[128];
+	const char *param_txt;
+	int ip_version = 4;
+
+	param_txt = drv_br_net_param_str(param);
+	if (param_txt == NULL)
+		return -EINVAL;
+
+	switch (param) {
+		case DRV_BR_NET_PARAM_GARP_ACCEPT:
+			ip_version = 4;
+			break;
+		default:
+			return -EINVAL;
+	}
+
+	os_snprintf(path, sizeof(path), "/proc/sys/net/ipv%d/conf/%s/%s",
+		    ip_version, bss->brname, param_txt);
+
+	if (linux_write_system_file(path, val))
+		return -1;
+
+	return 0;
+}
+
+
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
@@ -9136,4 +9177,5 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.br_add_ip_neigh = wpa_driver_br_add_ip_neigh,
 	.br_delete_ip_neigh = wpa_driver_br_delete_ip_neigh,
 	.br_port_set_attr = wpa_driver_br_port_set_attr,
+	.br_set_net_param = wpa_driver_br_set_net_param,
 };

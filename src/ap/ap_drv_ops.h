@@ -310,6 +310,16 @@ static inline int hostapd_drv_br_port_set_attr(struct hostapd_data *hapd,
 	return hapd->driver->br_port_set_attr(hapd->drv_priv, attr, val);
 }
 
+static inline int hostapd_drv_br_set_net_param(struct hostapd_data *hapd,
+					       enum drv_br_net_param param,
+					       unsigned int val)
+{
+	if (hapd->driver == NULL || hapd->drv_priv == NULL ||
+	    hapd->driver->br_set_net_param == NULL)
+		return -1;
+	return hapd->driver->br_set_net_param(hapd->drv_priv, param, val);
+}
+
 static inline int hostapd_drv_vendor_cmd(struct hostapd_data *hapd,
 					 int vendor_id, int subcmd,
 					 const u8 *data, size_t data_len,

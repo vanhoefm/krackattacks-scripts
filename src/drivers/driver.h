@@ -1378,6 +1378,10 @@ enum drv_br_port_attr {
 	DRV_BR_PORT_ATTR_HAIRPIN_MODE,
 };
 
+enum drv_br_net_param {
+	DRV_BR_NET_PARAM_GARP_ACCEPT,
+};
+
 
 /**
  * struct wpa_driver_ops - Driver interface API definition
@@ -2631,6 +2635,15 @@ struct wpa_driver_ops {
 	 * Returns: 0 on success, negative (<0) on failure
 	 */
 	int (*br_port_set_attr)(void *priv, enum drv_br_port_attr attr,
+				unsigned int val);
+
+	/**
+	 * br_port_set_attr - Set a bridge network parameter
+	 * @param: Bridge parameter to set
+	 * @val: Value to be set
+	 * Returns: 0 on success, negative (<0) on failure
+	 */
+	int (*br_set_net_param)(void *priv, enum drv_br_net_param param,
 				unsigned int val);
 
 	/**

@@ -105,6 +105,22 @@ def test_p2p_service_discovery2(dev):
         if "496e7465726e6574" not in ev:
             raise Exception("Unexpected service discovery response contents (UPnP)")
 
+def test_p2p_service_discovery3(dev):
+    """P2P service discovery for Bonjour with one peer having no services"""
+    dev[2].p2p_listen()
+    for dst in [ "00:00:00:00:00:00", dev[0].p2p_dev_addr() ]:
+        ev = run_sd(dev, dst, "02000101")
+        if "0b5f6166706f766572746370c00c000c01" not in ev:
+            raise Exception("Unexpected service discovery response contents (Bonjour)")
+
+def test_p2p_service_discovery4(dev):
+    """P2P service discovery for UPnP with one peer having no services"""
+    dev[2].p2p_listen()
+    for dst in [ "00:00:00:00:00:00", dev[0].p2p_dev_addr() ]:
+        ev = run_sd(dev, dst, "02000201")
+        if "496e7465726e6574" not in ev:
+            raise Exception("Unexpected service discovery response contents (UPnP)")
+
 def test_p2p_service_discovery_multiple_queries(dev):
     """P2P service discovery with multiple queries"""
     for dst in [ "00:00:00:00:00:00", dev[0].p2p_dev_addr() ]:
@@ -154,6 +170,18 @@ def test_p2p_service_discovery_bonjour2(dev):
     if "496e7465726e6574" in ev:
         raise Exception("Unexpected service discovery response contents (UPnP not expected)")
 
+def test_p2p_service_discovery_bonjour3(dev):
+    """P2P service discovery (Bonjour AFS - no match)"""
+    ev = run_sd(dev, "00:00:00:00:00:00", "130001010b5f6166706f766572746370c00c000c02")
+    if "0300010102" not in ev:
+        raise Exception("Requested-info-not-available was not indicated")
+    if "0b5f6166706f766572746370c00c000c01" in ev:
+        raise Exception("Unexpected service discovery response contents (Bonjour)")
+    if "045f697070c00c000c01" in ev:
+        raise Exception("Unexpected service discovery response contents (Bonjour mismatching)")
+    if "496e7465726e6574" in ev:
+        raise Exception("Unexpected service discovery response contents (UPnP not expected)")
+
 def test_p2p_service_discovery_upnp(dev):
     """P2P service discovery (UPnP)"""
     ev = run_sd(dev, "00:00:00:00:00:00", "02000201")
@@ -170,6 +198,16 @@ def test_p2p_service_discovery_upnp2(dev):
     if "496e7465726e6574" not in ev:
         raise Exception("Unexpected service discovery response contents (UPnP)")
 
+def test_p2p_service_discovery_upnp3(dev):
+    """P2P service discovery (UPnP using request helper - no match)"""
+    ev = run_sd(dev, "00:00:00:00:00:00", "upnp 10 ssdp:foo", "0b00020110737364703a666f6f")
+    if "0300020102" not in ev:
+        raise Exception("Requested-info-not-available was not indicated")
+    if "0b5f6166706f766572746370c00c000c01" in ev:
+        raise Exception("Unexpected service discovery response contents (Bonjour not expected)")
+    if "496e7465726e6574" in ev:
+        raise Exception("Unexpected service discovery response contents (UPnP)")
+
 def test_p2p_service_discovery_ws(dev):
     """P2P service discovery (WS-Discovery)"""
     ev = run_sd(dev, "00:00:00:00:00:00", "02000301")
@@ -179,6 +217,17 @@ def test_p2p_service_discovery_ws(dev):
         raise Exception("Unexpected service discovery response contents (UPnP not expected)")
     if "0300030101" not in ev:
         raise Exception("Unexpected service discovery response contents (WS)")
+
+def test_p2p_service_discovery_wfd(dev):
+    """P2P service discovery (Wi-Fi Display)"""
+    dev[0].request("SET wifi_display 1")
+    ev = run_sd(dev, "00:00:00:00:00:00", "02000401")
+    if " 030004" in ev:
+        raise Exception("Unexpected response to invalid WFD SD query")
+    dev[0].request("SET wifi_display 0")
+    ev = run_sd(dev, "00:00:00:00:00:00", "0300040100")
+    if "0300040101" not in ev:
+        raise Exception("Unexpected response to WFD SD query (protocol was disabled)")
 
 def test_p2p_service_discovery_req_cancel(dev):
     """Cancel a P2P service discovery request"""

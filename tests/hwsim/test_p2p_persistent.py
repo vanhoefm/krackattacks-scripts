@@ -190,6 +190,24 @@ def test_persistent_group_per_sta_psk(dev):
         raise Exception("Same PSK assigned for both clients")
     hwsim_utils.test_connectivity_p2p_sta(dev[1], dev[2])
 
+    logger.info("Remove persistent group and re-start it manually")
+    dev[0].remove_group()
+    dev[1].wait_go_ending_session()
+    dev[2].wait_go_ending_session()
+    dev[0].dump_monitor()
+
+    for i in range(0, 3):
+        networks = dev[i].list_networks()
+        if len(networks) != 1:
+            raise Exception("Unexpected number of networks")
+        if "[P2P-PERSISTENT]" not in networks[0]['flags']:
+            raise Exception("Not the persistent group data")
+        if "OK" not in dev[i].global_request("P2P_GROUP_ADD persistent=" + networks[0]['id'] + " freq=2412"):
+            raise Exception("Could not re-start persistent group")
+        ev = dev[i].wait_global_event(["P2P-GROUP-STARTED"], timeout=30)
+        if ev is None:
+            raise Exception("Timeout on group restart")
+
     logger.info("Leave persistent group and rejoin it")
     dev[2].remove_group()
     ev = dev[2].wait_event(["P2P-GROUP-REMOVED"], timeout=3)

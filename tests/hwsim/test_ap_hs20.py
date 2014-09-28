@@ -2086,6 +2086,7 @@ def test_ap_hs20_random_mac_addr(dev, apdev):
     wpas.request("SET preassoc_mac_addr 1")
     wpas.request("SET rand_addr_lifetime 60")
     wpas.hs20_enable()
+    wpas.scan(freq="2412", only_new=True)
     id = wpas.add_cred_values({ 'realm': "example.com",
                                   'username': "hs20-test",
                                   'password': "password",
@@ -2094,7 +2095,6 @@ def test_ap_hs20_random_mac_addr(dev, apdev):
                                   'update_identifier': "1234" })
     interworking_select(wpas, bssid, "home", freq="2412")
     interworking_connect(wpas, bssid, "TTLS")
-    check_sp_type(wpas, "home")
     addr1 = wpas.get_driver_status_field("addr")
     if addr == addr1:
         raise Exception("Did not use random MAC address")

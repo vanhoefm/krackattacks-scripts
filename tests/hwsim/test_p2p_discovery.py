@@ -271,3 +271,59 @@ def test_discovery_and_interface_disabled(dev):
             raise Exception("Peer not found")
     finally:
         dev[0].request("DRIVER_EVENT INTERFACE_ENABLED")
+
+def test_discovery_auto(dev):
+    """P2P device discovery and provision discovery with auto GO/dev selection"""
+    addr0 = dev[0].p2p_dev_addr()
+    addr1 = dev[1].p2p_dev_addr()
+    addr2 = dev[2].p2p_dev_addr()
+    dev[2].p2p_start_go(freq="2412")
+    logger.info("Start device discovery")
+    dev[0].p2p_listen()
+    if not dev[1].discover_peer(addr0):
+        raise Exception("Device discovery timed out")
+    dev[1].p2p_listen()
+    if not dev[0].discover_peer(addr1):
+        raise Exception("Device discovery timed out")
+    if not dev[0].discover_peer(addr2):
+        raise Exception("Device discovery timed out")
+
+    logger.info("Test provision discovery for display (device)")
+    dev[0].global_request("P2P_PROV_DISC " + addr1 + " display auto")
+    ev1 = dev[1].wait_global_event(["P2P-PROV-DISC-SHOW-PIN"], timeout=15)
+    if ev1 is None:
+        raise Exception("Provision discovery timed out (display/dev1)")
+    if addr0 not in ev1:
+        raise Exception("Dev0 not in provision discovery event")
+    if " group=" in ev1:
+        raise Exception("Unexpected group parameter from non-GO")
+    ev0 = dev[0].wait_global_event(["P2P-PROV-DISC-ENTER-PIN",
+                                    "P2P-PROV-DISC-FAILURE"], timeout=15)
+    if ev0 is None:
+        raise Exception("Provision discovery timed out (display/dev0)")
+    if "P2P-PROV-DISC-FAILURE" in ev0:
+        raise Exception("Provision discovery failed (display/dev0)")
+    if addr1 not in ev0:
+        raise Exception("Dev1 not in provision discovery event")
+    if "peer_go=0" not in ev0:
+        raise Exception("peer_go incorrect in PD response from non-GO")
+
+    logger.info("Test provision discovery for display (GO)")
+    dev[0].global_request("P2P_PROV_DISC " + addr2 + " display auto")
+    ev2 = dev[2].wait_global_event(["P2P-PROV-DISC-SHOW-PIN"], timeout=15)
+    if ev2 is None:
+        raise Exception("Provision discovery timed out (display/dev2)")
+    if addr0 not in ev2:
+        raise Exception("Dev0 not in provision discovery event")
+    if " group=" not in ev2:
+        raise Exception("Group parameter missing from GO")
+    ev0 = dev[0].wait_global_event(["P2P-PROV-DISC-ENTER-PIN",
+                                    "P2P-PROV-DISC-FAILURE"], timeout=15)
+    if ev0 is None:
+        raise Exception("Provision discovery timed out (display/dev0)")
+    if "P2P-PROV-DISC-FAILURE" in ev0:
+        raise Exception("Provision discovery failed (display/dev0)")
+    if addr2 not in ev0:
+        raise Exception("Dev1 not in provision discovery event")
+    if "peer_go=1" not in ev0:
+        raise Exception("peer_go incorrect in PD response from GO")

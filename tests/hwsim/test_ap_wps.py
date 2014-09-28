@@ -2130,3 +2130,54 @@ def test_ap_wps_mixed_cred(dev, apdev):
     pairwise = dev[0].get_network(id, "pairwise")
     if pairwise != "CCMP TKIP":
         raise Exception("Unexpected merged pairwise field value: " + pairwise)
+
+def test_ap_wps_while_connected(dev, apdev):
+    """WPS PBC provisioning while connected to another AP"""
+    ssid = "test-wps-conf"
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                     "wpa_passphrase": "12345678", "wpa": "2",
+                     "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP"})
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+
+    hostapd.add_ap(apdev[1]['ifname'], { "ssid": "open" })
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+
+    logger.info("WPS provisioning step")
+    hapd.request("WPS_PBC")
+    dev[0].dump_monitor()
+    dev[0].request("WPS_PBC")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
+    if ev is None:
+        raise Exception("Association with the AP timed out")
+    status = dev[0].get_status()
+    if status['bssid'] != apdev[0]['bssid']:
+        raise Exception("Unexpected BSSID")
+
+def test_ap_wps_while_connected_no_autoconnect(dev, apdev):
+    """WPS PBC provisioning while connected to another AP and STA_AUTOCONNECT disabled"""
+    ssid = "test-wps-conf"
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                     "wpa_passphrase": "12345678", "wpa": "2",
+                     "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP"})
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+
+    hostapd.add_ap(apdev[1]['ifname'], { "ssid": "open" })
+
+    try:
+        dev[0].request("STA_AUTOCONNECT 0")
+        dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+
+        logger.info("WPS provisioning step")
+        hapd.request("WPS_PBC")
+        dev[0].dump_monitor()
+        dev[0].request("WPS_PBC")
+        ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
+        if ev is None:
+            raise Exception("Association with the AP timed out")
+        status = dev[0].get_status()
+        if status['bssid'] != apdev[0]['bssid']:
+            raise Exception("Unexpected BSSID")
+    finally:
+        dev[0].request("STA_AUTOCONNECT 1")

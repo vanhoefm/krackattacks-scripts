@@ -2503,6 +2503,7 @@ struct wpa_driver_ops {
 	 * @dialog_token: Dialog Token to use in the message (if needed)
 	 * @status_code: Status Code or Reason Code to use (if needed)
 	 * @peer_capab: TDLS peer capability (TDLS_PEER_* bitfield)
+	 * @initiator: Is the current end the TDLS link initiator
 	 * @buf: TDLS IEs to add to the message
 	 * @len: Length of buf in octets
 	 * Returns: 0 on success, negative (<0) on failure
@@ -2512,7 +2513,7 @@ struct wpa_driver_ops {
 	 */
 	int (*send_tdls_mgmt)(void *priv, const u8 *dst, u8 action_code,
 			      u8 dialog_token, u16 status_code, u32 peer_capab,
-			      const u8 *buf, size_t len);
+			      int initiator, const u8 *buf, size_t len);
 
 	/**
 	 * tdls_oper - Ask the driver to perform high-level TDLS operations

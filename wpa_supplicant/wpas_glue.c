@@ -580,11 +580,13 @@ static int wpa_supplicant_tdls_get_capa(void *ctx, int *tdls_supported,
 static int wpa_supplicant_send_tdls_mgmt(void *ctx, const u8 *dst,
 					 u8 action_code, u8 dialog_token,
 					 u16 status_code, u32 peer_capab,
-					 const u8 *buf, size_t len)
+					 int initiator, const u8 *buf,
+					 size_t len)
 {
 	struct wpa_supplicant *wpa_s = ctx;
 	return wpa_drv_send_tdls_mgmt(wpa_s, dst, action_code, dialog_token,
-				      status_code, peer_capab, buf, len);
+				      status_code, peer_capab, initiator, buf,
+				      len);
 }
 
 

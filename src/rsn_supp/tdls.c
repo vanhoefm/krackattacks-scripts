@@ -218,26 +218,29 @@ static int wpa_tdls_set_key(struct wpa_sm *sm, struct wpa_tdls_peer *peer)
 static int wpa_tdls_send_tpk_msg(struct wpa_sm *sm, const u8 *dst,
 				 u8 action_code, u8 dialog_token,
 				 u16 status_code, u32 peer_capab,
-				 const u8 *buf, size_t len)
+				 int initiator, const u8 *buf, size_t len)
 {
 	return wpa_sm_send_tdls_mgmt(sm, dst, action_code, dialog_token,
-				     status_code, peer_capab, buf, len);
+				     status_code, peer_capab, initiator, buf,
+				     len);
 }
 
 
 static int wpa_tdls_tpk_send(struct wpa_sm *sm, const u8 *dest, u8 action_code,
 			     u8 dialog_token, u16 status_code, u32 peer_capab,
-			     const u8 *msg, size_t msg_len)
+			     int initiator, const u8 *msg, size_t msg_len)
 {
 	struct wpa_tdls_peer *peer;
 
 	wpa_printf(MSG_DEBUG, "TDLS: TPK send dest=" MACSTR " action_code=%u "
-		   "dialog_token=%u status_code=%u peer_capab=%u msg_len=%u",
+		   "dialog_token=%u status_code=%u peer_capab=%u initiator=%d "
+		   "msg_len=%u",
 		   MAC2STR(dest), action_code, dialog_token, status_code,
-		   peer_capab, (unsigned int) msg_len);
+		   peer_capab, initiator, (unsigned int) msg_len);
 
 	if (wpa_tdls_send_tpk_msg(sm, dest, action_code, dialog_token,
-				  status_code, peer_capab, msg, msg_len)) {
+				  status_code, peer_capab, initiator, msg,
+				  msg_len)) {
 		wpa_printf(MSG_INFO, "TDLS: Failed to send message "
 			   "(action_code=%u)", action_code);
 		return -1;
@@ -333,6 +336,7 @@ static void wpa_tdls_tpk_retry_timeout(void *eloop_ctx, void *timeout_ctx)
 					  peer->sm_tmr.dialog_token,
 					  peer->sm_tmr.status_code,
 					  peer->sm_tmr.peer_capab,
+					  peer->initiator,
 					  peer->sm_tmr.buf,
 					  peer->sm_tmr.buf_len)) {
 			wpa_printf(MSG_INFO, "TDLS: Failed to retry "
@@ -793,7 +797,7 @@ skip_ies:
 
 	/* request driver to send Teardown using this FTIE */
 	wpa_tdls_tpk_send(sm, addr, WLAN_TDLS_TEARDOWN, 0,
-			  reason_code, 0, rbuf, pos - rbuf);
+			  reason_code, 0, peer->initiator, rbuf, pos - rbuf);
 	os_free(rbuf);
 
 	return 0;
@@ -968,17 +972,19 @@ skip_ftie:
  *	appropriate status code mentioning reason for error/failure.
  * @dst 	- MAC addr of Peer station
  * @tdls_action - TDLS frame type for which error code is sent
+ * @initiator   - was this end the initiator of the connection
  * @status 	- status code mentioning reason
  */
 
 static int wpa_tdls_send_error(struct wpa_sm *sm, const u8 *dst,
-			       u8 tdls_action, u8 dialog_token, u16 status)
+			       u8 tdls_action, u8 dialog_token, int initiator,
+			       u16 status)
 {
 	wpa_printf(MSG_DEBUG, "TDLS: Sending error to " MACSTR
 		   " (action=%u status=%u)",
 		   MAC2STR(dst), tdls_action, status);
 	return wpa_tdls_tpk_send(sm, dst, tdls_action, dialog_token, status,
-				 0, NULL, 0);
+				 0, initiator, NULL, 0);
 }
 
 
@@ -1184,7 +1190,7 @@ skip_ies:
 		   MAC2STR(peer->addr));
 
 	status = wpa_tdls_tpk_send(sm, peer->addr, WLAN_TDLS_SETUP_REQUEST,
-				   1, 0, 0, rbuf, pos - rbuf);
+				   1, 0, 0, peer->initiator, rbuf, pos - rbuf);
 	os_free(rbuf);
 
 	return status;
@@ -1274,7 +1280,8 @@ static int wpa_tdls_send_tpk_m2(struct wpa_sm *sm,
 
 skip_ies:
 	status = wpa_tdls_tpk_send(sm, src_addr, WLAN_TDLS_SETUP_RESPONSE,
-				   dtoken, 0, 0, rbuf, pos - rbuf);
+				   dtoken, 0, 0, peer->initiator, rbuf,
+				   pos - rbuf);
 	os_free(rbuf);
 
 	return status;
@@ -1371,7 +1378,8 @@ skip_ies:
 		peer_capab |= TDLS_PEER_WMM;
 
 	status = wpa_tdls_tpk_send(sm, src_addr, WLAN_TDLS_SETUP_CONFIRM,
-				   dtoken, 0, peer_capab, rbuf, pos - rbuf);
+				   dtoken, 0, peer_capab, peer->initiator,
+				   rbuf, pos - rbuf);
 	os_free(rbuf);
 
 	return status;
@@ -1457,7 +1465,7 @@ skip_rsn_ies:
 	wpa_printf(MSG_DEBUG, "TDLS: TPK lifetime %u seconds", peer->lifetime);
 skip_ies:
 	status = wpa_tdls_tpk_send(sm, peer->addr, WLAN_TDLS_DISCOVERY_RESPONSE,
-				   dialog_token, 0, 0,  rbuf, pos - rbuf);
+				   dialog_token, 0, 0, 0, rbuf, pos - rbuf);
 	os_free(rbuf);
 
 	return status;
@@ -1528,7 +1536,7 @@ int wpa_tdls_send_discovery_request(struct wpa_sm *sm, const u8 *addr)
 	wpa_printf(MSG_DEBUG, "TDLS: Sending Discovery Request to peer "
 		   MACSTR, MAC2STR(addr));
 	return wpa_tdls_tpk_send(sm, addr, WLAN_TDLS_DISCOVERY_REQUEST,
-				 1, 0, 0, NULL, 0);
+				 1, 0, 0, 1, NULL, 0);
 }
 
 
@@ -2051,7 +2059,7 @@ skip_rsn_check:
 	return 0;
 
 error:
-	wpa_tdls_send_error(sm, src_addr, WLAN_TDLS_SETUP_RESPONSE, dtoken,
+	wpa_tdls_send_error(sm, src_addr, WLAN_TDLS_SETUP_RESPONSE, dtoken, 0,
 			    status);
 	if (peer)
 		wpa_tdls_peer_free(sm, peer);
@@ -2362,7 +2370,7 @@ skip_rsn:
 	return ret;
 
 error:
-	wpa_tdls_send_error(sm, src_addr, WLAN_TDLS_SETUP_CONFIRM, dtoken,
+	wpa_tdls_send_error(sm, src_addr, WLAN_TDLS_SETUP_CONFIRM, dtoken, 1,
 			    status);
 	wpa_tdls_disable_peer_link(sm, peer);
 	return -1;

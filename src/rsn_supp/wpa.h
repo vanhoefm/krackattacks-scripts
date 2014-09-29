@@ -55,7 +55,7 @@ struct wpa_sm_ctx {
 	int (*send_tdls_mgmt)(void *ctx, const u8 *dst,
 			      u8 action_code, u8 dialog_token,
 			      u16 status_code, u32 peer_capab,
-			      const u8 *buf, size_t len);
+			      int initiator, const u8 *buf, size_t len);
 	int (*tdls_oper)(void *ctx, int oper, const u8 *peer);
 	int (*tdls_peer_addset)(void *ctx, const u8 *addr, int add, u16 aid,
 				u16 capability, const u8 *supp_rates,

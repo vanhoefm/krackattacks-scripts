@@ -11605,7 +11605,8 @@ nla_put_failure:
 
 static int nl80211_send_tdls_mgmt(void *priv, const u8 *dst, u8 action_code,
 				  u8 dialog_token, u16 status_code,
-				  u32 peer_capab, const u8 *buf, size_t len)
+				  u32 peer_capab, int initiator, const u8 *buf,
+				  size_t len)
 {
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
@@ -11636,6 +11637,8 @@ static int nl80211_send_tdls_mgmt(void *priv, const u8 *dst, u8 action_code,
 		 */
 		NLA_PUT_U32(msg, NL80211_ATTR_TDLS_PEER_CAPABILITY, peer_capab);
 	}
+	if (initiator)
+		NLA_PUT_FLAG(msg, NL80211_ATTR_TDLS_INITIATOR);
 	NLA_PUT(msg, NL80211_ATTR_IE, len, buf);
 
 	return send_and_recv_msgs(drv, msg, NULL, NULL);

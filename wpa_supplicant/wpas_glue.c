@@ -602,7 +602,7 @@ static int wpa_supplicant_tdls_peer_addset(
 	const u8 *supp_rates, size_t supp_rates_len,
 	const struct ieee80211_ht_capabilities *ht_capab,
 	const struct ieee80211_vht_capabilities *vht_capab,
-	u8 qosinfo, const u8 *ext_capab, size_t ext_capab_len,
+	u8 qosinfo, int wmm, const u8 *ext_capab, size_t ext_capab_len,
 	const u8 *supp_channels, size_t supp_channels_len,
 	const u8 *supp_oper_classes, size_t supp_oper_classes_len)
 {
@@ -617,10 +617,10 @@ static int wpa_supplicant_tdls_peer_addset(
 	params.flags = WPA_STA_TDLS_PEER | WPA_STA_AUTHORIZED;
 
 	/*
-	 * TDLS Setup frames do not contain WMM IEs, hence need to depend on
-	 * qosinfo to check if the peer is WMM capable.
+	 * Don't rely only on qosinfo for WMM capability. It may be 0 even when
+	 * present. Allow the WMM IE to also indicate QoS support.
 	 */
-	if (qosinfo)
+	if (wmm || qosinfo)
 		params.flags |= WPA_STA_WMM;
 
 	params.ht_capabilities = ht_capab;

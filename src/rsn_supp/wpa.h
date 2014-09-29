@@ -62,7 +62,7 @@ struct wpa_sm_ctx {
 				size_t supp_rates_len,
 				const struct ieee80211_ht_capabilities *ht_capab,
 				const struct ieee80211_vht_capabilities *vht_capab,
-				u8 qosinfo, const u8 *ext_capab,
+				u8 qosinfo, int wmm, const u8 *ext_capab,
 				size_t ext_capab_len, const u8 *supp_channels,
 				size_t supp_channels_len,
 				const u8 *supp_oper_classes,

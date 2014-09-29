@@ -1721,8 +1721,8 @@ static int wpa_tdls_addset_peer(struct wpa_sm *sm, struct wpa_tdls_peer *peer,
 				       peer->supp_rates, peer->supp_rates_len,
 				       peer->ht_capabilities,
 				       peer->vht_capabilities,
-				       peer->qos_info, peer->ext_capab,
-				       peer->ext_capab_len,
+				       peer->qos_info, peer->wmm_capable,
+				       peer->ext_capab, peer->ext_capab_len,
 				       peer->supp_channels,
 				       peer->supp_channels_len,
 				       peer->supp_oper_classes,
@@ -1867,7 +1867,7 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 			   "TDLS setup - send own request");
 		peer->initiator = 1;
 		wpa_sm_tdls_peer_addset(sm, peer->addr, 1, 0, 0, NULL, 0, NULL,
-					NULL, 0, NULL, 0, NULL, 0, NULL, 0);
+					NULL, 0, 0, NULL, 0, NULL, 0, NULL, 0);
 		wpa_tdls_send_tpk_m1(sm, peer);
 	}
 
@@ -2605,7 +2605,7 @@ int wpa_tdls_start(struct wpa_sm *sm, const u8 *addr)
 
 	/* add the peer to the driver as a "setup in progress" peer */
 	if (wpa_sm_tdls_peer_addset(sm, peer->addr, 1, 0, 0, NULL, 0, NULL,
-				    NULL, 0, NULL, 0, NULL, 0, NULL, 0)) {
+				    NULL, 0, 0, NULL, 0, NULL, 0, NULL, 0)) {
 		wpa_tdls_disable_peer_link(sm, peer);
 		return -1;
 	}

@@ -1866,6 +1866,8 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 		wpa_printf(MSG_DEBUG, "TDLS: Testing concurrent initiation of "
 			   "TDLS setup - send own request");
 		peer->initiator = 1;
+		wpa_sm_tdls_peer_addset(sm, peer->addr, 1, 0, 0, NULL, 0, NULL,
+					NULL, 0, NULL, 0, NULL, 0, NULL, 0);
 		wpa_tdls_send_tpk_m1(sm, peer);
 	}
 
@@ -2044,10 +2046,18 @@ skip_rsn:
 	wpa_tdls_generate_tpk(peer, sm->own_addr, sm->bssid);
 
 skip_rsn_check:
+#ifdef CONFIG_TDLS_TESTING
+	if (tdls_testing & TDLS_TESTING_CONCURRENT_INIT)
+		goto skip_add_peer;
+#endif /* CONFIG_TDLS_TESTING */
+
 	/* add supported rates, capabilities, and qos_info to the TDLS peer */
 	if (wpa_tdls_addset_peer(sm, peer, 1) < 0)
 		goto error;
 
+#ifdef CONFIG_TDLS_TESTING
+skip_add_peer:
+#endif /* CONFIG_TDLS_TESTING */
 	peer->tpk_in_progress = 1;
 
 	wpa_printf(MSG_DEBUG, "TDLS: Sending TDLS Setup Response / TPK M2");

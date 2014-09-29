@@ -391,6 +391,7 @@ struct wpa_supplicant {
 	struct l2_packet_data *l2;
 	struct l2_packet_data *l2_br;
 	unsigned char own_addr[ETH_ALEN];
+	unsigned char perm_addr[ETH_ALEN];
 	char ifname[100];
 #ifdef CONFIG_CTRL_IFACE_DBUS
 	char *dbus_path;
@@ -613,6 +614,7 @@ struct wpa_supplicant {
 	unsigned int mac_addr_changed:1;
 
 	struct os_reltime last_mac_addr_change;
+	int last_mac_addr_style;
 
 	struct ibss_rsn *ibss_rsn;
 
@@ -962,7 +964,7 @@ int disallowed_ssid(struct wpa_supplicant *wpa_s, const u8 *ssid,
 		    size_t ssid_len);
 void wpas_request_connection(struct wpa_supplicant *wpa_s);
 int wpas_build_ext_capab(struct wpa_supplicant *wpa_s, u8 *buf, size_t buflen);
-int wpas_update_random_addr(struct wpa_supplicant *wpa_s);
+int wpas_update_random_addr(struct wpa_supplicant *wpa_s, int style);
 int wpas_update_random_addr_disassoc(struct wpa_supplicant *wpa_s);
 
 /**

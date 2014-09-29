@@ -1058,6 +1058,7 @@ struct wpa_config {
 	 *
 	 * 0 = use permanent MAC address
 	 * 1 = use random MAC address for each ESS connection
+	 * 2 = like 1, but maintain OUI (with local admin bit set)
 	 *
 	 * By default, permanent MAC address is used unless policy is changed by
 	 * the per-network mac_addr parameter. Global mac_addr=1 can be used to
@@ -1075,6 +1076,7 @@ struct wpa_config {
 	 *
 	 * 0 = use permanent MAC address
 	 * 1 = use random MAC address
+	 * 2 = like 1, but maintain OUI (with local admin bit set)
 	 */
 	int preassoc_mac_addr;
 };

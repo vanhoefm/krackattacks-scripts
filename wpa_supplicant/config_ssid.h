@@ -659,6 +659,7 @@ struct wpa_ssid {
 	 *
 	 * 0 = use permanent MAC address
 	 * 1 = use random MAC address for each ESS connection
+	 * 2 = like 1, but maintain OUI (with local admin bit set)
 	 *
 	 * Internally, special value -1 is used to indicate that the parameter
 	 * was not specified in the configuration (i.e., default behavior is

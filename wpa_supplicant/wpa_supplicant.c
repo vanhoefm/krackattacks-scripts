@@ -1380,13 +1380,14 @@ void wpas_connect_work_done(struct wpa_supplicant *wpa_s)
 }
 
 
-int wpas_update_random_addr(struct wpa_supplicant *wpa_s)
+int wpas_update_random_addr(struct wpa_supplicant *wpa_s, int style)
 {
 	struct os_reltime now;
 	u8 addr[ETH_ALEN];
 
 	os_get_reltime(&now);
-	if (wpa_s->last_mac_addr_change.sec != 0 &&
+	if (wpa_s->last_mac_addr_style == style &&
+	    wpa_s->last_mac_addr_change.sec != 0 &&
 	    !os_reltime_expired(&now, &wpa_s->last_mac_addr_change,
 				wpa_s->conf->rand_addr_lifetime)) {
 		wpa_msg(wpa_s, MSG_DEBUG,
@@ -1394,8 +1395,19 @@ int wpas_update_random_addr(struct wpa_supplicant *wpa_s)
 		return 0;
 	}
 
-	if (random_mac_addr(addr) < 0)
+	switch (style) {
+	case 1:
+		if (random_mac_addr(addr) < 0)
+			return -1;
+		break;
+	case 2:
+		os_memcpy(addr, wpa_s->perm_addr, ETH_ALEN);
+		if (random_mac_addr_keep_oui(addr) < 0)
+			return -1;
+		break;
+	default:
 		return -1;
+	}
 
 	if (wpa_drv_set_mac_addr(wpa_s, addr) < 0) {
 		wpa_msg(wpa_s, MSG_INFO,
@@ -1405,6 +1417,7 @@ int wpas_update_random_addr(struct wpa_supplicant *wpa_s)
 
 	os_get_reltime(&wpa_s->last_mac_addr_change);
 	wpa_s->mac_addr_changed = 1;
+	wpa_s->last_mac_addr_style = style;
 
 	if (wpa_supplicant_update_mac_addr(wpa_s) < 0) {
 		wpa_msg(wpa_s, MSG_INFO,
@@ -1425,7 +1438,7 @@ int wpas_update_random_addr_disassoc(struct wpa_supplicant *wpa_s)
 	    !wpa_s->conf->preassoc_mac_addr)
 		return 0;
 
-	return wpas_update_random_addr(wpa_s);
+	return wpas_update_random_addr(wpa_s, wpa_s->conf->preassoc_mac_addr);
 }
 
 
@@ -1443,12 +1456,17 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 			      struct wpa_bss *bss, struct wpa_ssid *ssid)
 {
 	struct wpa_connect_work *cwork;
+	int rand_style;
+
+	if (ssid->mac_addr == -1)
+		rand_style = wpa_s->conf->mac_addr;
+	else
+		rand_style = ssid->mac_addr;
 
 	if (wpa_s->last_ssid == ssid) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Re-association to the same ESS");
-	} else if (ssid->mac_addr == 1 ||
-		   (ssid->mac_addr == -1 && wpa_s->conf->mac_addr == 1)) {
-		if (wpas_update_random_addr(wpa_s) < 0)
+	} else if (rand_style > 0) {
+		if (wpas_update_random_addr(wpa_s, rand_style) < 0)
 			return;
 		wpa_sm_pmksa_cache_flush(wpa_s->wpa, ssid);
 	} else if (wpa_s->mac_addr_changed) {
@@ -2783,6 +2801,7 @@ int wpa_supplicant_driver_init(struct wpa_supplicant *wpa_s)
 
 	wpa_dbg(wpa_s, MSG_DEBUG, "Own MAC address: " MACSTR,
 		MAC2STR(wpa_s->own_addr));
+	os_memcpy(wpa_s->perm_addr, wpa_s->own_addr, ETH_ALEN);
 	wpa_sm_set_own_addr(wpa_s->wpa, wpa_s->own_addr);
 
 	if (wpa_s->bridge_ifname[0]) {

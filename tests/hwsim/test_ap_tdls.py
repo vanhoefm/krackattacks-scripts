@@ -129,13 +129,16 @@ def setup_tdls(sta0, sta1, ap, reverse=False, expect_fail=False, allow_skip=Fals
     tdls_check_dl(sta0, sta1, bssid, addr0, addr1)
     check_connectivity(sta0, sta1, ap)
 
-def teardown_tdls(sta0, sta1, ap):
+def teardown_tdls(sta0, sta1, ap, responder=False):
     logger.info("Teardown TDLS")
     check_connectivity(sta0, sta1, ap)
     bssid = ap['bssid']
     addr0 = sta0.p2p_interface_addr()
     addr1 = sta1.p2p_interface_addr()
-    sta0.tdls_teardown(addr1)
+    if responder:
+        sta1.tdls_teardown(addr0)
+    else:
+        sta0.tdls_teardown(addr1)
     time.sleep(1)
     wt = Wlantest()
     teardown = wt.get_tdls_counter("teardown", bssid, addr0, addr1);
@@ -319,3 +322,11 @@ def test_ap_wpa2_tdls_bssid_mismatch(dev, apdev):
     finally:
         subprocess.call(['sudo', 'ip', 'link', 'set', 'dev', 'ap-br0', 'down'])
         subprocess.call(['sudo', 'brctl', 'delbr', 'ap-br0'])
+
+def test_ap_wpa2_tdls_responder_teardown(dev, apdev):
+    """TDLS teardown from responder with WPA2-PSK AP"""
+    start_ap_wpa2_psk(apdev[0]['ifname'])
+    wlantest_setup()
+    connect_2sta_wpa2_psk(dev, apdev[0]['ifname'])
+    setup_tdls(dev[0], dev[1], apdev[0])
+    teardown_tdls(dev[0], dev[1], apdev[0], responder=True)

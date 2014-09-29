@@ -539,6 +539,7 @@ void str_clear_free(char *str);
 void bin_clear_free(void *bin, size_t len);
 
 int random_mac_addr(u8 *addr);
+int random_mac_addr_keep_oui(u8 *addr);
 
 
 /*

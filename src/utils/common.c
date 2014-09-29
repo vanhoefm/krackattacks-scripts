@@ -856,3 +856,13 @@ int random_mac_addr(u8 *addr)
 	addr[0] |= 0x02; /* locally administered */
 	return 0;
 }
+
+
+int random_mac_addr_keep_oui(u8 *addr)
+{
+	if (os_get_random(addr + 3, 3) < 0)
+		return -1;
+	addr[0] &= 0xfe; /* unicast */
+	addr[0] |= 0x02; /* locally administered */
+	return 0;
+}

@@ -331,7 +331,7 @@ struct wpa_driver_nl80211_data {
 
 	int eapol_sock; /* socket for EAPOL frames */
 
-	struct nl_sock *rtnl_sk; /* nl_sock for NETLINK_ROUTE */
+	struct nl_handle *rtnl_sk; /* nl_sock for NETLINK_ROUTE */
 
 	int default_if_indices[16];
 	int *if_indices;
@@ -4938,7 +4938,7 @@ static void wpa_driver_nl80211_deinit(struct i802_bss *bss)
 				   "interface %s from bridge %s: %s",
 				   bss->ifname, bss->brname, strerror(errno));
 		if (drv->rtnl_sk)
-			nl_socket_free(drv->rtnl_sk);
+			nl80211_handle_destroy(drv->rtnl_sk);
 	}
 	if (bss->added_bridge) {
 		if (linux_br_del(drv->global->ioctl_sock, bss->brname) < 0)

@@ -1851,8 +1851,23 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 	}
 
 	if (ssid->mode == WPAS_MODE_IBSS && ssid->frequency > 0 &&
-	    params.freq.freq == 0)
+	    params.freq.freq == 0) {
+		enum hostapd_hw_mode hw_mode;
+		u8 channel;
+
 		params.freq.freq = ssid->frequency;
+
+		hw_mode = ieee80211_freq_to_chan(ssid->frequency, &channel);
+		for (i = 0; wpa_s->hw.modes && i < wpa_s->hw.num_modes; i++) {
+			if (wpa_s->hw.modes[i].mode == hw_mode) {
+				struct hostapd_hw_modes *mode;
+
+				mode = &wpa_s->hw.modes[i];
+				params.freq.ht_enabled = ht_supported(mode);
+				break;
+			}
+		}
+	}
 
 	if (ssid->mode == WPAS_MODE_IBSS) {
 		if (ssid->beacon_int)

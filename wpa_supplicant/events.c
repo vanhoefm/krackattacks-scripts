@@ -582,7 +582,7 @@ static int freq_allowed(int *freqs, int freq)
 }
 
 
-static int ht_supported(const struct hostapd_hw_modes *mode)
+int ht_supported(const struct hostapd_hw_modes *mode)
 {
 	if (!(mode->flags & HOSTAPD_MODE_FLAG_HT_INFO_KNOWN)) {
 		/*
@@ -600,7 +600,7 @@ static int ht_supported(const struct hostapd_hw_modes *mode)
 }
 
 
-static int vht_supported(const struct hostapd_hw_modes *mode)
+int vht_supported(const struct hostapd_hw_modes *mode)
 {
 	if (!(mode->flags & HOSTAPD_MODE_FLAG_VHT_INFO_KNOWN)) {
 		/*

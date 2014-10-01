@@ -358,7 +358,8 @@ static void wpa_driver_nl80211_scan_timeout(void *eloop_ctx,
 					    void *timeout_ctx);
 static int wpa_driver_nl80211_set_mode(struct i802_bss *bss,
 				       enum nl80211_iftype nlmode);
-static int wpa_driver_nl80211_set_mode_ibss(struct i802_bss *bss, int freq);
+static int wpa_driver_nl80211_set_mode_ibss(struct i802_bss *bss,
+					    struct hostapd_freq_params *freq);
 
 static int
 wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv,
@@ -8681,9 +8682,6 @@ static int wpa_driver_nl80211_ap(struct wpa_driver_nl80211_data *drv,
 				 struct wpa_driver_associate_params *params)
 {
 	enum nl80211_iftype nlmode, old_mode;
-	struct hostapd_freq_params freq = {
-		.freq = params->freq,
-	};
 
 	if (params->p2p) {
 		wpa_printf(MSG_DEBUG, "nl80211: Setup AP operations for P2P "
@@ -8698,7 +8696,7 @@ static int wpa_driver_nl80211_ap(struct wpa_driver_nl80211_data *drv,
 		return -1;
 	}
 
-	if (nl80211_set_channel(drv->first_bss, &freq, 0)) {
+	if (nl80211_set_channel(drv->first_bss, &params->freq, 0)) {
 		if (old_mode != nlmode)
 			wpa_driver_nl80211_set_mode(drv->first_bss, old_mode);
 		nl80211_remove_monitor_interface(drv);
@@ -8752,7 +8750,7 @@ static int wpa_driver_nl80211_ibss(struct wpa_driver_nl80211_data *drv,
 
 	wpa_printf(MSG_DEBUG, "nl80211: Join IBSS (ifindex=%d)", drv->ifindex);
 
-	if (wpa_driver_nl80211_set_mode_ibss(drv->first_bss, params->freq)) {
+	if (wpa_driver_nl80211_set_mode_ibss(drv->first_bss, &params->freq)) {
 		wpa_printf(MSG_INFO, "nl80211: Failed to set interface into "
 			   "IBSS mode");
 		return -1;
@@ -8776,8 +8774,16 @@ retry:
 	os_memcpy(drv->ssid, params->ssid, params->ssid_len);
 	drv->ssid_len = params->ssid_len;
 
-	wpa_printf(MSG_DEBUG, "  * freq=%d", params->freq);
-	NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, params->freq);
+	wpa_printf(MSG_DEBUG, "  * freq=%d", params->freq.freq);
+	wpa_printf(MSG_DEBUG, "  * ht_enabled=%d", params->freq.ht_enabled);
+	wpa_printf(MSG_DEBUG, "  * sec_channel_offset=%d",
+		   params->freq.sec_channel_offset);
+	wpa_printf(MSG_DEBUG, "  * vht_enabled=%d", params->freq.vht_enabled);
+	wpa_printf(MSG_DEBUG, "  * center_freq1=%d", params->freq.center_freq1);
+	wpa_printf(MSG_DEBUG, "  * center_freq2=%d", params->freq.center_freq2);
+	wpa_printf(MSG_DEBUG, "  * bandwidth=%d", params->freq.bandwidth);
+	if (nl80211_put_freq_params(msg, &params->freq) < 0)
+		goto nla_put_failure;
 
 	if (params->beacon_int > 0) {
 		wpa_printf(MSG_DEBUG, "  * beacon_int=%d", params->beacon_int);
@@ -8855,10 +8861,10 @@ static int nl80211_connect_common(struct wpa_driver_nl80211_data *drv,
 			params->bssid_hint);
 	}
 
-	if (params->freq) {
-		wpa_printf(MSG_DEBUG, "  * freq=%d", params->freq);
-		NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, params->freq);
-		drv->assoc_freq = params->freq;
+	if (params->freq.freq) {
+		wpa_printf(MSG_DEBUG, "  * freq=%d", params->freq.freq);
+		NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, params->freq.freq);
+		drv->assoc_freq = params->freq.freq;
 	} else
 		drv->assoc_freq = 0;
 
@@ -9349,13 +9355,11 @@ static int wpa_driver_nl80211_set_mode(struct i802_bss *bss,
 }
 
 
-static int wpa_driver_nl80211_set_mode_ibss(struct i802_bss *bss, int freq)
+static int wpa_driver_nl80211_set_mode_ibss(struct i802_bss *bss,
+					    struct hostapd_freq_params *freq)
 {
-	struct hostapd_freq_params freq_params;
-	os_memset(&freq_params, 0, sizeof(freq_params));
-	freq_params.freq = freq;
 	return wpa_driver_nl80211_set_mode_impl(bss, NL80211_IFTYPE_ADHOC,
-						&freq_params);
+						freq);
 }
 
 

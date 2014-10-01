@@ -1835,7 +1835,7 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 				   MAC2STR(bss->bssid), bss->freq,
 				   ssid->bssid_set);
 			params.bssid = bss->bssid;
-			params.freq = bss->freq;
+			params.freq.freq = bss->freq;
 		}
 		params.bssid_hint = bss->bssid;
 		params.freq_hint = bss->freq;
@@ -1851,8 +1851,8 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 	}
 
 	if (ssid->mode == WPAS_MODE_IBSS && ssid->frequency > 0 &&
-	    params.freq == 0)
-		params.freq = ssid->frequency; /* Initial channel for IBSS */
+	    params.freq.freq == 0)
+		params.freq.freq = ssid->frequency;
 
 	if (ssid->mode == WPAS_MODE_IBSS) {
 		if (ssid->beacon_int)
@@ -1936,13 +1936,12 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 	if (wpa_s->num_multichan_concurrent < 2) {
 		int freq, num;
 		num = get_shared_radio_freqs(wpa_s, &freq, 1);
-		if (num > 0 && freq > 0 && freq != params.freq) {
+		if (num > 0 && freq > 0 && freq != params.freq.freq) {
 			wpa_printf(MSG_DEBUG,
 				   "Assoc conflicting freq found (%d != %d)",
-				   freq, params.freq);
-			if (wpas_p2p_handle_frequency_conflicts(wpa_s,
-								params.freq,
-								ssid) < 0)
+				   freq, params.freq.freq);
+			if (wpas_p2p_handle_frequency_conflicts(
+				    wpa_s, params.freq.freq, ssid) < 0)
 				return;
 		}
 	}

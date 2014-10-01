@@ -1478,7 +1478,7 @@ static int wpa_driver_test_associate(
 	struct wpa_driver_test_data *drv = dbss->drv;
 	wpa_printf(MSG_DEBUG, "%s: priv=%p freq=%d pairwise_suite=%d "
 		   "group_suite=%d key_mgmt_suite=%d auth_alg=%d mode=%d",
-		   __func__, priv, params->freq, params->pairwise_suite,
+		   __func__, priv, params->freq.freq, params->pairwise_suite,
 		   params->group_suite, params->key_mgmt_suite,
 		   params->auth_alg, params->mode);
 	wpa_driver_update_mode(drv, params->mode == IEEE80211_MODE_AP);

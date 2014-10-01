@@ -411,6 +411,25 @@ enum wps_mode {
 			  */
 };
 
+struct hostapd_freq_params {
+	int mode;
+	int freq;
+	int channel;
+	/* for HT */
+	int ht_enabled;
+	int sec_channel_offset; /* 0 = HT40 disabled, -1 = HT40 enabled,
+				 * secondary channel below primary, 1 = HT40
+				 * enabled, secondary channel above primary */
+
+	/* for VHT */
+	int vht_enabled;
+
+	/* valid for both HT and VHT, center_freq2 is non-zero
+	 * only for bandwidth 80 and an 80+80 channel */
+	int center_freq1, center_freq2;
+	int bandwidth;
+};
+
 /**
  * struct wpa_driver_associate_params - Association parameters
  * Data for struct wpa_driver_ops::associate().
@@ -443,11 +462,9 @@ struct wpa_driver_associate_params {
 	size_t ssid_len;
 
 	/**
-	 * freq - Frequency of the channel the selected AP is using
-	 * Frequency that the selected AP is using (in MHz as
-	 * reported in the scan results)
+	 * freq - channel parameters
 	 */
-	int freq;
+	struct hostapd_freq_params freq;
 
 	/**
 	 * freq_hint - Frequency of the channel the proposed AP is using
@@ -1089,25 +1106,6 @@ struct hostapd_sta_add_params {
 	size_t supp_channels_len;
 	const u8 *supp_oper_classes;
 	size_t supp_oper_classes_len;
-};
-
-struct hostapd_freq_params {
-	int mode;
-	int freq;
-	int channel;
-	/* for HT */
-	int ht_enabled;
-	int sec_channel_offset; /* 0 = HT40 disabled, -1 = HT40 enabled,
-				 * secondary channel below primary, 1 = HT40
-				 * enabled, secondary channel above primary */
-
-	/* for VHT */
-	int vht_enabled;
-
-	/* valid for both HT and VHT, center_freq2 is non-zero
-	 * only for bandwidth 80 and an 80+80 channel */
-	int center_freq1, center_freq2;
-	int bandwidth;
 };
 
 struct mac_address {

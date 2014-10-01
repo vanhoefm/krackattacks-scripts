@@ -513,7 +513,7 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 	}
 	if (ssid->frequency == 0)
 		ssid->frequency = 2462; /* default channel 11 */
-	params.freq = ssid->frequency;
+	params.freq.freq = ssid->frequency;
 
 	params.wpa_proto = ssid->proto;
 	if (ssid->key_mgmt & WPA_KEY_MGMT_PSK)

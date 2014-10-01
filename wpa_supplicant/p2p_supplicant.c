@@ -891,6 +891,7 @@ static void wpas_group_formation_completed(struct wpa_supplicant *wpa_s,
 		wpa_s->p2p_in_provisioning = 0;
 	}
 	wpa_s->p2p_in_invitation = 0;
+	wpa_s->group_formation_reported = 1;
 
 	if (!success) {
 		wpa_msg_global(wpa_s->parent, MSG_INFO,
@@ -1178,6 +1179,7 @@ static int wpas_copy_go_neg_results(struct wpa_supplicant *wpa_s,
 static void wpas_start_wps_enrollee(struct wpa_supplicant *wpa_s,
 				    struct p2p_go_neg_results *res)
 {
+	wpa_s->group_formation_reported = 0;
 	wpa_printf(MSG_DEBUG, "P2P: Start WPS Enrollee for peer " MACSTR
 		   " dev_addr " MACSTR " wps_method %d",
 		   MAC2STR(res->peer_interface_addr),
@@ -1266,6 +1268,7 @@ static void p2p_go_configured(void *ctx, void *data)
 				       params->passphrase,
 				       wpa_s->global->p2p_dev_addr,
 				       params->persistent_group, "");
+		wpa_s->group_formation_reported = 1;
 
 		os_get_reltime(&wpa_s->global->p2p_go_wait_client);
 		if (params->persistent_group) {
@@ -1350,6 +1353,7 @@ static void wpas_start_wps_go(struct wpa_supplicant *wpa_s,
 
 	wpa_s->show_group_started = 0;
 	wpa_s->p2p_go_group_formation_completed = 0;
+	wpa_s->group_formation_reported = 0;
 
 	wpa_config_set_network_defaults(ssid);
 	ssid->temporary = 1;
@@ -6896,6 +6900,20 @@ void wpas_p2p_notify_ap_sta_authorized(struct wpa_supplicant *wpa_s,
 		 * provisioning step.
 		 */
 		wpa_printf(MSG_DEBUG, "P2P: Canceled P2P group formation timeout on data connection");
+
+		if (!wpa_s->p2p_go_group_formation_completed &&
+		    !wpa_s->group_formation_reported) {
+			/*
+			 * GO has not yet notified group formation success since
+			 * the WPS step was not completed cleanly. Do that
+			 * notification now since the P2P Client was able to
+			 * connect and as such, must have received the
+			 * credential from the WPS step.
+			 */
+			if (wpa_s->global->p2p)
+				p2p_wps_success_cb(wpa_s->global->p2p, addr);
+			wpas_group_formation_completed(wpa_s, 1);
+		}
 	}
 	if (!wpa_s->p2p_go_group_formation_completed) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Marking group formation completed on GO on first data connection");

@@ -1320,6 +1320,28 @@ static void wpa_driver_nl80211_event_rtm_newlink(void *ctx,
 				   "event since interface %s is marked "
 				   "removed", drv->first_bss->ifname);
 		} else {
+			struct i802_bss *bss;
+			u8 addr[ETH_ALEN];
+
+			/* Re-read MAC address as it may have changed */
+			bss = get_bss_ifindex(drv, ifi->ifi_index);
+			if (bss &&
+			    linux_get_ifhwaddr(drv->global->ioctl_sock,
+					       bss->ifname, addr) < 0) {
+				wpa_printf(MSG_DEBUG,
+					   "nl80211: %s: failed to re-read MAC address",
+					   bss->ifname);
+			} else if (bss &&
+				   os_memcmp(addr, bss->addr, ETH_ALEN) != 0) {
+				wpa_printf(MSG_DEBUG,
+					   "nl80211: Own MAC address on ifindex %d (%s) changed from "
+					   MACSTR " to " MACSTR,
+					   ifi->ifi_index, bss->ifname,
+					   MAC2STR(bss->addr),
+					   MAC2STR(addr));
+				os_memcpy(bss->addr, addr, ETH_ALEN);
+			}
+
 			wpa_printf(MSG_DEBUG, "nl80211: Interface up");
 			drv->if_disabled = 0;
 			wpa_supplicant_event(drv->ctx, EVENT_INTERFACE_ENABLED,

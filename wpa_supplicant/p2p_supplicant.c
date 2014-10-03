@@ -3786,7 +3786,8 @@ static void wpas_p2p_debug_print(void *ctx, int level, const char *msg)
 }
 
 
-int wpas_p2p_add_p2pdev_interface(struct wpa_supplicant *wpa_s)
+int wpas_p2p_add_p2pdev_interface(struct wpa_supplicant *wpa_s,
+				  const char *conf_p2p_dev)
 {
 	struct wpa_interface iface;
 	struct wpa_supplicant *p2pdev_wpa_s;
@@ -3817,8 +3818,8 @@ int wpas_p2p_add_p2pdev_interface(struct wpa_supplicant *wpa_s)
 	 * If a P2P Device configuration file was given, use it as the interface
 	 * configuration file (instead of using parent's configuration file.
 	 */
-	if (wpa_s->conf_p2p_dev) {
-		iface.confname = wpa_s->conf_p2p_dev;
+	if (conf_p2p_dev) {
+		iface.confname = conf_p2p_dev;
 		iface.ctrl_interface = NULL;
 	} else {
 		iface.confname = wpa_s->confname;

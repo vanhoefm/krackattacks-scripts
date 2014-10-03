@@ -331,7 +331,8 @@ int main(int argc, char *argv[])
 		if (wpa_s->global->p2p == NULL &&
 		    (wpa_s->drv_flags &
 		     WPA_DRIVER_FLAGS_DEDICATED_P2P_DEVICE) &&
-		    wpas_p2p_add_p2pdev_interface(wpa_s) < 0)
+		    wpas_p2p_add_p2pdev_interface(wpa_s, iface->conf_p2p_dev) <
+		    0)
 			exitcode = -1;
 #endif /* CONFIG_P2P */
 	}

@@ -67,7 +67,7 @@ struct wpa_interface {
 
 #ifdef CONFIG_P2P
 	/**
-	 * conf_p2p_dev - Additional configuration file used to hold the
+	 * conf_p2p_dev - Configuration file used to hold the
 	 * P2P Device configuration parameters.
 	 *
 	 * This can also be %NULL. In such a case, if a P2P Device dedicated
@@ -407,10 +407,6 @@ struct wpa_supplicant {
 
 	char *confname;
 	char *confanother;
-
-#ifdef CONFIG_P2P
-	char *conf_p2p_dev;
-#endif /* CONFIG_P2P */
 
 	struct wpa_config *conf;
 	int countermeasures;

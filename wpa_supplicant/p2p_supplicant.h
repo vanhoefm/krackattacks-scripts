@@ -16,7 +16,8 @@ struct p2p_peer_info;
 struct p2p_channels;
 struct wps_event_fail;
 
-int wpas_p2p_add_p2pdev_interface(struct wpa_supplicant *wpa_s);
+int wpas_p2p_add_p2pdev_interface(struct wpa_supplicant *wpa_s,
+				  const char *conf_p2p_dev);
 struct wpa_supplicant * wpas_get_p2p_go_iface(struct wpa_supplicant *wpa_s,
 					      const u8 *ssid, size_t ssid_len);
 struct wpa_supplicant * wpas_get_p2p_client_iface(struct wpa_supplicant *wpa_s,

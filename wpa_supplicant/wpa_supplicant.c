@@ -403,11 +403,6 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 	os_free(wpa_s->confanother);
 	wpa_s->confanother = NULL;
 
-#ifdef CONFIG_P2P
-	os_free(wpa_s->conf_p2p_dev);
-	wpa_s->conf_p2p_dev = NULL;
-#endif /* CONFIG_P2P */
-
 	wpa_sm_set_eapol(wpa_s->wpa, NULL);
 	eapol_sm_deinit(wpa_s->eapol);
 	wpa_s->eapol = NULL;
@@ -3652,11 +3647,6 @@ static int wpa_supplicant_init_iface(struct wpa_supplicant *wpa_s,
 		}
 		wpa_s->confanother = os_rel2abs_path(iface->confanother);
 		wpa_config_read(wpa_s->confanother, wpa_s->conf);
-
-#ifdef CONFIG_P2P
-		wpa_s->conf_p2p_dev = os_rel2abs_path(iface->conf_p2p_dev);
-		wpa_config_read(wpa_s->conf_p2p_dev, wpa_s->conf);
-#endif /* CONFIG_P2P */
 
 		/*
 		 * Override ctrl_interface and driver_param if set on command

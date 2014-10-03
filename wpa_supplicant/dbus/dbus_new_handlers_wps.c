@@ -389,3 +389,60 @@ dbus_bool_t wpas_dbus_setter_process_credentials(DBusMessageIter *iter,
 
 	return TRUE;
 }
+
+
+/**
+ * wpas_dbus_getter_config_methods - Get current WPS configuration methods
+ * @iter: Pointer to incoming dbus message iter
+ * @error: Location to store error on failure
+ * @user_data: Function specific data
+ * Returns: TRUE on success, FALSE on failure
+ *
+ * Getter for "ConfigMethods" property. Returned boolean will be true if
+ * providing the relevant string worked, or false otherwise.
+ */
+dbus_bool_t wpas_dbus_getter_config_methods(DBusMessageIter *iter,
+					    DBusError *error,
+					    void *user_data)
+{
+	struct wpa_supplicant *wpa_s = user_data;
+	char *methods = wpa_s->conf->config_methods;
+
+	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_STRING,
+						&methods, error);
+}
+
+
+/**
+ * wpas_dbus_setter_config_methods - Set WPS configuration methods
+ * @iter: Pointer to incoming dbus message iter
+ * @error: Location to store error on failure
+ * @user_data: Function specific data
+ * Returns: TRUE on success, FALSE on failure
+ *
+ * Setter for "ConfigMethods" property. Sets the methods string, apply such
+ * change and returns true on success. Returns false otherwise.
+ */
+dbus_bool_t wpas_dbus_setter_config_methods(DBusMessageIter *iter,
+					    DBusError *error,
+					    void *user_data)
+{
+	struct wpa_supplicant *wpa_s = user_data;
+	char *methods, *new_methods;
+
+	if (!wpas_dbus_simple_property_setter(iter, error, DBUS_TYPE_STRING,
+					      &methods))
+		return FALSE;
+
+	new_methods = os_strdup(methods);
+	if (!new_methods)
+		return FALSE;
+
+	os_free(wpa_s->conf->config_methods);
+	wpa_s->conf->config_methods = new_methods;
+
+	wpa_s->conf->changed_parameters |= CFG_CHANGED_CONFIG_METHODS;
+	wpa_supplicant_update_config(wpa_s);
+
+	return TRUE;
+}

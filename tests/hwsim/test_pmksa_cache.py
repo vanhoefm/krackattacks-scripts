@@ -388,3 +388,42 @@ def test_pmksa_cache_preauth(dev, apdev):
     finally:
         subprocess.call(['sudo', 'ip', 'link', 'set', 'dev', 'ap-br0', 'down'])
         subprocess.call(['sudo', 'brctl', 'delbr', 'ap-br0'])
+
+def test_pmksa_cache_disabled(dev, apdev):
+    """PMKSA cache disabling on AP"""
+    params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
+    params['disable_pmksa_caching'] = '1'
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+    dev[0].connect("test-pmksa-cache", proto="RSN", key_mgmt="WPA-EAP",
+                   eap="GPSK", identity="gpsk user",
+                   password="abcdefghijklmnop0123456789abcdef",
+                   scan_freq="2412")
+
+    hostapd.add_ap(apdev[1]['ifname'], params)
+    bssid2 = apdev[1]['bssid']
+
+    dev[0].dump_monitor()
+    logger.info("Roam to AP2")
+    dev[0].scan_for_bss(bssid2, freq="2412")
+    dev[0].request("ROAM " + bssid2)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=10)
+    if ev is None:
+        raise Exception("EAP success timed out")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("Roaming with the AP timed out")
+
+    dev[0].dump_monitor()
+    logger.info("Roam back to AP1")
+    dev[0].scan(freq="2412")
+    dev[0].request("ROAM " + bssid)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED",
+                            "CTRL-EVENT-CONNECTED"], timeout=20)
+    if ev is None:
+        raise Exception("Roaming with the AP timed out")
+    if "CTRL-EVENT-CONNECTED" in ev:
+        raise Exception("EAP exchange missing")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=20)
+    if ev is None:
+        raise Exception("Roaming with the AP timed out")

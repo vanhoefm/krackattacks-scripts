@@ -50,38 +50,42 @@ void pmksa_cache_free_entry(struct rsn_pmksa_cache *pmksa,
 			    struct rsn_pmksa_cache_entry *entry)
 {
 	struct rsn_pmksa_cache_entry *pos, *prev;
+	unsigned int hash;
 
 	pmksa->pmksa_count--;
 	pmksa->free_cb(entry, pmksa->ctx);
-	pos = pmksa->pmkid[PMKID_HASH(entry->pmkid)];
+
+	/* unlink from hash list */
+	hash = PMKID_HASH(entry->pmkid);
+	pos = pmksa->pmkid[hash];
 	prev = NULL;
 	while (pos) {
 		if (pos == entry) {
-			if (prev != NULL) {
-				prev->hnext = pos->hnext;
-			} else {
-				pmksa->pmkid[PMKID_HASH(entry->pmkid)] =
-					pos->hnext;
-			}
+			if (prev != NULL)
+				prev->hnext = entry->hnext;
+			else
+				pmksa->pmkid[hash] = entry->hnext;
 			break;
 		}
 		prev = pos;
 		pos = pos->hnext;
 	}
 
+	/* unlink from entry list */
 	pos = pmksa->pmksa;
 	prev = NULL;
 	while (pos) {
 		if (pos == entry) {
 			if (prev != NULL)
-				prev->next = pos->next;
+				prev->next = entry->next;
 			else
-				pmksa->pmksa = pos->next;
+				pmksa->pmksa = entry->next;
 			break;
 		}
 		prev = pos;
 		pos = pos->next;
 	}
+
 	_pmksa_cache_free_entry(entry);
 }
 
@@ -186,6 +190,7 @@ static void pmksa_cache_link_entry(struct rsn_pmksa_cache *pmksa,
 				   struct rsn_pmksa_cache_entry *entry)
 {
 	struct rsn_pmksa_cache_entry *pos, *prev;
+	int hash;
 
 	/* Add the new entry; order by expiration time */
 	pos = pmksa->pmksa;
@@ -203,8 +208,10 @@ static void pmksa_cache_link_entry(struct rsn_pmksa_cache *pmksa,
 		entry->next = prev->next;
 		prev->next = entry;
 	}
-	entry->hnext = pmksa->pmkid[PMKID_HASH(entry->pmkid)];
-	pmksa->pmkid[PMKID_HASH(entry->pmkid)] = entry;
+
+	hash = PMKID_HASH(entry->pmkid);
+	entry->hnext = pmksa->pmkid[hash];
+	pmksa->pmkid[hash] = entry;
 
 	pmksa->pmksa_count++;
 	if (prev == NULL)
@@ -340,6 +347,8 @@ void pmksa_cache_auth_deinit(struct rsn_pmksa_cache *pmksa)
 		_pmksa_cache_free_entry(prev);
 	}
 	eloop_cancel_timeout(pmksa_cache_expire, pmksa, NULL);
+	pmksa->pmksa_count = 0;
+	pmksa->pmksa = NULL;
 	for (i = 0; i < PMKID_HASH_SIZE; i++)
 		pmksa->pmkid[i] = NULL;
 	os_free(pmksa);
@@ -359,18 +368,22 @@ pmksa_cache_auth_get(struct rsn_pmksa_cache *pmksa,
 {
 	struct rsn_pmksa_cache_entry *entry;
 
-	if (pmkid)
-		entry = pmksa->pmkid[PMKID_HASH(pmkid)];
-	else
-		entry = pmksa->pmksa;
-	while (entry) {
-		if ((spa == NULL ||
-		     os_memcmp(entry->spa, spa, ETH_ALEN) == 0) &&
-		    (pmkid == NULL ||
-		     os_memcmp(entry->pmkid, pmkid, PMKID_LEN) == 0))
-			return entry;
-		entry = pmkid ? entry->hnext : entry->next;
+	if (pmkid) {
+		for (entry = pmksa->pmkid[PMKID_HASH(pmkid)]; entry;
+		     entry = entry->hnext) {
+			if ((spa == NULL ||
+			     os_memcmp(entry->spa, spa, ETH_ALEN) == 0) &&
+			    os_memcmp(entry->pmkid, pmkid, PMKID_LEN) == 0)
+				return entry;
+		}
+	} else {
+		for (entry = pmksa->pmksa; entry; entry = entry->next) {
+			if (spa == NULL ||
+			    os_memcmp(entry->spa, spa, ETH_ALEN) == 0)
+				return entry;
+		}
 	}
+
 	return NULL;
 }
 

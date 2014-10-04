@@ -345,9 +345,10 @@ int wpa_ctrl_detach(struct wpa_ctrl *ctrl);
  * @reply_len: Length of the reply buffer
  * Returns: 0 on success, -1 on failure
  *
- * This function will receive a pending control interface message. This
- * function will block if no messages are available. The received response will
- * be written to reply and reply_len is set to the actual length of the reply.
+ * This function will receive a pending control interface message. The received
+ * response will be written to reply and reply_len is set to the actual length
+ * of the reply.
+
  * wpa_ctrl_recv() is only used for event messages, i.e., wpa_ctrl_attach()
  * must have been used to register the control interface as an event monitor.
  */

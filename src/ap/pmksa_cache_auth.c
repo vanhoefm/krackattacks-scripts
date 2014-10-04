@@ -394,15 +394,13 @@ struct rsn_pmksa_cache_entry * pmksa_cache_get_okc(
 	struct rsn_pmksa_cache_entry *entry;
 	u8 new_pmkid[PMKID_LEN];
 
-	entry = pmksa->pmksa;
-	while (entry) {
+	for (entry = pmksa->pmksa; entry; entry = entry->next) {
 		if (os_memcmp(entry->spa, spa, ETH_ALEN) != 0)
 			continue;
 		rsn_pmkid(entry->pmk, entry->pmk_len, aa, spa, new_pmkid,
 			  wpa_key_mgmt_sha256(entry->akmp));
 		if (os_memcmp(new_pmkid, pmkid, PMKID_LEN) == 0)
 			return entry;
-		entry = entry->next;
 	}
 	return NULL;
 }

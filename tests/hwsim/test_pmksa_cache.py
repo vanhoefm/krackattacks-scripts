@@ -457,3 +457,67 @@ def test_pmksa_cache_ap_expiration(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=20)
     if ev is None:
         raise Exception("Reassociation with the AP timed out")
+
+def test_pmksa_cache_multiple_sta(dev, apdev):
+    """PMKSA cache with multiple stations"""
+    params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+    dev[0].connect("test-pmksa-cache", proto="RSN", key_mgmt="WPA-EAP",
+                   eap="GPSK", identity="gpsk-user-session-timeout",
+                   password="abcdefghijklmnop0123456789abcdef",
+                   scan_freq="2412")
+    dev[1].connect("test-pmksa-cache", proto="RSN", key_mgmt="WPA-EAP",
+                   eap="GPSK", identity="gpsk user",
+                   password="abcdefghijklmnop0123456789abcdef",
+                   scan_freq="2412")
+    dev[2].connect("test-pmksa-cache", proto="RSN", key_mgmt="WPA-EAP",
+                   eap="GPSK", identity="gpsk-user-session-timeout",
+                   password="abcdefghijklmnop0123456789abcdef",
+                   scan_freq="2412")
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5")
+    wpas.connect("test-pmksa-cache", proto="RSN", key_mgmt="WPA-EAP",
+                 eap="GPSK", identity="gpsk user",
+                 password="abcdefghijklmnop0123456789abcdef",
+                 scan_freq="2412")
+
+    hostapd.add_ap(apdev[1]['ifname'], params)
+    bssid2 = apdev[1]['bssid']
+
+    logger.info("Roam to AP2")
+    for sta in [ dev[1], dev[0], dev[2], wpas ]:
+        sta.dump_monitor()
+        sta.scan_for_bss(bssid2, freq="2412")
+        sta.request("ROAM " + bssid2)
+        ev = sta.wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=10)
+        if ev is None:
+            raise Exception("EAP success timed out")
+        ev = sta.wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
+        if ev is None:
+            raise Exception("Roaming with the AP timed out")
+
+    logger.info("Roam back to AP1")
+    for sta in [ dev[1], wpas, dev[0], dev[2] ]:
+        sta.dump_monitor()
+        sta.scan(freq="2412")
+        sta.dump_monitor()
+        sta.request("ROAM " + bssid)
+        ev = sta.wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
+        if ev is None:
+            raise Exception("Roaming with the AP timed out")
+        sta.dump_monitor()
+
+    time.sleep(4)
+
+    logger.info("Roam back to AP2")
+    for sta in [ dev[1], wpas, dev[0], dev[2] ]:
+        sta.dump_monitor()
+        sta.scan(freq="2412")
+        sta.dump_monitor()
+        sta.request("ROAM " + bssid2)
+        ev = sta.wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
+        if ev is None:
+            raise Exception("Roaming with the AP timed out")
+        sta.dump_monitor()

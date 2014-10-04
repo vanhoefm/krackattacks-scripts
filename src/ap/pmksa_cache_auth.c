@@ -37,8 +37,6 @@ static void pmksa_cache_set_expiration(struct rsn_pmksa_cache *pmksa);
 
 static void _pmksa_cache_free_entry(struct rsn_pmksa_cache_entry *entry)
 {
-	if (entry == NULL)
-		return;
 	os_free(entry->identity);
 	wpabuf_free(entry->cui);
 #ifndef CONFIG_NO_RADIUS

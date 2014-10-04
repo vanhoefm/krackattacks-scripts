@@ -588,6 +588,20 @@ static int is_p2p_net_interface(enum nl80211_iftype nlmode)
 }
 
 
+static struct i802_bss * get_bss_ifindex(struct wpa_driver_nl80211_data *drv,
+					 int ifindex)
+{
+	struct i802_bss *bss;
+
+	for (bss = drv->first_bss; bss; bss = bss->next) {
+		if (bss->ifindex == ifindex)
+			return bss;
+	}
+
+	return NULL;
+}
+
+
 static void nl80211_mark_disconnected(struct wpa_driver_nl80211_data *drv)
 {
 	if (drv->associated)
@@ -1688,10 +1702,7 @@ static void mlme_event_ch_switch(struct wpa_driver_nl80211_data *drv,
 		return;
 
 	ifidx = nla_get_u32(ifindex);
-	for (bss = drv->first_bss; bss; bss = bss->next)
-		if (bss->ifindex == ifidx)
-			break;
-
+	bss = get_bss_ifindex(drv, ifidx);
 	if (bss == NULL) {
 		wpa_printf(MSG_WARNING, "nl80211: Unknown ifindex (%d) for channel switch, ignoring",
 			   ifidx);

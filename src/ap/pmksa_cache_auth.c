@@ -42,7 +42,7 @@ static void _pmksa_cache_free_entry(struct rsn_pmksa_cache_entry *entry)
 #ifndef CONFIG_NO_RADIUS
 	radius_free_class(&entry->radius_class);
 #endif /* CONFIG_NO_RADIUS */
-	os_free(entry);
+	bin_clear_free(entry, sizeof(*entry));
 }
 
 

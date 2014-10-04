@@ -427,3 +427,33 @@ def test_pmksa_cache_disabled(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=20)
     if ev is None:
         raise Exception("Roaming with the AP timed out")
+
+def test_pmksa_cache_ap_expiration(dev, apdev):
+    """PMKSA cache entry expiring on AP"""
+    params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+    dev[0].connect("test-pmksa-cache", proto="RSN", key_mgmt="WPA-EAP",
+                   eap="GPSK", identity="gpsk-user-session-timeout",
+                   password="abcdefghijklmnop0123456789abcdef",
+                   scan_freq="2412")
+    dev[0].request("DISCONNECT")
+    time.sleep(5)
+    dev[0].dump_monitor()
+    dev[0].request("RECONNECT")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED",
+                            "CTRL-EVENT-CONNECTED"], timeout=20)
+    if ev is None:
+        raise Exception("Roaming with the AP timed out")
+    if "CTRL-EVENT-CONNECTED" in ev:
+        raise Exception("EAP exchange missing")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=20)
+    if ev is None:
+        raise Exception("Reassociation with the AP timed out")
+    dev[0].dump_monitor()
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=20)
+    if ev is None:
+        raise Exception("Disconnection event timed out")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=20)
+    if ev is None:
+        raise Exception("Reassociation with the AP timed out")

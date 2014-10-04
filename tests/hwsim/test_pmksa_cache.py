@@ -521,3 +521,47 @@ def test_pmksa_cache_multiple_sta(dev, apdev):
         if ev is None:
             raise Exception("Roaming with the AP timed out")
         sta.dump_monitor()
+
+def test_pmksa_cache_opportunistic_multiple_sta(dev, apdev):
+    """Opportunistic PMKSA caching with multiple stations"""
+    params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
+    params['okc'] = "1"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5")
+    for sta in [ dev[0], dev[1], dev[2], wpas ]:
+        sta.connect("test-pmksa-cache", proto="RSN", key_mgmt="WPA-EAP",
+                    eap="GPSK", identity="gpsk user",
+                    password="abcdefghijklmnop0123456789abcdef", okc=True,
+                    scan_freq="2412")
+
+    hostapd.add_ap(apdev[1]['ifname'], params)
+    bssid2 = apdev[1]['bssid']
+
+    logger.info("Roam to AP2")
+    for sta in [ dev[2], dev[0], wpas, dev[1] ]:
+        sta.dump_monitor()
+        sta.scan_for_bss(bssid2, freq="2412")
+        sta.request("ROAM " + bssid2)
+        ev = sta.wait_event(["CTRL-EVENT-EAP-STARTED",
+                             "CTRL-EVENT-CONNECTED"], timeout=10)
+        if ev is None:
+            raise Exception("Roaming with the AP timed out")
+        if "CTRL-EVENT-EAP-STARTED" in ev:
+            raise Exception("Unexpected EAP exchange")
+        pmksa2 = sta.get_pmksa(bssid2)
+        if pmksa2 is None:
+            raise Exception("No PMKSA cache entry created")
+
+    logger.info("Roam back to AP1")
+    for sta in [ dev[0], dev[1], dev[2], wpas ]:
+        sta.dump_monitor()
+        sta.scan_for_bss(bssid, freq="2412")
+        sta.request("ROAM " + bssid)
+        ev = sta.wait_event(["CTRL-EVENT-EAP-STARTED",
+                             "CTRL-EVENT-CONNECTED"], timeout=10)
+        if ev is None:
+            raise Exception("Roaming with the AP timed out")
+        if "CTRL-EVENT-EAP-STARTED" in ev:
+            raise Exception("Unexpected EAP exchange")

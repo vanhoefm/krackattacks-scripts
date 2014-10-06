@@ -92,7 +92,7 @@ int hs20_web_browser(const char *url)
 		return -1;
 	}
 
-	if (system(cmd) != 0) {
+	if (os_exec("/usr/bin/x-www-browser", url, 0) != 0) {
 		wpa_printf(MSG_INFO, "Failed to launch browser");
 		eloop_cancel_timeout(browser_timeout, NULL, NULL);
 		http_server_deinit(http);

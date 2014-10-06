@@ -75,7 +75,7 @@ int hs20_web_browser(const char *url)
 	os_memset(&data, 0, sizeof(data));
 
 	ret = os_snprintf(cmd, sizeof(cmd),
-			  "am start -a android.intent.action.VIEW -d '%s' "
+			  "start -a android.intent.action.VIEW -d %s "
 			  "-n com.android.browser/.BrowserActivity", url);
 	if (ret < 0 || (size_t) ret >= sizeof(cmd)) {
 		wpa_printf(MSG_ERROR, "Too long URL");
@@ -94,7 +94,7 @@ int hs20_web_browser(const char *url)
 		return -1;
 	}
 
-	if (system(cmd) != 0) {
+	if (os_exec("/system/bin/am", cmd, 1) != 0) {
 		wpa_printf(MSG_INFO, "Failed to launch Android browser");
 		eloop_cancel_timeout(browser_timeout, NULL, NULL);
 		http_server_deinit(http);
@@ -109,7 +109,7 @@ int hs20_web_browser(const char *url)
 	eloop_destroy();
 
 	wpa_printf(MSG_INFO, "Closing Android browser");
-	if (system("input keyevent 3") != 0) {
+	if (os_exec("/system/bin/input", "keyevent 3", 1) != 0) {
 		wpa_printf(MSG_INFO, "Failed to inject keyevent");
 	}
 

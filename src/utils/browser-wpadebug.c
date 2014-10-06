@@ -76,7 +76,7 @@ int hs20_web_browser(const char *url)
 	os_memset(&data, 0, sizeof(data));
 
 	ret = os_snprintf(cmd, sizeof(cmd),
-			  "am start -a android.action.MAIN "
+			  "start -a android.action.MAIN "
 			  "-c android.intent.category.LAUNCHER "
 			  "-n w1.fi.wpadebug/.WpaWebViewActivity "
 			  "-e w1.fi.wpadebug.URL '%s'", url);
@@ -97,7 +97,7 @@ int hs20_web_browser(const char *url)
 		return -1;
 	}
 
-	if (system(cmd) != 0) {
+	if (os_exec("/system/bin/am", cmd, 1) != 0) {
 		wpa_printf(MSG_INFO, "Failed to launch wpadebug browser");
 		eloop_cancel_timeout(browser_timeout, NULL, NULL);
 		http_server_deinit(http);
@@ -112,10 +112,11 @@ int hs20_web_browser(const char *url)
 	eloop_destroy();
 
 	wpa_printf(MSG_INFO, "Closing Android browser");
-	if (system("am start -a android.action.MAIN "
-		   "-c android.intent.category.LAUNCHER "
-		   "-n w1.fi.wpadebug/.WpaWebViewActivity "
-		   "-e w1.fi.wpadebug.URL FINISH") != 0) {
+	if (os_exec("/system/bin/am",
+		    "start -a android.action.MAIN "
+		    "-c android.intent.category.LAUNCHER "
+		    "-n w1.fi.wpadebug/.WpaWebViewActivity "
+		    "-e w1.fi.wpadebug.URL FINISH", 1) != 0) {
 		wpa_printf(MSG_INFO, "Failed to close wpadebug browser");
 	}
 

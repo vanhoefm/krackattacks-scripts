@@ -6437,7 +6437,7 @@ static int wpas_ctrl_vendor_elem_remove(struct wpa_supplicant *wpa_s, char *cmd)
 			wpa_s->vendor_elem[frame] = NULL;
 		} else {
 			os_memmove(ie, ie + len,
-				   wpabuf_len(wpa_s->vendor_elem[frame]) - len);
+				   end - (ie + len));
 			wpa_s->vendor_elem[frame]->used -= len;
 		}
 		os_free(buf);

@@ -52,6 +52,15 @@ def test_p2p_ext_discovery(dev):
         peer = dev[1].get_peer(addr0)
         if peer['vendor_elems'] != "dd050011223344dd06001122335566":
             raise Exception("Vendor elements not reported correctly")
+
+        res = dev[0].request("VENDOR_ELEM_GET 1")
+        if res != "dd050011223344dd06001122335566":
+            raise Exception("Unexpected VENDOR_ELEM_GET result(6): " + res)
+        if "OK" not in dev[0].request("VENDOR_ELEM_REMOVE 1 dd06001122335566"):
+            raise Exception("VENDOR_ELEM_REMOVE failed")
+        res = dev[0].request("VENDOR_ELEM_GET 1")
+        if res != "dd050011223344":
+            raise Exception("Unexpected VENDOR_ELEM_GET result(7): " + res)
     finally:
         dev[0].request("VENDOR_ELEM_REMOVE 1 *")
 

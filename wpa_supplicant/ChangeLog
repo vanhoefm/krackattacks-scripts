@@ -1,5 +1,70 @@
 ChangeLog for wpa_supplicant
 
+2014-10-09 - v2.3
+	* fixed number of minor issues identified in static analyzer warnings
+	* fixed wfd_dev_info to be more careful and not read beyond the buffer
+	  when parsing invalid information for P2P-DEVICE-FOUND
+	* extended P2P and GAS query operations to support drivers that have
+	  maximum remain-on-channel time below 1000 ms (500 ms is the current
+	  minimum supported value)
+	* added p2p_search_delay parameter to make the default p2p_find delay
+	  configurable
+	* improved P2P operating channel selection for various multi-channel
+	  concurrency cases
+	* fixed some TDLS failure cases to clean up driver state
+	* fixed dynamic interface addition cases with nl80211 to avoid adding
+	  ifindex values to incorrect interface to skip foreign interface events
+	  properly
+	* added TDLS workaround for some APs that may add extra data to the
+	  end of a short frame
+	* fixed EAP-AKA' message parser with multiple AT_KDF attributes
+	* added configuration option (p2p_passphrase_len) to allow longer
+	  passphrases to be generated for P2P groups
+	* fixed IBSS channel configuration in some corner cases
+	* improved HT/VHT/QoS parameter setup for TDLS
+	* modified D-Bus interface for P2P peers/groups
+	* started to use constant time comparison for various password and hash
+	  values to reduce possibility of any externally measurable timing
+	  differences
+	* extended explicit clearing of freed memory and expired keys to avoid
+	  keeping private data in memory longer than necessary
+	* added optional scan_id parameter to the SCAN command to allow manual
+	  scan requests for active scans for specific configured SSIDs
+	* fixed CTRL-EVENT-REGDOM-CHANGE event init parameter value
+	* added option to set Hotspot 2.0 Rel 2 update_identifier in network
+	  configuration to support external configuration
+	* modified Android PNO functionality to send Probe Request frames only
+	  for hidden SSIDs (based on scan_ssid=1)
+	* added generic mechanism for adding vendor elements into frames at
+	  runtime (VENDOR_ELEM_ADD, VENDOR_ELEM_GET, VENDOR_ELEM_REMOVE)
+	* added fields to show unrecognized vendor elements in P2P_PEER
+	* removed EAP-TTLS/MSCHAPv2 interoperability workaround so that
+	  MS-CHAP2-Success is required to be present regardless of
+	  eap_workaround configuration
+	* modified EAP fast session resumption to allow results to be used only
+	  with the same network block that generated them
+	* extended freq_list configuration to apply for sched_scan as well as
+	  normal scan
+	* modified WPS to merge mixed-WPA/WPA2 credentials from a single session
+	* fixed nl80211/RTM_DELLINK processing when a P2P GO interface is
+	  removed from a bridge
+	* fixed number of small P2P issues to make negotiations more robust in
+	  corner cases
+	* added experimental support for using temporary, random local MAC
+	  address (mac_addr and preassoc_mac_addr parameters); this is disabled
+	  by default (i.e., previous behavior of using permanent address is
+	  maintained if configuration is not changed)
+	* added D-Bus interface for setting/clearing WFD IEs
+	* fixed TDLS AID configuration for VHT
+	* modified -m<conf> configuration file to be used only for the P2P
+	  non-netdev management device and do not load this for the default
+	  station interface or load the station interface configuration for
+	  the P2P management interface
+	* fixed external MAC address changes while wpa_supplicant is running
+	* started to enable HT (if supported by the driver) for IBSS
+	* fixed wpa_cli action script execution to use more robust mechanism
+	  (CVE-2014-3686)
+
 2014-06-04 - v2.2
 	* added DFS indicator to get_capability freq
 	* added/fixed nl80211 functionality

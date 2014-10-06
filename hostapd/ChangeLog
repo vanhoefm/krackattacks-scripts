@@ -1,5 +1,24 @@
 ChangeLog for hostapd
 
+2014-10-09 - v2.3
+	* fixed number of minor issues identified in static analyzer warnings
+	* fixed DFS and channel switch operation for multi-BSS cases
+	* started to use constant time comparison for various password and hash
+	  values to reduce possibility of any externally measurable timing
+	  differences
+	* extended explicit clearing of freed memory and expired keys to avoid
+	  keeping private data in memory longer than necessary
+	* added support for number of new RADIUS attributes from RFC 7268
+	  (Mobility-Domain-Id, WLAN-HESSID, WLAN-Pairwise-Cipher,
+	  WLAN-Group-Cipher, WLAN-AKM-Suite, WLAN-Group-Mgmt-Pairwise-Cipher)
+	* fixed GET_CONFIG wpa_pairwise_cipher value
+	* added code to clear bridge FDB entry on station disconnection
+	* fixed PMKSA cache timeout from Session-Timeout for WPA/WPA2 cases
+	* fixed OKC PMKSA cache entry fetch to avoid a possible infinite loop
+	  in case the first entry does not match
+	* fixed hostapd_cli action script execution to use more robust mechanism
+	  (CVE-2014-3686)
+
 2014-06-04 - v2.2
 	* fixed SAE confirm-before-commit validation to avoid a potential
 	  segmentation fault in an unexpected message sequence that could be

@@ -238,28 +238,19 @@ static int hostapd_cli_cmd_mib(struct wpa_ctrl *ctrl, int argc, char *argv[])
 static int hostapd_cli_exec(const char *program, const char *arg1,
 			    const char *arg2)
 {
-	char *cmd;
+	char *arg;
 	size_t len;
 	int res;
-	int ret = 0;
 
-	len = os_strlen(program) + os_strlen(arg1) + os_strlen(arg2) + 3;
-	cmd = os_malloc(len);
-	if (cmd == NULL)
+	len = os_strlen(arg1) + os_strlen(arg2) + 2;
+	arg = os_malloc(len);
+	if (arg == NULL)
 		return -1;
-	res = os_snprintf(cmd, len, "%s %s %s", program, arg1, arg2);
-	if (res < 0 || (size_t) res >= len) {
-		os_free(cmd);
-		return -1;
-	}
-	cmd[len - 1] = '\0';
-#ifndef _WIN32_WCE
-	if (system(cmd) < 0)
-		ret = -1;
-#endif /* _WIN32_WCE */
-	os_free(cmd);
+	os_snprintf(arg, len, "%s %s", arg1, arg2);
+	res = os_exec(program, arg, 1);
+	os_free(arg);
 
-	return ret;
+	return res;
 }
 
 

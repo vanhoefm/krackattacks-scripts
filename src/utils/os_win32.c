@@ -258,3 +258,9 @@ int os_memcmp_const(const void *a, const void *b, size_t len)
 
 	return res;
 }
+
+
+int os_exec(const char *program, const char *arg, int wait_completion)
+{
+	return -1;
+}

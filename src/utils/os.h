@@ -601,6 +601,15 @@ size_t os_strlcpy(char *dest, const char *src, size_t siz);
  */
 int os_memcmp_const(const void *a, const void *b, size_t len);
 
+/**
+ * os_exec - Execute an external program
+ * @program: Path to the program
+ * @arg: Command line argument string
+ * @wait_completion: Whether to wait until the program execution completes
+ * Returns: 0 on success, -1 on error
+ */
+int os_exec(const char *program, const char *arg, int wait_completion);
+
 
 #ifdef OS_REJECT_C_LIB_FUNCTIONS
 #define malloc OS_DO_NOT_USE_malloc

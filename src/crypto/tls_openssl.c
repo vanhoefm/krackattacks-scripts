@@ -1217,6 +1217,7 @@ static int tls_match_suffix(X509 *cert, const char *match)
 	GENERAL_NAME *gen;
 	void *ext;
 	int i;
+	stack_index_t j;
 	int dns_name = 0;
 	X509_NAME *name;
 
@@ -1224,8 +1225,8 @@ static int tls_match_suffix(X509 *cert, const char *match)
 
 	ext = X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
 
-	for (i = 0; ext && i < (int) sk_GENERAL_NAME_num(ext); i++) {
-		gen = sk_GENERAL_NAME_value(ext, i);
+	for (j = 0; ext && j < sk_GENERAL_NAME_num(ext); j++) {
+		gen = sk_GENERAL_NAME_value(ext, j);
 		if (gen->type != GEN_DNS)
 			continue;
 		dns_name++;

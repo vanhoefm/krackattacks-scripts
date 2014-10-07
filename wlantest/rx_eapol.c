@@ -355,7 +355,7 @@ static u8 * decrypt_eapol_key_data_aes(struct wlantest *wt, const u8 *kek,
 	buf = os_malloc(keydatalen);
 	if (buf == NULL)
 		return NULL;
-	if (aes_unwrap(kek, keydatalen / 8, (u8 *) (hdr + 1), buf)) {
+	if (aes_unwrap(kek, 16, keydatalen / 8, (u8 *) (hdr + 1), buf)) {
 		os_free(buf);
 		add_note(wt, MSG_INFO,
 			 "AES unwrap failed - could not decrypt EAPOL-Key "

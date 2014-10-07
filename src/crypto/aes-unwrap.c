@@ -1,5 +1,5 @@
 /*
- * AES key unwrap (128-bit KEK, RFC3394)
+ * AES key unwrap (RFC3394)
  *
  * Copyright (c) 2003-2007, Jouni Malinen <j@w1.fi>
  *
@@ -14,17 +14,19 @@
 #include "aes_wrap.h"
 
 /**
- * aes_unwrap - Unwrap key with AES Key Wrap Algorithm (128-bit KEK) (RFC3394)
+ * aes_unwrap - Unwrap key with AES Key Wrap Algorithm (RFC3394)
  * @kek: Key encryption key (KEK)
+ * @kek_len: Length of KEK in octets
  * @n: Length of the plaintext key in 64-bit units; e.g., 2 = 128-bit = 16
  * bytes
  * @cipher: Wrapped key to be unwrapped, (n + 1) * 64 bits
  * @plain: Plaintext key, n * 64 bits
  * Returns: 0 on success, -1 on failure (e.g., integrity verification failed)
  */
-int aes_unwrap(const u8 *kek, int n, const u8 *cipher, u8 *plain)
+int aes_unwrap(const u8 *kek, size_t kek_len, int n, const u8 *cipher,
+	       u8 *plain)
 {
-	u8 a[8], *r, b[16];
+	u8 a[8], *r, b[AES_BLOCK_SIZE];
 	int i, j;
 	void *ctx;
 
@@ -33,7 +35,7 @@ int aes_unwrap(const u8 *kek, int n, const u8 *cipher, u8 *plain)
 	r = plain;
 	os_memcpy(r, cipher + 8, 8 * n);
 
-	ctx = aes_decrypt_init(kek, 16);
+	ctx = aes_decrypt_init(kek, kek_len);
 	if (ctx == NULL)
 		return -1;
 

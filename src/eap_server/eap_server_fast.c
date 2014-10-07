@@ -161,8 +161,8 @@ static int eap_fast_session_ticket_cb(void *ctx, const u8 *ticket, size_t len,
 		return 0;
 	}
 
-	if (aes_unwrap(data->pac_opaque_encr, (pac_opaque_len - 8) / 8,
-		       pac_opaque, buf) < 0) {
+	if (aes_unwrap(data->pac_opaque_encr, sizeof(data->pac_opaque_encr),
+		       (pac_opaque_len - 8) / 8, pac_opaque, buf) < 0) {
 		wpa_printf(MSG_DEBUG, "EAP-FAST: Failed to decrypt "
 			   "PAC-Opaque");
 		os_free(buf);
@@ -731,8 +731,8 @@ static struct wpabuf * eap_fast_build_pac(struct eap_sm *sm,
 		os_free(pac_buf);
 		return NULL;
 	}
-	if (aes_wrap(data->pac_opaque_encr, pac_len / 8, pac_buf,
-		     pac_opaque) < 0) {
+	if (aes_wrap(data->pac_opaque_encr, sizeof(data->pac_opaque_encr),
+		     pac_len / 8, pac_buf, pac_opaque) < 0) {
 		os_free(pac_buf);
 		os_free(pac_opaque);
 		return NULL;

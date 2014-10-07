@@ -1451,7 +1451,7 @@ ieee802_1x_mka_encode_dist_sak_body(
 		os_memcpy(body->sak, cipher_suite_tbl[cs_index].id, CS_ID_LEN);
 		sak_pos = CS_ID_LEN;
 	}
-	if (aes_wrap(participant->kek.key,
+	if (aes_wrap(participant->kek.key, 16,
 		     cipher_suite_tbl[cs_index].sak_len / 8,
 		     sak->key, body->sak + sak_pos)) {
 		wpa_printf(MSG_ERROR, "KaY: AES wrap failed");
@@ -1611,7 +1611,7 @@ ieee802_1x_mka_decode_dist_sak_body(
 		wpa_printf(MSG_ERROR, "KaY-%s: Out of memory", __func__);
 		return -1;
 	}
-	if (aes_unwrap(participant->kek.key, sak_len >> 3, wrap_sak,
+	if (aes_unwrap(participant->kek.key, 16, sak_len >> 3, wrap_sak,
 		       unwrap_sak)) {
 		wpa_printf(MSG_ERROR, "KaY: AES unwrap failed");
 		os_free(unwrap_sak);

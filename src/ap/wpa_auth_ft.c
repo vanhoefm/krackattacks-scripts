@@ -344,7 +344,8 @@ static int wpa_ft_pull_pmk_r1(struct wpa_state_machine *sm,
 	os_memcpy(f.s1kh_id, sm->addr, ETH_ALEN);
 	os_memset(f.pad, 0, sizeof(f.pad));
 
-	if (aes_wrap(r0kh->key, (FT_R0KH_R1KH_PULL_DATA_LEN + 7) / 8,
+	if (aes_wrap(r0kh->key, sizeof(r0kh->key),
+		     (FT_R0KH_R1KH_PULL_DATA_LEN + 7) / 8,
 		     f.nonce, frame.nonce) < 0)
 		return -1;
 
@@ -459,7 +460,7 @@ static u8 * wpa_ft_gtk_subelem(struct wpa_state_machine *sm, size_t *len)
 	WPA_PUT_LE16(&subelem[2], gsm->GN & 0x03);
 	subelem[4] = gsm->GTK_len;
 	wpa_auth_get_seqnum(sm->wpa_auth, NULL, gsm->GN, subelem + 5);
-	if (aes_wrap(sm->PTK.kek, key_len / 8, key, subelem + 13)) {
+	if (aes_wrap(sm->PTK.kek, 16, key_len / 8, key, subelem + 13)) {
 		os_free(subelem);
 		return NULL;
 	}
@@ -491,7 +492,7 @@ static u8 * wpa_ft_igtk_subelem(struct wpa_state_machine *sm, size_t *len)
 	wpa_auth_get_seqnum(sm->wpa_auth, NULL, gsm->GN_igtk, pos);
 	pos += 6;
 	*pos++ = WPA_IGTK_LEN;
-	if (aes_wrap(sm->PTK.kek, WPA_IGTK_LEN / 8,
+	if (aes_wrap(sm->PTK.kek, 16, WPA_IGTK_LEN / 8,
 		     gsm->IGTK[gsm->GN_igtk - 4], pos)) {
 		os_free(subelem);
 		return NULL;
@@ -1336,7 +1337,8 @@ static int wpa_ft_rrb_rx_pull(struct wpa_authenticator *wpa_auth,
 	frame = (struct ft_r0kh_r1kh_pull_frame *) data;
 	/* aes_unwrap() does not support inplace decryption, so use a temporary
 	 * buffer for the data. */
-	if (aes_unwrap(r1kh->key, (FT_R0KH_R1KH_PULL_DATA_LEN + 7) / 8,
+	if (aes_unwrap(r1kh->key, sizeof(r1kh->key),
+		       (FT_R0KH_R1KH_PULL_DATA_LEN + 7) / 8,
 		       frame->nonce, f.nonce) < 0) {
 		wpa_printf(MSG_DEBUG, "FT: Failed to decrypt PMK-R1 pull "
 			   "request from " MACSTR, MAC2STR(src_addr));
@@ -1376,7 +1378,8 @@ static int wpa_ft_rrb_rx_pull(struct wpa_authenticator *wpa_auth,
 	r.pairwise = host_to_le16(pairwise);
 	os_memset(r.pad, 0, sizeof(r.pad));
 
-	if (aes_wrap(r1kh->key, (FT_R0KH_R1KH_RESP_DATA_LEN + 7) / 8,
+	if (aes_wrap(r1kh->key, sizeof(r1kh->key),
+		     (FT_R0KH_R1KH_RESP_DATA_LEN + 7) / 8,
 		     r.nonce, resp.nonce) < 0) {
 		os_memset(pmk_r0, 0, PMK_LEN);
 		return -1;
@@ -1464,7 +1467,8 @@ static int wpa_ft_rrb_rx_resp(struct wpa_authenticator *wpa_auth,
 	frame = (struct ft_r0kh_r1kh_resp_frame *) data;
 	/* aes_unwrap() does not support inplace decryption, so use a temporary
 	 * buffer for the data. */
-	if (aes_unwrap(r0kh->key, (FT_R0KH_R1KH_RESP_DATA_LEN + 7) / 8,
+	if (aes_unwrap(r0kh->key, sizeof(r0kh->key),
+		       (FT_R0KH_R1KH_RESP_DATA_LEN + 7) / 8,
 		       frame->nonce, f.nonce) < 0) {
 		wpa_printf(MSG_DEBUG, "FT: Failed to decrypt PMK-R1 pull "
 			   "response from " MACSTR, MAC2STR(src_addr));
@@ -1530,7 +1534,8 @@ static int wpa_ft_rrb_rx_push(struct wpa_authenticator *wpa_auth,
 	frame = (struct ft_r0kh_r1kh_push_frame *) data;
 	/* aes_unwrap() does not support inplace decryption, so use a temporary
 	 * buffer for the data. */
-	if (aes_unwrap(r0kh->key, (FT_R0KH_R1KH_PUSH_DATA_LEN + 7) / 8,
+	if (aes_unwrap(r0kh->key, sizeof(r0kh->key),
+		       (FT_R0KH_R1KH_PUSH_DATA_LEN + 7) / 8,
 		       frame->timestamp, f.timestamp) < 0) {
 		wpa_printf(MSG_DEBUG, "FT: Failed to decrypt PMK-R1 push from "
 			   MACSTR, MAC2STR(src_addr));
@@ -1727,7 +1732,8 @@ static void wpa_ft_generate_pmk_r1(struct wpa_authenticator *wpa_auth,
 	WPA_PUT_LE32(f.timestamp, now.sec);
 	f.pairwise = host_to_le16(pairwise);
 	os_memset(f.pad, 0, sizeof(f.pad));
-	if (aes_wrap(r1kh->key, (FT_R0KH_R1KH_PUSH_DATA_LEN + 7) / 8,
+	if (aes_wrap(r1kh->key, sizeof(r1kh->key),
+		     (FT_R0KH_R1KH_PUSH_DATA_LEN + 7) / 8,
 		     f.timestamp, frame.timestamp) < 0)
 		return;
 

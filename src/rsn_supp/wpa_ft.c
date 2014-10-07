@@ -566,7 +566,7 @@ static int wpa_ft_process_gtk_subelem(struct wpa_sm *sm, const u8 *gtk_elem,
 		return -1;
 	}
 	gtk_len = gtk_elem_len - 19;
-	if (aes_unwrap(sm->ptk.kek, gtk_len / 8, gtk_elem + 11, gtk)) {
+	if (aes_unwrap(sm->ptk.kek, 16, gtk_len / 8, gtk_elem + 11, gtk)) {
 		wpa_printf(MSG_WARNING, "FT: AES unwrap failed - could not "
 			   "decrypt GTK");
 		return -1;
@@ -645,7 +645,8 @@ static int wpa_ft_process_igtk_subelem(struct wpa_sm *sm, const u8 *igtk_elem,
 		return -1;
 	}
 
-	if (aes_unwrap(sm->ptk.kek, WPA_IGTK_LEN / 8, igtk_elem + 9, igtk)) {
+	if (aes_unwrap(sm->ptk.kek, 16, WPA_IGTK_LEN / 8, igtk_elem + 9, igtk))
+	{
 		wpa_printf(MSG_WARNING, "FT: AES unwrap failed - could not "
 			   "decrypt IGTK");
 		return -1;

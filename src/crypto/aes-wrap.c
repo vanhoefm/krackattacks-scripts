@@ -28,6 +28,7 @@ int aes_wrap(const u8 *kek, size_t kek_len, int n, const u8 *plain, u8 *cipher)
 	u8 *a, *r, b[AES_BLOCK_SIZE];
 	int i, j;
 	void *ctx;
+	unsigned int t;
 
 	a = cipher;
 	r = cipher + 8;
@@ -54,7 +55,11 @@ int aes_wrap(const u8 *kek, size_t kek_len, int n, const u8 *plain, u8 *cipher)
 			os_memcpy(b + 8, r, 8);
 			aes_encrypt(ctx, b, b);
 			os_memcpy(a, b, 8);
-			a[7] ^= n * j + i;
+			t = n * j + i;
+			a[7] ^= t;
+			a[6] ^= t >> 8;
+			a[5] ^= t >> 16;
+			a[4] ^= t >> 24;
 			os_memcpy(r, b + 8, 8);
 			r += 8;
 		}

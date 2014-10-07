@@ -29,6 +29,7 @@ int aes_unwrap(const u8 *kek, size_t kek_len, int n, const u8 *cipher,
 	u8 a[8], *r, b[AES_BLOCK_SIZE];
 	int i, j;
 	void *ctx;
+	unsigned int t;
 
 	/* 1) Initialize variables. */
 	os_memcpy(a, cipher, 8);
@@ -50,7 +51,11 @@ int aes_unwrap(const u8 *kek, size_t kek_len, int n, const u8 *cipher,
 		r = plain + (n - 1) * 8;
 		for (i = n; i >= 1; i--) {
 			os_memcpy(b, a, 8);
-			b[7] ^= n * j + i;
+			t = n * j + i;
+			b[7] ^= t;
+			b[6] ^= t >> 8;
+			b[5] ^= t >> 16;
+			b[4] ^= t >> 24;
 
 			os_memcpy(b + 8, r, 8);
 			aes_decrypt(ctx, b, b);

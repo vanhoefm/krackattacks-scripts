@@ -752,12 +752,292 @@ static int test_key_wrap(void)
 }
 
 
+static int test_nist_key_wrap_ae(const char *fname)
+{
+	FILE *f;
+	int ret = 0;
+	char buf[15000], *pos, *pos2;
+	u8 bin[2000], k[32], p[1024], c[1024 + 8], result[1024 + 8];
+	size_t bin_len, k_len = 0, p_len = 0, c_len = 0;
+	int ok = 0;
+
+	printf("NIST KW AE tests from %s\n", fname);
+
+	f = fopen(fname, "r");
+	if (f == NULL) {
+		printf("%s does not exist - cannot validate test vectors\n",
+		       fname);
+		return 1;
+	}
+
+	while (fgets(buf, sizeof(buf), f)) {
+		if (buf[0] == '#')
+			continue;
+		pos = os_strchr(buf, '=');
+		if (pos == NULL)
+			continue;
+		pos2 = pos - 1;
+		while (pos2 >= buf && *pos2 == ' ')
+			*pos2-- = '\0';
+		*pos++ = '\0';
+		while (*pos == ' ')
+			*pos++ = '\0';
+		pos2 = os_strchr(pos, '\r');
+		if (!pos2)
+			pos2 = os_strchr(pos, '\n');
+		if (pos2)
+			*pos2 = '\0';
+		else
+			pos2 = pos + os_strlen(pos);
+
+		if (buf[0] == '[') {
+			printf("%s = %s\n", buf, pos);
+			continue;
+		}
+
+		if (os_strcmp(buf, "COUNT") == 0) {
+			printf("Test %s - ", pos);
+			continue;
+		}
+
+		bin_len = os_strlen(pos);
+		if (bin_len > sizeof(bin) * 2) {
+			printf("Too long binary data (%s)\n", buf);
+			return 1;
+		}
+		if (bin_len & 0x01) {
+			printf("Odd number of hexstring values (%s)\n",
+				buf);
+			return 1;
+		}
+		bin_len /= 2;
+		if (hexstr2bin(pos, bin, bin_len) < 0) {
+			printf("Invalid hex string '%s' (%s)\n", pos, buf);
+			return 1;
+		}
+
+		if (os_strcmp(buf, "K") == 0) {
+			if (bin_len > sizeof(k)) {
+				printf("Too long K (%u)\n", (unsigned) bin_len);
+				return 1;
+			}
+			os_memcpy(k, bin, bin_len);
+			k_len = bin_len;
+			continue;
+		}
+
+		if (os_strcmp(buf, "P") == 0) {
+			if (bin_len > sizeof(p)) {
+				printf("Too long P (%u)\n", (unsigned) bin_len);
+				return 1;
+			}
+			os_memcpy(p, bin, bin_len);
+			p_len = bin_len;
+			continue;
+		}
+
+		if (os_strcmp(buf, "C") != 0) {
+			printf("Unexpected field '%s'\n", buf);
+			continue;
+		}
+
+		if (bin_len > sizeof(c)) {
+			printf("Too long C (%u)\n", (unsigned) bin_len);
+			return 1;
+		}
+		os_memcpy(c, bin, bin_len);
+		c_len = bin_len;
+
+		if (p_len % 8 != 0 || c_len % 8 != 0 || c_len - p_len != 8) {
+			printf("invalid parameter length (p_len=%u c_len=%u)\n",
+			       (unsigned) p_len, (unsigned) c_len);
+			continue;
+		}
+
+		if (aes_wrap(k, k_len, p_len / 8, p, result)) {
+			printf("aes_wrap() failed\n");
+			ret++;
+			continue;
+		}
+
+		if (os_memcmp(c, result, c_len) == 0) {
+			printf("OK\n");
+			ok++;
+		} else {
+			printf("FAIL\n");
+			ret++;
+		}
+	}
+
+	fclose(f);
+
+	if (ret)
+		printf("Test case failed\n");
+	else
+		printf("%d test vectors OK\n", ok);
+
+	return ret;
+}
+
+
+static int test_nist_key_wrap_ad(const char *fname)
+{
+	FILE *f;
+	int ret = 0;
+	char buf[15000], *pos, *pos2;
+	u8 bin[2000], k[32], p[1024], c[1024 + 8], result[1024 + 8];
+	size_t bin_len, k_len = 0, p_len = 0, c_len = 0;
+	int ok = 0;
+	int fail;
+
+	printf("NIST KW AD tests from %s\n", fname);
+
+	f = fopen(fname, "r");
+	if (f == NULL) {
+		printf("%s does not exist - cannot validate test vectors\n",
+		       fname);
+		return 1;
+	}
+
+	while (fgets(buf, sizeof(buf), f)) {
+		if (buf[0] == '#')
+			continue;
+		fail = 0;
+		pos = os_strchr(buf, '=');
+		if (pos == NULL) {
+			if (os_strncmp(buf, "FAIL", 4) == 0) {
+				fail = 1;
+				goto skip_val_parse;
+			}
+			continue;
+		}
+		pos2 = pos - 1;
+		while (pos2 >= buf && *pos2 == ' ')
+			*pos2-- = '\0';
+		*pos++ = '\0';
+		while (*pos == ' ')
+			*pos++ = '\0';
+		pos2 = os_strchr(pos, '\r');
+		if (!pos2)
+			pos2 = os_strchr(pos, '\n');
+		if (pos2)
+			*pos2 = '\0';
+		else
+			pos2 = pos + os_strlen(pos);
+
+		if (buf[0] == '[') {
+			printf("%s = %s\n", buf, pos);
+			continue;
+		}
+
+		if (os_strcmp(buf, "COUNT") == 0) {
+			printf("Test %s - ", pos);
+			continue;
+		}
+
+		bin_len = os_strlen(pos);
+		if (bin_len > sizeof(bin) * 2) {
+			printf("Too long binary data (%s)\n", buf);
+			return 1;
+		}
+		if (bin_len & 0x01) {
+			printf("Odd number of hexstring values (%s)\n",
+				buf);
+			return 1;
+		}
+		bin_len /= 2;
+		if (hexstr2bin(pos, bin, bin_len) < 0) {
+			printf("Invalid hex string '%s' (%s)\n", pos, buf);
+			return 1;
+		}
+
+		if (os_strcmp(buf, "K") == 0) {
+			if (bin_len > sizeof(k)) {
+				printf("Too long K (%u)\n", (unsigned) bin_len);
+				return 1;
+			}
+			os_memcpy(k, bin, bin_len);
+			k_len = bin_len;
+			continue;
+		}
+
+		if (os_strcmp(buf, "C") == 0) {
+			if (bin_len > sizeof(c)) {
+				printf("Too long C (%u)\n", (unsigned) bin_len);
+				return 1;
+			}
+			os_memcpy(c, bin, bin_len);
+			c_len = bin_len;
+			continue;
+		}
+
+	skip_val_parse:
+		if (!fail) {
+			if (os_strcmp(buf, "P") != 0) {
+				printf("Unexpected field '%s'\n", buf);
+				continue;
+			}
+
+			if (bin_len > sizeof(p)) {
+				printf("Too long P (%u)\n", (unsigned) bin_len);
+				return 1;
+			}
+			os_memcpy(p, bin, bin_len);
+			p_len = bin_len;
+
+			if (p_len % 8 != 0 || c_len % 8 != 0 ||
+			    c_len - p_len != 8) {
+				printf("invalid parameter length (p_len=%u c_len=%u)\n",
+				       (unsigned) p_len, (unsigned) c_len);
+				continue;
+			}
+		}
+
+		if (aes_unwrap(k, k_len, (c_len / 8) - 1, c, result)) {
+			if (fail) {
+				printf("OK (fail reported)\n");
+				ok++;
+				continue;
+			}
+			printf("aes_unwrap() failed\n");
+			ret++;
+			continue;
+		}
+
+		if (fail) {
+			printf("FAIL (mismatch not reported)\n");
+			ret++;
+		} else if (os_memcmp(p, result, p_len) == 0) {
+			printf("OK\n");
+			ok++;
+		} else {
+			printf("FAIL\n");
+			ret++;
+		}
+	}
+
+	fclose(f);
+
+	if (ret)
+		printf("Test case failed\n");
+	else
+		printf("%d test vectors OK\n", ok);
+
+	return ret;
+}
+
+
 int main(int argc, char *argv[])
 {
 	u8 result[24];
 	int ret = 0;
 	unsigned int i;
 	struct omac1_test_vector *tv;
+
+	if (argc >= 3 && os_strcmp(argv[1], "NIST-KW-AE") == 0)
+		ret += test_nist_key_wrap_ae(argv[2]);
+	else if (argc >= 3 && os_strcmp(argv[1], "NIST-KW-AD") == 0)
+		ret += test_nist_key_wrap_ad(argv[2]);
 
 	ret += test_key_wrap();
 

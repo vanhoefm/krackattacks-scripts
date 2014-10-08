@@ -82,8 +82,7 @@ def test_dfs(dev, apdev):
         if freq != "5260":
             raise Exception("Unexpected frequency")
 
-        #TODO: need to fix hwsim for DFS?!
-        #dev[0].connect("dfs", key_mgmt="NONE")
+        dev[0].connect("dfs", key_mgmt="NONE")
     finally:
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
 
@@ -130,8 +129,7 @@ def test_dfs_radar(dev, apdev):
         if freq != "5260":
             raise Exception("Unexpected frequency")
 
-       #TODO: need to fix hwsim for DFS?!
-       #dev[0].connect("dfs", key_mgmt="NONE")
+        dev[0].connect("dfs", key_mgmt="NONE")
     finally:
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
 

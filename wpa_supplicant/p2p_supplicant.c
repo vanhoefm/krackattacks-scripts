@@ -467,8 +467,17 @@ static int wpas_p2p_group_delete(struct wpa_supplicant *wpa_s,
 	if (removal_reason != P2P_GROUP_REMOVAL_SILENT && ssid)
 		wpas_notify_p2p_group_removed(wpa_s, ssid, gtype);
 
-	if (os_strcmp(gtype, "client") == 0)
+	if (os_strcmp(gtype, "client") == 0) {
 		wpa_supplicant_deauthenticate(wpa_s, WLAN_REASON_DEAUTH_LEAVING);
+		if (eloop_is_timeout_registered(wpas_p2p_psk_failure_removal,
+						wpa_s, NULL)) {
+			wpa_printf(MSG_DEBUG,
+				   "P2P: PSK failure removal was scheduled, so use PSK failure as reason for group removal");
+			removal_reason = P2P_GROUP_REMOVAL_PSK_FAILURE;
+			eloop_cancel_timeout(wpas_p2p_psk_failure_removal,
+					     wpa_s, NULL);
+		}
+	}
 
 	if (wpa_s->cross_connect_in_use) {
 		wpa_s->cross_connect_in_use = 0;

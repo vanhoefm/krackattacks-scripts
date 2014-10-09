@@ -1682,7 +1682,7 @@ def test_ap_hs20_session_info(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-SCAN-STARTED"])
     if ev is None:
         raise Exception("Scan not started")
-    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"])
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], timeout=30)
     if ev is None:
         raise Exception("Scan not completed")
 

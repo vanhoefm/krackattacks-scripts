@@ -7829,7 +7829,8 @@ static void rtnl_neigh_delete_fdb_entry(struct i802_bss *bss, const u8 *addr)
 }
 
 
-static int wpa_driver_nl80211_sta_remove(struct i802_bss *bss, const u8 *addr)
+static int wpa_driver_nl80211_sta_remove(struct i802_bss *bss, const u8 *addr,
+					 int deauth, u16 reason_code)
 {
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct nl_msg *msg;
@@ -7844,6 +7845,14 @@ static int wpa_driver_nl80211_sta_remove(struct i802_bss *bss, const u8 *addr)
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX,
 		    if_nametoindex(bss->ifname));
 	NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, addr);
+	if (deauth == 0)
+		NLA_PUT_U8(msg, NL80211_ATTR_MGMT_SUBTYPE,
+			   WLAN_FC_STYPE_DISASSOC);
+	else if (deauth == 1)
+		NLA_PUT_U8(msg, NL80211_ATTR_MGMT_SUBTYPE,
+			   WLAN_FC_STYPE_DEAUTH);
+	if (reason_code)
+		NLA_PUT_U16(msg, NL80211_ATTR_REASON_CODE, reason_code);
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	wpa_printf(MSG_DEBUG, "nl80211: sta_remove -> DEL_STATION %s " MACSTR
@@ -9841,7 +9850,7 @@ static int i802_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr,
 	struct ieee80211_mgmt mgmt;
 
 	if (drv->device_ap_sme)
-		return wpa_driver_nl80211_sta_remove(bss, addr);
+		return wpa_driver_nl80211_sta_remove(bss, addr, 1, reason);
 
 	memset(&mgmt, 0, sizeof(mgmt));
 	mgmt.frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
@@ -9865,7 +9874,7 @@ static int i802_sta_disassoc(void *priv, const u8 *own_addr, const u8 *addr,
 	struct ieee80211_mgmt mgmt;
 
 	if (drv->device_ap_sme)
-		return wpa_driver_nl80211_sta_remove(bss, addr);
+		return wpa_driver_nl80211_sta_remove(bss, addr, 0, reason);
 
 	memset(&mgmt, 0, sizeof(mgmt));
 	mgmt.frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
@@ -11935,7 +11944,7 @@ static int driver_nl80211_send_mlme(void *priv, const u8 *data,
 static int driver_nl80211_sta_remove(void *priv, const u8 *addr)
 {
 	struct i802_bss *bss = priv;
-	return wpa_driver_nl80211_sta_remove(bss, addr);
+	return wpa_driver_nl80211_sta_remove(bss, addr, -1, 0);
 }
 
 

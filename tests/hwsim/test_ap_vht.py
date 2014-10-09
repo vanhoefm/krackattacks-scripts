@@ -224,3 +224,54 @@ def test_ap_vht160(dev, apdev):
         raise
     finally:
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+
+def test_ap_vht80plus80(dev, apdev):
+    """VHT with 80+80 MHz channel width"""
+    try:
+        params = { "ssid": "vht",
+                   "country_code": "US",
+                   "hw_mode": "a",
+                   "channel": "52",
+                   "ht_capab": "[HT40+]",
+                   "ieee80211n": "1",
+                   "ieee80211ac": "1",
+                   "vht_oper_chwidth": "3",
+                   "vht_oper_centr_freq_seg0_idx": "58",
+                   "vht_oper_centr_freq_seg1_idx": "155",
+                   'ieee80211d': '1',
+                   'ieee80211h': '1' }
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params, wait_enabled=False)
+        # This will actually fail since DFS on 80+80 is not yet supported
+        ev = hapd.wait_event(["AP-DISABLED"], timeout=5)
+        # ignore result to avoid breaking the test once 80+80 DFS gets enabled
+
+        params = { "ssid": "vht2",
+                   "country_code": "US",
+                   "hw_mode": "a",
+                   "channel": "36",
+                   "ht_capab": "[HT40+]",
+                   "ieee80211n": "1",
+                   "ieee80211ac": "1",
+                   "vht_oper_chwidth": "3",
+                   "vht_oper_centr_freq_seg0_idx": "42",
+                   "vht_oper_centr_freq_seg1_idx": "155" }
+        hapd2 = hostapd.add_ap(apdev[1]['ifname'], params, wait_enabled=False)
+
+        ev = hapd2.wait_event(["AP-ENABLED"], timeout=5)
+        if not ev:
+            raise Exception("AP setup timed out(2)")
+
+        state = hapd2.get_status_field("state")
+        if state != "ENABLED":
+            raise Exception("Unexpected interface state(2)")
+
+        dev[1].connect("vht2", key_mgmt="NONE", scan_freq="5180")
+        hwsim_utils.test_connectivity(dev[1].ifname, apdev[1]['ifname'])
+    except Exception, e:
+        if isinstance(e, Exception) and str(e) == "AP startup failed":
+            if not vht_supported():
+                logger.info("80/160 MHz channel not supported in regulatory information")
+                return "skip"
+        raise
+    finally:
+        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])

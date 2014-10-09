@@ -18,9 +18,11 @@
 #include "dfs.h"
 
 
-static int dfs_get_used_n_chans(struct hostapd_iface *iface)
+static int dfs_get_used_n_chans(struct hostapd_iface *iface, int *seg1)
 {
 	int n_chans = 1;
+
+	*seg1 = 0;
 
 	if (iface->conf->ieee80211n && iface->conf->secondary_channel)
 		n_chans = 2;
@@ -34,6 +36,10 @@ static int dfs_get_used_n_chans(struct hostapd_iface *iface)
 			break;
 		case VHT_CHANWIDTH_160MHZ:
 			n_chans = 8;
+			break;
+		case VHT_CHANWIDTH_80P80MHZ:
+			n_chans = 4;
+			*seg1 = 4;
 			break;
 		default:
 			break;
@@ -170,10 +176,10 @@ static int dfs_find_channel(struct hostapd_iface *iface,
 {
 	struct hostapd_hw_modes *mode;
 	struct hostapd_channel_data *chan;
-	int i, channel_idx = 0, n_chans;
+	int i, channel_idx = 0, n_chans, n_chans1;
 
 	mode = iface->current_mode;
-	n_chans = dfs_get_used_n_chans(iface);
+	n_chans = dfs_get_used_n_chans(iface, &n_chans1);
 
 	wpa_printf(MSG_DEBUG, "DFS new chan checking %d channels", n_chans);
 	for (i = 0; i < mode->num_channels; i++) {
@@ -246,12 +252,15 @@ static void dfs_adjust_vht_center_freq(struct hostapd_iface *iface,
 
 
 /* Return start channel idx we will use for mode->channels[idx] */
-static int dfs_get_start_chan_idx(struct hostapd_iface *iface)
+static int dfs_get_start_chan_idx(struct hostapd_iface *iface, int *seg1_start)
 {
 	struct hostapd_hw_modes *mode;
 	struct hostapd_channel_data *chan;
 	int channel_no = iface->conf->channel;
 	int res = -1, i;
+	int chan_seg1 = -1;
+
+	*seg1_start = -1;
 
 	/* HT40- */
 	if (iface->conf->ieee80211n && iface->conf->secondary_channel == -1)
@@ -270,9 +279,15 @@ static int dfs_get_start_chan_idx(struct hostapd_iface *iface)
 			channel_no =
 				iface->conf->vht_oper_centr_freq_seg0_idx - 14;
 			break;
+		case VHT_CHANWIDTH_80P80MHZ:
+			channel_no =
+				iface->conf->vht_oper_centr_freq_seg0_idx - 6;
+			chan_seg1 =
+				iface->conf->vht_oper_centr_freq_seg1_idx - 6;
+			break;
 		default:
 			wpa_printf(MSG_INFO,
-				   "DFS only VHT20/40/80/160 is supported now");
+				   "DFS only VHT20/40/80/160/80+80 is supported now");
 			channel_no = -1;
 			break;
 		}
@@ -286,6 +301,23 @@ static int dfs_get_start_chan_idx(struct hostapd_iface *iface)
 			res = i;
 			break;
 		}
+	}
+
+	if (res != -1 && chan_seg1 > -1) {
+		int found = 0;
+
+		/* Get idx for seg1 */
+		mode = iface->current_mode;
+		for (i = 0; i < mode->num_channels; i++) {
+			chan = &mode->channels[i];
+			if (chan->chan == chan_seg1) {
+				*seg1_start = i;
+				found = 1;
+				break;
+			}
+		}
+		if (!found)
+			res = -1;
 	}
 
 	if (res == -1) {
@@ -511,17 +543,17 @@ static int set_dfs_state(struct hostapd_iface *iface, int freq, int ht_enabled,
 static int dfs_are_channels_overlapped(struct hostapd_iface *iface, int freq,
 				       int chan_width, int cf1, int cf2)
 {
-	int start_chan_idx;
+	int start_chan_idx, start_chan_idx1;
 	struct hostapd_hw_modes *mode;
 	struct hostapd_channel_data *chan;
-	int n_chans, i, j, frequency = freq, radar_n_chans = 1;
+	int n_chans, n_chans1, i, j, frequency = freq, radar_n_chans = 1;
 	u8 radar_chan;
 	int res = 0;
 
 	/* Our configuration */
 	mode = iface->current_mode;
-	start_chan_idx = dfs_get_start_chan_idx(iface);
-	n_chans = dfs_get_used_n_chans(iface);
+	start_chan_idx = dfs_get_start_chan_idx(iface, &start_chan_idx1);
+	n_chans = dfs_get_used_n_chans(iface, &n_chans1);
 
 	/* Check we are on DFS channel(s) */
 	if (!dfs_check_chans_radar(iface, start_chan_idx, n_chans))
@@ -604,19 +636,20 @@ static unsigned int dfs_get_cac_time(struct hostapd_iface *iface,
 int hostapd_handle_dfs(struct hostapd_iface *iface)
 {
 	struct hostapd_channel_data *channel;
-	int res, n_chans, start_chan_idx;
+	int res, n_chans, n_chans1, start_chan_idx, start_chan_idx1;
 	int skip_radar = 0;
 
 	iface->cac_started = 0;
 
 	do {
 		/* Get start (first) channel for current configuration */
-		start_chan_idx = dfs_get_start_chan_idx(iface);
+		start_chan_idx = dfs_get_start_chan_idx(iface,
+							&start_chan_idx1);
 		if (start_chan_idx == -1)
 			return -1;
 
 		/* Get number of used channels, depend on width */
-		n_chans = dfs_get_used_n_chans(iface);
+		n_chans = dfs_get_used_n_chans(iface, &n_chans1);
 
 		/* Setup CAC time */
 		iface->dfs_cac_ms = dfs_get_cac_time(iface, start_chan_idx,
@@ -928,20 +961,25 @@ int hostapd_dfs_nop_finished(struct hostapd_iface *iface, int freq,
 
 int hostapd_is_dfs_required(struct hostapd_iface *iface)
 {
-	int n_chans, start_chan_idx;
+	int n_chans, n_chans1, start_chan_idx, start_chan_idx1, res;
 
 	if (!iface->conf->ieee80211h || !iface->current_mode ||
 	    iface->current_mode->mode != HOSTAPD_MODE_IEEE80211A)
 		return 0;
 
 	/* Get start (first) channel for current configuration */
-	start_chan_idx = dfs_get_start_chan_idx(iface);
+	start_chan_idx = dfs_get_start_chan_idx(iface, &start_chan_idx1);
 	if (start_chan_idx == -1)
 		return -1;
 
 	/* Get number of used channels, depend on width */
-	n_chans = dfs_get_used_n_chans(iface);
+	n_chans = dfs_get_used_n_chans(iface, &n_chans1);
 
 	/* Check if any of configured channels require DFS */
-	return dfs_check_chans_radar(iface, start_chan_idx, n_chans);
+	res = dfs_check_chans_radar(iface, start_chan_idx, n_chans);
+	if (res)
+		return res;
+	if (start_chan_idx1 >= 0 && n_chans1 > 0)
+		res = dfs_check_chans_radar(iface, start_chan_idx1, n_chans1);
+	return res;
 }

@@ -383,8 +383,6 @@ int wpa_ctrl_pending(struct wpa_ctrl *ctrl);
  */
 int wpa_ctrl_get_fd(struct wpa_ctrl *ctrl);
 
-char * wpa_ctrl_get_remote_ifname(struct wpa_ctrl *ctrl);
-
 #ifdef ANDROID
 /**
  * wpa_ctrl_cleanup() - Delete any local UNIX domain socket files that
@@ -402,6 +400,8 @@ void wpa_ctrl_cleanup(void);
 #define WPA_CTRL_IFACE_PORT_LIMIT 50 /* decremented from start */
 #define WPA_GLOBAL_CTRL_IFACE_PORT 9878
 #define WPA_GLOBAL_CTRL_IFACE_PORT_LIMIT 20 /* incremented from start */
+
+char * wpa_ctrl_get_remote_ifname(struct wpa_ctrl *ctrl);
 #endif /* CONFIG_CTRL_IFACE_UDP */
 
 

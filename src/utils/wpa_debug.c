@@ -555,6 +555,8 @@ int wpa_debug_open_file(const char *path)
 #ifndef _WIN32
 	setvbuf(out_file, NULL, _IOLBF, 0);
 #endif /* _WIN32 */
+#else /* CONFIG_DEBUG_FILE */
+	(void)path;
 #endif /* CONFIG_DEBUG_FILE */
 	return 0;
 }

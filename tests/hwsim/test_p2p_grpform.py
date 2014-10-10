@@ -721,3 +721,48 @@ def test_grpform_cred_ready_timeout(dev, apdev, params):
     logger.info("GO Negotiation wait time: {} seconds".format(end - start))
     if end - start < 120:
         raise Exception("Too short GO Negotiation wait time: {}".format(end - start))
+
+def test_grpform_no_wsc_done(dev):
+    """P2P group formation with WSC-Done not sent"""
+    addr0 = dev[0].p2p_dev_addr()
+    addr1 = dev[1].p2p_dev_addr()
+
+    for i in range(0, 2):
+        dev[0].request("SET ext_eapol_frame_io 1")
+        dev[1].request("SET ext_eapol_frame_io 1")
+        dev[0].p2p_listen()
+        dev[1].p2p_go_neg_auth(addr0, "12345670", "display", 0)
+        dev[1].p2p_listen()
+        dev[0].p2p_go_neg_init(addr1, "12345670", "enter", timeout=20,
+                               go_intent=15, wait_group=False)
+
+        while True:
+            ev = dev[0].wait_event(["EAPOL-TX"], timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAPOL-TX from GO")
+            res = dev[1].request("EAPOL_RX " + addr0 + " " + ev.split(' ')[2])
+            if "OK" not in res:
+                raise Exception("EAPOL_RX failed")
+            ev = dev[1].wait_event(["EAPOL-TX"], timeout=15)
+            if ev is None:
+                raise Exception("Timeout on EAPOL-TX from P2P Client")
+            msg = ev.split(' ')[2]
+            if msg[46:56] == "102200010f":
+                logger.info("Drop WSC_Done")
+                dev[0].request("SET ext_eapol_frame_io 0")
+                dev[1].request("SET ext_eapol_frame_io 0")
+                # Fake EAP-Failure to complete session on the client
+                id = msg[10:12]
+                dev[1].request("EAPOL_RX " + addr0 + " 0300000404" + id + "0004")
+                break
+            res = dev[0].request("EAPOL_RX " + addr1 + " " + msg)
+            if "OK" not in res:
+                raise Exception("EAPOL_RX failed")
+
+        ev = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
+        if ev is None:
+            raise Exception("Group formation timed out on GO")
+        ev = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
+        if ev is None:
+            raise Exception("Group formation timed out on P2P Client")
+        dev[0].remove_group()

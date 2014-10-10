@@ -327,3 +327,37 @@ def test_ap_wpa2_bridge_fdb(dev, apdev):
     finally:
         subprocess.call(['sudo', 'ip', 'link', 'set', 'dev', 'ap-br0', 'down'])
         subprocess.call(['sudo', 'brctl', 'delbr', 'ap-br0'])
+
+def test_ap_wpa2_psk_ext(dev, apdev):
+    """WPA2-PSK AP using external EAPOL I/O"""
+    bssid = apdev[0]['bssid']
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    psk = '602e323e077bc63bd80307ef4745b754b0ae0a925c2638ecd13a794b9527b9e6'
+    params = hostapd.wpa2_params(ssid=ssid)
+    params['wpa_psk'] = psk
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd.request("SET ext_eapol_frame_io 1")
+    dev[0].request("SET ext_eapol_frame_io 1")
+    dev[0].connect(ssid, psk=passphrase, scan_freq="2412", wait_connect=False)
+    addr = dev[0].p2p_interface_addr()
+    while True:
+        ev = hapd.wait_event(["EAPOL-TX", "AP-STA-CONNECTED"], timeout=15)
+        if ev is None:
+            raise Exception("Timeout on EAPOL-TX from hostapd")
+        if "AP-STA-CONNECTED" in ev:
+            ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+            if ev is None:
+                raise Exception("Timeout on connection event from wpa_supplicant")
+            break
+        res = dev[0].request("EAPOL_RX " + bssid + " " + ev.split(' ')[2])
+        if "OK" not in res:
+            raise Exception("EAPOL_RX to wpa_supplicant failed")
+        ev = dev[0].wait_event(["EAPOL-TX", "CTRL-EVENT-CONNECTED"], timeout=15)
+        if ev is None:
+            raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+        if "CTRL-EVENT-CONNECTED" in ev:
+            break
+        res = hapd.request("EAPOL_RX " + addr + " " + ev.split(' ')[2])
+        if "OK" not in res:
+            raise Exception("EAPOL_RX to hostapd failed")

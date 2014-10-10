@@ -650,6 +650,24 @@ static void p2p_update_peer_vendor_elems(struct p2p_device *dev, const u8 *ies,
 }
 
 
+static int p2p_compare_wfd_info(struct p2p_device *dev,
+			      const struct p2p_message *msg)
+{
+	if (dev->info.wfd_subelems && msg->wfd_subelems) {
+		if (dev->info.wfd_subelems->used != msg->wfd_subelems->used)
+			return 1;
+
+		return os_memcmp(dev->info.wfd_subelems->buf,
+				 msg->wfd_subelems->buf,
+				 dev->info.wfd_subelems->used);
+	}
+	if (dev->info.wfd_subelems || msg->wfd_subelems)
+		return 1;
+
+	return 0;
+}
+
+
 /**
  * p2p_add_device - Add peer entries based on scan results or P2P frames
  * @p2p: P2P module context from p2p_init()
@@ -675,6 +693,7 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq,
 	struct p2p_device *dev;
 	struct p2p_message msg;
 	const u8 *p2p_dev_addr;
+	int wfd_changed;
 	int i;
 	struct os_reltime time_now;
 
@@ -786,6 +805,8 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq,
 			break;
 	}
 
+	wfd_changed = p2p_compare_wfd_info(dev, &msg);
+
 	if (msg.wfd_subelems) {
 		wpabuf_free(dev->info.wfd_subelems);
 		dev->info.wfd_subelems = wpabuf_dup(msg.wfd_subelems);
@@ -800,7 +821,7 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq,
 
 	p2p_update_peer_vendor_elems(dev, ies, ies_len);
 
-	if (dev->flags & P2P_DEV_REPORTED)
+	if (dev->flags & P2P_DEV_REPORTED && !wfd_changed)
 		return 0;
 
 	p2p_dbg(p2p, "Peer found with Listen frequency %d MHz (rx_time=%u.%06u)",

@@ -1074,6 +1074,8 @@ static int hostapd_ctrl_iface_set(struct hostapd_data *hapd, char *cmd)
 #ifdef CONFIG_TESTING_OPTIONS
 	} else if (os_strcasecmp(cmd, "ext_mgmt_frame_handling") == 0) {
 		hapd->ext_mgmt_frame_handling = atoi(value);
+	} else if (os_strcasecmp(cmd, "ext_eapol_frame_io") == 0) {
+		hapd->ext_eapol_frame_io = atoi(value);
 #endif /* CONFIG_TESTING_OPTIONS */
 	} else {
 		struct sta_info *sta;
@@ -1247,6 +1249,44 @@ static int hostapd_ctrl_iface_mgmt_tx(struct hostapd_data *hapd, char *cmd)
 	res = hostapd_drv_send_mlme(hapd, buf, len, 0);
 	os_free(buf);
 	return res;
+}
+
+
+static int hostapd_ctrl_iface_eapol_rx(struct hostapd_data *hapd, char *cmd)
+{
+	char *pos;
+	u8 src[ETH_ALEN], *buf;
+	int used;
+	size_t len;
+
+	wpa_printf(MSG_DEBUG, "External EAPOL RX: %s", cmd);
+
+	pos = cmd;
+	used = hwaddr_aton2(pos, src);
+	if (used < 0)
+		return -1;
+	pos += used;
+	while (*pos == ' ')
+		pos++;
+
+	len = os_strlen(pos);
+	if (len & 1)
+		return -1;
+	len /= 2;
+
+	buf = os_malloc(len);
+	if (buf == NULL)
+		return -1;
+
+	if (hexstr2bin(pos, buf, len) < 0) {
+		os_free(buf);
+		return -1;
+	}
+
+	ieee802_1x_receive(hapd, src, buf, len);
+	os_free(buf);
+
+	return 0;
 }
 
 #endif /* CONFIG_TESTING_OPTIONS */
@@ -1550,6 +1590,9 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 			reply_len = -1;
 	} else if (os_strncmp(buf, "MGMT_TX ", 8) == 0) {
 		if (hostapd_ctrl_iface_mgmt_tx(hapd, buf + 8))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "EAPOL_RX ", 9) == 0) {
+		if (hostapd_ctrl_iface_eapol_rx(hapd, buf + 9) < 0)
 			reply_len = -1;
 #endif /* CONFIG_TESTING_OPTIONS */
 	} else if (os_strncmp(buf, "CHAN_SWITCH ", 12) == 0) {

@@ -66,6 +66,20 @@ static void ieee802_1x_send(struct hostapd_data *hapd, struct sta_info *sta,
 
 	if (wpa_auth_pairwise_set(sta->wpa_sm))
 		encrypt = 1;
+#ifdef CONFIG_TESTING_OPTIONS
+	if (hapd->ext_eapol_frame_io) {
+		size_t hex_len = 2 * len + 1;
+		char *hex = os_malloc(hex_len);
+
+		if (hex) {
+			wpa_snprintf_hex(hex, hex_len, buf, len);
+			wpa_msg(hapd->msg_ctx, MSG_INFO,
+				"EAPOL-TX " MACSTR " %s",
+				MAC2STR(sta->addr), hex);
+			os_free(hex);
+		}
+	} else
+#endif /* CONFIG_TESTING_OPTIONS */
 	if (sta->flags & WLAN_STA_PREAUTH) {
 		rsn_preauth_send(hapd, sta, buf, len);
 	} else {

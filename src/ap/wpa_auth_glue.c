@@ -299,6 +299,21 @@ static int hostapd_wpa_auth_send_eapol(void *ctx, const u8 *addr,
 	struct sta_info *sta;
 	u32 flags = 0;
 
+#ifdef CONFIG_TESTING_OPTIONS
+	if (hapd->ext_eapol_frame_io) {
+		size_t hex_len = 2 * data_len + 1;
+		char *hex = os_malloc(hex_len);
+
+		if (hex == NULL)
+			return -1;
+		wpa_snprintf_hex(hex, hex_len, data, data_len);
+		wpa_msg(hapd->msg_ctx, MSG_INFO, "EAPOL-TX " MACSTR " %s",
+			MAC2STR(addr), hex);
+		os_free(hex);
+		return 0;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
+
 	sta = ap_get_sta(hapd, addr);
 	if (sta)
 		flags = hostapd_sta_flags_to_drv(sta->flags);
@@ -403,6 +418,21 @@ static int hostapd_wpa_auth_send_ether(void *ctx, const u8 *dst, u16 proto,
 	struct hostapd_data *hapd = ctx;
 	struct l2_ethhdr *buf;
 	int ret;
+
+#ifdef CONFIG_TESTING_OPTIONS
+	if (hapd->ext_eapol_frame_io && proto == ETH_P_EAPOL) {
+		size_t hex_len = 2 * data_len + 1;
+		char *hex = os_malloc(hex_len);
+
+		if (hex == NULL)
+			return -1;
+		wpa_snprintf_hex(hex, hex_len, data, data_len);
+		wpa_msg(hapd->msg_ctx, MSG_INFO, "EAPOL-TX " MACSTR " %s",
+			MAC2STR(dst), hex);
+		os_free(hex);
+		return 0;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 
 #ifdef CONFIG_IEEE80211R
 	if (proto == ETH_P_RRB && hapd->iface->interfaces &&

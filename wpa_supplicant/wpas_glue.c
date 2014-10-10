@@ -96,6 +96,21 @@ static u8 * wpa_alloc_eapol(const struct wpa_supplicant *wpa_s, u8 type,
 static int wpa_ether_send(struct wpa_supplicant *wpa_s, const u8 *dest,
 			  u16 proto, const u8 *buf, size_t len)
 {
+#ifdef CONFIG_TESTING_OPTIONS
+	if (wpa_s->ext_eapol_frame_io && proto == ETH_P_EAPOL) {
+		size_t hex_len = 2 * len + 1;
+		char *hex = os_malloc(hex_len);
+
+		if (hex == NULL)
+			return -1;
+		wpa_snprintf_hex(hex, hex_len, buf, len);
+		wpa_msg(wpa_s, MSG_INFO, "EAPOL-TX " MACSTR " %s",
+			MAC2STR(dest), hex);
+		os_free(hex);
+		return 0;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
+
 	if (wpa_s->l2) {
 		return l2_packet_send(wpa_s->l2, dest, proto, buf, len);
 	}

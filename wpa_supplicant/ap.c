@@ -629,6 +629,10 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_P2P */
 		hapd_iface->bss[i]->setup_complete_cb = wpas_ap_configured_cb;
 		hapd_iface->bss[i]->setup_complete_cb_ctx = wpa_s;
+#ifdef CONFIG_TESTING_OPTIONS
+		hapd_iface->bss[i]->ext_eapol_frame_io =
+			wpa_s->ext_eapol_frame_io;
+#endif /* CONFIG_TESTING_OPTIONS */
 	}
 
 	os_memcpy(hapd_iface->bss[0]->own_addr, wpa_s->own_addr, ETH_ALEN);

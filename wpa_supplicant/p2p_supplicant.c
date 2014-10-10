@@ -1349,6 +1349,7 @@ static void wpas_start_wps_go(struct wpa_supplicant *wpa_s,
 	}
 
 	wpa_s->show_group_started = 0;
+	wpa_s->p2p_go_group_formation_completed = 0;
 
 	wpa_config_set_network_defaults(ssid);
 	ssid->temporary = 1;

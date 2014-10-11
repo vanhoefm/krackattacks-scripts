@@ -148,7 +148,6 @@ static struct wpabuf * eap_pax_build_std_3(struct eap_sm *sm,
 		    (u8 *) data->cid, data->cid_len, NULL, 0, pos);
 	wpa_hexdump(MSG_MSGDUMP, "EAP-PAX: MAC_CK(B, CID)",
 		    pos, EAP_PAX_MAC_LEN);
-	pos += EAP_PAX_MAC_LEN;
 
 	/* Optional ADE could be added here, if needed */
 

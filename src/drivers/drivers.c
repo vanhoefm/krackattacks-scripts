@@ -38,9 +38,6 @@ extern struct wpa_driver_ops wpa_driver_wired_ops; /* driver_wired.c */
  /* driver_macsec_qca.c */
 extern struct wpa_driver_ops wpa_driver_macsec_qca_ops;
 #endif /* CONFIG_DRIVER_MACSEC_QCA */
-#ifdef CONFIG_DRIVER_TEST
-extern struct wpa_driver_ops wpa_driver_test_ops; /* driver_test.c */
-#endif /* CONFIG_DRIVER_TEST */
 #ifdef CONFIG_DRIVER_ROBOSWITCH
 /* driver_roboswitch.c */
 extern struct wpa_driver_ops wpa_driver_roboswitch_ops;
@@ -82,9 +79,6 @@ struct wpa_driver_ops *wpa_drivers[] =
 #ifdef CONFIG_DRIVER_MACSEC_QCA
 	&wpa_driver_macsec_qca_ops,
 #endif /* CONFIG_DRIVER_MACSEC_QCA */
-#ifdef CONFIG_DRIVER_TEST
-	&wpa_driver_test_ops,
-#endif /* CONFIG_DRIVER_TEST */
 #ifdef CONFIG_DRIVER_ROBOSWITCH
 	&wpa_driver_roboswitch_ops,
 #endif /* CONFIG_DRIVER_ROBOSWITCH */

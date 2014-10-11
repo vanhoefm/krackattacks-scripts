@@ -1539,26 +1539,6 @@ OBJS_priv += wpa_priv.o
 ifdef CONFIG_DRIVER_NL80211
 OBJS_priv += ../src/common/ieee802_11_common.o
 endif
-ifdef CONFIG_DRIVER_TEST
-OBJS_priv += $(SHA1OBJS)
-OBJS_priv += $(MD5OBJS)
-ifeq ($(CONFIG_TLS), openssl)
-OBJS_priv += ../src/crypto/crypto_openssl.o
-endif
-ifeq ($(CONFIG_TLS), gnutls)
-OBJS_priv += ../src/crypto/crypto_gnutls.o
-endif
-ifeq ($(CONFIG_TLS), nss)
-OBJS_priv += ../src/crypto/crypto_nss.o
-endif
-ifeq ($(CONFIG_TLS), internal)
-ifeq ($(CONFIG_CRYPTO), libtomcrypt)
-OBJS_priv += ../src/crypto/crypto_libtomcrypt.o
-else
-OBJS_priv += ../src/crypto/crypto_internal.o
-endif
-endif
-endif # CONFIG_DRIVER_TEST
 OBJS += ../src/l2_packet/l2_packet_privsep.o
 OBJS += ../src/drivers/driver_privsep.o
 EXTRA_progs += wpa_priv

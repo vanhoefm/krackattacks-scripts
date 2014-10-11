@@ -67,9 +67,6 @@ CONFIG_DRIVER_NL80211=y
 # wpa_supplicant.
 # CONFIG_USE_NDISUIO=y
 
-# Driver interface for development testing
-#CONFIG_DRIVER_TEST=y
-
 # Driver interface for wired Ethernet drivers
 CONFIG_DRIVER_WIRED=y
 

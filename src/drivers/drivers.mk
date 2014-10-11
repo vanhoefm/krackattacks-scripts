@@ -67,12 +67,6 @@ DRV_CFLAGS += -DCONFIG_DRIVER_OPENBSD
 DRV_OBJS += src/drivers/driver_openbsd.c
 endif
 
-ifdef CONFIG_DRIVER_TEST
-DRV_CFLAGS += -DCONFIG_DRIVER_TEST
-DRV_OBJS += src/drivers/driver_test.c
-NEED_AP_MLME=y
-endif
-
 ifdef CONFIG_DRIVER_NONE
 DRV_CFLAGS += -DCONFIG_DRIVER_NONE
 DRV_OBJS += src/drivers/driver_none.c

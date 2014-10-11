@@ -10,8 +10,6 @@ PKG_CONFIG ?= pkg-config
 
 ifneq ($(BOARD_WPA_SUPPLICANT_DRIVER),)
   CONFIG_DRIVER_$(BOARD_WPA_SUPPLICANT_DRIVER) := y
-else
-  CONFIG_DRIVER_TEST := y
 endif
 
 include $(LOCAL_PATH)/android.config
@@ -1500,26 +1498,6 @@ OBJS_priv += wpa_priv.c
 ifdef CONFIG_DRIVER_NL80211
 OBJS_priv += src/common/ieee802_11_common.c
 endif
-ifdef CONFIG_DRIVER_TEST
-OBJS_priv += $(SHA1OBJS)
-OBJS_priv += $(MD5OBJS)
-ifeq ($(CONFIG_TLS), openssl)
-OBJS_priv += src/crypto/crypto_openssl.c
-endif
-ifeq ($(CONFIG_TLS), gnutls)
-OBJS_priv += src/crypto/crypto_gnutls.c
-endif
-ifeq ($(CONFIG_TLS), nss)
-OBJS_priv += src/crypto/crypto_nss.c
-endif
-ifeq ($(CONFIG_TLS), internal)
-ifeq ($(CONFIG_CRYPTO), libtomcrypt)
-OBJS_priv += src/crypto/crypto_libtomcrypt.c
-else
-OBJS_priv += src/crypto/crypto_internal.c
-endif
-endif
-endif # CONFIG_DRIVER_TEST
 OBJS += src/l2_packet/l2_packet_privsep.c
 OBJS += src/drivers/driver_privsep.c
 EXTRA_progs += wpa_priv

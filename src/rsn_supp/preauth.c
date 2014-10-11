@@ -391,6 +391,18 @@ void pmksa_candidate_add(struct wpa_sm *sm, const u8 *bssid,
 	dl_list_for_each(pos, &sm->pmksa_candidates,
 			 struct rsn_pmksa_candidate, list) {
 		if (cand->priority <= pos->priority) {
+			if (!pos->list.prev) {
+				/*
+				 * This cannot really happen in pracrice since
+				 * pos was fetched from the list and the prev
+				 * pointer must be set. It looks like clang
+				 * static analyzer gets confused with the
+				 * dl_list_del(&cand->list) call above and ends
+				 * up assuming pos->list.prev could be NULL.
+				 */
+				os_free(cand);
+				return;
+			}
 			dl_list_add(pos->list.prev, &cand->list);
 			cand = NULL;
 			break;

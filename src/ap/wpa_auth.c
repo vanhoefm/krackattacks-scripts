@@ -2331,7 +2331,8 @@ SM_STATE(WPA_PTK_GROUP, REKEYNEGOTIATING)
 {
 	u8 rsc[WPA_KEY_RSC_LEN];
 	struct wpa_group *gsm = sm->group;
-	u8 *kde, *pos, hdr[2];
+	const u8 *kde;
+	u8 *kde_buf = NULL, *pos, hdr[2];
 	size_t kde_len;
 	u8 *gtk, dummy_gtk[32];
 
@@ -2367,28 +2368,29 @@ SM_STATE(WPA_PTK_GROUP, REKEYNEGOTIATING)
 	if (sm->wpa == WPA_VERSION_WPA2) {
 		kde_len = 2 + RSN_SELECTOR_LEN + 2 + gsm->GTK_len +
 			ieee80211w_kde_len(sm);
-		kde = os_malloc(kde_len);
-		if (kde == NULL)
+		kde_buf = os_malloc(kde_len);
+		if (kde_buf == NULL)
 			return;
 
-		pos = kde;
+		kde = pos = kde_buf;
 		hdr[0] = gsm->GN & 0x03;
 		hdr[1] = 0;
 		pos = wpa_add_kde(pos, RSN_KEY_DATA_GROUPKEY, hdr, 2,
 				  gtk, gsm->GTK_len);
 		pos = ieee80211w_kde_add(sm, pos);
+		kde_len = pos - kde;
 	} else {
 		kde = gtk;
-		pos = kde + gsm->GTK_len;
+		kde_len = gsm->GTK_len;
 	}
 
 	wpa_send_eapol(sm->wpa_auth, sm,
 		       WPA_KEY_INFO_SECURE | WPA_KEY_INFO_MIC |
 		       WPA_KEY_INFO_ACK |
 		       (!sm->Pair ? WPA_KEY_INFO_INSTALL : 0),
-		       rsc, gsm->GNonce, kde, pos - kde, gsm->GN, 1);
-	if (sm->wpa == WPA_VERSION_WPA2)
-		os_free(kde);
+		       rsc, gsm->GNonce, kde, kde_len, gsm->GN, 1);
+
+	os_free(kde_buf);
 }
 
 

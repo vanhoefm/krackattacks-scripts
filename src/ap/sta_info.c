@@ -904,7 +904,15 @@ static void ap_sa_query_timer(void *eloop_ctx, void *timeout_ctx)
 	sta->sa_query_trans_id = nbuf;
 	sta->sa_query_count++;
 
-	os_get_random(trans_id, WLAN_SA_QUERY_TR_ID_LEN);
+	if (os_get_random(trans_id, WLAN_SA_QUERY_TR_ID_LEN) < 0) {
+		/*
+		 * We don't really care which ID is used here, so simply
+		 * hardcode this if the mostly theoretical os_get_random()
+		 * failure happens.
+		 */
+		trans_id[0] = 0x12;
+		trans_id[1] = 0x34;
+	}
 
 	timeout = hapd->conf->assoc_sa_query_retry_timeout;
 	sec = ((timeout / 1000) * 1024) / 1000;

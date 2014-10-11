@@ -1017,7 +1017,7 @@ static void eap_fast_process_phase2_response(struct eap_sm *sm,
 	if (m->check(sm, priv, &buf)) {
 		wpa_printf(MSG_DEBUG, "EAP-FAST: Phase2 check() asked to "
 			   "ignore the packet");
-		next_type = eap_fast_req_failure(sm, data);
+		eap_fast_req_failure(sm, data);
 		return;
 	}
 

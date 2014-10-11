@@ -7602,7 +7602,7 @@ static int wpas_p2p_nfc_connection_handover(struct wpa_supplicant *wpa_s,
 	}
 	len = WPA_GET_BE16(pos);
 	pos += 2;
-	if (pos + len > end) {
+	if (len > end - pos) {
 		wpa_printf(MSG_DEBUG, "P2P: Not enough data for WSC "
 			   "attributes");
 		return -1;
@@ -7618,7 +7618,7 @@ static int wpas_p2p_nfc_connection_handover(struct wpa_supplicant *wpa_s,
 	}
 	len = WPA_GET_BE16(pos);
 	pos += 2;
-	if (pos + len > end) {
+	if (len > end - pos) {
 		wpa_printf(MSG_DEBUG, "P2P: Not enough data for P2P "
 			   "attributes");
 		return -1;

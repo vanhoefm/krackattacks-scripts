@@ -271,7 +271,7 @@ int wifi_display_subelem_set_from_ies(struct wpa_global *global,
 {
 	int subelements[MAX_WFD_SUBELEMS] = {};
 	const u8 *pos, *end;
-	int len, subelem;
+	unsigned int len, subelem;
 	struct wpabuf *e;
 
 	wpa_printf(MSG_DEBUG, "WFD IEs set: %p - %lu",
@@ -292,7 +292,7 @@ int wifi_display_subelem_set_from_ies(struct wpa_global *global,
 		wpa_printf(MSG_DEBUG, "WFD Sub-Element ID %d - len %d",
 			   *pos, len - 3);
 
-		if (pos + len > end)
+		if (len > end - pos)
 			break;
 
 		subelem = *pos;

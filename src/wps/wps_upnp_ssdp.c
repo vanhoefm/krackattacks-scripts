@@ -317,7 +317,8 @@ static void advertisement_state_machine_handler(void *eloop_data,
 			 * (see notes above)
 			 */
 			next_timeout_msec = 0;
-			os_get_random((void *) &r, sizeof(r));
+			if (os_get_random((void *) &r, sizeof(r)) < 0)
+				r = 32768;
 			next_timeout_sec = UPNP_CACHE_SEC / 4 +
 				(((UPNP_CACHE_SEC / 4) * r) >> 16);
 			sm->advertise_count++;

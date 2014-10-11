@@ -5008,7 +5008,11 @@ static void wpa_driver_nl80211_deinit(struct i802_bss *bss)
 		(void) i802_set_iface_flags(bss, 0);
 
 	if (drv->addr_changed) {
-		linux_set_iface_flags(drv->global->ioctl_sock, bss->ifname, 0);
+		if (linux_set_iface_flags(drv->global->ioctl_sock, bss->ifname,
+					  0) < 0) {
+			wpa_printf(MSG_DEBUG,
+				   "nl80211: Could not set interface down to restore permanent MAC address");
+		}
 		if (linux_set_ifhwaddr(drv->global->ioctl_sock, bss->ifname,
 				       drv->perm_addr) < 0) {
 			wpa_printf(MSG_DEBUG,

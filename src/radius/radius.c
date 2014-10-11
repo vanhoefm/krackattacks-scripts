@@ -945,7 +945,6 @@ static u8 *radius_msg_get_vendor_attr(struct radius_msg *msg, u32 vendor,
 			vhdr = (struct radius_attr_vendor *) pos;
 			if (vhdr->vendor_length > left ||
 			    vhdr->vendor_length < sizeof(*vhdr)) {
-				left = 0;
 				break;
 			}
 			if (vhdr->vendor_type != subtype) {

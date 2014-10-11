@@ -451,7 +451,7 @@ static int tlsv1_process_diffie_hellman(struct tlsv1_client *conn,
 	server_params = pos;
 	conn->dh_p_len = WPA_GET_BE16(pos);
 	pos += 2;
-	if (conn->dh_p_len == 0 || end - pos < (int) conn->dh_p_len) {
+	if (conn->dh_p_len == 0 || conn->dh_p_len > (size_t) (end - pos)) {
 		wpa_printf(MSG_DEBUG, "TLSv1: Invalid dh_p length %lu",
 			   (unsigned long) conn->dh_p_len);
 		goto fail;
@@ -476,7 +476,7 @@ static int tlsv1_process_diffie_hellman(struct tlsv1_client *conn,
 		goto fail;
 	conn->dh_g_len = WPA_GET_BE16(pos);
 	pos += 2;
-	if (conn->dh_g_len == 0 || end - pos < (int) conn->dh_g_len)
+	if (conn->dh_g_len == 0 || conn->dh_g_len > (size_t) (end - pos))
 		goto fail;
 	conn->dh_g = os_malloc(conn->dh_g_len);
 	if (conn->dh_g == NULL)
@@ -492,7 +492,7 @@ static int tlsv1_process_diffie_hellman(struct tlsv1_client *conn,
 		goto fail;
 	conn->dh_ys_len = WPA_GET_BE16(pos);
 	pos += 2;
-	if (conn->dh_ys_len == 0 || end - pos < (int) conn->dh_ys_len)
+	if (conn->dh_ys_len == 0 || conn->dh_ys_len > (size_t) (end - pos))
 		goto fail;
 	conn->dh_ys = os_malloc(conn->dh_ys_len);
 	if (conn->dh_ys == NULL)

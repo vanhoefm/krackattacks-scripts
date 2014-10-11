@@ -1992,11 +1992,12 @@ int p2p_match_dev_type(struct p2p_data *p2p, struct wpabuf *wps)
 				attr.num_req_dev_type))
 		return 1; /* Own Primary Device Type matches */
 
-	for (i = 0; i < p2p->cfg->num_sec_dev_types; i++)
+	for (i = 0; i < p2p->cfg->num_sec_dev_types; i++) {
 		if (dev_type_list_match(p2p->cfg->sec_dev_type[i],
 					attr.req_dev_type,
 					attr.num_req_dev_type))
-		return 1; /* Own Secondary Device Type matches */
+			return 1; /* Own Secondary Device Type matches */
+	}
 
 	/* No matching device type found */
 	return 0;

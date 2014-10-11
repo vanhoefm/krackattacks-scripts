@@ -1416,8 +1416,11 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 
 	reply = os_malloc(reply_size);
 	if (reply == NULL) {
-		sendto(sock, "FAIL\n", 5, 0, (struct sockaddr *) &from,
-		       fromlen);
+		if (sendto(sock, "FAIL\n", 5, 0, (struct sockaddr *) &from,
+			   fromlen) < 0) {
+			wpa_printf(MSG_DEBUG, "CTRL: sendto failed: %s",
+				   strerror(errno));
+		}
 		return;
 	}
 
@@ -1611,7 +1614,11 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 		os_memcpy(reply, "FAIL\n", 5);
 		reply_len = 5;
 	}
-	sendto(sock, reply, reply_len, 0, (struct sockaddr *) &from, fromlen);
+	if (sendto(sock, reply, reply_len, 0, (struct sockaddr *) &from,
+		   fromlen) < 0) {
+		wpa_printf(MSG_DEBUG, "CTRL: sendto failed: %s",
+			   strerror(errno));
+	}
 	os_free(reply);
 }
 
@@ -1914,7 +1921,11 @@ static void hostapd_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 		reply_len = 5;
 	}
 
-	sendto(sock, reply, reply_len, 0, (struct sockaddr *) &from, fromlen);
+	if (sendto(sock, reply, reply_len, 0, (struct sockaddr *) &from,
+		   fromlen) < 0) {
+		wpa_printf(MSG_DEBUG, "CTRL: sendto failed: %s",
+			   strerror(errno));
+	}
 }
 
 

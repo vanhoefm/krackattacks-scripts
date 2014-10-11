@@ -251,13 +251,16 @@ void format_date(struct wpabuf *buf)
  * use for constructing UUIDs for subscriptions. Presumably any method from
  * rfc4122 is good enough; I've chosen random number method.
  */
-static void uuid_make(u8 uuid[UUID_LEN])
+static int uuid_make(u8 uuid[UUID_LEN])
 {
-	os_get_random(uuid, UUID_LEN);
+	if (os_get_random(uuid, UUID_LEN) < 0)
+		return -1;
 
 	/* Replace certain bits as specified in rfc4122 or X.667 */
 	uuid[6] &= 0x0f; uuid[6] |= (4 << 4);   /* version 4 == random gen */
 	uuid[8] &= 0x3f; uuid[8] |= 0x80;
+
+	return 0;
 }
 
 
@@ -716,7 +719,10 @@ struct subscription * subscription_start(struct upnp_wps_device_sm *sm,
 
 	s->sm = sm;
 	s->timeout_time = expire;
-	uuid_make(s->uuid);
+	if (uuid_make(s->uuid) < 0) {
+		subscription_destroy(s);
+		return NULL;
+	}
 	subscr_addr_list_create(s, callback_urls);
 	if (dl_list_empty(&s->addr_list)) {
 		wpa_printf(MSG_DEBUG, "WPS UPnP: No valid callback URLs in "

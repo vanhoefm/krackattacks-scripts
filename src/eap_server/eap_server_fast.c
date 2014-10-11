@@ -186,7 +186,6 @@ static int eap_fast_session_ticket_cb(void *ctx, const u8 *ticket, size_t len,
 
 		switch (*pos) {
 		case PAC_OPAQUE_TYPE_PAD:
-			pos = end;
 			goto done;
 		case PAC_OPAQUE_TYPE_KEY:
 			if (pos[1] != EAP_FAST_PAC_KEY_LEN) {

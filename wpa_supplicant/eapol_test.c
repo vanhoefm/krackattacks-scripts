@@ -928,7 +928,11 @@ static void wpa_init_conf(struct eapol_test_data *e,
 		*pos++ = a[3];
 	}
 #else /* CONFIG_NATIVE_WINDOWS or CONFIG_ANSI_C_EXTRA */
-	inet_aton(authsrv, &as->addr.u.v4);
+	if (inet_aton(authsrv, &as->addr.u.v4) < 0) {
+		wpa_printf(MSG_ERROR, "Invalid IP address '%s'",
+			   authsrv);
+		assert(0);
+	}
 #endif /* CONFIG_NATIVE_WINDOWS or CONFIG_ANSI_C_EXTRA */
 	as->addr.af = AF_INET;
 	as->port = port;

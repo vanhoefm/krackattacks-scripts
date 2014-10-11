@@ -361,7 +361,7 @@ static void iapp_receive_udp(int sock, void *eloop_ctx, void *sock_ctx)
 
 	switch (hdr->command) {
 	case IAPP_CMD_ADD_notify:
-		iapp_process_add_notify(iapp, &from, hdr, hlen - sizeof(*hdr));
+		iapp_process_add_notify(iapp, &from, hdr, len - sizeof(*hdr));
 		break;
 	case IAPP_CMD_MOVE_notify:
 		/* TODO: MOVE is using TCP; so move this to TCP handler once it

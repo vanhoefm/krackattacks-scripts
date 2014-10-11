@@ -700,10 +700,12 @@ struct subscription * subscription_start(struct upnp_wps_device_sm *sm,
 	if (dl_list_len(&sm->subscriptions) >= MAX_SUBSCRIPTIONS) {
 		s = dl_list_first(&sm->subscriptions, struct subscription,
 				  list);
-		wpa_printf(MSG_INFO, "WPS UPnP: Too many subscriptions, "
-			   "trashing oldest");
-		dl_list_del(&s->list);
-		subscription_destroy(s);
+		if (s) {
+			wpa_printf(MSG_INFO,
+				   "WPS UPnP: Too many subscriptions, trashing oldest");
+			dl_list_del(&s->list);
+			subscription_destroy(s);
+		}
 	}
 
 	s = os_zalloc(sizeof(*s));

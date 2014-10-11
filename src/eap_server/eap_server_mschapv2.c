@@ -414,13 +414,16 @@ static void eap_mschapv2_process_response(struct eap_sm *sm,
 			}
 			pw_hash = pw_hash_buf;
 		}
-		generate_authenticator_response_pwhash(
-			pw_hash, peer_challenge, data->auth_challenge,
-			username, username_len, nt_response,
-			data->auth_response);
-
-		hash_nt_password_hash(pw_hash, pw_hash_hash);
-		get_master_key(pw_hash_hash, nt_response, data->master_key);
+		if (generate_authenticator_response_pwhash(
+			    pw_hash, peer_challenge, data->auth_challenge,
+			    username, username_len, nt_response,
+			    data->auth_response) < 0 ||
+		    hash_nt_password_hash(pw_hash, pw_hash_hash) < 0 ||
+		    get_master_key(pw_hash_hash, nt_response,
+				   data->master_key)) {
+			data->state = FAILURE;
+			return;
+		}
 		data->master_key_valid = 1;
 		wpa_hexdump_key(MSG_DEBUG, "EAP-MSCHAPV2: Derived Master Key",
 				data->master_key, MSCHAPV2_KEY_LEN);

@@ -3267,7 +3267,7 @@ static int wpas_check_wowlan_trigger(const char *start, const char *trigger,
 
 
 static int wpas_set_wowlan_triggers(struct wpa_supplicant *wpa_s,
-				    struct wpa_driver_capa *capa)
+				    const struct wpa_driver_capa *capa)
 {
 	struct wowlan_triggers triggers;
 	char *start, *end, *buf;
@@ -3632,6 +3632,7 @@ static int wpa_supplicant_init_iface(struct wpa_supplicant *wpa_s,
 				     struct wpa_interface *iface)
 {
 	struct wpa_driver_capa capa;
+	int capa_res;
 
 	wpa_printf(MSG_DEBUG, "Initializing interface '%s' conf '%s' driver "
 		   "'%s' ctrl_interface '%s' bridge '%s'", iface->ifname,
@@ -3761,7 +3762,8 @@ static int wpa_supplicant_init_iface(struct wpa_supplicant *wpa_s,
 						      &wpa_s->hw.num_modes,
 						      &wpa_s->hw.flags);
 
-	if (wpa_drv_get_capa(wpa_s, &capa) == 0) {
+	capa_res = wpa_drv_get_capa(wpa_s, &capa);
+	if (capa_res == 0) {
 		wpa_s->drv_capa_known = 1;
 		wpa_s->drv_flags = capa.flags;
 		wpa_s->drv_enc = capa.enc;
@@ -3851,7 +3853,7 @@ static int wpa_supplicant_init_iface(struct wpa_supplicant *wpa_s,
 	 * Note: We don't restore/remove the triggers on shutdown (it doesn't
 	 * have effect anyway when the interface is down).
 	 */
-	if (wpas_set_wowlan_triggers(wpa_s, &capa) < 0)
+	if (capa_res == 0 && wpas_set_wowlan_triggers(wpa_s, &capa) < 0)
 		return -1;
 
 #ifdef CONFIG_EAP_PROXY

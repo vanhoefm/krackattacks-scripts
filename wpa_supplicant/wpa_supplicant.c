@@ -299,9 +299,9 @@ void wpa_supplicant_initiate_eapol(struct wpa_supplicant *wpa_s)
 	eapol_conf.external_sim = wpa_s->conf->external_sim;
 	eapol_conf.wps = wpa_s->key_mgmt == WPA_KEY_MGMT_WPS;
 	eapol_sm_notify_config(wpa_s->eapol, &ssid->eap, &eapol_conf);
-#endif /* IEEE8021X_EAPOL */
 
 	ieee802_1x_alloc_kay_sm(wpa_s, ssid);
+#endif /* IEEE8021X_EAPOL */
 }
 
 

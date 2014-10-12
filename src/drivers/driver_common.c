@@ -105,3 +105,39 @@ const char * channel_width_to_string(enum chan_width width)
 		return "unknown";
 	}
 }
+
+
+int ht_supported(const struct hostapd_hw_modes *mode)
+{
+	if (!(mode->flags & HOSTAPD_MODE_FLAG_HT_INFO_KNOWN)) {
+		/*
+		 * The driver did not indicate whether it supports HT. Assume
+		 * it does to avoid connection issues.
+		 */
+		return 1;
+	}
+
+	/*
+	 * IEEE Std 802.11n-2009 20.1.1:
+	 * An HT non-AP STA shall support all EQM rates for one spatial stream.
+	 */
+	return mode->mcs_set[0] == 0xff;
+}
+
+
+int vht_supported(const struct hostapd_hw_modes *mode)
+{
+	if (!(mode->flags & HOSTAPD_MODE_FLAG_VHT_INFO_KNOWN)) {
+		/*
+		 * The driver did not indicate whether it supports VHT. Assume
+		 * it does to avoid connection issues.
+		 */
+		return 1;
+	}
+
+	/*
+	 * A VHT non-AP STA shall support MCS 0-7 for one spatial stream.
+	 * TODO: Verify if this complies with the standard
+	 */
+	return (mode->vht_mcs_set[0] & 0x3) != 3;
+}

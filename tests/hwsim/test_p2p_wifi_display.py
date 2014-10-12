@@ -62,6 +62,8 @@ def test_wifi_display(dev):
         raise Exception("Device discovery timed out")
     if "wfd_dev_info=0x" + wfd_devinfo not in ev:
         raise Exception("Wi-Fi Display Info not in P2P-DEVICE-FOUND event")
+    if "new=1" not in ev:
+        raise Exception("new=1 flag missing from P2P-DEVICE-FOUND event")
     ev = dev[1].wait_global_event(["P2P-SERV-DISC-RESP"], timeout=5)
     if ev is None:
         raise Exception("Service discovery timed out")
@@ -73,6 +75,25 @@ def test_wifi_display(dev):
         raise Exception("WFD 3D Video Formats missing from WSD response")
     if audio not in ev:
         raise Exception("WFD Audio Formats missing from WSD response")
+
+    dev[1].dump_monitor()
+    dev[0].request("WFD_SUBELEM_SET 0 0006" + wfd_devinfo2)
+    ev = dev[1].wait_global_event(["P2P-DEVICE-FOUND"], timeout=15)
+    if ev is None:
+        raise Exception("Peer info update timed out")
+    if "new=0" not in ev:
+        raise Exception("new=0 flag missing from P2P-DEVICE-FOUND event")
+    if "wfd_dev_info=0x" + wfd_devinfo2 not in ev:
+        raise Exception("Wi-Fi Display Info not in P2P-DEVICE-FOUND event")
+    dev[1].dump_monitor()
+    dev[0].request("WFD_SUBELEM_SET 0 0006" + wfd_devinfo)
+    ev = dev[1].wait_global_event(["P2P-DEVICE-FOUND"], timeout=15)
+    if ev is None:
+        raise Exception("Peer info update timed out")
+    if "new=0" not in ev:
+        raise Exception("new=0 flag missing from P2P-DEVICE-FOUND event")
+    if "wfd_dev_info=0x" + wfd_devinfo not in ev:
+        raise Exception("Wi-Fi Display Info not in P2P-DEVICE-FOUND event")
 
     pin = dev[0].wps_read_pin()
     dev[0].p2p_go_neg_auth(dev[1].p2p_dev_addr(), pin, 'display')

@@ -2181,3 +2181,26 @@ def test_ap_wps_while_connected_no_autoconnect(dev, apdev):
             raise Exception("Unexpected BSSID")
     finally:
         dev[0].request("STA_AUTOCONNECT 1")
+
+def test_ap_wps_from_event(dev, apdev):
+    """WPS PBC event on AP to enable PBC"""
+    ssid = "test-wps-conf"
+    hapd = hostapd.add_ap(apdev[0]['ifname'],
+                          { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                            "wpa_passphrase": "12345678", "wpa": "2",
+                            "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP"})
+    dev[0].dump_monitor()
+    dev[0].request("WPS_PBC")
+
+    ev = hapd.wait_event(['WPS-ENROLLEE-SEEN'], timeout=15)
+    if ev is None:
+        raise Exception("No WPS-ENROLLEE-SEEN event on AP")
+    vals = ev.split(' ')
+    if vals[1] != dev[0].p2p_interface_addr():
+        raise Exception("Unexpected enrollee address: " + vals[1])
+    if vals[5] != '4':
+        raise Exception("Unexpected Device Password Id: " + vals[5])
+    hapd.request("WPS_PBC")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
+    if ev is None:
+        raise Exception("Association with the AP timed out")

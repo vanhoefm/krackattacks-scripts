@@ -167,6 +167,8 @@ static int eap_tls_params_from_conf(struct eap_sm *sm,
 		return -1;
 	}
 
+	params->openssl_ciphers = config->openssl_ciphers;
+
 	return 0;
 }
 

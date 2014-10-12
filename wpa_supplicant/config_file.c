@@ -938,6 +938,8 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 	if (config->pkcs11_module_path)
 		fprintf(f, "pkcs11_module_path=%s\n",
 			config->pkcs11_module_path);
+	if (config->openssl_ciphers)
+		fprintf(f, "openssl_ciphers=%s\n", config->openssl_ciphers);
 	if (config->pcsc_reader)
 		fprintf(f, "pcsc_reader=%s\n", config->pcsc_reader);
 	if (config->pcsc_pin)

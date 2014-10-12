@@ -686,6 +686,15 @@ struct eap_peer_config {
 	 * has more than one.
 	 */
 	int sim_num;
+
+	/**
+	 * openssl_ciphers - OpenSSL cipher string
+	 *
+	 * This is an OpenSSL specific configuration option for configuring the
+	 * ciphers for this connection. If not set, the default cipher suite
+	 * list is used.
+	 */
+	char *openssl_ciphers;
 };
 
 

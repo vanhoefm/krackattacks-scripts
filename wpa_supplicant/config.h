@@ -517,6 +517,15 @@ struct wpa_config {
 	char *pkcs11_module_path;
 
 	/**
+	 * openssl_ciphers - OpenSSL cipher string
+	 *
+	 * This is an OpenSSL specific configuration option for configuring the
+	 * default ciphers. If not set, "DEFAULT:!EXP:!LOW" is used as the
+	 * default.
+	 */
+	char *openssl_ciphers;
+
+	/**
 	 * pcsc_reader - PC/SC reader name prefix
 	 *
 	 * If not %NULL, PC/SC reader with a name that matches this prefix is

@@ -610,7 +610,8 @@ static char ** wpa_cli_complete_set(const char *str, int pos)
 		/* global configuration parameters */
 		"eapol_version", "ap_scan", "disable_scan_offload",
 		"fast_reauth", "opensc_engine_path", "pkcs11_engine_path",
-		"pkcs11_module_path", "pcsc_reader", "pcsc_pin",
+		"pkcs11_module_path", "openssl_ciphers",
+		"pcsc_reader", "pcsc_pin",
 		"driver_param", "dot11RSNAConfigPMKLifetime",
 		"dot11RSNAConfigPMKReauthThreshold",
 		"dot11RSNAConfigSATimeout",

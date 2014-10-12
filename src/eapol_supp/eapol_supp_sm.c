@@ -2026,6 +2026,7 @@ struct eapol_sm *eapol_sm_init(struct eapol_ctx *ctx)
 	conf.opensc_engine_path = ctx->opensc_engine_path;
 	conf.pkcs11_engine_path = ctx->pkcs11_engine_path;
 	conf.pkcs11_module_path = ctx->pkcs11_module_path;
+	conf.openssl_ciphers = ctx->openssl_ciphers;
 	conf.wps = ctx->wps;
 	conf.cert_in_cb = ctx->cert_in_cb;
 

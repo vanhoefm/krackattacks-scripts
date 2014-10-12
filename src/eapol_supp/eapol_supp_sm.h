@@ -210,6 +210,15 @@ struct eapol_ctx {
 	const char *pkcs11_module_path;
 
 	/**
+	 * openssl_ciphers - OpenSSL cipher string
+	 *
+	 * This is an OpenSSL specific configuration option for configuring the
+	 * default ciphers. If not set, "DEFAULT:!EXP:!LOW" is used as the
+	 * default.
+	 */
+	const char *openssl_ciphers;
+
+	/**
 	 * wps - WPS context data
 	 *
 	 * This is only used by EAP-WSC and can be left %NULL if not available.

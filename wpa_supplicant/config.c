@@ -1682,6 +1682,7 @@ static const struct parse_data ssid_fields[] = {
 	{ INTe(engine2) },
 	{ INT(eapol_flags) },
 	{ INTe(sim_num) },
+	{ STRe(openssl_ciphers) },
 #endif /* IEEE8021X_EAPOL */
 	{ FUNC_KEY(wep_key0) },
 	{ FUNC_KEY(wep_key1) },
@@ -1903,6 +1904,7 @@ static void eap_peer_config_free(struct eap_peer_config *eap)
 	os_free(eap->pac_file);
 	bin_clear_free(eap->new_password, eap->new_password_len);
 	str_clear_free(eap->external_sim_resp);
+	os_free(eap->openssl_ciphers);
 }
 #endif /* IEEE8021X_EAPOL */
 
@@ -2023,6 +2025,7 @@ void wpa_config_free(struct wpa_config *config)
 	os_free(config->opensc_engine_path);
 	os_free(config->pkcs11_engine_path);
 	os_free(config->pkcs11_module_path);
+	os_free(config->openssl_ciphers);
 	os_free(config->pcsc_reader);
 	str_clear_free(config->pcsc_pin);
 	os_free(config->driver_param);
@@ -3823,6 +3826,7 @@ static const struct global_parse_data global_fields[] = {
 	{ STR(opensc_engine_path), 0 },
 	{ STR(pkcs11_engine_path), 0 },
 	{ STR(pkcs11_module_path), 0 },
+	{ STR(openssl_ciphers), 0 },
 	{ STR(pcsc_reader), 0 },
 	{ STR(pcsc_pin), 0 },
 	{ INT(external_sim), 0 },

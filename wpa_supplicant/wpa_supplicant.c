@@ -842,7 +842,7 @@ int wpa_supplicant_reload_configuration(struct wpa_supplicant *wpa_s)
 
 	/*
 	 * TODO: should notify EAPOL SM about changes in opensc_engine_path,
-	 * pkcs11_engine_path, pkcs11_module_path.
+	 * pkcs11_engine_path, pkcs11_module_path, openssl_ciphers.
 	 */
 	if (wpa_key_mgmt_wpa_psk(wpa_s->key_mgmt)) {
 		/*

@@ -1924,7 +1924,7 @@ def test_ap_hs20_fetch_osu(dev, apdev):
         except:
             pass
     try:
-        dev[1].scan(freq="2412")
+        dev[1].scan_for_bss(bssid, freq="2412")
         dev[0].request("SET osu_dir " + dir)
         dev[0].request("FETCH_OSU")
         if "OK" not in dev[1].request("HS20_ICON_REQUEST " + bssid + " w1fi_logo"):

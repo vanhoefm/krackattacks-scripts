@@ -2208,3 +2208,35 @@ def test_ap_wpa2_eap_non_ascii_identity2(dev, apdev):
         ev = dev[i].wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=10)
         if ev is None:
             raise Exception("EAP method selection timed out")
+
+def test_openssl_cipher_suite_config_wpas(dev, apdev):
+    """OpenSSL cipher suite configuration on wpa_supplicant"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "TTLS", "pap user",
+                anonymous_identity="ttls", password="password",
+                openssl_ciphers="AES128",
+                ca_cert="auth_serv/ca.pem", phase2="auth=PAP")
+    eap_connect(dev[1], apdev[0], "TTLS", "pap user",
+                anonymous_identity="ttls", password="password",
+                openssl_ciphers="EXPORT",
+                ca_cert="auth_serv/ca.pem", phase2="auth=PAP",
+                expect_failure=True)
+
+def test_openssl_cipher_suite_config_hapd(dev, apdev):
+    """OpenSSL cipher suite configuration on hostapd"""
+    params = int_eap_server_params()
+    params['openssl_ciphers'] = "AES256"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "TTLS", "pap user",
+                anonymous_identity="ttls", password="password",
+                ca_cert="auth_serv/ca.pem", phase2="auth=PAP")
+    eap_connect(dev[1], apdev[0], "TTLS", "pap user",
+                anonymous_identity="ttls", password="password",
+                openssl_ciphers="AES128",
+                ca_cert="auth_serv/ca.pem", phase2="auth=PAP",
+                expect_failure=True)
+    eap_connect(dev[2], apdev[0], "TTLS", "pap user",
+                anonymous_identity="ttls", password="password",
+                openssl_ciphers="HIGH:!ADH",
+                ca_cert="auth_serv/ca.pem", phase2="auth=PAP")

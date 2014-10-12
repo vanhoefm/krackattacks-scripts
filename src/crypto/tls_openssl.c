@@ -747,6 +747,7 @@ void * tls_init(const struct tls_config *conf)
 {
 	SSL_CTX *ssl;
 	struct tls_context *context;
+	const char *ciphers;
 
 	if (tls_openssl_ref_count == 0) {
 		tls_global = context = tls_context_new(conf);
@@ -844,6 +845,18 @@ void * tls_init(const struct tls_config *conf)
 		}
 	}
 #endif /* OPENSSL_NO_ENGINE */
+
+	if (conf && conf->openssl_ciphers)
+		ciphers = conf->openssl_ciphers;
+	else
+		ciphers = "DEFAULT:!EXP:!LOW";
+	if (SSL_CTX_set_cipher_list(ssl, ciphers) != 1) {
+		wpa_printf(MSG_ERROR,
+			   "OpenSSL: Failed to set cipher string '%s'",
+			   ciphers);
+		tls_deinit(ssl);
+		return NULL;
+	}
 
 	return ssl;
 }
@@ -3262,6 +3275,14 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 		return -1;
 	}
 
+	if (params->openssl_ciphers &&
+	    SSL_set_cipher_list(conn->ssl, params->openssl_ciphers) != 1) {
+		wpa_printf(MSG_INFO,
+			   "OpenSSL: Failed to set cipher string '%s'",
+			   params->openssl_ciphers);
+		return -1;
+	}
+
 #ifdef SSL_OP_NO_TICKET
 	if (params->flags & TLS_CONN_DISABLE_SESSION_TICKET)
 		SSL_set_options(conn->ssl, SSL_OP_NO_TICKET);
@@ -3325,6 +3346,14 @@ int tls_global_set_params(void *tls_ctx,
 	if (tls_global_dh(ssl_ctx, params->dh_file)) {
 		wpa_printf(MSG_INFO, "TLS: Failed to load DH file '%s'",
 			   params->dh_file);
+		return -1;
+	}
+
+	if (params->openssl_ciphers &&
+	    SSL_CTX_set_cipher_list(ssl_ctx, params->openssl_ciphers) != 1) {
+		wpa_printf(MSG_INFO,
+			   "OpenSSL: Failed to set cipher string '%s'",
+			   params->openssl_ciphers);
 		return -1;
 	}
 

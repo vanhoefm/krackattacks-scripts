@@ -74,6 +74,7 @@ struct tls_config {
 	const char *pkcs11_module_path;
 	int fips_mode;
 	int cert_in_cb;
+	const char *openssl_ciphers;
 
 	void (*event_cb)(void *ctx, enum tls_event ev,
 			 union tls_event_data *data);
@@ -123,6 +124,7 @@ struct tls_config {
  * specific for now)
  * @cert_id: the certificate's id when using engine
  * @ca_cert_id: the CA certificate's id when using engine
+ * @openssl_ciphers: OpenSSL cipher configuration
  * @flags: Parameter options (TLS_CONN_*)
  * @ocsp_stapling_response: DER encoded file with cached OCSP stapling response
  *	or %NULL if OCSP is not enabled
@@ -161,6 +163,7 @@ struct tls_connection_params {
 	const char *key_id;
 	const char *cert_id;
 	const char *ca_cert_id;
+	const char *openssl_ciphers;
 
 	unsigned int flags;
 	const char *ocsp_stapling_response;

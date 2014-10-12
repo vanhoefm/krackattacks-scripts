@@ -199,8 +199,7 @@ int netlink_send_oper_ifla(struct netlink_data *netlink, int ifindex,
 		rta->rta_type = IFLA_LINKMODE;
 		rta->rta_len = RTA_LENGTH(sizeof(char));
 		*((char *) RTA_DATA(rta)) = linkmode;
-		req.hdr.nlmsg_len = NLMSG_ALIGN(req.hdr.nlmsg_len) +
-			RTA_LENGTH(sizeof(char));
+		req.hdr.nlmsg_len += RTA_SPACE(sizeof(char));
 	}
 	if (operstate != -1) {
 		rta = aliasing_hide_typecast(
@@ -209,8 +208,7 @@ int netlink_send_oper_ifla(struct netlink_data *netlink, int ifindex,
 		rta->rta_type = IFLA_OPERSTATE;
 		rta->rta_len = RTA_LENGTH(sizeof(char));
 		*((char *) RTA_DATA(rta)) = operstate;
-		req.hdr.nlmsg_len = NLMSG_ALIGN(req.hdr.nlmsg_len) +
-			RTA_LENGTH(sizeof(char));
+		req.hdr.nlmsg_len += RTA_SPACE(sizeof(char));
 	}
 
 	wpa_printf(MSG_DEBUG, "netlink: Operstate: ifindex=%d linkmode=%d (%s), operstate=%d (%s)",

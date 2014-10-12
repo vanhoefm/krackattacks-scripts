@@ -191,7 +191,6 @@ endif
 ifdef CONFIG_IEEE80211R
 L_CFLAGS += -DCONFIG_IEEE80211R
 OBJS += src/rsn_supp/wpa_ft.c
-NEED_80211_COMMON=y
 NEED_SHA256=y
 NEED_AES_OMAC1=y
 endif
@@ -261,7 +260,6 @@ OBJS += src/utils/bitfield.c
 L_CFLAGS += -DCONFIG_P2P
 NEED_GAS=y
 NEED_OFFCHANNEL=y
-NEED_80211_COMMON=y
 CONFIG_WPS=y
 CONFIG_AP=y
 ifdef CONFIG_P2P_STRICT
@@ -633,7 +631,6 @@ CONFIG_IEEE8021X_EAPOL=y
 NEED_DH_GROUPS=y
 NEED_SHA256=y
 NEED_BASE64=y
-NEED_80211_COMMON=y
 NEED_AES_CBC=y
 NEED_MODEXP=y
 
@@ -742,7 +739,6 @@ endif
 endif
 
 ifdef CONFIG_AP
-NEED_80211_COMMON=y
 NEED_EAP_COMMON=y
 NEED_RSN_AUTHENTICATOR=y
 L_CFLAGS += -DCONFIG_AP
@@ -1366,14 +1362,11 @@ OBJS += src/utils/base64.c
 endif
 
 ifdef NEED_SME
-NEED_80211_COMMON=y
 OBJS += sme.c
 L_CFLAGS += -DCONFIG_SME
 endif
 
-ifdef NEED_80211_COMMON
 OBJS += src/common/ieee802_11_common.c
-endif
 
 ifdef NEED_EAP_COMMON
 OBJS += src/eap_common/eap_common.c

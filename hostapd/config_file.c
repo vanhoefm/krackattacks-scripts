@@ -1984,6 +1984,9 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 	} else if (os_strcmp(buf, "dh_file") == 0) {
 		os_free(bss->dh_file);
 		bss->dh_file = os_strdup(pos);
+	} else if (os_strcmp(buf, "openssl_ciphers") == 0) {
+		os_free(bss->openssl_ciphers);
+		bss->openssl_ciphers = os_strdup(pos);
 	} else if (os_strcmp(buf, "fragment_size") == 0) {
 		bss->fragment_size = atoi(pos);
 #ifdef EAP_SERVER_FAST

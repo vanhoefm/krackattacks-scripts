@@ -255,7 +255,7 @@ SM_STATE(SUPP_PAE, CONNECTING)
 		 * delay authentication. Use a short timeout to send the first
 		 * EAPOL-Start if Authenticator does not start authentication.
 		 */
-		if (sm->conf.wps) {
+		if (sm->conf.wps && !(sm->conf.wps & EAPOL_PEER_IS_WPS20_AP)) {
 			/* Reduce latency on starting WPS negotiation. */
 			wpa_printf(MSG_DEBUG,
 				   "EAPOL: Using shorter startWhen for WPS");

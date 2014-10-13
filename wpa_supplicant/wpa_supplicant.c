@@ -297,7 +297,24 @@ void wpa_supplicant_initiate_eapol(struct wpa_supplicant *wpa_s)
 		wpa_s->key_mgmt != WPA_KEY_MGMT_IEEE8021X_NO_WPA &&
 		wpa_s->key_mgmt != WPA_KEY_MGMT_WPS;
 	eapol_conf.external_sim = wpa_s->conf->external_sim;
-	eapol_conf.wps = wpa_s->key_mgmt == WPA_KEY_MGMT_WPS;
+
+#ifdef CONFIG_WPS
+	if (wpa_s->key_mgmt == WPA_KEY_MGMT_WPS) {
+		eapol_conf.wps |= EAPOL_LOCAL_WPS_IN_USE;
+		if (wpa_s->current_bss) {
+			struct wpabuf *ie;
+			ie = wpa_bss_get_vendor_ie_multi(wpa_s->current_bss,
+							 WPS_IE_VENDOR_TYPE);
+			if (ie) {
+				if (wps_is_20(ie))
+					eapol_conf.wps |=
+						EAPOL_PEER_IS_WPS20_AP;
+				wpabuf_free(ie);
+			}
+		}
+	}
+#endif /* CONFIG_WPS */
+
 	eapol_sm_notify_config(wpa_s->eapol, &ssid->eap, &eapol_conf);
 
 	ieee802_1x_alloc_kay_sm(wpa_s, ssid);

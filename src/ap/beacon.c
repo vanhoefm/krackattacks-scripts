@@ -34,16 +34,27 @@
 
 static u8 * hostapd_eid_bss_load(struct hostapd_data *hapd, u8 *eid, size_t len)
 {
+	if (len < 2 + 5)
+		return eid;
+
 #ifdef CONFIG_TESTING_OPTIONS
 	if (hapd->conf->bss_load_test_set) {
-		if (2 + 5 > len)
-			return eid;
 		*eid++ = WLAN_EID_BSS_LOAD;
 		*eid++ = 5;
 		os_memcpy(eid, hapd->conf->bss_load_test, 5);
 		eid += 5;
+		return eid;
 	}
 #endif /* CONFIG_TESTING_OPTIONS */
+	if (hapd->conf->bss_load_update_period) {
+		*eid++ = WLAN_EID_BSS_LOAD;
+		*eid++ = 5;
+		WPA_PUT_LE16(eid, hapd->num_sta);
+		eid += 2;
+		*eid++ = hapd->iface->channel_utilization;
+		WPA_PUT_LE16(eid, 0); /* no available admission capabity */
+		eid += 2;
+	}
 	return eid;
 }
 

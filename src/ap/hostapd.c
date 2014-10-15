@@ -35,6 +35,7 @@
 #include "gas_serv.h"
 #include "dfs.h"
 #include "ieee802_11.h"
+#include "bss_load.h"
 
 
 static int hostapd_flush_old_stations(struct hostapd_data *hapd, u16 reason);
@@ -309,6 +310,8 @@ static void hostapd_free_hapd_data(struct hostapd_data *hapd)
 #ifdef CONFIG_INTERWORKING
 	gas_serv_deinit(hapd);
 #endif /* CONFIG_INTERWORKING */
+
+	bss_load_update_deinit(hapd);
 
 #ifdef CONFIG_SQLITE
 	bin_clear_free(hapd->tmp_eap_user.identity,
@@ -874,6 +877,11 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 		return -1;
 	}
 #endif /* CONFIG_INTERWORKING */
+
+	if (conf->bss_load_update_period && bss_load_update_init(hapd)) {
+		wpa_printf(MSG_ERROR, "BSS Load initialization failed");
+		return -1;
+	}
 
 	if (!hostapd_drv_none(hapd) && vlan_init(hapd)) {
 		wpa_printf(MSG_ERROR, "VLAN initialization failed.");

@@ -95,6 +95,7 @@ OBJS += src/ap/preauth_auth.c
 OBJS += src/ap/pmksa_cache_auth.c
 OBJS += src/ap/ieee802_11_shared.c
 OBJS += src/ap/beacon.c
+OBJS += src/ap/bss_load.c
 OBJS_d =
 OBJS_p =
 LIBS =

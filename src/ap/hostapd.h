@@ -218,6 +218,9 @@ struct hostapd_data {
 	unsigned int cs_c_off_proberesp;
 	int csa_in_progress;
 
+	/* BSS Load */
+	unsigned int bss_load_update_timeout;
+
 #ifdef CONFIG_P2P
 	struct p2p_data *p2p;
 	struct p2p_group *p2p_group;
@@ -353,6 +356,11 @@ struct hostapd_iface {
 
 	/* lowest observed noise floor in dBm */
 	s8 lowest_nf;
+
+	/* channel utilization calculation */
+	u64 last_channel_time;
+	u64 last_channel_time_busy;
+	u8 channel_utilization;
 
 	unsigned int dfs_cac_ms;
 	struct os_reltime dfs_cac_start;

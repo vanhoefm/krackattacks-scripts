@@ -174,7 +174,7 @@ void p2p_process_invitation_req(struct p2p_data *p2p, const u8 *sa,
 	u8 group_bssid[ETH_ALEN], *bssid;
 	int op_freq = 0;
 	u8 reg_class = 0, channel = 0;
-	struct p2p_channels intersection, *channels = NULL;
+	struct p2p_channels all_channels, intersection, *channels = NULL;
 	int persistent;
 
 	os_memset(group_bssid, 0, sizeof(group_bssid));
@@ -226,7 +226,10 @@ void p2p_process_invitation_req(struct p2p_data *p2p, const u8 *sa,
 		persistent = 1;
 	}
 
-	if (p2p_peer_channels_check(p2p, &p2p->cfg->channels, dev,
+	p2p_channels_union(&p2p->cfg->channels, &p2p->cfg->cli_channels,
+			   &all_channels);
+
+	if (p2p_peer_channels_check(p2p, &all_channels, dev,
 				    msg.channel_list, msg.channel_list_len) <
 	    0) {
 		p2p_dbg(p2p, "No common channels found");
@@ -235,8 +238,9 @@ void p2p_process_invitation_req(struct p2p_data *p2p, const u8 *sa,
 	}
 
 	p2p_channels_dump(p2p, "own channels", &p2p->cfg->channels);
+	p2p_channels_dump(p2p, "own client channels", &all_channels);
 	p2p_channels_dump(p2p, "peer channels", &dev->channels);
-	p2p_channels_intersect(&p2p->cfg->channels, &dev->channels,
+	p2p_channels_intersect(&all_channels, &dev->channels,
 			       &intersection);
 	p2p_channels_dump(p2p, "intersection", &intersection);
 
@@ -246,6 +250,17 @@ void p2p_process_invitation_req(struct p2p_data *p2p, const u8 *sa,
 			msg.group_id + ETH_ALEN, msg.group_id_len - ETH_ALEN,
 			&go, group_bssid, &op_freq, persistent, &intersection,
 			msg.dev_password_id_present ? msg.dev_password_id : -1);
+	}
+
+	if (go) {
+		p2p_channels_intersect(&p2p->cfg->channels, &dev->channels,
+				       &intersection);
+		p2p_channels_dump(p2p, "intersection(GO)", &intersection);
+		if (intersection.reg_classes == 0) {
+			p2p_dbg(p2p, "No common channels found (GO)");
+			status = P2P_SC_FAIL_NO_COMMON_CHANNELS;
+			goto fail;
+		}
 	}
 
 	if (op_freq) {

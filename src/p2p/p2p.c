@@ -1265,7 +1265,7 @@ void p2p_stop_find_for_freq(struct p2p_data *p2p, int freq)
 	p2p_dbg(p2p, "Stopping find");
 	eloop_cancel_timeout(p2p_find_timeout, p2p, NULL);
 	p2p_clear_timeout(p2p);
-	if (p2p->state == P2P_SEARCH)
+	if (p2p->state == P2P_SEARCH || p2p->state == P2P_SD_DURING_FIND)
 		p2p->cfg->find_stopped(p2p->cfg->cb_ctx);
 
 	p2p->p2ps_seek_count = 0;

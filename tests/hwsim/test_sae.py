@@ -28,6 +28,43 @@ def test_sae(dev, apdev):
     if dev[0].get_status_field('sae_group') != '19':
             raise Exception("Expected default SAE group not used")
 
+def test_sae_pmksa_caching(dev, apdev):
+    """SAE and PMKSA caching"""
+    params = hostapd.wpa2_params(ssid="test-sae",
+                                 passphrase="12345678")
+    params['wpa_key_mgmt'] = 'SAE'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].request("SET sae_groups ")
+    dev[0].connect("test-sae", psk="12345678", key_mgmt="SAE",
+                   scan_freq="2412")
+    dev[0].request("DISCONNECT")
+    dev[0].request("RECONNECT")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Reconnect timed out")
+    if dev[0].get_status_field('sae_group') is not None:
+            raise Exception("SAE group claimed to have been used")
+
+def test_sae_pmksa_caching_disabled(dev, apdev):
+    """SAE and PMKSA caching disabled"""
+    params = hostapd.wpa2_params(ssid="test-sae",
+                                 passphrase="12345678")
+    params['wpa_key_mgmt'] = 'SAE'
+    params['disable_pmksa_caching'] = '1'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].request("SET sae_groups ")
+    dev[0].connect("test-sae", psk="12345678", key_mgmt="SAE",
+                   scan_freq="2412")
+    dev[0].request("DISCONNECT")
+    dev[0].request("RECONNECT")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Reconnect timed out")
+    if dev[0].get_status_field('sae_group') != '19':
+            raise Exception("Expected default SAE group not used")
+
 def test_sae_groups(dev, apdev):
     """SAE with all supported groups"""
     # This would be the full list of supported groups, but groups 14-16

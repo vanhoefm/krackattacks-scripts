@@ -148,6 +148,50 @@ def test_radius_acct(dev, apdev):
     if acc_e < acc_s + 1:
         raise Exception("Unexpected RADIUS server auth MIB value")
 
+def test_radius_acct_pmksa_caching(dev, apdev):
+    """RADIUS Accounting with PMKSA caching"""
+    as_hapd = hostapd.Hostapd("as")
+    as_mib_start = as_hapd.get_mib(param="radius_server")
+    params = hostapd.wpa2_eap_params(ssid="radius-acct")
+    params['acct_server_addr'] = "127.0.0.1"
+    params['acct_server_port'] = "1813"
+    params['acct_server_shared_secret'] = "radius"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    connect(dev[0], "radius-acct")
+    dev[1].connect("radius-acct", key_mgmt="WPA-EAP", scan_freq="2412",
+                   eap="PAX", identity="test-class",
+                   password_hex="0123456789abcdef0123456789abcdef")
+    for d in [ dev[0], dev[1] ]:
+        d.request("REASSOCIATE")
+        ev = d.wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+        if ev is None:
+            raise Exception("Reassociation timed out")
+
+    count = 0
+    while True:
+        mib = hapd.get_mib()
+        if int(mib['radiusAccClientResponses']) >= 4:
+            break
+        time.sleep(0.1)
+        count += 1
+        if count > 10:
+            raise Exception("Did not receive Accounting-Response packets")
+
+    if int(mib['radiusAccClientRetransmissions']) > 0:
+        raise Exception("Unexpected Accounting-Request retransmission")
+
+    as_mib_end = as_hapd.get_mib(param="radius_server")
+
+    req_s = int(as_mib_start['radiusAccServTotalRequests'])
+    req_e = int(as_mib_end['radiusAccServTotalRequests'])
+    if req_e < req_s + 2:
+        raise Exception("Unexpected RADIUS server acct MIB value")
+
+    acc_s = int(as_mib_start['radiusAuthServAccessAccepts'])
+    acc_e = int(as_mib_end['radiusAuthServAccessAccepts'])
+    if acc_e < acc_s + 1:
+        raise Exception("Unexpected RADIUS server auth MIB value")
+
 def test_radius_acct_interim(dev, apdev):
     """RADIUS Accounting interim update"""
     as_hapd = hostapd.Hostapd("as")

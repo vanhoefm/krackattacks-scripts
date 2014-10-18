@@ -10,6 +10,8 @@
 
 #include "utils/common.h"
 #include "utils/eloop.h"
+#include "eapol_auth/eapol_auth_sm.h"
+#include "eapol_auth/eapol_auth_sm_i.h"
 #include "radius/radius.h"
 #include "radius/radius_client.h"
 #include "hostapd.h"
@@ -49,6 +51,21 @@ static struct radius_msg * accounting_msg(struct hostapd_data *hapd,
 
 	if (sta) {
 		radius_msg_make_authenticator(msg, (u8 *) sta, sizeof(*sta));
+
+		if ((hapd->conf->wpa & 2) &&
+		    !hapd->conf->disable_pmksa_caching &&
+		    sta->eapol_sm && sta->eapol_sm->acct_multi_session_id_hi) {
+			os_snprintf(buf, sizeof(buf), "%08X+%08X",
+				    sta->eapol_sm->acct_multi_session_id_hi,
+				    sta->eapol_sm->acct_multi_session_id_lo);
+			if (!radius_msg_add_attr(
+				    msg, RADIUS_ATTR_ACCT_MULTI_SESSION_ID,
+				    (u8 *) buf, os_strlen(buf))) {
+				wpa_printf(MSG_INFO,
+					   "Could not add Acct-Multi-Session-Id");
+				goto fail;
+			}
+		}
 	} else {
 		radius_msg_make_authenticator(msg, (u8 *) hapd, sizeof(*hapd));
 	}

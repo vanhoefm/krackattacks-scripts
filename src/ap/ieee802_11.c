@@ -1,6 +1,6 @@
 /*
  * hostapd / IEEE 802.11 Management
- * Copyright (c) 2002-2013, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -29,6 +29,7 @@
 #include "sta_info.h"
 #include "ieee802_1x.h"
 #include "wpa_auth.h"
+#include "pmksa_cache_auth.h"
 #include "wmm.h"
 #include "ap_list.h"
 #include "accounting.h"
@@ -517,6 +518,9 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 				resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
 			else {
 				sta->sae->state = SAE_ACCEPTED;
+				wpa_auth_pmksa_add_sae(hapd->wpa_auth,
+						       sta->addr,
+						       sta->sae->pmk);
 				sae_clear_temp_data(sta->sae);
 			}
 		}
@@ -1072,9 +1076,21 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 
 #ifdef CONFIG_SAE
 		if (wpa_auth_uses_sae(sta->wpa_sm) &&
-		    sta->auth_alg != WLAN_AUTH_SAE &&
-		    !(sta->auth_alg == WLAN_AUTH_FT &&
-		      wpa_auth_uses_ft_sae(sta->wpa_sm))) {
+		    sta->auth_alg == WLAN_AUTH_OPEN) {
+			struct rsn_pmksa_cache_entry *sa;
+			sa = wpa_auth_sta_get_pmksa(sta->wpa_sm);
+			if (!sa || sa->akmp != WPA_KEY_MGMT_SAE) {
+				wpa_printf(MSG_DEBUG,
+					   "SAE: No PMKSA cache entry found for "
+					   MACSTR, MAC2STR(sta->addr));
+				return WLAN_STATUS_INVALID_PMKID;
+			}
+			wpa_printf(MSG_DEBUG, "SAE: " MACSTR
+				   " using PMKSA caching", MAC2STR(sta->addr));
+		} else if (wpa_auth_uses_sae(sta->wpa_sm) &&
+			   sta->auth_alg != WLAN_AUTH_SAE &&
+			   !(sta->auth_alg == WLAN_AUTH_FT &&
+			     wpa_auth_uses_ft_sae(sta->wpa_sm))) {
 			wpa_printf(MSG_DEBUG, "SAE: " MACSTR " tried to use "
 				   "SAE AKM after non-SAE auth_alg %u",
 				   MAC2STR(sta->addr), sta->auth_alg);

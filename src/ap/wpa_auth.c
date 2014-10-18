@@ -3082,6 +3082,21 @@ int wpa_auth_pmksa_add_preauth(struct wpa_authenticator *wpa_auth,
 }
 
 
+int wpa_auth_pmksa_add_sae(struct wpa_authenticator *wpa_auth, const u8 *addr,
+			   const u8 *pmk)
+{
+	if (wpa_auth->conf.disable_pmksa_caching)
+		return -1;
+
+	if (pmksa_cache_auth_add(wpa_auth->pmksa, pmk, PMK_LEN,
+				 wpa_auth->addr, addr, 0, NULL,
+				 WPA_KEY_MGMT_SAE))
+		return 0;
+
+	return -1;
+}
+
+
 void wpa_auth_pmksa_remove(struct wpa_authenticator *wpa_auth,
 			   const u8 *sta_addr)
 {

@@ -230,7 +230,7 @@ static int ibss_rsn_supp_init(struct ibss_rsn_peer *peer, const u8 *own_addr,
 	wpa_sm_set_param(peer->supp, WPA_PARAM_PAIRWISE, WPA_CIPHER_CCMP);
 	wpa_sm_set_param(peer->supp, WPA_PARAM_GROUP, WPA_CIPHER_CCMP);
 	wpa_sm_set_param(peer->supp, WPA_PARAM_KEY_MGMT, WPA_KEY_MGMT_PSK);
-	wpa_sm_set_pmk(peer->supp, psk, PMK_LEN);
+	wpa_sm_set_pmk(peer->supp, psk, PMK_LEN, NULL);
 
 	peer->supp_ie_len = sizeof(peer->supp_ie);
 	if (wpa_sm_set_assoc_wpa_ie_default(peer->supp, peer->supp_ie,

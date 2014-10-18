@@ -199,6 +199,7 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 			"0x%x", params.auth_alg);
 	}
 #ifdef CONFIG_SAE
+	wpa_s->sme.sae_pmksa_caching = 0;
 	if (wpa_key_mgmt_sae(ssid->key_mgmt)) {
 		const u8 *rsn;
 		struct wpa_ie_data ied;
@@ -391,6 +392,15 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 	}
 
 #ifdef CONFIG_SAE
+	if (params.auth_alg == WPA_AUTH_ALG_SAE &&
+	    pmksa_cache_set_current(wpa_s->wpa, NULL, bss->bssid, ssid, 0) == 0)
+	{
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"PMKSA cache entry found - try to use PMKSA caching instead of new SAE authentication");
+		params.auth_alg = WPA_AUTH_ALG_OPEN;
+		wpa_s->sme.sae_pmksa_caching = 1;
+	}
+
 	if (params.auth_alg == WPA_AUTH_ALG_SAE) {
 		if (start)
 			resp = sme_auth_build_sae_commit(wpa_s, ssid,
@@ -667,7 +677,8 @@ void sme_event_auth(struct wpa_supplicant *wpa_s, union wpa_event_data *data)
 
 		wpa_printf(MSG_DEBUG, "SME: SAE completed - setting PMK for "
 			   "4-way handshake");
-		wpa_sm_set_pmk(wpa_s->wpa, wpa_s->sme.sae.pmk, PMK_LEN);
+		wpa_sm_set_pmk(wpa_s->wpa, wpa_s->sme.sae.pmk, PMK_LEN,
+			       wpa_s->pending_bssid);
 	}
 #endif /* CONFIG_SAE */
 
@@ -880,6 +891,27 @@ void sme_event_assoc_reject(struct wpa_supplicant *wpa_s,
 		data->assoc_reject.status_code);
 
 	eloop_cancel_timeout(sme_assoc_timer, wpa_s, NULL);
+
+#ifdef CONFIG_SAE
+	if (wpa_s->sme.sae_pmksa_caching && wpa_s->current_ssid &&
+	    wpa_key_mgmt_sae(wpa_s->current_ssid->key_mgmt)) {
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"PMKSA caching attempt rejected - drop PMKSA cache entry and fall back to SAE authentication");
+		wpa_sm_aborted_cached(wpa_s->wpa);
+		wpa_sm_pmksa_cache_flush(wpa_s->wpa, wpa_s->current_ssid);
+		if (wpa_s->current_bss) {
+			struct wpa_bss *bss = wpa_s->current_bss;
+			struct wpa_ssid *ssid = wpa_s->current_ssid;
+
+			wpa_drv_deauthenticate(wpa_s, wpa_s->pending_bssid,
+					       WLAN_REASON_DEAUTH_LEAVING);
+			wpas_connect_work_done(wpa_s);
+			wpa_supplicant_mark_disassoc(wpa_s);
+			wpa_supplicant_connect(wpa_s, bss, ssid);
+			return;
+		}
+	}
+#endif /* CONFIG_SAE */
 
 	/*
 	 * For now, unconditionally terminate the previous authentication. In

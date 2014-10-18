@@ -2181,10 +2181,12 @@ void wpa_sm_notify_disassoc(struct wpa_sm *sm)
  * @sm: Pointer to WPA state machine data from wpa_sm_init()
  * @pmk: The new PMK
  * @pmk_len: The length of the new PMK in bytes
+ * @bssid: AA to add into PMKSA cache or %NULL to not cache the PMK
  *
  * Configure the PMK for WPA state machine.
  */
-void wpa_sm_set_pmk(struct wpa_sm *sm, const u8 *pmk, size_t pmk_len)
+void wpa_sm_set_pmk(struct wpa_sm *sm, const u8 *pmk, size_t pmk_len,
+		    const u8 *bssid)
 {
 	if (sm == NULL)
 		return;
@@ -2197,6 +2199,11 @@ void wpa_sm_set_pmk(struct wpa_sm *sm, const u8 *pmk, size_t pmk_len)
 	sm->xxkey_len = pmk_len;
 	os_memcpy(sm->xxkey, pmk, pmk_len);
 #endif /* CONFIG_IEEE80211R */
+
+	if (bssid) {
+		pmksa_cache_add(sm->pmksa, pmk, pmk_len, bssid, sm->own_addr,
+				sm->network_ctx, sm->key_mgmt);
+	}
 }
 
 

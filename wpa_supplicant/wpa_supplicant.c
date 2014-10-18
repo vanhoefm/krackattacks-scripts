@@ -1177,7 +1177,7 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 	}
 
 	if (wpa_key_mgmt_wpa_psk(ssid->key_mgmt)) {
-		wpa_sm_set_pmk(wpa_s->wpa, ssid->psk, PMK_LEN);
+		wpa_sm_set_pmk(wpa_s->wpa, ssid->psk, PMK_LEN, NULL);
 #ifndef CONFIG_NO_PBKDF2
 		if (bss && ssid->bssid_set && ssid->ssid_len == 0 &&
 		    ssid->passphrase) {
@@ -1186,7 +1186,7 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 				    4096, psk, PMK_LEN);
 		        wpa_hexdump_key(MSG_MSGDUMP, "PSK (from passphrase)",
 					psk, PMK_LEN);
-			wpa_sm_set_pmk(wpa_s->wpa, psk, PMK_LEN);
+			wpa_sm_set_pmk(wpa_s->wpa, psk, PMK_LEN, NULL);
 		}
 #endif /* CONFIG_NO_PBKDF2 */
 #ifdef CONFIG_EXT_PASSWORD
@@ -1222,7 +1222,7 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 				wpa_hexdump_key(MSG_MSGDUMP, "PSK (from "
 						"external passphrase)",
 						psk, PMK_LEN);
-				wpa_sm_set_pmk(wpa_s->wpa, psk, PMK_LEN);
+				wpa_sm_set_pmk(wpa_s->wpa, psk, PMK_LEN, NULL);
 			} else
 #endif /* CONFIG_NO_PBKDF2 */
 			if (wpabuf_len(pw) == 2 * PMK_LEN) {
@@ -1233,7 +1233,7 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 					ext_password_free(pw);
 					return -1;
 				}
-				wpa_sm_set_pmk(wpa_s->wpa, psk, PMK_LEN);
+				wpa_sm_set_pmk(wpa_s->wpa, psk, PMK_LEN, NULL);
 			} else {
 				wpa_msg(wpa_s, MSG_INFO, "EXT PW: No suitable "
 					"PSK available");

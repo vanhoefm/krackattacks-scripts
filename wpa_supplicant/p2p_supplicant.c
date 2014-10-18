@@ -426,6 +426,37 @@ static struct wpa_supplicant * wpas_get_p2p_group(struct wpa_supplicant *wpa_s,
 }
 
 
+static void run_wpas_p2p_disconnect(void *eloop_ctx, void *timeout_ctx)
+{
+	struct wpa_supplicant *wpa_s = eloop_ctx;
+	wpa_printf(MSG_DEBUG,
+		   "P2P: Complete previously requested removal of %s",
+		   wpa_s->ifname);
+	wpas_p2p_disconnect(wpa_s);
+}
+
+
+static int wpas_p2p_disconnect_safely(struct wpa_supplicant *wpa_s,
+				      struct wpa_supplicant *calling_wpa_s)
+{
+	if (calling_wpa_s == wpa_s &&
+	    wpa_s->p2p_group_interface != NOT_P2P_GROUP_INTERFACE) {
+		/*
+		 * The calling wpa_s instance is going to be removed. Do that
+		 * from an eloop callback to keep the instance available until
+		 * the caller has returned. This my be needed, e.g., to provide
+		 * control interface responses on the per-interface socket.
+		 */
+		if (eloop_register_timeout(0, 0, run_wpas_p2p_disconnect,
+					   wpa_s, NULL) < 0)
+			return -1;
+		return 0;
+	}
+
+	return wpas_p2p_disconnect(wpa_s);
+}
+
+
 static int wpas_p2p_group_delete(struct wpa_supplicant *wpa_s,
 				 enum p2p_group_removal_reason removal_reason)
 {
@@ -545,6 +576,7 @@ static int wpas_p2p_group_delete(struct wpa_supplicant *wpa_s,
 		global = wpa_s->global;
 		ifname = os_strdup(wpa_s->ifname);
 		type = wpas_p2p_if_type(wpa_s->p2p_group_interface);
+		eloop_cancel_timeout(run_wpas_p2p_disconnect, wpa_s, NULL);
 		wpa_supplicant_remove_iface(wpa_s->global, wpa_s, 0);
 		wpa_s = global->ifaces;
 		if (wpa_s && ifname)
@@ -5023,6 +5055,7 @@ void wpas_p2p_cancel_remain_on_channel_cb(struct wpa_supplicant *wpa_s,
 int wpas_p2p_group_remove(struct wpa_supplicant *wpa_s, const char *ifname)
 {
 	struct wpa_global *global = wpa_s->global;
+	struct wpa_supplicant *calling_wpa_s = wpa_s;
 
 	if (os_strcmp(ifname, "*") == 0) {
 		struct wpa_supplicant *prev;
@@ -5034,7 +5067,7 @@ int wpas_p2p_group_remove(struct wpa_supplicant *wpa_s, const char *ifname)
 			    NOT_P2P_GROUP_INTERFACE ||
 			    (prev->current_ssid &&
 			     prev->current_ssid->p2p_group))
-				wpas_p2p_disconnect(prev);
+				wpas_p2p_disconnect_safely(prev, calling_wpa_s);
 		}
 		return 0;
 	}
@@ -5044,7 +5077,7 @@ int wpas_p2p_group_remove(struct wpa_supplicant *wpa_s, const char *ifname)
 			break;
 	}
 
-	return wpas_p2p_disconnect(wpa_s);
+	return wpas_p2p_disconnect_safely(wpa_s, calling_wpa_s);
 }
 
 

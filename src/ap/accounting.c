@@ -49,14 +49,6 @@ static struct radius_msg * accounting_msg(struct hostapd_data *hapd,
 
 	if (sta) {
 		radius_msg_make_authenticator(msg, (u8 *) sta, sizeof(*sta));
-
-		os_snprintf(buf, sizeof(buf), "%08X-%08X",
-			    sta->acct_session_id_hi, sta->acct_session_id_lo);
-		if (!radius_msg_add_attr(msg, RADIUS_ATTR_ACCT_SESSION_ID,
-					 (u8 *) buf, os_strlen(buf))) {
-			wpa_printf(MSG_INFO, "Could not add Acct-Session-Id");
-			goto fail;
-		}
 	} else {
 		radius_msg_make_authenticator(msg, (u8 *) hapd, sizeof(*hapd));
 	}

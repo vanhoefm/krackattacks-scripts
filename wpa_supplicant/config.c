@@ -699,6 +699,18 @@ static char * wpa_config_write_key_mgmt(const struct parse_data *data,
 	}
 #endif /* CONFIG_SAE */
 
+#ifdef CONFIG_HS20
+	if (ssid->key_mgmt & WPA_KEY_MGMT_OSEN) {
+		ret = os_snprintf(pos, end - pos, "%sOSEN",
+				  pos == buf ? "" : " ");
+		if (ret < 0 || ret >= end - pos) {
+			end[-1] = '\0';
+			return buf;
+		}
+		pos += ret;
+	}
+#endif /* CONFIG_HS20 */
+
 	if (pos == buf) {
 		os_free(buf);
 		buf = NULL;

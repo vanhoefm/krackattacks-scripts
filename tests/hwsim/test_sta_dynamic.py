@@ -90,13 +90,13 @@ def test_sta_ap_scan_2(dev, apdev):
 def test_sta_dynamic_down_up(dev, apdev):
     """Dynamically added wpa_supplicant interface down/up"""
     params = hostapd.wpa2_params(ssid="sta-dynamic", passphrase="12345678")
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
 
     logger.info("Create a dynamic wpa_supplicant interface and connect")
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     wpas.interface_add("wlan5")
     wpas.connect("sta-dynamic", psk="12345678", scan_freq="2412")
-    hwsim_utils.test_connectivity(wpas.ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(wpas, hapd)
     subprocess.call(['sudo', 'ifconfig', wpas.ifname, 'down'])
     ev = wpas.wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=10)
     if ev is None:
@@ -107,7 +107,7 @@ def test_sta_dynamic_down_up(dev, apdev):
     ev = wpas.wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
     if ev is None:
         raise Exception("Reconnection not reported")
-    hwsim_utils.test_connectivity(wpas.ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(wpas, hapd)
 
 def test_sta_dynamic_ext_mac_addr_change(dev, apdev):
     """Dynamically added wpa_supplicant interface with external MAC address change"""
@@ -118,7 +118,7 @@ def test_sta_dynamic_ext_mac_addr_change(dev, apdev):
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     wpas.interface_add("wlan5")
     wpas.connect("sta-dynamic", psk="12345678", scan_freq="2412")
-    hwsim_utils.test_connectivity(wpas.ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(wpas, hapd)
     subprocess.call(['sudo', 'ifconfig', wpas.ifname, 'down'])
     ev = wpas.wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=10)
     if ev is None:
@@ -136,7 +136,7 @@ def test_sta_dynamic_ext_mac_addr_change(dev, apdev):
             raise Exception("Reconnection not reported")
         if wpas.get_driver_status_field('addr') != new_addr:
             raise Exception("Address change not reported")
-        hwsim_utils.test_connectivity(wpas.ifname, apdev[0]['ifname'])
+        hwsim_utils.test_connectivity(wpas, hapd)
         sta = hapd.get_sta(new_addr)
         if sta['addr'] != new_addr:
             raise Exception("STA association with new address not found")

@@ -36,7 +36,7 @@ def test_ap_vht80(dev, apdev):
         hapd = hostapd.add_ap(apdev[0]['ifname'], params)
 
         dev[0].connect("vht", key_mgmt="NONE", scan_freq="5180")
-        hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+        hwsim_utils.test_connectivity(dev[0], hapd)
     except Exception, e:
         if isinstance(e, Exception) and str(e) == "AP startup failed":
             if not vht_supported():
@@ -71,7 +71,7 @@ def test_ap_vht80_params(dev, apdev):
         if "status_code=104" not in ev:
             raise Exception("Unexpected rejection status code")
         dev[1].request("DISCONNECT")
-        hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+        hwsim_utils.test_connectivity(dev[0], hapd)
     except Exception, e:
         if isinstance(e, Exception) and str(e) == "AP startup failed":
             if not vht_supported():
@@ -98,9 +98,9 @@ def test_ap_vht_20(devs, apdevs):
                    "supported_rates": "60 120 240 360 480 540",
                    "require_vht": "1",
                  }
-        hostapd.add_ap(ap['ifname'], params)
+        hapd = hostapd.add_ap(ap['ifname'], params)
         dev.connect("test-vht20", scan_freq="5180", key_mgmt="NONE")
-        hwsim_utils.test_connectivity(dev.ifname, ap['ifname'])
+        hwsim_utils.test_connectivity(dev, hapd)
     finally:
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
 
@@ -213,9 +213,9 @@ def test_ap_vht160(dev, apdev):
             raise Exception("Unexpected frequency(2)")
 
         dev[0].connect("vht", key_mgmt="NONE", scan_freq="5180")
-        hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+        hwsim_utils.test_connectivity(dev[0], hapd)
         dev[1].connect("vht2", key_mgmt="NONE", scan_freq="5500")
-        hwsim_utils.test_connectivity(dev[1].ifname, apdev[1]['ifname'])
+        hwsim_utils.test_connectivity(dev[1], hapd2)
     except Exception, e:
         if isinstance(e, Exception) and str(e) == "AP startup failed":
             if not vht_supported():
@@ -266,7 +266,7 @@ def test_ap_vht80plus80(dev, apdev):
             raise Exception("Unexpected interface state(2)")
 
         dev[1].connect("vht2", key_mgmt="NONE", scan_freq="5180")
-        hwsim_utils.test_connectivity(dev[1].ifname, apdev[1]['ifname'])
+        hwsim_utils.test_connectivity(dev[1], hapd2)
     except Exception, e:
         if isinstance(e, Exception) and str(e) == "AP startup failed":
             if not vht_supported():

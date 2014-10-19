@@ -39,9 +39,9 @@ def test_ap_csa_1_switch(dev, apdev):
         return "skip"
     ap = connect(dev[0], apdev)
 
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], ap)
     switch_channel(ap, 10, 2462)
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], ap)
 
 def test_ap_csa_2_switches(dev, apdev):
     """AP Channel Switch, two switches"""
@@ -49,11 +49,11 @@ def test_ap_csa_2_switches(dev, apdev):
         return "skip"
     ap = connect(dev[0], apdev)
 
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], ap)
     switch_channel(ap, 10, 2462)
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], ap)
     switch_channel(ap, 10, 2412)
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], ap)
 
 def test_ap_csa_1_switch_count_0(dev, apdev):
     """AP Channel Switch, one switch with count 0"""
@@ -61,7 +61,7 @@ def test_ap_csa_1_switch_count_0(dev, apdev):
         return "skip"
     ap = connect(dev[0], apdev)
 
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], ap)
     switch_channel(ap, 0, 2462)
     # this does not result in CSA currently, so do not bother checking
     # connectivity
@@ -72,7 +72,7 @@ def test_ap_csa_2_switches_count_0(dev, apdev):
         return "skip"
     ap = connect(dev[0], apdev)
 
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], ap)
     switch_channel(ap, 0, 2462)
     # this does not result in CSA currently, so do not bother checking
     # connectivity
@@ -86,7 +86,7 @@ def test_ap_csa_1_switch_count_1(dev, apdev):
         return "skip"
     ap = connect(dev[0], apdev)
 
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], ap)
     switch_channel(ap, 1, 2462)
     # this does not result in CSA currently, so do not bother checking
     # connectivity
@@ -97,7 +97,7 @@ def test_ap_csa_2_switches_count_1(dev, apdev):
         return "skip"
     ap = connect(dev[0], apdev)
 
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], ap)
     switch_channel(ap, 1, 2462)
     # this does not result in CSA currently, so do not bother checking
     # connectivity
@@ -111,6 +111,6 @@ def test_ap_csa_1_switch_count_2(dev, apdev):
         return "skip"
     ap = connect(dev[0], apdev)
 
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], ap)
     switch_channel(ap, 2, 2462)
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], ap)

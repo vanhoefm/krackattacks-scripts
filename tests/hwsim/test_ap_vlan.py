@@ -19,14 +19,14 @@ def test_ap_vlan_open(dev, apdev):
     params = { "ssid": "test-vlan-open",
                "dynamic_vlan": "1",
                "accept_mac_file": "hostapd.accept" }
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
 
     dev[0].connect("test-vlan-open", key_mgmt="NONE", scan_freq="2412")
     dev[1].connect("test-vlan-open", key_mgmt="NONE", scan_freq="2412")
     dev[2].connect("test-vlan-open", key_mgmt="NONE", scan_freq="2412")
-    hwsim_utils.test_connectivity(dev[0].ifname, "brvlan1")
-    hwsim_utils.test_connectivity(dev[1].ifname, "brvlan2")
-    hwsim_utils.test_connectivity(dev[2].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity_iface(dev[0], "brvlan1")
+    hwsim_utils.test_connectivity_iface(dev[1], "brvlan2")
+    hwsim_utils.test_connectivity(dev[2], hapd)
 
 def test_ap_vlan_file_open(dev, apdev):
     """AP VLAN with open network and vlan_file mapping"""
@@ -34,14 +34,14 @@ def test_ap_vlan_file_open(dev, apdev):
                "dynamic_vlan": "1",
                "vlan_file": "hostapd.vlan",
                "accept_mac_file": "hostapd.accept" }
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
 
     dev[0].connect("test-vlan-open", key_mgmt="NONE", scan_freq="2412")
     dev[1].connect("test-vlan-open", key_mgmt="NONE", scan_freq="2412")
     dev[2].connect("test-vlan-open", key_mgmt="NONE", scan_freq="2412")
-    hwsim_utils.test_connectivity(dev[0].ifname, "brvlan1")
-    hwsim_utils.test_connectivity(dev[1].ifname, "brvlan2")
-    hwsim_utils.test_connectivity(dev[2].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity_iface(dev[0], "brvlan1")
+    hwsim_utils.test_connectivity_iface(dev[1], "brvlan2")
+    hwsim_utils.test_connectivity(dev[2], hapd)
 
 def test_ap_vlan_wpa2(dev, apdev):
     """AP VLAN with WPA2-PSK"""
@@ -49,20 +49,20 @@ def test_ap_vlan_wpa2(dev, apdev):
                                  passphrase="12345678")
     params['dynamic_vlan'] = "1";
     params['accept_mac_file'] = "hostapd.accept";
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
 
     dev[0].connect("test-vlan", psk="12345678", scan_freq="2412")
     dev[1].connect("test-vlan", psk="12345678", scan_freq="2412")
     dev[2].connect("test-vlan", psk="12345678", scan_freq="2412")
-    hwsim_utils.test_connectivity(dev[0].ifname, "brvlan1")
-    hwsim_utils.test_connectivity(dev[1].ifname, "brvlan2")
-    hwsim_utils.test_connectivity(dev[2].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity_iface(dev[0], "brvlan1")
+    hwsim_utils.test_connectivity_iface(dev[1], "brvlan2")
+    hwsim_utils.test_connectivity(dev[2], hapd)
 
 def test_ap_vlan_wpa2_radius(dev, apdev):
     """AP VLAN with WPA2-Enterprise and RADIUS attributes"""
     params = hostapd.wpa2_eap_params(ssid="test-vlan")
     params['dynamic_vlan'] = "1";
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
 
     dev[0].connect("test-vlan", key_mgmt="WPA-EAP", eap="PAX",
                    identity="vlan1",
@@ -76,9 +76,9 @@ def test_ap_vlan_wpa2_radius(dev, apdev):
                    identity="pax.user@example.com",
                    password_hex="0123456789abcdef0123456789abcdef",
                    scan_freq="2412")
-    hwsim_utils.test_connectivity(dev[0].ifname, "brvlan1")
-    hwsim_utils.test_connectivity(dev[1].ifname, "brvlan2")
-    hwsim_utils.test_connectivity(dev[2].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity_iface(dev[0], "brvlan1")
+    hwsim_utils.test_connectivity_iface(dev[1], "brvlan2")
+    hwsim_utils.test_connectivity(dev[2], hapd)
 
 def test_ap_vlan_wpa2_radius_required(dev, apdev):
     """AP VLAN with WPA2-Enterprise and RADIUS attributes required"""
@@ -107,11 +107,11 @@ def test_ap_vlan_tagged(dev, apdev):
                "dynamic_vlan": "1",
                "vlan_tagged_interface": "lo",
                "accept_mac_file": "hostapd.accept" }
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
 
     dev[0].connect("test-vlan-open", key_mgmt="NONE", scan_freq="2412")
     dev[1].connect("test-vlan-open", key_mgmt="NONE", scan_freq="2412")
     dev[2].connect("test-vlan-open", key_mgmt="NONE", scan_freq="2412")
-    hwsim_utils.test_connectivity(dev[0].ifname, "brlo.1")
-    hwsim_utils.test_connectivity(dev[1].ifname, "brlo.2")
-    hwsim_utils.test_connectivity(dev[2].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity_iface(dev[0], "brlo.1")
+    hwsim_utils.test_connectivity_iface(dev[1], "brlo.2")
+    hwsim_utils.test_connectivity(dev[2], hapd)

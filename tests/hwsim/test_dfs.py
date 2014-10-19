@@ -83,7 +83,7 @@ def test_dfs(dev, apdev):
             raise Exception("Unexpected frequency")
 
         dev[0].connect("dfs", key_mgmt="NONE")
-        hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+        hwsim_utils.test_connectivity(dev[0], hapd)
 
         hapd.request("RADAR DETECTED freq=5260 ht_enabled=1 chan_width=1")
         ev = hapd.wait_event(["DFS-RADAR-DETECTED"], timeout=10)
@@ -103,7 +103,7 @@ def test_dfs(dev, apdev):
         if "freq=5260" in ev:
             raise Exception("Channel did not change after radar was detected(2)");
         time.sleep(1)
-        hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+        hwsim_utils.test_connectivity(dev[0], hapd)
     finally:
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
 

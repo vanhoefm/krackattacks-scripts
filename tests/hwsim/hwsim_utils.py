@@ -10,7 +10,7 @@ import time
 import logging
 logger = logging.getLogger()
 
-def test_connectivity(ifname1, ifname2, dscp=None, tos=None, max_tries=1):
+def test_connectivity_run(ifname1, ifname2, dscp=None, tos=None, max_tries=1):
     if os.path.isfile("../../mac80211_hwsim/tools/hwsim_test"):
         hwsim_test = "../../mac80211_hwsim/tools/hwsim_test"
     else:
@@ -40,17 +40,25 @@ def test_connectivity(ifname1, ifname2, dscp=None, tos=None, max_tries=1):
     if not success:
         raise Exception("hwsim_test failed")
 
+def test_connectivity(dev1, dev2, dscp=None, tos=None, max_tries=1):
+    test_connectivity_run(dev1.ifname, dev2.ifname, dscp=dscp, tos=tos,
+                          max_tries=max_tries)
+
+def test_connectivity_iface(dev1, ifname, dscp=None, tos=None, max_tries=1):
+    test_connectivity_run(dev1.ifname, ifname, dscp=dscp, tos=tos,
+                          max_tries=max_tries)
+
 def test_connectivity_p2p(dev1, dev2, dscp=None, tos=None):
     ifname1 = dev1.group_ifname if dev1.group_ifname else dev1.ifname
     ifname2 = dev2.group_ifname if dev2.group_ifname else dev2.ifname
-    test_connectivity(ifname1, ifname2, dscp, tos)
+    test_connectivity_run(ifname1, ifname2, dscp, tos)
 
 def test_connectivity_p2p_sta(dev1, dev2, dscp=None, tos=None):
     ifname1 = dev1.group_ifname if dev1.group_ifname else dev1.ifname
     ifname2 = dev2.ifname
-    test_connectivity(ifname1, ifname2, dscp, tos)
+    test_connectivity_run(ifname1, ifname2, dscp, tos)
 
 def test_connectivity_sta(dev1, dev2, dscp=None, tos=None):
     ifname1 = dev1.ifname
     ifname2 = dev2.ifname
-    test_connectivity(ifname1, ifname2, dscp, tos)
+    test_connectivity_run(ifname1, ifname2, dscp, tos)

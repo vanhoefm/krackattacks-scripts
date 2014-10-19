@@ -46,7 +46,7 @@ def test_rfkill_open(dev, apdev):
         ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
         if ev is None:
             raise Exception("Missing connection event on rfkill unblock")
-        hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+        hwsim_utils.test_connectivity(dev[0], hapd)
     finally:
         subprocess.call(['sudo', 'rfkill', 'unblock', id])
 
@@ -73,7 +73,7 @@ def test_rfkill_wpa2_psk(dev, apdev):
         ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
         if ev is None:
             raise Exception("Missing connection event on rfkill unblock")
-        hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+        hwsim_utils.test_connectivity(dev[0], hapd)
     finally:
         subprocess.call(['sudo', 'rfkill', 'unblock', id])
 

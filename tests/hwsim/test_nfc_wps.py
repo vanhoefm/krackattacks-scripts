@@ -12,7 +12,7 @@ logger = logging.getLogger()
 import hwsim_utils
 import hostapd
 
-def check_wpa2_connection(sta, ap, ssid, mixed=False):
+def check_wpa2_connection(sta, ap, hapd, ssid, mixed=False):
     status = sta.get_status()
     if status['wpa_state'] != 'COMPLETED':
         raise Exception("Not fully connected")
@@ -26,7 +26,7 @@ def check_wpa2_connection(sta, ap, ssid, mixed=False):
         raise Exception("Unexpected encryption configuration")
     if status['key_mgmt'] != 'WPA2-PSK':
         raise Exception("Unexpected key_mgmt")
-    hwsim_utils.test_connectivity(sta.ifname, ap['ifname'])
+    hwsim_utils.test_connectivity(sta, hapd)
 
 def ap_wps_params(ssid):
     return { "ssid": ssid, "eap_server": "1", "wps_state": "2",
@@ -53,7 +53,7 @@ def test_nfc_wps_password_token_sta(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
     if ev is None:
         raise Exception("Association with the AP timed out")
-    check_wpa2_connection(dev[0], apdev[0], ssid)
+    check_wpa2_connection(dev[0], apdev[0], hapd, ssid)
 
 def test_nfc_wps_config_token(dev, apdev):
     """NFC tag with configuration token from AP"""
@@ -72,7 +72,7 @@ def test_nfc_wps_config_token(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
     if ev is None:
         raise Exception("Association with the AP timed out")
-    check_wpa2_connection(dev[0], apdev[0], ssid)
+    check_wpa2_connection(dev[0], apdev[0], hapd, ssid)
 
 def test_nfc_wps_config_token_init(dev, apdev):
     """NFC tag with configuration token from AP with auto configuration"""
@@ -91,7 +91,7 @@ def test_nfc_wps_config_token_init(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
     if ev is None:
         raise Exception("Association with the AP timed out")
-    check_wpa2_connection(dev[0], apdev[0], ssid, mixed=True)
+    check_wpa2_connection(dev[0], apdev[0], hapd, ssid, mixed=True)
 
 def test_nfc_wps_password_token_sta_init(dev, apdev):
     """Initial AP configuration with first WPS NFC Enrollee"""
@@ -113,7 +113,7 @@ def test_nfc_wps_password_token_sta_init(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
     if ev is None:
         raise Exception("Association with the AP timed out")
-    check_wpa2_connection(dev[0], apdev[0], ssid, mixed=True)
+    check_wpa2_connection(dev[0], apdev[0], hapd, ssid, mixed=True)
 
 def test_nfc_wps_password_token_ap(dev, apdev):
     """WPS registrar configuring an AP using AP password token"""
@@ -140,7 +140,7 @@ def test_nfc_wps_password_token_ap(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
     if ev is None:
         raise Exception("Association with the AP timed out")
-    check_wpa2_connection(dev[0], apdev[0], new_ssid, mixed=True)
+    check_wpa2_connection(dev[0], apdev[0], hapd, new_ssid, mixed=True)
     if "FAIL" in hapd.request("WPS_NFC_TOKEN disable"):
         raise Exception("Failed to disable AP password token")
     if "FAIL" in hapd.request("WPS_NFC_TOKEN WPS"):
@@ -170,7 +170,7 @@ def test_nfc_wps_handover_init(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
     if ev is None:
         raise Exception("Association with the AP timed out")
-    check_wpa2_connection(dev[0], apdev[0], ssid, mixed=True)
+    check_wpa2_connection(dev[0], apdev[0], hapd, ssid, mixed=True)
 
 def test_nfc_wps_handover_errors(dev, apdev):
     """WPS AP NFC handover report error cases"""
@@ -225,7 +225,7 @@ def test_nfc_wps_handover(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
     if ev is None:
         raise Exception("Association with the AP timed out")
-    check_wpa2_connection(dev[0], apdev[0], ssid)
+    check_wpa2_connection(dev[0], apdev[0], hapd, ssid)
 
 def test_nfc_wps_handover_5ghz(dev, apdev):
     """Connect to WPS AP with NFC connection handover on 5 GHz band"""
@@ -253,7 +253,7 @@ def test_nfc_wps_handover_5ghz(dev, apdev):
         ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
         if ev is None:
             raise Exception("Association with the AP timed out")
-        check_wpa2_connection(dev[0], apdev[0], ssid)
+        check_wpa2_connection(dev[0], apdev[0], hapd, ssid)
     finally:
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
 
@@ -283,7 +283,7 @@ def test_nfc_wps_handover_chan14(dev, apdev):
         ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
         if ev is None:
             raise Exception("Association with the AP timed out")
-        check_wpa2_connection(dev[0], apdev[0], ssid)
+        check_wpa2_connection(dev[0], apdev[0], hapd, ssid)
     finally:
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
 
@@ -317,7 +317,7 @@ def test_nfc_wps_handover_with_pw_token_set(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
     if ev is None:
         raise Exception("Association with the AP timed out")
-    check_wpa2_connection(dev[0], apdev[0], ssid)
+    check_wpa2_connection(dev[0], apdev[0], hapd, ssid)
 
 def test_nfc_wps_handover_pk_hash_mismatch_sta(dev, apdev):
     """WPS NFC connection handover with invalid pkhash from station (negative)"""
@@ -410,6 +410,7 @@ def test_nfc_wps_er_pw_token(dev, apdev):
     """WPS NFC password token from Enrollee to ER"""
     ssid = "wps-nfc-er-pw-token"
     start_ap_er(dev[0], apdev[0], ssid)
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
     logger.info("WPS provisioning step using password token from station")
     dev[1].request("SET ignore_old_scan_res 1")
     pw = dev[1].request("WPS_NFC_TOKEN NDEF").rstrip()
@@ -428,12 +429,13 @@ def test_nfc_wps_er_pw_token(dev, apdev):
     ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
     if ev is None:
         raise Exception("Association with the AP timed out")
-    check_wpa2_connection(dev[1], apdev[0], ssid)
+    check_wpa2_connection(dev[1], apdev[0], hapd, ssid)
 
 def test_nfc_wps_er_config_token(dev, apdev):
     """WPS NFC configuration token from ER to Enrollee"""
     ssid = "wps-nfc-er-config-token"
     start_ap_er(dev[0], apdev[0], ssid)
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
     logger.info("WPS provisioning step using configuration token from ER")
     conf = dev[0].request("WPS_ER_NFC_CONFIG_TOKEN NDEF " + apdev[0]['bssid']).rstrip()
     if "FAIL" in conf:
@@ -445,12 +447,13 @@ def test_nfc_wps_er_config_token(dev, apdev):
     ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
     if ev is None:
         raise Exception("Association with the AP timed out")
-    check_wpa2_connection(dev[1], apdev[0], ssid)
+    check_wpa2_connection(dev[1], apdev[0], hapd, ssid)
 
 def test_nfc_wps_er_handover(dev, apdev):
     """WPS NFC connection handover between Enrollee and ER"""
     ssid = "wps-nfc-er-handover"
     start_ap_er(dev[0], apdev[0], ssid)
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
     logger.info("WPS provisioning step using connection handover")
     req = dev[1].request("NFC_GET_HANDOVER_REQ NDEF WPS-CR").rstrip()
     if "FAIL" in req:
@@ -468,12 +471,13 @@ def test_nfc_wps_er_handover(dev, apdev):
     ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
     if ev is None:
         raise Exception("Association with the AP timed out")
-    check_wpa2_connection(dev[1], apdev[0], ssid)
+    check_wpa2_connection(dev[1], apdev[0], hapd, ssid)
 
 def test_nfc_wps_er_handover_pk_hash_mismatch_sta(dev, apdev):
     """WPS NFC connection handover with invalid pkhash from station to ER (negative)"""
     ssid = "wps-nfc-er-handover-pkhash-sta"
     start_ap_er(dev[0], apdev[0], ssid)
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
     logger.info("WPS provisioning step using connection handover")
     if "FAIL" in dev[1].request("SET wps_corrupt_pkhash 1"):
         raise Exception("Could not enable wps_corrupt_pkhash")
@@ -501,6 +505,7 @@ def test_nfc_wps_er_handover_pk_hash_mismatch_er(dev, apdev):
     """WPS NFC connection handover with invalid pkhash from ER to station (negative)"""
     ssid = "wps-nfc-er-handover-pkhash-er"
     start_ap_er(dev[0], apdev[0], ssid)
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
     logger.info("WPS provisioning step using connection handover")
     if "FAIL" in dev[0].request("SET wps_corrupt_pkhash 1"):
         raise Exception("Could not enable wps_corrupt_pkhash")

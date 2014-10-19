@@ -28,8 +28,8 @@ def test_wpas_ap_open(dev):
 
     dev[1].connect("wpas-ap-open", key_mgmt="NONE", scan_freq="2412")
     dev[2].connect("wpas-ap-open", key_mgmt="NONE", scan_freq="2412")
-    hwsim_utils.test_connectivity(dev[0].ifname, dev[1].ifname)
-    hwsim_utils.test_connectivity(dev[1].ifname, dev[2].ifname)
+    hwsim_utils.test_connectivity(dev[0], dev[1])
+    hwsim_utils.test_connectivity(dev[1], dev[2])
 
     addr1 = dev[1].p2p_interface_addr()
     addr2 = dev[2].p2p_interface_addr()
@@ -84,7 +84,7 @@ def test_wpas_ap_wep(dev):
 
     dev[1].connect("wpas-ap-wep", key_mgmt="NONE", wep_key0='"hello"',
                    scan_freq="2412")
-    hwsim_utils.test_connectivity(dev[0].ifname, dev[1].ifname)
+    hwsim_utils.test_connectivity(dev[0], dev[1])
     dev[1].request("DISCONNECT")
 
 def test_wpas_ap_no_ssid(dev):
@@ -158,7 +158,7 @@ def test_wpas_ap_wps(dev):
     ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
     if ev is None:
         raise Exception("WPS PBC operation timed out")
-    hwsim_utils.test_connectivity(dev[0].ifname, dev[1].ifname)
+    hwsim_utils.test_connectivity(dev[0], dev[1])
 
     logger.info("Test AP PIN to learn configuration")
     pin = dev[0].request("WPS_AP_PIN random")
@@ -167,7 +167,7 @@ def test_wpas_ap_wps(dev):
     if pin not in dev[0].request("WPS_AP_PIN get"):
         raise Exception("Could not fetch current AP PIN")
     dev[2].wps_reg(bssid, pin)
-    hwsim_utils.test_connectivity(dev[1].ifname, dev[2].ifname)
+    hwsim_utils.test_connectivity(dev[1], dev[2])
 
     dev[1].request("REMOVE_NETWORK all")
     dev[2].request("REMOVE_NETWORK all")

@@ -110,9 +110,9 @@ def test_ibss_rsn(dev):
 
     # Allow some time for all peers to complete key setup
     time.sleep(3)
-    hwsim_utils.test_connectivity(dev[0].ifname, dev[1].ifname)
-    hwsim_utils.test_connectivity(dev[0].ifname, dev[2].ifname)
-    hwsim_utils.test_connectivity(dev[1].ifname, dev[2].ifname)
+    hwsim_utils.test_connectivity(dev[0], dev[1])
+    hwsim_utils.test_connectivity(dev[0], dev[2])
+    hwsim_utils.test_connectivity(dev[1], dev[2])
 
     dev[1].request("REMOVE_NETWORK all")
     time.sleep(1)
@@ -126,7 +126,7 @@ def test_ibss_rsn(dev):
     wait_4way_handshake(dev[0], dev[1])
     wait_4way_handshake(dev[1], dev[0])
     time.sleep(3)
-    hwsim_utils.test_connectivity(dev[0].ifname, dev[1].ifname)
+    hwsim_utils.test_connectivity(dev[0], dev[1])
 
 def test_ibss_wpa_none(dev):
     """IBSS WPA-None"""
@@ -172,15 +172,15 @@ def test_ibss_wpa_none(dev):
     # This is supposed to work, but looks like WPA-None does not work with
     # mac80211 currently..
     try:
-        hwsim_utils.test_connectivity(dev[0].ifname, dev[1].ifname)
+        hwsim_utils.test_connectivity(dev[0], dev[1])
     except Exception, e:
         logger.info("Ignoring known connectivity failure: " + str(e))
     try:
-        hwsim_utils.test_connectivity(dev[0].ifname, dev[2].ifname)
+        hwsim_utils.test_connectivity(dev[0], dev[2])
     except Exception, e:
         logger.info("Ignoring known connectivity failure: " + str(e))
     try:
-        hwsim_utils.test_connectivity(dev[1].ifname, dev[2].ifname)
+        hwsim_utils.test_connectivity(dev[1], dev[2])
     except Exception, e:
         logger.info("Ignoring known connectivity failure: " + str(e))
 
@@ -220,7 +220,7 @@ def test_ibss_wpa_none_ccmp(dev):
     # This is supposed to work, but looks like WPA-None does not work with
     # mac80211 currently..
     try:
-        hwsim_utils.test_connectivity(dev[0].ifname, dev[1].ifname)
+        hwsim_utils.test_connectivity(dev[0], dev[1])
     except Exception, e:
         logger.info("Ignoring known connectivity failure: " + str(e))
 

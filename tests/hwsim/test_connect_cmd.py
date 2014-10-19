@@ -52,7 +52,7 @@ def test_connect_cmd_wpa2_psk(dev, apdev):
 def test_connect_cmd_concurrent_grpform_while_connecting(dev, apdev):
     """Concurrent P2P group formation while connecting to an AP using cfg80211 connect command"""
     logger.info("Start connection to an infrastructure AP")
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
 
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
@@ -67,7 +67,7 @@ def test_connect_cmd_concurrent_grpform_while_connecting(dev, apdev):
     remove_group(dev[0], wpas)
 
     logger.info("Confirm AP connection after P2P group removal")
-    hwsim_utils.test_connectivity(wpas.ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(wpas, hapd)
 
 def test_connect_cmd_reject_assoc(dev, apdev):
     """Connection using cfg80211 connect command getting rejected"""

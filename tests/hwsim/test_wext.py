@@ -22,7 +22,7 @@ def REMOVED_test_wext_open(dev, apdev):
         return "skip"
 
     params = { "ssid": "wext-open" }
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
 
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     try:
@@ -32,7 +32,7 @@ def REMOVED_test_wext_open(dev, apdev):
         return "skip"
 
     wpas.connect("wext-open", key_mgmt="NONE")
-    hwsim_utils.test_connectivity(wpas.ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(wpas, hapd)
 
 def test_wext_wpa2_psk(dev, apdev):
     """WEXT driver interface with WPA2-PSK"""
@@ -41,7 +41,7 @@ def test_wext_wpa2_psk(dev, apdev):
         return "skip"
 
     params = hostapd.wpa2_params(ssid="wext-wpa2-psk", passphrase="12345678")
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
 
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     try:
@@ -51,4 +51,4 @@ def test_wext_wpa2_psk(dev, apdev):
         return "skip"
 
     wpas.connect("wext-wpa2-psk", psk="12345678")
-    hwsim_utils.test_connectivity(wpas.ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(wpas, hapd)

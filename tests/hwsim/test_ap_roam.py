@@ -14,45 +14,45 @@ import hostapd
 
 def test_ap_roam_open(dev, apdev):
     """Roam between two open APs"""
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
+    hapd0 = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
     dev[0].connect("test-open", key_mgmt="NONE")
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
-    hostapd.add_ap(apdev[1]['ifname'], { "ssid": "test-open" })
+    hwsim_utils.test_connectivity(dev[0], hapd0)
+    hapd1 = hostapd.add_ap(apdev[1]['ifname'], { "ssid": "test-open" })
     dev[0].scan(type="ONLY")
     dev[0].roam(apdev[1]['bssid'])
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[1]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], hapd1)
     dev[0].roam(apdev[0]['bssid'])
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], hapd0)
 
 def test_ap_roam_wpa2_psk(dev, apdev):
     """Roam between two WPA2-PSK APs"""
     params = hostapd.wpa2_params(ssid="test-wpa2-psk", passphrase="12345678")
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd0 = hostapd.add_ap(apdev[0]['ifname'], params)
     dev[0].connect("test-wpa2-psk", psk="12345678")
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
-    hostapd.add_ap(apdev[1]['ifname'], params)
+    hwsim_utils.test_connectivity(dev[0], hapd0)
+    hapd1 = hostapd.add_ap(apdev[1]['ifname'], params)
     dev[0].scan(type="ONLY")
     dev[0].roam(apdev[1]['bssid'])
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[1]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], hapd1)
     dev[0].roam(apdev[0]['bssid'])
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], hapd0)
 
 def test_ap_reassociation_to_same_bss(dev, apdev):
     """Reassociate to the same BSS"""
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
     dev[0].connect("test-open", key_mgmt="NONE")
 
     dev[0].request("REASSOCIATE")
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
     if ev is None:
         raise Exception("Reassociation with the AP timed out")
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], hapd)
 
     dev[0].request("REATTACH")
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
     if ev is None:
         raise Exception("Reassociation (reattach) with the AP timed out")
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], hapd)
 
 def test_ap_roam_set_bssid(dev, apdev):
     """Roam control"""

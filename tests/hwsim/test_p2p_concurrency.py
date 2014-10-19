@@ -22,9 +22,9 @@ from test_p2p_persistent import invite
 def test_concurrent_autogo(dev, apdev):
     """Concurrent P2P autonomous GO"""
     logger.info("Connect to an infrastructure AP")
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
     dev[0].connect("test-open", key_mgmt="NONE", scan_freq="2412")
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], hapd)
 
     logger.info("Start a P2P group while associated to an AP")
     dev[0].request("SET p2p_no_group_iface 0")
@@ -38,14 +38,14 @@ def test_concurrent_autogo(dev, apdev):
     dev[1].wait_go_ending_session()
 
     logger.info("Confirm AP connection after P2P group removal")
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], hapd)
 
 def test_concurrent_p2pcli(dev, apdev):
     """Concurrent P2P client join"""
     logger.info("Connect to an infrastructure AP")
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
     dev[0].connect("test-open", key_mgmt="NONE", scan_freq="2412")
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], hapd)
 
     logger.info("Join a P2P group while associated to an AP")
     dev[0].request("SET p2p_no_group_iface 0")
@@ -59,14 +59,14 @@ def test_concurrent_p2pcli(dev, apdev):
     dev[0].wait_go_ending_session()
 
     logger.info("Confirm AP connection after P2P group removal")
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], hapd)
 
 def test_concurrent_grpform_go(dev, apdev):
     """Concurrent P2P group formation to become GO"""
     logger.info("Connect to an infrastructure AP")
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
     dev[0].connect("test-open", key_mgmt="NONE", scan_freq="2412")
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], hapd)
 
     logger.info("Form a P2P group while associated to an AP")
     dev[0].request("SET p2p_no_group_iface 0")
@@ -77,14 +77,14 @@ def test_concurrent_grpform_go(dev, apdev):
     remove_group(dev[0], dev[1])
 
     logger.info("Confirm AP connection after P2P group removal")
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], hapd)
 
 def test_concurrent_grpform_cli(dev, apdev):
     """Concurrent P2P group formation to become P2P Client"""
     logger.info("Connect to an infrastructure AP")
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
     dev[0].connect("test-open", key_mgmt="NONE", scan_freq="2412")
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], hapd)
 
     logger.info("Form a P2P group while associated to an AP")
     dev[0].request("SET p2p_no_group_iface 0")
@@ -95,12 +95,12 @@ def test_concurrent_grpform_cli(dev, apdev):
     remove_group(dev[0], dev[1])
 
     logger.info("Confirm AP connection after P2P group removal")
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], hapd)
 
 def test_concurrent_grpform_while_connecting(dev, apdev):
     """Concurrent P2P group formation while connecting to an AP"""
     logger.info("Start connection to an infrastructure AP")
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
     dev[0].connect("test-open", key_mgmt="NONE", wait_connect=False)
 
     logger.info("Form a P2P group while connecting to an AP")
@@ -112,12 +112,12 @@ def test_concurrent_grpform_while_connecting(dev, apdev):
     remove_group(dev[0], dev[1])
 
     logger.info("Confirm AP connection after P2P group removal")
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], hapd)
 
 def test_concurrent_grpform_while_connecting2(dev, apdev):
     """Concurrent P2P group formation while connecting to an AP (2)"""
     logger.info("Start connection to an infrastructure AP")
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
     dev[0].connect("test-open", key_mgmt="NONE", wait_connect=False)
     dev[1].request("BSS_FLUSH 0")
     dev[1].scan(freq="2412", only_new=True)
@@ -132,12 +132,12 @@ def test_concurrent_grpform_while_connecting2(dev, apdev):
 
     logger.info("Confirm AP connection after P2P group removal")
     dev[0].wait_completed()
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], hapd)
 
 def test_concurrent_grpform_while_connecting3(dev, apdev):
     """Concurrent P2P group formation while connecting to an AP (3)"""
     logger.info("Start connection to an infrastructure AP")
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
     dev[0].connect("test-open", key_mgmt="NONE", wait_connect=False)
 
     logger.info("Form a P2P group while connecting to an AP")
@@ -150,7 +150,7 @@ def test_concurrent_grpform_while_connecting3(dev, apdev):
 
     logger.info("Confirm AP connection after P2P group removal")
     dev[0].wait_completed()
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], hapd)
 
 def test_concurrent_persistent_group(dev, apdev):
     """Concurrent P2P persistent group"""

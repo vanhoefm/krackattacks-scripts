@@ -192,14 +192,14 @@ def test_autogo_following_bss(dev, apdev):
 
     channels = { 3 : "2422", 5 : "2432", 9 : "2452" }
     for key in channels:
-        hostapd.add_ap(apdev[0]['ifname'], { "ssid" : 'ap-test',
-                                             "channel" : str(key) })
+        hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid" : 'ap-test',
+                                                    "channel" : str(key) })
         dev[0].connect("ap-test", key_mgmt="NONE",
                        scan_freq=str(channels[key]))
         res_go = autogo(dev[0])
         if res_go['freq'] != channels[key]:
             raise Exception("Group operation channel is not the same as on connected station interface")
-        hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+        hwsim_utils.test_connectivity(dev[0], hapd)
         dev[0].remove_group(res_go['ifname'])
 
 def test_go_neg_with_bss_connected(dev, apdev):
@@ -207,7 +207,8 @@ def test_go_neg_with_bss_connected(dev, apdev):
 
     dev[0].request("SET p2p_no_group_iface 0")
 
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid": 'bss-2.4ghz', "channel": '5' })
+    hapd = hostapd.add_ap(apdev[0]['ifname'],
+                          { "ssid": 'bss-2.4ghz', "channel": '5' })
     dev[0].connect("bss-2.4ghz", key_mgmt="NONE", scan_freq="2432")
     #dev[0] as GO
     [i_res, r_res] = go_neg_pbc(i_dev=dev[0], i_intent=10, r_dev=dev[1],
@@ -217,7 +218,7 @@ def test_go_neg_with_bss_connected(dev, apdev):
        raise Exception("GO not selected according to go_intent")
     if i_res['freq'] != "2432":
        raise Exception("Group formed on a different frequency than BSS")
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], hapd)
     dev[0].remove_group(i_res['ifname'])
 
     if dev[0].get_mcc() > 1:
@@ -232,7 +233,7 @@ def test_go_neg_with_bss_connected(dev, apdev):
        raise Exception("GO not selected according to go_intent")
     if i_res2['freq'] != "2432":
        raise Exception("Group formed on a different frequency than BSS")
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], hapd)
 
 def test_autogo_with_bss_on_disallowed_chan(dev, apdev):
     """P2P channel selection: Autonomous GO with BSS on a disallowed channel"""
@@ -243,14 +244,14 @@ def test_autogo_with_bss_on_disallowed_chan(dev, apdev):
        logger.info("Skipping test because driver does not support MCC")
        return "skip"
     try:
-        hostapd.add_ap(apdev[0]['ifname'], { "ssid": 'bss-2.4ghz',
-                                             "channel": '1' })
+        hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": 'bss-2.4ghz',
+                                                    "channel": '1' })
         dev[0].request("P2P_SET disallow_freq 2412")
         dev[0].connect("bss-2.4ghz", key_mgmt="NONE", scan_freq="2412")
         res = autogo(dev[0])
         if res['freq'] == "2412":
            raise Exception("GO set on a disallowed channel")
-        hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+        hwsim_utils.test_connectivity(dev[0], hapd)
     finally:
         dev[0].request("P2P_SET disallow_freq ")
 
@@ -263,7 +264,8 @@ def test_go_neg_with_bss_on_disallowed_chan(dev, apdev):
        logger.info("Skipping test because driver does not support MCC")
        return "skip"
     try:
-        hostapd.add_ap(apdev[0]['ifname'], { "ssid": 'bss-2.4ghz', "channel": '1' })
+        hapd = hostapd.add_ap(apdev[0]['ifname'],
+                              { "ssid": 'bss-2.4ghz', "channel": '1' })
         dev[0].connect("bss-2.4ghz", key_mgmt="NONE", scan_freq="2412")
         dev[0].request("P2P_SET disallow_freq 2412")
 
@@ -275,7 +277,7 @@ def test_go_neg_with_bss_on_disallowed_chan(dev, apdev):
            raise Exception("GO not selected according to go_intent")
         if i_res['freq'] == "2412":
            raise Exception("Group formed on a disallowed channel")
-        hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+        hwsim_utils.test_connectivity(dev[0], hapd)
         dev[0].remove_group(i_res['ifname'])
 
         #dev[0] as client
@@ -286,7 +288,7 @@ def test_go_neg_with_bss_on_disallowed_chan(dev, apdev):
            raise Exception("GO not selected according to go_intent")
         if i_res2['freq'] == "2412":
            raise Exception("Group formed on a disallowed channel")
-        hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+        hwsim_utils.test_connectivity(dev[0], hapd)
     finally:
         dev[0].request("P2P_SET disallow_freq ")
 
@@ -298,12 +300,13 @@ def test_autogo_force_diff_channel(dev, apdev):
 
     dev[0].request("SET p2p_no_group_iface 0")
 
-    hostapd.add_ap(apdev[0]['ifname'], {"ssid" : 'ap-test', "channel" : '1'})
+    hapd = hostapd.add_ap(apdev[0]['ifname'],
+                          {"ssid" : 'ap-test', "channel" : '1'})
     dev[0].connect("ap-test", key_mgmt = "NONE", scan_freq = "2412")
     channels = { 2 : 2417, 5 : 2432, 9 : 2452 }
     for key in channels:
         res_go = autogo(dev[0], channels[key])
-        hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+        hwsim_utils.test_connectivity(dev[0], hapd)
         if int(res_go['freq']) == 2412:
             raise Exception("Group operation channel is: 2412 excepted: " + res_go['freq'])
         dev[0].remove_group(res_go['ifname'])
@@ -316,9 +319,10 @@ def test_go_neg_forced_freq_diff_than_bss_freq(dev, apdev):
 
     dev[0].request("SET p2p_no_group_iface 0")
 
-    hostapd.add_ap(apdev[0]['ifname'], { "country_code": 'US',
-                                         "ssid": 'bss-5ghz', "hw_mode": 'a',
-                                         "channel": '40' })
+    hapd = hostapd.add_ap(apdev[0]['ifname'],
+                          { "country_code": 'US',
+                            "ssid": 'bss-5ghz', "hw_mode": 'a',
+                            "channel": '40' })
     dev[0].connect("bss-5ghz", key_mgmt="NONE", scan_freq="5200")
 
     # GO and peer force the same freq, different than BSS freq,
@@ -330,7 +334,7 @@ def test_go_neg_forced_freq_diff_than_bss_freq(dev, apdev):
        raise Exception("P2P group formed on unexpected frequency: " + i_res['freq'])
     if r_res['role'] != "GO":
        raise Exception("GO not selected according to go_intent")
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], hapd)
     dev[0].remove_group(r_res['ifname'])
 
     # GO and peer force the same freq, different than BSS freq, dev[0] to
@@ -342,7 +346,7 @@ def test_go_neg_forced_freq_diff_than_bss_freq(dev, apdev):
        raise Exception("P2P group formed on unexpected frequency: " + i_res2['freq'])
     if r_res2['role'] != "client":
        raise Exception("GO not selected according to go_intent")
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], hapd)
 
 def test_go_pref_chan_bss_on_diff_chan(dev, apdev):
     """P2P channel selection: Station on different channel than GO configured pref channel"""
@@ -350,14 +354,14 @@ def test_go_pref_chan_bss_on_diff_chan(dev, apdev):
     dev[0].request("SET p2p_no_group_iface 0")
 
     try:
-        hostapd.add_ap(apdev[0]['ifname'], { "ssid": 'bss-2.4ghz',
-                                             "channel": '1' })
+        hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": 'bss-2.4ghz',
+                                                    "channel": '1' })
         dev[0].request("SET p2p_pref_chan 81:2")
         dev[0].connect("bss-2.4ghz", key_mgmt="NONE", scan_freq="2412")
         res = autogo(dev[0])
         if res['freq'] != "2412":
            raise Exception("GO channel did not follow BSS")
-        hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+        hwsim_utils.test_connectivity(dev[0], hapd)
     finally:
         dev[0].request("SET p2p_pref_chan ")
 
@@ -370,15 +374,15 @@ def test_go_pref_chan_bss_on_disallowed_chan(dev, apdev):
     dev[0].request("SET p2p_no_group_iface 0")
 
     try:
-        hostapd.add_ap(apdev[0]['ifname'], { "ssid": 'bss-2.4ghz',
-                                             "channel": '1' })
+        hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": 'bss-2.4ghz',
+                                                    "channel": '1' })
         dev[0].request("P2P_SET disallow_freq 2412")
         dev[0].request("SET p2p_pref_chan 81:2")
         dev[0].connect("bss-2.4ghz", key_mgmt="NONE", scan_freq="2412")
         res2 = autogo(dev[0])
         if res2['freq'] != "2417":
            raise Exception("GO channel did not follow pref_chan configuration")
-        hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+        hwsim_utils.test_connectivity(dev[0], hapd)
     finally:
         dev[0].request("P2P_SET disallow_freq ")
         dev[0].request("SET p2p_pref_chan ")

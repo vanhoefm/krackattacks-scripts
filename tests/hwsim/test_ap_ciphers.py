@@ -21,10 +21,10 @@ def check_cipher(dev, ap, cipher):
                "wpa": "2",
                "wpa_key_mgmt": "WPA-PSK",
                "rsn_pairwise": cipher }
-    hostapd.add_ap(ap['ifname'], params)
+    hapd = hostapd.add_ap(ap['ifname'], params)
     dev.connect("test-wpa2-psk", psk="12345678",
                 pairwise=cipher, group=cipher, scan_freq="2412")
-    hwsim_utils.test_connectivity(dev.ifname, ap['ifname'])
+    hwsim_utils.test_connectivity(dev, hapd)
 
 def test_ap_cipher_tkip(dev, apdev):
     """WPA2-PSK/TKIP connection"""
@@ -140,7 +140,7 @@ def test_ap_cipher_mixed_wpa_wpa2(dev, apdev):
                "wpa_key_mgmt": "WPA-PSK",
                "rsn_pairwise": "CCMP",
                "wpa_pairwise": "TKIP" }
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     dev[0].connect(ssid, psk=passphrase, proto="WPA2",
                    pairwise="CCMP", group="TKIP", scan_freq="2412")
     status = dev[0].get_status()
@@ -157,7 +157,7 @@ def test_ap_cipher_mixed_wpa_wpa2(dev, apdev):
         raise Exception("Missing BSS flag WPA-PSK-TKIP")
     if "[WPA2-PSK-CCMP]" not in bss['flags']:
         raise Exception("Missing BSS flag WPA2-PSK-CCMP")
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], hapd)
 
     dev[1].connect(ssid, psk=passphrase, proto="WPA",
                    pairwise="TKIP", group="TKIP", scan_freq="2412")
@@ -168,5 +168,5 @@ def test_ap_cipher_mixed_wpa_wpa2(dev, apdev):
         raise Exception("Incorrect pairwise_cipher reported")
     if status['group_cipher'] != 'TKIP':
         raise Exception("Incorrect group_cipher reported")
-    hwsim_utils.test_connectivity(dev[1].ifname, apdev[0]['ifname'])
-    hwsim_utils.test_connectivity(dev[0].ifname, dev[1].ifname)
+    hwsim_utils.test_connectivity(dev[1], hapd)
+    hwsim_utils.test_connectivity(dev[0], dev[1])

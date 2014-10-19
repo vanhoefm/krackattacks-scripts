@@ -65,12 +65,12 @@ def test_ap_wpa2_ptk_rekey(dev, apdev):
     ssid = "test-wpa2-psk"
     passphrase = 'qwertyuiop'
     params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     dev[0].connect(ssid, psk=passphrase, wpa_ptk_rekey="1", scan_freq="2412")
     ev = dev[0].wait_event(["WPA: Key negotiation completed"])
     if ev is None:
         raise Exception("PTK rekey timed out")
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], hapd)
 
 def test_ap_wpa2_ptk_rekey_ap(dev, apdev):
     """WPA2-PSK AP and PTK rekey enforced by AP"""
@@ -78,12 +78,12 @@ def test_ap_wpa2_ptk_rekey_ap(dev, apdev):
     passphrase = 'qwertyuiop'
     params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
     params['wpa_ptk_rekey'] = '2'
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
     ev = dev[0].wait_event(["WPA: Key negotiation completed"])
     if ev is None:
         raise Exception("PTK rekey timed out")
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], hapd)
 
 def test_ap_wpa2_sha256_ptk_rekey(dev, apdev):
     """WPA2-PSK/SHA256 AKM AP and PTK rekey enforced by station"""
@@ -91,13 +91,13 @@ def test_ap_wpa2_sha256_ptk_rekey(dev, apdev):
     passphrase = 'qwertyuiop'
     params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
     params["wpa_key_mgmt"] = "WPA-PSK-SHA256"
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     dev[0].connect(ssid, psk=passphrase, key_mgmt="WPA-PSK-SHA256",
                    wpa_ptk_rekey="1", scan_freq="2412")
     ev = dev[0].wait_event(["WPA: Key negotiation completed"])
     if ev is None:
         raise Exception("PTK rekey timed out")
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], hapd)
     check_mib(dev[0], [ ("dot11RSNAAuthenticationSuiteRequested", "00-0f-ac-6"),
                         ("dot11RSNAAuthenticationSuiteSelected", "00-0f-ac-6") ])
 
@@ -108,13 +108,13 @@ def test_ap_wpa2_sha256_ptk_rekey_ap(dev, apdev):
     params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
     params["wpa_key_mgmt"] = "WPA-PSK-SHA256"
     params['wpa_ptk_rekey'] = '2'
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     dev[0].connect(ssid, psk=passphrase, key_mgmt="WPA-PSK-SHA256",
                    scan_freq="2412")
     ev = dev[0].wait_event(["WPA: Key negotiation completed"])
     if ev is None:
         raise Exception("PTK rekey timed out")
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], hapd)
     check_mib(dev[0], [ ("dot11RSNAAuthenticationSuiteRequested", "00-0f-ac-6"),
                         ("dot11RSNAAuthenticationSuiteSelected", "00-0f-ac-6") ])
 
@@ -123,14 +123,14 @@ def test_ap_wpa_ptk_rekey(dev, apdev):
     ssid = "test-wpa-psk"
     passphrase = 'qwertyuiop'
     params = hostapd.wpa_params(ssid=ssid, passphrase=passphrase)
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     dev[0].connect(ssid, psk=passphrase, wpa_ptk_rekey="1", scan_freq="2412")
     if "[WPA-PSK-TKIP]" not in dev[0].request("SCAN_RESULTS"):
         raise Exception("Scan results missing WPA element info")
     ev = dev[0].wait_event(["WPA: Key negotiation completed"])
     if ev is None:
         raise Exception("PTK rekey timed out")
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], hapd)
 
 def test_ap_wpa_ptk_rekey_ap(dev, apdev):
     """WPA-PSK/TKIP AP and PTK rekey enforced by AP"""
@@ -138,12 +138,12 @@ def test_ap_wpa_ptk_rekey_ap(dev, apdev):
     passphrase = 'qwertyuiop'
     params = hostapd.wpa_params(ssid=ssid, passphrase=passphrase)
     params['wpa_ptk_rekey'] = '2'
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
     ev = dev[0].wait_event(["WPA: Key negotiation completed"], timeout=10)
     if ev is None:
         raise Exception("PTK rekey timed out")
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], hapd)
 
 def test_ap_wpa_ccmp(dev, apdev):
     """WPA-PSK/CCMP"""
@@ -151,9 +151,9 @@ def test_ap_wpa_ccmp(dev, apdev):
     passphrase = 'qwertyuiop'
     params = hostapd.wpa_params(ssid=ssid, passphrase=passphrase)
     params['wpa_pairwise'] = "CCMP"
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], hapd)
     check_mib(dev[0], [ ("dot11RSNAConfigGroupCipherSize", "128"),
                         ("dot11RSNAGroupCipherRequested", "00-50-f2-4"),
                         ("dot11RSNAPairwiseCipherRequested", "00-50-f2-4"),
@@ -243,12 +243,12 @@ def test_ap_wpa2_gtk_rekey(dev, apdev):
     passphrase = 'qwertyuiop'
     params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
     params['wpa_group_rekey'] = '1'
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
     ev = dev[0].wait_event(["WPA: Group rekeying completed"], timeout=2)
     if ev is None:
         raise Exception("GTK rekey timed out")
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], hapd)
 
 def test_ap_wpa_gtk_rekey(dev, apdev):
     """WPA-PSK/TKIP AP and GTK rekey enforced by AP"""
@@ -256,12 +256,12 @@ def test_ap_wpa_gtk_rekey(dev, apdev):
     passphrase = 'qwertyuiop'
     params = hostapd.wpa_params(ssid=ssid, passphrase=passphrase)
     params['wpa_group_rekey'] = '1'
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
     ev = dev[0].wait_event(["WPA: Group rekeying completed"], timeout=2)
     if ev is None:
         raise Exception("GTK rekey timed out")
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], hapd)
 
 def test_ap_wpa2_gmk_rekey(dev, apdev):
     """WPA2-PSK AP and GMK and GTK rekey enforced by AP"""
@@ -270,13 +270,13 @@ def test_ap_wpa2_gmk_rekey(dev, apdev):
     params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
     params['wpa_group_rekey'] = '1'
     params['wpa_gmk_rekey'] = '2'
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
     for i in range(0, 3):
         ev = dev[0].wait_event(["WPA: Group rekeying completed"], timeout=2)
         if ev is None:
             raise Exception("GTK rekey timed out")
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], hapd)
 
 def test_ap_wpa2_strict_rekey(dev, apdev):
     """WPA2-PSK AP and strict GTK rekey enforced by AP"""
@@ -284,14 +284,14 @@ def test_ap_wpa2_strict_rekey(dev, apdev):
     passphrase = 'qwertyuiop'
     params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
     params['wpa_strict_rekey'] = '1'
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
     dev[1].connect(ssid, psk=passphrase, scan_freq="2412")
     dev[1].request("DISCONNECT")
     ev = dev[0].wait_event(["WPA: Group rekeying completed"], timeout=2)
     if ev is None:
         raise Exception("GTK rekey timed out")
-    hwsim_utils.test_connectivity(dev[0].ifname, apdev[0]['ifname'])
+    hwsim_utils.test_connectivity(dev[0], hapd)
 
 def test_ap_wpa2_bridge_fdb(dev, apdev):
     """Bridge FDB entry removal"""

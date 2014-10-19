@@ -10,6 +10,11 @@
 
 #ifndef CONFIG_NATIVE_WINDOWS
 
+#ifdef CONFIG_TESTING_OPTIONS
+#include <net/ethernet.h>
+#include <netinet/ip.h>
+#endif /* CONFIG_TESTING_OPTIONS */
+
 #include <sys/un.h>
 #include <sys/stat.h>
 #include <stddef.h>
@@ -21,6 +26,7 @@
 #include "drivers/driver.h"
 #include "radius/radius_client.h"
 #include "radius/radius_server.h"
+#include "l2_packet/l2_packet.h"
 #include "ap/hostapd.h"
 #include "ap/ap_config.h"
 #include "ap/ieee802_1x.h"
@@ -1289,6 +1295,151 @@ static int hostapd_ctrl_iface_eapol_rx(struct hostapd_data *hapd, char *cmd)
 	return 0;
 }
 
+
+static u16 ipv4_hdr_checksum(const void *buf, size_t len)
+{
+	size_t i;
+	u32 sum = 0;
+	const u16 *pos = buf;
+
+	for (i = 0; i < len / 2; i++)
+		sum += *pos++;
+
+	while (sum >> 16)
+		sum = (sum & 0xffff) + (sum >> 16);
+
+	return sum ^ 0xffff;
+}
+
+
+#define HWSIM_PACKETLEN 1500
+#define HWSIM_IP_LEN (HWSIM_PACKETLEN - sizeof(struct ether_header))
+
+void hostapd_data_test_rx(void *ctx, const u8 *src_addr, const u8 *buf,
+			  size_t len)
+{
+	struct hostapd_data *hapd = ctx;
+	const struct ether_header *eth;
+	const struct iphdr *ip;
+	const u8 *pos;
+	unsigned int i;
+
+	if (len != HWSIM_PACKETLEN)
+		return;
+
+	eth = (const struct ether_header *) buf;
+	ip = (const struct iphdr *) (eth + 1);
+	pos = (const u8 *) (ip + 1);
+
+	if (ip->ihl != 5 || ip->version != 4 ||
+	    ntohs(ip->tot_len) != HWSIM_IP_LEN)
+		return;
+
+	for (i = 0; i < HWSIM_IP_LEN - sizeof(*ip); i++) {
+		if (*pos != (u8) i)
+			return;
+		pos++;
+	}
+
+	wpa_msg(hapd->msg_ctx, MSG_INFO, "DATA-TEST-RX " MACSTR " " MACSTR,
+		MAC2STR(eth->ether_dhost), MAC2STR(eth->ether_shost));
+}
+
+
+static int hostapd_ctrl_iface_data_test_config(struct hostapd_data *hapd,
+					       char *cmd)
+{
+	int enabled = atoi(cmd);
+
+	if (!enabled) {
+		if (hapd->l2_test) {
+			l2_packet_deinit(hapd->l2_test);
+			hapd->l2_test = NULL;
+			wpa_dbg(hapd->msg_ctx, MSG_DEBUG,
+				"test data: Disabled");
+		}
+		return 0;
+	}
+
+	if (hapd->l2_test)
+		return 0;
+
+	hapd->l2_test = l2_packet_init(hapd->conf->iface, hapd->own_addr,
+					ETHERTYPE_IP, hostapd_data_test_rx,
+					hapd, 1);
+	if (hapd->l2_test == NULL)
+		return -1;
+
+	wpa_dbg(hapd->msg_ctx, MSG_DEBUG, "test data: Enabled");
+
+	return 0;
+}
+
+
+static int hostapd_ctrl_iface_data_test_tx(struct hostapd_data *hapd, char *cmd)
+{
+	u8 dst[ETH_ALEN], src[ETH_ALEN];
+	char *pos;
+	int used;
+	long int val;
+	u8 tos;
+	u8 buf[HWSIM_PACKETLEN];
+	struct ether_header *eth;
+	struct iphdr *ip;
+	u8 *dpos;
+	unsigned int i;
+
+	if (hapd->l2_test == NULL)
+		return -1;
+
+	/* format: <dst> <src> <tos> */
+
+	pos = cmd;
+	used = hwaddr_aton2(pos, dst);
+	if (used < 0)
+		return -1;
+	pos += used;
+	while (*pos == ' ')
+		pos++;
+	used = hwaddr_aton2(pos, src);
+	if (used < 0)
+		return -1;
+	pos += used;
+
+	val = strtol(pos, NULL, 0);
+	if (val < 0 || val > 0xff)
+		return -1;
+	tos = val;
+
+	eth = (struct ether_header *) buf;
+	os_memcpy(eth->ether_dhost, dst, ETH_ALEN);
+	os_memcpy(eth->ether_shost, src, ETH_ALEN);
+	eth->ether_type = htons(ETHERTYPE_IP);
+	ip = (struct iphdr *) (eth + 1);
+	os_memset(ip, 0, sizeof(*ip));
+	ip->ihl = 5;
+	ip->version = 4;
+	ip->ttl = 64;
+	ip->tos = tos;
+	ip->tot_len = htons(HWSIM_IP_LEN);
+	ip->protocol = 1;
+	ip->saddr = htonl(192 << 24 | 168 << 16 | 1 << 8 | 1);
+	ip->daddr = htonl(192 << 24 | 168 << 16 | 1 << 8 | 2);
+	ip->check = ipv4_hdr_checksum(ip, sizeof(*ip));
+	dpos = (u8 *) (ip + 1);
+	for (i = 0; i < HWSIM_IP_LEN - sizeof(*ip); i++)
+		*dpos++ = i;
+
+	if (l2_packet_send(hapd->l2_test, dst, ETHERTYPE_IP, buf,
+			   HWSIM_PACKETLEN) < 0)
+		return -1;
+
+	wpa_dbg(hapd->msg_ctx, MSG_DEBUG, "test data: TX dst=" MACSTR
+		" src=" MACSTR " tos=0x%x", MAC2STR(dst), MAC2STR(src), tos);
+
+	return 0;
+}
+
 #endif /* CONFIG_TESTING_OPTIONS */
 
 
@@ -1597,6 +1748,12 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 	} else if (os_strncmp(buf, "EAPOL_RX ", 9) == 0) {
 		if (hostapd_ctrl_iface_eapol_rx(hapd, buf + 9) < 0)
 			reply_len = -1;
+	} else if (os_strncmp(buf, "DATA_TEST_CONFIG ", 17) == 0) {
+		if (hostapd_ctrl_iface_data_test_config(hapd, buf + 17) < 0)
+			reply_len = -1;
+	} else if (os_strncmp(buf, "DATA_TEST_TX ", 13) == 0) {
+		if (hostapd_ctrl_iface_data_test_tx(hapd, buf + 13) < 0)
+			reply_len = -1;
 #endif /* CONFIG_TESTING_OPTIONS */
 	} else if (os_strncmp(buf, "CHAN_SWITCH ", 12) == 0) {
 		if (hostapd_ctrl_iface_chan_switch(hapd->iface, buf + 12))
@@ -1832,6 +1989,11 @@ void hostapd_ctrl_iface_deinit(struct hostapd_data *hapd)
 		dst = dst->next;
 		os_free(prev);
 	}
+
+#ifdef CONFIG_TESTING_OPTIONS
+	l2_packet_deinit(hapd->l2_test);
+	hapd->l2_test = NULL;
+#endif /* CONFIG_TESTING_OPTIONS */
 }
 
 

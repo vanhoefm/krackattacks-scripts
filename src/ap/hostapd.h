@@ -249,6 +249,8 @@ struct hostapd_data {
 #ifdef CONFIG_TESTING_OPTIONS
 	unsigned int ext_mgmt_frame_handling:1;
 	unsigned int ext_eapol_frame_io:1;
+
+	struct l2_packet_data *l2_test;
 #endif /* CONFIG_TESTING_OPTIONS */
 };
 

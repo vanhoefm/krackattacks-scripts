@@ -869,6 +869,10 @@ struct wpa_supplicant {
 	unsigned int ext_work_id;
 
 	struct wpabuf *vendor_elem[NUM_VENDOR_ELEM_FRAMES];
+
+#ifdef CONFIG_TESTING_OPTIONS
+	struct l2_packet_data *l2_test;
+#endif /* CONFIG_TESTING_OPTIONS */
 };
 
 

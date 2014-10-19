@@ -407,6 +407,10 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 		l2_packet_deinit(wpa_s->l2_br);
 		wpa_s->l2_br = NULL;
 	}
+#ifdef CONFIG_TESTING_OPTIONS
+	l2_packet_deinit(wpa_s->l2_test);
+	wpa_s->l2_test = NULL;
+#endif /* CONFIG_TESTING_OPTIONS */
 
 	if (wpa_s->conf != NULL) {
 		struct wpa_ssid *ssid;

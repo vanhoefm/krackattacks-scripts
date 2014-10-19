@@ -54,6 +54,12 @@ class Hostapd:
         self.ctrl = wpaspy.Ctrl(os.path.join(hapd_ctrl, ifname))
         self.mon = wpaspy.Ctrl(os.path.join(hapd_ctrl, ifname))
         self.mon.attach()
+        self.bssid = None
+
+    def own_addr(self):
+        if self.bssid is None:
+            self.bssid = self.get_status_field('bssid[0]')
+        return self.bssid
 
     def request(self, cmd):
         logger.debug(self.ifname + ": CTRL: " + cmd)

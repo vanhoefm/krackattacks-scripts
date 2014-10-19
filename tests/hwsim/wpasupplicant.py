@@ -335,6 +335,13 @@ class WpaSupplicant:
     def p2p_interface_addr(self):
         return self.get_group_status_field("address")
 
+    def own_addr(self):
+        try:
+            res = self.p2p_interface_addr()
+        except:
+            res = self.p2p_dev_addr()
+        return res
+
     def p2p_listen(self):
         return self.global_request("P2P_LISTEN")
 

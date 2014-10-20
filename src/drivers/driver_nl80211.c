@@ -305,7 +305,6 @@ struct wpa_driver_nl80211_data {
 	unsigned int use_monitor:1;
 	unsigned int ignore_next_local_disconnect:1;
 	unsigned int ignore_next_local_deauth:1;
-	unsigned int allow_p2p_device:1;
 	unsigned int hostapd:1;
 	unsigned int start_mode_ap:1;
 	unsigned int start_iface_up:1;
@@ -4054,6 +4053,8 @@ static int wpa_driver_nl80211_get_info(struct wpa_driver_nl80211_data *drv,
 		drv->capa.num_multichan_concurrent =
 			info->num_multichan_concurrent;
 	}
+	if (drv->capa.flags & WPA_DRIVER_FLAGS_DEDICATED_P2P_DEVICE)
+		wpa_printf(MSG_DEBUG, "nl80211: use P2P_DEVICE support");
 
 	/* default to 5000 since early versions of mac80211 don't set it */
 	if (!drv->capa.max_remain_on_chan)
@@ -9424,12 +9425,6 @@ static int wpa_driver_nl80211_get_capa(void *priv,
 		capa->extended_capa_len = drv->extended_capa_len;
 	}
 
-	if ((capa->flags & WPA_DRIVER_FLAGS_DEDICATED_P2P_DEVICE) &&
-	    !drv->allow_p2p_device) {
-		wpa_printf(MSG_DEBUG, "nl80211: Do not indicate P2P_DEVICE support (p2p_device=1 driver param not specified)");
-		capa->flags &= ~WPA_DRIVER_FLAGS_DEDICATED_P2P_DEVICE;
-	}
-
 	if (drv->dfs_vendor_cmd_avail == 1) {
 		msg = nlmsg_alloc();
 		if (!msg)
@@ -11156,12 +11151,6 @@ static int nl80211_set_param(void *priv, const char *param)
 		drv->capa.flags |= WPA_DRIVER_FLAGS_P2P_CONCURRENT;
 		drv->capa.flags |= WPA_DRIVER_FLAGS_P2P_MGMT_AND_NON_P2P;
 	}
-
-	if (os_strstr(param, "p2p_device=1")) {
-		struct i802_bss *bss = priv;
-		struct wpa_driver_nl80211_data *drv = bss->drv;
-		drv->allow_p2p_device = 1;
-	}
 #endif /* CONFIG_P2P */
 
 	if (os_strstr(param, "use_monitor=1")) {
@@ -12146,7 +12135,7 @@ static int wpa_driver_nl80211_status(void *priv, char *buf, size_t buflen)
 			  "monitor_refcount=%d\n"
 			  "last_mgmt_freq=%u\n"
 			  "eapol_tx_sock=%d\n"
-			  "%s%s%s%s%s%s%s%s%s%s%s%s%s%s",
+			  "%s%s%s%s%s%s%s%s%s%s%s%s%s",
 			  drv->phyname,
 			  MAC2STR(drv->perm_addr),
 			  drv->ifindex,
@@ -12182,8 +12171,7 @@ static int wpa_driver_nl80211_status(void *priv, char *buf, size_t buflen)
 			  drv->ignore_next_local_disconnect ?
 			  "ignore_next_local_disconnect=1\n" : "",
 			  drv->ignore_next_local_deauth ?
-			  "ignore_next_local_deauth=1\n" : "",
-			  drv->allow_p2p_device ? "allow_p2p_device=1\n" : "");
+			  "ignore_next_local_deauth=1\n" : "");
 	if (res < 0 || res >= end - pos)
 		return pos - buf;
 	pos += res;

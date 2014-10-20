@@ -3888,6 +3888,12 @@ static void wiphy_info_feature_flags(struct wiphy_info_data *info,
 
 	if (flags & NL80211_FEATURE_LOW_PRIORITY_SCAN)
 		info->have_low_prio_scan = 1;
+
+	if (flags & NL80211_FEATURE_STATIC_SMPS)
+		capa->smps_modes |= WPA_DRIVER_SMPS_MODE_STATIC;
+
+	if (flags & NL80211_FEATURE_DYNAMIC_SMPS)
+		capa->smps_modes |= WPA_DRIVER_SMPS_MODE_DYNAMIC;
 }
 
 
@@ -7521,6 +7527,7 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 	int beacon_set;
 	int ifindex = if_nametoindex(bss->ifname);
 	int num_suites;
+	int smps_mode;
 	u32 suites[10], suite;
 	u32 ver;
 
@@ -7628,6 +7635,24 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 	suite = wpa_cipher_to_cipher_suite(params->group_cipher);
 	if (suite)
 		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITE_GROUP, suite);
+
+	switch (params->smps_mode) {
+	case HT_CAP_INFO_SMPS_DYNAMIC:
+		wpa_printf(MSG_DEBUG, "nl80211: SMPS mode - dynamic");
+		smps_mode = NL80211_SMPS_DYNAMIC;
+		break;
+	case HT_CAP_INFO_SMPS_STATIC:
+		wpa_printf(MSG_DEBUG, "nl80211: SMPS mode - static");
+		smps_mode = NL80211_SMPS_STATIC;
+		break;
+	default:
+		/* invalid - fallback to smps off */
+	case HT_CAP_INFO_SMPS_DISABLED:
+		wpa_printf(MSG_DEBUG, "nl80211: SMPS mode - off");
+		smps_mode = NL80211_SMPS_OFF;
+		break;
+	}
+	NLA_PUT_U32(msg, NL80211_ATTR_SMPS_MODE, smps_mode);
 
 	if (params->beacon_ies) {
 		wpa_hexdump_buf(MSG_DEBUG, "nl80211: beacon_ies",

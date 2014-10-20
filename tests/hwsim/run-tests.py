@@ -382,7 +382,7 @@ def main():
                     logger.info(e)
                     result = "FAIL"
             try:
-                wpas = WpaSupplicant("wlan5", "/tmp/wpas-wlan5")
+                wpas = WpaSupplicant("/tmp/wpas-wlan5")
                 d.dump_monitor()
                 rename_log(args.logdir, 'log5', name, wpas)
                 if not args.no_reset:

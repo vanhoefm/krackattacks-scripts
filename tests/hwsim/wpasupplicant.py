@@ -834,7 +834,7 @@ class WpaSupplicant:
             raise Exception("Association with the AP timed out")
 
     def relog(self):
-        self.request("RELOG")
+        self.global_request("RELOG")
 
     def wait_completed(self, timeout=10):
         for i in range(0, timeout * 2):

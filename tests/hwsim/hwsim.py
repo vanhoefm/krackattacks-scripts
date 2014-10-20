@@ -7,7 +7,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
-import netlink
+import netlink, os
 
 # constants
 HWSIM_CMD_CREATE_RADIO		= 4
@@ -47,6 +47,32 @@ class HWSimController(object):
                                           netlink.NLM_F_ACK,
                                   attrs = attrs)
         msg.send_and_recv(self._conn)
+
+class HWSimRadio(object):
+    def __init__(self, n_channels=None, use_chanctx=False,
+                 use_p2p_device=False):
+        self._controller = HWSimController()
+        self._n_channels = n_channels
+        self._use_chanctx = use_chanctx
+        self._use_p2p_dev = use_p2p_device
+
+    def __enter__(self):
+        self._radio_id = self._controller.create_radio(
+              n_channels=self._n_channels,
+              use_chanctx=self._use_chanctx,
+              use_p2p_device=self._use_p2p_dev)
+        if self._radio_id < 0:
+            raise Exception("Failed to create radio (err:%d)" % self._radio_id)
+        try:
+            iface = os.listdir('/sys/class/mac80211_hwsim/hwsim%d/net/' % self._radio_id)[0]
+        except Exception,e:
+            self._controller.destroy_radio(self._radio_id)
+            raise e
+        return self._radio_id, iface
+
+    def __exit__(self, type, value, traceback):
+        self._controller.destroy_radio(self._radio_id)
+
 
 def create(args):
     print 'Created radio %d' % c.create_radio(n_channels=args.channels,

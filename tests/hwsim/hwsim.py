@@ -15,6 +15,7 @@ HWSIM_CMD_DESTROY_RADIO		= 5
 
 HWSIM_ATTR_CHANNELS		= 9
 HWSIM_ATTR_RADIO_ID		= 10
+HWSIM_ATTR_SUPPORT_P2P_DEVICE	= 14
 HWSIM_ATTR_USE_CHANCTX		= 15
 
 # the controller class
@@ -23,12 +24,15 @@ class HWSimController(object):
         self._conn = netlink.Connection(netlink.NETLINK_GENERIC)
         self._fid = netlink.genl_controller.get_family_id('MAC80211_HWSIM')
 
-    def create_radio(self, n_channels=None, use_chanctx=False):
+    def create_radio(self, n_channels=None, use_chanctx=False,
+                     use_p2p_device=False):
         attrs = []
         if n_channels:
             attrs.append(netlink.U32Attr(HWSIM_ATTR_CHANNELS, n_channels))
         if use_chanctx:
             attrs.append(netlink.FlagAttr(HWSIM_ATTR_USE_CHANCTX))
+        if use_p2p_device:
+            attrs.append(netlink.FlagAttr(HWSIM_ATTR_SUPPORT_P2P_DEVICE))
 
         msg = netlink.GenlMessage(self._fid, HWSIM_CMD_CREATE_RADIO,
                                   flags = netlink.NLM_F_REQUEST |

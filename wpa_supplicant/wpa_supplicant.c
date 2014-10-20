@@ -3905,6 +3905,26 @@ static int wpa_supplicant_init_iface(struct wpa_supplicant *wpa_s,
 static void wpa_supplicant_deinit_iface(struct wpa_supplicant *wpa_s,
 					int notify, int terminate)
 {
+	struct wpa_global *global = wpa_s->global;
+	struct wpa_supplicant *iface, *prev;
+
+	if (wpa_s == wpa_s->parent)
+		wpas_p2p_group_remove(wpa_s, "*");
+
+	iface = global->ifaces;
+	while (iface) {
+		if (iface == wpa_s || iface->parent != wpa_s) {
+			iface = iface->next;
+			continue;
+		}
+		wpa_printf(MSG_DEBUG,
+			   "Remove remaining child interface %s from parent %s",
+			   iface->ifname, wpa_s->ifname);
+		prev = iface;
+		iface = iface->next;
+		wpa_supplicant_remove_iface(global, prev, terminate);
+	}
+
 	wpa_s->disconnected = 1;
 	if (wpa_s->drv_priv) {
 		wpa_supplicant_deauthenticate(wpa_s,

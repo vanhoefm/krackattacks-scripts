@@ -1056,6 +1056,10 @@ struct wpa_driver_capa {
 #define WPA_DRIVER_FLAGS_MESH			0x0000000100000000ULL
 	u64 flags;
 
+#define WPA_DRIVER_SMPS_MODE_STATIC			0x00000001
+#define WPA_DRIVER_SMPS_MODE_DYNAMIC			0x00000002
+	unsigned int smps_modes;
+
 	int max_scan_ssids;
 	int max_sched_scan_ssids;
 	int sched_scan_supported;

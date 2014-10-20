@@ -746,11 +746,24 @@ static int ieee80211n_supported_ht_capab(struct hostapd_iface *iface)
 		return 0;
 	}
 
-	if ((conf & HT_CAP_INFO_SMPS_MASK) != (hw & HT_CAP_INFO_SMPS_MASK) &&
-	    (conf & HT_CAP_INFO_SMPS_MASK) != HT_CAP_INFO_SMPS_DISABLED) {
-		wpa_printf(MSG_ERROR, "Driver does not support configured "
-			   "HT capability [SMPS-*]");
-		return 0;
+	switch (conf & HT_CAP_INFO_SMPS_MASK) {
+	case HT_CAP_INFO_SMPS_STATIC:
+		if (!(iface->smps_modes & WPA_DRIVER_SMPS_MODE_STATIC)) {
+			wpa_printf(MSG_ERROR,
+				   "Driver does not support configured HT capability [SMPS-STATIC]");
+			return 0;
+		}
+		break;
+	case HT_CAP_INFO_SMPS_DYNAMIC:
+		if (!(iface->smps_modes & WPA_DRIVER_SMPS_MODE_DYNAMIC)) {
+			wpa_printf(MSG_ERROR,
+				   "Driver does not support configured HT capability [SMPS-DYNAMIC]");
+			return 0;
+		}
+		break;
+	case HT_CAP_INFO_SMPS_DISABLED:
+	default:
+		break;
 	}
 
 	if ((conf & HT_CAP_INFO_GREEN_FIELD) &&

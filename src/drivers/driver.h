@@ -903,6 +903,14 @@ struct wpa_driver_ap_params {
 	int ap_max_inactivity;
 
 	/**
+	 * smps_mode - SMPS mode
+	 *
+	 * SMPS mode to be used by the AP, specified as the relevant bits of
+	 * ht_capab (i.e. HT_CAP_INFO_SMPS_*).
+	 */
+	unsigned int smps_mode;
+
+	/**
 	 * disable_dgaf - Whether group-addressed frames are disabled
 	 */
 	int disable_dgaf;

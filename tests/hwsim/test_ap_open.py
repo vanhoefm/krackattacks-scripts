@@ -165,3 +165,17 @@ def test_ap_open_unexpected_assoc_event(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=15)
     if ev is None:
         raise Exception("Disconnection with the AP timed out")
+
+def test_ap_bss_load(dev, apdev):
+    """AP with open mode (no security) configuration"""
+    hapd = hostapd.add_ap(apdev[0]['ifname'],
+                          { "ssid": "open",
+                            "bss_load_update_period": "10" })
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+    # this does not really get much useful output with mac80211_hwsim currently,
+    # but run through the channel survey update couple of times
+    for i in range(0, 10):
+        hwsim_utils.test_connectivity(dev[0], hapd)
+        hwsim_utils.test_connectivity(dev[0], hapd)
+        hwsim_utils.test_connectivity(dev[0], hapd)
+        time.sleep(0.15)

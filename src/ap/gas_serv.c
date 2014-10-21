@@ -748,6 +748,7 @@ struct anqp_query_info {
 	size_t home_realm_query_len;
 	const u8 *icon_name;
 	size_t icon_name_len;
+	int p2p_sd;
 };
 
 
@@ -919,6 +920,21 @@ static void rx_anqp_vendor_specific(struct hostapd_data *hapd,
 		return;
 	}
 
+#ifdef CONFIG_P2P
+	if (*pos == P2P_OUI_TYPE) {
+		/*
+		 * This is for P2P SD and will be taken care of by the P2P
+		 * implementation. This query needs to be ignored in the generic
+		 * GAS server to avoid duplicated response.
+		 */
+		wpa_printf(MSG_DEBUG,
+			   "ANQP: Ignore WFA vendor type %u (P2P SD) in generic GAS server",
+			   *pos);
+		qi->p2p_sd = 1;
+		return;
+	}
+#endif /* CONFIG_P2P */
+
 	if (*pos != HS20_ANQP_OUI_TYPE) {
 		wpa_printf(MSG_DEBUG, "ANQP: Unsupported WFA vendor type %u",
 			   *pos);
@@ -969,6 +985,14 @@ static void gas_serv_req_local_processing(struct hostapd_data *hapd,
 			buf);
 	if (!buf)
 		return;
+#ifdef CONFIG_P2P
+	if (wpabuf_len(buf) == 0 && qi->p2p_sd) {
+		wpa_printf(MSG_DEBUG,
+			   "ANQP: Do not send response to P2P SD from generic GAS service (P2P SD implementation will process this)");
+		wpabuf_free(buf);
+		return;
+	}
+#endif /* CONFIG_P2P */
 
 	if (wpabuf_len(buf) > hapd->gas_frag_limit ||
 	    hapd->conf->gas_comeback_delay) {

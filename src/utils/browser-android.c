@@ -64,23 +64,14 @@ static void http_req(void *ctx, struct http_request *req)
 
 int hs20_web_browser(const char *url)
 {
-	char cmd[2000];
-	int ret;
 	struct http_server *http;
 	struct in_addr addr;
 	struct browser_data data;
+	pid_t pid;
 
 	wpa_printf(MSG_INFO, "Launching Android browser to %s", url);
 
 	os_memset(&data, 0, sizeof(data));
-
-	ret = os_snprintf(cmd, sizeof(cmd),
-			  "start -a android.intent.action.VIEW -d %s "
-			  "-n com.android.browser/.BrowserActivity", url);
-	if (ret < 0 || (size_t) ret >= sizeof(cmd)) {
-		wpa_printf(MSG_ERROR, "Too long URL");
-		return -1;
-	}
 
 	if (eloop_init() < 0) {
 		wpa_printf(MSG_ERROR, "eloop_init failed");
@@ -94,11 +85,31 @@ int hs20_web_browser(const char *url)
 		return -1;
 	}
 
-	if (os_exec("/system/bin/am", cmd, 1) != 0) {
-		wpa_printf(MSG_INFO, "Failed to launch Android browser");
-		eloop_cancel_timeout(browser_timeout, NULL, NULL);
+	pid = fork();
+	if (pid < 0) {
+		perror("fork");
 		http_server_deinit(http);
 		eloop_destroy();
+		return -1;
+	}
+
+	if (pid == 0) {
+		/* run the external command in the child process */
+		char *argv[9];
+
+		argv[0] = "browser-android";
+		argv[1] = "start";
+		argv[2] = "-a";
+		argv[3] = "android.intent.action.VIEW";
+		argv[4] = "-d";
+		argv[5] = (void *) url;
+		argv[6] = "-n";
+		argv[7] = "com.android.browser/.BrowserActivity";
+		argv[8] = NULL;
+
+		execv("/system/bin/am", argv);
+		perror("execv");
+		exit(0);
 		return -1;
 	}
 
@@ -109,7 +120,7 @@ int hs20_web_browser(const char *url)
 	eloop_destroy();
 
 	wpa_printf(MSG_INFO, "Closing Android browser");
-	if (os_exec("/system/bin/input", "keyevent 3", 1) != 0) {
+	if (system("/system/bin/input keyevent KEYCODE_HOME") != 0) {
 		wpa_printf(MSG_INFO, "Failed to inject keyevent");
 	}
 

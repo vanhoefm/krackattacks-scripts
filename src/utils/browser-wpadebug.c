@@ -65,25 +65,14 @@ static void http_req(void *ctx, struct http_request *req)
 
 int hs20_web_browser(const char *url)
 {
-	char cmd[2000];
-	int ret;
 	struct http_server *http;
 	struct in_addr addr;
 	struct browser_data data;
+	pid_t pid;
 
 	wpa_printf(MSG_INFO, "Launching wpadebug browser to %s", url);
 
 	os_memset(&data, 0, sizeof(data));
-
-	ret = os_snprintf(cmd, sizeof(cmd),
-			  "start -a android.action.MAIN "
-			  "-c android.intent.category.LAUNCHER "
-			  "-n w1.fi.wpadebug/.WpaWebViewActivity "
-			  "-e w1.fi.wpadebug.URL '%s'", url);
-	if (ret < 0 || (size_t) ret >= sizeof(cmd)) {
-		wpa_printf(MSG_ERROR, "Too long URL");
-		return -1;
-	}
 
 	if (eloop_init() < 0) {
 		wpa_printf(MSG_ERROR, "eloop_init failed");
@@ -97,11 +86,34 @@ int hs20_web_browser(const char *url)
 		return -1;
 	}
 
-	if (os_exec("/system/bin/am", cmd, 1) != 0) {
-		wpa_printf(MSG_INFO, "Failed to launch wpadebug browser");
-		eloop_cancel_timeout(browser_timeout, NULL, NULL);
+	pid = fork();
+	if (pid < 0) {
+		perror("fork");
 		http_server_deinit(http);
 		eloop_destroy();
+		return -1;
+	}
+
+	if (pid == 0) {
+		/* run the external command in the child process */
+		char *argv[12];
+
+		argv[0] = "browser-wpadebug";
+		argv[1] = "start";
+		argv[2] = "-a";
+		argv[3] = "android.action.MAIN";
+		argv[4] = "-c";
+		argv[5] = "android.intent.category.LAUNCHER";
+		argv[6] = "-n";
+		argv[7] = "w1.fi.wpadebug/.WpaWebViewActivity";
+		argv[8] = "-e";
+		argv[9] = "w1.fi.wpadebug.URL";
+		argv[10] = (void *) url;
+		argv[11] = NULL;
+
+		execv("/system/bin/am", argv);
+		perror("execv");
+		exit(0);
 		return -1;
 	}
 

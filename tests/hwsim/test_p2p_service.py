@@ -249,3 +249,34 @@ def test_p2p_service_discovery_req_cancel(dev):
     query = dev[0].request("P2P_SERV_DISC_REQ 00:00:00:00:00:00 02000001")
     if "OK" not in dev[0].request("P2P_SERV_DISC_CANCEL_REQ " + query):
         raise Exception("Unexpected SD(broadcast) cancel failure")
+
+def test_p2p_service_discovery_go(dev):
+    """P2P service discovery from GO"""
+    addr0 = dev[0].p2p_dev_addr()
+    addr1 = dev[1].p2p_dev_addr()
+
+    add_bonjour_services(dev[0])
+    add_upnp_services(dev[0])
+
+    dev[0].p2p_start_go(freq=2412)
+
+    dev[1].request("P2P_FLUSH")
+    dev[1].request("P2P_SERV_DISC_REQ " + addr0 + " 02000001")
+    if not dev[1].discover_peer(addr0, social=True, force_find=True):
+        raise Exception("Peer " + addr0 + " not found")
+
+    ev = dev[0].wait_event(["P2P-SERV-DISC-REQ"], timeout=10)
+    if ev is None:
+        raise Exception("Service discovery timed out")
+    if addr1 not in ev:
+        raise Exception("Unexpected service discovery request source")
+
+    ev = dev[1].wait_event(["P2P-SERV-DISC-RESP"], timeout=10)
+    if ev is None:
+        raise Exception("Service discovery timed out")
+    if addr0 not in ev:
+        raise Exception("Unexpected service discovery response source")
+    if "0b5f6166706f766572746370c00c000c01" not in ev:
+        raise Exception("Unexpected service discovery response contents (Bonjour)")
+    if "496e7465726e6574" not in ev:
+        raise Exception("Unexpected service discovery response contents (UPnP)")

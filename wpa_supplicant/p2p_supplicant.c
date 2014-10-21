@@ -5507,13 +5507,21 @@ int wpas_p2p_group_add_persistent(struct wpa_supplicant *wpa_s,
 
 	wpa_s->p2p_fallback_to_go_neg = 0;
 
-	if (force_freq > 0) {
-		freq = wpas_p2p_select_go_freq(wpa_s, force_freq);
-		if (freq < 0)
-			return -1;
+	if (ssid->mode == WPAS_MODE_P2P_GO) {
+		if (force_freq > 0) {
+			freq = wpas_p2p_select_go_freq(wpa_s, force_freq);
+			if (freq < 0)
+				return -1;
+		} else {
+			freq = wpas_p2p_select_go_freq(wpa_s, neg_freq);
+			if (freq < 0 ||
+			    (freq > 0 && !freq_included(channels, freq)))
+				freq = 0;
+		}
 	} else {
-		freq = wpas_p2p_select_go_freq(wpa_s, neg_freq);
-		if (freq < 0 || (freq > 0 && !freq_included(channels, freq)))
+		freq = neg_freq;
+		if (freq < 0 ||
+		    (freq > 0 && !freq_included(channels, freq)))
 			freq = 0;
 	}
 

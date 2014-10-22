@@ -166,5 +166,7 @@ void wmm_ac_notify_disassoc(struct wpa_supplicant *wpa_s);
 int wpas_wmm_ac_addts(struct wpa_supplicant *wpa_s,
 		      struct wmm_ac_ts_setup_params *params);
 int wpas_wmm_ac_delts(struct wpa_supplicant *wpa_s, u8 tsid);
+void wmm_ac_rx_action(struct wpa_supplicant *wpa_s, const u8 *da,
+			const u8 *sa, const u8 *data, size_t len);
 
 #endif /* WMM_AC_H */

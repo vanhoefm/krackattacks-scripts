@@ -11,12 +11,14 @@
 
 #include "utils/common.h"
 #include "utils/list.h"
+#include "utils/eloop.h"
 #include "common/ieee802_11_common.h"
 #include "wpa_supplicant_i.h"
 #include "bss.h"
 #include "driver_i.h"
 #include "wmm_ac.h"
 
+static void wmm_ac_addts_req_timeout(void *eloop_ctx, void *timeout_ctx);
 
 static const enum wmm_ac up_to_ac[8] = {
 	WMM_AC_BK,
@@ -33,6 +35,141 @@ static const enum wmm_ac up_to_ac[8] = {
 static inline u8 wmm_ac_get_tsid(const struct wmm_tspec_element *tspec)
 {
 	return (tspec->ts_info[0] >> 1) & 0x0f;
+}
+
+
+static u8 wmm_ac_get_direction(const struct wmm_tspec_element *tspec)
+{
+	return (tspec->ts_info[0] >> 5) & 0x03;
+}
+
+
+static u8 wmm_ac_get_user_priority(const struct wmm_tspec_element *tspec)
+{
+	return (tspec->ts_info[1] >> 3) & 0x07;
+}
+
+
+static u8 wmm_ac_direction_to_idx(u8 direction)
+{
+	switch (direction) {
+	case WMM_AC_DIR_UPLINK:
+		return TS_DIR_IDX_UPLINK;
+	case WMM_AC_DIR_DOWNLINK:
+		return TS_DIR_IDX_DOWNLINK;
+	case WMM_AC_DIR_BIDIRECTIONAL:
+		return TS_DIR_IDX_BIDI;
+	default:
+		wpa_printf(MSG_ERROR, "Invalid direction: %d", direction);
+		return WMM_AC_DIR_UPLINK;
+	}
+}
+
+
+static int wmm_ac_add_ts(struct wpa_supplicant *wpa_s, const u8 *addr,
+			 const struct wmm_tspec_element *tspec)
+{
+	struct wmm_tspec_element *_tspec;
+	int ret;
+	u16 admitted_time = le_to_host16(tspec->medium_time);
+	u8 up = wmm_ac_get_user_priority(tspec);
+	u8 ac = up_to_ac[up];
+	u8 dir = wmm_ac_get_direction(tspec);
+	u8 tsid = wmm_ac_get_tsid(tspec);
+	enum ts_dir_idx idx = wmm_ac_direction_to_idx(dir);
+
+	/* should have been verified before, but double-check here */
+	if (wpa_s->tspecs[ac][idx]) {
+		wpa_printf(MSG_ERROR,
+			   "WMM AC: tspec (ac=%d, dir=%d) already exists!",
+			   ac, dir);
+		return -1;
+	}
+
+	/* copy tspec */
+	_tspec = os_malloc(sizeof(*_tspec));
+	if (!_tspec)
+		return -1;
+
+	/* store the admitted TSPEC */
+	os_memcpy(_tspec, tspec, sizeof(*_tspec));
+
+	if (dir != WMM_AC_DIR_DOWNLINK) {
+		ret = wpa_drv_add_ts(wpa_s, tsid, addr, up, admitted_time);
+		wpa_printf(MSG_DEBUG,
+			   "WMM AC: Add TS: addr=" MACSTR
+			   " TSID=%u admitted time=%u, ret=%d",
+			   MAC2STR(addr), tsid, admitted_time, ret);
+		if (ret < 0) {
+			os_free(_tspec);
+			return -1;
+		}
+	}
+
+	wpa_s->tspecs[ac][idx] = _tspec;
+
+	wpa_printf(MSG_DEBUG, "Traffic stream was created successfully");
+
+	wpa_msg(wpa_s, MSG_INFO, WMM_AC_EVENT_TSPEC_ADDED
+		"tsid=%d addr=" MACSTR " admitted_time=%d",
+		tsid, MAC2STR(addr), admitted_time);
+
+	return 0;
+}
+
+
+static void wmm_ac_del_ts_idx(struct wpa_supplicant *wpa_s, u8 ac,
+			      enum ts_dir_idx dir)
+{
+	struct wmm_tspec_element *tspec = wpa_s->tspecs[ac][dir];
+	u8 tsid;
+
+	if (!tspec)
+		return;
+
+	tsid = wmm_ac_get_tsid(tspec);
+	wpa_printf(MSG_DEBUG, "WMM AC: Del TS ac=%d tsid=%d", ac, tsid);
+
+	/* update the driver in case of uplink/bidi */
+	if (wmm_ac_get_direction(tspec) != WMM_AC_DIR_DOWNLINK)
+		wpa_drv_del_ts(wpa_s, tsid, wpa_s->bssid);
+
+	wpa_msg(wpa_s, MSG_INFO, WMM_AC_EVENT_TSPEC_REMOVED
+		"tsid=%d addr=" MACSTR, tsid, MAC2STR(wpa_s->bssid));
+
+	os_free(wpa_s->tspecs[ac][dir]);
+	wpa_s->tspecs[ac][dir] = NULL;
+}
+
+
+static void wmm_ac_del_req(struct wpa_supplicant *wpa_s, int failed)
+{
+	struct wmm_ac_addts_request *req = wpa_s->addts_request;
+
+	if (!req)
+		return;
+
+	if (failed)
+		wpa_msg(wpa_s, MSG_INFO, WMM_AC_EVENT_TSPEC_REQ_FAILED
+			"tsid=%u", wmm_ac_get_tsid(&req->tspec));
+
+	eloop_cancel_timeout(wmm_ac_addts_req_timeout, wpa_s, req);
+	wpa_s->addts_request = NULL;
+	os_free(req);
+}
+
+
+static void wmm_ac_addts_req_timeout(void *eloop_ctx, void *timeout_ctx)
+{
+	struct wpa_supplicant *wpa_s = eloop_ctx;
+	struct wmm_ac_addts_request *addts_req = timeout_ctx;
+
+	wpa_printf(MSG_DEBUG,
+		   "Timeout getting ADDTS response (tsid=%d up=%d)",
+		   wmm_ac_get_tsid(&addts_req->tspec),
+		   wmm_ac_get_user_priority(&addts_req->tspec));
+
+	wmm_ac_del_req(wpa_s, 1);
 }
 
 
@@ -349,6 +486,7 @@ static int wmm_ac_init(struct wpa_supplicant *wpa_s, const u8 *ies,
 
 	os_memset(wpa_s->tspecs, 0, sizeof(wpa_s->tspecs));
 	wpa_s->wmm_ac_last_dialog_token = 0;
+	wpa_s->addts_request = NULL;
 
 	assoc_data = wmm_ac_process_param_elem(wpa_s, ies, ies_len);
 	if (!assoc_data)
@@ -375,11 +513,7 @@ static void wmm_ac_del_ts(struct wpa_supplicant *wpa_s, u8 ac, int dir_bitmap)
 		if (!(dir_bitmap & BIT(idx)))
 			continue;
 
-		if (!wpa_s->tspecs[ac][idx])
-			continue;
-
-		os_free(wpa_s->tspecs[ac][idx]);
-		wpa_s->tspecs[ac][idx] = NULL;
+		wmm_ac_del_ts_idx(wpa_s, ac, idx);
 	}
 }
 
@@ -390,6 +524,9 @@ static void wmm_ac_deinit(struct wpa_supplicant *wpa_s)
 
 	for (i = 0; i < WMM_AC_NUM; i++)
 		wmm_ac_del_ts(wpa_s, i, TS_DIR_IDX_ALL);
+
+	/* delete pending add_ts requset */
+	wmm_ac_del_req(wpa_s, 1);
 
 	os_free(wpa_s->wmm_ac_assoc_info);
 	wpa_s->wmm_ac_assoc_info = NULL;
@@ -438,11 +575,7 @@ int wpas_wmm_ac_delts(struct wpa_supplicant *wpa_s, u8 tsid)
 	tspec = wpa_s->tspecs[ac][dir];
 	wmm_ac_send_delts(wpa_s, tspec, wpa_s->bssid);
 
-	os_free(tspec);
-	wpa_s->tspecs[ac][dir] = NULL;
-
-	wpa_printf(MSG_DEBUG, "WMM AC: TS was deleted (TSID=%u addr=" MACSTR
-		   ")", tsid, MAC2STR(wpa_s->bssid));
+	wmm_ac_del_ts_idx(wpa_s, ac, dir);
 
 	return 0;
 }
@@ -456,6 +589,12 @@ int wpas_wmm_ac_addts(struct wpa_supplicant *wpa_s,
 	if (!wpa_s->wmm_ac_assoc_info) {
 		wpa_printf(MSG_DEBUG,
 			   "WMM AC: Cannot add TS - missing assoc data");
+		return -1;
+	}
+
+	if (wpa_s->addts_request) {
+		wpa_printf(MSG_DEBUG,
+			   "WMM AC: can't add TS - ADDTS request is already pending");
 		return -1;
 	}
 
@@ -485,10 +624,196 @@ int wpas_wmm_ac_addts(struct wpa_supplicant *wpa_s,
 	if (wmm_ac_send_addts_request(wpa_s, addts_req))
 		goto err;
 
-	/* TODO: wait for ADDTS response, etc. */
-	os_free(addts_req);
+	/* save as pending and set ADDTS resp timeout to 1 second */
+	wpa_s->addts_request = addts_req;
+	eloop_register_timeout(1, 0, wmm_ac_addts_req_timeout,
+			       wpa_s, addts_req);
 	return 0;
 err:
 	os_free(addts_req);
 	return -1;
+}
+
+
+static void wmm_ac_handle_delts(struct wpa_supplicant *wpa_s, const u8 *sa,
+				const struct wmm_tspec_element *tspec)
+{
+	int ac;
+	u8 tsid;
+	enum ts_dir_idx idx;
+
+	tsid = wmm_ac_get_tsid(tspec);
+
+	wpa_printf(MSG_DEBUG,
+		   "WMM AC: DELTS frame has been received TSID=%u addr="
+		   MACSTR, tsid, MAC2STR(sa));
+
+	ac = wmm_ac_find_tsid(wpa_s, tsid, &idx);
+	if (ac < 0) {
+		wpa_printf(MSG_DEBUG,
+			   "WMM AC: Ignoring DELTS frame - TSID does not exist");
+		return;
+	}
+
+	wmm_ac_del_ts_idx(wpa_s, ac, idx);
+
+	wpa_printf(MSG_INFO,
+		   "TS was deleted successfully (tsid=%u address=" MACSTR ")",
+		   tsid, MAC2STR(sa));
+}
+
+
+static void wmm_ac_handle_addts_resp(struct wpa_supplicant *wpa_s, const u8 *sa,
+		const u8 resp_dialog_token, const u8 status_code,
+		const struct wmm_tspec_element *tspec)
+{
+	struct wmm_ac_addts_request *req = wpa_s->addts_request;
+	u8 ac, tsid, up, dir;
+	int replace_tspecs;
+
+	tsid = wmm_ac_get_tsid(tspec);
+	dir = wmm_ac_get_direction(tspec);
+	up = wmm_ac_get_user_priority(tspec);
+	ac = up_to_ac[up];
+
+	/* make sure we have a matching addts request */
+	if (!req || req->dialog_token != resp_dialog_token) {
+		wpa_printf(MSG_ERROR,
+			   "WMM AC: no req with dialog=%u, ignoring frame",
+			   resp_dialog_token);
+		return;
+	}
+
+	/* make sure the params are the same */
+	if (os_memcmp(req->address, sa, ETH_ALEN) != 0 ||
+	    tsid != wmm_ac_get_tsid(&req->tspec) ||
+	    up != wmm_ac_get_user_priority(&req->tspec) ||
+	    dir != wmm_ac_get_direction(&req->tspec)) {
+		wpa_printf(MSG_ERROR,
+			   "WMM AC: ADDTS params do not match, ignoring frame");
+		return;
+	}
+
+	/* delete pending request */
+	wmm_ac_del_req(wpa_s, 0);
+
+	wpa_printf(MSG_INFO,
+		   "ADDTS response status=%d tsid=%u up=%u direction=%u",
+		   status_code, tsid, up, dir);
+
+	if (status_code != WMM_ADDTS_STATUS_ADMISSION_ACCEPTED) {
+		wpa_printf(MSG_INFO, "WMM AC: ADDTS request was rejected");
+		goto err_msg;
+	}
+
+	replace_tspecs = wmm_ac_should_replace_ts(wpa_s, tsid, ac, dir);
+	if (replace_tspecs < 0)
+		goto err_delts;
+
+	wpa_printf(MSG_DEBUG, "ts idx replace bitmap: 0x%x", replace_tspecs);
+
+	/* when replacing tspecs - delete first */
+	wmm_ac_del_ts(wpa_s, ac, replace_tspecs);
+
+	/* Creating a new traffic stream */
+	wpa_printf(MSG_DEBUG,
+		   "WMM AC: adding a new TS with TSID=%u address="MACSTR
+		   " medium time=%u access category=%d dir=%d ",
+		   tsid, MAC2STR(sa),
+		   le_to_host16(tspec->medium_time), ac, dir);
+
+	if (wmm_ac_add_ts(wpa_s, sa, tspec))
+		goto err_delts;
+
+	return;
+
+err_delts:
+	/* ask the ap to delete the tspec */
+	wmm_ac_send_delts(wpa_s, tspec, sa);
+err_msg:
+	wpa_msg(wpa_s, MSG_INFO, WMM_AC_EVENT_TSPEC_REQ_FAILED "tsid=%u",
+		tsid);
+}
+
+
+void wmm_ac_rx_action(struct wpa_supplicant *wpa_s, const u8 *da,
+			const u8 *sa, const u8 *data, size_t len)
+{
+	u8 action;
+	u8 dialog_token;
+	u8 status_code;
+	struct ieee802_11_elems elems;
+	struct wmm_tspec_element *tspec;
+
+	if (wpa_s->wmm_ac_assoc_info == NULL) {
+		wpa_printf(MSG_WARNING,
+			   "WMM AC: WMM AC is disabled, ignoring action frame");
+		return;
+	}
+
+	action = data[0];
+
+	if (action != WMM_ACTION_CODE_ADDTS_RESP &&
+	    action != WMM_ACTION_CODE_DELTS) {
+		wpa_printf(MSG_WARNING,
+			   "WMM AC: Unknown action (%d), ignoring action frame",
+			   action);
+		return;
+	}
+
+	/* WMM AC action frame */
+	if (os_memcmp(da, wpa_s->own_addr, ETH_ALEN) != 0) {
+		wpa_printf(MSG_DEBUG, "WMM AC: frame destination addr="MACSTR
+			   " is other than ours, ignoring frame", MAC2STR(da));
+		return;
+	}
+
+	if (os_memcmp(sa, wpa_s->bssid, ETH_ALEN) != 0) {
+		wpa_printf(MSG_DEBUG, "WMM AC: ignore frame with sa " MACSTR
+			   " different other than our bssid", MAC2STR(da));
+		return;
+	}
+
+	if (len < 2 + sizeof(struct wmm_tspec_element)) {
+		wpa_printf(MSG_DEBUG,
+			   "WMM AC: Short ADDTS response ignored (len=%lu)",
+			   (unsigned long) len);
+		return;
+	}
+
+	data++;
+	len--;
+	dialog_token = data[0];
+	status_code = data[1];
+
+	if (ieee802_11_parse_elems(data + 2, len - 2, &elems, 1) != ParseOK) {
+		wpa_printf(MSG_DEBUG,
+			   "WMM AC: Could not parse WMM AC action from " MACSTR,
+			   MAC2STR(sa));
+		return;
+	}
+
+	/* the struct also contains the type and value, so decrease it */
+	if (elems.wmm_tspec_len != sizeof(struct wmm_tspec_element) - 2) {
+		wpa_printf(MSG_DEBUG, "WMM AC: missing or wrong length TSPEC");
+		return;
+	}
+
+	tspec = (struct wmm_tspec_element *)(elems.wmm_tspec - 2);
+
+	wpa_printf(MSG_DEBUG, "WMM AC: RX WMM AC Action from " MACSTR,
+		   MAC2STR(sa));
+	wpa_hexdump(MSG_MSGDUMP, "WMM AC: WMM AC Action content", data, len);
+
+	switch (action) {
+	case WMM_ACTION_CODE_ADDTS_RESP:
+		wmm_ac_handle_addts_resp(wpa_s, sa, dialog_token, status_code,
+					 tspec);
+		break;
+	case WMM_ACTION_CODE_DELTS:
+		wmm_ac_handle_delts(wpa_s, sa, tspec);
+		break;
+	default:
+		break;
+	}
 }

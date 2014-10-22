@@ -893,6 +893,7 @@ struct wpa_supplicant {
 
 	struct wmm_ac_assoc_data *wmm_ac_assoc_info;
 	struct wmm_tspec_element *tspecs[WMM_AC_NUM][TS_DIR_IDX_COUNT];
+	struct wmm_ac_addts_request *addts_request;
 	u8 wmm_ac_last_dialog_token;
 };
 

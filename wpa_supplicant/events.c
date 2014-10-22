@@ -2799,6 +2799,11 @@ static void wpas_event_rx_mgmt_action(struct wpa_supplicant *wpa_s,
 		" Category=%u DataLen=%d freq=%d MHz",
 		MAC2STR(mgmt->sa), category, (int) plen, freq);
 
+	if (category == WLAN_ACTION_WMM) {
+		wmm_ac_rx_action(wpa_s, mgmt->da, mgmt->sa, payload, plen);
+		return;
+	}
+
 #ifdef CONFIG_IEEE80211R
 	if (category == WLAN_ACTION_FT) {
 		ft_rx_action(wpa_s, payload, plen);

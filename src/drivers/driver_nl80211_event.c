@@ -129,6 +129,8 @@ static const char * nl80211_command_to_string(enum nl80211_commands cmd)
 	C2S(NL80211_CMD_CHANNEL_SWITCH)
 	C2S(NL80211_CMD_VENDOR)
 	C2S(NL80211_CMD_SET_QOS_MAP)
+	C2S(NL80211_CMD_ADD_TX_TS)
+	C2S(NL80211_CMD_DEL_TX_TS)
 	default:
 		return "NL80211_CMD_UNKNOWN";
 	}

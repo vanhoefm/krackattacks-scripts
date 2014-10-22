@@ -1940,6 +1940,14 @@ static int nl80211_mgmt_subscribe_non_ap(struct i802_bss *bss)
 		ret = -1;
 #endif /* CONFIG_HS20 */
 
+	/* WMM-AC ADDTS Response */
+	if (nl80211_register_action_frame(bss, (u8 *) "\x11\x01", 2) < 0)
+		return -1;
+
+	/* WMM-AC DELTS */
+	if (nl80211_register_action_frame(bss, (u8 *) "\x11\x02", 2) < 0)
+		return -1;
+
 	nl80211_mgmt_handle_register_eloop(bss);
 
 	return ret;
@@ -8435,6 +8443,81 @@ error:
 }
 
 
+static int nl80211_add_ts(void *priv, u8 tsid, const u8 *addr,
+			  u8 user_priority, u16 admitted_time)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg;
+	int ret;
+
+	wpa_printf(MSG_DEBUG,
+		   "nl80211: add_ts request: tsid=%u admitted_time=%u up=%d",
+		   tsid, admitted_time, user_priority);
+
+	if (!is_sta_interface(drv->nlmode))
+		return -ENOTSUP;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -ENOMEM;
+
+	nl80211_cmd(drv, msg, 0, NL80211_CMD_ADD_TX_TS);
+	if (nl80211_set_iface_id(msg, bss) < 0)
+		goto nla_put_failure;
+
+	NLA_PUT_U8(msg, NL80211_ATTR_TSID, tsid);
+	NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, addr);
+	NLA_PUT_U8(msg, NL80211_ATTR_USER_PRIO, user_priority);
+	NLA_PUT_U16(msg, NL80211_ATTR_ADMITTED_TIME, admitted_time);
+
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	if (ret)
+		wpa_printf(MSG_DEBUG, "nl80211: add_ts failed err=%d (%s)",
+			   ret, strerror(-ret));
+	return ret;
+
+nla_put_failure:
+	nlmsg_free(msg);
+	return -ENOBUFS;
+}
+
+
+static int nl80211_del_ts(void *priv, u8 tsid, const u8 *addr)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg;
+	int ret;
+
+	wpa_printf(MSG_DEBUG, "nl80211: del_ts request: tsid=%u", tsid);
+
+	if (!is_sta_interface(drv->nlmode))
+		return -ENOTSUP;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -ENOMEM;
+
+	nl80211_cmd(drv, msg, 0, NL80211_CMD_DEL_TX_TS);
+	if (nl80211_set_iface_id(msg, bss) < 0)
+		goto nla_put_failure;
+
+	NLA_PUT_U8(msg, NL80211_ATTR_TSID, tsid);
+	NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, addr);
+
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	if (ret)
+		wpa_printf(MSG_DEBUG, "nl80211: del_ts failed err=%d (%s)",
+			   ret, strerror(-ret));
+	return ret;
+
+nla_put_failure:
+	nlmsg_free(msg);
+	return -ENOBUFS;
+}
+
+
 #ifdef CONFIG_TESTING_OPTIONS
 static int cmd_reply_handler(struct nl_msg *msg, void *arg)
 {
@@ -9208,4 +9291,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.br_delete_ip_neigh = wpa_driver_br_delete_ip_neigh,
 	.br_port_set_attr = wpa_driver_br_port_set_attr,
 	.br_set_net_param = wpa_driver_br_set_net_param,
+	.add_tx_ts = nl80211_add_ts,
+	.del_tx_ts = nl80211_del_ts,
 };

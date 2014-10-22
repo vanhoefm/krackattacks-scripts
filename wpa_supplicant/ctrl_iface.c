@@ -7354,6 +7354,8 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		if (wpa_supplicant_ctrl_iface_tdls_teardown(wpa_s, buf + 14))
 			reply_len = -1;
 #endif /* CONFIG_TDLS */
+	} else if (os_strcmp(buf, "WMM_AC_STATUS") == 0) {
+		reply_len = wpas_wmm_ac_status(wpa_s, reply, reply_size);
 	} else if (os_strncmp(buf, "WMM_AC_ADDTS ", 13) == 0) {
 		if (wmm_ac_ctrl_addts(wpa_s, buf + 13))
 			reply_len = -1;

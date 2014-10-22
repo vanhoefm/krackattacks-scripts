@@ -2412,6 +2412,13 @@ static int wpa_cli_cmd_wmm_ac_delts(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int wpa_cli_cmd_wmm_ac_status(struct wpa_ctrl *ctrl, int argc,
+				    char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "WMM_AC_STATUS");
+}
+
+
 static int wpa_cli_cmd_signal_poll(struct wpa_ctrl *ctrl, int argc,
 				   char *argv[])
 {
@@ -2969,6 +2976,9 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "wmm_ac_delts", wpa_cli_cmd_wmm_ac_delts, NULL,
 	  cli_cmd_flag_none,
 	  "<tsid> = delete WMM-AC traffic stream" },
+	{ "wmm_ac_status", wpa_cli_cmd_wmm_ac_status, NULL,
+	  cli_cmd_flag_none,
+	  "= show status for Wireless Multi-Media Admission-Control" },
 	{ "signal_poll", wpa_cli_cmd_signal_poll, NULL,
 	  cli_cmd_flag_none,
 	  "= get signal parameters" },

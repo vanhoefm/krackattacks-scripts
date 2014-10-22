@@ -168,5 +168,6 @@ int wpas_wmm_ac_addts(struct wpa_supplicant *wpa_s,
 int wpas_wmm_ac_delts(struct wpa_supplicant *wpa_s, u8 tsid);
 void wmm_ac_rx_action(struct wpa_supplicant *wpa_s, const u8 *da,
 			const u8 *sa, const u8 *data, size_t len);
+int wpas_wmm_ac_status(struct wpa_supplicant *wpa_s, char *buf, size_t buflen);
 
 #endif /* WMM_AC_H */

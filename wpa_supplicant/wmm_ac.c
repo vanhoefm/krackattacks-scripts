@@ -817,3 +817,94 @@ void wmm_ac_rx_action(struct wpa_supplicant *wpa_s, const u8 *da,
 		break;
 	}
 }
+
+
+static const char * get_ac_str(u8 ac)
+{
+	switch (ac) {
+	case WMM_AC_BE:
+		return "BE";
+	case WMM_AC_BK:
+		return "BK";
+	case WMM_AC_VI:
+		return "VI";
+	case WMM_AC_VO:
+		return "VO";
+	default:
+		return "N/A";
+	}
+}
+
+
+static const char * get_direction_str(u8 direction)
+{
+	switch (direction) {
+	case WMM_AC_DIR_DOWNLINK:
+		return "Downlink";
+	case WMM_AC_DIR_UPLINK:
+		return "Uplink";
+	case WMM_AC_DIR_BIDIRECTIONAL:
+		return "Bi-directional";
+	default:
+		return "N/A";
+	}
+}
+
+
+int wpas_wmm_ac_status(struct wpa_supplicant *wpa_s, char *buf, size_t buflen)
+{
+	struct wmm_ac_assoc_data *assoc_info = wpa_s->wmm_ac_assoc_info;
+	enum ts_dir_idx idx;
+	int pos = 0;
+	u8 ac;
+
+	if (!assoc_info) {
+		return wpa_scnprintf(buf, buflen - pos,
+				     "Not associated to a WMM AP, WMM AC is Disabled\n");
+	}
+
+	pos += wpa_scnprintf(buf + pos, buflen - pos, "WMM AC is Enabled\n");
+
+	for (ac = 0; ac < WMM_AC_NUM; ac++) {
+		int ts_count = 0;
+
+		pos += wpa_scnprintf(buf + pos, buflen - pos,
+				     "%s: acm=%d uapsd=%d\n",
+				     get_ac_str(ac),
+				     assoc_info->ac_params[ac].acm,
+				     assoc_info->ac_params[ac].uapsd);
+
+		for (idx = 0; idx < TS_DIR_IDX_COUNT; idx++) {
+			struct wmm_tspec_element *tspec;
+			u8 dir, tsid;
+			const char *dir_str;
+
+			tspec = wpa_s->tspecs[ac][idx];
+			if (!tspec)
+				continue;
+
+			ts_count++;
+
+			dir = wmm_ac_get_direction(tspec);
+			dir_str = get_direction_str(dir);
+			tsid = wmm_ac_get_tsid(tspec);
+
+			pos += wpa_scnprintf(buf + pos, buflen - pos,
+					     "\tTSID = %u\n"
+					     "\tAddress = "MACSTR"\n"
+					     "\tWMM AC dir = %s\n"
+					     "\tTotal admitted time = %u\n\n",
+					     tsid,
+					     MAC2STR(wpa_s->bssid),
+					     dir_str,
+					     le_to_host16(tspec->medium_time));
+		}
+
+		if (!ts_count) {
+			pos += wpa_scnprintf(buf + pos, buflen - pos,
+					     "\t(No Traffic Stream)\n\n");
+		}
+	}
+
+	return pos;
+}

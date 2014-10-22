@@ -44,6 +44,7 @@
 #include "interworking.h"
 #include "mesh.h"
 #include "mesh_mpm.h"
+#include "wmm_ac.h"
 
 
 #ifndef CONFIG_NO_SCAN_PROCESSING
@@ -2037,6 +2038,12 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_IBSS_RSN */
 
 	wpas_wps_notify_assoc(wpa_s, bssid);
+
+	if (data) {
+		wmm_ac_notify_assoc(wpa_s, data->assoc_info.resp_ies,
+				    data->assoc_info.resp_ies_len,
+				    &data->assoc_info.wmm_params);
+	}
 }
 
 
@@ -2123,6 +2130,8 @@ static void wpa_supplicant_event_disassoc_finish(struct wpa_supplicant *wpa_s,
 			"IBSS/WPA-None mode");
 		return;
 	}
+
+	wmm_ac_notify_disassoc(wpa_s);
 
 	if (could_be_psk_mismatch(wpa_s, reason_code, locally_generated)) {
 		wpa_msg(wpa_s, MSG_INFO, "WPA: 4-Way Handshake failed - "

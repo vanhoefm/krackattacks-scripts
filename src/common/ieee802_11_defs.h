@@ -884,6 +884,8 @@ struct wmm_information_element {
 
 } STRUCT_PACKED;
 
+#define WMM_QOSINFO_AP_UAPSD 0x80
+
 #define WMM_QOSINFO_STA_AC_MASK 0x0f
 #define WMM_QOSINFO_STA_SP_MASK 0x03
 #define WMM_QOSINFO_STA_SP_SHIFT 5
@@ -951,11 +953,12 @@ struct wmm_tspec_element {
 
 
 /* Access Categories / ACI to AC coding */
-enum {
+enum wmm_ac {
 	WMM_AC_BE = 0 /* Best Effort */,
 	WMM_AC_BK = 1 /* Background */,
 	WMM_AC_VI = 2 /* Video */,
-	WMM_AC_VO = 3 /* Voice */
+	WMM_AC_VO = 3 /* Voice */,
+	WMM_AC_NUM = 4
 };
 
 

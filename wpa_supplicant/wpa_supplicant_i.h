@@ -15,6 +15,7 @@
 #include "common/wpa_ctrl.h"
 #include "wps/wps_defs.h"
 #include "config_ssid.h"
+#include "wmm_ac.h"
 
 extern const char *wpa_supplicant_version;
 extern const char *wpa_supplicant_license;
@@ -888,6 +889,8 @@ struct wpa_supplicant {
 	struct l2_packet_data *l2_test;
 	unsigned int extra_roc_dur;
 #endif /* CONFIG_TESTING_OPTIONS */
+
+	struct wmm_ac_assoc_data *wmm_ac_assoc_info;
 };
 
 

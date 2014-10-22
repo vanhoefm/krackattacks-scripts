@@ -183,6 +183,35 @@ void wpa_get_ntp_timestamp(u8 *buf)
 	os_memcpy(buf + 4, (u8 *) &tmp, 4);
 }
 
+/**
+ * wpa_scnprintf - Simpler-to-use snprintf function
+ * @buf: Output buffer
+ * @size: Buffer size
+ * @fmt: format
+ *
+ * Simpler snprintf version that doesn't require further error checks - the
+ * return value only indicates how many bytes were actually written, excluding
+ * the NULL byte (i.e., 0 on error, size-1 if buffer is not big enough).
+ */
+int wpa_scnprintf(char *buf, size_t size, const char *fmt, ...)
+{
+	va_list ap;
+	int ret;
+
+	if (!size)
+		return 0;
+
+	va_start(ap, fmt);
+	ret = vsnprintf(buf, size, fmt, ap);
+	va_end(ap);
+
+	if (ret < 0)
+		return 0;
+	if ((size_t) ret >= size)
+		return size - 1;
+
+	return ret;
+}
 
 static inline int _wpa_snprintf_hex(char *buf, size_t buf_size, const u8 *data,
 				    size_t len, int uppercase)

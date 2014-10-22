@@ -279,6 +279,22 @@ static void wpas_p2p_trigger_scan_cb(struct wpa_radio_work *work, int deinit)
 }
 
 
+static int wpas_p2p_search_social_channel(struct wpa_supplicant *wpa_s,
+					  int freq)
+{
+	if (wpa_s->global->p2p_24ghz_social_channels &&
+	    (freq == 2412 || freq == 2437 || freq == 2462)) {
+		/*
+		 * Search all social channels regardless of whether these have
+		 * been disabled for P2P operating channel use to avoid missing
+		 * peers.
+		 */
+		return 1;
+	}
+	return p2p_supported_freq(wpa_s->global->p2p, freq);
+}
+
+
 static int wpas_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 			 unsigned int num_req_dev_types,
 			 const u8 *req_dev_types, const u8 *dev_id, u16 pw_id)
@@ -348,8 +364,8 @@ static int wpas_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 		if (params->freqs == NULL)
 			goto fail;
 		for (i = 0; i < ARRAY_SIZE(social_channels_freq); i++) {
-			if (p2p_supported_freq(wpa_s->global->p2p,
-					       social_channels_freq[i]))
+			if (wpas_p2p_search_social_channel(
+				    wpa_s, social_channels_freq[i]))
 				params->freqs[num_channels++] =
 					social_channels_freq[i];
 		}
@@ -363,8 +379,8 @@ static int wpas_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 		if (params->freqs == NULL)
 			goto fail;
 		for (i = 0; i < ARRAY_SIZE(social_channels_freq); i++) {
-			if (p2p_supported_freq(wpa_s->global->p2p,
-					       social_channels_freq[i]))
+			if (wpas_p2p_search_social_channel(
+				    wpa_s, social_channels_freq[i]))
 				params->freqs[num_channels++] =
 					social_channels_freq[i];
 		}
@@ -3416,6 +3432,8 @@ static int wpas_p2p_default_channels(struct wpa_supplicant *wpa_s,
 {
 	int i, cla = 0;
 
+	wpa_s->global->p2p_24ghz_social_channels = 1;
+
 	os_memset(cli_chan, 0, sizeof(*cli_chan));
 
 	wpa_printf(MSG_DEBUG, "P2P: Enable operating classes for 2.4 GHz "
@@ -3669,6 +3687,8 @@ static int wpas_p2p_setup_channels(struct wpa_supplicant *wpa_s,
 		mode = get_mode(wpa_s->hw.modes, wpa_s->hw.num_modes, o->mode);
 		if (mode == NULL)
 			continue;
+		if (mode->mode == HOSTAPD_MODE_IEEE80211G)
+			wpa_s->global->p2p_24ghz_social_channels = 1;
 		for (ch = o->min_chan; ch <= o->max_chan; ch += o->inc) {
 			enum chan_allowed res;
 			res = wpas_p2p_verify_channel(wpa_s, mode, ch, o->bw);

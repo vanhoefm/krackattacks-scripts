@@ -609,6 +609,24 @@ static inline int wpa_drv_switch_channel(struct wpa_supplicant *wpa_s,
 	return wpa_s->driver->switch_channel(wpa_s->drv_priv, settings);
 }
 
+static inline int wpa_drv_add_ts(struct wpa_supplicant *wpa_s, u8 tsid,
+				 const u8 *address, u8 user_priority,
+				 u16 admitted_time)
+{
+	if (!wpa_s->driver->add_tx_ts)
+		return -1;
+	return wpa_s->driver->add_tx_ts(wpa_s->drv_priv, tsid, address,
+					user_priority, admitted_time);
+}
+
+static inline int wpa_drv_del_ts(struct wpa_supplicant *wpa_s, u8 tid,
+				 const u8 *address)
+{
+	if (!wpa_s->driver->del_tx_ts)
+		return -1;
+	return wpa_s->driver->del_tx_ts(wpa_s->drv_priv, tid, address);
+}
+
 static inline int wpa_drv_wnm_oper(struct wpa_supplicant *wpa_s,
 				   enum wnm_oper oper, const u8 *peer,
 				   u8 *buf, u16 *buf_len)

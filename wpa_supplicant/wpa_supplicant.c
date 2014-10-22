@@ -3813,6 +3813,7 @@ static int wpa_supplicant_init_iface(struct wpa_supplicant *wpa_s,
 		wpa_s->extended_capa_len = capa.extended_capa_len;
 		wpa_s->num_multichan_concurrent =
 			capa.num_multichan_concurrent;
+		wpa_s->wmm_ac_supported = capa.wmm_ac_supported;
 	}
 	if (wpa_s->max_remain_on_chan == 0)
 		wpa_s->max_remain_on_chan = 1000;

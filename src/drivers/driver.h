@@ -1072,6 +1072,8 @@ struct wpa_driver_capa {
 #define WPA_DRIVER_SMPS_MODE_DYNAMIC			0x00000002
 	unsigned int smps_modes;
 
+	unsigned int wmm_ac_supported:1;
+
 	int max_scan_ssids;
 	int max_sched_scan_ssids;
 	int sched_scan_supported;
@@ -2867,6 +2869,28 @@ struct wpa_driver_ops {
 	 * avoid frequency conflict in single channel concurrency.
 	 */
 	int (*switch_channel)(void *priv, struct csa_settings *settings);
+
+	/**
+	 * add_tx_ts - Add traffic stream
+	 * @priv: Private driver interface data
+	 * @tsid: Traffic stream ID
+	 * @addr: Receiver address
+	 * @user_prio: User priority of the traffic stream
+	 * @admitted_time: Admitted time for this TS in units of
+	 *	32 microsecond periods (per second).
+	 * Returns: 0 on success, -1 on failure
+	 */
+	int (*add_tx_ts)(void *priv, u8 tsid, const u8 *addr, u8 user_prio,
+			 u16 admitted_time);
+
+	/**
+	 * del_tx_ts - Delete traffic stream
+	 * @priv: Private driver interface data
+	 * @tsid: Traffic stream ID
+	 * @addr: Receiver address
+	 * Returns: 0 on success, -1 on failure
+	 */
+	int (*del_tx_ts)(void *priv, u8 tsid, const u8 *addr);
 
 	/**
 	 * start_dfs_cac - Listen for radar interference on the channel

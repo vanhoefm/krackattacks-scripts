@@ -861,6 +861,7 @@ struct wpa_supplicant {
 	unsigned int no_keep_alive:1;
 	unsigned int ext_mgmt_frame_handling:1;
 	unsigned int ext_eapol_frame_io:1;
+	unsigned int wmm_ac_supported:1;
 
 #ifdef CONFIG_WNM
 	u8 wnm_dialog_token;

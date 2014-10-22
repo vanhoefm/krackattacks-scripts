@@ -1366,6 +1366,23 @@ enum tdls_peer_capability {
 	TDLS_PEER_WMM = BIT(2),
 };
 
+/* valid info in the wmm_params struct */
+enum wmm_params_valid_info {
+	WMM_PARAMS_UAPSD_QUEUES_INFO = BIT(0),
+};
+
+/**
+ * struct wmm_params - WMM parameterss configured for this association
+ * @info_bitmap: Bitmap of valid wmm_params info; indicates what fields
+ *	of the struct contain valid information.
+ * @uapsd_queues: Bitmap of ACs configured for uapsd (valid only if
+ *	%WMM_PARAMS_UAPSD_QUEUES_INFO is set)
+ */
+struct wmm_params {
+	u8 info_bitmap;
+	u8 uapsd_queues;
+};
+
 #ifdef CONFIG_MACSEC
 struct macsec_init_params {
 	Boolean always_include_sci;
@@ -3734,6 +3751,11 @@ union wpa_event_data {
 		 * freq - Frequency of the operational channel in MHz
 		 */
 		unsigned int freq;
+
+		/**
+		 * wmm_params - WMM parameters used in this association.
+		 */
+		struct wmm_params wmm_params;
 
 		/**
 		 * addr - Station address (for AP mode)

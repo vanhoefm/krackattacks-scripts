@@ -178,8 +178,39 @@ static void mlme_event_auth(struct wpa_driver_nl80211_data *drv,
 }
 
 
+static int nl80211_parse_wmm_params(struct nlattr *wmm_attr,
+				    struct wmm_params *wmm_params)
+{
+	struct nlattr *wmm_info[NL80211_STA_WME_MAX + 1];
+	static struct nla_policy wme_policy[NL80211_STA_WME_MAX + 1] = {
+		[NL80211_STA_WME_UAPSD_QUEUES] = { .type = NLA_U8 },
+	};
+
+	if (!wmm_attr) {
+		wpa_printf(MSG_DEBUG, "nl80211: WMM data missing");
+		return -1;
+	}
+
+	if (nla_parse_nested(wmm_info, NL80211_STA_WME_MAX, wmm_attr,
+			     wme_policy)) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Failed to parse nested attributes");
+		return -1;
+	}
+
+	if (!wmm_info[NL80211_STA_WME_UAPSD_QUEUES])
+		return -1;
+
+	wmm_params->uapsd_queues =
+		nla_get_u8(wmm_info[NL80211_STA_WME_UAPSD_QUEUES]);
+	wmm_params->info_bitmap |= WMM_PARAMS_UAPSD_QUEUES_INFO;
+
+	return 0;
+}
+
+
 static void mlme_event_assoc(struct wpa_driver_nl80211_data *drv,
-			    const u8 *frame, size_t len)
+			    const u8 *frame, size_t len, struct nlattr *wmm)
 {
 	const struct ieee80211_mgmt *mgmt;
 	union wpa_event_data event;
@@ -232,6 +263,8 @@ static void mlme_event_assoc(struct wpa_driver_nl80211_data *drv,
 	}
 
 	event.assoc_info.freq = drv->assoc_freq;
+
+	nl80211_parse_wmm_params(wmm, &event.assoc_info.wmm_params);
 
 	wpa_supplicant_event(drv->ctx, EVENT_ASSOC, &event);
 }
@@ -691,7 +724,8 @@ static void mlme_event(struct i802_bss *bss,
 		       enum nl80211_commands cmd, struct nlattr *frame,
 		       struct nlattr *addr, struct nlattr *timed_out,
 		       struct nlattr *freq, struct nlattr *ack,
-		       struct nlattr *cookie, struct nlattr *sig)
+		       struct nlattr *cookie, struct nlattr *sig,
+		       struct nlattr *wmm)
 {
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	const u8 *data;
@@ -738,7 +772,7 @@ static void mlme_event(struct i802_bss *bss,
 		mlme_event_auth(drv, nla_data(frame), nla_len(frame));
 		break;
 	case NL80211_CMD_ASSOCIATE:
-		mlme_event_assoc(drv, nla_data(frame), nla_len(frame));
+		mlme_event_assoc(drv, nla_data(frame), nla_len(frame), wmm);
 		break;
 	case NL80211_CMD_DEAUTHENTICATE:
 		mlme_event_deauth_disassoc(drv, EVENT_DEAUTH,
@@ -1683,7 +1717,8 @@ static void do_process_drv_event(struct i802_bss *bss, int cmd,
 			   tb[NL80211_ATTR_MAC], tb[NL80211_ATTR_TIMED_OUT],
 			   tb[NL80211_ATTR_WIPHY_FREQ], tb[NL80211_ATTR_ACK],
 			   tb[NL80211_ATTR_COOKIE],
-			   tb[NL80211_ATTR_RX_SIGNAL_DBM]);
+			   tb[NL80211_ATTR_RX_SIGNAL_DBM],
+			   tb[NL80211_ATTR_STA_WME]);
 		break;
 	case NL80211_CMD_CONNECT:
 	case NL80211_CMD_ROAM:
@@ -1875,7 +1910,8 @@ int process_bss_event(struct nl_msg *msg, void *arg)
 			   tb[NL80211_ATTR_MAC], tb[NL80211_ATTR_TIMED_OUT],
 			   tb[NL80211_ATTR_WIPHY_FREQ], tb[NL80211_ATTR_ACK],
 			   tb[NL80211_ATTR_COOKIE],
-			   tb[NL80211_ATTR_RX_SIGNAL_DBM]);
+			   tb[NL80211_ATTR_RX_SIGNAL_DBM],
+			   tb[NL80211_ATTR_STA_WME]);
 		break;
 	case NL80211_CMD_UNEXPECTED_FRAME:
 		nl80211_spurious_frame(bss, tb, 0);

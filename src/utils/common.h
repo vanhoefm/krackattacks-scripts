@@ -537,12 +537,13 @@ void int_array_add_unique(int **res, int a);
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 
-
 void str_clear_free(char *str);
 void bin_clear_free(void *bin, size_t len);
 
 int random_mac_addr(u8 *addr);
 int random_mac_addr_keep_oui(u8 *addr);
+
+char * str_token(char *str, const char *delim, char **context);
 
 
 /*

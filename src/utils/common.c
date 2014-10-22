@@ -866,3 +866,35 @@ int random_mac_addr_keep_oui(u8 *addr)
 	addr[0] |= 0x02; /* locally administered */
 	return 0;
 }
+
+
+/**
+ * str_token - Get next token from a string
+ * @buf: String to tokenize. Note that the string might be modified.
+ * @delim: String of delimiters
+ * @context: Pointer to save our context. Should be initialized with
+ *	NULL on the first call, and passed for any further call.
+ * Returns: The next token, NULL if there are no more valid tokens.
+ */
+char * str_token(char *str, const char *delim, char **context)
+{
+	char *end, *pos = str;
+
+	if (*context)
+		pos = *context;
+
+	while (*pos && os_strchr(delim, *pos))
+		pos++;
+	if (!*pos)
+		return NULL;
+
+	end = pos + 1;
+	while (*end && !os_strchr(delim, *end))
+		end++;
+
+	if (*end)
+		*end++ = '\0';
+
+	*context = end;
+	return pos;
+}

@@ -2398,6 +2398,20 @@ static int wpa_cli_cmd_tdls_teardown(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int wpa_cli_cmd_wmm_ac_addts(struct wpa_ctrl *ctrl, int argc,
+				    char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "WMM_AC_ADDTS", 3, argc, argv);
+}
+
+
+static int wpa_cli_cmd_wmm_ac_delts(struct wpa_ctrl *ctrl, int argc,
+				    char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "WMM_AC_DELTS", 1, argc, argv);
+}
+
+
 static int wpa_cli_cmd_signal_poll(struct wpa_ctrl *ctrl, int argc,
 				   char *argv[])
 {
@@ -2947,6 +2961,14 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "tdls_teardown", wpa_cli_cmd_tdls_teardown, NULL,
 	  cli_cmd_flag_none,
 	  "<addr> = tear down TDLS with <addr>" },
+	{ "wmm_ac_addts", wpa_cli_cmd_wmm_ac_addts, NULL,
+	  cli_cmd_flag_none,
+	  "<uplink/downlink/bidi> <tsid=0..7> <up=0..7> [nominal_msdu_size=#] "
+	  "[mean_data_rate=#] [min_phy_rate=#] [sba=#] [fixed_nominal_msdu] "
+	  "= add WMM-AC traffic stream" },
+	{ "wmm_ac_delts", wpa_cli_cmd_wmm_ac_delts, NULL,
+	  cli_cmd_flag_none,
+	  "<tsid> = delete WMM-AC traffic stream" },
 	{ "signal_poll", wpa_cli_cmd_signal_poll, NULL,
 	  cli_cmd_flag_none,
 	  "= get signal parameters" },

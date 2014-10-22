@@ -74,7 +74,7 @@ DBusMessage * wpas_dbus_handler_p2p_find(DBusMessage *message,
 	DBusMessageIter iter;
 	DBusMessageIter iter_dict;
 	unsigned int timeout = 0;
-	enum p2p_discovery_type type = P2P_FIND_ONLY_SOCIAL;
+	enum p2p_discovery_type type = P2P_FIND_START_WITH_FULL;
 	int num_req_dev_types = 0;
 	unsigned int i;
 	u8 *req_dev_types = NULL;

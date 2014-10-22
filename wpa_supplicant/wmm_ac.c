@@ -556,7 +556,7 @@ void wmm_ac_notify_disassoc(struct wpa_supplicant *wpa_s)
 
 int wpas_wmm_ac_delts(struct wpa_supplicant *wpa_s, u8 tsid)
 {
-	struct wmm_tspec_element *tspec;
+	struct wmm_tspec_element tspec;
 	int ac;
 	enum ts_dir_idx dir;
 
@@ -572,10 +572,11 @@ int wpas_wmm_ac_delts(struct wpa_supplicant *wpa_s, u8 tsid)
 		return -1;
 	}
 
-	tspec = wpa_s->tspecs[ac][dir];
-	wmm_ac_send_delts(wpa_s, tspec, wpa_s->bssid);
+	tspec = *wpa_s->tspecs[ac][dir];
 
 	wmm_ac_del_ts_idx(wpa_s, ac, dir);
+
+	wmm_ac_send_delts(wpa_s, &tspec, wpa_s->bssid);
 
 	return 0;
 }

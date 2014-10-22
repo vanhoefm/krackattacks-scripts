@@ -57,7 +57,7 @@ if ! ./start.sh $VALGRIND $TRACE $NUM_CH; then
 	exit 1
 fi
 
-./run-tests.py -D --logdir "$LOGDIR" $TRACE_ARGS -q $DB $@ || errors=1
+sudo ./run-tests.py -D --logdir "$LOGDIR" $TRACE_ARGS -q $DB $@ || errors=1
 
 ./stop.sh
 

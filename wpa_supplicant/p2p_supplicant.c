@@ -3957,6 +3957,7 @@ int wpas_p2p_add_p2pdev_interface(struct wpa_supplicant *wpa_s,
 		return -1;
 	}
 	p2pdev_wpa_s->parent = wpa_s;
+	wpa_s->p2p_dev = p2pdev_wpa_s;
 
 	wpa_s->pending_interface_name[0] = '\0';
 	return 0;

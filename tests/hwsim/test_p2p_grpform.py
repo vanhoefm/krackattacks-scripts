@@ -123,6 +123,9 @@ def go_neg_pbc(i_dev, r_dev, i_intent=None, r_intent=None, i_freq=None, r_freq=N
     if ev is None:
         raise Exception("GO Negotiation timed out")
     r_dev.dump_monitor()
+    # Allow some time for the GO Neg Resp to go out before initializing new
+    # GO Negotiation.
+    time.sleep(0.2)
     logger.debug("Re-initiate GO Negotiation from r_dev")
     r_res = r_dev.p2p_go_neg_init(i_dev.p2p_dev_addr(), None, "pbc",
                                   go_intent=r_intent, timeout=20, freq=r_freq)

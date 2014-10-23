@@ -2837,6 +2837,8 @@ static void p2p_sd_cb(struct p2p_data *p2p, int success)
 	p2p->pending_action_state = P2P_NO_PENDING_ACTION;
 
 	if (!success) {
+		if (p2p->sd_peer)
+			p2p->cfg->send_action_done(p2p->cfg->cb_ctx);
 		p2p->sd_peer = NULL;
 		p2p_continue_find(p2p);
 		return;

@@ -260,6 +260,11 @@ struct p2p_data {
 	 */
 	struct p2p_device *invite_peer;
 
+	/**
+	 * last_p2p_find_oper - Pointer to last pre-find operation peer
+	 */
+	struct p2p_device *last_p2p_find_oper;
+
 	const u8 *invite_go_dev_addr;
 	u8 invite_go_dev_addr_buf[ETH_ALEN];
 	int invite_dev_pw_id;

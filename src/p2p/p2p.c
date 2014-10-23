@@ -2764,28 +2764,64 @@ int p2p_set_country(struct p2p_data *p2p, const char *country)
 }
 
 
+static int p2p_pre_find_operation(struct p2p_data *p2p, struct p2p_device *dev)
+{
+	if (dev->sd_pending_bcast_queries == 0) {
+		/* Initialize with total number of registered broadcast
+		 * SD queries. */
+		dev->sd_pending_bcast_queries = p2p->num_p2p_sd_queries;
+	}
+
+	if (p2p_start_sd(p2p, dev) == 0)
+		return 1;
+
+	if (dev->req_config_methods &&
+	    !(dev->flags & P2P_DEV_PD_FOR_JOIN)) {
+		p2p_dbg(p2p, "Send pending Provision Discovery Request to "
+			MACSTR " (config methods 0x%x)",
+			MAC2STR(dev->info.p2p_device_addr),
+			dev->req_config_methods);
+		if (p2p_send_prov_disc_req(p2p, dev, 0, 0) == 0)
+			return 1;
+	}
+
+	return 0;
+}
+
+
 void p2p_continue_find(struct p2p_data *p2p)
 {
 	struct p2p_device *dev;
-	p2p_set_state(p2p, P2P_SEARCH);
-	dl_list_for_each(dev, &p2p->devices, struct p2p_device, list) {
-		if (dev->sd_pending_bcast_queries == 0) {
-			/* Initialize with total number of registered broadcast
-			 * SD queries. */
-			dev->sd_pending_bcast_queries = p2p->num_p2p_sd_queries;
-		}
+	int found;
 
-		if (p2p_start_sd(p2p, dev) == 0)
-			return;
-		if (dev->req_config_methods &&
-		    !(dev->flags & P2P_DEV_PD_FOR_JOIN)) {
-			p2p_dbg(p2p, "Send pending Provision Discovery Request to "
-				MACSTR " (config methods 0x%x)",
-				MAC2STR(dev->info.p2p_device_addr),
-				dev->req_config_methods);
-			if (p2p_send_prov_disc_req(p2p, dev, 0, 0) == 0)
-				return;
+	p2p_set_state(p2p, P2P_SEARCH);
+
+	/* Continue from the device following the last iteration */
+	found = 0;
+	dl_list_for_each(dev, &p2p->devices, struct p2p_device, list) {
+		if (dev == p2p->last_p2p_find_oper) {
+			found = 1;
+			continue;
 		}
+		if (!found)
+			continue;
+		if (p2p_pre_find_operation(p2p, dev) > 0) {
+			p2p->last_p2p_find_oper = dev;
+			return;
+		}
+	}
+
+	/*
+	 * Wrap around to the beginning of the list and continue until the last
+	 * iteration device.
+	 */
+	dl_list_for_each(dev, &p2p->devices, struct p2p_device, list) {
+		if (p2p_pre_find_operation(p2p, dev) > 0) {
+			p2p->last_p2p_find_oper = dev;
+			return;
+		}
+		if (dev == p2p->last_p2p_find_oper)
+			break;
 	}
 
 	p2p_listen_in_find(p2p, 1);

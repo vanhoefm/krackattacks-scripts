@@ -1192,6 +1192,9 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 
 	if (config->preassoc_mac_addr)
 		fprintf(f, "preassoc_mac_addr=%d\n", config->preassoc_mac_addr);
+
+	if (config->key_mgmt_offload != DEFAULT_KEY_MGMT_OFFLOAD)
+		fprintf(f, "key_mgmt_offload=%u\n", config->key_mgmt_offload);
 }
 
 #endif /* CONFIG_NO_CONFIG_WRITE */

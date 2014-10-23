@@ -50,6 +50,14 @@ enum qca_radiotap_vendor_ids {
  * @QCA_NL80211_VENDOR_SUBCMD_NAN: NAN command/event which is used to pass
  *	NAN Request/Response and NAN Indication messages. These messages are
  *	interpreted between the framework and the firmware component.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_KEY_MGMT_SET_KEY: Set key operation that can be
+ *	used to configure PMK to the driver even when not connected. This can
+ *	be used to request offloading of key management operations.
+ * @QCA_NL80211_VENDOR_SUBCMD_KEY_MGMT_ROAM_AUTH: An extended version of
+ *	NL80211_CMD_ROAM event with optional attributes including information
+ *	from offloaded key management operation. Uses
+ *	enum qca_wlan_vendor_attr_roam_auth attributes.
  */
 enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
@@ -61,6 +69,8 @@ enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_NAN =  12,
 	QCA_NL80211_VENDOR_SUBMCD_STATS_EXT = 13,
 	/* 14..49 - reserved for QCA */
+	QCA_NL80211_VENDOR_SUBCMD_KEY_MGMT_SET_KEY = 50,
+	QCA_NL80211_VENDOR_SUBCMD_KEY_MGMT_ROAM_AUTH = 51,
 };
 
 
@@ -87,6 +97,21 @@ enum qca_wlan_vendor_attr {
 enum qca_roaming_policy {
 	QCA_ROAMING_NOT_ALLOWED,
 	QCA_ROAMING_ALLOWED_WITHIN_ESS,
+};
+
+enum qca_wlan_vendor_attr_roam_auth {
+	QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_INVALID = 0,
+	QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_BSSID,
+	QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_REQ_IE,
+	QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_RESP_IE,
+	QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_AUTHORIZED,
+	QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_KEY_REPLAY_CTR,
+	QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_PTK_KCK,
+	QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_PTK_KEK,
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_MAX =
+	QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_AFTER_LAST - 1
 };
 
 #endif /* QCA_VENDOR_H */

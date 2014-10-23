@@ -915,6 +915,19 @@ static void wpa_supplicant_set_rekey_offload(void *ctx, const u8 *kek,
 #endif /* CONFIG_NO_WPA */
 
 
+static int wpa_supplicant_key_mgmt_set_pmk(void *ctx, const u8 *pmk,
+					   size_t pmk_len)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+
+	if (wpa_s->conf->key_mgmt_offload)
+		return wpa_drv_set_key(wpa_s, WPA_ALG_PMK, NULL, 0, 0,
+				       NULL, 0, pmk, pmk_len);
+	else
+		return 0;
+}
+
+
 int wpa_supplicant_init_wpa(struct wpa_supplicant *wpa_s)
 {
 #ifndef CONFIG_NO_WPA
@@ -956,6 +969,7 @@ int wpa_supplicant_init_wpa(struct wpa_supplicant *wpa_s)
 	ctx->tdls_peer_addset = wpa_supplicant_tdls_peer_addset;
 #endif /* CONFIG_TDLS */
 	ctx->set_rekey_offload = wpa_supplicant_set_rekey_offload;
+	ctx->key_mgmt_set_pmk = wpa_supplicant_key_mgmt_set_pmk;
 
 	wpa_s->wpa = wpa_sm_init(ctx);
 	if (wpa_s->wpa == NULL) {

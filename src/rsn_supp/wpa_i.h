@@ -312,6 +312,16 @@ wpa_sm_tdls_peer_addset(struct wpa_sm *sm, const u8 *addr, int add,
 }
 #endif /* CONFIG_TDLS */
 
+static inline int wpa_sm_key_mgmt_set_pmk(struct wpa_sm *sm,
+					  const u8 *pmk, size_t pmk_len)
+{
+	if (!sm->proactive_key_caching)
+		return 0;
+	if (!sm->ctx->key_mgmt_set_pmk)
+		return -1;
+	return sm->ctx->key_mgmt_set_pmk(sm->ctx->ctx, pmk, pmk_len);
+}
+
 void wpa_eapol_key_send(struct wpa_sm *sm, const u8 *kck,
 			int ver, const u8 *dest, u16 proto,
 			u8 *msg, size_t msg_len, u8 *key_mic);

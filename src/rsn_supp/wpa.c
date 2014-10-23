@@ -138,6 +138,24 @@ void wpa_sm_key_request(struct wpa_sm *sm, int error, int pairwise)
 }
 
 
+static void wpa_supplicant_key_mgmt_set_pmk(struct wpa_sm *sm)
+{
+#ifdef CONFIG_IEEE80211R
+	if (sm->key_mgmt == WPA_KEY_MGMT_FT_IEEE8021X) {
+		if (wpa_sm_key_mgmt_set_pmk(sm, sm->xxkey, sm->xxkey_len))
+			wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG,
+				"RSN: Cannot set low order 256 bits of MSK for key management offload");
+	} else {
+#endif /* CONFIG_IEEE80211R */
+		if (wpa_sm_key_mgmt_set_pmk(sm, sm->pmk, sm->pmk_len))
+			wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG,
+				"RSN: Cannot set PMK for key management offload");
+#ifdef CONFIG_IEEE80211R
+	}
+#endif /* CONFIG_IEEE80211R */
+}
+
+
 static int wpa_supplicant_get_pmk(struct wpa_sm *sm,
 				  const unsigned char *src_addr,
 				  const u8 *pmkid)
@@ -198,6 +216,7 @@ static int wpa_supplicant_get_pmk(struct wpa_sm *sm,
 			wpa_hexdump_key(MSG_DEBUG, "WPA: PMK from EAPOL state "
 					"machines", sm->pmk, pmk_len);
 			sm->pmk_len = pmk_len;
+			wpa_supplicant_key_mgmt_set_pmk(sm);
 			if (sm->proto == WPA_PROTO_RSN &&
 			    !wpa_key_mgmt_ft(sm->key_mgmt)) {
 				sa = pmksa_cache_add(sm->pmksa,
@@ -2787,3 +2806,30 @@ int wpa_sm_get_p2p_ip_addr(struct wpa_sm *sm, u8 *buf)
 }
 
 #endif /* CONFIG_P2P */
+
+
+void wpa_sm_set_rx_replay_ctr(struct wpa_sm *sm, const u8 *rx_replay_counter)
+{
+	if (rx_replay_counter == NULL)
+		return;
+
+	os_memcpy(sm->rx_replay_counter, rx_replay_counter,
+		  WPA_REPLAY_COUNTER_LEN);
+	sm->rx_replay_counter_set = 1;
+	wpa_printf(MSG_DEBUG, "Updated key replay counter");
+}
+
+
+void wpa_sm_set_ptk_kck_kek(struct wpa_sm *sm, const u8 *ptk_kck,
+			    const u8 *ptk_kek)
+{
+	if (ptk_kck) {
+		os_memcpy(sm->ptk.kck, ptk_kck, 16);
+		wpa_printf(MSG_DEBUG, "Updated PTK KCK");
+	}
+	if (ptk_kek) {
+		os_memcpy(sm->ptk.kek, ptk_kek, 16);
+		wpa_printf(MSG_DEBUG, "Updated PTK KEK");
+	}
+	sm->ptk_set = 1;
+}

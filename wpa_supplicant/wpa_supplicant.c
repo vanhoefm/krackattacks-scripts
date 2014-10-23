@@ -1921,6 +1921,22 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 			params.psk = ssid->psk;
 	}
 
+	if (wpa_s->conf->key_mgmt_offload) {
+		if (params.key_mgmt_suite == WPA_KEY_MGMT_IEEE8021X ||
+		    params.key_mgmt_suite == WPA_KEY_MGMT_IEEE8021X_SHA256)
+			params.req_key_mgmt_offload =
+				ssid->proactive_key_caching < 0 ?
+				wpa_s->conf->okc : ssid->proactive_key_caching;
+		else
+			params.req_key_mgmt_offload = 1;
+
+		if ((params.key_mgmt_suite == WPA_KEY_MGMT_PSK ||
+		     params.key_mgmt_suite == WPA_KEY_MGMT_PSK_SHA256 ||
+		     params.key_mgmt_suite == WPA_KEY_MGMT_FT_PSK) &&
+		    ssid->psk_set)
+			params.psk = ssid->psk;
+	}
+
 	params.drop_unencrypted = use_crypt;
 
 #ifdef CONFIG_IEEE80211W

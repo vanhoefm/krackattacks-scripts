@@ -28,6 +28,7 @@
 #define DEFAULT_SCAN_CUR_FREQ 0
 #define DEFAULT_P2P_SEARCH_DELAY 500
 #define DEFAULT_RAND_ADDR_LIFETIME 60
+#define DEFAULT_KEY_MGMT_OFFLOAD 1
 
 #include "config_ssid.h"
 #include "wps/wps.h"
@@ -1088,6 +1089,17 @@ struct wpa_config {
 	 * 2 = like 1, but maintain OUI (with local admin bit set)
 	 */
 	int preassoc_mac_addr;
+
+	/**
+	 * key_mgmt_offload - Use key management offload
+	 *
+	 * Key management offload should be used if the device supports it.
+	 * Key management offload is the capability of a device operating as
+	 * a station to do the exchange necessary to establish temporal keys
+	 * during initial RSN connection, after roaming, or during a PTK
+	 * rekeying operation.
+	 */
+	int key_mgmt_offload;
 };
 
 

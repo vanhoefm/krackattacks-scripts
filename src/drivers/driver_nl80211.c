@@ -315,6 +315,8 @@ struct wpa_driver_nl80211_data {
 	unsigned int have_low_prio_scan:1;
 	unsigned int force_connect_cmd:1;
 	unsigned int addr_changed:1;
+	unsigned int key_mgmt_set_key_vendor_cmd_avail:1;
+	unsigned int roam_auth_vendor_event_avail:1;
 
 	u64 remain_on_chan_cookie;
 	u64 send_action_cookie;
@@ -1587,7 +1589,11 @@ static void mlme_event_assoc(struct wpa_driver_nl80211_data *drv,
 static void mlme_event_connect(struct wpa_driver_nl80211_data *drv,
 			       enum nl80211_commands cmd, struct nlattr *status,
 			       struct nlattr *addr, struct nlattr *req_ie,
-			       struct nlattr *resp_ie)
+			       struct nlattr *resp_ie,
+			       struct nlattr *authorized,
+			       struct nlattr *key_replay_ctr,
+			       struct nlattr *ptk_kck,
+			       struct nlattr *ptk_kek)
 {
 	union wpa_event_data event;
 
@@ -1636,6 +1642,23 @@ static void mlme_event_connect(struct wpa_driver_nl80211_data *drv,
 	}
 
 	event.assoc_info.freq = nl80211_get_assoc_freq(drv);
+
+	if (authorized && nla_get_u8(authorized)) {
+		event.assoc_info.authorized = 1;
+		wpa_printf(MSG_DEBUG, "nl80211: connection authorized");
+	}
+	if (key_replay_ctr) {
+		event.assoc_info.key_replay_ctr = nla_data(key_replay_ctr);
+		event.assoc_info.key_replay_ctr_len = nla_len(key_replay_ctr);
+	}
+	if (ptk_kck) {
+		event.assoc_info.ptk_kck = nla_data(ptk_kck);
+		event.assoc_info.ptk_kck_len = nla_len(ptk_kek);
+	}
+	if (ptk_kek) {
+		event.assoc_info.ptk_kek = nla_data(ptk_kek);
+		event.assoc_info.ptk_kek_len = nla_len(ptk_kek);
+	}
 
 	wpa_supplicant_event(drv->ctx, EVENT_ASSOC, &event);
 }
@@ -2976,12 +2999,48 @@ static void qca_nl80211_avoid_freq(struct wpa_driver_nl80211_data *drv,
 }
 
 
+static void qca_nl80211_key_mgmt_auth(struct wpa_driver_nl80211_data *drv,
+				      const u8 *data, size_t len)
+{
+	struct nlattr *tb[QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_MAX + 1];
+	u8 *bssid;
+
+	wpa_printf(MSG_DEBUG,
+		   "nl80211: Key management roam+auth vendor event received");
+
+	if (nla_parse(tb, QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_MAX,
+		      (struct nlattr *) data, len, NULL))
+		return;
+	if (!tb[QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_BSSID] ||
+	    nla_len(tb[QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_BSSID]) != ETH_ALEN ||
+	    !tb[QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_REQ_IE] ||
+	    !tb[QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_RESP_IE] ||
+	    !tb[QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_AUTHORIZED])
+		return;
+
+	bssid = nla_data(tb[QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_BSSID]);
+	wpa_printf(MSG_DEBUG, "  * roam BSSID " MACSTR, MAC2STR(bssid));
+
+	mlme_event_connect(drv, NL80211_CMD_ROAM, NULL,
+			   tb[QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_BSSID],
+			   tb[QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_REQ_IE],
+			   tb[QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_RESP_IE],
+			   tb[QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_AUTHORIZED],
+			   tb[QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_KEY_REPLAY_CTR],
+			   tb[QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_PTK_KCK],
+			   tb[QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_PTK_KEK]);
+}
+
+
 static void nl80211_vendor_event_qca(struct wpa_driver_nl80211_data *drv,
 				     u32 subcmd, u8 *data, size_t len)
 {
 	switch (subcmd) {
 	case QCA_NL80211_VENDOR_SUBCMD_AVOID_FREQUENCY:
 		qca_nl80211_avoid_freq(drv, data, len);
+		break;
+	case QCA_NL80211_VENDOR_SUBCMD_KEY_MGMT_ROAM_AUTH:
+		qca_nl80211_key_mgmt_auth(drv, data, len);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG,
@@ -3109,6 +3168,17 @@ static void do_process_drv_event(struct i802_bss *bss, int cmd,
 	wpa_printf(MSG_DEBUG, "nl80211: Drv Event %d (%s) received for %s",
 		   cmd, nl80211_command_to_string(cmd), bss->ifname);
 
+	if (cmd == NL80211_CMD_ROAM && drv->roam_auth_vendor_event_avail) {
+		/*
+		 * Device will use roam+auth vendor event to indicate
+		 * roaming, so ignore the regular roam event.
+		 */
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Ignore roam event (cmd=%d), device will use vendor event roam+auth",
+			   cmd);
+		return;
+	}
+
 	if (drv->ap_scan_as_station != NL80211_IFTYPE_UNSPECIFIED &&
 	    (cmd == NL80211_CMD_NEW_SCAN_RESULTS ||
 	     cmd == NL80211_CMD_SCAN_ABORTED)) {
@@ -3187,7 +3257,8 @@ static void do_process_drv_event(struct i802_bss *bss, int cmd,
 				   tb[NL80211_ATTR_STATUS_CODE],
 				   tb[NL80211_ATTR_MAC],
 				   tb[NL80211_ATTR_REQ_IE],
-				   tb[NL80211_ATTR_RESP_IE]);
+				   tb[NL80211_ATTR_RESP_IE],
+				   NULL, NULL, NULL, NULL);
 		break;
 	case NL80211_CMD_CH_SWITCH_NOTIFY:
 		mlme_event_ch_switch(drv,
@@ -3970,6 +4041,9 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 			case QCA_NL80211_VENDOR_SUBCMD_DFS_CAPABILITY:
 				drv->dfs_vendor_cmd_avail = 1;
 				break;
+			case QCA_NL80211_VENDOR_SUBCMD_KEY_MGMT_SET_KEY:
+				drv->key_mgmt_set_key_vendor_cmd_avail = 1;
+				break;
 			}
 
 			wpa_printf(MSG_DEBUG, "nl80211: Supported vendor command: vendor_id=0x%x subcmd=%u",
@@ -3988,6 +4062,9 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 				continue;
 			}
 			vinfo = nla_data(nl);
+			if (vinfo->subcmd ==
+			    QCA_NL80211_VENDOR_SUBCMD_KEY_MGMT_ROAM_AUTH)
+				drv->roam_auth_vendor_event_avail = 1;
 			wpa_printf(MSG_DEBUG, "nl80211: Supported vendor event: vendor_id=0x%x subcmd=%u",
 				   vinfo->vendor_id, vinfo->subcmd);
 		}
@@ -5883,6 +5960,39 @@ static int wpa_cipher_to_cipher_suites(unsigned int ciphers, u32 suites[],
 }
 
 
+static int issue_key_mgmt_set_key(struct wpa_driver_nl80211_data *drv,
+				  const u8 *key, size_t key_len)
+{
+	struct nl_msg *msg;
+	int ret = 0;
+
+	if (!drv->key_mgmt_set_key_vendor_cmd_avail)
+		return 0;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -1;
+
+	nl80211_cmd(drv, msg, 0, NL80211_CMD_VENDOR);
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+	NLA_PUT_U32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA);
+	NLA_PUT_U32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+		    QCA_NL80211_VENDOR_SUBCMD_KEY_MGMT_SET_KEY);
+	NLA_PUT(msg, NL80211_ATTR_VENDOR_DATA, key_len, key);
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	msg = NULL;
+	if (ret) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Key management set key failed: ret=%d (%s)",
+			   ret, strerror(-ret));
+	}
+
+nla_put_failure:
+	nlmsg_free(msg);
+	return ret;
+}
+
+
 static int wpa_driver_nl80211_set_key(const char *ifname, struct i802_bss *bss,
 				      enum wpa_alg alg, const u8 *addr,
 				      int key_idx, int set_tx,
@@ -5910,6 +6020,13 @@ static int wpa_driver_nl80211_set_key(const char *ifname, struct i802_bss *bss,
 		tdls = 1;
 	}
 #endif /* CONFIG_TDLS */
+
+	if (alg == WPA_ALG_PMK && drv->key_mgmt_set_key_vendor_cmd_avail) {
+		wpa_printf(MSG_DEBUG, "%s: calling issue_key_mgmt_set_key",
+			   __func__);
+		ret = issue_key_mgmt_set_key(drv, key, key_len);
+		return ret;
+	}
 
 	msg = nlmsg_alloc();
 	if (!msg)
@@ -9065,6 +9182,16 @@ static int wpa_driver_nl80211_try_connect(
 	enum nl80211_auth_type type;
 	int ret;
 	int algs;
+
+	if (params->req_key_mgmt_offload && params->psk &&
+	    (params->key_mgmt_suite == WPA_KEY_MGMT_PSK ||
+	     params->key_mgmt_suite == WPA_KEY_MGMT_PSK_SHA256 ||
+	     params->key_mgmt_suite == WPA_KEY_MGMT_FT_PSK)) {
+		wpa_printf(MSG_DEBUG, "nl80211: Key management set PSK");
+		ret = issue_key_mgmt_set_key(drv, params->psk, 32);
+		if (ret)
+			return ret;
+	}
 
 	msg = nlmsg_alloc();
 	if (!msg)

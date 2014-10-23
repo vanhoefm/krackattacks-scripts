@@ -699,6 +699,14 @@ struct wpa_driver_associate_params {
 	const struct ieee80211_vht_capabilities *vhtcaps;
 	const struct ieee80211_vht_capabilities *vhtcaps_mask;
 #endif /* CONFIG_VHT_OVERRIDES */
+
+	/**
+	 * req_key_mgmt_offload - Request key management offload for connection
+	 *
+	 * Request key management offload for this connection if the device
+	 * supports it.
+	 */
+	int req_key_mgmt_offload;
 };
 
 enum hide_ssid {
@@ -3677,6 +3685,54 @@ union wpa_event_data {
 		 * addr - Station address (for AP mode)
 		 */
 		const u8 *addr;
+
+		/**
+		 * The following is the key management offload information
+		 * @authorized
+		 * @key_replay_ctr
+		 * @key_replay_ctr_len
+		 * @ptk_kck
+		 * @ptk_kek_len
+		 * @ptk_kek
+		 * @ptk_kek_len
+		 */
+
+		/**
+		 * authorized - Status of key management offload,
+		 * 1 = successful
+		 */
+		int authorized;
+
+		/**
+		 * key_replay_ctr - Key replay counter value last used
+		 * in a valid EAPOL-Key frame
+		 */
+		const u8 *key_replay_ctr;
+
+		/**
+		 * key_replay_ctr_len - The length of key_replay_ctr
+		 */
+		size_t key_replay_ctr_len;
+
+		/**
+		 * ptk_kck - The derived PTK KCK
+		 */
+		const u8 *ptk_kck;
+
+		/**
+		 * ptk_kek_len - The length of ptk_kck
+		 */
+		size_t ptk_kck_len;
+
+		/**
+		 * ptk_kek - The derived PTK KEK
+		 */
+		const u8 *ptk_kek;
+
+		/**
+		 * ptk_kek_len - The length of ptk_kek
+		 */
+		size_t ptk_kek_len;
 	} assoc_info;
 
 	/**

@@ -348,8 +348,10 @@ int p2p_listen(struct p2p_data *p2p, unsigned int timeout)
 static void p2p_device_clear_reported(struct p2p_data *p2p)
 {
 	struct p2p_device *dev;
-	dl_list_for_each(dev, &p2p->devices, struct p2p_device, list)
+	dl_list_for_each(dev, &p2p->devices, struct p2p_device, list) {
 		dev->flags &= ~P2P_DEV_REPORTED;
+		dev->sd_reqs = 0;
+	}
 }
 
 

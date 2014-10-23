@@ -105,6 +105,7 @@ struct p2p_device {
 	unsigned int wait_count;
 	unsigned int connect_reqs;
 	unsigned int invitation_reqs;
+	unsigned int sd_reqs;
 
 	u16 ext_listen_period;
 	u16 ext_listen_interval;

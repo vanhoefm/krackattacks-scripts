@@ -75,16 +75,25 @@ struct p2p_sd_query * p2p_pending_sd_req(struct p2p_data *p2p,
 				return NULL;
 			/* query number that needs to be send to the device */
 			if (count == dev->sd_pending_bcast_queries - 1)
-				return q;
+				goto found;
 			count++;
 		}
 		if (!q->for_all_peers &&
 		    os_memcmp(q->peer, dev->info.p2p_device_addr, ETH_ALEN) ==
 		    0)
-			return q;
+			goto found;
 	}
 
 	return NULL;
+
+found:
+	if (dev->sd_reqs > 100) {
+		p2p_dbg(p2p, "Too many SD request attempts to " MACSTR
+			" - skip remaining queries",
+			MAC2STR(dev->info.p2p_device_addr));
+		return NULL;
+	}
+	return q;
 }
 
 
@@ -287,6 +296,7 @@ int p2p_start_sd(struct p2p_data *p2p, struct p2p_device *dev)
 	if (req == NULL)
 		return -1;
 
+	dev->sd_reqs++;
 	p2p->sd_peer = dev;
 	p2p->sd_query = query;
 	p2p->pending_action_state = P2P_PENDING_SD;

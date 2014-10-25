@@ -84,6 +84,7 @@ static void wpas_send_action_cb(void *eloop_ctx, void *timeout_ctx)
 			   wpa_s->off_channel_freq,
 			   iface->assoc_freq);
 		if (without_roc && wpa_s->off_channel_freq == 0) {
+			unsigned int duration = 200;
 			/*
 			 * We may get here if wpas_send_action() found us to be
 			 * on the correct channel, but remain-on-channel cancel
@@ -91,9 +92,18 @@ static void wpas_send_action_cb(void *eloop_ctx, void *timeout_ctx)
 			 */
 			wpa_printf(MSG_DEBUG, "Off-channel: Schedule "
 				   "remain-on-channel to send Action frame");
+#ifdef CONFIG_TESTING_OPTIONS
+			if (wpa_s->extra_roc_dur) {
+				wpa_printf(MSG_DEBUG,
+					   "TESTING: Increase ROC duration %u -> %u",
+					   duration,
+					   duration + wpa_s->extra_roc_dur);
+				duration += wpa_s->extra_roc_dur;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 			if (wpa_drv_remain_on_channel(
-				    wpa_s, wpa_s->pending_action_freq, 200) <
-			    0) {
+				    wpa_s, wpa_s->pending_action_freq,
+				    duration) < 0) {
 				wpa_printf(MSG_DEBUG, "Off-channel: Failed to "
 					   "request driver to remain on "
 					   "channel (%u MHz) for Action Frame "
@@ -308,6 +318,13 @@ int offchannel_send_action(struct wpa_supplicant *wpa_s, unsigned int freq,
 		wait_time = wpa_s->max_remain_on_chan;
 	else if (wait_time == 0)
 		wait_time = 20;
+#ifdef CONFIG_TESTING_OPTIONS
+	if (wpa_s->extra_roc_dur) {
+		wpa_printf(MSG_DEBUG, "TESTING: Increase ROC duration %u -> %u",
+			   wait_time, wait_time + wpa_s->extra_roc_dur);
+		wait_time += wpa_s->extra_roc_dur;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 	if (wpa_drv_remain_on_channel(wpa_s, freq, wait_time) < 0) {
 		wpa_printf(MSG_DEBUG, "Off-channel: Failed to request driver "
 			   "to remain on channel (%u MHz) for Action "

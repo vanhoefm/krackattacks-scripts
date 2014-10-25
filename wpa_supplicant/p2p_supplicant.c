@@ -1853,6 +1853,7 @@ static void wpas_start_listen_cb(struct wpa_radio_work *work, int deinit)
 {
 	struct wpa_supplicant *wpa_s = work->wpa_s;
 	struct wpas_p2p_listen_work *lwork = work->ctx;
+	unsigned int duration;
 
 	if (deinit) {
 		if (work->started) {
@@ -1877,8 +1878,16 @@ static void wpas_start_listen_cb(struct wpa_radio_work *work, int deinit)
 	wpa_s->pending_listen_freq = lwork->freq;
 	wpa_s->pending_listen_duration = lwork->duration;
 
-	if (wpa_drv_remain_on_channel(wpa_s, lwork->freq, lwork->duration) < 0)
-	{
+	duration = lwork->duration;
+#ifdef CONFIG_TESTING_OPTIONS
+	if (wpa_s->extra_roc_dur) {
+		wpa_printf(MSG_DEBUG, "TESTING: Increase ROC duration %u -> %u",
+			   duration, duration + wpa_s->extra_roc_dur);
+		duration += wpa_s->extra_roc_dur;
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
+
+	if (wpa_drv_remain_on_channel(wpa_s, lwork->freq, duration) < 0) {
 		wpa_printf(MSG_DEBUG, "P2P: Failed to request the driver "
 			   "to remain on channel (%u MHz) for Listen "
 			   "state", lwork->freq);

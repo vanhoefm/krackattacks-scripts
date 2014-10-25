@@ -876,6 +876,7 @@ struct wpa_supplicant {
 
 #ifdef CONFIG_TESTING_OPTIONS
 	struct l2_packet_data *l2_test;
+	unsigned int extra_roc_dur;
 #endif /* CONFIG_TESTING_OPTIONS */
 };
 

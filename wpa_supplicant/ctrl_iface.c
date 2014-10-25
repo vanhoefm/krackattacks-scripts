@@ -433,6 +433,8 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 				wpa_s->ext_eapol_frame_io;
 		}
 #endif /* CONFIG_AP */
+	} else if (os_strcasecmp(cmd, "extra_roc_dur") == 0) {
+		wpa_s->extra_roc_dur = atoi(value);
 #endif /* CONFIG_TESTING_OPTIONS */
 #ifndef CONFIG_NO_CONFIG_BLOBS
 	} else if (os_strcmp(cmd, "blob") == 0) {
@@ -5833,6 +5835,9 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 
 	wpa_s->ext_mgmt_frame_handling = 0;
 	wpa_s->ext_eapol_frame_io = 0;
+#ifdef CONFIG_TESTING_OPTIONS
+	wpa_s->extra_roc_dur = 0;
+#endif /* CONFIG_TESTING_OPTIONS */
 }
 
 

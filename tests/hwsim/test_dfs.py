@@ -16,7 +16,7 @@ import hostapd
 def wait_dfs_event(hapd, event, timeout):
     dfs_events = [ "DFS-RADAR-DETECTED", "DFS-NEW-CHANNEL",
                    "DFS-CAC-START", "DFS-CAC-COMPLETED",
-                   "DFS-NOP-FINISHED", "AP-ENABLED" ]
+                   "DFS-NOP-FINISHED", "AP-ENABLED", "AP-CSA-FINISHED" ]
     ev = hapd.wait_event(dfs_events, timeout=timeout)
     if not ev:
         raise Exception("DFS event timed out")
@@ -24,7 +24,7 @@ def wait_dfs_event(hapd, event, timeout):
         raise Exception("Unexpected DFS event")
     return ev
 
-def start_dfs_ap(ap, allow_failure=False):
+def start_dfs_ap(ap, allow_failure=False, ssid="dfs", ht40=False):
     ifname = ap['ifname']
     logger.info("Starting AP " + ifname + " on DFS channel")
     hapd_global = hostapd.HostapdGlobal()
@@ -34,12 +34,14 @@ def start_dfs_ap(ap, allow_failure=False):
     if not hapd.ping():
         raise Exception("Could not ping hostapd")
     hapd.set_defaults()
-    hapd.set("ssid", "dfs")
+    hapd.set("ssid", ssid)
     hapd.set("country_code", "FI")
     hapd.set("ieee80211d", "1")
     hapd.set("ieee80211h", "1")
     hapd.set("hw_mode", "a")
     hapd.set("channel", "52")
+    if ht40:
+        hapd.set("ht_capab", "[HT40+]")
     hapd.enable()
 
     ev = wait_dfs_event(hapd, "DFS-CAC-START", 5)
@@ -54,6 +56,13 @@ def start_dfs_ap(ap, allow_failure=False):
         raise Exception("Unexpected interface state: " + state)
 
     return hapd
+
+def dfs_simulate_radar(hapd):
+    logger.info("Trigger a simulated radar event")
+    phyname = hapd.get_driver_status_field("phyname")
+    radar_file = '/sys/kernel/debug/ieee80211/' + phyname + '/hwsim/dfs_simulate_radar'
+    with open(radar_file, 'w') as f:
+        f.write('1')
 
 def test_dfs(dev, apdev):
     """DFS CAC functionality on clear channel"""
@@ -117,14 +126,9 @@ def test_dfs_radar(dev, apdev):
             raise Exception("Failed to start DFS AP")
         time.sleep(1)
 
-        phyname = hapd.get_driver_status_field("phyname")
-        radar_file = '/sys/kernel/debug/ieee80211/' + phyname + '/hwsim/dfs_simulate_radar'
-        cmd = subprocess.Popen(["sudo", "tee", radar_file],
-                               stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        cmd.stdin.write("1")
-        cmd.stdin.close()
-        cmd.stdout.read()
-        cmd.stdout.close()
+        dfs_simulate_radar(hapd)
+
+        hapd2 = start_dfs_ap(apdev[1], ssid="dfs2", ht40=True)
 
         ev = wait_dfs_event(hapd, "DFS-CAC-COMPLETED", 5)
         if ev is None:
@@ -169,6 +173,22 @@ def test_dfs_radar(dev, apdev):
                 raise Exception("Unexpected frequency: " + freq)
 
         dev[0].connect("dfs", key_mgmt="NONE")
+
+        ev = hapd2.wait_event(["AP-ENABLED"], timeout=70)
+        if not ev:
+            raise Exception("AP2 setup timed out")
+
+        dfs_simulate_radar(hapd2)
+
+        ev = wait_dfs_event(hapd2, "DFS-RADAR-DETECTED", 5)
+        if "freq=5260 ht_enabled=1 chan_offset=1 chan_width=2" not in ev:
+            raise Exception("Unexpected DFS radar detection freq from AP2")
+
+        ev = wait_dfs_event(hapd2, "DFS-NEW-CHANNEL", 5)
+        if "freq=5260" in ev:
+            raise Exception("Unexpected DFS new freq for AP2")
+
+        wait_dfs_event(hapd2, None, 5)
     finally:
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
 

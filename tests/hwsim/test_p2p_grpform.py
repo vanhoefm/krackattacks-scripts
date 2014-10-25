@@ -769,3 +769,25 @@ def test_grpform_no_wsc_done(dev):
         if ev is None:
             raise Exception("Group formation timed out on P2P Client")
         dev[0].remove_group()
+
+def test_grpform_wait_peer(dev):
+    """P2P group formation wait for peer to become ready"""
+    addr0 = dev[0].p2p_dev_addr()
+    addr1 = dev[1].p2p_dev_addr()
+    dev[1].p2p_listen()
+    if not dev[0].discover_peer(addr1):
+        raise Exception("Peer " + addr1 + " not found")
+    dev[0].request("SET extra_roc_dur 500")
+    if "OK" not in dev[0].request("P2P_CONNECT " + addr1 + " 12345670 display go_intent=15"):
+        raise Exception("Failed to initiate GO Neg")
+    time.sleep(3)
+    dev[1].request("P2P_CONNECT " + addr0 + " 12345670 enter go_intent=0")
+
+    ev = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
+    if ev is None:
+        raise Exception("Group formation timed out")
+    dev[0].request("SET extra_roc_dur 0")
+    ev = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
+    if ev is None:
+        raise Exception("Group formation timed out")
+    dev[0].remove_group()

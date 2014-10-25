@@ -489,6 +489,8 @@ void hostapd_event_ch_switch(struct hostapd_data *hapd, int freq, int ht,
 
 	hapd->iconf->channel = channel;
 	hapd->iconf->ieee80211n = ht;
+	if (!ht)
+		hapd->iconf->ieee80211ac = 0;
 	hapd->iconf->secondary_channel = offset;
 	hapd->iconf->vht_oper_chwidth = chwidth;
 	hapd->iconf->vht_oper_centr_freq_seg0_idx = seg0_idx;

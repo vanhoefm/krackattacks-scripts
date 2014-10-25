@@ -1755,7 +1755,10 @@ static void mlme_event_ch_switch(struct wpa_driver_nl80211_data *drv,
 	}
 
 	if (type) {
-		switch (nla_get_u32(type)) {
+		enum nl80211_channel_type ch_type = nla_get_u32(type);
+
+		wpa_printf(MSG_DEBUG, "nl80211: Channel type: %d", ch_type);
+		switch (ch_type) {
 		case NL80211_CHAN_NO_HT:
 			ht_enabled = 0;
 			break;

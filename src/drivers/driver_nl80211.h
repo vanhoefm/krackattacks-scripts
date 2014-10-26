@@ -181,6 +181,7 @@ struct wpa_driver_nl80211_data {
 };
 
 struct nl_msg;
+struct nlattr;
 
 int nl80211_set_iface_id(struct nl_msg *msg, struct i802_bss *bss);
 void * nl80211_cmd(struct wpa_driver_nl80211_data *drv,
@@ -209,6 +210,7 @@ int nl80211_get_wiphy_index(struct i802_bss *bss);
 int wpa_driver_nl80211_set_mode(struct i802_bss *bss,
 				enum nl80211_iftype nlmode);
 void wpa_driver_nl80211_scan_timeout(void *eloop_ctx, void *timeout_ctx);
+const char * nl80211_command_to_string(enum nl80211_commands cmd);
 
 int nl80211_create_monitor_interface(struct wpa_driver_nl80211_data *drv);
 void nl80211_remove_monitor_interface(struct wpa_driver_nl80211_data *drv);
@@ -219,6 +221,27 @@ int nl80211_send_monitor(struct wpa_driver_nl80211_data *drv,
 int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv);
 struct hostapd_hw_modes *
 nl80211_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags);
+
+void mlme_event_connect(struct wpa_driver_nl80211_data *drv,
+			enum nl80211_commands cmd, struct nlattr *status,
+			struct nlattr *addr, struct nlattr *req_ie,
+			struct nlattr *resp_ie,
+			struct nlattr *authorized,
+			struct nlattr *key_replay_ctr,
+			struct nlattr *ptk_kck,
+			struct nlattr *ptk_kek);
+void mlme_event(struct i802_bss *bss,
+		enum nl80211_commands cmd, struct nlattr *frame,
+		struct nlattr *addr, struct nlattr *timed_out,
+		struct nlattr *freq, struct nlattr *ack,
+		struct nlattr *cookie, struct nlattr *sig);
+void mlme_event_ch_switch(struct wpa_driver_nl80211_data *drv,
+			  struct nlattr *ifindex, struct nlattr *freq,
+			  struct nlattr *type, struct nlattr *bw,
+			  struct nlattr *cf1, struct nlattr *cf2);
+void mlme_event_disconnect(struct wpa_driver_nl80211_data *drv,
+			   struct nlattr *reason, struct nlattr *addr,
+			   struct nlattr *by_ap);
 
 #ifdef ANDROID
 int android_nl_socket_set_nonblocking(struct nl_handle *handle);

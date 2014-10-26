@@ -27,6 +27,36 @@ def test_connect_cmd_open(dev, apdev):
     wpas.connect("sta-connect", key_mgmt="NONE", scan_freq="2412")
     wpas.request("DISCONNECT")
 
+def test_connect_cmd_wep(dev, apdev):
+    """WEP Open System using cfg80211 connect command"""
+    params = { "ssid": "sta-connect-wep", "wep_key0": '"hello"' }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
+    wpas.connect("sta-connect-wep", key_mgmt="NONE", scan_freq="2412",
+                 wep_key0='"hello"')
+    hwsim_utils.test_connectivity(wpas, hapd)
+    wpas.request("DISCONNECT")
+
+def test_connect_cmd_wep_shared(dev, apdev):
+    """WEP Shared key using cfg80211 connect command"""
+    params = { "ssid": "sta-connect-wep", "wep_key0": '"hello"',
+               "auth_algs": "2" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
+    id = wpas.connect("sta-connect-wep", key_mgmt="NONE", scan_freq="2412",
+                      auth_alg="SHARED", wep_key0='"hello"')
+    hwsim_utils.test_connectivity(wpas, hapd)
+    wpas.request("DISCONNECT")
+    wpas.remove_network(id)
+    wpas.connect("sta-connect-wep", key_mgmt="NONE", scan_freq="2412",
+                 auth_alg="OPEN SHARED", wep_key0='"hello"')
+    hwsim_utils.test_connectivity(wpas, hapd)
+    wpas.request("DISCONNECT")
+
 def test_connect_cmd_p2p_management(dev, apdev):
     """Open connection using cfg80211 connect command and AP using P2P management"""
     params = { "ssid": "sta-connect",

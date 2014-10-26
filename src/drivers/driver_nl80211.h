@@ -216,6 +216,10 @@ int nl80211_send_monitor(struct wpa_driver_nl80211_data *drv,
 			 const void *data, size_t len,
 			 int encrypt, int noack);
 
+int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv);
+struct hostapd_hw_modes *
+nl80211_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags);
+
 #ifdef ANDROID
 int android_nl_socket_set_nonblocking(struct nl_handle *handle);
 int android_genl_ctrl_resolve(struct nl_handle *handle, const char *name);

@@ -442,9 +442,10 @@ void hostapd_event_ch_switch(struct hostapd_data *hapd, int freq, int ht,
 	int channel, chwidth, seg0_idx = 0, seg1_idx = 0;
 
 	hostapd_logger(hapd, NULL, HOSTAPD_MODULE_IEEE80211,
-		       HOSTAPD_LEVEL_INFO, "driver had channel switch: "
-		       "freq=%d, ht=%d, offset=%d, width=%d, cf1=%d, cf2=%d",
-		       freq, ht, offset, width, cf1, cf2);
+		       HOSTAPD_LEVEL_INFO,
+		       "driver had channel switch: freq=%d, ht=%d, offset=%d, width=%d (%s), cf1=%d, cf2=%d",
+		       freq, ht, offset, width, channel_width_to_string(width),
+		       cf1, cf2);
 
 	hapd->iface->freq = freq;
 

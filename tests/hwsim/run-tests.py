@@ -195,14 +195,16 @@ def main():
     parser.add_argument('-f', dest='testmodules', metavar='<test module>',
                         help='execute only tests from these test modules',
                         type=str, choices=[[]] + test_modules, nargs='+')
+    parser.add_argument('-l', metavar='<modules file>', dest='mfile',
+                        help='test modules file name')
     parser.add_argument('tests', metavar='<test>', nargs='*', type=str,
                         help='tests to run (only valid without -f)',
                         choices=[[]] + test_names)
 
     args = parser.parse_args()
 
-    if args.tests and args.testmodules:
-        print 'Invalid arguments - both test module and tests given'
+    if (args.tests and args.testmodules) or (args.tests and args.mfile) or (args.testmodules and args.mfile):
+        print 'Invalid arguments - only one of (test, test modules, modules file) can be given.'
         sys.exit(2)
 
     if not args.logdir:
@@ -289,6 +291,16 @@ def main():
 
     if args.dmesg:
         subprocess.call(['sudo', 'dmesg', '-c'], stdout=open('/dev/null', 'w'))
+
+    # read the modules from the modules file
+    if args.mfile:
+	args.testmodules = []
+	with open(args.mfile) as f:
+	    for line in f.readlines():
+		line = line.strip()
+		if not line or line.startswith('#'):
+		    continue
+	        args.testmodules.append(line)
 
     tests_to_run = []
     for t in tests:

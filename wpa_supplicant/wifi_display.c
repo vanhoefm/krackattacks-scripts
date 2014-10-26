@@ -292,7 +292,7 @@ int wifi_display_subelem_set_from_ies(struct wpa_global *global,
 		wpa_printf(MSG_DEBUG, "WFD Sub-Element ID %d - len %d",
 			   *pos, len - 3);
 
-		if (len > end - pos)
+		if (len > (unsigned int) (end - pos))
 			break;
 
 		subelem = *pos;

@@ -1028,3 +1028,15 @@ def test_wpas_ctrl_roam(dev, apdev):
     id = dev[0].connect("test", key_mgmt="NONE", scan_freq="2412")
     if "FAIL" not in dev[0].request("ROAM 00:11:22:33:44:55"):
         raise Exception("Unexpected success")
+
+def test_wpas_ctrl_ipaddr(dev, apdev):
+    """wpa_supplicant IP address in STATUS"""
+    try:
+        subprocess.call(['ip', 'addr', 'add', '10.174.65.207/32', 'dev',
+                         dev[0].ifname])
+        ipaddr = dev[0].get_status_field('ip_address')
+        if ipaddr != '10.174.65.207':
+            raise Exception("IP address not in STATUS output")
+    finally:
+        subprocess.call(['ip', 'addr', 'del', '10.174.65.207/32', 'dev',
+                         dev[0].ifname])

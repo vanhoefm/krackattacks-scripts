@@ -210,6 +210,12 @@ int wpa_driver_nl80211_set_mode(struct i802_bss *bss,
 				enum nl80211_iftype nlmode);
 void wpa_driver_nl80211_scan_timeout(void *eloop_ctx, void *timeout_ctx);
 
+int nl80211_create_monitor_interface(struct wpa_driver_nl80211_data *drv);
+void nl80211_remove_monitor_interface(struct wpa_driver_nl80211_data *drv);
+int nl80211_send_monitor(struct wpa_driver_nl80211_data *drv,
+			 const void *data, size_t len,
+			 int encrypt, int noack);
+
 #ifdef ANDROID
 int android_nl_socket_set_nonblocking(struct nl_handle *handle);
 int android_genl_ctrl_resolve(struct nl_handle *handle, const char *name);

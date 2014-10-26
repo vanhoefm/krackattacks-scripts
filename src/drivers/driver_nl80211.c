@@ -11,13 +11,9 @@
  */
 
 #include "includes.h"
-#include <sys/ioctl.h>
 #include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <net/if.h>
 #include <netlink/genl/genl.h>
-#include <netlink/genl/family.h>
 #include <netlink/genl/ctrl.h>
 #ifdef CONFIG_LIBNL3_ROUTE
 #include <netlink/route/neighbour.h>
@@ -42,9 +38,6 @@
 #include "rfkill.h"
 #include "driver_nl80211.h"
 
-#ifdef ANDROID
-#include "android_drv.h"
-#endif /* ANDROID */
 
 #ifndef CONFIG_LIBNL20
 /*
@@ -91,12 +84,10 @@ static void nl80211_handle_destroy(struct nl_handle *handle)
 
 #ifdef ANDROID
 /* system/core/libnl_2 does not include nl_socket_set_nonblocking() */
-static int android_nl_socket_set_nonblocking(struct nl_handle *handle)
-{
-	return fcntl(nl_socket_get_fd(handle), F_SETFL, O_NONBLOCK);
-}
 #undef nl_socket_set_nonblocking
 #define nl_socket_set_nonblocking(h) android_nl_socket_set_nonblocking(h)
+
+#define genl_ctrl_resolve android_genl_ctrl_resolve
 #endif /* ANDROID */
 
 
@@ -183,38 +174,6 @@ static int nl80211_register_frame(struct i802_bss *bss,
 				  u16 type, const u8 *match, size_t match_len);
 static int wpa_driver_nl80211_probe_req_report(struct i802_bss *bss,
 					       int report);
-#ifdef ANDROID
-static int android_pno_start(struct i802_bss *bss,
-			     struct wpa_driver_scan_params *params);
-static int android_pno_stop(struct i802_bss *bss);
-extern int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
-					 size_t buf_len);
-#endif /* ANDROID */
-#ifdef ANDROID_P2P
-#ifdef ANDROID_P2P_STUB
-int wpa_driver_set_p2p_noa(void *priv, u8 count, int start, int duration) {
-	return 0;
-}
-int wpa_driver_get_p2p_noa(void *priv, u8 *buf, size_t len) {
-	return 0;
-}
-int wpa_driver_set_p2p_ps(void *priv, int legacy_ps, int opp_ps, int ctwindow) {
-	return -1;
-}
-int wpa_driver_set_ap_wps_p2p_ie(void *priv, const struct wpabuf *beacon,
-				 const struct wpabuf *proberesp,
-				 const struct wpabuf *assocresp) {
-	return 0;
-}
-#else /* ANDROID_P2P_STUB */
-int wpa_driver_set_p2p_noa(void *priv, u8 count, int start, int duration);
-int wpa_driver_get_p2p_noa(void *priv, u8 *buf, size_t len);
-int wpa_driver_set_p2p_ps(void *priv, int legacy_ps, int opp_ps, int ctwindow);
-int wpa_driver_set_ap_wps_p2p_ie(void *priv, const struct wpabuf *beacon,
-				 const struct wpabuf *proberesp,
-				 const struct wpabuf *assocresp);
-#endif /* ANDROID_P2P_STUB */
-#endif /* ANDROID_P2P */
 
 static void add_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx);
 static void del_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx);
@@ -4053,42 +4012,6 @@ static int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 
 	return 0;
 }
-
-
-#ifdef ANDROID
-static int android_genl_ctrl_resolve(struct nl_handle *handle,
-				     const char *name)
-{
-	/*
-	 * Android ICS has very minimal genl_ctrl_resolve() implementation, so
-	 * need to work around that.
-	 */
-	struct nl_cache *cache = NULL;
-	struct genl_family *nl80211 = NULL;
-	int id = -1;
-
-	if (genl_ctrl_alloc_cache(handle, &cache) < 0) {
-		wpa_printf(MSG_ERROR, "nl80211: Failed to allocate generic "
-			   "netlink cache");
-		goto fail;
-	}
-
-	nl80211 = genl_ctrl_search_by_name(cache, name);
-	if (nl80211 == NULL)
-		goto fail;
-
-	id = genl_family_get_id(nl80211);
-
-fail:
-	if (nl80211)
-		genl_family_put(nl80211);
-	if (cache)
-		nl_cache_free(cache);
-
-	return id;
-}
-#define genl_ctrl_resolve android_genl_ctrl_resolve
-#endif /* ANDROID */
 
 
 static int wpa_driver_nl80211_init_nl_global(struct nl80211_global *global)
@@ -11832,139 +11755,6 @@ nla_put_failure:
 }
 
 #endif /* CONFIG TDLS */
-
-
-#ifdef ANDROID
-
-typedef struct android_wifi_priv_cmd {
-	char *buf;
-	int used_len;
-	int total_len;
-} android_wifi_priv_cmd;
-
-static int drv_errors = 0;
-
-static void wpa_driver_send_hang_msg(struct wpa_driver_nl80211_data *drv)
-{
-	drv_errors++;
-	if (drv_errors > DRV_NUMBER_SEQUENTIAL_ERRORS) {
-		drv_errors = 0;
-		wpa_msg(drv->ctx, MSG_INFO, WPA_EVENT_DRIVER_STATE "HANGED");
-	}
-}
-
-
-static int android_priv_cmd(struct i802_bss *bss, const char *cmd)
-{
-	struct wpa_driver_nl80211_data *drv = bss->drv;
-	struct ifreq ifr;
-	android_wifi_priv_cmd priv_cmd;
-	char buf[MAX_DRV_CMD_SIZE];
-	int ret;
-
-	os_memset(&ifr, 0, sizeof(ifr));
-	os_memset(&priv_cmd, 0, sizeof(priv_cmd));
-	os_strlcpy(ifr.ifr_name, bss->ifname, IFNAMSIZ);
-
-	os_memset(buf, 0, sizeof(buf));
-	os_strlcpy(buf, cmd, sizeof(buf));
-
-	priv_cmd.buf = buf;
-	priv_cmd.used_len = sizeof(buf);
-	priv_cmd.total_len = sizeof(buf);
-	ifr.ifr_data = &priv_cmd;
-
-	ret = ioctl(drv->global->ioctl_sock, SIOCDEVPRIVATE + 1, &ifr);
-	if (ret < 0) {
-		wpa_printf(MSG_ERROR, "%s: failed to issue private commands",
-			   __func__);
-		wpa_driver_send_hang_msg(drv);
-		return ret;
-	}
-
-	drv_errors = 0;
-	return 0;
-}
-
-
-static int android_pno_start(struct i802_bss *bss,
-			     struct wpa_driver_scan_params *params)
-{
-	struct wpa_driver_nl80211_data *drv = bss->drv;
-	struct ifreq ifr;
-	android_wifi_priv_cmd priv_cmd;
-	int ret = 0, i = 0, bp;
-	char buf[WEXT_PNO_MAX_COMMAND_SIZE];
-
-	bp = WEXT_PNOSETUP_HEADER_SIZE;
-	os_memcpy(buf, WEXT_PNOSETUP_HEADER, bp);
-	buf[bp++] = WEXT_PNO_TLV_PREFIX;
-	buf[bp++] = WEXT_PNO_TLV_VERSION;
-	buf[bp++] = WEXT_PNO_TLV_SUBVERSION;
-	buf[bp++] = WEXT_PNO_TLV_RESERVED;
-
-	while (i < WEXT_PNO_AMOUNT && (size_t) i < params->num_ssids) {
-		/* Check that there is enough space needed for 1 more SSID, the
-		 * other sections and null termination */
-		if ((bp + WEXT_PNO_SSID_HEADER_SIZE + MAX_SSID_LEN +
-		     WEXT_PNO_NONSSID_SECTIONS_SIZE + 1) >= (int) sizeof(buf))
-			break;
-		wpa_hexdump_ascii(MSG_DEBUG, "For PNO Scan",
-				  params->ssids[i].ssid,
-				  params->ssids[i].ssid_len);
-		buf[bp++] = WEXT_PNO_SSID_SECTION;
-		buf[bp++] = params->ssids[i].ssid_len;
-		os_memcpy(&buf[bp], params->ssids[i].ssid,
-			  params->ssids[i].ssid_len);
-		bp += params->ssids[i].ssid_len;
-		i++;
-	}
-
-	buf[bp++] = WEXT_PNO_SCAN_INTERVAL_SECTION;
-	os_snprintf(&buf[bp], WEXT_PNO_SCAN_INTERVAL_LENGTH + 1, "%x",
-		    WEXT_PNO_SCAN_INTERVAL);
-	bp += WEXT_PNO_SCAN_INTERVAL_LENGTH;
-
-	buf[bp++] = WEXT_PNO_REPEAT_SECTION;
-	os_snprintf(&buf[bp], WEXT_PNO_REPEAT_LENGTH + 1, "%x",
-		    WEXT_PNO_REPEAT);
-	bp += WEXT_PNO_REPEAT_LENGTH;
-
-	buf[bp++] = WEXT_PNO_MAX_REPEAT_SECTION;
-	os_snprintf(&buf[bp], WEXT_PNO_MAX_REPEAT_LENGTH + 1, "%x",
-		    WEXT_PNO_MAX_REPEAT);
-	bp += WEXT_PNO_MAX_REPEAT_LENGTH + 1;
-
-	memset(&ifr, 0, sizeof(ifr));
-	memset(&priv_cmd, 0, sizeof(priv_cmd));
-	os_strlcpy(ifr.ifr_name, bss->ifname, IFNAMSIZ);
-
-	priv_cmd.buf = buf;
-	priv_cmd.used_len = bp;
-	priv_cmd.total_len = bp;
-	ifr.ifr_data = &priv_cmd;
-
-	ret = ioctl(drv->global->ioctl_sock, SIOCDEVPRIVATE + 1, &ifr);
-
-	if (ret < 0) {
-		wpa_printf(MSG_ERROR, "ioctl[SIOCSIWPRIV] (pnosetup): %d",
-			   ret);
-		wpa_driver_send_hang_msg(drv);
-		return ret;
-	}
-
-	drv_errors = 0;
-
-	return android_priv_cmd(bss, "PNOFORCE 1");
-}
-
-
-static int android_pno_stop(struct i802_bss *bss)
-{
-	return android_priv_cmd(bss, "PNOFORCE 0");
-}
-
-#endif /* ANDROID */
 
 
 static int driver_nl80211_set_key(const char *ifname, void *priv,

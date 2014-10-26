@@ -180,4 +180,23 @@ struct wpa_driver_nl80211_data {
 	int auth_p2p;
 };
 
+#ifdef ANDROID
+int android_nl_socket_set_nonblocking(struct nl_handle *handle);
+int android_genl_ctrl_resolve(struct nl_handle *handle, const char *name);
+int android_pno_start(struct i802_bss *bss,
+		      struct wpa_driver_scan_params *params);
+int android_pno_stop(struct i802_bss *bss);
+extern int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
+					 size_t buf_len);
+
+#ifdef ANDROID_P2P
+int wpa_driver_set_p2p_noa(void *priv, u8 count, int start, int duration);
+int wpa_driver_get_p2p_noa(void *priv, u8 *buf, size_t len);
+int wpa_driver_set_p2p_ps(void *priv, int legacy_ps, int opp_ps, int ctwindow);
+int wpa_driver_set_ap_wps_p2p_ie(void *priv, const struct wpabuf *beacon,
+				 const struct wpabuf *proberesp,
+				 const struct wpabuf *assocresp);
+#endif /* ANDROID_P2P */
+#endif /* ANDROID */
+
 #endif /* DRIVER_NL80211_H */

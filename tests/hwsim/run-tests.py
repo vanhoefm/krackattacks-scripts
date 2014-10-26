@@ -375,6 +375,8 @@ def main():
                     result = "PASS"
             except Exception, e:
                 logger.info(e)
+                if args.loglevel == logging.WARNING:
+                    print "Exception: " + str(e)
                 result = "FAIL"
             for d in dev:
                 try:

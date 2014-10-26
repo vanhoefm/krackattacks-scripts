@@ -1375,11 +1375,20 @@ static void wpa_driver_nl80211_event_rtm_newlink(void *ctx,
 		wpa_driver_nl80211_event_newlink(drv, ifname);
 
 	if (ifi->ifi_family == AF_BRIDGE && brid) {
+		struct i802_bss *bss;
+
 		/* device has been added to bridge */
 		if_indextoname(brid, namebuf);
 		wpa_printf(MSG_DEBUG, "nl80211: Add ifindex %u for bridge %s",
 			   brid, namebuf);
 		add_ifidx(drv, brid);
+
+		for (bss = drv->first_bss; bss; bss = bss->next) {
+			if (os_strcmp(ifname, bss->ifname) == 0) {
+				os_strlcpy(bss->brname, namebuf, IFNAMSIZ);
+				break;
+			}
+		}
 	}
 }
 
@@ -10400,6 +10409,7 @@ static void *i802_init(struct hostapd_data *hapd,
 		wpa_printf(MSG_DEBUG, "nl80211: Interface %s is in bridge %s",
 			   params->ifname, brname);
 		br_ifindex = if_nametoindex(brname);
+		os_strlcpy(bss->brname, brname, IFNAMSIZ);
 	} else {
 		brname[0] = '\0';
 		br_ifindex = 0;

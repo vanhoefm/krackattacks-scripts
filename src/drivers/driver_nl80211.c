@@ -150,10 +150,6 @@ static void nl80211_destroy_eloop_handle(struct nl_handle **handle)
 static void nl80211_global_deinit(void *priv);
 
 static void wpa_driver_nl80211_deinit(struct i802_bss *bss);
-static void wpa_driver_nl80211_scan_timeout(void *eloop_ctx,
-					    void *timeout_ctx);
-static int wpa_driver_nl80211_set_mode(struct i802_bss *bss,
-				       enum nl80211_iftype nlmode);
 static int wpa_driver_nl80211_set_mode_ibss(struct i802_bss *bss,
 					    struct hostapd_freq_params *freq);
 
@@ -188,8 +184,6 @@ static int nl80211_disable_11b_rates(struct wpa_driver_nl80211_data *drv,
 				     int ifindex, int disabled);
 
 static int nl80211_leave_ibss(struct wpa_driver_nl80211_data *drv);
-static int wpa_driver_nl80211_authenticate_retry(
-	struct wpa_driver_nl80211_data *drv);
 
 static int i802_set_freq(void *priv, struct hostapd_freq_params *freq);
 static int i802_set_iface_flags(struct i802_bss *bss, int up);
@@ -312,7 +306,7 @@ static const char * nl80211_command_to_string(enum nl80211_commands cmd)
 
 
 /* Converts nl80211_chan_width to a common format */
-static enum chan_width convert2width(int width)
+enum chan_width convert2width(int width)
 {
 	switch (width) {
 	case NL80211_CHAN_WIDTH_20_NOHT:
@@ -332,7 +326,7 @@ static enum chan_width convert2width(int width)
 }
 
 
-static int is_ap_interface(enum nl80211_iftype nlmode)
+int is_ap_interface(enum nl80211_iftype nlmode)
 {
 	return nlmode == NL80211_IFTYPE_AP ||
 		nlmode == NL80211_IFTYPE_P2P_GO;
@@ -353,8 +347,8 @@ static int is_p2p_net_interface(enum nl80211_iftype nlmode)
 }
 
 
-static struct i802_bss * get_bss_ifindex(struct wpa_driver_nl80211_data *drv,
-					 int ifindex)
+struct i802_bss * get_bss_ifindex(struct wpa_driver_nl80211_data *drv,
+				  int ifindex)
 {
 	struct i802_bss *bss;
 
@@ -373,7 +367,7 @@ static int is_mesh_interface(enum nl80211_iftype nlmode)
 }
 
 
-static void nl80211_mark_disconnected(struct wpa_driver_nl80211_data *drv)
+void nl80211_mark_disconnected(struct wpa_driver_nl80211_data *drv)
 {
 	if (drv->associated)
 		os_memcpy(drv->prev_bssid, drv->bssid, ETH_ALEN);
@@ -474,10 +468,10 @@ static int send_and_recv_msgs_global(struct nl80211_global *global,
 }
 
 
-static int send_and_recv_msgs(struct wpa_driver_nl80211_data *drv,
-			      struct nl_msg *msg,
-			      int (*valid_handler)(struct nl_msg *, void *),
-			      void *valid_data)
+int send_and_recv_msgs(struct wpa_driver_nl80211_data *drv,
+		       struct nl_msg *msg,
+		       int (*valid_handler)(struct nl_msg *, void *),
+		       void *valid_data)
 {
 	return send_and_recv(drv->global, drv->global->nl, msg,
 			     valid_handler, valid_data);
@@ -490,7 +484,7 @@ struct family_data {
 };
 
 
-static int nl80211_set_iface_id(struct nl_msg *msg, struct i802_bss *bss)
+int nl80211_set_iface_id(struct nl_msg *msg, struct i802_bss *bss)
 {
 	if (bss->wdev_id_set)
 		NLA_PUT_U64(msg, NL80211_ATTR_WDEV, bss->wdev_id);
@@ -559,8 +553,8 @@ nla_put_failure:
 }
 
 
-static void * nl80211_cmd(struct wpa_driver_nl80211_data *drv,
-			  struct nl_msg *msg, int flags, uint8_t cmd)
+void * nl80211_cmd(struct wpa_driver_nl80211_data *drv,
+		   struct nl_msg *msg, int flags, uint8_t cmd)
 {
 	return genlmsg_put(msg, 0, 0, drv->global->nl80211_id,
 			   0, flags, cmd, 0);
@@ -597,7 +591,7 @@ static int netdev_info_handler(struct nl_msg *msg, void *arg)
 }
 
 
-static int nl80211_get_wiphy_index(struct i802_bss *bss)
+int nl80211_get_wiphy_index(struct i802_bss *bss)
 {
 	struct nl_msg *msg;
 	struct wiphy_idx_data data = {
@@ -1271,7 +1265,7 @@ static void mlme_event_auth(struct wpa_driver_nl80211_data *drv,
 }
 
 
-static unsigned int nl80211_get_assoc_freq(struct wpa_driver_nl80211_data *drv)
+unsigned int nl80211_get_assoc_freq(struct wpa_driver_nl80211_data *drv)
 {
 	struct nl_msg *msg;
 	int ret;
@@ -2154,8 +2148,8 @@ static int get_link_signal(struct nl_msg *msg, void *arg)
 }
 
 
-static int nl80211_get_link_signal(struct wpa_driver_nl80211_data *drv,
-				   struct wpa_signal_info *sig)
+int nl80211_get_link_signal(struct wpa_driver_nl80211_data *drv,
+			    struct wpa_signal_info *sig)
 {
 	struct nl_msg *msg;
 
@@ -2222,8 +2216,8 @@ static int get_link_noise(struct nl_msg *msg, void *arg)
 }
 
 
-static int nl80211_get_link_noise(struct wpa_driver_nl80211_data *drv,
-				  struct wpa_signal_info *sig_change)
+int nl80211_get_link_noise(struct wpa_driver_nl80211_data *drv,
+			   struct wpa_signal_info *sig_change)
 {
 	struct nl_msg *msg;
 
@@ -4948,7 +4942,7 @@ static void wpa_driver_nl80211_deinit(struct i802_bss *bss)
  * This function can be used as registered timeout when starting a scan to
  * generate a scan completed event if the driver does not report this.
  */
-static void wpa_driver_nl80211_scan_timeout(void *eloop_ctx, void *timeout_ctx)
+void wpa_driver_nl80211_scan_timeout(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_driver_nl80211_data *drv = eloop_ctx;
 	if (drv->ap_scan_as_station != NL80211_IFTYPE_UNSPECIFIED) {
@@ -6312,8 +6306,7 @@ nla_put_failure:
 }
 
 
-static int wpa_driver_nl80211_authenticate_retry(
-	struct wpa_driver_nl80211_data *drv)
+int wpa_driver_nl80211_authenticate_retry(struct wpa_driver_nl80211_data *drv)
 {
 	struct wpa_driver_auth_params params;
 	struct i802_bss *bss = drv->first_bss;
@@ -7869,8 +7862,7 @@ static int wpa_driver_nl80211_sta_remove(struct i802_bss *bss, const u8 *addr,
 }
 
 
-static void nl80211_remove_iface(struct wpa_driver_nl80211_data *drv,
-				 int ifidx)
+void nl80211_remove_iface(struct wpa_driver_nl80211_data *drv, int ifidx)
 {
 	struct nl_msg *msg;
 	struct wpa_driver_nl80211_data *drv2;
@@ -8013,11 +8005,11 @@ static int nl80211_create_iface_once(struct wpa_driver_nl80211_data *drv,
 }
 
 
-static int nl80211_create_iface(struct wpa_driver_nl80211_data *drv,
-				const char *ifname, enum nl80211_iftype iftype,
-				const u8 *addr, int wds,
-				int (*handler)(struct nl_msg *, void *),
-				void *arg, int use_existing)
+int nl80211_create_iface(struct wpa_driver_nl80211_data *drv,
+			 const char *ifname, enum nl80211_iftype iftype,
+			 const u8 *addr, int wds,
+			 int (*handler)(struct nl_msg *, void *),
+			 void *arg, int use_existing)
 {
 	int ret;
 
@@ -9370,8 +9362,8 @@ static int dfs_info_handler(struct nl_msg *msg, void *arg)
 }
 
 
-static int wpa_driver_nl80211_set_mode(struct i802_bss *bss,
-				       enum nl80211_iftype nlmode)
+int wpa_driver_nl80211_set_mode(struct i802_bss *bss,
+				enum nl80211_iftype nlmode)
 {
 	return wpa_driver_nl80211_set_mode_impl(bss, nlmode, NULL);
 }

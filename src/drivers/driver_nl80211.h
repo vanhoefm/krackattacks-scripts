@@ -180,6 +180,36 @@ struct wpa_driver_nl80211_data {
 	int auth_p2p;
 };
 
+struct nl_msg;
+
+int nl80211_set_iface_id(struct nl_msg *msg, struct i802_bss *bss);
+void * nl80211_cmd(struct wpa_driver_nl80211_data *drv,
+		   struct nl_msg *msg, int flags, uint8_t cmd);
+int send_and_recv_msgs(struct wpa_driver_nl80211_data *drv, struct nl_msg *msg,
+		       int (*valid_handler)(struct nl_msg *, void *),
+		       void *valid_data);
+int nl80211_create_iface(struct wpa_driver_nl80211_data *drv,
+			 const char *ifname, enum nl80211_iftype iftype,
+			 const u8 *addr, int wds,
+			 int (*handler)(struct nl_msg *, void *),
+			 void *arg, int use_existing);
+void nl80211_remove_iface(struct wpa_driver_nl80211_data *drv, int ifidx);
+unsigned int nl80211_get_assoc_freq(struct wpa_driver_nl80211_data *drv);
+enum chan_width convert2width(int width);
+void nl80211_mark_disconnected(struct wpa_driver_nl80211_data *drv);
+struct i802_bss * get_bss_ifindex(struct wpa_driver_nl80211_data *drv,
+				  int ifindex);
+int is_ap_interface(enum nl80211_iftype nlmode);
+int wpa_driver_nl80211_authenticate_retry(struct wpa_driver_nl80211_data *drv);
+int nl80211_get_link_signal(struct wpa_driver_nl80211_data *drv,
+			    struct wpa_signal_info *sig);
+int nl80211_get_link_noise(struct wpa_driver_nl80211_data *drv,
+			   struct wpa_signal_info *sig_change);
+int nl80211_get_wiphy_index(struct i802_bss *bss);
+int wpa_driver_nl80211_set_mode(struct i802_bss *bss,
+				enum nl80211_iftype nlmode);
+void wpa_driver_nl80211_scan_timeout(void *eloop_ctx, void *timeout_ctx);
+
 #ifdef ANDROID
 int android_nl_socket_set_nonblocking(struct nl_handle *handle);
 int android_genl_ctrl_resolve(struct nl_handle *handle, const char *name);

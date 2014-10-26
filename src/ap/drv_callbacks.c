@@ -1168,6 +1168,12 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			hapd->iface, data->channel_list_changed.initiator);
 		break;
 #endif /* NEED_AP_MLME */
+	case EVENT_INTERFACE_ENABLED:
+		wpa_msg(hapd->msg_ctx, MSG_INFO, INTERFACE_ENABLED);
+		break;
+	case EVENT_INTERFACE_DISABLED:
+		wpa_msg(hapd->msg_ctx, MSG_INFO, INTERFACE_DISABLED);
+		break;
 	default:
 		wpa_printf(MSG_DEBUG, "Unknown event %d", event);
 		break;

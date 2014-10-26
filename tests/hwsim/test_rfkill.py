@@ -10,6 +10,7 @@ import subprocess
 import time
 
 import hostapd
+from hostapd import HostapdGlobal
 import hwsim_utils
 
 def get_rfkill_id(dev):
@@ -115,3 +116,45 @@ def test_rfkill_autogo(dev, apdev):
     finally:
         subprocess.call(['sudo', 'rfkill', 'unblock', id0])
         subprocess.call(['sudo', 'rfkill', 'unblock', id1])
+
+def test_rfkill_hostapd(dev, apdev):
+    """rfkill block/unblock during and prior to hostapd operations"""
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+
+    id = get_rfkill_id(hapd)
+    if id is None:
+        return "skip"
+
+    try:
+        subprocess.call(['rfkill', 'block', id])
+        ev = hapd.wait_event(["INTERFACE-DISABLED"], timeout=5)
+        if ev is None:
+            raise Exception("INTERFACE-DISABLED event not seen")
+        subprocess.call(['rfkill', 'unblock', id])
+        ev = hapd.wait_event(["INTERFACE-ENABLED"], timeout=5)
+        if ev is None:
+            raise Exception("INTERFACE-ENABLED event not seen")
+        # hostapd does not current re-enable beaconing automatically
+        hapd.disable()
+        hapd.enable()
+        dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+        subprocess.call(['rfkill', 'block', id])
+        ev = hapd.wait_event(["INTERFACE-DISABLED"], timeout=5)
+        if ev is None:
+            raise Exception("INTERFACE-DISABLED event not seen")
+        ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=10)
+        if ev is None:
+            raise Exception("Missing disconnection event")
+        dev[0].request("DISCONNECT")
+        hapd.disable()
+
+        hglobal = HostapdGlobal()
+        hglobal.flush()
+        hglobal.remove(apdev[0]['ifname'])
+
+        hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open2" },
+                              no_enable=True)
+        if "FAIL" not in hapd.request("ENABLE"):
+            raise Exception("ENABLE succeeded unexpectedly (rfkill)")
+    finally:
+        subprocess.call(['rfkill', 'unblock', id])

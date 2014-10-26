@@ -1462,6 +1462,15 @@ static void wpas_start_wps_go(struct wpa_supplicant *wpa_s,
 	ssid->key_mgmt = WPA_KEY_MGMT_PSK;
 	ssid->proto = WPA_PROTO_RSN;
 	ssid->pairwise_cipher = WPA_CIPHER_CCMP;
+	ssid->group_cipher = WPA_CIPHER_CCMP;
+	if (params->freq > 56160) {
+		/*
+		 * Enable GCMP instead of CCMP as pairwise_cipher and
+		 * group_cipher in 60 GHz.
+		 */
+		ssid->pairwise_cipher = WPA_CIPHER_GCMP;
+		ssid->group_cipher = WPA_CIPHER_GCMP;
+	}
 	if (os_strlen(params->passphrase) > 0) {
 		ssid->passphrase = os_strdup(params->passphrase);
 		if (ssid->passphrase == NULL) {

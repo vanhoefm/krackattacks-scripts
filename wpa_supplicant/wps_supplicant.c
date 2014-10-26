@@ -286,7 +286,9 @@ static void wpas_wps_remove_dup_network(struct wpa_supplicant *wpa_s,
 		/* compare security parameters */
 		if (ssid->auth_alg != new_ssid->auth_alg ||
 		    ssid->key_mgmt != new_ssid->key_mgmt ||
-		    ssid->group_cipher != new_ssid->group_cipher)
+		    (ssid->group_cipher != new_ssid->group_cipher &&
+		     !(ssid->group_cipher & new_ssid->group_cipher &
+		       WPA_CIPHER_CCMP)))
 			continue;
 
 		/*
@@ -471,6 +473,11 @@ static int wpa_supplicant_wps_cred(void *ctx,
 		break;
 	case WPS_ENCR_AES:
 		ssid->pairwise_cipher = WPA_CIPHER_CCMP;
+		if (wpa_s->drv_capa_known &&
+		    (wpa_s->drv_enc & WPA_DRIVER_CAPA_ENC_GCMP)) {
+			ssid->pairwise_cipher |= WPA_CIPHER_GCMP;
+			ssid->group_cipher |= WPA_CIPHER_GCMP;
+		}
 		break;
 	}
 

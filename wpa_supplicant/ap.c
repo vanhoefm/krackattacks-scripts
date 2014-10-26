@@ -317,7 +317,8 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 	    bss->ssid.security_policy != SECURITY_PLAINTEXT)
 		goto no_wps;
 	if (bss->ssid.security_policy == SECURITY_WPA_PSK &&
-	    (!(bss->rsn_pairwise & WPA_CIPHER_CCMP) || !(bss->wpa & 2)))
+	    (!(bss->rsn_pairwise & (WPA_CIPHER_CCMP | WPA_CIPHER_GCMP)) ||
+	     !(bss->wpa & 2)))
 		goto no_wps; /* WPS2 does not allow WPA/TKIP-only
 			      * configuration */
 	bss->eap_server = 1;

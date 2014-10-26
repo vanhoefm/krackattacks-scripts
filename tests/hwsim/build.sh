@@ -4,6 +4,12 @@ set -e
 
 cd $(dirname $0)
 
+usage()
+{
+	echo "$0 [-c | --codecov] [-f | --force-config]"
+	exit 1
+}
+
 use_lcov=0
 force_config=0
 while [ "$1" != "" ]; do
@@ -16,7 +22,7 @@ while [ "$1" != "" ]; do
 			force_config=1
 			echo "$0: force copy config specified"
 			;;
-		* ) exit 1
+		* ) usage
 	esac
 done
 

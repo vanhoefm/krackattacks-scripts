@@ -3925,6 +3925,66 @@ nla_put_failure:
 }
 
 
+static int dfs_info_handler(struct nl_msg *msg, void *arg)
+{
+	struct nlattr *tb[NL80211_ATTR_MAX + 1];
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+	int *dfs_capability_ptr = arg;
+
+	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+
+	if (tb[NL80211_ATTR_VENDOR_DATA]) {
+		struct nlattr *nl_vend = tb[NL80211_ATTR_VENDOR_DATA];
+		struct nlattr *tb_vendor[QCA_WLAN_VENDOR_ATTR_MAX + 1];
+
+		nla_parse(tb_vendor, QCA_WLAN_VENDOR_ATTR_MAX,
+			  nla_data(nl_vend), nla_len(nl_vend), NULL);
+
+		if (tb_vendor[QCA_WLAN_VENDOR_ATTR_DFS]) {
+			u32 val;
+			val = nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_DFS]);
+			wpa_printf(MSG_DEBUG, "nl80211: DFS offload capability: %u",
+				   val);
+			*dfs_capability_ptr = val;
+		}
+	}
+
+	return NL_SKIP;
+}
+
+
+static void qca_nl80211_check_dfs_capa(struct wpa_driver_nl80211_data *drv)
+{
+	struct nl_msg *msg;
+	int dfs_capability = 0;
+	int ret;
+
+	if (!drv->dfs_vendor_cmd_avail)
+		return;
+
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return;
+
+	nl80211_cmd(drv, msg, 0, NL80211_CMD_VENDOR);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+	NLA_PUT_U32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA);
+	NLA_PUT_U32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+		    QCA_NL80211_VENDOR_SUBCMD_DFS_CAPABILITY);
+
+	ret = send_and_recv_msgs(drv, msg, dfs_info_handler, &dfs_capability);
+	if (!ret && dfs_capability)
+		drv->capa.flags |= WPA_DRIVER_FLAGS_DFS_OFFLOAD;
+	msg = NULL;
+
+ nla_put_failure:
+	nlmsg_free(msg);
+}
+
+
 static int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 {
 	struct wiphy_info_data info;
@@ -4000,6 +4060,8 @@ static int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 	 */
 	if (!drv->use_monitor && !info.data_tx_status)
 		drv->capa.flags &= ~WPA_DRIVER_FLAGS_EAPOL_TX_STATUS;
+
+	qca_nl80211_check_dfs_capa(drv);
 
 	return 0;
 }
@@ -8859,35 +8921,6 @@ done:
 }
 
 
-static int dfs_info_handler(struct nl_msg *msg, void *arg)
-{
-	struct nlattr *tb[NL80211_ATTR_MAX + 1];
-	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
-	int *dfs_capability_ptr = arg;
-
-	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
-		  genlmsg_attrlen(gnlh, 0), NULL);
-
-	if (tb[NL80211_ATTR_VENDOR_DATA]) {
-		struct nlattr *nl_vend = tb[NL80211_ATTR_VENDOR_DATA];
-		struct nlattr *tb_vendor[QCA_WLAN_VENDOR_ATTR_MAX + 1];
-
-		nla_parse(tb_vendor, QCA_WLAN_VENDOR_ATTR_MAX,
-			  nla_data(nl_vend), nla_len(nl_vend), NULL);
-
-		if (tb_vendor[QCA_WLAN_VENDOR_ATTR_DFS]) {
-			u32 val;
-			val = nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_DFS]);
-			wpa_printf(MSG_DEBUG, "nl80211: DFS offload capability: %u",
-				   val);
-			*dfs_capability_ptr = val;
-		}
-	}
-
-	return NL_SKIP;
-}
-
-
 int wpa_driver_nl80211_set_mode(struct i802_bss *bss,
 				enum nl80211_iftype nlmode)
 {
@@ -8908,9 +8941,6 @@ static int wpa_driver_nl80211_get_capa(void *priv,
 {
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
-	struct nl_msg *msg;
-	int dfs_capability = 0;
-	int ret = 0;
 
 	if (!drv->has_capability)
 		return -1;
@@ -8921,31 +8951,7 @@ static int wpa_driver_nl80211_get_capa(void *priv,
 		capa->extended_capa_len = drv->extended_capa_len;
 	}
 
-	if (drv->dfs_vendor_cmd_avail == 1) {
-		msg = nlmsg_alloc();
-		if (!msg)
-			return -ENOMEM;
-
-		nl80211_cmd(drv, msg, 0, NL80211_CMD_VENDOR);
-
-		NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
-		NLA_PUT_U32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA);
-		NLA_PUT_U32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-			    QCA_NL80211_VENDOR_SUBCMD_DFS_CAPABILITY);
-
-		ret = send_and_recv_msgs(drv, msg, dfs_info_handler,
-					 &dfs_capability);
-		if (!ret) {
-			if (dfs_capability)
-				capa->flags |= WPA_DRIVER_FLAGS_DFS_OFFLOAD;
-		}
-	}
-
-	return ret;
-
- nla_put_failure:
-	nlmsg_free(msg);
-	return -ENOBUFS;
+	return 0;
 }
 
 

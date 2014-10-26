@@ -328,6 +328,51 @@ def test_ap_wpa2_bridge_fdb(dev, apdev):
         subprocess.call(['sudo', 'ip', 'link', 'set', 'dev', 'ap-br0', 'down'])
         subprocess.call(['sudo', 'brctl', 'delbr', 'ap-br0'])
 
+def test_ap_wpa2_already_in_bridge(dev, apdev):
+    """hostapd behavior with interface already in bridge"""
+    ifname = apdev[0]['ifname']
+    br_ifname = 'ext-ap-br0'
+    try:
+        ssid = "test-wpa2-psk"
+        passphrase = "12345678"
+        subprocess.call(['brctl', 'addbr', br_ifname])
+        subprocess.call(['brctl', 'setfd', br_ifname, '0'])
+        subprocess.call(['ip', 'link', 'set', 'dev', br_ifname, 'up'])
+        subprocess.call(['iw', ifname, 'set', 'type', '__ap'])
+        subprocess.call(['brctl', 'addif', br_ifname, ifname])
+        params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+        hapd = hostapd.add_ap(ifname, params)
+        if hapd.get_driver_status_field('brname') != br_ifname:
+            raise Exception("Bridge name not identified correctly")
+        dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
+    finally:
+        subprocess.call(['ip', 'link', 'set', 'dev', br_ifname, 'down'])
+        subprocess.call(['brctl', 'delif', br_ifname, ifname])
+        subprocess.call(['iw', ifname, 'set', 'type', 'station'])
+        subprocess.call(['brctl', 'delbr', br_ifname])
+
+def test_ap_wpa2_ext_add_to_bridge(dev, apdev):
+    """hostapd behavior with interface added to bridge externally"""
+    ifname = apdev[0]['ifname']
+    br_ifname = 'ext-ap-br0'
+    try:
+        ssid = "test-wpa2-psk"
+        passphrase = "12345678"
+        params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+        hapd = hostapd.add_ap(ifname, params)
+
+        subprocess.call(['brctl', 'addbr', br_ifname])
+        subprocess.call(['brctl', 'setfd', br_ifname, '0'])
+        subprocess.call(['ip', 'link', 'set', 'dev', br_ifname, 'up'])
+        subprocess.call(['brctl', 'addif', br_ifname, ifname])
+        dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
+        if hapd.get_driver_status_field('brname') != br_ifname:
+            raise Exception("Bridge name not identified correctly")
+    finally:
+        subprocess.call(['ip', 'link', 'set', 'dev', br_ifname, 'down'])
+        subprocess.call(['brctl', 'delif', br_ifname, ifname])
+        subprocess.call(['brctl', 'delbr', br_ifname])
+
 def test_ap_wpa2_psk_ext(dev, apdev):
     """WPA2-PSK AP using external EAPOL I/O"""
     bssid = apdev[0]['bssid']

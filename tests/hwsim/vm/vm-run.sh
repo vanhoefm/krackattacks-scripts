@@ -41,19 +41,34 @@ fi
 
 
 CMD=$TESTDIR/vm/inside.sh
-if [ "$1" = "--ext" ]; then
-    shift
-    DATE=$(date +%s).$1
-    shift
-else
-    DATE=$(date +%s)
-fi
+
+unset RUN_TEST_ARGS
+DATE=$(date +%s)
+CODECOV=no
+TIMEWARP=0
+while [ "$1" != "" ]; do
+	case $1 in
+		--ext ) shift
+			DATE=$(date +%s).$1
+			shift
+			;;
+		--codecov ) shift
+			CODECOV=yes
+			;;
+		--timewrap ) shift
+			TIMEWARP=1
+			;;
+		* )
+			RUN_TEST_ARGS="$RUN_TEST_ARGS$1 "
+			shift
+			;;
+	esac
+done
+
 LOGDIR=$LOGS/$DATE
 mkdir -p $LOGDIR
 
-if [ "$1" = "--codecov" ]; then
-    shift
-    CODECOV=yes
+if [ $CODECOV = "yes" ]; then
     DIR=$PWD
     if [ -e /tmp/logs ]; then
 	echo "/tmp/logs exists - cannot prepare build trees"
@@ -110,13 +125,6 @@ else
     CODECOV=no
 fi
 
-if [ "$1" == "--timewarp" ] ; then
-    TIMEWARP=1
-    shift
-else
-    TIMEWARP=0
-fi
-
 echo "Starting test run in a virtual machine"
 
 kvm \
@@ -127,7 +135,7 @@ kvm \
 	-fsdev local,security_model=none,id=fsdev-logs,path="$LOGDIR",writeout=immediate \
 	-device virtio-9p-pci,id=fs-logs,fsdev=fsdev-logs,mount_tag=logshare \
 	-monitor null -serial stdio -serial file:$LOGDIR/console \
-	-append "mac80211_hwsim.support_p2p_device=0 mac80211_hwsim.channels=$CHANNELS mac80211_hwsim.radios=6 init=$CMD testdir=$TESTDIR timewarp=$TIMEWARP console=$KVMOUT root=/dev/root rootflags=trans=virtio,version=9p2000.u ro rootfstype=9p EPATH=$EPATH ARGS=$*"
+	-append "mac80211_hwsim.support_p2p_device=0 mac80211_hwsim.channels=$CHANNELS mac80211_hwsim.radios=6 init=$CMD testdir=$TESTDIR timewarp=$TIMEWARP console=$KVMOUT root=/dev/root rootflags=trans=virtio,version=9p2000.u ro rootfstype=9p EPATH=$EPATH ARGS=$RUN_TEST_ARGS"
 
 if [ $CODECOV = "yes" ]; then
     mv $LOGDIR/alt-wpa_supplicant /tmp/logs

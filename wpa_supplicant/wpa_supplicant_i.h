@@ -321,10 +321,12 @@ void radio_work_done(struct wpa_radio_work *work);
 void radio_remove_works(struct wpa_supplicant *wpa_s,
 			const char *type, int remove_all);
 void radio_work_check_next(struct wpa_supplicant *wpa_s);
-int radio_work_pending(struct wpa_supplicant *wpa_s, const char *type);
+struct wpa_radio_work *
+radio_work_pending(struct wpa_supplicant *wpa_s, const char *type);
 
 struct wpa_connect_work {
 	unsigned int sme:1;
+	unsigned int bss_removed:1;
 	struct wpa_bss *bss;
 	struct wpa_ssid *ssid;
 };

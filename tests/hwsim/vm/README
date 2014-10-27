@@ -57,7 +57,7 @@ VM into the logs directory. To post-process this data, you'll want to use
 lcov and run
 
 cd /tmp/hwsim-test-logs/<timestamp>
-lcov -c -d gcov/ > gcov/data
+lcov -b <path to kernel dir> -c -d gcov/ > gcov/data
 genhtml -o html/ gcov/data
 
 Then open html/index.html in your browser.

@@ -304,7 +304,7 @@ static void mlme_event_connect(struct wpa_driver_nl80211_data *drv,
 	}
 	if (ptk_kck) {
 		event.assoc_info.ptk_kck = nla_data(ptk_kck);
-		event.assoc_info.ptk_kck_len = nla_len(ptk_kek);
+		event.assoc_info.ptk_kck_len = nla_len(ptk_kck);
 	}
 	if (ptk_kek) {
 		event.assoc_info.ptk_kek = nla_data(ptk_kek);

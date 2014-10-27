@@ -28,6 +28,9 @@ unset VALGRIND
 unset TRACE
 unset TRACE_ARGS
 unset RUN_TEST_ARGS
+unset BUILD
+unset BUILD_ARGS
+unset CODECOV
 while [ "$1" != "" ]; do
 	case $1 in
 		-v | --valgrind | valgrind)
@@ -46,6 +49,17 @@ while [ "$1" != "" ]; do
 			shift
 			echo "$0: using channels=$NUM_CH"
 			;;
+		-B | --build)
+			shift
+			echo "$0: build before running tests"
+			BUILD=build
+			;;
+		-c | --codecov)
+			shift
+			echo "$0: using code coverage"
+			CODECOV=lcov
+			BUILD_ARGS=-c
+			;;
 		*)
 			RUN_TEST_ARGS="$RUN_TEST_ARGS$1 "
 			shift
@@ -58,13 +72,29 @@ if [ ! -z "$RUN_TEST_ARGS" ]; then
 fi
 
 unset SUFFIX
+if [ ! -z "$BUILD" ]; then
+	SUFFIX=-build
+fi
+
 if [ ! -z "$VALGRIND" ]; then
-	SUFFIX=-valgrind
+	SUFFIX=$SUFFIX-valgrind
 fi
 
 if [ ! -z "$TRACE" ]; then
 	SUFFIX=$SUFFIX-trace
 	TRACE_ARGS="-T"
+fi
+
+if [ ! -z "$CODECOV" ]; then
+	SUFFIX=$SUFFIX-codecov
+fi
+
+if [ ! -z "$BUILD" ]; then
+    echo "Building with args=$BUILD_ARGS"
+    if ! ./build.sh $BUILD_ARGS; then
+	    echo "Failed building components"
+	    exit 1
+    fi
 fi
 
 if ! ./start.sh $VALGRIND $TRACE $NUM_CH; then
@@ -85,6 +115,14 @@ if [ ! -z "$VALGRIND" ] ; then
 	errors=1
     fi
 fi
+
+if [ ! -z "$CODECOV" ] ; then
+	lcov -q --capture --directory ../../wpa_supplicant --output-file $LOGDIR/wpas_lcov.info
+	genhtml -q $LOGDIR/wpas_lcov.info --output-directory $LOGDIR/wpas_lcov
+	lcov -q --capture --directory ../../hostapd --output-file $LOGDIR/hostapd_lcov.info
+	genhtml -q $LOGDIR/hostapd_lcov.info --output-directory $LOGDIR/hostapd_lcov
+fi
+
 if [ $errors -gt 0 ]; then
     tar czf /tmp/hwsim-tests-$DATE-FAILED$SUFFIX.tar.gz $LOGDIR/
     exit 1

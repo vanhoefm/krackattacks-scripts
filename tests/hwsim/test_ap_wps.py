@@ -19,6 +19,7 @@ import StringIO
 
 import hwsim_utils
 import hostapd
+from wpasupplicant import WpaSupplicant
 
 def test_ap_wps_init(dev, apdev):
     """Initial AP configuration with first WPS Enrollee"""
@@ -2202,5 +2203,35 @@ def test_ap_wps_from_event(dev, apdev):
         raise Exception("Unexpected Device Password Id: " + vals[5])
     hapd.request("WPS_PBC")
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
+    if ev is None:
+        raise Exception("Association with the AP timed out")
+
+def test_ap_wps_ap_scan_2(dev, apdev):
+    """AP_SCAN 2 for WPS"""
+    ssid = "test-wps-conf"
+    hapd = hostapd.add_ap(apdev[0]['ifname'],
+                          { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                            "wpa_passphrase": "12345678", "wpa": "2",
+                            "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP"})
+    hapd.request("WPS_PBC")
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
+
+    if "OK" not in wpas.request("AP_SCAN 2"):
+        raise Exception("Failed to set AP_SCAN 2")
+
+    wpas.request("WPS_PBC")
+    ev = wpas.wait_event(["WPS-SUCCESS"], timeout=15)
+    if ev is None:
+        raise Exception("WPS-SUCCESS event timed out")
+    ev = wpas.wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
+    if ev is None:
+        raise Exception("Association with the AP timed out")
+    wpas.request("DISCONNECT")
+    wpas.request("BSS_FLUSH 0")
+    wpas.dump_monitor()
+    wpas.request("REASSOCIATE")
+    ev = wpas.wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
     if ev is None:
         raise Exception("Association with the AP timed out")

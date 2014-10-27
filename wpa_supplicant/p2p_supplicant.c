@@ -455,7 +455,7 @@ static void run_wpas_p2p_disconnect(void *eloop_ctx, void *timeout_ctx)
 static int wpas_p2p_disconnect_safely(struct wpa_supplicant *wpa_s,
 				      struct wpa_supplicant *calling_wpa_s)
 {
-	if (calling_wpa_s == wpa_s &&
+	if (calling_wpa_s == wpa_s && wpa_s &&
 	    wpa_s->p2p_group_interface != NOT_P2P_GROUP_INTERFACE) {
 		/*
 		 * The calling wpa_s instance is going to be removed. Do that

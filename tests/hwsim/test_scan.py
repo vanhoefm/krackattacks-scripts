@@ -11,6 +11,7 @@ import os
 import subprocess
 
 import hostapd
+from wpasupplicant import WpaSupplicant
 
 def check_scan(dev, params, other_started=False):
     if not other_started:
@@ -322,3 +323,89 @@ def test_scan_hidden(dev, apdev):
     check_scan(dev[0], "scan_id=%d,%d,%d freq=2412 use_id=1" % (id1, id2, id3))
     if "test-scan" not in dev[0].request("SCAN_RESULTS"):
         raise Exception("BSS not found in scan")
+
+def test_scan_and_bss_entry_removed(dev, apdev):
+    """Last scan result and connect work processing on BSS entry update"""
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open",
+                                                "eap_server": "1",
+                                                "wps_state": "2" })
+    bssid = apdev[0]['bssid']
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
+
+    # Add a BSS entry
+    dev[0].scan_for_bss(bssid, freq="2412")
+    wpas.scan_for_bss(bssid, freq="2412")
+
+    # Start a connect radio work with a blocking entry preventing this from
+    # proceeding; this stores a pointer to the selected BSS entry.
+    id = dev[0].request("RADIO_WORK add block-work")
+    w_id = wpas.request("RADIO_WORK add block-work")
+    dev[0].wait_event(["EXT-RADIO-WORK-START"], timeout=1)
+    wpas.wait_event(["EXT-RADIO-WORK-START"], timeout=1)
+    nid = dev[0].connect("open", key_mgmt="NONE", scan_freq="2412",
+                         wait_connect=False)
+    w_nid = wpas.connect("open", key_mgmt="NONE", scan_freq="2412",
+                         wait_connect=False)
+    time.sleep(0.1)
+
+    # Remove the BSS entry
+    dev[0].request("BSS_FLUSH 0")
+    wpas.request("BSS_FLUSH 0")
+
+    # Allow the connect radio work to continue. The bss entry stored in the
+    # pending connect work is now stale. This will result in the connection
+    # attempt failing since the BSS entry does not exist.
+    dev[0].request("RADIO_WORK done " + id)
+    wpas.request("RADIO_WORK done " + w_id)
+
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
+    if ev is not None:
+        raise Exception("Unexpected connection")
+    dev[0].remove_network(nid)
+    ev = wpas.wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
+    if ev is not None:
+        raise Exception("Unexpected connection")
+    wpas.remove_network(w_nid)
+    time.sleep(0.5)
+    dev[0].request("BSS_FLUSH 0")
+    wpas.request("BSS_FLUSH 0")
+
+    # Add a BSS entry
+    dev[0].scan_for_bss(bssid, freq="2412")
+    wpas.scan_for_bss(bssid, freq="2412")
+
+    # Start a connect radio work with a blocking entry preventing this from
+    # proceeding; this stores a pointer to the selected BSS entry.
+    id = dev[0].request("RADIO_WORK add block-work")
+    w_id = wpas.request("RADIO_WORK add block-work")
+    dev[0].wait_event(["EXT-RADIO-WORK-START"], timeout=1)
+    wpas.wait_event(["EXT-RADIO-WORK-START"], timeout=1)
+
+    # Schedule a connection based on the current BSS entry.
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412",
+                   wait_connect=False)
+    wpas.connect("open", key_mgmt="NONE", scan_freq="2412",
+                 wait_connect=False)
+
+    # Update scan results with results that have longer set of IEs so that new
+    # memory needs to be allocated for the BSS entry.
+    hapd.request("WPS_PBC")
+    time.sleep(0.1)
+    subprocess.call(['iw', dev[0].ifname, 'scan', 'trigger', 'freq', '2412'])
+    subprocess.call(['iw', wpas.ifname, 'scan', 'trigger', 'freq', '2412'])
+    time.sleep(0.1)
+
+    # Allow the connect radio work to continue. The bss entry stored in the
+    # pending connect work becomes stale during the scan and it must have been
+    # updated for the connection to work.
+    dev[0].request("RADIO_WORK done " + id)
+    wpas.request("RADIO_WORK done " + w_id)
+
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("No connection (sme-connect)")
+    ev = wpas.wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("No connection (connect)")

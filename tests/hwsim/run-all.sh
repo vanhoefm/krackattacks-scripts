@@ -24,6 +24,14 @@ else
     fi
 fi
 
+usage()
+{
+	echo "$0 [-v | --valgrind | valgrind] [-t | --trace | trace]"
+	echo "\t[-n <num> | --channels <num>] [-B | --build]"
+	echo "\t[-c | --codecov ] [run-tests.py parameters]"
+	exit 1
+}
+
 unset VALGRIND
 unset TRACE
 unset TRACE_ARGS
@@ -59,6 +67,9 @@ while [ "$1" != "" ]; do
 			echo "$0: using code coverage"
 			CODECOV=lcov
 			BUILD_ARGS=-c
+			;;
+		-h | --help)
+			usage
 			;;
 		*)
 			RUN_TEST_ARGS="$RUN_TEST_ARGS$1 "

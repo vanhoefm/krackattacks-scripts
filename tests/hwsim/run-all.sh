@@ -24,30 +24,47 @@ else
     fi
 fi
 
-if [ "x$1" = "xvalgrind" ]; then
-	VALGRIND=valgrind
-	SUFFIX=-valgrind
-	shift
-else
-	unset VALGRIND
-	SUFFIX=
+unset VALGRIND
+unset TRACE
+unset TRACE_ARGS
+unset RUN_TEST_ARGS
+while [ "$1" != "" ]; do
+	case $1 in
+		-v | --valgrind | valgrind)
+			shift
+			echo "$0: using valgrind"
+			VALGRIND=valgrind
+			;;
+		-t | --trace | trace)
+			shift
+			echo "$0: using Trace"
+			TRACE=trace
+			;;
+		-n | --channels)
+			shift
+			NUM_CH=$1
+			shift
+			echo "$0: using channels=$NUM_CH"
+			;;
+		*)
+			RUN_TEST_ARGS="$RUN_TEST_ARGS$1 "
+			shift
+			;;
+	esac
+done
+
+if [ ! -z "$RUN_TEST_ARGS" ]; then
+	echo "$0: passing the following args to run-tests.py: $RUN_TEST_ARGS"
 fi
 
-if [ "x$1" = "xtrace" ] ; then
-	TRACE=trace
+unset SUFFIX
+if [ ! -z "$VALGRIND" ]; then
+	SUFFIX=-valgrind
+fi
+
+if [ ! -z "$TRACE" ]; then
 	SUFFIX=$SUFFIX-trace
 	TRACE_ARGS="-T"
-	shift
-else
-	unset TRACE
-	unset TRACE_ARGS
-fi
-
-NUM_CH=$1
-if [ x${NUM_CH%=[0-9]*} = "xchannels" ]; then
-	shift
-else
-	unset NUM_CH
 fi
 
 if ! ./start.sh $VALGRIND $TRACE $NUM_CH; then
@@ -57,7 +74,7 @@ if ! ./start.sh $VALGRIND $TRACE $NUM_CH; then
 	exit 1
 fi
 
-sudo ./run-tests.py -D --logdir "$LOGDIR" $TRACE_ARGS -q $DB $@ || errors=1
+sudo ./run-tests.py -D --logdir "$LOGDIR" $TRACE_ARGS -q $DB $RUN_TEST_ARGS || errors=1
 
 ./stop.sh
 

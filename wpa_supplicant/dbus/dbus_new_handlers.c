@@ -3993,6 +3993,8 @@ dbus_bool_t wpas_dbus_getter_bss_wps(DBusMessageIter *iter, DBusError *error,
 			type = "pbc";
 		else if (wps_is_selected_pin_registrar(wps_ie))
 			type = "pin";
+
+		wpabuf_free(wps_ie);
 	}
 #endif /* CONFIG_WPS */
 

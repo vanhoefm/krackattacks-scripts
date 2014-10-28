@@ -725,6 +725,32 @@ def test_grpform_cred_ready_timeout(dev, apdev, params):
     if end - start < 120:
         raise Exception("Too short GO Negotiation wait time: {}".format(end - start))
 
+def test_grpform_cred_ready_timeout2(dev, apdev, params):
+    """P2P GO Negotiation wait for credentials to become ready (2) [long]"""
+    if not params['long']:
+        logger.info("Skip test case with long duration due to --long not specified")
+        return "skip"
+
+    dev[1].p2p_listen()
+    addr1 = dev[1].p2p_dev_addr()
+    if not dev[0].discover_peer(addr1):
+        raise Exception("Peer " + addr1 + " not found")
+    start = os.times()[4]
+    if "OK" not in dev[0].global_request("P2P_CONNECT " + addr1 + " 12345670 display"):
+        raise Exception("Failed to initiate GO Neg")
+    ev = dev[0].wait_global_event(["P2P-GO-NEG-FAILURE"], timeout=30)
+    if ev is not None:
+        raise Exception("Too early GO Negotiation timeout reported")
+    logger.info("Starting p2p_find to change state")
+    dev[0].p2p_find()
+    ev = dev[0].wait_global_event(["P2P-GO-NEG-FAILURE"], timeout=100)
+    if ev is None:
+        raise Exception("GO Negotiation failure timed out")
+    end = os.times()[4]
+    logger.info("GO Negotiation wait time: {} seconds".format(end - start))
+    if end - start < 120:
+        raise Exception("Too short GO Negotiation wait time: {}".format(end - start))
+
 def test_grpform_no_wsc_done(dev):
     """P2P group formation with WSC-Done not sent"""
     addr0 = dev[0].p2p_dev_addr()

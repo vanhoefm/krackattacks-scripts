@@ -623,7 +623,7 @@ void p2p_process_go_neg_req(struct p2p_data *p2p, const u8 *sa,
 			 * Request frame.
 			 */
 			p2p->cfg->send_action_done(p2p->cfg->cb_ctx);
-			p2p_go_neg_failed(p2p, dev, *msg.status);
+			p2p_go_neg_failed(p2p, *msg.status);
 			p2p_parse_free(&msg);
 			return;
 		}
@@ -974,7 +974,7 @@ void p2p_process_go_neg_resp(struct p2p_data *p2p, const u8 *sa,
 			p2p_set_timeout(p2p, 0, 0);
 		} else {
 			p2p_dbg(p2p, "Stop GO Negotiation attempt");
-			p2p_go_neg_failed(p2p, dev, *msg.status);
+			p2p_go_neg_failed(p2p, *msg.status);
 		}
 		p2p->cfg->send_action_done(p2p->cfg->cb_ctx);
 		p2p_parse_free(&msg);
@@ -1156,13 +1156,13 @@ fail:
 			    wpabuf_head(dev->go_neg_conf),
 			    wpabuf_len(dev->go_neg_conf), 200) < 0) {
 		p2p_dbg(p2p, "Failed to send Action frame");
-		p2p_go_neg_failed(p2p, dev, -1);
+		p2p_go_neg_failed(p2p, -1);
 		p2p->cfg->send_action_done(p2p->cfg->cb_ctx);
 	} else
 		dev->go_neg_conf_sent++;
 	if (status != P2P_SC_SUCCESS) {
 		p2p_dbg(p2p, "GO Negotiation failed");
-		p2p_go_neg_failed(p2p, dev, status);
+		p2p_go_neg_failed(p2p, status);
 	}
 }
 
@@ -1213,7 +1213,7 @@ void p2p_process_go_neg_conf(struct p2p_data *p2p, const u8 *sa,
 	}
 	if (*msg.status) {
 		p2p_dbg(p2p, "GO Negotiation rejected: status %d", *msg.status);
-		p2p_go_neg_failed(p2p, dev, *msg.status);
+		p2p_go_neg_failed(p2p, *msg.status);
 		p2p_parse_free(&msg);
 		return;
 	}
@@ -1225,7 +1225,7 @@ void p2p_process_go_neg_conf(struct p2p_data *p2p, const u8 *sa,
 	} else if (dev->go_state == REMOTE_GO) {
 		p2p_dbg(p2p, "Mandatory P2P Group ID attribute missing from GO Negotiation Confirmation");
 		p2p->ssid_len = 0;
-		p2p_go_neg_failed(p2p, dev, P2P_SC_FAIL_INVALID_PARAMS);
+		p2p_go_neg_failed(p2p, P2P_SC_FAIL_INVALID_PARAMS);
 		p2p_parse_free(&msg);
 		return;
 	}

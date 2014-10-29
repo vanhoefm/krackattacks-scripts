@@ -211,30 +211,29 @@ void p2p_clear_timeout(struct p2p_data *p2p)
 }
 
 
-void p2p_go_neg_failed(struct p2p_data *p2p, struct p2p_device *peer,
-		       int status)
+void p2p_go_neg_failed(struct p2p_data *p2p, int status)
 {
 	struct p2p_go_neg_results res;
+	struct p2p_device *peer = p2p->go_neg_peer;
+
+	if (!peer)
+		return;
+
 	p2p_clear_timeout(p2p);
 	eloop_cancel_timeout(p2p_go_neg_wait_timeout, p2p, NULL);
 	p2p_set_state(p2p, P2P_IDLE);
-	if (p2p->go_neg_peer) {
-		p2p->go_neg_peer->flags &= ~P2P_DEV_PEER_WAITING_RESPONSE;
-		p2p->go_neg_peer->wps_method = WPS_NOT_READY;
-		p2p->go_neg_peer->oob_pw_id = 0;
-	}
+
+	peer->flags &= ~P2P_DEV_PEER_WAITING_RESPONSE;
+	peer->wps_method = WPS_NOT_READY;
+	peer->oob_pw_id = 0;
+	wpabuf_free(peer->go_neg_conf);
+	peer->go_neg_conf = NULL;
 	p2p->go_neg_peer = NULL;
 
 	os_memset(&res, 0, sizeof(res));
 	res.status = status;
-	if (peer) {
-		wpabuf_free(peer->go_neg_conf);
-		peer->go_neg_conf = NULL;
-		os_memcpy(res.peer_device_addr, peer->info.p2p_device_addr,
-			  ETH_ALEN);
-		os_memcpy(res.peer_interface_addr, peer->intended_addr,
-			  ETH_ALEN);
-	}
+	os_memcpy(res.peer_device_addr, peer->info.p2p_device_addr, ETH_ALEN);
+	os_memcpy(res.peer_interface_addr, peer->intended_addr, ETH_ALEN);
 	p2p->cfg->go_neg_completed(p2p->cfg->cb_ctx, &res);
 }
 
@@ -872,8 +871,7 @@ static void p2p_device_free(struct p2p_data *p2p, struct p2p_device *dev)
 		/*
 		 * If GO Negotiation is in progress, report that it has failed.
 		 */
-		p2p_go_neg_failed(p2p, dev, -1);
-		p2p->go_neg_peer = NULL;
+		p2p_go_neg_failed(p2p, -1);
 	}
 	if (p2p->invite_peer == dev)
 		p2p->invite_peer = NULL;
@@ -3109,8 +3107,7 @@ static void p2p_go_neg_resp_failure_cb(struct p2p_data *p2p, int success,
 {
 	p2p_dbg(p2p, "GO Negotiation Response (failure) TX callback: success=%d", success);
 	if (p2p->go_neg_peer && p2p->go_neg_peer->status != P2P_SC_SUCCESS) {
-		p2p_go_neg_failed(p2p, p2p->go_neg_peer,
-				  p2p->go_neg_peer->status);
+		p2p_go_neg_failed(p2p, p2p->go_neg_peer->status);
 	} else if (success) {
 		struct p2p_device *dev;
 		dev = p2p_get_device(p2p, addr);
@@ -3129,7 +3126,7 @@ static void p2p_go_neg_conf_cb(struct p2p_data *p2p,
 	p2p_dbg(p2p, "GO Negotiation Confirm TX callback: result=%d", result);
 	if (result == P2P_SEND_ACTION_FAILED) {
 		p2p->cfg->send_action_done(p2p->cfg->cb_ctx);
-		p2p_go_neg_failed(p2p, p2p->go_neg_peer, -1);
+		p2p_go_neg_failed(p2p, -1);
 		return;
 	}
 
@@ -3300,7 +3297,7 @@ int p2p_listen_end(struct p2p_data *p2p, unsigned int freq)
 	if (p2p->state == P2P_CONNECT_LISTEN && p2p->go_neg_peer) {
 		if (p2p->go_neg_peer->connect_reqs >= 120) {
 			p2p_dbg(p2p, "Timeout on sending GO Negotiation Request without getting response");
-			p2p_go_neg_failed(p2p, p2p->go_neg_peer, -1);
+			p2p_go_neg_failed(p2p, -1);
 			return 0;
 		}
 
@@ -3351,7 +3348,7 @@ static void p2p_timeout_connect(struct p2p_data *p2p)
 	if (p2p->go_neg_peer &&
 	    (p2p->go_neg_peer->flags & P2P_DEV_WAIT_GO_NEG_CONFIRM)) {
 		p2p_dbg(p2p, "Wait for GO Negotiation Confirm timed out - assume GO Negotiation failed");
-		p2p_go_neg_failed(p2p, p2p->go_neg_peer, -1);
+		p2p_go_neg_failed(p2p, -1);
 		return;
 	}
 	if (p2p->go_neg_peer &&
@@ -3382,7 +3379,7 @@ static void p2p_timeout_connect_listen(struct p2p_data *p2p)
 
 		if (p2p->go_neg_peer->connect_reqs >= 120) {
 			p2p_dbg(p2p, "Timeout on sending GO Negotiation Request without getting response");
-			p2p_go_neg_failed(p2p, p2p->go_neg_peer, -1);
+			p2p_go_neg_failed(p2p, -1);
 			return;
 		}
 
@@ -4906,6 +4903,5 @@ void p2p_go_neg_wait_timeout(void *eloop_ctx, void *timeout_ctx)
 
 	p2p_dbg(p2p,
 		"Timeout on waiting peer to become ready for GO Negotiation");
-	if (p2p->go_neg_peer)
-		p2p_go_neg_failed(p2p, p2p->go_neg_peer, -1);
+	p2p_go_neg_failed(p2p, -1);
 }

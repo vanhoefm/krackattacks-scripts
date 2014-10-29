@@ -773,8 +773,7 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq,
 struct p2p_device * p2p_get_device(struct p2p_data *p2p, const u8 *addr);
 struct p2p_device * p2p_get_device_interface(struct p2p_data *p2p,
 					     const u8 *addr);
-void p2p_go_neg_failed(struct p2p_data *p2p, struct p2p_device *peer,
-		       int status);
+void p2p_go_neg_failed(struct p2p_data *p2p, int status);
 void p2p_go_complete(struct p2p_data *p2p, struct p2p_device *peer);
 int p2p_match_dev_type(struct p2p_data *p2p, struct wpabuf *wps);
 int dev_type_list_match(const u8 *dev_type, const u8 *req_dev_type[],

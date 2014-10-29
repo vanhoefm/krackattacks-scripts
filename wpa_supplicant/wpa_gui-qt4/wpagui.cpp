@@ -36,6 +36,7 @@ WpaGui::WpaGui(QApplication *_app, QWidget *parent, const char *, Qt::WFlags)
 	: QMainWindow(parent), app(_app)
 {
 	setupUi(this);
+	this->setWindowFlags(Qt::Dialog);
 
 #ifdef CONFIG_NATIVE_WINDOWS
 	fileStopServiceAction = new QAction(this);

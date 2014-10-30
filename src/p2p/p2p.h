@@ -1922,7 +1922,8 @@ int p2p_set_no_go_freq(struct p2p_data *p2p,
 /**
  * p2p_in_progress - Check whether a P2P operation is progress
  * @p2p: P2P module context from p2p_init()
- * Returns: 0 if P2P module is idle or 1 if an operation is in progress
+ * Returns: 0 if P2P module is idle, 1 if an operation is in progress but not
+ * in search state, or 2 if search state operation is in progress
  */
 int p2p_in_progress(struct p2p_data *p2p);
 

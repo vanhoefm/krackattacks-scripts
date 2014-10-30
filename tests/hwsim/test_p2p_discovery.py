@@ -327,3 +327,34 @@ def test_discovery_auto(dev):
         raise Exception("Dev1 not in provision discovery event")
     if "peer_go=1" not in ev0:
         raise Exception("peer_go incorrect in PD response from GO")
+
+def test_discovery_stop(dev):
+    """P2P device discovery and p2p_stop_find"""
+    addr0 = dev[0].p2p_dev_addr()
+    addr1 = dev[1].p2p_dev_addr()
+    dev[1].p2p_listen()
+    dev[2].p2p_listen()
+
+    dev[0].p2p_find(social=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-STARTED"], timeout=0.5)
+    if ev is None:
+        logger.info("No CTRL-EVENT-SCAN-STARTED event")
+    dev[0].p2p_stop_find()
+    ev = dev[0].wait_global_event(["P2P-FIND-STOPPED"], timeout=1)
+    if ev is None:
+        raise Exception("P2P_STOP not reported")
+    ev = dev[0].wait_global_event(["P2P-DEVICE-FOUND"], timeout=5)
+    if ev is not None:
+        raise Exception("Peer found unexpectedly: " + ev)
+
+    dev[0].p2p_find(social=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-STARTED"], timeout=0.5)
+    if ev is None:
+        logger.info("No CTRL-EVENT-SCAN-STARTED event")
+    dev[0].request("P2P_FLUSH")
+    ev = dev[0].wait_global_event(["P2P-FIND-STOPPED"], timeout=1)
+    if ev is None:
+        raise Exception("P2P_STOP not reported")
+    ev = dev[0].wait_global_event(["P2P-DEVICE-FOUND"], timeout=5)
+    if ev is not None:
+        raise Exception("Peer found unexpectedly: " + ev)

@@ -5900,6 +5900,28 @@ int wpas_p2p_find(struct wpa_supplicant *wpa_s, unsigned int timeout,
 }
 
 
+static void wpas_p2p_scan_res_ignore_search(struct wpa_supplicant *wpa_s,
+					    struct wpa_scan_results *scan_res)
+{
+	wpa_printf(MSG_DEBUG, "P2P: Ignore scan results");
+
+	if (wpa_s->p2p_scan_work) {
+		struct wpa_radio_work *work = wpa_s->p2p_scan_work;
+		wpa_s->p2p_scan_work = NULL;
+		radio_work_done(work);
+	}
+
+	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
+		return;
+
+	/*
+	 * Indicate that results have been processed so that the P2P module can
+	 * continue pending tasks.
+	 */
+	p2p_scan_res_handled(wpa_s->global->p2p);
+}
+
+
 static void wpas_p2p_stop_find_oper(struct wpa_supplicant *wpa_s)
 {
 	wpas_p2p_clear_pending_action_tx(wpa_s);
@@ -5909,6 +5931,12 @@ static void wpas_p2p_stop_find_oper(struct wpa_supplicant *wpa_s)
 
 	if (wpa_s->global->p2p)
 		p2p_stop_find(wpa_s->global->p2p);
+
+	if (wpa_s->scan_res_handler == wpas_p2p_scan_res_handler) {
+		wpa_printf(MSG_DEBUG,
+			   "P2P: Do not consider the scan results after stop_find");
+		wpa_s->scan_res_handler = wpas_p2p_scan_res_ignore_search;
+	}
 }
 
 

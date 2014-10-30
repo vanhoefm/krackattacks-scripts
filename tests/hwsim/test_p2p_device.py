@@ -52,3 +52,15 @@ def test_p2p_device_group_remove(dev, apdev):
             raise Exception("Group removal event not received")
         if not wpas.global_ping():
             raise Exception("Could not ping global ctrl_iface after group removal")
+
+def test_p2p_device_concurrent_scan(dev, apdev):
+    """Concurrent P2P and station mode scans with driver using cfg80211 P2P Device"""
+    with HWSimRadio(use_p2p_device=True) as (radio, iface):
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add(iface)
+        wpas.p2p_find()
+        time.sleep(0.1)
+        wpas.request("SCAN")
+        ev = wpas.wait_event(["CTRL-EVENT-SCAN-STARTED"], timeout=15)
+        if ev is None:
+            raise Exception("Station mode scan did not start")

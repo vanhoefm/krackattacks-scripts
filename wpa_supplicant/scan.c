@@ -603,7 +603,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_supplicant *wpa_s = eloop_ctx;
 	struct wpa_ssid *ssid;
-	int ret;
+	int ret, p2p_in_progress;
 	struct wpabuf *extra_ie = NULL;
 	struct wpa_driver_scan_params params;
 	struct wpa_driver_scan_params *scan_params;
@@ -656,7 +656,8 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		return;
 	}
 
-	if (wpas_p2p_in_progress(wpa_s)) {
+	p2p_in_progress = wpas_p2p_in_progress(wpa_s);
+	if (p2p_in_progress && p2p_in_progress != 2) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Delay station mode scan while P2P operation is in progress");
 		wpa_supplicant_req_scan(wpa_s, 5, 0);
 		return;

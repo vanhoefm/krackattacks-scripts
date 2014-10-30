@@ -949,6 +949,13 @@ int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 	     const u8 *dev_id, unsigned int search_delay);
 
 /**
+ * p2p_notify_scan_trigger_status - Indicate scan trigger status
+ * @p2p: P2P module context from p2p_init()
+ * @status: 0 on success, -1 on failure
+ */
+void p2p_notify_scan_trigger_status(struct p2p_data *p2p, int status);
+
+/**
  * p2p_stop_find - Stop P2P Find (Device Discovery)
  * @p2p: P2P module context from p2p_init()
  */

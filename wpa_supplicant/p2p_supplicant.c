@@ -269,9 +269,11 @@ static void wpas_p2p_trigger_scan_cb(struct wpa_radio_work *work, int deinit)
 	work->ctx = NULL;
 	if (ret) {
 		radio_work_done(work);
+		p2p_notify_scan_trigger_status(wpa_s->global->p2p, ret);
 		return;
 	}
 
+	p2p_notify_scan_trigger_status(wpa_s->global->p2p, ret);
 	os_get_reltime(&wpa_s->scan_trigger_time);
 	wpa_s->scan_res_handler = wpas_p2p_scan_res_handler;
 	wpa_s->own_scan_requested = 1;

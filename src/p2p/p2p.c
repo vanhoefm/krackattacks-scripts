@@ -978,14 +978,8 @@ static void p2p_search(struct p2p_data *p2p)
 				 p2p->num_req_dev_types, p2p->req_dev_types,
 				 p2p->find_dev_id, pw_id);
 	if (res < 0) {
-		p2p_dbg(p2p, "Scan request failed");
+		p2p_dbg(p2p, "Scan request schedule failed");
 		p2p_continue_find(p2p);
-	} else {
-		p2p_dbg(p2p, "Running p2p_scan");
-		p2p->p2p_scan_running = 1;
-		eloop_cancel_timeout(p2p_scan_timeout, p2p, NULL);
-		eloop_register_timeout(P2P_SCAN_TIMEOUT, 0, p2p_scan_timeout,
-				       p2p, NULL);
 	}
 }
 
@@ -995,6 +989,22 @@ static void p2p_find_timeout(void *eloop_ctx, void *timeout_ctx)
 	struct p2p_data *p2p = eloop_ctx;
 	p2p_dbg(p2p, "Find timeout -> stop");
 	p2p_stop_find(p2p);
+}
+
+
+void p2p_notify_scan_trigger_status(struct p2p_data *p2p, int status)
+{
+	if (status != 0) {
+		p2p_dbg(p2p, "Scan request failed");
+		/* Do continue find even for the first p2p_find_scan */
+		p2p_continue_find(p2p);
+	} else {
+		p2p_dbg(p2p, "Running p2p_scan");
+		p2p->p2p_scan_running = 1;
+		eloop_cancel_timeout(p2p_scan_timeout, p2p, NULL);
+		eloop_register_timeout(P2P_SCAN_TIMEOUT, 0, p2p_scan_timeout,
+				       p2p, NULL);
+	}
 }
 
 
@@ -1128,17 +1138,11 @@ int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 		return -1;
 	}
 
-	if (res == 0) {
-		p2p_dbg(p2p, "Running p2p_scan");
-		p2p->p2p_scan_running = 1;
-		eloop_cancel_timeout(p2p_scan_timeout, p2p, NULL);
-		eloop_register_timeout(P2P_SCAN_TIMEOUT, 0, p2p_scan_timeout,
-				       p2p, NULL);
-	} else if (p2p->p2p_scan_running) {
+	if (res != 0 && p2p->p2p_scan_running) {
 		p2p_dbg(p2p, "Failed to start p2p_scan - another p2p_scan was already running");
 		/* wait for the previous p2p_scan to complete */
 		res = 0; /* do not report failure */
-	} else {
+	} else if (res != 0) {
 		p2p_dbg(p2p, "Failed to start p2p_scan");
 		p2p_set_state(p2p, P2P_IDLE);
 		eloop_cancel_timeout(p2p_find_timeout, p2p, NULL);

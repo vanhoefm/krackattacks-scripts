@@ -3169,7 +3169,7 @@ ieee802_1x_kay_init(struct ieee802_1x_kay_ctx *ctx, enum macsec_policy policy,
 		kay->macsec_capable = MACSEC_CAP_NOT_IMPLEMENTED;
 		kay->macsec_desired = FALSE;
 		kay->macsec_protect = FALSE;
-		kay->macsec_validate = FALSE;
+		kay->macsec_validate = Disabled;
 		kay->macsec_replay_protect = FALSE;
 		kay->macsec_replay_window = 0;
 		kay->macsec_confidentiality = CONFIDENTIALITY_NONE;
@@ -3177,7 +3177,7 @@ ieee802_1x_kay_init(struct ieee802_1x_kay_ctx *ctx, enum macsec_policy policy,
 		kay->macsec_capable = MACSEC_CAP_INTEG_AND_CONF_0_30_50;
 		kay->macsec_desired = TRUE;
 		kay->macsec_protect = TRUE;
-		kay->macsec_validate = TRUE;
+		kay->macsec_validate = Strict;
 		kay->macsec_replay_protect = FALSE;
 		kay->macsec_replay_window = 0;
 		kay->macsec_confidentiality = CONFIDENTIALITY_OFFSET_0;

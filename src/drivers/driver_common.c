@@ -50,7 +50,6 @@ const char * event_to_string(enum wpa_event_type event)
 	E2S(RX_MGMT);
 	E2S(REMAIN_ON_CHANNEL);
 	E2S(CANCEL_REMAIN_ON_CHANNEL);
-	E2S(MLME_RX);
 	E2S(RX_PROBE_REQ);
 	E2S(NEW_STA);
 	E2S(EAPOL_RX);

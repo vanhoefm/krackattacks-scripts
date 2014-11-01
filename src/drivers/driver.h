@@ -3373,13 +3373,6 @@ enum wpa_event_type {
 	EVENT_CANCEL_REMAIN_ON_CHANNEL,
 
 	/**
-	 * EVENT_MLME_RX - Report reception of frame for MLME (test use only)
-	 *
-	 * This event is used only by driver_test.c and userspace MLME.
-	 */
-	EVENT_MLME_RX,
-
-	/**
 	 * EVENT_RX_PROBE_REQ - Indicate received Probe Request frame
 	 *
 	 * This event is used to indicate when a Probe Request frame has been
@@ -4083,17 +4076,6 @@ union wpa_event_data {
 		struct wpa_driver_scan_ssid ssids[WPAS_MAX_SCAN_SSIDS];
 		size_t num_ssids;
 	} scan_info;
-
-	/**
-	 * struct mlme_rx - Data for EVENT_MLME_RX events
-	 */
-	struct mlme_rx {
-		const u8 *buf;
-		size_t len;
-		int freq;
-		int channel;
-		int ssi;
-	} mlme_rx;
 
 	/**
 	 * struct rx_probe_req - Data for EVENT_RX_PROBE_REQ events

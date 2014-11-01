@@ -36,6 +36,7 @@
 #include "dfs.h"
 #include "ieee802_11.h"
 #include "bss_load.h"
+#include "x_snoop.h"
 #include "dhcp_snoop.h"
 
 
@@ -314,6 +315,7 @@ static void hostapd_free_hapd_data(struct hostapd_data *hapd)
 
 	bss_load_update_deinit(hapd);
 	dhcp_snoop_deinit(hapd);
+	x_snoop_deinit(hapd);
 
 #ifdef CONFIG_SQLITE
 	bin_clear_free(hapd->tmp_eap_user.identity,
@@ -893,9 +895,18 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 		return -1;
 	}
 
-	if (conf->proxy_arp && dhcp_snoop_init(hapd)) {
-		wpa_printf(MSG_ERROR, "DHCP snooping initialization failed");
-		return -1;
+	if (conf->proxy_arp) {
+		if (x_snoop_init(hapd)) {
+			wpa_printf(MSG_ERROR,
+				   "Generic snooping infrastructure initialization failed");
+			return -1;
+		}
+
+		if (dhcp_snoop_init(hapd)) {
+			wpa_printf(MSG_ERROR,
+				   "DHCP snooping initialization failed");
+			return -1;
+		}
 	}
 
 	if (!hostapd_drv_none(hapd) && vlan_init(hapd)) {

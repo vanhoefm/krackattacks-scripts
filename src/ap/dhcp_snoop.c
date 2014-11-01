@@ -7,7 +7,6 @@
  */
 
 #include "utils/includes.h"
-#include <linux/filter.h>
 #include <linux/ip.h>
 #include <linux/udp.h>
 
@@ -16,6 +15,7 @@
 #include "hostapd.h"
 #include "sta_info.h"
 #include "ap_drv_ops.h"
+#include "x_snoop.h"
 #include "dhcp_snoop.h"
 
 struct bootp_pkt {
@@ -132,54 +132,12 @@ static void handle_dhcp(void *ctx, const u8 *src_addr, const u8 *buf,
 
 int dhcp_snoop_init(struct hostapd_data *hapd)
 {
-	struct hostapd_bss_config *conf = hapd->conf;
-
-	if (!conf->isolate) {
-		wpa_printf(MSG_DEBUG,
-			   "dhcp_snoop: ap_isolate must be enabled for DHCP snooping");
-		return -1;
-	}
-
-	if (conf->bridge[0] == '\0') {
-		wpa_printf(MSG_DEBUG,
-			   "dhcp_snoop: Bridge must be configured for DHCP snooping");
-		return -1;
-	}
-
-	hapd->sock_dhcp = l2_packet_init(conf->bridge, NULL, ETH_P_ALL,
-					 handle_dhcp, hapd, 1);
+	hapd->sock_dhcp = x_snoop_get_l2_packet(hapd, handle_dhcp,
+						L2_PACKET_FILTER_DHCP);
 	if (hapd->sock_dhcp == NULL) {
 		wpa_printf(MSG_DEBUG,
 			   "dhcp_snoop: Failed to initialize L2 packet processing for DHCP packet: %s",
 			   strerror(errno));
-		return -1;
-	}
-
-	if (l2_packet_set_packet_filter(hapd->sock_dhcp,
-					L2_PACKET_FILTER_DHCP)) {
-		wpa_printf(MSG_DEBUG,
-			   "dhcp_snoop: Failed to set L2 packet filter for DHCP: %s",
-			   strerror(errno));
-		return -1;
-	}
-
-	if (hostapd_drv_br_port_set_attr(hapd, DRV_BR_PORT_ATTR_HAIRPIN_MODE,
-					 1)) {
-		wpa_printf(MSG_DEBUG,
-			   "dhcp_snoop: Failed to enable hairpin_mode on the bridge port");
-		return -1;
-	}
-
-	if (hostapd_drv_br_port_set_attr(hapd, DRV_BR_PORT_ATTR_PROXYARP, 1)) {
-		wpa_printf(MSG_DEBUG,
-			   "dhcp_snoop: Failed to enable proxyarp on the bridge port");
-		return -1;
-	}
-
-	if (hostapd_drv_br_set_net_param(hapd, DRV_BR_NET_PARAM_GARP_ACCEPT,
-					 1)) {
-		wpa_printf(MSG_DEBUG,
-			   "dhcp_snoop: Failed to enable accepting gratuitous ARP on the bridge");
 		return -1;
 	}
 
@@ -189,8 +147,5 @@ int dhcp_snoop_init(struct hostapd_data *hapd)
 
 void dhcp_snoop_deinit(struct hostapd_data *hapd)
 {
-	hostapd_drv_br_set_net_param(hapd, DRV_BR_NET_PARAM_GARP_ACCEPT, 0);
-	hostapd_drv_br_port_set_attr(hapd, DRV_BR_PORT_ATTR_PROXYARP, 0);
-	hostapd_drv_br_port_set_attr(hapd, DRV_BR_PORT_ATTR_HAIRPIN_MODE, 0);
 	l2_packet_deinit(hapd->sock_dhcp);
 }

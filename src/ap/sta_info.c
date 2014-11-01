@@ -31,6 +31,7 @@
 #include "ap_drv_ops.h"
 #include "gas_serv.h"
 #include "wnm_ap.h"
+#include "ndisc_snoop.h"
 #include "sta_info.h"
 
 static void ap_sta_remove_in_other_bss(struct hostapd_data *hapd,
@@ -144,6 +145,12 @@ static void ap_sta_hash_del(struct hostapd_data *hapd, struct sta_info *sta)
 }
 
 
+void ap_sta_ip6addr_del(struct hostapd_data *hapd, struct sta_info *sta)
+{
+	sta_ip6addr_del(hapd, sta);
+}
+
+
 void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 {
 	int set_beacon = 0;
@@ -158,6 +165,7 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 
 	if (sta->ipaddr)
 		hostapd_drv_br_delete_ip_neigh(hapd, 4, (u8 *) &sta->ipaddr);
+	ap_sta_ip6addr_del(hapd, sta);
 
 	if (!hapd->iface->driver_ap_teardown &&
 	    !(sta->flags & WLAN_STA_PREAUTH))
@@ -605,6 +613,7 @@ struct sta_info * ap_sta_add(struct hostapd_data *hapd, const u8 *addr)
 	sta->ssid = &hapd->conf->ssid;
 	ap_sta_remove_in_other_bss(hapd, sta);
 	sta->last_seq_ctrl = WLAN_INVALID_MGMT_SEQ;
+	dl_list_init(&sta->ip6addr);
 
 	return sta;
 }
@@ -616,6 +625,7 @@ static int ap_sta_remove(struct hostapd_data *hapd, struct sta_info *sta)
 
 	if (sta->ipaddr)
 		hostapd_drv_br_delete_ip_neigh(hapd, 4, (u8 *) &sta->ipaddr);
+	ap_sta_ip6addr_del(hapd, sta);
 
 	wpa_printf(MSG_DEBUG, "Removing STA " MACSTR " from kernel driver",
 		   MAC2STR(sta->addr));

@@ -14,6 +14,8 @@
 #include "common/defs.h"
 #endif /* CONFIG_MESH */
 
+#include "list.h"
+
 /* STA flags */
 #define WLAN_STA_AUTH BIT(0)
 #define WLAN_STA_ASSOC BIT(1)
@@ -47,6 +49,7 @@ struct sta_info {
 	struct sta_info *hnext; /* next entry in hash table list */
 	u8 addr[6];
 	be32 ipaddr;
+	struct dl_list ip6addr; /* list head for struct ip6addr */
 	u16 aid; /* STA's unique AID (1 .. 2007) or 0 if not yet assigned */
 	u32 flags; /* Bitfield of WLAN_STA_* */
 	u16 capability;
@@ -193,6 +196,7 @@ struct sta_info * ap_get_sta(struct hostapd_data *hapd, const u8 *sta);
 struct sta_info * ap_get_sta_p2p(struct hostapd_data *hapd, const u8 *addr);
 void ap_sta_hash_add(struct hostapd_data *hapd, struct sta_info *sta);
 void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta);
+void ap_sta_ip6addr_del(struct hostapd_data *hapd, struct sta_info *sta);
 void hostapd_free_stas(struct hostapd_data *hapd);
 void ap_handle_timer(void *eloop_ctx, void *timeout_ctx);
 void ap_sta_replenish_timeout(struct hostapd_data *hapd, struct sta_info *sta,

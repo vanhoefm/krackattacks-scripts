@@ -38,6 +38,7 @@
 #include "bss_load.h"
 #include "x_snoop.h"
 #include "dhcp_snoop.h"
+#include "ndisc_snoop.h"
 
 
 static int hostapd_flush_old_stations(struct hostapd_data *hapd, u16 reason);
@@ -314,6 +315,7 @@ static void hostapd_free_hapd_data(struct hostapd_data *hapd)
 #endif /* CONFIG_INTERWORKING */
 
 	bss_load_update_deinit(hapd);
+	ndisc_snoop_deinit(hapd);
 	dhcp_snoop_deinit(hapd);
 	x_snoop_deinit(hapd);
 
@@ -905,6 +907,12 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 		if (dhcp_snoop_init(hapd)) {
 			wpa_printf(MSG_ERROR,
 				   "DHCP snooping initialization failed");
+			return -1;
+		}
+
+		if (ndisc_snoop_init(hapd)) {
+			wpa_printf(MSG_ERROR,
+				   "Neighbor Discovery snooping initialization failed");
 			return -1;
 		}
 	}

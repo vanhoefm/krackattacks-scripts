@@ -243,6 +243,7 @@ struct hostapd_data {
 #endif /* CONFIG_INTERWORKING */
 #ifdef CONFIG_PROXYARP
 	struct l2_packet_data *sock_dhcp;
+	struct l2_packet_data *sock_ndisc;
 #endif /* CONFIG_PROXYARP */
 #ifdef CONFIG_MESH
 	int num_plinks;

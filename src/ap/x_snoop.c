@@ -10,6 +10,7 @@
 
 #include "utils/common.h"
 #include "hostapd.h"
+#include "sta_info.h"
 #include "ap_drv_ops.h"
 #include "x_snoop.h"
 
@@ -80,6 +81,33 @@ x_snoop_get_l2_packet(struct hostapd_data *hapd,
 	}
 
 	return l2;
+}
+
+
+void x_snoop_mcast_to_ucast_convert_send(struct hostapd_data *hapd,
+					 struct sta_info *sta, u8 *buf,
+					 size_t len)
+{
+	int res;
+	u8 addr[ETH_ALEN];
+	u8 *dst_addr = buf;
+
+	if (!(dst_addr[0] & 0x01))
+		return;
+
+	/* save the multicast destination address for restoring it later */
+	os_memcpy(addr, buf, ETH_ALEN);
+
+	os_memcpy(buf, sta->addr, ETH_ALEN);
+	res = l2_packet_send(hapd->sock_dhcp, NULL, 0, buf, len);
+	if (res) {
+		wpa_printf(MSG_DEBUG,
+			   "x_snoop: Failed to send mcast to ucast converted packet to "
+			   MACSTR, MAC2STR(sta->addr));
+	}
+
+	/* restore the multicast destination address */
+	os_memcpy(buf, addr, ETH_ALEN);
 }
 
 

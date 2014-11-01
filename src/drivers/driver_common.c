@@ -44,7 +44,6 @@ const char * event_to_string(enum wpa_event_type event)
 	E2S(ASSOC_REJECT);
 	E2S(AUTH_TIMED_OUT);
 	E2S(ASSOC_TIMED_OUT);
-	E2S(FT_RRB_RX);
 	E2S(WPS_BUTTON_PUSHED);
 	E2S(TX_STATUS);
 	E2S(RX_FROM_UNKNOWN);

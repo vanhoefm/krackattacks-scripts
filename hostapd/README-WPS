@@ -58,10 +58,9 @@ hostapd configuration
 
 WPS is an optional component that needs to be enabled in hostapd build
 configuration (.config). Here is an example configuration that
-includes WPS support and uses madwifi driver interface:
+includes WPS support and uses nl80211 driver interface:
 
-CONFIG_DRIVER_MADWIFI=y
-CFLAGS += -I/usr/src/madwifi-0.9.3
+CONFIG_DRIVER_NL80211=y
 CONFIG_WPS=y
 CONFIG_WPS_UPNP=y
 
@@ -74,8 +73,8 @@ Following section shows an example runtime configuration
 (hostapd.conf) that enables WPS:
 
 # Configure the driver and network interface
-driver=madwifi
-interface=ath0
+driver=nl80211
+interface=wlan0
 
 # WPA2-Personal configuration for the AP
 ssid=wps-test

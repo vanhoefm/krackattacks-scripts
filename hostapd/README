@@ -74,12 +74,6 @@ Current hardware/software requirements:
 	Please note that station firmware version needs to be 1.7.0 or newer
 	to work in WPA mode.
 
-	madwifi driver for cards based on Atheros chip set (ar521x)
-	(http://sourceforge.net/projects/madwifi/)
-	Please note that you will need to add the correct path for
-	madwifi driver root directory in .config (see defconfig file for
-	an example: CFLAGS += -I<path>)
-
 	mac80211-based drivers that support AP mode (with driver=nl80211).
 	This includes drivers for Atheros (ath9k) and Broadcom (b43)
 	chipsets.

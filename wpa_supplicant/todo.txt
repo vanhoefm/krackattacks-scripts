@@ -31,7 +31,6 @@ To do:
   in one page; how to build a PDF file with all the SGML included?
 - EAP-POTP/RSA SecurID profile (RFC 4793)
 - document wpa_gui build and consider adding it to 'make install'
-- test madwifi with pairwise=TKIP group=WEP104
 - consider merging hostapd and wpa_supplicant PMKSA cache implementations
 - consider redesigning pending EAP requests (identity/password/otp from
   ctrl_iface) by moving the retrying of the previous request into EAP

@@ -24,7 +24,7 @@ def wait_dfs_event(hapd, event, timeout):
         raise Exception("Unexpected DFS event")
     return ev
 
-def start_dfs_ap(ap, allow_failure=False, ssid="dfs", ht40=False):
+def start_dfs_ap(ap, allow_failure=False, ssid="dfs", ht40=False, vht80=False, vht20=False, chanlist=None):
     ifname = ap['ifname']
     logger.info("Starting AP " + ifname + " on DFS channel")
     hapd_global = hostapd.HostapdGlobal()
@@ -42,6 +42,16 @@ def start_dfs_ap(ap, allow_failure=False, ssid="dfs", ht40=False):
     hapd.set("channel", "52")
     if ht40:
         hapd.set("ht_capab", "[HT40+]")
+    if vht80:
+        hapd.set("ieee80211ac", "1")
+        hapd.set("vht_oper_chwidth", "1")
+        hapd.set("vht_oper_centr_freq_seg0_idx", "58")
+    if vht20:
+        hapd.set("ieee80211ac", "1")
+        hapd.set("vht_oper_chwidth", "0")
+        hapd.set("vht_oper_centr_freq_seg0_idx", "0")
+    if chanlist:
+        hapd.set("chanlist", chanlist)
     hapd.enable()
 
     ev = wait_dfs_event(hapd, "DFS-CAC-START", 5)
@@ -199,3 +209,105 @@ def test_dfs_radar_on_non_dfs_channel(dev, apdev):
 
     hapd.request("RADAR DETECTED freq=5260 ht_enabled=1 chan_width=1")
     hapd.request("RADAR DETECTED freq=2412 ht_enabled=1 chan_width=1")
+
+def test_dfs_radar_chanlist(dev, apdev):
+    """DFS chanlist when radar is detected"""
+    try:
+        hapd = start_dfs_ap(apdev[0], chanlist="40 44")
+        if hapd is None:
+            if not os.path.exists("dfs"):
+                return "skip"
+            raise Exception("Failed to start DFS AP")
+        time.sleep(1)
+
+        dfs_simulate_radar(hapd)
+
+        ev = wait_dfs_event(hapd, "DFS-CAC-COMPLETED", 5)
+        if ev is None:
+            raise Exception("Timeout on DFS aborted event")
+        if "success=0 freq=5260" not in ev:
+            raise Exception("Unexpected DFS aborted event contents: " + ev)
+
+        ev = wait_dfs_event(hapd, "DFS-RADAR-DETECTED", 5)
+        if "freq=5260" not in ev:
+            raise Exception("Unexpected DFS radar detection freq")
+
+        ev = wait_dfs_event(hapd, "DFS-NEW-CHANNEL", 5)
+        if "freq=5200 chan=40" not in ev and "freq=5220 chan=44" not in ev:
+            raise Exception("Unexpected DFS new freq: " + ev)
+
+        ev = wait_dfs_event(hapd, None, 5)
+        if "AP-ENABLED" not in ev:
+            raise Exception("Unexpected DFS event")
+        dev[0].connect("dfs", key_mgmt="NONE")
+    finally:
+        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+
+def test_dfs_radar_chanlist_vht80(dev, apdev):
+    """DFS chanlist when radar is detected and VHT80 configured"""
+    try:
+        hapd = start_dfs_ap(apdev[0], chanlist="36", ht40=True, vht80=True)
+        if hapd is None:
+            if not os.path.exists("dfs"):
+                return "skip"
+            raise Exception("Failed to start DFS AP")
+        time.sleep(1)
+
+        dfs_simulate_radar(hapd)
+
+        ev = wait_dfs_event(hapd, "DFS-CAC-COMPLETED", 5)
+        if ev is None:
+            raise Exception("Timeout on DFS aborted event")
+        if "success=0 freq=5260" not in ev:
+            raise Exception("Unexpected DFS aborted event contents: " + ev)
+
+        ev = wait_dfs_event(hapd, "DFS-RADAR-DETECTED", 5)
+        if "freq=5260" not in ev:
+            raise Exception("Unexpected DFS radar detection freq")
+
+        ev = wait_dfs_event(hapd, "DFS-NEW-CHANNEL", 5)
+        if "freq=5180 chan=36 sec_chan=1" not in ev:
+            raise Exception("Unexpected DFS new freq: " + ev)
+
+        ev = wait_dfs_event(hapd, None, 5)
+        if "AP-ENABLED" not in ev:
+            raise Exception("Unexpected DFS event")
+        dev[0].connect("dfs", key_mgmt="NONE")
+
+        if hapd.get_status_field('vht_oper_centr_freq_seg0_idx') != "42":
+            raise Exception("Unexpected seg0 idx")
+    finally:
+        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+
+def test_dfs_radar_chanlist_vht20(dev, apdev):
+    """DFS chanlist when radar is detected and VHT40 configured"""
+    try:
+        hapd = start_dfs_ap(apdev[0], chanlist="36", vht20=True)
+        if hapd is None:
+            if not os.path.exists("dfs"):
+                return "skip"
+            raise Exception("Failed to start DFS AP")
+        time.sleep(1)
+
+        dfs_simulate_radar(hapd)
+
+        ev = wait_dfs_event(hapd, "DFS-CAC-COMPLETED", 5)
+        if ev is None:
+            raise Exception("Timeout on DFS aborted event")
+        if "success=0 freq=5260" not in ev:
+            raise Exception("Unexpected DFS aborted event contents: " + ev)
+
+        ev = wait_dfs_event(hapd, "DFS-RADAR-DETECTED", 5)
+        if "freq=5260" not in ev:
+            raise Exception("Unexpected DFS radar detection freq")
+
+        ev = wait_dfs_event(hapd, "DFS-NEW-CHANNEL", 5)
+        if "freq=5180 chan=36 sec_chan=0" not in ev:
+            raise Exception("Unexpected DFS new freq: " + ev)
+
+        ev = wait_dfs_event(hapd, None, 5)
+        if "AP-ENABLED" not in ev:
+            raise Exception("Unexpected DFS event")
+        dev[0].connect("dfs", key_mgmt="NONE")
+    finally:
+        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])

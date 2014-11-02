@@ -308,7 +308,7 @@ struct hostapd_iface {
 	struct ap_info *ap_list; /* AP info list head */
 	struct ap_info *ap_hash[STA_HASH_SIZE];
 
-	unsigned int drv_flags;
+	u64 drv_flags;
 
 	/* SMPS modes supported by the driver (WPA_DRIVER_SMPS_MODE_*) */
 	unsigned int smps_modes;

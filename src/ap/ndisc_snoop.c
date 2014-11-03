@@ -32,6 +32,7 @@ struct icmpv6_ndmsg {
 	u8 opt_lladdr[0];
 };
 
+#define ROUTER_ADVERTISEMENT	134
 #define NEIGHBOR_SOLICITATION	135
 #define NEIGHBOR_ADVERTISEMENT	136
 #define SOURCE_LL_ADDR		1
@@ -123,6 +124,10 @@ static void handle_ndisc(void *ctx, const u8 *src_addr, const u8 *buf,
 				return;
 		}
 		break;
+	case ROUTER_ADVERTISEMENT:
+		if (!hapd->conf->disable_dgaf)
+			return;
+		/* fall through */
 	case NEIGHBOR_ADVERTISEMENT:
 		for (sta = hapd->sta_list; sta; sta = sta->next) {
 			x_snoop_mcast_to_ucast_convert_send(hapd, sta,

@@ -3018,9 +3018,11 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "vendor", wpa_cli_cmd_vendor, NULL, cli_cmd_flag_none,
 	  "<vendor id> <command id> [<hex formatted command argument>] = Send vendor command"
 	},
-	{ "neighbor_rep_request", wpa_cli_cmd_neighbor_rep_request, NULL,
-	  cli_cmd_flag_none,
-	  "= Trigger request to AP for neighboring AP report"},
+	{ "neighbor_rep_request",
+	  wpa_cli_cmd_neighbor_rep_request, NULL, cli_cmd_flag_none,
+	  "[ssid=<SSID>] = Trigger request to AP for neighboring AP report "
+	  "(with optional given SSID, default: current SSID)"
+	},
 	{ NULL, NULL, NULL, cli_cmd_flag_none, NULL }
 };
 

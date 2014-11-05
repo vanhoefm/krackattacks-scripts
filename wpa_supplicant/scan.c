@@ -176,6 +176,8 @@ static void wpas_trigger_scan_cb(struct wpa_radio_work *work, int deinit)
 	if (ret) {
 		wpa_supplicant_notify_scanning(wpa_s, 0);
 		wpas_notify_scan_done(wpa_s, 0);
+		wpa_msg_ctrl(wpa_s, MSG_INFO, WPA_EVENT_SCAN_FAILED "ret=%d",
+			     ret);
 		radio_work_done(work);
 		return;
 	}

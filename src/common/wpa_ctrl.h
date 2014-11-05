@@ -58,6 +58,8 @@ extern "C" {
 #define WPA_EVENT_SCAN_STARTED "CTRL-EVENT-SCAN-STARTED "
 /** New scan results available */
 #define WPA_EVENT_SCAN_RESULTS "CTRL-EVENT-SCAN-RESULTS "
+/** Scan command failed */
+#define WPA_EVENT_SCAN_FAILED "CTRL-EVENT-SCAN-FAILED "
 /** wpa_supplicant state change */
 #define WPA_EVENT_STATE_CHANGE "CTRL-EVENT-STATE-CHANGE "
 /** A new BSS entry was added (followed by BSS entry id and BSSID) */

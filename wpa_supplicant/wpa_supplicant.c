@@ -4994,6 +4994,8 @@ void wpas_rrm_process_neighbor_rep(struct wpa_supplicant *wpa_s,
 /**
  * wpas_rrm_send_neighbor_rep_request - Request a neighbor report from our AP
  * @wpa_s: Pointer to wpa_supplicant
+ * @ssid: if not null, this is sent in the request. Otherwise, no SSID IE
+ *	  is sent in the request.
  * @cb: Callback function to be called once the requested report arrives, or
  *	timed out after RRM_NEIGHBOR_REPORT_TIMEOUT seconds.
  *	In the former case, 'neighbor_rep' is a newly allocated wpabuf, and it's
@@ -5005,9 +5007,9 @@ void wpas_rrm_process_neighbor_rep(struct wpa_supplicant *wpa_s,
  * In case there is a previous request which has not been answered yet, the
  * new request fails. The caller may retry after RRM_NEIGHBOR_REPORT_TIMEOUT.
  * Request must contain a callback function.
- * The Neighbor Report Request sent to the AP will specify the current SSID.
  */
 int wpas_rrm_send_neighbor_rep_request(struct wpa_supplicant *wpa_s,
+				       const struct wpa_ssid *ssid,
 				       void (*cb)(void *ctx,
 						  struct wpabuf *neighbor_rep),
 				       void *cb_ctx)
@@ -5047,8 +5049,8 @@ int wpas_rrm_send_neighbor_rep_request(struct wpa_supplicant *wpa_s,
 		return -EBUSY;
 	}
 
-	/* 5 = action category + action code + dialog token + IE hdr */
-	buf = wpabuf_alloc(5 + wpa_s->current_ssid->ssid_len);
+	/* 3 = action category + action code + dialog token */
+	buf = wpabuf_alloc(3 + (ssid ? 2 + ssid->ssid_len : 0));
 	if (buf == NULL) {
 		wpa_printf(MSG_DEBUG,
 			   "RRM: Failed to allocate Neighbor Report Request");
@@ -5056,17 +5058,17 @@ int wpas_rrm_send_neighbor_rep_request(struct wpa_supplicant *wpa_s,
 	}
 
 	wpa_printf(MSG_DEBUG, "RRM: Neighbor report request (for %s), token=%d",
-		   wpa_ssid_txt(wpa_s->current_ssid->ssid,
-				wpa_s->current_ssid->ssid_len),
+		   (ssid ? wpa_ssid_txt(ssid->ssid, ssid->ssid_len) : ""),
 		   wpa_s->rrm.next_neighbor_rep_token);
 
 	wpabuf_put_u8(buf, WLAN_ACTION_RADIO_MEASUREMENT);
 	wpabuf_put_u8(buf, WLAN_RRM_NEIGHBOR_REPORT_REQUEST);
 	wpabuf_put_u8(buf, wpa_s->rrm.next_neighbor_rep_token);
-	wpabuf_put_u8(buf, WLAN_EID_SSID);
-	wpabuf_put_u8(buf, wpa_s->current_ssid->ssid_len);
-	wpabuf_put_data(buf, wpa_s->current_ssid->ssid,
-			wpa_s->current_ssid->ssid_len);
+	if (ssid) {
+		wpabuf_put_u8(buf, WLAN_EID_SSID);
+		wpabuf_put_u8(buf, ssid->ssid_len);
+		wpabuf_put_data(buf, ssid->ssid, ssid->ssid_len);
+	}
 
 	wpa_s->rrm.next_neighbor_rep_token++;
 

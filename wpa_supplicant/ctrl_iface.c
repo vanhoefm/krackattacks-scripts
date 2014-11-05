@@ -6838,11 +6838,26 @@ static void wpas_ctrl_neighbor_rep_cb(void *ctx, struct wpabuf *neighbor_rep)
 }
 
 
-static int wpas_ctrl_iface_send_neigbor_rep(struct wpa_supplicant *wpa_s)
+static int wpas_ctrl_iface_send_neigbor_rep(struct wpa_supplicant *wpa_s,
+					    char *cmd)
 {
-	return wpas_rrm_send_neighbor_rep_request(wpa_s,
-						  wpas_ctrl_neighbor_rep_cb,
-						  wpa_s);
+	struct wpa_ssid ssid;
+	struct wpa_ssid *ssid_p = NULL;
+	int ret = 0;
+
+	if (os_strncmp(cmd, " ssid=", 6) == 0) {
+		ssid.ssid_len = os_strlen(cmd + 6);
+		if (ssid.ssid_len > 32)
+			return -1;
+		ssid.ssid = (u8 *) (cmd + 6);
+		ssid_p = &ssid;
+	}
+
+	ret = wpas_rrm_send_neighbor_rep_request(wpa_s, ssid_p,
+						 wpas_ctrl_neighbor_rep_cb,
+						 wpa_s);
+
+	return ret;
 }
 
 
@@ -7449,7 +7464,7 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		if (wpas_ctrl_vendor_elem_remove(wpa_s, buf + 19) < 0)
 			reply_len = -1;
 	} else if (os_strncmp(buf, "NEIGHBOR_REP_REQUEST", 20) == 0) {
-		if (wpas_ctrl_iface_send_neigbor_rep(wpa_s))
+		if (wpas_ctrl_iface_send_neigbor_rep(wpa_s, buf + 20))
 			reply_len = -1;
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);

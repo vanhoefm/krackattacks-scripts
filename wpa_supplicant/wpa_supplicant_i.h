@@ -378,12 +378,29 @@ struct wpa_used_freq_data {
 	unsigned int flags;
 };
 
+#define RRM_NEIGHBOR_REPORT_TIMEOUT 1 /* 1 second for AP to send a report */
+
 /*
  * struct rrm_data - Data used for managing RRM features
  */
 struct rrm_data {
 	/* rrm_used - indication regarding the current connection */
 	unsigned int rrm_used:1;
+
+	/*
+	 * notify_neighbor_rep - Callback for notifying report requester
+	 */
+	void (*notify_neighbor_rep)(void *ctx, struct wpabuf *neighbor_rep);
+
+	/*
+	 * neighbor_rep_cb_ctx - Callback context
+	 * Received in the callback registration, and sent to the callback
+	 * function as a parameter.
+	 */
+	void *neighbor_rep_cb_ctx;
+
+	/* next_neighbor_rep_token - Next request's dialog token */
+	u8 next_neighbor_rep_token;
 };
 
 /**
@@ -1006,6 +1023,12 @@ int wpas_update_random_addr_disassoc(struct wpa_supplicant *wpa_s);
 void add_freq(int *freqs, int *num_freqs, int freq);
 
 void wpas_rrm_reset(struct wpa_supplicant *wpa_s);
+void wpas_rrm_process_neighbor_rep(struct wpa_supplicant *wpa_s,
+				   const u8 *report, size_t report_len);
+int wpas_rrm_send_neighbor_rep_request(struct wpa_supplicant *wpa_s,
+				       void (*cb)(void *ctx,
+						  struct wpabuf *neighbor_rep),
+				       void *cb_ctx);
 
 /**
  * wpa_supplicant_ctrl_iface_ctrl_rsp_handle - Handle a control response

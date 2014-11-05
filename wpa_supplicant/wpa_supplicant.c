@@ -4913,6 +4913,24 @@ int get_shared_radio_freqs(struct wpa_supplicant *wpa_s,
 }
 
 
+static void wpas_rrm_neighbor_rep_timeout_handler(void *data, void *user_ctx)
+{
+	struct rrm_data *rrm = data;
+
+	if (!rrm->notify_neighbor_rep) {
+		wpa_printf(MSG_ERROR,
+			   "RRM: Unexpected neighbor report timeout");
+		return;
+	}
+
+	wpa_printf(MSG_DEBUG, "RRM: Notifying neighbor report - NONE");
+	rrm->notify_neighbor_rep(rrm->neighbor_rep_cb_ctx, NULL);
+
+	rrm->notify_neighbor_rep = NULL;
+	rrm->neighbor_rep_cb_ctx = NULL;
+}
+
+
 /*
  * wpas_rrm_reset - Clear and reset all RRM data in wpa_supplicant
  * @wpa_s: Pointer to wpa_supplicant
@@ -4920,4 +4938,153 @@ int get_shared_radio_freqs(struct wpa_supplicant *wpa_s,
 void wpas_rrm_reset(struct wpa_supplicant *wpa_s)
 {
 	wpa_s->rrm.rrm_used = 0;
+
+	eloop_cancel_timeout(wpas_rrm_neighbor_rep_timeout_handler, &wpa_s->rrm,
+			     NULL);
+	if (wpa_s->rrm.notify_neighbor_rep)
+		wpas_rrm_neighbor_rep_timeout_handler(&wpa_s->rrm, NULL);
+	wpa_s->rrm.next_neighbor_rep_token = 1;
+}
+
+
+/*
+ * wpas_rrm_process_neighbor_rep - Handle incoming neighbor report
+ * @wpa_s: Pointer to wpa_supplicant
+ * @report: Neighbor report buffer, prefixed by a 1-byte dialog token
+ * @report_len: Length of neighbor report buffer
+ */
+void wpas_rrm_process_neighbor_rep(struct wpa_supplicant *wpa_s,
+				   const u8 *report, size_t report_len)
+{
+	struct wpabuf *neighbor_rep;
+
+	wpa_hexdump(MSG_DEBUG, "RRM: New Neighbor Report", report, report_len);
+	if (report_len < 1)
+		return;
+
+	if (report[0] != wpa_s->rrm.next_neighbor_rep_token - 1) {
+		wpa_printf(MSG_DEBUG,
+			   "RRM: Discarding neighbor report with token %d (expected %d)",
+			   report[0], wpa_s->rrm.next_neighbor_rep_token - 1);
+		return;
+	}
+
+	eloop_cancel_timeout(wpas_rrm_neighbor_rep_timeout_handler, &wpa_s->rrm,
+			     NULL);
+
+	if (!wpa_s->rrm.notify_neighbor_rep) {
+		wpa_printf(MSG_ERROR, "RRM: Unexpected neighbor report");
+		return;
+	}
+
+	/* skipping the first byte, which is only an id (dialog token) */
+	neighbor_rep = wpabuf_alloc(report_len - 1);
+	if (neighbor_rep == NULL)
+		return;
+	wpabuf_put_data(neighbor_rep, report + 1, report_len - 1);
+	wpa_printf(MSG_DEBUG, "RRM: Notifying neighbor report (token = %d)",
+		   report[0]);
+	wpa_s->rrm.notify_neighbor_rep(wpa_s->rrm.neighbor_rep_cb_ctx,
+				       neighbor_rep);
+	wpa_s->rrm.notify_neighbor_rep = NULL;
+	wpa_s->rrm.neighbor_rep_cb_ctx = NULL;
+}
+
+
+/**
+ * wpas_rrm_send_neighbor_rep_request - Request a neighbor report from our AP
+ * @wpa_s: Pointer to wpa_supplicant
+ * @cb: Callback function to be called once the requested report arrives, or
+ *	timed out after RRM_NEIGHBOR_REPORT_TIMEOUT seconds.
+ *	In the former case, 'neighbor_rep' is a newly allocated wpabuf, and it's
+ *	the requester's responsibility to free it.
+ *	In the latter case NULL will be sent in 'neighbor_rep'.
+ * @cb_ctx: Context value to send the callback function
+ * Returns: 0 in case of success, negative error code otherwise
+ *
+ * In case there is a previous request which has not been answered yet, the
+ * new request fails. The caller may retry after RRM_NEIGHBOR_REPORT_TIMEOUT.
+ * Request must contain a callback function.
+ * The Neighbor Report Request sent to the AP will specify the current SSID.
+ */
+int wpas_rrm_send_neighbor_rep_request(struct wpa_supplicant *wpa_s,
+				       void (*cb)(void *ctx,
+						  struct wpabuf *neighbor_rep),
+				       void *cb_ctx)
+{
+	struct wpabuf *buf;
+	const u8 *rrm_ie;
+
+	if (wpa_s->wpa_state != WPA_COMPLETED || wpa_s->current_ssid == NULL) {
+		wpa_printf(MSG_DEBUG, "RRM: No connection, no RRM.");
+		return -ENOTCONN;
+	}
+
+	if (!wpa_s->rrm.rrm_used) {
+		wpa_printf(MSG_DEBUG, "RRM: No RRM in current connection.");
+		return -EOPNOTSUPP;
+	}
+
+	rrm_ie = wpa_bss_get_ie(wpa_s->current_bss,
+				WLAN_EID_RRM_ENABLED_CAPABILITIES);
+	if (!rrm_ie || !(wpa_s->current_bss->caps & IEEE80211_CAP_RRM) ||
+	    !(rrm_ie[2] & WLAN_RRM_CAPS_NEIGHBOR_REPORT)) {
+		wpa_printf(MSG_DEBUG,
+			   "RRM: No network support for Neighbor Report.");
+		return -EOPNOTSUPP;
+	}
+
+	if (!cb) {
+		wpa_printf(MSG_DEBUG,
+			   "RRM: Neighbor Report request must provide a callback.");
+		return -EINVAL;
+	}
+
+	/* Refuse if there's a live request */
+	if (wpa_s->rrm.notify_neighbor_rep) {
+		wpa_printf(MSG_DEBUG,
+			   "RRM: Currently handling previous Neighbor Report.");
+		return -EBUSY;
+	}
+
+	/* 5 = action category + action code + dialog token + IE hdr */
+	buf = wpabuf_alloc(5 + wpa_s->current_ssid->ssid_len);
+	if (buf == NULL) {
+		wpa_printf(MSG_DEBUG,
+			   "RRM: Failed to allocate Neighbor Report Request");
+		return -ENOMEM;
+	}
+
+	wpa_printf(MSG_DEBUG, "RRM: Neighbor report request (for %s), token=%d",
+		   wpa_ssid_txt(wpa_s->current_ssid->ssid,
+				wpa_s->current_ssid->ssid_len),
+		   wpa_s->rrm.next_neighbor_rep_token);
+
+	wpabuf_put_u8(buf, WLAN_ACTION_RADIO_MEASUREMENT);
+	wpabuf_put_u8(buf, WLAN_RRM_NEIGHBOR_REPORT_REQUEST);
+	wpabuf_put_u8(buf, wpa_s->rrm.next_neighbor_rep_token);
+	wpabuf_put_u8(buf, WLAN_EID_SSID);
+	wpabuf_put_u8(buf, wpa_s->current_ssid->ssid_len);
+	wpabuf_put_data(buf, wpa_s->current_ssid->ssid,
+			wpa_s->current_ssid->ssid_len);
+
+	wpa_s->rrm.next_neighbor_rep_token++;
+
+	if (wpa_drv_send_action(wpa_s, wpa_s->assoc_freq, 0, wpa_s->bssid,
+				wpa_s->own_addr, wpa_s->bssid,
+				wpabuf_head(buf), wpabuf_len(buf), 0) < 0) {
+		wpa_printf(MSG_DEBUG,
+			   "RRM: Failed to send Neighbor Report Request");
+		wpabuf_free(buf);
+		return -ECANCELED;
+	}
+
+	wpa_s->rrm.neighbor_rep_cb_ctx = cb_ctx;
+	wpa_s->rrm.notify_neighbor_rep = cb;
+	eloop_register_timeout(RRM_NEIGHBOR_REPORT_TIMEOUT, 0,
+			       wpas_rrm_neighbor_rep_timeout_handler,
+			       &wpa_s->rrm, NULL);
+
+	wpabuf_free(buf);
+	return 0;
 }

@@ -6823,6 +6823,29 @@ static int wpas_ctrl_vendor_elem_remove(struct wpa_supplicant *wpa_s, char *cmd)
 }
 
 
+static void wpas_ctrl_neighbor_rep_cb(void *ctx, struct wpabuf *neighbor_rep)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+
+	if (neighbor_rep) {
+		wpa_msg_ctrl(wpa_s, MSG_INFO, RRM_EVENT_NEIGHBOR_REP_RXED
+			     "length=%u",
+			     (unsigned int) wpabuf_len(neighbor_rep));
+		wpabuf_free(neighbor_rep);
+	} else {
+		wpa_msg_ctrl(wpa_s, MSG_INFO, RRM_EVENT_NEIGHBOR_REP_FAILED);
+	}
+}
+
+
+static int wpas_ctrl_iface_send_neigbor_rep(struct wpa_supplicant *wpa_s)
+{
+	return wpas_rrm_send_neighbor_rep_request(wpa_s,
+						  wpas_ctrl_neighbor_rep_cb,
+						  wpa_s);
+}
+
+
 char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 					 char *buf, size_t *resp_len)
 {
@@ -7424,6 +7447,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 						      reply_size);
 	} else if (os_strncmp(buf, "VENDOR_ELEM_REMOVE ", 19) == 0) {
 		if (wpas_ctrl_vendor_elem_remove(wpa_s, buf + 19) < 0)
+			reply_len = -1;
+	} else if (os_strncmp(buf, "NEIGHBOR_REP_REQUEST", 20) == 0) {
+		if (wpas_ctrl_iface_send_neigbor_rep(wpa_s))
 			reply_len = -1;
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);

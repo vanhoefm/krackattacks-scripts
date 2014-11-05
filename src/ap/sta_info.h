@@ -158,6 +158,12 @@ struct sta_info {
 #endif /* CONFIG_SAE */
 
 	u32 session_timeout; /* valid only if session_timeout_set == 1 */
+
+	/* Last Authentication/(Re)Association Request/Action frame sequence
+	 * control */
+	u16 last_seq_ctrl;
+	/* Last Authentication/(Re)Association Request/Action frame subtype */
+	u8 last_subtype;
 };
 
 

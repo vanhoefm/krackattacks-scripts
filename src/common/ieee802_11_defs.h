@@ -25,6 +25,8 @@
 #define WLAN_FC_GET_TYPE(fc)	(((fc) & 0x000c) >> 2)
 #define WLAN_FC_GET_STYPE(fc)	(((fc) & 0x00f0) >> 4)
 
+#define WLAN_INVALID_MGMT_SEQ   0xFFFF
+
 #define WLAN_GET_SEQ_FRAG(seq) ((seq) & (BIT(3) | BIT(2) | BIT(1) | BIT(0)))
 #define WLAN_GET_SEQ_SEQ(seq) \
 	(((seq) & (~(BIT(3) | BIT(2) | BIT(1) | BIT(0)))) >> 4)

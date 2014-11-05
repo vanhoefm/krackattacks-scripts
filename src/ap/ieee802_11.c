@@ -709,6 +709,7 @@ static void handle_auth(struct hostapd_data *hapd,
 	size_t resp_ies_len = 0;
 	char *identity = NULL;
 	char *radius_cui = NULL;
+	u16 seq_ctrl;
 
 	if (len < IEEE80211_HDRLEN + sizeof(mgmt->u.auth)) {
 		wpa_printf(MSG_INFO, "handle_auth - too short payload (len=%lu)",
@@ -730,6 +731,7 @@ static void handle_auth(struct hostapd_data *hapd,
 	auth_transaction = le_to_host16(mgmt->u.auth.auth_transaction);
 	status_code = le_to_host16(mgmt->u.auth.status_code);
 	fc = le_to_host16(mgmt->frame_control);
+	seq_ctrl = le_to_host16(mgmt->seq_ctrl);
 
 	if (len >= IEEE80211_HDRLEN + sizeof(mgmt->u.auth) +
 	    2 + WLAN_AUTH_CHALLENGE_LEN &&
@@ -738,10 +740,12 @@ static void handle_auth(struct hostapd_data *hapd,
 		challenge = &mgmt->u.auth.variable[2];
 
 	wpa_printf(MSG_DEBUG, "authentication: STA=" MACSTR " auth_alg=%d "
-		   "auth_transaction=%d status_code=%d wep=%d%s",
+		   "auth_transaction=%d status_code=%d wep=%d%s "
+		   "seq_ctrl=0x%x%s",
 		   MAC2STR(mgmt->sa), auth_alg, auth_transaction,
 		   status_code, !!(fc & WLAN_FC_ISWEP),
-		   challenge ? " challenge" : "");
+		   challenge ? " challenge" : "",
+		   seq_ctrl, (fc & WLAN_FC_RETRY) ? " retry" : "");
 
 	if (hapd->tkip_countermeasures) {
 		resp = WLAN_REASON_MICHAEL_MIC_FAILURE;
@@ -802,21 +806,36 @@ static void handle_auth(struct hostapd_data *hapd,
 		return;
 	}
 
-#ifdef CONFIG_MESH
-	if (hapd->conf->mesh & MESH_ENABLED) {
-		/* if the mesh peer is not available, we don't do auth. */
-		sta = ap_get_sta(hapd, mgmt->sa);
-		if (!sta)
+	sta = ap_get_sta(hapd, mgmt->sa);
+	if (sta) {
+		if ((fc & WLAN_FC_RETRY) &&
+		    sta->last_seq_ctrl != WLAN_INVALID_MGMT_SEQ &&
+		    sta->last_seq_ctrl == seq_ctrl &&
+		    sta->last_subtype == WLAN_FC_STYPE_AUTH) {
+			hostapd_logger(hapd, sta->addr,
+				       HOSTAPD_MODULE_IEEE80211,
+				       HOSTAPD_LEVEL_DEBUG,
+				       "Drop repeated authentication frame seq_ctrl=0x%x",
+				       seq_ctrl);
 			return;
-	} else
+		}
+	} else {
+#ifdef CONFIG_MESH
+		if (hapd->conf->mesh & MESH_ENABLED) {
+			/* if the mesh peer is not available, we don't do auth.
+			 */
+			return;
+		}
 #endif /* CONFIG_MESH */
-	{
+
 		sta = ap_sta_add(hapd, mgmt->sa);
 		if (!sta) {
 			resp = WLAN_STATUS_AP_UNABLE_TO_HANDLE_NEW_STA;
 			goto fail;
 		}
 	}
+	sta->last_seq_ctrl = seq_ctrl;
+	sta->last_subtype = WLAN_FC_STYPE_AUTH;
 
 	if (vlan_id > 0) {
 		if (!hostapd_vlan_id_valid(hapd->conf->vlan, vlan_id)) {
@@ -1464,7 +1483,7 @@ static void handle_assoc(struct hostapd_data *hapd,
 			 const struct ieee80211_mgmt *mgmt, size_t len,
 			 int reassoc)
 {
-	u16 capab_info, listen_interval;
+	u16 capab_info, listen_interval, seq_ctrl, fc;
 	u16 resp = WLAN_STATUS_SUCCESS;
 	const u8 *pos;
 	int left, i;
@@ -1497,15 +1516,19 @@ static void handle_assoc(struct hostapd_data *hapd,
 	}
 #endif /* CONFIG_TESTING_OPTIONS */
 
+	fc = le_to_host16(mgmt->frame_control);
+	seq_ctrl = le_to_host16(mgmt->seq_ctrl);
+
 	if (reassoc) {
 		capab_info = le_to_host16(mgmt->u.reassoc_req.capab_info);
 		listen_interval = le_to_host16(
 			mgmt->u.reassoc_req.listen_interval);
 		wpa_printf(MSG_DEBUG, "reassociation request: STA=" MACSTR
 			   " capab_info=0x%02x listen_interval=%d current_ap="
-			   MACSTR,
+			   MACSTR " seq_ctrl=0x%x%s",
 			   MAC2STR(mgmt->sa), capab_info, listen_interval,
-			   MAC2STR(mgmt->u.reassoc_req.current_ap));
+			   MAC2STR(mgmt->u.reassoc_req.current_ap),
+			   seq_ctrl, (fc & WLAN_FC_RETRY) ? " retry" : "");
 		left = len - (IEEE80211_HDRLEN + sizeof(mgmt->u.reassoc_req));
 		pos = mgmt->u.reassoc_req.variable;
 	} else {
@@ -1513,8 +1536,10 @@ static void handle_assoc(struct hostapd_data *hapd,
 		listen_interval = le_to_host16(
 			mgmt->u.assoc_req.listen_interval);
 		wpa_printf(MSG_DEBUG, "association request: STA=" MACSTR
-			   " capab_info=0x%02x listen_interval=%d",
-			   MAC2STR(mgmt->sa), capab_info, listen_interval);
+			   " capab_info=0x%02x listen_interval=%d "
+			   "seq_ctrl=0x%x%s",
+			   MAC2STR(mgmt->sa), capab_info, listen_interval,
+			   seq_ctrl, (fc & WLAN_FC_RETRY) ? " retry" : "");
 		left = len - (IEEE80211_HDRLEN + sizeof(mgmt->u.assoc_req));
 		pos = mgmt->u.assoc_req.variable;
 	}
@@ -1539,6 +1564,21 @@ static void handle_assoc(struct hostapd_data *hapd,
 			    WLAN_REASON_CLASS2_FRAME_FROM_NONAUTH_STA);
 		return;
 	}
+
+	if ((fc & WLAN_FC_RETRY) &&
+	    sta->last_seq_ctrl != WLAN_INVALID_MGMT_SEQ &&
+	    sta->last_seq_ctrl == seq_ctrl &&
+	    sta->last_subtype == reassoc ? WLAN_FC_STYPE_REASSOC_REQ :
+	    WLAN_FC_STYPE_ASSOC_REQ) {
+		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
+			       HOSTAPD_LEVEL_DEBUG,
+			       "Drop repeated association frame seq_ctrl=0x%x",
+			       seq_ctrl);
+		return;
+	}
+	sta->last_seq_ctrl = seq_ctrl;
+	sta->last_subtype = reassoc ? WLAN_FC_STYPE_REASSOC_REQ :
+		WLAN_FC_STYPE_ASSOC_REQ;
 
 	if (hapd->tkip_countermeasures) {
 		resp = WLAN_REASON_MICHAEL_MIC_FAILURE;
@@ -1665,6 +1705,7 @@ static void handle_disassoc(struct hostapd_data *hapd,
 	}
 
 	ap_sta_set_authorized(hapd, sta, 0);
+	sta->last_seq_ctrl = WLAN_INVALID_MGMT_SEQ;
 	sta->flags &= ~(WLAN_STA_ASSOC | WLAN_STA_ASSOC_REQ_OK);
 	wpa_auth_sm_event(sta->wpa_sm, WPA_DISASSOC);
 	hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
@@ -1716,6 +1757,7 @@ static void handle_deauth(struct hostapd_data *hapd,
 	}
 
 	ap_sta_set_authorized(hapd, sta, 0);
+	sta->last_seq_ctrl = WLAN_INVALID_MGMT_SEQ;
 	sta->flags &= ~(WLAN_STA_AUTH | WLAN_STA_ASSOC |
 			WLAN_STA_ASSOC_REQ_OK);
 	wpa_auth_sm_event(sta->wpa_sm, WPA_DEAUTH);
@@ -1814,6 +1856,26 @@ static int handle_action(struct hostapd_data *hapd,
 		return 0;
 	}
 #endif /* CONFIG_IEEE80211W */
+
+	if (sta) {
+		u16 fc = le_to_host16(mgmt->frame_control);
+		u16 seq_ctrl = le_to_host16(mgmt->seq_ctrl);
+
+		if ((fc & WLAN_FC_RETRY) &&
+		    sta->last_seq_ctrl != WLAN_INVALID_MGMT_SEQ &&
+		    sta->last_seq_ctrl == seq_ctrl &&
+		    sta->last_subtype == WLAN_FC_STYPE_ACTION) {
+			hostapd_logger(hapd, sta->addr,
+				       HOSTAPD_MODULE_IEEE80211,
+				       HOSTAPD_LEVEL_DEBUG,
+				       "Drop repeated action frame seq_ctrl=0x%x",
+				       seq_ctrl);
+			return 1;
+		}
+
+		sta->last_seq_ctrl = seq_ctrl;
+		sta->last_subtype = WLAN_FC_STYPE_ACTION;
+	}
 
 	switch (mgmt->u.action.category) {
 #ifdef CONFIG_IEEE80211R

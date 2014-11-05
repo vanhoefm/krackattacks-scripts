@@ -604,6 +604,7 @@ struct sta_info * ap_sta_add(struct hostapd_data *hapd, const u8 *addr)
 	ap_sta_hash_add(hapd, sta);
 	sta->ssid = &hapd->conf->ssid;
 	ap_sta_remove_in_other_bss(hapd, sta);
+	sta->last_seq_ctrl = WLAN_INVALID_MGMT_SEQ;
 
 	return sta;
 }
@@ -668,6 +669,7 @@ void ap_sta_disassociate(struct hostapd_data *hapd, struct sta_info *sta,
 {
 	wpa_printf(MSG_DEBUG, "%s: disassociate STA " MACSTR,
 		   hapd->conf->iface, MAC2STR(sta->addr));
+	sta->last_seq_ctrl = WLAN_INVALID_MGMT_SEQ;
 	sta->flags &= ~(WLAN_STA_ASSOC | WLAN_STA_ASSOC_REQ_OK);
 	ap_sta_set_authorized(hapd, sta, 0);
 	sta->timeout_next = STA_DEAUTH;
@@ -706,6 +708,7 @@ void ap_sta_deauthenticate(struct hostapd_data *hapd, struct sta_info *sta,
 {
 	wpa_printf(MSG_DEBUG, "%s: deauthenticate STA " MACSTR,
 		   hapd->conf->iface, MAC2STR(sta->addr));
+	sta->last_seq_ctrl = WLAN_INVALID_MGMT_SEQ;
 	sta->flags &= ~(WLAN_STA_AUTH | WLAN_STA_ASSOC);
 	ap_sta_set_authorized(hapd, sta, 0);
 	sta->timeout_next = STA_REMOVE;

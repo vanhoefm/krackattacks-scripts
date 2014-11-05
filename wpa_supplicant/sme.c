@@ -137,6 +137,56 @@ static struct wpabuf * sme_auth_build_sae_confirm(struct wpa_supplicant *wpa_s)
 #endif /* CONFIG_SAE */
 
 
+/**
+ * sme_auth_handle_rrm - Handle RRM aspects of current authentication attempt
+ * @wpa_s: Pointer to wpa_supplicant data
+ * @bss: Pointer to the bss which is the target of authentication attempt
+ */
+static void sme_auth_handle_rrm(struct wpa_supplicant *wpa_s,
+				struct wpa_bss *bss)
+{
+	const u8 rrm_ie_len = 5;
+	u8 *pos;
+	const u8 *rrm_ie;
+
+	wpa_s->rrm.rrm_used = 0;
+
+	wpa_printf(MSG_DEBUG,
+		   "RRM: Determining whether RRM can be used - device support: 0x%x",
+		   wpa_s->drv_rrm_flags);
+
+	rrm_ie = wpa_bss_get_ie(bss, WLAN_EID_RRM_ENABLED_CAPABILITIES);
+	if (!rrm_ie || !(bss->caps & IEEE80211_CAP_RRM)) {
+		wpa_printf(MSG_DEBUG, "RRM: No RRM in network");
+		return;
+	}
+
+	if (!(wpa_s->drv_rrm_flags &
+	      WPA_DRIVER_FLAGS_DS_PARAM_SET_IE_IN_PROBES) ||
+	    !(wpa_s->drv_rrm_flags & WPA_DRIVER_FLAGS_QUIET)) {
+		wpa_printf(MSG_DEBUG,
+			   "RRM: Insufficient RRM support in driver - do not use RRM");
+		return;
+	}
+
+	if (sizeof(wpa_s->sme.assoc_req_ie) - wpa_s->sme.assoc_req_ie_len <
+	    rrm_ie_len + 2) {
+		wpa_printf(MSG_INFO,
+			   "RRM: Unable to use RRM, no room for RRM IE");
+		return;
+	}
+
+	wpa_printf(MSG_DEBUG, "RRM: Adding RRM IE to Association Request");
+	pos = wpa_s->sme.assoc_req_ie + wpa_s->sme.assoc_req_ie_len;
+	 /* IE body is made of bit flags, all initialized to 0 */
+	os_memset(pos, 0, 2 + rrm_ie_len);
+	*pos++ = WLAN_EID_RRM_ENABLED_CAPABILITIES;
+	*pos++ = rrm_ie_len;
+	wpa_s->sme.assoc_req_ie_len += rrm_ie_len + 2;
+	wpa_s->rrm.rrm_used = 1;
+}
+
+
 static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 				    struct wpa_bss *bss, struct wpa_ssid *ssid,
 				    int start)
@@ -390,6 +440,8 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 		wpa_s->sme.assoc_req_ie_len += ext_capab_len;
 		os_memcpy(pos, ext_capab, ext_capab_len);
 	}
+
+	sme_auth_handle_rrm(wpa_s, bss);
 
 #ifdef CONFIG_SAE
 	if (params.auth_alg == WPA_AUTH_ALG_SAE &&
@@ -786,6 +838,7 @@ void sme_associate(struct wpa_supplicant *wpa_s, enum wpas_mode mode,
 #endif /* CONFIG_IEEE80211R */
 	params.mode = mode;
 	params.mgmt_frame_protection = wpa_s->sme.mfp;
+	params.rrm_used = wpa_s->rrm.rrm_used;
 	if (wpa_s->sme.prev_bssid_set)
 		params.prev_bssid = wpa_s->sme.prev_bssid;
 

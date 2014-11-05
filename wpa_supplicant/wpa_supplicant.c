@@ -3913,6 +3913,8 @@ static int wpa_supplicant_init_iface(struct wpa_supplicant *wpa_s,
 	if (wpas_init_ext_pw(wpa_s) < 0)
 		return -1;
 
+	wpas_rrm_reset(wpa_s);
+
 	return 0;
 }
 
@@ -4908,4 +4910,14 @@ int get_shared_radio_freqs(struct wpa_supplicant *wpa_s,
 	os_free(freqs_data);
 
 	return num;
+}
+
+
+/*
+ * wpas_rrm_reset - Clear and reset all RRM data in wpa_supplicant
+ * @wpa_s: Pointer to wpa_supplicant
+ */
+void wpas_rrm_reset(struct wpa_supplicant *wpa_s)
+{
+	wpa_s->rrm.rrm_used = 0;
 }

@@ -378,6 +378,14 @@ struct wpa_used_freq_data {
 	unsigned int flags;
 };
 
+/*
+ * struct rrm_data - Data used for managing RRM features
+ */
+struct rrm_data {
+	/* rrm_used - indication regarding the current connection */
+	unsigned int rrm_used:1;
+};
+
 /**
  * struct wpa_supplicant - Internal data for wpa_supplicant interface
  *
@@ -897,6 +905,8 @@ struct wpa_supplicant {
 	struct wmm_tspec_element *tspecs[WMM_AC_NUM][TS_DIR_IDX_COUNT];
 	struct wmm_ac_addts_request *addts_request;
 	u8 wmm_ac_last_dialog_token;
+
+	struct rrm_data rrm;
 };
 
 
@@ -994,6 +1004,8 @@ int wpas_build_ext_capab(struct wpa_supplicant *wpa_s, u8 *buf, size_t buflen);
 int wpas_update_random_addr(struct wpa_supplicant *wpa_s, int style);
 int wpas_update_random_addr_disassoc(struct wpa_supplicant *wpa_s);
 void add_freq(int *freqs, int *num_freqs, int freq);
+
+void wpas_rrm_reset(struct wpa_supplicant *wpa_s);
 
 /**
  * wpa_supplicant_ctrl_iface_ctrl_rsp_handle - Handle a control response

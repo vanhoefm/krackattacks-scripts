@@ -2503,6 +2503,13 @@ static int wpa_cli_cmd_radio_work(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+static int wpa_cli_cmd_neighbor_rep_request(struct wpa_ctrl *ctrl, int argc,
+					    char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "NEIGHBOR_REP_REQUEST", 0, argc, argv);
+}
+
+
 enum wpa_cli_cmd_flags {
 	cli_cmd_flag_none		= 0x00,
 	cli_cmd_flag_sensitive		= 0x01
@@ -3011,6 +3018,9 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "vendor", wpa_cli_cmd_vendor, NULL, cli_cmd_flag_none,
 	  "<vendor id> <command id> [<hex formatted command argument>] = Send vendor command"
 	},
+	{ "neighbor_rep_request", wpa_cli_cmd_neighbor_rep_request, NULL,
+	  cli_cmd_flag_none,
+	  "= Trigger request to AP for neighboring AP report"},
 	{ NULL, NULL, NULL, cli_cmd_flag_none, NULL }
 };
 

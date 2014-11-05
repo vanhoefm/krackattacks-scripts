@@ -14,6 +14,7 @@
 #include <netlink/genl/genl.h>
 #include <netlink/genl/family.h>
 #include <netlink/genl/ctrl.h>
+#include <fcntl.h>
 
 #include "utils/common.h"
 #include "driver_nl80211.h"

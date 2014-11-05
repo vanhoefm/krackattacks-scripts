@@ -177,6 +177,7 @@ struct hostapd_hw_modes {
 #define IEEE80211_CAP_ESS	0x0001
 #define IEEE80211_CAP_IBSS	0x0002
 #define IEEE80211_CAP_PRIVACY	0x0010
+#define IEEE80211_CAP_RRM	0x1000
 
 /* DMG (60 GHz) IEEE 802.11ad */
 /* type - bits 0..1 */
@@ -710,6 +711,12 @@ struct wpa_driver_associate_params {
 	 * supports it.
 	 */
 	int req_key_mgmt_offload;
+
+	/**
+	 * Flag for indicating whether this association includes support for
+	 * RRM (Radio Resource Measurements)
+	 */
+	int rrm_used;
 };
 
 enum hide_ssid {
@@ -1121,6 +1128,24 @@ struct wpa_driver_capa {
 	unsigned int extended_capa_len;
 
 	struct wowlan_triggers wowlan_triggers;
+
+/* Driver adds the DS Params Set IE in Probe Request frames */
+#define WPA_DRIVER_FLAGS_DS_PARAM_SET_IE_IN_PROBES	0x00000001
+/* Driver adds the WFA TPC IE in Probe Request frames */
+#define WPA_DRIVER_FLAGS_WFA_TPC_IE_IN_PROBES		0x00000002
+/* Driver handles quiet period requests */
+#define WPA_DRIVER_FLAGS_QUIET				0x00000004
+/**
+ * Driver is capable of inserting the current TX power value into the body of
+ * transmitted frames.
+ * Background: Some Action frames include a TPC Report IE. This IE contains a
+ * TX power field, which has to be updated by lower layers. One such Action
+ * frame is Link Measurement Report (part of RRM). Another is TPC Report (part
+ * of spectrum management). Note that this insertion takes place at a fixed
+ * offset, namely the 6th byte in the Action frame body.
+ */
+#define WPA_DRIVER_FLAGS_TX_POWER_INSERTION		0x00000008
+	u32 rrm_flags;
 };
 
 

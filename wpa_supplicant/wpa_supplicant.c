@@ -5090,3 +5090,82 @@ int wpas_rrm_send_neighbor_rep_request(struct wpa_supplicant *wpa_s,
 	wpabuf_free(buf);
 	return 0;
 }
+
+
+void wpas_rrm_handle_link_measurement_request(struct wpa_supplicant *wpa_s,
+					      const u8 *src,
+					      const u8 *frame, size_t len,
+					      int rssi)
+{
+	struct wpabuf *buf;
+	const struct rrm_link_measurement_request *req;
+	struct rrm_link_measurement_report report;
+
+	if (wpa_s->wpa_state != WPA_COMPLETED) {
+		wpa_printf(MSG_INFO,
+			   "RRM: Ignoring link measurement request. Not associated");
+		return;
+	}
+
+	if (!wpa_s->rrm.rrm_used) {
+		wpa_printf(MSG_INFO,
+			   "RRM: Ignoring link measurement request. Not RRM network");
+		return;
+	}
+
+	if (!(wpa_s->drv_rrm_flags & WPA_DRIVER_FLAGS_TX_POWER_INSERTION)) {
+		wpa_printf(MSG_INFO,
+			   "RRM: Measurement report failed. TX power insertion not supported");
+		return;
+	}
+
+	req = (const struct rrm_link_measurement_request *) frame;
+	if (len < sizeof(*req)) {
+		wpa_printf(MSG_INFO,
+			   "RRM: Link measurement report failed. Request too short");
+		return;
+	}
+
+	os_memset(&report, 0, sizeof(report));
+	report.tpc.eid = WLAN_EID_TPC_REPORT;
+	report.tpc.len = 2;
+	report.rsni = 255; /* 255 indicates that RSNI is not available */
+	report.dialog_token = req->dialog_token;
+
+	/*
+	 * It's possible to estimate RCPI based on RSSI in dBm. This
+	 * calculation will not reflect the correct value for high rates,
+	 * but it's good enough for Action frames which are transmitted
+	 * with up to 24 Mbps rates.
+	 */
+	if (!rssi)
+		report.rcpi = 255; /* not available */
+	else if (rssi < -110)
+		report.rcpi = 0;
+	else if (rssi > 0)
+		report.rcpi = 220;
+	else
+		report.rcpi = (rssi + 110) * 2;
+
+	/* action_category + action_code */
+	buf = wpabuf_alloc(2 + sizeof(report));
+	if (buf == NULL) {
+		wpa_printf(MSG_ERROR,
+			   "RRM: Link measurement report failed. Buffer allocation failed");
+		return;
+	}
+
+	wpabuf_put_u8(buf, WLAN_ACTION_RADIO_MEASUREMENT);
+	wpabuf_put_u8(buf, WLAN_RRM_LINK_MEASUREMENT_REPORT);
+	wpabuf_put_data(buf, &report, sizeof(report));
+	wpa_hexdump(MSG_DEBUG, "RRM: Link measurement report:",
+		    wpabuf_head(buf), wpabuf_len(buf));
+
+	if (wpa_drv_send_action(wpa_s, wpa_s->assoc_freq, 0, src,
+				wpa_s->own_addr, wpa_s->bssid,
+				wpabuf_head(buf), wpabuf_len(buf), 0)) {
+		wpa_printf(MSG_ERROR,
+			   "RRM: Link measurement report failed. Send action failed");
+	}
+	wpabuf_free(buf);
+}

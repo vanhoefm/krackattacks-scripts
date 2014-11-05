@@ -350,6 +350,7 @@
 
 /* Radio Measurement capabilities (from RRM Capabilities IE) */
 /* byte 1 (out of 5) */
+#define WLAN_RRM_CAPS_LINK_MEASUREMENT BIT(0)
 #define WLAN_RRM_CAPS_NEIGHBOR_REPORT BIT(1)
 
 /* Timeout Interval Type */
@@ -1307,5 +1308,31 @@ enum wnm_sleep_mode_subelement_id {
 /* Channel Switch modes (802.11h) */
 #define CHAN_SWITCH_MODE_ALLOW_TX	0
 #define CHAN_SWITCH_MODE_BLOCK_TX	1
+
+struct tpc_report {
+	u8 eid;
+	u8 len;
+	u8 tx_power;
+	u8 link_margin;
+} STRUCT_PACKED;
+
+/* IEEE Std 802.11-2012, 8.5.7.4 - Link Measurement Request frame format */
+struct rrm_link_measurement_request {
+	u8 dialog_token;
+	s8 tx_power;
+	s8 max_tp;
+	u8 variable[0];
+} STRUCT_PACKED;
+
+/* IEEE Std 802.11-2012, 8.5.7.5 - Link Measurement Report frame format */
+struct rrm_link_measurement_report {
+	u8 dialog_token;
+	struct tpc_report tpc;
+	u8 rx_ant_id;
+	u8 tx_ant_id;
+	u8 rcpi;
+	u8 rsni;
+	u8 variable[0];
+} STRUCT_PACKED;
 
 #endif /* IEEE802_11_DEFS_H */

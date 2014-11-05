@@ -2785,7 +2785,8 @@ static void wpa_supplicant_update_channel_list(
 
 
 static void wpas_event_rx_mgmt_action(struct wpa_supplicant *wpa_s,
-				      const u8 *frame, size_t len, int freq)
+				      const u8 *frame, size_t len, int freq,
+				      int rssi)
 {
 	const struct ieee80211_mgmt *mgmt;
 	const u8 *payload;
@@ -2869,6 +2870,14 @@ static void wpas_event_rx_mgmt_action(struct wpa_supplicant *wpa_s,
 	if (category == WLAN_ACTION_RADIO_MEASUREMENT &&
 	    payload[0] == WLAN_RRM_NEIGHBOR_REPORT_RESPONSE) {
 		wpas_rrm_process_neighbor_rep(wpa_s, payload + 1, plen - 1);
+		return;
+	}
+
+	if (category == WLAN_ACTION_RADIO_MEASUREMENT &&
+	    payload[0] == WLAN_RRM_LINK_MEASUREMENT_REQUEST) {
+		wpas_rrm_handle_link_measurement_request(wpa_s, mgmt->sa,
+							 payload + 1, plen - 1,
+							 rssi);
 		return;
 	}
 
@@ -3258,7 +3267,8 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 				wpas_event_rx_mgmt_action(
 					wpa_s, data->rx_mgmt.frame,
 					data->rx_mgmt.frame_len,
-					data->rx_mgmt.freq);
+					data->rx_mgmt.freq,
+					data->rx_mgmt.ssi_signal);
 				break;
 			}
 

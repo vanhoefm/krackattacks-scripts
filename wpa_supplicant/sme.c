@@ -178,10 +178,14 @@ static void sme_auth_handle_rrm(struct wpa_supplicant *wpa_s,
 
 	wpa_printf(MSG_DEBUG, "RRM: Adding RRM IE to Association Request");
 	pos = wpa_s->sme.assoc_req_ie + wpa_s->sme.assoc_req_ie_len;
-	 /* IE body is made of bit flags, all initialized to 0 */
 	os_memset(pos, 0, 2 + rrm_ie_len);
 	*pos++ = WLAN_EID_RRM_ENABLED_CAPABILITIES;
 	*pos++ = rrm_ie_len;
+
+	/* Set supported capabilites flags */
+	if (wpa_s->drv_rrm_flags & WPA_DRIVER_FLAGS_TX_POWER_INSERTION)
+		*pos |= WLAN_RRM_CAPS_LINK_MEASUREMENT;
+
 	wpa_s->sme.assoc_req_ie_len += rrm_ie_len + 2;
 	wpa_s->rrm.rrm_used = 1;
 }

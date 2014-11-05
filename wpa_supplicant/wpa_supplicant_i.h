@@ -1030,6 +1030,10 @@ int wpas_rrm_send_neighbor_rep_request(struct wpa_supplicant *wpa_s,
 				       void (*cb)(void *ctx,
 						  struct wpabuf *neighbor_rep),
 				       void *cb_ctx);
+void wpas_rrm_handle_link_measurement_request(struct wpa_supplicant *wpa_s,
+					      const u8 *src,
+					      const u8 *frame, size_t len,
+					      int rssi);
 
 /**
  * wpa_supplicant_ctrl_iface_ctrl_rsp_handle - Handle a control response

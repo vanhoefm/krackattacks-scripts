@@ -1147,7 +1147,7 @@ int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 	     enum p2p_discovery_type type,
 	     unsigned int num_req_dev_types, const u8 *req_dev_types,
 	     const u8 *dev_id, unsigned int search_delay,
-	     u8 seek_count, const char **seek)
+	     u8 seek_count, const char **seek, int freq)
 {
 	int res;
 
@@ -1230,6 +1230,19 @@ int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 				       p2p, NULL);
 	switch (type) {
 	case P2P_FIND_START_WITH_FULL:
+		if (freq > 0) {
+			/*
+			 * Start with the specified channel and then move to
+			 * social channels only scans.
+			 */
+			res = p2p->cfg->p2p_scan(p2p->cfg->cb_ctx,
+						 P2P_SCAN_SPECIFIC, freq,
+						 p2p->num_req_dev_types,
+						 p2p->req_dev_types, dev_id,
+						 DEV_PW_DEFAULT);
+			break;
+		}
+		/* fall through */
 	case P2P_FIND_PROGRESSIVE:
 		res = p2p->cfg->p2p_scan(p2p->cfg->cb_ctx, P2P_SCAN_FULL, 0,
 					 p2p->num_req_dev_types,

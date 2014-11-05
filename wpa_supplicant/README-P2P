@@ -73,7 +73,7 @@ Device Discovery
 
 p2p_find [timeout in seconds] [type=<social|progressive>] \
 	[dev_id=<addr>] [dev_type=<device type>] \
-	[delay=<search delay in ms>] [seek=<service name>]
+	[delay=<search delay in ms>] [seek=<service name>] [freq=<MHz>]
 
 The default behavior is to run a single full scan in the beginning and
 then scan only social channels. type=social will scan only social
@@ -81,7 +81,9 @@ channels, i.e., it skips the initial full scan. type=progressive is
 like the default behavior, but it will scan through all the channels
 progressively one channel at the time in the Search state rounds. This
 will help in finding new groups or groups missed during the initial
-full scan.
+full scan. When the type parameter is not included (i.e., full scan), the
+optional freq parameter can be used to override the first scan to use only
+the specified channel after which only social channels are scanned.
 
 The optional dev_id option can be used to specify a single P2P peer to
 search for. The optional delay parameter can be used to request an extra

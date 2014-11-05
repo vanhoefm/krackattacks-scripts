@@ -1131,13 +1131,17 @@ enum p2p_discovery_type {
  * @search_delay: Extra delay in milliseconds between search iterations
  * @seek_count: Number of ASP Service Strings in the seek_string array
  * @seek_string: ASP Service Strings to query for in Probe Requests
+ * @freq: Requested first scan frequency (in MHz) to modify type ==
+ *	P2P_FIND_START_WITH_FULL behavior. 0 = Use normal full scan.
+ *	If p2p_find is already in progress, this parameter is ignored and full
+ *	scan will be executed.
  * Returns: 0 on success, -1 on failure
  */
 int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 	     enum p2p_discovery_type type,
 	     unsigned int num_req_dev_types, const u8 *req_dev_types,
 	     const u8 *dev_id, unsigned int search_delay,
-	     u8 seek_count, const char **seek_string);
+	     u8 seek_count, const char **seek_string, int freq);
 
 /**
  * p2p_notify_scan_trigger_status - Indicate scan trigger status

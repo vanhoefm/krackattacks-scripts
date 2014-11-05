@@ -4510,6 +4510,7 @@ static int p2p_ctrl_find(struct wpa_supplicant *wpa_s, char *cmd)
 	unsigned int search_delay;
 	const char *seek[P2P_MAX_QUERY_HASH + 1];
 	u8 seek_count = 0;
+	int freq = 0;
 
 	if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED) {
 		wpa_dbg(wpa_s, MSG_INFO,
@@ -4557,20 +4558,28 @@ static int p2p_ctrl_find(struct wpa_supplicant *wpa_s, char *cmd)
 			*term = '\0';
 	}
 
+	pos = os_strstr(cmd, "freq=");
+	if (pos) {
+		pos += 5;
+		freq = atoi(pos);
+		if (freq <= 0)
+			return -1;
+	}
+
 	if (!seek_count)
 		return wpas_p2p_find(wpa_s, timeout, type, _dev_type != NULL,
 				     _dev_type, _dev_id,
-				     search_delay, 0, NULL);
+				     search_delay, 0, NULL, freq);
 
 	if (seek_count > P2P_MAX_QUERY_HASH) {
 		seek[0] = NULL;
 		return wpas_p2p_find(wpa_s, timeout, type, _dev_type != NULL,
 				     _dev_type, _dev_id,
-				     search_delay, 1, seek);
+				     search_delay, 1, seek, freq);
 	}
 
 	return wpas_p2p_find(wpa_s, timeout, type, _dev_type != NULL, _dev_type,
-			     _dev_id, search_delay, seek_count, seek);
+			     _dev_id, search_delay, seek_count, seek, freq);
 }
 
 

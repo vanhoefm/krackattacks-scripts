@@ -368,6 +368,18 @@ static void wiphy_info_feature_flags(struct wiphy_info_data *info,
 
 	if (flags & NL80211_FEATURE_SUPPORTS_WMM_ADMISSION)
 		info->wmm_ac_supported = 1;
+
+	if (flags & NL80211_FEATURE_DS_PARAM_SET_IE_IN_PROBES)
+		capa->rrm_flags |= WPA_DRIVER_FLAGS_DS_PARAM_SET_IE_IN_PROBES;
+
+	if (flags & NL80211_FEATURE_WFA_TPC_IE_IN_PROBES)
+		capa->rrm_flags |= WPA_DRIVER_FLAGS_WFA_TPC_IE_IN_PROBES;
+
+	if (flags & NL80211_FEATURE_QUIET)
+		capa->rrm_flags |= WPA_DRIVER_FLAGS_QUIET;
+
+	if (flags & NL80211_FEATURE_TX_POWER_INSERTION)
+		capa->rrm_flags |= WPA_DRIVER_FLAGS_TX_POWER_INSERTION;
 }
 
 

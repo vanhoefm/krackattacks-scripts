@@ -377,6 +377,13 @@ static int wpas_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 		break;
 	case P2P_SCAN_FULL:
 		break;
+	case P2P_SCAN_SPECIFIC:
+		params->freqs = os_calloc(2, sizeof(int));
+		if (params->freqs == NULL)
+			goto fail;
+		params->freqs[0] = freq;
+		params->freqs[1] = 0;
+		break;
 	case P2P_SCAN_SOCIAL_PLUS_ONE:
 		params->freqs = os_calloc(ARRAY_SIZE(social_channels_freq) + 2,
 					  sizeof(int));

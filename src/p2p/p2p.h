@@ -245,6 +245,7 @@ struct p2p_data;
 enum p2p_scan_type {
 	P2P_SCAN_SOCIAL,
 	P2P_SCAN_FULL,
+	P2P_SCAN_SPECIFIC,
 	P2P_SCAN_SOCIAL_PLUS_ONE
 };
 
@@ -545,7 +546,8 @@ struct p2p_config {
 	 * operation to be completed. Type type argument specifies which type
 	 * of scan is to be done. @P2P_SCAN_SOCIAL indicates that only the
 	 * social channels (1, 6, 11) should be scanned. @P2P_SCAN_FULL
-	 * indicates that all channels are to be scanned.
+	 * indicates that all channels are to be scanned. @P2P_SCAN_SPECIFIC
+	 * request a scan of a single channel specified by freq.
 	 * @P2P_SCAN_SOCIAL_PLUS_ONE request scan of all the social channels
 	 * plus one extra channel specified by freq.
 	 *

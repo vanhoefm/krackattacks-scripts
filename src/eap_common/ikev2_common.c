@@ -263,7 +263,7 @@ int ikev2_parse_payloads(struct ikev2_payloads *payloads,
 		}
 		phdr = (const struct ikev2_payload_hdr *) pos;
 		plen = WPA_GET_BE16(phdr->payload_length);
-		if (plen < sizeof(*phdr) || plen > end - pos) {
+		if (plen < sizeof(*phdr) || pos + plen > end) {
 			wpa_printf(MSG_INFO, "IKEV2:   Invalid payload header "
 				   "length %d", plen);
 			return -1;

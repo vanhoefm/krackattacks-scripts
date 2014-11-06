@@ -157,7 +157,7 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 		hostapd_set_wds_sta(hapd, NULL, sta->addr, sta->aid, 0);
 
 	if (sta->ipaddr)
-		hostapd_drv_br_delete_ip_neigh(hapd, sta->ipaddr);
+		hostapd_drv_br_delete_ip_neigh(hapd, 4, (u8 *) &sta->ipaddr);
 
 	if (!hapd->iface->driver_ap_teardown &&
 	    !(sta->flags & WLAN_STA_PREAUTH))
@@ -615,7 +615,7 @@ static int ap_sta_remove(struct hostapd_data *hapd, struct sta_info *sta)
 	ieee802_1x_notify_port_enabled(sta->eapol_sm, 0);
 
 	if (sta->ipaddr)
-		hostapd_drv_br_delete_ip_neigh(hapd, sta->ipaddr);
+		hostapd_drv_br_delete_ip_neigh(hapd, 4, (u8 *) &sta->ipaddr);
 
 	wpa_printf(MSG_DEBUG, "Removing STA " MACSTR " from kernel driver",
 		   MAC2STR(sta->addr));

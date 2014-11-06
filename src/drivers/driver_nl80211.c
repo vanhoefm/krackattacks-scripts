@@ -8949,8 +8949,9 @@ nla_put_failure:
 #endif /* CONFIG_MESH */
 
 
-static int wpa_driver_br_add_ip_neigh(void *priv, be32 ipaddr,
-				      int prefixlen, const u8 *addr)
+static int wpa_driver_br_add_ip_neigh(void *priv, u8 version,
+				      const u8 *ipaddr, int prefixlen,
+				      const u8 *addr)
 {
 #ifdef CONFIG_LIBNL3_ROUTE
 	struct i802_bss *bss = priv;
@@ -8958,9 +8959,10 @@ static int wpa_driver_br_add_ip_neigh(void *priv, be32 ipaddr,
 	struct rtnl_neigh *rn;
 	struct nl_addr *nl_ipaddr = NULL;
 	struct nl_addr *nl_lladdr = NULL;
+	int family, addrsize;
 	int res;
 
-	if (ipaddr == 0 || prefixlen == 0 || !addr)
+	if (!ipaddr || prefixlen == 0 || !addr)
 		return -EINVAL;
 
 	if (bss->br_ifindex == 0) {
@@ -8975,12 +8977,22 @@ static int wpa_driver_br_add_ip_neigh(void *priv, be32 ipaddr,
 		return -1;
 	}
 
+	if (version == 4) {
+		family = AF_INET;
+		addrsize = 4;
+	} else if (version == 6) {
+		family = AF_INET6;
+		addrsize = 16;
+	} else {
+		return -EINVAL;
+	}
+
 	rn = rtnl_neigh_alloc();
 	if (rn == NULL)
 		return -ENOMEM;
 
 	/* set the destination ip address for neigh */
-	nl_ipaddr = nl_addr_build(AF_INET, &ipaddr, sizeof(ipaddr));
+	nl_ipaddr = nl_addr_build(family, (void *) ipaddr, addrsize);
 	if (nl_ipaddr == NULL) {
 		wpa_printf(MSG_DEBUG, "nl80211: nl_ipaddr build failed");
 		res = -ENOMEM;
@@ -9026,17 +9038,29 @@ errout:
 }
 
 
-static int wpa_driver_br_delete_ip_neigh(void *priv, be32 ipaddr)
+static int wpa_driver_br_delete_ip_neigh(void *priv, u8 version,
+					 const u8 *ipaddr)
 {
 #ifdef CONFIG_LIBNL3_ROUTE
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct rtnl_neigh *rn;
 	struct nl_addr *nl_ipaddr;
+	int family, addrsize;
 	int res;
 
-	if (ipaddr == 0)
+	if (!ipaddr)
 		return -EINVAL;
+
+	if (version == 4) {
+		family = AF_INET;
+		addrsize = 4;
+	} else if (version == 6) {
+		family = AF_INET6;
+		addrsize = 16;
+	} else {
+		return -EINVAL;
+	}
 
 	if (bss->br_ifindex == 0) {
 		wpa_printf(MSG_DEBUG,
@@ -9055,7 +9079,7 @@ static int wpa_driver_br_delete_ip_neigh(void *priv, be32 ipaddr)
 		return -ENOMEM;
 
 	/* set the destination ip address for neigh */
-	nl_ipaddr = nl_addr_build(AF_INET, &ipaddr, sizeof(ipaddr));
+	nl_ipaddr = nl_addr_build(family, (void *) ipaddr, addrsize);
 	if (nl_ipaddr == NULL) {
 		wpa_printf(MSG_DEBUG, "nl80211: nl_ipaddr build failed");
 		res = -ENOMEM;

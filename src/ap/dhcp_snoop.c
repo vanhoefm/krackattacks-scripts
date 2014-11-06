@@ -114,11 +114,12 @@ static void handle_dhcp(void *ctx, const u8 *src_addr, const u8 *buf,
 			wpa_printf(MSG_DEBUG,
 				   "dhcp_snoop: Removing IPv4 address %X from the ip neigh table",
 				   sta->ipaddr);
-			hostapd_drv_br_delete_ip_neigh(hapd, sta->ipaddr);
+			hostapd_drv_br_delete_ip_neigh(hapd, 4,
+						       (u8 *) &sta->ipaddr);
 		}
 
-		res = hostapd_drv_br_add_ip_neigh(hapd, b->your_ip, prefixlen,
-						  sta->addr);
+		res = hostapd_drv_br_add_ip_neigh(hapd, 4, (u8 *) &b->your_ip,
+						  prefixlen, sta->addr);
 		if (res) {
 			wpa_printf(MSG_DEBUG,
 				   "dhcp_snoop: Adding ip neigh table failed: %d",

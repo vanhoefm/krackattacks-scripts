@@ -2632,21 +2632,23 @@ struct wpa_driver_ops {
 	/**
 	 * br_add_ip_neigh - Add a neigh to the bridge ip neigh table
 	 * @priv: Private driver interface data
-	 * @ipaddr: IPv4 address for the neigh entry
-	 * @prefixlen: IPv4 address netmask prefix length
+	 * @version: IP version of the IP address, 4 or 6
+	 * @ipaddr: IP address for the neigh entry
+	 * @prefixlen: IP address prefix length
 	 * @addr: Corresponding MAC address
 	 * Returns: 0 on success, negative (<0) on failure
 	 */
-	int (*br_add_ip_neigh)(void *priv, be32 ipaddr, int prefixlen,
-			       const u8 *addr);
+	int (*br_add_ip_neigh)(void *priv, u8 version, const u8 *ipaddr,
+			       int prefixlen, const u8 *addr);
 
 	/**
 	 * br_delete_ip_neigh - Remove a neigh from the bridge ip neigh table
 	 * @priv: Private driver interface data
-	 * @ipaddr: IPv4 address for the neigh entry
+	 * @version: IP version of the IP address, 4 or 6
+	 * @ipaddr: IP address for the neigh entry
 	 * Returns: 0 on success, negative (<0) on failure
 	 */
-	int (*br_delete_ip_neigh)(void *priv, be32 ipaddr);
+	int (*br_delete_ip_neigh)(void *priv, u8 version, const u8 *ipaddr);
 
 	/**
 	 * br_port_set_attr - Set a bridge port attribute

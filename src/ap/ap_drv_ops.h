@@ -281,23 +281,24 @@ static inline int hostapd_drv_status(struct hostapd_data *hapd, char *buf,
 }
 
 static inline int hostapd_drv_br_add_ip_neigh(struct hostapd_data *hapd,
-					      be32 ipaddr, int prefixlen,
-					      const u8 *addr)
+					      int version, const u8 *ipaddr,
+					      int prefixlen, const u8 *addr)
 {
 	if (hapd->driver == NULL || hapd->drv_priv == NULL ||
 	    hapd->driver->br_add_ip_neigh == NULL)
 		return -1;
-	return hapd->driver->br_add_ip_neigh(hapd->drv_priv, ipaddr, prefixlen,
-					     addr);
+	return hapd->driver->br_add_ip_neigh(hapd->drv_priv, version, ipaddr,
+					     prefixlen, addr);
 }
 
 static inline int hostapd_drv_br_delete_ip_neigh(struct hostapd_data *hapd,
-						 be32 ipaddr)
+						 u8 version, const u8 *ipaddr)
 {
 	if (hapd->driver == NULL || hapd->drv_priv == NULL ||
 	    hapd->driver->br_delete_ip_neigh == NULL)
 		return -1;
-	return hapd->driver->br_delete_ip_neigh(hapd->drv_priv, ipaddr);
+	return hapd->driver->br_delete_ip_neigh(hapd->drv_priv, version,
+						ipaddr);
 }
 
 static inline int hostapd_drv_br_port_set_attr(struct hostapd_data *hapd,

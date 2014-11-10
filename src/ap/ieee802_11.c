@@ -1327,6 +1327,13 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 			       "mandatory VHT PHY - reject association");
 		return WLAN_STATUS_ASSOC_DENIED_NO_VHT;
 	}
+
+	if (hapd->conf->vendor_vht && !elems.vht_capabilities) {
+		resp = copy_sta_vendor_vht(hapd, sta, elems.vendor_vht,
+					   elems.vendor_vht_len);
+		if (resp != WLAN_STATUS_SUCCESS)
+			return resp;
+	}
 #endif /* CONFIG_IEEE80211AC */
 
 #ifdef CONFIG_P2P
@@ -1616,14 +1623,21 @@ static void send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 #endif /* CONFIG_IEEE80211N */
 
 #ifdef CONFIG_IEEE80211AC
-	p = hostapd_eid_vht_capabilities(hapd, p);
-	p = hostapd_eid_vht_operation(hapd, p);
+	if (hapd->iconf->ieee80211ac && !hapd->conf->disable_11ac) {
+		p = hostapd_eid_vht_capabilities(hapd, p);
+		p = hostapd_eid_vht_operation(hapd, p);
+	}
 #endif /* CONFIG_IEEE80211AC */
 
 	p = hostapd_eid_ext_capab(hapd, p);
 	p = hostapd_eid_bss_max_idle_period(hapd, p);
 	if (sta->qos_map_enabled)
 		p = hostapd_eid_qos_map_set(hapd, p);
+
+#ifdef CONFIG_IEEE80211AC
+	if (hapd->conf->vendor_vht && (sta->flags & WLAN_STA_VENDOR_VHT))
+		p = hostapd_eid_vendor_vht(hapd, p);
+#endif /* CONFIG_IEEE80211AC */
 
 	if (sta->flags & WLAN_STA_WMM)
 		p = hostapd_eid_wmm(hapd, p);

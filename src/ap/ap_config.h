@@ -551,6 +551,8 @@ struct hostapd_bss_config {
 	int mesh;
 
 	int radio_measurements;
+
+	int vendor_vht;
 };
 
 

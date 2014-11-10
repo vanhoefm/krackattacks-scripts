@@ -379,6 +379,10 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 #endif /* CONFIG_P2P */
 	if (hapd->conf->vendor_elements)
 		buflen += wpabuf_len(hapd->conf->vendor_elements);
+	if (hapd->conf->vendor_vht) {
+		buflen += 5 + 2 + sizeof(struct ieee80211_vht_capabilities) +
+			2 + sizeof(struct ieee80211_vht_operation);
+	}
 	resp = os_zalloc(buflen);
 	if (resp == NULL)
 		return NULL;
@@ -446,8 +450,12 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 	pos = hostapd_add_csa_elems(hapd, pos, (u8 *)resp,
 				    &hapd->cs_c_off_proberesp);
 #ifdef CONFIG_IEEE80211AC
-	pos = hostapd_eid_vht_capabilities(hapd, pos);
-	pos = hostapd_eid_vht_operation(hapd, pos);
+	if (hapd->iconf->ieee80211ac && !hapd->conf->disable_11ac) {
+		pos = hostapd_eid_vht_capabilities(hapd, pos);
+		pos = hostapd_eid_vht_operation(hapd, pos);
+	}
+	if (hapd->conf->vendor_vht)
+		pos = hostapd_eid_vendor_vht(hapd, pos);
 #endif /* CONFIG_IEEE80211AC */
 
 	/* Wi-Fi Alliance WMM */
@@ -776,6 +784,14 @@ int ieee802_11_build_ap_params(struct hostapd_data *hapd,
 #endif /* CONFIG_P2P */
 	if (hapd->conf->vendor_elements)
 		tail_len += wpabuf_len(hapd->conf->vendor_elements);
+
+#ifdef CONFIG_IEEE80211AC
+	if (hapd->conf->vendor_vht) {
+		tail_len += 5 + 2 + sizeof(struct ieee80211_vht_capabilities) +
+			2 + sizeof(struct ieee80211_vht_operation);
+	}
+#endif /* CONFIG_IEEE80211AC */
+
 	tailpos = tail = os_malloc(tail_len);
 	if (head == NULL || tail == NULL) {
 		wpa_printf(MSG_ERROR, "Failed to set beacon data");
@@ -865,8 +881,12 @@ int ieee802_11_build_ap_params(struct hostapd_data *hapd,
 	tailpos = hostapd_add_csa_elems(hapd, tailpos, tail,
 					&hapd->cs_c_off_beacon);
 #ifdef CONFIG_IEEE80211AC
-	tailpos = hostapd_eid_vht_capabilities(hapd, tailpos);
-	tailpos = hostapd_eid_vht_operation(hapd, tailpos);
+	if (hapd->iconf->ieee80211ac && !hapd->conf->disable_11ac) {
+		tailpos = hostapd_eid_vht_capabilities(hapd, tailpos);
+		tailpos = hostapd_eid_vht_operation(hapd, tailpos);
+	}
+	if (hapd->conf->vendor_vht)
+		tailpos = hostapd_eid_vendor_vht(hapd, tailpos);
 #endif /* CONFIG_IEEE80211AC */
 
 	/* Wi-Fi Alliance WMM */

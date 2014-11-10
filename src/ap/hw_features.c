@@ -641,11 +641,30 @@ static int ieee80211ac_cap_check_max(u32 hw, u32 conf, u32 mask,
 
 static int ieee80211ac_supported_vht_capab(struct hostapd_iface *iface)
 {
-	u32 hw = iface->current_mode->vht_capab;
+	struct hostapd_hw_modes *mode = iface->current_mode;
+	u32 hw = mode->vht_capab;
 	u32 conf = iface->conf->vht_capab;
 
 	wpa_printf(MSG_DEBUG, "hw vht capab: 0x%x, conf vht capab: 0x%x",
 		   hw, conf);
+
+	if (mode->mode == HOSTAPD_MODE_IEEE80211G &&
+	    iface->conf->bss[0]->vendor_vht &&
+	    mode->vht_capab == 0 && iface->hw_features) {
+		int i;
+
+		for (i = 0; i < iface->num_hw_features; i++) {
+			if (iface->hw_features[i].mode ==
+			    HOSTAPD_MODE_IEEE80211A) {
+				mode = &iface->hw_features[i];
+				hw = mode->vht_capab;
+				wpa_printf(MSG_DEBUG,
+					   "update hw vht capab based on 5 GHz band: 0x%x",
+					   hw);
+				break;
+			}
+		}
+	}
 
 #define VHT_CAP_CHECK(cap) \
 	do { \

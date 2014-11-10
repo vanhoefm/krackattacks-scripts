@@ -128,6 +128,15 @@ static int ieee802_11_parse_vendor_specific(const u8 *pos, size_t elen,
 			elems->vendor_ht_cap = pos;
 			elems->vendor_ht_cap_len = elen;
 			break;
+		case VENDOR_VHT_TYPE:
+			if (elen > 4 &&
+			    (pos[4] == VENDOR_VHT_SUBTYPE ||
+			     pos[4] == VENDOR_VHT_SUBTYPE2)) {
+				elems->vendor_vht = pos;
+				elems->vendor_vht_len = elen;
+			} else
+				return -1;
+			break;
 		default:
 			wpa_printf(MSG_EXCESSIVE, "Unknown Broadcom "
 				   "information element ignored "

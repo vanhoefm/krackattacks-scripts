@@ -35,6 +35,7 @@ struct ieee802_11_elems {
 	const u8 *vht_operation;
 	const u8 *vht_opmode_notif;
 	const u8 *vendor_ht_cap;
+	const u8 *vendor_vht;
 	const u8 *p2p;
 	const u8 *wfd;
 	const u8 *link_id;
@@ -71,6 +72,7 @@ struct ieee802_11_elems {
 	u8 vht_capabilities_len;
 	u8 vht_operation_len;
 	u8 vendor_ht_cap_len;
+	u8 vendor_vht_len;
 	u8 p2p_len;
 	u8 wfd_len;
 	u8 interworking_len;

@@ -51,6 +51,7 @@ u8 * hostapd_eid_ht_capabilities(struct hostapd_data *hapd, u8 *eid);
 u8 * hostapd_eid_ht_operation(struct hostapd_data *hapd, u8 *eid);
 u8 * hostapd_eid_vht_capabilities(struct hostapd_data *hapd, u8 *eid);
 u8 * hostapd_eid_vht_operation(struct hostapd_data *hapd, u8 *eid);
+u8 * hostapd_eid_vendor_vht(struct hostapd_data *hapd, u8 *eid);
 int hostapd_ht_operation_update(struct hostapd_iface *iface);
 void ieee802_11_send_sa_query_req(struct hostapd_data *hapd,
 				  const u8 *addr, const u8 *trans_id);
@@ -62,6 +63,9 @@ void hostapd_get_vht_capab(struct hostapd_data *hapd,
 			   struct ieee80211_vht_capabilities *neg_vht_cap);
 u16 copy_sta_ht_capab(struct hostapd_data *hapd, struct sta_info *sta,
 		      const u8 *ht_capab, size_t ht_capab_len);
+u16 copy_sta_vendor_vht(struct hostapd_data *hapd, struct sta_info *sta,
+			const u8 *ie, size_t len);
+
 void update_ht_state(struct hostapd_data *hapd, struct sta_info *sta);
 void ht40_intolerant_add(struct hostapd_iface *iface, struct sta_info *sta);
 void ht40_intolerant_remove(struct hostapd_iface *iface, struct sta_info *sta);

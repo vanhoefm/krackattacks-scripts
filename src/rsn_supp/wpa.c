@@ -1756,6 +1756,9 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 			wpa_msg(sm->ctx->msg_ctx, MSG_INFO,
 				"WPA: Backwards compatibility: allow invalid "
 				"version for non-CCMP group keys");
+		} else if (ver == WPA_KEY_INFO_TYPE_AES_128_CMAC) {
+			wpa_msg(sm->ctx->msg_ctx, MSG_INFO,
+				"WPA: Interoperability workaround: allow incorrect (should have been HMAC-SHA1), but stronger (is AES-128-CMAC), descriptor version to be used");
 		} else
 			goto out;
 	} else if (sm->pairwise_cipher == WPA_CIPHER_GCMP &&

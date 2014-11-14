@@ -280,3 +280,22 @@ def test_ap_pmf_required_eap(dev, apdev):
     dev[0].connect("test-pmf-required-eap", key_mgmt="WPA-EAP-SHA256",
                    ieee80211w="2", eap="PSK", identity="psk.user@example.com",
                    password_hex="0123456789abcdef0123456789abcdef")
+
+def test_ap_pmf_required_sha1(dev, apdev):
+    """WPA2-PSK AP with PMF required with SHA1 AKM"""
+    ssid = "test-pmf-required-sha1"
+    wt = Wlantest()
+    wt.flush()
+    wt.add_passphrase("12345678")
+    params = hostapd.wpa2_params(ssid=ssid, passphrase="12345678")
+    params["wpa_key_mgmt"] = "WPA-PSK";
+    params["ieee80211w"] = "2";
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    key_mgmt = hapd.get_config()['key_mgmt']
+    if key_mgmt.split(' ')[0] != "WPA-PSK":
+        raise Exception("Unexpected GET_CONFIG(key_mgmt): " + key_mgmt)
+    dev[0].connect(ssid, psk="12345678", ieee80211w="2",
+                   key_mgmt="WPA-PSK", proto="WPA2", scan_freq="2412")
+    if "[WPA2-PSK-CCMP]" not in dev[0].request("SCAN_RESULTS"):
+        raise Exception("Scan results missing RSN element info")
+    hwsim_utils.test_connectivity(dev[0], hapd)

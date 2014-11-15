@@ -3475,9 +3475,13 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 #endif /* CONFIG_AP */
 		break;
 	case EVENT_NEW_PEER_CANDIDATE:
+#ifdef CONFIG_MESH
+		if (!wpa_s->ifmsh || !data)
+			break;
 		wpa_mesh_notify_peer(wpa_s, data->mesh_peer.peer,
 				     data->mesh_peer.ies,
 				     data->mesh_peer.ie_len);
+#endif /* CONFIG_MESH */
 		break;
 	default:
 		wpa_msg(wpa_s, MSG_INFO, "Unknown event %d", event);

@@ -810,7 +810,7 @@ void * tls_init(const struct tls_config *conf)
 	}
 	tls_openssl_ref_count++;
 
-	ssl = SSL_CTX_new(TLSv1_method());
+	ssl = SSL_CTX_new(SSLv23_method());
 	if (ssl == NULL) {
 		tls_openssl_ref_count--;
 #ifdef OPENSSL_SUPPORTS_CTX_APP_DATA
@@ -823,6 +823,9 @@ void * tls_init(const struct tls_config *conf)
 		}
 		return NULL;
 	}
+
+	SSL_CTX_set_options(ssl, SSL_OP_NO_SSLv2);
+	SSL_CTX_set_options(ssl, SSL_OP_NO_SSLv3);
 
 	SSL_CTX_set_info_callback(ssl, ssl_info_cb);
 #ifdef OPENSSL_SUPPORTS_CTX_APP_DATA

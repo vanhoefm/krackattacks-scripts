@@ -143,6 +143,15 @@ static int wpa_config_validate_network(struct wpa_ssid *ssid, int line)
 		ssid->group_cipher &= ~WPA_CIPHER_CCMP;
 	}
 
+	if (ssid->mode == WPAS_MODE_MESH &&
+	    (ssid->key_mgmt != WPA_KEY_MGMT_NONE &&
+	    ssid->key_mgmt != WPA_KEY_MGMT_SAE)) {
+		wpa_printf(MSG_ERROR,
+			   "Line %d: key_mgmt for mesh network should be open or SAE",
+			   line);
+		errors++;
+	}
+
 	return errors;
 }
 

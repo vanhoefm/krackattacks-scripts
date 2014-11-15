@@ -2388,6 +2388,12 @@ static int wpa_supplicant_ctrl_iface_mesh_group_add(
 			   "CTRL_IFACE: Cannot use MESH_GROUP_ADD on a non mesh network");
 		return -1;
 	}
+	if (ssid->key_mgmt != WPA_KEY_MGMT_NONE &&
+	    ssid->key_mgmt != WPA_KEY_MGMT_SAE) {
+		wpa_printf(MSG_ERROR,
+			   "CTRL_IFACE: key_mgmt for mesh network should be open or SAE");
+		return -1;
+	}
 
 	/*
 	 * TODO: If necessary write our own group_add function,

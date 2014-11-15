@@ -220,21 +220,28 @@ static void mesh_mpm_send_plink_action(struct wpa_supplicant *wpa_s,
 	u8 ie_len, add_plid = 0;
 	int ret;
 	int ampe = conf->security & MESH_CONF_SEC_AMPE;
+	size_t buf_len;
 
 	if (!sta)
 		return;
 
-	buf = wpabuf_alloc(2 +      /* capability info */
-			   2 +      /* AID */
-			   2 + 8 +  /* supported rates */
-			   2 + (32 - 8) +
-			   2 + 32 + /* mesh ID */
-			   2 + 7 +  /* mesh config */
-			   2 + 26 + /* HT capabilities */
-			   2 + 22 + /* HT operation */
-			   2 + 23 + /* peering management */
-			   2 + 96 + /* AMPE */
-			   2 + 16); /* MIC */
+	buf_len = 2 +      /* capability info */
+		  2 +      /* AID */
+		  2 + 8 +  /* supported rates */
+		  2 + (32 - 8) +
+		  2 + 32 + /* mesh ID */
+		  2 + 7 +  /* mesh config */
+		  2 + 23 + /* peering management */
+		  2 + 96 + /* AMPE */
+		  2 + 16;  /* MIC */
+#ifdef CONFIG_IEEE80211N
+	if (type != PLINK_CLOSE &&
+	    wpa_s->current_ssid->mesh_ht_mode > CHAN_NO_HT) {
+		buf_len += 2 + 26 + /* HT capabilities */
+			   2 + 22;  /* HT operation */
+	}
+#endif /* CONFIG_IEEE80211N */
+	buf = wpabuf_alloc(buf_len);
 	if (!buf)
 		return;
 

@@ -101,6 +101,7 @@ class WpaSupplicant:
         self.request("SET p2p_pref_chan ")
         self.request("SET p2p_no_group_iface 1")
         self.request("SET p2p_go_intent 7")
+        self.request("SET ignore_old_scan_res 0")
         if self.gctrl_mon:
             try:
                 self.gctrl_mon.detach()

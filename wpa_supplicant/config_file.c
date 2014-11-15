@@ -755,6 +755,10 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 #ifdef CONFIG_MESH
 	STR(mesh_ht_mode);
 	STR(mesh_basic_rates);
+	INT_DEF(dot11MeshMaxRetries, DEFAULT_MESH_MAX_RETRIES);
+	INT_DEF(dot11MeshRetryTimeout, DEFAULT_MESH_RETRY_TIMEOUT);
+	INT_DEF(dot11MeshConfirmTimeout, DEFAULT_MESH_CONFIRM_TIMEOUT);
+	INT_DEF(dot11MeshHoldingTimeout, DEFAULT_MESH_HOLDING_TIMEOUT);
 #endif /* CONFIG_MESH */
 
 #undef STR

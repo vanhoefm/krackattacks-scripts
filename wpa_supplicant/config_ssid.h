@@ -28,6 +28,10 @@
 
 #define DEFAULT_BG_SCAN_PERIOD -1
 #define DEFAULT_MESH_HT_MODE CHAN_UNDEFINED /* undefined */
+#define DEFAULT_MESH_MAX_RETRIES 2
+#define DEFAULT_MESH_RETRY_TIMEOUT 40
+#define DEFAULT_MESH_CONFIRM_TIMEOUT 40
+#define DEFAULT_MESH_HOLDING_TIMEOUT 40
 #define DEFAULT_DISABLE_HT 0
 #define DEFAULT_DISABLE_HT40 0
 #define DEFAULT_DISABLE_SGI 0
@@ -418,6 +422,14 @@ struct wpa_ssid {
 	 *
 	 */
 	int *mesh_basic_rates;
+
+	/**
+	 * Mesh network plink parameters
+	 */
+	int dot11MeshMaxRetries;
+	int dot11MeshRetryTimeout; /* msec */
+	int dot11MeshConfirmTimeout; /* msec */
+	int dot11MeshHoldingTimeout; /* msec */
 
 	int ht40;
 

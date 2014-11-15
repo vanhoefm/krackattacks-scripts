@@ -1851,6 +1851,10 @@ static const struct parse_data ssid_fields[] = {
 #ifdef CONFIG_MESH
 	{ FUNC(mesh_ht_mode) },
 	{ FUNC(mesh_basic_rates) },
+	{ INT(dot11MeshMaxRetries) },
+	{ INT(dot11MeshRetryTimeout) },
+	{ INT(dot11MeshConfirmTimeout) },
+	{ INT(dot11MeshHoldingTimeout) },
 #endif /* CONFIG_MESH */
 	{ INT(wpa_ptk_rekey) },
 	{ STR(bgscan) },
@@ -2335,6 +2339,10 @@ void wpa_config_set_network_defaults(struct wpa_ssid *ssid)
 #endif /* IEEE8021X_EAPOL */
 #ifdef CONFIG_MESH
 	ssid->mesh_ht_mode = DEFAULT_MESH_HT_MODE;
+	ssid->dot11MeshMaxRetries = DEFAULT_MESH_MAX_RETRIES;
+	ssid->dot11MeshRetryTimeout = DEFAULT_MESH_RETRY_TIMEOUT;
+	ssid->dot11MeshConfirmTimeout = DEFAULT_MESH_CONFIRM_TIMEOUT;
+	ssid->dot11MeshHoldingTimeout = DEFAULT_MESH_HOLDING_TIMEOUT;
 #endif /* CONFIG_MESH */
 #ifdef CONFIG_HT_OVERRIDES
 	ssid->disable_ht = DEFAULT_DISABLE_HT;

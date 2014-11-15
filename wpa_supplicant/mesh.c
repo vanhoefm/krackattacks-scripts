@@ -89,6 +89,10 @@ static struct mesh_conf * mesh_config_create(struct wpa_ssid *ssid)
 	conf->mesh_cc_id = 0;
 	conf->mesh_sp_id = MESH_SYNC_METHOD_NEIGHBOR_OFFSET;
 	conf->mesh_auth_id = (conf->security & MESH_CONF_SEC_AUTH) ? 1 : 0;
+	conf->dot11MeshMaxRetries = ssid->dot11MeshMaxRetries;
+	conf->dot11MeshRetryTimeout = ssid->dot11MeshRetryTimeout;
+	conf->dot11MeshConfirmTimeout = ssid->dot11MeshConfirmTimeout;
+	conf->dot11MeshHoldingTimeout = ssid->dot11MeshHoldingTimeout;
 
 	return conf;
 }

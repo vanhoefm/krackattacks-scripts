@@ -474,3 +474,62 @@ int wpas_mesh_scan_result_text(const u8 *ies, size_t ies_len, char *buf,
 {
 	return mesh_attr_text(ies, ies_len, buf, end);
 }
+
+
+static int wpas_mesh_get_ifname(struct wpa_supplicant *wpa_s, char *ifname,
+				size_t len)
+{
+	char *ifname_ptr = wpa_s->ifname;
+	int res;
+
+	res = os_snprintf(ifname, len, "mesh-%s-%d", ifname_ptr,
+			  wpa_s->mesh_if_idx);
+	if (os_snprintf_error(len, res) ||
+	    (os_strlen(ifname) >= IFNAMSIZ &&
+	     os_strlen(wpa_s->ifname) < IFNAMSIZ)) {
+		/* Try to avoid going over the IFNAMSIZ length limit */
+		res = os_snprintf(ifname, len, "mesh-%d", wpa_s->mesh_if_idx);
+		if (os_snprintf_error(len, res))
+			return -1;
+	}
+	wpa_s->mesh_if_idx++;
+	return 0;
+}
+
+
+int wpas_mesh_add_interface(struct wpa_supplicant *wpa_s, char *ifname,
+			    size_t len)
+{
+	struct wpa_interface iface;
+	struct wpa_supplicant *mesh_wpa_s;
+	u8 addr[ETH_ALEN];
+
+	if (ifname[0] == '\0' && wpas_mesh_get_ifname(wpa_s, ifname, len) < 0)
+		return -1;
+
+	if (wpa_drv_if_add(wpa_s, WPA_IF_MESH, ifname, NULL, NULL, NULL, addr,
+			   NULL) < 0) {
+		wpa_printf(MSG_ERROR,
+			   "mesh: Failed to create new mesh interface");
+		return -1;
+	}
+	wpa_printf(MSG_INFO, "mesh: Created virtual interface %s addr "
+		   MACSTR, ifname, MAC2STR(addr));
+
+	os_memset(&iface, 0, sizeof(iface));
+	iface.ifname = ifname;
+	iface.driver = wpa_s->driver->name;
+	iface.driver_param = wpa_s->conf->driver_param;
+	iface.ctrl_interface = wpa_s->conf->ctrl_interface;
+
+	mesh_wpa_s = wpa_supplicant_add_iface(wpa_s->global, &iface);
+	if (!mesh_wpa_s) {
+		wpa_printf(MSG_ERROR,
+			   "mesh: Failed to create new wpa_supplicant interface");
+		wpa_supplicant_remove_iface(wpa_s->global, wpa_s, 0);
+		return -1;
+	}
+	mesh_wpa_s->mesh_if_created = 1;
+	mesh_wpa_s->parent = wpa_s;
+	return 0;
+}

@@ -2423,6 +2423,27 @@ static int wpa_supplicant_ctrl_iface_scan_results(
 
 #ifdef CONFIG_MESH
 
+static int wpa_supplicant_ctrl_iface_mesh_interface_add(
+	struct wpa_supplicant *wpa_s, char *cmd, char *reply, size_t max_len)
+{
+	char *pos, ifname[IFNAMSIZ + 1];
+
+	ifname[0] = '\0';
+
+	pos = os_strstr(cmd, "ifname=");
+	if (pos) {
+		pos += 7;
+		os_strlcpy(ifname, pos, sizeof(ifname));
+	}
+
+	if (wpas_mesh_add_interface(wpa_s, ifname, sizeof(ifname)) < 0)
+		return -1;
+
+	os_strlcpy(reply, ifname, max_len);
+	return os_strlen(ifname);
+}
+
+
 static int wpa_supplicant_ctrl_iface_mesh_group_add(
 	struct wpa_supplicant *wpa_s, char *cmd)
 {
@@ -2463,17 +2484,32 @@ static int wpa_supplicant_ctrl_iface_mesh_group_add(
 static int wpa_supplicant_ctrl_iface_mesh_group_remove(
 	struct wpa_supplicant *wpa_s, char *cmd)
 {
-	/*
-	 * TODO: Support a multiple mesh and other iface type combinations
-	 */
-	if (os_strcmp(cmd, wpa_s->ifname) != 0) {
-		wpa_printf(MSG_DEBUG,
-			   "CTRL_IFACE: MESH_GROUP_REMOVE unknown interface name: %s",
+	struct wpa_supplicant *orig;
+	struct wpa_global *global;
+	int found = 0;
+
+	wpa_printf(MSG_DEBUG, "CTRL_IFACE: MESH_GROUP_REMOVE ifname=%s", cmd);
+
+	global = wpa_s->global;
+	orig = wpa_s;
+
+	for (wpa_s = global->ifaces; wpa_s; wpa_s = wpa_s->next) {
+		if (os_strcmp(wpa_s->ifname, cmd) == 0) {
+			found = 1;
+			break;
+		}
+	}
+	if (!found) {
+		wpa_printf(MSG_ERROR,
+			   "CTRL_IFACE: MESH_GROUP_REMOVE ifname=%s not found",
 			   cmd);
 		return -1;
 	}
-
-	wpa_printf(MSG_DEBUG, "CTRL_IFACE: MESH_GROUP_REMOVE ifname=%s", cmd);
+	if (wpa_s->mesh_if_created && wpa_s == orig) {
+		wpa_printf(MSG_ERROR,
+			   "CTRL_IFACE: MESH_GROUP_REMOVE can't remove itself");
+		return -1;
+	}
 
 	wpa_s->reassociate = 0;
 	wpa_s->disconnected = 1;
@@ -2485,6 +2521,9 @@ static int wpa_supplicant_ctrl_iface_mesh_group_remove(
 	 * for now we can reuse deauthenticate
 	 */
 	wpa_supplicant_deauthenticate(wpa_s, WLAN_REASON_DEAUTH_LEAVING);
+
+	if (wpa_s->mesh_if_created)
+		wpa_supplicant_remove_iface(global, wpa_s, 0);
 
 	return 0;
 }
@@ -7175,6 +7214,12 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 			reply_len = -1;
 #endif /* CONFIG_IBSS_RSN */
 #ifdef CONFIG_MESH
+	} else if (os_strncmp(buf, "MESH_INTERFACE_ADD ", 19) == 0) {
+		reply_len = wpa_supplicant_ctrl_iface_mesh_interface_add(
+			wpa_s, buf + 19, reply, reply_size);
+	} else if (os_strcmp(buf, "MESH_INTERFACE_ADD") == 0) {
+		reply_len = wpa_supplicant_ctrl_iface_mesh_interface_add(
+			wpa_s, "", reply, reply_size);
 	} else if (os_strncmp(buf, "MESH_GROUP_ADD ", 15) == 0) {
 		if (wpa_supplicant_ctrl_iface_mesh_group_add(wpa_s, buf + 15))
 			reply_len = -1;

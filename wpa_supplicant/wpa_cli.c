@@ -1754,6 +1754,13 @@ static int wpa_cli_cmd_roam(struct wpa_ctrl *ctrl, int argc, char *argv[])
 
 #ifdef CONFIG_MESH
 
+static int wpa_cli_cmd_mesh_interface_add(struct wpa_ctrl *ctrl, int argc,
+					  char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "MESH_INTERFACE_ADD", 0, argc, argv);
+}
+
+
 static int wpa_cli_cmd_mesh_group_add(struct wpa_ctrl *ctrl, int argc,
 				      char *argv[])
 {
@@ -2834,6 +2841,9 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	  cli_cmd_flag_none,
 	  "<addr> = roam to the specified BSS" },
 #ifdef CONFIG_MESH
+	{ "mesh_interface_add", wpa_cli_cmd_mesh_interface_add, NULL,
+	  cli_cmd_flag_none,
+	  "[ifname] = Create a new mesh interface" },
 	{ "mesh_group_add", wpa_cli_cmd_mesh_group_add, NULL,
 	  cli_cmd_flag_none,
 	  "<network id> = join a mesh network (disable others)" },

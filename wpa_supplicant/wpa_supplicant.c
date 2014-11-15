@@ -4085,6 +4085,10 @@ int wpa_supplicant_remove_iface(struct wpa_global *global,
 				int terminate)
 {
 	struct wpa_supplicant *prev;
+#ifdef CONFIG_MESH
+	unsigned int mesh_if_created = wpa_s->mesh_if_created;
+	char *ifname = NULL;
+#endif /* CONFIG_MESH */
 
 	/* Remove interface from the global list of interfaces */
 	prev = global->ifaces;
@@ -4100,11 +4104,29 @@ int wpa_supplicant_remove_iface(struct wpa_global *global,
 
 	wpa_dbg(wpa_s, MSG_DEBUG, "Removing interface %s", wpa_s->ifname);
 
+#ifdef CONFIG_MESH
+	if (mesh_if_created) {
+		ifname = os_strdup(wpa_s->ifname);
+		if (ifname == NULL) {
+			wpa_dbg(wpa_s, MSG_ERROR,
+				"mesh: Failed to malloc ifname");
+			return -1;
+		}
+	}
+#endif /* CONFIG_MESH */
+
 	if (global->p2p_group_formation == wpa_s)
 		global->p2p_group_formation = NULL;
 	if (global->p2p_invite_group == wpa_s)
 		global->p2p_invite_group = NULL;
 	wpa_supplicant_deinit_iface(wpa_s, 1, terminate);
+
+#ifdef CONFIG_MESH
+	if (mesh_if_created) {
+		wpa_drv_if_remove(global->ifaces, WPA_IF_MESH, ifname);
+		os_free(ifname);
+	}
+#endif /* CONFIG_MESH */
 
 	return 0;
 }

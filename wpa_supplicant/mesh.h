@@ -16,6 +16,8 @@ void wpa_supplicant_mesh_iface_deinit(struct wpa_supplicant *wpa_s,
 				      struct hostapd_iface *ifmsh);
 int wpas_mesh_scan_result_text(const u8 *ies, size_t ies_len, char *buf,
 			       char *end);
+int wpas_mesh_add_interface(struct wpa_supplicant *wpa_s, char *ifname,
+			    size_t len);
 
 #ifdef CONFIG_MESH
 

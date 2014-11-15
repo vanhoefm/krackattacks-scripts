@@ -1244,7 +1244,12 @@ enum wpa_driver_if_type {
 	 * WPA_IF_P2P_DEVICE - P2P Device interface is used to indentify the
 	 * abstracted P2P Device function in the driver
 	 */
-	WPA_IF_P2P_DEVICE
+	WPA_IF_P2P_DEVICE,
+
+	/*
+	 * WPA_IF_MESH - Mesh interface
+	 */
+	WPA_IF_MESH,
 };
 
 struct wpa_init_params {

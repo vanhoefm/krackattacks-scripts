@@ -3272,6 +3272,14 @@ static void wpa_cli_action_process(const char *msg)
 			wpa_cli_connected = 0;
 			wpa_cli_exec(action_file, ifname, "DISCONNECTED");
 		}
+	} else if (str_match(pos, MESH_GROUP_STARTED)) {
+		wpa_cli_exec(action_file, ctrl_ifname, pos);
+	} else if (str_match(pos, MESH_GROUP_REMOVED)) {
+		wpa_cli_exec(action_file, ctrl_ifname, pos);
+	} else if (str_match(pos, MESH_PEER_CONNECTED)) {
+		wpa_cli_exec(action_file, ctrl_ifname, pos);
+	} else if (str_match(pos, MESH_PEER_DISCONNECTED)) {
+		wpa_cli_exec(action_file, ctrl_ifname, pos);
 	} else if (str_match(pos, P2P_EVENT_GROUP_STARTED)) {
 		wpa_cli_exec(action_file, ifname, pos);
 	} else if (str_match(pos, P2P_EVENT_GROUP_REMOVED)) {

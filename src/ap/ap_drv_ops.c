@@ -573,7 +573,8 @@ int hostapd_set_freq(struct hostapd_data *hapd, int mode, int freq,
 				    vht_enabled, sec_channel_offset,
 				    vht_oper_chwidth,
 				    center_segment0, center_segment1,
-				    hapd->iface->current_mode->vht_capab))
+				    hapd->iface->current_mode ?
+				    hapd->iface->current_mode->vht_capab : 0))
 		return -1;
 
 	if (hapd->driver == NULL)

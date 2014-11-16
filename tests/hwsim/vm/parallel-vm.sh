@@ -15,7 +15,7 @@ DATE=$(date +%s)
 
 for i in `seq 1 $NUM`; do
     printf "\rStarting virtual machine $i/$NUM"
-    ./vm-run.sh --ext srv.$i --split $i/$NUM $* >> $LOGS/parallel-$DATE.srv.$i 2>&1 &
+    ./vm-run.sh --timestamp $DATE --ext srv.$i --split $i/$NUM $* >> $LOGS/parallel-$DATE.srv.$i 2>&1 &
 done
 echo
 

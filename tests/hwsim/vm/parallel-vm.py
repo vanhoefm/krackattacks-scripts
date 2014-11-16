@@ -129,7 +129,8 @@ def main():
     vm = {}
     for i in range(0, num_servers):
         print("\rStarting virtual machine {}/{}".format(i + 1, num_servers)),
-        cmd = ['./vm-run.sh', '--ext', 'srv.%d' % (i + 1),
+        cmd = ['./vm-run.sh', '--timestamp', str(timestamp),
+               '--ext', 'srv.%d' % (i + 1),
                '--split', '%d/%d' % (i + 1, num_servers)] + sys.argv[2:]
         vm[i] = {}
         vm[i]['proc'] = subprocess.Popen(cmd,

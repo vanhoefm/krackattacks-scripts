@@ -43,13 +43,18 @@ fi
 CMD=$TESTDIR/vm/inside.sh
 
 unset RUN_TEST_ARGS
-DATE=$(date +%s)
+TIMESTAMP=$(date +%s)
+DATE=$TIMESTAMP
 CODECOV=no
 TIMEWARP=0
 while [ "$1" != "" ]; do
 	case $1 in
+		--timestamp ) shift
+			TIMESTAMP=$1
+			shift
+			;;
 		--ext ) shift
-			DATE=$(date +%s).$1
+			DATE=$TIMESTAMP.$1
 			shift
 			;;
 		--codecov ) shift

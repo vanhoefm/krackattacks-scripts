@@ -56,10 +56,10 @@ void wpa_eapol_key_send(struct wpa_sm *sm, const u8 *kck,
 		}
 	}
 	if (key_mic &&
-	    wpa_eapol_key_mic(kck, ver, msg, msg_len, key_mic)) {
+	    wpa_eapol_key_mic(kck, sm->key_mgmt, ver, msg, msg_len, key_mic)) {
 		wpa_msg(sm->ctx->msg_ctx, MSG_ERROR,
-			"WPA: Failed to generate EAPOL-Key "
-			"version %d MIC", ver);
+			"WPA: Failed to generate EAPOL-Key version %d key_mgmt 0x%x MIC",
+			ver, sm->key_mgmt);
 		goto out;
 	}
 	wpa_hexdump_key(MSG_DEBUG, "WPA: KCK", kck, 16);
@@ -89,7 +89,8 @@ void wpa_sm_key_request(struct wpa_sm *sm, int error, int pairwise)
 	int key_info, ver;
 	u8 bssid[ETH_ALEN], *rbuf;
 
-	if (sm->key_mgmt == WPA_KEY_MGMT_OSEN)
+	if (sm->key_mgmt == WPA_KEY_MGMT_OSEN ||
+	    wpa_key_mgmt_suite_b(sm->key_mgmt))
 		ver = WPA_KEY_INFO_TYPE_AKM_DEFINED;
 	else if (wpa_key_mgmt_ft(sm->key_mgmt) ||
 		 wpa_key_mgmt_sha256(sm->key_mgmt))
@@ -1451,7 +1452,7 @@ static int wpa_supplicant_verify_eapol_key_mic(struct wpa_sm *sm,
 	os_memcpy(mic, key->key_mic, 16);
 	if (sm->tptk_set) {
 		os_memset(key->key_mic, 0, 16);
-		wpa_eapol_key_mic(sm->tptk.kck, ver, buf, len,
+		wpa_eapol_key_mic(sm->tptk.kck, sm->key_mgmt, ver, buf, len,
 				  key->key_mic);
 		if (os_memcmp_const(mic, key->key_mic, 16) != 0) {
 			wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
@@ -1468,7 +1469,7 @@ static int wpa_supplicant_verify_eapol_key_mic(struct wpa_sm *sm,
 
 	if (!ok && sm->ptk_set) {
 		os_memset(key->key_mic, 0, 16);
-		wpa_eapol_key_mic(sm->ptk.kck, ver, buf, len,
+		wpa_eapol_key_mic(sm->ptk.kck, sm->key_mgmt, ver, buf, len,
 				  key->key_mic);
 		if (os_memcmp_const(mic, key->key_mic, 16) != 0) {
 			wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
@@ -1522,7 +1523,8 @@ static int wpa_supplicant_decrypt_key_data(struct wpa_sm *sm,
 		os_memset(ek, 0, sizeof(ek));
 	} else if (ver == WPA_KEY_INFO_TYPE_HMAC_SHA1_AES ||
 		   ver == WPA_KEY_INFO_TYPE_AES_128_CMAC ||
-		   sm->key_mgmt == WPA_KEY_MGMT_OSEN) {
+		   sm->key_mgmt == WPA_KEY_MGMT_OSEN ||
+		   wpa_key_mgmt_suite_b(sm->key_mgmt)) {
 		u8 *buf;
 		if (*key_data_len < 8 || *key_data_len % 8) {
 			wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
@@ -1720,6 +1722,7 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 	    ver != WPA_KEY_INFO_TYPE_AES_128_CMAC &&
 #endif /* CONFIG_IEEE80211R || CONFIG_IEEE80211W */
 	    ver != WPA_KEY_INFO_TYPE_HMAC_SHA1_AES &&
+	    !wpa_key_mgmt_suite_b(sm->key_mgmt) &&
 	    sm->key_mgmt != WPA_KEY_MGMT_OSEN) {
 		wpa_msg(sm->ctx->msg_ctx, MSG_INFO,
 			"WPA: Unsupported EAPOL-Key descriptor version %d",
@@ -1731,6 +1734,14 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 	    ver != WPA_KEY_INFO_TYPE_AKM_DEFINED) {
 		wpa_msg(sm->ctx->msg_ctx, MSG_INFO,
 			"OSEN: Unsupported EAPOL-Key descriptor version %d",
+			ver);
+		goto out;
+	}
+
+	if (wpa_key_mgmt_suite_b(sm->key_mgmt) &&
+	    ver != WPA_KEY_INFO_TYPE_AKM_DEFINED) {
+		wpa_msg(sm->ctx->msg_ctx, MSG_INFO,
+			"RSN: Unsupported EAPOL-Key descriptor version %d (expected AKM defined = 0)",
 			ver);
 		goto out;
 	}
@@ -1748,7 +1759,8 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 #ifdef CONFIG_IEEE80211W
 	if (wpa_key_mgmt_sha256(sm->key_mgmt)) {
 		if (ver != WPA_KEY_INFO_TYPE_AES_128_CMAC &&
-		    sm->key_mgmt != WPA_KEY_MGMT_OSEN) {
+		    sm->key_mgmt != WPA_KEY_MGMT_OSEN &&
+		    !wpa_key_mgmt_suite_b(sm->key_mgmt)) {
 			wpa_msg(sm->ctx->msg_ctx, MSG_INFO,
 				"WPA: AP did not use the "
 				"negotiated AES-128-CMAC");
@@ -1757,6 +1769,7 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 	} else
 #endif /* CONFIG_IEEE80211W */
 	if (sm->pairwise_cipher == WPA_CIPHER_CCMP &&
+	    !wpa_key_mgmt_suite_b(sm->key_mgmt) &&
 	    ver != WPA_KEY_INFO_TYPE_HMAC_SHA1_AES) {
 		wpa_msg(sm->ctx->msg_ctx, MSG_INFO,
 			"WPA: CCMP is used, but EAPOL-Key "
@@ -1776,6 +1789,7 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 		} else
 			goto out;
 	} else if (sm->pairwise_cipher == WPA_CIPHER_GCMP &&
+		   !wpa_key_mgmt_suite_b(sm->key_mgmt) &&
 		   ver != WPA_KEY_INFO_TYPE_HMAC_SHA1_AES) {
 		wpa_msg(sm->ctx->msg_ctx, MSG_INFO,
 			"WPA: GCMP is used, but EAPOL-Key "

@@ -22,6 +22,7 @@
 /**
  * wpa_eapol_key_mic - Calculate EAPOL-Key MIC
  * @key: EAPOL-Key Key Confirmation Key (KCK)
+ * @akmp: WPA_KEY_MGMT_* used in key derivation
  * @ver: Key descriptor version (WPA_KEY_INFO_TYPE_*)
  * @buf: Pointer to the beginning of the EAPOL header (version field)
  * @len: Length of the EAPOL frame (from EAPOL header to the end of the frame)
@@ -37,10 +38,10 @@
  * happened during final editing of the standard and the correct behavior is
  * defined in the last draft (IEEE 802.11i/D10).
  */
-int wpa_eapol_key_mic(const u8 *key, int ver, const u8 *buf, size_t len,
-		      u8 *mic)
+int wpa_eapol_key_mic(const u8 *key, int akmp, int ver, const u8 *buf,
+		      size_t len, u8 *mic)
 {
-	u8 hash[SHA1_MAC_LEN];
+	u8 hash[SHA256_MAC_LEN];
 
 	switch (ver) {
 #ifndef CONFIG_FIPS
@@ -56,11 +57,23 @@ int wpa_eapol_key_mic(const u8 *key, int ver, const u8 *buf, size_t len,
 	case WPA_KEY_INFO_TYPE_AES_128_CMAC:
 		return omac1_aes_128(key, buf, len, mic);
 #endif /* CONFIG_IEEE80211R || CONFIG_IEEE80211W */
-#ifdef CONFIG_HS20
 	case WPA_KEY_INFO_TYPE_AKM_DEFINED:
-		/* FIX: This should be based on negotiated AKM */
-		return omac1_aes_128(key, buf, len, mic);
+		switch (akmp) {
+#ifdef CONFIG_HS20
+		case WPA_KEY_MGMT_OSEN:
+			return omac1_aes_128(key, buf, len, mic);
 #endif /* CONFIG_HS20 */
+#ifdef CONFIG_SUITEB
+		case WPA_KEY_MGMT_IEEE8021X_SUITE_B:
+			if (hmac_sha256(key, 16, buf, len, hash))
+				return -1;
+			os_memcpy(mic, hash, MD5_MAC_LEN);
+			break;
+#endif /* CONFIG_SUITEB */
+		default:
+			return -1;
+		}
+		break;
 	default:
 		return -1;
 	}

@@ -928,8 +928,8 @@ int peerkey_verify_eapol_key_mic(struct wpa_sm *sm,
 	os_memcpy(mic, key->key_mic, 16);
 	if (peerkey->tstk_set) {
 		os_memset(key->key_mic, 0, 16);
-		wpa_eapol_key_mic(peerkey->tstk.kck, ver, buf, len,
-				  key->key_mic);
+		wpa_eapol_key_mic(peerkey->tstk.kck, sm->key_mgmt, ver, buf,
+				  len, key->key_mic);
 		if (os_memcmp_const(mic, key->key_mic, 16) != 0) {
 			wpa_printf(MSG_WARNING, "RSN: Invalid EAPOL-Key MIC "
 				   "when using TSTK - ignoring TSTK");
@@ -944,7 +944,7 @@ int peerkey_verify_eapol_key_mic(struct wpa_sm *sm,
 
 	if (!ok && peerkey->stk_set) {
 		os_memset(key->key_mic, 0, 16);
-		wpa_eapol_key_mic(peerkey->stk.kck, ver, buf, len,
+		wpa_eapol_key_mic(peerkey->stk.kck, sm->key_mgmt, ver, buf, len,
 				  key->key_mic);
 		if (os_memcmp_const(mic, key->key_mic, 16) != 0) {
 			wpa_printf(MSG_WARNING, "RSN: Invalid EAPOL-Key MIC "

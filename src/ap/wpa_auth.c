@@ -33,7 +33,8 @@
 
 static void wpa_send_eapol_timeout(void *eloop_ctx, void *timeout_ctx);
 static int wpa_sm_step(struct wpa_state_machine *sm);
-static int wpa_verify_key_mic(struct wpa_ptk *PTK, u8 *data, size_t data_len);
+static int wpa_verify_key_mic(int akmp, struct wpa_ptk *PTK, u8 *data,
+			      size_t data_len);
 static void wpa_sm_call_step(void *eloop_ctx, void *timeout_ctx);
 static void wpa_group_sm_step(struct wpa_authenticator *wpa_auth,
 			      struct wpa_group *group);
@@ -884,6 +885,7 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 		    sm->pairwise == WPA_CIPHER_GCMP) {
 			if (wpa_use_aes_cmac(sm) &&
 			    sm->wpa_key_mgmt != WPA_KEY_MGMT_OSEN &&
+			    !wpa_key_mgmt_suite_b(sm->wpa_key_mgmt) &&
 			    ver != WPA_KEY_INFO_TYPE_AES_128_CMAC) {
 				wpa_auth_logger(wpa_auth, sm->addr,
 						LOGGER_WARNING,
@@ -901,6 +903,13 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 						"with CCMP/GCMP");
 				return;
 			}
+		}
+
+		if (wpa_key_mgmt_suite_b(sm->wpa_key_mgmt) &&
+		    ver != WPA_KEY_INFO_TYPE_AKM_DEFINED) {
+			wpa_auth_logger(wpa_auth, sm->addr, LOGGER_WARNING,
+					"did not use EAPOL-Key descriptor version 0 as required for AKM-defined cases");
+			return;
 		}
 	}
 
@@ -1123,7 +1132,8 @@ continue_processing:
 
 	sm->MICVerified = FALSE;
 	if (sm->PTK_valid && !sm->update_snonce) {
-		if (wpa_verify_key_mic(&sm->PTK, data, data_len)) {
+		if (wpa_verify_key_mic(sm->wpa_key_mgmt, &sm->PTK, data,
+				       data_len)) {
 			wpa_auth_logger(wpa_auth, sm->addr, LOGGER_INFO,
 					"received EAPOL-Key with invalid MIC");
 			return;
@@ -1295,7 +1305,8 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 
 	if (force_version)
 		version = force_version;
-	else if (sm->wpa_key_mgmt == WPA_KEY_MGMT_OSEN)
+	else if (sm->wpa_key_mgmt == WPA_KEY_MGMT_OSEN ||
+		 wpa_key_mgmt_suite_b(sm->wpa_key_mgmt))
 		version = WPA_KEY_INFO_TYPE_AKM_DEFINED;
 	else if (wpa_use_aes_cmac(sm))
 		version = WPA_KEY_INFO_TYPE_AES_128_CMAC;
@@ -1320,6 +1331,7 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 
 	if ((version == WPA_KEY_INFO_TYPE_HMAC_SHA1_AES ||
 	     sm->wpa_key_mgmt == WPA_KEY_MGMT_OSEN ||
+	     wpa_key_mgmt_suite_b(sm->wpa_key_mgmt) ||
 	     version == WPA_KEY_INFO_TYPE_AES_128_CMAC) && encr) {
 		pad_len = key_data_len % 8;
 		if (pad_len)
@@ -1389,6 +1401,7 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 				buf, key_data_len);
 		if (version == WPA_KEY_INFO_TYPE_HMAC_SHA1_AES ||
 		    sm->wpa_key_mgmt == WPA_KEY_MGMT_OSEN ||
+		    wpa_key_mgmt_suite_b(sm->wpa_key_mgmt) ||
 		    version == WPA_KEY_INFO_TYPE_AES_128_CMAC) {
 			if (aes_wrap(sm->PTK.kek, 16,
 				     (key_data_len - 8) / 8, buf,
@@ -1420,8 +1433,8 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 			os_free(hdr);
 			return;
 		}
-		wpa_eapol_key_mic(sm->PTK.kck, version, (u8 *) hdr, len,
-				  key->key_mic);
+		wpa_eapol_key_mic(sm->PTK.kck, sm->wpa_key_mgmt, version,
+				  (u8 *) hdr, len, key->key_mic);
 #ifdef CONFIG_TESTING_OPTIONS
 		if (!pairwise &&
 		    wpa_auth->conf.corrupt_gtk_rekey_mic_probability > 0.0 &&
@@ -1473,7 +1486,8 @@ static void wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 }
 
 
-static int wpa_verify_key_mic(struct wpa_ptk *PTK, u8 *data, size_t data_len)
+static int wpa_verify_key_mic(int akmp, struct wpa_ptk *PTK, u8 *data,
+			      size_t data_len)
 {
 	struct ieee802_1x_hdr *hdr;
 	struct wpa_eapol_key *key;
@@ -1489,7 +1503,7 @@ static int wpa_verify_key_mic(struct wpa_ptk *PTK, u8 *data, size_t data_len)
 	key_info = WPA_GET_BE16(key->key_info);
 	os_memcpy(mic, key->key_mic, 16);
 	os_memset(key->key_mic, 0, 16);
-	if (wpa_eapol_key_mic(PTK->kck, key_info & WPA_KEY_INFO_TYPE_MASK,
+	if (wpa_eapol_key_mic(PTK->kck, akmp, key_info & WPA_KEY_INFO_TYPE_MASK,
 			      data, data_len, key->key_mic) ||
 	    os_memcmp_const(mic, key->key_mic, 16) != 0)
 		ret = -1;
@@ -1795,10 +1809,13 @@ SM_STATE(WPA_PTK, PTKSTART)
 		pmkid[0] = WLAN_EID_VENDOR_SPECIFIC;
 		pmkid[1] = RSN_SELECTOR_LEN + PMKID_LEN;
 		RSN_SELECTOR_PUT(&pmkid[2], RSN_KEY_DATA_PMKID);
-		if (sm->pmksa)
+		if (sm->pmksa) {
 			os_memcpy(&pmkid[2 + RSN_SELECTOR_LEN],
 				  sm->pmksa->pmkid, PMKID_LEN);
-		else {
+		} else if (wpa_key_mgmt_suite_b(sm->wpa_key_mgmt)) {
+			/* No KCK available to derive PMKID */
+			pmkid = NULL;
+		} else {
 			/*
 			 * Calculate PMKID since no PMKSA cache entry was
 			 * available with pre-calculated PMKID.
@@ -1856,7 +1873,8 @@ SM_STATE(WPA_PTK, PTKCALCNEGOTIATING)
 
 		wpa_derive_ptk(sm, pmk, &PTK);
 
-		if (wpa_verify_key_mic(&PTK, sm->last_rx_eapol_key,
+		if (wpa_verify_key_mic(sm->wpa_key_mgmt, &PTK,
+				       sm->last_rx_eapol_key,
 				       sm->last_rx_eapol_key_len) == 0) {
 			ok = 1;
 			break;

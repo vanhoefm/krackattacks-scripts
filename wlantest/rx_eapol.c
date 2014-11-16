@@ -31,7 +31,8 @@ static int is_zero(const u8 *buf, size_t len)
 }
 
 
-static int check_mic(const u8 *kck, int ver, const u8 *data, size_t len)
+static int check_mic(const u8 *kck, int akmp, int ver, const u8 *data,
+		     size_t len)
 {
 	u8 *buf;
 	int ret = -1;
@@ -49,7 +50,7 @@ static int check_mic(const u8 *kck, int ver, const u8 *data, size_t len)
 	os_memcpy(rx_mic, key->key_mic, 16);
 	os_memset(key->key_mic, 0, 16);
 
-	if (wpa_eapol_key_mic(kck, ver, buf, len, key->key_mic) == 0 &&
+	if (wpa_eapol_key_mic(kck, akmp, ver, buf, len, key->key_mic) == 0 &&
 	    os_memcmp(rx_mic, key->key_mic, 16) == 0)
 		ret = 0;
 
@@ -105,7 +106,7 @@ static int try_pmk(struct wlantest *wt, struct wlantest_bss *bss,
 		       bss->bssid, sta->addr, sta->anonce, sta->snonce,
 		       (u8 *) &ptk, ptk_len,
 		       wpa_key_mgmt_sha256(sta->key_mgmt));
-	if (check_mic(ptk.kck, ver, data, len) < 0)
+	if (check_mic(ptk.kck, sta->key_mgmt, ver, data, len) < 0)
 		return -1;
 
 	sta->tk_len = wpa_cipher_key_len(sta->pairwise_cipher);
@@ -168,7 +169,8 @@ static void derive_ptk(struct wlantest *wt, struct wlantest_bss *bss,
 
 		wpa_debug_level = MSG_WARNING;
 		dl_list_for_each(ptk, &wt->ptk, struct wlantest_ptk, list) {
-			if (check_mic(ptk->ptk.kck, ver, data, len) < 0)
+			if (check_mic(ptk->ptk.kck, sta->key_mgmt, ver, data,
+				      len) < 0)
 				continue;
 			wpa_printf(MSG_INFO, "Pre-set PTK matches for STA "
 				   MACSTR " BSSID " MACSTR,
@@ -241,7 +243,8 @@ static void rx_data_eapol_key_2_of_4(struct wlantest *wt, const u8 *dst,
 			 "Use TPTK for validation EAPOL-Key MIC");
 		kck = sta->tptk.kck;
 	}
-	if (check_mic(kck, key_info & WPA_KEY_INFO_TYPE_MASK, data, len) < 0) {
+	if (check_mic(kck, sta->key_mgmt, key_info & WPA_KEY_INFO_TYPE_MASK,
+		      data, len) < 0) {
 		add_note(wt, MSG_INFO, "Mismatch in EAPOL-Key 2/4 MIC");
 		return;
 	}
@@ -532,7 +535,8 @@ static void rx_data_eapol_key_3_of_4(struct wlantest *wt, const u8 *dst,
 		kck = sta->tptk.kck;
 		kek = sta->tptk.kek;
 	}
-	if (check_mic(kck, key_info & WPA_KEY_INFO_TYPE_MASK, data, len) < 0) {
+	if (check_mic(kck, sta->key_mgmt, key_info & WPA_KEY_INFO_TYPE_MASK,
+		      data, len) < 0) {
 		add_note(wt, MSG_INFO, "Mismatch in EAPOL-Key 3/4 MIC");
 		return;
 	}
@@ -677,7 +681,8 @@ static void rx_data_eapol_key_4_of_4(struct wlantest *wt, const u8 *dst,
 			 "Use TPTK for validation EAPOL-Key MIC");
 		kck = sta->tptk.kck;
 	}
-	if (check_mic(kck, key_info & WPA_KEY_INFO_TYPE_MASK, data, len) < 0) {
+	if (check_mic(kck, sta->key_mgmt, key_info & WPA_KEY_INFO_TYPE_MASK,
+		      data, len) < 0) {
 		add_note(wt, MSG_INFO, "Mismatch in EAPOL-Key 4/4 MIC");
 		return;
 	}
@@ -724,7 +729,8 @@ static void rx_data_eapol_key_1_of_2(struct wlantest *wt, const u8 *dst,
 	}
 
 	if (sta->ptk_set &&
-	    check_mic(sta->ptk.kck, key_info & WPA_KEY_INFO_TYPE_MASK,
+	    check_mic(sta->ptk.kck, sta->key_mgmt,
+		      key_info & WPA_KEY_INFO_TYPE_MASK,
 		      data, len) < 0) {
 		add_note(wt, MSG_INFO, "Mismatch in EAPOL-Key 1/2 MIC");
 		return;
@@ -848,7 +854,8 @@ static void rx_data_eapol_key_2_of_2(struct wlantest *wt, const u8 *dst,
 	}
 
 	if (sta->ptk_set &&
-	    check_mic(sta->ptk.kck, key_info & WPA_KEY_INFO_TYPE_MASK,
+	    check_mic(sta->ptk.kck, sta->key_mgmt,
+		      key_info & WPA_KEY_INFO_TYPE_MASK,
 		      data, len) < 0) {
 		add_note(wt, MSG_INFO, "Mismatch in EAPOL-Key 2/2 MIC");
 		return;

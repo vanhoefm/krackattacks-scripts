@@ -327,8 +327,8 @@ struct rsn_rdie {
 #endif /* _MSC_VER */
 
 
-int wpa_eapol_key_mic(const u8 *key, int ver, const u8 *buf, size_t len,
-		      u8 *mic);
+int wpa_eapol_key_mic(const u8 *key, int akmp, int ver, const u8 *buf,
+		      size_t len, u8 *mic);
 void wpa_pmk_to_ptk(const u8 *pmk, size_t pmk_len, const char *label,
 		    const u8 *addr1, const u8 *addr2,
 		    const u8 *nonce1, const u8 *nonce2,

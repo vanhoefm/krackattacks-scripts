@@ -28,6 +28,7 @@
 #include "rsn_supp/pmksa_cache.h"
 #include "l2_packet/l2_packet.h"
 #include "wps/wps.h"
+#include "fst/fst_ctrl_iface.h"
 #include "config.h"
 #include "wpa_supplicant_i.h"
 #include "driver_i.h"
@@ -4290,6 +4291,15 @@ static int print_bss_info(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 			return 0;
 		pos += ret;
 	}
+
+#ifdef CONFIG_FST
+	if (mask & WPA_BSS_MASK_FST) {
+		ret = fst_ctrl_iface_mb_info(bss->bssid, pos, end - pos);
+		if (ret < 0 || ret >= end - pos)
+			return 0;
+		pos += ret;
+	}
+#endif /* CONFIG_FST */
 
 	if (mask & WPA_BSS_MASK_DELIM) {
 		ret = os_snprintf(pos, end - pos, "====\n");
@@ -9130,6 +9140,55 @@ static int wpas_global_ctrl_iface_status(struct wpa_global *global,
 }
 
 
+#ifdef CONFIG_FST
+
+static int wpas_global_ctrl_iface_fst_attach(struct wpa_global *global,
+					     char *cmd, char *buf,
+					     size_t reply_size)
+{
+	char ifname[IFNAMSIZ + 1];
+	struct fst_iface_cfg cfg;
+	struct wpa_supplicant *wpa_s;
+	struct fst_wpa_obj iface_obj;
+
+	if (!fst_parse_attach_command(cmd, ifname, sizeof(ifname), &cfg)) {
+		wpa_s = wpa_supplicant_get_iface(global, ifname);
+		if (wpa_s) {
+			fst_wpa_supplicant_fill_iface_obj(wpa_s, &iface_obj);
+			wpa_s->fst = fst_attach(ifname, wpa_s->own_addr,
+						&iface_obj, &cfg);
+			if (wpa_s->fst)
+				return os_snprintf(buf, reply_size, "OK\n");
+		}
+	}
+
+	return -1;
+}
+
+
+static int wpas_global_ctrl_iface_fst_detach(struct wpa_global *global,
+					     char *cmd, char *buf,
+					     size_t reply_size)
+{
+	char ifname[IFNAMSIZ + 1];
+	struct wpa_supplicant *wpa_s;
+
+	if (!fst_parse_detach_command(cmd, ifname, sizeof(ifname))) {
+		wpa_s = wpa_supplicant_get_iface(global, ifname);
+		if (wpa_s) {
+			if (!fst_iface_detach(ifname)) {
+				wpa_s->fst = NULL;
+				return os_snprintf(buf, reply_size, "OK\n");
+			}
+		}
+	}
+
+	return -1;
+}
+
+#endif /* CONFIG_FST */
+
+
 char * wpa_supplicant_global_ctrl_iface_process(struct wpa_global *global,
 						char *buf, size_t *resp_len)
 {
@@ -9181,6 +9240,18 @@ char * wpa_supplicant_global_ctrl_iface_process(struct wpa_global *global,
 	} else if (os_strcmp(buf, "INTERFACES") == 0) {
 		reply_len = wpa_supplicant_global_iface_interfaces(
 			global, reply, reply_size);
+#ifdef CONFIG_FST
+	} else if (os_strncmp(buf, "FST-ATTACH ", 11) == 0) {
+		reply_len = wpas_global_ctrl_iface_fst_attach(global, buf + 11,
+							      reply,
+							      reply_size);
+	} else if (os_strncmp(buf, "FST-DETACH ", 11) == 0) {
+		reply_len = wpas_global_ctrl_iface_fst_detach(global, buf + 11,
+							      reply,
+							      reply_size);
+	} else if (os_strncmp(buf, "FST-MANAGER ", 12) == 0) {
+		reply_len = fst_ctrl_iface_receive(buf + 12, reply, reply_size);
+#endif /* CONFIG_FST */
 	} else if (os_strcmp(buf, "TERMINATE") == 0) {
 		wpa_supplicant_terminate_proc(global);
 	} else if (os_strcmp(buf, "SUSPEND") == 0) {

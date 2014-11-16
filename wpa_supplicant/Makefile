@@ -1591,6 +1591,21 @@ EXTRALIBS += WbemUuid.Lib
 endif
 endif
 
+ifdef CONFIG_FST
+CFLAGS += -DCONFIG_FST
+FST_OBJS += ../src/fst/fst.o
+FST_OBJS += ../src/fst/fst_session.o
+FST_OBJS += ../src/fst/fst_iface.o
+FST_OBJS += ../src/fst/fst_group.o
+FST_OBJS += ../src/fst/fst_ctrl_aux.o
+ifdef CONFIG_CTRL_IFACE
+FST_OBJS += ../src/fst/fst_ctrl_iface.o
+endif
+OBJS += $(FST_OBJS)
+OBJS_t += $(FST_OBJS)
+OBJS_t2 += $(FST_OBJS)
+endif
+
 ifndef LDO
 LDO=$(CC)
 endif

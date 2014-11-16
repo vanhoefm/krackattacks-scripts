@@ -288,7 +288,7 @@ int main(int argc, char *argv[])
 			if (iface == NULL)
 				goto out;
 			ifaces = iface;
-			iface = &ifaces[iface_count - 1]; 
+			iface = &ifaces[iface_count - 1];
 			os_memset(iface, 0, sizeof(*iface));
 			break;
 		default:

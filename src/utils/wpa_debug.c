@@ -749,6 +749,33 @@ void wpa_msg_no_global(void *ctx, int level, const char *fmt, ...)
 	bin_clear_free(buf, buflen);
 }
 
+
+void wpa_msg_global_only(void *ctx, int level, const char *fmt, ...)
+{
+	va_list ap;
+	char *buf;
+	int buflen;
+	int len;
+
+	va_start(ap, fmt);
+	buflen = vsnprintf(NULL, 0, fmt, ap) + 1;
+	va_end(ap);
+
+	buf = os_malloc(buflen);
+	if (buf == NULL) {
+		wpa_printf(MSG_ERROR, "%s: Failed to allocate message buffer",
+			   __func__);
+		return;
+	}
+	va_start(ap, fmt);
+	len = vsnprintf(buf, buflen, fmt, ap);
+	va_end(ap);
+	wpa_printf(level, "%s", buf);
+	if (wpa_msg_cb)
+		wpa_msg_cb(ctx, level, WPA_MSG_ONLY_GLOBAL, buf, len);
+	os_free(buf);
+}
+
 #endif /* CONFIG_NO_WPA_MSG */
 
 

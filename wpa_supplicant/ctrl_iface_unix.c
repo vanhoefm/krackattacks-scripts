@@ -316,13 +316,14 @@ static void wpa_supplicant_ctrl_iface_msg_cb(void *ctx, int level,
 		if (!dl_list_empty(&priv->ctrl_dst)) {
 			wpa_supplicant_ctrl_iface_send(
 				wpa_s,
-				type == WPA_MSG_GLOBAL ? NULL : wpa_s->ifname,
+				type != WPA_MSG_PER_INTERFACE ?
+				NULL : wpa_s->ifname,
 				priv->sock, &priv->ctrl_dst, level, txt, len,
 				NULL, priv);
 		}
 	}
 
-	if (wpa_s->ctrl_iface == NULL)
+	if (type == WPA_MSG_ONLY_GLOBAL || wpa_s->ctrl_iface == NULL)
 		return;
 	wpa_supplicant_ctrl_iface_send(wpa_s, NULL, wpa_s->ctrl_iface->sock,
 				       &wpa_s->ctrl_iface->ctrl_dst,

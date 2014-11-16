@@ -41,6 +41,7 @@ struct hapd_interfaces {
 
 	size_t count;
 	int global_ctrl_sock;
+	struct wpa_ctrl_dst *global_ctrl_dst;
 	char *global_iface_path;
 	char *global_iface_name;
 #ifndef CONFIG_NATIVE_WINDOWS

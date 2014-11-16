@@ -2565,6 +2565,14 @@ static int wpa_supplicant_ctrl_iface_scan_result(
 		pos += ret;
 	}
 #endif /* CONFIG_HS20 */
+#ifdef CONFIG_FST
+	if (wpa_bss_get_ie(bss, WLAN_EID_MULTI_BAND)) {
+		ret = os_snprintf(pos, end - pos, "[FST]");
+		if (os_snprintf_error(end - pos, ret))
+			return -1;
+		pos += ret;
+	}
+#endif /* CONFIG_FST */
 
 	ret = os_snprintf(pos, end - pos, "\t%s",
 			  wpa_ssid_txt(bss->ssid, bss->ssid_len));

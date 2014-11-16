@@ -2000,6 +2000,19 @@ static int wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
 	if (wpa_found || rsn_found)
 		wpa_s->ap_ies_from_associnfo = 1;
 
+#ifdef CONFIG_FST
+	wpabuf_free(wpa_s->received_mb_ies);
+	wpa_s->received_mb_ies = NULL;
+	if (wpa_s->fst) {
+		struct mb_ies_info mb_ies;
+
+		wpa_printf(MSG_DEBUG, "Looking for MB IE");
+		if (!mb_ies_info_by_ies(&mb_ies, data->assoc_info.resp_ies,
+					data->assoc_info.resp_ies_len))
+			wpa_s->received_mb_ies = mb_ies_by_info(&mb_ies);
+	}
+#endif /* CONFIG_FST */
+
 	if (wpa_s->assoc_freq && data->assoc_info.freq &&
 	    wpa_s->assoc_freq != data->assoc_info.freq) {
 		wpa_printf(MSG_DEBUG, "Operating frequency changed from "

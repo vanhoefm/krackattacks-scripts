@@ -17,6 +17,7 @@
 #include "dbus/dbus_old.h"
 #include "dbus/dbus_new.h"
 #include "rsn_supp/wpa.h"
+#include "fst/fst.h"
 #include "driver_i.h"
 #include "scan.h"
 #include "p2p_supplicant.h"
@@ -87,6 +88,16 @@ void wpas_notify_state_changed(struct wpa_supplicant *wpa_s,
 
 	/* notify the new DBus API */
 	wpas_dbus_signal_prop_changed(wpa_s, WPAS_DBUS_PROP_STATE);
+
+#ifdef CONFIG_FST
+	if (wpa_s->fst && !is_zero_ether_addr(wpa_s->bssid)) {
+		if (new_state == WPA_COMPLETED)
+			fst_notify_peer_connected(wpa_s->fst, wpa_s->bssid);
+		else if (old_state >= WPA_ASSOCIATED &&
+			 new_state < WPA_ASSOCIATED)
+			fst_notify_peer_disconnected(wpa_s->fst, wpa_s->bssid);
+	}
+#endif /* CONFIG_FST */
 
 	if (new_state == WPA_COMPLETED)
 		wpas_p2p_notif_connected(wpa_s);

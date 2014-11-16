@@ -35,6 +35,7 @@
 #include "common/ieee802_11_defs.h"
 #include "common/hw_features_common.h"
 #include "p2p/p2p.h"
+#include "fst/fst.h"
 #include "blacklist.h"
 #include "wpas_glue.h"
 #include "wps_supplicant.h"
@@ -2188,6 +2189,18 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 		}
 	}
 
+#ifdef CONFIG_FST
+	if (wpa_s->fst_ies) {
+		int fst_ies_len = wpabuf_len(wpa_s->fst_ies);
+
+		if (wpa_ie_len + fst_ies_len <= sizeof(wpa_ie)) {
+			os_memcpy(wpa_ie + wpa_ie_len,
+				  wpabuf_head(wpa_s->fst_ies), fst_ies_len);
+			wpa_ie_len += fst_ies_len;
+		}
+	}
+#endif /* CONFIG_FST */
+
 	wpa_clear_keys(wpa_s, bss ? bss->bssid : NULL);
 	use_crypt = 1;
 	cipher_pairwise = wpa_s->pairwise_cipher;
@@ -3700,6 +3713,123 @@ int wpas_init_ext_pw(struct wpa_supplicant *wpa_s)
 }
 
 
+#ifdef CONFIG_FST
+
+static const u8 * wpas_fst_get_bssid_cb(void *ctx)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+
+	return (is_zero_ether_addr(wpa_s->bssid) ||
+		wpa_s->wpa_state != WPA_COMPLETED) ? NULL : wpa_s->bssid;
+}
+
+
+static void wpas_fst_get_channel_info_cb(void *ctx,
+					 enum hostapd_hw_mode *hw_mode,
+					 u8 *channel)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+
+	if (wpa_s->current_bss) {
+		*hw_mode = ieee80211_freq_to_chan(wpa_s->current_bss->freq,
+						  channel);
+	} else if (wpa_s->hw.num_modes) {
+		*hw_mode = wpa_s->hw.modes[0].mode;
+	} else {
+		WPA_ASSERT(0);
+		*hw_mode = 0;
+	}
+}
+
+
+static int wpas_fst_get_hw_modes(void *ctx, struct hostapd_hw_modes **modes)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+
+	*modes = wpa_s->hw.modes;
+	return wpa_s->hw.num_modes;
+}
+
+
+static void wpas_fst_set_ies_cb(void *ctx, struct wpabuf *fst_ies)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+
+	wpa_s->fst_ies = fst_ies;
+}
+
+
+static int wpas_fst_send_action_cb(void *ctx, const u8 *da, struct wpabuf *data)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+
+	WPA_ASSERT(os_memcmp(wpa_s->bssid, da, ETH_ALEN) == 0);
+	return wpa_drv_send_action(wpa_s, wpa_s->assoc_freq, 0, wpa_s->bssid,
+					  wpa_s->own_addr, wpa_s->bssid,
+					  wpabuf_head(data), wpabuf_len(data),
+				   0);
+}
+
+
+static struct wpabuf * wpas_fst_get_mb_ie_cb(void *ctx, const u8 *addr)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+
+	WPA_ASSERT(os_memcmp(wpa_s->bssid, addr, ETH_ALEN) == 0);
+	return wpa_s->received_mb_ies;
+}
+
+
+static void wpas_fst_update_mb_ie_cb(void *ctx, const u8 *addr,
+				     const u8 *buf, size_t size)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+	struct mb_ies_info info;
+
+	WPA_ASSERT(os_memcmp(wpa_s->bssid, addr, ETH_ALEN) == 0);
+
+	if (!mb_ies_info_by_ies(&info, buf, size)) {
+		wpabuf_free(wpa_s->received_mb_ies);
+		wpa_s->received_mb_ies = mb_ies_by_info(&info);
+	}
+}
+
+
+const u8 * wpas_fst_get_peer_first(void *ctx, struct fst_get_peer_ctx **get_ctx,
+				   Boolean mb_only)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+
+	*get_ctx = NULL;
+	if (!is_zero_ether_addr(wpa_s->bssid))
+		return (wpa_s->received_mb_ies || !mb_only) ?
+			wpa_s->bssid : NULL;
+	return NULL;
+}
+
+
+const u8 * wpas_fst_get_peer_next(void *ctx, struct fst_get_peer_ctx **get_ctx,
+				  Boolean mb_only)
+{
+	return NULL;
+}
+
+void fst_wpa_supplicant_fill_iface_obj(struct wpa_supplicant *wpa_s,
+				       struct fst_wpa_obj *iface_obj)
+{
+	iface_obj->ctx              = wpa_s;
+	iface_obj->get_bssid        = wpas_fst_get_bssid_cb;
+	iface_obj->get_channel_info = wpas_fst_get_channel_info_cb;
+	iface_obj->get_hw_modes     = wpas_fst_get_hw_modes;
+	iface_obj->set_ies          = wpas_fst_set_ies_cb;
+	iface_obj->send_action      = wpas_fst_send_action_cb;
+	iface_obj->get_mb_ie        = wpas_fst_get_mb_ie_cb;
+	iface_obj->update_mb_ie     = wpas_fst_update_mb_ie_cb;
+	iface_obj->get_peer_first   = wpas_fst_get_peer_first;
+	iface_obj->get_peer_next    = wpas_fst_get_peer_next;
+}
+#endif /* CONFIG_FST */
+
 static int wpas_set_wowlan_triggers(struct wpa_supplicant *wpa_s,
 				    const struct wpa_driver_capa *capa)
 {
@@ -4238,6 +4368,28 @@ static int wpa_supplicant_init_iface(struct wpa_supplicant *wpa_s,
 		return -1;
 	}
 
+#ifdef CONFIG_FST
+	if (wpa_s->conf->fst_group_id) {
+		struct fst_iface_cfg cfg;
+		struct fst_wpa_obj iface_obj;
+
+		fst_wpa_supplicant_fill_iface_obj(wpa_s, &iface_obj);
+		os_strlcpy(cfg.group_id, wpa_s->conf->fst_group_id,
+			   sizeof(cfg.group_id));
+		cfg.priority = wpa_s->conf->fst_priority;
+		cfg.llt = wpa_s->conf->fst_llt;
+
+		wpa_s->fst = fst_attach(wpa_s->ifname, wpa_s->own_addr,
+					&iface_obj, &cfg);
+		if (!wpa_s->fst) {
+			wpa_msg(wpa_s, MSG_ERROR,
+				"FST: Cannot attach iface %s to group %s",
+				wpa_s->ifname, cfg.group_id);
+			return -1;
+		}
+	}
+#endif /* CONFIG_FST */
+
 	if (wpas_wps_init(wpa_s))
 		return -1;
 
@@ -4345,6 +4497,17 @@ static void wpa_supplicant_deinit_iface(struct wpa_supplicant *wpa_s,
 
 	wpas_ctrl_radio_work_flush(wpa_s);
 	radio_remove_interface(wpa_s);
+
+#ifdef CONFIG_FST
+	if (wpa_s->fst) {
+		fst_detach(wpa_s->fst);
+		wpa_s->fst = NULL;
+	}
+	if (wpa_s->received_mb_ies) {
+		wpabuf_free(wpa_s->received_mb_ies);
+		wpa_s->received_mb_ies = NULL;
+	}
+#endif /* CONFIG_FST */
 
 	if (wpa_s->drv_priv)
 		wpa_drv_deinit(wpa_s);

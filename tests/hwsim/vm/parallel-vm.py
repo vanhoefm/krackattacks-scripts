@@ -30,6 +30,8 @@ def get_results():
 def show_progress(scr):
     global num_servers
     global vm
+    global dir
+    global timestamp
 
     scr.leaveok(1)
     scr.addstr(0, 0, "Parallel test execution status", curses.A_BOLD)
@@ -50,7 +52,12 @@ def show_progress(scr):
                 vm[i]['done'] = vm[i]['total']
                 scr.move(i + 1, 10)
                 scr.clrtoeol()
-                scr.addstr("completed run")
+                log = '{}/{}.srv.{}/console'.format(dir, timestamp, i + 1)
+                with open(log, 'r') as f:
+                    if "Kernel panic" in f.read():
+                        scr.addstr("kernel panic")
+                    else:
+                        scr.addstr("completed run")
                 updated = True
                 continue
 
@@ -118,12 +125,20 @@ def show_progress(scr):
 def main():
     global num_servers
     global vm
+    global dir
+    global timestamp
 
     if len(sys.argv) < 2:
         sys.exit("Usage: %s <number of VMs> [params..]" % sys.argv[0])
     num_servers = int(sys.argv[1])
     if num_servers < 1:
         sys.exit("Too small number of VMs")
+
+    dir = '/tmp/hwsim-test-logs'
+    try:
+        os.mkdir(dir)
+    except:
+        pass
 
     timestamp = int(time.time())
     vm = {}
@@ -150,11 +165,6 @@ def main():
 
     curses.wrapper(show_progress)
 
-    dir = '/tmp/hwsim-test-logs'
-    try:
-        os.mkdir(dir)
-    except:
-        pass
     with open('{}/{}-parallel.log'.format(dir, timestamp), 'w') as f:
         for i in range(0, num_servers):
             f.write('VM {}\n{}\n{}\n'.format(i, vm[i]['out'], vm[i]['err']))
@@ -167,6 +177,12 @@ def main():
             print f.split(' ')[1],
         print
     print("TOTAL={} PASS={} FAIL={} SKIP={}".format(len(started), len(passed), len(failed), len(skipped)))
+
+    for i in range(0, num_servers):
+        log = '{}/{}.srv.{}/console'.format(dir, timestamp, i + 1)
+        with open(log, 'r') as f:
+            if "Kernel panic" in f.read():
+                print "Kernel panic in " + log
 
 if __name__ == "__main__":
     main()

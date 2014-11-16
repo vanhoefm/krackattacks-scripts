@@ -1878,6 +1878,11 @@ static int nl80211_mgmt_subscribe_non_ap(struct i802_bss *bss)
 			ret = -1;
 	}
 #endif /* CONFIG_TDLS */
+#ifdef CONFIG_FST
+	/* FST Action frames */
+	if (nl80211_register_action_frame(bss, (u8 *) "\x12", 1) < 0)
+		ret = -1;
+#endif /* CONFIG_FST */
 
 	/* FT Action frames */
 	if (nl80211_register_action_frame(bss, (u8 *) "\x06", 1) < 0)

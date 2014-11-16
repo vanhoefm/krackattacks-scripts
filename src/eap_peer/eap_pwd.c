@@ -952,7 +952,6 @@ int eap_peer_pwd_register(void)
 	struct eap_method *eap;
 	int ret;
 
-	EVP_add_digest(EVP_sha256());
 	eap = eap_peer_method_alloc(EAP_PEER_METHOD_INTERFACE_VERSION,
 				    EAP_VENDOR_IETF, EAP_TYPE_PWD, "PWD");
 	if (eap == NULL)

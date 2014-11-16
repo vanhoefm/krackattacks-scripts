@@ -1028,8 +1028,6 @@ int eap_server_pwd_register(void)
 	struct timezone tz;
 	u32 sr;
 
-	EVP_add_digest(EVP_sha256());
-
 	sr = 0xdeaddada;
 	(void) gettimeofday(&tp, &tz);
 	sr ^= (tp.tv_sec ^ tp.tv_usec);

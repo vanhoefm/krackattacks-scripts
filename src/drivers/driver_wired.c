@@ -374,11 +374,15 @@ static void wired_driver_hapd_deinit(void *priv)
 {
 	struct wpa_driver_wired_data *drv = priv;
 
-	if (drv->sock >= 0)
+	if (drv->sock >= 0) {
+		eloop_unregister_read_sock(drv->sock);
 		close(drv->sock);
+	}
 
-	if (drv->dhcp_sock >= 0)
+	if (drv->dhcp_sock >= 0) {
+		eloop_unregister_read_sock(drv->dhcp_sock);
 		close(drv->dhcp_sock);
+	}
 
 	os_free(drv);
 }

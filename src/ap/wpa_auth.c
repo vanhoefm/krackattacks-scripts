@@ -3057,6 +3057,7 @@ int wpa_auth_pmksa_add(struct wpa_state_machine *sm, const u8 *pmk,
 		return -1;
 
 	if (pmksa_cache_auth_add(sm->wpa_auth->pmksa, pmk, PMK_LEN,
+				 sm->PTK.kck, sizeof(sm->PTK.kck),
 				 sm->wpa_auth->addr, sm->addr, session_timeout,
 				 eapol, sm->wpa_key_mgmt))
 		return 0;
@@ -3073,7 +3074,9 @@ int wpa_auth_pmksa_add_preauth(struct wpa_authenticator *wpa_auth,
 	if (wpa_auth == NULL)
 		return -1;
 
-	if (pmksa_cache_auth_add(wpa_auth->pmksa, pmk, len, wpa_auth->addr,
+	if (pmksa_cache_auth_add(wpa_auth->pmksa, pmk, len,
+				 NULL, 0,
+				 wpa_auth->addr,
 				 sta_addr, session_timeout, eapol,
 				 WPA_KEY_MGMT_IEEE8021X))
 		return 0;
@@ -3089,6 +3092,7 @@ int wpa_auth_pmksa_add_sae(struct wpa_authenticator *wpa_auth, const u8 *addr,
 		return -1;
 
 	if (pmksa_cache_auth_add(wpa_auth->pmksa, pmk, PMK_LEN,
+				 NULL, 0,
 				 wpa_auth->addr, addr, 0, NULL,
 				 WPA_KEY_MGMT_SAE))
 		return 0;

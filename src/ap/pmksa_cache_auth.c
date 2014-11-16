@@ -233,6 +233,8 @@ static void pmksa_cache_link_entry(struct rsn_pmksa_cache *pmksa,
  * @pmksa: Pointer to PMKSA cache data from pmksa_cache_auth_init()
  * @pmk: The new pairwise master key
  * @pmk_len: PMK length in bytes, usually PMK_LEN (32)
+ * @kck: Key confirmation key or %NULL if not yet derived
+ * @kck_len: KCK length in bytes
  * @aa: Authenticator address
  * @spa: Supplicant address
  * @session_timeout: Session timeout
@@ -248,8 +250,9 @@ static void pmksa_cache_link_entry(struct rsn_pmksa_cache *pmksa,
 struct rsn_pmksa_cache_entry *
 pmksa_cache_auth_add(struct rsn_pmksa_cache *pmksa,
 		     const u8 *pmk, size_t pmk_len,
-		const u8 *aa, const u8 *spa, int session_timeout,
-		struct eapol_state_machine *eapol, int akmp)
+		     const u8 *kck, size_t kck_len,
+		     const u8 *aa, const u8 *spa, int session_timeout,
+		     struct eapol_state_machine *eapol, int akmp)
 {
 	struct rsn_pmksa_cache_entry *entry, *pos;
 	struct os_reltime now;
@@ -257,13 +260,19 @@ pmksa_cache_auth_add(struct rsn_pmksa_cache *pmksa,
 	if (pmk_len > PMK_LEN)
 		return NULL;
 
+	if (wpa_key_mgmt_suite_b(akmp) && !kck)
+		return NULL;
+
 	entry = os_zalloc(sizeof(*entry));
 	if (entry == NULL)
 		return NULL;
 	os_memcpy(entry->pmk, pmk, pmk_len);
 	entry->pmk_len = pmk_len;
-	rsn_pmkid(pmk, pmk_len, aa, spa, entry->pmkid,
-		  wpa_key_mgmt_sha256(akmp));
+	if (wpa_key_mgmt_suite_b(akmp))
+		rsn_pmkid_suite_b(kck, kck_len, aa, spa, entry->pmkid);
+	else
+		rsn_pmkid(pmk, pmk_len, aa, spa, entry->pmkid,
+			  wpa_key_mgmt_sha256(akmp));
 	os_get_reltime(&now);
 	entry->expiration = now.sec;
 	if (session_timeout > 0)

@@ -94,6 +94,7 @@ static void rsn_preauth_eapol_cb(struct eapol_sm *eapol,
 					pmk, pmk_len);
 			sm->pmk_len = pmk_len;
 			pmksa_cache_add(sm->pmksa, pmk, pmk_len,
+					NULL, 0,
 					sm->preauth_bssid, sm->own_addr,
 					sm->network_ctx,
 					WPA_KEY_MGMT_IEEE8021X);

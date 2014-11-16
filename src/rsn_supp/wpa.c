@@ -218,9 +218,11 @@ static int wpa_supplicant_get_pmk(struct wpa_sm *sm,
 			sm->pmk_len = pmk_len;
 			wpa_supplicant_key_mgmt_set_pmk(sm);
 			if (sm->proto == WPA_PROTO_RSN &&
+			    !wpa_key_mgmt_suite_b(sm->key_mgmt) &&
 			    !wpa_key_mgmt_ft(sm->key_mgmt)) {
 				sa = pmksa_cache_add(sm->pmksa,
 						     sm->pmk, pmk_len,
+						     NULL, 0,
 						     src_addr, sm->own_addr,
 						     sm->network_ctx,
 						     sm->key_mgmt);
@@ -254,6 +256,7 @@ static int wpa_supplicant_get_pmk(struct wpa_sm *sm,
 	}
 
 	if (abort_cached && wpa_key_mgmt_wpa_ieee8021x(sm->key_mgmt) &&
+	    !wpa_key_mgmt_suite_b(sm->key_mgmt) &&
 	    !wpa_key_mgmt_ft(sm->key_mgmt) && sm->key_mgmt != WPA_KEY_MGMT_OSEN)
 	{
 		/* Send EAPOL-Start to trigger full EAP authentication. */
@@ -1196,6 +1199,17 @@ static void wpa_supplicant_process_3_of_4(struct wpa_sm *sm,
 
 	if (ie.gtk)
 		wpa_sm_set_rekey_offload(sm);
+
+	if (sm->proto == WPA_PROTO_RSN && wpa_key_mgmt_suite_b(sm->key_mgmt)) {
+		struct rsn_pmksa_cache_entry *sa;
+
+		sa = pmksa_cache_add(sm->pmksa, sm->pmk, sm->pmk_len,
+				     sm->ptk.kck, sizeof(sm->ptk.kck),
+				     sm->bssid, sm->own_addr,
+				     sm->network_ctx, sm->key_mgmt);
+		if (!sm->cur_pmksa)
+			sm->cur_pmksa = sa;
+	}
 
 	return;
 
@@ -2225,7 +2239,8 @@ void wpa_sm_set_pmk(struct wpa_sm *sm, const u8 *pmk, size_t pmk_len,
 #endif /* CONFIG_IEEE80211R */
 
 	if (bssid) {
-		pmksa_cache_add(sm->pmksa, pmk, pmk_len, bssid, sm->own_addr,
+		pmksa_cache_add(sm->pmksa, pmk, pmk_len, NULL, 0,
+				bssid, sm->own_addr,
 				sm->network_ctx, sm->key_mgmt);
 	}
 }

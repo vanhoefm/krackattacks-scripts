@@ -374,6 +374,16 @@ int wpa_parse_wpa_ie_wpa(const u8 *wpa_ie, size_t wpa_ie_len,
 
 void rsn_pmkid(const u8 *pmk, size_t pmk_len, const u8 *aa, const u8 *spa,
 	       u8 *pmkid, int use_sha256);
+#ifdef CONFIG_SUITEB
+int rsn_pmkid_suite_b(const u8 *kck, size_t kck_len, const u8 *aa,
+		       const u8 *spa, u8 *pmkid);
+#else /* CONFIG_SUITEB */
+static inline int rsn_pmkid_suite_b(const u8 *kck, size_t kck_len, const u8 *aa,
+				    const u8 *spa, u8 *pmkid)
+{
+	return -1;
+}
+#endif /* CONFIG_SUITEB */
 
 const char * wpa_cipher_txt(int cipher);
 const char * wpa_key_mgmt_txt(int key_mgmt, int proto);

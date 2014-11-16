@@ -929,6 +929,39 @@ void rsn_pmkid(const u8 *pmk, size_t pmk_len, const u8 *aa, const u8 *spa,
 }
 
 
+#ifdef CONFIG_SUITEB
+/**
+ * rsn_pmkid_suite_b - Calculate PMK identifier for Suite B AKM
+ * @kck: Key confirmation key
+ * @kck_len: Length of kck in bytes
+ * @aa: Authenticator address
+ * @spa: Supplicant address
+ * @pmkid: Buffer for PMKID
+ * Returns: 0 on success, -1 on failure
+ *
+ * IEEE Std 802.11ac-2013 - 11.6.1.3 Pairwise key hierarchy
+ * PMKID = Truncate(HMAC-SHA-256(KCK, "PMK Name" || AA || SPA))
+ */
+int rsn_pmkid_suite_b(const u8 *kck, size_t kck_len, const u8 *aa,
+		      const u8 *spa, u8 *pmkid)
+{
+	char *title = "PMK Name";
+	const u8 *addr[3];
+	const size_t len[3] = { 8, ETH_ALEN, ETH_ALEN };
+	unsigned char hash[SHA256_MAC_LEN];
+
+	addr[0] = (u8 *) title;
+	addr[1] = aa;
+	addr[2] = spa;
+
+	if (hmac_sha256_vector(kck, kck_len, 3, addr, len, hash) < 0)
+		return -1;
+	os_memcpy(pmkid, hash, PMKID_LEN);
+	return 0;
+}
+#endif /* CONFIG_SUITEB */
+
+
 /**
  * wpa_cipher_txt - Convert cipher suite to a text string
  * @cipher: Cipher suite (WPA_CIPHER_* enum)

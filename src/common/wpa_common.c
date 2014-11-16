@@ -398,6 +398,8 @@ static int rsn_key_mgmt_to_bitfield(const u8 *s)
 	if (RSN_SELECTOR_GET(s) == RSN_AUTH_KEY_MGMT_FT_SAE)
 		return WPA_KEY_MGMT_FT_SAE;
 #endif /* CONFIG_SAE */
+	if (RSN_SELECTOR_GET(s) == RSN_AUTH_KEY_MGMT_802_1X_SUITE_B)
+		return WPA_KEY_MGMT_IEEE8021X_SUITE_B;
 	return 0;
 }
 
@@ -996,6 +998,8 @@ const char * wpa_key_mgmt_txt(int key_mgmt, int proto)
 	case WPA_KEY_MGMT_PSK_SHA256:
 		return "WPA2-PSK-SHA256";
 #endif /* CONFIG_IEEE80211W */
+	case WPA_KEY_MGMT_IEEE8021X_SUITE_B:
+		return "WPA2-EAP-SUITE-B";
 	default:
 		return "UNKNOWN";
 	}
@@ -1022,6 +1026,8 @@ u32 wpa_akm_to_suite(int akm)
 		return WLAN_AKM_SUITE_CCKM;
 	if (akm & WPA_KEY_MGMT_OSEN)
 		return WLAN_AKM_SUITE_OSEN;
+	if (akm & WPA_KEY_MGMT_IEEE8021X_SUITE_B)
+		return WLAN_AKM_SUITE_8021X_SUITE_B;
 	return 0;
 }
 

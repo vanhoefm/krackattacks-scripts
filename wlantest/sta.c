@@ -170,7 +170,7 @@ skip_rsn_wpa:
 	wpa_printf(MSG_INFO, "STA " MACSTR
 		   " proto=%s%s%s%s"
 		   "pairwise=%s%s%s%s%s%s%s"
-		   "key_mgmt=%s%s%s%s%s%s%s%s%s"
+		   "key_mgmt=%s%s%s%s%s%s%s%s%s%s"
 		   "rsn_capab=%s%s%s%s%s",
 		   MAC2STR(sta->addr),
 		   sta->proto == 0 ? "OPEN " : "",
@@ -197,6 +197,8 @@ skip_rsn_wpa:
 		   sta->key_mgmt & WPA_KEY_MGMT_PSK_SHA256 ?
 		   "PSK-SHA256 " : "",
 		   sta->key_mgmt & WPA_KEY_MGMT_OSEN ? "OSEN " : "",
+		   sta->key_mgmt & WPA_KEY_MGMT_IEEE8021X_SUITE_B ?
+		   "EAP-SUITE-B " : "",
 		   sta->rsn_capab & WPA_CAPABILITY_PREAUTH ? "PREAUTH " : "",
 		   sta->rsn_capab & WPA_CAPABILITY_NO_PAIRWISE ?
 		   "NO_PAIRWISE " : "",

@@ -942,6 +942,9 @@ static void info_print_key_mgmt(char *buf, size_t len, int key_mgmt)
 	if (key_mgmt & WPA_KEY_MGMT_PSK_SHA256)
 		pos += os_snprintf(pos, end - pos, "%sPSK-SHA256",
 				   pos == buf ? "" : " ");
+	if (key_mgmt & WPA_KEY_MGMT_IEEE8021X_SUITE_B)
+		pos += os_snprintf(pos, end - pos, "%sEAP-SUITE-B",
+				   pos == buf ? "" : " ");
 }
 
 

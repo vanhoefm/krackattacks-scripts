@@ -298,7 +298,8 @@ void rsn_preauth_candidate_process(struct wpa_sm *sm)
 	    sm->proto != WPA_PROTO_RSN ||
 	    wpa_sm_get_state(sm) != WPA_COMPLETED ||
 	    (sm->key_mgmt != WPA_KEY_MGMT_IEEE8021X &&
-	     sm->key_mgmt != WPA_KEY_MGMT_IEEE8021X_SHA256)) {
+	     sm->key_mgmt != WPA_KEY_MGMT_IEEE8021X_SHA256 &&
+	     sm->key_mgmt != WPA_KEY_MGMT_IEEE8021X_SUITE_B)) {
 		wpa_msg(sm->ctx->msg_ctx, MSG_DEBUG, "RSN: not in suitable "
 			"state for new pre-authentication");
 		return; /* invalid state for new pre-auth */

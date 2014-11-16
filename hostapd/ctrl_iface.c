@@ -977,6 +977,12 @@ static int hostapd_ctrl_iface_get_config(struct hostapd_data *hapd,
 			pos += ret;
 		}
 #endif /* CONFIG_SAE */
+		if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_IEEE8021X_SUITE_B) {
+			ret = os_snprintf(pos, end - pos, "WPA-EAP-SUITE-B ");
+			if (ret < 0 || ret >= end - pos)
+				return pos - buf;
+			pos += ret;
+		}
 
 		ret = os_snprintf(pos, end - pos, "\n");
 		if (ret < 0 || ret >= end - pos)

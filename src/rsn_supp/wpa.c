@@ -1925,6 +1925,8 @@ static u32 wpa_key_mgmt_suite(struct wpa_sm *sm)
 			WPA_AUTH_KEY_MGMT_CCKM);
 	case WPA_KEY_MGMT_WPA_NONE:
 		return WPA_AUTH_KEY_MGMT_NONE;
+	case WPA_KEY_MGMT_IEEE8021X_SUITE_B:
+		return RSN_AUTH_KEY_MGMT_802_1X_SUITE_B;
 	default:
 		return 0;
 	}

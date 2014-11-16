@@ -242,7 +242,8 @@ static int wpa_supplicant_process_smk_m2(
 	peerkey->cipher = cipher;
 #ifdef CONFIG_IEEE80211W
 	if (ie.key_mgmt & (WPA_KEY_MGMT_IEEE8021X_SHA256 |
-			   WPA_KEY_MGMT_PSK_SHA256))
+			   WPA_KEY_MGMT_PSK_SHA256 |
+			   WPA_KEY_MGMT_IEEE8021X_SUITE_B))
 		peerkey->use_sha256 = 1;
 #endif /* CONFIG_IEEE80211W */
 

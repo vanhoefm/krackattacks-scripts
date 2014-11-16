@@ -1184,6 +1184,22 @@ struct wpa_config {
 	 * by executing the WPS protocol.
 	 */
 	int wps_priority;
+
+	/**
+	 * fst_group_id - FST group ID
+	 */
+	char *fst_group_id;
+
+	/**
+	 * fst_priority - priority of the interface within the FST group
+	 */
+	int fst_priority;
+
+	/**
+	 * fst_llt - default FST LLT (Link-Lost Timeout) to be used for the
+	 * interface.
+	 */
+	int fst_llt;
 };
 
 

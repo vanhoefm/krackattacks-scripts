@@ -17,7 +17,10 @@ import subprocess
 import logging
 logger = logging.getLogger()
 
-sys.path.append('../../wpaspy')
+if os.path.exists('../../wpaspy'):
+    sys.path.append('../../wpaspy')
+else:
+    sys.path.append('../../../wpaspy')
 
 from wpasupplicant import WpaSupplicant
 from hostapd import HostapdGlobal
@@ -146,7 +149,11 @@ def rename_log(logdir, basename, testname, dev):
 def main():
     tests = []
     test_modules = []
-    for t in os.listdir("."):
+    if os.path.exists('run-tests.py'):
+        files = os.listdir(".")
+    else:
+        files = os.listdir("..")
+    for t in files:
         m = re.match(r'(test_.*)\.py$', t)
         if m:
             logger.debug("Import test cases from " + t)
@@ -207,27 +214,6 @@ def main():
         print 'Invalid arguments - only one of (test, test modules, modules file) can be given.'
         sys.exit(2)
 
-    if not args.logdir:
-        if os.path.exists('logs/current'):
-            args.logdir = 'logs/current'
-        else:
-            args.logdir = 'logs'
-
-    # Write debug level log to a file and configurable verbosity to stdout
-    logger.setLevel(logging.DEBUG)
-
-    stdout_handler = logging.StreamHandler()
-    stdout_handler.setLevel(args.loglevel)
-    logger.addHandler(stdout_handler)
-
-    file_name = os.path.join(args.logdir, 'run-tests.log')
-    log_handler = logging.FileHandler(file_name)
-    log_handler.setLevel(logging.DEBUG)
-    fmt = "%(asctime)s %(levelname)s %(message)s"
-    log_formatter = logging.Formatter(fmt)
-    log_handler.setFormatter(log_formatter)
-    logger.addHandler(log_handler)
-
     if args.database:
         import sqlite3
         conn = sqlite3.connect(args.database)
@@ -281,6 +267,26 @@ def main():
             conn.close()
         sys.exit(0)
 
+    if not args.logdir:
+        if os.path.exists('logs/current'):
+            args.logdir = 'logs/current'
+        else:
+            args.logdir = 'logs'
+
+    # Write debug level log to a file and configurable verbosity to stdout
+    logger.setLevel(logging.DEBUG)
+
+    stdout_handler = logging.StreamHandler()
+    stdout_handler.setLevel(args.loglevel)
+    logger.addHandler(stdout_handler)
+
+    file_name = os.path.join(args.logdir, 'run-tests.log')
+    log_handler = logging.FileHandler(file_name)
+    log_handler.setLevel(logging.DEBUG)
+    fmt = "%(asctime)s %(levelname)s %(message)s"
+    log_formatter = logging.Formatter(fmt)
+    log_handler.setFormatter(log_formatter)
+    logger.addHandler(log_handler)
 
     dev0 = WpaSupplicant('wlan0', '/tmp/wpas-wlan0')
     dev1 = WpaSupplicant('wlan1', '/tmp/wpas-wlan1')

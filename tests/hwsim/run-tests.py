@@ -240,8 +240,29 @@ def main():
     if conn:
         run = int(time.time())
 
+    # read the modules from the modules file
+    if args.mfile:
+	args.testmodules = []
+	with open(args.mfile) as f:
+	    for line in f.readlines():
+		line = line.strip()
+		if not line or line.startswith('#'):
+		    continue
+	        args.testmodules.append(line)
+
+    tests_to_run = []
+    for t in tests:
+        name = t.__name__.replace('test_', '', 1)
+        if args.tests:
+            if not name in args.tests:
+                continue
+        if args.testmodules:
+            if not t.__module__.replace('test_', '', 1) in args.testmodules:
+                continue
+        tests_to_run.append(t)
+
     if args.update_tests_db:
-        for t in tests:
+        for t in tests_to_run:
             name = t.__name__.replace('test_', '', 1)
             if t.__doc__ is None:
                 print name + " - MISSING DESCRIPTION"
@@ -291,27 +312,6 @@ def main():
 
     if args.dmesg:
         subprocess.call(['sudo', 'dmesg', '-c'], stdout=open('/dev/null', 'w'))
-
-    # read the modules from the modules file
-    if args.mfile:
-	args.testmodules = []
-	with open(args.mfile) as f:
-	    for line in f.readlines():
-		line = line.strip()
-		if not line or line.startswith('#'):
-		    continue
-	        args.testmodules.append(line)
-
-    tests_to_run = []
-    for t in tests:
-        name = t.__name__.replace('test_', '', 1)
-        if args.tests:
-            if not name in args.tests:
-                continue
-        if args.testmodules:
-            if not t.__module__.replace('test_', '', 1) in args.testmodules:
-                continue
-        tests_to_run.append(t)
 
     if conn and args.prefill:
         for t in tests_to_run:

@@ -816,6 +816,14 @@ enum hostapd_chan_status acs_init(struct hostapd_iface *iface)
 
 	wpa_printf(MSG_INFO, "ACS: Automatic channel selection started, this may take a bit");
 
+	if (iface->drv_flags & WPA_DRIVER_FLAGS_ACS_OFFLOAD) {
+		wpa_printf(MSG_INFO, "ACS: Offloading to driver");
+		err = hostapd_drv_do_acs(iface->bss[0]);
+		if (err)
+			return HOSTAPD_CHAN_INVALID;
+		return HOSTAPD_CHAN_ACS;
+	}
+
 	acs_cleanup(iface);
 
 	err = acs_request_scan(iface);

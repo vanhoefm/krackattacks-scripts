@@ -536,6 +536,9 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 			case QCA_NL80211_VENDOR_SUBCMD_KEY_MGMT_SET_KEY:
 				drv->key_mgmt_set_key_vendor_cmd_avail = 1;
 				break;
+			case QCA_NL80211_VENDOR_SUBCMD_DO_ACS:
+				drv->capa.flags |= WPA_DRIVER_FLAGS_ACS_OFFLOAD;
+				break;
 			}
 
 			wpa_printf(MSG_DEBUG, "nl80211: Supported vendor command: vendor_id=0x%x subcmd=%u",

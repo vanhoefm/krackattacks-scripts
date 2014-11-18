@@ -111,6 +111,7 @@ int hostapd_set_freq_params(struct hostapd_freq_params *data, int mode,
 			    int vht_enabled, int sec_channel_offset,
 			    int vht_oper_chwidth, int center_segment0,
 			    int center_segment1, u32 vht_caps);
+int hostapd_drv_do_acs(struct hostapd_data *hapd);
 
 
 #include "drivers/driver.h"

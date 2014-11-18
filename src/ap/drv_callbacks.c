@@ -525,6 +525,51 @@ void hostapd_event_connect_failed_reason(struct hostapd_data *hapd,
 }
 
 
+#ifdef CONFIG_ACS
+static void hostapd_acs_channel_selected(struct hostapd_data *hapd,
+					 u8 pri_channel, u8 sec_channel)
+{
+	int channel;
+	int ret;
+
+	if (hapd->iconf->channel) {
+		wpa_printf(MSG_INFO, "ACS: Channel was already set to %d",
+			   hapd->iconf->channel);
+		return;
+	}
+
+	hapd->iface->freq = hostapd_hw_get_freq(hapd, pri_channel);
+
+	channel = pri_channel;
+	if (!channel) {
+		hostapd_logger(hapd, NULL, HOSTAPD_MODULE_IEEE80211,
+			       HOSTAPD_LEVEL_WARNING,
+			       "driver switched to bad channel");
+		return;
+	}
+
+	hapd->iconf->channel = channel;
+
+	if (sec_channel == 0)
+		hapd->iconf->secondary_channel = 0;
+	else if (sec_channel < pri_channel)
+		hapd->iconf->secondary_channel = -1;
+	else if (sec_channel > pri_channel)
+		hapd->iconf->secondary_channel = 1;
+	else {
+		wpa_printf(MSG_ERROR, "Invalid secondary channel!");
+		return;
+	}
+
+	ret = hostapd_acs_completed(hapd->iface, 0);
+	if (ret) {
+		wpa_printf(MSG_ERROR,
+			   "ACS: Possibly channel configuration is invalid");
+	}
+}
+#endif /* CONFIG_ACS */
+
+
 int hostapd_probe_req_rx(struct hostapd_data *hapd, const u8 *sa, const u8 *da,
 			 const u8 *bssid, const u8 *ie, size_t ie_len,
 			 int ssi_signal)
@@ -1169,6 +1214,13 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 	case EVENT_INTERFACE_DISABLED:
 		wpa_msg(hapd->msg_ctx, MSG_INFO, INTERFACE_DISABLED);
 		break;
+#ifdef CONFIG_ACS
+	case EVENT_ACS_CHANNEL_SELECTED:
+		hostapd_acs_channel_selected(
+			hapd, data->acs_selected_channels.pri_channel,
+			data->acs_selected_channels.sec_channel);
+		break;
+#endif /* CONFIG_ACS */
 	default:
 		wpa_printf(MSG_DEBUG, "Unknown event %d", event);
 		break;

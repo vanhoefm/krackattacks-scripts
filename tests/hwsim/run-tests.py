@@ -344,8 +344,9 @@ def main():
     if args.stdin_ctrl:
         print "READY"
         sys.stdout.flush()
+        num_tests = 0
     else:
-        remaining_tests = tests_to_run
+        num_tests = len(tests_to_run)
     while True:
         if args.stdin_ctrl:
             test = sys.stdin.readline()
@@ -365,9 +366,9 @@ def main():
                 sys.stdout.flush()
                 continue
         else:
-            if len(remaining_tests) == 0:
+            if len(tests_to_run) == 0:
                 break
-            t = remaining_tests.pop(0)
+            t = tests_to_run.pop(0)
 
         name = t.__name__.replace('test_', '', 1)
         if log_handler:
@@ -382,7 +383,7 @@ def main():
         reset_ok = True
         with DataCollector(args.logdir, name, args.tracing, args.dmesg):
             count = count + 1
-            msg = "START {} {}/{}".format(name, count, len(tests_to_run))
+            msg = "START {} {}/{}".format(name, count, num_tests)
             logger.info(msg)
             if args.loglevel == logging.WARNING:
                 print msg

@@ -741,15 +741,24 @@ def test_grpform_cred_ready_timeout2(dev, apdev, params):
     ev = dev[0].wait_global_event(["P2P-GO-NEG-FAILURE"], timeout=30)
     if ev is not None:
         raise Exception("Too early GO Negotiation timeout reported")
+    dev[0].dump_monitor()
     logger.info("Starting p2p_find to change state")
     dev[0].p2p_find()
     ev = dev[0].wait_global_event(["P2P-GO-NEG-FAILURE"], timeout=100)
     if ev is None:
         raise Exception("GO Negotiation failure timed out")
+    dev[0].dump_monitor()
     end = os.times()[4]
     logger.info("GO Negotiation wait time: {} seconds".format(end - start))
     if end - start < 120:
         raise Exception("Too short GO Negotiation wait time: {}".format(end - start))
+
+    dev[2].p2p_listen()
+    ev = dev[0].wait_global_event(["P2P-DEVICE-FOUND"], timeout=10)
+    if ev is None:
+        raise Exception("Did not discovery new device after GO Negotiation failure")
+    if dev[2].p2p_dev_addr() not in ev:
+        raise Exception("Unexpected device found: " + ev)
 
 def test_grpform_no_wsc_done(dev):
     """P2P group formation with WSC-Done not sent"""

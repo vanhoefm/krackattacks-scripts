@@ -32,13 +32,17 @@ def show_progress(scr):
     global vm
     global dir
     global timestamp
+    global tests
+
+    total_tests = len(tests)
 
     scr.leaveok(1)
     scr.addstr(0, 0, "Parallel test execution status", curses.A_BOLD)
     for i in range(0, num_servers):
         scr.addstr(i + 1, 0, "VM %d:" % (i + 1), curses.A_BOLD)
-        scr.addstr(i + 1, 20, "starting VM")
+        scr.addstr(i + 1, 10, "starting VM")
     scr.addstr(num_servers + 1, 0, "Total:", curses.A_BOLD)
+    scr.addstr(num_servers + 1, 20, "TOTAL={} STARTED=0 PASS=0 FAIL=0 SKIP=0".format(total_tests))
     scr.refresh()
 
     while True:
@@ -49,7 +53,6 @@ def show_progress(scr):
                 continue
             if vm[i]['proc'].poll() is not None:
                 vm[i]['proc'] = None
-                vm[i]['done'] = vm[i]['total']
                 scr.move(i + 1, 10)
                 scr.clrtoeol()
                 log = '{}/{}.srv.{}/console'.format(dir, timestamp, i + 1)
@@ -70,6 +73,12 @@ def show_progress(scr):
 
             try:
                 out = vm[i]['proc'].stdout.read()
+                if "READY" in out or "PASS" in out or "FAIL" in out or "SKIP" in out:
+                    if not tests:
+                        vm[i]['proc'].stdin.write('\n')
+                    else:
+                        name = tests.pop(0)
+                        vm[i]['proc'].stdin.write(name + '\n')
             except:
                 continue
             #print("VM {}: '{}'".format(i, out))
@@ -79,38 +88,22 @@ def show_progress(scr):
             if len(last) > 0:
                 try:
                     info = last[-1].split(' ')
-                    vm[i]['pos'] = info[2]
-                    pos = info[2].split('/')
-                    if int(pos[0]) > 0:
-                        vm[i]['done'] = int(pos[0]) - 1
-                    vm[i]['total'] = int(pos[1])
-                    p = float(pos[0]) / float(pos[1]) * 100.0
                     scr.move(i + 1, 10)
                     scr.clrtoeol()
-                    scr.addstr("{} %".format(int(p)))
-                    scr.addstr(i + 1, 20, info[1])
+                    scr.addstr(info[1])
                     updated = True
                 except:
                     pass
-            else:
-                vm[i]['pos'] = ''
 
         if not running:
             break
 
         if updated:
-            done = 0
-            total = 0
-            for i in range(0, num_servers):
-                done += vm[i]['done']
-                total += vm[i]['total']
+            (started, passed, failed, skipped) = get_results()
             scr.move(num_servers + 1, 10)
             scr.clrtoeol()
-            if total > 0:
-                scr.addstr("{} %".format(int(100.0 * done / total)))
-
-            (started, passed, failed, skipped) = get_results()
-            scr.addstr(num_servers + 1, 20, "TOTAL={} PASS={} FAIL={} SKIP={}".format(len(started), len(passed), len(failed), len(skipped)))
+            scr.addstr("{} %".format(int(100.0 * (len(passed) + len(failed) + len(skipped)) / total_tests)))
+            scr.addstr(num_servers + 1, 20, "TOTAL={} STARTED={} PASS={} FAIL={} SKIP={}".format(total_tests, len(started), len(passed), len(failed), len(skipped)))
             if len(failed) > 0:
                 scr.move(num_servers + 2, 0)
                 scr.clrtoeol()
@@ -120,19 +113,32 @@ def show_progress(scr):
                     scr.addstr(' ')
             scr.refresh()
 
-        time.sleep(1)
+        time.sleep(0.5)
+
+    scr.refresh()
+    time.sleep(0.3)
 
 def main():
     global num_servers
     global vm
     global dir
     global timestamp
+    global tests
 
     if len(sys.argv) < 2:
         sys.exit("Usage: %s <number of VMs> [params..]" % sys.argv[0])
     num_servers = int(sys.argv[1])
     if num_servers < 1:
         sys.exit("Too small number of VMs")
+
+    tests = []
+    cmd = [ '../run-tests.py', '-L' ] + sys.argv[2:]
+    lst = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    for l in lst.stdout.readlines():
+        name = l.split(' ')[0]
+        tests.append(name)
+    if len(tests) == 0:
+        sys.exit("No test cases selected")
 
     dir = '/tmp/hwsim-test-logs'
     try:
@@ -146,7 +152,7 @@ def main():
         print("\rStarting virtual machine {}/{}".format(i + 1, num_servers)),
         cmd = ['./vm-run.sh', '--timestamp', str(timestamp),
                '--ext', 'srv.%d' % (i + 1),
-               '--split', '%d/%d' % (i + 1, num_servers)] + sys.argv[2:]
+               '-i'] + sys.argv[2:]
         vm[i] = {}
         vm[i]['proc'] = subprocess.Popen(cmd,
                                          stdin=subprocess.PIPE,
@@ -154,9 +160,6 @@ def main():
                                          stderr=subprocess.PIPE)
         vm[i]['out'] = ""
         vm[i]['err'] = ""
-        vm[i]['pos'] = ""
-        vm[i]['done'] = 0
-        vm[i]['total'] = 0
         for stream in [ vm[i]['proc'].stdout, vm[i]['proc'].stderr ]:
             fd = stream.fileno()
             fl = fcntl.fcntl(fd, fcntl.F_GETFL)
@@ -177,6 +180,7 @@ def main():
             print f.split(' ')[1],
         print
     print("TOTAL={} PASS={} FAIL={} SKIP={}".format(len(started), len(passed), len(failed), len(skipped)))
+    print "Logs: " + dir + '/' + str(timestamp)
 
     for i in range(0, num_servers):
         log = '{}/{}.srv.{}/console'.format(dir, timestamp, i + 1)

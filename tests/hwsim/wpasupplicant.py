@@ -750,7 +750,8 @@ class WpaSupplicant:
                 self.set_network_quoted(id, field, kwargs[field])
 
         not_quoted = [ "proto", "key_mgmt", "ieee80211w", "pairwise",
-                       "group", "wep_key0", "scan_freq", "eap",
+                       "group", "wep_key0", "wep_key1", "wep_key2", "wep_key3",
+                       "wep_tx_keyidx", "scan_freq", "eap",
                        "eapol_flags", "fragment_size", "scan_ssid", "auth_alg",
                        "wpa_ptk_rekey", "disable_ht", "disable_vht", "bssid",
                        "disable_max_amsdu", "ampdu_factor", "ampdu_density",

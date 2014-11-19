@@ -204,6 +204,8 @@ def main():
                         type=str, choices=[[]] + test_modules, nargs='+')
     parser.add_argument('-l', metavar='<modules file>', dest='mfile',
                         help='test modules file name')
+    parser.add_argument('-i', action='store_true', dest='stdin_ctrl',
+                        help='stdin-controlled test case execution')
     parser.add_argument('tests', metavar='<test>', nargs='*', type=str,
                         help='tests to run (only valid without -f)',
                         choices=[[]] + test_names)
@@ -339,7 +341,34 @@ def main():
         shuffle(tests_to_run)
 
     count = 0
-    for t in tests_to_run:
+    if args.stdin_ctrl:
+        print "READY"
+        sys.stdout.flush()
+    else:
+        remaining_tests = tests_to_run
+    while True:
+        if args.stdin_ctrl:
+            test = sys.stdin.readline()
+            if not test:
+                break
+            test = test.splitlines()[0]
+            if test == '':
+                break
+            t = None
+            for tt in tests:
+                name = tt.__name__.replace('test_', '', 1)
+                if name == test:
+                    t = tt
+                    break
+            if not t:
+                print "NOT-FOUND"
+                sys.stdout.flush()
+                continue
+        else:
+            if len(remaining_tests) == 0:
+                break
+            t = remaining_tests.pop(0)
+
         name = t.__name__.replace('test_', '', 1)
         if log_handler:
             log_handler.stream.close()

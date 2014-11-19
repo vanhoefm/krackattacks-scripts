@@ -12,6 +12,7 @@ import subprocess
 import time
 
 import hostapd
+import hwsim_utils
 from nl80211 import *
 
 def nl80211_command(dev, cmd, attr):
@@ -101,3 +102,36 @@ def test_cfg80211_tx_frame(dev, apdev, params):
             raise Exception("First Action frame on unexpected channel: %s MHz" % freq[0])
         if freq[1] != "2412":
             raise Exception("Second Action frame on unexpected channel: %s MHz" % freq[1])
+
+def test_cfg80211_wep_key_idx_change(dev, apdev):
+    """WEP Shared Key authentication and key index change without deauth"""
+    hapd = hostapd.add_ap(apdev[0]['ifname'],
+                          { "ssid": "wep-shared-key",
+                            "wep_key0": '"hello12345678"',
+                            "wep_key1": '"other12345678"',
+                            "auth_algs": "2" })
+    id = dev[0].connect("wep-shared-key", key_mgmt="NONE", auth_alg="SHARED",
+                        wep_key0='"hello12345678"',
+                        wep_key1='"other12345678"',
+                        wep_tx_keyidx="0",
+                        scan_freq="2412")
+    hwsim_utils.test_connectivity(dev[0], hapd)
+
+    dev[0].set_network(id, "wep_tx_keyidx", "1")
+
+    # clear cfg80211 auth state to allow new auth without deauth frame
+    ifindex = int(dev[0].get_driver_status_field("ifindex"))
+    attrs = build_nl80211_attr_u32('IFINDEX', ifindex)
+    attrs += build_nl80211_attr_u16('REASON_CODE', 1)
+    attrs += build_nl80211_attr_mac('MAC', apdev[0]['bssid'])
+    attrs += build_nl80211_attr_flag('LOCAL_STATE_CHANGE')
+    nl80211_command(dev[0], 'DEAUTHENTICATE', attrs)
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=5)
+    if ev is None:
+        raise Exception("Local-deauth timed out")
+
+    # the previous command results in deauth event followed by auto-reconnect
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("Reassociation with the AP timed out")
+    hwsim_utils.test_connectivity(dev[0], hapd)

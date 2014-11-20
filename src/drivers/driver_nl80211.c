@@ -4393,6 +4393,36 @@ static int wpa_driver_nl80211_sta_add(void *priv,
 			params->supp_rates_len, params->supp_rates);
 		wpa_hexdump(MSG_DEBUG, "  * supported rates",
 			    params->supp_rates, params->supp_rates_len);
+
+		if (params->ht_capabilities) {
+			wpa_hexdump(MSG_DEBUG, "  * ht_capabilities",
+				    (u8 *) params->ht_capabilities,
+				    sizeof(*params->ht_capabilities));
+			NLA_PUT(msg, NL80211_ATTR_HT_CAPABILITY,
+				sizeof(*params->ht_capabilities),
+				params->ht_capabilities);
+		}
+
+		if (params->vht_capabilities) {
+			wpa_hexdump(MSG_DEBUG, "  * vht_capabilities",
+				    (u8 *) params->vht_capabilities,
+				    sizeof(*params->vht_capabilities));
+			NLA_PUT(msg, NL80211_ATTR_VHT_CAPABILITY,
+				sizeof(*params->vht_capabilities),
+				params->vht_capabilities);
+		}
+
+		wpa_printf(MSG_DEBUG, "  * capability=0x%x",
+			   params->capability);
+		NLA_PUT_U16(msg, NL80211_ATTR_STA_CAPABILITY,
+			    params->capability);
+
+		if (params->ext_capab) {
+			wpa_hexdump(MSG_DEBUG, "  * ext_capab",
+				    params->ext_capab, params->ext_capab_len);
+			NLA_PUT(msg, NL80211_ATTR_STA_EXT_CAPABILITY,
+				params->ext_capab_len, params->ext_capab);
+		}
 	}
 	if (!params->set) {
 		if (params->aid) {
@@ -4415,38 +4445,11 @@ static int wpa_driver_nl80211_sta_add(void *priv,
 		wpa_printf(MSG_DEBUG, "  * peer_aid=%u", params->aid);
 		NLA_PUT_U16(msg, NL80211_ATTR_PEER_AID, params->aid);
 	}
-	if (params->ht_capabilities) {
-		wpa_hexdump(MSG_DEBUG, "  * ht_capabilities",
-			    (u8 *) params->ht_capabilities,
-			    sizeof(*params->ht_capabilities));
-		NLA_PUT(msg, NL80211_ATTR_HT_CAPABILITY,
-			sizeof(*params->ht_capabilities),
-			params->ht_capabilities);
-	}
-
-	if (params->vht_capabilities) {
-		wpa_hexdump(MSG_DEBUG, "  * vht_capabilities",
-			    (u8 *) params->vht_capabilities,
-			    sizeof(*params->vht_capabilities));
-		NLA_PUT(msg, NL80211_ATTR_VHT_CAPABILITY,
-			sizeof(*params->vht_capabilities),
-			params->vht_capabilities);
-	}
 
 	if (params->vht_opmode_enabled) {
 		wpa_printf(MSG_DEBUG, "  * opmode=%u", params->vht_opmode);
 		NLA_PUT_U8(msg, NL80211_ATTR_OPMODE_NOTIF,
 			   params->vht_opmode);
-	}
-
-	wpa_printf(MSG_DEBUG, "  * capability=0x%x", params->capability);
-	NLA_PUT_U16(msg, NL80211_ATTR_STA_CAPABILITY, params->capability);
-
-	if (params->ext_capab) {
-		wpa_hexdump(MSG_DEBUG, "  * ext_capab",
-			    params->ext_capab, params->ext_capab_len);
-		NLA_PUT(msg, NL80211_ATTR_STA_EXT_CAPABILITY,
-			params->ext_capab_len, params->ext_capab);
 	}
 
 	if (params->supp_channels) {

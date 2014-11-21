@@ -427,7 +427,7 @@ def parse_eapol(data):
         # EAPOL-Key
         (eapol['descr_type'],) = struct.unpack('B', payload[0:1])
         payload = payload[1:]
-        if eapol['descr_type'] == 2:
+        if eapol['descr_type'] == 2 or eapol['descr_type'] == 254:
             # RSN EAPOL-Key
             (key_info, key_len) = struct.unpack('>HH', payload[0:4])
             eapol['rsn_key_info'] = key_info
@@ -539,19 +539,28 @@ def hapd_connected(hapd):
     if ev is None:
         raise Exception("Timeout on AP-STA-CONNECTED from hostapd")
 
-def eapol_test(apdev, dev):
+def eapol_test(apdev, dev, wpa2=True):
     bssid = apdev['bssid']
-    ssid = "test-wpa2-psk"
+    if wpa2:
+        ssid = "test-wpa2-psk"
+    else:
+        ssid = "test-wpa-psk"
     psk = '602e323e077bc63bd80307ef4745b754b0ae0a925c2638ecd13a794b9527b9e6'
     pmk = binascii.unhexlify(psk)
-    params = hostapd.wpa2_params(ssid=ssid)
+    if wpa2:
+        params = hostapd.wpa2_params(ssid=ssid)
+    else:
+        params = hostapd.wpa_params(ssid=ssid)
     params['wpa_psk'] = psk
     hapd = hostapd.add_ap(apdev['ifname'], params)
     hapd.request("SET ext_eapol_frame_io 1")
     dev.request("SET ext_eapol_frame_io 1")
     dev.connect(ssid, psk="not used", scan_freq="2412", wait_connect=False)
     addr = dev.p2p_interface_addr()
-    rsne = binascii.unhexlify('30140100000fac040100000fac040100000fac020000')
+    if wpa2:
+        rsne = binascii.unhexlify('30140100000fac040100000fac040100000fac020000')
+    else:
+        rsne = binascii.unhexlify('dd160050f20101000050f20201000050f20201000050f202')
     snonce = binascii.unhexlify('1111111111111111111111111111111111111111111111111111111111111111')
     return (bssid,ssid,hapd,snonce,pmk,addr,rsne)
 
@@ -695,6 +704,33 @@ def test_ap_wpa2_psk_ext_eapol_type_diff(dev, apdev):
     rsn_eapol_key_set(msg, 0x010a, 0, snonce, rsne)
     eapol_key_mic(kck, msg)
     send_eapol(hapd, addr, build_eapol(msg))
+
+    msg = recv_eapol(hapd)
+    if anonce != msg['rsn_key_nonce']:
+        raise Exception("ANonce changed")
+    logger.info("Replay same data back")
+    send_eapol(hapd, addr, build_eapol(msg))
+
+    reply_eapol("4/4", hapd, addr, msg, 0x030a, None, None, kck)
+    hapd_connected(hapd)
+
+def test_ap_wpa_psk_ext_eapol(dev, apdev):
+    """WPA2-PSK AP using external EAPOL supplicant"""
+    (bssid,ssid,hapd,snonce,pmk,addr,wpae) = eapol_test(apdev[0], dev[0],
+                                                        wpa2=False)
+
+    msg = recv_eapol(hapd)
+    anonce = msg['rsn_key_nonce']
+    logger.info("Replay same data back")
+    send_eapol(hapd, addr, build_eapol(msg))
+    logger.info("Too short data")
+    send_eapol(hapd, addr, build_eapol(msg)[0:98])
+
+    (ptk, kck, kek) = pmk_to_ptk(pmk, addr, bssid, snonce, anonce)
+    msg['descr_type'] = 2
+    reply_eapol("2/4(invalid type)", hapd, addr, msg, 0x010a, snonce, wpae, kck)
+    msg['descr_type'] = 254
+    reply_eapol("2/4", hapd, addr, msg, 0x010a, snonce, wpae, kck)
 
     msg = recv_eapol(hapd)
     if anonce != msg['rsn_key_nonce']:

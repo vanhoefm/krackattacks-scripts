@@ -674,3 +674,33 @@ def test_ap_wpa2_psk_ext_eapol_retry1d(dev, apdev):
         raise Exception("ANonce changed")
     reply_eapol("4/4", hapd, addr, msg, 0x030a, None, None, kck)
     hapd_connected(hapd)
+
+def test_ap_wpa2_psk_ext_eapol_type_diff(dev, apdev):
+    """WPA2 4-way handshake using external EAPOL supplicant"""
+    (bssid,ssid,hapd,snonce,pmk,addr,rsne) = eapol_test(apdev[0], dev[0])
+
+    msg = recv_eapol(hapd)
+    anonce = msg['rsn_key_nonce']
+
+    (ptk, kck, kek) = pmk_to_ptk(pmk, addr, bssid, snonce, anonce)
+
+    # Incorrect descriptor type (frame dropped)
+    msg['descr_type'] = 253
+    rsn_eapol_key_set(msg, 0x010a, 0, snonce, rsne)
+    eapol_key_mic(kck, msg)
+    send_eapol(hapd, addr, build_eapol(msg))
+
+    # Incorrect descriptor type, but with a workaround (frame processed)
+    msg['descr_type'] = 254
+    rsn_eapol_key_set(msg, 0x010a, 0, snonce, rsne)
+    eapol_key_mic(kck, msg)
+    send_eapol(hapd, addr, build_eapol(msg))
+
+    msg = recv_eapol(hapd)
+    if anonce != msg['rsn_key_nonce']:
+        raise Exception("ANonce changed")
+    logger.info("Replay same data back")
+    send_eapol(hapd, addr, build_eapol(msg))
+
+    reply_eapol("4/4", hapd, addr, msg, 0x030a, None, None, kck)
+    hapd_connected(hapd)

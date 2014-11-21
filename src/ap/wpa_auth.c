@@ -1384,6 +1384,8 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 	inc_byte_array(sm->key_replay[0].counter, WPA_REPLAY_COUNTER_LEN);
 	os_memcpy(key->replay_counter, sm->key_replay[0].counter,
 		  WPA_REPLAY_COUNTER_LEN);
+	wpa_hexdump(MSG_DEBUG, "WPA: Replay Counter",
+		    key->replay_counter, WPA_REPLAY_COUNTER_LEN);
 	sm->key_replay[0].valid = TRUE;
 
 	if (nonce)

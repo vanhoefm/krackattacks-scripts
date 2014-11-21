@@ -740,3 +740,48 @@ def test_ap_wpa_psk_ext_eapol(dev, apdev):
 
     reply_eapol("4/4", hapd, addr, msg, 0x030a, None, None, kck)
     hapd_connected(hapd)
+
+def test_ap_wpa2_psk_ext_eapol_key_info(dev, apdev):
+    """WPA2-PSK 4-way handshake with strange key info values"""
+    (bssid,ssid,hapd,snonce,pmk,addr,rsne) = eapol_test(apdev[0], dev[0])
+
+    msg = recv_eapol(hapd)
+    anonce = msg['rsn_key_nonce']
+
+    (ptk, kck, kek) = pmk_to_ptk(pmk, addr, bssid, snonce, anonce)
+    rsn_eapol_key_set(msg, 0x0000, 0, snonce, rsne)
+    send_eapol(hapd, addr, build_eapol(msg))
+    rsn_eapol_key_set(msg, 0xffff, 0, snonce, rsne)
+    send_eapol(hapd, addr, build_eapol(msg))
+    # SMK M1
+    rsn_eapol_key_set(msg, 0x2802, 0, snonce, rsne)
+    send_eapol(hapd, addr, build_eapol(msg))
+    # SMK M3
+    rsn_eapol_key_set(msg, 0x2002, 0, snonce, rsne)
+    send_eapol(hapd, addr, build_eapol(msg))
+    # Request
+    rsn_eapol_key_set(msg, 0x0902, 0, snonce, rsne)
+    send_eapol(hapd, addr, build_eapol(msg))
+    # Request
+    rsn_eapol_key_set(msg, 0x0902, 0, snonce, rsne)
+    tmp_kck = binascii.unhexlify('00000000000000000000000000000000')
+    eapol_key_mic(tmp_kck, msg)
+    send_eapol(hapd, addr, build_eapol(msg))
+
+    reply_eapol("2/4", hapd, addr, msg, 0x010a, snonce, rsne, kck)
+
+    msg = recv_eapol(hapd)
+    if anonce != msg['rsn_key_nonce']:
+        raise Exception("ANonce changed")
+
+    # Request (valic MIC)
+    rsn_eapol_key_set(msg, 0x0902, 0, snonce, rsne)
+    eapol_key_mic(kck, msg)
+    send_eapol(hapd, addr, build_eapol(msg))
+    # Request (valid MIC, replayed counter)
+    rsn_eapol_key_set(msg, 0x0902, 0, snonce, rsne)
+    eapol_key_mic(kck, msg)
+    send_eapol(hapd, addr, build_eapol(msg))
+
+    reply_eapol("4/4", hapd, addr, msg, 0x030a, None, None, kck)
+    hapd_connected(hapd)

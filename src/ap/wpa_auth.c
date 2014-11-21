@@ -43,6 +43,8 @@ static int wpa_gtk_update(struct wpa_authenticator *wpa_auth,
 			  struct wpa_group *group);
 static int wpa_group_config_group_keys(struct wpa_authenticator *wpa_auth,
 				       struct wpa_group *group);
+static int wpa_derive_ptk(struct wpa_state_machine *sm, const u8 *snonce,
+			  const u8 *pmk, struct wpa_ptk *ptk);
 
 static const u32 dot11RSNAConfigGroupUpdateCount = 4;
 static const u32 dot11RSNAConfigPairwiseUpdateCount = 4;
@@ -794,6 +796,51 @@ static int wpa_receive_error_report(struct wpa_authenticator *wpa_auth,
 }
 
 
+static int wpa_try_alt_snonce(struct wpa_state_machine *sm, u8 *data,
+			      size_t data_len)
+{
+	struct wpa_ptk PTK;
+	int ok = 0;
+	const u8 *pmk = NULL;
+
+	for (;;) {
+		if (wpa_key_mgmt_wpa_psk(sm->wpa_key_mgmt)) {
+			pmk = wpa_auth_get_psk(sm->wpa_auth, sm->addr,
+					       sm->p2p_dev_addr, pmk);
+			if (pmk == NULL)
+				break;
+		} else
+			pmk = sm->PMK;
+
+		wpa_derive_ptk(sm, sm->alt_SNonce, pmk, &PTK);
+
+		if (wpa_verify_key_mic(sm->wpa_key_mgmt, &PTK, data, data_len)
+		    == 0) {
+			ok = 1;
+			break;
+		}
+
+		if (!wpa_key_mgmt_wpa_psk(sm->wpa_key_mgmt))
+			break;
+	}
+
+	if (!ok) {
+		wpa_printf(MSG_DEBUG,
+			   "WPA: Earlier SNonce did not result in matching MIC");
+		return -1;
+	}
+
+	wpa_printf(MSG_DEBUG,
+		   "WPA: Earlier SNonce resulted in matching MIC");
+	sm->alt_snonce_valid = 0;
+	os_memcpy(sm->SNonce, sm->alt_SNonce, WPA_NONCE_LEN);
+	os_memcpy(&sm->PTK, &PTK, sizeof(PTK));
+	sm->PTK_valid = TRUE;
+
+	return 0;
+}
+
+
 void wpa_receive(struct wpa_authenticator *wpa_auth,
 		 struct wpa_state_machine *sm,
 		 u8 *data, size_t data_len)
@@ -957,8 +1004,25 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 					 "based on retransmitted EAPOL-Key "
 					 "1/4");
 			sm->update_snonce = 1;
-			wpa_replay_counter_mark_invalid(sm->prev_key_replay,
-							key->replay_counter);
+			os_memcpy(sm->alt_SNonce, sm->SNonce, WPA_NONCE_LEN);
+			sm->alt_snonce_valid = TRUE;
+			os_memcpy(sm->alt_replay_counter,
+				  sm->key_replay[0].counter,
+				  WPA_REPLAY_COUNTER_LEN);
+			goto continue_processing;
+		}
+
+		if (msg == PAIRWISE_4 && sm->alt_snonce_valid &&
+		    sm->wpa_ptk_state == WPA_PTK_PTKINITNEGOTIATING &&
+		    os_memcmp(key->replay_counter, sm->alt_replay_counter,
+			      WPA_REPLAY_COUNTER_LEN) == 0) {
+			/*
+			 * Supplicant may still be using the old SNonce since
+			 * there was two EAPOL-Key 2/4 messages and they had
+			 * different SNonce values.
+			 */
+			wpa_auth_vlogger(wpa_auth, sm->addr, LOGGER_DEBUG,
+					 "Try to process received EAPOL-Key 4/4 based on old Replay Counter and SNonce from an earlier EAPOL-Key 1/4");
 			goto continue_processing;
 		}
 
@@ -1144,7 +1208,9 @@ continue_processing:
 	sm->MICVerified = FALSE;
 	if (sm->PTK_valid && !sm->update_snonce) {
 		if (wpa_verify_key_mic(sm->wpa_key_mgmt, &sm->PTK, data,
-				       data_len)) {
+				       data_len) &&
+		    (msg != PAIRWISE_4 || !sm->alt_snonce_valid ||
+		     wpa_try_alt_snonce(sm, data, data_len))) {
 			wpa_auth_logger(wpa_auth, sm->addr, LOGGER_INFO,
 					"received EAPOL-Key with invalid MIC");
 			return;
@@ -1808,6 +1874,7 @@ SM_STATE(WPA_PTK, PTKSTART)
 	SM_ENTRY_MA(WPA_PTK, PTKSTART, wpa_ptk);
 	sm->PTKRequest = FALSE;
 	sm->TimeoutEvt = FALSE;
+	sm->alt_snonce_valid = FALSE;
 
 	sm->TimeoutCtr++;
 	if (sm->TimeoutCtr > (int) dot11RSNAConfigPairwiseUpdateCount) {
@@ -1852,8 +1919,8 @@ SM_STATE(WPA_PTK, PTKSTART)
 }
 
 
-static int wpa_derive_ptk(struct wpa_state_machine *sm, const u8 *pmk,
-			  struct wpa_ptk *ptk)
+static int wpa_derive_ptk(struct wpa_state_machine *sm, const u8 *snonce,
+			  const u8 *pmk, struct wpa_ptk *ptk)
 {
 	size_t ptk_len = wpa_cipher_key_len(sm->pairwise) + 32;
 #ifdef CONFIG_IEEE80211R
@@ -1862,7 +1929,7 @@ static int wpa_derive_ptk(struct wpa_state_machine *sm, const u8 *pmk,
 #endif /* CONFIG_IEEE80211R */
 
 	wpa_pmk_to_ptk(pmk, PMK_LEN, "Pairwise key expansion",
-		       sm->wpa_auth->addr, sm->addr, sm->ANonce, sm->SNonce,
+		       sm->wpa_auth->addr, sm->addr, sm->ANonce, snonce,
 		       (u8 *) ptk, ptk_len,
 		       wpa_key_mgmt_sha256(sm->wpa_key_mgmt));
 
@@ -1892,7 +1959,7 @@ SM_STATE(WPA_PTK, PTKCALCNEGOTIATING)
 		} else
 			pmk = sm->PMK;
 
-		wpa_derive_ptk(sm, pmk, &PTK);
+		wpa_derive_ptk(sm, sm->SNonce, pmk, &PTK);
 
 		if (wpa_verify_key_mic(sm->wpa_key_mgmt, &PTK,
 				       sm->last_rx_eapol_key,

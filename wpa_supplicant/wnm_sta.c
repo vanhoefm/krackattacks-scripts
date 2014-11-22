@@ -448,7 +448,7 @@ static void wnm_parse_neighbor_report(struct wpa_supplicant *wpa_s,
 	}
 
 	os_memcpy(rep->bssid, pos, ETH_ALEN);
-	os_memcpy(rep->bssid_information, pos + ETH_ALEN, 4);
+	rep->bssid_info = WPA_GET_LE32(pos + ETH_ALEN);
 	rep->regulatory_class = *(pos + 10);
 	rep->channel_number = *(pos + 11);
 	rep->phy_type = *(pos + 12);
@@ -628,8 +628,9 @@ static void wnm_dump_cand_list(struct wpa_supplicant *wpa_s)
 
 		nei = &wpa_s->wnm_neighbor_report_elements[i];
 		wpa_printf(MSG_DEBUG, "%u: " MACSTR
-			   " op_class=%u chan=%u phy=%u pref=%d",
-			   i, MAC2STR(nei->bssid), nei->regulatory_class,
+			   " info=0x%x op_class=%u chan=%u phy=%u pref=%d",
+			   i, MAC2STR(nei->bssid), nei->bssid_info,
+			   nei->regulatory_class,
 			   nei->channel_number, nei->phy_type,
 			   nei->bss_tran_can ? nei->bss_tran_can->preference :
 			   -1);

@@ -48,7 +48,7 @@ struct multiple_bssid {
 
 struct neighbor_report {
 	u8 bssid[ETH_ALEN];
-	u8 bssid_information[4];
+	u32 bssid_info;
 	u8 regulatory_class;
 	u8 channel_number;
 	u8 phy_type;

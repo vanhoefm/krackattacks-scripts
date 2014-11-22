@@ -11,6 +11,7 @@
 #include "utils/common.h"
 #include "utils/eloop.h"
 #include "common/ieee802_11_defs.h"
+#include "common/wpa_ctrl.h"
 #include "ap/hostapd.h"
 #include "ap/sta_info.h"
 #include "ap/ap_config.h"
@@ -358,7 +359,16 @@ static void ieee802_11_rx_bss_trans_mgmt_resp(struct hostapd_data *hapd,
 		}
 		wpa_printf(MSG_DEBUG, "WNM: Target BSSID: " MACSTR,
 			   MAC2STR(pos));
+		wpa_msg(hapd->msg_ctx, MSG_INFO, BSS_TM_RESP MACSTR
+			" status_code=%u bss_termination_delay=%u target_bssid="
+			MACSTR,
+			MAC2STR(addr), status_code, bss_termination_delay,
+			MAC2STR(pos));
 		pos += ETH_ALEN;
+	} else {
+		wpa_msg(hapd->msg_ctx, MSG_INFO, BSS_TM_RESP MACSTR
+			" status_code=%u bss_termination_delay=%u",
+			MAC2STR(addr), status_code, bss_termination_delay);
 	}
 
 	wpa_hexdump(MSG_DEBUG, "WNM: BSS Transition Candidate List Entries",

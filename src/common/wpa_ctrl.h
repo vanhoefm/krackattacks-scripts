@@ -232,6 +232,9 @@ extern "C" {
 
 #define AP_CSA_FINISHED "AP-CSA-FINISHED "
 
+/* BSS Transition Management Response frame received */
+#define BSS_TM_RESP "BSS-TM-RESP "
+
 /* BSS command information masks */
 
 #define WPA_BSS_MASK_ALL		0xFFFDFFFF

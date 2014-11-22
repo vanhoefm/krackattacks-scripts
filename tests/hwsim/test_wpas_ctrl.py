@@ -1040,3 +1040,13 @@ def test_wpas_ctrl_ipaddr(dev, apdev):
     finally:
         subprocess.call(['ip', 'addr', 'del', '10.174.65.207/32', 'dev',
                          dev[0].ifname])
+
+def test_wpas_ctrl_neighbor_rep_req(dev, apdev):
+    """wpa_supplicant ctrl_iface NEIGHBOR_REP_REQUEST"""
+    params = { "ssid": "test" }
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test", key_mgmt="NONE", scan_freq="2412")
+    if "FAIL" not in dev[0].request("NEIGHBOR_REP_REQUEST"):
+        raise Exception("Request succeeded unexpectedly")
+    if "FAIL" not in dev[0].request("NEIGHBOR_REP_REQUEST ssid=abcdef"):
+        raise Exception("Request succeeded unexpectedly")

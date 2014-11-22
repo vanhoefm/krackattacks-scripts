@@ -45,6 +45,7 @@ struct neighbor_report {
 	unsigned int bss_term_present:1;
 	struct measurement_pilot *meas_pilot;
 	struct multiple_bssid *mul_bssid;
+	int freq;
 };
 
 

@@ -10,6 +10,7 @@
 
 #include "utils/common.h"
 #include "common/ieee802_11_defs.h"
+#include "common/ieee802_11_common.h"
 #include "common/wpa_ctrl.h"
 #include "rsn_supp/wpa.h"
 #include "wpa_supplicant_i.h"
@@ -406,6 +407,12 @@ static void wnm_parse_neighbor_report_elem(struct neighbor_report *rep,
 }
 
 
+static int wnm_nei_get_chan(struct wpa_supplicant *wpa_s, u8 op_class, u8 chan)
+{
+	return ieee80211_chan_to_freq(NULL, op_class, chan);
+}
+
+
 static void wnm_parse_neighbor_report(struct wpa_supplicant *wpa_s,
 				      const u8 *pos, u8 len,
 				      struct neighbor_report *rep)
@@ -442,6 +449,9 @@ static void wnm_parse_neighbor_report(struct wpa_supplicant *wpa_s,
 		left -= elen;
 		pos += elen;
 	}
+
+	rep->freq = wnm_nei_get_chan(wpa_s, rep->regulatory_class,
+				     rep->channel_number);
 }
 
 
@@ -673,12 +683,82 @@ static void wnm_dump_cand_list(struct wpa_supplicant *wpa_s)
 
 		nei = &wpa_s->wnm_neighbor_report_elements[i];
 		wpa_printf(MSG_DEBUG, "%u: " MACSTR
-			   " info=0x%x op_class=%u chan=%u phy=%u pref=%d",
+			   " info=0x%x op_class=%u chan=%u phy=%u pref=%d freq=%d",
 			   i, MAC2STR(nei->bssid), nei->bssid_info,
 			   nei->regulatory_class,
 			   nei->channel_number, nei->phy_type,
-			   nei->preference_present ? nei->preference : -1);
+			   nei->preference_present ? nei->preference : -1,
+			   nei->freq);
 	}
+}
+
+
+static int chan_supported(struct wpa_supplicant *wpa_s, int freq)
+{
+	unsigned int i;
+
+	for (i = 0; i < wpa_s->hw.num_modes; i++) {
+		struct hostapd_hw_modes *mode = &wpa_s->hw.modes[i];
+		int j;
+
+		for (j = 0; j < mode->num_channels; j++) {
+			struct hostapd_channel_data *chan;
+
+			chan = &mode->channels[j];
+			if (chan->freq == freq &&
+			    !(chan->flag & HOSTAPD_CHAN_DISABLED))
+				return 1;
+		}
+	}
+
+	return 0;
+}
+
+
+static void wnm_set_scan_freqs(struct wpa_supplicant *wpa_s)
+{
+	int *freqs;
+	int num_freqs = 0;
+	unsigned int i;
+
+	if (!wpa_s->wnm_neighbor_report_elements)
+		return;
+
+	if (wpa_s->hw.modes == NULL)
+		return;
+
+	os_free(wpa_s->next_scan_freqs);
+	wpa_s->next_scan_freqs = NULL;
+
+	freqs = os_calloc(wpa_s->wnm_num_neighbor_report + 1, sizeof(int));
+	if (freqs == NULL)
+		return;
+
+	for (i = 0; i < wpa_s->wnm_num_neighbor_report; i++) {
+		struct neighbor_report *nei;
+
+		nei = &wpa_s->wnm_neighbor_report_elements[i];
+		if (nei->freq <= 0) {
+			wpa_printf(MSG_DEBUG,
+				   "WNM: Unknown neighbor operating frequency for "
+				   MACSTR " - scan all channels",
+				   MAC2STR(nei->bssid));
+			os_free(freqs);
+			return;
+		}
+		if (chan_supported(wpa_s, nei->freq))
+			add_freq(freqs, &num_freqs, nei->freq);
+	}
+
+	if (num_freqs == 0) {
+		os_free(freqs);
+		return;
+	}
+
+	wpa_printf(MSG_DEBUG,
+		   "WNM: Scan %d frequencies based on transition candidate list",
+		   num_freqs);
+	wpa_s->next_scan_freqs = freqs;
 }
 
 
@@ -794,6 +874,7 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 		wpa_s->wnm_cand_valid_until.usec %= 1000000;
 		os_memcpy(wpa_s->wnm_cand_from_bss, wpa_s->bssid, ETH_ALEN);
 
+		wnm_set_scan_freqs(wpa_s);
 		wpa_supplicant_req_scan(wpa_s, 0, 0);
 	} else if (reply) {
 		enum bss_trans_mgmt_status_code status;

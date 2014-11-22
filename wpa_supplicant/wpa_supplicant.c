@@ -4402,7 +4402,7 @@ void wpa_supplicant_update_config(struct wpa_supplicant *wpa_s)
 }
 
 
-static void add_freq(int *freqs, int *num_freqs, int freq)
+void add_freq(int *freqs, int *num_freqs, int freq)
 {
 	int i;
 

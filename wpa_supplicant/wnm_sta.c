@@ -745,8 +745,7 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 		unsigned int valid_ms;
 
 		wpa_msg(wpa_s, MSG_INFO, "WNM: Preferred List Available");
-		wpa_s->wnm_num_neighbor_report = 0;
-		os_free(wpa_s->wnm_neighbor_report_elements);
+		wnm_deallocate_memory(wpa_s);
 		wpa_s->wnm_neighbor_report_elements = os_zalloc(
 			WNM_MAX_NEIGHBOR_REPORT *
 			sizeof(struct neighbor_report));

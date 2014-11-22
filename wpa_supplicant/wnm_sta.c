@@ -586,6 +586,35 @@ send_bss_resp_fail:
 }
 
 
+static int cand_pref_compar(const void *a, const void *b)
+{
+	const struct neighbor_report *aa = a;
+	const struct neighbor_report *bb = b;
+
+	if (!aa->preference_present && !bb->preference_present)
+		return 0;
+	if (!aa->preference_present)
+		return 1;
+	if (!bb->preference_present)
+		return -1;
+	if (bb->preference > aa->preference)
+		return 1;
+	if (bb->preference < aa->preference)
+		return -1;
+	return 0;
+}
+
+
+static void wnm_sort_cand_list(struct wpa_supplicant *wpa_s)
+{
+	if (!wpa_s->wnm_neighbor_report_elements)
+		return;
+	qsort(wpa_s->wnm_neighbor_report_elements,
+	      wpa_s->wnm_num_neighbor_report, sizeof(struct neighbor_report),
+	      cand_pref_compar);
+}
+
+
 static void wnm_dump_cand_list(struct wpa_supplicant *wpa_s)
 {
 	unsigned int i;
@@ -707,6 +736,7 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 			pos += len;
 			wpa_s->wnm_num_neighbor_report++;
 		}
+		wnm_sort_cand_list(wpa_s);
 		wnm_dump_cand_list(wpa_s);
 		valid_ms = valid_int * beacon_int * 128 / 125;
 		wpa_printf(MSG_DEBUG, "WNM: Candidate list valid for %u ms",

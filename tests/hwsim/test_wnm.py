@@ -277,7 +277,7 @@ def test_wnm_bss_tm_req(dev, apdev):
     req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
                      req_mode=0x01, dialog_token=5)
     hapd.mgmt_tx(req)
-    resp = rx_bss_tm_resp(hapd, expect_dialog=5, expect_status=1)
+    resp = rx_bss_tm_resp(hapd, expect_dialog=5, expect_status=7)
 
     # Preferred Candidate List with a truncated entry
     req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
@@ -291,7 +291,7 @@ def test_wnm_bss_tm_req(dev, apdev):
                      req_mode=0x01, dialog_token=6)
     req['payload'] += struct.pack("<BB", 52, 0)
     hapd.mgmt_tx(req)
-    resp = rx_bss_tm_resp(hapd, expect_dialog=6, expect_status=1)
+    resp = rx_bss_tm_resp(hapd, expect_dialog=6, expect_status=7)
 
     # Preferred Candidate List with a non-matching entry
     req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
@@ -300,7 +300,7 @@ def test_wnm_bss_tm_req(dev, apdev):
                                   1, 2, 3, 4, 5, 6,
                                   0, 81, 1, 7)
     hapd.mgmt_tx(req)
-    resp = rx_bss_tm_resp(hapd, expect_dialog=6, expect_status=1)
+    resp = rx_bss_tm_resp(hapd, expect_dialog=6, expect_status=7)
 
     # Preferred Candidate List with a truncated subelement
     req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
@@ -310,7 +310,7 @@ def test_wnm_bss_tm_req(dev, apdev):
                                   0, 81, 1, 7,
                                   1, 1)
     hapd.mgmt_tx(req)
-    resp = rx_bss_tm_resp(hapd, expect_dialog=7, expect_status=1)
+    resp = rx_bss_tm_resp(hapd, expect_dialog=7, expect_status=7)
 
     # Preferred Candidate List with lots of invalid optional subelements
     req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
@@ -327,7 +327,7 @@ def test_wnm_bss_tm_req(dev, apdev):
                                   1, 2, 3, 4, 5, 6,
                                   0, 81, 1, 7) + subelems
     hapd.mgmt_tx(req)
-    resp = rx_bss_tm_resp(hapd, expect_dialog=8, expect_status=1)
+    resp = rx_bss_tm_resp(hapd, expect_dialog=8, expect_status=7)
 
     # Preferred Candidate List with lots of valid optional subelements (twice)
     req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
@@ -352,7 +352,7 @@ def test_wnm_bss_tm_req(dev, apdev):
                                   1, 2, 3, 4, 5, 6,
                                   0, 81, 1, 7) + subelems + subelems
     hapd.mgmt_tx(req)
-    resp = rx_bss_tm_resp(hapd, expect_dialog=8, expect_status=1)
+    resp = rx_bss_tm_resp(hapd, expect_dialog=8, expect_status=7)
 
 def test_wnm_bss_keep_alive(dev, apdev):
     """WNM keep-alive"""

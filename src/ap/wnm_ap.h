@@ -1,6 +1,6 @@
 /*
  * IEEE 802.11v WNM related functions and structures
- * Copyright (c) 2011-2013, Qualcomm Atheros, Inc.
+ * Copyright (c) 2011-2014, Qualcomm Atheros, Inc.
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -18,5 +18,9 @@ int wnm_send_disassoc_imminent(struct hostapd_data *hapd,
 int wnm_send_ess_disassoc_imminent(struct hostapd_data *hapd,
 				   struct sta_info *sta, const char *url,
 				   int disassoc_timer);
+int wnm_send_bss_tm_req(struct hostapd_data *hapd, struct sta_info *sta,
+			u8 req_mode, int disassoc_timer, u8 valid_int,
+			const u8 *bss_term_dur, const char *url,
+			const u8 *nei_rep, size_t nei_rep_len);
 
 #endif /* WNM_AP_H */

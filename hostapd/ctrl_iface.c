@@ -863,6 +863,193 @@ static int hostapd_ctrl_iface_ess_disassoc(struct hostapd_data *hapd,
 	return wnm_send_ess_disassoc_imminent(hapd, sta, url, disassoc_timer);
 }
 
+
+static int hostapd_ctrl_iface_bss_tm_req(struct hostapd_data *hapd,
+					 const char *cmd)
+{
+	u8 addr[ETH_ALEN];
+	const char *pos, *end;
+	int disassoc_timer = 0;
+	struct sta_info *sta;
+	u8 req_mode = 0, valid_int = 0x01;
+	u8 bss_term_dur[12];
+	char *url = NULL;
+	int ret;
+	u8 nei_rep[1000];
+	u8 *nei_pos = nei_rep;
+
+	if (hwaddr_aton(cmd, addr)) {
+		wpa_printf(MSG_DEBUG, "Invalid STA MAC address");
+		return -1;
+	}
+
+	sta = ap_get_sta(hapd, addr);
+	if (sta == NULL) {
+		wpa_printf(MSG_DEBUG, "Station " MACSTR
+			   " not found for BSS TM Request message",
+			   MAC2STR(addr));
+		return -1;
+	}
+
+	pos = os_strstr(cmd, " disassoc_timer=");
+	if (pos) {
+		pos += 16;
+		disassoc_timer = atoi(pos);
+		if (disassoc_timer < 0 || disassoc_timer > 65535) {
+			wpa_printf(MSG_DEBUG, "Invalid disassoc_timer");
+			return -1;
+		}
+	}
+
+	pos = os_strstr(cmd, " valid_int=");
+	if (pos) {
+		pos += 11;
+		valid_int = atoi(pos);
+	}
+
+	pos = os_strstr(cmd, " bss_term=");
+	if (pos) {
+		pos += 10;
+		req_mode |= WNM_BSS_TM_REQ_BSS_TERMINATION_INCLUDED;
+		/* TODO: TSF configurable/learnable */
+		bss_term_dur[0] = 4; /* Subelement ID */
+		bss_term_dur[1] = 10; /* Length */
+		os_memset(bss_term_dur, 2, 8);
+		end = os_strchr(pos, ',');
+		if (end == NULL) {
+			wpa_printf(MSG_DEBUG, "Invalid bss_term data");
+			return -1;
+		}
+		end++;
+		WPA_PUT_LE16(&bss_term_dur[10], atoi(end));
+	}
+
+
+	/*
+	 * BSS Transition Candidate List Entries - Neighbor Report elements
+	 * neighbor=<BSSID>,<BSSID Information>,<Operating Class>,
+	 * <Channel Number>,<PHY Type>[,<hexdump of Optional Subelements>]
+	 */
+	pos = cmd;
+	while (pos) {
+		u8 *nei_start;
+		long int val;
+		char *endptr, *tmp;
+
+		pos = os_strstr(pos, " neighbor=");
+		if (!pos)
+			break;
+		if (nei_pos + 15 > nei_rep + sizeof(nei_rep)) {
+			wpa_printf(MSG_DEBUG,
+				   "Not enough room for additional neighbor");
+			return -1;
+		}
+		pos += 10;
+
+		nei_start = nei_pos;
+		*nei_pos++ = WLAN_EID_NEIGHBOR_REPORT;
+		nei_pos++; /* length to be filled in */
+
+		if (hwaddr_aton(pos, nei_pos)) {
+			wpa_printf(MSG_DEBUG, "Invalid BSSID");
+			return -1;
+		}
+		nei_pos += ETH_ALEN;
+		pos += 17;
+		if (*pos != ',') {
+			wpa_printf(MSG_DEBUG, "Missing BSSID Information");
+			return -1;
+		}
+		pos++;
+
+		val = strtol(pos, &endptr, 0);
+		WPA_PUT_LE32(nei_pos, val);
+		nei_pos += 4;
+		if (*endptr != ',') {
+			wpa_printf(MSG_DEBUG, "Missing Operating Class");
+			return -1;
+		}
+		pos = endptr + 1;
+
+		*nei_pos++ = atoi(pos); /* Operating Class */
+		pos = os_strchr(pos, ',');
+		if (pos == NULL) {
+			wpa_printf(MSG_DEBUG, "Missing Channel Number");
+			return -1;
+		}
+		pos++;
+
+		*nei_pos++ = atoi(pos); /* Channel Number */
+		pos = os_strchr(pos, ',');
+		if (pos == NULL) {
+			wpa_printf(MSG_DEBUG, "Missing PHY Type");
+			return -1;
+		}
+		pos++;
+
+		*nei_pos++ = atoi(pos); /* PHY Type */
+		end = os_strchr(pos, ' ');
+		tmp = os_strchr(pos, ',');
+		if (tmp && (!end || tmp < end)) {
+			/* Optional Subelements (hexdump) */
+			size_t len;
+
+			pos = tmp + 1;
+			end = os_strchr(pos, ' ');
+			if (end)
+				len = end - pos;
+			else
+				len = os_strlen(pos);
+			if (nei_pos + len / 2 > nei_rep + sizeof(nei_rep)) {
+				wpa_printf(MSG_DEBUG,
+					   "Not enough room for neighbor subelements");
+				return -1;
+			}
+			if (len & 0x01 ||
+			    hexstr2bin(pos, nei_pos, len / 2) < 0) {
+				wpa_printf(MSG_DEBUG,
+					   "Invalid neighbor subelement info");
+				return -1;
+			}
+			nei_pos += len / 2;
+			pos = end;
+		}
+
+		nei_start[1] = nei_pos - nei_start - 2;
+	}
+
+	pos = os_strstr(cmd, " url=");
+	if (pos) {
+		size_t len;
+		pos += 5;
+		end = os_strchr(pos, ' ');
+		if (end)
+			len = end - pos;
+		else
+			len = os_strlen(pos);
+		url = os_malloc(len + 1);
+		if (url == NULL)
+			return -1;
+		os_memcpy(url, pos, len);
+		url[len] = '\0';
+		req_mode |= WNM_BSS_TM_REQ_ESS_DISASSOC_IMMINENT;
+	}
+
+	if (os_strstr(cmd, " pref=1"))
+		req_mode |= WNM_BSS_TM_REQ_PREF_CAND_LIST_INCLUDED;
+	if (os_strstr(cmd, " abridged=1"))
+		req_mode |= WNM_BSS_TM_REQ_ABRIDGED;
+	if (os_strstr(cmd, " disassoc_imminent=1"))
+		req_mode |= WNM_BSS_TM_REQ_DISASSOC_IMMINENT;
+
+	ret = wnm_send_bss_tm_req(hapd, sta, req_mode, disassoc_timer,
+				  valid_int, bss_term_dur, url,
+				  nei_pos > nei_rep ? nei_rep : NULL,
+				  nei_pos - nei_rep);
+	os_free(url);
+	return ret;
+}
+
 #endif /* CONFIG_WNM */
 
 
@@ -1724,6 +1911,9 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 			reply_len = -1;
 	} else if (os_strncmp(buf, "ESS_DISASSOC ", 13) == 0) {
 		if (hostapd_ctrl_iface_ess_disassoc(hapd, buf + 13))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "BSS_TM_REQ ", 11) == 0) {
+		if (hostapd_ctrl_iface_bss_tm_req(hapd, buf + 11))
 			reply_len = -1;
 #endif /* CONFIG_WNM */
 	} else if (os_strcmp(buf, "GET_CONFIG") == 0) {

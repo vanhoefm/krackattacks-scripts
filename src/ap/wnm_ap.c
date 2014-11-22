@@ -1,6 +1,6 @@
 /*
  * hostapd - WNM
- * Copyright (c) 2011-2013, Qualcomm Atheros, Inc.
+ * Copyright (c) 2011-2014, Qualcomm Atheros, Inc.
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -436,6 +436,34 @@ int wnm_send_disassoc_imminent(struct hostapd_data *hapd,
 }
 
 
+static void set_disassoc_timer(struct hostapd_data *hapd, struct sta_info *sta,
+			       int disassoc_timer)
+{
+	int timeout, beacon_int;
+
+	/*
+	 * Prevent STA from reconnecting using cached PMKSA to force
+	 * full authentication with the authentication server (which may
+	 * decide to reject the connection),
+	 */
+	wpa_auth_pmksa_remove(hapd->wpa_auth, sta->addr);
+
+	beacon_int = hapd->iconf->beacon_int;
+	if (beacon_int < 1)
+		beacon_int = 100; /* best guess */
+	/* Calculate timeout in ms based on beacon_int in TU */
+	timeout = disassoc_timer * beacon_int * 128 / 125;
+	wpa_printf(MSG_DEBUG, "Disassociation timer for " MACSTR
+		   " set to %d ms", MAC2STR(sta->addr), timeout);
+
+	sta->timeout_next = STA_DISASSOC_FROM_CLI;
+	eloop_cancel_timeout(ap_handle_timer, hapd, sta);
+	eloop_register_timeout(timeout / 1000,
+			       timeout % 1000 * 1000,
+			       ap_handle_timer, hapd, sta);
+}
+
+
 int wnm_send_ess_disassoc_imminent(struct hostapd_data *hapd,
 				   struct sta_info *sta, const char *url,
 				   int disassoc_timer)
@@ -477,30 +505,78 @@ int wnm_send_ess_disassoc_imminent(struct hostapd_data *hapd,
 		return -1;
 	}
 
-	/* send disassociation frame after time-out */
 	if (disassoc_timer) {
-		int timeout, beacon_int;
+		/* send disassociation frame after time-out */
+		set_disassoc_timer(hapd, sta, disassoc_timer);
+	}
 
-		/*
-		 * Prevent STA from reconnecting using cached PMKSA to force
-		 * full authentication with the authentication server (which may
-		 * decide to reject the connection),
-		 */
-		wpa_auth_pmksa_remove(hapd->wpa_auth, sta->addr);
+	return 0;
+}
 
-		beacon_int = hapd->iconf->beacon_int;
-		if (beacon_int < 1)
-			beacon_int = 100; /* best guess */
-		/* Calculate timeout in ms based on beacon_int in TU */
-		timeout = disassoc_timer * beacon_int * 128 / 125;
-		wpa_printf(MSG_DEBUG, "Disassociation timer for " MACSTR
-			   " set to %d ms", MAC2STR(sta->addr), timeout);
 
-		sta->timeout_next = STA_DISASSOC_FROM_CLI;
-		eloop_cancel_timeout(ap_handle_timer, hapd, sta);
-		eloop_register_timeout(timeout / 1000,
-				       timeout % 1000 * 1000,
-				       ap_handle_timer, hapd, sta);
+int wnm_send_bss_tm_req(struct hostapd_data *hapd, struct sta_info *sta,
+			u8 req_mode, int disassoc_timer, u8 valid_int,
+			const u8 *bss_term_dur, const char *url,
+			const u8 *nei_rep, size_t nei_rep_len)
+{
+	u8 *buf, *pos;
+	struct ieee80211_mgmt *mgmt;
+	size_t url_len;
+
+	wpa_printf(MSG_DEBUG, "WNM: Send BSS Transition Management Request to "
+		   MACSTR " req_mode=0x%x disassoc_timer=%d valid_int=0x%x",
+		   MAC2STR(sta->addr), req_mode, disassoc_timer, valid_int);
+	buf = os_zalloc(1000 + nei_rep_len);
+	if (buf == NULL)
+		return -1;
+	mgmt = (struct ieee80211_mgmt *) buf;
+	mgmt->frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
+					   WLAN_FC_STYPE_ACTION);
+	os_memcpy(mgmt->da, sta->addr, ETH_ALEN);
+	os_memcpy(mgmt->sa, hapd->own_addr, ETH_ALEN);
+	os_memcpy(mgmt->bssid, hapd->own_addr, ETH_ALEN);
+	mgmt->u.action.category = WLAN_ACTION_WNM;
+	mgmt->u.action.u.bss_tm_req.action = WNM_BSS_TRANS_MGMT_REQ;
+	mgmt->u.action.u.bss_tm_req.dialog_token = 1;
+	mgmt->u.action.u.bss_tm_req.req_mode = req_mode;
+	mgmt->u.action.u.bss_tm_req.disassoc_timer =
+		host_to_le16(disassoc_timer);
+	mgmt->u.action.u.bss_tm_req.validity_interval = valid_int;
+
+	pos = mgmt->u.action.u.bss_tm_req.variable;
+
+	if ((req_mode & WNM_BSS_TM_REQ_BSS_TERMINATION_INCLUDED) &&
+	    bss_term_dur) {
+		os_memcpy(pos, bss_term_dur, 12);
+		pos += 12;
+	}
+
+	if (url) {
+		/* Session Information URL */
+		url_len = os_strlen(url);
+		if (url_len > 255)
+			return -1;
+		*pos++ = url_len;
+		os_memcpy(pos, url, url_len);
+		pos += url_len;
+	}
+
+	if (nei_rep) {
+		os_memcpy(pos, nei_rep, nei_rep_len);
+		pos += nei_rep_len;
+	}
+
+	if (hostapd_drv_send_mlme(hapd, buf, pos - buf, 0) < 0) {
+		wpa_printf(MSG_DEBUG,
+			   "Failed to send BSS Transition Management Request frame");
+		os_free(buf);
+		return -1;
+	}
+	os_free(buf);
+
+	if (disassoc_timer) {
+		/* send disassociation frame after time-out */
+		set_disassoc_timer(hapd, sta, disassoc_timer);
 	}
 
 	return 0;

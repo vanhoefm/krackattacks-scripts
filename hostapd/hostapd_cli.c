@@ -622,6 +622,33 @@ static int hostapd_cli_cmd_ess_disassoc(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int hostapd_cli_cmd_bss_tm_req(struct wpa_ctrl *ctrl, int argc,
+				      char *argv[])
+{
+	char buf[2000], *tmp;
+	int res, i, total;
+
+	if (argc < 1) {
+		printf("Invalid 'bss_tm_req' command - at least one argument (STA addr) is needed\n");
+		return -1;
+	}
+
+	res = os_snprintf(buf, sizeof(buf), "BSS_TM_REQ %s", argv[0]);
+	if (res < 0 || res >= (int) sizeof(buf))
+		return -1;
+
+	total = res;
+	for (i = 1; i < argc; i++) {
+		tmp = &buf[total];
+		res = os_snprintf(tmp, sizeof(buf) - total, " %s", argv[i]);
+		if (res < 0 || (size_t) res >= sizeof(buf) - total - 1)
+			return -1;
+		total += res;
+	}
+	return wpa_ctrl_command(ctrl, buf);
+}
+
+
 static int hostapd_cli_cmd_get_config(struct wpa_ctrl *ctrl, int argc,
 				      char *argv[])
 {
@@ -1010,6 +1037,7 @@ static struct hostapd_cli_cmd hostapd_cli_commands[] = {
 #endif /* CONFIG_WPS */
 	{ "disassoc_imminent", hostapd_cli_cmd_disassoc_imminent },
 	{ "ess_disassoc", hostapd_cli_cmd_ess_disassoc },
+	{ "bss_tm_req", hostapd_cli_cmd_bss_tm_req },
 	{ "get_config", hostapd_cli_cmd_get_config },
 	{ "help", hostapd_cli_cmd_help },
 	{ "interface", hostapd_cli_cmd_interface },

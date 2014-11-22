@@ -9,6 +9,7 @@ import struct
 import time
 import logging
 logger = logging.getLogger()
+import subprocess
 
 import hostapd
 from wlantest import Wlantest
@@ -362,3 +363,100 @@ def test_wnm_bss_keep_alive(dev, apdev):
 
     dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
     time.sleep(2)
+
+def test_wnm_bss_tm(dev, apdev):
+    """WNM BSS Transition Management"""
+    try:
+        params = { "ssid": "test-wnm",
+                   "country_code": "FI",
+                   "hw_mode": "g",
+                   "channel": "1",
+                   "bss_transition": "1" }
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+        id = dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
+        dev[0].set_network(id, "scan_freq", "")
+
+        params = { "ssid": "test-wnm",
+                   "country_code": "FI",
+                   "hw_mode": "a",
+                   "channel": "36",
+                   "bss_transition": "1" }
+        hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+
+        addr = dev[0].p2p_interface_addr()
+        dev[0].dump_monitor()
+
+        logger.info("No neighbor list entries")
+        if "OK" not in hapd.request("BSS_TM_REQ " + addr):
+            raise Exception("BSS_TM_REQ command failed")
+        ev = hapd.wait_event(['BSS-TM-RESP'], timeout=10)
+        if ev is None:
+            raise Exception("No BSS Transition Management Response")
+        if addr not in ev:
+            raise Exception("Unexpected BSS Transition Management Response address")
+        if "status_code=0" in ev:
+            raise Exception("BSS transition accepted unexpectedly")
+        dev[0].dump_monitor()
+
+        logger.info("Neighbor list entry, but not claimed as Preferred Candidate List")
+        if "OK" not in hapd.request("BSS_TM_REQ " + addr + " neighbor=11:22:33:44:55:66,0x0000,81,3,7"):
+            raise Exception("BSS_TM_REQ command failed")
+        ev = hapd.wait_event(['BSS-TM-RESP'], timeout=10)
+        if ev is None:
+            raise Exception("No BSS Transition Management Response")
+        if "status_code=0" in ev:
+            raise Exception("BSS transition accepted unexpectedly")
+        dev[0].dump_monitor()
+
+        logger.info("Preferred Candidate List (no matching neighbor) without Disassociation Imminent")
+        if "OK" not in hapd.request("BSS_TM_REQ " + addr + " pref=1 neighbor=11:22:33:44:55:66,0x0000,81,3,7,0301ff neighbor=22:33:44:55:66:77,0x0000,81,8,7 neighbor=00:11:22:33:44:55,0x0000,81,4,7,03010a"):
+            raise Exception("BSS_TM_REQ command failed")
+        ev = hapd.wait_event(['BSS-TM-RESP'], timeout=10)
+        if ev is None:
+            raise Exception("No BSS Transition Management Response")
+        if "status_code=0" in ev:
+            raise Exception("BSS transition accepted unexpectedly")
+        ev = dev[0].wait_event(["CTRL-EVENT-SCAN-STARTED"], timeout=5)
+        if ev is None:
+            raise Exception("No scan started")
+        dev[0].dump_monitor()
+
+        logger.info("Preferred Candidate List (matching neighbor for another BSS) without Disassociation Imminent")
+        if "OK" not in hapd.request("BSS_TM_REQ " + addr + " pref=1 abridged=1 valid_int=255 neighbor=" + apdev[1]['bssid'] + ",0x0000,115,36,7,0301ff"):
+            raise Exception("BSS_TM_REQ command failed")
+        ev = hapd.wait_event(['BSS-TM-RESP'], timeout=10)
+        if ev is None:
+            raise Exception("No BSS Transition Management Response")
+        if "status_code=0" not in ev:
+            raise Exception("BSS transition request was not accepted: " + ev)
+        if "target_bssid=" + apdev[1]['bssid'] not in ev:
+            raise Exception("Unexpected target BSS: " + ev)
+        ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+        if ev is None:
+            raise Exception("No reassociation seen");
+        if apdev[1]['bssid'] not in ev:
+            raise Exception("Unexpected reassociation target: " + ev)
+        ev = dev[0].wait_event(["CTRL-EVENT-SCAN-STARTED"], timeout=0.1)
+        if ev is not None:
+            raise Exception("Unexpected scan started")
+        dev[0].dump_monitor()
+
+        logger.info("Preferred Candidate List with two matches, no roam needed")
+        if "OK" not in hapd2.request("BSS_TM_REQ " + addr + " pref=1 abridged=1 valid_int=255 neighbor=" + apdev[0]['bssid'] + ",0x0000,81,1,7,030101 neighbor=" + apdev[1]['bssid'] + ",0x0000,115,36,7,0301ff"):
+            raise Exception("BSS_TM_REQ command failed")
+        ev = hapd2.wait_event(['BSS-TM-RESP'], timeout=10)
+        if ev is None:
+            raise Exception("No BSS Transition Management Response")
+        if "status_code=0" not in ev:
+            raise Exception("BSS transition request was not accepted: " + ev)
+        if "target_bssid=" + apdev[1]['bssid'] not in ev:
+            raise Exception("Unexpected target BSS: " + ev)
+        ev = dev[0].wait_event(["CTRL-EVENT-SCAN-STARTED"], timeout=0.1)
+        if ev is not None:
+            raise Exception("Unexpected scan started")
+        ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=0.5)
+        if ev is not None:
+            raise Exception("Unexpected reassociation");
+    finally:
+        subprocess.call(['iw', 'reg', 'set', '00'])

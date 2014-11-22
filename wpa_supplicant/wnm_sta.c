@@ -642,20 +642,28 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 					     const u8 *pos, const u8 *end,
 					     int reply)
 {
+	unsigned int beacon_int;
+	u8 valid_int;
+
 	if (pos + 5 > end)
 		return;
+
+	if (wpa_s->current_bss)
+		beacon_int = wpa_s->current_bss->beacon_int;
+	else
+		beacon_int = 100; /* best guess */
 
 	wpa_s->wnm_dialog_token = pos[0];
 	wpa_s->wnm_mode = pos[1];
 	wpa_s->wnm_dissoc_timer = WPA_GET_LE16(pos + 2);
-	wpa_s->wnm_validity_interval = pos[4];
+	valid_int = pos[4];
 	wpa_s->wnm_reply = reply;
 
 	wpa_printf(MSG_DEBUG, "WNM: BSS Transition Management Request: "
 		   "dialog_token=%u request_mode=0x%x "
 		   "disassoc_timer=%u validity_interval=%u",
 		   wpa_s->wnm_dialog_token, wpa_s->wnm_mode,
-		   wpa_s->wnm_dissoc_timer, wpa_s->wnm_validity_interval);
+		   wpa_s->wnm_dissoc_timer, valid_int);
 
 	pos += 5;
 
@@ -670,7 +678,6 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 
 	if (wpa_s->wnm_mode & WNM_BSS_TM_REQ_ESS_DISASSOC_IMMINENT) {
 		char url[256];
-		unsigned int beacon_int;
 
 		if (pos + 1 > end || pos + 1 + pos[0] > end) {
 			wpa_printf(MSG_DEBUG, "WNM: Invalid BSS Transition "
@@ -680,11 +687,6 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 		os_memcpy(url, pos + 1, pos[0]);
 		url[pos[0]] = '\0';
 		pos += 1 + pos[0];
-
-		if (wpa_s->current_bss)
-			beacon_int = wpa_s->current_bss->beacon_int;
-		else
-			beacon_int = 100; /* best guess */
 
 		wpa_msg(wpa_s, MSG_INFO, ESS_DISASSOC_IMMINENT "%d %u %s",
 			wpa_sm_pmf_enabled(wpa_s->wpa),
@@ -703,6 +705,8 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 	}
 
 	if (wpa_s->wnm_mode & WNM_BSS_TM_REQ_PREF_CAND_LIST_INCLUDED) {
+		unsigned int valid_ms;
+
 		wpa_msg(wpa_s, MSG_INFO, "WNM: Preferred List Available");
 		wpa_s->wnm_num_neighbor_report = 0;
 		os_free(wpa_s->wnm_neighbor_report_elements);
@@ -735,6 +739,15 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 			wpa_s->wnm_num_neighbor_report++;
 		}
 		wnm_dump_cand_list(wpa_s);
+		valid_ms = valid_int * beacon_int * 128 / 125;
+		wpa_printf(MSG_DEBUG, "WNM: Candidate list valid for %u ms",
+			   valid_ms);
+		os_get_reltime(&wpa_s->wnm_cand_valid_until);
+		wpa_s->wnm_cand_valid_until.sec += valid_ms / 1000;
+		wpa_s->wnm_cand_valid_until.usec += (valid_ms % 1000) * 1000;
+		wpa_s->wnm_cand_valid_until.sec +=
+			wpa_s->wnm_cand_valid_until.usec / 1000000;
+		wpa_s->wnm_cand_valid_until.usec %= 1000000;
 
 		wpa_s->scan_res_handler = wnm_scan_response;
 		wpa_supplicant_req_scan(wpa_s, 0, 0);

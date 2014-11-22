@@ -211,7 +211,7 @@ def rx_bss_tm_resp(hapd, expect_dialog=None, expect_status=None):
         raise Exception("Unexpected status code %d" % status)
     return resp
 
-def except_ack(hapd):
+def expect_ack(hapd):
     ev = hapd.wait_event(["MGMT-TX-STATUS"], timeout=5)
     if ev is None:
         raise Exception("Missing TX status")
@@ -234,7 +234,7 @@ def test_wnm_bss_tm_req(dev, apdev):
                                  ACTION_CATEG_WNM, WNM_ACT_BSS_TM_REQ,
                                  1, 0, 0)
     hapd.mgmt_tx(req)
-    except_ack(hapd)
+    expect_ack(hapd)
 
     # no disassociation and no candidate list
     req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
@@ -246,7 +246,7 @@ def test_wnm_bss_tm_req(dev, apdev):
     req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
                      req_mode=0x08)
     hapd.mgmt_tx(req)
-    except_ack(hapd)
+    expect_ack(hapd)
 
     # BSS Termination Duration with TSF=0 and Duration=10
     req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
@@ -259,12 +259,12 @@ def test_wnm_bss_tm_req(dev, apdev):
     req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
                      req_mode=0x10)
     hapd.mgmt_tx(req)
-    except_ack(hapd)
+    expect_ack(hapd)
     req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
                      req_mode=0x10)
     req['payload'] += struct.pack("<BBB", 3, 65, 66)
     hapd.mgmt_tx(req)
-    except_ack(hapd)
+    expect_ack(hapd)
 
     # Session Information URL
     req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],
@@ -284,7 +284,7 @@ def test_wnm_bss_tm_req(dev, apdev):
                      req_mode=0x01)
     req['payload'] += struct.pack("<BB", 52, 1)
     hapd.mgmt_tx(req)
-    except_ack(hapd)
+    expect_ack(hapd)
 
     # Preferred Candidate List with a too short entry
     req = bss_tm_req(dev[0].p2p_interface_addr(), apdev[0]['bssid'],

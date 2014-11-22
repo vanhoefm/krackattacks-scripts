@@ -62,11 +62,12 @@ void wnm_deallocate_memory(struct wpa_supplicant *wpa_s);
 
 #ifdef CONFIG_WNM
 
-int wnm_scan_process(struct wpa_supplicant *wpa_s);
+int wnm_scan_process(struct wpa_supplicant *wpa_s, int reply_on_fail);
 
 #else /* CONFIG_WNM */
 
-static inline int wnm_scan_process(struct wpa_supplicant *wpa_s)
+static inline int wnm_scan_process(struct wpa_supplicant *wpa_s,
+				   int reply_on_fail)
 {
 	return 0;
 }

@@ -309,13 +309,7 @@ void wnm_deallocate_memory(struct wpa_supplicant *wpa_s)
 	int i;
 
 	for (i = 0; i < wpa_s->wnm_num_neighbor_report; i++) {
-		os_free(wpa_s->wnm_neighbor_report_elements[i].tsf_info);
-		os_free(wpa_s->wnm_neighbor_report_elements[i].con_coun_str);
-		os_free(wpa_s->wnm_neighbor_report_elements[i].bss_tran_can);
-		os_free(wpa_s->wnm_neighbor_report_elements[i].bss_term_dur);
-		os_free(wpa_s->wnm_neighbor_report_elements[i].bearing);
 		os_free(wpa_s->wnm_neighbor_report_elements[i].meas_pilot);
-		os_free(wpa_s->wnm_neighbor_report_elements[i].rrm_cap);
 		os_free(wpa_s->wnm_neighbor_report_elements[i].mul_bssid);
 	}
 
@@ -334,12 +328,9 @@ static void wnm_parse_neighbor_report_elem(struct neighbor_report *rep,
 			wpa_printf(MSG_DEBUG, "WNM: Too short TSF");
 			break;
 		}
-		os_free(rep->tsf_info);
-		rep->tsf_info = os_zalloc(sizeof(struct tsf_info));
-		if (rep->tsf_info == NULL)
-			break;
-		os_memcpy(rep->tsf_info->tsf_offset, pos, 2);
-		os_memcpy(rep->tsf_info->beacon_interval, pos + 2, 2);
+		rep->tsf_offset = WPA_GET_LE16(pos);
+		rep->beacon_int = WPA_GET_LE16(pos + 2);
+		rep->tsf_present = 1;
 		break;
 	case WNM_NEIGHBOR_CONDENSED_COUNTRY_STRING:
 		if (elen < 2) {
@@ -347,12 +338,8 @@ static void wnm_parse_neighbor_report_elem(struct neighbor_report *rep,
 				   "country string");
 			break;
 		}
-		os_free(rep->con_coun_str);
-		rep->con_coun_str =
-			os_zalloc(sizeof(struct condensed_country_string));
-		if (rep->con_coun_str == NULL)
-			break;
-		os_memcpy(rep->con_coun_str->country_string, pos, 2);
+		os_memcpy(rep->country, pos, 2);
+		rep->country_present = 1;
 		break;
 	case WNM_NEIGHBOR_BSS_TRANSITION_CANDIDATE:
 		if (elen < 1) {
@@ -360,25 +347,13 @@ static void wnm_parse_neighbor_report_elem(struct neighbor_report *rep,
 				   "candidate");
 			break;
 		}
-		os_free(rep->bss_tran_can);
-		rep->bss_tran_can =
-			os_zalloc(sizeof(struct bss_transition_candidate));
-		if (rep->bss_tran_can == NULL)
-			break;
-		rep->bss_tran_can->preference = pos[0];
+		rep->preference = pos[0];
+		rep->preference_present = 1;
 		break;
 	case WNM_NEIGHBOR_BSS_TERMINATION_DURATION:
-		if (elen < 10) {
-			wpa_printf(MSG_DEBUG, "WNM: Too short BSS termination "
-				   "duration");
-			break;
-		}
-		os_free(rep->bss_term_dur);
-		rep->bss_term_dur =
-			os_zalloc(sizeof(struct bss_termination_duration));
-		if (rep->bss_term_dur == NULL)
-			break;
-		os_memcpy(rep->bss_term_dur->duration, pos, 10);
+		rep->bss_term_tsf = WPA_GET_LE64(pos);
+		rep->bss_term_dur = WPA_GET_LE16(pos + 8);
+		rep->bss_term_present = 1;
 		break;
 	case WNM_NEIGHBOR_BEARING:
 		if (elen < 8) {
@@ -386,11 +361,10 @@ static void wnm_parse_neighbor_report_elem(struct neighbor_report *rep,
 				   "bearing");
 			break;
 		}
-		os_free(rep->bearing);
-		rep->bearing = os_zalloc(sizeof(struct bearing));
-		if (rep->bearing == NULL)
-			break;
-		os_memcpy(rep->bearing->bearing, pos, 8);
+		rep->bearing = WPA_GET_LE16(pos);
+		rep->distance = WPA_GET_LE32(pos + 2);
+		rep->rel_height = WPA_GET_LE16(pos + 2 + 4);
+		rep->bearing_present = 1;
 		break;
 	case WNM_NEIGHBOR_MEASUREMENT_PILOT:
 		if (elen < 1) {
@@ -412,12 +386,8 @@ static void wnm_parse_neighbor_report_elem(struct neighbor_report *rep,
 				   "capabilities");
 			break;
 		}
-		os_free(rep->rrm_cap);
-		rep->rrm_cap =
-			os_zalloc(sizeof(struct rrm_enabled_capabilities));
-		if (rep->rrm_cap == NULL)
-			break;
-		os_memcpy(rep->rrm_cap->capabilities, pos, 5);
+		os_memcpy(rep->rm_capab, pos, 5);
+		rep->rm_capab_present = 1;
 		break;
 	case WNM_NEIGHBOR_MULTIPLE_BSSID:
 		if (elen < 1) {
@@ -632,8 +602,7 @@ static void wnm_dump_cand_list(struct wpa_supplicant *wpa_s)
 			   i, MAC2STR(nei->bssid), nei->bssid_info,
 			   nei->regulatory_class,
 			   nei->channel_number, nei->phy_type,
-			   nei->bss_tran_can ? nei->bss_tran_can->preference :
-			   -1);
+			   nei->preference_present ? nei->preference : -1);
 	}
 }
 

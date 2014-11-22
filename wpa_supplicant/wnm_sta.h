@@ -9,35 +9,10 @@
 #ifndef WNM_STA_H
 #define WNM_STA_H
 
-struct tsf_info {
-	u8 tsf_offset[2];
-	u8 beacon_interval[2];
-};
-
-struct condensed_country_string {
-	u8 country_string[2];
-};
-
-struct bss_transition_candidate {
-	u8 preference;
-};
-
-struct bss_termination_duration {
-	u8 duration[10];
-};
-
-struct bearing {
-	u8 bearing[8];
-};
-
 struct measurement_pilot {
 	u8 measurement_pilot;
 	u8 subelem_len;
 	u8 subelems[255];
-};
-
-struct rrm_enabled_capabilities {
-	u8 capabilities[5];
 };
 
 struct multiple_bssid {
@@ -52,13 +27,23 @@ struct neighbor_report {
 	u8 regulatory_class;
 	u8 channel_number;
 	u8 phy_type;
-	struct tsf_info *tsf_info;
-	struct condensed_country_string *con_coun_str;
-	struct bss_transition_candidate *bss_tran_can;
-	struct bss_termination_duration *bss_term_dur;
-	struct bearing *bearing;
+	u8 preference; /* valid if preference_present=1 */
+	u16 tsf_offset; /* valid if tsf_present=1 */
+	u16 beacon_int; /* valid if tsf_present=1 */
+	char country[2]; /* valid if country_present=1 */
+	u8 rm_capab[5]; /* valid if rm_capab_present=1 */
+	u16 bearing; /* valid if bearing_present=1 */
+	u16 rel_height; /* valid if bearing_present=1 */
+	u32 distance; /* valid if bearing_present=1 */
+	u64 bss_term_tsf; /* valid if bss_term_present=1 */
+	u16 bss_term_dur; /* valid if bss_term_present=1 */
+	unsigned int preference_present:1;
+	unsigned int tsf_present:1;
+	unsigned int country_present:1;
+	unsigned int rm_capab_present:1;
+	unsigned int bearing_present:1;
+	unsigned int bss_term_present:1;
 	struct measurement_pilot *meas_pilot;
-	struct rrm_enabled_capabilities *rrm_cap;
 	struct multiple_bssid *mul_bssid;
 };
 

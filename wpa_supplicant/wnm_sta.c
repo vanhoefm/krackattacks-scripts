@@ -452,34 +452,73 @@ static int compare_scan_neighbor_results(struct wpa_supplicant *wpa_s,
 {
 
 	u8 i, j;
+	const u8 *ssid;
+	struct wpa_bss *bss = wpa_s->current_bss;
 
-	if (scan_res == NULL || num_neigh_rep == 0 || !wpa_s->current_bss)
+	if (scan_res == NULL || num_neigh_rep == 0 || !bss)
 		return 0;
 
 	wpa_printf(MSG_DEBUG, "WNM: Current BSS " MACSTR " RSSI %d",
-		   MAC2STR(wpa_s->bssid), wpa_s->current_bss->level);
+		   MAC2STR(wpa_s->bssid), bss->level);
 
 	for (i = 0; i < num_neigh_rep; i++) {
-		for (j = 0; j < scan_res->num; j++) {
-			/* Check for a better RSSI AP */
-			if (os_memcmp(scan_res->res[j]->bssid,
-				      neigh_rep[i].bssid, ETH_ALEN) == 0 &&
-			    scan_res->res[j]->level >
-			    wpa_s->current_bss->level) {
-				/* Got a BSSID with better RSSI value */
-				os_memcpy(bssid_to_connect, neigh_rep[i].bssid,
-					  ETH_ALEN);
-				wpa_printf(MSG_DEBUG, "Found a BSS " MACSTR
-					   " with better scan RSSI %d",
-					   MAC2STR(scan_res->res[j]->bssid),
-					   scan_res->res[j]->level);
-				return 1;
-			}
-			wpa_printf(MSG_DEBUG, "scan_res[%d] " MACSTR
-				   " RSSI %d", j,
-				   MAC2STR(scan_res->res[j]->bssid),
-				   scan_res->res[j]->level);
+		struct neighbor_report *nei = &neigh_rep[i];
+		struct wpa_scan_res *res = NULL;
+
+		if (nei->preference_present && nei->preference == 0) {
+			wpa_printf(MSG_DEBUG, "Skip excluded BSS " MACSTR,
+				   MAC2STR(nei->bssid));
+			continue;
 		}
+
+		for (j = 0; j < scan_res->num; j++) {
+			if (os_memcmp(scan_res->res[j]->bssid,
+				      neigh_rep[i].bssid, ETH_ALEN) == 0) {
+				res = scan_res->res[j];
+				break;
+			}
+		}
+
+		if (!res) {
+			wpa_printf(MSG_DEBUG, "Candidate BSS " MACSTR
+				   " (pref %d) not found in scan results",
+				   MAC2STR(nei->bssid),
+				   nei->preference_present ? nei->preference :
+				   -1);
+			continue;
+		}
+
+		ssid = wpa_scan_get_ie(res, WLAN_EID_SSID);
+		if (ssid == NULL || bss->ssid_len != ssid[1] ||
+		    os_memcmp(bss->ssid, ssid + 2, ssid[1]) != 0) {
+			/*
+			 * TODO: Could consider allowing transition to another
+			 * ESS if PMF was enabled for the association.
+			 */
+			wpa_printf(MSG_DEBUG, "Candidate BSS " MACSTR
+				   " (pref %d) in different ESS",
+				   MAC2STR(nei->bssid),
+				   nei->preference_present ? nei->preference :
+				   -1);
+			continue;
+		}
+
+		if (res->level < bss->level && res->level < -80) {
+			wpa_printf(MSG_DEBUG, "Candidate BSS " MACSTR
+				   " (pref %d) does not have sufficient signal level (%d)",
+				   MAC2STR(nei->bssid),
+				   nei->preference_present ? nei->preference :
+				   -1,
+				   res->level);
+			continue;
+		}
+
+		wpa_printf(MSG_DEBUG,
+			   "WNM: Found an acceptable prefed transition candidate BSS "
+			   MACSTR " (RSSI %d)",
+			   MAC2STR(nei->bssid), res->level);
+		os_memcpy(bssid_to_connect, nei->bssid, ETH_ALEN);
+		return 1;
 	}
 
 	return 0;

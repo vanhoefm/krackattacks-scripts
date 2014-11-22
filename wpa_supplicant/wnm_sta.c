@@ -616,6 +616,27 @@ send_bss_resp_fail:
 }
 
 
+static void wnm_dump_cand_list(struct wpa_supplicant *wpa_s)
+{
+	unsigned int i;
+
+	wpa_printf(MSG_DEBUG, "WNM: BSS Transition Candidate List");
+	if (!wpa_s->wnm_neighbor_report_elements)
+		return;
+	for (i = 0; i < wpa_s->wnm_num_neighbor_report; i++) {
+		struct neighbor_report *nei;
+
+		nei = &wpa_s->wnm_neighbor_report_elements[i];
+		wpa_printf(MSG_DEBUG, "%u: " MACSTR
+			   " op_class=%u chan=%u phy=%u pref=%d",
+			   i, MAC2STR(nei->bssid), nei->regulatory_class,
+			   nei->channel_number, nei->phy_type,
+			   nei->bss_tran_can ? nei->bss_tran_can->preference :
+			   -1);
+	}
+}
+
+
 static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 					     const u8 *pos, const u8 *end,
 					     int reply)
@@ -712,6 +733,7 @@ static void ieee802_11_rx_bss_trans_mgmt_req(struct wpa_supplicant *wpa_s,
 			pos += len;
 			wpa_s->wnm_num_neighbor_report++;
 		}
+		wnm_dump_cand_list(wpa_s);
 
 		wpa_s->scan_res_handler = wnm_scan_response;
 		wpa_supplicant_req_scan(wpa_s, 0, 0);

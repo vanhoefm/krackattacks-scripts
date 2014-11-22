@@ -105,6 +105,7 @@ struct hostapd_wmm_ac_params {
 int hostapd_config_wmm_ac(struct hostapd_wmm_ac_params wmm_ac_params[],
 			  const char *name, const char *val);
 enum hostapd_hw_mode ieee80211_freq_to_chan(int freq, u8 *channel);
+int ieee80211_chan_to_freq(const char *country, u8 op_class, u8 chan);
 
 int supp_rates_11b_only(struct ieee802_11_elems *elems);
 

@@ -9,6 +9,7 @@
 #include "includes.h"
 
 #include "common.h"
+#include "common/ieee802_11_common.h"
 #include "p2p_i.h"
 
 
@@ -54,56 +55,7 @@ int p2p_random(char *buf, size_t len)
  */
 int p2p_channel_to_freq(int op_class, int channel)
 {
-	/* Table E-4 in IEEE Std 802.11-2012 - Global operating classes */
-	/* TODO: more operating classes */
-	switch (op_class) {
-	case 81:
-		/* channels 1..13 */
-		if (channel < 1 || channel > 13)
-			return -1;
-		return 2407 + 5 * channel;
-	case 82:
-		/* channel 14 */
-		if (channel != 14)
-			return -1;
-		return 2414 + 5 * channel;
-	case 83: /* channels 1..9; 40 MHz */
-	case 84: /* channels 5..13; 40 MHz */
-		if (channel < 1 || channel > 13)
-			return -1;
-		return 2407 + 5 * channel;
-	case 115: /* channels 36,40,44,48; indoor only */
-	case 118: /* channels 52,56,60,64; dfs */
-		if (channel < 36 || channel > 64)
-			return -1;
-		return 5000 + 5 * channel;
-	case 124: /* channels 149,153,157,161 */
-	case 125: /* channels 149,153,157,161,165,169 */
-		if (channel < 149 || channel > 161)
-			return -1;
-		return 5000 + 5 * channel;
-	case 116: /* channels 36,44; 40 MHz; indoor only */
-	case 117: /* channels 40,48; 40 MHz; indoor only */
-	case 119: /* channels 52,60; 40 MHz; dfs */
-	case 120: /* channels 56,64; 40 MHz; dfs */
-		if (channel < 36 || channel > 64)
-			return -1;
-		return 5000 + 5 * channel;
-	case 126: /* channels 149,157; 40 MHz */
-	case 127: /* channels 153,161; 40 MHz */
-		if (channel < 149 || channel > 161)
-			return -1;
-		return 5000 + 5 * channel;
-	case 128: /* center freqs 42, 58, 106, 122, 138, 155; 80 MHz */
-		if (channel < 36 || channel > 161)
-			return -1;
-		return 5000 + 5 * channel;
-	case 180: /* 60 GHz band, channels 1..4 */
-		if (channel < 1 || channel > 4)
-			return -1;
-		return 56160 + 2160 * channel;
-	}
-	return -1;
+	return ieee80211_chan_to_freq(NULL, op_class, channel);
 }
 
 

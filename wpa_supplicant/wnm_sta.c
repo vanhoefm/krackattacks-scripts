@@ -532,6 +532,7 @@ static void wnm_send_bss_transition_mgmt_resp(
 	u8 buf[1000], *pos;
 	struct ieee80211_mgmt *mgmt;
 	size_t len;
+	int res;
 
 	wpa_printf(MSG_DEBUG, "WNM: Send BSS Transition Management Response "
 		   "to " MACSTR " dialog_token=%u status=%u delay=%d",
@@ -570,9 +571,13 @@ static void wnm_send_bss_transition_mgmt_resp(
 
 	len = pos - (u8 *) &mgmt->u.action.category;
 
-	wpa_drv_send_action(wpa_s, wpa_s->assoc_freq, 0, wpa_s->bssid,
-			    wpa_s->own_addr, wpa_s->bssid,
-			    &mgmt->u.action.category, len, 0);
+	res = wpa_drv_send_action(wpa_s, wpa_s->assoc_freq, 0, wpa_s->bssid,
+				  wpa_s->own_addr, wpa_s->bssid,
+				  &mgmt->u.action.category, len, 0);
+	if (res < 0) {
+		wpa_printf(MSG_DEBUG,
+			   "WNM: Failed to send BSS Transition Management Response");
+	}
 }
 
 

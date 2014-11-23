@@ -213,7 +213,7 @@ static int ikev2_parse_proposal(struct ikev2_proposal_data *prop,
 
 	p = (const struct ikev2_proposal *) pos;
 	proposal_len = WPA_GET_BE16(p->proposal_length);
-	if (proposal_len < (int) sizeof(*p) || pos + proposal_len > end) {
+	if (proposal_len < (int) sizeof(*p) || proposal_len > end - pos) {
 		wpa_printf(MSG_INFO, "IKEV2: Invalid proposal length %d",
 			   proposal_len);
 		return -1;

@@ -510,7 +510,7 @@ int wpa_parse_wpa_ie_rsn(const u8 *rsn_ie, size_t rsn_ie_len,
 		count = WPA_GET_LE16(pos);
 		pos += 2;
 		left -= 2;
-		if (count == 0 || left < count * RSN_SELECTOR_LEN) {
+		if (count == 0 || count > left / RSN_SELECTOR_LEN) {
 			wpa_printf(MSG_DEBUG, "%s: ie count botch (pairwise), "
 				   "count %u left %u", __func__, count, left);
 			return -4;
@@ -538,7 +538,7 @@ int wpa_parse_wpa_ie_rsn(const u8 *rsn_ie, size_t rsn_ie_len,
 		count = WPA_GET_LE16(pos);
 		pos += 2;
 		left -= 2;
-		if (count == 0 || left < count * RSN_SELECTOR_LEN) {
+		if (count == 0 || count > left / RSN_SELECTOR_LEN) {
 			wpa_printf(MSG_DEBUG, "%s: ie count botch (key mgmt), "
 				   "count %u left %u", __func__, count, left);
 			return -6;
@@ -688,7 +688,7 @@ int wpa_parse_wpa_ie_wpa(const u8 *wpa_ie, size_t wpa_ie_len,
 		count = WPA_GET_LE16(pos);
 		pos += 2;
 		left -= 2;
-		if (count == 0 || left < count * WPA_SELECTOR_LEN) {
+		if (count == 0 || count > left / WPA_SELECTOR_LEN) {
 			wpa_printf(MSG_DEBUG, "%s: ie count botch (pairwise), "
 				   "count %u left %u", __func__, count, left);
 			return -4;
@@ -709,7 +709,7 @@ int wpa_parse_wpa_ie_wpa(const u8 *wpa_ie, size_t wpa_ie_len,
 		count = WPA_GET_LE16(pos);
 		pos += 2;
 		left -= 2;
-		if (count == 0 || left < count * WPA_SELECTOR_LEN) {
+		if (count == 0 || count > left / WPA_SELECTOR_LEN) {
 			wpa_printf(MSG_DEBUG, "%s: ie count botch (key mgmt), "
 				   "count %u left %u", __func__, count, left);
 			return -6;

@@ -562,6 +562,7 @@ static void hs20_osu_add_prov(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 	const u8 *end = pos + len;
 	u16 len2;
 	const u8 *pos2;
+	u8 uri_len;
 
 	wpa_hexdump(MSG_DEBUG, "HS 2.0: Parsing OSU Provider", pos, len);
 	prov = os_realloc_array(wpa_s->osu_prov,
@@ -607,13 +608,19 @@ static void hs20_osu_add_prov(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 	}
 
 	/* OSU Server URI */
-	if (pos + 1 > end || pos + 1 + pos[0] > end) {
+	if (pos + 1 > end) {
+		wpa_printf(MSG_DEBUG,
+			   "HS 2.0: Not enough room for OSU Server URI length");
+		return;
+	}
+	uri_len = *pos++;
+	if (uri_len > end - pos) {
 		wpa_printf(MSG_DEBUG, "HS 2.0: Not enough room for OSU Server "
 			   "URI");
 		return;
 	}
-	os_memcpy(prov->server_uri, pos + 1, pos[0]);
-	pos += 1 + pos[0];
+	os_memcpy(prov->server_uri, pos, uri_len);
+	pos += uri_len;
 
 	/* OSU Method list */
 	if (pos + 1 > end || pos + 1 + pos[0] > end) {

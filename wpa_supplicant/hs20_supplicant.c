@@ -778,7 +778,7 @@ void hs20_osu_icon_fetch(struct wpa_supplicant *wpa_s)
 			num_providers--;
 			len = WPA_GET_LE16(pos);
 			pos += 2;
-			if (pos + len > end)
+			if (len > (unsigned int) (end - pos))
 				break;
 			hs20_osu_add_prov(wpa_s, bss, osu_ssid,
 					  osu_ssid_len, pos, len);

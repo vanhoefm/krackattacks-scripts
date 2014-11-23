@@ -251,11 +251,14 @@ int ikev2_parse_payloads(struct ikev2_payloads *payloads,
 	os_memset(payloads, 0, sizeof(*payloads));
 
 	while (next_payload != IKEV2_PAYLOAD_NO_NEXT_PAYLOAD) {
-		unsigned int plen, pdatalen;
+		unsigned int plen, pdatalen, left;
 		const u8 *pdata;
 		wpa_printf(MSG_DEBUG, "IKEV2: Processing payload %u",
 			   next_payload);
-		if (end - pos < (int) sizeof(*phdr)) {
+		if (end < pos)
+			return -1;
+		left = end - pos;
+		if (left < sizeof(*phdr)) {
 			wpa_printf(MSG_INFO, "IKEV2:   Too short message for "
 				   "payload header (left=%ld)",
 				   (long) (end - pos));
@@ -263,7 +266,7 @@ int ikev2_parse_payloads(struct ikev2_payloads *payloads,
 		}
 		phdr = (const struct ikev2_payload_hdr *) pos;
 		plen = WPA_GET_BE16(phdr->payload_length);
-		if (plen < sizeof(*phdr) || pos + plen > end) {
+		if (plen < sizeof(*phdr) || plen > left) {
 			wpa_printf(MSG_INFO, "IKEV2:   Invalid payload header "
 				   "length %d", plen);
 			return -1;

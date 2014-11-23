@@ -2808,7 +2808,9 @@ void anqp_resp_cb(void *ctx, const u8 *dst, u8 dialog_token,
 	end = pos + wpabuf_len(resp);
 
 	while (pos < end) {
-		if (pos + 4 > end) {
+		unsigned int left = end - pos;
+
+		if (left < 4) {
 			wpa_printf(MSG_DEBUG, "ANQP: Invalid element");
 			break;
 		}
@@ -2816,7 +2818,8 @@ void anqp_resp_cb(void *ctx, const u8 *dst, u8 dialog_token,
 		pos += 2;
 		slen = WPA_GET_LE16(pos);
 		pos += 2;
-		if (pos + slen > end) {
+		left -= 4;
+		if (left < slen) {
 			wpa_printf(MSG_DEBUG, "ANQP: Invalid element length "
 				   "for Info ID %u", info_id);
 			break;

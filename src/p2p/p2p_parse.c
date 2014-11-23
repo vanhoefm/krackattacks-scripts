@@ -309,23 +309,27 @@ int p2p_parse_p2p_ie(const struct wpabuf *buf, struct p2p_message *msg)
 
 	while (pos < end) {
 		u16 attr_len;
-		if (pos + 2 >= end) {
+		u8 id;
+
+		if (end - pos < 3) {
 			wpa_printf(MSG_DEBUG, "P2P: Invalid P2P attribute");
 			return -1;
 		}
-		attr_len = WPA_GET_LE16(pos + 1);
+		id = *pos++;
+		attr_len = WPA_GET_LE16(pos);
+		pos += 2;
 		wpa_printf(MSG_DEBUG, "P2P: Attribute %d length %u",
-			   pos[0], attr_len);
-		if (pos + 3 + attr_len > end) {
+			   id, attr_len);
+		if (attr_len > end - pos) {
 			wpa_printf(MSG_DEBUG, "P2P: Attribute underflow "
 				   "(len=%u left=%d)",
-				   attr_len, (int) (end - pos - 3));
+				   attr_len, (int) (end - pos));
 			wpa_hexdump(MSG_MSGDUMP, "P2P: Data", pos, end - pos);
 			return -1;
 		}
-		if (p2p_parse_attribute(pos[0], pos + 3, attr_len, msg))
+		if (p2p_parse_attribute(id, pos, attr_len, msg))
 			return -1;
-		pos += 3 + attr_len;
+		pos += attr_len;
 	}
 
 	return 0;

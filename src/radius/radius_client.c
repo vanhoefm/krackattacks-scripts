@@ -1039,6 +1039,13 @@ radius_change_server(struct radius_client_data *radius,
 		return -1;
 	}
 
+	if (sel_sock < 0) {
+		wpa_printf(MSG_INFO,
+			   "RADIUS: No server socket available (af=%d sock=%d sock6=%d auth=%d",
+			   nserv->addr.af, sock, sock6, auth);
+		return -1;
+	}
+
 	if (conf->force_client_addr) {
 		switch (conf->client_addr.af) {
 		case AF_INET:

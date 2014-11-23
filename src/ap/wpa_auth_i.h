@@ -230,11 +230,14 @@ int wpa_auth_for_each_auth(struct wpa_authenticator *wpa_auth,
 int wpa_stsl_remove(struct wpa_authenticator *wpa_auth,
 		    struct wpa_stsl_negotiation *neg);
 void wpa_smk_error(struct wpa_authenticator *wpa_auth,
-		   struct wpa_state_machine *sm, struct wpa_eapol_key *key);
+		   struct wpa_state_machine *sm,
+		   const u8 *key_data, size_t key_data_len);
 void wpa_smk_m1(struct wpa_authenticator *wpa_auth,
-		struct wpa_state_machine *sm, struct wpa_eapol_key *key);
+		struct wpa_state_machine *sm, struct wpa_eapol_key *key,
+		const u8 *key_data, size_t key_data_len);
 void wpa_smk_m3(struct wpa_authenticator *wpa_auth,
-		struct wpa_state_machine *sm, struct wpa_eapol_key *key);
+		struct wpa_state_machine *sm, struct wpa_eapol_key *key,
+		const u8 *key_data, size_t key_data_len);
 #endif /* CONFIG_PEERKEY */
 
 #ifdef CONFIG_IEEE80211R

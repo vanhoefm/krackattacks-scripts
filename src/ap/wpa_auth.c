@@ -1239,7 +1239,8 @@ continue_processing:
 		 */
 		if (msg == SMK_ERROR) {
 #ifdef CONFIG_PEERKEY
-			wpa_smk_error(wpa_auth, sm, key);
+			wpa_smk_error(wpa_auth, sm, (const u8 *) (key + 1),
+				      key_data_length);
 #endif /* CONFIG_PEERKEY */
 			return;
 		} else if (key_info & WPA_KEY_INFO_ERROR) {
@@ -1254,7 +1255,8 @@ continue_processing:
 			wpa_request_new_ptk(sm);
 #ifdef CONFIG_PEERKEY
 		} else if (msg == SMK_M1) {
-			wpa_smk_m1(wpa_auth, sm, key);
+			wpa_smk_m1(wpa_auth, sm, key, (const u8 *) (key + 1),
+				   key_data_length);
 #endif /* CONFIG_PEERKEY */
 		} else if (key_data_length > 0 &&
 			   wpa_parse_kde_ies((const u8 *) (key + 1),
@@ -1296,7 +1298,8 @@ continue_processing:
 
 #ifdef CONFIG_PEERKEY
 	if (msg == SMK_M3) {
-		wpa_smk_m3(wpa_auth, sm, key);
+		wpa_smk_m3(wpa_auth, sm, key, (const u8 *) (key + 1),
+			   key_data_length);
 		return;
 	}
 #endif /* CONFIG_PEERKEY */

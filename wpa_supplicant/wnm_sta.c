@@ -245,6 +245,7 @@ static void ieee802_11_rx_wnmsleep_resp(struct wpa_supplicant *wpa_s,
 	/* multiple TFS Resp IE (assuming consecutive) */
 	u8 *tfsresp_ie_start = NULL;
 	u8 *tfsresp_ie_end = NULL;
+	size_t left;
 
 	if (len < 3)
 		return;
@@ -252,11 +253,12 @@ static void ieee802_11_rx_wnmsleep_resp(struct wpa_supplicant *wpa_s,
 
 	wpa_printf(MSG_DEBUG, "WNM-Sleep Mode Response token=%u key_len_total=%d",
 		   frm[0], key_len_total);
-	pos += 3 + key_len_total;
-	if (pos > frm + len) {
+	left = len - 3;
+	if (key_len_total > left) {
 		wpa_printf(MSG_INFO, "WNM: Too short frame for Key Data field");
 		return;
 	}
+	pos += 3 + key_len_total;
 	while (pos - frm < len) {
 		u8 ie_len = *(pos + 1);
 		if (pos + 2 + ie_len > frm + len) {

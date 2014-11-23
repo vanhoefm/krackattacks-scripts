@@ -799,7 +799,9 @@ int eap_fast_load_pac_bin(struct eap_sm *sm, struct eap_fast_pac **pac_root,
 	pos = buf + 6;
 	end = buf + len;
 	while (pos < end) {
-		if (end - pos < 2 + 32 + 2 + 2)
+		u16 val;
+
+		if (end - pos < 2 + EAP_FAST_PAC_KEY_LEN + 2 + 2)
 			goto parse_fail;
 
 		pac = os_zalloc(sizeof(*pac));
@@ -810,19 +812,23 @@ int eap_fast_load_pac_bin(struct eap_sm *sm, struct eap_fast_pac **pac_root,
 		pos += 2;
 		os_memcpy(pac->pac_key, pos, EAP_FAST_PAC_KEY_LEN);
 		pos += EAP_FAST_PAC_KEY_LEN;
-		pac->pac_opaque_len = WPA_GET_BE16(pos);
+		val = WPA_GET_BE16(pos);
 		pos += 2;
-		if (pos + pac->pac_opaque_len + 2 > end)
+		if (val > end - pos)
 			goto parse_fail;
+		pac->pac_opaque_len = val;
 		pac->pac_opaque = os_malloc(pac->pac_opaque_len);
 		if (pac->pac_opaque == NULL)
 			goto parse_fail;
 		os_memcpy(pac->pac_opaque, pos, pac->pac_opaque_len);
 		pos += pac->pac_opaque_len;
-		pac->pac_info_len = WPA_GET_BE16(pos);
-		pos += 2;
-		if (pos + pac->pac_info_len > end)
+		if (2 > end - pos)
 			goto parse_fail;
+		val = WPA_GET_BE16(pos);
+		pos += 2;
+		if (val > end - pos)
+			goto parse_fail;
+		pac->pac_info_len = val;
 		pac->pac_info = os_malloc(pac->pac_info_len);
 		if (pac->pac_info == NULL)
 			goto parse_fail;

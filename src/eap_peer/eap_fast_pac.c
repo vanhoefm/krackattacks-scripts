@@ -714,7 +714,7 @@ static void eap_fast_pac_get_a_id(struct eap_fast_pac *pac)
 		pos += 2;
 		len = WPA_GET_BE16(pos);
 		pos += 2;
-		if (pos + len > end)
+		if (len > (unsigned int) (end - pos))
 			break;
 
 		if (type == PAC_TYPE_A_ID) {

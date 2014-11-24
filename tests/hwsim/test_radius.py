@@ -4,6 +4,7 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+import hashlib
 import hmac
 import logging
 logger = logging.getLogger()
@@ -746,6 +747,95 @@ def test_radius_protocol(dev, apdev):
         t_events['double_msg_auth'].set()
         connect(dev[0], "radius-test", wait_connect=False)
         time.sleep(1)
+    finally:
+        t_events['stop'].set()
+        t.join()
+
+def test_radius_psk(dev, apdev):
+    """WPA2 with PSK from RADIUS"""
+    try:
+        import pyrad.server
+        import pyrad.packet
+        import pyrad.dictionary
+    except ImportError:
+        return "skip"
+
+    class TestServer(pyrad.server.Server):
+        def _HandleAuthPacket(self, pkt):
+            pyrad.server.Server._HandleAuthPacket(self, pkt)
+            logger.info("Received authentication request")
+            reply = self.CreateReplyPacket(pkt)
+            reply.code = pyrad.packet.AccessAccept
+            a = "\xab\xcd"
+            secret = reply.secret
+            if self.t_events['long'].is_set():
+                p = b'\x10' + "0123456789abcdef" + 15 * b'\x00'
+                b = hashlib.md5(secret + pkt.authenticator + a).digest()
+                pp = bytearray(p[0:16])
+                bb = bytearray(b)
+                cc = bytearray(pp[i] ^ bb[i] for i in range(len(bb)))
+
+                b = hashlib.md5(reply.secret + bytes(cc)).digest()
+                pp = bytearray(p[16:32])
+                bb = bytearray(b)
+                cc += bytearray(pp[i] ^ bb[i] for i in range(len(bb)))
+
+                data = '\x00' + a + bytes(cc)
+            else:
+                p = b'\x08' + "12345678" + 7 * b'\x00'
+                b = hashlib.md5(secret + pkt.authenticator + a).digest()
+                pp = bytearray(p)
+                bb = bytearray(b)
+                cc = bytearray(pp[i] ^ bb[i] for i in range(len(bb)))
+                data = '\x00' + a + bytes(cc)
+            reply.AddAttribute("Tunnel-Password", data)
+            self.SendReplyPacket(pkt.fd, reply)
+
+        def RunWithStop(self, t_events):
+            self._poll = select.poll()
+            self._fdmap = {}
+            self._PrepareSockets()
+            self.t_events = t_events
+
+            while not t_events['stop'].is_set():
+                for (fd, event) in self._poll.poll(1000):
+                    if event == select.POLLIN:
+                        try:
+                            fdo = self._fdmap[fd]
+                            self._ProcessInput(fdo)
+                        except ServerPacketError as err:
+                            logger.info("pyrad server dropping packet: " + str(err))
+                        except pyrad.packet.PacketError as err:
+                            logger.info("pyrad server received invalid packet: " + str(err))
+                    else:
+                        logger.error("Unexpected event in pyrad server main loop")
+
+    srv = TestServer(dict=pyrad.dictionary.Dictionary("dictionary.radius"),
+                     authport=18138, acctport=18139)
+    srv.hosts["127.0.0.1"] = pyrad.server.RemoteHost("127.0.0.1",
+                                                     "radius",
+                                                     "localhost")
+    srv.BindToAddress("")
+    t_events = {}
+    t_events['stop'] = threading.Event()
+    t_events['long'] = threading.Event()
+    t = threading.Thread(target=run_pyrad_server, args=(srv, t_events))
+    t.start()
+
+    try:
+        ssid = "test-wpa2-psk"
+        params = hostapd.radius_params()
+        params['ssid'] = ssid
+        params["wpa"] = "2"
+        params["wpa_key_mgmt"] = "WPA-PSK"
+        params["rsn_pairwise"] = "CCMP"
+        params['macaddr_acl'] = '2'
+        params['wpa_psk_radius'] = '2'
+        params['auth_server_port'] = "18138"
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        dev[0].connect(ssid, psk="12345678", scan_freq="2412")
+        t_events['long'].set()
+        dev[1].connect(ssid, psk="0123456789abcdef", scan_freq="2412")
     finally:
         t_events['stop'].set()
         t.join()

@@ -169,8 +169,8 @@ static void sme_auth_handle_rrm(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
-	if (sizeof(wpa_s->sme.assoc_req_ie) - wpa_s->sme.assoc_req_ie_len <
-	    rrm_ie_len + 2) {
+	if (sizeof(wpa_s->sme.assoc_req_ie) <
+	    wpa_s->sme.assoc_req_ie_len + rrm_ie_len + 2) {
 		wpa_printf(MSG_INFO,
 			   "RRM: Unable to use RRM, no room for RRM IE");
 		return;

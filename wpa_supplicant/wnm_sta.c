@@ -411,7 +411,17 @@ static void wnm_parse_neighbor_report_elem(struct neighbor_report *rep,
 
 static int wnm_nei_get_chan(struct wpa_supplicant *wpa_s, u8 op_class, u8 chan)
 {
-	return ieee80211_chan_to_freq(NULL, op_class, chan);
+	struct wpa_bss *bss = wpa_s->current_bss;
+	const char *country = NULL;
+
+	if (bss) {
+		const u8 *elem = wpa_bss_get_ie(bss, WLAN_EID_COUNTRY);
+
+		if (elem && elem[1] >= 2)
+			country = (const char *) (elem + 2);
+	}
+
+	return ieee80211_chan_to_freq(country, op_class, chan);
 }
 
 

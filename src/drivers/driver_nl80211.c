@@ -6341,7 +6341,6 @@ static int i802_check_bridge(struct wpa_driver_nl80211_data *drv,
 
 	os_strlcpy(bss->brname, brname, IFNAMSIZ);
 	br_ifindex = if_nametoindex(brname);
-	bss->br_ifindex = br_ifindex;
 	if (br_ifindex == 0) {
 		/*
 		 * Bridge was configured, but the bridge device does
@@ -6354,8 +6353,10 @@ static int i802_check_bridge(struct wpa_driver_nl80211_data *drv,
 			return -1;
 		}
 		bss->added_bridge = 1;
-		add_ifidx(drv, if_nametoindex(brname));
+		br_ifindex = if_nametoindex(brname);
+		add_ifidx(drv, br_ifindex);
 	}
+	bss->br_ifindex = br_ifindex;
 
 	if (linux_br_get(in_br, ifname) == 0) {
 		if (os_strcmp(in_br, brname) == 0)

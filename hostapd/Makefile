@@ -855,7 +855,9 @@ ifdef CONFIG_PROXYARP
 CFLAGS += -DCONFIG_PROXYARP
 OBJS += ../src/ap/x_snoop.o
 OBJS += ../src/ap/dhcp_snoop.o
+ifdef CONFIG_IPV6
 OBJS += ../src/ap/ndisc_snoop.o
+endif
 endif
 
 OBJS += ../src/drivers/driver_common.o

@@ -7,8 +7,8 @@
  */
 
 #include "utils/includes.h"
-#include <linux/ipv6.h>
-#include <linux/icmpv6.h>
+#include <netinet/ip6.h>
+#include <netinet/icmp6.h>
 
 #include "utils/common.h"
 #include "l2_packet/l2_packet.h"
@@ -24,8 +24,8 @@ struct ip6addr {
 };
 
 struct icmpv6_ndmsg {
-	struct ipv6hdr ipv6h;
-	struct icmp6hdr icmp6h;
+	struct ip6_hdr ipv6h;
+	struct icmp6_hdr icmp6h;
 	struct in6_addr target_addr;
 	u8 opt_type;
 	u8 len;
@@ -98,7 +98,7 @@ static void handle_ndisc(void *ctx, const u8 *src_addr, const u8 *buf,
 		if (msg->opt_type != SOURCE_LL_ADDR)
 			return;
 
-		saddr = &msg->ipv6h.saddr;
+		saddr = &msg->ipv6h.ip6_src;
 		if (!(saddr->s6_addr32[0] == 0 && saddr->s6_addr32[1] == 0 &&
 		      saddr->s6_addr32[2] == 0 && saddr->s6_addr32[3] == 0)) {
 			if (len < ETH_HLEN + sizeof(*msg) + ETH_ALEN)

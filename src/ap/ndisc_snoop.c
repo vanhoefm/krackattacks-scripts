@@ -30,7 +30,7 @@ struct icmpv6_ndmsg {
 	u8 opt_type;
 	u8 len;
 	u8 opt_lladdr[0];
-};
+} STRUCT_PACKED;
 
 #define ROUTER_ADVERTISEMENT	134
 #define NEIGHBOR_SOLICITATION	135

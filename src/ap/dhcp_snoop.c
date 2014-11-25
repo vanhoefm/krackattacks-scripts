@@ -36,7 +36,7 @@ struct bootp_pkt {
 	u8 serv_name[64];
 	u8 boot_file[128];
 	u8 exten[312];
-};
+} STRUCT_PACKED;
 
 #define DHCPACK	5
 static const u8 ic_bootp_cookie[] = { 99, 130, 83, 99 };

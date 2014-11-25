@@ -47,6 +47,7 @@ struct ctrl_iface_priv {
 	struct wpa_supplicant *wpa_s;
 	int sock;
 	struct dl_list ctrl_dst;
+	int android_control_socket;
 };
 
 
@@ -54,6 +55,7 @@ struct ctrl_iface_global_priv {
 	struct wpa_global *global;
 	int sock;
 	struct dl_list ctrl_dst;
+	int android_control_socket;
 };
 
 
@@ -340,8 +342,10 @@ static int wpas_ctrl_iface_open_sock(struct wpa_supplicant *wpa_s,
 	os_snprintf(addr.sun_path, sizeof(addr.sun_path), "wpa_%s",
 		    wpa_s->conf->ctrl_interface);
 	priv->sock = android_get_control_socket(addr.sun_path);
-	if (priv->sock >= 0)
+	if (priv->sock >= 0) {
+		priv->android_control_socket = 1;
 		goto havesock;
+	}
 #endif /* ANDROID */
 	if (os_strncmp(buf, "DIR=", 4) == 0) {
 		dir = buf + 4;
@@ -555,6 +559,16 @@ static int wpas_ctrl_iface_reinit(struct wpa_supplicant *wpa_s,
 
 	if (priv->sock <= 0)
 		return -1;
+
+	/*
+	 * On Android, the control socket being used may be the socket
+	 * that is created when wpa_supplicant is started as a /init.*.rc
+	 * service. Such a socket is maintained as a key-value pair in
+	 * Android's environment. Closing this control socket would leave us
+	 * in a bad state with an invalid socket descriptor.
+	 */
+	if (priv->android_control_socket)
+		return priv->sock;
 
 	eloop_unregister_read_sock(priv->sock);
 	close(priv->sock);
@@ -870,6 +884,7 @@ static int wpas_global_ctrl_iface_open_sock(struct wpa_global *global,
 		}
 		wpa_printf(MSG_DEBUG, "Using Android control socket '%s'",
 			   ctrl + 9);
+		priv->android_control_socket = 1;
 		goto havesock;
 	}
 
@@ -884,6 +899,7 @@ static int wpas_global_ctrl_iface_open_sock(struct wpa_global *global,
 			wpa_printf(MSG_DEBUG,
 				   "Using Android control socket '%s'",
 				   ctrl);
+			priv->android_control_socket = 1;
 			goto havesock;
 		}
 	}
@@ -1063,6 +1079,16 @@ static int wpas_ctrl_iface_global_reinit(struct wpa_global *global,
 
 	if (priv->sock <= 0)
 		return -1;
+
+	/*
+	 * On Android, the control socket being used may be the socket
+	 * that is created when wpa_supplicant is started as a /init.*.rc
+	 * service. Such a socket is maintained as a key-value pair in
+	 * Android's environment. Closing this control socket would leave us
+	 * in a bad state with an invalid socket descriptor.
+	 */
+	if (priv->android_control_socket)
+		return priv->sock;
 
 	eloop_unregister_read_sock(priv->sock);
 	close(priv->sock);

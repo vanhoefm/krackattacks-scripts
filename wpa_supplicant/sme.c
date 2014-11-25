@@ -611,6 +611,8 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 static int sme_sae_auth(struct wpa_supplicant *wpa_s, u16 auth_transaction,
 			u16 status_code, const u8 *data, size_t len)
 {
+	int *groups;
+
 	wpa_dbg(wpa_s, MSG_DEBUG, "SME: SAE authentication transaction %u "
 		"status code %u", auth_transaction, status_code);
 
@@ -618,10 +620,32 @@ static int sme_sae_auth(struct wpa_supplicant *wpa_s, u16 auth_transaction,
 	    status_code == WLAN_STATUS_ANTI_CLOGGING_TOKEN_REQ &&
 	    wpa_s->sme.sae.state == SAE_COMMITTED &&
 	    wpa_s->current_bss && wpa_s->current_ssid) {
-		wpa_dbg(wpa_s, MSG_DEBUG, "SME: SAE anti-clogging token "
-			"requested");
+		int default_groups[] = { 19, 20, 21, 25, 26, 0 };
+		u16 group;
+
+		groups = wpa_s->conf->sae_groups;
+		if (!groups || groups[0] <= 0)
+			groups = default_groups;
+
+		if (len < sizeof(le16)) {
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"SME: Too short SAE anti-clogging token request");
+			return -1;
+		}
+		group = WPA_GET_LE16(data);
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"SME: SAE anti-clogging token requested (group %u)",
+			group);
+		if (sae_group_allowed(&wpa_s->sme.sae, groups, group) !=
+		    WLAN_STATUS_SUCCESS) {
+			wpa_dbg(wpa_s, MSG_ERROR,
+				"SME: SAE group %u of anti-clogging request is invalid",
+				group);
+			return -1;
+		}
 		wpabuf_free(wpa_s->sme.sae_token);
-		wpa_s->sme.sae_token = wpabuf_alloc_copy(data, len);
+		wpa_s->sme.sae_token = wpabuf_alloc_copy(data + sizeof(le16),
+							 len - sizeof(le16));
 		sme_send_authentication(wpa_s, wpa_s->current_bss,
 					wpa_s->current_ssid, 1);
 		return 0;
@@ -645,7 +669,7 @@ static int sme_sae_auth(struct wpa_supplicant *wpa_s, u16 auth_transaction,
 		return -1;
 
 	if (auth_transaction == 1) {
-		int *groups = wpa_s->conf->sae_groups;
+		groups = wpa_s->conf->sae_groups;
 
 		wpa_dbg(wpa_s, MSG_DEBUG, "SME SAE commit");
 		if (wpa_s->current_bss == NULL ||

@@ -686,8 +686,7 @@ void sae_write_commit(struct sae_data *sae, struct wpabuf *buf,
 }
 
 
-static u16 sae_group_allowed(struct sae_data *sae, int *allowed_groups,
-			     u16 group)
+u16 sae_group_allowed(struct sae_data *sae, int *allowed_groups, u16 group)
 {
 	if (allowed_groups) {
 		int i;

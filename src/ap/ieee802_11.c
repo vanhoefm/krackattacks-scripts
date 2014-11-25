@@ -449,7 +449,7 @@ static int check_sae_token(struct hostapd_data *hapd, const u8 *addr,
 
 
 static struct wpabuf * auth_build_token_req(struct hostapd_data *hapd,
-					    const u8 *addr)
+					    int group, const u8 *addr)
 {
 	struct wpabuf *buf;
 	u8 *token;
@@ -466,9 +466,11 @@ static struct wpabuf * auth_build_token_req(struct hostapd_data *hapd,
 		hapd->last_sae_token_key_update = now;
 	}
 
-	buf = wpabuf_alloc(SHA256_MAC_LEN);
+	buf = wpabuf_alloc(sizeof(le16) + SHA256_MAC_LEN);
 	if (buf == NULL)
 		return NULL;
+
+	wpabuf_put_le16(buf, group); /* Finite Cyclic Group */
 
 	token = wpabuf_put(buf, SHA256_MAC_LEN);
 	hmac_sha256(hapd->sae_token_key, sizeof(hapd->sae_token_key),
@@ -630,7 +632,7 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 	}
 
 	if (auth_transaction == 1) {
-		const u8 *token = NULL;
+		const u8 *token = NULL, *pos, *end;
 		size_t token_len = 0;
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_DEBUG,
@@ -639,11 +641,27 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 		if ((hapd->conf->mesh & MESH_ENABLED) &&
 		    mgmt->u.auth.status_code ==
 		    WLAN_STATUS_ANTI_CLOGGING_TOKEN_REQ && sta->sae->tmp) {
+			pos = mgmt->u.auth.variable;
+			end = ((const u8 *) mgmt) + len;
+			if (pos + sizeof(le16) > end) {
+				wpa_printf(MSG_ERROR,
+					   "SAE: Too short anti-clogging token request");
+				resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+				goto reply;
+			}
+			resp = sae_group_allowed(sta->sae,
+						 hapd->conf->sae_groups,
+						 WPA_GET_LE16(pos));
+			if (resp != WLAN_STATUS_SUCCESS) {
+				wpa_printf(MSG_ERROR,
+					   "SAE: Invalid group in anti-clogging token request");
+				goto reply;
+			}
+			pos += sizeof(le16);
+
 			wpabuf_free(sta->sae->tmp->anti_clogging_token);
 			sta->sae->tmp->anti_clogging_token =
-				wpabuf_alloc_copy(mgmt->u.auth.variable,
-						  ((const u8 *) mgmt) + len -
-						  mgmt->u.auth.variable);
+				wpabuf_alloc_copy(pos, end - pos);
 			if (sta->sae->tmp->anti_clogging_token == NULL) {
 				wpa_printf(MSG_ERROR,
 					   "SAE: Failed to alloc for anti-clogging token");
@@ -685,7 +703,8 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 			wpa_printf(MSG_DEBUG,
 				   "SAE: Request anti-clogging token from "
 				   MACSTR, MAC2STR(sta->addr));
-			data = auth_build_token_req(hapd, sta->addr);
+			data = auth_build_token_req(hapd, sta->sae->group,
+						    sta->addr);
 			resp = WLAN_STATUS_ANTI_CLOGGING_TOKEN_REQ;
 			if (hapd->conf->mesh & MESH_ENABLED)
 				sta->sae->state = SAE_NOTHING;

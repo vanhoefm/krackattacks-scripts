@@ -89,6 +89,7 @@ static void handle_ndisc(void *ctx, const u8 *src_addr, const u8 *buf,
 	struct in6_addr *saddr;
 	struct sta_info *sta;
 	int res;
+	char addrtxt[INET6_ADDRSTRLEN + 1];
 
 	if (len < ETH_HLEN + sizeof(*msg))
 		return;
@@ -110,6 +111,11 @@ static void handle_ndisc(void *ctx, const u8 *src_addr, const u8 *buf,
 			if (sta_has_ip6addr(sta, saddr))
 				return;
 
+			if (inet_ntop(AF_INET6, saddr, addrtxt, sizeof(addrtxt))
+			    == NULL)
+				addrtxt[0] = '\0';
+			wpa_printf(MSG_DEBUG, "ndisc_snoop: Learned new IPv6 address %s for "
+				   MACSTR, addrtxt, MAC2STR(sta->addr));
 			hostapd_drv_br_delete_ip_neigh(hapd, 6, (u8 *) saddr);
 			res = hostapd_drv_br_add_ip_neigh(hapd, 6, (u8 *) saddr,
 							  128, sta->addr);

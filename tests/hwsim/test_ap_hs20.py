@@ -2105,3 +2105,163 @@ def test_ap_hs20_random_mac_addr(dev, apdev):
     sta = hapd.get_sta(addr1)
     if sta['addr'] != addr1:
         raise Exception("STA association with random address not found")
+
+def _test_ap_hs20_proxyarp(dev, apdev):
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    params['disable_dgaf'] = '0'
+    params['proxy_arp'] = '1'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params, no_enable=True)
+    if "OK" in hapd.request("ENABLE"):
+        raise Exception("Incomplete hostapd configuration was accepted")
+    hapd.set("ap_isolate", "1")
+    if "OK" in hapd.request("ENABLE"):
+        raise Exception("Incomplete hostapd configuration was accepted")
+    hapd.set('bridge', 'ap-br0')
+    hapd.dump_monitor()
+    try:
+        hapd.enable()
+    except:
+        # For now, do not report failures due to missing kernel support
+        logger.info("Could not start hostapd - assume proxyarp not supported in kernel version")
+        return "skip"
+    ev = hapd.wait_event(["AP-ENABLED", "AP-DISABLED"], timeout=10)
+    if ev is None:
+        raise Exception("AP startup timed out")
+    if "AP-ENABLED" not in ev:
+        raise Exception("AP startup failed")
+
+    dev[0].hs20_enable()
+    subprocess.call(['brctl', 'setfd', 'ap-br0', '0'])
+    subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
+    subprocess.call(['ip', 'addr', 'add', 'aaaa:bbbb:cccc::1/64',
+                     'dev', dev[0].ifname])
+    subprocess.call(['ip', 'addr', 'add', 'aaaa:bbbb:dddd::1/64',
+                     'dev', dev[1].ifname])
+    subprocess.call(['ip', 'addr', 'add', 'aaaa:bbbb:eeee::1/64',
+                     'dev', dev[1].ifname])
+
+    id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'username': "hs20-test",
+                                  'password': "password",
+                                  'ca_cert': "auth_serv/ca.pem",
+                                  'domain': "example.com",
+                                  'update_identifier': "1234" })
+    interworking_select(dev[0], bssid, "home", freq="2412")
+    interworking_connect(dev[0], bssid, "TTLS")
+
+    dev[1].connect("test-hs20", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="hs20-test", password="password",
+                   ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                   scan_freq="2412")
+    time.sleep(0.1)
+
+    subprocess.call(['ping6', 'aaaa:bbbb:cccc::2', '-c', '1', '-w', '1'],
+                    stdout=open('/dev/null', 'w'))
+    matches = get_permanent_neighbors("ap-br0")
+    logger.info("After connect: " + str(matches))
+    if len(matches) < 1:
+        raise Exception("No neighbor entries after connect")
+    dev[0].request("DISCONNECT")
+    dev[1].request("DISCONNECT")
+    time.sleep(0.5)
+    matches = get_permanent_neighbors("ap-br0")
+    logger.info("After disconnect: " + str(matches))
+    if len(matches) > 0:
+        raise Exception("Unexpected neighbor entries after disconnect")
+
+def test_ap_hs20_proxyarp(dev, apdev):
+    """Hotspot 2.0 and ProxyARP"""
+    res = None
+    try:
+        res = _test_ap_hs20_proxyarp(dev, apdev)
+    finally:
+        subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'down'],
+                        stderr=open('/dev/null', 'w'))
+        subprocess.call(['brctl', 'delbr', 'ap-br0'],
+                        stderr=open('/dev/null', 'w'))
+        subprocess.call(['ip', 'addr', 'del', 'aaaa:bbbb:cccc::1/64',
+                         'dev', dev[0].ifname])
+        subprocess.call(['ip', 'addr', 'del', 'aaaa:bbbb:dddd::1/64',
+                         'dev', dev[1].ifname])
+        subprocess.call(['ip', 'addr', 'del', 'aaaa:bbbb:eeee::1/64',
+                         'dev', dev[1].ifname])
+
+    return res
+
+def get_permanent_neighbors(ifname):
+    cmd = subprocess.Popen(['ip', 'nei'], stdout=subprocess.PIPE)
+    res = cmd.stdout.read()
+    cmd.stdout.close()
+    return [ line for line in res.splitlines() if "PERMANENT" in line and ifname in line ]
+
+def _test_proxyarp_open(dev, apdev):
+    bssid = apdev[0]['bssid']
+    params = { 'ssid': 'open' }
+    params['proxy_arp'] = '1'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params, no_enable=True)
+    hapd.set("ap_isolate", "1")
+    hapd.set('bridge', 'ap-br0')
+    hapd.dump_monitor()
+    try:
+        hapd.enable()
+    except:
+        # For now, do not report failures due to missing kernel support
+        logger.info("Could not start hostapd - assume proxyarp not supported in kernel version")
+        return "skip"
+    ev = hapd.wait_event(["AP-ENABLED", "AP-DISABLED"], timeout=10)
+    if ev is None:
+        raise Exception("AP startup timed out")
+    if "AP-ENABLED" not in ev:
+        raise Exception("AP startup failed")
+
+    subprocess.call(['brctl', 'setfd', 'ap-br0', '0'])
+    subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
+    subprocess.call(['ip', 'addr', 'add', 'aaaa:bbbb:cccc::1/64',
+                     'dev', dev[0].ifname])
+    subprocess.call(['ip', 'addr', 'add', 'aaaa:bbbb:dddd::1/64',
+                     'dev', dev[1].ifname])
+    subprocess.call(['ip', 'addr', 'add', 'aaaa:bbbb:eeee::1/64',
+                     'dev', dev[1].ifname])
+
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+    dev[1].connect("open", key_mgmt="NONE", scan_freq="2412")
+    time.sleep(0.1)
+
+    subprocess.call(['ping6', 'aaaa:bbbb:cccc::2', '-c', '1', '-w', '1'],
+                    stdout=open('/dev/null', 'w'))
+    subprocess.call(['ping6', 'aaaa:bbbb:dddd::2', '-c', '1', '-w', '1'],
+                    stdout=open('/dev/null', 'w'))
+    subprocess.call(['ping6', 'aaaa:bbbb:eeee::2', '-c', '1', '-w', '1'],
+                    stdout=open('/dev/null', 'w'))
+    matches = get_permanent_neighbors("ap-br0")
+    logger.info("After connect: " + str(matches))
+    if len(matches) != 3:
+        raise Exception("Unexpected number of neighbor entries after connect")
+    dev[0].request("DISCONNECT")
+    dev[1].request("DISCONNECT")
+    time.sleep(0.5)
+    matches = get_permanent_neighbors("ap-br0")
+    logger.info("After disconnect: " + str(matches))
+    if len(matches) > 0:
+        raise Exception("Unexpected neighbor entries after disconnect")
+
+def test_proxyarp_open(dev, apdev):
+    """ProxyARP with open network"""
+    res = None
+    try:
+        res = _test_proxyarp_open(dev, apdev)
+    finally:
+        subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'down'],
+                        stderr=open('/dev/null', 'w'))
+        subprocess.call(['brctl', 'delbr', 'ap-br0'],
+                        stderr=open('/dev/null', 'w'))
+        subprocess.call(['ip', 'addr', 'del', 'aaaa:bbbb:cccc::1/64',
+                         'dev', dev[0].ifname])
+        subprocess.call(['ip', 'addr', 'del', 'aaaa:bbbb:dddd::1/64',
+                         'dev', dev[1].ifname])
+        subprocess.call(['ip', 'addr', 'del', 'aaaa:bbbb:eeee::1/64',
+                         'dev', dev[1].ifname])
+
+    return res

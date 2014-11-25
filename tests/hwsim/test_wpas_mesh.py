@@ -267,6 +267,7 @@ def test_wpas_mesh_open_no_auto(dev, apdev):
 
 def _test_wpas_mesh_secure(dev, apdev, test_connectivity):
     """wpa_supplicant secure MESH network connectivity"""
+    dev[0].request("SET sae_groups ")
     id = dev[0].add_network()
     dev[0].set_network(id, "mode", "5")
     dev[0].set_network_quoted(id, "ssid", "wpas-mesh-sec")
@@ -275,6 +276,7 @@ def _test_wpas_mesh_secure(dev, apdev, test_connectivity):
     dev[0].set_network_quoted(id, "psk", "thisismypassphrase!")
     dev[0].mesh_group_add(id)
 
+    dev[1].request("SET sae_groups ")
     id = dev[1].add_network()
     dev[1].set_network(id, "mode", "5")
     dev[1].set_network_quoted(id, "ssid", "wpas-mesh-sec")
@@ -302,6 +304,7 @@ def test_wpas_mesh_secure(dev, apdev):
 
 def _test_wpas_mesh_secure_no_auto(dev, apdev, test_connectivity):
     """wpa_supplicant secure MESH network connectivity"""
+    dev[0].request("SET sae_groups ")
     id = dev[0].add_network()
     dev[0].set_network(id, "mode", "5")
     dev[0].set_network_quoted(id, "ssid", "wpas-mesh-sec")
@@ -310,6 +313,7 @@ def _test_wpas_mesh_secure_no_auto(dev, apdev, test_connectivity):
     dev[0].set_network_quoted(id, "psk", "thisismypassphrase!")
     dev[0].mesh_group_add(id)
 
+    dev[1].request("SET sae_groups ")
     id = dev[1].add_network()
     dev[1].set_network(id, "mode", "5")
     dev[1].set_network_quoted(id, "ssid", "wpas-mesh-sec")

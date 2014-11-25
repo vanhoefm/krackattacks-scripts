@@ -263,6 +263,7 @@ def test_ap_ft_sae(dev, apdev):
     if key_mgmt.split(' ')[0] != "FT-SAE":
         raise Exception("Unexpected GET_CONFIG(key_mgmt): " + key_mgmt)
 
+    dev[0].request("SET sae_groups ")
     run_roams(dev[0], apdev, hapd0, hapd, ssid, passphrase, sae=True)
 
 def test_ap_ft_sae_over_ds(dev, apdev):
@@ -277,6 +278,7 @@ def test_ap_ft_sae_over_ds(dev, apdev):
     params['wpa_key_mgmt'] = "FT-SAE"
     hapd1 = hostapd.add_ap(apdev[1]['ifname'], params)
 
+    dev[0].request("SET sae_groups ")
     run_roams(dev[0], apdev, hapd0, hapd1, ssid, passphrase, sae=True,
               over_ds=True)
 

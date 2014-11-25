@@ -326,7 +326,7 @@ static void handle_auth_ft_finish(void *ctx, const u8 *dst, const u8 *bssid,
 #ifdef CONFIG_SAE
 
 static struct wpabuf * auth_build_sae_commit(struct hostapd_data *hapd,
-					     struct sta_info *sta)
+					     struct sta_info *sta, int update)
 {
 	struct wpabuf *buf;
 
@@ -335,7 +335,8 @@ static struct wpabuf * auth_build_sae_commit(struct hostapd_data *hapd,
 		return NULL;
 	}
 
-	if (sae_prepare_commit(hapd->own_addr, sta->addr,
+	if (update &&
+	    sae_prepare_commit(hapd->own_addr, sta->addr,
 			       (u8 *) hapd->conf->ssid.wpa_passphrase,
 			       os_strlen(hapd->conf->ssid.wpa_passphrase),
 			       sta->sae) < 0) {
@@ -346,7 +347,8 @@ static struct wpabuf * auth_build_sae_commit(struct hostapd_data *hapd,
 	buf = wpabuf_alloc(SAE_COMMIT_MAX_LEN);
 	if (buf == NULL)
 		return NULL;
-	sae_write_commit(sta->sae, buf, NULL);
+	sae_write_commit(sta->sae, buf, sta->sae->tmp ?
+			 sta->sae->tmp->anti_clogging_token : NULL);
 
 	return buf;
 }
@@ -369,11 +371,11 @@ static struct wpabuf * auth_build_sae_confirm(struct hostapd_data *hapd,
 
 static int auth_sae_send_commit(struct hostapd_data *hapd,
 				struct sta_info *sta,
-				const u8 *bssid)
+				const u8 *bssid, int update)
 {
 	struct wpabuf *data;
 
-	data = auth_build_sae_commit(hapd, sta);
+	data = auth_build_sae_commit(hapd, sta, update);
 	if (data == NULL)
 		return WLAN_STATUS_UNSPECIFIED_FAILURE;
 
@@ -487,7 +489,7 @@ static int sae_sm_step(struct hostapd_data *hapd, struct sta_info *sta,
 	switch (sta->sae->state) {
 	case SAE_NOTHING:
 		if (auth_transaction == 1) {
-			ret = auth_sae_send_commit(hapd, sta, bssid);
+			ret = auth_sae_send_commit(hapd, sta, bssid, 1);
 			if (ret)
 				return ret;
 			sta->sae->state = SAE_COMMITTED;
@@ -544,7 +546,7 @@ static int sae_sm_step(struct hostapd_data *hapd, struct sta_info *sta,
 			 * In mesh case, follow SAE finite state machine and
 			 * send Commit now.
 			 */
-			ret = auth_sae_send_commit(hapd, sta, bssid);
+			ret = auth_sae_send_commit(hapd, sta, bssid, 1);
 			if (ret)
 				return ret;
 		} else {
@@ -569,7 +571,7 @@ static int sae_sm_step(struct hostapd_data *hapd, struct sta_info *sta,
 		break;
 	case SAE_CONFIRMED:
 		if (auth_transaction == 1) {
-			ret = auth_sae_send_commit(hapd, sta, bssid);
+			ret = auth_sae_send_commit(hapd, sta, bssid, 1);
 			if (ret)
 				return ret;
 
@@ -633,6 +635,37 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_DEBUG,
 			       "start SAE authentication (RX commit)");
+
+		if ((hapd->conf->mesh & MESH_ENABLED) &&
+		    mgmt->u.auth.status_code ==
+		    WLAN_STATUS_ANTI_CLOGGING_TOKEN_REQ && sta->sae->tmp) {
+			wpabuf_free(sta->sae->tmp->anti_clogging_token);
+			sta->sae->tmp->anti_clogging_token =
+				wpabuf_alloc_copy(mgmt->u.auth.variable,
+						  ((const u8 *) mgmt) + len -
+						  mgmt->u.auth.variable);
+			if (sta->sae->tmp->anti_clogging_token == NULL) {
+				wpa_printf(MSG_ERROR,
+					   "SAE: Failed to alloc for anti-clogging token");
+				return;
+			}
+
+			/*
+			 * IEEE Std 802.11-2012, 11.3.8.6.4: If the Status code
+			 * is 76, a new Commit Message shall be constructed
+			 * with the Anti-Clogging Token from the received
+			 * Authentication frame, and the commit-scalar and
+			 * COMMIT-ELEMENT previously sent.
+			 */
+			if (auth_sae_send_commit(hapd, sta, mgmt->bssid, 0)) {
+				wpa_printf(MSG_ERROR,
+					   "SAE: Failed to send commit message");
+				return;
+			}
+			sta->sae->state = SAE_COMMITTED;
+			return;
+		}
+
 		resp = sae_parse_commit(sta->sae, mgmt->u.auth.variable,
 					((const u8 *) mgmt) + len -
 					mgmt->u.auth.variable, &token,
@@ -654,6 +687,8 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 				   MACSTR, MAC2STR(sta->addr));
 			data = auth_build_token_req(hapd, sta->addr);
 			resp = WLAN_STATUS_ANTI_CLOGGING_TOKEN_REQ;
+			if (hapd->conf->mesh & MESH_ENABLED)
+				sta->sae->state = SAE_NOTHING;
 			goto reply;
 		}
 

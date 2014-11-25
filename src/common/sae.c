@@ -87,6 +87,7 @@ void sae_clear_temp_data(struct sae_data *sae)
 	crypto_ec_point_deinit(tmp->pwe_ecc, 1);
 	crypto_ec_point_deinit(tmp->own_commit_element_ecc, 0);
 	crypto_ec_point_deinit(tmp->peer_commit_element_ecc, 0);
+	wpabuf_free(tmp->anti_clogging_token);
 	os_free(sae->tmp);
 	sae->tmp = NULL;
 }
@@ -656,8 +657,11 @@ void sae_write_commit(struct sae_data *sae, struct wpabuf *buf,
 		return;
 
 	wpabuf_put_le16(buf, sae->group); /* Finite Cyclic Group */
-	if (token)
+	if (token) {
 		wpabuf_put_buf(buf, token);
+		wpa_hexdump(MSG_DEBUG, "SAE: Anti-clogging token",
+			    wpabuf_head(token), wpabuf_len(token));
+	}
 	pos = wpabuf_put(buf, sae->tmp->prime_len);
 	crypto_bignum_to_bin(sae->tmp->own_commit_scalar, pos,
 			     sae->tmp->prime_len, sae->tmp->prime_len);

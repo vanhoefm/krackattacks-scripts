@@ -35,6 +35,7 @@ struct sae_temporary_data {
 	const struct crypto_bignum *order;
 	struct crypto_bignum *prime_buf;
 	struct crypto_bignum *order_buf;
+	struct wpabuf *anti_clogging_token;
 };
 
 struct sae_data {

@@ -269,6 +269,8 @@ struct p2p_data {
 	u8 invite_go_dev_addr_buf[ETH_ALEN];
 	int invite_dev_pw_id;
 
+	unsigned int retry_invite_req;
+
 	/**
 	 * sd_peer - Pointer to Service Discovery peer
 	 */

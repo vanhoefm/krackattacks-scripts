@@ -6619,6 +6619,47 @@ static int wpas_ctrl_iface_data_test_tx(struct wpa_supplicant *wpa_s, char *cmd)
 	return 0;
 }
 
+
+static int wpas_ctrl_iface_data_test_frame(struct wpa_supplicant *wpa_s,
+					   char *cmd)
+{
+	u8 *buf;
+	struct ether_header *eth;
+	struct l2_packet_data *l2 = NULL;
+	size_t len;
+	u16 ethertype;
+	int res = -1;
+
+	len = os_strlen(cmd);
+	if (len & 1 || len < ETH_HLEN * 2)
+		return -1;
+	len /= 2;
+
+	buf = os_malloc(len);
+	if (buf == NULL)
+		return -1;
+
+	if (hexstr2bin(cmd, buf, len) < 0)
+		goto done;
+
+	eth = (struct ether_header *) buf;
+	ethertype = ntohs(eth->ether_type);
+
+	l2 = l2_packet_init(wpa_s->ifname, wpa_s->own_addr, ethertype,
+			    wpas_data_test_rx, wpa_s, 1);
+	if (l2 == NULL)
+		goto done;
+
+	res = l2_packet_send(l2, eth->ether_dhost, ethertype, buf, len);
+	wpa_dbg(wpa_s, MSG_DEBUG, "test data: TX frame res=%d", res);
+done:
+	if (l2)
+		l2_packet_deinit(l2);
+	os_free(buf);
+
+	return res < 0 ? -1 : 0;
+}
+
 #endif /* CONFIG_TESTING_OPTIONS */
 
 
@@ -7455,6 +7496,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 			reply_len = -1;
 	} else if (os_strncmp(buf, "DATA_TEST_TX ", 13) == 0) {
 		if (wpas_ctrl_iface_data_test_tx(wpa_s, buf + 13) < 0)
+			reply_len = -1;
+	} else if (os_strncmp(buf, "DATA_TEST_FRAME ", 16) == 0) {
+		if (wpas_ctrl_iface_data_test_frame(wpa_s, buf + 16) < 0)
 			reply_len = -1;
 #endif /* CONFIG_TESTING_OPTIONS */
 	} else if (os_strncmp(buf, "VENDOR_ELEM_ADD ", 16) == 0) {

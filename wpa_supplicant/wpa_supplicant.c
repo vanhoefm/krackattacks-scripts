@@ -4807,6 +4807,7 @@ int disallowed_ssid(struct wpa_supplicant *wpa_s, const u8 *ssid,
 void wpas_request_connection(struct wpa_supplicant *wpa_s)
 {
 	wpa_s->normal_scans = 0;
+	wpa_s->scan_req = NORMAL_SCAN_REQ;
 	wpa_supplicant_reinit_autoscan(wpa_s);
 	wpa_s->extra_blacklist_count = 0;
 	wpa_s->disconnected = 0;

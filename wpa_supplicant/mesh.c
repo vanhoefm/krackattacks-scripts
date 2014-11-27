@@ -369,13 +369,14 @@ int wpa_supplicant_leave_mesh(struct wpa_supplicant *wpa_s)
 
 	wpa_msg(wpa_s, MSG_INFO, "leaving mesh");
 
+	/* Need to send peering close messages first */
+	wpa_supplicant_mesh_deinit(wpa_s);
+
 	ret = wpa_drv_leave_mesh(wpa_s);
 	if (ret)
 		wpa_msg(wpa_s, MSG_ERROR, "mesh leave error=%d", ret);
 
 	wpa_drv_set_operstate(wpa_s, 1);
-
-	wpa_supplicant_mesh_deinit(wpa_s);
 
 	return ret;
 }

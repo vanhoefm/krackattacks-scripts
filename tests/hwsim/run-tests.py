@@ -76,7 +76,8 @@ def add_log_file(conn, test, run, type, path):
         print "sqlite: " + str(e)
         print "sql: %r" % (params, )
 
-def report(conn, prefill, build, commit, run, test, result, duration, logdir):
+def report(conn, prefill, build, commit, run, test, result, duration, logdir,
+           sql_commit=True):
     if conn:
         if not build:
             build = ''
@@ -88,7 +89,8 @@ def report(conn, prefill, build, commit, run, test, result, duration, logdir):
         params = (test, result, run, time.time(), duration, build, commit)
         try:
             conn.execute(sql, params)
-            conn.commit()
+            if sql_commit:
+                conn.commit()
         except Exception, e:
             print "sqlite: " + str(e)
             print "sql: %r" % (params, )
@@ -329,7 +331,8 @@ def main():
         for t in tests_to_run:
             name = t.__name__.replace('test_', '', 1)
             report(conn, False, args.build, args.commit, run, name, 'NOTRUN', 0,
-                   args.logdir)
+                   args.logdir, sql_commit=False)
+        conn.commit()
 
     if args.split:
         vals = args.split.split('/')

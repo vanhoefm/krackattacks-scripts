@@ -239,15 +239,19 @@ def main():
 	        args.testmodules.append(line)
 
     tests_to_run = []
-    for t in tests:
-        name = t.__name__.replace('test_', '', 1)
-        if args.tests:
-            if not name in args.tests:
-                continue
-        if args.testmodules:
-            if not t.__module__.replace('test_', '', 1) in args.testmodules:
-                continue
-        tests_to_run.append(t)
+    if args.tests:
+        for selected in args.tests:
+            for t in tests:
+                name = t.__name__.replace('test_', '', 1)
+                if name == selected:
+                    tests_to_run.append(t)
+    else:
+        for t in tests:
+            name = t.__name__.replace('test_', '', 1)
+            if args.testmodules:
+                if not t.__module__.replace('test_', '', 1) in args.testmodules:
+                    continue
+            tests_to_run.append(t)
 
     if args.update_tests_db:
         for t in tests_to_run:

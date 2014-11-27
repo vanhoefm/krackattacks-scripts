@@ -8966,6 +8966,11 @@ static int wpa_driver_nl80211_leave_mesh(void *priv)
 
 nla_put_failure:
 	nlmsg_free(msg);
+	if (wpa_driver_nl80211_set_mode(drv->first_bss,
+					NL80211_IFTYPE_STATION)) {
+		wpa_printf(MSG_INFO,
+			   "nl80211: Failed to set interface into station mode");
+	}
 	return ret;
 }
 

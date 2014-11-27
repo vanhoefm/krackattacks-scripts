@@ -708,7 +708,7 @@ def test_ap_wps_setup_locked_timeout(dev, apdev):
         logger.info("Try incorrect AP PIN - attempt " + pin)
         dev[0].wps_reg(apdev[0]['bssid'], pin, new_ssid, "WPA2PSK",
                        "CCMP", new_passphrase, no_wait=True)
-        ev = dev[0].wait_event(["WPS-FAIL", "CTRL-EVENT-CONNECTED"])
+        ev = dev[0].wait_event(["WPS-FAIL", "CTRL-EVENT-CONNECTED"], timeout=15)
         if ev is None:
             raise Exception("Timeout on receiving WPS operation failure event")
         if "CTRL-EVENT-CONNECTED" in ev:
@@ -901,7 +901,7 @@ def test_ap_wps_er_add_enrollee(dev, apdev):
     if addr2 not in ev:
         raise Exception("Unexpected Enrollee MAC address")
     dev[0].request("WPS_ER_PIN " + addr2 + " " + pin + " " + addr2)
-    ev = dev[2].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    ev = dev[2].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
     if ev is None:
         raise Exception("Association with the AP timed out")
     ev = dev[0].wait_event(["WPS-SUCCESS"], timeout=15)
@@ -1049,7 +1049,7 @@ def test_ap_wps_er_v10_add_enrollee_pin(dev, apdev):
     dev[0].request("WPS_ER_PIN any " + pin + " " + enrollee)
     dev[1].dump_monitor()
     dev[1].request("WPS_PIN any " + pin)
-    ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
     if ev is None:
         raise Exception("Association with the AP timed out")
     ev = dev[0].wait_event(["WPS-SUCCESS"], timeout=15)
@@ -1324,14 +1324,14 @@ def test_ap_wps_per_station_psk(dev, apdev):
         logger.info("First enrollee")
         hapd.request("WPS_PBC")
         dev[0].request("WPS_PBC")
-        ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"])
+        ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
         if ev is None:
             raise Exception("Association with the AP timed out (1)")
 
         logger.info("Second enrollee")
         hapd.request("WPS_PBC")
         dev[1].request("WPS_PBC")
-        ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"])
+        ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
         if ev is None:
             raise Exception("Association with the AP timed out (2)")
 
@@ -1392,14 +1392,14 @@ def test_ap_wps_per_station_psk_failure(dev, apdev):
         logger.info("First enrollee")
         hapd.request("WPS_PBC")
         dev[0].request("WPS_PBC")
-        ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"])
+        ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
         if ev is None:
             raise Exception("Association with the AP timed out (1)")
 
         logger.info("Second enrollee")
         hapd.request("WPS_PBC")
         dev[1].request("WPS_PBC")
-        ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"])
+        ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
         if ev is None:
             raise Exception("Association with the AP timed out (2)")
 
@@ -2118,7 +2118,7 @@ def test_ap_wps_mixed_cred(dev, apdev):
     hapd = hostapd.Hostapd(apdev[0]['ifname'])
     hapd.request("WPS_PBC")
     dev[0].request("WPS_PBC")
-    ev = dev[0].wait_event(["WPS-SUCCESS"], timeout=15)
+    ev = dev[0].wait_event(["WPS-SUCCESS"], timeout=30)
     if ev is None:
         raise Exception("WPS-SUCCESS event timed out")
     nets = dev[0].list_networks()

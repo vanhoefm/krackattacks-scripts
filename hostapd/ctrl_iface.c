@@ -1543,6 +1543,8 @@ static int hostapd_ctrl_iface_data_test_config(struct hostapd_data *hapd,
 					       char *cmd)
 {
 	int enabled = atoi(cmd);
+	char *pos;
+	const char *ifname;
 
 	if (!enabled) {
 		if (hapd->l2_test) {
@@ -1557,7 +1559,13 @@ static int hostapd_ctrl_iface_data_test_config(struct hostapd_data *hapd,
 	if (hapd->l2_test)
 		return 0;
 
-	hapd->l2_test = l2_packet_init(hapd->conf->iface, hapd->own_addr,
+	pos = os_strstr(cmd, " ifname=");
+	if (pos)
+		ifname = pos + 8;
+	else
+		ifname = hapd->conf->iface;
+
+	hapd->l2_test = l2_packet_init(ifname, hapd->own_addr,
 					ETHERTYPE_IP, hostapd_data_test_rx,
 					hapd, 1);
 	if (hapd->l2_test == NULL)

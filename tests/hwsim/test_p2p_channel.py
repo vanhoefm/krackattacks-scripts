@@ -12,6 +12,8 @@ import time
 
 import hostapd
 import hwsim_utils
+from wpasupplicant import WpaSupplicant
+from hwsim import HWSimRadio
 from test_p2p_grpform import go_neg_pin_authorized
 from test_p2p_grpform import check_grpform_results
 from test_p2p_grpform import remove_group
@@ -238,115 +240,129 @@ def test_go_neg_with_bss_connected(dev, apdev):
 def test_autogo_with_bss_on_disallowed_chan(dev, apdev):
     """P2P channel selection: Autonomous GO with BSS on a disallowed channel"""
 
-    dev[0].request("SET p2p_no_group_iface 0")
+    with HWSimRadio(n_channels=2) as (radio, iface):
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add(iface)
 
-    if dev[0].get_mcc() < 2:
-       logger.info("Skipping test because driver does not support MCC")
-       return "skip"
-    try:
-        hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": 'bss-2.4ghz',
-                                                    "channel": '1' })
-        dev[0].request("P2P_SET disallow_freq 2412")
-        dev[0].connect("bss-2.4ghz", key_mgmt="NONE", scan_freq="2412")
-        res = autogo(dev[0])
-        if res['freq'] == "2412":
-           raise Exception("GO set on a disallowed channel")
-        hwsim_utils.test_connectivity(dev[0], hapd)
-    finally:
-        dev[0].request("P2P_SET disallow_freq ")
+        wpas.request("SET p2p_no_group_iface 0")
+
+        if wpas.get_mcc() < 2:
+           raise Exception("New radio does not support MCC")
+
+        try:
+            hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": 'bss-2.4ghz',
+                                                        "channel": '1' })
+            wpas.request("P2P_SET disallow_freq 2412")
+            wpas.connect("bss-2.4ghz", key_mgmt="NONE", scan_freq="2412")
+            res = autogo(wpas)
+            if res['freq'] == "2412":
+               raise Exception("GO set on a disallowed channel")
+            hwsim_utils.test_connectivity(wpas, hapd)
+        finally:
+            wpas.request("P2P_SET disallow_freq ")
 
 def test_go_neg_with_bss_on_disallowed_chan(dev, apdev):
     """P2P channel selection: GO negotiation with station interface on a disallowed channel"""
 
-    dev[0].request("SET p2p_no_group_iface 0")
+    with HWSimRadio(n_channels=2) as (radio, iface):
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add(iface)
 
-    if dev[0].get_mcc() < 2:
-       logger.info("Skipping test because driver does not support MCC")
-       return "skip"
-    try:
-        hapd = hostapd.add_ap(apdev[0]['ifname'],
-                              { "ssid": 'bss-2.4ghz', "channel": '1' })
-        dev[0].connect("bss-2.4ghz", key_mgmt="NONE", scan_freq="2412")
-        dev[0].request("P2P_SET disallow_freq 2412")
+        wpas.request("SET p2p_no_group_iface 0")
 
-        #dev[0] as GO
-        [i_res, r_res] = go_neg_pbc(i_dev=dev[0], i_intent=10, r_dev=dev[1],
-                                    r_intent=1)
-        check_grpform_results(i_res, r_res)
-        if i_res['role'] != "GO":
-           raise Exception("GO not selected according to go_intent")
-        if i_res['freq'] == "2412":
-           raise Exception("Group formed on a disallowed channel")
-        hwsim_utils.test_connectivity(dev[0], hapd)
-        dev[0].remove_group(i_res['ifname'])
+        if wpas.get_mcc() < 2:
+           raise Exception("New radio does not support MCC")
 
-        #dev[0] as client
-        [i_res2, r_res2] = go_neg_pbc(i_dev=dev[0], i_intent=1, r_dev=dev[1],
-                                      r_intent=10)
-        check_grpform_results(i_res2, r_res2)
-        if i_res2['role'] != "client":
-           raise Exception("GO not selected according to go_intent")
-        if i_res2['freq'] == "2412":
-           raise Exception("Group formed on a disallowed channel")
-        hwsim_utils.test_connectivity(dev[0], hapd)
-    finally:
-        dev[0].request("P2P_SET disallow_freq ")
+        try:
+            hapd = hostapd.add_ap(apdev[0]['ifname'],
+                                  { "ssid": 'bss-2.4ghz', "channel": '1' })
+            wpas.connect("bss-2.4ghz", key_mgmt="NONE", scan_freq="2412")
+            wpas.request("P2P_SET disallow_freq 2412")
+
+            #wpas as GO
+            [i_res, r_res] = go_neg_pbc(i_dev=wpas, i_intent=10, r_dev=dev[1],
+                                        r_intent=1)
+            check_grpform_results(i_res, r_res)
+            if i_res['role'] != "GO":
+               raise Exception("GO not selected according to go_intent")
+            if i_res['freq'] == "2412":
+               raise Exception("Group formed on a disallowed channel")
+            hwsim_utils.test_connectivity(wpas, hapd)
+            wpas.remove_group(i_res['ifname'])
+
+            #wpas as client
+            [i_res2, r_res2] = go_neg_pbc(i_dev=wpas, i_intent=1, r_dev=dev[1],
+                                          r_intent=10)
+            check_grpform_results(i_res2, r_res2)
+            if i_res2['role'] != "client":
+               raise Exception("GO not selected according to go_intent")
+            if i_res2['freq'] == "2412":
+               raise Exception("Group formed on a disallowed channel")
+            hwsim_utils.test_connectivity(wpas, hapd)
+        finally:
+            wpas.request("P2P_SET disallow_freq ")
 
 def test_autogo_force_diff_channel(dev, apdev):
     """P2P autonomous GO and station interface operate on different channels"""
-    if dev[0].get_mcc() < 2:
-        logger.info("Skiping test because the driver doesn't support MCC")
-        return "skip"
+    with HWSimRadio(n_channels=2) as (radio, iface):
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add(iface)
 
-    dev[0].request("SET p2p_no_group_iface 0")
+        if wpas.get_mcc() < 2:
+           raise Exception("New radio does not support MCC")
 
-    hapd = hostapd.add_ap(apdev[0]['ifname'],
-                          {"ssid" : 'ap-test', "channel" : '1'})
-    dev[0].connect("ap-test", key_mgmt = "NONE", scan_freq = "2412")
-    channels = { 2 : 2417, 5 : 2432, 9 : 2452 }
-    for key in channels:
-        res_go = autogo(dev[0], channels[key])
-        hwsim_utils.test_connectivity(dev[0], hapd)
-        if int(res_go['freq']) == 2412:
-            raise Exception("Group operation channel is: 2412 excepted: " + res_go['freq'])
-        dev[0].remove_group(res_go['ifname'])
+        wpas.request("SET p2p_no_group_iface 0")
+
+        hapd = hostapd.add_ap(apdev[0]['ifname'],
+                              {"ssid" : 'ap-test', "channel" : '1'})
+        wpas.connect("ap-test", key_mgmt = "NONE", scan_freq = "2412")
+        channels = { 2 : 2417, 5 : 2432, 9 : 2452 }
+        for key in channels:
+            res_go = autogo(wpas, channels[key])
+            hwsim_utils.test_connectivity(wpas, hapd)
+            if int(res_go['freq']) == 2412:
+                raise Exception("Group operation channel is: 2412 excepted: " + res_go['freq'])
+            wpas.remove_group(res_go['ifname'])
 
 def test_go_neg_forced_freq_diff_than_bss_freq(dev, apdev):
     """P2P channel selection: GO negotiation with forced freq different than station interface"""
-    if dev[0].get_mcc() < 2:
-       logger.info("Skipping test because driver does not support MCC")
-       return "skip"
+    with HWSimRadio(n_channels=2) as (radio, iface):
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add(iface)
 
-    dev[0].request("SET p2p_no_group_iface 0")
+        if wpas.get_mcc() < 2:
+           raise Exception("New radio does not support MCC")
 
-    hapd = hostapd.add_ap(apdev[0]['ifname'],
-                          { "country_code": 'US',
-                            "ssid": 'bss-5ghz', "hw_mode": 'a',
-                            "channel": '40' })
-    dev[0].connect("bss-5ghz", key_mgmt="NONE", scan_freq="5200")
+        wpas.request("SET p2p_no_group_iface 0")
 
-    # GO and peer force the same freq, different than BSS freq,
-    # dev[0] to become GO
-    [i_res, r_res] = go_neg_pbc(i_dev=dev[1], i_intent=1, i_freq=5180,
-                                r_dev=dev[0], r_intent=14, r_freq=5180)
-    check_grpform_results(i_res, r_res)
-    if i_res['freq'] != "5180":
-       raise Exception("P2P group formed on unexpected frequency: " + i_res['freq'])
-    if r_res['role'] != "GO":
-       raise Exception("GO not selected according to go_intent")
-    hwsim_utils.test_connectivity(dev[0], hapd)
-    dev[0].remove_group(r_res['ifname'])
+        hapd = hostapd.add_ap(apdev[0]['ifname'],
+                              { "country_code": 'US',
+                                "ssid": 'bss-5ghz', "hw_mode": 'a',
+                                "channel": '40' })
+        wpas.connect("bss-5ghz", key_mgmt="NONE", scan_freq="5200")
 
-    # GO and peer force the same freq, different than BSS freq, dev[0] to
-    # become client
-    [i_res2, r_res2] = go_neg_pbc(i_dev=dev[1], i_intent=14, i_freq=2422,
-                                  r_dev=dev[0], r_intent=1, r_freq=2422)
-    check_grpform_results(i_res2, r_res2)
-    if i_res2['freq'] != "2422":
-       raise Exception("P2P group formed on unexpected frequency: " + i_res2['freq'])
-    if r_res2['role'] != "client":
-       raise Exception("GO not selected according to go_intent")
-    hwsim_utils.test_connectivity(dev[0], hapd)
+        # GO and peer force the same freq, different than BSS freq,
+        # wpas to become GO
+        [i_res, r_res] = go_neg_pbc(i_dev=dev[1], i_intent=1, i_freq=5180,
+                                    r_dev=wpas, r_intent=14, r_freq=5180)
+        check_grpform_results(i_res, r_res)
+        if i_res['freq'] != "5180":
+           raise Exception("P2P group formed on unexpected frequency: " + i_res['freq'])
+        if r_res['role'] != "GO":
+           raise Exception("GO not selected according to go_intent")
+        hwsim_utils.test_connectivity(wpas, hapd)
+        wpas.remove_group(r_res['ifname'])
+
+        # GO and peer force the same freq, different than BSS freq, wpas to
+        # become client
+        [i_res2, r_res2] = go_neg_pbc(i_dev=dev[1], i_intent=14, i_freq=2422,
+                                      r_dev=wpas, r_intent=1, r_freq=2422)
+        check_grpform_results(i_res2, r_res2)
+        if i_res2['freq'] != "2422":
+           raise Exception("P2P group formed on unexpected frequency: " + i_res2['freq'])
+        if r_res2['role'] != "client":
+           raise Exception("GO not selected according to go_intent")
+        hwsim_utils.test_connectivity(wpas, hapd)
 
 def test_go_pref_chan_bss_on_diff_chan(dev, apdev):
     """P2P channel selection: Station on different channel than GO configured pref channel"""
@@ -367,25 +383,28 @@ def test_go_pref_chan_bss_on_diff_chan(dev, apdev):
 
 def test_go_pref_chan_bss_on_disallowed_chan(dev, apdev):
     """P2P channel selection: Station interface on different channel than GO configured pref channel, and station channel is disallowed"""
-    if dev[0].get_mcc() < 2:
-       logger.info("Skipping test because driver does not support MCC")
-       return "skip"
+    with HWSimRadio(n_channels=2) as (radio, iface):
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add(iface)
 
-    dev[0].request("SET p2p_no_group_iface 0")
+        if wpas.get_mcc() < 2:
+           raise Exception("New radio does not support MCC")
 
-    try:
-        hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": 'bss-2.4ghz',
-                                                    "channel": '1' })
-        dev[0].request("P2P_SET disallow_freq 2412")
-        dev[0].request("SET p2p_pref_chan 81:2")
-        dev[0].connect("bss-2.4ghz", key_mgmt="NONE", scan_freq="2412")
-        res2 = autogo(dev[0])
-        if res2['freq'] != "2417":
-           raise Exception("GO channel did not follow pref_chan configuration")
-        hwsim_utils.test_connectivity(dev[0], hapd)
-    finally:
-        dev[0].request("P2P_SET disallow_freq ")
-        dev[0].request("SET p2p_pref_chan ")
+        wpas.request("SET p2p_no_group_iface 0")
+
+        try:
+            hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": 'bss-2.4ghz',
+                                                        "channel": '1' })
+            wpas.request("P2P_SET disallow_freq 2412")
+            wpas.request("SET p2p_pref_chan 81:2")
+            wpas.connect("bss-2.4ghz", key_mgmt="NONE", scan_freq="2412")
+            res2 = autogo(wpas)
+            if res2['freq'] != "2417":
+               raise Exception("GO channel did not follow pref_chan configuration")
+            hwsim_utils.test_connectivity(wpas, hapd)
+        finally:
+            wpas.request("P2P_SET disallow_freq ")
+            wpas.request("SET p2p_pref_chan ")
 
 def test_no_go_freq(dev, apdev):
     """P2P channel selection: no GO freq"""

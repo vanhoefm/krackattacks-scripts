@@ -298,7 +298,7 @@ def test_ap_wpa2_tdls_bssid_mismatch(dev, apdev):
         passphrase = "12345678"
         params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
         params['bridge'] = 'ap-br0'
-        hostapd.add_ap(apdev[0]['ifname'], params)
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
         hostapd.add_ap(apdev[1]['ifname'], params)
         wlantest_setup()
         subprocess.call(['sudo', 'brctl', 'setfd', 'ap-br0', '0'])
@@ -308,8 +308,8 @@ def test_ap_wpa2_tdls_bssid_mismatch(dev, apdev):
         dev[1].connect(ssid, psk=passphrase, scan_freq="2412",
                        bssid=apdev[1]['bssid'])
         hwsim_utils.test_connectivity_sta(dev[0], dev[1])
-        hwsim_utils.test_connectivity_iface(dev[0], "ap-br0")
-        hwsim_utils.test_connectivity_iface(dev[1], "ap-br0")
+        hwsim_utils.test_connectivity_iface(dev[0], hapd, "ap-br0")
+        hwsim_utils.test_connectivity_iface(dev[1], hapd, "ap-br0")
 
         addr0 = dev[0].p2p_interface_addr()
         dev[1].tdls_setup(addr0)

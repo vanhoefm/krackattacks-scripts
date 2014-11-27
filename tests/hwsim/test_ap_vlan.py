@@ -24,8 +24,8 @@ def test_ap_vlan_open(dev, apdev):
     dev[0].connect("test-vlan-open", key_mgmt="NONE", scan_freq="2412")
     dev[1].connect("test-vlan-open", key_mgmt="NONE", scan_freq="2412")
     dev[2].connect("test-vlan-open", key_mgmt="NONE", scan_freq="2412")
-    hwsim_utils.test_connectivity_iface(dev[0], "brvlan1")
-    hwsim_utils.test_connectivity_iface(dev[1], "brvlan2")
+    hwsim_utils.test_connectivity_iface(dev[0], hapd, "brvlan1")
+    hwsim_utils.test_connectivity_iface(dev[1], hapd, "brvlan2")
     hwsim_utils.test_connectivity(dev[2], hapd)
 
 def test_ap_vlan_file_open(dev, apdev):
@@ -39,8 +39,8 @@ def test_ap_vlan_file_open(dev, apdev):
     dev[0].connect("test-vlan-open", key_mgmt="NONE", scan_freq="2412")
     dev[1].connect("test-vlan-open", key_mgmt="NONE", scan_freq="2412")
     dev[2].connect("test-vlan-open", key_mgmt="NONE", scan_freq="2412")
-    hwsim_utils.test_connectivity_iface(dev[0], "brvlan1")
-    hwsim_utils.test_connectivity_iface(dev[1], "brvlan2")
+    hwsim_utils.test_connectivity_iface(dev[0], hapd, "brvlan1")
+    hwsim_utils.test_connectivity_iface(dev[1], hapd, "brvlan2")
     hwsim_utils.test_connectivity(dev[2], hapd)
 
 def test_ap_vlan_wpa2(dev, apdev):
@@ -54,8 +54,8 @@ def test_ap_vlan_wpa2(dev, apdev):
     dev[0].connect("test-vlan", psk="12345678", scan_freq="2412")
     dev[1].connect("test-vlan", psk="12345678", scan_freq="2412")
     dev[2].connect("test-vlan", psk="12345678", scan_freq="2412")
-    hwsim_utils.test_connectivity_iface(dev[0], "brvlan1")
-    hwsim_utils.test_connectivity_iface(dev[1], "brvlan2")
+    hwsim_utils.test_connectivity_iface(dev[0], hapd, "brvlan1")
+    hwsim_utils.test_connectivity_iface(dev[1], hapd, "brvlan2")
     hwsim_utils.test_connectivity(dev[2], hapd)
 
 def test_ap_vlan_wpa2_radius(dev, apdev):
@@ -76,8 +76,8 @@ def test_ap_vlan_wpa2_radius(dev, apdev):
                    identity="pax.user@example.com",
                    password_hex="0123456789abcdef0123456789abcdef",
                    scan_freq="2412")
-    hwsim_utils.test_connectivity_iface(dev[0], "brvlan1")
-    hwsim_utils.test_connectivity_iface(dev[1], "brvlan2")
+    hwsim_utils.test_connectivity_iface(dev[0], hapd, "brvlan1")
+    hwsim_utils.test_connectivity_iface(dev[1], hapd, "brvlan2")
     hwsim_utils.test_connectivity(dev[2], hapd)
 
 def test_ap_vlan_wpa2_radius_required(dev, apdev):
@@ -112,6 +112,6 @@ def test_ap_vlan_tagged(dev, apdev):
     dev[0].connect("test-vlan-open", key_mgmt="NONE", scan_freq="2412")
     dev[1].connect("test-vlan-open", key_mgmt="NONE", scan_freq="2412")
     dev[2].connect("test-vlan-open", key_mgmt="NONE", scan_freq="2412")
-    hwsim_utils.test_connectivity_iface(dev[0], "brlo.1")
-    hwsim_utils.test_connectivity_iface(dev[1], "brlo.2")
+    hwsim_utils.test_connectivity_iface(dev[0], hapd, "brlo.1")
+    hwsim_utils.test_connectivity_iface(dev[1], hapd, "brlo.2")
     hwsim_utils.test_connectivity(dev[2], hapd)

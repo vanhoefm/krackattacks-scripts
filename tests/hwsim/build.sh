@@ -64,10 +64,7 @@ make -j8 hostapd hlr_auc_gw
 cd ../wlantest
 make clean
 make -j8
-cd ../mac80211_hwsim/tools
-make clean
-make -j8
-cd ../../tests/hwsim/tnc
+cd ../tests/hwsim/tnc
 make clean
 make -j8
 cd ..

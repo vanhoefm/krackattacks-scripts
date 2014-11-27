@@ -115,7 +115,7 @@ def test_ap_wds_sta(dev, apdev):
     params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
     params['wds_sta'] = "1"
     params['wds_bridge'] = "wds-br0"
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
 
     try:
         subprocess.call(['sudo', 'brctl', 'addbr', 'wds-br0'])
@@ -123,7 +123,8 @@ def test_ap_wds_sta(dev, apdev):
         subprocess.call(['sudo', 'ip', 'link', 'set', 'dev', 'wds-br0', 'up'])
         subprocess.call(['sudo', 'iw', dev[0].ifname, 'set', '4addr', 'on'])
         dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
-        hwsim_utils.test_connectivity_iface(dev[0], "wds-br0", max_tries=15)
+        hwsim_utils.test_connectivity_iface(dev[0], hapd, "wds-br0",
+                                            max_tries=15)
     finally:
         subprocess.call(['sudo', 'iw', dev[0].ifname, 'set', '4addr', 'off'])
         subprocess.call(['sudo', 'ip', 'link', 'set', 'dev', 'wds-br0', 'down'])

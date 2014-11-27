@@ -15,14 +15,15 @@ captured through the hwsim0 monitor interface that capture all frames
 sent on all channels. wlantest is used to store the frames for
 analysis. Three wpa_supplicant processes are used to control three
 virtual radios and one hostapd process is used to dynamically control
-the other two virtual radios. hwsim_test is used to verify that data
-connection (both unicast and broadcast) works between two netdevs.
+the other two virtual radios. wpa_supplicant/hostapd test functionality
+is used to verify that data connection (both unicast and broadcast)
+works between two netdevs.
 
 The python scripts and tools in this directory control test case
 execution. They interact wpa_supplicant and hostapd through control
-interfaces to perform the operations. In addition, wlantest_cli and
-hwsim_test are used to verify that operations have been performed
-correctly and that the network connection works in the expected way.
+interfaces to perform the operations. In addition, wlantest_cli is used
+to verify that operations have been performed correctly and that the
+network connection works in the expected way.
 
 These test cases are run automatically against the hostap.git commits
 for regression testing and to help in keeping the hostap.git master
@@ -48,15 +49,13 @@ make hostapd hlr_auc_gw
 cd ../wlantest
 make clean
 make
-cd ../mac80211_hwsim/tools
-make
 
 Alternatively, the build.sh script here can be used to run these steps
 with conditional creation of .config files only if they do not exist.
 
 The test scripts can find the binaries in the locations where they were
-built. It is also possible to install hwsim_test and wlantest_cli
-somewhat on the path to use pre-built tools.
+built. It is also possible to install wlantest_cli somewhere on the path
+to use pre-built tools.
 
 Please note that some of the configuration parameters used to enable
 more testing coverage may require development packages that may not be

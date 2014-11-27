@@ -12,37 +12,8 @@ logger = logging.getLogger()
 
 from wpasupplicant import WpaSupplicant
 
-def test_connectivity_run(ifname1, ifname2, dscp=None, tos=None, max_tries=1):
-    if os.path.isfile("../../mac80211_hwsim/tools/hwsim_test"):
-        hwsim_test = "../../mac80211_hwsim/tools/hwsim_test"
-    else:
-        hwsim_test = "hwsim_test"
-    cmd = ["sudo",
-           hwsim_test,
-           ifname1,
-           ifname2]
-    if dscp:
-        cmd.append('-D')
-        cmd.append(str(dscp))
-    elif tos:
-        cmd.append('-t')
-        cmd.append(str(tos))
-    success = False
-    for i in range(0, max_tries):
-        try:
-            s = subprocess.check_output(cmd)
-            logger.debug(s)
-            success = True
-            break
-        except subprocess.CalledProcessError, e:
-            logger.info("hwsim failed: " + str(e.returncode))
-            logger.info(e.output)
-            if i + 1 < max_tries:
-                time.sleep(1)
-    if not success:
-        raise Exception("hwsim_test failed")
-
-def run_connectivity_test(dev1, dev2, tos, dev1group=False, dev2group=False):
+def run_connectivity_test(dev1, dev2, tos, dev1group=False, dev2group=False,
+                          ifname1=None, ifname2=None):
     addr1 = dev1.own_addr()
     if not dev1group and isinstance(dev1, WpaSupplicant):
         addr1 = dev1.get_driver_status_field('addr')
@@ -53,6 +24,8 @@ def run_connectivity_test(dev1, dev2, tos, dev1group=False, dev2group=False):
 
     try:
         cmd = "DATA_TEST_CONFIG 1"
+        if ifname1:
+            cmd = cmd + " ifname=" + ifname1
         if dev1group:
             res = dev1.group_request(cmd)
         else:
@@ -60,6 +33,9 @@ def run_connectivity_test(dev1, dev2, tos, dev1group=False, dev2group=False):
         if "OK" not in res:
             raise Exception("Failed to enable data test functionality")
 
+        cmd = "DATA_TEST_CONFIG 1"
+        if ifname2:
+            cmd = cmd + " ifname=" + ifname2
         if dev2group:
             res = dev2.group_request(cmd)
         else:
@@ -132,7 +108,9 @@ def run_connectivity_test(dev1, dev2, tos, dev1group=False, dev2group=False):
         else:
             dev2.request("DATA_TEST_CONFIG 0")
 
-def test_connectivity(dev1, dev2, dscp=None, tos=None, max_tries=1, dev1group=False, dev2group=False):
+def test_connectivity(dev1, dev2, dscp=None, tos=None, max_tries=1,
+                      dev1group=False, dev2group=False,
+                      ifname1=None, ifname2=None):
     if dscp:
         tos = dscp << 2
     if not tos:
@@ -142,7 +120,8 @@ def test_connectivity(dev1, dev2, dscp=None, tos=None, max_tries=1, dev1group=Fa
     last_err = None
     for i in range(0, max_tries):
         try:
-            run_connectivity_test(dev1, dev2, tos, dev1group, dev2group)
+            run_connectivity_test(dev1, dev2, tos, dev1group, dev2group,
+                                  ifname1, ifname2)
             success = True
             break
         except Exception, e:
@@ -152,9 +131,10 @@ def test_connectivity(dev1, dev2, dscp=None, tos=None, max_tries=1, dev1group=Fa
     if not success:
         raise Exception(last_err)
 
-def test_connectivity_iface(dev1, ifname, dscp=None, tos=None, max_tries=1):
-    test_connectivity_run(dev1.ifname, ifname, dscp=dscp, tos=tos,
-                          max_tries=max_tries)
+def test_connectivity_iface(dev1, dev2, ifname, dscp=None, tos=None,
+                            max_tries=1):
+    test_connectivity(dev1, dev2, dscp, tos, ifname2=ifname,
+                      max_tries=max_tries)
 
 def test_connectivity_p2p(dev1, dev2, dscp=None, tos=None):
     test_connectivity(dev1, dev2, dscp, tos, dev1group=True, dev2group=True)

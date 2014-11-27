@@ -619,7 +619,7 @@ def test_ap_wps_reg_config_tkip(dev, apdev):
     dev[0].connect_network(id)
     status = dev[0].get_status()
     if status['wpa_state'] != 'COMPLETED' or status['bssid'] != apdev[0]['bssid']:
-        raise Exception("Not fully connected")
+        raise Exception("Not fully connected: wpa_state={} bssid={}".format(status['wpa_state'], status['bssid']))
     if status['ssid'] != new_ssid:
         raise Exception("Unexpected SSID")
     if status['pairwise_cipher'] != 'CCMP' or status['group_cipher'] != 'TKIP':

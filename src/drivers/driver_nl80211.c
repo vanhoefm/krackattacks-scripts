@@ -927,6 +927,7 @@ static void wpa_driver_nl80211_event_rtm_newlink(void *ctx,
 				   drv->first_bss->ifname) > 0) {
 			wpa_printf(MSG_DEBUG, "nl80211: Ignore interface down "
 				   "event since interface %s is up", namebuf);
+			drv->ignore_if_down_event = 0;
 			return;
 		}
 		wpa_printf(MSG_DEBUG, "nl80211: Interface down");

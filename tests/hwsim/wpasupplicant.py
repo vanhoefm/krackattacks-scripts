@@ -308,7 +308,11 @@ class WpaSupplicant:
         lines = res.splitlines()
         vals = dict()
         for l in lines:
-            [name,value] = l.split('=', 1)
+            try:
+                [name,value] = l.split('=', 1)
+            except ValueError:
+                logger.info(self.ifname + ": Ignore unexpected status line: " + l)
+                continue
             vals[name] = value
         return vals
 
@@ -323,7 +327,11 @@ class WpaSupplicant:
         lines = res.splitlines()
         vals = dict()
         for l in lines:
-            [name,value] = l.split('=', 1)
+            try:
+                [name,value] = l.split('=', 1)
+            except ValueError:
+                logger.info(self.ifname + ": Ignore unexpected status-driver line: " + l)
+                continue
             vals[name] = value
         return vals
 

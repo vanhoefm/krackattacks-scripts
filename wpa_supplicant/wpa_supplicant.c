@@ -523,6 +523,8 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 		wpabuf_free(wpa_s->vendor_elem[i]);
 		wpa_s->vendor_elem[i] = NULL;
 	}
+
+	wmm_ac_notify_disassoc(wpa_s);
 }
 
 

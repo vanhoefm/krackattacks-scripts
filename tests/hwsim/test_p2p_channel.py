@@ -120,7 +120,7 @@ def test_p2p_channel_random_social_with_op_class_change(dev, apdev, params):
         try:
             arg = [ "tshark",
                     "-r", os.path.join(params['logdir'], "hwsim0.pcapng"),
-                    "-R", "wifi_p2p.public_action.subtype == 0",
+                    "-Y", "wifi_p2p.public_action.subtype == 0",
                     "-V" ]
             cmd = subprocess.Popen(arg, stdout=subprocess.PIPE,
                                    stderr=open('/dev/null', 'w'))

@@ -85,7 +85,7 @@ def test_cfg80211_tx_frame(dev, apdev, params):
     try:
         arg = [ "tshark",
                 "-r", os.path.join(params['logdir'], "hwsim0.pcapng"),
-                "-R", "wlan.fc.type_subtype == 13",
+                "-Y", "wlan.fc.type_subtype == 13",
                 "-Tfields", "-e", "radiotap.channel.freq" ]
         cmd = subprocess.Popen(arg, stdout=subprocess.PIPE,
                                stderr=open('/dev/null', 'w'))

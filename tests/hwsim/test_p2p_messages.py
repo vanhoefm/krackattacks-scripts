@@ -735,8 +735,7 @@ def test_p2p_msg_invitation_req_to_go(dev, apdev):
         raise Exception("Unexpected number of networks")
     if "[P2P-PERSISTENT]" not in networks[0]['flags']:
         raise Exception("Not the persistent group data")
-    if "OK" not in dev[0].global_request("P2P_GROUP_ADD persistent=" + networks[0]['id'] + " freq=" + listen_freq):
-        raise Exception("Could not state GO")
+    dev[0].p2p_start_go(persistent=networks[0]['id'], freq=listen_freq)
 
     dialog_token = 0
 

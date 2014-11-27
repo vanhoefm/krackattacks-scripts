@@ -207,6 +207,10 @@ def test_autogo_following_bss(dev, apdev):
 def test_go_neg_with_bss_connected(dev, apdev):
     """P2P channel selection: GO negotiation when station interface is connected"""
 
+    dev[0].request("BSS_FLUSH 0")
+    dev[0].request("SCAN freq=2412 only_new=1")
+    dev[1].request("BSS_FLUSH 0")
+    dev[1].request("SCAN freq=2412 only_new=1")
     dev[0].request("SET p2p_no_group_iface 0")
 
     hapd = hostapd.add_ap(apdev[0]['ifname'],

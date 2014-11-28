@@ -2353,6 +2353,33 @@ static int wpa_driver_wext_signal_poll(void *priv, struct wpa_signal_info *si)
 }
 
 
+static int wpa_driver_wext_status(void *priv, char *buf, size_t buflen)
+{
+	struct wpa_driver_wext_data *drv = priv;
+	int res;
+	char *pos, *end;
+	unsigned char addr[ETH_ALEN];
+
+	pos = buf;
+	end = buf + buflen;
+
+	if (linux_get_ifhwaddr(drv->ioctl_sock, drv->ifname, addr))
+		return -1;
+
+	res = os_snprintf(pos, end - pos,
+			  "ifindex=%d\n"
+			  "ifname=%s\n"
+			  "addr=" MACSTR "\n",
+			  drv->ifindex,
+			  drv->ifname,
+			  MAC2STR(addr));
+	if (res < 0 || res >= end - pos)
+		return pos - buf;
+	pos += res;
+
+	return pos - buf;
+}
+
 const struct wpa_driver_ops wpa_driver_wext_ops = {
 	.name = "wext",
 	.desc = "Linux wireless extensions (generic)",
@@ -2373,4 +2400,5 @@ const struct wpa_driver_ops wpa_driver_wext_ops = {
 	.set_operstate = wpa_driver_wext_set_operstate,
 	.get_radio_name = wext_get_radio_name,
 	.signal_poll = wpa_driver_wext_signal_poll,
+	.status = wpa_driver_wext_status,
 };

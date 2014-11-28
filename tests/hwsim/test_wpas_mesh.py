@@ -224,7 +224,6 @@ def _test_wpas_mesh_open(dev, apdev, test_connectivity):
 
     # Test connectivity 0->1 and 1->0
     test_connectivity(dev[0], dev[1])
-    test_connectivity(dev[1], dev[0])
 
 
 def test_wpas_mesh_open(dev, apdev):
@@ -258,7 +257,6 @@ def _test_wpas_mesh_open_no_auto(dev, apdev, test_connectivity):
 
     # Test connectivity 0->1 and 1->0
     test_connectivity(dev[0], dev[1])
-    test_connectivity(dev[1], dev[0])
 
 
 def test_wpas_mesh_open_no_auto(dev, apdev):
@@ -295,7 +293,6 @@ def _test_wpas_mesh_secure(dev, apdev, test_connectivity):
 
     # Test connectivity 0->1 and 1->0
     test_connectivity(dev[0], dev[1])
-    test_connectivity(dev[1], dev[0])
 
 
 def test_wpas_mesh_secure(dev, apdev):
@@ -333,7 +330,6 @@ def _test_wpas_mesh_secure_no_auto(dev, apdev, test_connectivity):
 
     # Test connectivity 0->1 and 1->0
     test_connectivity(dev[0], dev[1])
-    test_connectivity(dev[1], dev[0])
 
 
 def test_wpas_mesh_secure_no_auto(dev, apdev):

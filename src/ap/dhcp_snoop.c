@@ -52,17 +52,22 @@ static void handle_dhcp(void *ctx, const u8 *src_addr, const u8 *buf,
 	const u8 *end, *pos;
 	int res, msgtype = 0, prefixlen = 32;
 	u32 subnet_mask = 0;
+	u16 tot_len;
 
 	exten_len = len - ETH_HLEN - (sizeof(*b) - sizeof(b->exten));
 	if (exten_len < 4)
 		return;
 
 	b = (const struct bootp_pkt *) &buf[ETH_HLEN];
+	tot_len = ntohs(b->iph.tot_len);
+	if (tot_len > (unsigned int) (len - ETH_HLEN))
+		return;
+
 	if (os_memcmp(b->exten, ic_bootp_cookie, ARRAY_SIZE(ic_bootp_cookie)))
 		return;
 
 	/* Parse DHCP options */
-	end = (const u8 *) b + ntohs(b->iph.tot_len);
+	end = (const u8 *) b + tot_len;
 	pos = &b->exten[4];
 	while (pos < end && *pos != 0xff) {
 		const u8 *opt = pos++;

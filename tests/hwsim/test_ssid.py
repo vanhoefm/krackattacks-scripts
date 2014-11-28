@@ -62,34 +62,58 @@ def test_ssid_utf8(dev, apdev):
 
 def test_ssid_hidden(dev, apdev):
     """Hidden SSID"""
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid": 'secret',
-                                         "ignore_broadcast_ssid": "1" })
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": 'secret',
+                                                "ignore_broadcast_ssid": "1" })
     dev[1].connect("secret", key_mgmt="NONE", scan_freq="2412",
                    wait_connect=False)
     dev[0].connect("secret", key_mgmt="NONE", scan_freq="2412", scan_ssid="1")
     ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
     if ev is not None:
         raise Exception("Unexpected connection")
+    dev[0].request("DISCONNECT")
+    dev[1].request("DISCONNECT")
+    # clear BSS table to avoid issues in following test cases
+    hapd.disable()
+    dev[0].request("BSS_FLUSH 0")
+    dev[0].request("SCAN freq=2412 only_new=1")
+    dev[1].request("BSS_FLUSH 0")
+    dev[1].request("SCAN freq=2412 only_new=1")
 
 def test_ssid_hidden2(dev, apdev):
     """Hidden SSID using zero octets as payload"""
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid": 'secret2',
-                                         "ignore_broadcast_ssid": "2" })
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": 'secret2',
+                                                "ignore_broadcast_ssid": "2" })
     dev[1].connect("secret2", key_mgmt="NONE", scan_freq="2412",
                    wait_connect=False)
     dev[0].connect("secret2", key_mgmt="NONE", scan_freq="2412", scan_ssid="1")
     ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
     if ev is not None:
         raise Exception("Unexpected connection")
+    dev[0].request("DISCONNECT")
+    dev[1].request("DISCONNECT")
+    # clear BSS table to avoid issues in following test cases
+    hapd.disable()
+    dev[0].request("BSS_FLUSH 0")
+    dev[0].request("SCAN freq=2412 only_new=1")
+    dev[1].request("BSS_FLUSH 0")
+    dev[1].request("SCAN freq=2412 only_new=1")
 
 def test_ssid_hidden_wpa2(dev, apdev):
     """Hidden SSID with WPA2-PSK"""
     params = hostapd.wpa2_params(ssid="secret", passphrase="12345678")
     params["ignore_broadcast_ssid"] = "1"
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     dev[1].connect("secret", psk="12345678", scan_freq="2412",
                    wait_connect=False)
     dev[0].connect("secret", psk="12345678", scan_freq="2412", scan_ssid="1")
     ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
     if ev is not None:
         raise Exception("Unexpected connection")
+    dev[0].request("DISCONNECT")
+    dev[1].request("DISCONNECT")
+    # clear BSS table to avoid issues in following test cases
+    hapd.disable()
+    dev[0].request("BSS_FLUSH 0")
+    dev[0].request("SCAN freq=2412 only_new=1")
+    dev[1].request("BSS_FLUSH 0")
+    dev[1].request("SCAN freq=2412 only_new=1")

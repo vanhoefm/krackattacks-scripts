@@ -399,11 +399,14 @@ def test_ap_hs20_ext_sim(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
 
     dev[0].hs20_enable()
-    dev[0].request("SET external_sim 1")
-    dev[0].add_cred_values({ 'imsi': "23201-0000000000", 'eap': "SIM" })
-    interworking_select(dev[0], "home", freq="2412")
-    interworking_ext_sim_connect(dev[0], bssid, "SIM")
-    check_sp_type(dev[0], "home")
+    try:
+        dev[0].request("SET external_sim 1")
+        dev[0].add_cred_values({ 'imsi': "23201-0000000000", 'eap': "SIM" })
+        interworking_select(dev[0], "home", freq="2412")
+        interworking_ext_sim_connect(dev[0], bssid, "SIM")
+        check_sp_type(dev[0], "home")
+    finally:
+        dev[0].request("SET external_sim 0")
 
 def test_ap_hs20_ext_sim_roaming(dev, apdev):
     """Hotspot 2.0 with external SIM processing in roaming network"""
@@ -417,11 +420,14 @@ def test_ap_hs20_ext_sim_roaming(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
 
     dev[0].hs20_enable()
-    dev[0].request("SET external_sim 1")
-    dev[0].add_cred_values({ 'imsi': "23201-0000000000", 'eap': "SIM" })
-    interworking_select(dev[0], "roaming", freq="2412")
-    interworking_ext_sim_connect(dev[0], bssid, "SIM")
-    check_sp_type(dev[0], "roaming")
+    try:
+        dev[0].request("SET external_sim 1")
+        dev[0].add_cred_values({ 'imsi': "23201-0000000000", 'eap': "SIM" })
+        interworking_select(dev[0], "roaming", freq="2412")
+        interworking_ext_sim_connect(dev[0], bssid, "SIM")
+        check_sp_type(dev[0], "roaming")
+    finally:
+        dev[0].request("SET external_sim 0")
 
 def test_ap_hs20_username(dev, apdev):
     """Hotspot 2.0 connection in username/password credential"""
@@ -1215,6 +1221,12 @@ def test_ap_hs20_max_bss_load2(dev, apdev):
 
 def test_ap_hs20_multi_cred_sp_prio(dev, apdev):
     """Hotspot 2.0 multi-cred sp_priority"""
+    try:
+        return _test_ap_hs20_multi_cred_sp_prio(dev, apdev)
+    finally:
+        dev[0].request("SET external_sim 0")
+
+def _test_ap_hs20_multi_cred_sp_prio(dev, apdev):
     if not hlr_auc_gw_available():
         return "skip"
     bssid = apdev[0]['bssid']
@@ -1252,6 +1264,12 @@ def test_ap_hs20_multi_cred_sp_prio(dev, apdev):
 
 def test_ap_hs20_multi_cred_sp_prio2(dev, apdev):
     """Hotspot 2.0 multi-cred sp_priority with two BSSes"""
+    try:
+        return _test_ap_hs20_multi_cred_sp_prio2(dev, apdev)
+    finally:
+        dev[0].request("SET external_sim 0")
+
+def _test_ap_hs20_multi_cred_sp_prio2(dev, apdev):
     if not hlr_auc_gw_available():
         return "skip"
     bssid = apdev[0]['bssid']

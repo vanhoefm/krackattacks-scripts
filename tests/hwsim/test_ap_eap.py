@@ -247,6 +247,12 @@ def test_ap_wpa2_eap_sim_config(dev, apdev):
 
 def test_ap_wpa2_eap_sim_ext(dev, apdev):
     """WPA2-Enterprise connection using EAP-SIM and external GSM auth"""
+    try:
+        return _test_ap_wpa2_eap_sim_ext(dev, apdev)
+    finally:
+        dev[0].request("SET external_sim 0")
+
+def _test_ap_wpa2_eap_sim_ext(dev, apdev):
     if not os.path.exists("/tmp/hlr_auc_gw.sock"):
         logger.info("No hlr_auc_gw available");
         return "skip"
@@ -498,6 +504,12 @@ def test_ap_wpa2_eap_aka_config(dev, apdev):
 
 def test_ap_wpa2_eap_aka_ext(dev, apdev):
     """WPA2-Enterprise connection using EAP-AKA and external UMTS auth"""
+    try:
+        return _test_ap_wpa2_eap_aka_ext(dev, apdev)
+    finally:
+        dev[0].request("SET external_sim 0")
+
+def _test_ap_wpa2_eap_aka_ext(dev, apdev):
     if not os.path.exists("/tmp/hlr_auc_gw.sock"):
         logger.info("No hlr_auc_gw available");
         return "skip"

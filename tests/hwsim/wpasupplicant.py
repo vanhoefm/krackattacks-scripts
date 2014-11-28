@@ -93,7 +93,6 @@ class WpaSupplicant:
             logger.info("FLUSH to " + self.ifname + " failed: " + res)
         self.request("WPS_ER_STOP")
         self.request("SET pmf 0")
-        self.request("SET external_sim 0")
         self.request("SET hessid 00:00:00:00:00:00")
         self.request("SET access_network_type 15")
         self.request("SET p2p_add_cli_chan 0")

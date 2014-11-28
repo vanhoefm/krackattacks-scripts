@@ -237,6 +237,8 @@ def _test_wpas_mesh_open_no_auto(dev, apdev, test_connectivity):
     dev[0].set_network_quoted(id, "ssid", "wpas-mesh-open")
     dev[0].set_network(id, "key_mgmt", "NONE")
     dev[0].set_network(id, "frequency", "2412")
+    dev[0].set_network(id, "dot11MeshMaxRetries", "16")
+    dev[0].set_network(id, "dot11MeshRetryTimeout", "255")
     dev[0].mesh_group_add(id)
 
     id = dev[1].add_network()

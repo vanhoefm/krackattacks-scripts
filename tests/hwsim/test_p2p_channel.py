@@ -144,8 +144,8 @@ def test_p2p_channel_random_social_with_op_class_change(dev, apdev, params):
     finally:
         set_country("00")
         dev[0].request("P2P_SET disallow_freq ")
-        dev[0].request("SET p2p_oper_reg_class 81")
-        dev[0].request("SET p2p_oper_channel 11")
+        dev[0].request("SET p2p_oper_reg_class 0")
+        dev[0].request("SET p2p_oper_channel 0")
 
 def test_p2p_channel_avoid(dev):
     """P2P and avoid frequencies driver event"""

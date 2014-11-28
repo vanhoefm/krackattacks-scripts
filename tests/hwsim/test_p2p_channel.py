@@ -337,6 +337,10 @@ def test_go_neg_forced_freq_diff_than_bss_freq(dev, apdev):
         if wpas.get_mcc() < 2:
            raise Exception("New radio does not support MCC")
 
+        # Clear possible PBC session overlap from previous test case
+        dev[1].request("BSS_FLUSH 0")
+        dev[1].request("SCAN freq=2412 only_new=1")
+
         wpas.request("SET p2p_no_group_iface 0")
 
         hapd = hostapd.add_ap(apdev[0]['ifname'],

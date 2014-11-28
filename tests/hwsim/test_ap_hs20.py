@@ -2267,12 +2267,26 @@ def _test_ap_hs20_proxyarp_dgaf(dev, apdev, disabled):
     if "OK" not in hapd.request("DATA_TEST_FRAME ifname=ap-br0 " + binascii.hexlify(pkt)):
         raise Exception("DATA_TEST_FRAME failed")
 
+    pkt = build_dhcp_ack(dst_ll="ff:ff:ff:ff:ff:ff", src_ll=bssid,
+                         ip_src="192.168.1.1", ip_dst="255.255.255.255",
+                         yiaddr="192.168.1.123", chaddr=addr0)
+    if "OK" not in hapd.request("DATA_TEST_FRAME ifname=ap-br0 " + binascii.hexlify(pkt)):
+        raise Exception("DATA_TEST_FRAME failed")
+    # another copy for additional code coverage
+    pkt = build_dhcp_ack(dst_ll=addr0, src_ll=bssid,
+                         ip_src="192.168.1.1", ip_dst="255.255.255.255",
+                         yiaddr="192.168.1.123", chaddr=addr0)
+    if "OK" not in hapd.request("DATA_TEST_FRAME ifname=ap-br0 " + binascii.hexlify(pkt)):
+        raise Exception("DATA_TEST_FRAME failed")
+
     matches = get_permanent_neighbors("ap-br0")
     logger.info("After connect: " + str(matches))
-    if len(matches) != 1:
+    if len(matches) != 2:
         raise Exception("Unexpected number of neighbor entries after connect")
     if 'aaaa:bbbb:cccc::2 dev ap-br0 lladdr 02:00:00:00:00:00 PERMANENT' not in matches:
         raise Exception("dev0 addr missing")
+    if '192.168.1.123 dev ap-br0 lladdr 02:00:00:00:00:00 PERMANENT' not in matches:
+        raise Exception("dev0 IPv4 addr missing")
     dev[0].request("DISCONNECT")
     dev[1].request("DISCONNECT")
     time.sleep(0.5)
@@ -2390,6 +2404,61 @@ def build_na(src_ll, ip_src, ip_dst, target, opt=None):
 
     return ehdr + ipv6 + icmp
 
+def build_dhcp_ack(dst_ll, src_ll, ip_src, ip_dst, yiaddr, chaddr,
+                   subnet_mask="255.255.255.0", truncated_opt=False,
+                   wrong_magic=False, force_tot_len=None, no_dhcp=False):
+    _dst_ll = binascii.unhexlify(dst_ll.replace(':',''))
+    _src_ll = binascii.unhexlify(src_ll.replace(':',''))
+    proto = '\x08\x00'
+    ehdr = _dst_ll + _src_ll + proto
+    _ip_src = socket.inet_pton(socket.AF_INET, ip_src)
+    _ip_dst = socket.inet_pton(socket.AF_INET, ip_dst)
+    _subnet_mask = socket.inet_pton(socket.AF_INET, subnet_mask)
+
+    _ciaddr = '\x00\x00\x00\x00'
+    _yiaddr = socket.inet_pton(socket.AF_INET, yiaddr)
+    _siaddr = '\x00\x00\x00\x00'
+    _giaddr = '\x00\x00\x00\x00'
+    _chaddr = binascii.unhexlify(chaddr.replace(':','') + "00000000000000000000")
+    payload = struct.pack('>BBBBL3BB', 2, 1, 6, 0, 12345, 0, 0, 0, 0)
+    payload += _ciaddr + _yiaddr + _siaddr + _giaddr + _chaddr + 192*'\x00'
+    # magic
+    if wrong_magic:
+        payload += '\x63\x82\x53\x00'
+    else:
+        payload += '\x63\x82\x53\x63'
+    if truncated_opt:
+        payload += '\x22\xff\x00'
+    # Option: DHCP Message Type = ACK
+    payload += '\x35\x01\x05'
+    # Pad Option
+    payload += '\x00'
+    # Option: Subnet Mask
+    payload += '\x01\x04' + _subnet_mask
+    # Option: Time Offset
+    payload += struct.pack('>BBL', 2, 4, 0)
+    # End Option
+    payload += '\xff'
+    # Pad Option
+    payload += '\x00\x00\x00\x00'
+
+    if no_dhcp:
+        payload = struct.pack('>BBBBL3BB', 2, 1, 6, 0, 12345, 0, 0, 0, 0)
+        payload += _ciaddr + _yiaddr + _siaddr + _giaddr + _chaddr + 192*'\x00'
+
+    udp = struct.pack('>HHHH', 67, 68, 8 + len(payload), 0) + payload
+
+    if force_tot_len:
+        tot_len = force_tot_len
+    else:
+        tot_len = 20 + len(udp)
+    start = struct.pack('>BBHHBBBB', 0x45, 0, tot_len, 0, 0, 0, 128, 17)
+    ipv4 = start + '\x00\x00' + _ip_src + _ip_dst
+    csum = ip_checksum(ipv4)
+    ipv4 = start + csum + _ip_src + _ip_dst
+
+    return ehdr + ipv4 + udp
+
 def get_permanent_neighbors(ifname):
     cmd = subprocess.Popen(['ip', 'nei'], stdout=subprocess.PIPE)
     res = cmd.stdout.read()
@@ -2479,9 +2548,75 @@ def _test_proxyarp_open(dev, apdev):
     if "OK" not in dev[1].request("DATA_TEST_FRAME " + binascii.hexlify(pkt)):
         raise Exception("DATA_TEST_FRAME failed")
 
+    pkt = build_dhcp_ack(dst_ll="ff:ff:ff:ff:ff:ff", src_ll=bssid,
+                         ip_src="192.168.1.1", ip_dst="255.255.255.255",
+                         yiaddr="192.168.1.124", chaddr=addr0)
+    if "OK" not in hapd.request("DATA_TEST_FRAME ifname=ap-br0 " + binascii.hexlify(pkt)):
+        raise Exception("DATA_TEST_FRAME failed")
+    # Change address and verify unicast
+    pkt = build_dhcp_ack(dst_ll=addr0, src_ll=bssid,
+                         ip_src="192.168.1.1", ip_dst="255.255.255.255",
+                         yiaddr="192.168.1.123", chaddr=addr0)
+    if "OK" not in hapd.request("DATA_TEST_FRAME ifname=ap-br0 " + binascii.hexlify(pkt)):
+        raise Exception("DATA_TEST_FRAME failed")
+
+    # Not-associated client MAC address
+    pkt = build_dhcp_ack(dst_ll="ff:ff:ff:ff:ff:ff", src_ll=bssid,
+                         ip_src="192.168.1.1", ip_dst="255.255.255.255",
+                         yiaddr="192.168.1.125", chaddr="22:33:44:55:66:77")
+    if "OK" not in hapd.request("DATA_TEST_FRAME ifname=ap-br0 " + binascii.hexlify(pkt)):
+        raise Exception("DATA_TEST_FRAME failed")
+
+    # No IP address
+    pkt = build_dhcp_ack(dst_ll=addr1, src_ll=bssid,
+                         ip_src="192.168.1.1", ip_dst="255.255.255.255",
+                         yiaddr="0.0.0.0", chaddr=addr1)
+    if "OK" not in hapd.request("DATA_TEST_FRAME ifname=ap-br0 " + binascii.hexlify(pkt)):
+        raise Exception("DATA_TEST_FRAME failed")
+
+    # Zero subnet mask
+    pkt = build_dhcp_ack(dst_ll=addr1, src_ll=bssid,
+                         ip_src="192.168.1.1", ip_dst="255.255.255.255",
+                         yiaddr="192.168.1.126", chaddr=addr1,
+                         subnet_mask="0.0.0.0")
+    if "OK" not in hapd.request("DATA_TEST_FRAME ifname=ap-br0 " + binascii.hexlify(pkt)):
+        raise Exception("DATA_TEST_FRAME failed")
+
+    # Truncated option
+    pkt = build_dhcp_ack(dst_ll=addr1, src_ll=bssid,
+                         ip_src="192.168.1.1", ip_dst="255.255.255.255",
+                         yiaddr="192.168.1.127", chaddr=addr1,
+                         truncated_opt=True)
+    if "OK" not in hapd.request("DATA_TEST_FRAME ifname=ap-br0 " + binascii.hexlify(pkt)):
+        raise Exception("DATA_TEST_FRAME failed")
+
+    # Wrong magic
+    pkt = build_dhcp_ack(dst_ll=addr1, src_ll=bssid,
+                         ip_src="192.168.1.1", ip_dst="255.255.255.255",
+                         yiaddr="192.168.1.128", chaddr=addr1,
+                         wrong_magic=True)
+    if "OK" not in hapd.request("DATA_TEST_FRAME ifname=ap-br0 " + binascii.hexlify(pkt)):
+        raise Exception("DATA_TEST_FRAME failed")
+
+    # Wrong IPv4 total length
+    pkt = build_dhcp_ack(dst_ll=addr1, src_ll=bssid,
+                         ip_src="192.168.1.1", ip_dst="255.255.255.255",
+                         yiaddr="192.168.1.129", chaddr=addr1,
+                         force_tot_len=1000)
+    if "OK" not in hapd.request("DATA_TEST_FRAME ifname=ap-br0 " + binascii.hexlify(pkt)):
+        raise Exception("DATA_TEST_FRAME failed")
+
+    # BOOTP
+    pkt = build_dhcp_ack(dst_ll=addr1, src_ll=bssid,
+                         ip_src="192.168.1.1", ip_dst="255.255.255.255",
+                         yiaddr="192.168.1.129", chaddr=addr1,
+                         no_dhcp=True)
+    if "OK" not in hapd.request("DATA_TEST_FRAME ifname=ap-br0 " + binascii.hexlify(pkt)):
+        raise Exception("DATA_TEST_FRAME failed")
+
     matches = get_permanent_neighbors("ap-br0")
     logger.info("After connect: " + str(matches))
-    if len(matches) != 3:
+    if len(matches) != 4:
         raise Exception("Unexpected number of neighbor entries after connect")
     if 'aaaa:bbbb:cccc::2 dev ap-br0 lladdr 02:00:00:00:00:00 PERMANENT' not in matches:
         raise Exception("dev0 addr missing")
@@ -2489,6 +2624,8 @@ def _test_proxyarp_open(dev, apdev):
         raise Exception("dev1 addr(1) missing")
     if 'aaaa:bbbb:eeee::2 dev ap-br0 lladdr 02:00:00:00:01:00 PERMANENT' not in matches:
         raise Exception("dev1 addr(2) missing")
+    if '192.168.1.123 dev ap-br0 lladdr 02:00:00:00:00:00 PERMANENT' not in matches:
+        raise Exception("dev0 IPv4 addr missing")
 
     dev[0].request("DISCONNECT")
     dev[1].request("DISCONNECT")

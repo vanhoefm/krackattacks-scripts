@@ -136,6 +136,8 @@ static void handle_ndisc(void *ctx, const u8 *src_addr, const u8 *buf,
 		/* fall through */
 	case NEIGHBOR_ADVERTISEMENT:
 		for (sta = hapd->sta_list; sta; sta = sta->next) {
+			if (!(sta->flags & WLAN_STA_AUTHORIZED))
+				continue;
 			x_snoop_mcast_to_ucast_convert_send(hapd, sta,
 							    (u8 *) buf, len);
 		}

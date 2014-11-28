@@ -130,9 +130,12 @@ static void handle_dhcp(void *ctx, const u8 *src_addr, const u8 *buf,
 	}
 
 	if (hapd->conf->disable_dgaf && is_broadcast_ether_addr(buf)) {
-		for (sta = hapd->sta_list; sta; sta = sta->next)
+		for (sta = hapd->sta_list; sta; sta = sta->next) {
+			if (!(sta->flags & WLAN_STA_AUTHORIZED))
+				continue;
 			x_snoop_mcast_to_ucast_convert_send(hapd, sta,
 							    (u8 *) buf, len);
+		}
 	}
 }
 

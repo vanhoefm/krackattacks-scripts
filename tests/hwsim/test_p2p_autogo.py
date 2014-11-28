@@ -20,11 +20,12 @@ def autogo(go, freq=None, persistent=None):
     logger.debug("res: " + str(res))
     return res
 
-def connect_cli(go, client):
+def connect_cli(go, client, social=False, freq=None):
     logger.info("Try to connect the client to the GO")
     pin = client.wps_read_pin()
     go.p2p_go_authorize_client(pin)
-    res = client.p2p_connect_group(go.p2p_dev_addr(), pin, timeout=60)
+    res = client.p2p_connect_group(go.p2p_dev_addr(), pin, timeout=60,
+                                   social=social, freq=freq)
     logger.info("Client connected")
     hwsim_utils.test_connectivity_p2p(go, client)
     return res
@@ -61,12 +62,12 @@ def test_autogo(dev):
 def test_autogo2(dev):
     """P2P autonomous GO with a separate group interface and client joining group"""
     dev[0].request("SET p2p_no_group_iface 0")
-    res = autogo(dev[0])
+    res = autogo(dev[0], freq=2437)
     if "p2p-wlan" not in res['ifname']:
         raise Exception("Unexpected group interface name on GO")
     if res['ifname'] not in utils.get_ifnames():
         raise Exception("Could not find group interface netdev")
-    connect_cli(dev[0], dev[1])
+    connect_cli(dev[0], dev[1], social=True, freq=2437)
     dev[0].remove_group()
     dev[1].wait_go_ending_session()
     if res['ifname'] in utils.get_ifnames():
@@ -75,8 +76,8 @@ def test_autogo2(dev):
 def test_autogo3(dev):
     """P2P autonomous GO and client with a separate group interface joining group"""
     dev[1].request("SET p2p_no_group_iface 0")
-    autogo(dev[0])
-    res = connect_cli(dev[0], dev[1])
+    autogo(dev[0], freq=2462)
+    res = connect_cli(dev[0], dev[1], social=True, freq=2462)
     if "p2p-wlan" not in res['ifname']:
         raise Exception("Unexpected group interface name on client")
     if res['ifname'] not in utils.get_ifnames():
@@ -91,8 +92,8 @@ def test_autogo4(dev):
     """P2P autonomous GO and client joining group (both with a separate group interface)"""
     dev[0].request("SET p2p_no_group_iface 0")
     dev[1].request("SET p2p_no_group_iface 0")
-    res1 = autogo(dev[0])
-    res2 = connect_cli(dev[0], dev[1])
+    res1 = autogo(dev[0], freq=2412)
+    res2 = connect_cli(dev[0], dev[1], social=True, freq=2412)
     if "p2p-wlan" not in res1['ifname']:
         raise Exception("Unexpected group interface name on GO")
     if "p2p-wlan" not in res2['ifname']:
@@ -113,7 +114,7 @@ def test_autogo4(dev):
 
 def test_autogo_m2d(dev):
     """P2P autonomous GO and clients not authorized"""
-    autogo(dev[0], freq="2412")
+    autogo(dev[0], freq=2412)
     go_addr = dev[0].p2p_dev_addr()
 
     dev[1].request("SET p2p_no_group_iface 0")
@@ -155,7 +156,7 @@ def test_autogo_m2d(dev):
 
 def test_autogo_fail(dev):
     """P2P autonomous GO and incorrect PIN"""
-    autogo(dev[0], freq="2412")
+    autogo(dev[0], freq=2412)
     go_addr = dev[0].p2p_dev_addr()
     dev[0].p2p_go_authorize_client("00000000")
 
@@ -176,9 +177,9 @@ def test_autogo_fail(dev):
 
 def test_autogo_2cli(dev):
     """P2P autonomous GO and two clients joining group"""
-    autogo(dev[0])
-    connect_cli(dev[0], dev[1])
-    connect_cli(dev[0], dev[2])
+    autogo(dev[0], freq=2412)
+    connect_cli(dev[0], dev[1], social=True, freq=2412)
+    connect_cli(dev[0], dev[2], social=True, freq=2412)
     hwsim_utils.test_connectivity_p2p(dev[1], dev[2])
     dev[0].global_request("P2P_REMOVE_CLIENT " + dev[1].p2p_dev_addr())
     dev[1].wait_go_ending_session()
@@ -188,7 +189,7 @@ def test_autogo_2cli(dev):
 def test_autogo_pbc(dev):
     """P2P autonomous GO and PBC"""
     dev[1].request("SET p2p_no_group_iface 0")
-    autogo(dev[0], freq="2412")
+    autogo(dev[0], freq=2412)
     if "FAIL" not in dev[0].group_request("WPS_PBC p2p_dev_addr=00:11:22:33:44"):
         raise Exception("Invalid WPS_PBC succeeded")
     if "OK" not in dev[0].group_request("WPS_PBC p2p_dev_addr=" + dev[1].p2p_dev_addr()):
@@ -213,12 +214,12 @@ def test_autogo_tdls(dev):
     go.set_network_quoted(id, "psk", "12345678")
     go.set_network(id, "mode", "3")
     go.set_network(id, "disabled", "2")
-    res = go.p2p_start_go(persistent=id)
+    res = go.p2p_start_go(persistent=id, freq="2462")
     logger.debug("res: " + str(res))
     wt.flush()
     wt.add_passphrase("12345678")
-    connect_cli(go, dev[1])
-    connect_cli(go, dev[2])
+    connect_cli(go, dev[1], social=True, freq=2462)
+    connect_cli(go, dev[2], social=True, freq=2462)
     hwsim_utils.test_connectivity_p2p(dev[1], dev[2])
     bssid = dev[0].p2p_interface_addr()
     addr1 = dev[1].p2p_interface_addr()
@@ -256,12 +257,12 @@ def test_autogo_tdls(dev):
 
 def test_autogo_legacy(dev):
     """P2P autonomous GO and legacy clients"""
-    res = autogo(dev[0])
+    res = autogo(dev[0], freq=2462)
     if dev[0].get_group_status_field("passphrase", extra="WPS") != res['passphrase']:
         raise Exception("passphrase mismatch")
 
     logger.info("Connect P2P client")
-    connect_cli(dev[0], dev[1])
+    connect_cli(dev[0], dev[1], social=True, freq=2462)
 
     logger.info("Connect legacy WPS client")
     pin = dev[2].wps_read_pin()
@@ -313,8 +314,8 @@ def test_autogo_extra_cred(dev):
     """P2P autonomous GO sending two WPS credentials"""
     if "FAIL" in dev[0].request("SET wps_testing_dummy_cred 1"):
         raise Exception("Failed to enable test mode")
-    autogo(dev[0])
-    connect_cli(dev[0], dev[1])
+    autogo(dev[0], freq=2412)
+    connect_cli(dev[0], dev[1], social=True, freq=2412)
     dev[0].remove_group()
     dev[1].wait_go_ending_session()
 
@@ -341,8 +342,8 @@ def test_autogo_start_during_scan(dev):
         # use autoscan to set scan_req = MANUAL_SCAN_REQ
         if "OK" not in dev[0].request("AUTOSCAN periodic:1"):
             raise Exception("Failed to set autoscan")
-        autogo(dev[0])
-        connect_cli(dev[0], dev[1])
+        autogo(dev[0], freq=2462)
+        connect_cli(dev[0], dev[1], social=True, freq=2462)
         dev[0].remove_group()
         dev[1].wait_go_ending_session()
     finally:
@@ -353,14 +354,14 @@ def test_autogo_passphrase_len(dev):
     try:
         if "OK" not in dev[0].request("SET p2p_passphrase_len 13"):
             raise Exception("Failed to set passphrase length")
-        res = autogo(dev[0])
+        res = autogo(dev[0], freq=2412)
         if len(res['passphrase']) != 13:
             raise Exception("Unexpected passphrase length")
         if dev[0].get_group_status_field("passphrase", extra="WPS") != res['passphrase']:
             raise Exception("passphrase mismatch")
 
         logger.info("Connect P2P client")
-        connect_cli(dev[0], dev[1])
+        connect_cli(dev[0], dev[1], social=True, freq=2412)
 
         logger.info("Connect legacy WPS client")
         pin = dev[2].wps_read_pin()

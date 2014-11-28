@@ -405,8 +405,8 @@ class WpaSupplicant:
             return True
         self.p2p_find(social)
         count = 0
-        while count < timeout:
-            time.sleep(1)
+        while count < timeout * 4:
+            time.sleep(0.25)
             count = count + 1
             if self.peer_known(peer, full):
                 return True
@@ -688,13 +688,16 @@ class WpaSupplicant:
             raise Exception("Failed to authorize client connection on GO")
         return None
 
-    def p2p_connect_group(self, go_addr, pin, timeout=0, social=False):
+    def p2p_connect_group(self, go_addr, pin, timeout=0, social=False,
+                          freq=None):
         self.dump_monitor()
         if not self.discover_peer(go_addr, social=social):
             if social or not self.discover_peer(go_addr, social=social):
                 raise Exception("GO " + go_addr + " not found")
         self.dump_monitor()
         cmd = "P2P_CONNECT " + go_addr + " " + pin + " join"
+        if freq:
+            cmd += " freq=" + str(freq)
         if "OK" in self.global_request(cmd):
             if timeout == 0:
                 self.dump_monitor()

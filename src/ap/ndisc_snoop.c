@@ -91,11 +91,13 @@ static void handle_ndisc(void *ctx, const u8 *src_addr, const u8 *buf,
 	int res;
 	char addrtxt[INET6_ADDRSTRLEN + 1];
 
-	if (len < ETH_HLEN + sizeof(*msg))
+	if (len < ETH_HLEN + sizeof(struct ip6_hdr) + sizeof(struct icmp6_hdr))
 		return;
 	msg = (struct icmpv6_ndmsg *) &buf[ETH_HLEN];
 	switch (msg->icmp6h.icmp6_type) {
 	case NEIGHBOR_SOLICITATION:
+		if (len < ETH_HLEN + sizeof(*msg))
+			return;
 		if (msg->opt_type != SOURCE_LL_ADDR)
 			return;
 

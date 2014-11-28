@@ -2209,6 +2209,104 @@ def test_ap_hs20_proxyarp(dev, apdev):
 
     return res
 
+def _test_ap_hs20_proxyarp_dgaf(dev, apdev, disabled):
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    params['disable_dgaf'] = '1' if disabled else '0'
+    params['proxy_arp'] = '1'
+    params['ap_isolate'] = '1'
+    params['bridge'] = 'ap-br0'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params, no_enable=True)
+    try:
+        hapd.enable()
+    except:
+        # For now, do not report failures due to missing kernel support
+        logger.info("Could not start hostapd - assume proxyarp not supported in kernel version")
+        return "skip"
+    ev = hapd.wait_event(["AP-ENABLED"], timeout=10)
+    if ev is None:
+        raise Exception("AP startup timed out")
+
+    dev[0].hs20_enable()
+    subprocess.call(['brctl', 'setfd', 'ap-br0', '0'])
+    subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
+
+    id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'username': "hs20-test",
+                                  'password': "password",
+                                  'ca_cert': "auth_serv/ca.pem",
+                                  'domain': "example.com",
+                                  'update_identifier': "1234" })
+    interworking_select(dev[0], bssid, "home", freq="2412")
+    interworking_connect(dev[0], bssid, "TTLS")
+
+    dev[1].connect("test-hs20", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="hs20-test", password="password",
+                   ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                   scan_freq="2412")
+    time.sleep(0.1)
+
+    addr0 = dev[0].p2p_interface_addr()
+
+    src_ll_opt0 = "\x01\x01" + binascii.unhexlify(addr0.replace(':',''))
+
+    pkt = build_ns(src_ll=addr0, ip_src="aaaa:bbbb:cccc::2",
+                   ip_dst="ff02::1:ff00:2", target="aaaa:bbbb:cccc::2",
+                   opt=src_ll_opt0)
+    if "OK" not in dev[0].request("DATA_TEST_FRAME " + binascii.hexlify(pkt)):
+        raise Exception("DATA_TEST_FRAME failed")
+
+    pkt = build_ra(src_ll=apdev[0]['bssid'], ip_src="aaaa:bbbb:cccc::33",
+                   ip_dst="ff01::1")
+    if "OK" not in hapd.request("DATA_TEST_FRAME ifname=ap-br0 " + binascii.hexlify(pkt)):
+        raise Exception("DATA_TEST_FRAME failed")
+
+    pkt = build_na(src_ll=apdev[0]['bssid'], ip_src="aaaa:bbbb:cccc::44",
+                   ip_dst="ff01::1", target="aaaa:bbbb:cccc::55")
+    if "OK" not in hapd.request("DATA_TEST_FRAME ifname=ap-br0 " + binascii.hexlify(pkt)):
+        raise Exception("DATA_TEST_FRAME failed")
+
+    matches = get_permanent_neighbors("ap-br0")
+    logger.info("After connect: " + str(matches))
+    if len(matches) != 1:
+        raise Exception("Unexpected number of neighbor entries after connect")
+    if 'aaaa:bbbb:cccc::2 dev ap-br0 lladdr 02:00:00:00:00:00 PERMANENT' not in matches:
+        raise Exception("dev0 addr missing")
+    dev[0].request("DISCONNECT")
+    dev[1].request("DISCONNECT")
+    time.sleep(0.5)
+    matches = get_permanent_neighbors("ap-br0")
+    logger.info("After disconnect: " + str(matches))
+    if len(matches) > 0:
+        raise Exception("Unexpected neighbor entries after disconnect")
+
+def test_ap_hs20_proxyarp_disable_dgaf(dev, apdev):
+    """Hotspot 2.0 and ProxyARP with DGAF disabled"""
+    res = None
+    try:
+        res = _test_ap_hs20_proxyarp_dgaf(dev, apdev, True)
+    finally:
+        subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'down'],
+                        stderr=open('/dev/null', 'w'))
+        subprocess.call(['brctl', 'delbr', 'ap-br0'],
+                        stderr=open('/dev/null', 'w'))
+
+    return res
+
+def test_ap_hs20_proxyarp_enable_dgaf(dev, apdev):
+    """Hotspot 2.0 and ProxyARP with DGAF enabled"""
+    res = None
+    try:
+        res = _test_ap_hs20_proxyarp_dgaf(dev, apdev, False)
+    finally:
+        subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'down'],
+                        stderr=open('/dev/null', 'w'))
+        subprocess.call(['brctl', 'delbr', 'ap-br0'],
+                        stderr=open('/dev/null', 'w'))
+
+    return res
+
 def ip_checksum(buf):
     sum = 0
     if len(buf) & 0x01:
@@ -2228,6 +2326,28 @@ def build_icmpv6(ipv6_addrs, type, code, payload):
     csum = ip_checksum(pseudo + icmp)
     return start + csum + end
 
+def build_ra(src_ll, ip_src, ip_dst, cur_hop_limit=0, router_lifetime=0,
+             reachable_time=0, retrans_timer=0, opt=None):
+    link_mc = binascii.unhexlify("3333ff000002")
+    _src_ll = binascii.unhexlify(src_ll.replace(':',''))
+    proto = '\x86\xdd'
+    ehdr = link_mc + _src_ll + proto
+    _ip_src = socket.inet_pton(socket.AF_INET6, ip_src)
+    _ip_dst = socket.inet_pton(socket.AF_INET6, ip_dst)
+
+    adv = struct.pack('>BBHLL', cur_hop_limit, 0, router_lifetime,
+                      reachable_time, retrans_timer)
+    if opt:
+        payload = adv + opt
+    else:
+        payload = adv
+    icmp = build_icmpv6(_ip_src + _ip_dst, 134, 0, payload)
+
+    ipv6 = struct.pack('>BBBBHBB', 0x60, 0, 0, 0, len(icmp), 58, 255)
+    ipv6 += _ip_src + _ip_dst
+
+    return ehdr + ipv6 + icmp
+
 def build_ns(src_ll, ip_src, ip_dst, target, opt=None):
     link_mc = binascii.unhexlify("3333ff000002")
     _src_ll = binascii.unhexlify(src_ll.replace(':',''))
@@ -2243,6 +2363,27 @@ def build_ns(src_ll, ip_src, ip_dst, target, opt=None):
     else:
         payload = reserved + _target
     icmp = build_icmpv6(_ip_src + _ip_dst, 135, 0, payload)
+
+    ipv6 = struct.pack('>BBBBHBB', 0x60, 0, 0, 0, len(icmp), 58, 255)
+    ipv6 += _ip_src + _ip_dst
+
+    return ehdr + ipv6 + icmp
+
+def build_na(src_ll, ip_src, ip_dst, target, opt=None):
+    link_mc = binascii.unhexlify("3333ff000002")
+    _src_ll = binascii.unhexlify(src_ll.replace(':',''))
+    proto = '\x86\xdd'
+    ehdr = link_mc + _src_ll + proto
+    _ip_src = socket.inet_pton(socket.AF_INET6, ip_src)
+    _ip_dst = socket.inet_pton(socket.AF_INET6, ip_dst)
+
+    reserved = '\x00\x00\x00\x00'
+    _target = socket.inet_pton(socket.AF_INET6, target)
+    if opt:
+        payload = reserved + _target + opt
+    else:
+        payload = reserved + _target
+    icmp = build_icmpv6(_ip_src + _ip_dst, 136, 0, payload)
 
     ipv6 = struct.pack('>BBBBHBB', 0x60, 0, 0, 0, len(icmp), 58, 255)
     ipv6 += _ip_src + _ip_dst

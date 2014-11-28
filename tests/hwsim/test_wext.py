@@ -12,10 +12,7 @@ import hostapd
 import hwsim_utils
 from wpasupplicant import WpaSupplicant
 
-# It did not look like open mode association completed with WEXT.. Commenting
-# this test case out for now. If you care about WEXT, feel free to fix it and
-# submit a patch to remove the "REMOVED_" prefix here..
-def REMOVED_test_wext_open(dev, apdev):
+def test_wext_open(dev, apdev):
     """WEXT driver interface with open network"""
     if not os.path.exists("/proc/net/wireless"):
         logger.info("WEXT support not included in the kernel")

@@ -241,6 +241,13 @@ def test_ap_nai_home_realm_query(dev, apdev):
 
 def test_ap_interworking_scan_filtering(dev, apdev):
     """Interworking scan filtering with HESSID and access network type"""
+    try:
+        return _test_ap_interworking_scan_filtering(dev, apdev)
+    finally:
+        dev[0].request("SET hessid 00:00:00:00:00:00")
+        dev[0].request("SET access_network_type 15")
+
+def _test_ap_interworking_scan_filtering(dev, apdev):
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     ssid = "test-hs20-ap1"

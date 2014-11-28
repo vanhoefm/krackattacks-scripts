@@ -104,7 +104,7 @@ void x_snoop_mcast_to_ucast_convert_send(struct hostapd_data *hapd,
 
 	os_memcpy(buf, sta->addr, ETH_ALEN);
 	res = l2_packet_send(hapd->sock_dhcp, NULL, 0, buf, len);
-	if (res) {
+	if (res < 0) {
 		wpa_printf(MSG_DEBUG,
 			   "x_snoop: Failed to send mcast to ucast converted packet to "
 			   MACSTR, MAC2STR(sta->addr));

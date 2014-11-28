@@ -831,69 +831,104 @@ void mesh_mpm_action_rx(struct wpa_supplicant *wpa_s,
 		return;
 
 	action_field = mgmt->u.action.u.slf_prot_action.action;
+	if (action_field != PLINK_OPEN &&
+	    action_field != PLINK_CONFIRM &&
+	    action_field != PLINK_CLOSE)
+		return;
 
 	ies = mgmt->u.action.u.slf_prot_action.variable;
 	ie_len = (const u8 *) mgmt + len -
 		mgmt->u.action.u.slf_prot_action.variable;
 
 	/* at least expect mesh id and peering mgmt */
-	if (ie_len < 2 + 2)
+	if (ie_len < 2 + 2) {
+		wpa_printf(MSG_DEBUG,
+			   "MPM: Ignore too short action frame %u ie_len %u",
+			   action_field, (unsigned int) ie_len);
 		return;
+	}
+	wpa_printf(MSG_DEBUG, "MPM: Received PLINK action %u", action_field);
 
 	if (action_field == PLINK_OPEN || action_field == PLINK_CONFIRM) {
+		wpa_printf(MSG_DEBUG, "MPM: Capability 0x%x",
+			   WPA_GET_LE16(ies));
 		ies += 2;	/* capability */
 		ie_len -= 2;
 	}
 	if (action_field == PLINK_CONFIRM) {
+		wpa_printf(MSG_DEBUG, "MPM: AID 0x%x", WPA_GET_LE16(ies));
 		ies += 2;	/* aid */
 		ie_len -= 2;
 	}
 
 	/* check for mesh peering, mesh id and mesh config IEs */
-	if (ieee802_11_parse_elems(ies, ie_len, &elems, 0) == ParseFailed)
+	if (ieee802_11_parse_elems(ies, ie_len, &elems, 0) == ParseFailed) {
+		wpa_printf(MSG_DEBUG, "MPM: Failed to parse PLINK IEs");
 		return;
-	if (!elems.peer_mgmt)
+	}
+	if (!elems.peer_mgmt) {
+		wpa_printf(MSG_DEBUG,
+			   "MPM: No Mesh Peering Management element");
 		return;
-	if ((action_field != PLINK_CLOSE) &&
-	    (!elems.mesh_id || !elems.mesh_config))
-		return;
+	}
+	if (action_field != PLINK_CLOSE) {
+		if (!elems.mesh_id || !elems.mesh_config) {
+			wpa_printf(MSG_DEBUG,
+				   "MPM: No Mesh ID or Mesh Configuration element");
+			return;
+		}
 
-	if (action_field != PLINK_CLOSE && !matches_local(wpa_s, &elems))
-		return;
+		if (!matches_local(wpa_s, &elems)) {
+			wpa_printf(MSG_DEBUG,
+				   "MPM: Mesh ID or Mesh Configuration element do not match local MBSS");
+			return;
+		}
+	}
 
 	ret = mesh_mpm_parse_peer_mgmt(wpa_s, action_field,
 				       elems.peer_mgmt,
 				       elems.peer_mgmt_len,
 				       &peer_mgmt_ie);
-	if (ret)
+	if (ret) {
+		wpa_printf(MSG_DEBUG, "MPM: Mesh parsing rejected frame");
 		return;
+	}
 
 	/* the sender's llid is our plid and vice-versa */
 	plid = WPA_GET_LE16(peer_mgmt_ie.llid);
 	if (peer_mgmt_ie.plid)
 		llid = WPA_GET_LE16(peer_mgmt_ie.plid);
+	wpa_printf(MSG_DEBUG, "MPM: plid=0x%x llid=0x%x", plid, llid);
 
 	sta = ap_get_sta(hapd, mgmt->sa);
-	if (!sta)
+	if (!sta) {
+		wpa_printf(MSG_DEBUG, "MPM: No STA entry for peer");
 		return;
+	}
 
 #ifdef CONFIG_SAE
 	/* peer is in sae_accepted? */
-	if (sta->sae && sta->sae->state != SAE_ACCEPTED)
+	if (sta->sae && sta->sae->state != SAE_ACCEPTED) {
+		wpa_printf(MSG_DEBUG, "MPM: SAE not yet accepted for peer");
 		return;
+	}
 #endif /* CONFIG_SAE */
 
 	if (!sta->my_lid)
 		mesh_mpm_init_link(wpa_s, sta);
 
-	if (mconf->security & MESH_CONF_SEC_AMPE)
-		if (mesh_rsn_process_ampe(wpa_s, sta, &elems,
-					  &mgmt->u.action.category,
-					  ies, ie_len))
-			return;
-
-	if (sta->plink_state == PLINK_BLOCKED)
+	if ((mconf->security & MESH_CONF_SEC_AMPE) &&
+	    mesh_rsn_process_ampe(wpa_s, sta, &elems,
+				  &mgmt->u.action.category,
+				  ies, ie_len)) {
+		wpa_printf(MSG_DEBUG, "MPM: RSN process rejected frame");
 		return;
+	}
+
+	if (sta->plink_state == PLINK_BLOCKED) {
+		wpa_printf(MSG_DEBUG, "MPM: PLINK_BLOCKED");
+		return;
+	}
 
 	/* Now we will figure out the appropriate event... */
 	switch (action_field) {
@@ -936,10 +971,6 @@ void mesh_mpm_action_rx(struct wpa_supplicant *wpa_s,
 		else
 			event = CLS_ACPT;
 		break;
-	default:
-		wpa_msg(wpa_s, MSG_ERROR,
-			"Mesh plink: unknown frame subtype");
-		return;
 	}
 	mesh_mpm_fsm(wpa_s, sta, event);
 }

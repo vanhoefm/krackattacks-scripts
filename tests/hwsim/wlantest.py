@@ -58,7 +58,8 @@ class Wlantest:
         return int(res)
 
     def clear_bss_counters(self, bssid):
-        subprocess.call([self.wlantest_cli, "clear_bss_counters", bssid]);
+        subprocess.call([self.wlantest_cli, "clear_bss_counters", bssid],
+                        stdout=open('/dev/null', 'w'));
 
     def info_sta(self, field, bssid, addr):
         res = subprocess.check_output([self.wlantest_cli, "info_sta",

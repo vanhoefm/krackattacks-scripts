@@ -379,15 +379,10 @@ u8 * eap_peer_tls_derive_session_id(struct eap_sm *sm,
 	struct tls_keys keys;
 	u8 *out;
 
-	/*
-	 * TLS library did not support session ID generation,
-	 * so get the needed TLS session parameters
-	 */
 	if (tls_connection_get_keys(sm->ssl_ctx, data->conn, &keys))
 		return NULL;
 
-	if (keys.client_random == NULL || keys.server_random == NULL ||
-	    keys.master_key == NULL)
+	if (keys.client_random == NULL || keys.server_random == NULL)
 		return NULL;
 
 	*len = 1 + keys.client_random_len + keys.server_random_len;
@@ -399,7 +394,7 @@ u8 * eap_peer_tls_derive_session_id(struct eap_sm *sm,
 	out[0] = eap_type;
 	os_memcpy(out + 1, keys.client_random, keys.client_random_len);
 	os_memcpy(out + 1 + keys.client_random_len, keys.server_random,
-	          keys.server_random_len);
+		  keys.server_random_len);
 
 	return out;
 }

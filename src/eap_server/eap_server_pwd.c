@@ -1020,6 +1020,25 @@ static Boolean eap_pwd_is_done(struct eap_sm *sm, void *priv)
 }
 
 
+static u8 * eap_pwd_get_session_id(struct eap_sm *sm, void *priv, size_t *len)
+{
+	struct eap_pwd_data *data = priv;
+	u8 *id;
+
+	if (data->state != SUCCESS)
+		return NULL;
+
+	id = os_malloc(1 + SHA256_MAC_LEN);
+	if (id == NULL)
+		return NULL;
+
+	os_memcpy(id, data->session_id, 1 + SHA256_MAC_LEN);
+	*len = 1 + SHA256_MAC_LEN;
+
+	return id;
+}
+
+
 int eap_server_pwd_register(void)
 {
 	struct eap_method *eap;
@@ -1048,6 +1067,7 @@ int eap_server_pwd_register(void)
 	eap->getKey = eap_pwd_getkey;
 	eap->get_emsk = eap_pwd_get_emsk;
 	eap->isSuccess = eap_pwd_is_success;
+	eap->getSessionId = eap_pwd_get_session_id;
 
 	ret = eap_server_method_register(eap);
 	if (ret)

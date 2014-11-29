@@ -1229,6 +1229,18 @@ static Boolean eap_peap_isSuccess(struct eap_sm *sm, void *priv)
 }
 
 
+static u8 * eap_peap_get_session_id(struct eap_sm *sm, void *priv, size_t *len)
+{
+	struct eap_peap_data *data = priv;
+
+	if (data->state != SUCCESS)
+		return NULL;
+
+	return eap_server_tls_derive_session_id(sm, &data->ssl, EAP_TYPE_PEAP,
+						len);
+}
+
+
 int eap_server_peap_register(void)
 {
 	struct eap_method *eap;
@@ -1247,6 +1259,7 @@ int eap_server_peap_register(void)
 	eap->isDone = eap_peap_isDone;
 	eap->getKey = eap_peap_getKey;
 	eap->isSuccess = eap_peap_isSuccess;
+	eap->getSessionId = eap_peap_get_session_id;
 
 	ret = eap_server_method_register(eap);
 	if (ret)

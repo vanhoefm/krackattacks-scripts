@@ -24,6 +24,8 @@ struct eap_gpsk_data {
 	size_t sk_len;
 	u8 pk[EAP_GPSK_MAX_PK_LEN];
 	size_t pk_len;
+	u8 session_id[128];
+	size_t id_len;
 	u8 *id_peer;
 	size_t id_peer_len;
 #define MAX_NUM_CSUITES 2
@@ -417,6 +419,21 @@ static void eap_gpsk_process_gpsk_2(struct eap_sm *sm,
 		return;
 	}
 
+	if (eap_gpsk_derive_session_id(sm->user->password,
+				       sm->user->password_len,
+				       data->vendor, data->specifier,
+				       data->rand_peer, data->rand_server,
+				       data->id_peer, data->id_peer_len,
+				       sm->server_id, sm->server_id_len,
+				       EAP_TYPE_GPSK,
+				       data->session_id, &data->id_len) < 0) {
+		wpa_printf(MSG_DEBUG, "EAP-GPSK: Failed to derive Session-Id");
+		eap_gpsk_state(data, FAILURE);
+		return;
+	}
+	wpa_hexdump(MSG_DEBUG, "EAP-GPSK: Derived Session-Id",
+		    data->session_id, data->id_len);
+
 	miclen = eap_gpsk_mic_len(data->vendor, data->specifier);
 	if (end - pos < (int) miclen) {
 		wpa_printf(MSG_DEBUG, "EAP-GPSK: Message too short for MIC "
@@ -593,6 +610,24 @@ static Boolean eap_gpsk_isSuccess(struct eap_sm *sm, void *priv)
 }
 
 
+static u8 * eap_gpsk_get_session_id(struct eap_sm *sm, void *priv, size_t *len)
+{
+	struct eap_gpsk_data *data = priv;
+	u8 *sid;
+
+	if (data->state != SUCCESS)
+		return NULL;
+
+	sid = os_malloc(data->id_len);
+	if (sid == NULL)
+		return NULL;
+	os_memcpy(sid, data->session_id, data->id_len);
+	*len = data->id_len;
+
+	return sid;
+}
+
+
 int eap_server_gpsk_register(void)
 {
 	struct eap_method *eap;
@@ -612,6 +647,7 @@ int eap_server_gpsk_register(void)
 	eap->getKey = eap_gpsk_getKey;
 	eap->isSuccess = eap_gpsk_isSuccess;
 	eap->get_emsk = eap_gpsk_get_emsk;
+	eap->getSessionId = eap_gpsk_get_session_id;
 
 	ret = eap_server_method_register(eap);
 	if (ret)

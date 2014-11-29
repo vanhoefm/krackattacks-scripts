@@ -171,6 +171,9 @@ SM_STATE(EAP, INITIALIZE)
 	bin_clear_free(sm->eap_if.eapKeyData, sm->eap_if.eapKeyDataLen);
 	sm->eap_if.eapKeyData = NULL;
 	sm->eap_if.eapKeyDataLen = 0;
+	os_free(sm->eap_if.eapSessionId);
+	sm->eap_if.eapSessionId = NULL;
+	sm->eap_if.eapSessionIdLen = 0;
 	sm->eap_if.eapKeyAvailable = FALSE;
 	sm->eap_if.eapRestart = FALSE;
 
@@ -354,6 +357,16 @@ SM_STATE(EAP, METHOD_RESPONSE)
 		} else {
 			sm->eap_if.eapKeyData = NULL;
 			sm->eap_if.eapKeyDataLen = 0;
+		}
+		os_free(sm->eap_if.eapSessionId);
+		sm->eap_if.eapSessionId = NULL;
+		if (sm->m->getSessionId) {
+			sm->eap_if.eapSessionId = sm->m->getSessionId(
+				sm, sm->eap_method_priv,
+				&sm->eap_if.eapSessionIdLen);
+			wpa_hexdump(MSG_DEBUG, "EAP: Session-Id",
+				    sm->eap_if.eapSessionId,
+				    sm->eap_if.eapSessionIdLen);
 		}
 		sm->methodState = METHOD_END;
 	} else {
@@ -1353,6 +1366,7 @@ void eap_server_sm_deinit(struct eap_sm *sm)
 		sm->m->reset(sm, sm->eap_method_priv);
 	wpabuf_free(sm->eap_if.eapReqData);
 	bin_clear_free(sm->eap_if.eapKeyData, sm->eap_if.eapKeyDataLen);
+	os_free(sm->eap_if.eapSessionId);
 	wpabuf_free(sm->lastReqData);
 	wpabuf_free(sm->eap_if.eapRespData);
 	os_free(sm->identity);

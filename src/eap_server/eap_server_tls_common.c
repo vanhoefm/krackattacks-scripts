@@ -140,6 +140,47 @@ fail:
 }
 
 
+/**
+ * eap_server_tls_derive_session_id - Derive a Session-Id based on TLS data
+ * @sm: Pointer to EAP state machine allocated with eap_peer_sm_init()
+ * @data: Data for TLS processing
+ * @eap_type: EAP method used in Phase 1 (EAP_TYPE_TLS/PEAP/TTLS/FAST)
+ * @len: Pointer to length of the session ID generated
+ * Returns: Pointer to allocated Session-Id on success or %NULL on failure
+ *
+ * This function derive the Session-Id based on the TLS session data
+ * (client/server random and method type).
+ *
+ * The caller is responsible for freeing the returned buffer.
+ */
+u8 * eap_server_tls_derive_session_id(struct eap_sm *sm,
+				      struct eap_ssl_data *data, u8 eap_type,
+				      size_t *len)
+{
+	struct tls_keys keys;
+	u8 *out;
+
+	if (tls_connection_get_keys(sm->ssl_ctx, data->conn, &keys))
+		return NULL;
+
+	if (keys.client_random == NULL || keys.server_random == NULL)
+		return NULL;
+
+	*len = 1 + keys.client_random_len + keys.server_random_len;
+	out = os_malloc(*len);
+	if (out == NULL)
+		return NULL;
+
+	/* Session-Id = EAP type || client.random || server.random */
+	out[0] = eap_type;
+	os_memcpy(out + 1, keys.client_random, keys.client_random_len);
+	os_memcpy(out + 1 + keys.client_random_len, keys.server_random,
+		  keys.server_random_len);
+
+	return out;
+}
+
+
 struct wpabuf * eap_server_tls_build_msg(struct eap_ssl_data *data,
 					 int eap_type, int version, u8 id)
 {

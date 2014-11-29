@@ -1589,6 +1589,18 @@ static Boolean eap_fast_isSuccess(struct eap_sm *sm, void *priv)
 }
 
 
+static u8 * eap_fast_get_session_id(struct eap_sm *sm, void *priv, size_t *len)
+{
+	struct eap_fast_data *data = priv;
+
+	if (data->state != SUCCESS)
+		return NULL;
+
+	return eap_server_tls_derive_session_id(sm, &data->ssl, EAP_TYPE_FAST,
+						len);
+}
+
+
 int eap_server_fast_register(void)
 {
 	struct eap_method *eap;
@@ -1608,6 +1620,7 @@ int eap_server_fast_register(void)
 	eap->getKey = eap_fast_getKey;
 	eap->get_emsk = eap_fast_get_emsk;
 	eap->isSuccess = eap_fast_isSuccess;
+	eap->getSessionId = eap_fast_get_session_id;
 
 	ret = eap_server_method_register(eap);
 	if (ret)

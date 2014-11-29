@@ -74,6 +74,9 @@ int eap_server_tls_ssl_init(struct eap_sm *sm, struct eap_ssl_data *data,
 void eap_server_tls_ssl_deinit(struct eap_sm *sm, struct eap_ssl_data *data);
 u8 * eap_server_tls_derive_key(struct eap_sm *sm, struct eap_ssl_data *data,
 			       char *label, size_t len);
+u8 * eap_server_tls_derive_session_id(struct eap_sm *sm,
+				      struct eap_ssl_data *data, u8 eap_type,
+				      size_t *len);
 struct wpabuf * eap_server_tls_build_msg(struct eap_ssl_data *data,
 					 int eap_type, int version, u8 id);
 struct wpabuf * eap_server_tls_build_ack(u8 id, int eap_type, int version);

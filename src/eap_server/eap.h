@@ -58,6 +58,8 @@ struct eap_eapol_interface {
 	struct wpabuf *eapReqData;
 	u8 *eapKeyData;
 	size_t eapKeyDataLen;
+	u8 *eapSessionId;
+	size_t eapSessionIdLen;
 	Boolean eapKeyAvailable; /* called keyAvailable in IEEE 802.1X-2004 */
 
 	/* AAA interface to full authenticator variables */

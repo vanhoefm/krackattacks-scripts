@@ -511,6 +511,36 @@ static u8 * eap_ikev2_get_emsk(struct eap_sm *sm, void *priv, size_t *len)
 }
 
 
+static u8 * eap_ikev2_get_session_id(struct eap_sm *sm, void *priv, size_t *len)
+{
+	struct eap_ikev2_data *data = priv;
+	u8 *sid;
+	size_t sid_len;
+	size_t offset;
+
+	if (data->state != DONE || !data->keymat_ok)
+		return NULL;
+
+	sid_len = 1 + data->ikev2.i_nonce_len + data->ikev2.r_nonce_len;
+	sid = os_malloc(sid_len);
+	if (sid) {
+		offset = 0;
+		sid[offset] = EAP_TYPE_IKEV2;
+		offset++;
+		os_memcpy(sid + offset, data->ikev2.i_nonce,
+			  data->ikev2.i_nonce_len);
+		offset += data->ikev2.i_nonce_len;
+		os_memcpy(sid + offset, data->ikev2.r_nonce,
+			  data->ikev2.r_nonce_len);
+		*len = sid_len;
+		wpa_hexdump(MSG_DEBUG, "EAP-IKEV2: Derived Session-Id",
+			    sid, sid_len);
+	}
+
+	return sid;
+}
+
+
 int eap_server_ikev2_register(void)
 {
 	struct eap_method *eap;
@@ -531,6 +561,7 @@ int eap_server_ikev2_register(void)
 	eap->getKey = eap_ikev2_getKey;
 	eap->isSuccess = eap_ikev2_isSuccess;
 	eap->get_emsk = eap_ikev2_get_emsk;
+	eap->getSessionId = eap_ikev2_get_session_id;
 
 	ret = eap_server_method_register(eap);
 	if (ret)

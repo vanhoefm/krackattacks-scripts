@@ -820,6 +820,29 @@ static Boolean eap_sim_isSuccess(struct eap_sm *sm, void *priv)
 }
 
 
+static u8 * eap_sim_get_session_id(struct eap_sm *sm, void *priv, size_t *len)
+{
+	struct eap_sim_data *data = priv;
+	u8 *id;
+
+	if (data->state != SUCCESS)
+		return NULL;
+
+	*len = 1 + data->num_chal * GSM_RAND_LEN + EAP_SIM_NONCE_MT_LEN;
+	id = os_malloc(*len);
+	if (id == NULL)
+		return NULL;
+
+	id[0] = EAP_TYPE_SIM;
+	os_memcpy(id + 1, data->rand, data->num_chal * GSM_RAND_LEN);
+	os_memcpy(id + 1 + data->num_chal * GSM_RAND_LEN, data->nonce_mt,
+		  EAP_SIM_NONCE_MT_LEN);
+	wpa_hexdump(MSG_DEBUG, "EAP-SIM: Derived Session-Id", id, *len);
+
+	return id;
+}
+
+
 int eap_server_sim_register(void)
 {
 	struct eap_method *eap;
@@ -839,6 +862,7 @@ int eap_server_sim_register(void)
 	eap->getKey = eap_sim_getKey;
 	eap->isSuccess = eap_sim_isSuccess;
 	eap->get_emsk = eap_sim_get_emsk;
+	eap->getSessionId = eap_sim_get_session_id;
 
 	ret = eap_server_method_register(eap);
 	if (ret)

@@ -88,6 +88,19 @@ struct eap_method {
 	 * private data or this function may derive the key.
 	 */
 	u8 * (*get_emsk)(struct eap_sm *sm, void *priv, size_t *len);
+
+	/**
+	 * getSessionId - Get EAP method specific Session-Id
+	 * @sm: Pointer to EAP state machine allocated with eap_server_sm_init()
+	 * @priv: Pointer to private EAP method data from eap_method::init()
+	 * @len: Pointer to a variable to store Session-Id length
+	 * Returns: Session-Id or %NULL if not available
+	 *
+	 * This function can be used to get the Session-Id from the EAP method.
+	 * The Session-Id may already be stored in the method-specific private
+	 * data or this function may derive the Session-Id.
+	 */
+	u8 * (*getSessionId)(struct eap_sm *sm, void *priv, size_t *len);
 };
 
 /**

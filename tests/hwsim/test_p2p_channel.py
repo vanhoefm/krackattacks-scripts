@@ -280,6 +280,11 @@ def test_go_neg_with_bss_on_disallowed_chan(dev, apdev):
         try:
             hapd = hostapd.add_ap(apdev[0]['ifname'],
                                   { "ssid": 'bss-2.4ghz', "channel": '1' })
+            # make sure PBC overlap from old test cases is not maintained
+            dev[0].request("BSS_FLUSH 0")
+            dev[0].request("SCAN freq=2412 only_new=1")
+            dev[1].request("BSS_FLUSH 0")
+            dev[1].request("SCAN freq=2412 only_new=1")
             wpas.connect("bss-2.4ghz", key_mgmt="NONE", scan_freq="2412")
             wpas.request("P2P_SET disallow_freq 2412")
 

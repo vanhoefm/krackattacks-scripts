@@ -155,7 +155,8 @@ static int wpa_driver_nl80211_set_mode_ibss(struct i802_bss *bss,
 
 static int
 wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv,
-				   const u8 *set_addr, int first);
+				   const u8 *set_addr, int first,
+				   const char *driver_params);
 static int wpa_driver_nl80211_mlme(struct wpa_driver_nl80211_data *drv,
 				   const u8 *addr, int cmd, u16 reason_code,
 				   int local_state_change);
@@ -185,6 +186,7 @@ static int nl80211_leave_ibss(struct wpa_driver_nl80211_data *drv);
 
 static int i802_set_freq(void *priv, struct hostapd_freq_params *freq);
 static int i802_set_iface_flags(struct i802_bss *bss, int up);
+static int nl80211_set_param(void *priv, const char *param);
 
 
 /* Converts nl80211_chan_width to a common format */
@@ -836,7 +838,7 @@ static int wpa_driver_nl80211_own_ifindex(struct wpa_driver_nl80211_data *drv,
 	if (drv->if_removed && wpa_driver_nl80211_own_ifname(drv, buf, len)) {
 		wpa_printf(MSG_DEBUG, "nl80211: Update ifindex for a removed "
 			   "interface");
-		wpa_driver_nl80211_finish_drv_init(drv, NULL, 0);
+		wpa_driver_nl80211_finish_drv_init(drv, NULL, 0, NULL);
 		return 1;
 	}
 
@@ -1659,7 +1661,8 @@ static void nl80211_destroy_bss(struct i802_bss *bss)
 
 static void * wpa_driver_nl80211_drv_init(void *ctx, const char *ifname,
 					  void *global_priv, int hostapd,
-					  const u8 *set_addr)
+					  const u8 *set_addr,
+					  const char *driver_params)
 {
 	struct wpa_driver_nl80211_data *drv;
 	struct rfkill_config *rcfg;
@@ -1716,7 +1719,7 @@ static void * wpa_driver_nl80211_drv_init(void *ctx, const char *ifname,
 	if (linux_iface_up(drv->global->ioctl_sock, ifname) > 0)
 		drv->start_iface_up = 1;
 
-	if (wpa_driver_nl80211_finish_drv_init(drv, set_addr, 1))
+	if (wpa_driver_nl80211_finish_drv_init(drv, set_addr, 1, driver_params))
 		goto failed;
 
 	drv->eapol_tx_sock = socket(PF_PACKET, SOCK_DGRAM, 0);
@@ -1765,7 +1768,8 @@ failed:
 static void * wpa_driver_nl80211_init(void *ctx, const char *ifname,
 				      void *global_priv)
 {
-	return wpa_driver_nl80211_drv_init(ctx, ifname, global_priv, 0, NULL);
+	return wpa_driver_nl80211_drv_init(ctx, ifname, global_priv, 0, NULL,
+					   NULL);
 }
 
 
@@ -2188,7 +2192,8 @@ static int i802_set_iface_flags(struct i802_bss *bss, int up)
 
 static int
 wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv,
-				   const u8 *set_addr, int first)
+				   const u8 *set_addr, int first,
+				   const char *driver_params)
 {
 	struct i802_bss *bss = drv->first_bss;
 	int send_rfkill_event = 0;
@@ -2207,6 +2212,9 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv,
 		bss->static_ap = 1;
 
 	if (wpa_driver_nl80211_capa(drv))
+		return -1;
+
+	if (driver_params && nl80211_set_param(bss, driver_params) < 0)
 		return -1;
 
 	wpa_printf(MSG_DEBUG, "nl80211: interface %s in phy %s",
@@ -6401,7 +6409,7 @@ static void *i802_init(struct hostapd_data *hapd,
 
 	bss = wpa_driver_nl80211_drv_init(hapd, params->ifname,
 					  params->global_priv, 1,
-					  params->bssid);
+					  params->bssid, params->driver_params);
 	if (bss == NULL)
 		return NULL;
 

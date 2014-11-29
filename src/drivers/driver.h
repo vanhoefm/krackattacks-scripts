@@ -1247,6 +1247,7 @@ struct wpa_init_params {
 	void *global_priv;
 	const u8 *bssid;
 	const char *ifname;
+	const char *driver_params;
 	int use_pae_group_addr;
 	char **bridge;
 	size_t num_bridge;

@@ -184,6 +184,7 @@ static int hostapd_driver_init(struct hostapd_iface *iface)
 	}
 	params.bssid = b;
 	params.ifname = hapd->conf->iface;
+	params.driver_params = hapd->iconf->driver_params;
 	params.use_pae_group_addr = hapd->conf->use_pae_group_addr;
 
 	params.num_bridge = hapd->iface->num_bss;

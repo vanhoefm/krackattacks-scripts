@@ -572,6 +572,7 @@ struct hostapd_config {
 	int *basic_rates;
 
 	const struct wpa_driver_ops *driver;
+	char *driver_params;
 
 	int ap_table_max_size;
 	int ap_table_expiration_time;

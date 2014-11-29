@@ -1867,6 +1867,9 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 				   line, pos);
 			return 1;
 		}
+	} else if (os_strcmp(buf, "driver_params") == 0) {
+		os_free(conf->driver_params);
+		conf->driver_params = os_strdup(pos);
 	} else if (os_strcmp(buf, "debug") == 0) {
 		wpa_printf(MSG_DEBUG, "Line %d: DEPRECATED: 'debug' configuration variable is not used anymore",
 			   line);

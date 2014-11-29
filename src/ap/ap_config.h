@@ -349,8 +349,6 @@ struct hostapd_bss_config {
 	int radius_server_acct_port;
 	int radius_server_ipv6;
 
-	char *test_socket; /* UNIX domain socket path for driver_test */
-
 	int use_pae_group_addr; /* Whether to send EAPOL frames to PAE group
 				 * address instead of individual address
 				 * (for driver_wired.c).

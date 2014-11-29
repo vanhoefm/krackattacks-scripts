@@ -2410,9 +2410,6 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 	} else if (os_strcmp(buf, "radius_server_ipv6") == 0) {
 		bss->radius_server_ipv6 = atoi(pos);
 #endif /* RADIUS_SERVER */
-	} else if (os_strcmp(buf, "test_socket") == 0) {
-		os_free(bss->test_socket);
-		bss->test_socket = os_strdup(pos);
 	} else if (os_strcmp(buf, "use_pae_group_addr") == 0) {
 		bss->use_pae_group_addr = atoi(pos);
 	} else if (os_strcmp(buf, "hw_mode") == 0) {

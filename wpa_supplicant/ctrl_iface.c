@@ -3619,6 +3619,15 @@ static int wpa_supplicant_ctrl_iface_get_capability(
 		return ctrl_iface_get_capability_tdls(wpa_s, buf, buflen);
 #endif /* CONFIG_TDLS */
 
+#ifdef CONFIG_ERP
+	if (os_strcmp(field, "erp") == 0) {
+		res = os_snprintf(buf, buflen, "ERP");
+		if (res < 0 || (unsigned int) res >= buflen)
+			return -1;
+		return res;
+	}
+#endif /* CONFIG_EPR */
+
 	wpa_printf(MSG_DEBUG, "CTRL_IFACE: Unknown GET_CAPABILITY field '%s'",
 		   field);
 

@@ -94,7 +94,14 @@ enum eapol_bool_var {
 	 *
 	 * EAP state machines reads this value.
 	 */
-	EAPOL_altReject
+	EAPOL_altReject,
+
+	/**
+	 * EAPOL_eapTriggerStart - EAP-based trigger to send EAPOL-Start
+	 *
+	 * EAP state machine writes this value.
+	 */
+	EAPOL_eapTriggerStart
 };
 
 /**

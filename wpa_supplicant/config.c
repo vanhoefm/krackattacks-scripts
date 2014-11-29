@@ -1820,6 +1820,7 @@ static const struct parse_data ssid_fields[] = {
 	{ INT(eapol_flags) },
 	{ INTe(sim_num) },
 	{ STRe(openssl_ciphers) },
+	{ INTe(erp) },
 #endif /* IEEE8021X_EAPOL */
 	{ FUNC_KEY(wep_key0) },
 	{ FUNC_KEY(wep_key1) },

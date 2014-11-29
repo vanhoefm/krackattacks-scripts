@@ -346,6 +346,12 @@ ifeq ($(CONFIG_L2_PACKET), freebsd)
 LIBS += -lpcap
 endif
 
+ifdef CONFIG_ERP
+L_CFLAGS += -DCONFIG_ERP
+NEED_SHA256=y
+NEED_HMAC_SHA256_KDF=y
+endif
+
 ifdef CONFIG_EAP_TLS
 # EAP-TLS
 ifeq ($(CONFIG_EAP_TLS), dyn)
@@ -1242,6 +1248,9 @@ SHA256OBJS += src/crypto/sha256-internal.c
 endif
 ifdef NEED_TLS_PRF_SHA256
 SHA256OBJS += src/crypto/sha256-tlsprf.c
+endif
+ifdef NEED_HMAC_SHA256_KDF
+SHA256OBJS += src/crypto/sha256-kdf.c
 endif
 OBJS += $(SHA256OBJS)
 endif

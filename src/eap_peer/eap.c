@@ -23,6 +23,7 @@
 #include "ext_password.h"
 #include "crypto/crypto.h"
 #include "crypto/tls.h"
+#include "crypto/sha256.h"
 #include "common/wpa_ctrl.h"
 #include "eap_common/eap_wsc_common.h"
 #include "eap_i.h"
@@ -190,6 +191,8 @@ SM_STATE(EAP, INITIALIZE)
 	sm->num_rounds = 0;
 	sm->prev_failure = 0;
 	sm->expected_failure = 0;
+	sm->reauthInit = FALSE;
+	sm->erp_seq = (u32) -1;
 }
 
 
@@ -353,6 +356,267 @@ nak:
 }
 
 
+#ifdef CONFIG_ERP
+
+static char * eap_home_realm(struct eap_sm *sm)
+{
+	struct eap_peer_config *config = eap_get_config(sm);
+	char *realm;
+	size_t i, realm_len;
+
+	if (!config)
+		return NULL;
+
+	if (config->identity) {
+		for (i = 0; i < config->identity_len; i++) {
+			if (config->identity[i] == '@')
+				break;
+		}
+		if (i < config->identity_len) {
+			realm_len = config->identity_len - i - 1;
+			realm = os_malloc(realm_len + 1);
+			if (realm == NULL)
+				return NULL;
+			os_memcpy(realm, &config->identity[i + 1], realm_len);
+			realm[realm_len] = '\0';
+			return realm;
+		}
+	}
+
+	if (config->anonymous_identity) {
+		for (i = 0; i < config->anonymous_identity_len; i++) {
+			if (config->anonymous_identity[i] == '@')
+				break;
+		}
+		if (i < config->anonymous_identity_len) {
+			realm_len = config->anonymous_identity_len - i - 1;
+			realm = os_malloc(realm_len + 1);
+			if (realm == NULL)
+				return NULL;
+			os_memcpy(realm, &config->anonymous_identity[i + 1],
+				  realm_len);
+			realm[realm_len] = '\0';
+			return realm;
+		}
+	}
+
+	return os_strdup("");
+}
+
+
+static struct eap_erp_key *
+eap_erp_get_key(struct eap_sm *sm, const char *realm)
+{
+	struct eap_erp_key *erp;
+
+	dl_list_for_each(erp, &sm->erp_keys, struct eap_erp_key, list) {
+		char *pos;
+
+		pos = os_strchr(erp->keyname_nai, '@');
+		if (!pos)
+			continue;
+		pos++;
+		if (os_strcmp(pos, realm) == 0)
+			return erp;
+	}
+
+	return NULL;
+}
+
+
+static struct eap_erp_key *
+eap_erp_get_key_nai(struct eap_sm *sm, const char *nai)
+{
+	struct eap_erp_key *erp;
+
+	dl_list_for_each(erp, &sm->erp_keys, struct eap_erp_key, list) {
+		if (os_strcmp(erp->keyname_nai, nai) == 0)
+			return erp;
+	}
+
+	return NULL;
+}
+
+
+static void eap_peer_erp_free_key(struct eap_erp_key *erp)
+{
+	dl_list_del(&erp->list);
+	bin_clear_free(erp, sizeof(*erp));
+}
+
+
+static void eap_erp_remove_keys_realm(struct eap_sm *sm, const char *realm)
+{
+	struct eap_erp_key *erp;
+
+	while ((erp = eap_erp_get_key(sm, realm)) != NULL) {
+		wpa_printf(MSG_DEBUG, "EAP: Delete old ERP key %s",
+			   erp->keyname_nai);
+		eap_peer_erp_free_key(erp);
+	}
+}
+
+#endif /* CONFIG_ERP */
+
+
+static void eap_peer_erp_free_keys(struct eap_sm *sm)
+{
+#ifdef CONFIG_ERP
+	struct eap_erp_key *erp, *tmp;
+
+	dl_list_for_each_safe(erp, tmp, &sm->erp_keys, struct eap_erp_key, list)
+		eap_peer_erp_free_key(erp);
+#endif /* CONFIG_ERP */
+}
+
+
+static void eap_peer_erp_init(struct eap_sm *sm)
+{
+#ifdef CONFIG_ERP
+	u8 *emsk = NULL;
+	size_t emsk_len;
+	u8 EMSKname[EAP_EMSK_NAME_LEN];
+	u8 len[2];
+	char *realm;
+	size_t realm_len, nai_buf_len;
+	struct eap_erp_key *erp = NULL;
+	int pos;
+
+	realm = eap_home_realm(sm);
+	if (!realm)
+		return;
+	realm_len = os_strlen(realm);
+	wpa_printf(MSG_DEBUG, "EAP: Realm for ERP keyName-NAI: %s", realm);
+	eap_erp_remove_keys_realm(sm, realm);
+
+	nai_buf_len = 2 * EAP_EMSK_NAME_LEN + 1 + realm_len;
+	if (nai_buf_len > 253) {
+		/*
+		 * keyName-NAI has a maximum length of 253 octet to fit in
+		 * RADIUS attributes.
+		 */
+		wpa_printf(MSG_DEBUG,
+			   "EAP: Too long realm for ERP keyName-NAI maximum length");
+		goto fail;
+	}
+	nai_buf_len++; /* null termination */
+	erp = os_zalloc(sizeof(*erp) + nai_buf_len);
+	if (erp == NULL)
+		goto fail;
+
+	emsk = sm->m->get_emsk(sm, sm->eap_method_priv, &emsk_len);
+	if (!emsk || emsk_len == 0 || emsk_len > ERP_MAX_KEY_LEN) {
+		wpa_printf(MSG_DEBUG,
+			   "EAP: No suitable EMSK available for ERP");
+		goto fail;
+	}
+
+	wpa_hexdump_key(MSG_DEBUG, "EAP: EMSK", emsk, emsk_len);
+
+	WPA_PUT_BE16(len, 8);
+	if (hmac_sha256_kdf(sm->eapSessionId, sm->eapSessionIdLen, "EMSK",
+			    len, sizeof(len),
+			    EMSKname, EAP_EMSK_NAME_LEN) < 0) {
+		wpa_printf(MSG_DEBUG, "EAP: Could not derive EMSKname");
+		goto fail;
+	}
+	wpa_hexdump(MSG_DEBUG, "EAP: EMSKname", EMSKname, EAP_EMSK_NAME_LEN);
+
+	pos = wpa_snprintf_hex(erp->keyname_nai, nai_buf_len,
+			       EMSKname, EAP_EMSK_NAME_LEN);
+	erp->keyname_nai[pos] = '@';
+	os_memcpy(&erp->keyname_nai[pos + 1], realm, realm_len);
+
+	WPA_PUT_BE16(len, emsk_len);
+	if (hmac_sha256_kdf(emsk, emsk_len,
+			    "EAP Re-authentication Root Key@ietf.org",
+			    len, sizeof(len), erp->rRK, emsk_len) < 0) {
+		wpa_printf(MSG_DEBUG, "EAP: Could not derive rRK for ERP");
+		goto fail;
+	}
+	erp->rRK_len = emsk_len;
+	wpa_hexdump_key(MSG_DEBUG, "EAP: ERP rRK", erp->rRK, erp->rRK_len);
+
+	if (hmac_sha256_kdf(erp->rRK, erp->rRK_len,
+			    "EAP Re-authentication Integrity Key@ietf.org",
+			    len, sizeof(len), erp->rIK, erp->rRK_len) < 0) {
+		wpa_printf(MSG_DEBUG, "EAP: Could not derive rIK for ERP");
+		goto fail;
+	}
+	erp->rIK_len = erp->rRK_len;
+	wpa_hexdump_key(MSG_DEBUG, "EAP: ERP rIK", erp->rIK, erp->rIK_len);
+
+	wpa_printf(MSG_DEBUG, "EAP: Stored ERP keys %s", erp->keyname_nai);
+	dl_list_add(&sm->erp_keys, &erp->list);
+	erp = NULL;
+fail:
+	bin_clear_free(emsk, emsk_len);
+	bin_clear_free(erp, sizeof(*erp));
+	os_free(realm);
+#endif /* CONFIG_ERP */
+}
+
+
+#ifdef CONFIG_ERP
+static int eap_peer_erp_reauth_start(struct eap_sm *sm,
+				     const struct eap_hdr *hdr, size_t len)
+{
+	char *realm;
+	struct eap_erp_key *erp;
+	struct wpabuf *msg;
+	u8 hash[SHA256_MAC_LEN];
+
+	realm = eap_home_realm(sm);
+	if (!realm)
+		return -1;
+
+	erp = eap_erp_get_key(sm, realm);
+	os_free(realm);
+	realm = NULL;
+	if (!erp)
+		return -1;
+
+	if (erp->next_seq >= 65536)
+		return -1; /* SEQ has range of 0..65535 */
+
+	/* TODO: check rRK lifetime expiration */
+
+	wpa_printf(MSG_DEBUG, "EAP: Valid ERP key found %s (SEQ=%u)",
+		   erp->keyname_nai, erp->next_seq);
+
+	msg = eap_msg_alloc(EAP_VENDOR_IETF, EAP_ERP_TYPE_REAUTH,
+			    1 + 2 + 2 + os_strlen(erp->keyname_nai) + 1 + 16,
+			    EAP_CODE_INITIATE, hdr->identifier);
+	if (msg == NULL)
+		return -1;
+
+	wpabuf_put_u8(msg, 0x20); /* Flags: R=0 B=0 L=1 */
+	wpabuf_put_be16(msg, erp->next_seq);
+
+	wpabuf_put_u8(msg, EAP_ERP_TLV_KEYNAME_NAI);
+	wpabuf_put_u8(msg, os_strlen(erp->keyname_nai));
+	wpabuf_put_str(msg, erp->keyname_nai);
+
+	wpabuf_put_u8(msg, EAP_ERP_CS_HMAC_SHA256_128); /* Cryptosuite */
+
+	if (hmac_sha256(erp->rIK, erp->rIK_len,
+			wpabuf_head(msg), wpabuf_len(msg), hash) < 0) {
+		wpabuf_free(msg);
+		return -1;
+	}
+	wpabuf_put_data(msg, hash, 16);
+
+	wpa_printf(MSG_DEBUG, "EAP: Sending EAP-Initiate/Re-auth");
+	sm->erp_seq = erp->next_seq;
+	erp->next_seq++;
+	wpabuf_free(sm->eapRespData);
+	sm->eapRespData = msg;
+	sm->reauthInit = TRUE;
+	return 0;
+}
+#endif /* CONFIG_ERP */
+
+
 /*
  * The method processing happens here. The request from the authenticator is
  * processed, and an appropriate response packet is built.
@@ -414,6 +678,8 @@ SM_STATE(EAP, METHOD)
 
 	if (sm->m->isKeyAvailable && sm->m->getKey &&
 	    sm->m->isKeyAvailable(sm, sm->eap_method_priv)) {
+		struct eap_peer_config *config = eap_get_config(sm);
+
 		eap_sm_free_key(sm);
 		sm->eapKeyData = sm->m->getKey(sm, sm->eap_method_priv,
 					       &sm->eapKeyDataLen);
@@ -426,6 +692,8 @@ SM_STATE(EAP, METHOD)
 			wpa_hexdump(MSG_DEBUG, "EAP: Session-Id",
 				    sm->eapSessionId, sm->eapSessionIdLen);
 		}
+		if (config->erp && sm->m->get_emsk && sm->eapSessionId)
+			eap_peer_erp_init(sm);
 	}
 }
 
@@ -450,6 +718,7 @@ SM_STATE(EAP, SEND_RESPONSE)
 	}
 	eapol_set_bool(sm, EAPOL_eapReq, FALSE);
 	eapol_set_int(sm, EAPOL_idleWhile, sm->ClientTimeout);
+	sm->reauthInit = FALSE;
 }
 
 
@@ -709,6 +978,8 @@ static void eap_peer_sm_step_received(struct eap_sm *sm)
 	else if (sm->selectedMethod == EAP_TYPE_LEAP &&
 		 (sm->rxSuccess || sm->rxResp))
 		SM_ENTER(EAP, METHOD);
+	else if (sm->reauthInit)
+		SM_ENTER(EAP, SEND_RESPONSE);
 	else
 		SM_ENTER(EAP, DISCARD);
 }
@@ -1231,6 +1502,209 @@ static struct wpabuf * eap_sm_buildNotify(int id)
 }
 
 
+static void eap_peer_initiate(struct eap_sm *sm, const struct eap_hdr *hdr,
+			      size_t len)
+{
+#ifdef CONFIG_ERP
+	const u8 *pos = (const u8 *) (hdr + 1);
+	const u8 *end = ((const u8 *) hdr) + len;
+	struct erp_tlvs parse;
+
+	if (len < sizeof(*hdr) + 1) {
+		wpa_printf(MSG_DEBUG, "EAP: Ignored too short EAP-Initiate");
+		return;
+	}
+
+	if (*pos != EAP_ERP_TYPE_REAUTH_START) {
+		wpa_printf(MSG_DEBUG,
+			   "EAP: Ignored unexpected EAP-Initiate Type=%u",
+			   *pos);
+		return;
+	}
+
+	pos++;
+	if (pos >= end) {
+		wpa_printf(MSG_DEBUG,
+			   "EAP: Too short EAP-Initiate/Re-auth-Start");
+		return;
+	}
+	pos++; /* Reserved */
+	wpa_hexdump(MSG_DEBUG, "EAP: EAP-Initiate/Re-auth-Start TVs/TLVs",
+		    pos, end - pos);
+
+	if (erp_parse_tlvs(pos, end, &parse, 0) < 0)
+		goto invalid;
+
+	if (parse.domain) {
+		wpa_hexdump_ascii(MSG_DEBUG,
+				  "EAP: EAP-Initiate/Re-auth-Start - Domain name",
+				  parse.domain, parse.domain_len);
+		/* TODO: Derivation of domain specific keys for local ER */
+	}
+
+	if (eap_peer_erp_reauth_start(sm, hdr, len) == 0)
+		return;
+
+invalid:
+#endif /* CONFIG_ERP */
+	wpa_printf(MSG_DEBUG,
+		   "EAP: EAP-Initiate/Re-auth-Start - No suitable ERP keys available - try to start full EAP authentication");
+	eapol_set_bool(sm, EAPOL_eapTriggerStart, TRUE);
+}
+
+
+static void eap_peer_finish(struct eap_sm *sm, const struct eap_hdr *hdr,
+			    size_t len)
+{
+#ifdef CONFIG_ERP
+	const u8 *pos = (const u8 *) (hdr + 1);
+	const u8 *end = ((const u8 *) hdr) + len;
+	const u8 *start;
+	struct erp_tlvs parse;
+	u8 flags;
+	u16 seq;
+	u8 hash[SHA256_MAC_LEN];
+	size_t hash_len;
+	struct eap_erp_key *erp;
+	int max_len;
+	char nai[254];
+	u8 seed[4];
+
+	if (len < sizeof(*hdr) + 1) {
+		wpa_printf(MSG_DEBUG, "EAP: Ignored too short EAP-Finish");
+		return;
+	}
+
+	if (*pos != EAP_ERP_TYPE_REAUTH) {
+		wpa_printf(MSG_DEBUG,
+			   "EAP: Ignored unexpected EAP-Finish Type=%u", *pos);
+		return;
+	}
+
+	if (len < sizeof(*hdr) + 4) {
+		wpa_printf(MSG_DEBUG,
+			   "EAP: Ignored too short EAP-Finish/Re-auth");
+		return;
+	}
+
+	pos++;
+	flags = *pos++;
+	seq = WPA_GET_BE16(pos);
+	pos += 2;
+	wpa_printf(MSG_DEBUG, "EAP: Flags=0x%x SEQ=%u", flags, seq);
+
+	if (seq != sm->erp_seq) {
+		wpa_printf(MSG_DEBUG,
+			   "EAP: Unexpected EAP-Finish/Re-auth SEQ=%u", seq);
+		return;
+	}
+
+	/*
+	 * Parse TVs/TLVs. Since we do not yet know the length of the
+	 * Authentication Tag, stop parsing if an unknown TV/TLV is seen and
+	 * just try to find the keyName-NAI first so that we can check the
+	 * Authentication Tag.
+	 */
+	if (erp_parse_tlvs(pos, end, &parse, 1) < 0)
+		return;
+
+	if (!parse.keyname) {
+		wpa_printf(MSG_DEBUG,
+			   "EAP: No keyName-NAI in EAP-Finish/Re-auth Packet");
+		return;
+	}
+
+	wpa_hexdump_ascii(MSG_DEBUG, "EAP: EAP-Finish/Re-auth - keyName-NAI",
+			  parse.keyname, parse.keyname_len);
+	if (parse.keyname_len > 253) {
+		wpa_printf(MSG_DEBUG,
+			   "EAP: Too long keyName-NAI in EAP-Finish/Re-auth");
+		return;
+	}
+	os_memcpy(nai, parse.keyname, parse.keyname_len);
+	nai[parse.keyname_len] = '\0';
+
+	erp = eap_erp_get_key_nai(sm, nai);
+	if (!erp) {
+		wpa_printf(MSG_DEBUG, "EAP: No matching ERP key found for %s",
+			   nai);
+		return;
+	}
+
+	/* Is there enough room for Cryptosuite and Authentication Tag? */
+	start = parse.keyname + parse.keyname_len;
+	max_len = end - start;
+	hash_len = 16;
+	if (max_len < 1 + (int) hash_len) {
+		wpa_printf(MSG_DEBUG,
+			   "EAP: Not enough room for Authentication Tag");
+		return;
+	}
+	if (end[-17] != EAP_ERP_CS_HMAC_SHA256_128) {
+		wpa_printf(MSG_DEBUG, "EAP: Different Cryptosuite used");
+		return;
+	}
+
+	if (hmac_sha256(erp->rIK, erp->rIK_len, (const u8 *) hdr,
+			end - ((const u8 *) hdr) - hash_len, hash) < 0)
+		return;
+	if (os_memcmp(end - hash_len, hash, hash_len) != 0) {
+		wpa_printf(MSG_DEBUG,
+			   "EAP: Authentication Tag mismatch");
+		return;
+	}
+	end -= 1 + hash_len;
+
+	/*
+	 * Parse TVs/TLVs again now that we know the exact part of the buffer
+	 * that contains them.
+	 */
+	wpa_hexdump(MSG_DEBUG, "EAP: EAP-Finish/Re-Auth TVs/TLVs",
+		    pos, end - pos);
+	if (erp_parse_tlvs(pos, end, &parse, 0) < 0)
+		return;
+
+	if (flags & 0x80) {
+		wpa_printf(MSG_DEBUG,
+			   "EAP: EAP-Finish/Re-auth indicated failure");
+		eapol_set_bool(sm, EAPOL_eapFail, TRUE);
+		eapol_set_bool(sm, EAPOL_eapReq, FALSE);
+		eapol_set_bool(sm, EAPOL_eapNoResp, TRUE);
+		wpa_msg(sm->msg_ctx, MSG_INFO, WPA_EVENT_EAP_FAILURE
+			"EAP authentication failed");
+		sm->prev_failure = 1;
+		return;
+	}
+
+	eap_sm_free_key(sm);
+	sm->eapKeyDataLen = 0;
+	sm->eapKeyData = os_malloc(erp->rRK_len);
+	if (!sm->eapKeyData)
+		return;
+	sm->eapKeyDataLen = erp->rRK_len;
+
+	WPA_PUT_BE16(seed, seq);
+	WPA_PUT_BE16(&seed[2], erp->rRK_len);
+	if (hmac_sha256_kdf(erp->rRK, erp->rRK_len,
+			    "Re-authentication Master Session Key@ietf.org",
+			    seed, sizeof(seed),
+			    sm->eapKeyData, erp->rRK_len) < 0) {
+		wpa_printf(MSG_DEBUG, "EAP: Could not derive rMSK for ERP");
+		eap_sm_free_key(sm);
+		return;
+	}
+	wpa_hexdump_key(MSG_DEBUG, "EAP: ERP rMSK",
+			sm->eapKeyData, sm->eapKeyDataLen);
+	sm->eapKeyAvailable = TRUE;
+	eapol_set_bool(sm, EAPOL_eapSuccess, TRUE);
+	eapol_set_bool(sm, EAPOL_eapReq, FALSE);
+	eapol_set_bool(sm, EAPOL_eapNoResp, TRUE);
+	wpa_msg(sm->msg_ctx, MSG_INFO, WPA_EVENT_EAP_SUCCESS
+		"EAP re-authentication completed successfully");
+#endif /* CONFIG_ERP */
+}
+
+
 static void eap_sm_parseEapReq(struct eap_sm *sm, const struct wpabuf *req)
 {
 	const struct eap_hdr *hdr;
@@ -1321,6 +1795,12 @@ static void eap_sm_parseEapReq(struct eap_sm *sm, const struct wpabuf *req)
 		wpa_printf(MSG_DEBUG, "EAP: Received EAP-Failure");
 		eap_notify_status(sm, "completion", "failure");
 		sm->rxFailure = TRUE;
+		break;
+	case EAP_CODE_INITIATE:
+		eap_peer_initiate(sm, hdr, plen);
+		break;
+	case EAP_CODE_FINISH:
+		eap_peer_finish(sm, hdr, plen);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "EAP: Ignored EAP-Packet with unknown "
@@ -1413,6 +1893,7 @@ struct eap_sm * eap_peer_sm_init(void *eapol_ctx,
 	sm->msg_ctx = msg_ctx;
 	sm->ClientTimeout = EAP_CLIENT_TIMEOUT_DEFAULT;
 	sm->wps = conf->wps;
+	dl_list_init(&sm->erp_keys);
 
 	os_memset(&tlsconf, 0, sizeof(tlsconf));
 	tlsconf.opensc_engine_path = conf->opensc_engine_path;
@@ -1460,6 +1941,7 @@ void eap_peer_sm_deinit(struct eap_sm *sm)
 	if (sm->ssl_ctx2)
 		tls_deinit(sm->ssl_ctx2);
 	tls_deinit(sm->ssl_ctx);
+	eap_peer_erp_free_keys(sm);
 	os_free(sm);
 }
 

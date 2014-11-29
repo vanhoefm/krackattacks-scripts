@@ -695,6 +695,11 @@ struct eap_peer_config {
 	 * list is used.
 	 */
 	char *openssl_ciphers;
+
+	/**
+	 * erp - Whether EAP Re-authentication Protocol (ERP) is enabled
+	 */
+	int erp;
 };
 
 

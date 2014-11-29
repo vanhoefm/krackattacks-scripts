@@ -128,6 +128,7 @@ struct eapol_sm {
 	struct wpabuf *eapReqData; /* for EAP */
 	Boolean altAccept; /* for EAP */
 	Boolean altReject; /* for EAP */
+	Boolean eapTriggerStart;
 	Boolean replay_counter_valid;
 	u8 last_replay_counter[16];
 	struct eapol_config conf;
@@ -222,6 +223,7 @@ SM_STATE(SUPP_PAE, DISCONNECTED)
 	SM_ENTRY(SUPP_PAE, DISCONNECTED);
 	sm->sPortMode = Auto;
 	sm->startCount = 0;
+	sm->eapTriggerStart = FALSE;
 	sm->logoffSent = FALSE;
 	eapol_sm_set_port_unauthorized(sm);
 	sm->suppAbort = TRUE;
@@ -244,6 +246,11 @@ SM_STATE(SUPP_PAE, CONNECTING)
 {
 	int send_start = sm->SUPP_PAE_state == SUPP_PAE_CONNECTING;
 	SM_ENTRY(SUPP_PAE, CONNECTING);
+
+	if (sm->eapTriggerStart)
+		send_start = 1;
+	sm->eapTriggerStart = FALSE;
+
 	if (send_start) {
 		sm->startWhen = sm->startPeriod;
 		sm->startCount++;
@@ -385,6 +392,8 @@ SM_STEP(SUPP_PAE)
 		else if (sm->eapFail || (sm->keyDone && !sm->portValid))
 			SM_ENTER(SUPP_PAE, HELD);
 		else if (sm->suppTimeout)
+			SM_ENTER(SUPP_PAE, CONNECTING);
+		else if (sm->eapTriggerStart)
 			SM_ENTER(SUPP_PAE, CONNECTING);
 		break;
 	case SUPP_PAE_HELD:
@@ -1822,6 +1831,8 @@ static Boolean eapol_sm_get_bool(void *ctx, enum eapol_bool_var variable)
 		return sm->altAccept;
 	case EAPOL_altReject:
 		return sm->altReject;
+	case EAPOL_eapTriggerStart:
+		return sm->eapTriggerStart;
 	}
 	return FALSE;
 }
@@ -1860,6 +1871,9 @@ static void eapol_sm_set_bool(void *ctx, enum eapol_bool_var variable,
 		break;
 	case EAPOL_altReject:
 		sm->altReject = value;
+		break;
+	case EAPOL_eapTriggerStart:
+		sm->eapTriggerStart = value;
 		break;
 	}
 }

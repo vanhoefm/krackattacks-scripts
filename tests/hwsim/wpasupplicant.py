@@ -776,7 +776,8 @@ class WpaSupplicant:
                        "wpa_ptk_rekey", "disable_ht", "disable_vht", "bssid",
                        "disable_max_amsdu", "ampdu_factor", "ampdu_density",
                        "disable_ht40", "disable_sgi", "disable_ldpc",
-                       "ht40_intolerant", "update_identifier", "mac_addr" ]
+                       "ht40_intolerant", "update_identifier", "mac_addr",
+                       "erp" ]
         for field in not_quoted:
             if field in kwargs and kwargs[field]:
                 self.set_network(id, field, kwargs[field])

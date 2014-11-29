@@ -116,7 +116,8 @@ struct eap_sm {
 		EAP_INITIALIZE_PASSTHROUGH, EAP_IDLE2, EAP_RETRANSMIT2,
 		EAP_RECEIVED2, EAP_DISCARD2, EAP_SEND_REQUEST2,
 		EAP_AAA_REQUEST, EAP_AAA_RESPONSE, EAP_AAA_IDLE,
-		EAP_TIMEOUT_FAILURE2, EAP_FAILURE2, EAP_SUCCESS2
+		EAP_TIMEOUT_FAILURE2, EAP_FAILURE2, EAP_SUCCESS2,
+		EAP_INITIATE_REAUTH_START
 	} EAP_state;
 
 	/* Constants */
@@ -145,7 +146,7 @@ struct eap_sm {
 	Boolean ignore;
 	enum {
 		DECISION_SUCCESS, DECISION_FAILURE, DECISION_CONTINUE,
-		DECISION_PASSTHROUGH
+		DECISION_PASSTHROUGH, DECISION_INITIATE_REAUTH_START
 	} decision;
 
 	/* Miscellaneous variables */
@@ -204,6 +205,9 @@ struct eap_sm {
 
 	const u8 *server_id;
 	size_t server_id_len;
+
+	Boolean initiate_reauth_start_sent;
+	Boolean try_initiate_reauth;
 
 #ifdef CONFIG_TESTING_OPTIONS
 	u32 tls_test_flags;

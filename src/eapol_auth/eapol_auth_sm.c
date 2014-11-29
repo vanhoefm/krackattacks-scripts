@@ -1,6 +1,6 @@
 /*
  * IEEE 802.1X-2004 Authenticator - EAPOL state machine
- * Copyright (c) 2002-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -43,6 +43,7 @@ sm->eapol->cb.set_port_authorized(sm->eapol->conf.ctx, sm->sta, 0)
 static void eapol_sm_step_run(struct eapol_state_machine *sm);
 static void eapol_sm_step_cb(void *eloop_ctx, void *timeout_ctx);
 static void eapol_auth_initialize(struct eapol_state_machine *sm);
+static void eapol_auth_conf_free(struct eapol_auth_config *conf);
 
 
 static void eapol_auth_logger(struct eapol_authenticator *eapol,
@@ -1025,11 +1026,27 @@ static const char * eapol_sm_get_eap_req_id_text(void *ctx, size_t *len)
 }
 
 
+static int eapol_sm_get_erp_send_reauth_start(void *ctx)
+{
+	struct eapol_state_machine *sm = ctx;
+	return sm->eapol->conf.erp_send_reauth_start;
+}
+
+
+static const char * eapol_sm_get_erp_domain(void *ctx)
+{
+	struct eapol_state_machine *sm = ctx;
+	return sm->eapol->conf.erp_domain;
+}
+
+
 static struct eapol_callbacks eapol_cb =
 {
 	eapol_sm_get_eap_user,
 	eapol_sm_get_eap_req_id_text,
-	NULL
+	NULL,
+	eapol_sm_get_erp_send_reauth_start,
+	eapol_sm_get_erp_domain,
 };
 
 
@@ -1074,21 +1091,16 @@ static int eapol_auth_conf_clone(struct eapol_auth_config *dst,
 	}
 	if (src->pac_opaque_encr_key) {
 		dst->pac_opaque_encr_key = os_malloc(16);
-		if (dst->pac_opaque_encr_key == NULL) {
-			os_free(dst->eap_req_id_text);
-			return -1;
-		}
+		if (dst->pac_opaque_encr_key == NULL)
+			goto fail;
 		os_memcpy(dst->pac_opaque_encr_key, src->pac_opaque_encr_key,
 			  16);
 	} else
 		dst->pac_opaque_encr_key = NULL;
 	if (src->eap_fast_a_id) {
 		dst->eap_fast_a_id = os_malloc(src->eap_fast_a_id_len);
-		if (dst->eap_fast_a_id == NULL) {
-			os_free(dst->eap_req_id_text);
-			os_free(dst->pac_opaque_encr_key);
-			return -1;
-		}
+		if (dst->eap_fast_a_id == NULL)
+			goto fail;
 		os_memcpy(dst->eap_fast_a_id, src->eap_fast_a_id,
 			  src->eap_fast_a_id_len);
 		dst->eap_fast_a_id_len = src->eap_fast_a_id_len;
@@ -1096,12 +1108,8 @@ static int eapol_auth_conf_clone(struct eapol_auth_config *dst,
 		dst->eap_fast_a_id = NULL;
 	if (src->eap_fast_a_id_info) {
 		dst->eap_fast_a_id_info = os_strdup(src->eap_fast_a_id_info);
-		if (dst->eap_fast_a_id_info == NULL) {
-			os_free(dst->eap_req_id_text);
-			os_free(dst->pac_opaque_encr_key);
-			os_free(dst->eap_fast_a_id);
-			return -1;
-		}
+		if (dst->eap_fast_a_id_info == NULL)
+			goto fail;
 	} else
 		dst->eap_fast_a_id_info = NULL;
 	dst->eap_fast_prov = src->eap_fast_prov;
@@ -1111,7 +1119,22 @@ static int eapol_auth_conf_clone(struct eapol_auth_config *dst,
 	dst->tnc = src->tnc;
 	dst->wps = src->wps;
 	dst->fragment_size = src->fragment_size;
+
+	os_free(dst->erp_domain);
+	if (src->erp_domain) {
+		dst->erp_domain = os_strdup(src->erp_domain);
+		if (dst->erp_domain == NULL)
+			goto fail;
+	} else {
+		dst->erp_domain = NULL;
+	}
+	dst->erp_send_reauth_start = src->erp_send_reauth_start;
+
 	return 0;
+
+fail:
+	eapol_auth_conf_free(dst);
+	return -1;
 }
 
 
@@ -1125,6 +1148,8 @@ static void eapol_auth_conf_free(struct eapol_auth_config *conf)
 	conf->eap_fast_a_id = NULL;
 	os_free(conf->eap_fast_a_id_info);
 	conf->eap_fast_a_id_info = NULL;
+	os_free(conf->erp_domain);
+	conf->erp_domain = NULL;
 }
 
 

@@ -259,6 +259,8 @@ struct hostapd_bss_config {
 	int wep_rekeying_period;
 	int broadcast_key_idx_min, broadcast_key_idx_max;
 	int eap_reauth_period;
+	int erp_send_reauth_start;
+	char *erp_domain;
 
 	int ieee802_11f; /* use IEEE 802.11f (IAPP) */
 	char iapp_iface[IFNAMSIZ + 1]; /* interface used with IAPP broadcast

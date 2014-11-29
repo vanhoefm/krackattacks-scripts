@@ -85,6 +85,8 @@ struct eapol_callbacks {
 			    int phase2, struct eap_user *user);
 	const char * (*get_eap_req_id_text)(void *ctx, size_t *len);
 	void (*log_msg)(void *ctx, const char *msg);
+	int (*get_erp_send_reauth_start)(void *ctx);
+	const char * (*get_erp_domain)(void *ctx);
 };
 
 struct eap_config {

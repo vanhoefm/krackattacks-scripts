@@ -24,6 +24,8 @@ struct eapol_auth_config {
 	void *eap_sim_db_priv;
 	char *eap_req_id_text; /* a copy of this will be allocated */
 	size_t eap_req_id_text_len;
+	int erp_send_reauth_start;
+	char *erp_domain; /* a copy of this will be allocated */
 	u8 *pac_opaque_encr_key;
 	u8 *eap_fast_a_id;
 	size_t eap_fast_a_id_len;

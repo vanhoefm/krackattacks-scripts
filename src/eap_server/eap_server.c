@@ -1,6 +1,6 @@
 /*
  * hostapd / EAP Full Authenticator state machine (RFC 4137)
- * Copyright (c) 2004-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -42,6 +42,52 @@ static void eap_sm_Policy_update(struct eap_sm *sm, const u8 *nak_list,
 static EapType eap_sm_Policy_getNextMethod(struct eap_sm *sm, int *vendor);
 static int eap_sm_Policy_getDecision(struct eap_sm *sm);
 static Boolean eap_sm_Policy_doPickUp(struct eap_sm *sm, EapType method);
+
+
+static int eap_get_erp_send_reauth_start(struct eap_sm *sm)
+{
+	if (sm->eapol_cb->get_erp_send_reauth_start)
+		return sm->eapol_cb->get_erp_send_reauth_start(sm->eapol_ctx);
+	return 0;
+}
+
+
+static const char * eap_get_erp_domain(struct eap_sm *sm)
+{
+	if (sm->eapol_cb->get_erp_domain)
+		return sm->eapol_cb->get_erp_domain(sm->eapol_ctx);
+	return NULL;
+}
+
+
+static struct wpabuf * eap_sm_buildInitiateReauthStart(struct eap_sm *sm,
+						       u8 id)
+{
+	const char *domain;
+	size_t plen = 1;
+	struct wpabuf *msg;
+	size_t domain_len = 0;
+
+	domain = eap_get_erp_domain(sm);
+	if (domain) {
+		domain_len = os_strlen(domain);
+		plen += 2 + domain_len;;
+	}
+
+	msg = eap_msg_alloc(EAP_VENDOR_IETF, EAP_ERP_TYPE_REAUTH_START, plen,
+			    EAP_CODE_INITIATE, id);
+	if (msg == NULL)
+		return NULL;
+	wpabuf_put_u8(msg, 0); /* Reserved */
+	if (domain) {
+		/* Domain name TLV */
+		wpabuf_put_u8(msg, EAP_ERP_TLV_DOMAIN_NAME);
+		wpabuf_put_u8(msg, domain_len);
+		wpabuf_put_data(msg, domain, domain_len);
+	}
+
+	return msg;
+}
 
 
 static int eap_copy_buf(struct wpabuf **dst, const struct wpabuf *src)
@@ -164,6 +210,8 @@ SM_STATE(EAP, INITIALIZE)
 		eap_server_clear_identity(sm);
 	}
 
+	sm->initiate_reauth_start_sent = FALSE;
+	sm->try_initiate_reauth = FALSE;
 	sm->currentId = -1;
 	sm->eap_if.eapSuccess = FALSE;
 	sm->eap_if.eapFail = FALSE;
@@ -382,6 +430,7 @@ SM_STATE(EAP, PROPOSE_METHOD)
 
 	SM_ENTRY(EAP, PROPOSE_METHOD);
 
+	sm->try_initiate_reauth = FALSE;
 try_another_method:
 	type = eap_sm_Policy_getNextMethod(sm, &vendor);
 	if (vendor == EAP_VENDOR_IETF)
@@ -502,6 +551,25 @@ SM_STATE(EAP, SUCCESS)
 
 	wpa_msg(sm->msg_ctx, MSG_INFO, WPA_EVENT_EAP_SUCCESS
 		MACSTR, MAC2STR(sm->peer_addr));
+}
+
+
+SM_STATE(EAP, INITIATE_REAUTH_START)
+{
+	SM_ENTRY(EAP, INITIATE_REAUTH_START);
+
+	sm->initiate_reauth_start_sent = TRUE;
+	sm->try_initiate_reauth = TRUE;
+	sm->currentId = eap_sm_nextId(sm, sm->currentId);
+	wpa_printf(MSG_DEBUG,
+		   "EAP: building EAP-Initiate-Re-auth-Start: Identifier %d",
+		   sm->currentId);
+	sm->lastId = sm->currentId;
+	wpabuf_free(sm->eap_if.eapReqData);
+	sm->eap_if.eapReqData = eap_sm_buildInitiateReauthStart(sm,
+								sm->currentId);
+	wpabuf_free(sm->lastReqData);
+	sm->lastReqData = NULL;
 }
 
 
@@ -704,9 +772,14 @@ SM_STEP(EAP)
 			SM_ENTER(EAP, INITIALIZE);
 		break;
 	case EAP_IDLE:
-		if (sm->eap_if.retransWhile == 0)
-			SM_ENTER(EAP, RETRANSMIT);
-		else if (sm->eap_if.eapResp)
+		if (sm->eap_if.retransWhile == 0) {
+			if (sm->try_initiate_reauth) {
+				sm->try_initiate_reauth = FALSE;
+				SM_ENTER(EAP, SELECT_ACTION);
+			} else {
+				SM_ENTER(EAP, RETRANSMIT);
+			}
+		} else if (sm->eap_if.eapResp)
 			SM_ENTER(EAP, RECEIVED);
 		break;
 	case EAP_RETRANSMIT:
@@ -817,8 +890,13 @@ SM_STEP(EAP)
 			SM_ENTER(EAP, SUCCESS);
 		else if (sm->decision == DECISION_PASSTHROUGH)
 			SM_ENTER(EAP, INITIALIZE_PASSTHROUGH);
+		else if (sm->decision == DECISION_INITIATE_REAUTH_START)
+			SM_ENTER(EAP, INITIATE_REAUTH_START);
 		else
 			SM_ENTER(EAP, PROPOSE_METHOD);
+		break;
+	case EAP_INITIATE_REAUTH_START:
+		SM_ENTER(EAP, SEND_REQUEST);
 		break;
 	case EAP_TIMEOUT_FAILURE:
 		break;
@@ -888,6 +966,12 @@ static int eap_sm_calculateTimeout(struct eap_sm *sm, int retransCount,
 				   int methodTimeout)
 {
 	int rto, i;
+
+	if (sm->try_initiate_reauth) {
+		wpa_printf(MSG_DEBUG,
+			   "EAP: retransmit timeout 1 second for EAP-Initiate-Re-auth-Start");
+		return 1;
+	}
 
 	if (methodTimeout) {
 		/*
@@ -1227,6 +1311,13 @@ static int eap_sm_Policy_getDecision(struct eap_sm *sm)
 		wpa_printf(MSG_DEBUG, "EAP: getDecision: another method "
 			   "available -> CONTINUE");
 		return DECISION_CONTINUE;
+	}
+
+	if (!sm->identity && eap_get_erp_send_reauth_start(sm) &&
+	    !sm->initiate_reauth_start_sent) {
+		wpa_printf(MSG_DEBUG,
+			   "EAP: getDecision: send EAP-Initiate/Re-auth-Start");
+		return DECISION_INITIATE_REAUTH_START;
 	}
 
 	if (sm->identity == NULL || sm->currentId == -1) {

@@ -425,6 +425,7 @@ void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 	os_free(conf->eap_user_sqlite);
 
 	os_free(conf->eap_req_id_text);
+	os_free(conf->erp_domain);
 	os_free(conf->accept_mac);
 	os_free(conf->deny_mac);
 	os_free(conf->nas_identifier);

@@ -2071,6 +2071,11 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 				   (term - bss->eap_req_id_text) - 1);
 			bss->eap_req_id_text_len--;
 		}
+	} else if (os_strcmp(buf, "erp_send_reauth_start") == 0) {
+		bss->erp_send_reauth_start = atoi(pos);
+	} else if (os_strcmp(buf, "erp_domain") == 0) {
+		os_free(bss->erp_domain);
+		bss->erp_domain = os_strdup(pos);
 	} else if (os_strcmp(buf, "wep_key_len_broadcast") == 0) {
 		bss->default_wep_key_len = atoi(pos);
 		if (bss->default_wep_key_len > 13) {

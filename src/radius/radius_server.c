@@ -2022,6 +2022,8 @@ static struct eapol_callbacks radius_server_eapol_cb =
 	.get_eap_user = radius_server_get_eap_user,
 	.get_eap_req_id_text = radius_server_get_eap_req_id_text,
 	.log_msg = radius_server_log_msg,
+	NULL,
+	NULL,
 };
 
 

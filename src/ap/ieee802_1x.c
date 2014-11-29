@@ -2003,6 +2003,8 @@ int ieee802_1x_init(struct hostapd_data *hapd)
 	conf.eap_sim_db_priv = hapd->eap_sim_db_priv;
 	conf.eap_req_id_text = hapd->conf->eap_req_id_text;
 	conf.eap_req_id_text_len = hapd->conf->eap_req_id_text_len;
+	conf.erp_send_reauth_start = hapd->conf->erp_send_reauth_start;
+	conf.erp_domain = hapd->conf->erp_domain;
 	conf.pac_opaque_encr_key = hapd->conf->pac_opaque_encr_key;
 	conf.eap_fast_a_id = hapd->conf->eap_fast_a_id;
 	conf.eap_fast_a_id_len = hapd->conf->eap_fast_a_id_len;

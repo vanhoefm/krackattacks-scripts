@@ -1,6 +1,6 @@
 /*
  * hostapd / EAP Full Authenticator state machine (RFC 4137)
- * Copyright (c) 2004-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -10,6 +10,7 @@
 #define EAP_H
 
 #include "common/defs.h"
+#include "utils/list.h"
 #include "eap_common/eap_defs.h"
 #include "eap_server/eap_methods.h"
 #include "wpabuf.h"
@@ -80,6 +81,17 @@ struct eap_eapol_interface {
 	Boolean aaaTimeout;
 };
 
+struct eap_server_erp_key {
+	struct dl_list list;
+	size_t rRK_len;
+	size_t rIK_len;
+	u8 rRK[ERP_MAX_KEY_LEN];
+	u8 rIK[ERP_MAX_KEY_LEN];
+	u32 recv_seq;
+	u8 cryptosuite;
+	char keyname_nai[];
+};
+
 struct eapol_callbacks {
 	int (*get_eap_user)(void *ctx, const u8 *identity, size_t identity_len,
 			    int phase2, struct eap_user *user);
@@ -87,6 +99,9 @@ struct eapol_callbacks {
 	void (*log_msg)(void *ctx, const char *msg);
 	int (*get_erp_send_reauth_start)(void *ctx);
 	const char * (*get_erp_domain)(void *ctx);
+	struct eap_server_erp_key * (*erp_get_key)(void *ctx,
+						   const char *keyname);
+	int (*erp_add_key)(void *ctx, struct eap_server_erp_key *erp);
 };
 
 struct eap_config {
@@ -115,6 +130,7 @@ struct eap_config {
 
 	const u8 *server_id;
 	size_t server_id_len;
+	int erp;
 
 #ifdef CONFIG_TESTING_OPTIONS
 	u32 tls_test_flags;

@@ -258,6 +258,12 @@ OBJS += ../src/l2_packet/l2_packet_none.o
 endif
 
 
+ifdef CONFIG_ERP
+CFLAGS += -DCONFIG_ERP
+NEED_SHA256=y
+NEED_HMAC_SHA256_KDF=y
+endif
+
 ifdef CONFIG_EAP_MD5
 CFLAGS += -DEAP_SERVER_MD5
 OBJS += ../src/eap_server/eap_server_md5.o
@@ -766,6 +772,9 @@ OBJS += ../src/crypto/sha256-internal.o
 endif
 ifdef NEED_TLS_PRF_SHA256
 OBJS += ../src/crypto/sha256-tlsprf.o
+endif
+ifdef NEED_HMAC_SHA256_KDF
+OBJS += ../src/crypto/sha256-kdf.o
 endif
 endif
 

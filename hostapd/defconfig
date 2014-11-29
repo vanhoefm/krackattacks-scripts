@@ -56,6 +56,9 @@ CONFIG_IEEE80211W=y
 # Integrated EAP server
 CONFIG_EAP=y
 
+# EAP Re-authentication Protocol (ERP) in integrated EAP server
+CONFIG_ERP=y
+
 # EAP-MD5 for the integrated EAP server
 CONFIG_EAP_MD5=y
 

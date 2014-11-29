@@ -834,6 +834,7 @@ eapol_auth_alloc(struct eapol_authenticator *eapol, const u8 *addr,
 	eap_conf.pbc_in_m1 = eapol->conf.pbc_in_m1;
 	eap_conf.server_id = eapol->conf.server_id;
 	eap_conf.server_id_len = eapol->conf.server_id_len;
+	eap_conf.erp = eapol->conf.erp;
 	sm->eap = eap_server_sm_init(sm, &eapol_cb, &eap_conf);
 	if (sm->eap == NULL) {
 		eapol_auth_free(sm);
@@ -1040,6 +1041,21 @@ static const char * eapol_sm_get_erp_domain(void *ctx)
 }
 
 
+static struct eap_server_erp_key * eapol_sm_erp_get_key(void *ctx,
+							const char *keyname)
+{
+	struct eapol_state_machine *sm = ctx;
+	return sm->eapol->cb.erp_get_key(sm->eapol->conf.ctx, keyname);
+}
+
+
+static int eapol_sm_erp_add_key(void *ctx, struct eap_server_erp_key *erp)
+{
+	struct eapol_state_machine *sm = ctx;
+	return sm->eapol->cb.erp_add_key(sm->eapol->conf.ctx, erp);
+}
+
+
 static struct eapol_callbacks eapol_cb =
 {
 	eapol_sm_get_eap_user,
@@ -1047,6 +1063,8 @@ static struct eapol_callbacks eapol_cb =
 	NULL,
 	eapol_sm_get_erp_send_reauth_start,
 	eapol_sm_get_erp_domain,
+	eapol_sm_erp_get_key,
+	eapol_sm_erp_add_key,
 };
 
 
@@ -1129,6 +1147,7 @@ static int eapol_auth_conf_clone(struct eapol_auth_config *dst,
 		dst->erp_domain = NULL;
 	}
 	dst->erp_send_reauth_start = src->erp_send_reauth_start;
+	dst->erp = src->erp;
 
 	return 0;
 
@@ -1183,6 +1202,8 @@ struct eapol_authenticator * eapol_auth_init(struct eapol_auth_config *conf,
 	eapol->cb.abort_auth = cb->abort_auth;
 	eapol->cb.tx_key = cb->tx_key;
 	eapol->cb.eapol_event = cb->eapol_event;
+	eapol->cb.erp_get_key = cb->erp_get_key;
+	eapol->cb.erp_add_key = cb->erp_add_key;
 
 	/* Acct-Multi-Session-Id should be unique over reboots. If reliable
 	 * clock is not available, this could be replaced with reboot counter,

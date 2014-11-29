@@ -1,6 +1,6 @@
 /*
  * hostapd / Initialization and configuration
- * Copyright (c) 2002-2013, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -10,6 +10,7 @@
 #define HOSTAPD_H
 
 #include "common/defs.h"
+#include "utils/list.h"
 #include "ap_config.h"
 #include "drivers/driver.h"
 
@@ -153,6 +154,7 @@ struct hostapd_data {
 	void *ssl_ctx;
 	void *eap_sim_db_priv;
 	struct radius_server_data *radius_srv;
+	struct dl_list erp_keys; /* struct eap_server_erp_key */
 
 	int parameter_set_count;
 

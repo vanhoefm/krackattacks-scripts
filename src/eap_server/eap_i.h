@@ -117,7 +117,7 @@ struct eap_sm {
 		EAP_RECEIVED2, EAP_DISCARD2, EAP_SEND_REQUEST2,
 		EAP_AAA_REQUEST, EAP_AAA_RESPONSE, EAP_AAA_IDLE,
 		EAP_TIMEOUT_FAILURE2, EAP_FAILURE2, EAP_SUCCESS2,
-		EAP_INITIATE_REAUTH_START
+		EAP_INITIATE_REAUTH_START, EAP_INITIATE_RECEIVED
 	} EAP_state;
 
 	/* Constants */
@@ -139,6 +139,7 @@ struct eap_sm {
 
 	/* Short-term (not maintained between packets) */
 	Boolean rxResp;
+	Boolean rxInitiate;
 	int respId;
 	EapType respMethod;
 	int respVendor;
@@ -208,6 +209,7 @@ struct eap_sm {
 
 	Boolean initiate_reauth_start_sent;
 	Boolean try_initiate_reauth;
+	int erp;
 
 #ifdef CONFIG_TESTING_OPTIONS
 	u32 tls_test_flags;

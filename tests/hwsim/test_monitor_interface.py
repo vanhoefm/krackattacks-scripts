@@ -41,3 +41,38 @@ def test_monitor_iface_wpa2_psk(dev, apdev):
     wpas.connect_network(id)
 
     dev[0].connect("monitor-iface-wpa2", psk="12345678", scan_freq="2412")
+
+def test_monitor_iface_multi_bss(dev, apdev):
+    """AP mode mmonitor interface with hostapd multi-BSS setup"""
+    params = { "ssid": "monitor-iface", "driver_params": "use_monitor=1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hostapd.add_bss('phy3', apdev[0]['ifname'] + '-2', 'bss-2.conf')
+    dev[0].connect("monitor-iface", key_mgmt="NONE", scan_freq="2412")
+    dev[1].connect("bss-2", key_mgmt="NONE", scan_freq="2412")
+
+def test_monitor_iface_unknown_sta(dev, apdev):
+    """AP mode monitor interface and Data frame from unknown STA"""
+    ssid = "monitor-iface-pmf"
+    passphrase = "12345678"
+    params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+    params["wpa_key_mgmt"] = "WPA-PSK-SHA256"
+    params["ieee80211w"] = "2"
+    params['driver_params'] = "use_monitor=1"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    bssid = apdev[0]['bssid']
+    addr = dev[0].p2p_interface_addr()
+    dev[0].connect(ssid, psk=passphrase, ieee80211w="2",
+                   key_mgmt="WPA-PSK-SHA256", proto="WPA2",
+                   scan_freq="2412")
+    dev[0].request("DROP_SA")
+    # This protected Deauth will be ignored by the STA
+    hapd.request("DEAUTHENTICATE " + addr)
+    # But the unprotected Deauth from TX frame-from-unassoc-STA will now be
+    # processed
+    dev[0].request("DATA_TEST_CONFIG 1")
+    dev[0].request("DATA_TEST_TX " + bssid + " " + addr + " 0")
+    dev[0].request("DATA_TEST_CONFIG 0")
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=5)
+    if ev is None:
+        raise Exception("No disconnection")

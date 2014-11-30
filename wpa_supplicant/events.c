@@ -3110,10 +3110,24 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		}
 		break;
 	case EVENT_AUTH_TIMED_OUT:
+		/* It is possible to get this event from earlier connection */
+		if (wpa_s->current_ssid &&
+		    wpa_s->current_ssid->mode == WPAS_MODE_MESH) {
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"Ignore AUTH_TIMED_OUT in mesh configuration");
+			break;
+		}
 		if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME)
 			sme_event_auth_timed_out(wpa_s, data);
 		break;
 	case EVENT_ASSOC_TIMED_OUT:
+		/* It is possible to get this event from earlier connection */
+		if (wpa_s->current_ssid &&
+		    wpa_s->current_ssid->mode == WPAS_MODE_MESH) {
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"Ignore ASSOC_TIMED_OUT in mesh configuration");
+			break;
+		}
 		if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME)
 			sme_event_assoc_timed_out(wpa_s, data);
 		break;

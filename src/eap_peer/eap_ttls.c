@@ -136,7 +136,7 @@ static void eap_ttls_phase2_eap_deinit(struct eap_sm *sm,
 static void eap_ttls_free_key(struct eap_ttls_data *data)
 {
 	if (data->key_data) {
-		bin_clear_free(data->key_data, EAP_TLS_KEY_LEN);
+		bin_clear_free(data->key_data, EAP_TLS_KEY_LEN + EAP_EMSK_LEN);
 		data->key_data = NULL;
 	}
 }
@@ -225,7 +225,8 @@ static int eap_ttls_v0_derive_key(struct eap_sm *sm,
 	eap_ttls_free_key(data);
 	data->key_data = eap_peer_tls_derive_key(sm, &data->ssl,
 						 "ttls keying material",
-						 EAP_TLS_KEY_LEN);
+						 EAP_TLS_KEY_LEN +
+						 EAP_EMSK_LEN);
 	if (!data->key_data) {
 		wpa_printf(MSG_INFO, "EAP-TTLS: Failed to derive key");
 		return -1;
@@ -233,6 +234,9 @@ static int eap_ttls_v0_derive_key(struct eap_sm *sm,
 
 	wpa_hexdump_key(MSG_DEBUG, "EAP-TTLS: Derived key",
 			data->key_data, EAP_TLS_KEY_LEN);
+	wpa_hexdump_key(MSG_DEBUG, "EAP-TTLS: Derived EMSK",
+			data->key_data + EAP_TLS_KEY_LEN,
+			EAP_EMSK_LEN);
 
 	os_free(data->session_id);
 	data->session_id = eap_peer_tls_derive_session_id(sm, &data->ssl,
@@ -1645,6 +1649,25 @@ static u8 * eap_ttls_get_session_id(struct eap_sm *sm, void *priv, size_t *len)
 }
 
 
+static u8 * eap_ttls_get_emsk(struct eap_sm *sm, void *priv, size_t *len)
+{
+	struct eap_ttls_data *data = priv;
+	u8 *key;
+
+	if (data->key_data == NULL)
+		return NULL;
+
+	key = os_malloc(EAP_EMSK_LEN);
+	if (key == NULL)
+		return NULL;
+
+	*len = EAP_EMSK_LEN;
+	os_memcpy(key, data->key_data + EAP_TLS_KEY_LEN, EAP_EMSK_LEN);
+
+	return key;
+}
+
+
 int eap_peer_ttls_register(void)
 {
 	struct eap_method *eap;
@@ -1665,6 +1688,7 @@ int eap_peer_ttls_register(void)
 	eap->has_reauth_data = eap_ttls_has_reauth_data;
 	eap->deinit_for_reauth = eap_ttls_deinit_for_reauth;
 	eap->init_for_reauth = eap_ttls_init_for_reauth;
+	eap->get_emsk = eap_ttls_get_emsk;
 
 	ret = eap_peer_method_register(eap);
 	if (ret)

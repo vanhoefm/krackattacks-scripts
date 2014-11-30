@@ -1193,6 +1193,38 @@ static u8 * eap_ttls_get_session_id(struct eap_sm *sm, void *priv, size_t *len)
 }
 
 
+static u8 * eap_ttls_get_emsk(struct eap_sm *sm, void *priv, size_t *len)
+{
+	struct eap_ttls_data *data = priv;
+	u8 *eapKeyData, *emsk;
+
+	if (data->state != SUCCESS)
+		return NULL;
+
+	eapKeyData = eap_server_tls_derive_key(sm, &data->ssl,
+					       "ttls keying material",
+					       EAP_TLS_KEY_LEN + EAP_EMSK_LEN);
+	if (eapKeyData) {
+		emsk = os_malloc(EAP_EMSK_LEN);
+		if (emsk)
+			os_memcpy(emsk, eapKeyData + EAP_TLS_KEY_LEN,
+				  EAP_EMSK_LEN);
+		bin_clear_free(eapKeyData, EAP_TLS_KEY_LEN + EAP_EMSK_LEN);
+	} else
+		emsk = NULL;
+
+	if (emsk) {
+		*len = EAP_EMSK_LEN;
+		wpa_hexdump(MSG_DEBUG, "EAP-TTLS: Derived EMSK",
+			    emsk, EAP_EMSK_LEN);
+	} else {
+		wpa_printf(MSG_DEBUG, "EAP-TTLS: Failed to derive EMSK");
+	}
+
+	return emsk;
+}
+
+
 int eap_server_ttls_register(void)
 {
 	struct eap_method *eap;
@@ -1212,6 +1244,7 @@ int eap_server_ttls_register(void)
 	eap->getKey = eap_ttls_getKey;
 	eap->isSuccess = eap_ttls_isSuccess;
 	eap->getSessionId = eap_ttls_get_session_id;
+	eap->get_emsk = eap_ttls_get_emsk;
 
 	ret = eap_server_method_register(eap);
 	if (ret)

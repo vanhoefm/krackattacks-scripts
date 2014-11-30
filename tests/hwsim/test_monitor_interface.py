@@ -76,3 +76,4 @@ def test_monitor_iface_unknown_sta(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=5)
     if ev is None:
         raise Exception("No disconnection")
+    dev[0].request("DISCONNECT")

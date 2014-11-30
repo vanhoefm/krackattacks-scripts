@@ -287,7 +287,7 @@ static u8 * eap_tls_get_emsk(struct eap_sm *sm, void *priv, size_t *len)
 		if (emsk)
 			os_memcpy(emsk, eapKeyData + EAP_TLS_KEY_LEN,
 				  EAP_EMSK_LEN);
-		os_free(eapKeyData);
+		bin_clear_free(eapKeyData, EAP_TLS_KEY_LEN + EAP_EMSK_LEN);
 	} else
 		emsk = NULL;
 

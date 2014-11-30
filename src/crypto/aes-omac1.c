@@ -65,6 +65,13 @@ int omac1_aes_128_vector(const u8 *key, size_t num_elem,
 		for (i = 0; i < AES_BLOCK_SIZE; i++) {
 			cbc[i] ^= *pos++;
 			if (pos >= end) {
+				/*
+				 * Stop if there are no more bytes to process
+				 * since there are no more entries in the array.
+				 */
+				if (i + 1 == AES_BLOCK_SIZE &&
+				    left == AES_BLOCK_SIZE)
+					break;
 				e++;
 				pos = addr[e];
 				end = pos + len[e];
@@ -83,6 +90,12 @@ int omac1_aes_128_vector(const u8 *key, size_t num_elem,
 		for (i = 0; i < left; i++) {
 			cbc[i] ^= *pos++;
 			if (pos >= end) {
+				/*
+				 * Stop if there are no more bytes to process
+				 * since there are no more entries in the array.
+				 */
+				if (i + 1 == left)
+					break;
 				e++;
 				pos = addr[e];
 				end = pos + len[e];

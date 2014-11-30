@@ -36,6 +36,7 @@ struct eap_pax_data {
 	u8 mk[EAP_PAX_MK_LEN];
 	u8 ck[EAP_PAX_CK_LEN];
 	u8 ick[EAP_PAX_ICK_LEN];
+	u8 mid[EAP_PAX_MID_LEN];
 	int keys_set;
 	char *cid;
 	size_t cid_len;
@@ -387,7 +388,7 @@ static void eap_pax_process_std_2(struct eap_sm *sm,
 
 	if (eap_pax_initial_key_derivation(data->mac_id, data->ak,
 					   data->rand.e, data->mk, data->ck,
-					   data->ick) < 0) {
+					   data->ick, data->mid) < 0) {
 		wpa_printf(MSG_INFO, "EAP-PAX: Failed to complete initial "
 			   "key derivation");
 		data->state = FAILURE;
@@ -541,6 +542,26 @@ static Boolean eap_pax_isSuccess(struct eap_sm *sm, void *priv)
 }
 
 
+static u8 * eap_pax_get_session_id(struct eap_sm *sm, void *priv, size_t *len)
+{
+	struct eap_pax_data *data = priv;
+	u8 *sid;
+
+	if (data->state != SUCCESS)
+		return NULL;
+
+	sid = os_malloc(1 + EAP_PAX_MID_LEN);
+	if (sid == NULL)
+		return NULL;
+
+	*len = 1 + EAP_PAX_MID_LEN;
+	sid[0] = EAP_TYPE_PAX;
+	os_memcpy(sid + 1, data->mid, EAP_PAX_MID_LEN);
+
+	return sid;
+}
+
+
 int eap_server_pax_register(void)
 {
 	struct eap_method *eap;
@@ -560,6 +581,7 @@ int eap_server_pax_register(void)
 	eap->getKey = eap_pax_getKey;
 	eap->isSuccess = eap_pax_isSuccess;
 	eap->get_emsk = eap_pax_get_emsk;
+	eap->getSessionId = eap_pax_get_session_id;
 
 	ret = eap_server_method_register(eap);
 	if (ret)

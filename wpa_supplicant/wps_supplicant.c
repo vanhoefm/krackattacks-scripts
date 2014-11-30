@@ -339,6 +339,8 @@ static void wpas_wps_remove_dup_network(struct wpa_supplicant *wpa_s,
 		/* Remove the duplicated older network entry. */
 		wpa_printf(MSG_DEBUG, "Remove duplicate network %d", ssid->id);
 		wpas_notify_network_removed(wpa_s, ssid);
+		if (wpa_s->current_ssid == ssid)
+			wpa_s->current_ssid = NULL;
 		wpa_config_remove_network(wpa_s->conf, ssid->id);
 	}
 }

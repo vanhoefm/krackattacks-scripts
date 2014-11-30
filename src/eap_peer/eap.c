@@ -459,7 +459,7 @@ static void eap_erp_remove_keys_realm(struct eap_sm *sm, const char *realm)
 #endif /* CONFIG_ERP */
 
 
-static void eap_peer_erp_free_keys(struct eap_sm *sm)
+void eap_peer_erp_free_keys(struct eap_sm *sm)
 {
 #ifdef CONFIG_ERP
 	struct eap_erp_key *erp, *tmp;

@@ -2121,3 +2121,10 @@ int eapol_sm_get_eap_proxy_imsi(struct eapol_sm *sm, char *imsi, size_t *len)
 	return -1;
 #endif /* CONFIG_EAP_PROXY */
 }
+
+
+void eapol_sm_erp_flush(struct eapol_sm *sm)
+{
+	if (sm)
+		eap_peer_erp_free_keys(sm->eap);
+}

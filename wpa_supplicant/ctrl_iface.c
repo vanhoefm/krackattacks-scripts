@@ -6930,6 +6930,13 @@ static int wpas_ctrl_iface_send_neigbor_rep(struct wpa_supplicant *wpa_s,
 }
 
 
+static int wpas_ctrl_iface_erp_flush(struct wpa_supplicant *wpa_s)
+{
+	eapol_sm_erp_flush(wpa_s->eapol);
+	return 0;
+}
+
+
 char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 					 char *buf, size_t *resp_len)
 {
@@ -7541,6 +7548,8 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strncmp(buf, "NEIGHBOR_REP_REQUEST", 20) == 0) {
 		if (wpas_ctrl_iface_send_neigbor_rep(wpa_s, buf + 20))
 			reply_len = -1;
+	} else if (os_strcmp(buf, "ERP_FLUSH") == 0) {
+		wpas_ctrl_iface_erp_flush(wpa_s);
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);
 		reply_len = 16;

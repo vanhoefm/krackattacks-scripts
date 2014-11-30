@@ -2510,6 +2510,12 @@ static int wpa_cli_cmd_neighbor_rep_request(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int wpa_cli_cmd_erp_flush(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "ERP_FLUSH");
+}
+
+
 enum wpa_cli_cmd_flags {
 	cli_cmd_flag_none		= 0x00,
 	cli_cmd_flag_sensitive		= 0x01
@@ -3023,6 +3029,8 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	  "[ssid=<SSID>] = Trigger request to AP for neighboring AP report "
 	  "(with optional given SSID, default: current SSID)"
 	},
+	{ "erp_flush", wpa_cli_cmd_erp_flush, NULL, cli_cmd_flag_none,
+	  "= flush ERP keys" },
 	{ NULL, NULL, NULL, cli_cmd_flag_none, NULL }
 };
 

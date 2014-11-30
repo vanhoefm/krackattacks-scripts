@@ -316,6 +316,7 @@ const char * eapol_sm_get_method_name(struct eapol_sm *sm);
 void eapol_sm_set_ext_pw_ctx(struct eapol_sm *sm,
 			     struct ext_password_data *ext);
 int eapol_sm_failed(struct eapol_sm *sm);
+void eapol_sm_erp_flush(struct eapol_sm *sm);
 int eapol_sm_get_eap_proxy_imsi(struct eapol_sm *sm, char *imsi, size_t *len);
 #else /* IEEE8021X_EAPOL */
 static inline struct eapol_sm *eapol_sm_init(struct eapol_ctx *ctx)
@@ -415,6 +416,9 @@ static inline void eapol_sm_set_ext_pw_ctx(struct eapol_sm *sm,
 static inline int eapol_sm_failed(struct eapol_sm *sm)
 {
 	return 0;
+}
+static inline void eapol_sm_erp_flush(struct eapol_sm *sm)
+{
 }
 #endif /* IEEE8021X_EAPOL */
 

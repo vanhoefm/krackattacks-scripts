@@ -2354,7 +2354,8 @@ void wpa_supplicant_select_network(struct wpa_supplicant *wpa_s,
 	wpa_s->disconnected = 0;
 	wpa_s->reassociate = 1;
 
-	if (wpa_supplicant_fast_associate(wpa_s) != 1)
+	if (wpa_s->connect_without_scan ||
+	    wpa_supplicant_fast_associate(wpa_s) != 1)
 		wpa_supplicant_req_scan(wpa_s, 0, disconnected ? 100000 : 0);
 
 	if (ssid)

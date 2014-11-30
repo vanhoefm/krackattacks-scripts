@@ -971,6 +971,13 @@ void mesh_mpm_action_rx(struct wpa_supplicant *wpa_s,
 		else
 			event = CLS_ACPT;
 		break;
+	default:
+		/*
+		 * This cannot be hit due to the action_field check above, but
+		 * compilers may not be able to figure that out and can warn
+		 * about uninitialized event below.
+		 */
+		return;
 	}
 	mesh_mpm_fsm(wpa_s, sta, event);
 }

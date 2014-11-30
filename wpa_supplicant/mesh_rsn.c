@@ -329,6 +329,12 @@ int mesh_rsn_auth_sae_sta(struct wpa_supplicant *wpa_s,
 	struct wpabuf *buf;
 	unsigned int rnd;
 
+	if (!ssid) {
+		wpa_msg(wpa_s, MSG_DEBUG,
+			"AUTH: No current_ssid known to initiate new SAE");
+		return -1;
+	}
+
 	if (!sta->sae) {
 		sta->sae = os_zalloc(sizeof(*sta->sae));
 		if (sta->sae == NULL)

@@ -310,9 +310,14 @@ static void mesh_mpm_send_plink_action(struct wpa_supplicant *wpa_s,
 		wpabuf_put_le16(buf, sta->peer_lid);
 	if (type == PLINK_CLOSE)
 		wpabuf_put_le16(buf, close_reason);
-	if (ampe)
+	if (ampe) {
+		if (sta->sae == NULL) {
+			wpa_msg(wpa_s, MSG_INFO, "Mesh MPM: no SAE session");
+			goto fail;
+		}
 		mesh_rsn_get_pmkid(wpa_s->mesh_rsn, sta,
 				   wpabuf_put(buf, PMKID_LEN));
+	}
 
 #ifdef CONFIG_IEEE80211N
 	if (type != PLINK_CLOSE &&

@@ -603,16 +603,16 @@ def test_go_neg_two_peers(dev):
 def clear_pbc_overlap(dev, ifname):
     hapd_global = hostapd.HostapdGlobal()
     hapd_global.remove(ifname)
+    dev[0].request("P2P_CANCEL")
+    dev[1].request("P2P_CANCEL")
     dev[0].p2p_stop_find()
     dev[1].p2p_stop_find()
     dev[0].dump_monitor()
     dev[1].dump_monitor()
     time.sleep(0.1)
-    dev[0].request("BSS_FLUSH 0")
-    dev[0].request("SCAN freq=2412 only_new=1")
-    dev[1].request("BSS_FLUSH 0")
-    dev[1].request("SCAN freq=2412 only_new=1")
-    time.sleep(1)
+    dev[0].flush_scan_cache()
+    dev[1].flush_scan_cache()
+    time.sleep(0.1)
 
 def test_grpform_pbc_overlap(dev, apdev):
     """P2P group formation during PBC overlap"""

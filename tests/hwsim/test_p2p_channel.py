@@ -207,10 +207,8 @@ def test_autogo_following_bss(dev, apdev):
 def test_go_neg_with_bss_connected(dev, apdev):
     """P2P channel selection: GO negotiation when station interface is connected"""
 
-    dev[0].request("BSS_FLUSH 0")
-    dev[0].request("SCAN freq=2412 only_new=1")
-    dev[1].request("BSS_FLUSH 0")
-    dev[1].request("SCAN freq=2412 only_new=1")
+    dev[0].flush_scan_cache()
+    dev[1].flush_scan_cache()
     dev[0].request("SET p2p_no_group_iface 0")
 
     hapd = hostapd.add_ap(apdev[0]['ifname'],
@@ -281,10 +279,8 @@ def test_go_neg_with_bss_on_disallowed_chan(dev, apdev):
             hapd = hostapd.add_ap(apdev[0]['ifname'],
                                   { "ssid": 'bss-2.4ghz', "channel": '1' })
             # make sure PBC overlap from old test cases is not maintained
-            dev[0].request("BSS_FLUSH 0")
-            dev[0].request("SCAN freq=2412 only_new=1")
-            dev[1].request("BSS_FLUSH 0")
-            dev[1].request("SCAN freq=2412 only_new=1")
+            dev[0].flush_scan_cache()
+            dev[1].flush_scan_cache()
             wpas.connect("bss-2.4ghz", key_mgmt="NONE", scan_freq="2412")
             wpas.request("P2P_SET disallow_freq 2412")
 
@@ -343,8 +339,7 @@ def test_go_neg_forced_freq_diff_than_bss_freq(dev, apdev):
            raise Exception("New radio does not support MCC")
 
         # Clear possible PBC session overlap from previous test case
-        dev[1].request("BSS_FLUSH 0")
-        dev[1].request("SCAN freq=2412 only_new=1")
+        dev[1].flush_scan_cache()
 
         wpas.request("SET p2p_no_group_iface 0")
 

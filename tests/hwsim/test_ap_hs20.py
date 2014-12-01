@@ -476,6 +476,7 @@ def test_ap_hs20_connect_api(dev, apdev):
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
     wpas.hs20_enable()
+    wpas.flush_scan_cache()
     id = wpas.add_cred_values({ 'realm': "example.com",
                                   'username': "hs20-test",
                                   'password': "password",
@@ -2114,7 +2115,7 @@ def test_ap_hs20_random_mac_addr(dev, apdev):
     wpas.request("SET preassoc_mac_addr 1")
     wpas.request("SET rand_addr_lifetime 60")
     wpas.hs20_enable()
-    wpas.scan(freq="2412", only_new=True)
+    wpas.flush_scan_cache()
     id = wpas.add_cred_values({ 'realm': "example.com",
                                   'username': "hs20-test",
                                   'password': "password",

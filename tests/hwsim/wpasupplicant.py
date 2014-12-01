@@ -809,7 +809,7 @@ class WpaSupplicant:
         else:
             cmd = "SCAN"
         if freq:
-            cmd = cmd + " freq=" + freq
+            cmd = cmd + " freq=" + str(freq)
         if only_new:
             cmd += " only_new=1"
         if not no_wait:
@@ -830,6 +830,10 @@ class WpaSupplicant:
             if self.get_bss(bssid) is not None:
                 return
         raise Exception("Could not find BSS " + bssid + " in scan")
+
+    def flush_scan_cache(self):
+        self.request("BSS_FLUSH 0")
+        self.scan(freq=2412, only_new=True)
 
     def roam(self, bssid, fail_test=False):
         self.dump_monitor()

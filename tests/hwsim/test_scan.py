@@ -288,10 +288,13 @@ def test_scan_for_auth(dev, apdev):
         raise Exception("Timeout while waiting radio work to start")
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412",
                    wait_connect=False)
+    dev[0].dump_monitor()
     # Clear cfg80211 BSS table.
-    subprocess.call(['sudo', 'iw', dev[0].ifname, 'scan', 'trigger',
-                     'freq', '2462', 'flush'])
-    time.sleep(0.1)
+    subprocess.call(['iw', dev[0].ifname, 'scan', 'trigger',
+                     'freq', '2457', 'flush'])
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], 5)
+    if ev is None:
+        raise Exception("External flush scan timed out")
     # Release blocking radio work to allow connection to go through with the
     # cfg80211 BSS entry missing.
     dev[0].request("RADIO_WORK done " + id)

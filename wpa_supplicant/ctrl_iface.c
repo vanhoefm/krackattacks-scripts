@@ -5976,6 +5976,7 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 	eapol_sm_notify_logoff(wpa_s->eapol, FALSE);
 
 	radio_remove_works(wpa_s, NULL, 1);
+	wpa_s->ext_work_in_progress = 0;
 
 	wpa_s->next_ssid = NULL;
 
@@ -6029,6 +6030,7 @@ static void wpas_ctrl_radio_work_timeout(void *eloop_ctx, void *timeout_ctx)
 		"Timing out external radio work %u (%s)",
 		ework->id, work->type);
 	wpa_msg(work->wpa_s, MSG_INFO, EXT_RADIO_WORK_TIMEOUT "%u", ework->id);
+	work->wpa_s->ext_work_in_progress = 0;
 	radio_work_done(work);
 	os_free(ework);
 }
@@ -6050,6 +6052,7 @@ static void wpas_ctrl_radio_work_cb(struct wpa_radio_work *work, int deinit)
 	wpa_dbg(work->wpa_s, MSG_DEBUG, "Starting external radio work %u (%s)",
 		ework->id, ework->type);
 	wpa_msg(work->wpa_s, MSG_INFO, EXT_RADIO_WORK_START "%u", ework->id);
+	work->wpa_s->ext_work_in_progress = 1;
 	if (!ework->timeout)
 		ework->timeout = 10;
 	eloop_register_timeout(ework->timeout, 0, wpas_ctrl_radio_work_timeout,
@@ -6129,6 +6132,7 @@ static int wpas_ctrl_radio_work_done(struct wpa_supplicant *wpa_s, char *cmd)
 			"Completed external radio work %u (%s)",
 			ework->id, ework->type);
 		eloop_cancel_timeout(wpas_ctrl_radio_work_timeout, work, NULL);
+		wpa_s->ext_work_in_progress = 0;
 		radio_work_done(work);
 		os_free(ework);
 		return 3; /* "OK\n" */

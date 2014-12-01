@@ -3513,6 +3513,11 @@ void radio_work_check_next(struct wpa_supplicant *wpa_s)
 
 	if (dl_list_empty(&radio->work))
 		return;
+	if (wpa_s->ext_work_in_progress) {
+		wpa_printf(MSG_DEBUG,
+			   "External radio work in progress - delay start of pending item");
+		return;
+	}
 	eloop_cancel_timeout(radio_start_next_work, radio, NULL);
 	eloop_register_timeout(0, 0, radio_start_next_work, radio, NULL);
 }

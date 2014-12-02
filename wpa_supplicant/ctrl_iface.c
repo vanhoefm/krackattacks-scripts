@@ -2048,7 +2048,7 @@ static int wpa_supplicant_ctrl_iface_log_level(struct wpa_supplicant *wpa_s,
 
 
 static int wpa_supplicant_ctrl_iface_list_networks(
-	struct wpa_supplicant *wpa_s, char *buf, size_t buflen)
+	struct wpa_supplicant *wpa_s, char *cmd, char *buf, size_t buflen)
 {
 	char *pos, *end;
 	struct wpa_ssid *ssid;
@@ -2063,6 +2063,17 @@ static int wpa_supplicant_ctrl_iface_list_networks(
 	pos += ret;
 
 	ssid = wpa_s->conf->ssid;
+
+	/* skip over ssids until we find next one */
+	if (cmd != NULL && os_strncmp(cmd, "LAST_ID=", 8) == 0) {
+		int last_id = atoi(cmd + 8);
+		if (last_id != -1) {
+			while (ssid != NULL && ssid->id <= last_id) {
+				ssid = ssid->next;
+			}
+		}
+	}
+
 	while (ssid) {
 		ret = os_snprintf(pos, end - pos, "%d\t%s",
 				  ssid->id,
@@ -7303,9 +7314,12 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strncmp(buf, "LOG_LEVEL", 9) == 0) {
 		reply_len = wpa_supplicant_ctrl_iface_log_level(
 			wpa_s, buf + 9, reply, reply_size);
+	} else if (os_strncmp(buf, "LIST_NETWORKS ", 14) == 0) {
+		reply_len = wpa_supplicant_ctrl_iface_list_networks(
+			wpa_s, buf + 14, reply, reply_size);
 	} else if (os_strcmp(buf, "LIST_NETWORKS") == 0) {
 		reply_len = wpa_supplicant_ctrl_iface_list_networks(
-			wpa_s, reply, reply_size);
+			wpa_s, NULL, reply, reply_size);
 	} else if (os_strcmp(buf, "DISCONNECT") == 0) {
 #ifdef CONFIG_SME
 		wpa_s->sme.prev_bssid_set = 0;

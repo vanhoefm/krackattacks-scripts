@@ -8651,6 +8651,7 @@ static char * wpas_global_ctrl_iface_redir_p2p(struct wpa_global *global,
 		"P2P_SERV_DISC_EXTERNAL ",
 		"P2P_SERVICE_ADD ",
 		"P2P_SERVICE_DEL ",
+		"P2P_SERVICE_REP ",
 		"P2P_REJECT ",
 		"P2P_INVITE ",
 		"P2P_PEER ",
@@ -8664,6 +8665,8 @@ static char * wpas_global_ctrl_iface_redir_p2p(struct wpa_global *global,
 		"NFC_GET_HANDOVER_SEL ",
 		"NFC_GET_HANDOVER_REQ ",
 		"NFC_REPORT_HANDOVER ",
+		"P2P_ASP_PROVISION ",
+		"P2P_ASP_PROVISION_RESP ",
 		NULL
 	};
 	int found = 0;

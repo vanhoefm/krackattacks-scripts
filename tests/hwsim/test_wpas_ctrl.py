@@ -199,6 +199,17 @@ def test_wpas_ctrl_network(dev):
     if "FAIL" not in dev[0].request('BSSID ' + str(id) + ' 00:11:22:33:44'):
         raise Exception("Unexpected BSSID success")
 
+def test_wpas_ctrl_many_networks(dev, apdev):
+    """wpa_supplicant ctrl_iface LIST_NETWORKS with huge number of networks"""
+    for i in range(1000):
+        id = dev[0].add_network()
+    res = dev[0].request("LIST_NETWORKS")
+    if str(id) in res:
+        raise Exception("Last added network was unexpectedly included")
+    res = dev[0].request("LIST_NETWORKS LAST_ID=%d" % (id - 2))
+    if str(id) not in res:
+        raise Exception("Last added network was not present when using LAST_ID")
+
 def test_wpas_ctrl_dup_network(dev, apdev):
     """wpa_supplicant ctrl_iface DUP_NETWORK"""
     ssid = "target"

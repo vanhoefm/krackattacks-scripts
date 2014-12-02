@@ -306,8 +306,9 @@ static int wpa_bss_known(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 static int wpa_bss_in_use(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 {
 	return bss == wpa_s->current_bss ||
-		os_memcmp(bss->bssid, wpa_s->bssid, ETH_ALEN) == 0 ||
-		os_memcmp(bss->bssid, wpa_s->pending_bssid, ETH_ALEN) == 0;
+		(!is_zero_ether_addr(bss->bssid) &&
+		 (os_memcmp(bss->bssid, wpa_s->bssid, ETH_ALEN) == 0 ||
+		  os_memcmp(bss->bssid, wpa_s->pending_bssid, ETH_ALEN) == 0));
 }
 
 

@@ -5440,7 +5440,15 @@ static int wpa_driver_nl80211_connect(
 	struct wpa_driver_nl80211_data *drv,
 	struct wpa_driver_associate_params *params)
 {
-	int ret = wpa_driver_nl80211_try_connect(drv, params);
+	int ret;
+
+	/* Store the connection attempted bssid for future use */
+	if (params->bssid)
+		os_memcpy(drv->auth_attempt_bssid, params->bssid, ETH_ALEN);
+	else
+		os_memset(drv->auth_attempt_bssid, 0, ETH_ALEN);
+
+	ret = wpa_driver_nl80211_try_connect(drv, params);
 	if (ret == -EALREADY) {
 		/*
 		 * cfg80211 does not currently accept new connections if

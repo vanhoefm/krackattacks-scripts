@@ -282,6 +282,7 @@ static void mlme_event_connect(struct wpa_driver_nl80211_data *drv,
 			       struct nlattr *ptk_kek)
 {
 	union wpa_event_data event;
+	u16 status_code;
 
 	if (drv->capa.flags & WPA_DRIVER_FLAGS_SME) {
 		/*
@@ -293,21 +294,41 @@ static void mlme_event_connect(struct wpa_driver_nl80211_data *drv,
 		return;
 	}
 
-	if (cmd == NL80211_CMD_CONNECT)
-		wpa_printf(MSG_DEBUG, "nl80211: Connect event");
-	else if (cmd == NL80211_CMD_ROAM)
+	status_code = status ? nla_get_u16(status) : WLAN_STATUS_SUCCESS;
+
+	if (cmd == NL80211_CMD_CONNECT) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Connect event (status=%u ignore_next_local_disconnect=%d)",
+			   status_code, drv->ignore_next_local_disconnect);
+	} else if (cmd == NL80211_CMD_ROAM) {
 		wpa_printf(MSG_DEBUG, "nl80211: Roam event");
+	}
 
 	os_memset(&event, 0, sizeof(event));
-	if (cmd == NL80211_CMD_CONNECT &&
-	    nla_get_u16(status) != WLAN_STATUS_SUCCESS) {
+	if (cmd == NL80211_CMD_CONNECT && status_code != WLAN_STATUS_SUCCESS) {
 		if (addr)
 			event.assoc_reject.bssid = nla_data(addr);
+		if (drv->ignore_next_local_disconnect) {
+			drv->ignore_next_local_disconnect = 0;
+			if (!event.assoc_reject.bssid ||
+			    (os_memcmp(event.assoc_reject.bssid,
+				       drv->auth_attempt_bssid,
+				       ETH_ALEN) != 0)) {
+				/*
+				 * Ignore the event that came without a BSSID or
+				 * for the old connection since this is likely
+				 * not relevant to the new Connect command.
+				 */
+				wpa_printf(MSG_DEBUG,
+					   "nl80211: Ignore connection failure event triggered during reassociation");
+				return;
+			}
+		}
 		if (resp_ie) {
 			event.assoc_reject.resp_ies = nla_data(resp_ie);
 			event.assoc_reject.resp_ies_len = nla_len(resp_ie);
 		}
-		event.assoc_reject.status_code = nla_get_u16(status);
+		event.assoc_reject.status_code = status_code;
 		wpa_supplicant_event(drv->ctx, EVENT_ASSOC_REJECT, &event);
 		return;
 	}

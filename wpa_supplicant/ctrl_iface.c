@@ -2050,7 +2050,7 @@ static int wpa_supplicant_ctrl_iface_log_level(struct wpa_supplicant *wpa_s,
 static int wpa_supplicant_ctrl_iface_list_networks(
 	struct wpa_supplicant *wpa_s, char *cmd, char *buf, size_t buflen)
 {
-	char *pos, *end;
+	char *pos, *end, *prev;
 	struct wpa_ssid *ssid;
 	int ret;
 
@@ -2075,11 +2075,12 @@ static int wpa_supplicant_ctrl_iface_list_networks(
 	}
 
 	while (ssid) {
+		prev = pos;
 		ret = os_snprintf(pos, end - pos, "%d\t%s",
 				  ssid->id,
 				  wpa_ssid_txt(ssid->ssid, ssid->ssid_len));
 		if (ret < 0 || ret >= end - pos)
-			return pos - buf;
+			return prev - buf;
 		pos += ret;
 		if (ssid->bssid_set) {
 			ret = os_snprintf(pos, end - pos, "\t" MACSTR,
@@ -2088,7 +2089,7 @@ static int wpa_supplicant_ctrl_iface_list_networks(
 			ret = os_snprintf(pos, end - pos, "\tany");
 		}
 		if (ret < 0 || ret >= end - pos)
-			return pos - buf;
+			return prev - buf;
 		pos += ret;
 		ret = os_snprintf(pos, end - pos, "\t%s%s%s%s",
 				  ssid == wpa_s->current_ssid ?
@@ -2099,11 +2100,11 @@ static int wpa_supplicant_ctrl_iface_list_networks(
 				  ssid->disabled == 2 ? "[P2P-PERSISTENT]" :
 				  "");
 		if (ret < 0 || ret >= end - pos)
-			return pos - buf;
+			return prev - buf;
 		pos += ret;
 		ret = os_snprintf(pos, end - pos, "\n");
 		if (ret < 0 || ret >= end - pos)
-			return pos - buf;
+			return prev - buf;
 		pos += ret;
 
 		ssid = ssid->next;

@@ -474,7 +474,7 @@ static void eap_peer_erp_init(struct eap_sm *sm)
 {
 #ifdef CONFIG_ERP
 	u8 *emsk = NULL;
-	size_t emsk_len;
+	size_t emsk_len = 0;
 	u8 EMSKname[EAP_EMSK_NAME_LEN];
 	u8 len[2];
 	char *realm;

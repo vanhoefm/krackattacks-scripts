@@ -27,6 +27,7 @@ struct eap_peer_ctx {
 	Boolean portEnabled;
 	Boolean altAccept; /* for EAP */
 	Boolean altReject; /* for EAP */
+	Boolean eapTriggerStart;
 
 	struct wpabuf *eapReqData; /* for EAP */
 
@@ -71,6 +72,8 @@ static Boolean peer_get_bool(void *ctx, enum eapol_bool_var variable)
 		return peer->altAccept;
 	case EAPOL_altReject:
 		return peer->altReject;
+	case EAPOL_eapTriggerStart:
+		return peer->eapTriggerStart;
 	}
 	return FALSE;
 }
@@ -109,6 +112,9 @@ static void peer_set_bool(void *ctx, enum eapol_bool_var variable,
 		break;
 	case EAPOL_altReject:
 		peer->altReject = value;
+		break;
+	case EAPOL_eapTriggerStart:
+		peer->eapTriggerStart = value;
 		break;
 	}
 }

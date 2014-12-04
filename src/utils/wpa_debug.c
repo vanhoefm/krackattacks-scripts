@@ -574,6 +574,14 @@ void wpa_debug_close_file(void)
 #endif /* CONFIG_DEBUG_FILE */
 }
 
+
+void wpa_debug_setup_stdout(void)
+{
+#ifndef _WIN32
+	setvbuf(stdout, NULL, _IOLBF, 0);
+#endif /* _WIN32 */
+}
+
 #endif /* CONFIG_NO_STDOUT_DEBUG */
 
 

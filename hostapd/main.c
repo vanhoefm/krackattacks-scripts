@@ -638,6 +638,8 @@ int main(int argc, char *argv[])
 
 	if (log_file)
 		wpa_debug_open_file(log_file);
+	else
+		wpa_debug_setup_stdout();
 #ifdef CONFIG_DEBUG_LINUX_TRACING
 	if (enable_trace_dbg) {
 		int tret = wpa_debug_open_linux_tracing();

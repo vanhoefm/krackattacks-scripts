@@ -408,6 +408,58 @@ static int session_teardown(const char *session_id, char *buf, size_t buflen)
 	return os_snprintf(buf, buflen, "OK\n");
 }
 
+
+#ifdef CONFIG_FST_TEST
+/* fst test_request */
+static int test_request(const char *request, char *buf, size_t buflen)
+{
+	const char *p = request;
+	int ret;
+
+	if (!os_strncasecmp(p, FST_CTR_SEND_SETUP_REQUEST,
+			    os_strlen(FST_CTR_SEND_SETUP_REQUEST))) {
+		ret = fst_test_req_send_fst_request(
+			p + os_strlen(FST_CTR_SEND_SETUP_REQUEST));
+	} else if (!os_strncasecmp(p, FST_CTR_SEND_SETUP_RESPONSE,
+				   os_strlen(FST_CTR_SEND_SETUP_RESPONSE))) {
+		ret = fst_test_req_send_fst_response(
+			p + os_strlen(FST_CTR_SEND_SETUP_RESPONSE));
+	} else if (!os_strncasecmp(p, FST_CTR_SEND_ACK_REQUEST,
+				   os_strlen(FST_CTR_SEND_ACK_REQUEST))) {
+		ret = fst_test_req_send_ack_request(
+			p + os_strlen(FST_CTR_SEND_ACK_REQUEST));
+	} else if (!os_strncasecmp(p, FST_CTR_SEND_ACK_RESPONSE,
+				   os_strlen(FST_CTR_SEND_ACK_RESPONSE))) {
+		ret = fst_test_req_send_ack_response(
+			p + os_strlen(FST_CTR_SEND_ACK_RESPONSE));
+	} else if (!os_strncasecmp(p, FST_CTR_SEND_TEAR_DOWN,
+				   os_strlen(FST_CTR_SEND_TEAR_DOWN))) {
+		ret = fst_test_req_send_tear_down(
+			p + os_strlen(FST_CTR_SEND_TEAR_DOWN));
+	} else if (!os_strncasecmp(p, FST_CTR_GET_FSTS_ID,
+				   os_strlen(FST_CTR_GET_FSTS_ID))) {
+		u32 fsts_id = fst_test_req_get_fsts_id(
+			p + os_strlen(FST_CTR_GET_FSTS_ID));
+		if (fsts_id != FST_FSTS_ID_NOT_FOUND)
+			return os_snprintf(buf, buflen, "%u\n", fsts_id);
+		return os_snprintf(buf, buflen, "FAIL\n");
+	} else if (!os_strncasecmp(p, FST_CTR_GET_LOCAL_MBIES,
+				   os_strlen(FST_CTR_GET_LOCAL_MBIES))) {
+		return fst_test_req_get_local_mbies(
+			p + os_strlen(FST_CTR_GET_LOCAL_MBIES), buf, buflen);
+	} else if (!os_strncasecmp(p, FST_CTR_IS_SUPPORTED,
+				   os_strlen(FST_CTR_IS_SUPPORTED))) {
+		ret = 0;
+	} else {
+		fst_printf(MSG_ERROR, "CTRL: Unknown parameter: %s", p);
+		return os_snprintf(buf, buflen, "FAIL\n");
+	}
+
+	return os_snprintf(buf, buflen, "%s\n", ret ? "FAIL" : "OK");
+}
+#endif /* CONFIG_FST_TEST */
+
+
 /* fst list_sessions */
 struct list_sessions_cb_ctx {
 	char *buf;
@@ -752,6 +804,9 @@ int fst_ctrl_iface_receive(const char *cmd, char *reply, size_t reply_size)
 		{ FST_CMD_SESSION_RESPOND, 1, session_respond},
 		{ FST_CMD_SESSION_TRANSFER, 1, session_transfer},
 		{ FST_CMD_SESSION_TEARDOWN, 1, session_teardown},
+#ifdef CONFIG_FST_TEST
+		{ FST_CMD_TEST_REQUEST, 1, test_request },
+#endif /* CONFIG_FST_TEST */
 		{ NULL, 0, NULL }
 	};
 	const struct fst_command *c;

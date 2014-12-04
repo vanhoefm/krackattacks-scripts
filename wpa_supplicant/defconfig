@@ -498,3 +498,6 @@ CONFIG_PEERKEY=y
 
 # Enable Fast Session Transfer (FST)
 #CONFIG_FST=y
+
+# Enable CLI commands for FST testing
+#CONFIG_FST_TEST=y

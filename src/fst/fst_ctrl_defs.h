@@ -67,6 +67,20 @@
 #define FST_CMD_SESSION_TRANSFER "session_transfer"
 #define FST_CMD_SESSION_TEARDOWN "session_teardown"
 
+#ifdef CONFIG_FST_TEST
+#define FST_CTR_PVAL_BAD_NEW_BAND        "bad_new_band"
+
+#define FST_CMD_TEST_REQUEST    "test_request"
+#define FST_CTR_IS_SUPPORTED        "is_supported"
+#define FST_CTR_SEND_SETUP_REQUEST  "send_setup_request"
+#define FST_CTR_SEND_SETUP_RESPONSE "send_setup_response"
+#define FST_CTR_SEND_ACK_REQUEST    "send_ack_request"
+#define FST_CTR_SEND_ACK_RESPONSE   "send_ack_response"
+#define FST_CTR_SEND_TEAR_DOWN      "send_tear_down"
+#define FST_CTR_GET_FSTS_ID         "get_fsts_id"
+#define FST_CTR_GET_LOCAL_MBIES     "get_local_mbies"
+#endif /* CONFIG_FST_TEST */
+
 /* Events */
 #define FST_CTRL_EVENT_IFACE "FST-EVENT-IFACE"
 #define FST_CEI_PNAME_IFNAME       "ifname"

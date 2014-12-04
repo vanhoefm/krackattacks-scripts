@@ -62,4 +62,19 @@ int fst_session_set_str_peer_addr(struct fst_session *s, const char *mac,
 				  Boolean is_old);
 int fst_session_set_str_llt(struct fst_session *s, const char *llt_str);
 
+#ifdef CONFIG_FST_TEST
+
+#define FST_FSTS_ID_NOT_FOUND ((u32) -1)
+
+int fst_test_req_send_fst_request(const char *params);
+int fst_test_req_send_fst_response(const char *params);
+int fst_test_req_send_ack_request(const char *params);
+int fst_test_req_send_ack_response(const char *params);
+int fst_test_req_send_tear_down(const char *params);
+u32 fst_test_req_get_fsts_id(const char *params);
+int fst_test_req_get_local_mbies(const char *request, char *buf,
+				 size_t buflen);
+
+#endif /* CONFIG_FST_TEST */
+
 #endif /* FST_SESSION_H */

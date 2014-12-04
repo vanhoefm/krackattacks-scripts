@@ -905,6 +905,9 @@ OBJS += ../src/fst/fst_group.o
 OBJS += ../src/fst/fst_iface.o
 OBJS += ../src/fst/fst_session.o
 OBJS += ../src/fst/fst_ctrl_aux.o
+ifdef CONFIG_FST_TEST
+CFLAGS += -DCONFIG_FST_TEST
+endif
 ifndef CONFIG_NO_CTRL_IFACE
 OBJS += ../src/fst/fst_ctrl_iface.o
 endif

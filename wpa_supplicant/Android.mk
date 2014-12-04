@@ -323,6 +323,9 @@ OBJS += src/fst/fst_session.c
 OBJS += src/fst/fst_iface.c
 OBJS += src/fst/fst_group.c
 OBJS += src/fst/fst_ctrl_aux.c
+ifdef CONFIG_FST_TEST
+L_CFLAGS += -DCONFIG_FST_TEST
+endif
 ifdef CONFIG_CTRL_IFACE
 OBJS += src/fst/fst_ctrl_iface.c
 endif

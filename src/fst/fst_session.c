@@ -14,6 +14,9 @@
 #include "fst/fst_internal.h"
 #include "fst/fst_defs.h"
 #include "fst/fst_ctrl_iface.h"
+#ifdef CONFIG_FST_TEST
+#include "fst/fst_ctrl_defs.h"
+#endif /* CONFIG_FST_TEST */
 
 #define US_80211_TU 1024
 
@@ -1272,3 +1275,285 @@ struct fst_session * fst_session_global_get_first_by_group(struct fst_group *g)
 	return NULL;
 }
 
+
+#ifdef CONFIG_FST_TEST
+
+static int get_group_fill_session(struct fst_group **g, struct fst_session *s)
+{
+	const u8 *old_addr, *new_addr;
+	struct fst_get_peer_ctx *ctx;
+
+	os_memset(s, 0, sizeof(*s));
+	*g = dl_list_first(&fst_global_groups_list,
+			   struct fst_group, global_groups_lentry);
+	if (!*g)
+		return EINVAL;
+
+	s->data.new_iface = dl_list_first(&(*g)->ifaces, struct fst_iface,
+					  group_lentry);
+	if (!s->data.new_iface)
+		return EINVAL;
+
+	s->data.old_iface = dl_list_entry(s->data.new_iface->group_lentry.next,
+					  struct fst_iface, group_lentry);
+	if (!s->data.old_iface)
+		return EINVAL;
+
+	old_addr = fst_iface_get_peer_first(s->data.old_iface, &ctx, TRUE);
+	if (!old_addr)
+		return EINVAL;
+
+	new_addr = fst_iface_get_peer_first(s->data.new_iface, &ctx, TRUE);
+	if (!new_addr)
+		return EINVAL;
+
+	os_memcpy(s->data.old_peer_addr, old_addr, ETH_ALEN);
+	os_memcpy(s->data.new_peer_addr, new_addr, ETH_ALEN);
+
+	return 0;
+}
+
+
+#define FST_MAX_COMMAND_WORD_NAME_LENGTH 16
+
+int fst_test_req_send_fst_request(const char *params)
+{
+	int fsts_id;
+	Boolean is_valid;
+	char *endp;
+	struct fst_setup_req req;
+	struct fst_session s;
+	struct fst_group *g;
+	enum hostapd_hw_mode hw_mode;
+	u8 channel;
+	char additional_param[FST_MAX_COMMAND_WORD_NAME_LENGTH];
+
+	fsts_id = fst_read_next_int_param(params, &is_valid, &endp);
+	if (!is_valid)
+		return EINVAL;
+
+	if (get_group_fill_session(&g, &s))
+		return EINVAL;
+
+	req.action = FST_ACTION_SETUP_REQUEST;
+	req.dialog_token = g->dialog_token;
+	req.llt = host_to_le32(FST_LLT_MS_DEFAULT);
+	/* 8.4.2.147 Session Transition element */
+	req.stie.element_id = WLAN_EID_SESSION_TRANSITION;
+	req.stie.length = sizeof(req.stie);
+	req.stie.fsts_id = host_to_le32(fsts_id);
+	req.stie.session_control = SESSION_CONTROL(SESSION_TYPE_BSS, 0);
+
+	fst_iface_get_channel_info(s.data.new_iface, &hw_mode, &channel);
+	req.stie.new_band_id = fst_hw_mode_to_band(hw_mode);
+	req.stie.new_band_op = 1;
+	req.stie.new_band_setup = 0;
+
+	fst_iface_get_channel_info(s.data.old_iface, &hw_mode, &channel);
+	req.stie.old_band_id = fst_hw_mode_to_band(hw_mode);
+	req.stie.old_band_op = 1;
+	req.stie.old_band_setup = 0;
+
+	if (!fst_read_next_text_param(endp, additional_param,
+				       sizeof(additional_param), &endp)) {
+		if (!os_strcasecmp(additional_param, FST_CTR_PVAL_BAD_NEW_BAND))
+			req.stie.new_band_id = req.stie.old_band_id;
+	}
+
+	return fst_session_send_action(&s, TRUE, &req, sizeof(req),
+				       s.data.old_iface->mb_ie);
+}
+
+
+int fst_test_req_send_fst_response(const char *params)
+{
+	int fsts_id;
+	Boolean is_valid;
+	char *endp;
+	struct fst_setup_res res;
+	struct fst_session s;
+	struct fst_group *g;
+	enum hostapd_hw_mode hw_mode;
+	u8 status_code;
+	u8 channel;
+	char response[FST_MAX_COMMAND_WORD_NAME_LENGTH];
+	struct fst_session *_s;
+
+	fsts_id = fst_read_next_int_param(params, &is_valid, &endp);
+	if (!is_valid)
+		return EINVAL;
+
+	if (get_group_fill_session(&g, &s))
+		return EINVAL;
+
+	status_code = WLAN_STATUS_SUCCESS;
+	if (!fst_read_next_text_param(endp, response, sizeof(response),
+				      &endp)) {
+		if (!os_strcasecmp(response, FST_CS_PVAL_RESPONSE_REJECT))
+			status_code = WLAN_STATUS_PENDING_ADMITTING_FST_SESSION;
+	}
+
+	os_memset(&res, 0, sizeof(res));
+
+	res.action = FST_ACTION_SETUP_RESPONSE;
+	/*
+	 * If some session has just received an FST Setup Request, then
+	 * use the correct dialog token copied from this request.
+	 */
+	_s = fst_find_session_in_progress(fst_session_get_peer_addr(&s, TRUE),
+					  g);
+	res.dialog_token = (_s && fst_session_is_ready_pending(_s)) ?
+		_s->data.pending_setup_req_dlgt : g->dialog_token;
+	res.status_code  = status_code;
+
+	if (res.status_code == WLAN_STATUS_SUCCESS) {
+		res.stie.element_id = WLAN_EID_SESSION_TRANSITION;
+		res.stie.length = sizeof(res.stie);
+		res.stie.fsts_id = fsts_id;
+		res.stie.session_control = SESSION_CONTROL(SESSION_TYPE_BSS, 0);
+
+		fst_iface_get_channel_info(s.data.new_iface, &hw_mode,
+					    &channel);
+		res.stie.new_band_id = fst_hw_mode_to_band(hw_mode);
+		res.stie.new_band_op = 1;
+		res.stie.new_band_setup = 0;
+
+		fst_iface_get_channel_info(s.data.old_iface, &hw_mode,
+					   &channel);
+		res.stie.old_band_id = fst_hw_mode_to_band(hw_mode);
+		res.stie.old_band_op = 1;
+		res.stie.old_band_setup = 0;
+	}
+
+	if (!fst_read_next_text_param(endp, response, sizeof(response),
+				      &endp)) {
+		if (!os_strcasecmp(response, FST_CTR_PVAL_BAD_NEW_BAND))
+			res.stie.new_band_id = res.stie.old_band_id;
+	}
+
+	return fst_session_send_action(&s, TRUE, &res, sizeof(res),
+				       s.data.old_iface->mb_ie);
+}
+
+
+int fst_test_req_send_ack_request(const char *params)
+{
+	int fsts_id;
+	Boolean is_valid;
+	char *endp;
+	struct fst_ack_req req;
+	struct fst_session s;
+	struct fst_group *g;
+
+	fsts_id = fst_read_next_int_param(params, &is_valid, &endp);
+	if (!is_valid)
+		return EINVAL;
+
+	if (get_group_fill_session(&g, &s))
+		return EINVAL;
+
+	os_memset(&req, 0, sizeof(req));
+	req.action = FST_ACTION_ACK_REQUEST;
+	req.dialog_token = g->dialog_token;
+	req.fsts_id = fsts_id;
+
+	return fst_session_send_action(&s, FALSE, &req, sizeof(req), NULL);
+}
+
+
+int fst_test_req_send_ack_response(const char *params)
+{
+	int fsts_id;
+	Boolean is_valid;
+	char *endp;
+	struct fst_ack_res res;
+	struct fst_session s;
+	struct fst_group *g;
+
+	fsts_id = fst_read_next_int_param(params, &is_valid, &endp);
+	if (!is_valid)
+		return EINVAL;
+
+	if (get_group_fill_session(&g, &s))
+		return EINVAL;
+
+	os_memset(&res, 0, sizeof(res));
+	res.action = FST_ACTION_ACK_RESPONSE;
+	res.dialog_token = g->dialog_token;
+	res.fsts_id = fsts_id;
+
+	return fst_session_send_action(&s, FALSE, &res, sizeof(res), NULL);
+}
+
+
+int fst_test_req_send_tear_down(const char *params)
+{
+	int fsts_id;
+	Boolean is_valid;
+	char *endp;
+	struct fst_tear_down td;
+	struct fst_session s;
+	struct fst_group *g;
+
+	fsts_id = fst_read_next_int_param(params, &is_valid, &endp);
+	if (!is_valid)
+		return EINVAL;
+
+	if (get_group_fill_session(&g, &s))
+		return EINVAL;
+
+	os_memset(&td, 0, sizeof(td));
+	td.action = FST_ACTION_TEAR_DOWN;
+	td.fsts_id = fsts_id;
+
+	return fst_session_send_action(&s, TRUE, &td, sizeof(td), NULL);
+}
+
+
+u32 fst_test_req_get_fsts_id(const char *params)
+{
+	int sid;
+	Boolean is_valid;
+	char *endp;
+	struct fst_session *s;
+
+	sid = fst_read_next_int_param(params, &is_valid, &endp);
+	if (!is_valid)
+		return FST_FSTS_ID_NOT_FOUND;
+
+	s = fst_session_get_by_id(sid);
+	if (!s)
+		return FST_FSTS_ID_NOT_FOUND;
+
+	return s->data.fsts_id;
+}
+
+
+int fst_test_req_get_local_mbies(const char *request, char *buf, size_t buflen)
+{
+	char *endp;
+	char ifname[FST_MAX_COMMAND_WORD_NAME_LENGTH];
+	struct fst_group *g;
+	struct fst_iface *iface;
+	int ret;
+
+	if (fst_read_next_text_param(request, ifname, sizeof(ifname), &endp) ||
+	    !*ifname)
+		goto problem;
+	g = dl_list_first(&fst_global_groups_list, struct fst_group,
+			  global_groups_lentry);
+	if (!g)
+		goto problem;
+	iface = fst_group_get_iface_by_name(g, ifname);
+	if (!iface || !iface->mb_ie)
+		goto problem;
+	ret = print_mb_ies(iface->mb_ie, buf, buflen);
+	if ((size_t) ret != wpabuf_len(iface->mb_ie) * 2)
+		fst_printf(MSG_WARNING, "MB IEs copied only partially");
+	return ret;
+
+problem:
+	return os_snprintf(buf, buflen, "FAIL\n");
+}
+
+#endif /* CONFIG_FST_TEST */

@@ -1593,6 +1593,9 @@ endif
 
 ifdef CONFIG_FST
 CFLAGS += -DCONFIG_FST
+ifdef CONFIG_FST_TEST
+CFLAGS += -DCONFIG_FST_TEST
+endif
 FST_OBJS += ../src/fst/fst.o
 FST_OBJS += ../src/fst/fst_session.o
 FST_OBJS += ../src/fst/fst_iface.o

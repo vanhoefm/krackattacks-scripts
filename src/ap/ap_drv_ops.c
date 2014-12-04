@@ -804,7 +804,7 @@ int hostapd_drv_do_acs(struct hostapd_data *hapd)
 	os_memset(&params, 0, sizeof(params));
 	params.hw_mode = hapd->iface->conf->hw_mode;
 	params.ht_enabled = !!(hapd->iface->conf->ieee80211n);
-	params.ht40_enabled = !!(hapd->iface->conf->ht_capab |
+	params.ht40_enabled = !!(hapd->iface->conf->ht_capab &
 				 HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET);
 	return hapd->driver->do_acs(hapd->drv_priv, &params);
 }

@@ -1366,8 +1366,8 @@ int p2p_prepare_channel(struct p2p_data *p2p, struct p2p_device *dev,
 	if (go)
 		p2p_channels_remove_freqs(&p2p->channels, &p2p->no_go_freq);
 	else if (!force_freq)
-		p2p_channels_union(&p2p->channels, &p2p->cfg->cli_channels,
-				   &p2p->channels);
+		p2p_channels_union_inplace(&p2p->channels,
+					   &p2p->cfg->cli_channels);
 	p2p_channels_dump(p2p, "after go/cli filter/add", &p2p->channels);
 
 	p2p_dbg(p2p, "Own preference for operation channel: Operating Class %u Channel %u%s",

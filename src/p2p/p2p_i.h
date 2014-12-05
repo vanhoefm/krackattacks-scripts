@@ -613,6 +613,8 @@ int p2p_freq_to_channel(unsigned int freq, u8 *op_class, u8 *channel);
 void p2p_channels_intersect(const struct p2p_channels *a,
 			    const struct p2p_channels *b,
 			    struct p2p_channels *res);
+void p2p_channels_union_inplace(struct p2p_channels *res,
+				const struct p2p_channels *b);
 void p2p_channels_union(const struct p2p_channels *a,
 			const struct p2p_channels *b,
 			struct p2p_channels *res);

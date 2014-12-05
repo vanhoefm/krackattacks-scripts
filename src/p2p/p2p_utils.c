@@ -193,19 +193,14 @@ static void p2p_op_class_union(struct p2p_reg_class *cl,
 
 
 /**
- * p2p_channels_union - Union of channel lists
- * @a: First set of channels
+ * p2p_channels_union_inplace - Inplace union of channel lists
+ * @res: Input data and place for returning union of the channel sets
  * @b: Second set of channels
- * @res: Data structure for returning the union of channels
  */
-void p2p_channels_union(const struct p2p_channels *a,
-			const struct p2p_channels *b,
-			struct p2p_channels *res)
+void p2p_channels_union_inplace(struct p2p_channels *res,
+				const struct p2p_channels *b)
 {
 	size_t i, j;
-
-	if (a != res)
-		os_memcpy(res, a, sizeof(*res));
 
 	for (i = 0; i < res->reg_classes; i++) {
 		struct p2p_reg_class *cl = &res->reg_class[i];
@@ -233,6 +228,21 @@ void p2p_channels_union(const struct p2p_channels *a,
 				  b_cl, sizeof(struct p2p_reg_class));
 		}
 	}
+}
+
+
+/**
+ * p2p_channels_union - Union of channel lists
+ * @a: First set of channels
+ * @b: Second set of channels
+ * @res: Data structure for returning the union of channels
+ */
+void p2p_channels_union(const struct p2p_channels *a,
+			const struct p2p_channels *b,
+			struct p2p_channels *res)
+{
+	os_memcpy(res, a, sizeof(*res));
+	p2p_channels_union_inplace(res, b);
 }
 
 

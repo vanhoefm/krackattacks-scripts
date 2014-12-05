@@ -402,10 +402,12 @@ static int scard_get_aid(struct scard_data *scard, unsigned char *aid,
 		unsigned char rid[5];
 		unsigned char appl_code[2]; /* 0x1002 for 3G USIM */
 	} *efdir;
-	unsigned char buf[127];
+	unsigned char buf[127], *aid_pos;
 	size_t blen;
+	unsigned int aid_len = 0;
 
 	efdir = (struct efdir *) buf;
+	aid_pos = &buf[4];
 	blen = sizeof(buf);
 	if (scard_select_file(scard, SCARD_FILE_EF_DIR, buf, &blen)) {
 		wpa_printf(MSG_DEBUG, "SCARD: Failed to read EF_DIR");
@@ -454,14 +456,15 @@ static int scard_get_aid(struct scard_data *scard, unsigned char *aid,
 			continue;
 		}
 
-		if (efdir->aid_len < 1 || efdir->aid_len > 16) {
-			wpa_printf(MSG_DEBUG, "SCARD: Invalid AID length %d",
-				   efdir->aid_len);
+		aid_len = efdir->aid_len;
+		if (aid_len < 1 || aid_len > 16) {
+			wpa_printf(MSG_DEBUG, "SCARD: Invalid AID length %u",
+				   aid_len);
 			continue;
 		}
 
 		wpa_hexdump(MSG_DEBUG, "SCARD: AID from EF_DIR record",
-			    efdir->rid, efdir->aid_len);
+			    aid_pos, aid_len);
 
 		if (efdir->appl_code[0] == 0x10 &&
 		    efdir->appl_code[1] == 0x02) {
@@ -477,14 +480,14 @@ static int scard_get_aid(struct scard_data *scard, unsigned char *aid,
 		return -1;
 	}
 
-	if (efdir->aid_len > maxlen) {
+	if (aid_len > maxlen) {
 		wpa_printf(MSG_DEBUG, "SCARD: Too long AID");
 		return -1;
 	}
 
-	os_memcpy(aid, efdir->rid, efdir->aid_len);
+	os_memcpy(aid, aid_pos, aid_len);
 
-	return efdir->aid_len;
+	return aid_len;
 }
 
 

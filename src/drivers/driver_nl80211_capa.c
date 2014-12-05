@@ -42,15 +42,16 @@ static u32 get_nl80211_protocol_features(struct wpa_driver_nl80211_data *drv)
 
 	msg = nlmsg_alloc();
 	if (!msg)
-		goto nla_put_failure;
+		return 0;
 
-	nl80211_cmd(drv, msg, 0, NL80211_CMD_GET_PROTOCOL_FEATURES);
+	if (!nl80211_cmd(drv, msg, 0, NL80211_CMD_GET_PROTOCOL_FEATURES)) {
+		nlmsg_free(msg);
+		return 0;
+	}
+
 	if (send_and_recv_msgs(drv, msg, protocol_feature_handler, &feat) == 0)
 		return feat;
 
-	msg = NULL;
-nla_put_failure:
-	nlmsg_free(msg);
 	return 0;
 }
 
@@ -581,6 +582,7 @@ static int wpa_driver_nl80211_get_info(struct wpa_driver_nl80211_data *drv,
 {
 	u32 feat;
 	struct nl_msg *msg;
+	int flags = 0;
 
 	os_memset(info, 0, sizeof(*info));
 	info->capa = &drv->capa;
@@ -592,13 +594,13 @@ static int wpa_driver_nl80211_get_info(struct wpa_driver_nl80211_data *drv,
 
 	feat = get_nl80211_protocol_features(drv);
 	if (feat & NL80211_PROTOCOL_FEATURE_SPLIT_WIPHY_DUMP)
-		nl80211_cmd(drv, msg, NLM_F_DUMP, NL80211_CMD_GET_WIPHY);
-	else
-		nl80211_cmd(drv, msg, 0, NL80211_CMD_GET_WIPHY);
-
-	NLA_PUT_FLAG(msg, NL80211_ATTR_SPLIT_WIPHY_DUMP);
-	if (nl80211_set_iface_id(msg, drv->first_bss) < 0)
-		goto nla_put_failure;
+		flags = NLM_F_DUMP;
+	if (!nl80211_cmd(drv, msg, flags, NL80211_CMD_GET_WIPHY) ||
+	    nla_put_flag(msg, NL80211_ATTR_SPLIT_WIPHY_DUMP) ||
+	    nl80211_set_iface_id(msg, drv->first_bss) < 0) {
+		nlmsg_free(msg);
+		return -1;
+	}
 
 	if (send_and_recv_msgs(drv, msg, wiphy_info_handler, info))
 		return -1;
@@ -637,9 +639,6 @@ static int wpa_driver_nl80211_get_info(struct wpa_driver_nl80211_data *drv,
 	drv->capa.wmm_ac_supported = info->wmm_ac_supported;
 
 	return 0;
-nla_put_failure:
-	nlmsg_free(msg);
-	return -1;
 }
 
 
@@ -686,20 +685,18 @@ static void qca_nl80211_check_dfs_capa(struct wpa_driver_nl80211_data *drv)
 	if (!msg)
 		return;
 
-	nl80211_cmd(drv, msg, 0, NL80211_CMD_VENDOR);
-
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
-	NLA_PUT_U32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA);
-	NLA_PUT_U32(msg, NL80211_ATTR_VENDOR_SUBCMD,
-		    QCA_NL80211_VENDOR_SUBCMD_DFS_CAPABILITY);
+	if (!nl80211_cmd(drv, msg, 0, NL80211_CMD_VENDOR) ||
+	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, drv->ifindex) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_DFS_CAPABILITY)) {
+		nlmsg_free(msg);
+		return;
+	}
 
 	ret = send_and_recv_msgs(drv, msg, dfs_info_handler, &dfs_capability);
 	if (!ret && dfs_capability)
 		drv->capa.flags |= WPA_DRIVER_FLAGS_DFS_OFFLOAD;
-	msg = NULL;
-
- nla_put_failure:
-	nlmsg_free(msg);
 }
 
 
@@ -1416,6 +1413,7 @@ nl80211_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags)
 	u32 feat;
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
+	int nl_flags = 0;
 	struct nl_msg *msg;
 	struct phy_info_arg result = {
 		.num_modes = num_modes,
@@ -1432,21 +1430,19 @@ nl80211_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags)
 
 	feat = get_nl80211_protocol_features(drv);
 	if (feat & NL80211_PROTOCOL_FEATURE_SPLIT_WIPHY_DUMP)
-		nl80211_cmd(drv, msg, NLM_F_DUMP, NL80211_CMD_GET_WIPHY);
-	else
-		nl80211_cmd(drv, msg, 0, NL80211_CMD_GET_WIPHY);
-
-	NLA_PUT_FLAG(msg, NL80211_ATTR_SPLIT_WIPHY_DUMP);
-	if (nl80211_set_iface_id(msg, bss) < 0)
-		goto nla_put_failure;
+		nl_flags = NLM_F_DUMP;
+	if (!nl80211_cmd(drv, msg, nl_flags, NL80211_CMD_GET_WIPHY) ||
+	    nla_put_flag(msg, NL80211_ATTR_SPLIT_WIPHY_DUMP) ||
+	    nl80211_set_iface_id(msg, bss) < 0) {
+		nlmsg_free(msg);
+		return NULL;
+	}
 
 	if (send_and_recv_msgs(drv, msg, phy_info_handler, &result) == 0) {
 		nl80211_set_regulatory_flags(drv, &result);
 		return wpa_driver_nl80211_postprocess_modes(result.modes,
 							    num_modes);
 	}
-	msg = NULL;
- nla_put_failure:
-	nlmsg_free(msg);
+
 	return NULL;
 }

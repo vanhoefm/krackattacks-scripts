@@ -10,6 +10,7 @@
 
 #include "utils/common.h"
 #include "utils/eloop.h"
+#include "utils/list.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
 #include "crypto/aes_wrap.h"
@@ -1310,7 +1311,9 @@ static int wpa_ft_rrb_rx_pull(struct wpa_authenticator *wpa_auth,
 			      const u8 *src_addr,
 			      const u8 *data, size_t data_len)
 {
-	struct ft_r0kh_r1kh_pull_frame *frame, f;
+	struct ft_r0kh_r1kh_pull_frame f;
+	const u8 *crypt;
+	u8 *plain;
 	struct ft_remote_r1kh *r1kh;
 	struct ft_r0kh_r1kh_resp_frame resp, r;
 	u8 pmk_r0[PMK_LEN];
@@ -1318,7 +1321,7 @@ static int wpa_ft_rrb_rx_pull(struct wpa_authenticator *wpa_auth,
 
 	wpa_printf(MSG_DEBUG, "FT: Received PMK-R1 pull");
 
-	if (data_len < sizeof(*frame))
+	if (data_len < sizeof(f))
 		return -1;
 
 	r1kh = wpa_auth->conf.r1kh_list;
@@ -1334,12 +1337,14 @@ static int wpa_ft_rrb_rx_pull(struct wpa_authenticator *wpa_auth,
 		return -1;
 	}
 
-	frame = (struct ft_r0kh_r1kh_pull_frame *) data;
+	crypt = data + offsetof(struct ft_r0kh_r1kh_pull_frame, nonce);
+	os_memset(&f, 0, sizeof(f));
+	plain = ((u8 *) &f) + offsetof(struct ft_r0kh_r1kh_pull_frame, nonce);
 	/* aes_unwrap() does not support inplace decryption, so use a temporary
 	 * buffer for the data. */
 	if (aes_unwrap(r1kh->key, sizeof(r1kh->key),
 		       (FT_R0KH_R1KH_PULL_DATA_LEN + 7) / 8,
-		       frame->nonce, f.nonce) < 0) {
+		       crypt, plain) < 0) {
 		wpa_printf(MSG_DEBUG, "FT: Failed to decrypt PMK-R1 pull "
 			   "request from " MACSTR, MAC2STR(src_addr));
 		return -1;
@@ -1442,13 +1447,15 @@ static int wpa_ft_rrb_rx_resp(struct wpa_authenticator *wpa_auth,
 			      const u8 *src_addr,
 			      const u8 *data, size_t data_len)
 {
-	struct ft_r0kh_r1kh_resp_frame *frame, f;
+	struct ft_r0kh_r1kh_resp_frame f;
+	const u8 *crypt;
+	u8 *plain;
 	struct ft_remote_r0kh *r0kh;
 	int pairwise, res;
 
 	wpa_printf(MSG_DEBUG, "FT: Received PMK-R1 pull response");
 
-	if (data_len < sizeof(*frame))
+	if (data_len < sizeof(f))
 		return -1;
 
 	r0kh = wpa_auth->conf.r0kh_list;
@@ -1464,12 +1471,14 @@ static int wpa_ft_rrb_rx_resp(struct wpa_authenticator *wpa_auth,
 		return -1;
 	}
 
-	frame = (struct ft_r0kh_r1kh_resp_frame *) data;
+	crypt = data + offsetof(struct ft_r0kh_r1kh_resp_frame, nonce);
+	os_memset(&f, 0, sizeof(f));
+	plain = ((u8 *) &f) + offsetof(struct ft_r0kh_r1kh_resp_frame, nonce);
 	/* aes_unwrap() does not support inplace decryption, so use a temporary
 	 * buffer for the data. */
 	if (aes_unwrap(r0kh->key, sizeof(r0kh->key),
 		       (FT_R0KH_R1KH_RESP_DATA_LEN + 7) / 8,
-		       frame->nonce, f.nonce) < 0) {
+		       crypt, plain) < 0) {
 		wpa_printf(MSG_DEBUG, "FT: Failed to decrypt PMK-R1 pull "
 			   "response from " MACSTR, MAC2STR(src_addr));
 		return -1;
@@ -1507,7 +1516,9 @@ static int wpa_ft_rrb_rx_push(struct wpa_authenticator *wpa_auth,
 			      const u8 *src_addr,
 			      const u8 *data, size_t data_len)
 {
-	struct ft_r0kh_r1kh_push_frame *frame, f;
+	struct ft_r0kh_r1kh_push_frame f;
+	const u8 *crypt;
+	u8 *plain;
 	struct ft_remote_r0kh *r0kh;
 	struct os_time now;
 	os_time_t tsend;
@@ -1515,7 +1526,7 @@ static int wpa_ft_rrb_rx_push(struct wpa_authenticator *wpa_auth,
 
 	wpa_printf(MSG_DEBUG, "FT: Received PMK-R1 push");
 
-	if (data_len < sizeof(*frame))
+	if (data_len < sizeof(f))
 		return -1;
 
 	r0kh = wpa_auth->conf.r0kh_list;
@@ -1531,12 +1542,15 @@ static int wpa_ft_rrb_rx_push(struct wpa_authenticator *wpa_auth,
 		return -1;
 	}
 
-	frame = (struct ft_r0kh_r1kh_push_frame *) data;
+	crypt = data + offsetof(struct ft_r0kh_r1kh_push_frame, timestamp);
+	os_memset(&f, 0, sizeof(f));
+	plain = ((u8 *) &f) + offsetof(struct ft_r0kh_r1kh_push_frame,
+				       timestamp);
 	/* aes_unwrap() does not support inplace decryption, so use a temporary
 	 * buffer for the data. */
 	if (aes_unwrap(r0kh->key, sizeof(r0kh->key),
 		       (FT_R0KH_R1KH_PUSH_DATA_LEN + 7) / 8,
-		       frame->timestamp, f.timestamp) < 0) {
+		       crypt, plain) < 0) {
 		wpa_printf(MSG_DEBUG, "FT: Failed to decrypt PMK-R1 push from "
 			   MACSTR, MAC2STR(src_addr));
 		return -1;

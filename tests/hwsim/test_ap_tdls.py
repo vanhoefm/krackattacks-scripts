@@ -125,7 +125,7 @@ def setup_tdls(sta0, sta1, ap, reverse=False, expect_fail=False):
     tdls_check_dl(sta0, sta1, bssid, addr0, addr1)
     check_connectivity(sta0, sta1, hapd)
 
-def teardown_tdls(sta0, sta1, ap, responder=False):
+def teardown_tdls(sta0, sta1, ap, responder=False, wildcard=False):
     logger.info("Teardown TDLS")
     hapd = hostapd.Hostapd(ap['ifname'])
     check_connectivity(sta0, sta1, hapd)
@@ -134,6 +134,8 @@ def teardown_tdls(sta0, sta1, ap, responder=False):
     addr1 = sta1.p2p_interface_addr()
     if responder:
         sta1.tdls_teardown(addr0)
+    elif wildcard:
+        sta0.tdls_teardown("*")
     else:
         sta0.tdls_teardown(addr1)
     time.sleep(1)
@@ -290,6 +292,7 @@ def test_ap_open_tdls(dev, apdev):
     setup_tdls(dev[0], dev[1], apdev[0])
     teardown_tdls(dev[0], dev[1], apdev[0])
     setup_tdls(dev[1], dev[0], apdev[0])
+    teardown_tdls(dev[1], dev[0], apdev[0], wildcard=True)
 
 def test_ap_wpa2_tdls_bssid_mismatch(dev, apdev):
     """TDLS failure due to BSSID mismatch"""

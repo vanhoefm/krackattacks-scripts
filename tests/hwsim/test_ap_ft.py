@@ -220,6 +220,18 @@ def test_ap_ft_over_ds_many(dev, apdev):
     run_roams(dev[0], apdev, hapd0, hapd1, ssid, passphrase, over_ds=True,
               roams=50)
 
+def test_ap_ft_over_ds_unknown_target(dev, apdev):
+    """WPA2-PSK-FT AP"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    hapd0 = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
+                   scan_freq="2412")
+    dev[0].roam_over_ds("02:11:22:33:44:55", fail_test=True)
+
 def test_ap_ft_pmf_over_ds(dev, apdev):
     """WPA2-PSK-FT AP over DS with PMF"""
     ssid = "test-ft"

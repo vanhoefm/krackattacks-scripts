@@ -1724,6 +1724,8 @@ static void wpa_ft_generate_pmk_r1(struct wpa_authenticator *wpa_auth,
 {
 	struct ft_r0kh_r1kh_push_frame frame, f;
 	struct os_time now;
+	const u8 *plain;
+	u8 *crypt;
 
 	os_memset(&frame, 0, sizeof(frame));
 	frame.frame_type = RSN_REMOTE_FRAME_TYPE_FT_RRB;
@@ -1746,9 +1748,13 @@ static void wpa_ft_generate_pmk_r1(struct wpa_authenticator *wpa_auth,
 	WPA_PUT_LE32(f.timestamp, now.sec);
 	f.pairwise = host_to_le16(pairwise);
 	os_memset(f.pad, 0, sizeof(f.pad));
+	plain = ((const u8 *) &f) + offsetof(struct ft_r0kh_r1kh_push_frame,
+					     timestamp);
+	crypt = ((u8 *) &frame) + offsetof(struct ft_r0kh_r1kh_push_frame,
+					   timestamp);
 	if (aes_wrap(r1kh->key, sizeof(r1kh->key),
 		     (FT_R0KH_R1KH_PUSH_DATA_LEN + 7) / 8,
-		     f.timestamp, frame.timestamp) < 0)
+		     plain, crypt) < 0)
 		return;
 
 	wpa_ft_rrb_send(wpa_auth, r1kh->addr, (u8 *) &frame, sizeof(frame));

@@ -703,6 +703,10 @@ def test_wpas_ctrl_set_uapsd(dev):
 def test_wpas_ctrl_set(dev):
     """wpa_supplicant ctrl_iface SET"""
     vals = [ "foo",
+             "ampdu 0",
+             "radio_disable 0",
+             "ps 10",
+             "ps 1",
              "dot11RSNAConfigPMKLifetime 0",
              "dot11RSNAConfigPMKReauthThreshold 101",
              "dot11RSNAConfigSATimeout 0",
@@ -717,6 +721,9 @@ def test_wpas_ctrl_set(dev):
              "EAPOL::startPeriod 30",
              "EAPOL::maxStart 3",
              "dot11RSNAConfigSATimeout 60",
+             "ps -1",
+             "ps 0",
+             "no_keep_alive 0",
              "tdls_disabled 1",
              "tdls_disabled 0" ]
     for val in vals:

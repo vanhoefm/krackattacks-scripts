@@ -665,6 +665,11 @@ def test_wpas_ctrl_disallow_aps(dev, apdev):
     if ev is not None:
         raise Exception("Unexpected reassociation")
 
+    dev[0].request("DISCONNECT")
+    dev[0].p2p_start_go(freq=2412)
+    if "OK" not in dev[0].request("SET disallow_aps "):
+        raise Exception("Failed to set disallow_aps")
+
 def test_wpas_ctrl_blob(dev):
     """wpa_supplicant ctrl_iface SET blob"""
     if "FAIL" not in dev[0].request("SET blob foo"):

@@ -1276,8 +1276,9 @@ static int wpa_supplicant_process_1_of_2_wpa(struct wpa_sm *sm,
 					     u16 ver, struct wpa_gtk_data *gd)
 {
 	size_t maxkeylen;
+	u16 gtk_len;
 
-	gd->gtk_len = WPA_GET_BE16(key->key_length);
+	gtk_len = WPA_GET_BE16(key->key_length);
 	maxkeylen = key_data_len;
 	if (ver == WPA_KEY_INFO_TYPE_HMAC_SHA1_AES) {
 		if (maxkeylen < 8) {
@@ -1289,11 +1290,13 @@ static int wpa_supplicant_process_1_of_2_wpa(struct wpa_sm *sm,
 		maxkeylen -= 8;
 	}
 
-	if (wpa_supplicant_check_group_cipher(sm, sm->group_cipher,
-					      gd->gtk_len, maxkeylen,
+	if (gtk_len > maxkeylen ||
+	    wpa_supplicant_check_group_cipher(sm, sm->group_cipher,
+					      gtk_len, maxkeylen,
 					      &gd->key_rsc_len, &gd->alg))
 		return -1;
 
+	gd->gtk_len = gtk_len;
 	gd->keyidx = (key_info & WPA_KEY_INFO_KEY_INDEX_MASK) >>
 		WPA_KEY_INFO_KEY_INDEX_SHIFT;
 	if (ver == WPA_KEY_INFO_TYPE_HMAC_MD5_RC4) {

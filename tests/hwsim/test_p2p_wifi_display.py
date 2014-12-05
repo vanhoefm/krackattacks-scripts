@@ -231,7 +231,7 @@ def test_wifi_display_go_invite(dev):
         dev[0].p2p_start_go(freq=2412)
 
         # Add test client to the group
-        connect_cli(dev[0], dev[2])
+        connect_cli(dev[0], dev[2], social=True, freq=2412)
 
         logger.info("Invite peer to join the group")
         dev[0].p2p_go_authorize_client(pin)
@@ -274,7 +274,7 @@ def test_wifi_display_persistent_group(dev):
             raise Exception("Not the persistent group data")
         if "OK" not in dev[0].global_request("P2P_GROUP_ADD persistent=" + networks[0]['id'] + " freq=" + listen_freq):
             raise Exception("Could not state GO")
-        connect_cli(dev[0], dev[2])
+        connect_cli(dev[0], dev[2], social=True, freq=listen_freq)
         invite_from_cli(dev[0], dev[1])
 
     finally:

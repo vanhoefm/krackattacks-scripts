@@ -721,19 +721,30 @@ class WpaSupplicant:
             raise Exception("Failed to request TDLS teardown")
         return None
 
-    def add_ts(self, tsid, up):
+    def add_ts(self, tsid, up, direction="downlink", expect_failure=False,
+               extra=None):
         params = {
             "sba": 9000,
             "nominal_msdu_size": 1500,
             "min_phy_rate": 6000000,
             "mean_data_rate": 1500,
         }
-        cmd = "WMM_AC_ADDTS downlink tsid=%d up=%d" % (tsid, up)
+        cmd = "WMM_AC_ADDTS %s tsid=%d up=%d" % (direction, tsid, up)
         for (key, value) in params.iteritems():
             cmd += " %s=%d" % (key, value)
+        if extra:
+            cmd += " " + extra
 
         if self.request(cmd).strip() != "OK":
             raise Exception("ADDTS failed (tsid=%d up=%d)" % (tsid, up))
+
+        if expect_failure:
+            ev = self.wait_event(["TSPEC-REQ-FAILED"], timeout=2)
+            if ev is None:
+                raise Exception("ADDTS failed (time out while waiting failure)")
+            if "tsid=%d" % (tsid) not in ev:
+                raise Exception("ADDTS failed (invalid tsid in TSPEC-REQ-FAILED")
+            return
 
         ev = self.wait_event(["TSPEC-ADDED"], timeout=1)
         if ev is None:

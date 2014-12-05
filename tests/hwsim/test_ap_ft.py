@@ -92,14 +92,16 @@ def run_roams(dev, apdev, hapd0, hapd1, ssid, passphrase, over_ds=False, sae=Fal
     logger.info("Connect to first AP")
     if eap:
         dev.connect(ssid, key_mgmt="FT-EAP", proto="WPA2", ieee80211w="1",
-                    eap="EKE", identity="eke user", password="hello")
+                    eap="GPSK", identity="gpsk user",
+                    password="abcdefghijklmnop0123456789abcdef",
+                    scan_freq="2412")
     else:
         if sae:
             key_mgmt="FT-SAE"
         else:
             key_mgmt="FT-PSK"
         dev.connect(ssid, psk=passphrase, key_mgmt=key_mgmt, proto="WPA2",
-                    ieee80211w="1")
+                    ieee80211w="1", scan_freq="2412")
     if dev.get_status_field('bssid') == apdev[0]['bssid']:
         ap1 = apdev[0]
         ap2 = apdev[1]
@@ -383,7 +385,8 @@ def test_ap_ft_mismatching_r0kh_id_pull(dev, apdev):
     params["pmk_r1_push"] = "0"
     params["nas_identifier"] = "nas0.w1.fi"
     hostapd.add_ap(apdev[0]['ifname'], params)
-    dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2")
+    dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
+                   scan_freq="2412")
 
     params = ft_params2(ssid=ssid, passphrase=passphrase)
     params["pmk_r1_push"] = "0"
@@ -432,7 +435,7 @@ def test_ap_ft_gtk_rekey(dev, apdev):
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
 
     dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
-                   ieee80211w="1")
+                   ieee80211w="1", scan_freq="2412")
 
     ev = dev[0].wait_event(["WPA: Group rekeying completed"], timeout=2)
     if ev is None:

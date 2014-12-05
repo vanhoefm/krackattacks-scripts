@@ -359,10 +359,33 @@ def test_wnm_bss_keep_alive(dev, apdev):
     """WNM keep-alive"""
     params = { "ssid": "test-wnm",
                "ap_max_inactivity": "1" }
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
 
+    addr = dev[0].p2p_interface_addr()
     dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
-    time.sleep(2)
+    start = hapd.get_sta(addr)
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=2)
+    if ev is not None:
+        raise Exception("Unexpected disconnection")
+    end = hapd.get_sta(addr)
+    if int(end['rx_packets']) <= int(start['rx_packets']):
+        raise Exception("No keep-alive packets received")
+    try:
+        # Disable client keep-alive so that hostapd will verify connection
+        # with client poll
+        dev[0].request("SET no_keep_alive 1")
+        for i in range(60):
+            sta = hapd.get_sta(addr)
+            logger.info("timeout_next=%s rx_packets=%s tx_packets=%s" % (sta['timeout_next'], sta['rx_packets'], sta['tx_packets']))
+            if i > 1 and sta['timeout_next'] != "NULLFUNC POLL" and int(sta['tx_packets']) > int(end['tx_packets']):
+                break
+            ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=0.5)
+            if ev is not None:
+                raise Exception("Unexpected disconnection (client poll expected)")
+    finally:
+        dev[0].request("SET no_keep_alive 0")
+    if int(sta['tx_packets']) <= int(end['tx_packets']):
+        raise Exception("No client poll packet seen")
 
 def test_wnm_bss_tm(dev, apdev):
     """WNM BSS Transition Management"""

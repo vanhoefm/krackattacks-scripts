@@ -44,6 +44,10 @@ def test_wifi_display(dev):
     audio = "000f" + "010203040506070809101112131415"
     dev[0].request("WFD_SUBELEM_SET 2 " + audio)
 
+    elems = dev[0].request("WFD_SUBELEM_GET all")
+    if wfd_devinfo not in elems:
+        raise Exception("Could not fetch back configured subelements")
+
     wfd_devinfo2 = "00001c440028"
     dev[1].request("SET wifi_display 1")
     dev[1].request("WFD_SUBELEM_SET 0 0006" + wfd_devinfo2)
@@ -166,6 +170,33 @@ def test_wifi_display(dev):
         raise Exception("WFD_SUBELEM_SET failed on global interface")
     if dev[0].request("WFD_SUBELEM_GET 1") != "0006020304050608":
         raise Exception("Unexpected WFD_SUBELEM_GET 1 value (per-interface)")
+
+    elems = dev[0].request("WFD_SUBELEM_GET all")
+    if "OK" not in dev[0].request("WFD_SUBELEM_SET all " + elems):
+        raise Exception("WFD_SUBELEM_SET all failed")
+    if dev[0].request("WFD_SUBELEM_GET all") != elems:
+        raise Exception("Mismatch in WFS_SUBELEM_SET/GET all")
+    test = "00000600411c440028"
+    if "OK" not in dev[0].request("WFD_SUBELEM_SET all " + test):
+        raise Exception("WFD_SUBELEM_SET all failed")
+    if dev[0].request("WFD_SUBELEM_GET all") != test:
+        raise Exception("Mismatch in WFS_SUBELEM_SET/GET all")
+
+    if "FAIL" not in dev[0].request("WFD_SUBELEM_SET all qwerty"):
+        raise Exception("Invalid WFD_SUBELEM_SET all succeeded")
+    if "FAIL" not in dev[0].request("WFD_SUBELEM_SET all 11"):
+        raise Exception("Invalid WFD_SUBELEM_SET all succeeded")
+    dev[0].request("WFD_SUBELEM_SET all 112233445566")
+    dev[0].request("WFD_SUBELEM_SET all ff0000fe0000fd00")
+
+    if "FAIL" not in dev[0].request("WFD_SUBELEM_SET 300 112233"):
+        raise Exception("Invalid WFD_SUBELEM_SET 300 succeeded")
+    if "FAIL" not in dev[0].request("WFD_SUBELEM_SET -1 112233"):
+        raise Exception("Invalid WFD_SUBELEM_SET -1 succeeded")
+    if "FAIL" not in dev[0].request("WFD_SUBELEM_GET 300"):
+        raise Exception("Invalid WFD_SUBELEM_GET 300 succeeded")
+    if "FAIL" not in dev[0].request("WFD_SUBELEM_GET -1"):
+        raise Exception("Invalid WFD_SUBELEM_GET -1 succeeded")
 
     dev[0].request("SET wifi_display 0")
     dev[1].request("SET wifi_display 0")

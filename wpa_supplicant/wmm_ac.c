@@ -438,7 +438,7 @@ wmm_ac_process_param_elem(struct wpa_supplicant *wpa_s, const u8 *ies,
 	}
 
 	if (elems.wmm_len != sizeof(*wmm_params)) {
-		wpa_printf(MSG_WARNING, "WMM AC: Invalid WMM ie length");
+		wpa_printf(MSG_DEBUG, "WMM AC: Invalid WMM ie length");
 		return NULL;
 	}
 
@@ -658,7 +658,7 @@ static void wmm_ac_handle_delts(struct wpa_supplicant *wpa_s, const u8 *sa,
 
 	wmm_ac_del_ts_idx(wpa_s, ac, idx);
 
-	wpa_printf(MSG_INFO,
+	wpa_printf(MSG_DEBUG,
 		   "TS was deleted successfully (tsid=%u address=" MACSTR ")",
 		   tsid, MAC2STR(sa));
 }
@@ -679,7 +679,7 @@ static void wmm_ac_handle_addts_resp(struct wpa_supplicant *wpa_s, const u8 *sa,
 
 	/* make sure we have a matching addts request */
 	if (!req || req->dialog_token != resp_dialog_token) {
-		wpa_printf(MSG_ERROR,
+		wpa_printf(MSG_DEBUG,
 			   "WMM AC: no req with dialog=%u, ignoring frame",
 			   resp_dialog_token);
 		return;
@@ -690,7 +690,7 @@ static void wmm_ac_handle_addts_resp(struct wpa_supplicant *wpa_s, const u8 *sa,
 	    tsid != wmm_ac_get_tsid(&req->tspec) ||
 	    up != wmm_ac_get_user_priority(&req->tspec) ||
 	    dir != wmm_ac_get_direction(&req->tspec)) {
-		wpa_printf(MSG_ERROR,
+		wpa_printf(MSG_DEBUG,
 			   "WMM AC: ADDTS params do not match, ignoring frame");
 		return;
 	}
@@ -698,7 +698,7 @@ static void wmm_ac_handle_addts_resp(struct wpa_supplicant *wpa_s, const u8 *sa,
 	/* delete pending request */
 	wmm_ac_del_req(wpa_s, 0);
 
-	wpa_printf(MSG_INFO,
+	wpa_printf(MSG_DEBUG,
 		   "ADDTS response status=%d tsid=%u up=%u direction=%u",
 		   status_code, tsid, up, dir);
 
@@ -747,7 +747,7 @@ void wmm_ac_rx_action(struct wpa_supplicant *wpa_s, const u8 *da,
 	struct wmm_tspec_element *tspec;
 
 	if (wpa_s->wmm_ac_assoc_info == NULL) {
-		wpa_printf(MSG_WARNING,
+		wpa_printf(MSG_DEBUG,
 			   "WMM AC: WMM AC is disabled, ignoring action frame");
 		return;
 	}
@@ -756,7 +756,7 @@ void wmm_ac_rx_action(struct wpa_supplicant *wpa_s, const u8 *da,
 
 	if (action != WMM_ACTION_CODE_ADDTS_RESP &&
 	    action != WMM_ACTION_CODE_DELTS) {
-		wpa_printf(MSG_WARNING,
+		wpa_printf(MSG_DEBUG,
 			   "WMM AC: Unknown action (%d), ignoring action frame",
 			   action);
 		return;

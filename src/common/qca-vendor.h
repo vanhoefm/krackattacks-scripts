@@ -53,15 +53,22 @@ enum qca_radiotap_vendor_ids {
  *
  * @QCA_NL80211_VENDOR_SUBCMD_KEY_MGMT_SET_KEY: Set key operation that can be
  *	used to configure PMK to the driver even when not connected. This can
- *	be used to request offloading of key management operations.
+ *	be used to request offloading of key management operations. Only used
+ *	if device supports QCA_WLAN_VENDOR_FEATURE_KEY_MGMT_OFFLOAD.
+ *
  * @QCA_NL80211_VENDOR_SUBCMD_KEY_MGMT_ROAM_AUTH: An extended version of
  *	NL80211_CMD_ROAM event with optional attributes including information
  *	from offloaded key management operation. Uses
- *	enum qca_wlan_vendor_attr_roam_auth attributes.
+ *	enum qca_wlan_vendor_attr_roam_auth attributes. Only used
+ *	if device supports QCA_WLAN_VENDOR_FEATURE_KEY_MGMT_OFFLOAD.
  *
  * @QCA_NL80211_VENDOR_SUBCMD_DO_ACS: ACS command/event which is used to
  *	invoke the ACS function in device and pass selected channels to
  *	hostapd.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_GET_FEATURES: Command to get the features
+ *	supported by the driver. enum qca_wlan_vendor_features defines
+ *	the possible features.
  */
 enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
@@ -107,6 +114,7 @@ enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_APFIND = 52,
 	/* 53 - reserved for QCA */
 	QCA_NL80211_VENDOR_SUBCMD_DO_ACS = 54,
+	QCA_NL80211_VENDOR_SUBCMD_GET_FEATURES = 55,
 };
 
 
@@ -124,6 +132,8 @@ enum qca_wlan_vendor_attr {
 	 * by enum qca_roaming_policy. */
 	QCA_WLAN_VENDOR_ATTR_ROAMING_POLICY = 5,
 	QCA_WLAN_VENDOR_ATTR_MAC_ADDR = 6,
+	/* used by QCA_NL80211_VENDOR_SUBCMD_GET_FEATURES */
+	QCA_WLAN_VENDOR_ATTR_FEATURE_FLAGS = 7,
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_MAX	= QCA_WLAN_VENDOR_ATTR_AFTER_LAST - 1,
@@ -168,6 +178,20 @@ enum qca_wlan_vendor_acs_hw_mode {
 	QCA_ACS_MODE_IEEE80211G,
 	QCA_ACS_MODE_IEEE80211A,
 	QCA_ACS_MODE_IEEE80211AD,
+};
+
+/**
+ * enum qca_wlan_vendor_features - Vendor device/driver feature flags
+ *
+ * @QCA_WLAN_VENDOR_FEATURE_KEY_MGMT_OFFLOAD: Device supports key
+ *	management offload, a mechanism where the station's firmware
+ *	does the exchange with the AP to establish the temporal keys
+ *	after roaming, rather than having the user space wpa_supplicant do it.
+ * @NUM_QCA_WLAN_VENDOR_FEATURES: Number of assigned feature bits
+ */
+enum qca_wlan_vendor_features {
+	QCA_WLAN_VENDOR_FEATURE_KEY_MGMT_OFFLOAD	= 0,
+	NUM_QCA_WLAN_VENDOR_FEATURES /* keep last */
 };
 
 #endif /* QCA_VENDOR_H */

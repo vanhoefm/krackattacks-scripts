@@ -143,8 +143,7 @@ struct wpa_driver_nl80211_data {
 	unsigned int have_low_prio_scan:1;
 	unsigned int force_connect_cmd:1;
 	unsigned int addr_changed:1;
-	unsigned int key_mgmt_set_key_vendor_cmd_avail:1;
-	unsigned int roam_auth_vendor_event_avail:1;
+	unsigned int get_features_vendor_cmd_avail:1;
 
 	u64 remain_on_chan_cookie;
 	u64 send_action_cookie;

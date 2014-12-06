@@ -1075,6 +1075,8 @@ struct wpa_driver_capa {
 #define WPA_DRIVER_FLAGS_MESH			0x0000000100000000ULL
 /* Driver support ACS offload */
 #define WPA_DRIVER_FLAGS_ACS_OFFLOAD		0x0000000200000000ULL
+/* Driver supports key management offload */
+#define WPA_DRIVER_FLAGS_KEY_MGMT_OFFLOAD	0x0000000400000000ULL
 	u64 flags;
 
 #define WPA_DRIVER_SMPS_MODE_STATIC			0x00000001

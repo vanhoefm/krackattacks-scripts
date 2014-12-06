@@ -2347,7 +2347,7 @@ static int issue_key_mgmt_set_key(struct wpa_driver_nl80211_data *drv,
 	struct nl_msg *msg;
 	int ret;
 
-	if (!drv->key_mgmt_set_key_vendor_cmd_avail)
+	if (!(drv->capa.flags & WPA_DRIVER_FLAGS_KEY_MGMT_OFFLOAD))
 		return 0;
 
 	if (!(msg = nl80211_drv_msg(drv, 0, NL80211_CMD_VENDOR)) ||
@@ -2397,7 +2397,8 @@ static int wpa_driver_nl80211_set_key(const char *ifname, struct i802_bss *bss,
 	}
 #endif /* CONFIG_TDLS */
 
-	if (alg == WPA_ALG_PMK && drv->key_mgmt_set_key_vendor_cmd_avail) {
+	if (alg == WPA_ALG_PMK &&
+	    (drv->capa.flags & WPA_DRIVER_FLAGS_KEY_MGMT_OFFLOAD)) {
 		wpa_printf(MSG_DEBUG, "%s: calling issue_key_mgmt_set_key",
 			   __func__);
 		ret = issue_key_mgmt_set_key(drv, key, key_len);

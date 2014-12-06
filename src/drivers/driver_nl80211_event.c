@@ -1690,7 +1690,8 @@ static void do_process_drv_event(struct i802_bss *bss, int cmd,
 	wpa_printf(MSG_DEBUG, "nl80211: Drv Event %d (%s) received for %s",
 		   cmd, nl80211_command_to_string(cmd), bss->ifname);
 
-	if (cmd == NL80211_CMD_ROAM && drv->roam_auth_vendor_event_avail) {
+	if (cmd == NL80211_CMD_ROAM &&
+	    (drv->capa.flags & WPA_DRIVER_FLAGS_KEY_MGMT_OFFLOAD)) {
 		/*
 		 * Device will use roam+auth vendor event to indicate
 		 * roaming, so ignore the regular roam event.

@@ -534,8 +534,8 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 			case QCA_NL80211_VENDOR_SUBCMD_DFS_CAPABILITY:
 				drv->dfs_vendor_cmd_avail = 1;
 				break;
-			case QCA_NL80211_VENDOR_SUBCMD_KEY_MGMT_SET_KEY:
-				drv->key_mgmt_set_key_vendor_cmd_avail = 1;
+			case QCA_NL80211_VENDOR_SUBCMD_GET_FEATURES:
+				drv->get_features_vendor_cmd_avail = 1;
 				break;
 			case QCA_NL80211_VENDOR_SUBCMD_DO_ACS:
 				drv->capa.flags |= WPA_DRIVER_FLAGS_ACS_OFFLOAD;
@@ -558,9 +558,6 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 				continue;
 			}
 			vinfo = nla_data(nl);
-			if (vinfo->subcmd ==
-			    QCA_NL80211_VENDOR_SUBCMD_KEY_MGMT_ROAM_AUTH)
-				drv->roam_auth_vendor_event_avail = 1;
 			wpa_printf(MSG_DEBUG, "nl80211: Supported vendor event: vendor_id=0x%x subcmd=%u",
 				   vinfo->vendor_id, vinfo->subcmd);
 		}
@@ -689,6 +686,77 @@ static void qca_nl80211_check_dfs_capa(struct wpa_driver_nl80211_data *drv)
 }
 
 
+struct features_info {
+	u8 *flags;
+	size_t flags_len;
+};
+
+
+static int features_info_handler(struct nl_msg *msg, void *arg)
+{
+	struct nlattr *tb[NL80211_ATTR_MAX + 1];
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+	struct features_info *info = arg;
+	struct nlattr *nl_vend, *attr;
+
+	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+
+	nl_vend = tb[NL80211_ATTR_VENDOR_DATA];
+	if (nl_vend) {
+		struct nlattr *tb_vendor[QCA_WLAN_VENDOR_ATTR_MAX + 1];
+
+		nla_parse(tb_vendor, QCA_WLAN_VENDOR_ATTR_MAX,
+			  nla_data(nl_vend), nla_len(nl_vend), NULL);
+
+		attr = tb_vendor[QCA_WLAN_VENDOR_ATTR_FEATURE_FLAGS];
+		if (attr) {
+			info->flags = nla_data(attr);
+			info->flags_len = nla_len(attr);
+		}
+	}
+
+	return NL_SKIP;
+}
+
+
+static int check_feature(enum qca_wlan_vendor_features feature,
+			 struct features_info *info)
+{
+	size_t index = feature / 8;
+
+	return (index < info->flags_len) &&
+		(info->flags[index] & BIT(feature % 8));
+}
+
+
+static void qca_nl80211_get_features(struct wpa_driver_nl80211_data *drv)
+{
+	struct nl_msg *msg;
+	struct features_info info;
+	int ret;
+
+	if (!drv->get_features_vendor_cmd_avail)
+		return;
+
+	if (!(msg = nl80211_drv_msg(drv, 0, NL80211_CMD_VENDOR)) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_GET_FEATURES)) {
+		nlmsg_free(msg);
+		return;
+	}
+
+	os_memset(&info, 0, sizeof(info));
+	ret = send_and_recv_msgs(drv, msg, features_info_handler, &info);
+	if (ret || !info.flags)
+		return;
+
+	if (check_feature(QCA_WLAN_VENDOR_FEATURE_KEY_MGMT_OFFLOAD, &info))
+		drv->capa.flags |= WPA_DRIVER_FLAGS_KEY_MGMT_OFFLOAD;
+}
+
+
 int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 {
 	struct wiphy_info_data info;
@@ -766,6 +834,7 @@ int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 		drv->capa.flags &= ~WPA_DRIVER_FLAGS_EAPOL_TX_STATUS;
 
 	qca_nl80211_check_dfs_capa(drv);
+	qca_nl80211_get_features(drv);
 
 	return 0;
 }

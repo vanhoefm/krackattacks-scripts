@@ -2348,26 +2348,17 @@ void wpa_driver_nl80211_scan_timeout(void *eloop_ctx, void *timeout_ctx)
 
 
 static struct nl_msg *
-nl80211_scan_common(struct wpa_driver_nl80211_data *drv, u8 cmd,
-		    struct wpa_driver_scan_params *params, u64 *wdev_id)
+nl80211_scan_common(struct i802_bss *bss, u8 cmd,
+		    struct wpa_driver_scan_params *params)
 {
+	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct nl_msg *msg;
 	size_t i;
 	u32 scan_flags = 0;
-	int res;
 
-	msg = nlmsg_alloc();
+	msg = nl80211_cmd_msg(bss, 0, cmd);
 	if (!msg)
 		return NULL;
-
-	nl80211_cmd(drv, msg, 0, cmd);
-
-	if (!wdev_id)
-		res = nla_put_u32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
-	else
-		res = nla_put_u64(msg, NL80211_ATTR_WDEV, *wdev_id);
-	if (res < 0)
-		goto fail;
 
 	if (params->num_ssids) {
 		struct nlattr *ssids;
@@ -2452,8 +2443,7 @@ static int wpa_driver_nl80211_scan(struct i802_bss *bss,
 	wpa_dbg(drv->ctx, MSG_DEBUG, "nl80211: scan request");
 	drv->scan_for_auth = 0;
 
-	msg = nl80211_scan_common(drv, NL80211_CMD_TRIGGER_SCAN, params,
-				  bss->wdev_id_set ? &bss->wdev_id : NULL);
+	msg = nl80211_scan_common(bss, NL80211_CMD_TRIGGER_SCAN, params);
 	if (!msg)
 		return -1;
 
@@ -2557,8 +2547,7 @@ static int wpa_driver_nl80211_sched_scan(void *priv,
 		return android_pno_start(bss, params);
 #endif /* ANDROID */
 
-	msg = nl80211_scan_common(drv, NL80211_CMD_START_SCHED_SCAN, params,
-				  bss->wdev_id_set ? &bss->wdev_id : NULL);
+	msg = nl80211_scan_common(bss, NL80211_CMD_START_SCHED_SCAN, params);
 	if (!msg ||
 	    nla_put_u32(msg, NL80211_ATTR_SCHED_SCAN_INTERVAL, interval))
 		goto fail;

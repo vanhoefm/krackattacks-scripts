@@ -573,16 +573,14 @@ static void eap_sim_db_receive(int sock, void *eloop_ctx, void *sock_ctx)
 	char buf[1000], *pos, *cmd, *imsi;
 	int res;
 
-	res = recv(sock, buf, sizeof(buf), 0);
+	res = recv(sock, buf, sizeof(buf) - 1, 0);
 	if (res < 0)
 		return;
+	buf[res] = '\0';
 	wpa_hexdump_ascii_key(MSG_MSGDUMP, "EAP-SIM DB: Received from an "
 			      "external source", (u8 *) buf, res);
 	if (res == 0)
 		return;
-	if (res >= (int) sizeof(buf))
-		res = sizeof(buf) - 1;
-	buf[res] = '\0';
 
 	if (data->get_complete_cb == NULL) {
 		wpa_printf(MSG_DEBUG, "EAP-SIM DB: No get_complete_cb "

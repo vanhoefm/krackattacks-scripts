@@ -675,13 +675,7 @@ static void qca_nl80211_check_dfs_capa(struct wpa_driver_nl80211_data *drv)
 	if (!drv->dfs_vendor_cmd_avail)
 		return;
 
-
-	msg = nlmsg_alloc();
-	if (!msg)
-		return;
-
-	if (!nl80211_cmd(drv, msg, 0, NL80211_CMD_VENDOR) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, drv->ifindex) ||
+	if (!(msg = nl80211_drv_msg(drv, 0, NL80211_CMD_VENDOR)) ||
 	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
 	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
 			QCA_NL80211_VENDOR_SUBCMD_DFS_CAPABILITY)) {

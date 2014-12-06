@@ -117,6 +117,7 @@ private:
 	void createTrayIcon(bool);
 	bool ackTrayIcon;
 	bool startInTray;
+	bool quietMode;
 
 	int openCtrlConnection(const char *ifname);
 

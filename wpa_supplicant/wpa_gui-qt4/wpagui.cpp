@@ -130,6 +130,7 @@ WpaGui::WpaGui(QApplication *_app, QWidget *parent, const char *, Qt::WFlags)
 	udr = NULL;
 	tray_icon = NULL;
 	startInTray = false;
+	quietMode = false;
 	ctrl_iface = NULL;
 	ctrl_conn = NULL;
 	monitor_conn = NULL;
@@ -234,7 +235,7 @@ void WpaGui::parse_argv()
 {
 	int c;
 	for (;;) {
-		c = getopt(qApp->argc(), qApp->argv(), "i:p:t");
+		c = getopt(qApp->argc(), qApp->argv(), "i:p:tq");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -248,6 +249,9 @@ void WpaGui::parse_argv()
 			break;
 		case 't':
 			startInTray = true;
+			break;
+		case 'q':
+			quietMode = true;
 			break;
 		}
 	}
@@ -1336,7 +1340,7 @@ void WpaGui::showTrayMessage(QSystemTrayIcon::MessageIcon type, int sec,
 	if (!QSystemTrayIcon::supportsMessages())
 		return;
 
-	if (isVisible() || !tray_icon || !tray_icon->isVisible())
+	if (isVisible() || !tray_icon || !tray_icon->isVisible() || quietMode)
 		return;
 
 	tray_icon->showMessage(qAppName(), msg, type, sec * 1000);

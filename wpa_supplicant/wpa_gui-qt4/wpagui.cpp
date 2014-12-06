@@ -492,6 +492,7 @@ void WpaGui::updateStatus()
 		textSsid->clear();
 		textBssid->clear();
 		textIpAddress->clear();
+		updateTrayToolTip(tr("no status information"));
 
 #ifdef CONFIG_NATIVE_WINDOWS
 		static bool first = true;
@@ -539,6 +540,7 @@ void WpaGui::updateStatus()
 			} else if (strcmp(start, "ssid") == 0) {
 				ssid_updated = true;
 				textSsid->setText(pos);
+				updateTrayToolTip(pos + tr(" (associated)"));
 			} else if (strcmp(start, "ip_address") == 0) {
 				ipaddr_updated = true;
 				textIpAddress->setText(pos);
@@ -586,8 +588,10 @@ void WpaGui::updateStatus()
 		textStatus->clear();
 	if (!auth_updated)
 		textAuthentication->clear();
-	if (!ssid_updated)
+	if (!ssid_updated) {
 		textSsid->clear();
+		updateTrayToolTip(tr("(not-associated)"));
+	}
 	if (!bssid_updated)
 		textBssid->clear();
 	if (!ipaddr_updated)
@@ -1271,7 +1275,6 @@ void WpaGui::createTrayIcon(bool trayOnly)
 	QApplication::setQuitOnLastWindowClosed(false);
 
 	tray_icon = new QSystemTrayIcon(this);
-	tray_icon->setToolTip(qAppName() + tr(" - wpa_supplicant user interface"));
 	if (QImageReader::supportedImageFormats().contains(QByteArray("svg")))
 		tray_icon->setIcon(QIcon(":/icons/wpa_gui.svg"));
 	else
@@ -1405,6 +1408,13 @@ void WpaGui::showTrayStatus()
 
 	if (!msg.isEmpty())
 		showTrayMessage(QSystemTrayIcon::Information, 10, msg);
+}
+
+
+void WpaGui::updateTrayToolTip(const QString &msg)
+{
+	if (tray_icon)
+		tray_icon->setToolTip(msg);
 }
 
 

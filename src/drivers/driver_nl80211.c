@@ -1976,21 +1976,11 @@ static int nl80211_mgmt_subscribe_mesh(struct i802_bss *bss)
 
 static int nl80211_register_spurious_class3(struct i802_bss *bss)
 {
-	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct nl_msg *msg;
 	int ret;
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -1;
-
-	if (!nl80211_cmd(drv, msg, 0, NL80211_CMD_UNEXPECTED_FRAME) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, bss->ifindex)) {
-		nlmsg_free(msg);
-		return -1;
-	}
-
-	ret = send_and_recv(drv->global, bss->nl_mgmt, msg, NULL, NULL);
+	msg = nl80211_bss_msg(bss, 0, NL80211_CMD_UNEXPECTED_FRAME);
+	ret = send_and_recv(bss->drv->global, bss->nl_mgmt, msg, NULL, NULL);
 	if (ret) {
 		wpa_printf(MSG_DEBUG, "nl80211: Register spurious class3 "
 			   "failed: ret=%d (%s)",
@@ -3850,11 +3840,7 @@ static int nl80211_set_bss(struct i802_bss *bss, int cts, int preamble,
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct nl_msg *msg;
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -ENOMEM;
-
-	if (!nl80211_cmd(drv, msg, 0, NL80211_CMD_SET_BSS) ||
+	if (!(msg = nl80211_bss_msg(bss, 0, NL80211_CMD_SET_BSS)) ||
 	    (cts >= 0 &&
 	     nla_put_u8(msg, NL80211_ATTR_BSS_CTS_PROT, cts)) ||
 	    (preamble >= 0 &&
@@ -3880,9 +3866,6 @@ static int nl80211_set_bss(struct i802_bss *bss, int cts, int preamble,
 			    rates))
 			goto fail;
 	}
-
-	if (nla_put_u32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(bss->ifname)))
-		goto fail;
 
 	return send_and_recv_msgs(drv, msg, NULL, NULL);
 fail:
@@ -3947,17 +3930,12 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 	u8 cmd = NL80211_CMD_NEW_BEACON;
 	int ret;
 	int beacon_set;
-	int ifindex = if_nametoindex(bss->ifname);
 	int num_suites;
 	int smps_mode;
 	u32 suites[10], suite;
 	u32 ver;
 
 	beacon_set = bss->beacon_set;
-
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -ENOMEM;
 
 	wpa_printf(MSG_DEBUG, "nl80211: Set beacon (beacon_set=%d)",
 		   beacon_set);
@@ -3968,17 +3946,16 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 		    params->head, params->head_len);
 	wpa_hexdump(MSG_DEBUG, "nl80211: Beacon tail",
 		    params->tail, params->tail_len);
-	wpa_printf(MSG_DEBUG, "nl80211: ifindex=%d", ifindex);
+	wpa_printf(MSG_DEBUG, "nl80211: ifindex=%d", bss->ifindex);
 	wpa_printf(MSG_DEBUG, "nl80211: beacon_int=%d", params->beacon_int);
 	wpa_printf(MSG_DEBUG, "nl80211: dtim_period=%d", params->dtim_period);
 	wpa_hexdump_ascii(MSG_DEBUG, "nl80211: ssid",
 			  params->ssid, params->ssid_len);
-	if (!nl80211_cmd(drv, msg, 0, cmd) ||
+	if (!(msg = nl80211_bss_msg(bss, 0, cmd)) ||
 	    nla_put(msg, NL80211_ATTR_BEACON_HEAD, params->head_len,
 		    params->head) ||
 	    nla_put(msg, NL80211_ATTR_BEACON_TAIL, params->tail_len,
 		    params->tail) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
 	    nla_put_u32(msg, NL80211_ATTR_BEACON_INTERVAL,
 			params->beacon_int) ||
 	    nla_put_u32(msg, NL80211_ATTR_DTIM_PERIOD, params->dtim_period) ||
@@ -4314,16 +4291,11 @@ static int wpa_driver_nl80211_sta_add(void *priv,
 	    !(drv->capa.flags & WPA_DRIVER_FLAGS_TDLS_SUPPORT))
 		return -EOPNOTSUPP;
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -ENOMEM;
-
 	wpa_printf(MSG_DEBUG, "nl80211: %s STA " MACSTR,
 		   params->set ? "Set" : "Add", MAC2STR(params->addr));
-	if (!nl80211_cmd(drv, msg, 0, params->set ? NL80211_CMD_SET_STATION :
-			 NL80211_CMD_NEW_STATION) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(bss->ifname)) ||
-	    nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN, params->addr))
+	msg = nl80211_bss_msg(bss, 0, params->set ? NL80211_CMD_SET_STATION :
+			      NL80211_CMD_NEW_STATION);
+	if (!msg || nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN, params->addr))
 		goto fail;
 
 	if (!params->set || (params->flags & WPA_STA_TDLS_PEER)) {
@@ -4503,12 +4475,7 @@ static int wpa_driver_nl80211_sta_remove(struct i802_bss *bss, const u8 *addr,
 	struct nl_msg *msg;
 	int ret;
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -ENOMEM;
-
-	if (!nl80211_cmd(drv, msg, 0, NL80211_CMD_DEL_STATION) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(bss->ifname)) ||
+	if (!(msg = nl80211_bss_msg(bss, 0, NL80211_CMD_DEL_STATION)) ||
 	    nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN, addr) ||
 	    (deauth == 0 &&
 	     nla_put_u8(msg, NL80211_ATTR_MGMT_SUBTYPE,
@@ -4880,7 +4847,6 @@ static int wpa_driver_nl80211_sta_set_flags(void *priv, const u8 *addr,
 					    int flags_or, int flags_and)
 {
 	struct i802_bss *bss = priv;
-	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct nl_msg *msg;
 	struct nlattr *flags;
 	struct nl80211_sta_flag_update upd;
@@ -4890,13 +4856,7 @@ static int wpa_driver_nl80211_sta_set_flags(void *priv, const u8 *addr,
 		   bss->ifname, MAC2STR(addr), total_flags, flags_or, flags_and,
 		   !!(total_flags & WPA_STA_AUTHORIZED));
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -ENOMEM;
-
-	if (!nl80211_cmd(drv, msg, 0, NL80211_CMD_SET_STATION) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX,
-			if_nametoindex(bss->ifname)) ||
+	if (!(msg = nl80211_bss_msg(bss, 0, NL80211_CMD_SET_STATION)) ||
 	    nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN, addr))
 		goto fail;
 
@@ -4926,7 +4886,7 @@ static int wpa_driver_nl80211_sta_set_flags(void *priv, const u8 *addr,
 	if (nla_put(msg, NL80211_ATTR_STA_FLAGS2, sizeof(upd), &upd))
 		goto fail;
 
-	return send_and_recv_msgs(drv, msg, NULL, NULL);
+	return send_and_recv_msgs(bss->drv, msg, NULL, NULL);
 fail:
 	nlmsg_free(msg);
 	return -ENOBUFS;
@@ -5669,18 +5629,12 @@ static int wpa_driver_nl80211_set_supp_port(void *priv, int authorized)
 	wpa_printf(MSG_DEBUG, "nl80211: Set supplicant port %sauthorized for "
 		   MACSTR, authorized ? "" : "un", MAC2STR(drv->bssid));
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -ENOMEM;
-
 	os_memset(&upd, 0, sizeof(upd));
 	upd.mask = BIT(NL80211_STA_FLAG_AUTHORIZED);
 	if (authorized)
 		upd.set = BIT(NL80211_STA_FLAG_AUTHORIZED);
 
-	if (!nl80211_cmd(drv, msg, 0, NL80211_CMD_SET_STATION) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX,
-			if_nametoindex(bss->ifname)) ||
+	if (!(msg = nl80211_bss_msg(bss, 0, NL80211_CMD_SET_STATION)) ||
 	    nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN, drv->bssid) ||
 	    nla_put(msg, NL80211_ATTR_STA_FLAGS2, sizeof(upd), &upd)) {
 		nlmsg_free(msg);
@@ -5817,28 +5771,17 @@ static int i802_set_frag(void *priv, int frag)
 static int i802_flush(void *priv)
 {
 	struct i802_bss *bss = priv;
-	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct nl_msg *msg;
 	int res;
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -1;
-
 	wpa_printf(MSG_DEBUG, "nl80211: flush -> DEL_STATION %s (all)",
 		   bss->ifname);
-	nl80211_cmd(drv, msg, 0, NL80211_CMD_DEL_STATION);
 
 	/*
 	 * XXX: FIX! this needs to flush all VLANs too
 	 */
-	if (nla_put_u32(msg, NL80211_ATTR_IFINDEX,
-			if_nametoindex(bss->ifname))) {
-		nlmsg_free(msg);
-		return -ENOBUFS;
-	}
-
-	res = send_and_recv_msgs(drv, msg, NULL, NULL);
+	msg = nl80211_bss_msg(bss, 0, NL80211_CMD_DEL_STATION);
+	res = send_and_recv_msgs(bss->drv, msg, NULL, NULL);
 	if (res) {
 		wpa_printf(MSG_DEBUG, "nl80211: Station flush failed: ret=%d "
 			   "(%s)", res, strerror(-res));
@@ -5906,23 +5849,17 @@ static int i802_read_sta_data(struct i802_bss *bss,
 			      struct hostap_sta_driver_data *data,
 			      const u8 *addr)
 {
-	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct nl_msg *msg;
 
 	os_memset(data, 0, sizeof(*data));
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -ENOMEM;
 
-	if (!nl80211_cmd(drv, msg, 0, NL80211_CMD_GET_STATION) ||
-	    nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN, addr) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX,
-			if_nametoindex(bss->ifname))) {
+	if (!(msg = nl80211_bss_msg(bss, 0, NL80211_CMD_GET_STATION)) ||
+	    nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN, addr)) {
 		nlmsg_free(msg);
 		return -ENOBUFS;
 	}
 
-	return send_and_recv_msgs(drv, msg, get_sta_handler, data);
+	return send_and_recv_msgs(bss->drv, msg, get_sta_handler, data);
 }
 
 
@@ -5934,13 +5871,9 @@ static int i802_set_tx_queue_params(void *priv, int queue, int aifs,
 	struct nl_msg *msg;
 	struct nlattr *txq, *params;
 
-	msg = nlmsg_alloc();
+	msg = nl80211_bss_msg(bss, 0, NL80211_CMD_SET_WIPHY);
 	if (!msg)
 		return -1;
-
-	if (!nl80211_cmd(drv, msg, 0, NL80211_CMD_SET_WIPHY) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(bss->ifname)))
-		goto fail;
 
 	txq = nla_nest_start(msg, NL80211_ATTR_WIPHY_TXQ_PARAMS);
 	if (!txq)
@@ -5998,17 +5931,11 @@ static int i802_set_sta_vlan(struct i802_bss *bss, const u8 *addr,
 	struct nl_msg *msg;
 	int ret;
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -ENOMEM;
-
 	wpa_printf(MSG_DEBUG, "nl80211: %s[%d]: set_sta_vlan(" MACSTR
 		   ", ifname=%s[%d], vlan_id=%d)",
 		   bss->ifname, if_nametoindex(bss->ifname),
 		   MAC2STR(addr), ifname, if_nametoindex(ifname), vlan_id);
-	if (!nl80211_cmd(drv, msg, 0, NL80211_CMD_SET_STATION) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX,
-			if_nametoindex(bss->ifname)) ||
+	if (!(msg = nl80211_bss_msg(bss, 0, NL80211_CMD_SET_STATION)) ||
 	    nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN, addr) ||
 	    nla_put_u32(msg, NL80211_ATTR_STA_VLAN, if_nametoindex(ifname))) {
 		nlmsg_free(msg);
@@ -7145,12 +7072,7 @@ static int nl80211_signal_monitor(void *priv, int threshold, int hysteresis)
 	wpa_printf(MSG_DEBUG, "nl80211: Signal monitor threshold=%d "
 		   "hysteresis=%d", threshold, hysteresis);
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -1;
-
-	if (!nl80211_cmd(drv, msg, 0, NL80211_CMD_SET_CQM) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, bss->ifindex) ||
+	if (!(msg = nl80211_bss_msg(bss, 0, NL80211_CMD_SET_CQM)) ||
 	    !(cqm = nla_nest_start(msg, NL80211_ATTR_CQM)) ||
 	    nla_put_u32(msg, NL80211_ATTR_CQM_RSSI_THOLD, threshold) ||
 	    nla_put_u32(msg, NL80211_ATTR_CQM_RSSI_HYST, hysteresis)) {
@@ -7396,13 +7318,7 @@ static int nl80211_pmkid(struct i802_bss *bss, int cmd, const u8 *bssid,
 {
 	struct nl_msg *msg;
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -ENOMEM;
-
-	if (!nl80211_cmd(bss->drv, msg, 0, cmd) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX,
-			if_nametoindex(bss->ifname)) ||
+	if (!(msg = nl80211_bss_msg(bss, 0, cmd)) ||
 	    (pmkid && nla_put(msg, NL80211_ATTR_PMKID, 16, pmkid)) ||
 	    (bssid && nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN, bssid))) {
 		nlmsg_free(msg);
@@ -7620,12 +7536,7 @@ static void nl80211_set_rekey_info(void *priv, const u8 *kek, const u8 *kck,
 	struct nlattr *replay_nested;
 	struct nl_msg *msg;
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return;
-
-	if (!nl80211_cmd(drv, msg, 0, NL80211_CMD_SET_REKEY_OFFLOAD) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, bss->ifindex) ||
+	if (!(msg = nl80211_bss_msg(bss, 0, NL80211_CMD_SET_REKEY_OFFLOAD)) ||
 	    !(replay_nested = nla_nest_start(msg, NL80211_ATTR_REKEY_DATA)) ||
 	    nla_put(msg, NL80211_REKEY_DATA_KEK, NL80211_KEK_LEN, kek) ||
 	    nla_put(msg, NL80211_REKEY_DATA_KCK, NL80211_KCK_LEN, kck) ||
@@ -7691,12 +7602,7 @@ static void nl80211_poll_client(void *priv, const u8 *own_addr, const u8 *addr,
 		return;
 	}
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return;
-
-	if (!nl80211_cmd(drv, msg, 0, NL80211_CMD_PROBE_CLIENT) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, bss->ifindex) ||
+	if (!(msg = nl80211_bss_msg(bss, 0, NL80211_CMD_PROBE_CLIENT)) ||
 	    nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN, addr)) {
 		nlmsg_free(msg);
 		return;
@@ -7710,12 +7616,7 @@ static int nl80211_set_power_save(struct i802_bss *bss, int enabled)
 {
 	struct nl_msg *msg;
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -ENOMEM;
-
-	if (!nl80211_cmd(bss->drv, msg, 0, NL80211_CMD_SET_POWER_SAVE) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, bss->ifindex) ||
+	if (!(msg = nl80211_bss_msg(bss, 0, NL80211_CMD_SET_POWER_SAVE)) ||
 	    nla_put_u32(msg, NL80211_ATTR_PS_STATE,
 			enabled ? NL80211_PS_ENABLED : NL80211_PS_DISABLED)) {
 		nlmsg_free(msg);
@@ -8243,12 +8144,7 @@ static int nl80211_switch_channel(void *priv, struct csa_settings *settings)
 	      settings->cs_count)))
 		return -EINVAL;
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -ENOMEM;
-
-	if (!nl80211_cmd(drv, msg, 0, NL80211_CMD_CHANNEL_SWITCH) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, bss->ifindex) ||
+	if (!(msg = nl80211_bss_msg(bss, 0, NL80211_CMD_CHANNEL_SWITCH)) ||
 	    nla_put_u32(msg, NL80211_ATTR_CH_SWITCH_COUNT,
 			settings->cs_count) ||
 	    (ret = nl80211_put_freq_params(msg, &settings->freq_params)) ||

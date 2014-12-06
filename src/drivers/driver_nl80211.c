@@ -2090,21 +2090,11 @@ static void wpa_driver_nl80211_send_rfkill(void *eloop_ctx, void *timeout_ctx)
 
 static void nl80211_del_p2pdev(struct i802_bss *bss)
 {
-	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct nl_msg *msg;
 	int ret;
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return;
-
-	if (!nl80211_cmd(drv, msg, 0, NL80211_CMD_DEL_INTERFACE) ||
-	    nla_put_u64(msg, NL80211_ATTR_WDEV, bss->wdev_id)) {
-		nlmsg_free(msg);
-		return;
-	}
-
-	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	msg = nl80211_cmd_msg(bss, 0, NL80211_CMD_DEL_INTERFACE);
+	ret = send_and_recv_msgs(bss->drv, msg, NULL, NULL);
 
 	wpa_printf(MSG_DEBUG, "nl80211: Delete P2P Device %s (0x%llx): %s",
 		   bss->ifname, (long long unsigned int) bss->wdev_id,
@@ -2114,22 +2104,12 @@ static void nl80211_del_p2pdev(struct i802_bss *bss)
 
 static int nl80211_set_p2pdev(struct i802_bss *bss, int start)
 {
-	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct nl_msg *msg;
 	int ret;
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -1;
-
-	if (!nl80211_cmd(drv, msg, 0, start ? NL80211_CMD_START_P2P_DEVICE :
-			 NL80211_CMD_STOP_P2P_DEVICE) ||
-	    nla_put_u64(msg, NL80211_ATTR_WDEV, bss->wdev_id)) {
-		nlmsg_free(msg);
-		return -1;
-	}
-
-	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	msg = nl80211_cmd_msg(bss, 0, start ? NL80211_CMD_START_P2P_DEVICE :
+			      NL80211_CMD_STOP_P2P_DEVICE);
+	ret = send_and_recv_msgs(bss->drv, msg, NULL, NULL);
 
 	wpa_printf(MSG_DEBUG, "nl80211: %s P2P Device %s (0x%llx): %s",
 		   start ? "Start" : "Stop",

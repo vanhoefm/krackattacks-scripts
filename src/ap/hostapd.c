@@ -1940,9 +1940,17 @@ int hostapd_add_iface(struct hapd_interfaces *interfaces, char *buf)
 		}
 
 		if (new_iface) {
-			if (interfaces->driver_init(hapd_iface) ||
-			    hostapd_setup_interface(hapd_iface)) {
+			if (interfaces->driver_init(hapd_iface)) {
 				interfaces->count--;
+				goto fail;
+			}
+
+			if (hostapd_setup_interface(hapd_iface)) {
+				interfaces->count--;
+				hostapd_deinit_driver(
+					hapd_iface->bss[0]->driver,
+					hapd_iface->bss[0]->drv_priv,
+					hapd_iface);
 				goto fail;
 			}
 		} else {
@@ -2036,14 +2044,14 @@ fail:
 				wpa_printf(MSG_DEBUG, "%s: free hapd %p (%s)",
 					   __func__, hapd_iface->bss[i],
 					   hapd->conf->iface);
+				hostapd_cleanup(hapd);
 				os_free(hapd);
 				hapd_iface->bss[i] = NULL;
 			}
 			os_free(hapd_iface->bss);
+			hapd_iface->bss = NULL;
 		}
-		wpa_printf(MSG_DEBUG, "%s: free iface %p",
-			   __func__, hapd_iface);
-		os_free(hapd_iface);
+		hostapd_cleanup_iface(hapd_iface);
 	}
 	return -1;
 }

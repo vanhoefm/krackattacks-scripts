@@ -549,6 +549,12 @@ char * os_strdup(const char *s);
 #endif /* OS_NO_C_LIB_DEFINES */
 
 
+static inline int os_snprintf_error(size_t size, int res)
+{
+	return res < 0 || (unsigned int) res >= size;
+}
+
+
 static inline void * os_realloc_array(void *ptr, size_t nmemb, size_t size)
 {
 	if (size && nmemb > (~(size_t) 0) / size)

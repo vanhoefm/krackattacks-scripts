@@ -368,14 +368,6 @@ struct family_data {
 };
 
 
-static int nl80211_set_iface_id(struct nl_msg *msg, struct i802_bss *bss)
-{
-	if (bss->wdev_id_set)
-		return nla_put_u64(msg, NL80211_ATTR_WDEV, bss->wdev_id);
-	return nla_put_u32(msg, NL80211_ATTR_IFINDEX, bss->ifindex);
-}
-
-
 static int family_handler(struct nl_msg *msg, void *arg)
 {
 	struct family_data *res = arg;
@@ -436,6 +428,14 @@ void * nl80211_cmd(struct wpa_driver_nl80211_data *drv,
 {
 	return genlmsg_put(msg, 0, 0, drv->global->nl80211_id,
 			   0, flags, cmd, 0);
+}
+
+
+static int nl80211_set_iface_id(struct nl_msg *msg, struct i802_bss *bss)
+{
+	if (bss->wdev_id_set)
+		return nla_put_u64(msg, NL80211_ATTR_WDEV, bss->wdev_id);
+	return nla_put_u32(msg, NL80211_ATTR_IFINDEX, bss->ifindex);
 }
 
 

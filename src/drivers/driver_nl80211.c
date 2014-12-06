@@ -3184,15 +3184,13 @@ static int wpa_driver_nl80211_set_key(const char *ifname, struct i802_bss *bss,
 		return ret;
 	}
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -ENOMEM;
-
 	if (alg == WPA_ALG_NONE) {
-		if (!nl80211_cmd(drv, msg, 0, NL80211_CMD_DEL_KEY))
-			goto fail;
+		msg = nl80211_ifindex_msg(drv, ifindex, 0, NL80211_CMD_DEL_KEY);
+		if (!msg)
+			return -ENOBUFS;
 	} else {
-		if (!nl80211_cmd(drv, msg, 0, NL80211_CMD_NEW_KEY) ||
+		msg = nl80211_ifindex_msg(drv, ifindex, 0, NL80211_CMD_NEW_KEY);
+		if (!msg ||
 		    nla_put(msg, NL80211_ATTR_KEY_DATA, key_len, key) ||
 		    nla_put_u32(msg, NL80211_ATTR_KEY_CIPHER,
 				wpa_alg_to_cipher_suite(alg, key_len)))
@@ -3228,8 +3226,7 @@ static int wpa_driver_nl80211_set_key(const char *ifname, struct i802_bss *bss,
 			goto fail;
 		nla_nest_end(msg, types);
 	}
-	if (nla_put_u8(msg, NL80211_ATTR_KEY_IDX, key_idx) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex))
+	if (nla_put_u8(msg, NL80211_ATTR_KEY_IDX, key_idx))
 		goto fail;
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
@@ -3249,13 +3246,9 @@ static int wpa_driver_nl80211_set_key(const char *ifname, struct i802_bss *bss,
 	    !is_broadcast_ether_addr(addr))
 		return ret;
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -ENOMEM;
-
-	if (!nl80211_cmd(drv, msg, 0, NL80211_CMD_SET_KEY) ||
+	msg = nl80211_ifindex_msg(drv, ifindex, 0, NL80211_CMD_SET_KEY);
+	if (!msg ||
 	    nla_put_u8(msg, NL80211_ATTR_KEY_IDX, key_idx) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex) ||
 	    nla_put_flag(msg, alg == WPA_ALG_IGTK ?
 			 NL80211_ATTR_KEY_DEFAULT_MGMT :
 			 NL80211_ATTR_KEY_DEFAULT))
@@ -4515,19 +4508,9 @@ void nl80211_remove_iface(struct wpa_driver_nl80211_data *drv, int ifidx)
 			 struct wpa_driver_nl80211_data, list)
 		del_ifidx(drv2, ifidx);
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return;
-
-	if (!nl80211_cmd(drv, msg, 0, NL80211_CMD_DEL_INTERFACE) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifidx)) {
-		nlmsg_free(msg);
-		goto fail;
-	}
-
+	msg = nl80211_ifindex_msg(drv, ifidx, 0, NL80211_CMD_DEL_INTERFACE);
 	if (send_and_recv_msgs(drv, msg, NULL, NULL) == 0)
 		return;
-fail:
 	wpa_printf(MSG_ERROR, "Failed to remove interface (ifidx=%d)", ifidx);
 }
 
@@ -5694,14 +5677,11 @@ static int i802_get_seqnum(const char *iface, void *priv, const u8 *addr,
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct nl_msg *msg;
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -ENOMEM;
-
-	if (!nl80211_cmd(drv, msg, 0, NL80211_CMD_GET_KEY) ||
+	msg = nl80211_ifindex_msg(drv, if_nametoindex(iface), 0,
+				  NL80211_CMD_GET_KEY);
+	if (!msg ||
 	    (addr && nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN, addr)) ||
-	    nla_put_u8(msg, NL80211_ATTR_KEY_IDX, idx) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(iface))) {
+	    nla_put_u8(msg, NL80211_ATTR_KEY_IDX, idx)) {
 		nlmsg_free(msg);
 		return -ENOBUFS;
 	}
@@ -6915,13 +6895,10 @@ static int nl80211_disable_11b_rates(struct wpa_driver_nl80211_data *drv,
 	struct nlattr *bands, *band;
 	int ret;
 
-	msg = nlmsg_alloc();
+	msg = nl80211_ifindex_msg(drv, ifindex, 0,
+				  NL80211_CMD_SET_TX_BITRATE_MASK);
 	if (!msg)
 		return -1;
-
-	if (!nl80211_cmd(drv, msg, 0, NL80211_CMD_SET_TX_BITRATE_MASK) ||
-	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex))
-		goto fail;
 
 	bands = nla_nest_start(msg, NL80211_ATTR_TX_RATES);
 	if (!bands)

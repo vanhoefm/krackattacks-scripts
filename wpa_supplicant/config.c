@@ -358,9 +358,15 @@ static char * wpa_config_write_psk(const struct parse_data *data,
 	if (ssid->ext_psk) {
 		size_t len = 4 + os_strlen(ssid->ext_psk) + 1;
 		char *buf = os_malloc(len);
+		int res;
+
 		if (buf == NULL)
 			return NULL;
-		os_snprintf(buf, len, "ext:%s", ssid->ext_psk);
+		res = os_snprintf(buf, len, "ext:%s", ssid->ext_psk);
+		if (os_snprintf_error(len, res)) {
+			os_free(buf);
+			buf = NULL;
+		}
 		return buf;
 	}
 #endif /* CONFIG_EXT_PASSWORD */
@@ -2995,12 +3001,18 @@ int wpa_config_set_cred(struct wpa_cred *cred, const char *var,
 
 static char * alloc_int_str(int val)
 {
+	const unsigned int bufsize = 20;
 	char *buf;
+	int res;
 
-	buf = os_malloc(20);
+	buf = os_malloc(bufsize);
 	if (buf == NULL)
 		return NULL;
-	os_snprintf(buf, 20, "%d", val);
+	res = os_snprintf(buf, bufsize, "%d", val);
+	if (os_snprintf_error(bufsize, res)) {
+		os_free(buf);
+		buf = NULL;
+	}
 	return buf;
 }
 

@@ -2973,9 +2973,13 @@ static int wpas_ctrl_remove_cred(struct wpa_supplicant *wpa_s,
 	ssid = wpa_s->conf->ssid;
 	while (ssid) {
 		if (ssid->parent_cred == cred) {
+			int res;
+
 			wpa_printf(MSG_DEBUG, "Remove network id %d since it "
 				   "used the removed credential", ssid->id);
-			os_snprintf(str, sizeof(str), "%d", ssid->id);
+			res = os_snprintf(str, sizeof(str), "%d", ssid->id);
+			if (os_snprintf_error(sizeof(str), res))
+				str[sizeof(str) - 1] = '\0';
 			ssid = ssid->next;
 			wpa_supplicant_ctrl_iface_remove_network(wpa_s, str);
 		} else
@@ -3965,7 +3969,7 @@ static int wpa_supplicant_ctrl_iface_bss(struct wpa_supplicant *wpa_s,
 	struct dl_list *next;
 	int ret = 0;
 	int len;
-	char *ctmp;
+	char *ctmp, *end = buf + buflen;
 	unsigned long mask = WPA_BSS_MASK_ALL;
 
 	if (os_strncmp(cmd, "RANGE=", 6) == 0) {
@@ -4074,8 +4078,16 @@ static int wpa_supplicant_ctrl_iface_bss(struct wpa_supplicant *wpa_s,
 		if (bss == bsslast) {
 			if ((mask & WPA_BSS_MASK_DELIM) && len &&
 			    (bss == dl_list_last(&wpa_s->bss_id,
-						 struct wpa_bss, list_id)))
-				os_snprintf(buf - 5, 5, "####\n");
+						 struct wpa_bss, list_id))) {
+				int res;
+
+				res = os_snprintf(buf - 5, end - buf + 5,
+						  "####\n");
+				if (os_snprintf_error(end - buf + 5, res)) {
+					wpa_printf(MSG_DEBUG,
+						   "Could not add end delim");
+				}
+			}
 			break;
 		}
 		next = bss->list_id.next;
@@ -6684,8 +6696,13 @@ static void wpas_ctrl_vendor_elem_update(struct wpa_supplicant *wpa_s)
 
 	for (i = 0; i < NUM_VENDOR_ELEM_FRAMES; i++) {
 		if (wpa_s->vendor_elem[i]) {
-			os_snprintf(buf, sizeof(buf), "frame[%u]", i);
-			wpa_hexdump_buf(MSG_DEBUG, buf, wpa_s->vendor_elem[i]);
+			int res;
+
+			res = os_snprintf(buf, sizeof(buf), "frame[%u]", i);
+			if (!os_snprintf_error(sizeof(buf), res)) {
+				wpa_hexdump_buf(MSG_DEBUG, buf,
+						wpa_s->vendor_elem[i]);
+			}
 		}
 	}
 

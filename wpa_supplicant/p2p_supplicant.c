@@ -1557,8 +1557,12 @@ static void wpas_p2p_get_group_ifname(struct wpa_supplicant *wpa_s,
 	os_snprintf(ifname, len, "p2p-%s-%d", ifname_ptr, wpa_s->p2p_group_idx);
 	if (os_strlen(ifname) >= IFNAMSIZ &&
 	    os_strlen(wpa_s->ifname) < IFNAMSIZ) {
+		int res;
+
 		/* Try to avoid going over the IFNAMSIZ length limit */
-		os_snprintf(ifname, len, "p2p-%d", wpa_s->p2p_group_idx);
+		res = os_snprintf(ifname, len, "p2p-%d", wpa_s->p2p_group_idx);
+		if (os_snprintf_error(len, res) && len)
+			ifname[len - 1] = '\0';
 	}
 }
 
@@ -2948,6 +2952,7 @@ static void wpas_prov_disc_req(void *ctx, const u8 *peer, u16 config_methods,
 	u8 empty_dev_type[8];
 	unsigned int generated_pin = 0;
 	struct wpa_supplicant *group = NULL;
+	int res;
 
 	if (group_id) {
 		for (group = wpa_s->global->ifaces; group; group = group->next)
@@ -2966,15 +2971,17 @@ static void wpas_prov_disc_req(void *ctx, const u8 *peer, u16 config_methods,
 		os_memset(empty_dev_type, 0, sizeof(empty_dev_type));
 		pri_dev_type = empty_dev_type;
 	}
-	os_snprintf(params, sizeof(params), " p2p_dev_addr=" MACSTR
-		    " pri_dev_type=%s name='%s' config_methods=0x%x "
-		    "dev_capab=0x%x group_capab=0x%x%s%s",
-		    MAC2STR(dev_addr),
-		    wps_dev_type_bin2str(pri_dev_type, devtype,
-					 sizeof(devtype)),
-		    dev_name, supp_config_methods, dev_capab, group_capab,
-		    group ? " group=" : "",
-		    group ? group->ifname : "");
+	res = os_snprintf(params, sizeof(params), " p2p_dev_addr=" MACSTR
+			  " pri_dev_type=%s name='%s' config_methods=0x%x "
+			  "dev_capab=0x%x group_capab=0x%x%s%s",
+			  MAC2STR(dev_addr),
+			  wps_dev_type_bin2str(pri_dev_type, devtype,
+					       sizeof(devtype)),
+			  dev_name, supp_config_methods, dev_capab, group_capab,
+			  group ? " group=" : "",
+			  group ? group->ifname : "");
+	if (os_snprintf_error(sizeof(params), res))
+		wpa_printf(MSG_DEBUG, "P2P: PD Request event truncated");
 	params[sizeof(params) - 1] = '\0';
 
 	if (config_methods & WPS_CONFIG_DISPLAY) {
@@ -3010,10 +3017,14 @@ static void wpas_prov_disc_resp(void *ctx, const u8 *peer, u16 config_methods)
 	}
 
 	if (wpa_s->pending_pd_use == AUTO_PD_JOIN ||
-	    wpa_s->pending_pd_use == AUTO_PD_GO_NEG)
-		os_snprintf(params, sizeof(params), " peer_go=%d",
-			    wpa_s->pending_pd_use == AUTO_PD_JOIN);
-	else
+	    wpa_s->pending_pd_use == AUTO_PD_GO_NEG) {
+		int res;
+
+		res = os_snprintf(params, sizeof(params), " peer_go=%d",
+				  wpa_s->pending_pd_use == AUTO_PD_JOIN);
+		if (os_snprintf_error(sizeof(params), res))
+			params[sizeof(params) - 1] = '\0';
+	} else
 		params[0] = '\0';
 
 	if (config_methods & WPS_CONFIG_DISPLAY)
@@ -3921,8 +3932,10 @@ int wpas_p2p_add_p2pdev_interface(struct wpa_supplicant *wpa_s,
 	char force_name[100];
 	int ret;
 
-	os_snprintf(ifname, sizeof(ifname), P2P_MGMT_DEVICE_PREFIX "%s",
-		    wpa_s->ifname);
+	ret = os_snprintf(ifname, sizeof(ifname), P2P_MGMT_DEVICE_PREFIX "%s",
+			  wpa_s->ifname);
+	if (os_snprintf_error(sizeof(ifname), ret))
+		return -1;
 	force_name[0] = '\0';
 	wpa_s->pending_interface_type = WPA_IF_P2P_DEVICE;
 	ret = wpa_drv_if_add(wpa_s, WPA_IF_P2P_DEVICE, ifname, NULL, NULL,
@@ -4968,8 +4981,10 @@ int wpas_p2p_connect(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 		os_strlcpy(wpa_s->p2p_pin, pin, sizeof(wpa_s->p2p_pin));
 	else if (wps_method == WPS_PIN_DISPLAY) {
 		ret = wps_generate_pin();
-		os_snprintf(wpa_s->p2p_pin, sizeof(wpa_s->p2p_pin), "%08d",
-			    ret);
+		res = os_snprintf(wpa_s->p2p_pin, sizeof(wpa_s->p2p_pin),
+				  "%08d", ret);
+		if (os_snprintf_error(sizeof(wpa_s->p2p_pin), res))
+			wpa_s->p2p_pin[sizeof(wpa_s->p2p_pin) - 1] = '\0';
 		wpa_printf(MSG_DEBUG, "P2P: Randomly generated PIN: %s",
 			   wpa_s->p2p_pin);
 	} else
@@ -6268,11 +6283,16 @@ void wpas_p2p_completed(struct wpa_supplicant *wpa_s)
 
 	ip_addr[0] = '\0';
 	if (wpa_sm_get_p2p_ip_addr(wpa_s->wpa, ip) == 0) {
-		os_snprintf(ip_addr, sizeof(ip_addr), " ip_addr=%u.%u.%u.%u "
-			    "ip_mask=%u.%u.%u.%u go_ip_addr=%u.%u.%u.%u",
-			    ip[0], ip[1], ip[2], ip[3],
-			    ip[4], ip[5], ip[6], ip[7],
-			    ip[8], ip[9], ip[10], ip[11]);
+		int res;
+
+		res = os_snprintf(ip_addr, sizeof(ip_addr),
+				  " ip_addr=%u.%u.%u.%u "
+				  "ip_mask=%u.%u.%u.%u go_ip_addr=%u.%u.%u.%u",
+				  ip[0], ip[1], ip[2], ip[3],
+				  ip[4], ip[5], ip[6], ip[7],
+				  ip[8], ip[9], ip[10], ip[11]);
+		if (os_snprintf_error(sizeof(ip_addr), res))
+			ip_addr[0] = '\0';
 	}
 
 	wpas_p2p_group_started(wpa_s, 0, ssid, freq,

@@ -439,6 +439,57 @@ void * nl80211_cmd(struct wpa_driver_nl80211_data *drv,
 }
 
 
+struct nl_msg * nl80211_cmd_msg(struct i802_bss *bss, int flags, uint8_t cmd)
+{
+	struct nl_msg *msg;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return NULL;
+
+	if (!nl80211_cmd(bss->drv, msg, flags, cmd) ||
+	    nl80211_set_iface_id(msg, bss) < 0) {
+		nlmsg_free(msg);
+		return NULL;
+	}
+
+	return msg;
+}
+
+
+static struct nl_msg *
+nl80211_ifindex_msg(struct wpa_driver_nl80211_data *drv, int ifindex,
+		    int flags, uint8_t cmd)
+{
+	struct nl_msg *msg;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return NULL;
+
+	if (!nl80211_cmd(drv, msg, flags, cmd) ||
+	    nla_put_u32(msg, NL80211_ATTR_IFINDEX, ifindex)) {
+		nlmsg_free(msg);
+		return NULL;
+	}
+
+	return msg;
+}
+
+
+struct nl_msg * nl80211_drv_msg(struct wpa_driver_nl80211_data *drv, int flags,
+				uint8_t cmd)
+{
+	return nl80211_ifindex_msg(drv, drv->ifindex, flags, cmd);
+}
+
+
+struct nl_msg * nl80211_bss_msg(struct i802_bss *bss, int flags, uint8_t cmd)
+{
+	return nl80211_ifindex_msg(bss->drv, bss->ifindex, flags, cmd);
+}
+
+
 struct wiphy_idx_data {
 	int wiphy_idx;
 	enum nl80211_iftype nlmode;

@@ -310,16 +310,6 @@ static inline int wpa_drv_update_ft_ies(struct wpa_supplicant *wpa_s,
 	return -1;
 }
 
-static inline int wpa_drv_send_ft_action(struct wpa_supplicant *wpa_s,
-					 u8 action, const u8 *target_ap,
-					 const u8 *ies, size_t ies_len)
-{
-	if (wpa_s->driver->send_ft_action)
-		return wpa_s->driver->send_ft_action(wpa_s->drv_priv, action,
-						     target_ap, ies, ies_len);
-	return -1;
-}
-
 static inline int wpa_drv_set_ap(struct wpa_supplicant *wpa_s,
 				 struct wpa_driver_ap_params *params)
 {

@@ -1819,22 +1819,6 @@ struct wpa_driver_ops {
 			     size_t ies_len);
 
 	/**
-	 * send_ft_action - Send FT Action frame (IEEE 802.11r)
-	 * @priv: Private driver interface data
-	 * @action: Action field value
-	 * @target_ap: Target AP address
-	 * @ies: FT IEs (MDIE, FTIE, ...) (FT Request action frame body)
-	 * @ies_len: Length of FT IEs in bytes
-	 * Returns: 0 on success, -1 on failure
-	 *
-	 * The supplicant uses this callback to request the driver to transmit
-	 * an FT Action frame (action category 6) for over-the-DS fast BSS
-	 * transition.
-	 */
-	int (*send_ft_action)(void *priv, u8 action, const u8 *target_ap,
-			      const u8 *ies, size_t ies_len);
-
-	/**
 	 * get_scan_results2 - Fetch the latest scan results
 	 * @priv: private driver interface data
 	 *

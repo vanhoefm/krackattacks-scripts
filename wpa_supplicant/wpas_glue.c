@@ -543,7 +543,44 @@ static int wpa_supplicant_send_ft_action(void *ctx, u8 action,
 					 const u8 *ies, size_t ies_len)
 {
 	struct wpa_supplicant *wpa_s = ctx;
-	return wpa_drv_send_ft_action(wpa_s, action, target_ap, ies, ies_len);
+	int ret;
+	u8 *data, *pos;
+	size_t data_len;
+
+	if (action != 1) {
+		wpa_printf(MSG_ERROR, "Unsupported send_ft_action action %d",
+			   action);
+		return -1;
+	}
+
+	/*
+	 * Action frame payload:
+	 * Category[1] = 6 (Fast BSS Transition)
+	 * Action[1] = 1 (Fast BSS Transition Request)
+	 * STA Address
+	 * Target AP Address
+	 * FT IEs
+	 */
+
+	data_len = 2 + 2 * ETH_ALEN + ies_len;
+	data = os_malloc(data_len);
+	if (data == NULL)
+		return -1;
+	pos = data;
+	*pos++ = 0x06; /* FT Action category */
+	*pos++ = action;
+	os_memcpy(pos, wpa_s->own_addr, ETH_ALEN);
+	pos += ETH_ALEN;
+	os_memcpy(pos, target_ap, ETH_ALEN);
+	pos += ETH_ALEN;
+	os_memcpy(pos, ies, ies_len);
+
+	ret = wpa_drv_send_action(wpa_s, wpa_s->assoc_freq, 0,
+				  wpa_s->bssid, wpa_s->own_addr, wpa_s->bssid,
+				  data, data_len, 0);
+	os_free(data);
+
+	return ret;
 }
 
 

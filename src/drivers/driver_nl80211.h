@@ -183,7 +183,6 @@ struct wpa_driver_nl80211_data {
 
 struct nl_msg;
 
-int nl80211_set_iface_id(struct nl_msg *msg, struct i802_bss *bss);
 void * nl80211_cmd(struct wpa_driver_nl80211_data *drv,
 		   struct nl_msg *msg, int flags, uint8_t cmd);
 struct nl_msg * nl80211_cmd_msg(struct i802_bss *bss, int flags, uint8_t cmd);

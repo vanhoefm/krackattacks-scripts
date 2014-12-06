@@ -368,7 +368,7 @@ struct family_data {
 };
 
 
-int nl80211_set_iface_id(struct nl_msg *msg, struct i802_bss *bss)
+static int nl80211_set_iface_id(struct nl_msg *msg, struct i802_bss *bss)
 {
 	if (bss->wdev_id_set)
 		return nla_put_u64(msg, NL80211_ATTR_WDEV, bss->wdev_id);
@@ -528,15 +528,8 @@ int nl80211_get_wiphy_index(struct i802_bss *bss)
 		.macaddr = NULL,
 	};
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return NL80211_IFTYPE_UNSPECIFIED;
-
-	if (!nl80211_cmd(bss->drv, msg, 0, NL80211_CMD_GET_INTERFACE) ||
-	    nl80211_set_iface_id(msg, bss) < 0) {
-		nlmsg_free(msg);
+	if (!(msg = nl80211_cmd_msg(bss, 0, NL80211_CMD_GET_INTERFACE)))
 		return -1;
-	}
 
 	if (send_and_recv_msgs(bss->drv, msg, netdev_info_handler, &data) == 0)
 		return data.wiphy_idx;
@@ -552,15 +545,8 @@ static enum nl80211_iftype nl80211_get_ifmode(struct i802_bss *bss)
 		.macaddr = NULL,
 	};
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -1;
-
-	if (!nl80211_cmd(bss->drv, msg, 0, NL80211_CMD_GET_INTERFACE) ||
-	    nl80211_set_iface_id(msg, bss) < 0) {
-		nlmsg_free(msg);
+	if (!(msg = nl80211_cmd_msg(bss, 0, NL80211_CMD_GET_INTERFACE)))
 		return NL80211_IFTYPE_UNSPECIFIED;
-	}
 
 	if (send_and_recv_msgs(bss->drv, msg, netdev_info_handler, &data) == 0)
 		return data.nlmode;
@@ -575,15 +561,8 @@ static int nl80211_get_macaddr(struct i802_bss *bss)
 		.macaddr = bss->addr,
 	};
 
-	msg = nlmsg_alloc();
-	if (!msg)
+	if (!(msg = nl80211_cmd_msg(bss, 0, NL80211_CMD_GET_INTERFACE)))
 		return -1;
-
-	if (!nl80211_cmd(bss->drv, msg, 0, NL80211_CMD_GET_INTERFACE) ||
-	    nl80211_set_iface_id(msg, bss) < 0) {
-		nlmsg_free(msg);
-		return -1;
-	}
 
 	return send_and_recv_msgs(bss->drv, msg, netdev_info_handler, &data);
 }
@@ -1814,17 +1793,12 @@ static int nl80211_register_frame(struct i802_bss *bss,
 	int ret;
 	char buf[30];
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -1;
-
 	buf[0] = '\0';
 	wpa_snprintf_hex(buf, sizeof(buf), match, match_len);
 	wpa_printf(MSG_DEBUG, "nl80211: Register frame type=0x%x (%s) nl_handle=%p match=%s",
 		   type, fc2str(type), nl_handle, buf);
 
-	if (!nl80211_cmd(drv, msg, 0, NL80211_CMD_REGISTER_ACTION) ||
-	    nl80211_set_iface_id(msg, bss) < 0 ||
+	if (!(msg = nl80211_cmd_msg(bss, 0, NL80211_CMD_REGISTER_ACTION)) ||
 	    nla_put_u16(msg, NL80211_ATTR_FRAME_TYPE, type) ||
 	    nla_put(msg, NL80211_ATTR_FRAME_MATCH, match_len, match)) {
 		nlmsg_free(msg);
@@ -3068,18 +3042,15 @@ nl80211_get_scan_results(struct wpa_driver_nl80211_data *drv)
 	res = os_zalloc(sizeof(*res));
 	if (res == NULL)
 		return NULL;
-	msg = nlmsg_alloc();
-	if (!msg)
-		goto fail;
-
-	if (!nl80211_cmd(drv, msg, NLM_F_DUMP, NL80211_CMD_GET_SCAN) ||
-	    nl80211_set_iface_id(msg, drv->first_bss) < 0)
-		goto fail;
+	if (!(msg = nl80211_cmd_msg(drv->first_bss, NLM_F_DUMP,
+				    NL80211_CMD_GET_SCAN))) {
+		wpa_scan_results_free(res);
+		return NULL;
+	}
 
 	arg.drv = drv;
 	arg.res = res;
 	ret = send_and_recv_msgs(drv, msg, bss_info_handler, &arg);
-	msg = NULL;
 	if (ret == 0) {
 		wpa_printf(MSG_DEBUG, "nl80211: Received scan results (%lu "
 			   "BSSes)", (unsigned long) res->num);
@@ -3088,8 +3059,6 @@ nl80211_get_scan_results(struct wpa_driver_nl80211_data *drv)
 	}
 	wpa_printf(MSG_DEBUG, "nl80211: Scan result fetch failed: ret=%d "
 		   "(%s)", ret, strerror(-ret));
-fail:
-	nlmsg_free(msg);
 	wpa_scan_results_free(res);
 	return NULL;
 }
@@ -4731,12 +4700,8 @@ static int nl80211_create_iface_once(struct wpa_driver_nl80211_data *drv,
 	wpa_printf(MSG_DEBUG, "nl80211: Create interface iftype %d (%s)",
 		   iftype, nl80211_iftype_str(iftype));
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -1;
-
-	if (!nl80211_cmd(drv, msg, 0, NL80211_CMD_NEW_INTERFACE) ||
-	    nl80211_set_iface_id(msg, drv->first_bss) < 0 ||
+	msg = nl80211_cmd_msg(drv->first_bss, 0, NL80211_CMD_NEW_INTERFACE);
+	if (!msg ||
 	    nla_put_string(msg, NL80211_ATTR_IFNAME, ifname) ||
 	    nla_put_u32(msg, NL80211_ATTR_IFTYPE, iftype))
 		goto fail;
@@ -5614,13 +5579,8 @@ static int nl80211_set_mode(struct wpa_driver_nl80211_data *drv,
 	wpa_printf(MSG_DEBUG, "nl80211: Set mode ifindex %d iftype %d (%s)",
 		   ifindex, mode, nl80211_iftype_str(mode));
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -ENOMEM;
-
-	if (!nl80211_cmd(drv, msg, 0, NL80211_CMD_SET_INTERFACE) ||
-	    nl80211_set_iface_id(msg, drv->first_bss) < 0 ||
-	    nla_put_u32(msg, NL80211_ATTR_IFTYPE, mode))
+	msg = nl80211_cmd_msg(drv->first_bss, 0, NL80211_CMD_SET_INTERFACE);
+	if (!msg || nla_put_u32(msg, NL80211_ATTR_IFTYPE, mode))
 		goto fail;
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
@@ -6922,17 +6882,12 @@ static int nl80211_send_frame_cmd(struct i802_bss *bss,
 	u64 cookie;
 	int ret = -1;
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -1;
-
 	wpa_printf(MSG_MSGDUMP, "nl80211: CMD_FRAME freq=%u wait=%u no_cck=%d "
 		   "no_ack=%d offchanok=%d",
 		   freq, wait, no_cck, no_ack, offchanok);
 	wpa_hexdump(MSG_MSGDUMP, "CMD_FRAME", buf, buf_len);
 
-	if (!nl80211_cmd(drv, msg, 0, NL80211_CMD_FRAME) ||
-	    nl80211_set_iface_id(msg, bss) < 0 ||
+	if (!(msg = nl80211_cmd_msg(bss, 0, NL80211_CMD_FRAME)) ||
 	    (freq && nla_put_u32(msg, NL80211_ATTR_WIPHY_FREQ, freq)) ||
 	    (wait && nla_put_u32(msg, NL80211_ATTR_DURATION, wait)) ||
 	    (offchanok && ((drv->capa.flags & WPA_DRIVER_FLAGS_OFFCHANNEL_TX) ||
@@ -7018,14 +6973,9 @@ static void wpa_driver_nl80211_send_action_cancel_wait(void *priv)
 	struct nl_msg *msg;
 	int ret;
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return;
-
 	wpa_printf(MSG_DEBUG, "nl80211: Cancel TX frame wait: cookie=0x%llx",
 		   (long long unsigned int) drv->send_action_cookie);
-	if (!nl80211_cmd(drv, msg, 0, NL80211_CMD_FRAME_WAIT_CANCEL) ||
-	    nl80211_set_iface_id(msg, bss) < 0 ||
+	if (!(msg = nl80211_cmd_msg(bss, 0, NL80211_CMD_FRAME_WAIT_CANCEL)) ||
 	    nla_put_u64(msg, NL80211_ATTR_COOKIE, drv->send_action_cookie)) {
 		nlmsg_free(msg);
 		return;
@@ -7047,12 +6997,7 @@ static int wpa_driver_nl80211_remain_on_channel(void *priv, unsigned int freq,
 	int ret;
 	u64 cookie;
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -1;
-
-	if (!nl80211_cmd(drv, msg, 0, NL80211_CMD_REMAIN_ON_CHANNEL) ||
-	    nl80211_set_iface_id(msg, bss) < 0 ||
+	if (!(msg = nl80211_cmd_msg(bss, 0, NL80211_CMD_REMAIN_ON_CHANNEL)) ||
 	    nla_put_u32(msg, NL80211_ATTR_WIPHY_FREQ, freq) ||
 	    nla_put_u32(msg, NL80211_ATTR_DURATION, duration)) {
 		nlmsg_free(msg);
@@ -7093,12 +7038,8 @@ static int wpa_driver_nl80211_cancel_remain_on_channel(void *priv)
 		   "0x%llx",
 		   (long long unsigned int) drv->remain_on_chan_cookie);
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -1;
-
-	if (!nl80211_cmd(drv, msg, 0, NL80211_CMD_CANCEL_REMAIN_ON_CHANNEL) ||
-	    nl80211_set_iface_id(msg, bss) < 0 ||
+	msg = nl80211_cmd_msg(bss, 0, NL80211_CMD_CANCEL_REMAIN_ON_CHANNEL);
+	if (!msg ||
 	    nla_put_u64(msg, NL80211_ATTR_COOKIE, drv->remain_on_chan_cookie)) {
 		nlmsg_free(msg);
 		return -1;
@@ -8529,12 +8470,8 @@ static int nl80211_add_ts(void *priv, u8 tsid, const u8 *addr,
 	if (!is_sta_interface(drv->nlmode))
 		return -ENOTSUP;
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -ENOMEM;
-
-	if (!nl80211_cmd(drv, msg, 0, NL80211_CMD_ADD_TX_TS) ||
-	    nl80211_set_iface_id(msg, bss) < 0 ||
+	msg = nl80211_cmd_msg(bss, 0, NL80211_CMD_ADD_TX_TS);
+	if (!msg ||
 	    nla_put_u8(msg, NL80211_ATTR_TSID, tsid) ||
 	    nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN, addr) ||
 	    nla_put_u8(msg, NL80211_ATTR_USER_PRIO, user_priority) ||
@@ -8563,12 +8500,7 @@ static int nl80211_del_ts(void *priv, u8 tsid, const u8 *addr)
 	if (!is_sta_interface(drv->nlmode))
 		return -ENOTSUP;
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -ENOMEM;
-
-	if (!nl80211_cmd(drv, msg, 0, NL80211_CMD_DEL_TX_TS) ||
-	    nl80211_set_iface_id(msg, bss) < 0 ||
+	if (!(msg = nl80211_cmd_msg(bss, 0, NL80211_CMD_DEL_TX_TS)) ||
 	    nla_put_u8(msg, NL80211_ATTR_TSID, tsid) ||
 	    nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN, addr)) {
 		nlmsg_free(msg);
@@ -8645,12 +8577,12 @@ static int nl80211_vendor_cmd(void *priv, unsigned int vendor_id,
 	struct nl_msg *msg;
 	int ret;
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -ENOMEM;
-
 #ifdef CONFIG_TESTING_OPTIONS
 	if (vendor_id == 0xffffffff) {
+		msg = nlmsg_alloc();
+		if (!msg)
+			return -ENOMEM;
+
 		nl80211_cmd(drv, msg, 0, subcmd);
 		if (nlmsg_append(msg, (void *) data, data_len, NLMSG_ALIGNTO) <
 		    0)
@@ -8663,8 +8595,7 @@ static int nl80211_vendor_cmd(void *priv, unsigned int vendor_id,
 	}
 #endif /* CONFIG_TESTING_OPTIONS */
 
-	if (!nl80211_cmd(drv, msg, 0, NL80211_CMD_VENDOR) ||
-	    nl80211_set_iface_id(msg, bss) < 0 ||
+	if (!(msg = nl80211_cmd_msg(bss, 0, NL80211_CMD_VENDOR)) ||
 	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, vendor_id) ||
 	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD, subcmd) ||
 	    (data &&

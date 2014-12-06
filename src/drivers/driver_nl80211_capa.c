@@ -588,16 +588,11 @@ static int wpa_driver_nl80211_get_info(struct wpa_driver_nl80211_data *drv,
 	info->capa = &drv->capa;
 	info->drv = drv;
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -1;
-
 	feat = get_nl80211_protocol_features(drv);
 	if (feat & NL80211_PROTOCOL_FEATURE_SPLIT_WIPHY_DUMP)
 		flags = NLM_F_DUMP;
-	if (!nl80211_cmd(drv, msg, flags, NL80211_CMD_GET_WIPHY) ||
-	    nla_put_flag(msg, NL80211_ATTR_SPLIT_WIPHY_DUMP) ||
-	    nl80211_set_iface_id(msg, drv->first_bss) < 0) {
+	msg = nl80211_cmd_msg(drv->first_bss, flags, NL80211_CMD_GET_WIPHY);
+	if (!msg || nla_put_flag(msg, NL80211_ATTR_SPLIT_WIPHY_DUMP)) {
 		nlmsg_free(msg);
 		return -1;
 	}
@@ -1424,16 +1419,11 @@ nl80211_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags)
 	*num_modes = 0;
 	*flags = 0;
 
-	msg = nlmsg_alloc();
-	if (!msg)
-		return NULL;
-
 	feat = get_nl80211_protocol_features(drv);
 	if (feat & NL80211_PROTOCOL_FEATURE_SPLIT_WIPHY_DUMP)
 		nl_flags = NLM_F_DUMP;
-	if (!nl80211_cmd(drv, msg, nl_flags, NL80211_CMD_GET_WIPHY) ||
-	    nla_put_flag(msg, NL80211_ATTR_SPLIT_WIPHY_DUMP) ||
-	    nl80211_set_iface_id(msg, bss) < 0) {
+	if (!(msg = nl80211_cmd_msg(bss, nl_flags, NL80211_CMD_GET_WIPHY)) ||
+	    nla_put_flag(msg, NL80211_ATTR_SPLIT_WIPHY_DUMP)) {
 		nlmsg_free(msg);
 		return NULL;
 	}

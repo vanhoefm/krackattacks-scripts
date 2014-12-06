@@ -626,7 +626,7 @@ static int tls_process_client_key_exchange_dh(
 	dh_yc_len = WPA_GET_BE16(pos);
 	dh_yc = pos + 2;
 
-	if (dh_yc + dh_yc_len > end) {
+	if (dh_yc_len > end - dh_yc) {
 		tlsv1_server_log(conn, "Client public value overflow (length %d)",
 				 dh_yc_len);
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,

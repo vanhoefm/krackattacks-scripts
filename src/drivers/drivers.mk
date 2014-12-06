@@ -24,6 +24,7 @@ DRV_OBJS += src/drivers/driver_nl80211_android.c
 DRV_OBJS += src/drivers/driver_nl80211_capa.c
 DRV_OBJS += src/drivers/driver_nl80211_event.c
 DRV_OBJS += src/drivers/driver_nl80211_monitor.c
+DRV_OBJS += src/drivers/driver_nl80211_scan.c
 DRV_OBJS += src/utils/radiotap.c
 NEED_SME=y
 NEED_AP_MLME=y

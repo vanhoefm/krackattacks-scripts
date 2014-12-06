@@ -204,6 +204,7 @@ void nl80211_mark_disconnected(struct wpa_driver_nl80211_data *drv);
 struct i802_bss * get_bss_ifindex(struct wpa_driver_nl80211_data *drv,
 				  int ifindex);
 int is_ap_interface(enum nl80211_iftype nlmode);
+int is_sta_interface(enum nl80211_iftype nlmode);
 int wpa_driver_nl80211_authenticate_retry(struct wpa_driver_nl80211_data *drv);
 int nl80211_get_link_signal(struct wpa_driver_nl80211_data *drv,
 			    struct wpa_signal_info *sig);
@@ -212,7 +213,9 @@ int nl80211_get_link_noise(struct wpa_driver_nl80211_data *drv,
 int nl80211_get_wiphy_index(struct i802_bss *bss);
 int wpa_driver_nl80211_set_mode(struct i802_bss *bss,
 				enum nl80211_iftype nlmode);
-void wpa_driver_nl80211_scan_timeout(void *eloop_ctx, void *timeout_ctx);
+int wpa_driver_nl80211_mlme(struct wpa_driver_nl80211_data *drv,
+			    const u8 *addr, int cmd, u16 reason_code,
+			    int local_state_change);
 
 int nl80211_create_monitor_interface(struct wpa_driver_nl80211_data *drv);
 void nl80211_remove_monitor_interface(struct wpa_driver_nl80211_data *drv);
@@ -246,5 +249,27 @@ int wpa_driver_set_ap_wps_p2p_ie(void *priv, const struct wpabuf *beacon,
 				 const struct wpabuf *assocresp);
 #endif /* ANDROID_P2P */
 #endif /* ANDROID */
+
+
+/* driver_nl80211_scan.c */
+
+struct nl80211_bss_info_arg {
+	struct wpa_driver_nl80211_data *drv;
+	struct wpa_scan_results *res;
+	unsigned int assoc_freq;
+	unsigned int ibss_freq;
+	u8 assoc_bssid[ETH_ALEN];
+};
+
+int bss_info_handler(struct nl_msg *msg, void *arg);
+void wpa_driver_nl80211_scan_timeout(void *eloop_ctx, void *timeout_ctx);
+int wpa_driver_nl80211_scan(struct i802_bss *bss,
+			    struct wpa_driver_scan_params *params);
+int wpa_driver_nl80211_sched_scan(void *priv,
+				  struct wpa_driver_scan_params *params,
+				  u32 interval);
+int wpa_driver_nl80211_stop_sched_scan(void *priv);
+struct wpa_scan_results * wpa_driver_nl80211_get_scan_results(void *priv);
+void nl80211_dump_scan(struct wpa_driver_nl80211_data *drv);
 
 #endif /* DRIVER_NL80211_H */

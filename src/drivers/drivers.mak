@@ -28,6 +28,7 @@ DRV_OBJS += ../src/drivers/driver_nl80211.o
 DRV_OBJS += ../src/drivers/driver_nl80211_capa.o
 DRV_OBJS += ../src/drivers/driver_nl80211_event.o
 DRV_OBJS += ../src/drivers/driver_nl80211_monitor.o
+DRV_OBJS += ../src/drivers/driver_nl80211_scan.o
 DRV_OBJS += ../src/utils/radiotap.o
 NEED_SME=y
 NEED_AP_MLME=y

@@ -1021,8 +1021,9 @@ void ieee802_1x_new_station(struct hostapd_data *hapd, struct sta_info *sta)
 	int key_mgmt;
 
 #ifdef CONFIG_WPS
-	if (hapd->conf->wps_state && hapd->conf->wpa &&
-	    (sta->flags & (WLAN_STA_WPS | WLAN_STA_MAYBE_WPS))) {
+	if (hapd->conf->wps_state &&
+	    ((hapd->conf->wpa && (sta->flags & WLAN_STA_MAYBE_WPS)) ||
+	     (sta->flags & WLAN_STA_WPS))) {
 		/*
 		 * Need to enable IEEE 802.1X/EAPOL state machines for possible
 		 * WPS handshake even if IEEE 802.1X/EAPOL is not used for

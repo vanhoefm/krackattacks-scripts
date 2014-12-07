@@ -139,6 +139,7 @@ def main():
         tests.append(name)
     if len(tests) == 0:
         sys.exit("No test cases selected")
+    extra_args = [x for x in sys.argv[2:] if x not in tests]
 
     dir = '/tmp/hwsim-test-logs'
     try:
@@ -152,7 +153,7 @@ def main():
         print("\rStarting virtual machine {}/{}".format(i + 1, num_servers)),
         cmd = ['./vm-run.sh', '--timestamp', str(timestamp),
                '--ext', 'srv.%d' % (i + 1),
-               '-i'] + sys.argv[2:]
+               '-i'] + extra_args
         vm[i] = {}
         vm[i]['proc'] = subprocess.Popen(cmd,
                                          stdin=subprocess.PIPE,

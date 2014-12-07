@@ -336,3 +336,18 @@ def _test_wpas_mesh_secure_no_auto(dev, apdev, test_connectivity):
 
 def test_wpas_mesh_secure_no_auto(dev, apdev):
     return wrap_wpas_mesh_test(_test_wpas_mesh_secure_no_auto, dev, apdev)
+
+def test_wpas_mesh_ctrl(dev):
+    """wpa_supplicant ctrl_iface mesh command error cases"""
+    if "FAIL" not in dev[0].request("MESH_GROUP_ADD 123"):
+        raise Exception("Unexpected MESH_GROUP_ADD success")
+    id = dev[0].add_network()
+    if "FAIL" not in dev[0].request("MESH_GROUP_ADD %d" % id):
+        raise Exception("Unexpected MESH_GROUP_ADD success")
+    dev[0].set_network(id, "mode", "5")
+    dev[0].set_network(id, "key_mgmt", "WPA-PSK")
+    if "FAIL" not in dev[0].request("MESH_GROUP_ADD %d" % id):
+        raise Exception("Unexpected MESH_GROUP_ADD success")
+
+    if "FAIL" not in dev[0].request("MESH_GROUP_REMOVE foo"):
+        raise Exception("Unexpected MESH_GROUP_REMOVE success")

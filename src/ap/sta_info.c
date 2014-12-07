@@ -1120,6 +1120,8 @@ int ap_sta_flags_txt(u32 flags, char *buf, size_t buflen)
 			  (flags & WLAN_STA_VHT ? "[VHT]" : ""),
 			  (flags & WLAN_STA_WNM_SLEEP_MODE ?
 			   "[WNM_SLEEP_MODE]" : ""));
+	if (os_snprintf_error(buflen, res))
+		res = -1;
 
 	return res;
 }

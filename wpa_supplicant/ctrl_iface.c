@@ -5859,6 +5859,8 @@ static int wpa_supplicant_driver_cmd(struct wpa_supplicant *wpa_s, char *cmd,
 			}
 		}
 		ret = os_snprintf(buf, buflen, "%s\n", "OK");
+		if (os_snprintf_error(buflen, ret))
+			ret = -1;
 	}
 	return ret;
 }

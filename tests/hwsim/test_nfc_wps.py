@@ -439,7 +439,7 @@ def test_nfc_wps_er_config_token(dev, apdev):
     logger.info("WPS provisioning step using configuration token from ER")
     conf = dev[0].request("WPS_ER_NFC_CONFIG_TOKEN NDEF " + apdev[0]['bssid']).rstrip()
     if "FAIL" in conf:
-        raise Exception("Failed to generate configugration token")
+        raise Exception("Failed to generate configuration token")
     dev[1].request("SET ignore_old_scan_res 1")
     res = dev[1].request("WPS_NFC_TAG_READ " + conf)
     if "FAIL" in res:

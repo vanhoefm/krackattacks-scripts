@@ -968,7 +968,7 @@ DBusMessage * wpas_dbus_iface_set_network(DBusMessage *message,
 					goto error;
 				ret = os_snprintf(value, size, "\"%s\"",
 						  entry.str_value);
-				if (ret < 0 || (size_t) ret != (size - 1))
+				if (os_snprintf_error(size, ret))
 					goto error;
 			} else {
 				value = os_strdup(entry.str_value);

@@ -641,7 +641,7 @@ struct wpa_ctrl * wpa_ctrl_open(const char *ctrl_path)
 		ret = os_snprintf(name, 256, NAMED_PIPE_PREFIX "-%s",
 				  ctrl_path);
 #endif /* UNICODE */
-	if (ret < 0 || ret >= 256) {
+	if (os_snprintf_error(256, ret)) {
 		os_free(ctrl);
 		return NULL;
 	}

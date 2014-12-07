@@ -922,7 +922,8 @@ int eap_sim_db_get_gsm_triplets(struct eap_sim_db_data *data,
 
 	imsi_len = os_strlen(imsi);
 	len = os_snprintf(msg, sizeof(msg), "SIM-REQ-AUTH ");
-	if (len < 0 || len + imsi_len >= sizeof(msg))
+	if (os_snprintf_error(sizeof(msg), len) ||
+	    len + imsi_len >= sizeof(msg))
 		return EAP_SIM_DB_FAILURE;
 	os_memcpy(msg + len, imsi, imsi_len);
 	len += imsi_len;
@@ -1385,7 +1386,8 @@ int eap_sim_db_get_aka_auth(struct eap_sim_db_data *data, const char *username,
 
 	imsi_len = os_strlen(imsi);
 	len = os_snprintf(msg, sizeof(msg), "AKA-REQ-AUTH ");
-	if (len < 0 || len + imsi_len >= sizeof(msg))
+	if (os_snprintf_error(sizeof(msg), len) ||
+	    len + imsi_len >= sizeof(msg))
 		return EAP_SIM_DB_FAILURE;
 	os_memcpy(msg + len, imsi, imsi_len);
 	len += imsi_len;
@@ -1449,7 +1451,8 @@ int eap_sim_db_resynchronize(struct eap_sim_db_data *data,
 
 		imsi_len = os_strlen(imsi);
 		len = os_snprintf(msg, sizeof(msg), "AKA-AUTS ");
-		if (len < 0 || len + imsi_len >= sizeof(msg))
+		if (os_snprintf_error(sizeof(msg), len) ||
+		    len + imsi_len >= sizeof(msg))
 			return -1;
 		os_memcpy(msg + len, imsi, imsi_len);
 		len += imsi_len;

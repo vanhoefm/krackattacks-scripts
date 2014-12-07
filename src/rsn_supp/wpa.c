@@ -2042,7 +2042,7 @@ int wpa_sm_get_mib(struct wpa_sm *sm, char *buf, size_t buflen)
 		RSN_SUITE_ARG(wpa_cipher_to_suite(sm->proto,
 						  sm->group_cipher)),
 		sm->dot11RSNA4WayHandshakeFailures);
-	if (ret >= 0 && (size_t) ret < buflen)
+	if (!os_snprintf_error(buflen - len, ret))
 		len += ret;
 
 	return (int) len;

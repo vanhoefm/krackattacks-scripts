@@ -475,9 +475,6 @@ static int wpa_supplicant_ctrl_iface_get(struct wpa_supplicant *wpa_s,
 		else
 			enabled = wpa_s->global->wifi_display;
 		res = os_snprintf(buf, buflen, "%d", enabled);
-		if (os_snprintf_error(buflen, res))
-			return -1;
-		return res;
 #endif /* CONFIG_WIFI_DISPLAY */
 #ifdef CONFIG_TESTING_GET_GTK
 	} else if (os_strcmp(cmd, "gtk") == 0) {
@@ -489,7 +486,7 @@ static int wpa_supplicant_ctrl_iface_get(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_TESTING_GET_GTK */
 	}
 
-	if (res < 0 || (unsigned int) res >= buflen)
+	if (os_snprintf_error(buflen, res))
 		return -1;
 	return res;
 }
@@ -1676,7 +1673,7 @@ static int wpa_supplicant_ctrl_iface_status(struct wpa_supplicant *wpa_s,
 				ret = 0;
 				break;
 			}
-			if (ret < 0 || ret >= end - pos)
+			if (os_snprintf_error(end - pos, ret))
 				return pos - buf;
 			pos += ret;
 		}

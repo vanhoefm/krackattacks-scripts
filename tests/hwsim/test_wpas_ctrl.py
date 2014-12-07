@@ -229,6 +229,22 @@ def test_wpas_ctrl_dup_network(dev, apdev):
             raise Exception("DUP_NETWORK failed")
     dev[0].connect_network(id)
 
+    if "FAIL" not in dev[0].request("DUP_NETWORK "):
+        raise Exception("Unexpected DUP_NETWORK success")
+    if "FAIL" not in dev[0].request("DUP_NETWORK %d " % id):
+        raise Exception("Unexpected DUP_NETWORK success")
+    if "FAIL" not in dev[0].request("DUP_NETWORK %d %d" % (id, id)):
+        raise Exception("Unexpected DUP_NETWORK success")
+    if "FAIL" not in dev[0].request("DUP_NETWORK 123456 1234567 "):
+        raise Exception("Unexpected DUP_NETWORK success")
+    if "FAIL" not in dev[0].request("DUP_NETWORK %d 123456 " % id):
+        raise Exception("Unexpected DUP_NETWORK success")
+    if "FAIL" not in dev[0].request("DUP_NETWORK %d %d foo" % (id, id)):
+        raise Exception("Unexpected DUP_NETWORK success")
+    dev[0].request("DISCONNECT")
+    if "OK" not in dev[0].request("DUP_NETWORK %d %d ssid" % (id, id)):
+        raise Exception("Unexpected DUP_NETWORK failure")
+
 def add_cred(dev):
     id = dev.add_cred()
     ev = dev.wait_event(["CRED-ADDED"])

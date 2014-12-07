@@ -40,6 +40,9 @@ def test_nfc_wps_password_token_sta(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
     hapd = hostapd.Hostapd(apdev[0]['ifname'])
     logger.info("WPS provisioning step using password token from station")
+    wps = dev[0].request("WPS_NFC_TOKEN WPS").rstrip()
+    if "FAIL" in wps:
+        raise Exception("Failed to generate password token (WPS only)")
     pw = dev[0].request("WPS_NFC_TOKEN NDEF").rstrip()
     if "FAIL" in pw:
         raise Exception("Failed to generate password token")
@@ -437,6 +440,9 @@ def test_nfc_wps_er_config_token(dev, apdev):
     start_ap_er(dev[0], apdev[0], ssid)
     hapd = hostapd.Hostapd(apdev[0]['ifname'])
     logger.info("WPS provisioning step using configuration token from ER")
+    wps = dev[0].request("WPS_ER_NFC_CONFIG_TOKEN WPS " + apdev[0]['bssid']).rstrip()
+    if "FAIL" in wps:
+        raise Exception("Failed to generate configuration token (WPS format)")
     conf = dev[0].request("WPS_ER_NFC_CONFIG_TOKEN NDEF " + apdev[0]['bssid']).rstrip()
     if "FAIL" in conf:
         raise Exception("Failed to generate configuration token")

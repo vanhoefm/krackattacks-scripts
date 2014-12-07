@@ -540,6 +540,13 @@ def test_wpas_ctrl_wps_errors(dev):
     if "FAIL" not in dev[0].request("WPS_ER_NFC_CONFIG_TOKEN NDEF 00:11:22:33:44:55"):
         raise Exception("Unexpected success on invalid WPS_ER_NFC_CONFIG_TOKEN")
 
+    if "FAIL" not in dev[0].request("WPS_NFC_CONFIG_TOKEN FOO"):
+        raise Exception("Unexpected success on invalid WPS_NFC_CONFIG_TOKEN")
+    if "FAIL" not in dev[0].request("WPS_NFC_CONFIG_TOKEN WPS FOO"):
+        raise Exception("Unexpected success on invalid WPS_NFC_CONFIG_TOKEN")
+    if "FAIL" not in dev[0].request("WPS_NFC_TOKEN FOO"):
+        raise Exception("Unexpected success on invalid WPS_NFC_TOKEN")
+
 def test_wpas_ctrl_config_parser(dev):
     """wpa_supplicant ctrl_iface SET config parser"""
     if "FAIL" not in dev[0].request("SET pbc_in_m1 qwerty"):

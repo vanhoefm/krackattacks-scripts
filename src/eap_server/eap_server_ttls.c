@@ -409,7 +409,7 @@ static struct wpabuf * eap_ttls_build_phase2_mschapv2(
 				       RADIUS_VENDOR_ID_MICROSOFT, 1, 43);
 		*pos++ = data->mschapv2_ident;
 		ret = os_snprintf((char *) pos, end - pos, "S=");
-		if (ret >= 0 && ret < end - pos)
+		if (!os_snprintf_error(end - pos, ret))
 			pos += ret;
 		pos += wpa_snprintf_hex_uppercase(
 			(char *) pos, end - pos, data->mschapv2_auth_response,

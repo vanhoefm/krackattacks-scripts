@@ -185,7 +185,7 @@ static void hostapd_wps_pin_needed_cb(void *ctx, const u8 *uuid_e,
 			  dev->model_number, dev->serial_number,
 			  wps_dev_type_bin2str(dev->pri_dev_type, devtype,
 					       sizeof(devtype)));
-	if (len > 0 && len < (int) sizeof(txt))
+	if (!os_snprintf_error(sizeof(txt), len))
 		wpa_msg(hapd->msg_ctx, MSG_INFO, "%s", txt);
 
 	if (hapd->conf->wps_pin_requests) {

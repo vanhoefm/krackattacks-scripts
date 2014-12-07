@@ -1015,7 +1015,7 @@ static void send_scan_event(struct wpa_driver_nl80211_data *drv, int aborted,
 			freqs[num_freqs] = nla_get_u32(nl);
 			res = os_snprintf(pos, end - pos, " %d",
 					  freqs[num_freqs]);
-			if (res > 0 && end - pos > res)
+			if (!os_snprintf_error(end - pos, res))
 				pos += res;
 			num_freqs++;
 			if (num_freqs == MAX_REPORT_FREQS - 1)

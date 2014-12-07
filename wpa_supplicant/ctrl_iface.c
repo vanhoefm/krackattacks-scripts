@@ -2260,7 +2260,7 @@ static char * wpa_supplicant_wps_ie_txt_buf(struct wpa_supplicant *wpa_s,
 		txt = "[WPS]";
 
 	ret = os_snprintf(pos, end - pos, "%s", txt);
-	if (ret >= 0 && ret < end - pos)
+	if (!os_snprintf_error(end - pos, ret))
 		pos += ret;
 	wpabuf_free(wps_ie);
 	return pos;

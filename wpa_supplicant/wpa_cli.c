@@ -3681,7 +3681,7 @@ static void update_ifnames(struct wpa_ctrl *ctrl)
 			break;
 		*end = '\0';
 		ret = os_snprintf(txt, sizeof(txt), "ifname=%s", pos);
-		if (ret > 0 && ret < (int) sizeof(txt))
+		if (!os_snprintf_error(sizeof(txt), ret))
 			cli_txt_list_add(&ifnames, txt);
 		pos = end + 1;
 	}

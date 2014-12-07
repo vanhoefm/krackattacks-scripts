@@ -1310,7 +1310,7 @@ static int wpa_config_parse_wep_key(u8 *key, size_t *len, int line,
 	os_memcpy(key, buf, *len);
 	str_clear_free(buf);
 	res = os_snprintf(title, sizeof(title), "wep_key%d", idx);
-	if (res >= 0 && (size_t) res < sizeof(title))
+	if (!os_snprintf_error(sizeof(title), res))
 		wpa_hexdump_key(MSG_MSGDUMP, title, key, *len);
 	return 0;
 }

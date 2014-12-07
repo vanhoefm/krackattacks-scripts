@@ -2878,7 +2878,7 @@ static int wpa_supplicant_ctrl_iface_dup_network(
 	ssid_d = wpa_config_get_network(wpa_s->conf, id_d);
 	if (ssid_d == NULL) {
 		wpa_printf(MSG_DEBUG, "CTRL_IFACE: Could not find "
-			   "network id=%d", id_s);
+			   "network id=%d", id_d);
 		return -1;
 	}
 

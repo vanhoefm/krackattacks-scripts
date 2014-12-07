@@ -247,7 +247,7 @@ dbus_bool_t set_network_properties(struct wpa_supplicant *wpa_s,
 
 			ret = os_snprintf(value, size, "%u",
 					  entry.uint32_value);
-			if (ret <= 0)
+			if (os_snprintf_error(size, ret))
 				goto error;
 		} else if (entry.type == DBUS_TYPE_INT32) {
 			value = os_zalloc(size);
@@ -256,7 +256,7 @@ dbus_bool_t set_network_properties(struct wpa_supplicant *wpa_s,
 
 			ret = os_snprintf(value, size, "%d",
 					  entry.int32_value);
-			if (ret <= 0)
+			if (os_snprintf_error(size, ret))
 				goto error;
 		} else
 			goto error;

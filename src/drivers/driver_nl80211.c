@@ -7972,7 +7972,7 @@ static int linux_write_system_file(const char *path, unsigned int val)
 	int fd, len;
 
 	len = os_snprintf(buf, sizeof(buf), "%u\n", val);
-	if (len < 0)
+	if (os_snprintf_error(sizeof(buf), len))
 		return -1;
 
 	fd = open(path, O_WRONLY);

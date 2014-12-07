@@ -128,6 +128,9 @@ def test_ibss_rsn(dev):
     time.sleep(3)
     hwsim_utils.test_connectivity(dev[0], dev[1])
 
+    if "OK" not in dev[0].request("IBSS_RSN " + dev[1].p2p_interface_addr()):
+        raise Exception("IBSS_RSN command failed")
+
 def test_ibss_wpa_none(dev):
     """IBSS WPA-None"""
     ssid="ibss-wpa-none"

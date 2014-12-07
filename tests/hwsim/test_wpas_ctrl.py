@@ -1080,3 +1080,23 @@ def test_wpas_ctrl_neighbor_rep_req(dev, apdev):
         raise Exception("Request succeeded unexpectedly")
     if "FAIL" not in dev[0].request("NEIGHBOR_REP_REQUEST ssid=abcdef"):
         raise Exception("Request succeeded unexpectedly")
+
+def test_wpas_ctrl_rsp(dev, apdev):
+    """wpa_supplicant ctrl_iface CTRL-RSP-"""
+    if "FAIL" not in dev[0].request("CTRL-RSP-"):
+        raise Exception("Request succeeded unexpectedly")
+    if "FAIL" not in dev[0].request("CTRL-RSP-foo-"):
+        raise Exception("Request succeeded unexpectedly")
+    if "FAIL" not in dev[0].request("CTRL-RSP-foo-1234567"):
+        raise Exception("Request succeeded unexpectedly")
+    if "FAIL" not in dev[0].request("CTRL-RSP-foo-1234567:"):
+        raise Exception("Request succeeded unexpectedly")
+    id = dev[0].add_network()
+    if "FAIL" not in dev[0].request("CTRL-RSP-foo-%d:" % id):
+        raise Exception("Request succeeded unexpectedly")
+    for req in [ "IDENTITY", "PASSWORD", "NEW_PASSWORD", "PIN", "OTP",
+                 "PASSPHRASE", "SIM" ]:
+        if "OK" not in dev[0].request("CTRL-RSP-%s-%d:" % (req, id)):
+            raise Exception("Request failed unexpectedly")
+        if "OK" not in dev[0].request("CTRL-RSP-%s-%d:" % (req, id)):
+            raise Exception("Request failed unexpectedly")

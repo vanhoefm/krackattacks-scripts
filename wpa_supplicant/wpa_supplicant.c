@@ -4275,7 +4275,7 @@ struct wpa_global * wpa_supplicant_init(struct wpa_params *params)
 		wpa_supplicant_deinit(global);
 		return NULL;
 	}
-	global->drv_priv = os_zalloc(global->drv_count * sizeof(void *));
+	global->drv_priv = os_calloc(global->drv_count, sizeof(void *));
 	if (global->drv_priv == NULL) {
 		wpa_supplicant_deinit(global);
 		return NULL;
@@ -4434,7 +4434,7 @@ static int * get_bss_freqs_in_ess(struct wpa_supplicant *wpa_s)
 	int *freqs;
 	int num_freqs = 0;
 
-	freqs = os_zalloc(sizeof(int) * (max_freqs + 1));
+	freqs = os_calloc(max_freqs + 1, sizeof(int));
 	if (freqs == NULL)
 		return NULL;
 

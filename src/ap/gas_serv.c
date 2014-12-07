@@ -58,7 +58,7 @@ gas_dialog_create(struct hostapd_data *hapd, const u8 *addr, u8 dialog_token)
 	}
 
 	if (sta->gas_dialog == NULL) {
-		sta->gas_dialog = os_zalloc(GAS_DIALOG_MAX *
+		sta->gas_dialog = os_calloc(GAS_DIALOG_MAX,
 					    sizeof(struct gas_dialog_info));
 		if (sta->gas_dialog == NULL)
 			return NULL;

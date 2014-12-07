@@ -294,7 +294,7 @@ wpa_supplicant_build_filter_ssids(struct wpa_config *conf, size_t *num_ssids)
 	}
 	if (count == 0)
 		return NULL;
-	ssids = os_zalloc(count * sizeof(struct wpa_driver_scan_filter));
+	ssids = os_calloc(count, sizeof(struct wpa_driver_scan_filter));
 	if (ssids == NULL)
 		return NULL;
 
@@ -322,7 +322,7 @@ static void wpa_supplicant_optimize_freqs(
 			wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Scan only GO "
 				"preferred frequency %d MHz",
 				wpa_s->go_params->freq);
-			params->freqs = os_zalloc(2 * sizeof(int));
+			params->freqs = os_calloc(2, sizeof(int));
 			if (params->freqs)
 				params->freqs[0] = wpa_s->go_params->freq;
 		} else if (wpa_s->p2p_in_provisioning < 8 &&
@@ -346,7 +346,7 @@ static void wpa_supplicant_optimize_freqs(
 		    wpa_s->p2p_invite_go_freq > 0) {
 			wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Scan only GO preferred frequency %d MHz during invitation",
 				wpa_s->p2p_invite_go_freq);
-			params->freqs = os_zalloc(2 * sizeof(int));
+			params->freqs = os_calloc(2, sizeof(int));
 			if (params->freqs)
 				params->freqs[0] = wpa_s->p2p_invite_go_freq;
 		}
@@ -372,7 +372,7 @@ static void wpa_supplicant_optimize_freqs(
 		 */
 		wpa_dbg(wpa_s, MSG_DEBUG, "WPS: Scan only frequency %u MHz "
 			"that was used during provisioning", wpa_s->wps_freq);
-		params->freqs = os_zalloc(2 * sizeof(int));
+		params->freqs = os_calloc(2, sizeof(int));
 		if (params->freqs)
 			params->freqs[0] = wpa_s->wps_freq;
 		wpa_s->after_wps--;
@@ -384,7 +384,7 @@ static void wpa_supplicant_optimize_freqs(
 		/* Optimize provisioning scan based on already known channel */
 		wpa_dbg(wpa_s, MSG_DEBUG, "WPS: Scan only frequency %u MHz",
 			wpa_s->wps_freq);
-		params->freqs = os_zalloc(2 * sizeof(int));
+		params->freqs = os_calloc(2, sizeof(int));
 		if (params->freqs)
 			params->freqs[0] = wpa_s->wps_freq;
 		wpa_s->known_wps_freq = 0; /* only do this once */
@@ -533,7 +533,7 @@ static void wpa_setband_scan_freqs_list(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
-	params->freqs = os_zalloc((mode->num_channels + 1) * sizeof(int));
+	params->freqs = os_calloc(mode->num_channels + 1, sizeof(int));
 	if (params->freqs == NULL)
 		return;
 	for (count = 0, i = 0; i < mode->num_channels; i++) {
@@ -1151,7 +1151,7 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 	os_memset(&params, 0, sizeof(params));
 
 	/* If we can't allocate space for the filters, we just don't filter */
-	params.filter_ssids = os_zalloc(wpa_s->max_match_sets *
+	params.filter_ssids = os_calloc(wpa_s->max_match_sets,
 					sizeof(struct wpa_driver_scan_filter));
 
 	prev_state = wpa_s->wpa_state;

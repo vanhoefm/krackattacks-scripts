@@ -1878,7 +1878,7 @@ static struct hostapd_iface * hostapd_data_alloc(
 	hapd_iface->conf = conf;
 	hapd_iface->num_bss = conf->num_bss;
 
-	hapd_iface->bss = os_zalloc(conf->num_bss *
+	hapd_iface->bss = os_calloc(conf->num_bss,
 				    sizeof(struct hostapd_data *));
 	if (hapd_iface->bss == NULL)
 		return NULL;

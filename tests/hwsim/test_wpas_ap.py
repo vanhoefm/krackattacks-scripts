@@ -217,3 +217,24 @@ def test_wpas_ap_wps(dev):
     ev = dev[0].wait_event(["WPS-AP-SETUP-LOCKED"])
     if ev is None:
         raise Exception("WPS AP PIN not locked")
+
+    dev[0].dump_monitor()
+    logger.info("Test random AP PIN timeout")
+    pin = dev[0].request("WPS_AP_PIN random 1")
+    if "FAIL" in pin:
+        raise Exception("Could not generate random AP PIN")
+    res = dev[0].request("WPS_AP_PIN get")
+    if pin not in res:
+        raise Exception("Could not fetch current AP PIN")
+    for i in range(10):
+        time.sleep(0.2)
+        res = dev[0].request("WPS_AP_PIN get")
+        if "FAIL" in res:
+            break
+    if "FAIL" not in res:
+        raise Exception("WPS_AP_PIN random timeout did not work")
+
+    if "FAIL" not in dev[0].request("WPS_AP_PIN foo"):
+        raise Exception("Invalid WPS_AP_PIN command not rejected")
+    if "FAIL" not in dev[0].request("WPS_AP_PIN set"):
+        raise Exception("Invalid WPS_AP_PIN command not rejected")

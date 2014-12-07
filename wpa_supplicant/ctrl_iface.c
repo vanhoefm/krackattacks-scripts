@@ -2466,12 +2466,6 @@ static int wpa_supplicant_ctrl_iface_mesh_group_add(
 static int wpa_supplicant_ctrl_iface_mesh_group_remove(
 	struct wpa_supplicant *wpa_s, char *cmd)
 {
-	if (!cmd) {
-		wpa_printf(MSG_ERROR,
-			   "CTRL_IFACE: MESH_GROUP_REMOVE ifname cannot be empty");
-		return -1;
-	}
-
 	/*
 	 * TODO: Support a multiple mesh and other iface type combinations
 	 */

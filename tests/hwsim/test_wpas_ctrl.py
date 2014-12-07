@@ -198,6 +198,8 @@ def test_wpas_ctrl_network(dev):
         raise Exception("Unexpected BSSID success")
     if "FAIL" not in dev[0].request('BSSID ' + str(id) + ' 00:11:22:33:44'):
         raise Exception("Unexpected BSSID success")
+    if "FAIL" not in dev[0].request('BSSID ' + str(id)):
+        raise Exception("Unexpected BSSID success")
 
 def test_wpas_ctrl_many_networks(dev, apdev):
     """wpa_supplicant ctrl_iface LIST_NETWORKS with huge number of networks"""

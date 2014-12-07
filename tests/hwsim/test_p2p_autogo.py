@@ -49,6 +49,10 @@ def test_autogo(dev):
     if "id=" + id not in res:
         raise Exception("Could not find BSS entry based on id range")
 
+    res = dev[1].request("SCAN_RESULTS")
+    if "[P2P]" not in res:
+        raise Exception("P2P flag missing from scan results: " + res)
+
     # Presence request to increase testing coverage
     if "FAIL" in dev[1].group_request("P2P_PRESENCE_REQ 30000 102400"):
         raise Exception("Could not send presence request")

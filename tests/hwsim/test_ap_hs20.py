@@ -345,6 +345,10 @@ def test_ap_hs20_select(dev, apdev):
     dev[0].set_cred_quoted(id, "realm", "no.match.example.com");
     interworking_select(dev[0], bssid, no_match=True, freq="2412")
 
+    res = dev[0].request("SCAN_RESULTS")
+    if "[HS20]" not in res:
+        raise Exception("HS20 flag missing from scan results: " + res)
+
     bssid2 = apdev[1]['bssid']
     params = hs20_ap_params()
     params['nai_realm'] = [ "0,example.org,21" ]

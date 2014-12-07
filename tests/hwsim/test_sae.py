@@ -27,6 +27,11 @@ def test_sae(dev, apdev):
                         scan_freq="2412")
     if dev[0].get_status_field('sae_group') != '19':
             raise Exception("Expected default SAE group not used")
+    bss = dev[0].get_bss(apdev[0]['bssid'])
+    if 'flags' not in bss:
+        raise Exception("Could not get BSS flags from BSS table")
+    if "[WPA2-SAE-CCMP]" not in bss['flags']:
+        raise Exception("Unexpected BSS flags: " + bss['flags'])
 
 def test_sae_pmksa_caching(dev, apdev):
     """SAE and PMKSA caching"""

@@ -1695,6 +1695,12 @@ def test_ap_wpa2_eap_psk(dev, apdev):
     check_mib(dev[0], [ ("dot11RSNAAuthenticationSuiteRequested", "00-0f-ac-5"),
                         ("dot11RSNAAuthenticationSuiteSelected", "00-0f-ac-5") ])
 
+    bss = dev[0].get_bss(apdev[0]['bssid'])
+    if 'flags' not in bss:
+        raise Exception("Could not get BSS flags from BSS table")
+    if "[WPA2-EAP-SHA256-CCMP]" not in bss['flags']:
+        raise Exception("Unexpected BSS flags: " + bss['flags'])
+
     logger.info("Negative test with incorrect password")
     dev[0].request("REMOVE_NETWORK all")
     eap_connect(dev[0], apdev[0], "PSK", "psk.user@example.com",

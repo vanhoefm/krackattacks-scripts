@@ -24,6 +24,13 @@ def test_suite_b(dev, apdev):
                    client_cert="auth_serv/user.pem",
                    private_key="auth_serv/user.key",
                    pairwise="GCMP", group="GCMP", scan_freq="2412")
+
+    bss = dev[0].get_bss(apdev[0]['bssid'])
+    if 'flags' not in bss:
+        raise Exception("Could not get BSS flags from BSS table")
+    if "[WPA2-EAP-SUITE-B-GCMP]" not in bss['flags']:
+        raise Exception("Unexpected BSS flags: " + bss['flags'])
+
     dev[0].request("DISCONNECT")
     ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=20)
     if ev is None:

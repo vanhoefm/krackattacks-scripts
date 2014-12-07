@@ -18,6 +18,12 @@ def test_wep_open_auth(dev, apdev):
     if "[WEP]" not in dev[0].request("SCAN_RESULTS"):
         raise Exception("WEP flag not indicated in scan results")
 
+    bss = dev[0].get_bss(apdev[0]['bssid'])
+    if 'flags' not in bss:
+        raise Exception("Could not get BSS flags from BSS table")
+    if "[WEP]" not in bss['flags']:
+        raise Exception("Unexpected BSS flags: " + bss['flags'])
+
 def test_wep_shared_key_auth(dev, apdev):
     """WEP Shared Key authentication"""
     hapd = hostapd.add_ap(apdev[0]['ifname'],

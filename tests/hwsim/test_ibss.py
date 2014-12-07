@@ -169,6 +169,16 @@ def test_ibss_wpa_none(dev):
     print bssid1
     print bssid2
 
+    bss = dev[0].get_bss(bssid0)
+    if not bss:
+        bss = dev[1].get_bss(bssid1)
+        if not bss:
+            raise Exception("Could not find BSS entry for IBSS")
+    if 'flags' not in bss:
+        raise Exception("Could not get BSS flags from BSS table")
+    if "[WPA-None-TKIP]" not in bss['flags']:
+        raise Exception("Unexpected BSS flags: " + bss['flags'])
+
     # Allow some time for all peers to complete key setup
     time.sleep(1)
 
@@ -239,6 +249,21 @@ def test_ibss_open(dev):
     bssid1 = wait_ibss_connection(dev[1])
     if bssid0 != bssid1:
         logger.info("STA0 BSSID " + bssid0 + " differs from STA1 BSSID " + bssid1)
+
+    res = dev[0].request("SCAN_RESULTS")
+    if "[IBSS]" not in res:
+        res = dev[1].request("SCAN_RESULTS")
+        if "[IBSS]" not in res:
+            raise Exception("IBSS flag missing from scan results: " + res)
+    bss = dev[0].get_bss(bssid0)
+    if not bss:
+        bss = dev[1].get_bss(bssid1)
+        if not bss:
+            raise Exception("Could not find BSS entry for IBSS")
+    if 'flags' not in bss:
+        raise Exception("Could not get BSS flags from BSS table")
+    if "[IBSS]" not in bss['flags']:
+        raise Exception("Unexpected BSS flags: " + bss['flags'])
 
 def test_ibss_open_fixed_bssid(dev):
     """IBSS open (no security) and fixed BSSID"""

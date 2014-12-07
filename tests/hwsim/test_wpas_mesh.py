@@ -197,7 +197,6 @@ def wrap_wpas_mesh_test(test, dev, apdev):
 
 
 def _test_wpas_mesh_open(dev, apdev, test_connectivity):
-    """wpa_supplicant open MESH network connectivity"""
     id = dev[0].add_network()
     dev[0].set_network(id, "mode", "5")
     dev[0].set_network_quoted(id, "ssid", "wpas-mesh-open")
@@ -227,11 +226,11 @@ def _test_wpas_mesh_open(dev, apdev, test_connectivity):
 
 
 def test_wpas_mesh_open(dev, apdev):
+    """wpa_supplicant open MESH network connectivity"""
     return wrap_wpas_mesh_test(_test_wpas_mesh_open, dev, apdev)
 
 
 def _test_wpas_mesh_open_no_auto(dev, apdev, test_connectivity):
-    """wpa_supplicant open MESH network connectivity"""
     id = dev[0].add_network()
     dev[0].set_network(id, "mode", "5")
     dev[0].set_network_quoted(id, "ssid", "wpas-mesh-open")
@@ -262,11 +261,11 @@ def _test_wpas_mesh_open_no_auto(dev, apdev, test_connectivity):
 
 
 def test_wpas_mesh_open_no_auto(dev, apdev):
+    """wpa_supplicant open MESH network connectivity"""
     return wrap_wpas_mesh_test(_test_wpas_mesh_open_no_auto, dev, apdev)
 
 
 def _test_wpas_mesh_secure(dev, apdev, test_connectivity):
-    """wpa_supplicant secure MESH network connectivity"""
     dev[0].request("SET sae_groups ")
     id = dev[0].add_network()
     dev[0].set_network(id, "mode", "5")
@@ -298,11 +297,11 @@ def _test_wpas_mesh_secure(dev, apdev, test_connectivity):
 
 
 def test_wpas_mesh_secure(dev, apdev):
+    """wpa_supplicant secure MESH network connectivity"""
     return wrap_wpas_mesh_test(_test_wpas_mesh_secure, dev, apdev)
 
 
 def _test_wpas_mesh_secure_no_auto(dev, apdev, test_connectivity):
-    """wpa_supplicant secure MESH network connectivity"""
     dev[0].request("SET sae_groups ")
     id = dev[0].add_network()
     dev[0].set_network(id, "mode", "5")
@@ -335,6 +334,7 @@ def _test_wpas_mesh_secure_no_auto(dev, apdev, test_connectivity):
 
 
 def test_wpas_mesh_secure_no_auto(dev, apdev):
+    """wpa_supplicant secure MESH network connectivity"""
     return wrap_wpas_mesh_test(_test_wpas_mesh_secure_no_auto, dev, apdev)
 
 def test_wpas_mesh_ctrl(dev):

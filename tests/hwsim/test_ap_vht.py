@@ -83,6 +83,7 @@ def test_ap_vht80_params(dev, apdev):
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
 
 def test_ap_vht_20(devs, apdevs):
+    """VHT and 20 MHz channel"""
     dev = devs[0]
     ap = apdevs[0]
     try:

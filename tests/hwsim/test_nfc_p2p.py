@@ -552,6 +552,7 @@ def test_nfc_p2p_static_handover_join_tagdev_client(dev):
     check_ip_addr(res)
 
 def test_nfc_p2p_go_legacy_config_token(dev):
+    """NFC config token from P2P GO to legacy WPS STA"""
     logger.info("Start autonomous GOs")
     dev[0].p2p_start_go()
     logger.info("Connect legacy WPS STA with configuration token")
@@ -570,6 +571,7 @@ def test_nfc_p2p_go_legacy_config_token(dev):
     dev[0].remove_group()
 
 def test_nfc_p2p_go_legacy_handover(dev):
+    """NFC token from legacy WPS STA to P2P GO"""
     logger.info("Start autonomous GOs")
     dev[0].p2p_start_go()
     logger.info("Connect legacy WPS STA with connection handover")

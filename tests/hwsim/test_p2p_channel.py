@@ -442,6 +442,7 @@ def test_no_go_freq(dev, apdev):
        dev[0].request("SET p2p_no_go_freq ")
 
 def test_go_neg_peers_force_diff_freq(dev, apdev):
+    """P2P channel selection when peers for different frequency"""
     try:
        [i_res2, r_res2] = go_neg_pbc(i_dev=dev[0], i_intent=14, i_freq=5180,
                                      r_dev=dev[1], r_intent=0, r_freq=5200)

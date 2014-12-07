@@ -94,10 +94,9 @@ struct wpa_ctrl * wpa_ctrl_open(const char *ctrl_path)
 	if (ctrl_path == NULL)
 		return NULL;
 
-	ctrl = os_malloc(sizeof(*ctrl));
+	ctrl = os_zalloc(sizeof(*ctrl));
 	if (ctrl == NULL)
 		return NULL;
-	os_memset(ctrl, 0, sizeof(*ctrl));
 
 	ctrl->s = socket(PF_UNIX, SOCK_DGRAM, 0);
 	if (ctrl->s < 0) {
@@ -283,10 +282,9 @@ struct wpa_ctrl * wpa_ctrl_open(const char *ctrl_path)
 	struct hostent *h;
 #endif /* CONFIG_CTRL_IFACE_UDP_REMOTE */
 
-	ctrl = os_malloc(sizeof(*ctrl));
+	ctrl = os_zalloc(sizeof(*ctrl));
 	if (ctrl == NULL)
 		return NULL;
-	os_memset(ctrl, 0, sizeof(*ctrl));
 
 #ifdef CONFIG_CTRL_IFACE_UDP_IPV6
 	ctrl->s = socket(PF_INET6, SOCK_DGRAM, 0);

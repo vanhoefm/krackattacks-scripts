@@ -774,10 +774,13 @@ def test_grpform_no_wsc_done(dev):
         dev[0].p2p_go_neg_init(addr1, "12345670", "enter", timeout=20,
                                go_intent=15, wait_group=False)
 
+        mode = None
         while True:
             ev = dev[0].wait_event(["EAPOL-TX"], timeout=15)
             if ev is None:
                 raise Exception("Timeout on EAPOL-TX from GO")
+            if not mode:
+                mode = dev[0].get_status_field("mode")
             res = dev[1].request("EAPOL_RX " + addr0 + " " + ev.split(' ')[2])
             if "OK" not in res:
                 raise Exception("EAPOL_RX failed")
@@ -804,6 +807,9 @@ def test_grpform_no_wsc_done(dev):
         if ev is None:
             raise Exception("Group formation timed out on P2P Client")
         dev[0].remove_group()
+
+        if mode != "P2P GO - group formation":
+            raise Exception("Unexpected mode on GO during group formation: " + mode)
 
 def test_grpform_wait_peer(dev):
     """P2P group formation wait for peer to become ready"""

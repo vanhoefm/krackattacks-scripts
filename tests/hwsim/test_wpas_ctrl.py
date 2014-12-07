@@ -759,6 +759,8 @@ def test_wpas_ctrl_get_capability(dev):
     """wpa_supplicant ctrl_iface GET_CAPABILITY"""
     if "FAIL" not in dev[0].request("GET_CAPABILITY 1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890"):
         raise Exception("Unexpected success on invalid GET_CAPABILITY")
+    if "FAIL" not in dev[0].request("GET_CAPABILITY eap foo"):
+        raise Exception("Unexpected success on invalid GET_CAPABILITY")
     if "AP" not in dev[0].request("GET_CAPABILITY modes strict"):
         raise Exception("Unexpected GET_CAPABILITY response")
     res = dev[0].get_capability("eap")
@@ -800,6 +802,10 @@ def test_wpas_ctrl_get_capability(dev):
     res = dev[0].get_capability("tdls")
     if "EXTERNAL" not in res[0]:
         raise Exception("Unexpected GET_CAPABILITY tdls response: " + str(res))
+
+    res = dev[0].get_capability("erp")
+    if "ERP" not in res[0]:
+        raise Exception("Unexpected GET_CAPABILITY erp response: " + str(res))
 
     if dev[0].get_capability("foo") is not None:
         raise Exception("Unexpected GET_CAPABILITY foo response: " + str(res))

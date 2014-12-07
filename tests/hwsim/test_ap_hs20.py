@@ -2139,6 +2139,45 @@ def test_ap_hs20_random_mac_addr(dev, apdev):
     if sta['addr'] != addr1:
         raise Exception("STA association with random address not found")
 
+def test_ap_hs20_multi_network_and_cred_removal(dev, apdev):
+    """Multiple networks and cred removal"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['nai_realm'] = [ "0,example.com,25[3:26]"]
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].add_network()
+    dev[0].hs20_enable()
+    id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'username': "user",
+                                  'password': "password" })
+    interworking_select(dev[0], bssid, freq="2412")
+    interworking_connect(dev[0], bssid, "PEAP")
+    dev[0].add_network()
+
+    dev[0].request("DISCONNECT")
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"])
+    if ev is None:
+        raise Exception("Timeout on disconnection")
+
+    hapd.disable()
+    hapd.set("ssid", "another ssid")
+    hapd.enable()
+
+    interworking_select(dev[0], bssid, freq="2412")
+    interworking_connect(dev[0], bssid, "PEAP")
+    dev[0].add_network()
+    if len(dev[0].list_networks()) != 5:
+        raise Exception("Unexpected number of networks prior to remove_crec")
+
+    dev[0].dump_monitor()
+    dev[0].remove_cred(id)
+    if len(dev[0].list_networks()) != 3:
+        raise Exception("Unexpected number of networks after to remove_crec")
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"])
+    if ev is None:
+        raise Exception("Timeout on disconnection")
+
 def _test_ap_hs20_proxyarp(dev, apdev):
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()

@@ -2003,10 +2003,6 @@ static int wpa_supplicant_ctrl_iface_log_level(struct wpa_supplicant *wpa_s,
 	char *pos, *end, *stamp;
 	int ret;
 
-	if (cmd == NULL) {
-		return -1;
-	}
-
 	/* cmd: "LOG_LEVEL [<level>]" */
 	if (*cmd == '\0') {
 		pos = buf;

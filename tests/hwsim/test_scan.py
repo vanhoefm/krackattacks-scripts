@@ -222,6 +222,16 @@ def test_scan_bss_operations(dev, apdev):
     if "####" not in res:
         raise Exception("Missing end")
 
+    res = dev[0].request("BSS RANGE=ALL MASK=0")
+    if "id=" + id1 not in res:
+        raise Exception("Missing BSS " + id1)
+    if "id=" + id2 not in res:
+        raise Exception("Missing BSS " + id2)
+    if "====" in res:
+        raise Exception("Unexpected delim")
+    if "####" in res:
+        raise Exception("Unexpected end delim")
+
     res = dev[0].request("BSS RANGE=ALL MASK=0x1").splitlines()
     if len(res) != 2:
         raise Exception("Unexpected result")
@@ -236,6 +246,9 @@ def test_scan_bss_operations(dev, apdev):
         raise Exception("Unexpected result: " + res)
     res = dev[0].request("BSS NEXT-" + id1 + " MASK=0x1")
     if "id=" + id2 not in res:
+        raise Exception("Unexpected result: " + res)
+    res = dev[0].request("BSS NEXT-" + id2 + " MASK=0x1")
+    if "id=" in res:
         raise Exception("Unexpected result: " + res)
 
     if len(dev[0].request("BSS RANGE=" + id2 + " MASK=0x1").splitlines()) != 0:
@@ -252,6 +265,24 @@ def test_scan_bss_operations(dev, apdev):
         raise Exception("Unexpected RANGE=2-10 result")
     if len(dev[0].request("BSS RANGE=0-" + str(int(id2) + 10) + " MASK=0x1").splitlines()) != 2:
         raise Exception("Unexpected RANGE=0-10 result")
+    if len(dev[0].request("BSS RANGE=" + id1 + "-" + id1 + " MASK=0x1").splitlines()) != 1:
+        raise Exception("Unexpected RANGE=0-0 result")
+
+    res = dev[0].request("BSS p2p_dev_addr=FOO")
+    if "FAIL" in res or "id=" in res:
+        raise Exception("Unexpected result: " + res)
+    res = dev[0].request("BSS p2p_dev_addr=00:11:22:33:44:55")
+    if "FAIL" in res or "id=" in res:
+        raise Exception("Unexpected result: " + res)
+
+    dev[0].request("BSS_FLUSH 1000")
+    res = dev[0].request("BSS RANGE=ALL MASK=0x1").splitlines()
+    if len(res) != 2:
+        raise Exception("Unexpected result after BSS_FLUSH 1000")
+    dev[0].request("BSS_FLUSH 0")
+    res = dev[0].request("BSS RANGE=ALL MASK=0x1").splitlines()
+    if len(res) != 0:
+        raise Exception("Unexpected result after BSS_FLUSH 0")
 
 def test_scan_and_interface_disabled(dev, apdev):
     """Scan operation when interface gets disabled"""

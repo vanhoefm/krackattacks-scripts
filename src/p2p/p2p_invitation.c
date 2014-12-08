@@ -427,21 +427,45 @@ void p2p_process_invitation_resp(struct p2p_data *p2p, const u8 *sa,
 	if (dev == NULL) {
 		p2p_dbg(p2p, "Ignore Invitation Response from unknown peer "
 			MACSTR, MAC2STR(sa));
+		p2p->cfg->send_action_done(p2p->cfg->cb_ctx);
 		return;
 	}
 
 	if (dev != p2p->invite_peer) {
 		p2p_dbg(p2p, "Ignore unexpected Invitation Response from peer "
 			MACSTR, MAC2STR(sa));
+		p2p->cfg->send_action_done(p2p->cfg->cb_ctx);
 		return;
 	}
 
-	if (p2p_parse(data, len, &msg))
+	if (p2p_parse(data, len, &msg)) {
+		p2p->cfg->send_action_done(p2p->cfg->cb_ctx);
 		return;
+	}
 
 	if (!msg.status) {
 		p2p_dbg(p2p, "Mandatory Status attribute missing in Invitation Response from "
 			MACSTR, MAC2STR(sa));
+		p2p_parse_free(&msg);
+		p2p->cfg->send_action_done(p2p->cfg->cb_ctx);
+		return;
+	}
+
+	/*
+	 * We should not really receive a replayed response twice since
+	 * duplicate frames are supposed to be dropped. However, not all drivers
+	 * do that for pre-association frames. We did not use to verify dialog
+	 * token matches for invitation response frames, but that check can be
+	 * safely used to drop a replayed response to the previous Invitation
+	 * Request in case the suggested operating channel was changed. This
+	 * allows a duplicated reject frame to be dropped with the assumption
+	 * that the real response follows after it.
+	 */
+	if (*msg.status == P2P_SC_FAIL_NO_COMMON_CHANNELS &&
+	    p2p->retry_invite_req_sent &&
+	    msg.dialog_token != dev->dialog_token) {
+		p2p_dbg(p2p, "Unexpected Dialog Token %u (expected %u)",
+			msg.dialog_token, dev->dialog_token);
 		p2p_parse_free(&msg);
 		return;
 	}
@@ -451,15 +475,18 @@ void p2p_process_invitation_resp(struct p2p_data *p2p, const u8 *sa,
 	    p2p_channel_random_social(&p2p->cfg->channels, &p2p->op_reg_class,
 				      &p2p->op_channel) == 0) {
 		p2p->retry_invite_req = 0;
+		p2p->cfg->send_action_done(p2p->cfg->cb_ctx);
 		p2p->cfg->stop_listen(p2p->cfg->cb_ctx);
 		p2p_set_state(p2p, P2P_INVITE);
 		p2p_dbg(p2p, "Resend Invitation Request setting op_class %u channel %u as operating channel",
 			p2p->op_reg_class, p2p->op_channel);
+		p2p->retry_invite_req_sent = 1;
 		p2p_invite_send(p2p, p2p->invite_peer, p2p->invite_go_dev_addr,
 				p2p->invite_dev_pw_id);
 		p2p_parse_free(&msg);
 		return;
 	}
+	p2p->cfg->send_action_done(p2p->cfg->cb_ctx);
 	p2p->retry_invite_req = 0;
 
 	if (!msg.channel_list && *msg.status == P2P_SC_SUCCESS) {
@@ -625,6 +652,7 @@ int p2p_invite(struct p2p_data *p2p, const u8 *peer, enum p2p_invite_role role,
 	p2p->invite_dev_pw_id = dev_pw_id;
 	p2p->retry_invite_req = role == P2P_INVITE_ROLE_GO &&
 		persistent_group && !force_freq;
+	p2p->retry_invite_req_sent = 0;
 
 	dev = p2p_get_device(p2p, peer);
 	if (dev == NULL || (dev->listen_freq <= 0 && dev->oper_freq <= 0 &&

@@ -497,12 +497,30 @@ def test_grpform_no_5ghz_add_cli4(dev):
 def test_grpform_incorrect_pin(dev):
     """P2P GO Negotiation with incorrect PIN"""
     dev[1].p2p_listen()
-    pin = dev[1].wps_read_pin()
     addr1 = dev[1].p2p_dev_addr()
     if not dev[0].discover_peer(addr1):
         raise Exception("Peer not found")
-    dev[1].p2p_go_neg_auth(dev[0].p2p_dev_addr(), pin, 'display', go_intent=0)
+    res = dev[1].request("P2P_CONNECT " + dev[0].p2p_dev_addr() + " pin auth go_intent=0")
+    if "FAIL" in res:
+        raise Exception("P2P_CONNECT failed to generate PIN")
+    logger.info("PIN from P2P_CONNECT: " + res)
     dev[0].request("P2P_CONNECT " + addr1 + " 00000000 enter go_intent=15")
+    ev = dev[0].wait_global_event(["P2P-GO-NEG-SUCCESS"], timeout=15)
+    if ev is None:
+        raise Exception("GO Negotiation did not complete successfully(0)")
+    ev = dev[1].wait_global_event(["P2P-GO-NEG-SUCCESS"], timeout=15)
+    if ev is None:
+        raise Exception("GO Negotiation did not complete successfully(1)")
+    ev = dev[1].wait_event(["WPS-FAIL"], timeout=15)
+    if ev is None:
+        raise Exception("WPS failure not reported(1)")
+    if "msg=8 config_error=18" not in ev:
+        raise Exception("Unexpected WPS failure(1): " + ev)
+    ev = dev[0].wait_event(["WPS-FAIL"], timeout=15)
+    if ev is None:
+        raise Exception("WPS failure not reported")
+    if "msg=8 config_error=18" not in ev:
+        raise Exception("Unexpected WPS failure: " + ev)
     ev = dev[1].wait_event(["P2P-GROUP-FORMATION-FAILURE"], timeout=10)
     if ev is None:
         raise Exception("Group formation failure timed out")
@@ -832,3 +850,23 @@ def test_grpform_wait_peer(dev):
     if ev is None:
         raise Exception("Group formation timed out")
     dev[0].remove_group()
+
+def test_invalid_p2p_connect_command(dev):
+    """P2P_CONNECT error cases"""
+    id = dev[0].add_network()
+    for cmd in [ "foo",
+                 "00:11:22:33:44:55",
+                 "00:11:22:33:44:55 pbc persistent=123",
+                 "00:11:22:33:44:55 pbc persistent=%d" % id,
+                 "00:11:22:33:44:55 pbc go_intent=-1",
+                 "00:11:22:33:44:55 pbc go_intent=16",
+                 "00:11:22:33:44:55 pin",
+                 "00:11:22:33:44:55 pbc freq=0" ]:
+        if "FAIL" not in dev[0].request("P2P_CONNECT " + cmd):
+            raise Exception("Invalid P2P_CONNECT command accepted: " + cmd)
+
+    if "FAIL-INVALID-PIN" not in dev[0].request("P2P_CONNECT 00:11:22:33:44:55 1234567"):
+        raise Exception("Invalid PIN was not rejected")
+
+    if "FAIL-CHANNEL-UNSUPPORTED" not in dev[0].request("P2P_CONNECT 00:11:22:33:44:55 pin freq=3000"):
+        raise Exception("Unsupported channel not reported")

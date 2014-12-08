@@ -32,13 +32,15 @@ def connect_cli(go, client, social=False, freq=None):
 
 def test_autogo(dev):
     """P2P autonomous GO and client joining group"""
+    addr0 = dev[0].p2p_dev_addr()
+    addr2 = dev[2].p2p_dev_addr()
     res = autogo(dev[0])
     if "p2p-wlan" in res['ifname']:
         raise Exception("Unexpected group interface name on GO")
     res = connect_cli(dev[0], dev[1])
     if "p2p-wlan" in res['ifname']:
         raise Exception("Unexpected group interface name on client")
-    bss = dev[1].get_bss("p2p_dev_addr=" + dev[0].p2p_dev_addr())
+    bss = dev[1].get_bss("p2p_dev_addr=" + addr0)
     if bss['bssid'] != dev[0].p2p_interface_addr():
         raise Exception("Unexpected BSSID in the BSS entry for the GO")
     id = bss['id']
@@ -59,6 +61,21 @@ def test_autogo(dev):
     ev = dev[1].wait_event(["P2P-PRESENCE-RESPONSE"])
     if ev is None:
         raise Exception("Timeout while waiting for Presence Response")
+
+    if not dev[2].discover_peer(addr0):
+        raise Exception("Could not discover GO")
+    dev[0].dump_monitor()
+    dev[2].global_request("P2P_PROV_DISC " + addr0 + " display join")
+    ev = dev[0].wait_global_event(["P2P-PROV-DISC-SHOW-PIN"], timeout=10)
+    if ev is None:
+        raise Exception("GO did not report P2P-PROV-DISC-SHOW-PIN")
+    if "p2p_dev_addr=" + addr2 not in ev:
+        raise Exception("Unexpected P2P Device Address in event: " + ev)
+    if "group=" + dev[0].group_ifname not in ev:
+        raise Exception("Unexpected group interface in event: " + ev)
+    ev = dev[2].wait_global_event(["P2P-PROV-DISC-ENTER-PIN"], timeout=10)
+    if ev is None:
+        raise Exception("P2P-PROV-DISC-ENTER-PIN not reported")
 
     dev[0].remove_group()
     dev[1].wait_go_ending_session()

@@ -6011,6 +6011,8 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 #ifdef CONFIG_TESTING_OPTIONS
 	wpa_s->extra_roc_dur = 0;
 #endif /* CONFIG_TESTING_OPTIONS */
+
+	wpa_s->disconnected = 0;
 }
 
 

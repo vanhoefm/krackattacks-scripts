@@ -287,6 +287,9 @@ def test_autogo_legacy(dev):
     logger.info("Connect P2P client")
     connect_cli(dev[0], dev[1], social=True, freq=2462)
 
+    if "FAIL" not in dev[1].request("P2P_GET_PASSPHRASE"):
+        raise Exception("P2P_GET_PASSPHRASE succeeded on P2P Client")
+
     logger.info("Connect legacy WPS client")
     pin = dev[2].wps_read_pin()
     dev[0].p2p_go_authorize_client(pin)

@@ -755,7 +755,7 @@ char * freq_range_list_str(const struct wpa_freq_range_list *list)
 			res = os_snprintf(pos, end - pos, "%s%u-%u",
 					  i == 0 ? "" : ",",
 					  range->min, range->max);
-		if (res < 0 || res > end - pos) {
+		if (os_snprintf_error(end - pos, res)) {
 			os_free(buf);
 			return NULL;
 		}

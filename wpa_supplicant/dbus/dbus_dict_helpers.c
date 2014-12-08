@@ -465,7 +465,7 @@ dbus_bool_t wpa_dbus_dict_begin_array(DBusMessageIter *iter_dict,
 	err = os_snprintf(array_type, sizeof(array_type),
 			  DBUS_TYPE_ARRAY_AS_STRING "%s",
 			  type);
-	if (err < 0 || err > (int) sizeof(array_type))
+	if (os_snprintf_error(sizeof(array_type), err))
 		return FALSE;
 
 	if (!iter_dict || !iter_dict_entry || !iter_dict_val || !iter_array)

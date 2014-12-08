@@ -642,7 +642,7 @@ static int ctrl_iface_get_capability_tdls(
 			  (wpa_s->drv_flags &
 			   WPA_DRIVER_FLAGS_TDLS_EXTERNAL_SETUP ?
 			   "EXTERNAL" : "INTERNAL") : "UNSUPPORTED");
-	if (ret < 0 || (size_t) ret > buflen)
+	if (os_snprintf_error(buflen, ret))
 		return -1;
 	return ret;
 }
@@ -5780,14 +5780,14 @@ static int wpa_supplicant_signal_poll(struct wpa_supplicant *wpa_s, char *buf,
 			  "NOISE=%d\nFREQUENCY=%u\n",
 			  si.current_signal, si.current_txrate / 1000,
 			  si.current_noise, si.frequency);
-	if (ret < 0 || ret > end - pos)
+	if (os_snprintf_error(end - pos, ret))
 		return -1;
 	pos += ret;
 
 	if (si.chanwidth != CHAN_WIDTH_UNKNOWN) {
 		ret = os_snprintf(pos, end - pos, "WIDTH=%s\n",
 				  channel_width_to_string(si.chanwidth));
-		if (ret < 0 || ret > end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return -1;
 		pos += ret;
 	}
@@ -5796,7 +5796,7 @@ static int wpa_supplicant_signal_poll(struct wpa_supplicant *wpa_s, char *buf,
 		ret = os_snprintf(pos, end - pos,
 				  "CENTER_FRQ1=%d\nCENTER_FRQ2=%d\n",
 				  si.center_frq1, si.center_frq2);
-		if (ret < 0 || ret > end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return -1;
 		pos += ret;
 	}
@@ -5825,7 +5825,7 @@ static int wpa_supplicant_pktcnt_poll(struct wpa_supplicant *wpa_s, char *buf,
 
 	ret = os_snprintf(buf, buflen, "TXGOOD=%lu\nTXBAD=%lu\nRXGOOD=%lu\n",
 			  sta.tx_packets, sta.tx_retry_failed, sta.rx_packets);
-	if (ret < 0 || (size_t) ret > buflen)
+	if (os_snprintf_error(buflen, ret))
 		return -1;
 	return ret;
 }

@@ -2157,6 +2157,9 @@ static void wpa_driver_nl80211_deinit(struct i802_bss *bss)
 {
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 
+	wpa_printf(MSG_INFO, "nl80211: deinit ifname=%s disabled_11b_rates=%d",
+		   bss->ifname, drv->disabled_11b_rates);
+
 	bss->in_deinit = 1;
 	if (drv->data_tx_status)
 		eloop_unregister_read_sock(drv->eapol_tx_sock);
@@ -3882,8 +3885,12 @@ int nl80211_create_iface(struct wpa_driver_nl80211_data *drv,
 						wds, handler, arg);
 	}
 
-	if (ret >= 0 && is_p2p_net_interface(iftype))
+	if (ret >= 0 && is_p2p_net_interface(iftype)) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Interface %s created for P2P - disable 11b rates",
+			   ifname);
 		nl80211_disable_11b_rates(drv, ret, 1);
+	}
 
 	return ret;
 }
@@ -4734,10 +4741,17 @@ done:
 		return ret;
 	}
 
-	if (is_p2p_net_interface(nlmode))
+	if (is_p2p_net_interface(nlmode)) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Interface %s mode change to P2P - disable 11b rates",
+			   bss->ifname);
 		nl80211_disable_11b_rates(drv, drv->ifindex, 1);
-	else if (drv->disabled_11b_rates)
+	} else if (drv->disabled_11b_rates) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Interface %s mode changed to non-P2P - re-enable 11b rates",
+			   bss->ifname);
 		nl80211_disable_11b_rates(drv, drv->ifindex, 0);
+	}
 
 	if (is_ap_interface(nlmode)) {
 		nl80211_mgmt_unsubscribe(bss, "start AP");
@@ -6111,6 +6125,11 @@ static int nl80211_disable_11b_rates(struct wpa_driver_nl80211_data *drv,
 	struct nl_msg *msg;
 	struct nlattr *bands, *band;
 	int ret;
+
+	wpa_printf(MSG_DEBUG,
+		   "nl80211: NL80211_CMD_SET_TX_BITRATE_MASK (ifindex=%d %s)",
+		   ifindex, disabled ? "NL80211_TXRATE_LEGACY=OFDM-only" :
+		   "no NL80211_TXRATE_LEGACY constraint");
 
 	msg = nl80211_ifindex_msg(drv, ifindex, 0,
 				  NL80211_CMD_SET_TX_BITRATE_MASK);

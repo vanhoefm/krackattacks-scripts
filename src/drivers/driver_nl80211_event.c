@@ -561,8 +561,9 @@ static void mlme_event_mgmt(struct i802_bss *bss,
 	}
 	wpa_printf(MSG_DEBUG,
 		   "nl80211: RX frame sa=" MACSTR
-		   " freq=%d ssi_signal=%d stype=%u (%s) len=%u",
-		   MAC2STR(mgmt->sa), rx_freq, ssi_signal, stype, fc2str(fc),
+		   " freq=%d ssi_signal=%d fc=0x%x seq_ctrl=0x%x stype=%u (%s) len=%u",
+		   MAC2STR(mgmt->sa), rx_freq, ssi_signal, fc,
+		   le_to_host16(mgmt->seq_ctrl), stype, fc2str(fc),
 		   (unsigned int) len);
 	event.rx_mgmt.frame = frame;
 	event.rx_mgmt.frame_len = len;

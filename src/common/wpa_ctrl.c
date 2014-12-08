@@ -111,7 +111,7 @@ try_again:
 			  CONFIG_CTRL_IFACE_CLIENT_DIR "/"
 			  CONFIG_CTRL_IFACE_CLIENT_PREFIX "%d-%d",
 			  (int) getpid(), counter);
-	if (ret < 0 || (size_t) ret >= sizeof(ctrl->local.sun_path)) {
+	if (os_snprintf_error(sizeof(ctrl->local.sun_path), ret)) {
 		close(ctrl->s);
 		os_free(ctrl);
 		return NULL;

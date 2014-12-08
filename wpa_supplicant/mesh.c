@@ -403,7 +403,7 @@ static int mesh_attr_text(const u8 *ies, size_t ies_len, char *buf, char *end)
 	mesh_id[elems.mesh_id_len] = '\0';
 	ret = os_snprintf(pos, end - pos, "mesh_id=%s\n", mesh_id);
 	os_free(mesh_id);
-	if (ret < 0 || ret >= end - pos)
+	if (os_snprintf_error(end - pos, ret))
 		return pos - buf;
 	pos += ret;
 
@@ -420,7 +420,7 @@ static int mesh_attr_text(const u8 *ies, size_t ies_len, char *buf, char *end)
 				  elems.mesh_config[2], elems.mesh_config[3],
 				  elems.mesh_config[4], elems.mesh_config[5],
 				  elems.mesh_config[6]);
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return pos - buf;
 		pos += ret;
 	}
@@ -446,20 +446,20 @@ static int mesh_attr_text(const u8 *ies, size_t ies_len, char *buf, char *end)
 	if (bss_basic_rate_set_len > 0) {
 		ret = os_snprintf(pos, end - pos, "bss_basic_rate_set=%d",
 				  bss_basic_rate_set[0]);
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return pos - buf;
 		pos += ret;
 
 		for (i = 1; i < bss_basic_rate_set_len; i++) {
 			ret = os_snprintf(pos, end - pos, " %d",
 					  bss_basic_rate_set[i]);
-			if (ret < 0 || ret >= end - pos)
+			if (os_snprintf_error(end - pos, ret))
 				return pos - buf;
 			pos += ret;
 		}
 
 		ret = os_snprintf(pos, end - pos, "\n");
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return pos - buf;
 		pos += ret;
 	}

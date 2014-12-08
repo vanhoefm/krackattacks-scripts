@@ -560,7 +560,7 @@ int wps_attr_text(struct wpabuf *data, char *buf, char *end)
 					  "wps_state=configured\n");
 		else
 			ret = 0;
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return pos - buf;
 		pos += ret;
 	}
@@ -568,7 +568,7 @@ int wps_attr_text(struct wpabuf *data, char *buf, char *end)
 	if (attr.ap_setup_locked && *attr.ap_setup_locked) {
 		ret = os_snprintf(pos, end - pos,
 				  "wps_ap_setup_locked=1\n");
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return pos - buf;
 		pos += ret;
 	}
@@ -576,7 +576,7 @@ int wps_attr_text(struct wpabuf *data, char *buf, char *end)
 	if (attr.selected_registrar && *attr.selected_registrar) {
 		ret = os_snprintf(pos, end - pos,
 				  "wps_selected_registrar=1\n");
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return pos - buf;
 		pos += ret;
 	}
@@ -585,7 +585,7 @@ int wps_attr_text(struct wpabuf *data, char *buf, char *end)
 		ret = os_snprintf(pos, end - pos,
 				  "wps_device_password_id=%u\n",
 				  WPA_GET_BE16(attr.dev_password_id));
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return pos - buf;
 		pos += ret;
 	}
@@ -595,7 +595,7 @@ int wps_attr_text(struct wpabuf *data, char *buf, char *end)
 				  "wps_selected_registrar_config_methods="
 				  "0x%04x\n",
 				  WPA_GET_BE16(attr.sel_reg_config_methods));
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return pos - buf;
 		pos += ret;
 	}
@@ -607,7 +607,7 @@ int wps_attr_text(struct wpabuf *data, char *buf, char *end)
 				  wps_dev_type_bin2str(attr.primary_dev_type,
 						       devtype,
 						       sizeof(devtype)));
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return pos - buf;
 		pos += ret;
 	}
@@ -626,7 +626,7 @@ int wps_attr_text(struct wpabuf *data, char *buf, char *end)
 		str[i] = '\0';
 		ret = os_snprintf(pos, end - pos, "wps_device_name=%s\n", str);
 		os_free(str);
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return pos - buf;
 		pos += ret;
 	}
@@ -635,7 +635,7 @@ int wps_attr_text(struct wpabuf *data, char *buf, char *end)
 		ret = os_snprintf(pos, end - pos,
 				  "wps_config_methods=0x%04x\n",
 				  WPA_GET_BE16(attr.config_methods));
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return pos - buf;
 		pos += ret;
 	}

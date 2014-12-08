@@ -504,28 +504,28 @@ static void eap_fast_write(char **buf, char **pos, size_t *buf_len,
 	end = *buf + *buf_len;
 
 	ret = os_snprintf(*pos, end - *pos, "%s=", field);
-	if (ret < 0 || ret >= end - *pos)
+	if (os_snprintf_error(end - *pos, ret))
 		return;
 	*pos += ret;
 	*pos += wpa_snprintf_hex(*pos, end - *pos, data, len);
 	ret = os_snprintf(*pos, end - *pos, "\n");
-	if (ret < 0 || ret >= end - *pos)
+	if (os_snprintf_error(end - *pos, ret))
 		return;
 	*pos += ret;
 
 	if (txt) {
 		ret = os_snprintf(*pos, end - *pos, "%s-txt=", field);
-		if (ret < 0 || ret >= end - *pos)
+		if (os_snprintf_error(end - *pos, ret))
 			return;
 		*pos += ret;
 		for (i = 0; i < len; i++) {
 			ret = os_snprintf(*pos, end - *pos, "%c", data[i]);
-			if (ret < 0 || ret >= end - *pos)
+			if (os_snprintf_error(end - *pos, ret))
 				return;
 			*pos += ret;
 		}
 		ret = os_snprintf(*pos, end - *pos, "\n");
-		if (ret < 0 || ret >= end - *pos)
+		if (os_snprintf_error(end - *pos, ret))
 			return;
 		*pos += ret;
 	}
@@ -578,7 +578,7 @@ static int eap_fast_add_pac_data(struct eap_fast_pac *pac, char **buf,
 
 	ret = os_snprintf(*pos, *buf + *buf_len - *pos,
 			  "START\nPAC-Type=%d\n", pac->pac_type);
-	if (ret < 0 || ret >= *buf + *buf_len - *pos)
+	if (os_snprintf_error(*buf + *buf_len - *pos, ret))
 		return -1;
 
 	*pos += ret;
@@ -600,7 +600,7 @@ static int eap_fast_add_pac_data(struct eap_fast_pac *pac, char **buf,
 		return -1;
 	}
 	ret = os_snprintf(*pos, *buf + *buf_len - *pos, "END\n");
-	if (ret < 0 || ret >= *buf + *buf_len - *pos)
+	if (os_snprintf_error(*buf + *buf_len - *pos, ret))
 		return -1;
 	*pos += ret;
 
@@ -632,7 +632,7 @@ int eap_fast_save_pac(struct eap_sm *sm, struct eap_fast_pac *pac_root,
 		return -1;
 
 	ret = os_snprintf(pos, buf + buf_len - pos, "%s\n", pac_file_hdr);
-	if (ret < 0 || ret >= buf + buf_len - pos) {
+	if (os_snprintf_error(buf + buf_len - pos, ret)) {
 		os_free(buf);
 		return -1;
 	}

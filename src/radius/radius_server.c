@@ -1900,7 +1900,7 @@ int radius_server_get_mib(struct radius_server_data *data, char *buf,
 			  "radiusAuthServResetTime=0\n"
 			  "radiusAuthServConfigReset=4\n",
 			  uptime);
-	if (ret < 0 || ret >= end - pos) {
+	if (os_snprintf_error(end - pos, ret)) {
 		*pos = '\0';
 		return pos - buf;
 	}
@@ -1939,7 +1939,7 @@ int radius_server_get_mib(struct radius_server_data *data, char *buf,
 			  data->counters.malformed_acct_requests,
 			  data->counters.acct_bad_authenticators,
 			  data->counters.unknown_acct_types);
-	if (ret < 0 || ret >= end - pos) {
+	if (os_snprintf_error(end - pos, ret)) {
 		*pos = '\0';
 		return pos - buf;
 	}
@@ -1997,7 +1997,7 @@ int radius_server_get_mib(struct radius_server_data *data, char *buf,
 				  cli->counters.malformed_acct_requests,
 				  cli->counters.acct_bad_authenticators,
 				  cli->counters.unknown_acct_types);
-		if (ret < 0 || ret >= end - pos) {
+		if (os_snprintf_error(end - pos, ret)) {
 			*pos = '\0';
 			return pos - buf;
 		}

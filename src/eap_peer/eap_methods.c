@@ -103,7 +103,7 @@ size_t eap_get_names(char *buf, size_t buflen)
 	for (m = eap_methods; m; m = m->next) {
 		ret = os_snprintf(pos, end - pos, "%s%s",
 				  m == eap_methods ? "" : " ", m->name);
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			break;
 		pos += ret;
 	}

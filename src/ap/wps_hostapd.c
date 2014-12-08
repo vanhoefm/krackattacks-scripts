@@ -1583,7 +1583,7 @@ int hostapd_wps_ap_pin_set(struct hostapd_data *hapd, const char *pin,
 	int ret;
 
 	ret = os_snprintf(data.pin_txt, sizeof(data.pin_txt), "%s", pin);
-	if (ret < 0 || ret >= (int) sizeof(data.pin_txt))
+	if (os_snprintf_error(sizeof(data.pin_txt), ret))
 		return -1;
 	data.timeout = timeout;
 	return hostapd_wps_for_each(hapd, wps_ap_pin_set, &data);

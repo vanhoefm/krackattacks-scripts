@@ -608,7 +608,7 @@ static void write_wep_key(FILE *f, int idx, struct wpa_ssid *ssid)
 	int res;
 
 	res = os_snprintf(field, sizeof(field), "wep_key%d", idx);
-	if (res < 0 || (size_t) res >= sizeof(field))
+	if (os_snprintf_error(sizeof(field), res))
 		return;
 	value = wpa_config_get(ssid, field);
 	if (value) {

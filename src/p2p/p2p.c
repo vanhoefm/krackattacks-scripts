@@ -3750,7 +3750,7 @@ int p2p_get_peer_info_txt(const struct p2p_peer_info *info,
 			  "[PD_FOR_JOIN]" : "",
 			  dev->status,
 			  dev->invitation_reqs);
-	if (res < 0 || res >= end - pos)
+	if (os_snprintf_error(end - pos, res))
 		return pos - buf;
 	pos += res;
 
@@ -3760,7 +3760,7 @@ int p2p_get_peer_info_txt(const struct p2p_peer_info *info,
 				  "ext_listen_interval=%u\n",
 				  dev->ext_listen_period,
 				  dev->ext_listen_interval);
-		if (res < 0 || res >= end - pos)
+		if (os_snprintf_error(end - pos, res))
 			return pos - buf;
 		pos += res;
 	}
@@ -3770,7 +3770,7 @@ int p2p_get_peer_info_txt(const struct p2p_peer_info *info,
 				  "oper_ssid=%s\n",
 				  wpa_ssid_txt(dev->oper_ssid,
 					       dev->oper_ssid_len));
-		if (res < 0 || res >= end - pos)
+		if (os_snprintf_error(end - pos, res))
 			return pos - buf;
 		pos += res;
 	}
@@ -3778,7 +3778,7 @@ int p2p_get_peer_info_txt(const struct p2p_peer_info *info,
 #ifdef CONFIG_WIFI_DISPLAY
 	if (dev->info.wfd_subelems) {
 		res = os_snprintf(pos, end - pos, "wfd_subelems=");
-		if (res < 0 || res >= end - pos)
+		if (os_snprintf_error(end - pos, res))
 			return pos - buf;
 		pos += res;
 
@@ -3787,7 +3787,7 @@ int p2p_get_peer_info_txt(const struct p2p_peer_info *info,
 					wpabuf_len(dev->info.wfd_subelems));
 
 		res = os_snprintf(pos, end - pos, "\n");
-		if (res < 0 || res >= end - pos)
+		if (os_snprintf_error(end - pos, res))
 			return pos - buf;
 		pos += res;
 	}

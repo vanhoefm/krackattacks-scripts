@@ -461,7 +461,7 @@ static void eapol_test_eap_param_needed(void *ctx, enum wpa_ctrl_req_type field,
 	len = os_snprintf(buf, buflen,
 			  WPA_CTRL_REQ "%s-%d:%s needed for SSID ",
 			  field_name, ssid->id, txt);
-	if (len < 0 || (size_t) len >= buflen) {
+	if (os_snprintf_error(buflen, len)) {
 		os_free(buf);
 		return;
 	}

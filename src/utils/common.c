@@ -224,7 +224,7 @@ static inline int _wpa_snprintf_hex(char *buf, size_t buf_size, const u8 *data,
 	for (i = 0; i < len; i++) {
 		ret = os_snprintf(pos, end - pos, uppercase ? "%02X" : "%02x",
 				  data[i]);
-		if (ret < 0 || ret >= end - pos) {
+		if (os_snprintf_error(end - pos, ret)) {
 			end[-1] = '\0';
 			return pos - buf;
 		}

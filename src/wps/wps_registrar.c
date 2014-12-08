@@ -3495,7 +3495,7 @@ int wps_registrar_get_info(struct wps_registrar *reg, const u8 *addr,
 			  d->dev.model_name ? d->dev.model_name : "",
 			  d->dev.model_number ? d->dev.model_number : "",
 			  d->dev.serial_number ? d->dev.serial_number : "");
-	if (ret < 0 || (size_t) ret >= buflen - len)
+	if (os_snprintf_error(buflen - len, ret))
 		return len;
 	len += ret;
 

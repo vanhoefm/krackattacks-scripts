@@ -501,7 +501,7 @@ int rsn_preauth_get_status(struct wpa_sm *sm, char *buf, size_t buflen,
 	if (sm->preauth_eapol) {
 		ret = os_snprintf(pos, end - pos, "Pre-authentication "
 				  "EAPOL state machines:\n");
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return pos - buf;
 		pos += ret;
 		res = eapol_sm_get_status(sm->preauth_eapol,

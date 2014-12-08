@@ -2090,7 +2090,7 @@ int eap_sm_get_status(struct eap_sm *sm, char *buf, size_t buflen, int verbose)
 	len = os_snprintf(buf, buflen,
 			  "EAP state=%s\n",
 			  eap_sm_state_txt(sm->EAP_state));
-	if (len < 0 || (size_t) len >= buflen)
+	if (os_snprintf_error(buflen, len))
 		return 0;
 
 	if (sm->selectedMethod != EAP_TYPE_NONE) {
@@ -2109,7 +2109,7 @@ int eap_sm_get_status(struct eap_sm *sm, char *buf, size_t buflen, int verbose)
 		ret = os_snprintf(buf + len, buflen - len,
 				  "selectedMethod=%d (EAP-%s)\n",
 				  sm->selectedMethod, name);
-		if (ret < 0 || (size_t) ret >= buflen - len)
+		if (os_snprintf_error(buflen - len, ret))
 			return len;
 		len += ret;
 
@@ -2130,7 +2130,7 @@ int eap_sm_get_status(struct eap_sm *sm, char *buf, size_t buflen, int verbose)
 				  eap_sm_method_state_txt(sm->methodState),
 				  eap_sm_decision_txt(sm->decision),
 				  sm->ClientTimeout);
-		if (ret < 0 || (size_t) ret >= buflen - len)
+		if (os_snprintf_error(buflen - len, ret))
 			return len;
 		len += ret;
 	}

@@ -927,7 +927,7 @@ int eap_sim_db_get_gsm_triplets(struct eap_sim_db_data *data,
 	os_memcpy(msg + len, imsi, imsi_len);
 	len += imsi_len;
 	ret = os_snprintf(msg + len, sizeof(msg) - len, " %d", max_chal);
-	if (ret < 0 || (size_t) ret >= sizeof(msg) - len)
+	if (os_snprintf_error(sizeof(msg) - len, ret))
 		return EAP_SIM_DB_FAILURE;
 	len += ret;
 
@@ -1455,13 +1455,13 @@ int eap_sim_db_resynchronize(struct eap_sim_db_data *data,
 		len += imsi_len;
 
 		ret = os_snprintf(msg + len, sizeof(msg) - len, " ");
-		if (ret < 0 || (size_t) ret >= sizeof(msg) - len)
+		if (os_snprintf_error(sizeof(msg) - len, ret))
 			return -1;
 		len += ret;
 		len += wpa_snprintf_hex(msg + len, sizeof(msg) - len,
 					auts, EAP_AKA_AUTS_LEN);
 		ret = os_snprintf(msg + len, sizeof(msg) - len, " ");
-		if (ret < 0 || (size_t) ret >= sizeof(msg) - len)
+		if (os_snprintf_error(sizeof(msg) - len, ret))
 			return -1;
 		len += ret;
 		len += wpa_snprintf_hex(msg + len, sizeof(msg) - len,

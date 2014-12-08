@@ -2373,7 +2373,7 @@ static int wpa_driver_wext_status(void *priv, char *buf, size_t buflen)
 			  drv->ifindex,
 			  drv->ifname,
 			  MAC2STR(addr));
-	if (res < 0 || res >= end - pos)
+	if (os_snprintf_error(end - pos, res))
 		return pos - buf;
 	pos += res;
 

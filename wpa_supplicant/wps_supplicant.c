@@ -1254,7 +1254,7 @@ int wpas_wps_start_reg(struct wpa_supplicant *wpa_s, const u8 *bssid,
 	pos = val;
 	end = pos + sizeof(val);
 	res = os_snprintf(pos, end - pos, "\"pin=%s", pin);
-	if (res < 0 || res >= end - pos)
+	if (os_snprintf_error(end - pos, res))
 		return -1;
 	pos += res;
 	if (settings) {
@@ -1262,12 +1262,12 @@ int wpas_wps_start_reg(struct wpa_supplicant *wpa_s, const u8 *bssid,
 				  "new_encr=%s new_key=%s",
 				  settings->ssid_hex, settings->auth,
 				  settings->encr, settings->key_hex);
-		if (res < 0 || res >= end - pos)
+		if (os_snprintf_error(end - pos, res))
 			return -1;
 		pos += res;
 	}
 	res = os_snprintf(pos, end - pos, "\"");
-	if (res < 0 || res >= end - pos)
+	if (os_snprintf_error(end - pos, res))
 		return -1;
 	if (wpa_config_set(ssid, "phase1", val, 0) < 0)
 		return -1;

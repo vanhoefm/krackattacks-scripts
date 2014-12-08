@@ -1156,7 +1156,7 @@ static int eap_peap_get_status(struct eap_sm *sm, void *priv, char *buf,
 				  "EAP-PEAPv%d Phase2 method=%s\n",
 				  data->peap_version,
 				  data->phase2_method->name);
-		if (ret < 0 || (size_t) ret >= buflen - len)
+		if (os_snprintf_error(buflen - len, ret))
 			return len;
 		len += ret;
 	}

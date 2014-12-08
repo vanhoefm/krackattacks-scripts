@@ -272,7 +272,7 @@ static char * wpa_supplicant_ctrl_iface_path(struct wpa_supplicant *wpa_s)
 	}
 
 	res = os_snprintf(buf, len, "%s/%s", dir, wpa_s->ifname);
-	if (res < 0 || (size_t) res >= len) {
+	if (os_snprintf_error(len, res)) {
 		os_free(pbuf);
 		os_free(buf);
 		return NULL;
@@ -671,7 +671,7 @@ static void wpa_supplicant_ctrl_iface_send(struct wpa_supplicant *wpa_s,
 		return;
 
 	res = os_snprintf(levelstr, sizeof(levelstr), "<%d>", level);
-	if (res < 0 || (size_t) res >= sizeof(levelstr))
+	if (os_snprintf_error(sizeof(levelstr), res))
 		return;
 	idx = 0;
 	if (ifname) {

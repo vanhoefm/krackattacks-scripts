@@ -136,7 +136,7 @@ static int is_signature_correct(DBusMessage *message,
 		if (arg->dir == ARG_IN) {
 			size_t blen = registered_sig + MAX_SIG_LEN - pos;
 			ret = os_snprintf(pos, blen, "%s", arg->type);
-			if (ret < 0 || (size_t) ret >= blen)
+			if (os_snprintf_error(blen, ret))
 				return 0;
 			pos += ret;
 		}

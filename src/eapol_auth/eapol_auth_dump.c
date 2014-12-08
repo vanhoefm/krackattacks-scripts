@@ -130,7 +130,7 @@ int eapol_auth_dump_state(struct eapol_state_machine *sm, char *buf,
 	ret = os_snprintf(pos, end - pos, "aWhile=%d\nquietWhile=%d\n"
 			  "reAuthWhen=%d\n",
 			  sm->aWhile, sm->quietWhile, sm->reAuthWhen);
-	if (ret < 0 || ret >= end - pos)
+	if (os_snprintf_error(end - pos, ret))
 		return pos - buf;
 	pos += ret;
 
@@ -173,7 +173,7 @@ int eapol_auth_dump_state(struct eapol_state_machine *sm, char *buf,
 			  _SB(sm->eap_if->portEnabled),
 			  _SB(sm->portValid),
 			  _SB(sm->reAuthenticate));
-	if (ret < 0 || ret >= end - pos)
+	if (os_snprintf_error(end - pos, ret))
 		return pos - buf;
 	pos += ret;
 
@@ -215,7 +215,7 @@ int eapol_auth_dump_state(struct eapol_state_machine *sm, char *buf,
 			  sm->authAuthReauthsWhileAuthenticated,
 			  sm->authAuthEapStartsWhileAuthenticated,
 			  sm->authAuthEapLogoffWhileAuthenticated);
-	if (ret < 0 || ret >= end - pos)
+	if (os_snprintf_error(end - pos, ret))
 		return pos - buf;
 	pos += ret;
 
@@ -240,7 +240,7 @@ int eapol_auth_dump_state(struct eapol_state_machine *sm, char *buf,
 			  sm->backendOtherRequestsToSupplicant,
 			  sm->backendAuthSuccesses,
 			  sm->backendAuthFails);
-	if (ret < 0 || ret >= end - pos)
+	if (os_snprintf_error(end - pos, ret))
 		return pos - buf;
 	pos += ret;
 
@@ -251,14 +251,14 @@ int eapol_auth_dump_state(struct eapol_state_machine *sm, char *buf,
 			  reauth_timer_state_txt(sm->reauth_timer_state),
 			  sm->reAuthPeriod,
 			  _SB(sm->reAuthEnabled));
-	if (ret < 0 || ret >= end - pos)
+	if (os_snprintf_error(end - pos, ret))
 		return pos - buf;
 	pos += ret;
 
 	ret = os_snprintf(pos, end - pos,
 			  "auth_key_tx_state=%s\n",
 			  auth_key_tx_state_txt(sm->auth_key_tx_state));
-	if (ret < 0 || ret >= end - pos)
+	if (os_snprintf_error(end - pos, ret))
 		return pos - buf;
 	pos += ret;
 
@@ -267,7 +267,7 @@ int eapol_auth_dump_state(struct eapol_state_machine *sm, char *buf,
 			  "rxKey=%s\n",
 			  key_rx_state_txt(sm->key_rx_state),
 			  _SB(sm->rxKey));
-	if (ret < 0 || ret >= end - pos)
+	if (os_snprintf_error(end - pos, ret))
 		return pos - buf;
 	pos += ret;
 
@@ -280,7 +280,7 @@ int eapol_auth_dump_state(struct eapol_state_machine *sm, char *buf,
 			  ctrl_dir_txt(sm->adminControlledDirections),
 			  ctrl_dir_txt(sm->operControlledDirections),
 			  _SB(sm->operEdge));
-	if (ret < 0 || ret >= end - pos)
+	if (os_snprintf_error(end - pos, ret))
 		return pos - buf;
 	pos += ret;
 #undef _SB

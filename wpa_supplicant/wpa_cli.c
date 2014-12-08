@@ -333,7 +333,7 @@ static int wpa_cli_open_connection(const char *ifname, int attach)
 			return -1;
 		res = os_snprintf(cfile, flen, "%s/%s", ctrl_iface_dir,
 				  ifname);
-		if (res < 0 || res >= flen) {
+		if (os_snprintf_error(flen, res)) {
 			os_free(cfile);
 			return -1;
 		}
@@ -448,13 +448,13 @@ static int write_cmd(char *buf, size_t buflen, const char *cmd, int argc,
 	end = buf + buflen;
 
 	res = os_snprintf(pos, end - pos, "%s", cmd);
-	if (res < 0 || res >= end - pos)
+	if (os_snprintf_error(end - pos, res))
 		goto fail;
 	pos += res;
 
 	for (i = 0; i < argc; i++) {
 		res = os_snprintf(pos, end - pos, " %s", argv[i]);
-		if (res < 0 || res >= end - pos)
+		if (os_snprintf_error(end - pos, res))
 			goto fail;
 		pos += res;
 	}
@@ -1085,14 +1085,14 @@ static int wpa_cli_cmd_identity(struct wpa_ctrl *ctrl, int argc, char *argv[])
 	pos = cmd;
 	ret = os_snprintf(pos, end - pos, WPA_CTRL_RSP "IDENTITY-%s:%s",
 			  argv[0], argv[1]);
-	if (ret < 0 || ret >= end - pos) {
+	if (os_snprintf_error(end - pos, ret)) {
 		printf("Too long IDENTITY command.\n");
 		return -1;
 	}
 	pos += ret;
 	for (i = 2; i < argc; i++) {
 		ret = os_snprintf(pos, end - pos, " %s", argv[i]);
-		if (ret < 0 || ret >= end - pos) {
+		if (os_snprintf_error(end - pos, ret)) {
 			printf("Too long IDENTITY command.\n");
 			return -1;
 		}
@@ -1118,14 +1118,14 @@ static int wpa_cli_cmd_password(struct wpa_ctrl *ctrl, int argc, char *argv[])
 	pos = cmd;
 	ret = os_snprintf(pos, end - pos, WPA_CTRL_RSP "PASSWORD-%s:%s",
 			  argv[0], argv[1]);
-	if (ret < 0 || ret >= end - pos) {
+	if (os_snprintf_error(end - pos, ret)) {
 		printf("Too long PASSWORD command.\n");
 		return -1;
 	}
 	pos += ret;
 	for (i = 2; i < argc; i++) {
 		ret = os_snprintf(pos, end - pos, " %s", argv[i]);
-		if (ret < 0 || ret >= end - pos) {
+		if (os_snprintf_error(end - pos, ret)) {
 			printf("Too long PASSWORD command.\n");
 			return -1;
 		}
@@ -1152,14 +1152,14 @@ static int wpa_cli_cmd_new_password(struct wpa_ctrl *ctrl, int argc,
 	pos = cmd;
 	ret = os_snprintf(pos, end - pos, WPA_CTRL_RSP "NEW_PASSWORD-%s:%s",
 			  argv[0], argv[1]);
-	if (ret < 0 || ret >= end - pos) {
+	if (os_snprintf_error(end - pos, ret)) {
 		printf("Too long NEW_PASSWORD command.\n");
 		return -1;
 	}
 	pos += ret;
 	for (i = 2; i < argc; i++) {
 		ret = os_snprintf(pos, end - pos, " %s", argv[i]);
-		if (ret < 0 || ret >= end - pos) {
+		if (os_snprintf_error(end - pos, ret)) {
 			printf("Too long NEW_PASSWORD command.\n");
 			return -1;
 		}
@@ -1185,14 +1185,14 @@ static int wpa_cli_cmd_pin(struct wpa_ctrl *ctrl, int argc, char *argv[])
 	pos = cmd;
 	ret = os_snprintf(pos, end - pos, WPA_CTRL_RSP "PIN-%s:%s",
 			  argv[0], argv[1]);
-	if (ret < 0 || ret >= end - pos) {
+	if (os_snprintf_error(end - pos, ret)) {
 		printf("Too long PIN command.\n");
 		return -1;
 	}
 	pos += ret;
 	for (i = 2; i < argc; i++) {
 		ret = os_snprintf(pos, end - pos, " %s", argv[i]);
-		if (ret < 0 || ret >= end - pos) {
+		if (os_snprintf_error(end - pos, ret)) {
 			printf("Too long PIN command.\n");
 			return -1;
 		}
@@ -1217,14 +1217,14 @@ static int wpa_cli_cmd_otp(struct wpa_ctrl *ctrl, int argc, char *argv[])
 	pos = cmd;
 	ret = os_snprintf(pos, end - pos, WPA_CTRL_RSP "OTP-%s:%s",
 			  argv[0], argv[1]);
-	if (ret < 0 || ret >= end - pos) {
+	if (os_snprintf_error(end - pos, ret)) {
 		printf("Too long OTP command.\n");
 		return -1;
 	}
 	pos += ret;
 	for (i = 2; i < argc; i++) {
 		ret = os_snprintf(pos, end - pos, " %s", argv[i]);
-		if (ret < 0 || ret >= end - pos) {
+		if (os_snprintf_error(end - pos, ret)) {
 			printf("Too long OTP command.\n");
 			return -1;
 		}
@@ -1250,14 +1250,14 @@ static int wpa_cli_cmd_sim(struct wpa_ctrl *ctrl, int argc, char *argv[])
 	pos = cmd;
 	ret = os_snprintf(pos, end - pos, WPA_CTRL_RSP "SIM-%s:%s",
 			  argv[0], argv[1]);
-	if (ret < 0 || ret >= end - pos) {
+	if (os_snprintf_error(end - pos, ret)) {
 		printf("Too long SIM command.\n");
 		return -1;
 	}
 	pos += ret;
 	for (i = 2; i < argc; i++) {
 		ret = os_snprintf(pos, end - pos, " %s", argv[i]);
-		if (ret < 0 || ret >= end - pos) {
+		if (os_snprintf_error(end - pos, ret)) {
 			printf("Too long SIM command.\n");
 			return -1;
 		}
@@ -1283,14 +1283,14 @@ static int wpa_cli_cmd_passphrase(struct wpa_ctrl *ctrl, int argc,
 	pos = cmd;
 	ret = os_snprintf(pos, end - pos, WPA_CTRL_RSP "PASSPHRASE-%s:%s",
 			  argv[0], argv[1]);
-	if (ret < 0 || ret >= end - pos) {
+	if (os_snprintf_error(end - pos, ret)) {
 		printf("Too long PASSPHRASE command.\n");
 		return -1;
 	}
 	pos += ret;
 	for (i = 2; i < argc; i++) {
 		ret = os_snprintf(pos, end - pos, " %s", argv[i]);
-		if (ret < 0 || ret >= end - pos) {
+		if (os_snprintf_error(end - pos, ret)) {
 			printf("Too long PASSPHRASE command.\n");
 			return -1;
 		}
@@ -1626,7 +1626,7 @@ static int wpa_cli_cmd_interface_add(struct wpa_ctrl *ctrl, int argc,
 			  argc > 1 ? argv[1] : "", argc > 2 ? argv[2] : "",
 			  argc > 3 ? argv[3] : "", argc > 4 ? argv[4] : "",
 			  argc > 5 ? argv[5] : "");
-	if (res < 0 || (size_t) res >= sizeof(cmd))
+	if (os_snprintf_error(sizeof(cmd), res))
 		return -1;
 	cmd[sizeof(cmd) - 1] = '\0';
 	return wpa_ctrl_command(ctrl, cmd);
@@ -1933,7 +1933,7 @@ static int wpa_cli_cmd_p2p_serv_disc_resp(struct wpa_ctrl *ctrl, int argc,
 
 	res = os_snprintf(cmd, sizeof(cmd), "P2P_SERV_DISC_RESP %s %s %s %s",
 			  argv[0], argv[1], argv[2], argv[3]);
-	if (res < 0 || (size_t) res >= sizeof(cmd))
+	if (os_snprintf_error(sizeof(cmd), res))
 		return -1;
 	cmd[sizeof(cmd) - 1] = '\0';
 	return wpa_ctrl_command(ctrl, cmd);
@@ -1981,7 +1981,7 @@ static int wpa_cli_cmd_p2p_service_add(struct wpa_ctrl *ctrl, int argc,
 		res = os_snprintf(cmd, sizeof(cmd),
 				  "P2P_SERVICE_ADD %s %s %s",
 				  argv[0], argv[1], argv[2]);
-	if (res < 0 || (size_t) res >= sizeof(cmd))
+	if (os_snprintf_error(sizeof(cmd), res))
 		return -1;
 	cmd[sizeof(cmd) - 1] = '\0';
 	return wpa_ctrl_command(ctrl, cmd);
@@ -2008,7 +2008,7 @@ static int wpa_cli_cmd_p2p_service_del(struct wpa_ctrl *ctrl, int argc,
 		res = os_snprintf(cmd, sizeof(cmd),
 				  "P2P_SERVICE_DEL %s %s",
 				  argv[0], argv[1]);
-	if (res < 0 || (size_t) res >= sizeof(cmd))
+	if (os_snprintf_error(sizeof(cmd), res))
 		return -1;
 	cmd[sizeof(cmd) - 1] = '\0';
 	return wpa_ctrl_command(ctrl, cmd);
@@ -2230,7 +2230,7 @@ static int wpa_cli_cmd_wfd_subelem_set(struct wpa_ctrl *ctrl, int argc,
 
 	res = os_snprintf(cmd, sizeof(cmd), "WFD_SUBELEM_SET %s %s",
 			  argv[0], argc > 1 ? argv[1] : "");
-	if (res < 0 || (size_t) res >= sizeof(cmd))
+	if (os_snprintf_error(sizeof(cmd), res))
 		return -1;
 	cmd[sizeof(cmd) - 1] = '\0';
 	return wpa_ctrl_command(ctrl, cmd);
@@ -2251,7 +2251,7 @@ static int wpa_cli_cmd_wfd_subelem_get(struct wpa_ctrl *ctrl, int argc,
 
 	res = os_snprintf(cmd, sizeof(cmd), "WFD_SUBELEM_GET %s",
 			  argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd))
+	if (os_snprintf_error(sizeof(cmd), res))
 		return -1;
 	cmd[sizeof(cmd) - 1] = '\0';
 	return wpa_ctrl_command(ctrl, cmd);

@@ -2970,7 +2970,7 @@ int wpa_get_mib(struct wpa_authenticator *wpa_auth, char *buf, size_t buflen)
 			  wpa_bool_txt(preauth),
 			  wpa_bool_txt(wpa_auth->conf.wpa & WPA_PROTO_RSN),
 			  wpa_bool_txt(wpa_auth->conf.rsn_preauth));
-	if (ret < 0 || (size_t) ret >= buflen - len)
+	if (os_snprintf_error(buflen - len, ret))
 		return len;
 	len += ret;
 
@@ -3020,7 +3020,7 @@ int wpa_get_mib(struct wpa_authenticator *wpa_auth, char *buf, size_t buflen)
 		RSN_SUITE_ARG(wpa_auth->dot11RSNAGroupCipherRequested),
 		wpa_auth->dot11RSNATKIPCounterMeasuresInvoked,
 		wpa_auth->dot11RSNA4WayHandshakeFailures);
-	if (ret < 0 || (size_t) ret >= buflen - len)
+	if (os_snprintf_error(buflen - len, ret))
 		return len;
 	len += ret;
 
@@ -3030,7 +3030,7 @@ int wpa_get_mib(struct wpa_authenticator *wpa_auth, char *buf, size_t buflen)
 	/* Private MIB */
 	ret = os_snprintf(buf + len, buflen - len, "hostapdWPAGroupState=%d\n",
 			  wpa_auth->group->wpa_group_state);
-	if (ret < 0 || (size_t) ret >= buflen - len)
+	if (os_snprintf_error(buflen - len, ret))
 		return len;
 	len += ret;
 
@@ -3072,7 +3072,7 @@ int wpa_get_mib_sta(struct wpa_state_machine *sm, char *buf, size_t buflen)
 		RSN_SUITE_ARG(pairwise),
 		sm->dot11RSNAStatsTKIPLocalMICFailures,
 		sm->dot11RSNAStatsTKIPRemoteMICFailures);
-	if (ret < 0 || (size_t) ret >= buflen - len)
+	if (os_snprintf_error(buflen - len, ret))
 		return len;
 	len += ret;
 
@@ -3082,7 +3082,7 @@ int wpa_get_mib_sta(struct wpa_state_machine *sm, char *buf, size_t buflen)
 			  "hostapdWPAPTKGroupState=%d\n",
 			  sm->wpa_ptk_state,
 			  sm->wpa_ptk_group_state);
-	if (ret < 0 || (size_t) ret >= buflen - len)
+	if (os_snprintf_error(buflen - len, ret))
 		return len;
 	len += ret;
 

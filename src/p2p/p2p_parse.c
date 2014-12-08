@@ -607,7 +607,7 @@ static int p2p_group_info_text(const u8 *gi, size_t gi_len, char *buf,
 				  "dev=" MACSTR " iface=" MACSTR,
 				  MAC2STR(cli->p2p_device_addr),
 				  MAC2STR(cli->p2p_interface_addr));
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return pos - buf;
 		pos += ret;
 
@@ -618,7 +618,7 @@ static int p2p_group_info_text(const u8 *gi, size_t gi_len, char *buf,
 				  wps_dev_type_bin2str(cli->pri_dev_type,
 						       devtype,
 						       sizeof(devtype)));
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return pos - buf;
 		pos += ret;
 
@@ -627,7 +627,7 @@ static int p2p_group_info_text(const u8 *gi, size_t gi_len, char *buf,
 					  wps_dev_type_bin2str(
 						  &cli->sec_dev_types[s * 8],
 						  devtype, sizeof(devtype)));
-			if (ret < 0 || ret >= end - pos)
+			if (os_snprintf_error(end - pos, ret))
 				return pos - buf;
 			pos += ret;
 		}
@@ -642,7 +642,7 @@ static int p2p_group_info_text(const u8 *gi, size_t gi_len, char *buf,
 		}
 
 		ret = os_snprintf(pos, end - pos, " dev_name='%s'\n", name);
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return pos - buf;
 		pos += ret;
 	}
@@ -676,7 +676,7 @@ int p2p_attr_text(struct wpabuf *data, char *buf, char *end)
 				  "p2p_dev_capab=0x%x\n"
 				  "p2p_group_capab=0x%x\n",
 				  msg.capability[0], msg.capability[1]);
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return pos - buf;
 		pos += ret;
 	}
@@ -688,14 +688,14 @@ int p2p_attr_text(struct wpabuf *data, char *buf, char *end)
 				  wps_dev_type_bin2str(msg.pri_dev_type,
 						       devtype,
 						       sizeof(devtype)));
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return pos - buf;
 		pos += ret;
 	}
 
 	ret = os_snprintf(pos, end - pos, "p2p_device_name=%s\n",
 			  msg.device_name);
-	if (ret < 0 || ret >= end - pos)
+	if (os_snprintf_error(end - pos, ret))
 		return pos - buf;
 	pos += ret;
 
@@ -703,14 +703,14 @@ int p2p_attr_text(struct wpabuf *data, char *buf, char *end)
 		ret = os_snprintf(pos, end - pos, "p2p_device_addr=" MACSTR
 				  "\n",
 				  MAC2STR(msg.p2p_device_addr));
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return pos - buf;
 		pos += ret;
 	}
 
 	ret = os_snprintf(pos, end - pos, "p2p_config_methods=0x%x\n",
 			  msg.config_methods);
-	if (ret < 0 || ret >= end - pos)
+	if (os_snprintf_error(end - pos, ret))
 		return pos - buf;
 	pos += ret;
 

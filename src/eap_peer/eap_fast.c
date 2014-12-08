@@ -1666,7 +1666,7 @@ static int eap_fast_get_status(struct eap_sm *sm, void *priv, char *buf,
 		ret = os_snprintf(buf + len, buflen - len,
 				  "EAP-FAST Phase2 method=%s\n",
 				  data->phase2_method->name);
-		if (ret < 0 || (size_t) ret >= buflen - len)
+		if (os_snprintf_error(buflen - len, ret))
 			return len;
 		len += ret;
 	}

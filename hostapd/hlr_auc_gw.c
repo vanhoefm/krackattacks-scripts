@@ -711,7 +711,7 @@ static int gsm_auth_req(char *imsi, char *resp, size_t resp_len)
 	rend = resp + resp_len;
 	rpos = resp;
 	ret = os_snprintf(rpos, rend - rpos, "GSM-AUTH-RESP %s", imsi);
-	if (ret < 0 || ret >= rend - rpos)
+	if (os_snprintf_error(rend - rpos, ret))
 		return -1;
 	rpos += ret;
 
@@ -737,7 +737,7 @@ static int gsm_auth_req(char *imsi, char *resp, size_t resp_len)
 
 	printf("No GSM triplets found for %s\n", imsi);
 	ret = os_snprintf(rpos, rend - rpos, " FAILURE");
-	if (ret < 0 || ret >= rend - rpos)
+	if (os_snprintf_error(rend - rpos, ret))
 		return -1;
 	rpos += ret;
 

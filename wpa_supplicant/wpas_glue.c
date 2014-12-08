@@ -800,7 +800,7 @@ static void wpa_supplicant_eap_param_needed(void *ctx,
 	len = os_snprintf(buf, buflen,
 			  WPA_CTRL_REQ "%s-%d:%s needed for SSID ",
 			  field_name, ssid->id, txt);
-	if (len < 0 || (size_t) len >= buflen) {
+	if (os_snprintf_error(buflen, len)) {
 		os_free(buf);
 		return;
 	}

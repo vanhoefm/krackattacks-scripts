@@ -1468,56 +1468,56 @@ int wpa_write_ciphers(char *start, char *end, int ciphers, const char *delim)
 	if (ciphers & WPA_CIPHER_CCMP_256) {
 		ret = os_snprintf(pos, end - pos, "%sCCMP-256",
 				  pos == start ? "" : delim);
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return -1;
 		pos += ret;
 	}
 	if (ciphers & WPA_CIPHER_GCMP_256) {
 		ret = os_snprintf(pos, end - pos, "%sGCMP-256",
 				  pos == start ? "" : delim);
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return -1;
 		pos += ret;
 	}
 	if (ciphers & WPA_CIPHER_CCMP) {
 		ret = os_snprintf(pos, end - pos, "%sCCMP",
 				  pos == start ? "" : delim);
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return -1;
 		pos += ret;
 	}
 	if (ciphers & WPA_CIPHER_GCMP) {
 		ret = os_snprintf(pos, end - pos, "%sGCMP",
 				  pos == start ? "" : delim);
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return -1;
 		pos += ret;
 	}
 	if (ciphers & WPA_CIPHER_TKIP) {
 		ret = os_snprintf(pos, end - pos, "%sTKIP",
 				  pos == start ? "" : delim);
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return -1;
 		pos += ret;
 	}
 	if (ciphers & WPA_CIPHER_WEP104) {
 		ret = os_snprintf(pos, end - pos, "%sWEP104",
 				  pos == start ? "" : delim);
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return -1;
 		pos += ret;
 	}
 	if (ciphers & WPA_CIPHER_WEP40) {
 		ret = os_snprintf(pos, end - pos, "%sWEP40",
 				  pos == start ? "" : delim);
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return -1;
 		pos += ret;
 	}
 	if (ciphers & WPA_CIPHER_NONE) {
 		ret = os_snprintf(pos, end - pos, "%sNONE",
 				  pos == start ? "" : delim);
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return -1;
 		pos += ret;
 	}

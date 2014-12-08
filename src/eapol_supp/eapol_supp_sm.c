@@ -1108,7 +1108,7 @@ int eapol_sm_get_status(struct eapol_sm *sm, char *buf, size_t buflen,
 			  "suppPortStatus=%s\n",
 			  eapol_supp_pae_state(sm->SUPP_PAE_state),
 			  eapol_port_status(sm->suppPortStatus));
-	if (len < 0 || (size_t) len >= buflen)
+	if (os_snprintf_error(buflen, len))
 		return 0;
 
 	if (verbose) {
@@ -1125,7 +1125,7 @@ int eapol_sm_get_status(struct eapol_sm *sm, char *buf, size_t buflen,
 				  sm->maxStart,
 				  eapol_port_control(sm->portControl),
 				  eapol_supp_be_state(sm->SUPP_BE_state));
-		if (ret < 0 || (size_t) ret >= buflen - len)
+		if (os_snprintf_error(buflen - len, ret))
 			return len;
 		len += ret;
 	}
@@ -1179,7 +1179,7 @@ int eapol_sm_get_mib(struct eapol_sm *sm, char *buf, size_t buflen)
 			  "Authorized" : "Unauthorized",
 			  sm->SUPP_BE_state);
 
-	if (ret < 0 || (size_t) ret >= buflen)
+	if (os_snprintf_error(buflen, ret))
 		return 0;
 	len = ret;
 
@@ -1207,7 +1207,7 @@ int eapol_sm_get_mib(struct eapol_sm *sm, char *buf, size_t buflen)
 			  sm->dot1xSuppLastEapolFrameVersion,
 			  MAC2STR(sm->dot1xSuppLastEapolFrameSource));
 
-	if (ret < 0 || (size_t) ret >= buflen - len)
+	if (os_snprintf_error(buflen - len, ret))
 		return len;
 	len += ret;
 

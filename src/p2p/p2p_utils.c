@@ -390,7 +390,7 @@ void p2p_channels_dump(struct p2p_data *p2p, const char *title,
 		const struct p2p_reg_class *c;
 		c = &chan->reg_class[i];
 		ret = os_snprintf(pos, end - pos, " %u:", c->reg_class);
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			break;
 		pos += ret;
 
@@ -398,7 +398,7 @@ void p2p_channels_dump(struct p2p_data *p2p, const char *title,
 			ret = os_snprintf(pos, end - pos, "%s%u",
 					  j == 0 ? "" : ",",
 					  c->channel[j]);
-			if (ret < 0 || ret >= end - pos)
+			if (os_snprintf_error(end - pos, ret))
 				break;
 			pos += ret;
 		}

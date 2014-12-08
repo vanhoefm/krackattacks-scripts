@@ -596,7 +596,7 @@ static int hostapd_cli_cmd_disassoc_imminent(struct wpa_ctrl *ctrl, int argc,
 
 	res = os_snprintf(buf, sizeof(buf), "DISASSOC_IMMINENT %s %s",
 			  argv[0], argv[1]);
-	if (res < 0 || res >= (int) sizeof(buf))
+	if (os_snprintf_error(sizeof(buf), res))
 		return -1;
 	return wpa_ctrl_command(ctrl, buf);
 }
@@ -616,7 +616,7 @@ static int hostapd_cli_cmd_ess_disassoc(struct wpa_ctrl *ctrl, int argc,
 
 	res = os_snprintf(buf, sizeof(buf), "ESS_DISASSOC %s %s %s",
 			  argv[0], argv[1], argv[2]);
-	if (res < 0 || res >= (int) sizeof(buf))
+	if (os_snprintf_error(sizeof(buf), res))
 		return -1;
 	return wpa_ctrl_command(ctrl, buf);
 }
@@ -634,7 +634,7 @@ static int hostapd_cli_cmd_bss_tm_req(struct wpa_ctrl *ctrl, int argc,
 	}
 
 	res = os_snprintf(buf, sizeof(buf), "BSS_TM_REQ %s", argv[0]);
-	if (res < 0 || res >= (int) sizeof(buf))
+	if (os_snprintf_error(sizeof(buf), res))
 		return -1;
 
 	total = res;
@@ -736,7 +736,7 @@ static int hostapd_cli_cmd_set_qos_map_set(struct wpa_ctrl *ctrl,
 	}
 
 	res = os_snprintf(buf, sizeof(buf), "SET_QOS_MAP_SET %s", argv[0]);
-	if (res < 0 || res >= (int) sizeof(buf))
+	if (os_snprintf_error(sizeof(buf), res))
 		return -1;
 	return wpa_ctrl_command(ctrl, buf);
 }
@@ -755,7 +755,7 @@ static int hostapd_cli_cmd_send_qos_map_conf(struct wpa_ctrl *ctrl,
 	}
 
 	res = os_snprintf(buf, sizeof(buf), "SEND_QOS_MAP_CONF %s", argv[0]);
-	if (res < 0 || res >= (int) sizeof(buf))
+	if (os_snprintf_error(sizeof(buf), res))
 		return -1;
 	return wpa_ctrl_command(ctrl, buf);
 }
@@ -775,7 +775,7 @@ static int hostapd_cli_cmd_hs20_wnm_notif(struct wpa_ctrl *ctrl, int argc,
 
 	res = os_snprintf(buf, sizeof(buf), "HS20_WNM_NOTIF %s %s",
 			  argv[0], argv[1]);
-	if (res < 0 || res >= (int) sizeof(buf))
+	if (os_snprintf_error(sizeof(buf), res))
 		return -1;
 	return wpa_ctrl_command(ctrl, buf);
 }
@@ -800,7 +800,7 @@ static int hostapd_cli_cmd_hs20_deauth_req(struct wpa_ctrl *ctrl, int argc,
 		res = os_snprintf(buf, sizeof(buf),
 				  "HS20_DEAUTH_REQ %s %s %s",
 				  argv[0], argv[1], argv[2]);
-	if (res < 0 || res >= (int) sizeof(buf))
+	if (os_snprintf_error(sizeof(buf), res))
 		return -1;
 	return wpa_ctrl_command(ctrl, buf);
 }

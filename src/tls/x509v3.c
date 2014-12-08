@@ -512,7 +512,7 @@ void x509_name_string(struct x509_name *name, char *buf, size_t len)
 		ret = os_snprintf(pos, end - pos, "%s=%s, ",
 				  x509_name_attr_str(name->attr[i].type),
 				  name->attr[i].value);
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			goto done;
 		pos += ret;
 	}
@@ -527,7 +527,7 @@ void x509_name_string(struct x509_name *name, char *buf, size_t len)
 	if (name->email) {
 		ret = os_snprintf(pos, end - pos, "/emailAddress=%s",
 				  name->email);
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			goto done;
 		pos += ret;
 	}

@@ -5238,7 +5238,7 @@ static void dump_ifidx(struct wpa_driver_nl80211_data *drv)
 		if (!drv->if_indices[i])
 			continue;
 		res = os_snprintf(pos, end - pos, " %d", drv->if_indices[i]);
-		if (res < 0 || res >= end - pos)
+		if (os_snprintf_error(end - pos, res))
 			break;
 		pos += res;
 	}
@@ -7120,14 +7120,14 @@ static int wpa_driver_nl80211_status(void *priv, char *buf, size_t buflen)
 			  bss->added_bridge ? "added_bridge=1\n" : "",
 			  bss->in_deinit ? "in_deinit=1\n" : "",
 			  bss->if_dynamic ? "if_dynamic=1\n" : "");
-	if (res < 0 || res >= end - pos)
+	if (os_snprintf_error(end - pos, res))
 		return pos - buf;
 	pos += res;
 
 	if (bss->wdev_id_set) {
 		res = os_snprintf(pos, end - pos, "wdev_id=%llu\n",
 				  (unsigned long long) bss->wdev_id);
-		if (res < 0 || res >= end - pos)
+		if (os_snprintf_error(end - pos, res))
 			return pos - buf;
 		pos += res;
 	}
@@ -7186,7 +7186,7 @@ static int wpa_driver_nl80211_status(void *priv, char *buf, size_t buflen)
 			  "ignore_next_local_disconnect=1\n" : "",
 			  drv->ignore_next_local_deauth ?
 			  "ignore_next_local_deauth=1\n" : "");
-	if (res < 0 || res >= end - pos)
+	if (os_snprintf_error(end - pos, res))
 		return pos - buf;
 	pos += res;
 
@@ -7218,7 +7218,7 @@ static int wpa_driver_nl80211_status(void *priv, char *buf, size_t buflen)
 				  drv->capa.probe_resp_offloads,
 				  drv->capa.max_acl_mac_addrs,
 				  drv->capa.num_multichan_concurrent);
-		if (res < 0 || res >= end - pos)
+		if (os_snprintf_error(end - pos, res))
 			return pos - buf;
 		pos += res;
 	}

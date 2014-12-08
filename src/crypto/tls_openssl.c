@@ -2868,7 +2868,7 @@ int tls_connection_set_cipher_list(void *tls_ctx, struct tls_connection *conn,
 			return -1;
 		}
 		ret = os_snprintf(pos, end - pos, ":%s", suite);
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			break;
 		pos += ret;
 

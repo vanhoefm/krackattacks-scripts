@@ -2359,7 +2359,7 @@ int ieee802_1x_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 			  sta->aid,
 			  EAPOL_VERSION,
 			  sm->initialize);
-	if (ret < 0 || (size_t) ret >= buflen - len)
+	if (os_snprintf_error(buflen - len, ret))
 		return len;
 	len += ret;
 
@@ -2387,7 +2387,7 @@ int ieee802_1x_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 			  sm->reAuthPeriod,
 			  bool_txt(sm->reAuthEnabled),
 			  bool_txt(sm->keyTxEnabled));
-	if (ret < 0 || (size_t) ret >= buflen - len)
+	if (os_snprintf_error(buflen - len, ret))
 		return len;
 	len += ret;
 
@@ -2417,7 +2417,7 @@ int ieee802_1x_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 			  sm->dot1xAuthEapLengthErrorFramesRx,
 			  sm->dot1xAuthLastEapolFrameVersion,
 			  MAC2STR(sm->addr));
-	if (ret < 0 || (size_t) ret >= buflen - len)
+	if (os_snprintf_error(buflen - len, ret))
 		return len;
 	len += ret;
 
@@ -2455,7 +2455,7 @@ int ieee802_1x_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 			  sm->backendOtherRequestsToSupplicant,
 			  sm->backendAuthSuccesses,
 			  sm->backendAuthFails);
-	if (ret < 0 || (size_t) ret >= buflen - len)
+	if (os_snprintf_error(buflen - len, ret))
 		return len;
 	len += ret;
 
@@ -2477,7 +2477,7 @@ int ieee802_1x_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 			  1 : 2,
 			  (unsigned int) diff.sec,
 			  sm->identity);
-	if (ret < 0 || (size_t) ret >= buflen - len)
+	if (os_snprintf_error(buflen - len, ret))
 		return len;
 	len += ret;
 
@@ -2490,7 +2490,7 @@ int ieee802_1x_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 			  name1 ? name1 : "",
 			  sm->eap_type_supp,
 			  name2 ? name2 : "");
-	if (ret < 0 || (size_t) ret >= buflen - len)
+	if (os_snprintf_error(buflen - len, ret))
 		return len;
 	len += ret;
 

@@ -1571,7 +1571,7 @@ static int eap_ttls_get_status(struct eap_sm *sm, void *priv, char *buf,
 	ret = os_snprintf(buf + len, buflen - len,
 			  "EAP-TTLSv%d Phase2 method=",
 			  data->ttls_version);
-	if (ret < 0 || (size_t) ret >= buflen - len)
+	if (os_snprintf_error(buflen - len, ret))
 		return len;
 	len += ret;
 	switch (data->phase2_type) {

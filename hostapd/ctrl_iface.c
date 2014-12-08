@@ -246,14 +246,14 @@ static int hostapd_ctrl_iface_wps_check_pin(
 		if (!wps_pin_valid(pin_val)) {
 			wpa_printf(MSG_DEBUG, "WPS: Invalid checksum digit");
 			ret = os_snprintf(buf, buflen, "FAIL-CHECKSUM\n");
-			if (ret < 0 || (size_t) ret >= buflen)
+			if (os_snprintf_error(buflen, ret))
 				return -1;
 			return ret;
 		}
 	}
 
 	ret = os_snprintf(buf, buflen, "%s", pin);
-	if (ret < 0 || (size_t) ret >= buflen)
+	if (os_snprintf_error(buflen, ret))
 		return -1;
 
 	return ret;
@@ -584,7 +584,7 @@ static int hostapd_ctrl_iface_wps_get_status(struct hostapd_data *hapd,
 	ret = os_snprintf(pos, end - pos, "PBC Status: %s\n",
 			  pbc_status_str(hapd->wps_stats.pbc_status));
 
-	if (ret < 0 || ret >= end - pos)
+	if (os_snprintf_error(end - pos, ret))
 		return pos - buf;
 	pos += ret;
 
@@ -594,7 +594,7 @@ static int hostapd_ctrl_iface_wps_get_status(struct hostapd_data *hapd,
 			   (hapd->wps_stats.status == WPS_STATUS_FAILURE ?
 			    "Failed" : "None")));
 
-	if (ret < 0 || ret >= end - pos)
+	if (os_snprintf_error(end - pos, ret))
 		return pos - buf;
 	pos += ret;
 
@@ -605,7 +605,7 @@ static int hostapd_ctrl_iface_wps_get_status(struct hostapd_data *hapd,
 				  "Failure Reason: %s\n",
 				  wps_ei_str(hapd->wps_stats.failure_reason));
 
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return pos - buf;
 		pos += ret;
 	}
@@ -614,7 +614,7 @@ static int hostapd_ctrl_iface_wps_get_status(struct hostapd_data *hapd,
 		ret = os_snprintf(pos, end - pos, "Peer Address: " MACSTR "\n",
 				  MAC2STR(hapd->wps_stats.peer_addr));
 
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return pos - buf;
 		pos += ret;
 	}
@@ -1067,7 +1067,7 @@ static int hostapd_ctrl_iface_get_config(struct hostapd_data *hapd,
 			  MAC2STR(hapd->own_addr),
 			  wpa_ssid_txt(hapd->conf->ssid.ssid,
 				       hapd->conf->ssid.ssid_len));
-	if (ret < 0 || ret >= end - pos)
+	if (os_snprintf_error(end - pos, ret))
 		return pos - buf;
 	pos += ret;
 
@@ -1076,7 +1076,7 @@ static int hostapd_ctrl_iface_get_config(struct hostapd_data *hapd,
 			  hapd->conf->wps_state == 0 ? "disabled" :
 			  (hapd->conf->wps_state == 1 ? "not configured" :
 			   "configured"));
-	if (ret < 0 || ret >= end - pos)
+	if (os_snprintf_error(end - pos, ret))
 		return pos - buf;
 	pos += ret;
 
@@ -1084,7 +1084,7 @@ static int hostapd_ctrl_iface_get_config(struct hostapd_data *hapd,
 	    hapd->conf->ssid.wpa_passphrase) {
 		ret = os_snprintf(pos, end - pos, "passphrase=%s\n",
 				  hapd->conf->ssid.wpa_passphrase);
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return pos - buf;
 		pos += ret;
 	}
@@ -1096,7 +1096,7 @@ static int hostapd_ctrl_iface_get_config(struct hostapd_data *hapd,
 		wpa_snprintf_hex(hex, sizeof(hex),
 				 hapd->conf->ssid.wpa_psk->psk, PMK_LEN);
 		ret = os_snprintf(pos, end - pos, "psk=%s\n", hex);
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return pos - buf;
 		pos += ret;
 	}
@@ -1104,39 +1104,39 @@ static int hostapd_ctrl_iface_get_config(struct hostapd_data *hapd,
 
 	if (hapd->conf->wpa && hapd->conf->wpa_key_mgmt) {
 		ret = os_snprintf(pos, end - pos, "key_mgmt=");
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return pos - buf;
 		pos += ret;
 
 		if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_PSK) {
 			ret = os_snprintf(pos, end - pos, "WPA-PSK ");
-			if (ret < 0 || ret >= end - pos)
+			if (os_snprintf_error(end - pos, ret))
 				return pos - buf;
 			pos += ret;
 		}
 		if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_IEEE8021X) {
 			ret = os_snprintf(pos, end - pos, "WPA-EAP ");
-			if (ret < 0 || ret >= end - pos)
+			if (os_snprintf_error(end - pos, ret))
 				return pos - buf;
 			pos += ret;
 		}
 #ifdef CONFIG_IEEE80211R
 		if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_FT_PSK) {
 			ret = os_snprintf(pos, end - pos, "FT-PSK ");
-			if (ret < 0 || ret >= end - pos)
+			if (os_snprintf_error(end - pos, ret))
 				return pos - buf;
 			pos += ret;
 		}
 		if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_FT_IEEE8021X) {
 			ret = os_snprintf(pos, end - pos, "FT-EAP ");
-			if (ret < 0 || ret >= end - pos)
+			if (os_snprintf_error(end - pos, ret))
 				return pos - buf;
 			pos += ret;
 		}
 #ifdef CONFIG_SAE
 		if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_FT_SAE) {
 			ret = os_snprintf(pos, end - pos, "FT-SAE ");
-			if (ret < 0 || ret >= end - pos)
+			if (os_snprintf_error(end - pos, ret))
 				return pos - buf;
 			pos += ret;
 		}
@@ -1145,13 +1145,13 @@ static int hostapd_ctrl_iface_get_config(struct hostapd_data *hapd,
 #ifdef CONFIG_IEEE80211W
 		if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_PSK_SHA256) {
 			ret = os_snprintf(pos, end - pos, "WPA-PSK-SHA256 ");
-			if (ret < 0 || ret >= end - pos)
+			if (os_snprintf_error(end - pos, ret))
 				return pos - buf;
 			pos += ret;
 		}
 		if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_IEEE8021X_SHA256) {
 			ret = os_snprintf(pos, end - pos, "WPA-EAP-SHA256 ");
-			if (ret < 0 || ret >= end - pos)
+			if (os_snprintf_error(end - pos, ret))
 				return pos - buf;
 			pos += ret;
 		}
@@ -1159,20 +1159,20 @@ static int hostapd_ctrl_iface_get_config(struct hostapd_data *hapd,
 #ifdef CONFIG_SAE
 		if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_SAE) {
 			ret = os_snprintf(pos, end - pos, "SAE ");
-			if (ret < 0 || ret >= end - pos)
+			if (os_snprintf_error(end - pos, ret))
 				return pos - buf;
 			pos += ret;
 		}
 #endif /* CONFIG_SAE */
 		if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_IEEE8021X_SUITE_B) {
 			ret = os_snprintf(pos, end - pos, "WPA-EAP-SUITE-B ");
-			if (ret < 0 || ret >= end - pos)
+			if (os_snprintf_error(end - pos, ret))
 				return pos - buf;
 			pos += ret;
 		}
 
 		ret = os_snprintf(pos, end - pos, "\n");
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return pos - buf;
 		pos += ret;
 	}
@@ -1180,14 +1180,14 @@ static int hostapd_ctrl_iface_get_config(struct hostapd_data *hapd,
 	if (hapd->conf->wpa) {
 		ret = os_snprintf(pos, end - pos, "group_cipher=%s\n",
 				  wpa_cipher_txt(hapd->conf->wpa_group));
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return pos - buf;
 		pos += ret;
 	}
 
 	if ((hapd->conf->wpa & WPA_PROTO_RSN) && hapd->conf->rsn_pairwise) {
 		ret = os_snprintf(pos, end - pos, "rsn_pairwise_cipher=");
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return pos - buf;
 		pos += ret;
 
@@ -1198,14 +1198,14 @@ static int hostapd_ctrl_iface_get_config(struct hostapd_data *hapd,
 		pos += ret;
 
 		ret = os_snprintf(pos, end - pos, "\n");
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return pos - buf;
 		pos += ret;
 	}
 
 	if ((hapd->conf->wpa & WPA_PROTO_WPA) && hapd->conf->wpa_pairwise) {
 		ret = os_snprintf(pos, end - pos, "wpa_pairwise_cipher=");
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return pos - buf;
 		pos += ret;
 
@@ -1216,7 +1216,7 @@ static int hostapd_ctrl_iface_get_config(struct hostapd_data *hapd,
 		pos += ret;
 
 		ret = os_snprintf(pos, end - pos, "\n");
-		if (ret < 0 || ret >= end - pos)
+		if (os_snprintf_error(end - pos, ret))
 			return pos - buf;
 		pos += ret;
 	}
@@ -1323,7 +1323,7 @@ static int hostapd_ctrl_iface_get(struct hostapd_data *hapd, char *cmd,
 
 	if (os_strcmp(cmd, "version") == 0) {
 		res = os_snprintf(buf, buflen, "%s", VERSION_STR);
-		if (res < 0 || (unsigned int) res >= buflen)
+		if (os_snprintf_error(buflen, res))
 			return -1;
 		return res;
 	}

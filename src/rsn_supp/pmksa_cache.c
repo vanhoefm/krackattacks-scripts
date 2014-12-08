@@ -482,7 +482,7 @@ int pmksa_cache_list(struct rsn_pmksa_cache *pmksa, char *buf, size_t len)
 	ret = os_snprintf(pos, buf + len - pos,
 			  "Index / AA / PMKID / expiration (in seconds) / "
 			  "opportunistic\n");
-	if (ret < 0 || ret >= buf + len - pos)
+	if (os_snprintf_error(buf + len - pos, ret))
 		return pos - buf;
 	pos += ret;
 	i = 0;
@@ -491,7 +491,7 @@ int pmksa_cache_list(struct rsn_pmksa_cache *pmksa, char *buf, size_t len)
 		i++;
 		ret = os_snprintf(pos, buf + len - pos, "%d " MACSTR " ",
 				  i, MAC2STR(entry->aa));
-		if (ret < 0 || ret >= buf + len - pos)
+		if (os_snprintf_error(buf + len - pos, ret))
 			return pos - buf;
 		pos += ret;
 		pos += wpa_snprintf_hex(pos, buf + len - pos, entry->pmkid,
@@ -499,7 +499,7 @@ int pmksa_cache_list(struct rsn_pmksa_cache *pmksa, char *buf, size_t len)
 		ret = os_snprintf(pos, buf + len - pos, " %d %d\n",
 				  (int) (entry->expiration - now.sec),
 				  entry->opportunistic);
-		if (ret < 0 || ret >= buf + len - pos)
+		if (os_snprintf_error(buf + len - pos, ret))
 			return pos - buf;
 		pos += ret;
 		entry = entry->next;

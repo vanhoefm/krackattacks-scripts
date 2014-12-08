@@ -619,7 +619,7 @@ void wpa_msg(void *ctx, int level, const char *fmt, ...)
 		if (ifname) {
 			int res = os_snprintf(prefix, sizeof(prefix), "%s: ",
 					      ifname);
-			if (res < 0 || res >= (int) sizeof(prefix))
+			if (os_snprintf_error(sizeof(prefix), res))
 				prefix[0] = '\0';
 		}
 	}

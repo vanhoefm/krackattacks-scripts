@@ -2015,7 +2015,7 @@ int wpa_sm_get_mib(struct wpa_sm *sm, char *buf, size_t buflen)
 			  sm->dot11RSNAConfigPMKLifetime,
 			  sm->dot11RSNAConfigPMKReauthThreshold,
 			  sm->dot11RSNAConfigSATimeout);
-	if (ret < 0 || (size_t) ret >= buflen)
+	if (os_snprintf_error(buflen, ret))
 		return 0;
 	len = ret;
 
@@ -2484,7 +2484,7 @@ int wpa_sm_get_status(struct wpa_sm *sm, char *buf, size_t buflen,
 			  wpa_cipher_txt(sm->pairwise_cipher),
 			  wpa_cipher_txt(sm->group_cipher),
 			  wpa_key_mgmt_txt(sm->key_mgmt, sm->proto));
-	if (ret < 0 || ret >= end - pos)
+	if (os_snprintf_error(end - pos, ret))
 		return pos - buf;
 	pos += ret;
 
@@ -2497,7 +2497,7 @@ int wpa_sm_get_status(struct wpa_sm *sm, char *buf, size_t buflen,
 			ret = os_snprintf(pos, end - pos, "pmf=%d\n",
 					  (rsn.capabilities &
 					   WPA_CAPABILITY_MFPR) ? 2 : 1);
-			if (ret < 0 || ret >= end - pos)
+			if (os_snprintf_error(end - pos, ret))
 				return pos - buf;
 			pos += ret;
 		}

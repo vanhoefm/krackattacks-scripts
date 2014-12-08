@@ -904,7 +904,7 @@ int wpas_wps_ap_pin_set(struct wpa_supplicant *wpa_s, const char *pin,
 		return -1;
 	hapd = wpa_s->ap_iface->bss[0];
 	ret = os_snprintf(pin_txt, sizeof(pin_txt), "%s", pin);
-	if (ret < 0 || ret >= (int) sizeof(pin_txt))
+	if (os_snprintf_error(sizeof(pin_txt), ret))
 		return -1;
 	os_free(hapd->conf->ap_pin);
 	hapd->conf->ap_pin = os_strdup(pin_txt);
@@ -1058,7 +1058,7 @@ int ap_ctrl_iface_wpa_get_status(struct wpa_supplicant *wpa_s, char *buf,
 			  wpa_cipher_txt(conf->wpa_group),
 			  wpa_key_mgmt_txt(conf->wpa_key_mgmt,
 					   conf->wpa));
-	if (ret < 0 || ret >= end - pos)
+	if (os_snprintf_error(end - pos, ret))
 		return pos - buf;
 	pos += ret;
 	return pos - buf;

@@ -16,7 +16,7 @@ def test_discovery(dev):
     addr0 = dev[0].p2p_dev_addr()
     addr1 = dev[1].p2p_dev_addr()
     logger.info("Start device discovery")
-    dev[0].p2p_find(social=True)
+    dev[0].p2p_find(social=True, delay=1)
     if not dev[1].discover_peer(addr0):
         raise Exception("Device discovery timed out")
     if not dev[0].discover_peer(addr1):
@@ -74,6 +74,11 @@ def test_discovery(dev):
 
     dev[0].p2p_stop_find
     dev[1].p2p_stop_find
+
+    if "FAIL" not in dev[0].p2p_find(dev_id="foo"):
+        raise Exception("P2P_FIND with invalid dev_id accepted")
+    if "FAIL" not in dev[0].p2p_find(dev_type="foo"):
+        raise Exception("P2P_FIND with invalid dev_type accepted")
 
 def test_discovery_pd_retries(dev):
     """P2P device discovery and provision discovery retries"""

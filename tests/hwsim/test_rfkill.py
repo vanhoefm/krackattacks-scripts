@@ -99,6 +99,10 @@ def test_rfkill_autogo(dev, apdev):
             raise Exception("Group removal not reported")
         if "reason=UNAVAILABLE" not in ev:
             raise Exception("Unexpected group removal reason: " + ev)
+        if "FAIL" not in dev[0].request("P2P_LISTEN 1"):
+            raise Exception("P2P_LISTEN accepted unexpectedly")
+        if "FAIL" not in dev[0].request("P2P_LISTEN"):
+            raise Exception("P2P_LISTEN accepted unexpectedly")
 
         logger.info("rfkill block 1")
         subprocess.call(['sudo', 'rfkill', 'block', id1])

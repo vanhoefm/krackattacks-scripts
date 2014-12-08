@@ -174,3 +174,16 @@ def test_p2p_cli_invite(dev):
     dev[0].remove_group()
     dev[1].wait_go_ending_session()
     dev[2].wait_go_ending_session()
+
+def test_p2p_invite_invalid(dev):
+    """Invalid parameters to P2P_INVITE"""
+    id = dev[0].add_network()
+    for cmd in [ "foo=bar",
+                 "persistent=123 peer=foo",
+                 "persistent=123",
+                 "persistent=%d" % id,
+                 "group=foo",
+                 "group=foo peer=foo",
+                 "group=foo peer=00:11:22:33:44:55 go_dev_addr=foo" ]:
+        if "FAIL" not in dev[0].request("P2P_INVITE " + cmd):
+            raise Exception("Invalid P2P_INVITE accepted: " + cmd)

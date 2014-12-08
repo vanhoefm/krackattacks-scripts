@@ -470,6 +470,11 @@ def test_persistent_group_without_persistent_reconnect(dev):
     sa = s[2]
     id = s[3]
     freq = s[4]
+    logger.info("Invalid P2P_INVITE test coverage")
+    if "FAIL" not in dev[0].global_request("P2P_INVITE persistent=" + id + " peer=" + sa + " freq=0"):
+        raise Exception("Invalid P2P_INVITE accepted")
+    if "FAIL" not in dev[0].global_request("P2P_INVITE persistent=" + id + " peer=" + sa + " pref=0"):
+        raise Exception("Invalid P2P_INVITE accepted")
     logger.info("Re-initiate invitation based on upper layer acceptance")
     if "OK" not in dev[0].global_request("P2P_INVITE persistent=" + id + " peer=" + sa + " freq=" + freq):
         raise Exception("Invitation command failed")

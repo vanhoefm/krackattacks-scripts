@@ -584,7 +584,7 @@ static int wpa_cli_cmd_set(struct wpa_ctrl *ctrl, int argc, char *argv[])
 
 	if (argc == 1) {
 		res = os_snprintf(cmd, sizeof(cmd), "SET %s ", argv[0]);
-		if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		if (os_snprintf_error(sizeof(cmd), res)) {
 			printf("Too long SET command.\n");
 			return -1;
 		}
@@ -733,7 +733,7 @@ static int wpa_cli_cmd_bss_flush(struct wpa_ctrl *ctrl, int argc, char *argv[])
 		res = os_snprintf(cmd, sizeof(cmd), "BSS_FLUSH 0");
 	else
 		res = os_snprintf(cmd, sizeof(cmd), "BSS_FLUSH %s", argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+	if (os_snprintf_error(sizeof(cmd), res)) {
 		printf("Too long BSS_FLUSH command.\n");
 		return -1;
 	}
@@ -908,7 +908,7 @@ static int wpa_cli_cmd_wps_reg(struct wpa_ctrl *ctrl, int argc, char *argv[])
 		return -1;
 	}
 
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+	if (os_snprintf_error(sizeof(cmd), res)) {
 		printf("Too long WPS_REG command.\n");
 		return -1;
 	}
@@ -1033,7 +1033,7 @@ static int wpa_cli_cmd_wps_er_config(struct wpa_ctrl *ctrl, int argc,
 		return -1;
 	}
 
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+	if (os_snprintf_error(sizeof(cmd), res)) {
 		printf("Too long WPS_ER_CONFIG command.\n");
 		return -1;
 	}

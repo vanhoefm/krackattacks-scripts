@@ -393,7 +393,7 @@ static int hostapd_cli_cmd_wps_check_pin(struct wpa_ctrl *ctrl, int argc,
 	else
 		res = os_snprintf(cmd, sizeof(cmd), "WPS_CHECK_PIN %s",
 				  argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+	if (os_snprintf_error(sizeof(cmd), res)) {
 		printf("Too long WPS_CHECK_PIN command.\n");
 		return -1;
 	}
@@ -456,7 +456,7 @@ static int hostapd_cli_cmd_wps_nfc_config_token(struct wpa_ctrl *ctrl,
 
 	res = os_snprintf(cmd, sizeof(cmd), "WPS_NFC_CONFIG_TOKEN %s",
 			  argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+	if (os_snprintf_error(sizeof(cmd), res)) {
 		printf("Too long WPS_NFC_CONFIG_TOKEN command.\n");
 		return -1;
 	}
@@ -477,7 +477,7 @@ static int hostapd_cli_cmd_wps_nfc_token(struct wpa_ctrl *ctrl,
 	}
 
 	res = os_snprintf(cmd, sizeof(cmd), "WPS_NFC_TOKEN %s", argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+	if (os_snprintf_error(sizeof(cmd), res)) {
 		printf("Too long WPS_NFC_TOKEN command.\n");
 		return -1;
 	}
@@ -499,7 +499,7 @@ static int hostapd_cli_cmd_nfc_get_handover_sel(struct wpa_ctrl *ctrl,
 
 	res = os_snprintf(cmd, sizeof(cmd), "NFC_GET_HANDOVER_SEL %s %s",
 			  argv[0], argv[1]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+	if (os_snprintf_error(sizeof(cmd), res)) {
 		printf("Too long NFC_GET_HANDOVER_SEL command.\n");
 		return -1;
 	}
@@ -641,7 +641,7 @@ static int hostapd_cli_cmd_bss_tm_req(struct wpa_ctrl *ctrl, int argc,
 	for (i = 1; i < argc; i++) {
 		tmp = &buf[total];
 		res = os_snprintf(tmp, sizeof(buf) - total, " %s", argv[i]);
-		if (res < 0 || (size_t) res >= sizeof(buf) - total - 1)
+		if (os_snprintf_error(sizeof(buf) - total, res))
 			return -1;
 		total += res;
 	}
@@ -893,7 +893,7 @@ static int hostapd_cli_cmd_set(struct wpa_ctrl *ctrl, int argc, char *argv[])
 	}
 
 	res = os_snprintf(cmd, sizeof(cmd), "SET %s %s", argv[0], argv[1]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+	if (os_snprintf_error(sizeof(cmd), res)) {
 		printf("Too long SET command.\n");
 		return -1;
 	}
@@ -913,7 +913,7 @@ static int hostapd_cli_cmd_get(struct wpa_ctrl *ctrl, int argc, char *argv[])
 	}
 
 	res = os_snprintf(cmd, sizeof(cmd), "GET %s", argv[0]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+	if (os_snprintf_error(sizeof(cmd), res)) {
 		printf("Too long GET command.\n");
 		return -1;
 	}
@@ -941,7 +941,7 @@ static int hostapd_cli_cmd_chan_switch(struct wpa_ctrl *ctrl,
 
 	res = os_snprintf(cmd, sizeof(cmd), "CHAN_SWITCH %s %s",
 			  argv[0], argv[1]);
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+	if (os_snprintf_error(sizeof(cmd), res)) {
 		printf("Too long CHAN_SWITCH command.\n");
 		return -1;
 	}
@@ -950,7 +950,7 @@ static int hostapd_cli_cmd_chan_switch(struct wpa_ctrl *ctrl,
 	for (i = 2; i < argc; i++) {
 		tmp = cmd + total;
 		res = os_snprintf(tmp, sizeof(cmd) - total, " %s", argv[i]);
-		if (res < 0 || (size_t) res >= sizeof(cmd) - total - 1) {
+		if (os_snprintf_error(sizeof(cmd) - total, res)) {
 			printf("Too long CHAN_SWITCH command.\n");
 			return -1;
 		}
@@ -994,7 +994,7 @@ static int hostapd_cli_cmd_vendor(struct wpa_ctrl *ctrl, int argc, char *argv[])
 
 	res = os_snprintf(cmd, sizeof(cmd), "VENDOR %s %s %s", argv[0], argv[1],
 			  argc == 3 ? argv[2] : "");
-	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+	if (os_snprintf_error(sizeof(cmd), res)) {
 		printf("Too long VENDOR command.\n");
 		return -1;
 	}

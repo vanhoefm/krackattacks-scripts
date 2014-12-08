@@ -2707,6 +2707,25 @@ static void nl80211_copy_auth_params(struct wpa_driver_nl80211_data *drv,
 }
 
 
+static void nl80211_unmask_11b_rates(struct i802_bss *bss)
+{
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+
+	if (is_p2p_net_interface(drv->nlmode) || !drv->disabled_11b_rates)
+		return;
+
+	/*
+	 * Looks like we failed to unmask 11b rates previously. This could
+	 * happen, e.g., if the interface was down at the point in time when a
+	 * P2P group was terminated.
+	 */
+	wpa_printf(MSG_DEBUG,
+		   "nl80211: Interface %s mode is for non-P2P, but 11b rates were disabled - re-enable them",
+		   bss->ifname);
+	nl80211_disable_11b_rates(drv, drv->ifindex, 0);
+}
+
+
 static int wpa_driver_nl80211_authenticate(
 	struct i802_bss *bss, struct wpa_driver_auth_params *params)
 {
@@ -2717,6 +2736,8 @@ static int wpa_driver_nl80211_authenticate(
 	enum nl80211_iftype nlmode;
 	int count = 0;
 	int is_retry;
+
+	nl80211_unmask_11b_rates(bss);
 
 	is_retry = drv->retry_auth;
 	drv->retry_auth = 0;
@@ -4567,6 +4588,8 @@ static int wpa_driver_nl80211_associate(
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	int ret = -1;
 	struct nl_msg *msg;
+
+	nl80211_unmask_11b_rates(bss);
 
 	if (params->mode == IEEE80211_MODE_AP)
 		return wpa_driver_nl80211_ap(drv, params);

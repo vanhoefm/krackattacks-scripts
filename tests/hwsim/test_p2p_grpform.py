@@ -536,6 +536,8 @@ def test_grpform_reject(dev):
     ev = dev[0].wait_global_event(["P2P-GO-NEG-REQUEST"], timeout=15)
     if ev is None:
         raise Exception("GO Negotiation timed out")
+    if "OK" in dev[0].global_request("P2P_REJECT foo"):
+        raise Exception("Invalid P2P_REJECT accepted")
     if "FAIL" in dev[0].global_request("P2P_REJECT " + ev.split(' ')[1]):
         raise Exception("P2P_REJECT failed")
     dev[1].request("P2P_STOP_FIND")

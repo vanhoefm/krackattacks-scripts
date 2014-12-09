@@ -45,14 +45,6 @@
 #define ERR_remove_thread_state(tid) ERR_remove_state(0)
 #endif
 
-#if OPENSSL_VERSION_NUMBER >= 0x10000000L
-/*
- * Session ticket override patch was merged into OpenSSL 0.9.9 tree on
- * 2008-11-15. This version uses a bit different API compared to the old patch.
- */
-#define CONFIG_OPENSSL_TICKET_OVERRIDE
-#endif
-
 #if defined(OPENSSL_IS_BORINGSSL)
 /* stack_index_t is the return type of OpenSSL's sk_XXX_num() functions. */
 typedef size_t stack_index_t;
@@ -2923,15 +2915,9 @@ int tls_connection_client_hello_ext(void *ssl_ctx, struct tls_connection *conn,
 	if (conn == NULL || conn->ssl == NULL || ext_type != 35)
 		return -1;
 
-#ifdef CONFIG_OPENSSL_TICKET_OVERRIDE
 	if (SSL_set_session_ticket_ext(conn->ssl, (void *) data,
 				       data_len) != 1)
 		return -1;
-#else /* CONFIG_OPENSSL_TICKET_OVERRIDE */
-	if (SSL_set_hello_extension(conn->ssl, ext_type, (void *) data,
-				    data_len) != 1)
-		return -1;
-#endif /* CONFIG_OPENSSL_TICKET_OVERRIDE */
 
 	return 0;
 }
@@ -3464,7 +3450,6 @@ static int tls_sess_sec_cb(SSL *s, void *secret, int *secret_len,
 }
 
 
-#ifdef CONFIG_OPENSSL_TICKET_OVERRIDE
 static int tls_session_ticket_ext_cb(SSL *s, const unsigned char *data,
 				     int len, void *arg)
 {
@@ -3490,62 +3475,6 @@ static int tls_session_ticket_ext_cb(SSL *s, const unsigned char *data,
 
 	return 1;
 }
-#else /* CONFIG_OPENSSL_TICKET_OVERRIDE */
-#ifdef SSL_OP_NO_TICKET
-static void tls_hello_ext_cb(SSL *s, int client_server, int type,
-			     unsigned char *data, int len, void *arg)
-{
-	struct tls_connection *conn = arg;
-
-	if (conn == NULL || conn->session_ticket_cb == NULL)
-		return;
-
-	wpa_printf(MSG_DEBUG, "OpenSSL: %s: type=%d length=%d", __func__,
-		   type, len);
-
-	if (type == TLSEXT_TYPE_session_ticket && !client_server) {
-		os_free(conn->session_ticket);
-		conn->session_ticket = NULL;
-
-		wpa_hexdump(MSG_DEBUG, "OpenSSL: ClientHello SessionTicket "
-			    "extension", data, len);
-		conn->session_ticket = os_malloc(len);
-		if (conn->session_ticket == NULL)
-			return;
-
-		os_memcpy(conn->session_ticket, data, len);
-		conn->session_ticket_len = len;
-	}
-}
-#else /* SSL_OP_NO_TICKET */
-static int tls_hello_ext_cb(SSL *s, TLS_EXTENSION *ext, void *arg)
-{
-	struct tls_connection *conn = arg;
-
-	if (conn == NULL || conn->session_ticket_cb == NULL)
-		return 0;
-
-	wpa_printf(MSG_DEBUG, "OpenSSL: %s: type=%d length=%d", __func__,
-		   ext->type, ext->length);
-
-	os_free(conn->session_ticket);
-	conn->session_ticket = NULL;
-
-	if (ext->type == 35) {
-		wpa_hexdump(MSG_DEBUG, "OpenSSL: ClientHello SessionTicket "
-			    "extension", ext->data, ext->length);
-		conn->session_ticket = os_malloc(ext->length);
-		if (conn->session_ticket == NULL)
-			return SSL_AD_INTERNAL_ERROR;
-
-		os_memcpy(conn->session_ticket, ext->data, ext->length);
-		conn->session_ticket_len = ext->length;
-	}
-
-	return 0;
-}
-#endif /* SSL_OP_NO_TICKET */
-#endif /* CONFIG_OPENSSL_TICKET_OVERRIDE */
 #endif /* EAP_FAST || EAP_FAST_DYNAMIC || EAP_SERVER_FAST */
 
 
@@ -3562,33 +3491,12 @@ int tls_connection_set_session_ticket_cb(void *tls_ctx,
 		if (SSL_set_session_secret_cb(conn->ssl, tls_sess_sec_cb,
 					      conn) != 1)
 			return -1;
-#ifdef CONFIG_OPENSSL_TICKET_OVERRIDE
 		SSL_set_session_ticket_ext_cb(conn->ssl,
 					      tls_session_ticket_ext_cb, conn);
-#else /* CONFIG_OPENSSL_TICKET_OVERRIDE */
-#ifdef SSL_OP_NO_TICKET
-		SSL_set_tlsext_debug_callback(conn->ssl, tls_hello_ext_cb);
-		SSL_set_tlsext_debug_arg(conn->ssl, conn);
-#else /* SSL_OP_NO_TICKET */
-		if (SSL_set_hello_extension_cb(conn->ssl, tls_hello_ext_cb,
-					       conn) != 1)
-			return -1;
-#endif /* SSL_OP_NO_TICKET */
-#endif /* CONFIG_OPENSSL_TICKET_OVERRIDE */
 	} else {
 		if (SSL_set_session_secret_cb(conn->ssl, NULL, NULL) != 1)
 			return -1;
-#ifdef CONFIG_OPENSSL_TICKET_OVERRIDE
 		SSL_set_session_ticket_ext_cb(conn->ssl, NULL, NULL);
-#else /* CONFIG_OPENSSL_TICKET_OVERRIDE */
-#ifdef SSL_OP_NO_TICKET
-		SSL_set_tlsext_debug_callback(conn->ssl, NULL);
-		SSL_set_tlsext_debug_arg(conn->ssl, conn);
-#else /* SSL_OP_NO_TICKET */
-		if (SSL_set_hello_extension_cb(conn->ssl, NULL, NULL) != 1)
-			return -1;
-#endif /* SSL_OP_NO_TICKET */
-#endif /* CONFIG_OPENSSL_TICKET_OVERRIDE */
 	}
 
 	return 0;

@@ -12,7 +12,7 @@ command line.
 diff -upr openssl-0.9.8za.orig/ssl/s3_clnt.c openssl-0.9.8za/ssl/s3_clnt.c
 --- openssl-0.9.8za.orig/ssl/s3_clnt.c	2014-06-05 11:09:26.000000000 +0300
 +++ openssl-0.9.8za/ssl/s3_clnt.c	2014-06-05 20:37:09.221387312 +0300
-@@ -767,6 +767,21 @@ int ssl3_get_server_hello(SSL *s)
+@@ -767,6 +767,22 @@ int ssl3_get_server_hello(SSL *s)
  		goto f_err;
  		}
  
@@ -27,6 +27,7 @@ diff -upr openssl-0.9.8za.orig/ssl/s3_clnt.c openssl-0.9.8za/ssl/s3_clnt.c
 +			{
 +			s->session->cipher=pref_cipher ?
 +				pref_cipher : ssl_get_cipher_by_char(s,p+j);
++			s->s3->flags |= SSL3_FLAGS_CCS_OK;
 +			}
 +		}
 +#endif /* OPENSSL_NO_TLSEXT */

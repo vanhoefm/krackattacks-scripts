@@ -95,11 +95,12 @@ def eap_check_auth(dev, method, initial, rsn=True, sha256=False,
         e = "WPA/IEEE 802.1X/EAP"
     if status["key_mgmt"] != e:
         raise Exception("Unexpected key_mgmt status: " + status["key_mgmt"])
+    return status
 
 def eap_reauth(dev, method, rsn=True, sha256=False, expect_failure=False):
     dev.request("REAUTHENTICATE")
-    eap_check_auth(dev, method, False, rsn=rsn, sha256=sha256,
-                   expect_failure=expect_failure)
+    return eap_check_auth(dev, method, False, rsn=rsn, sha256=sha256,
+                          expect_failure=expect_failure)
 
 def test_ap_wpa2_eap_sim(dev, apdev):
     """WPA2-Enterprise connection using EAP-SIM"""
@@ -1780,7 +1781,9 @@ def test_ap_wpa2_eap_fast_mschapv2_unauth_prov(dev, apdev):
                 ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
                 phase1="fast_provisioning=1", pac_file="blob://fast_pac")
     hwsim_utils.test_connectivity(dev[0], hapd)
-    eap_reauth(dev[0], "FAST")
+    res = eap_reauth(dev[0], "FAST")
+    if res['tls_session_reused'] != '1':
+        raise Exception("EAP-FAST could not use PAC session ticket")
 
 def test_ap_wpa2_eap_fast_pac_file(dev, apdev, params):
     """WPA2-Enterprise connection using EAP-FAST/MSCHAPv2 and PAC file"""
@@ -1830,7 +1833,9 @@ def test_ap_wpa2_eap_fast_binary_pac(dev, apdev):
                 ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
                 phase1="fast_provisioning=1 fast_max_pac_list_len=1 fast_pac_format=binary",
                 pac_file="blob://fast_pac_bin")
-    eap_reauth(dev[0], "FAST")
+    res = eap_reauth(dev[0], "FAST")
+    if res['tls_session_reused'] != '1':
+        raise Exception("EAP-FAST could not use PAC session ticket")
 
 def test_ap_wpa2_eap_fast_missing_pac_config(dev, apdev):
     """WPA2-Enterprise connection using EAP-FAST and missing PAC config"""
@@ -1866,7 +1871,9 @@ def test_ap_wpa2_eap_fast_gtc_auth_prov(dev, apdev):
                 ca_cert="auth_serv/ca.pem", phase2="auth=GTC",
                 phase1="fast_provisioning=2", pac_file="blob://fast_pac_auth")
     hwsim_utils.test_connectivity(dev[0], hapd)
-    eap_reauth(dev[0], "FAST")
+    res = eap_reauth(dev[0], "FAST")
+    if res['tls_session_reused'] != '1':
+        raise Exception("EAP-FAST could not use PAC session ticket")
 
 def test_ap_wpa2_eap_tls_ocsp(dev, apdev):
     """WPA2-Enterprise connection using EAP-TLS and verifying OCSP"""

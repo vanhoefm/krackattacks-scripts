@@ -493,6 +493,7 @@ struct p2p_data {
 	u8 pending_channel_forced;
 
 	/* ASP Support */
+	struct p2ps_advertisement *p2ps_adv_list;
 	u8 wild_card_hash[P2PS_HASH_LEN];
 	u8 query_hash[P2P_MAX_QUERY_HASH * P2PS_HASH_LEN];
 	u8 p2ps_seek;

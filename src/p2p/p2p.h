@@ -11,6 +11,12 @@
 
 #include "wps/wps_defs.h"
 
+/* P2P ASP Setup Capability */
+#define P2PS_SETUP_NONE 0
+#define P2PS_SETUP_NEW BIT(0)
+#define P2PS_SETUP_CLIENT BIT(1)
+#define P2PS_SETUP_GROUP_OWNER BIT(2)
+
 #define P2PS_WILD_HASH_STR "org.wi-fi.wfds"
 #define P2PS_HASH_LEN 6
 #define P2P_MAX_QUERY_HASH 6
@@ -146,6 +152,46 @@ struct p2p_go_neg_results {
 	 */
 	unsigned int peer_config_timeout;
 };
+
+struct p2ps_advertisement {
+	struct p2ps_advertisement *next;
+
+	/**
+	 * svc_info - Pointer to (internal) Service defined information
+	 */
+	char *svc_info;
+
+	/**
+	 * id - P2PS Advertisement ID
+	 */
+	u32 id;
+
+	/**
+	 * config_methods - WPS Methods which are allowed for this service
+	 */
+	u16 config_methods;
+
+	/**
+	 * state - Current state of the service: 0 - Out Of Service, 1-255 Vendor defined
+	 */
+	u8 state;
+
+	/**
+	 * auto_accept - Automatically Accept provisioning request if possible.
+	 */
+	u8 auto_accept;
+
+	/**
+	 * hash - 6 octet Service Name has to match against incoming Probe Requests
+	 */
+	u8 hash[P2PS_HASH_LEN];
+
+	/**
+	 * svc_name - NULL Terminated UTF-8 Service Name, and svc_info storage
+	 */
+	char svc_name[0];
+};
+
 
 struct p2p_data;
 
@@ -2037,5 +2083,12 @@ void p2p_loop_on_known_peers(struct p2p_data *p2p,
 			     void *user_data);
 
 void p2p_set_vendor_elems(struct p2p_data *p2p, struct wpabuf **vendor_elem);
+
+struct p2ps_advertisement *
+p2p_service_p2ps_id(struct p2p_data *p2p, u32 adv_id);
+int p2p_service_add_asp(struct p2p_data *p2p, int auto_accept, u32 adv_id,
+			const char *adv_str, u8 svc_state,
+			u16 config_methods, const char *svc_info);
+int p2p_service_del_asp(struct p2p_data *p2p, u32 adv_id);
 
 #endif /* P2P_H */

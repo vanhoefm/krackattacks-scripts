@@ -4914,6 +4914,106 @@ static int p2p_ctrl_service_add_upnp(struct wpa_supplicant *wpa_s, char *cmd)
 }
 
 
+static int p2p_ctrl_service_add_asp(struct wpa_supplicant *wpa_s,
+				    u8 replace, char *cmd)
+{
+	char *pos;
+	char *adv_str;
+	u32 auto_accept, adv_id, svc_state, config_methods;
+	char *svc_info = NULL;
+
+	pos = os_strchr(cmd, ' ');
+	if (pos == NULL)
+		return -1;
+	*pos++ = '\0';
+
+	/* Auto-Accept value is mandatory, and must be one of the
+	 * single values (0, 1, 2, 4) */
+	auto_accept = atoi(cmd);
+	switch (auto_accept) {
+	case P2PS_SETUP_NONE: /* No auto-accept */
+	case P2PS_SETUP_NEW:
+	case P2PS_SETUP_CLIENT:
+	case P2PS_SETUP_GROUP_OWNER:
+		break;
+	default:
+		return -1;
+	}
+
+	/* Advertisement ID is mandatory */
+	cmd = pos;
+	pos = os_strchr(cmd, ' ');
+	if (pos == NULL)
+		return -1;
+	*pos++ = '\0';
+
+	/* Handle Adv_ID == 0 (wildcard "org.wi-fi.wfds") internally. */
+	if (sscanf(cmd, "%x", &adv_id) != 1 || adv_id == 0)
+		return -1;
+
+	/* Only allow replacements if exist, and adds if not */
+	if (wpas_p2p_service_p2ps_id_exists(wpa_s, adv_id)) {
+		if (!replace)
+			return -1;
+	} else {
+		if (replace)
+			return -1;
+	}
+
+	/* svc_state between 0 - 0xff is mandatory */
+	if (sscanf(pos, "%x", &svc_state) != 1 || svc_state > 0xff)
+		return -1;
+
+	pos = os_strchr(pos, ' ');
+	if (pos == NULL)
+		return -1;
+
+	/* config_methods is mandatory */
+	pos++;
+	if (sscanf(pos, "%x", &config_methods) != 1)
+		return -1;
+
+	if (!(config_methods &
+	      (WPS_CONFIG_DISPLAY | WPS_CONFIG_KEYPAD | WPS_CONFIG_P2PS)))
+		return -1;
+
+	pos = os_strchr(pos, ' ');
+	if (pos == NULL)
+		return -1;
+
+	pos++;
+	adv_str = pos;
+
+	/* Advertisement string is mandatory */
+	if (!pos[0] || pos[0] == ' ')
+		return -1;
+
+	/* Terminate svc string */
+	pos = os_strchr(pos, ' ');
+	if (pos != NULL)
+		*pos++ = '\0';
+
+	/* Service and Response Information are optional */
+	if (pos && pos[0]) {
+		size_t len;
+
+		/* Note the bare ' included, which cannot exist legally
+		 * in unescaped string. */
+		svc_info = os_strstr(pos, "svc_info='");
+
+		if (svc_info) {
+			svc_info += 9;
+			len = os_strlen(svc_info);
+			utf8_unescape(svc_info, len, svc_info, len);
+		}
+	}
+
+	return wpas_p2p_service_add_asp(wpa_s, auto_accept, adv_id, adv_str,
+					(u8) svc_state, (u16) config_methods,
+					svc_info);
+}
+
+
 static int p2p_ctrl_service_add(struct wpa_supplicant *wpa_s, char *cmd)
 {
 	char *pos;
@@ -4927,6 +5027,8 @@ static int p2p_ctrl_service_add(struct wpa_supplicant *wpa_s, char *cmd)
 		return p2p_ctrl_service_add_bonjour(wpa_s, pos);
 	if (os_strcmp(cmd, "upnp") == 0)
 		return p2p_ctrl_service_add_upnp(wpa_s, pos);
+	if (os_strcmp(cmd, "asp") == 0)
+		return p2p_ctrl_service_add_asp(wpa_s, 0, pos);
 	wpa_printf(MSG_DEBUG, "Unknown service '%s'", cmd);
 	return -1;
 }
@@ -4974,6 +5076,17 @@ static int p2p_ctrl_service_del_upnp(struct wpa_supplicant *wpa_s, char *cmd)
 }
 
 
+static int p2p_ctrl_service_del_asp(struct wpa_supplicant *wpa_s, char *cmd)
+{
+	u32 adv_id;
+
+	if (sscanf(cmd, "%x", &adv_id) != 1)
+		return -1;
+
+	return wpas_p2p_service_del_asp(wpa_s, adv_id);
+}
+
+
 static int p2p_ctrl_service_del(struct wpa_supplicant *wpa_s, char *cmd)
 {
 	char *pos;
@@ -4987,6 +5100,25 @@ static int p2p_ctrl_service_del(struct wpa_supplicant *wpa_s, char *cmd)
 		return p2p_ctrl_service_del_bonjour(wpa_s, pos);
 	if (os_strcmp(cmd, "upnp") == 0)
 		return p2p_ctrl_service_del_upnp(wpa_s, pos);
+	if (os_strcmp(cmd, "asp") == 0)
+		return p2p_ctrl_service_del_asp(wpa_s, pos);
+	wpa_printf(MSG_DEBUG, "Unknown service '%s'", cmd);
+	return -1;
+}
+
+
+static int p2p_ctrl_service_replace(struct wpa_supplicant *wpa_s, char *cmd)
+{
+	char *pos;
+
+	pos = os_strchr(cmd, ' ');
+	if (pos == NULL)
+		return -1;
+	*pos++ = '\0';
+
+	if (os_strcmp(cmd, "asp") == 0)
+		return p2p_ctrl_service_add_asp(wpa_s, 1, pos);
+
 	wpa_printf(MSG_DEBUG, "Unknown service '%s'", cmd);
 	return -1;
 }
@@ -7734,6 +7866,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 			reply_len = -1;
 	} else if (os_strncmp(buf, "P2P_SERVICE_DEL ", 16) == 0) {
 		if (p2p_ctrl_service_del(wpa_s, buf + 16) < 0)
+			reply_len = -1;
+	} else if (os_strncmp(buf, "P2P_SERVICE_REP ", 16) == 0) {
+		if (p2p_ctrl_service_replace(wpa_s, buf + 16) < 0)
 			reply_len = -1;
 	} else if (os_strncmp(buf, "P2P_REJECT ", 11) == 0) {
 		if (p2p_ctrl_reject(wpa_s, buf + 11) < 0)

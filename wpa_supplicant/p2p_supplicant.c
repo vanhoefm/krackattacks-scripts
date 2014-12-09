@@ -2868,6 +2868,35 @@ void wpas_p2p_service_flush(struct wpa_supplicant *wpa_s)
 }
 
 
+int wpas_p2p_service_p2ps_id_exists(struct wpa_supplicant *wpa_s, u32 adv_id)
+{
+	if (adv_id == 0)
+		return 1;
+
+	if (p2p_service_p2ps_id(wpa_s->global->p2p, adv_id))
+		return 1;
+
+	return 0;
+}
+
+
+int wpas_p2p_service_del_asp(struct wpa_supplicant *wpa_s, u32 adv_id)
+{
+	return p2p_service_del_asp(wpa_s->global->p2p, adv_id);
+}
+
+
+int wpas_p2p_service_add_asp(struct wpa_supplicant *wpa_s,
+			     int auto_accept, u32 adv_id,
+			     const char *adv_str, u8 svc_state,
+			     u16 config_methods, const char *svc_info)
+{
+	return p2p_service_add_asp(wpa_s->global->p2p, auto_accept, adv_id,
+				   adv_str, svc_state, config_methods,
+				   svc_info);
+}
+
+
 int wpas_p2p_service_add_bonjour(struct wpa_supplicant *wpa_s,
 				 struct wpabuf *query, struct wpabuf *resp)
 {

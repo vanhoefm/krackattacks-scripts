@@ -2475,6 +2475,132 @@ int p2p_scan_result_text(const u8 *ies, size_t ies_len, char *buf, char *end)
 }
 
 
+struct p2ps_advertisement *
+p2p_service_p2ps_id(struct p2p_data *p2p, u32 adv_id)
+{
+	struct p2ps_advertisement *adv_data;
+
+	if (!p2p)
+		return NULL;
+
+	adv_data = p2p->p2ps_adv_list;
+	while (adv_data) {
+		if (adv_data->id == adv_id)
+			return adv_data;
+		adv_data = adv_data->next;
+	}
+
+	return NULL;
+}
+
+
+int p2p_service_del_asp(struct p2p_data *p2p, u32 adv_id)
+{
+	struct p2ps_advertisement *adv_data;
+	struct p2ps_advertisement **prior;
+
+	if (!p2p)
+		return -1;
+
+	adv_data = p2p->p2ps_adv_list;
+	prior = &p2p->p2ps_adv_list;
+	while (adv_data) {
+		if (adv_data->id == adv_id) {
+			p2p_dbg(p2p, "Delete ASP adv_id=0x%x", adv_id);
+			*prior = adv_data->next;
+			os_free(adv_data);
+			return 0;
+		}
+		prior = &adv_data->next;
+		adv_data = adv_data->next;
+	}
+
+	return -1;
+}
+
+
+int p2p_service_add_asp(struct p2p_data *p2p, int auto_accept, u32 adv_id,
+			const char *adv_str, u8 svc_state, u16 config_methods,
+			const char *svc_info)
+{
+	struct p2ps_advertisement *adv_data, *tmp, **prev;
+	u8 buf[P2PS_HASH_LEN];
+	size_t adv_data_len, adv_len, info_len = 0;
+
+	if (!p2p || !adv_str || !adv_str[0])
+		return -1;
+
+	if (!(config_methods & p2p->cfg->config_methods)) {
+		p2p_dbg(p2p, "Config methods not supported svc: 0x%x dev: 0x%x",
+			config_methods, p2p->cfg->config_methods);
+		return -1;
+	}
+
+	if (!p2ps_gen_hash(p2p, adv_str, buf))
+		return -1;
+
+	if (svc_info)
+		info_len = os_strlen(svc_info);
+	adv_len = os_strlen(adv_str);
+	adv_data_len = sizeof(struct p2ps_advertisement) + adv_len + 1 +
+		info_len + 1;
+
+	adv_data = os_zalloc(adv_data_len);
+	if (!adv_data)
+		return -1;
+
+	os_memcpy(adv_data->hash, buf, P2PS_HASH_LEN);
+	adv_data->id = adv_id;
+	adv_data->state = svc_state;
+	adv_data->config_methods = config_methods & p2p->cfg->config_methods;
+	adv_data->auto_accept = (u8) auto_accept;
+	os_memcpy(adv_data->svc_name, adv_str, adv_len);
+
+	if (svc_info && info_len) {
+		adv_data->svc_info = &adv_data->svc_name[adv_len + 1];
+		os_memcpy(adv_data->svc_info, svc_info, info_len);
+	}
+
+	/*
+	 * Group Advertisements by service string. They do not need to be
+	 * sorted, but groups allow easier Probe Response instance grouping
+	 */
+	tmp = p2p->p2ps_adv_list;
+	prev = &p2p->p2ps_adv_list;
+	while (tmp) {
+		if (tmp->id == adv_data->id) {
+			if (os_strcmp(tmp->svc_name, adv_data->svc_name) != 0) {
+				os_free(adv_data);
+				return -1;
+			}
+			adv_data->next = tmp->next;
+			*prev = adv_data;
+			os_free(tmp);
+			goto inserted;
+		} else {
+			if (os_strcmp(tmp->svc_name, adv_data->svc_name) == 0) {
+				adv_data->next = tmp->next;
+				tmp->next = adv_data;
+				goto inserted;
+			}
+		}
+		prev = &tmp->next;
+		tmp = tmp->next;
+	}
+
+	/* No svc_name match found */
+	adv_data->next = p2p->p2ps_adv_list;
+	p2p->p2ps_adv_list = adv_data;
+
+inserted:
+	p2p_dbg(p2p,
+		"Added ASP advertisement adv_id=0x%x config_methods=0x%x svc_state=0x%x adv_str='%s'",
+		adv_id, adv_data->config_methods, svc_state, adv_str);
+
+	return 0;
+}
+
+
 int p2p_parse_dev_addr_in_p2p_ie(struct wpabuf *p2p_ie, u8 *dev_addr)
 {
 	struct p2p_message msg;
@@ -2623,6 +2749,8 @@ struct p2p_data * p2p_init(const struct p2p_config *cfg)
 
 void p2p_deinit(struct p2p_data *p2p)
 {
+	struct p2ps_advertisement *adv, *prev;
+
 #ifdef CONFIG_WIFI_DISPLAY
 	wpabuf_free(p2p->wfd_ie_beacon);
 	wpabuf_free(p2p->wfd_ie_probe_req);
@@ -2655,6 +2783,14 @@ void p2p_deinit(struct p2p_data *p2p)
 	os_free(p2p->after_scan_tx);
 	p2p_remove_wps_vendor_extensions(p2p);
 	os_free(p2p->no_go_freq.range);
+
+	adv = p2p->p2ps_adv_list;
+	while (adv) {
+		prev = adv;
+		adv = adv->next;
+		os_free(prev);
+	}
+
 	os_free(p2p);
 }
 

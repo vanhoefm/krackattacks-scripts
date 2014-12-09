@@ -84,6 +84,11 @@ int wpas_p2p_service_add_upnp(struct wpa_supplicant *wpa_s, u8 version,
 			      const char *service);
 int wpas_p2p_service_del_upnp(struct wpa_supplicant *wpa_s, u8 version,
 			      const char *service);
+int wpas_p2p_service_add_asp(struct wpa_supplicant *wpa_s, int auto_accept,
+			     u32 adv_id, const char *adv_str, u8 svc_state,
+			     u16 config_methods, const char *svc_info);
+int wpas_p2p_service_del_asp(struct wpa_supplicant *wpa_s, u32 adv_id);
+int wpas_p2p_service_p2ps_id_exists(struct wpa_supplicant *wpa_s, u32 adv_id);
 int wpas_p2p_reject(struct wpa_supplicant *wpa_s, const u8 *addr);
 int wpas_p2p_invite(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 		    struct wpa_ssid *ssid, const u8 *go_dev_addr, int freq,

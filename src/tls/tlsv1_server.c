@@ -516,14 +516,56 @@ int tlsv1_server_get_cipher(struct tlsv1_server *conn, char *buf,
 	case TLS_RSA_WITH_3DES_EDE_CBC_SHA:
 		cipher = "DES-CBC3-SHA";
 		break;
+	case TLS_DHE_RSA_WITH_DES_CBC_SHA:
+		cipher = "DHE-RSA-DES-CBC-SHA";
+		break;
+	case TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA:
+		cipher = "DHE-RSA-DES-CBC3-SHA";
+		break;
+	case TLS_DH_anon_WITH_RC4_128_MD5:
+		cipher = "ADH-RC4-MD5";
+		break;
+	case TLS_DH_anon_WITH_DES_CBC_SHA:
+		cipher = "ADH-DES-SHA";
+		break;
+	case TLS_DH_anon_WITH_3DES_EDE_CBC_SHA:
+		cipher = "ADH-DES-CBC3-SHA";
+		break;
+	case TLS_RSA_WITH_AES_128_CBC_SHA:
+		cipher = "AES-128-SHA";
+		break;
+	case TLS_DHE_RSA_WITH_AES_128_CBC_SHA:
+		cipher = "DHE-RSA-AES-128-SHA";
+		break;
 	case TLS_DH_anon_WITH_AES_128_CBC_SHA:
 		cipher = "ADH-AES-128-SHA";
 		break;
 	case TLS_RSA_WITH_AES_256_CBC_SHA:
 		cipher = "AES-256-SHA";
 		break;
-	case TLS_RSA_WITH_AES_128_CBC_SHA:
-		cipher = "AES-128-SHA";
+	case TLS_DHE_RSA_WITH_AES_256_CBC_SHA:
+		cipher = "DHE-RSA-AES-256-SHA";
+		break;
+	case TLS_DH_anon_WITH_AES_256_CBC_SHA:
+		cipher = "ADH-AES-256-SHA";
+		break;
+	case TLS_RSA_WITH_AES_128_CBC_SHA256:
+		cipher = "AES-128-SHA256";
+		break;
+	case TLS_RSA_WITH_AES_256_CBC_SHA256:
+		cipher = "AES-256-SHA256";
+		break;
+	case TLS_DHE_RSA_WITH_AES_128_CBC_SHA256:
+		cipher = "DHE-RSA-AES-128-SHA256";
+		break;
+	case TLS_DHE_RSA_WITH_AES_256_CBC_SHA256:
+		cipher = "DHE-RSA-AES-256-SHA256";
+		break;
+	case TLS_DH_anon_WITH_AES_128_CBC_SHA256:
+		cipher = "ADH-AES-128-SHA256";
+		break;
+	case TLS_DH_anon_WITH_AES_256_CBC_SHA256:
+		cipher = "ADH-AES-256-SHA256";
 		break;
 	default:
 		return -1;

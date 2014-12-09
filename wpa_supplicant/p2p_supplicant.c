@@ -6734,7 +6734,8 @@ static void wpas_p2p_cross_connect_setup(struct wpa_supplicant *wpa_s)
 		if (iface->drv_flags &
 		    WPA_DRIVER_FLAGS_P2P_DEDICATED_INTERFACE)
 			continue;
-		if (iface->drv_flags & WPA_DRIVER_FLAGS_P2P_CAPABLE)
+		if ((iface->drv_flags & WPA_DRIVER_FLAGS_P2P_CAPABLE) &&
+		    iface != wpa_s->parent)
 			continue;
 
 		wpa_s->cross_connect_enabled = 1;

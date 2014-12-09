@@ -147,6 +147,8 @@ static int eap_tls_params_from_conf(struct eap_sm *sm,
 	} else {
 		wpa_printf(MSG_DEBUG, "TLS: using phase1 config options");
 		eap_tls_params_from_conf1(params, config);
+		if (data->eap_type == EAP_TYPE_FAST)
+			params->flags |= TLS_CONN_EAP_FAST;
 	}
 
 	/*

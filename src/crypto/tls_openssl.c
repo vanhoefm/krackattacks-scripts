@@ -118,6 +118,8 @@ struct tls_connection {
 	X509 *peer_cert;
 	X509 *peer_issuer;
 	X509 *peer_issuer_issuer;
+
+	SSL_CTX *ssl_ctx; /* separate context for EAP-FAST workaround */
 };
 
 
@@ -1025,59 +1027,76 @@ static void tls_msg_cb(int write_p, int version, int content_type,
 }
 
 
-struct tls_connection * tls_connection_init(void *ssl_ctx)
+static int openssl_new_ssl(SSL_CTX *ssl_ctx, struct tls_connection *conn)
 {
-	SSL_CTX *ssl = ssl_ctx;
-	struct tls_connection *conn;
 	long options;
 #ifdef OPENSSL_SUPPORTS_CTX_APP_DATA
-	struct tls_context *context = SSL_CTX_get_app_data(ssl);
+	struct tls_context *context = SSL_CTX_get_app_data(ssl_ctx);
 #else /* OPENSSL_SUPPORTS_CTX_APP_DATA */
 	struct tls_context *context = tls_global;
 #endif /* OPENSSL_SUPPORTS_CTX_APP_DATA */
+	SSL *ssl;
+	BIO *ssl_in, *ssl_out;
 
-	conn = os_zalloc(sizeof(*conn));
-	if (conn == NULL)
-		return NULL;
-	conn->ssl = SSL_new(ssl);
-	if (conn->ssl == NULL) {
+	ssl = SSL_new(ssl_ctx);
+	if (ssl == NULL) {
 		tls_show_errors(MSG_INFO, __func__,
 				"Failed to initialize new SSL connection");
-		os_free(conn);
-		return NULL;
+		return -1;
 	}
 
-	conn->context = context;
-	SSL_set_app_data(conn->ssl, conn);
-	SSL_set_msg_callback(conn->ssl, tls_msg_cb);
-	SSL_set_msg_callback_arg(conn->ssl, conn);
+	SSL_set_app_data(ssl, conn);
+	SSL_set_msg_callback(ssl, tls_msg_cb);
+	SSL_set_msg_callback_arg(ssl, conn);
 	options = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 |
 		SSL_OP_SINGLE_DH_USE;
 #ifdef SSL_OP_NO_COMPRESSION
 	options |= SSL_OP_NO_COMPRESSION;
 #endif /* SSL_OP_NO_COMPRESSION */
-	SSL_set_options(conn->ssl, options);
+	SSL_set_options(ssl, options);
 
-	conn->ssl_in = BIO_new(BIO_s_mem());
-	if (!conn->ssl_in) {
+	ssl_in = BIO_new(BIO_s_mem());
+	if (!ssl_in) {
 		tls_show_errors(MSG_INFO, __func__,
 				"Failed to create a new BIO for ssl_in");
-		SSL_free(conn->ssl);
-		os_free(conn);
-		return NULL;
+		SSL_free(ssl);
+		return -1;
 	}
 
-	conn->ssl_out = BIO_new(BIO_s_mem());
-	if (!conn->ssl_out) {
+	ssl_out = BIO_new(BIO_s_mem());
+	if (!ssl_out) {
 		tls_show_errors(MSG_INFO, __func__,
 				"Failed to create a new BIO for ssl_out");
+		SSL_free(ssl);
+		BIO_free(ssl_in);
+		return -1;
+	}
+
+	SSL_set_bio(ssl, ssl_in, ssl_out);
+
+	if (conn->ssl)
 		SSL_free(conn->ssl);
-		BIO_free(conn->ssl_in);
+	conn->ssl = ssl;
+	conn->ssl_in = ssl_in;
+	conn->ssl_out = ssl_out;
+	conn->context = context;
+
+	return 0;
+}
+
+
+struct tls_connection * tls_connection_init(void *ssl_ctx)
+{
+	SSL_CTX *ssl = ssl_ctx;
+	struct tls_connection *conn;
+
+	conn = os_zalloc(sizeof(*conn));
+	if (conn == NULL)
+		return NULL;
+	if (openssl_new_ssl(ssl, conn) < 0) {
 		os_free(conn);
 		return NULL;
 	}
-
-	SSL_set_bio(conn->ssl, conn->ssl_in, conn->ssl_out);
 
 	return conn;
 }
@@ -1093,6 +1112,8 @@ void tls_connection_deinit(void *ssl_ctx, struct tls_connection *conn)
 	os_free(conn->altsubject_match);
 	os_free(conn->suffix_match);
 	os_free(conn->session_ticket);
+	if (conn->ssl_ctx)
+		SSL_CTX_free(conn->ssl_ctx);
 	os_free(conn);
 }
 
@@ -3198,6 +3219,44 @@ static int ocsp_status_cb(SSL *s, void *arg)
 #endif /* HAVE_OCSP */
 
 
+static int openssl_eap_fast_workaround(
+	struct tls_connection *conn,
+	const struct tls_connection_params *params)
+{
+#if defined(EAP_FAST) || defined(EAP_FAST_DYNAMIC)
+	if (!(params->flags & TLS_CONN_EAP_FAST))
+		return 0;
+	if (conn->ssl_ctx)
+		return 0; /* already initialized */
+
+	/*
+	 * The default SSL_CTX with SSLv23_method() does not allow session
+	 * ticket from EAP-FAST to be added into ClientHello, so we have to
+	 * create a separate SSL_CTX instance for EAP-FAST uses.
+	 */
+	wpa_printf(MSG_DEBUG, "OpenSSL: Create new SSL_CTX for EAP-FAST");
+
+	conn->ssl_ctx = SSL_CTX_new(TLSv1_method());
+	if (conn->ssl_ctx == NULL)
+		return -1;
+
+	SSL_CTX_set_info_callback(conn->ssl_ctx, ssl_info_cb);
+#ifdef OPENSSL_SUPPORTS_CTX_APP_DATA
+	SSL_CTX_set_app_data(conn->ssl_ctx, tls_global);
+#endif /* OPENSSL_SUPPORTS_CTX_APP_DATA */
+
+	if (openssl_new_ssl(conn->ssl_ctx, conn) < 0) {
+		SSL_CTX_free(conn->ssl_ctx);
+		conn->ssl_ctx = NULL;
+		return -1;
+	}
+#endif /* EAP_FAST || EAP_FAST_DYNAMIC */
+
+	return 0;
+}
+
+
+
 int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 			      const struct tls_connection_params *params)
 {
@@ -3206,6 +3265,11 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 
 	if (conn == NULL)
 		return -1;
+
+	if (openssl_eap_fast_workaround(conn, params) < 0)
+		return -1;
+	if (conn->ssl_ctx)
+		tls_ctx = conn->ssl_ctx;
 
 	while ((err = ERR_get_error())) {
 		wpa_printf(MSG_INFO, "%s: Clearing pending SSL error: %s",

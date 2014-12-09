@@ -4752,6 +4752,40 @@ static int p2p_ctrl_serv_disc_req(struct wpa_supplicant *wpa_s, char *cmd,
 	} else if (os_strncmp(pos, "wifi-display ", 13) == 0) {
 		ref = wpas_p2p_sd_request_wifi_display(wpa_s, dst, pos + 13);
 #endif /* CONFIG_WIFI_DISPLAY */
+	} else if (os_strncmp(pos, "asp ", 4) == 0) {
+		char *svc_str;
+		char *svc_info = NULL;
+		u32 id;
+
+		pos += 4;
+		if (sscanf(pos, "%x", &id) != 1 || id > 0xff)
+			return -1;
+
+		pos = os_strchr(pos, ' ');
+		if (pos == NULL || pos[1] == '\0' || pos[1] == ' ')
+			return -1;
+
+		svc_str = pos + 1;
+
+		pos = os_strchr(svc_str, ' ');
+
+		if (pos)
+			*pos++ = '\0';
+
+		/* All remaining data is the svc_info string */
+		if (pos && pos[0] && pos[0] != ' ') {
+			len = os_strlen(pos);
+
+			/* Unescape in place */
+			len = utf8_unescape(pos, len, pos, len);
+			if (len > 0xff)
+				return -1;
+
+			svc_info = pos;
+		}
+
+		ref = wpas_p2p_sd_request_asp(wpa_s, dst, (u8) id,
+					      svc_str, svc_info);
 	} else {
 		len = os_strlen(pos);
 		if (len & 1)

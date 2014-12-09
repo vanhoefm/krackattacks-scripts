@@ -2774,6 +2774,39 @@ u64 wpas_p2p_sd_request_upnp(struct wpa_supplicant *wpa_s, const u8 *dst,
 }
 
 
+u64 wpas_p2p_sd_request_asp(struct wpa_supplicant *wpa_s, const u8 *dst, u8 id,
+			    const char *svc_str, const char *info_substr)
+{
+	struct wpabuf *tlvs;
+	size_t plen, svc_len, substr_len = 0;
+	u64 ret;
+
+	svc_len = os_strlen(svc_str);
+	if (info_substr)
+		substr_len = os_strlen(info_substr);
+
+	if (svc_len > 0xff || substr_len > 0xff)
+		return 0;
+
+	plen = 1 + 1 + 1 + svc_len + 1 + substr_len;
+	tlvs = wpabuf_alloc(2 + plen);
+	if (tlvs == NULL)
+		return 0;
+
+	wpabuf_put_le16(tlvs, plen);
+	wpabuf_put_u8(tlvs, P2P_SERV_P2PS);
+	wpabuf_put_u8(tlvs, id); /* Service Transaction ID */
+	wpabuf_put_u8(tlvs, (u8) svc_len); /* Service String Length */
+	wpabuf_put_data(tlvs, svc_str, svc_len);
+	wpabuf_put_u8(tlvs, (u8) substr_len); /* Info Substring Length */
+	wpabuf_put_data(tlvs, info_substr, substr_len);
+	ret = wpas_p2p_sd_request(wpa_s, dst, tlvs);
+	wpabuf_free(tlvs);
+
+	return ret;
+}
+
+
 #ifdef CONFIG_WIFI_DISPLAY
 
 static u64 wpas_p2p_sd_request_wfd(struct wpa_supplicant *wpa_s, const u8 *dst,

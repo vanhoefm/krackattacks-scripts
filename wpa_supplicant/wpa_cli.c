@@ -1909,11 +1909,9 @@ static int wpa_cli_cmd_p2p_serv_disc_req(struct wpa_ctrl *ctrl, int argc,
 {
 	char cmd[4096];
 
-	if (argc != 2 && argc != 4) {
+	if (argc < 2) {
 		printf("Invalid P2P_SERV_DISC_REQ command: needs two "
-		       "arguments (address and TLVs) or four arguments "
-		       "(address, \"upnp\", version, search target "
-		       "(SSDP ST:)\n");
+		       "or more arguments (address and TLVs)\n");
 		return -1;
 	}
 

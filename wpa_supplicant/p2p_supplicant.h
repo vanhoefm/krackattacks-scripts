@@ -66,6 +66,8 @@ void wpas_p2p_scan_ie(struct wpa_supplicant *wpa_s, struct wpabuf *ies);
 void wpas_p2p_group_formation_failed(struct wpa_supplicant *wpa_s);
 u64 wpas_p2p_sd_request(struct wpa_supplicant *wpa_s, const u8 *dst,
 			const struct wpabuf *tlvs);
+u64 wpas_p2p_sd_request_asp(struct wpa_supplicant *wpa_s, const u8 *dst, u8 id,
+			    const char *svc_str, const char *info_substr);
 u64 wpas_p2p_sd_request_upnp(struct wpa_supplicant *wpa_s, const u8 *dst,
 			     u8 version, const char *query);
 u64 wpas_p2p_sd_request_wifi_display(struct wpa_supplicant *wpa_s,

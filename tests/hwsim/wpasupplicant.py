@@ -660,7 +660,7 @@ class WpaSupplicant:
             raise Exception("Group could not be removed")
         self.group_ifname = None
 
-    def p2p_start_go(self, persistent=None, freq=None):
+    def p2p_start_go(self, persistent=None, freq=None, no_event_clear=False):
         self.dump_monitor()
         cmd = "P2P_GROUP_ADD"
         if persistent is None:
@@ -675,7 +675,8 @@ class WpaSupplicant:
             ev = self.wait_global_event(["P2P-GROUP-STARTED"], timeout=5)
             if ev is None:
                 raise Exception("GO start up timed out")
-            self.dump_monitor()
+            if not no_event_clear:
+                self.dump_monitor()
             return self.group_form_result(ev)
         raise Exception("P2P_GROUP_ADD failed")
 

@@ -22,6 +22,7 @@ from test_p2p_persistent import invite
 def test_concurrent_autogo(dev, apdev):
     """Concurrent P2P autonomous GO"""
     logger.info("Connect to an infrastructure AP")
+    dev[0].request("P2P_SET cross_connect 0")
     hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
     dev[0].connect("test-open", key_mgmt="NONE", scan_freq="2412")
     hwsim_utils.test_connectivity(dev[0], hapd)
@@ -39,6 +40,43 @@ def test_concurrent_autogo(dev, apdev):
 
     logger.info("Confirm AP connection after P2P group removal")
     hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_concurrent_autogo_crossconnect(dev, apdev):
+    """Concurrent P2P autonomous GO"""
+    dev[0].request("P2P_SET cross_connect 1")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
+    dev[0].connect("test-open", key_mgmt="NONE", scan_freq="2412")
+
+    dev[0].request("SET p2p_no_group_iface 0")
+    dev[0].p2p_start_go(no_event_clear=True)
+    ev = dev[0].wait_global_event("P2P-CROSS-CONNECT-ENABLE", timeout=10)
+    if ev is None:
+        raise Exception("Timeout on cross connection enabled event")
+    if dev[0].group_ifname + " " + dev[0].ifname not in ev:
+        raise Exception("Unexpected interfaces: " + ev)
+    dev[0].dump_monitor()
+
+    dev[0].request("P2P_SET cross_connect 0")
+    ev = dev[0].wait_global_event("P2P-CROSS-CONNECT-DISABLE", timeout=10)
+    if ev is None:
+        raise Exception("Timeout on cross connection disabled event")
+    if dev[0].group_ifname + " " + dev[0].ifname not in ev:
+        raise Exception("Unexpected interfaces: " + ev)
+    dev[0].remove_group()
+
+    dev[0].request("P2P_SET cross_connect 1")
+    dev[0].p2p_start_go(no_event_clear=True)
+    ev = dev[0].wait_global_event("P2P-CROSS-CONNECT-ENABLE", timeout=10)
+    if ev is None:
+        raise Exception("Timeout on cross connection enabled event")
+    if dev[0].group_ifname + " " + dev[0].ifname not in ev:
+        raise Exception("Unexpected interfaces: " + ev)
+    dev[0].dump_monitor()
+    dev[0].remove_group()
+    ev = dev[0].wait_global_event("P2P-CROSS-CONNECT-DISABLE", timeout=10)
+    if ev is None:
+        raise Exception("Timeout on cross connection disabled event")
+    dev[0].request("P2P_SET cross_connect 0")
 
 def test_concurrent_p2pcli(dev, apdev):
     """Concurrent P2P client join"""

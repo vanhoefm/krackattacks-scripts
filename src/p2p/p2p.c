@@ -2154,6 +2154,28 @@ struct wpabuf * p2p_build_probe_resp_ies(struct p2p_data *p2p)
 }
 
 
+static int p2p_service_find_asp(struct p2p_data *p2p, const u8 *hash)
+{
+	struct p2ps_advertisement *adv_data;
+
+	p2p_dbg(p2p, "ASP find - ASP list: %p", p2p->p2ps_adv_list);
+
+	/* Wildcard always matches if we have actual services */
+	if (os_memcmp(hash, p2p->wild_card_hash, P2PS_HASH_LEN) == 0)
+		return p2p->p2ps_adv_list != NULL;
+
+	adv_data = p2p->p2ps_adv_list;
+	while (adv_data) {
+		p2p_dbg(p2p, "ASP hash: %x =? %x", hash[0], adv_data->hash[0]);
+		if (os_memcmp(hash, adv_data->hash, P2PS_HASH_LEN) == 0)
+			return 1;
+		adv_data = adv_data->next;
+	}
+
+	return 0;
+}
+
+
 static enum p2p_probe_req_status
 p2p_reply_probe(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 		const u8 *bssid, const u8 *ie, size_t ie_len)
@@ -2163,13 +2185,6 @@ p2p_reply_probe(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 	struct ieee80211_mgmt *resp;
 	struct p2p_message msg;
 	struct wpabuf *ies;
-
-	if (!p2p->in_listen || !p2p->drv_in_listen) {
-		/* not in Listen state - ignore Probe Request */
-		p2p_dbg(p2p, "Not in Listen state (in_listen=%d drv_in_listen=%d) - ignore Probe Request",
-			p2p->in_listen, p2p->drv_in_listen);
-		return P2P_PREQ_NOT_LISTEN;
-	}
 
 	if (ieee802_11_parse_elems((u8 *) ie, ie_len, &elems, 0) ==
 	    ParseFailed) {
@@ -2219,6 +2234,64 @@ p2p_reply_probe(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 		/* Could not parse P2P attributes */
 		p2p_dbg(p2p, "Could not parse P2P attributes in Probe Req - ignore it");
 		return P2P_PREQ_NOT_P2P;
+	}
+
+	p2p->p2ps_svc_found = 0;
+
+	if (msg.service_hash && msg.service_hash_count) {
+		const u8 *hash = msg.service_hash;
+		u8 *dest = p2p->query_hash;
+		u8 i;
+
+		p2p->query_count = 0;
+		for (i = 0; i < msg.service_hash_count; i++) {
+			if (p2p_service_find_asp(p2p, hash)) {
+				p2p->p2ps_svc_found = 1;
+
+				if (!os_memcmp(hash, p2p->wild_card_hash,
+					       P2PS_HASH_LEN)) {
+					/* We found match(es) but wildcard
+					 * will return all */
+					p2p->query_count = 1;
+					os_memcpy(p2p->query_hash, hash,
+						  P2PS_HASH_LEN);
+					break;
+				}
+
+				/* Save each matching hash */
+				if (p2p->query_count < P2P_MAX_QUERY_HASH) {
+					os_memcpy(dest, hash, P2PS_HASH_LEN);
+					dest += P2PS_HASH_LEN;
+					p2p->query_count++;
+				} else {
+					/* We found match(es) but too many to
+					 * return all */
+					p2p->query_count = 0;
+					break;
+				}
+			}
+			hash += P2PS_HASH_LEN;
+		}
+
+		p2p_dbg(p2p, "ASP adv found: %d", p2p->p2ps_svc_found);
+
+		/* Probed hash unknown */
+		if (!p2p->p2ps_svc_found) {
+			p2p_parse_free(&msg);
+			return P2P_PREQ_NOT_PROCESSED;
+		}
+	} else {
+		/* This is not a P2PS Probe Request */
+		p2p->query_count = 0;
+		p2p_dbg(p2p, "No P2PS Hash in Probe Request");
+
+		if (!p2p->in_listen || !p2p->drv_in_listen) {
+			/* not in Listen state - ignore Probe Request */
+			p2p_dbg(p2p, "Not in Listen state (in_listen=%d drv_in_listen=%d) - ignore Probe Request",
+				p2p->in_listen, p2p->drv_in_listen);
+			p2p_parse_free(&msg);
+			return P2P_PREQ_NOT_LISTEN;
+		}
 	}
 
 	if (msg.device_id &&

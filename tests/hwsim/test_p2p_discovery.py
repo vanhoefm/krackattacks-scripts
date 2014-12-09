@@ -370,3 +370,34 @@ def test_discovery_stop(dev):
     ev = dev[0].wait_global_event(["P2P-DEVICE-FOUND"], timeout=5)
     if ev is not None:
         raise Exception("Peer found unexpectedly: " + ev)
+
+def test_p2p_peer_command(dev):
+    """P2P_PEER command"""
+    addr0 = dev[0].p2p_dev_addr()
+    addr1 = dev[1].p2p_dev_addr()
+    addr2 = dev[2].p2p_dev_addr()
+    dev[1].p2p_listen()
+    dev[2].p2p_listen()
+    if not dev[0].discover_peer(addr1):
+        raise Exception("Device discovery timed out")
+    if not dev[0].discover_peer(addr2):
+        raise Exception("Device discovery timed out")
+    dev[0].p2p_stop_find()
+    dev[1].p2p_stop_find()
+    dev[2].p2p_stop_find()
+
+    res0 = dev[0].request("P2P_PEER FIRST")
+    peer = res0.splitlines()[0]
+    if peer not in [ addr1, addr2 ]:
+        raise Exception("Unexpected P2P_PEER FIRST address")
+    res1 = dev[0].request("P2P_PEER NEXT-" + peer)
+    peer2 = res1.splitlines()[0]
+    if peer2 not in [ addr1, addr2 ] or peer == peer2:
+        raise Exception("Unexpected P2P_PEER NEXT address")
+
+    if "FAIL" not in dev[0].request("P2P_PEER NEXT-foo"):
+        raise Exception("Invalid P2P_PEER command accepted")
+    if "FAIL" not in dev[0].request("P2P_PEER foo"):
+        raise Exception("Invalid P2P_PEER command accepted")
+    if "FAIL" not in dev[0].request("P2P_PEER 00:11:22:33:44:55"):
+        raise Exception("P2P_PEER command for unknown peer accepted")

@@ -794,7 +794,10 @@ int eap_peer_tls_status(struct eap_sm *sm, struct eap_ssl_data *data,
 	if (tls_get_cipher(data->ssl_ctx, data->conn, name, sizeof(name)) == 0)
 	{
 		ret = os_snprintf(buf + len, buflen - len,
-				  "EAP TLS cipher=%s\n", name);
+				  "EAP TLS cipher=%s\n"
+				  "tls_session_reused=%d\n",
+				  name, tls_connection_resumed(data->ssl_ctx,
+							       data->conn));
 		if (os_snprintf_error(buflen - len, ret))
 			return len;
 		len += ret;

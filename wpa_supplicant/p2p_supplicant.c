@@ -2849,6 +2849,80 @@ done:
 }
 
 
+static void wpas_sd_p2ps_serv_response(struct wpa_supplicant *wpa_s,
+				       const u8 *sa, u8 srv_trans_id,
+				       const u8 *pos, const u8 *tlv_end)
+{
+	u8 left = *pos++;
+	u32 adv_id;
+	u8 svc_status;
+	u16 config_methods;
+	char svc_str[256];
+
+	while (left-- && pos < tlv_end) {
+		char *buf = NULL;
+		size_t buf_len;
+		u8 svc_len;
+
+		/* Sanity check fixed length+svc_str */
+		if (pos + 6 >= tlv_end)
+			break;
+		svc_len = pos[6];
+		if (pos + svc_len + 10 > tlv_end)
+			break;
+
+		/* Advertisement ID */
+		adv_id = WPA_GET_LE32(pos);
+		pos += sizeof(u32);
+
+		/* Config Methods */
+		config_methods = WPA_GET_BE16(pos);
+		pos += sizeof(u16);
+
+		/* Service Name */
+		pos++; /* svc_len */
+		os_memcpy(svc_str, pos, svc_len);
+		svc_str[svc_len] = '\0';
+		pos += svc_len;
+
+		/* Service Status */
+		svc_status = *pos++;
+
+		/* Service Information Length */
+		buf_len = WPA_GET_LE16(pos);
+		pos += sizeof(u16);
+
+		/* Sanity check buffer length */
+		if (buf_len > (unsigned int) (tlv_end - pos))
+			break;
+
+		if (buf_len) {
+			buf = os_zalloc(2 * buf_len + 1);
+			if (buf) {
+				utf8_escape((const char *) pos, buf_len, buf,
+					    2 * buf_len + 1);
+			}
+		}
+
+		pos += buf_len;
+
+		if (buf) {
+			wpa_msg_global(wpa_s, MSG_INFO, P2P_EVENT_SERV_ASP_RESP
+				       MACSTR " %x %x %x %x %s '%s'",
+				       MAC2STR(sa), srv_trans_id, adv_id,
+				       svc_status, config_methods, svc_str,
+				       buf);
+			os_free(buf);
+		} else {
+			wpa_msg_global(wpa_s, MSG_INFO, P2P_EVENT_SERV_ASP_RESP
+				       MACSTR " %x %x %x %x %s",
+				       MAC2STR(sa), srv_trans_id, adv_id,
+				       svc_status, config_methods, svc_str);
+		}
+	}
+}
+
+
 static void wpas_sd_response(void *ctx, const u8 *sa, u16 update_indic,
 			     const u8 *tlvs, size_t tlvs_len)
 {
@@ -2906,6 +2980,11 @@ static void wpas_sd_response(void *ctx, const u8 *sa, u16 update_indic,
 
 		wpa_hexdump(MSG_MSGDUMP, "P2P: Response Data",
 			    pos, tlv_end - pos);
+
+		if (srv_proto == P2P_SERV_P2PS && pos < tlv_end) {
+			wpas_sd_p2ps_serv_response(wpa_s, sa, srv_trans_id,
+						   pos, tlv_end);
+		}
 
 		pos = tlv_end;
 	}

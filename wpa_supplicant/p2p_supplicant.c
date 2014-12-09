@@ -2236,8 +2236,8 @@ wpas_p2p_service_get_upnp(struct wpa_supplicant *wpa_s, u8 version,
 }
 
 
-static void wpas_sd_add_proto_not_avail(struct wpabuf *resp, u8 srv_proto,
-					u8 srv_trans_id)
+static void wpas_sd_add_empty(struct wpabuf *resp, u8 srv_proto,
+			      u8 srv_trans_id, u8 status)
 {
 	u8 *len_pos;
 
@@ -2249,9 +2249,32 @@ static void wpas_sd_add_proto_not_avail(struct wpabuf *resp, u8 srv_proto,
 	wpabuf_put_u8(resp, srv_proto);
 	wpabuf_put_u8(resp, srv_trans_id);
 	/* Status Code */
-	wpabuf_put_u8(resp, P2P_SD_PROTO_NOT_AVAILABLE);
+	wpabuf_put_u8(resp, status);
 	/* Response Data: empty */
 	WPA_PUT_LE16(len_pos, (u8 *) wpabuf_put(resp, 0) - len_pos - 2);
+}
+
+
+static void wpas_sd_add_proto_not_avail(struct wpabuf *resp, u8 srv_proto,
+					u8 srv_trans_id)
+{
+	wpas_sd_add_empty(resp, srv_proto, srv_trans_id,
+			  P2P_SD_PROTO_NOT_AVAILABLE);
+}
+
+
+static void wpas_sd_add_bad_request(struct wpabuf *resp, u8 srv_proto,
+				    u8 srv_trans_id)
+{
+	wpas_sd_add_empty(resp, srv_proto, srv_trans_id, P2P_SD_BAD_REQUEST);
+}
+
+
+static void wpas_sd_add_not_found(struct wpabuf *resp, u8 srv_proto,
+				  u8 srv_trans_id)
+{
+	wpas_sd_add_empty(resp, srv_proto, srv_trans_id,
+			  P2P_SD_REQUESTED_INFO_NOT_AVAILABLE);
 }
 
 
@@ -2562,6 +2585,148 @@ static void wpas_sd_req_wfd(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_WIFI_DISPLAY */
 
 
+static int find_p2ps_substr(struct p2ps_advertisement *adv_data,
+			    const u8 *needle, size_t needle_len)
+{
+	const u8 *haystack = (const u8 *) adv_data->svc_info;
+	size_t haystack_len, i;
+
+	/* Allow search term to be empty */
+	if (!needle || !needle_len)
+		return 1;
+
+	if (!haystack)
+		return 0;
+
+	haystack_len = os_strlen(adv_data->svc_info);
+	for (i = 0; i < haystack_len; i++) {
+		if (haystack_len - i < needle_len)
+			break;
+		if (os_memcmp(haystack + i, needle, needle_len) == 0)
+			return 1;
+	}
+
+	return 0;
+}
+
+
+static void wpas_sd_req_asp(struct wpa_supplicant *wpa_s,
+			    struct wpabuf *resp, u8 srv_trans_id,
+			    const u8 *query, size_t query_len)
+{
+	struct p2ps_advertisement *adv_data;
+	const u8 *svc = &query[1];
+	const u8 *info = NULL;
+	size_t svc_len = query[0];
+	size_t info_len = 0;
+	int prefix = 0;
+	u8 *count_pos = NULL;
+	u8 *len_pos = NULL;
+
+	wpa_hexdump(MSG_DEBUG, "P2P: SD Request for ASP", query, query_len);
+
+	if (!wpa_s->global->p2p) {
+		wpa_printf(MSG_DEBUG, "P2P: ASP protocol not available");
+		wpas_sd_add_proto_not_avail(resp, P2P_SERV_P2PS, srv_trans_id);
+		return;
+	}
+
+	/* Info block is optional */
+	if (svc_len + 1 < query_len) {
+		info = &svc[svc_len];
+		info_len = *info++;
+	}
+
+	/* Range check length of svc string and info block */
+	if (svc_len + (info_len ? info_len + 2 : 1) > query_len) {
+		wpa_printf(MSG_DEBUG, "P2P: ASP bad request");
+		wpas_sd_add_bad_request(resp, P2P_SERV_P2PS, srv_trans_id);
+		return;
+	}
+
+	/* Detect and correct for prefix search */
+	if (svc_len && svc[svc_len - 1] == '*') {
+		prefix = 1;
+		svc_len--;
+	}
+
+	for (adv_data = p2p_get_p2ps_adv_list(wpa_s->global->p2p);
+	     adv_data; adv_data = adv_data->next) {
+		/* If not a prefix match, reject length mismatches */
+		if (!prefix && svc_len != os_strlen(adv_data->svc_name))
+			continue;
+
+		/* Search each service for request */
+		if (os_memcmp(adv_data->svc_name, svc, svc_len) == 0 &&
+		    find_p2ps_substr(adv_data, info, info_len)) {
+			size_t len = os_strlen(adv_data->svc_name);
+			size_t svc_info_len = 0;
+
+			if (adv_data->svc_info)
+				svc_info_len = os_strlen(adv_data->svc_info);
+
+			if (len > 0xff || svc_info_len > 0xffff)
+				return;
+
+			/* Length & Count to be filled as we go */
+			if (!len_pos && !count_pos) {
+				if (wpabuf_tailroom(resp) <
+				    len + svc_info_len + 16)
+					return;
+
+				len_pos = wpabuf_put(resp, 2);
+				wpabuf_put_u8(resp, P2P_SERV_P2PS);
+				wpabuf_put_u8(resp, srv_trans_id);
+				/* Status Code */
+				wpabuf_put_u8(resp, P2P_SD_SUCCESS);
+				count_pos = wpabuf_put(resp, 1);
+				*count_pos = 0;
+			} else if (wpabuf_tailroom(resp) <
+				   len + svc_info_len + 10)
+				return;
+
+			if (svc_info_len) {
+				wpa_printf(MSG_DEBUG,
+					   "P2P: Add Svc: %s info: %s",
+					   adv_data->svc_name,
+					   adv_data->svc_info);
+			} else {
+				wpa_printf(MSG_DEBUG, "P2P: Add Svc: %s",
+					   adv_data->svc_name);
+			}
+
+			/* Advertisement ID */
+			wpabuf_put_le32(resp, adv_data->id);
+
+			/* Config Methods */
+			wpabuf_put_be16(resp, adv_data->config_methods);
+
+			/* Service Name */
+			wpabuf_put_u8(resp, (u8) len);
+			wpabuf_put_data(resp, adv_data->svc_name, len);
+
+			/* Service State */
+			wpabuf_put_u8(resp, adv_data->state);
+
+			/* Service Information */
+			wpabuf_put_le16(resp, (u16) svc_info_len);
+			wpabuf_put_data(resp, adv_data->svc_info, svc_info_len);
+
+			/* Update length and count */
+			(*count_pos)++;
+			WPA_PUT_LE16(len_pos,
+				     (u8 *) wpabuf_put(resp, 0) - len_pos - 2);
+		}
+	}
+
+	/* Return error if no matching svc found */
+	if (count_pos == NULL) {
+		wpa_printf(MSG_DEBUG, "P2P: ASP service not found");
+		wpas_sd_add_not_found(resp, P2P_SERV_P2PS, srv_trans_id);
+	}
+}
+
+
 static void wpas_sd_request(void *ctx, int freq, const u8 *sa, u8 dialog_token,
 			    u16 update_indic, const u8 *tlvs, size_t tlvs_len)
 {
@@ -2659,6 +2824,10 @@ static void wpas_sd_request(void *ctx, int freq, const u8 *sa, u8 dialog_token,
 					pos, tlv_end - pos);
 			break;
 #endif /* CONFIG_WIFI_DISPLAY */
+		case P2P_SERV_P2PS:
+			wpas_sd_req_asp(wpa_s, resp, srv_trans_id,
+					pos, tlv_end - pos);
+			break;
 		default:
 			wpa_printf(MSG_DEBUG, "P2P: Unavailable service "
 				   "protocol %u", srv_proto);

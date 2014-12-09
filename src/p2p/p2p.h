@@ -2095,5 +2095,6 @@ int p2p_service_add_asp(struct p2p_data *p2p, int auto_accept, u32 adv_id,
 			const char *adv_str, u8 svc_state,
 			u16 config_methods, const char *svc_info);
 int p2p_service_del_asp(struct p2p_data *p2p, u32 adv_id);
+struct p2ps_advertisement * p2p_get_p2ps_adv_list(struct p2p_data *p2p);
 
 #endif /* P2P_H */

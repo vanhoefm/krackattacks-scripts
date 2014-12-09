@@ -153,6 +153,12 @@ const char * p2p_get_state_txt(struct p2p_data *p2p)
 }
 
 
+struct p2ps_advertisement * p2p_get_p2ps_adv_list(struct p2p_data *p2p)
+{
+	return p2p ? p2p->p2ps_adv_list : NULL;
+}
+
+
 u16 p2p_get_provisioning_info(struct p2p_data *p2p, const u8 *addr)
 {
 	struct p2p_device *dev = NULL;

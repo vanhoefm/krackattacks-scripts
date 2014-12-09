@@ -503,3 +503,42 @@ def test_p2p_autogo_pref_chan_not_in_regulatory(dev, apdev):
     finally:
         dev[0].request("SET p2p_pref_chan ")
         set_country("00")
+
+def run_autogo(dev, param):
+    if "OK" not in dev.global_request("P2P_GROUP_ADD " + param):
+        raise Exception("P2P_GROUP_ADD failed: " + param)
+    ev = dev.wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
+    if ev is None:
+        raise Exception("GO start up timed out")
+    res = dev.group_form_result(ev)
+    dev.remove_group()
+    return res
+
+def _test_autogo_ht_vht(dev):
+    res = run_autogo(dev[0], "ht40")
+
+    res = run_autogo(dev[0], "vht")
+
+    res = run_autogo(dev[0], "freq=2")
+    freq = int(res['freq'])
+    if freq < 2412 or freq > 2462:
+        raise Exception("Unexpected freq=2 channel: " + str(freq))
+
+    res = run_autogo(dev[0], "freq=5")
+    freq = int(res['freq'])
+    if freq < 5000 or freq >= 6000:
+        raise Exception("Unexpected freq=5 channel: " + str(freq))
+
+    res = run_autogo(dev[0], "freq=5 ht40 vht")
+    print res
+    freq = int(res['freq'])
+    if freq < 5000 or freq >= 6000:
+        raise Exception("Unexpected freq=5 ht40 vht channel: " + str(freq))
+
+def test_autogo_ht_vht(dev):
+    """P2P autonomous GO with HT/VHT parameters"""
+    try:
+        set_country("US")
+        _test_autogo_ht_vht(dev)
+    finally:
+        set_country("00")

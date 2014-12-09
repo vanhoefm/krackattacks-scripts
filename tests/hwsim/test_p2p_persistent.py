@@ -543,3 +543,13 @@ def test_persistent_group_add_cli_chan(dev):
     dev[1].request("BSS_FLUSH 0")
     invite_from_cli(dev[0], dev[1])
     invite_from_go(dev[0], dev[1])
+
+def test_persistent_invalid_group_add(dev):
+    """Invalid P2P_GROUP_ADD command"""
+    id = dev[0].add_network()
+    if "FAIL" not in dev[0].global_request("P2P_GROUP_ADD persistent=12345"):
+        raise Exception("Invalid P2P_GROUP_ADD accepted")
+    if "FAIL" not in dev[0].global_request("P2P_GROUP_ADD persistent=%d" % id):
+        raise Exception("Invalid P2P_GROUP_ADD accepted")
+    if "FAIL" not in dev[0].global_request("P2P_GROUP_ADD foo"):
+        raise Exception("Invalid P2P_GROUP_ADD accepted")

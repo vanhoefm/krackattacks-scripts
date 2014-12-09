@@ -3351,6 +3351,9 @@ ieee802_1x_kay_create_mka(struct ieee802_1x_kay *kay, struct mka_key_name *ckn,
 	dl_list_init(&participant->rxsc_list);
 	participant->txsc = ieee802_1x_kay_init_transmit_sc(&kay->actor_sci,
 							    kay->sc_ch);
+	secy_cp_control_protect_frames(kay, kay->macsec_protect);
+	secy_cp_control_replay(kay, kay->macsec_replay_protect,
+			       kay->macsec_replay_window);
 	secy_create_transmit_sc(kay, participant->txsc);
 
 	/* to derive KEK from CAK and CKN */

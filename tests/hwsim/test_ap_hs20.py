@@ -2528,13 +2528,58 @@ def build_dhcp_ack(dst_ll, src_ll, ip_src, ip_dst, yiaddr, chaddr,
 
     return ehdr + ipv4 + udp
 
+def build_arp(dst_ll, src_ll, opcode, sender_mac, sender_ip,
+              target_mac, target_ip):
+    _dst_ll = binascii.unhexlify(dst_ll.replace(':',''))
+    _src_ll = binascii.unhexlify(src_ll.replace(':',''))
+    proto = '\x08\x06'
+    ehdr = _dst_ll + _src_ll + proto
+
+    _sender_mac = binascii.unhexlify(sender_mac.replace(':',''))
+    _sender_ip = socket.inet_pton(socket.AF_INET, sender_ip)
+    _target_mac = binascii.unhexlify(target_mac.replace(':',''))
+    _target_ip = socket.inet_pton(socket.AF_INET, target_ip)
+
+    arp = struct.pack('>HHBBH', 1, 0x0800, 6, 4, opcode)
+    arp += _sender_mac + _sender_ip
+    arp += _target_mac + _target_ip
+
+    return ehdr + arp
+
+def send_arp(dev, dst_ll="ff:ff:ff:ff:ff:ff", src_ll=None, opcode=1,
+             sender_mac=None, sender_ip="0.0.0.0",
+             target_mac="00:00:00:00:00:00", target_ip="0.0.0.0",
+             hapd_bssid=None):
+    if hapd_bssid:
+        if src_ll is None:
+            src_ll = hapd_bssid
+        if sender_mac is None:
+            sender_mac = hapd_bssid
+        cmd = "DATA_TEST_FRAME ifname=ap-br0 "
+    else:
+        if src_ll is None:
+            src_ll = dev.p2p_interface_addr()
+        if sender_mac is None:
+            sender_mac = dev.p2p_interface_addr()
+        cmd = "DATA_TEST_FRAME "
+
+    pkt = build_arp(dst_ll="ff:ff:ff:ff:ff:ff", src_ll=src_ll, opcode=opcode,
+                    sender_mac=sender_mac, sender_ip=sender_ip,
+                    target_mac=target_mac, target_ip=target_ip)
+    if "OK" not in dev.request(cmd + binascii.hexlify(pkt)):
+        raise Exception("DATA_TEST_FRAME failed")
+
 def get_permanent_neighbors(ifname):
     cmd = subprocess.Popen(['ip', 'nei'], stdout=subprocess.PIPE)
     res = cmd.stdout.read()
     cmd.stdout.close()
     return [ line for line in res.splitlines() if "PERMANENT" in line and ifname in line ]
 
-def _test_proxyarp_open(dev, apdev):
+def _test_proxyarp_open(dev, apdev, params):
+    cap_br = os.path.join(params['logdir'], "proxyarp_open.ap-br0.pcap")
+    cap_dev0 = os.path.join(params['logdir'], "proxyarp_open.%s.pcap" % dev[0].ifname)
+    cap_dev1 = os.path.join(params['logdir'], "proxyarp_open.%s.pcap" % dev[1].ifname)
+
     bssid = apdev[0]['bssid']
     params = { 'ssid': 'open' }
     params['proxy_arp'] = '1'
@@ -2556,6 +2601,14 @@ def _test_proxyarp_open(dev, apdev):
 
     subprocess.call(['brctl', 'setfd', 'ap-br0', '0'])
     subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
+
+    cmd = {}
+    cmd[0] = subprocess.Popen(['tcpdump', '-i', 'ap-br0', '-w', cap_br,
+                               '-s', '2000'], stderr=open('/dev/null', 'w'))
+    cmd[1] = subprocess.Popen(['tcpdump', '-i', dev[0].ifname, '-w', cap_dev0,
+                               '-s', '2000'], stderr=open('/dev/null', 'w'))
+    cmd[2] = subprocess.Popen(['tcpdump', '-i', dev[1].ifname, '-w', cap_dev1,
+                               '-s', '2000'], stderr=open('/dev/null', 'w'))
 
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
     dev[1].connect("open", key_mgmt="NONE", scan_freq="2412")
@@ -2696,19 +2749,81 @@ def _test_proxyarp_open(dev, apdev):
     if '192.168.1.123 dev ap-br0 lladdr 02:00:00:00:00:00 PERMANENT' not in matches:
         raise Exception("dev0 IPv4 addr missing")
 
+    targets = [ "192.168.1.123", "192.168.1.124", "192.168.1.125",
+                "192.168.1.126" ]
+    for target in targets:
+        send_arp(dev[1], sender_ip="192.168.1.100", target_ip=target)
+
+    for target in targets:
+        send_arp(hapd, hapd_bssid=bssid, sender_ip="192.168.1.101",
+                 target_ip=target)
+
+    # ARP Probe from wireless STA
+    send_arp(dev[1], target_ip="192.168.1.127")
+    # ARP Announcement from wireless STA
+    send_arp(dev[1], sender_ip="192.168.1.127", target_ip="192.168.1.127")
+    send_arp(dev[1], sender_ip="192.168.1.127", target_ip="192.168.1.127",
+             opcode=2)
+
+    matches = get_permanent_neighbors("ap-br0")
+    logger.info("After ARP Probe + Announcement: " + str(matches))
+
+    # ARP Request for the newly introduced IP address from wireless STA
+    send_arp(dev[0], sender_ip="192.168.1.123", target_ip="192.168.1.127")
+
+    # ARP Request for the newly introduced IP address from bridge
+    send_arp(hapd, hapd_bssid=bssid, sender_ip="192.168.1.102",
+             target_ip="192.168.1.127")
+
+    # ARP Probe from bridge
+    send_arp(hapd, hapd_bssid=bssid, target_ip="192.168.1.128")
+    # ARP Announcement from bridge
+    send_arp(hapd, hapd_bssid=bssid, sender_ip="129.168.1.128",
+             target_ip="192.168.1.128")
+    send_arp(hapd, hapd_bssid=bssid, sender_ip="129.168.1.128",
+             target_ip="192.168.1.128", opcode=2)
+
+    matches = get_permanent_neighbors("ap-br0")
+    logger.info("After ARP Probe + Announcement: " + str(matches))
+
+    # ARP Request for the newly introduced IP address from wireless STA
+    send_arp(dev[0], sender_ip="192.168.1.123", target_ip="192.168.1.128")
+
+    # ARP Request for the newly introduced IP address from bridge
+    send_arp(hapd, hapd_bssid=bssid, sender_ip="192.168.1.102",
+             target_ip="192.168.1.128")
+
+    # ARP Probe from wireless STA (duplicate address; learned through DHCP)
+    send_arp(dev[1], target_ip="192.168.1.123")
+    # ARP Probe from wireless STA (duplicate address; learned through ARP)
+    send_arp(dev[0], target_ip="192.168.1.127")
+
+    # Gratuitous ARP Reply for another STA's IP address
+    send_arp(dev[0], opcode=2, sender_mac=addr0, sender_ip="192.168.1.127",
+             target_mac=addr1, target_ip="192.168.1.127")
+    send_arp(dev[1], opcode=2, sender_mac=addr1, sender_ip="192.168.1.123",
+             target_mac=addr0, target_ip="192.168.1.123")
+    # ARP Request to verify previous mapping
+    send_arp(dev[1], sender_ip="192.168.1.127", target_ip="192.168.1.123")
+    send_arp(dev[0], sender_ip="192.168.1.123", target_ip="192.168.1.127")
+
+    time.sleep(0.1)
+
     dev[0].request("DISCONNECT")
     dev[1].request("DISCONNECT")
     time.sleep(0.5)
+    for i in range(3):
+        cmd[i].terminate()
     matches = get_permanent_neighbors("ap-br0")
     logger.info("After disconnect: " + str(matches))
     if len(matches) > 0:
         raise Exception("Unexpected neighbor entries after disconnect")
 
-def test_proxyarp_open(dev, apdev):
+def test_proxyarp_open(dev, apdev, params):
     """ProxyARP with open network"""
     res = None
     try:
-        res = _test_proxyarp_open(dev, apdev)
+        res = _test_proxyarp_open(dev, apdev, params)
     finally:
         subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'down'],
                         stderr=open('/dev/null', 'w'))

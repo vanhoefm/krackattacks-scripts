@@ -348,6 +348,7 @@ enum p2p_prov_disc_status {
 	P2P_PROV_DISC_TIMEOUT,
 	P2P_PROV_DISC_REJECTED,
 	P2P_PROV_DISC_TIMEOUT_JOIN,
+	P2P_PROV_DISC_INFO_UNAVAILABLE,
 };
 
 struct p2p_channel {

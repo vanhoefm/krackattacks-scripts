@@ -793,10 +793,47 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 	struct p2p_message msg;
 	struct p2p_device *dev;
 	u16 report_config_methods = 0, req_config_methods;
+	u8 status = P2P_SC_SUCCESS;
 	int success = 0;
+	u32 adv_id = 0;
+	u8 conncap = P2PS_SETUP_NEW;
+	u8 adv_mac[ETH_ALEN];
+	u8 group_mac[ETH_ALEN];
+	int passwd_id = DEV_PW_DEFAULT;
 
 	if (p2p_parse(data, len, &msg))
 		return;
+
+	/* Parse the P2PS members present */
+	if (msg.status)
+		status = *msg.status;
+
+	if (msg.intended_addr)
+		os_memcpy(group_mac, msg.intended_addr, ETH_ALEN);
+	else
+		os_memset(group_mac, 0, ETH_ALEN);
+
+	if (msg.adv_mac)
+		os_memcpy(adv_mac, msg.adv_mac, ETH_ALEN);
+	else
+		os_memset(adv_mac, 0, ETH_ALEN);
+
+	if (msg.adv_id)
+		adv_id = WPA_GET_LE32(msg.adv_id);
+
+	if (msg.conn_cap) {
+		conncap = *msg.conn_cap;
+
+		/* Switch bits to local relative */
+		switch (conncap) {
+		case P2PS_SETUP_GROUP_OWNER:
+			conncap = P2PS_SETUP_CLIENT;
+			break;
+		case P2PS_SETUP_CLIENT:
+			conncap = P2PS_SETUP_GROUP_OWNER;
+			break;
+		}
+	}
 
 	p2p_dbg(p2p, "Received Provision Discovery Response from " MACSTR
 		" with config methods 0x%x",
@@ -842,23 +879,108 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 		if (p2p->cfg->prov_disc_fail)
 			p2p->cfg->prov_disc_fail(p2p->cfg->cb_ctx, sa,
 						 P2P_PROV_DISC_REJECTED,
-						 0, NULL, NULL);
+						 adv_id, adv_mac, NULL);
 		p2p_parse_free(&msg);
+		os_free(p2p->p2ps_prov);
+		p2p->p2ps_prov = NULL;
 		goto out;
 	}
 
 	report_config_methods = req_config_methods;
 	dev->flags &= ~(P2P_DEV_PD_PEER_DISPLAY |
-			P2P_DEV_PD_PEER_KEYPAD);
+			P2P_DEV_PD_PEER_KEYPAD |
+			P2P_DEV_PD_PEER_P2PS);
 	if (req_config_methods & WPS_CONFIG_DISPLAY) {
 		p2p_dbg(p2p, "Peer " MACSTR
 			" accepted to show a PIN on display", MAC2STR(sa));
 		dev->flags |= P2P_DEV_PD_PEER_DISPLAY;
+		passwd_id = DEV_PW_REGISTRAR_SPECIFIED;
 	} else if (msg.wps_config_methods & WPS_CONFIG_KEYPAD) {
 		p2p_dbg(p2p, "Peer " MACSTR
 			" accepted to write our PIN using keypad",
 			MAC2STR(sa));
 		dev->flags |= P2P_DEV_PD_PEER_KEYPAD;
+		passwd_id = DEV_PW_USER_SPECIFIED;
+	} else if (msg.wps_config_methods & WPS_CONFIG_P2PS) {
+		p2p_dbg(p2p, "Peer " MACSTR " accepted P2PS PIN",
+			MAC2STR(sa));
+		dev->flags |= P2P_DEV_PD_PEER_P2PS;
+		passwd_id = DEV_PW_P2PS_DEFAULT;
+	}
+
+	if ((msg.conn_cap || msg.persistent_dev) &&
+	    msg.adv_id &&
+	    (status == P2P_SC_SUCCESS || status == P2P_SC_SUCCESS_DEFERRED) &&
+	    p2p->p2ps_prov) {
+		if (p2p->cfg->p2ps_prov_complete) {
+			p2p->cfg->p2ps_prov_complete(
+				p2p->cfg->cb_ctx, status, sa, adv_mac,
+				p2p->p2ps_prov->session_mac,
+				group_mac, adv_id, p2p->p2ps_prov->session_id,
+				conncap, passwd_id, msg.persistent_ssid,
+				msg.persistent_ssid_len, 1, 0, NULL);
+		}
+		os_free(p2p->p2ps_prov);
+		p2p->p2ps_prov = NULL;
+	}
+
+	if (status != P2P_SC_SUCCESS &&
+	    status != P2P_SC_FAIL_INFO_CURRENTLY_UNAVAILABLE &&
+	    status != P2P_SC_SUCCESS_DEFERRED && p2p->p2ps_prov) {
+		if (p2p->cfg->p2ps_prov_complete)
+			p2p->cfg->p2ps_prov_complete(
+				p2p->cfg->cb_ctx, status, sa, adv_mac,
+				p2p->p2ps_prov->session_mac,
+				group_mac, adv_id, p2p->p2ps_prov->session_id,
+				0, 0, NULL, 0, 1, 0, NULL);
+		os_free(p2p->p2ps_prov);
+		p2p->p2ps_prov = NULL;
+	}
+
+	if (status == P2P_SC_FAIL_INFO_CURRENTLY_UNAVAILABLE) {
+		if (p2p->cfg->remove_stale_groups) {
+			p2p->cfg->remove_stale_groups(p2p->cfg->cb_ctx,
+						      dev->info.p2p_device_addr,
+						      NULL, NULL, 0);
+		}
+
+		if (msg.session_info && msg.session_info_len) {
+			size_t info_len = msg.session_info_len;
+			char *deferred_sess_resp = os_malloc(2 * info_len + 1);
+
+			if (!deferred_sess_resp) {
+				p2p_parse_free(&msg);
+				os_free(p2p->p2ps_prov);
+				p2p->p2ps_prov = NULL;
+				goto out;
+			}
+			utf8_escape((char *) msg.session_info, info_len,
+				    deferred_sess_resp, 2 * info_len + 1);
+
+			if (p2p->cfg->prov_disc_fail)
+				p2p->cfg->prov_disc_fail(
+					p2p->cfg->cb_ctx, sa,
+					P2P_PROV_DISC_INFO_UNAVAILABLE,
+					adv_id, adv_mac,
+					deferred_sess_resp);
+			os_free(deferred_sess_resp);
+		} else
+			if (p2p->cfg->prov_disc_fail)
+				p2p->cfg->prov_disc_fail(
+					p2p->cfg->cb_ctx, sa,
+					P2P_PROV_DISC_INFO_UNAVAILABLE,
+					adv_id, adv_mac, NULL);
+	} else if (msg.wps_config_methods != dev->req_config_methods ||
+		   status != P2P_SC_SUCCESS) {
+		p2p_dbg(p2p, "Peer rejected our Provision Discovery Request");
+		if (p2p->cfg->prov_disc_fail)
+			p2p->cfg->prov_disc_fail(p2p->cfg->cb_ctx, sa,
+						 P2P_PROV_DISC_REJECTED, 0,
+						 NULL, NULL);
+		p2p_parse_free(&msg);
+		os_free(p2p->p2ps_prov);
+		p2p->p2ps_prov = NULL;
+		goto out;
 	}
 
 	/* Store the provisioning info */

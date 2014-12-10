@@ -723,6 +723,14 @@ void p2p_buf_add_p2p_interface(struct wpabuf *buf, struct p2p_data *p2p);
 void p2p_buf_add_oob_go_neg_channel(struct wpabuf *buf, const char *country,
 				    u8 oper_class, u8 channel,
 				    enum p2p_role_indication role);
+void p2p_buf_add_session_info(struct wpabuf *buf, const char *info);
+void p2p_buf_add_connection_capability(struct wpabuf *buf, u8 connection_cap);
+void p2p_buf_add_advertisement_id(struct wpabuf *buf, u32 id, const u8 *mac);
+void p2p_buf_add_session_id(struct wpabuf *buf, u32 id, const u8 *mac);
+void p2p_buf_add_feature_capability(struct wpabuf *buf, u16 len,
+				    const u8 *mask);
+void p2p_buf_add_persistent_group_info(struct wpabuf *buf, const u8 *dev_addr,
+				       const u8 *ssid, size_t ssid_len);
 int p2p_build_wps_ie(struct p2p_data *p2p, struct wpabuf *buf, int pw_id,
 		     int all_attr);
 

@@ -342,6 +342,91 @@ void p2p_buf_add_oob_go_neg_channel(struct wpabuf *buf, const char *country,
 }
 
 
+void p2p_buf_add_session_info(struct wpabuf *buf, const char *info)
+{
+	size_t info_len = 0;
+
+	if (info && info[0])
+		info_len = os_strlen(info);
+
+	/* Session Information Data Info */
+	wpabuf_put_u8(buf, P2P_ATTR_SESSION_INFORMATION_DATA);
+	wpabuf_put_le16(buf, (u16) info_len);
+
+	if (info) {
+		wpabuf_put_data(buf, info, info_len);
+		wpa_printf(MSG_DEBUG, "P2P: * Session Info Data (%s)", info);
+	}
+}
+
+
+void p2p_buf_add_connection_capability(struct wpabuf *buf, u8 connection_cap)
+{
+	/* Connection Capability Info */
+	wpabuf_put_u8(buf, P2P_ATTR_CONNECTION_CAPABILITY);
+	wpabuf_put_le16(buf, 1);
+	wpabuf_put_u8(buf, connection_cap);
+	wpa_printf(MSG_DEBUG, "P2P: * Connection Capability: 0x%x",
+		   connection_cap);
+}
+
+
+void p2p_buf_add_advertisement_id(struct wpabuf *buf, u32 id, const u8 *mac)
+{
+	if (!buf || !mac)
+		return;
+
+	/* Advertisement ID Info */
+	wpabuf_put_u8(buf, P2P_ATTR_ADVERTISEMENT_ID);
+	wpabuf_put_le16(buf, (u16) (sizeof(u32) + ETH_ALEN));
+	wpabuf_put_le32(buf, id);
+	wpabuf_put_data(buf, mac, ETH_ALEN);
+	wpa_printf(MSG_DEBUG, "P2P: * Advertisement ID (%x) " MACSTR,
+		   id, MAC2STR(mac));
+}
+
+
+void p2p_buf_add_session_id(struct wpabuf *buf, u32 id, const u8 *mac)
+{
+	if (!buf || !mac)
+		return;
+
+	/* Session ID Info */
+	wpabuf_put_u8(buf, P2P_ATTR_SESSION_ID);
+	wpabuf_put_le16(buf, (u16) (sizeof(u32) + ETH_ALEN));
+	wpabuf_put_le32(buf, id);
+	wpabuf_put_data(buf, mac, ETH_ALEN);
+	wpa_printf(MSG_DEBUG, "P2P: * Session ID Info (%x) " MACSTR,
+		   id, MAC2STR(mac));
+}
+
+
+void p2p_buf_add_feature_capability(struct wpabuf *buf, u16 len, const u8 *mask)
+{
+	if (!buf || !len || !mask)
+		return;
+
+	/* Feature Capability */
+	wpabuf_put_u8(buf, P2P_ATTR_FEATURE_CAPABILITY);
+	wpabuf_put_le16(buf, len);
+	wpabuf_put_data(buf, mask, len);
+	wpa_printf(MSG_DEBUG, "P2P: * Feature Capability (%d)", len);
+}
+
+
+void p2p_buf_add_persistent_group_info(struct wpabuf *buf, const u8 *dev_addr,
+				       const u8 *ssid, size_t ssid_len)
+{
+	/* P2P Group ID */
+	wpabuf_put_u8(buf, P2P_ATTR_PERSISTENT_GROUP);
+	wpabuf_put_le16(buf, ETH_ALEN + ssid_len);
+	wpabuf_put_data(buf, dev_addr, ETH_ALEN);
+	wpabuf_put_data(buf, ssid, ssid_len);
+	wpa_printf(MSG_DEBUG, "P2P: * P2P Group ID " MACSTR,
+		   MAC2STR(dev_addr));
+}
+
+
 static int p2p_add_wps_string(struct wpabuf *buf, enum wps_attribute attr,
 			      const char *val)
 {

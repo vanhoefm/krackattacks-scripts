@@ -56,7 +56,21 @@ def test_autogo(dev):
         raise Exception("P2P flag missing from scan results: " + res)
 
     # Presence request to increase testing coverage
+    if "FAIL" not in dev[1].group_request("P2P_PRESENCE_REQ 30000"):
+        raise Exception("Invald P2P_PRESENCE_REQ accepted")
+    if "FAIL" not in dev[1].group_request("P2P_PRESENCE_REQ 30000 102400 30001"):
+        raise Exception("Invald P2P_PRESENCE_REQ accepted")
     if "FAIL" in dev[1].group_request("P2P_PRESENCE_REQ 30000 102400"):
+        raise Exception("Could not send presence request")
+    ev = dev[1].wait_event(["P2P-PRESENCE-RESPONSE"])
+    if ev is None:
+        raise Exception("Timeout while waiting for Presence Response")
+    if "FAIL" in dev[1].group_request("P2P_PRESENCE_REQ 30000 102400 20000 102400"):
+        raise Exception("Could not send presence request")
+    ev = dev[1].wait_event(["P2P-PRESENCE-RESPONSE"])
+    if ev is None:
+        raise Exception("Timeout while waiting for Presence Response")
+    if "FAIL" in dev[1].group_request("P2P_PRESENCE_REQ"):
         raise Exception("Could not send presence request")
     ev = dev[1].wait_event(["P2P-PRESENCE-RESPONSE"])
     if ev is None:

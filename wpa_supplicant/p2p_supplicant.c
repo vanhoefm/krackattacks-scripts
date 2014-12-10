@@ -3706,7 +3706,9 @@ static void wpas_prov_disc_resp(void *ctx, const u8 *peer, u16 config_methods)
 
 
 static void wpas_prov_disc_fail(void *ctx, const u8 *peer,
-				enum p2p_prov_disc_status status)
+				enum p2p_prov_disc_status status,
+				u32 adv_id, const u8 *adv_mac,
+				const char *deferred_session_resp)
 {
 	struct wpa_supplicant *wpa_s = ctx;
 
@@ -3726,9 +3728,21 @@ static void wpas_prov_disc_fail(void *ctx, const u8 *peer,
 		return;
 	}
 
-	wpa_msg_global(wpa_s, MSG_INFO, P2P_EVENT_PROV_DISC_FAILURE
-		       " p2p_dev_addr=" MACSTR " status=%d",
-		       MAC2STR(peer), status);
+	if (adv_id && adv_mac && deferred_session_resp) {
+		wpa_msg_global(wpa_s, MSG_INFO, P2P_EVENT_PROV_DISC_FAILURE
+			       " p2p_dev_addr=" MACSTR " status=%d adv_id=%x"
+			       " deferred_session_resp='%s'",
+			       MAC2STR(peer), status, adv_id,
+			       deferred_session_resp);
+	} else if (adv_id && adv_mac) {
+		wpa_msg_global(wpa_s, MSG_INFO, P2P_EVENT_PROV_DISC_FAILURE
+			       " p2p_dev_addr=" MACSTR " status=%d adv_id=%x",
+			       MAC2STR(peer), status, adv_id);
+	} else {
+		wpa_msg_global(wpa_s, MSG_INFO, P2P_EVENT_PROV_DISC_FAILURE
+			       " p2p_dev_addr=" MACSTR " status=%d",
+			       MAC2STR(peer), status);
+	}
 
 	wpas_notify_p2p_provision_discovery(wpa_s, peer, 0 /* response */,
 					    status, 0, 0);

@@ -808,6 +808,9 @@ struct p2p_config {
 	 * @ctx: Callback context from cb_ctx
 	 * @peer: Source address of the response
 	 * @status: Cause of failure, will not be %P2P_PROV_DISC_SUCCESS
+	 * @adv_id: If non-zero, then the adv_id of the PD Request
+	 * @adv_mac: P2P Device Address of the advertizer
+	 * @deferred_session_resp: Deferred session response sent by advertizer
 	 *
 	 * This callback is used to indicate either a failure or no response
 	 * to an earlier provision discovery request.
@@ -816,7 +819,9 @@ struct p2p_config {
 	 * is not used or failures do not need to be indicated.
 	 */
 	void (*prov_disc_fail)(void *ctx, const u8 *peer,
-			       enum p2p_prov_disc_status status);
+			       enum p2p_prov_disc_status status,
+			       u32 adv_id, const u8 *adv_mac,
+			       const char *deferred_session_resp);
 
 	/**
 	 * invitation_process - Optional callback for processing Invitations

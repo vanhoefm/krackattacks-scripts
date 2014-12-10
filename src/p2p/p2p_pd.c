@@ -841,7 +841,8 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 			msg.wps_config_methods, req_config_methods);
 		if (p2p->cfg->prov_disc_fail)
 			p2p->cfg->prov_disc_fail(p2p->cfg->cb_ctx, sa,
-						 P2P_PROV_DISC_REJECTED);
+						 P2P_PROV_DISC_REJECTED,
+						 0, NULL, NULL);
 		p2p_parse_free(&msg);
 		goto out;
 	}

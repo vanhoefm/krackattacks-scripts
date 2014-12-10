@@ -3832,6 +3832,9 @@ static void p2p_timeout_prov_disc_during_find(struct p2p_data *p2p)
 
 static void p2p_timeout_prov_disc_req(struct p2p_data *p2p)
 {
+	u32 adv_id = 0;
+	u8 *adv_mac = NULL;
+
 	p2p->pending_action_state = P2P_NO_PENDING_ACTION;
 
 	/*
@@ -3860,12 +3863,18 @@ static void p2p_timeout_prov_disc_req(struct p2p_data *p2p)
 				for_join = 1;
 		}
 
+		if (p2p->p2ps_prov) {
+			adv_id = p2p->p2ps_prov->adv_id;
+			adv_mac = p2p->p2ps_prov->adv_mac;
+		}
+
 		if (p2p->cfg->prov_disc_fail)
 			p2p->cfg->prov_disc_fail(p2p->cfg->cb_ctx,
 						 p2p->pending_pd_devaddr,
 						 for_join ?
 						 P2P_PROV_DISC_TIMEOUT_JOIN :
-						 P2P_PROV_DISC_TIMEOUT);
+						 P2P_PROV_DISC_TIMEOUT,
+						 adv_id, adv_mac, NULL);
 		p2p_reset_pending_pd(p2p);
 	}
 }

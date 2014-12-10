@@ -1608,6 +1608,16 @@ static void p2p_go_save_group_common_freqs(struct wpa_supplicant *wpa_s,
 }
 
 
+static void p2p_config_write(struct wpa_supplicant *wpa_s)
+{
+#ifndef CONFIG_NO_CONFIG_WRITE
+	if (wpa_s->parent->conf->update_config &&
+	    wpa_config_write(wpa_s->parent->confname, wpa_s->parent->conf))
+		wpa_printf(MSG_DEBUG, "P2P: Failed to update configuration");
+#endif /* CONFIG_NO_CONFIG_WRITE */
+}
+
+
 static void p2p_go_configured(void *ctx, void *data)
 {
 	struct wpa_supplicant *wpa_s = ctx;
@@ -4674,6 +4684,51 @@ static int wpas_get_go_info(void *ctx, u8 *intended_addr,
 }
 
 
+static int wpas_remove_stale_groups(void *ctx, const u8 *peer, const u8 *go,
+				    const u8 *ssid, size_t ssid_len)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+	struct wpa_ssid *s;
+	int save_config = 0;
+	size_t i;
+
+	/* Start with our first choice of Persistent Groups */
+	while ((s = wpas_p2p_get_persistent(wpa_s, peer, NULL, 0))) {
+		if (go && ssid && ssid_len &&
+		    s->ssid_len == ssid_len &&
+		    os_memcmp(go, s->bssid, ETH_ALEN) == 0 &&
+		    os_memcmp(ssid, s->ssid, ssid_len) == 0)
+			break;
+
+		/* Remove stale persistent group */
+		if (s->mode != WPAS_MODE_P2P_GO || s->num_p2p_clients <= 1) {
+			wpa_config_remove_network(wpa_s->conf, s->id);
+			save_config = 1;
+			continue;
+		}
+
+		for (i = 0; i < s->num_p2p_clients; i++) {
+			if (os_memcmp(s->p2p_client_list + i * 2 * ETH_ALEN,
+				      peer, ETH_ALEN) != 0)
+				continue;
+
+			os_memmove(s->p2p_client_list + i * 2 * ETH_ALEN,
+				   s->p2p_client_list + (i + 1) * 2 * ETH_ALEN,
+				   (s->num_p2p_clients - i - 1) * 2 * ETH_ALEN);
+			break;
+		}
+		s->num_p2p_clients--;
+		save_config = 1;
+	}
+
+	if (save_config)
+		p2p_config_write(wpa_s);
+
+	/* Return TRUE if valid SSID remains */
+	return s != NULL;
+}
+
+
 static int _wpas_p2p_in_progress(void *ctx)
 {
 	struct wpa_supplicant *wpa_s = ctx;
@@ -4730,6 +4785,7 @@ int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s)
 	p2p.is_p2p_in_progress = _wpas_p2p_in_progress;
 	p2p.get_persistent_group = wpas_get_persistent_group;
 	p2p.get_go_info = wpas_get_go_info;
+	p2p.remove_stale_groups = wpas_remove_stale_groups;
 
 	os_memcpy(wpa_s->global->p2p_dev_addr, wpa_s->own_addr, ETH_ALEN);
 	os_memcpy(p2p.dev_addr, wpa_s->global->p2p_dev_addr, ETH_ALEN);

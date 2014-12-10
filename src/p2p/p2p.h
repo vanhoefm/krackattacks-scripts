@@ -970,6 +970,16 @@ struct p2p_config {
 	 */
 	int (*get_go_info)(void *ctx, u8 *intended_addr,
 			   u8 *ssid, size_t *ssid_len, int *group_iface);
+
+	/**
+	 * remove_stale_groups - Remove stale P2PS groups
+	 *
+	 * Because P2PS stages *potential* GOs, and remote devices can remove
+	 * credentials unilaterally, we need to make sure we don't let stale
+	 * unusable groups build up.
+	 */
+	int (*remove_stale_groups)(void *ctx, const u8 *peer, const u8 *go,
+				   const u8 *ssid, size_t ssid_len);
 };
 
 

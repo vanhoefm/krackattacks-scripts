@@ -19,6 +19,7 @@ def go_neg_pin_authorized_persistent(i_dev, r_dev, i_intent=None, r_intent=None,
     logger.info("Start GO negotiation " + i_dev.ifname + " -> " + r_dev.ifname)
     r_dev.p2p_go_neg_auth(i_dev.p2p_dev_addr(), pin, r_method,
                           go_intent=r_intent, persistent=True)
+    r_dev.p2p_listen()
     i_res = i_dev.p2p_go_neg_init(r_dev.p2p_dev_addr(), pin, i_method,
                                   timeout=20, go_intent=i_intent,
                                   persistent=True)
@@ -183,7 +184,8 @@ def test_persistent_group_per_sta_psk(dev):
     logger.info("Join another client to the group")
     pin = dev[2].wps_read_pin()
     dev[0].p2p_go_authorize_client(pin)
-    c_res = dev[2].p2p_connect_group(addr0, pin, timeout=60)
+    c_res = dev[2].p2p_connect_group(addr0, pin, timeout=60, social=True,
+                                     freq=i_res['freq'])
     if not c_res['persistent']:
         raise Exception("Joining client did not recognize persistent group")
     if r_res['psk'] == c_res['psk']:
@@ -195,6 +197,8 @@ def test_persistent_group_per_sta_psk(dev):
     dev[1].wait_go_ending_session()
     dev[2].wait_go_ending_session()
     dev[0].dump_monitor()
+    dev[1].dump_monitor()
+    dev[2].dump_monitor()
 
     for i in range(0, 3):
         networks = dev[i].list_networks()
@@ -202,6 +206,11 @@ def test_persistent_group_per_sta_psk(dev):
             raise Exception("Unexpected number of networks")
         if "[P2P-PERSISTENT]" not in networks[0]['flags']:
             raise Exception("Not the persistent group data")
+        if i > 0:
+            # speed up testing by avoiding use of the old BSS entry since the
+            # GO may have changed channels
+            dev[i].request("BSS_FLUSH 0")
+            dev[i].scan(freq="2412", only_new=True)
         if "OK" not in dev[i].global_request("P2P_GROUP_ADD persistent=" + networks[0]['id'] + " freq=2412"):
             raise Exception("Could not re-start persistent group")
         ev = dev[i].wait_global_event(["P2P-GROUP-STARTED"], timeout=30)
@@ -217,7 +226,7 @@ def test_persistent_group_per_sta_psk(dev):
         raise Exception("Peer " + peer + " not found")
     dev[2].dump_monitor()
     peer = dev[2].get_peer(addr0)
-    dev[2].global_request("P2P_GROUP_ADD persistent=" + peer['persistent'])
+    dev[2].global_request("P2P_GROUP_ADD persistent=" + peer['persistent'] + " freq=2412")
     ev = dev[2].wait_global_event(["P2P-GROUP-STARTED"], timeout=30)
     if ev is None:
         raise Exception("Timeout on group restart (on client)")
@@ -235,7 +244,7 @@ def test_persistent_group_per_sta_psk(dev):
         raise Exception("Peer " + peer + " not found")
     dev[2].dump_monitor()
     peer = dev[2].get_peer(addr0)
-    dev[2].global_request("P2P_GROUP_ADD persistent=" + peer['persistent'])
+    dev[2].global_request("P2P_GROUP_ADD persistent=" + peer['persistent'] + " freq=2412")
     ev = dev[2].wait_global_event(["P2P-GROUP-STARTED","WPA: 4-Way Handshake failed"], timeout=30)
     if ev is None:
         raise Exception("Timeout on group restart (on client)")
@@ -251,7 +260,7 @@ def test_persistent_group_per_sta_psk(dev):
         raise Exception("Peer " + peer + " not found")
     dev[2].dump_monitor()
     peer = dev[2].get_peer(addr0)
-    dev[2].global_request("P2P_GROUP_ADD persistent=" + peer['persistent'])
+    dev[2].global_request("P2P_GROUP_ADD persistent=" + peer['persistent'] + " freq=2412")
     ev = dev[2].wait_global_event(["P2P-GROUP-STARTED","WPA: 4-Way Handshake failed"], timeout=30)
     if ev is None:
         raise Exception("Timeout on group restart (on client)")
@@ -335,7 +344,8 @@ def test_persistent_group_invite_removed_client(dev):
         raise Exception("Unexpected invitation event")
     pin = dev[1].wps_read_pin()
     dev[0].p2p_go_authorize_client(pin)
-    c_res = dev[1].p2p_connect_group(addr0, pin, timeout=60)
+    c_res = dev[1].p2p_connect_group(addr0, pin, timeout=60, social=True,
+                                     freq=i_res['freq'])
     if not c_res['persistent']:
         raise Exception("Joining client did not recognize persistent group")
     if r_res['psk'] == c_res['psk']:
@@ -396,11 +406,11 @@ def test_persistent_go_client_list(dev):
     if id is None:
         raise Exception("Could not find persistent group entry")
 
-    connect_cli(dev[0], dev[1])
+    connect_cli(dev[0], dev[1], social=True, freq=res['freq'])
     clients = dev[0].request("GET_NETWORK " + id + " p2p_client_list").rstrip()
     if clients != addr1:
         raise Exception("Unexpected p2p_client_list entry(2): " + clients)
-    connect_cli(dev[0], dev[2])
+    connect_cli(dev[0], dev[2], social=True, freq=res['freq'])
     clients = dev[0].request("GET_NETWORK " + id + " p2p_client_list").rstrip()
     if clients != addr2 + " " + addr1:
         raise Exception("Unexpected p2p_client_list entry(3): " + clients)

@@ -988,6 +988,15 @@ unsigned int p2p_get_group_num_members(struct p2p_group *group)
 }
 
 
+int p2p_client_limit_reached(struct p2p_group *group)
+{
+	if (!group || !group->cfg)
+		return 1;
+
+	return group->num_members >= group->cfg->max_clients;
+}
+
+
 const u8 * p2p_iterate_group_members(struct p2p_group *group, void **next)
 {
 	struct p2p_group_member *iter = *next;

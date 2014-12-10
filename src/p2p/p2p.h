@@ -1956,6 +1956,13 @@ const u8 * p2p_get_go_neg_peer(struct p2p_data *p2p);
 unsigned int p2p_get_group_num_members(struct p2p_group *group);
 
 /**
+ * p2p_client_limit_reached - Check if client limit is reached
+ * @group: P2P group context from p2p_group_init()
+ * Returns: 1 if no of clients limit reached
+ */
+int p2p_client_limit_reached(struct p2p_group *group);
+
+/**
  * p2p_iterate_group_members - Iterate group members
  * @group: P2P group context from p2p_group_init()
  * @next: iteration pointer, must be a pointer to a void * that is set to %NULL
@@ -2169,6 +2176,8 @@ void p2p_loop_on_known_peers(struct p2p_data *p2p,
 			     void *user_data);
 
 void p2p_set_vendor_elems(struct p2p_data *p2p, struct wpabuf **vendor_elem);
+
+void p2p_set_intended_addr(struct p2p_data *p2p, const u8 *intended_addr);
 
 struct p2ps_advertisement *
 p2p_service_p2ps_id(struct p2p_data *p2p, u32 adv_id);

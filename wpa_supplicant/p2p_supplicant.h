@@ -15,6 +15,7 @@ enum p2p_send_action_result;
 struct p2p_peer_info;
 struct p2p_channels;
 struct wps_event_fail;
+struct p2ps_provision;
 
 int wpas_p2p_add_p2pdev_interface(struct wpa_supplicant *wpa_s,
 				  const char *conf_p2p_dev);
@@ -41,11 +42,13 @@ struct p2p_group * wpas_p2p_group_init(struct wpa_supplicant *wpa_s,
 enum wpas_p2p_prov_disc_use {
 	WPAS_P2P_PD_FOR_GO_NEG,
 	WPAS_P2P_PD_FOR_JOIN,
-	WPAS_P2P_PD_AUTO
+	WPAS_P2P_PD_AUTO,
+	WPAS_P2P_PD_FOR_ASP
 };
 int wpas_p2p_prov_disc(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 		       const char *config_method,
-		       enum wpas_p2p_prov_disc_use use);
+		       enum wpas_p2p_prov_disc_use use,
+		       struct p2ps_provision *p2ps_prov);
 void wpas_send_action_tx_status(struct wpa_supplicant *wpa_s, const u8 *dst,
 				const u8 *data, size_t data_len,
 				enum p2p_send_action_result result);

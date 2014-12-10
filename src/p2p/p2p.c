@@ -159,6 +159,13 @@ struct p2ps_advertisement * p2p_get_p2ps_adv_list(struct p2p_data *p2p)
 }
 
 
+void p2p_set_intended_addr(struct p2p_data *p2p, const u8 *intended_addr)
+{
+	if (p2p && intended_addr)
+		os_memcpy(p2p->intended_addr, intended_addr, ETH_ALEN);
+}
+
+
 u16 p2p_get_provisioning_info(struct p2p_data *p2p, const u8 *addr)
 {
 	struct p2p_device *dev = NULL;

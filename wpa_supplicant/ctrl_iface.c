@@ -4699,7 +4699,7 @@ static int p2p_ctrl_prov_disc(struct wpa_supplicant *wpa_s, char *cmd)
 	else if (os_strstr(pos, " auto") != NULL)
 		use = WPAS_P2P_PD_AUTO;
 
-	return wpas_p2p_prov_disc(wpa_s, addr, pos, use);
+	return wpas_p2p_prov_disc(wpa_s, addr, pos, use, NULL);
 }
 
 

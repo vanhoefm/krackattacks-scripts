@@ -730,7 +730,7 @@ DBusMessage * wpas_dbus_handler_p2p_prov_disc_req(DBusMessage *message,
 		wpa_s = wpa_s->p2p_dev;
 
 	if (wpas_p2p_prov_disc(wpa_s, peer_addr, config_method,
-			       WPAS_P2P_PD_FOR_GO_NEG) < 0)
+			       WPAS_P2P_PD_FOR_GO_NEG, NULL) < 0)
 		return wpas_dbus_error_unknown_error(message,
 				"Failed to send provision discovery request");
 

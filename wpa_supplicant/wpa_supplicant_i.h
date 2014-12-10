@@ -771,7 +771,7 @@ struct wpa_supplicant {
 	int force_long_sd;
 	u16 pending_pd_config_methods;
 	enum {
-		NORMAL_PD, AUTO_PD_GO_NEG, AUTO_PD_JOIN
+		NORMAL_PD, AUTO_PD_GO_NEG, AUTO_PD_JOIN, AUTO_PD_ASP
 	} pending_pd_use;
 
 	/*

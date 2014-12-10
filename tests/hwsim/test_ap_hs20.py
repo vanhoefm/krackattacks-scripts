@@ -949,6 +949,11 @@ def test_ap_hs20_disallow_aps(dev, apdev):
     if "FAIL" not in ret:
         raise Exception("INTERWORKING_CONNECT to disallowed BSS not rejected")
 
+    if "FAIL" not in dev[0].request("INTERWORKING_CONNECT foo"):
+        raise Exception("Invalid INTERWORKING_CONNECT not rejected")
+    if "FAIL" not in dev[0].request("INTERWORKING_CONNECT 00:11:22:33:44:55"):
+        raise Exception("Invalid INTERWORKING_CONNECT not rejected")
+
 def policy_test(dev, ap, values, only_one=True):
     dev.dump_monitor()
     if ap:

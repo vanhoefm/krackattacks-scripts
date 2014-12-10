@@ -477,6 +477,30 @@ static int wpas_p2p_disconnect_safely(struct wpa_supplicant *wpa_s,
 }
 
 
+/* Determine total number of clients in active groups where we are the GO */
+static unsigned int p2p_group_go_member_count(struct wpa_supplicant *wpa_s)
+{
+	unsigned int count = 0;
+	struct wpa_ssid *s;
+
+	for (wpa_s = wpa_s->global->ifaces; wpa_s; wpa_s = wpa_s->next) {
+		for (s = wpa_s->conf->ssid; s; s = s->next) {
+			wpa_printf(MSG_DEBUG,
+				   "P2P: sup:%p ssid:%p disabled:%d p2p:%d mode:%d",
+				   wpa_s, s, s->disabled, s->p2p_group,
+				   s->mode);
+			if (!s->disabled && s->p2p_group &&
+			    s->mode == WPAS_MODE_P2P_GO) {
+				count += p2p_get_group_num_members(
+					wpa_s->p2p_group);
+			}
+		}
+	}
+
+	return count;
+}
+
+
 /* Find an interface for a P2P group where we are the GO */
 static struct wpa_supplicant *
 wpas_p2p_get_go_group(struct wpa_supplicant *wpa_s)
@@ -4729,6 +4753,234 @@ static int wpas_remove_stale_groups(void *ctx, const u8 *peer, const u8 *go,
 }
 
 
+static void wpas_p2ps_prov_complete(void *ctx, u8 status, const u8 *dev,
+				    const u8 *adv_mac, const u8 *ses_mac,
+				    const u8 *grp_mac, u32 adv_id, u32 ses_id,
+				    u8 conncap, int passwd_id,
+				    const u8 *persist_ssid,
+				    size_t persist_ssid_size, int response_done,
+				    int prov_start, const char *session_info)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+	u8 mac[ETH_ALEN];
+	struct wpa_ssid *persistent_go, *stale, *s;
+	int save_config = 0;
+	struct wpa_supplicant *go_wpa_s;
+
+	if (!dev)
+		return;
+
+	os_memset(mac, 0, ETH_ALEN);
+	if (!adv_mac)
+		adv_mac = mac;
+	if (!ses_mac)
+		ses_mac = mac;
+	if (!grp_mac)
+		grp_mac = mac;
+
+	if (prov_start) {
+		if (session_info == NULL) {
+			wpa_msg_global(wpa_s, MSG_INFO,
+				       P2P_EVENT_P2PS_PROVISION_START MACSTR
+				       " adv_id=%x conncap=%x"
+				       " adv_mac=" MACSTR
+				       " session=%x mac=" MACSTR
+				       " dev_passwd_id=%d",
+				       MAC2STR(dev), adv_id, conncap,
+				       MAC2STR(adv_mac),
+				       ses_id, MAC2STR(ses_mac),
+				       passwd_id);
+		} else {
+			wpa_msg_global(wpa_s, MSG_INFO,
+				       P2P_EVENT_P2PS_PROVISION_START MACSTR
+				       " adv_id=%x conncap=%x"
+				       " adv_mac=" MACSTR
+				       " session=%x mac=" MACSTR
+				       " dev_passwd_id=%d info='%s'",
+				       MAC2STR(dev), adv_id, conncap,
+				       MAC2STR(adv_mac),
+				       ses_id, MAC2STR(ses_mac),
+				       passwd_id, session_info);
+		}
+		return;
+	}
+
+	go_wpa_s = wpas_p2p_get_go_group(wpa_s);
+	persistent_go = wpas_p2p_get_persistent_go(wpa_s);
+
+	if (status && status != P2P_SC_SUCCESS_DEFERRED) {
+		if (go_wpa_s && !p2p_group_go_member_count(wpa_s))
+			wpas_p2p_group_remove(wpa_s, go_wpa_s->ifname);
+
+		if (persistent_go && !persistent_go->num_p2p_clients) {
+			/* remove empty persistent GO */
+			wpa_config_remove_network(wpa_s->conf,
+						  persistent_go->id);
+		}
+
+		wpa_msg_global(wpa_s, MSG_INFO,
+			       P2P_EVENT_P2PS_PROVISION_DONE MACSTR
+			       " status=%d"
+			       " adv_id=%x adv_mac=" MACSTR
+			       " session=%x mac=" MACSTR,
+			       MAC2STR(dev), status,
+			       adv_id, MAC2STR(adv_mac),
+			       ses_id, MAC2STR(ses_mac));
+		return;
+	}
+
+	/* Clean up stale persistent groups with this device */
+	s = wpas_p2p_get_persistent(wpa_s, dev, persist_ssid,
+				    persist_ssid_size);
+	for (;;) {
+		stale = wpas_p2p_get_persistent(wpa_s, dev, NULL, 0);
+		if (!stale)
+			break;
+
+		if (s && s->ssid_len == stale->ssid_len &&
+		    os_memcmp(stale->bssid, s->bssid, ETH_ALEN) == 0 &&
+		    os_memcmp(stale->ssid, s->ssid, s->ssid_len) == 0)
+			break;
+
+		/* Remove stale persistent group */
+		if (stale->mode != WPAS_MODE_P2P_GO ||
+		    stale->num_p2p_clients <= 1) {
+			wpa_config_remove_network(wpa_s->conf, stale->id);
+		} else {
+			size_t i;
+
+			for (i = 0; i < stale->num_p2p_clients; i++) {
+				if (os_memcmp(stale->p2p_client_list +
+					      i * ETH_ALEN,
+					      dev, ETH_ALEN) == 0) {
+					os_memmove(stale->p2p_client_list +
+						   i * ETH_ALEN,
+						   stale->p2p_client_list +
+						   (i + 1) * ETH_ALEN,
+						   (stale->num_p2p_clients -
+						    i - 1) * ETH_ALEN);
+					break;
+				}
+			}
+			stale->num_p2p_clients--;
+		}
+		save_config = 1;
+	}
+
+	if (save_config)
+		p2p_config_write(wpa_s);
+
+	if (s) {
+		if (go_wpa_s && !p2p_group_go_member_count(wpa_s))
+			wpas_p2p_group_remove(wpa_s, go_wpa_s->ifname);
+
+		if (persistent_go && s != persistent_go &&
+		    !persistent_go->num_p2p_clients) {
+			/* remove empty persistent GO */
+			wpa_config_remove_network(wpa_s->conf,
+						  persistent_go->id);
+			/* Save config */
+		}
+
+		wpa_msg_global(wpa_s, MSG_INFO,
+			       P2P_EVENT_P2PS_PROVISION_DONE MACSTR
+			       " status=%d"
+			       " adv_id=%x adv_mac=" MACSTR
+			       " session=%x mac=" MACSTR
+			       " persist=%d",
+			       MAC2STR(dev), status,
+			       adv_id, MAC2STR(adv_mac),
+			       ses_id, MAC2STR(ses_mac), s->id);
+		return;
+	}
+
+	if (conncap == P2PS_SETUP_GROUP_OWNER) {
+		const char *go_ifname = NULL;
+		if (!go_wpa_s) {
+			wpa_s->global->pending_p2ps_group = 1;
+
+			if (wpa_s->conf->p2p_no_group_iface)
+				go_ifname = wpa_s->ifname;
+			else if (wpa_s->pending_interface_name[0])
+				go_ifname = wpa_s->pending_interface_name;
+
+			if (!go_ifname) {
+				wpas_p2ps_prov_complete(
+					wpa_s, P2P_SC_FAIL_UNKNOWN_GROUP,
+					dev, adv_mac, ses_mac,
+					NULL, adv_id, ses_id, 0, 0,
+					NULL, 0, 0, 0, NULL);
+				return;
+			}
+
+			/* If PD Resp complete, start up the GO */
+			if (response_done && persistent_go) {
+				wpas_p2p_group_add_persistent(
+					wpa_s, persistent_go,
+					0, 0, 0, 0, 0, NULL,
+					persistent_go->mode ==
+					WPAS_MODE_P2P_GO ?
+					P2P_MAX_INITIAL_CONN_WAIT_GO_REINVOKE :
+					0);
+			} else if (response_done) {
+				wpas_p2p_group_add(wpa_s, 1, 0, 0, 0);
+			}
+		} else if (passwd_id == DEV_PW_P2PS_DEFAULT) {
+			go_ifname = go_wpa_s->ifname;
+
+			wpa_dbg(go_wpa_s, MSG_DEBUG,
+				"P2P: Setting PIN-1 For " MACSTR, MAC2STR(dev));
+			wpa_supplicant_ap_wps_pin(go_wpa_s, dev, "12345670",
+						  NULL, 0, 0);
+		}
+
+		wpa_msg_global(wpa_s, MSG_INFO,
+			       P2P_EVENT_P2PS_PROVISION_DONE MACSTR
+			       " status=%d conncap=%x"
+			       " adv_id=%x adv_mac=" MACSTR
+			       " session=%x mac=" MACSTR
+			       " dev_passwd_id=%d go=%s",
+			       MAC2STR(dev), status, conncap,
+			       adv_id, MAC2STR(adv_mac),
+			       ses_id, MAC2STR(ses_mac),
+			       passwd_id, go_ifname);
+		return;
+	}
+
+	if (go_wpa_s && !p2p_group_go_member_count(wpa_s))
+		wpas_p2p_group_remove(wpa_s, go_wpa_s->ifname);
+
+	if (persistent_go && !persistent_go->num_p2p_clients) {
+		/* remove empty persistent GO */
+		wpa_config_remove_network(wpa_s->conf, persistent_go->id);
+	}
+
+	if (conncap == P2PS_SETUP_CLIENT) {
+		wpa_msg_global(wpa_s, MSG_INFO,
+			       P2P_EVENT_P2PS_PROVISION_DONE MACSTR
+			       " status=%d conncap=%x"
+			       " adv_id=%x adv_mac=" MACSTR
+			       " session=%x mac=" MACSTR
+			       " dev_passwd_id=%d join=" MACSTR,
+			       MAC2STR(dev), status, conncap,
+			       adv_id, MAC2STR(adv_mac),
+			       ses_id, MAC2STR(ses_mac),
+			       passwd_id, MAC2STR(grp_mac));
+	} else {
+		wpa_msg_global(wpa_s, MSG_INFO,
+			       P2P_EVENT_P2PS_PROVISION_DONE MACSTR
+			       " status=%d conncap=%x"
+			       " adv_id=%x adv_mac=" MACSTR
+			       " session=%x mac=" MACSTR
+			       " dev_passwd_id=%d",
+			       MAC2STR(dev), status, conncap,
+			       adv_id, MAC2STR(adv_mac),
+			       ses_id, MAC2STR(ses_mac),
+			       passwd_id);
+	}
+}
+
+
 static int _wpas_p2p_in_progress(void *ctx)
 {
 	struct wpa_supplicant *wpa_s = ctx;
@@ -4813,6 +5065,7 @@ int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s)
 	p2p.get_persistent_group = wpas_get_persistent_group;
 	p2p.get_go_info = wpas_get_go_info;
 	p2p.remove_stale_groups = wpas_remove_stale_groups;
+	p2p.p2ps_prov_complete = wpas_p2ps_prov_complete;
 	p2p.prov_disc_resp_cb = wpas_prov_disc_resp_cb;
 
 	os_memcpy(wpa_s->global->p2p_dev_addr, wpa_s->own_addr, ETH_ALEN);

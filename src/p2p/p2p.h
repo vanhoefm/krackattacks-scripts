@@ -982,6 +982,20 @@ struct p2p_config {
 				   const u8 *ssid, size_t ssid_len);
 
 	/**
+	 * p2ps_prov_complete - P2PS provisioning complete
+	 *
+	 * When P2PS provisioning completes (successfully or not) we must
+	 * transmit all of the results to the upper layers.
+	 */
+	void (*p2ps_prov_complete)(void *ctx, u8 status, const u8 *dev,
+				   const u8 *adv_mac, const u8 *ses_mac,
+				   const u8 *grp_mac, u32 adv_id, u32 ses_id,
+				   u8 conncap, int passwd_id,
+				   const u8 *persist_ssid,
+				   size_t persist_ssid_size, int response_done,
+				   int prov_start, const char *session_info);
+
+	/**
 	 * prov_disc_resp_cb - Callback for indicating completion of PD Response
 	 * @ctx: Callback context from cb_ctx
 	 * Returns: 1 if operation was started, 0 otherwise

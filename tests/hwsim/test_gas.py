@@ -266,6 +266,33 @@ def test_gas_anqp_get(dev, apdev):
     if ev is None or "WAN Metrics" not in ev:
         raise Exception("Did not receive WAN Metrics")
 
+    cmds = [ "",
+             "foo",
+             "00:11:22:33:44:55 258,hs20:-1",
+             "00:11:22:33:44:55 258,hs20:0",
+             "00:11:22:33:44:55 258,hs20:32",
+             "00:11:22:33:44:55 hs20:-1",
+             "00:11:22:33:44:55 hs20:0",
+             "00:11:22:33:44:55 hs20:32",
+             "00:11:22:33:44:55",
+             "00:11:22:33:44:55 ",
+             "00:11:22:33:44:55 0" ]
+    for cmd in cmds:
+        if "FAIL" not in dev[0].request("ANQP_GET " + cmd):
+            raise Exception("Invalid ANQP_GET accepted")
+
+    cmds = [ "",
+             "foo",
+             "00:11:22:33:44:55 -1",
+             "00:11:22:33:44:55 0",
+             "00:11:22:33:44:55 32",
+             "00:11:22:33:44:55",
+             "00:11:22:33:44:55 ",
+             "00:11:22:33:44:55 0" ]
+    for cmd in cmds:
+        if "FAIL" not in dev[0].request("HS20_ANQP_GET " + cmd):
+            raise Exception("Invalid HS20_ANQP_GET accepted")
+
 def expect_gas_result(dev, result, status=None):
     ev = dev.wait_event(["GAS-QUERY-DONE"], timeout=10)
     if ev is None:

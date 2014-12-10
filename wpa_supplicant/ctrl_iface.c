@@ -5375,6 +5375,8 @@ static int get_anqp(struct wpa_supplicant *wpa_s, char *dst)
 	if (used < 0)
 		return -1;
 	pos = dst + used;
+	if (*pos == ' ')
+		pos++;
 	while (num_id < MAX_ANQP_INFO_ID) {
 		if (os_strncmp(pos, "hs20:", 5) == 0) {
 #ifdef CONFIG_HS20
@@ -5554,6 +5556,8 @@ static int get_hs20_anqp(struct wpa_supplicant *wpa_s, char *dst)
 	if (used < 0)
 		return -1;
 	pos = dst + used;
+	if (*pos == ' ')
+		pos++;
 	for (;;) {
 		int num = atoi(pos);
 		if (num <= 0 || num > 31)

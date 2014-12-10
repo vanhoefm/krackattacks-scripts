@@ -218,8 +218,11 @@ def test_autogo_2cli(dev):
     hwsim_utils.test_connectivity_p2p(dev[1], dev[2])
     dev[0].global_request("P2P_REMOVE_CLIENT " + dev[1].p2p_dev_addr())
     dev[1].wait_go_ending_session()
-    dev[0].remove_group()
+    dev[0].global_request("P2P_REMOVE_CLIENT iface=" + dev[2].p2p_interface_addr())
     dev[2].wait_go_ending_session()
+    if "FAIL" not in dev[0].global_request("P2P_REMOVE_CLIENT foo"):
+        raise Exception("Invalid P2P_REMOVE_CLIENT command accepted")
+    dev[0].remove_group()
 
 def test_autogo_pbc(dev):
     """P2P autonomous GO and PBC"""

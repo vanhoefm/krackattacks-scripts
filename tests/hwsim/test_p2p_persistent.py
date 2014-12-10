@@ -226,6 +226,22 @@ def test_persistent_group_per_sta_psk(dev):
         raise Exception("Persistent group not restarted as persistent (cli)")
     hwsim_utils.test_connectivity_p2p(dev[1], dev[2])
 
+    logger.info("Remove one of the clients from the group without removing persistent group information for the client")
+    dev[0].global_request("P2P_REMOVE_CLIENT iface=" + dev[2].p2p_interface_addr())
+    dev[2].wait_go_ending_session()
+
+    logger.info("Try to reconnect after having been removed from group (but persistent group info still present)")
+    if not dev[2].discover_peer(addr0, social=True):
+        raise Exception("Peer " + peer + " not found")
+    dev[2].dump_monitor()
+    peer = dev[2].get_peer(addr0)
+    dev[2].global_request("P2P_GROUP_ADD persistent=" + peer['persistent'])
+    ev = dev[2].wait_global_event(["P2P-GROUP-STARTED","WPA: 4-Way Handshake failed"], timeout=30)
+    if ev is None:
+        raise Exception("Timeout on group restart (on client)")
+    if "P2P-GROUP-STARTED" not in ev:
+        raise Exception("Connection failed")
+
     logger.info("Remove one of the clients from the group")
     dev[0].global_request("P2P_REMOVE_CLIENT " + addr2)
     dev[2].wait_go_ending_session()

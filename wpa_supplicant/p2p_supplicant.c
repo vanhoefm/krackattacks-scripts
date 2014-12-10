@@ -4736,6 +4736,33 @@ static int _wpas_p2p_in_progress(void *ctx)
 }
 
 
+static int wpas_prov_disc_resp_cb(void *ctx)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+	struct wpa_ssid *persistent_go;
+
+	if (!wpa_s->global->pending_p2ps_group)
+		return 0;
+
+	wpa_s->global->pending_p2ps_group = 0;
+
+	if (wpas_p2p_get_go_group(wpa_s))
+		return 0;
+	persistent_go = wpas_p2p_get_persistent_go(wpa_s);
+
+	if (persistent_go) {
+		wpas_p2p_group_add_persistent(
+			wpa_s, persistent_go, 0, 0, 0, 0, 0, NULL,
+			persistent_go->mode == WPAS_MODE_P2P_GO ?
+			P2P_MAX_INITIAL_CONN_WAIT_GO_REINVOKE : 0);
+	} else {
+		wpas_p2p_group_add(wpa_s, 1, 0, 0, 0);
+	}
+
+	return 1;
+}
+
+
 /**
  * wpas_p2p_init - Initialize P2P module for %wpa_supplicant
  * @global: Pointer to global data from wpa_supplicant_init()
@@ -4786,6 +4813,7 @@ int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s)
 	p2p.get_persistent_group = wpas_get_persistent_group;
 	p2p.get_go_info = wpas_get_go_info;
 	p2p.remove_stale_groups = wpas_remove_stale_groups;
+	p2p.prov_disc_resp_cb = wpas_prov_disc_resp_cb;
 
 	os_memcpy(wpa_s->global->p2p_dev_addr, wpa_s->own_addr, ETH_ALEN);
 	os_memcpy(p2p.dev_addr, wpa_s->global->p2p_dev_addr, ETH_ALEN);
@@ -5692,6 +5720,7 @@ int wpas_p2p_connect(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 	wpa_s->global->add_psk = NULL;
 
 	wpa_s->global->p2p_fail_on_wps_complete = 0;
+	wpa_s->global->pending_p2ps_group = 0;
 
 	if (go_intent < 0)
 		go_intent = wpa_s->conf->p2p_go_intent;
@@ -6571,6 +6600,7 @@ int wpas_p2p_prov_disc(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 {
 	u16 config_methods;
 
+	wpa_s->global->pending_p2ps_group = 0;
 	wpa_s->p2p_fallback_to_go_neg = 0;
 	wpa_s->pending_pd_use = NORMAL_PD;
 	if (p2ps_prov && use == WPAS_P2P_PD_FOR_ASP) {

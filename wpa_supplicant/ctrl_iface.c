@@ -6563,6 +6563,7 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 	p2p_wpa_s->p2p_disable_ip_addr_req = 0;
 	os_free(p2p_wpa_s->global->p2p_go_avoid_freq.range);
 	p2p_wpa_s->global->p2p_go_avoid_freq.range = NULL;
+	p2p_wpa_s->global->pending_p2ps_group = 0;
 #endif /* CONFIG_P2P */
 
 #ifdef CONFIG_WPS_TESTING

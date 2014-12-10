@@ -980,6 +980,16 @@ struct p2p_config {
 	 */
 	int (*remove_stale_groups)(void *ctx, const u8 *peer, const u8 *go,
 				   const u8 *ssid, size_t ssid_len);
+
+	/**
+	 * prov_disc_resp_cb - Callback for indicating completion of PD Response
+	 * @ctx: Callback context from cb_ctx
+	 * Returns: 1 if operation was started, 0 otherwise
+	 *
+	 * This callback can be used to perform any pending actions after
+	 * provisioning. It is mainly used for P2PS pending group creation.
+	 */
+	int (*prov_disc_resp_cb)(void *ctx);
 };
 
 

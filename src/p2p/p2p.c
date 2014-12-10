@@ -3284,6 +3284,51 @@ static void p2p_prov_disc_cb(struct p2p_data *p2p, int success)
 }
 
 
+static int p2p_check_after_scan_tx_continuation(struct p2p_data *p2p)
+{
+	if (p2p->after_scan_tx_in_progress) {
+		p2p->after_scan_tx_in_progress = 0;
+		if (p2p->start_after_scan != P2P_AFTER_SCAN_NOTHING &&
+		    p2p_run_after_scan(p2p))
+			return 1;
+		if (p2p->state == P2P_SEARCH) {
+			p2p_dbg(p2p, "Continue find after after_scan_tx completion");
+			p2p_continue_find(p2p);
+		}
+	}
+
+	return 0;
+}
+
+
+static void p2p_prov_disc_resp_cb(struct p2p_data *p2p, int success)
+{
+	p2p_dbg(p2p, "Provision Discovery Response TX callback: success=%d",
+		success);
+
+	if (p2p->send_action_in_progress) {
+		p2p->send_action_in_progress = 0;
+		p2p->cfg->send_action_done(p2p->cfg->cb_ctx);
+	}
+
+	p2p->pending_action_state = P2P_NO_PENDING_ACTION;
+
+	if (!success)
+		goto continue_search;
+
+	if (!p2p->cfg->prov_disc_resp_cb ||
+	    p2p->cfg->prov_disc_resp_cb(p2p->cfg->cb_ctx) < 1)
+		goto continue_search;
+
+	p2p_dbg(p2p,
+		"Post-Provision Discovery operations started - do not try to continue other P2P operations");
+	return;
+
+continue_search:
+	p2p_check_after_scan_tx_continuation(p2p);
+}
+
+
 int p2p_scan_res_handler(struct p2p_data *p2p, const u8 *bssid, int freq,
 			 struct os_reltime *rx_time, int level, const u8 *ies,
 			 size_t ies_len)
@@ -3558,16 +3603,7 @@ void p2p_send_action_cb(struct p2p_data *p2p, unsigned int freq, const u8 *dst,
 			p2p->send_action_in_progress = 0;
 			p2p->cfg->send_action_done(p2p->cfg->cb_ctx);
 		}
-		if (p2p->after_scan_tx_in_progress) {
-			p2p->after_scan_tx_in_progress = 0;
-			if (p2p->start_after_scan != P2P_AFTER_SCAN_NOTHING &&
-			    p2p_run_after_scan(p2p))
-				break;
-			if (p2p->state == P2P_SEARCH) {
-				p2p_dbg(p2p, "Continue find after after_scan_tx completion");
-				p2p_continue_find(p2p);
-			}
-		}
+		p2p_check_after_scan_tx_continuation(p2p);
 		break;
 	case P2P_PENDING_GO_NEG_REQUEST:
 		p2p_go_neg_req_cb(p2p, success);
@@ -3586,6 +3622,9 @@ void p2p_send_action_cb(struct p2p_data *p2p, unsigned int freq, const u8 *dst,
 		break;
 	case P2P_PENDING_PD:
 		p2p_prov_disc_cb(p2p, success);
+		break;
+	case P2P_PENDING_PD_RESPONSE:
+		p2p_prov_disc_resp_cb(p2p, success);
 		break;
 	case P2P_PENDING_INVITATION_REQUEST:
 		p2p_invitation_req_cb(p2p, success);

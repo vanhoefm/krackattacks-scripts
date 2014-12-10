@@ -355,7 +355,7 @@ out:
 		p2p_parse_free(&msg);
 		return;
 	}
-	p2p->pending_action_state = P2P_NO_PENDING_ACTION;
+	p2p->pending_action_state = P2P_PENDING_PD_RESPONSE;
 	if (p2p_send_action(p2p, freq, sa, p2p->cfg->dev_addr,
 			    p2p->cfg->dev_addr,
 			    wpabuf_head(resp), wpabuf_len(resp), 200) < 0) {

@@ -153,6 +153,53 @@ struct p2p_go_neg_results {
 	unsigned int peer_config_timeout;
 };
 
+struct p2ps_provision {
+	/**
+	 * status - Remote returned provisioning status code
+	 */
+	int status;
+
+	/**
+	 * adv_id - P2PS Advertisement ID
+	 */
+	u32 adv_id;
+
+	/**
+	 * session_id - P2PS Session ID
+	 */
+	u32 session_id;
+
+	/**
+	 * method - WPS Method (to be) used to establish session
+	 */
+	u16 method;
+
+	/**
+	 * conncap - Connection Capabilities negotiated between P2P peers
+	 */
+	u8 conncap;
+
+	/**
+	 * role - Info about the roles to be used for this connection
+	 */
+	u8 role;
+
+	/**
+	 * session_mac - MAC address of the peer that started the session
+	 */
+	u8 session_mac[ETH_ALEN];
+
+	/**
+	 * adv_mac - MAC address of the peer advertised the service
+	 */
+	u8 adv_mac[ETH_ALEN];
+
+	/**
+	 * info - Vendor defined extra Provisioning information
+	 */
+	char info[0];
+};
+
 struct p2ps_advertisement {
 	struct p2ps_advertisement *next;
 
@@ -891,6 +938,38 @@ struct p2p_config {
 	 * or 0 if not.
 	 */
 	int (*is_p2p_in_progress)(void *ctx);
+
+	/**
+	 * Determine if we have a persistent group we share with remote peer
+	 * @ctx: Callback context from cb_ctx
+	 * @addr: Peer device address to search for
+	 * @ssid: Persistent group SSID or %NULL if any
+	 * @ssid_len: Length of @ssid
+	 * @go_dev_addr: Buffer for returning intended GO P2P Device Address
+	 * @ret_ssid: Buffer for returning group SSID
+	 * @ret_ssid_len: Buffer for returning length of @ssid
+	 * Returns: 1 if a matching persistent group was found, 0 otherwise
+	 */
+	int (*get_persistent_group)(void *ctx, const u8 *addr, const u8 *ssid,
+				    size_t ssid_len, u8 *go_dev_addr,
+				    u8 *ret_ssid, size_t *ret_ssid_len);
+
+	/**
+	 * Get information about a possible local GO role
+	 * @ctx: Callback context from cb_ctx
+	 * @intended_addr: Buffer for returning intended GO interface address
+	 * @ssid: Buffer for returning group SSID
+	 * @ssid_len: Buffer for returning length of @ssid
+	 * @group_iface: Buffer for returning whether a separate group interface
+	 *	would be used
+	 * Returns: 1 if GO info found, 0 otherwise
+	 *
+	 * This is used to compose New Group settings (SSID, and intended
+	 * address) during P2PS provisioning if results of provisioning *might*
+	 * result in our being an autonomous GO.
+	 */
+	int (*get_go_info)(void *ctx, u8 *intended_addr,
+			   u8 *ssid, size_t *ssid_len, int *group_iface);
 };
 
 
@@ -1117,6 +1196,7 @@ int p2p_reject(struct p2p_data *p2p, const u8 *peer_addr);
  * p2p_prov_disc_req - Send Provision Discovery Request
  * @p2p: P2P module context from p2p_init()
  * @peer_addr: MAC address of the peer P2P client
+ * @p2ps_prov: Provisioning info for P2PS
  * @config_methods: WPS Config Methods value (only one bit set)
  * @join: Whether this is used by a client joining an active group
  * @force_freq: Forced TX frequency for the frame (mainly for the join case)
@@ -1132,7 +1212,8 @@ int p2p_reject(struct p2p_data *p2p, const u8 *peer_addr);
  * indicated with the p2p_config::prov_disc_resp() callback.
  */
 int p2p_prov_disc_req(struct p2p_data *p2p, const u8 *peer_addr,
-		      u16 config_methods, int join, int force_freq,
+		      struct p2ps_provision *p2ps_prov, u16 config_methods,
+		      int join, int force_freq,
 		      int user_initiated_pd);
 
 /**

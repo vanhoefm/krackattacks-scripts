@@ -502,6 +502,7 @@ struct p2p_data {
 
 	/* ASP Support */
 	struct p2ps_advertisement *p2ps_adv_list;
+	struct p2ps_provision *p2ps_prov;
 	u8 wild_card_hash[P2PS_HASH_LEN];
 	u8 query_hash[P2P_MAX_QUERY_HASH * P2PS_HASH_LEN];
 	u8 query_count;
@@ -847,6 +848,8 @@ int p2p_prepare_channel(struct p2p_data *p2p, struct p2p_device *dev,
 			unsigned int force_freq, unsigned int pref_freq,
 			int go);
 void p2p_go_neg_wait_timeout(void *eloop_ctx, void *timeout_ctx);
+int p2p_go_select_channel(struct p2p_data *p2p, struct p2p_device *dev,
+			  u8 *status);
 void p2p_dbg(struct p2p_data *p2p, const char *fmt, ...)
 PRINTF_FORMAT(2, 3);
 void p2p_info(struct p2p_data *p2p, const char *fmt, ...)

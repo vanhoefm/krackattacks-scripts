@@ -475,6 +475,47 @@ static int wpas_p2p_disconnect_safely(struct wpa_supplicant *wpa_s,
 }
 
 
+/* Find an active P2P group where we are the GO */
+static struct wpa_ssid * wpas_p2p_group_go_ssid(struct wpa_supplicant *wpa_s,
+						u8 *bssid)
+{
+	struct wpa_ssid *s, *empty = NULL;
+
+	if (!wpa_s)
+		return 0;
+
+	for (wpa_s = wpa_s->global->ifaces; wpa_s; wpa_s = wpa_s->next) {
+		for (s = wpa_s->conf->ssid; s; s = s->next) {
+			if (s->disabled || !s->p2p_group ||
+			    s->mode != WPAS_MODE_P2P_GO)
+				continue;
+
+			os_memcpy(bssid, wpa_s->own_addr, ETH_ALEN);
+			if (p2p_get_group_num_members(wpa_s->p2p_group))
+				return s;
+			empty = s;
+		}
+	}
+
+	return empty;
+}
+
+
+/* Find a persistent group where we are the GO */
+static struct wpa_ssid *
+wpas_p2p_get_persistent_go(struct wpa_supplicant *wpa_s)
+{
+	struct wpa_ssid *s;
+
+	for (s = wpa_s->conf->ssid; s; s = s->next) {
+		if (s->disabled == 2 && s->mode == WPAS_MODE_P2P_GO)
+			return s;
+	}
+
+	return NULL;
+}
+
+
 static int wpas_p2p_group_delete(struct wpa_supplicant *wpa_s,
 				 enum p2p_group_removal_reason removal_reason)
 {
@@ -4371,6 +4412,51 @@ static void wpas_presence_resp(void *ctx, const u8 *src, u8 status,
 }
 
 
+static int wpas_get_persistent_group(void *ctx, const u8 *addr, const u8 *ssid,
+				     size_t ssid_len, u8 *go_dev_addr,
+				     u8 *ret_ssid, size_t *ret_ssid_len)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+	struct wpa_ssid *s;
+
+	s = wpas_p2p_get_persistent(wpa_s, addr, ssid, ssid_len);
+	if (s) {
+		os_memcpy(ret_ssid, s->ssid, s->ssid_len);
+		*ret_ssid_len = s->ssid_len;
+		os_memcpy(go_dev_addr, s->bssid, ETH_ALEN);
+		return 1;
+	}
+
+	return 0;
+}
+
+
+static int wpas_get_go_info(void *ctx, u8 *intended_addr,
+			    u8 *ssid, size_t *ssid_len, int *group_iface)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+	struct wpa_ssid *s;
+	u8 bssid[ETH_ALEN];
+
+	s = wpas_p2p_group_go_ssid(wpa_s, bssid);
+	if (!s) {
+		s = wpas_p2p_get_persistent_go(wpa_s);
+		if (s)
+			os_memcpy(bssid, s->bssid, ETH_ALEN);
+	}
+
+	*group_iface = wpas_p2p_create_iface(wpa_s);
+	if (!s)
+		return 0;
+
+	os_memcpy(intended_addr, bssid, ETH_ALEN);
+	os_memcpy(ssid, s->ssid, s->ssid_len);
+	*ssid_len = s->ssid_len;
+
+	return 1;
+}
+
+
 static int _wpas_p2p_in_progress(void *ctx)
 {
 	struct wpa_supplicant *wpa_s = ctx;
@@ -4425,6 +4511,8 @@ int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s)
 	p2p.presence_resp = wpas_presence_resp;
 	p2p.is_concurrent_session_active = wpas_is_concurrent_session_active;
 	p2p.is_p2p_in_progress = _wpas_p2p_in_progress;
+	p2p.get_persistent_group = wpas_get_persistent_group;
+	p2p.get_go_info = wpas_get_go_info;
 
 	os_memcpy(wpa_s->global->p2p_dev_addr, wpa_s->own_addr, ETH_ALEN);
 	os_memcpy(p2p.dev_addr, wpa_s->global->p2p_dev_addr, ETH_ALEN);
@@ -4844,7 +4932,7 @@ static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 		wpa_printf(MSG_DEBUG, "P2P: Auto PD with " MACSTR " join=%d",
 			   MAC2STR(wpa_s->pending_join_dev_addr), join);
 		if (p2p_prov_disc_req(wpa_s->global->p2p,
-				      wpa_s->pending_join_dev_addr,
+				      wpa_s->pending_join_dev_addr, NULL,
 				      wpa_s->pending_pd_config_methods, join,
 				      0, wpa_s->user_initiated_pd) < 0) {
 			wpa_s->p2p_auto_pd = 0;
@@ -4973,7 +5061,8 @@ static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 		}
 
 		if (p2p_prov_disc_req(wpa_s->global->p2p,
-				      wpa_s->pending_join_dev_addr, method, 1,
+				      wpa_s->pending_join_dev_addr,
+				      NULL, method, 1,
 				      freq, wpa_s->user_initiated_pd) < 0) {
 			wpa_printf(MSG_DEBUG, "P2P: Failed to send Provision "
 				   "Discovery Request before joining an "
@@ -6242,7 +6331,7 @@ int wpas_p2p_prov_disc(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 	if (wpa_s->global->p2p == NULL || wpa_s->global->p2p_disabled)
 		return -1;
 
-	return p2p_prov_disc_req(wpa_s->global->p2p, peer_addr,
+	return p2p_prov_disc_req(wpa_s->global->p2p, peer_addr, NULL,
 				 config_methods, use == WPAS_P2P_PD_FOR_JOIN,
 				 0, 1);
 }

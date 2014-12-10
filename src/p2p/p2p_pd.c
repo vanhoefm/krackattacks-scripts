@@ -40,14 +40,131 @@ static void p2p_build_wps_ie_config_methods(struct wpabuf *buf,
 }
 
 
+static void p2ps_add_new_group_info(struct p2p_data *p2p, struct wpabuf *buf)
+{
+	int found;
+	u8 intended_addr[ETH_ALEN];
+	u8 ssid[32];
+	size_t ssid_len;
+	int group_iface;
+
+	if (!p2p->cfg->get_go_info)
+		return;
+
+	found = p2p->cfg->get_go_info(
+		p2p->cfg->cb_ctx, intended_addr, ssid,
+		&ssid_len, &group_iface);
+	if (found) {
+		p2p_buf_add_group_id(buf, p2p->cfg->dev_addr,
+				     ssid, ssid_len);
+		p2p_buf_add_intended_addr(buf, intended_addr);
+	} else {
+		if (!p2p->ssid_set) {
+			p2p_build_ssid(p2p, p2p->ssid, &p2p->ssid_len);
+			p2p->ssid_set = 1;
+		}
+
+		/* Add pre-composed P2P Group ID */
+		p2p_buf_add_group_id(buf, p2p->cfg->dev_addr,
+				     p2p->ssid, p2p->ssid_len);
+
+		if (group_iface)
+			p2p_buf_add_intended_addr(
+				buf, p2p->intended_addr);
+		else
+			p2p_buf_add_intended_addr(
+				buf, p2p->cfg->dev_addr);
+	}
+}
+
+
+static void p2ps_add_pd_req_attrs(struct p2p_data *p2p, struct p2p_device *dev,
+				  struct wpabuf *buf, u16 config_methods)
+{
+	struct p2ps_provision *prov = p2p->p2ps_prov;
+	u8 feat_cap_mask[] = { 1, 0 };
+	int shared_group = 0;
+	u8 ssid[32];
+	size_t ssid_len;
+	u8 go_dev_addr[ETH_ALEN];
+
+	/* If we might be explicite group owner, add GO details */
+	if (prov->conncap & (P2PS_SETUP_GROUP_OWNER |
+			     P2PS_SETUP_NEW))
+		p2ps_add_new_group_info(p2p, buf);
+
+	if (prov->status >= 0)
+		p2p_buf_add_status(buf, (u8) prov->status);
+	else
+		prov->method = config_methods;
+
+	if (p2p->cfg->get_persistent_group) {
+		shared_group = p2p->cfg->get_persistent_group(
+			p2p->cfg->cb_ctx, dev->info.p2p_device_addr, NULL, 0,
+			go_dev_addr, ssid, &ssid_len);
+	}
+
+	/* Add Operating Channel if conncap includes GO */
+	if (shared_group ||
+	    (prov->conncap & (P2PS_SETUP_GROUP_OWNER |
+			      P2PS_SETUP_NEW))) {
+		u8 tmp;
+
+		p2p_go_select_channel(p2p, dev, &tmp);
+
+		if (p2p->op_reg_class && p2p->op_channel)
+			p2p_buf_add_operating_channel(buf, p2p->cfg->country,
+						      p2p->op_reg_class,
+						      p2p->op_channel);
+		else
+			p2p_buf_add_operating_channel(buf, p2p->cfg->country,
+						      p2p->cfg->op_reg_class,
+						      p2p->cfg->op_channel);
+	}
+
+	p2p_buf_add_channel_list(buf, p2p->cfg->country, &p2p->cfg->channels);
+
+	if (prov->info[0])
+		p2p_buf_add_session_info(buf, prov->info);
+
+	p2p_buf_add_connection_capability(buf, prov->conncap);
+
+	p2p_buf_add_advertisement_id(buf, prov->adv_id, prov->adv_mac);
+
+	if (shared_group || prov->conncap == P2PS_SETUP_NEW ||
+	    prov->conncap ==
+	    (P2PS_SETUP_GROUP_OWNER | P2PS_SETUP_NEW) ||
+	    prov->conncap ==
+	    (P2PS_SETUP_GROUP_OWNER | P2PS_SETUP_CLIENT)) {
+		/* Add Config Timeout */
+		p2p_buf_add_config_timeout(buf, p2p->go_timeout,
+					   p2p->client_timeout);
+	}
+
+	p2p_buf_add_listen_channel(buf, p2p->cfg->country, p2p->cfg->reg_class,
+				   p2p->cfg->channel);
+
+	p2p_buf_add_session_id(buf, prov->session_id, prov->session_mac);
+
+	p2p_buf_add_feature_capability(buf, sizeof(feat_cap_mask),
+				       feat_cap_mask);
+
+	if (shared_group)
+		p2p_buf_add_persistent_group_info(buf, go_dev_addr,
+						  ssid, ssid_len);
+}
+
+
 static struct wpabuf * p2p_build_prov_disc_req(struct p2p_data *p2p,
-					       u8 dialog_token,
-					       u16 config_methods,
-					       struct p2p_device *go)
+					       struct p2p_device *dev,
+					       int join)
 {
 	struct wpabuf *buf;
 	u8 *len;
 	size_t extra = 0;
+	u8 dialog_token = dev->dialog_token;
+	u16 config_methods = dev->req_config_methods;
+	struct p2p_device *go = join ? dev : NULL;
 
 #ifdef CONFIG_WIFI_DISPLAY
 	if (p2p->wfd_ie_prov_disc_req)
@@ -56,6 +173,10 @@ static struct wpabuf * p2p_build_prov_disc_req(struct p2p_data *p2p,
 
 	if (p2p->vendor_elem && p2p->vendor_elem[VENDOR_ELEM_P2P_PD_REQ])
 		extra += wpabuf_len(p2p->vendor_elem[VENDOR_ELEM_P2P_PD_REQ]);
+
+	if (p2p->p2ps_prov)
+		extra += os_strlen(p2p->p2ps_prov->info) + 1 +
+			sizeof(struct p2ps_provision);
 
 	buf = wpabuf_alloc(1000 + extra);
 	if (buf == NULL)
@@ -67,7 +188,9 @@ static struct wpabuf * p2p_build_prov_disc_req(struct p2p_data *p2p,
 	p2p_buf_add_capability(buf, p2p->dev_capab &
 			       ~P2P_DEV_CAPAB_CLIENT_DISCOVERABILITY, 0);
 	p2p_buf_add_device_info(buf, p2p, NULL);
-	if (go) {
+	if (p2p->p2ps_prov) {
+		p2ps_add_pd_req_attrs(p2p, dev, buf, config_methods);
+	} else if (go) {
 		p2p_buf_add_group_id(buf, go->info.p2p_device_addr,
 				     go->oper_ssid, go->oper_ssid_len);
 	}
@@ -388,9 +511,33 @@ int p2p_send_prov_disc_req(struct p2p_data *p2p, struct p2p_device *dev,
 		/* TODO: use device discoverability request through GO */
 	}
 
-	req = p2p_build_prov_disc_req(p2p, dev->dialog_token,
-				      dev->req_config_methods,
-				      join ? dev : NULL);
+	if (p2p->p2ps_prov) {
+		if (p2p->p2ps_prov->status == P2P_SC_SUCCESS_DEFERRED) {
+			if (p2p->p2ps_prov->method == WPS_CONFIG_DISPLAY)
+				dev->req_config_methods = WPS_CONFIG_KEYPAD;
+			else if (p2p->p2ps_prov->method == WPS_CONFIG_KEYPAD)
+				dev->req_config_methods = WPS_CONFIG_DISPLAY;
+			else
+				dev->req_config_methods = WPS_CONFIG_P2PS;
+		} else {
+			/* Order of preference, based on peer's capabilities */
+			if (p2p->p2ps_prov->method)
+				dev->req_config_methods =
+					p2p->p2ps_prov->method;
+			else if (dev->info.config_methods & WPS_CONFIG_P2PS)
+				dev->req_config_methods = WPS_CONFIG_P2PS;
+			else if (dev->info.config_methods & WPS_CONFIG_DISPLAY)
+				dev->req_config_methods = WPS_CONFIG_DISPLAY;
+			else
+				dev->req_config_methods = WPS_CONFIG_KEYPAD;
+		}
+		p2p_dbg(p2p,
+			"Building PD Request based on P2PS config method 0x%x status %d --> req_config_methods 0x%x",
+			p2p->p2ps_prov->method, p2p->p2ps_prov->status,
+			dev->req_config_methods);
+	}
+
+	req = p2p_build_prov_disc_req(p2p, dev, join);
 	if (req == NULL)
 		return -1;
 
@@ -413,6 +560,7 @@ int p2p_send_prov_disc_req(struct p2p_data *p2p, struct p2p_device *dev,
 
 
 int p2p_prov_disc_req(struct p2p_data *p2p, const u8 *peer_addr,
+		      struct p2ps_provision *p2ps_prov,
 		      u16 config_methods, int join, int force_freq,
 		      int user_initiated_pd)
 {
@@ -424,17 +572,28 @@ int p2p_prov_disc_req(struct p2p_data *p2p, const u8 *peer_addr,
 	if (dev == NULL || (dev->flags & P2P_DEV_PROBE_REQ_ONLY)) {
 		p2p_dbg(p2p, "Provision Discovery Request destination " MACSTR
 			" not yet known", MAC2STR(peer_addr));
+		os_free(p2ps_prov);
 		return -1;
 	}
 
 	p2p_dbg(p2p, "Provision Discovery Request with " MACSTR
 		" (config methods 0x%x)",
 		MAC2STR(peer_addr), config_methods);
-	if (config_methods == 0)
+	if (config_methods == 0 && !p2ps_prov) {
+		os_free(p2ps_prov);
 		return -1;
+	}
+
+	if (p2ps_prov && p2ps_prov->status == P2P_SC_SUCCESS_DEFERRED &&
+	    p2p->p2ps_prov) {
+		/* Use cached method from deferred provisioning */
+		p2ps_prov->method = p2p->p2ps_prov->method;
+	}
 
 	/* Reset provisioning info */
 	dev->wps_prov_info = 0;
+	os_free(p2p->p2ps_prov);
+	p2p->p2ps_prov = p2ps_prov;
 
 	dev->req_config_methods = config_methods;
 	if (join)

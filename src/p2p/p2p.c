@@ -4092,7 +4092,7 @@ int p2p_get_peer_info_txt(const struct p2p_peer_info *info,
 			  "country=%c%c\n"
 			  "oper_freq=%d\n"
 			  "req_config_methods=0x%x\n"
-			  "flags=%s%s%s%s%s%s%s%s%s%s%s%s%s\n"
+			  "flags=%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n"
 			  "status=%d\n"
 			  "invitation_reqs=%u\n",
 			  (int) (now.sec - dev->last_seen.sec),
@@ -4118,6 +4118,8 @@ int p2p_get_peer_info_txt(const struct p2p_peer_info *info,
 			  "[PD_PEER_DISPLAY]" : "",
 			  dev->flags & P2P_DEV_PD_PEER_KEYPAD ?
 			  "[PD_PEER_KEYPAD]" : "",
+			  dev->flags & P2P_DEV_PD_PEER_P2PS ?
+			  "[PD_PEER_P2PS]" : "",
 			  dev->flags & P2P_DEV_USER_REJECTED ?
 			  "[USER_REJECTED]" : "",
 			  dev->flags & P2P_DEV_PEER_WAITING_RESPONSE ?

@@ -1004,6 +1004,17 @@ struct p2p_config {
 	 * provisioning. It is mainly used for P2PS pending group creation.
 	 */
 	int (*prov_disc_resp_cb)(void *ctx);
+
+	/**
+	 * p2ps_group_capability - Determine group capability
+	 *
+	 * This function can be used to determine group capability based on
+	 * information from P2PS PD exchange and the current state of ongoing
+	 * groups and driver capabilities.
+	 *
+	 * P2PS_SETUP_* bitmap is used as the parameters and return value.
+	 */
+	u8 (*p2ps_group_capability)(void *ctx, u8 incoming, u8 role);
 };
 
 

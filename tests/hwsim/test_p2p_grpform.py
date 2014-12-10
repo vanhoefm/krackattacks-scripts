@@ -254,6 +254,8 @@ def test_grpform_pd(dev):
 def test_grpform_ext_listen(dev):
     """P2P group formation with extended listen timing enabled"""
     try:
+        if "FAIL" not in dev[0].global_request("P2P_EXT_LISTEN 100"):
+            raise Exception("Invalid P2P_EXT_LISTEN accepted")
         if "OK" not in dev[0].global_request("P2P_EXT_LISTEN 100 50000"):
             raise Exception("Failed to set extended listen timing")
         if "OK" not in dev[1].global_request("P2P_EXT_LISTEN 200 40000"):

@@ -1735,7 +1735,14 @@ void p2p_build_ssid(struct p2p_data *p2p, u8 *ssid, size_t *ssid_len)
 
 int p2p_go_params(struct p2p_data *p2p, struct p2p_go_neg_results *params)
 {
-	p2p_build_ssid(p2p, params->ssid, &params->ssid_len);
+	if (p2p->ssid_set) {
+		os_memcpy(params->ssid, p2p->ssid, p2p->ssid_len);
+		params->ssid_len = p2p->ssid_len;
+	} else {
+		p2p_build_ssid(p2p, params->ssid, &params->ssid_len);
+	}
+	p2p->ssid_set = 0;
+
 	p2p_random(params->passphrase, p2p->cfg->passphrase_len);
 	return 0;
 }

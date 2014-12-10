@@ -1825,6 +1825,20 @@ static int wpa_cli_cmd_p2p_stop_find(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int wpa_cli_cmd_p2p_asp_provision(struct wpa_ctrl *ctrl, int argc,
+					 char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "P2P_ASP_PROVISION", 3, argc, argv);
+}
+
+
+static int wpa_cli_cmd_p2p_asp_provision_resp(struct wpa_ctrl *ctrl, int argc,
+					      char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "P2P_ASP_PROVISION_RESP", 2, argc, argv);
+}
+
+
 static int wpa_cli_cmd_p2p_connect(struct wpa_ctrl *ctrl, int argc,
 				   char *argv[])
 {
@@ -2878,6 +2892,12 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	  "[timeout] [type=*] = find P2P Devices for up-to timeout seconds" },
 	{ "p2p_stop_find", wpa_cli_cmd_p2p_stop_find, NULL, cli_cmd_flag_none,
 	  "= stop P2P Devices search" },
+	{ "p2p_asp_provision", wpa_cli_cmd_p2p_asp_provision, NULL,
+	  cli_cmd_flag_none,
+	  "<addr> adv_id=<adv_id> conncap=<conncap> [info=<infodata>] = provision with a P2P ASP Device" },
+	{ "p2p_asp_provision_resp", wpa_cli_cmd_p2p_asp_provision_resp, NULL,
+	  cli_cmd_flag_none,
+	  "<addr> adv_id=<adv_id> [role<conncap>] [info=<infodata>] = provision with a P2P ASP Device" },
 	{ "p2p_connect", wpa_cli_cmd_p2p_connect, wpa_cli_complete_p2p_connect,
 	  cli_cmd_flag_none,
 	  "<addr> <\"pbc\"|PIN> [ht40] = connect to a P2P Device" },

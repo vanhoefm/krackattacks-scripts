@@ -4549,6 +4549,153 @@ static int p2p_ctrl_find(struct wpa_supplicant *wpa_s, char *cmd)
 }
 
 
+static struct p2ps_provision * p2p_parse_asp_provision_cmd(const char *cmd)
+{
+	struct p2ps_provision *p2ps_prov;
+	char *pos;
+	size_t info_len = 0;
+	char *info = NULL;
+	u8 role = P2PS_SETUP_NONE;
+	long long unsigned val;
+
+	pos = os_strstr(cmd, "info=");
+	if (pos) {
+		pos += 5;
+		info_len = os_strlen(pos);
+
+		if (info_len) {
+			info = os_malloc(info_len + 1);
+			if (info) {
+				info_len = utf8_unescape(pos, info_len,
+							 info, info_len + 1);
+			} else
+				info_len = 0;
+		}
+	}
+
+	p2ps_prov = os_zalloc(sizeof(struct p2ps_provision) + info_len + 1);
+	if (p2ps_prov == NULL) {
+		os_free(info);
+		return NULL;
+	}
+
+	if (info) {
+		os_memcpy(p2ps_prov->info, info, info_len);
+		p2ps_prov->info[info_len] = '\0';
+		os_free(info);
+	}
+
+	pos = os_strstr(cmd, "status=");
+	if (pos)
+		p2ps_prov->status = atoi(pos + 7);
+	else
+		p2ps_prov->status = -1;
+
+	pos = os_strstr(cmd, "adv_id=");
+	if (!pos || sscanf(pos + 7, "%llx", &val) != 1 || val > 0xffffffffULL)
+		goto invalid_args;
+	p2ps_prov->adv_id = val;
+
+	pos = os_strstr(cmd, "method=");
+	if (pos)
+		p2ps_prov->method = strtol(pos + 7, NULL, 16);
+	else
+		p2ps_prov->method = 0;
+
+	pos = os_strstr(cmd, "session=");
+	if (!pos || sscanf(pos + 8, "%llx", &val) != 1 || val > 0xffffffffULL)
+		goto invalid_args;
+	p2ps_prov->session_id = val;
+
+	pos = os_strstr(cmd, "adv_mac=");
+	if (!pos || hwaddr_aton(pos + 8, p2ps_prov->adv_mac))
+		goto invalid_args;
+
+	pos = os_strstr(cmd, "session_mac=");
+	if (!pos || hwaddr_aton(pos + 12, p2ps_prov->session_mac))
+		goto invalid_args;
+
+	/* force conncap with tstCap (no sanity checks) */
+	pos = os_strstr(cmd, "tstCap=");
+	if (pos) {
+		role = strtol(pos + 7, NULL, 16);
+	} else {
+		pos = os_strstr(cmd, "role=");
+		if (pos) {
+			role = strtol(pos + 5, NULL, 16);
+			if (role != P2PS_SETUP_CLIENT &&
+			    role != P2PS_SETUP_GROUP_OWNER)
+				role = P2PS_SETUP_NONE;
+		}
+	}
+	p2ps_prov->role = role;
+
+	return p2ps_prov;
+
+invalid_args:
+	os_free(p2ps_prov);
+	return NULL;
+}
+
+
+static int p2p_ctrl_asp_provision_resp(struct wpa_supplicant *wpa_s, char *cmd)
+{
+	u8 addr[ETH_ALEN];
+	struct p2ps_provision *p2ps_prov;
+	char *pos;
+
+	/* <addr> id=<adv_id> [role=<conncap>] [info=<infodata>] */
+
+	wpa_printf(MSG_DEBUG, "%s: %s", __func__, cmd);
+
+	if (hwaddr_aton(cmd, addr))
+		return -1;
+
+	pos = cmd + 17;
+	if (*pos != ' ')
+		return -1;
+
+	p2ps_prov = p2p_parse_asp_provision_cmd(pos);
+	if (!p2ps_prov)
+		return -1;
+
+	if (p2ps_prov->status < 0) {
+		os_free(p2ps_prov);
+		return -1;
+	}
+
+	return wpas_p2p_prov_disc(wpa_s, addr, NULL, WPAS_P2P_PD_FOR_ASP,
+				  p2ps_prov);
+}
+
+
+static int p2p_ctrl_asp_provision(struct wpa_supplicant *wpa_s, char *cmd)
+{
+	u8 addr[ETH_ALEN];
+	struct p2ps_provision *p2ps_prov;
+	char *pos;
+
+	/* <addr> id=<adv_id> adv_mac=<adv_mac> conncap=<conncap>
+	 *        session=<ses_id> mac=<ses_mac> [info=<infodata>]
+	 */
+
+	wpa_printf(MSG_DEBUG, "%s: %s", __func__, cmd);
+	if (hwaddr_aton(cmd, addr))
+		return -1;
+
+	pos = cmd + 17;
+	if (*pos != ' ')
+		return -1;
+
+	p2ps_prov = p2p_parse_asp_provision_cmd(pos);
+	if (!p2ps_prov)
+		return -1;
+
+	return wpas_p2p_prov_disc(wpa_s, addr, NULL, WPAS_P2P_PD_FOR_ASP,
+				  p2ps_prov);
+}
+
+
 static int p2p_ctrl_connect(struct wpa_supplicant *wpa_s, char *cmd,
 			    char *buf, size_t buflen)
 {
@@ -7856,6 +8003,12 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 			reply_len = -1;
 	} else if (os_strcmp(buf, "P2P_STOP_FIND") == 0) {
 		wpas_p2p_stop_find(wpa_s);
+	} else if (os_strncmp(buf, "P2P_ASP_PROVISION ", 18) == 0) {
+		if (p2p_ctrl_asp_provision(wpa_s, buf + 18))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "P2P_ASP_PROVISION_RESP ", 23) == 0) {
+		if (p2p_ctrl_asp_provision_resp(wpa_s, buf + 23))
+			reply_len = -1;
 	} else if (os_strncmp(buf, "P2P_CONNECT ", 12) == 0) {
 		reply_len = p2p_ctrl_connect(wpa_s, buf + 12, reply,
 					     reply_size);

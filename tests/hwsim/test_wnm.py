@@ -131,6 +131,13 @@ def test_wnm_sleep_mode_open(dev, apdev):
     check_wnm_sleep_mode_enter_exit(hapd, dev[0], interval=100)
     check_wnm_sleep_mode_enter_exit(hapd, dev[0], tfs_req="5b17010001130e110000071122334455661122334455661234")
 
+    cmds = [ "foo",
+             "exit tfs_req=123 interval=10",
+             "enter tfs_req=qq interval=10" ]
+    for cmd in cmds:
+        if "FAIL" not in dev[0].request("WNM_SLEEP " + cmd):
+            raise Exception("Invalid WNM_SLEEP accepted")
+
 def test_wnm_sleep_mode_rsn(dev, apdev):
     """WNM Sleep Mode - RSN"""
     params = hostapd.wpa2_params("test-wnm-rsn", "12345678")

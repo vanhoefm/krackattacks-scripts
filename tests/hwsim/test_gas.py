@@ -53,7 +53,8 @@ def start_ap(ap):
     hostapd.add_ap(ap['ifname'], params)
     return hostapd.Hostapd(ap['ifname'])
 
-def get_gas_response(dev, bssid, info, allow_fetch_failure=False):
+def get_gas_response(dev, bssid, info, allow_fetch_failure=False,
+                     extra_test=False):
     exp = r'<.>(GAS-RESPONSE-INFO) addr=([0-9a-f:]*) dialog_token=([0-9]*) status_code=([0-9]*) resp_len=([\-0-9]*)'
     res = re.split(exp, info)
     if len(res) < 6:
@@ -70,6 +71,19 @@ def get_gas_response(dev, bssid, info, allow_fetch_failure=False):
     if int(resp_len) > 2000:
         raise Exception("Unexpected long GAS response")
 
+    if extra_test:
+        if "FAIL" not in dev.request("GAS_RESPONSE_GET " + bssid + " 123456"):
+            raise Exception("Invalid dialog token accepted")
+        if "FAIL-Invalid range" not in dev.request("GAS_RESPONSE_GET " + bssid + " " + token + " 10000,10001"):
+            raise Exception("Invalid range accepted")
+        if "FAIL-Invalid range" not in dev.request("GAS_RESPONSE_GET " + bssid + " " + token + " 0,10000"):
+            raise Exception("Invalid range accepted")
+        if "FAIL" not in dev.request("GAS_RESPONSE_GET " + bssid + " " + token + " 0"):
+            raise Exception("Invalid GAS_RESPONSE_GET accepted")
+
+        res1_2 = dev.request("GAS_RESPONSE_GET " + bssid + " " + token + " 1,2")
+        res5_3 = dev.request("GAS_RESPONSE_GET " + bssid + " " + token + " 5,3")
+
     resp = dev.request("GAS_RESPONSE_GET " + bssid + " " + token)
     if "FAIL" in resp:
         if allow_fetch_failure:
@@ -79,6 +93,11 @@ def get_gas_response(dev, bssid, info, allow_fetch_failure=False):
     if len(resp) != int(resp_len) * 2:
         raise Exception("Unexpected GAS response length")
     logger.debug("GAS response: " + resp)
+    if extra_test:
+        if resp[2:6] != res1_2:
+            raise Exception("Unexpected response substring res1_2: " + res1_2)
+        if resp[10:16] != res5_3:
+            raise Exception("Unexpected response substring res5_3: " + res5_3)
 
 def test_gas_generic(dev, apdev):
     """Generic GAS query"""
@@ -87,6 +106,22 @@ def test_gas_generic(dev, apdev):
     params['hessid'] = bssid
     hostapd.add_ap(apdev[0]['ifname'], params)
 
+    cmds = [ "foo",
+             "00:11:22:33:44:55",
+             "00:11:22:33:44:55 ",
+             "00:11:22:33:44:55  ",
+             "00:11:22:33:44:55 1",
+             "00:11:22:33:44:55 1 1234",
+             "00:11:22:33:44:55 qq",
+             "00:11:22:33:44:55 qq 1234",
+             "00:11:22:33:44:55 00      1",
+             "00:11:22:33:44:55 00 123",
+             "00:11:22:33:44:55 00 ",
+             "00:11:22:33:44:55 00 qq" ]
+    for cmd in cmds:
+        if "FAIL" not in dev[0].request("GAS_REQUEST " + cmd):
+            raise Exception("Invalid GAS_REQUEST accepted: " + cmd)
+
     dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
     req = dev[0].request("GAS_REQUEST " + bssid + " 00 000102000101")
     if "FAIL" in req:
@@ -94,7 +129,10 @@ def test_gas_generic(dev, apdev):
     ev = dev[0].wait_event(["GAS-RESPONSE-INFO"], timeout=10)
     if ev is None:
         raise Exception("GAS query timed out")
-    get_gas_response(dev[0], bssid, ev)
+    get_gas_response(dev[0], bssid, ev, extra_test=True)
+
+    if "FAIL" not in dev[0].request("GAS_RESPONSE_GET ff"):
+        raise Exception("Invalid GAS_RESPONSE_GET accepted")
 
 def test_gas_concurrent_scan(dev, apdev):
     """Generic GAS queries with concurrent scan operation"""

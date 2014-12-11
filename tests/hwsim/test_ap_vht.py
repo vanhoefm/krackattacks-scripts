@@ -216,8 +216,18 @@ def test_ap_vht160(dev, apdev):
 
         dev[0].connect("vht", key_mgmt="NONE", scan_freq="5180")
         hwsim_utils.test_connectivity(dev[0], hapd)
+        sig = dev[0].request("SIGNAL_POLL").splitlines()
+        if "FREQUENCY=5180" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(1): " + str(sig))
+        if "WIDTH=160 MHz" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(2): " + str(sig))
         dev[1].connect("vht2", key_mgmt="NONE", scan_freq="5500")
         hwsim_utils.test_connectivity(dev[1], hapd2)
+        sig = dev[1].request("SIGNAL_POLL").splitlines()
+        if "FREQUENCY=5500" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(1): " + str(sig))
+        if "WIDTH=160 MHz" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(2): " + str(sig))
     except Exception, e:
         if isinstance(e, Exception) and str(e) == "AP startup failed":
             if not vht_supported():
@@ -269,6 +279,15 @@ def test_ap_vht80plus80(dev, apdev):
 
         dev[1].connect("vht2", key_mgmt="NONE", scan_freq="5180")
         hwsim_utils.test_connectivity(dev[1], hapd2)
+        sig = dev[1].request("SIGNAL_POLL").splitlines()
+        if "FREQUENCY=5180" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(1): " + str(sig))
+        if "WIDTH=80+80 MHz" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(2): " + str(sig))
+        if "CENTER_FRQ1=5210" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(3): " + str(sig))
+        if "CENTER_FRQ2=5775" not in sig:
+            raise Exception("Unexpected SIGNAL_POLL value(4): " + str(sig))
     except Exception, e:
         if isinstance(e, Exception) and str(e) == "AP startup failed":
             if not vht_supported():

@@ -239,6 +239,44 @@ def test_ap_nai_home_realm_query(dev, apdev):
     if "example.org".encode('hex') not in nai2:
         raise Exception("Non-home realm not reported in wildcard query ")
 
+    cmds = [ "foo",
+             "00:11:22:33:44:55 123",
+             "00:11:22:33:44:55 qq" ]
+    for cmd in cmds:
+        if "FAIL" not in dev[0].request("HS20_GET_NAI_HOME_REALM_LIST " + cmd):
+            raise Exception("Invalid HS20_GET_NAI_HOME_REALM_LIST accepted: " + cmd)
+
+    dev[0].dump_monitor()
+    if "OK" not in dev[0].request("HS20_GET_NAI_HOME_REALM_LIST " + bssid):
+        raise Exception("HS20_GET_NAI_HOME_REALM_LIST failed")
+    ev = dev[0].wait_event(["GAS-QUERY-DONE"], timeout=10)
+    if ev is None:
+        raise Exception("ANQP operation timed out")
+    ev = dev[0].wait_event(["RX-ANQP"], timeout=0.1)
+    if ev is not None:
+        raise Exception("Unexpected ANQP response: " + ev)
+
+    dev[0].dump_monitor()
+    if "OK" not in dev[0].request("HS20_GET_NAI_HOME_REALM_LIST " + bssid + " 01000b6578616d706c652e636f6d"):
+        raise Exception("HS20_GET_NAI_HOME_REALM_LIST failed")
+    ev = dev[0].wait_event(["RX-ANQP"], timeout=10)
+    if ev is None:
+        raise Exception("No ANQP response")
+    if "NAI Realm list" not in ev:
+        raise Exception("Missing NAI Realm list: " + ev)
+
+    dev[0].add_cred_values({ 'realm': "example.com", 'username': "test",
+                             'password': "secret",
+                             'domain': "example.com" })
+    dev[0].dump_monitor()
+    if "OK" not in dev[0].request("HS20_GET_NAI_HOME_REALM_LIST " + bssid):
+        raise Exception("HS20_GET_NAI_HOME_REALM_LIST failed")
+    ev = dev[0].wait_event(["RX-ANQP"], timeout=10)
+    if ev is None:
+        raise Exception("No ANQP response")
+    if "NAI Realm list" not in ev:
+        raise Exception("Missing NAI Realm list: " + ev)
+
 def test_ap_interworking_scan_filtering(dev, apdev):
     """Interworking scan filtering with HESSID and access network type"""
     try:

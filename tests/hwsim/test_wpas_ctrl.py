@@ -1124,3 +1124,14 @@ def test_wpas_ctrl_rsp(dev, apdev):
             raise Exception("Request failed unexpectedly")
         if "OK" not in dev[0].request("CTRL-RSP-%s-%d:" % (req, id)):
             raise Exception("Request failed unexpectedly")
+
+def test_wpas_ctrl_vendor(dev, apdev):
+    """wpa_supplicant ctrl_iface VENDOR"""
+    cmds = [ "foo",
+             "1",
+             "1 foo",
+             "1 2foo",
+             "1 2 qq" ]
+    for cmd in cmds:
+        if "FAIL" not in dev[0].request("VENDOR " + cmd):
+            raise Exception("Invalid VENDOR command accepted: " + cmd)

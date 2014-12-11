@@ -115,7 +115,7 @@ static int wpa_ether_send(struct wpa_supplicant *wpa_s, const u8 *dest,
 		return l2_packet_send(wpa_s->l2, dest, proto, buf, len);
 	}
 
-	return wpa_drv_send_eapol(wpa_s, dest, proto, buf, len);
+	return -1;
 }
 #endif /* IEEE8021X_EAPOL || !CONFIG_NO_WPA */
 

@@ -72,7 +72,7 @@ static int supp_ether_send(void *ctx, const u8 *dest, u16 proto, const u8 *buf,
 	if (wpa_s->l2)
 		return l2_packet_send(wpa_s->l2, dest, proto, buf, len);
 
-	return wpa_drv_send_eapol(wpa_s, dest, proto, buf, len);
+	return -1;
 }
 
 
@@ -283,7 +283,7 @@ static int auth_send_eapol(void *ctx, const u8 *addr, const u8 *data,
 		return l2_packet_send(wpa_s->l2, addr, ETH_P_EAPOL, data,
 				      data_len);
 
-	return wpa_drv_send_eapol(wpa_s, addr, ETH_P_EAPOL, data, data_len);
+	return -1;
 }
 
 

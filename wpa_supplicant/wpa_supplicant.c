@@ -2825,15 +2825,9 @@ void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 
 int wpa_supplicant_update_mac_addr(struct wpa_supplicant *wpa_s)
 {
-	if (wpa_s->driver->send_eapol) {
-		const u8 *addr = wpa_drv_get_mac_addr(wpa_s);
-		if (addr)
-			os_memcpy(wpa_s->own_addr, addr, ETH_ALEN);
-	} else if ((!wpa_s->p2p_mgmt ||
-		    !(wpa_s->drv_flags &
-		      WPA_DRIVER_FLAGS_DEDICATED_P2P_DEVICE)) &&
-		   !(wpa_s->drv_flags &
-		     WPA_DRIVER_FLAGS_P2P_DEDICATED_INTERFACE)) {
+	if ((!wpa_s->p2p_mgmt ||
+	     !(wpa_s->drv_flags & WPA_DRIVER_FLAGS_DEDICATED_P2P_DEVICE)) &&
+	    !(wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_DEDICATED_INTERFACE)) {
 		l2_packet_deinit(wpa_s->l2);
 		wpa_s->l2 = l2_packet_init(wpa_s->ifname,
 					   wpa_drv_get_mac_addr(wpa_s),

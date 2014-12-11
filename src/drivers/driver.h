@@ -1726,27 +1726,6 @@ struct wpa_driver_ops {
 	const u8 * (*get_mac_addr)(void *priv);
 
 	/**
-	 * send_eapol - Optional function for sending EAPOL packets
-	 * @priv: private driver interface data
-	 * @dest: Destination MAC address
-	 * @proto: Ethertype
-	 * @data: EAPOL packet starting with IEEE 802.1X header
-	 * @data_len: Size of the EAPOL packet
-	 *
-	 * Returns: 0 on success, -1 on failure
-	 *
-	 * This optional function can be used to override l2_packet operations
-	 * with driver specific functionality. If this function pointer is set,
-	 * l2_packet module is not used at all and the driver interface code is
-	 * responsible for receiving and sending all EAPOL packets. The
-	 * received EAPOL packets are sent to core code with EVENT_EAPOL_RX
-	 * event. The driver interface is required to implement get_mac_addr()
-	 * handler if send_eapol() is used.
-	 */
-	int (*send_eapol)(void *priv, const u8 *dest, u16 proto,
-			  const u8 *data, size_t data_len);
-
-	/**
 	 * set_operstate - Sets device operating state to DORMANT or UP
 	 * @priv: private driver interface data
 	 * @state: 0 = dormant, 1 = up
@@ -3477,9 +3456,7 @@ enum wpa_event_type {
 	 * EVENT_EAPOL_RX - Report received EAPOL frame
 	 *
 	 * When in AP mode with hostapd, this event is required to be used to
-	 * deliver the receive EAPOL frames from the driver. With
-	 * %wpa_supplicant, this event is used only if the send_eapol() handler
-	 * is used to override the use of l2_packet for EAPOL frame TX.
+	 * deliver the receive EAPOL frames from the driver.
 	 */
 	EVENT_EAPOL_RX,
 

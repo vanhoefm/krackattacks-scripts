@@ -244,16 +244,6 @@ static inline const u8 * wpa_drv_get_mac_addr(struct wpa_supplicant *wpa_s)
 	return NULL;
 }
 
-static inline int wpa_drv_send_eapol(struct wpa_supplicant *wpa_s,
-				     const u8 *dst, u16 proto,
-				     const u8 *data, size_t data_len)
-{
-	if (wpa_s->driver->send_eapol)
-		return wpa_s->driver->send_eapol(wpa_s->drv_priv, dst, proto,
-						 data, data_len);
-	return -1;
-}
-
 static inline int wpa_drv_set_operstate(struct wpa_supplicant *wpa_s,
 					int state)
 {

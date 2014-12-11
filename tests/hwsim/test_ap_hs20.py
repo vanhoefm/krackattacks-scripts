@@ -2003,6 +2003,8 @@ def test_ap_hs20_fetch_osu(dev, apdev):
         dev[1].scan_for_bss(bssid, freq="2412")
         dev[0].request("SET osu_dir " + dir)
         dev[0].request("FETCH_OSU")
+        if "FAIL" not in dev[1].request("HS20_ICON_REQUEST foo w1fi_logo"):
+            raise Exception("Invalid HS20_ICON_REQUEST accepted")
         if "OK" not in dev[1].request("HS20_ICON_REQUEST " + bssid + " w1fi_logo"):
             raise Exception("HS20_ICON_REQUEST failed")
         icons = 0

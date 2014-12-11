@@ -18,8 +18,8 @@ def test_autoscan_periodic(dev, apdev):
     try:
         if "OK" not in dev[0].request("AUTOSCAN periodic:1"):
             raise Exception("Failed to set autoscan")
-        dev[0].connect("not-used", key_mgmt="NONE", scan_freq="2412",
-                       wait_connect=False)
+        id = dev[0].connect("not-used", key_mgmt="NONE", scan_freq="2412",
+                            wait_connect=False)
         times = {}
         for i in range(0, 3):
             logger.info("Waiting for scan to start")
@@ -35,6 +35,19 @@ def test_autoscan_periodic(dev, apdev):
                 raise Exception("did not complete a scan")
         if times[0] > 1 or times[1] < 0.5 or times[1] > 1.5 or times[2] < 0.5 or times[2] > 1.5:
             raise Exception("Unexpected scan timing: " + str(times))
+
+        # scan some more channels to allow some more time for reseting AUTOSCAN
+        # while a scan is in progress
+        dev[0].set_network(id, "scan_freq", "2412 2437 2462 5180 5200 5220 5240")
+        dev[0].dump_monitor()
+        ev = dev[0].wait_event(["CTRL-EVENT-SCAN-STARTED"], timeout=5)
+        if ev is None:
+            raise Exception("did not start a scan")
+        if "OK" not in dev[0].request("AUTOSCAN periodic:2"):
+            raise Exception("Failed to (re)set autoscan")
+        ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], 10)
+        if ev is None:
+            raise Exception("did not complete a scan")
     finally:
         dev[0].request("AUTOSCAN ")
 

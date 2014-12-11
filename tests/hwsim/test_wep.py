@@ -12,6 +12,7 @@ def test_wep_open_auth(dev, apdev):
     hapd = hostapd.add_ap(apdev[0]['ifname'],
                           { "ssid": "wep-open",
                             "wep_key0": '"hello"' })
+    dev[0].flush_scan_cache()
     dev[0].connect("wep-open", key_mgmt="NONE", wep_key0='"hello"',
                    scan_freq="2412")
     hwsim_utils.test_connectivity(dev[0], hapd)

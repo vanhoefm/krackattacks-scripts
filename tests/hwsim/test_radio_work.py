@@ -65,6 +65,20 @@ def test_ext_radio_work(dev, apdev):
     if id not in ev:
         raise Exception("Radio work id mismatch")
 
+    for i in range(5):
+        dev[0].request(("RADIO_WORK add test-work-%d-" % i) + 100*'a')
+    ev = dev[0].wait_event(["EXT-RADIO-WORK-START"])
+    if ev is None:
+        raise Exception("Timeout while waiting radio work to start")
+    if "FAIL" not in dev[0].request("RADIO_WORK done 12345678"):
+        raise Exception("Invalid RADIO_WORK done accepted");
+    if "FAIL" not in dev[0].request("RADIO_WORK foo"):
+        raise Exception("Invalid RADIO_WORK accepted");
+    dev[0].request("FLUSH")
+    items = dev[0].request("RADIO_WORK show")
+    if items != "":
+        raise Exception("Unexpected radio work remaining after FLUSH: " + items)
+
 def test_radio_work_cancel(dev, apdev):
     """Radio work items cancelled on interface removal"""
     params = hostapd.wpa2_params(ssid="radio", passphrase="12345678")

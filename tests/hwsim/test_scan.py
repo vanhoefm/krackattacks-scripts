@@ -13,13 +13,17 @@ import subprocess
 import hostapd
 from wpasupplicant import WpaSupplicant
 
-def check_scan(dev, params, other_started=False):
+def check_scan(dev, params, other_started=False, test_busy=False):
     if not other_started:
         dev.dump_monitor()
     id = dev.request("SCAN " + params)
     if "FAIL" in id:
         raise Exception("Failed to start scan")
     id = int(id)
+
+    if test_busy:
+        if "FAIL-BUSY" not in dev.request("SCAN"):
+            raise Exception("SCAN command while already scanning not rejected")
 
     if other_started:
         ev = dev.wait_event(["CTRL-EVENT-SCAN-STARTED"])
@@ -39,6 +43,9 @@ def check_scan(dev, params, other_started=False):
         raise Exception("Scan did not start")
     if "id=" + str(id) not in ev:
         raise Exception("Scan id not included in start event")
+    if test_busy:
+        if "FAIL-BUSY" not in dev.request("SCAN"):
+            raise Exception("SCAN command while already scanning not rejected")
 
     ev = dev.wait_event(["CTRL-EVENT-SCAN-RESULTS"])
     if ev is None:
@@ -59,7 +66,7 @@ def test_scan(dev, apdev):
     bssid = apdev[0]['bssid']
 
     logger.info("Full scan")
-    check_scan(dev[0], "use_id=1")
+    check_scan(dev[0], "use_id=1", test_busy=True)
 
     logger.info("Limited channel scan")
     check_scan_retry(dev[0], "freq=2412-2462,5180 use_id=1", bssid)
@@ -357,6 +364,9 @@ def test_scan_hidden(dev, apdev):
     check_scan(dev[0], "scan_id=%d,%d,%d freq=2412 use_id=1" % (id1, id2, id3))
     if "test-scan" not in dev[0].request("SCAN_RESULTS"):
         raise Exception("BSS not found in scan")
+
+    if "FAIL" not in dev[0].request("SCAN scan_id=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17"):
+        raise Exception("Too many scan_id values accepted")
 
 def test_scan_and_bss_entry_removed(dev, apdev):
     """Last scan result and connect work processing on BSS entry update"""

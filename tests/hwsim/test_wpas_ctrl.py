@@ -1135,3 +1135,17 @@ def test_wpas_ctrl_vendor(dev, apdev):
     for cmd in cmds:
         if "FAIL" not in dev[0].request("VENDOR " + cmd):
             raise Exception("Invalid VENDOR command accepted: " + cmd)
+
+def test_wpas_ctrl_mgmt_tx(dev, apdev):
+    """wpa_supplicant ctrl_iface MGMT_TX"""
+    cmds = [ "foo",
+             "00:11:22:33:44:55 foo",
+             "00:11:22:33:44:55 11:22:33:44:55:66",
+             "00:11:22:33:44:55 11:22:33:44:55:66 freq=0 no_cck=0 wait_time=0 action=123",
+             "00:11:22:33:44:55 11:22:33:44:55:66 action=12qq" ]
+    for cmd in cmds:
+        if "FAIL" not in dev[0].request("MGMT_TX " + cmd):
+            raise Exception("Invalid MGMT_TX command accepted: " + cmd)
+
+    if "OK" not in dev[0].request("MGMT_TX_DONE"):
+        raise Exception("MGMT_TX_DONE failed")

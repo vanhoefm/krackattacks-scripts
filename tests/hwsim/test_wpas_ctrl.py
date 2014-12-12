@@ -1154,3 +1154,12 @@ def test_wpas_ctrl_driver_event(dev, apdev):
     """wpa_supplicant ctrl_iface DRIVER_EVENT"""
     if "FAIL" not in dev[0].request("DRIVER_EVENT foo"):
         raise Exception("Invalid DRIVER_EVENT accepted")
+
+def test_wpas_ctrl_eapol_rx(dev, apdev):
+    """wpa_supplicant ctrl_iface EAPOL_RX"""
+    cmds = [ "foo",
+             "00:11:22:33:44:55 123",
+             "00:11:22:33:44:55 12qq" ]
+    for cmd in cmds:
+        if "FAIL" not in dev[0].request("EAPOL_RX " + cmd):
+            raise Exception("Invalid EAPOL_RX command accepted: " + cmd)

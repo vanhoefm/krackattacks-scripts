@@ -1197,3 +1197,51 @@ def test_wpas_ctrl_data_test(dev, apdev):
 
     if "OK" not in dev[0].request("DATA_TEST_FRAME 00112233445566778899aabbccdd"):
         raise Exception("DATA_TEST_FRAME failed")
+
+def test_wpas_ctrl_vendor_elem(dev, apdev):
+    """wpa_supplicant ctrl_iface VENDOR_ELEM"""
+    if "OK" not in dev[0].request("VENDOR_ELEM_ADD 1 "):
+        raise Exception("VENDOR_ELEM_ADD failed")
+    cmds = [ "-1 ",
+             "13 ",
+             "1",
+             "1 123",
+             "1 12qq34" ]
+    for cmd in cmds:
+        if "FAIL" not in dev[0].request("VENDOR_ELEM_ADD " + cmd):
+            raise Exception("Invalid VENDOR_ELEM_ADD command accepted: " + cmd)
+
+    cmds = [ "-1 ",
+             "13 " ]
+    for cmd in cmds:
+        if "FAIL" not in dev[0].request("VENDOR_ELEM_GET " + cmd):
+            raise Exception("Invalid VENDOR_ELEM_GET command accepted: " + cmd)
+
+    dev[0].request("VENDOR_ELEM_REMOVE 1 *")
+    cmds = [ "-1 ",
+             "13 ",
+             "1",
+             "1",
+             "1 123",
+             "1 12qq34",
+             "1 12",
+             "1 0000" ]
+    for cmd in cmds:
+        if "FAIL" not in dev[0].request("VENDOR_ELEM_REMOVE " + cmd):
+            raise Exception("Invalid VENDOR_ELEM_REMOVE command accepted: " + cmd)
+
+    dev[0].request("VENDOR_ELEM_ADD 1 000100")
+    if "OK" not in dev[0].request("VENDOR_ELEM_REMOVE 1 "):
+        raise Exception("VENDOR_ELEM_REMOVE failed")
+    cmds = [ "-1 ",
+             "13 ",
+             "1",
+             "1 123",
+             "1 12qq34",
+             "1 12",
+             "1 0000" ]
+    for cmd in cmds:
+        if "FAIL" not in dev[0].request("VENDOR_ELEM_REMOVE " + cmd):
+            raise Exception("Invalid VENDOR_ELEM_REMOVE command accepted: " + cmd)
+    if "OK" not in dev[0].request("VENDOR_ELEM_REMOVE 1 000100"):
+        raise Exception("VENDOR_ELEM_REMOVE failed")

@@ -453,3 +453,41 @@ def test_scan_and_bss_entry_removed(dev, apdev):
     ev = wpas.wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
     if ev is None:
         raise Exception("No connection (connect)")
+
+def test_scan_reqs_with_non_scan_radio_work(dev, apdev):
+    """SCAN commands while non-scan radio_work is in progress"""
+    id = dev[0].request("RADIO_WORK add test-work-a")
+    ev = dev[0].wait_event(["EXT-RADIO-WORK-START"])
+    if ev is None:
+        raise Exception("Timeout while waiting radio work to start")
+
+    if "OK" not in dev[0].request("SCAN"):
+        raise Exception("SCAN failed")
+    if "FAIL-BUSY" not in dev[0].request("SCAN"):
+        raise Exception("SCAN accepted while one is already pending")
+    if "FAIL-BUSY" not in dev[0].request("SCAN"):
+        raise Exception("SCAN accepted while one is already pending")
+
+    res = dev[0].request("RADIO_WORK show").splitlines()
+    count = 0
+    for l in res:
+        if "scan" in l:
+            count += 1
+    if count != 1:
+        logger.info(res)
+        raise Exception("Unexpected number of scan radio work items")
+
+    dev[0].dump_monitor()
+    dev[0].request("RADIO_WORK done " + id)
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-STARTED"], timeout=5)
+    if ev is None:
+        raise Exception("Scan did not start")
+    if "FAIL-BUSY" not in dev[0].request("SCAN"):
+        raise Exception("SCAN accepted while one is already in progress")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], timeout=10)
+    if ev is None:
+        print "Scan did not complete"
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-STARTED"], timeout=0.2)
+    if ev is not None:
+        raise Exception("Unexpected scan started")

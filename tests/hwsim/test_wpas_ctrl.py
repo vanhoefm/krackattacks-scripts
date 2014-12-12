@@ -1163,3 +1163,37 @@ def test_wpas_ctrl_eapol_rx(dev, apdev):
     for cmd in cmds:
         if "FAIL" not in dev[0].request("EAPOL_RX " + cmd):
             raise Exception("Invalid EAPOL_RX command accepted: " + cmd)
+
+def test_wpas_ctrl_data_test(dev, apdev):
+    """wpa_supplicant ctrl_iface DATA_TEST"""
+    dev[0].request("DATA_TEST_CONFIG 0")
+    if "FAIL" not in dev[0].request("DATA_TEST_TX 00:11:22:33:44:55 00:11:22:33:44:55 0"):
+        raise Exception("DATA_TEST_TX accepted when not in test mode")
+
+    try:
+        if "OK" not in dev[0].request("DATA_TEST_CONFIG 1"):
+            raise Exception("DATA_TEST_CONFIG failed")
+        if "OK" not in dev[0].request("DATA_TEST_CONFIG 1"):
+            raise Exception("DATA_TEST_CONFIG failed")
+        cmds = [ "foo",
+                 "00:11:22:33:44:55 foo",
+                 "00:11:22:33:44:55 00:11:22:33:44:55 -1",
+                 "00:11:22:33:44:55 00:11:22:33:44:55 256" ]
+        for cmd in cmds:
+            if "FAIL" not in dev[0].request("DATA_TEST_TX " + cmd):
+                raise Exception("Invalid DATA_TEST_TX command accepted: " + cmd)
+        if "OK" not in dev[0].request("DATA_TEST_TX 00:11:22:33:44:55 00:11:22:33:44:55 0"):
+            raise Exception("DATA_TEST_TX failed")
+    finally:
+        dev[0].request("DATA_TEST_CONFIG 0")
+
+    cmds = [ "",
+             "00",
+             "00112233445566778899aabbccdde",
+             "00112233445566778899aabbccdq" ]
+    for cmd in cmds:
+        if "FAIL" not in dev[0].request("DATA_TEST_FRAME " + cmd):
+            raise Exception("Invalid DATA_TEST_FRAME command accepted: " + cmd)
+
+    if "OK" not in dev[0].request("DATA_TEST_FRAME 00112233445566778899aabbccdd"):
+        raise Exception("DATA_TEST_FRAME failed")

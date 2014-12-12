@@ -1044,6 +1044,14 @@ const char * wpa_key_mgmt_txt(int key_mgmt, int proto)
 	case WPA_KEY_MGMT_PSK_SHA256:
 		return "WPA2-PSK-SHA256";
 #endif /* CONFIG_IEEE80211W */
+	case WPA_KEY_MGMT_WPS:
+		return "WPS";
+	case WPA_KEY_MGMT_SAE:
+		return "SAE";
+	case WPA_KEY_MGMT_FT_SAE:
+		return "FT-SAE";
+	case WPA_KEY_MGMT_OSEN:
+		return "OSEN";
 	case WPA_KEY_MGMT_IEEE8021X_SUITE_B:
 		return "WPA2-EAP-SUITE-B";
 	default:

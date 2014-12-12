@@ -1149,3 +1149,8 @@ def test_wpas_ctrl_mgmt_tx(dev, apdev):
 
     if "OK" not in dev[0].request("MGMT_TX_DONE"):
         raise Exception("MGMT_TX_DONE failed")
+
+def test_wpas_ctrl_driver_event(dev, apdev):
+    """wpa_supplicant ctrl_iface DRIVER_EVENT"""
+    if "FAIL" not in dev[0].request("DRIVER_EVENT foo"):
+        raise Exception("Invalid DRIVER_EVENT accepted")

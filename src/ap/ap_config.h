@@ -549,6 +549,8 @@ struct hostapd_bss_config {
 
 #define MESH_ENABLED BIT(0)
 	int mesh;
+
+	int radio_measurements;
 };
 
 

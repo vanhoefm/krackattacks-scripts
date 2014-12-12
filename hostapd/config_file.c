@@ -3129,6 +3129,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		pos++;
 		WPA_PUT_LE16(&bss->bss_load_test[3], atoi(pos));
 		bss->bss_load_test_set = 1;
+	} else if (os_strcmp(buf, "radio_measurements") == 0) {
+		bss->radio_measurements = atoi(pos);
 #endif /* CONFIG_TESTING_OPTIONS */
 	} else if (os_strcmp(buf, "vendor_elements") == 0) {
 		struct wpabuf *elems;

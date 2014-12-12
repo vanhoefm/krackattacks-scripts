@@ -199,6 +199,9 @@ u16 hostapd_own_capab_info(struct hostapd_data *hapd, struct sta_info *sta,
 	    (hapd->iconf->spectrum_mgmt_required || dfs))
 		capab |= WLAN_CAPABILITY_SPECTRUM_MGMT;
 
+	if (hapd->conf->radio_measurements)
+		capab |= IEEE80211_CAP_RRM;
+
 	return capab;
 }
 

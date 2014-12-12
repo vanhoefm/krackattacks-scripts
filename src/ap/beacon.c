@@ -32,6 +32,24 @@
 
 #ifdef NEED_AP_MLME
 
+static u8 * hostapd_eid_rm_enabled_capab(struct hostapd_data *hapd, u8 *eid,
+					 size_t len)
+{
+	if (!hapd->conf->radio_measurements || len < 2 + 4)
+		return eid;
+
+	*eid++ = WLAN_EID_RRM_ENABLED_CAPABILITIES;
+	*eid++ = 5;
+	*eid++ = (hapd->conf->radio_measurements & BIT(0)) ?
+		WLAN_RRM_CAPS_NEIGHBOR_REPORT : 0x00;
+	*eid++ = 0x00;
+	*eid++ = 0x00;
+	*eid++ = 0x00;
+	*eid++ = 0x00;
+	return eid;
+}
+
+
 static u8 * hostapd_eid_bss_load(struct hostapd_data *hapd, u8 *eid, size_t len)
 {
 	if (len < 2 + 5)
@@ -408,6 +426,8 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 	pos = hostapd_eid_wpa(hapd, pos, epos - pos);
 
 	pos = hostapd_eid_bss_load(hapd, pos, epos - pos);
+
+	pos = hostapd_eid_rm_enabled_capab(hapd, pos, epos - pos);
 
 #ifdef CONFIG_IEEE80211N
 	pos = hostapd_eid_ht_capabilities(hapd, pos);
@@ -818,6 +838,10 @@ int ieee802_11_build_ap_params(struct hostapd_data *hapd,
 	/* RSN, MDIE, WPA */
 	tailpos = hostapd_eid_wpa(hapd, tailpos, tail + BEACON_TAIL_BUF_SIZE -
 				  tailpos);
+
+	tailpos = hostapd_eid_rm_enabled_capab(hapd, tailpos,
+					       tail + BEACON_TAIL_BUF_SIZE -
+					       tailpos);
 
 	tailpos = hostapd_eid_bss_load(hapd, tailpos,
 				       tail + BEACON_TAIL_BUF_SIZE - tailpos);

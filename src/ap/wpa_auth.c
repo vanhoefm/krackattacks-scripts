@@ -2118,8 +2118,10 @@ SM_STATE(WPA_PTK, PTKINITNEGOTIATING)
 	if (sm->wpa == WPA_VERSION_WPA &&
 	    (sm->wpa_auth->conf.wpa & WPA_PROTO_RSN) &&
 	    wpa_ie_len > wpa_ie[1] + 2 && wpa_ie[0] == WLAN_EID_RSN) {
-		/* WPA-only STA, remove RSN IE */
+		/* WPA-only STA, remove RSN IE and possible MDIE */
 		wpa_ie = wpa_ie + wpa_ie[1] + 2;
+		if (wpa_ie[0] == WLAN_EID_MOBILITY_DOMAIN)
+			wpa_ie = wpa_ie + wpa_ie[1] + 2;
 		wpa_ie_len = wpa_ie[1] + 2;
 	}
 	wpa_auth_logger(sm->wpa_auth, sm->addr, LOGGER_DEBUG,

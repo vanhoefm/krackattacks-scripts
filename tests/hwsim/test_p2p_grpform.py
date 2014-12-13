@@ -874,3 +874,23 @@ def test_invalid_p2p_connect_command(dev):
 
     if "FAIL-CHANNEL-UNSUPPORTED" not in dev[0].request("P2P_CONNECT 00:11:22:33:44:55 pin freq=3000"):
         raise Exception("Unsupported channel not reported")
+
+def test_p2p_unauthorize(dev):
+    """P2P_UNAUTHORIZE to unauthorize a peer"""
+    if "FAIL" not in dev[0].request("P2P_UNAUTHORIZE foo"):
+        raise Exception("Invalid P2P_UNAUTHORIZE accepted")
+    if "FAIL" not in dev[0].request("P2P_UNAUTHORIZE 00:11:22:33:44:55"):
+        raise Exception("P2P_UNAUTHORIZE for unknown peer accepted")
+
+    addr0 = dev[0].p2p_dev_addr()
+    addr1 = dev[1].p2p_dev_addr()
+    dev[1].p2p_listen()
+    pin = dev[0].wps_read_pin()
+    dev[0].p2p_go_neg_auth(addr1, pin, "display")
+    dev[0].p2p_listen()
+    if "OK" not in dev[0].request("P2P_UNAUTHORIZE " + addr1):
+        raise Exception("P2P_UNAUTHORIZE failed")
+    dev[1].p2p_go_neg_init(addr0, pin, "keypad", timeout=0)
+    ev = dev[0].wait_global_event(["P2P-GO-NEG-REQUEST"], timeout=10)
+    if ev is None:
+        raise Exception("No GO Negotiation Request RX reported")

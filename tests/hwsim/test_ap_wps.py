@@ -1116,6 +1116,18 @@ def test_ap_wps_er_config_ap(dev, apdev):
     dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"])
     dev[0].connect(ssid, psk="1234567890", scan_freq="2412")
 
+    logger.info("WPS ER restart")
+    dev[0].request("WPS_ER_START")
+    ev = dev[0].wait_event(["WPS-ER-AP-ADD"], timeout=15)
+    if ev is None:
+        raise Exception("AP discovery timed out on ER restart")
+    if ap_uuid not in ev:
+        raise Exception("Expected AP UUID not found on ER restart")
+    if "OK" not in dev[0].request("WPS_ER_STOP"):
+        raise Exception("WPS_ER_STOP failed")
+    if "OK" not in dev[0].request("WPS_ER_STOP"):
+        raise Exception("WPS_ER_STOP failed")
+
 def test_ap_wps_fragmentation(dev, apdev):
     """WPS with fragmentation in EAP-WSC and mixed mode WPA+WPA2"""
     ssid = "test-wps-fragmentation"

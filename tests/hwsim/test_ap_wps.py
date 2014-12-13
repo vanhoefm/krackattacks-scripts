@@ -996,12 +996,13 @@ def test_ap_wps_er_add_enrollee_pbc(dev, apdev):
     if ap_uuid not in ev:
         raise Exception("Expected AP UUID not found")
 
-    logger.info("Use learned network configuration on ER")
-    dev[0].request("WPS_ER_SET_CONFIG " + ap_uuid + " 0")
+    enrollee = dev[1].p2p_interface_addr()
+
+    if "FAIL-UNKNOWN-UUID" not in dev[0].request("WPS_ER_PBC " + enrollee):
+        raise Exception("Unknown UUID not reported")
 
     logger.info("Add Enrollee using ER and PBC")
     dev[0].dump_monitor()
-    enrollee = dev[1].p2p_interface_addr()
     dev[1].dump_monitor()
     dev[1].request("WPS_PBC")
 
@@ -1013,7 +1014,12 @@ def test_ap_wps_er_add_enrollee_pbc(dev, apdev):
             break
         if i == 1:
             raise Exception("Expected Enrollee not found")
-    dev[0].request("WPS_ER_PBC " + enrollee)
+    if "FAIL-NO-AP-SETTINGS" not in dev[0].request("WPS_ER_PBC " + enrollee):
+        raise Exception("Unknown UUID not reported")
+    logger.info("Use learned network configuration on ER")
+    dev[0].request("WPS_ER_SET_CONFIG " + ap_uuid + " 0")
+    if "OK" not in dev[0].request("WPS_ER_PBC " + enrollee):
+        raise Exception("WPS_ER_PBC failed")
 
     ev = dev[1].wait_event(["WPS-SUCCESS"], timeout=15)
     if ev is None:
@@ -1026,9 +1032,58 @@ def test_ap_wps_er_add_enrollee_pbc(dev, apdev):
         raise Exception("WPS ER did not report success")
     hwsim_utils.test_connectivity_sta(dev[0], dev[1])
 
+def test_ap_wps_er_pbc_overlap(dev, apdev):
+    """WPS ER connected to AP and PBC session overlap"""
+    ssid = "wps-er-add-enrollee-pbc"
+    ap_pin = "12345670"
+    ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                     "wpa_passphrase": "12345678", "wpa": "2",
+                     "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+                     "device_name": "Wireless AP", "manufacturer": "Company",
+                     "model_name": "WAP", "model_number": "123",
+                     "serial_number": "12345", "device_type": "6-0050F204-1",
+                     "os_version": "01020300",
+                     "config_methods": "label push_button",
+                     "ap_pin": ap_pin, "uuid": ap_uuid, "upnp_iface": "lo"})
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq=2412)
+    dev[0].dump_monitor()
+    dev[0].wps_reg(apdev[0]['bssid'], ap_pin)
+
+    dev[0].dump_monitor()
+    dev[0].request("WPS_ER_START ifname=lo")
+
+    ev = dev[0].wait_event(["WPS-ER-AP-ADD"], timeout=15)
+    if ev is None:
+        raise Exception("AP discovery timed out")
+    if ap_uuid not in ev:
+        raise Exception("Expected AP UUID not found")
+
     # verify BSSID selection of the AP instead of UUID
     if "FAIL" in dev[0].request("WPS_ER_SET_CONFIG " + apdev[0]['bssid'] + " 0"):
         raise Exception("Could not select AP based on BSSID")
+
+    dev[1].scan_for_bss(apdev[0]['bssid'], freq="2412")
+    dev[2].scan_for_bss(apdev[0]['bssid'], freq="2412")
+    dev[1].request("WPS_PBC " + apdev[0]['bssid'])
+    dev[2].request("WPS_PBC " + apdev[0]['bssid'])
+    ev = dev[1].wait_event(["CTRL-EVENT-SCAN-RESULTS"], timeout=10)
+    if ev is None:
+        raise Exception("PBC scan failed")
+    ev = dev[2].wait_event(["CTRL-EVENT-SCAN-RESULTS"], timeout=10)
+    if ev is None:
+        raise Exception("PBC scan failed")
+    for i in range(0, 2):
+        ev = dev[0].wait_event(["WPS-ER-ENROLLEE-ADD"], timeout=15)
+        if ev is None:
+            raise Exception("Enrollee discovery timed out")
+    if dev[0].request("WPS_ER_PBC " + ap_uuid) != "FAIL-PBC-OVERLAP\n":
+        raise Exception("PBC overlap not reported")
+    dev[1].request("WPS_CANCEL")
+    dev[2].request("WPS_CANCEL")
+    if dev[0].request("WPS_ER_PBC foo") != "FAIL\n":
+        raise Exception("Invalid WPS_ER_PBC accepted")
 
 def test_ap_wps_er_v10_add_enrollee_pin(dev, apdev):
     """WPS v1.0 ER connected to AP and adding a new enrollee using PIN"""

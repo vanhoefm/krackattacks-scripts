@@ -42,6 +42,13 @@ def test_rfkill_open(dev, apdev):
         if ev is None:
             raise Exception("Missing disconnection event on rfkill block")
 
+        if "FAIL" not in dev[0].request("REASSOCIATE"):
+            raise Exception("REASSOCIATE accepted while disabled")
+        if "FAIL" not in dev[0].request("REATTACH"):
+            raise Exception("REATTACH accepted while disabled")
+        if "FAIL" not in dev[0].request("RECONNECT"):
+            raise Exception("RECONNECT accepted while disabled")
+
         logger.info("rfkill unblock")
         subprocess.call(['sudo', 'rfkill', 'unblock', id])
         ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)

@@ -1275,3 +1275,23 @@ def test_wpas_ctrl_vendor_elem(dev, apdev):
             raise Exception("Invalid VENDOR_ELEM_REMOVE command accepted: " + cmd)
     if "OK" not in dev[0].request("VENDOR_ELEM_REMOVE 1 000100"):
         raise Exception("VENDOR_ELEM_REMOVE failed")
+
+def test_wpas_ctrl_misc(dev, apdev):
+    """wpa_supplicant ctrl_iface and miscellaneous commands"""
+    if "OK" not in dev[0].request("RELOG"):
+        raise Exception("RELOG failed")
+    if dev[0].request("IFNAME") != dev[0].ifname:
+        raise Exception("IFNAME returned unexpected response")
+    if "FAIL" not in dev[0].request("REATTACH"):
+        raise Exception("REATTACH accepted while disabled")
+    if "OK" not in dev[2].request("RECONFIGURE"):
+        raise Exception("RECONFIGURE failed")
+    if "FAIL" in dev[0].request("INTERFACE_LIST"):
+        raise Exception("INTERFACE_LIST failed")
+    if "UNKNOWN COMMAND" not in dev[0].request("FOO"):
+        raise Exception("Unknown command accepted")
+
+    if "FAIL" not in dev[0].global_request("INTERFACE_REMOVE foo"):
+        raise Exception("Invalid INTERFACE_REMOVE accepted")
+    if "FAIL" not in dev[0].global_request("SET foo"):
+        raise Exception("Invalid global SET accepted")

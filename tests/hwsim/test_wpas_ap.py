@@ -238,3 +238,43 @@ def test_wpas_ap_wps(dev):
         raise Exception("Invalid WPS_AP_PIN command not rejected")
     if "FAIL" not in dev[0].request("WPS_AP_PIN set"):
         raise Exception("Invalid WPS_AP_PIN command not rejected")
+
+def test_wpas_ap_wps_pbc_overlap(dev):
+    """wpa_supplicant AP mode - WPS operations with PBC overlap"""
+    id = dev[0].add_network()
+    dev[0].set_network(id, "mode", "2")
+    dev[0].set_network_quoted(id, "ssid", "wpas-ap-wps")
+    dev[0].set_network_quoted(id, "psk", "1234567890")
+    dev[0].set_network(id, "frequency", "2412")
+    dev[0].set_network(id, "scan_freq", "2412")
+    dev[0].select_network(id)
+    wait_ap_ready(dev[0])
+    bssid = dev[0].p2p_interface_addr()
+
+    dev[1].scan_for_bss(bssid, freq="2412")
+    dev[1].dump_monitor()
+    dev[2].scan_for_bss(bssid, freq="2412")
+    dev[2].dump_monitor()
+    dev[0].request("WPS_PBC")
+    dev[1].request("WPS_PBC " + bssid)
+    dev[2].request("WPS_PBC " + bssid)
+
+    ev = dev[1].wait_event(["WPS-M2D"], timeout=15)
+    if ev is None:
+        raise Exception("PBC session overlap not detected (dev1)")
+    if "config_error=12" not in ev:
+        raise Exception("PBC session overlap not correctly reported (dev1)")
+
+    ev = dev[2].wait_event(["WPS-M2D"], timeout=15)
+    if ev is None:
+        raise Exception("PBC session overlap not detected (dev2)")
+    if "config_error=12" not in ev:
+        raise Exception("PBC session overlap not correctly reported (dev2)")
+
+    if "FAIL-PBC-OVERLAP" not in dev[0].request("WPS_PBC"):
+        raise Exception("WPS_PBC(AP) accepted during overlap")
+    if "FAIL-PBC-OVERLAP" not in dev[0].request("WPS_PBC any"):
+        raise Exception("WPS_PBC(AP) accepted during overlap")
+    dev[0].request("WPS_CANCEL")
+    dev[1].request("WPS_CANCEL")
+    dev[2].request("WPS_CANCEL")

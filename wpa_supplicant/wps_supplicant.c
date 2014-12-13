@@ -1809,13 +1809,12 @@ int wpas_wps_er_start(struct wpa_supplicant *wpa_s, const char *filter)
 }
 
 
-int wpas_wps_er_stop(struct wpa_supplicant *wpa_s)
+void wpas_wps_er_stop(struct wpa_supplicant *wpa_s)
 {
 #ifdef CONFIG_WPS_ER
 	wps_er_deinit(wpa_s->wps_er, NULL, NULL);
 	wpa_s->wps_er = NULL;
 #endif /* CONFIG_WPS_ER */
-	return 0;
 }
 
 

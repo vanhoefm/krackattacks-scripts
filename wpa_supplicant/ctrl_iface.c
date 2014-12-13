@@ -7135,8 +7135,7 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		if (wpas_wps_er_start(wpa_s, buf + 13))
 			reply_len = -1;
 	} else if (os_strcmp(buf, "WPS_ER_STOP") == 0) {
-		if (wpas_wps_er_stop(wpa_s))
-			reply_len = -1;
+		wpas_wps_er_stop(wpa_s);
 	} else if (os_strncmp(buf, "WPS_ER_PIN ", 11) == 0) {
 		if (wpa_supplicant_ctrl_iface_wps_er_pin(wpa_s, buf + 11))
 			reply_len = -1;

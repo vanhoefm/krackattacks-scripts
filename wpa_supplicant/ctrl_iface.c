@@ -4132,7 +4132,7 @@ static int wpa_supplicant_ctrl_iface_bss_expire_count(
 }
 
 
-static int wpa_supplicant_ctrl_iface_bss_flush(
+static void wpa_supplicant_ctrl_iface_bss_flush(
 	struct wpa_supplicant *wpa_s, char *cmd)
 {
 	int flush_age = atoi(cmd);
@@ -4141,7 +4141,6 @@ static int wpa_supplicant_ctrl_iface_bss_flush(
 		wpa_bss_flush(wpa_s);
 	else
 		wpa_bss_flush_by_age(wpa_s, flush_age);
-	return 0;
 }
 
 
@@ -7486,8 +7485,7 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 							       buf + 17))
 			reply_len = -1;
 	} else if (os_strncmp(buf, "BSS_FLUSH ", 10) == 0) {
-		if (wpa_supplicant_ctrl_iface_bss_flush(wpa_s, buf + 10))
-			reply_len = -1;
+		wpa_supplicant_ctrl_iface_bss_flush(wpa_s, buf + 10);
 #ifdef CONFIG_TDLS
 	} else if (os_strncmp(buf, "TDLS_DISCOVER ", 14) == 0) {
 		if (wpa_supplicant_ctrl_iface_tdls_discover(wpa_s, buf + 14))

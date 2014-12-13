@@ -7021,13 +7021,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strcmp(buf, "MIB") == 0) {
 		reply_len = wpa_sm_get_mib(wpa_s->wpa, reply, reply_size);
 		if (reply_len >= 0) {
-			int res;
-			res = eapol_sm_get_mib(wpa_s->eapol, reply + reply_len,
-					       reply_size - reply_len);
-			if (res < 0)
-				reply_len = -1;
-			else
-				reply_len += res;
+			reply_len += eapol_sm_get_mib(wpa_s->eapol,
+						      reply + reply_len,
+						      reply_size - reply_len);
 		}
 	} else if (os_strncmp(buf, "STATUS", 6) == 0) {
 		reply_len = wpa_supplicant_ctrl_iface_status(

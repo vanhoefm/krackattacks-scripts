@@ -5669,14 +5669,6 @@ static int hs20_icon_request(struct wpa_supplicant *wpa_s, char *cmd)
 #endif /* CONFIG_HS20 */
 
 
-static int wpa_supplicant_ctrl_iface_sta_autoconnect(
-	struct wpa_supplicant *wpa_s, char *cmd)
-{
-	wpa_s->auto_reconnect_disabled = atoi(cmd) == 0 ? 1 : 0;
-	return 0;
-}
-
-
 #ifdef CONFIG_AUTOSCAN
 
 static int wpa_supplicant_ctrl_iface_autoscan(struct wpa_supplicant *wpa_s,
@@ -7475,8 +7467,7 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		if (wpa_supplicant_ctrl_iface_roam(wpa_s, buf + 5))
 			reply_len = -1;
 	} else if (os_strncmp(buf, "STA_AUTOCONNECT ", 16) == 0) {
-		if (wpa_supplicant_ctrl_iface_sta_autoconnect(wpa_s, buf + 16))
-			reply_len = -1;
+		wpa_s->auto_reconnect_disabled = atoi(buf + 16) == 0;
 	} else if (os_strncmp(buf, "BSS_EXPIRE_AGE ", 15) == 0) {
 		if (wpa_supplicant_ctrl_iface_bss_expire_age(wpa_s, buf + 15))
 			reply_len = -1;

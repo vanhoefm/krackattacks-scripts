@@ -91,7 +91,6 @@ class WpaSupplicant:
         res = self.request("FLUSH")
         if not "OK" in res:
             logger.info("FLUSH to " + self.ifname + " failed: " + res)
-        self.request("WPS_ER_STOP")
         self.request("SET pmf 0")
         self.request("SET p2p_add_cli_chan 0")
         self.request("SET p2p_no_go_freq ")

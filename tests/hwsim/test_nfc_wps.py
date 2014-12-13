@@ -411,6 +411,12 @@ def start_ap_er(er, ap, ssid):
 
 def test_nfc_wps_er_pw_token(dev, apdev):
     """WPS NFC password token from Enrollee to ER"""
+    try:
+        _test_nfc_wps_er_pw_token(dev, apdev)
+    finally:
+        dev[0].request("WPS_ER_STOP")
+
+def _test_nfc_wps_er_pw_token(dev, apdev):
     ssid = "wps-nfc-er-pw-token"
     start_ap_er(dev[0], apdev[0], ssid)
     hapd = hostapd.Hostapd(apdev[0]['ifname'])
@@ -436,6 +442,12 @@ def test_nfc_wps_er_pw_token(dev, apdev):
 
 def test_nfc_wps_er_config_token(dev, apdev):
     """WPS NFC configuration token from ER to Enrollee"""
+    try:
+        _test_nfc_wps_er_config_token(dev, apdev)
+    finally:
+        dev[0].request("WPS_ER_STOP")
+
+def _test_nfc_wps_er_config_token(dev, apdev):
     ssid = "wps-nfc-er-config-token"
     start_ap_er(dev[0], apdev[0], ssid)
     hapd = hostapd.Hostapd(apdev[0]['ifname'])
@@ -457,6 +469,12 @@ def test_nfc_wps_er_config_token(dev, apdev):
 
 def test_nfc_wps_er_handover(dev, apdev):
     """WPS NFC connection handover between Enrollee and ER"""
+    try:
+        _test_nfc_wps_er_handover(dev, apdev)
+    finally:
+        dev[0].request("WPS_ER_STOP")
+
+def _test_nfc_wps_er_handover(dev, apdev):
     ssid = "wps-nfc-er-handover"
     start_ap_er(dev[0], apdev[0], ssid)
     hapd = hostapd.Hostapd(apdev[0]['ifname'])
@@ -481,6 +499,12 @@ def test_nfc_wps_er_handover(dev, apdev):
 
 def test_nfc_wps_er_handover_pk_hash_mismatch_sta(dev, apdev):
     """WPS NFC connection handover with invalid pkhash from station to ER (negative)"""
+    try:
+        _test_nfc_wps_er_handover_pk_hash_mismatch_sta(dev, apdev)
+    finally:
+        dev[0].request("WPS_ER_STOP")
+
+def _test_nfc_wps_er_handover_pk_hash_mismatch_sta(dev, apdev):
     ssid = "wps-nfc-er-handover-pkhash-sta"
     start_ap_er(dev[0], apdev[0], ssid)
     hapd = hostapd.Hostapd(apdev[0]['ifname'])
@@ -509,6 +533,12 @@ def test_nfc_wps_er_handover_pk_hash_mismatch_sta(dev, apdev):
 
 def test_nfc_wps_er_handover_pk_hash_mismatch_er(dev, apdev):
     """WPS NFC connection handover with invalid pkhash from ER to station (negative)"""
+    try:
+        _test_nfc_wps_er_handover_pk_hash_mismatch_er(dev, apdev)
+    finally:
+        dev[0].request("WPS_ER_STOP")
+
+def _test_nfc_wps_er_handover_pk_hash_mismatch_er(dev, apdev):
     ssid = "wps-nfc-er-handover-pkhash-er"
     start_ap_er(dev[0], apdev[0], ssid)
     hapd = hostapd.Hostapd(apdev[0]['ifname'])

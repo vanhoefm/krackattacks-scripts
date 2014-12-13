@@ -839,6 +839,12 @@ def test_ap_wps_cancel(dev, apdev):
 
 def test_ap_wps_er_add_enrollee(dev, apdev):
     """WPS ER configuring AP and adding a new enrollee using PIN"""
+    try:
+        _test_ap_wps_er_add_enrollee(dev, apdev)
+    finally:
+        dev[0].request("WPS_ER_STOP")
+
+def _test_ap_wps_er_add_enrollee(dev, apdev):
     ssid = "wps-er-add-enrollee"
     ap_pin = "12345670"
     ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
@@ -967,6 +973,12 @@ def test_ap_wps_er_add_enrollee(dev, apdev):
 
 def test_ap_wps_er_add_enrollee_pbc(dev, apdev):
     """WPS ER connected to AP and adding a new enrollee using PBC"""
+    try:
+        _test_ap_wps_er_add_enrollee_pbc(dev, apdev)
+    finally:
+        dev[0].request("WPS_ER_STOP")
+
+def _test_ap_wps_er_add_enrollee_pbc(dev, apdev):
     ssid = "wps-er-add-enrollee-pbc"
     ap_pin = "12345670"
     ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
@@ -1034,6 +1046,12 @@ def test_ap_wps_er_add_enrollee_pbc(dev, apdev):
 
 def test_ap_wps_er_pbc_overlap(dev, apdev):
     """WPS ER connected to AP and PBC session overlap"""
+    try:
+        _test_ap_wps_er_pbc_overlap(dev, apdev)
+    finally:
+        dev[0].request("WPS_ER_STOP")
+
+def _test_ap_wps_er_pbc_overlap(dev, apdev):
     ssid = "wps-er-add-enrollee-pbc"
     ap_pin = "12345670"
     ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
@@ -1087,6 +1105,12 @@ def test_ap_wps_er_pbc_overlap(dev, apdev):
 
 def test_ap_wps_er_v10_add_enrollee_pin(dev, apdev):
     """WPS v1.0 ER connected to AP and adding a new enrollee using PIN"""
+    try:
+        _test_ap_wps_er_v10_add_enrollee_pin(dev, apdev)
+    finally:
+        dev[0].request("WPS_ER_STOP")
+
+def _test_ap_wps_er_v10_add_enrollee_pin(dev, apdev):
     ssid = "wps-er-add-enrollee-pbc"
     ap_pin = "12345670"
     ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
@@ -1137,6 +1161,12 @@ def test_ap_wps_er_v10_add_enrollee_pin(dev, apdev):
 
 def test_ap_wps_er_config_ap(dev, apdev):
     """WPS ER configuring AP over UPnP"""
+    try:
+        _test_ap_wps_er_config_ap(dev, apdev)
+    finally:
+        dev[0].request("WPS_ER_STOP")
+
+def _test_ap_wps_er_config_ap(dev, apdev):
     ssid = "wps-er-ap-config"
     ap_pin = "12345670"
     ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"

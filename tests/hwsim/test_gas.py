@@ -260,6 +260,21 @@ def test_gas_comeback_delay(dev, apdev):
         if ev is None:
             raise Exception("Operation timed out")
 
+def test_gas_stop_fetch_anqp(dev, apdev):
+    """Stop FETCH_ANQP operation"""
+    hapd = start_ap(apdev[0])
+
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412", force_scan=True)
+    hapd.set("ext_mgmt_frame_handling", "1")
+    dev[0].request("FETCH_ANQP")
+    dev[0].request("STOP_FETCH_ANQP")
+    hapd.set("ext_mgmt_frame_handling", "0")
+    ev = dev[0].wait_event(["RX-ANQP", "GAS-QUERY-DONE"], timeout=10)
+    if ev is None:
+        raise Exception("GAS-QUERY-DONE timed out")
+    if "RX-ANQP" in ev:
+        raise Exception("Unexpected ANQP response received")
+
 def test_gas_anqp_get(dev, apdev):
     """GAS/ANQP query for both IEEE 802.11 and Hotspot 2.0 elements"""
     hapd = start_ap(apdev[0])

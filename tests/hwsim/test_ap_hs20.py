@@ -856,6 +856,12 @@ def test_ap_hs20_gas_while_associated(dev, apdev):
 
 def test_ap_hs20_gas_while_associated_with_pmf(dev, apdev):
     """Hotspot 2.0 connection with GAS query while associated and using PMF"""
+    try:
+        _test_ap_hs20_gas_while_associated_with_pmf(dev, apdev)
+    finally:
+        dev[0].request("SET pmf 0")
+
+def _test_ap_hs20_gas_while_associated_with_pmf(dev, apdev):
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['hessid'] = bssid
@@ -1607,6 +1613,12 @@ def test_ap_hs20_min_bandwidth_no_wan_metrics(dev, apdev):
 
 def test_ap_hs20_deauth_req_ess(dev, apdev):
     """Hotspot 2.0 connection and deauthentication request for ESS"""
+    try:
+        _test_ap_hs20_deauth_req_ess(dev, apdev)
+    finally:
+        dev[0].request("SET pmf 0")
+
+def _test_ap_hs20_deauth_req_ess(dev, apdev):
     dev[0].request("SET pmf 2")
     eap_test(dev[0], apdev[0], "21[3:26]", "TTLS", "user")
     dev[0].dump_monitor()
@@ -1632,6 +1644,12 @@ def test_ap_hs20_deauth_req_ess(dev, apdev):
 
 def test_ap_hs20_deauth_req_bss(dev, apdev):
     """Hotspot 2.0 connection and deauthentication request for BSS"""
+    try:
+        _test_ap_hs20_deauth_req_bss(dev, apdev)
+    finally:
+        dev[0].request("SET pmf 0")
+
+def _test_ap_hs20_deauth_req_bss(dev, apdev):
     dev[0].request("SET pmf 2")
     eap_test(dev[0], apdev[0], "21[3:26]", "TTLS", "user")
     dev[0].dump_monitor()
@@ -1659,6 +1677,12 @@ def test_ap_hs20_deauth_req_bss(dev, apdev):
 
 def test_ap_hs20_deauth_req_from_radius(dev, apdev):
     """Hotspot 2.0 connection and deauthentication request from RADIUS"""
+    try:
+        _test_ap_hs20_deauth_req_from_radius(dev, apdev)
+    finally:
+        dev[0].request("SET pmf 0")
+
+def _test_ap_hs20_deauth_req_from_radius(dev, apdev):
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['nai_realm'] = [ "0,example.com,21[2:4]" ]
@@ -1683,6 +1707,12 @@ def test_ap_hs20_deauth_req_from_radius(dev, apdev):
 
 def test_ap_hs20_remediation_required(dev, apdev):
     """Hotspot 2.0 connection and remediation required from RADIUS"""
+    try:
+        _test_ap_hs20_remediation_required(dev, apdev)
+    finally:
+        dev[0].request("SET pmf 0")
+
+def _test_ap_hs20_remediation_required(dev, apdev):
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['nai_realm'] = [ "0,example.com,21[2:4]" ]
@@ -1703,6 +1733,12 @@ def test_ap_hs20_remediation_required(dev, apdev):
 
 def test_ap_hs20_remediation_required_ctrl(dev, apdev):
     """Hotspot 2.0 connection and subrem from ctrl_iface"""
+    try:
+        _test_ap_hs20_remediation_required_ctrl(dev, apdev)
+    finally:
+        dev[0].request("SET pmf 0")
+
+def _test_ap_hs20_remediation_required_ctrl(dev, apdev):
     bssid = apdev[0]['bssid']
     addr = dev[0].p2p_dev_addr()
     params = hs20_ap_params()
@@ -1738,6 +1774,12 @@ def test_ap_hs20_remediation_required_ctrl(dev, apdev):
 
 def test_ap_hs20_session_info(dev, apdev):
     """Hotspot 2.0 connection and session information from RADIUS"""
+    try:
+        _test_ap_hs20_session_info(dev, apdev)
+    finally:
+        dev[0].request("SET pmf 0")
+
+def _test_ap_hs20_session_info(dev, apdev):
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['nai_realm'] = [ "0,example.com,21[2:4]" ]
@@ -2132,6 +2174,7 @@ def test_ap_hs20_remediation_sql(dev, apdev, params):
 
     finally:
         os.remove(dbfile)
+        dev[0].request("SET pmf 0")
 
 def test_ap_hs20_external_selection(dev, apdev):
     """Hotspot 2.0 connection using external network selection and creation"""

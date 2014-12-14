@@ -464,7 +464,7 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 		else
 			resp = sme_auth_build_sae_confirm(wpa_s);
 		if (resp == NULL) {
-			wpas_connect_work_done(wpa_s);
+			wpas_connection_failed(wpa_s, bss->bssid);
 			return;
 		}
 		params.sae_data = wpabuf_head(resp);

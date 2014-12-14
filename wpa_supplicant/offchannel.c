@@ -30,8 +30,7 @@ wpas_get_tx_interface(struct wpa_supplicant *wpa_s, const u8 *src)
 	 */
 	iface = wpa_s->global->ifaces;
 	while (iface) {
-		if (os_memcmp(wpa_s->pending_action_src,
-			      iface->own_addr, ETH_ALEN) == 0)
+		if (os_memcmp(src, iface->own_addr, ETH_ALEN) == 0)
 			break;
 		iface = iface->next;
 	}
@@ -265,8 +264,7 @@ int offchannel_send_action(struct wpa_supplicant *wpa_s, unsigned int freq,
 		struct wpa_supplicant *iface;
 		int ret;
 
-		iface = wpas_get_tx_interface(wpa_s,
-					      wpa_s->pending_action_src);
+		iface = wpas_get_tx_interface(wpa_s, src);
 		wpa_s->action_tx_wait_time = wait_time;
 
 		ret = wpa_drv_send_action(

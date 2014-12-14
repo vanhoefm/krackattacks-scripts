@@ -2151,10 +2151,20 @@ int ieee802_1x_init(struct hostapd_data *hapd)
 }
 
 
-void ieee802_1x_deinit(struct hostapd_data *hapd)
+void ieee802_1x_erp_flush(struct hostapd_data *hapd)
 {
 	struct eap_server_erp_key *erp;
 
+	while ((erp = dl_list_first(&hapd->erp_keys, struct eap_server_erp_key,
+				    list)) != NULL) {
+		dl_list_del(&erp->list);
+		bin_clear_free(erp, sizeof(*erp));
+	}
+}
+
+
+void ieee802_1x_deinit(struct hostapd_data *hapd)
+{
 	eloop_cancel_timeout(ieee802_1x_rekey, hapd, NULL);
 
 	if (hapd->driver != NULL &&
@@ -2164,11 +2174,7 @@ void ieee802_1x_deinit(struct hostapd_data *hapd)
 	eapol_auth_deinit(hapd->eapol_auth);
 	hapd->eapol_auth = NULL;
 
-	while ((erp = dl_list_first(&hapd->erp_keys, struct eap_server_erp_key,
-				    list)) != NULL) {
-		dl_list_del(&erp->list);
-		bin_clear_free(erp, sizeof(*erp));
-	}
+	ieee802_1x_erp_flush(hapd);
 }
 
 

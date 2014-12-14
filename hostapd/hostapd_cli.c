@@ -1002,6 +1002,13 @@ static int hostapd_cli_cmd_vendor(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+static int hostapd_cli_cmd_erp_flush(struct wpa_ctrl *ctrl, int argc,
+				     char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "ERP_FLUSH");
+}
+
+
 struct hostapd_cli_cmd {
 	const char *cmd;
 	int (*handler)(struct wpa_ctrl *ctrl, int argc, char *argv[]);
@@ -1055,6 +1062,7 @@ static struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	{ "enable", hostapd_cli_cmd_enable },
 	{ "reload", hostapd_cli_cmd_reload },
 	{ "disable", hostapd_cli_cmd_disable },
+	{ "erp_flush", hostapd_cli_cmd_erp_flush },
 	{ NULL, NULL }
 };
 

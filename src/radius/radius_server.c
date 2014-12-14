@@ -1820,13 +1820,29 @@ radius_server_init(struct radius_server_conf *conf)
 
 
 /**
+ * radius_server_erp_flush - Flush all ERP keys
+ * @data: RADIUS server context from radius_server_init()
+ */
+void radius_server_erp_flush(struct radius_server_data *data)
+{
+	struct eap_server_erp_key *erp;
+
+	if (data == NULL)
+		return;
+	while ((erp = dl_list_first(&data->erp_keys, struct eap_server_erp_key,
+				    list)) != NULL) {
+		dl_list_del(&erp->list);
+		bin_clear_free(erp, sizeof(*erp));
+	}
+}
+
+
+/**
  * radius_server_deinit - Deinitialize RADIUS server
  * @data: RADIUS server context from radius_server_init()
  */
 void radius_server_deinit(struct radius_server_data *data)
 {
-	struct eap_server_erp_key *erp;
-
 	if (data == NULL)
 		return;
 
@@ -1856,11 +1872,7 @@ void radius_server_deinit(struct radius_server_data *data)
 		sqlite3_close(data->db);
 #endif /* CONFIG_SQLITE */
 
-	while ((erp = dl_list_first(&data->erp_keys, struct eap_server_erp_key,
-				    list)) != NULL) {
-		dl_list_del(&erp->list);
-		bin_clear_free(erp, sizeof(*erp));
-	}
+	radius_server_erp_flush(data);
 
 	os_free(data);
 }

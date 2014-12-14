@@ -235,6 +235,7 @@ struct radius_server_conf {
 struct radius_server_data *
 radius_server_init(struct radius_server_conf *conf);
 
+void radius_server_erp_flush(struct radius_server_data *data);
 void radius_server_deinit(struct radius_server_data *data);
 
 int radius_server_get_mib(struct radius_server_data *data, char *buf,

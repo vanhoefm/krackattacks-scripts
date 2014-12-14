@@ -2019,7 +2019,11 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 	} else if (os_strncmp(buf, "VENDOR ", 7) == 0) {
 		reply_len = hostapd_ctrl_iface_vendor(hapd, buf + 7, reply,
 						      reply_size);
-
+	} else if (os_strcmp(buf, "ERP_FLUSH") == 0) {
+		ieee802_1x_erp_flush(hapd);
+#ifdef RADIUS_SERVER
+		radius_server_erp_flush(hapd->radius_srv);
+#endif /* RADIUS_SERVER */
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);
 		reply_len = 16;

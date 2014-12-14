@@ -88,23 +88,21 @@ def test_wpas_add_set_remove_support(dev):
     dev[0].set_network(id, "mode", "5")
     dev[0].remove_network(id)
 
-def add_open_mesh_network(dev):
+def add_open_mesh_network(dev, ht_mode=False, start=True):
     id = dev.add_network()
     dev.set_network(id, "mode", "5")
     dev.set_network_quoted(id, "ssid", "wpas-mesh-open")
     dev.set_network(id, "key_mgmt", "NONE")
     dev.set_network(id, "frequency", "2412")
-    dev.mesh_group_add(id)
+    if ht_mode:
+        dev.set_network(id, "mesh_ht_mode", ht_mode)
+    if start:
+        dev.mesh_group_add(id)
     return id
 
 def test_wpas_mesh_group_added(dev):
     """wpa_supplicant MESH group add"""
-    id = dev[0].add_network()
-    dev[0].set_network(id, "mode", "5")
-    dev[0].set_network_quoted(id, "ssid", "wpas-mesh-open")
-    dev[0].set_network(id, "key_mgmt", "NONE")
-    dev[0].set_network(id, "frequency", "2412")
-    dev[0].mesh_group_add(id)
+    add_open_mesh_network(dev[0])
 
     # Check for MESH-GROUP-STARTED event
     check_mesh_group_added(dev[0])
@@ -112,12 +110,7 @@ def test_wpas_mesh_group_added(dev):
 
 def test_wpas_mesh_group_remove(dev):
     """wpa_supplicant MESH group remove"""
-    id = dev[0].add_network()
-    dev[0].set_network(id, "mode", "5")
-    dev[0].set_network_quoted(id, "ssid", "wpas-mesh-open")
-    dev[0].set_network(id, "key_mgmt", "NONE")
-    dev[0].set_network(id, "frequency", "2412")
-    dev[0].mesh_group_add(id)
+    add_open_mesh_network(dev[0])
     # Check for MESH-GROUP-STARTED event
     check_mesh_group_added(dev[0])
     dev[0].mesh_group_remove()
@@ -127,19 +120,8 @@ def test_wpas_mesh_group_remove(dev):
 
 def test_wpas_mesh_peer_connected(dev):
     """wpa_supplicant MESH peer connected"""
-    id = dev[0].add_network()
-    dev[0].set_network(id, "mode", "5")
-    dev[0].set_network_quoted(id, "ssid", "wpas-mesh-open")
-    dev[0].set_network(id, "key_mgmt", "NONE")
-    dev[0].set_network(id, "frequency", "2412")
-    dev[0].mesh_group_add(id)
-
-    id = dev[1].add_network()
-    dev[1].set_network(id, "mode", "5")
-    dev[1].set_network_quoted(id, "ssid", "wpas-mesh-open")
-    dev[1].set_network(id, "key_mgmt", "NONE")
-    dev[1].set_network(id, "frequency", "2412")
-    dev[1].mesh_group_add(id)
+    add_open_mesh_network(dev[0])
+    add_open_mesh_network(dev[1])
 
     # Check for mesh joined
     check_mesh_group_added(dev[0])
@@ -152,19 +134,8 @@ def test_wpas_mesh_peer_connected(dev):
 
 def test_wpas_mesh_peer_disconnected(dev):
     """wpa_supplicant MESH peer disconnected"""
-    id = dev[0].add_network()
-    dev[0].set_network(id, "mode", "5")
-    dev[0].set_network_quoted(id, "ssid", "wpas-mesh-open")
-    dev[0].set_network(id, "key_mgmt", "NONE")
-    dev[0].set_network(id, "frequency", "2412")
-    dev[0].mesh_group_add(id)
-
-    id = dev[1].add_network()
-    dev[1].set_network(id, "mode", "5")
-    dev[1].set_network_quoted(id, "ssid", "wpas-mesh-open")
-    dev[1].set_network(id, "key_mgmt", "NONE")
-    dev[1].set_network(id, "frequency", "2412")
-    dev[1].mesh_group_add(id)
+    add_open_mesh_network(dev[0])
+    add_open_mesh_network(dev[1])
 
     # Check for mesh joined
     check_mesh_group_added(dev[0])
@@ -182,21 +153,8 @@ def test_wpas_mesh_peer_disconnected(dev):
 
 def test_wpas_mesh_mode_scan(dev):
     """wpa_supplicant MESH scan support"""
-    id = dev[0].add_network()
-    dev[0].set_network(id, "mode", "5")
-    dev[0].set_network_quoted(id, "ssid", "wpas-mesh-open")
-    dev[0].set_network(id, "key_mgmt", "NONE")
-    dev[0].set_network(id, "frequency", "2412")
-    dev[0].set_network(id, "mesh_ht_mode", "HT40+")
-    dev[0].mesh_group_add(id)
-
-    id = dev[1].add_network()
-    dev[1].set_network(id, "mode", "5")
-    dev[1].set_network_quoted(id, "ssid", "wpas-mesh-open")
-    dev[1].set_network(id, "key_mgmt", "NONE")
-    dev[1].set_network(id, "frequency", "2412")
-    dev[1].set_network(id, "mesh_ht_mode", "HT40+")
-    dev[1].mesh_group_add(id)
+    add_open_mesh_network(dev[0], ht_mode="HT40+")
+    add_open_mesh_network(dev[1], ht_mode="HT40+")
 
     # Check for mesh joined
     check_mesh_group_added(dev[0])
@@ -214,21 +172,8 @@ def wrap_wpas_mesh_test(test, dev, apdev):
 
 
 def _test_wpas_mesh_open(dev, apdev, test_connectivity):
-    id = dev[0].add_network()
-    dev[0].set_network(id, "mode", "5")
-    dev[0].set_network_quoted(id, "ssid", "wpas-mesh-open")
-    dev[0].set_network(id, "key_mgmt", "NONE")
-    dev[0].set_network(id, "frequency", "2412")
-    dev[0].set_network(id, "mesh_ht_mode", "HT40+")
-    dev[0].mesh_group_add(id)
-
-    id = dev[1].add_network()
-    dev[1].set_network(id, "mode", "5")
-    dev[1].set_network_quoted(id, "ssid", "wpas-mesh-open")
-    dev[1].set_network(id, "key_mgmt", "NONE")
-    dev[1].set_network(id, "frequency", "2412")
-    dev[1].set_network(id, "mesh_ht_mode", "HT40+")
-    dev[1].mesh_group_add(id)
+    add_open_mesh_network(dev[0], ht_mode="HT40+")
+    add_open_mesh_network(dev[1], ht_mode="HT40+")
 
     # Check for mesh joined
     check_mesh_group_added(dev[0])
@@ -248,20 +193,12 @@ def test_wpas_mesh_open(dev, apdev):
 
 
 def _test_wpas_mesh_open_no_auto(dev, apdev, test_connectivity):
-    id = dev[0].add_network()
-    dev[0].set_network(id, "mode", "5")
-    dev[0].set_network_quoted(id, "ssid", "wpas-mesh-open")
-    dev[0].set_network(id, "key_mgmt", "NONE")
-    dev[0].set_network(id, "frequency", "2412")
+    id = add_open_mesh_network(dev[0], start=False)
     dev[0].set_network(id, "dot11MeshMaxRetries", "16")
     dev[0].set_network(id, "dot11MeshRetryTimeout", "255")
     dev[0].mesh_group_add(id)
 
-    id = dev[1].add_network()
-    dev[1].set_network(id, "mode", "5")
-    dev[1].set_network_quoted(id, "ssid", "wpas-mesh-open")
-    dev[1].set_network(id, "key_mgmt", "NONE")
-    dev[1].set_network(id, "frequency", "2412")
+    id = add_open_mesh_network(dev[1], start=False)
     dev[1].set_network(id, "no_auto_peer", "1")
     dev[1].mesh_group_add(id)
 

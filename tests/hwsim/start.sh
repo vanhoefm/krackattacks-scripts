@@ -15,15 +15,35 @@ if [ -z "$LOGDIR" ] ; then
 else
     if [ -e $LOGDIR/alt-wpa_supplicant/wpa_supplicant/wpa_supplicant ]; then
 	WPAS=$LOGDIR/alt-wpa_supplicant/wpa_supplicant/wpa_supplicant
+	# extra code coverage
+	$WPAS > /dev/null 2>&1
+	$WPAS -efoo -Ifoo -mfoo -ofoo -Ofoo -pfoo -Pfoo -h > /dev/null 2>&1
+	$WPAS -bfoo -B -Cfoo -q -W -N -L > /dev/null 2>&1
+	$WPAS -T -v > /dev/null 2>&1
+	$WPAS -u -z > /dev/null 2>&1
     fi
     if [ -e $LOGDIR/alt-hostapd/hostapd/hostapd ]; then
 	HAPD=$LOGDIR/alt-hostapd/hostapd/hostapd
+	# extra code coverage
+	$HAPD > /dev/null 2>&1
+	$HAPD -v > /dev/null 2>&1
+	$HAPD -B -efoo -Pfoo -T -bfoo -h > /dev/null 2>&1
+	$HAPD -ufoo > /dev/null 2>&1
+	$HAPD -u00:11:22:33:44:55 > /dev/null 2>&1
+	$HAPD -gfoo > /dev/null 2>&1
+	$HAPD -Gfoo-not-exists > /dev/null 2>&1
+	$HAPD -z > /dev/null 2>&1
     fi
     if [ -e $LOGDIR/alt-hostapd-as/hostapd/hostapd ]; then
 	HAPD_AS=$LOGDIR/alt-hostapd-as/hostapd/hostapd
     fi
     if [ -e $LOGDIR/alt-hlr_auc_gw/hostapd/hlr_auc_gw ]; then
 	HLR_AUC_GW=$LOGDIR/alt-hlr_auc_gw/hostapd/hlr_auc_gw
+	# extra code coverage
+	$HLR_AUC_GW > /dev/null 2>&1
+	$HLR_AUC_GW -Dfoo -i7 -sfoo -h > /dev/null 2>&1
+	$HLR_AUC_GW -i100 > /dev/null 2>&1
+	$HLR_AUC_GW -z > /dev/null 2>&1
     fi
 fi
 

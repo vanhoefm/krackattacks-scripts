@@ -264,24 +264,22 @@ def test_wpas_mesh_open_no_auto(dev, apdev):
     """wpa_supplicant open MESH network connectivity"""
     return wrap_wpas_mesh_test(_test_wpas_mesh_open_no_auto, dev, apdev)
 
+def add_mesh_secure_net(dev):
+    id = dev.add_network()
+    dev.set_network(id, "mode", "5")
+    dev.set_network_quoted(id, "ssid", "wpas-mesh-sec")
+    dev.set_network(id, "key_mgmt", "SAE")
+    dev.set_network(id, "frequency", "2412")
+    dev.set_network_quoted(id, "psk", "thisismypassphrase!")
+    return id
 
 def _test_wpas_mesh_secure(dev, apdev, test_connectivity):
     dev[0].request("SET sae_groups ")
-    id = dev[0].add_network()
-    dev[0].set_network(id, "mode", "5")
-    dev[0].set_network_quoted(id, "ssid", "wpas-mesh-sec")
-    dev[0].set_network(id, "key_mgmt", "SAE")
-    dev[0].set_network(id, "frequency", "2412")
-    dev[0].set_network_quoted(id, "psk", "thisismypassphrase!")
+    id = add_mesh_secure_net(dev[0])
     dev[0].mesh_group_add(id)
 
     dev[1].request("SET sae_groups ")
-    id = dev[1].add_network()
-    dev[1].set_network(id, "mode", "5")
-    dev[1].set_network_quoted(id, "ssid", "wpas-mesh-sec")
-    dev[1].set_network(id, "key_mgmt", "SAE")
-    dev[1].set_network(id, "frequency", "2412")
-    dev[1].set_network_quoted(id, "psk", "thisismypassphrase!")
+    id = add_mesh_secure_net(dev[1])
     dev[1].mesh_group_add(id)
 
     # Check for mesh joined
@@ -300,24 +298,63 @@ def test_wpas_mesh_secure(dev, apdev):
     """wpa_supplicant secure MESH network connectivity"""
     return wrap_wpas_mesh_test(_test_wpas_mesh_secure, dev, apdev)
 
+def test_wpas_mesh_secure_sae_group_mismatch(dev, apdev):
+    """wpa_supplicant secure MESH and SAE group mismatch"""
+    addr0 = dev[0].p2p_interface_addr()
+    addr1 = dev[1].p2p_interface_addr()
+    addr2 = dev[2].p2p_interface_addr()
 
-def _test_wpas_mesh_secure_no_auto(dev, apdev, test_connectivity):
-    dev[0].request("SET sae_groups ")
-    id = dev[0].add_network()
-    dev[0].set_network(id, "mode", "5")
-    dev[0].set_network_quoted(id, "ssid", "wpas-mesh-sec")
-    dev[0].set_network(id, "key_mgmt", "SAE")
-    dev[0].set_network(id, "frequency", "2412")
-    dev[0].set_network_quoted(id, "psk", "thisismypassphrase!")
+    dev[0].request("SET sae_groups 19 25")
+    id = add_mesh_secure_net(dev[0])
     dev[0].mesh_group_add(id)
 
+    dev[1].request("SET sae_groups 19")
+    id = add_mesh_secure_net(dev[1])
+    dev[1].mesh_group_add(id)
+
+    dev[2].request("SET sae_groups 26")
+    id = add_mesh_secure_net(dev[2])
+    dev[2].mesh_group_add(id)
+
+    check_mesh_group_added(dev[0])
+    check_mesh_group_added(dev[1])
+    check_mesh_group_added(dev[2])
+
+    ev = dev[0].wait_event(["MESH-PEER-CONNECTED"])
+    if ev is None:
+        raise Exception("Remote peer did not connect")
+    if addr1 not in ev:
+        raise Exception("Unexpected peer connected: " + ev)
+
+    ev = dev[1].wait_event(["MESH-PEER-CONNECTED"])
+    if ev is None:
+        raise Exception("Remote peer did not connect")
+    if addr0 not in ev:
+        raise Exception("Unexpected peer connected: " + ev)
+
+    ev = dev[2].wait_event(["MESH-PEER-CONNECTED"], timeout=1)
+    if ev is not None:
+        raise Exception("Unexpected peer connection at dev[2]: " + ev)
+
+    ev = dev[0].wait_event(["MESH-PEER-CONNECTED"], timeout=0.1)
+    if ev is not None:
+        raise Exception("Unexpected peer connection: " + ev)
+
+    ev = dev[1].wait_event(["MESH-PEER-CONNECTED"], timeout=0.1)
+    if ev is not None:
+        raise Exception("Unexpected peer connection: " + ev)
+
+    dev[0].request("SET sae_groups ")
     dev[1].request("SET sae_groups ")
-    id = dev[1].add_network()
-    dev[1].set_network(id, "mode", "5")
-    dev[1].set_network_quoted(id, "ssid", "wpas-mesh-sec")
-    dev[1].set_network(id, "key_mgmt", "SAE")
-    dev[1].set_network(id, "frequency", "2412")
-    dev[1].set_network_quoted(id, "psk", "thisismypassphrase!")
+    dev[2].request("SET sae_groups ")
+
+def _test_wpas_mesh_secure_no_auto(dev, apdev, test_connectivity):
+    dev[0].request("SET sae_groups 19")
+    id = add_mesh_secure_net(dev[0])
+    dev[0].mesh_group_add(id)
+
+    dev[1].request("SET sae_groups 19")
+    id = add_mesh_secure_net(dev[1])
     dev[1].set_network(id, "no_auto_peer", "1")
     dev[1].mesh_group_add(id)
 
@@ -332,6 +369,8 @@ def _test_wpas_mesh_secure_no_auto(dev, apdev, test_connectivity):
     # Test connectivity 0->1 and 1->0
     test_connectivity(dev[0], dev[1])
 
+    dev[0].request("SET sae_groups ")
+    dev[1].request("SET sae_groups ")
 
 def test_wpas_mesh_secure_no_auto(dev, apdev):
     """wpa_supplicant secure MESH network connectivity"""

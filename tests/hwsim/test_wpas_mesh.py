@@ -46,6 +46,12 @@ def check_mesh_scan(dev, params, other_started=False):
     if res.find("[MESH]") < 0:
         raise Exception("Scan did not contain a MESH network")
 
+    bssid = res.splitlines()[1].split(' ')[0]
+    bss = dev.get_bss(bssid)
+    if bss is None:
+        raise Exception("Could not get BSS entry for mesh")
+    if 'mesh_capability' not in bss:
+        raise Exception("mesh_capability missing from BSS entry")
 
 def check_mesh_group_added(dev):
     ev = dev.wait_event(["MESH-GROUP-STARTED"])

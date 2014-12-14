@@ -152,3 +152,18 @@ def test_sae_mixed(dev, apdev):
         dev[i].request("SET sae_groups ")
         dev[i].connect("test-sae", psk="12345678", key_mgmt="SAE",
                        scan_freq="2412")
+
+def test_sae_missing_password(dev, apdev):
+    """SAE and missing password"""
+    params = hostapd.wpa2_params(ssid="test-sae",
+                                 passphrase="12345678")
+    params['wpa_key_mgmt'] = 'SAE'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].request("SET sae_groups ")
+    id = dev[0].connect("test-sae",
+                        raw_psk="46b4a73b8a951ad53ebd2e0afdb9c5483257edd4c21d12b7710759da70945858",
+                        key_mgmt="SAE", scan_freq="2412", wait_connect=False)
+    ev = dev[0].wait_event(['CTRL-EVENT-SSID-TEMP-DISABLED'], timeout=10)
+    if ev is None:
+        raise Exception("Invalid network not temporarily disabled")

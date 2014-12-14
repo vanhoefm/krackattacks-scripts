@@ -620,13 +620,13 @@ static int sae_sm_step(struct hostapd_data *hapd, struct sta_info *sta,
 
 static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 			    const struct ieee80211_mgmt *mgmt, size_t len,
-			    u8 auth_transaction)
+			    u16 auth_transaction, u16 status_code)
 {
 	u16 resp = WLAN_STATUS_SUCCESS;
 	struct wpabuf *data = NULL;
 
 	if (!sta->sae) {
-		if (auth_transaction != 1)
+		if (auth_transaction != 1 || status_code != WLAN_STATUS_SUCCESS)
 			return;
 		sta->sae = os_zalloc(sizeof(*sta->sae));
 		if (sta->sae == NULL)
@@ -639,11 +639,12 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 		size_t token_len = 0;
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_DEBUG,
-			       "start SAE authentication (RX commit)");
+			       "start SAE authentication (RX commit, status=%u)",
+			       status_code);
 
 		if ((hapd->conf->mesh & MESH_ENABLED) &&
-		    mgmt->u.auth.status_code ==
-		    WLAN_STATUS_ANTI_CLOGGING_TOKEN_REQ && sta->sae->tmp) {
+		    status_code == WLAN_STATUS_ANTI_CLOGGING_TOKEN_REQ &&
+		    sta->sae->tmp) {
 			pos = mgmt->u.auth.variable;
 			end = ((const u8 *) mgmt) + len;
 			if (pos + sizeof(le16) > end) {
@@ -687,6 +688,9 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 			return;
 		}
 
+		if (status_code != WLAN_STATUS_SUCCESS)
+			return;
+
 		resp = sae_parse_commit(sta->sae, mgmt->u.auth.variable,
 					((const u8 *) mgmt) + len -
 					mgmt->u.auth.variable, &token,
@@ -718,7 +722,10 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 	} else if (auth_transaction == 2) {
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_DEBUG,
-			       "SAE authentication (RX confirm)");
+			       "SAE authentication (RX confirm, status=%u)",
+			       status_code);
+		if (status_code != WLAN_STATUS_SUCCESS)
+			return;
 		if (sta->sae->state >= SAE_CONFIRMED ||
 		    !(hapd->conf->mesh & MESH_ENABLED)) {
 			if (sae_check_confirm(sta->sae, mgmt->u.auth.variable,
@@ -729,12 +736,13 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 			}
 		}
 		resp = sae_sm_step(hapd, sta, mgmt->bssid, auth_transaction);
-
 	} else {
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_DEBUG,
-			       "unexpected SAE authentication transaction %u",
-			       auth_transaction);
+			       "unexpected SAE authentication transaction %u (status=%u)",
+			       auth_transaction, status_code);
+		if (status_code != WLAN_STATUS_SUCCESS)
+			return;
 		resp = WLAN_STATUS_UNKNOWN_AUTH_TRANSACTION;
 	}
 
@@ -977,7 +985,8 @@ static void handle_auth(struct hostapd_data *hapd,
 #ifdef CONFIG_SAE
 	case WLAN_AUTH_SAE:
 #ifdef CONFIG_MESH
-		if (hapd->conf->mesh & MESH_ENABLED) {
+		if (status_code == WLAN_STATUS_SUCCESS &&
+		    hapd->conf->mesh & MESH_ENABLED) {
 			if (sta->wpa_sm == NULL)
 				sta->wpa_sm =
 					wpa_auth_sta_init(hapd->wpa_auth,
@@ -990,7 +999,8 @@ static void handle_auth(struct hostapd_data *hapd,
 			}
 		}
 #endif /* CONFIG_MESH */
-		handle_auth_sae(hapd, sta, mgmt, len, auth_transaction);
+		handle_auth_sae(hapd, sta, mgmt, len, auth_transaction,
+				status_code);
 		return;
 #endif /* CONFIG_SAE */
 	}

@@ -994,30 +994,45 @@ int wpas_ap_wps_nfc_report_handover(struct wpa_supplicant *wpa_s,
 int ap_ctrl_iface_sta_first(struct wpa_supplicant *wpa_s,
 			    char *buf, size_t buflen)
 {
-	if (wpa_s->ap_iface == NULL)
+	struct hostapd_data *hapd;
+
+	if (wpa_s->ap_iface)
+		hapd = wpa_s->ap_iface->bss[0];
+	else if (wpa_s->ifmsh)
+		hapd = wpa_s->ifmsh->bss[0];
+	else
 		return -1;
-	return hostapd_ctrl_iface_sta_first(wpa_s->ap_iface->bss[0],
-					    buf, buflen);
+	return hostapd_ctrl_iface_sta_first(hapd, buf, buflen);
 }
 
 
 int ap_ctrl_iface_sta(struct wpa_supplicant *wpa_s, const char *txtaddr,
 		      char *buf, size_t buflen)
 {
-	if (wpa_s->ap_iface == NULL)
+	struct hostapd_data *hapd;
+
+	if (wpa_s->ap_iface)
+		hapd = wpa_s->ap_iface->bss[0];
+	else if (wpa_s->ifmsh)
+		hapd = wpa_s->ifmsh->bss[0];
+	else
 		return -1;
-	return hostapd_ctrl_iface_sta(wpa_s->ap_iface->bss[0], txtaddr,
-				      buf, buflen);
+	return hostapd_ctrl_iface_sta(hapd, txtaddr, buf, buflen);
 }
 
 
 int ap_ctrl_iface_sta_next(struct wpa_supplicant *wpa_s, const char *txtaddr,
 			   char *buf, size_t buflen)
 {
-	if (wpa_s->ap_iface == NULL)
+	struct hostapd_data *hapd;
+
+	if (wpa_s->ap_iface)
+		hapd = wpa_s->ap_iface->bss[0];
+	else if (wpa_s->ifmsh)
+		hapd = wpa_s->ifmsh->bss[0];
+	else
 		return -1;
-	return hostapd_ctrl_iface_sta_next(wpa_s->ap_iface->bss[0], txtaddr,
-					   buf, buflen);
+	return hostapd_ctrl_iface_sta_next(hapd, txtaddr, buf, buflen);
 }
 
 

@@ -206,7 +206,7 @@ def test_pmksa_cache_opportunistic_connect(dev, apdev):
 
     wpas.dump_monitor()
     logger.info("Roam to AP2")
-    wpas.scan(freq="2412")
+    wpas.scan_for_bss(bssid2, freq="2412")
     wpas.request("ROAM " + bssid2)
     ev = wpas.wait_event(["CTRL-EVENT-EAP-STARTED",
                             "CTRL-EVENT-CONNECTED"], timeout=10)

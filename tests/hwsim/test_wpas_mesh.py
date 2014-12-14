@@ -6,6 +6,11 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+import logging
+logger = logging.getLogger()
+
+import hwsim_utils
+from wpasupplicant import WpaSupplicant
 
 def check_mesh_scan(dev, params, other_started=False):
     if not other_started:
@@ -83,6 +88,14 @@ def test_wpas_add_set_remove_support(dev):
     dev[0].set_network(id, "mode", "5")
     dev[0].remove_network(id)
 
+def add_open_mesh_network(dev):
+    id = dev.add_network()
+    dev.set_network(id, "mode", "5")
+    dev.set_network_quoted(id, "ssid", "wpas-mesh-open")
+    dev.set_network(id, "key_mgmt", "NONE")
+    dev.set_network(id, "frequency", "2412")
+    dev.mesh_group_add(id)
+    return id
 
 def test_wpas_mesh_group_added(dev):
     """wpa_supplicant MESH group add"""
@@ -110,7 +123,7 @@ def test_wpas_mesh_group_remove(dev):
     dev[0].mesh_group_remove()
     # Check for MESH-GROUP-REMOVED event
     check_mesh_group_removed(dev[0])
-
+    dev[0].mesh_group_remove()
 
 def test_wpas_mesh_peer_connected(dev):
     """wpa_supplicant MESH peer connected"""
@@ -194,8 +207,6 @@ def test_wpas_mesh_mode_scan(dev):
 
 
 def wrap_wpas_mesh_test(test, dev, apdev):
-    import hwsim_utils
-
     def _test_connectivity(dev1, dev2):
         return hwsim_utils.test_connectivity(dev1, dev2)
 
@@ -412,3 +423,79 @@ def test_wpas_mesh_ctrl(dev):
 
     if "FAIL" not in dev[0].request("MESH_GROUP_REMOVE foo"):
         raise Exception("Unexpected MESH_GROUP_REMOVE success")
+
+def test_wpas_mesh_dynamic_interface(dev):
+    """wpa_supplicant mesh with dynamic interface"""
+    mesh0 = None
+    mesh1 = None
+    try:
+        mesh0 = dev[0].request("MESH_INTERFACE_ADD ifname=mesh0")
+        if "FAIL" in mesh0:
+            raise Exception("MESH_INTERFACE_ADD failed")
+        mesh1 = dev[1].request("MESH_INTERFACE_ADD")
+        if "FAIL" in mesh1:
+            raise Exception("MESH_INTERFACE_ADD failed")
+
+        wpas0 = WpaSupplicant(ifname=mesh0)
+        wpas1 = WpaSupplicant(ifname=mesh1)
+        logger.info(mesh0 + " address " + wpas0.get_status_field("address"))
+        logger.info(mesh1 + " address " + wpas1.get_status_field("address"))
+
+        add_open_mesh_network(wpas0)
+        add_open_mesh_network(wpas1)
+        check_mesh_group_added(wpas0)
+        check_mesh_group_added(wpas1)
+        check_mesh_peer_connected(wpas0)
+        check_mesh_peer_connected(wpas1)
+        hwsim_utils.test_connectivity(wpas0, wpas1)
+
+        # Must not allow MESH_GROUP_REMOVE on dynamic interface
+        if "FAIL" not in wpas0.request("MESH_GROUP_REMOVE " + mesh0):
+            raise Exception("Invalid MESH_GROUP_REMOVE accepted")
+        if "FAIL" not in wpas1.request("MESH_GROUP_REMOVE " + mesh1):
+            raise Exception("Invalid MESH_GROUP_REMOVE accepted")
+
+        # Must not allow MESH_GROUP_REMOVE on another radio interface
+        if "FAIL" not in wpas0.request("MESH_GROUP_REMOVE " + mesh1):
+            raise Exception("Invalid MESH_GROUP_REMOVE accepted")
+        if "FAIL" not in wpas1.request("MESH_GROUP_REMOVE " + mesh0):
+            raise Exception("Invalid MESH_GROUP_REMOVE accepted")
+
+        wpas0.remove_ifname()
+        wpas1.remove_ifname()
+
+        if "OK" not in dev[0].request("MESH_GROUP_REMOVE " + mesh0):
+            raise Exception("MESH_GROUP_REMOVE failed")
+        if "OK" not in dev[1].request("MESH_GROUP_REMOVE " + mesh1):
+            raise Exception("MESH_GROUP_REMOVE failed")
+
+        if "FAIL" not in dev[0].request("MESH_GROUP_REMOVE " + mesh0):
+            raise Exception("Invalid MESH_GROUP_REMOVE accepted")
+        if "FAIL" not in dev[1].request("MESH_GROUP_REMOVE " + mesh1):
+            raise Exception("Invalid MESH_GROUP_REMOVE accepted")
+
+        logger.info("Make sure another dynamic group can be added")
+        mesh0 = dev[0].request("MESH_INTERFACE_ADD ifname=mesh0")
+        if "FAIL" in mesh0:
+            raise Exception("MESH_INTERFACE_ADD failed")
+        mesh1 = dev[1].request("MESH_INTERFACE_ADD")
+        if "FAIL" in mesh1:
+            raise Exception("MESH_INTERFACE_ADD failed")
+
+        wpas0 = WpaSupplicant(ifname=mesh0)
+        wpas1 = WpaSupplicant(ifname=mesh1)
+        logger.info(mesh0 + " address " + wpas0.get_status_field("address"))
+        logger.info(mesh1 + " address " + wpas1.get_status_field("address"))
+
+        add_open_mesh_network(wpas0)
+        add_open_mesh_network(wpas1)
+        check_mesh_group_added(wpas0)
+        check_mesh_group_added(wpas1)
+        check_mesh_peer_connected(wpas0)
+        check_mesh_peer_connected(wpas1)
+        hwsim_utils.test_connectivity(wpas0, wpas1)
+    finally:
+        if mesh0:
+            dev[0].request("MESH_GROUP_REMOVE " + mesh0)
+        if mesh1:
+            dev[1].request("MESH_GROUP_REMOVE " + mesh1)

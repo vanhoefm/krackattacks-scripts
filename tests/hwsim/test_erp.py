@@ -69,6 +69,46 @@ def test_erp(dev, apdev):
         if ev is None:
             raise Exception("Reconnection timed out")
 
+def test_erp_server_no_match(dev, apdev):
+    """ERP enabled on server and peer, but server has no key match"""
+    capab = dev[0].get_capability("erp")
+    if not capab or 'ERP' not in capab:
+        return "skip"
+    params = int_eap_server_params()
+    params['erp_send_reauth_start'] = '1'
+    params['erp_domain'] = 'example.com'
+    params['eap_server_erp'] = '1'
+    params['disable_pmksa_caching'] = '1'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].request("ERP_FLUSH")
+    id = dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP",
+                        eap="PSK", identity="psk.user@example.com",
+                        password_hex="0123456789abcdef0123456789abcdef",
+                        erp="1", scan_freq="2412")
+    dev[0].request("DISCONNECT")
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Disconnection timed out")
+    hapd.request("ERP_FLUSH")
+    dev[0].request("RECONNECT")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS",
+                            "CTRL-EVENT-EAP-FAILURE"], timeout=15)
+    if ev is None:
+        raise Exception("EAP result timed out")
+    if "CTRL-EVENT-EAP-SUCCESS" in ev:
+        raise Exception("Unexpected EAP success")
+    dev[0].request("DISCONNECT")
+    dev[0].select_network(id)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=15)
+    if ev is None:
+        raise Exception("EAP success timed out")
+    if "EAP re-authentication completed successfully" in ev:
+        raise Exception("Unexpected use of ERP")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Reconnection timed out")
+
 def start_erp_as(apdev):
     params = { "ssid": "as", "beacon_int": "2000",
                "radius_server_clients": "auth_serv/radius_clients.conf",

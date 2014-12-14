@@ -831,6 +831,10 @@ static void hs20_osu_scan_res_handler(struct wpa_supplicant *wpa_s,
 				      struct wpa_scan_results *scan_res)
 {
 	wpa_printf(MSG_DEBUG, "OSU provisioning fetch scan completed");
+	if (!wpa_s->fetch_osu_waiting_scan) {
+		wpa_printf(MSG_DEBUG, "OSU fetch have been canceled");
+		return;
+	}
 	wpa_s->network_select = 0;
 	wpa_s->fetch_all_anqp = 1;
 	wpa_s->fetch_osu_info = 1;
@@ -879,6 +883,7 @@ int hs20_fetch_osu(struct wpa_supplicant *wpa_s)
 
 void hs20_start_osu_scan(struct wpa_supplicant *wpa_s)
 {
+	wpa_s->fetch_osu_waiting_scan = 1;
 	wpa_s->num_osu_scans++;
 	wpa_s->scan_req = MANUAL_SCAN_REQ;
 	wpa_s->scan_res_handler = hs20_osu_scan_res_handler;
@@ -890,6 +895,7 @@ void hs20_cancel_fetch_osu(struct wpa_supplicant *wpa_s)
 {
 	wpa_printf(MSG_DEBUG, "Cancel OSU fetch");
 	interworking_stop_fetch_anqp(wpa_s);
+	wpa_s->fetch_osu_waiting_scan = 0;
 	wpa_s->network_select = 0;
 	wpa_s->fetch_osu_info = 0;
 	wpa_s->fetch_osu_icon_in_progress = 0;

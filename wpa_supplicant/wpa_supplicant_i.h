@@ -852,6 +852,7 @@ struct wpa_supplicant {
 	unsigned int auto_network_select:1;
 	unsigned int fetch_all_anqp:1;
 	unsigned int fetch_osu_info:1;
+	unsigned int fetch_osu_waiting_scan:1;
 	unsigned int fetch_osu_icon_in_progress:1;
 	struct wpa_bss *interworking_gas_bss;
 	unsigned int osu_icon_id;

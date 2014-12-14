@@ -1,6 +1,6 @@
 /*
  * Control interface for shared AP commands
- * Copyright (c) 2004-2013, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -10,6 +10,7 @@
 
 #include "utils/common.h"
 #include "common/ieee802_11_defs.h"
+#include "common/sae.h"
 #include "eapol_auth/eapol_auth_sm.h"
 #include "hostapd.h"
 #include "ieee802_1x.h"
@@ -142,6 +143,15 @@ static int hostapd_ctrl_iface_sta_mib(struct hostapd_data *hapd,
 
 	len += hostapd_get_sta_tx_rx(hapd, sta, buf + len, buflen - len);
 	len += hostapd_get_sta_conn_time(sta, buf + len, buflen - len);
+
+#ifdef CONFIG_SAE
+	if (sta->sae && sta->sae->state == SAE_ACCEPTED) {
+		res = os_snprintf(buf + len, buflen - len, "sae_group=%d\n",
+				  sta->sae->group);
+		if (!os_snprintf_error(buflen - len, res))
+			len += res;
+	}
+#endif /* CONFIG_SAE */
 
 	return len;
 }

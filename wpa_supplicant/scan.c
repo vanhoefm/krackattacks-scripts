@@ -816,7 +816,9 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		    wpa_s->last_scan_req == MANUAL_SCAN_REQ)
 			wpa_set_scan_ssids(wpa_s, &params, max_ssids);
 
-		for (tssid = wpa_s->conf->ssid; tssid; tssid = tssid->next) {
+		for (tssid = wpa_s->conf->ssid;
+		     wpa_s->last_scan_req != MANUAL_SCAN_REQ && tssid;
+		     tssid = tssid->next) {
 			if (wpas_network_disabled(wpa_s, tssid))
 				continue;
 			if ((params.freqs || !freqs_set) && tssid->scan_freq) {

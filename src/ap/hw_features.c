@@ -852,16 +852,16 @@ static int ieee80211ac_cap_check(u32 hw, u32 conf, u32 cap, const char *name)
 }
 
 
-static int ieee80211ac_cap_check_max(u32 hw, u32 conf, u32 cap,
+static int ieee80211ac_cap_check_max(u32 hw, u32 conf, u32 mask,
+				     unsigned int shift,
 				     const char *name)
 {
-	u32 hw_max = hw & cap;
-	u32 conf_val = conf & cap;
+	u32 hw_max = hw & mask;
+	u32 conf_val = conf & mask;
 
 	if (conf_val > hw_max) {
-		int offset = find_first_bit(cap);
 		wpa_printf(MSG_ERROR, "Configured VHT capability [%s] exceeds max value supported by the driver (%d > %d)",
-			   name, conf_val >> offset, hw_max >> offset);
+			   name, conf_val >> shift, hw_max >> shift);
 		return 0;
 	}
 	return 1;
@@ -884,7 +884,8 @@ static int ieee80211ac_supported_vht_capab(struct hostapd_iface *iface)
 
 #define VHT_CAP_CHECK_MAX(cap) \
 	do { \
-		if (!ieee80211ac_cap_check_max(hw, conf, cap, #cap)) \
+		if (!ieee80211ac_cap_check_max(hw, conf, cap, cap ## _SHIFT, \
+					       #cap)) \
 			return 0; \
 	} while (0)
 

@@ -799,6 +799,7 @@ struct ieee80211_ampe_ie {
 #define VHT_CAP_MAX_MPDU_LENGTH_7991                ((u32) BIT(0))
 #define VHT_CAP_MAX_MPDU_LENGTH_11454               ((u32) BIT(1))
 #define VHT_CAP_MAX_MPDU_LENGTH_MASK                ((u32) BIT(0) | BIT(1))
+#define VHT_CAP_MAX_MPDU_LENGTH_MASK_SHIFT          0
 #define VHT_CAP_SUPP_CHAN_WIDTH_160MHZ              ((u32) BIT(2))
 #define VHT_CAP_SUPP_CHAN_WIDTH_160_80PLUS80MHZ     ((u32) BIT(3))
 #define VHT_CAP_SUPP_CHAN_WIDTH_MASK                ((u32) BIT(2) | BIT(3))
@@ -812,13 +813,16 @@ struct ieee80211_ampe_ie {
 #define VHT_CAP_RXSTBC_4                            ((u32) BIT(10))
 #define VHT_CAP_RXSTBC_MASK                         ((u32) BIT(8) | BIT(9) | \
 							   BIT(10))
+#define VHT_CAP_RXSTBC_MASK_SHIFT                   8
 #define VHT_CAP_SU_BEAMFORMER_CAPABLE               ((u32) BIT(11))
 #define VHT_CAP_SU_BEAMFORMEE_CAPABLE               ((u32) BIT(12))
 #define VHT_CAP_BEAMFORMEE_STS_MAX                  ((u32) BIT(13) | \
 							   BIT(14) | BIT(15))
+#define VHT_CAP_BEAMFORMEE_STS_MAX_SHIFT            13
 #define VHT_CAP_BEAMFORMEE_STS_OFFSET               13
 #define VHT_CAP_SOUNDING_DIMENSION_MAX              ((u32) BIT(16) | \
 							   BIT(17) | BIT(18))
+#define VHT_CAP_SOUNDING_DIMENSION_MAX_SHIFT        16
 #define VHT_CAP_SOUNDING_DIMENSION_OFFSET           16
 #define VHT_CAP_MU_BEAMFORMER_CAPABLE               ((u32) BIT(19))
 #define VHT_CAP_MU_BEAMFORMEE_CAPABLE               ((u32) BIT(20))

@@ -845,9 +845,9 @@ class WpaSupplicant:
                 return
         raise Exception("Could not find BSS " + bssid + " in scan")
 
-    def flush_scan_cache(self):
+    def flush_scan_cache(self, freq=2417):
         self.request("BSS_FLUSH 0")
-        self.scan(freq=2412, only_new=True)
+        self.scan(freq=freq, only_new=True)
 
     def roam(self, bssid, fail_test=False):
         self.dump_monitor()

@@ -1569,6 +1569,7 @@ static void eap_peer_finish(struct eap_sm *sm, const struct eap_hdr *hdr,
 	int max_len;
 	char nai[254];
 	u8 seed[4];
+	int auth_tag_ok = 0;
 
 	if (len < sizeof(*hdr) + 1) {
 		wpa_printf(MSG_DEBUG, "EAP: Ignored too short EAP-Finish");
@@ -1638,10 +1639,14 @@ static void eap_peer_finish(struct eap_sm *sm, const struct eap_hdr *hdr,
 	if (max_len < 1 + (int) hash_len) {
 		wpa_printf(MSG_DEBUG,
 			   "EAP: Not enough room for Authentication Tag");
+		if (flags & 0x80)
+			goto no_auth_tag;
 		return;
 	}
 	if (end[-17] != EAP_ERP_CS_HMAC_SHA256_128) {
 		wpa_printf(MSG_DEBUG, "EAP: Different Cryptosuite used");
+		if (flags & 0x80)
+			goto no_auth_tag;
 		return;
 	}
 
@@ -1653,8 +1658,10 @@ static void eap_peer_finish(struct eap_sm *sm, const struct eap_hdr *hdr,
 			   "EAP: Authentication Tag mismatch");
 		return;
 	}
+	auth_tag_ok = 1;
 	end -= 1 + hash_len;
 
+no_auth_tag:
 	/*
 	 * Parse TVs/TLVs again now that we know the exact part of the buffer
 	 * that contains them.
@@ -1664,7 +1671,7 @@ static void eap_peer_finish(struct eap_sm *sm, const struct eap_hdr *hdr,
 	if (erp_parse_tlvs(pos, end, &parse, 0) < 0)
 		return;
 
-	if (flags & 0x80) {
+	if (flags & 0x80 || !auth_tag_ok) {
 		wpa_printf(MSG_DEBUG,
 			   "EAP: EAP-Finish/Re-auth indicated failure");
 		eapol_set_bool(sm, EAPOL_eapFail, TRUE);
@@ -1673,6 +1680,9 @@ static void eap_peer_finish(struct eap_sm *sm, const struct eap_hdr *hdr,
 		wpa_msg(sm->msg_ctx, MSG_INFO, WPA_EVENT_EAP_FAILURE
 			"EAP authentication failed");
 		sm->prev_failure = 1;
+		wpa_printf(MSG_DEBUG,
+			   "EAP: Drop ERP key to try full authentication on next attempt");
+		eap_peer_erp_free_key(erp);
 		return;
 	}
 

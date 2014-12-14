@@ -17,6 +17,13 @@ def wait_ap_ready(dev):
 
 def test_wpas_ap_open(dev):
     """wpa_supplicant AP mode - open network"""
+    if "FAIL" not in dev[0].request("DEAUTHENTICATE 00:11:22:33:44:55"):
+        raise Exception("Unexpected DEAUTHENTICATE accepted")
+    if "FAIL" not in dev[0].request("DISASSOCIATE 00:11:22:33:44:55"):
+        raise Exception("Unexpected DISASSOCIATE accepted")
+    if "FAIL" not in dev[0].request("CHAN_SWITCH 0 2432"):
+        raise Exception("Unexpected CHAN_SWITCH accepted")
+
     id = dev[0].add_network()
     dev[0].set_network(id, "mode", "2")
     dev[0].set_network_quoted(id, "ssid", "wpas-ap-open")
@@ -25,6 +32,11 @@ def test_wpas_ap_open(dev):
     dev[0].set_network(id, "scan_freq", "2412")
     dev[0].select_network(id)
     wait_ap_ready(dev[0])
+
+    if "FAIL" not in dev[0].request("DEAUTHENTICATE foo"):
+        raise Exception("Invalid DEAUTHENTICATE accepted")
+    if "FAIL" not in dev[0].request("DISASSOCIATE foo"):
+        raise Exception("Invalid DISASSOCIATE accepted")
 
     dev[1].connect("wpas-ap-open", key_mgmt="NONE", scan_freq="2412")
     dev[2].connect("wpas-ap-open", key_mgmt="NONE", scan_freq="2412")

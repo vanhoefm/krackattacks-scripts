@@ -465,3 +465,16 @@ def test_autogo_bridge(dev):
                          stderr=open('/dev/null', 'w'))
         subprocess.Popen(['sudo', 'brctl', 'delbr', 'p2p-br0'],
                          stderr=open('/dev/null', 'w'))
+
+def test_presence_req_on_group_interface(dev):
+    """P2P_PRESENCE_REQ on group interface"""
+    dev[1].request("SET p2p_no_group_iface 0")
+    res = autogo(dev[0], freq=2437)
+    res = connect_cli(dev[0], dev[1], social=True, freq=2437)
+    if "FAIL" in dev[1].group_request("P2P_PRESENCE_REQ 30000 102400"):
+        raise Exception("Could not send presence request")
+    ev = dev[1].wait_group_event(["P2P-PRESENCE-RESPONSE"])
+    if ev is None:
+        raise Exception("Timeout while waiting for Presence Response")
+    dev[0].remove_group()
+    dev[1].wait_go_ending_session()

@@ -607,21 +607,6 @@ int is_hex(const u8 *data, size_t len)
 }
 
 
-int find_first_bit(u32 value)
-{
-	int pos = 0;
-
-	while (value) {
-		if (value & 0x1)
-			return pos;
-		value >>= 1;
-		pos++;
-	}
-
-	return -1;
-}
-
-
 size_t merge_byte_arrays(u8 *res, size_t res_len,
 			 const u8 *src1, size_t src1_len,
 			 const u8 *src2, size_t src2_len)

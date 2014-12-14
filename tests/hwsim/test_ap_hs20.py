@@ -2092,6 +2092,91 @@ def test_ap_hs20_fetch_osu(dev, apdev):
     if "Icon Binary File" not in ev:
         raise Exception("Unexpected ANQP element")
 
+def test_ap_hs20_fetch_osu_stop(dev, apdev):
+    """Hotspot 2.0 OSU provider fetch stopped"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hs20_icon'] = "128:80:zxx:image/png:w1fi_logo:w1fi_logo.png"
+    params['osu_ssid'] = '"HS 2.0 OSU open"'
+    params['osu_method_list'] = "1"
+    params['osu_friendly_name'] = [ "eng:Test OSU", "fin:Testi-OSU" ]
+    params['osu_icon'] = "w1fi_logo"
+    params['osu_service_desc'] = [ "eng:Example services", "fin:Esimerkkipalveluja" ]
+    params['osu_server_uri'] = "https://example.com/osu/"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    dir = "/tmp/osu-fetch"
+    if os.path.isdir(dir):
+       files = [ f for f in os.listdir(dir) if f.startswith("osu-") ]
+       for f in files:
+           os.remove(dir + "/" + f)
+    else:
+        try:
+            os.makedirs(dir)
+        except:
+            pass
+    try:
+        dev[0].request("SET osu_dir " + dir)
+        dev[0].request("SCAN freq=2412-2462")
+        ev = dev[0].wait_event(["CTRL-EVENT-SCAN-STARTED"], timeout=10)
+        if ev is None:
+            raise Exception("Scan did not start")
+        if "FAIL" not in dev[0].request("FETCH_OSU"):
+            raise Exception("FETCH_OSU accepted while scanning")
+        ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], 10)
+        if ev is None:
+            raise Exception("Scan timed out")
+        hapd.set("ext_mgmt_frame_handling", "1")
+        dev[0].request("FETCH_ANQP")
+        if "FAIL" not in dev[0].request("FETCH_OSU"):
+            raise Exception("FETCH_OSU accepted while in FETCH_ANQP")
+        dev[0].request("STOP_FETCH_ANQP")
+        dev[0].wait_event(["GAS-QUERY-DONE"], timeout=5)
+        dev[0].dump_monitor()
+        hapd.dump_monitor()
+        dev[0].request("INTERWORKING_SELECT freq=2412")
+        for i in range(5):
+            msg = hapd.mgmt_rx()
+            if msg['subtype'] == 13:
+                break
+        if "FAIL" not in dev[0].request("FETCH_OSU"):
+            raise Exception("FETCH_OSU accepted while in INTERWORKING_SELECT")
+        ev = dev[0].wait_event(["INTERWORKING-AP", "INTERWORKING-NO-MATCH"],
+                               timeout=15)
+        if ev is None:
+            raise Exception("Network selection timed out");
+
+        dev[0].dump_monitor()
+        if "OK" not in dev[0].request("FETCH_OSU"):
+            raise Exception("FETCH_OSU failed")
+        dev[0].request("CANCEL_FETCH_OSU")
+
+        for i in range(15):
+            time.sleep(0.5)
+            if dev[0].get_driver_status_field("scan_state") == "SCAN_COMPLETED":
+                break
+
+        dev[0].dump_monitor()
+        if "OK" not in dev[0].request("FETCH_OSU"):
+            raise Exception("FETCH_OSU failed")
+        if "FAIL" not in dev[0].request("FETCH_OSU"):
+            raise Exception("FETCH_OSU accepted while in FETCH_OSU")
+        ev = dev[0].wait_event(["GAS-QUERY-START"], 10)
+        if ev is None:
+            raise Exception("GAS timed out")
+        if "FAIL" not in dev[0].request("FETCH_OSU"):
+            raise Exception("FETCH_OSU accepted while in FETCH_OSU")
+        dev[0].request("CANCEL_FETCH_OSU")
+        ev = dev[0].wait_event(["GAS-QUERY-DONE"], 10)
+        if ev is None:
+            raise Exception("GAS event timed out after CANCEL_FETCH_OSU")
+    finally:
+        files = [ f for f in os.listdir(dir) if f.startswith("osu-") ]
+        for f in files:
+            os.remove(dir + "/" + f)
+        os.rmdir(dir)
+
 def test_ap_hs20_ft(dev, apdev):
     """Hotspot 2.0 connection with FT"""
     bssid = apdev[0]['bssid']

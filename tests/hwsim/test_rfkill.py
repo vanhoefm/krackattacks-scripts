@@ -48,6 +48,8 @@ def test_rfkill_open(dev, apdev):
             raise Exception("REATTACH accepted while disabled")
         if "FAIL" not in dev[0].request("RECONNECT"):
             raise Exception("RECONNECT accepted while disabled")
+        if "FAIL" not in dev[0].request("FETCH_OSU"):
+            raise Exception("FETCH_OSU accepted while disabled")
 
         logger.info("rfkill unblock")
         subprocess.call(['sudo', 'rfkill', 'unblock', id])

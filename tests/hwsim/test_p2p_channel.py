@@ -38,6 +38,7 @@ def test_p2p_channel_5ghz(dev):
         remove_group(dev[0], dev[1])
     finally:
         set_country("00")
+        dev[1].flush_scan_cache()
 
 def test_p2p_channel_5ghz_no_vht(dev):
     """P2P group formation with 5 GHz preference when VHT channels are disallowed"""
@@ -55,6 +56,7 @@ def test_p2p_channel_5ghz_no_vht(dev):
     finally:
         set_country("00")
         dev[0].request("P2P_SET disallow_freq ")
+        dev[1].flush_scan_cache()
 
 def test_p2p_channel_random_social(dev):
     """P2P group formation with 5 GHz preference but all 5 GHz channels disabled"""
@@ -73,6 +75,7 @@ def test_p2p_channel_random_social(dev):
     finally:
         set_country("00")
         dev[0].request("P2P_SET disallow_freq ")
+        dev[1].flush_scan_cache()
 
 def test_p2p_channel_random(dev):
     """P2P group formation with 5 GHz preference but all 5 GHz channels and all social channels disabled"""
@@ -91,6 +94,7 @@ def test_p2p_channel_random(dev):
     finally:
         set_country("00")
         dev[0].request("P2P_SET disallow_freq ")
+        dev[1].flush_scan_cache()
 
 def test_p2p_channel_random_social_with_op_class_change(dev, apdev, params):
     """P2P group formation using random social channel with oper class change needed"""
@@ -146,6 +150,7 @@ def test_p2p_channel_random_social_with_op_class_change(dev, apdev, params):
         dev[0].request("P2P_SET disallow_freq ")
         dev[0].request("SET p2p_oper_reg_class 0")
         dev[0].request("SET p2p_oper_channel 0")
+        dev[1].flush_scan_cache()
 
 def test_p2p_channel_avoid(dev):
     """P2P and avoid frequencies driver event"""
@@ -184,6 +189,7 @@ def test_p2p_channel_avoid(dev):
     finally:
         set_country("00")
         dev[0].request("DRIVER_EVENT AVOID_FREQUENCIES")
+        dev[1].flush_scan_cache()
 
 def test_autogo_following_bss(dev, apdev):
     """P2P autonomous GO operate on the same channel as station interface"""
@@ -371,6 +377,11 @@ def test_go_neg_forced_freq_diff_than_bss_freq(dev, apdev):
         if r_res2['role'] != "client":
            raise Exception("GO not selected according to go_intent")
         hwsim_utils.test_connectivity(wpas, hapd)
+
+        wpas.request("DISCONNECT")
+        hapd.request("DISABLE")
+        subprocess.call(['iw', 'reg', 'set', '00'])
+        wpas.flush_scan_cache()
 
 def test_go_pref_chan_bss_on_diff_chan(dev, apdev):
     """P2P channel selection: Station on different channel than GO configured pref channel"""

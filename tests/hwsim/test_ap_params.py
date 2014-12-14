@@ -58,6 +58,7 @@ def test_ap_vendor_elements(dev, apdev):
 def test_ap_country(dev, apdev):
     """WPA2-PSK AP setting country code and using 5 GHz band"""
     try:
+        hapd = None
         bssid = apdev[0]['bssid']
         ssid = "test-wpa2-psk"
         passphrase = 'qwertyuiop'
@@ -70,7 +71,11 @@ def test_ap_country(dev, apdev):
         dev[0].connect(ssid, psk=passphrase, scan_freq="5180")
         hwsim_utils.test_connectivity(dev[0], hapd)
     finally:
+        dev[0].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
 
 def test_ap_acl_accept(dev, apdev):
     """MAC ACL accept list"""
@@ -197,10 +202,15 @@ def test_ap_spectrum_management_required(dev, apdev):
     params["local_pwr_constraint"] = "3"
     params['spectrum_mgmt_required'] = "1"
     try:
-        hostapd.add_ap(apdev[0]['ifname'], params)
+        hapd = None
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
         dev[0].connect(ssid, key_mgmt="NONE", scan_freq="5180")
     finally:
+        dev[0].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
 
 def test_ap_max_listen_interval(dev, apdev):
     """Open AP with maximum listen interval limit"""

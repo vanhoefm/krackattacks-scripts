@@ -397,6 +397,8 @@ def test_wnm_bss_keep_alive(dev, apdev):
 def test_wnm_bss_tm(dev, apdev):
     """WNM BSS Transition Management"""
     try:
+        hapd = None
+        hapd2 = None
         params = { "ssid": "test-wnm",
                    "country_code": "FI",
                    "ieee80211d": "1",
@@ -491,4 +493,10 @@ def test_wnm_bss_tm(dev, apdev):
         if ev is not None:
             raise Exception("Unexpected reassociation");
     finally:
+        dev[0].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
+        if hapd2:
+            hapd2.request("DISABLE")
         subprocess.call(['iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()

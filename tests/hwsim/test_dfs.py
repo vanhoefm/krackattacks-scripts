@@ -124,11 +124,16 @@ def test_dfs(dev, apdev):
         time.sleep(1)
         hwsim_utils.test_connectivity(dev[0], hapd)
     finally:
+        dev[0].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
 
 def test_dfs_radar(dev, apdev):
     """DFS CAC functionality with radar detected"""
     try:
+        hapd2 = None
         hapd = start_dfs_ap(apdev[0])
         if hapd is None:
             if not os.path.exists("dfs"):
@@ -200,7 +205,13 @@ def test_dfs_radar(dev, apdev):
 
         wait_dfs_event(hapd2, None, 5)
     finally:
+        dev[0].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
+        if hapd2:
+            hapd2.request("DISABLE")
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
 
 def test_dfs_radar_on_non_dfs_channel(dev, apdev):
     """DFS radar detection test code on non-DFS channel"""
@@ -241,7 +252,11 @@ def test_dfs_radar_chanlist(dev, apdev):
             raise Exception("Unexpected DFS event")
         dev[0].connect("dfs", key_mgmt="NONE")
     finally:
+        dev[0].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
 
 def test_dfs_radar_chanlist_vht80(dev, apdev):
     """DFS chanlist when radar is detected and VHT80 configured"""
@@ -277,7 +292,11 @@ def test_dfs_radar_chanlist_vht80(dev, apdev):
         if hapd.get_status_field('vht_oper_centr_freq_seg0_idx') != "42":
             raise Exception("Unexpected seg0 idx")
     finally:
+        dev[0].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
 
 def test_dfs_radar_chanlist_vht20(dev, apdev):
     """DFS chanlist when radar is detected and VHT40 configured"""
@@ -310,4 +329,8 @@ def test_dfs_radar_chanlist_vht20(dev, apdev):
             raise Exception("Unexpected DFS event")
         dev[0].connect("dfs", key_mgmt="NONE")
     finally:
+        dev[0].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()

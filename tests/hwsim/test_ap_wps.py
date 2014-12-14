@@ -203,6 +203,7 @@ def test_ap_wps_conf(dev, apdev):
 def test_ap_wps_conf_5ghz(dev, apdev):
     """WPS PBC provisioning with configured AP on 5 GHz band"""
     try:
+        hapd = None
         ssid = "test-wps-conf"
         params = { "ssid": ssid, "eap_server": "1", "wps_state": "2",
                    "wpa_passphrase": "12345678", "wpa": "2",
@@ -221,11 +222,16 @@ def test_ap_wps_conf_5ghz(dev, apdev):
         if 'wpsDeviceName' not in sta or sta['wpsDeviceName'] != "Device A":
             raise Exception("Device name not available in STA command")
     finally:
+        dev[0].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
 
 def test_ap_wps_conf_chan14(dev, apdev):
     """WPS PBC provisioning with configured AP on channel 14"""
     try:
+        hapd = None
         ssid = "test-wps-conf"
         params = { "ssid": ssid, "eap_server": "1", "wps_state": "2",
                    "wpa_passphrase": "12345678", "wpa": "2",
@@ -243,7 +249,11 @@ def test_ap_wps_conf_chan14(dev, apdev):
         if 'wpsDeviceName' not in sta or sta['wpsDeviceName'] != "Device A":
             raise Exception("Device name not available in STA command")
     finally:
+        dev[0].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
 
 def test_ap_wps_twice(dev, apdev):
     """WPS provisioning with twice to change passphrase"""

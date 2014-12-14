@@ -258,7 +258,11 @@ def test_nfc_wps_handover_5ghz(dev, apdev):
             raise Exception("Association with the AP timed out")
         check_wpa2_connection(dev[0], apdev[0], hapd, ssid)
     finally:
+        dev[0].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
 
 def test_nfc_wps_handover_chan14(dev, apdev):
     """Connect to WPS AP with NFC connection handover on channel 14"""
@@ -288,7 +292,11 @@ def test_nfc_wps_handover_chan14(dev, apdev):
             raise Exception("Association with the AP timed out")
         check_wpa2_connection(dev[0], apdev[0], hapd, ssid)
     finally:
+        dev[0].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
 
 def test_nfc_wps_handover_with_pw_token_set(dev, apdev):
     """Connect to WPS AP with NFC connection handover (wps_nfc_* set)"""

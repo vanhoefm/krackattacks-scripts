@@ -25,6 +25,7 @@ def vht_supported():
 def test_ap_vht80(dev, apdev):
     """VHT with 80 MHz channel width"""
     try:
+        hapd = None
         params = { "ssid": "vht",
                    "country_code": "FI",
                    "hw_mode": "a",
@@ -45,11 +46,16 @@ def test_ap_vht80(dev, apdev):
                 return "skip"
         raise
     finally:
+        dev[0].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
 
 def test_ap_vht80_params(dev, apdev):
     """VHT with 80 MHz channel width and number of optional features enabled"""
     try:
+        hapd = None
         params = { "ssid": "vht",
                    "country_code": "FI",
                    "hw_mode": "a",
@@ -80,13 +86,20 @@ def test_ap_vht80_params(dev, apdev):
                 return "skip"
         raise
     finally:
+        dev[0].request("DISCONNECT")
+        dev[1].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
+        dev[1].flush_scan_cache()
 
 def test_ap_vht_20(devs, apdevs):
     """VHT and 20 MHz channel"""
     dev = devs[0]
     ap = apdevs[0]
     try:
+        hapd = None
         params = { "ssid": "test-vht20",
                    "country_code": "DE",
                    "hw_mode": "a",
@@ -104,7 +117,11 @@ def test_ap_vht_20(devs, apdevs):
         dev.connect("test-vht20", scan_freq="5180", key_mgmt="NONE")
         hwsim_utils.test_connectivity(dev, hapd)
     finally:
+        dev.request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        dev.flush_scan_cache()
 
 def test_ap_vht_capab_not_supported(dev, apdev):
     """VHT configuration with driver not supporting all vht_capab entries"""
@@ -133,6 +150,8 @@ def test_ap_vht_capab_not_supported(dev, apdev):
 def test_ap_vht160(dev, apdev):
     """VHT with 160 MHz channel width"""
     try:
+        hapd = None
+        hapd2 = None
         params = { "ssid": "vht",
                    "country_code": "FI",
                    "hw_mode": "a",
@@ -235,11 +254,21 @@ def test_ap_vht160(dev, apdev):
                 return "skip"
         raise
     finally:
+        dev[0].request("DISCONNECT")
+        dev[1].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
+        if hapd2:
+            hapd2.request("DISABLE")
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
+        dev[1].flush_scan_cache()
 
 def test_ap_vht80plus80(dev, apdev):
     """VHT with 80+80 MHz channel width"""
     try:
+        hapd = None
+        hapd2 = None
         params = { "ssid": "vht",
                    "country_code": "US",
                    "hw_mode": "a",
@@ -295,13 +324,22 @@ def test_ap_vht80plus80(dev, apdev):
                 return "skip"
         raise
     finally:
+        dev[0].request("DISCONNECT")
+        dev[1].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
+        if hapd2:
+            hapd2.request("DISABLE")
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
+        dev[1].flush_scan_cache()
 
 def test_ap_vht80_csa(dev, apdev):
     """VHT with 80 MHz channel width and CSA"""
     if not csa_supported(dev[0]):
         return "skip"
     try:
+        hapd = None
         params = { "ssid": "vht",
                    "country_code": "US",
                    "hw_mode": "a",
@@ -345,4 +383,8 @@ def test_ap_vht80_csa(dev, apdev):
                 return "skip"
         raise
     finally:
+        dev[0].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()

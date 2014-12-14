@@ -98,6 +98,7 @@ def test_ap_acs_40mhz(dev, apdev):
 def test_ap_acs_5ghz(dev, apdev):
     """Automatic channel selection on 5 GHz"""
     try:
+        hapd = None
         params = hostapd.wpa2_params(ssid="test-acs", passphrase="12345678")
         params['hw_mode'] = 'a'
         params['channel'] = '0'
@@ -120,11 +121,16 @@ def test_ap_acs_5ghz(dev, apdev):
             dev[0].connect("test-acs", psk="12345678", scan_freq=freq)
 
     finally:
+        dev[0].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
 
 def test_ap_acs_5ghz_40mhz(dev, apdev):
     """Automatic channel selection on 5 GHz for 40 MHz channel"""
     try:
+        hapd = None
         params = hostapd.wpa2_params(ssid="test-acs", passphrase="12345678")
         params['hw_mode'] = 'a'
         params['channel'] = '0'
@@ -152,11 +158,16 @@ def test_ap_acs_5ghz_40mhz(dev, apdev):
             dev[0].connect("test-acs", psk="12345678", scan_freq=freq)
 
     finally:
+        dev[0].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
 
 def test_ap_acs_vht(dev, apdev):
     """Automatic channel selection for VHT"""
     try:
+        hapd = None
         params = hostapd.wpa2_params(ssid="test-acs", passphrase="12345678")
         params['hw_mode'] = 'a'
         params['channel'] = '0'
@@ -186,4 +197,8 @@ def test_ap_acs_vht(dev, apdev):
             dev[0].connect("test-acs", psk="12345678", scan_freq=freq)
 
     finally:
+        dev[0].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()

@@ -178,12 +178,14 @@ def test_ap_ht40_5ghz_match(dev, apdev):
     """HT40 co-ex scan on 5 GHz with matching pri/sec channel"""
     clear_scan_cache(apdev[0]['ifname'])
     try:
+        hapd = None
+        hapd2 = None
         params = { "ssid": "test-ht40",
                    "hw_mode": "a",
                    "channel": "36",
                    "country_code": "US",
                    "ht_capab": "[HT40+]"}
-        hostapd.add_ap(apdev[1]['ifname'], params)
+        hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
 
         params = { "ssid": "test-ht40",
                    "hw_mode": "a",
@@ -218,18 +220,26 @@ def test_ap_ht40_5ghz_match(dev, apdev):
 
         dev[0].connect("test-ht40", key_mgmt="NONE", scan_freq=freq)
     finally:
+        dev[0].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
+        if hapd2:
+            hapd2.request("DISABLE")
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
 
 def test_ap_ht40_5ghz_switch(dev, apdev):
     """HT40 co-ex scan on 5 GHz switching pri/sec channel"""
     clear_scan_cache(apdev[0]['ifname'])
     try:
+        hapd = None
+        hapd2 = None
         params = { "ssid": "test-ht40",
                    "hw_mode": "a",
                    "channel": "36",
                    "country_code": "US",
                    "ht_capab": "[HT40+]"}
-        hostapd.add_ap(apdev[1]['ifname'], params)
+        hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
 
         params = { "ssid": "test-ht40",
                    "hw_mode": "a",
@@ -264,18 +274,25 @@ def test_ap_ht40_5ghz_switch(dev, apdev):
 
         dev[0].connect("test-ht40", key_mgmt="NONE", scan_freq=freq)
     finally:
+        dev[0].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
+        if hapd2:
+            hapd2.request("DISABLE")
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
 
 def test_ap_ht40_5ghz_switch2(dev, apdev):
     """HT40 co-ex scan on 5 GHz switching pri/sec channel (2)"""
     clear_scan_cache(apdev[0]['ifname'])
     try:
+        hapd = None
+        hapd2 = None
         params = { "ssid": "test-ht40",
                    "hw_mode": "a",
                    "channel": "36",
                    "country_code": "US",
                    "ht_capab": "[HT40+]"}
-        hostapd.add_ap(apdev[1]['ifname'], params)
+        hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
 
         id = dev[0].add_network()
         dev[0].set_network(id, "mode", "2")
@@ -319,7 +336,13 @@ def test_ap_ht40_5ghz_switch2(dev, apdev):
 
         dev[0].connect("test-ht40", key_mgmt="NONE", scan_freq=freq)
     finally:
+        dev[0].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
+        if hapd2:
+            hapd2.request("DISABLE")
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
 
 def test_obss_scan(dev, apdev):
     """Overlapping BSS scan request"""
@@ -447,6 +470,8 @@ def test_olbc(dev, apdev):
 def test_olbc_5ghz(dev, apdev):
     """OLBC detection on 5 GHz"""
     try:
+        hapd = None
+        hapd2 = None
         params = { "ssid": "test-olbc",
                    "country_code": "FI",
                    "hw_mode": "a",
@@ -463,12 +488,16 @@ def test_olbc_5ghz(dev, apdev):
                    "channel": "36",
                    "ieee80211n": "0",
                    "wmm_enabled": "0" }
-        hostapd.add_ap(apdev[1]['ifname'], params)
+        hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
         time.sleep(0.5)
         status = hapd.get_status()
         if status['olbc_ht'] != '1':
             raise Exception("Missing OLBC information")
     finally:
+        if hapd:
+            hapd.request("DISABLE")
+        if hapd2:
+            hapd2.request("DISABLE")
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
 
 def test_ap_require_ht(dev, apdev):
@@ -601,6 +630,7 @@ def test_ap_ht40_csa(dev, apdev):
     if not csa_supported(dev[0]):
         return "skip"
     try:
+        hapd = None
         params = { "ssid": "ht",
                    "country_code": "US",
                    "hw_mode": "a",
@@ -634,13 +664,18 @@ def test_ap_ht40_csa(dev, apdev):
             raise Exception("Unexpected STA disconnection during CSA")
         hwsim_utils.test_connectivity(dev[0], hapd)
     finally:
+        dev[0].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
 
 def test_ap_ht40_csa2(dev, apdev):
     """HT with 40 MHz channel width and CSA"""
     if not csa_supported(dev[0]):
         return "skip"
     try:
+        hapd = None
         params = { "ssid": "ht",
                    "country_code": "US",
                    "hw_mode": "a",
@@ -674,13 +709,18 @@ def test_ap_ht40_csa2(dev, apdev):
             raise Exception("Unexpected STA disconnection during CSA")
         hwsim_utils.test_connectivity(dev[0], hapd)
     finally:
+        dev[0].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
 
 def test_ap_ht40_csa3(dev, apdev):
     """HT with 40 MHz channel width and CSA"""
     if not csa_supported(dev[0]):
         return "skip"
     try:
+        hapd = None
         params = { "ssid": "ht",
                    "country_code": "US",
                    "hw_mode": "a",
@@ -714,4 +754,8 @@ def test_ap_ht40_csa3(dev, apdev):
             raise Exception("Unexpected STA disconnection during CSA")
         hwsim_utils.test_connectivity(dev[0], hapd)
     finally:
+        dev[0].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()

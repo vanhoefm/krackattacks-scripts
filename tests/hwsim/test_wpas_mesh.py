@@ -270,13 +270,14 @@ def test_wpas_mesh_open_no_auto(dev, apdev):
     """wpa_supplicant open MESH network connectivity"""
     return wrap_wpas_mesh_test(_test_wpas_mesh_open_no_auto, dev, apdev)
 
-def add_mesh_secure_net(dev):
+def add_mesh_secure_net(dev, psk=True):
     id = dev.add_network()
     dev.set_network(id, "mode", "5")
     dev.set_network_quoted(id, "ssid", "wpas-mesh-sec")
     dev.set_network(id, "key_mgmt", "SAE")
     dev.set_network(id, "frequency", "2412")
-    dev.set_network_quoted(id, "psk", "thisismypassphrase!")
+    if psk:
+        dev.set_network_quoted(id, "psk", "thisismypassphrase!")
     return id
 
 def _test_wpas_mesh_secure(dev, apdev, test_connectivity):
@@ -353,6 +354,21 @@ def test_wpas_mesh_secure_sae_group_mismatch(dev, apdev):
     dev[0].request("SET sae_groups ")
     dev[1].request("SET sae_groups ")
     dev[2].request("SET sae_groups ")
+
+def test_wpas_mesh_secure_sae_missing_password(dev, apdev):
+    """wpa_supplicant secure MESH and missing SAE password"""
+    id = add_mesh_secure_net(dev[0], psk=False)
+    dev[0].set_network(id, "psk", "8f20b381f9b84371d61b5080ad85cac3c61ab3ca9525be5b2d0f4da3d979187a")
+    dev[0].mesh_group_add(id)
+    ev = dev[0].wait_event(["MESH-GROUP-STARTED", "Could not join mesh"],
+                           timeout=5)
+    if ev is None:
+        raise Exception("Timeout on mesh start event")
+    if "MESH-GROUP-STARTED" in ev:
+        raise Exception("Unexpected mesh group start")
+    ev = dev[0].wait_event(["MESH-GROUP-STARTED"], timeout=0.1)
+    if ev is not None:
+        raise Exception("Unexpected mesh group start")
 
 def _test_wpas_mesh_secure_no_auto(dev, apdev, test_connectivity):
     dev[0].request("SET sae_groups 19")

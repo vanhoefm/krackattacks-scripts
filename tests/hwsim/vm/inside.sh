@@ -49,6 +49,18 @@ echo 'adm:x:0:' > /etc/group
 echo 'admin:x:0:' >> /etc/group
 # root should exist
 echo 'root:x:0:0:root:/tmp:/bin/bash' > /etc/passwd
+cat > /etc/ethertypes <<EOF
+IPv4	 	0800  	ip ip4
+ARP		0806	ether-arp
+IPv6		86DD	ip6
+EOF
+cat > /etc/protocols <<EOF
+ip      0       IP
+icmp    1       ICMP
+tcp     6       TCP
+udp     17      UDP
+ipv6-icmp 58	IPv6-ICMP
+EOF
 
 # local network is needed for some tests
 ip link set lo up

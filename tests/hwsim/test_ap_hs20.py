@@ -2574,6 +2574,19 @@ def ip_checksum(buf):
         sum = (sum & 0xffff) + (sum >> 16)
     return struct.pack('H', ~sum & 0xffff)
 
+def ipv6_solicited_node_mcaddr(target):
+    prefix = socket.inet_pton(socket.AF_INET6, "ff02::1:ff00:0")
+    mask = socket.inet_pton(socket.AF_INET6, "::ff:ffff")
+    _target = socket.inet_pton(socket.AF_INET6, target)
+    p = struct.unpack('4I', prefix)
+    m = struct.unpack('4I', mask)
+    t = struct.unpack('4I', _target)
+    res = (p[0] | (t[0] & m[0]),
+           p[1] | (t[1] & m[1]),
+           p[2] | (t[2] & m[2]),
+           p[3] | (t[3] & m[3]))
+    return socket.inet_ntop(socket.AF_INET6, struct.pack('4I', *res))
+
 def build_icmpv6(ipv6_addrs, type, code, payload):
     start = struct.pack("BB", type, code)
     end = payload
@@ -2610,6 +2623,8 @@ def build_ns(src_ll, ip_src, ip_dst, target, opt=None):
     proto = '\x86\xdd'
     ehdr = link_mc + _src_ll + proto
     _ip_src = socket.inet_pton(socket.AF_INET6, ip_src)
+    if ip_dst is None:
+        ip_dst = ipv6_solicited_node_mcaddr(target)
     _ip_dst = socket.inet_pton(socket.AF_INET6, ip_dst)
 
     reserved = '\x00\x00\x00\x00'
@@ -2624,6 +2639,25 @@ def build_ns(src_ll, ip_src, ip_dst, target, opt=None):
     ipv6 += _ip_src + _ip_dst
 
     return ehdr + ipv6 + icmp
+
+def send_ns(dev, src_ll=None, target=None, ip_src=None, ip_dst=None, opt=None,
+            hapd_bssid=None):
+    if hapd_bssid:
+        if src_ll is None:
+            src_ll = hapd_bssid
+        cmd = "DATA_TEST_FRAME ifname=ap-br0 "
+    else:
+        if src_ll is None:
+            src_ll = dev.p2p_interface_addr()
+        cmd = "DATA_TEST_FRAME "
+
+    if opt is None:
+        opt = "\x01\x01" + binascii.unhexlify(src_ll.replace(':',''))
+
+    pkt = build_ns(src_ll=src_ll, ip_src=ip_src, ip_dst=ip_dst, target=target,
+                   opt=opt)
+    if "OK" not in dev.request(cmd + binascii.hexlify(pkt)):
+        raise Exception("DATA_TEST_FRAME failed")
 
 def build_na(src_ll, ip_src, ip_dst, target, opt=None):
     link_mc = binascii.unhexlify("3333ff000002")
@@ -2645,6 +2679,22 @@ def build_na(src_ll, ip_src, ip_dst, target, opt=None):
     ipv6 += _ip_src + _ip_dst
 
     return ehdr + ipv6 + icmp
+
+def send_na(dev, src_ll=None, target=None, ip_src=None, ip_dst=None, opt=None,
+            hapd_bssid=None):
+    if hapd_bssid:
+        if src_ll is None:
+            src_ll = hapd_bssid
+        cmd = "DATA_TEST_FRAME ifname=ap-br0 "
+    else:
+        if src_ll is None:
+            src_ll = dev.p2p_interface_addr()
+        cmd = "DATA_TEST_FRAME "
+
+    pkt = build_na(src_ll=src_ll, ip_src=ip_src, ip_dst=ip_dst, target=target,
+                   opt=opt)
+    if "OK" not in dev.request(cmd + binascii.hexlify(pkt)):
+        raise Exception("DATA_TEST_FRAME failed")
 
 def build_dhcp_ack(dst_ll, src_ll, ip_src, ip_dst, yiaddr, chaddr,
                    subnet_mask="255.255.255.0", truncated_opt=False,
@@ -3006,6 +3056,26 @@ def _test_proxyarp_open(dev, apdev, params):
     send_arp(dev[0], sender_ip="192.168.1.123", target_ip="192.168.1.127")
 
     time.sleep(0.1)
+
+    send_ns(dev[0], target="aaaa:bbbb:dddd::2", ip_src="aaaa:bbbb:cccc::2")
+    time.sleep(0.1)
+    send_ns(dev[1], target="aaaa:bbbb:cccc::2", ip_src="aaaa:bbbb:dddd::2")
+    time.sleep(0.1)
+    send_ns(hapd, hapd_bssid=bssid, target="aaaa:bbbb:dddd::2",
+            ip_src="aaaa:bbbb:ffff::2")
+    time.sleep(0.1)
+
+    # Try to probe for an already assigned address
+    send_ns(dev[1], target="aaaa:bbbb:cccc::2", ip_src="::")
+    time.sleep(0.1)
+    send_ns(hapd, hapd_bssid=bssid, target="aaaa:bbbb:cccc::2", ip_src="::")
+    time.sleep(0.1)
+
+    # Unsolicited NA
+    send_na(dev[1], target="aaaa:bbbb:cccc:aeae::3",
+            ip_src="aaaa:bbbb:cccc:aeae::3", ip_dst="ff02::1")
+    send_na(hapd, hapd_bssid=bssid, target="aaaa:bbbb:cccc:aeae::4",
+            ip_src="aaaa:bbbb:cccc:aeae::4", ip_dst="ff02::1")
 
     dev[0].request("DISCONNECT")
     dev[1].request("DISCONNECT")

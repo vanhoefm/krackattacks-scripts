@@ -811,6 +811,7 @@ struct wpa_supplicant {
 	unsigned int p2p_nfc_tag_enabled:1;
 	unsigned int p2p_peer_oob_pk_hash_known:1;
 	unsigned int p2p_disable_ip_addr_req:1;
+	unsigned int p2ps_join_addr_valid:1;
 	int p2p_persistent_go_freq;
 	int p2p_persistent_id;
 	int p2p_go_intent;
@@ -830,6 +831,7 @@ struct wpa_supplicant {
 	/* group common frequencies */
 	int *p2p_group_common_freqs;
 	unsigned int p2p_group_common_freqs_num;
+	u8 p2ps_join_addr[ETH_ALEN];
 #endif /* CONFIG_P2P */
 
 	struct wpa_ssid *bgscan_ssid;

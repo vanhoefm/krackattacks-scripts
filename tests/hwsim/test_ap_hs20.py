@@ -2787,7 +2787,7 @@ def send_arp(dev, dst_ll="ff:ff:ff:ff:ff:ff", src_ll=None, opcode=1,
             sender_mac = dev.p2p_interface_addr()
         cmd = "DATA_TEST_FRAME "
 
-    pkt = build_arp(dst_ll="ff:ff:ff:ff:ff:ff", src_ll=src_ll, opcode=opcode,
+    pkt = build_arp(dst_ll=dst_ll, src_ll=src_ll, opcode=opcode,
                     sender_mac=sender_mac, sender_ip=sender_ip,
                     target_mac=target_mac, target_ip=target_ip)
     if "OK" not in dev.request(cmd + binascii.hexlify(pkt)):
@@ -2998,22 +2998,25 @@ def _test_proxyarp_open(dev, apdev, params):
              target_ip="192.168.1.127")
 
     # ARP Probe from bridge
-    send_arp(hapd, hapd_bssid=bssid, target_ip="192.168.1.128")
-    # ARP Announcement from bridge
-    send_arp(hapd, hapd_bssid=bssid, sender_ip="129.168.1.128",
-             target_ip="192.168.1.128")
-    send_arp(hapd, hapd_bssid=bssid, sender_ip="129.168.1.128",
-             target_ip="192.168.1.128", opcode=2)
+    send_arp(hapd, hapd_bssid=bssid, target_ip="192.168.1.130")
+    # ARP Announcement from bridge (not to be learned by AP for proxyarp)
+    send_arp(hapd, hapd_bssid=bssid, sender_ip="192.168.1.130",
+             target_ip="192.168.1.130")
+    send_arp(hapd, hapd_bssid=bssid, sender_ip="192.168.1.130",
+             target_ip="192.168.1.130", opcode=2)
 
     matches = get_permanent_neighbors("ap-br0")
     logger.info("After ARP Probe + Announcement: " + str(matches))
 
     # ARP Request for the newly introduced IP address from wireless STA
-    send_arp(dev[0], sender_ip="192.168.1.123", target_ip="192.168.1.128")
+    send_arp(dev[0], sender_ip="192.168.1.123", target_ip="192.168.1.130")
+    # ARP Response from bridge (AP does not proxy for non-wireless devices)
+    send_arp(hapd, hapd_bssid=bssid, dst_ll=addr0, sender_ip="192.168.1.130",
+             target_ip="192.168.1.123", opcode=2)
 
     # ARP Request for the newly introduced IP address from bridge
     send_arp(hapd, hapd_bssid=bssid, sender_ip="192.168.1.102",
-             target_ip="192.168.1.128")
+             target_ip="192.168.1.130")
 
     # ARP Probe from wireless STA (duplicate address; learned through DHCP)
     send_arp(dev[1], target_ip="192.168.1.123")

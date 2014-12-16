@@ -7761,6 +7761,13 @@ wpa_driver_nl80211_join_mesh(void *priv,
 			goto fail;
 	}
 
+	if (params->beacon_int > 0) {
+		wpa_printf(MSG_DEBUG, "  * beacon_int=%d", params->beacon_int);
+		if (nla_put_u32(msg, NL80211_ATTR_BEACON_INTERVAL,
+				params->beacon_int))
+			goto fail;
+	}
+
 	wpa_printf(MSG_DEBUG, "  * flags=%08X", params->flags);
 
 	container = nla_nest_start(msg, NL80211_ATTR_MESH_SETUP);

@@ -22,6 +22,9 @@ def run_connectivity_test(dev1, dev2, tos, dev1group=False, dev2group=False,
     if not dev2group and isinstance(dev2, WpaSupplicant):
         addr2 = dev2.get_driver_status_field('addr')
 
+    dev1.dump_monitor()
+    dev2.dump_monitor()
+
     try:
         cmd = "DATA_TEST_CONFIG 1"
         if ifname1:

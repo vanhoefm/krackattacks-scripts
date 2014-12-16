@@ -2776,12 +2776,15 @@ def _test_proxyarp_open(dev, apdev, params):
     subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
 
     cmd = {}
-    cmd[0] = subprocess.Popen(['tcpdump', '-i', 'ap-br0', '-w', cap_br,
-                               '-s', '2000'], stderr=open('/dev/null', 'w'))
-    cmd[1] = subprocess.Popen(['tcpdump', '-i', dev[0].ifname, '-w', cap_dev0,
-                               '-s', '2000'], stderr=open('/dev/null', 'w'))
-    cmd[2] = subprocess.Popen(['tcpdump', '-i', dev[1].ifname, '-w', cap_dev1,
-                               '-s', '2000'], stderr=open('/dev/null', 'w'))
+    cmd[0] = subprocess.Popen(['tcpdump', '-p', '-U', '-i', 'ap-br0',
+                               '-w', cap_br, '-s', '2000'],
+                              stderr=open('/dev/null', 'w'))
+    cmd[1] = subprocess.Popen(['tcpdump', '-p', '-U', '-i', dev[0].ifname,
+                               '-w', cap_dev0, '-s', '2000'],
+                              stderr=open('/dev/null', 'w'))
+    cmd[2] = subprocess.Popen(['tcpdump', '-p', '-U', '-i', dev[1].ifname,
+                               '-w', cap_dev1, '-s', '2000'],
+                              stderr=open('/dev/null', 'w'))
 
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
     dev[1].connect("open", key_mgmt="NONE", scan_freq="2412")

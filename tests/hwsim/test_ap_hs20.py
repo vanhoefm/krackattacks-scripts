@@ -2870,54 +2870,27 @@ def _test_proxyarp_open(dev, apdev, params):
     src_ll_opt1 = "\x01\x01" + binascii.unhexlify(addr1.replace(':',''))
 
     # DAD NS
-    pkt = build_ns(src_ll=addr0, ip_src="::", ip_dst="ff02::1:ff00:2",
-                   target="aaaa:bbbb:cccc::2", opt=src_ll_opt0)
-    if "OK" not in dev[0].request("DATA_TEST_FRAME " + binascii.hexlify(pkt)):
-        raise Exception("DATA_TEST_FRAME failed")
+    send_ns(dev[0], ip_src="::", target="aaaa:bbbb:cccc::2")
 
-    pkt = build_ns(src_ll=addr0, ip_src="aaaa:bbbb:cccc::2",
-                   ip_dst="ff02::1:ff00:2", target="aaaa:bbbb:cccc::2",
-                   opt=src_ll_opt0)
-    if "OK" not in dev[0].request("DATA_TEST_FRAME " + binascii.hexlify(pkt)):
-        raise Exception("DATA_TEST_FRAME failed")
+    send_ns(dev[0], ip_src="aaaa:bbbb:cccc::2", target="aaaa:bbbb:cccc::2")
     # test frame without source link-layer address option
-    pkt = build_ns(src_ll=addr0, ip_src="aaaa:bbbb:cccc::2",
-                   ip_dst="ff02::1:ff00:2", target="aaaa:bbbb:cccc::2")
-    if "OK" not in dev[0].request("DATA_TEST_FRAME " + binascii.hexlify(pkt)):
-        raise Exception("DATA_TEST_FRAME failed")
+    send_ns(dev[0], ip_src="aaaa:bbbb:cccc::2", target="aaaa:bbbb:cccc::2",
+            opt='')
     # test frame with bogus option
-    pkt = build_ns(src_ll=addr0, ip_src="aaaa:bbbb:cccc::2",
-                   ip_dst="ff02::1:ff00:2", target="aaaa:bbbb:cccc::2",
-                   opt="\x70\x01\x01\x02\x03\x04\x05\x05")
-    if "OK" not in dev[0].request("DATA_TEST_FRAME " + binascii.hexlify(pkt)):
-        raise Exception("DATA_TEST_FRAME failed")
+    send_ns(dev[0], ip_src="aaaa:bbbb:cccc::2", target="aaaa:bbbb:cccc::2",
+            opt="\x70\x01\x01\x02\x03\x04\x05\x05")
     # test frame with truncated source link-layer address option
-    pkt = build_ns(src_ll=addr0, ip_src="aaaa:bbbb:cccc::2",
-                   ip_dst="ff02::1:ff00:2", target="aaaa:bbbb:cccc::2",
-                   opt="\x01\x01\x01\x02\x03\x04")
-    if "OK" not in dev[0].request("DATA_TEST_FRAME " + binascii.hexlify(pkt)):
-        raise Exception("DATA_TEST_FRAME failed")
+    send_ns(dev[0], ip_src="aaaa:bbbb:cccc::2", target="aaaa:bbbb:cccc::2",
+            opt="\x01\x01\x01\x02\x03\x04")
     # test frame with foreign source link-layer address option
-    pkt = build_ns(src_ll=addr0, ip_src="aaaa:bbbb:cccc::2",
-                   ip_dst="ff02::1:ff00:2", target="aaaa:bbbb:cccc::2",
-                   opt="\x01\x01\x01\x02\x03\x04\x05\x06")
-    if "OK" not in dev[0].request("DATA_TEST_FRAME " + binascii.hexlify(pkt)):
-        raise Exception("DATA_TEST_FRAME failed")
+    send_ns(dev[0], ip_src="aaaa:bbbb:cccc::2", target="aaaa:bbbb:cccc::2",
+            opt="\x01\x01\x01\x02\x03\x04\x05\x06")
 
-    pkt = build_ns(src_ll=addr1, ip_src="aaaa:bbbb:dddd::2",
-                   ip_dst="ff02::1:ff00:2", target="aaaa:bbbb:dddd::2",
-                   opt=src_ll_opt1)
-    if "OK" not in dev[1].request("DATA_TEST_FRAME " + binascii.hexlify(pkt)):
-        raise Exception("DATA_TEST_FRAME failed")
+    send_ns(dev[1], ip_src="aaaa:bbbb:dddd::2", target="aaaa:bbbb:dddd::2")
 
-    pkt = build_ns(src_ll=addr1, ip_src="aaaa:bbbb:eeee::2",
-                   ip_dst="ff02::1:ff00:2", target="aaaa:bbbb:eeee::2",
-                   opt=src_ll_opt1)
-    if "OK" not in dev[1].request("DATA_TEST_FRAME " + binascii.hexlify(pkt)):
-        raise Exception("DATA_TEST_FRAME failed")
+    send_ns(dev[1], ip_src="aaaa:bbbb:eeee::2", target="aaaa:bbbb:eeee::2")
     # another copy for additional code coverage
-    if "OK" not in dev[1].request("DATA_TEST_FRAME " + binascii.hexlify(pkt)):
-        raise Exception("DATA_TEST_FRAME failed")
+    send_ns(dev[1], ip_src="aaaa:bbbb:eeee::2", target="aaaa:bbbb:eeee::2")
 
     pkt = build_dhcp_ack(dst_ll="ff:ff:ff:ff:ff:ff", src_ll=bssid,
                          ip_src="192.168.1.1", ip_dst="255.255.255.255",

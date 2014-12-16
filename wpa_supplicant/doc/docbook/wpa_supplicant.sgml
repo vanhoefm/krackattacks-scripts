@@ -469,7 +469,7 @@
 	  <para>Enable DBus control interface. If enabled, interface
 	  definitions may be omitted. (This is only available
 	  if <command>wpa_supplicant</command> was built with
-	  the <literal>CONFIG_DBUS</literal> option.)</para>0
+	  the <literal>CONFIG_DBUS</literal> option.)</para>
 	</listitem>
       </varlistentry>
 

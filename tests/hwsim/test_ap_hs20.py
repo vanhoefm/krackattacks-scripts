@@ -16,6 +16,7 @@ import socket
 import subprocess
 
 import hostapd
+import hwsim_utils
 from wlantest import Wlantest
 from wpasupplicant import WpaSupplicant
 
@@ -3076,6 +3077,10 @@ def _test_proxyarp_open(dev, apdev, params):
             ip_src="aaaa:bbbb:cccc:aeae::3", ip_dst="ff02::1")
     send_na(hapd, hapd_bssid=bssid, target="aaaa:bbbb:cccc:aeae::4",
             ip_src="aaaa:bbbb:cccc:aeae::4", ip_dst="ff02::1")
+
+    hwsim_utils.test_connectivity_iface(dev[0], hapd, "ap-br0")
+    hwsim_utils.test_connectivity_iface(dev[1], hapd, "ap-br0")
+    hwsim_utils.test_connectivity(dev[0], dev[1])
 
     dev[0].request("DISCONNECT")
     dev[1].request("DISCONNECT")

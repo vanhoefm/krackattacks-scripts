@@ -401,3 +401,25 @@ def test_p2p_peer_command(dev):
         raise Exception("Invalid P2P_PEER command accepted")
     if "FAIL" not in dev[0].request("P2P_PEER 00:11:22:33:44:55"):
         raise Exception("P2P_PEER command for unknown peer accepted")
+
+def test_p2p_listen_and_offchannel_tx(dev):
+    """P2P_LISTEN behavior with offchannel TX"""
+    addr0 = dev[0].p2p_dev_addr()
+    addr1 = dev[1].p2p_dev_addr()
+    addr2 = dev[2].p2p_dev_addr()
+
+    dev[1].p2p_listen()
+    if not dev[0].discover_peer(addr1):
+        raise Exception("Device discovery timed out")
+
+    dev[0].p2p_listen()
+    dev[0].global_request("P2P_PROV_DISC " + addr1 + " display")
+    ev = dev[0].wait_event(["P2P-PROV-DISC-ENTER-PIN"], timeout=15)
+    if ev is None:
+        raise Exception("No PD result reported")
+    dev[1].p2p_stop_find()
+
+    if not dev[2].discover_peer(addr0):
+        raise Exception("Device discovery timed out after PD exchange")
+    dev[2].p2p_stop_find()
+    dev[0].p2p_stop_find()

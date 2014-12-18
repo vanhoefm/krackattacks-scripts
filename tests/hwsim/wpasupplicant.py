@@ -30,6 +30,8 @@ class WpaSupplicant:
             self.global_ctrl = wpaspy.Ctrl(global_iface)
             self.global_mon = wpaspy.Ctrl(global_iface)
             self.global_mon.attach()
+        else:
+            self.global_mon = None
 
     def set_ifname(self, ifname):
         self.ifname = ifname
@@ -641,7 +643,7 @@ class WpaSupplicant:
         while self.mon.pending():
             ev = self.mon.recv()
             logger.debug(self.ifname + ": " + ev)
-        while self.global_mon.pending():
+        while self.global_mon and self.global_mon.pending():
             ev = self.global_mon.recv()
             logger.debug(self.ifname + "(global): " + ev)
 

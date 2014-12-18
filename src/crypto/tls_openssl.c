@@ -3205,28 +3205,44 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 {
 	int ret;
 	unsigned long err;
+	int can_pkcs11 = 0;
 	const char *key_id = params->key_id;
 	const char *cert_id = params->cert_id;
 	const char *ca_cert_id = params->ca_cert_id;
+	const char *engine_id = params->engine ? params->engine_id : NULL;
 
 	if (conn == NULL)
 		return -1;
 
 	/*
-	 * If any of these three are actually a PKCS#11 URI, treat them
-	 * as _id fields for the ENGINE.
+	 * If the engine isn't explicitly configured, and any of the
+	 * cert/key fields are actually PKCS#11 URIs, then automatically
+	 * use the PKCS#11 ENGINE.
 	 */
-	if (!key_id && params->private_key &&
-	    os_strncmp(params->private_key, "pkcs11:", 7) == 0)
+	if (!engine_id || os_strcmp(engine_id, "pkcs11") == 0)
+		can_pkcs11 = 1;
+
+	if (!key_id && params->private_key && can_pkcs11 &&
+	    os_strncmp(params->private_key, "pkcs11:", 7) == 0) {
+		can_pkcs11 = 2;
 		key_id = params->private_key;
+	}
 
-	if (!cert_id && params->client_cert &&
-	    os_strncmp(params->client_cert, "pkcs11:", 7) == 0)
+	if (!cert_id && params->client_cert && can_pkcs11 &&
+	    os_strncmp(params->client_cert, "pkcs11:", 7) == 0) {
+		can_pkcs11 = 2;
 		cert_id = params->client_cert;
+	}
 
-	if (!ca_cert_id && params->ca_cert &&
-	    os_strncmp(params->ca_cert, "pkcs11:", 7) == 0)
+	if (!ca_cert_id && params->ca_cert && can_pkcs11 &&
+	    os_strncmp(params->ca_cert, "pkcs11:", 7) == 0) {
+		can_pkcs11 = 2;
 		ca_cert_id = params->ca_cert;
+	}
+
+	/* If we need to automatically enable the PKCS#11 ENGINE, do so. */
+	if (can_pkcs11 == 2 && !engine_id)
+		engine_id = "pkcs11";
 
 	if (params->flags & TLS_CONN_EAP_FAST) {
 		wpa_printf(MSG_DEBUG,
@@ -3243,9 +3259,9 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 			   __func__, ERR_error_string(err, NULL));
 	}
 
-	if (params->engine) {
+	if (engine_id) {
 		wpa_printf(MSG_DEBUG, "SSL: Initializing TLS engine");
-		ret = tls_engine_init(conn, params->engine_id, params->pin,
+		ret = tls_engine_init(conn, engine_id, params->pin,
 				      key_id, cert_id, ca_cert_id);
 		if (ret)
 			return ret;
@@ -3256,7 +3272,7 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 					     params->suffix_match))
 		return -1;
 
-	if (params->engine && ca_cert_id) {
+	if (engine_id && ca_cert_id) {
 		if (tls_connection_engine_ca_cert(tls_ctx, conn,
 						  ca_cert_id))
 			return TLS_SET_PARAMS_ENGINE_PRV_VERIFY_FAILED;
@@ -3266,7 +3282,7 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 					  params->ca_path))
 		return -1;
 
-	if (params->engine && cert_id) {
+	if (engine_id && cert_id) {
 		if (tls_connection_engine_client_cert(conn, cert_id))
 			return TLS_SET_PARAMS_ENGINE_PRV_VERIFY_FAILED;
 	} else if (tls_connection_client_cert(conn, params->client_cert,
@@ -3274,7 +3290,7 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 					      params->client_cert_blob_len))
 		return -1;
 
-	if (params->engine && key_id) {
+	if (engine_id && key_id) {
 		wpa_printf(MSG_DEBUG, "TLS: Using private key from engine");
 		if (tls_connection_engine_private_key(conn))
 			return TLS_SET_PARAMS_ENGINE_PRV_VERIFY_FAILED;

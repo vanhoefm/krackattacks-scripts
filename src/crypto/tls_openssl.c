@@ -903,10 +903,6 @@ static int tls_engine_init(struct tls_connection *conn, const char *engine_id,
 		return -1;
 	}
 #endif
-	if (key_id == NULL) {
-		wpa_printf(MSG_ERROR, "ENGINE: Key Id not set");
-		return -1;
-	}
 
 	ERR_clear_error();
 #ifdef ANDROID
@@ -933,15 +929,18 @@ static int tls_engine_init(struct tls_connection *conn, const char *engine_id,
 		goto err;
 	}
 #endif
-	/* load private key first in-case PIN is required for cert */
-	conn->private_key = ENGINE_load_private_key(conn->engine,
-						    key_id, NULL, NULL);
-	if (!conn->private_key) {
-		wpa_printf(MSG_ERROR, "ENGINE: cannot load private key with id"
-				" '%s' [%s]", key_id,
-			   ERR_error_string(ERR_get_error(), NULL));
-		ret = TLS_SET_PARAMS_ENGINE_PRV_INIT_FAILED;
-		goto err;
+	if (key_id) {
+		/* load private key first in-case PIN is required for cert */
+		conn->private_key = ENGINE_load_private_key(conn->engine,
+							    key_id, NULL, NULL);
+		if (!conn->private_key) {
+			wpa_printf(MSG_ERROR,
+				   "ENGINE: cannot load private key with id '%s' [%s]",
+				   key_id,
+				   ERR_error_string(ERR_get_error(), NULL));
+			ret = TLS_SET_PARAMS_ENGINE_PRV_INIT_FAILED;
+			goto err;
+		}
 	}
 
 	/* handle a certificate and/or CA certificate */

@@ -692,12 +692,15 @@ static int tls_engine_load_dynamic_pkcs11(const char *pkcs11_so_path,
 		NULL, NULL
 	};
 
-	if (!pkcs11_so_path || !pkcs11_module_path)
+	if (!pkcs11_so_path)
 		return 0;
 
 	pre_cmd[1] = pkcs11_so_path;
 	pre_cmd[3] = engine_id;
-	post_cmd[1] = pkcs11_module_path;
+	if (pkcs11_module_path)
+		post_cmd[1] = pkcs11_module_path;
+	else
+		post_cmd[0] = NULL;
 
 	wpa_printf(MSG_DEBUG, "ENGINE: Loading pkcs11 Engine from %s",
 		   pkcs11_so_path);

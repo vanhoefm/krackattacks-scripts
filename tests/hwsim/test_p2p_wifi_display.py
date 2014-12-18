@@ -13,7 +13,7 @@ import Queue
 import hwsim_utils
 import utils
 from test_p2p_autogo import connect_cli
-from test_p2p_persistent import form, invite_from_cli, invite_from_go
+from test_p2p_persistent import form, invite, invite_from_cli, invite_from_go
 
 def test_wifi_display(dev):
     """Wi-Fi Display extensions to P2P"""
@@ -273,9 +273,18 @@ def test_wifi_display_persistent_group(dev):
         if "[P2P-PERSISTENT]" not in networks[0]['flags']:
             raise Exception("Not the persistent group data")
         if "OK" not in dev[0].global_request("P2P_GROUP_ADD persistent=" + networks[0]['id'] + " freq=" + listen_freq):
-            raise Exception("Could not state GO")
+            raise Exception("Could not start GO")
         connect_cli(dev[0], dev[2], social=True, freq=listen_freq)
-        invite_from_cli(dev[0], dev[1])
+        dev[0].dump_monitor()
+        dev[1].dump_monitor()
+        invite(dev[1], dev[0])
+        ev = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=30)
+        if ev is None:
+            raise Exception("Timeout on group re-invocation (on client)")
+        ev = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=0.1)
+        if ev is not None:
+            raise Exception("Unexpected P2P-GROUP-START on GO")
+        hwsim_utils.test_connectivity_p2p(dev[0], dev[1])
 
     finally:
         dev[0].request("SET wifi_display 0")

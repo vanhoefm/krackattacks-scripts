@@ -897,12 +897,6 @@ static int tls_engine_init(struct tls_connection *conn, const char *engine_id,
 		wpa_printf(MSG_ERROR, "ENGINE: Engine ID not set");
 		return -1;
 	}
-#ifndef ANDROID
-	if (pin == NULL) {
-		wpa_printf(MSG_ERROR, "ENGINE: Smartcard PIN not set");
-		return -1;
-	}
-#endif
 
 	ERR_clear_error();
 #ifdef ANDROID
@@ -923,16 +917,26 @@ static int tls_engine_init(struct tls_connection *conn, const char *engine_id,
 	wpa_printf(MSG_DEBUG, "ENGINE: engine initialized");
 
 #ifndef ANDROID
-	if (ENGINE_ctrl_cmd_string(conn->engine, "PIN", pin, 0) == 0) {
+	if (pin && ENGINE_ctrl_cmd_string(conn->engine, "PIN", pin, 0) == 0) {
 		wpa_printf(MSG_ERROR, "ENGINE: cannot set pin [%s]",
 			   ERR_error_string(ERR_get_error(), NULL));
 		goto err;
 	}
 #endif
 	if (key_id) {
+		/*
+		 * Ensure that the ENGINE does not attempt to use the OpenSSL
+		 * UI system to obtain a PIN, if we didn't provide one.
+		 */
+		struct {
+			const void *password;
+			const char *prompt_info;
+		} key_cb = { "", NULL };
+
 		/* load private key first in-case PIN is required for cert */
 		conn->private_key = ENGINE_load_private_key(conn->engine,
-							    key_id, NULL, NULL);
+							    key_id, NULL,
+							    &key_cb);
 		if (!conn->private_key) {
 			wpa_printf(MSG_ERROR,
 				   "ENGINE: cannot load private key with id '%s' [%s]",

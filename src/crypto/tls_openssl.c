@@ -828,13 +828,13 @@ void * tls_init(const struct tls_config *conf)
 #endif /* OPENSSL_SUPPORTS_CTX_APP_DATA */
 
 #ifndef OPENSSL_NO_ENGINE
+	wpa_printf(MSG_DEBUG, "ENGINE: Loading dynamic engine");
+	ERR_load_ENGINE_strings();
+	ENGINE_load_dynamic();
+
 	if (conf &&
 	    (conf->opensc_engine_path || conf->pkcs11_engine_path ||
 	     conf->pkcs11_module_path)) {
-		wpa_printf(MSG_DEBUG, "ENGINE: Loading dynamic engine");
-		ERR_load_ENGINE_strings();
-		ENGINE_load_dynamic();
-
 		if (tls_engine_load_dynamic_opensc(conf->opensc_engine_path) ||
 		    tls_engine_load_dynamic_pkcs11(conf->pkcs11_engine_path,
 						   conf->pkcs11_module_path)) {

@@ -441,6 +441,15 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 	} else if (os_strcmp(cmd, "blob") == 0) {
 		ret = wpas_ctrl_set_blob(wpa_s, value);
 #endif /* CONFIG_NO_CONFIG_BLOBS */
+	} else if (os_strcasecmp(cmd, "setband") == 0) {
+		if (os_strcmp(value, "AUTO") == 0)
+			wpa_s->setband = WPA_SETBAND_AUTO;
+		else if (os_strcmp(value, "5G") == 0)
+			wpa_s->setband = WPA_SETBAND_5G;
+		else if (os_strcmp(value, "2G") == 0)
+			wpa_s->setband = WPA_SETBAND_2G;
+		else
+			ret = -1;
 	} else {
 		value[-1] = '=';
 		ret = wpa_config_process_global(wpa_s->conf, cmd, -1);

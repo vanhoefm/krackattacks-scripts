@@ -244,6 +244,8 @@ static void mesh_mpm_send_plink_action(struct wpa_supplicant *wpa_s,
 	wpabuf_put_u8(buf, type);
 
 	if (type != PLINK_CLOSE) {
+		u8 info;
+
 		/* capability info */
 		wpabuf_put_le16(buf, ampe ? IEEE80211_CAP_PRIVACY : 0);
 
@@ -269,8 +271,9 @@ static void mesh_mpm_send_plink_action(struct wpa_supplicant *wpa_s,
 		wpabuf_put_u8(buf, conf->mesh_cc_id);
 		wpabuf_put_u8(buf, conf->mesh_sp_id);
 		wpabuf_put_u8(buf, conf->mesh_auth_id);
-		/* TODO: formation info */
-		wpabuf_put_u8(buf, 0);
+		info = (bss->num_plinks > 63 ? 63 : bss->num_plinks) << 1;
+		/* TODO: Add Connected to Mesh Gate/AS subfields */
+		wpabuf_put_u8(buf, info);
 		/* always forwarding & accepting plinks for now */
 		wpabuf_put_u8(buf, 0x1 | 0x8);
 	} else {	/* Peer closing frame */

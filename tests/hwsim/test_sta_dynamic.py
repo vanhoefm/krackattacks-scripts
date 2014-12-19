@@ -87,6 +87,38 @@ def test_sta_ap_scan_2(dev, apdev):
     if ev is not None:
         raise Exception("Unexpected connection reported")
 
+def test_sta_ap_scan_2b(dev, apdev):
+    """Dynamically added wpa_supplicant interface with AP_SCAN 2 operation"""
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test" })
+    bssid = apdev[0]['bssid']
+
+    logger.info("Create a dynamic wpa_supplicant interface and connect")
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
+
+    if "OK" not in wpas.request("AP_SCAN 2"):
+        raise Exception("Failed to set AP_SCAN 2")
+
+    id = wpas.connect("test", key_mgmt="NONE", bssid=bssid)
+    wpas.request("DISCONNECT")
+    wpas.set_network(id, "disabled", "1")
+    id2 = wpas.add_network()
+    wpas.set_network_quoted(id2, "ssid", "test2")
+    wpas.set_network(id2, "key_mgmt", "NONE")
+    wpas.set_network(id2, "disabled", "0")
+    wpas.request("REASSOCIATE")
+    ev = wpas.wait_event(["CTRL-EVENT-ASSOC-REJECT"], timeout=15)
+    if ev is None:
+        raise Exception("Association rejection not reported")
+    hapd.disable()
+    wpas.set_network(id, "disabled", "0")
+    wpas.set_network(id2, "disabled", "1")
+    for i in range(3):
+        ev = wpas.wait_event(["CTRL-EVENT-ASSOC-REJECT"], timeout=15)
+        if ev is None:
+            raise Exception("Association rejection not reported")
+    wpas.request("DISCONNECT")
+
 def test_sta_dynamic_down_up(dev, apdev):
     """Dynamically added wpa_supplicant interface down/up"""
     params = hostapd.wpa2_params(ssid="sta-dynamic", passphrase="12345678")

@@ -47,6 +47,7 @@ TIMESTAMP=$(date +%s)
 DATE=$TIMESTAMP
 CODECOV=no
 TIMEWARP=0
+CODECOV_DIR=
 while [ "$1" != "" ]; do
 	case $1 in
 		--timestamp ) shift
@@ -59,6 +60,10 @@ while [ "$1" != "" ]; do
 			;;
 		--codecov ) shift
 			CODECOV=yes
+			;;
+		--codecov_dir ) shift
+			CODECOV_DIR=$1
+			shift
 			;;
 		--timewrap ) shift
 			TIMEWARP=1
@@ -73,59 +78,13 @@ done
 LOGDIR=$LOGS/$DATE
 mkdir -p $LOGDIR
 
-if [ $CODECOV = "yes" ]; then
-    DIR=$PWD
-    if [ -e /tmp/logs ]; then
-	echo "/tmp/logs exists - cannot prepare build trees"
-	exit 1
-    fi
-    mkdir /tmp/logs
-    echo "Preparing separate build trees for hostapd/wpa_supplicant"
-    cd ../../..
-    git archive --format=tar --prefix=hostap/ HEAD > /tmp/logs/hostap.tar
-    cd $DIR
-    cat ../../../wpa_supplicant/.config > /tmp/logs/wpa_supplicant.config
-    echo "CONFIG_CODE_COVERAGE=y" >> /tmp/logs/wpa_supplicant.config
-    cat ../../../hostapd/.config > /tmp/logs/hostapd.config
-    echo "CONFIG_CODE_COVERAGE=y" >> /tmp/logs/hostapd.config
-
-    cd /tmp/logs
-    tar xf hostap.tar
-    mv hostap alt-wpa_supplicant
-    mv wpa_supplicant.config alt-wpa_supplicant/wpa_supplicant/.config
-    tar xf hostap.tar
-    mv hostap alt-hostapd
-    cp hostapd.config alt-hostapd/hostapd/.config
-    tar xf hostap.tar
-    mv hostap alt-hostapd-as
-    cp hostapd.config alt-hostapd-as/hostapd/.config
-    tar xf hostap.tar
-    mv hostap alt-hlr_auc_gw
-    mv hostapd.config alt-hlr_auc_gw/hostapd/.config
-    rm hostap.tar
-
-    cd /tmp/logs/alt-wpa_supplicant/wpa_supplicant
-    echo "Building wpa_supplicant"
-    make -j8 > /dev/null
-
-    cd /tmp/logs/alt-hostapd/hostapd
-    echo "Building hostapd"
-    make -j8 hostapd > /dev/null
-
-    cd /tmp/logs/alt-hostapd-as/hostapd
-    echo "Building hostapd (AS)"
-    make -j8 hostapd > /dev/null
-
-    cd /tmp/logs/alt-hlr_auc_gw/hostapd
-    echo "Building hlr_auc_gw"
-    make -j8 hlr_auc_gw > /dev/null
-
-    cd $DIR
-
-    mv /tmp/logs/alt-wpa_supplicant $LOGDIR
-    mv /tmp/logs/alt-hostapd $LOGDIR
-    mv /tmp/logs/alt-hostapd-as $LOGDIR
-    mv /tmp/logs/alt-hlr_auc_gw $LOGDIR
+if [ -n "$CODECOV_DIR" ]; then
+    cp -a $CODECOV_DIR/alt-wpa_supplicant $LOGDIR
+    cp -a $CODECOV_DIR/alt-hostapd $LOGDIR
+    cp -a $CODECOV_DIR/alt-hostapd-as $LOGDIR
+    cp -a $CODECOV_DIR/alt-hlr_auc_gw $LOGDIR
+elif [ $CODECOV = "yes" ]; then
+    ./build-codecov.sh $LOGDIR || exit 1
 else
     CODECOV=no
 fi
@@ -143,6 +102,7 @@ kvm \
 	-append "mac80211_hwsim.support_p2p_device=0 mac80211_hwsim.channels=$CHANNELS mac80211_hwsim.radios=6 init=$CMD testdir=$TESTDIR timewarp=$TIMEWARP console=$KVMOUT root=/dev/root rootflags=trans=virtio,version=9p2000.u ro rootfstype=9p EPATH=$EPATH ARGS=$RUN_TEST_ARGS"
 
 if [ $CODECOV = "yes" ]; then
+    DIR=$PWD
     mv $LOGDIR/alt-wpa_supplicant /tmp/logs
     mv $LOGDIR/alt-hostapd /tmp/logs
     mv $LOGDIR/alt-hostapd-as /tmp/logs

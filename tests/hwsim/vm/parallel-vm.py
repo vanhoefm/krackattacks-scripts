@@ -126,20 +126,38 @@ def main():
     global tests
 
     if len(sys.argv) < 2:
-        sys.exit("Usage: %s <number of VMs> [params..]" % sys.argv[0])
+        sys.exit("Usage: %s <number of VMs> [--codecov] [params..]" % sys.argv[0])
     num_servers = int(sys.argv[1])
     if num_servers < 1:
         sys.exit("Too small number of VMs")
 
+    timestamp = int(time.time())
+
+    if len(sys.argv) > 2 and sys.argv[2] == "--codecov":
+        idx = 3
+        print "Code coverage - build separate binaries"
+        logdir = "/tmp/hwsim-test-logs/" + str(timestamp)
+        os.makedirs(logdir)
+        subprocess.check_call(['./build-codecov.sh', logdir])
+        codecov_args = ['--codecov_dir', logdir]
+        codecov = True
+    else:
+        idx = 2
+        codecov_args = []
+        codecov = False
+
     tests = []
-    cmd = [ '../run-tests.py', '-L' ] + sys.argv[2:]
+    cmd = [ '../run-tests.py', '-L' ] + sys.argv[idx:]
     lst = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     for l in lst.stdout.readlines():
         name = l.split(' ')[0]
         tests.append(name)
     if len(tests) == 0:
         sys.exit("No test cases selected")
-    extra_args = [x for x in sys.argv[2:] if x not in tests]
+    if '-f' in sys.argv[idx:]:
+        extra_args = sys.argv[idx:]
+    else:
+        extra_args = [x for x in sys.argv[idx:] if x not in tests]
 
     dir = '/tmp/hwsim-test-logs'
     try:
@@ -147,13 +165,12 @@ def main():
     except:
         pass
 
-    timestamp = int(time.time())
     vm = {}
     for i in range(0, num_servers):
         print("\rStarting virtual machine {}/{}".format(i + 1, num_servers)),
         cmd = ['./vm-run.sh', '--timestamp', str(timestamp),
                '--ext', 'srv.%d' % (i + 1),
-               '-i'] + extra_args
+               '-i'] + codecov_args + extra_args
         vm[i] = {}
         vm[i]['proc'] = subprocess.Popen(cmd,
                                          stdin=subprocess.PIPE,
@@ -188,6 +205,15 @@ def main():
         with open(log, 'r') as f:
             if "Kernel panic" in f.read():
                 print "Kernel panic in " + log
+
+    if codecov:
+        print "Code coverage - preparing report"
+        for i in range(num_servers):
+            subprocess.check_call(['./process-codecov.sh',
+                                   logdir + ".srv.%d" % (i + 1),
+                                   str(i)])
+        subprocess.check_call(['./combine-codecov.sh', logdir])
+        print "file://%s/index.html" % logdir
 
 if __name__ == "__main__":
     main()

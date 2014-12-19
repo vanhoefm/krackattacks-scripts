@@ -1216,6 +1216,9 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 
 	if (config->user_mpm != DEFAULT_USER_MPM)
 		fprintf(f, "user_mpm=%d\n", config->user_mpm);
+
+	if (config->max_peer_links != DEFAULT_MAX_PEER_LINKS)
+		fprintf(f, "max_peer_links=%d\n", config->max_peer_links);
 }
 
 #endif /* CONFIG_NO_CONFIG_WRITE */

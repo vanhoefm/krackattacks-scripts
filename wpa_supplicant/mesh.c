@@ -169,7 +169,7 @@ static int wpa_supplicant_mesh_init(struct wpa_supplicant *wpa_s,
 	bss->iconf = conf;
 	ifmsh->conf = conf;
 
-	ifmsh->bss[0]->max_plinks = 99;
+	ifmsh->bss[0]->max_plinks = wpa_s->conf->max_peer_links;
 	os_strlcpy(bss->conf->iface, wpa_s->ifname, sizeof(bss->conf->iface));
 
 	mconf = mesh_config_create(ssid);
@@ -323,6 +323,7 @@ int wpa_supplicant_join_mesh(struct wpa_supplicant *wpa_s,
 		params.beacon_int = ssid->beacon_int;
 	else if (wpa_s->conf->beacon_int > 0)
 		params.beacon_int = wpa_s->conf->beacon_int;
+	params.max_peer_links = wpa_s->conf->max_peer_links;
 #ifdef CONFIG_IEEE80211N
 	params.ht_mode = ssid->mesh_ht_mode;
 #endif /* CONFIG_IEEE80211N */

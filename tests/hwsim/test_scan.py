@@ -164,7 +164,7 @@ def test_scan_filter(dev, apdev):
     try:
         if "OK" not in dev[0].request("SET filter_ssids 1"):
             raise Exception("SET failed")
-        dev[0].connect("test-scan", key_mgmt="NONE", only_add_network=True)
+        id = dev[0].connect("test-scan", key_mgmt="NONE", only_add_network=True)
         hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan" })
         bssid = apdev[0]['bssid']
         hostapd.add_ap(apdev[1]['ifname'], { "ssid": "test-scan2" })
@@ -174,6 +174,10 @@ def test_scan_filter(dev, apdev):
             raise Exception("BSS not found in scan results")
         if bssid2 in dev[0].request("SCAN_RESULTS"):
             raise Exception("Unexpected BSS found in scan results")
+        dev[0].set_network_quoted(id, "ssid", "")
+        dev[0].scan(freq="2412")
+        id2 = dev[0].connect("test", key_mgmt="NONE", only_add_network=True)
+        dev[0].scan(freq="2412")
     finally:
         dev[0].request("SET filter_ssids 0")
 

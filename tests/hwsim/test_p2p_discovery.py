@@ -423,3 +423,16 @@ def test_p2p_listen_and_offchannel_tx(dev):
         raise Exception("Device discovery timed out after PD exchange")
     dev[2].p2p_stop_find()
     dev[0].p2p_stop_find()
+
+def test_p2p_listen_and_scan(dev):
+    """P2P_LISTEN and scan"""
+    dev[0].p2p_listen()
+    if "OK" not in dev[0].request("SCAN freq=2412"):
+        raise Exception("Failed to request a scan")
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], 3)
+    if ev is not None:
+        raise Exception("Unexpected scan results")
+    dev[0].p2p_stop_find()
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], 15)
+    if ev is None:
+        raise Exception("Scan timed out")

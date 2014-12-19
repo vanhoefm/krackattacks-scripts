@@ -495,3 +495,63 @@ def test_scan_reqs_with_non_scan_radio_work(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-SCAN-STARTED"], timeout=0.2)
     if ev is not None:
         raise Exception("Unexpected scan started")
+
+def test_scan_setband(dev, apdev):
+    """Band selection for scan operations"""
+    try:
+        hapd = None
+        hapd2 = None
+        params = { "ssid": "test-setband",
+                   "hw_mode": "a",
+                   "channel": "36",
+                   "country_code": "US" }
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        bssid = apdev[0]['bssid']
+
+        params = { "ssid": "test-setband",
+                   "hw_mode": "g",
+                   "channel": "1" }
+        hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+        bssid2 = apdev[1]['bssid']
+
+        if "FAIL" not in dev[0].request("SET setband FOO"):
+            raise Exception("Invalid set setband accepted")
+        if "OK" not in dev[0].request("SET setband AUTO"):
+            raise Exception("Failed to set setband")
+        if "OK" not in dev[1].request("SET setband 5G"):
+            raise Exception("Failed to set setband")
+        if "OK" not in dev[2].request("SET setband 2G"):
+            raise Exception("Failed to set setband")
+
+        for i in range(3):
+            dev[i].request("SCAN only_new=1")
+
+        for i in range(3):
+            ev = dev[i].wait_event(["CTRL-EVENT-SCAN-RESULTS"], 15)
+            if ev is None:
+                raise Exception("Scan timed out")
+
+        res = dev[0].request("SCAN_RESULTS")
+        if bssid not in res or bssid2 not in res:
+            raise Exception("Missing scan result(0)")
+
+        res = dev[1].request("SCAN_RESULTS")
+        if bssid not in res:
+            raise Exception("Missing scan result(1)")
+        if bssid2 in res:
+            raise Exception("Unexpected scan result(1)")
+
+        res = dev[2].request("SCAN_RESULTS")
+        if bssid2 not in res:
+            raise Exception("Missing scan result(2)")
+        if bssid in res:
+            raise Exception("Unexpected scan result(2)")
+    finally:
+        if hapd:
+            hapd.request("DISABLE")
+        if hapd2:
+            hapd2.request("DISABLE")
+        subprocess.call(['iw', 'reg', 'set', '00'])
+        for i in range(3):
+            dev[i].request("SET setband AUTO")
+            dev[i].flush_scan_cache()

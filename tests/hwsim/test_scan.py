@@ -555,3 +555,45 @@ def test_scan_setband(dev, apdev):
         for i in range(3):
             dev[i].request("SET setband AUTO")
             dev[i].flush_scan_cache()
+
+def test_scan_hidden_many(dev, apdev):
+    """scan_ssid=1 with large number of profile with hidden SSID"""
+    try:
+        _test_scan_hidden_many(dev, apdev)
+    finally:
+        dev[0].flush_scan_cache()
+        dev[0].request("SCAN_INTERVAL 5")
+
+def _test_scan_hidden_many(dev, apdev):
+    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan-ssid",
+                                         "ignore_broadcast_ssid": "1" })
+    bssid = apdev[0]['bssid']
+
+    dev[0].request("SCAN_INTERVAL 1")
+
+    for i in range(5):
+        id = dev[0].add_network()
+        dev[0].set_network_quoted(id, "ssid", "foo")
+        dev[0].set_network(id, "key_mgmt", "NONE")
+        dev[0].set_network(id, "disabled", "0")
+        dev[0].set_network(id, "scan_freq", "2412")
+        dev[0].set_network(id, "scan_ssid", "1")
+
+    dev[0].set_network_quoted(id, "ssid", "test-scan-ssid")
+    dev[0].set_network(id, "key_mgmt", "NONE")
+    dev[0].set_network(id, "disabled", "0")
+    dev[0].set_network(id, "scan_freq", "2412")
+    dev[0].set_network(id, "scan_ssid", "1")
+
+    for i in range(5):
+        id = dev[0].add_network()
+        dev[0].set_network_quoted(id, "ssid", "foo")
+        dev[0].set_network(id, "key_mgmt", "NONE")
+        dev[0].set_network(id, "disabled", "0")
+        dev[0].set_network(id, "scan_freq", "2412")
+        dev[0].set_network(id, "scan_ssid", "1")
+
+    dev[0].request("REASSOCIATE")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
+    if ev is None:
+        raise Exception("Association with the AP timed out")

@@ -759,3 +759,15 @@ def test_ap_ht40_csa3(dev, apdev):
             hapd.request("DISABLE")
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
+
+def test_ap_ht_smps(dev, apdev):
+    """SMPS AP configuration options"""
+    params = { "ssid": "ht1", "ht_capab": "[SMPS-STATIC]" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    params = { "ssid": "ht2", "ht_capab": "[SMPS-DYNAMIC]" }
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+
+    dev[0].connect("ht1", key_mgmt="NONE", scan_freq="2412")
+    dev[1].connect("ht2", key_mgmt="NONE", scan_freq="2412")
+    hwsim_utils.test_connectivity(dev[0], hapd)
+    hwsim_utils.test_connectivity(dev[1], hapd2)

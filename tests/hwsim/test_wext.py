@@ -212,10 +212,10 @@ def test_wext_scan_hidden(dev, apdev):
     if not wpas:
         return "skip"
 
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan",
-                                         "ignore_broadcast_ssid": "1" })
-    hostapd.add_ap(apdev[1]['ifname'], { "ssid": "test-scan2",
-                                         "ignore_broadcast_ssid": "1" })
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan",
+                                                "ignore_broadcast_ssid": "1" })
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], { "ssid": "test-scan2",
+                                                 "ignore_broadcast_ssid": "1" })
 
     id1 = wpas.connect("test-scan", key_mgmt="NONE", scan_ssid="1",
                        only_add_network=True)
@@ -232,6 +232,13 @@ def test_wext_scan_hidden(dev, apdev):
     id = wpas.connect("test-scan2", key_mgmt="NONE", scan_ssid="1",
                       only_add_network=True)
     wpas.connect_network(id, timeout=30)
+    wpas.request("DISCONNECT")
+    hapd2.disable()
+    hapd.disable()
+    wpas.interface_remove("wlan5")
+    wpas.interface_add("wlan5")
+    wpas.flush_scan_cache(freq=2412)
+    wpas.flush_scan_cache()
 
 def test_wext_rfkill(dev, apdev):
     """WEXT and rfkill block/unblock"""

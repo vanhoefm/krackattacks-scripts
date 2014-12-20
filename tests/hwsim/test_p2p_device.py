@@ -24,6 +24,20 @@ def test_p2p_device_grpform(dev, apdev):
         check_grpform_results(i_res, r_res)
         remove_group(dev[0], wpas)
 
+        res = wpas.global_request("IFNAME=p2p-dev-" + iface + " STATUS-DRIVER")
+        lines = res.splitlines()
+        found = False
+        for l in lines:
+            try:
+                [name,value] = l.split('=', 1)
+                if name == "wdev_id":
+                    found = True
+                    break
+            except ValueError:
+                pass
+        if not found:
+            raise Exception("wdev_id not found")
+
 def test_p2p_device_grpform2(dev, apdev):
     """P2P group formation with driver using cfg80211 P2P Device (reverse)"""
     with HWSimRadio(use_p2p_device=True) as (radio, iface):

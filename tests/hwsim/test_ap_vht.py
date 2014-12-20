@@ -123,6 +123,33 @@ def test_ap_vht_20(devs, apdevs):
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
         dev.flush_scan_cache()
 
+def test_ap_vht_40(devs, apdevs):
+    """VHT and 40 MHz channel"""
+    dev = devs[0]
+    ap = apdevs[0]
+    try:
+        hapd = None
+        params = { "ssid": "test-vht40",
+                   "country_code": "DE",
+                   "hw_mode": "a",
+                   "channel": "36",
+                   "ieee80211n": "1",
+                   "ieee80211ac": "1",
+                   "ht_capab": "[HT40+]",
+                   "vht_capab": "",
+                   "vht_oper_chwidth": "0",
+                   "vht_oper_centr_freq_seg0_idx": "0",
+                 }
+        hapd = hostapd.add_ap(ap['ifname'], params)
+        dev.connect("test-vht40", scan_freq="5180", key_mgmt="NONE")
+        hwsim_utils.test_connectivity(dev, hapd)
+    finally:
+        dev.request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
+        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        dev.flush_scan_cache()
+
 def test_ap_vht_capab_not_supported(dev, apdev):
     """VHT configuration with driver not supporting all vht_capab entries"""
     try:

@@ -521,7 +521,8 @@ def test_pmksa_cache_opportunistic_multiple_sta(dev, apdev):
     for sta in [ dev[2], dev[0], wpas, dev[1] ]:
         sta.dump_monitor()
         sta.scan_for_bss(bssid2, freq="2412")
-        sta.request("ROAM " + bssid2)
+        if "OK" not in sta.request("ROAM " + bssid2):
+            raise Exception("ROAM command failed")
         ev = sta.wait_event(["CTRL-EVENT-EAP-STARTED",
                              "CTRL-EVENT-CONNECTED"], timeout=10)
         if ev is None:

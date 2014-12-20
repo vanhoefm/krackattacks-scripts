@@ -324,16 +324,6 @@ static int send_and_recv(struct nl80211_global *global,
 }
 
 
-static int send_and_recv_msgs_global(struct nl80211_global *global,
-				     struct nl_msg *msg,
-				     int (*valid_handler)(struct nl_msg *, void *),
-				     void *valid_data)
-{
-	return send_and_recv(global, global->nl, msg, valid_handler,
-			     valid_data);
-}
-
-
 int send_and_recv_msgs(struct wpa_driver_nl80211_data *drv,
 		       struct nl_msg *msg,
 		       int (*valid_handler)(struct nl_msg *, void *),
@@ -398,7 +388,7 @@ static int nl_get_multicast_id(struct nl80211_global *global,
 		return -1;
 	}
 
-	ret = send_and_recv_msgs_global(global, msg, family_handler, &res);
+	ret = send_and_recv(global, global->nl, msg, family_handler, &res);
 	if (ret == 0)
 		ret = res.id;
 	return ret;

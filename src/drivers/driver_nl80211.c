@@ -2162,6 +2162,7 @@ static void wpa_driver_nl80211_deinit(struct i802_bss *bss)
 			nl80211_handle_destroy(drv->rtnl_sk);
 	}
 	if (bss->added_bridge) {
+		linux_set_iface_flags(drv->global->ioctl_sock, bss->brname, 0);
 		if (linux_br_del(drv->global->ioctl_sock, bss->brname) < 0)
 			wpa_printf(MSG_INFO, "nl80211: Failed to remove "
 				   "bridge %s: %s",
@@ -5501,16 +5502,21 @@ static void *i802_init(struct hostapd_data *hapd,
 				br_added = 1;
 		}
 	}
-	if (!br_added && br_ifindex &&
-	    (params->num_bridge == 0 || !params->bridge[0]))
-		add_ifidx(drv, br_ifindex);
 
 	/* start listening for EAPOL on the default AP interface */
 	add_ifidx(drv, drv->ifindex);
 
-	if (params->num_bridge && params->bridge[0] &&
-	    i802_check_bridge(drv, bss, params->bridge[0], params->ifname) < 0)
-		goto failed;
+	if (params->num_bridge && params->bridge[0]) {
+		if (i802_check_bridge(drv, bss, params->bridge[0],
+				      params->ifname) < 0)
+			goto failed;
+		if (os_strcmp(params->bridge[0], brname) != 0)
+			br_added = 1;
+	}
+
+	if (!br_added && br_ifindex &&
+	    (params->num_bridge == 0 || !params->bridge[0]))
+		add_ifidx(drv, br_ifindex);
 
 #ifdef CONFIG_LIBNL3_ROUTE
 	if (bss->added_if_into_bridge) {

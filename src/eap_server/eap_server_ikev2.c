@@ -309,6 +309,12 @@ static int eap_ikev2_process_fragment(struct eap_ikev2_data *data,
 
 	if (data->in_buf == NULL) {
 		/* First fragment of the message */
+		if (message_length > 50000) {
+			/* Limit maximum memory allocation */
+			wpa_printf(MSG_DEBUG,
+				   "EAP-IKEV2: Ignore too long message");
+			return -1;
+		}
 		data->in_buf = wpabuf_alloc(message_length);
 		if (data->in_buf == NULL) {
 			wpa_printf(MSG_DEBUG, "EAP-IKEV2: No memory for "

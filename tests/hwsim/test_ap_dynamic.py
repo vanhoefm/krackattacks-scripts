@@ -8,6 +8,7 @@ import time
 import subprocess
 import logging
 logger = logging.getLogger()
+import os
 
 import hwsim_utils
 import hostapd
@@ -323,3 +324,51 @@ def test_ap_double_disable(dev, apdev):
     hapd.disable()
     if "FAIL" not in hapd.request("DISABLE"):
         raise Exception("Second DISABLE accepted unexpectedly")
+
+def test_ap_bss_add_many(dev, apdev):
+    """Large number of BSS add operations with hostapd"""
+    try:
+        _test_ap_bss_add_many(dev, apdev)
+    finally:
+        dev[0].request("SCAN_INTERVAL 5")
+        ifname = apdev[0]['ifname']
+        hapd = hostapd.HostapdGlobal()
+        hapd.flush()
+        for i in range(16):
+            ifname2 = ifname + '-' + str(i)
+            hapd.remove(ifname2)
+        try:
+            os.remove('/tmp/hwsim-bss.conf')
+        except:
+            pass
+
+def _test_ap_bss_add_many(dev, apdev):
+    ifname = apdev[0]['ifname']
+    phy = 'phy3'
+    hostapd.add_bss(phy, ifname, 'bss-1.conf')
+    hapd = hostapd.HostapdGlobal()
+    fname = '/tmp/hwsim-bss.conf'
+    for i in range(16):
+        ifname2 = ifname + '-' + str(i)
+        with open(fname, 'w') as f:
+            f.write("driver=nl80211\n")
+            f.write("hw_mode=g\n")
+            f.write("channel=1\n")
+            f.write("ieee80211n=1\n")
+            f.write("interface=%s\n" % ifname2)
+            f.write("bssid=02:00:00:00:03:%02x\n" % (i + 1))
+            f.write("ctrl_interface=/var/run/hostapd\n")
+            f.write("ssid=test-%d\n" % i)
+        hostapd.add_bss(phy, ifname2, fname)
+        os.remove(fname)
+
+    dev[0].request("SCAN_INTERVAL 1")
+    dev[0].connect("bss-1", key_mgmt="NONE", scan_freq="2412")
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected(timeout=5)
+    for i in range(16):
+        dev[0].connect("test-%d" % i, key_mgmt="NONE", scan_freq="2412")
+        dev[0].request("DISCONNECT")
+        dev[0].wait_disconnected(timeout=5)
+        ifname2 = ifname + '-' + str(i)
+        hapd.remove(ifname2)

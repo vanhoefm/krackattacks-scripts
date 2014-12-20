@@ -24,7 +24,8 @@ def test_connect_cmd_open(dev, apdev):
 
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")
-    wpas.connect("sta-connect", key_mgmt="NONE", scan_freq="2412")
+    wpas.connect("sta-connect", key_mgmt="NONE", scan_freq="2412",
+                 bg_scan_period="1")
     wpas.request("DISCONNECT")
 
 def test_connect_cmd_wep(dev, apdev):

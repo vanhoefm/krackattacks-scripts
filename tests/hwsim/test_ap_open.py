@@ -16,7 +16,8 @@ import hwsim_utils
 def test_ap_open(dev, apdev):
     """AP with open mode (no security) configuration"""
     hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
-    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412",
+                   bg_scan_period="0")
     ev = hapd.wait_event([ "AP-STA-CONNECTED" ], timeout=5)
     if ev is None:
         raise Exception("No connection event received from hostapd")

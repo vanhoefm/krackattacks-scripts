@@ -12,6 +12,7 @@ import time
 import hostapd
 from hostapd import HostapdGlobal
 import hwsim_utils
+from wpasupplicant import WpaSupplicant
 
 def get_rfkill_id(dev):
     try:
@@ -163,5 +164,28 @@ def test_rfkill_hostapd(dev, apdev):
                               no_enable=True)
         if "FAIL" not in hapd.request("ENABLE"):
             raise Exception("ENABLE succeeded unexpectedly (rfkill)")
+    finally:
+        subprocess.call(['rfkill', 'unblock', id])
+
+def test_rfkill_wpas(dev, apdev):
+    """rfkill block prior to wpa_supplicant start"""
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5")
+    id = get_rfkill_id(wpas)
+    if id is None:
+        return "skip"
+    wpas.interface_remove("wlan5")
+    try:
+        subprocess.call(['rfkill', 'block', id])
+        wpas.interface_add("wlan5")
+        time.sleep(0.5)
+        state = wpas.get_status_field("wpa_state")
+        if state != "INTERFACE_DISABLED":
+            raise Exception("Unexpected state with rfkill blocked: " + state)
+        subprocess.call(['rfkill', 'unblock', id])
+        time.sleep(0.5)
+        state = wpas.get_status_field("wpa_state")
+        if state == "INTERFACE_DISABLED":
+            raise Exception("Unexpected state with rfkill unblocked: " + state)
     finally:
         subprocess.call(['rfkill', 'unblock', id])

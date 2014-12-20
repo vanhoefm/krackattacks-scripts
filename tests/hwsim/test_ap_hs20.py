@@ -52,9 +52,7 @@ def hs20_ap_params(ssid="test-hs20"):
 def check_auto_select(dev, bssid):
     dev.scan_for_bss(bssid, freq="2412")
     dev.request("INTERWORKING_SELECT auto freq=2412")
-    ev = dev.wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("Connection timed out")
+    ev = dev.wait_connected(timeout=15)
     if bssid not in ev:
         raise Exception("Connected to incorrect network")
     dev.request("REMOVE_NETWORK all")
@@ -133,9 +131,7 @@ def interworking_ext_sim_auth(dev, method):
     resp = res.split(' ')[2].rstrip()
 
     dev.request("CTRL-RSP-SIM-" + id + ":GSM-AUTH:" + resp)
-    ev = dev.wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("Connection timed out")
+    dev.wait_connected(timeout=15)
 
 def interworking_connect(dev, bssid, method):
     dev.request("INTERWORKING_CONNECT " + bssid)
@@ -148,9 +144,7 @@ def interworking_auth(dev, method):
     if "(" + method + ")" not in ev:
         raise Exception("Unexpected EAP method selection")
 
-    ev = dev.wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("Connection timed out")
+    dev.wait_connected(timeout=15)
 
 def check_probe_resp(wt, bssid_unexpected, bssid_expected):
     if bssid_unexpected:
@@ -551,9 +545,7 @@ def test_ap_hs20_auto_interworking(dev, apdev):
                                   'domain': "example.com",
                                   'update_identifier': "1234" })
     dev[0].request("REASSOCIATE")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("Connection timed out")
+    dev[0].wait_connected(timeout=15)
     check_sp_type(dev[0], "home")
     status = dev[0].get_status()
     if status['pairwise_cipher'] != "CCMP":
@@ -1028,9 +1020,7 @@ def policy_test(dev, ap, values, only_one=True):
                 raise Exception("Selected incorrect BSS")
             break
 
-    ev = dev.wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("Connection timed out")
+    ev = dev.wait_connected(timeout=15)
     if bssid and bssid not in ev:
         raise Exception("Connected to incorrect BSS")
 
@@ -1632,9 +1622,7 @@ def _test_ap_hs20_deauth_req_ess(dev, apdev):
     if "1 120 http://example.com/" not in ev:
         raise Exception("Unexpected deauth imminent notice: " + ev)
     hapd.request("DEAUTHENTICATE " + addr)
-    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"])
-    if ev is None:
-        raise Exception("Timeout on disconnection")
+    dev[0].wait_disconnected(timeout=10)
     if "[TEMP-DISABLED]" not in dev[0].list_networks()[0]['flags']:
         raise Exception("Network not marked temporarily disabled")
     ev = dev[0].wait_event(["SME: Trying to authenticate",
@@ -1663,9 +1651,7 @@ def _test_ap_hs20_deauth_req_bss(dev, apdev):
     if "0 120 http://example.com/" not in ev:
         raise Exception("Unexpected deauth imminent notice: " + ev)
     hapd.request("DEAUTHENTICATE " + addr + " reason=4")
-    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"])
-    if ev is None:
-        raise Exception("Timeout on disconnection")
+    ev = dev[0].wait_disconnected(timeout=10)
     if "reason=4" not in ev:
         raise Exception("Unexpected disconnection reason")
     if "[TEMP-DISABLED]" not in dev[0].list_networks()[0]['flags']:
@@ -1702,9 +1688,7 @@ def _test_ap_hs20_deauth_req_from_radius(dev, apdev):
         raise Exception("Timeout on deauth imminent notice")
     if " 1 100" not in ev:
         raise Exception("Unexpected deauth imminent contents")
-    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=3)
-    if ev is None:
-        raise Exception("Timeout on disconnection")
+    dev[0].wait_disconnected(timeout=3)
 
 def test_ap_hs20_remediation_required(dev, apdev):
     """Hotspot 2.0 connection and remediation required from RADIUS"""
@@ -1854,9 +1838,7 @@ def test_ap_hs20_network_preference(dev, apdev):
 
     dev[0].scan_for_bss(bssid, freq="2412")
     dev[0].request("INTERWORKING_SELECT auto freq=2412")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("Connection timed out")
+    ev = dev[0].wait_connected(timeout=15)
     if bssid not in ev:
         raise Exception("Unexpected network selected")
 
@@ -1896,9 +1878,7 @@ def test_ap_hs20_network_preference2(dev, apdev):
 
     dev[0].scan_for_bss(bssid2, freq="2412")
     dev[0].request("INTERWORKING_SELECT auto freq=2412")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("Connection timed out")
+    ev = dev[0].wait_connected(timeout=15)
     if bssid2 not in ev:
         raise Exception("Unexpected network selected")
 
@@ -1942,9 +1922,7 @@ def test_ap_hs20_network_preference3(dev, apdev):
     dev[0].scan_for_bss(bssid, freq="2412")
     dev[0].scan_for_bss(bssid2, freq="2412")
     dev[0].request("INTERWORKING_SELECT auto freq=2412")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("Connection timed out")
+    ev = dev[0].wait_connected(timeout=15)
     if bssid not in ev:
         raise Exception("Unexpected network selected")
 
@@ -1986,9 +1964,7 @@ def test_ap_hs20_network_preference4(dev, apdev):
     dev[0].scan_for_bss(bssid, freq="2412")
     dev[0].scan_for_bss(bssid2, freq="2412")
     dev[0].request("INTERWORKING_SELECT auto freq=2412")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("Connection timed out")
+    ev = dev[0].wait_connected(timeout=15)
     if bssid not in ev:
         raise Exception("Unexpected network selected")
 
@@ -2330,9 +2306,7 @@ def test_ap_hs20_multi_network_and_cred_removal(dev, apdev):
     dev[0].add_network()
 
     dev[0].request("DISCONNECT")
-    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"])
-    if ev is None:
-        raise Exception("Timeout on disconnection")
+    dev[0].wait_disconnected(timeout=10)
 
     hapd.disable()
     hapd.set("ssid", "another ssid")
@@ -2348,9 +2322,7 @@ def test_ap_hs20_multi_network_and_cred_removal(dev, apdev):
     dev[0].remove_cred(id)
     if len(dev[0].list_networks()) != 3:
         raise Exception("Unexpected number of networks after to remove_crec")
-    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"])
-    if ev is None:
-        raise Exception("Timeout on disconnection")
+    dev[0].wait_disconnected(timeout=10)
 
 def _test_ap_hs20_proxyarp(dev, apdev):
     bssid = apdev[0]['bssid']

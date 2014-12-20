@@ -395,9 +395,7 @@ def test_ap_wpa2_psk_ext(dev, apdev):
         if ev is None:
             raise Exception("Timeout on EAPOL-TX from hostapd")
         if "AP-STA-CONNECTED" in ev:
-            ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
-            if ev is None:
-                raise Exception("Timeout on connection event from wpa_supplicant")
+            dev[0].wait_connected(timeout=15)
             break
         res = dev[0].request("EAPOL_RX " + bssid + " " + ev.split(' ')[2])
         if "OK" not in res:

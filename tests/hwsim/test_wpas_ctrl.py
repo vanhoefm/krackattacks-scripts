@@ -674,18 +674,14 @@ def test_wpas_ctrl_disallow_aps(dev, apdev):
         raise Exception("Failed to set disallow_aps")
     if "OK" not in dev[0].request("SET disallow_aps bssid " + apdev[0]['bssid']):
         raise Exception("Failed to set disallow_aps")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("Reassociation timed out")
+    ev = dev[0].wait_connected(timeout=15, error="Reassociation timed out")
     if apdev[1]['bssid'] not in ev:
         raise Exception("Unexpected BSSID")
 
     dev[0].dump_monitor()
     if "OK" not in dev[0].request("SET disallow_aps ssid " + "test".encode("hex")):
         raise Exception("Failed to set disallow_aps")
-    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=5)
-    if ev is None:
-        raise Exception("Disconnection not seen")
+    dev[0].wait_disconnected(timeout=5, error="Disconnection not seen")
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
     if ev is not None:
         raise Exception("Unexpected reassociation")
@@ -945,26 +941,18 @@ def test_wpas_ctrl_enable_disable_network(dev, apdev):
         raise Exception("Failed to disable networks")
     if "OK" not in dev[0].request("ENABLE_NETWORK " + str(id)):
         raise Exception("Failed to enable network")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
-    if ev is None:
-        raise Exception("Association with the AP timed out")
+    dev[0].wait_connected(timeout=10)
     if "OK" not in dev[0].request("DISABLE_NETWORK " + str(id)):
         raise Exception("Failed to disable network")
-    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=10)
-    if ev is None:
-        raise Exception("Disconnection with the AP timed out")
+    dev[0].wait_disconnected(timeout=10)
     time.sleep(0.1)
 
     if "OK" not in dev[0].request("ENABLE_NETWORK all"):
         raise Exception("Failed to enable network")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
-    if ev is None:
-        raise Exception("Association with the AP timed out")
+    dev[0].wait_connected(timeout=10)
     if "OK" not in dev[0].request("DISABLE_NETWORK all"):
         raise Exception("Failed to disable network")
-    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=10)
-    if ev is None:
-        raise Exception("Disconnection with the AP timed out")
+    dev[0].wait_disconnected(timeout=10)
 
 def test_wpas_ctrl_country(dev, apdev):
     """wpa_supplicant SET/GET country code"""

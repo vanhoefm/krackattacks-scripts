@@ -39,9 +39,7 @@ def test_ap_open_packet_loss(dev, apdev):
         dev[i].connect("open", key_mgmt="NONE", scan_freq="2412",
                        wait_connect=False)
     for i in range(0, 3):
-        ev = dev[i].wait_event(["CTRL-EVENT-CONNECTED"], timeout=20)
-        if ev is None:
-            raise Exception("Association with the AP timed out")
+        dev[i].wait_connected(timeout=20)
 
 def test_ap_open_unknown_action(dev, apdev):
     """AP with open mode configuration and unknown Action frame"""
@@ -62,12 +60,8 @@ def test_ap_open_reconnect_on_inactivity_disconnect(dev, apdev):
     hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
     hapd.request("DEAUTHENTICATE " + dev[0].p2p_interface_addr() + " reason=4")
-    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=5)
-    if ev is None:
-        raise Exception("Timeout on disconnection")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=2)
-    if ev is None:
-        raise Exception("Timeout on reconnection")
+    dev[0].wait_disconnected(timeout=5)
+    dev[0].wait_connected(timeout=2, error="Timeout on reconnection")
 
 def test_ap_open_assoc_timeout(dev, apdev):
     """AP timing out association"""
@@ -107,18 +101,14 @@ def test_ap_open_assoc_timeout(dev, apdev):
     if assoc != 3:
         raise Exception("Association Request frames not received: assoc=%d" % assoc)
     hapd.set("ext_mgmt_frame_handling", "0")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("Timeout on connection")
+    dev[0].wait_connected(timeout=15)
 
 def test_ap_open_id_str(dev, apdev):
     """AP with open mode and id_str"""
     hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412", id_str="foo",
                    wait_connect=False)
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"])
-    if ev is None:
-        raise Exception("Association with the AP timed out")
+    ev = dev[0].wait_connected(timeout=10)
     if "id_str=foo" not in ev:
         raise Exception("CTRL-EVENT-CONNECT did not have matching id_str: " + ev)
     if dev[0].get_status_field("id_str") != "foo":
@@ -137,34 +127,28 @@ def test_ap_open_select_any(dev, apdev):
         raise Exception("Unexpected connection")
 
     dev[0].select_network("any")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"])
-    if ev is None:
-        raise Exception("Association with the AP timed out")
+    dev[0].wait_connected(timeout=10)
 
 def test_ap_open_unexpected_assoc_event(dev, apdev):
     """AP with open mode and unexpected association event"""
     hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
     dev[0].request("DISCONNECT")
-    dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=15)
+    dev[0].wait_disconnected(timeout=15)
     dev[0].dump_monitor()
     # This will be accepted due to matching network
     subprocess.call(['iw', 'dev', dev[0].ifname, 'connect', 'open', "2412",
                      apdev[0]['bssid']])
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("Association with the AP timed out")
+    dev[0].wait_connected(timeout=15)
     dev[0].dump_monitor()
 
     dev[0].request("REMOVE_NETWORK all")
-    dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=5)
+    dev[0].wait_disconnected(timeout=5)
     dev[0].dump_monitor()
     # This will result in disconnection due to no matching network
     subprocess.call(['iw', 'dev', dev[0].ifname, 'connect', 'open', "2412",
                      apdev[0]['bssid']])
-    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("Disconnection with the AP timed out")
+    dev[0].wait_disconnected(timeout=15)
 
 def test_ap_bss_load(dev, apdev):
     """AP with open mode (no security) configuration"""

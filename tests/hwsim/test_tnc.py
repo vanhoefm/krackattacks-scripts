@@ -22,9 +22,7 @@ def test_tnc_peap_soh(dev, apdev):
                    phase1="peapver=0 tnc=soh cryptobinding=0",
                    phase2="auth=MSCHAPV2",
                    wait_connect=False)
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
-    if ev is None:
-        raise Exception("Connection timed out")
+    dev[0].wait_connected(timeout=10)
 
     dev[1].connect("test-wpa2-eap", key_mgmt="WPA-EAP",
                    eap="PEAP", identity="user", password="password",
@@ -32,9 +30,7 @@ def test_tnc_peap_soh(dev, apdev):
                    phase1="peapver=0 tnc=soh1 cryptobinding=1",
                    phase2="auth=MSCHAPV2",
                    wait_connect=False)
-    ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
-    if ev is None:
-        raise Exception("Connection timed out")
+    dev[1].wait_connected(timeout=10)
 
     dev[2].connect("test-wpa2-eap", key_mgmt="WPA-EAP",
                    eap="PEAP", identity="user", password="password",
@@ -42,9 +38,7 @@ def test_tnc_peap_soh(dev, apdev):
                    phase1="peapver=0 tnc=soh2 cryptobinding=2",
                    phase2="auth=MSCHAPV2",
                    wait_connect=False)
-    ev = dev[2].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
-    if ev is None:
-        raise Exception("Connection timed out")
+    dev[2].wait_connected(timeout=10)
 
 def test_tnc_ttls(dev, apdev):
     """TNC TTLS"""
@@ -62,9 +56,7 @@ def test_tnc_ttls(dev, apdev):
                    phase2="auth=MSCHAPV2",
                    ca_cert="auth_serv/ca.pem",
                    wait_connect=False)
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
-    if ev is None:
-        raise Exception("Connection timed out")
+    dev[0].wait_connected(timeout=10)
 
 def test_tnc_fast(dev, apdev):
     """TNC FAST"""
@@ -88,6 +80,4 @@ def test_tnc_fast(dev, apdev):
                    pac_file="blob://fast_pac_auth_tnc",
                    ca_cert="auth_serv/ca.pem",
                    wait_connect=False)
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
-    if ev is None:
-        raise Exception("Connection timed out")
+    dev[0].wait_connected(timeout=10)

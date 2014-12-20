@@ -341,9 +341,7 @@ def test_scan_for_auth(dev, apdev):
     # cfg80211 BSS entry missing.
     dev[0].request("RADIO_WORK done " + id)
 
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("Association with the AP timed out")
+    dev[0].wait_connected(timeout=15)
 
 def test_scan_hidden(dev, apdev):
     """Control interface behavior on scan parameters"""
@@ -451,12 +449,8 @@ def test_scan_and_bss_entry_removed(dev, apdev):
     dev[0].request("RADIO_WORK done " + id)
     wpas.request("RADIO_WORK done " + w_id)
 
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("No connection (sme-connect)")
-    ev = wpas.wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("No connection (connect)")
+    dev[0].wait_connected(timeout=15, error="No connection (sme-connect)")
+    wpas.wait_connected(timeout=15, error="No connection (connect)")
 
 def test_scan_reqs_with_non_scan_radio_work(dev, apdev):
     """SCAN commands while non-scan radio_work is in progress"""
@@ -594,6 +588,4 @@ def _test_scan_hidden_many(dev, apdev):
         dev[0].set_network(id, "scan_ssid", "1")
 
     dev[0].request("REASSOCIATE")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
-    if ev is None:
-        raise Exception("Association with the AP timed out")
+    dev[0].wait_connected(timeout=30)

@@ -38,9 +38,8 @@ def test_rfkill_open(dev, apdev):
     try:
         logger.info("rfkill block")
         subprocess.call(['sudo', 'rfkill', 'block', id])
-        ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=10)
-        if ev is None:
-            raise Exception("Missing disconnection event on rfkill block")
+        dev[0].wait_disconnected(timeout=10,
+                                 error="Missing disconnection event on rfkill block")
 
         if "FAIL" not in dev[0].request("REASSOCIATE"):
             raise Exception("REASSOCIATE accepted while disabled")
@@ -53,9 +52,8 @@ def test_rfkill_open(dev, apdev):
 
         logger.info("rfkill unblock")
         subprocess.call(['sudo', 'rfkill', 'unblock', id])
-        ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
-        if ev is None:
-            raise Exception("Missing connection event on rfkill unblock")
+        dev[0].wait_connected(timeout=10,
+                              error="Missing connection event on rfkill unblock")
         hwsim_utils.test_connectivity(dev[0], hapd)
     finally:
         subprocess.call(['sudo', 'rfkill', 'unblock', id])
@@ -74,15 +72,13 @@ def test_rfkill_wpa2_psk(dev, apdev):
     try:
         logger.info("rfkill block")
         subprocess.call(['sudo', 'rfkill', 'block', id])
-        ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=10)
-        if ev is None:
-            raise Exception("Missing disconnection event on rfkill block")
+        dev[0].wait_disconnected(timeout=10,
+                                 error="Missing disconnection event on rfkill block")
 
         logger.info("rfkill unblock")
         subprocess.call(['sudo', 'rfkill', 'unblock', id])
-        ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
-        if ev is None:
-            raise Exception("Missing connection event on rfkill unblock")
+        dev[0].wait_connected(timeout=10,
+                              error="Missing connection event on rfkill unblock")
         hwsim_utils.test_connectivity(dev[0], hapd)
     finally:
         subprocess.call(['sudo', 'rfkill', 'unblock', id])
@@ -155,9 +151,7 @@ def test_rfkill_hostapd(dev, apdev):
         ev = hapd.wait_event(["INTERFACE-DISABLED"], timeout=5)
         if ev is None:
             raise Exception("INTERFACE-DISABLED event not seen")
-        ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=10)
-        if ev is None:
-            raise Exception("Missing disconnection event")
+        dev[0].wait_disconnected(timeout=10)
         dev[0].request("DISCONNECT")
         hapd.disable()
 

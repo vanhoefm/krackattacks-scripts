@@ -164,9 +164,7 @@ def test_radius_acct_pmksa_caching(dev, apdev):
                    password_hex="0123456789abcdef0123456789abcdef")
     for d in [ dev[0], dev[1] ]:
         d.request("REASSOCIATE")
-        ev = d.wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
-        if ev is None:
-            raise Exception("Reassociation timed out")
+        d.wait_connected(timeout=15, error="Reassociation timed out")
 
     count = 0
     while True:
@@ -423,12 +421,8 @@ def test_radius_das_disconnect(dev, apdev):
     if reply.code != pyrad.packet.DisconnectACK:
         raise Exception("Unexpected response code")
 
-    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"])
-    if ev is None:
-        raise Exception("Timeout while waiting for disconnection")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"])
-    if ev is None:
-        raise Exception("Timeout while waiting for re-connection")
+    dev[0].wait_disconnected(timeout=10)
+    dev[0].wait_connected(timeout=10, error="Re-connection timed out")
 
     logger.info("Disconnect-Request with matching User-Name")
     req = radius_das.DisconnectPacket(dict=dict, secret="secret",
@@ -442,12 +436,8 @@ def test_radius_das_disconnect(dev, apdev):
     if reply.code != pyrad.packet.DisconnectACK:
         raise Exception("Unexpected response code")
 
-    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"])
-    if ev is None:
-        raise Exception("Timeout while waiting for disconnection")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"])
-    if ev is None:
-        raise Exception("Timeout while waiting for re-connection")
+    dev[0].wait_disconnected(timeout=10)
+    dev[0].wait_connected(timeout=10, error="Re-connection timed out")
 
     logger.info("Disconnect-Request with matching Calling-Station-Id")
     req = radius_das.DisconnectPacket(dict=dict, secret="secret",
@@ -461,17 +451,13 @@ def test_radius_das_disconnect(dev, apdev):
     if reply.code != pyrad.packet.DisconnectACK:
         raise Exception("Unexpected response code")
 
-    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"])
-    if ev is None:
-        raise Exception("Timeout while waiting for disconnection")
+    dev[0].wait_disconnected(timeout=10)
     ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED", "CTRL-EVENT-CONNECTED"])
     if ev is None:
         raise Exception("Timeout while waiting for re-connection")
     if "CTRL-EVENT-EAP-STARTED" not in ev:
         raise Exception("Unexpected skipping of EAP authentication in reconnection")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"])
-    if ev is None:
-        raise Exception("Timeout while waiting for re-connection to complete")
+    dev[0].wait_connected(timeout=10, error="Re-connection timed out")
 
     logger.info("Disconnect-Request with matching Calling-Station-Id and non-matching CUI")
     req = radius_das.DisconnectPacket(dict=dict, secret="secret",
@@ -485,12 +471,8 @@ def test_radius_das_disconnect(dev, apdev):
     if reply.code != pyrad.packet.DisconnectACK:
         raise Exception("Unexpected response code")
 
-    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"])
-    if ev is None:
-        raise Exception("Timeout while waiting for disconnection")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"])
-    if ev is None:
-        raise Exception("Timeout while waiting for re-connection")
+    dev[0].wait_disconnected(timeout=10)
+    dev[0].wait_connected(timeout=10, error="Re-connection timed out")
 
     logger.info("Disconnect-Request with matching CUI")
     dev[1].connect("radius-das", key_mgmt="WPA-EAP",
@@ -507,12 +489,8 @@ def test_radius_das_disconnect(dev, apdev):
     if reply.code != pyrad.packet.DisconnectACK:
         raise Exception("Unexpected response code")
 
-    ev = dev[1].wait_event(["CTRL-EVENT-DISCONNECTED"])
-    if ev is None:
-        raise Exception("Timeout while waiting for disconnection")
-    ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"])
-    if ev is None:
-        raise Exception("Timeout while waiting for re-connection")
+    dev[1].wait_disconnected(timeout=10)
+    dev[1].wait_connected(timeout=10, error="Re-connection timed out")
 
     ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=1)
     if ev is not None:
@@ -627,9 +605,7 @@ def test_radius_failover(dev, apdev):
                          '192.168.213.17'])
         dev[0].request("SET EAPOL::authPeriod 5")
         connect(dev[0], "radius-failover", wait_connect=False)
-        ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=60)
-        if ev is None:
-            raise Exception("Connection with the AP timed out")
+        dev[0].wait_connected(timeout=60)
     finally:
         dev[0].request("SET EAPOL::authPeriod 30")
         subprocess.call(['sudo', 'ip', 'ro', 'del', '192.168.213.17'])

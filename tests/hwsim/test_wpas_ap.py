@@ -67,18 +67,10 @@ def test_wpas_ap_open(dev):
     dev[2].dump_monitor()
     dev[0].request("DEAUTHENTICATE " + addr1)
     dev[0].request("DISASSOCIATE " + addr2)
-    ev = dev[1].wait_event(["CTRL-EVENT-DISCONNECTED"])
-    if ev is None:
-        raise Exception("Disconnection timed out")
-    ev = dev[2].wait_event(["CTRL-EVENT-DISCONNECTED"])
-    if ev is None:
-        raise Exception("Disconnection timed out")
-    ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"])
-    if ev is None:
-        raise Exception("Reconnection timed out")
-    ev = dev[2].wait_event(["CTRL-EVENT-CONNECTED"])
-    if ev is None:
-        raise Exception("Reconnection timed out")
+    dev[1].wait_disconnected(timeout=10)
+    dev[2].wait_disconnected(timeout=10)
+    dev[1].wait_connected(timeout=10, error="Reconnection timed out")
+    dev[2].wait_connected(timeout=10, error="Reconnection timed out")
     dev[1].request("DISCONNECT")
     dev[2].request("DISCONNECT")
 
@@ -167,9 +159,7 @@ def test_wpas_ap_wps(dev):
     if ev is None:
         raise Exception("PBC mode start timeout")
     dev[1].request("WPS_PBC")
-    ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
-    if ev is None:
-        raise Exception("WPS PBC operation timed out")
+    dev[1].wait_connected(timeout=30, error="WPS PBC operation timed out")
     hwsim_utils.test_connectivity(dev[0], dev[1])
 
     logger.info("Test AP PIN to learn configuration")
@@ -194,17 +184,13 @@ def test_wpas_ap_wps(dev):
     pin = dev[1].wps_read_pin()
     dev[0].request("WPS_PIN any " + pin)
     dev[1].request("WPS_PIN any " + pin)
-    ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
-    if ev is None:
-        raise Exception("Association with the AP timed out")
+    dev[1].wait_connected(timeout=30)
     dev[1].request("REMOVE_NETWORK all")
     dev[1].dump_monitor()
 
     dev[0].request("WPS_PIN any " + pin + " 100")
     dev[1].request("WPS_PIN any " + pin)
-    ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
-    if ev is None:
-        raise Exception("Association with the AP timed out")
+    dev[1].wait_connected(timeout=30)
     dev[1].request("REMOVE_NETWORK all")
     dev[1].dump_monitor()
 
@@ -221,9 +207,7 @@ def test_wpas_ap_wps(dev):
             raise Exception("WPS operation timed out")
         if "WPS-SUCCESS" in ev:
             raise Exception("WPS operation succeeded unexpectedly")
-        ev = dev[2].wait_event(["CTRL-EVENT-DISCONNECTED"])
-        if ev is None:
-            raise Exception("Timeout while waiting for disconnection")
+        dev[2].wait_disconnected(timeout=10)
         dev[2].request("WPS_CANCEL")
         dev[2].request("REMOVE_NETWORK all")
     ev = dev[0].wait_event(["WPS-AP-SETUP-LOCKED"])

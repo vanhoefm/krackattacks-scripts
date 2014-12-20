@@ -303,17 +303,13 @@ def test_ap_enable_disable_reenable(dev, apdev):
     ev = hapd.wait_event(["AP-DISABLED"], timeout=30)
     if ev is None:
         raise Exception("AP disabling timed out")
-    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"])
-    if ev is None:
-        raise Exception("STA disconnect event timed out")
+    dev[0].wait_disconnected(timeout=10)
     hapd.enable()
     ev = hapd.wait_event(["AP-ENABLED"], timeout=30)
     if ev is None:
         raise Exception("AP startup timed out")
     dev[1].connect("dynamic", key_mgmt="NONE", scan_freq="2412")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"])
-    if ev is None:
-        raise Exception("STA connect event timed out")
+    dev[0].wait_connected(timeout=10)
 
 def test_ap_double_disable(dev, apdev):
     """Double DISABLE regression test"""

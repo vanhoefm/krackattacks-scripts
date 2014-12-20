@@ -126,12 +126,8 @@ def test_cfg80211_wep_key_idx_change(dev, apdev):
     attrs += build_nl80211_attr_mac('MAC', apdev[0]['bssid'])
     attrs += build_nl80211_attr_flag('LOCAL_STATE_CHANGE')
     nl80211_command(dev[0], 'DEAUTHENTICATE', attrs)
-    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=5)
-    if ev is None:
-        raise Exception("Local-deauth timed out")
+    dev[0].wait_disconnected(timeout=5, error="Local-deauth timed out")
 
     # the previous command results in deauth event followed by auto-reconnect
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
-    if ev is None:
-        raise Exception("Reassociation with the AP timed out")
+    dev[0].wait_connected(timeout=10, error="Reassociation timed out")
     hwsim_utils.test_connectivity(dev[0], hapd)

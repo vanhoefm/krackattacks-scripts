@@ -269,9 +269,7 @@ class WpaSupplicant:
     def connect_network(self, id, timeout=10):
         self.dump_monitor()
         self.select_network(id)
-        ev = self.wait_event(["CTRL-EVENT-CONNECTED"], timeout=timeout)
-        if ev is None:
-            raise Exception("Association with the AP timed out")
+        self.wait_connected(timeout=timeout)
         self.dump_monitor()
 
     def get_status(self, extra=None):
@@ -861,9 +859,7 @@ class WpaSupplicant:
                 raise Exception("Unexpected connection")
             self.dump_monitor()
             return
-        ev = self.wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
-        if ev is None:
-            raise Exception("Roaming with the AP timed out")
+        self.wait_connected(timeout=10, error="Roaming with the AP timed out")
         self.dump_monitor()
 
     def roam_over_ds(self, bssid, fail_test=False):
@@ -876,9 +872,7 @@ class WpaSupplicant:
                 raise Exception("Unexpected connection")
             self.dump_monitor()
             return
-        ev = self.wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
-        if ev is None:
-            raise Exception("Roaming with the AP timed out")
+        self.wait_connected(timeout=10, error="Roaming with the AP timed out")
         self.dump_monitor()
 
     def wps_reg(self, bssid, pin, new_ssid=None, key_mgmt=None, cipher=None,
@@ -901,9 +895,7 @@ class WpaSupplicant:
             ev = self.wait_event(["WPS-FAIL"], timeout=15)
         if ev is None:
             raise Exception("WPS timed out")
-        ev = self.wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
-        if ev is None:
-            raise Exception("Association with the AP timed out")
+        self.wait_connected(timeout=15)
 
     def relog(self):
         self.global_request("RELOG")
@@ -998,3 +990,15 @@ class WpaSupplicant:
         msg['payload'] = frame[24:]
 
         return msg
+
+    def wait_connected(self, timeout=10, error="Connection timed out"):
+        ev = self.wait_event(["CTRL-EVENT-CONNECTED"], timeout=timeout)
+        if ev is None:
+            raise Exception(error)
+        return ev
+
+    def wait_disconnected(self, timeout=10, error="Disconnection timed out"):
+        ev = self.wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=timeout)
+        if ev is None:
+            raise Exception(error)
+        return ev

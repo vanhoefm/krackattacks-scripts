@@ -207,9 +207,7 @@ def test_gas_concurrent_connect(dev, apdev):
     get_gas_response(dev[0], bssid, ev)
 
     dev[0].request("DISCONNECT")
-    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=5)
-    if ev is None:
-        raise Exception("Disconnection timed out")
+    dev[0].wait_disconnected(timeout=5)
 
     logger.debug("Wait six seconds for expiration of connect-without-scan")
     time.sleep(6)
@@ -230,9 +228,7 @@ def test_gas_concurrent_connect(dev, apdev):
     if ev is None:
         raise Exception("No new scan results reported")
 
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=20)
-    if ev is None:
-        raise Exception("Operation timed out")
+    ev = dev[0].wait_connected(timeout=20, error="Operation tiemd out")
     if "CTRL-EVENT-CONNECTED" not in ev:
         raise Exception("Unexpected operation order")
 

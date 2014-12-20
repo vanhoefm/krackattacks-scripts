@@ -17,9 +17,8 @@ def connect_ibss_cmd(dev, id):
 
 def wait_ibss_connection(dev):
     logger.info(dev.ifname + " waiting for IBSS start/join to complete")
-    ev = dev.wait_event(["CTRL-EVENT-CONNECTED"], timeout=20)
-    if ev is None:
-        raise Exception("Connection to the IBSS timed out")
+    ev = dev.wait_connected(timeout=20,
+                            error="Connection to the IBSS timed out")
     exp = r'<.>(CTRL-EVENT-CONNECTED) - Connection to ([0-9a-f:]*) completed.*'
     s = re.split(exp, ev)
     if len(s) < 3:

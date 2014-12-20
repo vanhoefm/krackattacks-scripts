@@ -43,15 +43,11 @@ def test_ap_reassociation_to_same_bss(dev, apdev):
     dev[0].connect("test-open", key_mgmt="NONE")
 
     dev[0].request("REASSOCIATE")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
-    if ev is None:
-        raise Exception("Reassociation with the AP timed out")
+    dev[0].wait_connected(timeout=10, error="Reassociation timed out")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
     dev[0].request("REATTACH")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
-    if ev is None:
-        raise Exception("Reassociation (reattach) with the AP timed out")
+    dev[0].wait_connected(timeout=10, error="Reattach timed out")
     hwsim_utils.test_connectivity(dev[0], hapd)
 
 def test_ap_roam_set_bssid(dev, apdev):

@@ -54,9 +54,8 @@ def test_ap_cipher_tkip_countermeasures_ap(dev, apdev):
 
     with open(testfile, "w") as f:
         f.write("ff:ff:ff:ff:ff:ff")
-    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=10)
-    if ev is None:
-        raise Exception("No disconnection after two Michael MIC failures")
+    ev = dev[0].wait_disconnected(timeout=10,
+                                  error="No disconnection after two Michael MIC failures")
     if "reason=14" not in ev:
         raise Exception("Unexpected disconnection reason: " + ev)
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
@@ -88,9 +87,8 @@ def test_ap_cipher_tkip_countermeasures_sta(dev, apdev):
 
     with open(testfile, "w") as f:
         f.write("ff:ff:ff:ff:ff:ff")
-    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=10)
-    if ev is None:
-        raise Exception("No disconnection after two Michael MIC failures")
+    ev = dev[0].wait_disconnected(timeout=10,
+                                  error="No disconnection after two Michael MIC failures")
     if "reason=14 locally_generated=1" not in ev:
         raise Exception("Unexpected disconnection reason: " + ev)
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)

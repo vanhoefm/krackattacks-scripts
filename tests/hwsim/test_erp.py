@@ -56,18 +56,14 @@ def test_erp(dev, apdev):
                    erp="1", scan_freq="2412")
     for i in range(3):
         dev[0].request("DISCONNECT")
-        ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=15)
-        if ev is None:
-            raise Exception("Disconnection timed out")
+        dev[0].wait_disconnected(timeout=15)
         dev[0].request("RECONNECT")
         ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=15)
         if ev is None:
             raise Exception("EAP success timed out")
         if "EAP re-authentication completed successfully" not in ev:
             raise Exception("Did not use ERP")
-        ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
-        if ev is None:
-            raise Exception("Reconnection timed out")
+        dev[0].wait_connected(timeout=15, error="Reconnection timed out")
 
 def test_erp_server_no_match(dev, apdev):
     """ERP enabled on server and peer, but server has no key match"""
@@ -87,9 +83,7 @@ def test_erp_server_no_match(dev, apdev):
                         password_hex="0123456789abcdef0123456789abcdef",
                         erp="1", scan_freq="2412")
     dev[0].request("DISCONNECT")
-    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("Disconnection timed out")
+    dev[0].wait_disconnected(timeout=15)
     hapd.request("ERP_FLUSH")
     dev[0].request("RECONNECT")
     ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS",
@@ -105,9 +99,7 @@ def test_erp_server_no_match(dev, apdev):
         raise Exception("EAP success timed out")
     if "EAP re-authentication completed successfully" in ev:
         raise Exception("Unexpected use of ERP")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("Reconnection timed out")
+    dev[0].wait_connected(timeout=15, error="Reconnection timed out")
 
 def start_erp_as(apdev):
     params = { "ssid": "as", "beacon_int": "2000",
@@ -147,18 +139,14 @@ def test_erp_radius(dev, apdev):
                    erp="1", scan_freq="2412")
     for i in range(3):
         dev[0].request("DISCONNECT")
-        ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=15)
-        if ev is None:
-            raise Exception("Disconnection timed out")
+        dev[0].wait_disconnected(timeout=15)
         dev[0].request("RECONNECT")
         ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=15)
         if ev is None:
             raise Exception("EAP success timed out")
         if "EAP re-authentication completed successfully" not in ev:
             raise Exception("Did not use ERP")
-        ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
-        if ev is None:
-            raise Exception("Reconnection timed out")
+        dev[0].wait_connected(timeout=15, error="Reconnection timed out")
 
 def erp_test(dev, hapd, **kwargs):
     hapd.dump_monitor()
@@ -167,9 +155,7 @@ def erp_test(dev, hapd, **kwargs):
     id = dev.connect("test-wpa2-eap", key_mgmt="WPA-EAP", erp="1",
                      scan_freq="2412", **kwargs)
     dev.request("DISCONNECT")
-    ev = dev.wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("Disconnection timed out")
+    dev.wait_disconnected(timeout=15)
     hapd.dump_monitor()
     dev.request("RECONNECT")
     ev = dev.wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=15)
@@ -177,9 +163,7 @@ def erp_test(dev, hapd, **kwargs):
         raise Exception("EAP success timed out")
     if "EAP re-authentication completed successfully" not in ev:
         raise Exception("Did not use ERP")
-    ev = dev.wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("Reconnection timed out")
+    dev.wait_connected(timeout=15, error="Reconnection timed out")
     ev = hapd.wait_event([ "AP-STA-CONNECTED" ], timeout=5)
     if ev is None:
         raise Exception("No connection event received from hostapd")

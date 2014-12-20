@@ -359,9 +359,7 @@ def test_grpform_per_sta_psk_wps(dev):
 
     dev[0].p2p_go_authorize_client_pbc()
     dev[2].request("WPS_PBC")
-    ev = dev[2].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
-    if ev is None:
-        raise Exception("Association with the GO timed out")
+    dev[2].wait_connected(timeout=30)
 
     hwsim_utils.test_connectivity_p2p_sta(dev[1], dev[2])
 

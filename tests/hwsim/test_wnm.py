@@ -466,9 +466,7 @@ def test_wnm_bss_tm(dev, apdev):
             raise Exception("BSS transition request was not accepted: " + ev)
         if "target_bssid=" + apdev[1]['bssid'] not in ev:
             raise Exception("Unexpected target BSS: " + ev)
-        ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
-        if ev is None:
-            raise Exception("No reassociation seen");
+        dev[0].wait_connected(timeout=15, error="No reassociation seen")
         if apdev[1]['bssid'] not in ev:
             raise Exception("Unexpected reassociation target: " + ev)
         ev = dev[0].wait_event(["CTRL-EVENT-SCAN-STARTED"], timeout=0.1)

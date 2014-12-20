@@ -313,9 +313,7 @@ def test_autogo_legacy(dev):
     dev[2].request("P2P_SET disabled 1")
     dev[2].dump_monitor()
     dev[2].request("WPS_PIN any " + pin)
-    ev = dev[2].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
-    if ev is None:
-        raise Exception("Association with the GO timed out")
+    dev[2].wait_connected(timeout=30)
     status = dev[2].get_status()
     if status['wpa_state'] != 'COMPLETED':
         raise Exception("Not fully connected")
@@ -412,9 +410,7 @@ def test_autogo_passphrase_len(dev):
         dev[2].request("P2P_SET disabled 1")
         dev[2].dump_monitor()
         dev[2].request("WPS_PIN any " + pin)
-        ev = dev[2].wait_event(["CTRL-EVENT-CONNECTED"], timeout=30)
-        if ev is None:
-            raise Exception("Association with the GO timed out")
+        dev[2].wait_connected(timeout=30)
         status = dev[2].get_status()
         if status['wpa_state'] != 'COMPLETED':
             raise Exception("Not fully connected")

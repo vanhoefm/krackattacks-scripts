@@ -32,9 +32,7 @@ def test_suite_b(dev, apdev):
         raise Exception("Unexpected BSS flags: " + bss['flags'])
 
     dev[0].request("DISCONNECT")
-    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=20)
-    if ev is None:
-        raise Exception("Disconnection event timed out")
+    dev[0].wait_disconnected(timeout=20)
     dev[0].dump_monitor()
     dev[0].request("RECONNECT")
     ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED",

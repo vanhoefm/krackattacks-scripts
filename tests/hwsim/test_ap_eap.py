@@ -62,9 +62,7 @@ def eap_check_auth(dev, method, initial, rsn=True, sha256=False,
         ev = dev.wait_event(["CTRL-EVENT-EAP-FAILURE"])
         if ev is None:
             raise Exception("EAP failure timed out")
-        ev = dev.wait_event(["CTRL-EVENT-DISCONNECTED"])
-        if ev is None:
-            raise Exception("Disconnection timed out")
+        ev = dev.wait_disconnected(timeout=10)
         if not local_error_report:
             if "reason=23" not in ev:
                 raise Exception("Proper reason code for disconnection not reported")
@@ -696,9 +694,7 @@ def test_ap_wpa2_eap_aka_prime(dev, apdev):
                    identity="6555444333222111@both",
                    password="5122250214c33e723a5dd523fc145fc0:981d464c7c52eb6e5036234984ad0bcf:000000000123",
                    wait_connect=False, scan_freq="2412")
-    ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("Connection with the AP timed out")
+    dev[1].wait_connected(timeout=15)
 
     logger.info("Negative test with incorrect key")
     dev[0].request("REMOVE_NETWORK all")
@@ -1109,9 +1105,7 @@ def test_ap_wpa2_eap_tls_pkcs12(dev, apdev):
         raise Exception("Request for private key passphrase timed out")
     id = ev.split(':')[0].split('-')[-1]
     dev[0].request("CTRL-RSP-PASSPHRASE-" + id + ":whatever")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
-    if ev is None:
-        raise Exception("Connection timed out")
+    dev[0].wait_connected(timeout=10)
 
 def test_ap_wpa2_eap_tls_pkcs12_blob(dev, apdev):
     """WPA2-Enterprise connection using EAP-TLS and PKCS#12 from configuration blob"""
@@ -1209,9 +1203,7 @@ def test_ap_wpa2_eap_tls_diff_ca_trust(dev, apdev):
     if ev is None:
         raise Exception("EAP-TTLS not re-started")
     
-    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("Disconnection timed out")
+    ev = dev[0].wait_disconnected(timeout=15)
     if "reason=23" not in ev:
         raise Exception("Proper reason code for disconnection not reported")
 
@@ -1237,9 +1229,7 @@ def test_ap_wpa2_eap_tls_diff_ca_trust2(dev, apdev):
     if ev is None:
         raise Exception("EAP-TTLS not re-started")
     
-    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("Disconnection timed out")
+    ev = dev[0].wait_disconnected(timeout=15)
     if "reason=23" not in ev:
         raise Exception("Proper reason code for disconnection not reported")
 
@@ -1261,9 +1251,7 @@ def test_ap_wpa2_eap_tls_diff_ca_trust3(dev, apdev):
     if ev is None:
         raise Exception("EAP-TTLS not re-started")
     
-    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("Disconnection timed out")
+    ev = dev[0].wait_disconnected(timeout=15)
     if "reason=23" not in ev:
         raise Exception("Proper reason code for disconnection not reported")
 
@@ -1455,9 +1443,7 @@ def test_ap_wpa2_eap_ttls_server_cert_hash(dev, apdev):
         raise Exception("EAP result timed out")
     if "Server certificate chain probe" not in ev:
         raise Exception("Server certificate probe not reported")
-    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=10)
-    if ev is None:
-        raise Exception("Disconnection event not seen")
+    dev[0].wait_disconnected(timeout=10)
     dev[0].request("REMOVE_NETWORK all")
 
     dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
@@ -1473,9 +1459,7 @@ def test_ap_wpa2_eap_ttls_server_cert_hash(dev, apdev):
         raise Exception("EAP result timed out")
     if "Server certificate mismatch" not in ev:
         raise Exception("Server certificate mismatch not reported")
-    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=10)
-    if ev is None:
-        raise Exception("Disconnection event not seen")
+    dev[0].wait_disconnected(timeout=10)
     dev[0].request("REMOVE_NETWORK all")
 
     eap_connect(dev[0], apdev[0], "TTLS", "DOMAIN\mschapv2 user",
@@ -1581,9 +1565,7 @@ def test_ap_wpa2_eap_gpsk(dev, apdev):
         ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=10)
         if ev is None:
             raise Exception("EAP success timed out")
-        ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
-        if ev is None:
-            raise Exception("Association with the AP timed out")
+        dev[0].wait_connected(timeout=10)
 
     logger.info("Test failed algorithm negotiation")
     dev[0].set_network_quoted(id, "phase1", "cipher=9")
@@ -1627,9 +1609,7 @@ def test_ap_wpa2_eap_eke(dev, apdev):
         ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=10)
         if ev is None:
             raise Exception("EAP success timed out")
-        ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
-        if ev is None:
-            raise Exception("Association with the AP timed out")
+        dev[0].wait_connected(timeout=10)
 
     logger.info("Test failed algorithm negotiation")
     dev[0].set_network_quoted(id, "phase1", "dhgroup=9 encr=9 prf=9 mac=9")
@@ -1760,9 +1740,7 @@ def test_ap_wpa2_eap_interactive(dev, apdev):
         id = ev.split(':')[0].split('-')[-1]
         type = "OTP" if "CTRL-REQ-OTP" in ev else "PASSWORD"
         dev[0].request("CTRL-RSP-" + type + "-" + id + ":" + req_pw)
-        ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
-        if ev is None:
-            raise Exception("Connection timed out")
+        dev[0].wait_connected(timeout=10)
         dev[0].request("REMOVE_NETWORK all")
 
 def test_ap_wpa2_eap_vendor_test(dev, apdev):

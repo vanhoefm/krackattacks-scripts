@@ -55,9 +55,7 @@ def test_wext_wpa2_psk(dev, apdev):
 
     wpas.dump_monitor()
     hapd.request("DEAUTHENTICATE " + wpas.p2p_interface_addr())
-    ev = wpas.wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("Timeout on disconnection event")
+    wpas.wait_disconnected(timeout=15)
 
 def test_wext_wpa_psk(dev, apdev):
     """WEXT driver interface with WPA-PSK"""
@@ -82,9 +80,8 @@ def test_wext_wpa_psk(dev, apdev):
 
     with open(testfile, "w") as f:
         f.write("ff:ff:ff:ff:ff:ff")
-    ev = wpas.wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=10)
-    if ev is None:
-        raise Exception("No disconnection after two Michael MIC failures")
+    ev = wpas.wait_disconnected(timeout=10,
+                                error="No disconnection after two Michael MIC failures")
     if "reason=14 locally_generated=1" not in ev:
         raise Exception("Unexpected disconnection reason: " + ev)
 
@@ -125,9 +122,7 @@ def test_wext_pmksa_cache(dev, apdev):
     ev = wpas.wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=10)
     if ev is None:
         raise Exception("EAP success timed out")
-    ev = wpas.wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
-    if ev is None:
-        raise Exception("Roaming with the AP timed out")
+    wpas.wait_connected(timeout=10, error="Roaming timed out")
     pmksa2 = wpas.get_pmksa(bssid2)
     if pmksa2 is None:
         raise Exception("No PMKSA cache entry found")
@@ -155,12 +150,8 @@ def test_wext_pmksa_cache(dev, apdev):
         raise Exception("PMKSA_FLUSH failed")
     if wpas.get_pmksa(bssid) is not None or wpas.get_pmksa(bssid2) is not None:
         raise Exception("PMKSA_FLUSH did not remove PMKSA entries")
-    ev = wpas.wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=5)
-    if ev is None:
-        raise Exception("Disconnection event timed out")
-    ev = wpas.wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("Reconnection timed out")
+    wpas.wait_disconnected(timeout=5)
+    wpas.wait_connected(timeout=15, error="Reconnection timed out")
 
 def test_wext_wep_open_auth(dev, apdev):
     """WEP Open System authentication"""
@@ -191,9 +182,7 @@ def test_wext_wep_shared_key_auth(dev, apdev):
                  wep_key0='"hello12345678"', scan_freq="2412")
     hwsim_utils.test_connectivity(wpas, hapd)
     wpas.request("REMOVE_NETWORK all")
-    ev = wpas.wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=5)
-    if ev is None:
-        raise Exception("Disconnection event timed out")
+    wpas.wait_disconnected(timeout=5)
     wpas.connect("wep-shared-key", key_mgmt="NONE", auth_alg="OPEN SHARED",
                  wep_key0='"hello12345678"', scan_freq="2412")
 
@@ -215,9 +204,7 @@ def test_wext_pmf(dev, apdev):
 
     addr = wpas.p2p_interface_addr()
     hapd.request("DEAUTHENTICATE " + addr)
-    ev = wpas.wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=5)
-    if ev is None:
-        raise Exception("No disconnection")
+    wpas.wait_disconnected(timeout=5)
 
 def test_wext_scan_hidden(dev, apdev):
     """WEXT with hidden SSID"""
@@ -264,15 +251,13 @@ def test_wext_rfkill(dev, apdev):
     try:
         logger.info("rfkill block")
         subprocess.call(['rfkill', 'block', id])
-        ev = wpas.wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=10)
-        if ev is None:
-            raise Exception("Missing disconnection event on rfkill block")
+        wpas.wait_disconnected(timeout=10,
+                               error="Missing disconnection event on rfkill block")
 
         logger.info("rfkill unblock")
         subprocess.call(['rfkill', 'unblock', id])
-        ev = wpas.wait_event(["CTRL-EVENT-CONNECTED"], timeout=20)
-        if ev is None:
-            raise Exception("Missing connection event on rfkill unblock")
+        wpas.wait_connected(timeout=20,
+                            error="Missing connection event on rfkill unblock")
         hwsim_utils.test_connectivity(wpas, hapd)
     finally:
         subprocess.call(['rfkill', 'unblock', id])

@@ -42,13 +42,9 @@ def test_sta_ap_scan_0(dev, apdev):
     wpas.request("SCAN")
     time.sleep(0.5)
     subprocess.call(['sudo', 'iw', wpas.ifname, 'connect', 'test', '2412'])
-    ev = wpas.wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
-    if ev is None:
-        raise Exception("Connection not reported")
+    wpas.wait_connected(timeout=10)
     wpas.request("SCAN")
-    ev = wpas.wait_event(["CTRL-EVENT-CONNECTED"], timeout=5)
-    if ev is None:
-        raise Exception("Connection not reported")
+    wpas.wait_connected(timeout=5)
 
 def test_sta_ap_scan_2(dev, apdev):
     """Dynamically added wpa_supplicant interface with AP_SCAN 2 connection"""
@@ -73,14 +69,10 @@ def test_sta_ap_scan_2(dev, apdev):
                      'freq', '2412'])
     time.sleep(1)
     subprocess.call(['sudo', 'iw', wpas.ifname, 'connect', 'test', '2412'])
-    ev = wpas.wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
-    if ev is None:
-        raise Exception("Connection not reported")
+    wpas.wait_connected(timeout=10)
 
     wpas.request("SET disallow_aps bssid " + bssid)
-    ev = wpas.wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=10)
-    if ev is None:
-        raise Exception("Disconnection not reported")
+    wpas.wait_disconnected(timeout=10)
 
     subprocess.call(['sudo', 'iw', wpas.ifname, 'connect', 'test', '2412'])
     ev = wpas.wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
@@ -130,15 +122,11 @@ def test_sta_dynamic_down_up(dev, apdev):
     wpas.connect("sta-dynamic", psk="12345678", scan_freq="2412")
     hwsim_utils.test_connectivity(wpas, hapd)
     subprocess.call(['sudo', 'ifconfig', wpas.ifname, 'down'])
-    ev = wpas.wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=10)
-    if ev is None:
-        raise Exception("Disconnection not reported")
+    wpas.wait_disconnected(timeout=10)
     if wpas.get_status_field("wpa_state") != "INTERFACE_DISABLED":
         raise Exception("Unexpected wpa_state")
     subprocess.call(['sudo', 'ifconfig', wpas.ifname, 'up'])
-    ev = wpas.wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("Reconnection not reported")
+    wpas.wait_connected(timeout=15, error="Reconnection not reported")
     hwsim_utils.test_connectivity(wpas, hapd)
 
 def test_sta_dynamic_ext_mac_addr_change(dev, apdev):
@@ -152,9 +140,7 @@ def test_sta_dynamic_ext_mac_addr_change(dev, apdev):
     wpas.connect("sta-dynamic", psk="12345678", scan_freq="2412")
     hwsim_utils.test_connectivity(wpas, hapd)
     subprocess.call(['sudo', 'ifconfig', wpas.ifname, 'down'])
-    ev = wpas.wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=10)
-    if ev is None:
-        raise Exception("Disconnection not reported")
+    wpas.wait_disconnected(timeout=10)
     if wpas.get_status_field("wpa_state") != "INTERFACE_DISABLED":
         raise Exception("Unexpected wpa_state")
     prev_addr = wpas.p2p_interface_addr()
@@ -163,9 +149,7 @@ def test_sta_dynamic_ext_mac_addr_change(dev, apdev):
         subprocess.call(['sudo', 'ip', 'link', 'set', 'dev', wpas.ifname,
                          'address', new_addr])
         subprocess.call(['sudo', 'ifconfig', wpas.ifname, 'up'])
-        ev = wpas.wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
-        if ev is None:
-            raise Exception("Reconnection not reported")
+        wpas.wait_connected(timeout=15, error="Reconnection not reported")
         if wpas.get_driver_status_field('addr') != new_addr:
             raise Exception("Address change not reported")
         hwsim_utils.test_connectivity(wpas, hapd)

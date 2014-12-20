@@ -130,9 +130,7 @@ def test_discovery_group_client(dev):
     # make group client non-responsive on operating channel
     dev[1].dump_monitor()
     dev[1].group_request("DISCONNECT")
-    ev = dev[1].wait_event(["CTRL-EVENT-DISCONNECTED"])
-    if ev is None:
-        raise Exception("Timeout on waiting disconnection")
+    dev[1].wait_disconnected(timeout=10)
     dev[2].request("P2P_CONNECT {} {} display".format(dev[1].p2p_dev_addr(),
                                                       pin))
     ev = dev[1].wait_event(["P2P-GO-NEG-REQUEST"], timeout=2)

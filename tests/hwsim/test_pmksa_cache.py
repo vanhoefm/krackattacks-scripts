@@ -46,9 +46,7 @@ def test_pmksa_cache_on_roam_back(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=10)
     if ev is None:
         raise Exception("EAP success timed out")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
-    if ev is None:
-        raise Exception("Roaming with the AP timed out")
+    dev[0].wait_connected(timeout=10, error="Roaming timed out")
     pmksa2 = dev[0].get_pmksa(bssid2)
     if pmksa2 is None:
         raise Exception("No PMKSA cache entry found")
@@ -76,12 +74,8 @@ def test_pmksa_cache_on_roam_back(dev, apdev):
         raise Exception("PMKSA_FLUSH failed")
     if dev[0].get_pmksa(bssid) is not None or dev[0].get_pmksa(bssid2) is not None:
         raise Exception("PMKSA_FLUSH did not remove PMKSA entries")
-    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=5)
-    if ev is None:
-        raise Exception("Disconnection event timed out")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("Reconnection timed out")
+    dev[0].wait_disconnected(timeout=5)
+    dev[0].wait_connected(timeout=15, error="Reconnection timed out")
 
 def test_pmksa_cache_opportunistic_only_on_sta(dev, apdev):
     """Opportunistic PMKSA caching enabled only on station"""
@@ -108,9 +102,7 @@ def test_pmksa_cache_opportunistic_only_on_sta(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=10)
     if ev is None:
         raise Exception("EAP success timed out")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
-    if ev is None:
-        raise Exception("Roaming with the AP timed out")
+    dev[0].wait_connected(timeout=10, error="Roaming timed out")
     pmksa2 = dev[0].get_pmksa(bssid2)
     if pmksa2 is None:
         raise Exception("No PMKSA cache entry found")
@@ -410,9 +402,7 @@ def test_pmksa_cache_disabled(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=10)
     if ev is None:
         raise Exception("EAP success timed out")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
-    if ev is None:
-        raise Exception("Roaming with the AP timed out")
+    dev[0].wait_connected(timeout=10, error="Roaming timed out")
 
     dev[0].dump_monitor()
     logger.info("Roam back to AP1")
@@ -447,16 +437,10 @@ def test_pmksa_cache_ap_expiration(dev, apdev):
         raise Exception("Roaming with the AP timed out")
     if "CTRL-EVENT-CONNECTED" in ev:
         raise Exception("EAP exchange missing")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=20)
-    if ev is None:
-        raise Exception("Reassociation with the AP timed out")
+    dev[0].wait_connected(timeout=20, error="Reconnect timed out")
     dev[0].dump_monitor()
-    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=20)
-    if ev is None:
-        raise Exception("Disconnection event timed out")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=20)
-    if ev is None:
-        raise Exception("Reassociation with the AP timed out")
+    dev[0].wait_disconnected(timeout=20)
+    dev[0].wait_connected(timeout=20, error="Reassociation timed out")
 
 def test_pmksa_cache_multiple_sta(dev, apdev):
     """PMKSA cache with multiple stations"""
@@ -494,9 +478,7 @@ def test_pmksa_cache_multiple_sta(dev, apdev):
         ev = sta.wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=10)
         if ev is None:
             raise Exception("EAP success timed out")
-        ev = sta.wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
-        if ev is None:
-            raise Exception("Roaming with the AP timed out")
+        sta.wait_connected(timeout=10, error="Roaming timed out")
 
     logger.info("Roam back to AP1")
     for sta in [ dev[1], wpas, dev[0], dev[2] ]:
@@ -504,9 +486,7 @@ def test_pmksa_cache_multiple_sta(dev, apdev):
         sta.scan(freq="2412")
         sta.dump_monitor()
         sta.request("ROAM " + bssid)
-        ev = sta.wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
-        if ev is None:
-            raise Exception("Roaming with the AP timed out")
+        sta.wait_connected(timeout=10, error="Roaming timed out")
         sta.dump_monitor()
 
     time.sleep(4)
@@ -517,9 +497,7 @@ def test_pmksa_cache_multiple_sta(dev, apdev):
         sta.scan(freq="2412")
         sta.dump_monitor()
         sta.request("ROAM " + bssid2)
-        ev = sta.wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
-        if ev is None:
-            raise Exception("Roaming with the AP timed out")
+        sta.wait_connected(timeout=10, error="Roaming timed out")
         sta.dump_monitor()
 
 def test_pmksa_cache_opportunistic_multiple_sta(dev, apdev):

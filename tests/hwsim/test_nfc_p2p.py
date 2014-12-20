@@ -563,9 +563,7 @@ def test_nfc_p2p_go_legacy_config_token(dev):
     res = dev[1].request("WPS_NFC_TAG_READ " + conf)
     if "FAIL" in res:
         raise Exception("Failed to provide NFC tag contents to wpa_supplicant")
-    ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("Joining the group timed out")
+    dev[1].wait_connected(timeout=15, error="Joining the group timed out")
     hwsim_utils.test_connectivity_p2p(dev[0], dev[1])
     dev[1].request("DISCONNECT")
     dev[0].remove_group()
@@ -588,9 +586,7 @@ def test_nfc_p2p_go_legacy_handover(dev):
     res = dev[1].request("NFC_REPORT_HANDOVER INIT WPS " + req + " " + sel)
     if "FAIL" in res:
         raise Exception("Failed to report NFC connection handover to wpa_supplicant (legacy STA)")
-    ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("Joining the group timed out")
+    dev[1].wait_connected(timeout=15, error="Joining the group timed out")
     hwsim_utils.test_connectivity_p2p(dev[0], dev[1])
     dev[1].request("DISCONNECT")
     dev[0].remove_group()

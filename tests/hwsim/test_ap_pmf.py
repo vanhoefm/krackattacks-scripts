@@ -137,14 +137,10 @@ def test_ap_pmf_assoc_comeback(dev, apdev):
                    scan_freq="2412")
     hapd.set("ext_mgmt_frame_handling", "1")
     dev[0].request("DISCONNECT")
-    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"])
-    if ev is None:
-        raise Exception("Timeout on disconnection")
+    dev[0].wait_disconnected(timeout=10)
     hapd.set("ext_mgmt_frame_handling", "0")
     dev[0].request("REASSOCIATE")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"])
-    if ev is None:
-        raise Exception("Timeout on re-connection")
+    dev[0].wait_connected(timeout=10, error="Timeout on re-connection")
     if wt.get_sta_counter("assocresp_comeback", apdev[0]['bssid'],
                           dev[0].p2p_interface_addr()) < 1:
         raise Exception("AP did not use association comeback request")
@@ -164,9 +160,7 @@ def test_ap_pmf_assoc_comeback2(dev, apdev):
     if "OK" not in dev[0].request("DROP_SA"):
         raise Exception("DROP_SA failed")
     dev[0].request("REASSOCIATE")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"])
-    if ev is None:
-        raise Exception("Timeout on re-connection")
+    dev[0].wait_connected(timeout=10, error="Timeout on re-connection")
     if wt.get_sta_counter("reassocresp_comeback", apdev[0]['bssid'],
                           dev[0].p2p_interface_addr()) < 1:
         raise Exception("AP did not use reassociation comeback request")

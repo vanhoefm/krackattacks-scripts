@@ -45,9 +45,7 @@ def test_sae_pmksa_caching(dev, apdev):
                    scan_freq="2412")
     dev[0].request("DISCONNECT")
     dev[0].request("RECONNECT")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("Reconnect timed out")
+    dev[0].wait_connected(timeout=15, error="Reconnect timed out")
     if dev[0].get_status_field('sae_group') is not None:
             raise Exception("SAE group claimed to have been used")
 
@@ -64,9 +62,7 @@ def test_sae_pmksa_caching_disabled(dev, apdev):
                    scan_freq="2412")
     dev[0].request("DISCONNECT")
     dev[0].request("RECONNECT")
-    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=15)
-    if ev is None:
-        raise Exception("Reconnect timed out")
+    dev[0].wait_connected(timeout=15, error="Reconnect timed out")
     if dev[0].get_status_field('sae_group') != '19':
             raise Exception("Expected default SAE group not used")
 
@@ -124,9 +120,7 @@ def test_sae_anti_clogging(dev, apdev):
     for i in range(0, 2):
         dev[i].select_network(id[i])
     for i in range(0, 2):
-        ev = dev[i].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
-        if ev is None:
-            raise Exception("Association with the AP timed out")
+        dev[i].wait_connected(timeout=10)
 
 def test_sae_forced_anti_clogging(dev, apdev):
     """SAE anti clogging (forced)"""

@@ -78,7 +78,5 @@ def test_wep_shared_key_auth_multi_key(dev, apdev):
 
     dev[2].set_network(id, "wep_tx_keyidx", "1")
     dev[2].request("REASSOCIATE")
-    ev = dev[2].wait_event(["CTRL-EVENT-CONNECTED"], timeout=10)
-    if ev is None:
-        raise Exception("Reassociation with the AP timed out")
+    dev[2].wait_connected(timeout=10, error="Reassociation timed out")
     hwsim_utils.test_connectivity(dev[2], hapd)

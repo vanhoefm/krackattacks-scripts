@@ -3246,7 +3246,7 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 		    suites))
 		goto fail;
 
-	if (params->key_mgmt_suites & WPA_KEY_MGMT_IEEE8021X &&
+	if (params->key_mgmt_suites & WPA_KEY_MGMT_IEEE8021X_NO_WPA &&
 	    params->pairwise_ciphers & (WPA_CIPHER_WEP104 | WPA_CIPHER_WEP40) &&
 	    nla_put_flag(msg, NL80211_ATTR_CONTROL_PORT_NO_ENCRYPT))
 		goto fail;

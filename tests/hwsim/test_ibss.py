@@ -8,6 +8,7 @@ import logging
 logger = logging.getLogger()
 import time
 import re
+import subprocess
 
 import hwsim_utils
 
@@ -45,10 +46,13 @@ def wait_4way_handshake2(dev1, dev2, dev3):
     if ev is None:
         raise Exception("4-way handshake in IBSS timed out")
 
-def add_ibss(dev, ssid, psk=None, proto=None, key_mgmt=None, pairwise=None, group=None, beacon_int=None, bssid=None):
+def add_ibss(dev, ssid, psk=None, proto=None, key_mgmt=None, pairwise=None,
+             group=None, beacon_int=None, bssid=None, scan_freq=None):
     id = dev.add_network()
     dev.set_network(id, "mode", "1")
     dev.set_network(id, "frequency", "2412")
+    if scan_freq:
+        dev.set_network(id, "scan_freq", str(scan_freq))
     dev.set_network_quoted(id, "ssid", ssid)
     if psk:
         dev.set_network_quoted(id, "psk", psk)
@@ -286,3 +290,24 @@ def test_ibss_open_fixed_bssid(dev):
     finally:
         dev[0].request("AP_SCAN 1")
         dev[1].request("AP_SCAN 1")
+
+def test_ibss_open_retry(dev):
+    """IBSS open (no security) with cfg80211 retry workaround"""
+    subprocess.check_call(['iw', 'dev', dev[0].ifname, 'set', 'type', 'adhoc'])
+    subprocess.check_call(['iw', 'dev', dev[0].ifname, 'ibss', 'join',
+                           'ibss-test', '2412', 'HT20', 'fixed-freq',
+                           '02:22:33:44:55:66'])
+    ssid="ibss"
+    try:
+        dev[0].request("AP_SCAN 2")
+        id = add_ibss(dev[0], ssid, key_mgmt="NONE", beacon_int="150",
+                      bssid="02:33:44:55:66:77", scan_freq=2412)
+        #connect_ibss_cmd(dev[0], id)
+        dev[0].request("REASSOCIATE")
+        bssid0 = wait_ibss_connection(dev[0])
+
+        subprocess.check_call(['iw', 'dev', dev[0].ifname, 'ibss', 'leave'])
+        time.sleep(1)
+        dev[0].request("DISCONNECT")
+    finally:
+        dev[0].request("AP_SCAN 1")

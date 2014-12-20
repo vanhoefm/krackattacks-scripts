@@ -322,6 +322,7 @@ static struct wpabuf * eap_ikev2_process_fragment(struct eap_ikev2_data *data,
 			   (unsigned long) wpabuf_tailroom(data->in_buf));
 	}
 
+	ret->ignore = FALSE;
 	return eap_ikev2_build_frag_ack(id, EAP_CODE_RESPONSE);
 }
 

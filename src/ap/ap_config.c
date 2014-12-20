@@ -890,12 +890,20 @@ void hostapd_set_security_params(struct hostapd_bss_config *bss,
 		int cipher = WPA_CIPHER_NONE;
 		bss->ssid.security_policy = SECURITY_IEEE_802_1X;
 		bss->ssid.wep.default_len = bss->default_wep_key_len;
-		if (bss->default_wep_key_len)
+		if (full_config && bss->default_wep_key_len) {
 			cipher = bss->default_wep_key_len >= 13 ?
 				WPA_CIPHER_WEP104 : WPA_CIPHER_WEP40;
+		} else if (full_config && bss->ssid.wep.keys_set) {
+			if (bss->ssid.wep.len[0] >= 13)
+				cipher = WPA_CIPHER_WEP104;
+			else
+				cipher = WPA_CIPHER_WEP40;
+		}
 		bss->wpa_group = cipher;
 		bss->wpa_pairwise = cipher;
 		bss->rsn_pairwise = cipher;
+		if (full_config)
+			bss->wpa_key_mgmt = WPA_KEY_MGMT_IEEE8021X_NO_WPA;
 	} else if (bss->ssid.wep.keys_set) {
 		int cipher = WPA_CIPHER_WEP40;
 		if (bss->ssid.wep.len[0] >= 13)
@@ -904,6 +912,8 @@ void hostapd_set_security_params(struct hostapd_bss_config *bss,
 		bss->wpa_group = cipher;
 		bss->wpa_pairwise = cipher;
 		bss->rsn_pairwise = cipher;
+		if (full_config)
+			bss->wpa_key_mgmt = WPA_KEY_MGMT_NONE;
 	} else if (bss->osen) {
 		bss->ssid.security_policy = SECURITY_OSEN;
 		bss->wpa_group = WPA_CIPHER_CCMP;
@@ -914,5 +924,7 @@ void hostapd_set_security_params(struct hostapd_bss_config *bss,
 		bss->wpa_group = WPA_CIPHER_NONE;
 		bss->wpa_pairwise = WPA_CIPHER_NONE;
 		bss->rsn_pairwise = WPA_CIPHER_NONE;
+		if (full_config)
+			bss->wpa_key_mgmt = WPA_KEY_MGMT_NONE;
 	}
 }

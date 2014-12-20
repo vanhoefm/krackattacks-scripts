@@ -161,18 +161,12 @@ static int nl80211_send_frame_cmd(struct i802_bss *bss,
 				  unsigned int freq, unsigned int wait,
 				  const u8 *buf, size_t buf_len, u64 *cookie,
 				  int no_cck, int no_ack, int offchanok);
-static int nl80211_register_frame(struct i802_bss *bss,
-				  struct nl_handle *hl_handle,
-				  u16 type, const u8 *match, size_t match_len);
 static int wpa_driver_nl80211_probe_req_report(struct i802_bss *bss,
 					       int report);
 
 static void add_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx);
 static void del_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx);
 static int have_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx);
-static int wpa_driver_nl80211_if_remove(struct i802_bss *bss,
-					enum wpa_driver_if_type type,
-					const char *ifname);
 
 static int nl80211_set_channel(struct i802_bss *bss,
 			       struct hostapd_freq_params *freq, int set_chan);
@@ -181,7 +175,6 @@ static int nl80211_disable_11b_rates(struct wpa_driver_nl80211_data *drv,
 
 static int nl80211_leave_ibss(struct wpa_driver_nl80211_data *drv);
 
-static int i802_set_freq(void *priv, struct hostapd_freq_params *freq);
 static int i802_set_iface_flags(struct i802_bss *bss, int up);
 static int nl80211_set_param(void *priv, const char *param);
 
@@ -4724,7 +4717,7 @@ static int wpa_driver_nl80211_set_mode_impl(
 		 * on a frequency that the mode is disallowed in.
 		 */
 		if (desired_freq_params) {
-			res = i802_set_freq(bss, desired_freq_params);
+			res = nl80211_set_channel(bss, desired_freq_params, 0);
 			if (res) {
 				wpa_printf(MSG_DEBUG,
 					   "nl80211: Failed to set frequency on interface");

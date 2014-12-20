@@ -343,6 +343,40 @@ def test_scan_for_auth(dev, apdev):
 
     dev[0].wait_connected(timeout=15)
 
+def test_scan_for_auth_fail(dev, apdev):
+    """cfg80211 workaround with scan-for-auth failing"""
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")
+    # Block sme-connect radio work with an external radio work item, so that
+    # SELECT_NETWORK can decide to use fast associate without a new scan while
+    # cfg80211 still has the matching BSS entry, but the actual connection is
+    # not yet started.
+    id = dev[0].request("RADIO_WORK add block-work")
+    ev = dev[0].wait_event(["EXT-RADIO-WORK-START"])
+    if ev is None:
+        raise Exception("Timeout while waiting radio work to start")
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412",
+                   wait_connect=False)
+    dev[0].dump_monitor()
+    hapd.disable()
+    # Clear cfg80211 BSS table.
+    subprocess.call(['iw', dev[0].ifname, 'scan', 'trigger',
+                     'freq', '2457', 'flush'])
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], 5)
+    if ev is None:
+        raise Exception("External flush scan timed out")
+    # Release blocking radio work to allow connection to go through with the
+    # cfg80211 BSS entry missing.
+    dev[0].request("RADIO_WORK done " + id)
+
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS",
+                            "CTRL-EVENT-CONNECTED"], 15)
+    if ev is None:
+        raise Exception("Scan event missing")
+    if "CTRL-EVENT-CONNECTED" in ev:
+        raise Exception("Unexpected connection")
+    dev[0].request("DISCONNECT")
+
 def test_scan_hidden(dev, apdev):
     """Control interface behavior on scan parameters"""
     hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan",

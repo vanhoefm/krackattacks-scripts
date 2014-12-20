@@ -173,7 +173,8 @@ static int nl80211_set_channel(struct i802_bss *bss,
 static int nl80211_disable_11b_rates(struct wpa_driver_nl80211_data *drv,
 				     int ifindex, int disabled);
 
-static int nl80211_leave_ibss(struct wpa_driver_nl80211_data *drv);
+static int nl80211_leave_ibss(struct wpa_driver_nl80211_data *drv,
+			      int reset_mode);
 
 static int i802_set_iface_flags(struct i802_bss *bss, int up);
 static int nl80211_set_param(void *priv, const char *param);
@@ -2627,7 +2628,7 @@ static int wpa_driver_nl80211_deauthenticate(struct i802_bss *bss,
 
 	if (drv->nlmode == NL80211_IFTYPE_ADHOC) {
 		nl80211_mark_disconnected(drv);
-		return nl80211_leave_ibss(drv);
+		return nl80211_leave_ibss(drv, 1);
 	}
 	if (!(drv->capa.flags & WPA_DRIVER_FLAGS_SME))
 		return wpa_driver_nl80211_disconnect(drv, reason_code);
@@ -4134,7 +4135,8 @@ static int wpa_driver_nl80211_ap(struct wpa_driver_nl80211_data *drv,
 }
 
 
-static int nl80211_leave_ibss(struct wpa_driver_nl80211_data *drv)
+static int nl80211_leave_ibss(struct wpa_driver_nl80211_data *drv,
+			      int reset_mode)
 {
 	struct nl_msg *msg;
 	int ret;
@@ -4149,7 +4151,8 @@ static int nl80211_leave_ibss(struct wpa_driver_nl80211_data *drv)
 			   "nl80211: Leave IBSS request sent successfully");
 	}
 
-	if (wpa_driver_nl80211_set_mode(drv->first_bss,
+	if (reset_mode &&
+	    wpa_driver_nl80211_set_mode(drv->first_bss,
 					NL80211_IFTYPE_STATION)) {
 		wpa_printf(MSG_INFO, "nl80211: Failed to set interface into "
 			   "station mode");
@@ -4242,7 +4245,7 @@ retry:
 		if (ret == -EALREADY && count == 1) {
 			wpa_printf(MSG_DEBUG, "nl80211: Retry IBSS join after "
 				   "forced leave");
-			nl80211_leave_ibss(drv);
+			nl80211_leave_ibss(drv, 0);
 			nlmsg_free(msg);
 			goto retry;
 		}

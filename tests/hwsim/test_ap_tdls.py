@@ -49,9 +49,9 @@ def connect_2sta_wep(dev, hapd):
                    scan_freq="2412")
     connectivity(dev, hapd)
 
-def connect_2sta_open(dev, hapd):
-    dev[0].connect("test-open", key_mgmt="NONE", scan_freq="2412")
-    dev[1].connect("test-open", key_mgmt="NONE", scan_freq="2412")
+def connect_2sta_open(dev, hapd, scan_freq="2412"):
+    dev[0].connect("test-open", key_mgmt="NONE", scan_freq=scan_freq)
+    dev[1].connect("test-open", key_mgmt="NONE", scan_freq=scan_freq)
     connectivity(dev, hapd)
 
 def wlantest_setup():
@@ -329,3 +329,32 @@ def test_ap_wpa2_tdls_responder_teardown(dev, apdev):
     connect_2sta_wpa2_psk(dev, hapd)
     setup_tdls(dev[0], dev[1], apdev[0])
     teardown_tdls(dev[0], dev[1], apdev[0], responder=True)
+
+def test_ap_open_tdls_vht(dev, apdev):
+    """Open AP and two stations using TDLS"""
+    params = { "ssid": "test-open",
+               "country_code": "DE",
+               "hw_mode": "a",
+               "channel": "36",
+               "ieee80211n": "1",
+               "ieee80211ac": "1",
+               "ht_capab": "",
+               "vht_capab": "",
+               "vht_oper_chwidth": "0",
+               "vht_oper_centr_freq_seg0_idx": "0" }
+    try:
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        wlantest_setup()
+        connect_2sta_open(dev, hapd, scan_freq="5180")
+        setup_tdls(dev[0], dev[1], apdev[0])
+        teardown_tdls(dev[0], dev[1], apdev[0])
+        setup_tdls(dev[1], dev[0], apdev[0])
+        teardown_tdls(dev[1], dev[0], apdev[0], wildcard=True)
+    finally:
+        dev[0].request("DISCONNECT")
+        dev[1].request("DISCONNECT")
+        if hapd:
+            hapd.request("DISABLE")
+        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
+        dev[1].flush_scan_cache()

@@ -194,6 +194,8 @@ def test_erp_radius_eap_methods(dev, apdev):
              phase1="fast_provisioning=2", pac_file="blob://fast_pac_auth_erp")
     erp_test(dev[0], hapd, eap="GPSK", identity="erp-gpsk@example.com",
              password="abcdefghijklmnop0123456789abcdef")
+    erp_test(dev[0], hapd, eap="IKEV2", identity="erp-ikev2@example.com",
+             password="password")
     erp_test(dev[0], hapd, eap="PAX", identity="erp-pax@example.com",
              password_hex="0123456789abcdef0123456789abcdef")
     # TODO: PEAP (EMSK)

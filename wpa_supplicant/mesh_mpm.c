@@ -938,8 +938,12 @@ void mesh_mpm_action_rx(struct wpa_supplicant *wpa_s,
 	/* Now we will figure out the appropriate event... */
 	switch (action_field) {
 	case PLINK_OPEN:
-		if (!plink_free_count(hapd) ||
-		    (sta->peer_lid && sta->peer_lid != plid)) {
+		if (plink_free_count(hapd) == 0) {
+			event = OPN_IGNR;
+			wpa_printf(MSG_INFO,
+				   "MPM: Peer link num over quota(%d)",
+				   hapd->max_plinks);
+		} else if (sta->peer_lid && sta->peer_lid != plid) {
 			event = OPN_IGNR;
 		} else {
 			sta->peer_lid = plid;
@@ -947,9 +951,13 @@ void mesh_mpm_action_rx(struct wpa_supplicant *wpa_s,
 		}
 		break;
 	case PLINK_CONFIRM:
-		if (!plink_free_count(hapd) ||
-		    sta->my_lid != llid ||
-		    (sta->peer_lid && sta->peer_lid != plid)) {
+		if (plink_free_count(hapd) == 0) {
+			event = CNF_IGNR;
+			wpa_printf(MSG_INFO,
+				   "MPM: Peer link num over quota(%d)",
+				   hapd->max_plinks);
+		} else if (sta->my_lid != llid ||
+			   (sta->peer_lid && sta->peer_lid != plid)) {
 			event = CNF_IGNR;
 		} else {
 			if (!sta->peer_lid)

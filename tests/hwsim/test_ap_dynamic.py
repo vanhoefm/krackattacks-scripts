@@ -372,3 +372,14 @@ def _test_ap_bss_add_many(dev, apdev):
         dev[0].wait_disconnected(timeout=5)
         ifname2 = ifname + '-' + str(i)
         hapd.remove(ifname2)
+
+def test_ap_bss_add_reuse_existing(dev, apdev):
+    """Dynamic BSS add operation reusing existing interface"""
+    ifname1 = apdev[0]['ifname']
+    ifname2 = apdev[0]['ifname'] + '-2'
+    hostapd.add_bss('phy3', ifname1, 'bss-1.conf')
+    subprocess.check_call(["iw", "dev", ifname1, "interface", "add", ifname2,
+                           "type", "__ap"])
+    hostapd.add_bss('phy3', ifname2, 'bss-2.conf')
+    hostapd.remove_bss(ifname2)
+    subprocess.check_call(["iw", "dev", ifname2, "del"])

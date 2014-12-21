@@ -12,7 +12,7 @@ logger = logging.getLogger()
 import hwsim_utils
 from wpasupplicant import WpaSupplicant
 
-def check_mesh_scan(dev, params, other_started=False):
+def check_mesh_scan(dev, params, other_started=False, beacon_int=0):
     if not other_started:
         dev.dump_monitor()
     id = dev.request("SCAN " + params)
@@ -57,6 +57,11 @@ def check_mesh_scan(dev, params, other_started=False):
         raise Exception("Could not get BSS entry for mesh")
     if 'mesh_capability' not in bss:
         raise Exception("mesh_capability missing from BSS entry")
+    if beacon_int:
+        if 'beacon_int' not in bss:
+            raise Exception("beacon_int missing from BSS entry")
+        if str(beacon_int) != bss['beacon_int']:
+            raise Exception("Unexpected beacon_int in BSS entry: " + bss['beacon_int'])
 
 def check_mesh_group_added(dev):
     ev = dev.wait_event(["MESH-GROUP-STARTED"])
@@ -88,7 +93,8 @@ def test_wpas_add_set_remove_support(dev):
     dev[0].set_network(id, "mode", "5")
     dev[0].remove_network(id)
 
-def add_open_mesh_network(dev, ht_mode=False, freq="2412", start=True):
+def add_open_mesh_network(dev, ht_mode=False, freq="2412", start=True,
+                          beacon_int=0):
     id = dev.add_network()
     dev.set_network(id, "mode", "5")
     dev.set_network_quoted(id, "ssid", "wpas-mesh-open")
@@ -96,6 +102,8 @@ def add_open_mesh_network(dev, ht_mode=False, freq="2412", start=True):
     dev.set_network(id, "frequency", freq)
     if ht_mode:
         dev.set_network(id, "mesh_ht_mode", ht_mode)
+    if beacon_int:
+        dev.set_network(id, "beacon_int", str(beacon_int))
     if start:
         dev.mesh_group_add(id)
     return id
@@ -120,8 +128,8 @@ def test_wpas_mesh_group_remove(dev):
 
 def test_wpas_mesh_peer_connected(dev):
     """wpa_supplicant MESH peer connected"""
-    add_open_mesh_network(dev[0], ht_mode="HT20")
-    add_open_mesh_network(dev[1], ht_mode="HT20")
+    add_open_mesh_network(dev[0], ht_mode="HT20", beacon_int=160)
+    add_open_mesh_network(dev[1], ht_mode="HT20", beacon_int=160)
 
     # Check for mesh joined
     check_mesh_group_added(dev[0])
@@ -154,14 +162,14 @@ def test_wpas_mesh_peer_disconnected(dev):
 def test_wpas_mesh_mode_scan(dev):
     """wpa_supplicant MESH scan support"""
     add_open_mesh_network(dev[0], ht_mode="HT40+")
-    add_open_mesh_network(dev[1], ht_mode="HT40+")
+    add_open_mesh_network(dev[1], ht_mode="HT40+", beacon_int=175)
 
     # Check for mesh joined
     check_mesh_group_added(dev[0])
     check_mesh_group_added(dev[1])
 
     # Check for Mesh scan
-    check_mesh_scan(dev[0], "use_id=1")
+    check_mesh_scan(dev[0], "use_id=1", beacon_int=175)
 
 
 def wrap_wpas_mesh_test(test, dev, apdev):

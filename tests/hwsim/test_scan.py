@@ -409,8 +409,8 @@ def test_scan_for_auth_wep(dev, apdev):
 
 def test_scan_hidden(dev, apdev):
     """Control interface behavior on scan parameters"""
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan",
-                                         "ignore_broadcast_ssid": "1" })
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan",
+                                                "ignore_broadcast_ssid": "1" })
     bssid = apdev[0]['bssid']
 
     check_scan(dev[0], "freq=2412 use_id=1")
@@ -433,6 +433,11 @@ def test_scan_hidden(dev, apdev):
 
     if "FAIL" not in dev[0].request("SCAN scan_id=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17"):
         raise Exception("Too many scan_id values accepted")
+
+    hapd.disable()
+    dev[0].request("REMOVE_NETWORK all")
+    dev[0].flush_scan_cache(freq=2432)
+    dev[0].flush_scan_cache()
 
 def test_scan_and_bss_entry_removed(dev, apdev):
     """Last scan result and connect work processing on BSS entry update"""

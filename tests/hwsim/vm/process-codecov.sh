@@ -2,6 +2,7 @@
 
 LOGDIR=$1
 POSTFIX=$2
+RESTORE=$3
 
 DIR=$PWD
 TMPDIR=/tmp/logs
@@ -25,7 +26,11 @@ lcov -c -d .. 2> lcov.log | sed s%SF:/tmp/logs/alt-[^/]*/%SF:/tmp/logs/alt-wpa_s
 wait
 
 cd $DIR
-rm -r $TMPDIR/alt-wpa_supplicant
-rm -r $TMPDIR/alt-hostapd
-rm -r $TMPDIR/alt-hostapd-as
-rm -r $TMPDIR/alt-hlr_auc_gw
+if [ "$RESTORE" == "restore" ]; then
+    mv $TMPDIR/alt-* $LOGDIR
+else
+    rm -r $TMPDIR/alt-wpa_supplicant
+    rm -r $TMPDIR/alt-hostapd
+    rm -r $TMPDIR/alt-hostapd-as
+    rm -r $TMPDIR/alt-hlr_auc_gw
+fi

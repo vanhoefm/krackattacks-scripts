@@ -1,6 +1,11 @@
 #!/bin/bash
 
 LOGDIR=$1
+if [ -n "$2" ]; then
+    ODIR=$2
+else
+    ODIR=.
+fi
 TMPDIR=/tmp/logs
 
 mv $LOGDIR/alt-* $TMPDIR
@@ -13,7 +18,7 @@ done
 
 lcov $args -o $LOGDIR/combined.info > $LOGDIR/combined-lcov.log 2>&1
 cd $LOGDIR
-genhtml -t "wpa_supplicant/hostapd combined for hwsim test run $(date +%s)" combined.info --output-directory . > lcov.log 2>&1
+genhtml -t "wpa_supplicant/hostapd combined for hwsim test run $(date +%s)" combined.info --output-directory $ODIR > lcov.log 2>&1
 
 rm -r /tmp/logs/alt-wpa_supplicant
 rm -r /tmp/logs/alt-hostapd

@@ -369,7 +369,7 @@ static int ikev2_process_kei(struct ikev2_responder_data *data,
 	}
 
 	if (kei_len < 4 + 96) {
-		wpa_printf(MSG_INFO, "IKEV2: Too show Key Exchange Payload");
+		wpa_printf(MSG_INFO, "IKEV2: Too short Key Exchange Payload");
 		return -1;
 	}
 

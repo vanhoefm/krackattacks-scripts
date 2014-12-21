@@ -5993,6 +5993,7 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 #ifdef CONFIG_WPS
 	wpa_s->wps_fragment_size = 0;
 	wpas_wps_cancel(wpa_s);
+	wps_registrar_flush(wpa_s->wps->registrar);
 #endif /* CONFIG_WPS */
 	wpa_s->after_wps = 0;
 	wpa_s->known_wps_freq = 0;

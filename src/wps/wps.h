@@ -819,6 +819,7 @@ int wps_registrar_add_nfc_pw_token(struct wps_registrar *reg,
 int wps_registrar_add_nfc_password_token(struct wps_registrar *reg,
 					 const u8 *oob_dev_pw,
 					 size_t oob_dev_pw_len);
+void wps_registrar_flush(struct wps_registrar *reg);
 
 int wps_build_credential_wrap(struct wpabuf *msg,
 			      const struct wps_credential *cred);

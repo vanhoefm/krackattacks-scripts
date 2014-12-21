@@ -676,6 +676,22 @@ wps_registrar_init(struct wps_context *wps,
 }
 
 
+void wps_registrar_flush(struct wps_registrar *reg)
+{
+	if (reg == NULL)
+		return;
+	wps_free_pins(&reg->pins);
+	wps_free_nfc_pw_tokens(&reg->nfc_pw_tokens, 0);
+	wps_free_pbc_sessions(reg->pbc_sessions);
+	reg->pbc_sessions = NULL;
+	wps_free_devices(reg->devices);
+	reg->devices = NULL;
+#ifdef WPS_WORKAROUNDS
+	reg->pbc_ignore_start.sec = 0;
+#endif /* WPS_WORKAROUNDS */
+}
+
+
 /**
  * wps_registrar_deinit - Deinitialize WPS Registrar data
  * @reg: Registrar data from wps_registrar_init()
@@ -686,11 +702,8 @@ void wps_registrar_deinit(struct wps_registrar *reg)
 		return;
 	eloop_cancel_timeout(wps_registrar_pbc_timeout, reg, NULL);
 	eloop_cancel_timeout(wps_registrar_set_selected_timeout, reg, NULL);
-	wps_free_pins(&reg->pins);
-	wps_free_nfc_pw_tokens(&reg->nfc_pw_tokens, 0);
-	wps_free_pbc_sessions(reg->pbc_sessions);
+	wps_registrar_flush(reg);
 	wpabuf_free(reg->extra_cred);
-	wps_free_devices(reg->devices);
 	os_free(reg);
 }
 

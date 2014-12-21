@@ -165,6 +165,30 @@ def main():
     except:
         pass
 
+    if num_servers > 2 and len(tests) > 100:
+        # Move test cases with long duration to the beginning as an
+        # optimization to avoid last part of the test execution running a long
+        # duration test case on a single VM while all other VMs have already
+        # completed their work.
+        long = [ "ap_wps_pbc_timeout",
+                 "grpform_cred_ready_timeout",
+                 "grpform_cred_ready_timeout2",
+                 "discovery_pd_retries",
+                 "ibss_wpa_none",
+                 "concurrent_p2pcli",
+                 "wpas_ap_wps",
+                 "ibss_rsn",
+                 "wext_pmksa_cache",
+                 "ap_ht_40mhz_intolerant_ap",
+                 "ap_wps_setup_locked_timeout",
+                 "ap_vht160",
+                 "dfs_radar",
+                 "dfs" ]
+        for l in long:
+            if l in tests:
+                tests.remove(l)
+                tests.insert(0, l)
+
     vm = {}
     for i in range(0, num_servers):
         print("\rStarting virtual machine {}/{}".format(i + 1, num_servers)),

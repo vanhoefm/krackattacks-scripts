@@ -192,7 +192,7 @@ def main():
     vm = {}
     for i in range(0, num_servers):
         print("\rStarting virtual machine {}/{}".format(i + 1, num_servers)),
-        cmd = ['./vm-run.sh', '--timestamp', str(timestamp),
+        cmd = ['./vm-run.sh', '--delay', str(i), '--timestamp', str(timestamp),
                '--ext', 'srv.%d' % (i + 1),
                '-i'] + codecov_args + extra_args
         vm[i] = {}

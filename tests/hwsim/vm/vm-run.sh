@@ -47,6 +47,7 @@ TIMESTAMP=$(date +%s)
 DATE=$TIMESTAMP
 CODECOV=no
 TIMEWARP=0
+DELAY=0
 CODECOV_DIR=
 while [ "$1" != "" ]; do
 	case $1 in
@@ -68,6 +69,10 @@ while [ "$1" != "" ]; do
 		--timewrap ) shift
 			TIMEWARP=1
 			;;
+	        --delay ) shift
+			DELAY=$1
+			shift
+			;;
 		* )
 			RUN_TEST_ARGS="$RUN_TEST_ARGS$1 "
 			shift
@@ -87,6 +92,11 @@ elif [ $CODECOV = "yes" ]; then
     ./build-codecov.sh $LOGDIR || exit 1
 else
     CODECOV=no
+fi
+
+if [ $DELAY -gt 0 ]; then
+    echo "Wait $DELAY seconds before starting VM"
+    sleep $DELAY
 fi
 
 echo "Starting test run in a virtual machine"

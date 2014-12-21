@@ -3050,8 +3050,11 @@ def test_proxyarp_open(dev, apdev, params):
     try:
         res = _test_proxyarp_open(dev, apdev, params)
     finally:
-        subprocess.call(['ebtables', '-F', 'FORWARD'])
-        subprocess.call(['ebtables', '-F', 'OUTPUT'])
+        try:
+            subprocess.call(['ebtables', '-F', 'FORWARD'])
+            subprocess.call(['ebtables', '-F', 'OUTPUT'])
+        except:
+            pass
         subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'down'],
                         stderr=open('/dev/null', 'w'))
         subprocess.call(['brctl', 'delbr', 'ap-br0'],

@@ -259,12 +259,16 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 		struct wpa_ie_data ied;
 
 		rsn = wpa_bss_get_ie(bss, WLAN_EID_RSN);
-		if (rsn &&
-		    wpa_parse_wpa_ie(rsn, 2 + rsn[1], &ied) == 0) {
-			if (wpa_key_mgmt_sae(ied.key_mgmt)) {
-				wpa_dbg(wpa_s, MSG_DEBUG, "Using SAE auth_alg");
-				params.auth_alg = WPA_AUTH_ALG_SAE;
-			}
+		if (!rsn) {
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"SAE enabled, but target BSS does not advertise RSN");
+		} else if (wpa_parse_wpa_ie(rsn, 2 + rsn[1], &ied) == 0 &&
+			   wpa_key_mgmt_sae(ied.key_mgmt)) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "Using SAE auth_alg");
+			params.auth_alg = WPA_AUTH_ALG_SAE;
+		} else {
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"SAE enabled, but target BSS does not advertise SAE AKM for RSN");
 		}
 	}
 #endif /* CONFIG_SAE */

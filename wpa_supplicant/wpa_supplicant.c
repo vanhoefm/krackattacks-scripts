@@ -1003,7 +1003,7 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 		wpa_dbg(wpa_s, MSG_DEBUG, "RSN: using IEEE 802.11i/D9.0");
 		proto = WPA_PROTO_RSN;
 	} else if (bss_wpa && (ssid->proto & WPA_PROTO_WPA) &&
-		   wpa_parse_wpa_ie(bss_wpa, 2 +bss_wpa[1], &ie) == 0 &&
+		   wpa_parse_wpa_ie(bss_wpa, 2 + bss_wpa[1], &ie) == 0 &&
 		   (ie.group_cipher & ssid->group_cipher) &&
 		   (ie.pairwise_cipher & ssid->pairwise_cipher) &&
 		   (ie.key_mgmt & ssid->key_mgmt)) {
@@ -1021,6 +1021,40 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_HS20 */
 	} else if (bss) {
 		wpa_msg(wpa_s, MSG_WARNING, "WPA: Failed to select WPA/RSN");
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"WPA: ssid proto=0x%x pairwise_cipher=0x%x group_cipher=0x%x key_mgmt=0x%x",
+			ssid->proto, ssid->pairwise_cipher, ssid->group_cipher,
+			ssid->key_mgmt);
+		wpa_dbg(wpa_s, MSG_DEBUG, "WPA: BSS " MACSTR " ssid='%s'%s%s%s",
+			MAC2STR(bss->bssid),
+			wpa_ssid_txt(bss->ssid, bss->ssid_len),
+			bss_wpa ? " WPA" : "",
+			bss_rsn ? " RSN" : "",
+			bss_osen ? " OSEN" : "");
+		if (bss_rsn) {
+			wpa_hexdump(MSG_DEBUG, "RSN", bss_rsn, 2 + bss_rsn[1]);
+			if (wpa_parse_wpa_ie(bss_rsn, 2 + bss_rsn[1], &ie)) {
+				wpa_dbg(wpa_s, MSG_DEBUG,
+					"Could not parse RSN element");
+			} else {
+				wpa_dbg(wpa_s, MSG_DEBUG,
+					"RSN: pairwise_cipher=0x%x group_cipher=0x%x key_mgmt=0x%x",
+					ie.pairwise_cipher, ie.group_cipher,
+					ie.key_mgmt);
+			}
+		}
+		if (bss_wpa) {
+			wpa_hexdump(MSG_DEBUG, "WPA", bss_wpa, 2 + bss_wpa[1]);
+			if (wpa_parse_wpa_ie(bss_wpa, 2 + bss_wpa[1], &ie)) {
+				wpa_dbg(wpa_s, MSG_DEBUG,
+					"Could not parse WPA element");
+			} else {
+				wpa_dbg(wpa_s, MSG_DEBUG,
+					"WPA: pairwise_cipher=0x%x group_cipher=0x%x key_mgmt=0x%x",
+					ie.pairwise_cipher, ie.group_cipher,
+					ie.key_mgmt);
+			}
+		}
 		return -1;
 	} else {
 		if (ssid->proto & WPA_PROTO_OSEN)

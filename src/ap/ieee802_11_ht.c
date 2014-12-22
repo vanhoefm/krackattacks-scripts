@@ -211,7 +211,7 @@ void hostapd_2040_coex_action(struct hostapd_data *hapd,
 	struct ieee80211_2040_intol_chan_report *ic_report;
 	int is_ht_allowed = 1;
 	int i;
-	const u8 *data = ((const u8 *) mgmt) + 1;
+	const u8 *data = ((const u8 *) mgmt) + IEEE80211_HDRLEN + 1;
 
 	hostapd_logger(hapd, mgmt->sa, HOSTAPD_MODULE_IEEE80211,
 		       HOSTAPD_LEVEL_DEBUG, "hostapd_public_action - action=%d",

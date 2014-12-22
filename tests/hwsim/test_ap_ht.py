@@ -584,7 +584,7 @@ def test_ap_ht_40mhz_intolerant_ap(dev, apdev):
     params = { "ssid": "ht",
                "channel": "6",
                "ht_capab": "[HT40-]",
-               "obss_interval": "1" }
+               "obss_interval": "3" }
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
 
     dev[0].connect("ht", key_mgmt="NONE", scan_freq="2437")
@@ -613,15 +613,18 @@ def test_ap_ht_40mhz_intolerant_ap(dev, apdev):
         raise Exception("Failed to disable 40 MHz intolerant AP")
 
     # make sure the intolerant AP disappears from scan results more quickly
-    dev[0].scan(only_new=True)
-    dev[0].scan(freq="2432", only_new=True)
+    dev[0].scan(type="ONLY", freq="2432", only_new=True)
+    dev[0].scan(type="ONLY", freq="2432", only_new=True)
+    dev[0].dump_monitor()
 
     logger.info("Waiting for AP to move back to 40 MHz channel")
     ok = False
     for i in range(0, 30):
         time.sleep(1)
         if hapd.get_status_field("secondary_channel") == "-1":
+            logger.info("AP moved to 40 MHz channel")
             ok = True
+            break
     if not ok:
         raise Exception("AP did not move to 40 MHz channel")
 

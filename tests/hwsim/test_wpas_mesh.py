@@ -420,3 +420,30 @@ def test_wpas_mesh_dynamic_interface(dev):
             dev[0].request("MESH_GROUP_REMOVE " + mesh0)
         if mesh1:
             dev[1].request("MESH_GROUP_REMOVE " + mesh1)
+
+def test_wpas_mesh_max_peering(dev, apdev):
+    """Mesh max peering limit"""
+    try:
+        dev[0].request("SET max_peer_links 1")
+        for i in range(3):
+            add_open_mesh_network(dev[i])
+
+        for i in range(3):
+            ev = dev[i].wait_event(["MESH-PEER-CONNECTED"])
+            if ev is None:
+                raise Exception("dev%d did not connect with any peer" % i)
+
+        for i in range(1, 3):
+            ev = dev[i].wait_event(["MESH-PEER-CONNECTED"])
+            if ev is None:
+                raise Exception("dev%d did not connect the second peer" % i)
+
+        ev = dev[0].wait_event(["MESH-PEER-CONNECTED"], timeout=1)
+        if ev is not None:
+            raise Exception("dev0 connection beyond max peering limit")
+
+        for i in range(3):
+            dev[i].mesh_group_remove()
+            check_mesh_group_removed(dev[i])
+    finally:
+        dev[0].request("SET max_peer_links 99")

@@ -108,9 +108,6 @@ sudo $(printf -- "$VALGRIND_WPAS" 5) $WPAS -g /tmp/wpas-wlan5 -G$GROUP \
     -ddKt$TRACE -f $LOGDIR/log5 &
 sudo $VALGRIND_HAPD $HAPD -ddKt$TRACE -g /var/run/hostapd-global -G $GROUP -ddKt -f $LOGDIR/hostapd &
 
-sleep 1
-sudo chown -f $USER $LOGDIR/hwsim0.pcapng $LOGDIR/hwsim0 $LOGDIR/log* $LOGDIR/hostapd
-
 if [ -x $HLR_AUC_GW ]; then
     cp $DIR/auth_serv/hlr_auc_gw.milenage_db $LOGDIR/hlr_auc_gw.milenage_db
     sudo $HLR_AUC_GW -u -m $LOGDIR/hlr_auc_gw.milenage_db -g $DIR/auth_serv/hlr_auc_gw.gsm > $LOGDIR/hlr_auc_gw &
@@ -118,12 +115,14 @@ fi
 
 touch $LOGDIR/hostapd.db
 sudo $HAPD_AS -ddKt $LOGDIR/as.conf $LOGDIR/as2.conf > $LOGDIR/auth_serv &
-if [ "x$VALGRIND" = "xy" ]; then
-    sleep 1
-    sudo chown -f $USER $LOGDIR/*valgrind*
-fi
 
 # wait for programs to be fully initialized
+for i in 0 1 2 3 4 5 6 7 8 9; do
+    if [ -e /tmp/wpas-wlan0 ]; then
+	break
+    fi
+    sleep 0.05
+done
 for i in 0 1 2; do
     for j in `seq 1 10`; do
 	if $WPACLI -g /tmp/wpas-wlan$i ping | grep -q PONG; then
@@ -147,5 +146,15 @@ for j in `seq 1 10`; do
     fi
     sleep 1
 done
+
+if [ $USER = "0" -o $USER = "root" ]; then
+    exit 0
+fi
+
+sleep 0.75
+sudo chown -f $USER $LOGDIR/hwsim0.pcapng $LOGDIR/hwsim0 $LOGDIR/log* $LOGDIR/hostapd
+if [ "x$VALGRIND" = "xy" ]; then
+    sudo chown -f $USER $LOGDIR/*valgrind*
+fi
 
 exit 0

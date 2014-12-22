@@ -1425,23 +1425,6 @@ err:
 }
 
 
-static int wpa_driver_nl80211_init_nl(struct wpa_driver_nl80211_data *drv)
-{
-	drv->nl_cb = nl_cb_alloc(NL_CB_DEFAULT);
-	if (!drv->nl_cb) {
-		wpa_printf(MSG_ERROR, "nl80211: Failed to alloc cb struct");
-		return -1;
-	}
-
-	nl_cb_set(drv->nl_cb, NL_CB_SEQ_CHECK, NL_CB_CUSTOM,
-		  no_seq_check, NULL);
-	nl_cb_set(drv->nl_cb, NL_CB_VALID, NL_CB_CUSTOM,
-		  process_drv_event, drv);
-
-	return 0;
-}
-
-
 static void wpa_driver_nl80211_rfkill_blocked(void *ctx)
 {
 	wpa_printf(MSG_DEBUG, "nl80211: RFKILL blocked");
@@ -1582,11 +1565,6 @@ static void * wpa_driver_nl80211_drv_init(void *ctx, const char *ifname,
 	drv->eapol_tx_sock = -1;
 	drv->ap_scan_as_station = NL80211_IFTYPE_UNSPECIFIED;
 
-	if (wpa_driver_nl80211_init_nl(drv)) {
-		os_free(drv);
-		return NULL;
-	}
-
 	if (nl80211_init_bss(bss))
 		goto failed;
 
@@ -1695,15 +1673,13 @@ static int nl80211_register_frame(struct i802_bss *bss,
 
 static int nl80211_alloc_mgmt_handle(struct i802_bss *bss)
 {
-	struct wpa_driver_nl80211_data *drv = bss->drv;
-
 	if (bss->nl_mgmt) {
 		wpa_printf(MSG_DEBUG, "nl80211: Mgmt reporting "
 			   "already on! (nl_mgmt=%p)", bss->nl_mgmt);
 		return -1;
 	}
 
-	bss->nl_mgmt = nl_create_handle(drv->nl_cb, "mgmt");
+	bss->nl_mgmt = nl_create_handle(bss->nl_cb, "mgmt");
 	if (bss->nl_mgmt == NULL)
 		return -1;
 
@@ -2217,7 +2193,6 @@ static void wpa_driver_nl80211_deinit(struct i802_bss *bss)
 		nl80211_mgmt_unsubscribe(bss, "deinit");
 		nl80211_del_p2pdev(bss);
 	}
-	nl_cb_put(drv->nl_cb);
 
 	nl80211_destroy_bss(drv->first_bss);
 

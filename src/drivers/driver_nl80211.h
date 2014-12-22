@@ -105,8 +105,6 @@ struct wpa_driver_nl80211_data {
 		SCHED_SCAN_RESULTS
 	} scan_state;
 
-	struct nl_cb *nl_cb;
-
 	u8 auth_bssid[ETH_ALEN];
 	u8 auth_attempt_bssid[ETH_ALEN];
 	u8 bssid[ETH_ALEN];
@@ -227,7 +225,6 @@ struct hostapd_hw_modes *
 nl80211_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags);
 
 int process_global_event(struct nl_msg *msg, void *arg);
-int process_drv_event(struct nl_msg *msg, void *arg);
 int process_bss_event(struct nl_msg *msg, void *arg);
 
 #ifdef ANDROID

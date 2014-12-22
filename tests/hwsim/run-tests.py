@@ -161,10 +161,9 @@ def main():
             logger.debug("Import test cases from " + t)
             mod = __import__(m.group(1))
             test_modules.append(mod.__name__.replace('test_', '', 1))
-            for s in dir(mod):
-                if s.startswith("test_"):
-                    func = mod.__dict__.get(s)
-                    tests.append(func)
+            for key,val in mod.__dict__.iteritems():
+                if key.startswith("test_"):
+                    tests.append(val)
     test_names = list(set([t.__name__.replace('test_', '', 1) for t in tests]))
 
     run = None

@@ -1253,28 +1253,72 @@ static struct hostapd_hw_modes * get_mode(struct hostapd_hw_modes *modes,
 }
 
 
-static void wpa_setband_scan_freqs_list(struct wpa_supplicant *wpa_s,
-					enum hostapd_hw_mode band,
-					struct wpa_driver_scan_params *params)
+static void wpa_obss_scan_freqs_list(struct wpa_supplicant *wpa_s,
+				     struct wpa_driver_scan_params *params)
 {
-	/* Include only supported channels for the specified band */
+	/* Include only affected channels */
 	struct hostapd_hw_modes *mode;
 	int count, i;
+	int start, end;
 
-	mode = get_mode(wpa_s->hw.modes, wpa_s->hw.num_modes, band);
+	mode = get_mode(wpa_s->hw.modes, wpa_s->hw.num_modes,
+			HOSTAPD_MODE_IEEE80211G);
 	if (mode == NULL) {
 		/* No channels supported in this band - use empty list */
 		params->freqs = os_zalloc(sizeof(int));
 		return;
 	}
 
+	if (wpa_s->sme.ht_sec_chan == HT_SEC_CHAN_UNKNOWN &&
+	    wpa_s->current_bss) {
+		const u8 *ie;
+
+		ie = wpa_bss_get_ie(wpa_s->current_bss, WLAN_EID_HT_OPERATION);
+		if (ie && ie[1] >= 2) {
+			u8 o;
+
+			o = ie[3] & HT_INFO_HT_PARAM_SECONDARY_CHNL_OFF_MASK;
+			if (o == HT_INFO_HT_PARAM_SECONDARY_CHNL_ABOVE)
+				wpa_s->sme.ht_sec_chan = HT_SEC_CHAN_ABOVE;
+			else if (o == HT_INFO_HT_PARAM_SECONDARY_CHNL_BELOW)
+				wpa_s->sme.ht_sec_chan = HT_SEC_CHAN_BELOW;
+		}
+	}
+
+	start = wpa_s->assoc_freq - 10;
+	end = wpa_s->assoc_freq + 10;
+	switch (wpa_s->sme.ht_sec_chan) {
+	case HT_SEC_CHAN_UNKNOWN:
+		/* HT40+ possible on channels 1..9 */
+		if (wpa_s->assoc_freq <= 2452)
+			start -= 20;
+		/* HT40- possible on channels 5-13 */
+		if (wpa_s->assoc_freq >= 2432)
+			end += 20;
+		break;
+	case HT_SEC_CHAN_ABOVE:
+		end += 20;
+		break;
+	case HT_SEC_CHAN_BELOW:
+		start -= 20;
+		break;
+	}
+	wpa_printf(MSG_DEBUG,
+		   "OBSS: assoc_freq %d possible affected range %d-%d",
+		   wpa_s->assoc_freq, start, end);
+
 	params->freqs = os_calloc(mode->num_channels + 1, sizeof(int));
 	if (params->freqs == NULL)
 		return;
 	for (count = 0, i = 0; i < mode->num_channels; i++) {
+		int freq;
+
 		if (mode->channels[i].flag & HOSTAPD_CHAN_DISABLED)
 			continue;
-		params->freqs[count++] = mode->channels[i].freq;
+		freq = mode->channels[i].freq;
+		if (freq - 10 >= end || freq + 10 <= start)
+			continue; /* not affected */
+		params->freqs[count++] = freq;
 	}
 }
 
@@ -1290,7 +1334,7 @@ static void sme_obss_scan_timeout(void *eloop_ctx, void *timeout_ctx)
 	}
 
 	os_memset(&params, 0, sizeof(params));
-	wpa_setband_scan_freqs_list(wpa_s, HOSTAPD_MODE_IEEE80211G, &params);
+	wpa_obss_scan_freqs_list(wpa_s, &params);
 	params.low_priority = 1;
 	wpa_printf(MSG_DEBUG, "SME OBSS: Request an OBSS scan");
 
@@ -1315,6 +1359,7 @@ void sme_sched_obss_scan(struct wpa_supplicant *wpa_s, int enable)
 
 	eloop_cancel_timeout(sme_obss_scan_timeout, wpa_s, NULL);
 	wpa_s->sme.sched_obss_scan = 0;
+	wpa_s->sme.ht_sec_chan = HT_SEC_CHAN_UNKNOWN;
 	if (!enable)
 		return;
 

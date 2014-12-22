@@ -171,15 +171,8 @@ def test_wpas_mesh_mode_scan(dev):
     # Check for Mesh scan
     check_mesh_scan(dev[0], "use_id=1", beacon_int=175)
 
-
-def wrap_wpas_mesh_test(test, dev, apdev):
-    def _test_connectivity(dev1, dev2):
-        return hwsim_utils.test_connectivity(dev1, dev2)
-
-    return test(dev, apdev, _test_connectivity)
-
-
-def _test_wpas_mesh_open(dev, apdev, test_connectivity):
+def test_wpas_mesh_open(dev, apdev):
+    """wpa_supplicant open MESH network connectivity"""
     add_open_mesh_network(dev[0], ht_mode="HT40-", freq="2462")
     add_open_mesh_network(dev[1], ht_mode="HT40-", freq="2462")
 
@@ -192,15 +185,10 @@ def _test_wpas_mesh_open(dev, apdev, test_connectivity):
     check_mesh_peer_connected(dev[1])
 
     # Test connectivity 0->1 and 1->0
-    test_connectivity(dev[0], dev[1])
+    hwsim_utils.test_connectivity(dev[0], dev[1])
 
-
-def test_wpas_mesh_open(dev, apdev):
+def test_wpas_mesh_open_no_auto(dev, apdev):
     """wpa_supplicant open MESH network connectivity"""
-    return wrap_wpas_mesh_test(_test_wpas_mesh_open, dev, apdev)
-
-
-def _test_wpas_mesh_open_no_auto(dev, apdev, test_connectivity):
     id = add_open_mesh_network(dev[0], start=False)
     dev[0].set_network(id, "dot11MeshMaxRetries", "16")
     dev[0].set_network(id, "dot11MeshRetryTimeout", "255")
@@ -219,12 +207,7 @@ def _test_wpas_mesh_open_no_auto(dev, apdev, test_connectivity):
     check_mesh_peer_connected(dev[1])
 
     # Test connectivity 0->1 and 1->0
-    test_connectivity(dev[0], dev[1])
-
-
-def test_wpas_mesh_open_no_auto(dev, apdev):
-    """wpa_supplicant open MESH network connectivity"""
-    return wrap_wpas_mesh_test(_test_wpas_mesh_open_no_auto, dev, apdev)
+    hwsim_utils.test_connectivity(dev[0], dev[1])
 
 def add_mesh_secure_net(dev, psk=True):
     id = dev.add_network()
@@ -236,7 +219,8 @@ def add_mesh_secure_net(dev, psk=True):
         dev.set_network_quoted(id, "psk", "thisismypassphrase!")
     return id
 
-def _test_wpas_mesh_secure(dev, apdev, test_connectivity):
+def test_wpas_mesh_secure(dev, apdev):
+    """wpa_supplicant secure MESH network connectivity"""
     dev[0].request("SET sae_groups ")
     id = add_mesh_secure_net(dev[0])
     dev[0].mesh_group_add(id)
@@ -254,12 +238,7 @@ def _test_wpas_mesh_secure(dev, apdev, test_connectivity):
     check_mesh_peer_connected(dev[1])
 
     # Test connectivity 0->1 and 1->0
-    test_connectivity(dev[0], dev[1])
-
-
-def test_wpas_mesh_secure(dev, apdev):
-    """wpa_supplicant secure MESH network connectivity"""
-    return wrap_wpas_mesh_test(_test_wpas_mesh_secure, dev, apdev)
+    hwsim_utils.test_connectivity(dev[0], dev[1])
 
 def test_wpas_mesh_secure_sae_group_mismatch(dev, apdev):
     """wpa_supplicant secure MESH and SAE group mismatch"""
@@ -326,7 +305,8 @@ def test_wpas_mesh_secure_sae_missing_password(dev, apdev):
     if ev is not None:
         raise Exception("Unexpected mesh group start")
 
-def _test_wpas_mesh_secure_no_auto(dev, apdev, test_connectivity):
+def test_wpas_mesh_secure_no_auto(dev, apdev):
+    """wpa_supplicant secure MESH network connectivity"""
     dev[0].request("SET sae_groups 19")
     id = add_mesh_secure_net(dev[0])
     dev[0].mesh_group_add(id)
@@ -345,14 +325,10 @@ def _test_wpas_mesh_secure_no_auto(dev, apdev, test_connectivity):
     check_mesh_peer_connected(dev[1])
 
     # Test connectivity 0->1 and 1->0
-    test_connectivity(dev[0], dev[1])
+    hwsim_utils.test_connectivity(dev[0], dev[1])
 
     dev[0].request("SET sae_groups ")
     dev[1].request("SET sae_groups ")
-
-def test_wpas_mesh_secure_no_auto(dev, apdev):
-    """wpa_supplicant secure MESH network connectivity"""
-    return wrap_wpas_mesh_test(_test_wpas_mesh_secure_no_auto, dev, apdev)
 
 def test_wpas_mesh_ctrl(dev):
     """wpa_supplicant ctrl_iface mesh command error cases"""

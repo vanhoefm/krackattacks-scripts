@@ -22,13 +22,15 @@ sudo killall -q hlr_auc_gw
 
 if [ "$RUNNING" = "yes" ]; then
     # give some time for hostapd and wpa_supplicant to complete deinit
-    sleep 0.5
-    for i in `seq 1 5`; do
-	if pidof wpa_supplicant hostapd valgrind.bin hlr_auc_gw > /dev/null; then
+    for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+	if ! pidof wpa_supplicant hostapd valgrind.bin hlr_auc_gw > /dev/null; then
+	    break
+	fi
+	if [ $i -gt 10 ]; then
 	    echo "Waiting for processes to exit (1)"
 	    sleep 1
 	else
-	    break
+	    sleep 0.06
 	fi
     done
 fi

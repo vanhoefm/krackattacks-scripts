@@ -172,7 +172,6 @@ def main():
         # completed their work.
         long = [ "ap_wps_pbc_timeout",
                  "grpform_cred_ready_timeout",
-                 "grpform_cred_ready_timeout2",
                  "discovery_pd_retries",
                  "ibss_wpa_none",
                  "concurrent_p2pcli",

@@ -40,18 +40,30 @@ def multi_check(dev, check):
     for i in range(0, num_bss):
         dev[i].request("BSS_FLUSH 0")
         dev[i].dump_monitor()
-        id.append(dev[i].connect("bss-" + str(i + 1), key_mgmt="NONE",
-                                 scan_freq="2412", wait_connect=check[i]))
     for i in range(0, num_bss):
+        if check[i]:
+            continue
+        id.append(dev[i].connect("bss-" + str(i + 1), key_mgmt="NONE",
+                                 scan_freq="2412", wait_connect=False))
+    for i in range(num_bss):
         if not check[i]:
-            ev = dev[i].wait_event(["CTRL-EVENT-CONNECTED"], timeout=0.2)
+            continue
+        id.append(dev[i].connect("bss-" + str(i + 1), key_mgmt="NONE",
+                                 scan_freq="2412", wait_connect=True))
+    first = True
+    for i in range(num_bss):
+        if not check[i]:
+            timeout=0.2 if first else 0.01
+            first = False
+            ev = dev[i].wait_event(["CTRL-EVENT-CONNECTED"], timeout=timeout)
             if ev:
                 raise Exception("Unexpected connection")
 
     for i in range(0, num_bss):
         dev[i].remove_network(id[i])
-
-    time.sleep(0.3)
+    for i in range(num_bss):
+        if check[i]:
+            dev[i].wait_disconnected(timeout=5)
 
     res = ''
     for i in range(0, num_bss):

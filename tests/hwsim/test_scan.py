@@ -245,7 +245,7 @@ def test_scan_bss_operations(dev, apdev):
 
     res = dev[0].request("BSS RANGE=ALL MASK=0x1").splitlines()
     if len(res) != 2:
-        raise Exception("Unexpected result")
+        raise Exception("Unexpected result: " + str(res))
     res = dev[0].request("BSS FIRST MASK=0x1")
     if "id=" + id1 not in res:
         raise Exception("Unexpected result: " + res)
@@ -434,8 +434,8 @@ def test_scan_hidden(dev, apdev):
     if "FAIL" not in dev[0].request("SCAN scan_id=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17"):
         raise Exception("Too many scan_id values accepted")
 
-    hapd.disable()
     dev[0].request("REMOVE_NETWORK all")
+    hapd.disable()
     dev[0].flush_scan_cache(freq=2432)
     dev[0].flush_scan_cache()
 
@@ -624,12 +624,13 @@ def test_scan_hidden_many(dev, apdev):
     try:
         _test_scan_hidden_many(dev, apdev)
     finally:
+        dev[0].flush_scan_cache(freq=2432)
         dev[0].flush_scan_cache()
         dev[0].request("SCAN_INTERVAL 5")
 
 def _test_scan_hidden_many(dev, apdev):
-    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan-ssid",
-                                         "ignore_broadcast_ssid": "1" })
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan-ssid",
+                                                "ignore_broadcast_ssid": "1" })
     bssid = apdev[0]['bssid']
 
     dev[0].request("SCAN_INTERVAL 1")
@@ -658,3 +659,5 @@ def _test_scan_hidden_many(dev, apdev):
 
     dev[0].request("REASSOCIATE")
     dev[0].wait_connected(timeout=30)
+    dev[0].request("REMOVE_NETWORK all")
+    hapd.disable()

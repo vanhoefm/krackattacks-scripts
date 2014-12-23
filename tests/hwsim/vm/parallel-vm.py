@@ -170,19 +170,38 @@ def main():
         # optimization to avoid last part of the test execution running a long
         # duration test case on a single VM while all other VMs have already
         # completed their work.
-        long = [ "ap_wps_pbc_timeout",
-                 "grpform_cred_ready_timeout",
-                 "discovery_pd_retries",
-                 "ibss_wpa_none",
+        long = [ "ap_roam_open",
+                 "ap_hs20_fetch_osu_stop",
+                 "ap_roam_wpa2_psk",
+                 "ibss_wpa_none_ccmp",
+                 "nfc_wps_er_handover_pk_hash_mismatch_sta",
+                 "go_neg_peers_force_diff_freq",
+                 "p2p_cli_invite",
+                 "sta_ap_scan_2b",
+                 "ap_pmf_sta_unprot_deauth_burst",
+                 "ap_bss_add_remove_during_ht_scan",
+                 "wext_scan_hidden",
+                 "autoscan_exponential",
+                 "nfc_p2p_client",
+                 "wnm_bss_keep_alive",
+                 "ap_inactivity_disconnect",
+                 "scan_bss_expiration_age",
+                 "autoscan_periodic",
+                 "discovery_group_client",
                  "concurrent_p2pcli",
+                 "ap_bss_add_remove",
                  "wpas_ap_wps",
-                 "ibss_rsn",
                  "wext_pmksa_cache",
+                 "ibss_wpa_none",
                  "ap_ht_40mhz_intolerant_ap",
+                 "ibss_rsn",
+                 "discovery_pd_retries",
                  "ap_wps_setup_locked_timeout",
                  "ap_vht160",
                  "dfs_radar",
-                 "dfs" ]
+                 "dfs",
+                 "grpform_cred_ready_timeout",
+                 "ap_wps_pbc_timeout" ]
         for l in long:
             if l in tests:
                 tests.remove(l)

@@ -75,8 +75,8 @@ def check_mesh_group_removed(dev):
         raise Exception("Test exception: Couldn't leave mesh")
 
 
-def check_mesh_peer_connected(dev):
-    ev = dev.wait_event(["MESH-PEER-CONNECTED"])
+def check_mesh_peer_connected(dev, timeout=10):
+    ev = dev.wait_event(["MESH-PEER-CONNECTED"], timeout=timeout)
     if ev is None:
         raise Exception("Test exception: Remote peer did not connect.")
 
@@ -203,7 +203,7 @@ def test_wpas_mesh_open_no_auto(dev, apdev):
     check_mesh_group_added(dev[1])
 
     # Check for peer connected
-    check_mesh_peer_connected(dev[0])
+    check_mesh_peer_connected(dev[0], timeout=30)
     check_mesh_peer_connected(dev[1])
 
     # Test connectivity 0->1 and 1->0
@@ -321,7 +321,7 @@ def test_wpas_mesh_secure_no_auto(dev, apdev):
     check_mesh_group_added(dev[1])
 
     # Check for peer connected
-    check_mesh_peer_connected(dev[0])
+    check_mesh_peer_connected(dev[0], timeout=30)
     check_mesh_peer_connected(dev[1])
 
     # Test connectivity 0->1 and 1->0

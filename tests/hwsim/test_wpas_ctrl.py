@@ -1213,7 +1213,7 @@ def test_wpas_ctrl_data_test(dev, apdev):
         if "FAIL" not in dev[0].request("DATA_TEST_FRAME " + cmd):
             raise Exception("Invalid DATA_TEST_FRAME command accepted: " + cmd)
 
-    if "OK" not in dev[0].request("DATA_TEST_FRAME 00112233445566778899aabbccdd"):
+    if "OK" not in dev[0].request("DATA_TEST_FRAME 00112233445566778899aabbccddee"):
         raise Exception("DATA_TEST_FRAME failed")
 
 def test_wpas_ctrl_vendor_elem(dev, apdev):

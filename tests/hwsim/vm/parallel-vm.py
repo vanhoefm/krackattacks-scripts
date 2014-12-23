@@ -33,6 +33,7 @@ def show_progress(scr):
     global dir
     global timestamp
     global tests
+    global first_run_failures
 
     total_tests = len(tests)
 
@@ -45,10 +46,73 @@ def show_progress(scr):
     scr.addstr(num_servers + 1, 20, "TOTAL={} STARTED=0 PASS=0 FAIL=0 SKIP=0".format(total_tests))
     scr.refresh()
 
+    completed_first_pass = False
+    rerun_tests = []
+
     while True:
         running = False
+        first_running = False
         updated = False
+
         for i in range(0, num_servers):
+            if completed_first_pass:
+                continue
+            if vm[i]['first_run_done']:
+                continue
+            if not vm[i]['proc']:
+                continue
+            if vm[i]['proc'].poll() is not None:
+                vm[i]['proc'] = None
+                scr.move(i + 1, 10)
+                scr.clrtoeol()
+                log = '{}/{}.srv.{}/console'.format(dir, timestamp, i + 1)
+                with open(log, 'r') as f:
+                    if "Kernel panic" in f.read():
+                        scr.addstr("kernel panic")
+                    else:
+                        scr.addstr("unexpected exit")
+                updated = True
+                continue
+
+            running = True
+            first_running = True
+            try:
+                err = vm[i]['proc'].stderr.read()
+                vm[i]['err'] += err
+            except:
+                pass
+
+            try:
+                out = vm[i]['proc'].stdout.read()
+                vm[i]['out'] += out
+                if "READY" in out or "PASS" in out or "FAIL" in out or "SKIP" in out:
+                    scr.move(i + 1, 10)
+                    scr.clrtoeol()
+                    updated = True
+                    if not tests:
+                        vm[i]['first_run_done'] = True
+                        scr.addstr("completed first round")
+                        continue
+                    else:
+                        name = tests.pop(0)
+                        vm[i]['proc'].stdin.write(name + '\n')
+                        scr.addstr(name)
+            except:
+                pass
+
+        if not first_running and not completed_first_pass:
+            if tests:
+                raise Exception("Unexpected test cases remaining from first round")
+            completed_first_pass = True
+            (started, passed, failed, skipped) = get_results()
+            for f in failed:
+                name = f.split(' ')[1]
+                rerun_tests.append(name)
+                first_run_failures.append(name)
+
+        for i in range(num_servers):
+            if not completed_first_pass:
+                continue
             if not vm[i]['proc']:
                 continue
             if vm[i]['proc'].poll() is not None:
@@ -72,28 +136,28 @@ def show_progress(scr):
                 pass
 
             try:
-                out = vm[i]['proc'].stdout.read()
-                if "READY" in out or "PASS" in out or "FAIL" in out or "SKIP" in out:
-                    if not tests:
-                        vm[i]['proc'].stdin.write('\n')
-                    else:
-                        name = tests.pop(0)
-                        vm[i]['proc'].stdin.write(name + '\n')
-            except:
-                continue
-            #print("VM {}: '{}'".format(i, out))
-            vm[i]['out'] += out
-            lines = vm[i]['out'].splitlines()
-            last = [ l for l in lines if l.startswith('START ') ]
-            if len(last) > 0:
-                try:
-                    info = last[-1].split(' ')
+                ready = False
+                if vm[i]['first_run_done']:
+                    vm[i]['first_run_done'] = False
+                    ready = True
+                else:
+                    out = vm[i]['proc'].stdout.read()
+                    vm[i]['out'] += out
+                    if "READY" in out or "PASS" in out or "FAIL" in out or "SKIP" in out:
+                        ready = True
+                if ready:
                     scr.move(i + 1, 10)
                     scr.clrtoeol()
-                    scr.addstr(info[1])
                     updated = True
-                except:
-                    pass
+                    if not rerun_tests:
+                        vm[i]['proc'].stdin.write('\n')
+                        scr.addstr("shutting down")
+                    else:
+                        name = rerun_tests.pop(0)
+                        vm[i]['proc'].stdin.write(name + '\n')
+                        scr.addstr(name + "(*)")
+            except:
+                pass
 
         if not running:
             break
@@ -111,9 +175,17 @@ def show_progress(scr):
                 for f in failed:
                     scr.addstr(f.split(' ')[1])
                     scr.addstr(' ')
+
+            scr.move(0, 35)
+            scr.clrtoeol()
+            if rerun_tests:
+                scr.addstr("(RETRY FAILED %d)" % len(rerun_tests))
+            elif first_run_failures:
+                scr.addstr("(RETRY FAILED)")
+
             scr.refresh()
 
-        time.sleep(0.5)
+        time.sleep(0.25)
 
     scr.refresh()
     time.sleep(0.3)
@@ -124,6 +196,7 @@ def main():
     global dir
     global timestamp
     global tests
+    global first_run_failures
 
     if len(sys.argv) < 2:
         sys.exit("Usage: %s <number of VMs> [--codecov] [params..]" % sys.argv[0])
@@ -146,6 +219,7 @@ def main():
         codecov_args = []
         codecov = False
 
+    first_run_failures = []
     tests = []
     cmd = [ '../run-tests.py', '-L' ] + sys.argv[idx:]
     lst = subprocess.Popen(cmd, stdout=subprocess.PIPE)
@@ -214,6 +288,7 @@ def main():
                '--ext', 'srv.%d' % (i + 1),
                '-i'] + codecov_args + extra_args
         vm[i] = {}
+        vm[i]['first_run_done'] = False
         vm[i]['proc'] = subprocess.Popen(cmd,
                                          stdin=subprocess.PIPE,
                                          stdout=subprocess.PIPE,
@@ -234,10 +309,23 @@ def main():
 
     (started, passed, failed, skipped) = get_results()
 
-    if len(failed) > 0:
+    if first_run_failures:
         print "Failed test cases:"
-        for f in failed:
-            print f.split(' ')[1],
+        for f in first_run_failures:
+            print f,
+        print
+    double_failed = []
+    for f in failed:
+        name = f.split(' ')[1]
+        double_failed.append(name)
+    for test in first_run_failures:
+        double_failed.remove(test)
+    if failed and not double_failed:
+        print "All failed cases passed on retry"
+    elif double_failed:
+        print "Failed even on retry:"
+        for f in double_failed:
+            print f,
         print
     print("TOTAL={} PASS={} FAIL={} SKIP={}".format(len(started), len(passed), len(failed), len(skipped)))
     print "Logs: " + dir + '/' + str(timestamp)
@@ -256,6 +344,12 @@ def main():
                                    str(i)])
         subprocess.check_call(['./combine-codecov.sh', logdir])
         print "file://%s/index.html" % logdir
+
+    if double_failed:
+        sys.exit(2)
+    if failed:
+        sys.exit(1)
+    sys.exit(0)
 
 if __name__ == "__main__":
     main()

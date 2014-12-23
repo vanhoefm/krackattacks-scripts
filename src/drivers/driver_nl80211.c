@@ -740,7 +740,7 @@ static int wpa_driver_nl80211_get_ssid(void *priv, u8 *ssid)
 
 
 static void wpa_driver_nl80211_event_newlink(
-	struct wpa_driver_nl80211_data *drv, char *ifname)
+	struct wpa_driver_nl80211_data *drv, const char *ifname)
 {
 	union wpa_event_data event;
 
@@ -766,7 +766,7 @@ static void wpa_driver_nl80211_event_newlink(
 
 
 static void wpa_driver_nl80211_event_dellink(
-	struct wpa_driver_nl80211_data *drv, char *ifname)
+	struct wpa_driver_nl80211_data *drv, const char *ifname)
 {
 	union wpa_event_data event;
 
@@ -1008,7 +1008,12 @@ static void wpa_driver_nl80211_event_rtm_newlink(void *ctx,
 		struct i802_bss *bss;
 
 		/* device has been added to bridge */
-		if_indextoname(brid, namebuf);
+		if (!if_indextoname(brid, namebuf)) {
+			wpa_printf(MSG_DEBUG,
+				   "nl80211: Could not find bridge ifname for ifindex %u",
+				   brid);
+			return;
+		}
 		wpa_printf(MSG_DEBUG, "nl80211: Add ifindex %u for bridge %s",
 			   brid, namebuf);
 		add_ifidx(drv, brid);
@@ -1088,9 +1093,16 @@ static void wpa_driver_nl80211_event_rtm_dellink(void *ctx,
 	if (ifi->ifi_family == AF_BRIDGE && brid) {
 		/* device has been removed from bridge */
 		char namebuf[IFNAMSIZ];
-		if_indextoname(brid, namebuf);
-		wpa_printf(MSG_DEBUG, "nl80211: Remove ifindex %u for bridge "
-			   "%s", brid, namebuf);
+
+		if (!if_indextoname(brid, namebuf)) {
+			wpa_printf(MSG_DEBUG,
+				   "nl80211: Could not find bridge ifname for ifindex %u",
+				   brid);
+		} else {
+			wpa_printf(MSG_DEBUG,
+				   "nl80211: Remove ifindex %u for bridge %s",
+				   brid, namebuf);
+		}
 		del_ifidx(drv, brid);
 	}
 }

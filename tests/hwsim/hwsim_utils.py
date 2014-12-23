@@ -13,7 +13,7 @@ logger = logging.getLogger()
 from wpasupplicant import WpaSupplicant
 
 def run_connectivity_test(dev1, dev2, tos, dev1group=False, dev2group=False,
-                          ifname1=None, ifname2=None):
+                          ifname1=None, ifname2=None, config=True):
     addr1 = dev1.own_addr()
     if not dev1group and isinstance(dev1, WpaSupplicant):
         addr1 = dev1.get_driver_status_field('addr')
@@ -26,25 +26,26 @@ def run_connectivity_test(dev1, dev2, tos, dev1group=False, dev2group=False,
     dev2.dump_monitor()
 
     try:
-        cmd = "DATA_TEST_CONFIG 1"
-        if ifname1:
-            cmd = cmd + " ifname=" + ifname1
-        if dev1group:
-            res = dev1.group_request(cmd)
-        else:
-            res = dev1.request(cmd)
-        if "OK" not in res:
-            raise Exception("Failed to enable data test functionality")
+        if config:
+            cmd = "DATA_TEST_CONFIG 1"
+            if ifname1:
+                cmd = cmd + " ifname=" + ifname1
+            if dev1group:
+                res = dev1.group_request(cmd)
+            else:
+                res = dev1.request(cmd)
+            if "OK" not in res:
+                raise Exception("Failed to enable data test functionality")
 
-        cmd = "DATA_TEST_CONFIG 1"
-        if ifname2:
-            cmd = cmd + " ifname=" + ifname2
-        if dev2group:
-            res = dev2.group_request(cmd)
-        else:
-            res = dev2.request(cmd)
-        if "OK" not in res:
-            raise Exception("Failed to enable data test functionality")
+            cmd = "DATA_TEST_CONFIG 1"
+            if ifname2:
+                cmd = cmd + " ifname=" + ifname2
+            if dev2group:
+                res = dev2.group_request(cmd)
+            else:
+                res = dev2.request(cmd)
+            if "OK" not in res:
+                raise Exception("Failed to enable data test functionality")
 
         cmd = "DATA_TEST_TX {} {} {}".format(addr2, addr1, tos)
         if dev1group:
@@ -102,18 +103,19 @@ def run_connectivity_test(dev1, dev2, tos, dev1group=False, dev2group=False,
         if "DATA-TEST-RX ff:ff:ff:ff:ff:ff {}".format(addr2) not in ev:
             raise Exception("Unexpected dev2->dev1 broadcast data result")
     finally:
-        if dev1group:
-            dev1.group_request("DATA_TEST_CONFIG 0")
-        else:
-            dev1.request("DATA_TEST_CONFIG 0")
-        if dev2group:
-            dev2.group_request("DATA_TEST_CONFIG 0")
-        else:
-            dev2.request("DATA_TEST_CONFIG 0")
+        if config:
+            if dev1group:
+                dev1.group_request("DATA_TEST_CONFIG 0")
+            else:
+                dev1.request("DATA_TEST_CONFIG 0")
+            if dev2group:
+                dev2.group_request("DATA_TEST_CONFIG 0")
+            else:
+                dev2.request("DATA_TEST_CONFIG 0")
 
 def test_connectivity(dev1, dev2, dscp=None, tos=None, max_tries=1,
                       dev1group=False, dev2group=False,
-                      ifname1=None, ifname2=None):
+                      ifname1=None, ifname2=None, config=True):
     if dscp:
         tos = dscp << 2
     if not tos:
@@ -124,7 +126,7 @@ def test_connectivity(dev1, dev2, dscp=None, tos=None, max_tries=1,
     for i in range(0, max_tries):
         try:
             run_connectivity_test(dev1, dev2, tos, dev1group, dev2group,
-                                  ifname1, ifname2)
+                                  ifname1, ifname2, config=config)
             success = True
             break
         except Exception, e:

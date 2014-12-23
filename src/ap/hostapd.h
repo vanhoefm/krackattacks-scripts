@@ -251,6 +251,8 @@ struct hostapd_data {
 	int num_plinks;
 	int max_plinks;
 	void (*mesh_sta_free_cb)(struct sta_info *sta);
+	struct wpabuf *mesh_pending_auth;
+	struct os_reltime mesh_pending_auth_time;
 #endif /* CONFIG_MESH */
 
 #ifdef CONFIG_SQLITE

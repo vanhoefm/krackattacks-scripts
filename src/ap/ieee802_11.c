@@ -889,6 +889,16 @@ static void handle_auth(struct hostapd_data *hapd,
 		if (hapd->conf->mesh & MESH_ENABLED) {
 			/* if the mesh peer is not available, we don't do auth.
 			 */
+			wpa_printf(MSG_DEBUG, "Mesh peer " MACSTR
+				   " not yet known - drop Authentiation frame",
+				   MAC2STR(mgmt->sa));
+			/*
+			 * Save a copy of the frame so that it can be processed
+			 * if a new peer entry is added shortly after this.
+			 */
+			wpabuf_free(hapd->mesh_pending_auth);
+			hapd->mesh_pending_auth = wpabuf_alloc_copy(mgmt, len);
+			os_get_reltime(&hapd->mesh_pending_auth_time);
 			return;
 		}
 #endif /* CONFIG_MESH */

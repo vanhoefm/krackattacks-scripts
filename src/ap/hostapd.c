@@ -325,6 +325,11 @@ static void hostapd_free_hapd_data(struct hostapd_data *hapd)
 	bin_clear_free(hapd->tmp_eap_user.password,
 		       hapd->tmp_eap_user.password_len);
 #endif /* CONFIG_SQLITE */
+
+#ifdef CONFIG_MESH
+	wpabuf_free(hapd->mesh_pending_auth);
+	hapd->mesh_pending_auth = NULL;
+#endif /* CONFIG_MESH */
 }
 
 

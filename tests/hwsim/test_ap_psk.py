@@ -384,14 +384,11 @@ def test_ap_wpa2_in_different_bridge(dev, apdev):
             raise Exception("Unexpected added_if_into_bridge value")
         dev[0].request("DISCONNECT")
         hapd.disable()
-        subprocess.call(['ip', 'link', 'show', 'ap-br0'])
-        subprocess.call(['brctl', 'show'])
     finally:
         subprocess.call(['ip', 'link', 'set', 'dev', br_ifname, 'down'])
         subprocess.call(['brctl', 'delif', br_ifname, ifname],
                         stderr=open('/dev/null', 'w'))
         subprocess.call(['brctl', 'delbr', br_ifname])
-        subprocess.call(['brctl', 'show'])
 
 def test_ap_wpa2_ext_add_to_bridge(dev, apdev):
     """hostapd behavior with interface added to bridge externally"""

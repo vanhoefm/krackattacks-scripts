@@ -203,7 +203,7 @@ def test_scan_int(dev, apdev):
             ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], 10)
             if ev is None:
                 raise Exception("did not complete a scan")
-        print times
+        logger.info("times=" + str(times))
         if times[0] > 1 or times[1] < 0.5 or times[1] > 1.5 or times[2] < 0.5 or times[2] > 1.5:
             raise Exception("Unexpected scan timing: " + str(times))
     finally:

@@ -686,7 +686,7 @@ def test_nfc_p2p_ip_addr_assignment2(dev):
         raise Exception("Unexpected roles negotiated")
     hwsim_utils.test_connectivity_p2p(dev[0], dev[1])
     check_ip_addr(res0)
-    print "Client 1 IP address: " + res0['ip_addr']
+    logger.info("Client 1 IP address: " + res0['ip_addr'])
 
     logger.info("Connect a P2P client")
     pin = dev[2].wps_read_pin()
@@ -695,7 +695,7 @@ def test_nfc_p2p_ip_addr_assignment2(dev):
     logger.info("Client connected")
     hwsim_utils.test_connectivity_p2p(dev[1], dev[2])
     check_ip_addr(res)
-    print "Client 2 IP address: " + res['ip_addr']
+    logger.info("Client 2 IP address: " + res['ip_addr'])
     if res['ip_addr'] == res0['ip_addr']:
         raise Exception("Same IP address assigned to both clients")
 

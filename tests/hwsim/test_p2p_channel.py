@@ -541,7 +541,7 @@ def _test_autogo_ht_vht(dev):
         raise Exception("Unexpected freq=5 channel: " + str(freq))
 
     res = run_autogo(dev[0], "freq=5 ht40 vht")
-    print res
+    logger.info(str(res))
     freq = int(res['freq'])
     if freq < 5000 or freq >= 6000:
         raise Exception("Unexpected freq=5 ht40 vht channel: " + str(freq))

@@ -168,9 +168,7 @@ def test_ibss_wpa_none(dev):
         logger.info("STA0 BSSID " + bssid0 + " differs from STA2 BSSID " + bssid2)
         bssid2 = wait_ibss_connection(dev[2])
 
-    print bssid0
-    print bssid1
-    print bssid2
+    logger.info("bssid0=%s bssid1=%s bssid2=%s" % (bssid0, bssid1, bssid2))
 
     bss = dev[0].get_bss(bssid0)
     if not bss:
@@ -227,8 +225,7 @@ def test_ibss_wpa_none_ccmp(dev):
         logger.info("STA0 BSSID " + bssid0 + " differs from STA1 BSSID " + bssid1)
         bssid1 = wait_ibss_connection(dev[1])
 
-    print bssid0
-    print bssid1
+    logger.info("bssid0=%s bssid1=%s" % (bssid0, bssid1))
 
     # Allow some time for all peers to complete key setup
     time.sleep(1)

@@ -20,14 +20,22 @@ from test_p2p_grpform import remove_group
 from test_p2p_grpform import go_neg_pbc
 from test_p2p_autogo import autogo
 
-def set_country(country):
+def set_country(country, dev=None):
     subprocess.call(['sudo', 'iw', 'reg', 'set', country])
     time.sleep(0.1)
+    if dev:
+        for i in range(10):
+            ev = dev.wait_event(["CTRL-EVENT-REGDOM-CHANGE"], timeout=15)
+            if ev is None:
+                raise Exception("No regdom change event seen")
+            if "type=COUNTRY alpha2=" + country in ev:
+                return
+        raise Exception("No matching regdom event seen for set_country(%s)" % country)
 
 def test_p2p_channel_5ghz(dev):
     """P2P group formation with 5 GHz preference"""
     try:
-        set_country("US")
+        set_country("US", dev[0])
         [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
                                                r_dev=dev[1], r_intent=0,
                                                test_data=False)
@@ -43,7 +51,7 @@ def test_p2p_channel_5ghz(dev):
 def test_p2p_channel_5ghz_no_vht(dev):
     """P2P group formation with 5 GHz preference when VHT channels are disallowed"""
     try:
-        set_country("US")
+        set_country("US", dev[0])
         dev[0].request("P2P_SET disallow_freq 5180-5240")
         [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
                                                r_dev=dev[1], r_intent=0,
@@ -61,7 +69,7 @@ def test_p2p_channel_5ghz_no_vht(dev):
 def test_p2p_channel_random_social(dev):
     """P2P group formation with 5 GHz preference but all 5 GHz channels disabled"""
     try:
-        set_country("US")
+        set_country("US", dev[0])
         dev[0].request("SET p2p_oper_channel 11")
         dev[0].request("P2P_SET disallow_freq 5000-6000,2462")
         [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
@@ -80,7 +88,7 @@ def test_p2p_channel_random_social(dev):
 def test_p2p_channel_random(dev):
     """P2P group formation with 5 GHz preference but all 5 GHz channels and all social channels disabled"""
     try:
-        set_country("US")
+        set_country("US", dev[0])
         dev[0].request("SET p2p_oper_channel 11")
         dev[0].request("P2P_SET disallow_freq 5000-6000,2412,2437,2462")
         [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
@@ -99,7 +107,7 @@ def test_p2p_channel_random(dev):
 def test_p2p_channel_random_social_with_op_class_change(dev, apdev, params):
     """P2P group formation using random social channel with oper class change needed"""
     try:
-        set_country("US")
+        set_country("US", dev[0])
         logger.info("Start group on 5 GHz")
         [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
                                                r_dev=dev[1], r_intent=0,
@@ -155,7 +163,7 @@ def test_p2p_channel_random_social_with_op_class_change(dev, apdev, params):
 def test_p2p_channel_avoid(dev):
     """P2P and avoid frequencies driver event"""
     try:
-        set_country("US")
+        set_country("US", dev[0])
         if "OK" not in dev[0].request("DRIVER_EVENT AVOID_FREQUENCIES 5000-6000,2412,2437,2462"):
             raise Exception("Could not simulate driver event")
         ev = dev[0].wait_event(["CTRL-EVENT-AVOID-FREQ"], timeout=10)
@@ -494,7 +502,7 @@ def test_p2p_autogo_pref_chan_disallowed(dev, apdev):
 def test_p2p_autogo_pref_chan_not_in_regulatory(dev, apdev):
     """P2P channel selection: GO preferred channel not allowed in the regulatory rules"""
     try:
-        set_country("US")
+        set_country("US", dev[0])
         dev[0].request("SET p2p_pref_chan 124:149")
         res = autogo(dev[0], persistent=True)
         if res['freq'] != "5745":
@@ -506,7 +514,7 @@ def test_p2p_autogo_pref_chan_not_in_regulatory(dev, apdev):
             raise Exception("Unexpected number of network blocks: " + str(netw))
         id = netw[0]['id']
 
-        set_country("DE")
+        set_country("DE", dev[0])
         res = autogo(dev[0], persistent=id)
         if res['freq'] == "5745":
             raise Exception("Unexpected channel selected(2): " + res['freq'])
@@ -549,7 +557,7 @@ def _test_autogo_ht_vht(dev):
 def test_autogo_ht_vht(dev):
     """P2P autonomous GO with HT/VHT parameters"""
     try:
-        set_country("US")
+        set_country("US", dev[0])
         _test_autogo_ht_vht(dev)
     finally:
         set_country("00")

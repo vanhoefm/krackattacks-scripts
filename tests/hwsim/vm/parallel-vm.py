@@ -30,6 +30,33 @@ def get_results():
         skipped += [ l for l in lines if l.startswith('SKIP ') ]
     return (started, passed, failed, skipped)
 
+def vm_ready_str(s):
+    return s.startswith("READY") or s.startswith("PASS") or \
+        s.startswith("FAIL") or s.startswith("SKIP")
+
+def vm_read_stdout(vm, i):
+    ready = False
+    try:
+        out = vm['proc'].stdout.read()
+    except:
+        return False
+    logger.debug("VM[%d] stdout.read[%s]" % (i, out))
+    pending = vm['pending'] + out
+    lines = []
+    while True:
+        pos = pending.find('\n')
+        if pos < 0:
+            break
+        line = pending[0:pos].rstrip()
+        pending = pending[(pos + 1):]
+        logger.debug("VM[%d] stdout full line[%s]" % (i, line))
+        if vm_ready_str(line):
+            ready = True
+        vm['out'] += line + '\n'
+        lines.append(line)
+    vm['pending'] = pending
+    return ready
+
 def show_progress(scr):
     global num_servers
     global vm
@@ -89,26 +116,20 @@ def show_progress(scr):
             except:
                 pass
 
-            try:
-                out = vm[i]['proc'].stdout.read()
-                vm[i]['out'] += out
-                logger.debug("VM[%d] stdout.read[%s]" % (i, out))
-                if "READY" in out or "PASS" in out or "FAIL" in out or "SKIP" in out:
-                    scr.move(i + 1, 10)
-                    scr.clrtoeol()
-                    updated = True
-                    if not tests:
-                        vm[i]['first_run_done'] = True
-                        scr.addstr("completed first round")
-                        logger.info("VM[%d] completed first round" % i)
-                        continue
-                    else:
-                        name = tests.pop(0)
-                        vm[i]['proc'].stdin.write(name + '\n')
-                        scr.addstr(name)
-                        logger.debug("VM[%d] start test %s" % (i, name))
-            except:
-                pass
+            if vm_read_stdout(vm[i], i):
+                scr.move(i + 1, 10)
+                scr.clrtoeol()
+                updated = True
+                if not tests:
+                    vm[i]['first_run_done'] = True
+                    scr.addstr("completed first round")
+                    logger.info("VM[%d] completed first round" % i)
+                    continue
+                else:
+                    name = tests.pop(0)
+                    vm[i]['proc'].stdin.write(name + '\n')
+                    scr.addstr(name)
+                    logger.debug("VM[%d] start test %s" % (i, name))
 
         if not first_running and not completed_first_pass:
             logger.info("First round of testing completed")
@@ -150,32 +171,25 @@ def show_progress(scr):
             except:
                 pass
 
-            try:
-                ready = False
-                if vm[i]['first_run_done']:
-                    vm[i]['first_run_done'] = False
-                    ready = True
+            ready = False
+            if vm[i]['first_run_done']:
+                vm[i]['first_run_done'] = False
+                ready = True
+            else:
+                ready = vm_read_stdout(vm[i], i)
+            if ready:
+                scr.move(i + 1, 10)
+                scr.clrtoeol()
+                updated = True
+                if not rerun_tests:
+                    vm[i]['proc'].stdin.write('\n')
+                    scr.addstr("shutting down")
+                    logger.info("VM[%d] shutting down" % i)
                 else:
-                    out = vm[i]['proc'].stdout.read()
-                    vm[i]['out'] += out
-                    logger.debug("VM[%d] stdout.read[%s]" % (i, out))
-                    if "READY" in out or "PASS" in out or "FAIL" in out or "SKIP" in out:
-                        ready = True
-                if ready:
-                    scr.move(i + 1, 10)
-                    scr.clrtoeol()
-                    updated = True
-                    if not rerun_tests:
-                        vm[i]['proc'].stdin.write('\n')
-                        scr.addstr("shutting down")
-                        logger.info("VM[%d] shutting down" % i)
-                    else:
-                        name = rerun_tests.pop(0)
-                        vm[i]['proc'].stdin.write(name + '\n')
-                        scr.addstr(name + "(*)")
-                        logger.debug("VM[%d] start test %s (*)" % (i, name))
-            except:
-                pass
+                    name = rerun_tests.pop(0)
+                    vm[i]['proc'].stdin.write(name + '\n')
+                    scr.addstr(name + "(*)")
+                    logger.debug("VM[%d] start test %s (*)" % (i, name))
 
         if not running:
             break
@@ -328,6 +342,7 @@ def main():
                                          stdout=subprocess.PIPE,
                                          stderr=subprocess.PIPE)
         vm[i]['out'] = ""
+        vm[i]['pending'] = ""
         vm[i]['err'] = ""
         for stream in [ vm[i]['proc'].stdout, vm[i]['proc'].stderr ]:
             fd = stream.fileno()
@@ -371,6 +386,9 @@ def main():
     logger.info("Logs: " + dir + '/' + str(timestamp))
 
     for i in range(0, num_servers):
+        if len(vm[i]['pending']) > 0:
+            logger.info("Unprocessed stdout from VM[%d]: '%s'" %
+                        (i, vm[i]['pending']))
         log = '{}/{}.srv.{}/console'.format(dir, timestamp, i + 1)
         with open(log, 'r') as f:
             if "Kernel panic" in f.read():

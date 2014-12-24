@@ -13,6 +13,7 @@ import time
 from datetime import datetime
 import argparse
 import subprocess
+import termios
 
 import logging
 logger = logging.getLogger()
@@ -26,6 +27,15 @@ from wpasupplicant import WpaSupplicant
 from hostapd import HostapdGlobal
 from check_kernel import check_kernel
 from wlantest import Wlantest
+
+def set_term_echo(fd, enabled):
+    [iflag, oflag, cflag, lflag, ispeed, ospeed, cc] = termios.tcgetattr(fd)
+    if enabled:
+        lflag |= termios.ECHO
+    else:
+        lflag &= ~termios.ECHO
+    termios.tcsetattr(fd, termios.TCSANOW,
+                      [iflag, oflag, cflag, lflag, ispeed, ospeed, cc])
 
 def reset_devs(dev, apdev):
     ok = True
@@ -353,6 +363,8 @@ def main():
         num_tests = 0
     else:
         num_tests = len(tests_to_run)
+    if args.stdin_ctrl:
+        set_term_echo(sys.stdin.fileno(), False)
     while True:
         if args.stdin_ctrl:
             test = sys.stdin.readline()
@@ -412,6 +424,8 @@ def main():
                     if conn:
                         conn.close()
                         conn = None
+                    if args.stdin_ctrl:
+                        set_term_echo(sys.stdin.fileno(), True)
                     sys.exit(1)
             try:
                 if t.func_code.co_argcount > 2:
@@ -495,6 +509,8 @@ def main():
         if not reset_ok:
             print "Terminating early due to device reset failure"
             break
+    if args.stdin_ctrl:
+        set_term_echo(sys.stdin.fileno(), True)
 
     if log_handler:
         log_handler.stream.close()

@@ -252,6 +252,12 @@ def test_go_neg_with_bss_connected(dev, apdev):
     if i_res2['freq'] != "2432":
        raise Exception("Group formed on a different frequency than BSS")
     hwsim_utils.test_connectivity(dev[0], hapd)
+    dev[1].remove_group(r_res['ifname'])
+    dev[0].wait_go_ending_session()
+    dev[0].request("DISCONNECT")
+    hapd.disable()
+    dev[0].flush_scan_cache()
+    dev[1].flush_scan_cache()
 
 def test_autogo_with_bss_on_disallowed_chan(dev, apdev):
     """P2P channel selection: Autonomous GO with BSS on a disallowed channel"""
@@ -293,7 +299,6 @@ def test_go_neg_with_bss_on_disallowed_chan(dev, apdev):
             hapd = hostapd.add_ap(apdev[0]['ifname'],
                                   { "ssid": 'bss-2.4ghz', "channel": '1' })
             # make sure PBC overlap from old test cases is not maintained
-            dev[0].flush_scan_cache()
             dev[1].flush_scan_cache()
             wpas.connect("bss-2.4ghz", key_mgmt="NONE", scan_freq="2412")
             wpas.request("P2P_SET disallow_freq 2412")
@@ -308,6 +313,11 @@ def test_go_neg_with_bss_on_disallowed_chan(dev, apdev):
                raise Exception("Group formed on a disallowed channel")
             hwsim_utils.test_connectivity(wpas, hapd)
             wpas.remove_group(i_res['ifname'])
+            dev[1].wait_go_ending_session()
+            dev[1].flush_scan_cache()
+
+            wpas.dump_monitor()
+            dev[1].dump_monitor()
 
             #wpas as client
             [i_res2, r_res2] = go_neg_pbc(i_dev=wpas, i_intent=1, r_dev=dev[1],
@@ -318,6 +328,13 @@ def test_go_neg_with_bss_on_disallowed_chan(dev, apdev):
             if i_res2['freq'] == "2412":
                raise Exception("Group formed on a disallowed channel")
             hwsim_utils.test_connectivity(wpas, hapd)
+            dev[1].remove_group(r_res2['ifname'])
+            wpas.wait_go_ending_session()
+            ev = dev[1].wait_global_event(["P2P-GROUP-REMOVED"], timeout=5)
+            if ev is None:
+                raise Exception("Group removal not indicated")
+            wpas.request("DISCONNECT")
+            hapd.disable()
         finally:
             wpas.request("P2P_SET disallow_freq ")
 
@@ -374,6 +391,8 @@ def test_go_neg_forced_freq_diff_than_bss_freq(dev, apdev):
            raise Exception("GO not selected according to go_intent")
         hwsim_utils.test_connectivity(wpas, hapd)
         wpas.remove_group(r_res['ifname'])
+        dev[1].wait_go_ending_session()
+        dev[1].flush_scan_cache()
 
         # GO and peer force the same freq, different than BSS freq, wpas to
         # become client
@@ -445,6 +464,9 @@ def test_no_go_freq(dev, apdev):
           raise Exception("P2P group not formed on forced freq")
 
        dev[1].remove_group(r_res['ifname'])
+       dev[0].wait_go_ending_session()
+       dev[0].flush_scan_cache()
+
        fail = False
        # dev[0] as GO, channel 1 is not allowed
        try:

@@ -8,10 +8,13 @@
 
 import curses
 import fcntl
+import logging
 import os
 import subprocess
 import sys
 import time
+
+logger = logging.getLogger()
 
 def get_results():
     global vm
@@ -36,6 +39,7 @@ def show_progress(scr):
     global first_run_failures
 
     total_tests = len(tests)
+    logger.info("Total tests: %d" % total_tests)
 
     scr.leaveok(1)
     scr.addstr(0, 0, "Parallel test execution status", curses.A_BOLD)
@@ -69,8 +73,10 @@ def show_progress(scr):
                 with open(log, 'r') as f:
                     if "Kernel panic" in f.read():
                         scr.addstr("kernel panic")
+                        logger.info("VM[%d] kernel panic" % i)
                     else:
                         scr.addstr("unexpected exit")
+                        logger.info("VM[%d] unexpected exit" % i)
                 updated = True
                 continue
 
@@ -79,12 +85,14 @@ def show_progress(scr):
             try:
                 err = vm[i]['proc'].stderr.read()
                 vm[i]['err'] += err
+                logger.debug("VM[%d] stderr.read[%s]" % (i, err))
             except:
                 pass
 
             try:
                 out = vm[i]['proc'].stdout.read()
                 vm[i]['out'] += out
+                logger.debug("VM[%d] stdout.read[%s]" % (i, out))
                 if "READY" in out or "PASS" in out or "FAIL" in out or "SKIP" in out:
                     scr.move(i + 1, 10)
                     scr.clrtoeol()
@@ -92,16 +100,20 @@ def show_progress(scr):
                     if not tests:
                         vm[i]['first_run_done'] = True
                         scr.addstr("completed first round")
+                        logger.info("VM[%d] completed first round" % i)
                         continue
                     else:
                         name = tests.pop(0)
                         vm[i]['proc'].stdin.write(name + '\n')
                         scr.addstr(name)
+                        logger.debug("VM[%d] start test %s" % (i, name))
             except:
                 pass
 
         if not first_running and not completed_first_pass:
+            logger.info("First round of testing completed")
             if tests:
+                logger.info("Unexpected test cases remaining from first round: " + str(tests))
                 raise Exception("Unexpected test cases remaining from first round")
             completed_first_pass = True
             (started, passed, failed, skipped) = get_results()
@@ -123,8 +135,10 @@ def show_progress(scr):
                 with open(log, 'r') as f:
                     if "Kernel panic" in f.read():
                         scr.addstr("kernel panic")
+                        logger.info("VM[%d] kernel panic" % i)
                     else:
                         scr.addstr("completed run")
+                        logger.info("VM[%d] completed run" % i)
                 updated = True
                 continue
 
@@ -132,6 +146,7 @@ def show_progress(scr):
             try:
                 err = vm[i]['proc'].stderr.read()
                 vm[i]['err'] += err
+                logger.debug("VM[%d] stderr.read[%s]" % (i, err))
             except:
                 pass
 
@@ -143,6 +158,7 @@ def show_progress(scr):
                 else:
                     out = vm[i]['proc'].stdout.read()
                     vm[i]['out'] += out
+                    logger.debug("VM[%d] stdout.read[%s]" % (i, out))
                     if "READY" in out or "PASS" in out or "FAIL" in out or "SKIP" in out:
                         ready = True
                 if ready:
@@ -152,10 +168,12 @@ def show_progress(scr):
                     if not rerun_tests:
                         vm[i]['proc'].stdin.write('\n')
                         scr.addstr("shutting down")
+                        logger.info("VM[%d] shutting down" % i)
                     else:
                         name = rerun_tests.pop(0)
                         vm[i]['proc'].stdin.write(name + '\n')
                         scr.addstr(name + "(*)")
+                        logger.debug("VM[%d] start test %s (*)" % (i, name))
             except:
                 pass
 
@@ -198,16 +216,24 @@ def main():
     global tests
     global first_run_failures
 
+    debug_level = logging.INFO
+
     if len(sys.argv) < 2:
-        sys.exit("Usage: %s <number of VMs> [--codecov] [params..]" % sys.argv[0])
+        sys.exit("Usage: %s <number of VMs> [--debug] [--codecov] [params..]" % sys.argv[0])
     num_servers = int(sys.argv[1])
     if num_servers < 1:
         sys.exit("Too small number of VMs")
 
     timestamp = int(time.time())
 
-    if len(sys.argv) > 2 and sys.argv[2] == "--codecov":
-        idx = 3
+    idx = 2
+
+    if len(sys.argv) > idx and sys.argv[idx] == "--debug":
+        idx += 1
+        debug_level = logging.DEBUG
+
+    if len(sys.argv) > idx and sys.argv[idx] == "--codecov":
+        idx += 1
         print "Code coverage - build separate binaries"
         logdir = "/tmp/hwsim-test-logs/" + str(timestamp)
         os.makedirs(logdir)
@@ -215,7 +241,6 @@ def main():
         codecov_args = ['--codecov_dir', logdir]
         codecov = True
     else:
-        idx = 2
         codecov_args = []
         codecov = False
 
@@ -281,9 +306,18 @@ def main():
                 tests.remove(l)
                 tests.insert(0, l)
 
+    logger.setLevel(debug_level)
+    log_handler = logging.FileHandler('parallel-vm.log')
+    log_handler.setLevel(debug_level)
+    fmt = "%(asctime)s %(levelname)s %(message)s"
+    log_formatter = logging.Formatter(fmt)
+    log_handler.setFormatter(log_formatter)
+    logger.addHandler(log_handler)
+
     vm = {}
     for i in range(0, num_servers):
         print("\rStarting virtual machine {}/{}".format(i + 1, num_servers)),
+        logger.info("Starting virtual machine {}/{}".format(i + 1, num_servers))
         cmd = ['./vm-run.sh', '--delay', str(i), '--timestamp', str(timestamp),
                '--ext', 'srv.%d' % (i + 1),
                '-i'] + codecov_args + extra_args
@@ -313,6 +347,7 @@ def main():
         print "Failed test cases:"
         for f in first_run_failures:
             print f,
+            logger.info("Failed: " + f)
         print
     double_failed = []
     for f in failed:
@@ -322,19 +357,25 @@ def main():
         double_failed.remove(test)
     if failed and not double_failed:
         print "All failed cases passed on retry"
+        logger.info("All failed cases passed on retry")
     elif double_failed:
         print "Failed even on retry:"
         for f in double_failed:
             print f,
+            logger.info("Failed on retry: " + f)
         print
-    print("TOTAL={} PASS={} FAIL={} SKIP={}".format(len(started), len(passed), len(failed), len(skipped)))
+    res = "TOTAL={} PASS={} FAIL={} SKIP={}".format(len(started), len(passed), len(failed), len(skipped))
+    print(res)
+    logger.info(res)
     print "Logs: " + dir + '/' + str(timestamp)
+    logger.info("Logs: " + dir + '/' + str(timestamp))
 
     for i in range(0, num_servers):
         log = '{}/{}.srv.{}/console'.format(dir, timestamp, i + 1)
         with open(log, 'r') as f:
             if "Kernel panic" in f.read():
                 print "Kernel panic in " + log
+                logger.info("Kernel panic in " + log)
 
     if codecov:
         print "Code coverage - preparing report"
@@ -344,11 +385,15 @@ def main():
                                    str(i)])
         subprocess.check_call(['./combine-codecov.sh', logdir])
         print "file://%s/index.html" % logdir
+        logger.info("Code coverage report: file://%s/index.html" % logdir)
 
     if double_failed:
+        logger.info("Test run complete - failures found")
         sys.exit(2)
     if failed:
+        logger.info("Test run complete - failures found on first run; passed on retry")
         sys.exit(1)
+    logger.info("Test run complete - no failures")
     sys.exit(0)
 
 if __name__ == "__main__":

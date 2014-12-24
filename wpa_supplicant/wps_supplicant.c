@@ -1706,6 +1706,10 @@ int wpas_wps_scan_pbc_overlap(struct wpa_supplicant *wpa_s,
 		uuid = wps_get_uuid_e(ie);
 		wpa_hexdump(MSG_DEBUG, "WPS: UUID of the other BSS",
 			    uuid, UUID_LEN);
+		if (os_memcmp(selected->bssid, bss->bssid, ETH_ALEN) == 0) {
+			wpabuf_free(ie);
+			continue;
+		}
 		if (sel_uuid == NULL || uuid == NULL ||
 		    os_memcmp(sel_uuid, uuid, UUID_LEN) != 0) {
 			ret = 1; /* PBC overlap */

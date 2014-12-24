@@ -81,7 +81,7 @@ struct tls_global {
 };
 
 struct tls_connection {
-	gnutls_session session;
+	gnutls_session_t session;
 	char *subject_match, *altsubject_match;
 	int read_alerts, write_alerts, failed;
 
@@ -199,7 +199,7 @@ int tls_get_errors(void *ssl_ctx)
 }
 
 
-static ssize_t tls_pull_func(gnutls_transport_ptr ptr, void *buf,
+static ssize_t tls_pull_func(gnutls_transport_ptr_t ptr, void *buf,
 			     size_t len)
 {
 	struct tls_connection *conn = (struct tls_connection *) ptr;
@@ -228,7 +228,7 @@ static ssize_t tls_pull_func(gnutls_transport_ptr ptr, void *buf,
 }
 
 
-static ssize_t tls_push_func(gnutls_transport_ptr ptr, const void *buf,
+static ssize_t tls_push_func(gnutls_transport_ptr_t ptr, const void *buf,
 			     size_t len)
 {
 	struct tls_connection *conn = (struct tls_connection *) ptr;
@@ -286,7 +286,7 @@ static int tls_gnutls_init_session(struct tls_global *global,
 
 	gnutls_transport_set_pull_function(conn->session, tls_pull_func);
 	gnutls_transport_set_push_function(conn->session, tls_push_func);
-	gnutls_transport_set_ptr(conn->session, (gnutls_transport_ptr) conn);
+	gnutls_transport_set_ptr(conn->session, (gnutls_transport_ptr_t) conn);
 
 	return 0;
 

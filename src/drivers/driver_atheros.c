@@ -224,10 +224,10 @@ set80211param(struct atheros_driver_data *drv, int op, int arg)
 	memcpy(iwr.u.name+sizeof(__u32), &arg, sizeof(arg));
 
 	if (ioctl(drv->ioctl_sock, IEEE80211_IOCTL_SETPARAM, &iwr) < 0) {
-		perror("ioctl[IEEE80211_IOCTL_SETPARAM]");
-		wpa_printf(MSG_DEBUG, "%s: %s: Failed to set parameter (op %d "
-			   "(%s) arg %d)", __func__, drv->iface, op,
-			   athr_get_param_name(op), arg);
+		wpa_printf(MSG_INFO,
+			   "%s: %s: Failed to set parameter (op %d (%s) arg %d): ioctl[IEEE80211_IOCTL_SETPARAM]: %s",
+			   __func__, drv->iface, op, athr_get_param_name(op),
+			   arg, strerror(errno));
 		return -1;
 	}
 	return 0;
@@ -290,14 +290,15 @@ atheros_configure_wpa(struct atheros_driver_data *drv,
 	}
 	wpa_printf(MSG_DEBUG, "%s: group key cipher=%d", __func__, v);
 	if (set80211param(drv, IEEE80211_PARAM_MCASTCIPHER, v)) {
-		printf("Unable to set group key cipher to %u\n", v);
+		wpa_printf(MSG_INFO, "Unable to set group key cipher to %u", v);
 		return -1;
 	}
 	if (v == IEEE80211_CIPHER_WEP) {
 		/* key length is done only for specific ciphers */
 		v = (params->wpa_group == WPA_CIPHER_WEP104 ? 13 : 5);
 		if (set80211param(drv, IEEE80211_PARAM_MCASTKEYLEN, v)) {
-			printf("Unable to set group key length to %u\n", v);
+			wpa_printf(MSG_INFO,
+				   "Unable to set group key length to %u", v);
 			return -1;
 		}
 	}
@@ -319,7 +320,8 @@ atheros_configure_wpa(struct atheros_driver_data *drv,
 		v |= 1<<IEEE80211_CIPHER_NONE;
 	wpa_printf(MSG_DEBUG, "%s: pairwise key ciphers=0x%x", __func__, v);
 	if (set80211param(drv, IEEE80211_PARAM_UCASTCIPHERS, v)) {
-		printf("Unable to set pairwise key ciphers to 0x%x\n", v);
+		wpa_printf(MSG_INFO,
+			   "Unable to set pairwise key ciphers to 0x%x", v);
 		return -1;
 	}
 
@@ -327,8 +329,9 @@ atheros_configure_wpa(struct atheros_driver_data *drv,
 		   __func__, params->wpa_key_mgmt);
 	if (set80211param(drv, IEEE80211_PARAM_KEYMGTALGS,
 			  params->wpa_key_mgmt)) {
-		printf("Unable to set key management algorithms to 0x%x\n",
-			params->wpa_key_mgmt);
+		wpa_printf(MSG_INFO,
+			   "Unable to set key management algorithms to 0x%x",
+			   params->wpa_key_mgmt);
 		return -1;
 	}
 
@@ -345,13 +348,14 @@ atheros_configure_wpa(struct atheros_driver_data *drv,
 
 	wpa_printf(MSG_DEBUG, "%s: rsn capabilities=0x%x", __func__, v);
 	if (set80211param(drv, IEEE80211_PARAM_RSNCAPS, v)) {
-		printf("Unable to set RSN capabilities to 0x%x\n", v);
+		wpa_printf(MSG_INFO, "Unable to set RSN capabilities to 0x%x",
+			   v);
 		return -1;
 	}
 
 	wpa_printf(MSG_DEBUG, "%s: enable WPA=0x%x", __func__, params->wpa);
 	if (set80211param(drv, IEEE80211_PARAM_WPA, params->wpa)) {
-		printf("Unable to set WPA to %u\n", params->wpa);
+		wpa_printf(MSG_INFO, "Unable to set WPA to %u", params->wpa);
 		return -1;
 	}
 	return 0;
@@ -518,14 +522,14 @@ atheros_set_key(const char *ifname, void *priv, enum wpa_alg alg,
 #endif /* ATH_GCM_SUPPORT */
 #endif /* CONFIG_IEEE80211W */
 	default:
-		printf("%s: unknown/unsupported algorithm %d\n",
-			__func__, alg);
+		wpa_printf(MSG_INFO, "%s: unknown/unsupported algorithm %d",
+			   __func__, alg);
 		return -1;
 	}
 
 	if (key_len > sizeof(wk.ik_keydata)) {
-		printf("%s: key length %lu too big\n", __func__,
-		       (unsigned long) key_len);
+		wpa_printf(MSG_INFO, "%s: key length %lu too big", __func__,
+			   (unsigned long) key_len);
 		return -3;
 	}
 
@@ -636,7 +640,8 @@ atheros_read_sta_driver_data(void *priv, struct hostap_sta_driver_data *data,
 			return 0;
 		}
 
-		printf("Failed to get station stats information element.\n");
+		wpa_printf(MSG_INFO,
+			   "Failed to get station stats information element");
 		return -1;
 	}
 
@@ -808,9 +813,9 @@ static int atheros_set_qos_map(void *ctx, const u8 *qos_map_set,
 	}
 
 	if (ioctl(drv->ioctl_sock, IEEE80211_IOCTL_DBGREQ, &iwr) < 0) {
-		perror("ioctl[IEEE80211_IOCTL_DBGREQ]");
-		wpa_printf(MSG_DEBUG, "%s: %s: Failed to set QoS Map",
-			   __func__, drv->iface);
+		wpa_printf(MSG_ERROR,
+			   "%s: %s: Failed to set QoS Map: ioctl[IEEE80211_IOCTL_DBGREQ]: %s",
+			   __func__, drv->iface, strerror(errno));
 		return -1;
 	}
 #endif /* CONFIG_ATHEROS_QOS_MAP */
@@ -1495,8 +1500,9 @@ atheros_get_we_version(struct atheros_driver_data *drv)
 		sizeof(range->enc_capa);
 
 	if (ioctl(drv->ioctl_sock, SIOCGIWRANGE, &iwr) < 0) {
-		perror("ioctl[SIOCGIWRANGE]");
-		free(range);
+		wpa_printf(MSG_ERROR, "ioctl[SIOCGIWRANGE]: %s",
+			   strerror(errno));
+		os_free(range);
 		return -1;
 	} else if (iwr.u.data.length >= minlen &&
 		   range->we_version_compiled >= 18) {
@@ -1556,8 +1562,9 @@ atheros_send_eapol(void *priv, const u8 *addr, const u8 *data, size_t data_len,
 	if (len > sizeof(buf)) {
 		bp = malloc(len);
 		if (bp == NULL) {
-			printf("EAPOL frame discarded, cannot malloc temp "
-			       "buffer of size %lu!\n", (unsigned long) len);
+			wpa_printf(MSG_INFO,
+				   "EAPOL frame discarded, cannot malloc temp buffer of size %lu!",
+				   (unsigned long) len);
 			return -1;
 		}
 	}
@@ -1594,14 +1601,16 @@ atheros_init(struct hostapd_data *hapd, struct wpa_init_params *params)
 
 	drv = os_zalloc(sizeof(struct atheros_driver_data));
 	if (drv == NULL) {
-		printf("Could not allocate memory for atheros driver data\n");
+		wpa_printf(MSG_INFO,
+			   "Could not allocate memory for atheros driver data");
 		return NULL;
 	}
 
 	drv->hapd = hapd;
 	drv->ioctl_sock = socket(PF_INET, SOCK_DGRAM, 0);
 	if (drv->ioctl_sock < 0) {
-		perror("socket[PF_INET,SOCK_DGRAM]");
+		wpa_printf(MSG_ERROR, "socket[PF_INET,SOCK_DGRAM]: %s",
+			   strerror(errno));
 		goto bad;
 	}
 	memcpy(drv->iface, params->ifname, sizeof(drv->iface));
@@ -1609,7 +1618,8 @@ atheros_init(struct hostapd_data *hapd, struct wpa_init_params *params)
 	memset(&ifr, 0, sizeof(ifr));
 	os_strlcpy(ifr.ifr_name, drv->iface, sizeof(ifr.ifr_name));
 	if (ioctl(drv->ioctl_sock, SIOCGIFINDEX, &ifr) != 0) {
-		perror("ioctl(SIOCGIFINDEX)");
+		wpa_printf(MSG_ERROR, "ioctl(SIOCGIFINDEX): %s",
+			   strerror(errno));
 		goto bad;
 	}
 	drv->ifindex = ifr.ifr_ifindex;
@@ -1645,8 +1655,9 @@ atheros_init(struct hostapd_data *hapd, struct wpa_init_params *params)
 	iwr.u.mode = IW_MODE_MASTER;
 
 	if (ioctl(drv->ioctl_sock, SIOCSIWMODE, &iwr) < 0) {
-		perror("ioctl[SIOCSIWMODE]");
-		printf("Could not set interface to master mode!\n");
+		wpa_printf(MSG_ERROR,
+			   "Could not set interface to master mode! ioctl[SIOCSIWMODE]: %s",
+			   strerror(errno));
 		goto bad;
 	}
 
@@ -1712,8 +1723,8 @@ atheros_set_ssid(void *priv, const u8 *buf, int len)
 	iwr.u.essid.length = len + 1;
 
 	if (ioctl(drv->ioctl_sock, SIOCSIWESSID, &iwr) < 0) {
-		perror("ioctl[SIOCSIWESSID]");
-		printf("len=%d\n", len);
+		wpa_printf(MSG_ERROR, "ioctl[SIOCSIWESSID,len=%d]: %s",
+			   len, strerror(errno));
 		return -1;
 	}
 	return 0;
@@ -1733,7 +1744,8 @@ atheros_get_ssid(void *priv, u8 *buf, int len)
 		IW_ESSID_MAX_SIZE : len;
 
 	if (ioctl(drv->ioctl_sock, SIOCGIWESSID, &iwr) < 0) {
-		perror("ioctl[SIOCGIWESSID]");
+		wpa_printf(MSG_ERROR, "ioctl[SIOCGIWESSID]: %s",
+			   strerror(errno));
 		ret = -1;
 	} else
 		ret = iwr.u.essid.length;

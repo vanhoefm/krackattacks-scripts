@@ -408,7 +408,7 @@ static int hostapd_global_run(struct hapd_interfaces *ifaces, int daemonize,
 #endif /* EAP_SERVER_TNC */
 
 	if (daemonize && os_daemonize(pid_file)) {
-		perror("daemon");
+		wpa_printf(MSG_ERROR, "daemon: %s", strerror(errno));
 		return -1;
 	}
 

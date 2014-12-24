@@ -335,7 +335,7 @@ static void wpa_priv_l2_rx(void *ctx, const u8 *src_addr, const u8 *buf,
 	msg.msg_namelen = sizeof(iface->l2_addr);
 
 	if (sendmsg(iface->fd, &msg, 0) < 0) {
-		perror("sendmsg(l2 rx)");
+		wpa_printf(MSG_ERROR, "sendmsg(l2 rx): %s", strerror(errno));
 	}
 }
 
@@ -467,7 +467,7 @@ static void wpa_priv_receive(int sock, void *eloop_ctx, void *sock_ctx)
 	res = recvfrom(sock, buf, sizeof(buf), 0, (struct sockaddr *) &from,
 		       &fromlen);
 	if (res < 0) {
-		perror("recvfrom");
+		wpa_printf(MSG_ERROR, "recvfrom: %s", strerror(errno));
 		return;
 	}
 
@@ -615,7 +615,7 @@ wpa_priv_interface_init(const char *dir, const char *params)
 
 	iface->fd = socket(PF_UNIX, SOCK_DGRAM, 0);
 	if (iface->fd < 0) {
-		perror("socket(PF_UNIX)");
+		wpa_printf(MSG_ERROR, "socket(PF_UNIX): %s", strerror(errno));
 		wpa_priv_interface_deinit(iface);
 		return NULL;
 	}
@@ -633,15 +633,16 @@ wpa_priv_interface_init(const char *dir, const char *params)
 				   "allow connections - assuming it was "
 				   "leftover from forced program termination");
 			if (unlink(iface->sock_name) < 0) {
-				perror("unlink[ctrl_iface]");
-				wpa_printf(MSG_ERROR, "Could not unlink "
-					   "existing ctrl_iface socket '%s'",
-					   iface->sock_name);
+				wpa_printf(MSG_ERROR,
+					   "Could not unlink existing ctrl_iface socket '%s': %s",
+					   iface->sock_name, strerror(errno));
 				goto fail;
 			}
 			if (bind(iface->fd, (struct sockaddr *) &addr,
 				 sizeof(addr)) < 0) {
-				perror("wpa-priv-iface-init: bind(PF_UNIX)");
+				wpa_printf(MSG_ERROR,
+					   "wpa-priv-iface-init: bind(PF_UNIX): %s",
+					   strerror(errno));
 				goto fail;
 			}
 			wpa_printf(MSG_DEBUG, "Successfully replaced leftover "
@@ -656,7 +657,7 @@ wpa_priv_interface_init(const char *dir, const char *params)
 	}
 
 	if (chmod(iface->sock_name, S_IRWXU | S_IRWXG | S_IRWXO) < 0) {
-		perror("chmod");
+		wpa_printf(MSG_ERROR, "chmod: %s", strerror(errno));
 		goto fail;
 	}
 
@@ -688,7 +689,8 @@ static int wpa_priv_send_event(struct wpa_priv_interface *iface, int event,
 	msg.msg_namelen = sizeof(iface->drv_addr);
 
 	if (sendmsg(iface->fd, &msg, 0) < 0) {
-		perror("sendmsg(wpas_socket)");
+		wpa_printf(MSG_ERROR, "sendmsg(wpas_socket): %s",
+			   strerror(errno));
 		return -1;
 	}
 
@@ -903,7 +905,8 @@ void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 	msg.msg_namelen = sizeof(iface->drv_addr);
 
 	if (sendmsg(iface->fd, &msg, 0) < 0)
-		perror("sendmsg(wpas_socket)");
+		wpa_printf(MSG_ERROR, "sendmsg(wpas_socket): %s",
+			   strerror(errno));
 }
 
 

@@ -218,7 +218,8 @@ static void wpa_supplicant_ctrl_iface_receive(int sock, void *eloop_ctx,
 	res = recvfrom(sock, buf, sizeof(buf) - 1, 0,
 		       (struct sockaddr *) &from, &fromlen);
 	if (res < 0) {
-		perror("recvfrom(ctrl_iface)");
+		wpa_printf(MSG_ERROR, "recvfrom(ctrl_iface): %s",
+			   strerror(errno));
 		return;
 	}
 
@@ -356,7 +357,7 @@ wpa_supplicant_ctrl_iface_init(struct wpa_supplicant *wpa_s)
 
 	priv->sock = socket(domain, SOCK_DGRAM, 0);
 	if (priv->sock < 0) {
-		perror("socket(PF_INET)");
+		wpa_printf(MSG_ERROR, "socket(PF_INET): %s", strerror(errno));
 		goto fail;
 	}
 
@@ -386,7 +387,7 @@ try_again:
 		port--;
 		if ((WPA_CTRL_IFACE_PORT - port) < WPA_CTRL_IFACE_PORT_LIMIT)
 			goto try_again;
-		perror("bind(AF_INET)");
+		wpa_printf(MSG_ERROR, "bind(AF_INET): %s", strerror(errno));
 		goto fail;
 	}
 
@@ -482,7 +483,9 @@ static void wpa_supplicant_ctrl_iface_send(struct ctrl_iface_priv *priv,
 			if (sendto(priv->sock, sbuf, llen + len, 0,
 				   (struct sockaddr *) &dst->addr,
 				   sizeof(dst->addr)) < 0) {
-				perror("sendto(CTRL_IFACE monitor)");
+				wpa_printf(MSG_ERROR,
+					   "sendto(CTRL_IFACE monitor): %s",
+					   strerror(errno));
 				dst->errors++;
 				if (dst->errors > 10) {
 					wpa_supplicant_ctrl_iface_detach(
@@ -551,7 +554,8 @@ static void wpa_supplicant_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 	res = recvfrom(sock, buf, sizeof(buf) - 1, 0,
 		       (struct sockaddr *) &from, &fromlen);
 	if (res < 0) {
-		perror("recvfrom(ctrl_iface)");
+		wpa_printf(MSG_ERROR, "recvfrom(ctrl_iface): %s",
+			   strerror(errno));
 		return;
 	}
 
@@ -634,7 +638,7 @@ wpa_supplicant_global_ctrl_iface_init(struct wpa_global *global)
 
 	priv->sock = socket(PF_INET, SOCK_DGRAM, 0);
 	if (priv->sock < 0) {
-		perror("socket(PF_INET)");
+		wpa_printf(MSG_ERROR, "socket(PF_INET): %s", strerror(errno));
 		goto fail;
 	}
 
@@ -652,7 +656,7 @@ try_again:
 		if ((port - WPA_GLOBAL_CTRL_IFACE_PORT) <
 		    WPA_GLOBAL_CTRL_IFACE_PORT_LIMIT)
 			goto try_again;
-		perror("bind(AF_INET)");
+		wpa_printf(MSG_ERROR, "bind(AF_INET): %s", strerror(errno));
 		goto fail;
 	}
 

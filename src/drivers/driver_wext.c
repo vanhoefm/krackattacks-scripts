@@ -78,7 +78,7 @@ int wpa_driver_wext_get_bssid(void *priv, u8 *bssid)
 	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
 
 	if (ioctl(drv->ioctl_sock, SIOCGIWAP, &iwr) < 0) {
-		perror("ioctl[SIOCGIWAP]");
+		wpa_printf(MSG_ERROR, "ioctl[SIOCGIWAP]: %s", strerror(errno));
 		ret = -1;
 	}
 	os_memcpy(bssid, iwr.u.ap_addr.sa_data, ETH_ALEN);
@@ -108,7 +108,7 @@ int wpa_driver_wext_set_bssid(void *priv, const u8 *bssid)
 		os_memset(iwr.u.ap_addr.sa_data, 0, ETH_ALEN);
 
 	if (ioctl(drv->ioctl_sock, SIOCSIWAP, &iwr) < 0) {
-		perror("ioctl[SIOCSIWAP]");
+		wpa_printf(MSG_ERROR, "ioctl[SIOCSIWAP]: %s", strerror(errno));
 		ret = -1;
 	}
 
@@ -134,7 +134,8 @@ int wpa_driver_wext_get_ssid(void *priv, u8 *ssid)
 	iwr.u.essid.length = 32;
 
 	if (ioctl(drv->ioctl_sock, SIOCGIWESSID, &iwr) < 0) {
-		perror("ioctl[SIOCGIWESSID]");
+		wpa_printf(MSG_ERROR, "ioctl[SIOCGIWESSID]: %s",
+			   strerror(errno));
 		ret = -1;
 	} else {
 		ret = iwr.u.essid.length;
@@ -192,7 +193,8 @@ int wpa_driver_wext_set_ssid(void *priv, const u8 *ssid, size_t ssid_len)
 	iwr.u.essid.length = ssid_len;
 
 	if (ioctl(drv->ioctl_sock, SIOCSIWESSID, &iwr) < 0) {
-		perror("ioctl[SIOCSIWESSID]");
+		wpa_printf(MSG_ERROR, "ioctl[SIOCSIWESSID]: %s",
+			   strerror(errno));
 		ret = -1;
 	}
 
@@ -218,7 +220,8 @@ int wpa_driver_wext_set_freq(void *priv, int freq)
 	iwr.u.freq.e = 1;
 
 	if (ioctl(drv->ioctl_sock, SIOCSIWFREQ, &iwr) < 0) {
-		perror("ioctl[SIOCSIWFREQ]");
+		wpa_printf(MSG_ERROR, "ioctl[SIOCSIWFREQ]: %s",
+			   strerror(errno));
 		ret = -1;
 	}
 
@@ -815,7 +818,8 @@ void * wpa_driver_wext_init(void *ctx, const char *ifname)
 
 	drv->ioctl_sock = socket(PF_INET, SOCK_DGRAM, 0);
 	if (drv->ioctl_sock < 0) {
-		perror("socket(PF_INET,SOCK_DGRAM)");
+		wpa_printf(MSG_ERROR, "socket(PF_INET,SOCK_DGRAM): %s",
+			   strerror(errno));
 		goto err1;
 	}
 
@@ -1027,7 +1031,8 @@ int wpa_driver_wext_scan(void *priv, struct wpa_driver_scan_params *params)
 	}
 
 	if (ioctl(drv->ioctl_sock, SIOCSIWSCAN, &iwr) < 0) {
-		perror("ioctl[SIOCSIWSCAN]");
+		wpa_printf(MSG_ERROR, "ioctl[SIOCSIWSCAN]: %s",
+			   strerror(errno));
 		ret = -1;
 	}
 
@@ -1082,7 +1087,8 @@ static u8 * wpa_driver_wext_giwscan(struct wpa_driver_wext_data *drv,
 				   "trying larger buffer (%lu bytes)",
 				   (unsigned long) res_buf_len);
 		} else {
-			perror("ioctl[SIOCGIWSCAN]");
+			wpa_printf(MSG_ERROR, "ioctl[SIOCGIWSCAN]: %s",
+				   strerror(errno));
 			os_free(res_buf);
 			return NULL;
 		}
@@ -1533,7 +1539,8 @@ static int wpa_driver_wext_get_range(void *priv)
 		sizeof(range->enc_capa);
 
 	if (ioctl(drv->ioctl_sock, SIOCGIWRANGE, &iwr) < 0) {
-		perror("ioctl[SIOCGIWRANGE]");
+		wpa_printf(MSG_ERROR, "ioctl[SIOCGIWRANGE]: %s",
+			   strerror(errno));
 		os_free(range);
 		return -1;
 	} else if (iwr.u.data.length >= minlen &&
@@ -1613,7 +1620,8 @@ static int wpa_driver_wext_set_psk(struct wpa_driver_wext_data *drv,
 
 	ret = ioctl(drv->ioctl_sock, SIOCSIWENCODEEXT, &iwr);
 	if (ret < 0)
-		perror("ioctl[SIOCSIWENCODEEXT] PMK");
+		wpa_printf(MSG_ERROR, "ioctl[SIOCSIWENCODEEXT] PMK: %s",
+			   strerror(errno));
 	os_free(ext);
 
 	return ret;
@@ -1705,7 +1713,8 @@ static int wpa_driver_wext_set_key_ext(void *priv, enum wpa_alg alg,
 			ret = -2;
 		}
 
-		perror("ioctl[SIOCSIWENCODEEXT]");
+		wpa_printf(MSG_ERROR, "ioctl[SIOCSIWENCODEEXT]: %s",
+			   strerror(errno));
 	}
 
 	os_free(ext);
@@ -1779,7 +1788,8 @@ int wpa_driver_wext_set_key(const char *ifname, void *priv, enum wpa_alg alg,
 	iwr.u.encoding.length = key_len;
 
 	if (ioctl(drv->ioctl_sock, SIOCSIWENCODE, &iwr) < 0) {
-		perror("ioctl[SIOCSIWENCODE]");
+		wpa_printf(MSG_ERROR, "ioctl[SIOCSIWENCODE]: %s",
+			   strerror(errno));
 		ret = -1;
 	}
 
@@ -1791,7 +1801,9 @@ int wpa_driver_wext_set_key(const char *ifname, void *priv, enum wpa_alg alg,
 		iwr.u.encoding.pointer = (caddr_t) NULL;
 		iwr.u.encoding.length = 0;
 		if (ioctl(drv->ioctl_sock, SIOCSIWENCODE, &iwr) < 0) {
-			perror("ioctl[SIOCSIWENCODE] (set_tx)");
+			wpa_printf(MSG_ERROR,
+				   "ioctl[SIOCSIWENCODE] (set_tx): %s",
+				   strerror(errno));
 			ret = -1;
 		}
 	}
@@ -1840,7 +1852,8 @@ static int wpa_driver_wext_mlme(struct wpa_driver_wext_data *drv,
 	iwr.u.data.length = sizeof(mlme);
 
 	if (ioctl(drv->ioctl_sock, SIOCSIWMLME, &iwr) < 0) {
-		perror("ioctl[SIOCSIWMLME]");
+		wpa_printf(MSG_ERROR, "ioctl[SIOCSIWMLME]: %s",
+			   strerror(errno));
 		ret = -1;
 	}
 
@@ -1863,7 +1876,8 @@ static void wpa_driver_wext_disconnect(struct wpa_driver_wext_data *drv)
 	os_memset(&iwr, 0, sizeof(iwr));
 	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
 	if (ioctl(drv->ioctl_sock, SIOCGIWMODE, &iwr) < 0) {
-		perror("ioctl[SIOCGIWMODE]");
+		wpa_printf(MSG_ERROR, "ioctl[SIOCGIWMODE]: %s",
+			   strerror(errno));
 		iwr.u.mode = IW_MODE_INFRA;
 	}
 
@@ -1928,7 +1942,8 @@ static int wpa_driver_wext_set_gen_ie(void *priv, const u8 *ie,
 	iwr.u.data.length = ie_len;
 
 	if (ioctl(drv->ioctl_sock, SIOCSIWGENIE, &iwr) < 0) {
-		perror("ioctl[SIOCSIWGENIE]");
+		wpa_printf(MSG_ERROR, "ioctl[SIOCSIWGENIE]: %s",
+			   strerror(errno));
 		ret = -1;
 	}
 
@@ -2005,7 +2020,8 @@ wpa_driver_wext_auth_alg_fallback(struct wpa_driver_wext_data *drv,
 	}
 
 	if (ioctl(drv->ioctl_sock, SIOCSIWENCODE, &iwr) < 0) {
-		perror("ioctl[SIOCSIWENCODE]");
+		wpa_printf(MSG_ERROR, "ioctl[SIOCSIWENCODE]: %s",
+			   strerror(errno));
 		ret = -1;
 	}
 
@@ -2182,7 +2198,8 @@ int wpa_driver_wext_set_mode(void *priv, int mode)
 	}
 
 	if (errno != EBUSY) {
-		perror("ioctl[SIOCSIWMODE]");
+		wpa_printf(MSG_ERROR, "ioctl[SIOCSIWMODE]: %s",
+			   strerror(errno));
 		goto done;
 	}
 
@@ -2191,7 +2208,8 @@ int wpa_driver_wext_set_mode(void *priv, int mode)
 	 * down, try to set the mode again, and bring it back up.
 	 */
 	if (ioctl(drv->ioctl_sock, SIOCGIWMODE, &iwr) < 0) {
-		perror("ioctl[SIOCGIWMODE]");
+		wpa_printf(MSG_ERROR, "ioctl[SIOCGIWMODE]: %s",
+			   strerror(errno));
 		goto done;
 	}
 
@@ -2204,7 +2222,8 @@ int wpa_driver_wext_set_mode(void *priv, int mode)
 		/* Try to set the mode again while the interface is down */
 		iwr.u.mode = new_mode;
 		if (ioctl(drv->ioctl_sock, SIOCSIWMODE, &iwr) < 0)
-			perror("ioctl[SIOCSIWMODE]");
+			wpa_printf(MSG_ERROR, "ioctl[SIOCSIWMODE]: %s",
+				   strerror(errno));
 		else
 			ret = 0;
 
@@ -2237,7 +2256,8 @@ static int wpa_driver_wext_pmksa(struct wpa_driver_wext_data *drv,
 
 	if (ioctl(drv->ioctl_sock, SIOCSIWPMKSA, &iwr) < 0) {
 		if (errno != EOPNOTSUPP)
-			perror("ioctl[SIOCSIWPMKSA]");
+			wpa_printf(MSG_ERROR, "ioctl[SIOCSIWPMKSA]: %s",
+				   strerror(errno));
 		ret = -1;
 	}
 

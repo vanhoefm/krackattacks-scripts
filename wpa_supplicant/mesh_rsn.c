@@ -315,7 +315,8 @@ static void mesh_rsn_send_auth(struct wpa_supplicant *wpa_s,
 		" auth_transaction=%d resp=%d (IE len=%lu)",
 		MAC2STR(dst), auth_transaction, resp, (unsigned long) ielen);
 	if (wpa_drv_send_mlme(wpa_s, buf, len, 0) < 0)
-		perror("send_auth_reply: send");
+		wpa_printf(MSG_INFO, "send_auth_reply: send_mlme failed: %s",
+			   strerror(errno));
 
 	os_free(buf);
 }

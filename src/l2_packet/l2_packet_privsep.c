@@ -44,7 +44,7 @@ static int wpa_priv_cmd(struct l2_packet_data *l2, int cmd,
 	msg.msg_namelen = sizeof(l2->priv_addr);
 
 	if (sendmsg(l2->fd, &msg, 0) < 0) {
-		perror("L2: sendmsg(cmd)");
+		wpa_printf(MSG_ERROR, "L2: sendmsg(cmd): %s", strerror(errno));
 		return -1;
 	}
 
@@ -82,7 +82,8 @@ int l2_packet_send(struct l2_packet_data *l2, const u8 *dst_addr, u16 proto,
 	msg.msg_namelen = sizeof(l2->priv_addr);
 
 	if (sendmsg(l2->fd, &msg, 0) < 0) {
-		perror("L2: sendmsg(packet_send)");
+		wpa_printf(MSG_ERROR, "L2: sendmsg(packet_send): %s",
+			   strerror(errno));
 		return -1;
 	}
 
@@ -102,7 +103,8 @@ static void l2_packet_receive(int sock, void *eloop_ctx, void *sock_ctx)
 	res = recvfrom(sock, buf, sizeof(buf), 0, (struct sockaddr *) &from,
 		       &fromlen);
 	if (res < 0) {
-		perror("l2_packet_receive - recvfrom");
+		wpa_printf(MSG_ERROR, "l2_packet_receive - recvfrom: %s",
+			   strerror(errno));
 		return;
 	}
 	if (res < ETH_ALEN) {
@@ -162,7 +164,7 @@ struct l2_packet_data * l2_packet_init(
 
 	l2->fd = socket(PF_UNIX, SOCK_DGRAM, 0);
 	if (l2->fd < 0) {
-		perror("socket(PF_UNIX)");
+		wpa_printf(MSG_ERROR, "socket(PF_UNIX): %s", strerror(errno));
 		os_free(l2->own_socket_path);
 		l2->own_socket_path = NULL;
 		os_free(l2);
@@ -173,7 +175,8 @@ struct l2_packet_data * l2_packet_init(
 	addr.sun_family = AF_UNIX;
 	os_strlcpy(addr.sun_path, l2->own_socket_path, sizeof(addr.sun_path));
 	if (bind(l2->fd, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
-		perror("l2-pkt-privsep: bind(PF_UNIX)");
+		wpa_printf(MSG_ERROR, "l2-pkt-privsep: bind(PF_UNIX): %s",
+			   strerror(errno));
 		goto fail;
 	}
 
@@ -191,14 +194,14 @@ struct l2_packet_data * l2_packet_init(
 	tv.tv_usec = 0;
 	res = select(l2->fd + 1, &rfds, NULL, NULL, &tv);
 	if (res < 0 && errno != EINTR) {
-		perror("select");
+		wpa_printf(MSG_ERROR, "select: %s", strerror(errno));
 		goto fail;
 	}
 
 	if (FD_ISSET(l2->fd, &rfds)) {
 		res = recv(l2->fd, reply, sizeof(reply), 0);
 		if (res < 0) {
-			perror("recv");
+			wpa_printf(MSG_ERROR, "recv: %s", strerror(errno));
 			goto fail;
 		}
 	} else {

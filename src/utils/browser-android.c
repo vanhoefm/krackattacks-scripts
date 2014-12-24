@@ -87,7 +87,7 @@ int hs20_web_browser(const char *url)
 
 	pid = fork();
 	if (pid < 0) {
-		perror("fork");
+		wpa_printf(MSG_ERROR, "fork: %s", strerror(errno));
 		http_server_deinit(http);
 		eloop_destroy();
 		return -1;
@@ -108,7 +108,7 @@ int hs20_web_browser(const char *url)
 		argv[8] = NULL;
 
 		execv("/system/bin/am", argv);
-		perror("execv");
+		wpa_printf(MSG_ERROR, "execv: %s", strerror(errno));
 		exit(0);
 		return -1;
 	}

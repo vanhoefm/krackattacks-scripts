@@ -1809,7 +1809,8 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 	res = recvfrom(sock, buf, sizeof(buf) - 1, 0,
 		       (struct sockaddr *) &from, &fromlen);
 	if (res < 0) {
-		perror("recvfrom(ctrl_iface)");
+		wpa_printf(MSG_ERROR, "recvfrom(ctrl_iface): %s",
+			   strerror(errno));
 		return;
 	}
 	buf[res] = '\0';
@@ -2092,7 +2093,8 @@ int hostapd_ctrl_iface_init(struct hostapd_data *hapd)
 			wpa_printf(MSG_DEBUG, "Using existing control "
 				   "interface directory.");
 		} else {
-			perror("mkdir[ctrl_interface]");
+			wpa_printf(MSG_ERROR, "mkdir[ctrl_interface]: %s",
+				   strerror(errno));
 			goto fail;
 		}
 	}
@@ -2100,7 +2102,8 @@ int hostapd_ctrl_iface_init(struct hostapd_data *hapd)
 	if (hapd->conf->ctrl_interface_gid_set &&
 	    chown(hapd->conf->ctrl_interface, -1,
 		  hapd->conf->ctrl_interface_gid) < 0) {
-		perror("chown[ctrl_interface]");
+		wpa_printf(MSG_ERROR, "chown[ctrl_interface]: %s",
+			   strerror(errno));
 		return -1;
 	}
 
@@ -2108,7 +2111,8 @@ int hostapd_ctrl_iface_init(struct hostapd_data *hapd)
 	    hapd->iface->interfaces->ctrl_iface_group &&
 	    chown(hapd->conf->ctrl_interface, -1,
 		  hapd->iface->interfaces->ctrl_iface_group) < 0) {
-		perror("chown[ctrl_interface]");
+		wpa_printf(MSG_ERROR, "chown[ctrl_interface]: %s",
+			   strerror(errno));
 		return -1;
 	}
 
@@ -2133,7 +2137,7 @@ int hostapd_ctrl_iface_init(struct hostapd_data *hapd)
 
 	s = socket(PF_UNIX, SOCK_DGRAM, 0);
 	if (s < 0) {
-		perror("socket(PF_UNIX)");
+		wpa_printf(MSG_ERROR, "socket(PF_UNIX): %s", strerror(errno));
 		goto fail;
 	}
 
@@ -2154,15 +2158,16 @@ int hostapd_ctrl_iface_init(struct hostapd_data *hapd)
 				   " allow connections - assuming it was left"
 				   "over from forced program termination");
 			if (unlink(fname) < 0) {
-				perror("unlink[ctrl_iface]");
-				wpa_printf(MSG_ERROR, "Could not unlink "
-					   "existing ctrl_iface socket '%s'",
-					   fname);
+				wpa_printf(MSG_ERROR,
+					   "Could not unlink existing ctrl_iface socket '%s': %s",
+					   fname, strerror(errno));
 				goto fail;
 			}
 			if (bind(s, (struct sockaddr *) &addr, sizeof(addr)) <
 			    0) {
-				perror("hostapd-ctrl-iface: bind(PF_UNIX)");
+				wpa_printf(MSG_ERROR,
+					   "hostapd-ctrl-iface: bind(PF_UNIX): %s",
+					   strerror(errno));
 				goto fail;
 			}
 			wpa_printf(MSG_DEBUG, "Successfully replaced leftover "
@@ -2180,19 +2185,22 @@ int hostapd_ctrl_iface_init(struct hostapd_data *hapd)
 
 	if (hapd->conf->ctrl_interface_gid_set &&
 	    chown(fname, -1, hapd->conf->ctrl_interface_gid) < 0) {
-		perror("chown[ctrl_interface/ifname]");
+		wpa_printf(MSG_ERROR, "chown[ctrl_interface/ifname]: %s",
+			   strerror(errno));
 		goto fail;
 	}
 
 	if (!hapd->conf->ctrl_interface_gid_set &&
 	    hapd->iface->interfaces->ctrl_iface_group &&
 	    chown(fname, -1, hapd->iface->interfaces->ctrl_iface_group) < 0) {
-		perror("chown[ctrl_interface/ifname]");
+		wpa_printf(MSG_ERROR, "chown[ctrl_interface/ifname]: %s",
+			   strerror(errno));
 		goto fail;
 	}
 
 	if (chmod(fname, S_IRWXU | S_IRWXG) < 0) {
-		perror("chmod[ctrl_interface/ifname]");
+		wpa_printf(MSG_ERROR, "chmod[ctrl_interface/ifname]: %s",
+			   strerror(errno));
 		goto fail;
 	}
 	os_free(fname);
@@ -2305,7 +2313,8 @@ static void hostapd_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 	res = recvfrom(sock, buf, sizeof(buf) - 1, 0,
 		       (struct sockaddr *) &from, &fromlen);
 	if (res < 0) {
-		perror("recvfrom(ctrl_iface)");
+		wpa_printf(MSG_ERROR, "recvfrom(ctrl_iface): %s",
+			   strerror(errno));
 		return;
 	}
 	buf[res] = '\0';
@@ -2390,13 +2399,15 @@ int hostapd_global_ctrl_iface_init(struct hapd_interfaces *interface)
 			wpa_printf(MSG_DEBUG, "Using existing control "
 				   "interface directory.");
 		} else {
-			perror("mkdir[ctrl_interface]");
+			wpa_printf(MSG_ERROR, "mkdir[ctrl_interface]: %s",
+				   strerror(errno));
 			goto fail;
 		}
 	} else if (interface->ctrl_iface_group &&
 		   chown(interface->global_iface_path, -1,
 			 interface->ctrl_iface_group) < 0) {
-		perror("chown[ctrl_interface]");
+		wpa_printf(MSG_ERROR, "chown[ctrl_interface]: %s",
+			   strerror(errno));
 		goto fail;
 	}
 
@@ -2406,7 +2417,7 @@ int hostapd_global_ctrl_iface_init(struct hapd_interfaces *interface)
 
 	s = socket(PF_UNIX, SOCK_DGRAM, 0);
 	if (s < 0) {
-		perror("socket(PF_UNIX)");
+		wpa_printf(MSG_ERROR, "socket(PF_UNIX): %s", strerror(errno));
 		goto fail;
 	}
 
@@ -2427,15 +2438,15 @@ int hostapd_global_ctrl_iface_init(struct hapd_interfaces *interface)
 				   " allow connections - assuming it was left"
 				   "over from forced program termination");
 			if (unlink(fname) < 0) {
-				perror("unlink[ctrl_iface]");
-				wpa_printf(MSG_ERROR, "Could not unlink "
-					   "existing ctrl_iface socket '%s'",
-					   fname);
+				wpa_printf(MSG_ERROR,
+					   "Could not unlink existing ctrl_iface socket '%s': %s",
+					   fname, strerror(errno));
 				goto fail;
 			}
 			if (bind(s, (struct sockaddr *) &addr, sizeof(addr)) <
 			    0) {
-				perror("bind(PF_UNIX)");
+				wpa_printf(MSG_ERROR, "bind(PF_UNIX): %s",
+					   strerror(errno));
 				goto fail;
 			}
 			wpa_printf(MSG_DEBUG, "Successfully replaced leftover "
@@ -2453,12 +2464,14 @@ int hostapd_global_ctrl_iface_init(struct hapd_interfaces *interface)
 
 	if (interface->ctrl_iface_group &&
 	    chown(fname, -1, interface->ctrl_iface_group) < 0) {
-		perror("chown[ctrl_interface]");
+		wpa_printf(MSG_ERROR, "chown[ctrl_interface]: %s",
+			   strerror(errno));
 		goto fail;
 	}
 
 	if (chmod(fname, S_IRWXU | S_IRWXG) < 0) {
-		perror("chmod[ctrl_interface/ifname]");
+		wpa_printf(MSG_ERROR, "chmod[ctrl_interface/ifname]: %s",
+			   strerror(errno));
 		goto fail;
 	}
 	os_free(fname);

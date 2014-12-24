@@ -33,7 +33,7 @@ static void get_prg_fname(void)
 	os_snprintf(exe, sizeof(exe) - 1, "/proc/%u/exe", getpid());
 	len = readlink(exe, fname, sizeof(fname) - 1);
 	if (len < 0 || len >= (int) sizeof(fname)) {
-		perror("readlink");
+		wpa_printf(MSG_ERROR, "readlink: %s", strerror(errno));
 		return;
 	}
 	fname[len] = '\0';

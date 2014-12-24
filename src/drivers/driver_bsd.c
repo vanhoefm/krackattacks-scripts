@@ -264,7 +264,8 @@ bsd_ctrl_iface(void *priv, int enable)
 	os_strlcpy(ifr.ifr_name, drv->ifname, sizeof(ifr.ifr_name));
 
 	if (ioctl(drv->sock, SIOCGIFFLAGS, &ifr) < 0) {
-		perror("ioctl[SIOCGIFFLAGS]");
+		wpa_printf(MSG_ERROR, "ioctl[SIOCGIFFLAGS]: %s",
+			   strerror(errno));
 		return -1;
 	}
 
@@ -279,7 +280,8 @@ bsd_ctrl_iface(void *priv, int enable)
 	}
 
 	if (ioctl(drv->sock, SIOCSIFFLAGS, &ifr) < 0) {
-		perror("ioctl[SIOCSIFFLAGS]");
+		wpa_printf(MSG_ERROR, "ioctl[SIOCSIFFLAGS]: %s",
+			   strerror(errno));
 		return -1;
 	}
 
@@ -404,22 +406,24 @@ bsd_configure_wpa(void *priv, struct wpa_bss_params *params)
 		v = IEEE80211_CIPHER_NONE;
 		break;
 	default:
-		printf("Unknown group key cipher %u\n",
-			params->wpa_group);
+		wpa_printf(MSG_INFO, "Unknown group key cipher %u",
+			   params->wpa_group);
 		return -1;
 	}
 	wpa_printf(MSG_DEBUG, "%s: group key cipher=%s (%u)",
 		   __func__, ciphernames[v], v);
 	if (set80211param(priv, IEEE80211_IOC_MCASTCIPHER, v)) {
-		printf("Unable to set group key cipher to %u (%s)\n",
-			v, ciphernames[v]);
+		wpa_printf(MSG_INFO,
+			   "Unable to set group key cipher to %u (%s)",
+			   v, ciphernames[v]);
 		return -1;
 	}
 	if (v == IEEE80211_CIPHER_WEP) {
 		/* key length is done only for specific ciphers */
 		v = (params->wpa_group == WPA_CIPHER_WEP104 ? 13 : 5);
 		if (set80211param(priv, IEEE80211_IOC_MCASTKEYLEN, v)) {
-			printf("Unable to set group key length to %u\n", v);
+			wpa_printf(MSG_INFO,
+				   "Unable to set group key length to %u", v);
 			return -1;
 		}
 	}
@@ -433,7 +437,8 @@ bsd_configure_wpa(void *priv, struct wpa_bss_params *params)
 		v |= 1<<IEEE80211_CIPHER_NONE;
 	wpa_printf(MSG_DEBUG, "%s: pairwise key ciphers=0x%x", __func__, v);
 	if (set80211param(priv, IEEE80211_IOC_UCASTCIPHERS, v)) {
-		printf("Unable to set pairwise key ciphers to 0x%x\n", v);
+		wpa_printf(MSG_INFO,
+			   "Unable to set pairwise key ciphers to 0x%x", v);
 		return -1;
 	}
 
@@ -441,8 +446,9 @@ bsd_configure_wpa(void *priv, struct wpa_bss_params *params)
 		   __func__, params->wpa_key_mgmt);
 	if (set80211param(priv, IEEE80211_IOC_KEYMGTALGS,
 			  params->wpa_key_mgmt)) {
-		printf("Unable to set key management algorithms to 0x%x\n",
-			params->wpa_key_mgmt);
+		wpa_printf(MSG_INFO,
+			   "Unable to set key management algorithms to 0x%x",
+			   params->wpa_key_mgmt);
 		return -1;
 	}
 
@@ -452,14 +458,15 @@ bsd_configure_wpa(void *priv, struct wpa_bss_params *params)
 	wpa_printf(MSG_DEBUG, "%s: rsn capabilities=0x%x",
 		   __func__, params->rsn_preauth);
 	if (set80211param(priv, IEEE80211_IOC_RSNCAPS, v)) {
-		printf("Unable to set RSN capabilities to 0x%x\n", v);
+		wpa_printf(MSG_INFO, "Unable to set RSN capabilities to 0x%x",
+			   v);
 		return -1;
 	}
 #endif /* IEEE80211_IOC_APPIE */
 
 	wpa_printf(MSG_DEBUG, "%s: enable WPA= 0x%x", __func__, params->wpa);
 	if (set80211param(priv, IEEE80211_IOC_WPA, params->wpa)) {
-		printf("Unable to set WPA to %u\n", params->wpa);
+		wpa_printf(MSG_INFO, "Unable to set WPA to %u", params->wpa);
 		return -1;
 	}
 	return 0;
@@ -507,7 +514,8 @@ bsd_new_sta(void *priv, void *ctx, u8 addr[IEEE80211_ADDR_LEN])
 	memset(&ie, 0, sizeof(ie));
 	memcpy(ie.wpa_macaddr, addr, IEEE80211_ADDR_LEN);
 	if (get80211var(priv, IEEE80211_IOC_WPAIE, &ie, sizeof(ie)) < 0) {
-		printf("Failed to get WPA/RSN information element.\n");
+		wpa_printf(MSG_INFO,
+			   "Failed to get WPA/RSN information element");
 		goto no_ie;
 	}
 	iebuf = ie.wpa_ie;
@@ -594,7 +602,7 @@ rtbuf_len(void)
 	int mib[6] = {CTL_NET, AF_ROUTE, 0, AF_INET, NET_RT_DUMP, 0};
 
 	if (sysctl(mib, 6, NULL, &len, NULL, 0) < 0) {
-		wpa_printf(MSG_WARNING, "%s failed: %s\n", __func__,
+		wpa_printf(MSG_WARNING, "%s failed: %s", __func__,
 			   strerror(errno));
 		len = 2048;
 	}
@@ -652,7 +660,7 @@ bsd_get_seqnum(const char *ifname, void *priv, const u8 *addr, int idx,
 	wk.ik_keyix = idx;
 
 	if (get80211var(priv, IEEE80211_IOC_WPAKEY, &wk, sizeof(wk)) < 0) {
-		printf("Failed to get encryption.\n");
+		wpa_printf(MSG_INFO, "Failed to get encryption");
 		return -1;
 	}
 
@@ -734,7 +742,7 @@ bsd_wireless_event_receive(int sock, void *ctx, void *sock_ctx)
 	n = read(sock, drv->event_buf, drv->event_buf_len);
 	if (n < 0) {
 		if (errno != EINTR && errno != EAGAIN)
-			wpa_printf(MSG_ERROR, "%s read() failed: %s\n",
+			wpa_printf(MSG_ERROR, "%s read() failed: %s",
 				   __func__, strerror(errno));
 		return;
 	}
@@ -814,7 +822,8 @@ bsd_init(struct hostapd_data *hapd, struct wpa_init_params *params)
 	drv->hapd = hapd;
 	drv->sock = socket(PF_INET, SOCK_DGRAM, 0);
 	if (drv->sock < 0) {
-		perror("socket[PF_INET,SOCK_DGRAM]");
+		wpa_printf(MSG_ERROR, "socket[PF_INET,SOCK_DGRAM]: %s",
+			   strerror(errno));
 		goto bad;
 	}
 	os_strlcpy(drv->ifname, params->ifname, sizeof(drv->ifname));
@@ -832,7 +841,8 @@ bsd_init(struct hostapd_data *hapd, struct wpa_init_params *params)
 
 	drv->route = socket(PF_ROUTE, SOCK_RAW, 0);
 	if (drv->route < 0) {
-		perror("socket(PF_ROUTE,SOCK_RAW)");
+		wpa_printf(MSG_ERROR, "socket(PF_ROUTE,SOCK_RAW): %s",
+			   strerror(errno));
 		goto bad;
 	}
 	eloop_register_read_sock(drv->route, bsd_wireless_event_receive, drv,
@@ -1189,7 +1199,7 @@ wpa_driver_bsd_event_receive(int sock, void *ctx, void *sock_ctx)
 	n = read(sock, drv->event_buf, drv->event_buf_len);
 	if (n < 0) {
 		if (errno != EINTR && errno != EAGAIN)
-			wpa_printf(MSG_ERROR, "%s read() failed: %s\n",
+			wpa_printf(MSG_ERROR, "%s read() failed: %s",
 				   __func__, strerror(errno));
 		return;
 	}

@@ -50,7 +50,7 @@ static int inject_frame(int s, const void *data, size_t len)
 
 	ret = sendmsg(s, &msg, 0);
 	if (ret < 0)
-		perror("sendmsg");
+		wpa_printf(MSG_ERROR, "sendmsg: %s", strerror(errno));
 	return ret;
 }
 

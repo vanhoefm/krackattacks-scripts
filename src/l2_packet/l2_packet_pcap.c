@@ -54,15 +54,16 @@ static int l2_packet_init_libdnet(struct l2_packet_data *l2)
 
 	l2->eth = eth_open(l2->ifname);
 	if (!l2->eth) {
-		printf("Failed to open interface '%s'.\n", l2->ifname);
-		perror("eth_open");
+		wpa_printf(MSG_ERROR,
+			   "Failed to open interface '%s' - eth_open: %s",
+			   l2->ifname, strerror(errno));
 		return -1;
 	}
 
 	if (eth_get(l2->eth, &own_addr) < 0) {
-		printf("Failed to get own hw address from interface '%s'.\n",
-		       l2->ifname);
-		perror("eth_get");
+		wpa_printf(MSG_ERROR,
+			   "Failed to get own hw address from interface '%s' - eth_get: %s",
+			   l2->ifname, strerror(errno));
 		eth_close(l2->eth);
 		l2->eth = NULL;
 		return -1;

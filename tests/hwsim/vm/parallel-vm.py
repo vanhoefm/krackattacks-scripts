@@ -16,25 +16,15 @@ import time
 
 logger = logging.getLogger()
 
-def get_results():
-    global vm
-    started = []
-    passed = []
+def get_failed(vm):
     failed = []
-    skipped = []
-    for i in range(0, num_servers):
-        lines = vm[i]['out'].splitlines()
-        started += [ l for l in lines if l.startswith('START ') ]
-        passed += [ l for l in lines if l.startswith('PASS ') ]
-        failed += [ l for l in lines if l.startswith('FAIL ') ]
-        skipped += [ l for l in lines if l.startswith('SKIP ') ]
-    return (started, passed, failed, skipped)
-
-def vm_ready_str(s):
-    return s.startswith("READY") or s.startswith("PASS") or \
-        s.startswith("FAIL") or s.startswith("SKIP")
+    for i in range(num_servers):
+        failed += vm[i]['failed']
+    return failed
 
 def vm_read_stdout(vm, i):
+    global total_started, total_passed, total_failed, total_skipped
+
     ready = False
     try:
         out = vm['proc'].stdout.read()
@@ -50,8 +40,26 @@ def vm_read_stdout(vm, i):
         line = pending[0:pos].rstrip()
         pending = pending[(pos + 1):]
         logger.debug("VM[%d] stdout full line[%s]" % (i, line))
-        if vm_ready_str(line):
+        if line.startswith("READY"):
             ready = True
+        elif line.startswith("PASS"):
+            ready = True
+            total_passed += 1
+        elif line.startswith("FAIL"):
+            ready = True
+            total_failed += 1
+            name = line.split(' ')[1]
+            logger.debug("VM[%d] test case failed: %s" % (i, name))
+            vm['failed'].append(name)
+        elif line.startswith("NOT-FOUND"):
+            ready = True
+            total_failed += 1
+            logger.info("VM[%d] test case not found" % i)
+        elif line.startswith("SKIP"):
+            ready = True
+            total_skipped += 1
+        elif line.startswith("START"):
+            total_started += 1
         vm['out'] += line + '\n'
         lines.append(line)
     vm['pending'] = pending
@@ -64,6 +72,7 @@ def show_progress(scr):
     global timestamp
     global tests
     global first_run_failures
+    global total_started, total_passed, total_failed, total_skipped
 
     total_tests = len(tests)
     logger.info("Total tests: %d" % total_tests)
@@ -137,9 +146,7 @@ def show_progress(scr):
                 logger.info("Unexpected test cases remaining from first round: " + str(tests))
                 raise Exception("Unexpected test cases remaining from first round")
             completed_first_pass = True
-            (started, passed, failed, skipped) = get_results()
-            for f in failed:
-                name = f.split(' ')[1]
+            for name in get_failed(vm):
                 rerun_tests.append(name)
                 first_run_failures.append(name)
 
@@ -195,17 +202,17 @@ def show_progress(scr):
             break
 
         if updated:
-            (started, passed, failed, skipped) = get_results()
             scr.move(num_servers + 1, 10)
             scr.clrtoeol()
-            scr.addstr("{} %".format(int(100.0 * (len(passed) + len(failed) + len(skipped)) / total_tests)))
-            scr.addstr(num_servers + 1, 20, "TOTAL={} STARTED={} PASS={} FAIL={} SKIP={}".format(total_tests, len(started), len(passed), len(failed), len(skipped)))
+            scr.addstr("{} %".format(int(100.0 * (total_passed + total_failed + total_skipped) / total_tests)))
+            scr.addstr(num_servers + 1, 20, "TOTAL={} STARTED={} PASS={} FAIL={} SKIP={}".format(total_tests, total_started, total_passed, total_failed, total_skipped))
+            failed = get_failed(vm)
             if len(failed) > 0:
                 scr.move(num_servers + 2, 0)
                 scr.clrtoeol()
                 scr.addstr("Failed test cases: ")
                 for f in failed:
-                    scr.addstr(f.split(' ')[1])
+                    scr.addstr(f)
                     scr.addstr(' ')
 
             scr.move(0, 35)
@@ -229,6 +236,12 @@ def main():
     global timestamp
     global tests
     global first_run_failures
+    global total_started, total_passed, total_failed, total_skipped
+
+    total_started = 0
+    total_passed = 0
+    total_failed = 0
+    total_skipped = 0
 
     debug_level = logging.INFO
 
@@ -344,6 +357,7 @@ def main():
         vm[i]['out'] = ""
         vm[i]['pending'] = ""
         vm[i]['err'] = ""
+        vm[i]['failed'] = []
         for stream in [ vm[i]['proc'].stdout, vm[i]['proc'].stderr ]:
             fd = stream.fileno()
             fl = fcntl.fcntl(fd, fcntl.F_GETFL)
@@ -356,7 +370,7 @@ def main():
         for i in range(0, num_servers):
             f.write('VM {}\n{}\n{}\n'.format(i, vm[i]['out'], vm[i]['err']))
 
-    (started, passed, failed, skipped) = get_results()
+    failed = get_failed(vm)
 
     if first_run_failures:
         print "Failed test cases:"
@@ -365,8 +379,7 @@ def main():
             logger.info("Failed: " + f)
         print
     double_failed = []
-    for f in failed:
-        name = f.split(' ')[1]
+    for name in failed:
         double_failed.append(name)
     for test in first_run_failures:
         double_failed.remove(test)
@@ -379,7 +392,10 @@ def main():
             print f,
             logger.info("Failed on retry: " + f)
         print
-    res = "TOTAL={} PASS={} FAIL={} SKIP={}".format(len(started), len(passed), len(failed), len(skipped))
+    res = "TOTAL={} PASS={} FAIL={} SKIP={}".format(total_started,
+                                                    total_passed,
+                                                    total_failed,
+                                                    total_skipped)
     print(res)
     logger.info(res)
     print "Logs: " + dir + '/' + str(timestamp)

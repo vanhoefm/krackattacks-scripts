@@ -202,7 +202,9 @@ static void wpa_priv_cmd_associate(struct wpa_priv_interface *iface,
 	if (assoc->ssid_len > 32)
 		return;
 	params.ssid_len = assoc->ssid_len;
-	params.freq = assoc->freq;
+	params.freq.mode = assoc->hwmode;
+	params.freq.freq = assoc->freq;
+	params.freq.channel = assoc->channel;
 	if (assoc->wpa_ie_len) {
 		params.wpa_ie = (u8 *) (assoc + 1);
 		params.wpa_ie_len = assoc->wpa_ie_len;

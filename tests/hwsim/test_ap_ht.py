@@ -766,7 +766,11 @@ def test_ap_ht40_csa3(dev, apdev):
 def test_ap_ht_smps(dev, apdev):
     """SMPS AP configuration options"""
     params = { "ssid": "ht1", "ht_capab": "[SMPS-STATIC]" }
-    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    try:
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    except:
+        logger.info("Assume mac80211_hwsim was not recent enough to support SMPS")
+        return "skip"
     params = { "ssid": "ht2", "ht_capab": "[SMPS-DYNAMIC]" }
     hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
 

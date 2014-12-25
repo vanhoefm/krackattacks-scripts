@@ -800,7 +800,7 @@ def test_wpas_ctrl_get_capability(dev):
         raise Exception("Unexpected GET_CAPABILITY tdls response: " + str(res))
 
     res = dev[0].get_capability("erp")
-    if "ERP" not in res[0]:
+    if res is None or "ERP" not in res[0]:
         raise Exception("Unexpected GET_CAPABILITY erp response: " + str(res))
 
     if dev[0].get_capability("foo") is not None:

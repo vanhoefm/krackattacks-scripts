@@ -5,6 +5,7 @@ WPAS=$DIR/../../wpa_supplicant/wpa_supplicant
 WPACLI=$DIR/../../wpa_supplicant/wpa_cli
 HAPD=$DIR/../../hostapd/hostapd
 HAPD_AS=$DIR/../../hostapd/hostapd
+HAPDCLI=$DIR/../../hostapd/hostapd_cli
 WLANTEST=$DIR/../../wlantest/wlantest
 HLR_AUC_GW=$DIR/../../hostapd/hlr_auc_gw
 DATE="$(date +%s)"
@@ -142,6 +143,17 @@ for j in `seq 1 10`; do
     fi
     if [ $j = "10" ]; then
 	echo "Could not connect to /var/run/hostapd-global"
+	exit 1
+    fi
+    sleep 1
+done
+
+for j in `seq 1 10`; do
+    if $HAPDCLI -i as ping | grep -q PONG; then
+	break
+    fi
+    if [ $j = "10" ]; then
+	echo "Could not connect to hostapd-as-RADIUS-server"
 	exit 1
     fi
     sleep 1

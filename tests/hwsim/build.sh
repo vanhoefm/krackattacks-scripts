@@ -60,7 +60,7 @@ if [ $use_lcov -eq 1 ]; then
 fi
 
 make clean
-make -j8 hostapd hlr_auc_gw
+make -j8 hostapd hostapd_cli hlr_auc_gw
 cd ../wlantest
 make clean
 make -j8

@@ -144,8 +144,17 @@ def test_p2p_channel_random_social_with_op_class_change(dev, apdev, params):
             pass
 
         if cmd:
+            (out,err) = cmd.communicate()
+            res = cmd.wait()
+            if res == 1:
+                arg[3] = '-R'
+                cmd = subprocess.Popen(arg, stdout=subprocess.PIPE,
+                                       stderr=open('/dev/null', 'w'))
+                (out,err) = cmd.communicate()
+                res = cmd.wait()
+
             last = None
-            for l in cmd.stdout.read().splitlines():
+            for l in out.splitlines():
                 if "Operating Channel:" not in l:
                     continue
                 last = l

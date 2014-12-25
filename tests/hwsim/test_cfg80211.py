@@ -95,7 +95,16 @@ def test_cfg80211_tx_frame(dev, apdev, params):
         pass
 
     if cmd:
-        freq = cmd.stdout.read().splitlines()
+        (out,err) = cmd.communicate()
+        res = cmd.wait()
+        if res == 1:
+            arg[3] = '-R'
+            cmd = subprocess.Popen(arg, stdout=subprocess.PIPE,
+                                   stderr=open('/dev/null', 'w'))
+            (out,err) = cmd.communicate()
+            res = cmd.wait()
+
+        freq = out.splitlines()
         if len(freq) != 2:
             raise Exception("Unexpected number of Action frames (%d)" % len(freq))
         if freq[0] != "2422":

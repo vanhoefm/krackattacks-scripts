@@ -140,7 +140,7 @@ def test_dfs_radar(dev, apdev):
     """DFS CAC functionality with radar detected"""
     try:
         hapd2 = None
-        hapd = start_dfs_ap(apdev[0])
+        hapd = start_dfs_ap(apdev[0], allow_failure=True)
         if hapd is None:
             if not os.path.exists("dfs"):
                 return "skip"
@@ -230,7 +230,7 @@ def test_dfs_radar_on_non_dfs_channel(dev, apdev):
 def test_dfs_radar_chanlist(dev, apdev):
     """DFS chanlist when radar is detected"""
     try:
-        hapd = start_dfs_ap(apdev[0], chanlist="40 44")
+        hapd = start_dfs_ap(apdev[0], chanlist="40 44", allow_failure=True)
         if hapd is None:
             if not os.path.exists("dfs"):
                 return "skip"
@@ -267,7 +267,8 @@ def test_dfs_radar_chanlist(dev, apdev):
 def test_dfs_radar_chanlist_vht80(dev, apdev):
     """DFS chanlist when radar is detected and VHT80 configured"""
     try:
-        hapd = start_dfs_ap(apdev[0], chanlist="36", ht40=True, vht80=True)
+        hapd = start_dfs_ap(apdev[0], chanlist="36", ht40=True, vht80=True,
+                            allow_failure=True)
         if hapd is None:
             if not os.path.exists("dfs"):
                 return "skip"
@@ -307,7 +308,8 @@ def test_dfs_radar_chanlist_vht80(dev, apdev):
 def test_dfs_radar_chanlist_vht20(dev, apdev):
     """DFS chanlist when radar is detected and VHT40 configured"""
     try:
-        hapd = start_dfs_ap(apdev[0], chanlist="36", vht20=True)
+        hapd = start_dfs_ap(apdev[0], chanlist="36", vht20=True,
+                            allow_failure=True)
         if hapd is None:
             if not os.path.exists("dfs"):
                 return "skip"
@@ -344,7 +346,8 @@ def test_dfs_radar_chanlist_vht20(dev, apdev):
 def test_dfs_radar_no_ht(dev, apdev):
     """DFS chanlist when radar is detected and no HT configured"""
     try:
-        hapd = start_dfs_ap(apdev[0], chanlist="36", ht=False)
+        hapd = start_dfs_ap(apdev[0], chanlist="36", ht=False,
+                            allow_failure=True)
         if hapd is None:
             if not os.path.exists("dfs"):
                 return "skip"
@@ -381,7 +384,8 @@ def test_dfs_radar_no_ht(dev, apdev):
 def test_dfs_radar_ht40minus(dev, apdev):
     """DFS chanlist when radar is detected and HT40- configured"""
     try:
-        hapd = start_dfs_ap(apdev[0], chanlist="36", ht40minus=True)
+        hapd = start_dfs_ap(apdev[0], chanlist="36", ht40minus=True,
+                            allow_failure=True)
         if hapd is None:
             if not os.path.exists("dfs"):
                 return "skip"

@@ -723,10 +723,10 @@ static int features_info_handler(struct nl_msg *msg, void *arg)
 static int check_feature(enum qca_wlan_vendor_features feature,
 			 struct features_info *info)
 {
-	size_t index = feature / 8;
+	size_t idx = feature / 8;
 
-	return (index < info->flags_len) &&
-		(info->flags[index] & BIT(feature % 8));
+	return (idx < info->flags_len) &&
+		(info->flags[idx] & BIT(feature % 8));
 }
 
 

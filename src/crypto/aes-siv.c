@@ -50,7 +50,7 @@ static void xorend(u8 *a, int alen, const u8 *b, int blen)
 }
 
 
-static void pad(u8 *pad, const u8 *addr, size_t len)
+static void pad_block(u8 *pad, const u8 *addr, size_t len)
 {
 	os_memset(pad, 0, AES_BLOCK_SIZE);
 	os_memcpy(pad, addr, len);
@@ -99,7 +99,7 @@ int aes_s2v(const u8 *key, size_t num_elem, const u8 *addr[],
 	}
 
 	dbl(tmp);
-	pad(tmp2, addr[i], len[i]);
+	pad_block(tmp2, addr[i], len[i]);
 	xor(tmp, tmp2);
 
 	return omac1_aes_128(key, tmp, sizeof(tmp), mac);

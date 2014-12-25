@@ -211,7 +211,13 @@ def show_progress(scr):
                 scr.move(num_servers + 2, 0)
                 scr.clrtoeol()
                 scr.addstr("Failed test cases: ")
+                count = 0
                 for f in failed:
+                    count += 1
+                    if count > 30:
+                        scr.addstr('...')
+                        scr.clrtoeol()
+                        break
                     scr.addstr(f)
                     scr.addstr(' ')
 

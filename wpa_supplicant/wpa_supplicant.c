@@ -4248,7 +4248,10 @@ struct wpa_global * wpa_supplicant_init(struct wpa_params *params)
 	wpa_msg_register_ifname_cb(wpa_supplicant_msg_ifname_cb);
 #endif /* CONFIG_NO_WPA_MSG */
 
-	wpa_debug_open_file(params->wpa_debug_file_path);
+	if (params->wpa_debug_file_path)
+		wpa_debug_open_file(params->wpa_debug_file_path);
+	else
+		wpa_debug_setup_stdout();
 	if (params->wpa_debug_syslog)
 		wpa_debug_open_syslog();
 	if (params->wpa_debug_tracing) {

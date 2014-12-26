@@ -408,6 +408,8 @@ dbus_bool_t wpas_dbus_getter_config_methods(DBusMessageIter *iter,
 	struct wpa_supplicant *wpa_s = user_data;
 	char *methods = wpa_s->conf->config_methods;
 
+	if (methods == NULL)
+		methods = "";
 	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_STRING,
 						&methods, error);
 }

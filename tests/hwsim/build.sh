@@ -26,24 +26,15 @@ while [ "$1" != "" ]; do
 	esac
 done
 
-echo "Building wpa_supplicant"
-cd ../../wpa_supplicant
-if [ ! -e .config -o $force_config -eq 1 ]; then
-    cp ../tests/hwsim/example-wpa_supplicant.config .config
-else
-    echo "wpa_supplicant config file exists"
-fi
-
-if [ $use_lcov -eq 1 ]; then
-    if ! grep -q CONFIG_CODE_COVERAGE .config; then
-	    echo CONFIG_CODE_COVERAGE=y >> .config
-    else
-	    echo "CONFIG_CODE_COVERAGE already exists in wpa_supplicant/.config. Ignore"
-    fi
-fi
-
+echo "Building TNC testing tools"
+cd tnc
 make clean > /dev/null
 make QUIET=1 -j8
+
+echo "Building wlantest"
+cd ../../../wlantest
+make clean > /dev/null
+make QUIET=1 -j8 > /dev/null
 
 echo "Building hostapd"
 cd ../hostapd
@@ -64,13 +55,21 @@ fi
 make clean > /dev/null
 make QUIET=1 -j8 hostapd hostapd_cli hlr_auc_gw
 
-echo "Building wlantest"
-cd ../wlantest
-make clean > /dev/null
-make QUIET=1 -j8 > /dev/null
+echo "Building wpa_supplicant"
+cd ../wpa_supplicant
+if [ ! -e .config -o $force_config -eq 1 ]; then
+    cp ../tests/hwsim/example-wpa_supplicant.config .config
+else
+    echo "wpa_supplicant config file exists"
+fi
 
-echo "Building TNC testing tools"
-cd ../tests/hwsim/tnc
+if [ $use_lcov -eq 1 ]; then
+    if ! grep -q CONFIG_CODE_COVERAGE .config; then
+	    echo CONFIG_CODE_COVERAGE=y >> .config
+    else
+	    echo "CONFIG_CODE_COVERAGE already exists in wpa_supplicant/.config. Ignore"
+    fi
+fi
+
 make clean > /dev/null
 make QUIET=1 -j8
-cd ..

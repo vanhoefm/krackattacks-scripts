@@ -26,6 +26,7 @@ while [ "$1" != "" ]; do
 	esac
 done
 
+echo "Building wpa_supplicant"
 cd ../../wpa_supplicant
 if [ ! -e .config -o $force_config -eq 1 ]; then
     cp ../tests/hwsim/example-wpa_supplicant.config .config
@@ -41,9 +42,10 @@ if [ $use_lcov -eq 1 ]; then
     fi
 fi
 
-make clean
-make -j8
+make clean > /dev/null
+make QUIET=1 -j8
 
+echo "Building hostapd"
 cd ../hostapd
 if [ ! -e .config -o $force_config -eq 1 ]; then
     cp ../tests/hwsim/example-hostapd.config .config
@@ -59,12 +61,16 @@ if [ $use_lcov -eq 1 ]; then
     fi
 fi
 
-make clean
-make -j8 hostapd hostapd_cli hlr_auc_gw
+make clean > /dev/null
+make QUIET=1 -j8 hostapd hostapd_cli hlr_auc_gw
+
+echo "Building wlantest"
 cd ../wlantest
-make clean
-make -j8
+make clean > /dev/null
+make QUIET=1 -j8 > /dev/null
+
+echo "Building TNC testing tools"
 cd ../tests/hwsim/tnc
-make clean
-make -j8
+make clean > /dev/null
+make QUIET=1 -j8
 cd ..

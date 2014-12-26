@@ -913,6 +913,10 @@ ifeq ($(V), 1)
 Q=
 E=true
 endif
+ifeq ($(QUIET), 1)
+Q=@
+E=true
+endif
 
 ifdef CONFIG_CODE_COVERAGE
 %.o: %.c

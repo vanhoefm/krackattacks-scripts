@@ -1595,6 +1595,10 @@ ifeq ($(V), 1)
 Q=
 E=true
 endif
+ifeq ($(QUIET), 1)
+Q=@
+E=true
+endif
 
 dynamic_eap_methods: $(EAPDYN)
 
@@ -1687,10 +1691,12 @@ else
 endif
 
 %.service: %.service.in
-	sed -e 's|\@BINDIR\@|$(BINDIR)|g' $< >$@
+	$(Q)sed -e 's|\@BINDIR\@|$(BINDIR)|g' $< >$@
+	@$(E) "  sed" $<
 
 %@.service: %.service.arg.in
-	sed -e 's|\@BINDIR\@|$(BINDIR)|g' $< >$@
+	$(Q)sed -e 's|\@BINDIR\@|$(BINDIR)|g' $< >$@
+	@$(E) "  sed" $<
 
 wpa_supplicant.exe: wpa_supplicant
 	mv -f $< $@

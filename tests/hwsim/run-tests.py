@@ -442,10 +442,13 @@ def main():
                 else:
                     result = "PASS"
             except Exception, e:
-                logger.info(e)
-                if args.loglevel == logging.WARNING:
-                    print "Exception: " + str(e)
-                result = "FAIL"
+                if str(e) == "hwsim-SKIP":
+                    result = "SKIP"
+                else:
+                    logger.info(e)
+                    if args.loglevel == logging.WARNING:
+                        print "Exception: " + str(e)
+                    result = "FAIL"
             for d in dev:
                 try:
                     d.dump_monitor()

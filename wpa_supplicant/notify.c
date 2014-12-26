@@ -648,7 +648,8 @@ static void wpas_notify_ap_sta_authorized(struct wpa_supplicant *wpa_s,
 	 * Create 'peer-joined' signal on group object -- will also
 	 * check P2P itself.
 	 */
-	wpas_dbus_signal_p2p_peer_joined(wpa_s, p2p_dev_addr);
+	if (p2p_dev_addr)
+		wpas_dbus_signal_p2p_peer_joined(wpa_s, p2p_dev_addr);
 #endif /* CONFIG_P2P */
 
 	/* Notify listeners a new station has been authorized */
@@ -665,7 +666,8 @@ static void wpas_notify_ap_sta_deauthorized(struct wpa_supplicant *wpa_s,
 	 * Create 'peer-disconnected' signal on group object if this
 	 * is a P2P group.
 	 */
-	wpas_dbus_signal_p2p_peer_disconnected(wpa_s, p2p_dev_addr);
+	if (p2p_dev_addr)
+		wpas_dbus_signal_p2p_peer_disconnected(wpa_s, p2p_dev_addr);
 #endif /* CONFIG_P2P */
 
 	/* Notify listeners a station has been deauthorized */

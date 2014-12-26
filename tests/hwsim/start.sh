@@ -104,8 +104,14 @@ test -f /proc/modules && sudo modprobe mac80211_hwsim radios=6 channels=$NUM_CH 
 sudo ifconfig hwsim0 up
 sudo $WLANTEST -i hwsim0 -n $LOGDIR/hwsim0.pcapng -c -dt -L $LOGDIR/hwsim0 &
 for i in 0 1 2; do
+    DBUSARG=""
+    if [ $i = "0" -a -r /var/run/dbus/pid -a -r /var/run/dbus/hwsim-test ]; then
+	if $WPAS | grep -q -- -u; then
+	    DBUSARG="-u"
+	fi
+    fi
     sudo $(printf -- "$VALGRIND_WPAS" $i) $WPAS -g /tmp/wpas-wlan$i -G$GROUP -Dnl80211 -iwlan$i -c $LOGDIR/p2p$i.conf \
-         -ddKt$TRACE -f $LOGDIR/log$i &
+         -ddKt$TRACE -f $LOGDIR/log$i $DBUSARG &
 done
 sudo $(printf -- "$VALGRIND_WPAS" 5) $WPAS -g /tmp/wpas-wlan5 -G$GROUP \
     -ddKt$TRACE -f $LOGDIR/log5 &

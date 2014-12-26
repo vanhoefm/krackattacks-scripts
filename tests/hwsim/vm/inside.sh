@@ -45,10 +45,16 @@ chmod +x /tmp/bin/sudo
 export PATH=/tmp/bin:$EPATH:$PATH
 
 # some tests assume adm/admin group(s) exist(s)
-echo 'adm:x:0:' > /etc/group
-echo 'admin:x:0:' >> /etc/group
+cat > /etc/group <<EOF
+adm:x:0:
+admin:x:0:
+messagebus:x:106:
+EOF
 # root should exist
-echo 'root:x:0:0:root:/tmp:/bin/bash' > /etc/passwd
+cat > /etc/passwd <<EOF
+root:x:0:0:root:/tmp:/bin/bash
+messagebus:x:102:106::/var/run/dbus:/bin/false
+EOF
 cat > /etc/ethertypes <<EOF
 IPv4	 	0800  	ip ip4
 ARP		0806	ether-arp
@@ -91,6 +97,11 @@ else
 	# and preload the 00 domain it will have asked for already
 	echo $TESTDIR/vm/uevent.sh > /sys/kernel/uevent_helper
 	COUNTRY=00 crda
+
+	mkdir -p /var/run/dbus
+	touch /var/run/dbus/hwsim-test
+	chown messagebus.messagebus /var/run/dbus
+	dbus-daemon --config-file=$TESTDIR/vm/dbus.conf --fork
 
 	cd $TESTDIR
 	./run-all.sh $ARGS </dev/ttyS0 >/dev/ttyS0 2>&1

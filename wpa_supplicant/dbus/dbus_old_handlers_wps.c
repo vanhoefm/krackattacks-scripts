@@ -73,6 +73,7 @@ DBusMessage * wpas_dbus_iface_wps_pin(DBusMessage *message,
 	char *pin = NULL;
 	u8 bssid[ETH_ALEN], *_bssid = NULL;
 	int ret = 0;
+	char npin[9];
 
 	if (!dbus_message_get_args(message, NULL, DBUS_TYPE_STRING, &arg_bssid,
 				   DBUS_TYPE_STRING, &pin, DBUS_TYPE_INVALID))
@@ -104,15 +105,12 @@ DBusMessage * wpas_dbus_iface_wps_pin(DBusMessage *message,
 	if (reply == NULL)
 		return NULL;
 
-	if (ret == 0) {
-		dbus_message_append_args(reply, DBUS_TYPE_STRING, &pin,
-					 DBUS_TYPE_INVALID);
-	} else {
-		char npin[9];
+	if (ret > 0) {
 		os_snprintf(npin, sizeof(npin), "%08d", ret);
-		dbus_message_append_args(reply, DBUS_TYPE_STRING, &npin,
-					 DBUS_TYPE_INVALID);
+		pin = npin;
 	}
+	dbus_message_append_args(reply, DBUS_TYPE_STRING, &pin,
+				 DBUS_TYPE_INVALID);
 	return reply;
 }
 

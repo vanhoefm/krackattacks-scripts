@@ -846,7 +846,7 @@ DBusMessage * wpas_dbus_iface_remove_network(DBusMessage *message,
 
 	/* Extract the network ID */
 	iface = wpas_dbus_decompose_object_path(op, &net_id, NULL);
-	if (iface == NULL) {
+	if (iface == NULL || net_id == NULL) {
 		reply = wpas_dbus_new_invalid_network_error(message);
 		goto out;
 	}
@@ -1102,7 +1102,8 @@ DBusMessage * wpas_dbus_iface_select_network(DBusMessage *message,
 			goto out;
 		}
 		/* Ensure the object path really points to this interface */
-		if (os_strcmp(iface_obj_path, wpa_s->dbus_path) != 0) {
+		if (network == NULL ||
+		    os_strcmp(iface_obj_path, wpa_s->dbus_path) != 0) {
 			reply = wpas_dbus_new_invalid_network_error(message);
 			goto out;
 		}

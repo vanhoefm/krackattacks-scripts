@@ -1428,8 +1428,7 @@ DBusMessage * wpas_dbus_iface_remove_blobs(DBusMessage *message,
 		dbus_message_iter_get_basic(&array, &name);
 		if (!os_strlen(name))
 			err_msg = "Invalid blob name.";
-
-		if (wpa_config_remove_blob(wpa_s->conf, name) != 0)
+		else if (wpa_config_remove_blob(wpa_s->conf, name) != 0)
 			err_msg = "Error removing blob.";
 		else
 			wpas_notify_blob_removed(wpa_s, name);

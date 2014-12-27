@@ -136,9 +136,7 @@ DBusMessage * wpas_dbus_iface_wps_reg(DBusMessage *message,
 				   DBUS_TYPE_STRING, &pin, DBUS_TYPE_INVALID))
 		return wpas_dbus_new_invalid_opts_error(message, NULL);
 
-	if (!os_strcmp(arg_bssid, "any"))
-		ret = wpas_wps_start_reg(wpa_s, NULL, pin, NULL);
-	else if (!hwaddr_aton(arg_bssid, bssid))
+	if (!hwaddr_aton(arg_bssid, bssid))
 		ret = wpas_wps_start_reg(wpa_s, bssid, pin, NULL);
 	else {
 		return wpas_dbus_new_invalid_opts_error(message,

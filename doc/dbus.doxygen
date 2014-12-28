@@ -124,6 +124,11 @@ registered in the bus with fi.w1.wpa_supplicant1 name.
 	<h3>EapMethods - as - (read)</h3>
 	<p>An array with supported EAP methods names.</p>
       </li>
+
+      <li>
+	<h3>Capabilities - as - (read)</h3>
+	<p>An array with supported capabilities (e.g., "ap", "ibss-rsn", "p2p", "interworking").</p>
+      </li>
     </ul>
 
 \subsection dbus_main_signals Signals

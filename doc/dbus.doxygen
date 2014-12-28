@@ -443,6 +443,27 @@ fi.w1.wpa_supplicant1.CreateInterface.
 	  <dd>Reinit of the EAPOL state machine with the new PKCS #11 engine and module path failed.</dd>
 	</dl>
       </li>
+      <li>
+	<h3>SignalPoll ( ) --> a{sv} : properties</h3>
+	<p>Fetch signal properties for the current connection.</p>
+	<h4>Returns</h4>
+	<dl>
+	  <dt>a{sv} : properties</dt>
+	  <dd>
+	    <table>
+	      <tr><th>Key</th><th>Value type</th><th>Description</th><th>Required</th>
+	      <tr><td>linkspeed</td><td>i</td><td>Link speed (Mbps)</td><td>No</td>
+	      <tr><td>noise</td><td>i</td><td>Noise (dBm)</td><td>No</td>
+	      <tr><td>width</td><td>s</td><td>Channel width</td><td>No</td>
+	      <tr><td>frequency</td><td>u</td><td>Frequency (MHz)</td><td>No</td>
+	      <tr><td>rssi</td><td>i</td><td>RSSI (dBm)</td><td>No</td>
+	      <tr><td>avg-rssi</td><td>i</td><td>Average RSSI (dBm)</td><td>No</td>
+	      <tr><td>center-frq1</td><td>i</td><td>VHT segment 1 frequency (MHz)</td><td>No</td>
+	      <tr><td>center-frq2</td><td>i</td><td>VHT segment 2 frequency (MHz)</td><td>No</td>
+	    </table>
+	  </dd>
+	</dl>
+      </li>
     </ul>
 
 \subsection dbus_interface_properties Properties

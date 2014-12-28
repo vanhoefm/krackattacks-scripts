@@ -33,8 +33,9 @@ registered in the bus with fi.w1.wpa_supplicant1 name.
 	    <table>
 	      <tr><th>Key</th><th>Value type</th><th>Description</th><th>Required</th>
 	      <tr><td>Ifname</td><td>s</td><td>Name of the network interface to control, e.g., wlan0</td><td>Yes</td>
-	      <tr><td>Bridge_ifname</td><td>s</td><td>Name of the bridge interface to control, e.g., br0</td><td>No</td>
+	      <tr><td>BridgeIfname</td><td>s</td><td>Name of the bridge interface to control, e.g., br0</td><td>No</td>
 	      <tr><td>Driver</td><td>s</td><td>Driver name which the interface uses, e.g., nl80211</td><td>No</td>
+	      <tr><td>ConfigFile</td><td>s</td><td>Configuration file path</td><td>No</td>
 	    </table>
 	  </dd>
 	</dl>

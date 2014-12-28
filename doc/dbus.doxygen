@@ -21,7 +21,7 @@ registered in the bus with fi.w1.wpa_supplicant1 name.
 
 \subsection dbus_main_methods Methods
 
-    <ul>
+<ul>
       <li>
 	<h3>CreateInterface ( a{sv} : args ) --> o : interface</h3>
 	<p>Registers a wireless interface in %wpa_supplicant.</p>
@@ -96,7 +96,7 @@ registered in the bus with fi.w1.wpa_supplicant1 name.
 
 \subsection dbus_main_properties Properties
 
-    <ul>
+<ul>
       <li>
 	<h3>DebugLevel - s - (read/write)</h3>
 	<p>Global %wpa_supplicant debugging level. Possible values are
@@ -127,7 +127,7 @@ registered in the bus with fi.w1.wpa_supplicant1 name.
 
 \subsection dbus_main_signals Signals
 
-    <ul>
+<ul>
       <li>
 	<h3>InterfaceAdded ( o : interface, a{sv} : properties )</h3>
 	<p>A new interface was added to %wpa_supplicant.</p>
@@ -172,7 +172,7 @@ fi.w1.wpa_supplicant1.CreateInterface.
 
 \subsection dbus_interface_methods Methods
 
-    <ul>
+<ul>
       <li>
 	<h3>Scan ( a{sv} : args ) --> nothing</h3>
 	<p>Triggers a scan.</p>
@@ -441,7 +441,7 @@ fi.w1.wpa_supplicant1.CreateInterface.
 
 \subsection dbus_interface_properties Properties
 
-    <ul>
+<ul>
       <li>
 	<h3>Capabilities - a{sv} - (read)</h3>
 	<p>Capabilities of the interface. Dictionary contains following entries:</p>
@@ -550,7 +550,7 @@ fi.w1.wpa_supplicant1.CreateInterface.
 
 \subsection dbus_interface_signals Signals
 
-    <ul>
+<ul>
       <li>
 	<h3>ScanDone ( b : success )</h3>
 	<p>Scanning finished. </p>
@@ -678,7 +678,7 @@ Interface implemented by objects related to network interface added to
 
 \subsection dbus_wps_methods Methods
 
-    <ul>
+<ul>
       <li>
 	<h3>Start ( a{sv} : args ) --> a{sv} : output</h3>
 	<p>Starts WPS configuration.</p>
@@ -718,7 +718,7 @@ Interface implemented by objects related to network interface added to
 
 \subsection dbus_wps_properties Properties
 
-    <ul>
+<ul>
       <li>
 	<h3>ProcessCredentials - b - (read/write)</h3>
 	<p>Determines if the interface will process the credentials (credentials_processed configuration file parameter).</p>
@@ -727,7 +727,7 @@ Interface implemented by objects related to network interface added to
 
 \subsection dbus_wps_signals Signals
 
-    <ul>
+<ul>
       <li>
 	<h3>Event ( s : name, a{sv} : args )</h3>
 	<p>WPS event occurred.</p>
@@ -786,7 +786,7 @@ scan results.
 
 \subsection dbus_bss_properties Properties
 
-    <ul>
+<ul>
       <li>
 	<h3>BSSID - ay - (read)</h3>
 	<p>BSSID of the BSS.</p>
@@ -842,7 +842,7 @@ scan results.
 
 \subsection dbus_bss_signals Signals
 
-    <ul>
+<ul>
       <li>
 	<h3>PropertiesChanged ( a{sv} : properties )</h3>
 	<p>Some properties have changed.</p>
@@ -862,7 +862,7 @@ i.e., returned by fi.w1.wpa_supplicant1.Interface.AddNetwork.
 
 \subsection dbus_network_properties Properties
 
-    <ul>
+<ul>
       <li>
 	<h3>Enabled - b - (read/write)</h3>
 	<p>Determines if the configured network is enabled or not.</p>
@@ -876,7 +876,7 @@ i.e., returned by fi.w1.wpa_supplicant1.Interface.AddNetwork.
 
 \subsection dbus_network_signals Signals
 
-    <ul>
+<ul>
       <li>
 	<h3>PropertiesChanged ( a{sv} : properties )</h3>
 	<p>Some properties have changed.</p>

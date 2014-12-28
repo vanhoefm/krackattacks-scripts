@@ -434,12 +434,6 @@ void wpa_supplicant_dbus_notify_state_change(struct wpa_supplicant *wpa_s,
 
 	new_state_str = wpa_supplicant_state_txt(new_state);
 	old_state_str = wpa_supplicant_state_txt(old_state);
-	if (new_state_str == NULL || old_state_str == NULL) {
-		wpa_printf(MSG_ERROR,
-		           "dbus: wpa_supplicant_dbus_notify_state_change: "
-		           "Could not convert state strings");
-		goto out;
-	}
 
 	if (!dbus_message_append_args(_signal,
 	                              DBUS_TYPE_STRING, &new_state_str,

@@ -256,6 +256,11 @@ fi.w1.wpa_supplicant1.CreateInterface.
       </li>
 
       <li>
+	<h3>RemoveAllNetworks ( ) --> nothing</h3>
+	<p>Remove all configured networks from the interface.</p>
+      </li>
+
+      <li>
 	<h3>SelectNetwork ( o : network ) --> nothing</h3>
 	<p>Attempt association with a configured network.</p>
 	<h4>Arguments</h4>

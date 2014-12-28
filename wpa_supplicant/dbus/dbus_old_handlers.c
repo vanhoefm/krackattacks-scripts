@@ -1379,7 +1379,7 @@ DBusMessage * wpas_dbus_iface_set_blobs(DBusMessage *message,
 		blob->len = entry.array_len;
 		os_memcpy(blob->data, (u8 *) entry.bytearray_value,
 				entry.array_len);
-		if (blob->name == NULL || blob->data == NULL) {
+		if (blob->name == NULL) {
 			wpa_config_free_blob(blob);
 			reply = dbus_message_new_error(
 				message, WPAS_ERROR_ADD_ERROR,

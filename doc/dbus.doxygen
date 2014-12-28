@@ -283,6 +283,16 @@ fi.w1.wpa_supplicant1.CreateInterface.
       </li>
 
       <li>
+	<h3>Reattach ( ) --> nothing</h3>
+	<p>Attempt reassociation back to the current BSS.</p>
+	<h4>Possible errors</h4>
+	<dl>
+	  <dt>fi.w1.wpa_supplicant1.NotConnected</dt>
+	  <dd>Interface is not connected to any network.</dd>
+	</dl>
+      </li>
+
+      <li>
 	<h3>AddBlob ( s : name, ay : data ) --> nothing</h3>
 	<p>Adds a blob to the interface.</p>
 	<h4>Arguments</h4>

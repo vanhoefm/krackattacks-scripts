@@ -441,6 +441,29 @@ fi.w1.wpa_supplicant1.CreateInterface.
       </li>
 
       <li>
+	<h3>NetworkReply ( o : network, s : field, s : value ) --> nothing</h3>
+	<p>Provide parameter requested by NetworkRequest().</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>o : network</dt>
+	  <dd>A D-Bus path to an object representing the network (copied from NetworkRequest()).</dd>
+	  <dt>s : field</dt>
+	  <dd>Requested information (copied from NetworkRequest()).</dd>
+	  <dt>s : value</dt>
+	  <dd>The requested information (e.g., password for EAP authentication).</dd>
+	</dl>
+	<h4>Possible errors</h4>
+	<dl>
+	  <dt>fi.w1.wpa_supplicant1.NetworkUnknown</dt>
+	  <dd>A passed path doesn't point to any network object.</dd>
+	  <dt>fi.w1.wpa_supplicant1.InvalidArgs</dt>
+	  <dd>A passed path doesn't point to any network object.</dd>
+	  <dt>fi.w1.wpa_supplicant1.UnknownError</dt>
+	  <dd>IEEE 802.1X support was not included in the build.</dd>
+	</dl>
+      </li>
+
+      <li>
 	<h3>SetPKCS11EngineAndModulePath ( s : pkcs11_engine_path, s : pkcs11_module_path ) --> nothing</h3>
 	<p>Set PKCS #11 engine and module path.</p>
 	<h4>Arguments</h4>
@@ -717,6 +740,42 @@ fi.w1.wpa_supplicant1.CreateInterface.
 	<dl>
 	  <dt>a{sv} : properties</dt>
 	  <dd>A dictionary with pairs of properties names which have changed and theirs new values. Possible dictionary keys are: "ApScan", "Scanning", "State", "CurrentBSS", "CurrentNetwork"</dd>
+	</dl>
+      </li>
+
+      <li>
+	<h3>Certification ( a{sv} : parameters )</h3>
+	<p>Information about server TLS certificates.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>a{sv} : parameters</dt>
+	  <dd>A dictionary with pairs of field names and their values. Possible dictionary keys are: "depth", "subject", "cert_hash", "cert".</dd>
+	</dl>
+      </li>
+
+      <li>
+	<h3>EAP ( s : status, s : parameter )</h3>
+	<p>Information about EAP peer status.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>s : status</dt>
+	  <dd>Operation, e.g., "started", "accept proposed method", "remote certificate verification", "eap parameter needed", "completion".</dd>
+	  <dt>s : parameter</dt>
+	  <dd>Information about the operation, e.g., EAP method name, "success".</dd>
+	</dl>
+      </li>
+
+      <li>
+	<h3>NetworkRequest ( o : network, s : field, s : txt )</h3>
+	<p>Request for network parameter. NetworkResponse() is used to provide the requested parameter.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>o : network</dt>
+	  <dd>D-Bus path to an object representing the network.</dd>
+	  <dt>s : field</dt>
+	  <dd>Requested information, e.g., "PASSWORD".</dd>
+	  <dt>txt : field</dt>
+	  <dd>Human readable information about the requested information.</dd>
 	</dl>
       </li>
     </ul>

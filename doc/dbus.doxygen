@@ -479,6 +479,15 @@ fi.w1.wpa_supplicant1.CreateInterface.
 	  </dd>
 	</dl>
       </li>
+      <li>
+	<h3>FlushBSS ( u : age ) --> nothing</h3>
+	<p>Flush BSS entries from the cache.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>u : age</dt>
+	  <dd>Maximum age in seconds for BSS entries to keep in cache (0 = remove all entries).</dd>
+	</dl>
+      </li>
     </ul>
 
 \subsection dbus_interface_properties Properties

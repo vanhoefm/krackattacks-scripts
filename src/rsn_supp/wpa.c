@@ -609,6 +609,10 @@ static int wpa_supplicant_install_ptk(struct wpa_sm *sm,
 		return -1;
 	}
 
+	/* TK is not needed anymore in supplicant */
+	os_memset(sm->ptk.tk1, 0, sizeof(sm->ptk.tk1));
+	os_memset(sm->ptk.u.tk2, 0, sizeof(sm->ptk.u.tk2));
+
 	if (sm->wpa_ptk_rekey) {
 		eloop_cancel_timeout(wpa_sm_rekey_ptk, sm, NULL);
 		eloop_register_timeout(sm->wpa_ptk_rekey, 0, wpa_sm_rekey_ptk,

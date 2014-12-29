@@ -2078,7 +2078,6 @@ void wpa_config_free_ssid(struct wpa_ssid *ssid)
 	struct psk_list_entry *psk;
 
 	os_free(ssid->ssid);
-	os_memset(ssid->psk, 0, sizeof(ssid->psk));
 	str_clear_free(ssid->passphrase);
 	os_free(ssid->ext_psk);
 #ifdef IEEE8021X_EAPOL
@@ -2098,9 +2097,9 @@ void wpa_config_free_ssid(struct wpa_ssid *ssid)
 	while ((psk = dl_list_first(&ssid->psk_list, struct psk_list_entry,
 				    list))) {
 		dl_list_del(&psk->list);
-		os_free(psk);
+		bin_clear_free(psk, sizeof(*psk));
 	}
-	os_free(ssid);
+	bin_clear_free(ssid, sizeof(*ssid));
 }
 
 

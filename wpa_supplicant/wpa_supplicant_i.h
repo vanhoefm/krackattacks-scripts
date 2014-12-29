@@ -444,6 +444,7 @@ struct wpa_supplicant {
 	u8 pending_bssid[ETH_ALEN]; /* If wpa_state == WPA_ASSOCIATING, this
 				     * field contains the target BSSID. */
 	int reassociate; /* reassociation requested */
+	int reassoc_same_bss; /* reassociating to the same bss */
 	int disconnected; /* all connections disabled; i.e., do no reassociate
 			   * before this has been cleared */
 	struct wpa_ssid *current_ssid;
@@ -929,6 +930,8 @@ struct wpa_supplicant {
 	struct wmm_tspec_element *tspecs[WMM_AC_NUM][TS_DIR_IDX_COUNT];
 	struct wmm_ac_addts_request *addts_request;
 	u8 wmm_ac_last_dialog_token;
+	struct wmm_tspec_element *last_tspecs;
+	u8 last_tspecs_count;
 
 	struct rrm_data rrm;
 };

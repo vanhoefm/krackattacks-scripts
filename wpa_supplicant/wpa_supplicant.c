@@ -438,6 +438,7 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 	wpa_tdls_deinit(wpa_s->wpa);
 #endif /* CONFIG_TDLS */
 
+	wmm_ac_clear_saved_tspecs(wpa_s);
 	pmksa_candidate_free(wpa_s->wpa);
 	wpa_sm_deinit(wpa_s->wpa);
 	wpa_s->wpa = NULL;
@@ -1529,8 +1530,15 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	else
 		rand_style = ssid->mac_addr;
 
+	wmm_ac_clear_saved_tspecs(wpa_s);
+	wpa_s->reassoc_same_bss = 0;
+
 	if (wpa_s->last_ssid == ssid) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Re-association to the same ESS");
+		if (wpa_s->current_bss && wpa_s->current_bss == bss) {
+			wmm_ac_save_tspecs(wpa_s);
+			wpa_s->reassoc_same_bss = 1;
+		}
 	} else if (rand_style > 0) {
 		if (wpas_update_random_addr(wpa_s, rand_style) < 0)
 			return;

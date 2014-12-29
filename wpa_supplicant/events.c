@@ -2040,6 +2040,9 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 		wmm_ac_notify_assoc(wpa_s, data->assoc_info.resp_ies,
 				    data->assoc_info.resp_ies_len,
 				    &data->assoc_info.wmm_params);
+
+		if (wpa_s->reassoc_same_bss)
+			wmm_ac_restore_tspecs(wpa_s);
 	}
 }
 

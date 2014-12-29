@@ -169,5 +169,8 @@ int wpas_wmm_ac_delts(struct wpa_supplicant *wpa_s, u8 tsid);
 void wmm_ac_rx_action(struct wpa_supplicant *wpa_s, const u8 *da,
 			const u8 *sa, const u8 *data, size_t len);
 int wpas_wmm_ac_status(struct wpa_supplicant *wpa_s, char *buf, size_t buflen);
+void wmm_ac_save_tspecs(struct wpa_supplicant *wpa_s);
+void wmm_ac_clear_saved_tspecs(struct wpa_supplicant *wpa_s);
+int wmm_ac_restore_tspecs(struct wpa_supplicant *wpa_s);
 
 #endif /* WMM_AC_H */

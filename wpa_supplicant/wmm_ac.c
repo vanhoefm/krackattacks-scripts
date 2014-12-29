@@ -910,3 +910,86 @@ int wpas_wmm_ac_status(struct wpa_supplicant *wpa_s, char *buf, size_t buflen)
 
 	return pos;
 }
+
+
+static u8 wmm_ac_get_tspecs_count(struct wpa_supplicant *wpa_s)
+{
+	int ac, dir, tspecs_count = 0;
+
+	for (ac = 0; ac < WMM_AC_NUM; ac++) {
+		for (dir = 0; dir < TS_DIR_IDX_COUNT; dir++) {
+			if (wpa_s->tspecs[ac][dir])
+				tspecs_count++;
+		}
+	}
+
+	return tspecs_count;
+}
+
+
+void wmm_ac_save_tspecs(struct wpa_supplicant *wpa_s)
+{
+	int ac, dir, tspecs_count;
+
+	wpa_printf(MSG_DEBUG, "WMM AC: Save last configured tspecs");
+
+	if (!wpa_s->wmm_ac_assoc_info)
+		return;
+
+	tspecs_count = wmm_ac_get_tspecs_count(wpa_s);
+	if (!tspecs_count) {
+		wpa_printf(MSG_DEBUG, "WMM AC: No configured TSPECs");
+		return;
+	}
+
+	wpa_printf(MSG_DEBUG, "WMM AC: Saving tspecs");
+
+	wmm_ac_clear_saved_tspecs(wpa_s);
+	wpa_s->last_tspecs = os_calloc(tspecs_count,
+				       sizeof(*wpa_s->last_tspecs));
+	if (!wpa_s->last_tspecs) {
+		wpa_printf(MSG_ERROR, "WMM AC: Failed to save tspecs!");
+		return;
+	}
+
+	for (ac = 0; ac < WMM_AC_NUM; ac++) {
+		for (dir = 0; dir < TS_DIR_IDX_COUNT; dir++) {
+			if (!wpa_s->tspecs[ac][dir])
+				continue;
+
+			wpa_s->last_tspecs[wpa_s->last_tspecs_count++] =
+				*wpa_s->tspecs[ac][dir];
+		}
+	}
+
+	wpa_printf(MSG_DEBUG, "WMM AC: Successfully saved %d TSPECs",
+		   wpa_s->last_tspecs_count);
+}
+
+
+void wmm_ac_clear_saved_tspecs(struct wpa_supplicant *wpa_s)
+{
+	if (wpa_s->last_tspecs) {
+		wpa_printf(MSG_DEBUG, "WMM AC: Clear saved tspecs");
+		os_free(wpa_s->last_tspecs);
+		wpa_s->last_tspecs = NULL;
+		wpa_s->last_tspecs_count = 0;
+	}
+}
+
+
+int wmm_ac_restore_tspecs(struct wpa_supplicant *wpa_s)
+{
+	unsigned int i;
+
+	if (!wpa_s->wmm_ac_assoc_info || !wpa_s->last_tspecs_count)
+		return 0;
+
+	wpa_printf(MSG_DEBUG, "WMM AC: Restore %u saved tspecs",
+		   wpa_s->last_tspecs_count);
+
+	for (i = 0; i < wpa_s->last_tspecs_count; i++)
+		wmm_ac_add_ts(wpa_s, wpa_s->bssid, &wpa_s->last_tspecs[i]);
+
+	return 0;
+}

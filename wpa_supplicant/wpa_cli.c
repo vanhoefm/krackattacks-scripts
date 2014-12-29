@@ -2426,6 +2426,20 @@ static int wpa_cli_cmd_wmm_ac_status(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int wpa_cli_cmd_tdls_chan_switch(struct wpa_ctrl *ctrl, int argc,
+					char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "TDLS_CHAN_SWITCH", 2, argc, argv);
+}
+
+
+static int wpa_cli_cmd_tdls_cancel_chan_switch(struct wpa_ctrl *ctrl, int argc,
+					       char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "TDLS_CANCEL_CHAN_SWITCH", 1, argc, argv);
+}
+
+
 static int wpa_cli_cmd_signal_poll(struct wpa_ctrl *ctrl, int argc,
 				   char *argv[])
 {
@@ -3002,6 +3016,14 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "wmm_ac_status", wpa_cli_cmd_wmm_ac_status, NULL,
 	  cli_cmd_flag_none,
 	  "= show status for Wireless Multi-Media Admission-Control" },
+	{ "tdls_chan_switch", wpa_cli_cmd_tdls_chan_switch, NULL,
+	  cli_cmd_flag_none,
+	  "<addr> <oper class> <freq> [sec_channel_offset=] [center_freq1=] "
+	  "[center_freq2=] [bandwidth=] [ht|vht] = enable channel switching "
+	  "with TDLS peer" },
+	{ "tdls_cancel_chan_switch", wpa_cli_cmd_tdls_cancel_chan_switch, NULL,
+	  cli_cmd_flag_none,
+	  "<addr> = disable channel switching with TDLS peer <addr>" },
 	{ "signal_poll", wpa_cli_cmd_signal_poll, NULL,
 	  cli_cmd_flag_none,
 	  "= get signal parameters" },

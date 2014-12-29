@@ -3374,7 +3374,7 @@ fail:
 
 
 static int nl80211_put_freq_params(struct nl_msg *msg,
-				   struct hostapd_freq_params *freq)
+				   const struct hostapd_freq_params *freq)
 {
 	if (nla_put_u32(msg, NL80211_ATTR_WIPHY_FREQ, freq->freq))
 		return -ENOBUFS;
@@ -6970,6 +6970,62 @@ static int nl80211_tdls_oper(void *priv, enum tdls_oper oper, const u8 *peer)
 	return send_and_recv_msgs(drv, msg, NULL, NULL);
 }
 
+
+static int
+nl80211_tdls_enable_channel_switch(void *priv, const u8 *addr, u8 oper_class,
+				   const struct hostapd_freq_params *params)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg;
+	int ret = -ENOBUFS;
+
+	if (!(drv->capa.flags & WPA_DRIVER_FLAGS_TDLS_SUPPORT) ||
+	    !(drv->capa.flags & WPA_DRIVER_FLAGS_TDLS_CHANNEL_SWITCH))
+		return -EOPNOTSUPP;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Enable TDLS channel switch " MACSTR
+		   " oper_class=%u freq=%u",
+		   MAC2STR(addr), oper_class, params->freq);
+	msg = nl80211_cmd_msg(bss, 0, NL80211_CMD_TDLS_CHANNEL_SWITCH);
+	if (!msg ||
+	    nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN, addr) ||
+	    nla_put_u8(msg, NL80211_ATTR_OPER_CLASS, oper_class) ||
+	    (ret = nl80211_put_freq_params(msg, params))) {
+		nlmsg_free(msg);
+		wpa_printf(MSG_DEBUG, "nl80211: Could not build TDLS chan switch");
+		return ret;
+	}
+
+	return send_and_recv_msgs(drv, msg, NULL, NULL);
+}
+
+
+static int
+nl80211_tdls_disable_channel_switch(void *priv, const u8 *addr)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg;
+
+	if (!(drv->capa.flags & WPA_DRIVER_FLAGS_TDLS_SUPPORT) ||
+	    !(drv->capa.flags & WPA_DRIVER_FLAGS_TDLS_CHANNEL_SWITCH))
+		return -EOPNOTSUPP;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Disable TDLS channel switch " MACSTR,
+		   MAC2STR(addr));
+	msg = nl80211_cmd_msg(bss, 0, NL80211_CMD_TDLS_CANCEL_CHANNEL_SWITCH);
+	if (!msg ||
+	    nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN, addr)) {
+		nlmsg_free(msg);
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Could not build TDLS cancel chan switch");
+		return -ENOBUFS;
+	}
+
+	return send_and_recv_msgs(drv, msg, NULL, NULL);
+}
+
 #endif /* CONFIG TDLS */
 
 
@@ -8257,6 +8313,8 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 #ifdef CONFIG_TDLS
 	.send_tdls_mgmt = nl80211_send_tdls_mgmt,
 	.tdls_oper = nl80211_tdls_oper,
+	.tdls_enable_channel_switch = nl80211_tdls_enable_channel_switch,
+	.tdls_disable_channel_switch = nl80211_tdls_disable_channel_switch,
 #endif /* CONFIG_TDLS */
 	.update_ft_ies = wpa_driver_nl80211_update_ft_ies,
 	.get_mac_addr = wpa_driver_nl80211_get_macaddr,

@@ -10,6 +10,7 @@ import hmac
 import logging
 logger = logging.getLogger()
 import os
+import re
 import struct
 import subprocess
 import time
@@ -818,3 +819,159 @@ def test_ap_wpa2_psk_ext_eapol_key_info(dev, apdev):
 
     reply_eapol("4/4", hapd, addr, msg, 0x030a, None, None, kck)
     hapd_connected(hapd)
+
+def find_wpas_process(dev):
+    ifname = dev.ifname
+    cmd = subprocess.Popen(['ps', 'ax'], stdout=subprocess.PIPE)
+    (data,err) = cmd.communicate()
+    for l in data.splitlines():
+        if "wpa_supplicant" not in l:
+            continue
+        if "-i" + ifname not in l:
+            continue
+        return int(l.strip().split(' ')[0])
+    raise Exception("Could not find wpa_supplicant process")
+
+def read_process_memory(pid, key=None):
+    buf = bytes()
+    with open('/proc/%d/maps' % pid, 'r') as maps, \
+         open('/proc/%d/mem' % pid, 'r') as mem:
+        for l in maps.readlines():
+            m = re.match(r'([0-9a-f]+)-([0-9a-f]+) ([-r][-w][-x][-p])', l)
+            if not m:
+                continue
+            start = int(m.group(1), 16)
+            end = int(m.group(2), 16)
+            perm = m.group(3)
+            if start > 0xffffffffffff:
+                continue
+            if end < start:
+                continue
+            if not perm.startswith('rw'):
+                continue
+            mem.seek(start)
+            data = mem.read(end - start)
+            buf += data
+            if key and key in data:
+                logger.info("Key found in " + l)
+    return buf
+
+def verify_not_present(buf, key, fname, keyname):
+    pos = buf.find(key)
+    if pos < 0:
+        return
+
+    prefix = 2048 if pos > 2048 else pos
+    with open(fname + keyname, 'w') as f:
+        f.write(buf[pos - prefix:pos + 2048])
+    raise Exception(keyname + " found after disassociation")
+
+def get_key_locations(buf, key, keyname):
+    count = 0
+    pos = 0
+    while True:
+        pos = buf.find(key, pos)
+        if pos < 0:
+            break
+        logger.info("Found %s at %d" % (keyname, pos))
+        count += 1
+        pos += len(key)
+    return count
+
+def test_wpa2_psk_key_lifetime_in_memory(dev, apdev, params):
+    """WPA2-PSK and PSK/PTK lifetime in memory"""
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    psk = '602e323e077bc63bd80307ef4745b754b0ae0a925c2638ecd13a794b9527b9e6'
+    pmk = binascii.unhexlify(psk)
+    p = hostapd.wpa2_params(ssid=ssid)
+    p['wpa_psk'] = psk
+    hapd = hostapd.add_ap(apdev[0]['ifname'], p)
+
+    pid = find_wpas_process(dev[0])
+
+    id = dev[0].connect(ssid, raw_psk=psk, scan_freq="2412",
+                        only_add_network=True)
+
+    logger.info("Checking keys in memory after network profile configuration")
+    buf = read_process_memory(pid, pmk)
+    get_key_locations(buf, pmk, "PMK")
+
+    dev[0].request("REMOVE_NETWORK all")
+    logger.info("Checking keys in memory after network profile removal")
+    buf = read_process_memory(pid, pmk)
+    get_key_locations(buf, pmk, "PMK")
+
+    id = dev[0].connect(ssid, psk=passphrase, scan_freq="2412",
+                        only_add_network=True)
+
+    logger.info("Checking keys in memory before connection")
+    buf = read_process_memory(pid, pmk)
+    get_key_locations(buf, pmk, "PMK")
+
+    dev[0].connect_network(id, timeout=20)
+    time.sleep(0.1)
+
+    buf = read_process_memory(pid, pmk)
+
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    dev[0].relog()
+    ptk = None
+    gtk = None
+    with open(os.path.join(params['logdir'], 'log0'), 'r') as f:
+        for l in f.readlines():
+            if "WPA: PTK - hexdump" in l:
+                val = l.strip().split(':')[3].replace(' ', '')
+                ptk = binascii.unhexlify(val)
+            if "WPA: Group Key - hexdump" in l:
+                val = l.strip().split(':')[3].replace(' ', '')
+                gtk = binascii.unhexlify(val)
+    if not pmk or not ptk or not gtk:
+        raise Exception("Could not find keys from debug log")
+    if len(gtk) != 16:
+        raise Exception("Unexpected GTK length")
+
+    kck = ptk[0:16]
+    kek = ptk[16:32]
+    tk = ptk[32:48]
+
+    logger.info("Checking keys in memory while associated")
+    get_key_locations(buf, pmk, "PMK")
+    if pmk not in buf:
+        print("PMK not found while associated")
+        return "skip"
+    if kck not in buf:
+        raise Exception("KCK not found while associated")
+    if kek not in buf:
+        raise Exception("KEK not found while associated")
+    if tk in buf:
+        raise Exception("TK found from memory")
+    if gtk in buf:
+        raise Exception("GTK found from memory")
+
+    logger.info("Checking keys in memory after disassociation")
+    buf = read_process_memory(pid, pmk)
+    get_key_locations(buf, pmk, "PMK")
+
+    # Note: PMK/PSK is still present in network configuration
+
+    fname = os.path.join(params['logdir'],
+                         'wpa2_psk_key_lifetime_in_memory.memctx-')
+    verify_not_present(buf, kck, fname, "KCK")
+    verify_not_present(buf, kek, fname, "KEK")
+    verify_not_present(buf, tk, fname, "TK")
+    verify_not_present(buf, gtk, fname, "GTK")
+
+    dev[0].request("REMOVE_NETWORK all")
+
+    logger.info("Checking keys in memory after network profile removal")
+    buf = read_process_memory(pid, pmk)
+    get_key_locations(buf, pmk, "PMK")
+
+    verify_not_present(buf, pmk, fname, "PMK")
+    verify_not_present(buf, kck, fname, "KCK")
+    verify_not_present(buf, kek, fname, "KEK")
+    verify_not_present(buf, tk, fname, "TK")
+    verify_not_present(buf, gtk, fname, "GTK")

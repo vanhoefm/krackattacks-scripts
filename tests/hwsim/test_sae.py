@@ -1,9 +1,11 @@
 # Test cases for SAE
-# Copyright (c) 2013, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+import binascii
+import os
 import time
 import subprocess
 import logging
@@ -11,6 +13,7 @@ logger = logging.getLogger()
 
 import hwsim_utils
 import hostapd
+from test_ap_psk import find_wpas_process, read_process_memory, verify_not_present, get_key_locations
 
 def test_sae(dev, apdev):
     """SAE with default group"""
@@ -161,3 +164,123 @@ def test_sae_missing_password(dev, apdev):
     ev = dev[0].wait_event(['CTRL-EVENT-SSID-TEMP-DISABLED'], timeout=10)
     if ev is None:
         raise Exception("Invalid network not temporarily disabled")
+
+
+def test_sae_key_lifetime_in_memory(dev, apdev, params):
+    """SAE and key lifetime in memory"""
+    password = "5ad144a7c1f5a5503baa6fa01dabc15b1843e8c01662d78d16b70b5cd23cf8b"
+    p = hostapd.wpa2_params(ssid="test-sae", passphrase=password)
+    p['wpa_key_mgmt'] = 'SAE'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], p)
+
+    pid = find_wpas_process(dev[0])
+
+    dev[0].request("SET sae_groups ")
+    id = dev[0].connect("test-sae", psk=password, key_mgmt="SAE",
+                        scan_freq="2412")
+
+    time.sleep(0.1)
+    buf = read_process_memory(pid, password)
+
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    dev[0].relog()
+    sae_k = None
+    sae_keyseed = None
+    sae_kck = None
+    pmk = None
+    ptk = None
+    gtk = None
+    with open(os.path.join(params['logdir'], 'log0'), 'r') as f:
+        for l in f.readlines():
+            if "SAE: k - hexdump" in l:
+                val = l.strip().split(':')[3].replace(' ', '')
+                sae_k = binascii.unhexlify(val)
+            if "SAE: keyseed - hexdump" in l:
+                val = l.strip().split(':')[3].replace(' ', '')
+                sae_keyseed = binascii.unhexlify(val)
+            if "SAE: KCK - hexdump" in l:
+                val = l.strip().split(':')[3].replace(' ', '')
+                sae_kck = binascii.unhexlify(val)
+            if "SAE: PMK - hexdump" in l:
+                val = l.strip().split(':')[3].replace(' ', '')
+                pmk = binascii.unhexlify(val)
+            if "WPA: PTK - hexdump" in l:
+                val = l.strip().split(':')[3].replace(' ', '')
+                ptk = binascii.unhexlify(val)
+            if "WPA: Group Key - hexdump" in l:
+                val = l.strip().split(':')[3].replace(' ', '')
+                gtk = binascii.unhexlify(val)
+    if not sae_k or not sae_keyseed or not sae_kck or not pmk or not ptk or not gtk:
+        raise Exception("Could not find keys from debug log")
+    if len(gtk) != 16:
+        raise Exception("Unexpected GTK length")
+
+    kck = ptk[0:16]
+    kek = ptk[16:32]
+    tk = ptk[32:48]
+
+    fname = os.path.join(params['logdir'],
+                         'sae_key_lifetime_in_memory.memctx-')
+
+    logger.info("Checking keys in memory while associated")
+    get_key_locations(buf, password, "Password")
+    get_key_locations(buf, pmk, "PMK")
+    if password not in buf:
+        print("Password not found while associated")
+        return "skip"
+    if pmk not in buf:
+        print("PMK not found while associated")
+        return "skip"
+    if kck not in buf:
+        raise Exception("KCK not found while associated")
+    if kek not in buf:
+        raise Exception("KEK not found while associated")
+    if tk in buf:
+        raise Exception("TK found from memory")
+    if gtk in buf:
+        raise Exception("GTK found from memory")
+    verify_not_present(buf, sae_k, fname, "SAE(k)")
+    verify_not_present(buf, sae_keyseed, fname, "SAE(keyseed)")
+    verify_not_present(buf, sae_kck, fname, "SAE(KCK)")
+
+    logger.info("Checking keys in memory after disassociation")
+    buf = read_process_memory(pid, password)
+
+    # Note: Password is still present in network configuration
+    # Note: PMK is in PMKSA cache
+
+    get_key_locations(buf, password, "Password")
+    get_key_locations(buf, pmk, "PMK")
+    verify_not_present(buf, kck, fname, "KCK")
+    verify_not_present(buf, kek, fname, "KEK")
+    verify_not_present(buf, tk, fname, "TK")
+    verify_not_present(buf, gtk, fname, "GTK")
+    verify_not_present(buf, sae_k, fname, "SAE(k)")
+    verify_not_present(buf, sae_keyseed, fname, "SAE(keyseed)")
+    verify_not_present(buf, sae_kck, fname, "SAE(KCK)")
+
+    dev[0].request("PMKSA_FLUSH")
+    logger.info("Checking keys in memory after PMKSA cache flush")
+    buf = read_process_memory(pid, password)
+    get_key_locations(buf, password, "Password")
+    get_key_locations(buf, pmk, "PMK")
+    verify_not_present(buf, pmk, fname, "PMK")
+
+    dev[0].request("REMOVE_NETWORK all")
+
+    logger.info("Checking keys in memory after network profile removal")
+    buf = read_process_memory(pid, password)
+
+    get_key_locations(buf, password, "Password")
+    get_key_locations(buf, pmk, "PMK")
+    verify_not_present(buf, password, fname, "password")
+    verify_not_present(buf, pmk, fname, "PMK")
+    verify_not_present(buf, kck, fname, "KCK")
+    verify_not_present(buf, kek, fname, "KEK")
+    verify_not_present(buf, tk, fname, "TK")
+    verify_not_present(buf, gtk, fname, "GTK")
+    verify_not_present(buf, sae_k, fname, "SAE(k)")
+    verify_not_present(buf, sae_keyseed, fname, "SAE(keyseed)")
+    verify_not_present(buf, sae_kck, fname, "SAE(KCK)")

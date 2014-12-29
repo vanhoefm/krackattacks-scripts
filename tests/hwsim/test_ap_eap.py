@@ -6,6 +6,7 @@
 # See README for more details.
 
 import base64
+import binascii
 import time
 import subprocess
 import logging
@@ -14,7 +15,7 @@ import os
 
 import hwsim_utils
 import hostapd
-from test_ap_psk import check_mib
+from test_ap_psk import check_mib, find_wpas_process, read_process_memory, verify_not_present, get_key_locations
 
 def read_pem(fname):
     with open(fname, "r") as f:
@@ -2243,3 +2244,98 @@ def test_openssl_cipher_suite_config_hapd(dev, apdev):
                 anonymous_identity="ttls", password="password",
                 openssl_ciphers="HIGH:!ADH",
                 ca_cert="auth_serv/ca.pem", phase2="auth=PAP")
+
+def test_wpa2_eap_ttls_pap_key_lifetime_in_memory(dev, apdev, params):
+    """Key lifetime in memory with WPA2-Enterprise using EAP-TTLS/PAP"""
+    p = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], p)
+    password = "63d2d21ac3c09ed567ee004a34490f1d16e7fa5835edf17ddba70a63f1a90a25"
+    pid = find_wpas_process(dev[0])
+    id = eap_connect(dev[0], apdev[0], "TTLS", "pap-secret",
+                     anonymous_identity="ttls", password=password,
+                     ca_cert="auth_serv/ca.pem", phase2="auth=PAP")
+    time.sleep(0.1)
+    buf = read_process_memory(pid, password)
+
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    dev[0].relog()
+    pmk = None
+    ptk = None
+    gtk = None
+    with open(os.path.join(params['logdir'], 'log0'), 'r') as f:
+        for l in f.readlines():
+            if "WPA: PMK - hexdump" in l:
+                val = l.strip().split(':')[3].replace(' ', '')
+                pmk = binascii.unhexlify(val)
+            if "WPA: PTK - hexdump" in l:
+                val = l.strip().split(':')[3].replace(' ', '')
+                ptk = binascii.unhexlify(val)
+            if "WPA: Group Key - hexdump" in l:
+                val = l.strip().split(':')[3].replace(' ', '')
+                gtk = binascii.unhexlify(val)
+    if not pmk or not ptk or not gtk:
+        raise Exception("Could not find keys from debug log")
+    if len(gtk) != 16:
+        raise Exception("Unexpected GTK length")
+
+    kck = ptk[0:16]
+    kek = ptk[16:32]
+    tk = ptk[32:48]
+
+    fname = os.path.join(params['logdir'],
+                         'wpa2_eap_ttls_pap_key_lifetime_in_memory.memctx-')
+
+    logger.info("Checking keys in memory while associated")
+    get_key_locations(buf, password, "Password")
+    get_key_locations(buf, pmk, "PMK")
+    if password not in buf:
+        print("Password not found while associated")
+        return "skip"
+    if pmk not in buf:
+        print("PMK not found while associated")
+        return "skip"
+    if kck not in buf:
+        raise Exception("KCK not found while associated")
+    if kek not in buf:
+        raise Exception("KEK not found while associated")
+    if tk in buf:
+        raise Exception("TK found from memory")
+    if gtk in buf:
+        raise Exception("GTK found from memory")
+
+    logger.info("Checking keys in memory after disassociation")
+    buf = read_process_memory(pid, password)
+
+    # Note: Password is still present in network configuration
+    # Note: PMK is in PMKSA cache and EAP fast re-auth data
+
+    get_key_locations(buf, password, "Password")
+    get_key_locations(buf, pmk, "PMK")
+    verify_not_present(buf, kck, fname, "KCK")
+    verify_not_present(buf, kek, fname, "KEK")
+    verify_not_present(buf, tk, fname, "TK")
+    verify_not_present(buf, gtk, fname, "GTK")
+
+    dev[0].request("PMKSA_FLUSH")
+    dev[0].set_network_quoted(id, "identity", "foo")
+    logger.info("Checking keys in memory after PMKSA cache and EAP fast reauth flush")
+    buf = read_process_memory(pid, password)
+    get_key_locations(buf, password, "Password")
+    get_key_locations(buf, pmk, "PMK")
+    verify_not_present(buf, pmk, fname, "PMK")
+
+    dev[0].request("REMOVE_NETWORK all")
+
+    logger.info("Checking keys in memory after network profile removal")
+    buf = read_process_memory(pid, password)
+
+    get_key_locations(buf, password, "Password")
+    get_key_locations(buf, pmk, "PMK")
+    verify_not_present(buf, password, fname, "password")
+    verify_not_present(buf, pmk, fname, "PMK")
+    verify_not_present(buf, kck, fname, "KCK")
+    verify_not_present(buf, kek, fname, "KEK")
+    verify_not_present(buf, tk, fname, "TK")
+    verify_not_present(buf, gtk, fname, "GTK")

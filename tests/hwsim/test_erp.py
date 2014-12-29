@@ -4,11 +4,15 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+import binascii
 import logging
 logger = logging.getLogger()
+import os
+import time
 
 import hostapd
 from test_ap_eap import int_eap_server_params
+from test_ap_psk import find_wpas_process, read_process_memory, verify_not_present, get_key_locations
 
 def test_erp_initiate_reauth_start(dev, apdev):
     """Authenticator sending EAP-Initiate/Re-auth-Start, but ERP disabled on peer"""
@@ -215,3 +219,173 @@ def test_erp_radius_eap_methods(dev, apdev):
              private_key="auth_serv/user.key")
     erp_test(dev[0], hapd, eap="TTLS", identity="erp-ttls@example.com",
              password="password", ca_cert="auth_serv/ca.pem", phase2="auth=PAP")
+
+def test_erp_key_lifetime_in_memory(dev, apdev, params):
+    """ERP and key lifetime in memory"""
+    capab = dev[0].get_capability("erp")
+    if not capab or 'ERP' not in capab:
+        return "skip"
+    p = int_eap_server_params()
+    p['erp_send_reauth_start'] = '1'
+    p['erp_domain'] = 'example.com'
+    p['eap_server_erp'] = '1'
+    p['disable_pmksa_caching'] = '1'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], p)
+    password = "63d2d21ac3c09ed567ee004a34490f1d16e7fa5835edf17ddba70a63f1a90a25"
+
+    pid = find_wpas_process(dev[0])
+
+    dev[0].request("ERP_FLUSH")
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="pap-secret@example.com", password=password,
+                   ca_cert="auth_serv/ca.pem", phase2="auth=PAP",
+                   erp="1", scan_freq="2412")
+
+    time.sleep(0.1)
+    buf = read_process_memory(pid, password)
+
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected(timeout=15)
+
+    dev[0].relog()
+    rRK = None
+    rIK = None
+    pmk = None
+    ptk = None
+    gtk = None
+    with open(os.path.join(params['logdir'], 'log0'), 'r') as f:
+        for l in f.readlines():
+            if "EAP: ERP rRK - hexdump" in l:
+                val = l.strip().split(':')[3].replace(' ', '')
+                rRK = binascii.unhexlify(val)
+            if "EAP: ERP rIK - hexdump" in l:
+                val = l.strip().split(':')[3].replace(' ', '')
+                rIK = binascii.unhexlify(val)
+            if "WPA: PMK - hexdump" in l:
+                val = l.strip().split(':')[3].replace(' ', '')
+                pmk = binascii.unhexlify(val)
+            if "WPA: PTK - hexdump" in l:
+                val = l.strip().split(':')[3].replace(' ', '')
+                ptk = binascii.unhexlify(val)
+            if "WPA: Group Key - hexdump" in l:
+                val = l.strip().split(':')[3].replace(' ', '')
+                gtk = binascii.unhexlify(val)
+    if not rIK or not rRK or not pmk or not ptk or not gtk:
+        raise Exception("Could not find keys from debug log")
+    if len(gtk) != 16:
+        raise Exception("Unexpected GTK length")
+
+    kck = ptk[0:16]
+    kek = ptk[16:32]
+    tk = ptk[32:48]
+
+    fname = os.path.join(params['logdir'],
+                         'erp_key_lifetime_in_memory.memctx-')
+
+    logger.info("Checking keys in memory while associated")
+    get_key_locations(buf, password, "Password")
+    get_key_locations(buf, pmk, "PMK")
+    get_key_locations(buf, rRK, "rRK")
+    get_key_locations(buf, rIK, "rIK")
+    if password not in buf:
+        print("Password not found while associated")
+        return "skip"
+    if pmk not in buf:
+        print("PMK not found while associated")
+        return "skip"
+    if kck not in buf:
+        raise Exception("KCK not found while associated")
+    if kek not in buf:
+        raise Exception("KEK not found while associated")
+    if tk in buf:
+        raise Exception("TK found from memory")
+    if gtk in buf:
+        raise Exception("GTK found from memory")
+
+    logger.info("Checking keys in memory after disassociation")
+    buf = read_process_memory(pid, password)
+
+    # Note: Password is still present in network configuration
+    # Note: PMK is in EAP fast re-auth data
+
+    get_key_locations(buf, password, "Password")
+    get_key_locations(buf, pmk, "PMK")
+    get_key_locations(buf, rRK, "rRK")
+    get_key_locations(buf, rIK, "rIK")
+    verify_not_present(buf, kck, fname, "KCK")
+    verify_not_present(buf, kek, fname, "KEK")
+    verify_not_present(buf, tk, fname, "TK")
+    verify_not_present(buf, gtk, fname, "GTK")
+
+    dev[0].request("RECONNECT")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=15)
+    if ev is None:
+        raise Exception("EAP success timed out")
+    if "EAP re-authentication completed successfully" not in ev:
+        raise Exception("Did not use ERP")
+    dev[0].wait_connected(timeout=15, error="Reconnection timed out")
+
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected(timeout=15)
+
+    dev[0].relog()
+    pmk = None
+    ptk = None
+    gtk = None
+    with open(os.path.join(params['logdir'], 'log0'), 'r') as f:
+        for l in f.readlines():
+            if "WPA: PMK - hexdump" in l:
+                val = l.strip().split(':')[3].replace(' ', '')
+                pmk = binascii.unhexlify(val)
+            if "WPA: PTK - hexdump" in l:
+                val = l.strip().split(':')[3].replace(' ', '')
+                ptk = binascii.unhexlify(val)
+            if "WPA: GTK in EAPOL-Key - hexdump" in l:
+                val = l.strip().split(':')[3].replace(' ', '')
+                gtk = binascii.unhexlify(val)
+    if not pmk or not ptk or not gtk:
+        raise Exception("Could not find keys from debug log")
+
+    kck = ptk[0:16]
+    kek = ptk[16:32]
+    tk = ptk[32:48]
+
+    logger.info("Checking keys in memory after ERP and disassociation")
+    buf = read_process_memory(pid, password)
+
+    # Note: Password is still present in network configuration
+
+    get_key_locations(buf, password, "Password")
+    get_key_locations(buf, pmk, "PMK")
+    get_key_locations(buf, rRK, "rRK")
+    get_key_locations(buf, rIK, "rIK")
+    verify_not_present(buf, kck, fname, "KCK")
+    verify_not_present(buf, kek, fname, "KEK")
+    verify_not_present(buf, tk, fname, "TK")
+    verify_not_present(buf, gtk, fname, "GTK")
+
+    dev[0].request("REMOVE_NETWORK all")
+
+    logger.info("Checking keys in memory after network profile removal")
+    buf = read_process_memory(pid, password)
+
+    # Note: rRK and rIK are still in memory
+
+    get_key_locations(buf, password, "Password")
+    get_key_locations(buf, pmk, "PMK")
+    get_key_locations(buf, rRK, "rRK")
+    get_key_locations(buf, rIK, "rIK")
+    verify_not_present(buf, password, fname, "password")
+    verify_not_present(buf, pmk, fname, "PMK")
+    verify_not_present(buf, kck, fname, "KCK")
+    verify_not_present(buf, kek, fname, "KEK")
+    verify_not_present(buf, tk, fname, "TK")
+    verify_not_present(buf, gtk, fname, "GTK")
+
+    dev[0].request("ERP_FLUSH")
+    logger.info("Checking keys in memory after ERP_FLUSH")
+    buf = read_process_memory(pid, password)
+    get_key_locations(buf, rRK, "rRK")
+    get_key_locations(buf, rIK, "rIK")
+    verify_not_present(buf, rRK, fname, "rRK")
+    verify_not_present(buf, rIK, fname, "rIK")

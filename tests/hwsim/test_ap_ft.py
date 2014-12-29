@@ -4,6 +4,8 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+import binascii
+import os
 import time
 import subprocess
 import logging
@@ -12,7 +14,7 @@ logger = logging.getLogger()
 import hwsim_utils
 import hostapd
 from wlantest import Wlantest
-from test_ap_psk import check_mib
+from test_ap_psk import check_mib, find_wpas_process, read_process_memory, verify_not_present, get_key_locations
 
 def ft_base_rsn():
     params = { "wpa": "2",
@@ -456,3 +458,108 @@ def test_ap_ft_gtk_rekey(dev, apdev):
     if ev is None:
         raise Exception("GTK rekey timed out after FT protocol")
     hwsim_utils.test_connectivity(dev[0], hapd1)
+
+def test_ft_psk_key_lifetime_in_memory(dev, apdev, params):
+    """WPA2-PSK-FT and key lifetime in memory"""
+    ssid = "test-ft"
+    passphrase="04c2726b4b8d5f1b4db9c07aa4d9e9d8f765cb5d25ec817e6cc4fcdd5255db0"
+    psk = '93c90846ff67af9037ed83fb72b63dbeddaa81d47f926c20909b5886f1d9358d'
+    pmk = binascii.unhexlify(psk)
+    p = ft_params1(ssid=ssid, passphrase=passphrase)
+    hapd0 = hostapd.add_ap(apdev[0]['ifname'], p)
+    p = ft_params2(ssid=ssid, passphrase=passphrase)
+    hapd1 = hostapd.add_ap(apdev[1]['ifname'], p)
+
+    pid = find_wpas_process(dev[0])
+
+    dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
+                   scan_freq="2412")
+    time.sleep(0.1)
+
+    buf = read_process_memory(pid, pmk)
+
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+
+    dev[0].relog()
+    pmkr0 = None
+    pmkr1 = None
+    ptk = None
+    gtk = None
+    with open(os.path.join(params['logdir'], 'log0'), 'r') as f:
+        for l in f.readlines():
+            if "FT: PMK-R0 - hexdump" in l:
+                val = l.strip().split(':')[3].replace(' ', '')
+                pmkr0 = binascii.unhexlify(val)
+            if "FT: PMK-R1 - hexdump" in l:
+                val = l.strip().split(':')[3].replace(' ', '')
+                pmkr1 = binascii.unhexlify(val)
+            if "FT: PTK - hexdump" in l:
+                val = l.strip().split(':')[3].replace(' ', '')
+                ptk = binascii.unhexlify(val)
+            if "WPA: Group Key - hexdump" in l:
+                val = l.strip().split(':')[3].replace(' ', '')
+                gtk = binascii.unhexlify(val)
+    if not pmkr0 or not pmkr1 or not ptk or not gtk:
+        raise Exception("Could not find keys from debug log")
+    if len(gtk) != 16:
+        raise Exception("Unexpected GTK length")
+
+    kck = ptk[0:16]
+    kek = ptk[16:32]
+    tk = ptk[32:48]
+
+    logger.info("Checking keys in memory while associated")
+    get_key_locations(buf, pmk, "PMK")
+    get_key_locations(buf, pmkr0, "PMK-R0")
+    get_key_locations(buf, pmkr1, "PMK-R1")
+    if pmk not in buf:
+        print("PMK not found while associated")
+        return "skip"
+    if pmkr0 not in buf:
+        print("PMK-R0 not found while associated")
+        return "skip"
+    if pmkr1 not in buf:
+        print("PMK-R1 not found while associated")
+        return "skip"
+    if kck not in buf:
+        raise Exception("KCK not found while associated")
+    if kek not in buf:
+        raise Exception("KEK not found while associated")
+    if tk in buf:
+        raise Exception("TK found from memory")
+    if gtk in buf:
+        raise Exception("GTK found from memory")
+
+    logger.info("Checking keys in memory after disassociation")
+    buf = read_process_memory(pid, pmk)
+    get_key_locations(buf, pmk, "PMK")
+    get_key_locations(buf, pmkr0, "PMK-R0")
+    get_key_locations(buf, pmkr1, "PMK-R1")
+
+    # Note: PMK/PSK is still present in network configuration
+
+    fname = os.path.join(params['logdir'],
+                         'ft_psk_key_lifetime_in_memory.memctx-')
+    verify_not_present(buf, pmkr0, fname, "PMK-R0")
+    verify_not_present(buf, pmkr1, fname, "PMK-R1")
+    verify_not_present(buf, kck, fname, "KCK")
+    verify_not_present(buf, kek, fname, "KEK")
+    verify_not_present(buf, tk, fname, "TK")
+    verify_not_present(buf, gtk, fname, "GTK")
+
+    dev[0].request("REMOVE_NETWORK all")
+
+    logger.info("Checking keys in memory after network profile removal")
+    buf = read_process_memory(pid, pmk)
+    get_key_locations(buf, pmk, "PMK")
+    get_key_locations(buf, pmkr0, "PMK-R0")
+    get_key_locations(buf, pmkr1, "PMK-R1")
+
+    verify_not_present(buf, pmk, fname, "PMK")
+    verify_not_present(buf, pmkr0, fname, "PMK-R0")
+    verify_not_present(buf, pmkr1, fname, "PMK-R1")
+    verify_not_present(buf, kck, fname, "KCK")
+    verify_not_present(buf, kek, fname, "KEK")
+    verify_not_present(buf, tk, fname, "TK")
+    verify_not_present(buf, gtk, fname, "GTK")

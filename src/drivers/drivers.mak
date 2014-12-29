@@ -39,7 +39,13 @@ NEED_RFKILL=y
 ifdef CONFIG_LIBNL32
   DRV_LIBS += -lnl-3
   DRV_LIBS += -lnl-genl-3
-  DRV_CFLAGS += -DCONFIG_LIBNL20 -I/usr/include/libnl3
+  DRV_CFLAGS += -DCONFIG_LIBNL20
+  ifdef LIBNL_INC
+    DRV_CFLAGS += -I$(LIBNL_INC)
+  else
+    PKG_CONFIG ?= pkg-config
+    DRV_CFLAGS += $(shell $(PKG_CONFIG) --cflags libnl-3.0)
+  endif
 ifdef CONFIG_LIBNL3_ROUTE
   DRV_LIBS += -lnl-route-3
   DRV_CFLAGS += -DCONFIG_LIBNL3_ROUTE

@@ -2140,6 +2140,7 @@ void wpa_sm_deinit(struct wpa_sm *sm)
 	os_free(sm->assoc_wpa_ie);
 	os_free(sm->ap_wpa_ie);
 	os_free(sm->ap_rsn_ie);
+	wpa_sm_drop_sa(sm);
 	os_free(sm->ctx);
 	peerkey_deinit(sm);
 #ifdef CONFIG_IEEE80211R
@@ -2228,6 +2229,9 @@ void wpa_sm_notify_disassoc(struct wpa_sm *sm)
 #ifdef CONFIG_TDLS
 	wpa_tdls_disassoc(sm);
 #endif /* CONFIG_TDLS */
+
+	/* Keys are not needed in the WPA state machine anymore */
+	wpa_sm_drop_sa(sm);
 }
 
 
@@ -2700,7 +2704,6 @@ int wpa_sm_pmksa_cache_list(struct wpa_sm *sm, char *buf, size_t len)
 }
 
 
-#ifdef CONFIG_TESTING_OPTIONS
 void wpa_sm_drop_sa(struct wpa_sm *sm)
 {
 	wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG, "WPA: Clear old PMK and PTK");
@@ -2709,8 +2712,12 @@ void wpa_sm_drop_sa(struct wpa_sm *sm)
 	os_memset(sm->pmk, 0, sizeof(sm->pmk));
 	os_memset(&sm->ptk, 0, sizeof(sm->ptk));
 	os_memset(&sm->tptk, 0, sizeof(sm->tptk));
+#ifdef CONFIG_IEEE80211R
+	os_memset(sm->xxkey, 0, sizeof(sm->xxkey));
+	os_memset(sm->pmk_r0, 0, sizeof(sm->pmk_r0));
+	os_memset(sm->pmk_r1, 0, sizeof(sm->pmk_r1));
+#endif /* CONFIG_IEEE80211R */
 }
-#endif /* CONFIG_TESTING_OPTIONS */
 
 
 int wpa_sm_has_ptk(struct wpa_sm *sm)

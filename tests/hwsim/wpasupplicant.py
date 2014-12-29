@@ -723,6 +723,15 @@ class WpaSupplicant:
             raise Exception("Failed to request TDLS teardown")
         return None
 
+    def tspecs(self):
+        """Return (tsid, up) tuples representing current tspecs"""
+        res = self.request("WMM_AC_STATUS")
+        tspecs = re.findall(r"TSID=(\d+) UP=(\d+)", res)
+        tspecs = [tuple(map(int, tspec)) for tspec in tspecs]
+
+        logger.debug("tspecs: " + str(tspecs))
+        return tspecs
+
     def add_ts(self, tsid, up, direction="downlink", expect_failure=False,
                extra=None):
         params = {
@@ -754,6 +763,9 @@ class WpaSupplicant:
         if "tsid=%d" % (tsid) not in ev:
             raise Exception("ADDTS failed (invalid tsid in TSPEC-ADDED)")
 
+        if not (tsid, up) in self.tspecs():
+            raise Exception("ADDTS failed (tsid not in tspec list)")
+
     def del_ts(self, tsid):
         if self.request("WMM_AC_DELTS %d" % (tsid)).strip() != "OK":
             raise Exception("DELTS failed")
@@ -763,6 +775,10 @@ class WpaSupplicant:
             raise Exception("DELTS failed (time out)")
         if "tsid=%d" % (tsid) not in ev:
             raise Exception("DELTS failed (invalid tsid in TSPEC-REMOVED)")
+
+        tspecs = [(t, u) for (t, u) in self.tspecs() if t == tsid]
+        if tspecs:
+            raise Exception("DELTS failed (still in tspec list)")
 
     def connect(self, ssid=None, ssid2=None, **kwargs):
         logger.info("Connect STA " + self.ifname + " to AP")

@@ -20,12 +20,12 @@ def add_wmm_ap(apdev, acm_list):
     for ac in acm_list:
         params["wmm_ac_%s_acm" % (ac.lower())] = "1"
 
-    return hostapd.add_ap(apdev[0]['ifname'], params)
+    return hostapd.add_ap(apdev['ifname'], params)
 
 def test_tspec(dev, apdev):
     """Basic addts/delts tests"""
     # configure ap with VO and VI requiring admission-control
-    hapd = add_wmm_ap(apdev, ["VO", "VI"])
+    hapd = add_wmm_ap(apdev[0], ["VO", "VI"])
     dev[0].connect("wmm_ac", key_mgmt="NONE", scan_freq="2462")
     hwsim_utils.test_connectivity(dev[0], hapd)
     status = dev[0].request("WMM_AC_STATUS")
@@ -112,7 +112,7 @@ def test_tspec(dev, apdev):
 def test_tspec_protocol(dev, apdev):
     """Protocol tests for addts/delts"""
     # configure ap with VO and VI requiring admission-control
-    hapd = add_wmm_ap(apdev, ["VO", "VI"])
+    hapd = add_wmm_ap(apdev[0], ["VO", "VI"])
     dev[0].connect("wmm_ac", key_mgmt="NONE", scan_freq="2462")
 
     dev[0].dump_monitor()
@@ -245,3 +245,21 @@ def test_tspec_not_enabled(dev, apdev):
     msg['bssid'] = apdev[0]['bssid']
     msg['payload'] = struct.pack('BBBB', 17, 2, 0, 0)
     hapd.mgmt_tx(msg)
+
+def test_tspec_ap_roam_open(dev, apdev):
+    """Roam between two open APs while having tspecs"""
+    hapd0 = add_wmm_ap(apdev[0], ["VO", "VI"])
+    dev[0].connect("wmm_ac", key_mgmt="NONE")
+    hwsim_utils.test_connectivity(dev[0], hapd0)
+    dev[0].add_ts(5, 6)
+
+    hapd1 = add_wmm_ap(apdev[1], ["VO", "VI"])
+    dev[0].scan_for_bss(apdev[1]['bssid'], freq=2462)
+    dev[0].roam(apdev[1]['bssid'])
+    hwsim_utils.test_connectivity(dev[0], hapd1)
+    if dev[0].tspecs():
+        raise Exception("TSPECs weren't deleted on roaming")
+
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq=2462)
+    dev[0].roam(apdev[0]['bssid'])
+    hwsim_utils.test_connectivity(dev[0], hapd0)

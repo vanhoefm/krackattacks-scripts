@@ -202,20 +202,12 @@ void wpa_supplicant_mark_disassoc(struct wpa_supplicant *wpa_s)
 	bssid_changed = !is_zero_ether_addr(wpa_s->bssid);
 	os_memset(wpa_s->bssid, 0, ETH_ALEN);
 	os_memset(wpa_s->pending_bssid, 0, ETH_ALEN);
-#ifdef CONFIG_SME
-	wpa_s->sme.prev_bssid_set = 0;
-#endif /* CONFIG_SME */
+	sme_clear_on_disassoc(wpa_s);
 #ifdef CONFIG_P2P
 	os_memset(wpa_s->go_dev_addr, 0, ETH_ALEN);
 #endif /* CONFIG_P2P */
 	wpa_s->current_bss = NULL;
 	wpa_s->assoc_freq = 0;
-#ifdef CONFIG_IEEE80211R
-#ifdef CONFIG_SME
-	if (wpa_s->sme.ft_ies)
-		sme_update_ft_ies(wpa_s, NULL, NULL, 0);
-#endif /* CONFIG_SME */
-#endif /* CONFIG_IEEE80211R */
 
 	if (bssid_changed)
 		wpas_notify_bssid_changed(wpa_s);

@@ -88,7 +88,7 @@ void sae_clear_temp_data(struct sae_data *sae)
 	crypto_ec_point_deinit(tmp->own_commit_element_ecc, 0);
 	crypto_ec_point_deinit(tmp->peer_commit_element_ecc, 0);
 	wpabuf_free(tmp->anti_clogging_token);
-	os_free(sae->tmp);
+	bin_clear_free(tmp, sizeof(*tmp));
 	sae->tmp = NULL;
 }
 
@@ -624,8 +624,10 @@ static int sae_derive_keys(struct sae_data *sae, const u8 *k)
 	wpa_hexdump(MSG_DEBUG, "SAE: PMKID", val, SAE_PMKID_LEN);
 	sha256_prf(keyseed, sizeof(keyseed), "SAE KCK and PMK",
 		   val, sae->tmp->prime_len, keys, sizeof(keys));
+	os_memset(keyseed, 0, sizeof(keyseed));
 	os_memcpy(sae->tmp->kck, keys, SAE_KCK_LEN);
 	os_memcpy(sae->pmk, keys + SAE_KCK_LEN, SAE_PMK_LEN);
+	os_memset(keys, 0, sizeof(keys));
 	wpa_hexdump_key(MSG_DEBUG, "SAE: KCK", sae->tmp->kck, SAE_KCK_LEN);
 	wpa_hexdump_key(MSG_DEBUG, "SAE: PMK", sae->pmk, SAE_PMK_LEN);
 

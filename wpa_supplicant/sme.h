@@ -33,6 +33,7 @@ void sme_sa_query_rx(struct wpa_supplicant *wpa_s, const u8 *sa,
 void sme_state_changed(struct wpa_supplicant *wpa_s);
 void sme_disassoc_while_authenticating(struct wpa_supplicant *wpa_s,
 				       const u8 *prev_pending_bssid);
+void sme_clear_on_disassoc(struct wpa_supplicant *wpa_s);
 void sme_deinit(struct wpa_supplicant *wpa_s);
 
 int sme_proc_obss_scan(struct wpa_supplicant *wpa_s);
@@ -91,6 +92,10 @@ static inline void sme_state_changed(struct wpa_supplicant *wpa_s)
 static inline void
 sme_disassoc_while_authenticating(struct wpa_supplicant *wpa_s,
 				  const u8 *prev_pending_bssid)
+{
+}
+
+static inline void sme_clear_on_disassoc(struct wpa_supplicant *wpa_s)
 {
 }
 

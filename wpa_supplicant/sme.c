@@ -1099,6 +1099,21 @@ void sme_disassoc_while_authenticating(struct wpa_supplicant *wpa_s,
 }
 
 
+void sme_clear_on_disassoc(struct wpa_supplicant *wpa_s)
+{
+	wpa_s->sme.prev_bssid_set = 0;
+#ifdef CONFIG_SAE
+	wpabuf_free(wpa_s->sme.sae_token);
+	wpa_s->sme.sae_token = NULL;
+	sae_clear_data(&wpa_s->sme.sae);
+#endif /* CONFIG_SAE */
+#ifdef CONFIG_IEEE80211R
+	if (wpa_s->sme.ft_ies)
+		sme_update_ft_ies(wpa_s, NULL, NULL, 0);
+#endif /* CONFIG_IEEE80211R */
+}
+
+
 void sme_deinit(struct wpa_supplicant *wpa_s)
 {
 	os_free(wpa_s->sme.ft_ies);
@@ -1107,11 +1122,7 @@ void sme_deinit(struct wpa_supplicant *wpa_s)
 #ifdef CONFIG_IEEE80211W
 	sme_stop_sa_query(wpa_s);
 #endif /* CONFIG_IEEE80211W */
-#ifdef CONFIG_SAE
-	wpabuf_free(wpa_s->sme.sae_token);
-	wpa_s->sme.sae_token = NULL;
-	sae_clear_data(&wpa_s->sme.sae);
-#endif /* CONFIG_SAE */
+	sme_clear_on_disassoc(wpa_s);
 
 	eloop_cancel_timeout(sme_assoc_timer, wpa_s, NULL);
 	eloop_cancel_timeout(sme_auth_timer, wpa_s, NULL);

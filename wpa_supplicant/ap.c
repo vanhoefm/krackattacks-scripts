@@ -225,7 +225,7 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 	bss->wpa_key_mgmt = ssid->key_mgmt;
 	bss->wpa_pairwise = ssid->pairwise_cipher;
 	if (ssid->psk_set) {
-		os_free(bss->ssid.wpa_psk);
+		bin_clear_free(bss->ssid.wpa_psk, sizeof(*bss->ssid.wpa_psk));
 		bss->ssid.wpa_psk = os_zalloc(sizeof(struct hostapd_wpa_psk));
 		if (bss->ssid.wpa_psk == NULL)
 			return -1;

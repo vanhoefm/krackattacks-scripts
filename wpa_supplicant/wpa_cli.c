@@ -2537,6 +2537,13 @@ static int wpa_cli_cmd_erp_flush(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+static int wpa_cli_cmd_mac_rand_scan(struct wpa_ctrl *ctrl, int argc,
+				     char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "MAC_RAND_SCAN", 1, argc, argv);
+}
+
+
 enum wpa_cli_cmd_flags {
 	cli_cmd_flag_none		= 0x00,
 	cli_cmd_flag_sensitive		= 0x01
@@ -3063,6 +3070,11 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	},
 	{ "erp_flush", wpa_cli_cmd_erp_flush, NULL, cli_cmd_flag_none,
 	  "= flush ERP keys" },
+	{ "mac_rand_scan",
+	  wpa_cli_cmd_mac_rand_scan, NULL, cli_cmd_flag_none,
+	  "<scan|sched|pno|all> enable=<0/1> [addr=mac-address "
+	  "mask=mac-address-mask] = scan MAC randomization"
+	},
 	{ NULL, NULL, NULL, cli_cmd_flag_none, NULL }
 };
 

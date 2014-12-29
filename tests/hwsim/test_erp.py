@@ -248,6 +248,8 @@ def test_erp_key_lifetime_in_memory(dev, apdev, params):
     dev[0].wait_disconnected(timeout=15)
 
     dev[0].relog()
+    msk = None
+    emsk = None
     rRK = None
     rIK = None
     pmk = None
@@ -255,6 +257,12 @@ def test_erp_key_lifetime_in_memory(dev, apdev, params):
     gtk = None
     with open(os.path.join(params['logdir'], 'log0'), 'r') as f:
         for l in f.readlines():
+            if "EAP-TTLS: Derived key - hexdump" in l:
+                val = l.strip().split(':')[3].replace(' ', '')
+                msk = binascii.unhexlify(val)
+            if "EAP-TTLS: Derived EMSK - hexdump" in l:
+                val = l.strip().split(':')[3].replace(' ', '')
+                emsk = binascii.unhexlify(val)
             if "EAP: ERP rRK - hexdump" in l:
                 val = l.strip().split(':')[3].replace(' ', '')
                 rRK = binascii.unhexlify(val)
@@ -270,7 +278,7 @@ def test_erp_key_lifetime_in_memory(dev, apdev, params):
             if "WPA: Group Key - hexdump" in l:
                 val = l.strip().split(':')[3].replace(' ', '')
                 gtk = binascii.unhexlify(val)
-    if not rIK or not rRK or not pmk or not ptk or not gtk:
+    if not msk or not emsk or not rIK or not rRK or not pmk or not ptk or not gtk:
         raise Exception("Could not find keys from debug log")
     if len(gtk) != 16:
         raise Exception("Unexpected GTK length")
@@ -285,6 +293,8 @@ def test_erp_key_lifetime_in_memory(dev, apdev, params):
     logger.info("Checking keys in memory while associated")
     get_key_locations(buf, password, "Password")
     get_key_locations(buf, pmk, "PMK")
+    get_key_locations(buf, msk, "MSK")
+    get_key_locations(buf, emsk, "EMSK")
     get_key_locations(buf, rRK, "rRK")
     get_key_locations(buf, rIK, "rIK")
     if password not in buf:
@@ -310,6 +320,8 @@ def test_erp_key_lifetime_in_memory(dev, apdev, params):
 
     get_key_locations(buf, password, "Password")
     get_key_locations(buf, pmk, "PMK")
+    get_key_locations(buf, msk, "MSK")
+    get_key_locations(buf, emsk, "EMSK")
     get_key_locations(buf, rRK, "rRK")
     get_key_locations(buf, rIK, "rIK")
     verify_not_present(buf, kck, fname, "KCK")
@@ -357,6 +369,8 @@ def test_erp_key_lifetime_in_memory(dev, apdev, params):
 
     get_key_locations(buf, password, "Password")
     get_key_locations(buf, pmk, "PMK")
+    get_key_locations(buf, msk, "MSK")
+    get_key_locations(buf, emsk, "EMSK")
     get_key_locations(buf, rRK, "rRK")
     get_key_locations(buf, rIK, "rIK")
     verify_not_present(buf, kck, fname, "KCK")
@@ -373,6 +387,8 @@ def test_erp_key_lifetime_in_memory(dev, apdev, params):
 
     get_key_locations(buf, password, "Password")
     get_key_locations(buf, pmk, "PMK")
+    get_key_locations(buf, msk, "MSK")
+    get_key_locations(buf, emsk, "EMSK")
     get_key_locations(buf, rRK, "rRK")
     get_key_locations(buf, rIK, "rIK")
     verify_not_present(buf, password, fname, "password")
@@ -381,6 +397,8 @@ def test_erp_key_lifetime_in_memory(dev, apdev, params):
     verify_not_present(buf, kek, fname, "KEK")
     verify_not_present(buf, tk, fname, "TK")
     verify_not_present(buf, gtk, fname, "GTK")
+    verify_not_present(buf, msk, fname, "MSK")
+    verify_not_present(buf, emsk, fname, "EMSK")
 
     dev[0].request("ERP_FLUSH")
     logger.info("Checking keys in memory after ERP_FLUSH")

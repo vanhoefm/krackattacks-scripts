@@ -2261,11 +2261,19 @@ def test_wpa2_eap_ttls_pap_key_lifetime_in_memory(dev, apdev, params):
     dev[0].wait_disconnected()
 
     dev[0].relog()
+    msk = None
+    emsk = None
     pmk = None
     ptk = None
     gtk = None
     with open(os.path.join(params['logdir'], 'log0'), 'r') as f:
         for l in f.readlines():
+            if "EAP-TTLS: Derived key - hexdump" in l:
+                val = l.strip().split(':')[3].replace(' ', '')
+                msk = binascii.unhexlify(val)
+            if "EAP-TTLS: Derived EMSK - hexdump" in l:
+                val = l.strip().split(':')[3].replace(' ', '')
+                emsk = binascii.unhexlify(val)
             if "WPA: PMK - hexdump" in l:
                 val = l.strip().split(':')[3].replace(' ', '')
                 pmk = binascii.unhexlify(val)
@@ -2275,7 +2283,7 @@ def test_wpa2_eap_ttls_pap_key_lifetime_in_memory(dev, apdev, params):
             if "WPA: Group Key - hexdump" in l:
                 val = l.strip().split(':')[3].replace(' ', '')
                 gtk = binascii.unhexlify(val)
-    if not pmk or not ptk or not gtk:
+    if not msk or not emsk or not pmk or not ptk or not gtk:
         raise Exception("Could not find keys from debug log")
     if len(gtk) != 16:
         raise Exception("Unexpected GTK length")
@@ -2290,6 +2298,8 @@ def test_wpa2_eap_ttls_pap_key_lifetime_in_memory(dev, apdev, params):
     logger.info("Checking keys in memory while associated")
     get_key_locations(buf, password, "Password")
     get_key_locations(buf, pmk, "PMK")
+    get_key_locations(buf, msk, "MSK")
+    get_key_locations(buf, emsk, "EMSK")
     if password not in buf:
         print("Password not found while associated")
         return "skip"
@@ -2313,6 +2323,8 @@ def test_wpa2_eap_ttls_pap_key_lifetime_in_memory(dev, apdev, params):
 
     get_key_locations(buf, password, "Password")
     get_key_locations(buf, pmk, "PMK")
+    get_key_locations(buf, msk, "MSK")
+    get_key_locations(buf, emsk, "EMSK")
     verify_not_present(buf, kck, fname, "KCK")
     verify_not_present(buf, kek, fname, "KEK")
     verify_not_present(buf, tk, fname, "TK")
@@ -2324,6 +2336,8 @@ def test_wpa2_eap_ttls_pap_key_lifetime_in_memory(dev, apdev, params):
     buf = read_process_memory(pid, password)
     get_key_locations(buf, password, "Password")
     get_key_locations(buf, pmk, "PMK")
+    get_key_locations(buf, msk, "MSK")
+    get_key_locations(buf, emsk, "EMSK")
     verify_not_present(buf, pmk, fname, "PMK")
 
     dev[0].request("REMOVE_NETWORK all")
@@ -2333,9 +2347,13 @@ def test_wpa2_eap_ttls_pap_key_lifetime_in_memory(dev, apdev, params):
 
     get_key_locations(buf, password, "Password")
     get_key_locations(buf, pmk, "PMK")
+    get_key_locations(buf, msk, "MSK")
+    get_key_locations(buf, emsk, "EMSK")
     verify_not_present(buf, password, fname, "password")
     verify_not_present(buf, pmk, fname, "PMK")
     verify_not_present(buf, kck, fname, "KCK")
     verify_not_present(buf, kek, fname, "KEK")
     verify_not_present(buf, tk, fname, "TK")
     verify_not_present(buf, gtk, fname, "GTK")
+    verify_not_present(buf, msk, fname, "MSK")
+    verify_not_present(buf, emsk, fname, "EMSK")

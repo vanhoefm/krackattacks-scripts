@@ -7116,6 +7116,126 @@ static int wpas_ctrl_iface_erp_flush(struct wpa_supplicant *wpa_s)
 }
 
 
+static int wpas_ctrl_iface_mac_rand_scan(struct wpa_supplicant *wpa_s,
+					 char *cmd)
+{
+	char *token, *context = NULL;
+	unsigned int enable = ~0, type = 0;
+	u8 _addr[ETH_ALEN], _mask[ETH_ALEN];
+	u8 *addr = NULL, *mask = NULL;
+
+	while ((token = str_token(cmd, " ", &context))) {
+		if (os_strcasecmp(token, "scan") == 0) {
+			type |= MAC_ADDR_RAND_SCAN;
+		} else if (os_strcasecmp(token, "sched") == 0) {
+			type |= MAC_ADDR_RAND_SCHED_SCAN;
+		} else if (os_strcasecmp(token, "pno") == 0) {
+			type |= MAC_ADDR_RAND_PNO;
+		} else if (os_strcasecmp(token, "all") == 0) {
+			type = wpa_s->mac_addr_rand_supported;
+		} else if (os_strncasecmp(token, "enable=", 7) == 0) {
+			enable = atoi(token + 7);
+		} else if (os_strncasecmp(token, "addr=", 5) == 0) {
+			addr = _addr;
+			if (hwaddr_aton(token + 5, addr)) {
+				wpa_printf(MSG_INFO,
+					   "CTRL: Invalid MAC address: %s",
+					   token);
+				return -1;
+			}
+		} else if (os_strncasecmp(token, "mask=", 5) == 0) {
+			mask = _mask;
+			if (hwaddr_aton(token + 5, mask)) {
+				wpa_printf(MSG_INFO,
+					   "CTRL: Invalid MAC address mask: %s",
+					   token);
+				return -1;
+			}
+		} else {
+			wpa_printf(MSG_INFO,
+				   "CTRL: Invalid MAC_RAND_SCAN parameter: %s",
+				   token);
+			return -1;
+		}
+	}
+
+	if (!type) {
+		wpa_printf(MSG_INFO, "CTRL: MAC_RAND_SCAN no type specified");
+		return -1;
+	}
+
+	if ((wpa_s->mac_addr_rand_supported & type) != type) {
+		wpa_printf(MSG_INFO,
+			   "CTRL: MAC_RAND_SCAN types=%u != supported=%u",
+			   type, wpa_s->mac_addr_rand_supported);
+		return -1;
+	}
+
+	if (enable > 1) {
+		wpa_printf(MSG_INFO,
+			   "CTRL: MAC_RAND_SCAN enable=<0/1> not specified");
+		return -1;
+	}
+
+	if (!enable) {
+		wpas_mac_addr_rand_scan_clear(wpa_s, type);
+		if (wpa_s->pno) {
+			if (type & MAC_ADDR_RAND_PNO) {
+				wpas_stop_pno(wpa_s);
+				wpas_start_pno(wpa_s);
+			}
+		} else if (wpa_s->sched_scanning &&
+			   (type & MAC_ADDR_RAND_SCHED_SCAN)) {
+			/* simulate timeout to restart the sched scan */
+			wpa_s->sched_scan_timed_out = 1;
+			wpa_s->prev_sched_ssid = NULL;
+			wpa_supplicant_cancel_sched_scan(wpa_s);
+		}
+		return 0;
+	}
+
+	if ((addr && !mask) || (!addr && mask)) {
+		wpa_printf(MSG_INFO,
+			   "CTRL: MAC_RAND_SCAN invalid addr/mask combination");
+		return -1;
+	}
+
+	if (addr && mask && (!(mask[0] & 0x01) || (addr[0] & 0x01))) {
+		wpa_printf(MSG_INFO,
+			   "CTRL: MAC_RAND_SCAN cannot allow multicast address");
+		return -1;
+	}
+
+	if (type & MAC_ADDR_RAND_SCAN) {
+		wpas_mac_addr_rand_scan_set(wpa_s, MAC_ADDR_RAND_SCAN,
+					    addr, mask);
+	}
+
+	if (type & MAC_ADDR_RAND_SCHED_SCAN) {
+		wpas_mac_addr_rand_scan_set(wpa_s, MAC_ADDR_RAND_SCHED_SCAN,
+					    addr, mask);
+
+		if (wpa_s->sched_scanning && !wpa_s->pno) {
+			/* simulate timeout to restart the sched scan */
+			wpa_s->sched_scan_timed_out = 1;
+			wpa_s->prev_sched_ssid = NULL;
+			wpa_supplicant_cancel_sched_scan(wpa_s);
+		}
+	}
+
+	if (type & MAC_ADDR_RAND_PNO) {
+		wpas_mac_addr_rand_scan_set(wpa_s, MAC_ADDR_RAND_PNO,
+					    addr, mask);
+		if (wpa_s->pno) {
+			wpas_stop_pno(wpa_s);
+			wpas_start_pno(wpa_s);
+		}
+	}
+
+	return 0;
+}
+
+
 char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 					 char *buf, size_t *resp_len)
 {
@@ -7736,6 +7856,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 			reply_len = -1;
 	} else if (os_strcmp(buf, "ERP_FLUSH") == 0) {
 		wpas_ctrl_iface_erp_flush(wpa_s);
+	} else if (os_strncmp(buf, "MAC_RAND_SCAN ", 14) == 0) {
+		if (wpas_ctrl_iface_mac_rand_scan(wpa_s, buf + 14))
+			reply_len = -1;
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);
 		reply_len = 16;

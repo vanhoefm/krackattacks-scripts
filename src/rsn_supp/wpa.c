@@ -1426,6 +1426,7 @@ static void wpa_supplicant_process_1_of_2(struct wpa_sm *sm,
 	if (wpa_supplicant_install_gtk(sm, &gd, key->key_rsc) ||
 	    wpa_supplicant_send_2_of_2(sm, key, ver, key_info))
 		goto failed;
+	os_memset(&gd, 0, sizeof(gd));
 
 	if (rekey) {
 		wpa_msg(sm->ctx->msg_ctx, MSG_INFO, "WPA: Group rekeying "
@@ -1444,6 +1445,7 @@ static void wpa_supplicant_process_1_of_2(struct wpa_sm *sm,
 	return;
 
 failed:
+	os_memset(&gd, 0, sizeof(gd));
 	wpa_sm_deauthenticate(sm, WLAN_REASON_UNSPECIFIED);
 }
 
@@ -1924,7 +1926,7 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 	ret = 1;
 
 out:
-	os_free(tmp);
+	bin_clear_free(tmp, data_len);
 	return ret;
 }
 

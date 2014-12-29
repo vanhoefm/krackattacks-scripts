@@ -1919,6 +1919,7 @@ int wpas_wps_er_set_config(struct wpa_supplicant *wpa_s, const char *uuid,
 	u8 addr[ETH_ALEN], *use_addr = NULL;
 	struct wpa_ssid *ssid;
 	struct wps_credential cred;
+	int ret;
 
 	if (uuid_str2bin(uuid, u) == 0)
 		use_uuid = u;
@@ -1932,7 +1933,9 @@ int wpas_wps_er_set_config(struct wpa_supplicant *wpa_s, const char *uuid,
 
 	if (wpas_wps_network_to_cred(ssid, &cred) < 0)
 		return -1;
-	return wps_er_set_config(wpa_s->wps_er, use_uuid, use_addr, &cred);
+	ret = wps_er_set_config(wpa_s->wps_er, use_uuid, use_addr, &cred);
+	os_memset(&cred, 0, sizeof(cred));
+	return ret;
 }
 
 

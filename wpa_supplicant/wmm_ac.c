@@ -427,7 +427,7 @@ wmm_ac_process_param_elem(struct wpa_supplicant *wpa_s, const u8 *ies,
 	int i;
 
 	/* Parsing WMM Parameter Element */
-	if (ieee802_11_parse_elems(ies, ies_len, &elems, 1) != ParseOK) {
+	if (ieee802_11_parse_elems(ies, ies_len, &elems, 1) == ParseFailed) {
 		wpa_printf(MSG_DEBUG, "WMM AC: could not parse assoc ies");
 		return NULL;
 	}

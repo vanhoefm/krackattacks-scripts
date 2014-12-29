@@ -132,6 +132,7 @@ int wpa_supplicant_set_wpa_none_key(struct wpa_supplicant *wpa_s,
 	size_t keylen;
 	enum wpa_alg alg;
 	u8 seq[6] = { 0 };
+	int ret;
 
 	/* IBSS/WPA-None uses only one key (Group) for both receiving and
 	 * sending unicast and multicast packets. */
@@ -175,7 +176,9 @@ int wpa_supplicant_set_wpa_none_key(struct wpa_supplicant *wpa_s,
 	/* TODO: should actually remember the previously used seq#, both for TX
 	 * and RX from each STA.. */
 
-	return wpa_drv_set_key(wpa_s, alg, NULL, 0, 1, seq, 6, key, keylen);
+	ret = wpa_drv_set_key(wpa_s, alg, NULL, 0, 1, seq, 6, key, keylen);
+	os_memset(key, 0, sizeof(key));
+	return ret;
 }
 
 

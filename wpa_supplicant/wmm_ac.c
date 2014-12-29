@@ -857,7 +857,7 @@ int wpas_wmm_ac_status(struct wpa_supplicant *wpa_s, char *buf, size_t buflen)
 	struct wmm_ac_assoc_data *assoc_info = wpa_s->wmm_ac_assoc_info;
 	enum ts_dir_idx idx;
 	int pos = 0;
-	u8 ac;
+	u8 ac, up;
 
 	if (!assoc_info) {
 		return wpa_scnprintf(buf, buflen - pos,
@@ -889,13 +889,14 @@ int wpas_wmm_ac_status(struct wpa_supplicant *wpa_s, char *buf, size_t buflen)
 			dir = wmm_ac_get_direction(tspec);
 			dir_str = get_direction_str(dir);
 			tsid = wmm_ac_get_tsid(tspec);
+			up = wmm_ac_get_user_priority(tspec);
 
 			pos += wpa_scnprintf(buf + pos, buflen - pos,
-					     "\tTSID = %u\n"
+					     "\tTSID=%u UP=%u\n"
 					     "\tAddress = "MACSTR"\n"
 					     "\tWMM AC dir = %s\n"
 					     "\tTotal admitted time = %u\n\n",
-					     tsid,
+					     tsid, up,
 					     MAC2STR(wpa_s->bssid),
 					     dir_str,
 					     le_to_host16(tspec->medium_time));

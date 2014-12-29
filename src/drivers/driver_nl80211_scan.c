@@ -171,6 +171,28 @@ nl80211_scan_common(struct i802_bss *bss, u8 cmd,
 		scan_flags |= NL80211_SCAN_FLAG_LOW_PRIORITY;
 	}
 
+	if (params->mac_addr_rand) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Add NL80211_SCAN_FLAG_RANDOM_ADDR");
+		scan_flags |= NL80211_SCAN_FLAG_RANDOM_ADDR;
+
+		if (params->mac_addr) {
+			wpa_printf(MSG_DEBUG, "nl80211: MAC address: " MACSTR,
+				   MAC2STR(params->mac_addr));
+			if (nla_put(msg, NL80211_ATTR_MAC, ETH_ALEN,
+				    params->mac_addr))
+				goto fail;
+		}
+
+		if (params->mac_addr_mask) {
+			wpa_printf(MSG_DEBUG, "nl80211: MAC address mask: "
+				   MACSTR, MAC2STR(params->mac_addr_mask));
+			if (nla_put(msg, NL80211_ATTR_MAC_MASK, ETH_ALEN,
+				    params->mac_addr_mask))
+				goto fail;
+		}
+	}
+
 	if (scan_flags &&
 	    nla_put_u32(msg, NL80211_ATTR_SCAN_FLAGS, scan_flags))
 		goto fail;

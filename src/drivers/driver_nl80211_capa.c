@@ -76,6 +76,8 @@ struct wiphy_info_data {
 	unsigned int set_qos_map_supported:1;
 	unsigned int have_low_prio_scan:1;
 	unsigned int wmm_ac_supported:1;
+	unsigned int mac_addr_rand_scan_supported:1;
+	unsigned int mac_addr_rand_sched_scan_supported:1;
 };
 
 
@@ -366,6 +368,12 @@ static void wiphy_info_feature_flags(struct wiphy_info_data *info,
 	if (flags & NL80211_FEATURE_LOW_PRIORITY_SCAN)
 		info->have_low_prio_scan = 1;
 
+	if (flags & NL80211_FEATURE_SCAN_RANDOM_MAC_ADDR)
+		info->mac_addr_rand_scan_supported = 1;
+
+	if (flags & NL80211_FEATURE_SCHED_SCAN_RANDOM_MAC_ADDR)
+		info->mac_addr_rand_sched_scan_supported = 1;
+
 	if (flags & NL80211_FEATURE_STATIC_SMPS)
 		capa->smps_modes |= WPA_DRIVER_SMPS_MODE_STATIC;
 
@@ -634,6 +642,11 @@ static int wpa_driver_nl80211_get_info(struct wpa_driver_nl80211_data *drv,
 	if (info->channel_switch_supported)
 		drv->capa.flags |= WPA_DRIVER_FLAGS_AP_CSA;
 	drv->capa.wmm_ac_supported = info->wmm_ac_supported;
+
+	drv->capa.mac_addr_rand_sched_scan_supported =
+		info->mac_addr_rand_sched_scan_supported;
+	drv->capa.mac_addr_rand_scan_supported =
+		info->mac_addr_rand_scan_supported;
 
 	return 0;
 }

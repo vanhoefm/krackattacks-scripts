@@ -7310,7 +7310,9 @@ static int wpa_driver_nl80211_status(void *priv, char *buf, size_t buflen)
 				  "capa.max_stations=%u\n"
 				  "capa.probe_resp_offloads=0x%x\n"
 				  "capa.max_acl_mac_addrs=%u\n"
-				  "capa.num_multichan_concurrent=%u\n",
+				  "capa.num_multichan_concurrent=%u\n"
+				  "capa.mac_addr_rand_sched_scan_supported=%d\n"
+				  "capa.mac_addr_rand_scan_supported=%d\n",
 				  drv->capa.key_mgmt,
 				  drv->capa.enc,
 				  drv->capa.auth,
@@ -7324,7 +7326,9 @@ static int wpa_driver_nl80211_status(void *priv, char *buf, size_t buflen)
 				  drv->capa.max_stations,
 				  drv->capa.probe_resp_offloads,
 				  drv->capa.max_acl_mac_addrs,
-				  drv->capa.num_multichan_concurrent);
+				  drv->capa.num_multichan_concurrent,
+				  drv->capa.mac_addr_rand_sched_scan_supported,
+				  drv->capa.mac_addr_rand_scan_supported);
 		if (os_snprintf_error(end - pos, res))
 			return pos - buf;
 		pos += res;

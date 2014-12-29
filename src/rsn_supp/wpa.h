@@ -17,6 +17,7 @@
 struct wpa_sm;
 struct eapol_sm;
 struct wpa_config_blob;
+struct hostapd_freq_params;
 
 struct wpa_sm_ctx {
 	void *ctx; /* pointer to arbitrary upper level context */
@@ -67,6 +68,10 @@ struct wpa_sm_ctx {
 				size_t supp_channels_len,
 				const u8 *supp_oper_classes,
 				size_t supp_oper_classes_len);
+	int (*tdls_enable_channel_switch)(
+		void *ctx, const u8 *addr, u8 oper_class,
+		const struct hostapd_freq_params *params);
+	int (*tdls_disable_channel_switch)(void *ctx, const u8 *addr);
 #endif /* CONFIG_TDLS */
 	void (*set_rekey_offload)(void *ctx, const u8 *kek, const u8 *kck,
 				  const u8 *replay_ctr);
@@ -404,6 +409,10 @@ void wpa_tdls_enable(struct wpa_sm *sm, int enabled);
 void wpa_tdls_disable_unreachable_link(struct wpa_sm *sm, const u8 *addr);
 const char * wpa_tdls_get_link_status(struct wpa_sm *sm, const u8 *addr);
 int wpa_tdls_is_external_setup(struct wpa_sm *sm);
+int wpa_tdls_enable_chan_switch(struct wpa_sm *sm, const u8 *addr,
+				u8 oper_class,
+				struct hostapd_freq_params *freq_params);
+int wpa_tdls_disable_chan_switch(struct wpa_sm *sm, const u8 *addr);
 
 int wpa_wnmsleep_install_key(struct wpa_sm *sm, u8 subelem_id, u8 *buf);
 

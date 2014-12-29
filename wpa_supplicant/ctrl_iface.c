@@ -653,6 +653,104 @@ static int ctrl_iface_get_capability_tdls(
 	return ret;
 }
 
+
+static int wpa_supplicant_ctrl_iface_tdls_chan_switch(
+	struct wpa_supplicant *wpa_s, char *cmd)
+{
+	u8 peer[ETH_ALEN];
+	struct hostapd_freq_params freq_params;
+	u8 oper_class;
+	char *pos, *end;
+
+	if (!wpa_tdls_is_external_setup(wpa_s->wpa)) {
+		wpa_printf(MSG_INFO,
+			   "tdls_chanswitch: Only supported with external setup");
+		return -1;
+	}
+
+	os_memset(&freq_params, 0, sizeof(freq_params));
+
+	pos = os_strchr(cmd, ' ');
+	if (pos == NULL)
+		return -1;
+	*pos++ = '\0';
+
+	oper_class = strtol(pos, &end, 10);
+	if (pos == end) {
+		wpa_printf(MSG_INFO,
+			   "tdls_chanswitch: Invalid op class provided");
+		return -1;
+	}
+
+	pos = end;
+	freq_params.freq = atoi(pos);
+	if (freq_params.freq == 0) {
+		wpa_printf(MSG_INFO, "tdls_chanswitch: Invalid freq provided");
+		return -1;
+	}
+
+#define SET_FREQ_SETTING(str) \
+	do { \
+		const char *pos2 = os_strstr(pos, " " #str "="); \
+		if (pos2) { \
+			pos2 += sizeof(" " #str "=") - 1; \
+			freq_params.str = atoi(pos2); \
+		} \
+	} while (0)
+
+	SET_FREQ_SETTING(center_freq1);
+	SET_FREQ_SETTING(center_freq2);
+	SET_FREQ_SETTING(bandwidth);
+	SET_FREQ_SETTING(sec_channel_offset);
+#undef SET_FREQ_SETTING
+
+	freq_params.ht_enabled = !!os_strstr(pos, " ht");
+	freq_params.vht_enabled = !!os_strstr(pos, " vht");
+
+	if (hwaddr_aton(cmd, peer)) {
+		wpa_printf(MSG_DEBUG,
+			   "CTRL_IFACE TDLS_CHAN_SWITCH: Invalid address '%s'",
+			   cmd);
+		return -1;
+	}
+
+	wpa_printf(MSG_DEBUG, "CTRL_IFACE TDLS_CHAN_SWITCH " MACSTR
+		   " OP CLASS %d FREQ %d CENTER1 %d CENTER2 %d BW %d SEC_OFFSET %d%s%s",
+		   MAC2STR(peer), oper_class, freq_params.freq,
+		   freq_params.center_freq1, freq_params.center_freq2,
+		   freq_params.bandwidth, freq_params.sec_channel_offset,
+		   freq_params.ht_enabled ? " HT" : "",
+		   freq_params.vht_enabled ? " VHT" : "");
+
+	return wpa_tdls_enable_chan_switch(wpa_s->wpa, peer, oper_class,
+					   &freq_params);
+}
+
+
+static int wpa_supplicant_ctrl_iface_tdls_cancel_chan_switch(
+	struct wpa_supplicant *wpa_s, char *cmd)
+{
+	u8 peer[ETH_ALEN];
+
+	if (!wpa_tdls_is_external_setup(wpa_s->wpa)) {
+		wpa_printf(MSG_INFO,
+			   "tdls_chanswitch: Only supported with external setup");
+		return -1;
+	}
+
+	if (hwaddr_aton(cmd, peer)) {
+		wpa_printf(MSG_DEBUG,
+			   "CTRL_IFACE TDLS_CANCEL_CHAN_SWITCH: Invalid address '%s'",
+			   cmd);
+		return -1;
+	}
+
+	wpa_printf(MSG_DEBUG, "CTRL_IFACE TDLS_CANCEL_CHAN_SWITCH " MACSTR,
+		   MAC2STR(peer));
+
+	return wpa_tdls_disable_chan_switch(wpa_s->wpa, peer);
+}
+
 #endif /* CONFIG_TDLS */
 
 
@@ -7549,6 +7647,14 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 			reply_len = -1;
 	} else if (os_strncmp(buf, "TDLS_TEARDOWN ", 14) == 0) {
 		if (wpa_supplicant_ctrl_iface_tdls_teardown(wpa_s, buf + 14))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "TDLS_CHAN_SWITCH ", 17) == 0) {
+		if (wpa_supplicant_ctrl_iface_tdls_chan_switch(wpa_s,
+							       buf + 17))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "TDLS_CANCEL_CHAN_SWITCH ", 24) == 0) {
+		if (wpa_supplicant_ctrl_iface_tdls_cancel_chan_switch(wpa_s,
+								      buf + 24))
 			reply_len = -1;
 #endif /* CONFIG_TDLS */
 	} else if (os_strcmp(buf, "WMM_AC_STATUS") == 0) {

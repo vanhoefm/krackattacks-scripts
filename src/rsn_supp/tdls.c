@@ -148,6 +148,9 @@ struct wpa_tdls_peer {
 	size_t supp_oper_classes_len;
 
 	u8 wmm_capable;
+
+	/* channel switch currently enabled */
+	int chan_switch_enabled;
 };
 
 
@@ -687,6 +690,7 @@ static void wpa_tdls_peer_clear(struct wpa_sm *sm, struct wpa_tdls_peer *peer)
 	peer->qos_info = 0;
 	peer->wmm_capable = 0;
 	peer->tpk_set = peer->tpk_success = 0;
+	peer->chan_switch_enabled = 0;
 	os_memset(&peer->tpk, 0, sizeof(peer->tpk));
 	os_memset(peer->inonce, 0, WPA_NONCE_LEN);
 	os_memset(peer->rnonce, 0, WPA_NONCE_LEN);
@@ -740,6 +744,13 @@ static int wpa_tdls_send_teardown(struct wpa_sm *sm, const u8 *addr,
 		wpa_printf(MSG_INFO, "TDLS: No matching entry found for "
 			   "Teardown " MACSTR, MAC2STR(addr));
 		return 0;
+	}
+
+	/* Cancel active channel switch before teardown */
+	if (peer->chan_switch_enabled) {
+		wpa_printf(MSG_DEBUG, "TDLS: First returning link with " MACSTR
+			   " to base channel", MAC2STR(addr));
+		wpa_sm_tdls_disable_channel_switch(sm, peer->addr);
 	}
 
 	dialog_token = peer->dtoken;
@@ -858,9 +869,11 @@ void wpa_tdls_disable_unreachable_link(struct wpa_sm *sm, const u8 *addr)
 
 	if (wpa_tdls_is_external_setup(sm)) {
 		/*
-		 * Disable the link, send a teardown packet through the
-		 * AP, and then reset link data.
+		 * Get us on the base channel, disable the link, send a
+		 * teardown packet through the AP, and then reset link data.
 		 */
+		if (peer->chan_switch_enabled)
+			wpa_sm_tdls_disable_channel_switch(sm, peer->addr);
 		wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK, addr);
 		wpa_tdls_send_teardown(sm, addr,
 				       WLAN_REASON_TDLS_TEARDOWN_UNREACHABLE);
@@ -2901,4 +2914,79 @@ void wpa_tdls_enable(struct wpa_sm *sm, int enabled)
 int wpa_tdls_is_external_setup(struct wpa_sm *sm)
 {
 	return sm->tdls_external_setup;
+}
+
+
+int wpa_tdls_enable_chan_switch(struct wpa_sm *sm, const u8 *addr,
+				u8 oper_class,
+				struct hostapd_freq_params *freq_params)
+{
+	struct wpa_tdls_peer *peer;
+	int ret;
+
+	if (sm->tdls_disabled || !sm->tdls_supported)
+		return -1;
+
+	if (!sm->tdls_chan_switch) {
+		wpa_printf(MSG_DEBUG,
+			   "TDLS: Channel switching not supported by the driver");
+		return -1;
+	}
+
+	if (sm->tdls_chan_switch_prohibited) {
+		wpa_printf(MSG_DEBUG,
+			   "TDLS: Channel switching is prohibited in this BSS - reject request to switch channel");
+		return -1;
+	}
+
+	for (peer = sm->tdls; peer; peer = peer->next) {
+		if (os_memcmp(peer->addr, addr, ETH_ALEN) == 0)
+			break;
+	}
+
+	if (peer == NULL || !peer->tpk_success) {
+		wpa_printf(MSG_ERROR, "TDLS: Peer " MACSTR
+			   " not found for channel switching", MAC2STR(addr));
+		return -1;
+	}
+
+	if (peer->chan_switch_enabled) {
+		wpa_printf(MSG_DEBUG, "TDLS: Peer " MACSTR
+			   " already has channel switching enabled",
+			   MAC2STR(addr));
+		return 0;
+	}
+
+	ret = wpa_sm_tdls_enable_channel_switch(sm, peer->addr,
+						oper_class, freq_params);
+	if (!ret)
+		peer->chan_switch_enabled = 1;
+
+	return ret;
+}
+
+
+int wpa_tdls_disable_chan_switch(struct wpa_sm *sm, const u8 *addr)
+{
+	struct wpa_tdls_peer *peer;
+
+	if (sm->tdls_disabled || !sm->tdls_supported)
+		return -1;
+
+	for (peer = sm->tdls; peer; peer = peer->next) {
+		if (os_memcmp(peer->addr, addr, ETH_ALEN) == 0)
+			break;
+	}
+
+	if (!peer || !peer->chan_switch_enabled) {
+		wpa_printf(MSG_ERROR, "TDLS: Channel switching not enabled for "
+			   MACSTR, MAC2STR(addr));
+		return -1;
+	}
+
+	/* ignore the return value */
+	wpa_sm_tdls_disable_channel_switch(sm, peer->addr);
+
+	peer->chan_switch_enabled = 0;
+	return 0;
 }

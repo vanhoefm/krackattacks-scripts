@@ -2993,6 +2993,33 @@ struct wpa_driver_ops {
 	int (*del_tx_ts)(void *priv, u8 tsid, const u8 *addr);
 
 	/**
+	 * Enable channel-switching with TDLS peer
+	 * @priv: Private driver interface data
+	 * @addr: MAC address of the TDLS peer
+	 * @oper_class: Operating class of the switch channel
+	 * @params: Channel specification
+	 * Returns: 0 on success, -1 on failure
+	 *
+	 * The function indicates to driver that it can start switching to a
+	 * different channel with a specified TDLS peer. The switching is
+	 * assumed on until canceled with tdls_disable_channel_switch().
+	 */
+	int (*tdls_enable_channel_switch)(
+		void *priv, const u8 *addr, u8 oper_class,
+		const struct hostapd_freq_params *params);
+
+	/**
+	 * Disable channel switching with TDLS peer
+	 * @priv: Private driver interface data
+	 * @addr: MAC address of the TDLS peer
+	 * Returns: 0 on success, -1 on failure
+	 *
+	 * This function indicates to the driver that it should stop switching
+	 * with a given TDLS peer.
+	 */
+	int (*tdls_disable_channel_switch)(void *priv, const u8 *addr);
+
+	/**
 	 * start_dfs_cac - Listen for radar interference on the channel
 	 * @priv: Private driver interface data
 	 * @freq: Channel parameters

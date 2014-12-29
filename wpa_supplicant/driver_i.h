@@ -607,6 +607,27 @@ static inline int wpa_drv_del_ts(struct wpa_supplicant *wpa_s, u8 tid,
 	return wpa_s->driver->del_tx_ts(wpa_s->drv_priv, tid, address);
 }
 
+static inline int wpa_drv_tdls_enable_channel_switch(
+	struct wpa_supplicant *wpa_s, const u8 *addr, u8 oper_class,
+	const struct hostapd_freq_params *freq_params)
+{
+	if (!wpa_s->driver->tdls_enable_channel_switch)
+		return -1;
+	return wpa_s->driver->tdls_enable_channel_switch(wpa_s->drv_priv, addr,
+							 oper_class,
+							 freq_params);
+}
+
+static inline int
+wpa_drv_tdls_disable_channel_switch(struct wpa_supplicant *wpa_s,
+				    const u8 *addr)
+{
+	if (!wpa_s->driver->tdls_disable_channel_switch)
+		return -1;
+	return wpa_s->driver->tdls_disable_channel_switch(wpa_s->drv_priv,
+							  addr);
+}
+
 static inline int wpa_drv_wnm_oper(struct wpa_supplicant *wpa_s,
 				   enum wnm_oper oper, const u8 *peer,
 				   u8 *buf, u16 *buf_len)

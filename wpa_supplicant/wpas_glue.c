@@ -697,6 +697,25 @@ static int wpa_supplicant_tdls_peer_addset(
 	return wpa_drv_sta_add(wpa_s, &params);
 }
 
+
+static int wpa_supplicant_tdls_enable_channel_switch(
+	void *ctx, const u8 *addr, u8 oper_class,
+	const struct hostapd_freq_params *params)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+
+	return wpa_drv_tdls_enable_channel_switch(wpa_s, addr, oper_class,
+						  params);
+}
+
+
+static int wpa_supplicant_tdls_disable_channel_switch(void *ctx, const u8 *addr)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+
+	return wpa_drv_tdls_disable_channel_switch(wpa_s, addr);
+}
+
 #endif /* CONFIG_TDLS */
 
 #endif /* CONFIG_NO_WPA */
@@ -1009,6 +1028,10 @@ int wpa_supplicant_init_wpa(struct wpa_supplicant *wpa_s)
 	ctx->send_tdls_mgmt = wpa_supplicant_send_tdls_mgmt;
 	ctx->tdls_oper = wpa_supplicant_tdls_oper;
 	ctx->tdls_peer_addset = wpa_supplicant_tdls_peer_addset;
+	ctx->tdls_enable_channel_switch =
+		wpa_supplicant_tdls_enable_channel_switch;
+	ctx->tdls_disable_channel_switch =
+		wpa_supplicant_tdls_disable_channel_switch;
 #endif /* CONFIG_TDLS */
 	ctx->set_rekey_offload = wpa_supplicant_set_rekey_offload;
 	ctx->key_mgmt_set_pmk = wpa_supplicant_key_mgmt_set_pmk;

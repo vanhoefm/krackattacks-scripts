@@ -315,6 +315,26 @@ wpa_sm_tdls_peer_addset(struct wpa_sm *sm, const u8 *addr, int add,
 						 supp_oper_classes_len);
 	return -1;
 }
+
+static inline int
+wpa_sm_tdls_enable_channel_switch(struct wpa_sm *sm, const u8 *addr,
+				  u8 oper_class,
+				  const struct hostapd_freq_params *freq_params)
+{
+	if (sm->ctx->tdls_enable_channel_switch)
+		return sm->ctx->tdls_enable_channel_switch(sm->ctx->ctx, addr,
+							   oper_class,
+							   freq_params);
+	return -1;
+}
+
+static inline int
+wpa_sm_tdls_disable_channel_switch(struct wpa_sm *sm, const u8 *addr)
+{
+	if (sm->ctx->tdls_disable_channel_switch)
+		return sm->ctx->tdls_disable_channel_switch(sm->ctx->ctx, addr);
+	return -1;
+}
 #endif /* CONFIG_TDLS */
 
 static inline int wpa_sm_key_mgmt_set_pmk(struct wpa_sm *sm,

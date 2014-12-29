@@ -381,6 +381,27 @@ struct wpa_driver_scan_params {
 	 */
 	unsigned int low_priority:1;
 
+	/**
+	 * mac_addr_rand - Requests driver to randomize MAC address
+	 */
+	unsigned int mac_addr_rand:1;
+
+	/**
+	 * mac_addr - MAC address used with randomization. The address cannot be
+	 * a multicast one, i.e., bit 0 of byte 0 should not be set.
+	 */
+	const u8 *mac_addr;
+
+	/**
+	 * mac_addr_mask - MAC address mask used with randomization.
+	 *
+	 * Bits that are 0 in the mask should be randomized. Bits that are 1 in
+	 * the mask should be taken as is from mac_addr. The mask should not
+	 * allow the generation of a multicast address, i.e., bit 0 of byte 0
+	 * must be set.
+	 */
+	const u8 *mac_addr_mask;
+
 	/*
 	 * NOTE: Whenever adding new parameters here, please make sure
 	 * wpa_scan_clone_params() and wpa_scan_free_params() get updated with
@@ -1169,6 +1190,9 @@ struct wpa_driver_capa {
 	unsigned int smps_modes;
 
 	unsigned int wmm_ac_supported:1;
+
+	unsigned int mac_addr_rand_scan_supported:1;
+	unsigned int mac_addr_rand_sched_scan_supported:1;
 
 	/** Maximum number of supported active probe SSIDs */
 	int max_scan_ssids;

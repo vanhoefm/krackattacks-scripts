@@ -1235,6 +1235,7 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 		        wpa_hexdump_key(MSG_MSGDUMP, "PSK (from passphrase)",
 					psk, PMK_LEN);
 			wpa_sm_set_pmk(wpa_s->wpa, psk, PMK_LEN, NULL);
+			os_memset(psk, 0, sizeof(psk));
 		}
 #endif /* CONFIG_NO_PBKDF2 */
 #ifdef CONFIG_EXT_PASSWORD
@@ -1271,6 +1272,7 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 						"external passphrase)",
 						psk, PMK_LEN);
 				wpa_sm_set_pmk(wpa_s->wpa, psk, PMK_LEN, NULL);
+				os_memset(psk, 0, sizeof(psk));
 			} else
 #endif /* CONFIG_NO_PBKDF2 */
 			if (wpabuf_len(pw) == 2 * PMK_LEN) {
@@ -1282,6 +1284,7 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 					return -1;
 				}
 				wpa_sm_set_pmk(wpa_s->wpa, psk, PMK_LEN, NULL);
+				os_memset(psk, 0, sizeof(psk));
 			} else {
 				wpa_msg(wpa_s, MSG_INFO, "EXT PW: No suitable "
 					"PSK available");

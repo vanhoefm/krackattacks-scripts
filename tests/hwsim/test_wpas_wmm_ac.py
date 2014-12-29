@@ -263,3 +263,18 @@ def test_tspec_ap_roam_open(dev, apdev):
     dev[0].scan_for_bss(apdev[0]['bssid'], freq=2462)
     dev[0].roam(apdev[0]['bssid'])
     hwsim_utils.test_connectivity(dev[0], hapd0)
+
+def test_tspec_reassoc(dev, apdev):
+    """Reassociation to same BSS while having tspecs"""
+    hapd0 = add_wmm_ap(apdev[0], ["VO", "VI"])
+    dev[0].connect("wmm_ac", key_mgmt="NONE")
+    hwsim_utils.test_connectivity(dev[0], hapd0)
+    dev[0].add_ts(5, 6)
+    last_tspecs = dev[0].tspecs()
+
+    dev[0].request("REASSOCIATE")
+    dev[0].wait_connected()
+
+    hwsim_utils.test_connectivity(dev[0], hapd0)
+    if dev[0].tspecs() != last_tspecs:
+        raise Exception("TSPECs weren't saved on reassociation")

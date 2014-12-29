@@ -92,6 +92,7 @@ struct wpa_sm {
 #ifdef CONFIG_TDLS
 	struct wpa_tdls_peer *tdls;
 	int tdls_prohibited;
+	int tdls_chan_switch_prohibited;
 	int tdls_disabled;
 
 	/* The driver supports TDLS */

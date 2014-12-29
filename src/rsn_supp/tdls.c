@@ -2833,38 +2833,60 @@ void wpa_tdls_disassoc(struct wpa_sm *sm)
 }
 
 
-static int wpa_tdls_prohibited(const u8 *ies, size_t len)
+static int wpa_tdls_prohibited(struct wpa_eapol_ie_parse *elems)
 {
-	struct wpa_eapol_ie_parse elems;
+	/* bit 38 - TDLS Prohibited */
+	return !!(elems->ext_capab[2 + 4] & 0x40);
+}
 
-	if (ies == NULL)
-		return 0;
 
-	if (wpa_supplicant_parse_ies(ies, len, &elems) < 0)
-		return 0;
-
-	if (elems.ext_capab == NULL || elems.ext_capab_len < 2 + 5)
-		return 0;
-
-	 /* bit 38 - TDLS Prohibited */
-	return !!(elems.ext_capab[2 + 4] & 0x40);
+static int wpa_tdls_chan_switch_prohibited(struct wpa_eapol_ie_parse *elems)
+{
+	/* bit 39 - TDLS Channel Switch Prohibited */
+	return !!(elems->ext_capab[2 + 4] & 0x80);
 }
 
 
 void wpa_tdls_ap_ies(struct wpa_sm *sm, const u8 *ies, size_t len)
 {
-	sm->tdls_prohibited = wpa_tdls_prohibited(ies, len);
+	struct wpa_eapol_ie_parse elems;
+
+	sm->tdls_prohibited = 0;
+	sm->tdls_chan_switch_prohibited = 0;
+
+	if (ies == NULL || wpa_supplicant_parse_ies(ies, len, &elems) < 0 ||
+	    elems.ext_capab == NULL || elems.ext_capab_len < 2 + 5)
+		return;
+
+	sm->tdls_prohibited = wpa_tdls_prohibited(&elems);
 	wpa_printf(MSG_DEBUG, "TDLS: TDLS is %s in the target BSS",
 		   sm->tdls_prohibited ? "prohibited" : "allowed");
+	sm->tdls_chan_switch_prohibited =
+		wpa_tdls_chan_switch_prohibited(&elems);
+	wpa_printf(MSG_DEBUG, "TDLS: TDLS channel switch %s in the target BSS",
+		   sm->tdls_chan_switch_prohibited ? "prohibited" : "allowed");
 }
 
 
 void wpa_tdls_assoc_resp_ies(struct wpa_sm *sm, const u8 *ies, size_t len)
 {
-	if (!sm->tdls_prohibited && wpa_tdls_prohibited(ies, len)) {
+	struct wpa_eapol_ie_parse elems;
+
+	if (ies == NULL || wpa_supplicant_parse_ies(ies, len, &elems) < 0 ||
+	    elems.ext_capab == NULL || elems.ext_capab_len < 2 + 5)
+		return;
+
+	if (!sm->tdls_prohibited && wpa_tdls_prohibited(&elems)) {
 		wpa_printf(MSG_DEBUG, "TDLS: TDLS prohibited based on "
 			   "(Re)Association Response IEs");
 		sm->tdls_prohibited = 1;
+	}
+
+	if (!sm->tdls_chan_switch_prohibited &&
+	    wpa_tdls_chan_switch_prohibited(&elems)) {
+		wpa_printf(MSG_DEBUG,
+			   "TDLS: TDLS channel switch prohibited based on (Re)Association Response IEs");
+		sm->tdls_chan_switch_prohibited = 1;
 	}
 }
 

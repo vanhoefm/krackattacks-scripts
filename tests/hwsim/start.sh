@@ -16,6 +16,7 @@ if [ -z "$LOGDIR" ] ; then
 else
     if [ -e $LOGDIR/alt-wpa_supplicant/wpa_supplicant/wpa_supplicant ]; then
 	WPAS=$LOGDIR/alt-wpa_supplicant/wpa_supplicant/wpa_supplicant
+	WPACLI=$LOGDIR/alt-wpa_supplicant/wpa_supplicant/wpa_cli
 	# extra code coverage
 	$WPAS > /dev/null 2>&1
 	$WPAS -efoo -Ifoo -mfoo -ofoo -Ofoo -pfoo -Pfoo -h > /dev/null 2>&1
@@ -25,6 +26,7 @@ else
     fi
     if [ -e $LOGDIR/alt-hostapd/hostapd/hostapd ]; then
 	HAPD=$LOGDIR/alt-hostapd/hostapd/hostapd
+	HAPDCLI=$LOGDIR/alt-hostapd/hostapd/hostapd_cli
 	# extra code coverage
 	$HAPD > /dev/null 2>&1
 	$HAPD -v > /dev/null 2>&1

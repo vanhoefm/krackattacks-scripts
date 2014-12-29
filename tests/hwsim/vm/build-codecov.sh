@@ -39,11 +39,11 @@ make -j8 > /dev/null
 
 cd $TMPDIR/alt-hostapd/hostapd
 echo "Building hostapd"
-make -j8 hostapd > /dev/null
+make -j8 hostapd hostapd_cli > /dev/null
 
 cd $TMPDIR/alt-hostapd-as/hostapd
 echo "Building hostapd (AS)"
-make -j8 hostapd > /dev/null
+make -j8 hostapd hostapd_cli > /dev/null
 
 cd $TMPDIR/alt-hlr_auc_gw/hostapd
 echo "Building hlr_auc_gw"

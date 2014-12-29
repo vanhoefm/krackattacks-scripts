@@ -2742,7 +2742,8 @@ int wpa_tdls_init(struct wpa_sm *sm)
 	 * are assumed to perform everything internally
 	 */
 	if (wpa_sm_tdls_get_capa(sm, &sm->tdls_supported,
-				 &sm->tdls_external_setup) < 0) {
+				 &sm->tdls_external_setup,
+				 &sm->tdls_chan_switch) < 0) {
 		sm->tdls_supported = 1;
 		sm->tdls_external_setup = 0;
 	}
@@ -2751,6 +2752,8 @@ int wpa_tdls_init(struct wpa_sm *sm)
 		   "driver", sm->tdls_supported ? "" : " not");
 	wpa_printf(MSG_DEBUG, "TDLS: Driver uses %s link setup",
 		   sm->tdls_external_setup ? "external" : "internal");
+	wpa_printf(MSG_DEBUG, "TDLS: Driver %s TDLS channel switching",
+		   sm->tdls_chan_switch ? "supports" : "does not support");
 
 	return 0;
 }

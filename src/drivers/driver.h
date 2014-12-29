@@ -1160,6 +1160,8 @@ struct wpa_driver_capa {
 #define WPA_DRIVER_FLAGS_ACS_OFFLOAD		0x0000000200000000ULL
 /** Driver supports key management offload */
 #define WPA_DRIVER_FLAGS_KEY_MGMT_OFFLOAD	0x0000000400000000ULL
+/** Driver supports TDLS channel switching */
+#define WPA_DRIVER_FLAGS_TDLS_CHANNEL_SWITCH	0x0000000800000000ULL
 	u64 flags;
 
 #define WPA_DRIVER_SMPS_MODE_STATIC			0x00000001

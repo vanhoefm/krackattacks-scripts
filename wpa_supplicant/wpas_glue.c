@@ -609,12 +609,14 @@ static int wpa_supplicant_mark_authenticated(void *ctx, const u8 *target_ap)
 #ifdef CONFIG_TDLS
 
 static int wpa_supplicant_tdls_get_capa(void *ctx, int *tdls_supported,
-					int *tdls_ext_setup)
+					int *tdls_ext_setup,
+					int *tdls_chan_switch)
 {
 	struct wpa_supplicant *wpa_s = ctx;
 
 	*tdls_supported = 0;
 	*tdls_ext_setup = 0;
+	*tdls_chan_switch = 0;
 
 	if (!wpa_s->drv_capa_known)
 		return -1;
@@ -624,6 +626,9 @@ static int wpa_supplicant_tdls_get_capa(void *ctx, int *tdls_supported,
 
 	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_TDLS_EXTERNAL_SETUP)
 		*tdls_ext_setup = 1;
+
+	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_TDLS_CHANNEL_SWITCH)
+		*tdls_chan_switch = 1;
 
 	return 0;
 }

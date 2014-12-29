@@ -358,6 +358,11 @@ static void wiphy_info_feature_flags(struct wiphy_info_data *info,
 	if (flags & NL80211_FEATURE_AP_MODE_CHAN_WIDTH_CHANGE)
 		capa->flags |= WPA_DRIVER_FLAGS_HT_2040_COEX;
 
+	if (flags & NL80211_FEATURE_TDLS_CHANNEL_SWITCH) {
+		wpa_printf(MSG_DEBUG, "nl80211: TDLS channel switch");
+		capa->flags |= WPA_DRIVER_FLAGS_TDLS_CHANNEL_SWITCH;
+	}
+
 	if (flags & NL80211_FEATURE_LOW_PRIORITY_SCAN)
 		info->have_low_prio_scan = 1;
 

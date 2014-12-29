@@ -102,6 +102,9 @@ struct wpa_sm {
 	 * to it via tdls_mgmt.
 	 */
 	int tdls_external_setup;
+
+	/* The driver supports TDLS channel switching */
+	int tdls_chan_switch;
 #endif /* CONFIG_TDLS */
 
 #ifdef CONFIG_IEEE80211R
@@ -257,11 +260,12 @@ static inline void wpa_sm_set_rekey_offload(struct wpa_sm *sm)
 #ifdef CONFIG_TDLS
 static inline int wpa_sm_tdls_get_capa(struct wpa_sm *sm,
 				       int *tdls_supported,
-				       int *tdls_ext_setup)
+				       int *tdls_ext_setup,
+				       int *tdls_chan_switch)
 {
 	if (sm->ctx->tdls_get_capa)
 		return sm->ctx->tdls_get_capa(sm->ctx->ctx, tdls_supported,
-					      tdls_ext_setup);
+					      tdls_ext_setup, tdls_chan_switch);
 	return -1;
 }
 

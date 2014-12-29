@@ -1830,11 +1830,11 @@ static int nl80211_mgmt_subscribe_non_ap(struct i802_bss *bss)
 
 	/* WMM-AC ADDTS Response */
 	if (nl80211_register_action_frame(bss, (u8 *) "\x11\x01", 2) < 0)
-		return -1;
+		ret = -1;
 
 	/* WMM-AC DELTS */
 	if (nl80211_register_action_frame(bss, (u8 *) "\x11\x02", 2) < 0)
-		return -1;
+		ret = -1;
 
 	/* Radio Measurement - Neighbor Report Response */
 	if (nl80211_register_action_frame(bss, (u8 *) "\x05\x05", 2) < 0)

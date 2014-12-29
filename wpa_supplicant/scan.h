@@ -49,4 +49,10 @@ void wpa_scan_free_params(struct wpa_driver_scan_params *params);
 int wpas_start_pno(struct wpa_supplicant *wpa_s);
 int wpas_stop_pno(struct wpa_supplicant *wpa_s);
 
+void wpas_mac_addr_rand_scan_clear(struct wpa_supplicant *wpa_s,
+				   unsigned int type);
+int wpas_mac_addr_rand_scan_set(struct wpa_supplicant *wpa_s,
+				unsigned int type, const u8 *addr,
+				const u8 *mask);
+
 #endif /* SCAN_H */

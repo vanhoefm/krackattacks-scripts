@@ -488,6 +488,8 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 	os_free(wpa_s->manual_sched_scan_freqs);
 	wpa_s->manual_sched_scan_freqs = NULL;
 
+	wpas_mac_addr_rand_scan_clear(wpa_s, MAC_ADDR_RAND_ALL);
+
 	gas_query_deinit(wpa_s->gas);
 	wpa_s->gas = NULL;
 
@@ -3869,6 +3871,13 @@ static int wpa_supplicant_init_iface(struct wpa_supplicant *wpa_s,
 		wpa_s->num_multichan_concurrent =
 			capa.num_multichan_concurrent;
 		wpa_s->wmm_ac_supported = capa.wmm_ac_supported;
+
+		if (capa.mac_addr_rand_scan_supported)
+			wpa_s->mac_addr_rand_supported |= MAC_ADDR_RAND_SCAN;
+		if (wpa_s->sched_scan_supported &&
+		    capa.mac_addr_rand_sched_scan_supported)
+			wpa_s->mac_addr_rand_supported |=
+				(MAC_ADDR_RAND_SCHED_SCAN | MAC_ADDR_RAND_PNO);
 	}
 	if (wpa_s->max_remain_on_chan == 0)
 		wpa_s->max_remain_on_chan = 1000;

@@ -938,6 +938,14 @@ ssid_list_set:
 	}
 #endif /* CONFIG_P2P */
 
+	if (wpa_s->mac_addr_rand_enable & MAC_ADDR_RAND_SCAN) {
+		params.mac_addr_rand = 1;
+		if (wpa_s->mac_addr_scan) {
+			params.mac_addr = wpa_s->mac_addr_scan;
+			params.mac_addr_mask = wpa_s->mac_addr_scan + ETH_ALEN;
+		}
+	}
+
 	scan_params = &params;
 
 scan:
@@ -1280,6 +1288,15 @@ scan:
 	}
 
 	wpa_setband_scan_freqs(wpa_s, scan_params);
+
+	if (wpa_s->mac_addr_rand_enable & MAC_ADDR_RAND_SCHED_SCAN) {
+		params.mac_addr_rand = 1;
+		if (wpa_s->mac_addr_sched_scan) {
+			params.mac_addr = wpa_s->mac_addr_sched_scan;
+			params.mac_addr_mask = wpa_s->mac_addr_sched_scan +
+				ETH_ALEN;
+		}
+	}
 
 	ret = wpa_supplicant_start_sched_scan(wpa_s, scan_params,
 					      wpa_s->sched_scan_interval);
@@ -1926,6 +1943,23 @@ wpa_scan_clone_params(const struct wpa_driver_scan_params *src)
 	params->only_new_results = src->only_new_results;
 	params->low_priority = src->low_priority;
 
+	if (src->mac_addr_rand) {
+		params->mac_addr_rand = src->mac_addr_rand;
+
+		if (src->mac_addr && src->mac_addr_mask) {
+			u8 *mac_addr;
+
+			mac_addr = os_malloc(2 * ETH_ALEN);
+			if (!mac_addr)
+				goto failed;
+
+			os_memcpy(mac_addr, src->mac_addr, ETH_ALEN);
+			os_memcpy(mac_addr + ETH_ALEN, src->mac_addr_mask,
+				  ETH_ALEN);
+			params->mac_addr = mac_addr;
+			params->mac_addr_mask = mac_addr + ETH_ALEN;
+		}
+	}
 	return params;
 
 failed:
@@ -1946,6 +1980,13 @@ void wpa_scan_free_params(struct wpa_driver_scan_params *params)
 	os_free((u8 *) params->extra_ies);
 	os_free(params->freqs);
 	os_free(params->filter_ssids);
+
+	/*
+	 * Note: params->mac_addr_mask points to same memory allocation and
+	 * must not be freed separately.
+	 */
+	os_free((u8 *) params->mac_addr);
+
 	os_free(params);
 }
 
@@ -2050,6 +2091,14 @@ int wpas_start_pno(struct wpa_supplicant *wpa_s)
 		params.freqs = wpa_s->manual_sched_scan_freqs;
 	}
 
+	if (wpa_s->mac_addr_rand_enable & MAC_ADDR_RAND_PNO) {
+		params.mac_addr_rand = 1;
+		if (wpa_s->mac_addr_pno) {
+			params.mac_addr = wpa_s->mac_addr_pno;
+			params.mac_addr_mask = wpa_s->mac_addr_pno + ETH_ALEN;
+		}
+	}
+
 	ret = wpa_supplicant_start_sched_scan(wpa_s, &params, interval);
 	os_free(params.filter_ssids);
 	if (ret == 0)
@@ -2076,4 +2125,62 @@ int wpas_stop_pno(struct wpa_supplicant *wpa_s)
 		wpa_supplicant_req_scan(wpa_s, 0, 0);
 
 	return ret;
+}
+
+
+void wpas_mac_addr_rand_scan_clear(struct wpa_supplicant *wpa_s,
+				    unsigned int type)
+{
+	type &= MAC_ADDR_RAND_ALL;
+	wpa_s->mac_addr_rand_enable &= ~type;
+
+	if (type & MAC_ADDR_RAND_SCAN) {
+		os_free(wpa_s->mac_addr_scan);
+		wpa_s->mac_addr_scan = NULL;
+	}
+
+	if (type & MAC_ADDR_RAND_SCHED_SCAN) {
+		os_free(wpa_s->mac_addr_sched_scan);
+		wpa_s->mac_addr_sched_scan = NULL;
+	}
+
+	if (type & MAC_ADDR_RAND_PNO) {
+		os_free(wpa_s->mac_addr_pno);
+		wpa_s->mac_addr_pno = NULL;
+	}
+}
+
+
+int wpas_mac_addr_rand_scan_set(struct wpa_supplicant *wpa_s,
+				unsigned int type, const u8 *addr,
+				const u8 *mask)
+{
+	u8 *tmp = NULL;
+
+	wpas_mac_addr_rand_scan_clear(wpa_s, type);
+
+	if (addr) {
+		tmp = os_malloc(2 * ETH_ALEN);
+		if (!tmp)
+			return -1;
+		os_memcpy(tmp, addr, ETH_ALEN);
+		os_memcpy(tmp + ETH_ALEN, mask, ETH_ALEN);
+	}
+
+	if (type == MAC_ADDR_RAND_SCAN) {
+		wpa_s->mac_addr_scan = tmp;
+	} else if (type == MAC_ADDR_RAND_SCHED_SCAN) {
+		wpa_s->mac_addr_sched_scan = tmp;
+	} else if (type == MAC_ADDR_RAND_PNO) {
+		wpa_s->mac_addr_pno = tmp;
+	} else {
+		wpa_printf(MSG_INFO,
+			   "scan: Invalid MAC randomization type=0x%x",
+			   type);
+		os_free(tmp);
+		return -1;
+	}
+
+	wpa_s->mac_addr_rand_enable |= type;
+	return 0;
 }

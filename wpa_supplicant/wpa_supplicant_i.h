@@ -897,6 +897,20 @@ struct wpa_supplicant {
 	unsigned int wmm_ac_supported:1;
 	unsigned int ext_work_in_progress:1;
 
+#define MAC_ADDR_RAND_SCAN       BIT(0)
+#define MAC_ADDR_RAND_SCHED_SCAN BIT(1)
+#define MAC_ADDR_RAND_PNO        BIT(2)
+#define MAC_ADDR_RAND_ALL        (MAC_ADDR_RAND_SCAN | \
+				  MAC_ADDR_RAND_SCHED_SCAN | \
+				  MAC_ADDR_RAND_PNO)
+	unsigned int mac_addr_rand_supported;
+	unsigned int mac_addr_rand_enable;
+
+	/* MAC Address followed by mask (2 * ETH_ALEN) */
+	u8 *mac_addr_scan;
+	u8 *mac_addr_sched_scan;
+	u8 *mac_addr_pno;
+
 #ifdef CONFIG_WNM
 	u8 wnm_dialog_token;
 	u8 wnm_reply;

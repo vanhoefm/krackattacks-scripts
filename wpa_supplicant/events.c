@@ -2128,8 +2128,6 @@ static void wpa_supplicant_event_disassoc_finish(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
-	wmm_ac_notify_disassoc(wpa_s);
-
 	if (could_be_psk_mismatch(wpa_s, reason_code, locally_generated)) {
 		wpa_msg(wpa_s, MSG_INFO, "WPA: 4-Way Handshake failed - "
 			"pre-shared key may be incorrect");

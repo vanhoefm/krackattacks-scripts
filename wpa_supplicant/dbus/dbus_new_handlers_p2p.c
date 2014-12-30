@@ -2361,6 +2361,7 @@ DBusMessage * wpas_dbus_handler_p2p_add_service(DBusMessage *message,
 			version = entry.uint32_value;
 		} else if (!os_strcmp(entry.key, "service") &&
 			     (entry.type == DBUS_TYPE_STRING)) {
+			os_free(service);
 			service = os_strdup(entry.str_value);
 		} else if (!os_strcmp(entry.key, "query")) {
 			if ((entry.type != DBUS_TYPE_ARRAY) ||
@@ -2386,8 +2387,6 @@ DBusMessage * wpas_dbus_handler_p2p_add_service(DBusMessage *message,
 		if (wpas_p2p_service_add_upnp(wpa_s, version, service) != 0)
 			goto error;
 
-		os_free(service);
-		service = NULL;
 	} else if (bonjour == 1) {
 		if (query == NULL || resp == NULL)
 			goto error;
@@ -2399,6 +2398,7 @@ DBusMessage * wpas_dbus_handler_p2p_add_service(DBusMessage *message,
 	} else
 		goto error;
 
+	os_free(service);
 	return reply;
 error_clear:
 	wpa_dbus_dict_entry_clear(&entry);
@@ -2452,9 +2452,10 @@ DBusMessage * wpas_dbus_handler_p2p_delete_service(
 			    entry.type == DBUS_TYPE_INT32)
 				version = entry.uint32_value;
 			else if (!os_strcmp(entry.key, "service") &&
-				 entry.type == DBUS_TYPE_STRING)
+				 entry.type == DBUS_TYPE_STRING) {
+				os_free(service);
 				service = os_strdup(entry.str_value);
-			else
+			} else
 				goto error_clear;
 
 			wpa_dbus_dict_entry_clear(&entry);
@@ -2464,7 +2465,6 @@ DBusMessage * wpas_dbus_handler_p2p_delete_service(
 			goto error;
 
 		ret = wpas_p2p_service_del_upnp(wpa_s, version, service);
-		os_free(service);
 		if (ret != 0)
 			goto error;
 	} else if (bonjour == 1) {
@@ -2476,6 +2476,7 @@ DBusMessage * wpas_dbus_handler_p2p_delete_service(
 				if ((entry.type != DBUS_TYPE_ARRAY) ||
 				    (entry.array_type != DBUS_TYPE_BYTE))
 					goto error_clear;
+				wpabuf_free(query);
 				query = wpabuf_alloc_copy(
 					entry.bytearray_value,
 					entry.array_len);
@@ -2491,14 +2492,17 @@ DBusMessage * wpas_dbus_handler_p2p_delete_service(
 		ret = wpas_p2p_service_del_bonjour(wpa_s, query);
 		if (ret != 0)
 			goto error;
-		wpabuf_free(query);
 	} else
 		goto error;
 
+	wpabuf_free(query);
+	os_free(service);
 	return reply;
 error_clear:
 	wpa_dbus_dict_entry_clear(&entry);
 error:
+	wpabuf_free(query);
+	os_free(service);
 	return wpas_dbus_error_invalid_args(message, NULL);
 }
 

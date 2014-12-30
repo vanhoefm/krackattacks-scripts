@@ -979,7 +979,7 @@ i.e., returned by fi.w1.wpa_supplicant1.Interface.AddNetwork.
       </li>
 
       <li>
-	<h3>Properties - a{sv} - (read)</h3>
+	<h3>Properties - a{sv} - (read/write)</h3>
 	<p>Properties of the configured network. Dictionary contains entries from "network" block of %wpa_supplicant configuration file. All values are string type, e.g., frequency is "2437", not 2437.
       </li>
     </ul>

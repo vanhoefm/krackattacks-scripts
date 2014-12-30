@@ -496,6 +496,12 @@ void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 	os_free(conf->model_description);
 	os_free(conf->model_url);
 	os_free(conf->upc);
+	{
+		unsigned int i;
+
+		for (i = 0; i < MAX_WPS_VENDOR_EXTENSIONS; i++)
+			wpabuf_free(conf->wps_vendor_ext[i]);
+	}
 	wpabuf_free(conf->wps_nfc_dh_pubkey);
 	wpabuf_free(conf->wps_nfc_dh_privkey);
 	wpabuf_free(conf->wps_nfc_dev_pw);

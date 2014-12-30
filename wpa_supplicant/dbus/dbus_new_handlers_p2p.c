@@ -2223,6 +2223,7 @@ dbus_bool_t wpas_dbus_setter_p2p_group_vendor_ext(DBusMessageIter *iter,
 				goto error;
 
 			for (i = 0; i < MAX_WPS_VENDOR_EXTENSIONS; i++) {
+				wpabuf_free(hapd->conf->wps_vendor_ext[i]);
 				if (i < entry.array_len) {
 					hapd->conf->wps_vendor_ext[i] =
 						entry.binarray_value[i];

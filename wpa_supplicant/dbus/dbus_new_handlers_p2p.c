@@ -2194,7 +2194,7 @@ dbus_bool_t wpas_dbus_setter_p2p_group_vendor_ext(DBusMessageIter *iter,
 						  void *user_data)
 {
 	struct wpa_supplicant *wpa_s = user_data;
-	DBusMessageIter variant_iter, iter_dict;
+	DBusMessageIter variant_iter, iter_dict, array_iter, sub;
 	struct wpa_dbus_dict_entry entry = { .type = DBUS_TYPE_STRING };
 	unsigned int i;
 	struct hostapd_data *hapd = NULL;
@@ -2206,6 +2206,82 @@ dbus_bool_t wpas_dbus_setter_p2p_group_vendor_ext(DBusMessageIter *iter,
 		return FALSE;
 
 	dbus_message_iter_recurse(iter, &variant_iter);
+	if (dbus_message_iter_get_arg_type(&variant_iter) != DBUS_TYPE_ARRAY)
+		return FALSE;
+
+	/*
+	 * This is supposed to be array of bytearrays (aay), but the earlier
+	 * implementation used a dict with "WPSVendorExtensions" as the key in
+	 * this setter function which does not match the format used by the
+	 * getter function. For backwards compatibility, allow both formats to
+	 * be used in the setter.
+	 */
+	if (dbus_message_iter_get_element_type(&variant_iter) ==
+	    DBUS_TYPE_ARRAY) {
+		/* This is the proper format matching the getter */
+		struct wpabuf *vals[MAX_WPS_VENDOR_EXTENSIONS];
+
+		dbus_message_iter_recurse(&variant_iter, &array_iter);
+
+		if (dbus_message_iter_get_arg_type(&array_iter) !=
+		    DBUS_TYPE_ARRAY ||
+		    dbus_message_iter_get_element_type(&array_iter) !=
+		    DBUS_TYPE_BYTE) {
+			wpa_printf(MSG_DEBUG,
+				   "dbus: Not an array of array of bytes");
+			return FALSE;
+		}
+
+		i = 0;
+		os_memset(vals, 0, sizeof(vals));
+
+		while (dbus_message_iter_get_arg_type(&array_iter) ==
+		       DBUS_TYPE_ARRAY) {
+			char *val;
+			int len;
+
+			if (i == MAX_WPS_VENDOR_EXTENSIONS) {
+				wpa_printf(MSG_DEBUG,
+					   "dbus: Too many WPSVendorExtensions values");
+				i = MAX_WPS_VENDOR_EXTENSIONS + 1;
+				break;
+			}
+
+			dbus_message_iter_recurse(&array_iter, &sub);
+			dbus_message_iter_get_fixed_array(&sub, &val, &len);
+			wpa_hexdump(MSG_DEBUG, "dbus: WPSVendorExtentions[]",
+				    val, len);
+			vals[i] = wpabuf_alloc_copy(val, len);
+			if (vals[i] == NULL) {
+				i = MAX_WPS_VENDOR_EXTENSIONS + 1;
+				break;
+			}
+			i++;
+			dbus_message_iter_next(&array_iter);
+		}
+
+		if (i > MAX_WPS_VENDOR_EXTENSIONS) {
+			for (i = 0; i < MAX_WPS_VENDOR_EXTENSIONS; i++)
+				wpabuf_free(vals[i]);
+			return FALSE;
+		}
+
+		for (i = 0; i < MAX_WPS_VENDOR_EXTENSIONS; i++) {
+			wpabuf_free(hapd->conf->wps_vendor_ext[i]);
+			hapd->conf->wps_vendor_ext[i] = vals[i];
+		}
+
+		hostapd_update_wps(hapd);
+
+		return TRUE;
+	}
+
+	if (dbus_message_iter_get_element_type(&variant_iter) !=
+	    DBUS_TYPE_DICT_ENTRY)
+		return FALSE;
+
+	wpa_printf(MSG_DEBUG,
+		   "dbus: Try to use backwards compatibility version of WPSVendorExtensions setter");
 	if (!wpa_dbus_dict_open_read(&variant_iter, &iter_dict, error))
 		return FALSE;
 

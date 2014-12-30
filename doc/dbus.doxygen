@@ -511,6 +511,30 @@ fi.w1.wpa_supplicant1.CreateInterface.
 	  <dd>Maximum age in seconds for BSS entries to keep in cache (0 = remove all entries).</dd>
 	</dl>
       </li>
+
+      <li>
+	<h3>SubscribeProbeReq ( ) --> nothing</h3>
+	<p>Subscribe to receive Probe Request events. This is needed in addition to registering a signal handler for the ProbeRequest signal to avoid flooding D-Bus with all Probe Request indications when no application is interested in them.</p>
+	<h4>Possible errors</h4>
+	<dl>
+	  <dt>fi.w1.wpa_supplicant1.SubscriptionInUse</dt>
+	  <dd>Another application is already subscribed.</dd>
+	  <dt>fi.w1.wpa_supplicant1.NoMemory</dt>
+	  <dd>Needed memory was not possible to get allocated.</dd>
+	</dl>
+      </li>
+
+      <li>
+	<h3>UnsubscribeProbeReq ( ) --> nothing</h3>
+	<p>Unsubscribe from receiving Probe Request events.</p>
+	<h4>Possible errors</h4>
+	<dl>
+	  <dt>fi.w1.wpa_supplicant1.NoSubscription</dt>
+	  <dd>No subscription in place.</dd>
+	  <dt>fi.w1.wpa_supplicant1.SubscriptionNotYou</dt>
+	  <dd>Subscription in place, but for another process.</dd>
+	</dl>
+      </li>
     </ul>
 
 \subsection dbus_interface_properties Properties
@@ -776,6 +800,16 @@ fi.w1.wpa_supplicant1.CreateInterface.
 	  <dd>Requested information, e.g., "PASSWORD".</dd>
 	  <dt>txt : field</dt>
 	  <dd>Human readable information about the requested information.</dd>
+	</dl>
+      </li>
+
+      <li>
+	<h3>ProbeRequest ( a{sv} : args )</h3>
+	<p>Information about a received Probe Request frame. This signal is delivered only to a single application that has subscribed to received the events with SubscribeProbeReq().</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>a{sv} : args</dt>
+	  <dd>A dictionary with pairs of field names and their values. Possible dictionary keys are: "addr", "dst", "bssid", "ies", "signal".</dd>
 	</dl>
       </li>
     </ul>

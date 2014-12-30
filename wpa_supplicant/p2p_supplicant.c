@@ -748,6 +748,7 @@ grp_owner:
 					   "P2P: Failed to allocate a new interface for the group");
 				return P2PS_SETUP_NONE;
 			}
+			wpa_s->global->pending_group_iface_for_p2ps = 1;
 			p2p_set_intended_addr(wpa_s->global->p2p,
 					      wpa_s->pending_interface_addr);
 		}
@@ -1943,6 +1944,7 @@ static void wpas_p2p_remove_pending_group_interface(
 			  wpa_s->pending_interface_name);
 	os_memset(wpa_s->pending_interface_addr, 0, ETH_ALEN);
 	wpa_s->pending_interface_name[0] = '\0';
+	wpa_s->global->pending_group_iface_for_p2ps = 0;
 }
 
 
@@ -1988,6 +1990,7 @@ wpas_p2p_init_group_interface(struct wpa_supplicant *wpa_s, int go)
 	group_wpa_s->p2p_group_interface = go ? P2P_GROUP_INTERFACE_GO :
 		P2P_GROUP_INTERFACE_CLIENT;
 	wpa_s->global->p2p_group_formation = group_wpa_s;
+	wpa_s->global->pending_group_iface_for_p2ps = 0;
 
 	wpas_p2p_clone_config(group_wpa_s, wpa_s);
 
@@ -7029,7 +7032,8 @@ static void wpas_p2p_stop_find_oper(struct wpa_supplicant *wpa_s)
 void wpas_p2p_stop_find(struct wpa_supplicant *wpa_s)
 {
 	wpas_p2p_stop_find_oper(wpa_s);
-	wpas_p2p_remove_pending_group_interface(wpa_s);
+	if (!wpa_s->global->pending_group_iface_for_p2ps)
+		wpas_p2p_remove_pending_group_interface(wpa_s);
 }
 
 

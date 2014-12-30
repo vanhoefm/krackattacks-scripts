@@ -276,6 +276,7 @@ struct wpa_global {
 	unsigned int p2p_fail_on_wps_complete:1;
 	unsigned int p2p_24ghz_social_channels:1;
 	unsigned int pending_p2ps_group:1;
+	unsigned int pending_group_iface_for_p2ps:1;
 
 #ifdef CONFIG_WIFI_DISPLAY
 	int wifi_display;

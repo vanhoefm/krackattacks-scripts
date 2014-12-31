@@ -2161,6 +2161,7 @@ void wpa_config_free(struct wpa_config *config)
 {
 	struct wpa_ssid *ssid, *prev = NULL;
 	struct wpa_cred *cred, *cprev;
+	int i;
 
 	ssid = config->ssid;
 	while (ssid) {
@@ -2179,6 +2180,8 @@ void wpa_config_free(struct wpa_config *config)
 	wpa_config_flush_blobs(config);
 
 	wpabuf_free(config->wps_vendor_ext_m1);
+	for (i = 0; i < MAX_WPS_VENDOR_EXT; i++)
+		wpabuf_free(config->wps_vendor_ext[i]);
 	os_free(config->ctrl_interface);
 	os_free(config->ctrl_interface_group);
 	os_free(config->opensc_engine_path);

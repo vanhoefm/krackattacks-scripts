@@ -1056,9 +1056,10 @@ void wpas_dbus_signal_p2p_provision_discovery(struct wpa_supplicant *wpa_s,
 				   "ProvisionDiscoveryPBCResponse";
 		else
 			return; /* Unknown or un-supported method */
-	} else if (!request && status)
+	} else {
 		/* Explicit check for failure response */
 		_signal = "ProvisionDiscoveryFailure";
+	}
 
 	add_pin = ((request && (config_methods & WPS_CONFIG_DISPLAY)) ||
 		   (!request && !status &&

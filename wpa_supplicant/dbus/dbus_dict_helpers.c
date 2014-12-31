@@ -707,14 +707,23 @@ dbus_bool_t wpa_dbus_dict_open_read(DBusMessageIter *iter,
 				    DBusMessageIter *iter_dict,
 				    DBusError *error)
 {
+	int type;
+
+	wpa_printf(MSG_MSGDUMP, "%s: start reading a dict entry", __func__);
 	if (!iter || !iter_dict) {
 		dbus_set_error_const(error, DBUS_ERROR_FAILED,
 		                     "[internal] missing message iterators");
 		return FALSE;
 	}
 
-	if (dbus_message_iter_get_arg_type(iter) != DBUS_TYPE_ARRAY ||
+	type = dbus_message_iter_get_arg_type(iter);
+	if (type != DBUS_TYPE_ARRAY ||
 	    dbus_message_iter_get_element_type(iter) != DBUS_TYPE_DICT_ENTRY) {
+		wpa_printf(MSG_DEBUG,
+			   "%s: unexpected message argument types (arg=%c element=%c)",
+			   __func__, type,
+			   type != DBUS_TYPE_ARRAY ? '?' :
+			   dbus_message_iter_get_element_type(iter));
 		dbus_set_error_const(error, DBUS_ERROR_INVALID_ARGS,
 		                     "unexpected message argument types");
 		return FALSE;
@@ -768,6 +777,8 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_byte_array(
 		entry->array_len = ++count;
 		dbus_message_iter_next(iter);
 	}
+	wpa_hexdump_key(MSG_MSGDUMP, "dbus: byte array contents",
+			entry->bytearray_value, entry->array_len);
 
 	/* Zero-length arrays are valid. */
 	if (entry->array_len == 0) {
@@ -823,6 +834,8 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_string_array(
 		entry->strarray_value = buffer;
 
 		dbus_message_iter_get_basic(iter, &value);
+		wpa_printf(MSG_MSGDUMP, "%s: string_array value: %s",
+			   __func__, wpa_debug_show_keys ? value : "[omitted]");
 		str = os_strdup(value);
 		if (str == NULL) {
 			wpa_printf(MSG_ERROR, "dbus: _wpa_dbus_dict_entry_get_"
@@ -834,6 +847,8 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_string_array(
 		entry->array_len = ++count;
 		dbus_message_iter_next(iter);
 	}
+	wpa_printf(MSG_MSGDUMP, "%s: string_array length %u",
+		   __func__, entry->array_len);
 
 	/* Zero-length arrays are valid. */
 	if (entry->array_len == 0) {
@@ -856,19 +871,30 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_binarray(
 {
 	struct wpa_dbus_dict_entry tmpentry;
 	size_t buflen = 0;
-	int i;
+	int i, type;
 
 	entry->array_type = WPAS_DBUS_TYPE_BINARRAY;
 	entry->array_len = 0;
 	entry->binarray_value = NULL;
 
-	if (dbus_message_iter_get_arg_type(iter) == DBUS_TYPE_INVALID) {
+	type = dbus_message_iter_get_arg_type(iter);
+	wpa_printf(MSG_MSGDUMP, "%s: parsing binarray type %c", __func__, type);
+	if (type == DBUS_TYPE_INVALID) {
 		/* Likely an empty array of arrays */
 		return TRUE;
 	}
-
-	if (dbus_message_iter_get_element_type(iter) != DBUS_TYPE_BYTE)
+	if (type != DBUS_TYPE_ARRAY) {
+		wpa_printf(MSG_DEBUG, "%s: not an array type: %c",
+			   __func__, type);
 		return FALSE;
+	}
+
+	type = dbus_message_iter_get_element_type(iter);
+	if (type != DBUS_TYPE_BYTE) {
+		wpa_printf(MSG_DEBUG, "%s: unexpected element type %c",
+			   __func__, type);
+		return FALSE;
+	}
 
 	while (dbus_message_iter_get_arg_type(iter) == DBUS_TYPE_ARRAY) {
 		DBusMessageIter iter_array;
@@ -902,6 +928,8 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_binarray(
 		entry->array_len++;
 		dbus_message_iter_next(iter);
 	}
+	wpa_printf(MSG_MSGDUMP, "%s: binarray length %u",
+		   __func__, entry->array_len);
 
 	return TRUE;
 
@@ -922,6 +950,7 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_array(
 	dbus_bool_t success = FALSE;
 	DBusMessageIter iter_array;
 
+	wpa_printf(MSG_MSGDUMP, "%s: array_type %c", __func__, array_type);
 	if (!entry)
 		return FALSE;
 
@@ -941,6 +970,8 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_array(
 		success = _wpa_dbus_dict_entry_get_binarray(&iter_array, entry);
 		break;
 	default:
+		wpa_printf(MSG_MSGDUMP, "%s: unsupported array type %c",
+			   __func__, array_type);
 		break;
 	}
 
@@ -955,42 +986,72 @@ static dbus_bool_t _wpa_dbus_dict_fill_value_from_variant(
 
 	switch (entry->type) {
 	case DBUS_TYPE_OBJECT_PATH:
+		dbus_message_iter_get_basic(iter, &v);
+		wpa_printf(MSG_MSGDUMP, "%s: object path value: %s",
+			   __func__, v);
+		entry->str_value = os_strdup(v);
+		if (entry->str_value == NULL)
+			return FALSE;
+		break;
 	case DBUS_TYPE_STRING:
 		dbus_message_iter_get_basic(iter, &v);
+		wpa_printf(MSG_MSGDUMP, "%s: string value: %s",
+			   __func__, wpa_debug_show_keys ? v : "[omitted]");
 		entry->str_value = os_strdup(v);
 		if (entry->str_value == NULL)
 			return FALSE;
 		break;
 	case DBUS_TYPE_BOOLEAN:
 		dbus_message_iter_get_basic(iter, &entry->bool_value);
+		wpa_printf(MSG_MSGDUMP, "%s: boolean value: %d",
+			   __func__, entry->bool_value);
 		break;
 	case DBUS_TYPE_BYTE:
 		dbus_message_iter_get_basic(iter, &entry->byte_value);
+		wpa_printf(MSG_MSGDUMP, "%s: byte value: %d",
+			   __func__, entry->byte_value);
 		break;
 	case DBUS_TYPE_INT16:
 		dbus_message_iter_get_basic(iter, &entry->int16_value);
+		wpa_printf(MSG_MSGDUMP, "%s: int16 value: %d",
+			   __func__, entry->int16_value);
 		break;
 	case DBUS_TYPE_UINT16:
 		dbus_message_iter_get_basic(iter, &entry->uint16_value);
+		wpa_printf(MSG_MSGDUMP, "%s: uint16 value: %d",
+			   __func__, entry->uint16_value);
 		break;
 	case DBUS_TYPE_INT32:
 		dbus_message_iter_get_basic(iter, &entry->int32_value);
+		wpa_printf(MSG_MSGDUMP, "%s: int32 value: %d",
+			   __func__, entry->int32_value);
 		break;
 	case DBUS_TYPE_UINT32:
 		dbus_message_iter_get_basic(iter, &entry->uint32_value);
+		wpa_printf(MSG_MSGDUMP, "%s: uint32 value: %d",
+			   __func__, entry->uint32_value);
 		break;
 	case DBUS_TYPE_INT64:
 		dbus_message_iter_get_basic(iter, &entry->int64_value);
+		wpa_printf(MSG_MSGDUMP, "%s: int64 value: %lld",
+			   __func__, (long long int) entry->int64_value);
 		break;
 	case DBUS_TYPE_UINT64:
 		dbus_message_iter_get_basic(iter, &entry->uint64_value);
+		wpa_printf(MSG_MSGDUMP, "%s: uint64 value: %llu",
+			   __func__,
+			   (unsigned long long int) entry->uint64_value);
 		break;
 	case DBUS_TYPE_DOUBLE:
 		dbus_message_iter_get_basic(iter, &entry->double_value);
+		wpa_printf(MSG_MSGDUMP, "%s: double value: %f",
+			   __func__, entry->double_value);
 		break;
 	case DBUS_TYPE_ARRAY:
 		return _wpa_dbus_dict_entry_get_array(iter, entry);
 	default:
+		wpa_printf(MSG_MSGDUMP, "%s: unsupported type %c",
+			   __func__, entry->type);
 		return FALSE;
 	}
 
@@ -1024,24 +1085,39 @@ dbus_bool_t wpa_dbus_dict_get_entry(DBusMessageIter *iter_dict,
 	if (!iter_dict || !entry)
 		goto error;
 
-	if (dbus_message_iter_get_arg_type(iter_dict) != DBUS_TYPE_DICT_ENTRY)
+	if (dbus_message_iter_get_arg_type(iter_dict) != DBUS_TYPE_DICT_ENTRY) {
+		wpa_printf(MSG_DEBUG, "%s: not a dict entry", __func__);
 		goto error;
+	}
 
 	dbus_message_iter_recurse(iter_dict, &iter_dict_entry);
 	dbus_message_iter_get_basic(&iter_dict_entry, &key);
+	wpa_printf(MSG_MSGDUMP, "%s: dict entry key: %s", __func__, key);
 	entry->key = key;
 
-	if (!dbus_message_iter_next(&iter_dict_entry))
+	if (!dbus_message_iter_next(&iter_dict_entry)) {
+		wpa_printf(MSG_DEBUG, "%s: no variant in dict entry", __func__);
 		goto error;
+	}
 	type = dbus_message_iter_get_arg_type(&iter_dict_entry);
-	if (type != DBUS_TYPE_VARIANT)
+	if (type != DBUS_TYPE_VARIANT) {
+		wpa_printf(MSG_DEBUG,
+			   "%s: unexpected dict entry variant type: %c",
+			   __func__, type);
 		goto error;
+	}
 
 	dbus_message_iter_recurse(&iter_dict_entry, &iter_dict_val);
 	entry->type = dbus_message_iter_get_arg_type(&iter_dict_val);
+	wpa_printf(MSG_MSGDUMP, "%s: dict entry variant content type: %c",
+		   __func__, entry->type);
 	entry->array_type = DBUS_TYPE_INVALID;
-	if (!_wpa_dbus_dict_fill_value_from_variant(entry, &iter_dict_val))
+	if (!_wpa_dbus_dict_fill_value_from_variant(entry, &iter_dict_val)) {
+		wpa_printf(MSG_DEBUG,
+			   "%s: failed to fetch dict values from variant",
+			   __func__);
 		goto error;
+	}
 
 	dbus_message_iter_next(iter_dict);
 	return TRUE;

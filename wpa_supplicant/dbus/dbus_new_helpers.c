@@ -904,7 +904,7 @@ void wpa_dbus_mark_property_changed(struct wpas_dbus_priv *iface,
 	}
 
 	if (!eloop_is_timeout_registered(flush_object_timeout_handler,
-					 iface->con, obj_desc->path)) {
+					 iface->con, obj_desc)) {
 		eloop_register_timeout(0, WPA_DBUS_SEND_PROP_CHANGED_TIMEOUT,
 				       flush_object_timeout_handler,
 				       iface->con, obj_desc);

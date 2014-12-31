@@ -1039,6 +1039,7 @@ dbus_bool_t wpa_dbus_dict_get_entry(DBusMessageIter *iter_dict,
 
 	dbus_message_iter_recurse(&iter_dict_entry, &iter_dict_val);
 	entry->type = dbus_message_iter_get_arg_type(&iter_dict_val);
+	entry->array_type = DBUS_TYPE_INVALID;
 	if (!_wpa_dbus_dict_fill_value_from_variant(entry, &iter_dict_val))
 		goto error;
 

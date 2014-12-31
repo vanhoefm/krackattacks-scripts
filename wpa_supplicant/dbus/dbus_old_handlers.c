@@ -866,6 +866,10 @@ DBusMessage * wpas_dbus_iface_remove_network(DBusMessage *message,
 
 	wpas_notify_network_removed(wpa_s, ssid);
 
+	if (ssid == wpa_s->current_ssid)
+		wpa_supplicant_deauthenticate(wpa_s,
+					      WLAN_REASON_DEAUTH_LEAVING);
+
 	if (wpa_config_remove_network(wpa_s->conf, id) < 0) {
 		reply = dbus_message_new_error(message,
 					       WPAS_ERROR_REMOVE_NETWORK_ERROR,
@@ -874,9 +878,6 @@ DBusMessage * wpas_dbus_iface_remove_network(DBusMessage *message,
 		goto out;
 	}
 
-	if (ssid == wpa_s->current_ssid)
-		wpa_supplicant_deauthenticate(wpa_s,
-					      WLAN_REASON_DEAUTH_LEAVING);
 	reply = wpas_dbus_new_success_reply(message);
 
 out:

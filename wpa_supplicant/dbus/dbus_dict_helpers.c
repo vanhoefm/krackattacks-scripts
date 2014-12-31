@@ -858,12 +858,17 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_binarray(
 	size_t buflen = 0;
 	int i;
 
-	if (dbus_message_iter_get_element_type(iter) != DBUS_TYPE_BYTE)
-		return FALSE;
-
 	entry->array_type = WPAS_DBUS_TYPE_BINARRAY;
 	entry->array_len = 0;
 	entry->binarray_value = NULL;
+
+	if (dbus_message_iter_get_arg_type(iter) == DBUS_TYPE_INVALID) {
+		/* Likely an empty array of arrays */
+		return TRUE;
+	}
+
+	if (dbus_message_iter_get_element_type(iter) != DBUS_TYPE_BYTE)
+		return FALSE;
 
 	while (dbus_message_iter_get_arg_type(iter) == DBUS_TYPE_ARRAY) {
 		DBusMessageIter iter_array;

@@ -120,7 +120,11 @@ dbus_bool_t wpa_dbus_dict_append_wpabuf_array(DBusMessageIter *iter_dict,
  * Reading a dict from a DBusMessage
  */
 
-#define WPAS_DBUS_TYPE_BINARRAY (DBUS_NUMBER_OF_TYPES + 100)
+/*
+ * Used only in struct wpa_dbus_dict_entry::array_type internally to identify
+ * special binary array case.
+ */
+#define WPAS_DBUS_TYPE_BINARRAY ((int) '@')
 
 struct wpa_dbus_dict_entry {
 	int type;         /** the dbus type of the dict entry's value */

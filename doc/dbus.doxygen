@@ -10,8 +10,12 @@ Interfaces:
 - \ref dbus_main
 - \ref dbus_interface
 - \ref dbus_wps
+- \ref dbus_p2pdevice
 - \ref dbus_bss
 - \ref dbus_network
+- \ref dbus_peer
+- \ref dbus_group
+- \ref dbus_persistent_group
 
 
 \section dbus_main fi.w1.wpa_supplicant1
@@ -128,6 +132,11 @@ registered in the bus with fi.w1.wpa_supplicant1 name.
       <li>
 	<h3>Capabilities - as - (read)</h3>
 	<p>An array with supported capabilities (e.g., "ap", "ibss-rsn", "p2p", "interworking").</p>
+      </li>
+
+      <li>
+	<h3>WFDIEs - ay - (read/write)</h3>
+	<p>Wi-Fi Display subelements.</p>
       </li>
     </ul>
 
@@ -827,15 +836,14 @@ fi.w1.wpa_supplicant1.CreateInterface.
 
 \section dbus_wps fi.w1.wpa_supplicant1.Interface.WPS
 
-Interface implemented by objects related to network interface added to
-%wpa_supplicant, i.e., returned by fi.w1.wpa_supplicant1.CreateInterface.
+Interface for performing WPS (Wi-Fi Simple Config) operations.
 
 \subsection dbus_wps_methods Methods
 
 <ul>
       <li>
 	<h3>Start ( a{sv} : args ) --> a{sv} : output</h3>
-	<p>Starts WPS configuration.</p>
+	<p>Starts WPS configuration. Note: When used with P2P groups, this needs to be issued on the GO group interface.</p>
 	<h4>Arguments</h4>
 	<dl>
 	  <dt>a{sv} : args</dt>
@@ -846,7 +854,8 @@ Interface implemented by objects related to network interface added to
 	      <tr><td>Role</td><td>s</td><td>The device's role. Possible values are "enrollee" and "registrar".</td><td>Yes</td>
 	      <tr><td>Type</td><td>s</td><td>WPS authentication type. Applies only for enrollee role. Possible values are "pin" and "pbc".</td><td>Yes, for enrollee role; otherwise no</td>
 	      <tr><td>Pin</td><td>s</td><td>WPS Pin.</td><td>Yes, for registrar role; otherwise optional</td>
-	      <tr><td>Bssid</td><td>ay</td><td></td><td>No</td>
+	      <tr><td>Bssid</td><td>ay</td><td>Note: This is used to specify the peer MAC address when authorizing WPS connection in AP or P2P GO role.</td><td>No</td>
+	      <tr><td>P2PDeviceAddress</td><td>ay</td><td>P2P Device Address of a peer to authorize for PBC connection. Used only in P2P GO role.</td><td>No</td>
 	    </table>
 	  </dd>
 	</dl>
@@ -936,6 +945,553 @@ Interface implemented by objects related to network interface added to
       </li>
     </ul>
 
+
+\section dbus_p2pdevice fi.w1.wpa_supplicant1.Interface.P2PDevice
+
+Interface for performing P2P (Wi-Fi Peer-to-Peer) P2P Device operations.
+
+\subsection dbus_p2pdevice_methods Methods
+
+<ul>
+  <li>
+    <h3>Find ( a{sv} : args ) --> nothing</h3>
+    <p>Start P2P find operation (i.e., alternating P2P Search and Listen states to discover peers and be discoverable).</p>
+    <h4>Arguments</h4>
+    <dl>
+      <dt>a{sv} : args</dt>
+      <dd>
+	A dictionary with parameters for the P2P find operation:
+	<table>
+	<tr><th>Key</th><th>Value type</th><th>Description</th><th>Required</th></tr>
+	<tr><td>Timeout</td><td>i</td><td>Timeout for operating in seconds</td><td>no</td></tr>
+	<tr><td>RequestedDevicesTypes</td><td>aay</td><td>WPS Device Types to search for</td><td>no</td></tr>
+	<tr><td>DiscoveryType</td><td>s</td><td>"start_with_full" (default, if not specified), "social", "progressive"</td><td>no</td></tr>
+	</table>
+      </dd>
+    </dl>
+  </li>
+
+  <li>
+    <h3>StopFind ( nothing ) --> nothing</h3>
+    <p>Stop P2P find operation.</p>
+  </li>
+
+  <li>
+    <h3>Listen ( i : timeout ) --> nothing</h3>
+    <p>Start P2P listen operation (i.e., be discoverable).</p>
+    <h4>Arguments</h4>
+    <dl>
+      <dt>i : timeout</dt>
+      <dd>Timeout in seconds for stopping the listen operation.</dd>
+    </dl>
+  </li>
+
+  <li>
+    <h3>ExtendedListen ( a{sv} : args ) --> nothing</h3>
+    <p>Configure Extended Listen Timing. If the parameters are omitted, this feature is disabled. If the parameters are included, Listen State will be entered every interval msec for at least period msec. Both values have acceptable range of 1-65535 (with interval obviously having to be larger than or equal to duration). If the P2P module is not idle at the time the Extended Listen Timing timeout occurs, the Listen State operation will be skipped.</p>
+    <h4>Arguments</h4>
+    <dl>
+      <dt>a{sv} : args</dt>
+      <dd>
+	A dictionary with parameters for extended listen. Leave out all items to disable extended listen.
+	<table>
+	<tr><th>Key</th><th>Value type</th><th>Description</th><th>Required</th></tr>
+	<tr><td>period</td><td>i</td><td>Extended listen period in milliseconds; 1-65535.</td><td>no</td></tr>
+	<tr><td>interval</td><td>i</td><td>Extended listen interval in milliseconds; 1-65535.</td><td>no</td></tr>
+	</table>
+      </dd>
+    </dl>
+  </li>
+
+  <li>
+    <h3>PresenceRequest ( a{sv} : args ) --> nothing</h3>
+    <p>Request a specific GO presence in a P2P group where the local device is a P2P Client. Send a P2P Presence Request to the GO (this is only available when acting as a P2P client). If no duration/interval pairs are given, the request indicates that this client has no special needs for GO presence. The first parameter pair gives the preferred duration and interval values in microseconds. If the second pair is included, that indicates which value would be acceptable.
+    \note This needs to be issued on a P2P group interface if separate group interfaces are used.
+    \bug It would be cleaner to not require .P2PDevice methods to be issued on a group interface. In other words, args['group_object'] could be used to specify the group or this method could be moved to be a .Group PresenceRequest() method.</p>
+    <h4>Arguments</h4>
+    <dl>
+      <dt>a{sv} : args</dt>
+      <dd>
+	A dictionary with parameters for the presence request.
+	<table>
+	<tr><th>Key</th><th>Value type</th><th>Description</th><th>Required</th></tr>
+	<tr><td>duration1</td><td>i</td><td>Duration in microseconds.</td><td>no</td></tr>
+	<tr><td>interval1</td><td>i</td><td>Interval in microseconds.</td><td>no</td></tr>
+	<tr><td>duration2</td><td>i</td><td>Duration in microseconds.</td><td>no</td></tr>
+	<tr><td>interval2</td><td>i</td><td>Interval in microseconds.</td><td>no</td></tr>
+	</table>
+      </dd>
+    </dl>
+  </li>
+
+  <li>
+    <h3>ProvisionDiscoveryRequest ( o : peer, s : config_method ) --> nothing</h3>
+  </li>
+
+  <li>
+    <h3>Connect ( a{sv} : args ) --> s : generated_pin</h3>
+    <p>Request a P2P group to be started through GO Negotiation or by joining an already operating group.</p>
+    <h4>Arguments</h4>
+    <dl>
+      <dt>a{sv} : args</dt>
+      <dd>
+	A dictionary with parameters for the requested connection:
+	<table>
+	<tr><th>Key</th><th>Value type</th><th>Description</th><th>Required</th></tr>
+	<tr><td>peer</td><td>o</td><td></td><td>yes</td></tr>
+	<tr><td>persistent</td><td>b</td><td>Whether to form a persistent group.</td><td>no</td></tr>
+	<tr><td>join</td><td>b</td><td>Whether to join an already operating group instead of forming a new group.</td><td>no</td></tr>
+	<tr><td>authorize_only</td><td>b</td><td>Whether to authorize a peer to initiate GO Negotiation instead of initiating immediately.</td><td>no</td></tr>
+	<tr><td>frequency</td><td>i</td><td>Operating frequency in MHz</td><td>no</td></tr>
+	<tr><td>go_intent</td><td>i</td><td>GO intent 0-15</td><td>no</td></tr>
+	<tr><td>wps_method</td><td>s</td><td>"pbc", "display", "keypad", "pin" (alias for "display")</td><td>yes</td></tr>
+	<tr><td>pin</td><td>s</td><td></td><td>no</td></tr>
+	</table>
+      </dd>
+    </dl>
+  </li>
+
+  <li>
+    <h3>GroupAdd ( a{sv} : args ) --> nothing</h3>
+    <p>Request a P2P group to be started without GO Negotiation.</p>
+    <h4>Arguments</h4>
+    <dl>
+      <dt>a{sv} : args</dt>
+      <dd>
+	A dictionary with parameters for the requested group:
+	<table>
+	<tr><th>Key</th><th>Value type</th><th>Description</th><th>Required</th></tr>
+	<tr><td>persistent</td><td>b</td><td>Whether to form a persistent group.</td><td>no</td></tr>
+	<tr><td>persistent_group_object</td><td>o</td><td></td><td>no</td></tr>
+	<tr><td>frequency</td><td>i</td><td>Operating frequency in MHz</td><td>no</td></tr>
+	</table>
+      </dd>
+    </dl>
+  </li>
+
+  <li>
+    <h3>Invite ( a{sv} : args ) --> nothing</h3>
+    <p>Invite a peer to join an already operating group or to re-invoke a persistent group.</p>
+    <h4>Arguments</h4>
+    <dl>
+      <dt>a{sv} : args</dt>
+      <dd>
+	A dictionary with parameters for the invitation:
+	<table>
+	<tr><th>Key</th><th>Value type</th><th>Description</th><th>Required</th></tr>
+	<tr><td>peer</td><td>o</td><td></td><td>yes</td></tr>
+	<tr><td>persistent_group_object</td><td>o</td><td></td><td>no</td></tr>
+	</table>
+      </dd>
+    </dl>
+  </li>
+
+  <li>
+    <h3>Disconnect ( nothing ) --> nothing</h3>
+    <p>Terminate a P2P group.
+    \note This needs to be issued on a P2P group interface if separate group interfaces are used.
+    \bug It would be cleaner to not require .P2PDevice methods to be issued on a group interface. In other words, this would either need to be Disconnect(group_object) or moved to be a .Group Disconnect() method.</p>
+  </li>
+
+  <li>
+    <h3>RejectPeer ( o : peer ) --> nothing</h3>
+    <p>Reject connection attempt from a peer (specified with a device address). This is a mechanism to reject a pending GO Negotiation with a peer and request to automatically block any further connection or discovery of the peer.</p>
+  </li>
+
+  <li>
+    <h3>Flush ( nothing ) --> nothing</h3>
+    <p>Flush P2P peer table and state.</p>
+  </li>
+
+  <li>
+    <h3>AddService ( a{sv} : args ) --> nothing</h3>
+    <p></p>
+    <h4>Arguments</h4>
+    <dl>
+      <dt>a{sv} : args</dt>
+      <dd>
+	A dictionary with parameters for the service:
+	<table>
+	<tr><th>Key</th><th>Value type</th><th>Description</th><th>Required</th></tr>
+	<tr><td>service_type</td><td>s</td><td>"upnp", "bonjour"</td><td>yes</td></tr>
+	<tr><td>version</td><td>u</td><td>Required for UPnP services.</td><td>no</td></tr>
+	<tr><td>service</td><td>s</td><td></td><td></td></tr>
+	<tr><td>query</td><td>ay</td><td></td><td></td></tr>
+	<tr><td>response</td><td>ay</td><td></td><td></td></tr>
+	</table>
+      </dd>
+    </dl>
+  </li>
+
+  <li>
+    <h3>DeleteService ( a{sv} : args ) --> nothing</h3>
+    <p></p>
+    <h4>Arguments</h4>
+    <dl>
+      <dt>a{sv} : args</dt>
+      <dd>
+	A dictionary with parameters for the service:
+	<table>
+	<tr><th>Key</th><th>Value type</th><th>Description</th><th>Required</th></tr>
+	<tr><td>service_type</td><td>s</td><td>"upnp", "bonjour"</td><td>yes</td></tr>
+	<tr><td>version</td><td>u</td><td>Required for UPnP services.</td><td>no</td></tr>
+	<tr><td>service</td><td>s</td><td></td><td></td></tr>
+	<tr><td>query</td><td>ay</td><td></td><td></td></tr>
+	</table>
+      </dd>
+    </dl>
+  </li>
+
+  <li>
+    <h3>FlushService ( nothing ) --> nothing</h3>
+  </li>
+
+  <li>
+    <h3>ServiceDiscoveryRequest ( a{sv} : args ) --> t : ref</h3>
+    <p></p>
+    <h4>Arguments</h4>
+    <dl>
+      <dt>a{sv} : args</dt>
+      <dd>
+	A dictionary with following parameters:
+	<table>
+	<tr><th>Key</th><th>Value type</th><th>Description</th><th>Required</th></tr>
+	<tr><td>peer_object</td><td>o</td><td></td><td>no</td></tr>
+	<tr><td>service_type</td><td>s</td><td>"upnp"</td><td>no</td></tr>
+	<tr><td>version</td><td>u</td><td>Required for UPnP services.</td><td>no</td></tr>
+	<tr><td>service</td><td>s</td><td></td><td></td></tr>
+	<tr><td>tlv</td><td>ay</td><td></td><td></td></tr>
+	</table>
+      </dd>
+    </dl>
+  </li>
+
+  <li>
+    <h3>ServiceDiscoveryResponse ( a{sv} : args ) --> nothing : ref</h3>
+    <p></p>
+    <h4>Arguments</h4>
+    <dl>
+      <dt>a{sv} : args</dt>
+      <dd>
+	A dictionary with following parameters:
+	<table>
+	<tr><th>Key</th><th>Value type</th><th>Description</th><th>Required</th></tr>
+	<tr><td>peer_object</td><td>o</td><td></td><td>yes</td></tr>
+	<tr><td>frequency</td><td>i</td><td></td><td>yes</td></tr>
+	<tr><td>dialog_token</td><td>i</td><td></td><td>yes</td></tr>
+	<tr><td>tlvs</td><td>ay</td><td></td><td>yes</td></tr>
+	</table>
+      </dd>
+    </dl>
+  </li>
+
+  <li>
+    <h3>ServiceDiscoveryCancelRequest ( t : args ) --> nothing : ref</h3>
+  </li>
+
+  <li>
+    <h3>ServiceUpdate ( nothing ) --> nothing</h3>
+  </li>
+
+  <li>
+    <h3>ServiceDiscoveryExternal ( i : arg ) --> nothing</h3>
+  </li>
+
+  <li>
+    <h3>AddPersistentGroup ( a{sv} : args ) --> o : path</h3>
+    <p></p>
+    <h4>Arguments</h4>
+    <dl>
+      <dt>a{sv} : args</dt>
+      <dd>
+	A dictionary with following parameters:
+	<table>
+	<tr><th>Key</th><th>Value type</th><th>Description</th><th>Required</th></tr>
+	<tr><td>bssid</td><td>s</td><td>P2P Device Address of the GO in the persistent group.</td><td>yes</td></tr>
+	<tr><td>ssid</td><td>s</td><td>SSID of the group</td><td>yes</td></tr>
+	<tr><td>psk</td><td>s</td><td>Passphrase (on the GO and optionally on P2P Client) or PSK (on P2P Client if passphrase ise not known)</td><td>yes</td></tr>
+	<tr><td>mode</td><td>s</td><td>"3" on GO or "0" on P2P Client</td><td>yes</td></tr>
+	</table>
+      </dd>
+    </dl>
+  </li>
+
+  <li>
+    <h3>RemovePersistentGroup ( o : path ) --> nothing</h3>
+  </li>
+
+  <li>
+    <h3>RemoveAllPersistentGroups ( nothing ) --> nothing</h3>
+  </li>
+</ul>
+
+\subsection dbus_p2pdevice_properties Properties
+
+<ul>
+  <li>
+    <h3>P2PDeviceConfig - a{sv} - (read/write)</h3>
+    <p>Dictionary with following entries. On write, only the included values are changed.</p>
+    <table>
+    <tr><th>Key</th><th>Value type</th><th>Description</th></tr>
+    <tr><td>DeviceName</td><td>s</td><td></td></tr>
+    <tr><td>PrimaryDeviceType</td><td>ay</td><td></td></tr>
+    <tr><td>SecondaryDeviceTypes</td><td>aay</td><td></td></tr>
+    <tr><td>VendorExtension</td><td>aay</td><td></td></tr>
+    <tr><td>GOIntent</td><td>u</td><td></td></tr>
+    <tr><td>PersistentReconnect</td><td>b</td><td></td></tr>
+    <tr><td>ListenRegClass</td><td>u</td><td></td></tr>
+    <tr><td>OperRegClass</td><td>u</td><td></td></tr>
+    <tr><td>OperChannel</td><td>u</td><td></td></tr>
+    <tr><td>SsidPostfix</td><td>s</td><td></td></tr>
+    <tr><td>IntraBss</td><td>b</td><td></td></tr>
+    <tr><td>GroupIdle</td><td>u</td><td></td></tr>
+    <tr><td>disassoc_low_ack</td><td>u</td><td></td></tr>
+    <tr><td>NoGroupIface</td><td>b</td><td></td></tr>
+    <tr><td>p2p_search_delay</td><td>u</td><td></td></tr>
+    </table>
+  </li>
+
+  <li>
+    <h3>Peers - ao - (read)</h3>
+  </li>
+
+  <li>
+    <h3>Role - s - (read)</h3>
+    <p>\bug What is this trying to indicate? It does not make much sense to have a P2PDevice property role since there can be multiple concurrent groups and the P2P Device role is always active anyway.</p>
+  </li>
+
+  <li>
+    <h3>Group - o - (read)</h3>
+    <p>\bug What is this trying to indicate? It does not make much sense to have a P2PDevice property Group since there can be multiple concurrent groups.</p>
+  </li>
+
+  <li>
+    <h3>PeerGO - o - (read)</h3>
+    <p>\bug What is this trying to indicate? It does not make much sense to have a P2PDevice property PeerGO since there can be multiple concurrent groups.</p>
+  </li>
+
+  <li>
+    <h3>PersistentGroups - ao - (read)</h3>
+  </li>
+</ul>
+
+\subsection dbus_p2pdevice_signals Signals
+
+<ul>
+  <li>
+    <h3>DeviceFound ( o : path )</h3>
+  </li>
+
+  <li>
+    <h3>DeviceLost ( o : path )</h3>
+  </li>
+
+  <li>
+    <h3>ProvisionDiscoveryRequestDisplayPin ( o : peer_object, s : pin )</h3>
+  </li>
+
+  <li>
+    <h3>ProvisionDiscoveryResponseDisplayPin ( o : peer_object, s : pin )</h3>
+  </li>
+
+  <li>
+    <h3>ProvisionDiscoveryRequestEnterPin ( o : peer_object )</h3>
+  </li>
+
+  <li>
+    <h3>ProvisionDiscoveryResponseEnterPin ( o : peer_object )</h3>
+  </li>
+
+  <li>
+    <h3>ProvisionDiscoveryPBCRequest ( o : peer_object )</h3>
+  </li>
+
+  <li>
+    <h3>ProvisionDiscoveryPBCResponse ( o : peer_object )</h3>
+  </li>
+
+  <li>
+    <h3>ProvisionDiscoveryFailure ( o : peer_object, i : status )</h3>
+  </li>
+
+  <li>
+    <h3>GroupStarted ( a{sv} : properties )</h3>
+    <p>A new P2P group was started or joined.</p>
+    <h4>Arguments</h4>
+    <dl>
+      <dt>a{sv} : properties</dt>
+      <dd>A dictionary with following information on the added group:
+	<table>
+	  <tr><th>Key</th><th>Value type</th><th>Description</th></tr>
+	  <tr><td>interface_object</td><td>o</td><td>D-Bus path of the interface on which this group is operating on. See \ref dbus_interface.</td></tr>
+	  <tr><td>role</td><td>s</td><td>The role of the local device in the group: "GO" or "client".</td></tr>
+	  <tr><td>group_object</td><td>o</td><td>D-Bus path of the group. See \ref dbus_group.</td></tr>
+	</table>
+      </dd>
+    </dl>
+  </li>
+
+  <li>
+    <h3>GONegotiationSuccess ( a{sv} : properties )</h3>
+    <p></p>
+    <h4>Arguments</h4>
+    <dl>
+      <dt>a{sv} : properties</dt>
+      <dd>A dictionary with following information:
+	<table>
+	  <tr><th>Key</th><th>Value type</th><th>Description</th></tr>
+	  <tr><td>peer_object</td><td>o</td><td>D-Bus path of the peer. See \ref dbus_peer.</td></tr>
+	  <tr><td>status</td><td>i</td><td></td></tr>
+	  <tr><td>passphrase</td><td>s</td><td>Passphrase for the group. Included only if this device becomes the GO of the group.</td></tr>
+	  <tr><td>role_go</td><td>s</td><td>The role of the local device in the group: "GO" or "client".</td></tr>
+	  <tr><td>ssid</td><td>ay</td><td></td></tr>
+	  <tr><td>peer_device_addr</td><td>ay</td><td></td></tr>
+	  <tr><td>peer_interface_addr</td><td>ay</td><td></td></tr>
+	  <tr><td>wps_method</td><td>s</td><td></td></tr>
+	  <tr><td>frequency_list</td><td>ai</td><td></td></tr>
+	  <tr><td>persistent_group</td><td>i</td><td></td></tr>
+	  <tr><td>peer_config_timeout</td><td>u</td><td></td></tr>
+	</table>
+      </dd>
+    </dl>
+  </li>
+
+  <li>
+    <h3>GONegotiationFailure ( a{sv} : properties )</h3>
+    <p></p>
+    <h4>Arguments</h4>
+    <dl>
+      <dt>a{sv} : properties</dt>
+      <dd>A dictionary with following information:
+	<table>
+	  <tr><th>Key</th><th>Value type</th><th>Description</th></tr>
+	  <tr><td>peer_object</td><td>o</td><td>D-Bus path of the peer. See \ref dbus_peer.</td></tr>
+	  <tr><td>status</td><td>i</td><td></td></tr>
+	</table>
+      </dd>
+    </dl>
+  </li>
+
+  <li>
+    <h3>GONegotiationRequest ( o : path, i : dev_passwd_id )</h3>
+  </li>
+
+  <li>
+    <h3>InvitationResult ( a{sv} : invite_result )</h3>
+    <p></p>
+    <h4>Arguments</h4>
+    <dl>
+      <dt>a{sv} : invite_result</dt>
+      <dd>A dictionary with following information:
+	<table>
+	  <tr><th>Key</th><th>Value type</th><th>Description</th></tr>
+	  <tr><td>status</td><td>i</td><td></td></tr>
+	  <tr><td>BSSID</td><td>ay</td><td>Optionally present</td></tr>
+	</table>
+      </dd>
+    </dl>
+  </li>
+
+  <li>
+    <h3>GroupFinished ( a{sv} : properties )</h3>
+    <p>A P2P group was removed.</p>
+    <h4>Arguments</h4>
+    <dl>
+      <dt>a{sv} : properties</dt>
+      <dd>A dictionary with following information of the removed group:
+	<table>
+	  <tr><th>Key</th><th>Value type</th><th>Description</th></tr>
+	  <tr><td>interface_object</td><td>o</td><td>D-Bus path of the interface on which this group is operating on. See \ref dbus_interface.</td></tr>
+	  <tr><td>role</td><td>s</td><td>The role of the local device in the group: "GO" or "client".</td></tr>
+	  <tr><td>group_object</td><td>o</td><td>D-Bus path of the group. See \ref dbus_group.</td></tr>
+	</table>
+      </dd>
+    </dl>
+  </li>
+
+  <li>
+    <h3>ServiceDiscoveryRequest ( a{sv} : sd_request )</h3>
+    <p></p>
+    <h4>Arguments</h4>
+    <dl>
+      <dt>a{sv} : sd_request</dt>
+      <dd>A dictionary with following information:
+	<table>
+	  <tr><td>peer_object</td><td>o</td><td></td></tr>
+	  <tr><td>frequency</td><td>i</td><td></td></tr>
+	  <tr><td>dialog_token</td><td>i</td><td></td></tr>
+	  <tr><td>update_indicator</td><td>q</td><td></td></tr>
+	  <tr><td>tlvs</td><td>ay</td><td></td></tr>
+	</table>
+      </dd>
+    </dl>
+  </li>
+
+  <li>
+    <h3>ServiceDiscoveryResponse ( a{sv} : sd_response )</h3>
+    <p></p>
+    <h4>Arguments</h4>
+    <dl>
+      <dt>a{sv} : sd_response</dt>
+      <dd>A dictionary with following information:
+	<table>
+	  <tr><td>peer_object</td><td>o</td><td></td></tr>
+	  <tr><td>update_indicator</td><td>q</td><td></td></tr>
+	  <tr><td>tlvs</td><td>ay</td><td></td></tr>
+	</table>
+      </dd>
+    </dl>
+  </li>
+
+  <li>
+    <h3>PersistentGroupAdded ( o : path, a{sv} : properties )</h3>
+    <p></p>
+    <h4>Arguments</h4>
+    <dl>
+      <dt>o : path</dt>
+      <dd>D-Bus object path for the persistent group. See \ref dbus_persistent_group.</dd>
+      <dt>a{sv} : properties</dt>
+      <dd>A dictionary with following information:
+	<table>
+	<tr><th>Key</th><th>Value type</th><th>Description</th></tr>
+	<tr><td>bssid</td><td>s</td><td>P2P Device Address of the GO in the persistent group.</td></tr>
+	<tr><td>ssid</td><td>s</td><td>SSID of the group</td></tr>
+	<tr><td>psk</td><td>s</td><td>Passphrase (on the GO and optionally on P2P Client) or PSK (on P2P Client if passphrase ise not known)</td></tr>
+	<tr><td>disabled</td><td>s</td><td>Set to "2" to indicate special network block use as a P2P persistent group information</td></tr>
+	<tr><td>mode</td><td>s</td><td>"3" on GO or "0" on P2P Client</td></tr>
+	</table>
+      </dd>
+    </dl>
+  </li>
+
+  <li>
+    <h3>PersistentGroupRemoved ( o : path )</h3>
+    <p></p>
+    <h4>Arguments</h4>
+    <dl>
+      <dt>o : path</dt>
+      <dd>D-Bus object path for the persistent group. See \ref dbus_persistent_group.</dd>
+    </dl>
+  </li>
+
+  <li>
+    <h3>WpsFailed ( s : name, a{sv} : args )</h3>
+    <p></p>
+    <h4>Arguments</h4>
+    <dl>
+      <dt>s : name</dt>
+      <dd>"fail"</dd>
+      <dt>a{sv} : args</dt>
+      <dd>A dictionary with following information:
+	<table>
+	  <tr><th>Key</th><th>Value type</th><th>Description</th></tr>
+	  <tr><td>msg</td><td>i</td><td></td></tr>
+	  <tr><td>config_error</td><td>n</td><td></td></tr>
+	</table>
+      </dd>
+    </dl>
+  </li>
+</ul>
 
 \section dbus_bss fi.w1.wpa_supplicant1.BSS
 
@@ -1056,5 +1612,180 @@ i.e., returned by fi.w1.wpa_supplicant1.Interface.AddNetwork.
 	</dl>
       </li>
     </ul>
+
+\section dbus_peer fi.w1.wpa_supplicant1.Peer
+
+Interface implemented by objects representing P2P peer devices.
+
+\subsection dbus_peer_properties Properties
+
+<ul>
+  <li>
+    <h3>DeviceName - s - (read)</h3>
+  </li>
+
+  <li>
+    <h3>PrimaryDeviceType - ay - (read)</h3>
+  </li>
+
+  <li>
+    <h3>config_method - q - (read)</h3>
+  </li>
+
+  <li>
+    <h3>level - i - (read)</h3>
+  </li>
+
+  <li>
+    <h3>devicecapability - y - (read)</h3>
+  </li>
+
+  <li>
+    <h3>groupcapability - y - (read)</h3>
+    <p>Group Capability field from the last frame from which this peer information was updated.
+    \note This field is only for debugging purposes and must not be used to determine whether the peer happens to be operating a group as a GO at the moment.
+    </p>
+  </li>
+
+  <li>
+    <h3>SecondaryDeviceTypes - aay - (read)</h3>
+  </li>
+
+  <li>
+    <h3>VendorExtension - aay - (read)</h3>
+  </li>
+
+  <li>
+    <h3>IEs - ay - (read)</h3>
+    <p>This is a confusingly named property that includes Wi-Fi Display subelements from the peer.
+    \bug This should really be renamed since "IEs" means something completely different..
+    </p>
+  </li>
+
+  <li>
+    <h3>DeviceAddress - ay - (read)</h3>
+    <p>The P2P Device Address of the peer.</p>
+  </li>
+
+  <li>
+    <h3>Groups - ao - (read)</h3>
+    <p>The current groups in which this peer is connected.</p>
+  </li>
+</ul>
+
+\subsection dbus_peer_signals Signals
+
+<ul>
+  <li>
+    <h3>PropertiesChanged ( a{sv} : properties )</h3>
+    <p>Some properties have changed.
+    \deprecated Use org.freedesktop.DBus.Properties.PropertiesChanged instead.</p>
+    \todo Explain how ProertiesChanged signals are supposed to be of any real use with Peer objects (i.e., one signal for multiple peers).
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>a{sv} : properties</dt>
+	  <dd>A dictionary with pairs of properties names which have changed and their new values.</dd>
+	</dl>
+      </li>
+    </ul>
+
+\section dbus_group fi.w1.wpa_supplicant1.Group
+
+Interface implemented by objects representing active P2P groups.
+
+\subsection dbus_group_properties Properties
+
+<ul>
+  <li>
+    <h3>Members - ao - (read)</h3>
+    <p>Array of D-Bus object paths for the peer devices that are currently connected to the group. This is valid only on the GO device. An empty array is returned in P2P Client role.
+  </li>
+
+  <li>
+    <h3>Group - o - (read)</h3>
+    <p>\todo Why is this here? This D-Bus object path is to this specific group and one needs to know it to fetching this information in the first place..
+    </p>
+  </li>
+
+  <li>
+    <h3>Role - s - (read)</h3>
+    <p>The role of this device in the group: "GO", "client".</p>
+  </li>
+
+  <li>
+    <h3>SSID - ay - (read)</h3>
+    <p>P2P Group SSID.</p>
+  </li>
+
+  <li>
+    <h3>BSSID - ay - (read)</h3>
+    <p>P2P Group BSSID (the P2P Interface Address of the GO).</p>
+  </li>
+
+  <li>
+    <h3>Frequency - q - (read)</h3>
+    <p>The frequency (in MHz) of the group operating channel.</p>
+  </li>
+
+  <li>
+    <h3>Passphrase - s - (read)</h3>
+    <p>Passphrase used in the group. This is always available on the GO. For P2P Client role, this may be available depending on whether the peer GO provided the passphrase during the WPS provisioning step. If not available, an empty string is returned.</p>
+  </li>
+
+  <li>
+    <h3>PSK - ay - (read)</h3>
+    <p>PSK used in the group.</p>
+  </li>
+
+  <li>
+    <h3>WPSVendorExtensions - aay - (read/write)</h3>
+    <p>WPS vendor extension attributes used on the GO. This is valid only the in the GO role. An empty array is returned in P2P Client role. At maximum, 10 separate vendor extension byte arrays can be configured. The GO device will include the configured attributes in WPS exchanges.</p>
+  </li>
+</ul>
+
+\subsection dbus_group_signals Signals
+
+<ul>
+  <li>
+    <h3>PeerJoined ( o : peer )</h3>
+    <p>A peer device has joined the group. This is indicated only on the GO device.</p>
+    <h4>Arguments</h4>
+    <dl>
+      <dt>o : peer</dt>
+      <dd>A D-Bus path to the object representing the peer. See \ref dbus_peer.</dd>
+    </dl>
+  </li>
+
+  <li>
+    <h3>PeerDisconnected ( o : peer )</h3>
+    <p>A peer device has left the group. This is indicated only on the GO device.</p>
+    <h4>Arguments</h4>
+    <dl>
+      <dt>o : peer</dt>
+      <dd>A D-Bus path to the object representing the peer. See \ref dbus_peer.</dd>
+    </dl>
+  </li>
+</ul>
+
+\section dbus_persistent_group fi.w1.wpa_supplicant1.PersistentGroup
+
+Interface implemented by objects representing persistent P2P groups.
+
+\subsection dbus_persistent_group_properties Properties
+
+<ul>
+  <li>
+    <h3>Properties - a{sv} - (read/write)</h3>
+    <p>Properties of the persistent group. These are same properties as in the \ref dbus_network. When writing this, only the entries to be modified are included, i.e., any item that is not included will be left at its existing value. The following entries are used for persistent groups:</p>
+    <table>
+      <tr><th>Key</th><th>Value type</th><th>Description</th></tr>
+      <tr><td>bssid</td><td>s</td><td>P2P Device Address of the GO in the persistent group.</td></tr>
+      <tr><td>ssid</td><td>s</td><td>SSID of the group</td></tr>
+      <tr><td>psk</td><td>s</td><td>Passphrase (on the GO and optionally on P2P Client) or PSK (on P2P Client if passphrase ise not known)</td></tr>
+      <tr><td>disabled</td><td>s</td><td>Set to "2" to indicate special network block use as a P2P persistent group information</td></tr>
+      <tr><td>mode</td><td>s</td><td>"3" on GO or "0" on P2P Client</td></tr>
+    </table>
+  </li>
+</ul>
 
 */

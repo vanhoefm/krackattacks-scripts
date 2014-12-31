@@ -96,6 +96,7 @@ static void extract_interfaces_methods(
 {
 	const struct wpa_dbus_method_desc *dsc;
 	struct interfaces *iface;
+
 	for (dsc = methods; dsc && dsc->dbus_method; dsc++) {
 		iface = add_interface(list, dsc->dbus_interface);
 		if (iface)
@@ -110,6 +111,7 @@ static void extract_interfaces_signals(
 {
 	const struct wpa_dbus_signal_desc *dsc;
 	struct interfaces *iface;
+
 	for (dsc = signals; dsc && dsc->dbus_signal; dsc++) {
 		iface = add_interface(list, dsc->dbus_interface);
 		if (iface)
@@ -124,6 +126,7 @@ static void extract_interfaces_properties(
 {
 	const struct wpa_dbus_property_desc *dsc;
 	struct interfaces *iface;
+
 	for (dsc = properties; dsc && dsc->dbus_property; dsc++) {
 		iface = add_interface(list, dsc->dbus_interface);
 		if (iface)
@@ -154,14 +157,14 @@ static void extract_interfaces(struct dl_list *list,
 static void add_interfaces(struct dl_list *list, struct wpabuf *xml)
 {
 	struct interfaces *iface, *n;
+
 	dl_list_for_each_safe(iface, n, list, struct interfaces, list) {
 		if (wpabuf_len(iface->xml) + 20 < wpabuf_tailroom(xml)) {
 			wpabuf_put_buf(xml, iface->xml);
 			wpabuf_put_str(xml, "</interface>");
 		} else {
-			wpa_printf(MSG_DEBUG, "dbus: Not enough room for "
-				   "add_interfaces inspect data: tailroom %u, "
-				   "add %u",
+			wpa_printf(MSG_DEBUG,
+				   "dbus: Not enough room for add_interfaces inspect data: tailroom %u, add %u",
 				   (unsigned int) wpabuf_tailroom(xml),
 				   (unsigned int) wpabuf_len(iface->xml));
 		}
@@ -229,6 +232,7 @@ static void add_wpas_interfaces(struct wpabuf *xml,
 				struct wpa_dbus_object_desc *obj_dsc)
 {
 	struct dl_list ifaces;
+
 	dl_list_init(&ifaces);
 	extract_interfaces(&ifaces, obj_dsc);
 	add_interfaces(&ifaces, xml);
@@ -270,6 +274,7 @@ DBusMessage * wpa_dbus_introspect(DBusMessage *message,
 	reply = dbus_message_new_method_return(message);
 	if (reply) {
 		const char *intro_str = wpabuf_head(xml);
+
 		dbus_message_append_args(reply, DBUS_TYPE_STRING, &intro_str,
 					 DBUS_TYPE_INVALID);
 	}

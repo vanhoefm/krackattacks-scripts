@@ -57,12 +57,12 @@ static int parse_peer_object_path(const char *peer_path, u8 addr[ETH_ALEN])
  *
  * Convenience function to create and return an invalid persistent group error.
  */
-static DBusMessage * wpas_dbus_error_persistent_group_unknown(
-	DBusMessage *message)
+static DBusMessage *
+wpas_dbus_error_persistent_group_unknown(DBusMessage *message)
 {
-	return dbus_message_new_error(message, WPAS_DBUS_ERROR_NETWORK_UNKNOWN,
-				      "There is no such persistent group in "
-				      "this P2P device.");
+	return dbus_message_new_error(
+		message, WPAS_DBUS_ERROR_NETWORK_UNKNOWN,
+		"There is no such persistent group in this P2P device.");
 }
 
 
@@ -89,12 +89,12 @@ DBusMessage * wpas_dbus_handler_p2p_find(DBusMessage *message,
 		if (!wpa_dbus_dict_get_entry(&iter_dict, &entry))
 			goto error;
 
-		if (!os_strcmp(entry.key, "Timeout") &&
-		    (entry.type == DBUS_TYPE_INT32)) {
+		if (os_strcmp(entry.key, "Timeout") == 0 &&
+		    entry.type == DBUS_TYPE_INT32) {
 			timeout = entry.uint32_value;
 		} else if (os_strcmp(entry.key, "RequestedDeviceTypes") == 0) {
-			if ((entry.type != DBUS_TYPE_ARRAY) ||
-			    (entry.array_type != WPAS_DBUS_TYPE_BINARRAY))
+			if (entry.type != DBUS_TYPE_ARRAY ||
+			    entry.array_type != WPAS_DBUS_TYPE_BINARRAY)
 				goto error_clear;
 
 			os_free(req_dev_types);
@@ -105,20 +105,20 @@ DBusMessage * wpas_dbus_handler_p2p_find(DBusMessage *message,
 
 			for (i = 0; i < entry.array_len; i++) {
 				if (wpabuf_len(entry.binarray_value[i]) !=
-							WPS_DEV_TYPE_LEN)
+				    WPS_DEV_TYPE_LEN)
 					goto error_clear;
 				os_memcpy(req_dev_types + i * WPS_DEV_TYPE_LEN,
 					  wpabuf_head(entry.binarray_value[i]),
 					  WPS_DEV_TYPE_LEN);
 			}
 			num_req_dev_types = entry.array_len;
-		} else if (!os_strcmp(entry.key, "DiscoveryType") &&
-			   (entry.type == DBUS_TYPE_STRING)) {
-			if (!os_strcmp(entry.str_value, "start_with_full"))
+		} else if (os_strcmp(entry.key, "DiscoveryType") == 0 &&
+			   entry.type == DBUS_TYPE_STRING) {
+			if (os_strcmp(entry.str_value, "start_with_full") == 0)
 				type = P2P_FIND_START_WITH_FULL;
-			else if (!os_strcmp(entry.str_value, "social"))
+			else if (os_strcmp(entry.str_value, "social") == 0)
 				type = P2P_FIND_ONLY_SOCIAL;
-			else if (!os_strcmp(entry.str_value, "progressive"))
+			else if (os_strcmp(entry.str_value, "progressive") == 0)
 				type = P2P_FIND_PROGRESSIVE;
 			else
 				goto error_clear;
@@ -220,11 +220,11 @@ DBusMessage * wpas_dbus_handler_p2p_extendedlisten(
 		if (!wpa_dbus_dict_get_entry(&iter_dict, &entry))
 			goto error;
 
-		if (!os_strcmp(entry.key, "period") &&
-		    (entry.type == DBUS_TYPE_INT32))
+		if (os_strcmp(entry.key, "period") == 0 &&
+		    entry.type == DBUS_TYPE_INT32)
 			period = entry.uint32_value;
-		else if (!os_strcmp(entry.key, "interval") &&
-			 (entry.type == DBUS_TYPE_INT32))
+		else if (os_strcmp(entry.key, "interval") == 0 &&
+			 entry.type == DBUS_TYPE_INT32)
 			interval = entry.uint32_value;
 		else
 			goto error_clear;
@@ -265,16 +265,16 @@ DBusMessage * wpas_dbus_handler_p2p_presence_request(
 		if (!wpa_dbus_dict_get_entry(&iter_dict, &entry))
 			goto error;
 
-		if (!os_strcmp(entry.key, "duration1") &&
-		    (entry.type == DBUS_TYPE_INT32))
+		if (os_strcmp(entry.key, "duration1") == 0 &&
+		    entry.type == DBUS_TYPE_INT32)
 			dur1 = entry.uint32_value;
-		else if (!os_strcmp(entry.key, "interval1") &&
+		else if (os_strcmp(entry.key, "interval1") == 0 &&
 			 entry.type == DBUS_TYPE_INT32)
 			int1 = entry.uint32_value;
-		else if (!os_strcmp(entry.key, "duration2") &&
+		else if (os_strcmp(entry.key, "duration2") == 0 &&
 			 entry.type == DBUS_TYPE_INT32)
 			dur2 = entry.uint32_value;
-		else if (!os_strcmp(entry.key, "interval2") &&
+		else if (os_strcmp(entry.key, "interval2") == 0 &&
 			 entry.type == DBUS_TYPE_INT32)
 			int2 = entry.uint32_value;
 		else
@@ -322,15 +322,16 @@ DBusMessage * wpas_dbus_handler_p2p_group_add(DBusMessage *message,
 		if (!wpa_dbus_dict_get_entry(&iter_dict, &entry))
 			goto inv_args;
 
-		if (!os_strcmp(entry.key, "persistent") &&
-		    (entry.type == DBUS_TYPE_BOOLEAN)) {
-			persistent_group = (entry.bool_value == TRUE) ? 1 : 0;
-		} else if (!os_strcmp(entry.key, "frequency") &&
-			   (entry.type == DBUS_TYPE_INT32)) {
+		if (os_strcmp(entry.key, "persistent") == 0 &&
+		    entry.type == DBUS_TYPE_BOOLEAN) {
+			persistent_group = entry.bool_value;
+		} else if (os_strcmp(entry.key, "frequency") == 0 &&
+			   entry.type == DBUS_TYPE_INT32) {
 			freq = entry.int32_value;
 			if (freq <= 0)
 				goto inv_args_clear;
-		} else if (!os_strcmp(entry.key, "persistent_group_object") &&
+		} else if (os_strcmp(entry.key, "persistent_group_object") ==
+			   0 &&
 			   entry.type == DBUS_TYPE_OBJECT_PATH)
 			pg_object_path = os_strdup(entry.str_value);
 		else
@@ -419,8 +420,7 @@ static dbus_bool_t wpa_dbus_p2p_check_enabled(struct wpa_supplicant *wpa_s,
 				"P2P is not available for this interface");
 		}
 		dbus_set_error_const(error, DBUS_ERROR_FAILED,
-				     "P2P is not available for this "
-				     "interface");
+				     "P2P is not available for this interface");
 		return FALSE;
 	}
 	return TRUE;
@@ -478,42 +478,42 @@ DBusMessage * wpas_dbus_handler_p2p_connect(DBusMessage *message,
 		if (!wpa_dbus_dict_get_entry(&iter_dict, &entry))
 			goto inv_args;
 
-		if (!os_strcmp(entry.key, "peer") &&
-		    (entry.type == DBUS_TYPE_OBJECT_PATH)) {
+		if (os_strcmp(entry.key, "peer") == 0 &&
+		    entry.type == DBUS_TYPE_OBJECT_PATH) {
 			peer_object_path = os_strdup(entry.str_value);
-		} else if (!os_strcmp(entry.key, "persistent") &&
-			   (entry.type == DBUS_TYPE_BOOLEAN)) {
-			persistent_group = (entry.bool_value == TRUE) ? 1 : 0;
-		} else if (!os_strcmp(entry.key, "join") &&
-			   (entry.type == DBUS_TYPE_BOOLEAN)) {
-			join = (entry.bool_value == TRUE) ? 1 : 0;
-		} else if (!os_strcmp(entry.key, "authorize_only") &&
-			   (entry.type == DBUS_TYPE_BOOLEAN)) {
-			authorize_only = (entry.bool_value == TRUE) ? 1 : 0;
-		} else if (!os_strcmp(entry.key, "frequency") &&
-			   (entry.type == DBUS_TYPE_INT32)) {
+		} else if (os_strcmp(entry.key, "persistent") == 0 &&
+			   entry.type == DBUS_TYPE_BOOLEAN) {
+			persistent_group = entry.bool_value;
+		} else if (os_strcmp(entry.key, "join") == 0 &&
+			   entry.type == DBUS_TYPE_BOOLEAN) {
+			join = entry.bool_value;
+		} else if (os_strcmp(entry.key, "authorize_only") == 0 &&
+			   entry.type == DBUS_TYPE_BOOLEAN) {
+			authorize_only = entry.bool_value;
+		} else if (os_strcmp(entry.key, "frequency") == 0 &&
+			   entry.type == DBUS_TYPE_INT32) {
 			freq = entry.int32_value;
 			if (freq <= 0)
 				goto inv_args_clear;
-		} else if (!os_strcmp(entry.key, "go_intent") &&
-			   (entry.type == DBUS_TYPE_INT32)) {
+		} else if (os_strcmp(entry.key, "go_intent") == 0 &&
+			   entry.type == DBUS_TYPE_INT32) {
 			go_intent = entry.int32_value;
 			if ((go_intent < 0) || (go_intent > 15))
 				goto inv_args_clear;
-		} else if (!os_strcmp(entry.key, "wps_method") &&
-			   (entry.type == DBUS_TYPE_STRING)) {
-			if (!os_strcmp(entry.str_value, "pbc"))
+		} else if (os_strcmp(entry.key, "wps_method") == 0 &&
+			   entry.type == DBUS_TYPE_STRING) {
+			if (os_strcmp(entry.str_value, "pbc") == 0)
 				wps_method = WPS_PBC;
-			else if (!os_strcmp(entry.str_value, "pin"))
+			else if (os_strcmp(entry.str_value, "pin") == 0)
 				wps_method = WPS_PIN_DISPLAY;
-			else if (!os_strcmp(entry.str_value, "display"))
+			else if (os_strcmp(entry.str_value, "display") == 0)
 				wps_method = WPS_PIN_DISPLAY;
-			else if (!os_strcmp(entry.str_value, "keypad"))
+			else if (os_strcmp(entry.str_value, "keypad") == 0)
 				wps_method = WPS_PIN_KEYPAD;
 			else
 				goto inv_args_clear;
-		} else if (!os_strcmp(entry.key, "pin") &&
-			   (entry.type == DBUS_TYPE_STRING)) {
+		} else if (os_strcmp(entry.key, "pin") == 0 &&
+			   entry.type == DBUS_TYPE_STRING) {
 			pin = os_strdup(entry.str_value);
 		} else
 			goto inv_args_clear;
@@ -529,7 +529,7 @@ DBusMessage * wpas_dbus_handler_p2p_connect(DBusMessage *message,
 	/*
 	 * Validate the wps_method specified and the pin value.
 	 */
-	if ((!pin || !pin[0]) && (wps_method == WPS_PIN_KEYPAD))
+	if ((!pin || !pin[0]) && wps_method == WPS_PIN_KEYPAD)
 		goto inv_args;
 
 	if (wpa_s->p2p_dev)
@@ -542,6 +542,7 @@ DBusMessage * wpas_dbus_handler_p2p_connect(DBusMessage *message,
 	if (new_pin >= 0) {
 		char npin[9];
 		char *generated_pin;
+
 		os_snprintf(npin, sizeof(npin), "%08d", new_pin);
 		generated_pin = npin;
 		reply = dbus_message_new_method_return(message);
@@ -550,8 +551,8 @@ DBusMessage * wpas_dbus_handler_p2p_connect(DBusMessage *message,
 	} else {
 		switch (new_pin) {
 		case -2:
-			err_msg = "connect failed due to channel "
-				"unavailability.";
+			err_msg =
+				"connect failed due to channel unavailability.";
 			iface = WPAS_DBUS_ERROR_CONNECT_CHANNEL_UNAVAILABLE;
 			break;
 
@@ -614,12 +615,13 @@ DBusMessage * wpas_dbus_handler_p2p_invite(DBusMessage *message,
 		if (!wpa_dbus_dict_get_entry(&iter_dict, &entry))
 			goto err;
 
-		if (!os_strcmp(entry.key, "peer") &&
-		    (entry.type == DBUS_TYPE_OBJECT_PATH)) {
+		if (os_strcmp(entry.key, "peer") == 0 &&
+		    entry.type == DBUS_TYPE_OBJECT_PATH) {
 			peer_object_path = os_strdup(entry.str_value);
 			wpa_dbus_dict_entry_clear(&entry);
-		} else if (!os_strcmp(entry.key, "persistent_group_object") &&
-			   (entry.type == DBUS_TYPE_OBJECT_PATH)) {
+		} else if (os_strcmp(entry.key, "persistent_group_object") ==
+			   0 &&
+			   entry.type == DBUS_TYPE_OBJECT_PATH) {
 			pg_object_path = os_strdup(entry.str_value);
 			persistent = 1;
 			wpa_dbus_dict_entry_clear(&entry);
@@ -773,8 +775,8 @@ dbus_bool_t wpas_dbus_getter_p2p_device_config(DBusMessageIter *iter,
 
 	/* Primary device type */
 	if (!wpa_dbus_dict_append_byte_array(&dict_iter, "PrimaryDeviceType",
-	    				     (char *)wpa_s->conf->device_type,
-	    				     WPS_DEV_TYPE_LEN))
+					     (char *) wpa_s->conf->device_type,
+					     WPS_DEV_TYPE_LEN))
 		goto err_no_mem;
 
 	/* Secondary device types */
@@ -921,8 +923,8 @@ dbus_bool_t wpas_dbus_setter_p2p_device_config(DBusMessageIter *iter,
 			wpa_s->conf->changed_parameters |=
 					CFG_CHANGED_SEC_DEVICE_TYPE;
 		} else if (os_strcmp(entry.key, "VendorExtension") == 0) {
-			if ((entry.type != DBUS_TYPE_ARRAY) ||
-			    (entry.array_type != WPAS_DBUS_TYPE_BINARRAY) ||
+			if (entry.type != DBUS_TYPE_ARRAY ||
+			    entry.array_type != WPAS_DBUS_TYPE_BINARRAY ||
 			    (entry.array_len > P2P_MAX_WPS_VENDOR_EXT))
 				goto error;
 
@@ -938,30 +940,30 @@ dbus_bool_t wpas_dbus_setter_p2p_device_config(DBusMessageIter *iter,
 				} else
 					wpa_s->conf->wps_vendor_ext[i] = NULL;
 			}
-		} else if ((os_strcmp(entry.key, "GOIntent") == 0) &&
-			   (entry.type == DBUS_TYPE_UINT32) &&
+		} else if (os_strcmp(entry.key, "GOIntent") == 0 &&
+			   entry.type == DBUS_TYPE_UINT32 &&
 			   (entry.uint32_value <= 15))
 			wpa_s->conf->p2p_go_intent = entry.uint32_value;
-		else if ((os_strcmp(entry.key, "PersistentReconnect") == 0) &&
-			 (entry.type == DBUS_TYPE_BOOLEAN))
+		else if (os_strcmp(entry.key, "PersistentReconnect") == 0 &&
+			 entry.type == DBUS_TYPE_BOOLEAN)
 			wpa_s->conf->persistent_reconnect = entry.bool_value;
-		else if ((os_strcmp(entry.key, "ListenRegClass") == 0) &&
-			 (entry.type == DBUS_TYPE_UINT32)) {
+		else if (os_strcmp(entry.key, "ListenRegClass") == 0 &&
+			 entry.type == DBUS_TYPE_UINT32) {
 			wpa_s->conf->p2p_listen_reg_class = entry.uint32_value;
 			wpa_s->conf->changed_parameters |=
 				CFG_CHANGED_P2P_LISTEN_CHANNEL;
-		} else if ((os_strcmp(entry.key, "ListenChannel") == 0) &&
-			   (entry.type == DBUS_TYPE_UINT32)) {
+		} else if (os_strcmp(entry.key, "ListenChannel") == 0 &&
+			   entry.type == DBUS_TYPE_UINT32) {
 			wpa_s->conf->p2p_listen_channel = entry.uint32_value;
 			wpa_s->conf->changed_parameters |=
 				CFG_CHANGED_P2P_LISTEN_CHANNEL;
-		} else if ((os_strcmp(entry.key, "OperRegClass") == 0) &&
-			   (entry.type == DBUS_TYPE_UINT32)) {
+		} else if (os_strcmp(entry.key, "OperRegClass") == 0 &&
+			   entry.type == DBUS_TYPE_UINT32) {
 			wpa_s->conf->p2p_oper_reg_class = entry.uint32_value;
 			wpa_s->conf->changed_parameters |=
 				CFG_CHANGED_P2P_OPER_CHANNEL;
-		} else if ((os_strcmp(entry.key, "OperChannel") == 0) &&
-			   (entry.type == DBUS_TYPE_UINT32)) {
+		} else if (os_strcmp(entry.key, "OperChannel") == 0 &&
+			   entry.type == DBUS_TYPE_UINT32) {
 			wpa_s->conf->p2p_oper_channel = entry.uint32_value;
 			wpa_s->conf->changed_parameters |=
 				CFG_CHANGED_P2P_OPER_CHANNEL;
@@ -980,13 +982,13 @@ dbus_bool_t wpas_dbus_setter_p2p_device_config(DBusMessageIter *iter,
 
 			wpa_s->conf->changed_parameters |=
 					CFG_CHANGED_P2P_SSID_POSTFIX;
-		} else if ((os_strcmp(entry.key, "IntraBss") == 0) &&
-			   (entry.type == DBUS_TYPE_BOOLEAN)) {
+		} else if (os_strcmp(entry.key, "IntraBss") == 0 &&
+			   entry.type == DBUS_TYPE_BOOLEAN) {
 			wpa_s->conf->p2p_intra_bss = entry.bool_value;
 			wpa_s->conf->changed_parameters |=
 				CFG_CHANGED_P2P_INTRA_BSS;
-		} else if ((os_strcmp(entry.key, "GroupIdle") == 0) &&
-			   (entry.type == DBUS_TYPE_UINT32))
+		} else if (os_strcmp(entry.key, "GroupIdle") == 0 &&
+			   entry.type == DBUS_TYPE_UINT32)
 			wpa_s->conf->p2p_group_idle = entry.uint32_value;
 		else if (os_strcmp(entry.key, "disassoc_low_ack") == 0 &&
 			 entry.type == DBUS_TYPE_UINT32)
@@ -1266,8 +1268,8 @@ dbus_bool_t wpas_dbus_getter_p2p_peer_primary_device_type(
 
 
 dbus_bool_t wpas_dbus_getter_p2p_peer_config_method(DBusMessageIter *iter,
-                                                    DBusError *error,
-                                                    void *user_data)
+						    DBusError *error,
+						    void *user_data)
 {
 	struct peer_handler_args *peer_args = user_data;
 	const struct p2p_peer_info *info;
@@ -1291,8 +1293,8 @@ dbus_bool_t wpas_dbus_getter_p2p_peer_config_method(DBusMessageIter *iter,
 
 
 dbus_bool_t wpas_dbus_getter_p2p_peer_level(DBusMessageIter *iter,
-                                            DBusError *error,
-                                            void *user_data)
+					    DBusError *error,
+					    void *user_data)
 {
 	struct peer_handler_args *peer_args = user_data;
 	const struct p2p_peer_info *info;
@@ -1316,8 +1318,8 @@ dbus_bool_t wpas_dbus_getter_p2p_peer_level(DBusMessageIter *iter,
 
 
 dbus_bool_t wpas_dbus_getter_p2p_peer_device_capability(DBusMessageIter *iter,
-                                                        DBusError *error,
-                                                        void *user_data)
+							DBusError *error,
+							void *user_data)
 {
 	struct peer_handler_args *peer_args = user_data;
 	const struct p2p_peer_info *info;
@@ -1747,12 +1749,12 @@ DBusMessage * wpas_dbus_handler_add_persistent_group(
 
 	ssid = wpa_config_add_network(wpa_s->conf);
 	if (ssid == NULL) {
-		wpa_printf(MSG_ERROR, "dbus: %s: "
-			   "Cannot add new persistent group", __func__);
+		wpa_printf(MSG_ERROR,
+			   "dbus: %s: Cannot add new persistent group",
+			   __func__);
 		reply = wpas_dbus_error_unknown_error(
 			message,
-			"wpa_supplicant could not add "
-			"a persistent group on this interface.");
+			"wpa_supplicant could not add a persistent group on this interface.");
 		goto err;
 	}
 
@@ -1765,13 +1767,12 @@ DBusMessage * wpas_dbus_handler_add_persistent_group(
 
 	dbus_error_init(&error);
 	if (!set_network_properties(wpa_s, ssid, &iter, &error)) {
-		wpa_printf(MSG_DEBUG, "dbus: %s: "
-			   "Control interface could not set persistent group "
-			   "properties", __func__);
-		reply = wpas_dbus_reply_new_from_error(message, &error,
-						       DBUS_ERROR_INVALID_ARGS,
-						       "Failed to set network "
-						       "properties");
+		wpa_printf(MSG_DEBUG,
+			   "dbus: %s: Control interface could not set persistent group properties",
+			   __func__);
+		reply = wpas_dbus_reply_new_from_error(
+			message, &error, DBUS_ERROR_INVALID_ARGS,
+			"Failed to set network properties");
 		dbus_error_free(&error);
 		goto err;
 	}
@@ -1856,13 +1857,12 @@ DBusMessage * wpas_dbus_handler_remove_persistent_group(
 	wpas_notify_persistent_group_removed(wpa_s, ssid);
 
 	if (wpa_config_remove_network(wpa_s->conf, id) < 0) {
-		wpa_printf(MSG_ERROR, "dbus: %s: "
-			   "error occurred when removing persistent group %d",
+		wpa_printf(MSG_ERROR,
+			   "dbus: %s: error occurred when removing persistent group %d",
 			   __func__, id);
 		reply = wpas_dbus_error_unknown_error(
 			message,
-			"error removing the specified persistent group on "
-			"this interface.");
+			"error removing the specified persistent group on this interface.");
 		goto out;
 	}
 
@@ -1878,8 +1878,8 @@ static void remove_persistent_group(struct wpa_supplicant *wpa_s,
 	wpas_notify_persistent_group_removed(wpa_s, ssid);
 
 	if (wpa_config_remove_network(wpa_s->conf, ssid->id) < 0) {
-		wpa_printf(MSG_ERROR, "dbus: %s: "
-			   "error occurred when removing persistent group %d",
+		wpa_printf(MSG_ERROR,
+			   "dbus: %s: error occurred when removing persistent group %d",
 			   __func__, ssid->id);
 		return;
 	}
@@ -1987,6 +1987,7 @@ dbus_bool_t wpas_dbus_getter_p2p_group_ssid(DBusMessageIter *iter,
 					    DBusError *error, void *user_data)
 {
 	struct wpa_supplicant *wpa_s = user_data;
+
 	if (wpa_s->current_ssid == NULL)
 		return FALSE;
 	return wpas_dbus_simple_array_property_getter(
@@ -2279,31 +2280,31 @@ DBusMessage * wpas_dbus_handler_p2p_add_service(DBusMessage *message,
 		if (!wpa_dbus_dict_get_entry(&iter_dict, &entry))
 			goto error;
 
-		if (!os_strcmp(entry.key, "service_type") &&
-		    (entry.type == DBUS_TYPE_STRING)) {
-			if (!os_strcmp(entry.str_value, "upnp"))
+		if (os_strcmp(entry.key, "service_type") == 0 &&
+		    entry.type == DBUS_TYPE_STRING) {
+			if (os_strcmp(entry.str_value, "upnp") == 0)
 				upnp = 1;
-			else if (!os_strcmp(entry.str_value, "bonjour"))
+			else if (os_strcmp(entry.str_value, "bonjour") == 0)
 				bonjour = 1;
 			else
 				goto error_clear;
-		} else if (!os_strcmp(entry.key, "version") &&
-		           entry.type == DBUS_TYPE_INT32) {
+		} else if (os_strcmp(entry.key, "version") == 0 &&
+			   entry.type == DBUS_TYPE_INT32) {
 			version = entry.uint32_value;
-		} else if (!os_strcmp(entry.key, "service") &&
-			     (entry.type == DBUS_TYPE_STRING)) {
+		} else if (os_strcmp(entry.key, "service") == 0 &&
+			   entry.type == DBUS_TYPE_STRING) {
 			os_free(service);
 			service = os_strdup(entry.str_value);
-		} else if (!os_strcmp(entry.key, "query")) {
-			if ((entry.type != DBUS_TYPE_ARRAY) ||
-			    (entry.array_type != DBUS_TYPE_BYTE))
+		} else if (os_strcmp(entry.key, "query") == 0) {
+			if (entry.type != DBUS_TYPE_ARRAY ||
+			    entry.array_type != DBUS_TYPE_BYTE)
 				goto error_clear;
 			query = wpabuf_alloc_copy(
 				entry.bytearray_value,
 				entry.array_len);
-		} else if (!os_strcmp(entry.key, "response")) {
-			if ((entry.type != DBUS_TYPE_ARRAY) ||
-			    (entry.array_type != DBUS_TYPE_BYTE))
+		} else if (os_strcmp(entry.key, "response") == 0) {
+			if (entry.type != DBUS_TYPE_ARRAY ||
+			    entry.array_type != DBUS_TYPE_BYTE)
 				goto error_clear;
 			resp = wpabuf_alloc_copy(entry.bytearray_value,
 						 entry.array_len);
@@ -2364,11 +2365,11 @@ DBusMessage * wpas_dbus_handler_p2p_delete_service(
 		if (!wpa_dbus_dict_get_entry(&iter_dict, &entry))
 			goto error;
 
-		if (!os_strcmp(entry.key, "service_type") &&
-		    (entry.type == DBUS_TYPE_STRING)) {
-			if (!os_strcmp(entry.str_value, "upnp"))
+		if (os_strcmp(entry.key, "service_type") == 0 &&
+		    entry.type == DBUS_TYPE_STRING) {
+			if (os_strcmp(entry.str_value, "upnp") == 0)
 				upnp = 1;
-			else if (!os_strcmp(entry.str_value, "bonjour"))
+			else if (os_strcmp(entry.str_value, "bonjour") == 0)
 				bonjour = 1;
 			else
 				goto error_clear;
@@ -2379,10 +2380,10 @@ DBusMessage * wpas_dbus_handler_p2p_delete_service(
 		while (wpa_dbus_dict_has_dict_entry(&iter_dict)) {
 			if (!wpa_dbus_dict_get_entry(&iter_dict, &entry))
 				goto error;
-			if (!os_strcmp(entry.key, "version") &&
+			if (os_strcmp(entry.key, "version") == 0 &&
 			    entry.type == DBUS_TYPE_INT32)
 				version = entry.uint32_value;
-			else if (!os_strcmp(entry.key, "service") &&
+			else if (os_strcmp(entry.key, "service") == 0 &&
 				 entry.type == DBUS_TYPE_STRING) {
 				os_free(service);
 				service = os_strdup(entry.str_value);
@@ -2403,9 +2404,9 @@ DBusMessage * wpas_dbus_handler_p2p_delete_service(
 			if (!wpa_dbus_dict_get_entry(&iter_dict, &entry))
 				goto error;
 
-			if (!os_strcmp(entry.key, "query")) {
-				if ((entry.type != DBUS_TYPE_ARRAY) ||
-				    (entry.array_type != DBUS_TYPE_BYTE))
+			if (os_strcmp(entry.key, "query") == 0) {
+				if (entry.type != DBUS_TYPE_ARRAY ||
+				    entry.array_type != DBUS_TYPE_BYTE)
 					goto error_clear;
 				wpabuf_free(query);
 				query = wpabuf_alloc_copy(
@@ -2469,22 +2470,22 @@ DBusMessage * wpas_dbus_handler_p2p_service_sd_req(
 	while (wpa_dbus_dict_has_dict_entry(&iter_dict)) {
 		if (!wpa_dbus_dict_get_entry(&iter_dict, &entry))
 			goto error;
-		if (!os_strcmp(entry.key, "peer_object") &&
+		if (os_strcmp(entry.key, "peer_object") == 0 &&
 		    entry.type == DBUS_TYPE_OBJECT_PATH) {
 			peer_object_path = os_strdup(entry.str_value);
-		} else if (!os_strcmp(entry.key, "service_type") &&
+		} else if (os_strcmp(entry.key, "service_type") == 0 &&
 			   entry.type == DBUS_TYPE_STRING) {
-			if (!os_strcmp(entry.str_value, "upnp"))
+			if (os_strcmp(entry.str_value, "upnp") == 0)
 				upnp = 1;
 			else
 				goto error_clear;
-		} else if (!os_strcmp(entry.key, "version") &&
+		} else if (os_strcmp(entry.key, "version") == 0 &&
 			   entry.type == DBUS_TYPE_INT32) {
 			version = entry.uint32_value;
-		} else if (!os_strcmp(entry.key, "service") &&
+		} else if (os_strcmp(entry.key, "service") == 0 &&
 			   entry.type == DBUS_TYPE_STRING) {
 			service = os_strdup(entry.str_value);
-		} else if (!os_strcmp(entry.key, "tlv")) {
+		} else if (os_strcmp(entry.key, "tlv") == 0) {
 			if (entry.type != DBUS_TYPE_ARRAY ||
 			    entry.array_type != DBUS_TYPE_BYTE)
 				goto error_clear;
@@ -2562,17 +2563,17 @@ DBusMessage * wpas_dbus_handler_p2p_service_sd_res(
 		if (!wpa_dbus_dict_get_entry(&iter_dict, &entry))
 			goto error;
 
-		if (!os_strcmp(entry.key, "peer_object") &&
+		if (os_strcmp(entry.key, "peer_object") == 0 &&
 		    entry.type == DBUS_TYPE_OBJECT_PATH) {
 			peer_object_path = os_strdup(entry.str_value);
-		} else if (!os_strcmp(entry.key, "frequency") &&
+		} else if (os_strcmp(entry.key, "frequency") == 0 &&
 			   entry.type == DBUS_TYPE_INT32) {
 			freq = entry.uint32_value;
-		} else if (!os_strcmp(entry.key, "dialog_token") &&
+		} else if (os_strcmp(entry.key, "dialog_token") == 0 &&
 			   (entry.type == DBUS_TYPE_UINT32 ||
 			    entry.type == DBUS_TYPE_INT32)) {
 			dlg_tok = entry.uint32_value;
-		} else if (!os_strcmp(entry.key, "tlvs")) {
+		} else if (os_strcmp(entry.key, "tlvs") == 0) {
 			if (entry.type != DBUS_TYPE_ARRAY ||
 			    entry.array_type != DBUS_TYPE_BYTE)
 				goto error_clear;

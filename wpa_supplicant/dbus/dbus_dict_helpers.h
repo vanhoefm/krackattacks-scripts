@@ -72,28 +72,28 @@ dbus_bool_t wpa_dbus_dict_append_byte_array(DBusMessageIter *iter_dict,
 
 /* Manual construction and addition of array elements */
 dbus_bool_t wpa_dbus_dict_begin_array(DBusMessageIter *iter_dict,
-                                      const char *key, const char *type,
-                                      DBusMessageIter *iter_dict_entry,
-                                      DBusMessageIter *iter_dict_val,
-                                      DBusMessageIter *iter_array);
+				      const char *key, const char *type,
+				      DBusMessageIter *iter_dict_entry,
+				      DBusMessageIter *iter_dict_val,
+				      DBusMessageIter *iter_array);
 
 dbus_bool_t wpa_dbus_dict_begin_string_array(DBusMessageIter *iter_dict,
-                                             const char *key,
-                                             DBusMessageIter *iter_dict_entry,
-                                             DBusMessageIter *iter_dict_val,
-                                             DBusMessageIter *iter_array);
+					     const char *key,
+					     DBusMessageIter *iter_dict_entry,
+					     DBusMessageIter *iter_dict_val,
+					     DBusMessageIter *iter_array);
 
 dbus_bool_t wpa_dbus_dict_string_array_add_element(DBusMessageIter *iter_array,
-                                             const char *elem);
+						   const char *elem);
 
 dbus_bool_t wpa_dbus_dict_bin_array_add_element(DBusMessageIter *iter_array,
 						const u8 *value,
 						size_t value_len);
 
 dbus_bool_t wpa_dbus_dict_end_array(DBusMessageIter *iter_dict,
-                                    DBusMessageIter *iter_dict_entry,
-                                    DBusMessageIter *iter_dict_val,
-                                    DBusMessageIter *iter_array);
+				    DBusMessageIter *iter_dict_entry,
+				    DBusMessageIter *iter_dict_val,
+				    DBusMessageIter *iter_array);
 
 static inline dbus_bool_t
 wpa_dbus_dict_end_string_array(DBusMessageIter *iter_dict,

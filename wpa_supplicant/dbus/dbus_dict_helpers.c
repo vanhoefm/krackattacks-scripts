@@ -66,7 +66,7 @@ dbus_bool_t wpa_dbus_dict_close_write(DBusMessageIter *iter,
 
 const char * wpa_dbus_type_as_string(const int type)
 {
-	switch(type) {
+	switch (type) {
 	case DBUS_TYPE_BYTE:
 		return DBUS_TYPE_BYTE_AS_STRING;
 	case DBUS_TYPE_BOOLEAN:
@@ -661,7 +661,7 @@ dbus_bool_t wpa_dbus_dict_open_read(DBusMessageIter *iter,
 	wpa_printf(MSG_MSGDUMP, "%s: start reading a dict entry", __func__);
 	if (!iter || !iter_dict) {
 		dbus_set_error_const(error, DBUS_ERROR_FAILED,
-		                     "[internal] missing message iterators");
+				     "[internal] missing message iterators");
 		return FALSE;
 	}
 
@@ -674,7 +674,7 @@ dbus_bool_t wpa_dbus_dict_open_read(DBusMessageIter *iter,
 			   type != DBUS_TYPE_ARRAY ? '?' :
 			   dbus_message_iter_get_element_type(iter));
 		dbus_set_error_const(error, DBUS_ERROR_INVALID_ARGS,
-		                     "unexpected message argument types");
+				     "unexpected message argument types");
 		return FALSE;
 	}
 
@@ -711,10 +711,9 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_byte_array(
 				BYTE_ARRAY_ITEM_SIZE);
 			if (nbuffer == NULL) {
 				os_free(buffer);
-				wpa_printf(MSG_ERROR, "dbus: _wpa_dbus_dict_"
-					   "entry_get_byte_array out of "
-					   "memory trying to retrieve the "
-					   "string array");
+				wpa_printf(MSG_ERROR,
+					   "dbus: %s out of memory trying to retrieve the string array",
+					   __func__);
 				goto done;
 			}
 			buffer = nbuffer;
@@ -772,10 +771,9 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_string_array(
 				STR_ARRAY_ITEM_SIZE);
 			if (nbuffer == NULL) {
 				os_free(buffer);
-				wpa_printf(MSG_ERROR, "dbus: _wpa_dbus_dict_"
-					   "entry_get_string_array out of "
-					   "memory trying to retrieve the "
-					   "string array");
+				wpa_printf(MSG_ERROR,
+					   "dbus: %s out of memory trying to retrieve the string array",
+					   __func__);
 				goto done;
 			}
 			buffer = nbuffer;
@@ -787,9 +785,9 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_string_array(
 			   __func__, wpa_debug_show_keys ? value : "[omitted]");
 		str = os_strdup(value);
 		if (str == NULL) {
-			wpa_printf(MSG_ERROR, "dbus: _wpa_dbus_dict_entry_get_"
-				   "string_array out of memory trying to "
-				   "duplicate the string array");
+			wpa_printf(MSG_ERROR,
+				   "dbus: %s out of memory trying to duplicate the string array",
+				   __func__);
 			goto done;
 		}
 		entry->strarray_value[count] = str;
@@ -864,7 +862,7 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_binarray(
 		os_memset(&tmpentry, 0, sizeof(tmpentry));
 		tmpentry.type = DBUS_TYPE_ARRAY;
 		if (_wpa_dbus_dict_entry_get_byte_array(&iter_array, &tmpentry)
-					== FALSE)
+		    == FALSE)
 			goto cleanup;
 
 		entry->binarray_value[entry->array_len] =
@@ -903,7 +901,7 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_array(
 
 	dbus_message_iter_recurse(iter_dict_val, &iter_array);
 
- 	switch (array_type) {
+	switch (array_type) {
 	case DBUS_TYPE_BYTE:
 		success = _wpa_dbus_dict_entry_get_byte_array(&iter_array,
 							      entry);

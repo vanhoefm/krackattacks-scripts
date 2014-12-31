@@ -92,9 +92,9 @@ char * wpas_dbus_decompose_object_path(const char *path, char **network,
  */
 DBusMessage * wpas_dbus_new_invalid_iface_error(DBusMessage *message)
 {
-	return dbus_message_new_error(message, WPAS_ERROR_INVALID_IFACE,
-				      "wpa_supplicant knows nothing about "
-				      "this interface.");
+	return dbus_message_new_error(
+		message, WPAS_ERROR_INVALID_IFACE,
+		"wpa_supplicant knows nothing about this interface.");
 }
 
 
@@ -221,7 +221,7 @@ static DBusHandlerResult wpas_iface_message_handler(DBusConnection *connection,
 		   dbus_message_get_signature(message));
 
 	iface_obj_path = wpas_dbus_decompose_object_path(path, &network,
-	                                                 &bssid);
+							 &bssid);
 	if (iface_obj_path == NULL) {
 		reply = wpas_dbus_new_invalid_iface_error(message);
 		goto out;
@@ -231,7 +231,7 @@ static DBusHandlerResult wpas_iface_message_handler(DBusConnection *connection,
 	 * wpa_supplicant structure it's supposed to (which is wpa_s)
 	 */
 	if (wpa_supplicant_get_iface_by_dbus_path(wpa_s->global,
-	                                          iface_obj_path) != wpa_s) {
+						  iface_obj_path) != wpa_s) {
 		reply = wpas_dbus_new_invalid_iface_error(message);
 		goto out;
 	}
@@ -239,6 +239,7 @@ static DBusHandlerResult wpas_iface_message_handler(DBusConnection *connection,
 	if (network && !strcmp(msg_interface, WPAS_DBUS_IFACE_NETWORK)) {
 		/* A method for one of this interface's configured networks */
 		int nid = strtoul(network, NULL, 10);
+
 		if (errno != EINVAL)
 			reply = wpas_dispatch_network_method(message, wpa_s,
 							     nid);
@@ -279,14 +280,14 @@ static DBusHandlerResult wpas_iface_message_handler(DBusConnection *connection,
 			reply = wpas_dbus_iface_remove_blobs(message, wpa_s);
 #endif /* CONFIG_NO_CONFIG_BLOBS */
 #ifdef CONFIG_WPS
-		else if (!os_strcmp(method, "wpsPbc"))
+		else if (os_strcmp(method, "wpsPbc") == 0)
 			reply = wpas_dbus_iface_wps_pbc(message, wpa_s);
-		else if (!os_strcmp(method, "wpsPin"))
+		else if (os_strcmp(method, "wpsPin") == 0)
 			reply = wpas_dbus_iface_wps_pin(message, wpa_s);
-		else if (!os_strcmp(method, "wpsReg"))
+		else if (os_strcmp(method, "wpsReg") == 0)
 			reply = wpas_dbus_iface_wps_reg(message, wpa_s);
 #endif /* CONFIG_WPS */
-		else if (!os_strcmp(method, "flush"))
+		else if (os_strcmp(method, "flush") == 0)
 			reply = wpas_dbus_iface_flush(message, wpa_s);
 	}
 
@@ -389,8 +390,8 @@ void wpa_supplicant_dbus_notify_scan_results(struct wpa_supplicant *wpa_s)
 					  WPAS_DBUS_IFACE_INTERFACE,
 					  "ScanResultsAvailable");
 	if (_signal == NULL) {
-		wpa_printf(MSG_ERROR, "dbus: Not enough memory to send scan "
-			   "results signal");
+		wpa_printf(MSG_ERROR,
+			   "dbus: Not enough memory to send scan results signal");
 		return;
 	}
 	dbus_connection_send(iface->con, _signal, NULL);
@@ -434,9 +435,8 @@ void wpa_supplicant_dbus_notify_state_change(struct wpa_supplicant *wpa_s,
 					  "StateChange");
 	if (_signal == NULL) {
 		wpa_printf(MSG_ERROR,
-		           "dbus: wpa_supplicant_dbus_notify_state_change: "
-		           "could not create dbus signal; likely out of "
-		           "memory");
+			   "dbus: %s: could not create dbus signal; likely out of memory",
+			   __func__);
 		return;
 	}
 
@@ -444,13 +444,12 @@ void wpa_supplicant_dbus_notify_state_change(struct wpa_supplicant *wpa_s,
 	old_state_str = wpa_supplicant_state_txt(old_state);
 
 	if (!dbus_message_append_args(_signal,
-	                              DBUS_TYPE_STRING, &new_state_str,
-	                              DBUS_TYPE_STRING, &old_state_str,
-	                              DBUS_TYPE_INVALID)) {
+				      DBUS_TYPE_STRING, &new_state_str,
+				      DBUS_TYPE_STRING, &old_state_str,
+				      DBUS_TYPE_INVALID)) {
 		wpa_printf(MSG_ERROR,
-		           "dbus: wpa_supplicant_dbus_notify_state_change: "
-		           "Not enough memory to construct state change "
-		           "signal");
+			   "dbus: %s: Not enough memory to construct state change signal",
+			   __func__);
 		goto out;
 	}
 
@@ -482,18 +481,18 @@ void wpa_supplicant_dbus_notify_scanning(struct wpa_supplicant *wpa_s)
 					  WPAS_DBUS_IFACE_INTERFACE,
 					  "Scanning");
 	if (_signal == NULL) {
-		wpa_printf(MSG_ERROR, "dbus: Not enough memory to send scan "
-			   "results signal");
+		wpa_printf(MSG_ERROR,
+			   "dbus: Not enough memory to send scan results signal");
 		return;
 	}
 
 	if (dbus_message_append_args(_signal,
-	                             DBUS_TYPE_BOOLEAN, &scanning,
-	                             DBUS_TYPE_INVALID)) {
+				     DBUS_TYPE_BOOLEAN, &scanning,
+				     DBUS_TYPE_INVALID)) {
 		dbus_connection_send(iface->con, _signal, NULL);
 	} else {
-		wpa_printf(MSG_ERROR, "dbus: Not enough memory to construct "
-			   "signal");
+		wpa_printf(MSG_ERROR,
+			   "dbus: Not enough memory to construct signal");
 	}
 	dbus_message_unref(_signal);
 }
@@ -518,19 +517,18 @@ void wpa_supplicant_dbus_notify_wps_cred(struct wpa_supplicant *wpa_s,
 					  "WpsCred");
 	if (_signal == NULL) {
 		wpa_printf(MSG_ERROR,
-		           "dbus: wpa_supplicant_dbus_notify_wps_cred: "
-		           "Could not create dbus signal; likely out of "
-		           "memory");
+			   "dbus: %s: Could not create dbus signal; likely out of memory",
+			   __func__);
 		return;
 	}
 
 	if (!dbus_message_append_args(_signal,
-	                              DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE,
+				      DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE,
 				      &cred->cred_attr, cred->cred_attr_len,
-	                              DBUS_TYPE_INVALID)) {
+				      DBUS_TYPE_INVALID)) {
 		wpa_printf(MSG_ERROR,
-		           "dbus: wpa_supplicant_dbus_notify_wps_cred: "
-		           "Not enough memory to construct signal");
+			   "dbus: %s: Not enough memory to construct signal",
+			   __func__);
 		goto out;
 	}
 
@@ -569,9 +567,8 @@ void wpa_supplicant_dbus_notify_certification(struct wpa_supplicant *wpa_s,
 					  "Certification");
 	if (_signal == NULL) {
 		wpa_printf(MSG_ERROR,
-		           "dbus: wpa_supplicant_dbus_notify_certification: "
-		           "Could not create dbus signal; likely out of "
-		           "memory");
+			   "dbus: %s: Could not create dbus signal; likely out of memory",
+			   __func__);
 		return;
 	}
 
@@ -580,15 +577,15 @@ void wpa_supplicant_dbus_notify_certification(struct wpa_supplicant *wpa_s,
 	cert_hex_len = cert ? wpabuf_len(cert) : 0;
 
 	if (!dbus_message_append_args(_signal,
-				      DBUS_TYPE_INT32,&depth,
+				      DBUS_TYPE_INT32, &depth,
 				      DBUS_TYPE_STRING, &subject,
-	                              DBUS_TYPE_STRING, &hash,
-	                              DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE,
+				      DBUS_TYPE_STRING, &hash,
+				      DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE,
 				      &cert_hex, cert_hex_len,
-	                              DBUS_TYPE_INVALID)) {
+				      DBUS_TYPE_INVALID)) {
 		wpa_printf(MSG_ERROR,
-		           "dbus: wpa_supplicant_dbus_notify_certification: "
-		           "Not enough memory to construct signal");
+			   "dbus: %s: Not enough memory to construct signal",
+			   __func__);
 		goto out;
 	}
 
@@ -620,8 +617,7 @@ int wpa_supplicant_dbus_ctrl_iface_init(struct wpas_dbus_priv *iface)
 	if (!dbus_connection_register_object_path(iface->con,
 						  WPAS_DBUS_PATH, &wpas_vtable,
 						  iface)) {
-		wpa_printf(MSG_ERROR, "dbus: Could not set up message "
-			   "handler");
+		wpa_printf(MSG_ERROR, "dbus: Could not set up message handler");
 		return -1;
 	}
 
@@ -635,12 +631,13 @@ int wpa_supplicant_dbus_ctrl_iface_init(struct wpas_dbus_priv *iface)
 	case DBUS_REQUEST_NAME_REPLY_EXISTS:
 	case DBUS_REQUEST_NAME_REPLY_IN_QUEUE:
 	case DBUS_REQUEST_NAME_REPLY_ALREADY_OWNER:
-		wpa_printf(MSG_ERROR, "dbus: Could not request service name: "
-			   "already registered");
+		wpa_printf(MSG_ERROR,
+			   "dbus: Could not request service name: already registered");
 		break;
 	default:
-		wpa_printf(MSG_ERROR, "dbus: Could not request service name: "
-			   "%s %s", error.name, error.message);
+		wpa_printf(MSG_ERROR,
+			   "dbus: Could not request service name: %s %s",
+			   error.name, error.message);
 		break;
 	}
 	dbus_error_free(&error);
@@ -689,8 +686,9 @@ int wpas_dbus_register_iface(struct wpa_supplicant *wpa_s)
 	/* Register the message handler for the interface functions */
 	if (!dbus_connection_register_fallback(con, wpa_s->dbus_path, &vtable,
 					       wpa_s)) {
-		wpa_printf(MSG_ERROR, "dbus: Could not set up message "
-			   "handler for interface %s", wpa_s->ifname);
+		wpa_printf(MSG_ERROR,
+			   "dbus: Could not set up message handler for interface %s",
+			   wpa_s->ifname);
 		return -1;
 	}
 

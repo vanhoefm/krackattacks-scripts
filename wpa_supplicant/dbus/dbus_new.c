@@ -75,8 +75,7 @@ static DBusHandlerResult noc_filter(DBusConnection *conn,
 			return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 		}
 
-		for (wpa_s = priv->global->ifaces; wpa_s; wpa_s = wpa_s->next)
-		{
+		for (wpa_s = priv->global->ifaces; wpa_s; wpa_s = wpa_s->next) {
 			if (wpa_s->preq_notify_peer != NULL &&
 			    os_strcmp(name, wpa_s->preq_notify_peer) == 0 &&
 			    (new_owner == NULL || os_strlen(new_owner) == 0)) {
@@ -511,6 +510,7 @@ void wpas_dbus_signal_network_enabled_changed(struct wpa_supplicant *wpa_s,
 {
 
 	char path[WPAS_DBUS_OBJECT_PATH_MAX];
+
 	os_snprintf(path, WPAS_DBUS_OBJECT_PATH_MAX,
 		    "%s/" WPAS_DBUS_NEW_NETWORKS_PART "/%d",
 		    wpa_s->dbus_new_path, ssid->id);
@@ -1537,6 +1537,7 @@ void wpas_dbus_signal_p2p_sd_request(struct wpa_supplicant *wpa_s,
 	DBusMessageIter iter, dict_iter;
 	struct wpas_dbus_priv *iface;
 	char peer_obj_path[WPAS_DBUS_OBJECT_PATH_MAX], *path;
+
 	iface = wpa_s->global->dbus;
 
 	/* Do nothing if the control interface is not turned on */
@@ -1602,6 +1603,7 @@ void wpas_dbus_signal_p2p_sd_response(struct wpa_supplicant *wpa_s,
 	DBusMessageIter iter, dict_iter;
 	struct wpas_dbus_priv *iface;
 	char peer_obj_path[WPAS_DBUS_OBJECT_PATH_MAX], *path;
+
 	iface = wpa_s->global->dbus;
 
 	/* Do nothing if the control interface is not turned on */
@@ -1970,7 +1972,7 @@ static void wpas_dbus_register(struct wpa_dbus_object_desc *obj_desc,
 
 static const struct wpa_dbus_method_desc wpas_dbus_global_methods[] = {
 	{ "CreateInterface", WPAS_DBUS_NEW_INTERFACE,
-	  (WPADBusMethodHandler) &wpas_dbus_handler_create_interface,
+	  (WPADBusMethodHandler) wpas_dbus_handler_create_interface,
 	  {
 		  { "args", "a{sv}", ARG_IN },
 		  { "path", "o", ARG_OUT },
@@ -1978,14 +1980,14 @@ static const struct wpa_dbus_method_desc wpas_dbus_global_methods[] = {
 	  }
 	},
 	{ "RemoveInterface", WPAS_DBUS_NEW_INTERFACE,
-	  (WPADBusMethodHandler) &wpas_dbus_handler_remove_interface,
+	  (WPADBusMethodHandler) wpas_dbus_handler_remove_interface,
 	  {
 		  { "path", "o", ARG_IN },
 		  END_ARGS
 	  }
 	},
 	{ "GetInterface", WPAS_DBUS_NEW_INTERFACE,
-	  (WPADBusMethodHandler) &wpas_dbus_handler_get_interface,
+	  (WPADBusMethodHandler) wpas_dbus_handler_get_interface,
 	  {
 		  { "ifname", "s", ARG_IN },
 		  { "path", "o", ARG_OUT },
@@ -2077,8 +2079,8 @@ int wpas_dbus_ctrl_iface_init(struct wpas_dbus_priv *priv)
 
 	obj_desc = os_zalloc(sizeof(struct wpa_dbus_object_desc));
 	if (!obj_desc) {
-		wpa_printf(MSG_ERROR, "Not enough memory "
-			   "to create object description");
+		wpa_printf(MSG_ERROR,
+			   "Not enough memory to create object description");
 		return -1;
 	}
 
@@ -2192,16 +2194,16 @@ int wpas_dbus_register_network(struct wpa_supplicant *wpa_s,
 		   net_obj_path);
 	obj_desc = os_zalloc(sizeof(struct wpa_dbus_object_desc));
 	if (!obj_desc) {
-		wpa_printf(MSG_ERROR, "Not enough memory "
-			   "to create object description");
+		wpa_printf(MSG_ERROR,
+			   "Not enough memory to create object description");
 		goto err;
 	}
 
 	/* allocate memory for handlers arguments */
 	arg = os_zalloc(sizeof(struct network_handler_args));
 	if (!arg) {
-		wpa_printf(MSG_ERROR, "Not enough memory "
-			   "to create arguments for method");
+		wpa_printf(MSG_ERROR,
+			   "Not enough memory to create arguments for method");
 		goto err;
 	}
 
@@ -2407,15 +2409,15 @@ int wpas_dbus_register_bss(struct wpa_supplicant *wpa_s,
 
 	obj_desc = os_zalloc(sizeof(struct wpa_dbus_object_desc));
 	if (!obj_desc) {
-		wpa_printf(MSG_ERROR, "Not enough memory "
-			   "to create object description");
+		wpa_printf(MSG_ERROR,
+			   "Not enough memory to create object description");
 		goto err;
 	}
 
 	arg = os_zalloc(sizeof(struct bss_handler_args));
 	if (!arg) {
-		wpa_printf(MSG_ERROR, "Not enough memory "
-			   "to create arguments for handler");
+		wpa_printf(MSG_ERROR,
+			   "Not enough memory to create arguments for handler");
 		goto err;
 	}
 	arg->wpa_s = wpa_s;
@@ -2448,27 +2450,27 @@ err:
 
 static const struct wpa_dbus_method_desc wpas_dbus_interface_methods[] = {
 	{ "Scan", WPAS_DBUS_NEW_IFACE_INTERFACE,
-	  (WPADBusMethodHandler) &wpas_dbus_handler_scan,
+	  (WPADBusMethodHandler) wpas_dbus_handler_scan,
 	  {
 		  { "args", "a{sv}", ARG_IN },
 		  END_ARGS
 	  }
 	},
 	{ "SignalPoll", WPAS_DBUS_NEW_IFACE_INTERFACE,
-	  (WPADBusMethodHandler) &wpas_dbus_handler_signal_poll,
+	  (WPADBusMethodHandler) wpas_dbus_handler_signal_poll,
 	  {
 		  { "args", "a{sv}", ARG_OUT },
 		  END_ARGS
 	  }
 	},
 	{ "Disconnect", WPAS_DBUS_NEW_IFACE_INTERFACE,
-	  (WPADBusMethodHandler) &wpas_dbus_handler_disconnect,
+	  (WPADBusMethodHandler) wpas_dbus_handler_disconnect,
 	  {
 		  END_ARGS
 	  }
 	},
 	{ "AddNetwork", WPAS_DBUS_NEW_IFACE_INTERFACE,
-	  (WPADBusMethodHandler) &wpas_dbus_handler_add_network,
+	  (WPADBusMethodHandler) wpas_dbus_handler_add_network,
 	  {
 		  { "args", "a{sv}", ARG_IN },
 		  { "path", "o", ARG_OUT },
@@ -2476,39 +2478,39 @@ static const struct wpa_dbus_method_desc wpas_dbus_interface_methods[] = {
 	  }
 	},
 	{ "Reassociate", WPAS_DBUS_NEW_IFACE_INTERFACE,
-	  (WPADBusMethodHandler) &wpas_dbus_handler_reassociate,
+	  (WPADBusMethodHandler) wpas_dbus_handler_reassociate,
 	  {
 		  END_ARGS
 	  }
 	},
 	{ "Reattach", WPAS_DBUS_NEW_IFACE_INTERFACE,
-	  (WPADBusMethodHandler) &wpas_dbus_handler_reattach,
+	  (WPADBusMethodHandler) wpas_dbus_handler_reattach,
 	  {
 		  END_ARGS
 	  }
 	},
 	{ "RemoveNetwork", WPAS_DBUS_NEW_IFACE_INTERFACE,
-	  (WPADBusMethodHandler) &wpas_dbus_handler_remove_network,
+	  (WPADBusMethodHandler) wpas_dbus_handler_remove_network,
 	  {
 		  { "path", "o", ARG_IN },
 		  END_ARGS
 	  }
 	},
 	{ "RemoveAllNetworks", WPAS_DBUS_NEW_IFACE_INTERFACE,
-	  (WPADBusMethodHandler) &wpas_dbus_handler_remove_all_networks,
+	  (WPADBusMethodHandler) wpas_dbus_handler_remove_all_networks,
 	  {
 		  END_ARGS
 	  }
 	},
 	{ "SelectNetwork", WPAS_DBUS_NEW_IFACE_INTERFACE,
-	  (WPADBusMethodHandler) &wpas_dbus_handler_select_network,
+	  (WPADBusMethodHandler) wpas_dbus_handler_select_network,
 	  {
 		  { "path", "o", ARG_IN },
 		  END_ARGS
 	  }
 	},
 	{ "NetworkReply", WPAS_DBUS_NEW_IFACE_INTERFACE,
-	  (WPADBusMethodHandler) &wpas_dbus_handler_network_reply,
+	  (WPADBusMethodHandler) wpas_dbus_handler_network_reply,
 	  {
 		  { "path", "o", ARG_IN },
 		  { "field", "s", ARG_IN },
@@ -2518,7 +2520,7 @@ static const struct wpa_dbus_method_desc wpas_dbus_interface_methods[] = {
 	},
 #ifndef CONFIG_NO_CONFIG_BLOBS
 	{ "AddBlob", WPAS_DBUS_NEW_IFACE_INTERFACE,
-	  (WPADBusMethodHandler) &wpas_dbus_handler_add_blob,
+	  (WPADBusMethodHandler) wpas_dbus_handler_add_blob,
 	  {
 		  { "name", "s", ARG_IN },
 		  { "data", "ay", ARG_IN },
@@ -2526,7 +2528,7 @@ static const struct wpa_dbus_method_desc wpas_dbus_interface_methods[] = {
 	  }
 	},
 	{ "GetBlob", WPAS_DBUS_NEW_IFACE_INTERFACE,
-	  (WPADBusMethodHandler) &wpas_dbus_handler_get_blob,
+	  (WPADBusMethodHandler) wpas_dbus_handler_get_blob,
 	  {
 		  { "name", "s", ARG_IN },
 		  { "data", "ay", ARG_OUT },
@@ -2534,7 +2536,7 @@ static const struct wpa_dbus_method_desc wpas_dbus_interface_methods[] = {
 	  }
 	},
 	{ "RemoveBlob", WPAS_DBUS_NEW_IFACE_INTERFACE,
-	  (WPADBusMethodHandler) &wpas_dbus_handler_remove_blob,
+	  (WPADBusMethodHandler) wpas_dbus_handler_remove_blob,
 	  {
 		  { "name", "s", ARG_IN },
 		  END_ARGS
@@ -2543,7 +2545,7 @@ static const struct wpa_dbus_method_desc wpas_dbus_interface_methods[] = {
 #endif /* CONFIG_NO_CONFIG_BLOBS */
 	{ "SetPKCS11EngineAndModulePath", WPAS_DBUS_NEW_IFACE_INTERFACE,
 	  (WPADBusMethodHandler)
-	  &wpas_dbus_handler_set_pkcs11_engine_and_module_path,
+	  wpas_dbus_handler_set_pkcs11_engine_and_module_path,
 	  {
 		  { "pkcs11_engine_path", "s", ARG_IN },
 		  { "pkcs11_module_path", "s", ARG_IN },
@@ -2552,7 +2554,7 @@ static const struct wpa_dbus_method_desc wpas_dbus_interface_methods[] = {
 	},
 #ifdef CONFIG_WPS
 	{ "Start", WPAS_DBUS_NEW_IFACE_WPS,
-	  (WPADBusMethodHandler) &wpas_dbus_handler_wps_start,
+	  (WPADBusMethodHandler) wpas_dbus_handler_wps_start,
 	  {
 		  { "args", "a{sv}", ARG_IN },
 		  { "output", "a{sv}", ARG_OUT },
@@ -2562,41 +2564,41 @@ static const struct wpa_dbus_method_desc wpas_dbus_interface_methods[] = {
 #endif /* CONFIG_WPS */
 #ifdef CONFIG_P2P
 	{ "Find", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
-	  (WPADBusMethodHandler)wpas_dbus_handler_p2p_find,
+	  (WPADBusMethodHandler) wpas_dbus_handler_p2p_find,
 	  {
 		  { "args", "a{sv}", ARG_IN },
 		  END_ARGS
 	  }
 	},
 	{ "StopFind", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
-	  (WPADBusMethodHandler)wpas_dbus_handler_p2p_stop_find,
+	  (WPADBusMethodHandler) wpas_dbus_handler_p2p_stop_find,
 	  {
 		  END_ARGS
 	  }
 	},
 	{ "Listen", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
-	  (WPADBusMethodHandler)wpas_dbus_handler_p2p_listen,
+	  (WPADBusMethodHandler) wpas_dbus_handler_p2p_listen,
 	  {
 		  { "timeout", "i", ARG_IN },
 		  END_ARGS
 	  }
 	},
 	{ "ExtendedListen", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
-	  (WPADBusMethodHandler)wpas_dbus_handler_p2p_extendedlisten,
+	  (WPADBusMethodHandler) wpas_dbus_handler_p2p_extendedlisten,
 	  {
 		  { "args", "a{sv}", ARG_IN },
 		  END_ARGS
 	  }
 	},
 	{ "PresenceRequest", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
-	  (WPADBusMethodHandler)wpas_dbus_handler_p2p_presence_request,
+	  (WPADBusMethodHandler) wpas_dbus_handler_p2p_presence_request,
 	  {
 		  { "args", "a{sv}", ARG_IN },
 		  END_ARGS
 	  }
 	},
 	{ "ProvisionDiscoveryRequest", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
-	  (WPADBusMethodHandler)wpas_dbus_handler_p2p_prov_disc_req,
+	  (WPADBusMethodHandler) wpas_dbus_handler_p2p_prov_disc_req,
 	  {
 		  { "peer", "o", ARG_IN },
 		  { "config_method", "s", ARG_IN },
@@ -2604,7 +2606,7 @@ static const struct wpa_dbus_method_desc wpas_dbus_interface_methods[] = {
 	  }
 	},
 	{ "Connect", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
-	  (WPADBusMethodHandler)wpas_dbus_handler_p2p_connect,
+	  (WPADBusMethodHandler) wpas_dbus_handler_p2p_connect,
 	  {
 		  { "args", "a{sv}", ARG_IN },
 		  { "generated_pin", "s", ARG_OUT },
@@ -2612,60 +2614,60 @@ static const struct wpa_dbus_method_desc wpas_dbus_interface_methods[] = {
 	  }
 	},
 	{ "GroupAdd", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
-	  (WPADBusMethodHandler)wpas_dbus_handler_p2p_group_add,
+	  (WPADBusMethodHandler) wpas_dbus_handler_p2p_group_add,
 	  {
 		  { "args", "a{sv}", ARG_IN },
 		  END_ARGS
 	  }
 	},
 	{ "Invite", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
-	  (WPADBusMethodHandler)wpas_dbus_handler_p2p_invite,
+	  (WPADBusMethodHandler) wpas_dbus_handler_p2p_invite,
 	  {
 		  { "args", "a{sv}", ARG_IN },
 		  END_ARGS
 	  }
 	},
 	{ "Disconnect", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
-	  (WPADBusMethodHandler)wpas_dbus_handler_p2p_disconnect,
+	  (WPADBusMethodHandler) wpas_dbus_handler_p2p_disconnect,
 	  {
 		  END_ARGS
 	  }
 	},
 	{ "RejectPeer", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
-	  (WPADBusMethodHandler)wpas_dbus_handler_p2p_rejectpeer,
+	  (WPADBusMethodHandler) wpas_dbus_handler_p2p_rejectpeer,
 	  {
 		  { "peer", "o", ARG_IN },
 		  END_ARGS
 	  }
 	},
 	{ "Flush", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
-	  (WPADBusMethodHandler)wpas_dbus_handler_p2p_flush,
+	  (WPADBusMethodHandler) wpas_dbus_handler_p2p_flush,
 	  {
 		  END_ARGS
 	  }
 	},
 	{ "AddService", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
-	  (WPADBusMethodHandler)wpas_dbus_handler_p2p_add_service,
+	  (WPADBusMethodHandler) wpas_dbus_handler_p2p_add_service,
 	  {
 		  { "args", "a{sv}", ARG_IN },
 		  END_ARGS
 	  }
 	},
 	{ "DeleteService", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
-	  (WPADBusMethodHandler)wpas_dbus_handler_p2p_delete_service,
+	  (WPADBusMethodHandler) wpas_dbus_handler_p2p_delete_service,
 	  {
 		  { "args", "a{sv}", ARG_IN },
 		  END_ARGS
 	  }
 	},
 	{ "FlushService", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
-	  (WPADBusMethodHandler)wpas_dbus_handler_p2p_flush_service,
+	  (WPADBusMethodHandler) wpas_dbus_handler_p2p_flush_service,
 	  {
 		  END_ARGS
 	  }
 	},
 	{ "ServiceDiscoveryRequest", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
-	  (WPADBusMethodHandler)wpas_dbus_handler_p2p_service_sd_req,
+	  (WPADBusMethodHandler) wpas_dbus_handler_p2p_service_sd_req,
 	  {
 		  { "args", "a{sv}", ARG_IN },
 		  { "ref", "t", ARG_OUT },
@@ -2673,27 +2675,27 @@ static const struct wpa_dbus_method_desc wpas_dbus_interface_methods[] = {
 	  }
 	},
 	{ "ServiceDiscoveryResponse", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
-	  (WPADBusMethodHandler)wpas_dbus_handler_p2p_service_sd_res,
+	  (WPADBusMethodHandler) wpas_dbus_handler_p2p_service_sd_res,
 	  {
 		  { "args", "a{sv}", ARG_IN },
 		  END_ARGS
 	  }
 	},
 	{ "ServiceDiscoveryCancelRequest", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
-	  (WPADBusMethodHandler)wpas_dbus_handler_p2p_service_sd_cancel_req,
+	  (WPADBusMethodHandler) wpas_dbus_handler_p2p_service_sd_cancel_req,
 	  {
 		  { "args", "t", ARG_IN },
 		  END_ARGS
 	  }
 	},
 	{ "ServiceUpdate", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
-	  (WPADBusMethodHandler)wpas_dbus_handler_p2p_service_update,
+	  (WPADBusMethodHandler) wpas_dbus_handler_p2p_service_update,
 	  {
 		  END_ARGS
 	  }
 	},
 	{ "ServiceDiscoveryExternal", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
-	  (WPADBusMethodHandler)wpas_dbus_handler_p2p_serv_disc_external,
+	  (WPADBusMethodHandler) wpas_dbus_handler_p2p_serv_disc_external,
 	  {
 		  { "arg", "i", ARG_IN },
 		  END_ARGS
@@ -2723,7 +2725,7 @@ static const struct wpa_dbus_method_desc wpas_dbus_interface_methods[] = {
 	},
 #endif /* CONFIG_P2P */
 	{ "FlushBSS", WPAS_DBUS_NEW_IFACE_INTERFACE,
-	  (WPADBusMethodHandler) &wpas_dbus_handler_flush_bss,
+	  (WPADBusMethodHandler) wpas_dbus_handler_flush_bss,
 	  {
 		  { "age", "u", ARG_IN },
 		  END_ARGS
@@ -2744,20 +2746,20 @@ static const struct wpa_dbus_method_desc wpas_dbus_interface_methods[] = {
 	},
 #endif /* CONFIG_AP */
 	{ "EAPLogoff", WPAS_DBUS_NEW_IFACE_INTERFACE,
-	  (WPADBusMethodHandler) &wpas_dbus_handler_eap_logoff,
+	  (WPADBusMethodHandler) wpas_dbus_handler_eap_logoff,
 	  {
 		  END_ARGS
 	  }
 	},
 	{ "EAPLogon", WPAS_DBUS_NEW_IFACE_INTERFACE,
-	  (WPADBusMethodHandler) &wpas_dbus_handler_eap_logon,
+	  (WPADBusMethodHandler) wpas_dbus_handler_eap_logon,
 	  {
 		  END_ARGS
 	  }
 	},
 #ifdef CONFIG_AUTOSCAN
 	{ "AutoScan", WPAS_DBUS_NEW_IFACE_INTERFACE,
-	  (WPADBusMethodHandler) &wpas_dbus_handler_autoscan,
+	  (WPADBusMethodHandler) wpas_dbus_handler_autoscan,
 	  {
 		  { "arg", "s", ARG_IN },
 		  END_ARGS
@@ -3195,8 +3197,8 @@ int wpas_dbus_register_interface(struct wpa_supplicant *wpa_s)
 
 	obj_desc = os_zalloc(sizeof(struct wpa_dbus_object_desc));
 	if (!obj_desc) {
-		wpa_printf(MSG_ERROR, "Not enough memory "
-			   "to create object description");
+		wpa_printf(MSG_ERROR,
+			   "Not enough memory to create object description");
 		goto err;
 	}
 
@@ -3432,16 +3434,16 @@ int wpas_dbus_register_peer(struct wpa_supplicant *wpa_s, const u8 *dev_addr)
 		   peer_obj_path);
 	obj_desc = os_zalloc(sizeof(struct wpa_dbus_object_desc));
 	if (!obj_desc) {
-		wpa_printf(MSG_ERROR, "Not enough memory "
-			   "to create object description");
+		wpa_printf(MSG_ERROR,
+			   "Not enough memory to create object description");
 		goto err;
 	}
 
 	/* allocate memory for handlers arguments */
 	arg = os_zalloc(sizeof(struct peer_handler_args));
 	if (!arg) {
-		wpa_printf(MSG_ERROR, "Not enough memory "
-			   "to create arguments for method");
+		wpa_printf(MSG_ERROR,
+			   "Not enough memory to create arguments for method");
 		goto err;
 	}
 
@@ -3616,8 +3618,8 @@ void wpas_dbus_register_p2p_group(struct wpa_supplicant *wpa_s,
 		   group_obj_path);
 	obj_desc = os_zalloc(sizeof(struct wpa_dbus_object_desc));
 	if (!obj_desc) {
-		wpa_printf(MSG_ERROR, "Not enough memory "
-			   "to create object description");
+		wpa_printf(MSG_ERROR,
+			   "Not enough memory to create object description");
 		goto err;
 	}
 
@@ -3736,8 +3738,8 @@ int wpas_dbus_register_persistent_group(struct wpa_supplicant *wpa_s,
 		   pgrp_obj_path);
 	obj_desc = os_zalloc(sizeof(struct wpa_dbus_object_desc));
 	if (!obj_desc) {
-		wpa_printf(MSG_ERROR, "dbus: Not enough memory to create "
-			   "object description");
+		wpa_printf(MSG_ERROR,
+			   "dbus: Not enough memory to create object description");
 		goto err;
 	}
 
@@ -3748,8 +3750,8 @@ int wpas_dbus_register_persistent_group(struct wpa_supplicant *wpa_s,
 	/* allocate memory for handlers arguments */
 	arg = os_zalloc(sizeof(struct network_handler_args));
 	if (!arg) {
-		wpa_printf(MSG_ERROR, "dbus: Not enough memory to create "
-			   "arguments for method");
+		wpa_printf(MSG_ERROR,
+			   "dbus: Not enough memory to create arguments for method");
 		goto err;
 	}
 

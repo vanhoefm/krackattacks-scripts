@@ -109,34 +109,34 @@ dbus_bool_t wpas_dbus_getter_p2p_peergo(DBusMessageIter *iter,
  */
 
 dbus_bool_t wpas_dbus_getter_p2p_peer_device_name(DBusMessageIter *iter,
-                                                  DBusError *error,
-                                                  void *user_data);
+						  DBusError *error,
+						  void *user_data);
 
 dbus_bool_t wpas_dbus_getter_p2p_peer_primary_device_type(
 	DBusMessageIter *iter, DBusError *error, void *user_data);
 
 dbus_bool_t wpas_dbus_getter_p2p_peer_config_method(DBusMessageIter *iter,
-                                                    DBusError *error,
-                                                    void *user_data);
+						    DBusError *error,
+						    void *user_data);
 
 dbus_bool_t wpas_dbus_getter_p2p_peer_level(DBusMessageIter *iter,
-                                            DBusError *error,
-                                            void *user_data);
+					    DBusError *error,
+					    void *user_data);
 
 dbus_bool_t wpas_dbus_getter_p2p_peer_device_capability(DBusMessageIter *iter,
-                                                        DBusError *error,
-                                                        void *user_data);
+							DBusError *error,
+							void *user_data);
 
 dbus_bool_t wpas_dbus_getter_p2p_peer_group_capability(DBusMessageIter *iter,
-                                                       DBusError *error,
-                                                       void *user_data);
+						       DBusError *error,
+						       void *user_data);
 
 dbus_bool_t wpas_dbus_getter_p2p_peer_secondary_device_types(
 	DBusMessageIter *iter, DBusError *error, void *user_data);
 
 dbus_bool_t wpas_dbus_getter_p2p_peer_vendor_extension(DBusMessageIter *iter,
-                                                       DBusError *error,
-                                                       void *user_data);
+						       DBusError *error,
+						       void *user_data);
 
 dbus_bool_t wpas_dbus_getter_p2p_peer_ies(DBusMessageIter *iter,
 					  DBusError *error,

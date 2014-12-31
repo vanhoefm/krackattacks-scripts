@@ -41,8 +41,8 @@ static int wpas_dbus_handler_wps_role(DBusMessage *message,
 	dbus_message_iter_recurse(entry_iter, &variant_iter);
 	if (dbus_message_iter_get_arg_type(&variant_iter) !=
 	    DBUS_TYPE_STRING) {
-		wpa_printf(MSG_DEBUG, "dbus: WPS.Start - Wrong Role type, "
-			   "string required");
+		wpa_printf(MSG_DEBUG,
+			   "dbus: WPS.Start - Wrong Role type, string required");
 		*reply = wpas_dbus_error_invalid_args(message,
 						      "Role must be a string");
 		return -1;
@@ -70,10 +70,9 @@ static int wpas_dbus_handler_wps_type(DBusMessage *message,
 	char *val;
 
 	dbus_message_iter_recurse(entry_iter, &variant_iter);
-	if (dbus_message_iter_get_arg_type(&variant_iter) !=
-	    DBUS_TYPE_STRING) {
-		wpa_printf(MSG_DEBUG, "dbus: WPS.Start - Wrong Type type, "
-			   "string required");
+	if (dbus_message_iter_get_arg_type(&variant_iter) != DBUS_TYPE_STRING) {
+		wpa_printf(MSG_DEBUG,
+			   "dbus: WPS.Start - Wrong Type type, string required");
 		*reply = wpas_dbus_error_invalid_args(message,
 						      "Type must be a string");
 		return -1;
@@ -105,8 +104,8 @@ static int wpas_dbus_handler_wps_bssid(DBusMessage *message,
 	if (dbus_message_iter_get_arg_type(&variant_iter) != DBUS_TYPE_ARRAY ||
 	    dbus_message_iter_get_element_type(&variant_iter) !=
 	    DBUS_TYPE_BYTE) {
-		wpa_printf(MSG_DEBUG, "dbus: WPS.Start - Wrong Bssid type, "
-			   "byte array required");
+		wpa_printf(MSG_DEBUG,
+			   "dbus: WPS.Start - Wrong Bssid type, byte array required");
 		*reply = wpas_dbus_error_invalid_args(
 			message, "Bssid must be a byte array");
 		return -1;
@@ -114,8 +113,8 @@ static int wpas_dbus_handler_wps_bssid(DBusMessage *message,
 	dbus_message_iter_recurse(&variant_iter, &array_iter);
 	dbus_message_iter_get_fixed_array(&array_iter, &params->bssid, &len);
 	if (len != ETH_ALEN) {
-		wpa_printf(MSG_DEBUG, "dbus: WPS.Stsrt - Wrong Bssid length "
-			   "%d", len);
+		wpa_printf(MSG_DEBUG, "dbus: WPS.Stsrt - Wrong Bssid length %d",
+			   len);
 		*reply = wpas_dbus_error_invalid_args(message,
 						      "Bssid is wrong length");
 		return -1;
@@ -132,10 +131,9 @@ static int wpas_dbus_handler_wps_pin(DBusMessage *message,
 	DBusMessageIter variant_iter;
 
 	dbus_message_iter_recurse(entry_iter, &variant_iter);
-	if (dbus_message_iter_get_arg_type(&variant_iter) !=
-	    DBUS_TYPE_STRING) {
-		wpa_printf(MSG_DEBUG, "dbus: WPS.Start - Wrong Pin type, "
-			   "string required");
+	if (dbus_message_iter_get_arg_type(&variant_iter) != DBUS_TYPE_STRING) {
+		wpa_printf(MSG_DEBUG,
+			   "dbus: WPS.Start - Wrong Pin type, string required");
 		*reply = wpas_dbus_error_invalid_args(message,
 						      "Pin must be a string");
 		return -1;
@@ -158,8 +156,8 @@ static int wpas_dbus_handler_wps_p2p_dev_addr(DBusMessage *message,
 	if (dbus_message_iter_get_arg_type(&variant_iter) != DBUS_TYPE_ARRAY ||
 	    dbus_message_iter_get_element_type(&variant_iter) !=
 	    DBUS_TYPE_BYTE) {
-		wpa_printf(MSG_DEBUG, "dbus: WPS.Start - Wrong "
-			   "P2PDeviceAddress type, byte array required");
+		wpa_printf(MSG_DEBUG,
+			   "dbus: WPS.Start - Wrong P2PDeviceAddress type, byte array required");
 		*reply = wpas_dbus_error_invalid_args(
 			message, "P2PDeviceAddress must be a byte array");
 		return -1;
@@ -168,11 +166,11 @@ static int wpas_dbus_handler_wps_p2p_dev_addr(DBusMessage *message,
 	dbus_message_iter_get_fixed_array(&array_iter, &params->p2p_dev_addr,
 					  &len);
 	if (len != ETH_ALEN) {
-		wpa_printf(MSG_DEBUG, "dbus: WPS.Start - Wrong "
-			   "P2PDeviceAddress length %d", len);
-		*reply = wpas_dbus_error_invalid_args(message,
-						      "P2PDeviceAddress "
-						      "has wrong length");
+		wpa_printf(MSG_DEBUG,
+			   "dbus: WPS.Start - Wrong P2PDeviceAddress length %d",
+			   len);
+		*reply = wpas_dbus_error_invalid_args(
+			message, "P2PDeviceAddress has wrong length");
 		return -1;
 	}
 	return 0;
@@ -258,8 +256,8 @@ DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
 		return wpas_dbus_error_invalid_args(message,
 						    "Type not specified");
 	} else if (params.role == 2 && params.pin == NULL) {
-		wpa_printf(MSG_DEBUG, "dbus: WPS.Start - Pin required for "
-			   "registrar role");
+		wpa_printf(MSG_DEBUG,
+			   "dbus: WPS.Start - Pin required for registrar role");
 		return wpas_dbus_error_invalid_args(
 			message, "Pin required for registrar role.");
 	}
@@ -295,8 +293,8 @@ DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
 	}
 
 	if (ret < 0) {
-		wpa_printf(MSG_DEBUG, "dbus: WPS.Start wpas_wps_failed in "
-			   "role %s and key %s",
+		wpa_printf(MSG_DEBUG,
+			   "dbus: WPS.Start wpas_wps_failed in role %s and key %s",
 			   (params.role == 1 ? "enrollee" : "registrar"),
 			   (params.type == 0 ? "" :
 			    (params.type == 1 ? "pin" : "pbc")));
@@ -339,7 +337,8 @@ dbus_bool_t wpas_dbus_getter_process_credentials(DBusMessageIter *iter,
 						 void *user_data)
 {
 	struct wpa_supplicant *wpa_s = user_data;
-	dbus_bool_t process = (wpa_s->conf->wps_cred_processing != 1);
+	dbus_bool_t process = wpa_s->conf->wps_cred_processing != 1;
+
 	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_BOOLEAN,
 						&process, error);
 }
@@ -366,7 +365,7 @@ dbus_bool_t wpas_dbus_setter_process_credentials(DBusMessageIter *iter,
 					      &process_credentials))
 		return FALSE;
 
-	old_pc = (wpa_s->conf->wps_cred_processing != 1);
+	old_pc = wpa_s->conf->wps_cred_processing != 1;
 	wpa_s->conf->wps_cred_processing = (process_credentials ? 2 : 1);
 
 	if ((wpa_s->conf->wps_cred_processing != 1) != old_pc)

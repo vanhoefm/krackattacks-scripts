@@ -36,7 +36,7 @@ DBusMessage * wpas_dbus_iface_wps_pbc(DBusMessage *message,
 				   DBUS_TYPE_INVALID))
 		return wpas_dbus_new_invalid_opts_error(message, NULL);
 
-	if (!os_strcmp(arg_bssid, "any"))
+	if (os_strcmp(arg_bssid, "any") == 0)
 		ret = wpas_wps_start_pbc(wpa_s, NULL, 0);
 	else if (!hwaddr_aton(arg_bssid, bssid))
 		ret = wpas_wps_start_pbc(wpa_s, bssid, 0);
@@ -46,10 +46,9 @@ DBusMessage * wpas_dbus_iface_wps_pbc(DBusMessage *message,
 	}
 
 	if (ret < 0) {
-		return dbus_message_new_error(message,
-					      WPAS_ERROR_WPS_PBC_ERROR,
-					      "Could not start PBC "
-					      "negotiation");
+		return dbus_message_new_error(
+			message, WPAS_ERROR_WPS_PBC_ERROR,
+			"Could not start PBC negotiation");
 	}
 
 	return wpas_dbus_new_success_reply(message);
@@ -79,7 +78,7 @@ DBusMessage * wpas_dbus_iface_wps_pin(DBusMessage *message,
 				   DBUS_TYPE_STRING, &pin, DBUS_TYPE_INVALID))
 		return wpas_dbus_new_invalid_opts_error(message, NULL);
 
-	if (!os_strcmp(arg_bssid, "any"))
+	if (os_strcmp(arg_bssid, "any") == 0)
 		_bssid = NULL;
 	else if (!hwaddr_aton(arg_bssid, bssid))
 		_bssid = bssid;

@@ -55,8 +55,8 @@ dbus_bool_t wpas_dbus_getter_debug_level(DBusMessageIter *iter,
 					 void *user_data);
 
 dbus_bool_t wpas_dbus_getter_debug_timestamp(DBusMessageIter *iter,
-                                             DBusError *error,
-                                             void *user_data);
+					     DBusError *error,
+					     void *user_data);
 
 dbus_bool_t wpas_dbus_getter_debug_show_keys(DBusMessageIter *iter,
 					     DBusError *error,

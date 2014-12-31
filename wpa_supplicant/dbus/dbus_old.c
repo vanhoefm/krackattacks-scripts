@@ -216,6 +216,10 @@ static DBusHandlerResult wpas_iface_message_handler(DBusConnection *connection,
 	if (!msg_interface)
 		goto out;
 
+	wpa_printf(MSG_MSGDUMP, "dbus[old/iface]: %s.%s (%s) [%s]",
+		   msg_interface, method, path,
+		   dbus_message_get_signature(message));
+
 	iface_obj_path = wpas_dbus_decompose_object_path(path, &network,
 	                                                 &bssid);
 	if (iface_obj_path == NULL) {
@@ -327,6 +331,10 @@ static DBusHandlerResult wpas_message_handler(DBusConnection *connection,
 	msg_interface = dbus_message_get_interface(message);
 	if (!method || !path || !ctrl_iface || !msg_interface)
 		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+
+	wpa_printf(MSG_MSGDUMP, "dbus[old]: %s.%s (%s) [%s]",
+		   msg_interface, method, path,
+		   dbus_message_get_signature(message));
 
 	/* Validate the method interface */
 	if (strcmp(msg_interface, WPAS_DBUS_INTERFACE) != 0)

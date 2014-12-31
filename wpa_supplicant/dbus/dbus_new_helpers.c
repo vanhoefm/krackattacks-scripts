@@ -388,8 +388,9 @@ static DBusHandlerResult message_handler(DBusConnection *connection,
 	if (!method || !path || !msg_interface)
 		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 
-	wpa_printf(MSG_MSGDUMP, "dbus: %s.%s (%s)",
-		   msg_interface, method, path);
+	wpa_printf(MSG_MSGDUMP, "dbus: %s.%s (%s) [%s]",
+		   msg_interface, method, path,
+		   dbus_message_get_signature(message));
 
 	/* if message is introspection method call */
 	if (!os_strncmp(WPA_DBUS_INTROSPECTION_METHOD, method,

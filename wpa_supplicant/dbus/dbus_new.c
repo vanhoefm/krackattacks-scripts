@@ -148,22 +148,14 @@ static void wpas_dbus_signal_interface(struct wpa_supplicant *wpa_s,
 
 	dbus_message_iter_init_append(msg, &iter);
 	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_OBJECT_PATH,
-					    &wpa_s->dbus_new_path))
-		goto err;
-
-	if (properties) {
-		if (!wpa_dbus_get_object_properties(
-			    iface, wpa_s->dbus_new_path,
-			    WPAS_DBUS_NEW_IFACE_INTERFACE, &iter))
-			goto err;
-	}
-
-	dbus_connection_send(iface->con, msg, NULL);
-	dbus_message_unref(msg);
-	return;
-
-err:
-	wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+					    &wpa_s->dbus_new_path) ||
+	    (properties &&
+	     !wpa_dbus_get_object_properties(
+		     iface, wpa_s->dbus_new_path,
+		     WPAS_DBUS_NEW_IFACE_INTERFACE, &iter)))
+		wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+	else
+		dbus_connection_send(iface->con, msg, NULL);
 	dbus_message_unref(msg);
 }
 
@@ -229,7 +221,7 @@ void wpas_dbus_signal_scan_done(struct wpa_supplicant *wpa_s, int success)
 
 
 /**
- * wpas_dbus_signal_blob - Send a BSS related event signal
+ * wpas_dbus_signal_bss - Send a BSS related event signal
  * @wpa_s: %wpa_supplicant network interface data
  * @bss_obj_path: BSS object path
  * @sig_name: signal name - BSSAdded or BSSRemoved
@@ -259,22 +251,14 @@ static void wpas_dbus_signal_bss(struct wpa_supplicant *wpa_s,
 
 	dbus_message_iter_init_append(msg, &iter);
 	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_OBJECT_PATH,
-					    &bss_obj_path))
-		goto err;
-
-	if (properties) {
-		if (!wpa_dbus_get_object_properties(iface, bss_obj_path,
-						    WPAS_DBUS_NEW_IFACE_BSS,
-						    &iter))
-			goto err;
-	}
-
-	dbus_connection_send(iface->con, msg, NULL);
-	dbus_message_unref(msg);
-	return;
-
-err:
-	wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+					    &bss_obj_path) ||
+	    (properties &&
+	     !wpa_dbus_get_object_properties(iface, bss_obj_path,
+					     WPAS_DBUS_NEW_IFACE_BSS,
+					     &iter)))
+		wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+	else
+		dbus_connection_send(iface->con, msg, NULL);
 	dbus_message_unref(msg);
 }
 
@@ -407,23 +391,14 @@ static void wpas_dbus_signal_network(struct wpa_supplicant *wpa_s,
 	dbus_message_iter_init_append(msg, &iter);
 	path = net_obj_path;
 	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_OBJECT_PATH,
-					    &path))
-		goto err;
-
-	if (properties) {
-		if (!wpa_dbus_get_object_properties(
-			    iface, net_obj_path, WPAS_DBUS_NEW_IFACE_NETWORK,
-			    &iter))
-			goto err;
-	}
-
-	dbus_connection_send(iface->con, msg, NULL);
-
-	dbus_message_unref(msg);
-	return;
-
-err:
-	wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+					    &path) ||
+	    (properties &&
+	     !wpa_dbus_get_object_properties(
+		     iface, net_obj_path, WPAS_DBUS_NEW_IFACE_NETWORK,
+		     &iter)))
+		wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+	else
+		dbus_connection_send(iface->con, msg, NULL);
 	dbus_message_unref(msg);
 }
 
@@ -513,19 +488,12 @@ void wpas_dbus_signal_network_request(struct wpa_supplicant *wpa_s,
 
 	dbus_message_iter_init_append(msg, &iter);
 	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_OBJECT_PATH,
-					    &net_ptr))
-		goto err;
-	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &field))
-		goto err;
-	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &txt))
-		goto err;
-
-	dbus_connection_send(iface->con, msg, NULL);
-	dbus_message_unref(msg);
-	return;
-
-err:
-	wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+					    &net_ptr) ||
+	    !dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &field) ||
+	    !dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &txt))
+		wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+	else
+		dbus_connection_send(iface->con, msg, NULL);
 	dbus_message_unref(msg);
 }
 
@@ -749,15 +717,11 @@ void wpas_dbus_signal_wps_cred(struct wpa_supplicant *wpa_s,
 	if (cred->encr_type & WPS_ENCR_AES)
 		encr_type[et_num++] = "aes";
 
-	if (wpa_s->current_ssid) {
-		if (!wpa_dbus_dict_append_byte_array(
-			    &dict_iter, "BSSID",
-			    (const char *) wpa_s->current_ssid->bssid,
-			    ETH_ALEN))
-			goto nomem;
-	}
-
-	if (!wpa_dbus_dict_append_byte_array(&dict_iter, "SSID",
+	if ((wpa_s->current_ssid &&
+	     !wpa_dbus_dict_append_byte_array(
+		     &dict_iter, "BSSID",
+		     (const char *) wpa_s->current_ssid->bssid, ETH_ALEN)) ||
+	    !wpa_dbus_dict_append_byte_array(&dict_iter, "SSID",
 					     (const char *) cred->ssid,
 					     cred->ssid_len) ||
 	    !wpa_dbus_dict_append_string_array(&dict_iter, "AuthType",
@@ -804,29 +768,20 @@ void wpas_dbus_signal_certification(struct wpa_supplicant *wpa_s,
 		return;
 
 	dbus_message_iter_init_append(msg, &iter);
-	if (!wpa_dbus_dict_open_write(&iter, &dict_iter))
-		goto nomem;
-
-	if (!wpa_dbus_dict_append_uint32(&dict_iter, "depth", depth) ||
-	    !wpa_dbus_dict_append_string(&dict_iter, "subject", subject))
-		goto nomem;
-
-	if (cert_hash &&
-	    !wpa_dbus_dict_append_string(&dict_iter, "cert_hash", cert_hash))
-		goto nomem;
-
-	if (cert &&
-	    !wpa_dbus_dict_append_byte_array(&dict_iter, "cert",
-					     wpabuf_head(cert),
-					     wpabuf_len(cert)))
-		goto nomem;
-
-	if (!wpa_dbus_dict_close_write(&iter, &dict_iter))
-		goto nomem;
-
-	dbus_connection_send(iface->con, msg, NULL);
-
-nomem:
+	if (!wpa_dbus_dict_open_write(&iter, &dict_iter) ||
+	    !wpa_dbus_dict_append_uint32(&dict_iter, "depth", depth) ||
+	    !wpa_dbus_dict_append_string(&dict_iter, "subject", subject) ||
+	    (cert_hash &&
+	     !wpa_dbus_dict_append_string(&dict_iter, "cert_hash",
+					  cert_hash)) ||
+	    (cert &&
+	     !wpa_dbus_dict_append_byte_array(&dict_iter, "cert",
+					      wpabuf_head(cert),
+					      wpabuf_len(cert))) ||
+	    !wpa_dbus_dict_close_write(&iter, &dict_iter))
+		wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+	else
+		dbus_connection_send(iface->con, msg, NULL);
 	dbus_message_unref(msg);
 }
 
@@ -852,15 +807,12 @@ void wpas_dbus_signal_eap_status(struct wpa_supplicant *wpa_s,
 
 	dbus_message_iter_init_append(msg, &iter);
 
-	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &status)
-	    ||
+	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &status) ||
 	    !dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING,
 					    &parameter))
-		goto nomem;
-
-	dbus_connection_send(iface->con, msg, NULL);
-
-nomem:
+		wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+	else
+		dbus_connection_send(iface->con, msg, NULL);
 	dbus_message_unref(msg);
 }
 
@@ -946,7 +898,6 @@ void wpas_dbus_signal_sta_deauthorized(struct wpa_supplicant *wpa_s,
 void wpas_dbus_signal_p2p_group_removed(struct wpa_supplicant *wpa_s,
 					const char *role)
 {
-	int error = 1;
 	DBusMessage *msg;
 	DBusMessageIter iter, dict_iter;
 	struct wpas_dbus_priv *iface = wpa_s->global->dbus;
@@ -970,30 +921,17 @@ void wpas_dbus_signal_p2p_group_removed(struct wpa_supplicant *wpa_s,
 		return;
 
 	dbus_message_iter_init_append(msg, &iter);
-	if (!wpa_dbus_dict_open_write(&iter, &dict_iter))
-		goto nomem;
-
-	if (!wpa_dbus_dict_append_object_path(&dict_iter,
+	if (!wpa_dbus_dict_open_write(&iter, &dict_iter) ||
+	    !wpa_dbus_dict_append_object_path(&dict_iter,
 					      "interface_object",
-					      wpa_s->dbus_new_path))
-		goto nomem;
-
-	if (!wpa_dbus_dict_append_string(&dict_iter, "role", role))
-		goto nomem;
-
-	if (!wpa_dbus_dict_append_object_path(&dict_iter, "group_object",
+					      wpa_s->dbus_new_path) ||
+	    !wpa_dbus_dict_append_string(&dict_iter, "role", role) ||
+	    !wpa_dbus_dict_append_object_path(&dict_iter, "group_object",
 					      wpa_s->dbus_groupobj_path) ||
 	    !wpa_dbus_dict_close_write(&iter, &dict_iter))
-		goto nomem;
-
-	error = 0;
-	dbus_connection_send(iface->con, msg, NULL);
-
-nomem:
-	if (error > 0)
-		wpa_printf(MSG_ERROR,
-			   "dbus: Failed to construct GroupFinished");
-
+		wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+	else
+		dbus_connection_send(iface->con, msg, NULL);
 	dbus_message_unref(msg);
 }
 
@@ -1280,34 +1218,26 @@ void wpas_dbus_signal_p2p_group_started(struct wpa_supplicant *wpa_s,
 		return;
 
 	dbus_message_iter_init_append(msg, &iter);
-	if (!wpa_dbus_dict_open_write(&iter, &dict_iter))
-		goto nomem;
-
 	/*
 	 * In case the device supports creating a separate interface the
 	 * DBus client will need to know the object path for the interface
 	 * object this group was created on, so include it here.
 	 */
-	if (!wpa_dbus_dict_append_object_path(&dict_iter,
-					"interface_object",
-					wpa_s->dbus_new_path))
-		goto nomem;
-
-	if (!wpa_dbus_dict_append_string(&dict_iter, "role",
-					 client ? "client" : "GO"))
-		goto nomem;
-
-	if (!wpa_dbus_dict_append_object_path(&dict_iter, "group_object",
+	if (!wpa_dbus_dict_open_write(&iter, &dict_iter) ||
+	    !wpa_dbus_dict_append_object_path(&dict_iter,
+					      "interface_object",
+					      wpa_s->dbus_new_path) ||
+	    !wpa_dbus_dict_append_string(&dict_iter, "role",
+					 client ? "client" : "GO") ||
+	    !wpa_dbus_dict_append_object_path(&dict_iter, "group_object",
 					      wpa_s->dbus_groupobj_path) ||
-	   !wpa_dbus_dict_close_write(&iter, &dict_iter))
-		goto nomem;
-
-	dbus_connection_send(iface->con, msg, NULL);
-
-	if (client)
-		peer_groups_changed(wpa_s);
-
-nomem:
+	    !wpa_dbus_dict_close_write(&iter, &dict_iter)) {
+		wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+	} else {
+		dbus_connection_send(iface->con, msg, NULL);
+		if (client)
+			peer_groups_changed(wpa_s);
+	}
 	dbus_message_unref(msg);
 }
 
@@ -1353,9 +1283,8 @@ void wpas_dbus_signal_p2p_go_neg_resp(struct wpa_supplicant *wpa_s,
 		return;
 
 	dbus_message_iter_init_append(msg, &iter);
-	if (!wpa_dbus_dict_open_write(&iter, &dict_iter))
-		goto err;
-	if (!wpa_dbus_dict_append_object_path(&dict_iter, "peer_object",
+	if (!wpa_dbus_dict_open_write(&iter, &dict_iter) ||
+	    !wpa_dbus_dict_append_object_path(&dict_iter, "peer_object",
 					      path) ||
 	    !wpa_dbus_dict_append_int32(&dict_iter, "status", res->status))
 		goto err;
@@ -1364,12 +1293,10 @@ void wpas_dbus_signal_p2p_go_neg_resp(struct wpa_supplicant *wpa_s,
 		int i = 0;
 		int freq_list_num = 0;
 
-		if (res->role_go &&
-		    !wpa_dbus_dict_append_string(&dict_iter, "passphrase",
-						 res->passphrase))
-			goto err;
-
-		if (!wpa_dbus_dict_append_string(&dict_iter, "role_go",
+		if ((res->role_go &&
+		     !wpa_dbus_dict_append_string(&dict_iter, "passphrase",
+						  res->passphrase)) ||
+		    !wpa_dbus_dict_append_string(&dict_iter, "role_go",
 						 res->role_go ? "GO" :
 						 "client") ||
 		    !wpa_dbus_dict_append_int32(&dict_iter, "frequency",
@@ -1404,22 +1331,16 @@ void wpas_dbus_signal_p2p_go_neg_resp(struct wpa_supplicant *wpa_s,
 					       DBUS_TYPE_INT32_AS_STRING,
 					       &iter_dict_entry,
 					       &iter_dict_val,
-					       &iter_dict_array))
-			goto err;
-
-		if (!dbus_message_iter_append_fixed_array(&iter_dict_array,
+					       &iter_dict_array) ||
+		    !dbus_message_iter_append_fixed_array(&iter_dict_array,
 							  DBUS_TYPE_INT32,
 							  &f_array,
-							  freq_list_num))
-			goto err;
-
-		if (!wpa_dbus_dict_end_array(&dict_iter,
+							  freq_list_num) ||
+		    !wpa_dbus_dict_end_array(&dict_iter,
 					     &iter_dict_entry,
 					     &iter_dict_val,
-					     &iter_dict_array))
-			goto err;
-
-		if (!wpa_dbus_dict_append_int32(&dict_iter, "persistent_group",
+					     &iter_dict_array) ||
+		    !wpa_dbus_dict_append_int32(&dict_iter, "persistent_group",
 						res->persistent_group) ||
 		    !wpa_dbus_dict_append_uint32(&dict_iter,
 						 "peer_config_timeout",
@@ -1469,23 +1390,16 @@ void wpas_dbus_signal_p2p_invitation_result(struct wpa_supplicant *wpa_s,
 		return;
 
 	dbus_message_iter_init_append(msg, &iter);
-	if (!wpa_dbus_dict_open_write(&iter, &dict_iter))
-		goto nomem;
-
-	if (!wpa_dbus_dict_append_int32(&dict_iter, "status", status))
-		goto nomem;
-	if (bssid) {
-		if (!wpa_dbus_dict_append_byte_array(&dict_iter, "BSSID",
-						     (const char *) bssid,
-						     ETH_ALEN))
-			goto nomem;
-	}
-	if (!wpa_dbus_dict_close_write(&iter, &dict_iter))
-		goto nomem;
-
-	dbus_connection_send(iface->con, msg, NULL);
-
-nomem:
+	if (!wpa_dbus_dict_open_write(&iter, &dict_iter) ||
+	    !wpa_dbus_dict_append_int32(&dict_iter, "status", status) ||
+	    (bssid &&
+	     !wpa_dbus_dict_append_byte_array(&dict_iter, "BSSID",
+					      (const char *) bssid,
+					      ETH_ALEN)) ||
+	    !wpa_dbus_dict_close_write(&iter, &dict_iter))
+		wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+	else
+		dbus_connection_send(iface->con, msg, NULL);
 	dbus_message_unref(msg);
 }
 
@@ -1535,18 +1449,12 @@ void wpas_dbus_signal_p2p_peer_joined(struct wpa_supplicant *wpa_s,
 	dbus_message_iter_init_append(msg, &iter);
 	path = peer_obj_path;
 	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_OBJECT_PATH,
-					    &path))
-		goto err;
-
-	dbus_connection_send(iface->con, msg, NULL);
-	dbus_message_unref(msg);
-
-	wpas_dbus_signal_peer_groups_changed(parent, peer_addr);
-
-	return;
-
-err:
-	wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+					    &path)) {
+		wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+	} else {
+		dbus_connection_send(iface->con, msg, NULL);
+		wpas_dbus_signal_peer_groups_changed(parent, peer_addr);
+	}
 	dbus_message_unref(msg);
 }
 
@@ -1596,19 +1504,13 @@ void wpas_dbus_signal_p2p_peer_disconnected(struct wpa_supplicant *wpa_s,
 	dbus_message_iter_init_append(msg, &iter);
 	path = peer_obj_path;
 	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_OBJECT_PATH,
-					    &path))
-		goto err;
-
-	dbus_connection_send(iface->con, msg, NULL);
-	dbus_message_unref(msg);
-
-	wpas_dbus_signal_peer_groups_changed(parent, peer_addr);
-
-	return;
-
-err:
-	wpa_printf(MSG_ERROR, "dbus: Failed to construct PeerDisconnected "
-			      "signal");
+					    &path)) {
+		wpa_printf(MSG_ERROR,
+			   "dbus: Failed to construct PeerDisconnected signal");
+	} else {
+		dbus_connection_send(iface->con, msg, NULL);
+		wpas_dbus_signal_peer_groups_changed(parent, peer_addr);
+	}
 	dbus_message_unref(msg);
 }
 
@@ -1644,15 +1546,15 @@ void wpas_dbus_signal_p2p_sd_request(struct wpa_supplicant *wpa_s,
 	if (wpa_s->p2p_mgmt)
 		wpa_s = wpa_s->parent;
 
+	/* Check if this is a known peer */
+	if (!p2p_peer_known(wpa_s->global->p2p, sa))
+		return;
+
 	msg = dbus_message_new_signal(wpa_s->dbus_new_path,
 				      WPAS_DBUS_NEW_IFACE_P2PDEVICE,
 				      "ServiceDiscoveryRequest");
 	if (msg == NULL)
 		return;
-
-	/* Check if this is a known peer */
-	if (!p2p_peer_known(wpa_s->global->p2p, sa))
-		goto error;
 
 	os_snprintf(peer_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
 		    "%s/" WPAS_DBUS_NEW_P2P_PEERS_PART "/"
@@ -1661,11 +1563,8 @@ void wpas_dbus_signal_p2p_sd_request(struct wpa_supplicant *wpa_s,
 	path = peer_obj_path;
 
 	dbus_message_iter_init_append(msg, &iter);
-	if (!wpa_dbus_dict_open_write(&iter, &dict_iter))
-		goto error;
-
-
-	if (!wpa_dbus_dict_append_object_path(&dict_iter, "peer_object",
+	if (!wpa_dbus_dict_open_write(&iter, &dict_iter) ||
+	    !wpa_dbus_dict_append_object_path(&dict_iter, "peer_object",
 					      path) ||
 	    !wpa_dbus_dict_append_int32(&dict_iter, "frequency", freq) ||
 	    !wpa_dbus_dict_append_int32(&dict_iter, "dialog_token",
@@ -1676,13 +1575,9 @@ void wpas_dbus_signal_p2p_sd_request(struct wpa_supplicant *wpa_s,
 					     (const char *) tlvs,
 					     tlvs_len) ||
 	    !wpa_dbus_dict_close_write(&iter, &dict_iter))
-		goto error;
-
-	dbus_connection_send(iface->con, msg, NULL);
-	dbus_message_unref(msg);
-	return;
-error:
-	wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+		wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+	else
+		dbus_connection_send(iface->con, msg, NULL);
 	dbus_message_unref(msg);
 }
 
@@ -1716,15 +1611,15 @@ void wpas_dbus_signal_p2p_sd_response(struct wpa_supplicant *wpa_s,
 	if (wpa_s->p2p_mgmt)
 		wpa_s = wpa_s->parent;
 
+	/* Check if this is a known peer */
+	if (!p2p_peer_known(wpa_s->global->p2p, sa))
+		return;
+
 	msg = dbus_message_new_signal(wpa_s->dbus_new_path,
 				      WPAS_DBUS_NEW_IFACE_P2PDEVICE,
 				      "ServiceDiscoveryResponse");
 	if (msg == NULL)
 		return;
-
-	/* Check if this is a known peer */
-	if (!p2p_peer_known(wpa_s->global->p2p, sa))
-		goto error;
 
 	os_snprintf(peer_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
 		    "%s/" WPAS_DBUS_NEW_P2P_PEERS_PART "/"
@@ -1733,10 +1628,8 @@ void wpas_dbus_signal_p2p_sd_response(struct wpa_supplicant *wpa_s,
 	path = peer_obj_path;
 
 	dbus_message_iter_init_append(msg, &iter);
-	if (!wpa_dbus_dict_open_write(&iter, &dict_iter))
-		goto error;
-
-	if (!wpa_dbus_dict_append_object_path(&dict_iter, "peer_object",
+	if (!wpa_dbus_dict_open_write(&iter, &dict_iter) ||
+	    !wpa_dbus_dict_append_object_path(&dict_iter, "peer_object",
 					      path) ||
 	    !wpa_dbus_dict_append_uint16(&dict_iter, "update_indicator",
 					 update_indic) ||
@@ -1744,16 +1637,12 @@ void wpas_dbus_signal_p2p_sd_response(struct wpa_supplicant *wpa_s,
 					     (const char *) tlvs,
 					     tlvs_len) ||
 	    !wpa_dbus_dict_close_write(&iter, &dict_iter))
-		goto error;
-
-
-	dbus_connection_send(iface->con, msg, NULL);
-	dbus_message_unref(msg);
-	return;
-error:
-	wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+		wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+	else
+		dbus_connection_send(iface->con, msg, NULL);
 	dbus_message_unref(msg);
 }
+
 
 /**
  * wpas_dbus_signal_persistent_group - Send a persistent group related
@@ -1796,23 +1685,15 @@ static void wpas_dbus_signal_persistent_group(struct wpa_supplicant *wpa_s,
 	dbus_message_iter_init_append(msg, &iter);
 	path = pgrp_obj_path;
 	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_OBJECT_PATH,
-					    &path))
-		goto err;
+					    &path) ||
+	    (properties &&
+	     !wpa_dbus_get_object_properties(
+		     iface, pgrp_obj_path,
+		     WPAS_DBUS_NEW_IFACE_PERSISTENT_GROUP, &iter)))
+		wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+	else
+		dbus_connection_send(iface->con, msg, NULL);
 
-	if (properties) {
-		if (!wpa_dbus_get_object_properties(
-			    iface, pgrp_obj_path,
-			    WPAS_DBUS_NEW_IFACE_PERSISTENT_GROUP, &iter))
-			goto err;
-	}
-
-	dbus_connection_send(iface->con, msg, NULL);
-
-	dbus_message_unref(msg);
-	return;
-
-err:
-	wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
 	dbus_message_unref(msg);
 }
 
@@ -1895,7 +1776,7 @@ void wpas_dbus_signal_p2p_wps_failed(struct wpa_supplicant *wpa_s,
 	dbus_message_unref(msg);
 }
 
-#endif /*CONFIG_P2P*/
+#endif /* CONFIG_P2P */
 
 
 /**
@@ -3479,15 +3360,10 @@ static void wpas_dbus_signal_peer(struct wpa_supplicant *wpa_s,
 	path = peer_obj_path;
 	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_OBJECT_PATH,
 					    &path))
-		goto err;
+		wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+	else
+		dbus_connection_send(iface->con, msg, NULL);
 
-	dbus_connection_send(iface->con, msg, NULL);
-
-	dbus_message_unref(msg);
-	return;
-
-err:
-	wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
 	dbus_message_unref(msg);
 }
 

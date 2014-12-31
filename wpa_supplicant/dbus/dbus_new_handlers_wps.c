@@ -311,22 +311,10 @@ DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
 	}
 
 	dbus_message_iter_init_append(reply, &iter);
-	if (!wpa_dbus_dict_open_write(&iter, &dict_iter)) {
-		dbus_message_unref(reply);
-		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					      NULL);
-	}
-
-	if (os_strlen(npin) > 0) {
-		if (!wpa_dbus_dict_append_string(&dict_iter, "Pin", npin)) {
-			dbus_message_unref(reply);
-			return dbus_message_new_error(message,
-						      DBUS_ERROR_NO_MEMORY,
-						      NULL);
-		}
-	}
-
-	if (!wpa_dbus_dict_close_write(&iter, &dict_iter)) {
+	if (!wpa_dbus_dict_open_write(&iter, &dict_iter) ||
+	    (os_strlen(npin) > 0 &&
+	     !wpa_dbus_dict_append_string(&dict_iter, "Pin", npin)) ||
+	    !wpa_dbus_dict_close_write(&iter, &dict_iter)) {
 		dbus_message_unref(reply);
 		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
 					      NULL);

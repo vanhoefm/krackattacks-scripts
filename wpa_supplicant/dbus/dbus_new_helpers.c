@@ -630,10 +630,8 @@ static dbus_bool_t put_changed_properties(
 
 		if (!dbus_message_iter_open_container(dict_iter,
 						      DBUS_TYPE_DICT_ENTRY,
-						      NULL, &entry_iter))
-			return FALSE;
-
-		if (!dbus_message_iter_append_basic(&entry_iter,
+						      NULL, &entry_iter) ||
+		    !dbus_message_iter_append_basic(&entry_iter,
 						    DBUS_TYPE_STRING,
 						    &dsc->dbus_property))
 			return FALSE;
@@ -677,26 +675,16 @@ static void do_send_prop_changed_signal(
 	dbus_message_iter_init_append(msg, &signal_iter);
 
 	if (!dbus_message_iter_append_basic(&signal_iter, DBUS_TYPE_STRING,
-					    &interface))
-		goto err;
-
-	/* Changed properties dict */
-	if (!dbus_message_iter_open_container(&signal_iter, DBUS_TYPE_ARRAY,
-					      "{sv}", &dict_iter))
-		goto err;
-
-	if (!put_changed_properties(obj_dsc, interface, &dict_iter, 0))
-		goto err;
-
-	if (!dbus_message_iter_close_container(&signal_iter, &dict_iter))
-		goto err;
-
-	/* Invalidated properties array (empty) */
-	if (!dbus_message_iter_open_container(&signal_iter, DBUS_TYPE_ARRAY,
-					      "s", &dict_iter))
-		goto err;
-
-	if (!dbus_message_iter_close_container(&signal_iter, &dict_iter))
+					    &interface) ||
+	    /* Changed properties dict */
+	    !dbus_message_iter_open_container(&signal_iter, DBUS_TYPE_ARRAY,
+					      "{sv}", &dict_iter) ||
+	    !put_changed_properties(obj_dsc, interface, &dict_iter, 0) ||
+	    !dbus_message_iter_close_container(&signal_iter, &dict_iter) ||
+	    /* Invalidated properties array (empty) */
+	    !dbus_message_iter_open_container(&signal_iter, DBUS_TYPE_ARRAY,
+					      "s", &dict_iter) ||
+	    !dbus_message_iter_close_container(&signal_iter, &dict_iter))
 		goto err;
 
 	dbus_connection_send(con, msg, NULL);
@@ -726,13 +714,9 @@ static void do_send_deprecated_prop_changed_signal(
 	dbus_message_iter_init_append(msg, &signal_iter);
 
 	if (!dbus_message_iter_open_container(&signal_iter, DBUS_TYPE_ARRAY,
-					      "{sv}", &dict_iter))
-		goto err;
-
-	if (!put_changed_properties(obj_dsc, interface, &dict_iter, 1))
-		goto err;
-
-	if (!dbus_message_iter_close_container(&signal_iter, &dict_iter))
+					      "{sv}", &dict_iter) ||
+	    !put_changed_properties(obj_dsc, interface, &dict_iter, 1) ||
+	    !dbus_message_iter_close_container(&signal_iter, &dict_iter))
 		goto err;
 
 	dbus_connection_send(con, msg, NULL);

@@ -809,75 +809,37 @@ dbus_bool_t wpas_dbus_getter_p2p_device_config(DBusMessageIter *iter,
 			wpa_s->conf->wps_vendor_ext[i];
 	}
 
-	if (num_vendor_extensions &&
-	    !wpa_dbus_dict_append_wpabuf_array(&dict_iter,
-					       "VendorExtension",
-					       vendor_ext,
-					       num_vendor_extensions))
-		goto err_no_mem;
-
-	/* GO Intent */
-	if (!wpa_dbus_dict_append_uint32(&dict_iter, "GOIntent",
-					 wpa_s->conf->p2p_go_intent))
-		goto err_no_mem;
-
-	/* Persistent Reconnect */
-	if (!wpa_dbus_dict_append_bool(&dict_iter, "PersistentReconnect",
-				       wpa_s->conf->persistent_reconnect))
-		goto err_no_mem;
-
-	/* Listen Reg Class */
-	if (!wpa_dbus_dict_append_uint32(&dict_iter, "ListenRegClass",
-					 wpa_s->conf->p2p_listen_reg_class))
-		goto err_no_mem;
-
-	/* Listen Channel */
-	if (!wpa_dbus_dict_append_uint32(&dict_iter, "ListenChannel",
-					 wpa_s->conf->p2p_listen_channel))
-		goto err_no_mem;
-
-	/* Oper Reg Class */
-	if (!wpa_dbus_dict_append_uint32(&dict_iter, "OperRegClass",
-					 wpa_s->conf->p2p_oper_reg_class))
-		goto err_no_mem;
-
-	/* Oper Channel */
-	if (!wpa_dbus_dict_append_uint32(&dict_iter, "OperChannel",
-					 wpa_s->conf->p2p_oper_channel))
-		goto err_no_mem;
-
-	/* SSID Postfix */
-	if (wpa_s->conf->p2p_ssid_postfix &&
-	    !wpa_dbus_dict_append_string(&dict_iter, "SsidPostfix",
-					 wpa_s->conf->p2p_ssid_postfix))
-		goto err_no_mem;
-
-	/* Intra Bss */
-	if (!wpa_dbus_dict_append_bool(&dict_iter, "IntraBss",
-				       wpa_s->conf->p2p_intra_bss))
-		goto err_no_mem;
-
-	/* Group Idle */
-	if (!wpa_dbus_dict_append_uint32(&dict_iter, "GroupIdle",
-					 wpa_s->conf->p2p_group_idle))
-		goto err_no_mem;
-
-	/* Dissasociation low ack */
-	if (!wpa_dbus_dict_append_uint32(&dict_iter, "disassoc_low_ack",
-					 wpa_s->conf->disassoc_low_ack))
-		goto err_no_mem;
-
-	/* No Group Iface */
-	if (!wpa_dbus_dict_append_bool(&dict_iter, "NoGroupIface",
-				       wpa_s->conf->p2p_no_group_iface))
-		goto err_no_mem;
-
-	/* P2P Search Delay */
-	if (!wpa_dbus_dict_append_uint32(&dict_iter, "p2p_search_delay",
-					 wpa_s->conf->p2p_search_delay))
-		goto err_no_mem;
-
-	if (!wpa_dbus_dict_close_write(&variant_iter, &dict_iter) ||
+	if ((num_vendor_extensions &&
+	     !wpa_dbus_dict_append_wpabuf_array(&dict_iter,
+						"VendorExtension",
+						vendor_ext,
+						num_vendor_extensions)) ||
+	    !wpa_dbus_dict_append_uint32(&dict_iter, "GOIntent",
+					 wpa_s->conf->p2p_go_intent) ||
+	    !wpa_dbus_dict_append_bool(&dict_iter, "PersistentReconnect",
+				       wpa_s->conf->persistent_reconnect) ||
+	    !wpa_dbus_dict_append_uint32(&dict_iter, "ListenRegClass",
+					 wpa_s->conf->p2p_listen_reg_class) ||
+	    !wpa_dbus_dict_append_uint32(&dict_iter, "ListenChannel",
+					 wpa_s->conf->p2p_listen_channel) ||
+	    !wpa_dbus_dict_append_uint32(&dict_iter, "OperRegClass",
+					 wpa_s->conf->p2p_oper_reg_class) ||
+	    !wpa_dbus_dict_append_uint32(&dict_iter, "OperChannel",
+					 wpa_s->conf->p2p_oper_channel) ||
+	    (wpa_s->conf->p2p_ssid_postfix &&
+	     !wpa_dbus_dict_append_string(&dict_iter, "SsidPostfix",
+					  wpa_s->conf->p2p_ssid_postfix)) ||
+	    !wpa_dbus_dict_append_bool(&dict_iter, "IntraBss",
+				       wpa_s->conf->p2p_intra_bss) ||
+	    !wpa_dbus_dict_append_uint32(&dict_iter, "GroupIdle",
+					 wpa_s->conf->p2p_group_idle) ||
+	    !wpa_dbus_dict_append_uint32(&dict_iter, "disassoc_low_ack",
+					 wpa_s->conf->disassoc_low_ack) ||
+	    !wpa_dbus_dict_append_bool(&dict_iter, "NoGroupIface",
+				       wpa_s->conf->p2p_no_group_iface) ||
+	    !wpa_dbus_dict_append_uint32(&dict_iter, "p2p_search_delay",
+					 wpa_s->conf->p2p_search_delay) ||
+	    !wpa_dbus_dict_close_write(&variant_iter, &dict_iter) ||
 	    !dbus_message_iter_close_container(iter, &variant_iter))
 		goto err_no_mem;
 
@@ -1413,8 +1375,7 @@ dbus_bool_t wpas_dbus_getter_p2p_peer_secondary_device_types(
 	info = p2p_get_peer_found(peer_args->wpa_s->global->p2p,
 				  peer_args->p2p_device_addr, 0);
 	if (info == NULL) {
-		dbus_set_error(error, DBUS_ERROR_FAILED,
-			       "failed to find peer");
+		dbus_set_error(error, DBUS_ERROR_FAILED, "failed to find peer");
 		return FALSE;
 	}
 
@@ -1422,18 +1383,13 @@ dbus_bool_t wpas_dbus_getter_p2p_peer_secondary_device_types(
 					      DBUS_TYPE_ARRAY_AS_STRING
 					      DBUS_TYPE_ARRAY_AS_STRING
 					      DBUS_TYPE_BYTE_AS_STRING,
-					      &variant_iter)) {
-		dbus_set_error(error, DBUS_ERROR_FAILED,
-		               "%s: failed to construct message 1", __func__);
-		return FALSE;
-	}
-
-	if (!dbus_message_iter_open_container(&variant_iter, DBUS_TYPE_ARRAY,
+					      &variant_iter) ||
+	    !dbus_message_iter_open_container(&variant_iter, DBUS_TYPE_ARRAY,
 					      DBUS_TYPE_ARRAY_AS_STRING
 					      DBUS_TYPE_BYTE_AS_STRING,
 					      &array_iter)) {
 		dbus_set_error(error, DBUS_ERROR_FAILED,
-		               "%s: failed to construct message 2", __func__);
+			       "%s: failed to construct message 1", __func__);
 		return FALSE;
 	}
 
@@ -1448,29 +1404,14 @@ dbus_bool_t wpas_dbus_getter_p2p_peer_secondary_device_types(
 			if (!dbus_message_iter_open_container(
 				    &array_iter, DBUS_TYPE_ARRAY,
 				    DBUS_TYPE_BYTE_AS_STRING,
-				    &inner_array_iter)) {
-				dbus_set_error(error, DBUS_ERROR_FAILED,
-					       "%s: failed to construct "
-					       "message 3 (%d)",
-					       __func__, i);
-				return FALSE;
-			}
-
-			if (!dbus_message_iter_append_fixed_array(
+				    &inner_array_iter) ||
+			    !dbus_message_iter_append_fixed_array(
 				    &inner_array_iter, DBUS_TYPE_BYTE,
-				    &sec_dev_type_list, WPS_DEV_TYPE_LEN)) {
-				dbus_set_error(error, DBUS_ERROR_FAILED,
-					       "%s: failed to construct "
-					       "message 4 (%d)",
-					       __func__, i);
-				return FALSE;
-			}
-
-			if (!dbus_message_iter_close_container(
+				    &sec_dev_type_list, WPS_DEV_TYPE_LEN) ||
+			    !dbus_message_iter_close_container(
 				    &array_iter, &inner_array_iter)) {
 				dbus_set_error(error, DBUS_ERROR_FAILED,
-					       "%s: failed to construct "
-					       "message 5 (%d)",
+					       "%s: failed to construct message 2 (%d)",
 					       __func__, i);
 				return FALSE;
 			}
@@ -1479,15 +1420,10 @@ dbus_bool_t wpas_dbus_getter_p2p_peer_secondary_device_types(
 		}
 	}
 
-	if (!dbus_message_iter_close_container(&variant_iter, &array_iter)) {
+	if (!dbus_message_iter_close_container(&variant_iter, &array_iter) ||
+	    !dbus_message_iter_close_container(iter, &variant_iter)) {
 		dbus_set_error(error, DBUS_ERROR_FAILED,
-		               "%s: failed to construct message 6", __func__);
-		return FALSE;
-	}
-
-	if (!dbus_message_iter_close_container(iter, &variant_iter)) {
-		dbus_set_error(error, DBUS_ERROR_FAILED,
-		               "%s: failed to construct message 7", __func__);
+			       "%s: failed to construct message 3", __func__);
 		return FALSE;
 	}
 

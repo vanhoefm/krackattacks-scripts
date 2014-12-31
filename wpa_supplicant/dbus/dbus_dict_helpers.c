@@ -106,11 +106,8 @@ static dbus_bool_t _wpa_dbus_add_dict_entry_start(
 					      iter_dict_entry))
 		return FALSE;
 
-	if (!dbus_message_iter_append_basic(iter_dict_entry, DBUS_TYPE_STRING,
-					    &key))
-		return FALSE;
-
-	return TRUE;
+	return dbus_message_iter_append_basic(iter_dict_entry, DBUS_TYPE_STRING,
+					      &key);
 }
 
 
@@ -120,10 +117,8 @@ static dbus_bool_t _wpa_dbus_add_dict_entry_end(
 {
 	if (!dbus_message_iter_close_container(iter_dict_entry, iter_dict_val))
 		return FALSE;
-	if (!dbus_message_iter_close_container(iter_dict, iter_dict_entry))
-		return FALSE;
 
-	return TRUE;
+	return dbus_message_iter_close_container(iter_dict, iter_dict_entry);
 }
 
 
@@ -143,22 +138,15 @@ static dbus_bool_t _wpa_dbus_add_dict_entry_basic(DBusMessageIter *iter_dict,
 		return FALSE;
 
 	if (!_wpa_dbus_add_dict_entry_start(iter_dict, &iter_dict_entry,
-					    key, value_type))
-		return FALSE;
-
-	if (!dbus_message_iter_open_container(&iter_dict_entry,
+					    key, value_type) ||
+	    !dbus_message_iter_open_container(&iter_dict_entry,
 					      DBUS_TYPE_VARIANT,
-					      type_as_string, &iter_dict_val))
+					      type_as_string, &iter_dict_val) ||
+	    !dbus_message_iter_append_basic(&iter_dict_val, value_type, value))
 		return FALSE;
 
-	if (!dbus_message_iter_append_basic(&iter_dict_val, value_type, value))
-		return FALSE;
-
-	if (!_wpa_dbus_add_dict_entry_end(iter_dict, &iter_dict_entry,
-					  &iter_dict_val))
-		return FALSE;
-
-	return TRUE;
+	return _wpa_dbus_add_dict_entry_end(iter_dict, &iter_dict_entry,
+					    &iter_dict_val);
 }
 
 
@@ -170,17 +158,13 @@ static dbus_bool_t _wpa_dbus_add_dict_entry_byte_array(
 	dbus_uint32_t i;
 
 	if (!_wpa_dbus_add_dict_entry_start(iter_dict, &iter_dict_entry,
-					    key, DBUS_TYPE_ARRAY))
-		return FALSE;
-
-	if (!dbus_message_iter_open_container(&iter_dict_entry,
+					    key, DBUS_TYPE_ARRAY) ||
+	    !dbus_message_iter_open_container(&iter_dict_entry,
 					      DBUS_TYPE_VARIANT,
 					      DBUS_TYPE_ARRAY_AS_STRING
 					      DBUS_TYPE_BYTE_AS_STRING,
-					      &iter_dict_val))
-		return FALSE;
-
-	if (!dbus_message_iter_open_container(&iter_dict_val, DBUS_TYPE_ARRAY,
+					      &iter_dict_val) ||
+	    !dbus_message_iter_open_container(&iter_dict_val, DBUS_TYPE_ARRAY,
 					      DBUS_TYPE_BYTE_AS_STRING,
 					      &iter_array))
 		return FALSE;
@@ -195,11 +179,8 @@ static dbus_bool_t _wpa_dbus_add_dict_entry_byte_array(
 	if (!dbus_message_iter_close_container(&iter_dict_val, &iter_array))
 		return FALSE;
 
-	if (!_wpa_dbus_add_dict_entry_end(iter_dict, &iter_dict_entry,
-					  &iter_dict_val))
-		return FALSE;
-
-	return TRUE;
+	return _wpa_dbus_add_dict_entry_end(iter_dict, &iter_dict_entry,
+					    &iter_dict_val);
 }
 
 
@@ -428,9 +409,7 @@ dbus_bool_t wpa_dbus_dict_append_byte_array(DBusMessageIter *iter_dict,
 					    const char *value,
 					    const dbus_uint32_t value_len)
 {
-	if (!key)
-		return FALSE;
-	if (!value && (value_len != 0))
+	if (!key || (!value && value_len != 0))
 		return FALSE;
 	return _wpa_dbus_add_dict_entry_byte_array(iter_dict, key, value,
 						   value_len);
@@ -468,24 +447,17 @@ dbus_bool_t wpa_dbus_dict_begin_array(DBusMessageIter *iter_dict,
 	if (os_snprintf_error(sizeof(array_type), err))
 		return FALSE;
 
-	if (!iter_dict || !iter_dict_entry || !iter_dict_val || !iter_array)
-		return FALSE;
-
-	if (!_wpa_dbus_add_dict_entry_start(iter_dict, iter_dict_entry,
-					    key, DBUS_TYPE_ARRAY))
-		return FALSE;
-
-	if (!dbus_message_iter_open_container(iter_dict_entry,
+	if (!iter_dict || !iter_dict_entry || !iter_dict_val || !iter_array ||
+	    !_wpa_dbus_add_dict_entry_start(iter_dict, iter_dict_entry,
+					    key, DBUS_TYPE_ARRAY) ||
+	    !dbus_message_iter_open_container(iter_dict_entry,
 					      DBUS_TYPE_VARIANT,
 					      array_type,
 					      iter_dict_val))
 		return FALSE;
 
-	if (!dbus_message_iter_open_container(iter_dict_val, DBUS_TYPE_ARRAY,
-					      type, iter_array))
-		return FALSE;
-
-	return TRUE;
+	return dbus_message_iter_open_container(iter_dict_val, DBUS_TYPE_ARRAY,
+						type, iter_array);
 }
 
 
@@ -542,10 +514,8 @@ dbus_bool_t wpa_dbus_dict_bin_array_add_element(DBusMessageIter *iter_array,
 	DBusMessageIter iter_bytes;
 	size_t i;
 
-	if (!iter_array || !value)
-		return FALSE;
-
-	if (!dbus_message_iter_open_container(iter_array, DBUS_TYPE_ARRAY,
+	if (!iter_array || !value ||
+	    !dbus_message_iter_open_container(iter_array, DBUS_TYPE_ARRAY,
 					      DBUS_TYPE_BYTE_AS_STRING,
 					      &iter_bytes))
 		return FALSE;
@@ -557,10 +527,7 @@ dbus_bool_t wpa_dbus_dict_bin_array_add_element(DBusMessageIter *iter_array,
 			return FALSE;
 	}
 
-	if (!dbus_message_iter_close_container(iter_array, &iter_bytes))
-		return FALSE;
-
-	return TRUE;
+	return dbus_message_iter_close_container(iter_array, &iter_bytes);
 }
 
 
@@ -586,17 +553,12 @@ dbus_bool_t wpa_dbus_dict_end_array(DBusMessageIter *iter_dict,
 				    DBusMessageIter *iter_dict_val,
 				    DBusMessageIter *iter_array)
 {
-	if (!iter_dict || !iter_dict_entry || !iter_dict_val || !iter_array)
+	if (!iter_dict || !iter_dict_entry || !iter_dict_val || !iter_array ||
+	    !dbus_message_iter_close_container(iter_dict_val, iter_array))
 		return FALSE;
 
-	if (!dbus_message_iter_close_container(iter_dict_val, iter_array))
-		return FALSE;
-
-	if (!_wpa_dbus_add_dict_entry_end(iter_dict, iter_dict_entry,
-					  iter_dict_val))
-		return FALSE;
-
-	return TRUE;
+	return _wpa_dbus_add_dict_entry_end(iter_dict, iter_dict_entry,
+					    iter_dict_val);
 }
 
 
@@ -619,12 +581,8 @@ dbus_bool_t wpa_dbus_dict_append_string_array(DBusMessageIter *iter_dict,
 	DBusMessageIter iter_dict_entry, iter_dict_val, iter_array;
 	dbus_uint32_t i;
 
-	if (!key)
-		return FALSE;
-	if (!items && (num_items != 0))
-		return FALSE;
-
-	if (!wpa_dbus_dict_begin_string_array(iter_dict, key,
+	if (!key || (!items && num_items != 0) ||
+	    !wpa_dbus_dict_begin_string_array(iter_dict, key,
 					      &iter_dict_entry, &iter_dict_val,
 					      &iter_array))
 		return FALSE;
@@ -635,11 +593,8 @@ dbus_bool_t wpa_dbus_dict_append_string_array(DBusMessageIter *iter_dict,
 			return FALSE;
 	}
 
-	if (!wpa_dbus_dict_end_string_array(iter_dict, &iter_dict_entry,
-					    &iter_dict_val, &iter_array))
-		return FALSE;
-
-	return TRUE;
+	return wpa_dbus_dict_end_string_array(iter_dict, &iter_dict_entry,
+					      &iter_dict_val, &iter_array);
 }
 
 
@@ -662,12 +617,9 @@ dbus_bool_t wpa_dbus_dict_append_wpabuf_array(DBusMessageIter *iter_dict,
 	DBusMessageIter iter_dict_entry, iter_dict_val, iter_array;
 	dbus_uint32_t i;
 
-	if (!key)
-		return FALSE;
-	if (!items && (num_items != 0))
-		return FALSE;
-
-	if (!wpa_dbus_dict_begin_array(iter_dict, key,
+	if (!key ||
+	    (!items && num_items != 0) ||
+	    !wpa_dbus_dict_begin_array(iter_dict, key,
 				       DBUS_TYPE_ARRAY_AS_STRING
 				       DBUS_TYPE_BYTE_AS_STRING,
 				       &iter_dict_entry, &iter_dict_val,
@@ -681,11 +633,8 @@ dbus_bool_t wpa_dbus_dict_append_wpabuf_array(DBusMessageIter *iter_dict,
 			return FALSE;
 	}
 
-	if (!wpa_dbus_dict_end_array(iter_dict, &iter_dict_entry,
-				     &iter_dict_val, &iter_array))
-		return FALSE;
-
-	return TRUE;
+	return wpa_dbus_dict_end_array(iter_dict, &iter_dict_entry,
+				       &iter_dict_val, &iter_array);
 }
 
 
@@ -1080,10 +1029,8 @@ dbus_bool_t wpa_dbus_dict_get_entry(DBusMessageIter *iter_dict,
 	int type;
 	const char *key;
 
-	if (!iter_dict || !entry)
-		goto error;
-
-	if (dbus_message_iter_get_arg_type(iter_dict) != DBUS_TYPE_DICT_ENTRY) {
+	if (!iter_dict || !entry ||
+	    dbus_message_iter_get_arg_type(iter_dict) != DBUS_TYPE_DICT_ENTRY) {
 		wpa_printf(MSG_DEBUG, "%s: not a dict entry", __func__);
 		goto error;
 	}

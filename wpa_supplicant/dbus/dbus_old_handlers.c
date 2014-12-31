@@ -409,84 +409,56 @@ DBusMessage * wpas_dbus_bssid_properties(DBusMessage *message,
 {
 	DBusMessage *reply;
 	DBusMessageIter iter, iter_dict;
-	const u8 *ie;
+	const u8 *wpa_ie, *rsn_ie, *wps_ie;
 
 	/* Dump the properties into a dbus message */
 	reply = dbus_message_new_method_return(message);
 
+	wpa_ie = wpa_bss_get_vendor_ie(bss, WPA_IE_VENDOR_TYPE);
+	rsn_ie = wpa_bss_get_ie(bss, WLAN_EID_RSN);
+	wps_ie = wpa_bss_get_vendor_ie(bss, WPS_IE_VENDOR_TYPE);
+
 	dbus_message_iter_init_append(reply, &iter);
-	if (!wpa_dbus_dict_open_write(&iter, &iter_dict))
-		goto error;
-
-	if (!wpa_dbus_dict_append_byte_array(&iter_dict, "bssid",
+	if (!wpa_dbus_dict_open_write(&iter, &iter_dict) ||
+	    !wpa_dbus_dict_append_byte_array(&iter_dict, "bssid",
 					     (const char *) bss->bssid,
-					     ETH_ALEN))
-		goto error;
-
-	ie = wpa_bss_get_ie(bss, WLAN_EID_SSID);
-	if (ie) {
-		if (!wpa_dbus_dict_append_byte_array(&iter_dict, "ssid",
-						     (const char *) (ie + 2),
-						     ie[1]))
-			goto error;
+					     ETH_ALEN) ||
+	    !wpa_dbus_dict_append_byte_array(&iter_dict, "ssid",
+					     (const char *) bss->ssid,
+					     bss->ssid_len) ||
+	    (wpa_ie &&
+	     !wpa_dbus_dict_append_byte_array(&iter_dict, "wpaie",
+					      (const char *) wpa_ie,
+					      wpa_ie[1] + 2)) ||
+	    (rsn_ie &&
+	     !wpa_dbus_dict_append_byte_array(&iter_dict, "rsnie",
+					      (const char *) rsn_ie,
+					      rsn_ie[1] + 2)) ||
+	    (wps_ie &&
+	     !wpa_dbus_dict_append_byte_array(&iter_dict, "wpsie",
+					     (const char *) wps_ie,
+					      wps_ie[1] + 2)) ||
+	    (bss->freq &&
+	     !wpa_dbus_dict_append_int32(&iter_dict, "frequency", bss->freq)) ||
+	    !wpa_dbus_dict_append_uint16(&iter_dict, "capabilities",
+					 bss->caps) ||
+	    (!(bss->flags & WPA_BSS_QUAL_INVALID) &&
+	     !wpa_dbus_dict_append_int32(&iter_dict, "quality", bss->qual)) ||
+	    (!(bss->flags & WPA_BSS_NOISE_INVALID) &&
+	     !wpa_dbus_dict_append_int32(&iter_dict, "noise", bss->noise)) ||
+	    (!(bss->flags & WPA_BSS_LEVEL_INVALID) &&
+	     !wpa_dbus_dict_append_int32(&iter_dict, "level", bss->level)) ||
+	    !wpa_dbus_dict_append_int32(&iter_dict, "maxrate",
+					wpa_bss_get_max_rate(bss) * 500000) ||
+	    !wpa_dbus_dict_close_write(&iter, &iter_dict)) {
+		if (reply)
+			dbus_message_unref(reply);
+		reply = dbus_message_new_error(
+			message, WPAS_ERROR_INTERNAL_ERROR,
+			"an internal error occurred returning BSSID properties.");
 	}
-
-	ie = wpa_bss_get_vendor_ie(bss, WPA_IE_VENDOR_TYPE);
-	if (ie) {
-		if (!wpa_dbus_dict_append_byte_array(&iter_dict, "wpaie",
-						     (const char *) ie,
-						     ie[1] + 2))
-			goto error;
-	}
-
-	ie = wpa_bss_get_ie(bss, WLAN_EID_RSN);
-	if (ie) {
-		if (!wpa_dbus_dict_append_byte_array(&iter_dict, "rsnie",
-						     (const char *) ie,
-						     ie[1] + 2))
-			goto error;
-	}
-
-	ie = wpa_bss_get_vendor_ie(bss, WPS_IE_VENDOR_TYPE);
-	if (ie) {
-		if (!wpa_dbus_dict_append_byte_array(&iter_dict, "wpsie",
-						     (const char *) ie,
-						     ie[1] + 2))
-			goto error;
-	}
-
-	if (bss->freq) {
-		if (!wpa_dbus_dict_append_int32(&iter_dict, "frequency",
-						bss->freq))
-			goto error;
-	}
-	if (!wpa_dbus_dict_append_uint16(&iter_dict, "capabilities",
-					 bss->caps))
-		goto error;
-	if (!(bss->flags & WPA_BSS_QUAL_INVALID) &&
-	    !wpa_dbus_dict_append_int32(&iter_dict, "quality", bss->qual))
-		goto error;
-	if (!(bss->flags & WPA_BSS_NOISE_INVALID) &&
-	    !wpa_dbus_dict_append_int32(&iter_dict, "noise", bss->noise))
-		goto error;
-	if (!(bss->flags & WPA_BSS_LEVEL_INVALID) &&
-	    !wpa_dbus_dict_append_int32(&iter_dict, "level", bss->level))
-		goto error;
-	if (!wpa_dbus_dict_append_int32(&iter_dict, "maxrate",
-					wpa_bss_get_max_rate(bss) * 500000))
-		goto error;
-
-	if (!wpa_dbus_dict_close_write(&iter, &iter_dict))
-		goto error;
 
 	return reply;
-
-error:
-	if (reply)
-		dbus_message_unref(reply);
-	return dbus_message_new_error(message, WPAS_ERROR_INTERNAL_ERROR,
-				      "an internal error occurred returning "
-				      "BSSID properties.");
 }
 
 
@@ -555,28 +527,17 @@ DBusMessage * wpas_dbus_iface_capabilities(DBusMessage *message,
 		if (!wpa_dbus_dict_begin_string_array(&iter_dict, "pairwise",
 						      &iter_dict_entry,
 						      &iter_dict_val,
-						      &iter_array))
-			goto error;
-
-		if (capa.enc & WPA_DRIVER_CAPA_ENC_CCMP) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "CCMP"))
-				goto error;
-		}
-
-		if (capa.enc & WPA_DRIVER_CAPA_ENC_TKIP) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "TKIP"))
-				goto error;
-		}
-
-		if (capa.key_mgmt & WPA_DRIVER_CAPA_KEY_MGMT_WPA_NONE) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "NONE"))
-				goto error;
-		}
-
-		if (!wpa_dbus_dict_end_string_array(&iter_dict,
+						      &iter_array) ||
+		    ((capa.enc & WPA_DRIVER_CAPA_ENC_CCMP) &&
+		     !wpa_dbus_dict_string_array_add_element(
+			     &iter_array, "CCMP")) ||
+		    ((capa.enc & WPA_DRIVER_CAPA_ENC_TKIP) &&
+		     !wpa_dbus_dict_string_array_add_element(
+			     &iter_array, "TKIP")) ||
+		    ((capa.key_mgmt & WPA_DRIVER_CAPA_KEY_MGMT_WPA_NONE) &&
+		     !wpa_dbus_dict_string_array_add_element(
+			     &iter_array, "NONE")) ||
+		    !wpa_dbus_dict_end_string_array(&iter_dict,
 						    &iter_dict_entry,
 						    &iter_dict_val,
 						    &iter_array))
@@ -601,31 +562,19 @@ DBusMessage * wpas_dbus_iface_capabilities(DBusMessage *message,
 						      &iter_array))
 			goto error;
 
-		if (capa.enc & WPA_DRIVER_CAPA_ENC_CCMP) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "CCMP"))
-				goto error;
-		}
-
-		if (capa.enc & WPA_DRIVER_CAPA_ENC_TKIP) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "TKIP"))
-				goto error;
-		}
-
-		if (capa.enc & WPA_DRIVER_CAPA_ENC_WEP104) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "WEP104"))
-				goto error;
-		}
-
-		if (capa.enc & WPA_DRIVER_CAPA_ENC_WEP40) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "WEP40"))
-				goto error;
-		}
-
-		if (!wpa_dbus_dict_end_string_array(&iter_dict,
+		if (((capa.enc & WPA_DRIVER_CAPA_ENC_CCMP) &&
+		     !wpa_dbus_dict_string_array_add_element(
+			     &iter_array, "CCMP")) ||
+		    ((capa.enc & WPA_DRIVER_CAPA_ENC_TKIP) &&
+		     !wpa_dbus_dict_string_array_add_element(
+			     &iter_array, "TKIP")) ||
+		    ((capa.enc & WPA_DRIVER_CAPA_ENC_WEP104) &&
+		     !wpa_dbus_dict_string_array_add_element(
+			     &iter_array, "WEP104")) ||
+		    ((capa.enc & WPA_DRIVER_CAPA_ENC_WEP40) &&
+		     !wpa_dbus_dict_string_array_add_element(
+			     &iter_array, "WEP40")) ||
+		    !wpa_dbus_dict_end_string_array(&iter_dict,
 						    &iter_dict_entry,
 						    &iter_dict_val,
 						    &iter_array))
@@ -648,38 +597,23 @@ DBusMessage * wpas_dbus_iface_capabilities(DBusMessage *message,
 		if (!wpa_dbus_dict_begin_string_array(&iter_dict, "key_mgmt",
 						      &iter_dict_entry,
 						      &iter_dict_val,
-						      &iter_array))
-			goto error;
-
-		if (!wpa_dbus_dict_string_array_add_element(&iter_array,
-							    "NONE"))
-			goto error;
-
-		if (!wpa_dbus_dict_string_array_add_element(&iter_array,
-							    "IEEE8021X"))
-			goto error;
-
-		if (capa.key_mgmt & (WPA_DRIVER_CAPA_KEY_MGMT_WPA |
-				     WPA_DRIVER_CAPA_KEY_MGMT_WPA2)) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "WPA-EAP"))
-				goto error;
-		}
-
-		if (capa.key_mgmt & (WPA_DRIVER_CAPA_KEY_MGMT_WPA_PSK |
-				     WPA_DRIVER_CAPA_KEY_MGMT_WPA2_PSK)) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "WPA-PSK"))
-				goto error;
-		}
-
-		if (capa.key_mgmt & WPA_DRIVER_CAPA_KEY_MGMT_WPA_NONE) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "WPA-NONE"))
-				goto error;
-		}
-
-		if (!wpa_dbus_dict_end_string_array(&iter_dict,
+						      &iter_array) ||
+		    !wpa_dbus_dict_string_array_add_element(&iter_array,
+							    "NONE") ||
+		    !wpa_dbus_dict_string_array_add_element(&iter_array,
+							    "IEEE8021X") ||
+		    ((capa.key_mgmt & (WPA_DRIVER_CAPA_KEY_MGMT_WPA |
+				       WPA_DRIVER_CAPA_KEY_MGMT_WPA2)) &&
+		     !wpa_dbus_dict_string_array_add_element(
+			     &iter_array, "WPA-EAP")) ||
+		    ((capa.key_mgmt & (WPA_DRIVER_CAPA_KEY_MGMT_WPA_PSK |
+				       WPA_DRIVER_CAPA_KEY_MGMT_WPA2_PSK)) &&
+		     !wpa_dbus_dict_string_array_add_element(
+			     &iter_array, "WPA-PSK")) ||
+		    ((capa.key_mgmt & WPA_DRIVER_CAPA_KEY_MGMT_WPA_NONE) &&
+		     !wpa_dbus_dict_string_array_add_element(
+			     &iter_array, "WPA-NONE")) ||
+		    !wpa_dbus_dict_end_string_array(&iter_dict,
 						    &iter_dict_entry,
 						    &iter_dict_val,
 						    &iter_array))
@@ -699,24 +633,16 @@ DBusMessage * wpas_dbus_iface_capabilities(DBusMessage *message,
 		if (!wpa_dbus_dict_begin_string_array(&iter_dict, "proto",
 						      &iter_dict_entry,
 						      &iter_dict_val,
-						      &iter_array))
-			goto error;
-
-		if (capa.key_mgmt & (WPA_DRIVER_CAPA_KEY_MGMT_WPA2 |
-				     WPA_DRIVER_CAPA_KEY_MGMT_WPA2_PSK)) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "RSN"))
-				goto error;
-		}
-
-		if (capa.key_mgmt & (WPA_DRIVER_CAPA_KEY_MGMT_WPA |
-				     WPA_DRIVER_CAPA_KEY_MGMT_WPA_PSK)) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "WPA"))
-				goto error;
-		}
-
-		if (!wpa_dbus_dict_end_string_array(&iter_dict,
+						      &iter_array) ||
+		    ((capa.key_mgmt & (WPA_DRIVER_CAPA_KEY_MGMT_WPA2 |
+				       WPA_DRIVER_CAPA_KEY_MGMT_WPA2_PSK)) &&
+		     !wpa_dbus_dict_string_array_add_element(
+			     &iter_array, "RSN")) ||
+		    ((capa.key_mgmt & (WPA_DRIVER_CAPA_KEY_MGMT_WPA |
+				       WPA_DRIVER_CAPA_KEY_MGMT_WPA_PSK)) &&
+		     !wpa_dbus_dict_string_array_add_element(
+			     &iter_array, "WPA")) ||
+		    !wpa_dbus_dict_end_string_array(&iter_dict,
 						    &iter_dict_entry,
 						    &iter_dict_val,
 						    &iter_array))
@@ -736,28 +662,17 @@ DBusMessage * wpas_dbus_iface_capabilities(DBusMessage *message,
 		if (!wpa_dbus_dict_begin_string_array(&iter_dict, "auth_alg",
 						      &iter_dict_entry,
 						      &iter_dict_val,
-						      &iter_array))
-			goto error;
-
-		if (capa.auth & (WPA_DRIVER_AUTH_OPEN)) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "OPEN"))
-				goto error;
-		}
-
-		if (capa.auth & (WPA_DRIVER_AUTH_SHARED)) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "SHARED"))
-				goto error;
-		}
-
-		if (capa.auth & (WPA_DRIVER_AUTH_LEAP)) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "LEAP"))
-				goto error;
-		}
-
-		if (!wpa_dbus_dict_end_string_array(&iter_dict,
+						      &iter_array) ||
+		    ((capa.auth & WPA_DRIVER_AUTH_OPEN) &&
+		     !wpa_dbus_dict_string_array_add_element(
+			     &iter_array, "OPEN")) ||
+		    ((capa.auth & WPA_DRIVER_AUTH_SHARED) &&
+		     !wpa_dbus_dict_string_array_add_element(
+			     &iter_array, "SHARED")) ||
+		    ((capa.auth & WPA_DRIVER_AUTH_LEAP) &&
+		     !wpa_dbus_dict_string_array_add_element(
+			     &iter_array, "LEAP")) ||
+		    !wpa_dbus_dict_end_string_array(&iter_dict,
 						    &iter_dict_entry,
 						    &iter_dict_val,
 						    &iter_array))

@@ -308,21 +308,15 @@ dbus_bool_t wpas_dbus_simple_property_getter(DBusMessageIter *iter,
 
 	if (!dbus_message_iter_open_container(iter, DBUS_TYPE_VARIANT,
 	                                      wpa_dbus_type_as_string(type),
-	                                      &variant_iter))
-		goto error;
-
-	if (!dbus_message_iter_append_basic(&variant_iter, type, val))
-		goto error;
-
-	if (!dbus_message_iter_close_container(iter, &variant_iter))
-		goto error;
+	                                      &variant_iter) ||
+	    !dbus_message_iter_append_basic(&variant_iter, type, val) ||
+	    !dbus_message_iter_close_container(iter, &variant_iter)) {
+		dbus_set_error(error, DBUS_ERROR_FAILED,
+			       "%s: error constructing reply", __func__);
+		return FALSE;
+	}
 
 	return TRUE;
-
-error:
-	dbus_set_error(error, DBUS_ERROR_FAILED,
-	               "%s: error constructing reply", __func__);
-	return FALSE;
 }
 
 
@@ -393,16 +387,11 @@ dbus_bool_t wpas_dbus_simple_array_property_getter(DBusMessageIter *iter,
 	type_str[1] = sub_type_str[0];
 
 	if (!dbus_message_iter_open_container(iter, DBUS_TYPE_VARIANT,
-					      type_str, &variant_iter)) {
-		dbus_set_error(error, DBUS_ERROR_FAILED,
-		               "%s: failed to construct message 1", __func__);
-		return FALSE;
-	}
-
-	if (!dbus_message_iter_open_container(&variant_iter, DBUS_TYPE_ARRAY,
+					      type_str, &variant_iter) ||
+	    !dbus_message_iter_open_container(&variant_iter, DBUS_TYPE_ARRAY,
 					      sub_type_str, &array_iter)) {
 		dbus_set_error(error, DBUS_ERROR_FAILED,
-		               "%s: failed to construct message 2", __func__);
+			       "%s: failed to construct message", __func__);
 		return FALSE;
 	}
 
@@ -446,15 +435,10 @@ dbus_bool_t wpas_dbus_simple_array_property_getter(DBusMessageIter *iter,
 		}
 	}
 
-	if (!dbus_message_iter_close_container(&variant_iter, &array_iter)) {
+	if (!dbus_message_iter_close_container(&variant_iter, &array_iter) ||
+	    !dbus_message_iter_close_container(iter, &variant_iter)) {
 		dbus_set_error(error, DBUS_ERROR_FAILED,
 		               "%s: failed to construct message 3", __func__);
-		return FALSE;
-	}
-
-	if (!dbus_message_iter_close_container(iter, &variant_iter)) {
-		dbus_set_error(error, DBUS_ERROR_FAILED,
-		               "%s: failed to construct message 4", __func__);
 		return FALSE;
 	}
 
@@ -497,15 +481,11 @@ dbus_bool_t wpas_dbus_simple_array_array_property_getter(DBusMessageIter *iter,
 	inner_type_str[1] = sub_type_str[0];
 
 	if (!dbus_message_iter_open_container(iter, DBUS_TYPE_VARIANT,
-					      type_str, &variant_iter)) {
-		dbus_set_error(error, DBUS_ERROR_FAILED,
-			       "%s: failed to construct message 1", __func__);
-		return FALSE;
-	}
-	if (!dbus_message_iter_open_container(&variant_iter, DBUS_TYPE_ARRAY,
+					      type_str, &variant_iter) ||
+	    !dbus_message_iter_open_container(&variant_iter, DBUS_TYPE_ARRAY,
 					      inner_type_str, &array_iter)) {
 		dbus_set_error(error, DBUS_ERROR_FAILED,
-			       "%s: failed to construct message 2", __func__);
+			       "%s: failed to construct message", __func__);
 		return FALSE;
 	}
 
@@ -516,15 +496,10 @@ dbus_bool_t wpas_dbus_simple_array_array_property_getter(DBusMessageIter *iter,
 
 	}
 
-	if (!dbus_message_iter_close_container(&variant_iter, &array_iter)) {
+	if (!dbus_message_iter_close_container(&variant_iter, &array_iter) ||
+	    !dbus_message_iter_close_container(iter, &variant_iter)) {
 		dbus_set_error(error, DBUS_ERROR_FAILED,
-			       "%s: failed to close message 2", __func__);
-		return FALSE;
-	}
-
-	if (!dbus_message_iter_close_container(iter, &variant_iter)) {
-		dbus_set_error(error, DBUS_ERROR_FAILED,
-			       "%s: failed to close message 1", __func__);
+			       "%s: failed to close message", __func__);
 		return FALSE;
 	}
 
@@ -1429,45 +1404,30 @@ DBusMessage * wpas_dbus_handler_signal_poll(DBusMessage *message,
 	dbus_message_iter_init_append(reply, &iter);
 
 	if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
-					      "a{sv}", &variant_iter))
-		goto nomem;
-	if (!wpa_dbus_dict_open_write(&variant_iter, &iter_dict))
-		goto nomem;
-
-	if (!wpa_dbus_dict_append_int32(&iter_dict, "rssi", si.current_signal))
-		goto nomem;
-	if (!wpa_dbus_dict_append_int32(&iter_dict, "linkspeed",
-					si.current_txrate / 1000))
-		goto nomem;
-	if (!wpa_dbus_dict_append_int32(&iter_dict, "noise", si.current_noise))
-		goto nomem;
-	if (!wpa_dbus_dict_append_uint32(&iter_dict, "frequency", si.frequency))
-		goto nomem;
-
-	if (si.chanwidth != CHAN_WIDTH_UNKNOWN) {
-		if (!wpa_dbus_dict_append_string(&iter_dict, "width",
-					channel_width_to_string(si.chanwidth)))
-			goto nomem;
-	}
-
-	if (si.center_frq1 > 0 && si.center_frq2 > 0) {
-		if (!wpa_dbus_dict_append_int32(&iter_dict, "center-frq1",
-						si.center_frq1))
-			goto nomem;
-		if (!wpa_dbus_dict_append_int32(&iter_dict, "center-frq2",
-						si.center_frq2))
-			goto nomem;
-	}
-
-	if (si.avg_signal) {
-		if (!wpa_dbus_dict_append_int32(&iter_dict, "avg-rssi",
-						si.avg_signal))
-			goto nomem;
-	}
-
-	if (!wpa_dbus_dict_close_write(&variant_iter, &iter_dict))
-		goto nomem;
-	if (!dbus_message_iter_close_container(&iter, &variant_iter))
+					      "a{sv}", &variant_iter) ||
+	    !wpa_dbus_dict_open_write(&variant_iter, &iter_dict) ||
+	    !wpa_dbus_dict_append_int32(&iter_dict, "rssi",
+					si.current_signal) ||
+	    !wpa_dbus_dict_append_int32(&iter_dict, "linkspeed",
+					si.current_txrate / 1000) ||
+	    !wpa_dbus_dict_append_int32(&iter_dict, "noise",
+					si.current_noise) ||
+	    !wpa_dbus_dict_append_uint32(&iter_dict, "frequency",
+					 si.frequency) ||
+	    (si.chanwidth != CHAN_WIDTH_UNKNOWN &&
+	     !wpa_dbus_dict_append_string(
+		     &iter_dict, "width",
+		     channel_width_to_string(si.chanwidth))) ||
+	    (si.center_frq1 > 0 && si.center_frq2 > 0 &&
+	     (!wpa_dbus_dict_append_int32(&iter_dict, "center-frq1",
+					  si.center_frq1) ||
+	      !wpa_dbus_dict_append_int32(&iter_dict, "center-frq2",
+					  si.center_frq2))) ||
+	    (si.avg_signal &&
+	     !wpa_dbus_dict_append_int32(&iter_dict, "avg-rssi",
+					 si.avg_signal)) ||
+	    !wpa_dbus_dict_close_write(&variant_iter, &iter_dict) ||
+	    !dbus_message_iter_close_container(&iter, &variant_iter))
 		goto nomem;
 
 	return reply;
@@ -2375,10 +2335,8 @@ dbus_bool_t wpas_dbus_getter_capabilities(DBusMessageIter *iter,
 	const char *scans[] = { "active", "passive", "ssid" };
 
 	if (!dbus_message_iter_open_container(iter, DBUS_TYPE_VARIANT,
-					      "a{sv}", &variant_iter))
-		goto nomem;
-
-	if (!wpa_dbus_dict_open_write(&variant_iter, &iter_dict))
+					      "a{sv}", &variant_iter) ||
+	    !wpa_dbus_dict_open_write(&variant_iter, &iter_dict))
 		goto nomem;
 
 	res = wpa_drv_get_capa(wpa_s, &capa);
@@ -2394,46 +2352,26 @@ dbus_bool_t wpas_dbus_getter_capabilities(DBusMessageIter *iter,
 		if (!wpa_dbus_dict_begin_string_array(&iter_dict, "Pairwise",
 						      &iter_dict_entry,
 						      &iter_dict_val,
-						      &iter_array))
-			goto nomem;
-
-		if (capa.enc & WPA_DRIVER_CAPA_ENC_CCMP_256) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "ccmp-256"))
-				goto nomem;
-		}
-
-		if (capa.enc & WPA_DRIVER_CAPA_ENC_GCMP_256) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "gcmp-256"))
-				goto nomem;
-		}
-
-		if (capa.enc & WPA_DRIVER_CAPA_ENC_CCMP) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "ccmp"))
-				goto nomem;
-		}
-
-		if (capa.enc & WPA_DRIVER_CAPA_ENC_GCMP) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "gcmp"))
-				goto nomem;
-		}
-
-		if (capa.enc & WPA_DRIVER_CAPA_ENC_TKIP) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "tkip"))
-				goto nomem;
-		}
-
-		if (capa.key_mgmt & WPA_DRIVER_CAPA_KEY_MGMT_WPA_NONE) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "none"))
-				goto nomem;
-		}
-
-		if (!wpa_dbus_dict_end_string_array(&iter_dict,
+						      &iter_array) ||
+		    ((capa.enc & WPA_DRIVER_CAPA_ENC_CCMP_256) &&
+		     !wpa_dbus_dict_string_array_add_element(
+			     &iter_array, "ccmp-256")) ||
+		    ((capa.enc & WPA_DRIVER_CAPA_ENC_GCMP_256) &&
+		     !wpa_dbus_dict_string_array_add_element(
+			     &iter_array, "gcmp-256")) ||
+		    ((capa.enc & WPA_DRIVER_CAPA_ENC_CCMP) &&
+		     !wpa_dbus_dict_string_array_add_element(
+			     &iter_array, "ccmp")) ||
+		    ((capa.enc & WPA_DRIVER_CAPA_ENC_GCMP) &&
+		     !wpa_dbus_dict_string_array_add_element(
+			     &iter_array, "gcmp")) ||
+		    ((capa.enc & WPA_DRIVER_CAPA_ENC_TKIP) &&
+		     !wpa_dbus_dict_string_array_add_element(
+			     &iter_array, "tkip")) ||
+		    ((capa.key_mgmt & WPA_DRIVER_CAPA_KEY_MGMT_WPA_NONE) &&
+		     !wpa_dbus_dict_string_array_add_element(
+			     &iter_array, "none")) ||
+		    !wpa_dbus_dict_end_string_array(&iter_dict,
 						    &iter_dict_entry,
 						    &iter_dict_val,
 						    &iter_array))
@@ -2453,52 +2391,29 @@ dbus_bool_t wpas_dbus_getter_capabilities(DBusMessageIter *iter,
 		if (!wpa_dbus_dict_begin_string_array(&iter_dict, "Group",
 						      &iter_dict_entry,
 						      &iter_dict_val,
-						      &iter_array))
-			goto nomem;
-
-		if (capa.enc & WPA_DRIVER_CAPA_ENC_CCMP_256) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "ccmp-256"))
-				goto nomem;
-		}
-
-		if (capa.enc & WPA_DRIVER_CAPA_ENC_GCMP_256) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "gcmp-256"))
-				goto nomem;
-		}
-
-		if (capa.enc & WPA_DRIVER_CAPA_ENC_CCMP) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "ccmp"))
-				goto nomem;
-		}
-
-		if (capa.enc & WPA_DRIVER_CAPA_ENC_GCMP) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "gcmp"))
-				goto nomem;
-		}
-
-		if (capa.enc & WPA_DRIVER_CAPA_ENC_TKIP) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "tkip"))
-				goto nomem;
-		}
-
-		if (capa.enc & WPA_DRIVER_CAPA_ENC_WEP104) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "wep104"))
-				goto nomem;
-		}
-
-		if (capa.enc & WPA_DRIVER_CAPA_ENC_WEP40) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "wep40"))
-				goto nomem;
-		}
-
-		if (!wpa_dbus_dict_end_string_array(&iter_dict,
+						      &iter_array) ||
+		    ((capa.enc & WPA_DRIVER_CAPA_ENC_CCMP_256) &&
+		     !wpa_dbus_dict_string_array_add_element(
+			     &iter_array, "ccmp-256")) ||
+		    ((capa.enc & WPA_DRIVER_CAPA_ENC_GCMP_256) &&
+		     !wpa_dbus_dict_string_array_add_element(
+			     &iter_array, "gcmp-256")) ||
+		    ((capa.enc & WPA_DRIVER_CAPA_ENC_CCMP) &&
+		     !wpa_dbus_dict_string_array_add_element(
+			     &iter_array, "ccmp")) ||
+		    ((capa.enc & WPA_DRIVER_CAPA_ENC_GCMP) &&
+		     !wpa_dbus_dict_string_array_add_element(
+			     &iter_array, "gcmp")) ||
+		    ((capa.enc & WPA_DRIVER_CAPA_ENC_TKIP) &&
+		     !wpa_dbus_dict_string_array_add_element(
+			     &iter_array, "tkip")) ||
+		    ((capa.enc & WPA_DRIVER_CAPA_ENC_WEP104) &&
+		     !wpa_dbus_dict_string_array_add_element(
+			     &iter_array, "wep104")) ||
+		    ((capa.enc & WPA_DRIVER_CAPA_ENC_WEP40) &&
+		     !wpa_dbus_dict_string_array_add_element(
+			     &iter_array, "wep40")) ||
+		    !wpa_dbus_dict_end_string_array(&iter_dict,
 						    &iter_dict_entry,
 						    &iter_dict_val,
 						    &iter_array))
@@ -2522,27 +2437,21 @@ dbus_bool_t wpas_dbus_getter_capabilities(DBusMessageIter *iter,
 		if (!wpa_dbus_dict_begin_string_array(&iter_dict, "KeyMgmt",
 						      &iter_dict_entry,
 						      &iter_dict_val,
-						      &iter_array))
-			goto nomem;
-
-		if (!wpa_dbus_dict_string_array_add_element(&iter_array,
-							    "none"))
-			goto nomem;
-
-		if (!wpa_dbus_dict_string_array_add_element(&iter_array,
+						      &iter_array) ||
+		    !wpa_dbus_dict_string_array_add_element(&iter_array,
+							    "none") ||
+		    !wpa_dbus_dict_string_array_add_element(&iter_array,
 							    "ieee8021x"))
 			goto nomem;
 
 		if (capa.key_mgmt & (WPA_DRIVER_CAPA_KEY_MGMT_WPA |
 				     WPA_DRIVER_CAPA_KEY_MGMT_WPA2)) {
 			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "wpa-eap"))
+				    &iter_array, "wpa-eap") ||
+			    ((capa.key_mgmt & WPA_DRIVER_CAPA_KEY_MGMT_FT) &&
+			     !wpa_dbus_dict_string_array_add_element(
+				     &iter_array, "wpa-ft-eap")))
 				goto nomem;
-
-			if (capa.key_mgmt & WPA_DRIVER_CAPA_KEY_MGMT_FT)
-				if (!wpa_dbus_dict_string_array_add_element(
-					    &iter_array, "wpa-ft-eap"))
-					goto nomem;
 
 /* TODO: Ensure that driver actually supports sha256 encryption. */
 #ifdef CONFIG_IEEE80211W
@@ -2555,13 +2464,12 @@ dbus_bool_t wpas_dbus_getter_capabilities(DBusMessageIter *iter,
 		if (capa.key_mgmt & (WPA_DRIVER_CAPA_KEY_MGMT_WPA_PSK |
 				     WPA_DRIVER_CAPA_KEY_MGMT_WPA2_PSK)) {
 			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "wpa-psk"))
+				    &iter_array, "wpa-psk") ||
+			    ((capa.key_mgmt &
+			      WPA_DRIVER_CAPA_KEY_MGMT_FT_PSK) &&
+			     !wpa_dbus_dict_string_array_add_element(
+				     &iter_array, "wpa-ft-psk")))
 				goto nomem;
-
-			if (capa.key_mgmt & WPA_DRIVER_CAPA_KEY_MGMT_FT_PSK)
-				if (!wpa_dbus_dict_string_array_add_element(
-					    &iter_array, "wpa-ft-psk"))
-					goto nomem;
 
 /* TODO: Ensure that driver actually supports sha256 encryption. */
 #ifdef CONFIG_IEEE80211W
@@ -2571,11 +2479,10 @@ dbus_bool_t wpas_dbus_getter_capabilities(DBusMessageIter *iter,
 #endif /* CONFIG_IEEE80211W */
 		}
 
-		if (capa.key_mgmt & WPA_DRIVER_CAPA_KEY_MGMT_WPA_NONE) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "wpa-none"))
-				goto nomem;
-		}
+		if ((capa.key_mgmt & WPA_DRIVER_CAPA_KEY_MGMT_WPA_NONE) &&
+		    !wpa_dbus_dict_string_array_add_element(&iter_array,
+							    "wpa-none"))
+			goto nomem;
 
 
 #ifdef CONFIG_WPS
@@ -2602,24 +2509,16 @@ dbus_bool_t wpas_dbus_getter_capabilities(DBusMessageIter *iter,
 		if (!wpa_dbus_dict_begin_string_array(&iter_dict, "Protocol",
 						      &iter_dict_entry,
 						      &iter_dict_val,
-						      &iter_array))
-			goto nomem;
-
-		if (capa.key_mgmt & (WPA_DRIVER_CAPA_KEY_MGMT_WPA2 |
-				     WPA_DRIVER_CAPA_KEY_MGMT_WPA2_PSK)) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "rsn"))
-				goto nomem;
-		}
-
-		if (capa.key_mgmt & (WPA_DRIVER_CAPA_KEY_MGMT_WPA |
-				     WPA_DRIVER_CAPA_KEY_MGMT_WPA_PSK)) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "wpa"))
-				goto nomem;
-		}
-
-		if (!wpa_dbus_dict_end_string_array(&iter_dict,
+						      &iter_array) ||
+		    ((capa.key_mgmt & (WPA_DRIVER_CAPA_KEY_MGMT_WPA2 |
+				       WPA_DRIVER_CAPA_KEY_MGMT_WPA2_PSK)) &&
+		     !wpa_dbus_dict_string_array_add_element(
+			     &iter_array, "rsn")) ||
+		    ((capa.key_mgmt & (WPA_DRIVER_CAPA_KEY_MGMT_WPA |
+				       WPA_DRIVER_CAPA_KEY_MGMT_WPA_PSK)) &&
+		     !wpa_dbus_dict_string_array_add_element(
+			     &iter_array, "wpa")) ||
+		    !wpa_dbus_dict_end_string_array(&iter_dict,
 						    &iter_dict_entry,
 						    &iter_dict_val,
 						    &iter_array))
@@ -2640,25 +2539,16 @@ dbus_bool_t wpas_dbus_getter_capabilities(DBusMessageIter *iter,
 						      &iter_array))
 			goto nomem;
 
-		if (capa.auth & (WPA_DRIVER_AUTH_OPEN)) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "open"))
-				goto nomem;
-		}
-
-		if (capa.auth & (WPA_DRIVER_AUTH_SHARED)) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "shared"))
-				goto nomem;
-		}
-
-		if (capa.auth & (WPA_DRIVER_AUTH_LEAP)) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "leap"))
-				goto nomem;
-		}
-
-		if (!wpa_dbus_dict_end_string_array(&iter_dict,
+		if (((capa.auth & WPA_DRIVER_AUTH_OPEN) &&
+		     !wpa_dbus_dict_string_array_add_element(
+			     &iter_array, "open")) ||
+		    ((capa.auth & WPA_DRIVER_AUTH_SHARED) &&
+		     !wpa_dbus_dict_string_array_add_element(
+			     &iter_array, "shared")) ||
+		    ((capa.auth & WPA_DRIVER_AUTH_LEAP) &&
+		     !wpa_dbus_dict_string_array_add_element(
+			     &iter_array, "leap")) ||
+		    !wpa_dbus_dict_end_string_array(&iter_dict,
 						    &iter_dict_entry,
 						    &iter_dict_val,
 						    &iter_array))
@@ -2674,32 +2564,18 @@ dbus_bool_t wpas_dbus_getter_capabilities(DBusMessageIter *iter,
 	if (!wpa_dbus_dict_begin_string_array(&iter_dict, "Modes",
 					      &iter_dict_entry,
 					      &iter_dict_val,
-					      &iter_array))
-		goto nomem;
-
-	if (!wpa_dbus_dict_string_array_add_element(
-			    &iter_array, "infrastructure"))
-		goto nomem;
-
-	if (!wpa_dbus_dict_string_array_add_element(
-			    &iter_array, "ad-hoc"))
-		goto nomem;
-
-	if (res >= 0) {
-		if (capa.flags & (WPA_DRIVER_FLAGS_AP)) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "ap"))
-				goto nomem;
-		}
-
-		if (capa.flags & (WPA_DRIVER_FLAGS_P2P_CAPABLE)) {
-			if (!wpa_dbus_dict_string_array_add_element(
-				    &iter_array, "p2p"))
-				goto nomem;
-		}
-	}
-
-	if (!wpa_dbus_dict_end_string_array(&iter_dict,
+					      &iter_array) ||
+	    !wpa_dbus_dict_string_array_add_element(
+		    &iter_array, "infrastructure") ||
+	    !wpa_dbus_dict_string_array_add_element(
+		    &iter_array, "ad-hoc") ||
+	    (res >= 0 && (capa.flags & WPA_DRIVER_FLAGS_AP) &&
+	     !wpa_dbus_dict_string_array_add_element(
+		     &iter_array, "ap")) ||
+	    (res >= 0 && (capa.flags & WPA_DRIVER_FLAGS_P2P_CAPABLE) &&
+	     !wpa_dbus_dict_string_array_add_element(
+		     &iter_array, "p2p")) ||
+	    !wpa_dbus_dict_end_string_array(&iter_dict,
 					    &iter_dict_entry,
 					    &iter_dict_val,
 					    &iter_array))
@@ -2714,9 +2590,8 @@ dbus_bool_t wpas_dbus_getter_capabilities(DBusMessageIter *iter,
 			goto nomem;
 	}
 
-	if (!wpa_dbus_dict_close_write(&variant_iter, &iter_dict))
-		goto nomem;
-	if (!dbus_message_iter_close_container(iter, &variant_iter))
+	if (!wpa_dbus_dict_close_write(&variant_iter, &iter_dict) ||
+	    !dbus_message_iter_close_container(iter, &variant_iter))
 		goto nomem;
 
 	return TRUE;
@@ -3845,9 +3720,8 @@ static dbus_bool_t wpas_dbus_get_bss_security_prop(DBusMessageIter *iter,
 			goto nomem;
 	}
 
-	if (!wpa_dbus_dict_close_write(&variant_iter, &iter_dict))
-		goto nomem;
-	if (!dbus_message_iter_close_container(iter, &variant_iter))
+	if (!wpa_dbus_dict_close_write(&variant_iter, &iter_dict) ||
+	    !dbus_message_iter_close_container(iter, &variant_iter))
 		goto nomem;
 
 	return TRUE;
@@ -3881,12 +3755,10 @@ dbus_bool_t wpas_dbus_getter_bss_wpa(DBusMessageIter *iter, DBusError *error,
 
 	os_memset(&wpa_data, 0, sizeof(wpa_data));
 	ie = wpa_bss_get_vendor_ie(res, WPA_IE_VENDOR_TYPE);
-	if (ie) {
-		if (wpa_parse_wpa_ie(ie, 2 + ie[1], &wpa_data) < 0) {
-			dbus_set_error_const(error, DBUS_ERROR_FAILED,
-					     "failed to parse WPA IE");
-			return FALSE;
-		}
+	if (ie && wpa_parse_wpa_ie(ie, 2 + ie[1], &wpa_data) < 0) {
+		dbus_set_error_const(error, DBUS_ERROR_FAILED,
+				     "failed to parse WPA IE");
+		return FALSE;
 	}
 
 	return wpas_dbus_get_bss_security_prop(iter, &wpa_data, error);
@@ -3916,12 +3788,10 @@ dbus_bool_t wpas_dbus_getter_bss_rsn(DBusMessageIter *iter, DBusError *error,
 
 	os_memset(&wpa_data, 0, sizeof(wpa_data));
 	ie = wpa_bss_get_ie(res, WLAN_EID_RSN);
-	if (ie) {
-		if (wpa_parse_wpa_ie(ie, 2 + ie[1], &wpa_data) < 0) {
-			dbus_set_error_const(error, DBUS_ERROR_FAILED,
-					     "failed to parse RSN IE");
-			return FALSE;
-		}
+	if (ie && wpa_parse_wpa_ie(ie, 2 + ie[1], &wpa_data) < 0) {
+		dbus_set_error_const(error, DBUS_ERROR_FAILED,
+				     "failed to parse RSN IE");
+		return FALSE;
 	}
 
 	return wpas_dbus_get_bss_security_prop(iter, &wpa_data, error);
@@ -3953,10 +3823,8 @@ dbus_bool_t wpas_dbus_getter_bss_wps(DBusMessageIter *iter, DBusError *error,
 		return FALSE;
 
 	if (!dbus_message_iter_open_container(iter, DBUS_TYPE_VARIANT,
-					      "a{sv}", &variant_iter))
-		goto nomem;
-
-	if (!wpa_dbus_dict_open_write(&variant_iter, &iter_dict))
+					      "a{sv}", &variant_iter) ||
+	    !wpa_dbus_dict_open_write(&variant_iter, &iter_dict))
 		goto nomem;
 
 #ifdef CONFIG_WPS
@@ -3971,12 +3839,9 @@ dbus_bool_t wpas_dbus_getter_bss_wps(DBusMessageIter *iter, DBusError *error,
 	}
 #endif /* CONFIG_WPS */
 
-	if (!wpa_dbus_dict_append_string(&iter_dict, "Type", type))
-		goto nomem;
-
-	if (!wpa_dbus_dict_close_write(&variant_iter, &iter_dict))
-		goto nomem;
-	if (!dbus_message_iter_close_container(iter, &variant_iter))
+	if (!wpa_dbus_dict_append_string(&iter_dict, "Type", type) ||
+	    !wpa_dbus_dict_close_write(&variant_iter, &iter_dict) ||
+	    !dbus_message_iter_close_container(iter, &variant_iter))
 		goto nomem;
 
 	return TRUE;
@@ -4279,28 +4144,22 @@ void wpas_dbus_signal_preq(struct wpa_supplicant *wpa_s,
 
 	dbus_message_iter_init_append(msg, &iter);
 
-	if (!wpa_dbus_dict_open_write(&iter, &dict_iter))
-		goto fail;
-	if (addr && !wpa_dbus_dict_append_byte_array(&dict_iter, "addr",
-						     (const char *) addr,
-						     ETH_ALEN))
-		goto fail;
-	if (dst && !wpa_dbus_dict_append_byte_array(&dict_iter, "dst",
-						    (const char *) dst,
-						    ETH_ALEN))
-		goto fail;
-	if (bssid && !wpa_dbus_dict_append_byte_array(&dict_iter, "bssid",
-						      (const char *) bssid,
-						      ETH_ALEN))
-		goto fail;
-	if (ie && ie_len && !wpa_dbus_dict_append_byte_array(&dict_iter, "ies",
-							     (const char *) ie,
-							     ie_len))
-		goto fail;
-	if (ssi_signal && !wpa_dbus_dict_append_int32(&dict_iter, "signal",
-						      ssi_signal))
-		goto fail;
-	if (!wpa_dbus_dict_close_write(&iter, &dict_iter))
+	if (!wpa_dbus_dict_open_write(&iter, &dict_iter) ||
+	    (addr && !wpa_dbus_dict_append_byte_array(&dict_iter, "addr",
+						      (const char *) addr,
+						      ETH_ALEN)) ||
+	    (dst && !wpa_dbus_dict_append_byte_array(&dict_iter, "dst",
+						     (const char *) dst,
+						     ETH_ALEN)) ||
+	    (bssid && !wpa_dbus_dict_append_byte_array(&dict_iter, "bssid",
+						       (const char *) bssid,
+						       ETH_ALEN)) ||
+	    (ie && ie_len && !wpa_dbus_dict_append_byte_array(&dict_iter, "ies",
+							      (const char *) ie,
+							      ie_len)) ||
+	    (ssi_signal && !wpa_dbus_dict_append_int32(&dict_iter, "signal",
+						       ssi_signal)) ||
+	    !wpa_dbus_dict_close_write(&iter, &dict_iter))
 		goto fail;
 
 	dbus_connection_send(priv->con, msg, NULL);

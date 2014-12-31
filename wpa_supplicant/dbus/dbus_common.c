@@ -345,26 +345,14 @@ struct wpas_dbus_priv * wpas_dbus_init(struct wpa_global *global)
 		return NULL;
 	priv->global = global;
 
-	if (wpas_dbus_init_common(priv) < 0) {
-		wpas_dbus_deinit(priv);
-		return NULL;
-	}
-
+	if (wpas_dbus_init_common(priv) < 0 ||
 #ifdef CONFIG_CTRL_IFACE_DBUS_NEW
-	if (wpas_dbus_ctrl_iface_init(priv) < 0) {
-		wpas_dbus_deinit(priv);
-		return NULL;
-	}
+	    wpas_dbus_ctrl_iface_init(priv) < 0 ||
 #endif /* CONFIG_CTRL_IFACE_DBUS_NEW */
-
 #ifdef CONFIG_CTRL_IFACE_DBUS
-	if (wpa_supplicant_dbus_ctrl_iface_init(priv) < 0) {
-		wpas_dbus_deinit(priv);
-		return NULL;
-	}
+	    wpa_supplicant_dbus_ctrl_iface_init(priv) < 0 ||
 #endif /* CONFIG_CTRL_IFACE_DBUS */
-
-	if (wpas_dbus_init_common_finish(priv) < 0) {
+	    wpas_dbus_init_common_finish(priv) < 0) {
 		wpas_dbus_deinit(priv);
 		return NULL;
 	}

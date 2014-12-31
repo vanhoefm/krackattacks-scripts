@@ -270,10 +270,13 @@ properties_get_or_set(DBusMessage *message, DBusMessageIter *iter,
 	}
 
 	if (os_strncmp(WPA_DBUS_PROPERTIES_GET, method,
-		       WPAS_DBUS_METHOD_SIGNAL_PROP_MAX) == 0)
+		       WPAS_DBUS_METHOD_SIGNAL_PROP_MAX) == 0) {
+		wpa_printf(MSG_MSGDUMP, "%s: Get(%s)", __func__, property);
 		return properties_get(message, property_dsc,
 				      obj_dsc->user_data);
+	}
 
+	wpa_printf(MSG_MSGDUMP, "%s: Set(%s)", __func__, property);
 	return properties_set(message, property_dsc, obj_dsc->user_data);
 }
 

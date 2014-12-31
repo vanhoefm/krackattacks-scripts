@@ -1363,13 +1363,10 @@ void wpas_dbus_signal_p2p_go_neg_resp(struct wpa_supplicant *wpa_s,
 		int i = 0;
 		int freq_list_num = 0;
 
-		if (res->role_go) {
-			if (!wpa_dbus_dict_append_byte_array(
-				    &dict_iter, "passphrase",
-				    (const char *) res->passphrase,
-				    sizeof(res->passphrase)))
-				goto err;
-		}
+		if (res->role_go &&
+		    !wpa_dbus_dict_append_string(&dict_iter, "passphrase",
+						 res->passphrase))
+			goto err;
 
 		if (!wpa_dbus_dict_append_string(&dict_iter, "role_go",
 						 res->role_go ? "GO" :

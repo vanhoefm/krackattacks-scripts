@@ -2638,7 +2638,8 @@ DBusMessage * wpas_dbus_handler_p2p_service_sd_res(
 			   entry.type == DBUS_TYPE_INT32) {
 			freq = entry.uint32_value;
 		} else if (!os_strcmp(entry.key, "dialog_token") &&
-			   entry.type == DBUS_TYPE_UINT32) {
+			   (entry.type == DBUS_TYPE_UINT32 ||
+			    entry.type == DBUS_TYPE_INT32)) {
 			dlg_tok = entry.uint32_value;
 		} else if (!os_strcmp(entry.key, "tlvs")) {
 			if (entry.type != DBUS_TYPE_ARRAY ||

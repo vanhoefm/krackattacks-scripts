@@ -125,16 +125,12 @@ DBusMessage * wpas_dbus_error_invalid_args(DBusMessage *message,
  *
  * Convenience function to create and return a scan error
  */
-DBusMessage * wpas_dbus_error_scan_error(DBusMessage *message,
-					 const char *error)
+static DBusMessage * wpas_dbus_error_scan_error(DBusMessage *message,
+						const char *error)
 {
-	DBusMessage *reply;
-
-	reply = dbus_message_new_error(message,
-				       WPAS_DBUS_ERROR_IFACE_SCAN_ERROR,
-				       error);
-
-	return reply;
+	return dbus_message_new_error(message,
+				      WPAS_DBUS_ERROR_IFACE_SCAN_ERROR,
+				      error);
 }
 
 

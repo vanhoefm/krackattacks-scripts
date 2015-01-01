@@ -192,9 +192,11 @@ DBusMessage * wpas_dbus_handler_p2p_listen(DBusMessage *message,
 	if (wpa_s->p2p_dev)
 		wpa_s = wpa_s->p2p_dev;
 
-	if (wpas_p2p_listen(wpa_s, (unsigned int)timeout))
-		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					      NULL);
+	if (wpas_p2p_listen(wpa_s, (unsigned int) timeout)) {
+		return dbus_message_new_error(message,
+					      WPAS_DBUS_ERROR_UNKNOWN_ERROR,
+					      "Could not start P2P listen");
+	}
 
 	return NULL;
 }

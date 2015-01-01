@@ -1695,15 +1695,6 @@ dbus_bool_t wpas_dbus_getter_persistent_groups(DBusMessageIter *iter,
 	unsigned int i = 0, num = 0;
 	dbus_bool_t success = FALSE;
 
-	if (wpa_s->conf == NULL) {
-		wpa_printf(MSG_ERROR, "dbus: %s: "
-			   "An error occurred getting persistent groups list",
-			   __func__);
-		dbus_set_error_const(error, DBUS_ERROR_FAILED, "an error "
-				     "occurred getting persistent groups list");
-		return FALSE;
-	}
-
 	for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next)
 		if (network_is_persistent_group(ssid))
 			num++;

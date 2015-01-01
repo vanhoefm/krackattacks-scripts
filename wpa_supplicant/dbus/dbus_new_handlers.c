@@ -3345,14 +3345,6 @@ dbus_bool_t wpas_dbus_getter_networks(DBusMessageIter *iter, DBusError *error,
 	unsigned int i = 0, num = 0;
 	dbus_bool_t success = FALSE;
 
-	if (wpa_s->conf == NULL) {
-		wpa_printf(MSG_ERROR, "%s[dbus]: An error occurred getting "
-			   "networks list.", __func__);
-		dbus_set_error(error, DBUS_ERROR_FAILED, "%s: an error "
-			       "occurred getting the networks list", __func__);
-		return FALSE;
-	}
-
 	for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next)
 		if (!network_is_persistent_group(ssid))
 			num++;
@@ -3407,16 +3399,6 @@ dbus_bool_t wpas_dbus_getter_pkcs11_engine_path(DBusMessageIter *iter,
 	struct wpa_supplicant *wpa_s = user_data;
 	const char *pkcs11_engine_path;
 
-	if (wpa_s->conf == NULL) {
-		wpa_printf(MSG_ERROR,
-			   "wpas_dbus_getter_pkcs11_engine_path[dbus]: An "
-			   "error occurred getting the PKCS #11 engine path.");
-		dbus_set_error_const(
-			error, DBUS_ERROR_FAILED,
-			"An error occured getting the PKCS #11 engine path.");
-		return FALSE;
-	}
-
 	if (wpa_s->conf->pkcs11_engine_path == NULL)
 		pkcs11_engine_path = "";
 	else
@@ -3441,16 +3423,6 @@ dbus_bool_t wpas_dbus_getter_pkcs11_module_path(DBusMessageIter *iter,
 {
 	struct wpa_supplicant *wpa_s = user_data;
 	const char *pkcs11_module_path;
-
-	if (wpa_s->conf == NULL) {
-		wpa_printf(MSG_ERROR,
-			   "wpas_dbus_getter_pkcs11_module_path[dbus]: An "
-			   "error occurred getting the PKCS #11 module path.");
-		dbus_set_error_const(
-			error, DBUS_ERROR_FAILED,
-			"An error occured getting the PKCS #11 module path.");
-		return FALSE;
-	}
 
 	if (wpa_s->conf->pkcs11_module_path == NULL)
 		pkcs11_module_path = "";

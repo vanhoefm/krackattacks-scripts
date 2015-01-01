@@ -353,7 +353,7 @@ DBusMessage * wpas_dbus_handler_p2p_group_add(DBusMessage *message,
 		iface = wpas_dbus_new_decompose_object_path(
 			pg_object_path, WPAS_DBUS_NEW_PERSISTENT_GROUPS_PART,
 			&net_id_str);
-		if (iface == NULL ||
+		if (iface == NULL || net_id_str == NULL ||
 		    os_strcmp(iface, wpa_s->dbus_new_path) != 0) {
 			reply =
 			    wpas_dbus_error_invalid_args(message,
@@ -647,7 +647,7 @@ DBusMessage * wpas_dbus_handler_p2p_invite(DBusMessage *message,
 			pg_object_path,
 			WPAS_DBUS_NEW_PERSISTENT_GROUPS_PART,
 			&net_id_str);
-		if (iface == NULL ||
+		if (iface == NULL || net_id_str == NULL ||
 		    os_strcmp(iface, wpa_s->dbus_new_path) != 0) {
 			reply = wpas_dbus_error_invalid_args(message,
 							     pg_object_path);
@@ -1899,7 +1899,8 @@ DBusMessage * wpas_dbus_handler_remove_persistent_group(
 	iface = wpas_dbus_new_decompose_object_path(
 		op, WPAS_DBUS_NEW_PERSISTENT_GROUPS_PART,
 		&persistent_group_id);
-	if (iface == NULL || os_strcmp(iface, wpa_s->dbus_new_path) != 0) {
+	if (iface == NULL || persistent_group_id == NULL ||
+	    os_strcmp(iface, wpa_s->dbus_new_path) != 0) {
 		reply = wpas_dbus_error_invalid_args(message, op);
 		goto out;
 	}

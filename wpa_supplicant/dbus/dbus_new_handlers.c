@@ -35,7 +35,7 @@ static const char * const debug_strings[] = {
 
 
 /**
- * wpas_dbus_error_unknown_error - Return a new InvalidArgs error message
+ * wpas_dbus_error_unknown_error - Return a new UnknownError error message
  * @message: Pointer to incoming dbus message this error refers to
  * @arg: Optional string appended to error message
  * Returns: a dbus error message
@@ -45,20 +45,6 @@ static const char * const debug_strings[] = {
 DBusMessage * wpas_dbus_error_unknown_error(DBusMessage *message,
 					    const char *arg)
 {
-	/*
-	 * This function can be called as a result of a failure
-	 * within internal getter calls, which will call this function
-	 * with a NULL message parameter.  However, dbus_message_new_error
-	 * looks very unkindly (i.e, abort()) on a NULL message, so
-	 * in this case, we should not call it.
-	 */
-	if (message == NULL) {
-		wpa_printf(MSG_INFO,
-			   "dbus: %s called with NULL message (arg=%s)",
-			   __func__, arg ? arg : "N/A");
-		return NULL;
-	}
-
 	return dbus_message_new_error(message, WPAS_DBUS_ERROR_UNKNOWN_ERROR,
 				      arg);
 }

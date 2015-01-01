@@ -15,6 +15,7 @@
 #include "dbus_common_i.h"
 #include "dbus_new.h"
 #include "dbus_new_helpers.h"
+#include "dbus_new_handlers.h"
 #include "dbus_dict_helpers.h"
 
 
@@ -80,19 +81,13 @@ static DBusMessage * get_all_properties(DBusMessage *message, char *interface,
 	DBusError error;
 
 	reply = dbus_message_new_method_return(message);
-	if (reply == NULL) {
-		wpa_printf(MSG_ERROR, "%s: out of memory creating dbus reply",
-			   __func__);
-		return NULL;
-	}
+	if (reply == NULL)
+		return wpas_dbus_error_no_memory(message);
 
 	dbus_message_iter_init_append(reply, &iter);
 	if (!wpa_dbus_dict_open_write(&iter, &dict_iter)) {
-		wpa_printf(MSG_ERROR, "%s: out of memory creating reply",
-			   __func__);
 		dbus_message_unref(reply);
-		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					      "out of memory");
+		return wpas_dbus_error_no_memory(message);
 	}
 
 	dbus_error_init(&error);
@@ -108,8 +103,7 @@ static DBusMessage * get_all_properties(DBusMessage *message, char *interface,
 
 	if (!wpa_dbus_dict_close_write(&iter, &dict_iter)) {
 		dbus_message_unref(reply);
-		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					      "out of memory");
+		return wpas_dbus_error_no_memory(message);
 	}
 
 	return reply;

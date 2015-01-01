@@ -120,6 +120,13 @@ static DBusMessage * wpas_dbus_error_scan_error(DBusMessage *message,
 }
 
 
+DBusMessage * wpas_dbus_error_no_memory(DBusMessage *message)
+{
+	wpa_printf(MSG_DEBUG, "dbus: Failed to allocate memory");
+	return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+}
+
+
 static const char * const dont_quote[] = {
 	"key_mgmt", "proto", "pairwise", "auth_alg", "group", "eap",
 	"opensc_engine_path", "pkcs11_engine_path", "pkcs11_module_path",
@@ -667,13 +674,11 @@ DBusMessage * wpas_dbus_handler_get_interface(DBusMessage *message,
 	path = wpa_s->dbus_new_path;
 	reply = dbus_message_new_method_return(message);
 	if (reply == NULL)
-		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					      NULL);
+		return wpas_dbus_error_no_memory(message);
 	if (!dbus_message_append_args(reply, DBUS_TYPE_OBJECT_PATH, &path,
 				      DBUS_TYPE_INVALID)) {
 		dbus_message_unref(reply);
-		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					      NULL);
+		return wpas_dbus_error_no_memory(message);
 	}
 
 	return reply;
@@ -1025,11 +1030,7 @@ static int wpas_dbus_get_scan_ssids(DBusMessage *message, DBusMessageIter *var,
 		if (len != 0) {
 			ssid = os_malloc(len);
 			if (ssid == NULL) {
-				wpa_printf(MSG_DEBUG,
-					   "%s[dbus]: out of memory. Cannot allocate memory for SSID",
-					   __func__);
-				*reply = dbus_message_new_error(
-					message, DBUS_ERROR_NO_MEMORY, NULL);
+				*reply = wpas_dbus_error_no_memory(message);
 				return -1;
 			}
 			os_memcpy(ssid, val, len);
@@ -1093,12 +1094,8 @@ static int wpas_dbus_get_scan_ies(DBusMessage *message, DBusMessageIter *var,
 
 		nies = os_realloc(ies, ies_len + len);
 		if (nies == NULL) {
-			wpa_printf(MSG_DEBUG,
-				   "%s[dbus]: out of memory. Cannot allocate memory for IE",
-				   __func__);
 			os_free(ies);
-			*reply = dbus_message_new_error(
-				message, DBUS_ERROR_NO_MEMORY, NULL);
+			*reply = wpas_dbus_error_no_memory(message);
 			return -1;
 		}
 		ies = nies;
@@ -1191,11 +1188,7 @@ static int wpas_dbus_get_scan_channels(DBusMessage *message,
 			freqs = nfreqs;
 		}
 		if (freqs == NULL) {
-			wpa_printf(MSG_DEBUG,
-				   "%s[dbus]: out of memory. can't allocate memory for freqs",
-				__func__);
-			*reply = dbus_message_new_error(
-				message, DBUS_ERROR_NO_MEMORY, NULL);
+			*reply = wpas_dbus_error_no_memory(message);
 			return -1;
 		}
 
@@ -1210,11 +1203,7 @@ static int wpas_dbus_get_scan_channels(DBusMessage *message,
 		os_free(freqs);
 	freqs = nfreqs;
 	if (freqs == NULL) {
-		wpa_printf(MSG_DEBUG,
-			   "%s[dbus]: out of memory. Can't allocate memory for freqs",
-			   __func__);
-		*reply = dbus_message_new_error(
-			message, DBUS_ERROR_NO_MEMORY, NULL);
+		*reply = wpas_dbus_error_no_memory(message);
 		return -1;
 	}
 	freqs[freqs_num] = 0;
@@ -1425,8 +1414,7 @@ DBusMessage * wpas_dbus_handler_signal_poll(DBusMessage *message,
 nomem:
 	if (reply)
 		dbus_message_unref(reply);
-	reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
-	return reply;
+	return wpas_dbus_error_no_memory(message);
 }
 
 
@@ -1506,15 +1494,13 @@ DBusMessage * wpas_dbus_handler_add_network(DBusMessage *message,
 
 	reply = dbus_message_new_method_return(message);
 	if (reply == NULL) {
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
+		reply = wpas_dbus_error_no_memory(message);
 		goto err;
 	}
 	if (!dbus_message_append_args(reply, DBUS_TYPE_OBJECT_PATH, &path,
 				      DBUS_TYPE_INVALID)) {
 		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
+		reply = wpas_dbus_error_no_memory(message);
 		goto err;
 	}
 
@@ -1845,26 +1831,18 @@ DBusMessage * wpas_dbus_handler_add_blob(DBusMessage *message,
 
 	blob = os_zalloc(sizeof(*blob));
 	if (!blob) {
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
+		reply = wpas_dbus_error_no_memory(message);
 		goto err;
 	}
 
 	blob->data = os_malloc(blob_len);
-	if (!blob->data) {
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
+	blob->name = os_strdup(blob_name);
+	if (!blob->data || !blob->name) {
+		reply = wpas_dbus_error_no_memory(message);
 		goto err;
 	}
 	os_memcpy(blob->data, blob_data, blob_len);
-
 	blob->len = blob_len;
-	blob->name = os_strdup(blob_name);
-	if (!blob->name) {
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
-		goto err;
-	}
 
 	wpa_config_set_blob(wpa_s->conf, blob);
 	wpas_notify_blob_added(wpa_s, blob->name);
@@ -1909,39 +1887,21 @@ DBusMessage * wpas_dbus_handler_get_blob(DBusMessage *message,
 	}
 
 	reply = dbus_message_new_method_return(message);
-	if (!reply) {
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
-		goto out;
-	}
+	if (!reply)
+		return wpas_dbus_error_no_memory(message);
 
 	dbus_message_iter_init_append(reply, &iter);
 
 	if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_ARRAY,
 					      DBUS_TYPE_BYTE_AS_STRING,
-					      &array_iter)) {
+					      &array_iter) ||
+	    !dbus_message_iter_append_fixed_array(&array_iter, DBUS_TYPE_BYTE,
+						  &(blob->data), blob->len) ||
+	    !dbus_message_iter_close_container(&iter, &array_iter)) {
 		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
-		goto out;
+		reply = wpas_dbus_error_no_memory(message);
 	}
 
-	if (!dbus_message_iter_append_fixed_array(&array_iter, DBUS_TYPE_BYTE,
-						  &(blob->data), blob->len)) {
-		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
-		goto out;
-	}
-
-	if (!dbus_message_iter_close_container(&iter, &array_iter)) {
-		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
-		goto out;
-	}
-
-out:
 	return reply;
 }
 
@@ -2026,9 +1986,7 @@ DBusMessage * wpas_dbus_handler_autoscan(DBusMessage *message,
 
 		tmp = os_strdup(arg);
 		if (tmp == NULL) {
-			reply = dbus_message_new_error(message,
-						       DBUS_ERROR_NO_MEMORY,
-						       NULL);
+			reply = wpas_dbus_error_no_memory(message);
 		} else {
 			os_free(wpa_s->conf->autoscan);
 			wpa_s->conf->autoscan = tmp;
@@ -4058,8 +4016,7 @@ DBusMessage * wpas_dbus_handler_subscribe_preq(
 
 	name = os_strdup(dbus_message_get_sender(message));
 	if (!name)
-		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					      "out of memory");
+		return wpas_dbus_error_no_memory(message);
 
 	wpa_s->preq_notify_peer = name;
 

@@ -186,8 +186,7 @@ DBusMessage * wpas_dbus_handler_p2p_listen(DBusMessage *message,
 
 	if (!dbus_message_get_args(message, NULL, DBUS_TYPE_INT32, &timeout,
 				   DBUS_TYPE_INVALID))
-		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					      NULL);
+		return wpas_dbus_error_no_memory(message);
 
 	if (wpa_s->p2p_dev)
 		wpa_s = wpa_s->p2p_dev;
@@ -1784,15 +1783,13 @@ DBusMessage * wpas_dbus_handler_add_persistent_group(
 
 	reply = dbus_message_new_method_return(message);
 	if (reply == NULL) {
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
+		reply = wpas_dbus_error_no_memory(message);
 		goto err;
 	}
 	if (!dbus_message_append_args(reply, DBUS_TYPE_OBJECT_PATH, &path,
 				      DBUS_TYPE_INVALID)) {
 		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
+		reply = wpas_dbus_error_no_memory(message);
 		goto err;
 	}
 

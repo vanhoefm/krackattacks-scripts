@@ -303,10 +303,8 @@ DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
 	}
 
 	reply = dbus_message_new_method_return(message);
-	if (!reply) {
-		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					      NULL);
-	}
+	if (!reply)
+		return wpas_dbus_error_no_memory(message);
 
 	dbus_message_iter_init_append(reply, &iter);
 	if (!wpa_dbus_dict_open_write(&iter, &dict_iter) ||
@@ -314,8 +312,7 @@ DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
 	     !wpa_dbus_dict_append_string(&dict_iter, "Pin", npin)) ||
 	    !wpa_dbus_dict_close_write(&iter, &dict_iter)) {
 		dbus_message_unref(reply);
-		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					      NULL);
+		return wpas_dbus_error_no_memory(message);
 	}
 
 	return reply;

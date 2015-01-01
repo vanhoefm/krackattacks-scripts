@@ -35,9 +35,9 @@
  * @addr - out param must be of ETH_ALEN size
  * Returns 0 if valid (including MAC), -1 otherwise
  */
-static int parse_peer_object_path(char *peer_path, u8 addr[ETH_ALEN])
+static int parse_peer_object_path(const char *peer_path, u8 addr[ETH_ALEN])
 {
-	char *p;
+	const char *p;
 
 	if (!peer_path)
 		return -1;
@@ -518,8 +518,8 @@ DBusMessage * wpas_dbus_handler_p2p_connect(DBusMessage *message,
 		wpa_dbus_dict_entry_clear(&entry);
 	}
 
-	if (!peer_object_path || (wps_method == WPS_NOT_READY) ||
-	    (parse_peer_object_path(peer_object_path, addr) < 0) ||
+	if (wps_method == WPS_NOT_READY ||
+	    parse_peer_object_path(peer_object_path, addr) < 0 ||
 	    !p2p_peer_known(wpa_s->global->p2p, addr))
 		goto inv_args;
 
@@ -627,11 +627,9 @@ DBusMessage * wpas_dbus_handler_p2p_invite(DBusMessage *message,
 		}
 	}
 
-	if (!peer_object_path ||
-	    (parse_peer_object_path(peer_object_path, peer_addr) < 0) ||
-	    !p2p_peer_known(wpa_s->global->p2p, peer_addr)) {
+	if (parse_peer_object_path(peer_object_path, peer_addr) < 0 ||
+	    !p2p_peer_known(wpa_s->global->p2p, peer_addr))
 		goto err;
-	}
 
 	if (wpa_s->p2p_dev)
 		wpa_s = wpa_s->p2p_dev;
@@ -2643,12 +2641,9 @@ DBusMessage * wpas_dbus_handler_p2p_service_sd_res(
 
 		wpa_dbus_dict_entry_clear(&entry);
 	}
-	if (!peer_object_path ||
-	    (parse_peer_object_path(peer_object_path, addr) < 0) ||
-	    !p2p_peer_known(wpa_s->global->p2p, addr))
-		goto error;
-
-	if (tlv == NULL)
+	if (parse_peer_object_path(peer_object_path, addr) < 0 ||
+	    !p2p_peer_known(wpa_s->global->p2p, addr) ||
+	    tlv == NULL)
 		goto error;
 
 	wpas_p2p_sd_response(wpa_s, freq, addr, (u8) dlg_tok, tlv);

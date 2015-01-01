@@ -308,7 +308,6 @@ DBusMessage * wpas_dbus_handler_p2p_group_add(DBusMessage *message,
 	int persistent_group = 0;
 	int freq = 0;
 	char *iface = NULL;
-	char *net_id_str = NULL;
 	unsigned int group_id = 0;
 	struct wpa_ssid *ssid;
 
@@ -342,13 +341,16 @@ DBusMessage * wpas_dbus_handler_p2p_group_add(DBusMessage *message,
 		wpa_s = wpa_s->p2p_dev;
 
 	if (pg_object_path != NULL) {
+		char *net_id_str;
+
 		/*
 		 * A persistent group Object Path is defined meaning we want
 		 * to re-invoke a persistent group.
 		 */
 
-		iface = wpas_dbus_new_decompose_object_path(pg_object_path, 1,
-							    &net_id_str, NULL);
+		iface = wpas_dbus_new_decompose_object_path(
+			pg_object_path, WPAS_DBUS_NEW_PERSISTENT_GROUPS_PART,
+			&net_id_str);
 		if (iface == NULL ||
 		    os_strcmp(iface, wpa_s->dbus_new_path) != 0) {
 			reply =
@@ -381,7 +383,6 @@ DBusMessage * wpas_dbus_handler_p2p_group_add(DBusMessage *message,
 
 out:
 	os_free(pg_object_path);
-	os_free(net_id_str);
 	os_free(iface);
 	return reply;
 inv_args_clear:
@@ -594,7 +595,6 @@ DBusMessage * wpas_dbus_handler_p2p_invite(DBusMessage *message,
 	char *peer_object_path = NULL;
 	char *pg_object_path = NULL;
 	char *iface = NULL;
-	char *net_id_str = NULL;
 	u8 peer_addr[ETH_ALEN];
 	unsigned int group_id = 0;
 	int persistent = 0;
@@ -635,13 +635,16 @@ DBusMessage * wpas_dbus_handler_p2p_invite(DBusMessage *message,
 		wpa_s = wpa_s->p2p_dev;
 
 	if (persistent) {
+		char *net_id_str;
 		/*
 		 * A group ID is defined meaning we want to re-invoke a
 		 * persistent group
 		 */
 
-		iface = wpas_dbus_new_decompose_object_path(pg_object_path, 1,
-							    &net_id_str, NULL);
+		iface = wpas_dbus_new_decompose_object_path(
+			pg_object_path,
+			WPAS_DBUS_NEW_PERSISTENT_GROUPS_PART,
+			&net_id_str);
 		if (iface == NULL ||
 		    os_strcmp(iface, wpa_s->dbus_new_path) != 0) {
 			reply = wpas_dbus_error_invalid_args(message,
@@ -681,6 +684,7 @@ DBusMessage * wpas_dbus_handler_p2p_invite(DBusMessage *message,
 	}
 
 out:
+	os_free(iface);
 	os_free(pg_object_path);
 	os_free(peer_object_path);
 	return reply;
@@ -1879,7 +1883,7 @@ DBusMessage * wpas_dbus_handler_remove_persistent_group(
 {
 	DBusMessage *reply = NULL;
 	const char *op;
-	char *iface = NULL, *persistent_group_id = NULL;
+	char *iface = NULL, *persistent_group_id;
 	int id;
 	struct wpa_ssid *ssid;
 
@@ -1890,9 +1894,9 @@ DBusMessage * wpas_dbus_handler_remove_persistent_group(
 	 * Extract the network ID and ensure the network is actually a child of
 	 * this interface.
 	 */
-	iface = wpas_dbus_new_decompose_object_path(op, 1,
-						    &persistent_group_id,
-						    NULL);
+	iface = wpas_dbus_new_decompose_object_path(
+		op, WPAS_DBUS_NEW_PERSISTENT_GROUPS_PART,
+		&persistent_group_id);
 	if (iface == NULL || os_strcmp(iface, wpa_s->dbus_new_path) != 0) {
 		reply = wpas_dbus_error_invalid_args(message, op);
 		goto out;
@@ -1925,7 +1929,6 @@ DBusMessage * wpas_dbus_handler_remove_persistent_group(
 
 out:
 	os_free(iface);
-	os_free(persistent_group_id);
 	return reply;
 }
 

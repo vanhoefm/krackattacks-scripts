@@ -1638,7 +1638,7 @@ DBusMessage * wpas_dbus_handler_remove_network(DBusMessage *message,
 {
 	DBusMessage *reply = NULL;
 	const char *op;
-	char *iface = NULL, *net_id = NULL;
+	char *iface, *net_id;
 	int id;
 	struct wpa_ssid *ssid;
 	int was_disabled;
@@ -1648,7 +1648,9 @@ DBusMessage * wpas_dbus_handler_remove_network(DBusMessage *message,
 
 	/* Extract the network ID and ensure the network */
 	/* is actually a child of this interface */
-	iface = wpas_dbus_new_decompose_object_path(op, 0, &net_id, NULL);
+	iface = wpas_dbus_new_decompose_object_path(op,
+						    WPAS_DBUS_NEW_NETWORKS_PART,
+						    &net_id);
 	if (iface == NULL || net_id == NULL ||
 	    os_strcmp(iface, wpa_s->dbus_new_path) != 0) {
 		reply = wpas_dbus_error_invalid_args(message, op);
@@ -1694,7 +1696,6 @@ DBusMessage * wpas_dbus_handler_remove_network(DBusMessage *message,
 
 out:
 	os_free(iface);
-	os_free(net_id);
 	return reply;
 }
 
@@ -1752,7 +1753,7 @@ DBusMessage * wpas_dbus_handler_select_network(DBusMessage *message,
 {
 	DBusMessage *reply = NULL;
 	const char *op;
-	char *iface = NULL, *net_id = NULL;
+	char *iface, *net_id;
 	int id;
 	struct wpa_ssid *ssid;
 
@@ -1761,7 +1762,9 @@ DBusMessage * wpas_dbus_handler_select_network(DBusMessage *message,
 
 	/* Extract the network ID and ensure the network */
 	/* is actually a child of this interface */
-	iface = wpas_dbus_new_decompose_object_path(op, 0, &net_id, NULL);
+	iface = wpas_dbus_new_decompose_object_path(op,
+						    WPAS_DBUS_NEW_NETWORKS_PART,
+						    &net_id);
 	if (iface == NULL || net_id == NULL ||
 	    os_strcmp(iface, wpa_s->dbus_new_path) != 0) {
 		reply = wpas_dbus_error_invalid_args(message, op);
@@ -1786,7 +1789,6 @@ DBusMessage * wpas_dbus_handler_select_network(DBusMessage *message,
 
 out:
 	os_free(iface);
-	os_free(net_id);
 	return reply;
 }
 
@@ -1805,7 +1807,7 @@ DBusMessage * wpas_dbus_handler_network_reply(DBusMessage *message,
 #ifdef IEEE8021X_EAPOL
 	DBusMessage *reply = NULL;
 	const char *op, *field, *value;
-	char *iface = NULL, *net_id = NULL;
+	char *iface, *net_id;
 	int id;
 	struct wpa_ssid *ssid;
 
@@ -1818,7 +1820,9 @@ DBusMessage * wpas_dbus_handler_network_reply(DBusMessage *message,
 
 	/* Extract the network ID and ensure the network */
 	/* is actually a child of this interface */
-	iface = wpas_dbus_new_decompose_object_path(op, 0, &net_id, NULL);
+	iface = wpas_dbus_new_decompose_object_path(op,
+						    WPAS_DBUS_NEW_NETWORKS_PART,
+						    &net_id);
 	if (iface == NULL || net_id == NULL ||
 	    os_strcmp(iface, wpa_s->dbus_new_path) != 0) {
 		reply = wpas_dbus_error_invalid_args(message, op);
@@ -1848,7 +1852,6 @@ DBusMessage * wpas_dbus_handler_network_reply(DBusMessage *message,
 
 out:
 	os_free(iface);
-	os_free(net_id);
 	return reply;
 #else /* IEEE8021X_EAPOL */
 	wpa_printf(MSG_DEBUG, "CTRL_IFACE: 802.1X not included");

@@ -969,29 +969,34 @@ dbus_bool_t wpa_dbus_get_object_properties(struct wpas_dbus_priv *iface,
 /**
  * wpas_dbus_new_decompose_object_path - Decompose an interface object path into parts
  * @path: The dbus object path
- * @p2p_persistent_group: indicates whether to parse the path as a P2P
- *                        persistent group object
- * @network: (out) the configured network this object path refers to, if any
- * @bssid: (out) the scanned bssid this object path refers to, if any
- * Returns: The object path of the network interface this path refers to
+ * @sep: Separating part (e.g., "Networks" or "PersistentGroups")
+ * @item: (out) The part following the specified separator, if any
+ * Returns: The object path of the interface this path refers to
  *
- * For a given object path, decomposes the object path into object id, network,
- * and BSSID parts, if those parts exist.
+ * For a given object path, decomposes the object path into object id and
+ * requested part, if those parts exist. The caller is responsible for freeing
+ * the returned value. The *item pointer points to that allocated value and must
+ * not be freed separately.
+ *
+ * As an example, path = "/fi/w1/wpa_supplicant1/Interfaces/1/Networks/0" and
+ * sep = "Networks" would result in "/fi/w1/wpa_supplicant1/Interfaces/1"
+ * getting returned and *items set to point to "0".
  */
-char *wpas_dbus_new_decompose_object_path(const char *path,
-					   int p2p_persistent_group,
-					   char **network,
-					   char **bssid)
+char * wpas_dbus_new_decompose_object_path(const char *path, const char *sep,
+					   char **item)
 {
 	const unsigned int dev_path_prefix_len =
 		os_strlen(WPAS_DBUS_NEW_PATH_INTERFACES "/");
 	char *obj_path_only;
-	char *next_sep;
+	char *pos;
+	size_t sep_len;
 
-	/* Be a bit paranoid about path */
-	if (!path || os_strncmp(path, WPAS_DBUS_NEW_PATH_INTERFACES "/",
-				dev_path_prefix_len))
-		return NULL;
+	*item = NULL;
+
+	/* Verify that this starts with our interface prefix */
+	if (os_strncmp(path, WPAS_DBUS_NEW_PATH_INTERFACES "/",
+		       dev_path_prefix_len) != 0)
+		return NULL; /* not our path */
 
 	/* Ensure there's something at the end of the path */
 	if ((path + dev_path_prefix_len)[0] == '\0')
@@ -1001,39 +1006,20 @@ char *wpas_dbus_new_decompose_object_path(const char *path,
 	if (obj_path_only == NULL)
 		return NULL;
 
-	next_sep = os_strchr(obj_path_only + dev_path_prefix_len, '/');
-	if (next_sep != NULL) {
-		const char *net_part = os_strstr(
-			next_sep, p2p_persistent_group ?
-			WPAS_DBUS_NEW_PERSISTENT_GROUPS_PART "/" :
-			WPAS_DBUS_NEW_NETWORKS_PART "/");
-		const char *bssid_part = os_strstr(
-			next_sep, WPAS_DBUS_NEW_BSSIDS_PART "/");
+	pos = obj_path_only + dev_path_prefix_len;
+	pos = os_strchr(pos, '/');
+	if (pos == NULL)
+		return obj_path_only; /* no next item on the path */
 
-		if (network && net_part) {
-			/* Deal with a request for a configured network */
-			const char *net_name = net_part +
-				os_strlen(p2p_persistent_group ?
-					  WPAS_DBUS_NEW_PERSISTENT_GROUPS_PART
-					  "/" :
-					  WPAS_DBUS_NEW_NETWORKS_PART "/");
-			*network = NULL;
-			if (os_strlen(net_name))
-				*network = os_strdup(net_name);
-		} else if (bssid && bssid_part) {
-			/* Deal with a request for a scanned BSSID */
-			const char *bssid_name = bssid_part +
-				os_strlen(WPAS_DBUS_NEW_BSSIDS_PART "/");
-			if (os_strlen(bssid_name))
-				*bssid = os_strdup(bssid_name);
-			else
-				*bssid = NULL;
-		}
+	 /* Separate network interface prefix from the path */
+	*pos++ = '\0';
 
-		/* Cut off interface object path before "/" */
-		*next_sep = '\0';
-	}
+	sep_len = os_strlen(sep);
+	if (os_strncmp(pos, sep, sep_len) != 0 || pos[sep_len] != '/')
+		return obj_path_only; /* no match */
 
+	 /* return a pointer to the requested item */
+	*item = pos + sep_len + 1;
 	return obj_path_only;
 }
 

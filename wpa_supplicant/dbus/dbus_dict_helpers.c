@@ -951,8 +951,6 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_array(
 	DBusMessageIter iter_array;
 
 	wpa_printf(MSG_MSGDUMP, "%s: array_type %c", __func__, array_type);
-	if (!entry)
-		return FALSE;
 
 	dbus_message_iter_recurse(iter_dict_val, &iter_array);
 

@@ -247,48 +247,48 @@ DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
 		dbus_message_iter_next(&dict_iter);
 	}
 
+#ifdef CONFIG_AP
+	if (wpa_s->ap_iface && params.type == 1) {
+		if (params.pin == NULL) {
+			wpa_printf(MSG_DEBUG,
+				   "dbus: WPS.Start - Pin required for registrar role");
+			return wpas_dbus_error_invalid_args(
+				message, "Pin required for registrar role.");
+		}
+		ret = wpa_supplicant_ap_wps_pin(wpa_s,
+						params.bssid,
+						params.pin,
+						npin, sizeof(npin), 0);
+	} else if (wpa_s->ap_iface) {
+		ret = wpa_supplicant_ap_wps_pbc(wpa_s,
+						params.bssid,
+						params.p2p_dev_addr);
+	} else
+#endif /* CONFIG_AP */
 	if (params.role == 0) {
 		wpa_printf(MSG_DEBUG, "dbus: WPS.Start - Role not specified");
 		return wpas_dbus_error_invalid_args(message,
 						    "Role not specified");
-	} else if (params.role == 1 && params.type == 0) {
+	} else if (params.role == 2) {
+		if (params.pin == NULL) {
+			wpa_printf(MSG_DEBUG,
+				   "dbus: WPS.Start - Pin required for registrar role");
+			return wpas_dbus_error_invalid_args(
+				message, "Pin required for registrar role.");
+		}
+		ret = wpas_wps_start_reg(wpa_s, params.bssid, params.pin,
+					 NULL);
+	} else if (params.type == 0) {
 		wpa_printf(MSG_DEBUG, "dbus: WPS.Start - Type not specified");
 		return wpas_dbus_error_invalid_args(message,
 						    "Type not specified");
-	} else if (params.role == 2 && params.pin == NULL) {
-		wpa_printf(MSG_DEBUG,
-			   "dbus: WPS.Start - Pin required for registrar role");
-		return wpas_dbus_error_invalid_args(
-			message, "Pin required for registrar role.");
-	}
-
-	if (params.role == 2)
-		ret = wpas_wps_start_reg(wpa_s, params.bssid, params.pin,
-					 NULL);
-	else if (params.type == 1) {
-#ifdef CONFIG_AP
-		if (wpa_s->ap_iface)
-			ret = wpa_supplicant_ap_wps_pin(wpa_s,
-							params.bssid,
-							params.pin,
-							npin, sizeof(npin), 0);
-		else
-#endif /* CONFIG_AP */
-		{
-			ret = wpas_wps_start_pin(wpa_s, params.bssid,
-						 params.pin, 0,
-						 DEV_PW_DEFAULT);
-			if (ret > 0)
-				os_snprintf(npin, sizeof(npin), "%08d", ret);
-		}
+	} else if (params.type == 1) {
+		ret = wpas_wps_start_pin(wpa_s, params.bssid,
+					 params.pin, 0,
+					 DEV_PW_DEFAULT);
+		if (ret > 0)
+			os_snprintf(npin, sizeof(npin), "%08d", ret);
 	} else {
-#ifdef CONFIG_AP
-		if (wpa_s->ap_iface)
-			ret = wpa_supplicant_ap_wps_pbc(wpa_s,
-							params.bssid,
-							params.p2p_dev_addr);
-		else
-#endif /* CONFIG_AP */
 		ret = wpas_wps_start_pbc(wpa_s, params.bssid, 0);
 	}
 

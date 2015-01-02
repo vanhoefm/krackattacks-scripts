@@ -877,6 +877,10 @@ Interface implemented by objects related to network interface added to
 	<h3>ProcessCredentials - b - (read/write)</h3>
 	<p>Determines if the interface will process the credentials (credentials_processed configuration file parameter).</p>
       </li>
+      <li>
+	<h3>ConfigMethods - s - (read/write)</h3>
+	<p>The currently advertised WPS configuration methods. Available methods: usba ethernet label display ext_nfc_token int_nfc_token nfc_interface push_button keypad virtual_display physical_display virtual_push_button physical_push_button.</p>
+      </li>
     </ul>
 
 \subsection dbus_wps_signals Signals

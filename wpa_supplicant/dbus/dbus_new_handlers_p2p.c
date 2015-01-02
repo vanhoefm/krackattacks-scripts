@@ -2045,15 +2045,14 @@ dbus_bool_t wpas_dbus_getter_p2p_group_passphrase(DBusMessageIter *iter,
 						  void *user_data)
 {
 	struct wpa_supplicant *wpa_s = user_data;
-	u8 role = wpas_get_p2p_role(wpa_s);
-	char *p_pass = NULL;
+	char *p_pass;
+	struct wpa_ssid *ssid = wpa_s->current_ssid;
 
-	/* Verify correct role for this property */
-	if (role == WPAS_P2P_ROLE_GO) {
-		if (wpa_s->current_ssid == NULL)
-			return FALSE;
-		p_pass = wpa_s->current_ssid->passphrase;
-	} else
+	if (ssid == NULL)
+		return FALSE;
+
+	p_pass = ssid->passphrase;
+	if (!p_pass)
 		p_pass = "";
 
 	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_STRING,

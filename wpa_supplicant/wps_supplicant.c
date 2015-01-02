@@ -1091,6 +1091,14 @@ int wpas_wps_start_pbc(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		       int p2p_group)
 {
 	struct wpa_ssid *ssid;
+
+#ifdef CONFIG_AP
+	if (wpa_s->ap_iface) {
+		wpa_printf(MSG_DEBUG,
+			   "WPS: Reject request to start Registrar(as station) operation while AP mode is enabled");
+		return -1;
+	}
+#endif /* CONFIG_AP */
 	wpas_clear_wps(wpa_s);
 	ssid = wpas_wps_add_network(wpa_s, 0, NULL, bssid);
 	if (ssid == NULL)
@@ -1131,6 +1139,13 @@ static int wpas_wps_start_dev_pw(struct wpa_supplicant *wpa_s,
 	unsigned int rpin = 0;
 	char hash[2 * WPS_OOB_PUBKEY_HASH_LEN + 10];
 
+#ifdef CONFIG_AP
+	if (wpa_s->ap_iface) {
+		wpa_printf(MSG_DEBUG,
+			   "WPS: Reject request to start Registrar(as station) operation while AP mode is enabled");
+		return -1;
+	}
+#endif /* CONFIG_AP */
 	wpas_clear_wps(wpa_s);
 	if (bssid && is_zero_ether_addr(bssid))
 		bssid = NULL;
@@ -1244,6 +1259,13 @@ int wpas_wps_start_reg(struct wpa_supplicant *wpa_s, const u8 *bssid,
 	char *pos, *end;
 	int res;
 
+#ifdef CONFIG_AP
+	if (wpa_s->ap_iface) {
+		wpa_printf(MSG_DEBUG,
+			   "WPS: Reject request to start Registrar(as station) operation while AP mode is enabled");
+		return -1;
+	}
+#endif /* CONFIG_AP */
 	if (!pin)
 		return -1;
 	wpas_clear_wps(wpa_s);

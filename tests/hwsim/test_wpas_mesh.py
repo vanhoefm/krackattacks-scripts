@@ -459,14 +459,18 @@ def test_wpas_mesh_max_peering(dev, apdev):
         return "skip"
     try:
         dev[0].request("SET max_peer_links 1")
-        for i in range(3):
-            add_open_mesh_network(dev[i])
 
-        for i in range(3):
+        # first, connect dev[0] and dev[1]
+        add_open_mesh_network(dev[0])
+        add_open_mesh_network(dev[1])
+        for i in range(2):
             ev = dev[i].wait_event(["MESH-PEER-CONNECTED"])
             if ev is None:
                 raise Exception("dev%d did not connect with any peer" % i)
 
+        # add dev[2] which will try to connect with both dev[0] and dev[1],
+        # but can complete connection only with dev[1]
+        add_open_mesh_network(dev[2])
         for i in range(1, 3):
             ev = dev[i].wait_event(["MESH-PEER-CONNECTED"])
             if ev is None:
@@ -475,6 +479,10 @@ def test_wpas_mesh_max_peering(dev, apdev):
         ev = dev[0].wait_event(["MESH-PEER-CONNECTED"], timeout=1)
         if ev is not None:
             raise Exception("dev0 connection beyond max peering limit")
+
+        ev = dev[2].wait_event(["MESH-PEER-CONNECTED"], timeout=0.1)
+        if ev is not None:
+            raise Exception("dev2 reported unexpected peering: " + ev)
 
         for i in range(3):
             dev[i].mesh_group_remove()

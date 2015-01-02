@@ -281,6 +281,22 @@ static int no_seq_check(struct nl_msg *msg, void *arg)
 }
 
 
+static void nl80211_nlmsg_clear(struct nl_msg *msg)
+{
+	/*
+	 * Clear nlmsg data, e.g., to make sure key material is not left in
+	 * heap memory for unnecessarily long time.
+	 */
+	if (msg) {
+		struct nlmsghdr *hdr = nlmsg_hdr(msg);
+		void *data = nlmsg_data(hdr);
+		int len = nlmsg_datalen(hdr);
+
+		os_memset(data, 0, len);
+	}
+}
+
+
 static int send_and_recv(struct nl80211_global *global,
 			 struct nl_handle *nl_handle, struct nl_msg *msg,
 			 int (*valid_handler)(struct nl_msg *, void *),
@@ -320,6 +336,8 @@ static int send_and_recv(struct nl80211_global *global,
 	}
  out:
 	nl_cb_put(cb);
+	if (!valid_handler && valid_data == (void *) -1)
+		nl80211_nlmsg_clear(msg);
 	nlmsg_free(msg);
 	return err;
 }
@@ -2331,10 +2349,11 @@ static int issue_key_mgmt_set_key(struct wpa_driver_nl80211_data *drv,
 	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
 			QCA_NL80211_VENDOR_SUBCMD_KEY_MGMT_SET_KEY) ||
 	    nla_put(msg, NL80211_ATTR_VENDOR_DATA, key_len, key)) {
+		nl80211_nlmsg_clear(msg);
 		nlmsg_free(msg);
 		return -1;
 	}
-	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	ret = send_and_recv_msgs(drv, msg, NULL, (void *) -1);
 	if (ret) {
 		wpa_printf(MSG_DEBUG,
 			   "nl80211: Key management set key failed: ret=%d (%s)",
@@ -2426,7 +2445,7 @@ static int wpa_driver_nl80211_set_key(const char *ifname, struct i802_bss *bss,
 	if (nla_put_u8(msg, NL80211_ATTR_KEY_IDX, key_idx))
 		goto fail;
 
-	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	ret = send_and_recv_msgs(drv, msg, NULL, key ? (void *) -1 : NULL);
 	if ((ret == -ENOENT || ret == -ENOLINK) && alg == WPA_ALG_NONE)
 		ret = 0;
 	if (ret)
@@ -2477,6 +2496,7 @@ static int wpa_driver_nl80211_set_key(const char *ifname, struct i802_bss *bss,
 	return ret;
 
 fail:
+	nl80211_nlmsg_clear(msg);
 	nlmsg_free(msg);
 	return -ENOBUFS;
 }
@@ -6717,13 +6737,14 @@ static void nl80211_set_rekey_info(void *priv, const u8 *kek, const u8 *kck,
 	    nla_put(msg, NL80211_REKEY_DATA_KCK, NL80211_KCK_LEN, kck) ||
 	    nla_put(msg, NL80211_REKEY_DATA_REPLAY_CTR, NL80211_REPLAY_CTR_LEN,
 		    replay_ctr)) {
+		nl80211_nlmsg_clear(msg);
 		nlmsg_free(msg);
 		return;
 	}
 
 	nla_nest_end(msg, replay_nested);
 
-	send_and_recv_msgs(drv, msg, NULL, NULL);
+	send_and_recv_msgs(drv, msg, NULL, (void *) -1);
 }
 
 

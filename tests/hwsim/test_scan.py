@@ -427,8 +427,16 @@ def test_scan_hidden(dev, apdev):
     if "test-scan" in dev[0].request("SCAN_RESULTS"):
         raise Exception("BSS unexpectedly found in scan")
 
-    check_scan(dev[0], "scan_id=%d,%d,%d freq=2412 use_id=1" % (id1, id2, id3))
-    if "test-scan" not in dev[0].request("SCAN_RESULTS"):
+    # Allow multiple attempts to be more robust under heavy CPU load that can
+    # result in Probe Response frames getting sent only after the station has
+    # already stopped waiting for the response on the channel.
+    found = False
+    for i in range(10):
+        check_scan(dev[0], "scan_id=%d,%d,%d freq=2412 use_id=1" % (id1, id2, id3))
+        if "test-scan" in dev[0].request("SCAN_RESULTS"):
+            found = True
+            break
+    if not found:
         raise Exception("BSS not found in scan")
 
     if "FAIL" not in dev[0].request("SCAN scan_id=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17"):

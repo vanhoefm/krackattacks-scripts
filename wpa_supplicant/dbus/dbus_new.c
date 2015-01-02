@@ -2045,14 +2045,6 @@ static const struct wpa_dbus_signal_desc wpas_dbus_global_signals[] = {
 		  END_ARGS
 	  }
 	},
-	{ "NetworkRequest", WPAS_DBUS_NEW_IFACE_INTERFACE,
-	  {
-		  { "path", "o", ARG_OUT },
-		  { "field", "s", ARG_OUT },
-		  { "text", "s", ARG_OUT },
-		  END_ARGS
-	  }
-	},
 	/* Deprecated: use org.freedesktop.DBus.Properties.PropertiesChanged */
 	{ "PropertiesChanged", WPAS_DBUS_NEW_INTERFACE,
 	  {
@@ -3162,6 +3154,14 @@ static const struct wpa_dbus_signal_desc wpas_dbus_interface_signals[] = {
 	{ "StaDeauthorized", WPAS_DBUS_NEW_IFACE_INTERFACE,
 	  {
 		  { "name", "s", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ "NetworkRequest", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  {
+		  { "path", "o", ARG_OUT },
+		  { "field", "s", ARG_OUT },
+		  { "text", "s", ARG_OUT },
 		  END_ARGS
 	  }
 	},

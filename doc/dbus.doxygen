@@ -611,6 +611,11 @@ fi.w1.wpa_supplicant1.CreateInterface.
       </li>
 
       <li>
+	<h3>CurrentAuthMode - s - (read)</h3>
+	<p>Current authentication type.</p>
+      </li>
+
+      <li>
 	<h3>Blobs - as - (read)</h3>
 	<p>List of blobs names added to the Interface.</p>
       </li>
@@ -643,6 +648,11 @@ fi.w1.wpa_supplicant1.CreateInterface.
       <li>
 	<h3>PKCS11ModulePath - s - (read)</h3>
 	<p>PKCS #11 module path.</p>
+      </li>
+
+      <li>
+	<h3>DisconnectReason - i - (read)</h3>
+	<p>The most recent IEEE 802.11 reason code for disconnect. Negative value indicates locally generated disconnection.</p>
       </li>
     </ul>
 

@@ -959,6 +959,13 @@ scan results.
 	</table>
       </li>
       <li>
+	<h3>WPS - a{sv} - (read)</h3>
+	<p>WPS information of the BSS. Empty dictionary indicates no WPS support. Dictionary entries are:</p>
+	<table>
+	  <tr><td>Type</td><td>s</td><td>"pbc", "pin", ""</td>
+	</table>
+      </li>
+      <li>
 	<h3>IEs - ay - (read)</h3>
 	<p>All IEs of the BSS as a chain of TLVs</p>
       </li>
@@ -981,6 +988,10 @@ scan results.
       <li>
 	<h3>Signal - n - (read)</h3>
 	<p>Signal strength of the BSS.</p>
+      </li>
+      <li>
+	<h3>Age - u - (read)</h3>
+	<p>Number of seconds since the BSS was last seen.</p>
       </li>
     </ul>
 

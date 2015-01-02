@@ -3005,12 +3005,6 @@ static const struct wpa_dbus_signal_desc wpas_dbus_interface_signals[] = {
 	},
 #endif /* CONFIG_WPS */
 #ifdef CONFIG_P2P
-	{ "P2PStateChanged", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
-	  {
-		  { "states", "a{ss}", ARG_OUT },
-		  END_ARGS
-	  }
-	},
 	{ "DeviceFound", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
 	  {
 		  { "path", "o", ARG_OUT },

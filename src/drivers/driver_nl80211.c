@@ -2150,7 +2150,11 @@ static void wpa_driver_nl80211_deinit(struct i802_bss *bss)
 			nl80211_handle_destroy(drv->rtnl_sk);
 	}
 	if (bss->added_bridge) {
-		linux_set_iface_flags(drv->global->ioctl_sock, bss->brname, 0);
+		if (linux_set_iface_flags(drv->global->ioctl_sock, bss->brname,
+					  0) < 0)
+			wpa_printf(MSG_INFO,
+				   "nl80211: Could not set bridge %s down",
+				   bss->brname);
 		if (linux_br_del(drv->global->ioctl_sock, bss->brname) < 0)
 			wpa_printf(MSG_INFO, "nl80211: Failed to remove "
 				   "bridge %s: %s",

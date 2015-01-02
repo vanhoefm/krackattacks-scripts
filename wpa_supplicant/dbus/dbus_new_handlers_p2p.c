@@ -2066,20 +2066,20 @@ dbus_bool_t wpas_dbus_getter_p2p_group_psk(DBusMessageIter *iter,
 					   DBusError *error, void *user_data)
 {
 	struct wpa_supplicant *wpa_s = user_data;
-	u8 role = wpas_get_p2p_role(wpa_s);
 	u8 *p_psk = NULL;
 	u8 psk_len = 0;
+	struct wpa_ssid *ssid = wpa_s->current_ssid;
 
-	/* Verify correct role for this property */
-	if (role == WPAS_P2P_ROLE_CLIENT) {
-		if (wpa_s->current_ssid == NULL)
-			return FALSE;
-		p_psk = wpa_s->current_ssid->psk;
-		psk_len = 32;
+	if (ssid == NULL)
+		return FALSE;
+
+	if (ssid->psk_set) {
+		p_psk = ssid->psk;
+		psk_len = sizeof(ssid->psk);
 	}
 
 	return wpas_dbus_simple_array_property_getter(iter, DBUS_TYPE_BYTE,
-						      &p_psk, psk_len, error);
+						      p_psk, psk_len, error);
 }
 
 

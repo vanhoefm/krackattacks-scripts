@@ -16,20 +16,23 @@ all: docs
 _wpa_supplicant.png: wpa_supplicant.png
 	cp $< $@
 
-docs-pics: wpa_supplicant.png wpa_supplicant.eps hostapd.png hostapd.eps p2p_sm.png p2p_sm.eps p2p_arch.png p2p_arch.eps p2p_arch2.png p2p_arch2.eps
+_wpa_supplicant.eps: wpa_supplicant.eps
+	cp $< $@
+
+docs-pics: wpa_supplicant.png wpa_supplicant.eps hostapd.png hostapd.eps p2p_sm.png p2p_sm.eps p2p_arch.png p2p_arch.eps p2p_arch2.png p2p_arch2.eps _wpa_supplicant.png _wpa_supplicant.eps
 
 docs: docs-pics
 	(cd ..; doxygen doc/doxygen.conf; cd doc)
 	$(MAKE) -C latex
 	cp latex/refman.pdf wpa_supplicant-devel.pdf
 
-html: docs-pics _wpa_supplicant.png
+html: docs-pics
 	(cd ..; doxygen doc/doxygen.conf; cd doc)
 
 clean:
 	rm -f *~
 	rm -f wpa_supplicant.eps wpa_supplicant.png
-	rm -f _wpa_supplicant.png
+	rm -f _wpa_supplicant.png _wpa_supplicant.eps
 	rm -f hostapd.eps hostapd.png
 	rm -f p2p_sm.eps p2p_sm.png
 	rm -f p2p_arch.eps p2p_arch.png

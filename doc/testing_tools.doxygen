@@ -6,7 +6,7 @@
 \ref unit_tests "Unit tests" |
 \ref wpa_trace "Tracing code" ]
 
-%wpa_supplicant source tree includes number of testing and development
+wpa_supplicant source tree includes number of testing and development
 tools that make it easier to test the programs without having to setup
 a full test setup with wireless cards. In addition, these tools can be
 used to implement automatic tests suites.
@@ -14,7 +14,7 @@ used to implement automatic tests suites.
 \section eapol_test eapol_test - EAP peer and RADIUS client testing
 
 eapol_test is a program that links together the same EAP peer
-implementation that %wpa_supplicant is using and the RADIUS
+implementation that wpa_supplicant is using and the RADIUS
 authentication client code from hostapd. In addition, it has minimal
 glue code to combine these two components in similar ways to IEEE
 802.1X/EAPOL Authenticator state machines. In other words, it
@@ -34,7 +34,7 @@ could be used to implement an automated regression test suite for a
 RADIUS authentication server.
 
 eapol_test uses the same build time configuration file, .config, as
-%wpa_supplicant. This file is used to select which EAP methods are
+wpa_supplicant. This file is used to select which EAP methods are
 included in eapol_test. This program is not built with the default
 Makefile target, so a separate make command needs to be used to
 compile the tool:
@@ -77,7 +77,7 @@ tries to complete EAP authentication based on the network
 configuration from test.conf against the RADIUS server running on the
 local host. A re-authentication is triggered to test fast
 re-authentication. The configuration file uses the same format for
-network blocks as %wpa_supplicant.
+network blocks as wpa_supplicant.
 
 
 \section preauth_test preauth_test - WPA2 pre-authentication and EAP peer testing
@@ -85,8 +85,8 @@ network blocks as %wpa_supplicant.
 preauth_test is similar to eapol_test in the sense that in combines
 EAP peer implementation with something else, in this case, with WPA2
 pre-authentication. This tool can be used to test pre-authentication
-based on the code that %wpa_supplicant is using. As such, it tests
-both the %wpa_supplicant implementation and the functionality of an
+based on the code that wpa_supplicant is using. As such, it tests
+both the wpa_supplicant implementation and the functionality of an
 access point.
 
 preauth_test is built with:
@@ -112,7 +112,7 @@ pre-authentication packets would be sent using the eth0 interface.
 
 \section unit_tests Unit tests
 
-Number of the components (.c files) used in %wpa_supplicant define
+Number of the components (.c files) used in wpa_supplicant define
 their own unit tests for automated validation of the basic
 functionality. Most of the tests for cryptographic algorithms are
 using standard test vectors to validate functionality. These tests can
@@ -131,7 +131,7 @@ exit code if all tests were completed successfully.
 
 \section wpa_trace Tracing code for developer debuggin
 
-%wpa_supplicant and hostapd can be built with tracing code that will
+wpa_supplicant and hostapd can be built with tracing code that will
 track and analyze memory allocations and other resource registrations
 and certain API uses. If incorrect use is detected, a backtrace of the
 call location (and/or allocation location) is shown. This can also be

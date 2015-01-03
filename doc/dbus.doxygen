@@ -1,8 +1,8 @@
 /**
-\page dbus %wpa_supplicant D-Bus API
+\page dbus wpa_supplicant D-Bus API
 
-This section documents the %wpa_supplicant D-Bus API. Every D-Bus
-interface implemented by %wpa_supplicant is described here including
+This section documents the wpa_supplicant D-Bus API. Every D-Bus
+interface implemented by wpa_supplicant is described here including
 their methods, signals, and properties with arguments, returned
 values, and possible errors.
 
@@ -20,7 +20,7 @@ Interfaces:
 
 \section dbus_main fi.w1.wpa_supplicant1
 
-Interface implemented by the main %wpa_supplicant D-Bus object
+Interface implemented by the main wpa_supplicant D-Bus object
 registered in the bus with fi.w1.wpa_supplicant1 name.
 
 \subsection dbus_main_methods Methods
@@ -28,12 +28,12 @@ registered in the bus with fi.w1.wpa_supplicant1 name.
 <ul>
       <li>
 	<h3>CreateInterface ( a{sv} : args ) --> o : interface</h3>
-	<p>Registers a wireless interface in %wpa_supplicant.</p>
+	<p>Registers a wireless interface in wpa_supplicant.</p>
 	<h4>Arguments</h4>
 	<dl>
 	  <dt>a{sv} : args</dt>
 	  <dd>
-	    A dictionary with arguments used to add the interface to %wpa_supplicant. The dictionary may contain the following entries:
+	    A dictionary with arguments used to add the interface to wpa_supplicant. The dictionary may contain the following entries:
 	    <table>
 	      <tr><th>Key</th><th>Value type</th><th>Description</th><th>Required</th>
 	      <tr><td>Ifname</td><td>s</td><td>Name of the network interface to control, e.g., wlan0</td><td>Yes</td>
@@ -51,7 +51,7 @@ registered in the bus with fi.w1.wpa_supplicant1 name.
 	<h4>Possible errors</h4>
 	<dl>
 	  <dt>fi.w1.wpa_supplicant1.InterfaceExists</dt>
-	  <dd>%wpa_supplicant already controls this interface.</dd>
+	  <dd>wpa_supplicant already controls this interface.</dd>
 	  <dt>fi.w1.wpa_supplicant1.UnknownError</dt>
 	  <dd>Creating interface failed for an unknown reason.</dd>
 	  <dt>fi.w1.wpa_supplicant1.InvalidArgs</dt>
@@ -61,7 +61,7 @@ registered in the bus with fi.w1.wpa_supplicant1 name.
 
       <li>
 	<h3>RemoveInterface ( o : interface ) --> nothing</h3>
-	<p>Deregisters a wireless interface from %wpa_supplicant.</p>
+	<p>Deregisters a wireless interface from wpa_supplicant.</p>
 	<h4>Arguments</h4>
 	<dl>
 	  <dt>o : interface</dt>
@@ -78,7 +78,7 @@ registered in the bus with fi.w1.wpa_supplicant1 name.
 
       <li>
 	<h3>GetInterface ( s : ifname ) --> o : interface</h3>
-	<p>Returns a D-Bus path to an object related to an interface which %wpa_supplicant already controls.</p>
+	<p>Returns a D-Bus path to an object related to an interface which wpa_supplicant already controls.</p>
 	<h4>Arguments</h4>
 	<dl>
 	  <dt>s : ifname</dt>
@@ -92,7 +92,7 @@ registered in the bus with fi.w1.wpa_supplicant1 name.
 	<h4>Possible errors</h4>
 	<dl>
 	  <dt>fi.w1.wpa_supplicant1.InterfaceUnknown</dt>
-	  <dd>An interface with the passed name in not controlled by %wpa_supplicant.</dd>
+	  <dd>An interface with the passed name in not controlled by wpa_supplicant.</dd>
 	  <dt>fi.w1.wpa_supplicant1.UnknownError</dt>
 	  <dd>Getting an interface object path failed for an unknown reason.</dd>
 	</dl>
@@ -104,19 +104,19 @@ registered in the bus with fi.w1.wpa_supplicant1 name.
 <ul>
       <li>
 	<h3>DebugLevel - s - (read/write)</h3>
-	<p>Global %wpa_supplicant debugging level. Possible values are
+	<p>Global wpa_supplicant debugging level. Possible values are
 	"msgdump" (verbose debugging), "debug" (debugging),
 	"info" (informative), "warning" (warnings), and "error" (errors).</p>
       </li>
 
       <li>
 	<h3>DebugTimestamp - b - (read/write)</h3>
-	<p>Global %wpa_supplicant debugging parameter. Determines if timestamps are shown in debug logs.</p>
+	<p>Global wpa_supplicant debugging parameter. Determines if timestamps are shown in debug logs.</p>
       </li>
 
       <li>
 	<h3>DebugShowKeys - b - (read/write)</h3>
-	<p>Global %wpa_supplicant debugging parameter. Determines if secrets are shown in debug logs.</p>
+	<p>Global wpa_supplicant debugging parameter. Determines if secrets are shown in debug logs.</p>
       </li>
 
       <li>
@@ -145,7 +145,7 @@ registered in the bus with fi.w1.wpa_supplicant1 name.
 <ul>
       <li>
 	<h3>InterfaceAdded ( o : interface, a{sv} : properties )</h3>
-	<p>A new interface was added to %wpa_supplicant.</p>
+	<p>A new interface was added to wpa_supplicant.</p>
 	<h4>Arguments</h4>
 	<dl>
 	  <dt>o : interface</dt>
@@ -159,7 +159,7 @@ registered in the bus with fi.w1.wpa_supplicant1 name.
 
       <li>
 	<h3>InterfaceRemoved ( o : interface )</h3>
-	<p>An interface was removed from %wpa_supplicant.</p>
+	<p>An interface was removed from wpa_supplicant.</p>
 	<h4>Arguments</h4>
 	<dl>
 	  <dt>o : interface</dt>
@@ -182,7 +182,7 @@ registered in the bus with fi.w1.wpa_supplicant1 name.
 \section dbus_interface fi.w1.wpa_supplicant1.Interface
 
 Interface implemented by objects related to network interface added to
-%wpa_supplicant, i.e., returned by
+wpa_supplicant, i.e., returned by
 fi.w1.wpa_supplicant1.CreateInterface.
 
 \subsection dbus_interface_methods Methods
@@ -229,7 +229,7 @@ fi.w1.wpa_supplicant1.CreateInterface.
 	<h4>Arguments</h4>
 	<dl>
 	  <dt>a{sv} : args</dt>
-	  <dd>A dictionary with network configuration. Dictionary entries are equivalent to entries in the "network" block in %wpa_supplicant configuration file. Entry values should be appropriate type to the entry, e.g., an entry with key "frequency" should have value type int.</dd>
+	  <dd>A dictionary with network configuration. Dictionary entries are equivalent to entries in the "network" block in wpa_supplicant configuration file. Entry values should be appropriate type to the entry, e.g., an entry with key "frequency" should have value type int.</dd>
 	</dl>
 	<h4>Returns</h4>
 	<dl>
@@ -576,22 +576,22 @@ fi.w1.wpa_supplicant1.CreateInterface.
 
       <li>
 	<h3>ApScan - u - (read/write)</h3>
-	<p>Identical to ap_scan entry in %wpa_supplicant configuration file. Possible values are 0, 1 or 2.</p>
+	<p>Identical to ap_scan entry in wpa_supplicant configuration file. Possible values are 0, 1 or 2.</p>
       </li>
 
       <li>
 	<h3>BSSExpireAge - u - (read/write)</h3>
-	<p>Identical to bss_expiration_age entry in %wpa_supplicant configuration file.</p>
+	<p>Identical to bss_expiration_age entry in wpa_supplicant configuration file.</p>
       </li>
 
       <li>
 	<h3>BSSExpireCount - u - (read/write)</h3>
-	<p>Identical to bss_expiration_scan_count entry in %wpa_supplicant configuration file.</p>
+	<p>Identical to bss_expiration_scan_count entry in wpa_supplicant configuration file.</p>
       </li>
 
       <li>
 	<h3>Country - s - (read/write)</h3>
-	<p>Identical to country entry in %wpa_supplicant configuration file.</p>
+	<p>Identical to country entry in wpa_supplicant configuration file.</p>
       </li>
 
       <li>
@@ -611,12 +611,12 @@ fi.w1.wpa_supplicant1.CreateInterface.
 
       <li>
 	<h3>CurrentBSS - o - (read)</h3>
-	<p>Path to D-Bus object representing BSS which %wpa_supplicant is associated with, or "/" if is not associated at all.</p>
+	<p>Path to D-Bus object representing BSS which wpa_supplicant is associated with, or "/" if is not associated at all.</p>
       </li>
 
       <li>
 	<h3>CurrentNetwork - o - (read)</h3>
-	<p>Path to D-Bus object representing configured network which %wpa_supplicant uses at the moment, or "/" if doesn't use any.</p>
+	<p>Path to D-Bus object representing configured network which wpa_supplicant uses at the moment, or "/" if doesn't use any.</p>
       </li>
 
       <li>
@@ -641,7 +641,7 @@ fi.w1.wpa_supplicant1.CreateInterface.
 
       <li>
 	<h3>FastReauth - b - (read/write)</h3>
-	<p>Identical to fast_reauth entry in %wpa_supplicant configuration file.</p>
+	<p>Identical to fast_reauth entry in wpa_supplicant configuration file.</p>
       </li>
 
       <li>
@@ -1595,7 +1595,7 @@ i.e., returned by fi.w1.wpa_supplicant1.Interface.AddNetwork.
 
       <li>
 	<h3>Properties - a{sv} - (read/write)</h3>
-	<p>Properties of the configured network. Dictionary contains entries from "network" block of %wpa_supplicant configuration file. All values are string type, e.g., frequency is "2437", not 2437.
+	<p>Properties of the configured network. Dictionary contains entries from "network" block of wpa_supplicant configuration file. All values are string type, e.g., frequency is "2437", not 2437.
       </li>
     </ul>
 

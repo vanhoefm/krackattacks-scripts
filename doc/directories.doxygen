@@ -82,9 +82,9 @@ Enrollee. Minimal UPnP and HTTP functionality is also provided for the
 functionality needed to implement Wi-Fi Protected Setup.
 
 
-\dir wpa_supplicant %wpa_supplicant
+\dir wpa_supplicant wpa_supplicant
 
-%wpa_supplicant-specific code for configuration, control interface, and
+wpa_supplicant-specific code for configuration, control interface, and
 client management.
 
 */

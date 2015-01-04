@@ -1,5 +1,5 @@
 # Scanning tests
-# Copyright (c) 2013, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2015, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -669,3 +669,77 @@ def _test_scan_hidden_many(dev, apdev):
     dev[0].wait_connected(timeout=30)
     dev[0].request("REMOVE_NETWORK all")
     hapd.disable()
+
+def test_scan_random_mac(dev, apdev, params):
+    """Random MAC address in scans"""
+    try:
+        _test_scan_random_mac(dev, apdev, params)
+    finally:
+        dev[0].request("MAC_RAND_SCAN all enable=0")
+
+def _test_scan_random_mac(dev, apdev, params):
+    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan" })
+    bssid = apdev[0]['bssid']
+
+    tests = [ "",
+              "addr=foo",
+              "mask=foo",
+              "enable=1",
+              "all enable=1 mask=00:11:22:33:44:55",
+              "all enable=1 addr=00:11:22:33:44:55",
+              "all enable=1 addr=01:11:22:33:44:55 mask=ff:ff:ff:ff:ff:ff",
+              "all enable=1 addr=00:11:22:33:44:55 mask=fe:ff:ff:ff:ff:ff",
+              "enable=2 scan sched pno all",
+              "pno enable=1",
+              "all enable=2",
+              "foo" ]
+    for args in tests:
+        if "FAIL" not in dev[0].request("MAC_RAND_SCAN " + args):
+            raise Exception("Invalid MAC_RAND_SCAN accepted: " + args)
+
+    if dev[0].get_driver_status_field('capa.mac_addr_rand_scan_supported') != '1':
+        logger.info("Driver does not support random MAC address for scanning")
+        raise Exception("hwsim-SKIP")
+
+    tests = [ "all enable=1",
+              "all enable=1 addr=f2:11:22:33:44:55 mask=ff:ff:ff:ff:ff:ff",
+              "all enable=1 addr=f2:11:33:00:00:00 mask=ff:ff:ff:00:00:00" ]
+    for args in tests:
+        dev[0].request("MAC_RAND_SCAN " + args)
+        dev[0].scan_for_bss(bssid, freq=2412, force_scan=True)
+
+    try:
+        arg = [ "tshark",
+                "-r", os.path.join(params['logdir'], "hwsim0.pcapng"),
+                "-Y", "wlan.fc.type_subtype == 4",
+                "-Tfields", "-e", "wlan.ta" ]
+        cmd = subprocess.Popen(arg, stdout=subprocess.PIPE,
+                               stderr=open('/dev/null', 'w'))
+    except Exception, e:
+        logger.info("Could run run tshark check: " + str(e))
+        cmd = None
+        pass
+
+    if cmd:
+        (out,err) = cmd.communicate()
+        res = cmd.wait()
+        if res == 1:
+            arg[3] = '-R'
+            cmd = subprocess.Popen(arg, stdout=subprocess.PIPE,
+                                   stderr=open('/dev/null', 'w'))
+            (out,err) = cmd.communicate()
+            res = cmd.wait()
+
+        addr = out.splitlines()
+        logger.info("Probe Request frames seen from: " + str(addr))
+        if dev[0].own_addr() in addr:
+            raise Exception("Real address used to transmit Probe Request frame")
+        if "f2:11:22:33:44:55" not in addr:
+            raise Exception("Fully configured random address not seen")
+        found = False
+        for a in addr:
+            if a.startswith('f2:11:33'):
+                found = True
+                break
+        if not found:
+            raise Exception("Fixed OUI random address not seen")

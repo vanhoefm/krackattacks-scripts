@@ -496,6 +496,18 @@ def test_wpas_ctrl_tdls_discover(dev):
     if "FAIL" not in dev[0].request("TDLS_DISCOVER 00:11:22:33:44:55"):
         raise Exception("Unexpected success on TDLS_DISCOVER")
 
+def test_wpas_ctrl_tdls_chan_switch(dev):
+    """wpa_supplicant ctrl_iface tdls_chan_switch error cases"""
+    for args in [ '', '00:11:22:33:44:55' ]:
+        if "FAIL" not in dev[0].request("TDLS_CANCEL_CHAN_SWITCH " + args):
+            raise Exception("Unexpected success on invalid TDLS_CANCEL_CHAN_SWITCH: " + args)
+
+    for args in [ '', 'foo ', '00:11:22:33:44:55 ', '00:11:22:33:44:55 q',
+                  '00:11:22:33:44:55 81', '00:11:22:33:44:55 81 1234',
+                  '00:11:22:33:44:55 81 1234 center_freq1=234 center_freq2=345 bandwidth=456 sec_channel_offset=567 ht vht' ]:
+        if "FAIL" not in dev[0].request("TDLS_CHAN_SWITCH " + args):
+            raise Exception("Unexpected success on invalid TDLS_CHAN_SWITCH: " + args)
+
 def test_wpas_ctrl_addr(dev):
     """wpa_supplicant ctrl_iface invalid address"""
     if "FAIL" not in dev[0].request("TDLS_SETUP "):

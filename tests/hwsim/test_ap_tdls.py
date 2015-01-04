@@ -358,3 +358,20 @@ def test_ap_open_tdls_vht(dev, apdev):
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
         dev[1].flush_scan_cache()
+
+def test_tdls_chan_switch(dev, apdev):
+    """Open AP and two stations using TDLS"""
+    flags = int(dev[0].get_driver_status_field('capa.flags'), 16)
+    if flags & 0x800000000 == 0:
+        logger.info("Driver does not support TDLS channel switching")
+        return "skip"
+
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
+    connect_2sta_open(dev, hapd)
+    setup_tdls(dev[0], dev[1], apdev[0])
+    if "OK" not in dev[0].request("TDLS_CHAN_SWITCH " + dev[1].own_addr() + " 81 2462"):
+        raise Exception("Failed to enable TDLS channel switching")
+    if "OK" not in dev[0].request("TDLS_CANCEL_CHAN_SWITCH " + dev[1].own_addr()):
+        raise Exception("Could not disable TDLS channel switching")
+    if "FAIL" not in dev[0].request("TDLS_CANCEL_CHAN_SWITCH " + dev[1].own_addr()):
+        raise Exception("TDLS_CANCEL_CHAN_SWITCH accepted even though channel switching was already disabled")

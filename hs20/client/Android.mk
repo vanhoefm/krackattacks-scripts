@@ -8,9 +8,12 @@ INCLUDES += external/openssl/include
 INCLUDES += external/libxml2/include
 INCLUDES += external/curl/include
 INCLUDES += external/webkit/Source/WebKit/gtk
-ifneq ($(wildcard external/icu),)
-INCLUDES += external/icu/icu4c/source/common
-else
+
+# We try to keep this compiling against older platform versions.
+# The new icu location (external/icu) exports its own headers, but
+# the older versions in external/icu4c don't, and we need to add those
+# headers to the include path by hand.
+ifeq ($(wildcard external/icu),)
 INCLUDES += external/icu4c/common
 endif
 

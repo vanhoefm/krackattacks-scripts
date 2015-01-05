@@ -837,7 +837,7 @@ static void wpas_p2p_add_persistent_group_client(struct wpa_supplicant *wpa_s,
 		return;
 
 	for (i = 0; s->p2p_client_list && i < s->num_p2p_clients; i++) {
-		if (os_memcmp(s->p2p_client_list + i * ETH_ALEN, addr,
+		if (os_memcmp(s->p2p_client_list + i * 2 * ETH_ALEN, addr,
 			      ETH_ALEN) != 0)
 			continue;
 
@@ -845,32 +845,42 @@ static void wpas_p2p_add_persistent_group_client(struct wpa_supplicant *wpa_s,
 			return; /* already the most recent entry */
 
 		/* move the entry to mark it most recent */
-		os_memmove(s->p2p_client_list + i * ETH_ALEN,
-			   s->p2p_client_list + (i + 1) * ETH_ALEN,
-			   (s->num_p2p_clients - i - 1) * ETH_ALEN);
+		os_memmove(s->p2p_client_list + i * 2 * ETH_ALEN,
+			   s->p2p_client_list + (i + 1) * 2 * ETH_ALEN,
+			   (s->num_p2p_clients - i - 1) * 2 * ETH_ALEN);
 		os_memcpy(s->p2p_client_list +
-			  (s->num_p2p_clients - 1) * ETH_ALEN, addr, ETH_ALEN);
+			  (s->num_p2p_clients - 1) * 2 * ETH_ALEN, addr,
+			  ETH_ALEN);
+		os_memset(s->p2p_client_list +
+			  (s->num_p2p_clients - 1) * 2 * ETH_ALEN + ETH_ALEN,
+			  0xff, ETH_ALEN);
 		found = 1;
 		break;
 	}
 
 	if (!found && s->num_p2p_clients < P2P_MAX_STORED_CLIENTS) {
 		n = os_realloc_array(s->p2p_client_list,
-				     s->num_p2p_clients + 1, ETH_ALEN);
+				     s->num_p2p_clients + 1, 2 * ETH_ALEN);
 		if (n == NULL)
 			return;
-		os_memcpy(n + s->num_p2p_clients * ETH_ALEN, addr, ETH_ALEN);
+		os_memcpy(n + s->num_p2p_clients * 2 * ETH_ALEN, addr,
+			  ETH_ALEN);
+		os_memset(n + s->num_p2p_clients * 2 * ETH_ALEN + ETH_ALEN,
+			  0xff, ETH_ALEN);
 		s->p2p_client_list = n;
 		s->num_p2p_clients++;
 	} else if (!found && s->p2p_client_list) {
 		/* Not enough room for an additional entry - drop the oldest
 		 * entry */
 		os_memmove(s->p2p_client_list,
-			   s->p2p_client_list + ETH_ALEN,
-			   (s->num_p2p_clients - 1) * ETH_ALEN);
+			   s->p2p_client_list + 2 * ETH_ALEN,
+			   (s->num_p2p_clients - 1) * 2 * ETH_ALEN);
 		os_memcpy(s->p2p_client_list +
-			  (s->num_p2p_clients - 1) * ETH_ALEN,
+			  (s->num_p2p_clients - 1) * 2 * ETH_ALEN,
 			  addr, ETH_ALEN);
+		os_memset(s->p2p_client_list +
+			  (s->num_p2p_clients - 1) * 2 * ETH_ALEN + ETH_ALEN,
+			  0xff, ETH_ALEN);
 	}
 
 	if (wpa_s->parent->conf->update_config &&
@@ -3348,7 +3358,7 @@ static void wpas_remove_persistent_peer(struct wpa_supplicant *wpa_s,
 		return;
 
 	for (i = 0; ssid->p2p_client_list && i < ssid->num_p2p_clients; i++) {
-		if (os_memcmp(ssid->p2p_client_list + i * ETH_ALEN, peer,
+		if (os_memcmp(ssid->p2p_client_list + i * 2 * ETH_ALEN, peer,
 			      ETH_ALEN) == 0)
 			break;
 	}
@@ -3368,9 +3378,9 @@ static void wpas_remove_persistent_peer(struct wpa_supplicant *wpa_s,
 		   "group %d client list%s",
 		   MAC2STR(peer), ssid->id,
 		   inv ? " due to invitation result" : "");
-	os_memmove(ssid->p2p_client_list + i * ETH_ALEN,
-		   ssid->p2p_client_list + (i + 1) * ETH_ALEN,
-		   (ssid->num_p2p_clients - i - 1) * ETH_ALEN);
+	os_memmove(ssid->p2p_client_list + i * 2 * ETH_ALEN,
+		   ssid->p2p_client_list + (i + 1) * 2 * ETH_ALEN,
+		   (ssid->num_p2p_clients - i - 1) * 2 * ETH_ALEN);
 	ssid->num_p2p_clients--;
 	if (wpa_s->parent->conf->update_config &&
 	    wpa_config_write(wpa_s->parent->confname, wpa_s->parent->conf))
@@ -7047,7 +7057,7 @@ struct wpa_ssid * wpas_p2p_get_persistent(struct wpa_supplicant *wpa_s,
 		if (s->mode != WPAS_MODE_P2P_GO || s->p2p_client_list == NULL)
 			continue;
 		for (i = 0; i < s->num_p2p_clients; i++) {
-			if (os_memcmp(s->p2p_client_list + i * ETH_ALEN,
+			if (os_memcmp(s->p2p_client_list + i * 2 * ETH_ALEN,
 				      addr, ETH_ALEN) == 0)
 				return s; /* peer is P2P client in persistent
 					   * group */

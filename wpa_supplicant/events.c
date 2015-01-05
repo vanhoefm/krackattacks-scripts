@@ -698,14 +698,27 @@ static int bss_is_ess(struct wpa_bss *bss)
 }
 
 
+static int match_mac_mask(const u8 *addr_a, const u8 *addr_b, const u8 *mask)
+{
+	size_t i;
+
+	for (i = 0; i < ETH_ALEN; i++) {
+		if ((addr_a[i] & mask[i]) != (addr_b[i] & mask[i]))
+			return 0;
+	}
+	return 1;
+}
+
+
 static int addr_in_list(const u8 *addr, const u8 *list, size_t num)
 {
 	size_t i;
 
 	for (i = 0; i < num; i++) {
-		const u8 *a = list + (i * ETH_ALEN);
+		const u8 *a = list + i * ETH_ALEN * 2;
+		const u8 *m = a + ETH_ALEN;
 
-		if (os_memcmp(a, addr, ETH_ALEN) == 0)
+		if (match_mac_mask(a, addr, m))
 			return 1;
 	}
 	return 0;

@@ -238,10 +238,10 @@ static char * wpa_config_write_int(const struct parse_data *data,
 static int wpa_config_parse_addr_list(const struct parse_data *data,
 				      int line, const char *value,
 				      u8 **list, size_t *num, char *name,
-				      u8 abort_on_error)
+				      u8 abort_on_error, u8 masked)
 {
 	const char *pos;
-	u8 *buf, *n, addr[ETH_ALEN];
+	u8 *buf, *n, addr[2 * ETH_ALEN];
 	size_t count;
 
 	buf = NULL;
@@ -252,7 +252,7 @@ static int wpa_config_parse_addr_list(const struct parse_data *data,
 		while (*pos == ' ')
 			pos++;
 
-		if (hwaddr_aton(pos, addr)) {
+		if (hwaddr_masked_aton(pos, addr, &addr[ETH_ALEN], masked)) {
 			if (abort_on_error || count == 0) {
 				wpa_printf(MSG_ERROR,
 					   "Line %d: Invalid %s address '%s'",
@@ -266,16 +266,20 @@ static int wpa_config_parse_addr_list(const struct parse_data *data,
 				   "Line %d: Ignore likely truncated %s address '%s'",
 				   line, name, pos);
 		} else {
-			n = os_realloc_array(buf, count + 1, ETH_ALEN);
+			n = os_realloc_array(buf, count + 1, 2 * ETH_ALEN);
 			if (n == NULL) {
 				os_free(buf);
 				return -1;
 			}
 			buf = n;
-			os_memmove(buf + ETH_ALEN, buf, count * ETH_ALEN);
-			os_memcpy(buf, addr, ETH_ALEN);
+			os_memmove(buf + 2 * ETH_ALEN, buf,
+				   count * 2 * ETH_ALEN);
+			os_memcpy(buf, addr, 2 * ETH_ALEN);
 			count++;
-			wpa_hexdump(MSG_MSGDUMP, name, addr, ETH_ALEN);
+			wpa_printf(MSG_MSGDUMP,
+				   "%s: addr=" MACSTR " mask=" MACSTR,
+				   name, MAC2STR(addr),
+				   MAC2STR(&addr[ETH_ALEN]));
 		}
 
 		pos = os_strchr(pos, ' ');
@@ -300,24 +304,25 @@ static char * wpa_config_write_addr_list(const struct parse_data *data,
 	if (list == NULL || num == 0)
 		return NULL;
 
-	value = os_malloc(20 * num);
+	value = os_malloc(2 * 20 * num);
 	if (value == NULL)
 		return NULL;
 	pos = value;
-	end = value + 20 * num;
+	end = value + 2 * 20 * num;
 
 	for (i = num; i > 0; i--) {
-		res = os_snprintf(pos, end - pos, MACSTR " ",
-				  MAC2STR(list + (i - 1) * ETH_ALEN));
-		if (os_snprintf_error(end - pos, res)) {
+		const u8 *a = list + (i - 1) * 2 * ETH_ALEN;
+		const u8 *m = a + ETH_ALEN;
+
+		if (i < num)
+			*pos++ = ' ';
+		res = hwaddr_mask_txt(pos, end - pos, a, m);
+		if (res < 0) {
 			os_free(value);
 			return NULL;
 		}
 		pos += res;
 	}
-
-	if (pos > value)
-		pos[-1] = '\0';
 
 	return value;
 }
@@ -375,7 +380,7 @@ static int wpa_config_parse_bssid_blacklist(const struct parse_data *data,
 	return wpa_config_parse_addr_list(data, line, value,
 					  &ssid->bssid_blacklist,
 					  &ssid->num_bssid_blacklist,
-					  "bssid_blacklist", 1);
+					  "bssid_blacklist", 1, 1);
 }
 
 
@@ -397,7 +402,7 @@ static int wpa_config_parse_bssid_whitelist(const struct parse_data *data,
 	return wpa_config_parse_addr_list(data, line, value,
 					  &ssid->bssid_whitelist,
 					  &ssid->num_bssid_whitelist,
-					  "bssid_whitelist", 1);
+					  "bssid_whitelist", 1, 1);
 }
 
 
@@ -1588,7 +1593,7 @@ static int wpa_config_parse_p2p_client_list(const struct parse_data *data,
 	return wpa_config_parse_addr_list(data, line, value,
 					  &ssid->p2p_client_list,
 					  &ssid->num_p2p_clients,
-					  "p2p_client_list", 0);
+					  "p2p_client_list", 0, 0);
 }
 
 
@@ -2101,6 +2106,8 @@ void wpa_config_free_ssid(struct wpa_ssid *ssid)
 	os_free(ssid->freq_list);
 	os_free(ssid->bgscan);
 	os_free(ssid->p2p_client_list);
+	os_free(ssid->bssid_blacklist);
+	os_free(ssid->bssid_whitelist);
 #ifdef CONFIG_HT_OVERRIDES
 	os_free(ssid->ht_mcs);
 #endif /* CONFIG_HT_OVERRIDES */

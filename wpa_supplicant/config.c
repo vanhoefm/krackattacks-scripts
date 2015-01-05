@@ -368,6 +368,50 @@ static char * wpa_config_write_bssid(const struct parse_data *data,
 #endif /* NO_CONFIG_WRITE */
 
 
+static int wpa_config_parse_bssid_blacklist(const struct parse_data *data,
+					    struct wpa_ssid *ssid, int line,
+					    const char *value)
+{
+	return wpa_config_parse_addr_list(data, line, value,
+					  &ssid->bssid_blacklist,
+					  &ssid->num_bssid_blacklist,
+					  "bssid_blacklist", 1);
+}
+
+
+#ifndef NO_CONFIG_WRITE
+static char * wpa_config_write_bssid_blacklist(const struct parse_data *data,
+					       struct wpa_ssid *ssid)
+{
+	return wpa_config_write_addr_list(data, ssid->bssid_blacklist,
+					  ssid->num_bssid_blacklist,
+					  "bssid_blacklist");
+}
+#endif /* NO_CONFIG_WRITE */
+
+
+static int wpa_config_parse_bssid_whitelist(const struct parse_data *data,
+					    struct wpa_ssid *ssid, int line,
+					    const char *value)
+{
+	return wpa_config_parse_addr_list(data, line, value,
+					  &ssid->bssid_whitelist,
+					  &ssid->num_bssid_whitelist,
+					  "bssid_whitelist", 1);
+}
+
+
+#ifndef NO_CONFIG_WRITE
+static char * wpa_config_write_bssid_whitelist(const struct parse_data *data,
+					       struct wpa_ssid *ssid)
+{
+	return wpa_config_write_addr_list(data, ssid->bssid_whitelist,
+					  ssid->num_bssid_whitelist,
+					  "bssid_whitelist");
+}
+#endif /* NO_CONFIG_WRITE */
+
+
 static int wpa_config_parse_psk(const struct parse_data *data,
 				struct wpa_ssid *ssid, int line,
 				const char *value)
@@ -1744,6 +1788,8 @@ static const struct parse_data ssid_fields[] = {
 	{ STR_RANGE(ssid, 0, MAX_SSID_LEN) },
 	{ INT_RANGE(scan_ssid, 0, 1) },
 	{ FUNC(bssid) },
+	{ FUNC(bssid_blacklist) },
+	{ FUNC(bssid_whitelist) },
 	{ FUNC_KEY(psk) },
 	{ FUNC(proto) },
 	{ FUNC(key_mgmt) },

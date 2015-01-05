@@ -51,50 +51,6 @@ static void test_aes_perf(void)
 }
 
 
-static int test_eax(void)
-{
-	u8 msg[] = { 0xF7, 0xFB };
-	u8 key[] = { 0x91, 0x94, 0x5D, 0x3F, 0x4D, 0xCB, 0xEE, 0x0B,
-		     0xF4, 0x5E, 0xF5, 0x22, 0x55, 0xF0, 0x95, 0xA4 };
-	u8 nonce[] = { 0xBE, 0xCA, 0xF0, 0x43, 0xB0, 0xA2, 0x3D, 0x84,
-		       0x31, 0x94, 0xBA, 0x97, 0x2C, 0x66, 0xDE, 0xBD };
-	u8 hdr[] = { 0xFA, 0x3B, 0xFD, 0x48, 0x06, 0xEB, 0x53, 0xFA };
-	u8 cipher[] = { 0x19, 0xDD, 0x5C, 0x4C, 0x93, 0x31, 0x04, 0x9D,
-			0x0B, 0xDA, 0xB0, 0x27, 0x74, 0x08, 0xF6, 0x79,
-			0x67, 0xE5 };
-	u8 data[sizeof(msg)], tag[BLOCK_SIZE];
-
-	memcpy(data, msg, sizeof(msg));
-	if (aes_128_eax_encrypt(key, nonce, sizeof(nonce), hdr, sizeof(hdr),
-				data, sizeof(data), tag)) {
-		printf("AES-128 EAX mode encryption failed\n");
-		return 1;
-	}
-	if (memcmp(data, cipher, sizeof(data)) != 0) {
-		printf("AES-128 EAX mode encryption returned invalid cipher "
-		       "text\n");
-		return 1;
-	}
-	if (memcmp(tag, cipher + sizeof(data), BLOCK_SIZE) != 0) {
-		printf("AES-128 EAX mode encryption returned invalid tag\n");
-		return 1;
-	}
-
-	if (aes_128_eax_decrypt(key, nonce, sizeof(nonce), hdr, sizeof(hdr),
-				data, sizeof(data), tag)) {
-		printf("AES-128 EAX mode decryption failed\n");
-		return 1;
-	}
-	if (memcmp(data, msg, sizeof(data)) != 0) {
-		printf("AES-128 EAX mode decryption returned invalid plain "
-		       "text\n");
-		return 1;
-	}
-
-	return 0;
-}
-
-
 static int test_cbc(void)
 {
 	struct cbc_test_vector {
@@ -977,8 +933,6 @@ int main(int argc, char *argv[])
 	ret += test_key_wrap();
 
 	test_aes_perf();
-
-	ret += test_eax();
 
 	ret += test_cbc();
 

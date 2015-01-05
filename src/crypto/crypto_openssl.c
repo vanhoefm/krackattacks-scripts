@@ -258,7 +258,7 @@ void aes_encrypt_deinit(void *ctx)
 			   "in AES encrypt", len);
 	}
 	EVP_CIPHER_CTX_cleanup(c);
-	os_free(c);
+	bin_clear_free(c, sizeof(*c));
 }
 
 
@@ -309,7 +309,7 @@ void aes_decrypt_deinit(void *ctx)
 			   "in AES decrypt", len);
 	}
 	EVP_CIPHER_CTX_cleanup(c);
-	os_free(ctx);
+	bin_clear_free(c, sizeof(*c));
 }
 
 
@@ -507,8 +507,8 @@ void * dh5_init(struct wpabuf **priv, struct wpabuf **publ)
 	return dh;
 
 err:
-	wpabuf_free(pubkey);
-	wpabuf_free(privkey);
+	wpabuf_clear_free(pubkey);
+	wpabuf_clear_free(privkey);
 	DH_free(dh);
 	return NULL;
 }
@@ -581,7 +581,7 @@ struct wpabuf * dh5_derive_shared(void *ctx, const struct wpabuf *peer_public,
 
 err:
 	BN_clear_free(pub_key);
-	wpabuf_free(res);
+	wpabuf_clear_free(res);
 	return NULL;
 }
 
@@ -638,7 +638,7 @@ struct crypto_hash * crypto_hash_init(enum crypto_hash_alg alg, const u8 *key,
 	HMAC_Init_ex(&ctx->ctx, key, key_len, md, NULL);
 #else /* openssl < 0.9.9 */
 	if (HMAC_Init_ex(&ctx->ctx, key, key_len, md, NULL) != 1) {
-		os_free(ctx);
+		bin_clear_free(ctx, sizeof(*ctx));
 		return NULL;
 	}
 #endif /* openssl < 0.9.9 */
@@ -664,7 +664,7 @@ int crypto_hash_finish(struct crypto_hash *ctx, u8 *mac, size_t *len)
 		return -2;
 
 	if (mac == NULL || len == NULL) {
-		os_free(ctx);
+		bin_clear_free(ctx, sizeof(*ctx));
 		return 0;
 	}
 
@@ -676,7 +676,7 @@ int crypto_hash_finish(struct crypto_hash *ctx, u8 *mac, size_t *len)
 	res = HMAC_Final(&ctx->ctx, mac, &mdlen);
 #endif /* openssl < 0.9.9 */
 	HMAC_CTX_cleanup(&ctx->ctx);
-	os_free(ctx);
+	bin_clear_free(ctx, sizeof(*ctx));
 
 	if (res == 1) {
 		*len = mdlen;

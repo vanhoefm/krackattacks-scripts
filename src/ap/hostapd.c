@@ -1872,33 +1872,37 @@ hostapd_config_alloc(struct hapd_interfaces *interfaces, const char *ifname,
 }
 
 
-static struct hostapd_iface * hostapd_data_alloc(
-	struct hapd_interfaces *interfaces, struct hostapd_config *conf)
+static int hostapd_data_alloc(struct hostapd_iface *hapd_iface,
+			      struct hostapd_config *conf)
 {
 	size_t i;
-	struct hostapd_iface *hapd_iface =
-		interfaces->iface[interfaces->count - 1];
 	struct hostapd_data *hapd;
-
-	hapd_iface->conf = conf;
-	hapd_iface->num_bss = conf->num_bss;
 
 	hapd_iface->bss = os_calloc(conf->num_bss,
 				    sizeof(struct hostapd_data *));
 	if (hapd_iface->bss == NULL)
-		return NULL;
+		return -1;
 
 	for (i = 0; i < conf->num_bss; i++) {
 		hapd = hapd_iface->bss[i] =
 			hostapd_alloc_bss_data(hapd_iface, conf, conf->bss[i]);
-		if (hapd == NULL)
-			return NULL;
+		if (hapd == NULL) {
+			while (i > 0) {
+				i--;
+				os_free(hapd_iface->bss[i]);
+				hapd_iface->bss[i] = NULL;
+			}
+			os_free(hapd_iface->bss);
+			hapd_iface->bss = NULL;
+			return -1;
+		}
 		hapd->msg_ctx = hapd;
 	}
 
-	hapd_iface->interfaces = interfaces;
+	hapd_iface->conf = conf;
+	hapd_iface->num_bss = conf->num_bss;
 
-	return hapd_iface;
+	return 0;
 }
 
 
@@ -1945,13 +1949,10 @@ int hostapd_add_iface(struct hapd_interfaces *interfaces, char *buf)
 		}
 
 		if (new_iface) {
-			if (interfaces->driver_init(hapd_iface)) {
-				interfaces->count--;
+			if (interfaces->driver_init(hapd_iface))
 				goto fail;
-			}
 
 			if (hostapd_setup_interface(hapd_iface)) {
-				interfaces->count--;
 				hostapd_deinit_driver(
 					hapd_iface->bss[0]->driver,
 					hapd_iface->bss[0]->drv_priv,
@@ -2005,6 +2006,7 @@ int hostapd_add_iface(struct hapd_interfaces *interfaces, char *buf)
 			   "for interface", __func__);
 		goto fail;
 	}
+	new_iface = hapd_iface;
 
 	if (conf_file && interfaces->config_read_cb) {
 		conf = interfaces->config_read_cb(conf_file);
@@ -2019,8 +2021,7 @@ int hostapd_add_iface(struct hapd_interfaces *interfaces, char *buf)
 		goto fail;
 	}
 
-	hapd_iface = hostapd_data_alloc(interfaces, conf);
-	if (hapd_iface == NULL) {
+	if (hostapd_data_alloc(hapd_iface, conf) < 0) {
 		wpa_printf(MSG_ERROR, "%s: Failed to allocate memory "
 			   "for hostapd", __func__);
 		goto fail;
@@ -2056,6 +2057,10 @@ fail:
 			os_free(hapd_iface->bss);
 			hapd_iface->bss = NULL;
 		}
+		if (new_iface) {
+			interfaces->count--;
+			interfaces->iface[interfaces->count] = NULL;
+		}
 		hostapd_cleanup_iface(hapd_iface);
 	}
 	return -1;
@@ -2076,6 +2081,7 @@ static int hostapd_remove_bss(struct hostapd_iface *iface, unsigned int idx)
 		wpa_printf(MSG_DEBUG, "%s: free hapd %p (%s)",
 			   __func__, hapd, hapd->conf->iface);
 		hostapd_config_free_bss(hapd->conf);
+		hapd->conf = NULL;
 		os_free(hapd);
 
 		iface->num_bss--;

@@ -1198,14 +1198,14 @@ struct wpabuf * dh_init(const struct dh_group *dh, struct wpabuf **priv)
 	if (dh == NULL)
 		return NULL;
 
-	wpabuf_free(*priv);
+	wpabuf_clear_free(*priv);
 	*priv = wpabuf_alloc(dh->prime_len);
 	if (*priv == NULL)
 		return NULL;
 
 	if (random_get_bytes(wpabuf_put(*priv, dh->prime_len), dh->prime_len))
 	{
-		wpabuf_free(*priv);
+		wpabuf_clear_free(*priv);
 		*priv = NULL;
 		return NULL;
 	}
@@ -1224,7 +1224,7 @@ struct wpabuf * dh_init(const struct dh_group *dh, struct wpabuf **priv)
 			   wpabuf_head(*priv), wpabuf_len(*priv),
 			   dh->prime, dh->prime_len, wpabuf_mhead(pv),
 			   &pv_len) < 0) {
-		wpabuf_free(pv);
+		wpabuf_clear_free(pv);
 		wpa_printf(MSG_INFO, "DH: crypto_mod_exp failed");
 		return NULL;
 	}
@@ -1260,7 +1260,7 @@ struct wpabuf * dh_derive_shared(const struct wpabuf *peer_public,
 			   wpabuf_head(own_private), wpabuf_len(own_private),
 			   dh->prime, dh->prime_len,
 			   wpabuf_mhead(shared), &shared_len) < 0) {
-		wpabuf_free(shared);
+		wpabuf_clear_free(shared);
 		wpa_printf(MSG_INFO, "DH: crypto_mod_exp failed");
 		return NULL;
 	}

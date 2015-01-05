@@ -243,6 +243,52 @@ void wpa_trace_dump_funcname(const char *title, void *pc)
 	wpa_trace_bfd_addr(pc);
 }
 
+
+size_t wpa_trace_calling_func(const char *buf[], size_t len)
+{
+	bfd *abfd;
+	void *btrace_res[WPA_TRACE_LEN];
+	int i, btrace_num;
+	size_t pos = 0;
+
+	if (len == 0)
+		return 0;
+	if (len > WPA_TRACE_LEN)
+		len = WPA_TRACE_LEN;
+
+	wpa_trace_bfd_init();
+	abfd = cached_abfd;
+	if (!abfd)
+		return 0;
+
+	btrace_num = backtrace(btrace_res, len);
+	if (btrace_num < 1)
+		return 0;
+
+	for (i = 0; i < btrace_num; i++) {
+		struct bfd_data data;
+
+		data.pc = (bfd_hostptr_t) btrace_res[i];
+		data.found = FALSE;
+		bfd_map_over_sections(abfd, find_addr_sect, &data);
+
+		while (data.found || !data.function) {
+			if (pos > 0 ||
+			    os_strcmp(data.function, __func__) != 0) {
+				buf[pos++] = data.function;
+				if (pos == len)
+					return pos;
+			}
+
+			data.found = bfd_find_inliner_info(abfd, &data.filename,
+							   &data.function,
+							   &data.line);
+		}
+	}
+
+	return pos;
+}
+
 #else /* WPA_TRACE_BFD */
 
 #define wpa_trace_bfd_init() do { } while (0)

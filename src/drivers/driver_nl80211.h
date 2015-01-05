@@ -142,6 +142,7 @@ struct wpa_driver_nl80211_data {
 	unsigned int force_connect_cmd:1;
 	unsigned int addr_changed:1;
 	unsigned int get_features_vendor_cmd_avail:1;
+	unsigned int set_rekey_offload:1;
 
 	u64 remain_on_chan_cookie;
 	u64 send_action_cookie;

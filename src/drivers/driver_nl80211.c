@@ -1577,6 +1577,14 @@ static void * wpa_driver_nl80211_drv_init(void *ctx, const char *ifname,
 	drv->ctx = ctx;
 	drv->hostapd = !!hostapd;
 	drv->eapol_sock = -1;
+
+	/*
+	 * There is no driver capability flag for this, so assume it is
+	 * supported and disable this on first attempt to use if the driver
+	 * rejects the command due to missing support.
+	 */
+	drv->set_rekey_offload = 1;
+
 	drv->num_if_indices = sizeof(drv->default_if_indices) / sizeof(int);
 	drv->if_indices = drv->default_if_indices;
 
@@ -6730,7 +6738,12 @@ static void nl80211_set_rekey_info(void *priv, const u8 *kek, const u8 *kck,
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct nlattr *replay_nested;
 	struct nl_msg *msg;
+	int ret;
 
+	if (!drv->set_rekey_offload)
+		return;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Set rekey offload");
 	if (!(msg = nl80211_bss_msg(bss, 0, NL80211_CMD_SET_REKEY_OFFLOAD)) ||
 	    !(replay_nested = nla_nest_start(msg, NL80211_ATTR_REKEY_DATA)) ||
 	    nla_put(msg, NL80211_REKEY_DATA_KEK, NL80211_KEK_LEN, kek) ||
@@ -6744,7 +6757,12 @@ static void nl80211_set_rekey_info(void *priv, const u8 *kek, const u8 *kck,
 
 	nla_nest_end(msg, replay_nested);
 
-	send_and_recv_msgs(drv, msg, NULL, (void *) -1);
+	ret = send_and_recv_msgs(drv, msg, NULL, (void *) -1);
+	if (ret == -EOPNOTSUPP) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Driver does not support rekey offload");
+		drv->set_rekey_offload = 0;
+	}
 }
 
 

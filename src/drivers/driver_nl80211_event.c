@@ -180,34 +180,23 @@ static void mlme_event_auth(struct wpa_driver_nl80211_data *drv,
 }
 
 
-static int nl80211_parse_wmm_params(struct nlattr *wmm_attr,
-				    struct wmm_params *wmm_params)
+static void nl80211_parse_wmm_params(struct nlattr *wmm_attr,
+				     struct wmm_params *wmm_params)
 {
 	struct nlattr *wmm_info[NL80211_STA_WME_MAX + 1];
 	static struct nla_policy wme_policy[NL80211_STA_WME_MAX + 1] = {
 		[NL80211_STA_WME_UAPSD_QUEUES] = { .type = NLA_U8 },
 	};
 
-	if (!wmm_attr) {
-		wpa_printf(MSG_DEBUG, "nl80211: WMM data missing");
-		return -1;
-	}
-
-	if (nla_parse_nested(wmm_info, NL80211_STA_WME_MAX, wmm_attr,
-			     wme_policy)) {
-		wpa_printf(MSG_DEBUG,
-			   "nl80211: Failed to parse nested attributes");
-		return -1;
-	}
-
-	if (!wmm_info[NL80211_STA_WME_UAPSD_QUEUES])
-		return -1;
+	if (!wmm_attr ||
+	    nla_parse_nested(wmm_info, NL80211_STA_WME_MAX, wmm_attr,
+			     wme_policy) ||
+	    !wmm_info[NL80211_STA_WME_UAPSD_QUEUES])
+		return;
 
 	wmm_params->uapsd_queues =
 		nla_get_u8(wmm_info[NL80211_STA_WME_UAPSD_QUEUES]);
 	wmm_params->info_bitmap |= WMM_PARAMS_UAPSD_QUEUES_INFO;
-
-	return 0;
 }
 
 
@@ -1104,10 +1093,8 @@ static void nl80211_new_peer_candidate(struct wpa_driver_nl80211_data *drv,
 	const u8 *addr;
 	union wpa_event_data data;
 
-	if (drv->nlmode != NL80211_IFTYPE_MESH_POINT)
-		return;
-
-	if (!tb[NL80211_ATTR_MAC] || !tb[NL80211_ATTR_IE])
+	if (drv->nlmode != NL80211_IFTYPE_MESH_POINT ||
+	    !tb[NL80211_ATTR_MAC] || !tb[NL80211_ATTR_IE])
 		return;
 
 	addr = nla_data(tb[NL80211_ATTR_MAC]);
@@ -1201,14 +1188,11 @@ static void nl80211_rekey_offload_event(struct wpa_driver_nl80211_data *drv,
 	};
 	union wpa_event_data data;
 
-	if (!tb[NL80211_ATTR_MAC])
-		return;
-	if (!tb[NL80211_ATTR_REKEY_DATA])
-		return;
-	if (nla_parse_nested(rekey_info, MAX_NL80211_REKEY_DATA,
-			     tb[NL80211_ATTR_REKEY_DATA], rekey_policy))
-		return;
-	if (!rekey_info[NL80211_REKEY_DATA_REPLAY_CTR])
+	if (!tb[NL80211_ATTR_MAC] ||
+	    !tb[NL80211_ATTR_REKEY_DATA] ||
+	    nla_parse_nested(rekey_info, MAX_NL80211_REKEY_DATA,
+			     tb[NL80211_ATTR_REKEY_DATA], rekey_policy) ||
+	    !rekey_info[NL80211_REKEY_DATA_REPLAY_CTR])
 		return;
 
 	os_memset(&data, 0, sizeof(data));
@@ -1239,12 +1223,10 @@ static void nl80211_pmksa_candidate_event(struct wpa_driver_nl80211_data *drv,
 
 	wpa_printf(MSG_DEBUG, "nl80211: PMKSA candidate event");
 
-	if (!tb[NL80211_ATTR_PMKSA_CANDIDATE])
-		return;
-	if (nla_parse_nested(cand, MAX_NL80211_PMKSA_CANDIDATE,
-			     tb[NL80211_ATTR_PMKSA_CANDIDATE], cand_policy))
-		return;
-	if (!cand[NL80211_PMKSA_CANDIDATE_INDEX] ||
+	if (!tb[NL80211_ATTR_PMKSA_CANDIDATE] ||
+	    nla_parse_nested(cand, MAX_NL80211_PMKSA_CANDIDATE,
+			     tb[NL80211_ATTR_PMKSA_CANDIDATE], cand_policy) ||
+	    !cand[NL80211_PMKSA_CANDIDATE_INDEX] ||
 	    !cand[NL80211_PMKSA_CANDIDATE_BSSID])
 		return;
 
@@ -1502,10 +1484,8 @@ static void qca_nl80211_acs_select_ch(struct wpa_driver_nl80211_data *drv,
 		   "nl80211: ACS channel selection vendor event received");
 
 	if (nla_parse(tb, QCA_WLAN_VENDOR_ATTR_ACS_MAX,
-		      (struct nlattr *) data, len, NULL))
-		return;
-
-	if (!tb[QCA_WLAN_VENDOR_ATTR_ACS_PRIMARY_CHANNEL] ||
+		      (struct nlattr *) data, len, NULL) ||
+	    !tb[QCA_WLAN_VENDOR_ATTR_ACS_PRIMARY_CHANNEL] ||
 	    !tb[QCA_WLAN_VENDOR_ATTR_ACS_SECONDARY_CHANNEL])
 		return;
 
@@ -1529,9 +1509,8 @@ static void qca_nl80211_key_mgmt_auth(struct wpa_driver_nl80211_data *drv,
 		   "nl80211: Key management roam+auth vendor event received");
 
 	if (nla_parse(tb, QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_MAX,
-		      (struct nlattr *) data, len, NULL))
-		return;
-	if (!tb[QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_BSSID] ||
+		      (struct nlattr *) data, len, NULL) ||
+	    !tb[QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_BSSID] ||
 	    nla_len(tb[QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_BSSID]) != ETH_ALEN ||
 	    !tb[QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_REQ_IE] ||
 	    !tb[QCA_WLAN_VENDOR_ATTR_ROAM_AUTH_RESP_IE] ||

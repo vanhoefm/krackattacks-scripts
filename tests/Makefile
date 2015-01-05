@@ -1,4 +1,4 @@
-TESTS=test-base64 test-md4 test-md5 test-milenage \
+TESTS=test-base64 test-md4 test-milenage \
 	test-rsa-sig-ver \
 	test-sha1 \
 	test-sha256 test-aes test-asn1 test-x509 test-x509v3 test-list test-rc4
@@ -59,9 +59,6 @@ test-list: test-list.o $(LIBS)
 test-md4: test-md4.o $(LIBS)
 	$(LDO) $(LDFLAGS) -o $@ $^ $(LLIBS)
 
-test-md5: test-md5.o $(LIBS)
-	$(LDO) $(LDFLAGS) -o $@ $^ $(LLIBS)
-
 test-milenage: test-milenage.o $(LIBS)
 	$(LDO) $(LDFLAGS) -o $@ $^ $(LLIBS)
 
@@ -88,7 +85,6 @@ run-tests: $(TESTS)
 	./test-aes
 	./test-list
 	./test-md4
-	./test-md5
 	./test-milenage
 	./test-rsa-sig-ver
 	./test-sha1

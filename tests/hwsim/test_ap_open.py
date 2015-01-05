@@ -12,6 +12,7 @@ import time
 
 import hostapd
 import hwsim_utils
+from utils import alloc_fail
 
 def test_ap_open(dev, apdev):
     """AP with open mode (no security) configuration"""
@@ -164,3 +165,39 @@ def test_ap_bss_load(dev, apdev):
         hwsim_utils.test_connectivity(dev[0], hapd)
         hwsim_utils.test_connectivity(dev[0], hapd)
         time.sleep(0.15)
+
+def hapd_out_of_mem(hapd, apdev, count, func):
+    with alloc_fail(hapd, count, func):
+        started = False
+        try:
+            hostapd.add_ap(apdev['ifname'], { "ssid": "open" })
+            started = True
+        except:
+            pass
+        if started:
+            raise Exception("hostapd interface started even with memory allocation failure: " + arg)
+
+def test_ap_open_out_of_memory(dev, apdev):
+    """hostapd failing to setup interface due to allocation failure"""
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    hapd_out_of_mem(hapd, apdev[1], 1, "hostapd_alloc_bss_data")
+
+    for i in range(1, 3):
+        hapd_out_of_mem(hapd, apdev[1], i, "hostapd_iface_alloc")
+
+    for i in range(1, 5):
+        hapd_out_of_mem(hapd, apdev[1], i, "hostapd_config_defaults;hostapd_config_alloc")
+
+    hapd_out_of_mem(hapd, apdev[1], 1, "hostapd_config_alloc")
+
+    hapd_out_of_mem(hapd, apdev[1], 1, "hostapd_driver_init")
+
+    for i in range(1, 4):
+        hapd_out_of_mem(hapd, apdev[1], i, "=wpa_driver_nl80211_drv_init")
+
+    # eloop_register_read_sock() call from i802_init()
+    hapd_out_of_mem(hapd, apdev[1], 1, "eloop_sock_table_add_sock;eloop_register_sock;?eloop_register_read_sock;=i802_init")
+
+    # verify that a new interface can still be added when memory allocation does
+    # not fail
+    hostapd.add_ap(apdev[1]['ifname'], { "ssid": "open" })

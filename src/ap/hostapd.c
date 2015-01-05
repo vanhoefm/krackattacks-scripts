@@ -1976,6 +1976,8 @@ int hostapd_add_iface(struct hapd_interfaces *interfaces, char *buf)
 				hapd_iface->num_bss--;
 				wpa_printf(MSG_DEBUG, "%s: free hapd %p %s",
 					   __func__, hapd, hapd->conf->iface);
+				hostapd_config_free_bss(hapd->conf);
+				hapd->conf = NULL;
 				os_free(hapd);
 				return -1;
 			}

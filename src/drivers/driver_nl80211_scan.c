@@ -599,9 +599,6 @@ int bss_info_handler(struct nl_msg *msg, void *arg)
 		enum nl80211_bss_status status;
 		status = nla_get_u32(bss[NL80211_BSS_STATUS]);
 		switch (status) {
-		case NL80211_BSS_STATUS_AUTHENTICATED:
-			r->flags |= WPA_SCAN_AUTHENTICATED;
-			break;
 		case NL80211_BSS_STATUS_ASSOCIATED:
 			r->flags |= WPA_SCAN_ASSOCIATED;
 			break;
@@ -677,23 +674,6 @@ static void wpa_driver_nl80211_check_bss_status(
 
 	for (i = 0; i < res->num; i++) {
 		struct wpa_scan_res *r = res->res[i];
-		if (r->flags & WPA_SCAN_AUTHENTICATED) {
-			wpa_printf(MSG_DEBUG, "nl80211: Scan results "
-				   "indicates BSS status with " MACSTR
-				   " as authenticated",
-				   MAC2STR(r->bssid));
-			if (is_sta_interface(drv->nlmode) &&
-			    os_memcmp(r->bssid, drv->bssid, ETH_ALEN) != 0 &&
-			    os_memcmp(r->bssid, drv->auth_bssid, ETH_ALEN) !=
-			    0) {
-				wpa_printf(MSG_DEBUG, "nl80211: Unknown BSSID"
-					   " in local state (auth=" MACSTR
-					   " assoc=" MACSTR ")",
-					   MAC2STR(drv->auth_bssid),
-					   MAC2STR(drv->bssid));
-				clear_state_mismatch(drv, r->bssid);
-			}
-		}
 
 		if (r->flags & WPA_SCAN_ASSOCIATED) {
 			wpa_printf(MSG_DEBUG, "nl80211: Scan results "
@@ -786,9 +766,8 @@ void nl80211_dump_scan(struct wpa_driver_nl80211_data *drv)
 	wpa_printf(MSG_DEBUG, "nl80211: Scan result dump");
 	for (i = 0; i < res->num; i++) {
 		struct wpa_scan_res *r = res->res[i];
-		wpa_printf(MSG_DEBUG, "nl80211: %d/%d " MACSTR "%s%s",
+		wpa_printf(MSG_DEBUG, "nl80211: %d/%d " MACSTR "%s",
 			   (int) i, (int) res->num, MAC2STR(r->bssid),
-			   r->flags & WPA_SCAN_AUTHENTICATED ? " [auth]" : "",
 			   r->flags & WPA_SCAN_ASSOCIATED ? " [assoc]" : "");
 	}
 

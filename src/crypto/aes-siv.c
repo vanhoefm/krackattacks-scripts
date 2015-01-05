@@ -11,6 +11,7 @@
 #include "common.h"
 #include "aes.h"
 #include "aes_wrap.h"
+#include "aes_siv.h"
 
 
 static const u8 zero[AES_BLOCK_SIZE];
@@ -60,8 +61,8 @@ static void pad_block(u8 *pad, const u8 *addr, size_t len)
 }
 
 
-int aes_s2v(const u8 *key, size_t num_elem, const u8 *addr[],
-	    size_t *len, u8 *mac)
+static int aes_s2v(const u8 *key, size_t num_elem, const u8 *addr[],
+		   size_t *len, u8 *mac)
 {
 	u8 tmp[AES_BLOCK_SIZE], tmp2[AES_BLOCK_SIZE];
 	u8 *buf = NULL;

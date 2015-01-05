@@ -693,11 +693,11 @@ int pbkdf2_sha1(const char *passphrase, const u8 *ssid, size_t ssid_len,
 #if OPENSSL_VERSION_NUMBER < 0x00908000
 	if (PKCS5_PBKDF2_HMAC_SHA1(passphrase, os_strlen(passphrase),
 				   (unsigned char *) ssid,
-				   ssid_len, 4096, buflen, buf) != 1)
+				   ssid_len, iterations, buflen, buf) != 1)
 		return -1;
 #else /* openssl < 0.9.8 */
 	if (PKCS5_PBKDF2_HMAC_SHA1(passphrase, os_strlen(passphrase), ssid,
-				   ssid_len, 4096, buflen, buf) != 1)
+				   ssid_len, iterations, buflen, buf) != 1)
 		return -1;
 #endif /* openssl < 0.9.8 */
 	return 0;

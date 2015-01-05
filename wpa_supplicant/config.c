@@ -235,6 +235,94 @@ static char * wpa_config_write_int(const struct parse_data *data,
 #endif /* NO_CONFIG_WRITE */
 
 
+static int wpa_config_parse_addr_list(const struct parse_data *data,
+				      int line, const char *value,
+				      u8 **list, size_t *num, char *name,
+				      u8 abort_on_error)
+{
+	const char *pos;
+	u8 *buf, *n, addr[ETH_ALEN];
+	size_t count;
+
+	buf = NULL;
+	count = 0;
+
+	pos = value;
+	while (pos && *pos) {
+		while (*pos == ' ')
+			pos++;
+
+		if (hwaddr_aton(pos, addr)) {
+			if (abort_on_error || count == 0) {
+				wpa_printf(MSG_ERROR,
+					   "Line %d: Invalid %s address '%s'",
+					   line, name, value);
+				os_free(buf);
+				return -1;
+			}
+			/* continue anyway since this could have been from a
+			 * truncated configuration file line */
+			wpa_printf(MSG_INFO,
+				   "Line %d: Ignore likely truncated %s address '%s'",
+				   line, name, pos);
+		} else {
+			n = os_realloc_array(buf, count + 1, ETH_ALEN);
+			if (n == NULL) {
+				os_free(buf);
+				return -1;
+			}
+			buf = n;
+			os_memmove(buf + ETH_ALEN, buf, count * ETH_ALEN);
+			os_memcpy(buf, addr, ETH_ALEN);
+			count++;
+			wpa_hexdump(MSG_MSGDUMP, name, addr, ETH_ALEN);
+		}
+
+		pos = os_strchr(pos, ' ');
+	}
+
+	os_free(*list);
+	*list = buf;
+	*num = count;
+
+	return 0;
+}
+
+
+#ifndef NO_CONFIG_WRITE
+static char * wpa_config_write_addr_list(const struct parse_data *data,
+					 const u8 *list, size_t num, char *name)
+{
+	char *value, *end, *pos;
+	int res;
+	size_t i;
+
+	if (list == NULL || num == 0)
+		return NULL;
+
+	value = os_malloc(20 * num);
+	if (value == NULL)
+		return NULL;
+	pos = value;
+	end = value + 20 * num;
+
+	for (i = num; i > 0; i--) {
+		res = os_snprintf(pos, end - pos, MACSTR " ",
+				  MAC2STR(list + (i - 1) * ETH_ALEN));
+		if (os_snprintf_error(end - pos, res)) {
+			os_free(value);
+			return NULL;
+		}
+		pos += res;
+	}
+
+	if (pos > value)
+		pos[-1] = '\0';
+
+	return value;
+}
+#endif /* NO_CONFIG_WRITE */
+
 static int wpa_config_parse_bssid(const struct parse_data *data,
 				  struct wpa_ssid *ssid, int line,
 				  const char *value)
@@ -1453,53 +1541,10 @@ static int wpa_config_parse_p2p_client_list(const struct parse_data *data,
 					    struct wpa_ssid *ssid, int line,
 					    const char *value)
 {
-	const char *pos;
-	u8 *buf, *n, addr[ETH_ALEN];
-	size_t count;
-
-	buf = NULL;
-	count = 0;
-
-	pos = value;
-	while (pos && *pos) {
-		while (*pos == ' ')
-			pos++;
-
-		if (hwaddr_aton(pos, addr)) {
-			if (count == 0) {
-				wpa_printf(MSG_ERROR, "Line %d: Invalid "
-					   "p2p_client_list address '%s'.",
-					   line, value);
-				os_free(buf);
-				return -1;
-			}
-			/* continue anyway since this could have been from a
-			 * truncated configuration file line */
-			wpa_printf(MSG_INFO, "Line %d: Ignore likely "
-				   "truncated p2p_client_list address '%s'",
-				   line, pos);
-		} else {
-			n = os_realloc_array(buf, count + 1, ETH_ALEN);
-			if (n == NULL) {
-				os_free(buf);
-				return -1;
-			}
-			buf = n;
-			os_memmove(buf + ETH_ALEN, buf, count * ETH_ALEN);
-			os_memcpy(buf, addr, ETH_ALEN);
-			count++;
-			wpa_hexdump(MSG_MSGDUMP, "p2p_client_list",
-				    addr, ETH_ALEN);
-		}
-
-		pos = os_strchr(pos, ' ');
-	}
-
-	os_free(ssid->p2p_client_list);
-	ssid->p2p_client_list = buf;
-	ssid->num_p2p_clients = count;
-
-	return 0;
+	return wpa_config_parse_addr_list(data, line, value,
+					  &ssid->p2p_client_list,
+					  &ssid->num_p2p_clients,
+					  "p2p_client_list", 0);
 }
 
 
@@ -1507,34 +1552,9 @@ static int wpa_config_parse_p2p_client_list(const struct parse_data *data,
 static char * wpa_config_write_p2p_client_list(const struct parse_data *data,
 					       struct wpa_ssid *ssid)
 {
-	char *value, *end, *pos;
-	int res;
-	size_t i;
-
-	if (ssid->p2p_client_list == NULL || ssid->num_p2p_clients == 0)
-		return NULL;
-
-	value = os_malloc(20 * ssid->num_p2p_clients);
-	if (value == NULL)
-		return NULL;
-	pos = value;
-	end = value + 20 * ssid->num_p2p_clients;
-
-	for (i = ssid->num_p2p_clients; i > 0; i--) {
-		res = os_snprintf(pos, end - pos, MACSTR " ",
-				  MAC2STR(ssid->p2p_client_list +
-					  (i - 1) * ETH_ALEN));
-		if (os_snprintf_error(end - pos, res)) {
-			os_free(value);
-			return NULL;
-		}
-		pos += res;
-	}
-
-	if (pos > value)
-		pos[-1] = '\0';
-
-	return value;
+	return wpa_config_write_addr_list(data, ssid->p2p_client_list,
+					  ssid->num_p2p_clients,
+					  "p2p_client_list");
 }
 #endif /* NO_CONFIG_WRITE */
 

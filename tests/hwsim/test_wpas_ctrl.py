@@ -11,6 +11,7 @@ import time
 
 import hostapd
 from wpasupplicant import WpaSupplicant
+from utils import alloc_fail
 
 def test_wpas_ctrl_network(dev):
     """wpa_supplicant ctrl_iface network set/get"""
@@ -895,6 +896,12 @@ def test_wpas_ctrl_blacklist(dev):
         raise Exception("BLACKLIST clear failed")
     if dev[0].request("BLACKLIST") != "":
         raise Exception("Unexpected blacklist contents")
+
+def test_wpas_ctrl_blacklist_oom(dev):
+    """wpa_supplicant ctrl_iface BLACKLIST and out-of-memory"""
+    with alloc_fail(dev[0], 1, "wpa_blacklist_add"):
+        if "FAIL" not in dev[0].request("BLACKLIST aa:bb:cc:dd:ee:ff"):
+            raise Exception("Unexpected success with allocation failure")
 
 def test_wpas_ctrl_log_level(dev):
     """wpa_supplicant ctrl_iface LOG_LEVEL"""

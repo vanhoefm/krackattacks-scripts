@@ -19,3 +19,17 @@ class HwsimSkip(Exception):
         self.reason = reason
     def __str__(self):
         return self.reason
+
+class alloc_fail(object):
+    def __init__(self, dev, count, funcs):
+        self._dev = dev
+        self._count = count
+        self._funcs = funcs
+    def __enter__(self):
+        cmd = "TEST_ALLOC_FAIL %d:%s" % (self._count, self._funcs)
+        if "OK" not in self._dev.request(cmd):
+            raise HwsimSkip("TEST_ALLOC_FAIL not supported")
+    def __exit__(self, type, value, traceback):
+        if type is None:
+            if self._dev.request("GET_ALLOC_FAIL") != "0:%s" % self._funcs:
+                raise Exception("Allocation failure did not trigger")

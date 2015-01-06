@@ -292,13 +292,13 @@ static DBusHandlerResult wpas_iface_message_handler(DBusConnection *connection,
 	}
 
 	/* If the message was handled, send back the reply */
+out:
 	if (reply) {
 		if (!dbus_message_get_no_reply(message))
 			dbus_connection_send(connection, reply, NULL);
 		dbus_message_unref(reply);
 	}
 
-out:
 	os_free(iface_obj_path);
 	os_free(network);
 	os_free(bssid);

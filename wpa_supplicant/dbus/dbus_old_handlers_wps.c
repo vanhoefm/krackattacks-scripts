@@ -144,7 +144,7 @@ DBusMessage * wpas_dbus_iface_wps_reg(DBusMessage *message,
 
 	if (ret < 0) {
 		return dbus_message_new_error(message,
-					      WPAS_ERROR_WPS_PBC_ERROR,
+					      WPAS_ERROR_WPS_REG_ERROR,
 					      "Could not request credentials");
 	}
 

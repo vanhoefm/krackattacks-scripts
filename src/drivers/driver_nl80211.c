@@ -290,7 +290,13 @@ static void nl80211_nlmsg_clear(struct nl_msg *msg)
 	if (msg) {
 		struct nlmsghdr *hdr = nlmsg_hdr(msg);
 		void *data = nlmsg_data(hdr);
-		int len = nlmsg_datalen(hdr);
+		/*
+		 * This would use nlmsg_datalen() or the older nlmsg_len() if
+		 * only libnl were to maintain a stable API.. Neither will work
+		 * with all released versions, so just calculate the length
+		 * here.
+		 */
+		int len = hdr->nlmsg_len - NLMSG_HDRLEN;
 
 		os_memset(data, 0, len);
 	}

@@ -700,7 +700,6 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_byte_array(
 	if (!buffer)
 		return FALSE;
 
-	entry->bytearray_value = buffer;
 	entry->array_len = 0;
 	while (dbus_message_iter_get_arg_type(iter) == DBUS_TYPE_BYTE) {
 		char byte;
@@ -718,13 +717,13 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_byte_array(
 			}
 			buffer = nbuffer;
 		}
-		entry->bytearray_value = buffer;
 
 		dbus_message_iter_get_basic(iter, &byte);
-		entry->bytearray_value[count] = byte;
+		buffer[count] = byte;
 		entry->array_len = ++count;
 		dbus_message_iter_next(iter);
 	}
+	entry->bytearray_value = buffer;
 	wpa_hexdump_key(MSG_MSGDUMP, "dbus: byte array contents",
 			entry->bytearray_value, entry->array_len);
 

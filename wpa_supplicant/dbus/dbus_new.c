@@ -3227,7 +3227,7 @@ int wpas_dbus_unregister_interface(struct wpa_supplicant *wpa_s)
 	if (wpa_s == NULL || wpa_s->global == NULL)
 		return 0;
 	ctrl_iface = wpa_s->global->dbus;
-	if (ctrl_iface == NULL)
+	if (ctrl_iface == NULL || wpa_s->dbus_new_path == NULL)
 		return 0;
 
 	wpa_printf(MSG_DEBUG, "dbus: Unregister interface object '%s'",

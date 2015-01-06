@@ -1040,6 +1040,7 @@ int wpa_supplicant_init_wpa(struct wpa_supplicant *wpa_s)
 	if (wpa_s->wpa == NULL) {
 		wpa_printf(MSG_ERROR, "Failed to initialize WPA state "
 			   "machine");
+		os_free(ctx);
 		return -1;
 	}
 #endif /* CONFIG_NO_WPA */

@@ -37,14 +37,16 @@ static struct interfaces * add_interface(struct dl_list *list,
 	iface = os_zalloc(sizeof(struct interfaces));
 	if (!iface)
 		return NULL;
+	iface->dbus_interface = os_strdup(dbus_interface);
 	iface->xml = wpabuf_alloc(6000);
-	if (iface->xml == NULL) {
+	if (iface->dbus_interface == NULL || iface->xml == NULL) {
+		os_free(iface->dbus_interface);
+		wpabuf_free(iface->xml);
 		os_free(iface);
 		return NULL;
 	}
 	wpabuf_printf(iface->xml, "<interface name=\"%s\">", dbus_interface);
 	dl_list_add_tail(list, &iface->list);
-	iface->dbus_interface = os_strdup(dbus_interface);
 	return iface;
 }
 

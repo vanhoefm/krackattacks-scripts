@@ -12,6 +12,7 @@ import os
 
 import hwsim_utils
 import hostapd
+from utils import alloc_fail
 
 def test_ap_change_ssid(dev, apdev):
     """Dynamic SSID change with hostapd and WPA2-PSK"""
@@ -395,3 +396,35 @@ def test_ap_bss_add_reuse_existing(dev, apdev):
     hostapd.add_bss('phy3', ifname2, 'bss-2.conf')
     hostapd.remove_bss(ifname2)
     subprocess.check_call(["iw", "dev", ifname2, "del"])
+
+def hapd_bss_out_of_mem(hapd, phy, confname, count, func):
+    with alloc_fail(hapd, count, func):
+        hapd_global = hostapd.HostapdGlobal()
+        res = hapd_global.ctrl.request("ADD bss_config=" + phy + ":" + confname)
+        if "OK" in res:
+            raise Exception("add_bss succeeded")
+
+def test_ap_bss_add_out_of_memory(dev, apdev):
+    """Running out of memory while adding a BSS"""
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], { "ssid": "open" })
+
+    ifname1 = apdev[0]['ifname']
+    ifname2 = apdev[0]['ifname'] + '-2'
+
+    hapd_bss_out_of_mem(hapd2, 'phy3', 'bss-1.conf', 1, 'hostapd_add_iface')
+    for i in range(1, 3):
+        hapd_bss_out_of_mem(hapd2, 'phy3', 'bss-1.conf',
+                            i, 'hostapd_interface_init_bss')
+    hapd_bss_out_of_mem(hapd2, 'phy3', 'bss-1.conf',
+                        1, 'ieee802_11_build_ap_params')
+
+    hostapd.add_bss('phy3', ifname1, 'bss-1.conf')
+
+    hapd_bss_out_of_mem(hapd2, 'phy3', 'bss-2.conf',
+                        1, 'hostapd_interface_init_bss')
+    hapd_bss_out_of_mem(hapd2, 'phy3', 'bss-2.conf',
+                        1, 'ieee802_11_build_ap_params')
+
+    hostapd.add_bss('phy3', ifname2, 'bss-2.conf')
+    hostapd.remove_bss(ifname2)
+    hostapd.remove_bss(ifname1)

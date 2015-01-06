@@ -1134,25 +1134,27 @@ DBusMessage * wpas_dbus_iface_set_smartcard_modules(
 		    entry.type == DBUS_TYPE_STRING) {
 			os_free(opensc_engine_path);
 			opensc_engine_path = os_strdup(entry.str_value);
+			wpa_dbus_dict_entry_clear(&entry);
 			if (opensc_engine_path == NULL)
 				goto error;
 		} else if (!strcmp(entry.key, "pkcs11_engine_path") &&
 			   entry.type == DBUS_TYPE_STRING) {
 			os_free(pkcs11_engine_path);
 			pkcs11_engine_path = os_strdup(entry.str_value);
+			wpa_dbus_dict_entry_clear(&entry);
 			if (pkcs11_engine_path == NULL)
 				goto error;
 		} else if (!strcmp(entry.key, "pkcs11_module_path") &&
 				 entry.type == DBUS_TYPE_STRING) {
 			os_free(pkcs11_module_path);
 			pkcs11_module_path = os_strdup(entry.str_value);
+			wpa_dbus_dict_entry_clear(&entry);
 			if (pkcs11_module_path == NULL)
 				goto error;
 		} else {
 			wpa_dbus_dict_entry_clear(&entry);
 			goto error;
 		}
-		wpa_dbus_dict_entry_clear(&entry);
 	}
 
 	os_free(wpa_s->conf->opensc_engine_path);

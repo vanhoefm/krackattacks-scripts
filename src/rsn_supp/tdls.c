@@ -2776,6 +2776,8 @@ void wpa_tdls_teardown_peers(struct wpa_sm *sm)
 {
 	struct wpa_tdls_peer *peer, *tmp;
 
+	if (!sm)
+		return;
 	peer = sm->tdls;
 
 	wpa_printf(MSG_DEBUG, "TDLS: Tear down peers");

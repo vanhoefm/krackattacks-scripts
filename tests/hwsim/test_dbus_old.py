@@ -16,7 +16,7 @@ except ImportError:
 
 import hostapd
 from utils import HwsimSkip
-from test_dbus import TestDbus, start_ap
+from test_dbus import TestDbus, alloc_fail_dbus, start_ap
 
 WPAS_DBUS_OLD_SERVICE = "fi.epitest.hostap.WPASupplicant"
 WPAS_DBUS_OLD_PATH = "/fi/epitest/hostap/WPASupplicant"
@@ -237,6 +237,24 @@ def test_dbus_old_smartcard(dev, apdev):
             if not str(e).startswith("fi.epitest.hostap.WPASupplicant.InvalidOptions"):
                 raise Exception("Unexpected error message for invalid setSmartcardModules(%s): %s" % (str(t), str(e)))
 
+def test_dbus_old_smartcard_oom(dev, apdev):
+    """The old D-Bus interface - smartcard (OOM)"""
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+
+    for arg in [ 'opensc_engine_path', 'pkcs11_engine_path', 'pkcs11_module_path' ]:
+        with alloc_fail_dbus(dev[0], 1,
+                             "=wpas_dbus_iface_set_smartcard_modules",
+                             "setSmartcardModules",
+                             "InvalidOptions"):
+            params = dbus.Dictionary({ arg : "foo", }, signature='sv')
+            if_obj.setSmartcardModules(params,
+                                       dbus_interface=WPAS_DBUS_OLD_IFACE)
+
+    with alloc_fail_dbus(dev[0], 1, "=_wpa_dbus_dict_fill_value_from_variant;wpas_dbus_iface_set_smartcard_modules",
+                         "setSmartcardModules", "InvalidOptions"):
+        params = dbus.Dictionary({ arg : "foo", }, signature='sv')
+        if_obj.setSmartcardModules(params, dbus_interface=WPAS_DBUS_OLD_IFACE)
+
 def test_dbus_old_interface(dev, apdev):
     """The old D-Bus interface - interface get/add/remove"""
     (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
@@ -295,6 +313,22 @@ def test_dbus_old_interface(dev, apdev):
         if not str(e).startswith("fi.epitest.hostap.WPASupplicant.InvalidOptions"):
             raise Exception("Unexpected error message for invalid removeInterface: " + str(e))
 
+def test_dbus_old_interface_oom(dev, apdev):
+    """The old D-Bus interface - interface get/add/remove (OOM)"""
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    wpas = dbus.Interface(wpas_obj, WPAS_DBUS_OLD_SERVICE)
+
+    with alloc_fail_dbus(dev[0], 1, "=_wpa_dbus_dict_fill_value_from_variant;wpas_dbus_global_add_interface",
+                         "addInterface", "InvalidOptions"):
+        params = dbus.Dictionary({ 'driver': 'none' }, signature='sv')
+        wpas.addInterface("lo", params)
+
+    for arg in [ "driver", "driver-params", "config-file", "bridge-ifname" ]:
+        with alloc_fail_dbus(dev[0], 1, "=wpas_dbus_global_add_interface",
+                             "addInterface", "InvalidOptions"):
+            params = dbus.Dictionary({ arg: 'foo' }, signature='sv')
+            wpas.addInterface("lo", params)
+
 def test_dbus_old_blob(dev, apdev):
     """The old D-Bus interface - blob operations"""
     (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
@@ -334,6 +368,31 @@ def test_dbus_old_blob(dev, apdev):
                             signature='sv')
     if_obj.setBlobs(blobs, dbus_interface=WPAS_DBUS_OLD_IFACE)
     if_obj.removeBlobs(['blob1', 'blob2'], dbus_interface=WPAS_DBUS_OLD_IFACE)
+
+def test_dbus_old_blob_oom(dev, apdev):
+    """The old D-Bus interface - blob operations (OOM)"""
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+
+    blobs = dbus.Dictionary({ 'blob1': dbus.ByteArray([ 1, 2, 3 ]),
+                              'blob2': dbus.ByteArray([ 1, 2 ]) },
+                            signature='sv')
+
+    with alloc_fail_dbus(dev[0], 1, "=wpas_dbus_iface_set_blobs", "setBlobs",
+                         "AddError: Not enough memory to add blob"):
+        if_obj.setBlobs(blobs, dbus_interface=WPAS_DBUS_OLD_IFACE)
+
+    with alloc_fail_dbus(dev[0], 2, "=wpas_dbus_iface_set_blobs", "setBlobs",
+                         "AddError: Not enough memory to add blob data"):
+        if_obj.setBlobs(blobs, dbus_interface=WPAS_DBUS_OLD_IFACE)
+
+    with alloc_fail_dbus(dev[0], 3, "=wpas_dbus_iface_set_blobs", "setBlobs",
+                         "AddError: Error adding blob"):
+        if_obj.setBlobs(blobs, dbus_interface=WPAS_DBUS_OLD_IFACE)
+
+    with alloc_fail_dbus(dev[0], 1, "=wpas_dbus_decompose_object_path;wpas_iface_message_handler",
+                         "setBlobs",
+                         "InvalidInterface: wpa_supplicant knows nothing about this interface"):
+        if_obj.setBlobs(blobs, dbus_interface=WPAS_DBUS_OLD_IFACE)
 
 def test_dbus_old_connect(dev, apdev):
     """The old D-Bus interface - add a network and connect"""
@@ -725,3 +784,56 @@ def _test_dbus_old_wps_reg(dev, apdev):
             raise Exception("Expected signals not seen")
 
     dev[0].wait_connected(timeout=10)
+
+def test_dbus_old_wps_oom(dev, apdev):
+    """The old D-Bus interface and WPS (OOM)"""
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    bssid = apdev[0]['bssid']
+
+    with alloc_fail_dbus(dev[0], 1,
+                         "=wpa_config_add_network;wpas_dbus_iface_wps_pbc",
+                         "wpsPbc",
+                         "WpsPbcError: Could not start PBC negotiation"):
+        if_obj.wpsPbc("any", dbus_interface=WPAS_DBUS_OLD_IFACE)
+
+    with alloc_fail_dbus(dev[0], 1,
+                         "=wpa_config_add_network;wpas_dbus_iface_wps_pin",
+                         "wpsPin", "WpsPinError: Could not init PIN"):
+        if_obj.wpsPin("any", "", dbus_interface=WPAS_DBUS_OLD_IFACE)
+
+    with alloc_fail_dbus(dev[0], 1,
+                         "=wpa_config_add_network;wpas_dbus_iface_wps_reg",
+                         "wpsReg",
+                         "WpsRegError: Could not request credentials"):
+        if_obj.wpsReg(bssid, "12345670", dbus_interface=WPAS_DBUS_OLD_IFACE)
+
+def test_dbus_old_network_set_oom(dev, apdev):
+    """The old D-Bus interface and network set method (OOM)"""
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+
+    with alloc_fail_dbus(dev[0], 1,
+                         "=wpa_config_add_network;wpas_dbus_iface_add_network",
+                         "addNetwork",
+                         "AddNetworkError: wpa_supplicant could not add"):
+        if_obj.addNetwork(dbus_interface=WPAS_DBUS_OLD_IFACE)
+
+    path = if_obj.addNetwork(dbus_interface=WPAS_DBUS_OLD_IFACE)
+    netw_obj = bus.get_object(WPAS_DBUS_OLD_SERVICE, path)
+    netw_obj.disable(dbus_interface=WPAS_DBUS_OLD_NETWORK)
+
+    with alloc_fail_dbus(dev[0], 1,
+                         "_wpa_dbus_dict_fill_value_from_variant;wpas_dbus_iface_set_network",
+                         "set", "InvalidOptions"):
+        params = dbus.Dictionary({ 'ssid': "foo" }, signature='sv')
+        netw_obj.set(params, dbus_interface=WPAS_DBUS_OLD_NETWORK)
+
+    tests = [ { 'identity': dbus.ByteArray([ 1, 2 ]) },
+              { 'scan_freq': dbus.UInt32(2412) },
+              { 'priority': dbus.Int32(0) },
+              { 'identity': "user" },
+              { 'eap': "TLS" }]
+    for arg in tests:
+        with alloc_fail_dbus(dev[0], 1, "=wpas_dbus_iface_set_network",
+                             "set", "InvalidOptions"):
+            params = dbus.Dictionary(arg, signature='sv')
+            netw_obj.set(params, dbus_interface=WPAS_DBUS_OLD_NETWORK)

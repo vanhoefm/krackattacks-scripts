@@ -748,18 +748,16 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_string_array(
 	struct wpa_dbus_dict_entry *entry)
 {
 	dbus_uint32_t count = 0;
-	dbus_bool_t success = FALSE;
 	char **buffer, **nbuffer;
 
 	entry->strarray_value = NULL;
+	entry->array_len = 0;
 	entry->array_type = DBUS_TYPE_STRING;
 
 	buffer = os_calloc(STR_ARRAY_CHUNK_SIZE, STR_ARRAY_ITEM_SIZE);
 	if (buffer == NULL)
 		return FALSE;
 
-	entry->strarray_value = buffer;
-	entry->array_len = 0;
 	while (dbus_message_iter_get_arg_type(iter) == DBUS_TYPE_STRING) {
 		const char *value;
 		char *str;
@@ -769,15 +767,13 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_string_array(
 				buffer, count + STR_ARRAY_CHUNK_SIZE,
 				STR_ARRAY_ITEM_SIZE);
 			if (nbuffer == NULL) {
-				os_free(buffer);
 				wpa_printf(MSG_ERROR,
 					   "dbus: %s out of memory trying to retrieve the string array",
 					   __func__);
-				goto done;
+				goto fail;
 			}
 			buffer = nbuffer;
 		}
-		entry->strarray_value = buffer;
 
 		dbus_message_iter_get_basic(iter, &value);
 		wpa_printf(MSG_MSGDUMP, "%s: string_array value: %s",
@@ -787,12 +783,13 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_string_array(
 			wpa_printf(MSG_ERROR,
 				   "dbus: %s out of memory trying to duplicate the string array",
 				   __func__);
-			goto done;
+			goto fail;
 		}
-		entry->strarray_value[count] = str;
-		entry->array_len = ++count;
+		buffer[count++] = str;
 		dbus_message_iter_next(iter);
 	}
+	entry->strarray_value = buffer;
+	entry->array_len = count;
 	wpa_printf(MSG_MSGDUMP, "%s: string_array length %u",
 		   __func__, entry->array_len);
 
@@ -802,10 +799,15 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_string_array(
 		entry->strarray_value = NULL;
 	}
 
-	success = TRUE;
+	return TRUE;
 
-done:
-	return success;
+fail:
+	while (count > 0) {
+		count--;
+		os_free(buffer[count]);
+	}
+	os_free(buffer);
+	return FALSE;
 }
 
 
@@ -1114,6 +1116,8 @@ void wpa_dbus_dict_entry_clear(struct wpa_dbus_dict_entry *entry)
 			os_free(entry->bytearray_value);
 			break;
 		case DBUS_TYPE_STRING:
+			if (!entry->strarray_value)
+				break;
 			for (i = 0; i < entry->array_len; i++)
 				os_free(entry->strarray_value[i]);
 			os_free(entry->strarray_value);

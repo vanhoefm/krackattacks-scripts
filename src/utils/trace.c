@@ -160,7 +160,7 @@ static void wpa_trace_bfd_addr(void *pc)
 	if (abfd == NULL)
 		return;
 
-	data.pc = (bfd_vma) pc;
+	data.pc = (bfd_hostptr_t) pc;
 	data.found = FALSE;
 	bfd_map_over_sections(abfd, find_addr_sect, &data);
 
@@ -201,7 +201,7 @@ static const char * wpa_trace_bfd_addr2func(void *pc)
 	if (abfd == NULL)
 		return NULL;
 
-	data.pc = (bfd_vma) pc;
+	data.pc = (bfd_hostptr_t) pc;
 	data.found = FALSE;
 	bfd_map_over_sections(abfd, find_addr_sect, &data);
 

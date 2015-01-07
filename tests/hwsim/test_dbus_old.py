@@ -1,5 +1,5 @@
 # wpa_supplicant D-Bus old interface tests
-# Copyright (c) 2014, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2014-2015, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -7,6 +7,12 @@
 import gobject
 import logging
 logger = logging.getLogger()
+
+try:
+    import dbus
+    dbus_imported = True
+except ImportError:
+    dbus_imported = False
 
 import hostapd
 from test_dbus import TestDbus, start_ap
@@ -18,8 +24,10 @@ WPAS_DBUS_OLD_BSSID = "fi.epitest.hostap.WPASupplicant.BSSID"
 WPAS_DBUS_OLD_NETWORK = "fi.epitest.hostap.WPASupplicant.Network"
 
 def prepare_dbus(dev):
+    if not dbus_imported:
+        logger.info("No dbus module available")
+        raise Exception("hwsim-SKIP")
     try:
-        import dbus
         from dbus.mainloop.glib import DBusGMainLoop
         dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
         bus = dbus.SystemBus()
@@ -27,7 +35,7 @@ def prepare_dbus(dev):
         wpas = dbus.Interface(wpas_obj, WPAS_DBUS_OLD_SERVICE)
         path = wpas.getInterface(dev.ifname)
         if_obj = bus.get_object(WPAS_DBUS_OLD_SERVICE, path)
-        return (dbus,bus,wpas_obj,path,if_obj)
+        return (bus,wpas_obj,path,if_obj)
     except Exception, e:
         logger.info("No D-Bus support available: " + str(e))
         raise Exception("hwsim-SKIP")
@@ -54,7 +62,7 @@ class TestDbusOldWps(TestDbus):
 
 def test_dbus_old(dev, apdev):
     """The old D-Bus interface"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
 
     res = if_obj.capabilities(dbus_interface=WPAS_DBUS_OLD_IFACE)
     logger.debug("capabilities(): " + str(res))
@@ -102,7 +110,7 @@ def test_dbus_old(dev, apdev):
 
 def test_dbus_old_scan(dev, apdev):
     """The old D-Bus interface - scanning"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
 
     hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
 
@@ -180,7 +188,7 @@ def test_dbus_old_scan(dev, apdev):
 
 def test_dbus_old_debug(dev, apdev):
     """The old D-Bus interface - debug"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     wpas = dbus.Interface(wpas_obj, WPAS_DBUS_OLD_SERVICE)
 
     try:
@@ -202,7 +210,7 @@ def test_dbus_old_debug(dev, apdev):
 
 def test_dbus_old_smartcard(dev, apdev):
     """The old D-Bus interface - smartcard"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
 
     params = dbus.Dictionary(signature='sv')
     if_obj.setSmartcardModules(params, dbus_interface=WPAS_DBUS_OLD_IFACE)
@@ -232,7 +240,7 @@ def test_dbus_old_smartcard(dev, apdev):
 
 def test_dbus_old_interface(dev, apdev):
     """The old D-Bus interface - interface get/add/remove"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     wpas = dbus.Interface(wpas_obj, WPAS_DBUS_OLD_SERVICE)
 
     tests = [ (123, "InvalidOptions"),
@@ -290,7 +298,7 @@ def test_dbus_old_interface(dev, apdev):
 
 def test_dbus_old_blob(dev, apdev):
     """The old D-Bus interface - blob operations"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
 
     param1 = dbus.Dictionary({ 'blob3': 123 }, signature='sv')
     param2 = dbus.Dictionary({ 'blob3': "foo" })
@@ -330,7 +338,7 @@ def test_dbus_old_blob(dev, apdev):
 
 def test_dbus_old_connect(dev, apdev):
     """The old D-Bus interface - add a network and connect"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
 
     ssid = "test-wpa2-psk"
     passphrase = 'qwertyuiop'
@@ -486,7 +494,7 @@ def test_dbus_old_connect(dev, apdev):
 
 def test_dbus_old_connect_eap(dev, apdev):
     """The old D-Bus interface - add an EAP network and connect"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
 
     ssid = "test-wpa2-eap"
     params = hostapd.wpa2_eap_params(ssid=ssid)
@@ -553,7 +561,7 @@ def test_dbus_old_wps_pbc(dev, apdev):
         dev[0].request("SET wps_cred_processing 0")
 
 def _test_dbus_old_wps_pbc(dev, apdev):
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
 
     hapd = start_ap(apdev[0])
     hapd.request("WPS_PBC")
@@ -620,7 +628,7 @@ def test_dbus_old_wps_pin(dev, apdev):
         dev[0].request("SET wps_cred_processing 0")
 
 def _test_dbus_old_wps_pin(dev, apdev):
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
 
     hapd = start_ap(apdev[0])
     hapd.request("WPS_PIN any 12345670")
@@ -675,7 +683,7 @@ def test_dbus_old_wps_reg(dev, apdev):
         dev[0].request("SET wps_cred_processing 0")
 
 def _test_dbus_old_wps_reg(dev, apdev):
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
 
     hapd = start_ap(apdev[0])
     bssid = apdev[0]['bssid']

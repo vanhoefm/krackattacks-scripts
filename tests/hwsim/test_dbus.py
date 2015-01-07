@@ -1,5 +1,5 @@
 # wpa_supplicant D-Bus interface tests
-# Copyright (c) 2014, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2014-2015, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -10,6 +10,12 @@ import logging
 logger = logging.getLogger()
 import subprocess
 import time
+
+try:
+    import dbus
+    dbus_imported = True
+except ImportError:
+    dbus_imported = False
 
 import hostapd
 from wpasupplicant import WpaSupplicant
@@ -27,8 +33,10 @@ WPAS_DBUS_GROUP = "fi.w1.wpa_supplicant1.Group"
 WPAS_DBUS_PERSISTENT_GROUP = "fi.w1.wpa_supplicant1.PersistentGroup"
 
 def prepare_dbus(dev):
+    if not dbus_imported:
+        logger.info("No dbus module available")
+        raise Exception("hwsim-SKIP")
     try:
-        import dbus
         from dbus.mainloop.glib import DBusGMainLoop
         dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
         bus = dbus.SystemBus()
@@ -36,7 +44,7 @@ def prepare_dbus(dev):
         wpas = dbus.Interface(wpas_obj, WPAS_DBUS_SERVICE)
         path = wpas.GetInterface(dev.ifname)
         if_obj = bus.get_object(WPAS_DBUS_SERVICE, path)
-        return (dbus,bus,wpas_obj,path,if_obj)
+        return (bus,wpas_obj,path,if_obj)
     except Exception, e:
         logger.info("No D-Bus support available: " + str(e))
         raise Exception("hwsim-SKIP")
@@ -72,7 +80,7 @@ def start_ap(ap):
 
 def test_dbus_getall(dev, apdev):
     """D-Bus GetAll"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
 
     props = wpas_obj.GetAll(WPAS_DBUS_SERVICE,
                             dbus_interface=dbus.PROPERTIES_IFACE)
@@ -145,7 +153,7 @@ def dbus_set(dbus, wpas_obj, prop, val):
 
 def test_dbus_properties(dev, apdev):
     """D-Bus Get/Set fi.w1.wpa_supplicant1 properties"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
 
     dbus_get(dbus, wpas_obj, "DebugLevel", expect="msgdump")
     dbus_set(dbus, wpas_obj, "DebugLevel", "debug")
@@ -268,7 +276,7 @@ def test_dbus_properties(dev, apdev):
 
 def test_dbus_invalid_method(dev, apdev):
     """D-Bus invalid method"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     wps = dbus.Interface(if_obj, WPAS_DBUS_IFACE_WPS)
 
     try:
@@ -296,7 +304,7 @@ def test_dbus_get_set_wps(dev, apdev):
         dev[0].request("SET config_methods display keypad virtual_display nfc_interface")
 
 def _test_dbus_get_set_wps(dev, apdev):
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
 
     if_obj.Get(WPAS_DBUS_IFACE_WPS, "ConfigMethods",
                dbus_interface=dbus.PROPERTIES_IFACE)
@@ -388,7 +396,7 @@ def _test_dbus_get_set_wps(dev, apdev):
 
 def test_dbus_wps_invalid(dev, apdev):
     """D-Bus invaldi WPS operation"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     wps = dbus.Interface(if_obj, WPAS_DBUS_IFACE_WPS)
 
     failures = [ {'Role': 'foo', 'Type': 'pbc'},
@@ -424,7 +432,7 @@ def test_dbus_wps_pbc(dev, apdev):
         dev[0].request("SET wps_cred_processing 0")
 
 def _test_dbus_wps_pbc(dev, apdev):
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     wps = dbus.Interface(if_obj, WPAS_DBUS_IFACE_WPS)
 
     hapd = start_ap(apdev[0])
@@ -487,7 +495,7 @@ def test_dbus_wps_pin(dev, apdev):
         dev[0].request("SET wps_cred_processing 0")
 
 def _test_dbus_wps_pin(dev, apdev):
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     wps = dbus.Interface(if_obj, WPAS_DBUS_IFACE_WPS)
 
     hapd = start_ap(apdev[0])
@@ -548,7 +556,7 @@ def test_dbus_wps_pin2(dev, apdev):
         dev[0].request("SET wps_cred_processing 0")
 
 def _test_dbus_wps_pin2(dev, apdev):
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     wps = dbus.Interface(if_obj, WPAS_DBUS_IFACE_WPS)
 
     hapd = start_ap(apdev[0])
@@ -611,7 +619,7 @@ def test_dbus_wps_pin_m2d(dev, apdev):
         dev[0].request("SET wps_cred_processing 0")
 
 def _test_dbus_wps_pin_m2d(dev, apdev):
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     wps = dbus.Interface(if_obj, WPAS_DBUS_IFACE_WPS)
 
     hapd = start_ap(apdev[0])
@@ -674,7 +682,7 @@ def test_dbus_wps_reg(dev, apdev):
         dev[0].request("SET wps_cred_processing 0")
 
 def _test_dbus_wps_reg(dev, apdev):
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     wps = dbus.Interface(if_obj, WPAS_DBUS_IFACE_WPS)
 
     hapd = start_ap(apdev[0])
@@ -723,7 +731,7 @@ def _test_dbus_wps_reg(dev, apdev):
 
 def test_dbus_scan_invalid(dev, apdev):
     """D-Bus invalid scan method"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     iface = dbus.Interface(if_obj, WPAS_DBUS_IFACE)
 
     tests = [ ({}, "InvalidArgs"),
@@ -771,7 +779,7 @@ def test_dbus_scan_invalid(dev, apdev):
 
 def test_dbus_scan(dev, apdev):
     """D-Bus scan and related signals"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     iface = dbus.Interface(if_obj, WPAS_DBUS_IFACE)
 
     hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
@@ -845,7 +853,7 @@ def test_dbus_scan(dev, apdev):
 
 def test_dbus_scan_busy(dev, apdev):
     """D-Bus scan trigger rejection when busy with previous scan"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     iface = dbus.Interface(if_obj, WPAS_DBUS_IFACE)
 
     if "OK" not in dev[0].request("SCAN freq=2412-2462"):
@@ -867,7 +875,7 @@ def test_dbus_scan_busy(dev, apdev):
 
 def test_dbus_connect(dev, apdev):
     """D-Bus AddNetwork and connect"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     iface = dbus.Interface(if_obj, WPAS_DBUS_IFACE)
 
     ssid = "test-wpa2-psk"
@@ -965,7 +973,7 @@ def test_dbus_connect(dev, apdev):
 
 def test_dbus_while_not_connected(dev, apdev):
     """D-Bus invalid operations while not connected"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     iface = dbus.Interface(if_obj, WPAS_DBUS_IFACE)
 
     try:
@@ -984,7 +992,7 @@ def test_dbus_while_not_connected(dev, apdev):
 
 def test_dbus_connect_eap(dev, apdev):
     """D-Bus AddNetwork and connect to EAP network"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     iface = dbus.Interface(if_obj, WPAS_DBUS_IFACE)
 
     ssid = "ieee8021x-open"
@@ -1069,7 +1077,7 @@ def test_dbus_connect_eap(dev, apdev):
 
 def test_dbus_network(dev, apdev):
     """D-Bus AddNetwork/RemoveNetwork parameters and error cases"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     iface = dbus.Interface(if_obj, WPAS_DBUS_IFACE)
 
     args = dbus.Dictionary({ 'ssid': "foo",
@@ -1163,7 +1171,7 @@ def test_dbus_network(dev, apdev):
 
 def test_dbus_interface(dev, apdev):
     """D-Bus CreateInterface/GetInterface/RemoveInterface parameters and error cases"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     wpas = dbus.Interface(wpas_obj, WPAS_DBUS_SERVICE)
 
     params = dbus.Dictionary({ 'Ifname': 'lo', 'Driver': 'none' },
@@ -1221,7 +1229,7 @@ def test_dbus_interface(dev, apdev):
 
 def test_dbus_blob(dev, apdev):
     """D-Bus AddNetwork/RemoveNetwork parameters and error cases"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     iface = dbus.Interface(if_obj, WPAS_DBUS_IFACE)
 
     blob = dbus.ByteArray("\x01\x02\x03")
@@ -1296,7 +1304,7 @@ def test_dbus_blob(dev, apdev):
 
 def test_dbus_autoscan(dev, apdev):
     """D-Bus Autoscan()"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     iface = dbus.Interface(if_obj, WPAS_DBUS_IFACE)
 
     iface.AutoScan("foo")
@@ -1306,7 +1314,7 @@ def test_dbus_autoscan(dev, apdev):
 
 def test_dbus_tdls_invalid(dev, apdev):
     """D-Bus invalid TDLS operations"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     iface = dbus.Interface(if_obj, WPAS_DBUS_IFACE)
 
     hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
@@ -1347,7 +1355,7 @@ def test_dbus_tdls_invalid(dev, apdev):
 
 def test_dbus_tdls(dev, apdev):
     """D-Bus TDLS"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     iface = dbus.Interface(if_obj, WPAS_DBUS_IFACE)
 
     hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
@@ -1414,7 +1422,7 @@ def test_dbus_tdls(dev, apdev):
 
 def test_dbus_pkcs11(dev, apdev):
     """D-Bus SetPKCS11EngineAndModulePath()"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     iface = dbus.Interface(if_obj, WPAS_DBUS_IFACE)
 
     try:
@@ -1457,7 +1465,7 @@ def test_dbus_apscan(dev, apdev):
         dev[0].request("AP_SCAN 1")
 
 def _test_dbus_apscan(dev, apdev):
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
 
     res = if_obj.Get(WPAS_DBUS_IFACE, "ApScan",
                      dbus_interface=dbus.PROPERTIES_IFACE)
@@ -1493,7 +1501,7 @@ def _test_dbus_apscan(dev, apdev):
 
 def test_dbus_fastreauth(dev, apdev):
     """D-Bus Get/Set FastReauth"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
 
     res = if_obj.Get(WPAS_DBUS_IFACE, "FastReauth",
                      dbus_interface=dbus.PROPERTIES_IFACE)
@@ -1521,7 +1529,7 @@ def test_dbus_fastreauth(dev, apdev):
 
 def test_dbus_bss_expire(dev, apdev):
     """D-Bus Get/Set BSSExpireAge and BSSExpireCount"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
 
     if_obj.Set(WPAS_DBUS_IFACE, "BSSExpireAge", dbus.UInt32(179),
                dbus_interface=dbus.PROPERTIES_IFACE)
@@ -1583,7 +1591,7 @@ def test_dbus_country(dev, apdev):
         subprocess.call(['iw', 'reg', 'set', '00'])
 
 def _test_dbus_country(dev, apdev):
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
 
     # work around issues with possible pending regdom event from the end of
     # the previous test case
@@ -1636,7 +1644,7 @@ def test_dbus_scan_interval(dev, apdev):
         dev[0].request("SCAN_INTERVAL 5")
 
 def _test_dbus_scan_interval(dev, apdev):
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
 
     if_obj.Set(WPAS_DBUS_IFACE, "ScanInterval", dbus.Int32(3),
                dbus_interface=dbus.PROPERTIES_IFACE)
@@ -1666,7 +1674,7 @@ def _test_dbus_scan_interval(dev, apdev):
 
 def test_dbus_probe_req_reporting(dev, apdev):
     """D-Bus Probe Request reporting"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     iface = dbus.Interface(if_obj, WPAS_DBUS_IFACE)
 
     dev[0].p2p_start_go(freq=2412)
@@ -1721,7 +1729,7 @@ def test_dbus_probe_req_reporting(dev, apdev):
 
 def test_dbus_p2p_invalid(dev, apdev):
     """D-Bus invalid P2P operations"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     p2p = dbus.Interface(if_obj, WPAS_DBUS_IFACE_P2PDEVICE)
 
     try:
@@ -1930,7 +1938,7 @@ def test_dbus_p2p_invalid(dev, apdev):
 
 def test_dbus_p2p_discovery(dev, apdev):
     """D-Bus P2P discovery"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     p2p = dbus.Interface(if_obj, WPAS_DBUS_IFACE_P2PDEVICE)
 
     addr0 = dev[0].p2p_dev_addr()
@@ -2080,7 +2088,7 @@ def test_dbus_p2p_discovery(dev, apdev):
 
 def test_dbus_p2p_service_discovery(dev, apdev):
     """D-Bus P2P service discovery"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     p2p = dbus.Interface(if_obj, WPAS_DBUS_IFACE_P2PDEVICE)
 
     addr0 = dev[0].p2p_dev_addr()
@@ -2229,7 +2237,7 @@ def test_dbus_p2p_service_discovery(dev, apdev):
 
 def test_dbus_p2p_service_discovery_query(dev, apdev):
     """D-Bus P2P service discovery query"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     p2p = dbus.Interface(if_obj, WPAS_DBUS_IFACE_P2PDEVICE)
 
     addr0 = dev[0].p2p_dev_addr()
@@ -2287,7 +2295,7 @@ def test_dbus_p2p_service_discovery_external(dev, apdev):
         dev[0].request("P2P_SERV_DISC_EXTERNAL 0")
 
 def _test_dbus_p2p_service_discovery_external(dev, apdev):
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     p2p = dbus.Interface(if_obj, WPAS_DBUS_IFACE_P2PDEVICE)
 
     addr0 = dev[0].p2p_dev_addr()
@@ -2355,7 +2363,7 @@ def _test_dbus_p2p_service_discovery_external(dev, apdev):
 
 def test_dbus_p2p_autogo(dev, apdev):
     """D-Bus P2P autonomous GO"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     p2p = dbus.Interface(if_obj, WPAS_DBUS_IFACE_P2PDEVICE)
     wps = dbus.Interface(if_obj, WPAS_DBUS_IFACE_WPS)
 
@@ -2570,7 +2578,7 @@ def test_dbus_p2p_autogo(dev, apdev):
 
 def test_dbus_p2p_autogo_pbc(dev, apdev):
     """D-Bus P2P autonomous GO and PBC"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     p2p = dbus.Interface(if_obj, WPAS_DBUS_IFACE_P2PDEVICE)
     wps = dbus.Interface(if_obj, WPAS_DBUS_IFACE_WPS)
 
@@ -2657,7 +2665,7 @@ def test_dbus_p2p_autogo_pbc(dev, apdev):
 
 def test_dbus_p2p_autogo_legacy(dev, apdev):
     """D-Bus P2P autonomous GO and legacy STA"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     p2p = dbus.Interface(if_obj, WPAS_DBUS_IFACE_P2PDEVICE)
     wps = dbus.Interface(if_obj, WPAS_DBUS_IFACE_WPS)
 
@@ -2717,7 +2725,7 @@ def test_dbus_p2p_autogo_legacy(dev, apdev):
 
 def test_dbus_p2p_join(dev, apdev):
     """D-Bus P2P join an autonomous GO"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     p2p = dbus.Interface(if_obj, WPAS_DBUS_IFACE_P2PDEVICE)
 
     addr1 = dev[1].p2p_dev_addr()
@@ -2842,7 +2850,7 @@ def test_dbus_p2p_config(dev, apdev):
         dev[0].request("P2P_SET ssid_postfix ")
 
 def _test_dbus_p2p_config(dev, apdev):
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     p2p = dbus.Interface(if_obj, WPAS_DBUS_IFACE_P2PDEVICE)
 
     res = if_obj.Get(WPAS_DBUS_IFACE_P2PDEVICE, "P2PDeviceConfig",
@@ -2932,7 +2940,7 @@ def _test_dbus_p2p_config(dev, apdev):
 
 def test_dbus_p2p_persistent(dev, apdev):
     """D-Bus P2P persistent group"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     p2p = dbus.Interface(if_obj, WPAS_DBUS_IFACE_P2PDEVICE)
 
     class TestDbusP2p(TestDbus):
@@ -3022,7 +3030,7 @@ def test_dbus_p2p_persistent(dev, apdev):
 
 def test_dbus_p2p_reinvoke_persistent(dev, apdev):
     """D-Bus P2P reinvoke persistent group"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     p2p = dbus.Interface(if_obj, WPAS_DBUS_IFACE_P2PDEVICE)
     wps = dbus.Interface(if_obj, WPAS_DBUS_IFACE_WPS)
 
@@ -3141,7 +3149,7 @@ def test_dbus_p2p_reinvoke_persistent(dev, apdev):
 
 def test_dbus_p2p_go_neg_rx(dev, apdev):
     """D-Bus P2P GO Negotiation receive"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     p2p = dbus.Interface(if_obj, WPAS_DBUS_IFACE_P2PDEVICE)
     addr0 = dev[0].p2p_dev_addr()
 
@@ -3220,7 +3228,7 @@ def test_dbus_p2p_go_neg_rx(dev, apdev):
 
 def test_dbus_p2p_go_neg_auth(dev, apdev):
     """D-Bus P2P GO Negotiation authorized"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     p2p = dbus.Interface(if_obj, WPAS_DBUS_IFACE_P2PDEVICE)
     addr0 = dev[0].p2p_dev_addr()
     dev[1].p2p_listen()
@@ -3316,7 +3324,7 @@ def test_dbus_p2p_go_neg_auth(dev, apdev):
 
 def test_dbus_p2p_go_neg_init(dev, apdev):
     """D-Bus P2P GO Negotiation initiation"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     p2p = dbus.Interface(if_obj, WPAS_DBUS_IFACE_P2PDEVICE)
     addr0 = dev[0].p2p_dev_addr()
     dev[1].p2p_listen()
@@ -3385,7 +3393,7 @@ def test_dbus_p2p_go_neg_init(dev, apdev):
 
 def test_dbus_p2p_wps_failure(dev, apdev):
     """D-Bus P2P WPS failure"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     p2p = dbus.Interface(if_obj, WPAS_DBUS_IFACE_P2PDEVICE)
     addr0 = dev[0].p2p_dev_addr()
 
@@ -3450,7 +3458,7 @@ def test_dbus_p2p_wps_failure(dev, apdev):
 
 def test_dbus_p2p_two_groups(dev, apdev):
     """D-Bus P2P with two concurrent groups"""
-    (dbus,bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     p2p = dbus.Interface(if_obj, WPAS_DBUS_IFACE_P2PDEVICE)
 
     dev[0].request("SET p2p_no_group_iface 0")

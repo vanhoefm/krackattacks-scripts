@@ -328,6 +328,10 @@ static void handle_auth_ft_finish(void *ctx, const u8 *dst, const u8 *bssid,
 
 #ifdef CONFIG_SAE
 
+#define dot11RSNASAERetransPeriod 40	/* msec */
+#define dot11RSNASAESync 5		/* attempts */
+
+
 static struct wpabuf * auth_build_sae_commit(struct hostapd_data *hapd,
 					     struct sta_info *sta, int update)
 {
@@ -483,6 +487,66 @@ static struct wpabuf * auth_build_token_req(struct hostapd_data *hapd,
 }
 
 
+static int sae_check_big_sync(struct sta_info *sta)
+{
+	if (sta->sae->sync > dot11RSNASAESync) {
+		sta->sae->state = SAE_NOTHING;
+		sta->sae->sync = 0;
+		return -1;
+	}
+	return 0;
+}
+
+
+static void auth_sae_retransmit_timer(void *eloop_ctx, void *eloop_data)
+{
+	struct hostapd_data *hapd = eloop_ctx;
+	struct sta_info *sta = eloop_data;
+	int ret;
+
+	if (sae_check_big_sync(sta))
+		return;
+	sta->sae->sync++;
+
+	switch (sta->sae->state) {
+	case SAE_COMMITTED:
+		ret = auth_sae_send_commit(hapd, sta, hapd->own_addr, 0);
+		eloop_register_timeout(0, dot11RSNASAERetransPeriod * 1000,
+				       auth_sae_retransmit_timer, hapd, sta);
+		break;
+	case SAE_CONFIRMED:
+		ret = auth_sae_send_confirm(hapd, sta, hapd->own_addr);
+		eloop_register_timeout(0, dot11RSNASAERetransPeriod * 1000,
+				       auth_sae_retransmit_timer, hapd, sta);
+		break;
+	default:
+		ret = -1;
+		break;
+	}
+
+	if (ret != WLAN_STATUS_SUCCESS)
+		wpa_printf(MSG_INFO, "SAE: Failed to retransmit: ret=%d", ret);
+}
+
+
+void sae_clear_retransmit_timer(struct hostapd_data *hapd, struct sta_info *sta)
+{
+	eloop_cancel_timeout(auth_sae_retransmit_timer, hapd, sta);
+}
+
+
+static void sae_set_retransmit_timer(struct hostapd_data *hapd,
+				     struct sta_info *sta)
+{
+	if (!(hapd->conf->mesh & MESH_ENABLED))
+		return;
+
+	eloop_cancel_timeout(auth_sae_retransmit_timer, hapd, sta);
+	eloop_register_timeout(0, dot11RSNASAERetransPeriod * 1000,
+			       auth_sae_retransmit_timer, hapd, sta);
+}
+
+
 static int sae_sm_step(struct hostapd_data *hapd, struct sta_info *sta,
 		       const u8 *bssid, u8 auth_transaction)
 {
@@ -530,6 +594,8 @@ static int sae_sm_step(struct hostapd_data *hapd, struct sta_info *sta,
 				 * when receiving Confirm from STA.
 				 */
 			}
+			sta->sae->sync = 0;
+			sae_set_retransmit_timer(hapd, sta);
 		} else {
 			hostapd_logger(hapd, sta->addr,
 				       HOSTAPD_MODULE_IEEE80211,
@@ -538,6 +604,7 @@ static int sae_sm_step(struct hostapd_data *hapd, struct sta_info *sta,
 		}
 		break;
 	case SAE_COMMITTED:
+		sae_clear_retransmit_timer(hapd, sta);
 		if (auth_transaction == 1) {
 			if (sae_process_commit(sta->sae) < 0)
 				return WLAN_STATUS_UNSPECIFIED_FAILURE;
@@ -546,14 +613,22 @@ static int sae_sm_step(struct hostapd_data *hapd, struct sta_info *sta,
 			if (ret)
 				return ret;
 			sta->sae->state = SAE_CONFIRMED;
+			sta->sae->sync = 0;
+			sae_set_retransmit_timer(hapd, sta);
 		} else if (hapd->conf->mesh & MESH_ENABLED) {
 			/*
 			 * In mesh case, follow SAE finite state machine and
-			 * send Commit now.
+			 * send Commit now, if sync count allows.
 			 */
+			if (sae_check_big_sync(sta))
+				return WLAN_STATUS_SUCCESS;
+			sta->sae->sync++;
+
 			ret = auth_sae_send_commit(hapd, sta, bssid, 1);
 			if (ret)
 				return ret;
+
+			sae_set_retransmit_timer(hapd, sta);
 		} else {
 			/*
 			 * For instructure BSS, send the postponed Confirm from
@@ -575,7 +650,12 @@ static int sae_sm_step(struct hostapd_data *hapd, struct sta_info *sta,
 		}
 		break;
 	case SAE_CONFIRMED:
+		sae_clear_retransmit_timer(hapd, sta);
 		if (auth_transaction == 1) {
+			if (sae_check_big_sync(sta))
+				return WLAN_STATUS_SUCCESS;
+			sta->sae->sync++;
+
 			ret = auth_sae_send_commit(hapd, sta, bssid, 1);
 			if (ret)
 				return ret;
@@ -586,6 +666,8 @@ static int sae_sm_step(struct hostapd_data *hapd, struct sta_info *sta,
 			ret = auth_sae_send_confirm(hapd, sta, bssid);
 			if (ret)
 				return ret;
+
+			sae_set_retransmit_timer(hapd, sta);
 		} else {
 			sta->flags |= WLAN_STA_AUTH;
 			sta->auth_alg = WLAN_AUTH_SAE;
@@ -603,6 +685,10 @@ static int sae_sm_step(struct hostapd_data *hapd, struct sta_info *sta,
 				   MAC2STR(sta->addr));
 			ap_free_sta(hapd, sta);
 		} else {
+			if (sae_check_big_sync(sta))
+				return WLAN_STATUS_SUCCESS;
+			sta->sae->sync++;
+
 			ret = auth_sae_send_confirm(hapd, sta, bssid);
 			sae_clear_temp_data(sta->sae);
 			if (ret)
@@ -632,6 +718,7 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 		if (sta->sae == NULL)
 			return;
 		sta->sae->state = SAE_NOTHING;
+		sta->sae->sync = 0;
 	}
 
 	if (auth_transaction == 1) {
@@ -685,6 +772,8 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 				return;
 			}
 			sta->sae->state = SAE_COMMITTED;
+			sta->sae->sync = 0;
+			sae_set_retransmit_timer(hapd, sta);
 			return;
 		}
 
@@ -782,6 +871,8 @@ int auth_sae_init_committed(struct hostapd_data *hapd, struct sta_info *sta)
 		return -1;
 
 	sta->sae->state = SAE_COMMITTED;
+	sta->sae->sync = 0;
+	sae_set_retransmit_timer(hapd, sta);
 
 	return 0;
 }

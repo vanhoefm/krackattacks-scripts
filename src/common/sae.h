@@ -44,6 +44,7 @@ struct sae_data {
 	u8 pmk[SAE_PMK_LEN];
 	struct crypto_bignum *peer_commit_scalar;
 	int group;
+	int sync;
 	struct sae_temporary_data *tmp;
 };
 

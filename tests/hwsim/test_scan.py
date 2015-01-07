@@ -707,6 +707,9 @@ def _test_scan_random_mac(dev, apdev, params):
     for args in tests:
         dev[0].request("MAC_RAND_SCAN " + args)
         dev[0].scan_for_bss(bssid, freq=2412, force_scan=True)
+    # wait a bit to make it more likely for wlantest sniffer to have captured
+    # and written the results into a file that we can process here
+    time.sleep(1)
 
     try:
         arg = [ "tshark",

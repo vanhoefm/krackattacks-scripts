@@ -20,6 +20,7 @@ import StringIO
 import hwsim_utils
 import hostapd
 from wpasupplicant import WpaSupplicant
+from utils import HwsimSkip
 
 def test_ap_wps_init(dev, apdev):
     """Initial AP configuration with first WPS Enrollee"""
@@ -1569,8 +1570,7 @@ def test_ap_wps_auto_setup_with_config_file(dev, apdev):
 def test_ap_wps_pbc_timeout(dev, apdev, params):
     """wpa_supplicant PBC walk time [long]"""
     if not params['long']:
-        logger.info("Skip test case with long duration due to --long not specified")
-        return "skip"
+        raise HwsimSkip("Skip test case with long duration due to --long not specified")
     ssid = "test-wps"
     hostapd.add_ap(apdev[0]['ifname'],
                    { "ssid": ssid, "eap_server": "1", "wps_state": "1" })

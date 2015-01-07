@@ -11,8 +11,14 @@ import os
 import time
 
 import hostapd
+from utils import HwsimSkip
 from test_ap_eap import int_eap_server_params
 from test_ap_psk import find_wpas_process, read_process_memory, verify_not_present, get_key_locations
+
+def check_erp_capa(dev):
+    capab = dev.get_capability("erp")
+    if not capab or 'ERP' not in capab:
+        raise HwsimSkip("ERP not supported in the build")
 
 def test_erp_initiate_reauth_start(dev, apdev):
     """Authenticator sending EAP-Initiate/Re-auth-Start, but ERP disabled on peer"""
@@ -43,9 +49,7 @@ def test_erp_enabled_on_server(dev, apdev):
 
 def test_erp(dev, apdev):
     """ERP enabled on server and peer"""
-    capab = dev[0].get_capability("erp")
-    if not capab or 'ERP' not in capab:
-        return "skip"
+    check_erp_capa(dev[0])
     params = int_eap_server_params()
     params['erp_send_reauth_start'] = '1'
     params['erp_domain'] = 'example.com'
@@ -71,9 +75,7 @@ def test_erp(dev, apdev):
 
 def test_erp_server_no_match(dev, apdev):
     """ERP enabled on server and peer, but server has no key match"""
-    capab = dev[0].get_capability("erp")
-    if not capab or 'ERP' not in capab:
-        return "skip"
+    check_erp_capa(dev[0])
     params = int_eap_server_params()
     params['erp_send_reauth_start'] = '1'
     params['erp_domain'] = 'example.com'
@@ -125,9 +127,7 @@ def start_erp_as(apdev):
 
 def test_erp_radius(dev, apdev):
     """ERP enabled on RADIUS server and peer"""
-    capab = dev[0].get_capability("erp")
-    if not capab or 'ERP' not in capab:
-        return "skip"
+    check_erp_capa(dev[0])
     start_erp_as(apdev[1])
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     params['auth_server_port'] = "18128"
@@ -175,9 +175,7 @@ def erp_test(dev, hapd, **kwargs):
 
 def test_erp_radius_eap_methods(dev, apdev):
     """ERP enabled on RADIUS server and peer"""
-    capab = dev[0].get_capability("erp")
-    if not capab or 'ERP' not in capab:
-        return "skip"
+    check_erp_capa(dev[0])
     start_erp_as(apdev[1])
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     params['auth_server_port'] = "18128"
@@ -222,9 +220,7 @@ def test_erp_radius_eap_methods(dev, apdev):
 
 def test_erp_key_lifetime_in_memory(dev, apdev, params):
     """ERP and key lifetime in memory"""
-    capab = dev[0].get_capability("erp")
-    if not capab or 'ERP' not in capab:
-        return "skip"
+    check_erp_capa(dev[0])
     p = int_eap_server_params()
     p['erp_send_reauth_start'] = '1'
     p['erp_domain'] = 'example.com'
@@ -298,11 +294,9 @@ def test_erp_key_lifetime_in_memory(dev, apdev, params):
     get_key_locations(buf, rRK, "rRK")
     get_key_locations(buf, rIK, "rIK")
     if password not in buf:
-        print("Password not found while associated")
-        return "skip"
+        raise HwsimSkip("Password not found while associated")
     if pmk not in buf:
-        print("PMK not found while associated")
-        return "skip"
+        raise HwsimSkip("PMK not found while associated")
     if kck not in buf:
         raise Exception("KCK not found while associated")
     if kek not in buf:

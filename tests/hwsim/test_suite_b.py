@@ -9,11 +9,12 @@ import logging
 logger = logging.getLogger()
 
 import hostapd
+from utils import HwsimSkip
 
 def test_suite_b(dev, apdev):
     """WPA2-PSK/GCMP connection"""
     if "GCMP" not in dev[0].get_capability("pairwise"):
-        return "skip"
+        raise HwsimSkip("GCMP not supported")
     params = hostapd.wpa2_eap_params(ssid="test-suite-b")
     params["wpa_key_mgmt"] = "WPA-EAP-SUITE-B"
     params['rsn_pairwise'] = "GCMP"

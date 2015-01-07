@@ -433,15 +433,12 @@ def main():
                     params = {}
                     params['logdir'] = args.logdir
                     params['long'] = args.long
-                    res = t(dev, apdev, params)
+                    t(dev, apdev, params)
                 elif t.func_code.co_argcount > 1:
-                    res = t(dev, apdev)
+                    t(dev, apdev)
                 else:
-                    res = t(dev)
-                if res == "skip":
-                    result = "SKIP"
-                else:
-                    result = "PASS"
+                    t(dev)
+                result = "PASS"
             except HwsimSkip, e:
                 logger.info("Skip test case: %s" % e)
                 result = "SKIP"

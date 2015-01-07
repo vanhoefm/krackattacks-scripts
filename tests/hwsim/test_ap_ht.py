@@ -11,6 +11,7 @@ import struct
 import subprocess
 
 import hostapd
+from utils import HwsimSkip
 import hwsim_utils
 from test_ap_csa import csa_supported
 
@@ -630,8 +631,7 @@ def test_ap_ht_40mhz_intolerant_ap(dev, apdev):
 
 def test_ap_ht40_csa(dev, apdev):
     """HT with 40 MHz channel width and CSA"""
-    if not csa_supported(dev[0]):
-        return "skip"
+    csa_supported(dev[0])
     try:
         hapd = None
         params = { "ssid": "ht",
@@ -675,8 +675,7 @@ def test_ap_ht40_csa(dev, apdev):
 
 def test_ap_ht40_csa2(dev, apdev):
     """HT with 40 MHz channel width and CSA"""
-    if not csa_supported(dev[0]):
-        return "skip"
+    csa_supported(dev[0])
     try:
         hapd = None
         params = { "ssid": "ht",
@@ -720,8 +719,7 @@ def test_ap_ht40_csa2(dev, apdev):
 
 def test_ap_ht40_csa3(dev, apdev):
     """HT with 40 MHz channel width and CSA"""
-    if not csa_supported(dev[0]):
-        return "skip"
+    csa_supported(dev[0])
     try:
         hapd = None
         params = { "ssid": "ht",
@@ -769,8 +767,7 @@ def test_ap_ht_smps(dev, apdev):
     try:
         hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     except:
-        logger.info("Assume mac80211_hwsim was not recent enough to support SMPS")
-        return "skip"
+        raise HwsimSkip("Assume mac80211_hwsim was not recent enough to support SMPS")
     params = { "ssid": "ht2", "ht_capab": "[SMPS-DYNAMIC]" }
     hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
 

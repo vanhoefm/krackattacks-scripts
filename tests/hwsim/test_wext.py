@@ -1,5 +1,5 @@
 # Deprecated WEXT driver interface in wpa_supplicant
-# Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2015, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -11,26 +11,23 @@ import os
 import hostapd
 import hwsim_utils
 from wpasupplicant import WpaSupplicant
+from utils import HwsimSkip
 from test_rfkill import get_rfkill
 
 def get_wext_interface():
     if not os.path.exists("/proc/net/wireless"):
-        logger.info("WEXT support not included in the kernel")
-        return
+        raise HwsimSkip("WEXT support not included in the kernel")
 
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     try:
         wpas.interface_add("wlan5", driver="wext")
     except Exception, e:
-        logger.info("WEXT driver support not included in wpa_supplicant")
-        return
+        raise HwsimSkip("WEXT driver support not included in wpa_supplicant")
     return wpas
 
 def test_wext_open(dev, apdev):
     """WEXT driver interface with open network"""
     wpas = get_wext_interface()
-    if not wpas:
-        return "skip"
 
     params = { "ssid": "wext-open" }
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
@@ -41,8 +38,6 @@ def test_wext_open(dev, apdev):
 def test_wext_wpa2_psk(dev, apdev):
     """WEXT driver interface with WPA2-PSK"""
     wpas = get_wext_interface()
-    if not wpas:
-        return "skip"
 
     params = hostapd.wpa2_params(ssid="wext-wpa2-psk", passphrase="12345678")
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
@@ -59,14 +54,12 @@ def test_wext_wpa2_psk(dev, apdev):
 def test_wext_wpa_psk(dev, apdev):
     """WEXT driver interface with WPA-PSK"""
     wpas = get_wext_interface()
-    if not wpas:
-        return "skip"
 
     params = hostapd.wpa_params(ssid="wext-wpa-psk", passphrase="12345678")
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     testfile = "/sys/kernel/debug/ieee80211/%s/netdev:%s/tkip_mic_test" % (hapd.get_driver_status_field("phyname"), apdev[0]['ifname'])
     if not os.path.exists(testfile):
-        return "skip"
+        raise HwsimSkip("tkip_mic_test not supported in mac80211")
 
     wpas.connect("wext-wpa-psk", psk="12345678")
     hwsim_utils.test_connectivity(wpas, hapd)
@@ -87,8 +80,6 @@ def test_wext_wpa_psk(dev, apdev):
 def test_wext_pmksa_cache(dev, apdev):
     """PMKSA caching with WEXT"""
     wpas = get_wext_interface()
-    if not wpas:
-        return "skip"
 
     params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
     hostapd.add_ap(apdev[0]['ifname'], params)
@@ -155,8 +146,6 @@ def test_wext_pmksa_cache(dev, apdev):
 def test_wext_wep_open_auth(dev, apdev):
     """WEP Open System authentication"""
     wpas = get_wext_interface()
-    if not wpas:
-        return "skip"
 
     hapd = hostapd.add_ap(apdev[0]['ifname'],
                           { "ssid": "wep-open",
@@ -170,8 +159,6 @@ def test_wext_wep_open_auth(dev, apdev):
 def test_wext_wep_shared_key_auth(dev, apdev):
     """WEP Shared Key authentication"""
     wpas = get_wext_interface()
-    if not wpas:
-        return "skip"
 
     hapd = hostapd.add_ap(apdev[0]['ifname'],
                           { "ssid": "wep-shared-key",
@@ -188,8 +175,6 @@ def test_wext_wep_shared_key_auth(dev, apdev):
 def test_wext_pmf(dev, apdev):
     """WEXT driver interface with WPA2-PSK and PMF"""
     wpas = get_wext_interface()
-    if not wpas:
-        return "skip"
 
     params = hostapd.wpa2_params(ssid="wext-wpa2-psk", passphrase="12345678")
     params["wpa_key_mgmt"] = "WPA-PSK-SHA256";
@@ -208,8 +193,6 @@ def test_wext_pmf(dev, apdev):
 def test_wext_scan_hidden(dev, apdev):
     """WEXT with hidden SSID"""
     wpas = get_wext_interface()
-    if not wpas:
-        return "skip"
 
     hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan",
                                                 "ignore_broadcast_ssid": "1" })
@@ -244,13 +227,9 @@ def test_wext_rfkill(dev, apdev):
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     wpas.interface_add("wlan5")
     rfk = get_rfkill(wpas)
-    if rfk is None:
-        return "skip"
     wpas.interface_remove("wlan5")
 
     wpas = get_wext_interface()
-    if not wpas:
-        return "skip"
 
     hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
     wpas.connect("open", key_mgmt="NONE", scan_freq="2412")

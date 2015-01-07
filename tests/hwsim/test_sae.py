@@ -13,6 +13,7 @@ logger = logging.getLogger()
 
 import hwsim_utils
 import hostapd
+from utils import HwsimSkip
 from test_ap_psk import find_wpas_process, read_process_memory, verify_not_present, get_key_locations
 
 def test_sae(dev, apdev):
@@ -228,11 +229,9 @@ def test_sae_key_lifetime_in_memory(dev, apdev, params):
     get_key_locations(buf, password, "Password")
     get_key_locations(buf, pmk, "PMK")
     if password not in buf:
-        print("Password not found while associated")
-        return "skip"
+        raise HwsimSkip("Password not found while associated")
     if pmk not in buf:
-        print("PMK not found while associated")
-        return "skip"
+        raise HwsimSkip("PMK not found while associated")
     if kck not in buf:
         raise Exception("KCK not found while associated")
     if kek not in buf:

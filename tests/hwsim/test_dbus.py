@@ -298,7 +298,7 @@ def test_dbus_invalid_method(dev, apdev):
 def test_dbus_get_set_wps(dev, apdev):
     """D-Bus Get/Set for WPS properties"""
     try:
-        return _test_dbus_get_set_wps(dev, apdev)
+        _test_dbus_get_set_wps(dev, apdev)
     finally:
         dev[0].request("SET wps_cred_processing 0")
         dev[0].request("SET config_methods display keypad virtual_display nfc_interface")
@@ -427,7 +427,7 @@ def test_dbus_wps_invalid(dev, apdev):
 def test_dbus_wps_pbc(dev, apdev):
     """D-Bus WPS/PBC operation and signals"""
     try:
-        return _test_dbus_wps_pbc(dev, apdev)
+        _test_dbus_wps_pbc(dev, apdev)
     finally:
         dev[0].request("SET wps_cred_processing 0")
 
@@ -490,7 +490,7 @@ def _test_dbus_wps_pbc(dev, apdev):
 def test_dbus_wps_pin(dev, apdev):
     """D-Bus WPS/PIN operation and signals"""
     try:
-        return _test_dbus_wps_pin(dev, apdev)
+        _test_dbus_wps_pin(dev, apdev)
     finally:
         dev[0].request("SET wps_cred_processing 0")
 
@@ -551,7 +551,7 @@ def _test_dbus_wps_pin(dev, apdev):
 def test_dbus_wps_pin2(dev, apdev):
     """D-Bus WPS/PIN operation and signals (PIN from wpa_supplicant)"""
     try:
-        return _test_dbus_wps_pin2(dev, apdev)
+        _test_dbus_wps_pin2(dev, apdev)
     finally:
         dev[0].request("SET wps_cred_processing 0")
 
@@ -614,7 +614,7 @@ def _test_dbus_wps_pin2(dev, apdev):
 def test_dbus_wps_pin_m2d(dev, apdev):
     """D-Bus WPS/PIN operation and signals with M2D"""
     try:
-        return _test_dbus_wps_pin_m2d(dev, apdev)
+        _test_dbus_wps_pin_m2d(dev, apdev)
     finally:
         dev[0].request("SET wps_cred_processing 0")
 
@@ -677,7 +677,7 @@ def _test_dbus_wps_pin_m2d(dev, apdev):
 def test_dbus_wps_reg(dev, apdev):
     """D-Bus WPS/Registrar operation and signals"""
     try:
-        return _test_dbus_wps_reg(dev, apdev)
+        _test_dbus_wps_reg(dev, apdev)
     finally:
         dev[0].request("SET wps_cred_processing 0")
 
@@ -1460,7 +1460,7 @@ def test_dbus_pkcs11(dev, apdev):
 def test_dbus_apscan(dev, apdev):
     """D-Bus Get/Set ApScan"""
     try:
-        return _test_dbus_apscan(dev, apdev)
+        _test_dbus_apscan(dev, apdev)
     finally:
         dev[0].request("AP_SCAN 1")
 
@@ -1585,7 +1585,7 @@ def test_dbus_bss_expire(dev, apdev):
 def test_dbus_country(dev, apdev):
     """D-Bus Get/Set Country"""
     try:
-        return _test_dbus_country(dev, apdev)
+        _test_dbus_country(dev, apdev)
     finally:
         dev[0].request("SET country 00")
         subprocess.call(['iw', 'reg', 'set', '00'])

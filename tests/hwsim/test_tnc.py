@@ -8,6 +8,7 @@
 import os.path
 
 import hostapd
+from utils import HwsimSkip
 from test_ap_eap import int_eap_server_params
 
 def test_tnc_peap_soh(dev, apdev):
@@ -47,8 +48,7 @@ def test_tnc_ttls(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
 
     if not os.path.exists("tnc/libhostap_imc.so"):
-        logger.info("No IMC installed - skip")
-        return "skip"
+        raise HwsimSkip("No IMC installed")
 
     dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP",
                    eap="TTLS", identity="DOMAIN\mschapv2 user",
@@ -69,8 +69,7 @@ def test_tnc_fast(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
 
     if not os.path.exists("tnc/libhostap_imc.so"):
-        logger.info("No IMC installed - skip")
-        return "skip"
+        raise HwsimSkip("No IMC installed")
 
     dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP",
                    eap="FAST", identity="user",

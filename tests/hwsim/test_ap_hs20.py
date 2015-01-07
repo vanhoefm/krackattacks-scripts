@@ -16,6 +16,7 @@ import socket
 import subprocess
 
 import hostapd
+from utils import HwsimSkip
 import hwsim_utils
 from wlantest import Wlantest
 from wpasupplicant import WpaSupplicant
@@ -95,12 +96,9 @@ def check_sp_type(dev, sp_type):
 
 def hlr_auc_gw_available():
     if not os.path.exists("/tmp/hlr_auc_gw.sock"):
-        logger.info("No hlr_auc_gw available");
-        return False
+        raise HwsimSkip("No hlr_auc_gw socket available")
     if not os.path.exists("../../hostapd/hlr_auc_gw"):
-        logger.info("No hlr_auc_gw available");
-        return False
-    return True
+        raise HwsimSkip("No hlr_auc_gw available")
 
 def interworking_ext_sim_connect(dev, bssid, method):
     dev.request("INTERWORKING_CONNECT " + bssid)
@@ -275,7 +273,7 @@ def test_ap_nai_home_realm_query(dev, apdev):
 def test_ap_interworking_scan_filtering(dev, apdev):
     """Interworking scan filtering with HESSID and access network type"""
     try:
-        return _test_ap_interworking_scan_filtering(dev, apdev)
+        _test_ap_interworking_scan_filtering(dev, apdev)
     finally:
         dev[0].request("SET hessid 00:00:00:00:00:00")
         dev[0].request("SET access_network_type 15")
@@ -411,8 +409,7 @@ def hs20_simulated_sim(dev, ap, method):
 
 def test_ap_hs20_sim(dev, apdev):
     """Hotspot 2.0 with simulated SIM and EAP-SIM"""
-    if not hlr_auc_gw_available():
-        return "skip"
+    hlr_auc_gw_available()
     hs20_simulated_sim(dev[0], apdev[0], "SIM")
     dev[0].request("INTERWORKING_SELECT auto freq=2412")
     ev = dev[0].wait_event(["INTERWORKING-ALREADY-CONNECTED"], timeout=15)
@@ -421,20 +418,17 @@ def test_ap_hs20_sim(dev, apdev):
 
 def test_ap_hs20_aka(dev, apdev):
     """Hotspot 2.0 with simulated USIM and EAP-AKA"""
-    if not hlr_auc_gw_available():
-        return "skip"
+    hlr_auc_gw_available()
     hs20_simulated_sim(dev[0], apdev[0], "AKA")
 
 def test_ap_hs20_aka_prime(dev, apdev):
     """Hotspot 2.0 with simulated USIM and EAP-AKA'"""
-    if not hlr_auc_gw_available():
-        return "skip"
+    hlr_auc_gw_available()
     hs20_simulated_sim(dev[0], apdev[0], "AKA'")
 
 def test_ap_hs20_ext_sim(dev, apdev):
     """Hotspot 2.0 with external SIM processing"""
-    if not hlr_auc_gw_available():
-        return "skip"
+    hlr_auc_gw_available()
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['hessid'] = bssid
@@ -454,8 +448,7 @@ def test_ap_hs20_ext_sim(dev, apdev):
 
 def test_ap_hs20_ext_sim_roaming(dev, apdev):
     """Hotspot 2.0 with external SIM processing in roaming network"""
-    if not hlr_auc_gw_available():
-        return "skip"
+    hlr_auc_gw_available()
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['hessid'] = bssid
@@ -1274,13 +1267,12 @@ def test_ap_hs20_max_bss_load2(dev, apdev):
 def test_ap_hs20_multi_cred_sp_prio(dev, apdev):
     """Hotspot 2.0 multi-cred sp_priority"""
     try:
-        return _test_ap_hs20_multi_cred_sp_prio(dev, apdev)
+        _test_ap_hs20_multi_cred_sp_prio(dev, apdev)
     finally:
         dev[0].request("SET external_sim 0")
 
 def _test_ap_hs20_multi_cred_sp_prio(dev, apdev):
-    if not hlr_auc_gw_available():
-        return "skip"
+    hlr_auc_gw_available()
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['hessid'] = bssid
@@ -1317,13 +1309,12 @@ def _test_ap_hs20_multi_cred_sp_prio(dev, apdev):
 def test_ap_hs20_multi_cred_sp_prio2(dev, apdev):
     """Hotspot 2.0 multi-cred sp_priority with two BSSes"""
     try:
-        return _test_ap_hs20_multi_cred_sp_prio2(dev, apdev)
+        _test_ap_hs20_multi_cred_sp_prio2(dev, apdev)
     finally:
         dev[0].request("SET external_sim 0")
 
 def _test_ap_hs20_multi_cred_sp_prio2(dev, apdev):
-    if not hlr_auc_gw_available():
-        return "skip"
+    hlr_auc_gw_available()
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['hessid'] = bssid
@@ -2180,7 +2171,7 @@ def test_ap_hs20_remediation_sql(dev, apdev, params):
     try:
         import sqlite3
     except ImportError:
-        return "skip"
+        raise HwsimSkip("No sqlite3 module available")
     dbfile = os.path.join(params['logdir'], "eap-user.db")
     try:
         os.remove(dbfile)
@@ -2342,8 +2333,7 @@ def _test_ap_hs20_proxyarp(dev, apdev):
         hapd.enable()
     except:
         # For now, do not report failures due to missing kernel support
-        logger.info("Could not start hostapd - assume proxyarp not supported in kernel version")
-        return "skip"
+        raise HwsimSkip("Could not start hostapd - assume proxyarp not supported in kernel version")
     ev = hapd.wait_event(["AP-ENABLED", "AP-DISABLED"], timeout=10)
     if ev is None:
         raise Exception("AP startup timed out")
@@ -2413,16 +2403,13 @@ def _test_ap_hs20_proxyarp(dev, apdev):
 
 def test_ap_hs20_proxyarp(dev, apdev):
     """Hotspot 2.0 and ProxyARP"""
-    res = None
     try:
-        res = _test_ap_hs20_proxyarp(dev, apdev)
+        _test_ap_hs20_proxyarp(dev, apdev)
     finally:
         subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'down'],
                         stderr=open('/dev/null', 'w'))
         subprocess.call(['brctl', 'delbr', 'ap-br0'],
                         stderr=open('/dev/null', 'w'))
-
-    return res
 
 def _test_ap_hs20_proxyarp_dgaf(dev, apdev, disabled):
     bssid = apdev[0]['bssid']
@@ -2437,8 +2424,7 @@ def _test_ap_hs20_proxyarp_dgaf(dev, apdev, disabled):
         hapd.enable()
     except:
         # For now, do not report failures due to missing kernel support
-        logger.info("Could not start hostapd - assume proxyarp not supported in kernel version")
-        return "skip"
+        raise HwsimSkip("Could not start hostapd - assume proxyarp not supported in kernel version")
     ev = hapd.wait_event(["AP-ENABLED"], timeout=10)
     if ev is None:
         raise Exception("AP startup timed out")
@@ -2512,29 +2498,23 @@ def _test_ap_hs20_proxyarp_dgaf(dev, apdev, disabled):
 
 def test_ap_hs20_proxyarp_disable_dgaf(dev, apdev):
     """Hotspot 2.0 and ProxyARP with DGAF disabled"""
-    res = None
     try:
-        res = _test_ap_hs20_proxyarp_dgaf(dev, apdev, True)
+        _test_ap_hs20_proxyarp_dgaf(dev, apdev, True)
     finally:
         subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'down'],
                         stderr=open('/dev/null', 'w'))
         subprocess.call(['brctl', 'delbr', 'ap-br0'],
                         stderr=open('/dev/null', 'w'))
-
-    return res
 
 def test_ap_hs20_proxyarp_enable_dgaf(dev, apdev):
     """Hotspot 2.0 and ProxyARP with DGAF enabled"""
-    res = None
     try:
-        res = _test_ap_hs20_proxyarp_dgaf(dev, apdev, False)
+        _test_ap_hs20_proxyarp_dgaf(dev, apdev, False)
     finally:
         subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'down'],
                         stderr=open('/dev/null', 'w'))
         subprocess.call(['brctl', 'delbr', 'ap-br0'],
                         stderr=open('/dev/null', 'w'))
-
-    return res
 
 def ip_checksum(buf):
     sum = 0
@@ -2787,8 +2767,7 @@ def _test_proxyarp_open(dev, apdev, params):
         hapd.enable()
     except:
         # For now, do not report failures due to missing kernel support
-        logger.info("Could not start hostapd - assume proxyarp not supported in kernel version")
-        return "skip"
+        raise HwsimSkip("Could not start hostapd - assume proxyarp not supported in kernel version")
     ev = hapd.wait_event(["AP-ENABLED", "AP-DISABLED"], timeout=10)
     if ev is None:
         raise Exception("AP startup timed out")
@@ -3046,9 +3025,8 @@ def _test_proxyarp_open(dev, apdev, params):
 
 def test_proxyarp_open(dev, apdev, params):
     """ProxyARP with open network"""
-    res = None
     try:
-        res = _test_proxyarp_open(dev, apdev, params)
+        _test_proxyarp_open(dev, apdev, params)
     finally:
         try:
             subprocess.call(['ebtables', '-F', 'FORWARD'])
@@ -3059,5 +3037,3 @@ def test_proxyarp_open(dev, apdev, params):
                         stderr=open('/dev/null', 'w'))
         subprocess.call(['brctl', 'delbr', 'ap-br0'],
                         stderr=open('/dev/null', 'w'))
-
-    return res

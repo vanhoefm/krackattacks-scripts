@@ -11,6 +11,7 @@ logger = logging.getLogger()
 
 import hwsim_utils
 import hostapd
+from utils import HwsimSkip
 from wlantest import Wlantest
 
 def check_qos_map(ap, hapd, dev, sta, dscp, tid, ap_tid=None):
@@ -36,7 +37,7 @@ def test_ap_qosmap(dev, apdev):
     """QoS mapping"""
     drv_flags = dev[0].get_driver_status_field("capa.flags")
     if int(drv_flags, 0) & 0x40000000 == 0:
-        return "skip"
+        raise HwsimSkip("Driver does not support QoS Map")
     ssid = "test-qosmap"
     params = { "ssid": ssid }
     params['qos_map_set'] = '53,2,22,6,8,15,0,7,255,255,16,31,32,39,255,255,40,47,48,55'

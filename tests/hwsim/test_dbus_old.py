@@ -555,7 +555,7 @@ def test_dbus_old_connect_eap(dev, apdev):
 def test_dbus_old_wps_pbc(dev, apdev):
     """The old D-Bus interface and WPS/PBC"""
     try:
-        return _test_dbus_old_wps_pbc(dev, apdev)
+        _test_dbus_old_wps_pbc(dev, apdev)
     finally:
         dev[0].request("SET wps_cred_processing 0")
 
@@ -622,7 +622,7 @@ def _test_dbus_old_wps_pbc(dev, apdev):
 def test_dbus_old_wps_pin(dev, apdev):
     """The old D-Bus interface and WPS/PIN"""
     try:
-        return _test_dbus_old_wps_pin(dev, apdev)
+        _test_dbus_old_wps_pin(dev, apdev)
     finally:
         dev[0].request("SET wps_cred_processing 0")
 
@@ -677,7 +677,7 @@ def _test_dbus_old_wps_pin(dev, apdev):
 def test_dbus_old_wps_reg(dev, apdev):
     """The old D-Bus interface and WPS/Registar"""
     try:
-        return _test_dbus_old_wps_reg(dev, apdev)
+        _test_dbus_old_wps_reg(dev, apdev)
     finally:
         dev[0].request("SET wps_cred_processing 0")
 

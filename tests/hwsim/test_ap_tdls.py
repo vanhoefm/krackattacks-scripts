@@ -13,6 +13,7 @@ import hwsim_utils
 from hostapd import HostapdGlobal
 from hostapd import Hostapd
 import hostapd
+from utils import HwsimSkip
 from wlantest import Wlantest
 
 def start_ap_wpa2_psk(ifname):
@@ -363,8 +364,7 @@ def test_tdls_chan_switch(dev, apdev):
     """Open AP and two stations using TDLS"""
     flags = int(dev[0].get_driver_status_field('capa.flags'), 16)
     if flags & 0x800000000 == 0:
-        logger.info("Driver does not support TDLS channel switching")
-        return "skip"
+        raise HwsimSkip("Driver does not support TDLS channel switching")
 
     hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
     connect_2sta_open(dev, hapd)

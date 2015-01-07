@@ -15,7 +15,12 @@ import os
 
 import hwsim_utils
 import hostapd
+from utils import HwsimSkip
 from test_ap_psk import check_mib, find_wpas_process, read_process_memory, verify_not_present, get_key_locations
+
+def check_hlr_auc_gw_support():
+    if not os.path.exists("/tmp/hlr_auc_gw.sock"):
+        raise HwsimSkip("No hlr_auc_gw available")
 
 def read_pem(fname):
     with open(fname, "r") as f:
@@ -103,9 +108,7 @@ def eap_reauth(dev, method, rsn=True, sha256=False, expect_failure=False):
 
 def test_ap_wpa2_eap_sim(dev, apdev):
     """WPA2-Enterprise connection using EAP-SIM"""
-    if not os.path.exists("/tmp/hlr_auc_gw.sock"):
-        logger.info("No hlr_auc_gw available");
-        return "skip"
+    check_hlr_auc_gw_support()
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], apdev[0], "SIM", "1232010000000000",
@@ -156,13 +159,11 @@ def test_ap_wpa2_eap_sim(dev, apdev):
 
 def test_ap_wpa2_eap_sim_sql(dev, apdev, params):
     """WPA2-Enterprise connection using EAP-SIM (SQL)"""
-    if not os.path.exists("/tmp/hlr_auc_gw.sock"):
-        logger.info("No hlr_auc_gw available");
-        return "skip"
+    check_hlr_auc_gw_support()
     try:
         import sqlite3
     except ImportError:
-        return "skip"
+        raise HwsimSkip("No sqlite3 module available")
     con = sqlite3.connect(os.path.join(params['logdir'], "hostapd.db"))
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     params['auth_server_port'] = "1814"
@@ -248,14 +249,12 @@ def test_ap_wpa2_eap_sim_config(dev, apdev):
 def test_ap_wpa2_eap_sim_ext(dev, apdev):
     """WPA2-Enterprise connection using EAP-SIM and external GSM auth"""
     try:
-        return _test_ap_wpa2_eap_sim_ext(dev, apdev)
+        _test_ap_wpa2_eap_sim_ext(dev, apdev)
     finally:
         dev[0].request("SET external_sim 0")
 
 def _test_ap_wpa2_eap_sim_ext(dev, apdev):
-    if not os.path.exists("/tmp/hlr_auc_gw.sock"):
-        logger.info("No hlr_auc_gw available");
-        return "skip"
+    check_hlr_auc_gw_support()
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
     dev[0].request("SET external_sim 1")
@@ -380,9 +379,7 @@ def _test_ap_wpa2_eap_sim_ext(dev, apdev):
 
 def test_ap_wpa2_eap_aka(dev, apdev):
     """WPA2-Enterprise connection using EAP-AKA"""
-    if not os.path.exists("/tmp/hlr_auc_gw.sock"):
-        logger.info("No hlr_auc_gw available");
-        return "skip"
+    check_hlr_auc_gw_support()
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], apdev[0], "AKA", "0232010000000000",
@@ -436,13 +433,11 @@ def test_ap_wpa2_eap_aka(dev, apdev):
 
 def test_ap_wpa2_eap_aka_sql(dev, apdev, params):
     """WPA2-Enterprise connection using EAP-AKA (SQL)"""
-    if not os.path.exists("/tmp/hlr_auc_gw.sock"):
-        logger.info("No hlr_auc_gw available");
-        return "skip"
+    check_hlr_auc_gw_support()
     try:
         import sqlite3
     except ImportError:
-        return "skip"
+        raise HwsimSkip("No sqlite3 module available")
     con = sqlite3.connect(os.path.join(params['logdir'], "hostapd.db"))
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     params['auth_server_port'] = "1814"
@@ -505,14 +500,12 @@ def test_ap_wpa2_eap_aka_config(dev, apdev):
 def test_ap_wpa2_eap_aka_ext(dev, apdev):
     """WPA2-Enterprise connection using EAP-AKA and external UMTS auth"""
     try:
-        return _test_ap_wpa2_eap_aka_ext(dev, apdev)
+        _test_ap_wpa2_eap_aka_ext(dev, apdev)
     finally:
         dev[0].request("SET external_sim 0")
 
 def _test_ap_wpa2_eap_aka_ext(dev, apdev):
-    if not os.path.exists("/tmp/hlr_auc_gw.sock"):
-        logger.info("No hlr_auc_gw available");
-        return "skip"
+    check_hlr_auc_gw_support()
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
     dev[0].request("SET external_sim 1")
@@ -680,9 +673,7 @@ def _test_ap_wpa2_eap_aka_ext(dev, apdev):
 
 def test_ap_wpa2_eap_aka_prime(dev, apdev):
     """WPA2-Enterprise connection using EAP-AKA'"""
-    if not os.path.exists("/tmp/hlr_auc_gw.sock"):
-        logger.info("No hlr_auc_gw available");
-        return "skip"
+    check_hlr_auc_gw_support()
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], apdev[0], "AKA'", "6555444333222111",
@@ -705,13 +696,11 @@ def test_ap_wpa2_eap_aka_prime(dev, apdev):
 
 def test_ap_wpa2_eap_aka_prime_sql(dev, apdev, params):
     """WPA2-Enterprise connection using EAP-AKA' (SQL)"""
-    if not os.path.exists("/tmp/hlr_auc_gw.sock"):
-        logger.info("No hlr_auc_gw available");
-        return "skip"
+    check_hlr_auc_gw_support()
     try:
         import sqlite3
     except ImportError:
-        return "skip"
+        raise HwsimSkip("No sqlite3 module available")
     con = sqlite3.connect(os.path.join(params['logdir'], "hostapd.db"))
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     params['auth_server_port'] = "1814"
@@ -2064,9 +2053,7 @@ def test_ap_wpa2_eap_request_identity_message(dev, apdev):
 
 def test_ap_wpa2_eap_sim_aka_result_ind(dev, apdev):
     """WPA2-Enterprise using EAP-SIM/AKA and protected result indication"""
-    if not os.path.exists("/tmp/hlr_auc_gw.sock"):
-        logger.info("No hlr_auc_gw available");
-        return "skip"
+    check_hlr_auc_gw_support()
     params = int_eap_server_params()
     params['eap_sim_db'] = "unix:/tmp/hlr_auc_gw.sock"
     params['eap_sim_aka_result_ind'] = "1"
@@ -2142,7 +2129,7 @@ def test_ap_wpa2_eap_sql(dev, apdev, params):
     try:
         import sqlite3
     except ImportError:
-        return "skip"
+        raise HwsimSkip("No sqlite3 module available")
     dbfile = os.path.join(params['logdir'], "eap-user.db")
     try:
         os.remove(dbfile)
@@ -2301,11 +2288,9 @@ def test_wpa2_eap_ttls_pap_key_lifetime_in_memory(dev, apdev, params):
     get_key_locations(buf, msk, "MSK")
     get_key_locations(buf, emsk, "EMSK")
     if password not in buf:
-        print("Password not found while associated")
-        return "skip"
+        raise HwsimSkip("Password not found while associated")
     if pmk not in buf:
-        print("PMK not found while associated")
-        return "skip"
+        raise HwsimSkip("PMK not found while associated")
     if kck not in buf:
         raise Exception("KCK not found while associated")
     if kek not in buf:

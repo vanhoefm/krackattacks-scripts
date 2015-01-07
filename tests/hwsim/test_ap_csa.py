@@ -10,6 +10,7 @@ logger = logging.getLogger()
 
 import hwsim_utils
 import hostapd
+from utils import HwsimSkip
 
 def connect(dev, apdev):
     params = { "ssid": "ap-csa",
@@ -31,12 +32,12 @@ def switch_channel(ap, count, freq):
 # WpaSupplicant or Hostapd supports CSA.
 def csa_supported(dev):
     res = dev.get_driver_status()
-    return (int(res['capa.flags'], 0) & 0x80000000) != 0
+    if (int(res['capa.flags'], 0) & 0x80000000) == 0:
+        raise HwsimSkip("CSA not supported")
 
 def test_ap_csa_1_switch(dev, apdev):
     """AP Channel Switch, one switch"""
-    if not csa_supported(dev[0]):
-        return "skip"
+    csa_supported(dev[0])
     ap = connect(dev[0], apdev)
 
     hwsim_utils.test_connectivity(dev[0], ap)
@@ -45,8 +46,7 @@ def test_ap_csa_1_switch(dev, apdev):
 
 def test_ap_csa_2_switches(dev, apdev):
     """AP Channel Switch, two switches"""
-    if not csa_supported(dev[0]):
-        return "skip"
+    csa_supported(dev[0])
     ap = connect(dev[0], apdev)
 
     hwsim_utils.test_connectivity(dev[0], ap)
@@ -57,8 +57,7 @@ def test_ap_csa_2_switches(dev, apdev):
 
 def test_ap_csa_1_switch_count_0(dev, apdev):
     """AP Channel Switch, one switch with count 0"""
-    if not csa_supported(dev[0]):
-        return "skip"
+    csa_supported(dev[0])
     ap = connect(dev[0], apdev)
 
     hwsim_utils.test_connectivity(dev[0], ap)
@@ -68,8 +67,7 @@ def test_ap_csa_1_switch_count_0(dev, apdev):
 
 def test_ap_csa_2_switches_count_0(dev, apdev):
     """AP Channel Switch, two switches with count 0"""
-    if not csa_supported(dev[0]):
-        return "skip"
+    csa_supported(dev[0])
     ap = connect(dev[0], apdev)
 
     hwsim_utils.test_connectivity(dev[0], ap)
@@ -82,8 +80,7 @@ def test_ap_csa_2_switches_count_0(dev, apdev):
 
 def test_ap_csa_1_switch_count_1(dev, apdev):
     """AP Channel Switch, one switch with count 1"""
-    if not csa_supported(dev[0]):
-        return "skip"
+    csa_supported(dev[0])
     ap = connect(dev[0], apdev)
 
     hwsim_utils.test_connectivity(dev[0], ap)
@@ -93,8 +90,7 @@ def test_ap_csa_1_switch_count_1(dev, apdev):
 
 def test_ap_csa_2_switches_count_1(dev, apdev):
     """AP Channel Switch, two switches with count 1"""
-    if not csa_supported(dev[0]):
-        return "skip"
+    csa_supported(dev[0])
     ap = connect(dev[0], apdev)
 
     hwsim_utils.test_connectivity(dev[0], ap)
@@ -107,8 +103,7 @@ def test_ap_csa_2_switches_count_1(dev, apdev):
 
 def test_ap_csa_1_switch_count_2(dev, apdev):
     """AP Channel Switch, one switch with count 2"""
-    if not csa_supported(dev[0]):
-        return "skip"
+    csa_supported(dev[0])
     ap = connect(dev[0], apdev)
 
     hwsim_utils.test_connectivity(dev[0], ap)

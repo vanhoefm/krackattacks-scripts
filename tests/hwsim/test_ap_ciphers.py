@@ -11,10 +11,11 @@ import os.path
 
 import hwsim_utils
 import hostapd
+from utils import HwsimSkip
 
 def check_cipher(dev, ap, cipher):
     if cipher not in dev.get_capability("pairwise"):
-        return "skip"
+        raise HwsimSkip("Cipher %s not supported" % cipher)
     params = { "ssid": "test-wpa2-psk",
                "wpa_passphrase": "12345678",
                "wpa": "2",
@@ -27,13 +28,13 @@ def check_cipher(dev, ap, cipher):
 
 def test_ap_cipher_tkip(dev, apdev):
     """WPA2-PSK/TKIP connection"""
-    return check_cipher(dev[0], apdev[0], "TKIP")
+    check_cipher(dev[0], apdev[0], "TKIP")
 
 def test_ap_cipher_tkip_countermeasures_ap(dev, apdev):
     """WPA-PSK/TKIP countermeasures (detected by AP)"""
     testfile = "/sys/kernel/debug/ieee80211/%s/netdev:%s/tkip_mic_test" % (dev[0].get_driver_status_field("phyname"), dev[0].ifname)
     if not os.path.exists(testfile):
-        return "skip"
+        raise HwsimSkip("tkip_mic_test not supported in mac80211")
 
     params = { "ssid": "tkip-countermeasures",
                "wpa_passphrase": "12345678",
@@ -73,7 +74,7 @@ def test_ap_cipher_tkip_countermeasures_sta(dev, apdev):
 
     testfile = "/sys/kernel/debug/ieee80211/%s/netdev:%s/tkip_mic_test" % (hapd.get_driver_status_field("phyname"), apdev[0]['ifname'])
     if not os.path.exists(testfile):
-        return "skip"
+        raise HwsimSkip("tkip_mic_test not supported in mac80211")
 
     dev[0].connect("tkip-countermeasures", psk="12345678",
                    pairwise="TKIP", group="TKIP", scan_freq="2412")
@@ -97,19 +98,19 @@ def test_ap_cipher_tkip_countermeasures_sta(dev, apdev):
 
 def test_ap_cipher_ccmp(dev, apdev):
     """WPA2-PSK/CCMP connection"""
-    return check_cipher(dev[0], apdev[0], "CCMP")
+    check_cipher(dev[0], apdev[0], "CCMP")
 
 def test_ap_cipher_gcmp(dev, apdev):
     """WPA2-PSK/GCMP connection"""
-    return check_cipher(dev[0], apdev[0], "GCMP")
+    check_cipher(dev[0], apdev[0], "GCMP")
 
 def test_ap_cipher_ccmp_256(dev, apdev):
     """WPA2-PSK/CCMP-256 connection"""
-    return check_cipher(dev[0], apdev[0], "CCMP-256")
+    check_cipher(dev[0], apdev[0], "CCMP-256")
 
 def test_ap_cipher_gcmp_256(dev, apdev):
     """WPA2-PSK/GCMP-256 connection"""
-    return check_cipher(dev[0], apdev[0], "GCMP-256")
+    check_cipher(dev[0], apdev[0], "GCMP-256")
 
 def test_ap_cipher_mixed_wpa_wpa2(dev, apdev):
     """WPA2-PSK/CCMP/ and WPA-PSK/TKIP mixed configuration"""

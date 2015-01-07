@@ -13,6 +13,7 @@ import threading
 import time
 
 import hostapd
+from utils import HwsimSkip
 
 EAP_CODE_REQUEST = 1
 EAP_CODE_RESPONSE = 2
@@ -53,7 +54,7 @@ def start_radius_server(eap_handler):
         import pyrad.packet
         import pyrad.dictionary
     except ImportError:
-        return None
+        raise HwsimSkip("No pyrad modules available")
 
     class TestServer(pyrad.server.Server):
         def _HandleAuthPacket(self, pkt):
@@ -260,8 +261,6 @@ def test_eap_proto(dev, apdev):
         return None
 
     srv = start_radius_server(eap_handler)
-    if srv is None:
-        return "skip"
 
     try:
         hapd = start_ap(apdev[0]['ifname'])
@@ -528,8 +527,6 @@ def test_eap_proto_sake(dev, apdev):
         return sake_challenge(ctx)
 
     srv = start_radius_server(sake_handler)
-    if srv is None:
-        return "skip"
 
     try:
         hapd = start_ap(apdev[0]['ifname'])
@@ -704,8 +701,6 @@ def test_eap_proto_leap(dev, apdev):
         return None
 
     srv = start_radius_server(leap_handler)
-    if srv is None:
-        return "skip"
 
     try:
         hapd = start_ap(apdev[0]['ifname'])
@@ -766,8 +761,6 @@ def test_eap_proto_md5(dev, apdev):
         return None
 
     srv = start_radius_server(md5_handler)
-    if srv is None:
-        return "skip"
 
     try:
         hapd = start_ap(apdev[0]['ifname'])
@@ -819,8 +812,6 @@ def test_eap_proto_otp(dev, apdev):
         return None
 
     srv = start_radius_server(otp_handler)
-    if srv is None:
-        return "skip"
 
     try:
         hapd = start_ap(apdev[0]['ifname'])
@@ -1274,8 +1265,6 @@ def test_eap_proto_gpsk(dev, apdev):
         return None
 
     srv = start_radius_server(gpsk_handler)
-    if srv is None:
-        return "skip"
 
     try:
         hapd = start_ap(apdev[0]['ifname'])
@@ -1582,8 +1571,6 @@ def test_eap_proto_eke(dev, apdev):
         return None
 
     srv = start_radius_server(eke_handler)
-    if srv is None:
-        return "skip"
 
     try:
         hapd = start_ap(apdev[0]['ifname'])
@@ -1904,8 +1891,6 @@ def test_eap_proto_pax(dev, apdev):
             return struct.pack(">BBH", EAP_CODE_FAILURE, ctx['id'], 4)
 
     srv = start_radius_server(pax_handler)
-    if srv is None:
-        return "skip"
 
     try:
         hapd = start_ap(apdev[0]['ifname'])
@@ -2043,8 +2028,6 @@ def test_eap_proto_psk(dev, apdev):
         return None
 
     srv = start_radius_server(psk_handler)
-    if srv is None:
-        return "skip"
 
     try:
         hapd = start_ap(apdev[0]['ifname'])
@@ -2786,8 +2769,6 @@ def test_eap_proto_aka(dev, apdev):
         return None
 
     srv = start_radius_server(aka_handler)
-    if srv is None:
-        return "skip"
 
     try:
         hapd = start_ap(apdev[0]['ifname'])
@@ -3133,8 +3114,6 @@ def test_eap_proto_aka_prime(dev, apdev):
         return None
 
     srv = start_radius_server(aka_prime_handler)
-    if srv is None:
-        return "skip"
 
     try:
         hapd = start_ap(apdev[0]['ifname'])
@@ -3539,8 +3518,6 @@ def test_eap_proto_sim(dev, apdev):
         return None
 
     srv = start_radius_server(sim_handler)
-    if srv is None:
-        return "skip"
 
     try:
         hapd = start_ap(apdev[0]['ifname'])
@@ -4002,8 +3979,6 @@ def test_eap_proto_ikev2(dev, apdev):
         return None
 
     srv = start_radius_server(ikev2_handler)
-    if srv is None:
-        return "skip"
 
     try:
         hapd = start_ap(apdev[0]['ifname'])

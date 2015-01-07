@@ -14,6 +14,7 @@ import os
 import hostapd
 import hwsim_utils
 import utils
+from utils import HwsimSkip
 from wpasupplicant import WpaSupplicant
 
 def check_grpform_results(i_res, r_res):
@@ -728,8 +729,7 @@ def test_grpform_goneg_fail_with_group_iface(dev):
 def test_grpform_cred_ready_timeout(dev, apdev, params):
     """P2P GO Negotiation wait for credentials to become ready [long]"""
     if not params['long']:
-        logger.info("Skip test case with long duration due to --long not specified")
-        return "skip"
+        raise HwsimSkip("Skip test case with long duration due to --long not specified")
 
     dev[1].p2p_listen()
     addr1 = dev[1].p2p_dev_addr()

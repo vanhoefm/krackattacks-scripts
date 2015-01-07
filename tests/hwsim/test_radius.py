@@ -15,6 +15,7 @@ import threading
 import time
 
 import hostapd
+from utils import HwsimSkip
 
 def connect(dev, ssid, wait_connect=True):
     dev.connect(ssid, key_mgmt="WPA-EAP", scan_freq="2412",
@@ -237,7 +238,7 @@ def test_radius_das_disconnect(dev, apdev):
         import pyrad.dictionary
         import radius_das
     except ImportError:
-        return "skip"
+        raise HwsimSkip("No pyrad modules available")
 
     params = hostapd.wpa2_eap_params(ssid="radius-das")
     params['radius_das_port'] = "3799"
@@ -504,7 +505,7 @@ def test_radius_das_coa(dev, apdev):
         import pyrad.dictionary
         import radius_das
     except ImportError:
-        return "skip"
+        raise HwsimSkip("No pyrad modules available")
 
     params = hostapd.wpa2_eap_params(ssid="radius-das")
     params['radius_das_port'] = "3799"
@@ -626,7 +627,7 @@ def test_radius_protocol(dev, apdev):
         import pyrad.packet
         import pyrad.dictionary
     except ImportError:
-        return "skip"
+        raise HwsimSkip("No pyrad modules available")
 
     class TestServer(pyrad.server.Server):
         def _HandleAuthPacket(self, pkt):
@@ -734,7 +735,7 @@ def test_radius_psk(dev, apdev):
         import pyrad.packet
         import pyrad.dictionary
     except ImportError:
-        return "skip"
+        raise HwsimSkip("No pyrad modules available")
 
     class TestServer(pyrad.server.Server):
         def _HandleAuthPacket(self, pkt):

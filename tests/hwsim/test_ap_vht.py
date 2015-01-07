@@ -12,6 +12,7 @@ import subprocess, time
 
 import hwsim_utils
 import hostapd
+from utils import HwsimSkip
 from test_dfs import wait_dfs_event
 from test_ap_csa import csa_supported
 
@@ -42,8 +43,7 @@ def test_ap_vht80(dev, apdev):
     except Exception, e:
         if isinstance(e, Exception) and str(e) == "AP startup failed":
             if not vht_supported():
-                logger.info("80 MHz channel not supported in regulatory information")
-                return "skip"
+                raise HwsimSkip("80 MHz channel not supported in regulatory information")
         raise
     finally:
         dev[0].request("DISCONNECT")
@@ -82,8 +82,7 @@ def test_ap_vht80_params(dev, apdev):
     except Exception, e:
         if isinstance(e, Exception) and str(e) == "AP startup failed":
             if not vht_supported():
-                logger.info("80 MHz channel not supported in regulatory information")
-                return "skip"
+                raise HwsimSwkip("80 MHz channel not supported in regulatory information")
         raise
     finally:
         dev[0].request("DISCONNECT")
@@ -202,7 +201,7 @@ def test_ap_vht160(dev, apdev):
                 # Not all systems have recent enough CRDA version and
                 # wireless-regdb changes to support 160 MHz and DFS. For now,
                 # do not report failures for this test case.
-                return "skip"
+                raise HwsimSkip("CRDA or wireless-regdb did not support 160 MHz")
             raise Exception("Unexpected interface state: " + state)
 
         params = { "ssid": "vht2",
@@ -277,8 +276,7 @@ def test_ap_vht160(dev, apdev):
     except Exception, e:
         if isinstance(e, Exception) and str(e) == "AP startup failed":
             if not vht_supported():
-                logger.info("80/160 MHz channel not supported in regulatory information")
-                return "skip"
+                raise HwsimSkip("80/160 MHz channel not supported in regulatory information")
         raise
     finally:
         dev[0].request("DISCONNECT")
@@ -347,8 +345,7 @@ def test_ap_vht80plus80(dev, apdev):
     except Exception, e:
         if isinstance(e, Exception) and str(e) == "AP startup failed":
             if not vht_supported():
-                logger.info("80/160 MHz channel not supported in regulatory information")
-                return "skip"
+                raise HwsimSkip("80/160 MHz channel not supported in regulatory information")
         raise
     finally:
         dev[0].request("DISCONNECT")
@@ -363,8 +360,7 @@ def test_ap_vht80plus80(dev, apdev):
 
 def test_ap_vht80_csa(dev, apdev):
     """VHT with 80 MHz channel width and CSA"""
-    if not csa_supported(dev[0]):
-        return "skip"
+    csa_supported(dev[0])
     try:
         hapd = None
         params = { "ssid": "vht",
@@ -406,8 +402,7 @@ def test_ap_vht80_csa(dev, apdev):
     except Exception, e:
         if isinstance(e, Exception) and str(e) == "AP startup failed":
             if not vht_supported():
-                logger.info("80 MHz channel not supported in regulatory information")
-                return "skip"
+                raise HwsimSkip("80 MHz channel not supported in regulatory information")
         raise
     finally:
         dev[0].request("DISCONNECT")

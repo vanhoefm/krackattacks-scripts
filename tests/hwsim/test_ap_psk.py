@@ -16,6 +16,7 @@ import subprocess
 import time
 
 import hostapd
+from utils import HwsimSkip
 import hwsim_utils
 
 def check_mib(dev, vals):
@@ -940,8 +941,7 @@ def test_wpa2_psk_key_lifetime_in_memory(dev, apdev, params):
     logger.info("Checking keys in memory while associated")
     get_key_locations(buf, pmk, "PMK")
     if pmk not in buf:
-        print("PMK not found while associated")
-        return "skip"
+        raise HwsimSkip("PMK not found while associated")
     if kck not in buf:
         raise Exception("KCK not found while associated")
     if kek not in buf:

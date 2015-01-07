@@ -13,6 +13,7 @@ logger = logging.getLogger()
 
 import hwsim_utils
 import hostapd
+from utils import HwsimSkip
 from wlantest import Wlantest
 from test_ap_psk import check_mib, find_wpas_process, read_process_memory, verify_not_present, get_key_locations
 
@@ -514,14 +515,11 @@ def test_ft_psk_key_lifetime_in_memory(dev, apdev, params):
     get_key_locations(buf, pmkr0, "PMK-R0")
     get_key_locations(buf, pmkr1, "PMK-R1")
     if pmk not in buf:
-        print("PMK not found while associated")
-        return "skip"
+        raise HwsimSkip("PMK not found while associated")
     if pmkr0 not in buf:
-        print("PMK-R0 not found while associated")
-        return "skip"
+        raise HwsimSkip("PMK-R0 not found while associated")
     if pmkr1 not in buf:
-        print("PMK-R1 not found while associated")
-        return "skip"
+        raise HwsimSkip("PMK-R1 not found while associated")
     if kck not in buf:
         raise Exception("KCK not found while associated")
     if kek not in buf:

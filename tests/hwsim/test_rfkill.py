@@ -13,6 +13,7 @@ from hostapd import HostapdGlobal
 import hwsim_utils
 from wpasupplicant import WpaSupplicant
 from rfkill import RFKill
+from utils import HwsimSkip
 
 def get_rfkill(dev):
     phy = dev.get_driver_status_field("phyname")
@@ -21,15 +22,12 @@ def get_rfkill(dev):
             if r.name == phy:
                 return r
     except Exception, e:
-        logger.info("No rfkill available: " + str(e))
-
-    return None
+        raise HwsimSkip("No rfkill available: " + str(e))
+    raise HwsimSkip("No rfkill match found for the interface")
 
 def test_rfkill_open(dev, apdev):
     """rfkill block/unblock during open mode connection"""
     rfk = get_rfkill(dev[0])
-    if rfk is None:
-        return "skip"
 
     hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
@@ -59,8 +57,6 @@ def test_rfkill_open(dev, apdev):
 def test_rfkill_wpa2_psk(dev, apdev):
     """rfkill block/unblock during WPA2-PSK connection"""
     rfk = get_rfkill(dev[0])
-    if rfk is None:
-        return "skip"
 
     ssid = "test-wpa2-psk"
     passphrase = 'qwertyuiop'
@@ -84,11 +80,7 @@ def test_rfkill_wpa2_psk(dev, apdev):
 def test_rfkill_autogo(dev, apdev):
     """rfkill block/unblock for autonomous P2P GO"""
     rfk0 = get_rfkill(dev[0])
-    if rfk0 is None:
-        return "skip"
     rfk1 = get_rfkill(dev[1])
-    if rfk1 is None:
-        return "skip"
 
     dev[0].p2p_start_go()
     dev[1].request("SET p2p_no_group_iface 0")
@@ -129,8 +121,6 @@ def test_rfkill_hostapd(dev, apdev):
     hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
 
     rfk = get_rfkill(hapd)
-    if rfk is None:
-        return "skip"
 
     try:
         rfk.block()
@@ -169,8 +159,6 @@ def test_rfkill_wpas(dev, apdev):
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     wpas.interface_add("wlan5")
     rfk = get_rfkill(wpas)
-    if rfk is None:
-        return "skip"
     wpas.interface_remove("wlan5")
     try:
         rfk.block()

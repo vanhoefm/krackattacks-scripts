@@ -11,12 +11,12 @@ logger = logging.getLogger()
 
 import hwsim_utils
 from wpasupplicant import WpaSupplicant
+from utils import HwsimSkip
 
-def mesh_supported(dev):
+def check_mesh_support(dev):
     flags = int(dev.get_driver_status_field('capa.flags'), 16)
-    if flags & 0x100000000:
-        return True
-    return False
+    if flags & 0x100000000 == 0:
+        raise HwsimSkip("Driver does not support mesh")
 
 def check_mesh_scan(dev, params, other_started=False, beacon_int=0):
     if not other_started:
@@ -116,8 +116,7 @@ def add_open_mesh_network(dev, ht_mode=False, freq="2412", start=True,
 
 def test_wpas_mesh_group_added(dev):
     """wpa_supplicant MESH group add"""
-    if not mesh_supported(dev[0]):
-        return "skip"
+    check_mesh_support(dev[0])
     add_open_mesh_network(dev[0])
 
     # Check for MESH-GROUP-STARTED event
@@ -126,8 +125,7 @@ def test_wpas_mesh_group_added(dev):
 
 def test_wpas_mesh_group_remove(dev):
     """wpa_supplicant MESH group remove"""
-    if not mesh_supported(dev[0]):
-        return "skip"
+    check_mesh_support(dev[0])
     add_open_mesh_network(dev[0], ht_mode="NOHT")
     # Check for MESH-GROUP-STARTED event
     check_mesh_group_added(dev[0])
@@ -138,8 +136,7 @@ def test_wpas_mesh_group_remove(dev):
 
 def test_wpas_mesh_peer_connected(dev):
     """wpa_supplicant MESH peer connected"""
-    if not mesh_supported(dev[0]):
-        return "skip"
+    check_mesh_support(dev[0])
     add_open_mesh_network(dev[0], ht_mode="HT20", beacon_int=160)
     add_open_mesh_network(dev[1], ht_mode="HT20", beacon_int=160)
 
@@ -154,8 +151,7 @@ def test_wpas_mesh_peer_connected(dev):
 
 def test_wpas_mesh_peer_disconnected(dev):
     """wpa_supplicant MESH peer disconnected"""
-    if not mesh_supported(dev[0]):
-        return "skip"
+    check_mesh_support(dev[0])
     add_open_mesh_network(dev[0])
     add_open_mesh_network(dev[1])
 
@@ -175,8 +171,7 @@ def test_wpas_mesh_peer_disconnected(dev):
 
 def test_wpas_mesh_mode_scan(dev):
     """wpa_supplicant MESH scan support"""
-    if not mesh_supported(dev[0]):
-        return "skip"
+    check_mesh_support(dev[0])
     add_open_mesh_network(dev[0], ht_mode="HT40+")
     add_open_mesh_network(dev[1], ht_mode="HT40+", beacon_int=175)
 
@@ -189,8 +184,7 @@ def test_wpas_mesh_mode_scan(dev):
 
 def test_wpas_mesh_open(dev, apdev):
     """wpa_supplicant open MESH network connectivity"""
-    if not mesh_supported(dev[0]):
-        return "skip"
+    check_mesh_support(dev[0])
     add_open_mesh_network(dev[0], ht_mode="HT40-", freq="2462")
     add_open_mesh_network(dev[1], ht_mode="HT40-", freq="2462")
 
@@ -207,8 +201,7 @@ def test_wpas_mesh_open(dev, apdev):
 
 def test_wpas_mesh_open_no_auto(dev, apdev):
     """wpa_supplicant open MESH network connectivity"""
-    if not mesh_supported(dev[0]):
-        return "skip"
+    check_mesh_support(dev[0])
     id = add_open_mesh_network(dev[0], start=False)
     dev[0].set_network(id, "dot11MeshMaxRetries", "16")
     dev[0].set_network(id, "dot11MeshRetryTimeout", "255")
@@ -241,8 +234,7 @@ def add_mesh_secure_net(dev, psk=True):
 
 def test_wpas_mesh_secure(dev, apdev):
     """wpa_supplicant secure MESH network connectivity"""
-    if not mesh_supported(dev[0]):
-        return "skip"
+    check_mesh_support(dev[0])
     dev[0].request("SET sae_groups ")
     id = add_mesh_secure_net(dev[0])
     dev[0].mesh_group_add(id)
@@ -264,8 +256,7 @@ def test_wpas_mesh_secure(dev, apdev):
 
 def test_wpas_mesh_secure_sae_group_mismatch(dev, apdev):
     """wpa_supplicant secure MESH and SAE group mismatch"""
-    if not mesh_supported(dev[0]):
-        return "skip"
+    check_mesh_support(dev[0])
     addr0 = dev[0].p2p_interface_addr()
     addr1 = dev[1].p2p_interface_addr()
     addr2 = dev[2].p2p_interface_addr()
@@ -316,8 +307,7 @@ def test_wpas_mesh_secure_sae_group_mismatch(dev, apdev):
 
 def test_wpas_mesh_secure_sae_missing_password(dev, apdev):
     """wpa_supplicant secure MESH and missing SAE password"""
-    if not mesh_supported(dev[0]):
-        return "skip"
+    check_mesh_support(dev[0])
     id = add_mesh_secure_net(dev[0], psk=False)
     dev[0].set_network(id, "psk", "8f20b381f9b84371d61b5080ad85cac3c61ab3ca9525be5b2d0f4da3d979187a")
     dev[0].mesh_group_add(id)
@@ -333,8 +323,7 @@ def test_wpas_mesh_secure_sae_missing_password(dev, apdev):
 
 def test_wpas_mesh_secure_no_auto(dev, apdev):
     """wpa_supplicant secure MESH network connectivity"""
-    if not mesh_supported(dev[0]):
-        return "skip"
+    check_mesh_support(dev[0])
     dev[0].request("SET sae_groups 19")
     id = add_mesh_secure_net(dev[0])
     dev[0].mesh_group_add(id)
@@ -360,8 +349,7 @@ def test_wpas_mesh_secure_no_auto(dev, apdev):
 
 def test_wpas_mesh_ctrl(dev):
     """wpa_supplicant ctrl_iface mesh command error cases"""
-    if not mesh_supported(dev[0]):
-        return "skip"
+    check_mesh_support(dev[0])
     if "FAIL" not in dev[0].request("MESH_GROUP_ADD 123"):
         raise Exception("Unexpected MESH_GROUP_ADD success")
     id = dev[0].add_network()
@@ -377,8 +365,7 @@ def test_wpas_mesh_ctrl(dev):
 
 def test_wpas_mesh_dynamic_interface(dev):
     """wpa_supplicant mesh with dynamic interface"""
-    if not mesh_supported(dev[0]):
-        return "skip"
+    check_mesh_support(dev[0])
     mesh0 = None
     mesh1 = None
     try:
@@ -455,8 +442,7 @@ def test_wpas_mesh_dynamic_interface(dev):
 
 def test_wpas_mesh_max_peering(dev, apdev):
     """Mesh max peering limit"""
-    if not mesh_supported(dev[0]):
-        return "skip"
+    check_mesh_support(dev[0])
     try:
         dev[0].request("SET max_peer_links 1")
 

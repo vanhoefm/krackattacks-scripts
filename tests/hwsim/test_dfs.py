@@ -12,6 +12,7 @@ logger = logging.getLogger()
 
 import hwsim_utils
 import hostapd
+from utils import HwsimSkip
 
 def wait_dfs_event(hapd, event, timeout):
     dfs_events = [ "DFS-RADAR-DETECTED", "DFS-NEW-CHANNEL",
@@ -68,7 +69,9 @@ def start_dfs_ap(ap, allow_failure=False, ssid="dfs", ht=True, ht40=False,
     if state != "DFS":
         if allow_failure:
             logger.info("Interface state not DFS: " + state)
-            return None
+            if not os.path.exists("dfs"):
+                raise HwsimSkip("Assume DFS testing not supported")
+            raise Exception("Failed to start DFS AP")
         raise Exception("Unexpected interface state: " + state)
 
     return hapd
@@ -84,10 +87,6 @@ def test_dfs(dev, apdev):
     """DFS CAC functionality on clear channel"""
     try:
         hapd = start_dfs_ap(apdev[0], allow_failure=True)
-        if hapd is None:
-            if not os.path.exists("dfs"):
-                return "skip"
-            raise Exception("Failed to start DFS AP")
 
         ev = wait_dfs_event(hapd, "DFS-CAC-COMPLETED", 70)
         if "success=1" not in ev:
@@ -141,10 +140,6 @@ def test_dfs_radar(dev, apdev):
     try:
         hapd2 = None
         hapd = start_dfs_ap(apdev[0], allow_failure=True)
-        if hapd is None:
-            if not os.path.exists("dfs"):
-                return "skip"
-            raise Exception("Failed to start DFS AP")
         time.sleep(1)
 
         dfs_simulate_radar(hapd)
@@ -231,10 +226,6 @@ def test_dfs_radar_chanlist(dev, apdev):
     """DFS chanlist when radar is detected"""
     try:
         hapd = start_dfs_ap(apdev[0], chanlist="40 44", allow_failure=True)
-        if hapd is None:
-            if not os.path.exists("dfs"):
-                return "skip"
-            raise Exception("Failed to start DFS AP")
         time.sleep(1)
 
         dfs_simulate_radar(hapd)
@@ -269,10 +260,6 @@ def test_dfs_radar_chanlist_vht80(dev, apdev):
     try:
         hapd = start_dfs_ap(apdev[0], chanlist="36", ht40=True, vht80=True,
                             allow_failure=True)
-        if hapd is None:
-            if not os.path.exists("dfs"):
-                return "skip"
-            raise Exception("Failed to start DFS AP")
         time.sleep(1)
 
         dfs_simulate_radar(hapd)
@@ -310,10 +297,6 @@ def test_dfs_radar_chanlist_vht20(dev, apdev):
     try:
         hapd = start_dfs_ap(apdev[0], chanlist="36", vht20=True,
                             allow_failure=True)
-        if hapd is None:
-            if not os.path.exists("dfs"):
-                return "skip"
-            raise Exception("Failed to start DFS AP")
         time.sleep(1)
 
         dfs_simulate_radar(hapd)
@@ -348,10 +331,6 @@ def test_dfs_radar_no_ht(dev, apdev):
     try:
         hapd = start_dfs_ap(apdev[0], chanlist="36", ht=False,
                             allow_failure=True)
-        if hapd is None:
-            if not os.path.exists("dfs"):
-                return "skip"
-            raise Exception("Failed to start DFS AP")
         time.sleep(1)
 
         dfs_simulate_radar(hapd)
@@ -386,10 +365,6 @@ def test_dfs_radar_ht40minus(dev, apdev):
     try:
         hapd = start_dfs_ap(apdev[0], chanlist="36", ht40minus=True,
                             allow_failure=True)
-        if hapd is None:
-            if not os.path.exists("dfs"):
-                return "skip"
-            raise Exception("Failed to start DFS AP")
         time.sleep(1)
 
         dfs_simulate_radar(hapd)

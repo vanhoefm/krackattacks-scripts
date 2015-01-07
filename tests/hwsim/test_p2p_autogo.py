@@ -11,6 +11,7 @@ logger = logging.getLogger()
 
 import hwsim_utils
 import utils
+from utils import HwsimSkip
 from wlantest import Wlantest
 from wpasupplicant import WpaSupplicant
 
@@ -340,7 +341,7 @@ def test_autogo_chan_switch(dev):
     if "FAIL" in res:
         # for now, skip test since mac80211_hwsim support is not yet widely
         # deployed
-        return 'skip'
+        raise HwsimSkip("Assume mac80211_hwsim did not support channel switching")
     ev = dev[0].wait_event(["AP-CSA-FINISHED"], timeout=10)
     if ev is None:
         raise Exception("CSA finished event timed out")

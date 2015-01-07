@@ -1,5 +1,5 @@
 # Testing utilities
-# Copyright (c) 2013, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2015, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -13,3 +13,9 @@ def get_ifnames():
             if len(val) == 2:
                 ifnames.append(val[0].strip(' '))
     return ifnames
+
+class HwsimSkip(Exception):
+    def __init__(self, reason):
+        self.reason = reason
+    def __str__(self):
+        return self.reason

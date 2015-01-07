@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 #
 # Test case executor
-# Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2015, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -27,6 +27,7 @@ from wpasupplicant import WpaSupplicant
 from hostapd import HostapdGlobal
 from check_kernel import check_kernel
 from wlantest import Wlantest
+from utils import HwsimSkip
 
 def set_term_echo(fd, enabled):
     [iflag, oflag, cflag, lflag, ispeed, ospeed, cc] = termios.tcgetattr(fd)
@@ -441,14 +442,14 @@ def main():
                     result = "SKIP"
                 else:
                     result = "PASS"
+            except HwsimSkip, e:
+                logger.info("Skip test case: %s" % e)
+                result = "SKIP"
             except Exception, e:
-                if str(e) == "hwsim-SKIP":
-                    result = "SKIP"
-                else:
-                    logger.info(e)
-                    if args.loglevel == logging.WARNING:
-                        print "Exception: " + str(e)
-                    result = "FAIL"
+                logger.info(e)
+                if args.loglevel == logging.WARNING:
+                    print "Exception: " + str(e)
+                result = "FAIL"
             for d in dev:
                 try:
                     d.dump_monitor()

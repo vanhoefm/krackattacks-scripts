@@ -15,6 +15,7 @@ except ImportError:
     dbus_imported = False
 
 import hostapd
+from utils import HwsimSkip
 from test_dbus import TestDbus, start_ap
 
 WPAS_DBUS_OLD_SERVICE = "fi.epitest.hostap.WPASupplicant"
@@ -25,8 +26,7 @@ WPAS_DBUS_OLD_NETWORK = "fi.epitest.hostap.WPASupplicant.Network"
 
 def prepare_dbus(dev):
     if not dbus_imported:
-        logger.info("No dbus module available")
-        raise Exception("hwsim-SKIP")
+        raise HwsimSkip("No dbus module available")
     try:
         from dbus.mainloop.glib import DBusGMainLoop
         dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
@@ -37,8 +37,7 @@ def prepare_dbus(dev):
         if_obj = bus.get_object(WPAS_DBUS_OLD_SERVICE, path)
         return (bus,wpas_obj,path,if_obj)
     except Exception, e:
-        logger.info("No D-Bus support available: " + str(e))
-        raise Exception("hwsim-SKIP")
+        raise HwsimSkip("Could not connect to D-Bus: %s" % e)
 
 class TestDbusOldWps(TestDbus):
     def __init__(self, bus):

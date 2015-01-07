@@ -12,6 +12,7 @@ import subprocess
 
 import hostapd
 from wpasupplicant import WpaSupplicant
+from utils import HwsimSkip
 
 def check_scan(dev, params, other_started=False, test_busy=False):
     if not other_started:
@@ -698,8 +699,7 @@ def _test_scan_random_mac(dev, apdev, params):
             raise Exception("Invalid MAC_RAND_SCAN accepted: " + args)
 
     if dev[0].get_driver_status_field('capa.mac_addr_rand_scan_supported') != '1':
-        logger.info("Driver does not support random MAC address for scanning")
-        raise Exception("hwsim-SKIP")
+        raise HwsimSkip("Driver does not support random MAC address for scanning")
 
     tests = [ "all enable=1",
               "all enable=1 addr=f2:11:22:33:44:55 mask=ff:ff:ff:ff:ff:ff",

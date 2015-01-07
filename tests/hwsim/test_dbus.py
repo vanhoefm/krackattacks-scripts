@@ -19,6 +19,7 @@ except ImportError:
 
 import hostapd
 from wpasupplicant import WpaSupplicant
+from utils import HwsimSkip
 from test_ap_tdls import connect_2sta_open
 
 WPAS_DBUS_SERVICE = "fi.w1.wpa_supplicant1"
@@ -35,7 +36,7 @@ WPAS_DBUS_PERSISTENT_GROUP = "fi.w1.wpa_supplicant1.PersistentGroup"
 def prepare_dbus(dev):
     if not dbus_imported:
         logger.info("No dbus module available")
-        raise Exception("hwsim-SKIP")
+        raise HwsimSkip("No dbus module available")
     try:
         from dbus.mainloop.glib import DBusGMainLoop
         dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
@@ -46,8 +47,7 @@ def prepare_dbus(dev):
         if_obj = bus.get_object(WPAS_DBUS_SERVICE, path)
         return (bus,wpas_obj,path,if_obj)
     except Exception, e:
-        logger.info("No D-Bus support available: " + str(e))
-        raise Exception("hwsim-SKIP")
+        raise HwsimSkip("Could not connect to D-Bus: %s" % e)
 
 class TestDbus(object):
     def __init__(self, bus):

@@ -1649,6 +1649,37 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 }
 
 
+static void ibss_mesh_setup_freq(struct wpa_supplicant *wpa_s,
+				 const struct wpa_ssid *ssid,
+				 struct hostapd_freq_params *freq)
+{
+	enum hostapd_hw_mode hw_mode;
+	struct hostapd_hw_modes *mode = NULL;
+	u8 channel;
+	int i;
+
+	freq->freq = ssid->frequency;
+
+	/* For IBSS check HT_IBSS flag */
+	if (ssid->mode == WPAS_MODE_IBSS &&
+	    !(wpa_s->drv_flags & WPA_DRIVER_FLAGS_HT_IBSS))
+		return;
+
+	hw_mode = ieee80211_freq_to_chan(ssid->frequency, &channel);
+	for (i = 0; wpa_s->hw.modes && i < wpa_s->hw.num_modes; i++) {
+		if (wpa_s->hw.modes[i].mode == hw_mode) {
+			mode = &wpa_s->hw.modes[i];
+			break;
+		}
+	}
+
+	if (!mode)
+		return;
+
+	freq->ht_enabled = ht_supported(mode);
+}
+
+
 static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 {
 	struct wpa_connect_work *cwork = work->ctx;
@@ -1962,23 +1993,8 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 
 	/* Initial frequency for IBSS/mesh */
 	if ((ssid->mode == WPAS_MODE_IBSS || ssid->mode == WPAS_MODE_MESH) &&
-	    ssid->frequency > 0 && params.freq.freq == 0) {
-		enum hostapd_hw_mode hw_mode;
-		u8 channel;
-
-		params.freq.freq = ssid->frequency;
-
-		hw_mode = ieee80211_freq_to_chan(ssid->frequency, &channel);
-		for (i = 0; wpa_s->hw.modes && i < wpa_s->hw.num_modes; i++) {
-			if (wpa_s->hw.modes[i].mode == hw_mode) {
-				struct hostapd_hw_modes *mode;
-
-				mode = &wpa_s->hw.modes[i];
-				params.freq.ht_enabled = ht_supported(mode);
-				break;
-			}
-		}
-	}
+	    ssid->frequency > 0 && params.freq.freq == 0)
+		ibss_mesh_setup_freq(wpa_s, ssid, &params.freq);
 
 	if (ssid->mode == WPAS_MODE_IBSS) {
 		if (ssid->beacon_int)

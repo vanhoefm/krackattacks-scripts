@@ -394,6 +394,9 @@ static void wiphy_info_feature_flags(struct wiphy_info_data *info,
 
 	if (flags & NL80211_FEATURE_TX_POWER_INSERTION)
 		capa->rrm_flags |= WPA_DRIVER_FLAGS_TX_POWER_INSERTION;
+
+	if (flags & NL80211_FEATURE_HT_IBSS)
+		capa->flags |= WPA_DRIVER_FLAGS_HT_IBSS;
 }
 
 

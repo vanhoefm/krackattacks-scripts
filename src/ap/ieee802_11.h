@@ -89,4 +89,6 @@ int hostapd_update_time_adv(struct hostapd_data *hapd);
 void hostapd_client_poll_ok(struct hostapd_data *hapd, const u8 *addr);
 u8 * hostapd_eid_bss_max_idle_period(struct hostapd_data *hapd, u8 *eid);
 
+int auth_sae_init_committed(struct hostapd_data *hapd, struct sta_info *sta);
+
 #endif /* IEEE802_11_H */

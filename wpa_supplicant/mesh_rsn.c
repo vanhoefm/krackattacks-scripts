@@ -18,6 +18,7 @@
 #include "ap/hostapd.h"
 #include "ap/wpa_auth.h"
 #include "ap/sta_info.h"
+#include "ap/ieee802_11.h"
 #include "wpa_supplicant_i.h"
 #include "driver_i.h"
 #include "wpas_glue.h"
@@ -245,80 +246,23 @@ static int mesh_rsn_sae_group(struct wpa_supplicant *wpa_s,
 }
 
 
-struct wpabuf *
-mesh_rsn_build_sae_commit(struct wpa_supplicant *wpa_s,
-			  struct wpa_ssid *ssid, struct sta_info *sta)
+static int mesh_rsn_build_sae_commit(struct wpa_supplicant *wpa_s,
+				     struct wpa_ssid *ssid,
+				     struct sta_info *sta)
 {
-	struct wpabuf *buf;
-	int len;
-
 	if (ssid->passphrase == NULL) {
 		wpa_msg(wpa_s, MSG_DEBUG, "SAE: No password available");
-		return NULL;
+		return -1;
 	}
 
 	if (mesh_rsn_sae_group(wpa_s, sta->sae) < 0) {
 		wpa_msg(wpa_s, MSG_DEBUG, "SAE: Failed to select group");
-		return NULL;
+		return -1;
 	}
 
-	if (sae_prepare_commit(wpa_s->own_addr, sta->addr,
-			       (u8 *) ssid->passphrase,
-			       os_strlen(ssid->passphrase), sta->sae) < 0) {
-		wpa_msg(wpa_s, MSG_DEBUG, "SAE: Could not pick PWE");
-		return NULL;
-	}
-
-	len = wpa_s->mesh_rsn->sae_token ?
-		wpabuf_len(wpa_s->mesh_rsn->sae_token) : 0;
-	buf = wpabuf_alloc(4 + SAE_COMMIT_MAX_LEN + len);
-	if (buf == NULL)
-		return NULL;
-
-	sae_write_commit(sta->sae, buf, wpa_s->mesh_rsn->sae_token);
-
-	return buf;
-}
-
-
-static void mesh_rsn_send_auth(struct wpa_supplicant *wpa_s,
-			       const u8 *dst, const u8 *src,
-			       u16 auth_transaction, u16 resp,
-			       struct wpabuf *data)
-{
-	struct ieee80211_mgmt *auth;
-	u8 *buf;
-	size_t len, ielen = 0;
-
-	if (data)
-		ielen = wpabuf_len(data);
-	len = IEEE80211_HDRLEN + sizeof(auth->u.auth) + ielen;
-	buf = os_zalloc(len);
-	if (buf == NULL)
-		return;
-
-	auth = (struct ieee80211_mgmt *) buf;
-	auth->frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
-					   WLAN_FC_STYPE_AUTH);
-	os_memcpy(auth->da, dst, ETH_ALEN);
-	os_memcpy(auth->sa, src, ETH_ALEN);
-	os_memcpy(auth->bssid, src, ETH_ALEN);
-
-	auth->u.auth.auth_alg = host_to_le16(WLAN_AUTH_SAE);
-	auth->u.auth.auth_transaction = host_to_le16(auth_transaction);
-	auth->u.auth.status_code = host_to_le16(resp);
-
-	if (data)
-		os_memcpy(auth->u.auth.variable, wpabuf_head(data), ielen);
-
-	wpa_msg(wpa_s, MSG_DEBUG, "authentication frame: STA=" MACSTR
-		" auth_transaction=%d resp=%d (IE len=%lu)",
-		MAC2STR(dst), auth_transaction, resp, (unsigned long) ielen);
-	if (wpa_drv_send_mlme(wpa_s, buf, len, 0) < 0)
-		wpa_printf(MSG_INFO, "send_auth_reply: send_mlme failed: %s",
-			   strerror(errno));
-
-	os_free(buf);
+	return sae_prepare_commit(wpa_s->own_addr, sta->addr,
+				  (u8 *) ssid->passphrase,
+				  os_strlen(ssid->passphrase), sta->sae);
 }
 
 
@@ -326,9 +270,10 @@ static void mesh_rsn_send_auth(struct wpa_supplicant *wpa_s,
 int mesh_rsn_auth_sae_sta(struct wpa_supplicant *wpa_s,
 			  struct sta_info *sta)
 {
+	struct hostapd_data *hapd = wpa_s->ifmsh->bss[0];
 	struct wpa_ssid *ssid = wpa_s->current_ssid;
-	struct wpabuf *buf;
 	unsigned int rnd;
+	int ret;
 
 	if (!ssid) {
 		wpa_msg(wpa_s, MSG_DEBUG,
@@ -342,25 +287,21 @@ int mesh_rsn_auth_sae_sta(struct wpa_supplicant *wpa_s,
 			return -1;
 	}
 
-	buf = mesh_rsn_build_sae_commit(wpa_s, ssid, sta);
-	if (!buf)
+	if (mesh_rsn_build_sae_commit(wpa_s, ssid, sta))
 		return -1;
 
 	wpa_msg(wpa_s, MSG_DEBUG,
 		"AUTH: started authentication with SAE peer: " MACSTR,
 		MAC2STR(sta->addr));
 
-	sta->sae->state = SAE_COMMITTED;
 	wpa_supplicant_set_state(wpa_s, WPA_AUTHENTICATING);
-
-	mesh_rsn_send_auth(wpa_s, sta->addr, wpa_s->own_addr,
-			   1, WLAN_STATUS_SUCCESS, buf);
+	ret = auth_sae_init_committed(hapd, sta);
+	if (ret)
+		return ret;
 
 	rnd = rand() % MESH_AUTH_TIMEOUT;
 	eloop_register_timeout(MESH_AUTH_TIMEOUT + rnd, 0, mesh_auth_timer,
 			       wpa_s, sta);
-	wpabuf_free(buf);
-
 	return 0;
 }
 

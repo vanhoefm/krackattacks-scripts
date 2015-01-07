@@ -755,6 +755,37 @@ reply:
 	}
 	wpabuf_free(data);
 }
+
+
+/**
+ * auth_sae_init_committed - Send COMMIT and start SAE in committed state
+ * @hapd: BSS data for the device initiating the authentication
+ * @sta: the peer to which commit authentication frame is sent
+ *
+ * This function implements Init event handling (IEEE Std 802.11-2012,
+ * 11.3.8.6.3) in which initial COMMIT message is sent. Prior to calling, the
+ * sta->sae structure should be initialized appropriately via a call to
+ * sae_prepare_commit().
+ */
+int auth_sae_init_committed(struct hostapd_data *hapd, struct sta_info *sta)
+{
+	int ret;
+
+	if (!sta->sae || !sta->sae->tmp)
+		return -1;
+
+	if (sta->sae->state != SAE_NOTHING)
+		return -1;
+
+	ret = auth_sae_send_commit(hapd, sta, hapd->own_addr, 0);
+	if (ret)
+		return -1;
+
+	sta->sae->state = SAE_COMMITTED;
+
+	return 0;
+}
+
 #endif /* CONFIG_SAE */
 
 

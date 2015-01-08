@@ -2251,8 +2251,11 @@ int hostapd_ctrl_iface_init(struct hostapd_data *hapd)
 	os_free(fname);
 
 	hapd->ctrl_sock = s;
-	eloop_register_read_sock(s, hostapd_ctrl_iface_receive, hapd,
-				 NULL);
+	if (eloop_register_read_sock(s, hostapd_ctrl_iface_receive, hapd,
+				     NULL) < 0) {
+		hostapd_ctrl_iface_deinit(hapd);
+		return -1;
+	}
 	hapd->msg_ctx = hapd;
 	wpa_msg_register_cb(hostapd_ctrl_iface_msg_cb);
 
@@ -2299,6 +2302,7 @@ void hostapd_ctrl_iface_deinit(struct hostapd_data *hapd)
 	}
 
 	dst = hapd->ctrl_dst;
+	hapd->ctrl_dst = NULL;
 	while (dst) {
 		prev = dst;
 		dst = dst->next;

@@ -3400,7 +3400,11 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			 * it assuming an external entity will start a
 			 * new session if needed.
 			 */
-			wpas_p2p_disconnect(wpa_s);
+			if (wpa_s->current_ssid &&
+			    wpa_s->current_ssid->p2p_group)
+				wpas_p2p_interface_unavailable(wpa_s);
+			else
+				wpas_p2p_disconnect(wpa_s);
 			break;
 		}
 		if (wpa_s->p2p_scan_work && wpa_s->global->p2p &&

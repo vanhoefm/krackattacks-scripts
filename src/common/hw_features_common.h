@@ -20,4 +20,7 @@ struct hostapd_channel_data * hw_get_channel_freq(struct hostapd_hw_modes *mode,
 int hw_get_freq(struct hostapd_hw_modes *mode, int chan);
 int hw_get_chan(struct hostapd_hw_modes *mode, int freq);
 
+int allowed_ht40_channel_pair(struct hostapd_hw_modes *mode, int pri_chan,
+			      int sec_chan);
+
 #endif /* HW_FEATURES_COMMON_H */

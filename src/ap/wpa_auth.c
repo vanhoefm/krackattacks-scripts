@@ -415,6 +415,7 @@ struct wpa_authenticator * wpa_init(const u8 *addr,
 						wpa_auth);
 	if (wpa_auth->pmksa == NULL) {
 		wpa_printf(MSG_ERROR, "PMKSA cache initialization failed.");
+		os_free(wpa_auth->group);
 		os_free(wpa_auth->wpa_ie);
 		os_free(wpa_auth);
 		return NULL;
@@ -424,6 +425,7 @@ struct wpa_authenticator * wpa_init(const u8 *addr,
 	wpa_auth->ft_pmk_cache = wpa_ft_pmk_cache_init();
 	if (wpa_auth->ft_pmk_cache == NULL) {
 		wpa_printf(MSG_ERROR, "FT PMK cache initialization failed.");
+		os_free(wpa_auth->group);
 		os_free(wpa_auth->wpa_ie);
 		pmksa_cache_auth_deinit(wpa_auth->pmksa);
 		os_free(wpa_auth);

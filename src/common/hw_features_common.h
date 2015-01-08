@@ -26,5 +26,6 @@ void get_pri_sec_chan(struct wpa_scan_res *bss, int *pri_chan, int *sec_chan);
 int check_40mhz_5g(struct hostapd_hw_modes *mode,
 		   struct wpa_scan_results *scan_res, int pri_chan,
 		   int sec_chan);
+int check_20mhz_bss(struct wpa_scan_res *bss, int pri_freq, int start, int end);
 
 #endif /* HW_FEATURES_COMMON_H */

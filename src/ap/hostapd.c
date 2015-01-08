@@ -2028,11 +2028,13 @@ int hostapd_add_iface(struct hapd_interfaces *interfaces, char *buf)
 			   "for hostapd", __func__);
 		goto fail;
 	}
+	conf = NULL;
 
 	if (start_ctrl_iface(hapd_iface) < 0)
 		goto fail;
 
-	wpa_printf(MSG_INFO, "Add interface '%s'", conf->bss[0]->iface);
+	wpa_printf(MSG_INFO, "Add interface '%s'",
+		   hapd_iface->conf->bss[0]->iface);
 
 	return 0;
 

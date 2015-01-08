@@ -259,72 +259,18 @@ static void ieee80211n_get_pri_sec_chan(struct wpa_scan_res *bss,
 static int ieee80211n_check_40mhz_5g(struct hostapd_iface *iface,
 				     struct wpa_scan_results *scan_res)
 {
-	int pri_chan, sec_chan, pri_freq, sec_freq, pri_bss, sec_bss;
-	int bss_pri_chan, bss_sec_chan;
-	size_t i;
-	int match;
+	int pri_chan, sec_chan;
+	int res;
 
 	pri_chan = iface->conf->channel;
 	sec_chan = pri_chan + iface->conf->secondary_channel * 4;
-	pri_freq = hostapd_hw_get_freq(iface->bss[0], pri_chan);
-	if (iface->conf->secondary_channel > 0)
-		sec_freq = pri_freq + 20;
-	else
-		sec_freq = pri_freq - 20;
 
-	/*
-	 * Switch PRI/SEC channels if Beacons were detected on selected SEC
-	 * channel, but not on selected PRI channel.
-	 */
-	pri_bss = sec_bss = 0;
-	for (i = 0; i < scan_res->num; i++) {
-		struct wpa_scan_res *bss = scan_res->res[i];
-		if (bss->freq == pri_freq)
-			pri_bss++;
-		else if (bss->freq == sec_freq)
-			sec_bss++;
-	}
-	if (sec_bss && !pri_bss) {
-		wpa_printf(MSG_INFO, "Switch own primary and secondary "
-			   "channel to get secondary channel with no Beacons "
-			   "from other BSSes");
+	res = check_40mhz_5g(iface->current_mode, scan_res, pri_chan, sec_chan);
+
+	if (res == 2)
 		ieee80211n_switch_pri_sec(iface);
-		return 1;
-	}
 
-	/*
-	 * Match PRI/SEC channel with any existing HT40 BSS on the same
-	 * channels that we are about to use (if already mixed order in
-	 * existing BSSes, use own preference).
-	 */
-	match = 0;
-	for (i = 0; i < scan_res->num; i++) {
-		struct wpa_scan_res *bss = scan_res->res[i];
-		ieee80211n_get_pri_sec_chan(bss, &bss_pri_chan, &bss_sec_chan);
-		if (pri_chan == bss_pri_chan &&
-		    sec_chan == bss_sec_chan) {
-			match = 1;
-			break;
-		}
-	}
-	if (!match) {
-		for (i = 0; i < scan_res->num; i++) {
-			struct wpa_scan_res *bss = scan_res->res[i];
-			ieee80211n_get_pri_sec_chan(bss, &bss_pri_chan,
-						    &bss_sec_chan);
-			if (pri_chan == bss_sec_chan &&
-			    sec_chan == bss_pri_chan) {
-				wpa_printf(MSG_INFO, "Switch own primary and "
-					   "secondary channel due to BSS "
-					   "overlap with " MACSTR,
-					   MAC2STR(bss->bssid));
-				ieee80211n_switch_pri_sec(iface);
-				break;
-			}
-		}
-	}
-
-	return 1;
+	return !!res;
 }
 
 

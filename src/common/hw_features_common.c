@@ -166,3 +166,73 @@ void get_pri_sec_chan(struct wpa_scan_res *bss, int *pri_chan, int *sec_chan)
 		}
 	}
 }
+
+
+int check_40mhz_5g(struct hostapd_hw_modes *mode,
+		   struct wpa_scan_results *scan_res, int pri_chan,
+		   int sec_chan)
+{
+	int pri_freq, sec_freq, pri_bss, sec_bss;
+	int bss_pri_chan, bss_sec_chan;
+	size_t i;
+	int match;
+
+	if (!mode || !scan_res || !pri_chan || !sec_chan)
+		return 0;
+
+	if (pri_chan == sec_chan)
+		return 0;
+
+	pri_freq = hw_get_freq(mode, pri_chan);
+	sec_freq = hw_get_freq(mode, sec_chan);
+
+	/*
+	 * Switch PRI/SEC channels if Beacons were detected on selected SEC
+	 * channel, but not on selected PRI channel.
+	 */
+	pri_bss = sec_bss = 0;
+	for (i = 0; i < scan_res->num; i++) {
+		struct wpa_scan_res *bss = scan_res->res[i];
+		if (bss->freq == pri_freq)
+			pri_bss++;
+		else if (bss->freq == sec_freq)
+			sec_bss++;
+	}
+	if (sec_bss && !pri_bss) {
+		wpa_printf(MSG_INFO,
+			   "Switch own primary and secondary channel to get secondary channel with no Beacons from other BSSes");
+		return 2;
+	}
+
+	/*
+	 * Match PRI/SEC channel with any existing HT40 BSS on the same
+	 * channels that we are about to use (if already mixed order in
+	 * existing BSSes, use own preference).
+	 */
+	match = 0;
+	for (i = 0; i < scan_res->num; i++) {
+		struct wpa_scan_res *bss = scan_res->res[i];
+		get_pri_sec_chan(bss, &bss_pri_chan, &bss_sec_chan);
+		if (pri_chan == bss_pri_chan &&
+		    sec_chan == bss_sec_chan) {
+			match = 1;
+			break;
+		}
+	}
+	if (!match) {
+		for (i = 0; i < scan_res->num; i++) {
+			struct wpa_scan_res *bss = scan_res->res[i];
+			get_pri_sec_chan(bss, &bss_pri_chan, &bss_sec_chan);
+			if (pri_chan == bss_sec_chan &&
+			    sec_chan == bss_pri_chan) {
+				wpa_printf(MSG_INFO, "Switch own primary and "
+					   "secondary channel due to BSS "
+					   "overlap with " MACSTR,
+					   MAC2STR(bss->bssid));
+				return 2;
+			}
+		}
+	}
+
+	return 1;
+}

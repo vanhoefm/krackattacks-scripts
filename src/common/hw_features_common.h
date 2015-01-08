@@ -22,5 +22,6 @@ int hw_get_chan(struct hostapd_hw_modes *mode, int freq);
 
 int allowed_ht40_channel_pair(struct hostapd_hw_modes *mode, int pri_chan,
 			      int sec_chan);
+void get_pri_sec_chan(struct wpa_scan_res *bss, int *pri_chan, int *sec_chan);
 
 #endif /* HW_FEATURES_COMMON_H */

@@ -11,6 +11,8 @@
 
 #include "common.h"
 #include "defs.h"
+#include "ieee802_11_defs.h"
+#include "ieee802_11_common.h"
 #include "hw_features_common.h"
 
 
@@ -139,4 +141,28 @@ int allowed_ht40_channel_pair(struct hostapd_hw_modes *mode, int pri_chan,
 	}
 
 	return 1;
+}
+
+
+void get_pri_sec_chan(struct wpa_scan_res *bss, int *pri_chan, int *sec_chan)
+{
+	struct ieee80211_ht_operation *oper;
+	struct ieee802_11_elems elems;
+
+	*pri_chan = *sec_chan = 0;
+
+	ieee802_11_parse_elems((u8 *) (bss + 1), bss->ie_len, &elems, 0);
+	if (elems.ht_operation &&
+	    elems.ht_operation_len >= sizeof(*oper)) {
+		oper = (struct ieee80211_ht_operation *) elems.ht_operation;
+		*pri_chan = oper->primary_chan;
+		if (oper->ht_param & HT_INFO_HT_PARAM_STA_CHNL_WIDTH) {
+			int sec = oper->ht_param &
+				HT_INFO_HT_PARAM_SECONDARY_CHNL_OFF_MASK;
+			if (sec == HT_INFO_HT_PARAM_SECONDARY_CHNL_ABOVE)
+				*sec_chan = *pri_chan + 4;
+			else if (sec == HT_INFO_HT_PARAM_SECONDARY_CHNL_BELOW)
+				*sec_chan = *pri_chan - 4;
+		}
+	}
 }

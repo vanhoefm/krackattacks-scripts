@@ -1421,6 +1421,7 @@ CFLAGS += -DCONFIG_SME
 endif
 
 OBJS += ../src/common/ieee802_11_common.o
+OBJS += ../src/common/hw_features_common.o
 
 ifdef NEED_EAP_COMMON
 OBJS += ../src/eap_common/eap_common.o

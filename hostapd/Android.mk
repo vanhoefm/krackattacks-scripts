@@ -134,6 +134,7 @@ OBJS += src/utils/ip_addr.c
 
 OBJS += src/common/ieee802_11_common.c
 OBJS += src/common/wpa_common.c
+OBJS += src/common/hw_features_common.c
 
 OBJS += src/eapol_auth/eapol_auth_sm.c
 

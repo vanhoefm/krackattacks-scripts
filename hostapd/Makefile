@@ -115,6 +115,7 @@ OBJS += ../src/utils/ip_addr.o
 
 OBJS += ../src/common/ieee802_11_common.o
 OBJS += ../src/common/wpa_common.o
+OBJS += ../src/common/hw_features_common.o
 
 OBJS += ../src/eapol_auth/eapol_auth_sm.o
 

@@ -15,6 +15,7 @@
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
 #include "common/wpa_ctrl.h"
+#include "common/hw_features_common.h"
 #include "hostapd.h"
 #include "ap_config.h"
 #include "ap_drv_ops.h"
@@ -1143,35 +1144,11 @@ const char * hostapd_hw_mode_txt(int mode)
 
 int hostapd_hw_get_freq(struct hostapd_data *hapd, int chan)
 {
-	int i;
-
-	if (!hapd->iface->current_mode)
-		return 0;
-
-	for (i = 0; i < hapd->iface->current_mode->num_channels; i++) {
-		struct hostapd_channel_data *ch =
-			&hapd->iface->current_mode->channels[i];
-		if (ch->chan == chan)
-			return ch->freq;
-	}
-
-	return 0;
+	return hw_get_freq(hapd->iface->current_mode, chan);
 }
 
 
 int hostapd_hw_get_channel(struct hostapd_data *hapd, int freq)
 {
-	int i;
-
-	if (!hapd->iface->current_mode)
-		return 0;
-
-	for (i = 0; i < hapd->iface->current_mode->num_channels; i++) {
-		struct hostapd_channel_data *ch =
-			&hapd->iface->current_mode->channels[i];
-		if (ch->freq == freq)
-			return ch->chan;
-	}
-
-	return 0;
+	return hw_get_chan(hapd->iface->current_mode, freq);
 }

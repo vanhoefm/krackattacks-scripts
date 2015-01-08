@@ -249,13 +249,6 @@ static void ieee80211n_switch_pri_sec(struct hostapd_iface *iface)
 }
 
 
-static void ieee80211n_get_pri_sec_chan(struct wpa_scan_res *bss,
-					int *pri_chan, int *sec_chan)
-{
-	return get_pri_sec_chan(bss, pri_chan, sec_chan);
-}
-
-
 static int ieee80211n_check_40mhz_5g(struct hostapd_iface *iface,
 				     struct wpa_scan_results *scan_res)
 {
@@ -274,94 +267,16 @@ static int ieee80211n_check_40mhz_5g(struct hostapd_iface *iface,
 }
 
 
-static int ieee80211n_check_20mhz_bss(struct wpa_scan_res *bss, int pri_freq,
-				      int start, int end)
-{
-	return check_20mhz_bss(bss, pri_freq, start, end);
-}
-
-
 static int ieee80211n_check_40mhz_2g4(struct hostapd_iface *iface,
 				      struct wpa_scan_results *scan_res)
 {
-	int pri_freq, sec_freq;
-	int affected_start, affected_end;
-	size_t i;
+	int pri_chan, sec_chan;
 
-	pri_freq = hostapd_hw_get_freq(iface->bss[0], iface->conf->channel);
-	if (iface->conf->secondary_channel > 0)
-		sec_freq = pri_freq + 20;
-	else
-		sec_freq = pri_freq - 20;
-	affected_start = (pri_freq + sec_freq) / 2 - 25;
-	affected_end = (pri_freq + sec_freq) / 2 + 25;
-	wpa_printf(MSG_DEBUG, "40 MHz affected channel range: [%d,%d] MHz",
-		   affected_start, affected_end);
-	for (i = 0; i < scan_res->num; i++) {
-		struct wpa_scan_res *bss = scan_res->res[i];
-		int pri = bss->freq;
-		int sec = pri;
-		int sec_chan, pri_chan;
-		struct ieee802_11_elems elems;
+	pri_chan = iface->conf->channel;
+	sec_chan = pri_chan + iface->conf->secondary_channel * 4;
 
-		/* Check for overlapping 20 MHz BSS */
-		if (ieee80211n_check_20mhz_bss(bss, pri_freq, affected_start,
-					       affected_end)) {
-			wpa_printf(MSG_DEBUG,
-				   "Overlapping 20 MHz BSS is found");
-			return 0;
-		}
-
-		ieee80211n_get_pri_sec_chan(bss, &pri_chan, &sec_chan);
-
-		if (sec_chan) {
-			if (sec_chan < pri_chan)
-				sec = pri - 20;
-			else
-				sec = pri + 20;
-		}
-
-		if ((pri < affected_start || pri > affected_end) &&
-		    (sec < affected_start || sec > affected_end))
-			continue; /* not within affected channel range */
-
-		wpa_printf(MSG_DEBUG, "Neighboring BSS: " MACSTR
-			   " freq=%d pri=%d sec=%d",
-			   MAC2STR(bss->bssid), bss->freq, pri_chan, sec_chan);
-
-		if (sec_chan) {
-			if (pri_freq != pri || sec_freq != sec) {
-				wpa_printf(MSG_DEBUG, "40 MHz pri/sec "
-					   "mismatch with BSS " MACSTR
-					   " <%d,%d> (chan=%d%c) vs. <%d,%d>",
-					   MAC2STR(bss->bssid),
-					   pri, sec, pri_chan,
-					   sec > pri ? '+' : '-',
-					   pri_freq, sec_freq);
-				return 0;
-			}
-		}
-
-		ieee802_11_parse_elems((u8 *) (bss + 1), bss->ie_len, &elems,
-				       0);
-		if (elems.ht_capabilities &&
-		    elems.ht_capabilities_len >=
-		    sizeof(struct ieee80211_ht_capabilities)) {
-			struct ieee80211_ht_capabilities *ht_cap =
-				(struct ieee80211_ht_capabilities *)
-				elems.ht_capabilities;
-
-			if (le_to_host16(ht_cap->ht_capabilities_info) &
-			    HT_CAP_INFO_40MHZ_INTOLERANT) {
-				wpa_printf(MSG_DEBUG,
-					   "40 MHz Intolerant is set on channel %d in BSS "
-					   MACSTR, pri, MAC2STR(bss->bssid));
-				return 0;
-			}
-		}
-	}
-
-	return 1;
+	return check_40mhz_2g4(iface->current_mode, scan_res, pri_chan,
+			       sec_chan);
 }
 
 

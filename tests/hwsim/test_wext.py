@@ -7,12 +7,11 @@
 import logging
 logger = logging.getLogger()
 import os
-import subprocess
 
 import hostapd
 import hwsim_utils
 from wpasupplicant import WpaSupplicant
-from test_rfkill import get_rfkill_id
+from test_rfkill import get_rfkill
 
 def get_wext_interface():
     if not os.path.exists("/proc/net/wireless"):
@@ -244,8 +243,8 @@ def test_wext_rfkill(dev, apdev):
     """WEXT and rfkill block/unblock"""
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     wpas.interface_add("wlan5")
-    id = get_rfkill_id(wpas)
-    if id is None:
+    rfk = get_rfkill(wpas)
+    if rfk is None:
         return "skip"
     wpas.interface_remove("wlan5")
 
@@ -257,14 +256,14 @@ def test_wext_rfkill(dev, apdev):
     wpas.connect("open", key_mgmt="NONE", scan_freq="2412")
     try:
         logger.info("rfkill block")
-        subprocess.call(['rfkill', 'block', id])
+        rfk.block()
         wpas.wait_disconnected(timeout=10,
                                error="Missing disconnection event on rfkill block")
 
         logger.info("rfkill unblock")
-        subprocess.call(['rfkill', 'unblock', id])
+        rfk.unblock()
         wpas.wait_connected(timeout=20,
                             error="Missing connection event on rfkill unblock")
         hwsim_utils.test_connectivity(wpas, hapd)
     finally:
-        subprocess.call(['rfkill', 'unblock', id])
+        rfk.unblock()

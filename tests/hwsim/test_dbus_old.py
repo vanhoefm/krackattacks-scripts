@@ -552,6 +552,22 @@ def test_dbus_old_connect_eap(dev, apdev):
         if not t.success():
             raise Exception("Expected signals not seen")
 
+def test_dbus_old_network_set(dev, apdev):
+    """The old D-Bus interface and network set method"""
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+
+    path = if_obj.addNetwork(dbus_interface=WPAS_DBUS_OLD_IFACE)
+    netw_obj = bus.get_object(WPAS_DBUS_OLD_SERVICE, path)
+    netw_obj.disable(dbus_interface=WPAS_DBUS_OLD_NETWORK)
+
+    params = dbus.Dictionary({ 'priority': dbus.UInt64(1) }, signature='sv')
+    try:
+        netw_obj.set(params, dbus_interface=WPAS_DBUS_OLD_NETWORK)
+        raise Exception("set succeeded with unexpected type")
+    except dbus.exceptions.DBusException, e:
+        if "InvalidOptions" not in str(e):
+            raise Exception("Unexpected error message for unexpected type: " + str(e))
+
 def test_dbus_old_wps_pbc(dev, apdev):
     """The old D-Bus interface and WPS/PBC"""
     try:

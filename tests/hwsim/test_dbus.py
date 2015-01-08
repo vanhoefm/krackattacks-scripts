@@ -1353,6 +1353,13 @@ def test_dbus_tdls_invalid(dev, apdev):
         if "InvalidArgs" not in str(e):
             raise Exception("Unexpected error message for invalid TDLSTeardown: " + str(e))
 
+    try:
+        iface.TDLSTeardown("00:11:22:33:44:55")
+        raise Exception("TDLSTeardown accepted for unknown peer")
+    except dbus.exceptions.DBusException, e:
+        if "UnknownError: error performing TDLS teardown" not in str(e):
+            raise Exception("Unexpected error message: " + str(e))
+
 def test_dbus_tdls(dev, apdev):
     """D-Bus TDLS"""
     (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
@@ -2460,6 +2467,17 @@ def test_dbus_p2p_autogo(dev, apdev):
                 if len(addr) > 0:
                     addr += ':'
                 addr += '%02x' % ord(p)
+
+            params = { 'Role': 'registrar',
+                       'P2PDeviceAddress': self.peer['DeviceAddress'],
+                       'Bssid': self.peer['DeviceAddress'],
+                       'Type': 'pin' }
+            try:
+                wps.Start(params)
+                raise Exception("Invalid WPS.Start() accepted")
+            except dbus.exceptions.DBusException, e:
+                if "InvalidArgs" not in str(e):
+                    raise Exception("Unexpected error message: " + str(e))
             params = { 'Role': 'registrar',
                        'P2PDeviceAddress': self.peer['DeviceAddress'],
                        'Bssid': self.peer['DeviceAddress'],

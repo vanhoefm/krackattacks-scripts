@@ -9,9 +9,11 @@ logger = logging.getLogger()
 import struct
 import subprocess
 import time
+import os
 
 import hostapd
 import hwsim_utils
+from tshark import run_tshark
 from utils import alloc_fail
 from wpasupplicant import WpaSupplicant
 
@@ -346,3 +348,45 @@ def test_ap_open_ifdown(dev, apdev):
         raise Exception("No INTERFACE-ENABLED event")
     dev[0].wait_connected()
     hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_ap_open_disconnect_in_ps(dev, apdev, params):
+    """Disconnect with the client in PS to regression-test a kernel bug"""
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412",
+                   bg_scan_period="0")
+    ev = hapd.wait_event([ "AP-STA-CONNECTED" ], timeout=5)
+    if ev is None:
+        raise Exception("No connection event received from hostapd")
+
+    time.sleep(0.2)
+    hwsim_utils.set_powersave(dev[0], hwsim_utils.PS_MANUAL_POLL)
+    try:
+        # inject some traffic
+        sa = hapd.own_addr()
+        da = dev[0].own_addr()
+        hapd.request('DATA_TEST_CONFIG 1')
+        hapd.request('DATA_TEST_TX {} {} 0'.format(da, sa))
+        hapd.request('DATA_TEST_CONFIG 0')
+
+        # let the AP send couple of Beacon frames
+        time.sleep(0.3)
+
+        # disconnect - with traffic pending - shouldn't cause kernel warnings
+        dev[0].request("DISCONNECT")
+    finally:
+        hwsim_utils.set_powersave(dev[0], hwsim_utils.PS_DISABLED)
+
+    time.sleep(0.2)
+    out = run_tshark(os.path.join(params['logdir'], "hwsim0.pcapng"),
+                     "wlan_mgt.tim.partial_virtual_bitmap",
+                     ["wlan_mgt.tim.partial_virtual_bitmap"])
+    if out is not None:
+        state = 0
+        for l in out.splitlines():
+            pvb = int(l, 16)
+            if pvb > 0 and state == 0:
+                state = 1
+            elif pvb == 0 and state == 1:
+                state = 2
+        if state != 2:
+            raise Exception("Didn't observe TIM bit getting set and unset (state=%d)" % state)

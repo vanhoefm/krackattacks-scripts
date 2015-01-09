@@ -150,3 +150,11 @@ def test_connectivity_p2p_sta(dev1, dev2, dscp=None, tos=None):
 
 def test_connectivity_sta(dev1, dev2, dscp=None, tos=None):
     test_connectivity(dev1, dev2, dscp, tos)
+
+(PS_DISABLED, PS_ENABLED, PS_AUTO_POLL, PS_MANUAL_POLL) = range(4)
+
+def set_powersave(dev, val):
+    phy = dev.get_driver_status_field("phyname")
+    psf = open('/sys/kernel/debug/ieee80211/%s/hwsim/ps' % phy, 'w')
+    psf.write('%d\n' % val)
+    psf.close()

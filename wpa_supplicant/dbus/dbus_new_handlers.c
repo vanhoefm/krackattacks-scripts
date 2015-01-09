@@ -537,28 +537,28 @@ DBusMessage * wpas_dbus_handler_create_interface(DBusMessage *message,
 			driver = os_strdup(entry.str_value);
 			wpa_dbus_dict_entry_clear(&entry);
 			if (driver == NULL)
-				goto error;
+				goto oom;
 		} else if (os_strcmp(entry.key, "Ifname") == 0 &&
 			   entry.type == DBUS_TYPE_STRING) {
 			os_free(ifname);
 			ifname = os_strdup(entry.str_value);
 			wpa_dbus_dict_entry_clear(&entry);
 			if (ifname == NULL)
-				goto error;
+				goto oom;
 		} else if (os_strcmp(entry.key, "ConfigFile") == 0 &&
 			   entry.type == DBUS_TYPE_STRING) {
 			os_free(confname);
 			confname = os_strdup(entry.str_value);
 			wpa_dbus_dict_entry_clear(&entry);
 			if (confname == NULL)
-				goto error;
+				goto oom;
 		} else if (os_strcmp(entry.key, "BridgeIfname") == 0 &&
 			   entry.type == DBUS_TYPE_STRING) {
 			os_free(bridge_ifname);
 			bridge_ifname = os_strdup(entry.str_value);
 			wpa_dbus_dict_entry_clear(&entry);
 			if (bridge_ifname == NULL)
-				goto error;
+				goto oom;
 		} else {
 			wpa_dbus_dict_entry_clear(&entry);
 			goto error;
@@ -609,6 +609,9 @@ out:
 
 error:
 	reply = wpas_dbus_error_invalid_args(message, NULL);
+	goto out;
+oom:
+	reply = wpas_dbus_error_no_memory(message);
 	goto out;
 }
 

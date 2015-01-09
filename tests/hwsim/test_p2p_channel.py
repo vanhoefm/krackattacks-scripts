@@ -12,6 +12,7 @@ import time
 
 import hostapd
 import hwsim_utils
+from tshark import run_tshark
 from wpasupplicant import WpaSupplicant
 from hwsim import HWSimRadio
 from test_p2p_grpform import go_neg_pin_authorized
@@ -131,28 +132,9 @@ def test_p2p_channel_random_social_with_op_class_change(dev, apdev, params):
             raise Exception("Unexpected channel %d MHz - did not pick random social channel" % freq)
         remove_group(dev[0], dev[1])
 
-        try:
-            arg = [ "tshark",
-                    "-r", os.path.join(params['logdir'], "hwsim0.pcapng"),
-                    "-Y", "wifi_p2p.public_action.subtype == 0",
-                    "-V" ]
-            cmd = subprocess.Popen(arg, stdout=subprocess.PIPE,
-                                   stderr=open('/dev/null', 'w'))
-        except Exception, e:
-            logger.info("Could run run tshark check: " + str(e))
-            cmd = None
-            pass
-
-        if cmd:
-            (out,err) = cmd.communicate()
-            res = cmd.wait()
-            if res == 1:
-                arg[3] = '-R'
-                cmd = subprocess.Popen(arg, stdout=subprocess.PIPE,
-                                       stderr=open('/dev/null', 'w'))
-                (out,err) = cmd.communicate()
-                res = cmd.wait()
-
+        out = run_tshark(os.path.join(params['logdir'], "hwsim0.pcapng"),
+                         "wifi_p2p.public_action.subtype == 0")
+        if out is not None:
             last = None
             for l in out.splitlines():
                 if "Operating Channel:" not in l:

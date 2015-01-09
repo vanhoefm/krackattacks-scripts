@@ -13,6 +13,7 @@ import subprocess
 import hostapd
 from wpasupplicant import WpaSupplicant
 from utils import HwsimSkip
+from tshark import run_tshark
 
 def check_scan(dev, params, other_started=False, test_busy=False):
     if not other_started:
@@ -707,32 +708,10 @@ def _test_scan_random_mac(dev, apdev, params):
     for args in tests:
         dev[0].request("MAC_RAND_SCAN " + args)
         dev[0].scan_for_bss(bssid, freq=2412, force_scan=True)
-    # wait a bit to make it more likely for wlantest sniffer to have captured
-    # and written the results into a file that we can process here
-    time.sleep(1)
 
-    try:
-        arg = [ "tshark",
-                "-r", os.path.join(params['logdir'], "hwsim0.pcapng"),
-                "-Y", "wlan.fc.type_subtype == 4",
-                "-Tfields", "-e", "wlan.ta" ]
-        cmd = subprocess.Popen(arg, stdout=subprocess.PIPE,
-                               stderr=open('/dev/null', 'w'))
-    except Exception, e:
-        logger.info("Could run run tshark check: " + str(e))
-        cmd = None
-        pass
-
-    if cmd:
-        (out,err) = cmd.communicate()
-        res = cmd.wait()
-        if res == 1:
-            arg[3] = '-R'
-            cmd = subprocess.Popen(arg, stdout=subprocess.PIPE,
-                                   stderr=open('/dev/null', 'w'))
-            (out,err) = cmd.communicate()
-            res = cmd.wait()
-
+    out = run_tshark(os.path.join(params['logdir'], "hwsim0.pcapng"),
+                     "wlan.fc.type_subtype == 4", ["wlan.ta" ])
+    if out is not None:
         addr = out.splitlines()
         logger.info("Probe Request frames seen from: " + str(addr))
         if dev[0].own_addr() in addr:

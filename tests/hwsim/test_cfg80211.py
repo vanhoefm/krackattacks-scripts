@@ -13,6 +13,7 @@ import time
 
 import hostapd
 import hwsim_utils
+from tshark import run_tshark
 from nl80211 import *
 
 def nl80211_command(dev, cmd, attr):
@@ -82,28 +83,9 @@ def test_cfg80211_tx_frame(dev, apdev, params):
     # note: also the Deauthenticate frame sent by the GO going down ends up
     # being transmitted incorrectly on 2422 MHz.
 
-    try:
-        arg = [ "tshark",
-                "-r", os.path.join(params['logdir'], "hwsim0.pcapng"),
-                "-Y", "wlan.fc.type_subtype == 13",
-                "-Tfields", "-e", "radiotap.channel.freq" ]
-        cmd = subprocess.Popen(arg, stdout=subprocess.PIPE,
-                               stderr=open('/dev/null', 'w'))
-    except Exception, e:
-        logger.info("Could run run tshark check: " + str(e))
-        cmd = None
-        pass
-
-    if cmd:
-        (out,err) = cmd.communicate()
-        res = cmd.wait()
-        if res == 1:
-            arg[3] = '-R'
-            cmd = subprocess.Popen(arg, stdout=subprocess.PIPE,
-                                   stderr=open('/dev/null', 'w'))
-            (out,err) = cmd.communicate()
-            res = cmd.wait()
-
+    out = run_tshark(os.path.join(params['logdir'], "hwsim0.pcapng"),
+                     "wlan.fc.type_subtype == 13", ["radiotap.channel.freq"])
+    if out is not None:
         freq = out.splitlines()
         if len(freq) != 2:
             raise Exception("Unexpected number of Action frames (%d)" % len(freq))

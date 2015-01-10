@@ -1075,6 +1075,10 @@ int wpa_supplicant_ctrl_iface_ctrl_rsp_handle(struct wpa_supplicant *wpa_s,
 					      const char *field,
 					      const char *value);
 
+void ibss_mesh_setup_freq(struct wpa_supplicant *wpa_s,
+			  const struct wpa_ssid *ssid,
+			  struct hostapd_freq_params *freq);
+
 /* events.c */
 void wpa_supplicant_mark_disassoc(struct wpa_supplicant *wpa_s);
 int wpa_supplicant_connect(struct wpa_supplicant *wpa_s,

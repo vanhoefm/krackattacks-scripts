@@ -1650,9 +1650,9 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 }
 
 
-static void ibss_mesh_setup_freq(struct wpa_supplicant *wpa_s,
-				 const struct wpa_ssid *ssid,
-				 struct hostapd_freq_params *freq)
+void ibss_mesh_setup_freq(struct wpa_supplicant *wpa_s,
+			  const struct wpa_ssid *ssid,
+			  struct hostapd_freq_params *freq)
 {
 	enum hostapd_hw_mode hw_mode;
 	struct hostapd_hw_modes *mode = NULL;

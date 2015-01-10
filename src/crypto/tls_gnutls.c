@@ -82,7 +82,6 @@ struct tls_global {
 
 struct tls_connection {
 	gnutls_session_t session;
-	char *subject_match, *altsubject_match;
 	int read_alerts, write_alerts, failed;
 
 	u8 *pre_shared_secret;
@@ -342,8 +341,6 @@ void tls_connection_deinit(void *ssl_ctx, struct tls_connection *conn)
 	gnutls_certificate_free_credentials(conn->xcred);
 	gnutls_deinit(conn->session);
 	os_free(conn->pre_shared_secret);
-	os_free(conn->subject_match);
-	os_free(conn->altsubject_match);
 	wpabuf_free(conn->push_buf);
 	wpabuf_free(conn->pull_buf);
 	os_free(conn);
@@ -403,104 +400,6 @@ int tls_connection_shutdown(void *ssl_ctx, struct tls_connection *conn)
 }
 
 
-#if 0
-static int tls_match_altsubject(X509 *cert, const char *match)
-{
-	GENERAL_NAME *gen;
-	char *field, *tmp;
-	void *ext;
-	int i, found = 0;
-	size_t len;
-
-	ext = X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
-
-	for (i = 0; ext && i < sk_GENERAL_NAME_num(ext); i++) {
-		gen = sk_GENERAL_NAME_value(ext, i);
-		switch (gen->type) {
-		case GEN_EMAIL:
-			field = "EMAIL";
-			break;
-		case GEN_DNS:
-			field = "DNS";
-			break;
-		case GEN_URI:
-			field = "URI";
-			break;
-		default:
-			field = NULL;
-			wpa_printf(MSG_DEBUG, "TLS: altSubjectName: "
-				   "unsupported type=%d", gen->type);
-			break;
-		}
-
-		if (!field)
-			continue;
-
-		wpa_printf(MSG_DEBUG, "TLS: altSubjectName: %s:%s",
-			   field, gen->d.ia5->data);
-		len = os_strlen(field) + 1 +
-			strlen((char *) gen->d.ia5->data) + 1;
-		tmp = os_malloc(len);
-		if (tmp == NULL)
-			continue;
-		snprintf(tmp, len, "%s:%s", field, gen->d.ia5->data);
-		if (strstr(tmp, match))
-			found++;
-		os_free(tmp);
-	}
-
-	return found;
-}
-#endif
-
-
-#if 0
-static int tls_verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx)
-{
-	char buf[256];
-	X509 *err_cert;
-	int err, depth;
-	SSL *ssl;
-	struct tls_connection *conn;
-	char *match, *altmatch;
-
-	err_cert = X509_STORE_CTX_get_current_cert(x509_ctx);
-	err = X509_STORE_CTX_get_error(x509_ctx);
-	depth = X509_STORE_CTX_get_error_depth(x509_ctx);
-	ssl = X509_STORE_CTX_get_ex_data(x509_ctx,
-					 SSL_get_ex_data_X509_STORE_CTX_idx());
-	X509_NAME_oneline(X509_get_subject_name(err_cert), buf, sizeof(buf));
-
-	conn = SSL_get_app_data(ssl);
-	match = conn ? conn->subject_match : NULL;
-	altmatch = conn ? conn->altsubject_match : NULL;
-
-	if (!preverify_ok) {
-		wpa_printf(MSG_WARNING, "TLS: Certificate verification failed,"
-			   " error %d (%s) depth %d for '%s'", err,
-			   X509_verify_cert_error_string(err), depth, buf);
-	} else {
-		wpa_printf(MSG_DEBUG, "TLS: tls_verify_cb - "
-			   "preverify_ok=%d err=%d (%s) depth=%d buf='%s'",
-			   preverify_ok, err,
-			   X509_verify_cert_error_string(err), depth, buf);
-		if (depth == 0 && match && strstr(buf, match) == NULL) {
-			wpa_printf(MSG_WARNING, "TLS: Subject '%s' did not "
-				   "match with '%s'", buf, match);
-			preverify_ok = 0;
-		} else if (depth == 0 && altmatch &&
-			   !tls_match_altsubject(err_cert, altmatch)) {
-			wpa_printf(MSG_WARNING, "TLS: altSubjectName match "
-				   "'%s' not found", altmatch);
-			preverify_ok = 0;
-		}
-	}
-
-	return preverify_ok;
-}
-#endif
-
-
 int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 			      const struct tls_connection_params *params)
 {
@@ -509,20 +408,19 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 	if (conn == NULL || params == NULL)
 		return -1;
 
-	os_free(conn->subject_match);
-	conn->subject_match = NULL;
 	if (params->subject_match) {
-		conn->subject_match = os_strdup(params->subject_match);
-		if (conn->subject_match == NULL)
-			return -1;
+		wpa_printf(MSG_INFO, "GnuTLS: subject_match not supported");
+		return -1;
 	}
 
-	os_free(conn->altsubject_match);
-	conn->altsubject_match = NULL;
 	if (params->altsubject_match) {
-		conn->altsubject_match = os_strdup(params->altsubject_match);
-		if (conn->altsubject_match == NULL)
-			return -1;
+		wpa_printf(MSG_INFO, "GnuTLS: altsubject_match not supported");
+		return -1;
+	}
+
+	if (params->suffix_match) {
+		wpa_printf(MSG_INFO, "GnuTLS: suffix_match not supported");
+		return -1;
 	}
 
 	/* TODO: gnutls_certificate_set_verify_flags(xcred, flags); 
@@ -903,7 +801,9 @@ static int tls_connection_verify_peer(struct tls_connection *conn,
 			   i + 1, num_certs, buf);
 
 		if (i == 0) {
-			/* TODO: validate subject_match and altsubject_match */
+			/* TODO: validate altsubject_match and suffix_match.
+			 * For now, any such configuration is rejected in
+			 * tls_connection_set_params() */
 		}
 
 		os_free(buf);

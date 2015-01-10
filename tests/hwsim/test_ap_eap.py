@@ -1355,11 +1355,20 @@ def test_ap_wpa2_eap_tls_neg_altsubject_match(dev, apdev):
     """WPA2-Enterprise negative test - altsubject mismatch"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
+
+    tests = [ "incorrect.example.com",
+              "DNS:incorrect.example.com",
+              "DNS:w1.fi",
+              "DNS:erver.w1.fi" ]
+    for match in tests:
+        _test_ap_wpa2_eap_tls_neg_altsubject_match(dev, apdev, match)
+
+def _test_ap_wpa2_eap_tls_neg_altsubject_match(dev, apdev, match):
     dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
                    identity="DOMAIN\mschapv2 user", anonymous_identity="ttls",
                    password="password", phase2="auth=MSCHAPV2",
                    ca_cert="auth_serv/ca.pem",
-                   altsubject_match="incorrect.example.com",
+                   altsubject_match=match,
                    wait_connect=False, scan_freq="2412")
 
     ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
@@ -1403,6 +1412,8 @@ def test_ap_wpa2_eap_tls_neg_altsubject_match(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-SSID-TEMP-DISABLED"], timeout=10)
     if ev is None:
         raise Exception("Network block disabling not reported")
+
+    dev[0].request("REMOVE_NETWORK all")
 
 def test_ap_wpa2_eap_unauth_tls(dev, apdev):
     """WPA2-Enterprise connection using UNAUTH-TLS"""

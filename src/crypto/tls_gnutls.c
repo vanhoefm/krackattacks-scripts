@@ -432,7 +432,6 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 	 * to force peer validation(?) */
 
 	if (params->ca_cert) {
-		conn->verify_peer = 1;
 		ret = gnutls_certificate_set_x509_trust_file(
 			conn->xcred, params->ca_cert, GNUTLS_X509_FMT_PEM);
 		if (ret < 0) {
@@ -450,6 +449,34 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 				return -1;
 			}
 		}
+	} else if (params->ca_cert_blob) {
+		gnutls_datum_t ca;
+
+		ca.data = (unsigned char *) params->ca_cert_blob;
+		ca.size = params->ca_cert_blob_len;
+
+		ret = gnutls_certificate_set_x509_trust_mem(
+			conn->xcred, &ca, GNUTLS_X509_FMT_PEM);
+		if (ret < 0) {
+			wpa_printf(MSG_DEBUG,
+				   "Failed to parse CA cert in PEM format: %s",
+				   gnutls_strerror(ret));
+			ret = gnutls_certificate_set_x509_trust_mem(
+				conn->xcred, &ca, GNUTLS_X509_FMT_DER);
+			if (ret < 0) {
+				wpa_printf(MSG_DEBUG,
+					   "Failed to parse CA cert in DER format: %s",
+					   gnutls_strerror(ret));
+				return -1;
+			}
+		}
+	} else if (params->ca_path) {
+		wpa_printf(MSG_INFO, "GnuTLS: ca_path not supported");
+		return -1;
+	}
+
+	if (params->ca_cert || params->ca_cert_blob) {
+		conn->verify_peer = 1;
 
 		if (params->flags & TLS_CONN_ALLOW_SIGN_RSA_MD5) {
 			gnutls_certificate_set_verify_flags(

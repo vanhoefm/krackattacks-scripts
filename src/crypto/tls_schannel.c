@@ -707,6 +707,11 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 		return -1;
 	}
 
+	if (params->openssl_ciphers) {
+		wpa_printf(MSG_INFO, "GnuTLS: openssl_ciphers not supported");
+		return -1;
+	}
+
 	if (global->my_cert_store == NULL &&
 	    (global->my_cert_store = CertOpenSystemStore(0, TEXT("MY"))) ==
 	    NULL) {

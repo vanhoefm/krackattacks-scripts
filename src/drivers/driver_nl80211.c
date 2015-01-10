@@ -7797,6 +7797,19 @@ static int wpa_driver_nl80211_init_mesh(void *priv)
 }
 
 
+static int nl80211_put_mesh_id(struct nl_msg *msg, const u8 *mesh_id,
+			       size_t mesh_id_len)
+{
+	if (mesh_id) {
+		wpa_hexdump_ascii(MSG_DEBUG, "  * Mesh ID (SSID)",
+				  mesh_id, mesh_id_len);
+		return nla_put(msg, NL80211_ATTR_MESH_ID, mesh_id_len, mesh_id);
+	}
+
+	return 0;
+}
+
+
 static int
 wpa_driver_nl80211_join_mesh(void *priv,
 			     struct wpa_driver_mesh_join_params *params)
@@ -7811,18 +7824,9 @@ wpa_driver_nl80211_join_mesh(void *priv,
 	msg = nl80211_drv_msg(drv, 0, NL80211_CMD_JOIN_MESH);
 	if (!msg ||
 	    nl80211_put_freq_params(msg, &params->freq) ||
-	    nl80211_put_basic_rates(msg, params->basic_rates))
-		goto fail;
-
-	if (params->meshid) {
-		wpa_hexdump_ascii(MSG_DEBUG, "  * SSID",
-				  params->meshid, params->meshid_len);
-		if (nla_put(msg, NL80211_ATTR_MESH_ID, params->meshid_len,
-			    params->meshid))
-			goto fail;
-	}
-
-	if (nl80211_put_beacon_int(msg, params->beacon_int))
+	    nl80211_put_basic_rates(msg, params->basic_rates) ||
+	    nl80211_put_mesh_id(msg, params->meshid, params->meshid_len) ||
+	    nl80211_put_beacon_int(msg, params->beacon_int))
 		goto fail;
 
 	wpa_printf(MSG_DEBUG, "  * flags=%08X", params->flags);

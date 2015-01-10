@@ -5197,6 +5197,13 @@ void wpas_rrm_process_neighbor_rep(struct wpa_supplicant *wpa_s,
 }
 
 
+#if defined(__CYGWIN__) || defined(CONFIG_NATIVE_WINDOWS)
+/* Workaround different, undefined for Windows, error codes used here */
+#define ENOTCONN -1
+#define EOPNOTSUPP -1
+#define ECANCELED -1
+#endif
+
 /**
  * wpas_rrm_send_neighbor_rep_request - Request a neighbor report from our AP
  * @wpa_s: Pointer to wpa_supplicant

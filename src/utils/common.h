@@ -164,6 +164,7 @@ static inline unsigned int wpa_swap_32(unsigned int v)
 #define be_to_host16(n) wpa_swap_16(n)
 #define host_to_be16(n) wpa_swap_16(n)
 #define le_to_host32(n) (n)
+#define host_to_le32(n) (n)
 #define be_to_host32(n) wpa_swap_32(n)
 #define host_to_be32(n) wpa_swap_32(n)
 

@@ -186,6 +186,10 @@ struct eap_peer_config {
 	 * string is in following format:
 	 *
 	 * /C=US/ST=CA/L=San Francisco/CN=Test AS/emailAddress=as@n.example.com
+	 *
+	 * Note: Since this is a substring match, this cannot be used securily
+	 * to do a suffix match against a possible domain name in the CN entry.
+	 * For such a use case, domain_suffix_match should be used instead.
 	 */
 	u8 *subject_match;
 

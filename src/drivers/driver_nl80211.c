@@ -3078,9 +3078,25 @@ static int wpa_driver_nl80211_send_mlme(struct i802_bss *bss, const u8 *data,
 }
 
 
+static int nl80211_put_basic_rates(struct nl_msg *msg, const int *basic_rates)
+{
+	u8 rates[NL80211_MAX_SUPP_RATES];
+	u8 rates_len = 0;
+	int i;
+
+	if (!basic_rates)
+		return 0;
+
+	for (i = 0; i < NL80211_MAX_SUPP_RATES && basic_rates[i] >= 0; i++)
+		rates[rates_len++] = basic_rates[i] / 5;
+
+	return nla_put(msg, NL80211_ATTR_BSS_BASIC_RATES, rates_len, rates);
+}
+
+
 static int nl80211_set_bss(struct i802_bss *bss, int cts, int preamble,
 			   int slot, int ht_opmode, int ap_isolate,
-			   int *basic_rates)
+			   const int *basic_rates)
 {
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct nl_msg *msg;
@@ -3095,27 +3111,13 @@ static int nl80211_set_bss(struct i802_bss *bss, int cts, int preamble,
 	    (ht_opmode >= 0 &&
 	     nla_put_u16(msg, NL80211_ATTR_BSS_HT_OPMODE, ht_opmode)) ||
 	    (ap_isolate >= 0 &&
-	     nla_put_u8(msg, NL80211_ATTR_AP_ISOLATE, ap_isolate)))
-		goto fail;
-
-	if (basic_rates) {
-		u8 rates[NL80211_MAX_SUPP_RATES];
-		u8 rates_len = 0;
-		int i;
-
-		for (i = 0; i < NL80211_MAX_SUPP_RATES && basic_rates[i] >= 0;
-		     i++)
-			rates[rates_len++] = basic_rates[i] / 5;
-
-		if (nla_put(msg, NL80211_ATTR_BSS_BASIC_RATES, rates_len,
-			    rates))
-			goto fail;
+	     nla_put_u8(msg, NL80211_ATTR_AP_ISOLATE, ap_isolate)) ||
+	    nl80211_put_basic_rates(msg, basic_rates)) {
+		nlmsg_free(msg);
+		return -ENOBUFS;
 	}
 
 	return send_and_recv_msgs(drv, msg, NULL, NULL);
-fail:
-	nlmsg_free(msg);
-	return -ENOBUFS;
 }
 
 
@@ -7833,21 +7835,8 @@ wpa_driver_nl80211_join_mesh(void *priv,
 			goto fail;
 	}
 
-	if (params->basic_rates) {
-		u8 rates[NL80211_MAX_SUPP_RATES];
-		u8 rates_len = 0;
-		int i;
-
-		for (i = 0; i < NL80211_MAX_SUPP_RATES; i++) {
-			if (params->basic_rates[i] < 0)
-				break;
-			rates[rates_len++] = params->basic_rates[i] / 5;
-		}
-
-		if (nla_put(msg, NL80211_ATTR_BSS_BASIC_RATES, rates_len,
-			    rates))
-			goto fail;
-	}
+	if (nl80211_put_basic_rates(msg, params->basic_rates))
+		goto fail;
 
 	if (params->meshid) {
 		wpa_hexdump_ascii(MSG_DEBUG, "  * SSID",

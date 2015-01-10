@@ -272,9 +272,10 @@ size_t wpa_trace_calling_func(const char *buf[], size_t len)
 		data.found = FALSE;
 		bfd_map_over_sections(abfd, find_addr_sect, &data);
 
-		while (data.found || !data.function) {
-			if (pos > 0 ||
-			    os_strcmp(data.function, __func__) != 0) {
+		while (data.found) {
+			if (data.function &&
+			    (pos > 0 ||
+			     os_strcmp(data.function, __func__) != 0)) {
 				buf[pos++] = data.function;
 				if (pos == len)
 					return pos;

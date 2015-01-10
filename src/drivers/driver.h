@@ -1048,10 +1048,9 @@ struct wpa_driver_mesh_join_params {
 	const int *basic_rates;
 	const u8 *ies;
 	int ie_len;
-	int freq;
+	struct hostapd_freq_params freq;
 	int beacon_int;
 	int max_peer_links;
-	enum ht_mode ht_mode;
 	struct wpa_driver_mesh_bss_params conf;
 #define WPA_DRIVER_MESH_FLAG_USER_MPM	0x00000001
 #define WPA_DRIVER_MESH_FLAG_DRIVER_MPM	0x00000002

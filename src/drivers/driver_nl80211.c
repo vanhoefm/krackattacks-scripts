@@ -7804,43 +7804,9 @@ wpa_driver_nl80211_join_mesh(void *priv,
 
 	wpa_printf(MSG_DEBUG, "nl80211: mesh join (ifindex=%d)", drv->ifindex);
 	msg = nl80211_drv_msg(drv, 0, NL80211_CMD_JOIN_MESH);
-	if (!msg)
-		goto fail;
-	if (params->freq) {
-		wpa_printf(MSG_DEBUG, "  * freq=%d", params->freq);
-		if (nla_put_u32(msg, NL80211_ATTR_WIPHY_FREQ, params->freq))
-			goto fail;
-	}
-
-	if (params->ht_mode) {
-		unsigned int ht_value;
-		char *ht_mode = "";
-
-		switch (params->ht_mode) {
-		default:
-		case CHAN_NO_HT:
-			ht_value = NL80211_CHAN_NO_HT;
-			ht_mode = "NOHT";
-			break;
-		case CHAN_HT20:
-			ht_value = NL80211_CHAN_HT20;
-			ht_mode = "HT20";
-			break;
-		case CHAN_HT40PLUS:
-			ht_value = NL80211_CHAN_HT40PLUS;
-			ht_mode = "HT40+";
-			break;
-		case CHAN_HT40MINUS:
-			ht_value = NL80211_CHAN_HT40MINUS;
-			ht_mode = "HT40-";
-			break;
-		}
-		wpa_printf(MSG_DEBUG, "  * ht_mode=%s", ht_mode);
-		if (nla_put_u32(msg, NL80211_ATTR_WIPHY_CHANNEL_TYPE, ht_value))
-			goto fail;
-	}
-
-	if (nl80211_put_basic_rates(msg, params->basic_rates))
+	if (!msg ||
+	    nl80211_put_freq_params(msg, &params->freq) ||
+	    nl80211_put_basic_rates(msg, params->basic_rates))
 		goto fail;
 
 	if (params->meshid) {
@@ -7905,7 +7871,7 @@ wpa_driver_nl80211_join_mesh(void *priv,
 		goto fail;
 	}
 	ret = 0;
-	bss->freq = params->freq;
+	bss->freq = params->freq.freq;
 	wpa_printf(MSG_DEBUG, "nl80211: mesh join request send successfully");
 
 fail:

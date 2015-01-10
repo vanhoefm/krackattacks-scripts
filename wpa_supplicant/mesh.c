@@ -320,14 +320,26 @@ int wpa_supplicant_join_mesh(struct wpa_supplicant *wpa_s,
 	params.meshid_len = ssid->ssid_len;
 	params.freq = ssid->frequency;
 	wpa_s->mesh_ht_enabled = ssid->mesh_ht_mode > CHAN_NO_HT;
+	switch (ssid->mesh_ht_mode) {
+	case CHAN_HT20:
+		params.freq.ht_enabled = 1;
+		break;
+	case CHAN_HT40PLUS:
+		params.freq.ht_enabled = 1;
+		params.freq.sec_channel_offset = 1;
+		break;
+	case CHAN_HT40MINUS:
+		params.freq.ht_enabled = 1;
+		params.freq.sec_channel_offset = -1;
+		break;
+	default:
+		break;
+	}
 	if (ssid->beacon_int > 0)
 		params.beacon_int = ssid->beacon_int;
 	else if (wpa_s->conf->beacon_int > 0)
 		params.beacon_int = wpa_s->conf->beacon_int;
 	params.max_peer_links = wpa_s->conf->max_peer_links;
-#ifdef CONFIG_IEEE80211N
-	params.ht_mode = ssid->mesh_ht_mode;
-#endif /* CONFIG_IEEE80211N */
 
 	if (ssid->key_mgmt & WPA_KEY_MGMT_SAE) {
 		params.flags |= WPA_DRIVER_MESH_FLAG_SAE_AUTH;

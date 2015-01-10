@@ -703,6 +703,7 @@ struct wpa_supplicant {
 	struct mesh_rsn *mesh_rsn;
 	int mesh_if_idx;
 	unsigned int mesh_if_created:1;
+	unsigned int mesh_ht_enabled:1;
 #endif /* CONFIG_MESH */
 
 	unsigned int off_channel_freq;

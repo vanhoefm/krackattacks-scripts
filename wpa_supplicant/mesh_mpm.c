@@ -229,8 +229,7 @@ static void mesh_mpm_send_plink_action(struct wpa_supplicant *wpa_s,
 		  2 + 96 + /* AMPE */
 		  2 + 16;  /* MIC */
 #ifdef CONFIG_IEEE80211N
-	if (type != PLINK_CLOSE &&
-	    wpa_s->current_ssid->mesh_ht_mode > CHAN_NO_HT) {
+	if (type != PLINK_CLOSE && wpa_s->mesh_ht_enabled) {
 		buf_len += 2 + 26 + /* HT capabilities */
 			   2 + 22;  /* HT operation */
 	}
@@ -323,8 +322,7 @@ static void mesh_mpm_send_plink_action(struct wpa_supplicant *wpa_s,
 	}
 
 #ifdef CONFIG_IEEE80211N
-	if (type != PLINK_CLOSE &&
-	    wpa_s->current_ssid->mesh_ht_mode > CHAN_NO_HT) {
+	if (type != PLINK_CLOSE && wpa_s->mesh_ht_enabled) {
 		pos = hostapd_eid_ht_capabilities(bss, ht_capa_oper);
 		pos = hostapd_eid_ht_operation(bss, pos);
 		wpabuf_put_data(buf, ht_capa_oper, pos - ht_capa_oper);

@@ -8,6 +8,7 @@
 
 import logging
 logger = logging.getLogger()
+import subprocess
 
 import hwsim_utils
 from wpasupplicant import WpaSupplicant
@@ -475,3 +476,35 @@ def test_wpas_mesh_max_peering(dev, apdev):
             check_mesh_group_removed(dev[i])
     finally:
         dev[0].request("SET max_peer_links 99")
+
+def test_wpas_mesh_open_5ghz(dev, apdev):
+    """wpa_supplicant open MESH network on 5 GHz band"""
+    try:
+        _test_wpas_mesh_open_5ghz(dev, apdev)
+    finally:
+        subprocess.call(['iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
+        dev[1].flush_scan_cache()
+
+def _test_wpas_mesh_open_5ghz(dev, apdev):
+    check_mesh_support(dev[0])
+    subprocess.call(['iw', 'reg', 'set', 'US'])
+    for i in range(2):
+        for j in range(5):
+            ev = dev[i].wait_event(["CTRL-EVENT-REGDOM-CHANGE"], timeout=5)
+            if ev is None:
+                raise Exception("No regdom change event")
+            if "alpha2=US" in ev:
+                break
+        add_open_mesh_network(dev[i], freq="5180")
+
+    # Check for mesh joined
+    check_mesh_group_added(dev[0])
+    check_mesh_group_added(dev[1])
+
+    # Check for peer connected
+    check_mesh_peer_connected(dev[0])
+    check_mesh_peer_connected(dev[1])
+
+    # Test connectivity 0->1 and 1->0
+    hwsim_utils.test_connectivity(dev[0], dev[1])

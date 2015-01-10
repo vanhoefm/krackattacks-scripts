@@ -3168,6 +3168,18 @@ static int wpa_driver_nl80211_set_acl(void *priv,
 }
 
 
+static int nl80211_put_beacon_int(struct nl_msg *msg, int beacon_int)
+{
+	if (beacon_int > 0) {
+		wpa_printf(MSG_DEBUG, "  * beacon_int=%d", beacon_int);
+		return nla_put_u32(msg, NL80211_ATTR_BEACON_INTERVAL,
+				   beacon_int);
+	}
+
+	return 0;
+}
+
+
 static int wpa_driver_nl80211_set_ap(void *priv,
 				     struct wpa_driver_ap_params *params)
 {
@@ -3203,8 +3215,7 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 		    params->head) ||
 	    nla_put(msg, NL80211_ATTR_BEACON_TAIL, params->tail_len,
 		    params->tail) ||
-	    nla_put_u32(msg, NL80211_ATTR_BEACON_INTERVAL,
-			params->beacon_int) ||
+	    nl80211_put_beacon_int(msg, params->beacon_int) ||
 	    nla_put_u32(msg, NL80211_ATTR_DTIM_PERIOD, params->dtim_period) ||
 	    nla_put(msg, NL80211_ATTR_SSID, params->ssid_len, params->ssid))
 		goto fail;
@@ -4230,15 +4241,9 @@ retry:
 	os_memcpy(drv->ssid, params->ssid, params->ssid_len);
 	drv->ssid_len = params->ssid_len;
 
-	if (nl80211_put_freq_params(msg, &params->freq) < 0)
+	if (nl80211_put_freq_params(msg, &params->freq) < 0 ||
+	    nl80211_put_beacon_int(msg, params->beacon_int))
 		goto fail;
-
-	if (params->beacon_int > 0) {
-		wpa_printf(MSG_DEBUG, "  * beacon_int=%d", params->beacon_int);
-		if (nla_put_u32(msg, NL80211_ATTR_BEACON_INTERVAL,
-				params->beacon_int))
-			goto fail;
-	}
 
 	ret = nl80211_set_conn_keys(params, msg);
 	if (ret)
@@ -7817,12 +7822,8 @@ wpa_driver_nl80211_join_mesh(void *priv,
 			goto fail;
 	}
 
-	if (params->beacon_int > 0) {
-		wpa_printf(MSG_DEBUG, "  * beacon_int=%d", params->beacon_int);
-		if (nla_put_u32(msg, NL80211_ATTR_BEACON_INTERVAL,
-				params->beacon_int))
-			goto fail;
-	}
+	if (nl80211_put_beacon_int(msg, params->beacon_int))
+		goto fail;
 
 	wpa_printf(MSG_DEBUG, "  * flags=%08X", params->flags);
 

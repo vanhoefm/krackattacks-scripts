@@ -754,7 +754,6 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 #endif /* CONFIG_HS20 */
 	write_int(f, "mac_addr", ssid->mac_addr, -1);
 #ifdef CONFIG_MESH
-	STR(mesh_ht_mode);
 	STR(mesh_basic_rates);
 	INT_DEF(dot11MeshMaxRetries, DEFAULT_MESH_MAX_RETRIES);
 	INT_DEF(dot11MeshRetryTimeout, DEFAULT_MESH_RETRY_TIMEOUT);

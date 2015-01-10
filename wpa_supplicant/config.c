@@ -1597,32 +1597,6 @@ static char * wpa_config_write_psk_list(const struct parse_data *data,
 
 #ifdef CONFIG_MESH
 
-static int wpa_config_parse_mesh_ht_mode(const struct parse_data *data,
-					 struct wpa_ssid *ssid, int line,
-					 const char *value)
-{
-	int htval = 0;
-
-	if (os_strcmp(value, "NOHT") == 0)
-		htval = CHAN_NO_HT;
-	else if (os_strcmp(value, "HT20") == 0)
-		htval = CHAN_HT20;
-	else if (os_strcmp(value, "HT40-") == 0)
-		htval = CHAN_HT40MINUS;
-	else if (os_strcmp(value, "HT40+") == 0)
-		htval = CHAN_HT40PLUS;
-	else {
-		wpa_printf(MSG_ERROR,
-			   "Line %d: no ht_mode configured.", line);
-		return -1;
-	}
-
-	wpa_printf(MSG_MSGDUMP, "mesh_ht_mode: 0x%x", htval);
-	ssid->mesh_ht_mode = htval;
-	return 0;
-}
-
-
 static int wpa_config_parse_mesh_basic_rates(const struct parse_data *data,
 					     struct wpa_ssid *ssid, int line,
 					     const char *value)
@@ -1647,32 +1621,6 @@ static int wpa_config_parse_mesh_basic_rates(const struct parse_data *data,
 
 
 #ifndef NO_CONFIG_WRITE
-
-static char * wpa_config_write_mesh_ht_mode(const struct parse_data *data,
-					    struct wpa_ssid *ssid)
-{
-	char *val;
-
-	switch (ssid->mesh_ht_mode) {
-	default:
-		val = NULL;
-		break;
-	case CHAN_NO_HT:
-		val = "NOHT";
-		break;
-	case CHAN_HT20:
-		val = "HT20";
-		break;
-	case CHAN_HT40MINUS:
-		val = "HT40-";
-		break;
-	case CHAN_HT40PLUS:
-		val = "HT40+";
-		break;
-	}
-	return val ? os_strdup(val) : NULL;
-}
-
 
 static char * wpa_config_write_mesh_basic_rates(const struct parse_data *data,
 						struct wpa_ssid *ssid)
@@ -1856,7 +1804,6 @@ static const struct parse_data ssid_fields[] = {
 	{ INT_RANGE(mixed_cell, 0, 1) },
 	{ INT_RANGE(frequency, 0, 65000) },
 #ifdef CONFIG_MESH
-	{ FUNC(mesh_ht_mode) },
 	{ FUNC(mesh_basic_rates) },
 	{ INT(dot11MeshMaxRetries) },
 	{ INT(dot11MeshRetryTimeout) },
@@ -2347,7 +2294,6 @@ void wpa_config_set_network_defaults(struct wpa_ssid *ssid)
 	ssid->eap.sim_num = DEFAULT_USER_SELECTED_SIM;
 #endif /* IEEE8021X_EAPOL */
 #ifdef CONFIG_MESH
-	ssid->mesh_ht_mode = DEFAULT_MESH_HT_MODE;
 	ssid->dot11MeshMaxRetries = DEFAULT_MESH_MAX_RETRIES;
 	ssid->dot11MeshRetryTimeout = DEFAULT_MESH_RETRY_TIMEOUT;
 	ssid->dot11MeshConfirmTimeout = DEFAULT_MESH_CONFIRM_TIMEOUT;

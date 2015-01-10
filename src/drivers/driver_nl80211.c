@@ -3392,12 +3392,17 @@ fail:
 static int nl80211_put_freq_params(struct nl_msg *msg,
 				   const struct hostapd_freq_params *freq)
 {
+	wpa_printf(MSG_DEBUG, "  * freq=%d", freq->freq);
 	if (nla_put_u32(msg, NL80211_ATTR_WIPHY_FREQ, freq->freq))
 		return -ENOBUFS;
+
+	wpa_printf(MSG_DEBUG, "  * vht_enabled=%d", freq->vht_enabled);
+	wpa_printf(MSG_DEBUG, "  * ht_enabled=%d", freq->ht_enabled);
 
 	if (freq->vht_enabled) {
 		enum nl80211_chan_width cw;
 
+		wpa_printf(MSG_DEBUG, "  * bandwidth=%d", freq->bandwidth);
 		switch (freq->bandwidth) {
 		case 20:
 			cw = NL80211_CHAN_WIDTH_20;
@@ -3418,6 +3423,11 @@ static int nl80211_put_freq_params(struct nl_msg *msg,
 			return -EINVAL;
 		}
 
+		wpa_printf(MSG_DEBUG, "  * channel_width=%d", cw);
+		wpa_printf(MSG_DEBUG, "  * center_freq1=%d",
+			   freq->center_freq1);
+		wpa_printf(MSG_DEBUG, "  * center_freq2=%d",
+			   freq->center_freq2);
 		if (nla_put_u32(msg, NL80211_ATTR_CHANNEL_WIDTH, cw) ||
 		    nla_put_u32(msg, NL80211_ATTR_CENTER_FREQ1,
 				freq->center_freq1) ||
@@ -3428,6 +3438,8 @@ static int nl80211_put_freq_params(struct nl_msg *msg,
 	} else if (freq->ht_enabled) {
 		enum nl80211_channel_type ct;
 
+		wpa_printf(MSG_DEBUG, "  * sec_channel_offset=%d",
+			   freq->sec_channel_offset);
 		switch (freq->sec_channel_offset) {
 		case -1:
 			ct = NL80211_CHAN_HT40MINUS;
@@ -3440,6 +3452,7 @@ static int nl80211_put_freq_params(struct nl_msg *msg,
 			break;
 		}
 
+		wpa_printf(MSG_DEBUG, "  * channel_type=%d", ct);
 		if (nla_put_u32(msg, NL80211_ATTR_WIPHY_CHANNEL_TYPE, ct))
 			return -ENOBUFS;
 	}
@@ -4217,14 +4230,6 @@ retry:
 	os_memcpy(drv->ssid, params->ssid, params->ssid_len);
 	drv->ssid_len = params->ssid_len;
 
-	wpa_printf(MSG_DEBUG, "  * freq=%d", params->freq.freq);
-	wpa_printf(MSG_DEBUG, "  * ht_enabled=%d", params->freq.ht_enabled);
-	wpa_printf(MSG_DEBUG, "  * sec_channel_offset=%d",
-		   params->freq.sec_channel_offset);
-	wpa_printf(MSG_DEBUG, "  * vht_enabled=%d", params->freq.vht_enabled);
-	wpa_printf(MSG_DEBUG, "  * center_freq1=%d", params->freq.center_freq1);
-	wpa_printf(MSG_DEBUG, "  * center_freq2=%d", params->freq.center_freq2);
-	wpa_printf(MSG_DEBUG, "  * bandwidth=%d", params->freq.bandwidth);
 	if (nl80211_put_freq_params(msg, &params->freq) < 0)
 		goto fail;
 

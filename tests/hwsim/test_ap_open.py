@@ -201,3 +201,42 @@ def test_ap_open_out_of_memory(dev, apdev):
     # verify that a new interface can still be added when memory allocation does
     # not fail
     hostapd.add_ap(apdev[1]['ifname'], { "ssid": "open" })
+
+def test_bssid_black_white_list(dev, apdev):
+    """BSSID black/white list"""
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], { "ssid": "open" })
+
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412",
+                   bssid_whitelist=apdev[1]['bssid'])
+    dev[1].connect("open", key_mgmt="NONE", scan_freq="2412",
+                   bssid_blacklist=apdev[1]['bssid'])
+    dev[2].connect("open", key_mgmt="NONE", scan_freq="2412",
+                   bssid_whitelist="00:00:00:00:00:00/00:00:00:00:00:00",
+                   bssid_blacklist=apdev[1]['bssid'])
+    if dev[0].get_status_field('bssid') != apdev[1]['bssid']:
+        raise Exception("dev[0] connected to unexpected AP")
+    if dev[1].get_status_field('bssid') != apdev[0]['bssid']:
+        raise Exception("dev[1] connected to unexpected AP")
+    if dev[2].get_status_field('bssid') != apdev[0]['bssid']:
+        raise Exception("dev[2] connected to unexpected AP")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[1].request("REMOVE_NETWORK all")
+    dev[2].request("REMOVE_NETWORK all")
+
+    dev[2].connect("open", key_mgmt="NONE", scan_freq="2412",
+                   bssid_whitelist="00:00:00:00:00:00", wait_connect=False)
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412",
+                   bssid_whitelist="11:22:33:44:55:66/ff:00:00:00:00:00 " + apdev[1]['bssid'] + " aa:bb:cc:dd:ee:ff")
+    dev[1].connect("open", key_mgmt="NONE", scan_freq="2412",
+                   bssid_blacklist="11:22:33:44:55:66/ff:00:00:00:00:00 " + apdev[1]['bssid'] + " aa:bb:cc:dd:ee:ff")
+    if dev[0].get_status_field('bssid') != apdev[1]['bssid']:
+        raise Exception("dev[0] connected to unexpected AP")
+    if dev[1].get_status_field('bssid') != apdev[0]['bssid']:
+        raise Exception("dev[1] connected to unexpected AP")
+    dev[0].request("REMOVE_NETWORK all")
+    dev[1].request("REMOVE_NETWORK all")
+    ev = dev[2].wait_event(["CTRL-EVENT-CONNECTED"], timeout=0.1)
+    if ev is not None:
+        raise Exception("Unexpected dev[2] connectin")
+    dev[2].request("REMOVE_NETWORK all")

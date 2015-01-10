@@ -202,6 +202,32 @@ def test_wpas_ctrl_network(dev):
     if "FAIL" not in dev[0].request('BSSID ' + str(id)):
         raise Exception("Unexpected BSSID success")
 
+    tests = [ "02:11:22:33:44:55",
+              "02:11:22:33:44:55 02:ae:be:ce:53:77",
+              "02:11:22:33:44:55/ff:00:ff:00:ff:00",
+              "02:11:22:33:44:55/ff:00:ff:00:ff:00 f2:99:88:77:66:55",
+              "f2:99:88:77:66:55 02:11:22:33:44:55/ff:00:ff:00:ff:00",
+              "f2:99:88:77:66:55 02:11:22:33:44:55/ff:00:ff:00:ff:00 12:34:56:78:90:ab",
+              "02:11:22:33:44:55/ff:ff:ff:00:00:00 02:ae:be:ce:53:77/00:00:00:00:00:ff" ]
+    for val in tests:
+        dev[0].set_network(id, "bssid_blacklist", val)
+        res = dev[0].get_network(id, "bssid_blacklist")
+        if res != val:
+            raise Exception("Unexpected bssid_blacklist value: %s != %s" % (res, val))
+        dev[0].set_network(id, "bssid_whitelist", val)
+        res = dev[0].get_network(id, "bssid_whitelist")
+        if res != val:
+            raise Exception("Unexpected bssid_whitelist value: %s != %s" % (res, val))
+
+    tests = [ "foo",
+              "00:11:22:33:44:5",
+              "00:11:22:33:44:55q",
+              "00:11:22:33:44:55/",
+              "00:11:22:33:44:55/66:77:88:99:aa:b" ]
+    for val in tests:
+        if "FAIL" not in dev[0].request("SET_NETWORK %d bssid_blacklist %s" % (id, val)):
+            raise Exception("Invalid bssid_blacklist value accepted")
+
 def test_wpas_ctrl_many_networks(dev, apdev):
     """wpa_supplicant ctrl_iface LIST_NETWORKS with huge number of networks"""
     for i in range(1000):

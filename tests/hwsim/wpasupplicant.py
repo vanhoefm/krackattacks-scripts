@@ -806,7 +806,8 @@ class WpaSupplicant:
                        "disable_max_amsdu", "ampdu_factor", "ampdu_density",
                        "disable_ht40", "disable_sgi", "disable_ldpc",
                        "ht40_intolerant", "update_identifier", "mac_addr",
-                       "erp", "bg_scan_period" ]
+                       "erp", "bg_scan_period", "bssid_blacklist",
+                       "bssid_whitelist" ]
         for field in not_quoted:
             if field in kwargs and kwargs[field]:
                 self.set_network(id, field, kwargs[field])

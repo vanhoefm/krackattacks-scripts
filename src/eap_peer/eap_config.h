@@ -217,7 +217,7 @@ struct eap_peer_config {
 	 * If set, this FQDN is used as a suffix match requirement for the
 	 * server certificate in SubjectAltName dNSName element(s). If a
 	 * matching dNSName is found, this constraint is met. If no dNSName
-	 * values are present, this constraint is matched against SubjetName CN
+	 * values are present, this constraint is matched against SubjectName CN
 	 * using same suffix match comparison. Suffix match here means that the
 	 * host/domain name is compared one label at a time starting from the
 	 * top-level domain and all the labels in domain_suffix_match shall be

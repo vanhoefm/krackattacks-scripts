@@ -1005,23 +1005,6 @@ CONFIG_INTERNAL_RC4=y
 CONFIG_INTERNAL_DH_GROUP5=y
 endif
 
-ifeq ($(CONFIG_TLS), nss)
-ifdef TLS_FUNCS
-OBJS += src/crypto/tls_nss.c
-LIBS += -lssl3
-endif
-OBJS += src/crypto/crypto_nss.c
-OBJS_p += src/crypto/crypto_nss.c
-ifdef NEED_FIPS186_2_PRF
-OBJS += src/crypto/fips_prf_internal.c
-OBJS += src/crypto/sha1-internal.c
-endif
-LIBS += -lnss3
-LIBS_p += -lnss3
-CONFIG_INTERNAL_MD4=y
-CONFIG_INTERNAL_DH_GROUP5=y
-endif
-
 ifeq ($(CONFIG_TLS), internal)
 ifndef CONFIG_CRYPTO
 CONFIG_CRYPTO=internal

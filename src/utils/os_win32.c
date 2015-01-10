@@ -12,6 +12,7 @@
 #include <wincrypt.h>
 
 #include "os.h"
+#include "common.h"
 
 void os_sleep(os_time_t sec, os_time_t usec)
 {

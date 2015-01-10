@@ -190,6 +190,21 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 	if (cred == NULL)
 		return -1;
 
+	if (params->subject_match) {
+		wpa_printf(MSG_INFO, "TLS: subject_match not supported");
+		return -1;
+	}
+
+	if (params->altsubject_match) {
+		wpa_printf(MSG_INFO, "TLS: altsubject_match not supported");
+		return -1;
+	}
+
+	if (params->suffix_match) {
+		wpa_printf(MSG_INFO, "TLS: suffix_match not supported");
+		return -1;
+	}
+
 	if (tlsv1_set_ca_cert(cred, params->ca_cert,
 			      params->ca_cert_blob, params->ca_cert_blob_len,
 			      params->ca_path)) {

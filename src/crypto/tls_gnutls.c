@@ -18,54 +18,7 @@
 
 
 #define WPA_TLS_RANDOM_SIZE 32
-#define WPA_TLS_MASTER_SIZE 48
 
-
-#if LIBGNUTLS_VERSION_NUMBER < 0x010302
-/* GnuTLS 1.3.2 added functions for using master secret. Older versions require
- * use of internal structures to get the master_secret and
- * {server,client}_random.
- */
-#define GNUTLS_INTERNAL_STRUCTURE_HACK
-#endif /* LIBGNUTLS_VERSION_NUMBER < 0x010302 */
-
-
-#ifdef GNUTLS_INTERNAL_STRUCTURE_HACK
-/*
- * It looks like gnutls does not provide access to client/server_random and
- * master_key. This is somewhat unfortunate since these are needed for key
- * derivation in EAP-{TLS,TTLS,PEAP,FAST}. Workaround for now is a horrible
- * hack that copies the gnutls_session_int definition from gnutls_int.h so that
- * we can get the needed information.
- */
-
-typedef u8 uint8;
-typedef unsigned char opaque;
-typedef struct {
-    uint8 suite[2];
-} cipher_suite_st;
-
-typedef struct {
-	gnutls_connection_end_t entity;
-	gnutls_kx_algorithm_t kx_algorithm;
-	gnutls_cipher_algorithm_t read_bulk_cipher_algorithm;
-	gnutls_mac_algorithm_t read_mac_algorithm;
-	gnutls_compression_method_t read_compression_algorithm;
-	gnutls_cipher_algorithm_t write_bulk_cipher_algorithm;
-	gnutls_mac_algorithm_t write_mac_algorithm;
-	gnutls_compression_method_t write_compression_algorithm;
-	cipher_suite_st current_cipher_suite;
-	opaque master_secret[WPA_TLS_MASTER_SIZE];
-	opaque client_random[WPA_TLS_RANDOM_SIZE];
-	opaque server_random[WPA_TLS_RANDOM_SIZE];
-	/* followed by stuff we are not interested in */
-} security_parameters_st;
-
-struct gnutls_session_int {
-	security_parameters_st security_parameters;
-	/* followed by things we are not interested in */
-};
-#endif /* LIBGNUTLS_VERSION_NUMBER < 0x010302 */
 
 static int tls_gnutls_ref_count = 0;
 
@@ -128,18 +81,6 @@ void * tls_init(const struct tls_config *conf)
 {
 	struct tls_global *global;
 
-#ifdef GNUTLS_INTERNAL_STRUCTURE_HACK
-	/* Because of the horrible hack to get master_secret and client/server
-	 * random, we need to make sure that the gnutls version is something
-	 * that is expected to have same structure definition for the session
-	 * data.. */
-	const char *ver;
-	const char *ok_ver[] = { "1.2.3", "1.2.4", "1.2.5", "1.2.6", "1.2.9",
-				 "1.3.2",
-				 NULL };
-	int i;
-#endif /* GNUTLS_INTERNAL_STRUCTURE_HACK */
-
 	global = os_zalloc(sizeof(*global));
 	if (global == NULL)
 		return NULL;
@@ -149,25 +90,6 @@ void * tls_init(const struct tls_config *conf)
 		return NULL;
 	}
 	tls_gnutls_ref_count++;
-
-#ifdef GNUTLS_INTERNAL_STRUCTURE_HACK
-	ver = gnutls_check_version(NULL);
-	if (ver == NULL) {
-		tls_deinit(global);
-		return NULL;
-	}
-	wpa_printf(MSG_DEBUG, "%s - gnutls version %s", __func__, ver);
-	for (i = 0; ok_ver[i]; i++) {
-		if (strcmp(ok_ver[i], ver) == 0)
-			break;
-	}
-	if (ok_ver[i] == NULL) {
-		wpa_printf(MSG_INFO, "Untested gnutls version %s - this needs "
-			   "to be tested and enabled in tls_gnutls.c", ver);
-		tls_deinit(global);
-		return NULL;
-	}
-#endif /* GNUTLS_INTERNAL_STRUCTURE_HACK */
 
 	gnutls_global_set_log_function(tls_log_func);
 	if (wpa_debug_show_keys)
@@ -693,32 +615,18 @@ int tls_connection_set_verify(void *ssl_ctx, struct tls_connection *conn,
 int tls_connection_get_keys(void *ssl_ctx, struct tls_connection *conn,
 			    struct tls_keys *keys)
 {
-#ifdef GNUTLS_INTERNAL_STRUCTURE_HACK
-	security_parameters_st *sec;
-#endif /* GNUTLS_INTERNAL_STRUCTURE_HACK */
-
 	if (conn == NULL || conn->session == NULL || keys == NULL)
 		return -1;
 
 	os_memset(keys, 0, sizeof(*keys));
 
 #if LIBGNUTLS_VERSION_NUMBER < 0x020c00
-#ifdef GNUTLS_INTERNAL_STRUCTURE_HACK
-	sec = &conn->session->security_parameters;
-	keys->master_key = sec->master_secret;
-	keys->master_key_len = WPA_TLS_MASTER_SIZE;
-	keys->client_random = sec->client_random;
-	keys->server_random = sec->server_random;
-#else /* GNUTLS_INTERNAL_STRUCTURE_HACK */
 	keys->client_random =
 		(u8 *) gnutls_session_get_client_random(conn->session);
 	keys->server_random =
 		(u8 *) gnutls_session_get_server_random(conn->session);
 	/* No access to master_secret */
-#endif /* GNUTLS_INTERNAL_STRUCTURE_HACK */
-#endif /* LIBGNUTLS_VERSION_NUMBER < 0x020c00 */
 
-#if LIBGNUTLS_VERSION_NUMBER < 0x020c00
 	keys->client_random_len = WPA_TLS_RANDOM_SIZE;
 	keys->server_random_len = WPA_TLS_RANDOM_SIZE;
 #endif /* LIBGNUTLS_VERSION_NUMBER < 0x020c00 */

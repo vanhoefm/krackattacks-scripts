@@ -17,9 +17,6 @@
 #include "tls.h"
 
 
-#define WPA_TLS_RANDOM_SIZE 32
-
-
 static int tls_gnutls_ref_count = 0;
 
 struct tls_global {
@@ -167,12 +164,7 @@ static ssize_t tls_push_func(gnutls_transport_ptr_t ptr, const void *buf,
 static int tls_gnutls_init_session(struct tls_global *global,
 				   struct tls_connection *conn)
 {
-#if LIBGNUTLS_VERSION_NUMBER >= 0x020200
 	const char *err;
-#else /* LIBGNUTLS_VERSION_NUMBER >= 0x020200 */
-	const int cert_types[2] = { GNUTLS_CRT_X509, 0 };
-	const int protos[2] = { GNUTLS_TLS1, 0 };
-#endif /* LIBGNUTLS_VERSION_NUMBER < 0x020200 */
 	int ret;
 
 	ret = gnutls_init(&conn->session,
@@ -187,7 +179,6 @@ static int tls_gnutls_init_session(struct tls_global *global,
 	if (ret < 0)
 		goto fail;
 
-#if LIBGNUTLS_VERSION_NUMBER >= 0x020200
 	ret = gnutls_priority_set_direct(conn->session, "NORMAL:-VERS-SSL3.0",
 					 &err);
 	if (ret < 0) {
@@ -195,15 +186,6 @@ static int tls_gnutls_init_session(struct tls_global *global,
 			   "'%s'", err);
 		goto fail;
 	}
-#else /* LIBGNUTLS_VERSION_NUMBER >= 0x020200 */
-	ret = gnutls_certificate_type_set_priority(conn->session, cert_types);
-	if (ret < 0)
-		goto fail;
-
-	ret = gnutls_protocol_set_priority(conn->session, protos);
-	if (ret < 0)
-		goto fail;
-#endif /* LIBGNUTLS_VERSION_NUMBER < 0x020200 */
 
 	gnutls_transport_set_pull_function(conn->session, tls_pull_func);
 	gnutls_transport_set_push_function(conn->session, tls_push_func);
@@ -405,13 +387,11 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 				conn->xcred, GNUTLS_VERIFY_ALLOW_SIGN_RSA_MD5);
 		}
 
-#if LIBGNUTLS_VERSION_NUMBER >= 0x020800
 		if (params->flags & TLS_CONN_DISABLE_TIME_CHECKS) {
 			gnutls_certificate_set_verify_flags(
 				conn->xcred,
 				GNUTLS_VERIFY_DISABLE_TIME_CHECKS);
 		}
-#endif /* LIBGNUTLS_VERSION_NUMBER >= 0x020800 */
 	}
 
 	if (params->client_cert && params->private_key) {
@@ -527,13 +507,11 @@ int tls_global_set_params(void *tls_ctx,
 				GNUTLS_VERIFY_ALLOW_SIGN_RSA_MD5);
 		}
 
-#if LIBGNUTLS_VERSION_NUMBER >= 0x020800
 		if (params->flags & TLS_CONN_DISABLE_TIME_CHECKS) {
 			gnutls_certificate_set_verify_flags(
 				global->xcred,
 				GNUTLS_VERIFY_DISABLE_TIME_CHECKS);
 		}
-#endif /* LIBGNUTLS_VERSION_NUMBER >= 0x020800 */
 	}
 
 	if (params->client_cert && params->private_key) {
@@ -611,23 +589,23 @@ int tls_connection_set_verify(void *ssl_ctx, struct tls_connection *conn,
 int tls_connection_get_keys(void *ssl_ctx, struct tls_connection *conn,
 			    struct tls_keys *keys)
 {
+#if GNUTLS_VERSION_NUMBER >= 0x030012
+	gnutls_datum_t client, server;
+
 	if (conn == NULL || conn->session == NULL || keys == NULL)
 		return -1;
 
 	os_memset(keys, 0, sizeof(*keys));
-
-#if LIBGNUTLS_VERSION_NUMBER < 0x020c00
-	keys->client_random =
-		(u8 *) gnutls_session_get_client_random(conn->session);
-	keys->server_random =
-		(u8 *) gnutls_session_get_server_random(conn->session);
-	/* No access to master_secret */
-
-	keys->client_random_len = WPA_TLS_RANDOM_SIZE;
-	keys->server_random_len = WPA_TLS_RANDOM_SIZE;
-#endif /* LIBGNUTLS_VERSION_NUMBER < 0x020c00 */
+	gnutls_session_get_random(conn->session, &client, &server);
+	keys->client_random = client.data;
+	keys->server_random = server.data;
+	keys->client_random_len = client.size;
+	keys->server_random_len = client.size;
 
 	return 0;
+#else /* 3.0.18 */
+	return -1;
+#endif /* 3.0.18 */
 }
 
 
@@ -666,7 +644,6 @@ static int tls_connection_verify_peer(struct tls_connection *conn,
 				   "algorithm");
 			*err = GNUTLS_A_INSUFFICIENT_SECURITY;
 		}
-#if LIBGNUTLS_VERSION_NUMBER >= 0x020800
 		if (status & GNUTLS_CERT_NOT_ACTIVATED) {
 			wpa_printf(MSG_INFO, "TLS: Certificate not yet "
 				   "activated");
@@ -676,7 +653,6 @@ static int tls_connection_verify_peer(struct tls_connection *conn,
 			wpa_printf(MSG_INFO, "TLS: Certificate expired");
 			*err = GNUTLS_A_CERTIFICATE_EXPIRED;
 		}
-#endif /* LIBGNUTLS_VERSION_NUMBER >= 0x020800 */
 		return -1;
 	}
 

@@ -12,6 +12,9 @@
 #ifdef PKCS12_FUNCS
 #include <gnutls/pkcs12.h>
 #endif /* PKCS12_FUNCS */
+#if GNUTLS_VERSION_NUMBER >= 0x030103
+#include <gnutls/ocsp.h>
+#endif /* 3.1.3 */
 
 #include "common.h"
 #include "tls.h"
@@ -54,6 +57,7 @@ struct tls_connection {
 	gnutls_certificate_credentials_t xcred;
 
 	char *suffix_match;
+	unsigned int flags;
 };
 
 
@@ -358,6 +362,8 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 			return -1;
 	}
 
+	conn->flags = params->flags;
+
 	if (params->openssl_ciphers) {
 		wpa_printf(MSG_INFO, "GnuTLS: openssl_ciphers not supported");
 		return -1;
@@ -540,6 +546,24 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 		return -1;
 #endif /* PKCS12_FUNCS */
 	}
+
+#if GNUTLS_VERSION_NUMBER >= 0x030103
+	if (params->flags & (TLS_CONN_REQUEST_OCSP | TLS_CONN_REQUIRE_OCSP)) {
+		ret = gnutls_ocsp_status_request_enable_client(conn->session,
+							       NULL, 0, NULL);
+		if (ret != GNUTLS_E_SUCCESS) {
+			wpa_printf(MSG_INFO,
+				   "GnuTLS: Failed to enable OCSP client");
+			return -1;
+		}
+	}
+#else /* 3.1.3 */
+	if (params->flags & TLS_CONN_REQUIRE_OCSP) {
+		wpa_printf(MSG_INFO,
+			   "GnuTLS: OCSP not supported by this version of GnuTLS");
+		return -1;
+	}
+#endif /* 3.1.3 */
 
 	conn->params_set = 1;
 
@@ -777,6 +801,105 @@ static int server_eku_purpose(gnutls_x509_crt_t cert)
 #endif /* < 3.3.0 */
 
 
+static int check_ocsp(struct tls_connection *conn, gnutls_session_t session,
+		      gnutls_alert_description_t *err)
+{
+#if GNUTLS_VERSION_NUMBER >= 0x030103
+	gnutls_datum_t response, buf;
+	gnutls_ocsp_resp_t resp;
+	unsigned int cert_status;
+	int res;
+
+	if (!(conn->flags & (TLS_CONN_REQUEST_OCSP | TLS_CONN_REQUIRE_OCSP)))
+		return 0;
+
+	if (!gnutls_ocsp_status_request_is_checked(session, 0)) {
+		if (conn->flags & TLS_CONN_REQUIRE_OCSP) {
+			wpa_printf(MSG_INFO,
+				   "GnuTLS: No valid OCSP response received");
+			goto ocsp_error;
+		}
+
+		wpa_printf(MSG_DEBUG,
+			   "GnuTLS: Valid OCSP response was not received - continue since OCSP was not required");
+		return 0;
+	}
+
+	/*
+	 * GnuTLS has already verified the OCSP response in
+	 * check_ocsp_response() and rejected handshake if the certificate was
+	 * found to be revoked. However, if the response indicates that the
+	 * status is unknown, handshake continues and reaches here. We need to
+	 * re-import the OCSP response to check for unknown certificate status,
+	 * but we do not need to repeat gnutls_ocsp_resp_check_crt() and
+	 * gnutls_ocsp_resp_verify_direct() calls.
+	 */
+
+	res = gnutls_ocsp_status_request_get(session, &response);
+	if (res != GNUTLS_E_SUCCESS) {
+		wpa_printf(MSG_INFO,
+			   "GnuTLS: OCSP response was received, but it was not valid");
+		goto ocsp_error;
+	}
+
+	if (gnutls_ocsp_resp_init(&resp) != GNUTLS_E_SUCCESS)
+		goto ocsp_error;
+
+	res = gnutls_ocsp_resp_import(resp, &response);
+	if (res != GNUTLS_E_SUCCESS) {
+		wpa_printf(MSG_INFO,
+			   "GnuTLS: Could not parse received OCSP response: %s",
+			   gnutls_strerror(res));
+		gnutls_ocsp_resp_deinit(resp);
+		goto ocsp_error;
+	}
+
+	res = gnutls_ocsp_resp_print(resp, GNUTLS_OCSP_PRINT_FULL, &buf);
+	if (res == GNUTLS_E_SUCCESS) {
+		wpa_printf(MSG_DEBUG, "GnuTLS: %s", buf.data);
+		gnutls_free(buf.data);
+	}
+
+	res = gnutls_ocsp_resp_get_single(resp, 0, NULL, NULL, NULL,
+					  NULL, &cert_status, NULL,
+					  NULL, NULL, NULL);
+	gnutls_ocsp_resp_deinit(resp);
+	if (res != GNUTLS_E_SUCCESS) {
+		wpa_printf(MSG_INFO,
+			   "GnuTLS: Failed to extract OCSP information: %s",
+			   gnutls_strerror(res));
+		goto ocsp_error;
+	}
+
+	if (cert_status == GNUTLS_OCSP_CERT_GOOD) {
+		wpa_printf(MSG_DEBUG, "GnuTLS: OCSP cert status: good");
+	} else if (cert_status == GNUTLS_OCSP_CERT_REVOKED) {
+		wpa_printf(MSG_DEBUG,
+			   "GnuTLS: OCSP cert status: revoked");
+		goto ocsp_error;
+	} else {
+		wpa_printf(MSG_DEBUG,
+			   "GnuTLS: OCSP cert status: unknown");
+		if (conn->flags & TLS_CONN_REQUIRE_OCSP)
+			goto ocsp_error;
+		wpa_printf(MSG_DEBUG,
+			   "GnuTLS: OCSP was not required, so allow connection to continue");
+	}
+
+	return 0;
+
+ocsp_error:
+	gnutls_tls_fail_event(conn, NULL, 0, NULL,
+			      "bad certificate status response",
+			      TLS_FAIL_REVOKED);
+	*err = GNUTLS_A_CERTIFICATE_REVOKED;
+	return -1;
+#else /* GnuTLS 3.1.3 or newer */
+	return 0;
+#endif /* GnuTLS 3.1.3 or newer */
+}
+
+
 static int tls_connection_verify_peer(gnutls_session_t session)
 {
 	struct tls_connection *conn;
@@ -839,6 +962,13 @@ static int tls_connection_verify_peer(gnutls_session_t session)
 	}
 #endif /* GnuTLS 3.1.4 or newer */
 
+	certs = gnutls_certificate_get_peers(session, &num_certs);
+	if (certs == NULL || num_certs == 0) {
+		wpa_printf(MSG_INFO, "TLS: No peer certificate chain received");
+		err = GNUTLS_A_UNKNOWN_CA;
+		goto out;
+	}
+
 	if (conn->verify_peer && (status & GNUTLS_CERT_INVALID)) {
 		wpa_printf(MSG_INFO, "TLS: Peer certificate not trusted");
 		if (status & GNUTLS_CERT_INSECURE_ALGORITHM) {
@@ -899,15 +1029,10 @@ static int tls_connection_verify_peer(gnutls_session_t session)
 		goto out;
 	}
 
-	os_get_time(&now);
-
-	certs = gnutls_certificate_get_peers(session, &num_certs);
-	if (certs == NULL) {
-		wpa_printf(MSG_INFO, "TLS: No peer certificate chain "
-			   "received");
-		err = GNUTLS_A_UNKNOWN_CA;
+	if (check_ocsp(conn, session, &err))
 		goto out;
-	}
+
+	os_get_time(&now);
 
 	for (i = 0; i < num_certs; i++) {
 		char *buf;

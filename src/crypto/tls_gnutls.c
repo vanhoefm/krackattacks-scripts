@@ -45,6 +45,8 @@ struct tls_connection {
 
 	int params_set;
 	gnutls_certificate_credentials_t xcred;
+
+	char *suffix_match;
 };
 
 
@@ -257,6 +259,7 @@ void tls_connection_deinit(void *ssl_ctx, struct tls_connection *conn)
 	os_free(conn->pre_shared_secret);
 	wpabuf_free(conn->push_buf);
 	wpabuf_free(conn->pull_buf);
+	os_free(conn->suffix_match);
 	os_free(conn);
 }
 
@@ -332,9 +335,12 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 		return -1;
 	}
 
+	os_free(conn->suffix_match);
+	conn->suffix_match = NULL;
 	if (params->suffix_match) {
-		wpa_printf(MSG_INFO, "GnuTLS: suffix_match not supported");
-		return -1;
+		conn->suffix_match = os_strdup(params->suffix_match);
+		if (conn->suffix_match == NULL)
+			return -1;
 	}
 
 	if (params->openssl_ciphers) {
@@ -760,7 +766,19 @@ static int tls_connection_verify_peer(gnutls_session_t session)
 			   i + 1, num_certs, buf);
 
 		if (i == 0) {
-			/* TODO: validate altsubject_match and suffix_match.
+			if (conn->suffix_match &&
+			    !gnutls_x509_crt_check_hostname(
+				    cert, conn->suffix_match)) {
+				wpa_printf(MSG_WARNING,
+					   "TLS: Domain suffix match '%s' not found",
+					   conn->suffix_match);
+				err = GNUTLS_A_BAD_CERTIFICATE;
+				gnutls_x509_crt_deinit(cert);
+				os_free(buf);
+				goto out;
+			}
+
+			/* TODO: validate altsubject_match.
 			 * For now, any such configuration is rejected in
 			 * tls_connection_set_params() */
 		}

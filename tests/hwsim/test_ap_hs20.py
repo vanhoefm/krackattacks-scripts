@@ -1,5 +1,5 @@
 # Hotspot 2.0 tests
-# Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2015, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -20,6 +20,7 @@ from utils import HwsimSkip
 import hwsim_utils
 from wlantest import Wlantest
 from wpasupplicant import WpaSupplicant
+from test_ap_eap import check_eap_capa
 
 def hs20_ap_params(ssid="test-hs20"):
     params = hostapd.wpa2_params(ssid=ssid)
@@ -662,10 +663,12 @@ def test_ap_hs20_eap_ttls_unknown(dev, apdev):
 
 def test_ap_hs20_eap_fast_mschapv2(dev, apdev):
     """Hotspot 2.0 connection with FAST/EAP-MSCHAPV2"""
+    check_eap_capa(dev[0], "FAST")
     eap_test(dev[0], apdev[0], "43[3:26]", "FAST", "user")
 
 def test_ap_hs20_eap_fast_gtc(dev, apdev):
     """Hotspot 2.0 connection with FAST/EAP-GTC"""
+    check_eap_capa(dev[0], "FAST")
     eap_test(dev[0], apdev[0], "43[3:6]", "FAST", "user")
 
 def test_ap_hs20_eap_tls(dev, apdev):

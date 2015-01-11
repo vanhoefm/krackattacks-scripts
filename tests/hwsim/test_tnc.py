@@ -9,7 +9,7 @@ import os.path
 
 import hostapd
 from utils import HwsimSkip
-from test_ap_eap import int_eap_server_params
+from test_ap_eap import int_eap_server_params, check_eap_capa
 
 def test_tnc_peap_soh(dev, apdev):
     """TNC PEAP-SoH"""
@@ -60,6 +60,7 @@ def test_tnc_ttls(dev, apdev):
 
 def test_tnc_fast(dev, apdev):
     """TNC FAST"""
+    check_eap_capa(dev[0], "FAST")
     params = int_eap_server_params()
     params["tnc"] = "1"
     params["pac_opaque_encr_key"] ="000102030405060708090a0b0c0d0e00"

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # WPA2-Enterprise tests
-# Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2015, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -21,6 +21,11 @@ from test_ap_psk import check_mib, find_wpas_process, read_process_memory, verif
 def check_hlr_auc_gw_support():
     if not os.path.exists("/tmp/hlr_auc_gw.sock"):
         raise HwsimSkip("No hlr_auc_gw available")
+
+def check_eap_capa(dev, method):
+    res = dev.get_capability("eap")
+    if method not in res:
+        raise HwsimSkip("EAP method %s not supported in the build" % method)
 
 def read_pem(fname):
     with open(fname, "r") as f:
@@ -951,6 +956,7 @@ def test_ap_wpa2_eap_peap_eap_aka(dev, apdev):
 
 def test_ap_wpa2_eap_fast_eap_aka(dev, apdev):
     """WPA2-Enterprise connection using EAP-FAST/EAP-AKA"""
+    check_eap_capa(dev[0], "FAST")
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], apdev[0], "FAST", "0232010000000000",
@@ -1497,6 +1503,7 @@ def test_ap_wpa2_eap_ttls_server_cert_hash_invalid(dev, apdev):
 
 def test_ap_wpa2_eap_pwd(dev, apdev):
     """WPA2-Enterprise connection using EAP-pwd"""
+    check_eap_capa(dev[0], "PWD")
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], apdev[0], "PWD", "pwd user", password="secret password")
@@ -1519,6 +1526,7 @@ def test_ap_wpa2_eap_pwd(dev, apdev):
 
 def test_ap_wpa2_eap_pwd_groups(dev, apdev):
     """WPA2-Enterprise connection using various EAP-pwd groups"""
+    check_eap_capa(dev[0], "PWD")
     params = { "ssid": "test-wpa2-eap", "wpa": "2", "wpa_key_mgmt": "WPA-EAP",
                "rsn_pairwise": "CCMP", "ieee8021x": "1",
                "eap_server": "1", "eap_user_file": "auth_serv/eap_user.conf" }
@@ -1530,6 +1538,7 @@ def test_ap_wpa2_eap_pwd_groups(dev, apdev):
 
 def test_ap_wpa2_eap_pwd_invalid_group(dev, apdev):
     """WPA2-Enterprise connection using invalid EAP-pwd group"""
+    check_eap_capa(dev[0], "PWD")
     params = { "ssid": "test-wpa2-eap", "wpa": "2", "wpa_key_mgmt": "WPA-EAP",
                "rsn_pairwise": "CCMP", "ieee8021x": "1",
                "eap_server": "1", "eap_user_file": "auth_serv/eap_user.conf" }
@@ -1544,6 +1553,7 @@ def test_ap_wpa2_eap_pwd_invalid_group(dev, apdev):
 
 def test_ap_wpa2_eap_pwd_as_frag(dev, apdev):
     """WPA2-Enterprise connection using EAP-pwd with server fragmentation"""
+    check_eap_capa(dev[0], "PWD")
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     params = { "ssid": "test-wpa2-eap", "wpa": "2", "wpa_key_mgmt": "WPA-EAP",
                "rsn_pairwise": "CCMP", "ieee8021x": "1",
@@ -1753,6 +1763,7 @@ def test_ap_wpa2_eap_vendor_test(dev, apdev):
 
 def test_ap_wpa2_eap_fast_mschapv2_unauth_prov(dev, apdev):
     """WPA2-Enterprise connection using EAP-FAST/MSCHAPv2 and unauthenticated provisioning"""
+    check_eap_capa(dev[0], "FAST")
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], apdev[0], "FAST", "user",
@@ -1766,6 +1777,7 @@ def test_ap_wpa2_eap_fast_mschapv2_unauth_prov(dev, apdev):
 
 def test_ap_wpa2_eap_fast_pac_file(dev, apdev, params):
     """WPA2-Enterprise connection using EAP-FAST/MSCHAPv2 and PAC file"""
+    check_eap_capa(dev[0], "FAST")
     pac_file = os.path.join(params['logdir'], "fast.pac")
     pac_file2 = os.path.join(params['logdir'], "fast-bin.pac")
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
@@ -1805,6 +1817,7 @@ def test_ap_wpa2_eap_fast_pac_file(dev, apdev, params):
 
 def test_ap_wpa2_eap_fast_binary_pac(dev, apdev):
     """WPA2-Enterprise connection using EAP-FAST and binary PAC format"""
+    check_eap_capa(dev[0], "FAST")
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], apdev[0], "FAST", "user",
@@ -1818,6 +1831,7 @@ def test_ap_wpa2_eap_fast_binary_pac(dev, apdev):
 
 def test_ap_wpa2_eap_fast_missing_pac_config(dev, apdev):
     """WPA2-Enterprise connection using EAP-FAST and missing PAC config"""
+    check_eap_capa(dev[0], "FAST")
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
 
@@ -1843,6 +1857,7 @@ def test_ap_wpa2_eap_fast_missing_pac_config(dev, apdev):
 
 def test_ap_wpa2_eap_fast_gtc_auth_prov(dev, apdev):
     """WPA2-Enterprise connection using EAP-FAST/GTC and authenticated provisioning"""
+    check_eap_capa(dev[0], "FAST")
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], apdev[0], "FAST", "user",

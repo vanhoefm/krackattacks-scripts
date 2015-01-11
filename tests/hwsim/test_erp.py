@@ -1,5 +1,5 @@
 # EAP Re-authentication Protocol (ERP) tests
-# Copyright (c) 2014, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2014-2015, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -191,9 +191,12 @@ def test_erp_radius_eap_methods(dev, apdev):
     # TODO: EKE getSession
     #erp_test(dev[0], hapd, eap="EKE", identity="erp-eke@example.com",
     #         password="hello")
-    erp_test(dev[0], hapd, eap="FAST", identity="erp-fast@example.com",
-             password="password", ca_cert="auth_serv/ca.pem", phase2="auth=GTC",
-             phase1="fast_provisioning=2", pac_file="blob://fast_pac_auth_erp")
+    if "FAST" in dev[0].get_capability("eap"):
+        erp_test(dev[0], hapd, eap="FAST", identity="erp-fast@example.com",
+                 password="password", ca_cert="auth_serv/ca.pem",
+                 phase2="auth=GTC",
+                 phase1="fast_provisioning=2",
+                 pac_file="blob://fast_pac_auth_erp")
     erp_test(dev[0], hapd, eap="GPSK", identity="erp-gpsk@example.com",
              password="abcdefghijklmnop0123456789abcdef")
     erp_test(dev[0], hapd, eap="IKEV2", identity="erp-ikev2@example.com",
@@ -206,8 +209,9 @@ def test_erp_radius_eap_methods(dev, apdev):
     #         phase2="auth=MSCHAPV2")
     erp_test(dev[0], hapd, eap="PSK", identity="erp-psk@example.com",
              password_hex="0123456789abcdef0123456789abcdef")
-    erp_test(dev[0], hapd, eap="PWD", identity="erp-pwd@example.com",
-             password="secret password")
+    if "PWD" in dev[0].get_capability("eap"):
+        erp_test(dev[0], hapd, eap="PWD", identity="erp-pwd@example.com",
+                 password="secret password")
     erp_test(dev[0], hapd, eap="SAKE", identity="erp-sake@example.com",
              password_hex="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")
     erp_test(dev[0], hapd, eap="SIM", identity="1232010000000000@example.com",

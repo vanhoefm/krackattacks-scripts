@@ -17,6 +17,7 @@
 #endif /* 3.1.3 */
 
 #include "common.h"
+#include "crypto/crypto.h"
 #include "tls.h"
 
 
@@ -1063,6 +1064,36 @@ static int tls_connection_verify_peer(gnutls_session_t session)
 		wpa_printf(MSG_DEBUG, "TLS: Peer cert chain %d/%d: %s",
 			   i + 1, num_certs, buf);
 
+		if (conn->global->event_cb) {
+			struct wpabuf *cert_buf = NULL;
+			union tls_event_data ev;
+#ifdef CONFIG_SHA256
+			u8 hash[32];
+			const u8 *_addr[1];
+			size_t _len[1];
+#endif /* CONFIG_SHA256 */
+
+			os_memset(&ev, 0, sizeof(ev));
+			if (conn->global->cert_in_cb) {
+				cert_buf = wpabuf_alloc_copy(certs[i].data,
+							     certs[i].size);
+				ev.peer_cert.cert = cert_buf;
+			}
+#ifdef CONFIG_SHA256
+			_addr[0] = certs[i].data;
+			_len[0] = certs[i].size;
+			if (sha256_vector(1, _addr, _len, hash) == 0) {
+				ev.peer_cert.hash = hash;
+				ev.peer_cert.hash_len = sizeof(hash);
+			}
+#endif /* CONFIG_SHA256 */
+			ev.peer_cert.depth = i;
+			ev.peer_cert.subject = buf;
+			conn->global->event_cb(conn->global->cb_ctx,
+					       TLS_PEER_CERTIFICATE, &ev);
+			wpabuf_free(cert_buf);
+		}
+
 		if (i == 0) {
 			if (conn->suffix_match &&
 			    !gnutls_x509_crt_check_hostname(
@@ -1125,6 +1156,10 @@ static int tls_connection_verify_peer(gnutls_session_t session)
 
 		gnutls_x509_crt_deinit(cert);
 	}
+
+	if (conn->global->event_cb != NULL)
+		conn->global->event_cb(conn->global->cb_ctx,
+				       TLS_CERT_CHAIN_SUCCESS, NULL);
 
 	return 0;
 
@@ -1189,6 +1224,8 @@ struct wpabuf * tls_connection_handshake(void *tls_ctx,
 
 	ret = gnutls_handshake(conn->session);
 	if (ret < 0) {
+		gnutls_alert_description_t alert;
+
 		switch (ret) {
 		case GNUTLS_E_AGAIN:
 			if (global->server && conn->established &&
@@ -1199,10 +1236,20 @@ struct wpabuf * tls_connection_handshake(void *tls_ctx,
 			}
 			break;
 		case GNUTLS_E_FATAL_ALERT_RECEIVED:
+			alert = gnutls_alert_get(conn->session);
 			wpa_printf(MSG_DEBUG, "%s - received fatal '%s' alert",
-				   __func__, gnutls_alert_get_name(
-					   gnutls_alert_get(conn->session)));
+				   __func__, gnutls_alert_get_name(alert));
 			conn->read_alerts++;
+			if (conn->global->event_cb != NULL) {
+				union tls_event_data ev;
+
+				os_memset(&ev, 0, sizeof(ev));
+				ev.alert.is_local = 0;
+				ev.alert.type = gnutls_alert_get_name(alert);
+				ev.alert.description = ev.alert.type;
+				conn->global->event_cb(conn->global->cb_ctx,
+						       TLS_ALERT, &ev);
+			}
 			/* continue */
 		default:
 			wpa_printf(MSG_DEBUG, "%s - gnutls_handshake failed "

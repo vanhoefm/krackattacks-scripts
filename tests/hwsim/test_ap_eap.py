@@ -37,6 +37,11 @@ def check_altsubject_match_support(dev):
     if not tls.startswith("OpenSSL"):
         raise HwsimSkip("altsubject_match not supported with this TLS library: " + tls)
 
+def check_domain_match_full(dev):
+    tls = dev.request("GET tls_library")
+    if not tls.startswith("OpenSSL"):
+        raise HwsimSkip("domain_suffix_match requires full match with this TLS library: " + tls)
+
 def read_pem(fname):
     with open(fname, "r") as f:
         lines = f.readlines()
@@ -883,7 +888,7 @@ def test_ap_wpa2_eap_ttls_mschapv2(dev, apdev):
     eap_connect(dev[0], apdev[0], "TTLS", "DOMAIN\mschapv2 user",
                 anonymous_identity="ttls", password="password",
                 ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
-                domain_suffix_match="w1.fi")
+                domain_suffix_match="server.w1.fi")
     hwsim_utils.test_connectivity(dev[0], hapd)
     sta1 = hapd.get_sta(dev[0].p2p_interface_addr())
     eapol1 = hapd.get_sta(dev[0].p2p_interface_addr(), info="eapol")
@@ -903,6 +908,19 @@ def test_ap_wpa2_eap_ttls_mschapv2(dev, apdev):
                 anonymous_identity="ttls",
                 password_hex="hash:8846f7eaee8fb117ad06bdd830b7586c",
                 ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2")
+
+def test_ap_wpa2_eap_ttls_mschapv2_suffix_match(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TTLS/MSCHAPv2"""
+    check_domain_match_full(dev[0])
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    eap_connect(dev[0], apdev[0], "TTLS", "DOMAIN\mschapv2 user",
+                anonymous_identity="ttls", password="password",
+                ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                domain_suffix_match="w1.fi")
+    hwsim_utils.test_connectivity(dev[0], hapd)
+    eap_reauth(dev[0], "TTLS")
 
 def test_ap_wpa2_eap_ttls_mschapv2_incorrect_password(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/MSCHAPv2 - incorrect password"""
@@ -1956,7 +1974,7 @@ def test_ap_wpa2_eap_tls_ocsp_invalid(dev, apdev):
     if ev is None:
         raise Exception("Timeout on EAP failure report")
 
-def test_ap_wpa2_eap_tls_domain_suffix_match_cn(dev, apdev):
+def test_ap_wpa2_eap_tls_domain_suffix_match_cn_full(dev, apdev):
     """WPA2-Enterprise using EAP-TLS and domain suffix match (CN)"""
     params = int_eap_server_params()
     params["server_cert"] = "auth_serv/server-no-dnsname.pem"
@@ -1968,6 +1986,14 @@ def test_ap_wpa2_eap_tls_domain_suffix_match_cn(dev, apdev):
                    private_key_passwd="whatever",
                    domain_suffix_match="server3.w1.fi",
                    scan_freq="2412")
+
+def test_ap_wpa2_eap_tls_domain_suffix_match_cn(dev, apdev):
+    """WPA2-Enterprise using EAP-TLS and domain suffix match (CN)"""
+    check_domain_match_full(dev[0])
+    params = int_eap_server_params()
+    params["server_cert"] = "auth_serv/server-no-dnsname.pem"
+    params["private_key"] = "auth_serv/server-no-dnsname.key"
+    hostapd.add_ap(apdev[0]['ifname'], params)
     dev[1].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
                    identity="tls user", ca_cert="auth_serv/ca.pem",
                    private_key="auth_serv/user.pkcs12",

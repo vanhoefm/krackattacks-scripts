@@ -20,7 +20,7 @@ from utils import HwsimSkip
 import hwsim_utils
 from wlantest import Wlantest
 from wpasupplicant import WpaSupplicant
-from test_ap_eap import check_eap_capa
+from test_ap_eap import check_eap_capa, check_domain_match_full
 
 def hs20_ap_params(ssid="test-hs20"):
     params = hostapd.wpa2_params(ssid=ssid)
@@ -1170,7 +1170,7 @@ def test_ap_hs20_roam_to_higher_prio(dev, apdev):
     if bssid2 not in ev:
         raise Exception("Unexpected BSSID after reconnection")
 
-def test_ap_hs20_domain_suffix_match(dev, apdev):
+def test_ap_hs20_domain_suffix_match_full(dev, apdev):
     """Hotspot 2.0 and domain_suffix_match"""
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
@@ -1182,7 +1182,7 @@ def test_ap_hs20_domain_suffix_match(dev, apdev):
                                   'password': "password",
                                   'ca_cert': "auth_serv/ca.pem",
                                   'domain': "example.com",
-                                  'domain_suffix_match': "w1.fi" })
+                                  'domain_suffix_match': "server.w1.fi" })
     interworking_select(dev[0], bssid, "home", freq="2412")
     dev[0].dump_monitor()
     interworking_connect(dev[0], bssid, "TTLS")
@@ -1198,6 +1198,24 @@ def test_ap_hs20_domain_suffix_match(dev, apdev):
         raise Exception("TLS certificate error not reported")
     if "Domain suffix mismatch" not in ev:
         raise Exception("Domain suffix mismatch not reported")
+
+def test_ap_hs20_domain_suffix_match(dev, apdev):
+    """Hotspot 2.0 and domain_suffix_match"""
+    check_domain_match_full(dev[0])
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'username': "hs20-test",
+                                  'password': "password",
+                                  'ca_cert': "auth_serv/ca.pem",
+                                  'domain': "example.com",
+                                  'domain_suffix_match': "w1.fi" })
+    interworking_select(dev[0], bssid, "home", freq="2412")
+    dev[0].dump_monitor()
+    interworking_connect(dev[0], bssid, "TTLS")
 
 def test_ap_hs20_roaming_partner_preference(dev, apdev):
     """Hotspot 2.0 and roaming partner preference"""

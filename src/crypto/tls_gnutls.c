@@ -480,6 +480,62 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 				   "included");
 			return -1;
 		}
+	} else if (params->client_cert_blob && params->private_key_blob) {
+		gnutls_datum_t cert, key;
+
+		cert.data = (unsigned char *) params->client_cert_blob;
+		cert.size = params->client_cert_blob_len;
+		key.data = (unsigned char *) params->private_key_blob;
+		key.size = params->private_key_blob_len;
+
+#if GNUTLS_VERSION_NUMBER >= 0x03010b
+		ret = gnutls_certificate_set_x509_key_mem2(
+			conn->xcred, &cert, &key, GNUTLS_X509_FMT_DER,
+			params->private_key_passwd, 0);
+#else
+		/* private_key_passwd not (easily) supported here */
+		ret = gnutls_certificate_set_x509_key_mem(
+			conn->xcred, &cert, &key, GNUTLS_X509_FMT_DER);
+#endif
+		if (ret < 0) {
+			wpa_printf(MSG_DEBUG, "Failed to read client cert/key "
+				   "in DER format: %s", gnutls_strerror(ret));
+#if GNUTLS_VERSION_NUMBER >= 0x03010b
+			ret = gnutls_certificate_set_x509_key_mem2(
+				conn->xcred, &cert, &key, GNUTLS_X509_FMT_PEM,
+				params->private_key_passwd, 0);
+#else
+			/* private_key_passwd not (easily) supported here */
+			ret = gnutls_certificate_set_x509_key_mem(
+				conn->xcred, &cert, &key, GNUTLS_X509_FMT_PEM);
+#endif
+			if (ret < 0) {
+				wpa_printf(MSG_DEBUG, "Failed to read client "
+					   "cert/key in PEM format: %s",
+					   gnutls_strerror(ret));
+				return ret;
+			}
+		}
+	} else if (params->private_key_blob) {
+#ifdef PKCS12_FUNCS
+		gnutls_datum_t key;
+
+		key.data = (unsigned char *) params->private_key_blob;
+		key.size = params->private_key_blob_len;
+
+		/* Try to load in PKCS#12 format */
+		ret = gnutls_certificate_set_x509_simple_pkcs12_mem(
+			conn->xcred, &key, GNUTLS_X509_FMT_DER,
+			params->private_key_passwd);
+		if (ret != 0) {
+			wpa_printf(MSG_DEBUG, "Failed to load private_key in "
+				   "PKCS#12 format: %s", gnutls_strerror(ret));
+			return -1;
+		}
+#else /* PKCS12_FUNCS */
+		wpa_printf(MSG_DEBUG, "GnuTLS: PKCS#12 support not included");
+		return -1;
+#endif /* PKCS12_FUNCS */
 	}
 
 	conn->params_set = 1;

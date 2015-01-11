@@ -65,8 +65,8 @@ for i in 0 1 2; do
     sed "s/ GROUP=.*$/ GROUP=$GROUP/" "$DIR/p2p$i.conf" > "$LOGDIR/p2p$i.conf"
 done
 
-sed "s/group=admin/group=$GROUP/" "$DIR/auth_serv/as.conf" > "$LOGDIR/as.conf"
-sed "s/group=admin/group=$GROUP/;s%LOGDIR%$LOGDIR%" "$DIR/auth_serv/as2.conf" > "$LOGDIR/as2.conf"
+sed "s/group=admin/group=$GROUP/;s%LOGDIR%$LOGDIR%g" "$DIR/auth_serv/as.conf" > "$LOGDIR/as.conf"
+sed "s/group=admin/group=$GROUP/;s%LOGDIR%$LOGDIR%g" "$DIR/auth_serv/as2.conf" > "$LOGDIR/as2.conf"
 
 if [ "$1" = "valgrind" ]; then
     VALGRIND=y
@@ -122,6 +122,18 @@ if [ -x $HLR_AUC_GW ]; then
     sudo $HLR_AUC_GW -u -m $LOGDIR/hlr_auc_gw.milenage_db -g $DIR/auth_serv/hlr_auc_gw.gsm > $LOGDIR/hlr_auc_gw &
 fi
 
+openssl ocsp -index $DIR/auth_serv/index.txt \
+    -rsigner $DIR/auth_serv/ocsp-responder.pem \
+    -rkey $DIR/auth_serv/ocsp-responder.key \
+    -CA $DIR/auth_serv/ca.pem \
+    -issuer $DIR/auth_serv/ca.pem \
+    -verify_other $DIR/auth_serv/ca.pem -trust_other \
+    -ndays 7 \
+    -reqin $DIR/auth_serv/ocsp-req.der \
+    -respout $LOGDIR/ocsp-server-cache.der > $LOGDIR/ocsp.log 2>&1
+if [ ! -r $LOGDIR/ocsp-server-cache.der ]; then
+    cp $DIR/auth_serv/ocsp-server-cache.der $LOGDIR/ocsp-server-cache.der
+fi
 touch $LOGDIR/hostapd.db
 sudo $HAPD_AS -ddKt $LOGDIR/as.conf $LOGDIR/as2.conf > $LOGDIR/auth_serv &
 

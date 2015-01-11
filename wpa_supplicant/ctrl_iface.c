@@ -3499,7 +3499,8 @@ static int ctrl_iface_get_capability_proto(int res, char *strict,
 }
 
 
-static int ctrl_iface_get_capability_auth_alg(int res, char *strict,
+static int ctrl_iface_get_capability_auth_alg(struct wpa_supplicant *wpa_s,
+					      int res, char *strict,
 					      struct wpa_driver_capa *capa,
 					      char *buf, size_t buflen)
 {
@@ -3542,6 +3543,16 @@ static int ctrl_iface_get_capability_auth_alg(int res, char *strict,
 			return pos - buf;
 		pos += ret;
 	}
+
+#ifdef CONFIG_SAE
+	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SAE) {
+		ret = os_snprintf(pos, end - pos, "%sSAE",
+				  pos == buf ? "" : " ");
+		if (os_snprintf_error(end - pos, ret))
+			return pos - buf;
+		pos += ret;
+	}
+#endif /* CONFIG_SAE */
 
 	return pos - buf;
 }
@@ -3741,8 +3752,8 @@ static int wpa_supplicant_ctrl_iface_get_capability(
 						       buf, buflen);
 
 	if (os_strcmp(field, "auth_alg") == 0)
-		return ctrl_iface_get_capability_auth_alg(res, strict, &capa,
-							  buf, buflen);
+		return ctrl_iface_get_capability_auth_alg(wpa_s, res, strict,
+							  &capa, buf, buflen);
 
 	if (os_strcmp(field, "modes") == 0)
 		return ctrl_iface_get_capability_modes(res, strict, &capa,

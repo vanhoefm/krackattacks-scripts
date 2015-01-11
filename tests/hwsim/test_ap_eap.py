@@ -1125,7 +1125,7 @@ def test_ap_wpa2_eap_tls_blob(dev, apdev):
     cert = read_pem("auth_serv/user.pem")
     if "OK" not in dev[0].request("SET blob usercert " + cert.encode("hex")):
         raise Exception("Could not set usercert blob")
-    key = read_pem("auth_serv/user.key")
+    key = read_pem("auth_serv/user.rsa-key")
     if "OK" not in dev[0].request("SET blob userkey " + key.encode("hex")):
         raise Exception("Could not set cacert blob")
     eap_connect(dev[0], apdev[0], "TLS", "tls user", ca_cert="blob://cacert",

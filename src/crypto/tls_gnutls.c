@@ -449,7 +449,6 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 		int pkcs12_ok = 0;
 #ifdef PKCS12_FUNCS
 		/* Try to load in PKCS#12 format */
-#if LIBGNUTLS_VERSION_NUMBER >= 0x010302
 		ret = gnutls_certificate_set_x509_simple_pkcs12_file(
 			conn->xcred, params->private_key, GNUTLS_X509_FMT_DER,
 			params->private_key_passwd);
@@ -459,7 +458,6 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 			return -1;
 		} else
 			pkcs12_ok = 1;
-#endif /* LIBGNUTLS_VERSION_NUMBER >= 0x010302 */
 #endif /* PKCS12_FUNCS */
 
 		if (!pkcs12_ok) {
@@ -560,7 +558,6 @@ int tls_global_set_params(void *tls_ctx,
 		int pkcs12_ok = 0;
 #ifdef PKCS12_FUNCS
 		/* Try to load in PKCS#12 format */
-#if LIBGNUTLS_VERSION_NUMBER >= 0x010302
 		ret = gnutls_certificate_set_x509_simple_pkcs12_file(
 			global->xcred, params->private_key,
 			GNUTLS_X509_FMT_DER, params->private_key_passwd);
@@ -570,7 +567,6 @@ int tls_global_set_params(void *tls_ctx,
 			goto fail;
 		} else
 			pkcs12_ok = 1;
-#endif /* LIBGNUTLS_VERSION_NUMBER >= 0x010302 */
 #endif /* PKCS12_FUNCS */
 
 		if (!pkcs12_ok) {
@@ -639,15 +635,11 @@ int tls_connection_prf(void *tls_ctx, struct tls_connection *conn,
 		       const char *label, int server_random_first,
 		       u8 *out, size_t out_len)
 {
-#if LIBGNUTLS_VERSION_NUMBER >= 0x010302
 	if (conn == NULL || conn->session == NULL)
 		return -1;
 
 	return gnutls_prf(conn->session, os_strlen(label), label,
 			  server_random_first, 0, NULL, out_len, (char *) out);
-#else /* LIBGNUTLS_VERSION_NUMBER >= 0x010302 */
-	return -1;
-#endif /* LIBGNUTLS_VERSION_NUMBER >= 0x010302 */
 }
 
 

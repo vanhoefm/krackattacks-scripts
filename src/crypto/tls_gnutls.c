@@ -44,6 +44,7 @@ struct tls_connection {
 	size_t pre_shared_secret_len;
 	int established;
 	int verify_peer;
+	unsigned int disable_time_checks:1;
 
 	struct wpabuf *push_buf;
 	struct wpabuf *pull_buf;
@@ -412,6 +413,7 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 		return -1;
 	}
 
+	conn->disable_time_checks = 0;
 	if (params->ca_cert || params->ca_cert_blob) {
 		conn->verify_peer = 1;
 		gnutls_certificate_set_verify_function(
@@ -423,6 +425,7 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 		}
 
 		if (params->flags & TLS_CONN_DISABLE_TIME_CHECKS) {
+			conn->disable_time_checks = 1;
 			gnutls_certificate_set_verify_flags(
 				conn->xcred,
 				GNUTLS_VERIFY_DISABLE_TIME_CHECKS);
@@ -903,8 +906,9 @@ static int tls_connection_verify_peer(gnutls_session_t session)
 			 * tls_connection_set_params() */
 		}
 
-		if (gnutls_x509_crt_get_expiration_time(cert) < now.sec ||
-		    gnutls_x509_crt_get_activation_time(cert) > now.sec) {
+		if (!conn->disable_time_checks &&
+		    (gnutls_x509_crt_get_expiration_time(cert) < now.sec ||
+		     gnutls_x509_crt_get_activation_time(cert) > now.sec)) {
 			wpa_printf(MSG_INFO, "TLS: Peer certificate %d/%d is "
 				   "not valid at this time",
 				   i + 1, num_certs);

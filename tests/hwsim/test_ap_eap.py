@@ -2213,6 +2213,9 @@ def test_ap_wpa2_eap_non_ascii_identity2(dev, apdev):
 
 def test_openssl_cipher_suite_config_wpas(dev, apdev):
     """OpenSSL cipher suite configuration on wpa_supplicant"""
+    tls = dev[0].request("GET tls_library")
+    if not tls.startswith("OpenSSL"):
+        raise HwsimSkip("TLS library is not OpenSSL: " + tls)
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], apdev[0], "TTLS", "pap user",
@@ -2227,9 +2230,15 @@ def test_openssl_cipher_suite_config_wpas(dev, apdev):
 
 def test_openssl_cipher_suite_config_hapd(dev, apdev):
     """OpenSSL cipher suite configuration on hostapd"""
+    tls = dev[0].request("GET tls_library")
+    if not tls.startswith("OpenSSL"):
+        raise HwsimSkip("wpa_supplicant TLS library is not OpenSSL: " + tls)
     params = int_eap_server_params()
     params['openssl_ciphers'] = "AES256"
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    tls = hapd.request("GET tls_library")
+    if not tls.startswith("OpenSSL"):
+        raise HwsimSkip("hostapd TLS library is not OpenSSL: " + tls)
     eap_connect(dev[0], apdev[0], "TTLS", "pap user",
                 anonymous_identity="ttls", password="password",
                 ca_cert="auth_serv/ca.pem", phase2="auth=PAP")

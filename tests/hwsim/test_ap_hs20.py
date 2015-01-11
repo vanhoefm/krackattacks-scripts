@@ -577,6 +577,7 @@ def eap_test(dev, ap, eap_params, method, user):
 
     dev.hs20_enable()
     dev.add_cred_values({ 'realm': "example.com",
+                          'ca_cert': "auth_serv/ca.pem",
                           'username': user,
                           'password': "password" })
     interworking_select(dev, bssid, freq="2412")
@@ -739,6 +740,7 @@ def test_ap_hs20_nai_realms(dev, apdev):
 
     dev[0].hs20_enable()
     id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'ca_cert': "auth_serv/ca.pem",
                                   'username': "pap user",
                                   'password': "password",
                                   'domain': "example.com" })
@@ -758,6 +760,7 @@ def test_ap_hs20_roaming_consortium(dev, apdev):
         id = dev[0].add_cred_values({ 'username': "user",
                                       'password': "password",
                                       'domain': "example.com",
+                                      'ca_cert': "auth_serv/ca.pem",
                                       'roaming_consortium': consortium,
                                       'eap': "PEAP" })
         interworking_select(dev[0], bssid, "home", freq="2412")
@@ -784,6 +787,7 @@ def test_ap_hs20_username_roaming(dev, apdev):
     id = dev[0].add_cred_values({ 'realm': "roaming.example.com",
                                   'username': "hs20-test",
                                   'password': "password",
+                                  'ca_cert': "auth_serv/ca.pem",
                                   'domain': "example.com" })
     interworking_select(dev[0], bssid, "roaming", freq="2412")
     interworking_connect(dev[0], bssid, "TTLS")
@@ -798,6 +802,7 @@ def test_ap_hs20_username_unknown(dev, apdev):
 
     dev[0].hs20_enable()
     id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'ca_cert': "auth_serv/ca.pem",
                                   'username': "hs20-test",
                                   'password': "password" })
     interworking_select(dev[0], bssid, "unknown", freq="2412")
@@ -814,6 +819,7 @@ def test_ap_hs20_username_unknown2(dev, apdev):
 
     dev[0].hs20_enable()
     id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'ca_cert': "auth_serv/ca.pem",
                                   'username': "hs20-test",
                                   'password': "password",
                                   'domain': "example.com" })
@@ -830,6 +836,7 @@ def test_ap_hs20_gas_while_associated(dev, apdev):
 
     dev[0].hs20_enable()
     id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'ca_cert': "auth_serv/ca.pem",
                                   'username': "hs20-test",
                                   'password': "password",
                                   'domain': "example.com" })
@@ -865,6 +872,7 @@ def _test_ap_hs20_gas_while_associated_with_pmf(dev, apdev):
     dev[0].hs20_enable()
     dev[0].request("SET pmf 2")
     id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'ca_cert': "auth_serv/ca.pem",
                                   'username': "hs20-test",
                                   'password': "password",
                                   'domain': "example.com" })
@@ -889,6 +897,7 @@ def test_ap_hs20_gas_frag_while_associated(dev, apdev):
 
     dev[0].hs20_enable()
     id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'ca_cert': "auth_serv/ca.pem",
                                   'username': "hs20-test",
                                   'password': "password",
                                   'domain': "example.com" })
@@ -911,6 +920,7 @@ def test_ap_hs20_multiple_connects(dev, apdev):
 
     dev[0].hs20_enable()
     values = { 'realm': "example.com",
+               'ca_cert': "auth_serv/ca.pem",
                'username': "hs20-test",
                'password': "password",
                'domain': "example.com" }
@@ -950,6 +960,7 @@ def test_ap_hs20_disallow_aps(dev, apdev):
 
     dev[0].hs20_enable()
     values = { 'realm': "example.com",
+               'ca_cert': "auth_serv/ca.pem",
                'username': "hs20-test",
                'password': "password",
                'domain': "example.com" }
@@ -1030,6 +1041,7 @@ def policy_test(dev, ap, values, only_one=True):
 
 def default_cred(domain=None):
     cred = { 'realm': "example.com",
+             'ca_cert': "auth_serv/ca.pem",
              'username': "hs20-test",
              'password': "password" }
     if domain:
@@ -1129,6 +1141,7 @@ def test_ap_hs20_roam_to_higher_prio(dev, apdev):
 
     dev[0].hs20_enable()
     id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'ca_cert': "auth_serv/ca.pem",
                                   'username': "hs20-test",
                                   'password': "password",
                                   'domain': "example.com" })
@@ -1167,6 +1180,7 @@ def test_ap_hs20_domain_suffix_match(dev, apdev):
     id = dev[0].add_cred_values({ 'realm': "example.com",
                                   'username': "hs20-test",
                                   'password': "password",
+                                  'ca_cert': "auth_serv/ca.pem",
                                   'domain': "example.com",
                                   'domain_suffix_match': "w1.fi" })
     interworking_select(dev[0], bssid, "home", freq="2412")
@@ -1290,6 +1304,7 @@ def _test_ap_hs20_multi_cred_sp_prio(dev, apdev):
                                    'provisioning_sp': "example.com",
                                    'sp_priority' :"1" })
     id2 = dev[0].add_cred_values({ 'realm': "example.com",
+                                   'ca_cert': "auth_serv/ca.pem",
                                    'username': "hs20-test",
                                    'password': "password",
                                    'domain': "example.com",
@@ -1340,6 +1355,7 @@ def _test_ap_hs20_multi_cred_sp_prio2(dev, apdev):
                                    'provisioning_sp': "example.com",
                                    'sp_priority': "1" })
     id2 = dev[0].add_cred_values({ 'realm': "example.com",
+                                   'ca_cert': "auth_serv/ca.pem",
                                    'username': "hs20-test",
                                    'password': "password",
                                    'domain': "example.com",

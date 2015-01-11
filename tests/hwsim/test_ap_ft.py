@@ -267,6 +267,8 @@ def test_ap_ft_over_ds_pull(dev, apdev):
 
 def test_ap_ft_sae(dev, apdev):
     """WPA2-PSK-FT-SAE AP"""
+    if "SAE" not in dev[0].get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
     ssid = "test-ft"
     passphrase="12345678"
 
@@ -285,6 +287,8 @@ def test_ap_ft_sae(dev, apdev):
 
 def test_ap_ft_sae_over_ds(dev, apdev):
     """WPA2-PSK-FT-SAE AP over DS"""
+    if "SAE" not in dev[0].get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
     ssid = "test-ft"
     passphrase="12345678"
 

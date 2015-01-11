@@ -14,10 +14,12 @@ import hwsim_utils
 from wpasupplicant import WpaSupplicant
 from utils import HwsimSkip
 
-def check_mesh_support(dev):
+def check_mesh_support(dev, secure=False):
     flags = int(dev.get_driver_status_field('capa.flags'), 16)
     if flags & 0x100000000 == 0:
         raise HwsimSkip("Driver does not support mesh")
+    if secure and "SAE" not in dev.get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
 
 def check_mesh_scan(dev, params, other_started=False, beacon_int=0):
     if not other_started:
@@ -232,7 +234,7 @@ def add_mesh_secure_net(dev, psk=True):
 
 def test_wpas_mesh_secure(dev, apdev):
     """wpa_supplicant secure MESH network connectivity"""
-    check_mesh_support(dev[0])
+    check_mesh_support(dev[0], secure=True)
     dev[0].request("SET sae_groups ")
     id = add_mesh_secure_net(dev[0])
     dev[0].mesh_group_add(id)
@@ -254,7 +256,7 @@ def test_wpas_mesh_secure(dev, apdev):
 
 def test_wpas_mesh_secure_sae_group_mismatch(dev, apdev):
     """wpa_supplicant secure MESH and SAE group mismatch"""
-    check_mesh_support(dev[0])
+    check_mesh_support(dev[0], secure=True)
     addr0 = dev[0].p2p_interface_addr()
     addr1 = dev[1].p2p_interface_addr()
     addr2 = dev[2].p2p_interface_addr()
@@ -305,7 +307,7 @@ def test_wpas_mesh_secure_sae_group_mismatch(dev, apdev):
 
 def test_wpas_mesh_secure_sae_missing_password(dev, apdev):
     """wpa_supplicant secure MESH and missing SAE password"""
-    check_mesh_support(dev[0])
+    check_mesh_support(dev[0], secure=True)
     id = add_mesh_secure_net(dev[0], psk=False)
     dev[0].set_network(id, "psk", "8f20b381f9b84371d61b5080ad85cac3c61ab3ca9525be5b2d0f4da3d979187a")
     dev[0].mesh_group_add(id)
@@ -321,7 +323,7 @@ def test_wpas_mesh_secure_sae_missing_password(dev, apdev):
 
 def test_wpas_mesh_secure_no_auto(dev, apdev):
     """wpa_supplicant secure MESH network connectivity"""
-    check_mesh_support(dev[0])
+    check_mesh_support(dev[0], secure=True)
     dev[0].request("SET sae_groups 19")
     id = add_mesh_secure_net(dev[0])
     dev[0].mesh_group_add(id)

@@ -18,6 +18,8 @@ from test_ap_psk import find_wpas_process, read_process_memory, verify_not_prese
 
 def test_sae(dev, apdev):
     """SAE with default group"""
+    if "SAE" not in dev[0].get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
     params = hostapd.wpa2_params(ssid="test-sae",
                                  passphrase="12345678")
     params['wpa_key_mgmt'] = 'SAE'
@@ -39,6 +41,8 @@ def test_sae(dev, apdev):
 
 def test_sae_pmksa_caching(dev, apdev):
     """SAE and PMKSA caching"""
+    if "SAE" not in dev[0].get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
     params = hostapd.wpa2_params(ssid="test-sae",
                                  passphrase="12345678")
     params['wpa_key_mgmt'] = 'SAE'
@@ -55,6 +59,8 @@ def test_sae_pmksa_caching(dev, apdev):
 
 def test_sae_pmksa_caching_disabled(dev, apdev):
     """SAE and PMKSA caching disabled"""
+    if "SAE" not in dev[0].get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
     params = hostapd.wpa2_params(ssid="test-sae",
                                  passphrase="12345678")
     params['wpa_key_mgmt'] = 'SAE'
@@ -72,6 +78,8 @@ def test_sae_pmksa_caching_disabled(dev, apdev):
 
 def test_sae_groups(dev, apdev):
     """SAE with all supported groups"""
+    if "SAE" not in dev[0].get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
     # This would be the full list of supported groups, but groups 14-16
     # (2048-4096 bit MODP) are a bit too slow on some VMs and can result in
     # hitting mac80211 authentication timeout, so skip them for now.
@@ -95,6 +103,8 @@ def test_sae_groups(dev, apdev):
 
 def test_sae_group_nego(dev, apdev):
     """SAE group negotiation"""
+    if "SAE" not in dev[0].get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
     params = hostapd.wpa2_params(ssid="test-sae-group-nego",
                                  passphrase="12345678")
     params['wpa_key_mgmt'] = 'SAE'
@@ -109,6 +119,8 @@ def test_sae_group_nego(dev, apdev):
 
 def test_sae_anti_clogging(dev, apdev):
     """SAE anti clogging"""
+    if "SAE" not in dev[0].get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
     params = hostapd.wpa2_params(ssid="test-sae", passphrase="12345678")
     params['wpa_key_mgmt'] = 'SAE'
     params['sae_anti_clogging_threshold'] = '1'
@@ -128,6 +140,8 @@ def test_sae_anti_clogging(dev, apdev):
 
 def test_sae_forced_anti_clogging(dev, apdev):
     """SAE anti clogging (forced)"""
+    if "SAE" not in dev[0].get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
     params = hostapd.wpa2_params(ssid="test-sae", passphrase="12345678")
     params['wpa_key_mgmt'] = 'SAE WPA-PSK'
     params['sae_anti_clogging_threshold'] = '0'
@@ -140,6 +154,8 @@ def test_sae_forced_anti_clogging(dev, apdev):
 
 def test_sae_mixed(dev, apdev):
     """Mixed SAE and non-SAE network"""
+    if "SAE" not in dev[0].get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
     params = hostapd.wpa2_params(ssid="test-sae", passphrase="12345678")
     params['wpa_key_mgmt'] = 'SAE WPA-PSK'
     params['sae_anti_clogging_threshold'] = '0'
@@ -153,6 +169,8 @@ def test_sae_mixed(dev, apdev):
 
 def test_sae_missing_password(dev, apdev):
     """SAE and missing password"""
+    if "SAE" not in dev[0].get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
     params = hostapd.wpa2_params(ssid="test-sae",
                                  passphrase="12345678")
     params['wpa_key_mgmt'] = 'SAE'
@@ -169,6 +187,8 @@ def test_sae_missing_password(dev, apdev):
 
 def test_sae_key_lifetime_in_memory(dev, apdev, params):
     """SAE and key lifetime in memory"""
+    if "SAE" not in dev[0].get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
     password = "5ad144a7c1f5a5503baa6fa01dabc15b1843e8c01662d78d16b70b5cd23cf8b"
     p = hostapd.wpa2_params(ssid="test-sae", passphrase=password)
     p['wpa_key_mgmt'] = 'SAE'

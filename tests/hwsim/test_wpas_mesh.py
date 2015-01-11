@@ -97,6 +97,7 @@ def check_mesh_peer_disconnected(dev):
 
 def test_wpas_add_set_remove_support(dev):
     """wpa_supplicant MESH add/set/remove network support"""
+    check_mesh_support(dev[0])
     id = dev[0].add_network()
     dev[0].set_network(id, "mode", "5")
     dev[0].remove_network(id)

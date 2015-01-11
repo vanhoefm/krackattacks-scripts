@@ -556,4 +556,6 @@ void tls_connection_set_log_cb(struct tls_connection *conn,
 
 void tls_connection_set_test_flags(struct tls_connection *conn, u32 flags);
 
+int tls_get_library_version(char *buf, size_t buf_len);
+
 #endif /* TLS_H */

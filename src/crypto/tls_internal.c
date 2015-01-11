@@ -672,3 +672,9 @@ int tls_connection_set_session_ticket_cb(void *tls_ctx,
 #endif /* CONFIG_TLS_INTERNAL_SERVER */
 	return -1;
 }
+
+
+int tls_get_library_version(char *buf, size_t buf_len)
+{
+	return os_snprintf(buf, buf_len, "internal");
+}

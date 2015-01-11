@@ -1151,3 +1151,10 @@ int tls_connection_set_session_ticket_cb(void *tls_ctx,
 {
 	return -1;
 }
+
+
+int tls_get_library_version(char *buf, size_t buf_len)
+{
+	return os_snprintf(buf, buf_len, "GnuTLS build=%s run=%s",
+			   GNUTLS_VERSION, gnutls_check_version(NULL));
+}

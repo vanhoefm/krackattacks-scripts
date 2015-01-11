@@ -19,6 +19,7 @@
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
 #include "common/wpa_ctrl.h"
+#include "crypto/tls.h"
 #include "ap/hostapd.h"
 #include "eap_peer/eap.h"
 #include "eapol_supp/eapol_supp_sm.h"
@@ -493,6 +494,8 @@ static int wpa_supplicant_ctrl_iface_get(struct wpa_supplicant *wpa_s,
 				       wpa_s->last_gtk_len);
 		return res;
 #endif /* CONFIG_TESTING_GET_GTK */
+	} else if (os_strcmp(cmd, "tls_library") == 0) {
+		res = tls_get_library_version(buf, buflen);
 	}
 
 	if (os_snprintf_error(buflen, res))

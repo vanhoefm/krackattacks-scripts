@@ -23,6 +23,7 @@
 #include "utils/eloop.h"
 #include "common/version.h"
 #include "common/ieee802_11_defs.h"
+#include "crypto/tls.h"
 #include "drivers/driver.h"
 #include "radius/radius_client.h"
 #include "radius/radius_server.h"
@@ -1323,6 +1324,11 @@ static int hostapd_ctrl_iface_get(struct hostapd_data *hapd, char *cmd,
 
 	if (os_strcmp(cmd, "version") == 0) {
 		res = os_snprintf(buf, buflen, "%s", VERSION_STR);
+		if (os_snprintf_error(buflen, res))
+			return -1;
+		return res;
+	} else if (os_strcmp(cmd, "tls_library") == 0) {
+		res = tls_get_library_version(buf, buflen);
 		if (os_snprintf_error(buflen, res))
 			return -1;
 		return res;

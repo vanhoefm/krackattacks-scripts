@@ -28,9 +28,15 @@ struct tls_global {
 
 	int params_set;
 	gnutls_certificate_credentials_t xcred;
+
+	void (*event_cb)(void *ctx, enum tls_event ev,
+			 union tls_event_data *data);
+	void *cb_ctx;
+	int cert_in_cb;
 };
 
 struct tls_connection {
+	struct tls_global *global;
 	gnutls_session_t session;
 	int read_alerts, write_alerts, failed;
 
@@ -102,6 +108,13 @@ void * tls_init(const struct tls_config *conf)
 	gnutls_global_set_log_function(tls_log_func);
 	if (wpa_debug_show_keys)
 		gnutls_global_set_log_level(11);
+
+	if (conf) {
+		global->event_cb = conf->event_cb;
+		global->cb_ctx = conf->cb_ctx;
+		global->cert_in_cb = conf->cert_in_cb;
+	}
+
 	return global;
 }
 
@@ -222,6 +235,7 @@ struct tls_connection * tls_connection_init(void *ssl_ctx)
 	conn = os_zalloc(sizeof(*conn));
 	if (conn == NULL)
 		return NULL;
+	conn->global = global;
 
 	if (tls_gnutls_init_session(global, conn)) {
 		os_free(conn);
@@ -639,6 +653,32 @@ int tls_connection_prf(void *tls_ctx, struct tls_connection *conn,
 }
 
 
+static void gnutls_tls_fail_event(struct tls_connection *conn,
+				  const gnutls_datum_t *cert, int depth,
+				  const char *subject, const char *err_str,
+				  enum tls_fail_reason reason)
+{
+	union tls_event_data ev;
+	struct tls_global *global = conn->global;
+	struct wpabuf *cert_buf = NULL;
+
+	if (global->event_cb == NULL)
+		return;
+
+	os_memset(&ev, 0, sizeof(ev));
+	ev.cert_fail.depth = depth;
+	ev.cert_fail.subject = subject ? subject : "";
+	ev.cert_fail.reason = reason;
+	ev.cert_fail.reason_txt = err_str;
+	if (cert) {
+		cert_buf = wpabuf_alloc_copy(cert->data, cert->size);
+		ev.cert_fail.cert = cert_buf;
+	}
+	global->event_cb(global->cb_ctx, TLS_CERT_CHAIN_FAILURE, &ev);
+	wpabuf_free(cert_buf);
+}
+
+
 static int tls_connection_verify_peer(gnutls_session_t session)
 {
 	struct tls_connection *conn;
@@ -688,20 +728,32 @@ static int tls_connection_verify_peer(gnutls_session_t session)
 		if (status & GNUTLS_CERT_INSECURE_ALGORITHM) {
 			wpa_printf(MSG_INFO, "TLS: Certificate uses insecure "
 				   "algorithm");
+			gnutls_tls_fail_event(conn, NULL, 0, NULL,
+					      "certificate uses insecure algorithm",
+					      TLS_FAIL_BAD_CERTIFICATE);
 			err = GNUTLS_A_INSUFFICIENT_SECURITY;
 			goto out;
 		}
 		if (status & GNUTLS_CERT_NOT_ACTIVATED) {
 			wpa_printf(MSG_INFO, "TLS: Certificate not yet "
 				   "activated");
+			gnutls_tls_fail_event(conn, NULL, 0, NULL,
+					      "certificate not yet valid",
+					      TLS_FAIL_NOT_YET_VALID);
 			err = GNUTLS_A_CERTIFICATE_EXPIRED;
 			goto out;
 		}
 		if (status & GNUTLS_CERT_EXPIRED) {
 			wpa_printf(MSG_INFO, "TLS: Certificate expired");
+			gnutls_tls_fail_event(conn, NULL, 0, NULL,
+					      "certificate has expired",
+					      TLS_FAIL_EXPIRED);
 			err = GNUTLS_A_CERTIFICATE_EXPIRED;
 			goto out;
 		}
+		gnutls_tls_fail_event(conn, NULL, 0, NULL,
+				      "untrusted certificate",
+				      TLS_FAIL_UNTRUSTED);
 		err = GNUTLS_A_INTERNAL_ERROR;
 		goto out;
 	}
@@ -709,12 +761,17 @@ static int tls_connection_verify_peer(gnutls_session_t session)
 	if (status & GNUTLS_CERT_SIGNER_NOT_FOUND) {
 		wpa_printf(MSG_INFO, "TLS: Peer certificate does not have a "
 			   "known issuer");
+		gnutls_tls_fail_event(conn, NULL, 0, NULL, "signed not found",
+				      TLS_FAIL_UNTRUSTED);
 		err = GNUTLS_A_UNKNOWN_CA;
 		goto out;
 	}
 
 	if (status & GNUTLS_CERT_REVOKED) {
 		wpa_printf(MSG_INFO, "TLS: Peer certificate has been revoked");
+		gnutls_tls_fail_event(conn, NULL, 0, NULL,
+				      "certificate revoked",
+				      TLS_FAIL_REVOKED);
 		err = GNUTLS_A_CERTIFICATE_REVOKED;
 		goto out;
 	}
@@ -772,6 +829,10 @@ static int tls_connection_verify_peer(gnutls_session_t session)
 				wpa_printf(MSG_WARNING,
 					   "TLS: Domain suffix match '%s' not found",
 					   conn->suffix_match);
+				gnutls_tls_fail_event(
+					conn, &certs[i], i, buf,
+					"Domain suffix mismatch",
+					TLS_FAIL_DOMAIN_SUFFIX_MISMATCH);
 				err = GNUTLS_A_BAD_CERTIFICATE;
 				gnutls_x509_crt_deinit(cert);
 				os_free(buf);
@@ -783,17 +844,22 @@ static int tls_connection_verify_peer(gnutls_session_t session)
 			 * tls_connection_set_params() */
 		}
 
-		os_free(buf);
-
 		if (gnutls_x509_crt_get_expiration_time(cert) < now.sec ||
 		    gnutls_x509_crt_get_activation_time(cert) > now.sec) {
 			wpa_printf(MSG_INFO, "TLS: Peer certificate %d/%d is "
 				   "not valid at this time",
 				   i + 1, num_certs);
+			gnutls_tls_fail_event(
+				conn, &certs[i], i, buf,
+				"Certificate is not valid at this time",
+				TLS_FAIL_EXPIRED);
 			gnutls_x509_crt_deinit(cert);
+			os_free(buf);
 			err = GNUTLS_A_CERTIFICATE_EXPIRED;
 			goto out;
 		}
+
+		os_free(buf);
 
 		gnutls_x509_crt_deinit(cert);
 	}

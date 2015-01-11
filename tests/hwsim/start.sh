@@ -134,6 +134,18 @@ openssl ocsp -index $DIR/auth_serv/index.txt \
 if [ ! -r $LOGDIR/ocsp-server-cache.der ]; then
     cp $DIR/auth_serv/ocsp-server-cache.der $LOGDIR/ocsp-server-cache.der
 fi
+
+for i in unknown revoked; do
+    openssl ocsp -index $DIR/auth_serv/index-$i.txt \
+	-rsigner $DIR/auth_serv/ocsp-responder.pem \
+	-rkey $DIR/auth_serv/ocsp-responder.key \
+	-CA $DIR/auth_serv/ca.pem \
+	-issuer $DIR/auth_serv/ca.pem \
+	-verify_other $DIR/auth_serv/ca.pem -trust_other \
+	-ndays 7 \
+	-reqin $DIR/auth_serv/ocsp-req.der \
+	-respout $LOGDIR/ocsp-server-cache-$i.der >> $LOGDIR/ocsp.log 2>&1
+done
 touch $LOGDIR/hostapd.db
 sudo $HAPD_AS -ddKt $LOGDIR/as.conf $LOGDIR/as2.conf > $LOGDIR/auth_serv &
 

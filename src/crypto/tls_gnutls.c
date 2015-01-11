@@ -713,6 +713,13 @@ static int tls_connection_verify_peer(gnutls_session_t session)
 		goto out;
 	}
 
+	if (status != 0) {
+		wpa_printf(MSG_INFO, "TLS: Unknown verification status: %d",
+			   status);
+		err = GNUTLS_A_INTERNAL_ERROR;
+		goto out;
+	}
+
 	os_get_time(&now);
 
 	certs = gnutls_certificate_get_peers(session, &num_certs);

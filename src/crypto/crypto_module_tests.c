@@ -815,6 +815,7 @@ static int test_md5(void)
 
 static int test_eap_fast(void)
 {
+#ifdef EAP_FAST
 	/* RFC 4851, Appendix B.1 */
 	const u8 pac_key[] = {
 		0x0B, 0x97, 0x39, 0x0F, 0x37, 0x51, 0x78, 0x09,
@@ -976,6 +977,9 @@ static int test_eap_fast(void)
 	}
 
 	return errors;
+#else /* EAP_FAST */
+	return 0;
+#endif /* EAP_FAST */
 }
 
 

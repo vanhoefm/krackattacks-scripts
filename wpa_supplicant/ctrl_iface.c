@@ -3594,6 +3594,16 @@ static int ctrl_iface_get_capability_modes(int res, char *strict,
 		pos += ret;
 	}
 
+#ifdef CONFIG_MESH
+	if (capa->flags & WPA_DRIVER_FLAGS_MESH) {
+		ret = os_snprintf(pos, end - pos, "%sMESH",
+				  pos == buf ? "" : " ");
+		if (os_snprintf_error(end - pos, ret))
+			return pos - buf;
+		pos += ret;
+	}
+#endif /* CONFIG_MESH */
+
 	return pos - buf;
 }
 

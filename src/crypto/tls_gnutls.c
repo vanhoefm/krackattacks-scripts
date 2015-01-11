@@ -741,6 +741,42 @@ static void gnutls_tls_fail_event(struct tls_connection *conn,
 }
 
 
+#if GNUTLS_VERSION_NUMBER < 0x030300
+static int server_eku_purpose(gnutls_x509_crt_t cert)
+{
+	unsigned int i;
+
+	for (i = 0; ; i++) {
+		char oid[128];
+		size_t oid_size = sizeof(oid);
+		int res;
+
+		res = gnutls_x509_crt_get_key_purpose_oid(cert, i, oid,
+							  &oid_size, NULL);
+		if (res == GNUTLS_E_REQUESTED_DATA_NOT_AVAILABLE) {
+			if (i == 0) {
+				/* No EKU - assume any use allowed */
+				return 1;
+			}
+			break;
+		}
+
+		if (res < 0) {
+			wpa_printf(MSG_INFO, "GnuTLS: Failed to get EKU");
+			return 0;
+		}
+
+		wpa_printf(MSG_DEBUG, "GnuTLS: Certificate purpose: %s", oid);
+		if (os_strcmp(oid, GNUTLS_KP_TLS_WWW_SERVER) == 0 ||
+		    os_strcmp(oid, GNUTLS_KP_ANY) == 0)
+			return 1;
+	}
+
+	return 0;
+}
+#endif /* < 3.3.0 */
+
+
 static int tls_connection_verify_peer(gnutls_session_t session)
 {
 	struct tls_connection *conn;
@@ -749,6 +785,7 @@ static int tls_connection_verify_peer(gnutls_session_t session)
 	const gnutls_datum_t *certs;
 	gnutls_x509_crt_t cert;
 	gnutls_alert_description_t err;
+	int res;
 
 	conn = gnutls_session_get_ptr(session);
 	if (!conn->verify_peer) {
@@ -759,7 +796,24 @@ static int tls_connection_verify_peer(gnutls_session_t session)
 
 	wpa_printf(MSG_DEBUG, "GnuTSL: Verifying peer certificate");
 
-	if (gnutls_certificate_verify_peers2(session, &status) < 0) {
+#if GNUTLS_VERSION_NUMBER >= 0x030300
+	{
+		gnutls_typed_vdata_st data[1];
+		unsigned int elements = 0;
+
+		os_memset(data, 0, sizeof(data));
+		if (!conn->global->server) {
+			data[elements].type = GNUTLS_DT_KEY_PURPOSE_OID;
+			data[elements].data = (void *) GNUTLS_KP_TLS_WWW_SERVER;
+			elements++;
+		}
+		res = gnutls_certificate_verify_peers(session, data, 1,
+						      &status);
+	}
+#else /* < 3.3.0 */
+	res = gnutls_certificate_verify_peers2(session, &status);
+#endif
+	if (res < 0) {
 		wpa_printf(MSG_INFO, "TLS: Failed to verify peer "
 			   "certificate chain");
 		err = GNUTLS_A_INTERNAL_ERROR;
@@ -904,6 +958,26 @@ static int tls_connection_verify_peer(gnutls_session_t session)
 			/* TODO: validate altsubject_match.
 			 * For now, any such configuration is rejected in
 			 * tls_connection_set_params() */
+
+#if GNUTLS_VERSION_NUMBER < 0x030300
+			/*
+			 * gnutls_certificate_verify_peers() not available, so
+			 * need to check EKU separately.
+			 */
+			if (!conn->global->server &&
+			    !server_eku_purpose(cert)) {
+				wpa_printf(MSG_WARNING,
+					   "GnuTLS: No server EKU");
+				gnutls_tls_fail_event(
+					conn, &certs[i], i, buf,
+					"No server EKU",
+					TLS_FAIL_BAD_CERTIFICATE);
+				err = GNUTLS_A_BAD_CERTIFICATE;
+				gnutls_x509_crt_deinit(cert);
+				os_free(buf);
+				goto out;
+			}
+#endif /* < 3.3.0 */
 		}
 
 		if (!conn->disable_time_checks &&

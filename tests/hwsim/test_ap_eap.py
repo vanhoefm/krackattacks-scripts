@@ -27,6 +27,16 @@ def check_eap_capa(dev, method):
     if method not in res:
         raise HwsimSkip("EAP method %s not supported in the build" % method)
 
+def check_subject_match_support(dev):
+    tls = dev.request("GET tls_library")
+    if not tls.startswith("OpenSSL"):
+        raise HwsimSkip("subject_match not supported with this TLS library: " + tls)
+
+def check_altsubject_match_support(dev):
+    tls = dev.request("GET tls_library")
+    if not tls.startswith("OpenSSL"):
+        raise HwsimSkip("altsubject_match not supported with this TLS library: " + tls)
+
 def read_pem(fname):
     with open(fname, "r") as f:
         lines = f.readlines()
@@ -766,13 +776,24 @@ def test_ap_wpa2_eap_ttls_pap(dev, apdev):
         raise Exception("Unexpected GET_CONFIG(key_mgmt): " + key_mgmt)
     eap_connect(dev[0], apdev[0], "TTLS", "pap user",
                 anonymous_identity="ttls", password="password",
-                ca_cert="auth_serv/ca.pem", phase2="auth=PAP",
-                subject_match="/C=FI/O=w1.fi/CN=server.w1.fi",
-                altsubject_match="EMAIL:noone@example.com;DNS:server.w1.fi;URI:http://example.com/")
+                ca_cert="auth_serv/ca.pem", phase2="auth=PAP")
     hwsim_utils.test_connectivity(dev[0], hapd)
     eap_reauth(dev[0], "TTLS")
     check_mib(dev[0], [ ("dot11RSNAAuthenticationSuiteRequested", "00-0f-ac-1"),
                         ("dot11RSNAAuthenticationSuiteSelected", "00-0f-ac-1") ])
+
+def test_ap_wpa2_eap_ttls_pap_subject_match(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TTLS/PAP and (alt)subject_match"""
+    check_subject_match_support(dev[0])
+    check_altsubject_match_support(dev[0])
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "TTLS", "pap user",
+                anonymous_identity="ttls", password="password",
+                ca_cert="auth_serv/ca.pem", phase2="auth=PAP",
+                subject_match="/C=FI/O=w1.fi/CN=server.w1.fi",
+                altsubject_match="EMAIL:noone@example.com;DNS:server.w1.fi;URI:http://example.com/")
+    eap_reauth(dev[0], "TTLS")
 
 def test_ap_wpa2_eap_ttls_pap_incorrect_password(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/PAP - incorrect password"""
@@ -793,9 +814,19 @@ def test_ap_wpa2_eap_ttls_chap(dev, apdev):
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], apdev[0], "TTLS", "chap user",
                 anonymous_identity="ttls", password="password",
+                ca_cert="auth_serv/ca.der", phase2="auth=CHAP")
+    hwsim_utils.test_connectivity(dev[0], hapd)
+    eap_reauth(dev[0], "TTLS")
+
+def test_ap_wpa2_eap_ttls_chap_altsubject_match(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TTLS/CHAP"""
+    check_altsubject_match_support(dev[0])
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "TTLS", "chap user",
+                anonymous_identity="ttls", password="password",
                 ca_cert="auth_serv/ca.der", phase2="auth=CHAP",
                 altsubject_match="EMAIL:noone@example.com;URI:http://example.com/;DNS:server.w1.fi")
-    hwsim_utils.test_connectivity(dev[0], hapd)
     eap_reauth(dev[0], "TTLS")
 
 def test_ap_wpa2_eap_ttls_chap_incorrect_password(dev, apdev):
@@ -1319,9 +1350,16 @@ def test_ap_wpa2_eap_tls_neg_subject_match(dev, apdev):
     if ev is None:
         raise Exception("Association and EAP start timed out")
 
-    ev = dev[0].wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=10)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-METHOD",
+                            "EAP: Failed to initialize EAP method"], timeout=10)
     if ev is None:
         raise Exception("EAP method selection timed out")
+    if "EAP: Failed to initialize EAP method" in ev:
+        tls = dev[0].request("GET tls_library")
+        if tls.startswith("OpenSSL"):
+            raise Exception("Failed to select EAP method")
+        logger.info("subject_match not supported - connection failed, so test succeeded")
+        return
     if "TTLS" not in ev:
         raise Exception("Unexpected EAP method")
 
@@ -1381,9 +1419,16 @@ def _test_ap_wpa2_eap_tls_neg_altsubject_match(dev, apdev, match):
     if ev is None:
         raise Exception("Association and EAP start timed out")
 
-    ev = dev[0].wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=10)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-METHOD",
+                            "EAP: Failed to initialize EAP method"], timeout=10)
     if ev is None:
         raise Exception("EAP method selection timed out")
+    if "EAP: Failed to initialize EAP method" in ev:
+        tls = dev[0].request("GET tls_library")
+        if tls.startswith("OpenSSL"):
+            raise Exception("Failed to select EAP method")
+        logger.info("altsubject_match not supported - connection failed, so test succeeded")
+        return
     if "TTLS" not in ev:
         raise Exception("Unexpected EAP method")
 

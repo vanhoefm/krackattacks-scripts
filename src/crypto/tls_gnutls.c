@@ -81,6 +81,12 @@ void * tls_init(const struct tls_config *conf)
 {
 	struct tls_global *global;
 
+	if (tls_gnutls_ref_count == 0) {
+		wpa_printf(MSG_DEBUG,
+			   "GnuTLS: Library version %s (runtime) - %s (build)",
+			   gnutls_check_version(NULL), GNUTLS_VERSION);
+	}
+
 	global = os_zalloc(sizeof(*global));
 	if (global == NULL)
 		return NULL;
@@ -652,6 +658,25 @@ static int tls_connection_verify_peer(gnutls_session_t session)
 		goto out;
 	}
 
+#if GNUTLS_VERSION_NUMBER >= 0x030104
+	{
+		gnutls_datum_t info;
+		int ret, type;
+
+		type = gnutls_certificate_type_get(session);
+		ret = gnutls_certificate_verification_status_print(status, type,
+								   &info, 0);
+		if (ret < 0) {
+			wpa_printf(MSG_DEBUG,
+				   "GnuTLS: Failed to print verification status");
+			err = GNUTLS_A_INTERNAL_ERROR;
+			goto out;
+		}
+		wpa_printf(MSG_DEBUG, "GnuTLS: %s", info.data);
+		gnutls_free(info.data);
+	}
+#endif /* GnuTLS 3.1.4 or newer */
+
 	if (conn->verify_peer && (status & GNUTLS_CERT_INVALID)) {
 		wpa_printf(MSG_INFO, "TLS: Peer certificate not trusted");
 		if (status & GNUTLS_CERT_INSECURE_ALGORITHM) {
@@ -835,6 +860,19 @@ struct wpabuf * tls_connection_handshake(void *tls_ctx,
 		size_t size;
 
 		wpa_printf(MSG_DEBUG, "TLS: Handshake completed successfully");
+
+#if GNUTLS_VERSION_NUMBER >= 0x03010a
+		{
+			char *desc;
+
+			desc = gnutls_session_get_desc(conn->session);
+			if (desc) {
+				wpa_printf(MSG_DEBUG, "GnuTLS: %s", desc);
+				gnutls_free(desc);
+			}
+		}
+#endif /* GnuTLS 3.1.10 or newer */
+
 		conn->established = 1;
 		if (conn->push_buf == NULL) {
 			/* Need to return something to get final TLS ACK. */

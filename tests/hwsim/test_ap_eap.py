@@ -42,6 +42,11 @@ def check_domain_match_full(dev):
     if not tls.startswith("OpenSSL"):
         raise HwsimSkip("domain_suffix_match requires full match with this TLS library: " + tls)
 
+def check_cert_probe_support(dev):
+    tls = dev.request("GET tls_library")
+    if not tls.startswith("OpenSSL"):
+        raise HwsimSkip("Certificate probing not supported with this TLS library: " + tls)
+
 def read_pem(fname):
     with open(fname, "r") as f:
         lines = f.readlines()
@@ -1494,6 +1499,7 @@ def test_ap_wpa2_eap_unauth_tls(dev, apdev):
 
 def test_ap_wpa2_eap_ttls_server_cert_hash(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS and server certificate hash"""
+    check_cert_probe_support(dev[0])
     srv_cert_hash = "1477c9cd88391609444b83eca45c4f9f324e3051c5c31fc233ac6aede30ce7cd"
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)

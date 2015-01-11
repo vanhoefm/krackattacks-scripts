@@ -15,8 +15,7 @@ from wpasupplicant import WpaSupplicant
 from utils import HwsimSkip
 
 def check_mesh_support(dev, secure=False):
-    flags = int(dev.get_driver_status_field('capa.flags'), 16)
-    if flags & 0x100000000 == 0:
+    if "MESH" not in dev.get_capability("modes"):
         raise HwsimSkip("Driver does not support mesh")
     if secure and "SAE" not in dev.get_capability("auth_alg"):
         raise HwsimSkip("SAE not supported")

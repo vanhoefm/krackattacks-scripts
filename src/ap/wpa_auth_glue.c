@@ -249,12 +249,17 @@ static int hostapd_wpa_auth_get_msk(void *ctx, const u8 *addr, u8 *msk,
 	struct sta_info *sta;
 
 	sta = ap_get_sta(hapd, addr);
-	if (sta == NULL)
+	if (sta == NULL) {
+		wpa_printf(MSG_DEBUG, "AUTH_GET_MSK: Cannot find STA");
 		return -1;
+	}
 
 	key = ieee802_1x_get_key(sta->eapol_sm, &keylen);
-	if (key == NULL)
+	if (key == NULL) {
+		wpa_printf(MSG_DEBUG, "AUTH_GET_MSK: Key is null, eapol_sm: %p",
+			   sta->eapol_sm);
 		return -1;
+	}
 
 	if (keylen > *len)
 		keylen = *len;

@@ -1839,7 +1839,8 @@ SM_STATE(WPA_PTK, INITPMK)
 		}
 #endif /* CONFIG_IEEE80211R */
 	} else {
-		wpa_printf(MSG_DEBUG, "WPA: Could not get PMK");
+		wpa_printf(MSG_DEBUG, "WPA: Could not get PMK, get_msk: %p",
+			   sm->wpa_auth->cb.get_msk);
 	}
 
 	sm->req_replay_counter_used = 0;

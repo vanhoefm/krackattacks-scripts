@@ -1854,22 +1854,29 @@ static struct wpa_cred * interworking_credentials_available_3gpp(
 	int ret;
 	int is_excluded = 0;
 
-	if (bss->anqp == NULL || bss->anqp->anqp_3gpp == NULL)
+	if (bss->anqp == NULL || bss->anqp->anqp_3gpp == NULL) {
+		wpa_msg(wpa_s, MSG_DEBUG,
+			"interworking-avail-3gpp: not avail, anqp: %p  anqp_3gpp: %p",
+			bss->anqp, bss->anqp ? bss->anqp->anqp_3gpp : NULL);
 		return NULL;
+	}
 
 #ifdef CONFIG_EAP_PROXY
 	if (!wpa_s->imsi[0]) {
 		size_t len;
-		wpa_printf(MSG_DEBUG, "Interworking: IMSI not available - try to read again through eap_proxy");
+		wpa_msg(wpa_s, MSG_DEBUG,
+			"Interworking: IMSI not available - try to read again through eap_proxy");
 		wpa_s->mnc_len = eapol_sm_get_eap_proxy_imsi(wpa_s->eapol,
 							     wpa_s->imsi,
 							     &len);
 		if (wpa_s->mnc_len > 0) {
 			wpa_s->imsi[len] = '\0';
-			wpa_printf(MSG_DEBUG, "eap_proxy: IMSI %s (MNC length %d)",
-				   wpa_s->imsi, wpa_s->mnc_len);
+			wpa_msg(wpa_s, MSG_DEBUG,
+				"eap_proxy: IMSI %s (MNC length %d)",
+				wpa_s->imsi, wpa_s->mnc_len);
 		} else {
-			wpa_printf(MSG_DEBUG, "eap_proxy: IMSI not available");
+			wpa_msg(wpa_s, MSG_DEBUG,
+				"eap_proxy: IMSI not available");
 		}
 	}
 #endif /* CONFIG_EAP_PROXY */

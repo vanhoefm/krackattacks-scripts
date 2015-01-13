@@ -134,7 +134,7 @@ u16 copy_sta_vendor_vht(struct hostapd_data *hapd, struct sta_info *sta,
 		goto no_capab;
 	vht_capab_len = vht_capab[1];
 	if (vht_capab_len < sizeof(struct ieee80211_vht_capabilities) ||
-	    vht_capab_len > ie + len - vht_capab - 2)
+	    (int) vht_capab_len > ie + len - vht_capab - 2)
 		goto no_capab;
 	vht_capab += 2;
 

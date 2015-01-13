@@ -449,6 +449,20 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 		os_memcpy(pos, ext_capab, ext_capab_len);
 	}
 
+	if (wpa_s->vendor_elem[VENDOR_ELEM_ASSOC_REQ]) {
+		struct wpabuf *buf = wpa_s->vendor_elem[VENDOR_ELEM_ASSOC_REQ];
+		size_t len;
+
+		len = sizeof(wpa_s->sme.assoc_req_ie) -
+			wpa_s->sme.assoc_req_ie_len;
+		if (wpabuf_len(buf) <= len) {
+			os_memcpy(wpa_s->sme.assoc_req_ie +
+				  wpa_s->sme.assoc_req_ie_len,
+				  wpabuf_head(buf), wpabuf_len(buf));
+			wpa_s->sme.assoc_req_ie_len += wpabuf_len(buf);
+		}
+	}
+
 	sme_auth_handle_rrm(wpa_s, bss);
 
 #ifdef CONFIG_SAE

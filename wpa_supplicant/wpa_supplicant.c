@@ -2029,6 +2029,18 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 		}
 	}
 
+	if (wpa_s->vendor_elem[VENDOR_ELEM_ASSOC_REQ]) {
+		struct wpabuf *buf = wpa_s->vendor_elem[VENDOR_ELEM_ASSOC_REQ];
+		size_t len;
+
+		len = sizeof(wpa_ie) - wpa_ie_len;
+		if (wpabuf_len(buf) <= len) {
+			os_memcpy(wpa_ie + wpa_ie_len,
+				  wpabuf_head(buf), wpabuf_len(buf));
+			wpa_ie_len += wpabuf_len(buf);
+		}
+	}
+
 	wpa_clear_keys(wpa_s, bss ? bss->bssid : NULL);
 	use_crypt = 1;
 	cipher_pairwise = wpa_s->pairwise_cipher;

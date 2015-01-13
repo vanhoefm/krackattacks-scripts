@@ -1266,7 +1266,7 @@ def test_wpas_ctrl_vendor_elem(dev, apdev):
     if "OK" not in dev[0].request("VENDOR_ELEM_ADD 1 "):
         raise Exception("VENDOR_ELEM_ADD failed")
     cmds = [ "-1 ",
-             "13 ",
+             "255 ",
              "1",
              "1 123",
              "1 12qq34" ]
@@ -1275,14 +1275,14 @@ def test_wpas_ctrl_vendor_elem(dev, apdev):
             raise Exception("Invalid VENDOR_ELEM_ADD command accepted: " + cmd)
 
     cmds = [ "-1 ",
-             "13 " ]
+             "255 " ]
     for cmd in cmds:
         if "FAIL" not in dev[0].request("VENDOR_ELEM_GET " + cmd):
             raise Exception("Invalid VENDOR_ELEM_GET command accepted: " + cmd)
 
     dev[0].request("VENDOR_ELEM_REMOVE 1 *")
     cmds = [ "-1 ",
-             "13 ",
+             "255 ",
              "1",
              "1",
              "1 123",
@@ -1297,7 +1297,7 @@ def test_wpas_ctrl_vendor_elem(dev, apdev):
     if "OK" not in dev[0].request("VENDOR_ELEM_REMOVE 1 "):
         raise Exception("VENDOR_ELEM_REMOVE failed")
     cmds = [ "-1 ",
-             "13 ",
+             "255 ",
              "1",
              "1 123",
              "1 12qq34",

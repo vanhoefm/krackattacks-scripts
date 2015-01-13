@@ -2196,7 +2196,7 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 	os_memset(&vhtcaps_mask, 0, sizeof(vhtcaps_mask));
 	params.vhtcaps = &vhtcaps;
 	params.vhtcaps_mask = &vhtcaps_mask;
-	wpa_supplicant_apply_vht_overrides(wpa_s, wpa_s->current_ssid, &params);
+	wpa_supplicant_apply_vht_overrides(wpa_s, ssid, &params);
 #endif /* CONFIG_VHT_OVERRIDES */
 
 #ifdef CONFIG_P2P

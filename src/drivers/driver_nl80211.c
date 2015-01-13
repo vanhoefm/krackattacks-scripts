@@ -4214,6 +4214,48 @@ static int nl80211_leave_ibss(struct wpa_driver_nl80211_data *drv,
 }
 
 
+static int nl80211_ht_vht_overrides(struct nl_msg *msg,
+				    struct wpa_driver_associate_params *params)
+{
+	if (params->disable_ht && nla_put_flag(msg, NL80211_ATTR_DISABLE_HT))
+		return -1;
+
+	if (params->htcaps && params->htcaps_mask) {
+		int sz = sizeof(struct ieee80211_ht_capabilities);
+		wpa_hexdump(MSG_DEBUG, "  * htcaps", params->htcaps, sz);
+		wpa_hexdump(MSG_DEBUG, "  * htcaps_mask",
+			    params->htcaps_mask, sz);
+		if (nla_put(msg, NL80211_ATTR_HT_CAPABILITY, sz,
+			    params->htcaps) ||
+		    nla_put(msg, NL80211_ATTR_HT_CAPABILITY_MASK, sz,
+			    params->htcaps_mask))
+			return -1;
+	}
+
+#ifdef CONFIG_VHT_OVERRIDES
+	if (params->disable_vht) {
+		wpa_printf(MSG_DEBUG, "  * VHT disabled");
+		if (nla_put_flag(msg, NL80211_ATTR_DISABLE_VHT))
+			return -1;
+	}
+
+	if (params->vhtcaps && params->vhtcaps_mask) {
+		int sz = sizeof(struct ieee80211_vht_capabilities);
+		wpa_hexdump(MSG_DEBUG, "  * vhtcaps", params->vhtcaps, sz);
+		wpa_hexdump(MSG_DEBUG, "  * vhtcaps_mask",
+			    params->vhtcaps_mask, sz);
+		if (nla_put(msg, NL80211_ATTR_VHT_CAPABILITY, sz,
+			    params->vhtcaps) ||
+		    nla_put(msg, NL80211_ATTR_VHT_CAPABILITY_MASK, sz,
+			    params->vhtcaps_mask))
+			return -1;
+	}
+#endif /* CONFIG_VHT_OVERRIDES */
+
+	return 0;
+}
+
+
 static int wpa_driver_nl80211_ibss(struct wpa_driver_nl80211_data *drv,
 				   struct wpa_driver_associate_params *params)
 {
@@ -4273,6 +4315,9 @@ retry:
 			    params->wpa_ie))
 			goto fail;
 	}
+
+	if (nl80211_ht_vht_overrides(msg, params) < 0)
+		return -1;
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	msg = NULL;
@@ -4455,40 +4500,8 @@ static int nl80211_connect_common(struct wpa_driver_nl80211_data *drv,
 			return -1;
 	}
 
-	if (params->disable_ht && nla_put_flag(msg, NL80211_ATTR_DISABLE_HT))
+	if (nl80211_ht_vht_overrides(msg, params) < 0)
 		return -1;
-
-	if (params->htcaps && params->htcaps_mask) {
-		int sz = sizeof(struct ieee80211_ht_capabilities);
-		wpa_hexdump(MSG_DEBUG, "  * htcaps", params->htcaps, sz);
-		wpa_hexdump(MSG_DEBUG, "  * htcaps_mask",
-			    params->htcaps_mask, sz);
-		if (nla_put(msg, NL80211_ATTR_HT_CAPABILITY, sz,
-			    params->htcaps) ||
-		    nla_put(msg, NL80211_ATTR_HT_CAPABILITY_MASK, sz,
-			    params->htcaps_mask))
-			return -1;
-	}
-
-#ifdef CONFIG_VHT_OVERRIDES
-	if (params->disable_vht) {
-		wpa_printf(MSG_DEBUG, "  * VHT disabled");
-		if (nla_put_flag(msg, NL80211_ATTR_DISABLE_VHT))
-			return -1;
-	}
-
-	if (params->vhtcaps && params->vhtcaps_mask) {
-		int sz = sizeof(struct ieee80211_vht_capabilities);
-		wpa_hexdump(MSG_DEBUG, "  * vhtcaps", params->vhtcaps, sz);
-		wpa_hexdump(MSG_DEBUG, "  * vhtcaps_mask",
-			    params->vhtcaps_mask, sz);
-		if (nla_put(msg, NL80211_ATTR_VHT_CAPABILITY, sz,
-			    params->vhtcaps) ||
-		    nla_put(msg, NL80211_ATTR_VHT_CAPABILITY_MASK, sz,
-			    params->vhtcaps_mask))
-			return -1;
-	}
-#endif /* CONFIG_VHT_OVERRIDES */
 
 	if (params->p2p)
 		wpa_printf(MSG_DEBUG, "  * P2P group");

@@ -266,7 +266,7 @@ int wpa_driver_nl80211_scan(struct i802_bss *bss,
 				goto fail;
 
 			if (wpa_driver_nl80211_scan(bss, params)) {
-				wpa_driver_nl80211_set_mode(bss, drv->nlmode);
+				wpa_driver_nl80211_set_mode(bss, old_mode);
 				goto fail;
 			}
 

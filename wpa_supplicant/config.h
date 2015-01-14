@@ -31,6 +31,7 @@
 #define DEFAULT_P2P_SEARCH_DELAY 500
 #define DEFAULT_RAND_ADDR_LIFETIME 60
 #define DEFAULT_KEY_MGMT_OFFLOAD 1
+#define DEFAULT_CERT_IN_CB 1
 
 #include "config_ssid.h"
 #include "wps/wps.h"
@@ -1119,6 +1120,14 @@ struct wpa_config {
 	 * Maximum number of mesh peering currently maintained by the STA.
 	 */
 	int max_peer_links;
+
+	/**
+	 * cert_in_cb - Whether to include a peer certificate dump in events
+	 *
+	 * This controls whether peer certificates for authentication server and
+	 * its certificate chain are included in EAP peer certificate events.
+	 */
+	int cert_in_cb;
 };
 
 

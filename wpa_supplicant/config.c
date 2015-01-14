@@ -3490,6 +3490,7 @@ struct wpa_config * wpa_config_alloc_empty(const char *ctrl_interface,
 	config->p2p_search_delay = DEFAULT_P2P_SEARCH_DELAY;
 	config->rand_addr_lifetime = DEFAULT_RAND_ADDR_LIFETIME;
 	config->key_mgmt_offload = DEFAULT_KEY_MGMT_OFFLOAD;
+	config->cert_in_cb = DEFAULT_CERT_IN_CB;
 
 	if (ctrl_interface)
 		config->ctrl_interface = os_strdup(ctrl_interface);

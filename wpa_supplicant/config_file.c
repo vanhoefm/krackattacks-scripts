@@ -1218,6 +1218,9 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 
 	if (config->max_peer_links != DEFAULT_MAX_PEER_LINKS)
 		fprintf(f, "max_peer_links=%d\n", config->max_peer_links);
+
+	if (config->cert_in_cb != DEFAULT_CERT_IN_CB)
+		fprintf(f, "cert_in_cb=%d\n", config->cert_in_cb);
 }
 
 #endif /* CONFIG_NO_CONFIG_WRITE */

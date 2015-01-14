@@ -254,6 +254,19 @@ dbus_bool_t set_network_properties(struct wpa_supplicant *wpa_s,
 		if (wpa_config_set(ssid, entry.key, value, 0) < 0)
 			goto error;
 
+		if (os_strcmp(entry.key, "bssid") != 0 &&
+		    os_strcmp(entry.key, "priority") != 0)
+			wpa_sm_pmksa_cache_flush(wpa_s->wpa, ssid);
+
+		if (wpa_s->current_ssid == ssid ||
+		    wpa_s->current_ssid == NULL) {
+			/*
+			 * Invalidate the EAP session cache if anything in the
+			 * current or previously used configuration changes.
+			 */
+			eapol_sm_invalidate_cached_session(wpa_s->eapol);
+		}
+
 		if ((os_strcmp(entry.key, "psk") == 0 &&
 		     value[0] == '"' && ssid->ssid_len) ||
 		    (os_strcmp(entry.key, "ssid") == 0 && ssid->passphrase))

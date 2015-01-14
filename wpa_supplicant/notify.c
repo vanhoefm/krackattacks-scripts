@@ -690,13 +690,13 @@ void wpas_notify_sta_authorized(struct wpa_supplicant *wpa_s,
 
 
 void wpas_notify_certification(struct wpa_supplicant *wpa_s, int depth,
-			       const char *subject, const char *cert_hash,
+			       const char *subject, const char *altsubject[],
+			       int num_altsubject, const char *cert_hash,
 			       const struct wpabuf *cert)
 {
 	wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_EAP_PEER_CERT
 		"depth=%d subject='%s'%s%s",
-		depth, subject,
-		cert_hash ? " hash=" : "",
+		depth, subject, cert_hash ? " hash=" : "",
 		cert_hash ? cert_hash : "");
 
 	if (cert) {
@@ -714,11 +714,20 @@ void wpas_notify_certification(struct wpa_supplicant *wpa_s, int depth,
 		}
 	}
 
+	if (altsubject) {
+		int i;
+
+		for (i = 0; i < num_altsubject; i++)
+			wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_EAP_PEER_ALT
+				"depth=%d %s", depth, altsubject[i]);
+	}
+
 	/* notify the old DBus API */
 	wpa_supplicant_dbus_notify_certification(wpa_s, depth, subject,
 						 cert_hash, cert);
 	/* notify the new DBus API */
-	wpas_dbus_signal_certification(wpa_s, depth, subject, cert_hash, cert);
+	wpas_dbus_signal_certification(wpa_s, depth, subject, altsubject,
+				       num_altsubject, cert_hash, cert);
 }
 
 

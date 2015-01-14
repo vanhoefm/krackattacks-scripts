@@ -44,6 +44,9 @@ enum tls_fail_reason {
 	TLS_FAIL_DOMAIN_SUFFIX_MISMATCH = 9
 };
 
+
+#define TLS_MAX_ALT_SUBJECT 10
+
 union tls_event_data {
 	struct {
 		int depth;
@@ -59,6 +62,8 @@ union tls_event_data {
 		const struct wpabuf *cert;
 		const u8 *hash;
 		size_t hash_len;
+		const char *altsubject[TLS_MAX_ALT_SUBJECT];
+		int num_altsubject;
 	} peer_cert;
 
 	struct {

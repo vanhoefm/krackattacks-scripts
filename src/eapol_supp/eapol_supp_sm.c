@@ -1962,13 +1962,14 @@ static void eapol_sm_eap_param_needed(void *ctx, enum wpa_ctrl_req_type field,
 #endif /* CONFIG_CTRL_IFACE || !CONFIG_NO_STDOUT_DEBUG */
 
 static void eapol_sm_notify_cert(void *ctx, int depth, const char *subject,
-				 const char *cert_hash,
+				 const char *altsubject[],
+				 int num_altsubject, const char *cert_hash,
 				 const struct wpabuf *cert)
 {
 	struct eapol_sm *sm = ctx;
 	if (sm->ctx->cert_cb)
-		sm->ctx->cert_cb(sm->ctx->ctx, depth, subject,
-				 cert_hash, cert);
+		sm->ctx->cert_cb(sm->ctx->ctx, depth, subject, altsubject,
+				 num_altsubject, cert_hash, cert);
 }
 
 

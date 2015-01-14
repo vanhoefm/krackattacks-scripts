@@ -748,6 +748,8 @@ nomem:
 
 void wpas_dbus_signal_certification(struct wpa_supplicant *wpa_s,
 				    int depth, const char *subject,
+				    const char *altsubject[],
+				    int num_altsubject,
 				    const char *cert_hash,
 				    const struct wpabuf *cert)
 {
@@ -771,6 +773,9 @@ void wpas_dbus_signal_certification(struct wpa_supplicant *wpa_s,
 	if (!wpa_dbus_dict_open_write(&iter, &dict_iter) ||
 	    !wpa_dbus_dict_append_uint32(&dict_iter, "depth", depth) ||
 	    !wpa_dbus_dict_append_string(&dict_iter, "subject", subject) ||
+	    (altsubject && num_altsubject &&
+	     !wpa_dbus_dict_append_string_array(&dict_iter, "altsubject",
+						altsubject, num_altsubject)) ||
 	    (cert_hash &&
 	     !wpa_dbus_dict_append_string(&dict_iter, "cert_hash",
 					  cert_hash)) ||

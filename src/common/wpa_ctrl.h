@@ -42,6 +42,8 @@ extern "C" {
 #define WPA_EVENT_EAP_METHOD "CTRL-EVENT-EAP-METHOD "
 /** EAP peer certificate from TLS */
 #define WPA_EVENT_EAP_PEER_CERT "CTRL-EVENT-EAP-PEER-CERT "
+/** EAP peer certificate alternative subject name component from TLS */
+#define WPA_EVENT_EAP_PEER_ALT "CTRL-EVENT-EAP-PEER-ALT "
 /** EAP TLS certificate chain validation error */
 #define WPA_EVENT_EAP_TLS_CERT_ERROR "CTRL-EVENT-EAP-TLS-CERT-ERROR "
 /** EAP status */

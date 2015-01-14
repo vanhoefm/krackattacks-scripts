@@ -1377,6 +1377,11 @@ static void openssl_tls_cert_event(struct tls_connection *conn,
 	struct wpabuf *cert = NULL;
 	union tls_event_data ev;
 	struct tls_context *context = conn->context;
+	char *altsubject[TLS_MAX_ALT_SUBJECT];
+	int alt, num_altsubject = 0;
+	GENERAL_NAME *gen;
+	void *ext;
+	stack_index_t i;
 #ifdef CONFIG_SHA256
 	u8 hash[32];
 #endif /* CONFIG_SHA256 */
@@ -1403,8 +1408,52 @@ static void openssl_tls_cert_event(struct tls_connection *conn,
 #endif /* CONFIG_SHA256 */
 	ev.peer_cert.depth = depth;
 	ev.peer_cert.subject = subject;
+
+	ext = X509_get_ext_d2i(err_cert, NID_subject_alt_name, NULL, NULL);
+	for (i = 0; ext && i < sk_GENERAL_NAME_num(ext); i++) {
+		char *pos;
+
+		if (num_altsubject == TLS_MAX_ALT_SUBJECT)
+			break;
+		gen = sk_GENERAL_NAME_value(ext, i);
+		if (gen->type != GEN_EMAIL &&
+		    gen->type != GEN_DNS &&
+		    gen->type != GEN_URI)
+			continue;
+
+		pos = os_malloc(10 + gen->d.ia5->length + 1);
+		if (pos == NULL)
+			break;
+		altsubject[num_altsubject++] = pos;
+
+		switch (gen->type) {
+		case GEN_EMAIL:
+			os_memcpy(pos, "EMAIL:", 6);
+			pos += 6;
+			break;
+		case GEN_DNS:
+			os_memcpy(pos, "DNS:", 4);
+			pos += 4;
+			break;
+		case GEN_URI:
+			os_memcpy(pos, "URI:", 4);
+			pos += 4;
+			break;
+		}
+
+		os_memcpy(pos, gen->d.ia5->data, gen->d.ia5->length);
+		pos += gen->d.ia5->length;
+		*pos = '\0';
+	}
+
+	for (alt = 0; alt < num_altsubject; alt++)
+		ev.peer_cert.altsubject[alt] = altsubject[alt];
+	ev.peer_cert.num_altsubject = num_altsubject;
+
 	context->event_cb(context->cb_ctx, TLS_PEER_CERTIFICATE, &ev);
 	wpabuf_free(cert);
+	for (alt = 0; alt < num_altsubject; alt++)
+		os_free(altsubject[alt]);
 }
 
 

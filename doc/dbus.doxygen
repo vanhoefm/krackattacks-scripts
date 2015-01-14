@@ -792,7 +792,7 @@ fi.w1.wpa_supplicant1.CreateInterface.
 	<h4>Arguments</h4>
 	<dl>
 	  <dt>a{sv} : parameters</dt>
-	  <dd>A dictionary with pairs of field names and their values. Possible dictionary keys are: "depth", "subject", "cert_hash", "cert".</dd>
+	  <dd>A dictionary with pairs of field names and their values. Possible dictionary keys are: "depth", "subject", "altsubject", "cert_hash", "cert".</dd>
 	</dl>
       </li>
 

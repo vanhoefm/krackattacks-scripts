@@ -927,6 +927,18 @@ def test_ap_wpa2_eap_ttls_mschapv2_suffix_match(dev, apdev):
     hwsim_utils.test_connectivity(dev[0], hapd)
     eap_reauth(dev[0], "TTLS")
 
+def test_ap_wpa2_eap_ttls_mschapv2_domain_match(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TTLS/MSCHAPv2 (domain_match)"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    eap_connect(dev[0], apdev[0], "TTLS", "DOMAIN\mschapv2 user",
+                anonymous_identity="ttls", password="password",
+                ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                domain_match="Server.w1.fi")
+    hwsim_utils.test_connectivity(dev[0], hapd)
+    eap_reauth(dev[0], "TTLS")
+
 def test_ap_wpa2_eap_ttls_mschapv2_incorrect_password(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/MSCHAPv2 - incorrect password"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
@@ -1337,6 +1349,59 @@ def test_ap_wpa2_eap_tls_neg_suffix_match(dev, apdev):
         raise Exception("TLS certificate error not reported")
     if "Domain suffix mismatch" not in ev:
         raise Exception("Domain suffix mismatch not reported")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS",
+                            "CTRL-EVENT-EAP-FAILURE",
+                            "CTRL-EVENT-CONNECTED",
+                            "CTRL-EVENT-DISCONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("EAP result(2) timed out")
+    if "CTRL-EVENT-EAP-FAILURE" not in ev:
+        raise Exception("EAP failure not reported")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED",
+                            "CTRL-EVENT-DISCONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("EAP result(3) timed out")
+    if "CTRL-EVENT-DISCONNECTED" not in ev:
+        raise Exception("Disconnection not reported")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-SSID-TEMP-DISABLED"], timeout=10)
+    if ev is None:
+        raise Exception("Network block disabling not reported")
+
+def test_ap_wpa2_eap_tls_neg_domain_match(dev, apdev):
+    """WPA2-Enterprise negative test - domain mismatch"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="DOMAIN\mschapv2 user", anonymous_identity="ttls",
+                   password="password", phase2="auth=MSCHAPV2",
+                   ca_cert="auth_serv/ca.pem",
+                   domain_match="w1.fi",
+                   wait_connect=False, scan_freq="2412")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=10)
+    if ev is None:
+        raise Exception("Association and EAP start timed out")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=10)
+    if ev is None:
+        raise Exception("EAP method selection timed out")
+    if "TTLS" not in ev:
+        raise Exception("Unexpected EAP method")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-TLS-CERT-ERROR",
+                            "CTRL-EVENT-EAP-SUCCESS",
+                            "CTRL-EVENT-EAP-FAILURE",
+                            "CTRL-EVENT-CONNECTED",
+                            "CTRL-EVENT-DISCONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("EAP result timed out")
+    if "CTRL-EVENT-EAP-TLS-CERT-ERROR" not in ev:
+        raise Exception("TLS certificate error not reported")
+    if "Domain mismatch" not in ev:
+        raise Exception("Domain mismatch not reported")
 
     ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS",
                             "CTRL-EVENT-EAP-FAILURE",
@@ -2064,6 +2129,19 @@ def test_ap_wpa2_eap_tls_domain_suffix_match_cn_full(dev, apdev):
                    domain_suffix_match="server3.w1.fi",
                    scan_freq="2412")
 
+def test_ap_wpa2_eap_tls_domain_match_cn(dev, apdev):
+    """WPA2-Enterprise using EAP-TLS and domainmatch (CN)"""
+    params = int_eap_server_params()
+    params["server_cert"] = "auth_serv/server-no-dnsname.pem"
+    params["private_key"] = "auth_serv/server-no-dnsname.key"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
+                   identity="tls user", ca_cert="auth_serv/ca.pem",
+                   private_key="auth_serv/user.pkcs12",
+                   private_key_passwd="whatever",
+                   domain_match="server3.w1.fi",
+                   scan_freq="2412")
+
 def test_ap_wpa2_eap_tls_domain_suffix_match_cn(dev, apdev):
     """WPA2-Enterprise using EAP-TLS and domain suffix match (CN)"""
     check_domain_match_full(dev[0])
@@ -2096,6 +2174,33 @@ def test_ap_wpa2_eap_tls_domain_suffix_mismatch_cn(dev, apdev):
                    private_key="auth_serv/user.pkcs12",
                    private_key_passwd="whatever",
                    domain_suffix_match="erver3.w1.fi",
+                   wait_connect=False,
+                   scan_freq="2412")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"])
+    if ev is None:
+        raise Exception("Timeout on EAP failure report")
+    ev = dev[1].wait_event(["CTRL-EVENT-EAP-FAILURE"])
+    if ev is None:
+        raise Exception("Timeout on EAP failure report (2)")
+
+def test_ap_wpa2_eap_tls_domain_mismatch_cn(dev, apdev):
+    """WPA2-Enterprise using EAP-TLS and domain mismatch (CN)"""
+    params = int_eap_server_params()
+    params["server_cert"] = "auth_serv/server-no-dnsname.pem"
+    params["private_key"] = "auth_serv/server-no-dnsname.key"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
+                   identity="tls user", ca_cert="auth_serv/ca.pem",
+                   private_key="auth_serv/user.pkcs12",
+                   private_key_passwd="whatever",
+                   domain_match="example.com",
+                   wait_connect=False,
+                   scan_freq="2412")
+    dev[1].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TLS",
+                   identity="tls user", ca_cert="auth_serv/ca.pem",
+                   private_key="auth_serv/user.pkcs12",
+                   private_key_passwd="whatever",
+                   domain_match="w1.fi",
                    wait_connect=False,
                    scan_freq="2412")
     ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"])

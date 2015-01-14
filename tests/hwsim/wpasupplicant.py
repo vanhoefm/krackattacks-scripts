@@ -793,7 +793,8 @@ class WpaSupplicant:
                    "private_key_passwd", "ca_cert2", "client_cert2",
                    "private_key2", "phase1", "phase2", "domain_suffix_match",
                    "altsubject_match", "subject_match", "pac_file", "dh_file",
-                   "bgscan", "ht_mcs", "id_str", "openssl_ciphers" ]
+                   "bgscan", "ht_mcs", "id_str", "openssl_ciphers",
+                   "domain_match" ]
         for field in quoted:
             if field in kwargs and kwargs[field]:
                 self.set_network_quoted(id, field, kwargs[field])

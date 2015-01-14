@@ -91,6 +91,7 @@ static void eap_tls_params_from_conf1(struct tls_connection_params *params,
 	params->subject_match = (char *) config->subject_match;
 	params->altsubject_match = (char *) config->altsubject_match;
 	params->suffix_match = config->domain_suffix_match;
+	params->domain_match = config->domain_match;
 	params->engine = config->engine;
 	params->engine_id = config->engine_id;
 	params->pin = config->pin;
@@ -113,6 +114,7 @@ static void eap_tls_params_from_conf2(struct tls_connection_params *params,
 	params->subject_match = (char *) config->subject_match2;
 	params->altsubject_match = (char *) config->altsubject_match2;
 	params->suffix_match = config->domain_suffix_match2;
+	params->domain_match = config->domain_match2;
 	params->engine = config->engine2;
 	params->engine_id = config->engine2_id;
 	params->pin = config->pin2;

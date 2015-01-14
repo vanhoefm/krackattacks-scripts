@@ -58,6 +58,7 @@ struct tls_connection {
 	gnutls_certificate_credentials_t xcred;
 
 	char *suffix_match;
+	char *domain_match;
 	unsigned int flags;
 };
 
@@ -280,6 +281,7 @@ void tls_connection_deinit(void *ssl_ctx, struct tls_connection *conn)
 	wpabuf_free(conn->push_buf);
 	wpabuf_free(conn->pull_buf);
 	os_free(conn->suffix_match);
+	os_free(conn->domain_match);
 	os_free(conn);
 }
 
@@ -362,6 +364,21 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 		if (conn->suffix_match == NULL)
 			return -1;
 	}
+
+#if GNUTLS_VERSION_NUMBER >= 0x030300
+	os_free(conn->domain_match);
+	conn->domain_match = NULL;
+	if (params->domain_match) {
+		conn->domain_match = os_strdup(params->domain_match);
+		if (conn->domain_match == NULL)
+			return -1;
+	}
+#else /* < 3.3.0 */
+	if (params->domain_match) {
+		wpa_printf(MSG_INFO, "GnuTLS: domain_match not supported");
+		return -1;
+	}
+#endif /* >= 3.3.0 */
 
 	conn->flags = params->flags;
 
@@ -1110,6 +1127,25 @@ static int tls_connection_verify_peer(gnutls_session_t session)
 				os_free(buf);
 				goto out;
 			}
+
+#if GNUTLS_VERSION_NUMBER >= 0x030300
+			if (conn->domain_match &&
+			    !gnutls_x509_crt_check_hostname2(
+				    cert, conn->domain_match,
+				    GNUTLS_VERIFY_DO_NOT_ALLOW_WILDCARDS)) {
+				wpa_printf(MSG_WARNING,
+					   "TLS: Domain match '%s' not found",
+					   conn->domain_match);
+				gnutls_tls_fail_event(
+					conn, &certs[i], i, buf,
+					"Domain mismatch",
+					TLS_FAIL_DOMAIN_MISMATCH);
+				err = GNUTLS_A_BAD_CERTIFICATE;
+				gnutls_x509_crt_deinit(cert);
+				os_free(buf);
+				goto out;
+			}
+#endif /* >= 3.3.0 */
 
 			/* TODO: validate altsubject_match.
 			 * For now, any such configuration is rejected in

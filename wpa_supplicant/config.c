@@ -1818,6 +1818,7 @@ static const struct parse_data ssid_fields[] = {
 	{ STRe(subject_match) },
 	{ STRe(altsubject_match) },
 	{ STRe(domain_suffix_match) },
+	{ STRe(domain_match) },
 	{ STRe(ca_cert2) },
 	{ STRe(ca_path2) },
 	{ STRe(client_cert2) },
@@ -1827,6 +1828,7 @@ static const struct parse_data ssid_fields[] = {
 	{ STRe(subject_match2) },
 	{ STRe(altsubject_match2) },
 	{ STRe(domain_suffix_match2) },
+	{ STRe(domain_match2) },
 	{ STRe(phase1) },
 	{ STRe(phase2) },
 	{ STRe(pcsc) },
@@ -2052,6 +2054,7 @@ static void eap_peer_config_free(struct eap_peer_config *eap)
 	os_free(eap->subject_match);
 	os_free(eap->altsubject_match);
 	os_free(eap->domain_suffix_match);
+	os_free(eap->domain_match);
 	os_free(eap->ca_cert2);
 	os_free(eap->ca_path2);
 	os_free(eap->client_cert2);
@@ -2061,6 +2064,7 @@ static void eap_peer_config_free(struct eap_peer_config *eap)
 	os_free(eap->subject_match2);
 	os_free(eap->altsubject_match2);
 	os_free(eap->domain_suffix_match2);
+	os_free(eap->domain_match2);
 	os_free(eap->phase1);
 	os_free(eap->phase2);
 	os_free(eap->pcsc);

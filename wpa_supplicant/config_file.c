@@ -691,6 +691,7 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 	STR(subject_match);
 	STR(altsubject_match);
 	STR(domain_suffix_match);
+	STR(domain_match);
 	STR(ca_cert2);
 	STR(ca_path2);
 	STR(client_cert2);
@@ -700,6 +701,7 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 	STR(subject_match2);
 	STR(altsubject_match2);
 	STR(domain_suffix_match2);
+	STR(domain_match2);
 	STR(phase1);
 	STR(phase2);
 	STR(pcsc);

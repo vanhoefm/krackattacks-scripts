@@ -41,7 +41,8 @@ enum tls_fail_reason {
 	TLS_FAIL_ALTSUBJECT_MISMATCH = 6,
 	TLS_FAIL_BAD_CERTIFICATE = 7,
 	TLS_FAIL_SERVER_CHAIN_PROBE = 8,
-	TLS_FAIL_DOMAIN_SUFFIX_MISMATCH = 9
+	TLS_FAIL_DOMAIN_SUFFIX_MISMATCH = 9,
+	TLS_FAIL_DOMAIN_MISMATCH = 10,
 };
 
 
@@ -107,7 +108,11 @@ struct tls_config {
  * @altsubject_match: String to match in the alternative subject of the peer
  * certificate or %NULL to allow all alternative subjects
  * @suffix_match: String to suffix match in the dNSName or CN of the peer
- * certificate or %NULL to allow all domain names
+ * certificate or %NULL to allow all domain names. This may allow subdomains an
+ * wildcard certificates. Each domain name label must have a full match.
+ * @domain_match: String to match in the dNSName or CN of the peer
+ * certificate or %NULL to allow all domain names. This requires a full,
+ * case-insensitive match.
  * @client_cert: File or reference name for client X.509 certificate in PEM or
  * DER format
  * @client_cert_blob: client_cert as inlined data or %NULL if not used
@@ -151,6 +156,7 @@ struct tls_connection_params {
 	const char *subject_match;
 	const char *altsubject_match;
 	const char *suffix_match;
+	const char *domain_match;
 	const char *client_cert;
 	const u8 *client_cert_blob;
 	size_t client_cert_blob_len;

@@ -230,6 +230,21 @@ struct eap_peer_config {
 	char *domain_suffix_match;
 
 	/**
+	 * domain_match - Constraint for server domain name
+	 *
+	 * If set, this FQDN is used as a full match requirement for the
+	 * server certificate in SubjectAltName dNSName element(s). If a
+	 * matching dNSName is found, this constraint is met. If no dNSName
+	 * values are present, this constraint is matched against SubjectName CN
+	 * using same full match comparison. This behavior is similar to
+	 * domain_suffix_match, but has the requirement of a full match, i.e.,
+	 * no subdomains or wildcard matches are allowed. Case-insensitive
+	 * comparison is used, so "Example.com" matches "example.com", but would
+	 * not match "test.Example.com".
+	 */
+	char *domain_match;
+
+	/**
 	 * ca_cert2 - File path to CA certificate file (PEM/DER) (Phase 2)
 	 *
 	 * This file can have one or more trusted CA certificates. If ca_cert2
@@ -331,6 +346,14 @@ struct eap_peer_config {
 	 * EAP-TTLS/PEAP/FAST tunnel) authentication.
 	 */
 	char *domain_suffix_match2;
+
+	/**
+	 * domain_match2 - Constraint for server domain name
+	 *
+	 * This field is like domain_match, but used for phase 2 (inside
+	 * EAP-TTLS/PEAP/FAST tunnel) authentication.
+	 */
+	char *domain_match2;
 
 	/**
 	 * eap_methods - Allowed EAP methods

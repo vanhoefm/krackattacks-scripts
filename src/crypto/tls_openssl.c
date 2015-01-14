@@ -96,7 +96,7 @@ struct tls_connection {
 	ENGINE *engine;        /* functional reference to the engine */
 	EVP_PKEY *private_key; /* the private key if using engine */
 #endif /* OPENSSL_NO_ENGINE */
-	char *subject_match, *altsubject_match, *suffix_match;
+	char *subject_match, *altsubject_match, *suffix_match, *domain_match;
 	int read_alerts, write_alerts, failed;
 
 	tls_session_ticket_cb session_ticket_cb;
@@ -1098,6 +1098,7 @@ void tls_connection_deinit(void *ssl_ctx, struct tls_connection *conn)
 	os_free(conn->subject_match);
 	os_free(conn->altsubject_match);
 	os_free(conn->suffix_match);
+	os_free(conn->domain_match);
 	os_free(conn->session_ticket);
 	os_free(conn);
 }
@@ -1190,7 +1191,8 @@ static int tls_match_altsubject(X509 *cert, const char *match)
 
 
 #ifndef CONFIG_NATIVE_WINDOWS
-static int domain_suffix_match(const u8 *val, size_t len, const char *match)
+static int domain_suffix_match(const u8 *val, size_t len, const char *match,
+			       int full)
 {
 	size_t i, match_len;
 
@@ -1203,7 +1205,7 @@ static int domain_suffix_match(const u8 *val, size_t len, const char *match)
 	}
 
 	match_len = os_strlen(match);
-	if (match_len > len)
+	if (match_len > len || (full && match_len != len))
 		return 0;
 
 	if (os_strncasecmp((const char *) val + len - match_len, match,
@@ -1222,7 +1224,7 @@ static int domain_suffix_match(const u8 *val, size_t len, const char *match)
 #endif /* CONFIG_NATIVE_WINDOWS */
 
 
-static int tls_match_suffix(X509 *cert, const char *match)
+static int tls_match_suffix(X509 *cert, const char *match, int full)
 {
 #ifdef CONFIG_NATIVE_WINDOWS
 	/* wincrypt.h has conflicting X509_NAME definition */
@@ -1235,7 +1237,8 @@ static int tls_match_suffix(X509 *cert, const char *match)
 	int dns_name = 0;
 	X509_NAME *name;
 
-	wpa_printf(MSG_DEBUG, "TLS: Match domain against suffix %s", match);
+	wpa_printf(MSG_DEBUG, "TLS: Match domain against %s%s",
+		   full ? "": "suffix ", match);
 
 	ext = X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
 
@@ -1248,8 +1251,10 @@ static int tls_match_suffix(X509 *cert, const char *match)
 				  gen->d.dNSName->data,
 				  gen->d.dNSName->length);
 		if (domain_suffix_match(gen->d.dNSName->data,
-					gen->d.dNSName->length, match) == 1) {
-			wpa_printf(MSG_DEBUG, "TLS: Suffix match in dNSName found");
+					gen->d.dNSName->length, match, full) ==
+		    1) {
+			wpa_printf(MSG_DEBUG, "TLS: %s in dNSName found",
+				   full ? "Match" : "Suffix match");
 			return 1;
 		}
 	}
@@ -1276,13 +1281,16 @@ static int tls_match_suffix(X509 *cert, const char *match)
 			continue;
 		wpa_hexdump_ascii(MSG_DEBUG, "TLS: Certificate commonName",
 				  cn->data, cn->length);
-		if (domain_suffix_match(cn->data, cn->length, match) == 1) {
-			wpa_printf(MSG_DEBUG, "TLS: Suffix match in commonName found");
+		if (domain_suffix_match(cn->data, cn->length, match, full) == 1)
+		{
+			wpa_printf(MSG_DEBUG, "TLS: %s in commonName found",
+				   full ? "Match" : "Suffix match");
 			return 1;
 		}
 	}
 
-	wpa_printf(MSG_DEBUG, "TLS: No CommonName suffix match found");
+	wpa_printf(MSG_DEBUG, "TLS: No CommonName %smatch found",
+		   full ? "": "suffix ");
 	return 0;
 #endif /* CONFIG_NATIVE_WINDOWS */
 }
@@ -1465,7 +1473,7 @@ static int tls_verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx)
 	SSL *ssl;
 	struct tls_connection *conn;
 	struct tls_context *context;
-	char *match, *altmatch, *suffix_match;
+	char *match, *altmatch, *suffix_match, *domain_match;
 	const char *err_str;
 
 	err_cert = X509_STORE_CTX_get_current_cert(x509_ctx);
@@ -1493,6 +1501,7 @@ static int tls_verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx)
 	match = conn->subject_match;
 	altmatch = conn->altsubject_match;
 	suffix_match = conn->suffix_match;
+	domain_match = conn->domain_match;
 
 	if (!preverify_ok && !conn->ca_cert_verify)
 		preverify_ok = 1;
@@ -1562,13 +1571,21 @@ static int tls_verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx)
 				       "AltSubject mismatch",
 				       TLS_FAIL_ALTSUBJECT_MISMATCH);
 	} else if (depth == 0 && suffix_match &&
-		   !tls_match_suffix(err_cert, suffix_match)) {
+		   !tls_match_suffix(err_cert, suffix_match, 0)) {
 		wpa_printf(MSG_WARNING, "TLS: Domain suffix match '%s' not found",
 			   suffix_match);
 		preverify_ok = 0;
 		openssl_tls_fail_event(conn, err_cert, err, depth, buf,
 				       "Domain suffix mismatch",
 				       TLS_FAIL_DOMAIN_SUFFIX_MISMATCH);
+	} else if (depth == 0 && domain_match &&
+		   !tls_match_suffix(err_cert, domain_match, 1)) {
+		wpa_printf(MSG_WARNING, "TLS: Domain match '%s' not found",
+			   domain_match);
+		preverify_ok = 0;
+		openssl_tls_fail_event(conn, err_cert, err, depth, buf,
+				       "Domain mismatch",
+				       TLS_FAIL_DOMAIN_MISMATCH);
 	} else
 		openssl_tls_cert_event(conn, err_cert, depth, buf);
 
@@ -1832,7 +1849,8 @@ int tls_global_set_verify(void *ssl_ctx, int check_crl)
 static int tls_connection_set_subject_match(struct tls_connection *conn,
 					    const char *subject_match,
 					    const char *altsubject_match,
-					    const char *suffix_match)
+					    const char *suffix_match,
+					    const char *domain_match)
 {
 	os_free(conn->subject_match);
 	conn->subject_match = NULL;
@@ -1855,6 +1873,14 @@ static int tls_connection_set_subject_match(struct tls_connection *conn,
 	if (suffix_match) {
 		conn->suffix_match = os_strdup(suffix_match);
 		if (conn->suffix_match == NULL)
+			return -1;
+	}
+
+	os_free(conn->domain_match);
+	conn->domain_match = NULL;
+	if (domain_match) {
+		conn->domain_match = os_strdup(domain_match);
+		if (conn->domain_match == NULL)
 			return -1;
 	}
 
@@ -3322,7 +3348,8 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 	if (tls_connection_set_subject_match(conn,
 					     params->subject_match,
 					     params->altsubject_match,
-					     params->suffix_match))
+					     params->suffix_match,
+					     params->domain_match))
 		return -1;
 
 	if (engine_id && ca_cert_id) {

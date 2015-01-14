@@ -1249,7 +1249,7 @@ def test_dbus_connect_eap(dev, apdev):
             self.add_signal(self.propertiesChanged, WPAS_DBUS_IFACE,
                             "PropertiesChanged")
             self.add_signal(self.certification, WPAS_DBUS_IFACE,
-                            "Certification")
+                            "Certification", byte_arrays=True)
             self.add_signal(self.networkRequest, WPAS_DBUS_IFACE,
                             "NetworkRequest")
             self.add_signal(self.eap, WPAS_DBUS_IFACE, "EAP")
@@ -1262,23 +1262,52 @@ def test_dbus_connect_eap(dev, apdev):
                 if self.state == 0:
                     self.state = 1
                     iface.EAPLogoff()
+                    logger.info("Set dNSName constraint")
+                    net_obj = bus.get_object(WPAS_DBUS_SERVICE, self.netw)
+                    args = dbus.Dictionary({ 'altsubject_match':
+                                             self.server_dnsname },
+                                           signature='sv')
+                    net_obj.Set(WPAS_DBUS_NETWORK, "Properties", args,
+                                dbus_interface=dbus.PROPERTIES_IFACE)
                 elif self.state == 2:
                     self.state = 3
-                    self.loop.quit()
+                    iface.Disconnect()
+                    logger.info("Set non-matching dNSName constraint")
+                    net_obj = bus.get_object(WPAS_DBUS_SERVICE, self.netw)
+                    args = dbus.Dictionary({ 'altsubject_match':
+                                             self.server_dnsname + "FOO" },
+                                           signature='sv')
+                    net_obj.Set(WPAS_DBUS_NETWORK, "Properties", args,
+                                dbus_interface=dbus.PROPERTIES_IFACE)
             if 'State' in properties and properties['State'] == "disconnected":
                 if self.state == 1:
                     self.state = 2
                     iface.EAPLogon()
                     iface.SelectNetwork(self.netw)
+                if self.state == 3:
+                    self.state = 4
+                    iface.SelectNetwork(self.netw)
 
         def certification(self, args):
             logger.debug("certification: %s" % str(args))
             self.certification_received = True
+            if args['depth'] == 0:
+                # The test server certificate is supposed to have dNSName
+                if len(args['altsubject']) < 1:
+                    raise Exception("Missing dNSName")
+                dnsname = args['altsubject'][0]
+                if not dnsname.startswith("DNS:"):
+                    raise Exception("Expected dNSName not found: " + dnsname)
+                logger.info("altsubject: " + dnsname)
+                self.server_dnsname = dnsname
 
         def eap(self, status, parameter):
             logger.debug("EAP: status=%s parameter=%s" % (status, parameter))
             if status == 'completion' and parameter == 'success':
                 self.eap_status = True
+            if self.state == 4 and status == 'remote certificate verification' and parameter == 'AltSubject mismatch':
+                self.state = 5
+                self.loop.quit()
 
         def networkRequest(self, path, field, txt):
             logger.debug("networkRequest: %s %s %s" % (path, field, txt))
@@ -1304,7 +1333,7 @@ def test_dbus_connect_eap(dev, apdev):
         def success(self):
             if not self.eap_status or not self.certification_received:
                 return False
-            return self.state == 3
+            return self.state == 5
 
     with TestDbusConnect(bus) as t:
         if not t.success():

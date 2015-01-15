@@ -2438,6 +2438,36 @@ def _test_ap_hs20_proxyarp(dev, apdev):
     if len(matches) > 0:
         raise Exception("Unexpected neighbor entries after disconnect")
 
+def test_ap_hs20_hidden_ssid_in_scan_res(dev, apdev):
+    """Hotspot 2.0 connection with hidden SSId in scan results"""
+    bssid = apdev[0]['bssid']
+
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": 'secret',
+                                                "ignore_broadcast_ssid": "1" })
+    dev[0].scan_for_bss(bssid, freq=2412)
+    hapd.disable()
+    hapd_global = hostapd.HostapdGlobal()
+    hapd_global.flush()
+    hapd_global.remove(apdev[0]['ifname'])
+
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'username': "hs20-test",
+                                  'password': "password",
+                                  'ca_cert': "auth_serv/ca.pem",
+                                  'domain': "example.com" })
+    interworking_select(dev[0], bssid, "home", freq="2412")
+    interworking_connect(dev[0], bssid, "TTLS")
+
+    # clear BSS table to avoid issues in following test cases
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+    dev[0].flush_scan_cache()
+
 def test_ap_hs20_proxyarp(dev, apdev):
     """Hotspot 2.0 and ProxyARP"""
     try:

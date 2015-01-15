@@ -5526,6 +5526,27 @@ static int ctrl_interworking_connect(struct wpa_supplicant *wpa_s, char *dst)
 		return -1;
 	}
 
+	if (bss->ssid_len == 0) {
+		int found = 0;
+
+		wpa_printf(MSG_DEBUG, "Selected BSS entry for " MACSTR
+			   " does not have SSID information", MAC2STR(bssid));
+
+		dl_list_for_each_reverse(bss, &wpa_s->bss, struct wpa_bss,
+					 list) {
+			if (os_memcmp(bss->bssid, bssid, ETH_ALEN) == 0 &&
+			    bss->ssid_len > 0) {
+				found = 1;
+				break;
+			}
+		}
+
+		if (!found)
+			return -1;
+		wpa_printf(MSG_DEBUG,
+			   "Found another matching BSS entry with SSID");
+	}
+
 	return interworking_connect(wpa_s, bss);
 }
 

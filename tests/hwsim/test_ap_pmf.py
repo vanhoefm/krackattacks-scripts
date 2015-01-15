@@ -207,6 +207,42 @@ def test_ap_pmf_sta_sa_query(dev, apdev):
     if wt.get_sta_counter("valid_saqueryresp_rx", bssid, addr) < 1:
         raise Exception("AP did not reply to SA Query")
 
+def test_ap_pmf_sta_sa_query_no_response(dev, apdev):
+    """WPA2-PSK AP with station using SA Query and getting no response"""
+    ssid = "assoc-comeback"
+    addr = dev[0].p2p_dev_addr()
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5", drv_params="use_monitor=1")
+    id = wpas.add_network()
+    wpas.set_network(id, "mode", "2")
+    wpas.set_network_quoted(id, "ssid", ssid)
+    wpas.set_network(id, "proto", "WPA2")
+    wpas.set_network(id, "key_mgmt", "WPA-PSK-SHA256")
+    wpas.set_network(id, "ieee80211w", "2")
+    wpas.set_network_quoted(id, "psk", "12345678")
+    wpas.set_network(id, "pairwise", "CCMP")
+    wpas.set_network(id, "group", "CCMP")
+    wpas.set_network(id, "frequency", "2412")
+    wpas.connect_network(id)
+    bssid = wpas.p2p_dev_addr()
+
+    dev[0].connect(ssid, psk="12345678", ieee80211w="1",
+                   key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2",
+                   scan_freq="2412")
+    wpas.request("DEAUTHENTICATE " + addr + " test=0")
+    wpas.request("DISASSOCIATE " + addr + " test=0")
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=1)
+    if ev is not None:
+        raise Exception("Unexpected disconnection")
+
+    wpas.request("SET ext_mgmt_frame_handling 1")
+    wpas.request("DEAUTHENTICATE " + addr + " reason=6 test=0")
+    wpas.request("DISASSOCIATE " + addr + " reason=7 test=0")
+    dev[0].wait_disconnected()
+    wpas.request("SET ext_mgmt_frame_handling 0")
+    dev[0].wait_connected()
+
 def test_ap_pmf_sta_unprot_deauth_burst(dev, apdev):
     """WPA2-PSK AP with station receiving burst of unprotected Deauthentication frames"""
     ssid = "deauth-attack"

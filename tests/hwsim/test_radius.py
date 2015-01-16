@@ -498,6 +498,44 @@ def test_radius_das_disconnect(dev, apdev):
     if ev is not None:
         raise Exception("Unexpected disconnection")
 
+    connect(dev[2], "radius-das")
+
+    logger.info("Disconnect-Request with matching User-Name - multiple sessions matching")
+    req = radius_das.DisconnectPacket(dict=dict, secret="secret",
+                                      NAS_Identifier="nas.example.com",
+                                      User_Name="psk.user@example.com",
+                                      Event_Timestamp=int(time.time()))
+    reply = srv.SendPacket(req)
+    logger.debug("RADIUS response from hostapd")
+    for i in reply.keys():
+        logger.debug("%s: %s" % (i, reply[i]))
+    if reply.code != pyrad.packet.DisconnectNAK:
+        raise Exception("Unexpected response code")
+    if 'Error-Cause' not in reply:
+        raise Exception("Missing Error-Cause")
+    if reply['Error-Cause'][0] != 508:
+        raise Exception("Unexpected Error-Cause: {}".format(reply['Error-Cause']))
+
+    logger.info("Disconnect-Request with User-Name matching multiple sessions, Calling-Station-Id only one")
+    req = radius_das.DisconnectPacket(dict=dict, secret="secret",
+                                      NAS_Identifier="nas.example.com",
+                                      Calling_Station_Id=addr,
+                                      User_Name="psk.user@example.com",
+                                      Event_Timestamp=int(time.time()))
+    reply = srv.SendPacket(req)
+    logger.debug("RADIUS response from hostapd")
+    for i in reply.keys():
+        logger.debug("%s: %s" % (i, reply[i]))
+    if reply.code != pyrad.packet.DisconnectACK:
+        raise Exception("Unexpected response code")
+
+    dev[0].wait_disconnected(timeout=10)
+    dev[0].wait_connected(timeout=10, error="Re-connection timed out")
+
+    ev = dev[2].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=1)
+    if ev is not None:
+        raise Exception("Unexpected disconnection")
+
 def test_radius_das_coa(dev, apdev):
     """RADIUS Dynamic Authorization Extensions - CoA"""
     try:

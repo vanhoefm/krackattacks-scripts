@@ -1040,6 +1040,7 @@ struct wpa_driver_mesh_bss_params {
 	 * See NL80211_MESHCONF_* for all the mesh config parameters.
 	 */
 	unsigned int flags;
+	int peer_link_timeout;
 };
 
 struct wpa_driver_mesh_join_params {

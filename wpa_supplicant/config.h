@@ -17,6 +17,7 @@
 #endif /* CONFIG_NO_SCAN_PROCESSING */
 #define DEFAULT_USER_MPM 1
 #define DEFAULT_MAX_PEER_LINKS 99
+#define DEFAULT_MESH_MAX_INACTIVITY 300
 #define DEFAULT_FAST_REAUTH 1
 #define DEFAULT_P2P_GO_INTENT 7
 #define DEFAULT_P2P_INTRA_BSS 1
@@ -1128,6 +1129,14 @@ struct wpa_config {
 	 * its certificate chain are included in EAP peer certificate events.
 	 */
 	int cert_in_cb;
+
+	/**
+	 * mesh_max_inactivity - Timeout in seconds to detect STA inactivity
+	 *
+	 * This timeout value is used in mesh STA to clean up inactive stations.
+	 * By default: 300 seconds.
+	 */
+	int mesh_max_inactivity;
 };
 
 

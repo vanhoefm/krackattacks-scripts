@@ -3476,6 +3476,7 @@ struct wpa_config * wpa_config_alloc_empty(const char *ctrl_interface,
 	config->ap_scan = DEFAULT_AP_SCAN;
 	config->user_mpm = DEFAULT_USER_MPM;
 	config->max_peer_links = DEFAULT_MAX_PEER_LINKS;
+	config->mesh_max_inactivity = DEFAULT_MESH_MAX_INACTIVITY;
 	config->fast_reauth = DEFAULT_FAST_REAUTH;
 	config->p2p_go_intent = DEFAULT_P2P_GO_INTENT;
 	config->p2p_intra_bss = DEFAULT_P2P_INTRA_BSS;
@@ -4026,6 +4027,7 @@ static const struct global_parse_data global_fields[] = {
 #ifdef CONFIG_MESH
 	{ INT(user_mpm), 0 },
 	{ INT_RANGE(max_peer_links, 0, 255), 0 },
+	{ INT(mesh_max_inactivity), 0 },
 #endif /* CONFIG_MESH */
 	{ INT(disable_scan_offload), 0 },
 	{ INT(fast_reauth), 0 },

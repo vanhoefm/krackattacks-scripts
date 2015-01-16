@@ -166,6 +166,7 @@ static int wpa_supplicant_mesh_init(struct wpa_supplicant *wpa_s,
 	bss->conf = *conf->bss;
 	bss->conf->start_disabled = 1;
 	bss->conf->mesh = MESH_ENABLED;
+	bss->conf->ap_max_inactivity = wpa_s->conf->mesh_max_inactivity;
 	bss->iconf = conf;
 	ifmsh->conf = conf;
 
@@ -339,6 +340,7 @@ int wpa_supplicant_join_mesh(struct wpa_supplicant *wpa_s,
 		params.flags |= WPA_DRIVER_MESH_FLAG_DRIVER_MPM;
 		params.conf.flags |= WPA_DRIVER_MESH_CONF_FLAG_AUTO_PLINKS;
 	}
+	params.conf.peer_link_timeout = wpa_s->conf->mesh_max_inactivity;
 
 	if (wpa_supplicant_mesh_init(wpa_s, ssid)) {
 		wpa_msg(wpa_s, MSG_ERROR, "Failed to init mesh");

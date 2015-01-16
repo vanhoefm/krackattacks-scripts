@@ -7821,6 +7821,7 @@ wpa_driver_nl80211_join_mesh(void *priv,
 	struct nl_msg *msg;
 	struct nlattr *container;
 	int ret = 0;
+	u32 timeout;
 
 	wpa_printf(MSG_DEBUG, "nl80211: mesh join (ifindex=%d)", drv->ifindex);
 	msg = nl80211_drv_msg(drv, 0, NL80211_CMD_JOIN_MESH);
@@ -7868,6 +7869,22 @@ wpa_driver_nl80211_join_mesh(void *priv,
 	    nla_put_u16(msg, NL80211_MESHCONF_MAX_PEER_LINKS,
 			params->max_peer_links))
 		goto fail;
+
+	/*
+	 * Set NL80211_MESHCONF_PLINK_TIMEOUT even if user mpm is used because
+	 * the timer could disconnect stations even in that case.
+	 *
+	 * Set 0xffffffff instead of 0 because NL80211_MESHCONF_PLINK_TIMEOUT
+	 * does not allow 0.
+	 */
+	timeout = params->conf.peer_link_timeout;
+	if ((params->flags & WPA_DRIVER_MESH_FLAG_USER_MPM) || timeout == 0)
+		timeout = 0xffffffff;
+	if (nla_put_u32(msg, NL80211_MESHCONF_PLINK_TIMEOUT, timeout)) {
+		wpa_printf(MSG_ERROR, "nl80211: Failed to set PLINK_TIMEOUT");
+		goto fail;
+	}
+
 	nla_nest_end(msg, container);
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);

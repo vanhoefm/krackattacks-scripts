@@ -31,6 +31,8 @@ struct radius_das_attrs {
 	size_t user_name_len;
 	const u8 *acct_session_id;
 	size_t acct_session_id_len;
+	const u8 *acct_multi_session_id;
+	size_t acct_multi_session_id_len;
 	const u8 *cui;
 	size_t cui_len;
 };

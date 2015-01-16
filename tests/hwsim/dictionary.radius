@@ -4,6 +4,7 @@ ATTRIBUTE	NAS-IP-Address		4	ipaddr
 ATTRIBUTE	Calling-Station-Id	31	string
 ATTRIBUTE	NAS-Identifier		32	string
 ATTRIBUTE	Acct-Session-Id		44	string
+ATTRIBUTE	Acct-Multi-Session-Id	50	string
 ATTRIBUTE	Event-Timestamp		55	date
 ATTRIBUTE	Tunnel-Password		69	octets
 ATTRIBUTE	EAP-Message		79	string

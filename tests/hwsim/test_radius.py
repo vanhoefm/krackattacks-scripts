@@ -369,6 +369,51 @@ def test_radius_das_disconnect(dev, apdev):
     if reply['Error-Cause'][0] != 503:
         raise Exception("Unexpected Error-Cause: {}".format(reply['Error-Cause']))
 
+    logger.info("Disconnect-Request with mismatching Acct-Session-Id (len)")
+    req = radius_das.DisconnectPacket(dict=dict, secret="secret",
+                                      Acct_Session_Id="12345678",
+                                      Event_Timestamp=int(time.time()))
+    reply = srv.SendPacket(req)
+    logger.debug("RADIUS response from hostapd")
+    for i in reply.keys():
+        logger.debug("%s: %s" % (i, reply[i]))
+    if reply.code != pyrad.packet.DisconnectNAK:
+        raise Exception("Unexpected response code")
+    if 'Error-Cause' not in reply:
+        raise Exception("Missing Error-Cause")
+    if reply['Error-Cause'][0] != 503:
+        raise Exception("Unexpected Error-Cause: {}".format(reply['Error-Cause']))
+
+    logger.info("Disconnect-Request with mismatching Acct-Multi-Session-Id")
+    req = radius_das.DisconnectPacket(dict=dict, secret="secret",
+                                      Acct_Multi_Session_Id="12345678+87654321",
+                                      Event_Timestamp=int(time.time()))
+    reply = srv.SendPacket(req)
+    logger.debug("RADIUS response from hostapd")
+    for i in reply.keys():
+        logger.debug("%s: %s" % (i, reply[i]))
+    if reply.code != pyrad.packet.DisconnectNAK:
+        raise Exception("Unexpected response code")
+    if 'Error-Cause' not in reply:
+        raise Exception("Missing Error-Cause")
+    if reply['Error-Cause'][0] != 503:
+        raise Exception("Unexpected Error-Cause: {}".format(reply['Error-Cause']))
+
+    logger.info("Disconnect-Request with mismatching Acct-Multi-Session-Id (len)")
+    req = radius_das.DisconnectPacket(dict=dict, secret="secret",
+                                      Acct_Multi_Session_Id="12345678",
+                                      Event_Timestamp=int(time.time()))
+    reply = srv.SendPacket(req)
+    logger.debug("RADIUS response from hostapd")
+    for i in reply.keys():
+        logger.debug("%s: %s" % (i, reply[i]))
+    if reply.code != pyrad.packet.DisconnectNAK:
+        raise Exception("Unexpected response code")
+    if 'Error-Cause' not in reply:
+        raise Exception("Missing Error-Cause")
+    if reply['Error-Cause'][0] != 503:
+        raise Exception("Unexpected Error-Cause: {}".format(reply['Error-Cause']))
+
     ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=1)
     if ev is not None:
         raise Exception("Unexpected disconnection")
@@ -414,6 +459,24 @@ def test_radius_das_disconnect(dev, apdev):
                                       NAS_IP_Address="127.0.0.1",
                                       NAS_Identifier="nas.example.com",
                                       Acct_Session_Id=id,
+                                      Event_Timestamp=int(time.time()))
+    reply = srv.SendPacket(req)
+    logger.debug("RADIUS response from hostapd")
+    for i in reply.keys():
+        logger.debug("%s: %s" % (i, reply[i]))
+    if reply.code != pyrad.packet.DisconnectACK:
+        raise Exception("Unexpected response code")
+
+    dev[0].wait_disconnected(timeout=10)
+    dev[0].wait_connected(timeout=10, error="Re-connection timed out")
+
+    logger.info("Disconnect-Request with matching Acct-Multi-Session-Id")
+    sta = hapd.get_sta(addr)
+    multi_sess_id = sta['authMultiSessionId']
+    req = radius_das.DisconnectPacket(dict=dict, secret="secret",
+                                      NAS_IP_Address="127.0.0.1",
+                                      NAS_Identifier="nas.example.com",
+                                      Acct_Multi_Session_Id=multi_sess_id,
                                       Event_Timestamp=int(time.time()))
     reply = srv.SendPacket(req)
     logger.debug("RADIUS response from hostapd")

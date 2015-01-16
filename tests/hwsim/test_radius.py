@@ -355,6 +355,11 @@ def test_radius_das_disconnect(dev, apdev):
                                       Event_Timestamp=int(time.time()))
     send_and_check_reply(srv, req, pyrad.packet.DisconnectNAK, 503)
 
+    logger.info("Disconnect-Request with no session identification attributes")
+    req = radius_das.DisconnectPacket(dict=dict, secret="secret",
+                                      Event_Timestamp=int(time.time()))
+    send_and_check_reply(srv, req, pyrad.packet.DisconnectNAK, 503)
+
     ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=1)
     if ev is not None:
         raise Exception("Unexpected disconnection")

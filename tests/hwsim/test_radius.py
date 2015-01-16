@@ -469,11 +469,12 @@ def test_radius_das_disconnect(dev, apdev):
     logger.debug("RADIUS response from hostapd")
     for i in reply.keys():
         logger.debug("%s: %s" % (i, reply[i]))
-    if reply.code != pyrad.packet.DisconnectACK:
+    if reply.code != pyrad.packet.DisconnectNAK:
         raise Exception("Unexpected response code")
-
-    dev[0].wait_disconnected(timeout=10)
-    dev[0].wait_connected(timeout=10, error="Re-connection timed out")
+    if 'Error-Cause' not in reply:
+        raise Exception("Missing Error-Cause")
+    if reply['Error-Cause'][0] != 503:
+        raise Exception("Unexpected Error-Cause: {}".format(reply['Error-Cause']))
 
     logger.info("Disconnect-Request with matching CUI")
     dev[1].connect("radius-das", key_mgmt="WPA-EAP",

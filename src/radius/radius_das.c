@@ -147,6 +147,12 @@ static struct radius_msg * radius_das_disconnect(struct radius_das_data *das,
 			   "%s:%d", abuf, from_port);
 		error = 503;
 		break;
+	case RADIUS_DAS_MULTI_SESSION_MATCH:
+		wpa_printf(MSG_INFO,
+			   "DAS: Multiple sessions match for request from %s:%d",
+			   abuf, from_port);
+		error = 508;
+		break;
 	case RADIUS_DAS_SUCCESS:
 		error = 0;
 		break;

@@ -14,7 +14,8 @@ struct radius_das_data;
 enum radius_das_res {
 	RADIUS_DAS_SUCCESS,
 	RADIUS_DAS_NAS_MISMATCH,
-	RADIUS_DAS_SESSION_NOT_FOUND
+	RADIUS_DAS_SESSION_NOT_FOUND,
+	RADIUS_DAS_MULTI_SESSION_MATCH,
 };
 
 struct radius_das_attrs {

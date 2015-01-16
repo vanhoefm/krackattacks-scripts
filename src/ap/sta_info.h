@@ -85,6 +85,7 @@ struct sta_info {
 	unsigned int remediation:1;
 	unsigned int hs20_deauth_requested:1;
 	unsigned int session_timeout_set:1;
+	unsigned int radius_das_match:1;
 
 	u16 auth_alg;
 

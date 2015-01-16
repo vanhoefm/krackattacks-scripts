@@ -5219,6 +5219,8 @@ static int i802_get_inact_sec(void *priv, const u8 *addr)
 
 	data.inactive_msec = (unsigned long) -1;
 	ret = i802_read_sta_data(priv, &data, addr);
+	if (ret == -ENOENT)
+		return -ENOENT;
 	if (ret || data.inactive_msec == (unsigned long) -1)
 		return -1;
 	return data.inactive_msec / 1000;

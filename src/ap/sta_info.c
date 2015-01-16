@@ -370,6 +370,13 @@ void ap_handle_timer(void *eloop_ctx, void *timeout_ctx)
 			 * but do not disconnect the station now.
 			 */
 			next_time = hapd->conf->ap_max_inactivity + fuzz;
+		} else if (inactive_sec == -ENOENT) {
+			wpa_msg(hapd->msg_ctx, MSG_DEBUG,
+				"Station " MACSTR " has lost its driver entry",
+				MAC2STR(sta->addr));
+
+			if (hapd->conf->skip_inactivity_poll)
+				sta->timeout_next = STA_DISASSOC;
 		} else if (inactive_sec < hapd->conf->ap_max_inactivity) {
 			/* station activity detected; reset timeout state */
 			wpa_msg(hapd->msg_ctx, MSG_DEBUG,

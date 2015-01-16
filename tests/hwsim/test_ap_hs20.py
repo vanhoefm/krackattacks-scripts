@@ -547,6 +547,45 @@ def test_ap_hs20_auto_interworking(dev, apdev):
     if status['hs20'] != "2":
         raise Exception("Unexpected HS 2.0 support indication")
 
+def test_ap_hs20_auto_interworking_no_match(dev, apdev):
+    """Hotspot 2.0 connection with auto_interworking=1 and no matching network"""
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "mismatch" })
+
+    dev[0].hs20_enable(auto_interworking=True)
+    id = dev[0].connect("mismatch", psk="12345678", scan_freq="2412",
+                        only_add_network=True)
+    dev[0].request("ENABLE_NETWORK " + str(id) + " no-connect")
+
+    id = dev[0].add_cred_values({ 'realm': "example.com",
+                                  'username': "hs20-test",
+                                  'password': "password",
+                                  'ca_cert': "auth_serv/ca.pem",
+                                  'domain': "example.com",
+                                  'update_identifier': "1234" })
+    dev[0].request("INTERWORKING_SELECT auto freq=2412")
+    time.sleep(0.1)
+    dev[0].dump_monitor()
+    for i in range(5):
+        logger.info("start ping")
+        if "PONG" not in dev[0].ctrl.request("PING", timeout=2):
+            raise Exception("PING failed")
+        logger.info("ping done")
+        fetch = 0
+        scan = 0
+        for j in range(15):
+            ev = dev[0].wait_event([ "ANQP fetch completed",
+                                     "CTRL-EVENT-SCAN-RESULTS" ], timeout=0.05)
+            if ev is None:
+                break
+            if "ANQP fetch completed" in ev:
+                fetch += 1
+            else:
+                scan += 1
+        if fetch > 2 * scan + 3:
+            raise Exception("Too many ANQP fetch iterations")
+        dev[0].dump_monitor()
+    dev[0].request("DISCONNECT")
+
 def test_ap_hs20_auto_interworking_no_cred_match(dev, apdev):
     """Hotspot 2.0 connection with auto_interworking=1 but no cred match"""
     bssid = apdev[0]['bssid']

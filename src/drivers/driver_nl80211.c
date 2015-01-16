@@ -7820,7 +7820,7 @@ wpa_driver_nl80211_join_mesh(void *priv,
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct nl_msg *msg;
 	struct nlattr *container;
-	int ret = 0;
+	int ret = -1;
 	u32 timeout;
 
 	wpa_printf(MSG_DEBUG, "nl80211: mesh join (ifindex=%d)", drv->ifindex);

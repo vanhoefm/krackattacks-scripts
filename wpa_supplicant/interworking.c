@@ -2556,7 +2556,12 @@ void interworking_start_fetch_anqp(struct wpa_supplicant *wpa_s)
 		bss->flags &= ~WPA_BSS_ANQP_FETCH_TRIED;
 
 	wpa_s->fetch_anqp_in_progress = 1;
-	interworking_next_anqp_fetch(wpa_s);
+
+	/*
+	 * Start actual ANQP operation from eloop call to make sure the loop
+	 * does not end up using excessive recursion.
+	 */
+	eloop_register_timeout(0, 0, interworking_continue_anqp, wpa_s, NULL);
 }
 
 

@@ -599,6 +599,99 @@ def test_radius_das_disconnect(dev, apdev):
     if ev is not None:
         raise Exception("Unexpected disconnection")
 
+    logger.info("Disconnect-Request with matching Acct-Multi-Session-Id after disassociation")
+    sta = hapd.get_sta(addr)
+    multi_sess_id = sta['authMultiSessionId']
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected(timeout=10)
+    req = radius_das.DisconnectPacket(dict=dict, secret="secret",
+                                      NAS_IP_Address="127.0.0.1",
+                                      NAS_Identifier="nas.example.com",
+                                      Acct_Multi_Session_Id=multi_sess_id,
+                                      Event_Timestamp=int(time.time()))
+    reply = srv.SendPacket(req)
+    logger.debug("RADIUS response from hostapd")
+    for i in reply.keys():
+        logger.debug("%s: %s" % (i, reply[i]))
+    if reply.code != pyrad.packet.DisconnectACK:
+        raise Exception("Unexpected response code")
+
+    dev[0].request("RECONNECT")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAP start")
+    dev[0].wait_connected(timeout=15)
+
+    logger.info("Disconnect-Request with matching User-Name after disassociation")
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected(timeout=10)
+    dev[2].request("DISCONNECT")
+    dev[2].wait_disconnected(timeout=10)
+    req = radius_das.DisconnectPacket(dict=dict, secret="secret",
+                                      NAS_IP_Address="127.0.0.1",
+                                      NAS_Identifier="nas.example.com",
+                                      User_Name="psk.user@example.com",
+                                      Event_Timestamp=int(time.time()))
+    reply = srv.SendPacket(req)
+    logger.debug("RADIUS response from hostapd")
+    for i in reply.keys():
+        logger.debug("%s: %s" % (i, reply[i]))
+    if reply.code != pyrad.packet.DisconnectACK:
+        raise Exception("Unexpected response code")
+
+    logger.info("Disconnect-Request with matching CUI after disassociation")
+    dev[1].request("DISCONNECT")
+    dev[1].wait_disconnected(timeout=10)
+    req = radius_das.DisconnectPacket(dict=dict, secret="secret",
+                                      NAS_IP_Address="127.0.0.1",
+                                      NAS_Identifier="nas.example.com",
+                                      Chargeable_User_Identity="gpsk-chargeable-user-identity",
+                                      Event_Timestamp=int(time.time()))
+    reply = srv.SendPacket(req)
+    logger.debug("RADIUS response from hostapd")
+    for i in reply.keys():
+        logger.debug("%s: %s" % (i, reply[i]))
+    if reply.code != pyrad.packet.DisconnectACK:
+        raise Exception("Unexpected response code")
+
+    logger.info("Disconnect-Request with matching Calling-Station-Id after disassociation")
+    dev[0].request("RECONNECT")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAP start")
+    dev[0].wait_connected(timeout=15)
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected(timeout=10)
+    req = radius_das.DisconnectPacket(dict=dict, secret="secret",
+                                      NAS_IP_Address="127.0.0.1",
+                                      NAS_Identifier="nas.example.com",
+                                      Calling_Station_Id=addr,
+                                      Event_Timestamp=int(time.time()))
+    reply = srv.SendPacket(req)
+    logger.debug("RADIUS response from hostapd")
+    for i in reply.keys():
+        logger.debug("%s: %s" % (i, reply[i]))
+    if reply.code != pyrad.packet.DisconnectACK:
+        raise Exception("Unexpected response code")
+
+
+    logger.info("Disconnect-Request with mismatching Calling-Station-Id after disassociation")
+    req = radius_das.DisconnectPacket(dict=dict, secret="secret",
+                                      NAS_IP_Address="127.0.0.1",
+                                      NAS_Identifier="nas.example.com",
+                                      Calling_Station_Id=addr,
+                                      Event_Timestamp=int(time.time()))
+    reply = srv.SendPacket(req)
+    logger.debug("RADIUS response from hostapd")
+    for i in reply.keys():
+        logger.debug("%s: %s" % (i, reply[i]))
+    if reply.code != pyrad.packet.DisconnectNAK:
+        raise Exception("Unexpected response code")
+    if 'Error-Cause' not in reply:
+        raise Exception("Missing Error-Cause")
+    if reply['Error-Cause'][0] != 503:
+        raise Exception("Unexpected Error-Cause: {}".format(reply['Error-Cause']))
+
 def test_radius_das_coa(dev, apdev):
     """RADIUS Dynamic Authorization Extensions - CoA"""
     try:

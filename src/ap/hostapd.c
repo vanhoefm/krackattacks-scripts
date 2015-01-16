@@ -794,6 +794,15 @@ static struct sta_info * hostapd_das_find_sta(struct hostapd_data *hapd,
 }
 
 
+static int hostapd_das_disconnect_pmksa(struct hostapd_data *hapd,
+					struct radius_das_attrs *attr)
+{
+	if (!hapd->wpa_auth)
+		return -1;
+	return wpa_auth_radius_das_disconnect_pmksa(hapd->wpa_auth, attr);
+}
+
+
 static enum radius_das_res
 hostapd_das_disconnect(void *ctx, struct radius_das_attrs *attr)
 {
@@ -810,6 +819,11 @@ hostapd_das_disconnect(void *ctx, struct radius_das_attrs *attr)
 			wpa_printf(MSG_DEBUG,
 				   "RADIUS DAS: Multiple sessions match - not supported");
 			return RADIUS_DAS_MULTI_SESSION_MATCH;
+		}
+		if (hostapd_das_disconnect_pmksa(hapd, attr) == 0) {
+			wpa_printf(MSG_DEBUG,
+				   "RADIUS DAS: PMKSA cache entry matched");
+			return RADIUS_DAS_SUCCESS;
 		}
 		wpa_printf(MSG_DEBUG, "RADIUS DAS: No matching session found");
 		return RADIUS_DAS_SESSION_NOT_FOUND;

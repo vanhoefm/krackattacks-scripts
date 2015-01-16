@@ -61,5 +61,7 @@ void pmksa_cache_to_eapol_data(struct rsn_pmksa_cache_entry *entry,
 			       struct eapol_state_machine *eapol);
 void pmksa_cache_free_entry(struct rsn_pmksa_cache *pmksa,
 			    struct rsn_pmksa_cache_entry *entry);
+int pmksa_cache_auth_radius_das_disconnect(struct rsn_pmksa_cache *pmksa,
+					   struct radius_das_attrs *attr);
 
 #endif /* PMKSA_CACHE_H */

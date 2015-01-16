@@ -12,6 +12,7 @@
 #include "utils/eloop.h"
 #include "eapol_auth/eapol_auth_sm.h"
 #include "eapol_auth/eapol_auth_sm_i.h"
+#include "radius/radius_das.h"
 #include "sta_info.h"
 #include "ap_config.h"
 #include "pmksa_cache_auth.h"
@@ -451,4 +452,75 @@ pmksa_cache_auth_init(void (*free_cb)(struct rsn_pmksa_cache_entry *entry,
 	}
 
 	return pmksa;
+}
+
+
+static int das_attr_match(struct rsn_pmksa_cache_entry *entry,
+			  struct radius_das_attrs *attr)
+{
+	int match = 0;
+
+	if (attr->sta_addr) {
+		if (os_memcmp(attr->sta_addr, entry->spa, ETH_ALEN) != 0)
+			return 0;
+		match++;
+	}
+
+	if (attr->acct_multi_session_id) {
+		char buf[20];
+
+		if (attr->acct_multi_session_id_len != 17)
+			return 0;
+		os_snprintf(buf, sizeof(buf), "%08X+%08X",
+			    entry->acct_multi_session_id_hi,
+			    entry->acct_multi_session_id_lo);
+		if (os_memcmp(attr->acct_multi_session_id, buf, 17) != 0)
+			return 0;
+		match++;
+	}
+
+	if (attr->cui) {
+		if (!entry->cui ||
+		    attr->cui_len != wpabuf_len(entry->cui) ||
+		    os_memcmp(attr->cui, wpabuf_head(entry->cui),
+			      attr->cui_len) != 0)
+			return 0;
+		match++;
+	}
+
+	if (attr->user_name) {
+		if (!entry->identity ||
+		    attr->user_name_len != entry->identity_len ||
+		    os_memcmp(attr->user_name, entry->identity,
+			      attr->user_name_len) != 0)
+			return 0;
+		match++;
+	}
+
+	return match;
+}
+
+
+int pmksa_cache_auth_radius_das_disconnect(struct rsn_pmksa_cache *pmksa,
+					   struct radius_das_attrs *attr)
+{
+	int found = 0;
+	struct rsn_pmksa_cache_entry *entry, *prev;
+
+	if (attr->acct_session_id)
+		return -1;
+
+	entry = pmksa->pmksa;
+	while (entry) {
+		if (das_attr_match(entry, attr)) {
+			found++;
+			prev = entry;
+			entry = entry->next;
+			pmksa_cache_free_entry(pmksa, prev);
+			continue;
+		}
+		entry = entry->next;
+	}
+
+	return found ? 0 : -1;
 }

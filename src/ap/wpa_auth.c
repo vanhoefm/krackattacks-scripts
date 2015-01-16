@@ -3340,3 +3340,10 @@ int wpa_auth_get_ip_addr(struct wpa_state_machine *sm, u8 *addr)
 	return 0;
 }
 #endif /* CONFIG_P2P */
+
+
+int wpa_auth_radius_das_disconnect_pmksa(struct wpa_authenticator *wpa_auth,
+					 struct radius_das_attrs *attr)
+{
+	return pmksa_cache_auth_radius_das_disconnect(wpa_auth->pmksa, attr);
+}

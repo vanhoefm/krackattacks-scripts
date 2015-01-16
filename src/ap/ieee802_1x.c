@@ -2487,6 +2487,16 @@ int ieee802_1x_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 		return len;
 	len += ret;
 
+	if (sm->acct_multi_session_id_hi) {
+		ret = os_snprintf(buf + len, buflen - len,
+				  "authMultiSessionId=%08X+%08X\n",
+				  sm->acct_multi_session_id_hi,
+				  sm->acct_multi_session_id_lo);
+		if (os_snprintf_error(buflen - len, ret))
+			return len;
+		len += ret;
+	}
+
 	name1 = eap_server_get_name(0, sm->eap_type_authsrv);
 	name2 = eap_server_get_name(0, sm->eap_type_supp);
 	ret = os_snprintf(buf + len, buflen - len,

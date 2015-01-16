@@ -1002,6 +1002,9 @@ scan:
 		wpa_supplicant_req_scan(wpa_s, 1, 0);
 	} else {
 		wpa_s->scan_for_connection = 0;
+#ifdef CONFIG_INTERWORKING
+		wpa_s->interworking_fast_assoc_tried = 0;
+#endif /* CONFIG_INTERWORKING */
 	}
 }
 

@@ -73,6 +73,8 @@ static int cred_prio_cmp(const struct wpa_cred *a, const struct wpa_cred *b)
 
 static void interworking_reconnect(struct wpa_supplicant *wpa_s)
 {
+	unsigned int tried;
+
 	if (wpa_s->wpa_state >= WPA_AUTHENTICATING) {
 		wpa_supplicant_cancel_sched_scan(wpa_s);
 		wpa_supplicant_deauthenticate(wpa_s,
@@ -80,10 +82,13 @@ static void interworking_reconnect(struct wpa_supplicant *wpa_s)
 	}
 	wpa_s->disconnected = 0;
 	wpa_s->reassociate = 1;
+	tried = wpa_s->interworking_fast_assoc_tried;
+	wpa_s->interworking_fast_assoc_tried = 1;
 
-	if (wpa_supplicant_fast_associate(wpa_s) >= 0)
+	if (!tried && wpa_supplicant_fast_associate(wpa_s) >= 0)
 		return;
 
+	wpa_s->interworking_fast_assoc_tried = 0;
 	wpa_supplicant_req_scan(wpa_s, 0, 0);
 }
 

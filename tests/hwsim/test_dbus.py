@@ -5,13 +5,13 @@
 # See README for more details.
 
 import binascii
-import gobject
 import logging
 logger = logging.getLogger()
 import subprocess
 import time
 
 try:
+    import gobject
     import dbus
     dbus_imported = True
 except ImportError:

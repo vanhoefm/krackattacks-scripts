@@ -4,11 +4,11 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
-import gobject
 import logging
 logger = logging.getLogger()
 
 try:
+    import gobject
     import dbus
     dbus_imported = True
 except ImportError:

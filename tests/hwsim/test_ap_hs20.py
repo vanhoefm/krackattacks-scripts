@@ -2109,10 +2109,11 @@ def test_ap_hs20_fetch_osu(dev, apdev):
 
         with open(dir + "/osu-providers.txt", "r") as f:
             prov = f.read()
+            logger.debug("osu-providers.txt: " + prov)
         if "OSU-PROVIDER " + bssid not in prov:
-            raise Exception("Missing OSU_PROVIDER")
+            raise Exception("Missing OSU_PROVIDER(1)")
         if "OSU-PROVIDER " + bssid2 not in prov:
-            raise Exception("Missing OSU_PROVIDER")
+            raise Exception("Missing OSU_PROVIDER(2)")
     finally:
         files = [ f for f in os.listdir(dir) if f.startswith("osu-") ]
         for f in files:

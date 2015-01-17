@@ -334,8 +334,11 @@ def test_scan_for_auth(dev, apdev):
                    wait_connect=False)
     dev[0].dump_monitor()
     # Clear cfg80211 BSS table.
-    subprocess.call(['iw', dev[0].ifname, 'scan', 'trigger',
-                     'freq', '2457', 'flush'])
+    try:
+        subprocess.check_call(['iw', dev[0].ifname, 'scan', 'trigger',
+                               'freq', '2457', 'flush'])
+    except subprocess.CalledProcessError, e:
+        raise HwsimSkip("iw scan trigger flush not supported")
     ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], 5)
     if ev is None:
         raise Exception("External flush scan timed out")
@@ -362,8 +365,11 @@ def test_scan_for_auth_fail(dev, apdev):
     dev[0].dump_monitor()
     hapd.disable()
     # Clear cfg80211 BSS table.
-    subprocess.call(['iw', dev[0].ifname, 'scan', 'trigger',
-                     'freq', '2457', 'flush'])
+    try:
+        subprocess.check_call(['iw', dev[0].ifname, 'scan', 'trigger',
+                               'freq', '2457', 'flush'])
+    except subprocess.CalledProcessError, e:
+        raise HwsimSkip("iw scan trigger flush not supported")
     ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], 5)
     if ev is None:
         raise Exception("External flush scan timed out")
@@ -398,8 +404,11 @@ def test_scan_for_auth_wep(dev, apdev):
                    auth_alg="SHARED", scan_freq="2412", wait_connect=False)
     dev[0].dump_monitor()
     # Clear cfg80211 BSS table.
-    subprocess.call(['iw', dev[0].ifname, 'scan', 'trigger',
-                     'freq', '2457', 'flush'])
+    try:
+        subprocess.check_call(['iw', dev[0].ifname, 'scan', 'trigger',
+                               'freq', '2457', 'flush'])
+    except subprocess.CalledProcessError, e:
+        raise HwsimSkip("iw scan trigger flush not supported")
     ev = dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], 5)
     if ev is None:
         raise Exception("External flush scan timed out")

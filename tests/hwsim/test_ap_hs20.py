@@ -58,6 +58,7 @@ def check_auto_select(dev, bssid):
     if bssid not in ev:
         raise Exception("Connected to incorrect network")
     dev.request("REMOVE_NETWORK all")
+    dev.wait_disconnected()
 
 def interworking_select(dev, bssid, type=None, no_match=False, freq=None):
     dev.dump_monitor()
@@ -1542,6 +1543,7 @@ def check_bandwidth_selection(dev, type, below):
     ev = dev.wait_event(["INTERWORKING-AP"])
     if ev is None:
         raise Exception("Network selection timed out");
+    logger.debug("BSS entries:\n" + dev.request("BSS RANGE=ALL"))
     if "type=" + type not in ev:
         raise Exception("Unexpected network type")
     if below and "below_min_backhaul=1" not in ev:
@@ -1595,6 +1597,52 @@ def test_ap_hs20_min_bandwidth_home(dev, apdev):
     hostapd.add_ap(apdev[1]['ifname'], params)
 
     check_auto_select(dev[0], bssid2)
+
+def test_ap_hs20_min_bandwidth_home_hidden_ssid_in_scan_res(dev, apdev):
+    """Hotspot 2.0 network selection with min bandwidth (home) while hidden SSID is included in scan results"""
+    bssid = apdev[0]['bssid']
+
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": 'secret',
+                                                "ignore_broadcast_ssid": "1" })
+    dev[0].scan_for_bss(bssid, freq=2412)
+    hapd.disable()
+    hapd_global = hostapd.HostapdGlobal()
+    hapd_global.flush()
+    hapd_global.remove(apdev[0]['ifname'])
+
+    params = hs20_ap_params()
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    dev[0].scan_for_bss(bssid, freq="2412")
+    values = bw_cred(domain="example.com", dl_home=5490, ul_home=58)
+    id = dev[0].add_cred_values(values)
+    check_bandwidth_selection(dev[0], "home", False)
+    dev[0].remove_cred(id)
+
+    values = bw_cred(domain="example.com", dl_home=5491, ul_home=58)
+    id = dev[0].add_cred_values(values)
+    check_bandwidth_selection(dev[0], "home", True)
+    dev[0].remove_cred(id)
+
+    values = bw_cred(domain="example.com", dl_home=5490, ul_home=59)
+    id = dev[0].add_cred_values(values)
+    check_bandwidth_selection(dev[0], "home", True)
+    dev[0].remove_cred(id)
+
+    values = bw_cred(domain="example.com", dl_home=5491, ul_home=59)
+    id = dev[0].add_cred_values(values)
+    check_bandwidth_selection(dev[0], "home", True)
+    check_auto_select(dev[0], bssid)
+
+    bssid2 = apdev[1]['bssid']
+    params = hs20_ap_params(ssid="test-hs20-b")
+    params['hs20_wan_metrics'] = "01:8000:1000:1:1:3000"
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    check_auto_select(dev[0], bssid2)
+
+    dev[0].flush_scan_cache()
 
 def test_ap_hs20_min_bandwidth_roaming(dev, apdev):
     """Hotspot 2.0 network selection with min bandwidth (roaming)"""

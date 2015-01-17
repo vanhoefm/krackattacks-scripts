@@ -32,7 +32,9 @@ def test_ap_mixed_security(dev, apdev):
     if sae:
         dev[2].connect(ssid, psk=passphrase, key_mgmt="SAE", scan_freq="2412")
 
+    logger.debug(dev[0].request("SCAN_RESULTS"))
     bss = dev[0].get_bss(apdev[0]['bssid'])
+    logger.debug(bss)
     if "[WPA-EAP+PSK-TKIP]" not in bss['flags']:
         raise Exception("Unexpected flags (WPA): " + bss['flags'])
     if sae and "[WPA2-EAP+PSK+SAE+FT/EAP+FT/PSK+FT/SAE+EAP-SHA256+PSK-SHA256-CCMP]" not in bss['flags']:

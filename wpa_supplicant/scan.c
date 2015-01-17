@@ -168,8 +168,11 @@ static void wpas_trigger_scan_cb(struct wpa_radio_work *work, int deinit)
 
 	wpa_supplicant_notify_scanning(wpa_s, 1);
 
-	if (wpa_s->clear_driver_scan_cache)
+	if (wpa_s->clear_driver_scan_cache) {
+		wpa_printf(MSG_DEBUG,
+			   "Request driver to clear scan cache due to local BSS flush");
 		params->only_new_results = 1;
+	}
 	ret = wpa_drv_scan(wpa_s, params);
 	wpa_scan_free_params(params);
 	work->ctx = NULL;
@@ -876,8 +879,11 @@ ssid_list_set:
 	extra_ie = wpa_supplicant_extra_ies(wpa_s);
 
 	if (wpa_s->last_scan_req == MANUAL_SCAN_REQ &&
-	    wpa_s->manual_scan_only_new)
+	    wpa_s->manual_scan_only_new) {
+		wpa_printf(MSG_DEBUG,
+			   "Request driver to clear scan cache due to manual only_new=1 scan");
 		params.only_new_results = 1;
+	}
 
 	if (wpa_s->last_scan_req == MANUAL_SCAN_REQ && params.freqs == NULL &&
 	    wpa_s->manual_scan_freqs) {

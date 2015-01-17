@@ -2146,8 +2146,23 @@ def test_dbus_probe_req_reporting_oom(dev, apdev):
     (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
     iface = dbus.Interface(if_obj, WPAS_DBUS_IFACE)
 
+    # Need to make sure this process has not already subscribed to avoid false
+    # failures due to the operation succeeding due to os_strdup() not even
+    # getting called.
+    try:
+        iface.UnsubscribeProbeReq()
+        was_subscribed = True
+    except dbus.exceptions.DBusException, e:
+        was_subscribed = False
+        pass
+
     with alloc_fail_dbus(dev[0], 1, "wpas_dbus_handler_subscribe_preq",
                          "SubscribeProbeReq"):
+        iface.SubscribeProbeReq()
+
+    if was_subscribed:
+        # On purpose, leave ProbeReq subscription in place to test automatic
+        # cleanup.
         iface.SubscribeProbeReq()
 
 def test_dbus_p2p_invalid(dev, apdev):

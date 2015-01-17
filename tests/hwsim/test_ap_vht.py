@@ -82,7 +82,7 @@ def test_ap_vht80_params(dev, apdev):
     except Exception, e:
         if isinstance(e, Exception) and str(e) == "AP startup failed":
             if not vht_supported():
-                raise HwsimSwkip("80 MHz channel not supported in regulatory information")
+                raise HwsimSkip("80 MHz channel not supported in regulatory information")
         raise
     finally:
         dev[0].request("DISCONNECT")
@@ -323,9 +323,12 @@ def test_ap_vht80plus80(dev, apdev):
                    "vht_oper_centr_freq_seg1_idx": "155" }
         hapd2 = hostapd.add_ap(apdev[1]['ifname'], params, wait_enabled=False)
 
-        ev = hapd2.wait_event(["AP-ENABLED"], timeout=5)
+        ev = hapd2.wait_event(["AP-ENABLED", "AP-DISABLED"], timeout=5)
         if not ev:
             raise Exception("AP setup timed out(2)")
+        if "AP-DISABLED" in ev:
+            # Assume this failed due to missing regulatory update for now
+            raise HwsimSkip("80+80 MHz channel not supported in regulatory information")
 
         state = hapd2.get_status_field("state")
         if state != "ENABLED":

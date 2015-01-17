@@ -159,6 +159,8 @@ def check_probe_resp(wt, bssid_unexpected, bssid_expected):
 
 def test_ap_anqp_sharing(dev, apdev):
     """ANQP sharing within ESS and explicit unshare"""
+    dev[0].flush_scan_cache()
+
     bssid = apdev[0]['bssid']
     params = hs20_ap_params()
     params['hessid'] = bssid
@@ -180,8 +182,13 @@ def test_ap_anqp_sharing(dev, apdev):
     interworking_select(dev[0], None, "home", freq="2412")
     dev[0].dump_monitor()
 
+    logger.debug("BSS entries:\n" + dev[0].request("BSS RANGE=ALL"))
     res1 = dev[0].get_bss(bssid)
     res2 = dev[0].get_bss(bssid2)
+    if 'anqp_nai_realm' not in res1:
+        raise Exception("anqp_nai_realm not found for AP1")
+    if 'anqp_nai_realm' not in res2:
+        raise Exception("anqp_nai_realm not found for AP2")
     if res1['anqp_nai_realm'] != res2['anqp_nai_realm']:
         raise Exception("ANQP results were not shared between BSSes")
 

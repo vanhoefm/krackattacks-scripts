@@ -569,23 +569,6 @@ def _test_ap_wpa2_eap_aka_ext(dev, apdev):
         raise Exception("Unexpected CTRL-REQ-SIM type")
     rid = p[0].split('-')[3]
     # This will fail during UMTS auth validation
-    if "OK" not in dev[0].request("CTRL-RSP-SIM-" + rid + ":UMTS-AUTH:" + resp):
-        raise Exception("CTRL-RSP-SIM failed")
-    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=15)
-    if ev is None:
-        raise Exception("EAP failure not reported")
-    dev[0].request("DISCONNECT")
-    dev[0].wait_disconnected()
-
-    dev[0].select_network(id, freq="2412")
-    ev = dev[0].wait_event(["CTRL-REQ-SIM"], timeout=15)
-    if ev is None:
-        raise Exception("Wait for external SIM processing request timed out")
-    p = ev.split(':', 2)
-    if p[1] != "UMTS-AUTH":
-        raise Exception("Unexpected CTRL-REQ-SIM type")
-    rid = p[0].split('-')[3]
-    # This will fail during UMTS auth validation
     if "OK" not in dev[0].request("CTRL-RSP-SIM-" + rid + ":UMTS-AUTS:112233445566778899aabbccddee"):
         raise Exception("CTRL-RSP-SIM failed")
     ev = dev[0].wait_event(["CTRL-REQ-SIM"], timeout=15)
@@ -604,107 +587,30 @@ def _test_ap_wpa2_eap_aka_ext(dev, apdev):
     dev[0].request("DISCONNECT")
     dev[0].wait_disconnected()
 
-    dev[0].select_network(id, freq="2412")
-    ev = dev[0].wait_event(["CTRL-REQ-SIM"], timeout=15)
-    if ev is None:
-        raise Exception("Wait for external SIM processing request timed out")
-    p = ev.split(':', 2)
-    if p[1] != "UMTS-AUTH":
-        raise Exception("Unexpected CTRL-REQ-SIM type")
-    rid = p[0].split('-')[3]
-    # This will fail during UMTS auth validation
-    if "OK" not in dev[0].request("CTRL-RSP-SIM-" + rid + ":UMTS-AUTH:34"):
-        raise Exception("CTRL-RSP-SIM failed")
-    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=15)
-    if ev is None:
-        raise Exception("EAP failure not reported")
-    dev[0].request("DISCONNECT")
-    dev[0].wait_disconnected()
-
-    dev[0].select_network(id, freq="2412")
-    ev = dev[0].wait_event(["CTRL-REQ-SIM"], timeout=15)
-    if ev is None:
-        raise Exception("Wait for external SIM processing request timed out")
-    p = ev.split(':', 2)
-    if p[1] != "UMTS-AUTH":
-        raise Exception("Unexpected CTRL-REQ-SIM type")
-    rid = p[0].split('-')[3]
-    # This will fail during UMTS auth validation
-    if "OK" not in dev[0].request("CTRL-RSP-SIM-" + rid + ":UMTS-AUTH:00112233445566778899aabbccddeeff.00112233445566778899aabbccddeeff:0011223344"):
-        raise Exception("CTRL-RSP-SIM failed")
-    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=15)
-    if ev is None:
-        raise Exception("EAP failure not reported")
-    dev[0].request("DISCONNECT")
-    dev[0].wait_disconnected()
-
-    dev[0].select_network(id, freq="2412")
-    ev = dev[0].wait_event(["CTRL-REQ-SIM"], timeout=15)
-    if ev is None:
-        raise Exception("Wait for external SIM processing request timed out")
-    p = ev.split(':', 2)
-    if p[1] != "UMTS-AUTH":
-        raise Exception("Unexpected CTRL-REQ-SIM type")
-    rid = p[0].split('-')[3]
-    # This will fail during UMTS auth validation
-    if "OK" not in dev[0].request("CTRL-RSP-SIM-" + rid + ":UMTS-AUTH:00112233445566778899aabbccddeeff:00112233445566778899aabbccddee:0011223344"):
-        raise Exception("CTRL-RSP-SIM failed")
-    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=15)
-    if ev is None:
-        raise Exception("EAP failure not reported")
-    dev[0].request("DISCONNECT")
-    dev[0].wait_disconnected()
-
-    dev[0].select_network(id, freq="2412")
-    ev = dev[0].wait_event(["CTRL-REQ-SIM"], timeout=15)
-    if ev is None:
-        raise Exception("Wait for external SIM processing request timed out")
-    p = ev.split(':', 2)
-    if p[1] != "UMTS-AUTH":
-        raise Exception("Unexpected CTRL-REQ-SIM type")
-    rid = p[0].split('-')[3]
-    # This will fail during UMTS auth validation
-    if "OK" not in dev[0].request("CTRL-RSP-SIM-" + rid + ":UMTS-AUTH:00112233445566778899aabbccddeeff:00112233445566778899aabbccddeeff.0011223344"):
-        raise Exception("CTRL-RSP-SIM failed")
-    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=15)
-    if ev is None:
-        raise Exception("EAP failure not reported")
-    dev[0].request("DISCONNECT")
-    dev[0].wait_disconnected()
-
-    dev[0].select_network(id, freq="2412")
-    ev = dev[0].wait_event(["CTRL-REQ-SIM"], timeout=15)
-    if ev is None:
-        raise Exception("Wait for external SIM processing request timed out")
-    p = ev.split(':', 2)
-    if p[1] != "UMTS-AUTH":
-        raise Exception("Unexpected CTRL-REQ-SIM type")
-    rid = p[0].split('-')[3]
-    # This will fail during UMTS auth validation
-    if "OK" not in dev[0].request("CTRL-RSP-SIM-" + rid + ":UMTS-AUTH:00112233445566778899aabbccddeeff:00112233445566778899aabbccddeeff:00112233445566778899aabbccddeeff0011223344"):
-        raise Exception("CTRL-RSP-SIM failed")
-    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=15)
-    if ev is None:
-        raise Exception("EAP failure not reported")
-    dev[0].request("DISCONNECT")
-    dev[0].wait_disconnected()
-
-    dev[0].select_network(id, freq="2412")
-    ev = dev[0].wait_event(["CTRL-REQ-SIM"], timeout=15)
-    if ev is None:
-        raise Exception("Wait for external SIM processing request timed out")
-    p = ev.split(':', 2)
-    if p[1] != "UMTS-AUTH":
-        raise Exception("Unexpected CTRL-REQ-SIM type")
-    rid = p[0].split('-')[3]
-    # This will fail during UMTS auth validation
-    if "OK" not in dev[0].request("CTRL-RSP-SIM-" + rid + ":UMTS-AUTH:00112233445566778899aabbccddeeff:00112233445566778899aabbccddeeff:001122334q"):
-        raise Exception("CTRL-RSP-SIM failed")
-    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=15)
-    if ev is None:
-        raise Exception("EAP failure not reported")
-    dev[0].request("DISCONNECT")
-    dev[0].wait_disconnected()
+    tests = [ ":UMTS-AUTH:00112233445566778899aabbccddeeff:00112233445566778899aabbccddeeff:0011223344",
+              ":UMTS-AUTH:34",
+              ":UMTS-AUTH:00112233445566778899aabbccddeeff.00112233445566778899aabbccddeeff:0011223344",
+              ":UMTS-AUTH:00112233445566778899aabbccddeeff:00112233445566778899aabbccddee:0011223344",
+              ":UMTS-AUTH:00112233445566778899aabbccddeeff:00112233445566778899aabbccddeeff.0011223344",
+              ":UMTS-AUTH:00112233445566778899aabbccddeeff:00112233445566778899aabbccddeeff:00112233445566778899aabbccddeeff0011223344",
+              ":UMTS-AUTH:00112233445566778899aabbccddeeff:00112233445566778899aabbccddeeff:001122334q" ]
+    for t in tests:
+        dev[0].select_network(id, freq="2412")
+        ev = dev[0].wait_event(["CTRL-REQ-SIM"], timeout=15)
+        if ev is None:
+            raise Exception("Wait for external SIM processing request timed out")
+        p = ev.split(':', 2)
+        if p[1] != "UMTS-AUTH":
+            raise Exception("Unexpected CTRL-REQ-SIM type")
+        rid = p[0].split('-')[3]
+        # This will fail during UMTS auth validation
+        if "OK" not in dev[0].request("CTRL-RSP-SIM-" + rid + t):
+            raise Exception("CTRL-RSP-SIM failed")
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=15)
+        if ev is None:
+            raise Exception("EAP failure not reported")
+        dev[0].request("DISCONNECT")
+        dev[0].wait_disconnected()
 
 def test_ap_wpa2_eap_aka_prime(dev, apdev):
     """WPA2-Enterprise connection using EAP-AKA'"""

@@ -2749,8 +2749,8 @@ static void interworking_parse_rx_anqp_resp(struct wpa_supplicant *wpa_s,
 
 			switch (type) {
 			case HS20_ANQP_OUI_TYPE:
-				hs20_parse_rx_hs20_anqp_resp(wpa_s, sa, pos,
-							     slen);
+				hs20_parse_rx_hs20_anqp_resp(wpa_s, bss, sa,
+							     pos, slen);
 				break;
 			default:
 				wpa_printf(MSG_DEBUG, "HS20: Unsupported ANQP "

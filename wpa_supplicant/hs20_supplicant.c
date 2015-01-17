@@ -327,11 +327,11 @@ static void hs20_osu_icon_fetch_result(struct wpa_supplicant *wpa_s, int res)
 
 
 void hs20_parse_rx_hs20_anqp_resp(struct wpa_supplicant *wpa_s,
-				  const u8 *sa, const u8 *data, size_t slen)
+				  struct wpa_bss *bss, const u8 *sa,
+				  const u8 *data, size_t slen)
 {
 	const u8 *pos = data;
 	u8 subtype;
-	struct wpa_bss *bss = wpa_bss_get_bssid(wpa_s, sa);
 	struct wpa_bss_anqp *anqp = NULL;
 	int ret;
 

@@ -480,6 +480,7 @@ static void eapol_test_eap_param_needed(void *ctx, enum wpa_ctrl_req_type field,
 
 
 static void eapol_test_cert_cb(void *ctx, int depth, const char *subject,
+			       const char *altsubject[], int num_altsubject,
 			       const char *cert_hash,
 			       const struct wpabuf *cert)
 {
@@ -508,6 +509,14 @@ static void eapol_test_cert_cb(void *ctx, int depth, const char *subject,
 		if (e->server_cert_file)
 			eapol_test_write_cert(e->server_cert_file,
 					      subject, cert);
+	}
+
+	if (altsubject) {
+		int i;
+
+		for (i = 0; i < num_altsubject; i++)
+			wpa_msg(e->wpa_s, MSG_INFO, WPA_EVENT_EAP_PEER_ALT
+				"depth=%d %s", depth, altsubject[i]);
 	}
 }
 

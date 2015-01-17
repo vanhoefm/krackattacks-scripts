@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 #
 # Parallel VM test case executor
-# Copyright (c) 2014, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2014-2015, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -24,6 +24,7 @@ def get_failed(vm):
 
 def vm_read_stdout(vm, i):
     global total_started, total_passed, total_failed, total_skipped
+    global rerun_failures
 
     ready = False
     try:
@@ -147,7 +148,8 @@ def show_progress(scr):
                 raise Exception("Unexpected test cases remaining from first round")
             completed_first_pass = True
             for name in get_failed(vm):
-                rerun_tests.append(name)
+                if rerun_failures:
+                    rerun_tests.append(name)
                 first_run_failures.append(name)
 
         for i in range(num_servers):
@@ -225,6 +227,8 @@ def show_progress(scr):
             scr.clrtoeol()
             if rerun_tests:
                 scr.addstr("(RETRY FAILED %d)" % len(rerun_tests))
+            elif rerun_failures:
+                pass
             elif first_run_failures:
                 scr.addstr("(RETRY FAILED)")
 
@@ -243,6 +247,7 @@ def main():
     global tests
     global first_run_failures
     global total_started, total_passed, total_failed, total_skipped
+    global rerun_failures
 
     total_started = 0
     total_passed = 0
@@ -250,9 +255,10 @@ def main():
     total_skipped = 0
 
     debug_level = logging.INFO
+    rerun_failures = True
 
     if len(sys.argv) < 2:
-        sys.exit("Usage: %s <number of VMs> [--debug] [--codecov] [params..]" % sys.argv[0])
+        sys.exit("Usage: %s <number of VMs> [-1] [--debug] [--codecov] [params..]" % sys.argv[0])
     num_servers = int(sys.argv[1])
     if num_servers < 1:
         sys.exit("Too small number of VMs")
@@ -260,6 +266,10 @@ def main():
     timestamp = int(time.time())
 
     idx = 2
+
+    if len(sys.argv) > idx and sys.argv[idx] == "-1":
+        idx += 1
+        rerun_failures = False
 
     if len(sys.argv) > idx and sys.argv[idx] == "--debug":
         idx += 1
@@ -389,7 +399,9 @@ def main():
         double_failed.append(name)
     for test in first_run_failures:
         double_failed.remove(test)
-    if failed and not double_failed:
+    if not rerun_failures:
+        pass
+    elif failed and not double_failed:
         print "All failed cases passed on retry"
         logger.info("All failed cases passed on retry")
     elif double_failed:
@@ -427,7 +439,7 @@ def main():
         print "file://%s/index.html" % logdir
         logger.info("Code coverage report: file://%s/index.html" % logdir)
 
-    if double_failed:
+    if double_failed or (failed and not rerun_failures):
         logger.info("Test run complete - failures found")
         sys.exit(2)
     if failed:

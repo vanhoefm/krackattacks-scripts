@@ -6166,8 +6166,6 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 	wpa_s->sta_uapsd = 0;
 
 	wpa_drv_radio_disable(wpa_s, 0);
-
-	wpa_bss_flush(wpa_s);
 	wpa_blacklist_clear(wpa_s);
 	wpa_s->extra_blacklist_count = 0;
 	wpa_supplicant_ctrl_iface_remove_network(wpa_s, "all");
@@ -6202,6 +6200,16 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 	wpa_s->disconnected = 0;
 	os_free(wpa_s->next_scan_freqs);
 	wpa_s->next_scan_freqs = NULL;
+
+	wpa_bss_flush(wpa_s);
+	if (!dl_list_empty(&wpa_s->bss)) {
+		wpa_printf(MSG_DEBUG,
+			   "BSS table not empty after flush: %u entries, current_bss=%p bssid="
+			   MACSTR " pending_bssid=" MACSTR,
+			   dl_list_len(&wpa_s->bss), wpa_s->current_bss,
+			   MAC2STR(wpa_s->bssid),
+			   MAC2STR(wpa_s->pending_bssid));
+	}
 }
 
 

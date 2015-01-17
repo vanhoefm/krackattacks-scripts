@@ -58,6 +58,25 @@ def test_tnc_ttls(dev, apdev):
                    wait_connect=False)
     dev[0].wait_connected(timeout=10)
 
+def test_tnc_ttls_fragmentation(dev, apdev):
+    """TNC TTLS with fragmentation"""
+    params = int_eap_server_params()
+    params["tnc"] = "1"
+    params["fragment_size"] = "150"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    if not os.path.exists("tnc/libhostap_imc.so"):
+        raise HwsimSkip("No IMC installed")
+
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP",
+                   eap="TTLS", identity="DOMAIN\mschapv2 user",
+                   anonymous_identity="ttls", password="password",
+                   phase2="auth=MSCHAPV2",
+                   ca_cert="auth_serv/ca.pem",
+                   fragment_size="150",
+                   wait_connect=False)
+    dev[0].wait_connected(timeout=10)
+
 def test_tnc_fast(dev, apdev):
     """TNC FAST"""
     check_eap_capa(dev[0], "FAST")

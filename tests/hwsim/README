@@ -65,6 +65,9 @@ Debian/Ubuntu packages are likely to be needed:
 - libsqlite3-dev
 - libpcap-dev
 
+example-setup.txt provides more complete step-by-step example on how a
+test setup can be built.
+
 
 wpaspy
 ------

@@ -43,9 +43,13 @@ def test_hostapd_oom_open(dev, apdev):
 def test_hostapd_oom_wpa2_psk(dev, apdev):
     """hostapd failing to setup WPA2-PSK mode due to OOM"""
     params = hostapd.wpa2_params(ssid="test", passphrase="12345678")
+    params['wpa_psk_file'] = 'hostapd.wpa_psk'
     hostapd_oom_loop(apdev, params)
 
 def test_hostapd_oom_wpa2_eap(dev, apdev):
     """hostapd failing to setup WPA2-EAP mode due to OOM"""
     params = hostapd.wpa2_eap_params(ssid="test")
+    params['acct_server_addr'] = "127.0.0.1"
+    params['acct_server_port'] = "1813"
+    params['acct_server_shared_secret'] = "radius"
     hostapd_oom_loop(apdev, params)

@@ -97,6 +97,7 @@ def check_wnm_sleep_mode_enter_exit(hapd, dev, interval=None, tfs_req=None):
     sta = hapd.get_sta(addr)
     if "[WNM_SLEEP_MODE]" in sta['flags']:
         raise Exception("Station unexpectedly in WNM-Sleep Mode")
+
     logger.info("Going to WNM Sleep Mode")
     extra = ""
     if interval is not None:
@@ -105,15 +106,26 @@ def check_wnm_sleep_mode_enter_exit(hapd, dev, interval=None, tfs_req=None):
         extra += " tfs_req=" + tfs_req
     if "OK" not in dev.request("WNM_SLEEP enter" + extra):
         raise Exception("WNM_SLEEP failed")
-    time.sleep(0.5)
-    sta = hapd.get_sta(addr)
-    if "[WNM_SLEEP_MODE]" not in sta['flags']:
+    ok = False
+    for i in range(20):
+        time.sleep(0.1)
+        sta = hapd.get_sta(addr)
+        if "[WNM_SLEEP_MODE]" in sta['flags']:
+            ok = True
+            break
+    if not ok:
         raise Exception("Station failed to enter WNM-Sleep Mode")
+
     logger.info("Waking up from WNM Sleep Mode")
+    ok = False
     dev.request("WNM_SLEEP exit")
-    time.sleep(0.5)
-    sta = hapd.get_sta(addr)
-    if "[WNM_SLEEP_MODE]" in sta['flags']:
+    for i in range(20):
+        time.sleep(0.1)
+        sta = hapd.get_sta(addr)
+        if "[WNM_SLEEP_MODE]" not in sta['flags']:
+            ok = True
+            break
+    if not ok:
         raise Exception("Station failed to exit WNM-Sleep Mode")
 
 def test_wnm_sleep_mode_open(dev, apdev):
@@ -127,6 +139,9 @@ def test_wnm_sleep_mode_open(dev, apdev):
     hapd = hostapd.Hostapd(apdev[0]['ifname'])
 
     dev[0].connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
+    ev = hapd.wait_event([ "AP-STA-CONNECTED" ], timeout=5)
+    if ev is None:
+        raise Exception("No connection event received from hostapd")
     check_wnm_sleep_mode_enter_exit(hapd, dev[0])
     check_wnm_sleep_mode_enter_exit(hapd, dev[0], interval=100)
     check_wnm_sleep_mode_enter_exit(hapd, dev[0], tfs_req="5b17010001130e110000071122334455661122334455661234")
@@ -149,6 +164,9 @@ def test_wnm_sleep_mode_rsn(dev, apdev):
     hapd = hostapd.Hostapd(apdev[0]['ifname'])
 
     dev[0].connect("test-wnm-rsn", psk="12345678", scan_freq="2412")
+    ev = hapd.wait_event([ "AP-STA-CONNECTED" ], timeout=5)
+    if ev is None:
+        raise Exception("No connection event received from hostapd")
     check_wnm_sleep_mode_enter_exit(hapd, dev[0])
 
 def test_wnm_sleep_mode_rsn_pmf(dev, apdev):
@@ -168,6 +186,9 @@ def test_wnm_sleep_mode_rsn_pmf(dev, apdev):
 
     dev[0].connect("test-wnm-rsn", psk="12345678", ieee80211w="2",
                    key_mgmt="WPA-PSK-SHA256", proto="WPA2", scan_freq="2412")
+    ev = hapd.wait_event([ "AP-STA-CONNECTED" ], timeout=5)
+    if ev is None:
+        raise Exception("No connection event received from hostapd")
     check_wnm_sleep_mode_enter_exit(hapd, dev[0])
 
 MGMT_SUBTYPE_ACTION = 13

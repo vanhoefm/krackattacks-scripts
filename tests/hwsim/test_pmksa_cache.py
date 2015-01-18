@@ -288,7 +288,7 @@ def test_pmksa_cache_and_cui(dev, apdev):
     params['acct_server_addr'] = "127.0.0.1"
     params['acct_server_port'] = "1813"
     params['acct_server_shared_secret'] = "radius"
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     bssid = apdev[0]['bssid']
     dev[0].connect("cui", proto="RSN", key_mgmt="WPA-EAP",
                    eap="GPSK", identity="gpsk-cui",
@@ -297,10 +297,14 @@ def test_pmksa_cache_and_cui(dev, apdev):
     pmksa = dev[0].get_pmksa(bssid)
     if pmksa is None:
         raise Exception("No PMKSA cache entry created")
+    ev = hapd.wait_event([ "AP-STA-CONNECTED" ], timeout=5)
+    if ev is None:
+        raise Exception("No connection event received from hostapd")
 
     dev[0].dump_monitor()
     logger.info("Disconnect and reconnect to the same AP")
     dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
     dev[0].request("RECONNECT")
     ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED",
                             "CTRL-EVENT-CONNECTED"], timeout=10)
@@ -421,12 +425,15 @@ def test_pmksa_cache_disabled(dev, apdev):
 def test_pmksa_cache_ap_expiration(dev, apdev):
     """PMKSA cache entry expiring on AP"""
     params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     bssid = apdev[0]['bssid']
     dev[0].connect("test-pmksa-cache", proto="RSN", key_mgmt="WPA-EAP",
                    eap="GPSK", identity="gpsk-user-session-timeout",
                    password="abcdefghijklmnop0123456789abcdef",
                    scan_freq="2412")
+    ev = hapd.wait_event([ "AP-STA-CONNECTED" ], timeout=5)
+    if ev is None:
+        raise Exception("No connection event received from hostapd")
     dev[0].request("DISCONNECT")
     time.sleep(5)
     dev[0].dump_monitor()

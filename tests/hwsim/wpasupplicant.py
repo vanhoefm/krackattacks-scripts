@@ -33,6 +33,13 @@ class WpaSupplicant:
         else:
             self.global_mon = None
 
+    def close_ctrl(self):
+        if self.global_mon:
+            self.global_mon.detach()
+            self.global_mon = None
+            self.global_ctrl = None
+        self.remove_ifname()
+
     def set_ifname(self, ifname):
         self.ifname = ifname
         self.ctrl = wpaspy.Ctrl(os.path.join(wpas_ctrl, ifname))

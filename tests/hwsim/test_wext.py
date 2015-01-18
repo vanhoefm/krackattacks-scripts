@@ -22,6 +22,7 @@ def get_wext_interface():
     try:
         wpas.interface_add("wlan5", driver="wext")
     except Exception, e:
+        wpas.close_ctrl()
         raise HwsimSkip("WEXT driver support not included in wpa_supplicant")
     return wpas
 
@@ -59,6 +60,7 @@ def test_wext_wpa_psk(dev, apdev):
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     testfile = "/sys/kernel/debug/ieee80211/%s/netdev:%s/tkip_mic_test" % (hapd.get_driver_status_field("phyname"), apdev[0]['ifname'])
     if not os.path.exists(testfile):
+        wpas.close_ctrl()
         raise HwsimSkip("tkip_mic_test not supported in mac80211")
 
     wpas.connect("wext-wpa-psk", psk="12345678")

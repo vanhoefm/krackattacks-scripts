@@ -48,6 +48,7 @@ def reset_devs(dev, apdev):
             print str(e)
             ok = False
 
+    wpas = None
     try:
         wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
         ifaces = wpas.global_request("INTERFACES").splitlines()
@@ -56,6 +57,8 @@ def reset_devs(dev, apdev):
                 wpas.interface_remove(iface)
     except Exception, e:
         pass
+    if wpas:
+        wpas.close_ctrl()
 
     try:
         hapd = HostapdGlobal()
@@ -455,14 +458,16 @@ def main():
                     logger.info("Failed to issue TEST-STOP after {} for {}".format(name, d.ifname))
                     logger.info(e)
                     result = "FAIL"
+            wpas = None
             try:
-                wpas = WpaSupplicant("/tmp/wpas-wlan5")
-                d.dump_monitor()
+                wpas = WpaSupplicant(global_iface="/tmp/wpas-wlan5")
                 rename_log(args.logdir, 'log5', name, wpas)
                 if not args.no_reset:
                     wpas.remove_ifname()
             except Exception, e:
                 pass
+            if wpas:
+                wpas.close_ctrl()
             if args.no_reset:
                 print "Leaving devices in current state"
             else:

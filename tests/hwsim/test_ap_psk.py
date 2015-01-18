@@ -975,3 +975,15 @@ def test_wpa2_psk_key_lifetime_in_memory(dev, apdev, params):
     verify_not_present(buf, kek, fname, "KEK")
     verify_not_present(buf, tk, fname, "TK")
     verify_not_present(buf, gtk, fname, "GTK")
+
+def test_ap_wpa2_psk_wep(dev, apdev):
+    """WPA2-PSK AP and WEP enabled"""
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    try:
+        hapd.set('wep_key0', '"hello"')
+        raise Exception("WEP key accepted to WPA2 network")
+    except Exception:
+        pass

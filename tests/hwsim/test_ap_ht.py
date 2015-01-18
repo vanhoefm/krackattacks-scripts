@@ -490,9 +490,15 @@ def test_olbc_5ghz(dev, apdev):
                    "ieee80211n": "0",
                    "wmm_enabled": "0" }
         hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
-        time.sleep(0.5)
-        status = hapd.get_status()
-        if status['olbc_ht'] != '1':
+        found = False
+        for i in range(20):
+            time.sleep(0.1)
+            status = hapd.get_status()
+            logger.debug('olbc_ht: ' + status['olbc_ht'])
+            if status['olbc_ht'] == '1':
+                found = True
+                break
+        if not found:
             raise Exception("Missing OLBC information")
     finally:
         if hapd:

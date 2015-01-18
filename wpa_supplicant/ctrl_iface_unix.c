@@ -74,7 +74,7 @@ static int wpas_ctrl_iface_global_reinit(struct wpa_global *global,
 
 static int wpa_supplicant_ctrl_iface_attach(struct dl_list *ctrl_dst,
 					    struct sockaddr_un *from,
-					    socklen_t fromlen)
+					    socklen_t fromlen, int global)
 {
 	struct wpa_ctrl_dst *dst;
 	char addr_txt[200];
@@ -89,7 +89,8 @@ static int wpa_supplicant_ctrl_iface_attach(struct dl_list *ctrl_dst,
 	printf_encode(addr_txt, sizeof(addr_txt),
 		      (u8 *) from->sun_path,
 		      fromlen - offsetof(struct sockaddr_un, sun_path));
-	wpa_printf(MSG_DEBUG, "CTRL_IFACE monitor attached %s", addr_txt);
+	wpa_printf(MSG_DEBUG, "CTRL_IFACE %smonitor attached %s",
+		   global ? "global " : "", addr_txt);
 	return 0;
 }
 
@@ -174,7 +175,7 @@ static void wpa_supplicant_ctrl_iface_receive(int sock, void *eloop_ctx,
 
 	if (os_strcmp(buf, "ATTACH") == 0) {
 		if (wpa_supplicant_ctrl_iface_attach(&priv->ctrl_dst, &from,
-						     fromlen))
+						     fromlen, 0))
 			reply_len = 1;
 		else {
 			new_attached = 1;
@@ -775,7 +776,8 @@ void wpa_supplicant_ctrl_iface_wait(struct ctrl_iface_priv *priv)
 		if (os_strcmp(buf, "ATTACH") == 0) {
 			/* handle ATTACH signal of first monitor interface */
 			if (!wpa_supplicant_ctrl_iface_attach(&priv->ctrl_dst,
-							      &from, fromlen)) {
+							      &from, fromlen,
+							      0)) {
 				if (sendto(priv->sock, "OK\n", 3, 0,
 					   (struct sockaddr *) &from, fromlen) <
 				    0) {
@@ -830,7 +832,7 @@ static void wpa_supplicant_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 
 	if (os_strcmp(buf, "ATTACH") == 0) {
 		if (wpa_supplicant_ctrl_iface_attach(&priv->ctrl_dst, &from,
-						     fromlen))
+						     fromlen, 1))
 			reply_len = 1;
 		else
 			reply_len = 2;

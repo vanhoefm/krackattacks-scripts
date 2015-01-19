@@ -819,6 +819,9 @@ static int eap_fast_encrypt_phase2(struct eap_sm *sm,
 	encr = eap_server_tls_encrypt(sm, &data->ssl, plain);
 	wpabuf_free(plain);
 
+	if (!encr)
+		return -1;
+
 	if (data->ssl.tls_out && piggyback) {
 		wpa_printf(MSG_DEBUG, "EAP-FAST: Piggyback Phase 2 data "
 			   "(len=%d) with last Phase 1 Message (len=%d "

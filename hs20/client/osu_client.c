@@ -397,9 +397,9 @@ static int cmd_dl_polupd_ca(struct hs20_osu_client *ctx, const char *pps_fname,
 	}
 
 	node = get_child_node(ctx->xml, pps,
-			      "PolicyUpdate/TrustRoot");
+			      "Policy/PolicyUpdate/TrustRoot");
 	if (node == NULL) {
-		wpa_printf(MSG_INFO, "No PolicyUpdate/TrustRoot/CertURL found from PPS");
+		wpa_printf(MSG_INFO, "No Policy/PolicyUpdate/TrustRoot/CertURL found from PPS");
 		xml_node_free(ctx->xml, pps);
 		return -1;
 	}

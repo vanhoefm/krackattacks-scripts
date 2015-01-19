@@ -564,8 +564,11 @@ int wnm_send_bss_tm_req(struct hostapd_data *hapd, struct sta_info *sta,
 	if (url) {
 		/* Session Information URL */
 		url_len = os_strlen(url);
-		if (url_len > 255)
+		if (url_len > 255) {
+			os_free(buf);
 			return -1;
+		}
+
 		*pos++ = url_len;
 		os_memcpy(pos, url, url_len);
 		pos += url_len;

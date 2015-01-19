@@ -304,6 +304,12 @@ def test_gas_anqp_get(dev, apdev):
     if ev is None or "WAN Metrics" not in ev:
         raise Exception("Did not receive WAN Metrics")
 
+    ev = dev[0].wait_event(["ANQP-QUERY-DONE"], timeout=10)
+    if ev is None:
+        raise Exception("ANQP-QUERY-DONE event not seen")
+    if "result=SUCCESS" not in ev:
+        raise Exception("Unexpected result: " + ev)
+
     if "OK" not in dev[0].request("HS20_ANQP_GET " + bssid + " 3,4"):
         raise Exception("ANQP_GET command failed")
 
@@ -564,9 +570,15 @@ def test_gas_malformed(dev, apdev):
 
     # Station drops invalid frames, but the last of the responses is valid from
     # GAS view point even though it has an extra octet in the end and the ANQP
-    # part of the response is not valid. This is reported as successfulyl
+    # part of the response is not valid. This is reported as successfully
     # completed GAS exchange.
     expect_gas_result(dev[0], "SUCCESS")
+
+    ev = dev[0].wait_event(["ANQP-QUERY-DONE"], timeout=5)
+    if ev is None:
+        raise Exception("ANQP-QUERY-DONE not reported")
+    if "result=INVALID_FRAME" not in ev:
+        raise Exception("Unexpected result: " + ev)
 
 def init_gas(hapd, bssid, dev):
     anqp_get(dev, bssid, 263)

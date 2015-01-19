@@ -520,11 +520,11 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 				nla_len(tb[NL80211_ATTR_EXT_CAPA]);
 		}
 		drv->extended_capa_mask =
-			os_malloc(nla_len(tb[NL80211_ATTR_EXT_CAPA]));
+			os_malloc(nla_len(tb[NL80211_ATTR_EXT_CAPA_MASK]));
 		if (drv->extended_capa_mask) {
 			os_memcpy(drv->extended_capa_mask,
-				  nla_data(tb[NL80211_ATTR_EXT_CAPA]),
-				  nla_len(tb[NL80211_ATTR_EXT_CAPA]));
+				  nla_data(tb[NL80211_ATTR_EXT_CAPA_MASK]),
+				  nla_len(tb[NL80211_ATTR_EXT_CAPA_MASK]));
 		} else {
 			os_free(drv->extended_capa);
 			drv->extended_capa = NULL;

@@ -7,6 +7,7 @@
  */
 
 #include "includes.h"
+#include <sys/stat.h>
 
 #include "common.h"
 #include "eloop.h"
@@ -216,6 +217,30 @@ int hs20_anqp_send_req(struct wpa_supplicant *wpa_s, const u8 *dst, u32 stypes,
 }
 
 
+static void hs20_set_osu_access_permission(const char *osu_dir,
+					   const char *fname)
+{
+	struct stat statbuf;
+
+	/* Get OSU directory information */
+	if (stat(osu_dir, &statbuf) < 0) {
+		wpa_printf(MSG_WARNING, "Cannot stat the OSU directory %s",
+			   osu_dir);
+		return;
+	}
+
+	if (chmod(fname, statbuf.st_mode) < 0) {
+		wpa_printf(MSG_WARNING,
+			   "Cannot change the permissions for %s", fname);
+		return;
+	}
+
+	if (chown(fname, statbuf.st_uid, statbuf.st_gid) < 0) {
+		wpa_printf(MSG_WARNING, "Cannot change the ownership for %s",
+			   fname);
+	}
+}
+
 static int hs20_process_icon_binary_file(struct wpa_supplicant *wpa_s,
 					 const u8 *sa, const u8 *pos,
 					 size_t slen)
@@ -278,6 +303,9 @@ static int hs20_process_icon_binary_file(struct wpa_supplicant *wpa_s,
 	f = fopen(fname, "wb");
 	if (f == NULL)
 		return -1;
+
+	hs20_set_osu_access_permission(wpa_s->conf->osu_dir, fname);
+
 	if (fwrite(pos, slen, 1, f) != 1) {
 		fclose(f);
 		unlink(fname);
@@ -479,6 +507,9 @@ static void hs20_osu_fetch_done(struct wpa_supplicant *wpa_s)
 		hs20_free_osu_prov(wpa_s);
 		return;
 	}
+
+	hs20_set_osu_access_permission(wpa_s->conf->osu_dir, fname);
+
 	for (i = 0; i < wpa_s->osu_prov_count; i++) {
 		struct osu_provider *osu = &wpa_s->osu_prov[i];
 		if (i > 0)

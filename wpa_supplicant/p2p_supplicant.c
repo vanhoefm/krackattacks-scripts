@@ -6177,6 +6177,12 @@ int wpas_p2p_invite(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 		pref_freq = 0;
 	}
 
+	/*
+	 * Stop any find/listen operations before invitation and possibly
+	 * connection establishment.
+	 */
+	wpas_p2p_stop_find_oper(wpa_s);
+
 	return p2p_invite(wpa_s->global->p2p, peer_addr, role, bssid,
 			  ssid->ssid, ssid->ssid_len, force_freq, go_dev_addr,
 			  1, pref_freq, -1);

@@ -177,11 +177,25 @@ static void wpas_trigger_scan_cb(struct wpa_radio_work *work, int deinit)
 	wpa_scan_free_params(params);
 	work->ctx = NULL;
 	if (ret) {
+		int retry = wpa_s->last_scan_req != MANUAL_SCAN_REQ;
+
+		if (wpa_s->disconnected)
+			retry = 0;
+
 		wpa_supplicant_notify_scanning(wpa_s, 0);
 		wpas_notify_scan_done(wpa_s, 0);
-		wpa_msg_ctrl(wpa_s, MSG_INFO, WPA_EVENT_SCAN_FAILED "ret=%d",
-			     ret);
+		if (wpa_s->wpa_state == WPA_SCANNING)
+			wpa_supplicant_set_state(wpa_s,
+						 wpa_s->scan_prev_wpa_state);
+		wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_SCAN_FAILED "ret=%d%s",
+			ret, retry ? " retry=1" : "");
 		radio_work_done(work);
+
+		if (retry) {
+			/* Restore scan_req since we will try to scan again */
+			wpa_s->scan_req = wpa_s->last_scan_req;
+			wpa_supplicant_req_scan(wpa_s, 1, 0);
+		}
 		return;
 	}
 
@@ -613,7 +627,6 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	struct wpa_driver_scan_params params;
 	struct wpa_driver_scan_params *scan_params;
 	size_t max_ssids;
-	enum wpa_states prev_state;
 
 	if (wpa_s->pno || wpa_s->pno_sched_pending) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Skip scan - PNO is in progress");
@@ -681,7 +694,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 
 	os_memset(&params, 0, sizeof(params));
 
-	prev_state = wpa_s->wpa_state;
+	wpa_s->scan_prev_wpa_state = wpa_s->wpa_state;
 	if (wpa_s->wpa_state == WPA_DISCONNECTED ||
 	    wpa_s->wpa_state == WPA_INACTIVE)
 		wpa_supplicant_set_state(wpa_s, WPA_SCANNING);
@@ -1001,8 +1014,9 @@ scan:
 
 	if (ret) {
 		wpa_msg(wpa_s, MSG_WARNING, "Failed to initiate AP scan");
-		if (prev_state != wpa_s->wpa_state)
-			wpa_supplicant_set_state(wpa_s, prev_state);
+		if (wpa_s->scan_prev_wpa_state != wpa_s->wpa_state)
+			wpa_supplicant_set_state(wpa_s,
+						 wpa_s->scan_prev_wpa_state);
 		/* Restore scan_req since we will try to scan again */
 		wpa_s->scan_req = wpa_s->last_scan_req;
 		wpa_supplicant_req_scan(wpa_s, 1, 0);

@@ -2234,6 +2234,7 @@ void wpa_config_free(struct wpa_config *config)
 	os_free(config->sae_groups);
 	wpabuf_free(config->ap_vendor_elements);
 	os_free(config->osu_dir);
+	os_free(config->bgscan);
 	os_free(config->wowlan_triggers);
 	os_free(config);
 }

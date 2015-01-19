@@ -2325,12 +2325,11 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		os_free(bss->ssid.wpa_passphrase);
 		bss->ssid.wpa_passphrase = os_strdup(pos);
 		if (bss->ssid.wpa_passphrase) {
-			os_free(bss->ssid.wpa_psk);
-			bss->ssid.wpa_psk = NULL;
+			hostapd_config_clear_wpa_psk(&bss->ssid.wpa_psk);
 			bss->ssid.wpa_passphrase_set = 1;
 		}
 	} else if (os_strcmp(buf, "wpa_psk") == 0) {
-		os_free(bss->ssid.wpa_psk);
+		hostapd_config_clear_wpa_psk(&bss->ssid.wpa_psk);
 		bss->ssid.wpa_psk = os_zalloc(sizeof(struct hostapd_wpa_psk));
 		if (bss->ssid.wpa_psk == NULL)
 			return 1;
@@ -2338,8 +2337,7 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		    pos[PMK_LEN * 2] != '\0') {
 			wpa_printf(MSG_ERROR, "Line %d: Invalid PSK '%s'.",
 				   line, pos);
-			os_free(bss->ssid.wpa_psk);
-			bss->ssid.wpa_psk = NULL;
+			hostapd_config_clear_wpa_psk(&bss->ssid.wpa_psk);
 			return 1;
 		}
 		bss->ssid.wpa_psk->group = 1;

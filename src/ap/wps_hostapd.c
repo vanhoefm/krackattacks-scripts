@@ -362,10 +362,9 @@ static int hapd_wps_reconfig_in_memory(struct hostapd_data *hapd,
 			if (bss->ssid.wpa_passphrase)
 				os_memcpy(bss->ssid.wpa_passphrase, cred->key,
 					  cred->key_len);
-			os_free(bss->ssid.wpa_psk);
-			bss->ssid.wpa_psk = NULL;
+			hostapd_config_clear_wpa_psk(&bss->ssid.wpa_psk);
 		} else if (cred->key_len == 64) {
-			os_free(bss->ssid.wpa_psk);
+			hostapd_config_clear_wpa_psk(&bss->ssid.wpa_psk);
 			bss->ssid.wpa_psk =
 				os_zalloc(sizeof(struct hostapd_wpa_psk));
 			if (bss->ssid.wpa_psk &&

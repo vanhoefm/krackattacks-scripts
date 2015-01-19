@@ -394,20 +394,27 @@ static void hostapd_config_free_wep(struct hostapd_wep_keys *keys)
 }
 
 
+void hostapd_config_clear_wpa_psk(struct hostapd_wpa_psk **l)
+{
+	struct hostapd_wpa_psk *psk, *tmp;
+
+	for (psk = *l; psk;) {
+		tmp = psk;
+		psk = psk->next;
+		bin_clear_free(tmp, sizeof(*tmp));
+	}
+	*l = NULL;
+}
+
+
 void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 {
-	struct hostapd_wpa_psk *psk, *prev;
 	struct hostapd_eap_user *user, *prev_user;
 
 	if (conf == NULL)
 		return;
 
-	psk = conf->ssid.wpa_psk;
-	while (psk) {
-		prev = psk;
-		psk = psk->next;
-		bin_clear_free(prev, sizeof(*prev));
-	}
+	hostapd_config_clear_wpa_psk(&conf->ssid.wpa_psk);
 
 	str_clear_free(conf->ssid.wpa_passphrase);
 	os_free(conf->ssid.wpa_psk_file);

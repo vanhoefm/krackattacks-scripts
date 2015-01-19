@@ -82,8 +82,7 @@ static void hostapd_reload_bss(struct hostapd_data *hapd)
 		 * Force PSK to be derived again since SSID or passphrase may
 		 * have changed.
 		 */
-		os_free(ssid->wpa_psk);
-		ssid->wpa_psk = NULL;
+		hostapd_config_clear_wpa_psk(&hapd->conf->ssid.wpa_psk);
 	}
 	if (hostapd_setup_wpa_psk(hapd->conf)) {
 		wpa_printf(MSG_ERROR, "Failed to re-configure WPA PSK "

@@ -75,7 +75,7 @@ static char * dfs_info(struct hostapd_channel_data *chan)
 int hostapd_get_hw_features(struct hostapd_iface *iface)
 {
 	struct hostapd_data *hapd = iface->bss[0];
-	int ret = 0, i, j;
+	int i, j;
 	u16 num_modes, flags;
 	struct hostapd_hw_modes *modes;
 
@@ -138,7 +138,7 @@ int hostapd_get_hw_features(struct hostapd_iface *iface)
 		}
 	}
 
-	return ret;
+	return 0;
 }
 
 

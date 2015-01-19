@@ -6114,20 +6114,24 @@ static int wpa_supplicant_vendor_cmd(struct wpa_supplicant *wpa_s, char *cmd,
 
 static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 {
+#ifdef CONFIG_P2P
+	struct wpa_supplicant *p2p_wpa_s = wpa_s->global->p2p_init_wpa_s ?
+		wpa_s->global->p2p_init_wpa_s : wpa_s;
+#endif /* CONFIG_P2P */
+
 	wpa_dbg(wpa_s, MSG_DEBUG, "Flush all wpa_supplicant state");
 
 #ifdef CONFIG_P2P
-	wpas_p2p_cancel(wpa_s);
-	wpas_p2p_stop_find(wpa_s);
-	p2p_ctrl_flush(wpa_s);
-	wpas_p2p_group_remove(wpa_s, "*");
-	wpas_p2p_service_flush(wpa_s);
-	wpa_s->global->p2p_disabled = 0;
-	wpa_s->global->p2p_per_sta_psk = 0;
-	wpa_s->conf->num_sec_device_types = 0;
-	wpa_s->p2p_disable_ip_addr_req = 0;
-	os_free(wpa_s->global->p2p_go_avoid_freq.range);
-	wpa_s->global->p2p_go_avoid_freq.range = NULL;
+	wpas_p2p_cancel(p2p_wpa_s);
+	p2p_ctrl_flush(p2p_wpa_s);
+	wpas_p2p_group_remove(p2p_wpa_s, "*");
+	wpas_p2p_service_flush(p2p_wpa_s);
+	p2p_wpa_s->global->p2p_disabled = 0;
+	p2p_wpa_s->global->p2p_per_sta_psk = 0;
+	p2p_wpa_s->conf->num_sec_device_types = 0;
+	p2p_wpa_s->p2p_disable_ip_addr_req = 0;
+	os_free(p2p_wpa_s->global->p2p_go_avoid_freq.range);
+	p2p_wpa_s->global->p2p_go_avoid_freq.range = NULL;
 #endif /* CONFIG_P2P */
 
 #ifdef CONFIG_WPS_TESTING

@@ -7905,8 +7905,8 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strncmp(buf, "WNM_SLEEP ", 10) == 0) {
 		if (wpas_ctrl_iface_wnm_sleep(wpa_s, buf + 10))
 			reply_len = -1;
-	} else if (os_strncmp(buf, "WNM_BSS_QUERY ", 10) == 0) {
-		if (wpas_ctrl_iface_wnm_bss_query(wpa_s, buf + 10))
+	} else if (os_strncmp(buf, "WNM_BSS_QUERY ", 14) == 0) {
+		if (wpas_ctrl_iface_wnm_bss_query(wpa_s, buf + 14))
 				reply_len = -1;
 #endif /* CONFIG_WNM */
 	} else if (os_strcmp(buf, "FLUSH") == 0) {

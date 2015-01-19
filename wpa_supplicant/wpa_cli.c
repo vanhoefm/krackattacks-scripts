@@ -1577,6 +1577,10 @@ static int wpa_cli_cmd_interface(struct wpa_ctrl *ctrl, int argc, char *argv[])
 	wpa_cli_close_connection();
 	os_free(ctrl_ifname);
 	ctrl_ifname = os_strdup(argv[0]);
+	if (!ctrl_ifname) {
+		printf("Failed to allocate memory\n");
+		return 0;
+	}
 
 	if (wpa_cli_open_connection(ctrl_ifname, 1) == 0) {
 		printf("Connected to interface '%s.\n", ctrl_ifname);
@@ -3743,7 +3747,8 @@ static void try_connection(void *eloop_ctx, void *timeout_ctx)
 	if (!wpa_cli_open_connection(ctrl_ifname, 1) == 0) {
 		if (!warning_displayed) {
 			printf("Could not connect to wpa_supplicant: "
-			       "%s - re-trying\n", ctrl_ifname);
+			       "%s - re-trying\n",
+			       ctrl_ifname ? ctrl_ifname : "(nil)");
 			warning_displayed = 1;
 		}
 		eloop_register_timeout(1, 0, try_connection, NULL, NULL);
@@ -4004,7 +4009,8 @@ int main(int argc, char *argv[])
 		    wpa_cli_open_connection(ctrl_ifname, 0) < 0) {
 			fprintf(stderr, "Failed to connect to non-global "
 				"ctrl_ifname: %s  error: %s\n",
-				ctrl_ifname, strerror(errno));
+				ctrl_ifname ? ctrl_ifname : "(nil)",
+				strerror(errno));
 			return -1;
 		}
 

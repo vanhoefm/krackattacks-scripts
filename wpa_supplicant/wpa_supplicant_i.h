@@ -296,6 +296,7 @@ struct wpa_global {
 struct wpa_radio {
 	char name[16]; /* from driver_ops get_radio_name() or empty if not
 			* available */
+	unsigned int external_scan_running:1;
 	struct dl_list ifaces; /* struct wpa_supplicant::radio_list entries */
 	struct dl_list work; /* struct wpa_radio_work::list entries */
 };
@@ -596,7 +597,6 @@ struct wpa_supplicant {
 	unsigned int manual_scan_only_new:1;
 	unsigned int own_scan_requested:1;
 	unsigned int own_scan_running:1;
-	unsigned int external_scan_running:1;
 	unsigned int clear_driver_scan_cache:1;
 	unsigned int manual_scan_id;
 	int scan_interval; /* time in sec between scans to find suitable AP */

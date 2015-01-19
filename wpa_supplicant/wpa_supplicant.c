@@ -3611,7 +3611,7 @@ static void radio_start_next_work(void *eloop_ctx, void *timeout_ctx)
 
 	wpa_s = dl_list_first(&radio->ifaces, struct wpa_supplicant,
 			      radio_list);
-	if (wpa_s && wpa_s->external_scan_running) {
+	if (wpa_s && wpa_s->radio->external_scan_running) {
 		wpa_printf(MSG_DEBUG, "Delay radio work start until externally triggered scan completes");
 		return;
 	}

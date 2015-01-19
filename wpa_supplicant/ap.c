@@ -132,6 +132,7 @@ void wpa_supplicant_conf_ap_ht(struct wpa_supplicant *wpa_s,
 				 HT_CAP_INFO_SHORT_GI20MHZ |
 				 HT_CAP_INFO_SHORT_GI40MHZ |
 				 HT_CAP_INFO_RX_STBC_MASK |
+				 HT_CAP_INFO_TX_STBC |
 				 HT_CAP_INFO_MAX_AMSDU_SIZE);
 
 			if (mode->vht_capab && ssid->vht) {

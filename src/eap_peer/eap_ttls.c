@@ -995,6 +995,7 @@ static int eap_ttls_encrypt_response(struct eap_sm *sm,
 				 resp, out_data)) {
 		wpa_printf(MSG_INFO, "EAP-TTLS: Failed to encrypt a Phase 2 "
 			   "frame");
+		wpabuf_free(resp);
 		return -1;
 	}
 	wpabuf_free(resp);

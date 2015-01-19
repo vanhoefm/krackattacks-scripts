@@ -5032,6 +5032,8 @@ void wpas_request_connection(struct wpa_supplicant *wpa_s)
 
 	if (wpa_supplicant_fast_associate(wpa_s) != 1)
 		wpa_supplicant_req_scan(wpa_s, 0, 0);
+	else
+		wpa_s->reattach = 0;
 }
 
 

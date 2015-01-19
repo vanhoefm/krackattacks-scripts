@@ -734,3 +734,46 @@ def _test_scan_random_mac(dev, apdev, params):
                 break
         if not found:
             raise Exception("Fixed OUI random address not seen")
+
+def test_scan_trigger_failure(dev, apdev):
+    """Scan trigger to the driver failing"""
+    hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan" })
+    bssid = apdev[0]['bssid']
+
+    if "OK" not in dev[0].request("SET test_failure 1"):
+        raise Exception("Failed to set test_failure")
+
+    if "OK" not in dev[0].request("SCAN"):
+        raise Exception("SCAN command failed")
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-FAILED"], timeout=10)
+    if ev is None:
+        raise Exception("Did not receive CTRL-EVENT-SCAN-FAILED event")
+    if "retry=1" in ev:
+        raise Exception("Unexpected scan retry indicated")
+    if dev[0].get_status_field('wpa_state') == "SCANNING":
+        raise Exception("wpa_state SCANNING not cleared")
+
+    id = dev[0].connect("test-scan", key_mgmt="NONE", scan_freq="2412",
+                        only_add_network=True)
+    dev[0].select_network(id)
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-FAILED"], timeout=10)
+    if ev is None:
+        raise Exception("Did not receive CTRL-EVENT-SCAN-FAILED event")
+    if "retry=1" not in ev:
+        raise Exception("No scan retry indicated for connection")
+    if dev[0].get_status_field('wpa_state') == "SCANNING":
+        raise Exception("wpa_state SCANNING not cleared")
+    dev[0].request("SET test_failure 0")
+    dev[0].wait_connected()
+
+    dev[0].request("SET test_failure 1")
+    if "OK" not in dev[0].request("SCAN"):
+        raise Exception("SCAN command failed")
+    ev = dev[0].wait_event(["CTRL-EVENT-SCAN-FAILED"], timeout=10)
+    if ev is None:
+        raise Exception("Did not receive CTRL-EVENT-SCAN-FAILED event")
+    if "retry=1" in ev:
+        raise Exception("Unexpected scan retry indicated")
+    if dev[0].get_status_field('wpa_state') != "COMPLETED":
+        raise Exception("wpa_state COMPLETED not restored")
+    dev[0].request("SET test_failure 0")

@@ -90,6 +90,10 @@ static inline int wpa_drv_leave_mesh(struct wpa_supplicant *wpa_s)
 static inline int wpa_drv_scan(struct wpa_supplicant *wpa_s,
 			       struct wpa_driver_scan_params *params)
 {
+#ifdef CONFIG_TESTING_OPTIONS
+	if (wpa_s->test_failure == WPAS_TEST_FAILURE_SCAN_TRIGGER)
+		return -EBUSY;
+#endif /* CONFIG_TESTING_OPTIONS */
 	if (wpa_s->driver->scan2)
 		return wpa_s->driver->scan2(wpa_s->drv_priv, params);
 	return -1;

@@ -403,6 +403,11 @@ struct rrm_data {
 	u8 next_neighbor_rep_token;
 };
 
+enum wpa_supplicant_test_failure {
+	WPAS_TEST_FAILURE_NONE,
+	WPAS_TEST_FAILURE_SCAN_TRIGGER,
+};
+
 /**
  * struct wpa_supplicant - Internal data for wpa_supplicant interface
  *
@@ -940,6 +945,7 @@ struct wpa_supplicant {
 #ifdef CONFIG_TESTING_OPTIONS
 	struct l2_packet_data *l2_test;
 	unsigned int extra_roc_dur;
+	enum wpa_supplicant_test_failure test_failure;
 #endif /* CONFIG_TESTING_OPTIONS */
 
 	struct wmm_ac_assoc_data *wmm_ac_assoc_info;

@@ -1211,15 +1211,11 @@ static void ieee802_1x_decapsulate_radius(struct hostapd_data *hapd,
 		if (eap_type >= 0)
 			sm->eap_type_authsrv = eap_type;
 		os_snprintf(buf, sizeof(buf), "EAP-Request-%s (%d)",
-			    eap_type >= 0 ? eap_server_get_name(0, eap_type) :
-			    "??",
-			    eap_type);
+			    eap_server_get_name(0, eap_type), eap_type);
 		break;
 	case EAP_CODE_RESPONSE:
 		os_snprintf(buf, sizeof(buf), "EAP Response-%s (%d)",
-			    eap_type >= 0 ? eap_server_get_name(0, eap_type) :
-			    "??",
-			    eap_type);
+			    eap_server_get_name(0, eap_type), eap_type);
 		break;
 	case EAP_CODE_SUCCESS:
 		os_strlcpy(buf, "EAP Success", sizeof(buf));
@@ -2502,10 +2498,8 @@ int ieee802_1x_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 	ret = os_snprintf(buf + len, buflen - len,
 			  "last_eap_type_as=%d (%s)\n"
 			  "last_eap_type_sta=%d (%s)\n",
-			  sm->eap_type_authsrv,
-			  name1 ? name1 : "",
-			  sm->eap_type_supp,
-			  name2 ? name2 : "");
+			  sm->eap_type_authsrv, name1,
+			  sm->eap_type_supp, name2);
 	if (os_snprintf_error(buflen - len, ret))
 		return len;
 	len += ret;

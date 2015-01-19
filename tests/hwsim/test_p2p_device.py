@@ -12,7 +12,9 @@ from wpasupplicant import WpaSupplicant
 from test_p2p_grpform import go_neg_pin_authorized
 from test_p2p_grpform import check_grpform_results
 from test_p2p_grpform import remove_group
+from test_nfc_p2p import set_ip_addr_info, check_ip_addr, grpform_events
 from hwsim import HWSimRadio
+import hwsim_utils
 
 def test_p2p_device_grpform(dev, apdev):
     """P2P group formation with driver using cfg80211 P2P Device"""
@@ -78,3 +80,39 @@ def test_p2p_device_concurrent_scan(dev, apdev):
         ev = wpas.wait_event(["CTRL-EVENT-SCAN-STARTED"], timeout=15)
         if ev is None:
             raise Exception("Station mode scan did not start")
+
+def test_p2p_device_nfc_invite(dev, apdev):
+    """P2P NFC invitiation with driver using cfg80211 P2P Device"""
+    with HWSimRadio(use_p2p_device=True) as (radio, iface):
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add(iface)
+
+        set_ip_addr_info(dev[0])
+        logger.info("Start autonomous GO")
+        dev[0].p2p_start_go()
+
+        logger.info("Write NFC Tag on the P2P Client")
+        res = wpas.global_request("P2P_LISTEN")
+        if "FAIL" in res:
+            raise Exception("Failed to start Listen mode")
+        pw = wpas.global_request("WPS_NFC_TOKEN NDEF").rstrip()
+        if "FAIL" in pw:
+            raise Exception("Failed to generate password token")
+        res = wpas.global_request("P2P_SET nfc_tag 1").rstrip()
+        if "FAIL" in res:
+            raise Exception("Failed to enable NFC Tag for P2P static handover")
+        sel = wpas.global_request("NFC_GET_HANDOVER_SEL NDEF P2P-CR-TAG").rstrip()
+        if "FAIL" in sel:
+            raise Exception("Failed to generate NFC connection handover select")
+
+        logger.info("Read NFC Tag on the GO to trigger invitation")
+        res = dev[0].request("WPS_NFC_TAG_READ " + sel)
+        if "FAIL" in res:
+            raise Exception("Failed to provide NFC tag contents to wpa_supplicant")
+
+        ev = wpas.wait_global_event(grpform_events, timeout=20)
+        if ev is None:
+            raise Exception("Joining the group timed out")
+        res = wpas.group_form_result(ev)
+        hwsim_utils.test_connectivity_p2p(dev[0], wpas)
+        check_ip_addr(res)

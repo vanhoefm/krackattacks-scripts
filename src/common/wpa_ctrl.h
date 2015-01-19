@@ -196,6 +196,9 @@ extern "C" {
 /* parameters: <addr> <dialog_token> <freq> <status_code> <result> */
 #define GAS_QUERY_DONE "GAS-QUERY-DONE "
 
+/* parameters: <addr> <result> */
+#define ANQP_QUERY_DONE "ANQP-QUERY-DONE "
+
 #define HS20_SUBSCRIPTION_REMEDIATION "HS20-SUBSCRIPTION-REMEDIATION "
 #define HS20_DEAUTH_IMMINENT_NOTICE "HS20-DEAUTH-IMMINENT-NOTICE "
 

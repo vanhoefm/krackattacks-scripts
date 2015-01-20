@@ -2847,7 +2847,7 @@ static void p2p_sd_cb(struct p2p_data *p2p, int success)
 		return;
 	}
 
-	if (p2p->sd_query->for_all_peers) {
+	if (p2p->sd_query && p2p->sd_query->for_all_peers) {
 		/* Update the pending broadcast SD query count for this device
 		 */
 		p2p->sd_peer->sd_pending_bcast_queries--;

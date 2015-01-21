@@ -9,6 +9,16 @@
 #ifndef IEEE802_11_COMMON_H
 #define IEEE802_11_COMMON_H
 
+#define MAX_NOF_MB_IES_SUPPORTED 5
+
+struct mb_ies_info {
+	struct {
+		const u8 *ie;
+		u8 ie_len;
+	} ies[MAX_NOF_MB_IES_SUPPORTED];
+	u8 nof_ies;
+};
+
 /* Parsed Information Elements */
 struct ieee802_11_elems {
 	const u8 *ssid;
@@ -76,6 +86,7 @@ struct ieee802_11_elems {
 	u8 osen_len;
 	u8 ampe_len;
 	u8 mic_len;
+	struct mb_ies_info mb_ies;
 };
 
 typedef enum { ParseOK = 0, ParseUnknown = 1, ParseFailed = -1 } ParseRes;
@@ -104,6 +115,9 @@ int ieee80211_chan_to_freq(const char *country, u8 op_class, u8 chan);
 int ieee80211_is_dfs(int freq);
 
 int supp_rates_11b_only(struct ieee802_11_elems *elems);
+int mb_ies_info_by_ies(struct mb_ies_info *info, const u8 *ies_buf,
+		       size_t ies_len);
+struct wpabuf * mb_ies_by_info(struct mb_ies_info *info);
 
 const char * fc2str(u16 fc);
 #endif /* IEEE802_11_COMMON_H */

@@ -339,6 +339,18 @@ ParseRes ieee802_11_parse_elems(const u8 *start, size_t len,
 			/* after mic everything is encrypted, so stop. */
 			left = elen;
 			break;
+		case WLAN_EID_MULTI_BAND:
+			if (elems->mb_ies.nof_ies >= MAX_NOF_MB_IES_SUPPORTED) {
+				wpa_printf(MSG_MSGDUMP,
+					   "IEEE 802.11 element parse ignored MB IE (id=%d elen=%d)",
+					   id, elen);
+				break;
+			}
+
+			elems->mb_ies.ies[elems->mb_ies.nof_ies].ie = pos;
+			elems->mb_ies.ies[elems->mb_ies.nof_ies].ie_len = elen;
+			elems->mb_ies.nof_ies++;
+			break;
 		default:
 			unknown++;
 			if (!show_errors)
@@ -945,4 +957,66 @@ const char * fc2str(u16 fc)
 	}
 	return "WLAN_FC_TYPE_UNKNOWN";
 #undef C2S
+}
+
+
+#define IE_HEADER_SIZE               ((u8) (2 * sizeof(u8)))
+#define IE_BUFFER_LENGTH(ie_len_val) ((ie_len_val) + IE_HEADER_SIZE)
+
+int mb_ies_info_by_ies(struct mb_ies_info *info, const u8 *ies_buf,
+		       size_t ies_len)
+{
+	os_memset(info, 0, sizeof(*info));
+
+	while (ies_buf && ies_len >= IE_HEADER_SIZE &&
+	       info->nof_ies < MAX_NOF_MB_IES_SUPPORTED) {
+		size_t len = IE_BUFFER_LENGTH(ies_buf[1]);
+
+		if (len > ies_len) {
+			wpa_hexdump(MSG_DEBUG, "Truncated IEs",
+				    ies_buf, ies_len);
+			return -1;
+		}
+
+		if (ies_buf[0] == WLAN_EID_MULTI_BAND) {
+			wpa_printf(MSG_DEBUG, "MB IE of %zu bytes found", len);
+			info->ies[info->nof_ies].ie = ies_buf + IE_HEADER_SIZE;
+			info->ies[info->nof_ies].ie_len = ies_buf[1];
+			info->nof_ies++;
+		}
+
+		ies_len -= len;
+		ies_buf += len;
+	}
+
+	return 0;
+}
+
+
+struct wpabuf * mb_ies_by_info(struct mb_ies_info *info)
+{
+	struct wpabuf *mb_ies = NULL;
+
+	WPA_ASSERT(info != NULL);
+
+	if (info->nof_ies) {
+		u8 i;
+		size_t mb_ies_size = 0;
+
+		for (i = 0; i < info->nof_ies; i++)
+			mb_ies_size += IE_BUFFER_LENGTH(info->ies[i].ie_len);
+
+		mb_ies = wpabuf_alloc(mb_ies_size);
+		if (mb_ies) {
+			for (i = 0; i < info->nof_ies; i++) {
+				wpabuf_put_u8(mb_ies, WLAN_EID_MULTI_BAND);
+				wpabuf_put_u8(mb_ies, info->ies[i].ie_len);
+				wpabuf_put_data(mb_ies,
+						info->ies[i].ie,
+						info->ies[i].ie_len);
+			}
+		}
+	}
+
+	return mb_ies;
 }

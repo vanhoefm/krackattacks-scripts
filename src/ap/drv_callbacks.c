@@ -18,6 +18,7 @@
 #include "crypto/random.h"
 #include "p2p/p2p.h"
 #include "wps/wps.h"
+#include "fst/fst.h"
 #include "wnm_ap.h"
 #include "hostapd.h"
 #include "ieee802_11.h"
@@ -759,6 +760,13 @@ static void hostapd_action_rx(struct hostapd_data *hapd,
 		ieee802_11_rx_wnm_action_ap(hapd, mgmt, drv_mgmt->frame_len);
 	}
 #endif /* CONFIG_WNM */
+#ifdef CONFIG_FST
+	if (mgmt->u.action.category == WLAN_ACTION_FST && hapd->iface->fst) {
+		fst_rx_action(hapd->iface->fst, mgmt, drv_mgmt->frame_len);
+		return;
+	}
+#endif /* CONFIG_FST */
+
 }
 
 

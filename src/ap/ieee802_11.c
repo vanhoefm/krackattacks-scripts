@@ -23,6 +23,7 @@
 #include "radius/radius_client.h"
 #include "p2p/p2p.h"
 #include "wps/wps.h"
+#include "fst/fst.h"
 #include "hostapd.h"
 #include "beacon.h"
 #include "ieee802_11_auth.h"
@@ -2109,6 +2110,12 @@ static int handle_action(struct hostapd_data *hapd,
 		ieee802_11_rx_wnm_action_ap(hapd, mgmt, len);
 		return 1;
 #endif /* CONFIG_WNM */
+#ifdef CONFIG_FST
+	case WLAN_ACTION_FST:
+		if (hapd->iface->fst)
+			fst_rx_action(hapd->iface->fst, mgmt, len);
+		return 1;
+#endif /* CONFIG_FST */
 	case WLAN_ACTION_PUBLIC:
 	case WLAN_ACTION_PROTECTED_DUAL:
 #ifdef CONFIG_IEEE80211N

@@ -283,6 +283,9 @@ CONFIG_IPV6=y
 # Enable SQLite database support in hlr_auc_gw, EAP-SIM DB, and eap_user_file
 #CONFIG_SQLITE=y
 
+# Enable Fast Session Transfer (FST)
+#CONFIG_FST=y
+
 # Testing options
 # This can be used to enable some testing options (see also the example
 # configuration file) that are really useful only for testing clients that

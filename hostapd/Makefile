@@ -898,6 +898,18 @@ LIBS += -lsqlite3
 LIBS_h += -lsqlite3
 endif
 
+ifdef CONFIG_FST
+CFLAGS += -DCONFIG_FST
+OBJS += ../src/fst/fst.o
+OBJS += ../src/fst/fst_group.o
+OBJS += ../src/fst/fst_iface.o
+OBJS += ../src/fst/fst_session.o
+OBJS += ../src/fst/fst_ctrl_aux.o
+ifndef CONFIG_NO_CTRL_IFACE
+OBJS += ../src/fst/fst_ctrl_iface.o
+endif
+endif
+
 ALL=hostapd hostapd_cli
 
 all: verify_config $(ALL)

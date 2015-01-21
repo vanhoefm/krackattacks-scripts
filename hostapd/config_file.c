@@ -3309,6 +3309,64 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 	} else if (os_strcmp(buf, "wowlan_triggers") == 0) {
 		os_free(bss->wowlan_triggers);
 		bss->wowlan_triggers = os_strdup(pos);
+#ifdef CONFIG_FST
+	} else if (os_strcmp(buf, "fst_group_id") == 0) {
+		size_t len = os_strlen(pos);
+
+		if (!len || len >= sizeof(conf->fst_cfg.group_id)) {
+			wpa_printf(MSG_ERROR,
+				   "Line %d: Invalid fst_group_id value '%s'",
+				   line, pos);
+			return 1;
+		}
+
+		if (conf->fst_cfg.group_id[0]) {
+			wpa_printf(MSG_ERROR,
+				   "Line %d: Duplicate fst_group value '%s'",
+				   line, pos);
+			return 1;
+		}
+
+		os_strlcpy(conf->fst_cfg.group_id, pos,
+			   sizeof(conf->fst_cfg.group_id));
+	} else if (os_strcmp(buf, "fst_priority") == 0) {
+		char *endp;
+		long int val;
+
+		if (!*pos) {
+			wpa_printf(MSG_ERROR,
+				   "Line %d: fst_priority value not supplied (expected 1..%u)",
+				   line, FST_MAX_PRIO_VALUE);
+			return -1;
+		}
+
+		val = strtol(pos, &endp, 0);
+		if (*endp || val < 1 || val > FST_MAX_PRIO_VALUE) {
+			wpa_printf(MSG_ERROR,
+				   "Line %d: Invalid fst_priority %ld (%s) (expected 1..%u)",
+				   line, val, pos, FST_MAX_PRIO_VALUE);
+			return 1;
+		}
+		conf->fst_cfg.priority = (u8) val;
+	} else if (os_strcmp(buf, "fst_llt") == 0) {
+		char *endp;
+		long int val;
+
+		if (!*pos) {
+			wpa_printf(MSG_ERROR,
+				   "Line %d: fst_llt value not supplied (expected 1..%u)",
+				   line, FST_MAX_LLT_MS);
+			return -1;
+		}
+		val = strtol(pos, &endp, 0);
+		if (*endp || val < 1 || val > FST_MAX_LLT_MS) {
+			wpa_printf(MSG_ERROR,
+				   "Line %d: Invalid fst_llt %ld (%s) (expected 1..%u)",
+				   line, val, pos, FST_MAX_LLT_MS);
+			return 1;
+		}
+		conf->fst_cfg.llt = (u32) val;
+#endif /* CONFIG_FST */
 	} else {
 		wpa_printf(MSG_ERROR,
 			   "Line %d: unknown configuration item '%s'",

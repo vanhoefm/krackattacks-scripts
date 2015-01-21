@@ -44,6 +44,7 @@
 #include "ap/beacon.h"
 #include "wps/wps_defs.h"
 #include "wps/wps.h"
+#include "fst/fst_ctrl_iface.h"
 #include "config_file.h"
 #include "ctrl_iface.h"
 
@@ -2515,6 +2516,55 @@ static void hostapd_ctrl_iface_flush(struct hapd_interfaces *interfaces)
 }
 
 
+#ifdef CONFIG_FST
+
+static int
+hostapd_global_ctrl_iface_fst_attach(struct hapd_interfaces *interfaces,
+				     const char *cmd)
+{
+	char ifname[IFNAMSIZ + 1];
+	struct fst_iface_cfg cfg;
+	struct hostapd_data *hapd;
+	struct fst_wpa_obj iface_obj;
+
+	if (!fst_parse_attach_command(cmd, ifname, sizeof(ifname), &cfg)) {
+		hapd = hostapd_get_iface(interfaces, ifname);
+		if (hapd) {
+			fst_hostapd_fill_iface_obj(hapd, &iface_obj);
+			hapd->iface->fst = fst_attach(ifname, hapd->own_addr,
+						      &iface_obj, &cfg);
+			if (hapd->iface->fst)
+				return 0;
+		}
+	}
+
+	return EINVAL;
+}
+
+
+static int
+hostapd_global_ctrl_iface_fst_detach(struct hapd_interfaces *interfaces,
+				     const char *cmd)
+{
+	char ifname[IFNAMSIZ + 1];
+	struct hostapd_data * hapd;
+
+	if (!fst_parse_detach_command(cmd, ifname, sizeof(ifname))) {
+		hapd = hostapd_get_iface(interfaces, ifname);
+		if (hapd) {
+			if (!fst_iface_detach(ifname)) {
+				hapd->iface->fst = NULL;
+				return 0;
+			}
+		}
+	}
+
+	return EINVAL;
+}
+
+#endif /* CONFIG_FST */
+
+
 static void hostapd_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 					      void *sock_ctx)
 {
@@ -2578,6 +2628,20 @@ static void hostapd_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 		if (hapd_module_tests() < 0)
 			reply_len = -1;
 #endif /* CONFIG_MODULE_TESTS */
+#ifdef CONFIG_FST
+	} else if (os_strncmp(buf, "FST-ATTACH ", 11) == 0) {
+		if (!hostapd_global_ctrl_iface_fst_attach(interfaces, buf + 11))
+			reply_len = os_snprintf(reply, reply_size, "OK\n");
+		else
+			reply_len = -1;
+	} else if (os_strncmp(buf, "FST-DETACH ", 11) == 0) {
+		if (!hostapd_global_ctrl_iface_fst_detach(interfaces, buf + 11))
+			reply_len = os_snprintf(reply, reply_size, "OK\n");
+		else
+			reply_len = -1;
+	} else if (os_strncmp(buf, "FST-MANAGER ", 12) == 0) {
+		reply_len = fst_ctrl_iface_receive(buf + 12, reply, reply_size);
+#endif /* CONFIG_FST */
 	} else {
 		wpa_printf(MSG_DEBUG, "Unrecognized global ctrl_iface command "
 			   "ignored");

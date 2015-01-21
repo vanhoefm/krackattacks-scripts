@@ -922,6 +922,35 @@ static int hostapd_cli_cmd_get(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+#ifdef CONFIG_FST
+static int hostapd_cli_cmd_fst(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	char cmd[256];
+	int res;
+	int i;
+	int total;
+
+	if (argc <= 0) {
+		printf("FST command: parameters are required.\n");
+		return -1;
+	}
+
+	total = os_snprintf(cmd, sizeof(cmd), "FST-MANAGER");
+
+	for (i = 0; i < argc; i++) {
+		res = os_snprintf(cmd + total, sizeof(cmd) - total, " %s",
+				  argv[i]);
+		if (os_snprintf_error(sizeof(cmd) - total, res)) {
+			printf("Too long fst command.\n");
+			return -1;
+		}
+		total += res;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
+#endif /* CONFIG_FST */
+
+
 static int hostapd_cli_cmd_chan_switch(struct wpa_ctrl *ctrl,
 				       int argc, char *argv[])
 {
@@ -1049,6 +1078,9 @@ static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	{ "get_config", hostapd_cli_cmd_get_config },
 	{ "help", hostapd_cli_cmd_help },
 	{ "interface", hostapd_cli_cmd_interface },
+#ifdef CONFIG_FST
+	{ "fst", hostapd_cli_cmd_fst },
+#endif /* CONFIG_FST */
 	{ "level", hostapd_cli_cmd_level },
 	{ "license", hostapd_cli_cmd_license },
 	{ "quit", hostapd_cli_cmd_quit },

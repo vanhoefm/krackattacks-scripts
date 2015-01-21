@@ -16,6 +16,7 @@
 #include "radius/radius.h"
 #include "radius/radius_client.h"
 #include "p2p/p2p.h"
+#include "fst/fst.h"
 #include "hostapd.h"
 #include "accounting.h"
 #include "ieee802_1x.h"
@@ -1063,6 +1064,20 @@ void ap_sta_set_authorized(struct hostapd_data *hapd, struct sta_info *sta,
 			wpa_msg_no_global(hapd->msg_ctx_parent, MSG_INFO,
 					  AP_STA_DISCONNECTED "%s", buf);
 	}
+
+#ifdef CONFIG_FST
+	if (hapd->iface->fst) {
+		if (authorized)
+			fst_notify_peer_connected(hapd->iface->fst, sta->addr);
+		else
+			fst_notify_peer_disconnected(hapd->iface->fst,
+						     sta->addr);
+	}
+#endif /* CONFIG_FST */
+
+	if (hapd->sta_authorized_cb)
+		hapd->sta_authorized_cb(hapd->sta_authorized_cb_ctx,
+					sta->addr, authorized, dev_addr);
 }
 
 

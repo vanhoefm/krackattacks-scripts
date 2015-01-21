@@ -17,6 +17,7 @@
 #include "eap_server/tncs.h"
 #include "eapol_auth/eapol_auth_sm.h"
 #include "eapol_auth/eapol_auth_sm_i.h"
+#include "fst/fst.h"
 #include "hostapd.h"
 #include "authsrv.h"
 #include "sta_info.h"
@@ -1364,6 +1365,132 @@ fail:
 }
 
 
+#ifdef CONFIG_FST
+
+static const u8 * fst_hostapd_get_bssid_cb(void *ctx)
+{
+	struct hostapd_data *hapd = ctx;
+
+	return hapd->own_addr;
+}
+
+
+static void fst_hostapd_get_channel_info_cb(void *ctx,
+					    enum hostapd_hw_mode *hw_mode,
+					    u8 *channel)
+{
+	struct hostapd_data *hapd = ctx;
+
+	*hw_mode = ieee80211_freq_to_chan(hapd->iface->freq, channel);
+}
+
+
+static void fst_hostapd_set_ies_cb(void *ctx, struct wpabuf *fst_ies)
+{
+	struct hostapd_data *hapd = ctx;
+
+	if (hapd->iface->fst_ies != fst_ies) {
+		hapd->iface->fst_ies = fst_ies;
+		if (ieee802_11_set_beacon(hapd))
+			wpa_printf(MSG_WARNING, "FST: Cannot set beacon");
+	}
+}
+
+
+static int fst_hostapd_send_action_cb(void *ctx, const u8 *da,
+				      struct wpabuf *buf)
+{
+	struct hostapd_data *hapd = ctx;
+
+	return hostapd_drv_send_action(hapd, hapd->iface->freq, 0, da,
+				       wpabuf_head(buf), wpabuf_len(buf));
+}
+
+
+static struct wpabuf * fst_hostapd_get_mb_ie_cb(void *ctx, const u8 *addr)
+{
+	struct hostapd_data *hapd = ctx;
+	struct sta_info *sta = ap_get_sta(hapd, addr);
+
+	return sta ? sta->mb_ies : NULL;
+}
+
+
+static void fst_hostapd_update_mb_ie_cb(void *ctx, const u8 *addr,
+					const u8 *buf, size_t size)
+{
+	struct hostapd_data *hapd = ctx;
+	struct sta_info *sta = ap_get_sta(hapd, addr);
+
+	if (sta) {
+		struct mb_ies_info info;
+
+		if (!mb_ies_info_by_ies(&info, buf, size)) {
+			wpabuf_free(sta->mb_ies);
+			sta->mb_ies = mb_ies_by_info(&info);
+		}
+	}
+}
+
+
+static const u8 * fst_hostapd_get_sta(struct fst_get_peer_ctx **get_ctx,
+				      Boolean mb_only)
+{
+	struct sta_info *s = (struct sta_info *) *get_ctx;
+
+	if (mb_only) {
+		for (; s && !s->mb_ies; s = s->next)
+			;
+	}
+
+	if (s) {
+		*get_ctx = (struct fst_get_peer_ctx *) s->next;
+
+		return s->addr;
+	}
+
+	*get_ctx = NULL;
+	return NULL;
+}
+
+
+static const u8 * fst_hostapd_get_peer_first(void *ctx,
+					     struct fst_get_peer_ctx **get_ctx,
+					     Boolean mb_only)
+{
+	struct hostapd_data *hapd = ctx;
+
+	*get_ctx = (struct fst_get_peer_ctx *) hapd->sta_list;
+
+	return fst_hostapd_get_sta(get_ctx, mb_only);
+}
+
+
+static const u8 * fst_hostapd_get_peer_next(void *ctx,
+					    struct fst_get_peer_ctx **get_ctx,
+					    Boolean mb_only)
+{
+	return fst_hostapd_get_sta(get_ctx, mb_only);
+}
+
+
+void fst_hostapd_fill_iface_obj(struct hostapd_data *hapd,
+				struct fst_wpa_obj *iface_obj)
+{
+	iface_obj->ctx = hapd;
+	iface_obj->get_bssid = fst_hostapd_get_bssid_cb;
+	iface_obj->get_channel_info = fst_hostapd_get_channel_info_cb;
+	iface_obj->set_ies = fst_hostapd_set_ies_cb;
+	iface_obj->send_action = fst_hostapd_send_action_cb;
+	iface_obj->get_mb_ie = fst_hostapd_get_mb_ie_cb;
+	iface_obj->update_mb_ie = fst_hostapd_update_mb_ie_cb;
+	iface_obj->get_peer_first = fst_hostapd_get_peer_first;
+	iface_obj->get_peer_next = fst_hostapd_get_peer_next;
+}
+
+#endif /* CONFIG_FST */
+
+
 /**
  * hostapd_setup_interface_complete - Complete interface setup
  *
@@ -1529,6 +1656,22 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 #ifdef NEED_AP_MLME
 dfs_offload:
 #endif /* NEED_AP_MLME */
+
+#ifdef CONFIG_FST
+	if (hapd->iconf->fst_cfg.group_id[0]) {
+		struct fst_wpa_obj iface_obj;
+
+		fst_hostapd_fill_iface_obj(hapd, &iface_obj);
+		iface->fst = fst_attach(hapd->conf->iface, hapd->own_addr,
+					&iface_obj, &hapd->iconf->fst_cfg);
+		if (!iface->fst) {
+			wpa_printf(MSG_ERROR, "Could not attach to FST %s",
+				   hapd->iconf->fst_cfg.group_id);
+			goto fail;
+		}
+	}
+#endif /* CONFIG_FST */
+
 	hostapd_set_state(iface, HAPD_IFACE_ENABLED);
 	wpa_msg(iface->bss[0]->msg_ctx, MSG_INFO, AP_EVENT_ENABLED);
 	if (hapd->setup_complete_cb)
@@ -1545,6 +1688,12 @@ fail:
 	wpa_printf(MSG_ERROR, "Interface initialization failed");
 	hostapd_set_state(iface, HAPD_IFACE_DISABLED);
 	wpa_msg(hapd->msg_ctx, MSG_INFO, AP_EVENT_DISABLED);
+#ifdef CONFIG_FST
+	if (iface->fst) {
+		fst_detach(iface->fst);
+		iface->fst = NULL;
+	}
+#endif /* CONFIG_FST */
 	if (iface->interfaces && iface->interfaces->terminate_on_error)
 		eloop_terminate();
 	return -1;
@@ -1643,6 +1792,13 @@ void hostapd_interface_deinit(struct hostapd_iface *iface)
 #endif /* CONFIG_IEEE80211N */
 	eloop_cancel_timeout(channel_list_update_timeout, iface, NULL);
 	iface->wait_channel_update = 0;
+
+#ifdef CONFIG_FST
+	if (iface->fst) {
+		fst_detach(iface->fst);
+		iface->fst = NULL;
+	}
+#endif /* CONFIG_FST */
 
 	for (j = iface->num_bss - 1; j >= 0; j--)
 		hostapd_bss_deinit(iface->bss[j]);
@@ -2721,6 +2877,26 @@ hostapd_switch_channel_fallback(struct hostapd_iface *iface,
 
 	hostapd_disable_iface(iface);
 	hostapd_enable_iface(iface);
+}
+
+
+struct hostapd_data * hostapd_get_iface(struct hapd_interfaces *interfaces,
+					const char *ifname)
+{
+	size_t i, j;
+
+	for (i = 0; i < interfaces->count; i++) {
+		struct hostapd_iface *iface = interfaces->iface[i];
+
+		for (j = 0; j < iface->num_bss; j++) {
+			struct hostapd_data *hapd = iface->bss[j];
+
+			if (os_strcmp(ifname, hapd->conf->iface) == 0)
+				return hapd;
+		}
+	}
+
+	return NULL;
 }
 
 #endif /* NEED_AP_MLME */

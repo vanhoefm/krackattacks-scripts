@@ -1535,6 +1535,14 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 		sta->hs20_ie = NULL;
 #endif /* CONFIG_HS20 */
 
+#ifdef CONFIG_FST
+	wpabuf_free(sta->mb_ies);
+	if (hapd->iface->fst)
+		sta->mb_ies = mb_ies_by_info(&elems.mb_ies);
+	else
+		sta->mb_ies = NULL;
+#endif /* CONFIG_FST */
+
 	return WLAN_STATUS_SUCCESS;
 }
 

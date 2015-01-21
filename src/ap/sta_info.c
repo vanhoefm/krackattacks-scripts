@@ -296,6 +296,9 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 	wpabuf_free(sta->wps_ie);
 	wpabuf_free(sta->p2p_ie);
 	wpabuf_free(sta->hs20_ie);
+#ifdef CONFIG_FST
+	wpabuf_free(sta->mb_ies);
+#endif /* CONFIG_FST */
 
 	os_free(sta->ht_capabilities);
 	os_free(sta->vht_capabilities);

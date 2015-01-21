@@ -153,6 +153,9 @@ struct sta_info {
 	struct wpabuf *hs20_deauth_req;
 	char *hs20_session_info_url;
 	int hs20_disassoc_timer;
+#ifdef CONFIG_FST
+	struct wpabuf *mb_ies; /* MB IEs from (Re)Association Request */
+#endif /* CONFIG_FST */
 
 	struct os_reltime connected_time;
 

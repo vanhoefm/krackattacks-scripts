@@ -81,6 +81,22 @@ int hostapd_build_ap_extra_ies(struct hostapd_data *hapd,
 		wpabuf_put_data(proberesp, buf, pos - buf);
 	}
 
+#ifdef CONFIG_FST
+	if (hapd->iface->fst_ies) {
+		size_t add = wpabuf_len(hapd->iface->fst_ies);
+
+		if (wpabuf_resize(&beacon, add) < 0)
+			goto fail;
+		wpabuf_put_buf(beacon, hapd->iface->fst_ies);
+		if (wpabuf_resize(&proberesp, add) < 0)
+			goto fail;
+		wpabuf_put_buf(proberesp, hapd->iface->fst_ies);
+		if (wpabuf_resize(&assocresp, add) < 0)
+			goto fail;
+		wpabuf_put_buf(assocresp, hapd->iface->fst_ies);
+	}
+#endif /* CONFIG_FST */
+
 	if (hapd->wps_beacon_ie) {
 		if (wpabuf_resize(&beacon, wpabuf_len(hapd->wps_beacon_ie)) <
 		    0)

@@ -132,6 +132,20 @@ static void nl80211_register_eloop_read(struct nl_handle **handle,
 					eloop_sock_handler handler,
 					void *eloop_data)
 {
+	/*
+	 * libnl uses a pretty small buffer (32 kB that gets converted to 64 kB)
+	 * by default. It is possible to hit that limit in some cases where
+	 * operations are blocked, e.g., with a burst of Deauthentication frames
+	 * to hostapd and STA entry deletion. Try to increase the buffer to make
+	 * this less likely to occur.
+	 */
+	if (nl_socket_set_buffer_size(*handle, 262144, 0) < 0) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Could not set nl_socket RX buffer size: %s",
+			   strerror(errno));
+		/* continue anyway with the default (smaller) buffer */
+	}
+
 	nl_socket_set_nonblocking(*handle);
 	eloop_register_read_sock(nl_socket_get_fd(*handle), handler,
 				 eloop_data, *handle);

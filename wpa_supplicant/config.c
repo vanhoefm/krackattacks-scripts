@@ -4129,6 +4129,7 @@ static const struct global_parse_data global_fields[] = {
 	{ INT(rand_addr_lifetime), 0 },
 	{ INT(preassoc_mac_addr), 0 },
 	{ INT(key_mgmt_offload), 0},
+	{ INT(passive_scan), 0 },
 };
 
 #undef FUNC

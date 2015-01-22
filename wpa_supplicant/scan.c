@@ -724,7 +724,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 
 #ifdef CONFIG_P2P
 	if ((wpa_s->p2p_in_provisioning || wpa_s->show_group_started) &&
-	    wpa_s->go_params) {
+	    wpa_s->go_params && !wpa_s->conf->passive_scan) {
 		wpa_printf(MSG_DEBUG, "P2P: Use specific SSID for scan during P2P group formation (p2p_in_provisioning=%d show_group_started=%d)",
 			   wpa_s->p2p_in_provisioning,
 			   wpa_s->show_group_started);
@@ -878,6 +878,9 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	} else if (wpa_s->last_scan_req == MANUAL_SCAN_REQ &&
 		   wpa_s->manual_scan_passive && params.num_ssids == 0) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Use passive scan based on manual request");
+	} else if (wpa_s->conf->passive_scan) {
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"Use passive scan based on configuration");
 	} else {
 		wpa_s->prev_scan_ssid = WILDCARD_SSID_SCAN;
 		params.num_ssids++;

@@ -1227,6 +1227,9 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 	if (config->mesh_max_inactivity != DEFAULT_MESH_MAX_INACTIVITY)
 		fprintf(f, "mesh_max_inactivity=%d\n",
 			config->mesh_max_inactivity);
+
+	if (config->passive_scan)
+		fprintf(f, "cert_in_cb=%d\n", config->passive_scan);
 }
 
 #endif /* CONFIG_NO_CONFIG_WRITE */

@@ -1137,6 +1137,18 @@ struct wpa_config {
 	 * By default: 300 seconds.
 	 */
 	int mesh_max_inactivity;
+
+	/**
+	 * passive_scan - Whether to force passive scan for network connection
+	 *
+	 * This parameter can be used to force only passive scanning to be used
+	 * for network connection cases. It should be noted that this will slow
+	 * down scan operations and reduce likelihood of finding the AP. In
+	 * addition, some use cases will override this due to functional
+	 * requirements, e.g., for finding an AP that uses hidden SSID
+	 * (scan_ssid=1) or P2P device discovery.
+	 */
+	int passive_scan;
 };
 
 

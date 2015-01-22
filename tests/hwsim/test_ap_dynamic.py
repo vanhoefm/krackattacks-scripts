@@ -35,7 +35,7 @@ def test_ap_change_ssid(dev, apdev):
     dev[0].set_network_quoted(id, "ssid", "test-wpa2-psk-new")
     dev[0].connect_network(id)
 
-def multi_check(dev, check):
+def multi_check(dev, check, scan_opt=True):
     id = []
     num_bss = len(check)
     for i in range(0, num_bss):
@@ -49,6 +49,9 @@ def multi_check(dev, check):
     for i in range(num_bss):
         if not check[i]:
             continue
+        bssid = '02:00:00:00:03:0' + str(i)
+        if scan_opt:
+            dev[i].scan_for_bss(bssid, freq=2412)
         id.append(dev[i].connect("bss-" + str(i + 1), key_mgmt="NONE",
                                  scan_freq="2412", wait_connect=True))
     first = True
@@ -78,6 +81,15 @@ def multi_check(dev, check):
 
 def test_ap_bss_add_remove(dev, apdev):
     """Dynamic BSS add/remove operations with hostapd"""
+    try:
+        _test_ap_bss_add_remove(dev, apdev)
+    finally:
+        for i in range(3):
+            dev[i].request("SCAN_INTERVAL 5")
+
+def _test_ap_bss_add_remove(dev, apdev):
+    for i in range(3):
+        dev[i].request("SCAN_INTERVAL 1")
     ifname1 = apdev[0]['ifname']
     ifname2 = apdev[0]['ifname'] + '-2'
     ifname3 = apdev[0]['ifname'] + '-3'
@@ -143,14 +155,14 @@ def test_ap_bss_add_remove_during_ht_scan(dev, apdev):
     ifname2 = apdev[0]['ifname'] + '-2'
     hostapd.add_bss('phy3', ifname1, 'bss-ht40-1.conf')
     hostapd.add_bss('phy3', ifname2, 'bss-ht40-2.conf')
-    multi_check(dev, [ True, True ])
+    multi_check(dev, [ True, True ], scan_opt=False)
     hostapd.remove_bss(ifname2)
     hostapd.remove_bss(ifname1)
 
     hostapd.add_bss('phy3', ifname1, 'bss-ht40-1.conf')
     hostapd.add_bss('phy3', ifname2, 'bss-ht40-2.conf')
     hostapd.remove_bss(ifname2)
-    multi_check(dev, [ True, False ])
+    multi_check(dev, [ True, False ], scan_opt=False)
     hostapd.remove_bss(ifname1)
 
     hostapd.add_bss('phy3', ifname1, 'bss-ht40-1.conf')

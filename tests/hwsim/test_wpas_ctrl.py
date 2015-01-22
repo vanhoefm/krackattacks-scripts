@@ -708,12 +708,13 @@ def test_wpas_ctrl_disallow_aps(dev, apdev):
 
     dev[0].connect("test", key_mgmt="NONE", scan_freq="2412")
     hostapd.add_ap(apdev[1]['ifname'], params)
+    dev[0].scan_for_bss(apdev[1]['bssid'], freq="2412")
     dev[0].dump_monitor()
     if "OK" not in dev[0].request("SET disallow_aps bssid 00:11:22:33:44:55 bssid 00:22:33:44:55:66"):
         raise Exception("Failed to set disallow_aps")
     if "OK" not in dev[0].request("SET disallow_aps bssid " + apdev[0]['bssid']):
         raise Exception("Failed to set disallow_aps")
-    ev = dev[0].wait_connected(timeout=15, error="Reassociation timed out")
+    ev = dev[0].wait_connected(timeout=30, error="Reassociation timed out")
     if apdev[1]['bssid'] not in ev:
         raise Exception("Unexpected BSSID")
 

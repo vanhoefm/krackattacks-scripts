@@ -306,6 +306,8 @@ def _test_ap_wpa2_eap_sim_ext(dev, apdev):
     if ev is None:
         raise Exception("EAP failure not reported")
     dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+    time.sleep(0.1)
 
     dev[0].select_network(id, freq="2412")
     ev = dev[0].wait_event(["CTRL-REQ-SIM"], timeout=15)
@@ -322,6 +324,8 @@ def _test_ap_wpa2_eap_sim_ext(dev, apdev):
     if ev is None:
         raise Exception("EAP failure not reported")
     dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+    time.sleep(0.1)
 
     dev[0].select_network(id, freq="2412")
     ev = dev[0].wait_event(["CTRL-REQ-SIM"], timeout=15)
@@ -338,6 +342,8 @@ def _test_ap_wpa2_eap_sim_ext(dev, apdev):
     if ev is None:
         raise Exception("EAP failure not reported")
     dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+    time.sleep(0.1)
 
     dev[0].select_network(id, freq="2412")
     ev = dev[0].wait_event(["CTRL-REQ-SIM"], timeout=15)
@@ -354,6 +360,8 @@ def _test_ap_wpa2_eap_sim_ext(dev, apdev):
     if ev is None:
         raise Exception("EAP failure not reported")
     dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+    time.sleep(0.1)
 
     dev[0].select_network(id, freq="2412")
     ev = dev[0].wait_event(["CTRL-REQ-SIM"], timeout=15)
@@ -370,6 +378,8 @@ def _test_ap_wpa2_eap_sim_ext(dev, apdev):
     if ev is None:
         raise Exception("EAP failure not reported")
     dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+    time.sleep(0.1)
 
     dev[0].select_network(id, freq="2412")
     ev = dev[0].wait_event(["CTRL-REQ-SIM"], timeout=15)
@@ -386,6 +396,8 @@ def _test_ap_wpa2_eap_sim_ext(dev, apdev):
     if ev is None:
         raise Exception("EAP failure not reported")
     dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+    time.sleep(0.1)
 
     dev[0].select_network(id, freq="2412")
     ev = dev[0].wait_event(["CTRL-REQ-SIM"], timeout=15)
@@ -559,6 +571,7 @@ def _test_ap_wpa2_eap_aka_ext(dev, apdev):
         raise Exception("EAP failure not reported")
     dev[0].request("DISCONNECT")
     dev[0].wait_disconnected()
+    time.sleep(0.1)
 
     dev[0].select_network(id, freq="2412")
     ev = dev[0].wait_event(["CTRL-REQ-SIM"], timeout=15)
@@ -586,6 +599,7 @@ def _test_ap_wpa2_eap_aka_ext(dev, apdev):
         raise Exception("EAP failure not reported")
     dev[0].request("DISCONNECT")
     dev[0].wait_disconnected()
+    time.sleep(0.1)
 
     tests = [ ":UMTS-AUTH:00112233445566778899aabbccddeeff:00112233445566778899aabbccddeeff:0011223344",
               ":UMTS-AUTH:34",
@@ -611,6 +625,7 @@ def _test_ap_wpa2_eap_aka_ext(dev, apdev):
             raise Exception("EAP failure not reported")
         dev[0].request("DISCONNECT")
         dev[0].wait_disconnected()
+        time.sleep(0.1)
 
 def test_ap_wpa2_eap_aka_prime(dev, apdev):
     """WPA2-Enterprise connection using EAP-AKA'"""
@@ -1207,6 +1222,7 @@ def test_ap_wpa2_eap_tls_diff_ca_trust(dev, apdev):
                         only_add_network=True, scan_freq="2412")
 
     dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
     dev[0].dump_monitor()
     dev[0].select_network(id, freq="2412")
 
@@ -1233,6 +1249,7 @@ def test_ap_wpa2_eap_tls_diff_ca_trust2(dev, apdev):
                         only_add_network=True, scan_freq="2412")
 
     dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
     dev[0].dump_monitor()
     dev[0].select_network(id, freq="2412")
 
@@ -1254,6 +1271,7 @@ def test_ap_wpa2_eap_tls_diff_ca_trust3(dev, apdev):
                         ca_cert="auth_serv/ca.pem",
                         wait_connect=True, scan_freq="2412")
     dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
     dev[0].dump_monitor()
     dev[0].set_network_quoted(id, "ca_cert", "auth_serv/ca-incorrect.pem")
     dev[0].select_network(id, freq="2412")

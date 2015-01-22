@@ -1055,6 +1055,11 @@ def _test_ap_wps_er_pbc_overlap(dev, apdev):
     dev[0].dump_monitor()
     dev[0].wps_reg(apdev[0]['bssid'], ap_pin)
 
+    dev[1].scan_for_bss(apdev[0]['bssid'], freq="2412")
+    dev[2].scan_for_bss(apdev[0]['bssid'], freq="2412")
+    # avoid leaving dev 1 or 2 as the last Probe Request to the AP
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq=2412, force_scan=True)
+
     dev[0].dump_monitor()
     dev[0].request("WPS_ER_START ifname=lo")
 
@@ -1068,8 +1073,7 @@ def _test_ap_wps_er_pbc_overlap(dev, apdev):
     if "FAIL" in dev[0].request("WPS_ER_SET_CONFIG " + apdev[0]['bssid'] + " 0"):
         raise Exception("Could not select AP based on BSSID")
 
-    dev[1].scan_for_bss(apdev[0]['bssid'], freq="2412")
-    dev[2].scan_for_bss(apdev[0]['bssid'], freq="2412")
+    dev[0].dump_monitor()
     dev[1].request("WPS_PBC " + apdev[0]['bssid'])
     dev[2].request("WPS_PBC " + apdev[0]['bssid'])
     ev = dev[1].wait_event(["CTRL-EVENT-SCAN-RESULTS"], timeout=10)
@@ -1078,10 +1082,22 @@ def _test_ap_wps_er_pbc_overlap(dev, apdev):
     ev = dev[2].wait_event(["CTRL-EVENT-SCAN-RESULTS"], timeout=10)
     if ev is None:
         raise Exception("PBC scan failed")
-    for i in range(0, 2):
+    found1 = False
+    found2 = False
+    addr1 = dev[1].own_addr()
+    addr2 = dev[2].own_addr()
+    for i in range(3):
         ev = dev[0].wait_event(["WPS-ER-ENROLLEE-ADD"], timeout=15)
         if ev is None:
             raise Exception("Enrollee discovery timed out")
+        if addr1 in ev:
+            found1 = True
+            if found2:
+                break
+        if addr2 in ev:
+            found2 = True
+            if found1:
+                break
     if dev[0].request("WPS_ER_PBC " + ap_uuid) != "FAIL-PBC-OVERLAP\n":
         raise Exception("PBC overlap not reported")
     dev[1].request("WPS_CANCEL")

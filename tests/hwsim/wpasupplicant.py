@@ -501,7 +501,10 @@ class WpaSupplicant:
         if not self.discover_peer(peer):
             raise Exception("Peer " + peer + " not found")
         self.dump_monitor()
-        cmd = "P2P_CONNECT " + peer + " " + pin + " " + method + " auth"
+        if pin:
+            cmd = "P2P_CONNECT " + peer + " " + pin + " " + method + " auth"
+        else:
+            cmd = "P2P_CONNECT " + peer + " " + method + " auth"
         if go_intent:
             cmd = cmd + ' go_intent=' + str(go_intent)
         if freq:

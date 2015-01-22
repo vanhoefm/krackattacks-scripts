@@ -143,6 +143,26 @@ def go_neg_pbc(i_dev, r_dev, i_intent=None, r_intent=None, i_freq=None, r_freq=N
     i_dev.dump_monitor()
     return [i_res, r_res]
 
+def go_neg_pbc_authorized(i_dev, r_dev, i_intent=None, r_intent=None,
+                          expect_failure=False, i_freq=None, r_freq=None):
+    i_dev.p2p_listen()
+    logger.info("Start GO negotiation " + i_dev.ifname + " -> " + r_dev.ifname)
+    r_dev.p2p_go_neg_auth(i_dev.p2p_dev_addr(), None, "pbc",
+                          go_intent=r_intent, freq=r_freq)
+    r_dev.p2p_listen()
+    i_res = i_dev.p2p_go_neg_init(r_dev.p2p_dev_addr(), None, "pbc", timeout=20,
+                                  go_intent=i_intent,
+                                  expect_failure=expect_failure, freq=i_freq)
+    r_res = r_dev.p2p_go_neg_auth_result(expect_failure=expect_failure)
+    logger.debug("i_res: " + str(i_res))
+    logger.debug("r_res: " + str(r_res))
+    r_dev.dump_monitor()
+    i_dev.dump_monitor()
+    if expect_failure:
+        return
+    logger.info("Group formed")
+    return [i_res, r_res]
+
 def remove_group(dev1, dev2):
     dev1.remove_group()
     try:
@@ -896,3 +916,15 @@ def test_p2p_unauthorize(dev):
     ev = dev[0].wait_global_event(["P2P-GO-NEG-REQUEST"], timeout=10)
     if ev is None:
         raise Exception("No GO Negotiation Request RX reported")
+
+def test_grpform_pbc_multiple(dev):
+    """P2P group formation using PBC multiple times in a row"""
+    try:
+        dev[1].request("SET passive_scan 1")
+        for i in range(5):
+            [i_res, r_res] = go_neg_pbc_authorized(i_dev=dev[0], i_intent=15,
+                                                   r_dev=dev[1], r_intent=0)
+            remove_group(dev[0], dev[1])
+    finally:
+        dev[1].request("SET passive_scan 0")
+        dev[1].flush_scan_cache()

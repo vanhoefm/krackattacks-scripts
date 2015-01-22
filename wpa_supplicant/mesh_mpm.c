@@ -193,6 +193,11 @@ static void mesh_mpm_init_link(struct wpa_supplicant *wpa_s,
 
 	sta->my_lid = llid;
 	sta->peer_lid = 0;
+
+	/*
+	 * We do not use wpa_mesh_set_plink_state() here because there is no
+	 * entry in kernel yet.
+	 */
 	sta->plink_state = PLINK_LISTEN;
 }
 
@@ -348,9 +353,9 @@ fail:
 
 
 /* configure peering state in ours and driver's station entry */
-static void
-wpa_mesh_set_plink_state(struct wpa_supplicant *wpa_s, struct sta_info *sta,
-			 enum mesh_plink_state state)
+void wpa_mesh_set_plink_state(struct wpa_supplicant *wpa_s,
+			      struct sta_info *sta,
+			      enum mesh_plink_state state)
 {
 	struct hostapd_sta_add_params params;
 	int ret;
@@ -417,7 +422,7 @@ static void plink_timer(void *eloop_ctx, void *user_data)
 		/* confirm timer */
 		if (!reason)
 			reason = WLAN_REASON_MESH_CONFIRM_TIMEOUT;
-		sta->plink_state = PLINK_HOLDING;
+		wpa_mesh_set_plink_state(wpa_s, sta, PLINK_HOLDING);
 		eloop_register_timeout(conf->dot11MeshHoldingTimeout / 1000,
 			(conf->dot11MeshHoldingTimeout % 1000) * 1000,
 			plink_timer, wpa_s, sta);

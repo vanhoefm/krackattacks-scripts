@@ -416,3 +416,28 @@ def test_p2p_service_discovery_invalid_commands(dev):
                  "foo bar" ]:
         if "FAIL" not in dev[0].request("P2P_SERVICE_DEL " + cmd):
             raise Exception("Invalid P2P_SERVICE_DEL accepted: " + cmd)
+
+def test_p2p_service_discovery_cancel_during_query(dev):
+    """P2P service discovery and cancel during query"""
+    for i in range(2):
+        add_bonjour_services(dev[i])
+        add_upnp_services(dev[i])
+        add_extra_services(dev[i])
+        dev[i].p2p_listen()
+
+    dev[2].request("P2P_FLUSH")
+    id1 = dev[2].request("P2P_SERV_DISC_REQ 00:00:00:00:00:00 02000201")
+    id2 = dev[2].request("P2P_SERV_DISC_REQ 00:00:00:00:00:00 02000101")
+    dev[2].p2p_find(social=True)
+    ev = dev[2].wait_global_event(["P2P-DEVICE-FOUND"], timeout=15)
+    if ev is None:
+        raise Exception("Could not discover peer")
+    if "OK" not in dev[2].request("P2P_SERV_DISC_CANCEL_REQ " + id1):
+        raise Exception("Failed to cancel req1")
+    if "OK" not in dev[2].request("P2P_SERV_DISC_CANCEL_REQ " + id2):
+        raise Exception("Failed to cancel req2")
+    ev = dev[2].wait_global_event(["P2P-SERV-DISC-RESP"], timeout=3)
+    # we may or may not get a response depending on timing, so ignore the result
+    dev[2].p2p_stop_find()
+    dev[1].p2p_stop_find()
+    dev[0].p2p_stop_find()

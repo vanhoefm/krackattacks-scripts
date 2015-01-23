@@ -795,8 +795,8 @@ int crypto_get_random(void *buf, size_t len)
 
 
 #ifdef CONFIG_OPENSSL_CMAC
-int omac1_aes_128_vector(const u8 *key, size_t num_elem,
-			 const u8 *addr[], const size_t *len, u8 *mac)
+int omac1_aes_vector(const u8 *key, size_t key_len, size_t num_elem,
+		     const u8 *addr[], const size_t *len, u8 *mac)
 {
 	CMAC_CTX *ctx;
 	int ret = -1;
@@ -806,8 +806,15 @@ int omac1_aes_128_vector(const u8 *key, size_t num_elem,
 	if (ctx == NULL)
 		return -1;
 
-	if (!CMAC_Init(ctx, key, 16, EVP_aes_128_cbc(), NULL))
+	if (key_len == 32) {
+		if (!CMAC_Init(ctx, key, 32, EVP_aes_256_cbc(), NULL))
+			goto fail;
+	} else if (key_len == 16) {
+		if (!CMAC_Init(ctx, key, 16, EVP_aes_128_cbc(), NULL))
+			goto fail;
+	} else {
 		goto fail;
+	}
 	for (i = 0; i < num_elem; i++) {
 		if (!CMAC_Update(ctx, addr[i], len[i]))
 			goto fail;
@@ -822,9 +829,22 @@ fail:
 }
 
 
+int omac1_aes_128_vector(const u8 *key, size_t num_elem,
+			 const u8 *addr[], const size_t *len, u8 *mac)
+{
+	return omac1_aes_vector(key, 16, num_elem, addr, len, mac);
+}
+
+
 int omac1_aes_128(const u8 *key, const u8 *data, size_t data_len, u8 *mac)
 {
 	return omac1_aes_128_vector(key, 1, &data, &data_len, mac);
+}
+
+
+int omac1_aes_256(const u8 *key, const u8 *data, size_t data_len, u8 *mac)
+{
+	return omac1_aes_vector(key, 32, 1, &data, &data_len, mac);
 }
 #endif /* CONFIG_OPENSSL_CMAC */
 

@@ -2493,7 +2493,10 @@ static int wpa_driver_nl80211_set_key(const char *ifname, struct i802_bss *bss,
 	msg = nl80211_ifindex_msg(drv, ifindex, 0, NL80211_CMD_SET_KEY);
 	if (!msg ||
 	    nla_put_u8(msg, NL80211_ATTR_KEY_IDX, key_idx) ||
-	    nla_put_flag(msg, alg == WPA_ALG_IGTK ?
+	    nla_put_flag(msg, (alg == WPA_ALG_IGTK ||
+			       alg == WPA_ALG_BIP_GMAC_128 ||
+			       alg == WPA_ALG_BIP_GMAC_256 ||
+			       alg == WPA_ALG_BIP_CMAC_256) ?
 			 NL80211_ATTR_KEY_DEFAULT_MGMT :
 			 NL80211_ATTR_KEY_DEFAULT))
 		goto fail;

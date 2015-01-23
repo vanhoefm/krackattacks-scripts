@@ -145,8 +145,8 @@ struct wlantest_bss {
 	size_t gtk_len[4];
 	int gtk_idx;
 	u8 rsc[4][6];
-	u8 igtk[6][16];
-	int igtk_set[6];
+	u8 igtk[6][32];
+	size_t igtk_len[6];
 	int igtk_idx;
 	u8 ipn[6][6];
 	u32 counters[NUM_WLANTEST_BSS_COUNTER];
@@ -284,8 +284,8 @@ void tkip_get_pn(u8 *pn, const u8 *data);
 u8 * wep_decrypt(struct wlantest *wt, const struct ieee80211_hdr *hdr,
 		 const u8 *data, size_t data_len, size_t *decrypted_len);
 
-u8 * bip_protect(const u8 *igtk, u8 *frame, size_t len, u8 *ipn, int keyid,
-		 size_t *prot_len);
+u8 * bip_protect(const u8 *igtk, size_t igtk_len, u8 *frame, size_t len,
+		 u8 *ipn, int keyid, size_t *prot_len);
 u8 * bip_gmac_protect(const u8 *igtk, size_t igtk_len, u8 *frame, size_t len,
 		      u8 *ipn, int keyid, size_t *prot_len);
 

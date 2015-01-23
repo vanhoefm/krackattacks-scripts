@@ -159,7 +159,8 @@ static void test_vector_bip(void)
 	wpa_hexdump(MSG_INFO, "IPN", ipn, sizeof(ipn));
 	wpa_hexdump(MSG_INFO, "Plaintext frame", frame, sizeof(frame));
 
-	prot = bip_protect(igtk, frame, sizeof(frame), ipn, 4, &prot_len);
+	prot = bip_protect(igtk, sizeof(igtk), frame, sizeof(frame),
+			   ipn, 4, &prot_len);
 	if (prot == NULL) {
 		wpa_printf(MSG_ERROR, "Failed to protect BIP frame");
 		return;

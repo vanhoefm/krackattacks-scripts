@@ -14,8 +14,8 @@
 #include "wlantest.h"
 
 
-u8 * bip_protect(const u8 *igtk, u8 *frame, size_t len, u8 *ipn, int keyid,
-		 size_t *prot_len)
+u8 * bip_protect(const u8 *igtk, size_t igtk_len, u8 *frame, size_t len,
+		 u8 *ipn, int keyid, size_t *prot_len)
 {
 	u8 *prot, *pos, *buf;
 	u8 mic[16];
@@ -23,19 +23,19 @@ u8 * bip_protect(const u8 *igtk, u8 *frame, size_t len, u8 *ipn, int keyid,
 	struct ieee80211_hdr *hdr;
 	size_t plen;
 
-	plen = len + 18;
+	plen = len + igtk_len == 32 ? 26 : 18;
 	prot = os_malloc(plen);
 	if (prot == NULL)
 		return NULL;
 	os_memcpy(prot, frame, len);
 	pos = prot + len;
 	*pos++ = WLAN_EID_MMIE;
-	*pos++ = 16;
+	*pos++ = igtk_len == 32 ? 24 : 16;
 	WPA_PUT_LE16(pos, keyid);
 	pos += 2;
 	os_memcpy(pos, ipn, 6);
 	pos += 6;
-	os_memset(pos, 0, 8); /* MIC */
+	os_memset(pos, 0, igtk_len == 32 ? 16 : 8); /* MIC */
 
 	buf = os_malloc(plen + 20 - 24);
 	if (buf == NULL) {
@@ -59,8 +59,8 @@ u8 * bip_protect(const u8 *igtk, u8 *frame, size_t len, u8 *ipn, int keyid,
 	}
 	os_free(buf);
 
-	os_memcpy(pos, mic, 8);
-	wpa_hexdump(MSG_DEBUG, "BIP MMIE MIC", pos, 8);
+	os_memcpy(pos, mic, igtk_len == 32 ? 16 : 8);
+	wpa_hexdump(MSG_DEBUG, "BIP MMIE MIC", pos, igtk_len == 32 ? 16 : 8);
 
 	*prot_len = plen;
 	return prot;

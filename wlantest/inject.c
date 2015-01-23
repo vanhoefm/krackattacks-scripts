@@ -82,17 +82,18 @@ static int wlantest_inject_bip(struct wlantest *wt, struct wlantest_bss *bss,
 			       u8 *frame, size_t len, int incorrect_key)
 {
 	u8 *prot;
-	u8 dummy[16];
+	u8 dummy[32];
 	int ret;
 	size_t plen;
 
-	if (!bss->igtk_set[bss->igtk_idx])
+	if (!bss->igtk_len[bss->igtk_idx])
 		return -1;
 
 	os_memset(dummy, 0x11, sizeof(dummy));
 	inc_byte_array(bss->ipn[bss->igtk_idx], 6);
 
 	prot = bip_protect(incorrect_key ? dummy : bss->igtk[bss->igtk_idx],
+			   bss->igtk_len[bss->igtk_idx],
 			   frame, len, bss->ipn[bss->igtk_idx],
 			   bss->igtk_idx, &plen);
 	if (prot == NULL)
@@ -300,7 +301,7 @@ int wlantest_inject(struct wlantest *wt, struct wlantest_bss *bss,
 	     prot == WLANTEST_INJECT_INCORRECT_KEY) && bss) {
 		if (!sta &&
 		    ((WLAN_FC_GET_TYPE(fc) == WLAN_FC_TYPE_MGMT &&
-		      !bss->igtk_set[bss->igtk_idx]) ||
+		      !bss->igtk_len[bss->igtk_idx]) ||
 		     (WLAN_FC_GET_TYPE(fc) == WLAN_FC_TYPE_DATA &&
 		      !bss->gtk_len[bss->gtk_idx]))) {
 			wpa_printf(MSG_INFO, "No GTK/IGTK known for "
@@ -323,7 +324,7 @@ int wlantest_inject(struct wlantest *wt, struct wlantest_bss *bss,
 			    bss->gtk_len[bss->gtk_idx])
 				protect = 1;
 			if (WLAN_FC_GET_TYPE(fc) == WLAN_FC_TYPE_MGMT &&
-			    bss->igtk_set[bss->igtk_idx])
+			    bss->igtk_len[bss->igtk_idx])
 				protect = 1;
 		}
 	}

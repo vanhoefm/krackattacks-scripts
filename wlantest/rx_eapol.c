@@ -464,7 +464,30 @@ static void learn_kde_keys(struct wlantest *wt, struct wlantest_bss *bss,
 				wpa_hexdump(MSG_DEBUG, "IGTK", ie.igtk + 8,
 					    16);
 				os_memcpy(bss->igtk[id], ie.igtk + 8, 16);
-				bss->igtk_set[id] = 1;
+				bss->igtk_len[id] = 16;
+				ipn = ie.igtk + 2;
+				bss->ipn[id][0] = ipn[5];
+				bss->ipn[id][1] = ipn[4];
+				bss->ipn[id][2] = ipn[3];
+				bss->ipn[id][3] = ipn[2];
+				bss->ipn[id][4] = ipn[1];
+				bss->ipn[id][5] = ipn[0];
+				bss->igtk_idx = id;
+			}
+		} else if (ie.igtk_len == 40) {
+			u16 id;
+			id = WPA_GET_LE16(ie.igtk);
+			if (id > 5) {
+				add_note(wt, MSG_INFO,
+					 "Unexpected IGTK KeyID %u", id);
+			} else {
+				const u8 *ipn;
+				add_note(wt, MSG_DEBUG, "IGTK KeyID %u", id);
+				wpa_hexdump(MSG_DEBUG, "IPN", ie.igtk + 2, 6);
+				wpa_hexdump(MSG_DEBUG, "IGTK", ie.igtk + 8,
+					    32);
+				os_memcpy(bss->igtk[id], ie.igtk + 8, 32);
+				bss->igtk_len[id] = 32;
 				ipn = ie.igtk + 2;
 				bss->ipn[id][0] = ipn[5];
 				bss->ipn[id][1] = ipn[4];

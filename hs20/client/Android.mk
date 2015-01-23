@@ -4,7 +4,6 @@ INCLUDES = $(LOCAL_PATH)
 INCLUDES += $(LOCAL_PATH)/../../src/utils
 INCLUDES += $(LOCAL_PATH)/../../src/common
 INCLUDES += $(LOCAL_PATH)/../../src
-INCLUDES += external/openssl/include
 INCLUDES += external/libxml2/include
 INCLUDES += external/curl/include
 INCLUDES += external/webkit/Source/WebKit/gtk

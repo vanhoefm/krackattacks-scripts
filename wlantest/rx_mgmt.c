@@ -9,6 +9,7 @@
 #include "utils/includes.h"
 
 #include "utils/common.h"
+#include "common/defs.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
 #include "crypto/aes_wrap.h"
@@ -753,7 +754,8 @@ static void rx_mgmt_action(struct wlantest *wt, const u8 *data, size_t len,
 }
 
 
-static int check_mmie_mic(const u8 *igtk, size_t igtk_len,
+static int check_mmie_mic(unsigned int mgmt_group_cipher,
+			  const u8 *igtk, size_t igtk_len,
 			  const u8 *data, size_t len)
 {
 	u8 *buf;
@@ -762,12 +764,9 @@ static int check_mmie_mic(const u8 *igtk, size_t igtk_len,
 	const struct ieee80211_hdr *hdr;
 	int ret, mic_len;
 
-	if (igtk_len == 32)
-		mic_len = 16;
-	else if (igtk_len == 16)
-		mic_len = 8;
-	else
+	if (!mgmt_group_cipher || igtk_len < 16)
 		return -1;
+	mic_len = mgmt_group_cipher == WPA_CIPHER_AES_128_CMAC ? 8 : 16;
 
 	if (len < 24 || len - 24 < mic_len)
 		return -1;
@@ -789,10 +788,32 @@ static int check_mmie_mic(const u8 *igtk, size_t igtk_len,
 
 	wpa_hexdump(MSG_MSGDUMP, "BIP: AAD|Body(masked)", buf, len + 20 - 24);
 	/* MIC = L(AES-128-CMAC(AAD || Frame Body(masked)), 0, 64) */
-	if (igtk_len == 32)
-		ret = omac1_aes_256(igtk, buf, len + 20 - 24, mic);
-	else
+	if (mgmt_group_cipher == WPA_CIPHER_AES_128_CMAC) {
 		ret = omac1_aes_128(igtk, buf, len + 20 - 24, mic);
+	} else if (mgmt_group_cipher == WPA_CIPHER_BIP_CMAC_256) {
+		ret = omac1_aes_256(igtk, buf, len + 20 - 24, mic);
+	} else if (mgmt_group_cipher == WPA_CIPHER_BIP_GMAC_128 ||
+		 mgmt_group_cipher == WPA_CIPHER_BIP_GMAC_256) {
+		u8 nonce[12], *npos;
+		const u8 *ipn;
+
+		ipn = data + len - mic_len - 6;
+
+		/* Nonce: A2 | IPN */
+		os_memcpy(nonce, hdr->addr2, ETH_ALEN);
+		npos = nonce + ETH_ALEN;
+		*npos++ = ipn[5];
+		*npos++ = ipn[4];
+		*npos++ = ipn[3];
+		*npos++ = ipn[2];
+		*npos++ = ipn[1];
+		*npos++ = ipn[0];
+
+		ret = aes_gmac(igtk, igtk_len, nonce, sizeof(nonce),
+			       buf, len + 20 - 24, mic);
+	} else {
+		ret = -1;
+	}
 	if (ret < 0) {
 		os_free(buf);
 		return -1;
@@ -831,7 +852,7 @@ static int check_bip(struct wlantest *wt, const u8 *data, size_t len)
 	if (bss == NULL)
 		return 0; /* No key known yet */
 
-	mic_len = bss->igtk_len[4] == 32 || bss->igtk_len[5] == 32 ? 16 : 8;
+	mic_len = bss->mgmt_group_cipher == WPA_CIPHER_AES_128_CMAC ? 8 : 16;
 
 	if (len < 24 + 10 + mic_len ||
 	    data[len - (10 + mic_len)] != WLAN_EID_MMIE ||
@@ -876,8 +897,8 @@ static int check_bip(struct wlantest *wt, const u8 *data, size_t len)
 		wpa_hexdump(MSG_INFO, "Last RX IPN", bss->ipn[keyid], 6);
 	}
 
-	if (check_mmie_mic(bss->igtk[keyid], bss->igtk_len[keyid], data, len) <
-	    0) {
+	if (check_mmie_mic(bss->mgmt_group_cipher, bss->igtk[keyid],
+			   bss->igtk_len[keyid], data, len) < 0) {
 		add_note(wt, MSG_INFO, "Invalid MMIE MIC in a frame from "
 			 MACSTR, MAC2STR(mgmt->sa));
 		bss->counters[WLANTEST_BSS_COUNTER_INVALID_BIP_MMIE]++;

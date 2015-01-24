@@ -649,8 +649,7 @@ static struct nai_realm_eap * nai_realm_find_eap(struct wpa_cred *cred,
 {
 	u8 e;
 
-	if (cred == NULL ||
-	    cred->username == NULL ||
+	if (cred->username == NULL ||
 	    cred->username[0] == '\0' ||
 	    ((cred->password == NULL ||
 	      cred->password[0] == '\0') &&

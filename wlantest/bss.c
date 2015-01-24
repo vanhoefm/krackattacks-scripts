@@ -277,7 +277,7 @@ void bss_update(struct wlantest *wt, struct wlantest_bss *bss,
 		   " proto=%s%s%s%s"
 		   "pairwise=%s%s%s%s%s%s%s"
 		   "group=%s%s%s%s%s%s%s%s%s"
-		   "mgmt_group_cipher=%s"
+		   "mgmt_group_cipher=%s%s%s%s%s"
 		   "key_mgmt=%s%s%s%s%s%s%s%s%s"
 		   "rsn_capab=%s%s%s%s%s",
 		   MAC2STR(bss->bssid),
@@ -303,8 +303,15 @@ void bss_update(struct wlantest *wt, struct wlantest_bss *bss,
 		   bss->group_cipher & WPA_CIPHER_CCMP_256 ? "CCMP-256 " : "",
 		   bss->group_cipher & WPA_CIPHER_GCMP ? "GCMP " : "",
 		   bss->group_cipher & WPA_CIPHER_GCMP_256 ? "GCMP-256 " : "",
-		   bss->mgmt_group_cipher & WPA_CIPHER_AES_128_CMAC ? "BIP " :
-		   "N/A ",
+		   bss->mgmt_group_cipher == 0 ? "N/A " : "",
+		   bss->mgmt_group_cipher & WPA_CIPHER_AES_128_CMAC ?
+		   "BIP " : "",
+		   bss->mgmt_group_cipher & WPA_CIPHER_BIP_GMAC_128 ?
+		   "BIP-GMAC-128 " : "",
+		   bss->mgmt_group_cipher & WPA_CIPHER_BIP_GMAC_256 ?
+		   "BIP-GMAC-256 " : "",
+		   bss->mgmt_group_cipher & WPA_CIPHER_BIP_CMAC_256 ?
+		   "BIP-CMAC-256 " : "",
 		   bss->key_mgmt == 0 ? "N/A " : "",
 		   bss->key_mgmt & WPA_KEY_MGMT_IEEE8021X ? "EAP " : "",
 		   bss->key_mgmt & WPA_KEY_MGMT_PSK ? "PSK " : "",

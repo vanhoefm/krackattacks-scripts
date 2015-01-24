@@ -906,6 +906,15 @@ static void info_print_cipher(char *buf, size_t len, int cipher)
 	if (cipher & WPA_CIPHER_AES_128_CMAC)
 		pos += os_snprintf(pos, end - pos, "%sBIP",
 				   pos == buf ? "" : " ");
+	if (cipher & WPA_CIPHER_BIP_GMAC_128)
+		pos += os_snprintf(pos, end - pos, "%sBIP-GMAC-128",
+				   pos == buf ? "" : " ");
+	if (cipher & WPA_CIPHER_BIP_GMAC_256)
+		pos += os_snprintf(pos, end - pos, "%sBIP-GMAC-256",
+				   pos == buf ? "" : " ");
+	if (cipher & WPA_CIPHER_BIP_CMAC_256)
+		pos += os_snprintf(pos, end - pos, "%sBIP-CMAC-256",
+				   pos == buf ? "" : " ");
 }
 
 

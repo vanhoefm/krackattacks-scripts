@@ -1,5 +1,5 @@
 # Suite B tests
-# Copyright (c) 2014, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2014-2015, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -12,19 +12,45 @@ import hostapd
 from utils import HwsimSkip
 
 def test_suite_b(dev, apdev):
-    """WPA2-PSK/GCMP connection"""
+    """WPA2-PSK/GCMP connection at Suite B 128-bit level"""
     if "GCMP" not in dev[0].get_capability("pairwise"):
         raise HwsimSkip("GCMP not supported")
-    params = hostapd.wpa2_eap_params(ssid="test-suite-b")
-    params["wpa_key_mgmt"] = "WPA-EAP-SUITE-B"
-    params['rsn_pairwise'] = "GCMP"
+    if "BIP-GMAC-128" not in dev[0].get_capability("group_mgmt"):
+        raise HwsimSkip("BIP-GMAC-128 not supported")
+    if "WPA-EAP-SUITE-B" not in dev[0].get_capability("key_mgmt"):
+        raise HwsimSkip("WPA-EAP-SUITE-B not supported")
+    tls = dev[0].request("GET tls_library")
+    if not tls.startswith("OpenSSL"):
+        raise HwsimSkip("TLS library not supported for Suite B: " + tls);
+    if "build=OpenSSL 1.0.2" not in tls or "run=OpenSSL 1.0.2" not in tls:
+        raise HwsimSkip("OpenSSL version not supported for Suite B: " + tls)
+
+    params = { "ssid": "test-suite-b",
+               "wpa": "2",
+               "wpa_key_mgmt": "WPA-EAP-SUITE-B",
+               "rsn_pairwise": "GCMP",
+               "group_mgmt_cipher": "BIP-GMAC-128",
+               "ieee80211w": "2",
+               "ieee8021x": "1",
+               "openssl_ciphers": "SUITEB128",
+               #"dh_file": "auth_serv/dh.conf",
+               "eap_server": "1",
+               "eap_user_file": "auth_serv/eap_user.conf",
+               "ca_cert": "auth_serv/ec-ca.pem",
+               "server_cert": "auth_serv/ec-server.pem",
+               "private_key": "auth_serv/ec-server.key" }
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
-    # TODO: Force Suite B configuration for TLS
-    dev[0].connect("test-suite-b", key_mgmt="WPA-EAP-SUITE-B",
-                   eap="TLS", identity="tls user", ca_cert="auth_serv/ca.pem",
-                   client_cert="auth_serv/user.pem",
-                   private_key="auth_serv/user.key",
+
+    dev[0].connect("test-suite-b", key_mgmt="WPA-EAP-SUITE-B", ieee80211w="2",
+                   openssl_ciphers="SUITEB128",
+                   eap="TLS", identity="tls user",
+                   ca_cert="auth_serv/ec-ca.pem",
+                   client_cert="auth_serv/ec-user.pem",
+                   private_key="auth_serv/ec-user.key",
                    pairwise="GCMP", group="GCMP", scan_freq="2412")
+    tls_cipher = dev[0].get_status_field("EAP TLS cipher")
+    if tls_cipher != "ECDHE-ECDSA-AES128-GCM-SHA256":
+        raise Exception("Unexpected TLS cipher: " + tls_cipher)
 
     bss = dev[0].get_bss(apdev[0]['bssid'])
     if 'flags' not in bss:

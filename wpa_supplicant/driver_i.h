@@ -1,6 +1,6 @@
 /*
  * wpa_supplicant - Internal driver interface wrappers
- * Copyright (c) 2003-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -569,12 +569,14 @@ static inline int wpa_drv_driver_cmd(struct wpa_supplicant *wpa_s,
 #endif /* ANDROID */
 
 static inline void wpa_drv_set_rekey_info(struct wpa_supplicant *wpa_s,
-					  const u8 *kek, const u8 *kck,
+					  const u8 *kek, size_t kek_len,
+					  const u8 *kck, size_t kck_len,
 					  const u8 *replay_ctr)
 {
 	if (!wpa_s->driver->set_rekey_info)
 		return;
-	wpa_s->driver->set_rekey_info(wpa_s->drv_priv, kek, kck, replay_ctr);
+	wpa_s->driver->set_rekey_info(wpa_s->drv_priv, kek, kek_len,
+				      kck, kck_len, replay_ctr);
 }
 
 static inline int wpa_drv_radio_disable(struct wpa_supplicant *wpa_s,

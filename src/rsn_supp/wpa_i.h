@@ -1,6 +1,6 @@
 /*
  * Internal WPA/RSN supplicant state machine definitions
- * Copyright (c) 2004-2010, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -254,8 +254,9 @@ static inline void wpa_sm_set_rekey_offload(struct wpa_sm *sm)
 {
 	if (!sm->ctx->set_rekey_offload)
 		return;
-	sm->ctx->set_rekey_offload(sm->ctx->ctx, sm->ptk.kek,
-				   sm->ptk.kck, sm->rx_replay_counter);
+	sm->ctx->set_rekey_offload(sm->ctx->ctx, sm->ptk.kek, sm->ptk.kek_len,
+				   sm->ptk.kck, sm->ptk.kck_len,
+				   sm->rx_replay_counter);
 }
 
 #ifdef CONFIG_TDLS
@@ -347,7 +348,7 @@ static inline int wpa_sm_key_mgmt_set_pmk(struct wpa_sm *sm,
 	return sm->ctx->key_mgmt_set_pmk(sm->ctx->ctx, pmk, pmk_len);
 }
 
-void wpa_eapol_key_send(struct wpa_sm *sm, const u8 *kck,
+void wpa_eapol_key_send(struct wpa_sm *sm, const u8 *kck, size_t kck_len,
 			int ver, const u8 *dest, u16 proto,
 			u8 *msg, size_t msg_len, u8 *key_mic);
 int wpa_supplicant_send_2_of_4(struct wpa_sm *sm, const unsigned char *dst,
@@ -361,8 +362,7 @@ int wpa_supplicant_send_4_of_4(struct wpa_sm *sm, const unsigned char *dst,
 			       struct wpa_ptk *ptk);
 
 int wpa_derive_ptk_ft(struct wpa_sm *sm, const unsigned char *src_addr,
-		      const struct wpa_eapol_key *key,
-		      struct wpa_ptk *ptk, size_t ptk_len);
+		      const struct wpa_eapol_key *key, struct wpa_ptk *ptk);
 
 void wpa_tdls_assoc(struct wpa_sm *sm);
 void wpa_tdls_disassoc(struct wpa_sm *sm);

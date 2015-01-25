@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - PeerKey for Direct Link Setup (DLS)
- * Copyright (c) 2006-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2006-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -27,7 +27,7 @@ struct wpa_peerkey {
 	int cipher; /* Selected cipher (WPA_CIPHER_*) */
 	u8 replay_counter[WPA_REPLAY_COUNTER_LEN];
 	int replay_counter_set;
-	int use_sha256; /* whether AKMP indicate SHA256-based derivations */
+	int akmp;
 
 	struct wpa_ptk stk, tstk;
 	int stk_set, tstk_set;

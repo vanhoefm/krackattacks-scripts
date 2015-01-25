@@ -1,6 +1,6 @@
 /*
  * wlantest - IEEE 802.11 protocol monitoring and testing tool
- * Copyright (c) 2010-2013, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2010-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -210,10 +210,16 @@ static int add_ptk_file(struct wlantest *wt, const char *ptk_file)
 		if (p == NULL)
 			break;
 		if (ptk_len < 48) {
-			os_memcpy(p->ptk.tk1, ptk, ptk_len);
+			os_memcpy(p->ptk.tk, ptk, ptk_len);
+			p->ptk.tk_len = ptk_len;
 			p->ptk_len = 32 + ptk_len;
 		} else {
-			os_memcpy(&p->ptk, ptk, ptk_len);
+			os_memcpy(p->ptk.kck, ptk, 16);
+			p->ptk.kck_len = 16;
+			os_memcpy(p->ptk.kek, ptk + 16, 16);
+			p->ptk.kek_len = 16;
+			os_memcpy(p->ptk.tk, ptk + 32, ptk_len - 32);
+			p->ptk.tk_len = ptk_len - 32;
 			p->ptk_len = ptk_len;
 		}
 		dl_list_add(&wt->ptk, &p->list);

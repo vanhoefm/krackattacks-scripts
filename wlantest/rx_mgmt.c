@@ -1,6 +1,6 @@
 /*
  * Received Management frame processing
- * Copyright (c) 2010, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2010-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -983,7 +983,7 @@ static u8 * mgmt_ccmp_decrypt(struct wlantest *wt, const u8 *data, size_t len,
 		wpa_hexdump(MSG_INFO, "RSC", rsc, 6);
 	}
 
-	decrypted = ccmp_decrypt(sta->ptk.tk1, hdr, data + 24, len - 24, dlen);
+	decrypted = ccmp_decrypt(sta->ptk.tk, hdr, data + 24, len - 24, dlen);
 	if (decrypted) {
 		os_memcpy(rsc, pn, 6);
 		frame = os_malloc(24 + *dlen);

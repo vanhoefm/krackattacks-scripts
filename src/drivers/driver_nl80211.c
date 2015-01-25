@@ -1,6 +1,6 @@
 /*
  * Driver interaction with Linux nl80211/cfg80211
- * Copyright (c) 2002-2014, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2015, Jouni Malinen <j@w1.fi>
  * Copyright (c) 2003-2004, Instant802 Networks, Inc.
  * Copyright (c) 2005-2006, Devicescape Software, Inc.
  * Copyright (c) 2007, Johannes Berg <johannes@sipsolutions.net>
@@ -6781,7 +6781,8 @@ static int wpa_driver_nl80211_get_survey(void *priv, unsigned int freq)
 }
 
 
-static void nl80211_set_rekey_info(void *priv, const u8 *kek, const u8 *kck,
+static void nl80211_set_rekey_info(void *priv, const u8 *kek, size_t kek_len,
+				   const u8 *kck, size_t kck_len,
 				   const u8 *replay_ctr)
 {
 	struct i802_bss *bss = priv;
@@ -6796,8 +6797,8 @@ static void nl80211_set_rekey_info(void *priv, const u8 *kek, const u8 *kck,
 	wpa_printf(MSG_DEBUG, "nl80211: Set rekey offload");
 	if (!(msg = nl80211_bss_msg(bss, 0, NL80211_CMD_SET_REKEY_OFFLOAD)) ||
 	    !(replay_nested = nla_nest_start(msg, NL80211_ATTR_REKEY_DATA)) ||
-	    nla_put(msg, NL80211_REKEY_DATA_KEK, NL80211_KEK_LEN, kek) ||
-	    nla_put(msg, NL80211_REKEY_DATA_KCK, NL80211_KCK_LEN, kck) ||
+	    nla_put(msg, NL80211_REKEY_DATA_KEK, kek_len, kek) ||
+	    nla_put(msg, NL80211_REKEY_DATA_KCK, kck_len, kck) ||
 	    nla_put(msg, NL80211_REKEY_DATA_REPLAY_CTR, NL80211_REPLAY_CTR_LEN,
 		    replay_ctr)) {
 		nl80211_nlmsg_clear(msg);

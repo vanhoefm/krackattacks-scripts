@@ -1,6 +1,6 @@
 /*
  * wpa_supplicant - WPA definitions
- * Copyright (c) 2003-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -73,7 +73,8 @@ struct wpa_sm_ctx {
 		const struct hostapd_freq_params *params);
 	int (*tdls_disable_channel_switch)(void *ctx, const u8 *addr);
 #endif /* CONFIG_TDLS */
-	void (*set_rekey_offload)(void *ctx, const u8 *kek, const u8 *kck,
+	void (*set_rekey_offload)(void *ctx, const u8 *kek, size_t kek_len,
+				  const u8 *kck, size_t kck_len,
 				  const u8 *replay_ctr);
 	int (*key_mgmt_set_pmk)(void *ctx, const u8 *pmk, size_t pmk_len);
 };
@@ -155,8 +156,9 @@ void wpa_sm_pmksa_cache_flush(struct wpa_sm *sm, void *network_ctx);
 int wpa_sm_get_p2p_ip_addr(struct wpa_sm *sm, u8 *buf);
 
 void wpa_sm_set_rx_replay_ctr(struct wpa_sm *sm, const u8 *rx_replay_counter);
-void wpa_sm_set_ptk_kck_kek(struct wpa_sm *sm, const u8 *ptk_kck,
-			    const u8 *ptk_kek);
+void wpa_sm_set_ptk_kck_kek(struct wpa_sm *sm,
+			    const u8 *ptk_kck, size_t ptk_kck_len,
+			    const u8 *ptk_kek, size_t ptk_kek_len);
 
 #else /* CONFIG_NO_WPA */
 

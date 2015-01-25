@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - Driver event processing
- * Copyright (c) 2003-2014, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -2992,7 +2992,9 @@ static void wpa_supplicant_event_assoc_auth(struct wpa_supplicant *wpa_s,
 	}
 	wpa_sm_set_rx_replay_ctr(wpa_s->wpa, data->assoc_info.key_replay_ctr);
 	wpa_sm_set_ptk_kck_kek(wpa_s->wpa, data->assoc_info.ptk_kck,
-			       data->assoc_info.ptk_kek);
+			       data->assoc_info.ptk_kck_len,
+			       data->assoc_info.ptk_kek,
+			       data->assoc_info.ptk_kek_len);
 }
 
 

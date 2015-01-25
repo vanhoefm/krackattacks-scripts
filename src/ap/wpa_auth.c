@@ -1,6 +1,6 @@
 /*
  * IEEE 802.11 RSN / WPA Authenticator
- * Copyright (c) 2004-2013, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -1487,7 +1487,7 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 		    sm->wpa_key_mgmt == WPA_KEY_MGMT_OSEN ||
 		    wpa_key_mgmt_suite_b(sm->wpa_key_mgmt) ||
 		    version == WPA_KEY_INFO_TYPE_AES_128_CMAC) {
-			if (aes_wrap(sm->PTK.kek, 16,
+			if (aes_wrap(sm->PTK.kek, sm->PTK.kek_len,
 				     (key_data_len - 8) / 8, buf,
 				     (u8 *) (key + 1))) {
 				os_free(hdr);
@@ -1495,16 +1495,20 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 				return;
 			}
 			WPA_PUT_BE16(key->key_data_length, key_data_len);
-		} else {
+		} else if (sm->PTK.kek_len == 16) {
 			u8 ek[32];
 			os_memcpy(key->key_iv,
 				  sm->group->Counter + WPA_NONCE_LEN - 16, 16);
 			inc_byte_array(sm->group->Counter, WPA_NONCE_LEN);
 			os_memcpy(ek, key->key_iv, 16);
-			os_memcpy(ek + 16, sm->PTK.kek, 16);
+			os_memcpy(ek + 16, sm->PTK.kek, sm->PTK.kek_len);
 			os_memcpy(key + 1, buf, key_data_len);
 			rc4_skip(ek, 32, 256, (u8 *) (key + 1), key_data_len);
 			WPA_PUT_BE16(key->key_data_length, key_data_len);
+		} else {
+			os_free(hdr);
+			os_free(buf);
+			return;
 		}
 		os_free(buf);
 	}
@@ -1517,7 +1521,8 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 			os_free(hdr);
 			return;
 		}
-		wpa_eapol_key_mic(sm->PTK.kck, sm->wpa_key_mgmt, version,
+		wpa_eapol_key_mic(sm->PTK.kck, sm->PTK.kck_len,
+				  sm->wpa_key_mgmt, version,
 				  (u8 *) hdr, len, key->key_mic);
 #ifdef CONFIG_TESTING_OPTIONS
 		if (!pairwise &&
@@ -1577,7 +1582,8 @@ static int wpa_verify_key_mic(int akmp, struct wpa_ptk *PTK, u8 *data,
 	struct wpa_eapol_key *key;
 	u16 key_info;
 	int ret = 0;
-	u8 mic[16];
+	u8 mic[WPA_EAPOL_KEY_MIC_MAX_LEN];
+	size_t mic_len = 16;
 
 	if (data_len < sizeof(*hdr) + sizeof(*key))
 		return -1;
@@ -1585,13 +1591,14 @@ static int wpa_verify_key_mic(int akmp, struct wpa_ptk *PTK, u8 *data,
 	hdr = (struct ieee802_1x_hdr *) data;
 	key = (struct wpa_eapol_key *) (hdr + 1);
 	key_info = WPA_GET_BE16(key->key_info);
-	os_memcpy(mic, key->key_mic, 16);
-	os_memset(key->key_mic, 0, 16);
-	if (wpa_eapol_key_mic(PTK->kck, akmp, key_info & WPA_KEY_INFO_TYPE_MASK,
+	os_memcpy(mic, key->key_mic, mic_len);
+	os_memset(key->key_mic, 0, mic_len);
+	if (wpa_eapol_key_mic(PTK->kck, PTK->kck_len, akmp,
+			      key_info & WPA_KEY_INFO_TYPE_MASK,
 			      data, data_len, key->key_mic) ||
-	    os_memcmp_const(mic, key->key_mic, 16) != 0)
+	    os_memcmp_const(mic, key->key_mic, mic_len) != 0)
 		ret = -1;
-	os_memcpy(key->key_mic, mic, 16);
+	os_memcpy(key->key_mic, mic, mic_len);
 	return ret;
 }
 
@@ -1928,18 +1935,14 @@ SM_STATE(WPA_PTK, PTKSTART)
 static int wpa_derive_ptk(struct wpa_state_machine *sm, const u8 *snonce,
 			  const u8 *pmk, struct wpa_ptk *ptk)
 {
-	size_t ptk_len = wpa_cipher_key_len(sm->pairwise) + 32;
 #ifdef CONFIG_IEEE80211R
 	if (wpa_key_mgmt_ft(sm->wpa_key_mgmt))
-		return wpa_auth_derive_ptk_ft(sm, pmk, ptk, ptk_len);
+		return wpa_auth_derive_ptk_ft(sm, pmk, ptk);
 #endif /* CONFIG_IEEE80211R */
 
-	wpa_pmk_to_ptk(pmk, PMK_LEN, "Pairwise key expansion",
-		       sm->wpa_auth->addr, sm->addr, sm->ANonce, snonce,
-		       (u8 *) ptk, ptk_len,
-		       wpa_key_mgmt_sha256(sm->wpa_key_mgmt));
-
-	return 0;
+	return wpa_pmk_to_ptk(pmk, PMK_LEN, "Pairwise key expansion",
+			      sm->wpa_auth->addr, sm->addr, sm->ANonce, snonce,
+			      ptk, sm->wpa_key_mgmt, sm->pairwise);
 }
 
 
@@ -2271,7 +2274,7 @@ SM_STATE(WPA_PTK, PTKINITDONE)
 		enum wpa_alg alg = wpa_cipher_to_alg(sm->pairwise);
 		int klen = wpa_cipher_key_len(sm->pairwise);
 		if (wpa_auth_set_key(sm->wpa_auth, 0, alg, sm->addr, 0,
-				     sm->PTK.tk1, klen)) {
+				     sm->PTK.tk, klen)) {
 			wpa_sta_disconnect(sm->wpa_auth, sm->addr);
 			return;
 		}
@@ -3171,7 +3174,7 @@ int wpa_auth_pmksa_add(struct wpa_state_machine *sm, const u8 *pmk,
 		return -1;
 
 	if (pmksa_cache_auth_add(sm->wpa_auth->pmksa, pmk, PMK_LEN,
-				 sm->PTK.kck, sizeof(sm->PTK.kck),
+				 sm->PTK.kck, sm->PTK.kck_len,
 				 sm->wpa_auth->addr, sm->addr, session_timeout,
 				 eapol, sm->wpa_key_mgmt))
 		return 0;

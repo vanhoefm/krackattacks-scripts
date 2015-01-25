@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - Glue code to setup EAPOL and RSN modules
- * Copyright (c) 2003-2012, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -968,13 +968,14 @@ int wpa_supplicant_init_eapol(struct wpa_supplicant *wpa_s)
 
 
 #ifndef CONFIG_NO_WPA
-static void wpa_supplicant_set_rekey_offload(void *ctx, const u8 *kek,
-					     const u8 *kck,
+static void wpa_supplicant_set_rekey_offload(void *ctx,
+					     const u8 *kek, size_t kek_len,
+					     const u8 *kck, size_t kck_len,
 					     const u8 *replay_ctr)
 {
 	struct wpa_supplicant *wpa_s = ctx;
 
-	wpa_drv_set_rekey_info(wpa_s, kek, kck, replay_ctr);
+	wpa_drv_set_rekey_info(wpa_s, kek, kek_len, kck, kck_len, replay_ctr);
 }
 #endif /* CONFIG_NO_WPA */
 

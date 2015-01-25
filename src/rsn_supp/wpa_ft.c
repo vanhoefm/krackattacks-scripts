@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - IEEE 802.11r - Fast BSS Transition
- * Copyright (c) 2006-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2006-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -19,8 +19,7 @@
 #ifdef CONFIG_IEEE80211R
 
 int wpa_derive_ptk_ft(struct wpa_sm *sm, const unsigned char *src_addr,
-		      const struct wpa_eapol_key *key,
-		      struct wpa_ptk *ptk, size_t ptk_len)
+		      const struct wpa_eapol_key *key, struct wpa_ptk *ptk)
 {
 	u8 ptk_name[WPA_PMK_NAME_LEN];
 	const u8 *anonce = key->key_nonce;
@@ -43,13 +42,9 @@ int wpa_derive_ptk_ft(struct wpa_sm *sm, const unsigned char *src_addr,
 	wpa_hexdump_key(MSG_DEBUG, "FT: PMK-R1", sm->pmk_r1, PMK_LEN);
 	wpa_hexdump(MSG_DEBUG, "FT: PMKR1Name", sm->pmk_r1_name,
 		    WPA_PMK_NAME_LEN);
-	wpa_pmk_r1_to_ptk(sm->pmk_r1, sm->snonce, anonce, sm->own_addr,
-			  sm->bssid, sm->pmk_r1_name,
-			  (u8 *) ptk, ptk_len, ptk_name);
-	wpa_hexdump_key(MSG_DEBUG, "FT: PTK", (u8 *) ptk, ptk_len);
-	wpa_hexdump(MSG_DEBUG, "FT: PTKName", ptk_name, WPA_PMK_NAME_LEN);
-
-	return 0;
+	return wpa_pmk_r1_to_ptk(sm->pmk_r1, sm->snonce, anonce, sm->own_addr,
+				 sm->bssid, sm->pmk_r1_name, ptk, ptk_name,
+				 sm->key_mgmt, sm->pairwise_cipher);
 }
 
 
@@ -134,6 +129,7 @@ int wpa_sm_set_ft_params(struct wpa_sm *sm, const u8 *ies, size_t ies_len)
  * @anonce: ANonce or %NULL if not yet available
  * @pmk_name: PMKR0Name or PMKR1Name to be added into the RSN IE PMKID List
  * @kck: 128-bit KCK for MIC or %NULL if no MIC is used
+ * @kck_len: KCK length in octets
  * @target_ap: Target AP address
  * @ric_ies: Optional IE(s), e.g., WMM TSPEC(s), for RIC-Request or %NULL
  * @ric_ies_len: Length of ric_ies buffer in octets
@@ -144,7 +140,8 @@ int wpa_sm_set_ft_params(struct wpa_sm *sm, const u8 *ies, size_t ies_len)
  */
 static u8 * wpa_ft_gen_req_ies(struct wpa_sm *sm, size_t *len,
 			       const u8 *anonce, const u8 *pmk_name,
-			       const u8 *kck, const u8 *target_ap,
+			       const u8 *kck, size_t kck_len,
+			       const u8 *target_ap,
 			       const u8 *ric_ies, size_t ric_ies_len,
 			       const u8 *ap_mdie)
 {
@@ -298,7 +295,7 @@ static u8 * wpa_ft_gen_req_ies(struct wpa_sm *sm, size_t *len,
 		/* Information element count */
 		ftie->mic_control[1] = 3 + ieee802_11_ie_count(ric_ies,
 							       ric_ies_len);
-		if (wpa_ft_mic(kck, sm->own_addr, target_ap, 5,
+		if (wpa_ft_mic(kck, kck_len, sm->own_addr, target_ap, 5,
 			       ((u8 *) mdie) - 2, 2 + sizeof(*mdie),
 			       ftie_pos, 2 + *ftie_len,
 			       (u8 *) rsnie, 2 + rsnie->len, ric_ies,
@@ -333,7 +330,7 @@ static int wpa_ft_install_ptk(struct wpa_sm *sm, const u8 *bssid)
 	keylen = wpa_cipher_key_len(sm->pairwise_cipher);
 
 	if (wpa_sm_set_key(sm, alg, bssid, 0, 1, null_rsc,
-			   sizeof(null_rsc), (u8 *) sm->ptk.tk1, keylen) < 0) {
+			   sizeof(null_rsc), (u8 *) sm->ptk.tk, keylen) < 0) {
 		wpa_printf(MSG_WARNING, "FT: Failed to set PTK to the driver");
 		return -1;
 	}
@@ -360,7 +357,7 @@ int wpa_ft_prepare_auth_request(struct wpa_sm *sm, const u8 *mdie)
 	}
 
 	ft_ies = wpa_ft_gen_req_ies(sm, &ft_ies_len, NULL, sm->pmk_r0_name,
-				    NULL, sm->bssid, NULL, 0, mdie);
+				    NULL, 0, sm->bssid, NULL, 0, mdie);
 	if (ft_ies) {
 		wpa_sm_update_ft_ies(sm, sm->mobility_domain,
 				     ft_ies, ft_ies_len);
@@ -376,7 +373,7 @@ int wpa_ft_process_response(struct wpa_sm *sm, const u8 *ies, size_t ies_len,
 			    const u8 *ric_ies, size_t ric_ies_len)
 {
 	u8 *ft_ies;
-	size_t ft_ies_len, ptk_len;
+	size_t ft_ies_len;
 	struct wpa_ft_ies parse;
 	struct rsn_mdie *mdie;
 	struct rsn_ftie *ftie;
@@ -478,16 +475,14 @@ int wpa_ft_process_response(struct wpa_sm *sm, const u8 *ies, size_t ies_len,
 		    sm->pmk_r1_name, WPA_PMK_NAME_LEN);
 
 	bssid = target_ap;
-	ptk_len = sm->pairwise_cipher != WPA_CIPHER_TKIP ? 48 : 64;
-	wpa_pmk_r1_to_ptk(sm->pmk_r1, sm->snonce, ftie->anonce, sm->own_addr,
-			  bssid, sm->pmk_r1_name,
-			  (u8 *) &sm->ptk, ptk_len, ptk_name);
-	wpa_hexdump_key(MSG_DEBUG, "FT: PTK",
-			(u8 *) &sm->ptk, ptk_len);
-	wpa_hexdump(MSG_DEBUG, "FT: PTKName", ptk_name, WPA_PMK_NAME_LEN);
+	if (wpa_pmk_r1_to_ptk(sm->pmk_r1, sm->snonce, ftie->anonce,
+			      sm->own_addr, bssid, sm->pmk_r1_name, &sm->ptk,
+			      ptk_name, sm->key_mgmt, sm->pairwise_cipher) < 0)
+		return -1;
 
 	ft_ies = wpa_ft_gen_req_ies(sm, &ft_ies_len, ftie->anonce,
-				    sm->pmk_r1_name, sm->ptk.kck, bssid,
+				    sm->pmk_r1_name,
+				    sm->ptk.kck, sm->ptk.kck_len, bssid,
 				    ric_ies, ric_ies_len,
 				    parse.mdie ? parse.mdie - 2 : NULL);
 	if (ft_ies) {
@@ -566,7 +561,8 @@ static int wpa_ft_process_gtk_subelem(struct wpa_sm *sm, const u8 *gtk_elem,
 		return -1;
 	}
 	gtk_len = gtk_elem_len - 19;
-	if (aes_unwrap(sm->ptk.kek, 16, gtk_len / 8, gtk_elem + 11, gtk)) {
+	if (aes_unwrap(sm->ptk.kek, sm->ptk.kek_len, gtk_len / 8, gtk_elem + 11,
+		       gtk)) {
 		wpa_printf(MSG_WARNING, "FT: AES unwrap failed - could not "
 			   "decrypt GTK");
 		return -1;
@@ -645,8 +641,8 @@ static int wpa_ft_process_igtk_subelem(struct wpa_sm *sm, const u8 *igtk_elem,
 		return -1;
 	}
 
-	if (aes_unwrap(sm->ptk.kek, 16, WPA_IGTK_LEN / 8, igtk_elem + 9, igtk))
-	{
+	if (aes_unwrap(sm->ptk.kek, sm->ptk.kek_len, WPA_IGTK_LEN / 8,
+		       igtk_elem + 9, igtk)) {
 		wpa_printf(MSG_WARNING, "FT: AES unwrap failed - could not "
 			   "decrypt IGTK");
 		return -1;
@@ -677,7 +673,7 @@ int wpa_ft_validate_reassoc_resp(struct wpa_sm *sm, const u8 *ies,
 	struct rsn_mdie *mdie;
 	struct rsn_ftie *ftie;
 	unsigned int count;
-	u8 mic[16];
+	u8 mic[WPA_EAPOL_KEY_MIC_MAX_LEN];
 
 	wpa_hexdump(MSG_DEBUG, "FT: Response IEs", ies, ies_len);
 
@@ -770,7 +766,7 @@ int wpa_ft_validate_reassoc_resp(struct wpa_sm *sm, const u8 *ies,
 		return -1;
 	}
 
-	if (wpa_ft_mic(sm->ptk.kck, sm->own_addr, src_addr, 6,
+	if (wpa_ft_mic(sm->ptk.kck, sm->ptk.kck_len, sm->own_addr, src_addr, 6,
 		       parse.mdie - 2, parse.mdie_len + 2,
 		       parse.ftie - 2, parse.ftie_len + 2,
 		       parse.rsn - 2, parse.rsn_len + 2,
@@ -839,7 +835,7 @@ int wpa_ft_start_over_ds(struct wpa_sm *sm, const u8 *target_ap,
 	}
 
 	ft_ies = wpa_ft_gen_req_ies(sm, &ft_ies_len, NULL, sm->pmk_r0_name,
-				    NULL, target_ap, NULL, 0, mdie);
+				    NULL, 0, target_ap, NULL, 0, mdie);
 	if (ft_ies) {
 		sm->over_the_ds_in_progress = 1;
 		os_memcpy(sm->target_ap, target_ap, ETH_ALEN);

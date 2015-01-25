@@ -1,6 +1,6 @@
 /*
  * Driver interface definition
- * Copyright (c) 2003-2014, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -2859,14 +2859,17 @@ struct wpa_driver_ops {
 	 * set_rekey_info - Set rekey information
 	 * @priv: Private driver interface data
 	 * @kek: Current KEK
+	 * @kek_len: KEK length in octets
 	 * @kck: Current KCK
+	 * @kck_len: KCK length in octets
 	 * @replay_ctr: Current EAPOL-Key Replay Counter
 	 *
 	 * This optional function can be used to provide information for the
 	 * driver/firmware to process EAPOL-Key frames in Group Key Handshake
 	 * while the host (including wpa_supplicant) is sleeping.
 	 */
-	void (*set_rekey_info)(void *priv, const u8 *kek, const u8 *kck,
+	void (*set_rekey_info)(void *priv, const u8 *kek, size_t kek_len,
+			       const u8 *kck, size_t kck_len,
 			       const u8 *replay_ctr);
 
 	/**

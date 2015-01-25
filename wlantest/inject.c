@@ -1,6 +1,6 @@
 /*
  * wlantest frame injection
- * Copyright (c) 2010, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2010-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -248,11 +248,11 @@ static int wlantest_inject_prot(struct wlantest *wt, struct wlantest_bss *bss,
 				     frame, len, hdrlen, qos, pn, 0,
 				     &crypt_len);
 	else if (sta->pairwise_cipher == WPA_CIPHER_TKIP)
-		crypt = tkip_encrypt(incorrect_key ? dummy : sta->ptk.tk1,
+		crypt = tkip_encrypt(incorrect_key ? dummy : sta->ptk.tk,
 				     frame, len, hdrlen, qos, pn, 0,
 				     &crypt_len);
 	else
-		crypt = ccmp_encrypt(incorrect_key ? dummy : sta->ptk.tk1,
+		crypt = ccmp_encrypt(incorrect_key ? dummy : sta->ptk.tk,
 				     frame, len, hdrlen, qos, pn, 0,
 				     &crypt_len);
 

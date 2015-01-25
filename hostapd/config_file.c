@@ -1,6 +1,6 @@
 /*
  * hostapd / Configuration file parser
- * Copyright (c) 2003-2014, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -680,8 +680,14 @@ static int hostapd_config_parse_key_mgmt(int line, const char *value)
 		else if (os_strcmp(start, "FT-SAE") == 0)
 			val |= WPA_KEY_MGMT_FT_SAE;
 #endif /* CONFIG_SAE */
+#ifdef CONFIG_SUITEB
 		else if (os_strcmp(start, "WPA-EAP-SUITE-B") == 0)
 			val |= WPA_KEY_MGMT_IEEE8021X_SUITE_B;
+#endif /* CONFIG_SUITEB */
+#ifdef CONFIG_SUITEB192
+		else if (os_strcmp(start, "WPA-EAP-SUITE-B-192") == 0)
+			val |= WPA_KEY_MGMT_IEEE8021X_SUITE_B_192;
+#endif /* CONFIG_SUITEB192 */
 		else {
 			wpa_printf(MSG_ERROR, "Line %d: invalid key_mgmt '%s'",
 				   line, start);

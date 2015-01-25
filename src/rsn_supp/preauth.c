@@ -1,6 +1,6 @@
 /*
  * RSN pre-authentication (supplicant)
- * Copyright (c) 2003-2012, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -300,7 +300,8 @@ void rsn_preauth_candidate_process(struct wpa_sm *sm)
 	    wpa_sm_get_state(sm) != WPA_COMPLETED ||
 	    (sm->key_mgmt != WPA_KEY_MGMT_IEEE8021X &&
 	     sm->key_mgmt != WPA_KEY_MGMT_IEEE8021X_SHA256 &&
-	     sm->key_mgmt != WPA_KEY_MGMT_IEEE8021X_SUITE_B)) {
+	     sm->key_mgmt != WPA_KEY_MGMT_IEEE8021X_SUITE_B &&
+	     sm->key_mgmt != WPA_KEY_MGMT_IEEE8021X_SUITE_B_192)) {
 		wpa_msg(sm->ctx->msg_ctx, MSG_DEBUG, "RSN: not in suitable "
 			"state for new pre-authentication");
 		return; /* invalid state for new pre-auth */

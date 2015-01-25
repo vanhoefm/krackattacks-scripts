@@ -65,6 +65,7 @@ static int wpa_supplicant_send_smk_error(struct wpa_sm *sm, const u8 *dst,
 {
 	size_t rlen;
 	struct wpa_eapol_key *err;
+	struct wpa_eapol_key_192 *err192;
 	struct rsn_error_kde error;
 	u8 *rbuf, *pos;
 	size_t kde_len;
@@ -79,6 +80,7 @@ static int wpa_supplicant_send_smk_error(struct wpa_sm *sm, const u8 *dst,
 				  (void *) &err);
 	if (rbuf == NULL)
 		return -1;
+	err192 = (struct wpa_eapol_key_192 *) err;
 
 	err->type = EAPOL_KEY_TYPE_RSN;
 	key_info = ver | WPA_KEY_INFO_SMK_MESSAGE | WPA_KEY_INFO_MIC |
@@ -113,7 +115,7 @@ static int wpa_supplicant_send_smk_error(struct wpa_sm *sm, const u8 *dst,
 	}
 
 	wpa_eapol_key_send(sm, sm->ptk.kck, sm->ptk.kck_len, ver, dst,
-			   ETH_P_EAPOL, rbuf, rlen, err->key_mic);
+			   ETH_P_EAPOL, rbuf, rlen, err192->key_mic);
 
 	return 0;
 }
@@ -126,6 +128,7 @@ static int wpa_supplicant_send_smk_m3(struct wpa_sm *sm,
 {
 	size_t rlen;
 	struct wpa_eapol_key *reply;
+	struct wpa_eapol_key_192 *reply192;
 	u8 *rbuf, *pos;
 	size_t kde_len;
 	u16 key_info;
@@ -140,6 +143,7 @@ static int wpa_supplicant_send_smk_m3(struct wpa_sm *sm,
 				  (void *) &reply);
 	if (rbuf == NULL)
 		return -1;
+	reply192 = (struct wpa_eapol_key_192 *) reply;
 
 	reply->type = EAPOL_KEY_TYPE_RSN;
 	key_info = ver | WPA_KEY_INFO_SMK_MESSAGE | WPA_KEY_INFO_MIC |
@@ -165,7 +169,7 @@ static int wpa_supplicant_send_smk_m3(struct wpa_sm *sm,
 
 	wpa_printf(MSG_DEBUG, "RSN: Sending EAPOL-Key SMK M3");
 	wpa_eapol_key_send(sm, sm->ptk.kck, sm->ptk.kck_len, ver, src_addr,
-			   ETH_P_EAPOL, rbuf, rlen, reply->key_mic);
+			   ETH_P_EAPOL, rbuf, rlen, reply192->key_mic);
 
 	return 0;
 }
@@ -907,7 +911,7 @@ static void wpa_supplicant_process_stk_4_of_4(struct wpa_sm *sm,
  */
 int peerkey_verify_eapol_key_mic(struct wpa_sm *sm,
 				 struct wpa_peerkey *peerkey,
-				 struct wpa_eapol_key *key, u16 ver,
+				 struct wpa_eapol_key_192 *key, u16 ver,
 				 const u8 *buf, size_t len)
 {
 	u8 mic[WPA_EAPOL_KEY_MIC_MAX_LEN];

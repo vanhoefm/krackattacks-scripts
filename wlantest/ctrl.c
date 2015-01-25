@@ -1,6 +1,6 @@
 /*
  * wlantest control interface
- * Copyright (c) 2010-2013, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2010-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -953,6 +953,9 @@ static void info_print_key_mgmt(char *buf, size_t len, int key_mgmt)
 				   pos == buf ? "" : " ");
 	if (key_mgmt & WPA_KEY_MGMT_IEEE8021X_SUITE_B)
 		pos += os_snprintf(pos, end - pos, "%sEAP-SUITE-B",
+				   pos == buf ? "" : " ");
+	if (key_mgmt & WPA_KEY_MGMT_IEEE8021X_SUITE_B_192)
+		pos += os_snprintf(pos, end - pos, "%sEAP-SUITE-B-192",
 				   pos == buf ? "" : " ");
 }
 

@@ -2,7 +2,7 @@
  * WPA Supplicant / dbus-based control interface
  * Copyright (c) 2006, Dan Williams <dcbw@redhat.com> and Red Hat, Inc.
  * Copyright (c) 2009-2010, Witold Sowa <witold.sowa@gmail.com>
- * Copyright (c) 2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2009-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -3590,7 +3590,7 @@ static dbus_bool_t wpas_dbus_get_bss_security_prop(DBusMessageIter *iter,
 	DBusMessageIter iter_dict, variant_iter;
 	const char *group;
 	const char *pairwise[5]; /* max 5 pairwise ciphers is supported */
-	const char *key_mgmt[8]; /* max 8 key managements may be supported */
+	const char *key_mgmt[9]; /* max 9 key managements may be supported */
 	int n;
 
 	if (!dbus_message_iter_open_container(iter, DBUS_TYPE_VARIANT,
@@ -3614,8 +3614,14 @@ static dbus_bool_t wpas_dbus_get_bss_security_prop(DBusMessageIter *iter,
 		key_mgmt[n++] = "wpa-ft-eap";
 	if (ie_data->key_mgmt & WPA_KEY_MGMT_IEEE8021X_SHA256)
 		key_mgmt[n++] = "wpa-eap-sha256";
+#ifdef CONFIG_SUITEB
 	if (ie_data->key_mgmt & WPA_KEY_MGMT_IEEE8021X_SUITE_B)
 		key_mgmt[n++] = "wpa-eap-suite-b";
+#endif /* CONFIG_SUITEB */
+#ifdef CONFIG_SUITEB192
+	if (ie_data->key_mgmt & WPA_KEY_MGMT_IEEE8021X_SUITE_B_192)
+		key_mgmt[n++] = "wpa-eap-suite-b-192";
+#endif /* CONFIG_SUITEB192 */
 	if (ie_data->key_mgmt & WPA_KEY_MGMT_NONE)
 		key_mgmt[n++] = "wpa-none";
 

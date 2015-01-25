@@ -63,8 +63,8 @@ WPA_CIPHER_GTK_NOT_USED)
 #define RSN_AUTH_KEY_MGMT_SAE RSN_SELECTOR(0x00, 0x0f, 0xac, 8)
 #define RSN_AUTH_KEY_MGMT_FT_SAE RSN_SELECTOR(0x00, 0x0f, 0xac, 9)
 #define RSN_AUTH_KEY_MGMT_802_1X_SUITE_B RSN_SELECTOR(0x00, 0x0f, 0xac, 11)
-#define RSN_AUTH_KEY_MGMT_802_1X_SUITE_B_384 RSN_SELECTOR(0x00, 0x0f, 0xac, 12)
-#define RSN_AUTH_KEY_MGMT_FT_802_1X_SUITE_B_384 \
+#define RSN_AUTH_KEY_MGMT_802_1X_SUITE_B_192 RSN_SELECTOR(0x00, 0x0f, 0xac, 12)
+#define RSN_AUTH_KEY_MGMT_FT_802_1X_SUITE_B_192 \
 RSN_SELECTOR(0x00, 0x0f, 0xac, 13)
 #define RSN_AUTH_KEY_MGMT_CCKM RSN_SELECTOR(0x00, 0x40, 0x96, 0x00)
 #define RSN_AUTH_KEY_MGMT_OSEN RSN_SELECTOR(0x50, 0x6f, 0x9a, 0x01)
@@ -191,9 +191,24 @@ struct wpa_eapol_key {
 	/* followed by key_data_length bytes of key_data */
 } STRUCT_PACKED;
 
-#define WPA_EAPOL_KEY_MIC_MAX_LEN 16
-#define WPA_KCK_MAX_LEN 16
-#define WPA_KEK_MAX_LEN 16
+struct wpa_eapol_key_192 {
+	u8 type;
+	/* Note: key_info, key_length, and key_data_length are unaligned */
+	u8 key_info[2]; /* big endian */
+	u8 key_length[2]; /* big endian */
+	u8 replay_counter[WPA_REPLAY_COUNTER_LEN];
+	u8 key_nonce[WPA_NONCE_LEN];
+	u8 key_iv[16];
+	u8 key_rsc[WPA_KEY_RSC_LEN];
+	u8 key_id[8]; /* Reserved in IEEE 802.11i/RSN */
+	u8 key_mic[24];
+	u8 key_data_length[2]; /* big endian */
+	/* followed by key_data_length bytes of key_data */
+} STRUCT_PACKED;
+
+#define WPA_EAPOL_KEY_MIC_MAX_LEN 24
+#define WPA_KCK_MAX_LEN 24
+#define WPA_KEK_MAX_LEN 32
 #define WPA_TK_MAX_LEN 32
 
 /**
@@ -386,6 +401,16 @@ static inline int rsn_pmkid_suite_b(const u8 *kck, size_t kck_len, const u8 *aa,
 	return -1;
 }
 #endif /* CONFIG_SUITEB */
+#ifdef CONFIG_SUITEB192
+int rsn_pmkid_suite_b_192(const u8 *kck, size_t kck_len, const u8 *aa,
+			  const u8 *spa, u8 *pmkid);
+#else /* CONFIG_SUITEB192 */
+static inline int rsn_pmkid_suite_b_192(const u8 *kck, size_t kck_len,
+					const u8 *aa, const u8 *spa, u8 *pmkid)
+{
+	return -1;
+}
+#endif /* CONFIG_SUITEB192 */
 
 const char * wpa_cipher_txt(int cipher);
 const char * wpa_key_mgmt_txt(int key_mgmt, int proto);
@@ -431,5 +456,6 @@ int wpa_pick_group_cipher(int ciphers);
 int wpa_parse_cipher(const char *value);
 int wpa_write_ciphers(char *start, char *end, int ciphers, const char *delim);
 int wpa_select_ap_group_cipher(int wpa, int wpa_pairwise, int rsn_pairwise);
+unsigned int wpa_mic_len(int akmp);
 
 #endif /* WPA_COMMON_H */

@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant
- * Copyright (c) 2003-2014, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -1138,10 +1138,18 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 		sel &= ~(WPA_KEY_MGMT_SAE | WPA_KEY_MGMT_FT_SAE);
 #endif /* CONFIG_SAE */
 	if (0) {
+#ifdef CONFIG_SUITEB192
+	} else if (sel & WPA_KEY_MGMT_IEEE8021X_SUITE_B_192) {
+		wpa_s->key_mgmt = WPA_KEY_MGMT_IEEE8021X_SUITE_B_192;
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"WPA: using KEY_MGMT 802.1X with Suite B (192-bit)");
+#endif /* CONFIG_SUITEB192 */
+#ifdef CONFIG_SUITEB
 	} else if (sel & WPA_KEY_MGMT_IEEE8021X_SUITE_B) {
 		wpa_s->key_mgmt = WPA_KEY_MGMT_IEEE8021X_SUITE_B;
 		wpa_dbg(wpa_s, MSG_DEBUG,
 			"WPA: using KEY_MGMT 802.1X with Suite B");
+#endif /* CONFIG_SUITEB */
 #ifdef CONFIG_IEEE80211R
 	} else if (sel & WPA_KEY_MGMT_FT_IEEE8021X) {
 		wpa_s->key_mgmt = WPA_KEY_MGMT_FT_IEEE8021X;
@@ -2143,7 +2151,8 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 	if (wpa_s->conf->key_mgmt_offload) {
 		if (params.key_mgmt_suite == WPA_KEY_MGMT_IEEE8021X ||
 		    params.key_mgmt_suite == WPA_KEY_MGMT_IEEE8021X_SHA256 ||
-		    params.key_mgmt_suite == WPA_KEY_MGMT_IEEE8021X_SUITE_B)
+		    params.key_mgmt_suite == WPA_KEY_MGMT_IEEE8021X_SUITE_B ||
+		    params.key_mgmt_suite == WPA_KEY_MGMT_IEEE8021X_SUITE_B_192)
 			params.req_key_mgmt_offload =
 				ssid->proactive_key_caching < 0 ?
 				wpa_s->conf->okc : ssid->proactive_key_caching;

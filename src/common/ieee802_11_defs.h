@@ -1,6 +1,6 @@
 /*
  * IEEE 802.11 Frame type definitions
- * Copyright (c) 2002-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2015, Jouni Malinen <j@w1.fi>
  * Copyright (c) 2007-2008 Intel Corporation
  *
  * This software may be distributed under the terms of the BSD license.
@@ -1192,6 +1192,7 @@ enum plink_action_field {
 #define WLAN_AKM_SUITE_8021X_SHA256	0x000FAC05
 #define WLAN_AKM_SUITE_PSK_SHA256	0x000FAC06
 #define WLAN_AKM_SUITE_8021X_SUITE_B	0x000FAC11
+#define WLAN_AKM_SUITE_8021X_SUITE_B_192	0x000FAC12
 #define WLAN_AKM_SUITE_CCKM		0x00409600
 #define WLAN_AKM_SUITE_OSEN		0x506f9a01
 

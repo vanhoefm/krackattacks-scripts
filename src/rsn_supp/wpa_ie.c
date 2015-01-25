@@ -1,6 +1,6 @@
 /*
  * wpa_supplicant - WPA/RSN IE and KDE processing
- * Copyright (c) 2003-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -173,6 +173,8 @@ static int wpa_gen_wpa_ie_rsn(u8 *rsn_ie, size_t rsn_ie_len,
 	} else if (key_mgmt == WPA_KEY_MGMT_FT_SAE) {
 		RSN_SELECTOR_PUT(pos, RSN_AUTH_KEY_MGMT_FT_SAE);
 #endif /* CONFIG_SAE */
+	} else if (key_mgmt == WPA_KEY_MGMT_IEEE8021X_SUITE_B_192) {
+		RSN_SELECTOR_PUT(pos, RSN_AUTH_KEY_MGMT_802_1X_SUITE_B_192);
 	} else if (key_mgmt == WPA_KEY_MGMT_IEEE8021X_SUITE_B) {
 		RSN_SELECTOR_PUT(pos, RSN_AUTH_KEY_MGMT_802_1X_SUITE_B);
 	} else {

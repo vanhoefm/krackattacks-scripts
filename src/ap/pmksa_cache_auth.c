@@ -1,6 +1,6 @@
 /*
  * hostapd - PMKSA cache for IEEE 802.11i RSN
- * Copyright (c) 2004-2008, 2012, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2008, 2012-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -269,7 +269,9 @@ pmksa_cache_auth_add(struct rsn_pmksa_cache *pmksa,
 		return NULL;
 	os_memcpy(entry->pmk, pmk, pmk_len);
 	entry->pmk_len = pmk_len;
-	if (wpa_key_mgmt_suite_b(akmp))
+	if (akmp == WPA_KEY_MGMT_IEEE8021X_SUITE_B_192)
+		rsn_pmkid_suite_b_192(kck, kck_len, aa, spa, entry->pmkid);
+	else if (wpa_key_mgmt_suite_b(akmp))
 		rsn_pmkid_suite_b(kck, kck_len, aa, spa, entry->pmkid);
 	else
 		rsn_pmkid(pmk, pmk_len, aa, spa, entry->pmkid,

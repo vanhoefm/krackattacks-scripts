@@ -1,6 +1,6 @@
 /*
  * hostapd / UNIX domain socket -based control interface
- * Copyright (c) 2004-2014, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -1167,6 +1167,14 @@ static int hostapd_ctrl_iface_get_config(struct hostapd_data *hapd,
 #endif /* CONFIG_SAE */
 		if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_IEEE8021X_SUITE_B) {
 			ret = os_snprintf(pos, end - pos, "WPA-EAP-SUITE-B ");
+			if (os_snprintf_error(end - pos, ret))
+				return pos - buf;
+			pos += ret;
+		}
+		if (hapd->conf->wpa_key_mgmt &
+		    WPA_KEY_MGMT_IEEE8021X_SUITE_B_192) {
+			ret = os_snprintf(pos, end - pos,
+					  "WPA-EAP-SUITE-B-192 ");
 			if (os_snprintf_error(end - pos, ret))
 				return pos - buf;
 			pos += ret;

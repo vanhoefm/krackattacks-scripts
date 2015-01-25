@@ -1,6 +1,6 @@
 /*
  * hostapd - WPA/RSN IE and KDE definitions
- * Copyright (c) 2004-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -202,6 +202,11 @@ int wpa_write_rsn_ie(struct wpa_auth_config *conf, u8 *buf, size_t len,
 #endif /* CONFIG_SAE */
 	if (conf->wpa_key_mgmt & WPA_KEY_MGMT_IEEE8021X_SUITE_B) {
 		RSN_SELECTOR_PUT(pos, RSN_AUTH_KEY_MGMT_802_1X_SUITE_B);
+		pos += RSN_SELECTOR_LEN;
+		num_suites++;
+	}
+	if (conf->wpa_key_mgmt & WPA_KEY_MGMT_IEEE8021X_SUITE_B_192) {
+		RSN_SELECTOR_PUT(pos, RSN_AUTH_KEY_MGMT_802_1X_SUITE_B_192);
 		pos += RSN_SELECTOR_LEN;
 		num_suites++;
 	}
@@ -482,6 +487,8 @@ int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 		selector = RSN_AUTH_KEY_MGMT_UNSPEC_802_1X;
 		if (0) {
 		}
+		else if (data.key_mgmt & WPA_KEY_MGMT_IEEE8021X_SUITE_B_192)
+			selector = RSN_AUTH_KEY_MGMT_802_1X_SUITE_B_192;
 		else if (data.key_mgmt & WPA_KEY_MGMT_IEEE8021X_SUITE_B)
 			selector = RSN_AUTH_KEY_MGMT_802_1X_SUITE_B;
 #ifdef CONFIG_IEEE80211R
@@ -562,6 +569,8 @@ int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 	}
 	if (0) {
 	}
+	else if (key_mgmt & WPA_KEY_MGMT_IEEE8021X_SUITE_B_192)
+		sm->wpa_key_mgmt = WPA_KEY_MGMT_IEEE8021X_SUITE_B_192;
 	else if (key_mgmt & WPA_KEY_MGMT_IEEE8021X_SUITE_B)
 		sm->wpa_key_mgmt = WPA_KEY_MGMT_IEEE8021X_SUITE_B;
 #ifdef CONFIG_IEEE80211R

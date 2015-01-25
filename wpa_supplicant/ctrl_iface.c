@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant / Control interface (shared code for all backends)
- * Copyright (c) 2004-2014, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -2323,6 +2323,7 @@ static char * wpa_supplicant_ie_txt(char *pos, char *end, const char *proto,
 	}
 #endif /* CONFIG_IEEE80211W */
 
+#ifdef CONFIG_SUITEB
 	if (data.key_mgmt & WPA_KEY_MGMT_IEEE8021X_SUITE_B) {
 		ret = os_snprintf(pos, end - pos, "%sEAP-SUITE-B",
 				  pos == start ? "" : "+");
@@ -2330,6 +2331,17 @@ static char * wpa_supplicant_ie_txt(char *pos, char *end, const char *proto,
 			return pos;
 		pos += ret;
 	}
+#endif /* CONFIG_SUITEB */
+
+#ifdef CONFIG_SUITEB192
+	if (data.key_mgmt & WPA_KEY_MGMT_IEEE8021X_SUITE_B_192) {
+		ret = os_snprintf(pos, end - pos, "%sEAP-SUITE-B-192",
+				  pos == start ? "" : "+");
+		if (os_snprintf_error(end - pos, ret))
+			return pos;
+		pos += ret;
+	}
+#endif /* CONFIG_SUITEB192 */
 
 	pos = wpa_supplicant_cipher_txt(pos, end, data.pairwise_cipher);
 

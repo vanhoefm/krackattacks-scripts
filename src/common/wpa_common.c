@@ -12,6 +12,7 @@
 #include "crypto/md5.h"
 #include "crypto/sha1.h"
 #include "crypto/sha256.h"
+#include "crypto/sha384.h"
 #include "crypto/aes_wrap.h"
 #include "crypto/crypto.h"
 #include "ieee802_11_defs.h"
@@ -21,12 +22,24 @@
 
 static unsigned int wpa_kck_len(int akmp)
 {
+	if (akmp == WPA_KEY_MGMT_IEEE8021X_SUITE_B_192)
+		return 24;
 	return 16;
 }
 
 
 static unsigned int wpa_kek_len(int akmp)
 {
+	if (akmp == WPA_KEY_MGMT_IEEE8021X_SUITE_B_192)
+		return 32;
+	return 16;
+}
+
+
+unsigned int wpa_mic_len(int akmp)
+{
+	if (akmp == WPA_KEY_MGMT_IEEE8021X_SUITE_B_192)
+		return 24;
 	return 16;
 }
 
@@ -54,7 +67,7 @@ static unsigned int wpa_kek_len(int akmp)
 int wpa_eapol_key_mic(const u8 *key, size_t key_len, int akmp, int ver,
 		      const u8 *buf, size_t len, u8 *mic)
 {
-	u8 hash[SHA256_MAC_LEN];
+	u8 hash[SHA384_MAC_LEN];
 
 	switch (ver) {
 #ifndef CONFIG_FIPS
@@ -83,6 +96,13 @@ int wpa_eapol_key_mic(const u8 *key, size_t key_len, int akmp, int ver,
 			os_memcpy(mic, hash, MD5_MAC_LEN);
 			break;
 #endif /* CONFIG_SUITEB */
+#ifdef CONFIG_SUITEB192
+		case WPA_KEY_MGMT_IEEE8021X_SUITE_B_192:
+			if (hmac_sha384(key, key_len, buf, len, hash))
+				return -1;
+			os_memcpy(mic, hash, 24);
+			break;
+#endif /* CONFIG_SUITEB192 */
 		default:
 			return -1;
 		}
@@ -452,6 +472,8 @@ static int rsn_key_mgmt_to_bitfield(const u8 *s)
 #endif /* CONFIG_SAE */
 	if (RSN_SELECTOR_GET(s) == RSN_AUTH_KEY_MGMT_802_1X_SUITE_B)
 		return WPA_KEY_MGMT_IEEE8021X_SUITE_B;
+	if (RSN_SELECTOR_GET(s) == RSN_AUTH_KEY_MGMT_802_1X_SUITE_B_192)
+		return WPA_KEY_MGMT_IEEE8021X_SUITE_B_192;
 	return 0;
 }
 
@@ -1034,6 +1056,39 @@ int rsn_pmkid_suite_b(const u8 *kck, size_t kck_len, const u8 *aa,
 #endif /* CONFIG_SUITEB */
 
 
+#ifdef CONFIG_SUITEB192
+/**
+ * rsn_pmkid_suite_b_192 - Calculate PMK identifier for Suite B AKM
+ * @kck: Key confirmation key
+ * @kck_len: Length of kck in bytes
+ * @aa: Authenticator address
+ * @spa: Supplicant address
+ * @pmkid: Buffer for PMKID
+ * Returns: 0 on success, -1 on failure
+ *
+ * IEEE Std 802.11ac-2013 - 11.6.1.3 Pairwise key hierarchy
+ * PMKID = Truncate(HMAC-SHA-384(KCK, "PMK Name" || AA || SPA))
+ */
+int rsn_pmkid_suite_b_192(const u8 *kck, size_t kck_len, const u8 *aa,
+			  const u8 *spa, u8 *pmkid)
+{
+	char *title = "PMK Name";
+	const u8 *addr[3];
+	const size_t len[3] = { 8, ETH_ALEN, ETH_ALEN };
+	unsigned char hash[SHA384_MAC_LEN];
+
+	addr[0] = (u8 *) title;
+	addr[1] = aa;
+	addr[2] = spa;
+
+	if (hmac_sha384_vector(kck, kck_len, 3, addr, len, hash) < 0)
+		return -1;
+	os_memcpy(pmkid, hash, PMKID_LEN);
+	return 0;
+}
+#endif /* CONFIG_SUITEB192 */
+
+
 /**
  * wpa_cipher_txt - Convert cipher suite to a text string
  * @cipher: Cipher suite (WPA_CIPHER_* enum)
@@ -1113,6 +1168,8 @@ const char * wpa_key_mgmt_txt(int key_mgmt, int proto)
 		return "OSEN";
 	case WPA_KEY_MGMT_IEEE8021X_SUITE_B:
 		return "WPA2-EAP-SUITE-B";
+	case WPA_KEY_MGMT_IEEE8021X_SUITE_B_192:
+		return "WPA2-EAP-SUITE-B-192";
 	default:
 		return "UNKNOWN";
 	}
@@ -1141,6 +1198,8 @@ u32 wpa_akm_to_suite(int akm)
 		return WLAN_AKM_SUITE_OSEN;
 	if (akm & WPA_KEY_MGMT_IEEE8021X_SUITE_B)
 		return WLAN_AKM_SUITE_8021X_SUITE_B;
+	if (akm & WPA_KEY_MGMT_IEEE8021X_SUITE_B_192)
+		return WLAN_AKM_SUITE_8021X_SUITE_B_192;
 	return 0;
 }
 

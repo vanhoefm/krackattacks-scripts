@@ -38,7 +38,7 @@ struct wpa_peerkey {
 
 int peerkey_verify_eapol_key_mic(struct wpa_sm *sm,
 				 struct wpa_peerkey *peerkey,
-				 struct wpa_eapol_key *key, u16 ver,
+				 struct wpa_eapol_key_192 *key, u16 ver,
 				 const u8 *buf, size_t len);
 void peerkey_rx_eapol_4way(struct wpa_sm *sm, struct wpa_peerkey *peerkey,
 			   struct wpa_eapol_key *key, u16 key_info, u16 ver,

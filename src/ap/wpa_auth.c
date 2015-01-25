@@ -849,34 +849,45 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 {
 	struct ieee802_1x_hdr *hdr;
 	struct wpa_eapol_key *key;
+	struct wpa_eapol_key_192 *key192;
 	u16 key_info, key_data_length;
 	enum { PAIRWISE_2, PAIRWISE_4, GROUP_2, REQUEST,
 	       SMK_M1, SMK_M3, SMK_ERROR } msg;
 	char *msgtxt;
 	struct wpa_eapol_ie_parse kde;
 	int ft;
-	const u8 *eapol_key_ie;
-	size_t eapol_key_ie_len;
+	const u8 *eapol_key_ie, *key_data;
+	size_t eapol_key_ie_len, keyhdrlen, mic_len;
 
 	if (wpa_auth == NULL || !wpa_auth->conf.wpa || sm == NULL)
 		return;
 
-	if (data_len < sizeof(*hdr) + sizeof(*key))
+	mic_len = wpa_mic_len(sm->wpa_key_mgmt);
+	keyhdrlen = mic_len == 24 ? sizeof(*key192) : sizeof(*key);
+
+	if (data_len < sizeof(*hdr) + keyhdrlen)
 		return;
 
 	hdr = (struct ieee802_1x_hdr *) data;
 	key = (struct wpa_eapol_key *) (hdr + 1);
+	key192 = (struct wpa_eapol_key_192 *) (hdr + 1);
 	key_info = WPA_GET_BE16(key->key_info);
-	key_data_length = WPA_GET_BE16(key->key_data_length);
+	if (mic_len == 24) {
+		key_data = (const u8 *) (key192 + 1);
+		key_data_length = WPA_GET_BE16(key192->key_data_length);
+	} else {
+		key_data = (const u8 *) (key + 1);
+		key_data_length = WPA_GET_BE16(key->key_data_length);
+	}
 	wpa_printf(MSG_DEBUG, "WPA: Received EAPOL-Key from " MACSTR
 		   " key_info=0x%x type=%u key_data_length=%u",
 		   MAC2STR(sm->addr), key_info, key->type, key_data_length);
-	if (key_data_length > data_len - sizeof(*hdr) - sizeof(*key)) {
+	if (key_data_length > data_len - sizeof(*hdr) - keyhdrlen) {
 		wpa_printf(MSG_INFO, "WPA: Invalid EAPOL-Key frame - "
 			   "key_data overflow (%d > %lu)",
 			   key_data_length,
 			   (unsigned long) (data_len - sizeof(*hdr) -
-					    sizeof(*key)));
+					    keyhdrlen));
 		return;
 	}
 
@@ -1083,8 +1094,7 @@ continue_processing:
 			wpa_sta_disconnect(wpa_auth, sm->addr);
 			return;
 		}
-		if (wpa_parse_kde_ies((u8 *) (key + 1), key_data_length,
-				      &kde) < 0) {
+		if (wpa_parse_kde_ies(key_data, key_data_length, &kde) < 0) {
 			wpa_auth_vlogger(wpa_auth, sm->addr, LOGGER_INFO,
 					 "received EAPOL-Key msg 2/4 with "
 					 "invalid Key Data contents");
@@ -1241,8 +1251,7 @@ continue_processing:
 		 */
 		if (msg == SMK_ERROR) {
 #ifdef CONFIG_PEERKEY
-			wpa_smk_error(wpa_auth, sm, (const u8 *) (key + 1),
-				      key_data_length);
+			wpa_smk_error(wpa_auth, sm, key_data, key_data_length);
 #endif /* CONFIG_PEERKEY */
 			return;
 		} else if (key_info & WPA_KEY_INFO_ERROR) {
@@ -1257,12 +1266,12 @@ continue_processing:
 			wpa_request_new_ptk(sm);
 #ifdef CONFIG_PEERKEY
 		} else if (msg == SMK_M1) {
-			wpa_smk_m1(wpa_auth, sm, key, (const u8 *) (key + 1),
+			wpa_smk_m1(wpa_auth, sm, key, key_data,
 				   key_data_length);
 #endif /* CONFIG_PEERKEY */
 		} else if (key_data_length > 0 &&
-			   wpa_parse_kde_ies((const u8 *) (key + 1),
-					     key_data_length, &kde) == 0 &&
+			   wpa_parse_kde_ies(key_data, key_data_length,
+					     &kde) == 0 &&
 			   kde.mac_addr) {
 		} else {
 			wpa_auth_logger(wpa_auth, sm->addr, LOGGER_INFO,
@@ -1300,8 +1309,7 @@ continue_processing:
 
 #ifdef CONFIG_PEERKEY
 	if (msg == SMK_M3) {
-		wpa_smk_m3(wpa_auth, sm, key, (const u8 *) (key + 1),
-			   key_data_length);
+		wpa_smk_m3(wpa_auth, sm, key, key_data, key_data_length);
 		return;
 	}
 #endif /* CONFIG_PEERKEY */
@@ -1376,14 +1384,19 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 {
 	struct ieee802_1x_hdr *hdr;
 	struct wpa_eapol_key *key;
-	size_t len;
+	struct wpa_eapol_key_192 *key192;
+	size_t len, mic_len, keyhdrlen;
 	int alg;
 	int key_data_len, pad_len = 0;
 	u8 *buf, *pos;
 	int version, pairwise;
 	int i;
+	u8 *key_data;
 
-	len = sizeof(struct ieee802_1x_hdr) + sizeof(struct wpa_eapol_key);
+	mic_len = wpa_mic_len(sm->wpa_key_mgmt);
+	keyhdrlen = mic_len == 24 ? sizeof(*key192) : sizeof(*key);
+
+	len = sizeof(struct ieee802_1x_hdr) + keyhdrlen;
 
 	if (force_version)
 		version = force_version;
@@ -1430,6 +1443,8 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 	hdr->type = IEEE802_1X_TYPE_EAPOL_KEY;
 	hdr->length = host_to_be16(len  - sizeof(*hdr));
 	key = (struct wpa_eapol_key *) (hdr + 1);
+	key192 = (struct wpa_eapol_key_192 *) (hdr + 1);
+	key_data = ((u8 *) (hdr + 1)) + keyhdrlen;
 
 	key->type = sm->wpa == WPA_VERSION_WPA2 ?
 		EAPOL_KEY_TYPE_RSN : EAPOL_KEY_TYPE_WPA;
@@ -1466,8 +1481,11 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 		os_memcpy(key->key_rsc, key_rsc, WPA_KEY_RSC_LEN);
 
 	if (kde && !encr) {
-		os_memcpy(key + 1, kde, kde_len);
-		WPA_PUT_BE16(key->key_data_length, kde_len);
+		os_memcpy(key_data, kde, kde_len);
+		if (mic_len == 24)
+			WPA_PUT_BE16(key192->key_data_length, kde_len);
+		else
+			WPA_PUT_BE16(key->key_data_length, kde_len);
 	} else if (encr && kde) {
 		buf = os_zalloc(key_data_len);
 		if (buf == NULL) {
@@ -1488,13 +1506,17 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 		    wpa_key_mgmt_suite_b(sm->wpa_key_mgmt) ||
 		    version == WPA_KEY_INFO_TYPE_AES_128_CMAC) {
 			if (aes_wrap(sm->PTK.kek, sm->PTK.kek_len,
-				     (key_data_len - 8) / 8, buf,
-				     (u8 *) (key + 1))) {
+				     (key_data_len - 8) / 8, buf, key_data)) {
 				os_free(hdr);
 				os_free(buf);
 				return;
 			}
-			WPA_PUT_BE16(key->key_data_length, key_data_len);
+			if (mic_len == 24)
+				WPA_PUT_BE16(key192->key_data_length,
+					     key_data_len);
+			else
+				WPA_PUT_BE16(key->key_data_length,
+					     key_data_len);
 		} else if (sm->PTK.kek_len == 16) {
 			u8 ek[32];
 			os_memcpy(key->key_iv,
@@ -1502,9 +1524,14 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 			inc_byte_array(sm->group->Counter, WPA_NONCE_LEN);
 			os_memcpy(ek, key->key_iv, 16);
 			os_memcpy(ek + 16, sm->PTK.kek, sm->PTK.kek_len);
-			os_memcpy(key + 1, buf, key_data_len);
-			rc4_skip(ek, 32, 256, (u8 *) (key + 1), key_data_len);
-			WPA_PUT_BE16(key->key_data_length, key_data_len);
+			os_memcpy(key_data, buf, key_data_len);
+			rc4_skip(ek, 32, 256, key_data, key_data_len);
+			if (mic_len == 24)
+				WPA_PUT_BE16(key192->key_data_length,
+					     key_data_len);
+			else
+				WPA_PUT_BE16(key->key_data_length,
+					     key_data_len);
 		} else {
 			os_free(hdr);
 			os_free(buf);
@@ -1514,6 +1541,8 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 	}
 
 	if (key_info & WPA_KEY_INFO_MIC) {
+		u8 *key_mic;
+
 		if (!sm->PTK_valid) {
 			wpa_auth_logger(wpa_auth, sm->addr, LOGGER_DEBUG,
 					"PTK not valid when sending EAPOL-Key "
@@ -1521,9 +1550,11 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 			os_free(hdr);
 			return;
 		}
+
+		key_mic = key192->key_mic; /* same offset for key and key192 */
 		wpa_eapol_key_mic(sm->PTK.kck, sm->PTK.kck_len,
 				  sm->wpa_key_mgmt, version,
-				  (u8 *) hdr, len, key->key_mic);
+				  (u8 *) hdr, len, key_mic);
 #ifdef CONFIG_TESTING_OPTIONS
 		if (!pairwise &&
 		    wpa_auth->conf.corrupt_gtk_rekey_mic_probability > 0.0 &&
@@ -1531,7 +1562,7 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 		    wpa_auth->conf.corrupt_gtk_rekey_mic_probability) {
 			wpa_auth_logger(wpa_auth, sm->addr, LOGGER_INFO,
 					"Corrupting group EAPOL-Key Key MIC");
-			key->key_mic[0]++;
+			key_mic[0]++;
 		}
 #endif /* CONFIG_TESTING_OPTIONS */
 	}
@@ -1580,25 +1611,27 @@ static int wpa_verify_key_mic(int akmp, struct wpa_ptk *PTK, u8 *data,
 {
 	struct ieee802_1x_hdr *hdr;
 	struct wpa_eapol_key *key;
+	struct wpa_eapol_key_192 *key192;
 	u16 key_info;
 	int ret = 0;
 	u8 mic[WPA_EAPOL_KEY_MIC_MAX_LEN];
-	size_t mic_len = 16;
+	size_t mic_len = wpa_mic_len(akmp);
 
 	if (data_len < sizeof(*hdr) + sizeof(*key))
 		return -1;
 
 	hdr = (struct ieee802_1x_hdr *) data;
 	key = (struct wpa_eapol_key *) (hdr + 1);
+	key192 = (struct wpa_eapol_key_192 *) (hdr + 1);
 	key_info = WPA_GET_BE16(key->key_info);
-	os_memcpy(mic, key->key_mic, mic_len);
-	os_memset(key->key_mic, 0, mic_len);
+	os_memcpy(mic, key192->key_mic, mic_len);
+	os_memset(key192->key_mic, 0, mic_len);
 	if (wpa_eapol_key_mic(PTK->kck, PTK->kck_len, akmp,
 			      key_info & WPA_KEY_INFO_TYPE_MASK,
-			      data, data_len, key->key_mic) ||
-	    os_memcmp_const(mic, key->key_mic, mic_len) != 0)
+			      data, data_len, key192->key_mic) ||
+	    os_memcmp_const(mic, key192->key_mic, mic_len) != 0)
 		ret = -1;
-	os_memcpy(key->key_mic, mic, mic_len);
+	os_memcpy(key192->key_mic, mic, mic_len);
 	return ret;
 }
 

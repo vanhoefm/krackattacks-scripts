@@ -1237,6 +1237,9 @@ SHA256OBJS += src/crypto/sha256-kdf.c
 endif
 OBJS += $(SHA256OBJS)
 endif
+ifdef NEED_SHA384
+L_CFLAGS += -DCONFIG_SHA384
+endif
 
 ifdef NEED_DH_GROUPS
 OBJS += src/crypto/dh_groups.c

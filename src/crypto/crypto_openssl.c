@@ -1,6 +1,6 @@
 /*
  * Wrapper functions for OpenSSL libcrypto
- * Copyright (c) 2004-2013, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -28,6 +28,7 @@
 #include "dh_group5.h"
 #include "sha1.h"
 #include "sha256.h"
+#include "sha384.h"
 #include "crypto.h"
 
 #if OPENSSL_VERSION_NUMBER < 0x00907000
@@ -784,6 +785,40 @@ int hmac_sha256(const u8 *key, size_t key_len, const u8 *data,
 }
 
 #endif /* CONFIG_SHA256 */
+
+
+#ifdef CONFIG_SHA384
+
+int hmac_sha384_vector(const u8 *key, size_t key_len, size_t num_elem,
+		       const u8 *addr[], const size_t *len, u8 *mac)
+{
+	HMAC_CTX ctx;
+	size_t i;
+	unsigned int mdlen;
+	int res;
+
+	HMAC_CTX_init(&ctx);
+	if (HMAC_Init_ex(&ctx, key, key_len, EVP_sha384(), NULL) != 1)
+		return -1;
+
+	for (i = 0; i < num_elem; i++)
+		HMAC_Update(&ctx, addr[i], len[i]);
+
+	mdlen = 32;
+	res = HMAC_Final(&ctx, mac, &mdlen);
+	HMAC_CTX_cleanup(&ctx);
+
+	return res == 1 ? 0 : -1;
+}
+
+
+int hmac_sha384(const u8 *key, size_t key_len, const u8 *data,
+		size_t data_len, u8 *mac)
+{
+	return hmac_sha384_vector(key, key_len, 1, &data, &data_len, mac);
+}
+
+#endif /* CONFIG_SHA384 */
 
 
 int crypto_get_random(void *buf, size_t len)

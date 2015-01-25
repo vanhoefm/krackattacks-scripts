@@ -764,6 +764,9 @@ ifdef NEED_HMAC_SHA256_KDF
 OBJS += ../src/crypto/sha256-kdf.o
 endif
 endif
+ifdef NEED_SHA384
+CFLAGS += -DCONFIG_SHA384
+endif
 
 ifdef NEED_DH_GROUPS
 OBJS += ../src/crypto/dh_groups.o

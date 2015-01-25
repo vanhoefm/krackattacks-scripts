@@ -768,6 +768,9 @@ ifdef NEED_TLS_PRF_SHA256
 OBJS += src/crypto/sha256-tlsprf.c
 endif
 endif
+ifdef NEED_SHA384
+L_CFLAGS += -DCONFIG_SHA384
+endif
 
 ifdef NEED_DH_GROUPS
 OBJS += src/crypto/dh_groups.c

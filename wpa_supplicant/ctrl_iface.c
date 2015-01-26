@@ -3503,6 +3503,23 @@ static int ctrl_iface_get_capability_key_mgmt(int res, char *strict,
 		pos += ret;
 	}
 
+#ifdef CONFIG_SUITEB
+	if (capa->key_mgmt & WPA_DRIVER_CAPA_KEY_MGMT_SUITE_B) {
+		ret = os_snprintf(pos, end - pos, " WPA-EAP-SUITE-B");
+		if (os_snprintf_error(end - pos, ret))
+			return pos - buf;
+		pos += ret;
+	}
+#endif /* CONFIG_SUITEB */
+#ifdef CONFIG_SUITEB192
+	if (capa->key_mgmt & WPA_DRIVER_CAPA_KEY_MGMT_SUITE_B_192) {
+		ret = os_snprintf(pos, end - pos, " WPA-EAP-SUITE-B-192");
+		if (os_snprintf_error(end - pos, ret))
+			return pos - buf;
+		pos += ret;
+	}
+#endif /* CONFIG_SUITEB192 */
+
 	return pos - buf;
 }
 

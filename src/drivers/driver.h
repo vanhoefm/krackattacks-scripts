@@ -1072,6 +1072,8 @@ struct wpa_driver_capa {
 #define WPA_DRIVER_CAPA_KEY_MGMT_FT		0x00000020
 #define WPA_DRIVER_CAPA_KEY_MGMT_FT_PSK		0x00000040
 #define WPA_DRIVER_CAPA_KEY_MGMT_WAPI_PSK	0x00000080
+#define WPA_DRIVER_CAPA_KEY_MGMT_SUITE_B	0x00000100
+#define WPA_DRIVER_CAPA_KEY_MGMT_SUITE_B_192	0x00000200
 	/** Bitfield of supported key management suites */
 	unsigned int key_mgmt;
 

@@ -1,6 +1,6 @@
 /*
  * Driver interaction with Linux nl80211/cfg80211 - Capabilities
- * Copyright (c) 2002-2014, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2015, Jouni Malinen <j@w1.fi>
  * Copyright (c) 2007, Johannes Berg <johannes@sipsolutions.net>
  * Copyright (c) 2009-2010, Atheros Communications
  *
@@ -791,7 +791,9 @@ int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 	drv->capa.key_mgmt = WPA_DRIVER_CAPA_KEY_MGMT_WPA |
 		WPA_DRIVER_CAPA_KEY_MGMT_WPA_PSK |
 		WPA_DRIVER_CAPA_KEY_MGMT_WPA2 |
-		WPA_DRIVER_CAPA_KEY_MGMT_WPA2_PSK;
+		WPA_DRIVER_CAPA_KEY_MGMT_WPA2_PSK |
+		WPA_DRIVER_CAPA_KEY_MGMT_SUITE_B |
+		WPA_DRIVER_CAPA_KEY_MGMT_SUITE_B_192;
 	drv->capa.auth = WPA_DRIVER_AUTH_OPEN |
 		WPA_DRIVER_AUTH_SHARED |
 		WPA_DRIVER_AUTH_LEAP;

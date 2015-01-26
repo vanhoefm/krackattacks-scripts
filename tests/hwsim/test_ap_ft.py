@@ -499,20 +499,22 @@ def test_ft_psk_key_lifetime_in_memory(dev, apdev, params):
             if "FT: PMK-R1 - hexdump" in l:
                 val = l.strip().split(':')[3].replace(' ', '')
                 pmkr1 = binascii.unhexlify(val)
-            if "FT: PTK - hexdump" in l:
+            if "FT: KCK - hexdump" in l:
                 val = l.strip().split(':')[3].replace(' ', '')
-                ptk = binascii.unhexlify(val)
+                kck = binascii.unhexlify(val)
+            if "FT: KEK - hexdump" in l:
+                val = l.strip().split(':')[3].replace(' ', '')
+                kek = binascii.unhexlify(val)
+            if "FT: TK - hexdump" in l:
+                val = l.strip().split(':')[3].replace(' ', '')
+                tk = binascii.unhexlify(val)
             if "WPA: Group Key - hexdump" in l:
                 val = l.strip().split(':')[3].replace(' ', '')
                 gtk = binascii.unhexlify(val)
-    if not pmkr0 or not pmkr1 or not ptk or not gtk:
+    if not pmkr0 or not pmkr1 or not kck or not kek or not tk or not gtk:
         raise Exception("Could not find keys from debug log")
     if len(gtk) != 16:
         raise Exception("Unexpected GTK length")
-
-    kck = ptk[0:16]
-    kek = ptk[16:32]
-    tk = ptk[32:48]
 
     logger.info("Checking keys in memory while associated")
     get_key_locations(buf, pmk, "PMK")

@@ -962,9 +962,7 @@ static int wpa_supplicant_suites_from_ai(struct wpa_supplicant *wpa_s,
 
 #ifdef CONFIG_IEEE80211W
 	if (!(ie->capabilities & WPA_CAPABILITY_MFPC) &&
-	    (ssid->ieee80211w == MGMT_FRAME_PROTECTION_DEFAULT ?
-	     wpa_s->conf->pmf : ssid->ieee80211w) ==
-	    MGMT_FRAME_PROTECTION_REQUIRED) {
+	    wpas_get_ssid_pmf(wpa_s, ssid) == MGMT_FRAME_PROTECTION_REQUIRED) {
 		wpa_msg(wpa_s, MSG_INFO, "WPA: Driver associated with an AP "
 			"that does not support management frame protection - "
 			"reject");
@@ -1203,8 +1201,7 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 
 #ifdef CONFIG_IEEE80211W
 	sel = ie.mgmt_group_cipher;
-	if ((ssid->ieee80211w == MGMT_FRAME_PROTECTION_DEFAULT ?
-	     wpa_s->conf->pmf : ssid->ieee80211w) == NO_MGMT_FRAME_PROTECTION ||
+	if (wpas_get_ssid_pmf(wpa_s, ssid) == NO_MGMT_FRAME_PROTECTION ||
 	    !(ie.capabilities & WPA_CAPABILITY_MFPC))
 		sel = 0;
 	if (sel & WPA_CIPHER_AES_128_CMAC) {
@@ -1230,8 +1227,7 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 	wpa_sm_set_param(wpa_s->wpa, WPA_PARAM_MGMT_GROUP,
 			 wpa_s->mgmt_group_cipher);
 	wpa_sm_set_param(wpa_s->wpa, WPA_PARAM_MFP,
-			 (ssid->ieee80211w == MGMT_FRAME_PROTECTION_DEFAULT ?
-			  wpa_s->conf->pmf : ssid->ieee80211w));
+			 wpas_get_ssid_pmf(wpa_s, ssid));
 #endif /* CONFIG_IEEE80211W */
 
 	if (wpa_sm_set_assoc_wpa_ie_default(wpa_s->wpa, wpa_ie, wpa_ie_len)) {
@@ -2169,9 +2165,7 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 	params.drop_unencrypted = use_crypt;
 
 #ifdef CONFIG_IEEE80211W
-	params.mgmt_frame_protection =
-		ssid->ieee80211w == MGMT_FRAME_PROTECTION_DEFAULT ?
-		wpa_s->conf->pmf : ssid->ieee80211w;
+	params.mgmt_frame_protection = wpas_get_ssid_pmf(wpa_s, ssid);
 	if (params.mgmt_frame_protection != NO_MGMT_FRAME_PROTECTION && bss) {
 		const u8 *rsn = wpa_bss_get_ie(bss, WLAN_EID_RSN);
 		struct wpa_ie_data ie;
@@ -4895,6 +4889,30 @@ int wpas_network_disabled(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid)
 		return 1;
 
 	return 0;
+}
+
+
+int wpas_get_ssid_pmf(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid)
+{
+#ifdef CONFIG_IEEE80211W
+	if (ssid == NULL || ssid->ieee80211w == MGMT_FRAME_PROTECTION_DEFAULT) {
+		if (wpa_s->conf->pmf == MGMT_FRAME_PROTECTION_OPTIONAL &&
+		    !(wpa_s->drv_enc & WPA_DRIVER_CAPA_ENC_BIP)) {
+			/*
+			 * Driver does not support BIP -- ignore pmf=1 default
+			 * since the connection with PMF would fail and the
+			 * configuration does not require PMF to be enabled.
+			 */
+			return NO_MGMT_FRAME_PROTECTION;
+		}
+
+		return wpa_s->conf->pmf;
+	}
+
+	return ssid->ieee80211w;
+#else /* CONFIG_IEEE80211W */
+	return NO_MGMT_FRAME_PROTECTION;
+#endif /* CONFIG_IEEE80211W */
 }
 
 

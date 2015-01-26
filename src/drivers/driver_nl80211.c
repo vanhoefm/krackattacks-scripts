@@ -132,6 +132,7 @@ static void nl80211_register_eloop_read(struct nl_handle **handle,
 					eloop_sock_handler handler,
 					void *eloop_data)
 {
+#ifdef CONFIG_LIBNL20
 	/*
 	 * libnl uses a pretty small buffer (32 kB that gets converted to 64 kB)
 	 * by default. It is possible to hit that limit in some cases where
@@ -145,6 +146,7 @@ static void nl80211_register_eloop_read(struct nl_handle **handle,
 			   strerror(errno));
 		/* continue anyway with the default (smaller) buffer */
 	}
+#endif /* CONFIG_LIBNL20 */
 
 	nl_socket_set_nonblocking(*handle);
 	eloop_register_read_sock(nl_socket_get_fd(*handle), handler,

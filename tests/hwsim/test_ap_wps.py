@@ -2346,3 +2346,23 @@ def test_ap_wps_ap_scan_2(dev, apdev):
     wpas.dump_monitor()
     wpas.request("REASSOCIATE")
     wpas.wait_connected(timeout=30)
+
+def test_ap_wps_eapol_workaround(dev, apdev):
+    """EAPOL workaround code path for 802.1X header length mismatch"""
+    ssid = "test-wps"
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "1" })
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    bssid = apdev[0]['bssid']
+    hapd.request("SET ext_eapol_frame_io 1")
+    dev[0].request("SET ext_eapol_frame_io 1")
+    hapd.request("WPS_PBC")
+    dev[0].request("WPS_PBC")
+
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+
+    res = dev[0].request("EAPOL_RX " + bssid + " 020000040193000501FFFF")
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")

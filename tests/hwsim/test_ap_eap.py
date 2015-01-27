@@ -2606,3 +2606,17 @@ def test_wpa2_eap_ttls_pap_key_lifetime_in_memory(dev, apdev, params):
     verify_not_present(buf, gtk, fname, "GTK")
     verify_not_present(buf, msk, fname, "MSK")
     verify_not_present(buf, emsk, fname, "EMSK")
+
+def test_ap_wpa2_eap_unexpected_wep_eapol_key(dev, apdev):
+    """WPA2-Enterprise connection and unexpected WEP EAPOL-Key"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+    eap_connect(dev[0], apdev[0], "TTLS", "pap user",
+                anonymous_identity="ttls", password="password",
+                ca_cert="auth_serv/ca.pem", phase2="auth=PAP")
+
+    # Send unexpected WEP EAPOL-Key; this gets dropped
+    res = dev[0].request("EAPOL_RX " + bssid + " 0203002c0100000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")

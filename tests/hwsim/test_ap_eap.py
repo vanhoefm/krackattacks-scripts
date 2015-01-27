@@ -1813,6 +1813,15 @@ def test_ap_wpa_eap_peap_eap_mschapv2(dev, apdev):
     eap_reauth(dev[0], "PEAP", rsn=False)
     check_mib(dev[0], [ ("dot11RSNAAuthenticationSuiteRequested", "00-50-f2-1"),
                         ("dot11RSNAAuthenticationSuiteSelected", "00-50-f2-1") ])
+    status = dev[0].get_status(extra="VERBOSE")
+    if 'portControl' not in status:
+        raise Exception("portControl missing from STATUS-VERBOSE")
+    if status['portControl'] != 'Auto':
+        raise Exception("Unexpected portControl value: " + status['portControl'])
+    if 'eap_session_id' not in status:
+        raise Exception("eap_session_id missing from STATUS-VERBOSE")
+    if not status['eap_session_id'].startswith("19"):
+        raise Exception("Unexpected eap_session_id value: " + status['eap_session_id'])
 
 def test_ap_wpa2_eap_interactive(dev, apdev):
     """WPA2-Enterprise connection using interactive identity/password entry"""

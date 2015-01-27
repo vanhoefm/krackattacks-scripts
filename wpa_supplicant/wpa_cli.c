@@ -658,6 +658,11 @@ static char ** wpa_cli_complete_set(const char *str, int pos)
 	return NULL;
 }
 
+static int wpa_cli_cmd_dump(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "DUMP");
+}
+
 
 static int wpa_cli_cmd_get(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
@@ -2616,6 +2621,9 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	  cli_cmd_flag_none,
 	  "= set variables (shows list of variables when run without "
 	  "arguments)" },
+	{ "dump", wpa_cli_cmd_dump, NULL,
+	  cli_cmd_flag_none,
+	  "= dump config variables" },
 	{ "get", wpa_cli_cmd_get, NULL,
 	  cli_cmd_flag_none,
 	  "<name> = get information" },

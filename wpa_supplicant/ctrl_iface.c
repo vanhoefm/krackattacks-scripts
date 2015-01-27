@@ -498,6 +498,8 @@ static int wpa_supplicant_ctrl_iface_get(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_TESTING_GET_GTK */
 	} else if (os_strcmp(cmd, "tls_library") == 0) {
 		res = tls_get_library_version(buf, buflen);
+	} else {
+		res = wpa_config_get_value(cmd, wpa_s->conf, buf, buflen);
 	}
 
 	if (os_snprintf_error(buflen, res))
@@ -7838,6 +7840,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strncmp(buf, "SET ", 4) == 0) {
 		if (wpa_supplicant_ctrl_iface_set(wpa_s, buf + 4))
 			reply_len = -1;
+	} else if (os_strncmp(buf, "DUMP", 4) == 0) {
+		reply_len = wpa_config_dump_values(wpa_s->conf,
+						   reply, reply_size);
 	} else if (os_strncmp(buf, "GET ", 4) == 0) {
 		reply_len = wpa_supplicant_ctrl_iface_get(wpa_s, buf + 4,
 							  reply, reply_size);

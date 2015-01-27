@@ -1167,6 +1167,11 @@ int wpa_config_set(struct wpa_ssid *ssid, const char *var, const char *value,
 		   int line);
 int wpa_config_set_quoted(struct wpa_ssid *ssid, const char *var,
 			  const char *value);
+int wpa_config_dump_values(struct wpa_config *config, char *buf,
+			   size_t buflen);
+int wpa_config_get_value(const char *name, struct wpa_config *config,
+			 char *buf, size_t buflen);
+
 char ** wpa_config_get_all(struct wpa_ssid *ssid, int get_keys);
 char * wpa_config_get(struct wpa_ssid *ssid, const char *var);
 char * wpa_config_get_no_key(struct wpa_ssid *ssid, const char *var);

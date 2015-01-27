@@ -1634,21 +1634,15 @@ void eapol_sm_notify_cached(struct eapol_sm *sm)
 /**
  * eapol_sm_notify_pmkid_attempt - Notification of PMKSA caching
  * @sm: Pointer to EAPOL state machine allocated with eapol_sm_init()
- * @attempt: Whether PMKSA caching is tried
  *
- * Notify EAPOL state machines whether PMKSA caching is used.
+ * Notify EAPOL state machines if PMKSA caching is used.
  */
-void eapol_sm_notify_pmkid_attempt(struct eapol_sm *sm, int attempt)
+void eapol_sm_notify_pmkid_attempt(struct eapol_sm *sm)
 {
 	if (sm == NULL)
 		return;
-	if (attempt) {
-		wpa_printf(MSG_DEBUG, "RSN: Trying to use cached PMKSA");
-		sm->cached_pmk = TRUE;
-	} else {
-		wpa_printf(MSG_DEBUG, "RSN: Do not try to use cached PMKSA");
-		sm->cached_pmk = FALSE;
-	}
+	wpa_printf(MSG_DEBUG, "RSN: Trying to use cached PMKSA");
+	sm->cached_pmk = TRUE;
 }
 
 

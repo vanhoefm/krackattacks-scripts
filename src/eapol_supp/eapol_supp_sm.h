@@ -307,7 +307,7 @@ int eapol_sm_get_key(struct eapol_sm *sm, u8 *key, size_t len);
 const u8 * eapol_sm_get_session_id(struct eapol_sm *sm, size_t *len);
 void eapol_sm_notify_logoff(struct eapol_sm *sm, Boolean logoff);
 void eapol_sm_notify_cached(struct eapol_sm *sm);
-void eapol_sm_notify_pmkid_attempt(struct eapol_sm *sm, int attempt);
+void eapol_sm_notify_pmkid_attempt(struct eapol_sm *sm);
 void eapol_sm_register_scard_ctx(struct eapol_sm *sm, void *ctx);
 void eapol_sm_notify_portControl(struct eapol_sm *sm, PortControl portControl);
 void eapol_sm_notify_ctrl_attached(struct eapol_sm *sm);
@@ -391,7 +391,9 @@ static inline void eapol_sm_notify_logoff(struct eapol_sm *sm, Boolean logoff)
 static inline void eapol_sm_notify_cached(struct eapol_sm *sm)
 {
 }
-#define eapol_sm_notify_pmkid_attempt(sm, attempt) do { } while (0)
+static inline void eapol_sm_notify_pmkid_attempt(struct eapol_sm *sm)
+{
+}
 #define eapol_sm_register_scard_ctx(sm, ctx) do { } while (0)
 static inline void eapol_sm_notify_portControl(struct eapol_sm *sm,
 					       PortControl portControl)

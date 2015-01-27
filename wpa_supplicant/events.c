@@ -240,7 +240,7 @@ static void wpa_find_assoc_pmkid(struct wpa_supplicant *wpa_s)
 						    ie.pmkid + i * PMKID_LEN,
 						    NULL, NULL, 0);
 		if (pmksa_set == 0) {
-			eapol_sm_notify_pmkid_attempt(wpa_s->eapol, 1);
+			eapol_sm_notify_pmkid_attempt(wpa_s->eapol);
 			break;
 		}
 	}

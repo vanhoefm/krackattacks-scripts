@@ -519,27 +519,34 @@ void mesh_mpm_auth_peer(struct wpa_supplicant *wpa_s, const u8 *addr)
 	mesh_mpm_plink_open(wpa_s, sta, PLINK_OPEN_SENT);
 }
 
-
-void wpa_mesh_new_mesh_peer(struct wpa_supplicant *wpa_s, const u8 *addr,
-			    struct ieee802_11_elems *elems)
+/*
+ * Initialize a sta_info structure for a peer and upload it into the driver
+ * in preparation for beginning authentication or peering. This is done when a
+ * Beacon (secure or open mesh) or a peering open frame (for open mesh) is
+ * received from the peer for the first time.
+ */
+static struct sta_info * mesh_mpm_add_peer(struct wpa_supplicant *wpa_s,
+					   const u8 *addr,
+					   struct ieee802_11_elems *elems)
 {
 	struct hostapd_sta_add_params params;
 	struct mesh_conf *conf = wpa_s->ifmsh->mconf;
 	struct hostapd_data *data = wpa_s->ifmsh->bss[0];
 	struct sta_info *sta;
-	struct wpa_ssid *ssid = wpa_s->current_ssid;
-	int ret = 0;
+	int ret;
 
 	sta = ap_get_sta(data, addr);
 	if (!sta) {
 		sta = ap_sta_add(data, addr);
 		if (!sta)
-			return;
+			return NULL;
 	}
 
 	/* initialize sta */
-	if (copy_supp_rates(wpa_s, sta, elems))
-		return;
+	if (copy_supp_rates(wpa_s, sta, elems)) {
+		ap_free_sta(data, sta);
+		return NULL;
+	}
 
 	mesh_mpm_init_link(wpa_s, sta);
 
@@ -573,8 +580,25 @@ void wpa_mesh_new_mesh_peer(struct wpa_supplicant *wpa_s, const u8 *addr,
 		wpa_msg(wpa_s, MSG_ERROR,
 			"Driver failed to insert " MACSTR ": %d",
 			MAC2STR(addr), ret);
-		return;
+		ap_free_sta(data, sta);
+		return NULL;
 	}
+
+	return sta;
+}
+
+
+void wpa_mesh_new_mesh_peer(struct wpa_supplicant *wpa_s, const u8 *addr,
+			    struct ieee802_11_elems *elems)
+{
+	struct mesh_conf *conf = wpa_s->ifmsh->mconf;
+	struct hostapd_data *data = wpa_s->ifmsh->bss[0];
+	struct sta_info *sta;
+	struct wpa_ssid *ssid = wpa_s->current_ssid;
+
+	sta = mesh_mpm_add_peer(wpa_s, addr, elems);
+	if (!sta)
+		return;
 
 	if (ssid && ssid->no_auto_peer) {
 		wpa_msg(wpa_s, MSG_INFO, "will not initiate new peer link with "
@@ -928,6 +952,15 @@ void mesh_mpm_action_rx(struct wpa_supplicant *wpa_s,
 	wpa_printf(MSG_DEBUG, "MPM: plid=0x%x llid=0x%x", plid, llid);
 
 	sta = ap_get_sta(hapd, mgmt->sa);
+
+	/*
+	 * If this is an open frame from an unknown STA, and this is an
+	 * open mesh, then go ahead and add the peer before proceeding.
+	 */
+	if (!sta && action_field == PLINK_OPEN &&
+	    !(mconf->security & MESH_CONF_SEC_AMPE))
+		sta = mesh_mpm_add_peer(wpa_s, mgmt->sa, &elems);
+
 	if (!sta) {
 		wpa_printf(MSG_DEBUG, "MPM: No STA entry for peer");
 		return;

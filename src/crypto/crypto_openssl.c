@@ -688,28 +688,26 @@ int crypto_hash_finish(struct crypto_hash *ctx, u8 *mac, size_t *len)
 }
 
 
-#ifndef CONFIG_FIPS
-
-int hmac_md5_vector(const u8 *key, size_t key_len, size_t num_elem,
-		    const u8 *addr[], const size_t *len, u8 *mac)
+static int openssl_hmac_vector(const EVP_MD *type, const u8 *key,
+			       size_t key_len, size_t num_elem,
+			       const u8 *addr[], const size_t *len, u8 *mac,
+			       unsigned int mdlen)
 {
 	HMAC_CTX ctx;
 	size_t i;
-	unsigned int mdlen;
 	int res;
 
 	HMAC_CTX_init(&ctx);
 #if OPENSSL_VERSION_NUMBER < 0x00909000
-	HMAC_Init_ex(&ctx, key, key_len, EVP_md5(), NULL);
+	HMAC_Init_ex(&ctx, key, key_len, type, NULL);
 #else /* openssl < 0.9.9 */
-	if (HMAC_Init_ex(&ctx, key, key_len, EVP_md5(), NULL) != 1)
+	if (HMAC_Init_ex(&ctx, key, key_len, type, NULL) != 1)
 		return -1;
 #endif /* openssl < 0.9.9 */
 
 	for (i = 0; i < num_elem; i++)
 		HMAC_Update(&ctx, addr[i], len[i]);
 
-	mdlen = 16;
 #if OPENSSL_VERSION_NUMBER < 0x00909000
 	HMAC_Final(&ctx, mac, &mdlen);
 	res = 1;
@@ -719,6 +717,16 @@ int hmac_md5_vector(const u8 *key, size_t key_len, size_t num_elem,
 	HMAC_CTX_cleanup(&ctx);
 
 	return res == 1 ? 0 : -1;
+}
+
+
+#ifndef CONFIG_FIPS
+
+int hmac_md5_vector(const u8 *key, size_t key_len, size_t num_elem,
+		    const u8 *addr[], const size_t *len, u8 *mac)
+{
+	return openssl_hmac_vector(EVP_md5(), key ,key_len, num_elem, addr, len,
+				   mac, 16);
 }
 
 
@@ -751,32 +759,8 @@ int pbkdf2_sha1(const char *passphrase, const u8 *ssid, size_t ssid_len,
 int hmac_sha1_vector(const u8 *key, size_t key_len, size_t num_elem,
 		     const u8 *addr[], const size_t *len, u8 *mac)
 {
-	HMAC_CTX ctx;
-	size_t i;
-	unsigned int mdlen;
-	int res;
-
-	HMAC_CTX_init(&ctx);
-#if OPENSSL_VERSION_NUMBER < 0x00909000
-	HMAC_Init_ex(&ctx, key, key_len, EVP_sha1(), NULL);
-#else /* openssl < 0.9.9 */
-	if (HMAC_Init_ex(&ctx, key, key_len, EVP_sha1(), NULL) != 1)
-		return -1;
-#endif /* openssl < 0.9.9 */
-
-	for (i = 0; i < num_elem; i++)
-		HMAC_Update(&ctx, addr[i], len[i]);
-
-	mdlen = 20;
-#if OPENSSL_VERSION_NUMBER < 0x00909000
-	HMAC_Final(&ctx, mac, &mdlen);
-	res = 1;
-#else /* openssl < 0.9.9 */
-	res = HMAC_Final(&ctx, mac, &mdlen);
-#endif /* openssl < 0.9.9 */
-	HMAC_CTX_cleanup(&ctx);
-
-	return res == 1 ? 0 : -1;
+	return openssl_hmac_vector(EVP_sha1(), key, key_len, num_elem, addr,
+				   len, mac, 20);
 }
 
 
@@ -792,32 +776,8 @@ int hmac_sha1(const u8 *key, size_t key_len, const u8 *data, size_t data_len,
 int hmac_sha256_vector(const u8 *key, size_t key_len, size_t num_elem,
 		       const u8 *addr[], const size_t *len, u8 *mac)
 {
-	HMAC_CTX ctx;
-	size_t i;
-	unsigned int mdlen;
-	int res;
-
-	HMAC_CTX_init(&ctx);
-#if OPENSSL_VERSION_NUMBER < 0x00909000
-	HMAC_Init_ex(&ctx, key, key_len, EVP_sha256(), NULL);
-#else /* openssl < 0.9.9 */
-	if (HMAC_Init_ex(&ctx, key, key_len, EVP_sha256(), NULL) != 1)
-		return -1;
-#endif /* openssl < 0.9.9 */
-
-	for (i = 0; i < num_elem; i++)
-		HMAC_Update(&ctx, addr[i], len[i]);
-
-	mdlen = 32;
-#if OPENSSL_VERSION_NUMBER < 0x00909000
-	HMAC_Final(&ctx, mac, &mdlen);
-	res = 1;
-#else /* openssl < 0.9.9 */
-	res = HMAC_Final(&ctx, mac, &mdlen);
-#endif /* openssl < 0.9.9 */
-	HMAC_CTX_cleanup(&ctx);
-
-	return res == 1 ? 0 : -1;
+	return openssl_hmac_vector(EVP_sha256(), key, key_len, num_elem, addr,
+				   len, mac, 32);
 }
 
 
@@ -835,23 +795,8 @@ int hmac_sha256(const u8 *key, size_t key_len, const u8 *data,
 int hmac_sha384_vector(const u8 *key, size_t key_len, size_t num_elem,
 		       const u8 *addr[], const size_t *len, u8 *mac)
 {
-	HMAC_CTX ctx;
-	size_t i;
-	unsigned int mdlen;
-	int res;
-
-	HMAC_CTX_init(&ctx);
-	if (HMAC_Init_ex(&ctx, key, key_len, EVP_sha384(), NULL) != 1)
-		return -1;
-
-	for (i = 0; i < num_elem; i++)
-		HMAC_Update(&ctx, addr[i], len[i]);
-
-	mdlen = 32;
-	res = HMAC_Final(&ctx, mac, &mdlen);
-	HMAC_CTX_cleanup(&ctx);
-
-	return res == 1 ? 0 : -1;
+	return openssl_hmac_vector(EVP_sha384(), key, key_len, num_elem, addr,
+				   len, mac, 32);
 }
 
 

@@ -384,14 +384,7 @@ static void mesh_mpm_fsm_restart(struct wpa_supplicant *wpa_s,
 
 	eloop_cancel_timeout(plink_timer, wpa_s, sta);
 
-	if (sta->mpm_close_reason == WLAN_REASON_MESH_CLOSE_RCVD) {
-		ap_free_sta(hapd, sta);
-		return;
-	}
-
-	wpa_mesh_set_plink_state(wpa_s, sta, PLINK_LISTEN);
-	sta->my_lid = sta->peer_lid = sta->mpm_close_reason = 0;
-	sta->mpm_retries = 0;
+	ap_free_sta(hapd, sta);
 }
 
 

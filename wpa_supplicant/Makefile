@@ -1142,7 +1142,9 @@ ifdef CONFIG_INTERNAL_AES
 AESOBJS += ../src/crypto/aes-internal.o ../src/crypto/aes-internal-dec.o
 endif
 
+ifneq ($(CONFIG_TLS), openssl)
 AESOBJS += ../src/crypto/aes-unwrap.o
+endif
 ifdef NEED_AES_EAX
 AESOBJS += ../src/crypto/aes-eax.o
 NEED_AES_CTR=y
@@ -1166,7 +1168,9 @@ AESOBJS += ../src/crypto/aes-siv.o
 endif
 ifdef NEED_AES_WRAP
 NEED_AES_ENC=y
+ifneq ($(CONFIG_TLS), openssl)
 AESOBJS += ../src/crypto/aes-wrap.o
+endif
 endif
 ifdef NEED_AES_CBC
 NEED_AES_ENC=y

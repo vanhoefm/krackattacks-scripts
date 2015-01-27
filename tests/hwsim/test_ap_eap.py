@@ -1870,6 +1870,8 @@ def test_ap_wpa2_eap_vendor_test(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], apdev[0], "VENDOR-TEST", "vendor-test")
     eap_reauth(dev[0], "VENDOR-TEST")
+    eap_connect(dev[1], apdev[0], "VENDOR-TEST", "vendor-test",
+                password="pending")
 
 def test_ap_wpa2_eap_fast_mschapv2_unauth_prov(dev, apdev):
     """WPA2-Enterprise connection using EAP-FAST/MSCHAPv2 and unauthenticated provisioning"""

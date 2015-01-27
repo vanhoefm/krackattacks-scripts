@@ -31,17 +31,9 @@
 #include "sha384.h"
 #include "crypto.h"
 
-#if OPENSSL_VERSION_NUMBER < 0x00907000
-#define DES_key_schedule des_key_schedule
-#define DES_cblock des_cblock
-#define DES_set_key(key, schedule) des_set_key((key), *(schedule))
-#define DES_ecb_encrypt(input, output, ks, enc) \
-	des_ecb_encrypt((input), (output), *(ks), (enc))
-#endif /* openssl < 0.9.7 */
-
 static BIGNUM * get_group5_prime(void)
 {
-#if OPENSSL_VERSION_NUMBER < 0x00908000 || defined(OPENSSL_IS_BORINGSSL)
+#ifdef OPENSSL_IS_BORINGSSL
 	static const unsigned char RFC3526_PRIME_1536[] = {
 		0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xC9,0x0F,0xDA,0xA2,
 		0x21,0x68,0xC2,0x34,0xC4,0xC6,0x62,0x8B,0x80,0xDC,0x1C,0xD1,
@@ -61,19 +53,10 @@ static BIGNUM * get_group5_prime(void)
 		0xCA,0x23,0x73,0x27,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
 	};
         return BN_bin2bn(RFC3526_PRIME_1536, sizeof(RFC3526_PRIME_1536), NULL);
-#else /* openssl < 0.9.8 */
+#else /* OPENSSL_IS_BORINGSSL */
 	return get_rfc3526_prime_1536(NULL);
-#endif /* openssl < 0.9.8 */
+#endif /* OPENSSL_IS_BORINGSSL */
 }
-
-#if OPENSSL_VERSION_NUMBER < 0x00908000
-#ifndef OPENSSL_NO_SHA256
-#ifndef OPENSSL_FIPS
-#define NO_SHA256_WRAPPER
-#endif
-#endif
-
-#endif /* openssl < 0.9.8 */
 
 #ifdef OPENSSL_NO_SHA256
 #define NO_SHA256_WRAPPER
@@ -742,16 +725,9 @@ int hmac_md5(const u8 *key, size_t key_len, const u8 *data, size_t data_len,
 int pbkdf2_sha1(const char *passphrase, const u8 *ssid, size_t ssid_len,
 		int iterations, u8 *buf, size_t buflen)
 {
-#if OPENSSL_VERSION_NUMBER < 0x00908000
-	if (PKCS5_PBKDF2_HMAC_SHA1(passphrase, os_strlen(passphrase),
-				   (unsigned char *) ssid,
-				   ssid_len, iterations, buflen, buf) != 1)
-		return -1;
-#else /* openssl < 0.9.8 */
 	if (PKCS5_PBKDF2_HMAC_SHA1(passphrase, os_strlen(passphrase), ssid,
 				   ssid_len, iterations, buflen, buf) != 1)
 		return -1;
-#endif /* openssl < 0.9.8 */
 	return 0;
 }
 

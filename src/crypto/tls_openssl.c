@@ -28,12 +28,6 @@
 #include "crypto.h"
 #include "tls.h"
 
-#if OPENSSL_VERSION_NUMBER >= 0x0090800fL
-#define OPENSSL_d2i_TYPE const unsigned char **
-#else
-#define OPENSSL_d2i_TYPE unsigned char **
-#endif
-
 #if defined(SSL_CTX_get_app_data) && defined(SSL_CTX_set_app_data)
 #define OPENSSL_SUPPORTS_CTX_APP_DATA
 #endif
@@ -400,7 +394,8 @@ static int tls_cryptoapi_cert(SSL *ssl, const char *name)
 		goto err;
 	}
 
-	cert = d2i_X509(NULL, (OPENSSL_d2i_TYPE) &priv->cert->pbCertEncoded,
+	cert = d2i_X509(NULL,
+			(const unsigned char **) &priv->cert->pbCertEncoded,
 			priv->cert->cbCertEncoded);
 	if (cert == NULL) {
 		wpa_printf(MSG_INFO, "CryptoAPI: Could not process X509 DER "
@@ -500,7 +495,8 @@ static int tls_cryptoapi_ca_cert(SSL_CTX *ssl_ctx, SSL *ssl, const char *name)
 	}
 
 	while ((ctx = CertEnumCertificatesInStore(cs, ctx))) {
-		cert = d2i_X509(NULL, (OPENSSL_d2i_TYPE) &ctx->pbCertEncoded,
+		cert = d2i_X509(NULL,
+				(const unsigned char **) &ctx->pbCertEncoded,
 				ctx->cbCertEncoded);
 		if (cert == NULL) {
 			wpa_printf(MSG_INFO, "CryptoAPI: Could not process "
@@ -774,7 +770,7 @@ void * tls_init(const struct tls_config *conf)
 #endif /* CONFIG_FIPS */
 		SSL_load_error_strings();
 		SSL_library_init();
-#if (OPENSSL_VERSION_NUMBER >= 0x0090800fL) && !defined(OPENSSL_NO_SHA256)
+#ifndef OPENSSL_NO_SHA256
 		EVP_add_digest(EVP_sha256());
 #endif /* OPENSSL_NO_SHA256 */
 		/* TODO: if /dev/urandom is available, PRNG is seeded
@@ -1699,7 +1695,8 @@ static int tls_connection_ca_cert(void *_ssl_ctx, struct tls_connection *conn,
 	}
 
 	if (ca_cert_blob) {
-		X509 *cert = d2i_X509(NULL, (OPENSSL_d2i_TYPE) &ca_cert_blob,
+		X509 *cert = d2i_X509(NULL,
+				      (const unsigned char **) &ca_cert_blob,
 				      ca_cert_blob_len);
 		if (cert == NULL) {
 			tls_show_errors(MSG_WARNING, __func__,
@@ -2138,7 +2135,7 @@ static int tls_read_pkcs12_blob(SSL_CTX *ssl_ctx, SSL *ssl,
 #ifdef PKCS12_FUNCS
 	PKCS12 *p12;
 
-	p12 = d2i_PKCS12(NULL, (OPENSSL_d2i_TYPE) &blob, len);
+	p12 = d2i_PKCS12(NULL, (const unsigned char **) &blob, len);
 	if (p12 == NULL) {
 		tls_show_errors(MSG_INFO, __func__,
 				"Failed to use PKCS#12 blob");

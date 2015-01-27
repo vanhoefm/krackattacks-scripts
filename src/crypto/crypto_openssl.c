@@ -688,6 +688,49 @@ int crypto_hash_finish(struct crypto_hash *ctx, u8 *mac, size_t *len)
 }
 
 
+#ifndef CONFIG_FIPS
+
+int hmac_md5_vector(const u8 *key, size_t key_len, size_t num_elem,
+		    const u8 *addr[], const size_t *len, u8 *mac)
+{
+	HMAC_CTX ctx;
+	size_t i;
+	unsigned int mdlen;
+	int res;
+
+	HMAC_CTX_init(&ctx);
+#if OPENSSL_VERSION_NUMBER < 0x00909000
+	HMAC_Init_ex(&ctx, key, key_len, EVP_md5(), NULL);
+#else /* openssl < 0.9.9 */
+	if (HMAC_Init_ex(&ctx, key, key_len, EVP_md5(), NULL) != 1)
+		return -1;
+#endif /* openssl < 0.9.9 */
+
+	for (i = 0; i < num_elem; i++)
+		HMAC_Update(&ctx, addr[i], len[i]);
+
+	mdlen = 16;
+#if OPENSSL_VERSION_NUMBER < 0x00909000
+	HMAC_Final(&ctx, mac, &mdlen);
+	res = 1;
+#else /* openssl < 0.9.9 */
+	res = HMAC_Final(&ctx, mac, &mdlen);
+#endif /* openssl < 0.9.9 */
+	HMAC_CTX_cleanup(&ctx);
+
+	return res == 1 ? 0 : -1;
+}
+
+
+int hmac_md5(const u8 *key, size_t key_len, const u8 *data, size_t data_len,
+	     u8 *mac)
+{
+	return hmac_md5_vector(key, key_len, 1, &data, &data_len, mac);
+}
+
+#endif /* CONFIG_FIPS */
+
+
 int pbkdf2_sha1(const char *passphrase, const u8 *ssid, size_t ssid_len,
 		int iterations, u8 *buf, size_t buflen)
 {

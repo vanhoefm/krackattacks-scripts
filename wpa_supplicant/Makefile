@@ -1208,7 +1208,9 @@ endif
 endif
 
 ifndef CONFIG_FIPS
+ifneq ($(CONFIG_TLS), openssl)
 MD5OBJS += ../src/crypto/md5.o
+endif
 endif
 ifdef NEED_MD5
 ifdef CONFIG_INTERNAL_MD5

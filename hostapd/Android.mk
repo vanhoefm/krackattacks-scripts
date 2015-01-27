@@ -181,8 +181,6 @@ OBJS += ctrl_iface.c
 OBJS += src/ap/ctrl_iface_ap.c
 endif
 
-OBJS += src/crypto/md5.c
-
 L_CFLAGS += -DCONFIG_CTRL_IFACE -DCONFIG_CTRL_IFACE_UNIX
 
 ifdef CONFIG_IAPP
@@ -733,6 +731,10 @@ endif
 
 ifdef NEED_SHA1
 OBJS += $(SHA1OBJS)
+endif
+
+ifneq ($(CONFIG_TLS), openssl)
+OBJS += src/crypto/md5.c
 endif
 
 ifdef NEED_MD5

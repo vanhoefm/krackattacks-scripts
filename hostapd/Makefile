@@ -170,8 +170,6 @@ OBJS += ctrl_iface.o
 OBJS += ../src/ap/ctrl_iface_ap.o
 endif
 
-OBJS += ../src/crypto/md5.o
-
 CFLAGS += -DCONFIG_CTRL_IFACE -DCONFIG_CTRL_IFACE_UNIX
 
 ifdef CONFIG_IAPP
@@ -728,6 +726,10 @@ ifdef NEED_SHA1
 OBJS += $(SHA1OBJS)
 endif
 
+ifneq ($(CONFIG_TLS), openssl)
+OBJS += ../src/crypto/md5.o
+endif
+
 ifdef NEED_MD5
 ifdef CONFIG_INTERNAL_MD5
 OBJS += ../src/crypto/md5-internal.o
@@ -954,7 +956,7 @@ hostapd_cli: $(OBJS_c)
 	$(Q)$(CC) $(LDFLAGS) -o hostapd_cli $(OBJS_c) $(LIBS_c)
 	@$(E) "  LD " $@
 
-NOBJS = nt_password_hash.o ../src/crypto/ms_funcs.o $(SHA1OBJS) ../src/crypto/md5.o
+NOBJS = nt_password_hash.o ../src/crypto/ms_funcs.o $(SHA1OBJS)
 NOBJS += ../src/utils/common.o
 ifdef NEED_RC4
 ifdef CONFIG_INTERNAL_RC4

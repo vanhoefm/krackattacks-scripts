@@ -380,6 +380,11 @@ static inline int eapol_sm_get_key(struct eapol_sm *sm, u8 *key, size_t len)
 {
 	return -1;
 }
+static inline const u8 *
+eapol_sm_get_session_id(struct eapol_sm *sm, size_t *len)
+{
+	return NULL;
+}
 static inline void eapol_sm_notify_logoff(struct eapol_sm *sm, Boolean logoff)
 {
 }

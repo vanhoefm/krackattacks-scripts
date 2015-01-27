@@ -1701,6 +1701,8 @@ static int wpa_supplicant_ctrl_iface_status(struct wpa_supplicant *wpa_s,
 #ifdef CONFIG_HS20
 	const u8 *hs20;
 #endif /* CONFIG_HS20 */
+	const u8 *sess_id;
+	size_t sess_id_len;
 
 	if (os_strcmp(params, "-DRIVER") == 0)
 		return wpa_drv_status(wpa_s, buf, buflen);
@@ -1931,6 +1933,24 @@ static int wpa_supplicant_ctrl_iface_status(struct wpa_supplicant *wpa_s,
 					  verbose);
 		if (res >= 0)
 			pos += res;
+	}
+
+	sess_id = eapol_sm_get_session_id(wpa_s->eapol, &sess_id_len);
+	if (sess_id) {
+		char *start = pos;
+
+		ret = os_snprintf(pos, end - pos, "eap_session_id=");
+		if (os_snprintf_error(end - pos, ret))
+			return start - buf;
+		pos += ret;
+		ret = wpa_snprintf_hex(pos, end - pos, sess_id, sess_id_len);
+		if (ret <= 0)
+			return start - buf;
+		pos += ret;
+		ret = os_snprintf(pos, end - pos, "\n");
+		if (os_snprintf_error(end - pos, ret))
+			return start - buf;
+		pos += ret;
 	}
 
 	res = rsn_preauth_get_status(wpa_s->wpa, pos, end - pos, verbose);

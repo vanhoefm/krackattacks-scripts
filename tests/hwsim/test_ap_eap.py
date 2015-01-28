@@ -1026,6 +1026,59 @@ def test_ap_wpa2_eap_ttls_eap_mschapv2_no_password(dev, apdev):
                 ca_cert="auth_serv/ca.pem", phase2="autheap=MSCHAPV2",
                 expect_failure=True)
 
+def test_ap_wpa2_eap_ttls_eap_mschapv2_server_oom(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TTLS/EAP-MSCHAPv2 - server OOM"""
+    params = int_eap_server_params()
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    with alloc_fail(hapd, 1, "eap_mschapv2_init"):
+        eap_connect(dev[0], apdev[0], "TTLS", "user",
+                    anonymous_identity="ttls", password="password",
+                    ca_cert="auth_serv/ca.pem", phase2="autheap=MSCHAPV2",
+                    expect_failure=True)
+        dev[0].request("REMOVE_NETWORK all")
+
+    with alloc_fail(hapd, 1, "eap_mschapv2_build_challenge"):
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP WPA-EAP-SHA256",
+                       eap="TTLS", identity="user",
+                       anonymous_identity="ttls", password="password",
+                       ca_cert="auth_serv/ca.pem", phase2="autheap=MSCHAPV2",
+                       wait_connect=False, scan_freq="2412")
+        # This would eventually time out, but we can stop after having reached
+        # the allocation failure.
+        for i in range(20):
+            time.sleep(0.1)
+            if hapd.request("GET_ALLOC_FAIL").startswith('0'):
+                break
+        dev[0].request("REMOVE_NETWORK all")
+
+    with alloc_fail(hapd, 1, "eap_mschapv2_build_success_req"):
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP WPA-EAP-SHA256",
+                       eap="TTLS", identity="user",
+                       anonymous_identity="ttls", password="password",
+                       ca_cert="auth_serv/ca.pem", phase2="autheap=MSCHAPV2",
+                       wait_connect=False, scan_freq="2412")
+        # This would eventually time out, but we can stop after having reached
+        # the allocation failure.
+        for i in range(20):
+            time.sleep(0.1)
+            if hapd.request("GET_ALLOC_FAIL").startswith('0'):
+                break
+        dev[0].request("REMOVE_NETWORK all")
+
+    with alloc_fail(hapd, 1, "eap_mschapv2_build_failure_req"):
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP WPA-EAP-SHA256",
+                       eap="TTLS", identity="user",
+                       anonymous_identity="ttls", password="wrong",
+                       ca_cert="auth_serv/ca.pem", phase2="autheap=MSCHAPV2",
+                       wait_connect=False, scan_freq="2412")
+        # This would eventually time out, but we can stop after having reached
+        # the allocation failure.
+        for i in range(20):
+            time.sleep(0.1)
+            if hapd.request("GET_ALLOC_FAIL").startswith('0'):
+                break
+        dev[0].request("REMOVE_NETWORK all")
+
 def test_ap_wpa2_eap_ttls_eap_aka(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/EAP-AKA"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
@@ -1104,6 +1157,17 @@ def test_ap_wpa2_eap_peap_crypto_binding(dev, apdev):
                 ca_cert="auth_serv/ca.pem",
                 phase1="peapver=0 crypto_binding=0",
                 phase2="auth=MSCHAPV2")
+
+def test_ap_wpa2_eap_peap_crypto_binding_server_oom(dev, apdev):
+    """WPA2-Enterprise connection using EAP-PEAPv0/EAP-MSCHAPv2 and crypto binding with server OOM"""
+    params = int_eap_server_params()
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    with alloc_fail(hapd, 1, "eap_mschapv2_getKey"):
+        eap_connect(dev[0], apdev[0], "PEAP", "user", password="password",
+                    ca_cert="auth_serv/ca.pem",
+                    phase1="peapver=0 crypto_binding=2",
+                    phase2="auth=MSCHAPV2",
+                    expect_failure=True, local_error_report=True)
 
 def test_ap_wpa2_eap_peap_params(dev, apdev):
     """WPA2-Enterprise connection using EAP-PEAPv0/EAP-MSCHAPv2 and various parameters"""

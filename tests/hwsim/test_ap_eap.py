@@ -906,6 +906,48 @@ def test_ap_wpa2_eap_ttls_eap_gtc(dev, apdev):
     hwsim_utils.test_connectivity(dev[0], hapd)
     eap_reauth(dev[0], "TTLS")
 
+def test_ap_wpa2_eap_ttls_eap_gtc_incorrect_password(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TTLS/EAP-GTC - incorrect password"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "TTLS", "user",
+                anonymous_identity="ttls", password="wrong",
+                ca_cert="auth_serv/ca.pem", phase2="autheap=GTC",
+                expect_failure=True)
+
+def test_ap_wpa2_eap_ttls_eap_gtc_no_password(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TTLS/EAP-GTC - no password"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "TTLS", "user-no-passwd",
+                anonymous_identity="ttls", password="password",
+                ca_cert="auth_serv/ca.pem", phase2="autheap=GTC",
+                expect_failure=True)
+
+def test_ap_wpa2_eap_ttls_eap_gtc_server_oom(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TTLS/EAP-GTC - server OOM"""
+    params = int_eap_server_params()
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    with alloc_fail(hapd, 1, "eap_gtc_init"):
+        eap_connect(dev[0], apdev[0], "TTLS", "user",
+                    anonymous_identity="ttls", password="password",
+                    ca_cert="auth_serv/ca.pem", phase2="autheap=GTC",
+                    expect_failure=True)
+        dev[0].request("REMOVE_NETWORK all")
+
+    with alloc_fail(hapd, 1, "eap_gtc_buildReq"):
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP WPA-EAP-SHA256",
+                       eap="TTLS", identity="user",
+                       anonymous_identity="ttls", password="password",
+                       ca_cert="auth_serv/ca.pem", phase2="autheap=GTC",
+                       wait_connect=False, scan_freq="2412")
+        # This would eventually time out, but we can stop after having reached
+        # the allocation failure.
+        for i in range(20):
+            time.sleep(0.1)
+            if hapd.request("GET_ALLOC_FAIL").startswith('0'):
+                break
+
 def test_ap_wpa2_eap_ttls_eap_md5(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/EAP-MD5"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
@@ -922,6 +964,15 @@ def test_ap_wpa2_eap_ttls_eap_md5_incorrect_password(dev, apdev):
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], apdev[0], "TTLS", "user",
                 anonymous_identity="ttls", password="wrong",
+                ca_cert="auth_serv/ca.pem", phase2="autheap=MD5",
+                expect_failure=True)
+
+def test_ap_wpa2_eap_ttls_eap_md5_no_password(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TTLS/EAP-MD5 - no password"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "TTLS", "user-no-passwd",
+                anonymous_identity="ttls", password="password",
                 ca_cert="auth_serv/ca.pem", phase2="autheap=MD5",
                 expect_failure=True)
 
@@ -963,6 +1014,15 @@ def test_ap_wpa2_eap_ttls_eap_mschapv2(dev, apdev):
     dev[0].request("REMOVE_NETWORK all")
     eap_connect(dev[0], apdev[0], "TTLS", "user",
                 anonymous_identity="ttls", password="password1",
+                ca_cert="auth_serv/ca.pem", phase2="autheap=MSCHAPV2",
+                expect_failure=True)
+
+def test_ap_wpa2_eap_ttls_eap_mschapv2_no_password(dev, apdev):
+    """WPA2-Enterprise connection using EAP-TTLS/EAP-MSCHAPv2 - no password"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "TTLS", "user-no-passwd",
+                anonymous_identity="ttls", password="password",
                 ca_cert="auth_serv/ca.pem", phase2="autheap=MSCHAPV2",
                 expect_failure=True)
 
@@ -1980,6 +2040,26 @@ def test_ap_wpa2_eap_fast_gtc_auth_prov(dev, apdev):
     res = eap_reauth(dev[0], "FAST")
     if res['tls_session_reused'] != '1':
         raise Exception("EAP-FAST could not use PAC session ticket")
+
+def test_ap_wpa2_eap_fast_gtc_identity_change(dev, apdev):
+    """WPA2-Enterprise connection using EAP-FAST/GTC and identity changing"""
+    check_eap_capa(dev[0], "FAST")
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    id = eap_connect(dev[0], apdev[0], "FAST", "user",
+                     anonymous_identity="FAST", password="password",
+                     ca_cert="auth_serv/ca.pem", phase2="auth=GTC",
+                     phase1="fast_provisioning=2",
+                     pac_file="blob://fast_pac_auth")
+    dev[0].set_network_quoted(id, "identity", "user2")
+    dev[0].wait_disconnected()
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-METHOD"], timeout=15)
+    if ev is None:
+        raise Exception("EAP-FAST not started")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=5)
+    if ev is None:
+        raise Exception("EAP failure not reported")
+    dev[0].wait_disconnected()
 
 def test_ap_wpa2_eap_tls_ocsp(dev, apdev):
     """WPA2-Enterprise connection using EAP-TLS and verifying OCSP"""

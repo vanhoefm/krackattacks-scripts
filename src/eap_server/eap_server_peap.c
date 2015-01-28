@@ -344,12 +344,14 @@ static struct wpabuf * eap_peap_build_phase2_tlv(struct eap_sm *sm,
 	size_t mlen;
 
 	mlen = 6; /* Result TLV */
-	if (data->crypto_binding != NO_BINDING)
+	if (data->peap_version == 0 && data->tlv_request == TLV_REQ_SUCCESS &&
+	    data->crypto_binding != NO_BINDING) {
 		mlen += 60; /* Cryptobinding TLV */
 #ifdef EAP_SERVER_TNC
-	if (data->soh_response)
-		mlen += wpabuf_len(data->soh_response);
+		if (data->soh_response)
+			mlen += wpabuf_len(data->soh_response);
 #endif /* EAP_SERVER_TNC */
+	}
 
 	buf = eap_msg_alloc(EAP_VENDOR_IETF, EAP_TYPE_TLV, mlen,
 			    EAP_CODE_REQUEST, id);

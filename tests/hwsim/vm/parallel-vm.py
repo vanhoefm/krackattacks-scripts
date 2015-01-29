@@ -313,6 +313,7 @@ def main():
         # duration test case on a single VM while all other VMs have already
         # completed their work.
         long = [ "ap_roam_open",
+                 "hostapd_oom_wpa2_psk_connect",
                  "ap_hs20_fetch_osu_stop",
                  "ap_roam_wpa2_psk",
                  "ibss_wpa_none_ccmp",
@@ -343,6 +344,7 @@ def main():
                  "dfs_radar",
                  "dfs",
                  "grpform_cred_ready_timeout",
+                 "hostapd_oom_wpa2_eap_connect",
                  "ap_wps_pbc_timeout" ]
         for l in long:
             if l in tests:

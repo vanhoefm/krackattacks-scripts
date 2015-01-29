@@ -6,6 +6,7 @@
 
 import logging
 logger = logging.getLogger()
+import time
 
 import hostapd
 from utils import HwsimSkip
@@ -28,7 +29,9 @@ def hostapd_oom_loop(apdev, params, start_func="main"):
             hapd.request("TEST_ALLOC_FAIL 0:")
             if i < 3:
                 raise Exception("AP setup succeeded during out-of-memory")
-            if not state.startswith('0:'):
+            if state.startswith('0:'):
+                count = 0
+            else:
                 count += 1
                 if count == 5:
                     break
@@ -61,3 +64,92 @@ def test_hostapd_oom_wpa2_eap_radius(dev, apdev):
     params['acct_server_port'] = "1813"
     params['acct_server_shared_secret'] = "radius"
     hostapd_oom_loop(apdev, params, start_func="accounting_init")
+
+def test_hostapd_oom_wpa2_psk_connect(dev, apdev):
+    """hostapd failing during WPA2-PSK mode connection due to OOM"""
+    params = hostapd.wpa2_params(ssid="test-wpa2-psk", passphrase="12345678")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].request("SCAN_INTERVAL 1")
+    count = 0
+    for i in range(1, 1000):
+        logger.info("Iteration %d" % i)
+        if "OK" not in hapd.request("TEST_ALLOC_FAIL %d:main" % i):
+            raise HwsimSkip("TEST_ALLOC_FAIL not supported")
+        id = dev[0].connect("test-wpa2-psk", psk="12345678",
+                            scan_freq="2412", wait_connect=False)
+        ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED",
+                                "CTRL-EVENT-SSID-TEMP-DISABLED"], timeout=5)
+        if ev is None:
+            logger.info("Timeout while waiting for connection in iteration %d" % i)
+            dev[0].request("REMOVE_NETWORK all")
+            time.sleep(0.1)
+        else:
+            if "CTRL-EVENT-SSID-TEMP-DISABLED" in ev:
+                logger.info("Re-select to avoid long wait for temp disavle")
+                dev[0].select_network(id)
+                dev[0].wait_connected()
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+        for i in range(3):
+            dev[i].dump_monitor()
+        hapd.dump_monitor()
+
+        state = hapd.request('GET_ALLOC_FAIL')
+        logger.info("GET_ALLOC_FAIL: " + state)
+        hapd.request("TEST_ALLOC_FAIL 0:")
+        if state.startswith('0:'):
+            count = 0
+        else:
+            count += 1
+            if count == 5:
+                break
+    dev[0].request("SCAN_INTERVAL 5")
+
+def test_hostapd_oom_wpa2_eap_connect(dev, apdev, params):
+    """hostapd failing during WPA2-EAP mode connection due to OOM"""
+    if not params['long']:
+        raise HwsimSkip("Skip test case with long duration due to --long not specified")
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    params['acct_server_addr'] = "127.0.0.1"
+    params['acct_server_port'] = "1813"
+    params['acct_server_shared_secret'] = "radius"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].request("SCAN_INTERVAL 1")
+    count = 0
+    for i in range(1, 1000):
+        logger.info("Iteration %d" % i)
+        if "OK" not in hapd.request("TEST_ALLOC_FAIL %d:main" % i):
+            raise HwsimSkip("TEST_ALLOC_FAIL not supported")
+        id = dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP",
+                            eap="GPSK", identity="gpsk user",
+                            password="abcdefghijklmnop0123456789abcdef",
+                            scan_freq="2412", wait_connect=False)
+        ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED",
+                                "CTRL-EVENT-SSID-TEMP-DISABLED"], timeout=5)
+        if ev is None:
+            logger.info("Timeout while waiting for connection in iteration %d" % i)
+            dev[0].request("REMOVE_NETWORK all")
+            time.sleep(0.1)
+        else:
+            if "CTRL-EVENT-SSID-TEMP-DISABLED" in ev:
+                logger.info("Re-select to avoid long wait for temp disavle")
+                dev[0].select_network(id)
+                dev[0].wait_connected()
+            dev[0].request("REMOVE_NETWORK all")
+            dev[0].wait_disconnected()
+        for i in range(3):
+            dev[i].dump_monitor()
+        hapd.dump_monitor()
+
+        state = hapd.request('GET_ALLOC_FAIL')
+        logger.info("GET_ALLOC_FAIL: " + state)
+        hapd.request("TEST_ALLOC_FAIL 0:")
+        if state.startswith('0:'):
+            count = 0
+        else:
+            count += 1
+            if count == 5:
+                break
+    dev[0].request("SCAN_INTERVAL 5")

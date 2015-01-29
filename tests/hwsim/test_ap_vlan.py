@@ -80,6 +80,45 @@ def test_ap_vlan_wpa2_radius(dev, apdev):
     hwsim_utils.test_connectivity_iface(dev[1], hapd, "brvlan2")
     hwsim_utils.test_connectivity(dev[2], hapd)
 
+def test_ap_vlan_wpa2_radius_id_change(dev, apdev):
+    """AP VLAN with WPA2-Enterprise and RADIUS attributes changing VLANID"""
+    as_params = { "ssid": "as",
+                  "beacon_int": "2000",
+                  "radius_server_clients": "auth_serv/radius_clients.conf",
+                  "radius_server_auth_port": '18128',
+                  "eap_server": "1",
+                  "eap_user_file": "auth_serv/eap_user.conf",
+                  "ca_cert": "auth_serv/ca.pem",
+                  "server_cert": "auth_serv/server.pem",
+                  "private_key": "auth_serv/server.key" }
+    authserv = hostapd.add_ap(apdev[1]['ifname'], as_params)
+
+    params = hostapd.wpa2_eap_params(ssid="test-vlan")
+    params['dynamic_vlan'] = "1";
+    params['auth_server_port'] = "18128"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].connect("test-vlan", key_mgmt="WPA-EAP", eap="PAX",
+                   identity="vlan1",
+                   password_hex="0123456789abcdef0123456789abcdef",
+                   scan_freq="2412")
+    hwsim_utils.test_connectivity_iface(dev[0], hapd, "brvlan1")
+
+    authserv.disable()
+    authserv.set('eap_user_file', "auth_serv/eap_user_vlan.conf")
+    authserv.enable()
+
+    dev[0].dump_monitor()
+    dev[0].request("REAUTHENTICATE")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=15)
+    if ev is None:
+        raise Exception("EAP reauthentication timed out")
+    time.sleep(0.1)
+    state = dev[0].get_status_field('wpa_state')
+    if state != "COMPLETED":
+        raise("Unexpected state after reauth: " + state)
+    hwsim_utils.test_connectivity_iface(dev[0], hapd, "brvlan2")
+
 def test_ap_vlan_wpa2_radius_required(dev, apdev):
     """AP VLAN with WPA2-Enterprise and RADIUS attributes required"""
     params = hostapd.wpa2_eap_params(ssid="test-vlan")

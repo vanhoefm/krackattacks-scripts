@@ -122,3 +122,22 @@ def test_cfg80211_wep_key_idx_change(dev, apdev):
     # the previous command results in deauth event followed by auto-reconnect
     dev[0].wait_connected(timeout=10, error="Reassociation timed out")
     hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_cfg80211_hostapd_ext_sta_remove(dev, apdev):
+    """cfg80211 DEL_STATION issued externally to hostapd"""
+    hapd = hostapd.add_ap(apdev[0]['ifname'],
+                          { "ssid": "open" })
+    id = dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+
+    ifindex = int(hapd.get_driver_status_field("ifindex"))
+    attrs = build_nl80211_attr_u32('IFINDEX', ifindex)
+    attrs += build_nl80211_attr_u16('REASON_CODE', 1)
+    attrs += build_nl80211_attr_u8('MGMT_SUBTYPE', 12)
+    attrs += build_nl80211_attr_mac('MAC', dev[0].own_addr())
+    nl80211_command(hapd, 'DEL_STATION', attrs)
+
+    # Currently, hostapd ignores the NL80211_CMD_DEL_STATION event if
+    # drv->device_ap_sme == 0 (which is the case with mac80211_hwsim), so no
+    # further action happens here. If that event were to be used to remove the
+    # STA entry from hostapd even in device_ap_sme == 0 case, this test case
+    # could be extended to cover additional operations.

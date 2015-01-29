@@ -328,6 +328,9 @@ def build_nl80211_attr_u32(id, val):
 def build_nl80211_attr_u16(id, val):
     return build_nl80211_attr(id, struct.pack("@HH", val, 0))
 
+def build_nl80211_attr_u8(id, val):
+    return build_nl80211_attr(id, struct.pack("@4B", val, 0, 0, 0))
+
 def build_nl80211_attr_flag(id):
     return build_nl80211_attr(id, '')
 

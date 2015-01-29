@@ -11,7 +11,7 @@ import struct
 import subprocess
 
 import hostapd
-from utils import HwsimSkip
+from utils import HwsimSkip, alloc_fail
 import hwsim_utils
 from test_ap_csa import csa_supported
 
@@ -467,6 +467,28 @@ def test_olbc(dev, apdev):
             break
     if not cleared:
         raise Exception("OLBC state did nto time out")
+
+def test_olbc_table_limit(dev, apdev):
+    """OLBC AP table size limit"""
+    ifname1 = apdev[0]['ifname']
+    ifname2 = apdev[0]['ifname'] + '-2'
+    ifname3 = apdev[0]['ifname'] + '-3'
+    hostapd.add_bss('phy3', ifname1, 'bss-1.conf')
+    hostapd.add_bss('phy3', ifname2, 'bss-2.conf')
+    hostapd.add_bss('phy3', ifname3, 'bss-3.conf')
+
+    params = { "ssid": "test-olbc",
+               "channel": "1",
+               "ap_table_max_size": "2" }
+    hapd = hostapd.add_ap(apdev[1]['ifname'], params)
+
+    time.sleep(0.3)
+    with alloc_fail(hapd, 1, "ap_list_process_beacon"):
+        time.sleep(0.3)
+    hapd.set("ap_table_max_size", "1")
+    time.sleep(0.3)
+    hapd.set("ap_table_max_size", "0")
+    time.sleep(0.3)
 
 def test_olbc_5ghz(dev, apdev):
     """OLBC detection on 5 GHz"""

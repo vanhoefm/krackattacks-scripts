@@ -781,13 +781,6 @@ int ap_sta_bind_vlan(struct hostapd_data *hapd, struct sta_info *sta,
 	if (sta->vlan_id == old_vlanid)
 		return 0;
 
-	/*
-	 * During 1x reauth, if the vlan id changes, then remove the old id and
-	 * proceed furthur to add the new one.
-	 */
-	if (old_vlanid > 0)
-		vlan_remove_dynamic(hapd, old_vlanid);
-
 	iface = hapd->conf->iface;
 	if (sta->ssid->vlan[0])
 		iface = sta->ssid->vlan;
@@ -815,7 +808,8 @@ int ap_sta_bind_vlan(struct hostapd_data *hapd, struct sta_info *sta,
 			       HOSTAPD_LEVEL_DEBUG, "could not find VLAN for "
 			       "binding station to (vlan_id=%d)",
 			       sta->vlan_id);
-		return -1;
+		ret = -1;
+		goto done;
 	} else if (sta->vlan_id > 0 && vlan->vlan_id == VLAN_ID_WILDCARD) {
 		vlan = vlan_add_dynamic(hapd, vlan, sta->vlan_id);
 		if (vlan == NULL) {
@@ -824,7 +818,8 @@ int ap_sta_bind_vlan(struct hostapd_data *hapd, struct sta_info *sta,
 				       HOSTAPD_LEVEL_DEBUG, "could not add "
 				       "dynamic VLAN interface for vlan_id=%d",
 				       sta->vlan_id);
-			return -1;
+			ret = -1;
+			goto done;
 		}
 
 		iface = vlan->ifname;
@@ -878,6 +873,12 @@ int ap_sta_bind_vlan(struct hostapd_data *hapd, struct sta_info *sta,
 			       HOSTAPD_LEVEL_DEBUG, "could not bind the STA "
 			       "entry to vlan_id=%d", sta->vlan_id);
 	}
+
+done:
+	/* During 1x reauth, if the vlan id changes, then remove the old id. */
+	if (old_vlanid > 0)
+		vlan_remove_dynamic(hapd, old_vlanid);
+
 	return ret;
 #else /* CONFIG_NO_VLAN */
 	return 0;

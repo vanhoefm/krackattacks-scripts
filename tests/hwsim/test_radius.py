@@ -610,6 +610,21 @@ def test_radius_macacl(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
     dev[0].connect("radius", key_mgmt="NONE", scan_freq="2412")
 
+def test_radius_macacl_acct(dev, apdev):
+    """RADIUS MAC ACL and accounting enabled"""
+    params = hostapd.radius_params()
+    params["ssid"] = "radius"
+    params["macaddr_acl"] = "2"
+    params['acct_server_addr'] = "127.0.0.1"
+    params['acct_server_port'] = "1813"
+    params['acct_server_shared_secret'] = "radius"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("radius", key_mgmt="NONE", scan_freq="2412")
+    dev[1].connect("radius", key_mgmt="NONE", scan_freq="2412")
+    dev[1].request("DISCONNECT")
+    dev[1].wait_disconnected()
+    dev[1].request("RECONNECT")
+
 def test_radius_failover(dev, apdev):
     """RADIUS Authentication and Accounting server failover"""
     subprocess.call(['sudo', 'ip', 'ro', 'replace', '192.168.213.17', 'dev',

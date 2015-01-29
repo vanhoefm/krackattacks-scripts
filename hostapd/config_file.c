@@ -216,7 +216,7 @@ static int hostapd_config_read_eap_user(const char *fname,
 	FILE *f;
 	char buf[512], *pos, *start, *pos2;
 	int line = 0, ret = 0, num_methods;
-	struct hostapd_eap_user *user = NULL, *tail = NULL;
+	struct hostapd_eap_user *user = NULL, *tail = NULL, *new_user = NULL;
 
 	if (!fname)
 		return 0;
@@ -494,7 +494,7 @@ static int hostapd_config_read_eap_user(const char *fname,
 
 	done:
 		if (tail == NULL) {
-			tail = conf->eap_user = user;
+			tail = new_user = user;
 		} else {
 			tail->next = user;
 			tail = user;
@@ -509,6 +509,18 @@ static int hostapd_config_read_eap_user(const char *fname,
 	}
 
 	fclose(f);
+
+	if (ret == 0) {
+		user = conf->eap_user;
+		while (user) {
+			struct hostapd_eap_user *prev;
+
+			prev = user;
+			user = user->next;
+			hostapd_config_free_eap_user(prev);
+		}
+		conf->eap_user = new_user;
+	}
 
 	return ret;
 }

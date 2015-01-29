@@ -1881,6 +1881,8 @@ SM_STATE(WPA_PTK, INITPMK)
 	} else {
 		wpa_printf(MSG_DEBUG, "WPA: Could not get PMK, get_msk: %p",
 			   sm->wpa_auth->cb.get_msk);
+		sm->Disconnect = TRUE;
+		return;
 	}
 	os_memset(msk, 0, sizeof(msk));
 

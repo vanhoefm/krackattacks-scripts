@@ -11,6 +11,7 @@ import time
 
 import hostapd
 from wpasupplicant import WpaSupplicant
+from utils import alloc_fail
 from test_ap_eap import eap_connect
 
 def test_pmksa_cache_on_roam_back(dev, apdev):
@@ -551,3 +552,57 @@ def test_pmksa_cache_opportunistic_multiple_sta(dev, apdev):
             raise Exception("Roaming with the AP timed out")
         if "CTRL-EVENT-EAP-STARTED" in ev:
             raise Exception("Unexpected EAP exchange")
+
+def test_pmksa_cache_preauth_oom(dev, apdev):
+    """RSN pre-authentication to generate PMKSA cache entry and OOM"""
+    try:
+        _test_pmksa_cache_preauth_oom(dev, apdev)
+    finally:
+        subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'down'])
+        subprocess.call(['brctl', 'delbr', 'ap-br0'])
+
+def _test_pmksa_cache_preauth_oom(dev, apdev):
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    params['bridge'] = 'ap-br0'
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    subprocess.call(['brctl', 'setfd', 'ap-br0', '0'])
+    subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
+    eap_connect(dev[0], apdev[0], "PAX", "pax.user@example.com",
+                password_hex="0123456789abcdef0123456789abcdef",
+                bssid=apdev[0]['bssid'])
+
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    params['bridge'] = 'ap-br0'
+    params['rsn_preauth'] = '1'
+    params['rsn_preauth_interfaces'] = 'ap-br0'
+    hapd = hostapd.add_ap(apdev[1]['ifname'], params)
+    bssid1 = apdev[1]['bssid']
+
+    tests = [ (1, "rsn_preauth_receive"),
+              (2, "rsn_preauth_receive"),
+              (1, "rsn_preauth_send") ]
+    for test in tests:
+        with alloc_fail(hapd, test[0], test[1]):
+            dev[0].scan_for_bss(bssid1, freq="2412")
+            if "OK" not in dev[0].request("PREAUTH " + bssid1):
+                raise Exception("PREAUTH failed")
+
+            success = False
+            count = 0
+            for i in range(50):
+                time.sleep(0.1)
+                pmksa = dev[0].get_pmksa(bssid1)
+                if pmksa:
+                    success = True
+                    break
+                state = hapd.request('GET_ALLOC_FAIL')
+                if state.startswith('0:'):
+                    count += 1
+                    if count > 2:
+                        break
+            logger.info("PMKSA cache success: " + str(success))
+
+            dev[0].request("PMKSA_FLUSH")
+            dev[0].wait_disconnected()
+            dev[0].wait_connected()
+            dev[0].dump_monitor()

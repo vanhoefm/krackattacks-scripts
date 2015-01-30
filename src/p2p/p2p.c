@@ -3208,9 +3208,6 @@ static void p2p_retry_pd(struct p2p_data *p2p)
 {
 	struct p2p_device *dev;
 
-	if (p2p->state != P2P_IDLE)
-		return;
-
 	/*
 	 * Retry the prov disc req attempt only for the peer that the user had
 	 * requested.

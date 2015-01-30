@@ -2932,6 +2932,30 @@ def tshark_get_arp(cap, filter):
         frames.append(l.split('\t'))
     return frames
 
+def tshark_get_ns(cap):
+    res = run_tshark(cap, "icmpv6.type == 135",
+                     [ "eth.dst", "eth.src",
+                       "ipv6.src", "ipv6.dst",
+                       "icmpv6.nd.ns.target_address",
+                       "icmpv6.opt.linkaddr" ],
+                     wait=False)
+    frames = []
+    for l in res.splitlines():
+        frames.append(l.split('\t'))
+    return frames
+
+def tshark_get_na(cap):
+    res = run_tshark(cap, "icmpv6.type == 136",
+                     [ "eth.dst", "eth.src",
+                       "ipv6.src", "ipv6.dst",
+                       "icmpv6.nd.na.target_address",
+                       "icmpv6.opt.linkaddr" ],
+                     wait=False)
+    frames = []
+    for l in res.splitlines():
+        frames.append(l.split('\t'))
+    return frames
+
 def _test_proxyarp_open(dev, apdev, params, ebtables=False):
     prefix = "proxyarp_open"
     if ebtables:
@@ -2993,6 +3017,7 @@ def _test_proxyarp_open(dev, apdev, params, ebtables=False):
                              '--ip6-icmp-type', '143',
                              '-o', apdev[0]['ifname'], '-j', 'DROP'])
 
+    time.sleep(0.5)
     cmd = {}
     cmd[0] = subprocess.Popen(['tcpdump', '-p', '-U', '-i', 'ap-br0',
                                '-w', cap_br, '-s', '2000'],
@@ -3339,6 +3364,53 @@ def _test_proxyarp_open(dev, apdev, params, ebtables=False):
     #     addr0, '192.168.1.123',
     #     bssid, '192.168.1.101' ] not in arp_reply:
     #    raise Exception("br did not get ARP response for 192.168.1.123")
+
+    ns = tshark_get_ns(cap_dev0)
+    logger.info("dev0 seen NS: " + str(ns))
+    na = tshark_get_na(cap_dev0)
+    logger.info("dev0 seen NA: " + str(na))
+
+    # FIX: src mac addr is supposed to be addr1, not bssid
+    if [ addr0, bssid, 'aaaa:bbbb:dddd::2', 'aaaa:bbbb:cccc::2',
+         'aaaa:bbbb:dddd::2', addr1 ] not in na:
+        raise Exception("dev0 did not get NA for aaaa:bbbb:dddd::2")
+
+    if ebtables:
+        for req in ns:
+            if req[1] != addr0:
+                raise Exception("Unexpected foreign NS on dev0: " + str(req))
+
+    ns = tshark_get_ns(cap_dev1)
+    logger.info("dev1 seen NS: " + str(ns))
+    na = tshark_get_na(cap_dev1)
+    logger.info("dev1 seen NA: " + str(na))
+
+    # FIX: src mac addr is supposed to be addr0, not bssid
+    if [ addr1, bssid, 'aaaa:bbbb:cccc::2', 'aaaa:bbbb:dddd::2',
+         'aaaa:bbbb:cccc::2', addr0 ] not in na:
+        raise Exception("dev1 did not get NA for aaaa:bbbb:cccc::2")
+
+    if ebtables:
+        for req in ns:
+            if req[1] != addr1:
+                raise Exception("Unexpected foreign NS on dev1: " + str(req))
+
+    ns = tshark_get_ns(cap_dev2)
+    logger.info("dev2 seen NS: " + str(ns))
+    na = tshark_get_na(cap_dev2)
+    logger.info("dev2 seen NA: " + str(na))
+
+    # FIX: enable once kernel implementation for proxyarp IPv6 is fixed
+    # FIX: src mac addr is supposed to be addr0/addr1, not bssid
+    #if [ addr2, bssid, 'aaaa:bbbb:cccc::2', 'aaaa:bbbb:ff00::2',
+    #     'aaaa:bbbb:cccc::2', addr0 ] not in na:
+    #    raise Exception("dev2 did not get NA for aaaa:bbbb:cccc::2")
+    #if [ addr2, bssid, 'aaaa:bbbb:dddd::2', 'aaaa:bbbb:ff00::2',
+    #     'aaaa:bbbb:dddd::2', addr1 ] not in na:
+    #    raise Exception("dev2 did not get NA for aaaa:bbbb:dddd::2")
+    #if [ addr2, bssid, 'aaaa:bbbb:eeee::2', 'aaaa:bbbb:ff00::2',
+    #     'aaaa:bbbb:eeee::2', addr1 ] not in na:
+    #    raise Exception("dev2 did not get NA for aaaa:bbbb:eeee::2")
 
 def test_proxyarp_open(dev, apdev, params):
     """ProxyARP with open network"""

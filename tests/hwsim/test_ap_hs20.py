@@ -2929,6 +2929,8 @@ def _test_proxyarp_open(dev, apdev, params, ebtables=False):
                             prefix + ".%s.pcap" % dev[0].ifname)
     cap_dev1 = os.path.join(params['logdir'],
                             prefix + ".%s.pcap" % dev[1].ifname)
+    cap_dev2 = os.path.join(params['logdir'],
+                            prefix + ".%s.pcap" % dev[2].ifname)
 
     bssid = apdev[0]['bssid']
     params = { 'ssid': 'open' }
@@ -2947,6 +2949,11 @@ def _test_proxyarp_open(dev, apdev, params, ebtables=False):
         raise Exception("AP startup timed out")
     if "AP-ENABLED" not in ev:
         raise Exception("AP startup failed")
+
+    params2 = { 'ssid': 'another' }
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params2, no_enable=True)
+    hapd2.set('bridge', 'ap-br0')
+    hapd2.enable()
 
     subprocess.call(['brctl', 'setfd', 'ap-br0', '0'])
     subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
@@ -2984,10 +2991,25 @@ def _test_proxyarp_open(dev, apdev, params, ebtables=False):
     cmd[2] = subprocess.Popen(['tcpdump', '-p', '-U', '-i', dev[1].ifname,
                                '-w', cap_dev1, '-s', '2000'],
                               stderr=open('/dev/null', 'w'))
+    cmd[3] = subprocess.Popen(['tcpdump', '-p', '-U', '-i', dev[2].ifname,
+                               '-w', cap_dev2, '-s', '2000'],
+                              stderr=open('/dev/null', 'w'))
 
     dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
     dev[1].connect("open", key_mgmt="NONE", scan_freq="2412")
+    dev[2].connect("another", key_mgmt="NONE", scan_freq="2412")
     time.sleep(0.1)
+
+    brcmd = subprocess.Popen(['brctl', 'show'], stdout=subprocess.PIPE)
+    res = brcmd.stdout.read()
+    brcmd.stdout.close()
+    logger.info("Bridge setup: " + res)
+
+    brcmd = subprocess.Popen(['brctl', 'showstp', 'ap-br0'],
+                             stdout=subprocess.PIPE)
+    res = brcmd.stdout.read()
+    brcmd.stdout.close()
+    logger.info("Bridge showstp: " + res)
 
     addr0 = dev[0].p2p_interface_addr()
     addr1 = dev[1].p2p_interface_addr()
@@ -3109,6 +3131,9 @@ def _test_proxyarp_open(dev, apdev, params, ebtables=False):
         send_arp(hapd, hapd_bssid=bssid, sender_ip="192.168.1.101",
                  target_ip=target)
 
+    for target in targets:
+        send_arp(dev[2], sender_ip="192.168.1.103", target_ip=target)
+
     # ARP Probe from wireless STA
     send_arp(dev[1], target_ip="192.168.1.127")
     # ARP Announcement from wireless STA
@@ -3128,14 +3153,19 @@ def _test_proxyarp_open(dev, apdev, params, ebtables=False):
     # ARP Request for the newly introduced IP address from bridge
     send_arp(hapd, hapd_bssid=bssid, sender_ip="192.168.1.102",
              target_ip="192.168.1.127")
+    send_arp(dev[2], sender_ip="192.168.1.103", target_ip="192.168.1.127")
 
     # ARP Probe from bridge
     send_arp(hapd, hapd_bssid=bssid, target_ip="192.168.1.130")
+    send_arp(dev[2], target_ip="192.168.1.131")
     # ARP Announcement from bridge (not to be learned by AP for proxyarp)
     send_arp(hapd, hapd_bssid=bssid, sender_ip="192.168.1.130",
              target_ip="192.168.1.130")
     send_arp(hapd, hapd_bssid=bssid, sender_ip="192.168.1.130",
              target_ip="192.168.1.130", opcode=2)
+    send_arp(dev[2], sender_ip="192.168.1.131", target_ip="192.168.1.131")
+    send_arp(dev[2], sender_ip="192.168.1.131", target_ip="192.168.1.131",
+             opcode=2)
 
     macs = get_bridge_macs("ap-br0")
     logger.info("After ARP Probe + Announcement (showmacs): " + str(macs))
@@ -3149,9 +3179,16 @@ def _test_proxyarp_open(dev, apdev, params, ebtables=False):
     send_arp(hapd, hapd_bssid=bssid, dst_ll=addr0, sender_ip="192.168.1.130",
              target_ip="192.168.1.123", opcode=2)
 
+    # ARP Request for the newly introduced IP address from wireless STA
+    send_arp(dev[0], sender_ip="192.168.1.123", target_ip="192.168.1.131")
+    # ARP Response from bridge (AP does not proxy for non-wireless devices)
+    send_arp(dev[2], dst_ll=addr0, sender_ip="192.168.1.131",
+             target_ip="192.168.1.123", opcode=2)
+
     # ARP Request for the newly introduced IP address from bridge
     send_arp(hapd, hapd_bssid=bssid, sender_ip="192.168.1.102",
              target_ip="192.168.1.130")
+    send_arp(dev[2], sender_ip="192.168.1.104", target_ip="192.168.1.131")
 
     # ARP Probe from wireless STA (duplicate address; learned through DHCP)
     send_arp(dev[1], target_ip="192.168.1.123")
@@ -3176,11 +3213,19 @@ def _test_proxyarp_open(dev, apdev, params, ebtables=False):
     send_ns(hapd, hapd_bssid=bssid, target="aaaa:bbbb:dddd::2",
             ip_src="aaaa:bbbb:ffff::2")
     time.sleep(0.1)
+    send_ns(dev[2], target="aaaa:bbbb:cccc::2", ip_src="aaaa:bbbb:ff00::2")
+    time.sleep(0.1)
+    send_ns(dev[2], target="aaaa:bbbb:dddd::2", ip_src="aaaa:bbbb:ff00::2")
+    time.sleep(0.1)
+    send_ns(dev[2], target="aaaa:bbbb:eeee::2", ip_src="aaaa:bbbb:ff00::2")
+    time.sleep(0.1)
 
     # Try to probe for an already assigned address
     send_ns(dev[1], target="aaaa:bbbb:cccc::2", ip_src="::")
     time.sleep(0.1)
     send_ns(hapd, hapd_bssid=bssid, target="aaaa:bbbb:cccc::2", ip_src="::")
+    time.sleep(0.1)
+    send_ns(dev[2], target="aaaa:bbbb:cccc::2", ip_src="::")
     time.sleep(0.1)
 
     # Unsolicited NA
@@ -3188,6 +3233,8 @@ def _test_proxyarp_open(dev, apdev, params, ebtables=False):
             ip_src="aaaa:bbbb:cccc:aeae::3", ip_dst="ff02::1")
     send_na(hapd, hapd_bssid=bssid, target="aaaa:bbbb:cccc:aeae::4",
             ip_src="aaaa:bbbb:cccc:aeae::4", ip_dst="ff02::1")
+    send_na(dev[2], target="aaaa:bbbb:cccc:aeae::5",
+            ip_src="aaaa:bbbb:cccc:aeae::5", ip_dst="ff02::1")
 
     try:
         hwsim_utils.test_connectivity_iface(dev[0], hapd, "ap-br0")
@@ -3200,7 +3247,7 @@ def _test_proxyarp_open(dev, apdev, params, ebtables=False):
     dev[0].request("DISCONNECT")
     dev[1].request("DISCONNECT")
     time.sleep(0.5)
-    for i in range(3):
+    for i in range(len(cmd)):
         cmd[i].terminate()
     macs = get_bridge_macs("ap-br0")
     logger.info("After disconnect (showmacs): " + str(macs))

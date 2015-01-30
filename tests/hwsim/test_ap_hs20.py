@@ -18,6 +18,7 @@ import subprocess
 import hostapd
 from utils import HwsimSkip
 import hwsim_utils
+from tshark import run_tshark
 from wlantest import Wlantest
 from wpasupplicant import WpaSupplicant
 from test_ap_eap import check_eap_capa, check_domain_match_full
@@ -2920,6 +2921,17 @@ def get_bridge_macs(ifname):
     cmd.stdout.close()
     return res
 
+def tshark_get_arp(cap, filter):
+    res = run_tshark(cap, filter,
+                     [ "eth.dst", "eth.src",
+                       "arp.src.hw_mac", "arp.src.proto_ipv4",
+                       "arp.dst.hw_mac", "arp.dst.proto_ipv4" ],
+                     wait=False)
+    frames = []
+    for l in res.splitlines():
+        frames.append(l.split('\t'))
+    return frames
+
 def _test_proxyarp_open(dev, apdev, params, ebtables=False):
     prefix = "proxyarp_open"
     if ebtables:
@@ -3013,6 +3025,7 @@ def _test_proxyarp_open(dev, apdev, params, ebtables=False):
 
     addr0 = dev[0].p2p_interface_addr()
     addr1 = dev[1].p2p_interface_addr()
+    addr2 = dev[2].p2p_interface_addr()
 
     src_ll_opt0 = "\x01\x01" + binascii.unhexlify(addr0.replace(':',''))
     src_ll_opt1 = "\x01\x01" + binascii.unhexlify(addr1.replace(':',''))
@@ -3261,6 +3274,71 @@ def _test_proxyarp_open(dev, apdev, params, ebtables=False):
         res = cmd.stdout.read()
         cmd.stdout.close()
         logger.info("ebtables results:\n" + res)
+
+    # Verify that expected ARP messages were seen and no unexpected
+    # ARP messages were seen.
+
+    arp_req = tshark_get_arp(cap_dev0, "arp.opcode == 1")
+    arp_reply = tshark_get_arp(cap_dev0, "arp.opcode == 2")
+    logger.info("dev0 seen ARP requests:\n" + str(arp_req))
+    logger.info("dev0 seen ARP replies:\n" + str(arp_reply))
+
+    if [ 'ff:ff:ff:ff:ff:ff', addr1,
+         addr1, '192.168.1.100',
+         '00:00:00:00:00:00', '192.168.1.123' ] in arp_req:
+        raise Exception("dev0 saw ARP request from dev1")
+    if [ 'ff:ff:ff:ff:ff:ff', addr2,
+         addr2, '192.168.1.103',
+         '00:00:00:00:00:00', '192.168.1.123' ] in arp_req:
+        raise Exception("dev0 saw ARP request from dev2")
+    # TODO: Uncomment once fixed in kernel
+    #if [ 'ff:ff:ff:ff:ff:ff', bssid,
+    #     bssid, '192.168.1.101',
+    #     '00:00:00:00:00:00', '192.168.1.123' ] in arp_req:
+    #    raise Exception("dev0 saw ARP request from br")
+
+    if ebtables:
+        for req in arp_req:
+            if req[1] != addr0:
+                raise Exception("Unexpected foreign ARP request on dev0")
+
+    arp_req = tshark_get_arp(cap_dev1, "arp.opcode == 1")
+    arp_reply = tshark_get_arp(cap_dev1, "arp.opcode == 2")
+    logger.info("dev1 seen ARP requests:\n" + str(arp_req))
+    logger.info("dev1 seen ARP replies:\n" + str(arp_reply))
+
+    if [ 'ff:ff:ff:ff:ff:ff', addr2,
+         addr2, '192.168.1.103',
+         '00:00:00:00:00:00', '192.168.1.123' ] in arp_req:
+        raise Exception("dev1 saw ARP request from dev2")
+    if [addr1, addr0, addr0, '192.168.1.123', addr1, '192.168.1.100'] not in arp_reply:
+        raise Exception("dev1 did not get ARP response for 192.168.1.123")
+
+    if ebtables:
+        for req in arp_req:
+            if req[1] != addr1:
+                raise Exception("Unexpected foreign ARP request on dev1")
+
+    arp_req = tshark_get_arp(cap_dev2, "arp.opcode == 1")
+    arp_reply = tshark_get_arp(cap_dev2, "arp.opcode == 2")
+    logger.info("dev2 seen ARP requests:\n" + str(arp_req))
+    logger.info("dev2 seen ARP replies:\n" + str(arp_reply))
+
+    if [ addr2, addr0,
+         addr0, '192.168.1.123',
+         addr2, '192.168.1.103' ] not in arp_reply:
+        raise Exception("dev2 did not get ARP response for 192.168.1.123")
+
+    arp_req = tshark_get_arp(cap_br, "arp.opcode == 1")
+    arp_reply = tshark_get_arp(cap_br, "arp.opcode == 2")
+    logger.info("br seen ARP requests:\n" + str(arp_req))
+    logger.info("br seen ARP replies:\n" + str(arp_reply))
+
+    # TODO: Uncomment once fixed in kernel
+    #if [ bssid, addr0,
+    #     addr0, '192.168.1.123',
+    #     bssid, '192.168.1.101' ] not in arp_reply:
+    #    raise Exception("br did not get ARP response for 192.168.1.123")
 
 def test_proxyarp_open(dev, apdev, params):
     """ProxyARP with open network"""

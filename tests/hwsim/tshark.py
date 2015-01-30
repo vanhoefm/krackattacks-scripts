@@ -15,12 +15,13 @@ logger = logging.getLogger()
 
 _tshark_filter_arg = '-Y'
 
-def run_tshark(filename, filter, display=None):
+def run_tshark(filename, filter, display=None, wait=True):
     global _tshark_filter_arg
 
-    # wait a bit to make it more likely for wlantest sniffer to have captured
-    # and written the results into a file that we can process here
-    time.sleep(1)
+    if wait:
+        # wait a bit to make it more likely for wlantest sniffer to have
+        # captured and written the results into a file that we can process here
+        time.sleep(1)
 
     try:
         arg = [ "tshark", "-r", filename,

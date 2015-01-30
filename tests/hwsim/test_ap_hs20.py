@@ -2913,6 +2913,13 @@ def get_permanent_neighbors(ifname):
     cmd.stdout.close()
     return [ line for line in res.splitlines() if "PERMANENT" in line and ifname in line ]
 
+def get_bridge_macs(ifname):
+    cmd = subprocess.Popen(['brctl', 'showmacs', ifname],
+                           stdout=subprocess.PIPE)
+    res = cmd.stdout.read()
+    cmd.stdout.close()
+    return res
+
 def _test_proxyarp_open(dev, apdev, params, ebtables=False):
     prefix = "proxyarp_open"
     if ebtables:
@@ -3077,6 +3084,9 @@ def _test_proxyarp_open(dev, apdev, params, ebtables=False):
     if "OK" not in hapd.request("DATA_TEST_FRAME ifname=ap-br0 " + binascii.hexlify(pkt)):
         raise Exception("DATA_TEST_FRAME failed")
 
+    macs = get_bridge_macs("ap-br0")
+    logger.info("After connect (showmacs): " + str(macs))
+
     matches = get_permanent_neighbors("ap-br0")
     logger.info("After connect: " + str(matches))
     if len(matches) != 4:
@@ -3106,6 +3116,9 @@ def _test_proxyarp_open(dev, apdev, params, ebtables=False):
     send_arp(dev[1], sender_ip="192.168.1.127", target_ip="192.168.1.127",
              opcode=2)
 
+    macs = get_bridge_macs("ap-br0")
+    logger.info("After ARP Probe + Announcement (showmacs): " + str(macs))
+
     matches = get_permanent_neighbors("ap-br0")
     logger.info("After ARP Probe + Announcement: " + str(matches))
 
@@ -3123,6 +3136,9 @@ def _test_proxyarp_open(dev, apdev, params, ebtables=False):
              target_ip="192.168.1.130")
     send_arp(hapd, hapd_bssid=bssid, sender_ip="192.168.1.130",
              target_ip="192.168.1.130", opcode=2)
+
+    macs = get_bridge_macs("ap-br0")
+    logger.info("After ARP Probe + Announcement (showmacs): " + str(macs))
 
     matches = get_permanent_neighbors("ap-br0")
     logger.info("After ARP Probe + Announcement: " + str(matches))
@@ -3186,6 +3202,8 @@ def _test_proxyarp_open(dev, apdev, params, ebtables=False):
     time.sleep(0.5)
     for i in range(3):
         cmd[i].terminate()
+    macs = get_bridge_macs("ap-br0")
+    logger.info("After disconnect (showmacs): " + str(macs))
     matches = get_permanent_neighbors("ap-br0")
     logger.info("After disconnect: " + str(matches))
     if len(matches) > 0:

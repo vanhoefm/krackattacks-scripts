@@ -42,6 +42,17 @@ struct bootp_pkt {
 static const u8 ic_bootp_cookie[] = { 99, 130, 83, 99 };
 
 
+static const char * ipaddr_str(u32 addr)
+{
+	static char buf[17];
+
+	os_snprintf(buf, sizeof(buf), "%u.%u.%u.%u",
+		    (addr >> 24) & 0xff, (addr >> 16) & 0xff,
+		    (addr >> 8) & 0xff, addr & 0xff);
+	return buf;
+}
+
+
 static void handle_dhcp(void *ctx, const u8 *src_addr, const u8 *buf,
 			size_t len)
 {
@@ -109,16 +120,17 @@ static void handle_dhcp(void *ctx, const u8 *src_addr, const u8 *buf,
 			return;
 
 		wpa_printf(MSG_DEBUG, "dhcp_snoop: Found DHCPACK for " MACSTR
-			   " @ IPv4 address %X/%d",
-			   MAC2STR(sta->addr), ntohl(b->your_ip), prefixlen);
+			   " @ IPv4 address %s/%d",
+			   MAC2STR(sta->addr), ipaddr_str(ntohl(b->your_ip)),
+			   prefixlen);
 
 		if (sta->ipaddr == b->your_ip)
 			return;
 
 		if (sta->ipaddr != 0) {
 			wpa_printf(MSG_DEBUG,
-				   "dhcp_snoop: Removing IPv4 address %X from the ip neigh table",
-				   sta->ipaddr);
+				   "dhcp_snoop: Removing IPv4 address %s from the ip neigh table",
+				   ipaddr_str(be_to_host32(sta->ipaddr)));
 			hostapd_drv_br_delete_ip_neigh(hapd, 4,
 						       (u8 *) &sta->ipaddr);
 		}

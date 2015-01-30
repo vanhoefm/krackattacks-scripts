@@ -2913,10 +2913,15 @@ def get_permanent_neighbors(ifname):
     cmd.stdout.close()
     return [ line for line in res.splitlines() if "PERMANENT" in line and ifname in line ]
 
-def _test_proxyarp_open(dev, apdev, params):
-    cap_br = os.path.join(params['logdir'], "proxyarp_open.ap-br0.pcap")
-    cap_dev0 = os.path.join(params['logdir'], "proxyarp_open.%s.pcap" % dev[0].ifname)
-    cap_dev1 = os.path.join(params['logdir'], "proxyarp_open.%s.pcap" % dev[1].ifname)
+def _test_proxyarp_open(dev, apdev, params, ebtables=False):
+    prefix = "proxyarp_open"
+    if ebtables:
+        prefix += "_ebtables"
+    cap_br = os.path.join(params['logdir'], prefix + ".ap-br0.pcap")
+    cap_dev0 = os.path.join(params['logdir'],
+                            prefix + ".%s.pcap" % dev[0].ifname)
+    cap_dev1 = os.path.join(params['logdir'],
+                            prefix + ".%s.pcap" % dev[1].ifname)
 
     bssid = apdev[0]['bssid']
     params = { 'ssid': 'open' }
@@ -2939,27 +2944,28 @@ def _test_proxyarp_open(dev, apdev, params):
     subprocess.call(['brctl', 'setfd', 'ap-br0', '0'])
     subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
 
-    for chain in [ 'FORWARD', 'OUTPUT' ]:
-        subprocess.call(['ebtables', '-A', chain, '-p', 'ARP',
-                         '-d', 'Broadcast', '-o', apdev[0]['ifname'],
-                         '-j', 'DROP'])
-        subprocess.call(['ebtables', '-A', chain, '-d', 'Multicast',
-                         '-p', 'IPv6', '--ip6-protocol', 'ipv6-icmp',
-                         '--ip6-icmp-type', 'neighbor-solicitation',
-                         '-o', apdev[0]['ifname'], '-j', 'DROP'])
-        subprocess.call(['ebtables', '-A', chain, '-d', 'Multicast',
-                         '-p', 'IPv6', '--ip6-protocol', 'ipv6-icmp',
-                         '--ip6-icmp-type', 'neighbor-advertisement',
-                         '-o', apdev[0]['ifname'], '-j', 'DROP'])
-        subprocess.call(['ebtables', '-A', chain,
-                         '-p', 'IPv6', '--ip6-protocol', 'ipv6-icmp',
-                         '--ip6-icmp-type', 'router-solicitation',
-                         '-o', apdev[0]['ifname'], '-j', 'DROP'])
-        # Multicast Listener Report Message
-        subprocess.call(['ebtables', '-A', chain, '-d', 'Multicast',
-                         '-p', 'IPv6', '--ip6-protocol', 'ipv6-icmp',
-                         '--ip6-icmp-type', '143',
-                         '-o', apdev[0]['ifname'], '-j', 'DROP'])
+    if ebtables:
+        for chain in [ 'FORWARD', 'OUTPUT' ]:
+            subprocess.call(['ebtables', '-A', chain, '-p', 'ARP',
+                             '-d', 'Broadcast', '-o', apdev[0]['ifname'],
+                             '-j', 'DROP'])
+            subprocess.call(['ebtables', '-A', chain, '-d', 'Multicast',
+                             '-p', 'IPv6', '--ip6-protocol', 'ipv6-icmp',
+                             '--ip6-icmp-type', 'neighbor-solicitation',
+                             '-o', apdev[0]['ifname'], '-j', 'DROP'])
+            subprocess.call(['ebtables', '-A', chain, '-d', 'Multicast',
+                             '-p', 'IPv6', '--ip6-protocol', 'ipv6-icmp',
+                             '--ip6-icmp-type', 'neighbor-advertisement',
+                             '-o', apdev[0]['ifname'], '-j', 'DROP'])
+            subprocess.call(['ebtables', '-A', chain,
+                             '-p', 'IPv6', '--ip6-protocol', 'ipv6-icmp',
+                             '--ip6-icmp-type', 'router-solicitation',
+                             '-o', apdev[0]['ifname'], '-j', 'DROP'])
+            # Multicast Listener Report Message
+            subprocess.call(['ebtables', '-A', chain, '-d', 'Multicast',
+                             '-p', 'IPv6', '--ip6-protocol', 'ipv6-icmp',
+                             '--ip6-icmp-type', '143',
+                             '-o', apdev[0]['ifname'], '-j', 'DROP'])
 
     cmd = {}
     cmd[0] = subprocess.Popen(['tcpdump', '-p', '-U', '-i', 'ap-br0',
@@ -3184,15 +3190,27 @@ def _test_proxyarp_open(dev, apdev, params):
     logger.info("After disconnect: " + str(matches))
     if len(matches) > 0:
         raise Exception("Unexpected neighbor entries after disconnect")
-    cmd = subprocess.Popen(['ebtables', '-L', '--Lc'], stdout=subprocess.PIPE)
-    res = cmd.stdout.read()
-    cmd.stdout.close()
-    logger.info("ebtables results:\n" + res)
+    if ebtables:
+        cmd = subprocess.Popen(['ebtables', '-L', '--Lc'],
+                               stdout=subprocess.PIPE)
+        res = cmd.stdout.read()
+        cmd.stdout.close()
+        logger.info("ebtables results:\n" + res)
 
 def test_proxyarp_open(dev, apdev, params):
     """ProxyARP with open network"""
     try:
         _test_proxyarp_open(dev, apdev, params)
+    finally:
+        subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'down'],
+                        stderr=open('/dev/null', 'w'))
+        subprocess.call(['brctl', 'delbr', 'ap-br0'],
+                        stderr=open('/dev/null', 'w'))
+
+def test_proxyarp_open_ebtables(dev, apdev, params):
+    """ProxyARP with open network"""
+    try:
+        _test_proxyarp_open(dev, apdev, params, ebtables=True)
     finally:
         try:
             subprocess.call(['ebtables', '-F', 'FORWARD'])

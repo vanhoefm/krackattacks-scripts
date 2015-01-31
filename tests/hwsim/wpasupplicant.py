@@ -864,11 +864,11 @@ class WpaSupplicant:
         if ev is None:
             raise Exception("Scan timed out")
 
-    def scan_for_bss(self, bssid, freq=None, force_scan=False):
+    def scan_for_bss(self, bssid, freq=None, force_scan=False, only_new=False):
         if not force_scan and self.get_bss(bssid) is not None:
             return
         for i in range(0, 10):
-            self.scan(freq=freq, type="ONLY")
+            self.scan(freq=freq, type="ONLY", only_new=only_new)
             if self.get_bss(bssid) is not None:
                 return
         raise Exception("Could not find BSS " + bssid + " in scan")

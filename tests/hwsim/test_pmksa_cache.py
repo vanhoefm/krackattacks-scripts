@@ -606,3 +606,48 @@ def _test_pmksa_cache_preauth_oom(dev, apdev):
             dev[0].wait_disconnected()
             dev[0].wait_connected()
             dev[0].dump_monitor()
+
+def test_pmksa_cache_size_limit(dev, apdev):
+    """PMKSA cache size limit in wpa_supplicant"""
+    try:
+        _test_pmksa_cache_size_limit(dev, apdev)
+    finally:
+        try:
+            hapd = hostapd.HostapdGlobal()
+            hapd.flush()
+            hapd.remove(apdev[0]['ifname'])
+        except:
+            pass
+        params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
+        bssid = apdev[0]['bssid']
+        params['bssid'] = bssid
+        hostapd.add_ap(apdev[0]['ifname'], params)
+
+def _test_pmksa_cache_size_limit(dev, apdev):
+    params = hostapd.wpa2_eap_params(ssid="test-pmksa-cache")
+    id = dev[0].connect("test-pmksa-cache", proto="RSN", key_mgmt="WPA-EAP",
+                        eap="GPSK", identity="gpsk user",
+                        password="abcdefghijklmnop0123456789abcdef",
+                        scan_freq="2412", only_add_network=True)
+    for i in range(33):
+        bssid = apdev[0]['bssid'][0:15] + "%02x" % i
+        logger.info("Iteration with BSSID " + bssid)
+        params['bssid'] = bssid
+        hostapd.add_ap(apdev[0]['ifname'], params)
+        dev[0].request("BSS_FLUSH 0")
+        dev[0].scan_for_bss(bssid, freq=2412, only_new=True)
+        dev[0].select_network(id)
+        dev[0].wait_connected()
+        dev[0].request("DISCONNECT")
+        dev[0].wait_disconnected()
+        dev[0].dump_monitor()
+        entries = len(dev[0].request("PMKSA").splitlines()) - 1
+        if i == 32:
+            if entries != 32:
+                raise Exception("Unexpected number of PMKSA entries after expected removal of the oldest entry")
+        elif i + 1 != entries:
+            raise Exception("Unexpected number of PMKSA entries")
+
+        hapd = hostapd.HostapdGlobal()
+        hapd.flush()
+        hapd.remove(apdev[0]['ifname'])

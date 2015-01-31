@@ -546,3 +546,20 @@ def _test_nfc_wps_er_handover_pk_hash_mismatch_er(dev, apdev):
         raise Exception("Timed out")
     if "WPS-FAIL" not in ev:
         raise Exception("Public key hash mismatch not detected")
+
+def test_nfc_invalid_ndef_record(dev, apdev):
+    """Invalid NFC NDEF record handling"""
+    tests = [ "11223344",
+              "00112233",
+              "0000112233445566",
+              "0800112233445566",
+              "080011223344",
+              "18000000",
+              "18010000",
+              "90000050",
+              "9000005000",
+              "9001013344",
+              "98010101334455" ]
+    for test in tests:
+        if "FAIL" not in dev[0].request("WPS_NFC_TAG_READ " + test):
+            raise Exception("Invalid tag accepted: " + test)

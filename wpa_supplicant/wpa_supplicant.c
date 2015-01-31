@@ -3086,11 +3086,9 @@ int wpa_supplicant_driver_init(struct wpa_supplicant *wpa_s)
 	if (wpa_s->bridge_ifname[0]) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Receiving packets from bridge "
 			"interface '%s'", wpa_s->bridge_ifname);
-		wpa_s->l2_br = l2_packet_init(wpa_s->bridge_ifname,
-					      wpa_s->own_addr,
-					      ETH_P_EAPOL,
-					      wpa_supplicant_rx_eapol_bridge,
-					      wpa_s, 1);
+		wpa_s->l2_br = l2_packet_init_bridge(
+			wpa_s->bridge_ifname, wpa_s->ifname, wpa_s->own_addr,
+			ETH_P_EAPOL, wpa_supplicant_rx_eapol_bridge, wpa_s, 1);
 		if (wpa_s->l2_br == NULL) {
 			wpa_msg(wpa_s, MSG_ERROR, "Failed to open l2_packet "
 				"connection for the bridge interface '%s'",

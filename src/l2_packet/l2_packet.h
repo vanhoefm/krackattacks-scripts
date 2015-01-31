@@ -68,6 +68,19 @@ struct l2_packet_data * l2_packet_init(
 	void *rx_callback_ctx, int l2_hdr);
 
 /**
+ * l2_packet_init_bridge - Like l2_packet_init() but with bridge workaround
+ *
+ * This version of l2_packet_init() can be used to enable a workaround for Linux
+ * packet socket in case of a station interface in a bridge.
+ */
+struct l2_packet_data * l2_packet_init_bridge(
+	const char *br_ifname, const char *ifname, const u8 *own_addr,
+	unsigned short protocol,
+	void (*rx_callback)(void *ctx, const u8 *src_addr,
+			    const u8 *buf, size_t len),
+	void *rx_callback_ctx, int l2_hdr);
+
+/**
  * l2_packet_deinit - Deinitialize l2_packet interface
  * @l2: Pointer to internal l2_packet data from l2_packet_init()
  */

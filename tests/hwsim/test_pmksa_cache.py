@@ -651,3 +651,25 @@ def _test_pmksa_cache_size_limit(dev, apdev):
         hapd = hostapd.HostapdGlobal()
         hapd.flush()
         hapd.remove(apdev[0]['ifname'])
+
+def test_pmksa_cache_preauth_timeout(dev, apdev):
+    """RSN pre-authentication timing out"""
+    try:
+        _test_pmksa_cache_preauth_timeout(dev, apdev)
+    finally:
+        dev[0].request("SET dot11RSNAConfigSATimeout 60")
+
+def _test_pmksa_cache_preauth_timeout(dev, apdev):
+    dev[0].request("SET dot11RSNAConfigSATimeout 1")
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "PAX", "pax.user@example.com",
+                password_hex="0123456789abcdef0123456789abcdef",
+                bssid=apdev[0]['bssid'])
+    if "OK" not in dev[0].request("PREAUTH f2:11:22:33:44:55"):
+        raise Exception("PREAUTH failed")
+    ev = dev[0].wait_event(["RSN: pre-authentication with"], timeout=5)
+    if ev is None:
+        raise Exception("No timeout event seen")
+    if "timed out" not in ev:
+        raise Exception("Unexpected event: " + ev)

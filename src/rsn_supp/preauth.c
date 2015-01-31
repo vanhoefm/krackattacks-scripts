@@ -172,6 +172,7 @@ int rsn_preauth_init(struct wpa_sm *sm, const u8 *dst,
 {
 	struct eapol_config eapol_conf;
 	struct eapol_ctx *ctx;
+	int ret;
 
 	if (sm->preauth_eapol)
 		return -1;
@@ -197,14 +198,16 @@ int rsn_preauth_init(struct wpa_sm *sm, const u8 *dst,
 			wpa_printf(MSG_WARNING, "RSN: Failed to initialize L2 "
 				   "packet processing (bridge) for "
 				   "pre-authentication");
-			return -2;
+			ret = -2;
+			goto fail;
 		}
 	}
 
 	ctx = os_zalloc(sizeof(*ctx));
 	if (ctx == NULL) {
 		wpa_printf(MSG_WARNING, "Failed to allocate EAPOL context.");
-		return -4;
+		ret = -4;
+		goto fail;
 	}
 	ctx->ctx = sm->ctx->ctx;
 	ctx->msg_ctx = sm->ctx->ctx;
@@ -222,7 +225,8 @@ int rsn_preauth_init(struct wpa_sm *sm, const u8 *dst,
 		os_free(ctx);
 		wpa_printf(MSG_WARNING, "RSN: Failed to initialize EAPOL "
 			   "state machines for pre-authentication");
-		return -3;
+		ret = -3;
+		goto fail;
 	}
 	os_memset(&eapol_conf, 0, sizeof(eapol_conf));
 	eapol_conf.accept_802_1x_keys = 0;
@@ -247,6 +251,15 @@ int rsn_preauth_init(struct wpa_sm *sm, const u8 *dst,
 			       rsn_preauth_timeout, sm, NULL);
 
 	return 0;
+
+fail:
+	if (sm->l2_preauth_br) {
+		l2_packet_deinit(sm->l2_preauth_br);
+		sm->l2_preauth_br = NULL;
+	}
+	l2_packet_deinit(sm->l2_preauth);
+	sm->l2_preauth = NULL;
+	return ret;
 }
 
 

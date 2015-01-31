@@ -208,7 +208,7 @@ def test_sae_key_lifetime_in_memory(dev, apdev, params):
     id = dev[0].connect("test-sae", psk=password, key_mgmt="SAE",
                         scan_freq="2412")
 
-    time.sleep(0.1)
+    time.sleep(1)
     buf = read_process_memory(pid, password)
 
     dev[0].request("DISCONNECT")

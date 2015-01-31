@@ -2651,7 +2651,7 @@ def test_wpa2_eap_ttls_pap_key_lifetime_in_memory(dev, apdev, params):
     id = eap_connect(dev[0], apdev[0], "TTLS", "pap-secret",
                      anonymous_identity="ttls", password=password,
                      ca_cert="auth_serv/ca.pem", phase2="auth=PAP")
-    time.sleep(0.1)
+    time.sleep(1)
     buf = read_process_memory(pid, password)
 
     dev[0].request("DISCONNECT")

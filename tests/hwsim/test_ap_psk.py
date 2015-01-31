@@ -912,7 +912,7 @@ def test_wpa2_psk_key_lifetime_in_memory(dev, apdev, params):
     get_key_locations(buf, pmk, "PMK")
 
     dev[0].connect_network(id, timeout=20)
-    time.sleep(0.1)
+    time.sleep(1)
 
     buf = read_process_memory(pid, pmk)
 

@@ -479,7 +479,7 @@ def test_ft_psk_key_lifetime_in_memory(dev, apdev, params):
 
     dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
                    scan_freq="2412")
-    time.sleep(0.1)
+    time.sleep(1)
 
     buf = read_process_memory(pid, pmk)
 

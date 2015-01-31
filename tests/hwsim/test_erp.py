@@ -241,7 +241,7 @@ def test_erp_key_lifetime_in_memory(dev, apdev, params):
                    ca_cert="auth_serv/ca.pem", phase2="auth=PAP",
                    erp="1", scan_freq="2412")
 
-    time.sleep(0.1)
+    time.sleep(1)
     buf = read_process_memory(pid, password)
 
     dev[0].request("DISCONNECT")

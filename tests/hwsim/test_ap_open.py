@@ -13,6 +13,7 @@ import time
 import hostapd
 import hwsim_utils
 from utils import alloc_fail
+from wpasupplicant import WpaSupplicant
 
 def test_ap_open(dev, apdev):
     """AP with open mode (no security) configuration"""
@@ -240,3 +241,41 @@ def test_bssid_black_white_list(dev, apdev):
     if ev is not None:
         raise Exception("Unexpected dev[2] connectin")
     dev[2].request("REMOVE_NETWORK all")
+
+def test_ap_open_wpas_in_bridge(dev, apdev):
+    """Open mode AP and wpas interface in a bridge"""
+    br_ifname='sta-br0'
+    ifname='wlan5'
+    try:
+        _test_ap_open_wpas_in_bridge(dev, apdev)
+    finally:
+        subprocess.call(['ip', 'link', 'set', 'dev', br_ifname, 'down'])
+        subprocess.call(['brctl', 'delif', br_ifname, ifname])
+        subprocess.call(['brctl', 'delbr', br_ifname])
+        subprocess.call(['iw', ifname, 'set', '4addr', 'on'])
+
+def _test_ap_open_wpas_in_bridge(dev, apdev):
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+
+    br_ifname='sta-br0'
+    ifname='wlan5'
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    # First, try a failure case of adding an interface
+    try:
+        wpas.interface_add(ifname, br_ifname=br_ifname)
+        raise Exception("Interface addition succeeded unexpectedly")
+    except Exception, e:
+        if "Failed to add" in str(e):
+            logger.info("Ignore expected interface_add failure due to missing bridge interface: " + str(e))
+        else:
+            raise
+
+    # Next, add the bridge interface and add the interface again
+    subprocess.call(['brctl', 'addbr', br_ifname])
+    subprocess.call(['brctl', 'setfd', br_ifname, '0'])
+    subprocess.call(['ip', 'link', 'set', 'dev', br_ifname, 'up'])
+    subprocess.call(['iw', ifname, 'set', '4addr', 'on'])
+    subprocess.check_call(['brctl', 'addif', br_ifname, ifname])
+    wpas.interface_add(ifname, br_ifname=br_ifname)
+
+    wpas.connect("open", key_mgmt="NONE", scan_freq="2412")

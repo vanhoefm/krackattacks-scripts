@@ -53,7 +53,8 @@ class WpaSupplicant:
             self.ctrl = None
             self.ifname = None
 
-    def interface_add(self, ifname, config="", driver="nl80211", drv_params=None):
+    def interface_add(self, ifname, config="", driver="nl80211",
+                      drv_params=None, br_ifname=None):
         try:
             groups = subprocess.check_output(["id"])
             group = "admin" if "(admin)" in groups else "adm"
@@ -62,6 +63,10 @@ class WpaSupplicant:
         cmd = "INTERFACE_ADD " + ifname + "\t" + config + "\t" + driver + "\tDIR=/var/run/wpa_supplicant GROUP=" + group
         if drv_params:
             cmd = cmd + '\t' + drv_params
+        if br_ifname:
+            if not drv_params:
+                cmd += '\t'
+            cmd += '\t' + br_ifname
         if "FAIL" in self.global_request(cmd):
             raise Exception("Failed to add a dynamic wpa_supplicant interface")
         self.set_ifname(ifname)

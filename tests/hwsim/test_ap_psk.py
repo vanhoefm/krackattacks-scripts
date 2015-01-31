@@ -18,6 +18,7 @@ import time
 import hostapd
 from utils import HwsimSkip
 import hwsim_utils
+from wpasupplicant import WpaSupplicant
 
 def check_mib(dev, vals):
     mib = dev.get_mib()
@@ -987,3 +988,33 @@ def test_ap_wpa2_psk_wep(dev, apdev):
         raise Exception("WEP key accepted to WPA2 network")
     except Exception:
         pass
+
+def test_ap_wpa2_psk_wpas_in_bridge(dev, apdev):
+    """WPA2-PSK AP and wpas interface in a bridge"""
+    br_ifname='sta-br0'
+    ifname='wlan5'
+    try:
+        _test_ap_wpa2_psk_wpas_in_bridge(dev, apdev)
+    finally:
+        subprocess.call(['ip', 'link', 'set', 'dev', br_ifname, 'down'])
+        subprocess.call(['brctl', 'delif', br_ifname, ifname])
+        subprocess.call(['brctl', 'delbr', br_ifname])
+        subprocess.call(['iw', ifname, 'set', '4addr', 'on'])
+
+def _test_ap_wpa2_psk_wpas_in_bridge(dev, apdev):
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    br_ifname='sta-br0'
+    ifname='wlan5'
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    subprocess.call(['brctl', 'addbr', br_ifname])
+    subprocess.call(['brctl', 'setfd', br_ifname, '0'])
+    subprocess.call(['ip', 'link', 'set', 'dev', br_ifname, 'up'])
+    subprocess.call(['iw', ifname, 'set', '4addr', 'on'])
+    subprocess.check_call(['brctl', 'addif', br_ifname, ifname])
+    wpas.interface_add(ifname, br_ifname=br_ifname)
+
+    wpas.connect(ssid, psk=passphrase, scan_freq="2412")

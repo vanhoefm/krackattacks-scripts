@@ -673,3 +673,20 @@ def _test_pmksa_cache_preauth_timeout(dev, apdev):
         raise Exception("No timeout event seen")
     if "timed out" not in ev:
         raise Exception("Unexpected event: " + ev)
+
+def test_pmksa_cache_preauth_wpas_oom(dev, apdev):
+    """RSN pre-authentication OOM in wpa_supplicant"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "PAX", "pax.user@example.com",
+                password_hex="0123456789abcdef0123456789abcdef",
+                bssid=apdev[0]['bssid'])
+    for i in range(1, 11):
+        with alloc_fail(dev[0], i, "rsn_preauth_init"):
+            res = dev[0].request("PREAUTH f2:11:22:33:44:55").strip()
+            logger.info("Iteration %d - PREAUTH command results: %s" % (i, res))
+            for j in range(10):
+                state = dev[0].request('GET_ALLOC_FAIL')
+                if state.startswith('0:'):
+                    break
+                time.sleep(0.05)

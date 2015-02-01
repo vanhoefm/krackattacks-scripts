@@ -425,7 +425,9 @@ struct eap_peer_config {
 	 * phase2 - Phase2 (inner authentication with TLS tunnel) parameters
 	 *
 	 * String with field-value pairs, e.g., "auth=MSCHAPV2" for EAP-PEAP or
-	 * "autheap=MSCHAPV2 autheap=MD5" for EAP-TTLS.
+	 * "autheap=MSCHAPV2 autheap=MD5" for EAP-TTLS. "mschapv2_retry=0" can
+	 * be used to disable MSCHAPv2 password retry in authentication failure
+	 * cases.
 	 */
 	char *phase2;
 

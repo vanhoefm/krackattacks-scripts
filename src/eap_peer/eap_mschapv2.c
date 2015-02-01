@@ -472,6 +472,13 @@ static int eap_mschapv2_failure_txt(struct eap_sm *sm,
 		pos += 2;
 		msg = pos;
 	}
+	if (data->prev_error == ERROR_AUTHENTICATION_FAILURE && retry &&
+	    config && config->phase2 &&
+	    os_strstr(config->phase2, "mschapv2_retry=0")) {
+		wpa_printf(MSG_DEBUG,
+			   "EAP-MSCHAPV2: mark password retry disabled based on local configuration");
+		retry = 0;
+	}
 	wpa_msg(sm->msg_ctx, MSG_WARNING,
 		"EAP-MSCHAPV2: failure message: '%s' (retry %sallowed, error "
 		"%d)",

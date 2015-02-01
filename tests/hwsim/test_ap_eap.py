@@ -1138,6 +1138,15 @@ def test_ap_wpa2_eap_peap_eap_mschapv2(dev, apdev):
                 ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
                 expect_failure=True)
 
+def test_ap_wpa2_eap_peap_eap_mschapv2_incorrect_password(dev, apdev):
+    """WPA2-Enterprise connection using EAP-PEAP/EAP-MSCHAPv2 - incorrect password"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "PEAP", "user",
+                anonymous_identity="peap", password="wrong",
+                ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
+                expect_failure=True)
+
 def test_ap_wpa2_eap_peap_crypto_binding(dev, apdev):
     """WPA2-Enterprise connection using EAP-PEAPv0/EAP-MSCHAPv2 and crypto binding"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")

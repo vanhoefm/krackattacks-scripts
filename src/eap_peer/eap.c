@@ -934,6 +934,15 @@ static int eap_peer_req_is_duplicate(struct eap_sm *sm)
 }
 
 
+static int eap_peer_sm_allow_canned(struct eap_sm *sm)
+{
+	struct eap_peer_config *config = eap_get_config(sm);
+
+	return config && config->phase1 &&
+		os_strstr(config->phase1, "allow_canned_success=1");
+}
+
+
 static void eap_peer_sm_step_received(struct eap_sm *sm)
 {
 	int duplicate = eap_peer_req_is_duplicate(sm);
@@ -947,6 +956,17 @@ static void eap_peer_sm_step_received(struct eap_sm *sm)
 	    (sm->reqId == sm->lastId ||
 	     eap_success_workaround(sm, sm->reqId, sm->lastId)))
 		SM_ENTER(EAP, SUCCESS);
+	else if (sm->workaround && sm->lastId == -1 && sm->rxSuccess &&
+		 !sm->rxFailure && !sm->rxReq && eap_peer_sm_allow_canned(sm))
+		SM_ENTER(EAP, SUCCESS); /* EAP-Success prior any EAP method */
+	else if (sm->workaround && sm->lastId == -1 && sm->rxFailure &&
+		 !sm->rxReq && sm->methodState != METHOD_CONT &&
+		 eap_peer_sm_allow_canned(sm))
+		SM_ENTER(EAP, FAILURE); /* EAP-Failure prior any EAP method */
+	else if (sm->workaround && sm->rxSuccess && !sm->rxFailure &&
+		 !sm->rxReq && sm->methodState != METHOD_CONT &&
+		 eap_peer_sm_allow_canned(sm))
+		SM_ENTER(EAP, SUCCESS); /* EAP-Success after Identity */
 	else if (sm->methodState != METHOD_CONT &&
 		 ((sm->rxFailure &&
 		   sm->decision != DECISION_UNCOND_SUCC) ||

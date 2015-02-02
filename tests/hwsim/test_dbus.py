@@ -322,7 +322,7 @@ def test_dbus_get_set_wps(dev, apdev):
         _test_dbus_get_set_wps(dev, apdev)
     finally:
         dev[0].request("SET wps_cred_processing 0")
-        dev[0].request("SET config_methods display keypad virtual_display nfc_interface")
+        dev[0].request("SET config_methods display keypad virtual_display nfc_interface p2ps")
 
 def _test_dbus_get_set_wps(dev, apdev):
     (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])

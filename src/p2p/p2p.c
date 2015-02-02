@@ -3200,9 +3200,9 @@ void p2p_send_action_cb(struct p2p_data *p2p, unsigned int freq, const u8 *dst,
 	int success;
 
 	p2p_dbg(p2p, "Action frame TX callback (state=%d freq=%u dst=" MACSTR
-		" src=" MACSTR " bssid=" MACSTR " result=%d",
+		" src=" MACSTR " bssid=" MACSTR " result=%d p2p_state=%s)",
 		p2p->pending_action_state, freq, MAC2STR(dst), MAC2STR(src),
-		MAC2STR(bssid), result);
+		MAC2STR(bssid), result, p2p_state_txt(p2p->state));
 	success = result == P2P_SEND_ACTION_SUCCESS;
 	state = p2p->pending_action_state;
 	p2p->pending_action_state = P2P_NO_PENDING_ACTION;

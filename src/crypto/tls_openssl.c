@@ -84,6 +84,7 @@ static struct tls_context *tls_global = NULL;
 
 struct tls_connection {
 	struct tls_context *context;
+	SSL_CTX *ssl_ctx;
 	SSL *ssl;
 	BIO *ssl_in, *ssl_out;
 #ifndef OPENSSL_NO_ENGINE
@@ -1041,6 +1042,7 @@ struct tls_connection * tls_connection_init(void *ssl_ctx)
 	conn = os_zalloc(sizeof(*conn));
 	if (conn == NULL)
 		return NULL;
+	conn->ssl_ctx = ssl_ctx;
 	conn->ssl = SSL_new(ssl);
 	if (conn->ssl == NULL) {
 		tls_show_errors(MSG_INFO, __func__,
@@ -1609,7 +1611,7 @@ static int tls_load_ca_der(void *_ssl_ctx, const char *ca_cert)
 	X509_LOOKUP *lookup;
 	int ret = 0;
 
-	lookup = X509_STORE_add_lookup(ssl_ctx->cert_store,
+	lookup = X509_STORE_add_lookup(SSL_CTX_get_cert_store(ssl_ctx),
 				       X509_LOOKUP_file());
 	if (lookup == NULL) {
 		tls_show_errors(MSG_WARNING, __func__,
@@ -1640,18 +1642,19 @@ static int tls_connection_ca_cert(void *_ssl_ctx, struct tls_connection *conn,
 				  size_t ca_cert_blob_len, const char *ca_path)
 {
 	SSL_CTX *ssl_ctx = _ssl_ctx;
+	X509_STORE *store;
 
 	/*
 	 * Remove previously configured trusted CA certificates before adding
 	 * new ones.
 	 */
-	X509_STORE_free(ssl_ctx->cert_store);
-	ssl_ctx->cert_store = X509_STORE_new();
-	if (ssl_ctx->cert_store == NULL) {
+	store = X509_STORE_new();
+	if (store == NULL) {
 		wpa_printf(MSG_DEBUG, "OpenSSL: %s - failed to allocate new "
 			   "certificate store", __func__);
 		return -1;
 	}
+	SSL_CTX_set_cert_store(ssl_ctx, store);
 
 	SSL_set_verify(conn->ssl, SSL_VERIFY_PEER, tls_verify_cb);
 	conn->ca_cert_verify = 1;
@@ -1704,7 +1707,8 @@ static int tls_connection_ca_cert(void *_ssl_ctx, struct tls_connection *conn,
 			return -1;
 		}
 
-		if (!X509_STORE_add_cert(ssl_ctx->cert_store, cert)) {
+		if (!X509_STORE_add_cert(SSL_CTX_get_cert_store(ssl_ctx),
+					 cert)) {
 			unsigned long err = ERR_peek_error();
 			tls_show_errors(MSG_WARNING, __func__,
 					"Failed to add ca_cert_blob to "
@@ -2216,20 +2220,21 @@ static int tls_connection_engine_ca_cert(void *_ssl_ctx,
 #ifndef OPENSSL_NO_ENGINE
 	X509 *cert;
 	SSL_CTX *ssl_ctx = _ssl_ctx;
+	X509_STORE *store;
 
 	if (tls_engine_get_cert(conn, ca_cert_id, &cert))
 		return -1;
 
 	/* start off the same as tls_connection_ca_cert */
-	X509_STORE_free(ssl_ctx->cert_store);
-	ssl_ctx->cert_store = X509_STORE_new();
-	if (ssl_ctx->cert_store == NULL) {
+	store = X509_STORE_new();
+	if (store == NULL) {
 		wpa_printf(MSG_DEBUG, "OpenSSL: %s - failed to allocate new "
 			   "certificate store", __func__);
 		X509_free(cert);
 		return -1;
 	}
-	if (!X509_STORE_add_cert(ssl_ctx->cert_store, cert)) {
+	SSL_CTX_set_cert_store(ssl_ctx, store);
+	if (!X509_STORE_add_cert(store, cert)) {
 		unsigned long err = ERR_peek_error();
 		tls_show_errors(MSG_WARNING, __func__,
 				"Failed to add CA certificate from engine "
@@ -3138,7 +3143,7 @@ static int ocsp_resp_cb(SSL *s, void *arg)
 		return 0;
 	}
 
-	store = SSL_CTX_get_cert_store(s->ctx);
+	store = SSL_CTX_get_cert_store(conn->ssl_ctx);
 	if (conn->peer_issuer) {
 		debug_print_cert(conn->peer_issuer, "Add OCSP issuer");
 

@@ -275,14 +275,17 @@ def test_grpform_pd(dev):
 
 def test_grpform_ext_listen(dev):
     """P2P group formation with extended listen timing enabled"""
+    addr0 = dev[0].p2p_dev_addr()
     try:
         if "FAIL" not in dev[0].global_request("P2P_EXT_LISTEN 100"):
             raise Exception("Invalid P2P_EXT_LISTEN accepted")
-        if "OK" not in dev[0].global_request("P2P_EXT_LISTEN 100 50000"):
+        if "OK" not in dev[0].global_request("P2P_EXT_LISTEN 300 1000"):
             raise Exception("Failed to set extended listen timing")
         if "OK" not in dev[1].global_request("P2P_EXT_LISTEN 200 40000"):
             raise Exception("Failed to set extended listen timing")
-        [i_res, r_res] = go_neg_pbc(i_dev=dev[0], provdisc=True, r_dev=dev[1], r_listen=True)
+        [i_res, r_res] = go_neg_pbc(i_dev=dev[0], provdisc=True, r_dev=dev[1],
+                                    r_listen=True, i_freq="2417", r_freq="2417",
+                                    i_intent=1, r_intent=15)
         check_grpform_results(i_res, r_res)
         peer1 = dev[0].get_peer(dev[1].p2p_dev_addr())
         if peer1['ext_listen_interval'] != "40000":
@@ -290,10 +293,12 @@ def test_grpform_ext_listen(dev):
         if peer1['ext_listen_period'] != "200":
             raise Exception("Extended listen period not discovered correctly")
         peer0 = dev[1].get_peer(dev[0].p2p_dev_addr())
-        if peer0['ext_listen_interval'] != "50000":
+        if peer0['ext_listen_interval'] != "1000":
             raise Exception("Extended listen interval not discovered correctly")
-        if peer0['ext_listen_period'] != "100":
+        if peer0['ext_listen_period'] != "300":
             raise Exception("Extended listen period not discovered correctly")
+        if not dev[2].discover_peer(addr0):
+            raise Exception("Could not discover peer during ext listen")
         remove_group(dev[0], dev[1])
     finally:
         if "OK" not in dev[0].global_request("P2P_EXT_LISTEN"):

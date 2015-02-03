@@ -433,6 +433,69 @@ def test_obss_scan_40_intolerant(dev, apdev):
     if not received:
         raise Exception("20/40 BSS Coexistence report not seen")
 
+def test_obss_coex_report_handling(dev, apdev):
+    """Overlapping BSS scan report handling with obss_interval=0"""
+    clear_scan_cache(apdev[0]['ifname'])
+    params = { "ssid": "obss-scan",
+               "channel": "6",
+               "ht_capab": "[HT40-]" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+    dev[0].connect("obss-scan", key_mgmt="NONE", scan_freq="2437")
+
+    sec = hapd.get_status_field("secondary_channel")
+    if sec != "-1":
+        raise Exception("AP is not using 40 MHz channel")
+
+    # 20/40 MHz co-ex report tests: number of invalid reports and a valid report
+    # that forces 20 MHz channel.
+    tests = [ '0400', '040048', '04004801', '0400480000', '0400490100',
+              '040048ff0000', '04004801ff49ff00', '04004801004900',
+              '0400480100490101', '0400480100490201ff',
+              '040048010449020005' ]
+    for msg in tests:
+        req = "MGMT_TX {} {} freq=2437 action={}".format(bssid, bssid, msg)
+        if "OK" not in dev[0].request(req):
+            raise Exception("Could not send management frame")
+    time.sleep(0.5)
+    sec = hapd.get_status_field("secondary_channel")
+    if sec != "0":
+        raise Exception("AP did not move to 20 MHz channel")
+
+def test_obss_coex_report_handling1(dev, apdev):
+    """Overlapping BSS scan report handling with obss_interval=1"""
+    clear_scan_cache(apdev[0]['ifname'])
+    params = { "ssid": "obss-scan",
+               "channel": "6",
+               "ht_capab": "[HT40+]",
+               "obss_interval": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+    dev[0].connect("obss-scan", key_mgmt="NONE", scan_freq="2437")
+
+    sec = hapd.get_status_field("secondary_channel")
+    if sec != "1":
+        raise Exception("AP is not using 40 MHz channel")
+
+    # 20/40 MHz co-ex report forcing 20 MHz channel
+    msg = '040048010449020005'
+    req = "MGMT_TX {} {} freq=2437 action={}".format(bssid, bssid, msg)
+    if "OK" not in dev[0].request(req):
+        raise Exception("Could not send management frame")
+    time.sleep(0.5)
+    sec = hapd.get_status_field("secondary_channel")
+    if sec != "0":
+        raise Exception("AP did not move to 20 MHz channel")
+
+    # No 20/40 MHz co-ex reports forcing 20 MHz channel during next interval
+    for i in range(20):
+        sec = hapd.get_status_field("secondary_channel")
+        if sec == "1":
+            break
+        time.sleep(0.5)
+    if sec != "1":
+        raise Exception("AP did not return to 40 MHz channel")
+
 def test_olbc(dev, apdev):
     """OLBC detection"""
     params = { "ssid": "test-olbc",

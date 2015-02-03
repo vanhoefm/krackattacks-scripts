@@ -86,6 +86,8 @@ def test_discovery(dev):
         raise Exception("Invalid P2P_PROV_DISC accepted")
     if "FAIL" not in dev[0].global_request("P2P_PROV_DISC 00:11:22:33:44:55 pbc join"):
         raise Exception("Invalid P2P_PROV_DISC accepted")
+    if "FAIL" not in dev[0].global_request("P2P_PROV_DISC 00:11:22:33:44:55 foo"):
+        raise Exception("Invalid P2P_PROV_DISC accepted")
 
 def test_discovery_pd_retries(dev):
     """P2P device discovery and provision discovery retries"""

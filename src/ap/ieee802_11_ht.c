@@ -292,7 +292,8 @@ void hostapd_2040_coex_action(struct hostapd_data *hapd,
 			iface->conf->secondary_channel = 0;
 			ieee802_11_set_beacons(iface);
 		}
-		if (!iface->num_sta_ht40_intolerant) {
+		if (!iface->num_sta_ht40_intolerant &&
+		    iface->conf->obss_interval) {
 			unsigned int delay_time;
 			delay_time = OVERLAPPING_BSS_TRANS_DELAY_FACTOR *
 				iface->conf->obss_interval;

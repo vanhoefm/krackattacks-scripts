@@ -13,6 +13,7 @@ import hwsim_utils
 from wpasupplicant import WpaSupplicant
 from test_p2p_grpform import check_grpform_results
 from test_p2p_grpform import remove_group
+from test_p2p_persistent import go_neg_pin_authorized_persistent
 
 # Dev[0] -> Advertiser
 # Dev[1] -> Seeker
@@ -856,3 +857,57 @@ def test_p2ps_connect_p2ps_method_4(dev):
         raise Exception("unexpected dev0 group ifname: " + res0['ifname'])
     if not res1['ifname'].startswith('p2p-' + dev[1].ifname + '-'):
         raise Exception("unexpected dev1 group ifname: " + res1['ifname'])
+
+def test_p2ps_connect_adv_go_persistent(dev):
+    """P2PS auto-accept connection with advertisement as GO and having persistent group"""
+    addr0 = dev[0].p2p_dev_addr()
+    addr1 = dev[1].p2p_dev_addr()
+
+    go_neg_pin_authorized_persistent(i_dev=dev[0], i_intent=15,
+                                     r_dev=dev[1], r_intent=0)
+    dev[0].remove_group()
+    dev[1].wait_go_ending_session()
+
+    p2ps_advertise(r_dev=dev[0], r_role='4', svc_name='org.wi-fi.wfds.send.rx',
+                   srv_info='I can receive files upto size 2 GB')
+    [adv_id, rcvd_svc_name] = p2ps_exact_seek(i_dev=dev[1], r_dev=dev[0],
+                                              svc_name='org.wi-fi.wfds.send.rx',
+                                              srv_info='2 GB')
+    if "OK" not in dev[1].global_request("P2P_ASP_PROVISION " + addr0 + " adv_id=" + str(adv_id) + " adv_mac=" + addr0 + " session=1 session_mac=" + addr1 + " info='' method=1000"):
+        raise Exception("Failed to request provisioning on seeker")
+
+    ev0 = dev[0].wait_global_event(["P2PS-PROV-DONE"], timeout=10)
+    if ev0 is None:
+        raise Exception("Timed out while waiting for prov done on advertizer")
+    if "persist=" not in ev0:
+        raise Exception("Advertiser did not indicate persistent group")
+    id0 = ev0.split("persist=")[1].split(" ")[0]
+    if "OK" not in dev[0].global_request("P2P_GROUP_ADD persistent=" + id0 + " freq=2412"):
+        raise Exception("Could not re-start persistent group")
+
+    ev0 = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
+    if ev0 is None:
+        raise Exception("P2P-GROUP-STARTED timeout on advertiser side")
+
+    ev1 = dev[1].wait_global_event(["P2PS-PROV-DONE"], timeout=10)
+    if ev1 is None:
+        raise Exception("P2PS-PROV-DONE timeout on seeker side")
+    print ev1
+
+    if "persist=" not in ev1:
+        raise Exception("Seeker did not indicate persistent group")
+    id1 = ev1.split("persist=")[1].split(" ")[0]
+    if "OK" not in dev[1].global_request("P2P_GROUP_ADD persistent=" + id1 + " freq=2412"):
+        raise Exception("Could not re-start persistent group")
+
+    ev1 = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
+    if ev1 is None:
+        raise Exception("P2P-GROUP-STARTED timeout on seeker side")
+
+    ev0 = dev[0].wait_global_event(["AP-STA-CONNECTED"], timeout=15)
+    if ev0 is None:
+        raise Exception("AP-STA-CONNECTED timeout on advertiser side")
+    ev0 = dev[0].global_request("P2P_SERVICE_DEL asp " + str(adv_id))
+    if ev0 is None:
+        raise Exception("Unable to remove the advertisement instance")
+    remove_group(dev[0], dev[1])

@@ -574,3 +574,71 @@ def test_autogo_ht_vht(dev):
         _test_autogo_ht_vht(dev)
     finally:
         set_country("00")
+
+def test_p2p_listen_chan_optimize(dev, apdev):
+    """P2P listen channel optimization"""
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5")
+    addr5 = wpas.p2p_dev_addr()
+    try:
+        if "OK" not in wpas.request("SET p2p_optimize_listen_chan 1"):
+            raise Exception("Failed to set p2p_optimize_listen_chan")
+        wpas.p2p_listen()
+        if not dev[0].discover_peer(addr5):
+            raise Exception("Could not discover peer")
+        peer = dev[0].get_peer(addr5)
+        lfreq = peer['listen_freq']
+        wpas.p2p_stop_find()
+        dev[0].p2p_stop_find()
+
+        channel = "1" if lfreq != '2412' else "6"
+        freq = "2412" if lfreq != '2412' else "2437"
+        params = { "ssid": "test-open", "channel": channel }
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+        id = wpas.connect("test-open", key_mgmt="NONE", scan_freq=freq)
+        wpas.p2p_listen()
+
+        if "OK" not in dev[0].request("P2P_FLUSH"):
+            raise Exception("P2P_FLUSH failed")
+        if not dev[0].discover_peer(addr5):
+            raise Exception("Could not discover peer")
+        peer = dev[0].get_peer(addr5)
+        lfreq2 = peer['listen_freq']
+        if lfreq == lfreq2:
+            raise Exception("Listen channel did not change")
+        if lfreq2 != freq:
+            raise Exception("Listen channel not on AP's operating channel")
+        wpas.p2p_stop_find()
+        dev[0].p2p_stop_find()
+
+        wpas.request("DISCONNECT")
+        wpas.wait_disconnected()
+
+        # for larger coverage, cover case of current channel matching
+        wpas.select_network(id)
+        wpas.wait_connected()
+        wpas.request("DISCONNECT")
+        wpas.wait_disconnected()
+
+        lchannel = "1" if channel != "1" else "6"
+        lfreq3 = "2412" if channel != "1" else "2437"
+        if "OK" not in wpas.request("P2P_SET listen_channel " + lchannel):
+            raise Exception("Failed to set listen channel")
+
+        wpas.select_network(id)
+        wpas.wait_connected()
+        wpas.p2p_listen()
+
+        if "OK" not in dev[0].request("P2P_FLUSH"):
+            raise Exception("P2P_FLUSH failed")
+        if not dev[0].discover_peer(addr5):
+            raise Exception("Could not discover peer")
+        peer = dev[0].get_peer(addr5)
+        lfreq4 = peer['listen_freq']
+        if lfreq4 != lfreq3:
+            raise Exception("Unexpected Listen channel after configuration")
+        wpas.p2p_stop_find()
+        dev[0].p2p_stop_find()
+    finally:
+        wpas.request("SET p2p_optimize_listen_chan 0")

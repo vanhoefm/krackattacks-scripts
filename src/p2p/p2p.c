@@ -4557,15 +4557,18 @@ int p2p_set_listen_channel(struct p2p_data *p2p, u8 reg_class, u8 channel,
 	if (p2p_channel_to_freq(reg_class, channel) < 0)
 		return -1;
 
-	p2p_dbg(p2p, "Set Listen channel: reg_class %u channel %u",
-		reg_class, channel);
-
 	/*
 	 * Listen channel was set in configuration or set by control interface;
 	 * cannot override it.
 	 */
-	if (p2p->cfg->channel_forced && forced == 0)
+	if (p2p->cfg->channel_forced && forced == 0) {
+		p2p_dbg(p2p,
+			"Listen channel was previously configured - do not override based on optimization");
 		return -1;
+	}
+
+	p2p_dbg(p2p, "Set Listen channel: reg_class %u channel %u",
+		reg_class, channel);
 
 	if (p2p->state == P2P_IDLE) {
 		p2p->cfg->reg_class = reg_class;

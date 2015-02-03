@@ -9167,7 +9167,7 @@ static void wpas_p2p_optimize_listen_channel(struct wpa_supplicant *wpa_s,
 
 	if (cand) {
 		wpa_dbg(wpa_s, MSG_DEBUG,
-			"P2P: Update Listen channel to %u baased on operating channel",
+			"P2P: Update Listen channel to %u based on operating channel",
 			cand);
 		p2p_set_listen_channel(wpa_s->global->p2p, 81, cand, 0);
 	}

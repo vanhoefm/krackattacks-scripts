@@ -1419,9 +1419,9 @@ def get_psk(pskfile):
 
 def test_ap_wps_per_station_psk(dev, apdev):
     """WPS PBC provisioning with per-station PSK"""
-    addr0 = dev[0].p2p_dev_addr()
-    addr1 = dev[1].p2p_dev_addr()
-    addr2 = dev[2].p2p_dev_addr()
+    addr0 = dev[0].own_addr()
+    addr1 = dev[1].own_addr()
+    addr2 = dev[2].own_addr()
     ssid = "wps"
     appin = "12345670"
     pskfile = "/tmp/ap_wps_per_enrollee_psk.psk_file"

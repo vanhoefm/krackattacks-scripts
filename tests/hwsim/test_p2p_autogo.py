@@ -41,14 +41,14 @@ def test_autogo(dev):
     res = connect_cli(dev[0], dev[1])
     if "p2p-wlan" in res['ifname']:
         raise Exception("Unexpected group interface name on client")
-    bss = dev[1].get_bss("p2p_dev_addr=" + addr0)
-    if bss['bssid'] != dev[0].p2p_interface_addr():
+    bss = dev[1].get_bss("p2p_dev_addr=" + addr0, res['ifname'])
+    if not bss or bss['bssid'] != dev[0].p2p_interface_addr():
         raise Exception("Unexpected BSSID in the BSS entry for the GO")
     id = bss['id']
-    bss = dev[1].get_bss("ID-" + id)
-    if bss['id'] != id:
+    bss = dev[1].get_bss("ID-" + id, res['ifname'])
+    if not bss or bss['id'] != id:
         raise Exception("Could not find BSS entry based on id")
-    res = dev[1].request("BSS RANGE=" + id + "- MASK=0x1")
+    res = dev[1].group_request("BSS RANGE=" + id + "- MASK=0x1")
     if "id=" + id not in res:
         raise Exception("Could not find BSS entry based on id range")
 

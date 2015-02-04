@@ -173,7 +173,7 @@ def remove_group(dev1, dev2):
 def test_grpform(dev):
     """P2P group formation using PIN and authorized connection (init -> GO)"""
     try:
-        dev[0].request("SET p2p_group_idle 2")
+        dev[0].global_request("SET p2p_group_idle 2")
         [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
                                                r_dev=dev[1], r_intent=0)
         check_grpform_results(i_res, r_res)
@@ -184,11 +184,11 @@ def test_grpform(dev):
         if "GO reason=IDLE" not in ev:
             raise Exception("Unexpected group removal event: " + ev)
     finally:
-        dev[0].request("SET p2p_group_idle 0")
+        dev[0].global_request("SET p2p_group_idle 0")
 
 def test_grpform_a(dev):
     """P2P group formation using PIN and authorized connection (init -> GO) (init: group iface)"""
-    dev[0].request("SET p2p_no_group_iface 0")
+    dev[0].global_request("SET p2p_no_group_iface 0")
     [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
                                            r_dev=dev[1], r_intent=0)
     if "p2p-wlan" not in i_res['ifname']:
@@ -200,7 +200,7 @@ def test_grpform_a(dev):
 
 def test_grpform_b(dev):
     """P2P group formation using PIN and authorized connection (init -> GO) (resp: group iface)"""
-    dev[1].request("SET p2p_no_group_iface 0")
+    dev[1].global_request("SET p2p_no_group_iface 0")
     [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
                                            r_dev=dev[1], r_intent=0)
     if "p2p-wlan" not in r_res['ifname']:
@@ -212,8 +212,8 @@ def test_grpform_b(dev):
 
 def test_grpform_c(dev):
     """P2P group formation using PIN and authorized connection (init -> GO) (group iface)"""
-    dev[0].request("SET p2p_no_group_iface 0")
-    dev[1].request("SET p2p_no_group_iface 0")
+    dev[0].global_request("SET p2p_no_group_iface 0")
+    dev[1].global_request("SET p2p_no_group_iface 0")
     [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15,
                                            r_dev=dev[1], r_intent=0)
     if "p2p-wlan" not in i_res['ifname']:
@@ -234,8 +234,8 @@ def test_grpform2(dev):
 
 def test_grpform2_c(dev):
     """P2P group formation using PIN and authorized connection (resp -> GO) (group iface)"""
-    dev[0].request("SET p2p_no_group_iface 0")
-    dev[1].request("SET p2p_no_group_iface 0")
+    dev[0].global_request("SET p2p_no_group_iface 0")
+    dev[1].global_request("SET p2p_no_group_iface 0")
     [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=0, r_dev=dev[1], r_intent=15)
     remove_group(dev[0], dev[1])
     if i_res['ifname'] in utils.get_ifnames():
@@ -250,8 +250,8 @@ def test_grpform3(dev):
 
 def test_grpform3_c(dev):
     """P2P group formation using PIN and re-init GO Negotiation (group iface)"""
-    dev[0].request("SET p2p_no_group_iface 0")
-    dev[1].request("SET p2p_no_group_iface 0")
+    dev[0].global_request("SET p2p_no_group_iface 0")
+    dev[1].global_request("SET p2p_no_group_iface 0")
     [i_res, r_res] = go_neg_pin(i_dev=dev[0], i_intent=15, r_dev=dev[1], r_intent=0)
     remove_group(dev[0], dev[1])
     if i_res['ifname'] in utils.get_ifnames():
@@ -360,7 +360,7 @@ def test_go_neg_pin_vs_pbc(dev):
 
 def test_grpform_per_sta_psk(dev):
     """P2P group formation with per-STA PSKs"""
-    dev[0].request("P2P_SET per_sta_psk 1")
+    dev[0].global_request("P2P_SET per_sta_psk 1")
     [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15, r_dev=dev[1], r_intent=0)
     check_grpform_results(i_res, r_res)
 
@@ -380,7 +380,7 @@ def test_grpform_per_sta_psk(dev):
 
 def test_grpform_per_sta_psk_wps(dev):
     """P2P group formation with per-STA PSKs with non-P2P WPS STA"""
-    dev[0].request("P2P_SET per_sta_psk 1")
+    dev[0].global_request("P2P_SET per_sta_psk 1")
     [i_res, r_res] = go_neg_pin_authorized(i_dev=dev[0], i_intent=15, r_dev=dev[1], r_intent=0)
     check_grpform_results(i_res, r_res)
 

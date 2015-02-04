@@ -43,11 +43,11 @@ def test_concurrent_autogo(dev, apdev):
 
 def test_concurrent_autogo_crossconnect(dev, apdev):
     """Concurrent P2P autonomous GO"""
-    dev[0].request("P2P_SET cross_connect 1")
+    dev[0].global_request("P2P_SET cross_connect 1")
     hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open" })
     dev[0].connect("test-open", key_mgmt="NONE", scan_freq="2412")
 
-    dev[0].request("SET p2p_no_group_iface 0")
+    dev[0].global_request("SET p2p_no_group_iface 0")
     dev[0].p2p_start_go(no_event_clear=True)
     ev = dev[0].wait_global_event("P2P-CROSS-CONNECT-ENABLE", timeout=10)
     if ev is None:
@@ -56,7 +56,7 @@ def test_concurrent_autogo_crossconnect(dev, apdev):
         raise Exception("Unexpected interfaces: " + ev)
     dev[0].dump_monitor()
 
-    dev[0].request("P2P_SET cross_connect 0")
+    dev[0].global_request("P2P_SET cross_connect 0")
     ev = dev[0].wait_global_event("P2P-CROSS-CONNECT-DISABLE", timeout=10)
     if ev is None:
         raise Exception("Timeout on cross connection disabled event")
@@ -64,7 +64,7 @@ def test_concurrent_autogo_crossconnect(dev, apdev):
         raise Exception("Unexpected interfaces: " + ev)
     dev[0].remove_group()
 
-    dev[0].request("P2P_SET cross_connect 1")
+    dev[0].global_request("P2P_SET cross_connect 1")
     dev[0].p2p_start_go(no_event_clear=True)
     ev = dev[0].wait_global_event("P2P-CROSS-CONNECT-ENABLE", timeout=10)
     if ev is None:
@@ -76,7 +76,7 @@ def test_concurrent_autogo_crossconnect(dev, apdev):
     ev = dev[0].wait_global_event("P2P-CROSS-CONNECT-DISABLE", timeout=10)
     if ev is None:
         raise Exception("Timeout on cross connection disabled event")
-    dev[0].request("P2P_SET cross_connect 0")
+    dev[0].global_request("P2P_SET cross_connect 0")
 
 def test_concurrent_p2pcli(dev, apdev):
     """Concurrent P2P client join"""
@@ -193,7 +193,7 @@ def test_concurrent_persistent_group(dev, apdev):
     """Concurrent P2P persistent group"""
     logger.info("Connect to an infrastructure AP")
     hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open", "channel": "2" })
-    dev[0].request("SET p2p_no_group_iface 0")
+    dev[0].global_request("SET p2p_no_group_iface 0")
     dev[0].connect("test-open", key_mgmt="NONE", scan_freq="2417")
 
     logger.info("Run persistent group test while associated to an AP")
@@ -213,7 +213,7 @@ def test_concurrent_invitation_channel_mismatch(dev, apdev):
 
     logger.info("Connect to an infrastructure AP")
     hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-open", "channel": "2" })
-    dev[0].request("SET p2p_no_group_iface 0")
+    dev[0].global_request("SET p2p_no_group_iface 0")
     dev[0].connect("test-open", key_mgmt="NONE", scan_freq="2417")
     invite(dev[1], dev[0], extra="freq=2412")
     ev = dev[1].wait_global_event(["P2P-INVITATION-RESULT"], timeout=15)

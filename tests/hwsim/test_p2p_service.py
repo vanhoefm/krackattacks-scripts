@@ -12,21 +12,21 @@ import uuid
 import hwsim_utils
 
 def add_bonjour_services(dev):
-    dev.request("P2P_SERVICE_ADD bonjour 0b5f6166706f766572746370c00c000c01 074578616d706c65c027")
-    dev.request("P2P_SERVICE_ADD bonjour 076578616d706c650b5f6166706f766572746370c00c001001 00")
-    dev.request("P2P_SERVICE_ADD bonjour 045f697070c00c000c01 094d795072696e746572c027")
-    dev.request("P2P_SERVICE_ADD bonjour 096d797072696e746572045f697070c00c001001 09747874766572733d311a70646c3d6170706c69636174696f6e2f706f7374736372797074")
+    dev.global_request("P2P_SERVICE_ADD bonjour 0b5f6166706f766572746370c00c000c01 074578616d706c65c027")
+    dev.global_request("P2P_SERVICE_ADD bonjour 076578616d706c650b5f6166706f766572746370c00c001001 00")
+    dev.global_request("P2P_SERVICE_ADD bonjour 045f697070c00c000c01 094d795072696e746572c027")
+    dev.global_request("P2P_SERVICE_ADD bonjour 096d797072696e746572045f697070c00c001001 09747874766572733d311a70646c3d6170706c69636174696f6e2f706f7374736372797074")
 
 def add_upnp_services(dev):
-    dev.request("P2P_SERVICE_ADD upnp 10 uuid:6859dede-8574-59ab-9332-123456789012::upnp:rootdevice")
-    dev.request("P2P_SERVICE_ADD upnp 10 uuid:5566d33e-9774-09ab-4822-333456785632::upnp:rootdevice")
-    dev.request("P2P_SERVICE_ADD upnp 10 uuid:1122de4e-8574-59ab-9322-333456789044::urn:schemas-upnp-org:service:ContentDirectory:2")
-    dev.request("P2P_SERVICE_ADD upnp 10 uuid:5566d33e-9774-09ab-4822-333456785632::urn:schemas-upnp-org:service:ContentDirectory:2")
-    dev.request("P2P_SERVICE_ADD upnp 10 uuid:6859dede-8574-59ab-9332-123456789012::urn:schemas-upnp-org:device:InternetGatewayDevice:1")
+    dev.global_request("P2P_SERVICE_ADD upnp 10 uuid:6859dede-8574-59ab-9332-123456789012::upnp:rootdevice")
+    dev.global_request("P2P_SERVICE_ADD upnp 10 uuid:5566d33e-9774-09ab-4822-333456785632::upnp:rootdevice")
+    dev.global_request("P2P_SERVICE_ADD upnp 10 uuid:1122de4e-8574-59ab-9322-333456789044::urn:schemas-upnp-org:service:ContentDirectory:2")
+    dev.global_request("P2P_SERVICE_ADD upnp 10 uuid:5566d33e-9774-09ab-4822-333456785632::urn:schemas-upnp-org:service:ContentDirectory:2")
+    dev.global_request("P2P_SERVICE_ADD upnp 10 uuid:6859dede-8574-59ab-9332-123456789012::urn:schemas-upnp-org:device:InternetGatewayDevice:1")
 
 def add_extra_services(dev):
     for i in range(0, 100):
-        dev.request("P2P_SERVICE_ADD upnp 10 uuid:" + str(uuid.uuid4()) + "::upnp:rootdevice")
+        dev.global_request("P2P_SERVICE_ADD upnp 10 uuid:" + str(uuid.uuid4()) + "::upnp:rootdevice")
 
 def run_sd(dev, dst, query, exp_query=None, fragment=False, query2=None):
     addr0 = dev[0].p2p_dev_addr()
@@ -37,14 +37,14 @@ def run_sd(dev, dst, query, exp_query=None, fragment=False, query2=None):
         add_extra_services(dev[0])
     dev[0].p2p_listen()
 
-    dev[1].request("P2P_FLUSH")
-    dev[1].request("P2P_SERV_DISC_REQ " + dst + " " + query)
+    dev[1].global_request("P2P_FLUSH")
+    dev[1].global_request("P2P_SERV_DISC_REQ " + dst + " " + query)
     if query2:
-        dev[1].request("P2P_SERV_DISC_REQ " + dst + " " + query2)
+        dev[1].global_request("P2P_SERV_DISC_REQ " + dst + " " + query2)
     if not dev[1].discover_peer(addr0, social=True, force_find=True):
         raise Exception("Peer " + addr0 + " not found")
 
-    ev = dev[0].wait_event(["P2P-SERV-DISC-REQ"], timeout=10)
+    ev = dev[0].wait_global_event(["P2P-SERV-DISC-REQ"], timeout=10)
     if ev is None:
         raise Exception("Service discovery timed out")
     if addr1 not in ev:
@@ -57,7 +57,7 @@ def run_sd(dev, dst, query, exp_query=None, fragment=False, query2=None):
     if query2:
         ev_list = []
         for i in range(0, 4):
-            ev = dev[1].wait_event(["P2P-SERV-DISC-RESP"], timeout=10)
+            ev = dev[1].wait_global_event(["P2P-SERV-DISC-RESP"], timeout=10)
             if ev is None:
                 raise Exception("Service discovery timed out")
             if addr0 in ev:
@@ -67,7 +67,7 @@ def run_sd(dev, dst, query, exp_query=None, fragment=False, query2=None):
         return ev_list
 
     for i in range(0, 2):
-        ev = dev[1].wait_event(["P2P-SERV-DISC-RESP"], timeout=10)
+        ev = dev[1].wait_global_event(["P2P-SERV-DISC-RESP"], timeout=10)
         if ev is None:
             raise Exception("Service discovery timed out")
         if addr0 in ev:
@@ -76,13 +76,13 @@ def run_sd(dev, dst, query, exp_query=None, fragment=False, query2=None):
     dev[0].p2p_stop_find()
     dev[1].p2p_stop_find()
 
-    if "OK" not in dev[0].request("P2P_SERVICE_DEL upnp 10 uuid:6859dede-8574-59ab-9332-123456789012::upnp:rootdevice"):
+    if "OK" not in dev[0].global_request("P2P_SERVICE_DEL upnp 10 uuid:6859dede-8574-59ab-9332-123456789012::upnp:rootdevice"):
         raise Exception("Failed to delete a UPnP service")
-    if "FAIL" not in dev[0].request("P2P_SERVICE_DEL upnp 10 uuid:6859dede-8574-59ab-9332-123456789012::upnp:rootdevice"):
+    if "FAIL" not in dev[0].global_request("P2P_SERVICE_DEL upnp 10 uuid:6859dede-8574-59ab-9332-123456789012::upnp:rootdevice"):
         raise Exception("Unexpected deletion success for UPnP service")
-    if "OK" not in dev[0].request("P2P_SERVICE_DEL bonjour 0b5f6166706f766572746370c00c000c01"):
+    if "OK" not in dev[0].global_request("P2P_SERVICE_DEL bonjour 0b5f6166706f766572746370c00c000c01"):
         raise Exception("Failed to delete a Bonjour service")
-    if "FAIL" not in dev[0].request("P2P_SERVICE_DEL bonjour 0b5f6166706f766572746370c00c000c01"):
+    if "FAIL" not in dev[0].global_request("P2P_SERVICE_DEL bonjour 0b5f6166706f766572746370c00c000c01"):
         raise Exception("Unexpected deletion success for Bonjour service")
 
     return ev
@@ -103,7 +103,7 @@ def test_p2p_service_discovery(dev):
                  addr0 + " upnp 10",
                  addr0 + " 123",
                  addr0 + " qq" ]:
-        if "FAIL" not in dev[1].request("P2P_SERV_DISC_REQ " + req):
+        if "FAIL" not in dev[1].global_request("P2P_SERV_DISC_REQ " + req):
             raise Exception("Invalid P2P_SERV_DISC_REQ accepted: " + req)
 
 def test_p2p_service_discovery2(dev):
@@ -231,36 +231,36 @@ def test_p2p_service_discovery_ws(dev):
 
 def test_p2p_service_discovery_wfd(dev):
     """P2P service discovery (Wi-Fi Display)"""
-    dev[0].request("SET wifi_display 1")
+    dev[0].global_request("SET wifi_display 1")
     ev = run_sd(dev, "00:00:00:00:00:00", "02000401")
     if " 030004" in ev:
         raise Exception("Unexpected response to invalid WFD SD query")
-    dev[0].request("SET wifi_display 0")
+    dev[0].global_request("SET wifi_display 0")
     ev = run_sd(dev, "00:00:00:00:00:00", "0300040100")
     if "0300040101" not in ev:
         raise Exception("Unexpected response to WFD SD query (protocol was disabled)")
 
 def test_p2p_service_discovery_req_cancel(dev):
     """Cancel a P2P service discovery request"""
-    if "FAIL" not in dev[0].request("P2P_SERV_DISC_CANCEL_REQ ab"):
+    if "FAIL" not in dev[0].global_request("P2P_SERV_DISC_CANCEL_REQ ab"):
         raise Exception("Unexpected SD cancel success")
-    if "FAIL" not in dev[0].request("P2P_SERV_DISC_CANCEL_REQ qq"):
+    if "FAIL" not in dev[0].global_request("P2P_SERV_DISC_CANCEL_REQ qq"):
         raise Exception("Unexpected SD cancel success")
-    query = dev[0].request("P2P_SERV_DISC_REQ " + dev[1].p2p_dev_addr() + " 02000001")
-    if "OK" not in dev[0].request("P2P_SERV_DISC_CANCEL_REQ " + query):
+    query = dev[0].global_request("P2P_SERV_DISC_REQ " + dev[1].p2p_dev_addr() + " 02000001")
+    if "OK" not in dev[0].global_request("P2P_SERV_DISC_CANCEL_REQ " + query):
         raise Exception("Unexpected SD cancel failure")
-    query1 = dev[0].request("P2P_SERV_DISC_REQ " + dev[1].p2p_dev_addr() + " 02000001")
-    query2 = dev[0].request("P2P_SERV_DISC_REQ " + dev[1].p2p_dev_addr() + " 02000002")
-    query3 = dev[0].request("P2P_SERV_DISC_REQ " + dev[1].p2p_dev_addr() + " 02000003")
-    if "OK" not in dev[0].request("P2P_SERV_DISC_CANCEL_REQ " + query2):
+    query1 = dev[0].global_request("P2P_SERV_DISC_REQ " + dev[1].p2p_dev_addr() + " 02000001")
+    query2 = dev[0].global_request("P2P_SERV_DISC_REQ " + dev[1].p2p_dev_addr() + " 02000002")
+    query3 = dev[0].global_request("P2P_SERV_DISC_REQ " + dev[1].p2p_dev_addr() + " 02000003")
+    if "OK" not in dev[0].global_request("P2P_SERV_DISC_CANCEL_REQ " + query2):
         raise Exception("Unexpected SD cancel failure")
-    if "OK" not in dev[0].request("P2P_SERV_DISC_CANCEL_REQ " + query1):
+    if "OK" not in dev[0].global_request("P2P_SERV_DISC_CANCEL_REQ " + query1):
         raise Exception("Unexpected SD cancel failure")
-    if "OK" not in dev[0].request("P2P_SERV_DISC_CANCEL_REQ " + query3):
+    if "OK" not in dev[0].global_request("P2P_SERV_DISC_CANCEL_REQ " + query3):
         raise Exception("Unexpected SD cancel failure")
 
-    query = dev[0].request("P2P_SERV_DISC_REQ 00:00:00:00:00:00 02000001")
-    if "OK" not in dev[0].request("P2P_SERV_DISC_CANCEL_REQ " + query):
+    query = dev[0].global_request("P2P_SERV_DISC_REQ 00:00:00:00:00:00 02000001")
+    if "OK" not in dev[0].global_request("P2P_SERV_DISC_CANCEL_REQ " + query):
         raise Exception("Unexpected SD(broadcast) cancel failure")
 
 def test_p2p_service_discovery_go(dev):
@@ -273,18 +273,18 @@ def test_p2p_service_discovery_go(dev):
 
     dev[0].p2p_start_go(freq=2412)
 
-    dev[1].request("P2P_FLUSH")
-    dev[1].request("P2P_SERV_DISC_REQ " + addr0 + " 02000001")
+    dev[1].global_request("P2P_FLUSH")
+    dev[1].global_request("P2P_SERV_DISC_REQ " + addr0 + " 02000001")
     if not dev[1].discover_peer(addr0, social=True, force_find=True):
         raise Exception("Peer " + addr0 + " not found")
 
-    ev = dev[0].wait_event(["P2P-SERV-DISC-REQ"], timeout=10)
+    ev = dev[0].wait_global_event(["P2P-SERV-DISC-REQ"], timeout=10)
     if ev is None:
         raise Exception("Service discovery timed out")
     if addr1 not in ev:
         raise Exception("Unexpected service discovery request source")
 
-    ev = dev[1].wait_event(["P2P-SERV-DISC-RESP"], timeout=10)
+    ev = dev[1].wait_global_event(["P2P-SERV-DISC-RESP"], timeout=10)
     if ev is None:
         raise Exception("Service discovery timed out")
     if addr0 not in ev:
@@ -295,19 +295,19 @@ def test_p2p_service_discovery_go(dev):
         raise Exception("Unexpected service discovery response contents (UPnP)")
     dev[1].p2p_stop_find()
 
-    dev[0].request("P2P_SERVICE_FLUSH")
+    dev[0].global_request("P2P_SERVICE_FLUSH")
 
-    dev[1].request("P2P_FLUSH")
-    dev[1].request("P2P_SERV_DISC_REQ " + addr0 + " 02000001")
+    dev[1].global_request("P2P_FLUSH")
+    dev[1].global_request("P2P_SERV_DISC_REQ " + addr0 + " 02000001")
     if not dev[1].discover_peer(addr0, social=True, force_find=True):
         raise Exception("Peer " + addr0 + " not found")
-    ev = dev[0].wait_event(["P2P-SERV-DISC-REQ"], timeout=10)
+    ev = dev[0].wait_global_event(["P2P-SERV-DISC-REQ"], timeout=10)
     if ev is None:
         raise Exception("Service discovery timed out")
     if addr1 not in ev:
         raise Exception("Unexpected service discovery request source")
 
-    ev = dev[1].wait_event(["P2P-SERV-DISC-RESP"], timeout=10)
+    ev = dev[1].wait_global_event(["P2P-SERV-DISC-RESP"], timeout=10)
     if ev is None:
         raise Exception("Service discovery timed out")
     if addr0 not in ev:
@@ -320,13 +320,13 @@ def _test_p2p_service_discovery_external(dev):
     addr0 = dev[0].p2p_dev_addr()
     addr1 = dev[1].p2p_dev_addr()
 
-    if "FAIL" not in dev[0].request("P2P_SERV_DISC_EXTERNAL 2"):
+    if "FAIL" not in dev[0].global_request("P2P_SERV_DISC_EXTERNAL 2"):
         raise Exception("Invalid P2P_SERV_DISC_EXTERNAL accepted")
-    if "OK" not in dev[0].request("P2P_SERV_DISC_EXTERNAL 1"):
+    if "OK" not in dev[0].global_request("P2P_SERV_DISC_EXTERNAL 1"):
         raise Exception("P2P_SERV_DISC_EXTERNAL failed")
     dev[0].p2p_listen()
-    dev[1].request("P2P_FLUSH")
-    dev[1].request("P2P_SERV_DISC_REQ " + addr0 + " 02000001")
+    dev[1].global_request("P2P_FLUSH")
+    dev[1].global_request("P2P_SERV_DISC_REQ " + addr0 + " 02000001")
     if not dev[1].discover_peer(addr0, social=True, force_find=True):
         raise Exception("Peer " + addr0 + " not found")
 
@@ -349,10 +349,10 @@ def _test_p2p_service_discovery_external(dev):
         raise Exception("Unexpected response data SD Response: " + ev)
     ver = ev.split(' ')[3]
 
-    dev[0].request("P2P_SERVICE_UPDATE")
+    dev[0].global_request("P2P_SERVICE_UPDATE")
 
-    dev[1].request("P2P_FLUSH")
-    dev[1].request("P2P_SERV_DISC_REQ " + addr0 + " 02000001")
+    dev[1].global_request("P2P_FLUSH")
+    dev[1].global_request("P2P_SERV_DISC_REQ " + addr0 + " 02000001")
     if not dev[1].discover_peer(addr0, social=True, force_find=True):
         raise Exception("Peer " + addr0 + " not found")
 
@@ -392,7 +392,7 @@ def test_p2p_service_discovery_external(dev):
     try:
         _test_p2p_service_discovery_external(dev)
     finally:
-        dev[0].request("P2P_SERV_DISC_EXTERNAL 0")
+        dev[0].global_request("P2P_SERV_DISC_EXTERNAL 0")
 
 def test_p2p_service_discovery_invalid_commands(dev):
     """P2P service discovery invalid commands"""
@@ -405,7 +405,7 @@ def test_p2p_service_discovery_invalid_commands(dev):
                  "upnp 10",
                  "upnp qq uuid:",
                  "foo bar" ]:
-        if "FAIL" not in dev[0].request("P2P_SERVICE_ADD " + cmd):
+        if "FAIL" not in dev[0].global_request("P2P_SERVICE_ADD " + cmd):
             raise Exception("Invalid P2P_SERVICE_ADD accepted: " + cmd)
 
     for cmd in [ "bonjour",
@@ -415,7 +415,7 @@ def test_p2p_service_discovery_invalid_commands(dev):
                  "upnp  ",
                  "upnp qq uuid:",
                  "foo bar" ]:
-        if "FAIL" not in dev[0].request("P2P_SERVICE_DEL " + cmd):
+        if "FAIL" not in dev[0].global_request("P2P_SERVICE_DEL " + cmd):
             raise Exception("Invalid P2P_SERVICE_DEL accepted: " + cmd)
 
 def test_p2p_service_discovery_cancel_during_query(dev):

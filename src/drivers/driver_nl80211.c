@@ -7849,16 +7849,13 @@ static int nl80211_put_mesh_id(struct nl_msg *msg, const u8 *mesh_id,
 }
 
 
-static int
-wpa_driver_nl80211_join_mesh(void *priv,
+static int nl80211_join_mesh(struct i802_bss *bss,
 			     struct wpa_driver_mesh_join_params *params)
 {
-	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct nl_msg *msg;
 	struct nlattr *container;
 	int ret = -1;
-	u32 timeout;
 
 	wpa_printf(MSG_DEBUG, "nl80211: mesh join (ifindex=%d)", drv->ifindex);
 	msg = nl80211_drv_msg(drv, 0, NL80211_CMD_JOIN_MESH);
@@ -7910,14 +7907,9 @@ wpa_driver_nl80211_join_mesh(void *priv,
 	/*
 	 * Set NL80211_MESHCONF_PLINK_TIMEOUT even if user mpm is used because
 	 * the timer could disconnect stations even in that case.
-	 *
-	 * Set 0xffffffff instead of 0 because NL80211_MESHCONF_PLINK_TIMEOUT
-	 * does not allow 0.
 	 */
-	timeout = params->conf.peer_link_timeout;
-	if ((params->flags & WPA_DRIVER_MESH_FLAG_USER_MPM) || timeout == 0)
-		timeout = 0xffffffff;
-	if (nla_put_u32(msg, NL80211_MESHCONF_PLINK_TIMEOUT, timeout)) {
+	if (nla_put_u32(msg, NL80211_MESHCONF_PLINK_TIMEOUT,
+			params->conf.peer_link_timeout)) {
 		wpa_printf(MSG_ERROR, "nl80211: Failed to set PLINK_TIMEOUT");
 		goto fail;
 	}
@@ -7937,6 +7929,37 @@ wpa_driver_nl80211_join_mesh(void *priv,
 
 fail:
 	nlmsg_free(msg);
+	return ret;
+}
+
+
+static int
+wpa_driver_nl80211_join_mesh(void *priv,
+			     struct wpa_driver_mesh_join_params *params)
+{
+	struct i802_bss *bss = priv;
+	int ret, timeout;
+
+	timeout = params->conf.peer_link_timeout;
+
+	/* Disable kernel inactivity timer */
+	if (params->flags & WPA_DRIVER_MESH_FLAG_USER_MPM)
+		params->conf.peer_link_timeout = 0;
+
+	ret = nl80211_join_mesh(bss, params);
+	if (ret == -EINVAL && params->conf.peer_link_timeout == 0) {
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Mesh join retry for peer_link_timeout");
+		/*
+		 * Old kernel does not support setting
+		 * NL80211_MESHCONF_PLINK_TIMEOUT to zero, so set 60 seconds
+		 * into future from peer_link_timeout.
+		 */
+		params->conf.peer_link_timeout = timeout + 60;
+		ret = nl80211_join_mesh(priv, params);
+	}
+
+	params->conf.peer_link_timeout = timeout;
 	return ret;
 }
 

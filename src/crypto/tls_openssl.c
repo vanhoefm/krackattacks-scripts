@@ -2902,7 +2902,11 @@ struct wpabuf * tls_connection_decrypt(void *tls_ctx,
 
 int tls_connection_resumed(void *ssl_ctx, struct tls_connection *conn)
 {
+#if OPENSSL_VERSION_NUMBER >= 0x10001000L
+	return conn ? SSL_cache_hit(conn->ssl) : 0;
+#else
 	return conn ? conn->ssl->hit : 0;
+#endif
 }
 
 

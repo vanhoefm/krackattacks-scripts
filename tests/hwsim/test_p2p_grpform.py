@@ -527,31 +527,31 @@ def test_grpform_incorrect_pin(dev):
     addr1 = dev[1].p2p_dev_addr()
     if not dev[0].discover_peer(addr1):
         raise Exception("Peer not found")
-    res = dev[1].request("P2P_CONNECT " + dev[0].p2p_dev_addr() + " pin auth go_intent=0")
+    res = dev[1].global_request("P2P_CONNECT " + dev[0].p2p_dev_addr() + " pin auth go_intent=0")
     if "FAIL" in res:
         raise Exception("P2P_CONNECT failed to generate PIN")
     logger.info("PIN from P2P_CONNECT: " + res)
-    dev[0].request("P2P_CONNECT " + addr1 + " 00000000 enter go_intent=15")
+    dev[0].global_request("P2P_CONNECT " + addr1 + " 00000000 enter go_intent=15")
     ev = dev[0].wait_global_event(["P2P-GO-NEG-SUCCESS"], timeout=15)
     if ev is None:
         raise Exception("GO Negotiation did not complete successfully(0)")
     ev = dev[1].wait_global_event(["P2P-GO-NEG-SUCCESS"], timeout=15)
     if ev is None:
         raise Exception("GO Negotiation did not complete successfully(1)")
-    ev = dev[1].wait_event(["WPS-FAIL"], timeout=15)
+    ev = dev[1].wait_global_event(["WPS-FAIL"], timeout=15)
     if ev is None:
         raise Exception("WPS failure not reported(1)")
     if "msg=8 config_error=18" not in ev:
         raise Exception("Unexpected WPS failure(1): " + ev)
-    ev = dev[0].wait_event(["WPS-FAIL"], timeout=15)
+    ev = dev[0].wait_global_event(["WPS-FAIL"], timeout=15)
     if ev is None:
         raise Exception("WPS failure not reported")
     if "msg=8 config_error=18" not in ev:
         raise Exception("Unexpected WPS failure: " + ev)
-    ev = dev[1].wait_event(["P2P-GROUP-FORMATION-FAILURE"], timeout=10)
+    ev = dev[1].wait_global_event(["P2P-GROUP-FORMATION-FAILURE"], timeout=10)
     if ev is None:
         raise Exception("Group formation failure timed out")
-    ev = dev[0].wait_event(["P2P-GROUP-FORMATION-FAILURE"], timeout=5)
+    ev = dev[0].wait_global_event(["P2P-GROUP-FORMATION-FAILURE"], timeout=5)
     if ev is None:
         raise Exception("Group formation failure timed out")
 
@@ -602,7 +602,7 @@ def test_grpform_pd_no_probe_resp(dev):
         raise Exception("Peer listen frequency learned unexpectedly from PD Request")
 
     pin = dev[0].wps_read_pin()
-    if "FAIL" in dev[1].request("P2P_CONNECT " + addr0 + " " + pin + " enter"):
+    if "FAIL" in dev[1].global_request("P2P_CONNECT " + addr0 + " " + pin + " enter"):
         raise Exception("P2P_CONNECT on initiator failed")
     ev = dev[0].wait_global_event(["P2P-GO-NEG-REQUEST"], timeout=5)
     if ev is None:
@@ -610,7 +610,7 @@ def test_grpform_pd_no_probe_resp(dev):
     peer = dev[0].get_peer(addr1)
     if peer['listen_freq'] == '0':
         raise Exception("Peer listen frequency not learned from PD followed by GO Neg Req")
-    if "FAIL" in dev[0].request("P2P_CONNECT " + addr1 + " " + pin + " display"):
+    if "FAIL" in dev[0].global_request("P2P_CONNECT " + addr1 + " " + pin + " display"):
         raise Exception("P2P_CONNECT on responder failed")
     ev = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
     if ev is None:
@@ -688,11 +688,12 @@ def test_grpform_pbc_overlap(dev, apdev):
     if not dev[0].discover_peer(addr1):
         raise Exception("Could not discover peer")
     dev[0].p2p_listen()
-    if "OK" not in dev[0].request("P2P_CONNECT " + addr1 + " pbc auth go_intent=0"):
+    if "OK" not in dev[0].global_request("P2P_CONNECT " + addr1 + " pbc auth go_intent=0"):
         raise Exception("Failed to authorize GO Neg")
-    if "OK" not in dev[1].request("P2P_CONNECT " + addr0 + " pbc go_intent=15 freq=2412"):
+    if "OK" not in dev[1].global_request("P2P_CONNECT " + addr0 + " pbc go_intent=15 freq=2412"):
         raise Exception("Failed to initiate GO Neg")
     ev = dev[0].wait_global_event(["WPS-OVERLAP-DETECTED"], timeout=15)
+    print ev
     if ev is None:
         raise Exception("PBC overlap not reported")
 
@@ -721,9 +722,9 @@ def test_grpform_pbc_overlap_group_iface(dev, apdev):
     dev[0].p2p_stop_find()
     dev[0].scan(freq="2412")
     dev[0].p2p_listen()
-    if "OK" not in dev[0].request("P2P_CONNECT " + addr1 + " pbc auth go_intent=0"):
+    if "OK" not in dev[0].global_request("P2P_CONNECT " + addr1 + " pbc auth go_intent=0"):
         raise Exception("Failed to authorize GO Neg")
-    if "OK" not in dev[1].request("P2P_CONNECT " + addr0 + " pbc go_intent=15 freq=2412"):
+    if "OK" not in dev[1].global_request("P2P_CONNECT " + addr0 + " pbc go_intent=15 freq=2412"):
         raise Exception("Failed to initiate GO Neg")
     ev = dev[0].wait_global_event(["WPS-OVERLAP-DETECTED",
                                    "P2P-GROUP-FORMATION-SUCCESS"], timeout=15)

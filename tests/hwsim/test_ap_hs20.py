@@ -1848,7 +1848,7 @@ def test_ap_hs20_remediation_required_ctrl(dev, apdev):
 
 def _test_ap_hs20_remediation_required_ctrl(dev, apdev):
     bssid = apdev[0]['bssid']
-    addr = dev[0].p2p_dev_addr()
+    addr = dev[0].own_addr()
     params = hs20_ap_params()
     params['nai_realm'] = [ "0,example.com,21[2:4]" ]
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)

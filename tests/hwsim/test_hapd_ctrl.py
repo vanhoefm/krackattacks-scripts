@@ -38,7 +38,7 @@ def test_hapd_ctrl_p2p_manager(dev, apdev):
     params['allow_cross_connection'] = '0'
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
-    addr = dev[0].p2p_dev_addr()
+    addr = dev[0].own_addr()
     if "OK" not in hapd.request("DEAUTHENTICATE " + addr + " p2p=2"):
         raise Exception("DEAUTHENTICATE command failed")
     dev[0].wait_disconnected(timeout=5)
@@ -56,7 +56,7 @@ def test_hapd_ctrl_sta(dev, apdev):
     params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
-    addr = dev[0].p2p_dev_addr()
+    addr = dev[0].own_addr()
     if "FAIL" in hapd.request("STA " + addr):
         raise Exception("Unexpected STA failure")
     if "FAIL" not in hapd.request("STA " + addr + " eapol"):

@@ -94,6 +94,7 @@ def test_p2p_go_invite_auth(dev):
         raise Exception("Timeout on invitation on peer")
     if "P2P-INVITATION-RECEIVED" in ev:
         raise Exception("Unexpected request to accept pre-authorized invitaton")
+    dev[1].group_form_result(ev)
     dev[0].dump_monitor()
 
     logger.info("Client connected")

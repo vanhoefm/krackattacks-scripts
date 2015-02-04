@@ -946,8 +946,14 @@ class WpaSupplicant:
             return None
         return res.split(' ')
 
-    def get_bss(self, bssid):
-        res = self.request("BSS " + bssid)
+    def get_bss(self, bssid, ifname=None):
+	if not ifname or ifname == self.ifname:
+            res = self.request("BSS " + bssid)
+        elif ifname == self.group_ifname:
+            res = self.group_request("BSS " + bssid)
+        else:
+            return None
+
         if "FAIL" in res:
             return None
         lines = res.splitlines()

@@ -193,11 +193,11 @@ def test_discovery_dev_id(dev):
     addr1 = dev[1].p2p_dev_addr()
     dev[1].p2p_listen()
     dev[0].p2p_find(social=True, dev_id="02:03:04:05:06:07")
-    ev = dev[0].wait_event(['P2P-DEVICE-FOUND'], timeout=1)
+    ev = dev[0].wait_global_event(['P2P-DEVICE-FOUND'], timeout=1)
     if ev:
         raise Exception("Unexpected P2P device found")
     dev[0].p2p_find(social=True, dev_id=addr1)
-    ev = dev[0].wait_event(['P2P-DEVICE-FOUND'], timeout=2)
+    ev = dev[0].wait_global_event(['P2P-DEVICE-FOUND'], timeout=5)
     if ev is None:
         raise Exception("P2P device not found")
     if addr1 not in ev:

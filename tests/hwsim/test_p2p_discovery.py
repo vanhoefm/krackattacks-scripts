@@ -363,7 +363,7 @@ def test_discovery_stop(dev):
     ev = dev[0].wait_event(["CTRL-EVENT-SCAN-STARTED"], timeout=0.5)
     if ev is None:
         logger.info("No CTRL-EVENT-SCAN-STARTED event")
-    dev[0].request("P2P_FLUSH")
+    dev[0].global_request("P2P_FLUSH")
     ev = dev[0].wait_global_event(["P2P-FIND-STOPPED"], timeout=1)
     if ev is None:
         raise Exception("P2P_STOP not reported")
@@ -414,7 +414,7 @@ def test_p2p_listen_and_offchannel_tx(dev):
 
     dev[0].p2p_listen()
     dev[0].global_request("P2P_PROV_DISC " + addr1 + " display")
-    ev = dev[0].wait_event(["P2P-PROV-DISC-ENTER-PIN"], timeout=15)
+    ev = dev[0].wait_global_event(["P2P-PROV-DISC-ENTER-PIN"], timeout=15)
     if ev is None:
         raise Exception("No PD result reported")
     dev[1].p2p_stop_find()

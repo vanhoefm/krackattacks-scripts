@@ -299,7 +299,7 @@ def test_autogo_legacy(dev):
     res = autogo(dev[0], freq=2462)
     if dev[0].get_group_status_field("passphrase", extra="WPS") != res['passphrase']:
         raise Exception("passphrase mismatch")
-    if dev[0].request("P2P_GET_PASSPHRASE") != res['passphrase']:
+    if dev[0].group_request("P2P_GET_PASSPHRASE") != res['passphrase']:
         raise Exception("passphrase mismatch(2)")
 
     logger.info("Connect P2P client")

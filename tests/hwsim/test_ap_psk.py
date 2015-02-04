@@ -172,9 +172,9 @@ def test_ap_wpa_ccmp(dev, apdev):
 
 def test_ap_wpa2_psk_file(dev, apdev):
     """WPA2-PSK AP with various PSK file error and success cases"""
-    addr0 = dev[0].p2p_dev_addr()
-    addr1 = dev[1].p2p_dev_addr()
-    addr2 = dev[2].p2p_dev_addr()
+    addr0 = dev[0].own_addr()
+    addr1 = dev[1].own_addr()
+    addr2 = dev[2].own_addr()
     ssid = "psk"
     pskfile = "/tmp/ap_wpa2_psk_file_errors.psk_file"
     try:

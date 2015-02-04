@@ -168,7 +168,7 @@ def test_ap_pmf_assoc_comeback2(dev, apdev):
 def test_ap_pmf_sta_sa_query(dev, apdev):
     """WPA2-PSK AP with station using SA Query"""
     ssid = "assoc-comeback"
-    addr = dev[0].p2p_dev_addr()
+    addr = dev[0].own_addr()
     wt = Wlantest()
     wt.flush()
     wt.add_passphrase("12345678")
@@ -186,7 +186,7 @@ def test_ap_pmf_sta_sa_query(dev, apdev):
     wpas.set_network(id, "group", "CCMP")
     wpas.set_network(id, "frequency", "2412")
     wpas.connect_network(id)
-    bssid = wpas.p2p_dev_addr()
+    bssid = wpas.own_addr()
 
     dev[0].connect(ssid, psk="12345678", ieee80211w="1",
                    key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2",
@@ -225,7 +225,7 @@ def test_ap_pmf_sta_sa_query_no_response(dev, apdev):
     wpas.set_network(id, "group", "CCMP")
     wpas.set_network(id, "frequency", "2412")
     wpas.connect_network(id)
-    bssid = wpas.p2p_dev_addr()
+    bssid = wpas.own_addr()
 
     dev[0].connect(ssid, psk="12345678", ieee80211w="1",
                    key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2",
@@ -246,7 +246,7 @@ def test_ap_pmf_sta_sa_query_no_response(dev, apdev):
 def test_ap_pmf_sta_unprot_deauth_burst(dev, apdev):
     """WPA2-PSK AP with station receiving burst of unprotected Deauthentication frames"""
     ssid = "deauth-attack"
-    addr = dev[0].p2p_dev_addr()
+    addr = dev[0].own_addr()
     wt = Wlantest()
     wt.flush()
     wt.add_passphrase("12345678")

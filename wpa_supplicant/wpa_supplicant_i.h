@@ -712,6 +712,7 @@ struct wpa_supplicant {
 	int mesh_if_idx;
 	unsigned int mesh_if_created:1;
 	unsigned int mesh_ht_enabled:1;
+	int mesh_auth_block_duration; /* sec */
 #endif /* CONFIG_MESH */
 
 	unsigned int off_channel_freq;

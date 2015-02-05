@@ -37,6 +37,8 @@ void mesh_auth_timer(void *eloop_ctx, void *user_data)
 		wpa_printf(MSG_DEBUG, "AUTH: Re-authenticate with " MACSTR
 			   " (attempt %d) ",
 			   MAC2STR(sta->addr), sta->sae_auth_retry);
+		wpa_msg(wpa_s, MSG_INFO, MESH_SAE_AUTH_FAILURE "addr=" MACSTR,
+			MAC2STR(sta->addr));
 		if (sta->sae_auth_retry < MESH_AUTH_RETRY) {
 			mesh_rsn_auth_sae_sta(wpa_s, sta);
 		} else {

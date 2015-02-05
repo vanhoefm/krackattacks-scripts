@@ -127,6 +127,8 @@ extern "C" {
 #define MESH_GROUP_REMOVED "MESH-GROUP-REMOVED "
 #define MESH_PEER_CONNECTED "MESH-PEER-CONNECTED "
 #define MESH_PEER_DISCONNECTED "MESH-PEER-DISCONNECTED "
+/** Mesh SAE authentication failure. Wrong password suspected. */
+#define MESH_SAE_AUTH_FAILURE "MESH-SAE-AUTH-FAILURE "
 
 /* WMM AC events */
 #define WMM_AC_EVENT_TSPEC_ADDED "TSPEC-ADDED "

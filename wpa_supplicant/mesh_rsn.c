@@ -45,6 +45,9 @@ void mesh_auth_timer(void *eloop_ctx, void *user_data)
 			/* block the STA if exceeded the number of attempts */
 			wpa_mesh_set_plink_state(wpa_s, sta, PLINK_BLOCKED);
 			sta->sae->state = SAE_NOTHING;
+			wpa_msg(wpa_s, MSG_INFO, MESH_SAE_AUTH_BLOCKED "addr="
+				MACSTR,
+				MAC2STR(sta->addr));
 		}
 		sta->sae_auth_retry++;
 	}

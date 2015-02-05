@@ -129,6 +129,7 @@ extern "C" {
 #define MESH_PEER_DISCONNECTED "MESH-PEER-DISCONNECTED "
 /** Mesh SAE authentication failure. Wrong password suspected. */
 #define MESH_SAE_AUTH_FAILURE "MESH-SAE-AUTH-FAILURE "
+#define MESH_SAE_AUTH_BLOCKED "MESH-SAE-AUTH-BLOCKED "
 
 /* WMM AC events */
 #define WMM_AC_EVENT_TSPEC_ADDED "TSPEC-ADDED "

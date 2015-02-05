@@ -1,6 +1,6 @@
 /*
  * Qualcomm Atheros OUI and vendor specific assignments
- * Copyright (c) 2014, Qualcomm Atheros, Inc.
+ * Copyright (c) 2014-2015, Qualcomm Atheros, Inc.
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -69,6 +69,9 @@ enum qca_radiotap_vendor_ids {
  * @QCA_NL80211_VENDOR_SUBCMD_GET_FEATURES: Command to get the features
  *	supported by the driver. enum qca_wlan_vendor_features defines
  *	the possible features.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_CAC_STARTED: Event used by driver, which
+ *	supports DFS offloading, to indicate a channel availability check start.
  */
 enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
@@ -115,6 +118,7 @@ enum qca_nl80211_vendor_subcmds {
 	/* 53 - reserved for QCA */
 	QCA_NL80211_VENDOR_SUBCMD_DO_ACS = 54,
 	QCA_NL80211_VENDOR_SUBCMD_GET_FEATURES = 55,
+	QCA_NL80211_VENDOR_SUBCMD_CAC_STARTED = 56,
 };
 
 

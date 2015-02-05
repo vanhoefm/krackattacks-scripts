@@ -517,6 +517,14 @@ static struct hostapd_channel_data *acs_find_chan(struct hostapd_iface *iface,
 }
 
 
+#ifndef ACS_ADJ_WEIGHT
+#define ACS_ADJ_WEIGHT 0.85
+#endif /* ACS_ADJ_WEIGHT */
+
+#ifndef ACS_NEXT_ADJ_WEIGHT
+#define ACS_NEXT_ADJ_WEIGHT 0.55
+#endif /* ACS_NEXT_ADJ_WEIGHT */
+
 /*
  * At this point it's assumed chan->interface_factor has been computed.
  * This function should be reusable regardless of interference computation
@@ -557,6 +565,8 @@ acs_find_ideal_chan(struct hostapd_iface *iface)
 		   -1);
 
 	for (i = 0; i < iface->current_mode->num_channels; i++) {
+		double total_weight;
+
 		chan = &iface->current_mode->channels[i];
 
 		if (chan->flag & HOSTAPD_CHAN_DISABLED)
@@ -588,14 +598,17 @@ acs_find_ideal_chan(struct hostapd_iface *iface)
 		factor = 0;
 		if (acs_usable_chan(chan))
 			factor = chan->interference_factor;
+		total_weight = 1;
 
 		for (j = 1; j < n_chans; j++) {
 			adj_chan = acs_find_chan(iface, chan->freq + (j * 20));
 			if (!adj_chan)
 				break;
 
-			if (acs_usable_chan(adj_chan))
+			if (acs_usable_chan(adj_chan)) {
 				factor += adj_chan->interference_factor;
+				total_weight += 1;
+			}
 		}
 
 		if (j != n_chans) {
@@ -609,30 +622,41 @@ acs_find_ideal_chan(struct hostapd_iface *iface)
 		if (iface->current_mode->mode == HOSTAPD_MODE_IEEE80211B ||
 		    iface->current_mode->mode == HOSTAPD_MODE_IEEE80211G) {
 			for (j = 0; j < n_chans; j++) {
-				/* TODO: perhaps a multiplier should be used
-				 * here? */
-
 				adj_chan = acs_find_chan(iface, chan->freq +
 							 (j * 20) - 5);
-				if (adj_chan && acs_usable_chan(adj_chan))
-					factor += adj_chan->interference_factor;
+				if (adj_chan && acs_usable_chan(adj_chan)) {
+					factor += ACS_ADJ_WEIGHT *
+						adj_chan->interference_factor;
+					total_weight += ACS_ADJ_WEIGHT;
+				}
 
 				adj_chan = acs_find_chan(iface, chan->freq +
 							 (j * 20) - 10);
-				if (adj_chan && acs_usable_chan(adj_chan))
-					factor += adj_chan->interference_factor;
+				if (adj_chan && acs_usable_chan(adj_chan)) {
+					factor += ACS_NEXT_ADJ_WEIGHT *
+						adj_chan->interference_factor;
+					total_weight += ACS_NEXT_ADJ_WEIGHT;
+				}
 
 				adj_chan = acs_find_chan(iface, chan->freq +
 							 (j * 20) + 5);
-				if (adj_chan && acs_usable_chan(adj_chan))
-					factor += adj_chan->interference_factor;
+				if (adj_chan && acs_usable_chan(adj_chan)) {
+					factor += ACS_ADJ_WEIGHT *
+						adj_chan->interference_factor;
+					total_weight += ACS_ADJ_WEIGHT;
+				}
 
 				adj_chan = acs_find_chan(iface, chan->freq +
 							 (j * 20) + 10);
-				if (adj_chan && acs_usable_chan(adj_chan))
-					factor += adj_chan->interference_factor;
+				if (adj_chan && acs_usable_chan(adj_chan)) {
+					factor += ACS_NEXT_ADJ_WEIGHT *
+						adj_chan->interference_factor;
+					total_weight += ACS_NEXT_ADJ_WEIGHT;
+				}
 			}
 		}
+
+		factor /= total_weight;
 
 		wpa_printf(MSG_DEBUG, "ACS:  * channel %d: total interference = %Lg",
 			   chan->chan, factor);

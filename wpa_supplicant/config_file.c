@@ -11,6 +11,9 @@
  */
 
 #include "includes.h"
+#ifdef ANDROID
+#include <sys/stat.h>
+#endif /* ANDROID */
 
 #include "common.h"
 #include "config.h"
@@ -1245,12 +1248,21 @@ int wpa_config_write(const char *name, struct wpa_config *config)
 	struct wpa_config_blob *blob;
 #endif /* CONFIG_NO_CONFIG_BLOBS */
 	int ret = 0;
+	const char *orig_name = name;
+	int tmp_len = os_strlen(name) + 5; /* allow space for .tmp suffix */
+	char *tmp_name = os_malloc(tmp_len);
+
+	if (tmp_name) {
+		os_snprintf(tmp_name, tmp_len, "%s.tmp", name);
+		name = tmp_name;
+	}
 
 	wpa_printf(MSG_DEBUG, "Writing configuration file '%s'", name);
 
 	f = fopen(name, "w");
 	if (f == NULL) {
 		wpa_printf(MSG_DEBUG, "Failed to open '%s' for writing", name);
+		os_free(tmp_name);
 		return -1;
 	}
 
@@ -1285,8 +1297,21 @@ int wpa_config_write(const char *name, struct wpa_config *config)
 
 	fclose(f);
 
+	if (tmp_name) {
+		int chmod_ret = 0;
+
+#ifdef ANDROID
+		chmod_ret = chmod(tmp_name,
+				  S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+#endif /* ANDROID */
+		if (chmod_ret != 0 || rename(tmp_name, orig_name) != 0)
+			ret = -1;
+
+		os_free(tmp_name);
+	}
+
 	wpa_printf(MSG_DEBUG, "Configuration file '%s' written %ssuccessfully",
-		   name, ret ? "un" : "");
+		   orig_name, ret ? "un" : "");
 	return ret;
 #else /* CONFIG_NO_CONFIG_WRITE */
 	return -1;

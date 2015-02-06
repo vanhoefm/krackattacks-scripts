@@ -132,8 +132,6 @@ static void l2_packet_receive(int sock, void *eloop_ctx, void *sock_ctx)
 		return;
 	}
 
-	l2->rx_callback(l2->rx_callback_ctx, ll.sll_addr, buf, res);
-
 	if (l2->fd_br_rx >= 0) {
 		wpa_printf(MSG_DEBUG, "l2_packet_receive: Main packet socket for %s seems to have working RX - close workaround bridge socket",
 			   l2->ifname);
@@ -141,6 +139,8 @@ static void l2_packet_receive(int sock, void *eloop_ctx, void *sock_ctx)
 		close(l2->fd_br_rx);
 		l2->fd_br_rx = -1;
 	}
+
+	l2->rx_callback(l2->rx_callback_ctx, ll.sll_addr, buf, res);
 }
 
 

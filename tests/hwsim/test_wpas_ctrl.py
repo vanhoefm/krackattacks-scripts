@@ -1075,10 +1075,10 @@ def test_wpas_ctrl_global(dev):
 
     if "p2p_state=IDLE" not in wpas.global_request("STATUS"):
         raise Exception("P2P was disabled")
-    wpas.request("P2P_SET disabled 1")
+    wpas.global_request("P2P_SET disabled 1")
     if "p2p_state=DISABLED" not in wpas.global_request("STATUS"):
         raise Exception("P2P was not disabled")
-    wpas.request("P2P_SET disabled 0")
+    wpas.global_request("P2P_SET disabled 0")
     if "p2p_state=IDLE" not in wpas.global_request("STATUS"):
         raise Exception("P2P was not enabled")
 

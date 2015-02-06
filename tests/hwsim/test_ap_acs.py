@@ -202,3 +202,17 @@ def test_ap_acs_vht(dev, apdev):
             hapd.request("DISABLE")
         subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
+
+def test_ap_acs_bias(dev, apdev):
+    """Automatic channel selection with bias values"""
+    params = hostapd.wpa2_params(ssid="test-acs", passphrase="12345678")
+    params['channel'] = '0'
+    params['acs_chan_bias'] = '1:0.8 3:1.2 6:0.7 11:0.8'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params, wait_enabled=False)
+    wait_acs(hapd)
+
+    freq = hapd.get_status_field("freq")
+    if int(freq) < 2400:
+        raise Exception("Unexpected frequency")
+
+    dev[0].connect("test-acs", psk="12345678", scan_freq=freq)

@@ -2057,8 +2057,14 @@ def test_ap_wpa2_eap_fast_pac_file(dev, apdev, params):
                     phase1="fast_pac_format=binary",
                     pac_file=pac_file2)
     finally:
-        subprocess.call(['sudo', 'rm', pac_file])
-        subprocess.call(['sudo', 'rm', pac_file2])
+        try:
+            os.remove(pac_file)
+        except:
+            pass
+        try:
+            os.remove(pac_file2)
+        except:
+            pass
 
 def test_ap_wpa2_eap_fast_binary_pac(dev, apdev):
     """WPA2-Enterprise connection using EAP-FAST and binary PAC format"""

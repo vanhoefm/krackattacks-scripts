@@ -1536,7 +1536,7 @@ def test_ap_wps_pin_request_file(dev, apdev):
     ssid = "wps"
     pinfile = "/tmp/ap_wps_pin_request_file.log"
     if os.path.exists(pinfile):
-        subprocess.call(['sudo', 'rm', pinfile])
+        os.remove(pinfile)
     hostapd.add_ap(apdev[0]['ifname'],
                    { "ssid": ssid, "eap_server": "1", "wps_state": "2",
                      "wps_pin_requests": pinfile,
@@ -1564,7 +1564,10 @@ def test_ap_wps_pin_request_file(dev, apdev):
         if not success:
             raise Exception("PIN request entry not in the log file")
     finally:
-        subprocess.call(['sudo', 'rm', pinfile])
+        try:
+            os.remove(pinfile)
+        except:
+            pass
 
 def test_ap_wps_auto_setup_with_config_file(dev, apdev):
     """WPS auto-setup with configuration file"""
@@ -1602,7 +1605,10 @@ def test_ap_wps_auto_setup_with_config_file(dev, apdev):
         if vals['ieee80211n'] != '1' or vals['wps_state'] != '2' or "WPA-PSK" not in vals['wpa_key_mgmt']:
             raise Exception("Incorrect configuration: " + str(vals))
     finally:
-        subprocess.call(['sudo', 'rm', conffile])
+        try:
+            os.remove(conffile)
+        except:
+            pass
 
 def test_ap_wps_pbc_timeout(dev, apdev, params):
     """wpa_supplicant PBC walk time [long]"""

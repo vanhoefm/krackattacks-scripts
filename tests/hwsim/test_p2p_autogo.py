@@ -438,12 +438,13 @@ def test_autogo_bridge(dev):
         if "OK" not in dev[0].request("AUTOSCAN periodic:1"):
             raise Exception("Failed to set autoscan")
         autogo(dev[0])
+        ifname = dev[0].get_group_ifname()
         subprocess.call(['brctl', 'addbr', 'p2p-br0'])
         subprocess.call(['brctl', 'setfd', 'p2p-br0', '0'])
-        subprocess.call(['brctl', 'addif', 'p2p-br0', dev[0].ifname])
+        subprocess.call(['brctl', 'addif', 'p2p-br0', ifname])
         subprocess.call(['ip', 'link', 'set', 'dev', 'p2p-br0', 'up'])
         time.sleep(0.1)
-        subprocess.call(['brctl', 'delif', 'p2p-br0', dev[0].ifname])
+        subprocess.call(['brctl', 'delif', 'p2p-br0', ifname])
         time.sleep(0.1)
         subprocess.call(['ip', 'link', 'set', 'dev', 'p2p-br0', 'down'])
         time.sleep(0.1)
@@ -451,12 +452,12 @@ def test_autogo_bridge(dev):
         ev = dev[0].wait_global_event(["P2P-GROUP-REMOVED"], timeout=1)
         if ev is not None:
             raise Exception("P2P group removed unexpectedly")
-        if dev[0].get_status_field('wpa_state') != "COMPLETED":
+        if dev[0].get_group_status_field('wpa_state') != "COMPLETED":
             raise Exception("Unexpected wpa_state")
         dev[0].remove_group()
     finally:
         dev[0].request("AUTOSCAN ")
-        subprocess.Popen(['brctl', 'delif', 'p2p-br0', dev[0].ifname],
+        subprocess.Popen(['brctl', 'delif', 'p2p-br0', ifname],
                          stderr=open('/dev/null', 'w'))
         subprocess.Popen(['ip', 'link', 'set', 'dev', 'p2p-br0', 'down'],
                          stderr=open('/dev/null', 'w'))

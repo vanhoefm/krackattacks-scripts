@@ -1041,3 +1041,6 @@ class WpaSupplicant:
         if ev is None:
             raise Exception(error)
         return ev
+
+    def get_group_ifname(self):
+        return self.group_ifname if self.group_ifname else self.ifname

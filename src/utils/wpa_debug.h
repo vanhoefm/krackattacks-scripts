@@ -243,7 +243,13 @@ PRINTF_FORMAT(3, 4);
 void wpa_msg_no_global(void *ctx, int level, const char *fmt, ...)
 PRINTF_FORMAT(3, 4);
 
-typedef void (*wpa_msg_cb_func)(void *ctx, int level, int global,
+enum wpa_msg_type {
+	WPA_MSG_PER_INTERFACE,
+	WPA_MSG_GLOBAL,
+	WPA_MSG_NO_GLOBAL,
+};
+
+typedef void (*wpa_msg_cb_func)(void *ctx, int level, enum wpa_msg_type type,
 				const char *txt, size_t len);
 
 /**

@@ -295,7 +295,8 @@ static char * wpa_supplicant_ctrl_iface_path(struct wpa_supplicant *wpa_s)
 }
 
 
-static void wpa_supplicant_ctrl_iface_msg_cb(void *ctx, int level, int global,
+static void wpa_supplicant_ctrl_iface_msg_cb(void *ctx, int level,
+					     enum wpa_msg_type type,
 					     const char *txt, size_t len)
 {
 	struct wpa_supplicant *wpa_s = ctx;
@@ -303,15 +304,14 @@ static void wpa_supplicant_ctrl_iface_msg_cb(void *ctx, int level, int global,
 	if (wpa_s == NULL)
 		return;
 
-	if (global != 2 && wpa_s->global->ctrl_iface) {
+	if (type != WPA_MSG_NO_GLOBAL && wpa_s->global->ctrl_iface) {
 		struct ctrl_iface_global_priv *priv = wpa_s->global->ctrl_iface;
 		if (!dl_list_empty(&priv->ctrl_dst)) {
-			wpa_supplicant_ctrl_iface_send(wpa_s, global ? NULL :
-						       wpa_s->ifname,
-						       priv->sock,
-						       &priv->ctrl_dst,
-						       level, txt, len, NULL,
-						       priv);
+			wpa_supplicant_ctrl_iface_send(
+				wpa_s,
+				type == WPA_MSG_GLOBAL ? NULL : wpa_s->ifname,
+				priv->sock, &priv->ctrl_dst, level, txt, len,
+				NULL, priv);
 		}
 	}
 

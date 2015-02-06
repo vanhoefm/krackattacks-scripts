@@ -2130,7 +2130,8 @@ static char * hostapd_ctrl_iface_path(struct hostapd_data *hapd)
 }
 
 
-static void hostapd_ctrl_iface_msg_cb(void *ctx, int level, int global,
+static void hostapd_ctrl_iface_msg_cb(void *ctx, int level,
+				      enum wpa_msg_type type,
 				      const char *txt, size_t len)
 {
 	struct hostapd_data *hapd = ctx;

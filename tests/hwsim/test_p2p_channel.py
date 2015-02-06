@@ -173,7 +173,7 @@ def test_p2p_channel_avoid(dev):
         ev = dev[0].wait_event(["CTRL-EVENT-AVOID-FREQ"], timeout=10)
         if ev is None:
             raise Exception("No CTRL-EVENT-AVOID-FREQ event")
-        ev = dev[0].wait_event(["P2P-REMOVE-AND-REFORM-GROUP"], timeout=1)
+        ev = dev[0].wait_group_event(["P2P-REMOVE-AND-REFORM-GROUP"], timeout=1)
         if ev is not None:
             raise Exception("Unexpected P2P-REMOVE-AND-REFORM-GROUP event")
 
@@ -182,7 +182,8 @@ def test_p2p_channel_avoid(dev):
         ev = dev[0].wait_event(["CTRL-EVENT-AVOID-FREQ"], timeout=10)
         if ev is None:
             raise Exception("No CTRL-EVENT-AVOID-FREQ event")
-        ev = dev[0].wait_event(["P2P-REMOVE-AND-REFORM-GROUP"], timeout=10)
+        ev = dev[0].wait_group_event(["P2P-REMOVE-AND-REFORM-GROUP"],
+                                     timeout=10)
         if ev is None:
             raise Exception("No P2P-REMOVE-AND-REFORM-GROUP event")
     finally:

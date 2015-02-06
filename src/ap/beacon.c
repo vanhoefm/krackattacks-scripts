@@ -579,6 +579,27 @@ void handle_probe_req(struct hostapd_data *hapd,
 		return;
 	}
 
+	/*
+	 * No need to reply if the Probe Request frame was sent on an adjacent
+	 * channel. IEEE Std 802.11-2012 describes this as a requirement for an
+	 * AP with dot11RadioMeasurementActivated set to true, but strictly
+	 * speaking does not allow such ignoring of Probe Request frames if
+	 * dot11RadioMeasurementActivated is false. Anyway, this can help reduce
+	 * number of unnecessary Probe Response frames for cases where the STA
+	 * is less likely to see them (Probe Request frame sent on a
+	 * neighboring, but partially overlapping, channel).
+	 */
+	if (elems.ds_params && elems.ds_params_len == 1 &&
+	    hapd->iface->current_mode &&
+	    (hapd->iface->current_mode->mode == HOSTAPD_MODE_IEEE80211G ||
+	     hapd->iface->current_mode->mode == HOSTAPD_MODE_IEEE80211B) &&
+	    hapd->iconf->channel != elems.ds_params[0]) {
+		wpa_printf(MSG_DEBUG,
+			   "Ignore Probe Request due to DS Params mismatch: chan=%u != ds.chan=%u",
+			   hapd->iconf->channel, elems.ds_params[0]);
+		return;
+	}
+
 #ifdef CONFIG_P2P
 	if (hapd->p2p && elems.wps_ie) {
 		struct wpabuf *wps;

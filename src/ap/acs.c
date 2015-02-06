@@ -242,6 +242,7 @@
 
 
 static int acs_request_scan(struct hostapd_iface *iface);
+static int acs_survey_is_sufficient(struct freq_survey *survey);
 
 
 static void acs_clean_chan_surveys(struct hostapd_channel_data *chan)
@@ -328,6 +329,7 @@ acs_survey_chan_interference_factor(struct hostapd_iface *iface,
 	struct freq_survey *survey;
 	unsigned int i = 0;
 	long double int_factor = 0;
+	unsigned count = 0;
 
 	if (dl_list_empty(&chan->survey_list))
 		return;
@@ -339,18 +341,27 @@ acs_survey_chan_interference_factor(struct hostapd_iface *iface,
 
 	dl_list_for_each(survey, &chan->survey_list, struct freq_survey, list)
 	{
+		i++;
+
+		if (!acs_survey_is_sufficient(survey)) {
+			wpa_printf(MSG_DEBUG, "ACS: %d: insufficient data", i);
+			continue;
+		}
+
+		count++;
 		int_factor = acs_survey_interference_factor(survey,
 							    iface->lowest_nf);
 		chan->interference_factor += int_factor;
 		wpa_printf(MSG_DEBUG, "ACS: %d: min_nf=%d interference_factor=%Lg nf=%d time=%lu busy=%lu rx=%lu",
-			   ++i, chan->min_nf, int_factor,
+			   i, chan->min_nf, int_factor,
 			   survey->nf, (unsigned long) survey->channel_time,
 			   (unsigned long) survey->channel_time_busy,
 			   (unsigned long) survey->channel_time_rx);
 	}
 
-	chan->interference_factor = chan->interference_factor /
-		dl_list_len(&chan->survey_list);
+	if (!count)
+		return;
+	chan->interference_factor /= count;
 }
 
 
@@ -384,18 +395,19 @@ static int acs_usable_vht80_chan(struct hostapd_channel_data *chan)
 static int acs_survey_is_sufficient(struct freq_survey *survey)
 {
 	if (!(survey->filled & SURVEY_HAS_NF)) {
-		wpa_printf(MSG_ERROR, "ACS: Survey is missing noise floor");
+		wpa_printf(MSG_INFO, "ACS: Survey is missing noise floor");
 		return 0;
 	}
 
 	if (!(survey->filled & SURVEY_HAS_CHAN_TIME)) {
-		wpa_printf(MSG_ERROR, "ACS: Survey is missing channel time");
+		wpa_printf(MSG_INFO, "ACS: Survey is missing channel time");
 		return 0;
 	}
 
 	if (!(survey->filled & SURVEY_HAS_CHAN_TIME_BUSY) &&
 	    !(survey->filled & SURVEY_HAS_CHAN_TIME_RX)) {
-		wpa_printf(MSG_ERROR, "ACS: Survey is missing RX and busy time (at least one is required)");
+		wpa_printf(MSG_INFO,
+			   "ACS: Survey is missing RX and busy time (at least one is required)");
 		return 0;
 	}
 
@@ -406,18 +418,27 @@ static int acs_survey_is_sufficient(struct freq_survey *survey)
 static int acs_survey_list_is_sufficient(struct hostapd_channel_data *chan)
 {
 	struct freq_survey *survey;
+	int ret = -1;
 
 	dl_list_for_each(survey, &chan->survey_list, struct freq_survey, list)
 	{
-		if (!acs_survey_is_sufficient(survey)) {
-			wpa_printf(MSG_ERROR, "ACS: Channel %d has insufficient survey data",
-				   chan->chan);
-			return 0;
+		if (acs_survey_is_sufficient(survey)) {
+			ret = 1;
+			break;
 		}
+		ret = 0;
 	}
 
-	return 1;
+	if (ret == -1)
+		ret = 1; /* no survey list entries */
 
+	if (!ret) {
+		wpa_printf(MSG_INFO,
+			   "ACS: Channel %d has insufficient survey data",
+			   chan->chan);
+	}
+
+	return ret;
 }
 
 

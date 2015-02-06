@@ -47,7 +47,8 @@ def wait_4way_handshake2(dev1, dev2, dev3):
         raise Exception("4-way handshake in IBSS timed out")
 
 def add_ibss(dev, ssid, psk=None, proto=None, key_mgmt=None, pairwise=None,
-             group=None, beacon_int=None, bssid=None, scan_freq=None):
+             group=None, beacon_int=None, bssid=None, scan_freq=None,
+             wep_key0=None):
     id = dev.add_network()
     dev.set_network(id, "mode", "1")
     dev.set_network(id, "frequency", "2412")
@@ -68,11 +69,16 @@ def add_ibss(dev, ssid, psk=None, proto=None, key_mgmt=None, pairwise=None,
         dev.set_network(id, "beacon_int", beacon_int)
     if bssid:
         dev.set_network(id, "bssid", bssid)
+    if wep_key0:
+        dev.set_network(id, "wep_key0", wep_key0)
     dev.request("ENABLE_NETWORK " + str(id) + " no-connect")
     return id
 
 def add_ibss_rsn(dev, ssid):
     return add_ibss(dev, ssid, "12345678", "RSN", "WPA-PSK", "CCMP", "CCMP")
+
+def add_ibss_rsn_tkip(dev, ssid):
+    return add_ibss(dev, ssid, "12345678", "RSN", "WPA-PSK", "TKIP", "TKIP")
 
 def add_ibss_wpa_none(dev, ssid):
     return add_ibss(dev, ssid, "12345678", "WPA", "WPA-NONE", "TKIP", "TKIP")
@@ -308,3 +314,33 @@ def test_ibss_open_retry(dev):
         dev[0].request("DISCONNECT")
     finally:
         dev[0].request("AP_SCAN 1")
+
+def test_ibss_rsn_tkip(dev):
+    """IBSS RSN with TKIP as the cipher"""
+    ssid="ibss-rsn-tkip"
+
+    id = add_ibss_rsn_tkip(dev[0], ssid)
+    connect_ibss_cmd(dev[0], id)
+    bssid0 = wait_ibss_connection(dev[0])
+
+    id = add_ibss_rsn_tkip(dev[1], ssid)
+    connect_ibss_cmd(dev[1], id)
+    bssid1 = wait_ibss_connection(dev[1])
+    if bssid0 != bssid1:
+        logger.info("STA0 BSSID " + bssid0 + " differs from STA1 BSSID " + bssid1)
+        # try to merge with a scan
+        dev[1].scan()
+    wait_4way_handshake(dev[0], dev[1])
+    wait_4way_handshake(dev[1], dev[0])
+
+def test_ibss_wep(dev):
+    """IBSS with WEP"""
+    ssid="ibss-wep"
+
+    id = add_ibss(dev[0], ssid, key_mgmt="NONE", wep_key0='"hello"')
+    connect_ibss_cmd(dev[0], id)
+    bssid0 = wait_ibss_connection(dev[0])
+
+    id = add_ibss(dev[1], ssid, key_mgmt="NONE", wep_key0='"hello"')
+    connect_ibss_cmd(dev[1], id)
+    bssid1 = wait_ibss_connection(dev[1])

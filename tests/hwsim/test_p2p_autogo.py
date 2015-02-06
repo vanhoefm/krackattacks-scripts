@@ -63,7 +63,7 @@ def test_autogo(dev):
         raise Exception("Invald P2P_PRESENCE_REQ accepted")
     if "FAIL" in dev[1].group_request("P2P_PRESENCE_REQ 30000 102400"):
         raise Exception("Could not send presence request")
-    ev = dev[1].wait_event(["P2P-PRESENCE-RESPONSE"])
+    ev = dev[1].wait_group_event(["P2P-PRESENCE-RESPONSE"], 10)
     if ev is None:
         raise Exception("Timeout while waiting for Presence Response")
     if "FAIL" in dev[1].group_request("P2P_PRESENCE_REQ 30000 102400 20000 102400"):

@@ -517,6 +517,19 @@ static struct hostapd_channel_data *acs_find_chan(struct hostapd_iface *iface,
 }
 
 
+static int is_24ghz_mode(enum hostapd_hw_mode mode)
+{
+	return mode == HOSTAPD_MODE_IEEE80211B ||
+		mode == HOSTAPD_MODE_IEEE80211G;
+}
+
+
+static int is_common_24ghz_chan(int chan)
+{
+	return chan == 1 || chan == 6 || chan == 11;
+}
+
+
 #ifndef ACS_ADJ_WEIGHT
 #define ACS_ADJ_WEIGHT 0.85
 #endif /* ACS_ADJ_WEIGHT */
@@ -524,6 +537,15 @@ static struct hostapd_channel_data *acs_find_chan(struct hostapd_iface *iface,
 #ifndef ACS_NEXT_ADJ_WEIGHT
 #define ACS_NEXT_ADJ_WEIGHT 0.55
 #endif /* ACS_NEXT_ADJ_WEIGHT */
+
+#ifndef ACS_24GHZ_PREFER_1_6_11
+/*
+ * Select commonly used channels 1, 6, 11 by default even if a neighboring
+ * channel has a smaller interference factor as long as it is not better by more
+ * than this multiplier.
+ */
+#define ACS_24GHZ_PREFER_1_6_11 0.8
+#endif /* ACS_24GHZ_PREFER_1_6_11 */
 
 /*
  * At this point it's assumed chan->interface_factor has been computed.
@@ -539,6 +561,7 @@ acs_find_ideal_chan(struct hostapd_iface *iface)
 	long double factor, ideal_factor = 0;
 	int i, j;
 	int n_chans = 1;
+	unsigned int k;
 
 	/* TODO: HT40- support */
 
@@ -566,6 +589,7 @@ acs_find_ideal_chan(struct hostapd_iface *iface)
 
 	for (i = 0; i < iface->current_mode->num_channels; i++) {
 		double total_weight;
+		struct acs_bias *bias, tmp_bias;
 
 		chan = &iface->current_mode->channels[i];
 
@@ -619,8 +643,7 @@ acs_find_ideal_chan(struct hostapd_iface *iface)
 
 		/* 2.4 GHz has overlapping 20 MHz channels. Include adjacent
 		 * channel interference factor. */
-		if (iface->current_mode->mode == HOSTAPD_MODE_IEEE80211B ||
-		    iface->current_mode->mode == HOSTAPD_MODE_IEEE80211G) {
+		if (is_24ghz_mode(iface->current_mode->mode)) {
 			for (j = 0; j < n_chans; j++) {
 				adj_chan = acs_find_chan(iface, chan->freq +
 							 (j * 20) - 5);
@@ -658,8 +681,31 @@ acs_find_ideal_chan(struct hostapd_iface *iface)
 
 		factor /= total_weight;
 
-		wpa_printf(MSG_DEBUG, "ACS:  * channel %d: total interference = %Lg",
-			   chan->chan, factor);
+		bias = NULL;
+		if (iface->conf->acs_chan_bias) {
+			for (k = 0; k < iface->conf->num_acs_chan_bias; k++) {
+				bias = &iface->conf->acs_chan_bias[k];
+				if (bias->channel == chan->chan)
+					break;
+				bias = NULL;
+			}
+		} else if (is_24ghz_mode(iface->current_mode->mode) &&
+			   is_common_24ghz_chan(chan->chan)) {
+			tmp_bias.channel = chan->chan;
+			tmp_bias.bias = ACS_24GHZ_PREFER_1_6_11;
+			bias = &tmp_bias;
+		}
+
+		if (bias) {
+			factor *= bias->bias;
+			wpa_printf(MSG_DEBUG,
+				   "ACS:  * channel %d: total interference = %Lg (%f bias)",
+				   chan->chan, factor, bias->bias);
+		} else {
+			wpa_printf(MSG_DEBUG,
+				   "ACS:  * channel %d: total interference = %Lg",
+				   chan->chan, factor);
+		}
 
 		if (acs_usable_chan(chan) &&
 		    (!ideal_chan || factor < ideal_factor)) {

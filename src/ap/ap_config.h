@@ -639,6 +639,11 @@ struct hostapd_config {
 
 #ifdef CONFIG_ACS
 	unsigned int acs_num_scans;
+	struct acs_bias {
+		int channel;
+		double bias;
+	} *acs_chan_bias;
+	unsigned int num_acs_chan_bias;
 #endif /* CONFIG_ACS */
 };
 

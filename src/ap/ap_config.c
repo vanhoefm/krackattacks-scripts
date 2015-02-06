@@ -574,6 +574,9 @@ void hostapd_config_free(struct hostapd_config *conf)
 	os_free(conf->basic_rates);
 	os_free(conf->chanlist);
 	os_free(conf->driver_params);
+#ifdef CONFIG_ACS
+	os_free(conf->acs_chan_bias);
+#endif /* CONFIG_ACS */
 
 	os_free(conf);
 }

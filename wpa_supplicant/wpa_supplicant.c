@@ -1674,6 +1674,14 @@ void ibss_mesh_setup_freq(struct wpa_supplicant *wpa_s,
 	    !(wpa_s->drv_flags & WPA_DRIVER_FLAGS_HT_IBSS))
 		return;
 
+	if (wpa_s->group_cipher == WPA_CIPHER_WEP40 ||
+	    wpa_s->group_cipher == WPA_CIPHER_WEP104 ||
+	    wpa_s->pairwise_cipher == WPA_CIPHER_TKIP) {
+		wpa_printf(MSG_DEBUG,
+			   "IBSS: WEP/TKIP detected, do not try to enable HT");
+		return;
+	}
+
 	hw_mode = ieee80211_freq_to_chan(ssid->frequency, &channel);
 	for (i = 0; wpa_s->hw.modes && i < wpa_s->hw.num_modes; i++) {
 		if (wpa_s->hw.modes[i].mode == hw_mode) {

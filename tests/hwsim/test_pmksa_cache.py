@@ -337,8 +337,8 @@ def test_pmksa_cache_preauth(dev, apdev):
         params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
         params['bridge'] = 'ap-br0'
         hostapd.add_ap(apdev[0]['ifname'], params)
-        subprocess.call(['sudo', 'brctl', 'setfd', 'ap-br0', '0'])
-        subprocess.call(['sudo', 'ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
+        subprocess.call(['brctl', 'setfd', 'ap-br0', '0'])
+        subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
         eap_connect(dev[0], apdev[0], "PAX", "pax.user@example.com",
                     password_hex="0123456789abcdef0123456789abcdef")
 
@@ -383,8 +383,8 @@ def test_pmksa_cache_preauth(dev, apdev):
             raise Exception("Unexpected PMKID change")
 
     finally:
-        subprocess.call(['sudo', 'ip', 'link', 'set', 'dev', 'ap-br0', 'down'])
-        subprocess.call(['sudo', 'brctl', 'delbr', 'ap-br0'])
+        subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'down'])
+        subprocess.call(['brctl', 'delbr', 'ap-br0'])
 
 def test_pmksa_cache_disabled(dev, apdev):
     """PMKSA cache disabling on AP"""

@@ -371,7 +371,7 @@ def test_autogo_ifdown(dev):
     wpas.interface_add("wlan5")
     res = autogo(wpas)
     wpas.dump_monitor()
-    subprocess.call(['sudo', 'ifconfig', res['ifname'], 'down'])
+    subprocess.call(['ifconfig', res['ifname'], 'down'])
     ev = wpas.wait_global_event(["P2P-GROUP-REMOVED"], timeout=10)
     if ev is None:
         raise Exception("Group removal not reported")
@@ -438,16 +438,16 @@ def test_autogo_bridge(dev):
         if "OK" not in dev[0].request("AUTOSCAN periodic:1"):
             raise Exception("Failed to set autoscan")
         autogo(dev[0])
-        subprocess.call(['sudo', 'brctl', 'addbr', 'p2p-br0'])
-        subprocess.call(['sudo', 'brctl', 'setfd', 'p2p-br0', '0'])
-        subprocess.call(['sudo', 'brctl', 'addif', 'p2p-br0', dev[0].ifname])
-        subprocess.call(['sudo', 'ip', 'link', 'set', 'dev', 'p2p-br0', 'up'])
+        subprocess.call(['brctl', 'addbr', 'p2p-br0'])
+        subprocess.call(['brctl', 'setfd', 'p2p-br0', '0'])
+        subprocess.call(['brctl', 'addif', 'p2p-br0', dev[0].ifname])
+        subprocess.call(['ip', 'link', 'set', 'dev', 'p2p-br0', 'up'])
         time.sleep(0.1)
-        subprocess.call(['sudo', 'brctl', 'delif', 'p2p-br0', dev[0].ifname])
+        subprocess.call(['brctl', 'delif', 'p2p-br0', dev[0].ifname])
         time.sleep(0.1)
-        subprocess.call(['sudo', 'ip', 'link', 'set', 'dev', 'p2p-br0', 'down'])
+        subprocess.call(['ip', 'link', 'set', 'dev', 'p2p-br0', 'down'])
         time.sleep(0.1)
-        subprocess.call(['sudo', 'brctl', 'delbr', 'p2p-br0'])
+        subprocess.call(['brctl', 'delbr', 'p2p-br0'])
         ev = dev[0].wait_global_event(["P2P-GROUP-REMOVED"], timeout=1)
         if ev is not None:
             raise Exception("P2P group removed unexpectedly")
@@ -456,11 +456,11 @@ def test_autogo_bridge(dev):
         dev[0].remove_group()
     finally:
         dev[0].request("AUTOSCAN ")
-        subprocess.Popen(['sudo', 'brctl', 'delif', 'p2p-br0', dev[0].ifname],
+        subprocess.Popen(['brctl', 'delif', 'p2p-br0', dev[0].ifname],
                          stderr=open('/dev/null', 'w'))
-        subprocess.Popen(['sudo', 'ip', 'link', 'set', 'dev', 'p2p-br0', 'down'],
+        subprocess.Popen(['ip', 'link', 'set', 'dev', 'p2p-br0', 'down'],
                          stderr=open('/dev/null', 'w'))
-        subprocess.Popen(['sudo', 'brctl', 'delbr', 'p2p-br0'],
+        subprocess.Popen(['brctl', 'delbr', 'p2p-br0'],
                          stderr=open('/dev/null', 'w'))
 
 def test_presence_req_on_group_interface(dev):

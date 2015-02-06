@@ -133,13 +133,13 @@ class WpaSupplicant:
             logger.error(self.ifname + ": Driver scan state did not clear")
             print "Trying to clear cfg80211/mac80211 scan state"
             try:
-                cmd = ["sudo", "ifconfig", self.ifname, "down"]
+                cmd = ["ifconfig", self.ifname, "down"]
                 subprocess.call(cmd)
             except subprocess.CalledProcessError, e:
                 logger.info("ifconfig failed: " + str(e.returncode))
                 logger.info(e.output)
             try:
-                cmd = ["sudo", "ifconfig", self.ifname, "up"]
+                cmd = ["ifconfig", self.ifname, "up"]
                 subprocess.call(cmd)
             except subprocess.CalledProcessError, e:
                 logger.info("ifconfig failed: " + str(e.returncode))

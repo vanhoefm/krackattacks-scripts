@@ -305,8 +305,8 @@ def test_ap_wpa2_tdls_bssid_mismatch(dev, apdev):
         hapd = hostapd.add_ap(apdev[0]['ifname'], params)
         hostapd.add_ap(apdev[1]['ifname'], params)
         wlantest_setup()
-        subprocess.call(['sudo', 'brctl', 'setfd', 'ap-br0', '0'])
-        subprocess.call(['sudo', 'ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
+        subprocess.call(['brctl', 'setfd', 'ap-br0', '0'])
+        subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
         dev[0].connect(ssid, psk=passphrase, scan_freq="2412",
                        bssid=apdev[0]['bssid'])
         dev[1].connect(ssid, psk=passphrase, scan_freq="2412",
@@ -320,8 +320,8 @@ def test_ap_wpa2_tdls_bssid_mismatch(dev, apdev):
         time.sleep(1)
         hwsim_utils.test_connectivity_sta(dev[0], dev[1])
     finally:
-        subprocess.call(['sudo', 'ip', 'link', 'set', 'dev', 'ap-br0', 'down'])
-        subprocess.call(['sudo', 'brctl', 'delbr', 'ap-br0'])
+        subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'down'])
+        subprocess.call(['brctl', 'delbr', 'ap-br0'])
 
 def test_ap_wpa2_tdls_responder_teardown(dev, apdev):
     """TDLS teardown from responder with WPA2-PSK AP"""
@@ -356,7 +356,7 @@ def test_ap_open_tdls_vht(dev, apdev):
         dev[1].request("DISCONNECT")
         if hapd:
             hapd.request("DISABLE")
-        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
         dev[1].flush_scan_cache()
 

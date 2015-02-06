@@ -74,7 +74,7 @@ def test_ap_country(dev, apdev):
         dev[0].request("DISCONNECT")
         if hapd:
             hapd.request("DISABLE")
-        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
 def test_ap_acl_accept(dev, apdev):
@@ -123,17 +123,17 @@ def test_ap_wds_sta(dev, apdev):
     hapd = hostapd.add_ap(apdev[0]['ifname'], params)
 
     try:
-        subprocess.call(['sudo', 'brctl', 'addbr', 'wds-br0'])
-        subprocess.call(['sudo', 'brctl', 'setfd', 'wds-br0', '0'])
-        subprocess.call(['sudo', 'ip', 'link', 'set', 'dev', 'wds-br0', 'up'])
-        subprocess.call(['sudo', 'iw', dev[0].ifname, 'set', '4addr', 'on'])
+        subprocess.call(['brctl', 'addbr', 'wds-br0'])
+        subprocess.call(['brctl', 'setfd', 'wds-br0', '0'])
+        subprocess.call(['ip', 'link', 'set', 'dev', 'wds-br0', 'up'])
+        subprocess.call(['iw', dev[0].ifname, 'set', '4addr', 'on'])
         dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
         hwsim_utils.test_connectivity_iface(dev[0], hapd, "wds-br0",
                                             max_tries=15)
     finally:
-        subprocess.call(['sudo', 'iw', dev[0].ifname, 'set', '4addr', 'off'])
-        subprocess.call(['sudo', 'ip', 'link', 'set', 'dev', 'wds-br0', 'down'])
-        subprocess.call(['sudo', 'brctl', 'delbr', 'wds-br0'])
+        subprocess.call(['iw', dev[0].ifname, 'set', '4addr', 'off'])
+        subprocess.call(['ip', 'link', 'set', 'dev', 'wds-br0', 'down'])
+        subprocess.call(['brctl', 'delbr', 'wds-br0'])
 
 def test_ap_inactivity_poll(dev, apdev):
     """AP using inactivity poll"""
@@ -209,7 +209,7 @@ def test_ap_spectrum_management_required(dev, apdev):
         dev[0].request("DISCONNECT")
         if hapd:
             hapd.request("DISABLE")
-        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
 def test_ap_max_listen_interval(dev, apdev):

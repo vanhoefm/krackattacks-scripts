@@ -45,14 +45,13 @@ def test_radius_auth_unreachable(dev, apdev):
 
 def test_radius_auth_unreachable2(dev, apdev):
     """RADIUS Authentication server unreachable (2)"""
-    subprocess.call(['sudo', 'ip', 'ro', 'replace', '192.168.213.17', 'dev',
-                     'lo'])
+    subprocess.call(['ip', 'ro', 'replace', '192.168.213.17', 'dev', 'lo'])
     params = hostapd.wpa2_eap_params(ssid="radius-auth")
     params['auth_server_addr'] = "192.168.213.17"
     params['auth_server_port'] = "18139"
     hostapd.add_ap(apdev[0]['ifname'], params)
     hapd = hostapd.Hostapd(apdev[0]['ifname'])
-    subprocess.call(['sudo', 'ip', 'ro', 'del', '192.168.213.17', 'dev', 'lo'])
+    subprocess.call(['ip', 'ro', 'del', '192.168.213.17', 'dev', 'lo'])
     connect(dev[0], "radius-auth", wait_connect=False)
     ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"])
     if ev is None:
@@ -86,15 +85,14 @@ def test_radius_acct_unreachable(dev, apdev):
 
 def test_radius_acct_unreachable2(dev, apdev):
     """RADIUS Accounting server unreachable(2)"""
-    subprocess.call(['sudo', 'ip', 'ro', 'replace', '192.168.213.17', 'dev',
-                     'lo'])
+    subprocess.call(['ip', 'ro', 'replace', '192.168.213.17', 'dev', 'lo'])
     params = hostapd.wpa2_eap_params(ssid="radius-acct")
     params['acct_server_addr'] = "192.168.213.17"
     params['acct_server_port'] = "18139"
     params['acct_server_shared_secret'] = "radius"
     hostapd.add_ap(apdev[0]['ifname'], params)
     hapd = hostapd.Hostapd(apdev[0]['ifname'])
-    subprocess.call(['sudo', 'ip', 'ro', 'del', '192.168.213.17', 'dev', 'lo'])
+    subprocess.call(['ip', 'ro', 'del', '192.168.213.17', 'dev', 'lo'])
     connect(dev[0], "radius-acct")
     logger.info("Checking for RADIUS retries")
     time.sleep(4)
@@ -627,8 +625,7 @@ def test_radius_macacl_acct(dev, apdev):
 
 def test_radius_failover(dev, apdev):
     """RADIUS Authentication and Accounting server failover"""
-    subprocess.call(['sudo', 'ip', 'ro', 'replace', '192.168.213.17', 'dev',
-                     'lo'])
+    subprocess.call(['ip', 'ro', 'replace', '192.168.213.17', 'dev', 'lo'])
     as_hapd = hostapd.Hostapd("as")
     as_mib_start = as_hapd.get_mib(param="radius_server")
     params = hostapd.wpa2_eap_params(ssid="radius-failover")
@@ -653,14 +650,13 @@ def test_radius_failover(dev, apdev):
             raise Exception("AP startup failed")
 
     try:
-        subprocess.call(['sudo', 'ip', 'ro', 'replace', 'prohibit',
-                         '192.168.213.17'])
+        subprocess.call(['ip', 'ro', 'replace', 'prohibit', '192.168.213.17'])
         dev[0].request("SET EAPOL::authPeriod 5")
         connect(dev[0], "radius-failover", wait_connect=False)
         dev[0].wait_connected(timeout=60)
     finally:
         dev[0].request("SET EAPOL::authPeriod 30")
-        subprocess.call(['sudo', 'ip', 'ro', 'del', '192.168.213.17'])
+        subprocess.call(['ip', 'ro', 'del', '192.168.213.17'])
 
     as_mib_end = as_hapd.get_mib(param="radius_server")
     req_s = int(as_mib_start['radiusAccServTotalRequests'])

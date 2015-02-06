@@ -133,7 +133,7 @@ def test_dfs(dev, apdev):
         dev[0].request("DISCONNECT")
         if hapd:
             hapd.request("DISABLE")
-        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
 def test_dfs_radar(dev, apdev):
@@ -213,7 +213,7 @@ def test_dfs_radar(dev, apdev):
             hapd.request("DISABLE")
         if hapd2:
             hapd2.request("DISABLE")
-        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
 def test_dfs_radar_on_non_dfs_channel(dev, apdev):
@@ -255,7 +255,7 @@ def test_dfs_radar_chanlist(dev, apdev):
         dev[0].request("DISCONNECT")
         if hapd:
             hapd.request("DISABLE")
-        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
 def test_dfs_radar_chanlist_vht80(dev, apdev):
@@ -293,7 +293,7 @@ def test_dfs_radar_chanlist_vht80(dev, apdev):
         dev[0].request("DISCONNECT")
         if hapd:
             hapd.request("DISABLE")
-        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
 def test_dfs_radar_chanlist_vht20(dev, apdev):
@@ -328,7 +328,7 @@ def test_dfs_radar_chanlist_vht20(dev, apdev):
         dev[0].request("DISCONNECT")
         if hapd:
             hapd.request("DISABLE")
-        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
 def test_dfs_radar_no_ht(dev, apdev):

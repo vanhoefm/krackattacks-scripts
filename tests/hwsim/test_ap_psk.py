@@ -308,8 +308,8 @@ def test_ap_wpa2_bridge_fdb(dev, apdev):
         params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
         params['bridge'] = 'ap-br0'
         hostapd.add_ap(apdev[0]['ifname'], params)
-        subprocess.call(['sudo', 'brctl', 'setfd', 'ap-br0', '0'])
-        subprocess.call(['sudo', 'ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
+        subprocess.call(['brctl', 'setfd', 'ap-br0', '0'])
+        subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'up'])
         dev[0].connect(ssid, psk=passphrase, scan_freq="2412",
                        bssid=apdev[0]['bssid'])
         dev[1].connect(ssid, psk=passphrase, scan_freq="2412",
@@ -332,8 +332,8 @@ def test_ap_wpa2_bridge_fdb(dev, apdev):
         if addr0 in macs2 or addr1 in macs2:
             raise Exception("Bridge FDB entry was not removed")
     finally:
-        subprocess.call(['sudo', 'ip', 'link', 'set', 'dev', 'ap-br0', 'down'])
-        subprocess.call(['sudo', 'brctl', 'delbr', 'ap-br0'])
+        subprocess.call(['ip', 'link', 'set', 'dev', 'ap-br0', 'down'])
+        subprocess.call(['brctl', 'delbr', 'ap-br0'])
 
 def test_ap_wpa2_already_in_bridge(dev, apdev):
     """hostapd behavior with interface already in bridge"""

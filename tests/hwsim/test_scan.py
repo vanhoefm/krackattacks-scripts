@@ -114,7 +114,7 @@ def test_scan_external_trigger(dev, apdev):
     """Avoid operations during externally triggered scan"""
     hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-scan" })
     bssid = apdev[0]['bssid']
-    subprocess.call(['sudo', 'iw', dev[0].ifname, 'scan', 'trigger'])
+    subprocess.call(['iw', dev[0].ifname, 'scan', 'trigger'])
     check_scan(dev[0], "use_id=1", other_started=True)
 
 def test_scan_bss_expiration_count(dev, apdev):

@@ -16,10 +16,10 @@ import hwsim_utils
 from test_ap_csa import csa_supported
 
 def clear_scan_cache(ifname):
-    subprocess.call(['sudo', 'ifconfig', ifname, 'up'])
-    subprocess.call(['sudo', 'iw', ifname, 'scan', 'freq', '2412', 'flush'])
+    subprocess.call(['ifconfig', ifname, 'up'])
+    subprocess.call(['iw', ifname, 'scan', 'freq', '2412', 'flush'])
     time.sleep(0.1)
-    subprocess.call(['sudo', 'ifconfig', ifname, 'down'])
+    subprocess.call(['ifconfig', ifname, 'down'])
 
 def test_ap_ht40_scan(dev, apdev):
     """HT40 co-ex scan"""
@@ -226,7 +226,7 @@ def test_ap_ht40_5ghz_match(dev, apdev):
             hapd.request("DISABLE")
         if hapd2:
             hapd2.request("DISABLE")
-        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
 def test_ap_ht40_5ghz_switch(dev, apdev):
@@ -280,7 +280,7 @@ def test_ap_ht40_5ghz_switch(dev, apdev):
             hapd.request("DISABLE")
         if hapd2:
             hapd2.request("DISABLE")
-        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        subprocess.call(['iw', 'reg', 'set', '00'])
 
 def test_ap_ht40_5ghz_switch2(dev, apdev):
     """HT40 co-ex scan on 5 GHz switching pri/sec channel (2)"""
@@ -342,7 +342,7 @@ def test_ap_ht40_5ghz_switch2(dev, apdev):
             hapd.request("DISABLE")
         if hapd2:
             hapd2.request("DISABLE")
-        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
 def test_obss_scan(dev, apdev):
@@ -590,7 +590,7 @@ def test_olbc_5ghz(dev, apdev):
             hapd.request("DISABLE")
         if hapd2:
             hapd2.request("DISABLE")
-        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        subprocess.call(['iw', 'reg', 'set', '00'])
 
 def test_ap_require_ht(dev, apdev):
     """Require HT"""
@@ -761,7 +761,7 @@ def test_ap_ht40_csa(dev, apdev):
         dev[0].request("DISCONNECT")
         if hapd:
             hapd.request("DISABLE")
-        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
 def test_ap_ht40_csa2(dev, apdev):
@@ -805,7 +805,7 @@ def test_ap_ht40_csa2(dev, apdev):
         dev[0].request("DISCONNECT")
         if hapd:
             hapd.request("DISABLE")
-        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
 def test_ap_ht40_csa3(dev, apdev):
@@ -849,7 +849,7 @@ def test_ap_ht40_csa3(dev, apdev):
         dev[0].request("DISCONNECT")
         if hapd:
             hapd.request("DISABLE")
-        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
 def test_ap_ht_smps(dev, apdev):

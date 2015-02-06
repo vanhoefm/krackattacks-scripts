@@ -1026,7 +1026,7 @@ def test_wpas_ctrl_country(dev, apdev):
         if "init=CORE type=WORLD" not in ev:
             raise Exception("Unexpected event contents: " + ev)
     finally:
-        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        subprocess.call(['iw', 'reg', 'set', '00'])
 
 def test_wpas_ctrl_suspend_resume(dev):
     """wpa_supplicant SUSPEND/RESUME"""

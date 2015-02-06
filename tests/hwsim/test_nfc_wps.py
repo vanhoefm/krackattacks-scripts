@@ -245,7 +245,7 @@ def test_nfc_wps_handover_5ghz(dev, apdev):
         dev[0].request("DISCONNECT")
         if hapd:
             hapd.request("DISABLE")
-        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
 def test_nfc_wps_handover_chan14(dev, apdev):
@@ -277,7 +277,7 @@ def test_nfc_wps_handover_chan14(dev, apdev):
         dev[0].request("DISCONNECT")
         if hapd:
             hapd.request("DISABLE")
-        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
 def test_nfc_wps_handover_with_pw_token_set(dev, apdev):

@@ -49,7 +49,7 @@ def test_ap_vht80(dev, apdev):
         dev[0].request("DISCONNECT")
         if hapd:
             hapd.request("DISABLE")
-        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
 def test_ap_vht80_params(dev, apdev):
@@ -89,7 +89,7 @@ def test_ap_vht80_params(dev, apdev):
         dev[1].request("DISCONNECT")
         if hapd:
             hapd.request("DISABLE")
-        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
         dev[1].flush_scan_cache()
 
@@ -119,7 +119,7 @@ def test_ap_vht_20(devs, apdevs):
         dev.request("DISCONNECT")
         if hapd:
             hapd.request("DISABLE")
-        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        subprocess.call(['iw', 'reg', 'set', '00'])
         dev.flush_scan_cache()
 
 def test_ap_vht_40(devs, apdevs):
@@ -146,7 +146,7 @@ def test_ap_vht_40(devs, apdevs):
         dev.request("DISCONNECT")
         if hapd:
             hapd.request("DISABLE")
-        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        subprocess.call(['iw', 'reg', 'set', '00'])
         dev.flush_scan_cache()
 
 def test_ap_vht_capab_not_supported(dev, apdev):
@@ -171,7 +171,7 @@ def test_ap_vht_capab_not_supported(dev, apdev):
             if "OK" not in hapd.request("SET vht_capab [MAX-A-MPDU-LEN-EXP%d]" % i):
                 raise Exception("Unexpected SET failure")
     finally:
-        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        subprocess.call(['iw', 'reg', 'set', '00'])
 
 def test_ap_vht160(dev, apdev):
     """VHT with 160 MHz channel width"""
@@ -285,7 +285,7 @@ def test_ap_vht160(dev, apdev):
             hapd.request("DISABLE")
         if hapd2:
             hapd2.request("DISABLE")
-        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
         dev[1].flush_scan_cache()
 
@@ -357,7 +357,7 @@ def test_ap_vht80plus80(dev, apdev):
             hapd.request("DISABLE")
         if hapd2:
             hapd2.request("DISABLE")
-        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
         dev[1].flush_scan_cache()
 
@@ -411,7 +411,7 @@ def test_ap_vht80_csa(dev, apdev):
         dev[0].request("DISCONNECT")
         if hapd:
             hapd.request("DISABLE")
-        subprocess.call(['sudo', 'iw', 'reg', 'set', '00'])
+        subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
 
 def test_ap_vht_on_24ghz(dev, apdev):

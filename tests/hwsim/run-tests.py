@@ -124,7 +124,7 @@ class DataCollector(object):
     def __enter__(self):
         if self._tracing:
             output = os.path.abspath(os.path.join(self._logdir, '%s.dat' % (self._testname, )))
-            self._trace_cmd = subprocess.Popen(['sudo', 'trace-cmd', 'record', '-o', output, '-e', 'mac80211', '-e', 'cfg80211', '-e', 'printk', 'sh', '-c', 'echo STARTED ; read l'],
+            self._trace_cmd = subprocess.Popen(['trace-cmd', 'record', '-o', output, '-e', 'mac80211', '-e', 'cfg80211', '-e', 'printk', 'sh', '-c', 'echo STARTED ; read l'],
                                                stdin=subprocess.PIPE,
                                                stdout=subprocess.PIPE,
                                                stderr=open('/dev/null', 'w'),
@@ -142,7 +142,7 @@ class DataCollector(object):
             self._trace_cmd.wait()
         if self._dmesg:
             output = os.path.join(self._logdir, '%s.dmesg' % (self._testname, ))
-            subprocess.call(['sudo', 'dmesg', '-c'], stdout=open(output, 'w'))
+            subprocess.call(['dmesg', '-c'], stdout=open(output, 'w'))
 
 def rename_log(logdir, basename, testname, dev):
     try:
@@ -157,7 +157,7 @@ def rename_log(logdir, basename, testname, dev):
         os.rename(srcname, dstname)
         if dev:
             dev.relog()
-            subprocess.call(['sudo', 'chown', '-f', getpass.getuser(), srcname])
+            subprocess.call(['chown', '-f', getpass.getuser(), srcname])
     except Exception, e:
         logger.info("Failed to rename log files")
         logger.info(e)
@@ -338,7 +338,7 @@ def main():
         sys.exit(1)
 
     if args.dmesg:
-        subprocess.call(['sudo', 'dmesg', '-c'], stdout=open('/dev/null', 'w'))
+        subprocess.call(['dmesg', '-c'], stdout=open('/dev/null', 'w'))
 
     if conn and args.prefill:
         for t in tests_to_run:

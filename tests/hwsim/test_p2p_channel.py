@@ -22,7 +22,7 @@ from test_p2p_grpform import go_neg_pbc
 from test_p2p_autogo import autogo
 
 def set_country(country, dev=None):
-    subprocess.call(['sudo', 'iw', 'reg', 'set', country])
+    subprocess.call(['iw', 'reg', 'set', country])
     time.sleep(0.1)
     if dev:
         for i in range(10):

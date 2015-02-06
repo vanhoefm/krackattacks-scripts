@@ -7,7 +7,6 @@
 import logging
 logger = logging.getLogger()
 import os
-import subprocess
 
 from wpasupplicant import WpaSupplicant
 
@@ -34,7 +33,7 @@ def test_wpas_config_file(dev):
     """wpa_supplicant config file parsing/writing"""
     config = "/tmp/test_wpas_config_file.conf"
     if os.path.exists(config):
-        subprocess.call(['sudo', 'rm', config])
+        os.remove(config)
 
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     try:
@@ -119,9 +118,9 @@ def test_wpas_config_file(dev):
         if "OK" in wpas.global_request("SAVE_CONFIG"):
             raise Exception("SAVE_CONFIG (global) succeeded unexpectedly")
 
-        # symlink config file to itself to break writing
-        subprocess.call(['rm', config])
-        subprocess.call(['ln', '-s', config, config])
+        # replace the config file with a directory to break writing/renaming
+        os.remove(config)
+        os.mkdir(config)
         wpas.request("SET update_config 1")
         if "OK" in wpas.request("SAVE_CONFIG"):
             raise Exception("SAVE_CONFIG succeeded unexpectedly")
@@ -129,4 +128,11 @@ def test_wpas_config_file(dev):
             raise Exception("SAVE_CONFIG (global) succeeded unexpectedly")
 
     finally:
-        subprocess.call(['sudo', 'rm', config])
+        try:
+            os.remove(config)
+        except:
+            pass
+        try:
+            os.rmdir(config)
+        except:
+            pass

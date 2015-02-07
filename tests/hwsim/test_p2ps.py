@@ -892,7 +892,6 @@ def test_p2ps_connect_adv_go_persistent(dev):
     ev1 = dev[1].wait_global_event(["P2PS-PROV-DONE"], timeout=10)
     if ev1 is None:
         raise Exception("P2PS-PROV-DONE timeout on seeker side")
-    print ev1
 
     if "persist=" not in ev1:
         raise Exception("Seeker did not indicate persistent group")

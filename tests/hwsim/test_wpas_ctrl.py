@@ -238,6 +238,10 @@ def test_wpas_ctrl_many_networks(dev, apdev):
     res = dev[0].request("LIST_NETWORKS LAST_ID=%d" % (id - 2))
     if str(id) not in res:
         raise Exception("Last added network was not present when using LAST_ID")
+    # This command can take a very long time under valgrind testing on a low
+    # power CPU, so increase the command timeout significantly to avoid issues
+    # with the test case failing and following reset operation timing out.
+    dev[0].request("REMOVE_NETWORK all", timeout=60)
 
 def test_wpas_ctrl_dup_network(dev, apdev):
     """wpa_supplicant ctrl_iface DUP_NETWORK"""

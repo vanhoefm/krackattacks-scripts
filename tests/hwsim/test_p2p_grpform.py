@@ -693,7 +693,6 @@ def test_grpform_pbc_overlap(dev, apdev):
     if "OK" not in dev[1].global_request("P2P_CONNECT " + addr0 + " pbc go_intent=15 freq=2412"):
         raise Exception("Failed to initiate GO Neg")
     ev = dev[0].wait_global_event(["WPS-OVERLAP-DETECTED"], timeout=15)
-    print ev
     if ev is None:
         raise Exception("PBC overlap not reported")
 

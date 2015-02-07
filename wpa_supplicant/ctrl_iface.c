@@ -2940,7 +2940,7 @@ static int wpa_supplicant_ctrl_iface_update_network(
 static int wpa_supplicant_ctrl_iface_set_network(
 	struct wpa_supplicant *wpa_s, char *cmd)
 {
-	int id, ret, prev_bssid_set;
+	int id, ret, prev_bssid_set, prev_disabled;
 	struct wpa_ssid *ssid;
 	char *name, *value;
 	u8 prev_bssid[ETH_ALEN];
@@ -2970,6 +2970,7 @@ static int wpa_supplicant_ctrl_iface_set_network(
 	}
 
 	prev_bssid_set = ssid->bssid_set;
+	prev_disabled = ssid->disabled;
 	os_memcpy(prev_bssid, ssid->bssid, ETH_ALEN);
 	ret = wpa_supplicant_ctrl_iface_update_network(wpa_s, ssid, name,
 						       value);
@@ -2977,6 +2978,11 @@ static int wpa_supplicant_ctrl_iface_set_network(
 	    (ssid->bssid_set != prev_bssid_set ||
 	     os_memcmp(ssid->bssid, prev_bssid, ETH_ALEN) != 0))
 		wpas_notify_network_bssid_set_changed(wpa_s, ssid);
+
+	if (prev_disabled != ssid->disabled &&
+	    (prev_disabled == 2 || ssid->disabled == 2))
+		wpas_notify_network_type_changed(wpa_s, ssid);
+
 	return ret;
 }
 

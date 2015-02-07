@@ -131,5 +131,7 @@ void wpas_notify_eap_status(struct wpa_supplicant *wpa_s, const char *status,
 			    const char *parameter);
 void wpas_notify_network_bssid_set_changed(struct wpa_supplicant *wpa_s,
 					   struct wpa_ssid *ssid);
+void wpas_notify_network_type_changed(struct wpa_supplicant *wpa_s,
+				      struct wpa_ssid *ssid);
 
 #endif /* NOTIFY_H */

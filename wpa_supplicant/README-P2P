@@ -130,7 +130,7 @@ join-a-group style PD instead of GO Negotiation style PD.
 
 p2p_connect <peer device address> <pbc|pin|PIN#> [display|keypad]
 	[persistent|persistent=<network id>] [join|auth]
-	[go_intent=<0..15>] [freq=<in MHz>] [ht40] [vht] [provdisc]
+	[go_intent=<0..15>] [freq=<in MHz>] [ht40] [vht] [provdisc] [auto]
 
 Start P2P group formation with a discovered P2P peer. This includes
 optional group owner negotiation, group interface setup, provisioning,
@@ -170,6 +170,10 @@ to select 2.4 GHz channel 1).
 used prior to starting GO Negotiation as a workaround with some deployed
 P2P implementations that require this to allow the user to accept the
 connection.
+
+"auto" can be used to request wpa_supplicant to automatically figure
+out whether the peer device is operating as a GO and if so, use
+join-a-group operation rather than GO Negotiation.
 
 p2p_group_add [persistent|persistent=<network id>] [freq=<freq in MHz>]
 	[ht40] [vht]

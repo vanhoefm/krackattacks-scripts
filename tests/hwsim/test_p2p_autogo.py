@@ -476,3 +476,39 @@ def test_presence_req_on_group_interface(dev):
         raise Exception("Timeout while waiting for Presence Response")
     dev[0].remove_group()
     dev[1].wait_go_ending_session()
+
+def test_autogo_join_auto_go_not_found(dev):
+    """P2P_CONNECT-auto not finding GO"""
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5")
+    wpas.request("P2P_SET listen_channel 1")
+    wpas.global_request("SET p2p_no_group_iface 0")
+    autogo(wpas, freq=2412)
+    addr = wpas.p2p_dev_addr()
+    bssid = wpas.p2p_interface_addr()
+
+    dev[1].global_request("SET p2p_no_group_iface 0")
+    dev[1].scan_for_bss(bssid, freq=2412)
+    # This makes the GO not show up in the scan iteration following the
+    # P2P_CONNECT command by stopping beaconing and handling Probe Request
+    # frames externally (but not really replying to them). P2P listen mode is
+    # needed to keep the GO listening on the operating channel for the PD
+    # exchange.
+    if "OK" not in wpas.group_request("STOP_AP"):
+        raise Exception("STOP_AP failed")
+    wpas.group_request("SET ext_mgmt_frame_handling 1")
+    wpas.p2p_listen()
+    time.sleep(0.02)
+    dev[1].global_request("P2P_CONNECT " + addr + " pbc auto")
+
+    ev = dev[1].wait_group_event(["P2P-FALLBACK-TO-GO-NEG-ENABLED"], 15)
+    if ev is None:
+        raise Exception("Could not trigger old-scan-only case")
+        return
+
+    ev = dev[1].wait_group_event(["P2P-FALLBACK-TO-GO-NEG"], 15)
+    wpas.remove_group()
+    if ev is None:
+        raise Exception("Fallback to GO Negotiation not seen")
+    if "reason=GO-not-found" not in ev:
+        raise Exception("Unexpected reason for fallback: " + ev)

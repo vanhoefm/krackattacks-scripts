@@ -335,4 +335,11 @@ static inline int hostapd_drv_vendor_cmd(struct hostapd_data *hapd,
 					data_len, buf);
 }
 
+static inline int hostapd_drv_stop_ap(struct hostapd_data *hapd)
+{
+	if (hapd->driver == NULL || hapd->driver->stop_ap == NULL)
+		return 0;
+	return hapd->driver->stop_ap(hapd->drv_priv);
+}
+
 #endif /* AP_DRV_OPS */

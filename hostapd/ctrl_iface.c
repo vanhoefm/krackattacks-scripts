@@ -1955,6 +1955,9 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 	} else if (os_strncmp(buf, "DISASSOCIATE ", 13) == 0) {
 		if (hostapd_ctrl_iface_disassociate(hapd, buf + 13))
 			reply_len = -1;
+	} else if (os_strcmp(buf, "STOP_AP") == 0) {
+		if (hostapd_ctrl_iface_stop_ap(hapd))
+			reply_len = -1;
 #ifdef CONFIG_IEEE80211W
 #ifdef NEED_AP_MLME
 	} else if (os_strncmp(buf, "SA_QUERY ", 9) == 0) {

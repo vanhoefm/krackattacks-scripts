@@ -80,4 +80,6 @@ void wpa_supplicant_conf_ap_ht(struct wpa_supplicant *wpa_s,
 			       struct wpa_ssid *ssid,
 			       struct hostapd_config *conf);
 
+int wpas_ap_stop_ap(struct wpa_supplicant *wpa_s);
+
 #endif /* AP_H */

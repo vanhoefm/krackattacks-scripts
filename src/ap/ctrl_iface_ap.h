@@ -23,6 +23,6 @@ int hostapd_ctrl_iface_status(struct hostapd_data *hapd, char *buf,
 			      size_t buflen);
 int hostapd_parse_csa_settings(const char *pos,
 			       struct csa_settings *settings);
-
+int hostapd_ctrl_iface_stop_ap(struct hostapd_data *hapd);
 
 #endif /* CTRL_IFACE_AP_H */

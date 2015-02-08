@@ -1238,3 +1238,14 @@ int wpas_ap_wps_add_nfc_pw(struct wpa_supplicant *wpa_s, u16 pw_id,
 					      pw ? wpabuf_len(pw) : 0, 1);
 }
 #endif /* CONFIG_WPS_NFC */
+
+
+int wpas_ap_stop_ap(struct wpa_supplicant *wpa_s)
+{
+	struct hostapd_data *hapd;
+
+	if (!wpa_s->ap_iface)
+		return -1;
+	hapd = wpa_s->ap_iface->bss[0];
+	return hostapd_ctrl_iface_stop_ap(hapd);
+}

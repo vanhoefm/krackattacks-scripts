@@ -537,3 +537,9 @@ int hostapd_parse_csa_settings(const char *pos,
 
 	return 0;
 }
+
+
+int hostapd_ctrl_iface_stop_ap(struct hostapd_data *hapd)
+{
+	return hostapd_drv_stop_ap(hapd);
+}

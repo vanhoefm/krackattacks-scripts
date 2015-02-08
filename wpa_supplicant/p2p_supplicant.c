@@ -117,8 +117,8 @@ static void wpas_p2p_set_group_idle_timeout(struct wpa_supplicant *wpa_s);
 static void wpas_p2p_group_formation_timeout(void *eloop_ctx,
 					     void *timeout_ctx);
 static void wpas_p2p_group_freq_conflict(void *eloop_ctx, void *timeout_ctx);
-static void wpas_p2p_fallback_to_go_neg(struct wpa_supplicant *wpa_s,
-					int group_added);
+static int wpas_p2p_fallback_to_go_neg(struct wpa_supplicant *wpa_s,
+				       int group_added);
 static void wpas_p2p_stop_find_oper(struct wpa_supplicant *wpa_s);
 static void wpas_stop_listen(void *ctx);
 static void wpas_p2p_psk_failure_removal(void *eloop_ctx, void *timeout_ctx);
@@ -8184,16 +8184,18 @@ void wpas_p2p_notify_ap_sta_authorized(struct wpa_supplicant *wpa_s,
 }
 
 
-static void wpas_p2p_fallback_to_go_neg(struct wpa_supplicant *wpa_s,
-					int group_added)
+static int wpas_p2p_fallback_to_go_neg(struct wpa_supplicant *wpa_s,
+				       int group_added)
 {
 	struct wpa_supplicant *group = wpa_s;
+	int ret = 0;
+
 	if (wpa_s->global->p2p_group_formation)
 		group = wpa_s->global->p2p_group_formation;
 	wpa_s = wpa_s->parent;
 	offchannel_send_action_done(wpa_s);
 	if (group_added)
-		wpas_p2p_group_delete(group, P2P_GROUP_REMOVAL_SILENT);
+		ret = wpas_p2p_group_delete(group, P2P_GROUP_REMOVAL_SILENT);
 	wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Fall back to GO Negotiation");
 	wpas_p2p_connect(wpa_s, wpa_s->pending_join_dev_addr, wpa_s->p2p_pin,
 			 wpa_s->p2p_wps_method, wpa_s->p2p_persistent_group, 0,
@@ -8202,11 +8204,14 @@ static void wpas_p2p_fallback_to_go_neg(struct wpa_supplicant *wpa_s,
 			 wpa_s->p2p_pd_before_go_neg,
 			 wpa_s->p2p_go_ht40,
 			 wpa_s->p2p_go_vht);
+	return ret;
 }
 
 
 int wpas_p2p_scan_no_go_seen(struct wpa_supplicant *wpa_s)
 {
+	int res;
+
 	if (!wpa_s->p2p_fallback_to_go_neg ||
 	    wpa_s->p2p_in_provisioning <= 5)
 		return 0;
@@ -8216,9 +8221,9 @@ int wpas_p2p_scan_no_go_seen(struct wpa_supplicant *wpa_s)
 
 	wpa_dbg(wpa_s, MSG_DEBUG, "P2P: GO not found for p2p_connect-auto - "
 		"fallback to GO Negotiation");
-	wpas_p2p_fallback_to_go_neg(wpa_s, 1);
+	res = wpas_p2p_fallback_to_go_neg(wpa_s, 1);
 
-	return 1;
+	return res == 1 ? 2 : 1;
 }
 
 

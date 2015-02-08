@@ -1333,3 +1333,17 @@ def test_wpas_ctrl_misc(dev, apdev):
         raise Exception("Invalid INTERFACE_REMOVE accepted")
     if "FAIL" not in dev[0].global_request("SET foo"):
         raise Exception("Invalid global SET accepted")
+
+def test_wpas_ctrl_dump(dev, apdev):
+    """wpa_supplicant ctrl_iface and DUMP/GET global parameters"""
+    vals = dev[0].get_config()
+    logger.info("Config values from DUMP: " + str(vals))
+    for field in vals:
+        res = dev[0].request("GET " + field)
+        if res == 'FAIL\n':
+            res = "null"
+        if res != vals[field]:
+            print "'{}' != '{}'".format(res, vals[field])
+            raise Exception("Mismatch in config field " + field)
+    if "beacon_int" not in vals:
+        raise Exception("Missing config field")

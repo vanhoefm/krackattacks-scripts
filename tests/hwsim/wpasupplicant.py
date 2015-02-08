@@ -1050,3 +1050,14 @@ class WpaSupplicant:
 
     def get_group_ifname(self):
         return self.group_ifname if self.group_ifname else self.ifname
+
+    def get_config(self):
+        res = self.request("DUMP")
+        if res.startswith("FAIL"):
+            raise Exception("DUMP failed")
+        lines = res.splitlines()
+        vals = dict()
+        for l in lines:
+            [name,value] = l.split('=', 1)
+            vals[name] = value
+        return vals

@@ -313,6 +313,8 @@ def main():
         # duration test case on a single VM while all other VMs have already
         # completed their work.
         long = [ "ap_roam_open",
+                 "wpas_mesh_password_mismatch_retry",
+                 "wpas_mesh_password_mismatch",
                  "hostapd_oom_wpa2_psk_connect",
                  "ap_hs20_fetch_osu_stop",
                  "ap_roam_wpa2_psk",

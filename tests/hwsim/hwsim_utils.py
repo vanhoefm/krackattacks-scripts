@@ -13,7 +13,7 @@ logger = logging.getLogger()
 from wpasupplicant import WpaSupplicant
 
 def run_connectivity_test(dev1, dev2, tos, dev1group=False, dev2group=False,
-                          ifname1=None, ifname2=None, config=True):
+                          ifname1=None, ifname2=None, config=True, timeout=5):
     addr1 = dev1.own_addr()
     if not dev1group and isinstance(dev1, WpaSupplicant):
         addr1 = dev1.get_driver_status_field('addr')
@@ -53,9 +53,9 @@ def run_connectivity_test(dev1, dev2, tos, dev1group=False, dev2group=False,
         else:
             dev1.request(cmd)
         if dev2group:
-            ev = dev2.wait_group_event(["DATA-TEST-RX"], timeout=5)
+            ev = dev2.wait_group_event(["DATA-TEST-RX"], timeout=timeout)
         else:
-            ev = dev2.wait_event(["DATA-TEST-RX"], timeout=5)
+            ev = dev2.wait_event(["DATA-TEST-RX"], timeout=timeout)
         if ev is None:
             raise Exception("dev1->dev2 unicast data delivery failed")
         if "DATA-TEST-RX {} {}".format(addr2, addr1) not in ev:
@@ -67,9 +67,9 @@ def run_connectivity_test(dev1, dev2, tos, dev1group=False, dev2group=False,
         else:
             dev1.request(cmd)
         if dev2group:
-            ev = dev2.wait_group_event(["DATA-TEST-RX"], timeout=5)
+            ev = dev2.wait_group_event(["DATA-TEST-RX"], timeout=timeout)
         else:
-            ev = dev2.wait_event(["DATA-TEST-RX"], timeout=5)
+            ev = dev2.wait_event(["DATA-TEST-RX"], timeout=timeout)
         if ev is None:
             raise Exception("dev1->dev2 broadcast data delivery failed")
         if "DATA-TEST-RX ff:ff:ff:ff:ff:ff {}".format(addr1) not in ev:
@@ -81,9 +81,9 @@ def run_connectivity_test(dev1, dev2, tos, dev1group=False, dev2group=False,
         else:
             dev2.request(cmd)
         if dev1group:
-            ev = dev1.wait_group_event(["DATA-TEST-RX"], timeout=5)
+            ev = dev1.wait_group_event(["DATA-TEST-RX"], timeout=timeout)
         else:
-            ev = dev1.wait_event(["DATA-TEST-RX"], timeout=5)
+            ev = dev1.wait_event(["DATA-TEST-RX"], timeout=timeout)
         if ev is None:
             raise Exception("dev2->dev1 unicast data delivery failed")
         if "DATA-TEST-RX {} {}".format(addr1, addr2) not in ev:
@@ -95,9 +95,9 @@ def run_connectivity_test(dev1, dev2, tos, dev1group=False, dev2group=False,
         else:
             dev2.request(cmd)
         if dev1group:
-            ev = dev1.wait_group_event(["DATA-TEST-RX"], timeout=5)
+            ev = dev1.wait_group_event(["DATA-TEST-RX"], timeout=timeout)
         else:
-            ev = dev1.wait_event(["DATA-TEST-RX"], timeout=5)
+            ev = dev1.wait_event(["DATA-TEST-RX"], timeout=timeout)
         if ev is None:
             raise Exception("dev2->dev1 broadcast data delivery failed")
         if "DATA-TEST-RX ff:ff:ff:ff:ff:ff {}".format(addr2) not in ev:
@@ -115,7 +115,7 @@ def run_connectivity_test(dev1, dev2, tos, dev1group=False, dev2group=False,
 
 def test_connectivity(dev1, dev2, dscp=None, tos=None, max_tries=1,
                       dev1group=False, dev2group=False,
-                      ifname1=None, ifname2=None, config=True):
+                      ifname1=None, ifname2=None, config=True, timeout=5):
     if dscp:
         tos = dscp << 2
     if not tos:
@@ -126,7 +126,8 @@ def test_connectivity(dev1, dev2, dscp=None, tos=None, max_tries=1,
     for i in range(0, max_tries):
         try:
             run_connectivity_test(dev1, dev2, tos, dev1group, dev2group,
-                                  ifname1, ifname2, config=config)
+                                  ifname1, ifname2, config=config,
+                                  timeout=timeout)
             success = True
             break
         except Exception, e:

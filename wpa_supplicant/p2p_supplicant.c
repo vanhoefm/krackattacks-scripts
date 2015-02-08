@@ -1401,6 +1401,9 @@ static void wpas_p2p_send_action_tx_status(struct wpa_supplicant *wpa_s,
 		wpa_s->pending_pd_before_join = 0;
 		wpa_dbg(wpa_s, MSG_DEBUG, "P2P: No ACK for PD Req "
 			"during p2p_connect-auto");
+		wpa_msg_global(wpa_s->parent, MSG_INFO,
+			       P2P_EVENT_FALLBACK_TO_GO_NEG
+			       "reason=no-ACK-to-PD-Req");
 		wpas_p2p_fallback_to_go_neg(wpa_s, 0);
 		return;
 	}
@@ -3728,6 +3731,9 @@ static void wpas_prov_disc_fail(void *ctx, const u8 *peer,
 	if (wpa_s->p2p_fallback_to_go_neg) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "P2P: PD for p2p_connect-auto "
 			"failed - fall back to GO Negotiation");
+		wpa_msg_global(wpa_s->parent, MSG_INFO,
+			       P2P_EVENT_FALLBACK_TO_GO_NEG
+			       "reason=PD-failed");
 		wpas_p2p_fallback_to_go_neg(wpa_s, 0);
 		return;
 	}
@@ -5545,6 +5551,9 @@ static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 		if (join < 0) {
 			wpa_printf(MSG_DEBUG, "P2P: Peer was not found to be "
 				   "running a GO -> use GO Negotiation");
+			wpa_msg_global(wpa_s->parent, MSG_INFO,
+				       P2P_EVENT_FALLBACK_TO_GO_NEG
+				       "reason=peer-not-running-GO");
 			wpas_p2p_connect(wpa_s, wpa_s->pending_join_dev_addr,
 					 wpa_s->p2p_pin, wpa_s->p2p_wps_method,
 					 wpa_s->p2p_persistent_group, 0, 0, 0,
@@ -5560,8 +5569,11 @@ static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 		wpa_printf(MSG_DEBUG, "P2P: Peer was found running GO%s -> "
 			   "try to join the group", join ? "" :
 			   " in older scan");
-		if (!join)
+		if (!join) {
+			wpa_msg_global(wpa_s->parent, MSG_INFO,
+				       P2P_EVENT_FALLBACK_TO_GO_NEG_ENABLED);
 			wpa_s->p2p_fallback_to_go_neg = 1;
+		}
 	}
 
 	freq = p2p_get_oper_freq(wpa_s->global->p2p,
@@ -8221,6 +8233,8 @@ int wpas_p2p_scan_no_go_seen(struct wpa_supplicant *wpa_s)
 
 	wpa_dbg(wpa_s, MSG_DEBUG, "P2P: GO not found for p2p_connect-auto - "
 		"fallback to GO Negotiation");
+	wpa_msg_global(wpa_s->parent, MSG_INFO, P2P_EVENT_FALLBACK_TO_GO_NEG
+		       "reason=GO-not-found");
 	res = wpas_p2p_fallback_to_go_neg(wpa_s, 1);
 
 	return res == 1 ? 2 : 1;

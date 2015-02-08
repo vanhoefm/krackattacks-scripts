@@ -512,3 +512,96 @@ def test_autogo_join_auto_go_not_found(dev):
         raise Exception("Fallback to GO Negotiation not seen")
     if "reason=GO-not-found" not in ev:
         raise Exception("Unexpected reason for fallback: " + ev)
+
+def test_autogo_join_auto(dev):
+    """P2P_CONNECT-auto joining a group"""
+    autogo(dev[0])
+    addr = dev[0].p2p_dev_addr()
+    if "OK" not in dev[1].global_request("P2P_CONNECT " + addr + " pbc auto"):
+        raise Exception("P2P_CONNECT failed")
+
+    ev = dev[0].wait_global_event(["P2P-PROV-DISC-PBC-REQ"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on P2P-PROV-DISC-PBC-REQ")
+    if "group=" + dev[0].group_ifname not in ev:
+        raise Exception("Unexpected PD event contents: " + ev)
+    dev[0].group_request("WPS_PBC")
+
+    ev = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
+    if ev is None:
+        raise Exception("Joining the group timed out")
+    dev[1].group_form_result(ev)
+
+    dev[0].remove_group()
+    dev[1].wait_go_ending_session()
+    dev[1].flush_scan_cache()
+
+def test_autogo_join_auto_go_neg(dev):
+    """P2P_CONNECT-auto fallback to GO Neg"""
+    dev[0].p2p_listen()
+    addr = dev[0].p2p_dev_addr()
+    if "OK" not in dev[1].global_request("P2P_CONNECT " + addr + " pbc auto"):
+        raise Exception("P2P_CONNECT failed")
+
+    ev = dev[0].wait_global_event(["P2P-GO-NEG-REQUEST"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on P2P-GO-NEG-REQUEST")
+    peer = ev.split(' ')[1]
+    dev[0].p2p_go_neg_init(peer, None, "pbc", timeout=15, go_intent=15)
+
+    ev = dev[1].wait_global_event(["P2P-FALLBACK-TO-GO-NEG"], timeout=1)
+    if ev is None:
+        raise Exception("No P2P-FALLBACK-TO-GO-NEG event seen")
+    if "P2P-FALLBACK-TO-GO-NEG-ENABLED" in ev:
+        ev = dev[1].wait_global_event(["P2P-FALLBACK-TO-GO-NEG"], timeout=1)
+        if ev is None:
+            raise Exception("No P2P-FALLBACK-TO-GO-NEG event seen")
+    if "reason=peer-not-running-GO" not in ev:
+        raise Exception("Unexpected reason: " + ev)
+
+    ev = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
+    if ev is None:
+        raise Exception("Joining the group timed out")
+    dev[1].group_form_result(ev)
+
+    dev[0].remove_group()
+    dev[1].wait_go_ending_session()
+    dev[1].flush_scan_cache()
+
+def test_autogo_join_auto_go_neg_after_seeing_go(dev):
+    """P2P_CONNECT-auto fallback to GO Neg after seeing GO"""
+    autogo(dev[0], freq=2412)
+    addr = dev[0].p2p_dev_addr()
+    bssid = dev[0].p2p_interface_addr()
+    dev[1].scan_for_bss(bssid, freq=2412)
+    dev[0].remove_group()
+    dev[0].p2p_listen()
+
+    if "OK" not in dev[1].global_request("P2P_CONNECT " + addr + " pbc auto"):
+        raise Exception("P2P_CONNECT failed")
+
+    ev = dev[1].wait_global_event(["P2P-FALLBACK-TO-GO-NEG-ENABLED"],
+                                  timeout=15)
+    if ev is None:
+        raise Exception("No P2P-FALLBACK-TO-GO-NEG-ENABLED event seen")
+
+    ev = dev[0].wait_global_event(["P2P-GO-NEG-REQUEST"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on P2P-GO-NEG-REQUEST")
+    peer = ev.split(' ')[1]
+    dev[0].p2p_go_neg_init(peer, None, "pbc", timeout=15, go_intent=15)
+
+    ev = dev[1].wait_global_event(["P2P-FALLBACK-TO-GO-NEG"], timeout=1)
+    if ev is None:
+        raise Exception("No P2P-FALLBACK-TO-GO-NEG event seen")
+    if "reason=no-ACK-to-PD-Req" not in ev and "reason=PD-failed" not in ev:
+        raise Exception("Unexpected reason: " + ev)
+
+    ev = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
+    if ev is None:
+        raise Exception("Joining the group timed out")
+    dev[1].group_form_result(ev)
+
+    dev[0].remove_group()
+    dev[1].wait_go_ending_session()
+    dev[1].flush_scan_cache()

@@ -207,6 +207,12 @@ class WpaSupplicant:
         else:
             self.request("SET auto_interworking 0")
 
+    def interworking_add_network(self, bssid):
+        id = self.request("INTERWORKING_ADD_NETWORK " + bssid)
+        if "FAIL" in id or "OK" in id:
+            raise Exception("INTERWORKING_ADD_NETWORK failed")
+        return int(id)
+
     def add_cred(self):
         id = self.request("ADD_CRED")
         if "FAIL" in id:
@@ -258,7 +264,7 @@ class WpaSupplicant:
 
     def select_network(self, id, freq=None):
         if freq:
-            extra = " freq=" + freq
+            extra = " freq=" + str(freq)
         else:
             extra = ""
         id = self.request("SELECT_NETWORK " + str(id) + extra)

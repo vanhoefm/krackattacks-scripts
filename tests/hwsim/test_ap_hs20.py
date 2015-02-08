@@ -65,7 +65,7 @@ def interworking_select(dev, bssid, type=None, no_match=False, freq=None):
     dev.dump_monitor()
     if bssid and freq and not no_match:
         dev.scan_for_bss(bssid, freq=freq)
-    freq_extra = " freq=" + freq if freq else ""
+    freq_extra = " freq=" + str(freq) if freq else ""
     dev.request("INTERWORKING_SELECT" + freq_extra)
     ev = dev.wait_event(["INTERWORKING-AP", "INTERWORKING-NO-MATCH"],
                         timeout=15)
@@ -1087,10 +1087,10 @@ def policy_test(dev, ap, values, only_one=True):
     dev.dump_monitor()
     return events
 
-def default_cred(domain=None):
+def default_cred(domain=None, user="hs20-test"):
     cred = { 'realm': "example.com",
              'ca_cert': "auth_serv/ca.pem",
-             'username': "hs20-test",
+             'username': user,
              'password': "password" }
     if domain:
         cred['domain'] = domain
@@ -2447,6 +2447,20 @@ def test_ap_hs20_multi_network_and_cred_removal(dev, apdev):
     if len(dev[0].list_networks()) != 3:
         raise Exception("Unexpected number of networks after to remove_crec")
     dev[0].wait_disconnected(timeout=10)
+
+def test_ap_hs20_interworking_add_network(dev, apdev):
+    """Hotspot 2.0 connection using INTERWORKING_ADD_NETWORK"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['nai_realm'] = [ "0,example.com,21[3:26][6:7][99:99]" ]
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    dev[0].add_cred_values(default_cred(user="user"))
+    interworking_select(dev[0], bssid, freq=2412)
+    id = dev[0].interworking_add_network(bssid)
+    dev[0].select_network(id, freq=2412)
+    dev[0].wait_connected()
 
 def _test_ap_hs20_proxyarp(dev, apdev):
     bssid = apdev[0]['bssid']

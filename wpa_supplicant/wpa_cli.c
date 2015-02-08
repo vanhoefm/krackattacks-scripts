@@ -2309,6 +2309,13 @@ static int wpa_cli_cmd_interworking_connect(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int wpa_cli_cmd_interworking_add_network(struct wpa_ctrl *ctrl, int argc,
+						char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "INTERWORKING_ADD_NETWORK", 1, argc, argv);
+}
+
+
 static int wpa_cli_cmd_anqp_get(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	return wpa_cli_cmd(ctrl, "ANQP_GET", 2, argc, argv);
@@ -2995,6 +3002,9 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	  cli_cmd_flag_none,
 	  "[auto] = perform Interworking network selection" },
 	{ "interworking_connect", wpa_cli_cmd_interworking_connect,
+	  wpa_cli_complete_bss, cli_cmd_flag_none,
+	  "<BSSID> = connect using Interworking credentials" },
+	{ "interworking_add_network", wpa_cli_cmd_interworking_add_network,
 	  wpa_cli_complete_bss, cli_cmd_flag_none,
 	  "<BSSID> = connect using Interworking credentials" },
 	{ "anqp_get", wpa_cli_cmd_anqp_get, wpa_cli_complete_bss,

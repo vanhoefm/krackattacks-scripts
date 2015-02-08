@@ -5946,7 +5946,8 @@ static int ctrl_interworking_select(struct wpa_supplicant *wpa_s, char *param)
 }
 
 
-static int ctrl_interworking_connect(struct wpa_supplicant *wpa_s, char *dst)
+static int ctrl_interworking_connect(struct wpa_supplicant *wpa_s, char *dst,
+				     int only_add)
 {
 	u8 bssid[ETH_ALEN];
 	struct wpa_bss *bss;
@@ -5984,7 +5985,7 @@ static int ctrl_interworking_connect(struct wpa_supplicant *wpa_s, char *dst)
 			   "Found another matching BSS entry with SSID");
 	}
 
-	return interworking_connect(wpa_s, bss);
+	return interworking_connect(wpa_s, bss, only_add);
 }
 
 
@@ -8119,8 +8120,19 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		if (ctrl_interworking_select(wpa_s, buf + 20) < 0)
 			reply_len = -1;
 	} else if (os_strncmp(buf, "INTERWORKING_CONNECT ", 21) == 0) {
-		if (ctrl_interworking_connect(wpa_s, buf + 21) < 0)
+		if (ctrl_interworking_connect(wpa_s, buf + 21, 0) < 0)
 			reply_len = -1;
+	} else if (os_strncmp(buf, "INTERWORKING_ADD_NETWORK ", 25) == 0) {
+		int id;
+
+		id = ctrl_interworking_connect(wpa_s, buf + 25, 1);
+		if (id < 0)
+			reply_len = -1;
+		else {
+			reply_len = os_snprintf(reply, reply_size, "%d\n", id);
+			if (os_snprintf_error(reply_size, reply_len))
+				reply_len = -1;
+		}
 	} else if (os_strncmp(buf, "ANQP_GET ", 9) == 0) {
 		if (get_anqp(wpa_s, buf + 9) < 0)
 			reply_len = -1;

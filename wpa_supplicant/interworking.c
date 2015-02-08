@@ -955,7 +955,7 @@ static int interworking_set_hs20_params(struct wpa_supplicant *wpa_s,
 
 static int interworking_connect_3gpp(struct wpa_supplicant *wpa_s,
 				     struct wpa_cred *cred,
-				     struct wpa_bss *bss)
+				     struct wpa_bss *bss, int only_add)
 {
 #ifdef INTERWORKING_3GPP
 	struct wpa_ssid *ssid;
@@ -972,7 +972,7 @@ static int interworking_connect_3gpp(struct wpa_supplicant *wpa_s,
 	if (already_connected(wpa_s, cred, bss)) {
 		wpa_msg(wpa_s, MSG_INFO, INTERWORKING_ALREADY_CONNECTED MACSTR,
 			MAC2STR(bss->bssid));
-		return 0;
+		return wpa_s->current_ssid->id;
 	}
 
 	remove_duplicate_network(wpa_s, cred, bss);
@@ -1049,9 +1049,10 @@ static int interworking_connect_3gpp(struct wpa_supplicant *wpa_s,
 
 	wpa_s->next_ssid = ssid;
 	wpa_config_update_prio_list(wpa_s->conf);
-	interworking_reconnect(wpa_s);
+	if (!only_add)
+		interworking_reconnect(wpa_s);
 
-	return 0;
+	return ssid->id;
 
 fail:
 	wpas_notify_network_removed(wpa_s, ssid);
@@ -1499,7 +1500,7 @@ static int interworking_set_eap_params(struct wpa_ssid *ssid,
 
 static int interworking_connect_roaming_consortium(
 	struct wpa_supplicant *wpa_s, struct wpa_cred *cred,
-	struct wpa_bss *bss)
+	struct wpa_bss *bss, int only_add)
 {
 	struct wpa_ssid *ssid;
 
@@ -1509,7 +1510,7 @@ static int interworking_connect_roaming_consortium(
 	if (already_connected(wpa_s, cred, bss)) {
 		wpa_msg(wpa_s, MSG_INFO, INTERWORKING_ALREADY_CONNECTED MACSTR,
 			MAC2STR(bss->bssid));
-		return 0;
+		return wpa_s->current_ssid->id;
 	}
 
 	remove_duplicate_network(wpa_s, cred, bss);
@@ -1545,9 +1546,10 @@ static int interworking_connect_roaming_consortium(
 
 	wpa_s->next_ssid = ssid;
 	wpa_config_update_prio_list(wpa_s->conf);
-	interworking_reconnect(wpa_s);
+	if (!only_add)
+		interworking_reconnect(wpa_s);
 
-	return 0;
+	return ssid->id;
 
 fail:
 	wpas_notify_network_removed(wpa_s, ssid);
@@ -1557,7 +1559,8 @@ fail:
 
 
 static int interworking_connect_helper(struct wpa_supplicant *wpa_s,
-				       struct wpa_bss *bss, int allow_excluded)
+				       struct wpa_bss *bss, int allow_excluded,
+				       int only_add)
 {
 	struct wpa_cred *cred, *cred_rc, *cred_3gpp;
 	struct wpa_ssid *ssid;
@@ -1659,11 +1662,12 @@ static int interworking_connect_helper(struct wpa_supplicant *wpa_s,
 	    (cred == NULL || cred_prio_cmp(cred_rc, cred) >= 0) &&
 	    (cred_3gpp == NULL || cred_prio_cmp(cred_rc, cred_3gpp) >= 0))
 		return interworking_connect_roaming_consortium(wpa_s, cred_rc,
-							       bss);
+							       bss, only_add);
 
 	if (cred_3gpp &&
 	    (cred == NULL || cred_prio_cmp(cred_3gpp, cred) >= 0)) {
-		return interworking_connect_3gpp(wpa_s, cred_3gpp, bss);
+		return interworking_connect_3gpp(wpa_s, cred_3gpp, bss,
+						 only_add);
 	}
 
 	if (cred == NULL) {
@@ -1801,9 +1805,10 @@ static int interworking_connect_helper(struct wpa_supplicant *wpa_s,
 
 	wpa_s->next_ssid = ssid;
 	wpa_config_update_prio_list(wpa_s->conf);
-	interworking_reconnect(wpa_s);
+	if (!only_add)
+		interworking_reconnect(wpa_s);
 
-	return 0;
+	return ssid->id;
 
 fail:
 	wpas_notify_network_removed(wpa_s, ssid);
@@ -1813,9 +1818,10 @@ fail:
 }
 
 
-int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
+int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
+			 int only_add)
 {
-	return interworking_connect_helper(wpa_s, bss, 1);
+	return interworking_connect_helper(wpa_s, bss, 1, only_add);
 }
 
 
@@ -2495,7 +2501,7 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 			   MAC2STR(selected->bssid));
 		wpa_msg(wpa_s, MSG_INFO, INTERWORKING_SELECTED MACSTR,
 			MAC2STR(selected->bssid));
-		interworking_connect(wpa_s, selected);
+		interworking_connect(wpa_s, selected, 0);
 	}
 }
 

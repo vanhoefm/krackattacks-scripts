@@ -1279,6 +1279,7 @@ void p2p_stop_find_for_freq(struct p2p_data *p2p, int freq)
 	p2p->sd_peer = NULL;
 	p2p->invite_peer = NULL;
 	p2p_stop_listen_for_freq(p2p, freq);
+	p2p->send_action_in_progress = 0;
 }
 
 

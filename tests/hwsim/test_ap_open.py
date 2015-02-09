@@ -279,3 +279,39 @@ def _test_ap_open_wpas_in_bridge(dev, apdev):
     wpas.interface_add(ifname, br_ifname=br_ifname)
 
     wpas.connect("open", key_mgmt="NONE", scan_freq="2412")
+
+def test_ap_open_start_disabled(dev, apdev):
+    """AP with open mode and beaconing disabled"""
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open",
+                                                "start_disabled": "1" })
+    bssid = apdev[0]['bssid']
+
+    dev[0].flush_scan_cache()
+    dev[0].scan(freq=2412, only_new=True)
+    if dev[0].get_bss(bssid) is not None:
+        raise Exception("AP was seen beaconing")
+    if "OK" not in hapd.request("RELOAD"):
+        raise Exception("RELOAD failed")
+    dev[0].scan_for_bss(bssid, freq=2412)
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+
+def test_ap_open_start_disabled2(dev, apdev):
+    """AP with open mode and beaconing disabled (2)"""
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open",
+                                                "start_disabled": "1" })
+    bssid = apdev[0]['bssid']
+
+    dev[0].flush_scan_cache()
+    dev[0].scan(freq=2412, only_new=True)
+    if dev[0].get_bss(bssid) is not None:
+        raise Exception("AP was seen beaconing")
+    if "OK" not in hapd.request("UPDATE_BEACON"):
+        raise Exception("UPDATE_BEACON failed")
+    dev[0].scan_for_bss(bssid, freq=2412)
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+    if "OK" not in hapd.request("UPDATE_BEACON"):
+        raise Exception("UPDATE_BEACON failed")
+    dev[0].request("DISCONNECT")
+    dev[0].wait_disconnected()
+    dev[0].request("RECONNECT")
+    dev[0].wait_connected()

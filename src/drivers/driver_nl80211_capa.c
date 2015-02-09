@@ -544,6 +544,9 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 			}
 			vinfo = nla_data(nl);
 			switch (vinfo->subcmd) {
+			case QCA_NL80211_VENDOR_SUBCMD_TEST:
+				drv->vendor_cmd_test_avail = 1;
+				break;
 			case QCA_NL80211_VENDOR_SUBCMD_ROAMING:
 				drv->roaming_vendor_cmd_avail = 1;
 				break;

@@ -1535,6 +1535,9 @@ static void nl80211_vendor_event_qca(struct wpa_driver_nl80211_data *drv,
 				     u32 subcmd, u8 *data, size_t len)
 {
 	switch (subcmd) {
+	case QCA_NL80211_VENDOR_SUBCMD_TEST:
+		wpa_hexdump(MSG_DEBUG, "nl80211: QCA test event", data, len);
+		break;
 	case QCA_NL80211_VENDOR_SUBCMD_AVOID_FREQUENCY:
 		qca_nl80211_avoid_freq(drv, data, len);
 		break;

@@ -2065,6 +2065,60 @@ static int i802_set_iface_flags(struct i802_bss *bss, int up)
 }
 
 
+#ifdef CONFIG_TESTING_OPTIONS
+static int qca_vendor_test_cmd_handler(struct nl_msg *msg, void *arg)
+{
+	/* struct wpa_driver_nl80211_data *drv = arg; */
+	struct nlattr *tb[NL80211_ATTR_MAX + 1];
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+
+
+	wpa_printf(MSG_DEBUG,
+		   "nl80211: QCA vendor test command response received");
+
+	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+	if (!tb[NL80211_ATTR_VENDOR_DATA]) {
+		wpa_printf(MSG_DEBUG, "nl80211: No vendor data attribute");
+		return NL_SKIP;
+	}
+
+	wpa_hexdump(MSG_DEBUG,
+		    "nl80211: Received QCA vendor test command response",
+		    nla_data(tb[NL80211_ATTR_VENDOR_DATA]),
+		    nla_len(tb[NL80211_ATTR_VENDOR_DATA]));
+
+	return NL_SKIP;
+}
+#endif /* CONFIG_TESTING_OPTIONS */
+
+
+static void qca_vendor_test(struct wpa_driver_nl80211_data *drv)
+{
+#ifdef CONFIG_TESTING_OPTIONS
+	struct nl_msg *msg;
+	struct nlattr *params;
+	int ret;
+
+	if (!(msg = nl80211_drv_msg(drv, 0, NL80211_CMD_VENDOR)) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_TEST) ||
+	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
+	    nla_put_u32(msg, QCA_WLAN_VENDOR_ATTR_TEST, 123)) {
+		nlmsg_free(msg);
+		return;
+	}
+	nla_nest_end(msg, params);
+
+	ret = send_and_recv_msgs(drv, msg, qca_vendor_test_cmd_handler, drv);
+	wpa_printf(MSG_DEBUG,
+		   "nl80211: QCA vendor test command returned %d (%s)",
+		   ret, strerror(-ret));
+#endif /* CONFIG_TESTING_OPTIONS */
+}
+
+
 static int
 wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv,
 				   const u8 *set_addr, int first,
@@ -2150,6 +2204,9 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv,
 		eloop_register_timeout(0, 0, wpa_driver_nl80211_send_rfkill,
 				       drv, drv->ctx);
 	}
+
+	if (drv->vendor_cmd_test_avail)
+		qca_vendor_test(drv);
 
 	return 0;
 }

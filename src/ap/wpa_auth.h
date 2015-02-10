@@ -318,5 +318,6 @@ int wpa_auth_get_ip_addr(struct wpa_state_machine *sm, u8 *addr);
 struct radius_das_attrs;
 int wpa_auth_radius_das_disconnect_pmksa(struct wpa_authenticator *wpa_auth,
 					 struct radius_das_attrs *attr);
+void wpa_auth_reconfig_group_keys(struct wpa_authenticator *wpa_auth);
 
 #endif /* WPA_AUTH_H */

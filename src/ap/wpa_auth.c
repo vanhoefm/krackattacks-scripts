@@ -3387,3 +3387,14 @@ int wpa_auth_radius_das_disconnect_pmksa(struct wpa_authenticator *wpa_auth,
 {
 	return pmksa_cache_auth_radius_das_disconnect(wpa_auth->pmksa, attr);
 }
+
+
+void wpa_auth_reconfig_group_keys(struct wpa_authenticator *wpa_auth)
+{
+	struct wpa_group *group;
+
+	if (!wpa_auth)
+		return;
+	for (group = wpa_auth->group; group; group = group->next)
+		wpa_group_config_group_keys(wpa_auth, group);
+}

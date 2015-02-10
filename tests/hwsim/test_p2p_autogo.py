@@ -538,6 +538,7 @@ def test_autogo_join_auto(dev):
 
 def test_autogo_join_auto_go_neg(dev):
     """P2P_CONNECT-auto fallback to GO Neg"""
+    dev[1].flush_scan_cache()
     dev[0].p2p_listen()
     addr = dev[0].p2p_dev_addr()
     if "OK" not in dev[1].global_request("P2P_CONNECT " + addr + " pbc auto"):

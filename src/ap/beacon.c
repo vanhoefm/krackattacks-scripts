@@ -1055,6 +1055,8 @@ int ieee802_11_set_beacon(struct hostapd_data *hapd)
 	params.beacon_ies = beacon;
 	params.proberesp_ies = proberesp;
 	params.assocresp_ies = assocresp;
+	params.reenable = hapd->reenable_beacon;
+	hapd->reenable_beacon = 0;
 
 	if (iface->current_mode &&
 	    hostapd_set_freq_params(&freq, iconf->hw_mode, iface->freq,

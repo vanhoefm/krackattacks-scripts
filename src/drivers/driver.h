@@ -1031,6 +1031,11 @@ struct wpa_driver_ap_params {
 	 * freq - Channel parameters for dynamic bandwidth changes
 	 */
 	struct hostapd_freq_params *freq;
+
+	/**
+	 * reenable - Whether this is to re-enable beaconing
+	 */
+	int reenable;
 };
 
 struct wpa_driver_mesh_bss_params {

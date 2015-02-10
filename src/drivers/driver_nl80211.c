@@ -3270,7 +3270,7 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 	u32 suites[10], suite;
 	u32 ver;
 
-	beacon_set = bss->beacon_set;
+	beacon_set = params->reenable ? 0 : bss->beacon_set;
 
 	wpa_printf(MSG_DEBUG, "nl80211: Set beacon (beacon_set=%d)",
 		   beacon_set);

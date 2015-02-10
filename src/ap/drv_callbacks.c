@@ -1222,6 +1222,7 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		}
 		break;
 	case EVENT_INTERFACE_DISABLED:
+		hostapd_free_stas(hapd);
 		wpa_msg(hapd->msg_ctx, MSG_INFO, INTERFACE_DISABLED);
 		hapd->disabled = 1;
 		break;

@@ -1018,3 +1018,25 @@ def _test_ap_wpa2_psk_wpas_in_bridge(dev, apdev):
     wpas.interface_add(ifname, br_ifname=br_ifname)
 
     wpas.connect(ssid, psk=passphrase, scan_freq="2412")
+
+def test_ap_wpa2_psk_ifdown(dev, apdev):
+    """AP with open mode and external ifconfig down"""
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+
+    dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
+    subprocess.call(['ip', 'link', 'set', 'dev', apdev[0]['ifname'], 'down'])
+    ev = hapd.wait_event(["INTERFACE-DISABLED"], timeout=10)
+    if ev is None:
+        raise Exception("No INTERFACE-DISABLED event")
+    # this wait tests beacon loss detection in mac80211
+    dev[0].wait_disconnected()
+    subprocess.call(['ip', 'link', 'set', 'dev', apdev[0]['ifname'], 'up'])
+    ev = hapd.wait_event(["INTERFACE-ENABLED"], timeout=10)
+    if ev is None:
+        raise Exception("No INTERFACE-ENABLED event")
+    dev[0].wait_connected()
+    hwsim_utils.test_connectivity(dev[0], hapd)

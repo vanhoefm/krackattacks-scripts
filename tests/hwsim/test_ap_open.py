@@ -315,3 +315,34 @@ def test_ap_open_start_disabled2(dev, apdev):
     dev[0].wait_disconnected()
     dev[0].request("RECONNECT")
     dev[0].wait_connected()
+
+def test_ap_open_ifdown(dev, apdev):
+    """AP with open mode and external ifconfig down"""
+    params = { "ssid": "open",
+               "ap_max_inactivity": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+    dev[1].connect("open", key_mgmt="NONE", scan_freq="2412")
+    subprocess.call(['ip', 'link', 'set', 'dev', apdev[0]['ifname'], 'down'])
+    ev = hapd.wait_event(["AP-STA-DISCONNECTED"], timeout=10)
+    if ev is None:
+        raise Exception("Timeout on AP-STA-DISCONNECTED (1)")
+    ev = hapd.wait_event(["AP-STA-DISCONNECTED"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on AP-STA-DISCONNECTED (2)")
+    ev = hapd.wait_event(["INTERFACE-DISABLED"], timeout=5)
+    if ev is None:
+        raise Exception("No INTERFACE-DISABLED event")
+    # The following wait tests beacon loss detection in mac80211 on dev0.
+    # dev1 is used to test stopping of AP side functionality on client polling.
+    dev[1].request("REMOVE_NETWORK all")
+    subprocess.call(['ip', 'link', 'set', 'dev', apdev[0]['ifname'], 'up'])
+    dev[0].wait_disconnected()
+    dev[1].wait_disconnected()
+    ev = hapd.wait_event(["INTERFACE-ENABLED"], timeout=10)
+    if ev is None:
+        raise Exception("No INTERFACE-ENABLED event")
+    dev[0].wait_connected()
+    hwsim_utils.test_connectivity(dev[0], hapd)

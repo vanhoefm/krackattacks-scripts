@@ -133,6 +133,10 @@ def test_wpas_config_file(dev):
         except:
             pass
         try:
+            os.remove(config + ".tmp")
+        except:
+            pass
+        try:
             os.rmdir(config)
         except:
             pass

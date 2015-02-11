@@ -999,7 +999,7 @@ def test_ap_wpa2_psk_wpas_in_bridge(dev, apdev):
         subprocess.call(['ip', 'link', 'set', 'dev', br_ifname, 'down'])
         subprocess.call(['brctl', 'delif', br_ifname, ifname])
         subprocess.call(['brctl', 'delbr', br_ifname])
-        subprocess.call(['iw', ifname, 'set', '4addr', 'on'])
+        subprocess.call(['iw', ifname, 'set', '4addr', 'off'])
 
 def _test_ap_wpa2_psk_wpas_in_bridge(dev, apdev):
     ssid = "test-wpa2-psk"

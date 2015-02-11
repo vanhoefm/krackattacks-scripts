@@ -79,6 +79,7 @@ const char * event_to_string(enum wpa_event_type event)
 	E2S(AVOID_FREQUENCIES);
 	E2S(NEW_PEER_CANDIDATE);
 	E2S(ACS_CHANNEL_SELECTED);
+	E2S(DFS_CAC_STARTED);
 	}
 
 	return "UNKNOWN";

@@ -2036,7 +2036,7 @@ void wpa_scan_free_params(struct wpa_driver_scan_params *params)
 
 int wpas_start_pno(struct wpa_supplicant *wpa_s)
 {
-	int ret, interval;
+	int ret, interval, prio;
 	size_t i, num_ssid, num_match_ssid;
 	struct wpa_ssid *ssid;
 	struct wpa_driver_scan_params params;
@@ -2101,8 +2101,10 @@ int wpas_start_pno(struct wpa_supplicant *wpa_s)
 					sizeof(struct wpa_driver_scan_filter));
 	if (params.filter_ssids == NULL)
 		return -1;
+
 	i = 0;
-	ssid = wpa_s->conf->ssid;
+	prio = 0;
+	ssid = wpa_s->conf->pssid[prio];
 	while (ssid) {
 		if (!wpas_network_disabled(wpa_s, ssid)) {
 			if (ssid->scan_ssid && params.num_ssids < num_ssid) {
@@ -2120,7 +2122,12 @@ int wpas_start_pno(struct wpa_supplicant *wpa_s)
 			if (i == num_match_ssid)
 				break;
 		}
-		ssid = ssid->next;
+		if (ssid->pnext)
+			ssid = ssid->pnext;
+		else if (prio + 1 == wpa_s->conf->num_prio)
+			break;
+		else
+			ssid = wpa_s->conf->pssid[++prio];
 	}
 
 	if (wpa_s->conf->filter_rssi)

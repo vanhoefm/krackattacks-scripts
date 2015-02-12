@@ -537,17 +537,22 @@ def test_wpas_mesh_password_mismatch(dev, apdev):
     if ev is None:
         raise Exception("dev2 did not report auth failure (2)")
 
+    count = 0
     ev = dev[0].wait_event(["MESH-SAE-AUTH-FAILURE"], timeout=1)
     if ev is None:
-        raise Exception("dev0 did not report auth failure")
-    if "addr=" + dev[2].own_addr() not in ev:
-        raise Exception("Unexpected peer address in dev0 event: " + ev)
+        logger.info("dev0 did not report auth failure")
+    else:
+        if "addr=" + dev[2].own_addr() not in ev:
+            raise Exception("Unexpected peer address in dev0 event: " + ev)
+        count += 1
 
     ev = dev[1].wait_event(["MESH-SAE-AUTH-FAILURE"], timeout=1)
     if ev is None:
-        raise Exception("dev1 did not report auth failure")
-    if "addr=" + dev[2].own_addr() not in ev:
-        raise Exception("Unexpected peer address in dev1 event: " + ev)
+        logger.info("dev1 did not report auth failure")
+    else:
+        if "addr=" + dev[2].own_addr() not in ev:
+            raise Exception("Unexpected peer address in dev1 event: " + ev)
+        count += 1
 
     hwsim_utils.test_connectivity(dev[0], dev[1])
 
@@ -558,6 +563,9 @@ def test_wpas_mesh_password_mismatch(dev, apdev):
         except Exception, e:
             if "data delivery failed" not in str(e):
                 raise
+
+    if count == 0:
+        raise Exception("Neither dev0 nor dev1 reported auth failure")
 
 def test_wpas_mesh_password_mismatch_retry(dev, apdev, params):
     """Mesh password mismatch and retry [long]"""

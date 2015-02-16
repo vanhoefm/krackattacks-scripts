@@ -9,6 +9,9 @@
 #include "includes.h"
 #include <time.h>
 #include <sys/stat.h>
+#ifdef ANDROID
+#include "private/android_filesystem_config.h"
+#endif /* ANDROID */
 
 #include "common.h"
 #include "utils/browser.h"
@@ -570,6 +573,21 @@ int hs20_add_pps_mo(struct hs20_osu_client *ctx, const char *uri,
 			return -1;
 		}
 	}
+
+#ifdef ANDROID
+	/* Allow processes running with Group ID as AID_WIFI,
+	 * to read files from SP/<fqdn> directory */
+	if (chown(fname, -1, AID_WIFI)) {
+		wpa_printf(MSG_INFO, "CTRL: Could not chown directory: %s",
+			   strerror(errno));
+		/* Try to continue anyway */
+	}
+	if (chmod(fname, S_IRWXU | S_IRGRP | S_IXGRP) < 0) {
+		wpa_printf(MSG_INFO, "CTRL: Could not chmod directory: %s",
+			   strerror(errno));
+		/* Try to continue anyway */
+	}
+#endif /* ANDROID */
 
 	snprintf(fname, fname_len, "SP/%s/pps.xml", fqdn);
 

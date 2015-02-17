@@ -1098,7 +1098,7 @@ static int ocsp_resp_cb(SSL *s, void *arg)
 				sk_X509_free(certs);
 				certs = NULL;
 			}
-			if (ctx->peer_issuer_issuer) {
+			if (certs && ctx->peer_issuer_issuer) {
 				cert = X509_dup(ctx->peer_issuer_issuer);
 				if (cert && !sk_X509_push(certs, cert)) {
 					tls_show_errors(

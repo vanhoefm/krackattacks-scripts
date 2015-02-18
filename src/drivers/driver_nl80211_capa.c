@@ -71,6 +71,7 @@ struct wiphy_info_data {
 	unsigned int connect_supported:1;
 	unsigned int p2p_go_supported:1;
 	unsigned int p2p_client_supported:1;
+	unsigned int p2p_go_ctwindow_supported:1;
 	unsigned int p2p_concurrent:1;
 	unsigned int channel_switch_supported:1;
 	unsigned int set_qos_map_supported:1;
@@ -364,6 +365,9 @@ static void wiphy_info_feature_flags(struct wiphy_info_data *info,
 		wpa_printf(MSG_DEBUG, "nl80211: TDLS channel switch");
 		capa->flags |= WPA_DRIVER_FLAGS_TDLS_CHANNEL_SWITCH;
 	}
+
+	if (flags & NL80211_FEATURE_P2P_GO_CTWIN)
+		info->p2p_go_ctwindow_supported = 1;
 
 	if (flags & NL80211_FEATURE_LOW_PRIORITY_SCAN)
 		info->have_low_prio_scan = 1;
@@ -827,6 +831,7 @@ int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 	drv->device_ap_sme = info.device_ap_sme;
 	drv->poll_command_supported = info.poll_command_supported;
 	drv->data_tx_status = info.data_tx_status;
+	drv->p2p_go_ctwindow_supported = info.p2p_go_ctwindow_supported;
 	if (info.set_qos_map_supported)
 		drv->capa.flags |= WPA_DRIVER_FLAGS_QOS_MAPPING;
 	drv->have_low_prio_scan = info.have_low_prio_scan;

@@ -3439,6 +3439,21 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 			goto fail;
 	}
 
+#ifdef CONFIG_P2P
+	if (params->p2p_go_ctwindow > 0) {
+		if (drv->p2p_go_ctwindow_supported) {
+			wpa_printf(MSG_DEBUG, "nl80211: P2P GO ctwindow=%d",
+				   params->p2p_go_ctwindow);
+			if (nla_put_u8(msg, NL80211_ATTR_P2P_CTWINDOW,
+				       params->p2p_go_ctwindow))
+				goto fail;
+		} else {
+			wpa_printf(MSG_INFO,
+				   "nl80211: Driver does not support CTWindow configuration - ignore this parameter");
+		}
+	}
+#endif /* CONFIG_P2P */
+
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	if (ret) {
 		wpa_printf(MSG_DEBUG, "nl80211: Beacon set failed: %d (%s)",

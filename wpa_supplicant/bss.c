@@ -85,6 +85,7 @@ static struct wpa_bss_anqp * wpa_bss_anqp_clone(struct wpa_bss_anqp *anqp)
 
 #define ANQP_DUP(f) if (anqp->f) n->f = wpabuf_dup(anqp->f)
 #ifdef CONFIG_INTERWORKING
+	ANQP_DUP(capability_list);
 	ANQP_DUP(venue_name);
 	ANQP_DUP(network_auth_type);
 	ANQP_DUP(roaming_consortium);
@@ -155,6 +156,7 @@ static void wpa_bss_anqp_free(struct wpa_bss_anqp *anqp)
 	}
 
 #ifdef CONFIG_INTERWORKING
+	wpabuf_free(anqp->capability_list);
 	wpabuf_free(anqp->venue_name);
 	wpabuf_free(anqp->network_auth_type);
 	wpabuf_free(anqp->roaming_consortium);

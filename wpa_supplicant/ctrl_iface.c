@@ -4176,6 +4176,8 @@ static int print_bss_info(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 #ifdef CONFIG_INTERWORKING
 	if ((mask & WPA_BSS_MASK_INTERNETW) && bss->anqp) {
 		struct wpa_bss_anqp *anqp = bss->anqp;
+		pos = anqp_add_hex(pos, end, "anqp_capability_list",
+				   anqp->capability_list);
 		pos = anqp_add_hex(pos, end, "anqp_venue_name",
 				   anqp->venue_name);
 		pos = anqp_add_hex(pos, end, "anqp_network_auth_type",

@@ -26,6 +26,7 @@ struct wpa_bss_anqp {
 	/** Number of BSS entries referring to this ANQP data instance */
 	unsigned int users;
 #ifdef CONFIG_INTERWORKING
+	struct wpabuf *capability_list;
 	struct wpabuf *venue_name;
 	struct wpabuf *network_auth_type;
 	struct wpabuf *roaming_consortium;

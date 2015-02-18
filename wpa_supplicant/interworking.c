@@ -2728,6 +2728,12 @@ static void interworking_parse_rx_anqp_resp(struct wpa_supplicant *wpa_s,
 	case ANQP_CAPABILITY_LIST:
 		wpa_msg(wpa_s, MSG_INFO, "RX-ANQP " MACSTR
 			" ANQP Capability list", MAC2STR(sa));
+		wpa_hexdump_ascii(MSG_DEBUG, "ANQP: Capability list",
+				  pos, slen);
+		if (anqp) {
+			wpabuf_free(anqp->capability_list);
+			anqp->capability_list = wpabuf_alloc_copy(pos, slen);
+		}
 		break;
 	case ANQP_VENUE_NAME:
 		wpa_msg(wpa_s, MSG_INFO, "RX-ANQP " MACSTR

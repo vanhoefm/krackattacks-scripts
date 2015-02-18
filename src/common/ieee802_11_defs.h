@@ -1396,6 +1396,8 @@ enum mb_ctrl_sta_role {
 	MB_STA_ROLE_NON_PCP_NON_AP = 4
 };
 
+#define MB_CTRL_ROLE_MASK (BIT(0) | BIT(1) | BIT(2))
+#define MB_CTRL_ROLE(ctrl) ((u8) ((ctrl) & MB_CTRL_ROLE_MASK))
 #define MB_CTRL_STA_MAC_PRESENT ((u8) (BIT(3)))
 #define MB_CTRL_PAIRWISE_CIPHER_SUITE_PRESENT ((u8) (BIT(4)))
 

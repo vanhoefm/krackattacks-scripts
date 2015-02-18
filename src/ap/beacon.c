@@ -1008,6 +1008,9 @@ int ieee802_11_build_ap_params(struct hostapd_data *hapd,
 		params->hessid = hapd->conf->hessid;
 	params->access_network_type = hapd->conf->access_network_type;
 	params->ap_max_inactivity = hapd->conf->ap_max_inactivity;
+#ifdef CONFIG_P2P
+	params->p2p_go_ctwindow = hapd->iconf->p2p_go_ctwindow;
+#endif /* CONFIG_P2P */
 #ifdef CONFIG_HS20
 	params->disable_dgaf = hapd->conf->disable_dgaf;
 	if (hapd->conf->osen) {

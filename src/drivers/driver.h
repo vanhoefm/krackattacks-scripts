@@ -1018,6 +1018,11 @@ struct wpa_driver_ap_params {
 	int ap_max_inactivity;
 
 	/**
+	 * ctwindow - Client Traffic Window (in TUs)
+	 */
+	u8 p2p_go_ctwindow;
+
+	/**
 	 * smps_mode - SMPS mode
 	 *
 	 * SMPS mode to be used by the AP, specified as the relevant bits of

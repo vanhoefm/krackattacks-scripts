@@ -33,6 +33,7 @@
 #define DEFAULT_RAND_ADDR_LIFETIME 60
 #define DEFAULT_KEY_MGMT_OFFLOAD 1
 #define DEFAULT_CERT_IN_CB 1
+#define DEFAULT_P2P_GO_CTWINDOW 0
 
 #include "config_ssid.h"
 #include "wps/wps.h"
@@ -940,6 +941,14 @@ struct wpa_config {
 	 * By default: 0 (disabled)
 	 */
 	int p2p_go_vht;
+
+	/**
+	 * p2p_go_ctwindow - CTWindow to use when operating as GO
+	 *
+	 * By default: 0 (no CTWindow). Values 0-127 can be used to indicate
+	 * the length of the CTWindow in TUs.
+	 */
+	int p2p_go_ctwindow;
 
 	/**
 	 * p2p_disabled - Whether P2P operations are disabled for this interface

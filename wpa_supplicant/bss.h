@@ -137,4 +137,10 @@ static inline int bss_is_dmg(const struct wpa_bss *bss)
 	return bss->freq > 45000;
 }
 
+static inline void wpa_bss_update_level(struct wpa_bss *bss, int new_level)
+{
+	if (bss != NULL && new_level < 0)
+		bss->level = new_level;
+}
+
 #endif /* BSS_H */

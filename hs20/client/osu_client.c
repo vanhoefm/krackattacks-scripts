@@ -687,6 +687,10 @@ int update_pps_file(struct hs20_osu_client *ctx, const char *pps_fname,
 	wpa_printf(MSG_INFO, "Updating PPS MO %s", pps_fname);
 
 	str = xml_node_to_str(ctx->xml, pps);
+	if (str == NULL) {
+		wpa_printf(MSG_ERROR, "No node found");
+		return -1;
+	}
 	wpa_printf(MSG_MSGDUMP, "[hs20] Updated PPS: '%s'", str);
 
 	snprintf(backup, sizeof(backup), "%s.bak", pps_fname);

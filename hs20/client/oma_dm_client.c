@@ -394,6 +394,10 @@ static int oma_dm_exec_browser(struct hs20_osu_client *ctx, xml_node_t *exec)
 	}
 
 	data = xml_node_get_text(ctx->xml, node);
+	if (data == NULL) {
+		wpa_printf(MSG_INFO, "Invalid data");
+		return DM_RESP_BAD_REQUEST;
+	}
 	wpa_printf(MSG_INFO, "Data: %s", data);
 	wpa_printf(MSG_INFO, "Launch browser to URI '%s'", data);
 	write_summary(ctx, "Launch browser to URI '%s'", data);
@@ -428,6 +432,10 @@ static int oma_dm_exec_get_cert(struct hs20_osu_client *ctx, xml_node_t *exec)
 	}
 
 	data = xml_node_get_text(ctx->xml, node);
+	if (data == NULL) {
+		wpa_printf(MSG_INFO, "Invalid data");
+		return DM_RESP_BAD_REQUEST;
+	}
 	wpa_printf(MSG_INFO, "Data: %s", data);
 	getcert = xml_node_from_buf(ctx->xml, data);
 	xml_node_get_text_free(ctx->xml, data);
@@ -576,6 +584,11 @@ static int oma_dm_run_add(struct hs20_osu_client *ctx, const char *locuri,
 	if (node) {
 		char *type;
 		type = xml_node_get_text(ctx->xml, node);
+		if (type == NULL) {
+			wpa_printf(MSG_ERROR, "Could not find type text");
+			os_free(uri);
+			return DM_RESP_BAD_REQUEST;
+		}
 		use_tnds = node &&
 			os_strstr(type, "application/vnd.syncml.dmtnds+xml");
 	}
@@ -648,6 +661,10 @@ static int oma_dm_add(struct hs20_osu_client *ctx, xml_node_t *add,
 		return DM_RESP_BAD_REQUEST;
 	}
 	locuri = xml_node_get_text(ctx->xml, node);
+	if (locuri == NULL) {
+		wpa_printf(MSG_ERROR, "No LocURI node text found");
+		return DM_RESP_BAD_REQUEST;
+	}
 	wpa_printf(MSG_INFO, "Target LocURI: %s", locuri);
 	if (os_strncasecmp(locuri, "./Wi-Fi/", 8) != 0) {
 		wpa_printf(MSG_INFO, "Unsupported Add Target LocURI");

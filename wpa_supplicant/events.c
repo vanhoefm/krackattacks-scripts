@@ -175,6 +175,15 @@ void wpa_supplicant_stop_countermeasures(void *eloop_ctx, void *sock_ctx)
 		wpa_s->countermeasures = 0;
 		wpa_drv_set_countermeasures(wpa_s, 0);
 		wpa_msg(wpa_s, MSG_INFO, "WPA: TKIP countermeasures stopped");
+
+		/*
+		 * It is possible that the device is sched scanning, which means
+		 * that a connection attempt will be done only when we receive
+		 * scan results. However, in this case, it would be preferable
+		 * to scan and connect immediately, so cancel the sched_scan and
+		 * issue a regular scan flow.
+		 */
+		wpa_supplicant_cancel_sched_scan(wpa_s);
 		wpa_supplicant_req_scan(wpa_s, 0, 0);
 	}
 }

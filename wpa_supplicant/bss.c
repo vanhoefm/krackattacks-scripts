@@ -94,6 +94,7 @@ static struct wpa_bss_anqp * wpa_bss_anqp_clone(struct wpa_bss_anqp *anqp)
 	ANQP_DUP(domain_name);
 #endif /* CONFIG_INTERWORKING */
 #ifdef CONFIG_HS20
+	ANQP_DUP(hs20_capability_list);
 	ANQP_DUP(hs20_operator_friendly_name);
 	ANQP_DUP(hs20_wan_metrics);
 	ANQP_DUP(hs20_connection_capability);
@@ -163,6 +164,7 @@ static void wpa_bss_anqp_free(struct wpa_bss_anqp *anqp)
 	wpabuf_free(anqp->domain_name);
 #endif /* CONFIG_INTERWORKING */
 #ifdef CONFIG_HS20
+	wpabuf_free(anqp->hs20_capability_list);
 	wpabuf_free(anqp->hs20_operator_friendly_name);
 	wpabuf_free(anqp->hs20_wan_metrics);
 	wpabuf_free(anqp->hs20_connection_capability);

@@ -380,6 +380,11 @@ void hs20_parse_rx_hs20_anqp_resp(struct wpa_supplicant *wpa_s,
 		wpa_msg(wpa_s, MSG_INFO, "RX-HS20-ANQP " MACSTR
 			" HS Capability List", MAC2STR(sa));
 		wpa_hexdump_ascii(MSG_DEBUG, "HS Capability List", pos, slen);
+		if (anqp) {
+			wpabuf_free(anqp->hs20_capability_list);
+			anqp->hs20_capability_list =
+				wpabuf_alloc_copy(pos, slen);
+		}
 		break;
 	case HS20_STYPE_OPERATOR_FRIENDLY_NAME:
 		wpa_msg(wpa_s, MSG_INFO, "RX-HS20-ANQP " MACSTR

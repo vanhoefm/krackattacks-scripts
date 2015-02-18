@@ -35,6 +35,7 @@ struct wpa_bss_anqp {
 	struct wpabuf *domain_name;
 #endif /* CONFIG_INTERWORKING */
 #ifdef CONFIG_HS20
+	struct wpabuf *hs20_capability_list;
 	struct wpabuf *hs20_operator_friendly_name;
 	struct wpabuf *hs20_wan_metrics;
 	struct wpabuf *hs20_connection_capability;

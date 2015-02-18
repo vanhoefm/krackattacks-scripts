@@ -939,10 +939,15 @@ static int wpa_tdls_recv_teardown(struct wpa_sm *sm, const u8 *src_addr,
 		   " (reason code %u)", MAC2STR(src_addr), reason_code);
 
 	ielen = len - (pos - buf); /* start of IE in buf */
-	if (wpa_supplicant_parse_ies((const u8 *) pos, ielen, &kde) < 0) {
-		wpa_printf(MSG_INFO, "TDLS: Failed to parse IEs in Teardown");
-		return -1;
-	}
+
+	/*
+	 * Don't reject the message if failing to parse IEs. The IEs we need are
+	 * explicitly checked below. Some APs may add arbitrary padding to the
+	 * end of short TDLS frames and that would look like invalid IEs.
+	 */
+	if (wpa_supplicant_parse_ies((const u8 *) pos, ielen, &kde) < 0)
+		wpa_printf(MSG_DEBUG,
+			   "TDLS: Failed to parse IEs in Teardown - ignore as an interop workaround");
 
 	if (kde.lnkid == NULL || kde.lnkid_len < 3 * ETH_ALEN) {
 		wpa_printf(MSG_INFO, "TDLS: No Link Identifier IE in TDLS "
@@ -1823,10 +1828,15 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 	cpos += 2;
 
 	ielen = len - (cpos - buf); /* start of IE in buf */
-	if (wpa_supplicant_parse_ies(cpos, ielen, &kde) < 0) {
-		wpa_printf(MSG_INFO, "TDLS: Failed to parse IEs in TPK M1");
-		goto error;
-	}
+
+	/*
+	 * Don't reject the message if failing to parse IEs. The IEs we need are
+	 * explicitly checked below. Some APs may add arbitrary padding to the
+	 * end of short TDLS frames and that would look like invalid IEs.
+	 */
+	if (wpa_supplicant_parse_ies(cpos, ielen, &kde) < 0)
+		wpa_printf(MSG_DEBUG,
+			   "TDLS: Failed to parse IEs in TPK M1 - ignore as an interop workaround");
 
 	if (kde.lnkid == NULL || kde.lnkid_len < 3 * ETH_ALEN) {
 		wpa_printf(MSG_INFO, "TDLS: No valid Link Identifier IE in "
@@ -2199,10 +2209,15 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 	pos += 2;
 
 	ielen = len - (pos - buf); /* start of IE in buf */
-	if (wpa_supplicant_parse_ies(pos, ielen, &kde) < 0) {
-		wpa_printf(MSG_INFO, "TDLS: Failed to parse IEs in TPK M2");
-		goto error;
-	}
+
+	/*
+	 * Don't reject the message if failing to parse IEs. The IEs we need are
+	 * explicitly checked below. Some APs may add arbitrary padding to the
+	 * end of short TDLS frames and that would look like invalid IEs.
+	 */
+	if (wpa_supplicant_parse_ies(pos, ielen, &kde) < 0)
+		wpa_printf(MSG_DEBUG,
+			   "TDLS: Failed to parse IEs in TPK M2 - ignore as an interop workaround");
 
 #ifdef CONFIG_TDLS_TESTING
 	if (tdls_testing & TDLS_TESTING_DECLINE_RESP) {

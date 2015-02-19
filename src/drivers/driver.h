@@ -1199,6 +1199,8 @@ struct wpa_driver_capa {
 #define WPA_DRIVER_FLAGS_TDLS_CHANNEL_SWITCH	0x0000000800000000ULL
 /** Driver supports IBSS with HT datarates */
 #define WPA_DRIVER_FLAGS_HT_IBSS		0x0000001000000000ULL
+/** Driver supports IBSS with VHT datarates */
+#define WPA_DRIVER_FLAGS_VHT_IBSS		0x0000002000000000ULL
 	u64 flags;
 
 #define WPA_DRIVER_SMPS_MODE_STATIC			0x00000001

@@ -1669,10 +1669,12 @@ void ibss_mesh_setup_freq(struct wpa_supplicant *wpa_s,
 	struct hostapd_hw_modes *mode = NULL;
 	int ht40plus[] = { 36, 44, 52, 60, 100, 108, 116, 124, 132, 149, 157,
 			   184, 192 };
+	int vht80[] = { 36, 52, 100, 116, 132, 149 };
 	struct hostapd_channel_data *pri_chan = NULL, *sec_chan = NULL;
 	u8 channel;
 	int i, chan_idx, ht40 = -1, res, obss_scan = 1;
 	unsigned int j;
+	struct hostapd_freq_params vht_freq;
 
 	freq->freq = ssid->frequency;
 
@@ -1821,6 +1823,55 @@ void ibss_mesh_setup_freq(struct wpa_supplicant *wpa_s,
 	wpa_printf(MSG_DEBUG,
 		   "IBSS/mesh: setup freq channel %d, sec_channel_offset %d",
 		   freq->channel, freq->sec_channel_offset);
+
+	/* Not sure if mesh is ready for VHT */
+	if (ssid->mode != WPAS_MODE_IBSS)
+		return;
+
+	/* For IBSS check VHT_IBSS flag */
+	if (!(wpa_s->drv_flags & WPA_DRIVER_FLAGS_VHT_IBSS))
+		return;
+
+	vht_freq = *freq;
+
+	vht_freq.vht_enabled = vht_supported(mode);
+	if (!vht_freq.vht_enabled)
+		return;
+
+	/* setup center_freq1, bandwidth */
+	for (j = 0; j < ARRAY_SIZE(vht80); j++) {
+		if (freq->channel >= vht80[j] &&
+		    freq->channel < vht80[j] + 16)
+			break;
+	}
+
+	if (j == ARRAY_SIZE(vht80))
+		return;
+
+	for (i = vht80[j]; i < vht80[j] + 16; i += 4) {
+		struct hostapd_channel_data *chan;
+
+		chan = hw_get_channel_chan(mode, i, NULL);
+		if (!chan)
+			return;
+
+		/* Back to HT configuration if channel not usable */
+		if (chan->flag & (HOSTAPD_CHAN_DISABLED | HOSTAPD_CHAN_NO_IR))
+			return;
+	}
+
+	if (hostapd_set_freq_params(&vht_freq, mode->mode, freq->freq,
+				    freq->channel, freq->ht_enabled,
+				    vht_freq.vht_enabled,
+				    freq->sec_channel_offset,
+				    VHT_CHANWIDTH_80MHZ,
+				    vht80[i] + 6, 0, 0) != 0)
+		return;
+
+	*freq = vht_freq;
+
+	wpa_printf(MSG_DEBUG, "IBSS: VHT setup freq cf1 %d, cf2 %d, bw %d",
+		   freq->center_freq1, freq->center_freq2, freq->bandwidth);
 }
 
 

@@ -420,6 +420,11 @@ struct wpa_ssid {
 	int frequency;
 
 	/**
+	 * fixed_freq - Use fixed frequency for IBSS
+	 */
+	int fixed_freq;
+
+	/**
 	 * mesh_basic_rates - BSS Basic rate set for mesh network
 	 *
 	 */

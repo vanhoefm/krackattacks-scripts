@@ -1896,6 +1896,7 @@ static const struct parse_data ssid_fields[] = {
 	{ INT_RANGE(peerkey, 0, 1) },
 	{ INT_RANGE(mixed_cell, 0, 1) },
 	{ INT_RANGE(frequency, 0, 65000) },
+	{ INT_RANGE(fixed_freq, 0, 1) },
 #ifdef CONFIG_MESH
 	{ FUNC(mesh_basic_rates) },
 	{ INT(dot11MeshMaxRetries) },

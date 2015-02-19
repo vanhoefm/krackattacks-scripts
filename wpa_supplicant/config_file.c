@@ -736,6 +736,7 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 #endif /* IEEE8021X_EAPOL */
 	INT(mode);
 	INT(frequency);
+	INT(fixed_freq);
 	write_int(f, "proactive_key_caching", ssid->proactive_key_caching, -1);
 	INT(disabled);
 	INT(peerkey);

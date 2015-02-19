@@ -767,6 +767,14 @@ struct wpa_driver_associate_params {
 	int fixed_bssid;
 
 	/**
+	 * fixed_freq - Fix control channel in IBSS mode
+	 * 0 = don't fix control channel (default)
+	 * 1 = fix control channel; this prevents IBSS merging with another
+	 *	channel
+	 */
+	int fixed_freq;
+
+	/**
 	 * disable_ht - Disable HT (IEEE 802.11n) for this connection
 	 */
 	int disable_ht;

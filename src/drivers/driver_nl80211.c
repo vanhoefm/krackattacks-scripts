@@ -4378,6 +4378,12 @@ retry:
 			goto fail;
 	}
 
+	if (params->fixed_freq) {
+		wpa_printf(MSG_DEBUG, "  * fixed_freq");
+		if (nla_put_flag(msg, NL80211_ATTR_FREQ_FIXED))
+			goto fail;
+	}
+
 	if (params->key_mgmt_suite == WPA_KEY_MGMT_IEEE8021X ||
 	    params->key_mgmt_suite == WPA_KEY_MGMT_PSK ||
 	    params->key_mgmt_suite == WPA_KEY_MGMT_IEEE8021X_SHA256 ||

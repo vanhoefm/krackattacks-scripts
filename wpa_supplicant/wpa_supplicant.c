@@ -2122,6 +2122,7 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 		ibss_mesh_setup_freq(wpa_s, ssid, &params.freq);
 
 	if (ssid->mode == WPAS_MODE_IBSS) {
+		params.fixed_freq = ssid->fixed_freq;
 		if (ssid->beacon_int)
 			params.beacon_int = ssid->beacon_int;
 		else

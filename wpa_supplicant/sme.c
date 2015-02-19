@@ -207,6 +207,7 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 	struct wpabuf *resp = NULL;
 	u8 ext_capab[18];
 	int ext_capab_len;
+	int skip_auth;
 
 	if (bss == NULL) {
 		wpa_msg(wpa_s, MSG_ERROR, "SME: No scan result available for "
@@ -215,6 +216,8 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
+	skip_auth = wpa_s->conf->reassoc_same_bss_optim &&
+		wpa_s->reassoc_same_bss;
 	wpa_s->current_bss = bss;
 
 	os_memset(&params, 0, sizeof(params));
@@ -465,7 +468,7 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 	sme_auth_handle_rrm(wpa_s, bss);
 
 #ifdef CONFIG_SAE
-	if (params.auth_alg == WPA_AUTH_ALG_SAE &&
+	if (!skip_auth && params.auth_alg == WPA_AUTH_ALG_SAE &&
 	    pmksa_cache_set_current(wpa_s->wpa, NULL, bss->bssid, ssid, 0) == 0)
 	{
 		wpa_dbg(wpa_s, MSG_DEBUG,
@@ -474,7 +477,7 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 		wpa_s->sme.sae_pmksa_caching = 1;
 	}
 
-	if (params.auth_alg == WPA_AUTH_ALG_SAE) {
+	if (!skip_auth && params.auth_alg == WPA_AUTH_ALG_SAE) {
 		if (start)
 			resp = sme_auth_build_sae_commit(wpa_s, ssid,
 							 bss->bssid);
@@ -531,6 +534,15 @@ static void sme_send_authentication(struct wpa_supplicant *wpa_s,
 		}
 	}
 #endif /* CONFIG_P2P */
+
+	if (skip_auth) {
+		wpa_msg(wpa_s, MSG_DEBUG,
+			"SME: Skip authentication step on reassoc-to-same-BSS");
+		wpabuf_free(resp);
+		sme_associate(wpa_s, ssid->mode, bss->bssid, WLAN_AUTH_OPEN);
+		return;
+	}
+
 
 	wpa_s->sme.auth_alg = params.auth_alg;
 	if (wpa_drv_authenticate(wpa_s, &params) < 0) {

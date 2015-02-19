@@ -1233,6 +1233,10 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 
 	if (config->passive_scan)
 		fprintf(f, "passive_scan=%d\n", config->passive_scan);
+
+	if (config->reassoc_same_bss_optim)
+		fprintf(f, "reassoc_same_bss_optim=%d\n",
+			config->reassoc_same_bss_optim);
 }
 
 #endif /* CONFIG_NO_CONFIG_WRITE */

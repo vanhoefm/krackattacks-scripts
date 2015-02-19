@@ -1149,6 +1149,11 @@ struct wpa_config {
 	 * (scan_ssid=1) or P2P device discovery.
 	 */
 	int passive_scan;
+
+	/**
+	 * reassoc_same_bss_optim - Whether to optimize reassoc-to-same-BSS
+	 */
+	int reassoc_same_bss_optim;
 };
 
 

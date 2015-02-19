@@ -1654,6 +1654,13 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 }
 
 
+static int bss_is_ibss(struct wpa_bss *bss)
+{
+	return (bss->caps & (IEEE80211_CAP_ESS | IEEE80211_CAP_IBSS)) ==
+		IEEE80211_CAP_IBSS;
+}
+
+
 void ibss_mesh_setup_freq(struct wpa_supplicant *wpa_s,
 			  const struct wpa_ssid *ssid,
 			  struct hostapd_freq_params *freq)
@@ -1664,10 +1671,34 @@ void ibss_mesh_setup_freq(struct wpa_supplicant *wpa_s,
 			   184, 192 };
 	struct hostapd_channel_data *pri_chan = NULL, *sec_chan = NULL;
 	u8 channel;
-	int i, chan_idx, ht40 = -1, res;
+	int i, chan_idx, ht40 = -1, res, obss_scan = 1;
 	unsigned int j;
 
 	freq->freq = ssid->frequency;
+
+	for (j = 0; j < wpa_s->last_scan_res_used; j++) {
+		struct wpa_bss *bss = wpa_s->last_scan_res[j];
+
+		if (ssid->mode != WPAS_MODE_IBSS)
+			break;
+
+		/* Don't adjust control freq in case of fixed_freq */
+		if (ssid->fixed_freq)
+			break;
+
+		if (!bss_is_ibss(bss))
+			continue;
+
+		if (ssid->ssid_len == bss->ssid_len &&
+		    os_memcmp(ssid->ssid, bss->ssid, bss->ssid_len) == 0) {
+			wpa_printf(MSG_DEBUG,
+				   "IBSS already found in scan results, adjust control freq: %d",
+				   bss->freq);
+			freq->freq = bss->freq;
+			obss_scan = 0;
+			break;
+		}
+	}
 
 	/* For IBSS check HT_IBSS flag */
 	if (ssid->mode == WPAS_MODE_IBSS &&
@@ -1682,7 +1713,7 @@ void ibss_mesh_setup_freq(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
-	hw_mode = ieee80211_freq_to_chan(ssid->frequency, &channel);
+	hw_mode = ieee80211_freq_to_chan(freq->freq, &channel);
 	for (i = 0; wpa_s->hw.modes && i < wpa_s->hw.num_modes; i++) {
 		if (wpa_s->hw.modes[i].mode == hw_mode) {
 			mode = &wpa_s->hw.modes[i];
@@ -1753,7 +1784,7 @@ void ibss_mesh_setup_freq(struct wpa_supplicant *wpa_s,
 		break;
 	}
 
-	if (freq->sec_channel_offset) {
+	if (freq->sec_channel_offset && obss_scan) {
 		struct wpa_scan_results *scan_res;
 
 		scan_res = wpa_supplicant_get_scan_results(wpa_s, NULL, 0);

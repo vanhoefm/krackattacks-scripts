@@ -128,6 +128,11 @@ class Wlantest:
         if "MFPC" not in res:
             raise Exception("STA did not enable PMF")
 
+    def require_sta_no_pmf(self, bssid, addr):
+        res = self.info_sta("rsn_capab", bssid, addr)
+        if "MFPC" in res:
+            raise Exception("STA enabled PMF")
+
     def require_sta_key_mgmt(self, bssid, addr, key_mgmt):
         res = self.info_sta("key_mgmt", bssid, addr)
         if key_mgmt not in res:

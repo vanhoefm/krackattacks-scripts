@@ -329,3 +329,59 @@ def test_ap_pmf_required_sha1(dev, apdev):
     if "[WPA2-PSK-CCMP]" not in dev[0].request("SCAN_RESULTS"):
         raise Exception("Scan results missing RSN element info")
     hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_ap_pmf_toggle(dev, apdev):
+    """WPA2-PSK AP with PMF optional and changing PMF on reassociation"""
+    try:
+        _test_ap_pmf_toggle(dev, apdev)
+    finally:
+        dev[0].request("SET reassoc_same_bss_optim 0")
+
+def _test_ap_pmf_toggle(dev, apdev):
+    ssid = "test-pmf-optional"
+    wt = Wlantest()
+    wt.flush()
+    wt.add_passphrase("12345678")
+    params = hostapd.wpa2_params(ssid=ssid, passphrase="12345678")
+    params["wpa_key_mgmt"] = "WPA-PSK";
+    params["ieee80211w"] = "1";
+    params["assoc_sa_query_max_timeout"] = "1"
+    params["assoc_sa_query_retry_timeout"] = "1"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+    addr = dev[0].own_addr()
+    dev[0].request("SET reassoc_same_bss_optim 1")
+    id = dev[0].connect(ssid, psk="12345678", ieee80211w="1",
+                        key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2",
+                        scan_freq="2412")
+    wt.require_ap_pmf_optional(bssid)
+    wt.require_sta_pmf(bssid, addr)
+    sta = hapd.get_sta(addr)
+    if '[MFP]' not in sta['flags']:
+        raise Exception("MFP flag not present for STA")
+
+    dev[0].set_network(id, "ieee80211w", "0")
+    dev[0].request("REASSOCIATE")
+    dev[0].wait_connected()
+    wt.require_sta_no_pmf(bssid, addr)
+    sta = hapd.get_sta(addr)
+    if '[MFP]' in sta['flags']:
+        raise Exception("MFP flag unexpectedly present for STA")
+    cmd = subprocess.Popen(['iw', 'dev', apdev[0]['ifname'], 'station', 'get',
+                            addr], stdout=subprocess.PIPE)
+    (data,err) = cmd.communicate()
+    if "yes" in [l for l in data.splitlines() if "MFP" in l][0]:
+        raise Exception("Kernel STA entry had MFP enabled")
+
+    dev[0].set_network(id, "ieee80211w", "1")
+    dev[0].request("REASSOCIATE")
+    dev[0].wait_connected()
+    wt.require_sta_pmf(bssid, addr)
+    sta = hapd.get_sta(addr)
+    if '[MFP]' not in sta['flags']:
+        raise Exception("MFP flag not present for STA")
+    cmd = subprocess.Popen(['iw', 'dev', apdev[0]['ifname'], 'station', 'get',
+                            addr], stdout=subprocess.PIPE)
+    (data,err) = cmd.communicate()
+    if "yes" not in [l for l in data.splitlines() if "MFP" in l][0]:
+        raise Exception("Kernel STA entry did not have MFP enabled")

@@ -3153,7 +3153,7 @@ static int ocsp_resp_cb(SSL *s, void *arg)
 
 		if (X509_STORE_add_cert(store, conn->peer_issuer) != 1) {
 			tls_show_errors(MSG_INFO, __func__,
-					"OpenSSL: Could not add issuer to certificate store\n");
+					"OpenSSL: Could not add issuer to certificate store");
 		}
 		certs = sk_X509_new_null();
 		if (certs) {
@@ -3162,7 +3162,7 @@ static int ocsp_resp_cb(SSL *s, void *arg)
 			if (cert && !sk_X509_push(certs, cert)) {
 				tls_show_errors(
 					MSG_INFO, __func__,
-					"OpenSSL: Could not add issuer to OCSP responder trust store\n");
+					"OpenSSL: Could not add issuer to OCSP responder trust store");
 				X509_free(cert);
 				sk_X509_free(certs);
 				certs = NULL;
@@ -3172,7 +3172,7 @@ static int ocsp_resp_cb(SSL *s, void *arg)
 				if (cert && !sk_X509_push(certs, cert)) {
 					tls_show_errors(
 						MSG_INFO, __func__,
-						"OpenSSL: Could not add issuer to OCSP responder trust store\n");
+						"OpenSSL: Could not add issuer's issuer to OCSP responder trust store");
 					X509_free(cert);
 				}
 			}

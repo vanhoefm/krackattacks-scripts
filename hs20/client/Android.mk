@@ -68,6 +68,8 @@ L_CFLAGS += -DEAP_TLS_OPENSSL
 #CFLAGS += $(shell xml2-config --cflags)
 #LIBS += $(shell xml2-config --libs)
 
+L_CFLAGS += -Wno-unused-parameter
+
 
 ########################
 include $(CLEAR_VARS)

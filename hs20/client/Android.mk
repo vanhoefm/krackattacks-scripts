@@ -27,11 +27,6 @@ endif
 endif
 
 
-#GTKCFLAGS := $(shell pkg-config --cflags gtk+-2.0 webkit-1.0)
-#GTKLIBS := $(shell pkg-config --libs gtk+-2.0 webkit-1.0)
-#CFLAGS += $(GTKCFLAGS)
-#LIBS += $(GTKLIBS)
-
 L_CFLAGS += -DCONFIG_CTRL_IFACE
 L_CFLAGS += -DCONFIG_CTRL_IFACE_UNIX
 L_CFLAGS += -DCONFIG_CTRL_IFACE_CLIENT_DIR=\"/data/misc/wifi/sockets\"
@@ -62,9 +57,6 @@ OBJS += ../../src/crypto/sha1-internal.c
 OBJS += ../../src/crypto/sha256-internal.c
 
 L_CFLAGS += -DEAP_TLS_OPENSSL
-
-#CFLAGS += $(shell xml2-config --cflags)
-#LIBS += $(shell xml2-config --libs)
 
 L_CFLAGS += -Wno-unused-parameter
 

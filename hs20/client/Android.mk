@@ -15,6 +15,15 @@ INCLUDES += external/webkit/Source/WebKit/gtk
 # headers to the include path by hand.
 ifeq ($(wildcard external/icu),)
 INCLUDES += external/icu4c/common
+else
+# The LOCAL_EXPORT_C_INCLUDE_DIRS from ICU did not seem to fully resolve the
+# build (e.g., "mm -B" failed to build, but following that with "mm" allowed
+# the build to complete). For now, add the include directory manually here for
+# Android 5.0.
+ver = $(filter 5.0%,$(PLATFORM_VERSION))
+ifneq (,$(strip $(ver)))
+INCLUDES += external/icu/icu4c/source/common
+endif
 endif
 
 

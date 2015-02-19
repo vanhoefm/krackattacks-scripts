@@ -11,6 +11,7 @@
 
 #include "utils/common.h"
 #include "common/ieee802_11_defs.h"
+#include "common/hw_features_common.h"
 #include "common/wpa_ctrl.h"
 #include "hostapd.h"
 #include "ap_drv_ops.h"

@@ -30,5 +30,11 @@ int check_20mhz_bss(struct wpa_scan_res *bss, int pri_freq, int start, int end);
 int check_40mhz_2g4(struct hostapd_hw_modes *mode,
 		    struct wpa_scan_results *scan_res, int pri_chan,
 		    int sec_chan);
+int hostapd_set_freq_params(struct hostapd_freq_params *data,
+			    enum hostapd_hw_mode mode,
+			    int freq, int channel, int ht_enabled,
+			    int vht_enabled, int sec_channel_offset,
+			    int vht_oper_chwidth, int center_segment0,
+			    int center_segment1, u32 vht_caps);
 
 #endif /* HW_FEATURES_COMMON_H */

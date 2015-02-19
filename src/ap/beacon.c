@@ -15,6 +15,7 @@
 #include "utils/common.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
+#include "common/hw_features_common.h"
 #include "wps/wps_defs.h"
 #include "p2p/p2p.h"
 #include "hostapd.h"

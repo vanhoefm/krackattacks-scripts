@@ -670,6 +670,8 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 	STR(ssid);
 	INT(scan_ssid);
 	write_bssid(f, ssid);
+	write_str(f, "bssid_blacklist", ssid);
+	write_str(f, "bssid_whitelist", ssid);
 	write_psk(f, ssid);
 	write_proto(f, ssid);
 	write_key_mgmt(f, ssid);
@@ -721,6 +723,7 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 	INTe(engine);
 	INTe(engine2);
 	INT_DEF(eapol_flags, DEFAULT_EAPOL_FLAGS);
+	STR(openssl_ciphers);
 	INTe(erp);
 #endif /* IEEE8021X_EAPOL */
 	for (i = 0; i < 4; i++)
@@ -735,11 +738,13 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 	INT_DEFe(sim_num, DEFAULT_USER_SELECTED_SIM);
 #endif /* IEEE8021X_EAPOL */
 	INT(mode);
+	INT(no_auto_peer);
 	INT(frequency);
 	INT(fixed_freq);
 	write_int(f, "proactive_key_caching", ssid->proactive_key_caching, -1);
 	INT(disabled);
 	INT(peerkey);
+	INT(mixed_cell);
 #ifdef CONFIG_IEEE80211W
 	write_int(f, "ieee80211w", ssid->ieee80211w,
 		  MGMT_FRAME_PROTECTION_DEFAULT);
@@ -750,6 +755,7 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 	write_p2p_client_list(f, ssid);
 	write_psk_list(f, ssid);
 #endif /* CONFIG_P2P */
+	INT(ap_max_inactivity);
 	INT(dtim_period);
 	INT(beacon_int);
 #ifdef CONFIG_MACSEC
@@ -766,6 +772,40 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 	INT_DEF(dot11MeshConfirmTimeout, DEFAULT_MESH_CONFIRM_TIMEOUT);
 	INT_DEF(dot11MeshHoldingTimeout, DEFAULT_MESH_HOLDING_TIMEOUT);
 #endif /* CONFIG_MESH */
+	INT(wpa_ptk_rekey);
+	INT(ignore_broadcast_ssid);
+#ifdef CONFIG_HT_OVERRIDES
+	INT_DEF(disable_ht, DEFAULT_DISABLE_HT);
+	INT_DEF(disable_ht40, DEFAULT_DISABLE_HT40);
+	INT_DEF(disable_sgi, DEFAULT_DISABLE_SGI);
+	INT_DEF(disable_ldpc, DEFAULT_DISABLE_LDPC);
+	INT(ht40_intolerant);
+	INT_DEF(disable_max_amsdu, DEFAULT_DISABLE_MAX_AMSDU);
+	INT_DEF(ampdu_factor, DEFAULT_AMPDU_FACTOR);
+	INT_DEF(ampdu_density, DEFAULT_AMPDU_DENSITY);
+	STR(ht_mcs);
+#endif /* CONFIG_HT_OVERRIDES */
+#ifdef CONFIG_VHT_OVERRIDES
+	INT(disable_vht);
+	INT(vht_capa);
+	INT(vht_capa_mask);
+	INT_DEF(vht_rx_mcs_nss_1, -1);
+	INT_DEF(vht_rx_mcs_nss_2, -1);
+	INT_DEF(vht_rx_mcs_nss_3, -1);
+	INT_DEF(vht_rx_mcs_nss_4, -1);
+	INT_DEF(vht_rx_mcs_nss_5, -1);
+	INT_DEF(vht_rx_mcs_nss_6, -1);
+	INT_DEF(vht_rx_mcs_nss_7, -1);
+	INT_DEF(vht_rx_mcs_nss_8, -1);
+	INT_DEF(vht_tx_mcs_nss_1, -1);
+	INT_DEF(vht_tx_mcs_nss_2, -1);
+	INT_DEF(vht_tx_mcs_nss_3, -1);
+	INT_DEF(vht_tx_mcs_nss_4, -1);
+	INT_DEF(vht_tx_mcs_nss_5, -1);
+	INT_DEF(vht_tx_mcs_nss_6, -1);
+	INT_DEF(vht_tx_mcs_nss_7, -1);
+	INT_DEF(vht_tx_mcs_nss_8, -1);
+#endif /* CONFIG_VHT_OVERRIDES */
 
 #undef STR
 #undef INT

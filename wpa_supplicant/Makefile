@@ -105,6 +105,7 @@ OBJS += ../src/utils/trace.o
 OBJS_p += ../src/utils/trace.o
 OBJS_c += ../src/utils/trace.o
 OBJS_priv += ../src/utils/trace.o
+LIBCTRL += ../src/utils/trace.o
 LDFLAGS += -rdynamic
 CFLAGS += -funwind-tables
 ifdef CONFIG_WPA_TRACE_BFD
@@ -1636,6 +1637,15 @@ wpa_cli: $(OBJS_c)
 	$(Q)$(LDO) $(LDFLAGS) -o wpa_cli $(OBJS_c) $(LIBS_c)
 	@$(E) "  LD " $@
 
+LIBCTRL += ../src/common/wpa_ctrl.o
+LIBCTRL += ../src/utils/os_$(CONFIG_OS).o
+LIBCTRL += ../src/utils/wpa_debug.o
+
+libwpa_ctrl.a: $(LIBCTRL)
+	$(Q)rm -f $@
+	$(Q)$(AR) crs $@ $?
+	@$(E) "  AR " $@
+
 link_test: $(OBJS) $(OBJS_h) tests/link_test.o
 	$(Q)$(LDO) $(LDFLAGS) -o link_test $(OBJS) $(OBJS_h) tests/link_test.o $(LIBS)
 	@$(E) "  LD " $@
@@ -1755,5 +1765,6 @@ clean:
 	rm -f nfc_pw_token
 	rm -f lcov.info
 	rm -rf lcov-html
+	rm -f libwpa_ctrl.a
 
 -include $(OBJS:%.o=%.d)

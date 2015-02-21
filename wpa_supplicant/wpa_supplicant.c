@@ -4071,6 +4071,23 @@ static int wpa_supplicant_init_iface(struct wpa_supplicant *wpa_s,
 	wpa_s->hw.modes = wpa_drv_get_hw_feature_data(wpa_s,
 						      &wpa_s->hw.num_modes,
 						      &wpa_s->hw.flags);
+	if (wpa_s->hw.modes) {
+		u16 i;
+
+		for (i = 0; i < wpa_s->hw.num_modes; i++) {
+			if (wpa_s->hw.modes[i].vht_capab) {
+				wpa_s->hw_capab = CAPAB_VHT;
+				break;
+			}
+
+			if (wpa_s->hw.modes[i].ht_capab &
+			    HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET)
+				wpa_s->hw_capab = CAPAB_HT40;
+			else if (wpa_s->hw.modes[i].ht_capab &&
+				 wpa_s->hw_capab == CAPAB_NO_HT_VHT)
+				wpa_s->hw_capab = CAPAB_HT;
+		}
+	}
 
 	capa_res = wpa_drv_get_capa(wpa_s, &capa);
 	if (capa_res == 0) {

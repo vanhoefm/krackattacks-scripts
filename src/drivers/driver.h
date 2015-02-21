@@ -213,6 +213,9 @@ struct hostapd_hw_modes {
  * @tsf: Timestamp
  * @age: Age of the information in milliseconds (i.e., how many milliseconds
  * ago the last Beacon or Probe Response frame was received)
+ * @est_throughput: Estimated throughput in kbps (this is calculated during
+ * scan result processing if left zero by the driver wrapper)
+ * @snr: Signal-to-noise ratio in dB (calculated during scan result processing)
  * @ie_len: length of the following IE field in octets
  * @beacon_ie_len: length of the following Beacon IE field in octets
  *
@@ -241,6 +244,8 @@ struct wpa_scan_res {
 	int level;
 	u64 tsf;
 	unsigned int age;
+	unsigned int est_throughput;
+	int snr;
 	size_t ie_len;
 	size_t beacon_ie_len;
 	/* Followed by ie_len + beacon_ie_len octets of IE data */

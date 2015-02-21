@@ -1605,8 +1605,8 @@ static int wpa_scan_result_compar(const void *a, const void *b)
 	struct wpa_scan_res **_wb = (void *) b;
 	struct wpa_scan_res *wa = *_wa;
 	struct wpa_scan_res *wb = *_wb;
-	int wpa_a, wpa_b, maxrate_a, maxrate_b;
-	int snr_a, snr_b;
+	int wpa_a, wpa_b;
+	int snr_a, snr_b, snr_a_full, snr_b_full;
 
 	/* WPA/WPA2 support preferred */
 	wpa_a = wpa_scan_get_vendor_ie(wa, WPA_IE_VENDOR_TYPE) != NULL ||
@@ -1628,22 +1628,22 @@ static int wpa_scan_result_compar(const void *a, const void *b)
 		return -1;
 
 	if (wa->flags & wb->flags & WPA_SCAN_LEVEL_DBM) {
-		snr_a = MIN(wa->level - wa->noise, GREAT_SNR);
-		snr_b = MIN(wb->level - wb->noise, GREAT_SNR);
+		snr_a_full = wa->snr;
+		snr_a = MIN(wa->snr, GREAT_SNR);
+		snr_b_full = wb->snr;
+		snr_b = MIN(wa->snr, GREAT_SNR);
 	} else {
 		/* Level is not in dBm, so we can't calculate
 		 * SNR. Just use raw level (units unknown). */
-		snr_a = wa->level;
-		snr_b = wb->level;
+		snr_a = snr_a_full = wa->level;
+		snr_b = snr_b_full = wb->level;
 	}
 
 	/* if SNR is close, decide by max rate or frequency band */
 	if ((snr_a && snr_b && abs(snr_b - snr_a) < 5) ||
 	    (wa->qual && wb->qual && abs(wb->qual - wa->qual) < 10)) {
-		maxrate_a = wpa_scan_get_max_rate(wa);
-		maxrate_b = wpa_scan_get_max_rate(wb);
-		if (maxrate_a != maxrate_b)
-			return maxrate_b - maxrate_a;
+		if (wa->est_throughput != wb->est_throughput)
+			return wb->est_throughput - wa->est_throughput;
 		if (IS_5GHZ(wa->freq) ^ IS_5GHZ(wb->freq))
 			return IS_5GHZ(wa->freq) ? -1 : 1;
 	}
@@ -1651,9 +1651,9 @@ static int wpa_scan_result_compar(const void *a, const void *b)
 	/* all things being equal, use SNR; if SNRs are
 	 * identical, use quality values since some drivers may only report
 	 * that value and leave the signal level zero */
-	if (snr_b == snr_a)
+	if (snr_b_full == snr_a_full)
 		return wb->qual - wa->qual;
-	return snr_b - snr_a;
+	return snr_b_full - snr_a_full;
 #undef MIN
 }
 
@@ -1720,20 +1720,21 @@ static void dump_scan_res(struct wpa_scan_results *scan_res)
 		struct wpa_scan_res *r = scan_res->res[i];
 		u8 *pos;
 		if (r->flags & WPA_SCAN_LEVEL_DBM) {
-			int snr = r->level - r->noise;
 			int noise_valid = !(r->flags & WPA_SCAN_NOISE_INVALID);
 
 			wpa_printf(MSG_EXCESSIVE, MACSTR " freq=%d qual=%d "
-				   "noise=%d%s level=%d snr=%d%s flags=0x%x age=%u",
+				   "noise=%d%s level=%d snr=%d%s flags=0x%x age=%u est=%u",
 				   MAC2STR(r->bssid), r->freq, r->qual,
 				   r->noise, noise_valid ? "" : "~", r->level,
-				   snr, snr >= GREAT_SNR ? "*" : "", r->flags,
-				   r->age);
+				   r->snr, r->snr >= GREAT_SNR ? "*" : "",
+				   r->flags,
+				   r->age, r->est_throughput);
 		} else {
 			wpa_printf(MSG_EXCESSIVE, MACSTR " freq=%d qual=%d "
-				   "noise=%d level=%d flags=0x%x age=%u",
+				   "noise=%d level=%d flags=0x%x age=%u est=%u",
 				   MAC2STR(r->bssid), r->freq, r->qual,
-				   r->noise, r->level, r->flags, r->age);
+				   r->noise, r->level, r->flags, r->age,
+				   r->est_throughput);
 		}
 		pos = (u8 *) (r + 1);
 		if (r->ie_len)
@@ -1808,6 +1809,180 @@ static void filter_scan_res(struct wpa_supplicant *wpa_s,
 #define DEFAULT_NOISE_FLOOR_2GHZ (-89)
 #define DEFAULT_NOISE_FLOOR_5GHZ (-92)
 
+static void scan_snr(struct wpa_scan_res *res)
+{
+	if (res->flags & WPA_SCAN_NOISE_INVALID) {
+		res->noise = IS_5GHZ(res->freq) ?
+			DEFAULT_NOISE_FLOOR_5GHZ :
+			DEFAULT_NOISE_FLOOR_2GHZ;
+	}
+
+	if (res->flags & WPA_SCAN_LEVEL_DBM) {
+		res->snr = res->level - res->noise;
+	} else {
+		/* Level is not in dBm, so we can't calculate
+		 * SNR. Just use raw level (units unknown). */
+		res->snr = res->level;
+	}
+}
+
+
+static unsigned int max_ht20_rate(int snr)
+{
+	if (snr < 6)
+		return 6500; /* HT20 MCS0 */
+	if (snr < 8)
+		return 13000; /* HT20 MCS1 */
+	if (snr < 13)
+		return 19500; /* HT20 MCS2 */
+	if (snr < 17)
+		return 26000; /* HT20 MCS3 */
+	if (snr < 20)
+		return 39000; /* HT20 MCS4 */
+	if (snr < 23)
+		return 52000; /* HT20 MCS5 */
+	if (snr < 24)
+		return 58500; /* HT20 MCS6 */
+	return 65000; /* HT20 MCS7 */
+}
+
+
+static unsigned int max_ht40_rate(int snr)
+{
+	if (snr < 3)
+		return 13500; /* HT40 MCS0 */
+	if (snr < 6)
+		return 27000; /* HT40 MCS1 */
+	if (snr < 10)
+		return 40500; /* HT40 MCS2 */
+	if (snr < 15)
+		return 54000; /* HT40 MCS3 */
+	if (snr < 17)
+		return 81000; /* HT40 MCS4 */
+	if (snr < 22)
+		return 108000; /* HT40 MCS5 */
+	if (snr < 22)
+		return 121500; /* HT40 MCS6 */
+	return 135000; /* HT40 MCS7 */
+}
+
+
+static unsigned int max_vht80_rate(int snr)
+{
+	if (snr < 1)
+		return 0;
+	if (snr < 2)
+		return 29300; /* VHT80 MCS0 */
+	if (snr < 5)
+		return 58500; /* VHT80 MCS1 */
+	if (snr < 9)
+		return 87800; /* VHT80 MCS2 */
+	if (snr < 11)
+		return 117000; /* VHT80 MCS3 */
+	if (snr < 15)
+		return 175500; /* VHT80 MCS4 */
+	if (snr < 16)
+		return 234000; /* VHT80 MCS5 */
+	if (snr < 18)
+		return 263300; /* VHT80 MCS6 */
+	if (snr < 20)
+		return 292500; /* VHT80 MCS7 */
+	if (snr < 22)
+		return 351000; /* VHT80 MCS8 */
+	return 390000; /* VHT80 MCS9 */
+}
+
+
+static void scan_est_throughput(struct wpa_supplicant *wpa_s,
+				struct wpa_scan_res *res)
+{
+	enum local_hw_capab capab = wpa_s->hw_capab;
+	int rate; /* max legacy rate in 500 kb/s units */
+	const u8 *ie;
+	unsigned int est, tmp;
+	int snr = res->snr;
+
+	if (res->est_throughput)
+		return;
+
+	/* Get maximum legacy rate */
+	rate = wpa_scan_get_max_rate(res);
+
+	/* Limit based on estimated SNR */
+	if (rate > 1 * 2 && snr < 1)
+		rate = 1 * 2;
+	else if (rate > 2 * 2 && snr < 4)
+		rate = 2 * 2;
+	else if (rate > 6 * 2 && snr < 5)
+		rate = 6 * 2;
+	else if (rate > 9 * 2 && snr < 6)
+		rate = 9 * 2;
+	else if (rate > 12 * 2 && snr < 7)
+		rate = 12 * 2;
+	else if (rate > 18 * 2 && snr < 10)
+		rate = 18 * 2;
+	else if (rate > 24 * 2 && snr < 11)
+		rate = 24 * 2;
+	else if (rate > 36 * 2 && snr < 15)
+		rate = 36 * 2;
+	else if (rate > 48 * 2 && snr < 19)
+		rate = 48 * 2;
+	else if (rate > 54 * 2 && snr < 21)
+		rate = 54 * 2;
+	est = rate * 500;
+
+	if (capab == CAPAB_HT || capab == CAPAB_HT40 || capab == CAPAB_VHT) {
+		ie = wpa_scan_get_ie(res, WLAN_EID_HT_CAP);
+		if (ie) {
+			tmp = max_ht20_rate(snr);
+			if (tmp > est)
+				est = tmp;
+		}
+	}
+
+	if (capab == CAPAB_HT40 || capab == CAPAB_VHT) {
+		ie = wpa_scan_get_ie(res, WLAN_EID_HT_OPERATION);
+		if (ie && ie[1] >= 2 &&
+		    (ie[3] & HT_INFO_HT_PARAM_SECONDARY_CHNL_OFF_MASK)) {
+			tmp = max_ht40_rate(snr);
+			if (tmp > est)
+				est = tmp;
+		}
+	}
+
+	if (capab == CAPAB_VHT) {
+		/* Use +1 to assume VHT is always faster than HT */
+		ie = wpa_scan_get_ie(res, WLAN_EID_VHT_CAP);
+		if (ie) {
+			tmp = max_ht20_rate(snr) + 1;
+			if (tmp > est)
+				est = tmp;
+
+			ie = wpa_scan_get_ie(res, WLAN_EID_HT_OPERATION);
+			if (ie && ie[1] >= 2 &&
+			    (ie[3] &
+			     HT_INFO_HT_PARAM_SECONDARY_CHNL_OFF_MASK)) {
+				tmp = max_ht40_rate(snr) + 1;
+				if (tmp > est)
+					est = tmp;
+			}
+
+			ie = wpa_scan_get_ie(res, WLAN_EID_VHT_OPERATION);
+			if (ie && ie[1] >= 1 &&
+			    (ie[2] & VHT_OPMODE_CHANNEL_WIDTH_MASK)) {
+				tmp = max_vht80_rate(snr) + 1;
+				if (tmp > est)
+					est = tmp;
+			}
+		}
+	}
+
+	/* TODO: channel utilization and AP load (e.g., from AP Beacon) */
+
+	res->est_throughput = est;
+}
+
+
 /**
  * wpa_supplicant_get_scan_results - Get scan results
  * @wpa_s: Pointer to wpa_supplicant data
@@ -1844,12 +2019,8 @@ wpa_supplicant_get_scan_results(struct wpa_supplicant *wpa_s,
 	for (i = 0; i < scan_res->num; i++) {
 		struct wpa_scan_res *scan_res_item = scan_res->res[i];
 
-		if (scan_res_item->flags & WPA_SCAN_NOISE_INVALID) {
-			scan_res_item->noise =
-				IS_5GHZ(scan_res_item->freq) ?
-				DEFAULT_NOISE_FLOOR_5GHZ :
-				DEFAULT_NOISE_FLOOR_2GHZ;
-		}
+		scan_snr(scan_res_item);
+		scan_est_throughput(wpa_s, scan_res_item);
 	}
 
 #ifdef CONFIG_WPS

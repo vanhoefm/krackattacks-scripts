@@ -142,6 +142,10 @@ class DataCollector(object):
             self._trace_cmd.wait()
         if self._dmesg:
             output = os.path.join(self._logdir, '%s.dmesg' % (self._testname, ))
+            num = 0
+            while os.path.exists(output):
+                output = os.path.join(self._logdir, '%s.dmesg-%d' % (self._testname, num))
+                num += 1
             subprocess.call(['dmesg', '-c'], stdout=open(output, 'w'))
 
 def rename_log(logdir, basename, testname, dev):

@@ -26,7 +26,7 @@
 #include "trace.h"
 #include "list.h"
 
-static struct dl_list alloc_list;
+static struct dl_list alloc_list = DL_LIST_HEAD_INIT(alloc_list);
 
 #define ALLOC_MAGIC 0xa84ef1b2
 #define FREED_MAGIC 0x67fd487a
@@ -321,9 +321,6 @@ int os_program_init(void)
 	capset(&header, &cap);
 #endif /* ANDROID */
 
-#ifdef WPA_TRACE
-	dl_list_init(&alloc_list);
-#endif /* WPA_TRACE */
 	return 0;
 }
 

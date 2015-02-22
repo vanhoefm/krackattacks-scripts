@@ -16,6 +16,7 @@ import os
 import hwsim_utils
 import hostapd
 from utils import HwsimSkip, alloc_fail
+from wpasupplicant import WpaSupplicant
 from test_ap_psk import check_mib, find_wpas_process, read_process_memory, verify_not_present, get_key_locations
 
 def check_hlr_auc_gw_support():
@@ -2781,3 +2782,39 @@ def test_ap_wpa2_eap_unexpected_wep_eapol_key(dev, apdev):
     res = dev[0].request("EAPOL_RX " + bssid + " 0203002c0100000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
     if "OK" not in res:
         raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+def test_ap_wpa2_eap_in_bridge(dev, apdev):
+    """WPA2-EAP and wpas interface in a bridge"""
+    br_ifname='sta-br0'
+    ifname='wlan5'
+    try:
+        _test_ap_wpa2_eap_in_bridge(dev, apdev)
+    finally:
+        subprocess.call(['ip', 'link', 'set', 'dev', br_ifname, 'down'])
+        subprocess.call(['brctl', 'delif', br_ifname, ifname])
+        subprocess.call(['brctl', 'delbr', br_ifname])
+        subprocess.call(['iw', ifname, 'set', '4addr', 'off'])
+
+def _test_ap_wpa2_eap_in_bridge(dev, apdev):
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    br_ifname='sta-br0'
+    ifname='wlan5'
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    subprocess.call(['brctl', 'addbr', br_ifname])
+    subprocess.call(['brctl', 'setfd', br_ifname, '0'])
+    subprocess.call(['ip', 'link', 'set', 'dev', br_ifname, 'up'])
+    subprocess.call(['iw', ifname, 'set', '4addr', 'on'])
+    subprocess.check_call(['brctl', 'addif', br_ifname, ifname])
+    wpas.interface_add(ifname, br_ifname=br_ifname)
+
+    id = eap_connect(wpas, apdev[0], "PAX", "pax.user@example.com",
+                     password_hex="0123456789abcdef0123456789abcdef")
+    eap_reauth(wpas, "PAX")
+    # Try again as a regression test for packet socket workaround
+    eap_reauth(wpas, "PAX")
+    wpas.request("DISCONNECT")
+    wpas.wait_disconnected()
+    wpas.request("RECONNECT")
+    wpas.wait_connected()

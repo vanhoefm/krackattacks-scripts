@@ -866,3 +866,81 @@ def test_ap_ht_smps(dev, apdev):
     dev[1].connect("ht2", key_mgmt="NONE", scan_freq="2412")
     hwsim_utils.test_connectivity(dev[0], hapd)
     hwsim_utils.test_connectivity(dev[1], hapd2)
+
+def test_prefer_ht20(dev, apdev):
+    """Preference on HT20 over no-HT"""
+    params = { "ssid": "test",
+               "channel": "1",
+               "ieee80211n": "0" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+    params = { "ssid": "test",
+               "channel": "1",
+               "ieee80211n": "1" }
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+    bssid2 = apdev[1]['bssid']
+
+    dev[0].scan_for_bss(bssid, freq=2412)
+    dev[0].scan_for_bss(bssid2, freq=2412)
+    dev[0].connect("test", key_mgmt="NONE", scan_freq="2412")
+    if dev[0].get_status_field('bssid') != bssid2:
+        raise Exception("Unexpected BSS selected")
+
+    est = dev[0].get_bss(bssid)['est_throughput']
+    if est != "54000":
+        raise Exception("Unexpected BSS0 est_throughput: " + est)
+
+    est = dev[0].get_bss(bssid2)['est_throughput']
+    if est != "65000":
+        raise Exception("Unexpected BSS1 est_throughput: " + est)
+
+def test_prefer_ht40(dev, apdev):
+    """Preference on HT40 over HT20"""
+    params = { "ssid": "test",
+               "channel": "1",
+               "ieee80211n": "1" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+    params = { "ssid": "test",
+               "channel": "1",
+               "ieee80211n": "1",
+               "ht_capab": "[HT40+]" }
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+    bssid2 = apdev[1]['bssid']
+
+    dev[0].scan_for_bss(bssid, freq=2412)
+    dev[0].scan_for_bss(bssid2, freq=2412)
+    dev[0].connect("test", key_mgmt="NONE", scan_freq="2412")
+    if dev[0].get_status_field('bssid') != bssid2:
+        raise Exception("Unexpected BSS selected")
+
+    est = dev[0].get_bss(bssid)['est_throughput']
+    if est != "65000":
+        raise Exception("Unexpected BSS0 est_throughput: " + est)
+
+    est = dev[0].get_bss(bssid2)['est_throughput']
+    if est != "135000":
+        raise Exception("Unexpected BSS1 est_throughput: " + est)
+
+def test_prefer_ht20_during_roam(dev, apdev):
+    """Preference on HT20 over no-HT in roaming consideration"""
+    params = { "ssid": "test",
+               "channel": "1",
+               "ieee80211n": "0" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+
+    dev[0].scan_for_bss(bssid, freq=2412)
+    dev[0].connect("test", key_mgmt="NONE", scan_freq="2412")
+
+    params = { "ssid": "test",
+               "channel": "1",
+               "ieee80211n": "1" }
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+    bssid2 = apdev[1]['bssid']
+    dev[0].scan_for_bss(bssid2, freq=2412)
+    dev[0].scan(freq=2412)
+    dev[0].wait_connected()
+    
+    if dev[0].get_status_field('bssid') != bssid2:
+        raise Exception("Unexpected BSS selected")

@@ -37,9 +37,13 @@ def test_ap_vht80(dev, apdev):
                    "vht_oper_chwidth": "1",
                    "vht_oper_centr_freq_seg0_idx": "42" }
         hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        bssid = apdev[0]['bssid']
 
         dev[0].connect("vht", key_mgmt="NONE", scan_freq="5180")
         hwsim_utils.test_connectivity(dev[0], hapd)
+        est = dev[0].get_bss(bssid)['est_throughput']
+        if est != "390001":
+            raise Exception("Unexpected BSS est_throughput: " + est)
     except Exception, e:
         if isinstance(e, Exception) and str(e) == "AP startup failed":
             if not vht_supported():
@@ -442,3 +446,51 @@ def test_ap_vht_on_24ghz(dev, apdev):
             raise Exception("Unexpected VENDOR_VHT STA flag")
     finally:
         dev[0].request("VENDOR_ELEM_REMOVE 13 *")
+
+def test_prefer_vht40(dev, apdev):
+    """Preference on VHT40 over HT40"""
+    try:
+        hapd2 = None
+
+        params = { "ssid": "test",
+                   "country_code": "FI",
+                   "hw_mode": "a",
+                   "channel": "36",
+                   "ieee80211n": "1",
+                   "ht_capab": "[HT40+]" }
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        bssid = apdev[0]['bssid']
+
+        params = { "ssid": "test",
+                   "country_code": "FI",
+                   "hw_mode": "a",
+                   "channel": "36",
+                   "ieee80211n": "1",
+                   "ieee80211ac": "1",
+                   "ht_capab": "[HT40+]",
+                   "vht_capab": "",
+                   "vht_oper_chwidth": "0",
+                   "vht_oper_centr_freq_seg0_idx": "0",
+                 }
+        hapd2 = hostapd.add_ap(apdev[1]['ifname'], params)
+        bssid2 = apdev[1]['bssid']
+
+        dev[0].scan_for_bss(bssid, freq=5180)
+        dev[0].scan_for_bss(bssid2, freq=5180)
+        dev[0].connect("test", scan_freq="5180", key_mgmt="NONE")
+        if dev[0].get_status_field('bssid') != bssid2:
+            raise Exception("Unexpected BSS selected")
+
+        est = dev[0].get_bss(bssid)['est_throughput']
+        if est != "135000":
+            raise Exception("Unexpected BSS0 est_throughput: " + est)
+
+        est = dev[0].get_bss(bssid2)['est_throughput']
+        if est != "135001":
+            raise Exception("Unexpected BSS1 est_throughput: " + est)
+    finally:
+        dev[0].request("DISCONNECT")
+        if hapd2:
+            hapd2.request("DISABLE")
+        subprocess.call(['iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()

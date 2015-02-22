@@ -164,6 +164,7 @@ static void nl80211_destroy_eloop_handle(struct nl_handle **handle)
 
 
 static void nl80211_global_deinit(void *priv);
+static void nl80211_check_global(struct nl80211_global *global);
 
 static void wpa_driver_nl80211_deinit(struct i802_bss *bss);
 static int wpa_driver_nl80211_set_mode_ibss(struct i802_bss *bss,
@@ -864,6 +865,7 @@ static int wpa_driver_nl80211_own_ifindex(struct wpa_driver_nl80211_data *drv,
 		return 1;
 
 	if (drv->if_removed && wpa_driver_nl80211_own_ifname(drv, buf, len)) {
+		nl80211_check_global(drv->global);
 		wpa_printf(MSG_DEBUG, "nl80211: Update ifindex for a removed "
 			   "interface");
 		wpa_driver_nl80211_finish_drv_init(drv, NULL, 0, NULL);
@@ -1481,6 +1483,33 @@ err:
 }
 
 
+static void nl80211_check_global(struct nl80211_global *global)
+{
+	struct nl_handle *handle;
+	const char *groups[] = { "scan", "mlme", "regulatory", "vendor", NULL };
+	int ret;
+	unsigned int i;
+
+	/*
+	 * Try to re-add memberships to handle case of cfg80211 getting reloaded
+	 * and all registration having been cleared.
+	 */
+	handle = (void *) (((intptr_t) global->nl_event) ^
+			   ELOOP_SOCKET_INVALID);
+
+	for (i = 0; groups[i]; i++) {
+		ret = nl_get_multicast_id(global, "nl80211", groups[i]);
+		if (ret >= 0)
+			ret = nl_socket_add_membership(handle, ret);
+		if (ret < 0) {
+			wpa_printf(MSG_INFO,
+				   "nl80211: Could not re-add multicast membership for %s events: %d (%s)",
+				   groups[i], ret, strerror(-ret));
+		}
+	}
+}
+
+
 static void wpa_driver_nl80211_rfkill_blocked(void *ctx)
 {
 	wpa_printf(MSG_DEBUG, "nl80211: RFKILL blocked");
@@ -1674,6 +1703,7 @@ static void * wpa_driver_nl80211_drv_init(void *ctx, const char *ifname,
 	}
 
 	if (drv->global) {
+		nl80211_check_global(drv->global);
 		dl_list_add(&drv->global->interfaces, &drv->list);
 		drv->in_interface_list = 1;
 	}

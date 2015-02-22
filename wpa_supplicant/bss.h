@@ -1,6 +1,6 @@
 /*
  * BSS table
- * Copyright (c) 2009-2010, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2009-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -88,6 +88,10 @@ struct wpa_bss {
 	u64 tsf;
 	/** Time of the last update (i.e., Beacon or Probe Response RX) */
 	struct os_reltime last_update;
+	/** Estimated throughput in kbps */
+	unsigned int est_throughput;
+	/** Signal-to-noise ratio in dB */
+	int snr;
 	/** ANQP data */
 	struct wpa_bss_anqp *anqp;
 	/** Length of the following IE field in octets (from Probe Response) */

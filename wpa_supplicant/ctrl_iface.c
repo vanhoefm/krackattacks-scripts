@@ -4218,6 +4218,21 @@ static int print_bss_info(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 	}
 #endif /* CONFIG_MESH */
 
+	if (mask & WPA_BSS_MASK_SNR) {
+		ret = os_snprintf(pos, end - pos, "snr=%d\n", bss->snr);
+		if (os_snprintf_error(end - pos, ret))
+			return 0;
+		pos += ret;
+	}
+
+	if (mask & WPA_BSS_MASK_EST_THROUGHPUT) {
+		ret = os_snprintf(pos, end - pos, "est_throughput=%d\n",
+				  bss->est_throughput);
+		if (os_snprintf_error(end - pos, ret))
+			return 0;
+		pos += ret;
+	}
+
 	if (mask & WPA_BSS_MASK_DELIM) {
 		ret = os_snprintf(pos, end - pos, "====\n");
 		if (os_snprintf_error(end - pos, ret))

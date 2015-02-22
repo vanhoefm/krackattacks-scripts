@@ -274,6 +274,8 @@ extern "C" {
 #define WPA_BSS_MASK_WIFI_DISPLAY	BIT(16)
 #define WPA_BSS_MASK_DELIM		BIT(17)
 #define WPA_BSS_MASK_MESH_SCAN		BIT(18)
+#define WPA_BSS_MASK_SNR		BIT(19)
+#define WPA_BSS_MASK_EST_THROUGHPUT	BIT(20)
 
 
 /* VENDOR_ELEM_* frame id values */

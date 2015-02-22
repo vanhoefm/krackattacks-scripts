@@ -1,6 +1,6 @@
 /*
  * BSS table
- * Copyright (c) 2009-2012, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2009-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -286,6 +286,8 @@ static void wpa_bss_copy_res(struct wpa_bss *dst, struct wpa_scan_res *src,
 	dst->noise = src->noise;
 	dst->level = src->level;
 	dst->tsf = src->tsf;
+	dst->est_throughput = src->est_throughput;
+	dst->snr = src->snr;
 
 	calculate_update_time(fetch_time, src->age, &dst->last_update);
 }

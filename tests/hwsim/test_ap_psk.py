@@ -1040,3 +1040,70 @@ def test_ap_wpa2_psk_ifdown(dev, apdev):
         raise Exception("No INTERFACE-ENABLED event")
     dev[0].wait_connected()
     hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_ap_wpa2_psk_drop_first_msg_4(dev, apdev):
+    """WPA2-PSK and first EAPOL-Key msg 4/4 dropped"""
+    bssid = apdev[0]['bssid']
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    psk = '602e323e077bc63bd80307ef4745b754b0ae0a925c2638ecd13a794b9527b9e6'
+    params = hostapd.wpa2_params(ssid=ssid)
+    params['wpa_psk'] = psk
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd.request("SET ext_eapol_frame_io 1")
+    dev[0].request("SET ext_eapol_frame_io 1")
+    dev[0].connect(ssid, psk=passphrase, scan_freq="2412", wait_connect=False)
+    addr = dev[0].own_addr()
+
+    # EAPOL-Key msg 1/4
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    res = dev[0].request("EAPOL_RX " + bssid + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+    # EAPOL-Key msg 2/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+    res = hapd.request("EAPOL_RX " + addr + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to hostapd failed")
+
+    # EAPOL-Key msg 3/4
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from hostapd")
+    res = dev[0].request("EAPOL_RX " + bssid + " " + ev.split(' ')[2])
+    if "OK" not in res:
+        raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+    # EAPOL-Key msg 4/4
+    ev = dev[0].wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on EAPOL-TX from wpa_supplicant")
+    logger.info("Drop the first EAPOL-Key msg 4/4")
+
+    # wpa_supplicant believes now that 4-way handshake succeeded; hostapd
+    # doesn't. Use normal EAPOL TX/RX to handle retries.
+    hapd.request("SET ext_eapol_frame_io 0")
+    dev[0].request("SET ext_eapol_frame_io 0")
+    dev[0].wait_connected()
+
+    ev = hapd.wait_event(["AP-STA-CONNECTED"], timeout=15)
+    if ev is None:
+        raise Exception("Timeout on AP-STA-CONNECTED from hostapd")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-DISCONNECTED"], timeout=0.1)
+    if ev is not None:
+        logger.info("Disconnection detected")
+        # The EAPOL-Key retries are supposed to allow the connection to be
+        # established without having to reassociate. However, this does not
+        # currently work since mac80211 ends up encrypting EAPOL-Key msg 4/4
+        # after the pairwise key has been configured and AP will drop those and
+        # disconnect the station after reaching retransmission limit. Connection
+        # is then established after reassociation. Once that behavior has been
+        # optimized to prevent EAPOL-Key frame encryption for retransmission
+        # case, this exception can be uncommented here.
+        #raise Exception("Unexpected disconnection")

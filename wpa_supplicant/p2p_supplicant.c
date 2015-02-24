@@ -6339,6 +6339,24 @@ static int wpas_p2p_select_freq_no_pref(struct wpa_supplicant *wpa_s,
 			goto out;
 	}
 
+	/* try all channels in operating class 115 */
+	for (i = 0; i < 4; i++) {
+		params->freq = 5180 + i * 20;
+		if (!wpas_p2p_disallowed_freq(wpa_s->global, params->freq) &&
+		    freq_included(channels, params->freq) &&
+		    p2p_supported_freq(wpa_s->global->p2p, params->freq))
+			goto out;
+	}
+
+	/* try all channels in operating class 124 */
+	for (i = 0; i < 4; i++) {
+		params->freq = 5745 + i * 20;
+		if (!wpas_p2p_disallowed_freq(wpa_s->global, params->freq) &&
+		    freq_included(channels, params->freq) &&
+		    p2p_supported_freq(wpa_s->global->p2p, params->freq))
+			goto out;
+	}
+
 	/* try social channel class 180 channel 2 */
 	params->freq = 58320 + 1 * 2160;
 	if (!wpas_p2p_disallowed_freq(wpa_s->global, params->freq) &&
@@ -6355,7 +6373,7 @@ static int wpas_p2p_select_freq_no_pref(struct wpa_supplicant *wpa_s,
 			goto out;
 	}
 
-	wpa_printf(MSG_DEBUG, "P2P: No 2.4 and 60 GHz channel allowed");
+	wpa_printf(MSG_DEBUG, "P2P: No 2.4, 5, or 60 GHz channel allowed");
 	return -1;
 out:
 	wpa_printf(MSG_DEBUG, "P2P: Set GO freq %d MHz (no preference known)",

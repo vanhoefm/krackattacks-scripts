@@ -141,6 +141,7 @@ enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_DFS_OFFLOAD_CAC_NOP_FINISHED = 59,
 	QCA_NL80211_VENDOR_SUBCMD_DFS_OFFLOAD_RADAR_DETECTED = 60,
 	/* 61-90 - reserved for QCA */
+	QCA_NL80211_VENDOR_SUBCMD_DATA_OFFLOAD = 91,
 };
 
 
@@ -221,4 +222,25 @@ enum qca_wlan_vendor_features {
 	NUM_QCA_WLAN_VENDOR_FEATURES /* keep last */
 };
 
+/**
+ * enum qca_wlan_vendor_attr_data_offload_ind - Vendor Data Offload Indication
+ *
+ * @QCA_WLAN_VENDOR_ATTR_DATA_OFFLOAD_IND_SESSION: Session corresponding to
+ *	the offloaded data.
+ * @QCA_WLAN_VENDOR_ATTR_DATA_OFFLOAD_IND_PROTOCOL: Protocol of the offloaded
+ *	data.
+ * @QCA_WLAN_VENDOR_ATTR_DATA_OFFLOAD_IND_EVENT: Event type for the data offload
+ *	indication.
+ */
+enum qca_wlan_vendor_attr_data_offload_ind {
+	QCA_WLAN_VENDOR_ATTR_DATA_OFFLOAD_IND_INVALID = 0,
+	QCA_WLAN_VENDOR_ATTR_DATA_OFFLOAD_IND_SESSION,
+	QCA_WLAN_VENDOR_ATTR_DATA_OFFLOAD_IND_PROTOCOL,
+	QCA_WLAN_VENDOR_ATTR_DATA_OFFLOAD_IND_EVENT,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_DATA_OFFLOAD_IND_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_DATA_OFFLOAD_IND_MAX =
+	QCA_WLAN_VENDOR_ATTR_DATA_OFFLOAD_IND_AFTER_LAST - 1
+};
 #endif /* QCA_VENDOR_H */

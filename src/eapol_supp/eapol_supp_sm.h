@@ -271,6 +271,14 @@ struct eapol_ctx {
 	void (*status_cb)(void *ctx, const char *status,
 			  const char *parameter);
 
+#ifdef CONFIG_EAP_PROXY
+	/**
+	 * eap_proxy_cb - Callback signifying any updates from eap_proxy
+	 * @ctx: eapol_ctx from eap_peer_sm_init() call
+	 */
+	void (*eap_proxy_cb)(void *ctx);
+#endif /* CONFIG_EAP_PROXY */
+
 	/**
 	 * set_anon_id - Set or add anonymous identity
 	 * @ctx: eapol_ctx from eap_peer_sm_init() call

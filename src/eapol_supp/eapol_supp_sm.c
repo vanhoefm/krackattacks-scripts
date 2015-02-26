@@ -1977,6 +1977,17 @@ static void eapol_sm_notify_status(void *ctx, const char *status,
 }
 
 
+#ifdef CONFIG_EAP_PROXY
+static void eapol_sm_eap_proxy_cb(void *ctx)
+{
+	struct eapol_sm *sm = ctx;
+
+	if (sm->ctx->eap_proxy_cb)
+		sm->ctx->eap_proxy_cb(sm->ctx->ctx);
+}
+#endif /* CONFIG_EAP_PROXY */
+
+
 static void eapol_sm_set_anon_id(void *ctx, const u8 *id, size_t len)
 {
 	struct eapol_sm *sm = ctx;
@@ -2000,6 +2011,9 @@ static struct eapol_callbacks eapol_cb =
 	eapol_sm_eap_param_needed,
 	eapol_sm_notify_cert,
 	eapol_sm_notify_status,
+#ifdef CONFIG_EAP_PROXY
+	eapol_sm_eap_proxy_cb,
+#endif /* CONFIG_EAP_PROXY */
 	eapol_sm_set_anon_id
 };
 

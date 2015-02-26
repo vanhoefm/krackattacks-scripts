@@ -842,6 +842,25 @@ static void wpa_supplicant_eap_param_needed(void *ctx,
 #endif /* CONFIG_CTRL_IFACE || !CONFIG_NO_STDOUT_DEBUG */
 
 
+#ifdef CONFIG_EAP_PROXY
+static void wpa_supplicant_eap_proxy_cb(void *ctx)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+	size_t len;
+
+	wpa_s->mnc_len = eapol_sm_get_eap_proxy_imsi(wpa_s->eapol,
+						     wpa_s->imsi, &len);
+	if (wpa_s->mnc_len > 0) {
+		wpa_s->imsi[len] = '\0';
+		wpa_printf(MSG_DEBUG, "eap_proxy: IMSI %s (MNC length %d)",
+			   wpa_s->imsi, wpa_s->mnc_len);
+	} else {
+		wpa_printf(MSG_DEBUG, "eap_proxy: IMSI not available");
+	}
+}
+#endif /* CONFIG_EAP_PROXY */
+
+
 static void wpa_supplicant_port_cb(void *ctx, int authorized)
 {
 	struct wpa_supplicant *wpa_s = ctx;
@@ -947,6 +966,9 @@ int wpa_supplicant_init_eapol(struct wpa_supplicant *wpa_s)
 	ctx->openssl_ciphers = wpa_s->conf->openssl_ciphers;
 	ctx->wps = wpa_s->wps;
 	ctx->eap_param_needed = wpa_supplicant_eap_param_needed;
+#ifdef CONFIG_EAP_PROXY
+	ctx->eap_proxy_cb = wpa_supplicant_eap_proxy_cb;
+#endif /* CONFIG_EAP_PROXY */
 	ctx->port_cb = wpa_supplicant_port_cb;
 	ctx->cb = wpa_supplicant_eapol_cb;
 	ctx->cert_cb = wpa_supplicant_cert_cb;

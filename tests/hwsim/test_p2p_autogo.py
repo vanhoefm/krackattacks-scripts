@@ -606,3 +606,19 @@ def test_autogo_join_auto_go_neg_after_seeing_go(dev):
     dev[0].remove_group()
     dev[1].wait_go_ending_session()
     dev[1].flush_scan_cache()
+
+def test_go_search_non_social(dev):
+    """P2P_FIND with freq parameter to scan a single channel"""
+    addr0 = dev[0].p2p_dev_addr()
+    autogo(dev[0], freq=2422)
+    dev[1].p2p_find(freq=2422)
+    ev = dev[1].wait_event(["P2P-DEVICE-FOUND"], timeout=3.5)
+    if ev is None:
+        raise Exception("Did not find GO quickly enough")
+    dev[2].p2p_listen()
+    ev = dev[1].wait_event(["P2P-DEVICE-FOUND"], timeout=5)
+    if ev is None:
+        raise Exception("Did not find peer")
+    dev[2].p2p_stop_find()
+    dev[1].p2p_stop_find()
+    dev[0].remove_group()

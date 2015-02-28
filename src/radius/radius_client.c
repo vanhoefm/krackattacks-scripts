@@ -335,13 +335,18 @@ static int radius_client_retransmit(struct radius_client_data *radius,
 	struct hostapd_radius_servers *conf = radius->conf;
 	int s;
 	struct wpabuf *buf;
+	size_t prev_num_msgs;
 
 	if (entry->msg_type == RADIUS_ACCT ||
 	    entry->msg_type == RADIUS_ACCT_INTERIM) {
 		if (radius->acct_sock < 0)
 			radius_client_init_acct(radius);
-		if (radius->acct_sock < 0 && conf->num_acct_servers > 1)
+		if (radius->acct_sock < 0 && conf->num_acct_servers > 1) {
+			prev_num_msgs = radius->num_msgs;
 			radius_client_auth_failover(radius);
+			if (prev_num_msgs != radius->num_msgs)
+				return 0;
+		}
 		s = radius->acct_sock;
 		if (entry->attempts == 0)
 			conf->acct_server->requests++;
@@ -352,8 +357,12 @@ static int radius_client_retransmit(struct radius_client_data *radius,
 	} else {
 		if (radius->auth_sock < 0)
 			radius_client_init_auth(radius);
-		if (radius->auth_sock < 0 && conf->num_auth_servers > 1)
+		if (radius->auth_sock < 0 && conf->num_auth_servers > 1) {
+			prev_num_msgs = radius->num_msgs;
 			radius_client_auth_failover(radius);
+			if (prev_num_msgs != radius->num_msgs)
+				return 0;
+		}
 		s = radius->auth_sock;
 		if (entry->attempts == 0)
 			conf->auth_server->requests++;

@@ -856,6 +856,7 @@ def test_grpform_no_wsc_done(dev):
         if ev is None:
             raise Exception("Group formation timed out on P2P Client")
         dev[0].remove_group()
+        dev[1].wait_go_ending_session()
 
         if mode != "P2P GO - group formation":
             raise Exception("Unexpected mode on GO during group formation: " + mode)

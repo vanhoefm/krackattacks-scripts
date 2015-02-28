@@ -168,6 +168,17 @@ static int bitfield_tests(void)
 
 	bitfield_free(bf);
 
+	bf = bitfield_alloc(8);
+	if (bf == NULL)
+		return -1;
+	if (bitfield_get_first_zero(bf) != 0)
+		errors++;
+	for (i = 0; i < 8; i++)
+		bitfield_set(bf, i);
+	if (bitfield_get_first_zero(bf) != -1)
+		errors++;
+	bitfield_free(bf);
+
 	if (errors) {
 		wpa_printf(MSG_ERROR, "%d bitfield test(s) failed", errors);
 		return -1;

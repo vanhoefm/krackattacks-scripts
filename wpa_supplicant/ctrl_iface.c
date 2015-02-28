@@ -4508,7 +4508,7 @@ static int p2p_ctrl_find(struct wpa_supplicant *wpa_s, char *cmd)
 	u8 dev_type[WPS_DEV_TYPE_LEN], *_dev_type = NULL;
 	char *pos;
 	unsigned int search_delay;
-	const char *seek[P2P_MAX_QUERY_HASH + 1];
+	const char *_seek[P2P_MAX_QUERY_HASH + 1], **seek = NULL;
 	u8 seek_count = 0;
 	int freq = 0;
 
@@ -4551,11 +4551,16 @@ static int p2p_ctrl_find(struct wpa_supplicant *wpa_s, char *cmd)
 		char *term;
 
 		term = os_strchr(pos + 1, ' ');
-		seek[seek_count++] = pos + 6;
+		_seek[seek_count++] = pos + 6;
+		seek = _seek;
 		pos = os_strstr(pos + 6, " seek=");
 
 		if (term)
 			*term = '\0';
+	}
+	if (seek_count > P2P_MAX_QUERY_HASH) {
+		seek[0] = NULL;
+		seek_count = 1;
 	}
 
 	pos = os_strstr(cmd, "freq=");
@@ -4564,18 +4569,6 @@ static int p2p_ctrl_find(struct wpa_supplicant *wpa_s, char *cmd)
 		freq = atoi(pos);
 		if (freq <= 0)
 			return -1;
-	}
-
-	if (!seek_count)
-		return wpas_p2p_find(wpa_s, timeout, type, _dev_type != NULL,
-				     _dev_type, _dev_id,
-				     search_delay, 0, NULL, freq);
-
-	if (seek_count > P2P_MAX_QUERY_HASH) {
-		seek[0] = NULL;
-		return wpas_p2p_find(wpa_s, timeout, type, _dev_type != NULL,
-				     _dev_type, _dev_id,
-				     search_delay, 1, seek, freq);
 	}
 
 	return wpas_p2p_find(wpa_s, timeout, type, _dev_type != NULL, _dev_type,

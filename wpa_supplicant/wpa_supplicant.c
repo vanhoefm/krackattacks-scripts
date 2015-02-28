@@ -1865,7 +1865,7 @@ void ibss_mesh_setup_freq(struct wpa_supplicant *wpa_s,
 				    vht_freq.vht_enabled,
 				    freq->sec_channel_offset,
 				    VHT_CHANWIDTH_80MHZ,
-				    vht80[i] + 6, 0, 0) != 0)
+				    vht80[j] + 6, 0, 0) != 0)
 		return;
 
 	*freq = vht_freq;

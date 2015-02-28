@@ -1,6 +1,6 @@
 /*
  * RADIUS client
- * Copyright (c) 2002-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -236,6 +236,8 @@ radius_change_server(struct radius_client_data *radius,
 		     int sock, int sock6, int auth);
 static int radius_client_init_acct(struct radius_client_data *radius);
 static int radius_client_init_auth(struct radius_client_data *radius);
+static void radius_client_auth_failover(struct radius_client_data *radius);
+static void radius_client_acct_failover(struct radius_client_data *radius);
 
 
 static void radius_client_msg_free(struct radius_msg_list *req)
@@ -304,7 +306,7 @@ static int radius_client_handle_send_error(struct radius_client_data *radius,
 {
 #ifndef CONFIG_NATIVE_WINDOWS
 	int _errno = errno;
-	wpa_printf(MSG_INFO, "send[RADIUS]: %s", strerror(errno));
+	wpa_printf(MSG_INFO, "send[RADIUS,s=%d]: %s", s, strerror(errno));
 	if (_errno == ENOTCONN || _errno == EDESTADDRREQ || _errno == EINVAL ||
 	    _errno == EBADF || _errno == ENETUNREACH) {
 		hostapd_logger(radius->ctx, NULL, HOSTAPD_MODULE_RADIUS,
@@ -336,6 +338,10 @@ static int radius_client_retransmit(struct radius_client_data *radius,
 
 	if (entry->msg_type == RADIUS_ACCT ||
 	    entry->msg_type == RADIUS_ACCT_INTERIM) {
+		if (radius->acct_sock < 0)
+			radius_client_init_acct(radius);
+		if (radius->acct_sock < 0 && conf->num_acct_servers > 1)
+			radius_client_auth_failover(radius);
 		s = radius->acct_sock;
 		if (entry->attempts == 0)
 			conf->acct_server->requests++;
@@ -344,6 +350,10 @@ static int radius_client_retransmit(struct radius_client_data *radius,
 			conf->acct_server->retransmissions++;
 		}
 	} else {
+		if (radius->auth_sock < 0)
+			radius_client_init_auth(radius);
+		if (radius->auth_sock < 0 && conf->num_auth_servers > 1)
+			radius_client_auth_failover(radius);
 		s = radius->auth_sock;
 		if (entry->attempts == 0)
 			conf->auth_server->requests++;
@@ -351,6 +361,11 @@ static int radius_client_retransmit(struct radius_client_data *radius,
 			conf->auth_server->timeouts++;
 			conf->auth_server->retransmissions++;
 		}
+	}
+	if (s < 0) {
+		wpa_printf(MSG_INFO,
+			   "RADIUS: No valid socket for retransmission");
+		return 1;
 	}
 
 	/* retransmit; remove entry if too many attempts */
@@ -388,7 +403,6 @@ static void radius_client_timer(void *eloop_ctx, void *timeout_ctx)
 	os_time_t first;
 	struct radius_msg_list *entry, *prev, *tmp;
 	int auth_failover = 0, acct_failover = 0;
-	char abuf[50];
 	size_t prev_num_msgs;
 	int s;
 
@@ -453,54 +467,70 @@ static void radius_client_timer(void *eloop_ctx, void *timeout_ctx)
 			       (long int) (first - now.sec));
 	}
 
-	if (auth_failover && conf->num_auth_servers > 1) {
-		struct hostapd_radius_server *next, *old;
-		old = conf->auth_server;
-		hostapd_logger(radius->ctx, NULL, HOSTAPD_MODULE_RADIUS,
-			       HOSTAPD_LEVEL_NOTICE,
-			       "No response from Authentication server "
-			       "%s:%d - failover",
-			       hostapd_ip_txt(&old->addr, abuf, sizeof(abuf)),
-			       old->port);
+	if (auth_failover && conf->num_auth_servers > 1)
+		radius_client_auth_failover(radius);
 
-		for (entry = radius->msgs; entry; entry = entry->next) {
-			if (entry->msg_type == RADIUS_AUTH)
-				old->timeouts++;
-		}
+	if (acct_failover && conf->num_acct_servers > 1)
+		radius_client_acct_failover(radius);
+}
 
-		next = old + 1;
-		if (next > &(conf->auth_servers[conf->num_auth_servers - 1]))
-			next = conf->auth_servers;
-		conf->auth_server = next;
-		radius_change_server(radius, next, old,
-				     radius->auth_serv_sock,
-				     radius->auth_serv_sock6, 1);
+
+static void radius_client_auth_failover(struct radius_client_data *radius)
+{
+	struct hostapd_radius_servers *conf = radius->conf;
+	struct hostapd_radius_server *next, *old;
+	struct radius_msg_list *entry;
+	char abuf[50];
+
+	old = conf->auth_server;
+	hostapd_logger(radius->ctx, NULL, HOSTAPD_MODULE_RADIUS,
+		       HOSTAPD_LEVEL_NOTICE,
+		       "No response from Authentication server %s:%d - failover",
+		       hostapd_ip_txt(&old->addr, abuf, sizeof(abuf)),
+		       old->port);
+
+	for (entry = radius->msgs; entry; entry = entry->next) {
+		if (entry->msg_type == RADIUS_AUTH)
+			old->timeouts++;
 	}
 
-	if (acct_failover && conf->num_acct_servers > 1) {
-		struct hostapd_radius_server *next, *old;
-		old = conf->acct_server;
-		hostapd_logger(radius->ctx, NULL, HOSTAPD_MODULE_RADIUS,
-			       HOSTAPD_LEVEL_NOTICE,
-			       "No response from Accounting server "
-			       "%s:%d - failover",
-			       hostapd_ip_txt(&old->addr, abuf, sizeof(abuf)),
-			       old->port);
+	next = old + 1;
+	if (next > &(conf->auth_servers[conf->num_auth_servers - 1]))
+		next = conf->auth_servers;
+	conf->auth_server = next;
+	radius_change_server(radius, next, old,
+			     radius->auth_serv_sock,
+			     radius->auth_serv_sock6, 1);
+}
 
-		for (entry = radius->msgs; entry; entry = entry->next) {
-			if (entry->msg_type == RADIUS_ACCT ||
-			    entry->msg_type == RADIUS_ACCT_INTERIM)
-				old->timeouts++;
-		}
 
-		next = old + 1;
-		if (next > &conf->acct_servers[conf->num_acct_servers - 1])
-			next = conf->acct_servers;
-		conf->acct_server = next;
-		radius_change_server(radius, next, old,
-				     radius->acct_serv_sock,
-				     radius->acct_serv_sock6, 0);
+static void radius_client_acct_failover(struct radius_client_data *radius)
+{
+	struct hostapd_radius_servers *conf = radius->conf;
+	struct hostapd_radius_server *next, *old;
+	struct radius_msg_list *entry;
+	char abuf[50];
+
+	old = conf->acct_server;
+	hostapd_logger(radius->ctx, NULL, HOSTAPD_MODULE_RADIUS,
+		       HOSTAPD_LEVEL_NOTICE,
+		       "No response from Accounting server %s:%d - failover",
+		       hostapd_ip_txt(&old->addr, abuf, sizeof(abuf)),
+		       old->port);
+
+	for (entry = radius->msgs; entry; entry = entry->next) {
+		if (entry->msg_type == RADIUS_ACCT ||
+		    entry->msg_type == RADIUS_ACCT_INTERIM)
+			old->timeouts++;
 	}
+
+	next = old + 1;
+	if (next > &conf->acct_servers[conf->num_acct_servers - 1])
+		next = conf->acct_servers;
+	conf->acct_server = next;
+	radius_change_server(radius, next, old,
+			     radius->acct_serv_sock,
+			     radius->acct_serv_sock6, 0);
 }
 
 

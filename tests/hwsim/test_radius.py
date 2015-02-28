@@ -64,6 +64,25 @@ def test_radius_auth_unreachable2(dev, apdev):
     if int(mib["radiusAuthClientAccessRetransmissions"]) < 1:
         raise Exception("Missing RADIUS Authentication retransmission")
 
+def test_radius_auth_unreachable3(dev, apdev):
+    """RADIUS Authentication server initially unreachable, but then available"""
+    subprocess.call(['ip', 'ro', 'replace', 'blackhole', '192.168.213.18'])
+    params = hostapd.wpa2_eap_params(ssid="radius-auth")
+    params['auth_server_addr'] = "192.168.213.18"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    connect(dev[0], "radius-auth", wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"])
+    if ev is None:
+        raise Exception("Timeout on EAP start")
+    subprocess.call(['ip', 'ro', 'del', 'blackhole', '192.168.213.18'])
+    time.sleep(0.1)
+    dev[0].request("DISCONNECT")
+    hapd.set('auth_server_addr_replace', '127.0.0.1')
+    dev[0].request("RECONNECT")
+
+    dev[0].wait_connected()
+
 def test_radius_acct_unreachable(dev, apdev):
     """RADIUS Accounting server unreachable"""
     params = hostapd.wpa2_eap_params(ssid="radius-acct")

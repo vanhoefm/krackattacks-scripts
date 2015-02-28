@@ -90,13 +90,55 @@ u8 * hostapd_eid_vht_operation(struct hostapd_data *hapd, u8 *eid)
 }
 
 
+static int check_valid_vht_mcs(struct hostapd_hw_modes *mode,
+			       const u8 *sta_vht_capab)
+{
+	const struct ieee80211_vht_capabilities *vht_cap;
+	struct ieee80211_vht_capabilities ap_vht_cap;
+	u16 sta_rx_mcs_set, ap_tx_mcs_set;
+	int i;
+
+	if (!mode)
+		return 1;
+
+	/*
+	 * Disable VHT caps for STAs for which there is not even a single
+	 * allowed MCS in any supported number of streams, i.e., STA is
+	 * advertising 3 (not supported) as VHT MCS rates for all supported
+	 * stream cases.
+	 */
+	os_memcpy(&ap_vht_cap.vht_supported_mcs_set, mode->vht_mcs_set,
+		  sizeof(ap_vht_cap.vht_supported_mcs_set));
+	vht_cap = (const struct ieee80211_vht_capabilities *) sta_vht_capab;
+
+	/* AP Tx MCS map vs. STA Rx MCS map */
+	sta_rx_mcs_set = le_to_host16(vht_cap->vht_supported_mcs_set.rx_map);
+	ap_tx_mcs_set = le_to_host16(ap_vht_cap.vht_supported_mcs_set.tx_map);
+
+	for (i = 0; i < VHT_RX_NSS_MAX_STREAMS; i++) {
+		if ((ap_tx_mcs_set & (0x3 << (i * 2))) == 3)
+			continue;
+
+		if ((sta_rx_mcs_set & (0x3 << (i * 2))) == 3)
+			continue;
+
+		return 1;
+	}
+
+	wpa_printf(MSG_DEBUG,
+		   "No matching VHT MCS found between AP TX and STA RX");
+	return 0;
+}
+
+
 u16 copy_sta_vht_capab(struct hostapd_data *hapd, struct sta_info *sta,
 		       const u8 *vht_capab, size_t vht_capab_len)
 {
 	/* Disable VHT caps for STAs associated to no-VHT BSSes. */
 	if (!vht_capab ||
 	    vht_capab_len < sizeof(struct ieee80211_vht_capabilities) ||
-	    hapd->conf->disable_11ac) {
+	    hapd->conf->disable_11ac ||
+	    !check_valid_vht_mcs(hapd->iface->current_mode, vht_capab)) {
 		sta->flags &= ~WLAN_STA_VHT;
 		os_free(sta->vht_capabilities);
 		sta->vht_capabilities = NULL;

@@ -1861,7 +1861,7 @@ static unsigned int max_ht40_rate(int snr)
 		return 81000; /* HT40 MCS4 */
 	if (snr < 22)
 		return 108000; /* HT40 MCS5 */
-	if (snr < 22)
+	if (snr < 24)
 		return 121500; /* HT40 MCS6 */
 	return 135000; /* HT40 MCS7 */
 }

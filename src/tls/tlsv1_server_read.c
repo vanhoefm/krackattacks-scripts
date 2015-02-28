@@ -775,7 +775,6 @@ static int tls_process_certificate_verify(struct tlsv1_server *conn, u8 ct,
 	u8 type;
 	size_t hlen;
 	u8 hash[MD5_MAC_LEN + SHA1_MAC_LEN], *hpos;
-	enum { SIGN_ALG_RSA, SIGN_ALG_DSA } alg = SIGN_ALG_RSA;
 	u8 alert;
 
 	if (ct == TLS_CONTENT_TYPE_CHANGE_CIPHER_SPEC) {
@@ -883,21 +882,17 @@ static int tls_process_certificate_verify(struct tlsv1_server *conn, u8 ct,
 	} else {
 #endif /* CONFIG_TLSV12 */
 
-	if (alg == SIGN_ALG_RSA) {
-		hlen = MD5_MAC_LEN;
-		if (conn->verify.md5_cert == NULL ||
-		    crypto_hash_finish(conn->verify.md5_cert, hpos, &hlen) < 0)
-		{
-			tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
-					   TLS_ALERT_INTERNAL_ERROR);
-			conn->verify.md5_cert = NULL;
-			crypto_hash_finish(conn->verify.sha1_cert, NULL, NULL);
-			conn->verify.sha1_cert = NULL;
-			return -1;
-		}
-		hpos += MD5_MAC_LEN;
-	} else
-		crypto_hash_finish(conn->verify.md5_cert, NULL, NULL);
+	hlen = MD5_MAC_LEN;
+	if (conn->verify.md5_cert == NULL ||
+	    crypto_hash_finish(conn->verify.md5_cert, hpos, &hlen) < 0) {
+		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
+				   TLS_ALERT_INTERNAL_ERROR);
+		conn->verify.md5_cert = NULL;
+		crypto_hash_finish(conn->verify.sha1_cert, NULL, NULL);
+		conn->verify.sha1_cert = NULL;
+		return -1;
+	}
+	hpos += MD5_MAC_LEN;
 
 	conn->verify.md5_cert = NULL;
 	hlen = SHA1_MAC_LEN;
@@ -910,8 +905,7 @@ static int tls_process_certificate_verify(struct tlsv1_server *conn, u8 ct,
 	}
 	conn->verify.sha1_cert = NULL;
 
-	if (alg == SIGN_ALG_RSA)
-		hlen += MD5_MAC_LEN;
+	hlen += MD5_MAC_LEN;
 
 #ifdef CONFIG_TLSV12
 	}

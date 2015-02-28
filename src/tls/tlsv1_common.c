@@ -366,23 +366,20 @@ int tls_key_x_server_params_hash(u16 tls_version, const u8 *client_random,
 {
 	u8 *hpos;
 	size_t hlen;
-	enum { SIGN_ALG_RSA, SIGN_ALG_DSA } alg = SIGN_ALG_RSA;
 	struct crypto_hash *ctx;
 
 	hpos = hash;
 
-	if (alg == SIGN_ALG_RSA) {
-		ctx = crypto_hash_init(CRYPTO_HASH_ALG_MD5, NULL, 0);
-		if (ctx == NULL)
-			return -1;
-		crypto_hash_update(ctx, client_random, TLS_RANDOM_LEN);
-		crypto_hash_update(ctx, server_random, TLS_RANDOM_LEN);
-		crypto_hash_update(ctx, server_params, server_params_len);
-		hlen = MD5_MAC_LEN;
-		if (crypto_hash_finish(ctx, hash, &hlen) < 0)
-			return -1;
-		hpos += hlen;
-	}
+	ctx = crypto_hash_init(CRYPTO_HASH_ALG_MD5, NULL, 0);
+	if (ctx == NULL)
+		return -1;
+	crypto_hash_update(ctx, client_random, TLS_RANDOM_LEN);
+	crypto_hash_update(ctx, server_random, TLS_RANDOM_LEN);
+	crypto_hash_update(ctx, server_params, server_params_len);
+	hlen = MD5_MAC_LEN;
+	if (crypto_hash_finish(ctx, hash, &hlen) < 0)
+		return -1;
+	hpos += hlen;
 
 	ctx = crypto_hash_init(CRYPTO_HASH_ALG_SHA1, NULL, 0);
 	if (ctx == NULL)

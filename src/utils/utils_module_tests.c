@@ -1,6 +1,6 @@
 /*
  * utils module tests
- * Copyright (c) 2014, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2014-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -12,6 +12,7 @@
 #include "utils/bitfield.h"
 #include "utils/ext_password.h"
 #include "utils/trace.h"
+#include "utils/base64.h"
 
 
 struct printf_test_data {
@@ -249,6 +250,69 @@ static int trace_tests(void)
 }
 
 
+static int base64_tests(void)
+{
+	int errors = 0;
+	unsigned char *res;
+	size_t res_len;
+
+	wpa_printf(MSG_INFO, "base64 tests");
+
+	res = base64_encode((const unsigned char *) "", ~0, &res_len);
+	if (res) {
+		errors++;
+		os_free(res);
+	}
+
+	res = base64_encode((const unsigned char *) "=", 1, &res_len);
+	if (!res || res_len != 5 || res[0] != 'P' || res[1] != 'Q' ||
+	    res[2] != '=' || res[3] != '=' || res[4] != '\n')
+		errors++;
+	os_free(res);
+
+	res = base64_encode((const unsigned char *) "=", 1, NULL);
+	if (!res || res[0] != 'P' || res[1] != 'Q' ||
+	    res[2] != '=' || res[3] != '=' || res[4] != '\n')
+		errors++;
+	os_free(res);
+
+	res = base64_decode((const unsigned char *) "", 0, &res_len);
+	if (res) {
+		errors++;
+		os_free(res);
+	}
+
+	res = base64_decode((const unsigned char *) "a", 1, &res_len);
+	if (res) {
+		errors++;
+		os_free(res);
+	}
+
+	res = base64_decode((const unsigned char *) "====", 4, &res_len);
+	if (res) {
+		errors++;
+		os_free(res);
+	}
+
+	res = base64_decode((const unsigned char *) "PQ==", 4, &res_len);
+	if (!res || res_len != 1 || res[0] != '=')
+		errors++;
+	os_free(res);
+
+	res = base64_decode((const unsigned char *) "P.Q-=!=*", 8, &res_len);
+	if (!res || res_len != 1 || res[0] != '=')
+		errors++;
+	os_free(res);
+
+	if (errors) {
+		wpa_printf(MSG_ERROR, "%d base64 test(s) failed", errors);
+		return -1;
+	}
+
+	return 0;
+}
+
+
 int utils_module_tests(void)
 {
 	int ret = 0;
@@ -259,6 +323,7 @@ int utils_module_tests(void)
 	    ext_password_tests() < 0 ||
 	    trace_tests() < 0 ||
 	    bitfield_tests() < 0 ||
+	    base64_tests() < 0 ||
 	    int_array_tests() < 0)
 		ret = -1;
 

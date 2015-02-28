@@ -2200,6 +2200,15 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			return 1;
 		}
 	} else if (bss->radius->auth_server &&
+		   os_strcmp(buf, "auth_server_addr_replace") == 0) {
+		if (hostapd_parse_ip_addr(pos,
+					  &bss->radius->auth_server->addr)) {
+			wpa_printf(MSG_ERROR,
+				   "Line %d: invalid IP address '%s'",
+				   line, pos);
+			return 1;
+		}
+	} else if (bss->radius->auth_server &&
 		   os_strcmp(buf, "auth_server_port") == 0) {
 		bss->radius->auth_server->port = atoi(pos);
 	} else if (bss->radius->auth_server &&
@@ -2219,6 +2228,15 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			    &bss->radius->acct_servers,
 			    &bss->radius->num_acct_servers, pos, 1813,
 			    &bss->radius->acct_server)) {
+			wpa_printf(MSG_ERROR,
+				   "Line %d: invalid IP address '%s'",
+				   line, pos);
+			return 1;
+		}
+	} else if (bss->radius->acct_server &&
+		   os_strcmp(buf, "acct_server_addr_replace") == 0) {
+		if (hostapd_parse_ip_addr(pos,
+					  &bss->radius->acct_server->addr)) {
 			wpa_printf(MSG_ERROR,
 				   "Line %d: invalid IP address '%s'",
 				   line, pos);

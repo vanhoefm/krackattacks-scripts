@@ -3521,13 +3521,19 @@ static void p2p_go_neg_resp_failure_cb(struct p2p_data *p2p, int success,
 	p2p_dbg(p2p, "GO Negotiation Response (failure) TX callback: success=%d", success);
 	if (p2p->go_neg_peer && p2p->go_neg_peer->status != P2P_SC_SUCCESS) {
 		p2p_go_neg_failed(p2p, p2p->go_neg_peer->status);
-	} else if (success) {
+		return;
+	}
+
+	if (success) {
 		struct p2p_device *dev;
 		dev = p2p_get_device(p2p, addr);
 		if (dev &&
 		    dev->status == P2P_SC_FAIL_INFO_CURRENTLY_UNAVAILABLE)
 			dev->flags |= P2P_DEV_PEER_WAITING_RESPONSE;
 	}
+
+	if (p2p->state == P2P_SEARCH || p2p->state == P2P_SD_DURING_FIND)
+		p2p_continue_find(p2p);
 }
 
 

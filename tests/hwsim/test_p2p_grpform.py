@@ -934,3 +934,43 @@ def test_grpform_pbc_multiple(dev):
     finally:
         dev[1].request("SET passive_scan 0")
         dev[1].flush_scan_cache()
+
+def test_grpform_not_ready(dev):
+    """Not ready for GO Negotiation (listen)"""
+    addr0 = dev[0].p2p_dev_addr()
+    addr2 = dev[2].p2p_dev_addr()
+    dev[0].p2p_listen()
+    if not dev[1].discover_peer(addr0):
+        raise Exception("Could not discover peer")
+    dev[1].global_request("P2P_CONNECT " + addr0 + " pbc")
+    ev = dev[0].wait_global_event(["P2P-GO-NEG-REQUEST"], timeout=5)
+    if ev is None:
+        raise Exception("No P2P-GO-NEG-REQUEST event")
+    dev[0].dump_monitor()
+    time.sleep(5)
+    if not dev[2].discover_peer(addr0):
+        raise Exception("Could not discover peer(2)")
+    for i in range(3):
+        dev[i].p2p_stop_find()
+
+def test_grpform_not_ready2(dev):
+    """Not ready for GO Negotiation (search)"""
+    addr0 = dev[0].p2p_dev_addr()
+    addr2 = dev[2].p2p_dev_addr()
+    dev[0].p2p_find(social=True)
+    if not dev[1].discover_peer(addr0):
+        raise Exception("Could not discover peer")
+    dev[1].global_request("P2P_CONNECT " + addr0 + " pbc")
+    ev = dev[0].wait_global_event(["P2P-GO-NEG-REQUEST"], timeout=5)
+    if ev is None:
+        raise Exception("No P2P-GO-NEG-REQUEST event")
+    dev[0].dump_monitor()
+    time.sleep(1)
+    dev[2].p2p_listen()
+    ev = dev[0].wait_global_event(["P2P-DEVICE-FOUND"], timeout=10)
+    if ev is None:
+        raise Exception("Peer not discovered after GO Neg Resp(status=1) TX")
+    if addr2 not in ev:
+        raise Exception("Unexpected peer discovered: " + ev)
+    for i in range(3):
+        dev[i].p2p_stop_find()

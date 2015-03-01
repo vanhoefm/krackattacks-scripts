@@ -146,6 +146,19 @@ def test_radius_acct_unreachable3(dev, apdev):
     if req_e <= req_s:
         raise Exception("Unexpected RADIUS server acct MIB value")
 
+def test_radius_acct_unreachable4(dev, apdev):
+    """RADIUS Accounting server unreachable and multiple STAs"""
+    params = hostapd.wpa2_eap_params(ssid="radius-acct")
+    params['acct_server_addr'] = "127.0.0.1"
+    params['acct_server_port'] = "18139"
+    params['acct_server_shared_secret'] = "radius"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    for i in range(20):
+        connect(dev[0], "radius-acct")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
 def test_radius_acct(dev, apdev):
     """RADIUS Accounting"""
     as_hapd = hostapd.Hostapd("as")

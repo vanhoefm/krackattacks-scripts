@@ -174,3 +174,54 @@ def test_p2p_device_misuses(dev, apdev):
 
         wpas.request("DISCONNECT")
         wpas.wait_disconnected()
+
+def test_p2p_device_incorrect_command_interface(dev, apdev):
+    """cfg80211 P2P Device and P2P_* command on incorrect interface"""
+    with HWSimRadio(use_p2p_device=True) as (radio, iface):
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add(iface)
+
+        dev[0].p2p_listen()
+        wpas.request('P2P_FIND type=social')
+        ev = wpas.wait_global_event(["P2P-DEVICE-FOUND"], timeout=10)
+        if ev is None:
+            raise Exception("Peer not found")
+        ev = wpas.wait_event(["P2P-DEVICE-FOUND"], timeout=0.1)
+        if ev is not None:
+            raise Exception("Unexpected P2P-DEVICE-FOUND event on station interface")
+
+        pin = wpas.wps_read_pin()
+        dev[0].p2p_go_neg_auth(wpas.p2p_dev_addr(), pin, "enter", go_intent=14,
+                               freq=2412)
+        wpas.request('P2P_STOP_FIND')
+        if "OK" not in wpas.request('P2P_CONNECT ' + dev[0].p2p_dev_addr() + ' ' + pin + ' display go_intent=1'):
+            raise Exception("P2P_CONNECT failed")
+
+        ev = wpas.wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
+        if ev is None:
+            raise Exception("Group formation timed out")
+        wpas.group_form_result(ev)
+
+        ev = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
+        if ev is None:
+            raise Exception("Group formation timed out(2)")
+        dev[0].group_form_result(ev)
+
+        dev[0].remove_group()
+        wpas.wait_go_ending_session()
+
+def test_p2p_device_incorrect_command_interface2(dev, apdev):
+    """cfg80211 P2P Device and P2P_GROUP_ADD command on incorrect interface"""
+    with HWSimRadio(use_p2p_device=True) as (radio, iface):
+        wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+        wpas.interface_add(iface)
+
+        print wpas.request('P2P_GROUP_ADD')
+        ev = wpas.wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
+        if ev is None:
+            raise Exception("Group formation timed out")
+        res = wpas.group_form_result(ev)
+        logger.info("Group results: " + str(res))
+        wpas.remove_group()
+        if not res['ifname'].startswith('p2p-' + iface + '-'):
+            raise Exception("Unexpected group ifname: " + res['ifname'])

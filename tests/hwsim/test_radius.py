@@ -920,3 +920,24 @@ def test_radius_psk(dev, apdev):
     finally:
         t_events['stop'].set()
         t.join()
+
+def test_radius_auth_force_client_addr(dev, apdev):
+    """RADIUS client address specified"""
+    params = hostapd.wpa2_eap_params(ssid="radius-auth")
+    params['radius_client_addr'] = "127.0.0.1"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    connect(dev[0], "radius-auth")
+
+def test_radius_auth_force_invalid_client_addr(dev, apdev):
+    """RADIUS client address specified and invalid address"""
+    params = hostapd.wpa2_eap_params(ssid="radius-auth")
+    #params['radius_client_addr'] = "10.11.12.14"
+    params['radius_client_addr'] = "1::2"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    connect(dev[0], "radius-auth", wait_connect=False)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"])
+    if ev is None:
+        raise Exception("Timeout on EAP start")
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
+    if ev is not None:
+        raise Exception("Unexpected connection")

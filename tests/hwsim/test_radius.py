@@ -956,3 +956,56 @@ def test_radius_auth_force_invalid_client_addr(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=1)
     if ev is not None:
         raise Exception("Unexpected connection")
+
+def add_message_auth(req):
+    req.authenticator = req.CreateAuthenticator()
+    hmac_obj = hmac.new(req.secret)
+    hmac_obj.update(struct.pack("B", req.code))
+    hmac_obj.update(struct.pack("B", req.id))
+
+    # request attributes
+    req.AddAttribute("Message-Authenticator",
+                     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")
+    attrs = req._PktEncodeAttributes()
+
+    # Length
+    flen = 4 + 16 + len(attrs)
+    hmac_obj.update(struct.pack(">H", flen))
+    hmac_obj.update(req.authenticator)
+    hmac_obj.update(attrs)
+    del req[80]
+    req.AddAttribute("Message-Authenticator", hmac_obj.digest())
+
+def test_radius_server_failures(dev, apdev):
+    """RADIUS server failure cases"""
+    try:
+        import pyrad.client
+        import pyrad.packet
+        import pyrad.dictionary
+    except ImportError:
+        raise HwsimSkip("No pyrad modules available")
+
+    dict = pyrad.dictionary.Dictionary("dictionary.radius")
+    client = pyrad.client.Client(server="127.0.0.1", authport=1812,
+                                 secret="radius", dict=dict)
+    client.retries = 1
+    client.timeout = 1
+
+    # unexpected State
+    req = client.CreateAuthPacket(code=pyrad.packet.AccessRequest,
+                                  User_Name="foo")
+    req['State'] = 'foo-state'
+    add_message_auth(req)
+    reply = client.SendPacket(req)
+    if reply.code != pyrad.packet.AccessReject:
+        raise Exception("Unexpected RADIUS response code " + str(reply.code))
+
+    # no EAP-Message
+    req = client.CreateAuthPacket(code=pyrad.packet.AccessRequest,
+                                  User_Name="foo")
+    add_message_auth(req)
+    try:
+        reply = client.SendPacket(req)
+        raise Exception("Unexpected response")
+    except pyrad.client.Timeout:
+        pass

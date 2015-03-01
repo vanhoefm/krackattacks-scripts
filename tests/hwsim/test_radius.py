@@ -121,6 +121,31 @@ def test_radius_acct_unreachable2(dev, apdev):
     if int(mib["radiusAccClientRetransmissions"]) < 1 and int(mib["radiusAccClientPendingRequests"]) < 1:
         raise Exception("Missing pending or retransmitted RADIUS Accounting requests")
 
+def test_radius_acct_unreachable3(dev, apdev):
+    """RADIUS Accounting server initially unreachable, but then available"""
+    subprocess.call(['ip', 'ro', 'replace', 'blackhole', '192.168.213.18'])
+    as_hapd = hostapd.Hostapd("as")
+    as_mib_start = as_hapd.get_mib(param="radius_server")
+    params = hostapd.wpa2_eap_params(ssid="radius-acct")
+    params['acct_server_addr'] = "192.168.213.18"
+    params['acct_server_port'] = "1813"
+    params['acct_server_shared_secret'] = "radius"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    connect(dev[0], "radius-acct")
+    subprocess.call(['ip', 'ro', 'del', 'blackhole', '192.168.213.18'])
+    time.sleep(0.1)
+    dev[0].request("DISCONNECT")
+    hapd.set('acct_server_addr_replace', '127.0.0.1')
+    dev[0].request("RECONNECT")
+    dev[0].wait_connected()
+    time.sleep(1)
+    as_mib_end = as_hapd.get_mib(param="radius_server")
+    req_s = int(as_mib_start['radiusAccServTotalResponses'])
+    req_e = int(as_mib_end['radiusAccServTotalResponses'])
+    if req_e <= req_s:
+        raise Exception("Unexpected RADIUS server acct MIB value")
+
 def test_radius_acct(dev, apdev):
     """RADIUS Accounting"""
     as_hapd = hostapd.Hostapd("as")

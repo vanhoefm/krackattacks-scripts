@@ -1176,18 +1176,28 @@ static void radius_retry_primary_timer(void *eloop_ctx, void *timeout_ctx)
 	    conf->auth_server != conf->auth_servers) {
 		oserv = conf->auth_server;
 		conf->auth_server = conf->auth_servers;
-		radius_change_server(radius, conf->auth_server, oserv,
-				     radius->auth_serv_sock,
-				     radius->auth_serv_sock6, 1);
+		if (radius_change_server(radius, conf->auth_server, oserv,
+					 radius->auth_serv_sock,
+					 radius->auth_serv_sock6, 1) < 0) {
+			conf->auth_server = oserv;
+			radius_change_server(radius, oserv, conf->auth_server,
+					     radius->auth_serv_sock,
+					     radius->auth_serv_sock6, 1);
+		}
 	}
 
 	if (radius->acct_sock >= 0 && conf->acct_servers &&
 	    conf->acct_server != conf->acct_servers) {
 		oserv = conf->acct_server;
 		conf->acct_server = conf->acct_servers;
-		radius_change_server(radius, conf->acct_server, oserv,
-				     radius->acct_serv_sock,
-				     radius->acct_serv_sock6, 0);
+		if (radius_change_server(radius, conf->acct_server, oserv,
+					 radius->acct_serv_sock,
+					 radius->acct_serv_sock6, 0) < 0) {
+			conf->acct_server = oserv;
+			radius_change_server(radius, oserv, conf->acct_server,
+					     radius->acct_serv_sock,
+					     radius->acct_serv_sock6, 0);
+		}
 	}
 
 	if (conf->retry_primary_interval)

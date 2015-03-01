@@ -4741,6 +4741,14 @@ static int p2p_ctrl_connect(struct wpa_supplicant *wpa_s, char *cmd,
 	int pd;
 	int ht40, vht;
 
+	if (!wpa_s->global->p2p_init_wpa_s)
+		return -1;
+	if (wpa_s->global->p2p_init_wpa_s != wpa_s) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "Direct P2P_CONNECT command to %s",
+			wpa_s->global->p2p_init_wpa_s->ifname);
+		wpa_s = wpa_s->global->p2p_init_wpa_s;
+	}
+
 	/* <addr> <"pbc" | "pin" | PIN> [label|display|keypad|p2ps]
 	 * [persistent|persistent=<network id>]
 	 * [join] [auth] [go_intent=<0..15>] [freq=<in MHz>] [provdisc]

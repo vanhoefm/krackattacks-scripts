@@ -390,3 +390,29 @@ def test_ap_open_disconnect_in_ps(dev, apdev, params):
                 state = 2
         if state != 2:
             raise Exception("Didn't observe TIM bit getting set and unset (state=%d)" % state)
+
+def test_ap_open_select_network(dev, apdev):
+    """Open mode connection and SELECT_NETWORK to change network"""
+    hapd1 = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    bssid1 = apdev[0]['bssid']
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'], { "ssid": "open2" })
+    bssid2 = apdev[1]['bssid']
+
+    id1 = dev[0].connect("open", key_mgmt="NONE", scan_freq="2412",
+                         only_add_network=True)
+    id2 = dev[0].connect("open2", key_mgmt="NONE", scan_freq="2412")
+    hwsim_utils.test_connectivity(dev[0], hapd2)
+
+    dev[0].select_network(id1)
+    dev[0].wait_connected()
+    res = dev[0].request("BLACKLIST")
+    if bssid1 in res or bssid2 in res:
+        raise Exception("Unexpected blacklist entry")
+    hwsim_utils.test_connectivity(dev[0], hapd1)
+
+    dev[0].select_network(id2)
+    dev[0].wait_connected()
+    hwsim_utils.test_connectivity(dev[0], hapd2)
+    res = dev[0].request("BLACKLIST")
+    if bssid1 in res or bssid2 in res:
+        raise Exception("Unexpected blacklist entry(2)")

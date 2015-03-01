@@ -4986,7 +4986,7 @@ int wpas_network_disabled(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid)
 	if (ssid->disabled)
 		return 1;
 
-	if (wpa_s && wpa_s->drv_capa_known)
+	if (wpa_s->drv_capa_known)
 		drv_enc = wpa_s->drv_enc;
 	else
 		drv_enc = (unsigned int) -1;

@@ -1421,6 +1421,9 @@ static int wpas_select_network_from_last_scan(struct wpa_supplicant *wpa_s,
 	struct wpa_bss *selected;
 	struct wpa_ssid *ssid = NULL;
 
+	if (wpa_s->p2p_mgmt)
+		return 0; /* no normal connection on p2p_mgmt interface */
+
 	selected = wpa_supplicant_pick_network(wpa_s, &ssid);
 
 	if (selected) {

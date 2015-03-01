@@ -4966,6 +4966,9 @@ int wpas_network_disabled(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid)
 	int i;
 	unsigned int drv_enc;
 
+	if (wpa_s->p2p_mgmt)
+		return 1; /* no normal network profiles on p2p_mgmt interface */
+
 	if (ssid == NULL)
 		return 1;
 

@@ -96,6 +96,10 @@ int wpa_supplicant_enabled_networks(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_ssid *ssid = wpa_s->conf->ssid;
 	int count = 0, disabled = 0;
+
+	if (wpa_s->p2p_mgmt)
+		return 0; /* no normal network profiles on p2p_mgmt interface */
+
 	while (ssid) {
 		if (!wpas_network_disabled(wpa_s, ssid))
 			count++;
@@ -1066,8 +1070,17 @@ void wpa_supplicant_update_scan_int(struct wpa_supplicant *wpa_s, int sec)
  */
 void wpa_supplicant_req_scan(struct wpa_supplicant *wpa_s, int sec, int usec)
 {
-	int res = eloop_deplete_timeout(sec, usec, wpa_supplicant_scan, wpa_s,
-					NULL);
+	int res;
+
+	if (wpa_s->p2p_mgmt) {
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"Ignore scan request (%d.%06d sec) on p2p_mgmt interface",
+			sec, usec);
+		return;
+	}
+
+	res = eloop_deplete_timeout(sec, usec, wpa_supplicant_scan, wpa_s,
+				    NULL);
 	if (res == 1) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Rescheduling scan request: %d.%06d sec",
 			sec, usec);

@@ -8548,7 +8548,7 @@ static int wpa_supplicant_global_iface_add(struct wpa_global *global,
 	if (wpa_supplicant_get_iface(global, iface.ifname))
 		return -1;
 
-	return wpa_supplicant_add_iface(global, &iface) ? 0 : -1;
+	return wpa_supplicant_add_iface(global, &iface, NULL) ? 0 : -1;
 }
 
 

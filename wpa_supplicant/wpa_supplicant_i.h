@@ -1035,7 +1035,8 @@ void free_hw_features(struct wpa_supplicant *wpa_s);
 void wpa_show_license(void);
 
 struct wpa_supplicant * wpa_supplicant_add_iface(struct wpa_global *global,
-						 struct wpa_interface *iface);
+						 struct wpa_interface *iface,
+						 struct wpa_supplicant *parent);
 int wpa_supplicant_remove_iface(struct wpa_global *global,
 				struct wpa_supplicant *wpa_s,
 				int terminate);

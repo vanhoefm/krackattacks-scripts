@@ -165,7 +165,7 @@ DBusMessage * wpas_dbus_global_add_interface(DBusMessage *message,
 		iface.confname = confname;
 		iface.bridge_ifname = bridge_ifname;
 		/* Otherwise, have wpa_supplicant attach to it. */
-		wpa_s = wpa_supplicant_add_iface(global, &iface);
+		wpa_s = wpa_supplicant_add_iface(global, &iface, NULL);
 		if (wpa_s) {
 			const char *path = wpa_s->dbus_path;
 

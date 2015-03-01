@@ -3230,7 +3230,8 @@ static int wpa_supplicant_daemon(const char *pid_file)
 }
 
 
-static struct wpa_supplicant * wpa_supplicant_alloc(void)
+static struct wpa_supplicant *
+wpa_supplicant_alloc(struct wpa_supplicant *parent)
 {
 	struct wpa_supplicant *wpa_s;
 
@@ -3240,7 +3241,7 @@ static struct wpa_supplicant * wpa_supplicant_alloc(void)
 	wpa_s->scan_req = INITIAL_SCAN_REQ;
 	wpa_s->scan_interval = 5;
 	wpa_s->new_connection = 1;
-	wpa_s->parent = wpa_s;
+	wpa_s->parent = parent ? parent : wpa_s;
 	wpa_s->sched_scanning = 0;
 
 	return wpa_s;
@@ -4294,6 +4295,7 @@ static void wpa_supplicant_deinit_iface(struct wpa_supplicant *wpa_s,
  * wpa_supplicant_add_iface - Add a new network interface
  * @global: Pointer to global data from wpa_supplicant_init()
  * @iface: Interface configuration options
+ * @parent: Parent interface or %NULL to assign new interface as parent
  * Returns: Pointer to the created interface or %NULL on failure
  *
  * This function is used to add new network interfaces for %wpa_supplicant.
@@ -4303,7 +4305,8 @@ static void wpa_supplicant_deinit_iface(struct wpa_supplicant *wpa_s,
  * e.g., when a hotplug network adapter is inserted.
  */
 struct wpa_supplicant * wpa_supplicant_add_iface(struct wpa_global *global,
-						 struct wpa_interface *iface)
+						 struct wpa_interface *iface,
+						 struct wpa_supplicant *parent)
 {
 	struct wpa_supplicant *wpa_s;
 	struct wpa_interface t_iface;
@@ -4312,7 +4315,7 @@ struct wpa_supplicant * wpa_supplicant_add_iface(struct wpa_global *global,
 	if (global == NULL || iface == NULL)
 		return NULL;
 
-	wpa_s = wpa_supplicant_alloc();
+	wpa_s = wpa_supplicant_alloc(parent);
 	if (wpa_s == NULL)
 		return NULL;
 

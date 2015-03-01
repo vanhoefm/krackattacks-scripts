@@ -527,7 +527,7 @@ int wpas_mesh_add_interface(struct wpa_supplicant *wpa_s, char *ifname,
 	iface.driver_param = wpa_s->conf->driver_param;
 	iface.ctrl_interface = wpa_s->conf->ctrl_interface;
 
-	mesh_wpa_s = wpa_supplicant_add_iface(wpa_s->global, &iface);
+	mesh_wpa_s = wpa_supplicant_add_iface(wpa_s->global, &iface, wpa_s);
 	if (!mesh_wpa_s) {
 		wpa_printf(MSG_ERROR,
 			   "mesh: Failed to create new wpa_supplicant interface");
@@ -535,6 +535,5 @@ int wpas_mesh_add_interface(struct wpa_supplicant *wpa_s, char *ifname,
 		return -1;
 	}
 	mesh_wpa_s->mesh_if_created = 1;
-	mesh_wpa_s->parent = wpa_s;
 	return 0;
 }

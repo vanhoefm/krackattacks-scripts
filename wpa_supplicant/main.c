@@ -322,7 +322,7 @@ int main(int argc, char *argv[])
 			exitcode = -1;
 			break;
 		}
-		wpa_s = wpa_supplicant_add_iface(global, &ifaces[i]);
+		wpa_s = wpa_supplicant_add_iface(global, &ifaces[i], NULL);
 		if (wpa_s == NULL) {
 			exitcode = -1;
 			break;

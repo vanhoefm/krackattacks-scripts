@@ -1,5 +1,5 @@
 # RADIUS tests
-# Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2015, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -8,6 +8,7 @@ import hashlib
 import hmac
 import logging
 logger = logging.getLogger()
+import os
 import select
 import struct
 import subprocess
@@ -692,6 +693,7 @@ def test_radius_failover(dev, apdev):
     params['acct_server_addr'] = "192.168.213.17"
     params['acct_server_port'] = "1813"
     params['acct_server_shared_secret'] = "testing"
+    params['radius_retry_primary_interval'] = "20"
     hapd = hostapd.add_ap(apdev[0]['ifname'], params, no_enable=True)
     hapd.set("auth_server_addr", "127.0.0.1")
     hapd.set("auth_server_port", "1812")
@@ -705,12 +707,13 @@ def test_radius_failover(dev, apdev):
         raise Exception("AP startup timed out")
         if "AP-ENABLED" not in ev:
             raise Exception("AP startup failed")
+    start = os.times()[4]
 
     try:
         subprocess.call(['ip', 'ro', 'replace', 'prohibit', '192.168.213.17'])
         dev[0].request("SET EAPOL::authPeriod 5")
         connect(dev[0], "radius-failover", wait_connect=False)
-        dev[0].wait_connected(timeout=60)
+        dev[0].wait_connected(timeout=20)
     finally:
         dev[0].request("SET EAPOL::authPeriod 30")
         subprocess.call(['ip', 'ro', 'del', '192.168.213.17'])
@@ -720,6 +723,18 @@ def test_radius_failover(dev, apdev):
     req_e = int(as_mib_end['radiusAccServTotalRequests'])
     if req_e <= req_s:
         raise Exception("Unexpected RADIUS server acct MIB value")
+
+    end = os.times()[4]
+    try:
+        subprocess.call(['ip', 'ro', 'replace', 'prohibit', '192.168.213.17'])
+        dev[1].request("SET EAPOL::authPeriod 5")
+        if end - start < 21:
+            time.sleep(21 - (end - start))
+        connect(dev[1], "radius-failover", wait_connect=False)
+        dev[1].wait_connected(timeout=20)
+    finally:
+        dev[1].request("SET EAPOL::authPeriod 30")
+        subprocess.call(['ip', 'ro', 'del', '192.168.213.17'])
 
 def run_pyrad_server(srv, t_events):
     srv.RunWithStop(t_events)

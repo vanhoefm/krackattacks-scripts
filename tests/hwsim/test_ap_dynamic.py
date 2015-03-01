@@ -440,3 +440,25 @@ def test_ap_bss_add_out_of_memory(dev, apdev):
     hostapd.add_bss('phy3', ifname2, 'bss-2.conf')
     hostapd.remove_bss(ifname2)
     hostapd.remove_bss(ifname1)
+
+def test_ap_multi_bss(dev, apdev):
+    """Multiple BSSes with hostapd"""
+    ifname1 = apdev[0]['ifname']
+    ifname2 = apdev[0]['ifname'] + '-2'
+    hostapd.add_bss('phy3', ifname1, 'bss-1.conf')
+    hostapd.add_bss('phy3', ifname2, 'bss-2.conf')
+    dev[0].connect("bss-1", key_mgmt="NONE", scan_freq="2412")
+    dev[1].connect("bss-2", key_mgmt="NONE", scan_freq="2412")
+
+    hapd1 = hostapd.Hostapd(ifname1)
+    hapd2 = hostapd.Hostapd(ifname2)
+
+    hwsim_utils.test_connectivity(dev[0], hapd1)
+    hwsim_utils.test_connectivity(dev[1], hapd2)
+
+    sta0 = hapd1.get_sta(dev[0].own_addr())
+    sta1 = hapd2.get_sta(dev[1].own_addr())
+    if 'rx_packets' not in sta0 or int(sta0['rx_packets']) < 1:
+        raise Exception("sta0 did not report receiving packets")
+    if 'rx_packets' not in sta1 or int(sta1['rx_packets']) < 1:
+        raise Exception("sta1 did not report receiving packets")

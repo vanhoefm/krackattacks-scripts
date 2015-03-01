@@ -209,6 +209,7 @@ static int set_disallow_aps(struct wpa_supplicant *wpa_s, char *val)
 	wpa_s->sme.prev_bssid_set = 0;
 #endif /* CONFIG_SME */
 	wpa_s->reassociate = 1;
+	wpa_s->own_disconnect_req = 1;
 	wpa_supplicant_deauthenticate(wpa_s, WLAN_REASON_DEAUTH_LEAVING);
 	wpa_supplicant_req_scan(wpa_s, 0, 0);
 
@@ -2835,6 +2836,7 @@ static int wpa_supplicant_ctrl_iface_remove_network(
 #endif /* CONFIG_SME */
 			wpa_sm_set_config(wpa_s->wpa, NULL);
 			eapol_sm_notify_config(wpa_s->eapol, NULL, NULL);
+			wpa_s->own_disconnect_req = 1;
 			wpa_supplicant_deauthenticate(
 				wpa_s, WLAN_REASON_DEAUTH_LEAVING);
 		}
@@ -2881,6 +2883,7 @@ static int wpa_supplicant_ctrl_iface_remove_network(
 		wpa_sm_set_config(wpa_s->wpa, NULL);
 		eapol_sm_notify_config(wpa_s->eapol, NULL, NULL);
 
+		wpa_s->own_disconnect_req = 1;
 		wpa_supplicant_deauthenticate(wpa_s,
 					      WLAN_REASON_DEAUTH_LEAVING);
 	}
@@ -6628,6 +6631,7 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 	wpa_supplicant_stop_countermeasures(wpa_s, NULL);
 
 	wpa_s->no_keep_alive = 0;
+	wpa_s->own_disconnect_req = 0;
 
 	os_free(wpa_s->disallow_aps_bssid);
 	wpa_s->disallow_aps_bssid = NULL;

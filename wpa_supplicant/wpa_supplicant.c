@@ -870,6 +870,7 @@ int wpa_supplicant_reload_configuration(struct wpa_supplicant *wpa_s)
 
 	eapol_sm_invalidate_cached_session(wpa_s->eapol);
 	if (wpa_s->current_ssid) {
+		wpa_s->own_disconnect_req = 1;
 		wpa_supplicant_deauthenticate(wpa_s,
 					      WLAN_REASON_DEAUTH_LEAVING);
 	}
@@ -2585,6 +2586,7 @@ void wpa_supplicant_select_network(struct wpa_supplicant *wpa_s,
 	int disconnected = 0;
 
 	if (ssid && ssid != wpa_s->current_ssid && wpa_s->current_ssid) {
+		wpa_s->own_disconnect_req = 1;
 		wpa_supplicant_deauthenticate(
 			wpa_s, WLAN_REASON_DEAUTH_LEAVING);
 		disconnected = 1;
@@ -4792,11 +4794,17 @@ void wpas_connection_failed(struct wpa_supplicant *wpa_s, const u8 *bssid)
 	 */
 	eloop_cancel_timeout(wpa_supplicant_timeout, wpa_s, NULL);
 
+	/*
+	 * There is no point in blacklisting the AP if this event is
+	 * generated based on local request to disconnect.
+	 */
+	if (wpa_s->own_disconnect_req) {
+		wpa_s->own_disconnect_req = 0;
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"Ignore connection failure due to local request to disconnect");
+		return;
+	}
 	if (wpa_s->disconnected) {
-		/*
-		 * There is no point in blacklisting the AP if this event is
-		 * generated based on local request to disconnect.
-		 */
 		wpa_dbg(wpa_s, MSG_DEBUG, "Ignore connection failure "
 			"indication since interface has been put into "
 			"disconnected state");

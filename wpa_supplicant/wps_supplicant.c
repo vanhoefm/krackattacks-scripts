@@ -113,6 +113,7 @@ int wpas_wps_eapol_cb(struct wpa_supplicant *wpa_s)
 		wpa_printf(MSG_DEBUG, "WPS: Network configuration replaced - "
 			   "try to associate with the received credential "
 			   "(freq=%u)", freq);
+		wpa_s->own_disconnect_req = 1;
 		wpa_supplicant_deauthenticate(wpa_s,
 					      WLAN_REASON_DEAUTH_LEAVING);
 		if (disabled) {
@@ -160,6 +161,7 @@ int wpas_wps_eapol_cb(struct wpa_supplicant *wpa_s)
 		wpa_printf(MSG_DEBUG, "WPS: Registration completed - waiting "
 			   "for external credential processing");
 		wpas_clear_wps(wpa_s);
+		wpa_s->own_disconnect_req = 1;
 		wpa_supplicant_deauthenticate(wpa_s,
 					      WLAN_REASON_DEAUTH_LEAVING);
 		return 1;
@@ -913,6 +915,7 @@ static void wpas_clear_wps(struct wpa_supplicant *wpa_s)
 	while (ssid) {
 		if (ssid->key_mgmt & WPA_KEY_MGMT_WPS) {
 			if (ssid == wpa_s->current_ssid) {
+				wpa_s->own_disconnect_req = 1;
 				wpa_supplicant_deauthenticate(
 					wpa_s, WLAN_REASON_DEAUTH_LEAVING);
 			}
@@ -1022,9 +1025,11 @@ static void wpas_wps_temp_disable(struct wpa_supplicant *wpa_s,
 {
 	struct wpa_ssid *ssid;
 
-	if (wpa_s->current_ssid)
+	if (wpa_s->current_ssid) {
+		wpa_s->own_disconnect_req = 1;
 		wpa_supplicant_deauthenticate(
 			wpa_s, WLAN_REASON_DEAUTH_LEAVING);
+	}
 
 	/* Mark all other networks disabled and trigger reassociation */
 	ssid = wpa_s->conf->ssid;
@@ -1234,6 +1239,7 @@ int wpas_wps_cancel(struct wpa_supplicant *wpa_s)
 	} else if (wpa_s->wpa_state >= WPA_ASSOCIATED) {
 		wpa_printf(MSG_DEBUG, "WPS: Cancel operation - "
 			   "deauthenticate");
+		wpa_s->own_disconnect_req = 1;
 		wpa_supplicant_deauthenticate(wpa_s,
 					      WLAN_REASON_DEAUTH_LEAVING);
 		wpas_clear_wps(wpa_s);

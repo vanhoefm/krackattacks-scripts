@@ -2671,6 +2671,9 @@ static void wpas_event_disconnect(struct wpa_supplicant *wpa_s, const u8 *addr,
 	}
 #endif /* CONFIG_AP */
 
+	if (!locally_generated)
+		wpa_s->own_disconnect_req = 0;
+
 	wpa_supplicant_event_disassoc(wpa_s, reason_code, locally_generated);
 
 	if (((reason_code == WLAN_REASON_IEEE_802_1X_AUTH_FAILED ||

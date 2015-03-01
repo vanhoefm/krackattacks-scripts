@@ -622,3 +622,25 @@ def test_go_search_non_social(dev):
     dev[2].p2p_stop_find()
     dev[1].p2p_stop_find()
     dev[0].remove_group()
+
+def test_autogo_many(dev):
+    """P2P autonomous GO with large number of GO instances"""
+    dev[0].request("SET p2p_no_group_iface 0")
+    for i in range(100):
+        if "OK" not in dev[0].global_request("P2P_GROUP_ADD freq=2412"):
+            logger.info("Was able to add %d groups" % i)
+            if i < 5:
+                raise Exception("P2P_GROUP_ADD failed")
+            stop_ev = dev[0].wait_global_event(["P2P-GROUP-REMOVE"], timeout=1)
+            if stop_ev is not None:
+                raise Exception("Unexpected P2P-GROUP-REMOVE event")
+            break
+        ev = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=5)
+        if ev is None:
+            raise Exception("GO start up timed out")
+        dev[0].group_form_result(ev)
+
+    for i in dev[0].global_request("INTERFACES").splitlines():
+        dev[0].request("P2P_GROUP_REMOVE " + i)
+        dev[0].dump_monitor()
+    dev[0].request("P2P_GROUP_REMOVE *")

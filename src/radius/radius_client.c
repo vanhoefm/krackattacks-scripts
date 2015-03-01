@@ -343,7 +343,7 @@ static int radius_client_retransmit(struct radius_client_data *radius,
 			radius_client_init_acct(radius);
 		if (radius->acct_sock < 0 && conf->num_acct_servers > 1) {
 			prev_num_msgs = radius->num_msgs;
-			radius_client_auth_failover(radius);
+			radius_client_acct_failover(radius);
 			if (prev_num_msgs != radius->num_msgs)
 				return 0;
 		}

@@ -643,3 +643,17 @@ def test_p2p_listen_chan_optimize(dev, apdev):
         dev[0].p2p_stop_find()
     finally:
         wpas.request("SET p2p_optimize_listen_chan 0")
+
+def test_p2p_channel_5ghz_only(dev):
+    """P2P GO start with only 5 GHz band allowed"""
+    try:
+        set_country("US", dev[0])
+        dev[0].request("P2P_SET disallow_freq 2400-2500")
+        res = autogo(dev[0])
+        freq = int(res['freq'])
+        if freq < 5000:
+            raise Exception("Unexpected channel %d MHz" % freq)
+        dev[0].remove_group()
+    finally:
+        set_country("00")
+        dev[0].request("P2P_SET disallow_freq ")

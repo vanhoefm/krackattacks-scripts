@@ -16,7 +16,7 @@ import threading
 import time
 
 import hostapd
-from utils import HwsimSkip
+from utils import HwsimSkip, require_under_vm
 
 def connect(dev, ssid, wait_connect=True):
     dev.connect(ssid, key_mgmt="WPA-EAP", scan_freq="2412",
@@ -124,6 +124,7 @@ def test_radius_acct_unreachable2(dev, apdev):
 
 def test_radius_acct_unreachable3(dev, apdev):
     """RADIUS Accounting server initially unreachable, but then available"""
+    require_under_vm()
     subprocess.call(['ip', 'ro', 'replace', 'blackhole', '192.168.213.18'])
     as_hapd = hostapd.Hostapd("as")
     as_mib_start = as_hapd.get_mib(param="radius_server")

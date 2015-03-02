@@ -33,3 +33,9 @@ class alloc_fail(object):
         if type is None:
             if self._dev.request("GET_ALLOC_FAIL") != "0:%s" % self._funcs:
                 raise Exception("Allocation failure did not trigger")
+
+def require_under_vm():
+    with open('/proc/1/cmdline', 'r') as f:
+        cmd = f.read()
+        if "inside.sh" not in cmd:
+            raise HwsimSkip("Not running under VM")

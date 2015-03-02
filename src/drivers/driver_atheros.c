@@ -1810,7 +1810,7 @@ static int atheros_set_ap(void *priv, struct wpa_driver_ap_params *params)
 	wpa_hexdump_buf(MSG_DEBUG, "atheros: assocresp_ies",
 			params->assocresp_ies);
 
-#if defined(CONFIG_HS20) && defined(IEEE80211_PARAM_OSEN)
+#if defined(CONFIG_HS20) && (defined(IEEE80211_PARAM_OSEN) || defined(CONFIG_ATHEROS_OSEN))
 	if (params->osen) {
 		struct wpa_bss_params bss_params;
 

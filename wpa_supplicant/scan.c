@@ -680,7 +680,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	}
 
 	ssid = NULL;
-	if (wpa_s->last_scan_req != MANUAL_SCAN_REQ &&
+	if (wpa_s->scan_req != MANUAL_SCAN_REQ &&
 	    wpa_s->connect_without_scan) {
 		connect_without_scan = 1;
 		for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next) {

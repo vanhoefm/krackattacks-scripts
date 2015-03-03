@@ -240,6 +240,7 @@ def show_progress(scr):
     time.sleep(0.3)
 
 def main():
+    import argparse
     global num_servers
     global vm
     global dir
@@ -256,27 +257,35 @@ def main():
 
     debug_level = logging.INFO
     rerun_failures = True
-
-    if len(sys.argv) < 2:
-        sys.exit("Usage: %s <number of VMs> [-1] [--debug] [--codecov] [params..]" % sys.argv[0])
-    num_servers = int(sys.argv[1])
-    if num_servers < 1:
-        sys.exit("Too small number of VMs")
-
     timestamp = int(time.time())
 
-    idx = 2
-
-    if len(sys.argv) > idx and sys.argv[idx] == "-1":
-        idx += 1
-        rerun_failures = False
-
-    if len(sys.argv) > idx and sys.argv[idx] == "--debug":
-        idx += 1
+    p = argparse.ArgumentParser(description='run multiple testing VMs in parallel')
+    p.add_argument('num_servers', metavar='number of VMs', type=int, choices=range(1, 100),
+                   help="number of VMs to start")
+    p.add_argument('-f', dest='testmodules', metavar='<test module>',
+                   help='execute only tests from these test modules',
+                   type=str, nargs='+')
+    p.add_argument('-1', dest='no_retry', action='store_const', const=True, default=False,
+                   help="don't retry failed tests automatically")
+    p.add_argument('--debug', dest='debug', action='store_const', const=True, default=False,
+                   help="enable debug logging")
+    p.add_argument('--codecov', dest='codecov', action='store_const', const=True, default=False,
+                   help="enable code coverage collection")
+    p.add_argument('--shuffle-tests', dest='shuffle', action='store_const', const=True, default=False,
+                   help="shuffle test cases to randomize order")
+    p.add_argument('--long', dest='long', action='store_const', const=True,
+                   default=False,
+                   help="include long-duration test cases")
+    p.add_argument('params', nargs='*')
+    args = p.parse_args()
+    num_servers = args.num_servers
+    rerun_failures = not args.no_retry
+    if args.debug:
         debug_level = logging.DEBUG
-
-    if len(sys.argv) > idx and sys.argv[idx] == "--codecov":
-        idx += 1
+    extra_args = []
+    if args.long:
+        extra_args += [ '--long' ]
+    if args.codecov:
         print "Code coverage - build separate binaries"
         logdir = "/tmp/hwsim-test-logs/" + str(timestamp)
         os.makedirs(logdir)
@@ -289,17 +298,16 @@ def main():
 
     first_run_failures = []
     tests = []
-    cmd = [ '../run-tests.py', '-L' ] + sys.argv[idx:]
+    cmd = [ '../run-tests.py', '-L' ]
+    if args.testmodules:
+        cmd += [ "-f" ]
+        cmd += args.testmodules
     lst = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     for l in lst.stdout.readlines():
         name = l.split(' ')[0]
         tests.append(name)
     if len(tests) == 0:
         sys.exit("No test cases selected")
-    if '-f' in sys.argv[idx:]:
-        extra_args = sys.argv[idx:]
-    else:
-        extra_args = [x for x in sys.argv[idx:] if x not in tests]
 
     dir = '/tmp/hwsim-test-logs'
     try:
@@ -307,7 +315,7 @@ def main():
     except:
         pass
 
-    if "--shuffle-tests" in extra_args:
+    if args.shuffle:
         from random import shuffle
         shuffle(tests)
     elif num_servers > 2 and len(tests) > 100:

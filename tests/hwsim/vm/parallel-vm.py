@@ -241,6 +241,7 @@ def show_progress(scr):
 
 def main():
     import argparse
+    import os
     global num_servers
     global vm
     global dir
@@ -258,6 +259,8 @@ def main():
     debug_level = logging.INFO
     rerun_failures = True
     timestamp = int(time.time())
+
+    scriptsdir = os.path.dirname(os.path.realpath(sys.argv[0]))
 
     p = argparse.ArgumentParser(description='run multiple testing VMs in parallel')
     p.add_argument('num_servers', metavar='number of VMs', type=int, choices=range(1, 100),
@@ -289,7 +292,8 @@ def main():
         print "Code coverage - build separate binaries"
         logdir = "/tmp/hwsim-test-logs/" + str(timestamp)
         os.makedirs(logdir)
-        subprocess.check_call(['./build-codecov.sh', logdir])
+        subprocess.check_call([os.path.join(scriptsdir, 'build-codecov.sh'),
+                               logdir])
         codecov_args = ['--codecov_dir', logdir]
         codecov = True
     else:
@@ -298,7 +302,7 @@ def main():
 
     first_run_failures = []
     tests = []
-    cmd = [ '../run-tests.py', '-L' ]
+    cmd = [ os.path.join(os.path.dirname(scriptsdir), 'run-tests.py'), '-L' ]
     if args.testmodules:
         cmd += [ "-f" ]
         cmd += args.testmodules
@@ -377,7 +381,8 @@ def main():
     for i in range(0, num_servers):
         print("\rStarting virtual machine {}/{}".format(i + 1, num_servers)),
         logger.info("Starting virtual machine {}/{}".format(i + 1, num_servers))
-        cmd = ['./vm-run.sh', '--delay', str(i), '--timestamp', str(timestamp),
+        cmd = [os.path.join(scriptsdir, 'vm-run.sh'), '--delay', str(i),
+               '--timestamp', str(timestamp),
                '--ext', 'srv.%d' % (i + 1),
                '-i'] + codecov_args + extra_args
         vm[i] = {}
@@ -448,10 +453,12 @@ def main():
     if codecov:
         print "Code coverage - preparing report"
         for i in range(num_servers):
-            subprocess.check_call(['./process-codecov.sh',
+            subprocess.check_call([os.path.join(scriptsdir,
+                                                'process-codecov.sh'),
                                    logdir + ".srv.%d" % (i + 1),
                                    str(i)])
-        subprocess.check_call(['./combine-codecov.sh', logdir])
+        subprocess.check_call([os.path.join(scriptsdir, 'combine-codecov.sh'),
+                               logdir])
         print "file://%s/index.html" % logdir
         logger.info("Code coverage report: file://%s/index.html" % logdir)
 

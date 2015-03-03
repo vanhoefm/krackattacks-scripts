@@ -18,10 +18,8 @@ import termios
 import logging
 logger = logging.getLogger()
 
-if os.path.exists('../../wpaspy'):
-    sys.path.append('../../wpaspy')
-else:
-    sys.path.append('../../../wpaspy')
+scriptsdir = os.path.dirname(os.path.realpath(sys.modules[__name__].__file__))
+sys.path.append(os.path.join(scriptsdir, '..', '..', 'wpaspy'))
 
 from wpasupplicant import WpaSupplicant
 from hostapd import HostapdGlobal
@@ -169,10 +167,7 @@ def rename_log(logdir, basename, testname, dev):
 def main():
     tests = []
     test_modules = []
-    if os.path.exists('run-tests.py'):
-        files = os.listdir(".")
-    else:
-        files = os.listdir("..")
+    files = os.listdir(scriptsdir)
     for t in files:
         m = re.match(r'(test_.*)\.py$', t)
         if m:

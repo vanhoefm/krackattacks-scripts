@@ -11,6 +11,23 @@ import time
 
 import hostapd
 
+def force_prev_ap_on_24g(ap):
+    # For now, make sure the last operating channel was on 2.4 GHz band to get
+    # sufficient survey data from mac80211_hwsim.
+    hostapd.add_ap(ap['ifname'], { "ssid": "open" })
+    time.sleep(0.1)
+    hapd_global = hostapd.HostapdGlobal()
+    hapd_global.remove(ap['ifname'])
+
+def force_prev_ap_on_5g(ap):
+    # For now, make sure the last operating channel was on 5 GHz band to get
+    # sufficient survey data from mac80211_hwsim.
+    hostapd.add_ap(ap['ifname'], { "ssid": "open", "hw_mode": "a",
+                                   "channel": "36", "country_code": "US" })
+    time.sleep(0.1)
+    hapd_global = hostapd.HostapdGlobal()
+    hapd_global.remove(ap['ifname'])
+
 def wait_acs(hapd):
     ev = hapd.wait_event(["ACS-STARTED", "ACS-COMPLETED", "ACS-FAILED",
                           "AP-ENABLED", "AP-DISABLED"], timeout=5)
@@ -42,6 +59,7 @@ def wait_acs(hapd):
 
 def test_ap_acs(dev, apdev):
     """Automatic channel selection"""
+    force_prev_ap_on_24g(apdev[0])
     params = hostapd.wpa2_params(ssid="test-acs", passphrase="12345678")
     params['channel'] = '0'
     hapd = hostapd.add_ap(apdev[0]['ifname'], params, wait_enabled=False)
@@ -56,13 +74,7 @@ def test_ap_acs(dev, apdev):
 def test_ap_multi_bss_acs(dev, apdev):
     """hostapd start with a multi-BSS configuration file using ACS"""
     ifname = apdev[0]['ifname']
-
-    # make sure the current channel is on 2.4 GHz band as a workaround for the
-    # limited survey functionality in mac80211_hwsim
-    hostapd.add_ap(ifname, { "ssid": "test" })
-    time.sleep(0.1)
-    hapd_global = hostapd.HostapdGlobal()
-    hapd_global.remove(ifname)
+    force_prev_ap_on_24g(apdev[0])
 
     # start the actual test
     hostapd.add_iface(ifname, 'multi-bss-acs.conf')
@@ -80,6 +92,7 @@ def test_ap_multi_bss_acs(dev, apdev):
 
 def test_ap_acs_40mhz(dev, apdev):
     """Automatic channel selection for 40 MHz channel"""
+    force_prev_ap_on_24g(apdev[0])
     params = hostapd.wpa2_params(ssid="test-acs", passphrase="12345678")
     params['channel'] = '0'
     params['ht_capab'] = '[HT40+]'
@@ -99,26 +112,18 @@ def test_ap_acs_5ghz(dev, apdev):
     """Automatic channel selection on 5 GHz"""
     try:
         hapd = None
+        force_prev_ap_on_5g(apdev[0])
         params = hostapd.wpa2_params(ssid="test-acs", passphrase="12345678")
         params['hw_mode'] = 'a'
         params['channel'] = '0'
         params['country_code'] = 'US'
         hapd = hostapd.add_ap(apdev[0]['ifname'], params, wait_enabled=False)
-        # TODO: Remove exception acceptance once mac80211_hwsim supports ACS on
-        # 5 GHz
-        run = False
-        try:
-            wait_acs(hapd)
-            run = True
-        except Exception, e:
-            logger.info("Ignore exception due to missing hwsim support: " + str(e))
+        wait_acs(hapd)
+        freq = hapd.get_status_field("freq")
+        if int(freq) < 5000:
+            raise Exception("Unexpected frequency")
 
-        if run:
-            freq = hapd.get_status_field("freq")
-            if int(freq) < 5000:
-                raise Exception("Unexpected frequency")
-
-            dev[0].connect("test-acs", psk="12345678", scan_freq=freq)
+        dev[0].connect("test-acs", psk="12345678", scan_freq=freq)
 
     finally:
         dev[0].request("DISCONNECT")
@@ -131,31 +136,23 @@ def test_ap_acs_5ghz_40mhz(dev, apdev):
     """Automatic channel selection on 5 GHz for 40 MHz channel"""
     try:
         hapd = None
+        force_prev_ap_on_5g(apdev[0])
         params = hostapd.wpa2_params(ssid="test-acs", passphrase="12345678")
         params['hw_mode'] = 'a'
         params['channel'] = '0'
         params['ht_capab'] = '[HT40+]'
         params['country_code'] = 'US'
         hapd = hostapd.add_ap(apdev[0]['ifname'], params, wait_enabled=False)
-        # TODO: Remove exception acceptance once mac80211_hwsim supports ACS on
-        # 5 GHz
-        run = False
-        try:
-            wait_acs(hapd)
-            run = True
-        except Exception, e:
-            logger.info("Ignore exception due to missing hwsim support: " + str(e))
+        wait_acs(hapd)
+        freq = hapd.get_status_field("freq")
+        if int(freq) < 5000:
+            raise Exception("Unexpected frequency")
 
-        if run:
-            freq = hapd.get_status_field("freq")
-            if int(freq) < 5000:
-                raise Exception("Unexpected frequency")
+        sec = hapd.get_status_field("secondary_channel")
+        if int(sec) == 0:
+            raise Exception("Secondary channel not set")
 
-            sec = hapd.get_status_field("secondary_channel")
-            if int(sec) == 0:
-                raise Exception("Secondary channel not set")
-
-            dev[0].connect("test-acs", psk="12345678", scan_freq=freq)
+        dev[0].connect("test-acs", psk="12345678", scan_freq=freq)
 
     finally:
         dev[0].request("DISCONNECT")
@@ -168,6 +165,7 @@ def test_ap_acs_vht(dev, apdev):
     """Automatic channel selection for VHT"""
     try:
         hapd = None
+        force_prev_ap_on_5g(apdev[0])
         params = hostapd.wpa2_params(ssid="test-acs", passphrase="12345678")
         params['hw_mode'] = 'a'
         params['channel'] = '0'
@@ -176,25 +174,16 @@ def test_ap_acs_vht(dev, apdev):
         params['ieee80211ac'] = '1'
         params['vht_oper_chwidth'] = '1'
         hapd = hostapd.add_ap(apdev[0]['ifname'], params, wait_enabled=False)
-        # TODO: Remove exception acceptance once mac80211_hwsim supports ACS on
-        # 5 GHz
-        run = False
-        try:
-            wait_acs(hapd)
-            run = True
-        except Exception, e:
-            logger.info("Ignore exception due to missing hwsim support: " + str(e))
+        wait_acs(hapd)
+        freq = hapd.get_status_field("freq")
+        if int(freq) < 5000:
+            raise Exception("Unexpected frequency")
 
-        if run:
-            freq = hapd.get_status_field("freq")
-            if int(freq) < 5000:
-                raise Exception("Unexpected frequency")
+        sec = hapd.get_status_field("secondary_channel")
+        if int(sec) == 0:
+            raise Exception("Secondary channel not set")
 
-            sec = hapd.get_status_field("secondary_channel")
-            if int(sec) == 0:
-                raise Exception("Secondary channel not set")
-
-            dev[0].connect("test-acs", psk="12345678", scan_freq=freq)
+        dev[0].connect("test-acs", psk="12345678", scan_freq=freq)
 
     finally:
         dev[0].request("DISCONNECT")
@@ -205,6 +194,7 @@ def test_ap_acs_vht(dev, apdev):
 
 def test_ap_acs_bias(dev, apdev):
     """Automatic channel selection with bias values"""
+    force_prev_ap_on_24g(apdev[0])
     params = hostapd.wpa2_params(ssid="test-acs", passphrase="12345678")
     params['channel'] = '0'
     params['acs_chan_bias'] = '1:0.8 3:1.2 6:0.7 11:0.8'

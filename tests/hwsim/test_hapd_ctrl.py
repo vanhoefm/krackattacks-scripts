@@ -128,7 +128,7 @@ def test_hapd_ctrl_new_sta(dev, apdev):
     if "OK" not in hapd.request("NEW_STA 00:11:22:33:44:55"):
         raise Exception("Unexpected NEW_STA failure")
     if "AUTHORIZED" not in hapd.request("STA 00:11:22:33:44:55"):
-        raise Esception("Unexpected NEW_STA STA status")
+        raise Exception("Unexpected NEW_STA STA status")
 
 def test_hapd_ctrl_get(dev, apdev):
     """hostapd and GET ctrl_iface command"""

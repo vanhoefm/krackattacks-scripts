@@ -2491,6 +2491,8 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 
 		wpa_msg(wpa_s, MSG_INFO, INTERWORKING_NO_MATCH "No network "
 			"with matching credentials found");
+		if (wpa_s->wpa_state == WPA_SCANNING)
+			wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
 	}
 
 	if (selected) {

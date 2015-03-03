@@ -116,7 +116,7 @@ def test_ap_vlan_wpa2_radius_id_change(dev, apdev):
     time.sleep(0.1)
     state = dev[0].get_status_field('wpa_state')
     if state != "COMPLETED":
-        raise("Unexpected state after reauth: " + state)
+        raise Exception("Unexpected state after reauth: " + state)
     hwsim_utils.test_connectivity_iface(dev[0], hapd, "brvlan2")
 
 def test_ap_vlan_wpa2_radius_required(dev, apdev):

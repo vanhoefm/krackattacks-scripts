@@ -307,7 +307,10 @@ def main():
     except:
         pass
 
-    if num_servers > 2 and len(tests) > 100:
+    if "--shuffle-tests" in extra_args:
+        from random import shuffle
+        shuffle(tests)
+    elif num_servers > 2 and len(tests) > 100:
         # Move test cases with long duration to the beginning as an
         # optimization to avoid last part of the test execution running a long
         # duration test case on a single VM while all other VMs have already

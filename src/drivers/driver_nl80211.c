@@ -8305,7 +8305,7 @@ static const char * drv_br_port_attr_str(enum drv_br_port_attr attr)
 {
 	switch (attr) {
 	case DRV_BR_PORT_ATTR_PROXYARP:
-		return "proxyarp";
+		return "proxyarp_wifi";
 	case DRV_BR_PORT_ATTR_HAIRPIN_MODE:
 		return "hairpin_mode";
 	}

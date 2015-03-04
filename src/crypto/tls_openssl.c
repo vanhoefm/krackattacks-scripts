@@ -1516,7 +1516,11 @@ static int tls_verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx)
 	err_str = X509_verify_cert_error_string(err);
 
 #ifdef CONFIG_SHA256
-	if (preverify_ok && depth == 0 && conn->server_cert_only) {
+	/*
+	 * Do not require preverify_ok so we can explicity allow otherwise
+	 * invalid pinned server certificates.
+	 */
+	if (depth == 0 && conn->server_cert_only) {
 		struct wpabuf *cert;
 		cert = get_x509_cert(err_cert);
 		if (!cert) {
@@ -1534,6 +1538,14 @@ static int tls_verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx)
 				err_str = "Server certificate mismatch";
 				err = X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN;
 				preverify_ok = 0;
+			} else if (!preverify_ok) {
+				/*
+				 * Certificate matches pinned certificate, allow
+				 * regardless of other problems.
+				 */
+				wpa_printf(MSG_DEBUG,
+					   "OpenSSL: Ignore validation issues for a pinned server certificate");
+				preverify_ok = 1;
 			}
 			wpabuf_free(cert);
 		}

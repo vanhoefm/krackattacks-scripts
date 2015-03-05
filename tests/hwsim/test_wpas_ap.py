@@ -9,6 +9,8 @@ import logging
 logger = logging.getLogger()
 
 import hwsim_utils
+from utils import HwsimSkip
+from test_p2p_channel import set_country
 
 def wait_ap_ready(dev):
     ev = dev.wait_event(["CTRL-EVENT-CONNECTED"])
@@ -274,3 +276,42 @@ def test_wpas_ap_wps_pbc_overlap(dev):
     dev[0].request("WPS_CANCEL")
     dev[1].request("WPS_CANCEL")
     dev[2].request("WPS_CANCEL")
+
+def test_wpas_ap_dfs(dev):
+    """wpa_supplicant AP mode - DFS"""
+    try:
+        _test_wpas_ap_dfs(dev)
+    finally:
+        set_country("00")
+        dev[0].request("SET country 00")
+        dev[1].flush_scan_cache()
+
+def _test_wpas_ap_dfs(dev):
+    set_country("US")
+    dev[0].request("SET country US")
+    id = dev[0].add_network()
+    dev[0].set_network(id, "mode", "2")
+    dev[0].set_network_quoted(id, "ssid", "wpas-ap-dfs")
+    dev[0].set_network(id, "key_mgmt", "NONE")
+    dev[0].set_network(id, "frequency", "5260")
+    dev[0].set_network(id, "scan_freq", "5260")
+    dev[0].select_network(id)
+
+    ev = dev[0].wait_event(["DFS-CAC-START"])
+    if ev is None:
+        # For now, assume DFS is not supported by all kernel builds.
+        raise HwsimSkip("CAC did not start - assume not supported")
+
+    ev = dev[0].wait_event(["DFS-CAC-COMPLETED"], timeout=70)
+    if ev is None:
+        raise Exception("CAC did not complete")
+    if "success=1" not in ev:
+        raise Exception("CAC failed")
+    if "freq=5260" not in ev:
+        raise Exception("Unexpected DFS freq result")
+
+    ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"])
+    if ev is None:
+        raise Exception("AP failed to start")
+
+    dev[1].connect("wpas-ap-dfs", key_mgmt="NONE")

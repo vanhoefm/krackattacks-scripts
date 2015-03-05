@@ -350,6 +350,7 @@ def main():
                  "dfs",
                  "grpform_cred_ready_timeout",
                  "hostapd_oom_wpa2_eap_connect",
+                 "wpas_ap_dfs",
                  "ap_wps_pbc_timeout" ]
         for l in long:
             if l in tests:

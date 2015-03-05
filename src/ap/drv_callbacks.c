@@ -439,7 +439,7 @@ void hostapd_event_ch_switch(struct hostapd_data *hapd, int freq, int ht,
 			     int offset, int width, int cf1, int cf2)
 {
 #ifdef NEED_AP_MLME
-	int channel, chwidth, seg0_idx = 0, seg1_idx = 0;
+	int channel, chwidth, seg0_idx = 0, seg1_idx = 0, is_dfs;
 
 	hostapd_logger(hapd, NULL, HOSTAPD_MODULE_IEEE80211,
 		       HOSTAPD_LEVEL_INFO,
@@ -497,13 +497,18 @@ void hostapd_event_ch_switch(struct hostapd_data *hapd, int freq, int ht,
 	hapd->iconf->vht_oper_centr_freq_seg0_idx = seg0_idx;
 	hapd->iconf->vht_oper_centr_freq_seg1_idx = seg1_idx;
 
+	is_dfs = ieee80211_is_dfs(freq);
+
 	if (hapd->csa_in_progress &&
 	    freq == hapd->cs_freq_params.freq) {
 		hostapd_cleanup_cs_params(hapd);
 		ieee802_11_set_beacon(hapd);
 
-		wpa_msg(hapd->msg_ctx, MSG_INFO, AP_CSA_FINISHED "freq=%d",
-			freq);
+		wpa_msg(hapd->msg_ctx, MSG_INFO, AP_CSA_FINISHED
+			"freq=%d dfs=%d", freq, is_dfs);
+	} else if (hapd->iface->drv_flags & WPA_DRIVER_FLAGS_DFS_OFFLOAD) {
+		wpa_msg(hapd->msg_ctx, MSG_INFO, AP_CSA_FINISHED
+			"freq=%d dfs=%d", freq, is_dfs);
 	}
 #endif /* NEED_AP_MLME */
 }

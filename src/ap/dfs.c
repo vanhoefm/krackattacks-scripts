@@ -748,11 +748,19 @@ int hostapd_dfs_complete_cac(struct hostapd_iface *iface, int success, int freq,
 
 	if (success) {
 		/* Complete iface/ap configuration */
-		set_dfs_state(iface, freq, ht_enabled, chan_offset,
-			      chan_width, cf1, cf2,
-			      HOSTAPD_CHAN_DFS_AVAILABLE);
-		iface->cac_started = 0;
-		hostapd_setup_interface_complete(iface, 0);
+		if (iface->drv_flags & WPA_DRIVER_FLAGS_DFS_OFFLOAD) {
+			/* Complete AP configuration for the first bring up. */
+			if (iface->state != HAPD_IFACE_ENABLED)
+				hostapd_setup_interface_complete(iface, 0);
+			else
+				iface->cac_started = 0;
+		} else {
+			set_dfs_state(iface, freq, ht_enabled, chan_offset,
+				      chan_width, cf1, cf2,
+				      HOSTAPD_CHAN_DFS_AVAILABLE);
+			iface->cac_started = 0;
+			hostapd_setup_interface_complete(iface, 0);
+		}
 	}
 
 	return 0;
@@ -934,12 +942,16 @@ int hostapd_dfs_radar_detected(struct hostapd_iface *iface, int freq,
 {
 	int res;
 
-	if (!iface->conf->ieee80211h)
-		return 0;
-
 	wpa_msg(iface->bss[0]->msg_ctx, MSG_INFO, DFS_EVENT_RADAR_DETECTED
 		"freq=%d ht_enabled=%d chan_offset=%d chan_width=%d cf1=%d cf2=%d",
 		freq, ht_enabled, chan_offset, chan_width, cf1, cf2);
+
+	/* Proceed only if DFS is not offloaded to the driver */
+	if (iface->drv_flags & WPA_DRIVER_FLAGS_DFS_OFFLOAD)
+		return 0;
+
+	if (!iface->conf->ieee80211h)
+		return 0;
 
 	/* mark radar frequency as invalid */
 	set_dfs_state(iface, freq, ht_enabled, chan_offset, chan_width,
@@ -964,6 +976,11 @@ int hostapd_dfs_nop_finished(struct hostapd_iface *iface, int freq,
 	wpa_msg(iface->bss[0]->msg_ctx, MSG_INFO, DFS_EVENT_NOP_FINISHED
 		"freq=%d ht_enabled=%d chan_offset=%d chan_width=%d cf1=%d cf2=%d",
 		freq, ht_enabled, chan_offset, chan_width, cf1, cf2);
+
+	/* Proceed only if DFS is not offloaded to the driver */
+	if (iface->drv_flags & WPA_DRIVER_FLAGS_DFS_OFFLOAD)
+		return 0;
+
 	/* TODO add correct implementation here */
 	set_dfs_state(iface, freq, ht_enabled, chan_offset, chan_width,
 		      cf1, cf2, HOSTAPD_CHAN_DFS_USABLE);

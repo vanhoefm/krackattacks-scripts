@@ -826,6 +826,13 @@ int ieee80211_chan_to_freq(const char *country, u8 op_class, u8 chan)
 }
 
 
+int ieee80211_is_dfs(int freq)
+{
+	/* TODO: this could be more accurate to better cover all domains */
+	return (freq >= 5260 && freq <= 5320) || (freq >= 5500 && freq <= 5700);
+}
+
+
 static int is_11b(u8 rate)
 {
 	return rate == 0x02 || rate == 0x04 || rate == 0x0b || rate == 0x16;

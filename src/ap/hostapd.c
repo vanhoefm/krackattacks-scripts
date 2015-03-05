@@ -1377,6 +1377,7 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 	size_t j;
 	u8 *prev_addr;
 	int delay_apply_cfg = 0;
+	int res_dfs_offload = 0;
 
 	if (err)
 		goto fail;
@@ -1402,6 +1403,23 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 				if (res < 0)
 					goto fail;
 				return res;
+			}
+		} else {
+			/* If DFS is offloaded to the driver */
+			res_dfs_offload = hostapd_handle_dfs_offload(iface);
+			if (res_dfs_offload <= 0) {
+				if (res_dfs_offload < 0)
+					goto fail;
+			} else {
+				wpa_printf(MSG_DEBUG,
+					   "Proceed with AP/channel setup");
+				/*
+				 * If this is a DFS channel, move to completing
+				 * AP setup.
+				 */
+				if (res_dfs_offload == 1)
+					goto dfs_offload;
+				/* Otherwise fall through. */
 			}
 		}
 #endif /* NEED_AP_MLME */
@@ -1497,6 +1515,19 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 			goto fail;
 	}
 
+	if ((iface->drv_flags & WPA_DRIVER_FLAGS_DFS_OFFLOAD) &&
+	    !res_dfs_offload) {
+		/*
+		 * If freq is DFS, and DFS is offloaded to the driver, then wait
+		 * for CAC to complete.
+		 */
+		wpa_printf(MSG_DEBUG, "%s: Wait for CAC to complete", __func__);
+		return res_dfs_offload;
+	}
+
+#ifdef NEED_AP_MLME
+dfs_offload:
+#endif /* NEED_AP_MLME */
 	hostapd_set_state(iface, HAPD_IFACE_ENABLED);
 	wpa_msg(iface->bss[0]->msg_ctx, MSG_INFO, AP_EVENT_ENABLED);
 	if (hapd->setup_complete_cb)

@@ -1531,6 +1531,92 @@ static void qca_nl80211_key_mgmt_auth(struct wpa_driver_nl80211_data *drv,
 }
 
 
+static void qca_nl80211_dfs_offload_radar_event(
+	struct wpa_driver_nl80211_data *drv, u32 subcmd, u8 *msg, int length)
+{
+	union wpa_event_data data;
+	struct nlattr *tb[NL80211_ATTR_MAX + 1];
+
+	wpa_printf(MSG_DEBUG,
+		   "nl80211: DFS offload radar vendor event received");
+
+	if (nla_parse(tb, NL80211_ATTR_MAX,
+		      (struct nlattr *) msg, length, NULL))
+		return;
+
+	if (!tb[NL80211_ATTR_WIPHY_FREQ]) {
+		wpa_printf(MSG_INFO,
+			   "nl80211: Error parsing WIPHY_FREQ in FS offload radar vendor event");
+		return;
+	}
+
+	os_memset(&data, 0, sizeof(data));
+	data.dfs_event.freq = nla_get_u32(tb[NL80211_ATTR_WIPHY_FREQ]);
+
+	wpa_printf(MSG_DEBUG, "nl80211: DFS event on freq %d MHz",
+		   data.dfs_event.freq);
+
+	/* Check HT params */
+	if (tb[NL80211_ATTR_WIPHY_CHANNEL_TYPE]) {
+		data.dfs_event.ht_enabled = 1;
+		data.dfs_event.chan_offset = 0;
+
+		switch (nla_get_u32(tb[NL80211_ATTR_WIPHY_CHANNEL_TYPE])) {
+		case NL80211_CHAN_NO_HT:
+			data.dfs_event.ht_enabled = 0;
+			break;
+		case NL80211_CHAN_HT20:
+			break;
+		case NL80211_CHAN_HT40PLUS:
+			data.dfs_event.chan_offset = 1;
+			break;
+		case NL80211_CHAN_HT40MINUS:
+			data.dfs_event.chan_offset = -1;
+			break;
+		}
+	}
+
+	/* Get VHT params */
+	if (tb[NL80211_ATTR_CHANNEL_WIDTH])
+		data.dfs_event.chan_width =
+			convert2width(nla_get_u32(
+					      tb[NL80211_ATTR_CHANNEL_WIDTH]));
+	if (tb[NL80211_ATTR_CENTER_FREQ1])
+		data.dfs_event.cf1 = nla_get_u32(tb[NL80211_ATTR_CENTER_FREQ1]);
+	if (tb[NL80211_ATTR_CENTER_FREQ2])
+		data.dfs_event.cf2 = nla_get_u32(tb[NL80211_ATTR_CENTER_FREQ2]);
+
+	wpa_printf(MSG_DEBUG, "nl80211: DFS event on freq %d MHz, ht: %d, "
+		    "offset: %d, width: %d, cf1: %dMHz, cf2: %dMHz",
+		    data.dfs_event.freq, data.dfs_event.ht_enabled,
+		    data.dfs_event.chan_offset, data.dfs_event.chan_width,
+		    data.dfs_event.cf1, data.dfs_event.cf2);
+
+	switch (subcmd) {
+	case QCA_NL80211_VENDOR_SUBCMD_DFS_OFFLOAD_RADAR_DETECTED:
+		wpa_supplicant_event(drv->ctx, EVENT_DFS_RADAR_DETECTED, &data);
+		break;
+	case QCA_NL80211_VENDOR_SUBCMD_DFS_OFFLOAD_CAC_STARTED:
+		wpa_supplicant_event(drv->ctx, EVENT_DFS_CAC_STARTED, &data);
+		break;
+	case QCA_NL80211_VENDOR_SUBCMD_DFS_OFFLOAD_CAC_FINISHED:
+		wpa_supplicant_event(drv->ctx, EVENT_DFS_CAC_FINISHED, &data);
+		break;
+	case QCA_NL80211_VENDOR_SUBCMD_DFS_OFFLOAD_CAC_ABORTED:
+		wpa_supplicant_event(drv->ctx, EVENT_DFS_CAC_ABORTED, &data);
+		break;
+	case QCA_NL80211_VENDOR_SUBCMD_DFS_OFFLOAD_CAC_NOP_FINISHED:
+		wpa_supplicant_event(drv->ctx, EVENT_DFS_NOP_FINISHED, &data);
+		break;
+	default:
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: Unknown DFS offload radar event %d received",
+			   subcmd);
+		break;
+	}
+}
+
+
 static void nl80211_vendor_event_qca(struct wpa_driver_nl80211_data *drv,
 				     u32 subcmd, u8 *data, size_t len)
 {
@@ -1546,6 +1632,13 @@ static void nl80211_vendor_event_qca(struct wpa_driver_nl80211_data *drv,
 		break;
 	case QCA_NL80211_VENDOR_SUBCMD_DO_ACS:
 		qca_nl80211_acs_select_ch(drv, data, len);
+		break;
+	case QCA_NL80211_VENDOR_SUBCMD_DFS_OFFLOAD_CAC_STARTED:
+	case QCA_NL80211_VENDOR_SUBCMD_DFS_OFFLOAD_CAC_FINISHED:
+	case QCA_NL80211_VENDOR_SUBCMD_DFS_OFFLOAD_CAC_ABORTED:
+	case QCA_NL80211_VENDOR_SUBCMD_DFS_OFFLOAD_CAC_NOP_FINISHED:
+	case QCA_NL80211_VENDOR_SUBCMD_DFS_OFFLOAD_RADAR_DETECTED:
+		qca_nl80211_dfs_offload_radar_event(drv, subcmd, data, len);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG,

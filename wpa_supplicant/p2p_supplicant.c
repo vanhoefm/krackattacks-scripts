@@ -22,6 +22,7 @@
 #include "ap/ap_drv_ops.h"
 #include "ap/wps_hostapd.h"
 #include "ap/p2p_hostapd.h"
+#include "ap/dfs.h"
 #include "eapol_supp/eapol_supp_sm.h"
 #include "rsn_supp/wpa.h"
 #include "wpa_supplicant_i.h"
@@ -5927,11 +5928,22 @@ static int wpas_p2p_setup_freqs(struct wpa_supplicant *wpa_s, int freq,
 		else
 			ret = p2p_supported_freq_cli(wpa_s->global->p2p, freq);
 		if (!ret) {
-			wpa_printf(MSG_DEBUG, "P2P: The forced channel "
-				   "(%u MHz) is not supported for P2P uses",
-				   freq);
-			res = -3;
-			goto exit_free;
+			if ((wpa_s->drv_flags & WPA_DRIVER_FLAGS_DFS_OFFLOAD) &&
+			    ieee80211_is_dfs(freq)) {
+				/*
+				 * If freq is a DFS channel and DFS is offloaded
+				 * to the driver, allow P2P GO to use it.
+				 */
+				wpa_printf(MSG_DEBUG,
+					   "P2P: The forced channel for GO (%u MHz) is DFS, and DFS is offloaded to the driver",
+					   freq);
+			} else {
+				wpa_printf(MSG_DEBUG,
+					   "P2P: The forced channel (%u MHz) is not supported for P2P uses",
+					   freq);
+				res = -3;
+				goto exit_free;
+			}
 		}
 
 		for (i = 0; i < num; i++) {
@@ -6302,6 +6314,17 @@ static int wpas_p2p_select_go_freq(struct wpa_supplicant *wpa_s, int freq)
 	}
 
 	if (freq > 0 && !p2p_supported_freq_go(wpa_s->global->p2p, freq)) {
+		if ((wpa_s->drv_flags & WPA_DRIVER_FLAGS_DFS_OFFLOAD) &&
+		    ieee80211_is_dfs(freq)) {
+			/*
+			 * If freq is a DFS channel and DFS is offloaded to the
+			 * driver, allow P2P GO to use it.
+			 */
+			wpa_printf(MSG_DEBUG, "P2P: "
+				   "%s: The forced channel for GO (%u MHz) is DFS, and DFS is offloaded",
+				   __func__, freq);
+			return freq;
+		}
 		wpa_printf(MSG_DEBUG, "P2P: The forced channel for GO "
 			   "(%u MHz) is not supported for P2P uses",
 			   freq);
@@ -6583,10 +6606,21 @@ int wpas_p2p_group_add(struct wpa_supplicant *wpa_s, int persistent_group,
 		return -1;
 	if (params.freq &&
 	    !p2p_supported_freq_go(wpa_s->global->p2p, params.freq)) {
-		wpa_printf(MSG_DEBUG, "P2P: The selected channel for GO "
-			   "(%u MHz) is not supported for P2P uses",
-			   params.freq);
-		return -1;
+		if ((wpa_s->drv_flags & WPA_DRIVER_FLAGS_DFS_OFFLOAD) &&
+		    ieee80211_is_dfs(params.freq)) {
+			/*
+			 * If freq is a DFS channel and DFS is offloaded to the
+			 * driver, allow P2P GO to use it.
+			 */
+			wpa_printf(MSG_DEBUG,
+				   "P2P: %s: The forced channel for GO (%u MHz) is DFS, and DFS is offloaded to driver",
+				__func__, params.freq);
+		} else {
+			wpa_printf(MSG_DEBUG,
+				   "P2P: The selected channel for GO (%u MHz) is not supported for P2P uses",
+				   params.freq);
+			return -1;
+		}
 	}
 	p2p_go_params(wpa_s->global->p2p, &params);
 	params.persistent_group = persistent_group;

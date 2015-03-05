@@ -166,6 +166,13 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 
 	wpa_supplicant_conf_ap_ht(wpa_s, ssid, conf);
 
+	if (ieee80211_is_dfs(ssid->frequency) && wpa_s->conf->country[0]) {
+		conf->ieee80211h = 1;
+		conf->ieee80211d = 1;
+		conf->country[0] = wpa_s->conf->country[0];
+		conf->country[1] = wpa_s->conf->country[1];
+	}
+
 #ifdef CONFIG_P2P
 	if (conf->hw_mode == HOSTAPD_MODE_IEEE80211G &&
 	    (ssid->mode == WPAS_MODE_P2P_GO ||
@@ -566,6 +573,9 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 		params.uapsd = 1; /* mandatory for P2P GO */
 	else
 		params.uapsd = -1;
+
+	if (ieee80211_is_dfs(params.freq.freq))
+		params.freq.freq = 0; /* set channel after CAC */
 
 	if (wpa_drv_associate(wpa_s, &params) < 0) {
 		wpa_msg(wpa_s, MSG_INFO, "Failed to start AP functionality");

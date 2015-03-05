@@ -4301,7 +4301,8 @@ static int wpa_driver_nl80211_ap(struct wpa_driver_nl80211_data *drv,
 		return -1;
 	}
 
-	if (nl80211_set_channel(drv->first_bss, &params->freq, 0)) {
+	if (params->freq.freq &&
+	    nl80211_set_channel(drv->first_bss, &params->freq, 0)) {
 		if (old_mode != nlmode)
 			wpa_driver_nl80211_set_mode(drv->first_bss, old_mode);
 		nl80211_remove_monitor_interface(drv);

@@ -344,6 +344,7 @@ int wpa_supplicant_join_mesh(struct wpa_supplicant *wpa_s,
 
 	if (wpa_supplicant_mesh_init(wpa_s, ssid)) {
 		wpa_msg(wpa_s, MSG_ERROR, "Failed to init mesh");
+		wpa_drv_leave_mesh(wpa_s);
 		ret = -1;
 		goto out;
 	}

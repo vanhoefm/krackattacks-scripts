@@ -2494,6 +2494,10 @@ static void wpa_supplicant_event_tdls(struct wpa_supplicant *wpa_s,
 			wpa_drv_tdls_oper(wpa_s, TDLS_TEARDOWN,
 					  data->tdls.peer);
 		break;
+	case TDLS_REQUEST_DISCOVER:
+			wpa_tdls_send_discovery_request(wpa_s->wpa,
+							data->tdls.peer);
+		break;
 	}
 }
 #endif /* CONFIG_TDLS */

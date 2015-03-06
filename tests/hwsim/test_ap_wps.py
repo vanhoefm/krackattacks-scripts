@@ -2372,3 +2372,45 @@ def test_ap_wps_eapol_workaround(dev, apdev):
     res = dev[0].request("EAPOL_RX " + bssid + " 020000040193000501FFFF")
     if "OK" not in res:
         raise Exception("EAPOL_RX to wpa_supplicant failed")
+
+def test_ap_wps_iteration(dev, apdev):
+    """WPS PIN and iterate through APs without selected registrar"""
+    ssid = "test-wps-conf"
+    hapd = hostapd.add_ap(apdev[0]['ifname'],
+                          { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                            "wpa_passphrase": "12345678", "wpa": "2",
+                            "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP"})
+
+    ssid2 = "test-wps-conf2"
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'],
+                           { "ssid": ssid2, "eap_server": "1", "wps_state": "2",
+                             "wpa_passphrase": "12345678", "wpa": "2",
+                             "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP"})
+
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")
+    dev[0].scan_for_bss(apdev[1]['bssid'], freq="2412")
+    dev[0].dump_monitor()
+    pin = dev[0].request("WPS_PIN any")
+
+    # Wait for iteration through all WPS APs to happen before enabling any
+    # Registrar.
+    for i in range(2):
+        ev = dev[0].wait_event(["Associated with"], timeout=30)
+        if ev is None:
+            raise Exception("No association seen")
+        ev = dev[0].wait_event(["WPS-M2D"], timeout=10)
+        if ev is None:
+            raise Exception("No M2D from AP")
+        dev[0].wait_disconnected()
+
+    # Verify that each AP requested PIN
+    ev = hapd.wait_event(["WPS-PIN-NEEDED"], timeout=1)
+    if ev is None:
+        raise Exception("No WPS-PIN-NEEDED event from AP")
+    ev = hapd2.wait_event(["WPS-PIN-NEEDED"], timeout=1)
+    if ev is None:
+        raise Exception("No WPS-PIN-NEEDED event from AP2")
+
+    # Provide PIN to one of the APs and verify that connection gets formed
+    hapd.request("WPS_PIN any " + pin)
+    dev[0].wait_connected(timeout=30)

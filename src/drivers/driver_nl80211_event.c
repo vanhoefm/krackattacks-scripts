@@ -1282,6 +1282,12 @@ static void nl80211_tdls_oper_event(struct wpa_driver_nl80211_data *drv,
 			   MACSTR, MAC2STR(data.tdls.peer));
 		data.tdls.oper = TDLS_REQUEST_TEARDOWN;
 		break;
+	case NL80211_TDLS_DISCOVERY_REQ:
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: TDLS discovery request for peer " MACSTR,
+			   MAC2STR(data.tdls.peer));
+		data.tdls.oper = TDLS_REQUEST_DISCOVER;
+		break;
 	default:
 		wpa_printf(MSG_DEBUG, "nl80211: Unsupported TDLS operatione "
 			   "event");

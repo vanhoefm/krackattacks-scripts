@@ -16,6 +16,54 @@ import time
 
 logger = logging.getLogger()
 
+# Test cases that take significantly longer time to execute than average.
+long_tests = [ "ap_roam_open",
+               "wpas_mesh_password_mismatch_retry",
+               "wpas_mesh_password_mismatch",
+               "hostapd_oom_wpa2_psk_connect",
+               "ap_hs20_fetch_osu_stop",
+               "ap_roam_wpa2_psk",
+               "ibss_wpa_none_ccmp",
+               "nfc_wps_er_handover_pk_hash_mismatch_sta",
+               "go_neg_peers_force_diff_freq",
+               "p2p_cli_invite",
+               "sta_ap_scan_2b",
+               "ap_pmf_sta_unprot_deauth_burst",
+               "ap_bss_add_remove_during_ht_scan",
+               "wext_scan_hidden",
+               "autoscan_exponential",
+               "nfc_p2p_client",
+               "wnm_bss_keep_alive",
+               "ap_inactivity_disconnect",
+               "scan_bss_expiration_age",
+               "autoscan_periodic",
+               "discovery_group_client",
+               "concurrent_p2pcli",
+               "ap_bss_add_remove",
+               "wpas_ap_wps",
+               "wext_pmksa_cache",
+               "ibss_wpa_none",
+               "ap_ht_40mhz_intolerant_ap",
+               "ibss_rsn",
+               "discovery_pd_retries",
+               "ap_wps_setup_locked_timeout",
+               "ap_vht160",
+               "dfs_radar",
+               "dfs",
+               "grpform_cred_ready_timeout",
+               "hostapd_oom_wpa2_eap_connect",
+               "wpas_ap_dfs",
+               "autogo_many",
+               "hostapd_oom_wpa2_eap",
+               "ibss_open",
+               "proxyarp_open_ebtables",
+               "radius_failover",
+               "obss_scan_40_intolerant",
+               "dbus_connect_oom",
+               "proxyarp_open",
+               "ap_wps_iteration",
+               "ap_wps_pbc_timeout" ]
+
 def get_failed(vm):
     failed = []
     for i in range(num_servers):
@@ -276,6 +324,9 @@ def main():
                    help="enable code coverage collection")
     p.add_argument('--shuffle-tests', dest='shuffle', action='store_const', const=True, default=False,
                    help="shuffle test cases to randomize order")
+    p.add_argument('--short', dest='short', action='store_const', const=True,
+                   default=False,
+                   help="only run short-duration test cases")
     p.add_argument('--long', dest='long', action='store_const', const=True,
                    default=False,
                    help="include long-duration test cases")
@@ -327,47 +378,12 @@ def main():
         # optimization to avoid last part of the test execution running a long
         # duration test case on a single VM while all other VMs have already
         # completed their work.
-        long = [ "ap_roam_open",
-                 "wpas_mesh_password_mismatch_retry",
-                 "wpas_mesh_password_mismatch",
-                 "hostapd_oom_wpa2_psk_connect",
-                 "ap_hs20_fetch_osu_stop",
-                 "ap_roam_wpa2_psk",
-                 "ibss_wpa_none_ccmp",
-                 "nfc_wps_er_handover_pk_hash_mismatch_sta",
-                 "go_neg_peers_force_diff_freq",
-                 "p2p_cli_invite",
-                 "sta_ap_scan_2b",
-                 "ap_pmf_sta_unprot_deauth_burst",
-                 "ap_bss_add_remove_during_ht_scan",
-                 "wext_scan_hidden",
-                 "autoscan_exponential",
-                 "nfc_p2p_client",
-                 "wnm_bss_keep_alive",
-                 "ap_inactivity_disconnect",
-                 "scan_bss_expiration_age",
-                 "autoscan_periodic",
-                 "discovery_group_client",
-                 "concurrent_p2pcli",
-                 "ap_bss_add_remove",
-                 "wpas_ap_wps",
-                 "wext_pmksa_cache",
-                 "ibss_wpa_none",
-                 "ap_ht_40mhz_intolerant_ap",
-                 "ibss_rsn",
-                 "discovery_pd_retries",
-                 "ap_wps_setup_locked_timeout",
-                 "ap_vht160",
-                 "dfs_radar",
-                 "dfs",
-                 "grpform_cred_ready_timeout",
-                 "hostapd_oom_wpa2_eap_connect",
-                 "wpas_ap_dfs",
-                 "ap_wps_pbc_timeout" ]
-        for l in long:
+        for l in long_tests:
             if l in tests:
                 tests.remove(l)
                 tests.insert(0, l)
+    if args.short:
+        tests = [t for t in tests if t not in long_tests]
 
     logger.setLevel(debug_level)
     log_handler = logging.FileHandler('parallel-vm.log')

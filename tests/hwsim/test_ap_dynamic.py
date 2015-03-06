@@ -13,6 +13,7 @@ import os
 import hwsim_utils
 import hostapd
 from utils import alloc_fail
+from test_ap_acs import force_prev_ap_on_24g
 
 def test_ap_change_ssid(dev, apdev):
     """Dynamic SSID change with hostapd and WPA2-PSK"""
@@ -233,6 +234,7 @@ def test_ap_invalid_config2(dev, apdev):
 
 def test_ap_remove_during_acs(dev, apdev):
     """Remove interface during ACS"""
+    force_prev_ap_on_24g(apdev[0])
     params = hostapd.wpa2_params(ssid="test-acs-remove", passphrase="12345678")
     params['channel'] = '0'
     ifname = apdev[0]['ifname']
@@ -242,6 +244,7 @@ def test_ap_remove_during_acs(dev, apdev):
 
 def test_ap_remove_during_acs2(dev, apdev):
     """Remove BSS during ACS in multi-BSS configuration"""
+    force_prev_ap_on_24g(apdev[0])
     ifname = apdev[0]['ifname']
     ifname2 = ifname + "-2"
     hapd_global = hostapd.HostapdGlobal()
@@ -257,6 +260,7 @@ def test_ap_remove_during_acs2(dev, apdev):
 
 def test_ap_remove_during_acs3(dev, apdev):
     """Remove second BSS during ACS in multi-BSS configuration"""
+    force_prev_ap_on_24g(apdev[0])
     ifname = apdev[0]['ifname']
     ifname2 = ifname + "-2"
     hapd_global = hostapd.HostapdGlobal()

@@ -2562,7 +2562,7 @@ def test_ap_hs20_hidden_ssid_in_scan_res(dev, apdev):
 
     params = hs20_ap_params()
     params['hessid'] = bssid
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
 
     dev[0].hs20_enable()
     id = dev[0].add_cred_values({ 'realm': "example.com",
@@ -2576,6 +2576,8 @@ def test_ap_hs20_hidden_ssid_in_scan_res(dev, apdev):
     # clear BSS table to avoid issues in following test cases
     dev[0].request("DISCONNECT")
     dev[0].wait_disconnected()
+    hapd.disable()
+    dev[0].flush_scan_cache()
     dev[0].flush_scan_cache()
 
 def test_ap_hs20_proxyarp(dev, apdev):

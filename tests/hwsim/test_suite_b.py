@@ -25,6 +25,7 @@ def test_suite_b(dev, apdev):
     if "build=OpenSSL 1.0.2" not in tls or "run=OpenSSL 1.0.2" not in tls:
         raise HwsimSkip("OpenSSL version not supported for Suite B: " + tls)
 
+    dev[0].flush_scan_cache()
     params = { "ssid": "test-suite-b",
                "wpa": "2",
                "wpa_key_mgmt": "WPA-EAP-SUITE-B",
@@ -83,6 +84,7 @@ def test_suite_b_192(dev, apdev):
     if "build=OpenSSL 1.0.2" not in tls or "run=OpenSSL 1.0.2" not in tls:
         raise HwsimSkip("OpenSSL version not supported for Suite B: " + tls)
 
+    dev[0].flush_scan_cache()
     params = { "ssid": "test-suite-b",
                "wpa": "2",
                "wpa_key_mgmt": "WPA-EAP-SUITE-B-192",

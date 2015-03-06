@@ -22,7 +22,8 @@ def test_offchannel_tx_roc_gas(dev, apdev):
 
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     wpas.interface_add("wlan5", drv_params="no_offchannel_tx=1")
-    wpas.scan(freq="2412")
+    wpas.flush_scan_cache()
+    wpas.scan_for_bss(bssid, freq=2412)
     anqp_get(wpas, bssid, 263)
     ev = wpas.wait_event(["GAS-QUERY-DONE"], timeout=10)
     if ev is None:

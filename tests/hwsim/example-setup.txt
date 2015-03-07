@@ -32,7 +32,7 @@ Install Ubuntu Server 14.04.1 in the virtual machine
 
 Install the prerequisite packages that may not have been installed by default
 
-sudo apt-get install build-essential git libpcap-dev libsqlite3-dev binutils-dev libnl-3-dev libnl-genl-3-dev libnl-route-3-dev libssl-dev libiberty-dev libdbus-1-dev iw bridge-utils python-pyrad
+sudo apt-get install build-essential git libpcap-dev libsqlite3-dev binutils-dev libnl-3-dev libnl-genl-3-dev libnl-route-3-dev libssl-dev libiberty-dev libdbus-1-dev iw bridge-utils python-pyrad python-crypto
 
 
 Install a recent kernel wireless components (mac80211_hwsim, mac80211,

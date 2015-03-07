@@ -678,9 +678,10 @@ static int rate_match(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 				 * order to join a BSS all required rates
 				 * have to be supported by the hardware.
 				 */
-				wpa_dbg(wpa_s, MSG_DEBUG, "   hardware does "
-					"not support required rate %d.%d Mbps",
-					r / 10, r % 10);
+				wpa_dbg(wpa_s, MSG_DEBUG,
+					"   hardware does not support required rate %d.%d Mbps (freq=%d mode==%d num_rates=%d)",
+					r / 10, r % 10,
+					bss->freq, mode->mode, mode->num_rates);
 				return 0;
 			}
 		}

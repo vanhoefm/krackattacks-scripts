@@ -335,6 +335,33 @@ static void wiphy_info_tdls(struct wpa_driver_capa *capa, struct nlattr *tdls,
 }
 
 
+static int ext_feature_isset(const u8 *ext_features, int ext_features_len,
+			     enum nl80211_ext_feature_index ftidx)
+{
+	u8 ft_byte;
+
+	if ((int) ftidx / 8 >= ext_features_len)
+		return 0;
+
+	ft_byte = ext_features[ftidx / 8];
+	return (ft_byte & BIT(ftidx % 8)) != 0;
+}
+
+
+static void wiphy_info_ext_feature_flags(struct wiphy_info_data *info,
+					 struct nlattr *tb)
+{
+	struct wpa_driver_capa *capa = info->capa;
+
+	if (tb == NULL)
+		return;
+
+	if (ext_feature_isset(nla_data(tb), nla_len(tb),
+			      NL80211_EXT_FEATURE_VHT_IBSS))
+		capa->flags |= WPA_DRIVER_FLAGS_VHT_IBSS;
+}
+
+
 static void wiphy_info_feature_flags(struct wiphy_info_data *info,
 				     struct nlattr *tb)
 {
@@ -509,6 +536,7 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 		info->device_ap_sme = 1;
 
 	wiphy_info_feature_flags(info, tb[NL80211_ATTR_FEATURE_FLAGS]);
+	wiphy_info_ext_feature_flags(info, tb[NL80211_ATTR_EXT_FEATURES]);
 	wiphy_info_probe_resp_offload(capa,
 				      tb[NL80211_ATTR_PROBE_RESP_OFFLOAD]);
 

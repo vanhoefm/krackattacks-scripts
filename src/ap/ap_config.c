@@ -181,6 +181,8 @@ struct hostapd_config * hostapd_config_defaults(void)
 	conf->corrupt_gtk_rekey_mic_probability = 0.0;
 #endif /* CONFIG_TESTING_OPTIONS */
 
+	conf->acs = 0;
+	conf->acs_ch_list.num = 0;
 #ifdef CONFIG_ACS
 	conf->acs_num_scans = 5;
 #endif /* CONFIG_ACS */
@@ -579,7 +581,7 @@ void hostapd_config_free(struct hostapd_config *conf)
 	os_free(conf->bss);
 	os_free(conf->supported_rates);
 	os_free(conf->basic_rates);
-	os_free(conf->chanlist);
+	os_free(conf->acs_ch_list.range);
 	os_free(conf->driver_params);
 #ifdef CONFIG_ACS
 	os_free(conf->acs_chan_bias);

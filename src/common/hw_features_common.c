@@ -363,8 +363,6 @@ int hostapd_set_freq_params(struct hostapd_freq_params *data,
 			    int vht_oper_chwidth, int center_segment0,
 			    int center_segment1, u32 vht_caps)
 {
-	int tmp;
-
 	os_memset(data, 0, sizeof(*data));
 	data->mode = mode;
 	data->freq = freq;
@@ -404,13 +402,34 @@ int hostapd_set_freq_params(struct hostapd_freq_params *data,
 			return -1;
 		if (!sec_channel_offset)
 			return -1;
-		/* primary 40 part must match the HT configuration */
-		tmp = (30 + freq - 5000 - center_segment0 * 5) / 20;
-		tmp /= 2;
-		if (data->center_freq1 != 5000 +
-		    center_segment0 * 5 - 20 + 40 * tmp)
-			return -1;
-		data->center_freq1 = 5000 + center_segment0 * 5;
+		if (!center_segment0) {
+			if (channel <= 48)
+				center_segment0 = 42;
+			else if (channel <= 64)
+				center_segment0 = 58;
+			else if (channel <= 112)
+				center_segment0 = 106;
+			else if (channel <= 128)
+				center_segment0 = 122;
+			else if (channel <= 144)
+				center_segment0 = 138;
+			else if (channel <= 161)
+				center_segment0 = 155;
+			data->center_freq1 = 5000 + center_segment0 * 5;
+		} else {
+			/*
+			 * Note: HT/VHT config and params are coupled. Check if
+			 * HT40 channel band is in VHT80 Pri channel band
+			 * configuration.
+			 */
+			if (center_segment0 == channel + 6 ||
+			    center_segment0 == channel + 2 ||
+			    center_segment0 == channel - 2 ||
+			    center_segment0 == channel - 6)
+				data->center_freq1 = 5000 + center_segment0 * 5;
+			else
+				return -1;
+		}
 		break;
 	case VHT_CHANWIDTH_160MHZ:
 		data->bandwidth = 160;
@@ -424,13 +443,21 @@ int hostapd_set_freq_params(struct hostapd_freq_params *data,
 			return -1;
 		if (!sec_channel_offset)
 			return -1;
-		/* primary 40 part must match the HT configuration */
-		tmp = (70 + freq - 5000 - center_segment0 * 5) / 20;
-		tmp /= 2;
-		if (data->center_freq1 != 5000 +
-		    center_segment0 * 5 - 60 + 40 * tmp)
+		/*
+		 * Note: HT/VHT config and params are coupled. Check if
+		 * HT40 channel band is in VHT160 channel band configuration.
+		 */
+		if (center_segment0 == channel + 14 ||
+		    center_segment0 == channel + 10 ||
+		    center_segment0 == channel + 6 ||
+		    center_segment0 == channel + 2 ||
+		    center_segment0 == channel - 2 ||
+		    center_segment0 == channel - 6 ||
+		    center_segment0 == channel - 10 ||
+		    center_segment0 == channel - 14)
+			data->center_freq1 = 5000 + center_segment0 * 5;
+		else
 			return -1;
-		data->center_freq1 = 5000 + center_segment0 * 5;
 		break;
 	}
 

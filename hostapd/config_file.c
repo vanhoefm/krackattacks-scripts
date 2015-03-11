@@ -775,6 +775,24 @@ static int hostapd_config_read_wep(struct hostapd_wep_keys *wep, int keyidx,
 }
 
 
+static int hostapd_parse_chanlist(struct hostapd_config *conf, char *val)
+{
+	char *pos;
+
+	/* for backwards compatibility, translate ' ' in conf str to ',' */
+	pos = val;
+	while (pos) {
+		pos = os_strchr(pos, ' ');
+		if (pos)
+			*pos++ = ',';
+	}
+	if (freq_range_list_parse(&conf->acs_ch_list, val))
+		return -1;
+
+	return 0;
+}
+
+
 static int hostapd_parse_intlist(int **int_list, char *val)
 {
 	int *list;
@@ -2542,12 +2560,15 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 				   line);
 			return 1;
 #else /* CONFIG_ACS */
+			conf->acs = 1;
 			conf->channel = 0;
 #endif /* CONFIG_ACS */
-		} else
+		} else {
 			conf->channel = atoi(pos);
+			conf->acs = conf->channel == 0;
+		}
 	} else if (os_strcmp(buf, "chanlist") == 0) {
-		if (hostapd_parse_intlist(&conf->chanlist, pos)) {
+		if (hostapd_parse_chanlist(conf, pos)) {
 			wpa_printf(MSG_ERROR, "Line %d: invalid channel list",
 				   line);
 			return 1;

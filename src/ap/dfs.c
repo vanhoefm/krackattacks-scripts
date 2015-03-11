@@ -165,16 +165,10 @@ static int dfs_chan_range_available(struct hostapd_hw_modes *mode,
 static int is_in_chanlist(struct hostapd_iface *iface,
 			  struct hostapd_channel_data *chan)
 {
-	int *entry;
-
-	if (!iface->conf->chanlist)
+	if (!iface->conf->acs_ch_list.num)
 		return 1;
 
-	for (entry = iface->conf->chanlist; *entry != -1; entry++) {
-		if (*entry == chan->chan)
-			return 1;
-	}
-	return 0;
+	return freq_range_list_includes(&iface->conf->acs_ch_list, chan->chan);
 }
 
 

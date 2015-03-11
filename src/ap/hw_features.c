@@ -510,7 +510,11 @@ static int ieee80211n_supported_ht_capab(struct hostapd_iface *iface)
 		return 0;
 	}
 
-	if ((conf & HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET) &&
+	/*
+	 * Driver ACS chosen channel may not be HT40 due to internal driver
+	 * restrictions.
+	 */
+	if (!iface->conf->acs && (conf & HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET) &&
 	    !(hw & HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET)) {
 		wpa_printf(MSG_ERROR, "Driver does not support configured "
 			   "HT capability [HT40*]");

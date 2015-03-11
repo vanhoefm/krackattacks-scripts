@@ -1588,6 +1588,16 @@ struct drv_acs_params {
 
 	/* Indicates whether HT40 is enabled */
 	int ht40_enabled;
+
+	/* Indicates whether VHT is enabled */
+	int vht_enabled;
+
+	/* Configured ACS channel width */
+	u16 ch_width;
+
+	/* ACS channel list info */
+	unsigned int ch_list_len;
+	const u8 *ch_list;
 };
 
 
@@ -4546,10 +4556,18 @@ union wpa_event_data {
 	 * struct acs_selected_channels - Data for EVENT_ACS_CHANNEL_SELECTED
 	 * @pri_channel: Selected primary channel
 	 * @sec_channel: Selected secondary channel
+	 * @vht_seg0_center_ch: VHT mode Segment0 center channel
+	 * @vht_seg1_center_ch: VHT mode Segment1 center channel
+	 * @ch_width: Selected Channel width by driver. Driver may choose to
+	 *	change hostapd configured ACS channel width due driver internal
+	 *	channel restrictions.
 	 */
 	struct acs_selected_channels {
 		u8 pri_channel;
 		u8 sec_channel;
+		u8 vht_seg0_center_ch;
+		u8 vht_seg1_center_ch;
+		u16 ch_width;
 	} acs_selected_channels;
 };
 

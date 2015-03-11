@@ -1500,6 +1500,25 @@ static void qca_nl80211_acs_select_ch(struct wpa_driver_nl80211_data *drv,
 		nla_get_u8(tb[QCA_WLAN_VENDOR_ATTR_ACS_PRIMARY_CHANNEL]);
 	event.acs_selected_channels.sec_channel =
 		nla_get_u8(tb[QCA_WLAN_VENDOR_ATTR_ACS_SECONDARY_CHANNEL]);
+	if (tb[QCA_WLAN_VENDOR_ATTR_ACS_VHT_SEG0_CENTER_CHANNEL])
+		event.acs_selected_channels.vht_seg0_center_ch =
+			nla_get_u8(tb[QCA_WLAN_VENDOR_ATTR_ACS_VHT_SEG0_CENTER_CHANNEL]);
+	if (tb[QCA_WLAN_VENDOR_ATTR_ACS_VHT_SEG0_CENTER_CHANNEL])
+		event.acs_selected_channels.vht_seg1_center_ch =
+			nla_get_u8(tb[QCA_WLAN_VENDOR_ATTR_ACS_VHT_SEG1_CENTER_CHANNEL]);
+	if (tb[QCA_WLAN_VENDOR_ATTR_ACS_CHWIDTH])
+		event.acs_selected_channels.ch_width =
+			nla_get_u16(tb[QCA_WLAN_VENDOR_ATTR_ACS_CHWIDTH]);
+
+	wpa_printf(MSG_INFO,
+		   "nl80211: ACS Results: PCH: %d SCH: %d BW: %d VHT0: %d VHT1: %d",
+		   event.acs_selected_channels.pri_channel,
+		   event.acs_selected_channels.sec_channel,
+		   event.acs_selected_channels.ch_width,
+		   event.acs_selected_channels.vht_seg0_center_ch,
+		   event.acs_selected_channels.vht_seg1_center_ch);
+
+	/* Ignore ACS channel list check for backwards compatibility */
 
 	wpa_supplicant_event(drv->ctx, EVENT_ACS_CHANNEL_SELECTED, &event);
 }

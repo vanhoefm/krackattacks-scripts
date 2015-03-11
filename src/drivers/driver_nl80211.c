@@ -8382,11 +8382,23 @@ static int wpa_driver_do_acs(void *priv, struct drv_acs_params *params)
 	    (params->ht_enabled &&
 	     nla_put_flag(msg, QCA_WLAN_VENDOR_ATTR_ACS_HT_ENABLED)) ||
 	    (params->ht40_enabled &&
-	     nla_put_flag(msg, QCA_WLAN_VENDOR_ATTR_ACS_HT40_ENABLED))) {
+	     nla_put_flag(msg, QCA_WLAN_VENDOR_ATTR_ACS_HT40_ENABLED)) ||
+	    (params->vht_enabled &&
+	     nla_put_flag(msg, QCA_WLAN_VENDOR_ATTR_ACS_VHT_ENABLED)) ||
+	    nla_put_u16(msg, QCA_WLAN_VENDOR_ATTR_ACS_CHWIDTH,
+			params->ch_width) ||
+	    (params->ch_list_len &&
+	     nla_put(msg, QCA_WLAN_VENDOR_ATTR_ACS_CH_LIST, params->ch_list_len,
+		     params->ch_list))) {
 		nlmsg_free(msg);
 		return -ENOBUFS;
 	}
 	nla_nest_end(msg, data);
+
+	wpa_printf(MSG_DEBUG,
+		   "nl80211: ACS Params: HW_MODE: %d HT: %d HT40: %d VHT: %d BW: %d CH_LIST_LEN: %u",
+		   params->hw_mode, params->ht_enabled, params->ht40_enabled,
+		   params->vht_enabled, params->ch_width, params->ch_list_len);
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	if (ret) {

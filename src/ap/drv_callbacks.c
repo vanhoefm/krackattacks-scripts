@@ -532,9 +532,8 @@ void hostapd_event_connect_failed_reason(struct hostapd_data *hapd,
 
 #ifdef CONFIG_ACS
 static void hostapd_acs_channel_selected(struct hostapd_data *hapd,
-					 u8 pri_channel, u8 sec_channel)
+					 struct acs_selected_channels *acs_res)
 {
-	int channel;
 	int ret;
 
 	if (hapd->iconf->channel) {
@@ -543,27 +542,53 @@ static void hostapd_acs_channel_selected(struct hostapd_data *hapd,
 		return;
 	}
 
-	hapd->iface->freq = hostapd_hw_get_freq(hapd, pri_channel);
+	hapd->iface->freq = hostapd_hw_get_freq(hapd, acs_res->pri_channel);
 
-	channel = pri_channel;
-	if (!channel) {
+	if (!acs_res->pri_channel) {
 		hostapd_logger(hapd, NULL, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_WARNING,
 			       "driver switched to bad channel");
 		return;
 	}
 
-	hapd->iconf->channel = channel;
+	hapd->iconf->channel = acs_res->pri_channel;
+	hapd->iconf->acs = 1;
 
-	if (sec_channel == 0)
+	if (acs_res->sec_channel == 0)
 		hapd->iconf->secondary_channel = 0;
-	else if (sec_channel < pri_channel)
+	else if (acs_res->sec_channel < acs_res->pri_channel)
 		hapd->iconf->secondary_channel = -1;
-	else if (sec_channel > pri_channel)
+	else if (acs_res->sec_channel > acs_res->pri_channel)
 		hapd->iconf->secondary_channel = 1;
 	else {
 		wpa_printf(MSG_ERROR, "Invalid secondary channel!");
 		return;
+	}
+
+	if (hapd->iface->conf->ieee80211ac) {
+		/* set defaults for backwards compatibility */
+		hapd->iconf->vht_oper_centr_freq_seg1_idx = 0;
+		hapd->iconf->vht_oper_centr_freq_seg0_idx = 0;
+		hapd->iconf->vht_oper_chwidth = VHT_CHANWIDTH_USE_HT;
+		if (acs_res->ch_width == 80) {
+			hapd->iconf->vht_oper_centr_freq_seg0_idx =
+				acs_res->vht_seg0_center_ch;
+			hapd->iconf->vht_oper_chwidth = VHT_CHANWIDTH_80MHZ;
+		} else if (acs_res->ch_width == 160) {
+			if (acs_res->vht_seg1_center_ch == 0) {
+				hapd->iconf->vht_oper_centr_freq_seg0_idx =
+					acs_res->vht_seg0_center_ch;
+				hapd->iconf->vht_oper_chwidth =
+					VHT_CHANWIDTH_160MHZ;
+			} else {
+				hapd->iconf->vht_oper_centr_freq_seg0_idx =
+					acs_res->vht_seg0_center_ch;
+				hapd->iconf->vht_oper_centr_freq_seg1_idx =
+					acs_res->vht_seg1_center_ch;
+				hapd->iconf->vht_oper_chwidth =
+					VHT_CHANWIDTH_80P80MHZ;
+			}
+		}
 	}
 
 	ret = hostapd_acs_completed(hapd->iface, 0);
@@ -1248,9 +1273,8 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		break;
 #ifdef CONFIG_ACS
 	case EVENT_ACS_CHANNEL_SELECTED:
-		hostapd_acs_channel_selected(
-			hapd, data->acs_selected_channels.pri_channel,
-			data->acs_selected_channels.sec_channel);
+		hostapd_acs_channel_selected(hapd,
+					     &data->acs_selected_channels);
 		break;
 #endif /* CONFIG_ACS */
 	default:

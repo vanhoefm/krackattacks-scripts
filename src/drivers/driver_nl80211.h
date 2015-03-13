@@ -270,5 +270,6 @@ int wpa_driver_nl80211_sched_scan(void *priv,
 int wpa_driver_nl80211_stop_sched_scan(void *priv);
 struct wpa_scan_results * wpa_driver_nl80211_get_scan_results(void *priv);
 void nl80211_dump_scan(struct wpa_driver_nl80211_data *drv);
+const u8 * nl80211_get_ie(const u8 *ies, size_t ies_len, u8 ie);
 
 #endif /* DRIVER_NL80211_H */

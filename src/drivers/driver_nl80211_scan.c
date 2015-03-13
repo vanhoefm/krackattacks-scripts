@@ -433,7 +433,7 @@ int wpa_driver_nl80211_stop_sched_scan(void *priv)
 }
 
 
-static const u8 * nl80211_get_ie(const u8 *ies, size_t ies_len, u8 ie)
+const u8 * nl80211_get_ie(const u8 *ies, size_t ies_len, u8 ie)
 {
 	const u8 *end, *pos;
 

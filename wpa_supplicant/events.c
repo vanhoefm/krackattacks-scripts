@@ -158,11 +158,32 @@ static void wpa_supplicant_update_current_bss(struct wpa_supplicant *wpa_s)
 static int wpa_supplicant_select_config(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_ssid *ssid, *old_ssid;
+	u8 drv_ssid[MAX_SSID_LEN];
+	size_t drv_ssid_len;
 	int res;
 
 	if (wpa_s->conf->ap_scan == 1 && wpa_s->current_ssid) {
 		wpa_supplicant_update_current_bss(wpa_s);
-		return 0;
+
+		if (wpa_s->current_ssid->ssid_len == 0)
+			return 0; /* current profile still in use */
+		res = wpa_drv_get_ssid(wpa_s, drv_ssid);
+		if (res < 0) {
+			wpa_msg(wpa_s, MSG_INFO,
+				"Failed to read SSID from driver");
+			return 0; /* try to use current profile */
+		}
+		drv_ssid_len = res;
+
+		if (drv_ssid_len == wpa_s->current_ssid->ssid_len &&
+		    os_memcmp(drv_ssid, wpa_s->current_ssid->ssid,
+			      drv_ssid_len) == 0)
+			return 0; /* current profile still in use */
+
+		wpa_msg(wpa_s, MSG_DEBUG,
+			"Driver-initiated BSS selection changed the SSID to %s",
+			wpa_ssid_txt(drv_ssid, drv_ssid_len));
+		/* continue selecting a new network profile */
 	}
 
 	wpa_dbg(wpa_s, MSG_DEBUG, "Select network based on association "

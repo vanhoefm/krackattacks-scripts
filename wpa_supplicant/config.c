@@ -4052,6 +4052,31 @@ static int wpa_config_get_str(const char *name, struct wpa_config *config,
 }
 
 
+#ifdef CONFIG_P2P
+static int wpa_config_get_ipv4(const char *name, struct wpa_config *config,
+			       long offset, char *buf, size_t buflen,
+			       int pretty_print)
+{
+	void *val = ((u8 *) config) + (long) offset;
+	int res;
+	char addr[INET_ADDRSTRLEN];
+
+	if (!val || !inet_ntop(AF_INET, val, addr, sizeof(addr)))
+		return -1;
+
+	if (pretty_print)
+		res = os_snprintf(buf, buflen, "%s=%s\n", name, addr);
+	else
+		res = os_snprintf(buf, buflen, "%s", addr);
+
+	if (os_snprintf_error(buflen, res))
+		res = -1;
+
+	return res;
+}
+#endif /* CONFIG_P2P */
+
+
 #ifdef OFFSET
 #undef OFFSET
 #endif /* OFFSET */
@@ -4067,7 +4092,8 @@ static int wpa_config_get_str(const char *name, struct wpa_config *config,
 #define STR(f) _STR(f), NULL, NULL
 #define STR_RANGE(f, min, max) _STR(f), (void *) min, (void *) max
 #define BIN(f) #f, wpa_global_config_parse_bin, NULL, OFFSET(f), NULL, NULL
-#define IPV4(f) #f, wpa_global_config_parse_ipv4, NULL, OFFSET(f), NULL, NULL
+#define IPV4(f) #f, wpa_global_config_parse_ipv4, wpa_config_get_ipv4,  \
+	OFFSET(f), NULL, NULL
 
 static const struct global_parse_data global_fields[] = {
 #ifdef CONFIG_CTRL_IFACE

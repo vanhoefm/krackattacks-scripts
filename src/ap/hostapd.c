@@ -1619,6 +1619,7 @@ static void hostapd_bss_deinit(struct hostapd_data *hapd)
 	wpa_printf(MSG_DEBUG, "%s: deinit bss %s", __func__,
 		   hapd->conf->iface);
 	hostapd_bss_deinit_no_free(hapd);
+	wpa_msg(hapd->msg_ctx, MSG_INFO, AP_EVENT_DISABLED);
 	hostapd_cleanup(hapd);
 }
 
@@ -1630,6 +1631,8 @@ void hostapd_interface_deinit(struct hostapd_iface *iface)
 	wpa_printf(MSG_DEBUG, "%s(%p)", __func__, iface);
 	if (iface == NULL)
 		return;
+
+	hostapd_set_state(iface, HAPD_IFACE_DISABLED);
 
 #ifdef CONFIG_IEEE80211N
 #ifdef NEED_AP_MLME

@@ -1,5 +1,5 @@
 # P2P autonomous GO test cases
-# Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2015, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -644,3 +644,60 @@ def test_autogo_many(dev):
         dev[0].request("P2P_GROUP_REMOVE " + i)
         dev[0].dump_monitor()
     dev[0].request("P2P_GROUP_REMOVE *")
+
+def test_autogo_many_clients(dev):
+    """P2P autonomous GO and many clients (P2P IE fragmentation)"""
+    try:
+        _test_autogo_many_clients(dev)
+    finally:
+        dev[0].request("SET device_name Device A")
+        dev[1].request("SET device_name Device B")
+        dev[2].request("SET device_name Device C")
+
+def _test_autogo_many_clients(dev):
+    # These long device names will push the P2P IE contents beyond the limit
+    # that requires fragmentation.
+    name0 = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    name1 = "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+    name2 = "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"
+    name3 = "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD"
+    dev[0].request("SET device_name " + name0)
+    dev[1].request("SET device_name " + name1)
+    dev[2].request("SET device_name " + name2)
+
+    addr0 = dev[0].p2p_dev_addr()
+    res = autogo(dev[0], freq=2412)
+    bssid = dev[0].p2p_interface_addr()
+
+    connect_cli(dev[0], dev[1], social=True, freq=2412)
+    dev[0].dump_monitor()
+    connect_cli(dev[0], dev[2], social=True, freq=2412)
+    dev[0].dump_monitor()
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5")
+    wpas.request("SET device_name " + name3)
+    wpas.request("SET sec_device_type 1-11111111-1")
+    wpas.request("SET sec_device_type 2-22222222-2")
+    wpas.request("SET sec_device_type 3-33333333-3")
+    wpas.request("SET sec_device_type 4-44444444-4")
+    wpas.request("SET sec_device_type 5-55555555-5")
+    connect_cli(dev[0], wpas, social=True, freq=2412)
+    dev[0].dump_monitor()
+
+    dev[1].dump_monitor()
+    dev[1].p2p_find(freq=2412)
+    ev1 = dev[1].wait_global_event(["P2P-DEVICE-FOUND"], timeout=10)
+    if ev1 is None:
+        raise Exception("Could not find peer (1)")
+    ev2 = dev[1].wait_global_event(["P2P-DEVICE-FOUND"], timeout=10)
+    if ev2 is None:
+        raise Exception("Could not find peer (2)")
+    ev3 = dev[1].wait_global_event(["P2P-DEVICE-FOUND"], timeout=10)
+    if ev3 is None:
+        raise Exception("Could not find peer (3)")
+    dev[1].p2p_stop_find()
+
+    for i in [ name0, name2, name3 ]:
+        if i not in ev1 and i not in ev2 and i not in ev3:
+            raise Exception('name "%s" not found' % i)

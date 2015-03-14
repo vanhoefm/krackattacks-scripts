@@ -1,5 +1,83 @@
 ChangeLog for wpa_supplicant
 
+2015-03-15 - v2.4
+	* allow OpenSSL cipher configuration to be set for internal EAP server
+	  (openssl_ciphers parameter)
+	* fixed number of small issues based on hwsim test case failures and
+	  static analyzer reports
+	* P2P:
+	  - add new=<0/1> flag to P2P-DEVICE-FOUND events
+	  - add passive channels in invitation response from P2P Client
+	  - enable nl80211 P2P_DEVICE support by default
+	  - fix regresssion in disallow_freq preventing search on social
+	    channels
+	  - fix regressions in P2P SD query processing
+	  - try to re-invite with social operating channel if no common channels
+	    in invitation
+	  - allow cross connection on parent interface (this fixes number of
+	    use cases with nl80211)
+	  - add support for P2P services (P2PS)
+	  - add p2p_go_ctwindow configuration parameter to allow GO CTWindow to
+	    be configured
+	* increase postponing of EAPOL-Start by one second with AP/GO that
+	  supports WPS 2.0 (this makes it less likely to trigger extra roundtrip
+	  of identity frames)
+	* add support for PMKSA caching with SAE
+	* add support for control mesh BSS (IEEE 802.11s) operations
+	* fixed number of issues with D-Bus P2P commands
+	* fixed regression in ap_scan=2 special case for WPS
+	* fixed macsec_validate configuration
+	* add a workaround for incorrectly behaving APs that try to use
+	  EAPOL-Key descriptor version 3 when the station supports PMF even if
+	  PMF is not enabled on the AP
+	* allow TLS v1.1 and v1.2 to be negotiated by default; previous behavior
+	  of disabling these can be configured to work around issues with broken
+	  servers with phase1="tls_disable_tlsv1_1=1 tls_disable_tlsv1_2=1"
+	* add support for Suite B (128-bit and 192-bit level) key management and
+	  cipher suites
+	* add WMM-AC support (WMM_AC_ADDTS/WMM_AC_DELTS)
+	* improved BSS Transition Management processing
+	* add support for neighbor report
+	* add support for link measurement
+	* fixed expiration of BSS entry with all-zeros BSSID
+	* add optional LAST_ID=x argument to LIST_NETWORK to allow all
+	  configured networks to be listed even with huge number of network
+	  profiles
+	* add support for EAP Re-Authentication Protocol (ERP)
+	* fixed EAP-IKEv2 fragmentation reassembly
+	* improved PKCS#11 configuration for OpenSSL
+	* set stdout to be line-buffered
+	* add TDLS channel switch configuration
+	* add support for MAC address randomization in scans with nl80211
+	* enable HT for IBSS if supported by the driver
+	* add BSSID black and white lists (bssid_blacklist, bssid_whitelist)
+	* add support for domain_suffix_match with GnuTLS
+	* add OCSP stapling client support with GnuTLS
+	* include peer certificate in EAP events even without a separate probe
+	  operation; old behavior can be restored with cert_in_cb=0
+	* add peer ceritficate alt subject name to EAP events
+	  (CTRL-EVENT-EAP-PEER-ALT)
+	* add domain_match network profile parameter (similar to
+	  domain_suffix_match, but full match is required)
+	* enable AP/GO mode HT Tx STBC automatically based on driver support
+	* add ANQP-QUERY-DONE event to provide information on ANQP parsing
+	  status
+	* allow passive scanning to be forced with passive_scan=1
+	* add a workaround for Linux packet socket behavior when interface is in
+	  bridge
+	* increase 5 GHz band preference in BSS selection (estimate SNR, if info
+	  not available from driver; estimate maximum throughput based on common
+	  HT/VHT/specific TX rate support)
+	* add INTERWORKING_ADD_NETWORK ctrl_iface command; this can be used to
+	  implement Interworking network selection behavior in upper layers
+	  software components
+	* add optional reassoc_same_bss_optim=1 (disabled by default)
+	  optimization to avoid unnecessary Authentication frame exchange
+	* extend TDLS frame padding workaround to cover all packets
+	* allow wpa_supplicant to recover nl80211 functionality if the cfg80211
+	  module gets removed and reloaded without restarting wpa_supplicant
+	* allow hostapd DFS implementation to be used in wpa_supplicant AP mode
+
 2014-10-09 - v2.3
 	* fixed number of minor issues identified in static analyzer warnings
 	* fixed wfd_dev_info to be more careful and not read beyond the buffer

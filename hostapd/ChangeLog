@@ -1,5 +1,49 @@
 ChangeLog for hostapd
 
+2015-03-15 - v2.4
+	* allow OpenSSL cipher configuration to be set for internal EAP server
+	  (openssl_ciphers parameter)
+	* fixed number of small issues based on hwsim test case failures and
+	  static analyzer reports
+	* fixed Accounting-Request to not include duplicated Acct-Session-Id
+	* add support for Acct-Multi-Session-Id in RADIUS Accounting messages
+	* add support for PMKSA caching with SAE
+	* add support for generating BSS Load element (bss_load_update_period)
+	* fixed channel switch from VHT to HT
+	* add INTERFACE-ENABLED and INTERFACE-DISABLED ctrl_iface events
+	* add support for learning STA IPv4/IPv6 addresses and configuring
+	  ProxyARP support
+	* dropped support for the madwifi driver interface
+	* add support for Suite B (128-bit and 192-bit level) key management and
+	  cipher suites
+	* fixed a regression with driver=wired
+	* extend EAPOL-Key msg 1/4 retry workaround for changing SNonce
+	* add BSS_TM_REQ ctrl_iface command to send BSS Transition Management
+	  Request frames and BSS-TM-RESP event to indicate response to such
+	  frame
+	* add support for EAP Re-Authentication Protocol (ERP)
+	* fixed AP IE in EAPOL-Key 3/4 when both WPA and FT was enabled
+	* fixed a regression in HT 20/40 coex Action frame parsing
+	* set stdout to be line-buffered
+	* add support for vendor specific VHT extension to enable 256 QAM rates
+	  (VHT-MCS 8 and 9) on 2.4 GHz band
+	* RADIUS DAS:
+	  - extend Disconnect-Request processing to allow matching of multiple
+	    sessions
+	  - support Acct-Multi-Session-Id as an identifier
+	  - allow PMKSA cache entry to be removed without association
+	* expire hostapd STA entry if kernel does not have a matching entry
+	* allow chanlist to be used to specify a subset of channels for ACS
+	* improve ACS behavior on 2.4 GHz band and allow channel bias to be
+	  configured with acs_chan_bias parameter
+	* do not reply to a Probe Request frame that includes DSS Parameter Set
+	  element in which the channel does not match the current operating
+	  channel
+	* add UPDATE_BEACON ctrl_iface command; this can be used to force Beacon
+	  frame contents to be updated and to start beaconing on an interface
+	  that used start_disabled=1
+	* fixed some RADIUS server failover cases
+
 2014-10-09 - v2.3
 	* fixed number of minor issues identified in static analyzer warnings
 	* fixed DFS and channel switch operation for multi-BSS cases

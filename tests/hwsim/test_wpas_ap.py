@@ -315,3 +315,22 @@ def _test_wpas_ap_dfs(dev):
         raise Exception("AP failed to start")
 
     dev[1].connect("wpas-ap-dfs", key_mgmt="NONE")
+
+def test_wpas_ap_disable(dev):
+    """wpa_supplicant AP mode - DISABLE_NETWORK"""
+    id = dev[0].add_network()
+    dev[0].set_network(id, "mode", "2")
+    dev[0].set_network_quoted(id, "ssid", "wpas-ap-open")
+    dev[0].set_network(id, "key_mgmt", "NONE")
+    dev[0].set_network(id, "scan_freq", "2412")
+    dev[0].select_network(id)
+
+    ev = dev[0].wait_event(["AP-ENABLED"])
+    if ev is None:
+        raise Exception("AP-ENABLED event not seen")
+    wait_ap_ready(dev[0])
+    dev[0].request("DISABLE_NETWORK %d" % id)
+    ev = dev[0].wait_event(["AP-DISABLED"])
+    if ev is None:
+        raise Exception("AP-DISABLED event not seen")
+    dev[0].wait_disconnected()

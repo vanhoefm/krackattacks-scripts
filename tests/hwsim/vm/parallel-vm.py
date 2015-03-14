@@ -357,15 +357,19 @@ def main():
         codecov = False
 
     first_run_failures = []
-    tests = []
-    cmd = [ os.path.join(os.path.dirname(scriptsdir), 'run-tests.py'), '-L' ]
-    if args.testmodules:
-        cmd += [ "-f" ]
-        cmd += args.testmodules
-    lst = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-    for l in lst.stdout.readlines():
-        name = l.split(' ')[0]
-        tests.append(name)
+    if args.params:
+        tests = args.params
+    else:
+        tests = []
+        cmd = [ os.path.join(os.path.dirname(scriptsdir), 'run-tests.py'),
+                '-L' ]
+        if args.testmodules:
+            cmd += [ "-f" ]
+            cmd += args.testmodules
+        lst = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        for l in lst.stdout.readlines():
+            name = l.split(' ')[0]
+            tests.append(name)
     if len(tests) == 0:
         sys.exit("No test cases selected")
 

@@ -76,11 +76,11 @@ static int first_zero(u8 val)
 int bitfield_get_first_zero(struct bitfield *bf)
 {
 	size_t i;
-	for (i = 0; i <= (bf->max_bits + 7) / 8; i++) {
+	for (i = 0; i < (bf->max_bits + 7) / 8; i++) {
 		if (bf->bits[i] != 0xff)
 			break;
 	}
-	if (i > (bf->max_bits + 7) / 8)
+	if (i == (bf->max_bits + 7) / 8)
 		return -1;
 	i = i * 8 + first_zero(bf->bits[i]);
 	if (i >= bf->max_bits)

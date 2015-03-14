@@ -707,6 +707,9 @@ void wpa_supplicant_ap_deinit(struct wpa_supplicant *wpa_s)
 	hostapd_interface_free(wpa_s->ap_iface);
 	wpa_s->ap_iface = NULL;
 	wpa_drv_deinit_ap(wpa_s);
+	wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_DISCONNECTED "bssid=" MACSTR
+		" reason=%d locally_generated=1",
+		MAC2STR(wpa_s->own_addr), WLAN_REASON_DEAUTH_LEAVING);
 }
 
 

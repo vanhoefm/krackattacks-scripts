@@ -330,6 +330,9 @@ def main():
     p.add_argument('--long', dest='long', action='store_const', const=True,
                    default=False,
                    help="include long-duration test cases")
+    p.add_argument('--valgrind', dest='valgrind', action='store_const',
+                   const=True, default=False,
+                   help="run tests under valgrind")
     p.add_argument('params', nargs='*')
     args = p.parse_args()
     num_servers = args.num_servers
@@ -337,6 +340,8 @@ def main():
     if args.debug:
         debug_level = logging.DEBUG
     extra_args = []
+    if args.valgrind:
+        extra_args += [ '--valgrind' ]
     if args.long:
         extra_args += [ '--long' ]
     if args.codecov:

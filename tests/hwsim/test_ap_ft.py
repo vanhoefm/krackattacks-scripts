@@ -237,6 +237,106 @@ def test_ap_ft_over_ds_unknown_target(dev, apdev):
                    scan_freq="2412")
     dev[0].roam_over_ds("02:11:22:33:44:55", fail_test=True)
 
+def test_ap_ft_over_ds_unexpected(dev, apdev):
+    """WPA2-PSK-FT AP over DS and unexpected response"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    hapd0 = hostapd.add_ap(apdev[0]['ifname'], params)
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    hapd1 = hostapd.add_ap(apdev[1]['ifname'], params)
+
+    dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
+                   scan_freq="2412")
+    if dev[0].get_status_field('bssid') == apdev[0]['bssid']:
+        ap1 = apdev[0]
+        ap2 = apdev[1]
+        hapd1ap = hapd0
+        hapd2ap = hapd1
+    else:
+        ap1 = apdev[1]
+        ap2 = apdev[0]
+        hapd1ap = hapd1
+        hapd2ap = hapd0
+
+    addr = dev[0].own_addr()
+    hapd1ap.set("ext_mgmt_frame_handling", "1")
+    logger.info("Foreign STA address")
+    msg = {}
+    msg['fc'] = 13 << 4
+    msg['da'] = addr
+    msg['sa'] = ap1['bssid']
+    msg['bssid'] = ap1['bssid']
+    msg['payload'] = binascii.unhexlify("06021122334455660102030405060000")
+    hapd1ap.mgmt_tx(msg)
+
+    logger.info("No over-the-DS in progress")
+    msg['payload'] = binascii.unhexlify("0602" + addr.replace(':', '') + "0102030405060000")
+    hapd1ap.mgmt_tx(msg)
+
+    logger.info("Non-zero status code")
+    msg['payload'] = binascii.unhexlify("0602" + addr.replace(':', '') + "0102030405060100")
+    hapd1ap.mgmt_tx(msg)
+
+    hapd1ap.dump_monitor()
+
+    dev[0].scan_for_bss(ap2['bssid'], freq="2412")
+    if "OK" not in dev[0].request("FT_DS " + ap2['bssid']):
+            raise Exception("FT_DS failed")
+
+    req = hapd1ap.mgmt_rx()
+
+    logger.info("Foreign Target AP")
+    msg['payload'] = binascii.unhexlify("0602" + addr.replace(':', '') + "0102030405060000")
+    hapd1ap.mgmt_tx(msg)
+
+    addrs = addr.replace(':', '') + ap2['bssid'].replace(':', '')
+
+    logger.info("No IEs")
+    msg['payload'] = binascii.unhexlify("0602" + addrs + "0000")
+    hapd1ap.mgmt_tx(msg)
+
+    logger.info("Invalid IEs (trigger parsing failure)")
+    msg['payload'] = binascii.unhexlify("0602" + addrs + "00003700")
+    hapd1ap.mgmt_tx(msg)
+
+    logger.info("Too short MDIE")
+    msg['payload'] = binascii.unhexlify("0602" + addrs + "000036021122")
+    hapd1ap.mgmt_tx(msg)
+
+    logger.info("Mobility domain mismatch")
+    msg['payload'] = binascii.unhexlify("0602" + addrs + "00003603112201")
+    hapd1ap.mgmt_tx(msg)
+
+    logger.info("No FTIE")
+    msg['payload'] = binascii.unhexlify("0602" + addrs + "00003603a1b201")
+    hapd1ap.mgmt_tx(msg)
+
+    logger.info("FTIE SNonce mismatch")
+    msg['payload'] = binascii.unhexlify("0602" + addrs + "00003603a1b201375e0000" + "00000000000000000000000000000000" + "0000000000000000000000000000000000000000000000000000000000000000" + "1000000000000000000000000000000000000000000000000000000000000001" + "030a6e6173322e77312e6669")
+    hapd1ap.mgmt_tx(msg)
+
+    logger.info("No R0KH-ID subelem in FTIE")
+    snonce = binascii.hexlify(req['payload'][111:111+32])
+    msg['payload'] = binascii.unhexlify("0602" + addrs + "00003603a1b20137520000" + "00000000000000000000000000000000" + "0000000000000000000000000000000000000000000000000000000000000000" + snonce)
+    hapd1ap.mgmt_tx(msg)
+
+    logger.info("No R0KH-ID subelem mismatch in FTIE")
+    snonce = binascii.hexlify(req['payload'][111:111+32])
+    msg['payload'] = binascii.unhexlify("0602" + addrs + "00003603a1b201375e0000" + "00000000000000000000000000000000" + "0000000000000000000000000000000000000000000000000000000000000000" + snonce + "030a11223344556677889900")
+    hapd1ap.mgmt_tx(msg)
+
+    logger.info("No R1KH-ID subelem in FTIE")
+    r0khid = binascii.hexlify(req['payload'][145:145+10])
+    msg['payload'] = binascii.unhexlify("0602" + addrs + "00003603a1b201375e0000" + "00000000000000000000000000000000" + "0000000000000000000000000000000000000000000000000000000000000000" + snonce + "030a" + r0khid)
+    hapd1ap.mgmt_tx(msg)
+
+    logger.info("No RSNE")
+    r0khid = binascii.hexlify(req['payload'][145:145+10])
+    msg['payload'] = binascii.unhexlify("0602" + addrs + "00003603a1b20137660000" + "00000000000000000000000000000000" + "0000000000000000000000000000000000000000000000000000000000000000" + snonce + "030a" + r0khid + "0106000102030405")
+    hapd1ap.mgmt_tx(msg)
+
 def test_ap_ft_pmf_over_ds(dev, apdev):
     """WPA2-PSK-FT AP over DS with PMF"""
     ssid = "test-ft"

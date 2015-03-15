@@ -41,6 +41,9 @@ def check_ip_addr(res):
 def test_nfc_p2p_go_neg(dev):
     """NFC connection handover to form a new P2P group (initiator becomes GO)"""
     set_ip_addr_info(dev[0])
+    ip = dev[0].request("GET ip_addr_go")
+    if ip != "192.168.42.1":
+        raise Exception("Unexpected ip_addr_go returned: " + ip)
     dev[0].global_request("SET p2p_go_intent 10")
     logger.info("Perform NFC connection handover")
     req = dev[0].global_request("NFC_GET_HANDOVER_REQ NDEF P2P-CR").rstrip()

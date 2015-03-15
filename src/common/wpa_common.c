@@ -207,8 +207,10 @@ int wpa_ft_mic(const u8 *kck, size_t kck_len, const u8 *sta_addr,
 	       const u8 *rsnie, size_t rsnie_len,
 	       const u8 *ric, size_t ric_len, u8 *mic)
 {
-	u8 *buf, *pos;
-	size_t buf_len;
+	const u8 *addr[9];
+	size_t len[9];
+	size_t i, num_elem = 0;
+	u8 zero_mic[16];
 
 	if (kck_len != 16) {
 		wpa_printf(MSG_WARNING, "FT: Unsupported KCK length %u",
@@ -216,48 +218,58 @@ int wpa_ft_mic(const u8 *kck, size_t kck_len, const u8 *sta_addr,
 		return -1;
 	}
 
-	buf_len = 2 * ETH_ALEN + 1 + mdie_len + ftie_len + rsnie_len + ric_len;
-	buf = os_malloc(buf_len);
-	if (buf == NULL)
-		return -1;
+	addr[num_elem] = sta_addr;
+	len[num_elem] = ETH_ALEN;
+	num_elem++;
 
-	pos = buf;
-	os_memcpy(pos, sta_addr, ETH_ALEN);
-	pos += ETH_ALEN;
-	os_memcpy(pos, ap_addr, ETH_ALEN);
-	pos += ETH_ALEN;
-	*pos++ = transaction_seqnum;
+	addr[num_elem] = ap_addr;
+	len[num_elem] = ETH_ALEN;
+	num_elem++;
+
+	addr[num_elem] = &transaction_seqnum;
+	len[num_elem] = 1;
+	num_elem++;
+
 	if (rsnie) {
-		os_memcpy(pos, rsnie, rsnie_len);
-		pos += rsnie_len;
+		addr[num_elem] = rsnie;
+		len[num_elem] = rsnie_len;
+		num_elem++;
 	}
 	if (mdie) {
-		os_memcpy(pos, mdie, mdie_len);
-		pos += mdie_len;
+		addr[num_elem] = mdie;
+		len[num_elem] = mdie_len;
+		num_elem++;
 	}
 	if (ftie) {
-		struct rsn_ftie *_ftie;
-		os_memcpy(pos, ftie, ftie_len);
-		if (ftie_len < 2 + sizeof(*_ftie)) {
-			os_free(buf);
+		if (ftie_len < 2 + sizeof(struct rsn_ftie))
 			return -1;
-		}
-		_ftie = (struct rsn_ftie *) (pos + 2);
-		os_memset(_ftie->mic, 0, sizeof(_ftie->mic));
-		pos += ftie_len;
+
+		/* IE hdr and mic_control */
+		addr[num_elem] = ftie;
+		len[num_elem] = 2 + 2;
+		num_elem++;
+
+		/* MIC field with all zeros */
+		os_memset(zero_mic, 0, sizeof(zero_mic));
+		addr[num_elem] = zero_mic;
+		len[num_elem] = sizeof(zero_mic);
+		num_elem++;
+
+		/* Rest of FTIE */
+		addr[num_elem] = ftie + 2 + 2 + 16;
+		len[num_elem] = ftie_len - (2 + 2 + 16);
+		num_elem++;
 	}
 	if (ric) {
-		os_memcpy(pos, ric, ric_len);
-		pos += ric_len;
+		addr[num_elem] = ric;
+		len[num_elem] = ric_len;
+		num_elem++;
 	}
 
-	wpa_hexdump(MSG_MSGDUMP, "FT: MIC data", buf, pos - buf);
-	if (omac1_aes_128(kck, buf, pos - buf, mic)) {
-		os_free(buf);
+	for (i = 0; i < num_elem; i++)
+		wpa_hexdump(MSG_MSGDUMP, "FT: MIC data", addr[i], len[i]);
+	if (omac1_aes_128_vector(kck, num_elem, addr, len, mic))
 		return -1;
-	}
-
-	os_free(buf);
 
 	return 0;
 }

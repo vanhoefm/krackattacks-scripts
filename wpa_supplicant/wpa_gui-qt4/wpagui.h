@@ -22,6 +22,18 @@ class WpaGui : public QMainWindow, public Ui::WpaGui
 	Q_OBJECT
 
 public:
+
+	enum TrayIconType {
+		TrayIconOffline = 0,
+		TrayIconAcquiring,
+		TrayIconConnected,
+		TrayIconSignalNone,
+		TrayIconSignalWeak,
+		TrayIconSignalOk,
+		TrayIconSignalGood,
+		TrayIconSignalExcellent,
+	};
+
 	WpaGui(QApplication *app, QWidget *parent = 0, const char *name = 0,
 	       Qt::WFlags fl = 0);
 	~WpaGui();
@@ -49,6 +61,7 @@ public slots:
 	virtual void scan();
 	virtual void eventHistory();
 	virtual void ping();
+	virtual void signalMeterUpdate();
 	virtual void processMsg(char *msg);
 	virtual void processCtrlReq(const char *req);
 	virtual void receiveMsgs();
@@ -70,6 +83,7 @@ public slots:
 	virtual void showTrayMessage(QSystemTrayIcon::MessageIcon type,
 				     int sec, const QString &msg);
 	virtual void showTrayStatus();
+	virtual void updateTrayIcon(TrayIconType type);
 	virtual void updateTrayToolTip(const QString &msg);
 	virtual void wpsDialog();
 	virtual void peersDialog();
@@ -113,6 +127,7 @@ private:
 	QAction *quitAction;
 	QMenu *tray_menu;
 	QSystemTrayIcon *tray_icon;
+	TrayIconType currentIconType;
 	QString wpaStateTranslate(char *state);
 	void createTrayIcon(bool);
 	bool ackTrayIcon;
@@ -126,6 +141,9 @@ private:
 	QString bssFromScan;
 
 	void stopWpsRun(bool success);
+
+	QTimer *signalMeterTimer;
+	int signalMeterInterval;
 
 #ifdef CONFIG_NATIVE_WINDOWS
 	QAction *fileStartServiceAction;

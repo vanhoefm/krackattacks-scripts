@@ -16,6 +16,7 @@
       <command>wpa_gui</command>
       <arg>-p <replaceable>path to ctrl sockets</replaceable></arg>
       <arg>-i <replaceable>ifname</replaceable></arg>
+      <arg>-m <replaceable>seconds</replaceable></arg>
       <arg>-t</arg>
       <arg>-q</arg>
     </cmdsynopsis>
@@ -49,6 +50,14 @@
         <listitem><para>Specify the interface that is being
 	configured. By default, choose the first interface found with
 	a control socket in the socket path.</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term>-m seconds</term>
+
+	<listitem><para>Set the update interval in seconds for the signal
+	strength meter. This value must be a positive integer, otherwise
+	meter is not enabled (default behavior).</para></listitem>
       </varlistentry>
 
       <varlistentry>

@@ -1477,6 +1477,7 @@ struct wpa_signal_info {
 	int above_threshold;
 	int current_signal;
 	int avg_signal;
+	int avg_beacon_signal;
 	int current_noise;
 	int current_txrate;
 	enum chan_width chanwidth;

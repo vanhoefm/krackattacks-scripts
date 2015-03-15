@@ -6476,6 +6476,14 @@ static int wpa_supplicant_signal_poll(struct wpa_supplicant *wpa_s, char *buf,
 		pos += ret;
 	}
 
+	if (si.avg_beacon_signal) {
+		ret = os_snprintf(pos, end - pos,
+				  "AVG_BEACON_RSSI=%d\n", si.avg_beacon_signal);
+		if (os_snprintf_error(end - pos, ret))
+			return -1;
+		pos += ret;
+	}
+
 	return pos - buf;
 }
 

@@ -1187,6 +1187,7 @@ static int get_link_signal(struct nl_msg *msg, void *arg)
 	static struct nla_policy policy[NL80211_STA_INFO_MAX + 1] = {
 		[NL80211_STA_INFO_SIGNAL] = { .type = NLA_U8 },
 		[NL80211_STA_INFO_SIGNAL_AVG] = { .type = NLA_U8 },
+		[NL80211_STA_INFO_BEACON_SIGNAL_AVG] = { .type = NLA_U8 },
 	};
 	struct nlattr *rinfo[NL80211_RATE_INFO_MAX + 1];
 	static struct nla_policy rate_policy[NL80211_RATE_INFO_MAX + 1] = {
@@ -1214,6 +1215,13 @@ static int get_link_signal(struct nl_msg *msg, void *arg)
 			(s8) nla_get_u8(sinfo[NL80211_STA_INFO_SIGNAL_AVG]);
 	else
 		sig_change->avg_signal = 0;
+
+	if (sinfo[NL80211_STA_INFO_BEACON_SIGNAL_AVG])
+		sig_change->avg_beacon_signal =
+			(s8)
+			nla_get_u8(sinfo[NL80211_STA_INFO_BEACON_SIGNAL_AVG]);
+	else
+		sig_change->avg_beacon_signal = 0;
 
 	if (sinfo[NL80211_STA_INFO_TX_BITRATE]) {
 		if (nla_parse_nested(rinfo, NL80211_RATE_INFO_MAX,

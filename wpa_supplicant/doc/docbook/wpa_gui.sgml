@@ -17,6 +17,7 @@
       <arg>-p <replaceable>path to ctrl sockets</replaceable></arg>
       <arg>-i <replaceable>ifname</replaceable></arg>
       <arg>-t</arg>
+      <arg>-q</arg>
     </cmdsynopsis>
   </refsynopsisdiv>
 
@@ -56,6 +57,13 @@
         <listitem><para>Start program in the system tray only (if the window
 	manager supports it). By default the main status window is
 	shown.</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term>-q</term>
+
+        <listitem><para>Run program in the quiet mode - do not display tray
+	icon pop-up messages.</para></listitem>
       </varlistentry>
     </variablelist>
   </refsect1>

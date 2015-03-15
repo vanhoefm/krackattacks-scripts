@@ -94,6 +94,10 @@ int wpas_p2p_service_add_asp(struct wpa_supplicant *wpa_s, int auto_accept,
 			     u16 config_methods, const char *svc_info);
 int wpas_p2p_service_del_asp(struct wpa_supplicant *wpa_s, u32 adv_id);
 int wpas_p2p_service_p2ps_id_exists(struct wpa_supplicant *wpa_s, u32 adv_id);
+void wpas_sd_request(void *ctx, int freq, const u8 *sa, u8 dialog_token,
+		     u16 update_indic, const u8 *tlvs, size_t tlvs_len);
+void wpas_sd_response(void *ctx, const u8 *sa, u16 update_indic,
+		      const u8 *tlvs, size_t tlvs_len);
 int wpas_p2p_reject(struct wpa_supplicant *wpa_s, const u8 *addr);
 int wpas_p2p_invite(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 		    struct wpa_ssid *ssid, const u8 *go_dev_addr, int freq,

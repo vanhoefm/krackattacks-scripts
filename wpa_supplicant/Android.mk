@@ -271,6 +271,7 @@ endif
 
 ifdef CONFIG_P2P
 OBJS += p2p_supplicant.c
+OBJS += p2p_supplicant_sd.c
 OBJS += src/p2p/p2p.c
 OBJS += src/p2p/p2p_utils.c
 OBJS += src/p2p/p2p_parse.c

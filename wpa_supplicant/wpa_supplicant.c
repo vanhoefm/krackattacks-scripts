@@ -2625,6 +2625,13 @@ void wpa_supplicant_select_network(struct wpa_supplicant *wpa_s,
 		eapol_sm_notify_config(wpa_s->eapol, NULL, NULL);
 		wpa_s->connect_without_scan =
 			(ssid->mode == WPAS_MODE_MESH) ? ssid : NULL;
+
+		/*
+		 * Don't optimize next scan freqs since a new ESS has been
+		 * selected.
+		 */
+		os_free(wpa_s->next_scan_freqs);
+		wpa_s->next_scan_freqs = NULL;
 	} else {
 		wpa_s->connect_without_scan = NULL;
 	}

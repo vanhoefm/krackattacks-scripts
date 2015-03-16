@@ -671,6 +671,21 @@ static void wpas_sd_req_asp(struct wpa_supplicant *wpa_s,
 }
 
 
+static void wpas_sd_all_asp(struct wpa_supplicant *wpa_s,
+			    struct wpabuf *resp, u8 srv_trans_id)
+{
+	/* Query data to add all P2PS advertisements:
+	 *  - Service name length: 1
+	 *  - Service name: '*'
+	 *  - Service Information Request Length: 0
+	 */
+	const u8 q[] = { 1, (const u8) '*', 0 };
+
+	if (p2p_get_p2ps_adv_list(wpa_s->global->p2p))
+		wpas_sd_req_asp(wpa_s, resp, srv_trans_id, q, sizeof(q));
+}
+
+
 void wpas_sd_request(void *ctx, int freq, const u8 *sa, u8 dialog_token,
 		     u16 update_indic, const u8 *tlvs, size_t tlvs_len)
 {
@@ -735,6 +750,7 @@ void wpas_sd_request(void *ctx, int freq, const u8 *sa, u8 dialog_token,
 				   "response");
 			wpas_sd_all_bonjour(wpa_s, resp, srv_trans_id);
 			wpas_sd_all_upnp(wpa_s, resp, srv_trans_id);
+			wpas_sd_all_asp(wpa_s, resp, srv_trans_id);
 			goto done;
 		}
 
@@ -743,7 +759,8 @@ void wpas_sd_request(void *ctx, int freq, const u8 *sa, u8 dialog_token,
 			wpa_printf(MSG_DEBUG, "P2P: Service Discovery Request "
 				   "for all services");
 			if (dl_list_empty(&wpa_s->global->p2p_srv_upnp) &&
-			    dl_list_empty(&wpa_s->global->p2p_srv_bonjour)) {
+			    dl_list_empty(&wpa_s->global->p2p_srv_bonjour) &&
+			    !p2p_get_p2ps_adv_list(wpa_s->global->p2p)) {
 				wpa_printf(MSG_DEBUG, "P2P: No service "
 					   "discovery protocols available");
 				wpas_sd_add_proto_not_avail(
@@ -753,6 +770,7 @@ void wpas_sd_request(void *ctx, int freq, const u8 *sa, u8 dialog_token,
 			}
 			wpas_sd_all_bonjour(wpa_s, resp, srv_trans_id);
 			wpas_sd_all_upnp(wpa_s, resp, srv_trans_id);
+			wpas_sd_all_asp(wpa_s, resp, srv_trans_id);
 			break;
 		case P2P_SERV_BONJOUR:
 			wpas_sd_req_bonjour(wpa_s, resp, srv_trans_id,

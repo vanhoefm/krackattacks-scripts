@@ -421,19 +421,6 @@ static void wpas_add_interworking_elements(struct wpa_supplicant *wpa_s,
 	if (wpa_s->conf->interworking == 0)
 		return;
 
-	wpabuf_put_u8(buf, WLAN_EID_EXT_CAPAB);
-	wpabuf_put_u8(buf, 6);
-	wpabuf_put_u8(buf, 0x00);
-	wpabuf_put_u8(buf, 0x00);
-	wpabuf_put_u8(buf, 0x00);
-	wpabuf_put_u8(buf, 0x80); /* Bit 31 - Interworking */
-	wpabuf_put_u8(buf, 0x00);
-#ifdef CONFIG_HS20
-	wpabuf_put_u8(buf, 0x40); /* Bit 46 - WNM-Notification */
-#else /* CONFIG_HS20 */
-	wpabuf_put_u8(buf, 0x00);
-#endif /* CONFIG_HS20 */
-
 	wpabuf_put_u8(buf, WLAN_EID_INTERWORKING);
 	wpabuf_put_u8(buf, is_zero_ether_addr(wpa_s->conf->hessid) ? 1 :
 		      1 + ETH_ALEN);
@@ -448,10 +435,18 @@ static void wpas_add_interworking_elements(struct wpa_supplicant *wpa_s,
 static struct wpabuf * wpa_supplicant_extra_ies(struct wpa_supplicant *wpa_s)
 {
 	struct wpabuf *extra_ie = NULL;
+	u8 ext_capab[18];
+	int ext_capab_len;
 #ifdef CONFIG_WPS
 	int wps = 0;
 	enum wps_request_type req_type = WPS_REQ_ENROLLEE_INFO;
 #endif /* CONFIG_WPS */
+
+	ext_capab_len = wpas_build_ext_capab(wpa_s, ext_capab,
+					     sizeof(ext_capab));
+	if (ext_capab_len > 0 &&
+	    wpabuf_resize(&extra_ie, ext_capab_len) == 0)
+		wpabuf_put_data(extra_ie, ext_capab, ext_capab_len);
 
 #ifdef CONFIG_INTERWORKING
 	if (wpa_s->conf->interworking &&

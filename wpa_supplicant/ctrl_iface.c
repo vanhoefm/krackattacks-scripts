@@ -5299,6 +5299,11 @@ static int p2p_ctrl_service_del_asp(struct wpa_supplicant *wpa_s, char *cmd)
 {
 	u32 adv_id;
 
+	if (os_strcmp(cmd, "all") == 0) {
+		wpas_p2p_service_flush_asp(wpa_s);
+		return 0;
+	}
+
 	if (sscanf(cmd, "%x", &adv_id) != 1)
 		return -1;
 

@@ -456,6 +456,8 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 			     wpa_s, NULL);
 #endif /* CONFIG_DELAYED_MIC_ERROR_REPORT */
 
+	eloop_cancel_timeout(wpas_network_reenabled, wpa_s, NULL);
+
 	wpas_wps_deinit(wpa_s);
 
 	wpabuf_free(wpa_s->pending_eapol_rx);

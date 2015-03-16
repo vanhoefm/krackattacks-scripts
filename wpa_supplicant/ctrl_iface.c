@@ -6702,6 +6702,8 @@ static void wpa_supplicant_ctrl_iface_flush(struct wpa_supplicant *wpa_s)
 			   MAC2STR(wpa_s->bssid),
 			   MAC2STR(wpa_s->pending_bssid));
 	}
+
+	eloop_cancel_timeout(wpas_network_reenabled, wpa_s, NULL);
 }
 
 
@@ -8262,6 +8264,7 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		wpa_supplicant_cancel_scan(wpa_s);
 		wpa_supplicant_deauthenticate(wpa_s,
 					      WLAN_REASON_DEAUTH_LEAVING);
+		eloop_cancel_timeout(wpas_network_reenabled, wpa_s, NULL);
 	} else if (os_strcmp(buf, "SCAN") == 0) {
 		wpas_ctrl_scan(wpa_s, NULL, reply, reply_size, &reply_len);
 	} else if (os_strncmp(buf, "SCAN ", 5) == 0) {

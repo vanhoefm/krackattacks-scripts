@@ -71,6 +71,59 @@ static int wpas_temp_disabled(struct wpa_supplicant *wpa_s,
 }
 
 
+/**
+ * wpas_reenabled_network_time - Time until first network is re-enabled
+ * @wpa_s: Pointer to wpa_supplicant data
+ * Returns: If all enabled networks are temporarily disabled, returns the time
+ *	(in sec) until the first network is re-enabled. Otherwise returns 0.
+ *
+ * This function is used in case all enabled networks are temporarily disabled,
+ * in which case it returns the time (in sec) that the first network will be
+ * re-enabled. The function assumes that at least one network is enabled.
+ */
+static int wpas_reenabled_network_time(struct wpa_supplicant *wpa_s)
+{
+	struct wpa_ssid *ssid;
+	int disabled_for, res = 0;
+
+#ifdef CONFIG_INTERWORKING
+	if (wpa_s->conf->auto_interworking && wpa_s->conf->interworking &&
+	    wpa_s->conf->cred)
+		return 0;
+#endif /* CONFIG_INTERWORKING */
+
+	for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next) {
+		if (ssid->disabled)
+			continue;
+
+		disabled_for = wpas_temp_disabled(wpa_s, ssid);
+		if (!disabled_for)
+			return 0;
+
+		if (!res || disabled_for < res)
+			res = disabled_for;
+	}
+
+	return res;
+}
+
+
+void wpas_network_reenabled(void *eloop_ctx, void *timeout_ctx)
+{
+	struct wpa_supplicant *wpa_s = eloop_ctx;
+
+	if (wpa_s->disconnected || wpa_s->wpa_state != WPA_SCANNING)
+		return;
+
+	wpa_dbg(wpa_s, MSG_DEBUG,
+		"Try to associate due to network getting re-enabled");
+	if (wpa_supplicant_fast_associate(wpa_s) != 1) {
+		wpa_supplicant_cancel_sched_scan(wpa_s);
+		wpa_supplicant_req_scan(wpa_s, 0, 0);
+	}
+}
+
+
 static struct wpa_bss * wpa_supplicant_get_new_bss(
 	struct wpa_supplicant *wpa_s, const u8 *bssid)
 {
@@ -1421,6 +1474,17 @@ static int wpas_select_network_from_last_scan(struct wpa_supplicant *wpa_s,
 {
 	struct wpa_bss *selected;
 	struct wpa_ssid *ssid = NULL;
+	int time_to_reenable = wpas_reenabled_network_time(wpa_s);
+
+	if (time_to_reenable > 0) {
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"Postpone network selection by %d seconds since all networks are disabled",
+			time_to_reenable);
+		eloop_cancel_timeout(wpas_network_reenabled, wpa_s, NULL);
+		eloop_register_timeout(time_to_reenable, 0,
+				       wpas_network_reenabled, wpa_s, NULL);
+		return 0;
+	}
 
 	if (wpa_s->p2p_mgmt)
 		return 0; /* no normal connection on p2p_mgmt interface */
@@ -1945,6 +2009,8 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 		return;
 	}
 #endif /* CONFIG_AP */
+
+	eloop_cancel_timeout(wpas_network_reenabled, wpa_s, NULL);
 
 	ft_completed = wpa_ft_is_completed(wpa_s->wpa);
 	if (data && wpa_supplicant_event_associnfo(wpa_s, data) < 0)

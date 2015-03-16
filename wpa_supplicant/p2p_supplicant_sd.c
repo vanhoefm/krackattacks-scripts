@@ -1136,6 +1136,7 @@ void wpas_p2p_service_flush(struct wpa_supplicant *wpa_s)
 			      struct p2p_srv_upnp, list)
 		wpas_p2p_srv_upnp_free(usrv);
 
+	wpas_p2p_service_flush_asp(wpa_s);
 	wpas_p2p_sd_service_update(wpa_s);
 }
 
@@ -1176,6 +1177,12 @@ int wpas_p2p_service_add_asp(struct wpa_supplicant *wpa_s,
 	if (ret == 0)
 		wpas_p2p_sd_service_update(wpa_s);
 	return ret;
+}
+
+
+void wpas_p2p_service_flush_asp(struct wpa_supplicant *wpa_s)
+{
+	p2p_service_flush_asp(wpa_s->global->p2p);
 }
 
 

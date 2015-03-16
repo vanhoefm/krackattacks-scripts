@@ -2730,6 +2730,25 @@ inserted:
 }
 
 
+void p2p_service_flush_asp(struct p2p_data *p2p)
+{
+	struct p2ps_advertisement *adv, *prev;
+
+	if (!p2p)
+		return;
+
+	adv = p2p->p2ps_adv_list;
+	while (adv) {
+		prev = adv;
+		adv = adv->next;
+		os_free(prev);
+	}
+
+	p2p->p2ps_adv_list = NULL;
+	p2p_dbg(p2p, "All ASP advertisements flushed");
+}
+
+
 int p2p_parse_dev_addr_in_p2p_ie(struct wpabuf *p2p_ie, u8 *dev_addr)
 {
 	struct p2p_message msg;
@@ -2878,8 +2897,6 @@ struct p2p_data * p2p_init(const struct p2p_config *cfg)
 
 void p2p_deinit(struct p2p_data *p2p)
 {
-	struct p2ps_advertisement *adv, *prev;
-
 #ifdef CONFIG_WIFI_DISPLAY
 	wpabuf_free(p2p->wfd_ie_beacon);
 	wpabuf_free(p2p->wfd_ie_probe_req);
@@ -2913,13 +2930,7 @@ void p2p_deinit(struct p2p_data *p2p)
 	os_free(p2p->after_scan_tx);
 	p2p_remove_wps_vendor_extensions(p2p);
 	os_free(p2p->no_go_freq.range);
-
-	adv = p2p->p2ps_adv_list;
-	while (adv) {
-		prev = adv;
-		adv = adv->next;
-		os_free(prev);
-	}
+	p2p_service_flush_asp(p2p);
 
 	os_free(p2p);
 }

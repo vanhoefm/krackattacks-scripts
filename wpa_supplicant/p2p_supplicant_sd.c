@@ -1154,7 +1154,12 @@ int wpas_p2p_service_p2ps_id_exists(struct wpa_supplicant *wpa_s, u32 adv_id)
 
 int wpas_p2p_service_del_asp(struct wpa_supplicant *wpa_s, u32 adv_id)
 {
-	return p2p_service_del_asp(wpa_s->global->p2p, adv_id);
+	int ret;
+
+	ret = p2p_service_del_asp(wpa_s->global->p2p, adv_id);
+	if (ret == 0)
+		wpas_p2p_sd_service_update(wpa_s);
+	return ret;
 }
 
 
@@ -1163,9 +1168,14 @@ int wpas_p2p_service_add_asp(struct wpa_supplicant *wpa_s,
 			     const char *adv_str, u8 svc_state,
 			     u16 config_methods, const char *svc_info)
 {
-	return p2p_service_add_asp(wpa_s->global->p2p, auto_accept, adv_id,
-				   adv_str, svc_state, config_methods,
-				   svc_info);
+	int ret;
+
+	ret = p2p_service_add_asp(wpa_s->global->p2p, auto_accept, adv_id,
+				  adv_str, svc_state, config_methods,
+				  svc_info);
+	if (ret == 0)
+		wpas_p2p_sd_service_update(wpa_s);
+	return ret;
 }
 
 

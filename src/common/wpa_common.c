@@ -486,6 +486,8 @@ static int rsn_key_mgmt_to_bitfield(const u8 *s)
 		return WPA_KEY_MGMT_IEEE8021X_SUITE_B;
 	if (RSN_SELECTOR_GET(s) == RSN_AUTH_KEY_MGMT_802_1X_SUITE_B_192)
 		return WPA_KEY_MGMT_IEEE8021X_SUITE_B_192;
+	if (RSN_SELECTOR_GET(s) == RSN_AUTH_KEY_MGMT_OSEN)
+		return WPA_KEY_MGMT_OSEN;
 	return 0;
 }
 
@@ -520,7 +522,6 @@ int wpa_cipher_valid_mgmt_group(int cipher)
 int wpa_parse_wpa_ie_rsn(const u8 *rsn_ie, size_t rsn_ie_len,
 			 struct wpa_ie_data *data)
 {
-	const struct rsn_ie_hdr *hdr;
 	const u8 *pos;
 	int left;
 	int i, count;
@@ -550,18 +551,29 @@ int wpa_parse_wpa_ie_rsn(const u8 *rsn_ie, size_t rsn_ie_len,
 		return -1;
 	}
 
-	hdr = (const struct rsn_ie_hdr *) rsn_ie;
+	if (rsn_ie_len >= 6 && rsn_ie[1] >= 4 &&
+	    rsn_ie[1] == rsn_ie_len - 2 &&
+	    WPA_GET_BE32(&rsn_ie[2]) == OSEN_IE_VENDOR_TYPE) {
+		pos = rsn_ie + 6;
+		left = rsn_ie_len - 6;
 
-	if (hdr->elem_id != WLAN_EID_RSN ||
-	    hdr->len != rsn_ie_len - 2 ||
-	    WPA_GET_LE16(hdr->version) != RSN_VERSION) {
-		wpa_printf(MSG_DEBUG, "%s: malformed ie or unknown version",
-			   __func__);
-		return -2;
+		data->proto = WPA_PROTO_OSEN;
+	} else {
+		const struct rsn_ie_hdr *hdr;
+
+		hdr = (const struct rsn_ie_hdr *) rsn_ie;
+
+		if (hdr->elem_id != WLAN_EID_RSN ||
+		    hdr->len != rsn_ie_len - 2 ||
+		    WPA_GET_LE16(hdr->version) != RSN_VERSION) {
+			wpa_printf(MSG_DEBUG, "%s: malformed ie or unknown version",
+				   __func__);
+			return -2;
+		}
+
+		pos = (const u8 *) (hdr + 1);
+		left = rsn_ie_len - sizeof(*hdr);
 	}
-
-	pos = (const u8 *) (hdr + 1);
-	left = rsn_ie_len - sizeof(*hdr);
 
 	if (left >= RSN_SELECTOR_LEN) {
 		data->group_cipher = rsn_selector_to_bitfield(pos);

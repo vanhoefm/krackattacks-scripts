@@ -575,22 +575,25 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 				continue;
 			}
 			vinfo = nla_data(nl);
-			switch (vinfo->subcmd) {
-			case QCA_NL80211_VENDOR_SUBCMD_TEST:
-				drv->vendor_cmd_test_avail = 1;
-				break;
-			case QCA_NL80211_VENDOR_SUBCMD_ROAMING:
-				drv->roaming_vendor_cmd_avail = 1;
-				break;
-			case QCA_NL80211_VENDOR_SUBCMD_DFS_CAPABILITY:
-				drv->dfs_vendor_cmd_avail = 1;
-				break;
-			case QCA_NL80211_VENDOR_SUBCMD_GET_FEATURES:
-				drv->get_features_vendor_cmd_avail = 1;
-				break;
-			case QCA_NL80211_VENDOR_SUBCMD_DO_ACS:
-				drv->capa.flags |= WPA_DRIVER_FLAGS_ACS_OFFLOAD;
-				break;
+			if (vinfo->vendor_id == OUI_QCA) {
+				switch (vinfo->subcmd) {
+				case QCA_NL80211_VENDOR_SUBCMD_TEST:
+					drv->vendor_cmd_test_avail = 1;
+					break;
+				case QCA_NL80211_VENDOR_SUBCMD_ROAMING:
+					drv->roaming_vendor_cmd_avail = 1;
+					break;
+				case QCA_NL80211_VENDOR_SUBCMD_DFS_CAPABILITY:
+					drv->dfs_vendor_cmd_avail = 1;
+					break;
+				case QCA_NL80211_VENDOR_SUBCMD_GET_FEATURES:
+					drv->get_features_vendor_cmd_avail = 1;
+					break;
+				case QCA_NL80211_VENDOR_SUBCMD_DO_ACS:
+					drv->capa.flags |=
+						WPA_DRIVER_FLAGS_ACS_OFFLOAD;
+					break;
+				}
 			}
 
 			wpa_printf(MSG_DEBUG, "nl80211: Supported vendor command: vendor_id=0x%x subcmd=%u",

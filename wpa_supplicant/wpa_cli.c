@@ -3781,7 +3781,11 @@ static void start_edit(void)
 	ps = wpa_ctrl_get_remote_ifname(ctrl_conn);
 #endif /* CONFIG_CTRL_IFACE_UDP_REMOTE */
 
+#ifdef CONFIG_WPA_CLI_HISTORY_DIR
+	home = CONFIG_WPA_CLI_HISTORY_DIR;
+#else /* CONFIG_WPA_CLI_HISTORY_DIR */
 	home = getenv("HOME");
+#endif /* CONFIG_WPA_CLI_HISTORY_DIR */
 	if (home) {
 		const char *fname = ".wpa_cli_history";
 		int hfile_len = os_strlen(home) + 1 + os_strlen(fname) + 1;

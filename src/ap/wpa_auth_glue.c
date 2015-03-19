@@ -11,6 +11,7 @@
 #include "utils/common.h"
 #include "common/ieee802_11_defs.h"
 #include "common/sae.h"
+#include "common/wpa_ctrl.h"
 #include "eapol_auth/eapol_auth_sm.h"
 #include "eapol_auth/eapol_auth_sm_i.h"
 #include "eap_server/eap.h"
@@ -141,6 +142,14 @@ static int hostapd_wpa_auth_mic_failure_report(void *ctx, const u8 *addr)
 {
 	struct hostapd_data *hapd = ctx;
 	return michael_mic_failure(hapd, addr, 0);
+}
+
+
+static void hostapd_wpa_auth_psk_failure_report(void *ctx, const u8 *addr)
+{
+	struct hostapd_data *hapd = ctx;
+	wpa_msg(hapd->msg_ctx, MSG_INFO, AP_STA_POSSIBLE_PSK_MISMATCH MACSTR,
+		MAC2STR(addr));
 }
 
 
@@ -579,6 +588,7 @@ int hostapd_setup_wpa(struct hostapd_data *hapd)
 	cb.logger = hostapd_wpa_auth_logger;
 	cb.disconnect = hostapd_wpa_auth_disconnect;
 	cb.mic_failure_report = hostapd_wpa_auth_mic_failure_report;
+	cb.psk_failure_report = hostapd_wpa_auth_psk_failure_report;
 	cb.set_eapol = hostapd_wpa_auth_set_eapol;
 	cb.get_eapol = hostapd_wpa_auth_get_eapol;
 	cb.get_psk = hostapd_wpa_auth_get_psk;

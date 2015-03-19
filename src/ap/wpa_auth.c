@@ -67,6 +67,14 @@ static inline int wpa_auth_mic_failure_report(
 }
 
 
+static inline void wpa_auth_psk_failure_report(
+	struct wpa_authenticator *wpa_auth, const u8 *addr)
+{
+	if (wpa_auth->cb.psk_failure_report)
+		wpa_auth->cb.psk_failure_report(wpa_auth->cb.ctx, addr);
+}
+
+
 static inline void wpa_auth_set_eapol(struct wpa_authenticator *wpa_auth,
 				      const u8 *addr, wpa_eapol_variable var,
 				      int value)
@@ -1985,7 +1993,7 @@ static int wpa_derive_ptk(struct wpa_state_machine *sm, const u8 *snonce,
 SM_STATE(WPA_PTK, PTKCALCNEGOTIATING)
 {
 	struct wpa_ptk PTK;
-	int ok = 0;
+	int ok = 0, psk_found = 0;
 	const u8 *pmk = NULL;
 
 	SM_ENTRY_MA(WPA_PTK, PTKCALCNEGOTIATING, wpa_ptk);
@@ -2001,6 +2009,7 @@ SM_STATE(WPA_PTK, PTKCALCNEGOTIATING)
 					       sm->p2p_dev_addr, pmk);
 			if (pmk == NULL)
 				break;
+			psk_found = 1;
 		} else
 			pmk = sm->PMK;
 
@@ -2020,6 +2029,8 @@ SM_STATE(WPA_PTK, PTKCALCNEGOTIATING)
 	if (!ok) {
 		wpa_auth_logger(sm->wpa_auth, sm->addr, LOGGER_DEBUG,
 				"invalid MIC in msg 2/4 of 4-Way Handshake");
+		if (psk_found)
+			wpa_auth_psk_failure_report(sm->wpa_auth, sm->addr);
 		return;
 	}
 

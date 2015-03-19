@@ -189,6 +189,7 @@ struct wpa_auth_callbacks {
 		       const char *txt);
 	void (*disconnect)(void *ctx, const u8 *addr, u16 reason);
 	int (*mic_failure_report)(void *ctx, const u8 *addr);
+	void (*psk_failure_report)(void *ctx, const u8 *addr);
 	void (*set_eapol)(void *ctx, const u8 *addr, wpa_eapol_variable var,
 			  int value);
 	int (*get_eapol)(void *ctx, const u8 *addr, wpa_eapol_variable var);

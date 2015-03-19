@@ -1861,3 +1861,16 @@ def test_ap_wpa2_psk_disable_enable(dev, apdev):
         hapd.request("ENABLE")
         dev[0].wait_connected()
         hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_ap_wpa2_psk_incorrect_passphrase(dev, apdev):
+    """WPA2-PSK AP and station using incorrect passphrase"""
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect(ssid, psk="incorrect passphrase", scan_freq="2412",
+                   wait_connect=False)
+    ev = hapd.wait_event(["AP-STA-POSSIBLE-PSK-MISMATCH"], timeout=10)
+    if ev is None:
+        raise Exception("No AP-STA-POSSIBLE-PSK-MISMATCH reported")
+    print ev

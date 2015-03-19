@@ -416,3 +416,16 @@ def test_ap_open_select_network(dev, apdev):
     res = dev[0].request("BLACKLIST")
     if bssid1 in res or bssid2 in res:
         raise Exception("Unexpected blacklist entry(2)")
+
+def test_ap_open_disable_enable(dev, apdev):
+    """AP with open mode getting disabled and re-enabled"""
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412",
+                   bg_scan_period="0")
+
+    for i in range(2):
+        hapd.request("DISABLE")
+        dev[0].wait_disconnected()
+        hapd.request("ENABLE")
+        dev[0].wait_connected()
+        hwsim_utils.test_connectivity(dev[0], hapd)

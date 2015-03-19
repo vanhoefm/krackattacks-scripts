@@ -1844,3 +1844,20 @@ def test_ap_wpa2_psk_drop_first_msg_4(dev, apdev):
         # optimized to prevent EAPOL-Key frame encryption for retransmission
         # case, this exception can be uncommented here.
         #raise Exception("Unexpected disconnection")
+
+def test_ap_wpa2_psk_disable_enable(dev, apdev):
+    """WPA2-PSK AP getting disabled and re-enabled"""
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    psk = '602e323e077bc63bd80307ef4745b754b0ae0a925c2638ecd13a794b9527b9e6'
+    params = hostapd.wpa2_params(ssid=ssid)
+    params['wpa_psk'] = psk
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect(ssid, raw_psk=psk, scan_freq="2412")
+
+    for i in range(2):
+        hapd.request("DISABLE")
+        dev[0].wait_disconnected()
+        hapd.request("ENABLE")
+        dev[0].wait_connected()
+        hwsim_utils.test_connectivity(dev[0], hapd)

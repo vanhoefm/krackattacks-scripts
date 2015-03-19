@@ -122,6 +122,20 @@ static int dfs_is_chan_allowed(struct hostapd_channel_data *chan, int n_chans)
 }
 
 
+static struct hostapd_channel_data *
+dfs_get_chan_data(struct hostapd_hw_modes *mode, int freq, int first_chan_idx)
+{
+	int i;
+
+	for (i = first_chan_idx; i < mode->num_channels; i++) {
+		if (mode->channels[i].freq == freq)
+			return &mode->channels[i];
+	}
+
+	return NULL;
+}
+
+
 static int dfs_chan_range_available(struct hostapd_hw_modes *mode,
 				    int first_chan_idx, int num_chans,
 				    int skip_radar)
@@ -135,9 +149,9 @@ static int dfs_chan_range_available(struct hostapd_hw_modes *mode,
 	first_chan = &mode->channels[first_chan_idx];
 
 	for (i = 0; i < num_chans; i++) {
-		chan = &mode->channels[first_chan_idx + i];
-
-		if (first_chan->freq + i * 20 != chan->freq)
+		chan = dfs_get_chan_data(mode, first_chan->freq + i * 20,
+					 first_chan_idx);
+		if (!chan)
 			return 0;
 
 		if (!dfs_channel_available(chan, skip_radar))

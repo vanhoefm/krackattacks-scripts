@@ -2864,6 +2864,14 @@ static void wpa_supplicant_update_channel_list(
 				ifs, &ifs->hw.num_modes, &ifs->hw.flags);
 		}
 	}
+
+	/* Restart sched_scan with updated channel list */
+	if (wpa_s->sched_scanning) {
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"Channel list changed restart sched scan.");
+		wpa_supplicant_cancel_sched_scan(wpa_s);
+		wpa_supplicant_req_scan(wpa_s, 0, 0);
+	}
 }
 
 

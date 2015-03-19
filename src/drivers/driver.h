@@ -2657,18 +2657,6 @@ struct wpa_driver_ops {
 			  int encrypt);
 
 	/**
-	 * shared_freq - Get operating frequency of shared interface(s)
-	 * @priv: Private driver interface data
-	 * Returns: Operating frequency in MHz, 0 if no shared operation in
-	 * use, or -1 on failure
-	 *
-	 * This command can be used to request the current operating frequency
-	 * of any virtual interface that shares the same radio to provide
-	 * information for channel selection for other virtual interfaces.
-	 */
-	int (*shared_freq)(void *priv);
-
-	/**
 	 * get_noa - Get current Notice of Absence attribute payload
 	 * @priv: Private driver interface data
 	 * @buf: Buffer for returning NoA

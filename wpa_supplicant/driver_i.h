@@ -503,13 +503,6 @@ static inline int wpa_drv_set_ap_wps_ie(struct wpa_supplicant *wpa_s,
 					    proberesp, assocresp);
 }
 
-static inline int wpa_drv_shared_freq(struct wpa_supplicant *wpa_s)
-{
-	if (!wpa_s->driver->shared_freq)
-		return -1;
-	return wpa_s->driver->shared_freq(wpa_s->drv_priv);
-}
-
 static inline int wpa_drv_get_noa(struct wpa_supplicant *wpa_s,
 				  u8 *buf, size_t buf_len)
 {

@@ -143,7 +143,7 @@ static int dfs_chan_range_available(struct hostapd_hw_modes *mode,
 	struct hostapd_channel_data *first_chan, *chan;
 	int i;
 
-	if (first_chan_idx + num_chans >= mode->num_channels)
+	if (first_chan_idx + num_chans > mode->num_channels)
 		return 0;
 
 	first_chan = &mode->channels[first_chan_idx];

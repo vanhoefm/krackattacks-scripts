@@ -2102,6 +2102,25 @@ def test_ap_hs20_network_preference4(dev, apdev):
     if bssid2 not in ev:
         raise Exception("Unexpected network selected")
 
+def test_ap_hs20_interworking_select_blocking_scan(dev, apdev):
+    """Ongoing INTERWORKING_SELECT blocking SCAN"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].hs20_enable()
+    values = { 'realm': "example.com",
+               'username': "hs20-test",
+               'password': "password",
+               'domain': "example.com" }
+    dev[0].add_cred_values(values)
+
+    dev[0].scan_for_bss(bssid, freq="2412")
+    dev[0].request("INTERWORKING_SELECT auto freq=2412")
+    if "FAIL-BUSY" not in dev[0].request("SCAN"):
+        raise Exception("Unexpected SCAN command result")
+    dev[0].wait_connected(timeout=15)
+
 def test_ap_hs20_fetch_osu(dev, apdev):
     """Hotspot 2.0 OSU provider and icon fetch"""
     bssid = apdev[0]['bssid']

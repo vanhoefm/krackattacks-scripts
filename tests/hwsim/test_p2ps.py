@@ -739,6 +739,10 @@ def test_p2ps_service_discovery_multiple_queries(dev):
 
     if "OK" not in dev[0].global_request("P2P_SERVICE_ADD asp 1 12345678 1 1108 org.wi-fi.wfds.foobar svc_info='Test'"):
         raise Exception("P2P_SERVICE_ADD failed")
+    if "OK" not in dev[0].global_request("P2P_SERVICE_DEL asp all"):
+        raise Exception("P2P_SERVICE_DEL asp all failed")
+    if "OK" not in dev[0].global_request("P2P_SERVICE_ADD asp 1 12345678 1 1108 org.wi-fi.wfds.foobar svc_info='Test'"):
+        raise Exception("P2P_SERVICE_ADD failed")
     if "OK" not in dev[0].global_request("P2P_SERVICE_REP asp 1 12345678 1 1108 org.wi-fi.wfds.foobar svc_info='Test'"):
         raise Exception("P2P_SERVICE_REP failed")
     if "FAIL" not in dev[0].global_request("P2P_SERVICE_REP asp 1 12345678 1 1108 org.wi-fi.wfds.Foo svc_info='Test'"):

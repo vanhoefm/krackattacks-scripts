@@ -1711,20 +1711,20 @@ static int wpa_cli_cmd_interface_add(struct wpa_ctrl *ctrl, int argc,
 		printf("Invalid INTERFACE_ADD command: needs at least one "
 		       "argument (interface name)\n"
 		       "All arguments: ifname confname driver ctrl_interface "
-		       "driver_param bridge_name\n");
+		       "driver_param bridge_name [create]\n");
 		return -1;
 	}
 
 	/*
 	 * INTERFACE_ADD <ifname>TAB<confname>TAB<driver>TAB<ctrl_interface>TAB
-	 * <driver_param>TAB<bridge_name>
+	 * <driver_param>TAB<bridge_name>[TAB<create>]
 	 */
 	res = os_snprintf(cmd, sizeof(cmd),
-			  "INTERFACE_ADD %s\t%s\t%s\t%s\t%s\t%s",
+			  "INTERFACE_ADD %s\t%s\t%s\t%s\t%s\t%s\t%s",
 			  argv[0],
 			  argc > 1 ? argv[1] : "", argc > 2 ? argv[2] : "",
 			  argc > 3 ? argv[3] : "", argc > 4 ? argv[4] : "",
-			  argc > 5 ? argv[5] : "");
+			  argc > 5 ? argv[5] : "", argc > 6 ? argv[6] : "");
 	if (os_snprintf_error(sizeof(cmd), res))
 		return -1;
 	cmd[sizeof(cmd) - 1] = '\0';

@@ -648,6 +648,7 @@ struct wpa_supplicant {
 	unsigned int eap_expected_failure:1;
 	unsigned int reattach:1; /* reassociation to the same BSS requested */
 	unsigned int mac_addr_changed:1;
+	unsigned int added_vif:1;
 
 	struct os_reltime last_mac_addr_change;
 	int last_mac_addr_style;

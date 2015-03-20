@@ -113,7 +113,9 @@ def test_ap_vlan_wpa2_radius_id_change(dev, apdev):
     ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=15)
     if ev is None:
         raise Exception("EAP reauthentication timed out")
-    time.sleep(0.1)
+    ev = dev[0].wait_event(["WPA: Key negotiation completed"], timeout=5)
+    if ev is None:
+        raise Exception("4-way handshake after reauthentication timed out")
     state = dev[0].get_status_field('wpa_state')
     if state != "COMPLETED":
         raise Exception("Unexpected state after reauth: " + state)

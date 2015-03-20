@@ -317,6 +317,10 @@ CFLAGS += -DCONFIG_INTERWORKING
 NEED_GAS=y
 endif
 
+ifdef CONFIG_NO_ROAMING
+CFLAGS += -DCONFIG_NO_ROAMING
+endif
+
 include ../src/drivers/drivers.mak
 ifdef CONFIG_AP
 OBJS_d += $(DRV_BOTH_OBJS)

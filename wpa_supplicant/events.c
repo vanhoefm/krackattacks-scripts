@@ -1286,7 +1286,9 @@ static int wpa_supplicant_need_to_roam(struct wpa_supplicant *wpa_s,
 				       struct wpa_ssid *ssid)
 {
 	struct wpa_bss *current_bss = NULL;
+#ifndef CONFIG_NO_ROAMING
 	int min_diff;
+#endif /* CONFIG_NO_ROAMING */
 
 	if (wpa_s->reassociate)
 		return 1; /* explicit request to reassociate */

@@ -792,7 +792,9 @@ OBJS += ../src/crypto/random.o
 HOBJS += ../src/crypto/random.o
 HOBJS += ../src/utils/eloop.o
 HOBJS += $(SHA1OBJS)
+ifneq ($(CONFIG_TLS), openssl)
 HOBJS += ../src/crypto/md5.o
+endif
 endif
 
 ifdef CONFIG_RADIUS_SERVER

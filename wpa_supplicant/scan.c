@@ -418,9 +418,6 @@ static void wpa_supplicant_optimize_freqs(
 static void wpas_add_interworking_elements(struct wpa_supplicant *wpa_s,
 					   struct wpabuf *buf)
 {
-	if (wpa_s->conf->interworking == 0)
-		return;
-
 	wpabuf_put_u8(buf, WLAN_EID_INTERWORKING);
 	wpabuf_put_u8(buf, is_zero_ether_addr(wpa_s->conf->hessid) ? 1 :
 		      1 + ETH_ALEN);

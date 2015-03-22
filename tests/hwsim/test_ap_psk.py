@@ -1873,4 +1873,3 @@ def test_ap_wpa2_psk_incorrect_passphrase(dev, apdev):
     ev = hapd.wait_event(["AP-STA-POSSIBLE-PSK-MISMATCH"], timeout=10)
     if ev is None:
         raise Exception("No AP-STA-POSSIBLE-PSK-MISMATCH reported")
-    print ev

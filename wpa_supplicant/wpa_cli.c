@@ -174,6 +174,8 @@ static void cli_txt_list_del_word(struct dl_list *txt_list, const char *txt)
 	char *buf;
 	end = os_strchr(txt, ' ');
 	if (end == NULL)
+		end = os_strchr(txt, '\t');
+	if (end == NULL)
 		end = txt + os_strlen(txt);
 	buf = dup_binstr(txt, end - txt);
 	if (buf == NULL)
@@ -221,6 +223,8 @@ static int cli_txt_list_add_word(struct dl_list *txt_list, const char *txt)
 	char *buf;
 	int ret;
 	end = os_strchr(txt, ' ');
+	if (end == NULL)
+		end = os_strchr(txt, '\t');
 	if (end == NULL)
 		end = txt + os_strlen(txt);
 	buf = dup_binstr(txt, end - txt);

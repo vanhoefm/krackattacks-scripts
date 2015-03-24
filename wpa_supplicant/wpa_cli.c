@@ -92,6 +92,7 @@ static DEFINE_DL_LIST(bsses); /* struct cli_txt_entry */
 static DEFINE_DL_LIST(p2p_peers); /* struct cli_txt_entry */
 static DEFINE_DL_LIST(p2p_groups); /* struct cli_txt_entry */
 static DEFINE_DL_LIST(ifnames); /* struct cli_txt_entry */
+static DEFINE_DL_LIST(networks); /* struct cli_txt_entry */
 
 
 static void print_help(const char *cmd);
@@ -99,6 +100,7 @@ static void wpa_cli_mon_receive(int sock, void *eloop_ctx, void *sock_ctx);
 static void wpa_cli_close_connection(void);
 static char * wpa_cli_get_default_ifname(void);
 static char ** wpa_list_cmd_list(void);
+static void update_networks(struct wpa_ctrl *ctrl);
 
 
 static void usage(void)
@@ -215,6 +217,7 @@ static int cli_txt_list_add_addr(struct dl_list *txt_list, const char *txt)
 	os_snprintf(buf, sizeof(buf), MACSTR, MAC2STR(addr));
 	return cli_txt_list_add(txt_list, buf);
 }
+#endif /* CONFIG_P2P */
 
 
 static int cli_txt_list_add_word(struct dl_list *txt_list, const char *txt)
@@ -234,7 +237,6 @@ static int cli_txt_list_add_word(struct dl_list *txt_list, const char *txt)
 	os_free(buf);
 	return ret;
 }
-#endif /* CONFIG_P2P */
 
 
 static char ** cli_txt_list_array(struct dl_list *txt_list)
@@ -1455,14 +1457,18 @@ static int wpa_cli_cmd_disable_network(struct wpa_ctrl *ctrl, int argc,
 static int wpa_cli_cmd_add_network(struct wpa_ctrl *ctrl, int argc,
 				   char *argv[])
 {
-	return wpa_ctrl_command(ctrl, "ADD_NETWORK");
+	int res = wpa_ctrl_command(ctrl, "ADD_NETWORK");
+	update_networks(ctrl);
+	return res;
 }
 
 
 static int wpa_cli_cmd_remove_network(struct wpa_ctrl *ctrl, int argc,
 				      char *argv[])
 {
-	return wpa_cli_cmd(ctrl, "REMOVE_NETWORK", 1, argc, argv);
+	int res = wpa_cli_cmd(ctrl, "REMOVE_NETWORK", 1, argc, argv);
+	update_networks(ctrl);
+	return res;
 }
 
 
@@ -3872,6 +3878,38 @@ static void update_ifnames(struct wpa_ctrl *ctrl)
 }
 
 
+static void update_networks(struct wpa_ctrl *ctrl)
+{
+	char buf[4096];
+	size_t len = sizeof(buf);
+	int ret;
+	char *cmd = "LIST_NETWORKS";
+	char *pos, *end;
+	int header = 1;
+
+	cli_txt_list_flush(&networks);
+
+	if (ctrl == NULL)
+		return;
+	ret = wpa_ctrl_request(ctrl, cmd, os_strlen(cmd), buf, &len, NULL);
+	if (ret < 0)
+		return;
+	buf[len] = '\0';
+
+	pos = buf;
+	while (pos) {
+		end = os_strchr(pos, '\n');
+		if (end == NULL)
+			break;
+		*end = '\0';
+		if (!header)
+			cli_txt_list_add_word(&networks, pos);
+		header = 0;
+		pos = end + 1;
+	}
+}
+
+
 static void try_connection(void *eloop_ctx, void *timeout_ctx)
 {
 	if (ctrl_conn)
@@ -3892,6 +3930,7 @@ static void try_connection(void *eloop_ctx, void *timeout_ctx)
 	}
 
 	update_bssid_list(ctrl_conn);
+	update_networks(ctrl_conn);
 
 	if (warning_displayed)
 		printf("Connection established.\n");
@@ -3913,6 +3952,7 @@ static void wpa_cli_interactive(void)
 	cli_txt_list_flush(&p2p_groups);
 	cli_txt_list_flush(&bsses);
 	cli_txt_list_flush(&ifnames);
+	cli_txt_list_flush(&networks);
 	if (edit_started)
 		edit_deinit(hfile, wpa_cli_edit_filter_history_cb);
 	os_free(hfile);

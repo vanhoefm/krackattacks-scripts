@@ -3405,8 +3405,7 @@ def _test_proxyarp_open(dev, apdev, params, ebtables=False):
     na = tshark_get_na(cap_dev0)
     logger.info("dev0 seen NA: " + str(na))
 
-    # FIX: src mac addr is supposed to be addr1, not bssid
-    if [ addr0, bssid, 'aaaa:bbbb:dddd::2', 'aaaa:bbbb:cccc::2',
+    if [ addr0, addr1, 'aaaa:bbbb:dddd::2', 'aaaa:bbbb:cccc::2',
          'aaaa:bbbb:dddd::2', addr1 ] not in na:
         raise Exception("dev0 did not get NA for aaaa:bbbb:dddd::2")
 
@@ -3420,8 +3419,7 @@ def _test_proxyarp_open(dev, apdev, params, ebtables=False):
     na = tshark_get_na(cap_dev1)
     logger.info("dev1 seen NA: " + str(na))
 
-    # FIX: src mac addr is supposed to be addr0, not bssid
-    if [ addr1, bssid, 'aaaa:bbbb:cccc::2', 'aaaa:bbbb:dddd::2',
+    if [ addr1, addr0, 'aaaa:bbbb:cccc::2', 'aaaa:bbbb:dddd::2',
          'aaaa:bbbb:cccc::2', addr0 ] not in na:
         raise Exception("dev1 did not get NA for aaaa:bbbb:cccc::2")
 
@@ -3436,14 +3434,13 @@ def _test_proxyarp_open(dev, apdev, params, ebtables=False):
     logger.info("dev2 seen NA: " + str(na))
 
     # FIX: enable once kernel implementation for proxyarp IPv6 is fixed
-    # FIX: src mac addr is supposed to be addr0/addr1, not bssid
-    #if [ addr2, bssid, 'aaaa:bbbb:cccc::2', 'aaaa:bbbb:ff00::2',
+    #if [ addr2, addr0, 'aaaa:bbbb:cccc::2', 'aaaa:bbbb:ff00::2',
     #     'aaaa:bbbb:cccc::2', addr0 ] not in na:
     #    raise Exception("dev2 did not get NA for aaaa:bbbb:cccc::2")
-    #if [ addr2, bssid, 'aaaa:bbbb:dddd::2', 'aaaa:bbbb:ff00::2',
+    #if [ addr2, addr1, 'aaaa:bbbb:dddd::2', 'aaaa:bbbb:ff00::2',
     #     'aaaa:bbbb:dddd::2', addr1 ] not in na:
     #    raise Exception("dev2 did not get NA for aaaa:bbbb:dddd::2")
-    #if [ addr2, bssid, 'aaaa:bbbb:eeee::2', 'aaaa:bbbb:ff00::2',
+    #if [ addr2, addr1, 'aaaa:bbbb:eeee::2', 'aaaa:bbbb:ff00::2',
     #     'aaaa:bbbb:eeee::2', addr1 ] not in na:
     #    raise Exception("dev2 did not get NA for aaaa:bbbb:eeee::2")
 

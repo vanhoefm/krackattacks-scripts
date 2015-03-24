@@ -856,8 +856,10 @@ static void hostapd_wps_clear_ies(struct hostapd_data *hapd, int deinit_only)
 	wpabuf_free(hapd->wps_probe_resp_ie);
 	hapd->wps_probe_resp_ie = NULL;
 
-	if (deinit_only)
+	if (deinit_only) {
+		hostapd_reset_ap_wps_ie(hapd);
 		return;
+	}
 
 	hostapd_set_ap_wps_ie(hapd);
 }

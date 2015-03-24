@@ -217,6 +217,15 @@ void hostapd_free_ap_extra_ies(struct hostapd_data *hapd,
 }
 
 
+int hostapd_reset_ap_wps_ie(struct hostapd_data *hapd)
+{
+	if (hapd->driver == NULL || hapd->driver->set_ap_wps_ie == NULL)
+		return 0;
+
+	return hapd->driver->set_ap_wps_ie(hapd->drv_priv, NULL, NULL, NULL);
+}
+
+
 int hostapd_set_ap_wps_ie(struct hostapd_data *hapd)
 {
 	struct wpabuf *beacon, *proberesp, *assocresp;

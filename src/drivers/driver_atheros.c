@@ -1694,6 +1694,13 @@ atheros_deinit(void *priv)
 	struct atheros_driver_data *drv = priv;
 
 	atheros_reset_appfilter(drv);
+
+	if (drv->wpa_ie || drv->wps_beacon_ie || drv->wps_probe_resp_ie) {
+		wpabuf_free(drv->wpa_ie);
+		wpabuf_free(drv->wps_beacon_ie);
+		wpabuf_free(drv->wps_probe_resp_ie);
+		atheros_set_opt_ie(priv, NULL, 0);
+	}
 	netlink_deinit(drv->netlink);
 	(void) linux_set_iface_flags(drv->ioctl_sock, drv->iface, 0);
 	if (drv->ioctl_sock >= 0)
@@ -1704,9 +1711,6 @@ atheros_deinit(void *priv)
 		l2_packet_deinit(drv->sock_xmit);
 	if (drv->sock_raw)
 		l2_packet_deinit(drv->sock_raw);
-	wpabuf_free(drv->wpa_ie);
-	wpabuf_free(drv->wps_beacon_ie);
-	wpabuf_free(drv->wps_probe_resp_ie);
 	free(drv);
 }
 

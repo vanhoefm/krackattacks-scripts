@@ -1646,6 +1646,31 @@ static int wpa_cli_cmd_dup_network(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static char ** wpa_cli_complete_dup_network(const char *str, int pos)
+{
+	int arg = get_cmd_arg_num(str, pos);
+	int i, num_fields = ARRAY_SIZE(network_fields);
+	char **res = NULL;
+
+	switch (arg) {
+	case 1:
+	case 2:
+		res = cli_txt_list_array(&networks);
+		break;
+	case 3:
+		res = os_calloc(num_fields + 1, sizeof(char *));
+		if (res == NULL)
+			return NULL;
+		for (i = 0; i < num_fields; i++) {
+			res[i] = os_strdup(network_fields[i]);
+			if (res[i] == NULL)
+				break;
+		}
+	}
+	return res;
+}
+
+
 static int wpa_cli_cmd_list_creds(struct wpa_ctrl *ctrl, int argc,
 				  char *argv[])
 {
@@ -2911,7 +2936,7 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "get_network", wpa_cli_cmd_get_network, wpa_cli_complete_network,
 	  cli_cmd_flag_none,
 	  "<network id> <variable> = get network variables" },
-	{ "dup_network", wpa_cli_cmd_dup_network, NULL,
+	{ "dup_network", wpa_cli_cmd_dup_network, wpa_cli_complete_dup_network,
 	  cli_cmd_flag_none,
 	  "<src network id> <dst network id> <variable> = duplicate network variables"
 	},

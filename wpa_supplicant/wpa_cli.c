@@ -1529,6 +1529,96 @@ static int wpa_cli_cmd_get_network(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static const char *network_fields[] = {
+	"ssid", "scan_ssid", "bssid", "bssid_blacklist",
+	"bssid_whitelist", "psk", "proto", "key_mgmt",
+	"bg_scan_period", "pairwise", "group", "auth_alg", "scan_freq",
+	"freq_list",
+#ifdef IEEE8021X_EAPOL
+	"eap", "identity", "anonymous_identity", "password", "ca_cert",
+	"ca_path", "client_cert", "private_key", "private_key_passwd",
+	"dh_file", "subject_match", "altsubject_match",
+	"domain_suffix_match", "domain_match", "ca_cert2", "ca_path2",
+	"client_cert2", "private_key2", "private_key2_passwd",
+	"dh_file2", "subject_match2", "altsubject_match2",
+	"domain_suffix_match2", "domain_match2", "phase1", "phase2",
+	"pcsc", "pin", "engine_id", "key_id", "cert_id", "ca_cert_id",
+	"pin2", "engine2_id", "key2_id", "cert2_id", "ca_cert2_id",
+	"engine", "engine2", "eapol_flags", "sim_num",
+	"openssl_ciphers", "erp",
+#endif /* IEEE8021X_EAPOL */
+	"wep_key0", "wep_key1", "wep_key2", "wep_key3",
+	"wep_tx_keyidx", "priority",
+#ifdef IEEE8021X_EAPOL
+	"eap_workaround", "pac_file", "fragment_size", "ocsp",
+#endif /* IEEE8021X_EAPOL */
+#ifdef CONFIG_MESH
+	"mode", "no_auto_peer",
+#else /* CONFIG_MESH */
+	"mode",
+#endif /* CONFIG_MESH */
+	"proactive_key_caching", "disabled", "id_str",
+#ifdef CONFIG_IEEE80211W
+	"ieee80211w",
+#endif /* CONFIG_IEEE80211W */
+	"peerkey", "mixed_cell", "frequency", "fixed_freq",
+#ifdef CONFIG_MESH
+	"mesh_basic_rates", "dot11MeshMaxRetries",
+	"dot11MeshRetryTimeout", "dot11MeshConfirmTimeout",
+	"dot11MeshHoldingTimeout",
+#endif /* CONFIG_MESH */
+	"wpa_ptk_rekey", "bgscan", "ignore_broadcast_ssid",
+#ifdef CONFIG_P2P
+	"go_p2p_dev_addr", "p2p_client_list", "psk_list",
+#endif /* CONFIG_P2P */
+#ifdef CONFIG_HT_OVERRIDES
+	"disable_ht", "disable_ht40", "disable_sgi", "disable_ldpc",
+	"ht40_intolerant", "disable_max_amsdu", "ampdu_factor",
+	"ampdu_density", "ht_mcs",
+#endif /* CONFIG_HT_OVERRIDES */
+#ifdef CONFIG_VHT_OVERRIDES
+	"disable_vht", "vht_capa", "vht_capa_mask", "vht_rx_mcs_nss_1",
+	"vht_rx_mcs_nss_2", "vht_rx_mcs_nss_3", "vht_rx_mcs_nss_4",
+	"vht_rx_mcs_nss_5", "vht_rx_mcs_nss_6", "vht_rx_mcs_nss_7",
+	"vht_rx_mcs_nss_8", "vht_tx_mcs_nss_1", "vht_tx_mcs_nss_2",
+	"vht_tx_mcs_nss_3", "vht_tx_mcs_nss_4", "vht_tx_mcs_nss_5",
+	"vht_tx_mcs_nss_6", "vht_tx_mcs_nss_7", "vht_tx_mcs_nss_8",
+#endif /* CONFIG_VHT_OVERRIDES */
+	"ap_max_inactivity", "dtim_period", "beacon_int",
+#ifdef CONFIG_MACSEC
+	"macsec_policy",
+#endif /* CONFIG_MACSEC */
+#ifdef CONFIG_HS20
+	"update_identifier",
+#endif /* CONFIG_HS20 */
+	"mac_addr"
+};
+
+
+static char ** wpa_cli_complete_network(const char *str, int pos)
+{
+	int arg = get_cmd_arg_num(str, pos);
+	int i, num_fields = ARRAY_SIZE(network_fields);
+	char **res = NULL;
+
+	switch (arg) {
+	case 1:
+		res = cli_txt_list_array(&networks);
+		break;
+	case 2:
+		res = os_calloc(num_fields + 1, sizeof(char *));
+		if (res == NULL)
+			return NULL;
+		for (i = 0; i < num_fields; i++) {
+			res[i] = os_strdup(network_fields[i]);
+			if (res[i] == NULL)
+				break;
+		}
+	}
+	return res;
+}
+
+
 static int wpa_cli_cmd_dup_network(struct wpa_ctrl *ctrl, int argc,
 				   char *argv[])
 {
@@ -2801,11 +2891,11 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "remove_network", wpa_cli_cmd_remove_network, NULL,
 	  cli_cmd_flag_none,
 	  "<network id> = remove a network" },
-	{ "set_network", wpa_cli_cmd_set_network, NULL,
+	{ "set_network", wpa_cli_cmd_set_network, wpa_cli_complete_network,
 	  cli_cmd_flag_sensitive,
 	  "<network id> <variable> <value> = set network variables (shows\n"
 	  "  list of variables when run without arguments)" },
-	{ "get_network", wpa_cli_cmd_get_network, NULL,
+	{ "get_network", wpa_cli_cmd_get_network, wpa_cli_complete_network,
 	  cli_cmd_flag_none,
 	  "<network id> <variable> = get network variables" },
 	{ "dup_network", wpa_cli_cmd_dup_network, NULL,

@@ -1619,6 +1619,15 @@ static char ** wpa_cli_complete_network(const char *str, int pos)
 }
 
 
+static char ** wpa_cli_complete_network_id(const char *str, int pos)
+{
+	int arg = get_cmd_arg_num(str, pos);
+	if (arg == 1)
+		return cli_txt_list_array(&networks);
+	return NULL;
+}
+
+
 static int wpa_cli_cmd_dup_network(struct wpa_ctrl *ctrl, int argc,
 				   char *argv[])
 {
@@ -2876,19 +2885,23 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "list_networks", wpa_cli_cmd_list_networks, NULL,
 	  cli_cmd_flag_none,
 	  "= list configured networks" },
-	{ "select_network", wpa_cli_cmd_select_network, NULL,
+	{ "select_network", wpa_cli_cmd_select_network,
+	  wpa_cli_complete_network_id,
 	  cli_cmd_flag_none,
 	  "<network id> = select a network (disable others)" },
-	{ "enable_network", wpa_cli_cmd_enable_network, NULL,
+	{ "enable_network", wpa_cli_cmd_enable_network,
+	  wpa_cli_complete_network_id,
 	  cli_cmd_flag_none,
 	  "<network id> = enable a network" },
-	{ "disable_network", wpa_cli_cmd_disable_network, NULL,
+	{ "disable_network", wpa_cli_cmd_disable_network,
+	  wpa_cli_complete_network_id,
 	  cli_cmd_flag_none,
 	  "<network id> = disable a network" },
 	{ "add_network", wpa_cli_cmd_add_network, NULL,
 	  cli_cmd_flag_none,
 	  "= add a network" },
-	{ "remove_network", wpa_cli_cmd_remove_network, NULL,
+	{ "remove_network", wpa_cli_cmd_remove_network,
+	  wpa_cli_complete_network_id,
 	  cli_cmd_flag_none,
 	  "<network id> = remove a network" },
 	{ "set_network", wpa_cli_cmd_set_network, wpa_cli_complete_network,

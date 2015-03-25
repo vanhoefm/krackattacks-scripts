@@ -1925,11 +1925,20 @@ def test_ap_hs20_osen(dev, apdev):
                    wait_connect=False)
     dev[2].connect("osen", key_mgmt="NONE", wep_key0='"hello"',
                    scan_freq="2412", wait_connect=False)
+    dev[0].flush_scan_cache()
     dev[0].connect("osen", proto="OSEN", key_mgmt="OSEN", pairwise="CCMP",
                    group="GTK_NOT_USED",
                    eap="WFA-UNAUTH-TLS", identity="osen@example.com",
                    ca_cert="auth_serv/ca.pem",
                    scan_freq="2412")
+    res = dev[0].get_bss(apdev[0]['bssid'])['flags']
+    if "[OSEN-OSEN-CCMP]" not in res:
+        raise Exception("OSEN not reported in BSS")
+    if "[WEP]" in res:
+        raise Exception("WEP reported in BSS")
+    res = dev[0].request("SCAN_RESULTS")
+    if "[OSEN-OSEN-CCMP]" not in res:
+        raise Exception("OSEN not reported in SCAN_RESULTS")
 
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     wpas.interface_add("wlan5", drv_params="force_connect_cmd=1")

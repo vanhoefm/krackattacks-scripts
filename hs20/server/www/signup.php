@@ -17,7 +17,7 @@ if (!$db) {
 
 $row = $db->query("SELECT realm FROM sessions WHERE id='$id'")->fetch();
 if ($row == false) {
-   die("Session not found");
+   die("Session not found for id: $id");
 }
 $realm = $row['realm'];
 

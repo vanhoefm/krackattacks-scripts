@@ -2196,7 +2196,9 @@ xml_node_t * hs20_spp_server_process(struct hs20_svc *ctx, xml_node_t *node,
 		session_id = xml_node_get_attr_value_ns(ctx->xml, node,
 							SPP_NS_URI,
 							"sessionID");
-		debug_print(ctx, 1, "SPP message failed validation");
+		debug_print(ctx, 1,
+			    "SPP message failed validation, xsd file: %s  xml-error: %s",
+			    fname, xml_err);
 		hs20_eventlog_node(ctx, auth_user, auth_realm, session_id,
 				   "SPP message failed validation", node);
 		hs20_eventlog(ctx, auth_user, auth_realm, session_id,

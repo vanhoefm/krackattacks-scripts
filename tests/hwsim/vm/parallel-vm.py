@@ -97,7 +97,12 @@ def vm_read_stdout(vm, i):
         elif line.startswith("FAIL"):
             ready = True
             total_failed += 1
-            name = line.split(' ')[1]
+            vals = line.split(' ')
+            if len(vals) < 2:
+                logger.info("VM[%d] incomplete FAIL line: %s" % (i, line))
+                name = line
+            else:
+                name = vals[1]
             logger.debug("VM[%d] test case failed: %s" % (i, name))
             vm['failed'].append(name)
         elif line.startswith("NOT-FOUND"):

@@ -10,6 +10,7 @@ import subprocess
 import time
 
 import hostapd
+import hwsim_utils
 from wpasupplicant import WpaSupplicant
 from utils import alloc_fail
 
@@ -1347,3 +1348,18 @@ def test_wpas_ctrl_dump(dev, apdev):
             raise Exception("Mismatch in config field " + field)
     if "beacon_int" not in vals:
         raise Exception("Missing config field")
+
+def test_wpas_ctrl_interface_add(dev, apdev):
+    """wpa_supplicant INTERFACE_ADD/REMOVE with vif creation/removal"""
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+    hwsim_utils.test_connectivity(dev[0], hapd)
+
+    ifname = "test-" + dev[0].ifname
+    dev[0].interface_add(ifname, create=True)
+    wpas = WpaSupplicant(ifname=ifname)
+    wpas.connect("open", key_mgmt="NONE", scan_freq="2412")
+    hwsim_utils.test_connectivity(wpas, hapd)
+    hwsim_utils.test_connectivity(dev[0], hapd)
+    dev[0].global_request("INTERFACE_REMOVE " + ifname)
+    hwsim_utils.test_connectivity(dev[0], hapd)

@@ -2976,7 +2976,7 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "get_capability", wpa_cli_cmd_get_capability, NULL,
 	  cli_cmd_flag_none,
 	  "<eap/pairwise/group/key_mgmt/proto/auth_alg/channels/freq/modes> "
-	  "= get capabilies" },
+	  "= get capabilities" },
 	{ "reconfigure", wpa_cli_cmd_reconfigure, NULL,
 	  cli_cmd_flag_none,
 	  "= force wpa_supplicant to re-read its configuration file" },

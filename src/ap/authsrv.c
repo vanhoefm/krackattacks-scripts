@@ -55,10 +55,11 @@ static int hostapd_radius_get_eap_user(void *ctx, const u8 *identity,
 {
 	const struct hostapd_eap_user *eap_user;
 	int i;
+	int rv = -1;
 
 	eap_user = hostapd_get_eap_user(ctx, identity, identity_len, phase2);
 	if (eap_user == NULL)
-		return -1;
+		goto out;
 
 	if (user == NULL)
 		return 0;
@@ -72,7 +73,7 @@ static int hostapd_radius_get_eap_user(void *ctx, const u8 *identity,
 	if (eap_user->password) {
 		user->password = os_malloc(eap_user->password_len);
 		if (user->password == NULL)
-			return -1;
+			goto out;
 		os_memcpy(user->password, eap_user->password,
 			  eap_user->password_len);
 		user->password_len = eap_user->password_len;
@@ -83,8 +84,13 @@ static int hostapd_radius_get_eap_user(void *ctx, const u8 *identity,
 	user->ttls_auth = eap_user->ttls_auth;
 	user->remediation = eap_user->remediation;
 	user->accept_attr = eap_user->accept_attr;
+	rv = 0;
 
-	return 0;
+out:
+	if (rv)
+		wpa_printf(MSG_DEBUG, "%s: Failed to find user", __func__);
+
+	return rv;
 }
 
 

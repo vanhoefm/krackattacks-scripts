@@ -2035,6 +2035,12 @@ static int radius_server_get_eap_user(void *ctx, const u8 *identity,
 		sess->remediation = user->remediation;
 		sess->macacl = user->macacl;
 	}
+
+	if (ret) {
+		RADIUS_DEBUG("%s: User-Name not found from user database",
+			     __func__);
+	}
+
 	return ret;
 }
 

@@ -222,9 +222,15 @@ static int hostapd_config_read_eap_user(const char *fname,
 		return 0;
 
 	if (os_strncmp(fname, "sqlite:", 7) == 0) {
+#ifdef CONFIG_SQLITE
 		os_free(conf->eap_user_sqlite);
 		conf->eap_user_sqlite = os_strdup(fname + 7);
 		return 0;
+#else /* CONFIG_SQLITE */
+		wpa_printf(MSG_ERROR,
+			   "EAP user file in SQLite DB, but CONFIG_SQLITE was not enabled in the build.");
+		return -1;
+#endif /* CONFIG_SQLITE */
 	}
 
 	f = fopen(fname, "r");

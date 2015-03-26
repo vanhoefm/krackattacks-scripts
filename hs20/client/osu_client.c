@@ -2139,7 +2139,7 @@ static int cmd_osu_select(struct hs20_osu_client *ctx, const char *dir,
 	snprintf(fname, sizeof(fname), "%s/osu-providers.txt", dir);
 	osu = parse_osu_providers(fname, &osu_count);
 	if (osu == NULL) {
-		wpa_printf(MSG_INFO, "Could not any OSU providers from %s",
+		wpa_printf(MSG_INFO, "Could not find any OSU providers from %s",
 			   fname);
 		write_result(ctx, "No OSU providers available");
 		return -1;
@@ -2996,7 +2996,7 @@ int main(int argc, char *argv[])
 		return -1;
 
 	for (;;) {
-		c = getopt(argc, argv, "df:hi:KNO:qr:s:S:tw:");
+		c = getopt(argc, argv, "df:hKNO:qr:s:S:tw:");
 		if (c < 0)
 			break;
 		switch (c) {

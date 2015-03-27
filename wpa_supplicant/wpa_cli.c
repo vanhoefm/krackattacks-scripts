@@ -170,13 +170,12 @@ static void cli_txt_list_del_addr(struct dl_list *txt_list, const char *txt)
 
 
 #ifdef CONFIG_P2P
-static void cli_txt_list_del_word(struct dl_list *txt_list, const char *txt)
+static void cli_txt_list_del_word(struct dl_list *txt_list, const char *txt,
+				  int separator)
 {
 	const char *end;
 	char *buf;
-	end = os_strchr(txt, ' ');
-	if (end == NULL)
-		end = os_strchr(txt, '\t');
+	end = os_strchr(txt, separator);
 	if (end == NULL)
 		end = txt + os_strlen(txt);
 	buf = dup_binstr(txt, end - txt);
@@ -220,14 +219,13 @@ static int cli_txt_list_add_addr(struct dl_list *txt_list, const char *txt)
 #endif /* CONFIG_P2P */
 
 
-static int cli_txt_list_add_word(struct dl_list *txt_list, const char *txt)
+static int cli_txt_list_add_word(struct dl_list *txt_list, const char *txt,
+				 int separator)
 {
 	const char *end;
 	char *buf;
 	int ret;
-	end = os_strchr(txt, ' ');
-	if (end == NULL)
-		end = os_strchr(txt, '\t');
+	end = os_strchr(txt, separator);
 	if (end == NULL)
 		end = txt + os_strlen(txt);
 	buf = dup_binstr(txt, end - txt);
@@ -3752,7 +3750,7 @@ static void cli_event(const char *str)
 		s = os_strchr(start, ' ');
 		if (s == NULL)
 			return;
-		cli_txt_list_add_word(&p2p_groups, s + 1);
+		cli_txt_list_add_word(&p2p_groups, s + 1, ' ');
 		return;
 	}
 
@@ -3760,7 +3758,7 @@ static void cli_event(const char *str)
 		s = os_strchr(start, ' ');
 		if (s == NULL)
 			return;
-		cli_txt_list_del_word(&p2p_groups, s + 1);
+		cli_txt_list_del_word(&p2p_groups, s + 1, ' ');
 		return;
 	}
 #endif /* CONFIG_P2P */
@@ -4031,7 +4029,7 @@ static void update_networks(struct wpa_ctrl *ctrl)
 			break;
 		*end = '\0';
 		if (!header)
-			cli_txt_list_add_word(&networks, pos);
+			cli_txt_list_add_word(&networks, pos, '\t');
 		header = 0;
 		pos = end + 1;
 	}

@@ -1085,14 +1085,13 @@ struct wpa_bss * wpa_supplicant_pick_network(struct wpa_supplicant *wpa_s,
 	struct wpa_bss *selected = NULL;
 	int prio;
 	struct wpa_ssid *next_ssid = NULL;
+	struct wpa_ssid *ssid;
 
 	if (wpa_s->last_scan_res == NULL ||
 	    wpa_s->last_scan_res_used == 0)
 		return NULL; /* no scan results from last update */
 
 	if (wpa_s->next_ssid) {
-		struct wpa_ssid *ssid;
-
 		/* check that next_ssid is still valid */
 		for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next) {
 			if (ssid == wpa_s->next_ssid)
@@ -1126,6 +1125,27 @@ struct wpa_bss * wpa_supplicant_pick_network(struct wpa_supplicant *wpa_s,
 			wpa_s->blacklist_cleared++;
 		} else if (selected == NULL)
 			break;
+	}
+
+	ssid = *selected_ssid;
+	if (selected && ssid && ssid->mem_only_psk && !ssid->psk_set &&
+	    !ssid->passphrase && !ssid->ext_psk) {
+		const char *field_name, *txt = NULL;
+
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"PSK/passphrase not yet available for the selected network");
+
+		wpas_notify_network_request(wpa_s, ssid,
+					    WPA_CTRL_REQ_PSK_PASSPHRASE, NULL);
+
+		field_name = wpa_supplicant_ctrl_req_to_string(
+			WPA_CTRL_REQ_PSK_PASSPHRASE, NULL, &txt);
+		if (field_name == NULL)
+			return NULL;
+
+		wpas_send_ctrl_req(wpa_s, ssid, field_name, txt);
+
+		selected = NULL;
 	}
 
 	return selected;

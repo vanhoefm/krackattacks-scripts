@@ -1816,6 +1816,7 @@ static const struct parse_data ssid_fields[] = {
 	{ FUNC(bssid_blacklist) },
 	{ FUNC(bssid_whitelist) },
 	{ FUNC_KEY(psk) },
+	{ INT(mem_only_psk) },
 	{ FUNC(proto) },
 	{ FUNC(key_mgmt) },
 	{ INT(bg_scan_period) },

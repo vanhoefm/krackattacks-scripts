@@ -181,6 +181,14 @@ struct wpa_ssid {
 	char *ext_psk;
 
 	/**
+	 * mem_only_psk - Whether to keep PSK/passphrase only in memory
+	 *
+	 * 0 = allow psk/passphrase to be stored to the configuration file
+	 * 1 = do not store psk/passphrase to the configuration file
+	 */
+	int mem_only_psk;
+
+	/**
 	 * pairwise_cipher - Bitfield of allowed pairwise ciphers, WPA_CIPHER_*
 	 */
 	int pairwise_cipher;

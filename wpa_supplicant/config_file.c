@@ -501,7 +501,12 @@ static void write_bssid(FILE *f, struct wpa_ssid *ssid)
 
 static void write_psk(FILE *f, struct wpa_ssid *ssid)
 {
-	char *value = wpa_config_get(ssid, "psk");
+	char *value;
+
+	if (ssid->mem_only_psk)
+		return;
+
+	value = wpa_config_get(ssid, "psk");
 	if (value == NULL)
 		return;
 	fprintf(f, "\tpsk=%s\n", value);
@@ -673,6 +678,7 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 	write_str(f, "bssid_blacklist", ssid);
 	write_str(f, "bssid_whitelist", ssid);
 	write_psk(f, ssid);
+	INT(mem_only_psk);
 	write_proto(f, ssid);
 	write_key_mgmt(f, ssid);
 	INT_DEF(bg_scan_period, DEFAULT_BG_SCAN_PERIOD);

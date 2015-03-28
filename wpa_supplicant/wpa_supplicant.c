@@ -1239,7 +1239,12 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 	}
 
 	if (wpa_key_mgmt_wpa_psk(ssid->key_mgmt)) {
-		wpa_sm_set_pmk(wpa_s->wpa, ssid->psk, PMK_LEN, NULL);
+		int psk_set = 0;
+
+		if (ssid->psk_set) {
+			wpa_sm_set_pmk(wpa_s->wpa, ssid->psk, PMK_LEN, NULL);
+			psk_set = 1;
+		}
 #ifndef CONFIG_NO_PBKDF2
 		if (bss && ssid->bssid_set && ssid->ssid_len == 0 &&
 		    ssid->passphrase) {
@@ -1249,6 +1254,7 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 		        wpa_hexdump_key(MSG_MSGDUMP, "PSK (from passphrase)",
 					psk, PMK_LEN);
 			wpa_sm_set_pmk(wpa_s->wpa, psk, PMK_LEN, NULL);
+			psk_set = 1;
 			os_memset(psk, 0, sizeof(psk));
 		}
 #endif /* CONFIG_NO_PBKDF2 */
@@ -1286,6 +1292,7 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 						"external passphrase)",
 						psk, PMK_LEN);
 				wpa_sm_set_pmk(wpa_s->wpa, psk, PMK_LEN, NULL);
+				psk_set = 1;
 				os_memset(psk, 0, sizeof(psk));
 			} else
 #endif /* CONFIG_NO_PBKDF2 */
@@ -1298,6 +1305,7 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 					return -1;
 				}
 				wpa_sm_set_pmk(wpa_s->wpa, psk, PMK_LEN, NULL);
+				psk_set = 1;
 				os_memset(psk, 0, sizeof(psk));
 			} else {
 				wpa_msg(wpa_s, MSG_INFO, "EXT PW: No suitable "
@@ -1311,6 +1319,12 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 			ext_password_free(pw);
 		}
 #endif /* CONFIG_EXT_PASSWORD */
+
+		if (!psk_set) {
+			wpa_msg(wpa_s, MSG_INFO,
+				"No PSK available for association");
+			return -1;
+		}
 	} else
 		wpa_sm_set_pmk_from_pmksa(wpa_s->wpa);
 
@@ -4967,6 +4981,15 @@ int wpa_supplicant_ctrl_iface_ctrl_rsp_handle(struct wpa_supplicant *wpa_s,
 		str_clear_free(eap->external_sim_resp);
 		eap->external_sim_resp = os_strdup(value);
 		break;
+	case WPA_CTRL_REQ_PSK_PASSPHRASE:
+		if (wpa_config_set(ssid, "psk", value, 0) < 0)
+			return -1;
+		ssid->mem_only_psk = 1;
+		if (ssid->passphrase)
+			wpa_config_update_psk(ssid);
+		if (wpa_s->wpa_state == WPA_SCANNING && !wpa_s->scanning)
+			wpa_supplicant_req_scan(wpa_s, 0, 0);
+		break;
 	default:
 		wpa_printf(MSG_DEBUG, "CTRL_IFACE: Unknown field '%s'", field);
 		return -1;
@@ -5014,7 +5037,8 @@ int wpas_network_disabled(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid)
 	}
 
 	if (wpa_key_mgmt_wpa_psk(ssid->key_mgmt) && !ssid->psk_set &&
-	    (!ssid->passphrase || ssid->ssid_len != 0) && !ssid->ext_psk)
+	    (!ssid->passphrase || ssid->ssid_len != 0) && !ssid->ext_psk &&
+	    !ssid->mem_only_psk)
 		return 1;
 
 	return 0;

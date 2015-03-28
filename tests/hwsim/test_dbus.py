@@ -1075,6 +1075,60 @@ def test_dbus_connect(dev, apdev):
         if not t.success():
             raise Exception("Expected signals not seen")
 
+def test_dbus_connect_psk_mem(dev, apdev):
+    """D-Bus AddNetwork and connect with memory-only PSK"""
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    iface = dbus.Interface(if_obj, WPAS_DBUS_IFACE)
+
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    class TestDbusConnect(TestDbus):
+        def __init__(self, bus):
+            TestDbus.__init__(self, bus)
+            self.connected = False
+
+        def __enter__(self):
+            gobject.timeout_add(1, self.run_connect)
+            gobject.timeout_add(15000, self.timeout)
+            self.add_signal(self.propertiesChanged, WPAS_DBUS_IFACE,
+                            "PropertiesChanged")
+            self.add_signal(self.networkRequest, WPAS_DBUS_IFACE,
+                            "NetworkRequest")
+            self.loop.run()
+            return self
+
+        def propertiesChanged(self, properties):
+            logger.debug("propertiesChanged: %s" % str(properties))
+            if 'State' in properties and properties['State'] == "completed":
+                self.connected = True
+                self.loop.quit()
+
+        def networkRequest(self, path, field, txt):
+            logger.debug("networkRequest: %s %s %s" % (path, field, txt))
+            if field == "PSK_PASSPHRASE":
+                iface.NetworkReply(path, field, '"' + passphrase + '"')
+
+        def run_connect(self, *args):
+            logger.debug("run_connect")
+            args = dbus.Dictionary({ 'ssid': ssid,
+                                     'key_mgmt': 'WPA-PSK',
+                                     'mem_only_psk': 1,
+                                     'scan_freq': 2412 },
+                                   signature='sv')
+            self.netw = iface.AddNetwork(args)
+            iface.SelectNetwork(self.netw)
+            return False
+
+        def success(self):
+            return self.connected
+
+    with TestDbusConnect(bus) as t:
+        if not t.success():
+            raise Exception("Expected signals not seen")
+
 def test_dbus_connect_oom(dev, apdev):
     """D-Bus AddNetwork and connect when out-of-memory"""
     (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])

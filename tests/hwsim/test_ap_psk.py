@@ -68,6 +68,40 @@ def test_ap_wpa2_psk_file(dev, apdev):
         raise Exception("Timed out while waiting for failure report")
     dev[1].request("REMOVE_NETWORK all")
 
+def test_ap_wpa2_psk_mem(dev, apdev):
+    """WPA2-PSK AP with passphrase only in memory"""
+    try:
+        _test_ap_wpa2_psk_mem(dev, apdev)
+    finally:
+        dev[0].request("SCAN_INTERVAL 5")
+        dev[1].request("SCAN_INTERVAL 5")
+
+def _test_ap_wpa2_psk_mem(dev, apdev):
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+    psk = '602e323e077bc63bd80307ef4745b754b0ae0a925c2638ecd13a794b9527b9e6'
+    params = hostapd.wpa2_params(ssid=ssid)
+    params['wpa_psk'] = psk
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].connect(ssid, mem_only_psk="1", scan_freq="2412", wait_connect=False)
+    dev[0].request("SCAN_INTERVAL 1")
+    ev = dev[0].wait_event(["CTRL-REQ-PSK_PASSPHRASE"], timeout=10)
+    if ev is None:
+        raise Exception("Request for PSK/passphrase timed out")
+    id = ev.split(':')[0].split('-')[-1]
+    dev[0].request("CTRL-RSP-PSK_PASSPHRASE-" + id + ':"' + passphrase + '"')
+    dev[0].wait_connected(timeout=10)
+
+    dev[1].connect(ssid, mem_only_psk="1", scan_freq="2412", wait_connect=False)
+    dev[1].request("SCAN_INTERVAL 1")
+    ev = dev[1].wait_event(["CTRL-REQ-PSK_PASSPHRASE"], timeout=10)
+    if ev is None:
+        raise Exception("Request for PSK/passphrase timed out(2)")
+    id = ev.split(':')[0].split('-')[-1]
+    dev[1].request("CTRL-RSP-PSK_PASSPHRASE-" + id + ':' + psk)
+    dev[1].wait_connected(timeout=10)
+
 def test_ap_wpa2_ptk_rekey(dev, apdev):
     """WPA2-PSK AP and PTK rekey enforced by station"""
     ssid = "test-wpa2-psk"

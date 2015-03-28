@@ -1759,6 +1759,18 @@ def test_ap_wpa2_eap_pwd(dev, apdev):
                 password="secret password",
                 fragment_size="31")
 
+def test_ap_wpa2_eap_pwd_nthash(dev, apdev):
+    """WPA2-Enterprise connection using EAP-pwd and NTHash"""
+    check_eap_capa(dev[0], "PWD")
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "PWD", "pwd-hash", password="secret password")
+    eap_connect(dev[1], apdev[0], "PWD", "pwd-hash",
+                password_hex="hash:e3718ece8ab74792cbbfffd316d2d19a")
+    eap_connect(dev[2], apdev[0], "PWD", "pwd user",
+                password_hex="hash:e3718ece8ab74792cbbfffd316d2d19a",
+                expect_failure=True, local_error_report=True)
+
 def test_ap_wpa2_eap_pwd_groups(dev, apdev):
     """WPA2-Enterprise connection using various EAP-pwd groups"""
     check_eap_capa(dev[0], "PWD")

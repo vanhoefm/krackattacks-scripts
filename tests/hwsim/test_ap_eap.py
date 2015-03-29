@@ -1139,6 +1139,16 @@ def test_ap_wpa2_eap_peap_eap_mschapv2(dev, apdev):
                 ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2",
                 expect_failure=True)
 
+def test_ap_wpa2_eap_peap_eap_mschapv2_domain(dev, apdev):
+    """WPA2-Enterprise connection using EAP-PEAP/EAP-MSCHAPv2 with domain"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "PEAP", "DOMAIN\user3",
+                anonymous_identity="peap", password="password",
+                ca_cert="auth_serv/ca.pem", phase2="auth=MSCHAPV2")
+    hwsim_utils.test_connectivity(dev[0], hapd)
+    eap_reauth(dev[0], "PEAP")
+
 def test_ap_wpa2_eap_peap_eap_mschapv2_incorrect_password(dev, apdev):
     """WPA2-Enterprise connection using EAP-PEAP/EAP-MSCHAPv2 - incorrect password"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")

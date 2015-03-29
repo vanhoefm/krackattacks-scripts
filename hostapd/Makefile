@@ -227,6 +227,7 @@ CFLAGS += -DCONFIG_SAE
 OBJS += ../src/common/sae.o
 NEED_ECC=y
 NEED_DH_GROUPS=y
+NEED_AP_MLME=y
 endif
 
 ifdef CONFIG_WNM

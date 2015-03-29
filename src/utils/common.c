@@ -277,6 +277,31 @@ int wpa_scnprintf(char *buf, size_t size, const char *fmt, ...)
 	return ret;
 }
 
+
+int wpa_snprintf_hex_sep(char *buf, size_t buf_size, const u8 *data, size_t len,
+			 char sep)
+{
+	size_t i;
+	char *pos = buf, *end = buf + buf_size;
+	int ret;
+
+	if (buf_size == 0)
+		return 0;
+
+	for (i = 0; i < len; i++) {
+		ret = os_snprintf(pos, end - pos, "%02x%c",
+				  data[i], sep);
+		if (os_snprintf_error(end - pos, ret)) {
+			end[-1] = '\0';
+			return pos - buf;
+		}
+		pos += ret;
+	}
+	pos[-1] = '\0';
+	return pos - buf;
+}
+
+
 static inline int _wpa_snprintf_hex(char *buf, size_t buf_size, const u8 *data,
 				    size_t len, int uppercase)
 {

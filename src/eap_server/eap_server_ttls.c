@@ -618,6 +618,12 @@ static void eap_ttls_process_phase2_mschap(struct eap_sm *sm,
 		return;
 	}
 
+#ifdef CONFIG_TESTING_OPTIONS
+	eap_server_mschap_rx_callback(sm, "TTLS-MSCHAP",
+				      sm->identity, sm->identity_len,
+				      challenge, response + 2 + 24);
+#endif /* CONFIG_TESTING_OPTIONS */
+
 	if (os_memcmp_const(challenge, chal, EAP_TTLS_MSCHAP_CHALLENGE_LEN)
 	    != 0 ||
 	    response[0] != chal[EAP_TTLS_MSCHAP_CHALLENGE_LEN]) {
@@ -740,6 +746,18 @@ static void eap_ttls_process_phase2_mschapv2(struct eap_sm *sm,
 	}
 
 	rx_resp = response + 2 + EAP_TTLS_MSCHAPV2_CHALLENGE_LEN + 8;
+#ifdef CONFIG_TESTING_OPTIONS
+	{
+		u8 challenge2[8];
+
+		if (challenge_hash(peer_challenge, auth_challenge,
+				   username, username_len, challenge2) == 0) {
+			eap_server_mschap_rx_callback(sm, "TTLS-MSCHAPV2",
+						      username, username_len,
+						      challenge2, rx_resp);
+		}
+	}
+#endif /* CONFIG_TESTING_OPTIONS */
 	if (os_memcmp_const(nt_response, rx_resp, 24) == 0) {
 		wpa_printf(MSG_DEBUG, "EAP-TTLS/MSCHAPV2: Correct "
 			   "NT-Response");

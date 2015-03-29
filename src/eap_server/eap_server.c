@@ -1979,3 +1979,25 @@ void eap_server_clear_identity(struct eap_sm *sm)
 	os_free(sm->identity);
 	sm->identity = NULL;
 }
+
+
+#ifdef CONFIG_TESTING_OPTIONS
+void eap_server_mschap_rx_callback(struct eap_sm *sm, const char *source,
+				   const u8 *username, size_t username_len,
+				   const u8 *challenge, const u8 *response)
+{
+	char hex_challenge[30], hex_response[90], user[100];
+
+	/* Print out Challenge and Response in format supported by asleap. */
+	if (username)
+		printf_encode(user, sizeof(user), username, username_len);
+	else
+		user[0] = '\0';
+	wpa_snprintf_hex_sep(hex_challenge, sizeof(hex_challenge),
+			     challenge, sizeof(challenge), ':');
+	wpa_snprintf_hex_sep(hex_response, sizeof(hex_response), response, 24,
+			     ':');
+	wpa_printf(MSG_DEBUG, "[%s/user=%s] asleap -C %s -R %s",
+		   source, user, hex_challenge, hex_response);
+}
+#endif /* CONFIG_TESTING_OPTIONS */

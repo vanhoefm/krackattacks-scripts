@@ -324,6 +324,56 @@ int aes_unwrap(const u8 *kek, size_t kek_len, int n, const u8 *cipher,
 }
 
 
+int aes_128_cbc_encrypt(const u8 *key, const u8 *iv, u8 *data, size_t data_len)
+{
+	EVP_CIPHER_CTX ctx;
+	int clen, len;
+	u8 buf[16];
+
+	EVP_CIPHER_CTX_init(&ctx);
+	if (EVP_EncryptInit_ex(&ctx, EVP_aes_128_cbc(), NULL, key, iv) != 1)
+		return -1;
+	EVP_CIPHER_CTX_set_padding(&ctx, 0);
+
+	clen = data_len;
+	if (EVP_EncryptUpdate(&ctx, data, &clen, data, data_len) != 1 ||
+	    clen != (int) data_len)
+		return -1;
+
+	len = sizeof(buf);
+	if (EVP_EncryptFinal_ex(&ctx, buf, &len) != 1 || len != 0)
+		return -1;
+	EVP_CIPHER_CTX_cleanup(&ctx);
+
+	return 0;
+}
+
+
+int aes_128_cbc_decrypt(const u8 *key, const u8 *iv, u8 *data, size_t data_len)
+{
+	EVP_CIPHER_CTX ctx;
+	int plen, len;
+	u8 buf[16];
+
+	EVP_CIPHER_CTX_init(&ctx);
+	if (EVP_DecryptInit_ex(&ctx, EVP_aes_128_cbc(), NULL, key, iv) != 1)
+		return -1;
+	EVP_CIPHER_CTX_set_padding(&ctx, 0);
+
+	plen = data_len;
+	if (EVP_DecryptUpdate(&ctx, data, &plen, data, data_len) != 1 ||
+	    plen != (int) data_len)
+		return -1;
+
+	len = sizeof(buf);
+	if (EVP_DecryptFinal_ex(&ctx, buf, &len) != 1 || len != 0)
+		return -1;
+	EVP_CIPHER_CTX_cleanup(&ctx);
+
+	return 0;
+}
+
+
 int crypto_mod_exp(const u8 *base, size_t base_len,
 		   const u8 *power, size_t power_len,
 		   const u8 *modulus, size_t modulus_len,

@@ -1162,7 +1162,9 @@ endif
 endif
 ifdef NEED_AES_CBC
 NEED_AES_ENC=y
+ifneq ($(CONFIG_TLS), openssl)
 AESOBJS += ../src/crypto/aes-cbc.o
+endif
 endif
 ifdef NEED_AES_ENC
 ifdef CONFIG_INTERNAL_AES

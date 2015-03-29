@@ -5504,18 +5504,26 @@ int wpas_p2p_group_add_persistent(struct wpa_supplicant *wpa_s,
 			    (freq > 0 && !freq_included(channels, freq)))
 				freq = 0;
 		}
-	} else {
+	} else if (ssid->mode == WPAS_MODE_INFRA) {
 		freq = neg_freq;
-		if (freq < 0 ||
-		    (freq > 0 && !freq_included(channels, freq)))
-			freq = 0;
-	}
+		if (freq <= 0 || !freq_included(channels, freq)) {
+			struct os_reltime now;
+			struct wpa_bss *bss =
+				wpa_bss_get_p2p_dev_addr(wpa_s, ssid->bssid);
 
-	if (ssid->mode == WPAS_MODE_INFRA)
+			os_get_reltime(&now);
+			if (bss &&
+			    !os_reltime_expired(&now, &bss->last_update, 5) &&
+			    freq_included(channels, bss->freq))
+				freq = bss->freq;
+			else
+				freq = 0;
+		}
+
 		return wpas_start_p2p_client(wpa_s, ssid, addr_allocated, freq);
-
-	if (ssid->mode != WPAS_MODE_P2P_GO)
+	} else {
 		return -1;
+	}
 
 	if (wpas_p2p_init_go_params(wpa_s, &params, freq, ht40, vht, channels))
 		return -1;

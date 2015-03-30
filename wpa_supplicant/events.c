@@ -3164,6 +3164,7 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			  union wpa_event_data *data)
 {
 	struct wpa_supplicant *wpa_s = ctx;
+	int resched;
 
 	if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED &&
 	    event != EVENT_INTERFACE_ENABLED &&
@@ -3730,6 +3731,7 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 	case EVENT_SCHED_SCAN_STOPPED:
 		wpa_s->pno = 0;
 		wpa_s->sched_scanning = 0;
+		resched = wpa_s->scanning;
 		wpa_supplicant_notify_scanning(wpa_s, 0);
 
 		if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED)
@@ -3744,6 +3746,8 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		} else if (wpa_s->pno_sched_pending) {
 			wpa_s->pno_sched_pending = 0;
 			wpas_start_pno(wpa_s);
+		} else if (resched) {
+			wpa_supplicant_req_scan(wpa_s, 0, 0);
 		}
 
 		break;

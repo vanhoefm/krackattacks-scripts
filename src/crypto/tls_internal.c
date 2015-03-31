@@ -192,26 +192,31 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 
 	if (params->subject_match) {
 		wpa_printf(MSG_INFO, "TLS: subject_match not supported");
+		tlsv1_cred_free(cred);
 		return -1;
 	}
 
 	if (params->altsubject_match) {
 		wpa_printf(MSG_INFO, "TLS: altsubject_match not supported");
+		tlsv1_cred_free(cred);
 		return -1;
 	}
 
 	if (params->suffix_match) {
 		wpa_printf(MSG_INFO, "TLS: suffix_match not supported");
+		tlsv1_cred_free(cred);
 		return -1;
 	}
 
 	if (params->domain_match) {
 		wpa_printf(MSG_INFO, "TLS: domain_match not supported");
+		tlsv1_cred_free(cred);
 		return -1;
 	}
 
 	if (params->openssl_ciphers) {
-		wpa_printf(MSG_INFO, "GnuTLS: openssl_ciphers not supported");
+		wpa_printf(MSG_INFO, "TLS: openssl_ciphers not supported");
+		tlsv1_cred_free(cred);
 		return -1;
 	}
 

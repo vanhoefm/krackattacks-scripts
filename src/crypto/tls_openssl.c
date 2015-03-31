@@ -2633,8 +2633,6 @@ int tls_connection_get_keys(void *ssl_ctx, struct tls_connection *conn,
 		return -1;
 
 	os_memset(keys, 0, sizeof(*keys));
-	keys->master_key = ssl->session->master_key;
-	keys->master_key_len = ssl->session->master_key_length;
 	keys->client_random = ssl->s3->client_random;
 	keys->client_random_len = SSL3_RANDOM_SIZE;
 	keys->server_random = ssl->s3->server_random;

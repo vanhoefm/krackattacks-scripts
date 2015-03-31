@@ -12,8 +12,6 @@
 struct tls_connection;
 
 struct tls_keys {
-	const u8 *master_key; /* TLS master secret */
-	size_t master_key_len;
 	const u8 *client_random;
 	size_t client_random_len;
 	const u8 *server_random;
@@ -308,10 +306,10 @@ int __must_check tls_connection_set_verify(void *tls_ctx,
 					   int verify_peer);
 
 /**
- * tls_connection_get_keys - Get master key and random data from TLS connection
+ * tls_connection_get_keys - Get random data from TLS connection
  * @tls_ctx: TLS context data from tls_init()
  * @conn: Connection context data from tls_connection_init()
- * @keys: Structure of key/random data (filled on success)
+ * @keys: Structure of client/server random data (filled on success)
  * Returns: 0 on success, -1 on failure
  */
 int __must_check tls_connection_get_keys(void *tls_ctx,

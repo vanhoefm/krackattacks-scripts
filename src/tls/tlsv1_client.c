@@ -731,8 +731,6 @@ int tlsv1_client_get_keys(struct tlsv1_client *conn, struct tls_keys *keys)
 	if (conn->state != SERVER_HELLO) {
 		keys->server_random = conn->server_random;
 		keys->server_random_len = TLS_RANDOM_LEN;
-		keys->master_key = conn->master_secret;
-		keys->master_key_len = TLS_MASTER_SECRET_LEN;
 	}
 
 	return 0;

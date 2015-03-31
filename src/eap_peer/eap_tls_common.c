@@ -313,53 +313,18 @@ void eap_peer_tls_ssl_deinit(struct eap_sm *sm, struct eap_ssl_data *data)
 u8 * eap_peer_tls_derive_key(struct eap_sm *sm, struct eap_ssl_data *data,
 			     const char *label, size_t len)
 {
-#ifndef CONFIG_FIPS
-	struct tls_keys keys;
-#endif /* CONFIG_FIPS */
-	u8 *rnd = NULL, *out;
+	u8 *out;
 
 	out = os_malloc(len);
 	if (out == NULL)
 		return NULL;
 
-	/* First, try to use TLS library function for PRF, if available. */
-	if (tls_connection_prf(data->ssl_ctx, data->conn, label, 0, out, len)
-	    == 0)
-		return out;
+	if (tls_connection_prf(data->ssl_ctx, data->conn, label, 0, out, len)) {
+		os_free(out);
+		return NULL;
+	}
 
-#ifndef CONFIG_FIPS
-	/*
-	 * TLS library did not support key generation, so get the needed TLS
-	 * session parameters and use an internal implementation of TLS PRF to
-	 * derive the key.
-	 */
-	if (tls_connection_get_keys(data->ssl_ctx, data->conn, &keys))
-		goto fail;
-
-	if (keys.client_random == NULL || keys.server_random == NULL ||
-	    keys.master_key == NULL)
-		goto fail;
-
-	rnd = os_malloc(keys.client_random_len + keys.server_random_len);
-	if (rnd == NULL)
-		goto fail;
-	os_memcpy(rnd, keys.client_random, keys.client_random_len);
-	os_memcpy(rnd + keys.client_random_len, keys.server_random,
-		  keys.server_random_len);
-
-	if (tls_prf_sha1_md5(keys.master_key, keys.master_key_len,
-			     label, rnd, keys.client_random_len +
-			     keys.server_random_len, out, len))
-		goto fail;
-
-	os_free(rnd);
 	return out;
-
-fail:
-#endif /* CONFIG_FIPS */
-	os_free(out);
-	os_free(rnd);
-	return NULL;
 }
 
 

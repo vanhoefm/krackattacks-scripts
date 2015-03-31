@@ -26,6 +26,7 @@
 
 #include "common.h"
 #include "crypto.h"
+#include "sha1.h"
 #include "tls.h"
 
 #if defined(SSL_CTX_get_app_data) && defined(SSL_CTX_set_app_data)
@@ -2644,6 +2645,60 @@ int tls_connection_get_keys(void *ssl_ctx, struct tls_connection *conn,
 }
 
 
+static int openssl_tls_prf(void *tls_ctx, struct tls_connection *conn,
+			   const char *label, int server_random_first,
+			   u8 *out, size_t out_len)
+{
+#ifdef CONFIG_FIPS
+	wpa_printf(MSG_ERROR, "OpenSSL: TLS keys cannot be exported in FIPS "
+		   "mode");
+	return -1;
+#else /* CONFIG_FIPS */
+	SSL *ssl;
+	u8 *rnd;
+	int ret = -1;
+
+	/*
+	 * TLS library did not support key generation, so get the needed TLS
+	 * session parameters and use an internal implementation of TLS PRF to
+	 * derive the key.
+	 */
+
+	if (conn == NULL)
+		return -1;
+	ssl = conn->ssl;
+	if (ssl == NULL || ssl->s3 == NULL || ssl->session == NULL ||
+	    ssl->s3->client_random == NULL || ssl->s3->server_random == NULL ||
+	    ssl->session->master_key == NULL)
+		return -1;
+
+	rnd = os_malloc(2 * SSL3_RANDOM_SIZE);
+	if (rnd == NULL)
+		return -1;
+	if (server_random_first) {
+		os_memcpy(rnd, ssl->s3->server_random, SSL3_RANDOM_SIZE);
+		os_memcpy(rnd + SSL3_RANDOM_SIZE, ssl->s3->client_random,
+			SSL3_RANDOM_SIZE);
+	} else {
+		os_memcpy(rnd, ssl->s3->client_random, SSL3_RANDOM_SIZE);
+		os_memcpy(rnd + SSL3_RANDOM_SIZE, ssl->s3->server_random,
+			SSL3_RANDOM_SIZE);
+	}
+
+	/* TODO: TLSv1.2 may need another PRF. This could use something closer
+	 * to SSL_export_keying_material() design. */
+	if (tls_prf_sha1_md5(ssl->session->master_key,
+			     ssl->session->master_key_length,
+			     label, rnd, 2 * SSL3_RANDOM_SIZE,
+			     out, out_len) == 0)
+		ret = 0;
+	os_free(rnd);
+
+	return ret;
+#endif /* CONFIG_FIPS */
+}
+
+
 int tls_connection_prf(void *tls_ctx, struct tls_connection *conn,
 		       const char *label, int server_random_first,
 		       u8 *out, size_t out_len)
@@ -2653,7 +2708,8 @@ int tls_connection_prf(void *tls_ctx, struct tls_connection *conn,
 	if (conn == NULL)
 		return -1;
 	if (server_random_first)
-		return -1;
+		return openssl_tls_prf(tls_ctx, conn, label,
+				       server_random_first, out, out_len);
 	ssl = conn->ssl;
 	if (SSL_export_keying_material(ssl, out, out_len, label,
 				       os_strlen(label), NULL, 0, 0) == 1) {
@@ -2661,7 +2717,8 @@ int tls_connection_prf(void *tls_ctx, struct tls_connection *conn,
 		return 0;
 	}
 #endif
-	return -1;
+	return openssl_tls_prf(tls_ctx, conn, label, server_random_first,
+			       out, out_len);
 }
 
 

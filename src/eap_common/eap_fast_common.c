@@ -97,24 +97,16 @@ u8 * eap_fast_derive_key(void *ssl_ctx, struct tls_connection *conn,
 			 const char *label, size_t len)
 {
 	u8 *out;
-	int block_size;
 
-	block_size = tls_connection_get_keyblock_size(ssl_ctx, conn);
-	if (block_size < 0)
-		return NULL;
-
-	out = os_malloc(block_size + len);
+	out = os_malloc(len);
 	if (out == NULL)
 		return NULL;
 
-	if (tls_connection_prf(ssl_ctx, conn, label, 1, out, block_size + len))
-	{
+	if (tls_connection_prf(ssl_ctx, conn, label, 1, 1, out, len)) {
 		os_free(out);
 		return NULL;
 	}
 
-	os_memmove(out, out + block_size, len);
-	os_memset(out + len, 0, block_size);
 	return out;
 }
 

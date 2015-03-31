@@ -319,7 +319,8 @@ u8 * eap_peer_tls_derive_key(struct eap_sm *sm, struct eap_ssl_data *data,
 	if (out == NULL)
 		return NULL;
 
-	if (tls_connection_prf(data->ssl_ctx, data->conn, label, 0, out, len)) {
+	if (tls_connection_prf(data->ssl_ctx, data->conn, label, 0, 0,
+			       out, len)) {
 		os_free(out);
 		return NULL;
 	}

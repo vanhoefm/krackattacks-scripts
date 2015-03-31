@@ -2643,9 +2643,43 @@ int tls_connection_get_keys(void *ssl_ctx, struct tls_connection *conn,
 }
 
 
+static int openssl_get_keyblock_size(SSL *ssl)
+{
+	const EVP_CIPHER *c;
+	const EVP_MD *h;
+	int md_size;
+
+	if (ssl->enc_read_ctx == NULL || ssl->enc_read_ctx->cipher == NULL ||
+	    ssl->read_hash == NULL)
+		return -1;
+
+	c = ssl->enc_read_ctx->cipher;
+#if OPENSSL_VERSION_NUMBER >= 0x00909000L
+	h = EVP_MD_CTX_md(ssl->read_hash);
+#else
+	h = conn->ssl->read_hash;
+#endif
+	if (h)
+		md_size = EVP_MD_size(h);
+#if OPENSSL_VERSION_NUMBER >= 0x10000000L
+	else if (ssl->s3)
+		md_size = ssl->s3->tmp.new_mac_secret_size;
+#endif
+	else
+		return -1;
+
+	wpa_printf(MSG_DEBUG, "OpenSSL: keyblock size: key_len=%d MD_size=%d "
+		   "IV_len=%d", EVP_CIPHER_key_length(c), md_size,
+		   EVP_CIPHER_iv_length(c));
+	return 2 * (EVP_CIPHER_key_length(c) +
+		    md_size +
+		    EVP_CIPHER_iv_length(c));
+}
+
+
 static int openssl_tls_prf(void *tls_ctx, struct tls_connection *conn,
 			   const char *label, int server_random_first,
-			   u8 *out, size_t out_len)
+			   int skip_keyblock, u8 *out, size_t out_len)
 {
 #ifdef CONFIG_FIPS
 	wpa_printf(MSG_ERROR, "OpenSSL: TLS keys cannot be exported in FIPS "
@@ -2655,6 +2689,9 @@ static int openssl_tls_prf(void *tls_ctx, struct tls_connection *conn,
 	SSL *ssl;
 	u8 *rnd;
 	int ret = -1;
+	int skip = 0;
+	u8 *tmp_out = NULL;
+	u8 *_out = out;
 
 	/*
 	 * TLS library did not support key generation, so get the needed TLS
@@ -2669,6 +2706,16 @@ static int openssl_tls_prf(void *tls_ctx, struct tls_connection *conn,
 	    ssl->s3->client_random == NULL || ssl->s3->server_random == NULL ||
 	    ssl->session->master_key == NULL)
 		return -1;
+
+	if (skip_keyblock) {
+		skip = openssl_get_keyblock_size(ssl);
+		if (skip < 0)
+			return -1;
+		tmp_out = os_malloc(skip + out_len);
+		if (!tmp_out)
+			return -1;
+		_out = tmp_out;
+	}
 
 	rnd = os_malloc(2 * SSL3_RANDOM_SIZE);
 	if (rnd == NULL)
@@ -2688,9 +2735,12 @@ static int openssl_tls_prf(void *tls_ctx, struct tls_connection *conn,
 	if (tls_prf_sha1_md5(ssl->session->master_key,
 			     ssl->session->master_key_length,
 			     label, rnd, 2 * SSL3_RANDOM_SIZE,
-			     out, out_len) == 0)
+			     _out, skip + out_len) == 0)
 		ret = 0;
 	os_free(rnd);
+	if (ret == 0 && skip_keyblock)
+		os_memcpy(out, _out + skip, out_len);
+	bin_clear_free(tmp_out, skip);
 
 	return ret;
 #endif /* CONFIG_FIPS */
@@ -2699,15 +2749,16 @@ static int openssl_tls_prf(void *tls_ctx, struct tls_connection *conn,
 
 int tls_connection_prf(void *tls_ctx, struct tls_connection *conn,
 		       const char *label, int server_random_first,
-		       u8 *out, size_t out_len)
+		       int skip_keyblock, u8 *out, size_t out_len)
 {
 #if OPENSSL_VERSION_NUMBER >= 0x10001000L
 	SSL *ssl;
 	if (conn == NULL)
 		return -1;
-	if (server_random_first)
+	if (server_random_first || skip_keyblock)
 		return openssl_tls_prf(tls_ctx, conn, label,
-				       server_random_first, out, out_len);
+				       server_random_first, skip_keyblock,
+				       out, out_len);
 	ssl = conn->ssl;
 	if (SSL_export_keying_material(ssl, out, out_len, label,
 				       os_strlen(label), NULL, 0, 0) == 1) {
@@ -2716,7 +2767,7 @@ int tls_connection_prf(void *tls_ctx, struct tls_connection *conn,
 	}
 #endif
 	return openssl_tls_prf(tls_ctx, conn, label, server_random_first,
-			       out, out_len);
+			       skip_keyblock, out, out_len);
 }
 
 
@@ -3566,43 +3617,6 @@ int tls_global_set_params(void *tls_ctx,
 #endif /* HAVE_OCSP */
 
 	return 0;
-}
-
-
-int tls_connection_get_keyblock_size(void *tls_ctx,
-				     struct tls_connection *conn)
-{
-	const EVP_CIPHER *c;
-	const EVP_MD *h;
-	int md_size;
-
-	if (conn == NULL || conn->ssl == NULL ||
-	    conn->ssl->enc_read_ctx == NULL ||
-	    conn->ssl->enc_read_ctx->cipher == NULL ||
-	    conn->ssl->read_hash == NULL)
-		return -1;
-
-	c = conn->ssl->enc_read_ctx->cipher;
-#if OPENSSL_VERSION_NUMBER >= 0x00909000L
-	h = EVP_MD_CTX_md(conn->ssl->read_hash);
-#else
-	h = conn->ssl->read_hash;
-#endif
-	if (h)
-		md_size = EVP_MD_size(h);
-#if OPENSSL_VERSION_NUMBER >= 0x10000000L
-	else if (conn->ssl->s3)
-		md_size = conn->ssl->s3->tmp.new_mac_secret_size;
-#endif
-	else
-		return -1;
-
-	wpa_printf(MSG_DEBUG, "OpenSSL: keyblock size: key_len=%d MD_size=%d "
-		   "IV_len=%d", EVP_CIPHER_key_length(c), md_size,
-		   EVP_CIPHER_iv_length(c));
-	return 2 * (EVP_CIPHER_key_length(c) +
-		    md_size +
-		    EVP_CIPHER_iv_length(c));
 }
 
 

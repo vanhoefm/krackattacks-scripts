@@ -747,9 +747,9 @@ int tls_connection_get_keys(void *ssl_ctx, struct tls_connection *conn,
 
 int tls_connection_prf(void *tls_ctx, struct tls_connection *conn,
 		       const char *label, int server_random_first,
-		       u8 *out, size_t out_len)
+		       int skip_keyblock, u8 *out, size_t out_len)
 {
-	if (conn == NULL || conn->session == NULL)
+	if (conn == NULL || conn->session == NULL || skip_keyblock)
 		return -1;
 
 	return gnutls_prf(conn->session, os_strlen(label), label,
@@ -1473,14 +1473,6 @@ int tls_connection_get_write_alerts(void *ssl_ctx, struct tls_connection *conn)
 	if (conn == NULL)
 		return -1;
 	return conn->write_alerts;
-}
-
-
-int tls_connection_get_keyblock_size(void *tls_ctx,
-				     struct tls_connection *conn)
-{
-	/* TODO */
-	return -1;
 }
 
 

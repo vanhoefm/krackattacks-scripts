@@ -25,6 +25,8 @@
 #include "crypto/sha256.h"
 #include "osu_client.h"
 
+const char *spp_xsd_fname = "spp.xsd";
+
 
 void write_result(struct hs20_osu_client *ctx, const char *fmt, ...)
 {
@@ -2984,6 +2986,7 @@ static void usage(void)
 	       "    [-w<wpa_supplicant ctrl_iface dir>] "
 	       "[-r<result file>] [-f<debug file>] \\\n"
 	       "    [-s<summary file>] \\\n"
+	       "    [-x<spp.xsd file name>] \\\n"
 	       "    <command> [arguments..]\n"
 	       "commands:\n"
 	       "- to_tnds <XML MO> <XML MO in TNDS format> [URN]\n"
@@ -3025,7 +3028,7 @@ int main(int argc, char *argv[])
 		return -1;
 
 	for (;;) {
-		c = getopt(argc, argv, "df:hKNO:qr:s:S:tw:");
+		c = getopt(argc, argv, "df:hKNO:qr:s:S:tw:x:");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -3062,6 +3065,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'w':
 			wpas_ctrl_path = optarg;
+			break;
+		case 'x':
+			spp_xsd_fname = optarg;
 			break;
 		case 'h':
 		default:

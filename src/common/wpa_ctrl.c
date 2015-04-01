@@ -21,6 +21,7 @@
 
 #ifdef ANDROID
 #include <dirent.h>
+#include <sys/stat.h>
 #include <cutils/sockets.h>
 #include "private/android_filesystem_config.h"
 #endif /* ANDROID */

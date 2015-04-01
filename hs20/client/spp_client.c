@@ -952,7 +952,9 @@ int cmd_prov(struct hs20_osu_client *ctx, const char *url)
 		return -1;
 	}
 
-	wpa_printf(MSG_INFO, "Credential provisioning requested");
+	wpa_printf(MSG_INFO,
+		   "Credential provisioning requested - URL: %s ca_fname: %s",
+		   url, ctx->ca_fname ? ctx->ca_fname : "N/A");
 
 	os_free(ctx->server_url);
 	ctx->server_url = os_strdup(url);

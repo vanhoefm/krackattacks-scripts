@@ -5,6 +5,9 @@ for i in server-client server server-revoked user ocsp; do
 done
 
 rm -f openssl.cnf.tmp
-rm -r demoCA
+if [ -d demoCA ]; then
+    rm -r demoCA
+fi
 rm -f ca.pem logo.asn1 logo.der server.der ocsp-server-cache.der
+rm -f my-openssl.cnf my-openssl-root.cnf
 #rm -r rootCA

@@ -100,6 +100,21 @@ sqlite3 /home/user/hs20-server/AS/DB/eap_user.db < sql-example.txt
 # the examples as-is for initial testing).
 cp -r www /home/user/hs20-server
 
+# Build local keys and certs
+cd ca
+# Display help options.
+./setup.sh -h
+
+# Remove old keys, fill in appropriate values, and generate your keys.
+# For instance:
+./clean.sh
+rm -fr rootCA"
+old_hostname=myserver.local
+./setup.sh -C "Hotspot 2.0 Trust Root CA - CT" -d $old_hostname \
+   -I "Hotspot 2.0 Intermediate CA - CT" -o $old_hostname-osu-client \
+   -O $old_hostname-oscp -p lanforge -S $old_hostname \
+   -V $old_hostname-osu-revoked \
+   -m local -u http://$old_hostname:8888/
 
 # Configure subscription policies
 mkdir -p /home/user/hs20-server/spp/policy
@@ -156,6 +171,50 @@ cd /home/user/hs20-server/AS
 ./hostapd -B as-sql.conf
 
 
+OSEN RADIUS server configuration notes
+
+The OSEN RADIUS server config file should have the 'ocsp_stapling_response'
+configuration in it. For example:
+
+# hostapd-radius config for the radius used by the OSEN AP
+interface=eth0#0
+driver=none
+logger_syslog=-1
+logger_syslog_level=2
+logger_stdout=-1
+logger_stdout_level=2
+ctrl_interface=/var/run/hostapd
+ctrl_interface_group=0
+eap_server=1
+eap_user_file=/home/user/hs20-server/AS/hostapd-osen.eap_user
+server_id=ben-ota-2-osen
+radius_server_auth_port=1811
+radius_server_clients=/home/user/hs20-server/AS/hostap.radius_clients
+
+ca_cert=/home/user/hs20-server/ca/ca.pem
+server_cert=/home/user/hs20-server/ca/server.pem
+private_key=/home/user/hs20-server/ca/server.key
+private_key_passwd=whatever
+
+ocsp_stapling_response=/home/user/hs20-server/ca/ocsp-server-cache.der
+
+The /home/user/hs20-server/AS/hostapd-osen.eap_user file should look
+similar to this, and should coorelate with the osu_nai entry in
+the non-OSEN VAP config file.  For instance:
+
+# cat hostapd-osen.eap_user
+# For OSEN authentication (Hotspot 2.0 Release 2)
+"osen@w1.fi"      WFA-UNAUTH-TLS
+
+
+# Run OCSP server:
+cd /home/user/hs20-server/ca
+./ocsp-responder.sh&
+
+# Update cache (This should be run periodically)
+./ocsp-update-cache.sh
+
+
 Configure web server
 --------------------
 
@@ -172,6 +231,8 @@ Add following block just before "SSL Engine Switch" line":
         </Directory>
 
 Update SSL configuration to use the OSU server certificate/key.
+They keys and certs are called 'server.key' and 'server.pem' from
+ca/setup.sh.
 
 Enable default-ssl site and restart Apache2:
   sudo a2ensite default-ssl

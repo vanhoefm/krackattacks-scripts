@@ -539,15 +539,14 @@ static Boolean eap_peap_check(struct eap_sm *sm, void *priv,
 
 
 static int eap_peap_phase2_init(struct eap_sm *sm, struct eap_peap_data *data,
-				EapType eap_type)
+				int vendor, EapType eap_type)
 {
 	if (data->phase2_priv && data->phase2_method) {
 		data->phase2_method->reset(sm, data->phase2_priv);
 		data->phase2_method = NULL;
 		data->phase2_priv = NULL;
 	}
-	data->phase2_method = eap_server_get_eap_method(EAP_VENDOR_IETF,
-							eap_type);
+	data->phase2_method = eap_server_get_eap_method(vendor, eap_type);
 	if (!data->phase2_method)
 		return -1;
 
@@ -737,7 +736,7 @@ static void eap_peap_process_phase2_soh(struct eap_sm *sm,
 	const u8 *soh_tlv = NULL;
 	size_t soh_tlv_len = 0;
 	int tlv_type, mandatory, tlv_len, vtlv_len;
-	u8 next_type;
+	u32 next_type;
 	u32 vendor_id;
 
 	pos = eap_hdr_validate(EAP_VENDOR_MICROSOFT, 0x21, in_data, &left);
@@ -852,8 +851,9 @@ auth_method:
 	eap_peap_state(data, PHASE2_METHOD);
 	next_type = sm->user->methods[0].method;
 	sm->user_eap_method_index = 1;
-	wpa_printf(MSG_DEBUG, "EAP-PEAP: try EAP type %d", next_type);
-	eap_peap_phase2_init(sm, data, next_type);
+	wpa_printf(MSG_DEBUG, "EAP-PEAP: try EAP vendor %d type %d",
+		   sm->user->methods[0].vendor, next_type);
+	eap_peap_phase2_init(sm, data, sm->user->methods[0].vendor, next_type);
 }
 #endif /* EAP_SERVER_TNC */
 
@@ -862,7 +862,8 @@ static void eap_peap_process_phase2_response(struct eap_sm *sm,
 					     struct eap_peap_data *data,
 					     struct wpabuf *in_data)
 {
-	u8 next_type = EAP_TYPE_NONE;
+	int next_vendor = EAP_VENDOR_IETF;
+	u32 next_type = EAP_TYPE_NONE;
 	const struct eap_hdr *hdr;
 	const u8 *pos;
 	size_t left;
@@ -894,17 +895,23 @@ static void eap_peap_process_phase2_response(struct eap_sm *sm,
 			    "allowed types", pos + 1, left - 1);
 		eap_sm_process_nak(sm, pos + 1, left - 1);
 		if (sm->user && sm->user_eap_method_index < EAP_MAX_METHODS &&
-		    sm->user->methods[sm->user_eap_method_index].method !=
-		    EAP_TYPE_NONE) {
+		    (sm->user->methods[sm->user_eap_method_index].vendor !=
+		     EAP_VENDOR_IETF ||
+		     sm->user->methods[sm->user_eap_method_index].method !=
+		     EAP_TYPE_NONE)) {
+			next_vendor = sm->user->methods[
+				sm->user_eap_method_index].vendor;
 			next_type = sm->user->methods[
 				sm->user_eap_method_index++].method;
-			wpa_printf(MSG_DEBUG, "EAP-PEAP: try EAP type %d",
-				   next_type);
+			wpa_printf(MSG_DEBUG,
+				   "EAP-PEAP: try EAP vendor %d type 0x%x",
+				   next_vendor, next_type);
 		} else {
 			eap_peap_req_failure(sm, data);
+			next_vendor = EAP_VENDOR_IETF;
 			next_type = EAP_TYPE_NONE;
 		}
-		eap_peap_phase2_init(sm, data, next_type);
+		eap_peap_phase2_init(sm, data, next_vendor, next_type);
 		return;
 	}
 
@@ -929,8 +936,9 @@ static void eap_peap_process_phase2_response(struct eap_sm *sm,
 	if (!data->phase2_method->isSuccess(sm, data->phase2_priv)) {
 		wpa_printf(MSG_DEBUG, "EAP-PEAP: Phase2 method failed");
 		eap_peap_req_failure(sm, data);
+		next_vendor = EAP_VENDOR_IETF;
 		next_type = EAP_TYPE_NONE;
-		eap_peap_phase2_init(sm, data, next_type);
+		eap_peap_phase2_init(sm, data, next_vendor, next_type);
 		return;
 	}
 
@@ -942,7 +950,8 @@ static void eap_peap_process_phase2_response(struct eap_sm *sm,
 			wpa_printf(MSG_DEBUG, "EAP-PEAP: Phase2 getKey "
 				   "failed");
 			eap_peap_req_failure(sm, data);
-			eap_peap_phase2_init(sm, data, EAP_TYPE_NONE);
+			eap_peap_phase2_init(sm, data, EAP_VENDOR_IETF,
+					     EAP_TYPE_NONE);
 			return;
 		}
 	}
@@ -957,6 +966,7 @@ static void eap_peap_process_phase2_response(struct eap_sm *sm,
 					  "database",
 					  sm->identity, sm->identity_len);
 			eap_peap_req_failure(sm, data);
+			next_vendor = EAP_VENDOR_IETF;
 			next_type = EAP_TYPE_NONE;
 			break;
 		}
@@ -967,18 +977,22 @@ static void eap_peap_process_phase2_response(struct eap_sm *sm,
 			eap_peap_state(data, PHASE2_SOH);
 			wpa_printf(MSG_DEBUG, "EAP-PEAP: Try to initialize "
 				   "TNC (NAP SOH)");
+			next_vendor = EAP_VENDOR_IETF;
 			next_type = EAP_TYPE_NONE;
 			break;
 		}
 #endif /* EAP_SERVER_TNC */
 
 		eap_peap_state(data, PHASE2_METHOD);
+		next_vendor = sm->user->methods[0].vendor;
 		next_type = sm->user->methods[0].method;
 		sm->user_eap_method_index = 1;
-		wpa_printf(MSG_DEBUG, "EAP-PEAP: try EAP type %d", next_type);
+		wpa_printf(MSG_DEBUG, "EAP-PEAP: try EAP vendor %d type 0x%x",
+			   next_vendor, next_type);
 		break;
 	case PHASE2_METHOD:
 		eap_peap_req_success(sm, data);
+		next_vendor = EAP_VENDOR_IETF;
 		next_type = EAP_TYPE_NONE;
 		break;
 	case FAILURE:
@@ -989,7 +1003,7 @@ static void eap_peap_process_phase2_response(struct eap_sm *sm,
 		break;
 	}
 
-	eap_peap_phase2_init(sm, data, next_type);
+	eap_peap_phase2_init(sm, data, next_vendor, next_type);
 }
 
 
@@ -1133,7 +1147,8 @@ static void eap_peap_process_msg(struct eap_sm *sm, void *priv,
 		break;
 	case PHASE2_START:
 		eap_peap_state(data, PHASE2_ID);
-		eap_peap_phase2_init(sm, data, EAP_TYPE_IDENTITY);
+		eap_peap_phase2_init(sm, data, EAP_VENDOR_IETF,
+				     EAP_TYPE_IDENTITY);
 		break;
 	case PHASE1_ID2:
 	case PHASE2_ID:

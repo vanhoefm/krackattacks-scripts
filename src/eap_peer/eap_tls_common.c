@@ -998,7 +998,7 @@ int eap_peer_select_phase2_methods(struct eap_peer_config *config,
 {
 	char *start, *pos, *buf;
 	struct eap_method_type *methods = NULL, *_methods;
-	u8 method;
+	u32 method;
 	size_t num_methods = 0, prefix_len;
 
 	if (config == NULL || config->phase2 == NULL)

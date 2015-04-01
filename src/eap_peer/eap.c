@@ -2400,7 +2400,7 @@ static int eap_allowed_phase2_type(int vendor, int type)
 u32 eap_get_phase2_type(const char *name, int *vendor)
 {
 	int v;
-	u8 type = eap_peer_get_type(name, &v);
+	u32 type = eap_peer_get_type(name, &v);
 	if (eap_allowed_phase2_type(v, type)) {
 		*vendor = v;
 		return type;

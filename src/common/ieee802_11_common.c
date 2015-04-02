@@ -630,6 +630,10 @@ static int ieee80211_chan_to_freq_us(u8 op_class, u8 chan)
 		if (chan < 149 || chan > 161)
 			return -1;
 		return 5000 + 5 * chan;
+	case 5: /* channels 149,153,157,161,165 */
+		if (chan < 149 || chan > 165)
+			return -1;
+		return 5000 + 5 * chan;
 	case 34: /* 60 GHz band, channels 1..3 */
 		if (chan < 1 || chan > 3)
 			return -1;
@@ -782,10 +786,13 @@ static int ieee80211_chan_to_freq_global(u8 op_class, u8 chan)
 			return -1;
 		return 5000 + 5 * chan;
 	case 124: /* channels 149,153,157,161 */
-	case 125: /* channels 149,153,157,161,165,169 */
 	case 126: /* channels 149,157; 40 MHz */
 	case 127: /* channels 153,161; 40 MHz */
 		if (chan < 149 || chan > 161)
+			return -1;
+		return 5000 + 5 * chan;
+	case 125: /* channels 149,153,157,161,165,169 */
+		if (chan < 149 || chan > 169)
 			return -1;
 		return 5000 + 5 * chan;
 	case 128: /* center freqs 42, 58, 106, 122, 138, 155; 80 MHz */

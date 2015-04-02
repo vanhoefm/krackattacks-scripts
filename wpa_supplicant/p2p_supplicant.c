@@ -3116,6 +3116,7 @@ static const struct p2p_oper_class_map op_class[] = {
 #endif
 	{ HOSTAPD_MODE_IEEE80211A, 115, 36, 48, 4, BW20 },
 	{ HOSTAPD_MODE_IEEE80211A, 124, 149, 161, 4, BW20 },
+	{ HOSTAPD_MODE_IEEE80211A, 125, 149, 169, 4, BW20 },
 	{ HOSTAPD_MODE_IEEE80211A, 116, 36, 44, 8, BW40PLUS },
 	{ HOSTAPD_MODE_IEEE80211A, 117, 40, 48, 8, BW40MINUS },
 	{ HOSTAPD_MODE_IEEE80211A, 126, 149, 157, 8, BW40PLUS },
@@ -5226,6 +5227,7 @@ static int wpas_p2p_init_go_params(struct wpa_supplicant *wpa_s,
 		    wpa_s->conf->p2p_oper_reg_class == 116 ||
 		    wpa_s->conf->p2p_oper_reg_class == 117 ||
 		    wpa_s->conf->p2p_oper_reg_class == 124 ||
+		    wpa_s->conf->p2p_oper_reg_class == 125 ||
 		    wpa_s->conf->p2p_oper_reg_class == 126 ||
 		    wpa_s->conf->p2p_oper_reg_class == 127) &&
 		   freq_included(channels,

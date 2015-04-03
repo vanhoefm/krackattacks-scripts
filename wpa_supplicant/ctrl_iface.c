@@ -8593,10 +8593,17 @@ static int wpa_supplicant_global_iface_add(struct wpa_global *global,
 		pos = os_strchr(pos, '\t');
 		if (pos)
 			*pos++ = '\0';
+		if (!extra[0])
+			break;
+
 		if (os_strcmp(extra, "create") == 0)
 			create_iface = 1;
-		else
+		else {
+			wpa_printf(MSG_DEBUG,
+				   "INTERFACE_ADD unsupported extra parameter: '%s'",
+				   extra);
 			return -1;
+		}
 	} while (0);
 
 	if (create_iface) {

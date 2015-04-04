@@ -1296,6 +1296,7 @@ static int wpa_config_parse_eap(const struct parse_data *data,
 }
 
 
+#ifndef NO_CONFIG_WRITE
 static char * wpa_config_write_eap(const struct parse_data *data,
 				   struct wpa_ssid *ssid)
 {
@@ -1329,6 +1330,7 @@ static char * wpa_config_write_eap(const struct parse_data *data,
 
 	return buf;
 }
+#endif /* NO_CONFIG_WRITE */
 
 
 static int wpa_config_parse_password(const struct parse_data *data,
@@ -1411,6 +1413,7 @@ static int wpa_config_parse_password(const struct parse_data *data,
 }
 
 
+#ifndef NO_CONFIG_WRITE
 static char * wpa_config_write_password(const struct parse_data *data,
 					struct wpa_ssid *ssid)
 {
@@ -1444,6 +1447,7 @@ static char * wpa_config_write_password(const struct parse_data *data,
 
 	return buf;
 }
+#endif /* NO_CONFIG_WRITE */
 #endif /* IEEE8021X_EAPOL */
 
 
@@ -2517,6 +2521,9 @@ int wpa_config_set_quoted(struct wpa_ssid *ssid, const char *var,
  */
 char ** wpa_config_get_all(struct wpa_ssid *ssid, int get_keys)
 {
+#ifdef NO_CONFIG_WRITE
+	return NULL;
+#else /* NO_CONFIG_WRITE */
 	const struct parse_data *field;
 	char *key, *value;
 	size_t i;
@@ -2562,6 +2569,7 @@ err:
 		os_free(value++);
 	os_free(props);
 	return NULL;
+#endif /* NO_CONFIG_WRITE */
 }
 
 

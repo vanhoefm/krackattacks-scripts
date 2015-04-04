@@ -1156,6 +1156,7 @@ int ap_switch_channel(struct wpa_supplicant *wpa_s,
 }
 
 
+#ifdef CONFIG_CTRL_IFACE
 int ap_ctrl_iface_chanswitch(struct wpa_supplicant *wpa_s, const char *pos)
 {
 	struct csa_settings settings;
@@ -1166,6 +1167,7 @@ int ap_ctrl_iface_chanswitch(struct wpa_supplicant *wpa_s, const char *pos)
 
 	return ap_switch_channel(wpa_s, &settings);
 }
+#endif /* CONFIG_CTRL_IFACE */
 
 
 void wpas_ap_ch_switch(struct wpa_supplicant *wpa_s, int freq, int ht,
@@ -1265,6 +1267,7 @@ int wpas_ap_wps_add_nfc_pw(struct wpa_supplicant *wpa_s, u16 pw_id,
 #endif /* CONFIG_WPS_NFC */
 
 
+#ifdef CONFIG_CTRL_IFACE
 int wpas_ap_stop_ap(struct wpa_supplicant *wpa_s)
 {
 	struct hostapd_data *hapd;
@@ -1274,6 +1277,7 @@ int wpas_ap_stop_ap(struct wpa_supplicant *wpa_s)
 	hapd = wpa_s->ap_iface->bss[0];
 	return hostapd_ctrl_iface_stop_ap(hapd);
 }
+#endif /* CONFIG_CTRL_IFACE */
 
 
 #ifdef NEED_AP_MLME

@@ -1363,3 +1363,27 @@ def test_wpas_ctrl_interface_add(dev, apdev):
     hwsim_utils.test_connectivity(dev[0], hapd)
     dev[0].global_request("INTERFACE_REMOVE " + ifname)
     hwsim_utils.test_connectivity(dev[0], hapd)
+
+def test_wpas_ctrl_interface_add2(dev, apdev):
+    """wpa_supplicant INTERFACE_ADD/REMOVE with vif without creation/removal"""
+    ifname = "test-ext-" + dev[0].ifname
+    try:
+        _test_wpas_ctrl_interface_add2(dev, apdev, ifname)
+    finally:
+        subprocess.call(['iw', 'dev', ifname, 'del'])
+
+def _test_wpas_ctrl_interface_add2(dev, apdev, ifname):
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "open" })
+    dev[0].connect("open", key_mgmt="NONE", scan_freq="2412")
+    hwsim_utils.test_connectivity(dev[0], hapd)
+
+    subprocess.call(['iw', 'dev', dev[0].ifname, 'interface', 'add', ifname,
+                     'type', 'station'])
+    dev[0].interface_add(ifname, set_ifname=False, all_params=True)
+    wpas = WpaSupplicant(ifname=ifname)
+    wpas.connect("open", key_mgmt="NONE", scan_freq="2412")
+    hwsim_utils.test_connectivity(wpas, hapd)
+    hwsim_utils.test_connectivity(dev[0], hapd)
+    del wpas
+    dev[0].global_request("INTERFACE_REMOVE " + ifname)
+    hwsim_utils.test_connectivity(dev[0], hapd)

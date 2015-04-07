@@ -54,8 +54,8 @@ static void hostapd_wpa_auth_conf(struct hostapd_bss_config *conf,
 #endif /* CONFIG_IEEE80211W */
 #ifdef CONFIG_IEEE80211R
 	wconf->ssid_len = conf->ssid.ssid_len;
-	if (wconf->ssid_len > SSID_LEN)
-		wconf->ssid_len = SSID_LEN;
+	if (wconf->ssid_len > SSID_MAX_LEN)
+		wconf->ssid_len = SSID_MAX_LEN;
 	os_memcpy(wconf->ssid, conf->ssid.ssid, wconf->ssid_len);
 	os_memcpy(wconf->mobility_domain, conf->mobility_domain,
 		  MOBILITY_DOMAIN_ID_LEN);

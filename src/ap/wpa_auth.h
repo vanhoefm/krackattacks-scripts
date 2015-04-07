@@ -12,6 +12,7 @@
 #include "common/defs.h"
 #include "common/eapol_common.h"
 #include "common/wpa_common.h"
+#include "common/ieee802_11_defs.h"
 
 #ifdef _MSC_VER
 #pragma pack(push, 1)
@@ -146,8 +147,7 @@ struct wpa_auth_config {
 	int group_mgmt_cipher;
 #endif /* CONFIG_IEEE80211W */
 #ifdef CONFIG_IEEE80211R
-#define SSID_LEN 32
-	u8 ssid[SSID_LEN];
+	u8 ssid[SSID_MAX_LEN];
 	size_t ssid_len;
 	u8 mobility_domain[MOBILITY_DOMAIN_ID_LEN];
 	u8 r0_key_holder[FT_R0KH_ID_MAX_LEN];

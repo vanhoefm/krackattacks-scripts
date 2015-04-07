@@ -268,7 +268,7 @@ struct p2p_peer_info {
 	/**
 	 * device_name - Device Name (0..32 octets encoded in UTF-8)
 	 */
-	char device_name[33];
+	char device_name[WPS_DEV_NAME_MAX_LEN + 1];
 
 	/**
 	 * manufacturer - Manufacturer (0..64 octets encoded in UTF-8)

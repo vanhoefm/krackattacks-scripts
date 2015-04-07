@@ -149,7 +149,8 @@ static int p2p_parse_attribute(u8 id, const u8 *data, u16 len,
 		pos += 2;
 		nlen = WPA_GET_BE16(pos);
 		pos += 2;
-		if (data + len - pos < (int) nlen || nlen > 32) {
+		if (data + len - pos < (int) nlen ||
+		    nlen > WPS_DEV_NAME_MAX_LEN) {
 			wpa_printf(MSG_DEBUG, "P2P: Invalid Device Name "
 				   "length %d (buf len %d)", (int) nlen,
 				   (int) (data + len - pos));
@@ -674,8 +675,8 @@ int p2p_group_info_parse(const u8 *gi, size_t gi_len,
 		t += 2;
 		if (count > cend - t)
 			return -1; /* invalid Device Name TLV */
-		if (count >= 32)
-			count = 32;
+		if (count >= WPS_DEV_NAME_MAX_LEN)
+			count = WPS_DEV_NAME_MAX_LEN;
 		cli->dev_name = (const char *) t;
 		cli->dev_name_len = count;
 
@@ -703,7 +704,7 @@ static int p2p_group_info_text(const u8 *gi, size_t gi_len, char *buf,
 
 	for (i = 0; i < info.num_clients; i++) {
 		struct p2p_client_info *cli;
-		char name[33];
+		char name[WPS_DEV_NAME_MAX_LEN + 1];
 		char devtype[WPS_DEV_TYPE_BUFSIZE];
 		u8 s;
 		int count;

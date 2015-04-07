@@ -578,7 +578,7 @@ struct p2p_message {
 	const u8 *p2p_device_addr;
 	const u8 *pri_dev_type;
 	u8 num_sec_dev_types;
-	char device_name[33];
+	char device_name[WPS_DEV_NAME_MAX_LEN + 1];
 	u16 config_methods;
 
 	/* WPS IE */

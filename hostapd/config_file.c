@@ -2837,7 +2837,7 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		os_free(bss->wps_pin_requests);
 		bss->wps_pin_requests = os_strdup(pos);
 	} else if (os_strcmp(buf, "device_name") == 0) {
-		if (os_strlen(pos) > 32) {
+		if (os_strlen(pos) > WPS_DEV_NAME_MAX_LEN) {
 			wpa_printf(MSG_ERROR, "Line %d: Too long "
 				   "device_name", line);
 			return 1;

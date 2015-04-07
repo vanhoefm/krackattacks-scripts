@@ -279,6 +279,44 @@ def test_p2p_msg_empty(dev, apdev):
     msg = p2p_hdr(dst, src)
     hapd.mgmt_tx(msg)
 
+def test_p2p_msg_long_ssid(dev, apdev):
+    """P2P protocol test: Too long SSID in P2P Public Action frame"""
+    dst, src, hapd, channel = start_p2p(dev, apdev)
+
+    msg = p2p_hdr(dst, src, type=P2P_INVITATION_REQ, dialog_token=1)
+    attrs = p2p_attr_config_timeout()
+    attrs += p2p_attr_invitation_flags()
+    attrs += p2p_attr_operating_channel()
+    attrs += p2p_attr_group_bssid(src)
+    attrs += p2p_attr_channel_list()
+    attrs += p2p_attr_group_id(src, 'DIRECT-foo')
+    attrs += p2p_attr_device_info(src, config_methods=0x0108)
+    msg['payload'] += ie_p2p(attrs)
+    msg['payload'] += ie_ssid(255 * 'A')
+    hapd.mgmt_tx(msg)
+    ev = dev[0].wait_event(["P2P-DEVICE-FOUND"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout on device found event")
+
+def test_p2p_msg_long_dev_name(dev, apdev):
+    """P2P protocol test: Too long Device Name in P2P Public Action frame"""
+    dst, src, hapd, channel = start_p2p(dev, apdev)
+
+    msg = p2p_hdr(dst, src, type=P2P_INVITATION_REQ, dialog_token=1)
+    attrs = p2p_attr_config_timeout()
+    attrs += p2p_attr_invitation_flags()
+    attrs += p2p_attr_operating_channel()
+    attrs += p2p_attr_group_bssid(src)
+    attrs += p2p_attr_channel_list()
+    attrs += p2p_attr_group_id(src, 'DIRECT-foo')
+    attrs += p2p_attr_device_info(src, config_methods=0x0108,
+                                  name="123456789012345678901234567890123")
+    msg['payload'] += ie_p2p(attrs)
+    hapd.mgmt_tx(msg)
+    ev = dev[0].wait_event(["P2P-DEVICE-FOUND"], timeout=0.1)
+    if ev is not None:
+        raise Exception("Unexpected device found event")
+
 def test_p2p_msg_invitation_req(dev, apdev):
     """P2P protocol tests for invitation request processing"""
     dst, src, hapd, channel = start_p2p(dev, apdev)

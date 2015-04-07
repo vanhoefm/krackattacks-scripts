@@ -10,7 +10,7 @@
 #define P2P_H
 
 #include "common/ieee802_11_defs.h"
-#include "wps/wps_defs.h"
+#include "wps/wps.h"
 
 /* P2P ASP Setup Capability */
 #define P2PS_SETUP_NONE 0
@@ -317,7 +317,7 @@ struct p2p_peer_info {
 	 * This list includes from 0 to 16 Secondary Device Types as indicated
 	 * by wps_sec_dev_type_list_len (8 * number of types).
 	 */
-	u8 wps_sec_dev_type_list[128];
+	u8 wps_sec_dev_type_list[WPS_SEC_DEV_TYPE_MAX_LEN];
 
 	/**
 	 * wps_sec_dev_type_list_len - Length of secondary device type list

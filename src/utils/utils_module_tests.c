@@ -9,6 +9,7 @@
 #include "utils/includes.h"
 
 #include "utils/common.h"
+#include "common/ieee802_11_defs.h"
 #include "utils/bitfield.h"
 #include "utils/ext_password.h"
 #include "utils/trace.h"
@@ -340,6 +341,9 @@ static int common_tests(void)
 	u8 bin[3];
 	int errors = 0;
 	struct wpa_freq_range_list ranges;
+	size_t len;
+	const char *txt;
+	u8 ssid[255];
 
 	wpa_printf(MSG_INFO, "common tests");
 
@@ -394,6 +398,16 @@ static int common_tests(void)
 
 	if (utf8_escape("a", 0, buf, sizeof(buf)) != 1 || buf[0] != 'a')
 		errors++;
+
+	os_memset(ssid, 0, sizeof(ssid));
+	txt = wpa_ssid_txt(ssid, sizeof(ssid));
+	len = os_strlen(txt);
+	/* Verify that SSID_MAX_LEN * 4 buffer limit is enforced. */
+	if (len != SSID_MAX_LEN * 4) {
+		wpa_printf(MSG_ERROR,
+			   "Unexpected wpa_ssid_txt() result with too long SSID");
+		errors++;
+	}
 
 	if (errors) {
 		wpa_printf(MSG_ERROR, "%d common test(s) failed", errors);

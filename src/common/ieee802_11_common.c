@@ -196,6 +196,12 @@ ParseRes ieee802_11_parse_elems(const u8 *start, size_t len,
 
 		switch (id) {
 		case WLAN_EID_SSID:
+			if (elen > SSID_MAX_LEN) {
+				wpa_printf(MSG_DEBUG,
+					   "Ignored too long SSID element (elen=%u)",
+					   elen);
+				break;
+			}
 			elems->ssid = pos;
 			elems->ssid_len = elen;
 			break;

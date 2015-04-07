@@ -462,6 +462,12 @@ static int wps_set_attr(struct wps_parse_attr *attr, u16 type,
 		attr->serial_number_len = len;
 		break;
 	case ATTR_DEV_NAME:
+		if (len > WPS_DEV_NAME_MAX_LEN) {
+			wpa_printf(MSG_DEBUG,
+				   "WPS: Ignore too long Device Name (len=%u)",
+				   len);
+			break;
+		}
 		attr->dev_name = pos;
 		attr->dev_name_len = len;
 		break;

@@ -10,6 +10,8 @@
 #ifndef IEEE802_11_DEFS_H
 #define IEEE802_11_DEFS_H
 
+#include <utils/common.h>
+
 /* IEEE 802.11 defines */
 
 #define WLAN_FC_PVER		0x0003

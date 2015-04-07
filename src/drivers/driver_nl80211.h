@@ -110,7 +110,7 @@ struct wpa_driver_nl80211_data {
 	u8 bssid[ETH_ALEN];
 	u8 prev_bssid[ETH_ALEN];
 	int associated;
-	u8 ssid[32];
+	u8 ssid[SSID_MAX_LEN];
 	size_t ssid_len;
 	enum nl80211_iftype nlmode;
 	enum nl80211_iftype ap_scan_as_station;
@@ -169,7 +169,7 @@ struct wpa_driver_nl80211_data {
 	/* From failed authentication command */
 	int auth_freq;
 	u8 auth_bssid_[ETH_ALEN];
-	u8 auth_ssid[32];
+	u8 auth_ssid[SSID_MAX_LEN];
 	size_t auth_ssid_len;
 	int auth_alg;
 	u8 *auth_ie;

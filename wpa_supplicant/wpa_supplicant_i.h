@@ -369,7 +369,7 @@ struct wps_ap_info {
 };
 
 struct wpa_ssid_value {
-	u8 ssid[32];
+	u8 ssid[SSID_MAX_LEN];
 	size_t ssid_len;
 };
 
@@ -662,7 +662,7 @@ struct wpa_supplicant {
 
 #ifdef CONFIG_SME
 	struct {
-		u8 ssid[32];
+		u8 ssid[SSID_MAX_LEN];
 		size_t ssid_len;
 		int freq;
 		u8 assoc_req_ie[200];
@@ -768,7 +768,7 @@ struct wpa_supplicant {
 	u8 pending_join_iface_addr[ETH_ALEN];
 	u8 pending_join_dev_addr[ETH_ALEN];
 	int pending_join_wps_method;
-	u8 p2p_join_ssid[32];
+	u8 p2p_join_ssid[SSID_MAX_LEN];
 	size_t p2p_join_ssid_len;
 	int p2p_join_scan_count;
 	int auto_pd_scan_retry;

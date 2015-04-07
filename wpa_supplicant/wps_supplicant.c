@@ -1910,7 +1910,7 @@ static int wpas_wps_network_to_cred(struct wpa_ssid *ssid,
 				    struct wps_credential *cred)
 {
 	os_memset(cred, 0, sizeof(*cred));
-	if (ssid->ssid_len > 32)
+	if (ssid->ssid_len > SSID_MAX_LEN)
 		return -1;
 	os_memcpy(cred->ssid, ssid->ssid, ssid->ssid_len);
 	cred->ssid_len = ssid->ssid_len;

@@ -46,7 +46,7 @@ struct osu_icon {
 
 struct osu_provider {
 	u8 bssid[ETH_ALEN];
-	u8 osu_ssid[32];
+	u8 osu_ssid[SSID_MAX_LEN];
 	u8 osu_ssid_len;
 	char server_uri[256];
 	u32 osu_methods; /* bit 0 = OMA-DM, bit 1 = SOAP-XML SPP */
@@ -822,7 +822,7 @@ void hs20_osu_icon_fetch(struct wpa_supplicant *wpa_s)
 			continue;
 		}
 		osu_ssid_len = *pos++;
-		if (osu_ssid_len > 32) {
+		if (osu_ssid_len > SSID_MAX_LEN) {
 			wpa_printf(MSG_DEBUG, "HS 2.0: Invalid OSU SSID "
 				   "Length %u", osu_ssid_len);
 			continue;

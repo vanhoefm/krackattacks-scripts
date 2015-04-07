@@ -281,14 +281,15 @@ static int wpa_driver_privsep_get_ssid(void *priv, u8 *ssid)
 {
 	struct wpa_driver_privsep_data *drv = priv;
 	int res, ssid_len;
-	u8 reply[sizeof(int) + 32];
+	u8 reply[sizeof(int) + SSID_MAX_LEN];
 	size_t len = sizeof(reply);
 
 	res = wpa_priv_cmd(drv, PRIVSEP_CMD_GET_SSID, NULL, 0, reply, &len);
 	if (res < 0 || len < sizeof(int))
 		return -1;
 	os_memcpy(&ssid_len, reply, sizeof(int));
-	if (ssid_len < 0 || ssid_len > 32 || sizeof(int) + ssid_len > len) {
+	if (ssid_len < 0 || ssid_len > SSID_MAX_LEN ||
+	    sizeof(int) + ssid_len > len) {
 		wpa_printf(MSG_DEBUG, "privsep: Invalid get SSID reply");
 		return -1;
 	}

@@ -20,6 +20,7 @@
 #define WPA_SUPPLICANT_DRIVER_VERSION 4
 
 #include "common/defs.h"
+#include "common/ieee802_11_defs.h"
 #include "utils/list.h"
 
 #define HOSTAPD_CHAN_DISABLED 0x00000001
@@ -341,7 +342,7 @@ struct wpa_driver_scan_params {
 	 * is not needed anymore.
 	 */
 	struct wpa_driver_scan_filter {
-		u8 ssid[32];
+		u8 ssid[SSID_MAX_LEN];
 		size_t ssid_len;
 	} *filter_ssids;
 

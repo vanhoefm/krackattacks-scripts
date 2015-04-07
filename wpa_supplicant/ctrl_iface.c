@@ -153,7 +153,8 @@ static int set_disallow_aps(struct wpa_supplicant *wpa_s, char *val)
 			}
 			ssid = ns;
 
-			if ((end - pos) & 0x01 || end - pos > 2 * 32 ||
+			if ((end - pos) & 0x01 ||
+			    end - pos > 2 * SSID_MAX_LEN ||
 			    hexstr2bin(pos, ssid[ssid_count].ssid,
 				       (end - pos) / 2) < 0) {
 				os_free(ssid);
@@ -7706,7 +7707,7 @@ static int wpas_ctrl_iface_send_neigbor_rep(struct wpa_supplicant *wpa_s,
 
 	if (os_strncmp(cmd, " ssid=", 6) == 0) {
 		ssid.ssid_len = os_strlen(cmd + 6);
-		if (ssid.ssid_len > 32)
+		if (ssid.ssid_len > SSID_MAX_LEN)
 			return -1;
 		ssid.ssid = (u8 *) (cmd + 6);
 		ssid_p = &ssid;

@@ -44,7 +44,7 @@ static void p2ps_add_new_group_info(struct p2p_data *p2p, struct wpabuf *buf)
 {
 	int found;
 	u8 intended_addr[ETH_ALEN];
-	u8 ssid[32];
+	u8 ssid[SSID_MAX_LEN];
 	size_t ssid_len;
 	int group_iface;
 
@@ -84,7 +84,7 @@ static void p2ps_add_pd_req_attrs(struct p2p_data *p2p, struct p2p_device *dev,
 	struct p2ps_provision *prov = p2p->p2ps_prov;
 	u8 feat_cap_mask[] = { 1, 0 };
 	int shared_group = 0;
-	u8 ssid[32];
+	u8 ssid[SSID_MAX_LEN];
 	size_t ssid_len;
 	u8 go_dev_addr[ETH_ALEN];
 
@@ -293,7 +293,7 @@ static struct wpabuf * p2p_build_prov_disc_resp(struct p2p_data *p2p,
 		if (persist_ssid && p2p->cfg->get_persistent_group &&
 		    (status == P2P_SC_SUCCESS ||
 		     status == P2P_SC_SUCCESS_DEFERRED)) {
-			u8 ssid[32];
+			u8 ssid[SSID_MAX_LEN];
 			size_t ssid_len;
 			u8 go_dev_addr[ETH_ALEN];
 

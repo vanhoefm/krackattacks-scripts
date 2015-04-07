@@ -9,6 +9,7 @@
 #ifndef P2P_H
 #define P2P_H
 
+#include "common/ieee802_11_defs.h"
 #include "wps/wps_defs.h"
 
 /* P2P ASP Setup Capability */
@@ -95,7 +96,7 @@ struct p2p_go_neg_results {
 	/**
 	 * ssid - SSID of the group
 	 */
-	u8 ssid[32];
+	u8 ssid[SSID_MAX_LEN];
 
 	/**
 	 * ssid_len - Length of SSID in octets
@@ -495,7 +496,7 @@ struct p2p_config {
 	 * This data will be added to the end of the SSID after the
 	 * DIRECT-<random two octets> prefix.
 	 */
-	u8 ssid_postfix[32 - 9];
+	u8 ssid_postfix[SSID_MAX_LEN - 9];
 
 	/**
 	 * ssid_postfix_len - Length of the ssid_postfix data
@@ -1607,7 +1608,7 @@ struct p2p_group_config {
 	/**
 	 * ssid - Group SSID
 	 */
-	u8 ssid[32];
+	u8 ssid[SSID_MAX_LEN];
 
 	/**
 	 * ssid_len - Length of SSID
@@ -2214,7 +2215,7 @@ struct p2p_nfc_params {
 	size_t oob_dev_pw_len;
 	int go_freq;
 	u8 go_dev_addr[ETH_ALEN];
-	u8 go_ssid[32];
+	u8 go_ssid[SSID_MAX_LEN];
 	size_t go_ssid_len;
 };
 

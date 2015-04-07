@@ -10,6 +10,7 @@
 #include <dirent.h>
 
 #include "common/wpa_ctrl.h"
+#include "common/ieee802_11_defs.h"
 #include "utils/common.h"
 #include "utils/eloop.h"
 #include "utils/edit.h"
@@ -541,7 +542,7 @@ static int hostapd_cli_cmd_wps_config(struct wpa_ctrl *ctrl, int argc,
 				      char *argv[])
 {
 	char buf[256];
-	char ssid_hex[2 * 32 + 1];
+	char ssid_hex[2 * SSID_MAX_LEN + 1];
 	char key_hex[2 * 64 + 1];
 	int i;
 
@@ -552,7 +553,7 @@ static int hostapd_cli_cmd_wps_config(struct wpa_ctrl *ctrl, int argc,
 	}
 
 	ssid_hex[0] = '\0';
-	for (i = 0; i < 32; i++) {
+	for (i = 0; i < SSID_MAX_LEN; i++) {
 		if (argv[0][i] == '\0')
 			break;
 		os_snprintf(&ssid_hex[i * 2], 3, "%02x", argv[0][i]);

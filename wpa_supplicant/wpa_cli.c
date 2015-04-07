@@ -967,12 +967,12 @@ static int wpa_cli_cmd_wps_reg(struct wpa_ctrl *ctrl, int argc, char *argv[])
 		res = os_snprintf(cmd, sizeof(cmd), "WPS_REG %s %s",
 				  argv[0], argv[1]);
 	else if (argc == 5 || argc == 6) {
-		char ssid_hex[2 * 32 + 1];
+		char ssid_hex[2 * SSID_MAX_LEN + 1];
 		char key_hex[2 * 64 + 1];
 		int i;
 
 		ssid_hex[0] = '\0';
-		for (i = 0; i < 32; i++) {
+		for (i = 0; i < SSID_MAX_LEN; i++) {
 			if (argv[2][i] == '\0')
 				break;
 			os_snprintf(&ssid_hex[i * 2], 3, "%02x", argv[2][i]);
@@ -1096,12 +1096,12 @@ static int wpa_cli_cmd_wps_er_config(struct wpa_ctrl *ctrl, int argc,
 	int res;
 
 	if (argc == 5 || argc == 6) {
-		char ssid_hex[2 * 32 + 1];
+		char ssid_hex[2 * SSID_MAX_LEN + 1];
 		char key_hex[2 * 64 + 1];
 		int i;
 
 		ssid_hex[0] = '\0';
-		for (i = 0; i < 32; i++) {
+		for (i = 0; i < SSID_MAX_LEN; i++) {
 			if (argv[2][i] == '\0')
 				break;
 			os_snprintf(&ssid_hex[i * 2], 3, "%02x", argv[2][i]);

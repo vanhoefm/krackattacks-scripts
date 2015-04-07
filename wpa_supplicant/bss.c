@@ -652,7 +652,7 @@ void wpa_bss_update_scan_res(struct wpa_supplicant *wpa_s,
 			MACSTR, MAC2STR(res->bssid));
 		return;
 	}
-	if (ssid[1] > 32) {
+	if (ssid[1] > SSID_MAX_LEN) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "BSS: Too long SSID IE included for "
 			MACSTR, MAC2STR(res->bssid));
 		return;
@@ -679,7 +679,7 @@ void wpa_bss_update_scan_res(struct wpa_supplicant *wpa_s,
 	 * (to save memory) */
 
 	mesh = wpa_scan_get_ie(res, WLAN_EID_MESH_ID);
-	if (mesh && mesh[1] <= 32)
+	if (mesh && mesh[1] <= SSID_MAX_LEN)
 		ssid = mesh;
 
 	bss = wpa_bss_get(wpa_s, res->bssid, ssid + 2, ssid[1]);

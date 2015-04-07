@@ -199,7 +199,7 @@ static void wpa_priv_cmd_associate(struct wpa_priv_interface *iface,
 	if (bssid[0] | bssid[1] | bssid[2] | bssid[3] | bssid[4] | bssid[5])
 		params.bssid = bssid;
 	params.ssid = assoc->ssid;
-	if (assoc->ssid_len > 32)
+	if (assoc->ssid_len > SSID_MAX_LEN)
 		return;
 	params.ssid_len = assoc->ssid_len;
 	params.freq.mode = assoc->hwmode;
@@ -244,7 +244,7 @@ fail:
 static void wpa_priv_cmd_get_ssid(struct wpa_priv_interface *iface,
 				  struct sockaddr_un *from)
 {
-	u8 ssid[sizeof(int) + 32];
+	u8 ssid[sizeof(int) + SSID_MAX_LEN];
 	int res;
 
 	if (iface->drv_priv == NULL)
@@ -254,7 +254,7 @@ static void wpa_priv_cmd_get_ssid(struct wpa_priv_interface *iface,
 		goto fail;
 
 	res = iface->driver->get_ssid(iface->drv_priv, &ssid[sizeof(int)]);
-	if (res < 0 || res > 32)
+	if (res < 0 || res > SSID_MAX_LEN)
 		goto fail;
 	os_memcpy(ssid, &res, sizeof(int));
 

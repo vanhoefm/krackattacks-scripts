@@ -387,7 +387,7 @@ fail:
 	} else
 		p2p->inv_group_bssid_ptr = NULL;
 	if (msg.group_id) {
-		if (msg.group_id_len - ETH_ALEN <= 32) {
+		if (msg.group_id_len - ETH_ALEN <= SSID_MAX_LEN) {
 			os_memcpy(p2p->inv_ssid, msg.group_id + ETH_ALEN,
 				  msg.group_id_len - ETH_ALEN);
 			p2p->inv_ssid_len = msg.group_id_len - ETH_ALEN;

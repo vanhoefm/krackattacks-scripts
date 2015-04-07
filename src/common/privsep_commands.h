@@ -9,6 +9,8 @@
 #ifndef PRIVSEP_COMMANDS_H
 #define PRIVSEP_COMMANDS_H
 
+#include "common/ieee802_11_defs.h"
+
 enum privsep_cmd {
 	PRIVSEP_CMD_REGISTER,
 	PRIVSEP_CMD_UNREGISTER,
@@ -29,7 +31,7 @@ enum privsep_cmd {
 struct privsep_cmd_associate
 {
 	u8 bssid[ETH_ALEN];
-	u8 ssid[32];
+	u8 ssid[SSID_MAX_LEN];
 	size_t ssid_len;
 	int hwmode;
 	int freq;

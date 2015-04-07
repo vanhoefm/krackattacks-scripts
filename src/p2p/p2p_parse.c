@@ -204,7 +204,7 @@ static int p2p_parse_attribute(u8 id, const u8 *data, u16 len,
 			   MAC2STR(msg->group_bssid));
 		break;
 	case P2P_ATTR_GROUP_ID:
-		if (len < ETH_ALEN || len > ETH_ALEN + 32) {
+		if (len < ETH_ALEN || len > ETH_ALEN + SSID_MAX_LEN) {
 			wpa_printf(MSG_DEBUG, "P2P: Invalid P2P Group ID "
 				   "attribute length %d", len);
 			return -1;

@@ -132,7 +132,7 @@ int wpa_driver_wext_get_ssid(void *priv, u8 *ssid)
 	os_memset(&iwr, 0, sizeof(iwr));
 	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
 	iwr.u.essid.pointer = (caddr_t) ssid;
-	iwr.u.essid.length = 32;
+	iwr.u.essid.length = SSID_MAX_LEN;
 
 	if (ioctl(drv->ioctl_sock, SIOCGIWESSID, &iwr) < 0) {
 		wpa_printf(MSG_ERROR, "ioctl[SIOCGIWESSID]: %s",
@@ -140,8 +140,8 @@ int wpa_driver_wext_get_ssid(void *priv, u8 *ssid)
 		ret = -1;
 	} else {
 		ret = iwr.u.essid.length;
-		if (ret > 32)
-			ret = 32;
+		if (ret > SSID_MAX_LEN)
+			ret = SSID_MAX_LEN;
 		/* Some drivers include nul termination in the SSID, so let's
 		 * remove it here before further processing. WE-21 changes this
 		 * to explicitly require the length _not_ to include nul
@@ -169,7 +169,7 @@ int wpa_driver_wext_set_ssid(void *priv, const u8 *ssid, size_t ssid_len)
 	int ret = 0;
 	char buf[33];
 
-	if (ssid_len > 32)
+	if (ssid_len > SSID_MAX_LEN)
 		return -1;
 
 	os_memset(&iwr, 0, sizeof(iwr));
@@ -1199,7 +1199,7 @@ struct wext_scan_data {
 	struct wpa_scan_res res;
 	u8 *ie;
 	size_t ie_len;
-	u8 ssid[32];
+	u8 ssid[SSID_MAX_LEN];
 	size_t ssid_len;
 	int maxrate;
 };
@@ -1952,7 +1952,7 @@ static void wpa_driver_wext_disconnect(struct wpa_driver_wext_data *drv)
 {
 	struct iwreq iwr;
 	const u8 null_bssid[ETH_ALEN] = { 0, 0, 0, 0, 0, 0 };
-	u8 ssid[32];
+	u8 ssid[SSID_MAX_LEN];
 	int i;
 
 	/*
@@ -1994,9 +1994,9 @@ static void wpa_driver_wext_disconnect(struct wpa_driver_wext_data *drv)
 		 * SIOCSIWMLME commands (or tries to associate automatically
 		 * after deauth/disassoc).
 		 */
-		for (i = 0; i < 32; i++)
+		for (i = 0; i < SSID_MAX_LEN; i++)
 			ssid[i] = rand() & 0xFF;
-		if (wpa_driver_wext_set_ssid(drv, ssid, 32) < 0) {
+		if (wpa_driver_wext_set_ssid(drv, ssid, SSID_MAX_LEN) < 0) {
 			wpa_printf(MSG_DEBUG, "WEXT: Failed to set bogus "
 				   "SSID to disconnect");
 		}

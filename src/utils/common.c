@@ -8,6 +8,7 @@
 
 #include "includes.h"
 
+#include "common/ieee802_11_defs.h"
 #include "common.h"
 
 
@@ -609,7 +610,7 @@ size_t printf_decode(u8 *buf, size_t maxlen, const char *str)
  */
 const char * wpa_ssid_txt(const u8 *ssid, size_t ssid_len)
 {
-	static char ssid_txt[32 * 4 + 1];
+	static char ssid_txt[SSID_MAX_LEN * 4 + 1];
 
 	if (ssid == NULL) {
 		ssid_txt[0] = '\0';

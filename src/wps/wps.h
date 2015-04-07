@@ -9,6 +9,7 @@
 #ifndef WPS_H
 #define WPS_H
 
+#include "common/ieee802_11_defs.h"
 #include "wps_defs.h"
 
 /**
@@ -44,7 +45,7 @@ struct wps_parse_attr;
  * @cred_attr_len: Length of cred_attr in octets
  */
 struct wps_credential {
-	u8 ssid[32];
+	u8 ssid[SSID_MAX_LEN];
 	size_t ssid_len;
 	u16 auth_type;
 	u16 encr_type;
@@ -623,7 +624,7 @@ struct wps_context {
 	 * Credentials. In addition, AP uses it when acting as an Enrollee to
 	 * notify Registrar of the current configuration.
 	 */
-	u8 ssid[32];
+	u8 ssid[SSID_MAX_LEN];
 
 	/**
 	 * ssid_len - Length of ssid in octets

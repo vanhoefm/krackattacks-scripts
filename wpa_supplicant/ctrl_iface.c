@@ -1729,7 +1729,7 @@ static int wpa_supplicant_ctrl_iface_status(struct wpa_supplicant *wpa_s,
 		if (ssid) {
 			u8 *_ssid = ssid->ssid;
 			size_t ssid_len = ssid->ssid_len;
-			u8 ssid_buf[MAX_SSID_LEN];
+			u8 ssid_buf[SSID_MAX_LEN];
 			if (ssid_len == 0) {
 				int _res = wpa_drv_get_ssid(wpa_s, ssid_buf);
 				if (_res < 0)

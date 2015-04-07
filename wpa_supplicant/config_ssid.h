@@ -13,8 +13,6 @@
 #include "utils/list.h"
 #include "eap_peer/eap_config.h"
 
-#define MAX_SSID_LEN 32
-
 
 #define DEFAULT_EAP_WORKAROUND ((unsigned int) -1)
 #define DEFAULT_EAPOL_FLAGS (EAPOL_FLAG_REQUIRE_KEY_UNICAST | \

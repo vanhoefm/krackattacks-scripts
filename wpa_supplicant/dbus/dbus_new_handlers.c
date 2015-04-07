@@ -1034,10 +1034,10 @@ static int wpas_dbus_get_scan_ssids(DBusMessage *message, DBusMessageIter *var,
 
 		dbus_message_iter_get_fixed_array(&sub_array_iter, &val, &len);
 
-		if (len > MAX_SSID_LEN) {
+		if (len > SSID_MAX_LEN) {
 			wpa_printf(MSG_DEBUG,
 				   "%s[dbus]: SSID too long (len=%d max_len=%d)",
-				   __func__, len, MAX_SSID_LEN);
+				   __func__, len, SSID_MAX_LEN);
 			*reply = wpas_dbus_error_invalid_args(
 				message, "Invalid SSID: too long");
 			return -1;

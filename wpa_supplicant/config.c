@@ -1814,7 +1814,7 @@ static char * wpa_config_write_mesh_basic_rates(const struct parse_data *data,
  * functions.
  */
 static const struct parse_data ssid_fields[] = {
-	{ STR_RANGE(ssid, 0, MAX_SSID_LEN) },
+	{ STR_RANGE(ssid, 0, SSID_MAX_LEN) },
 	{ INT_RANGE(scan_ssid, 0, 1) },
 	{ FUNC(bssid) },
 	{ FUNC(bssid_blacklist) },
@@ -2956,7 +2956,7 @@ int wpa_config_set_cred(struct wpa_cred *cred, const char *var,
 	if (os_strcmp(var, "excluded_ssid") == 0) {
 		struct excluded_ssid *e;
 
-		if (len > MAX_SSID_LEN) {
+		if (len > SSID_MAX_LEN) {
 			wpa_printf(MSG_ERROR, "Line %d: invalid "
 				   "excluded_ssid length %d", line, (int) len);
 			os_free(val);

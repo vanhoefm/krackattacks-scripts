@@ -2872,7 +2872,7 @@ int wpa_supplicant_set_debug_params(struct wpa_global *global, int debug_level,
 struct wpa_ssid * wpa_supplicant_get_ssid(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_ssid *entry;
-	u8 ssid[MAX_SSID_LEN];
+	u8 ssid[SSID_MAX_LEN];
 	int res;
 	size_t ssid_len;
 	u8 bssid[ETH_ALEN];

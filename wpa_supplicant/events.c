@@ -158,7 +158,7 @@ static void wpa_supplicant_update_current_bss(struct wpa_supplicant *wpa_s)
 static int wpa_supplicant_select_config(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_ssid *ssid, *old_ssid;
-	u8 drv_ssid[MAX_SSID_LEN];
+	u8 drv_ssid[SSID_MAX_LEN];
 	size_t drv_ssid_len;
 	int res;
 

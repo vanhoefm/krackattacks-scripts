@@ -37,6 +37,7 @@
 
 #include "config_ssid.h"
 #include "wps/wps.h"
+#include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
 
 
@@ -241,7 +242,7 @@ struct wpa_cred {
 	char *phase2;
 
 	struct excluded_ssid {
-		u8 ssid[MAX_SSID_LEN];
+		u8 ssid[SSID_MAX_LEN];
 		size_t ssid_len;
 	} *excluded_ssid;
 	size_t num_excluded_ssid;

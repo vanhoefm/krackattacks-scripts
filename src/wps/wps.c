@@ -618,7 +618,8 @@ int wps_attr_text(struct wpabuf *data, char *buf, char *end)
 		if (str == NULL)
 			return pos - buf;
 		for (i = 0; i < attr.dev_name_len; i++) {
-			if (attr.dev_name[i] < 32)
+			if (attr.dev_name[i] == 0 ||
+			    is_ctrl_char(attr.dev_name[i]))
 				str[i] = '_';
 			else
 				str[i] = attr.dev_name[i];

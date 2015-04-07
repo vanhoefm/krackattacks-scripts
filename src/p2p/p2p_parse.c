@@ -161,8 +161,7 @@ static int p2p_parse_attribute(u8 id, const u8 *data, u16 len,
 		for (i = 0; i < nlen; i++) {
 			if (msg->device_name[i] == '\0')
 				break;
-			if (msg->device_name[i] > 0 &&
-			    msg->device_name[i] < 32)
+			if (is_ctrl_char(msg->device_name[i]))
 				msg->device_name[i] = '_';
 		}
 		wpa_printf(MSG_DEBUG, "P2P: * Device Info: addr " MACSTR
@@ -743,7 +742,7 @@ static int p2p_group_info_text(const u8 *gi, size_t gi_len, char *buf,
 		name[cli->dev_name_len] = '\0';
 		count = (int) cli->dev_name_len - 1;
 		while (count >= 0) {
-			if (name[count] > 0 && name[count] < 32)
+			if (is_ctrl_char(name[count]))
 				name[count] = '_';
 			count--;
 		}

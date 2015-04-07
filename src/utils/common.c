@@ -1088,3 +1088,9 @@ size_t utf8_escape(const char *inp, size_t in_size,
 
 	return res_size;
 }
+
+
+int is_ctrl_char(char c)
+{
+	return c > 0 && c < 32;
+}

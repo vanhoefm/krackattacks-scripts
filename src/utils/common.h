@@ -554,6 +554,7 @@ size_t utf8_escape(const char *inp, size_t in_size,
 		   char *outp, size_t out_size);
 size_t utf8_unescape(const char *inp, size_t in_size,
 		     char *outp, size_t out_size);
+int is_ctrl_char(char c);
 
 
 /*

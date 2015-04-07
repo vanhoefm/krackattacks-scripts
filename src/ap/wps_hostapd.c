@@ -324,7 +324,7 @@ static int hapd_wps_reconfig_in_memory(struct hostapd_data *hapd,
 	wpa_printf(MSG_DEBUG, "WPS: Updating in-memory configuration");
 
 	bss->wps_state = 2;
-	if (cred->ssid_len <= HOSTAPD_MAX_SSID_LEN) {
+	if (cred->ssid_len <= SSID_MAX_LEN) {
 		os_memcpy(bss->ssid.ssid, cred->ssid, cred->ssid_len);
 		bss->ssid.ssid_len = cred->ssid_len;
 		bss->ssid.ssid_set = 1;

@@ -12,6 +12,7 @@
 #include "common/defs.h"
 #include "ip_addr.h"
 #include "common/wpa_common.h"
+#include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
 #include "wps/wps.h"
 
@@ -57,8 +58,6 @@ struct hostapd_radius_servers;
 struct ft_remote_r0kh;
 struct ft_remote_r1kh;
 
-#define HOSTAPD_MAX_SSID_LEN 32
-
 #define NUM_WEP_KEYS 4
 struct hostapd_wep_keys {
 	u8 idx;
@@ -78,7 +77,7 @@ typedef enum hostap_security_policy {
 } secpolicy;
 
 struct hostapd_ssid {
-	u8 ssid[HOSTAPD_MAX_SSID_LEN];
+	u8 ssid[SSID_MAX_LEN];
 	size_t ssid_len;
 	unsigned int ssid_set:1;
 	unsigned int utf8_ssid:1;
@@ -511,7 +510,7 @@ struct hostapd_bss_config {
 		char file[256];
 	} *hs20_icons;
 	size_t hs20_icons_count;
-	u8 osu_ssid[HOSTAPD_MAX_SSID_LEN];
+	u8 osu_ssid[SSID_MAX_LEN];
 	size_t osu_ssid_len;
 	struct hs20_osu_provider {
 		unsigned int friendly_name_count;

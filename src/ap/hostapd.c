@@ -862,7 +862,7 @@ hostapd_das_disconnect(void *ctx, struct radius_das_attrs *attr)
 static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 {
 	struct hostapd_bss_config *conf = hapd->conf;
-	u8 ssid[HOSTAPD_MAX_SSID_LEN + 1];
+	u8 ssid[SSID_MAX_LEN + 1];
 	int ssid_len, set_ssid;
 	char force_ifname[IFNAMSIZ];
 	u8 if_addr[ETH_ALEN];

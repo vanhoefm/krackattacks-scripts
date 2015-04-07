@@ -9,8 +9,6 @@
 #ifndef WPA_COMMON_H
 #define WPA_COMMON_H
 
-#define WPA_MAX_SSID_LEN 32
-
 /* IEEE 802.11i */
 #define PMKID_LEN 16
 #define PMK_LEN 32

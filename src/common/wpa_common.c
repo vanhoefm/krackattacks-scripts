@@ -838,7 +838,7 @@ void wpa_derive_pmk_r0(const u8 *xxkey, size_t xxkey_len,
 		       const u8 *mdid, const u8 *r0kh_id, size_t r0kh_id_len,
 		       const u8 *s0kh_id, u8 *pmk_r0, u8 *pmk_r0_name)
 {
-	u8 buf[1 + WPA_MAX_SSID_LEN + MOBILITY_DOMAIN_ID_LEN + 1 +
+	u8 buf[1 + SSID_MAX_LEN + MOBILITY_DOMAIN_ID_LEN + 1 +
 	       FT_R0KH_ID_MAX_LEN + ETH_ALEN];
 	u8 *pos, r0_key_data[48], hash[32];
 	const u8 *addr[2];
@@ -852,7 +852,7 @@ void wpa_derive_pmk_r0(const u8 *xxkey, size_t xxkey_len,
 	 * PMK-R0 = L(R0-Key-Data, 0, 256)
 	 * PMK-R0Name-Salt = L(R0-Key-Data, 256, 128)
 	 */
-	if (ssid_len > WPA_MAX_SSID_LEN || r0kh_id_len > FT_R0KH_ID_MAX_LEN)
+	if (ssid_len > SSID_MAX_LEN || r0kh_id_len > FT_R0KH_ID_MAX_LEN)
 		return;
 	pos = buf;
 	*pos++ = ssid_len;

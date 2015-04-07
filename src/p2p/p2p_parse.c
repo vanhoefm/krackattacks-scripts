@@ -371,9 +371,9 @@ static int p2p_parse_attribute(u8 id, const u8 *data, u16 len,
 		break;
 	case P2P_ATTR_PERSISTENT_GROUP:
 	{
-		if (len < ETH_ALEN) {
+		if (len < ETH_ALEN || len > ETH_ALEN + SSID_MAX_LEN) {
 			wpa_printf(MSG_DEBUG,
-				   "P2P: Too short Persistent Group Info (length %u)",
+				   "P2P: Invalid Persistent Group Info (length %u)",
 				   len);
 			return -1;
 		}

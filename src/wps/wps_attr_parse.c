@@ -491,6 +491,11 @@ static int wps_set_attr(struct wps_parse_attr *attr, u16 type,
 		attr->num_cred++;
 		break;
 	case ATTR_SSID:
+		if (len > SSID_MAX_LEN) {
+			wpa_printf(MSG_DEBUG,
+				   "WPS: Ignore too long SSID (len=%u)", len);
+			break;
+		}
 		attr->ssid = pos;
 		attr->ssid_len = len;
 		break;

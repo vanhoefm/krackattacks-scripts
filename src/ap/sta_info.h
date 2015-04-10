@@ -120,7 +120,7 @@ struct sta_info {
 	struct hostapd_ssid *ssid; /* SSID selection based on (Re)AssocReq */
 	struct hostapd_ssid *ssid_probe; /* SSID selection based on ProbeReq */
 
-	int vlan_id;
+	int vlan_id; /* 0: none, >0: VID */
 	 /* PSKs from RADIUS authentication server */
 	struct hostapd_sta_wpa_psk_short *psk;
 

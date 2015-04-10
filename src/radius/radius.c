@@ -1425,7 +1425,7 @@ struct radius_tunnel_attrs {
 /**
  * radius_msg_get_vlanid - Parse RADIUS attributes for VLAN tunnel information
  * @msg: RADIUS message
- * Returns: VLAN ID for the first tunnel configuration of -1 if none is found
+ * Returns: VLAN ID for the first tunnel configuration or 0 if none is found
  */
 int radius_msg_get_vlanid(struct radius_msg *msg)
 {
@@ -1488,7 +1488,7 @@ int radius_msg_get_vlanid(struct radius_msg *msg)
 			return tun->vlanid;
 	}
 
-	return -1;
+	return 0;
 }
 
 

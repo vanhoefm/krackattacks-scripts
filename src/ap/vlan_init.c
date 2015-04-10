@@ -485,7 +485,8 @@ static void vlan_newlink(char *ifname, struct hostapd_data *hapd)
 	wpa_printf(MSG_DEBUG, "VLAN: vlan_newlink(%s)", ifname);
 
 	while (vlan) {
-		if (os_strcmp(ifname, vlan->ifname) == 0) {
+		if (os_strcmp(ifname, vlan->ifname) == 0 && !vlan->configured) {
+			vlan->configured = 1;
 
 			if (hapd->conf->vlan_bridge[0]) {
 				os_snprintf(br_name, sizeof(br_name), "%s%d",

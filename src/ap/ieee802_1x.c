@@ -1108,8 +1108,6 @@ void ieee802_1x_new_station(struct hostapd_data *hapd, struct sta_info *sta)
 
 	pmksa = wpa_auth_sta_get_pmksa(sta->wpa_sm);
 	if (pmksa) {
-		int old_vlanid;
-
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE8021X,
 			       HOSTAPD_LEVEL_DEBUG,
 			       "PMK from PMKSA cache - skip IEEE 802.1X/EAP");
@@ -1123,11 +1121,8 @@ void ieee802_1x_new_station(struct hostapd_data *hapd, struct sta_info *sta)
 		sta->eapol_sm->authFail = FALSE;
 		if (sta->eapol_sm->eap)
 			eap_sm_notify_cached(sta->eapol_sm->eap);
-		old_vlanid = sta->vlan_id;
 		pmksa_cache_to_eapol_data(pmksa, sta->eapol_sm);
-		if (sta->ssid->dynamic_vlan == DYNAMIC_VLAN_DISABLED)
-			sta->vlan_id = 0;
-		ap_sta_bind_vlan(hapd, sta, old_vlanid);
+		ap_sta_bind_vlan(hapd, sta);
 	} else {
 		if (reassoc) {
 			/*
@@ -1590,7 +1585,7 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 	struct hostapd_data *hapd = data;
 	struct sta_info *sta;
 	u32 session_timeout = 0, termination_action, acct_interim_interval;
-	int session_timeout_set, old_vlanid = 0, vlan_id = 0;
+	int session_timeout_set, vlan_id = 0;
 	struct eapol_state_machine *sm;
 	int override_eapReq = 0;
 	struct radius_hdr *hdr = radius_msg_get_hdr(msg);
@@ -1687,10 +1682,9 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 		}
 #endif /* CONFIG_NO_VLAN */
 
-		old_vlanid = sta->vlan_id;
 		sta->vlan_id = vlan_id;
 		if ((sta->flags & WLAN_STA_ASSOC) &&
-		    ap_sta_bind_vlan(hapd, sta, old_vlanid) < 0)
+		    ap_sta_bind_vlan(hapd, sta) < 0)
 			break;
 
 		sta->session_timeout_set = !!session_timeout_set;

@@ -121,6 +121,7 @@ struct sta_info {
 	struct hostapd_ssid *ssid_probe; /* SSID selection based on ProbeReq */
 
 	int vlan_id; /* 0: none, >0: VID */
+	int vlan_id_bound; /* updated by ap_sta_bind_vlan() */
 	 /* PSKs from RADIUS authentication server */
 	struct hostapd_sta_wpa_psk_short *psk;
 
@@ -218,8 +219,7 @@ void ap_sta_deauthenticate(struct hostapd_data *hapd, struct sta_info *sta,
 int ap_sta_wps_cancel(struct hostapd_data *hapd,
 		      struct sta_info *sta, void *ctx);
 #endif /* CONFIG_WPS */
-int ap_sta_bind_vlan(struct hostapd_data *hapd, struct sta_info *sta,
-		     int old_vlanid);
+int ap_sta_bind_vlan(struct hostapd_data *hapd, struct sta_info *sta);
 void ap_sta_start_sa_query(struct hostapd_data *hapd, struct sta_info *sta);
 void ap_sta_stop_sa_query(struct hostapd_data *hapd, struct sta_info *sta);
 int ap_check_sa_query_timeout(struct hostapd_data *hapd, struct sta_info *sta);

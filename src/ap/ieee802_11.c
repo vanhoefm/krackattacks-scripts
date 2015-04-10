@@ -2473,11 +2473,11 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 		 * so bind it to the selected VLAN interface now, since the
 		 * interface selection is not going to change anymore.
 		 */
-		if (ap_sta_bind_vlan(hapd, sta, 0) < 0)
+		if (ap_sta_bind_vlan(hapd, sta) < 0)
 			return;
 	} else if (sta->vlan_id) {
 		/* VLAN ID already set (e.g., by PMKSA caching), so bind STA */
-		if (ap_sta_bind_vlan(hapd, sta, 0) < 0)
+		if (ap_sta_bind_vlan(hapd, sta) < 0)
 			return;
 	}
 

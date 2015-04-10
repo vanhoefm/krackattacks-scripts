@@ -651,6 +651,11 @@ vlan_read_ifnames(struct nlmsghdr *h, size_t len, int del,
 
 	if (!ifname[0])
 		return;
+	if (del && if_nametoindex(ifname)) {
+		 /* interface still exists, race condition ->
+		  * iface has just been recreated */
+		return;
+	}
 
 	wpa_printf(MSG_DEBUG,
 		   "VLAN: RTM_%sLINK: ifi_index=%d ifname=%s ifi_family=%d ifi_flags=0x%x (%s%s%s%s)",

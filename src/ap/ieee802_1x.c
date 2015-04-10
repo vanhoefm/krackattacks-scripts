@@ -1590,7 +1590,7 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 	struct hostapd_data *hapd = data;
 	struct sta_info *sta;
 	u32 session_timeout = 0, termination_action, acct_interim_interval;
-	int session_timeout_set, old_vlanid = 0;
+	int session_timeout_set, old_vlanid = 0, vlan_id = 0;
 	struct eapol_state_machine *sm;
 	int override_eapReq = 0;
 	struct radius_hdr *hdr = radius_msg_get_hdr(msg);
@@ -1658,18 +1658,24 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 	switch (hdr->code) {
 	case RADIUS_CODE_ACCESS_ACCEPT:
 		if (sta->ssid->dynamic_vlan == DYNAMIC_VLAN_DISABLED)
-			sta->vlan_id = 0;
+			vlan_id = 0;
 #ifndef CONFIG_NO_VLAN
-		else {
-			old_vlanid = sta->vlan_id;
-			sta->vlan_id = radius_msg_get_vlanid(msg);
-		}
-		if (sta->vlan_id > 0 &&
-		    hostapd_vlan_id_valid(hapd->conf->vlan, sta->vlan_id)) {
+		else
+			vlan_id = radius_msg_get_vlanid(msg);
+		if (vlan_id > 0 &&
+		    hostapd_vlan_id_valid(hapd->conf->vlan, vlan_id)) {
 			hostapd_logger(hapd, sta->addr,
 				       HOSTAPD_MODULE_RADIUS,
 				       HOSTAPD_LEVEL_INFO,
-				       "VLAN ID %d", sta->vlan_id);
+				       "VLAN ID %d", vlan_id);
+		} else if (vlan_id > 0) {
+			sta->eapol_sm->authFail = TRUE;
+			hostapd_logger(hapd, sta->addr,
+				       HOSTAPD_MODULE_RADIUS,
+				       HOSTAPD_LEVEL_INFO,
+				       "Invalid VLAN ID %d received from RADIUS server",
+				       vlan_id);
+			break;
 		} else if (sta->ssid->dynamic_vlan == DYNAMIC_VLAN_REQUIRED) {
 			sta->eapol_sm->authFail = TRUE;
 			hostapd_logger(hapd, sta->addr,
@@ -1681,7 +1687,10 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 		}
 #endif /* CONFIG_NO_VLAN */
 
-		if (ap_sta_bind_vlan(hapd, sta, old_vlanid) < 0)
+		old_vlanid = sta->vlan_id;
+		sta->vlan_id = vlan_id;
+		if ((sta->flags & WLAN_STA_ASSOC) &&
+		    ap_sta_bind_vlan(hapd, sta, old_vlanid) < 0)
 			break;
 
 		sta->session_timeout_set = !!session_timeout_set;

@@ -1577,6 +1577,7 @@ enum drv_br_port_attr {
 
 enum drv_br_net_param {
 	DRV_BR_NET_PARAM_GARP_ACCEPT,
+	DRV_BR_MULTICAST_SNOOPING,
 };
 
 struct drv_acs_params {

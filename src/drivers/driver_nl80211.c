@@ -8307,9 +8307,9 @@ static const char * drv_br_net_param_str(enum drv_br_net_param param)
 	switch (param) {
 	case DRV_BR_NET_PARAM_GARP_ACCEPT:
 		return "arp_accept";
+	default:
+		return NULL;
 	}
-
-	return NULL;
 }
 
 
@@ -8320,6 +8320,13 @@ static int wpa_driver_br_set_net_param(void *priv, enum drv_br_net_param param,
 	char path[128];
 	const char *param_txt;
 	int ip_version = 4;
+
+	if (param == DRV_BR_MULTICAST_SNOOPING) {
+		os_snprintf(path, sizeof(path),
+			    "/sys/devices/virtual/net/%s/bridge/multicast_snooping",
+			    bss->brname);
+		goto set_val;
+	}
 
 	param_txt = drv_br_net_param_str(param);
 	if (param_txt == NULL)
@@ -8336,6 +8343,7 @@ static int wpa_driver_br_set_net_param(void *priv, enum drv_br_net_param param,
 	os_snprintf(path, sizeof(path), "/proc/sys/net/ipv%d/conf/%s/%s",
 		    ip_version, bss->brname, param_txt);
 
+set_val:
 	if (linux_write_system_file(path, val))
 		return -1;
 

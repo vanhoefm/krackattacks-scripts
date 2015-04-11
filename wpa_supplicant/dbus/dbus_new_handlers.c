@@ -3791,6 +3791,7 @@ dbus_bool_t wpas_dbus_getter_bss_wps(DBusMessageIter *iter, DBusError *error,
 	struct wpabuf *wps_ie;
 #endif /* CONFIG_WPS */
 	DBusMessageIter iter_dict, variant_iter;
+	int wps_support = 0;
 	const char *type = "";
 
 	res = get_bss_helper(args, error, __func__);
@@ -3805,6 +3806,7 @@ dbus_bool_t wpas_dbus_getter_bss_wps(DBusMessageIter *iter, DBusError *error,
 #ifdef CONFIG_WPS
 	wps_ie = wpa_bss_get_vendor_ie_multi(res, WPS_IE_VENDOR_TYPE);
 	if (wps_ie) {
+		wps_support = 1;
 		if (wps_is_selected_pbc_registrar(wps_ie))
 			type = "pbc";
 		else if (wps_is_selected_pin_registrar(wps_ie))
@@ -3814,7 +3816,7 @@ dbus_bool_t wpas_dbus_getter_bss_wps(DBusMessageIter *iter, DBusError *error,
 	}
 #endif /* CONFIG_WPS */
 
-	if (!wpa_dbus_dict_append_string(&iter_dict, "Type", type) ||
+	if ((wps_support && !wpa_dbus_dict_append_string(&iter_dict, "Type", type)) ||
 	    !wpa_dbus_dict_close_write(&variant_iter, &iter_dict) ||
 	    !dbus_message_iter_close_container(iter, &variant_iter))
 		goto nomem;

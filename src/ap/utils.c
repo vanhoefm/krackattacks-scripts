@@ -59,6 +59,8 @@ static int prune_associations(struct hostapd_iface *iface, void *ctx)
 		if (!osta)
 			continue;
 
+		wpa_printf(MSG_INFO, "%s: Prune association for " MACSTR,
+			   ohapd->conf->iface, MAC2STR(osta->addr));
 		ap_sta_disassociate(ohapd, osta, WLAN_REASON_UNSPECIFIED);
 	}
 

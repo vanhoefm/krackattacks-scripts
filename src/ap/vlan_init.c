@@ -959,7 +959,8 @@ int vlan_remove_dynamic(struct hostapd_data *hapd, int vlan_id)
 	if (vlan_id <= 0 || vlan_id > MAX_VLAN_ID)
 		return 1;
 
-	wpa_printf(MSG_DEBUG, "VLAN: %s(vlan_id=%d)", __func__, vlan_id);
+	wpa_printf(MSG_DEBUG, "VLAN: %s(ifname=%s vlan_id=%d)",
+		   __func__, hapd->conf->iface, vlan_id);
 
 	vlan = hapd->conf->vlan;
 	while (vlan) {

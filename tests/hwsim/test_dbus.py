@@ -514,6 +514,20 @@ def _test_dbus_wps_pbc(dev, apdev):
     dev[0].scan_for_bss(bssid, freq="2412")
     dev[0].request("SET wps_cred_processing 2")
 
+    res = if_obj.Get(WPAS_DBUS_IFACE, 'BSSs',
+                     dbus_interface=dbus.PROPERTIES_IFACE)
+    if len(res) != 1:
+        raise Exception("Missing BSSs entry: " + str(res))
+    bss_obj = bus.get_object(WPAS_DBUS_SERVICE, res[0])
+    props = bss_obj.GetAll(WPAS_DBUS_BSS, dbus_interface=dbus.PROPERTIES_IFACE)
+    logger.debug("GetAll(%s, %s): %s" % (WPAS_DBUS_BSS, res[0], str(props)))
+    if 'WPS' not in props:
+        raise Exception("No WPS information in the BSS entry")
+    if 'Type' not in props['WPS']:
+        raise Exception("No Type field in the WPS dictionary")
+    if props['WPS']['Type'] != 'pbc':
+        raise Exception("Unexpected WPS Type: " + props['WPS']['Type'])
+
     class TestDbusWps(TestDbus):
         def __init__(self, bus, wps):
             TestDbus.__init__(self, bus)
@@ -894,6 +908,7 @@ def test_dbus_scan(dev, apdev):
             TestDbus.__init__(self, bus)
             self.scan_completed = 0
             self.bss_added = False
+            self.fail_reason = None
 
         def __enter__(self):
             gobject.timeout_add(1, self.run_scan)
@@ -920,6 +935,10 @@ def test_dbus_scan(dev, apdev):
         def bssAdded(self, bss, properties):
             logger.debug("bssAdded: %s" % bss)
             logger.debug(str(properties))
+            if 'WPS' in properties:
+                if 'Type' in properties['WPS']:
+                    self.fail_reason = "Unexpected WPS dictionary entry in non-WPS BSS"
+                    self.loop.quit()
             self.bss_added = True
             if self.scan_completed == 3:
                 self.loop.quit()
@@ -942,6 +961,8 @@ def test_dbus_scan(dev, apdev):
             return self.scan_completed == 3 and self.bss_added
 
     with TestDbusScan(bus) as t:
+        if t.fail_reason:
+            raise Exception(t.fail_reason)
         if not t.success():
             raise Exception("Expected signals not seen")
 

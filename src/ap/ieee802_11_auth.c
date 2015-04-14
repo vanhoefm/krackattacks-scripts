@@ -561,6 +561,19 @@ hostapd_acl_recv_radius(struct radius_msg *msg, struct radius_msg *req,
 		if (hapd->conf->wpa_psk_radius == PSK_RADIUS_REQUIRED &&
 		    !cache->psk)
 			cache->accepted = HOSTAPD_ACL_REJECT;
+
+		if (cache->vlan_id &&
+		    !hostapd_vlan_id_valid(hapd->conf->vlan, cache->vlan_id)) {
+			hostapd_logger(hapd, query->addr,
+				       HOSTAPD_MODULE_RADIUS,
+				       HOSTAPD_LEVEL_INFO,
+				       "Invalid VLAN ID %d received from RADIUS server",
+				       cache->vlan_id);
+			cache->vlan_id = 0;
+		}
+		if (hapd->conf->ssid.dynamic_vlan == DYNAMIC_VLAN_REQUIRED &&
+		    !cache->vlan_id)
+			cache->accepted = HOSTAPD_ACL_REJECT;
 	} else
 		cache->accepted = HOSTAPD_ACL_REJECT;
 	cache->next = hapd->acl_cache;

@@ -1010,3 +1010,91 @@ def test_radius_server_failures(dev, apdev):
         raise Exception("Unexpected response")
     except pyrad.client.Timeout:
         pass
+
+def test_ap_vlan_wpa2_psk_radius_required(dev, apdev):
+    """AP VLAN with WPA2-PSK and RADIUS attributes required"""
+    try:
+        import pyrad.server
+        import pyrad.packet
+        import pyrad.dictionary
+    except ImportError:
+        raise HwsimSkip("No pyrad modules available")
+
+    class TestServer(pyrad.server.Server):
+        def _HandleAuthPacket(self, pkt):
+            pyrad.server.Server._HandleAuthPacket(self, pkt)
+            logger.info("Received authentication request")
+            reply = self.CreateReplyPacket(pkt)
+            reply.code = pyrad.packet.AccessAccept
+            secret = reply.secret
+            if self.t_events['long'].is_set():
+                reply.AddAttribute("Tunnel-Type", 13)
+                reply.AddAttribute("Tunnel-Medium-Type", 6)
+                reply.AddAttribute("Tunnel-Private-Group-ID", "1")
+            self.SendReplyPacket(pkt.fd, reply)
+
+        def RunWithStop(self, t_events):
+            self._poll = select.poll()
+            self._fdmap = {}
+            self._PrepareSockets()
+            self.t_events = t_events
+
+            while not t_events['stop'].is_set():
+                for (fd, event) in self._poll.poll(1000):
+                    if event == select.POLLIN:
+                        try:
+                            fdo = self._fdmap[fd]
+                            self._ProcessInput(fdo)
+                        except ServerPacketError as err:
+                            logger.info("pyrad server dropping packet: " + str(err))
+                        except pyrad.packet.PacketError as err:
+                            logger.info("pyrad server received invalid packet: " + str(err))
+                    else:
+                        logger.error("Unexpected event in pyrad server main loop")
+
+    srv = TestServer(dict=pyrad.dictionary.Dictionary("dictionary.radius"),
+                     authport=18138, acctport=18139)
+    srv.hosts["127.0.0.1"] = pyrad.server.RemoteHost("127.0.0.1",
+                                                     "radius",
+                                                     "localhost")
+    srv.BindToAddress("")
+    t_events = {}
+    t_events['stop'] = threading.Event()
+    t_events['long'] = threading.Event()
+    t = threading.Thread(target=run_pyrad_server, args=(srv, t_events))
+    t.start()
+
+    try:
+        ssid = "test-wpa2-psk"
+        params = hostapd.radius_params()
+        params['ssid'] = ssid
+        params["wpa"] = "2"
+        params["wpa_key_mgmt"] = "WPA-PSK"
+        params["rsn_pairwise"] = "CCMP"
+        params['macaddr_acl'] = '2'
+        params['dynamic_vlan'] = "2"
+        params['wpa_passphrase'] = '0123456789abcdefghi'
+        params['auth_server_port'] = "18138"
+        hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+        logger.info("connecting without VLAN")
+        dev[0].connect(ssid, psk="0123456789abcdefghi", scan_freq="2412",wait_connect=False)
+        ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED",
+                                "CTRL-EVENT-SSID-TEMP-DISABLED"], timeout=20)
+        if ev is None:
+            raise Exception("Timeout on connection attempt")
+        if "CTRL-EVENT-CONNECTED" in ev:
+            raise Exception("Unexpected success without vlan parameters")
+        logger.info("connecting without VLAN failed as expected")
+        t_events['long'].set()
+        logger.info("connecting with VLAN")
+        dev[2].connect(ssid, psk="0123456789abcdefghi", scan_freq="2412",wait_connect=False)
+        ev = dev[2].wait_event(["CTRL-EVENT-CONNECTED",
+                                "CTRL-EVENT-SSID-TEMP-DISABLED"], timeout=20)
+        if ev is None:
+            raise Exception("Timeout on connection attempt")
+        if "CTRL-EVENT-SSID-TEMP-DISABLED" in ev:
+            raise Exception("Unexpected failure with vlan parameters")
+        logger.info("connecting with VLAN succeeded as expected")
+    finally:
+        t_events['stop'].set()
+        t.join()

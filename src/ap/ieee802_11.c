@@ -609,7 +609,7 @@ static int sae_sm_step(struct hostapd_data *hapd, struct sta_info *sta,
 				return WLAN_STATUS_SUCCESS;
 			sta->sae->sync++;
 
-			ret = auth_sae_send_commit(hapd, sta, bssid, 1);
+			ret = auth_sae_send_commit(hapd, sta, bssid, 0);
 			if (ret)
 				return ret;
 

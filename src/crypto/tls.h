@@ -253,6 +253,7 @@ int tls_connection_established(void *tls_ctx, struct tls_connection *conn);
 int tls_connection_shutdown(void *tls_ctx, struct tls_connection *conn);
 
 enum {
+	TLS_SET_PARAMS_ENGINE_PRV_BAD_PIN = -4,
 	TLS_SET_PARAMS_ENGINE_PRV_VERIFY_FAILED = -3,
 	TLS_SET_PARAMS_ENGINE_PRV_INIT_FAILED = -2
 };
@@ -263,10 +264,12 @@ enum {
  * @conn: Connection context data from tls_connection_init()
  * @params: Connection parameters
  * Returns: 0 on success, -1 on failure,
- * TLS_SET_PARAMS_ENGINE_PRV_INIT_FAILED (-2) on possible PIN error causing
- * PKCS#11 engine failure, or
+ * TLS_SET_PARAMS_ENGINE_PRV_INIT_FAILED (-2) on error causing PKCS#11 engine
+ * failure, or
  * TLS_SET_PARAMS_ENGINE_PRV_VERIFY_FAILED (-3) on failure to verify the
- * PKCS#11 engine private key.
+ * PKCS#11 engine private key, or
+ * TLS_SET_PARAMS_ENGINE_PRV_BAD_PIN (-4) on PIN error causing PKCS#11 engine
+ * failure.
  */
 int __must_check
 tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
@@ -277,10 +280,12 @@ tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
  * @tls_ctx: TLS context data from tls_init()
  * @params: Global TLS parameters
  * Returns: 0 on success, -1 on failure,
- * TLS_SET_PARAMS_ENGINE_PRV_INIT_FAILED (-2) on possible PIN error causing
- * PKCS#11 engine failure, or
+ * TLS_SET_PARAMS_ENGINE_PRV_INIT_FAILED (-2) on error causing PKCS#11 engine
+ * failure, or
  * TLS_SET_PARAMS_ENGINE_PRV_VERIFY_FAILED (-3) on failure to verify the
- * PKCS#11 engine private key.
+ * PKCS#11 engine private key, or
+ * TLS_SET_PARAMS_ENGINE_PRV_BAD_PIN (-4) on PIN error causing PKCS#11 engine
+ * failure.
  */
 int __must_check tls_global_set_params(
 	void *tls_ctx, const struct tls_connection_params *params);

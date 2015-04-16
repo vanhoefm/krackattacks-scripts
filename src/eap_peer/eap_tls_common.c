@@ -196,28 +196,25 @@ static int eap_tls_init_connection(struct eap_sm *sm,
 	}
 
 	res = tls_connection_set_params(data->ssl_ctx, data->conn, params);
-	if (res == TLS_SET_PARAMS_ENGINE_PRV_INIT_FAILED) {
+	if (res == TLS_SET_PARAMS_ENGINE_PRV_BAD_PIN) {
 		/*
-		 * At this point with the pkcs11 engine the PIN might be wrong.
-		 * We reset the PIN in the configuration to be sure to not use
-		 * it again and the calling function must request a new one.
+		 * At this point with the pkcs11 engine the PIN is wrong. We
+		 * reset the PIN in the configuration to be sure to not use it
+		 * again and the calling function must request a new one.
 		 */
-		os_free(config->pin);
-		config->pin = NULL;
-	} else if (res == TLS_SET_PARAMS_ENGINE_PRV_VERIFY_FAILED) {
-		wpa_printf(MSG_INFO, "TLS: Failed to load private key");
-		/*
-		 * We do not know exactly but maybe the PIN was wrong,
-		 * so ask for a new one.
-		 */
+		wpa_printf(MSG_INFO,
+			   "TLS: Bad PIN provided, requesting a new one");
 		os_free(config->pin);
 		config->pin = NULL;
 		eap_sm_request_pin(sm);
 		sm->ignore = TRUE;
-		tls_connection_deinit(data->ssl_ctx, data->conn);
-		data->conn = NULL;
-		return -1;
-	} else if (res) {
+	} else if (res == TLS_SET_PARAMS_ENGINE_PRV_INIT_FAILED) {
+		wpa_printf(MSG_INFO, "TLS: Failed to initialize engine");
+	} else if (res == TLS_SET_PARAMS_ENGINE_PRV_VERIFY_FAILED) {
+		wpa_printf(MSG_INFO, "TLS: Failed to load private key");
+		sm->ignore = TRUE;
+	}
+	if (res) {
 		wpa_printf(MSG_INFO, "TLS: Failed to set TLS connection "
 			   "parameters");
 		tls_connection_deinit(data->ssl_ctx, data->conn);

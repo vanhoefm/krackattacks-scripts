@@ -81,6 +81,7 @@ static int eap_example_server_init_tls(void)
 	/* tparams.private_key = "server.key"; */
 	tparams.private_key = "server-key.pem";
 	/* tparams.private_key_passwd = "whatever"; */
+	tparams.dh_file = "dh.conf";
 
 	if (tls_global_set_params(eap_ctx.tls_ctx, &tparams)) {
 		printf("Failed to set TLS parameters\n");

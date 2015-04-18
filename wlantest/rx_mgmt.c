@@ -53,16 +53,19 @@ static void rx_mgmt_beacon(struct wlantest *wt, const u8 *data, size_t len)
 	const struct ieee80211_mgmt *mgmt;
 	struct wlantest_bss *bss;
 	struct ieee802_11_elems elems;
+	size_t offset;
 
 	mgmt = (const struct ieee80211_mgmt *) data;
+	offset = mgmt->u.beacon.variable - data;
+	if (len < offset)
+		return;
 	bss = bss_get(wt, mgmt->bssid);
 	if (bss == NULL)
 		return;
 	if (bss->proberesp_seen)
 		return; /* do not override with Beacon data */
 	bss->capab_info = le_to_host16(mgmt->u.beacon.capab_info);
-	if (ieee802_11_parse_elems(mgmt->u.beacon.variable,
-				   len - (mgmt->u.beacon.variable - data),
+	if (ieee802_11_parse_elems(mgmt->u.beacon.variable, len - offset,
 				   &elems, 0) == ParseFailed) {
 		if (bss->parse_error_reported)
 			return;
@@ -81,16 +84,19 @@ static void rx_mgmt_probe_resp(struct wlantest *wt, const u8 *data, size_t len)
 	const struct ieee80211_mgmt *mgmt;
 	struct wlantest_bss *bss;
 	struct ieee802_11_elems elems;
+	size_t offset;
 
 	mgmt = (const struct ieee80211_mgmt *) data;
+	offset = mgmt->u.probe_resp.variable - data;
+	if (len < offset)
+		return;
 	bss = bss_get(wt, mgmt->bssid);
 	if (bss == NULL)
 		return;
 
 	bss->counters[WLANTEST_BSS_COUNTER_PROBE_RESPONSE]++;
 	bss->capab_info = le_to_host16(mgmt->u.probe_resp.capab_info);
-	if (ieee802_11_parse_elems(mgmt->u.probe_resp.variable,
-				   len - (mgmt->u.probe_resp.variable - data),
+	if (ieee802_11_parse_elems(mgmt->u.probe_resp.variable, len - offset,
 				   &elems, 0) == ParseFailed) {
 		if (bss->parse_error_reported)
 			return;

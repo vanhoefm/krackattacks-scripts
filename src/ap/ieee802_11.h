@@ -14,6 +14,7 @@ struct hostapd_data;
 struct sta_info;
 struct hostapd_frame_info;
 struct ieee80211_ht_capabilities;
+struct ieee80211_vht_capabilities;
 struct ieee80211_mgmt;
 
 int ieee802_11_mgmt(struct hostapd_data *hapd, const u8 *buf, size_t len,

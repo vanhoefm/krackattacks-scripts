@@ -142,7 +142,8 @@ static int tdls_verify_mic(struct wlantest *wt, struct wlantest_tdls *tdls,
 	struct rsn_ftie *tmp_ftie;
 
 	if (elems->link_id == NULL || elems->rsn_ie == NULL ||
-	    elems->timeout_int == NULL || elems->ftie == NULL)
+	    elems->timeout_int == NULL || elems->ftie == NULL ||
+	    elems->ftie_len < sizeof(struct rsn_ftie))
 		return -1;
 
 	len = 2 * ETH_ALEN + 1 + 2 + 18 + 2 + elems->rsn_ie_len +
@@ -488,7 +489,8 @@ static int tdls_verify_mic_teardown(struct wlantest *wt,
 	const struct rsn_ftie *rx_ftie;
 	struct rsn_ftie *tmp_ftie;
 
-	if (elems->link_id == NULL || elems->ftie == NULL)
+	if (elems->link_id == NULL || elems->ftie == NULL ||
+	    elems->ftie_len < sizeof(struct rsn_ftie))
 		return -1;
 
 	len = 2 + 18 + 2 + 1 + 1 + 2 + elems->ftie_len;

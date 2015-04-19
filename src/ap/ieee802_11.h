@@ -70,7 +70,7 @@ void update_ht_state(struct hostapd_data *hapd, struct sta_info *sta);
 void ht40_intolerant_add(struct hostapd_iface *iface, struct sta_info *sta);
 void ht40_intolerant_remove(struct hostapd_iface *iface, struct sta_info *sta);
 u16 copy_sta_vht_capab(struct hostapd_data *hapd, struct sta_info *sta,
-		       const u8 *vht_capab, size_t vht_capab_len);
+		       const u8 *vht_capab);
 u16 set_sta_vht_opmode(struct hostapd_data *hapd, struct sta_info *sta,
 		       const u8 *vht_opmode);
 void hostapd_tx_status(struct hostapd_data *hapd, const u8 *addr,

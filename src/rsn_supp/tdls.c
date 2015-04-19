@@ -1603,9 +1603,7 @@ static int copy_peer_ht_capab(const struct wpa_eapol_ie_parse *kde,
 static int copy_peer_vht_capab(const struct wpa_eapol_ie_parse *kde,
 			      struct wpa_tdls_peer *peer)
 {
-	if (!kde->vht_capabilities ||
-	    kde->vht_capabilities_len <
-	    sizeof(struct ieee80211_vht_capabilities) ) {
+	if (!kde->vht_capabilities) {
 		wpa_printf(MSG_DEBUG, "TDLS: No supported vht capabilities "
 			   "received");
 		return 0;

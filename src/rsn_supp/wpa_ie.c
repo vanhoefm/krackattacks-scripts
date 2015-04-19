@@ -559,9 +559,10 @@ int wpa_supplicant_parse_ies(const u8 *buf, size_t len,
 		} else if (*pos == WLAN_EID_VHT_AID) {
 			if (pos[1] >= 2)
 				ie->aid = WPA_GET_LE16(pos + 2) & 0x3fff;
-		} else if (*pos == WLAN_EID_VHT_CAP) {
+		} else if (*pos == WLAN_EID_VHT_CAP &&
+			   pos[1] >= sizeof(struct ieee80211_vht_capabilities))
+		{
 			ie->vht_capabilities = pos + 2;
-			ie->vht_capabilities_len = pos[1];
 		} else if (*pos == WLAN_EID_QOS && pos[1] >= 1) {
 			ie->qosinfo = pos[2];
 		} else if (*pos == WLAN_EID_SUPPORTED_CHANNELS) {

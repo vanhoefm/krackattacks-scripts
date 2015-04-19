@@ -286,8 +286,9 @@ ParseRes ieee802_11_parse_elems(const u8 *start, size_t len,
 			elems->peer_mgmt_len = elen;
 			break;
 		case WLAN_EID_VHT_CAP:
+			if (elen < sizeof(struct ieee80211_vht_capabilities))
+				break;
 			elems->vht_capabilities = pos;
-			elems->vht_capabilities_len = elen;
 			break;
 		case WLAN_EID_VHT_OPERATION:
 			elems->vht_operation = pos;

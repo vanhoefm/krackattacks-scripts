@@ -453,22 +453,23 @@ static int mesh_attr_text(const u8 *ies, size_t ies_len, char *buf, char *end)
 		ret = os_snprintf(pos, end - pos, "bss_basic_rate_set=%d",
 				  bss_basic_rate_set[0]);
 		if (os_snprintf_error(end - pos, ret))
-			return pos - buf;
+			goto fail;
 		pos += ret;
 
 		for (i = 1; i < bss_basic_rate_set_len; i++) {
 			ret = os_snprintf(pos, end - pos, " %d",
 					  bss_basic_rate_set[i]);
 			if (os_snprintf_error(end - pos, ret))
-				return pos - buf;
+				goto fail;
 			pos += ret;
 		}
 
 		ret = os_snprintf(pos, end - pos, "\n");
 		if (os_snprintf_error(end - pos, ret))
-			return pos - buf;
+			goto fail;
 		pos += ret;
 	}
+fail:
 	os_free(bss_basic_rate_set);
 
 	return pos - buf;

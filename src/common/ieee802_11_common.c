@@ -223,8 +223,9 @@ ParseRes ieee802_11_parse_elems(const u8 *start, size_t len,
 			elems->challenge_len = elen;
 			break;
 		case WLAN_EID_ERP_INFO:
+			if (elen < 1)
+				break;
 			elems->erp_info = pos;
-			elems->erp_info_len = elen;
 			break;
 		case WLAN_EID_EXT_SUPP_RATES:
 			elems->ext_supp_rates = pos;

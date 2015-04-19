@@ -52,7 +52,6 @@ struct ieee802_11_elems {
 	u8 ssid_len;
 	u8 supp_rates_len;
 	u8 challenge_len;
-	u8 erp_info_len;
 	u8 ext_supp_rates_len;
 	u8 wpa_ie_len;
 	u8 rsn_ie_len;

@@ -147,7 +147,7 @@ static int tdls_verify_mic(struct wlantest *wt, struct wlantest_tdls *tdls,
 		return -1;
 
 	len = 2 * ETH_ALEN + 1 + 2 + 18 + 2 + elems->rsn_ie_len +
-		2 + elems->timeout_int_len + 2 + elems->ftie_len;
+		2 + 5 + 2 + elems->ftie_len;
 
 	buf = os_zalloc(len);
 	if (buf == NULL)
@@ -169,8 +169,8 @@ static int tdls_verify_mic(struct wlantest *wt, struct wlantest_tdls *tdls,
 	os_memcpy(pos, elems->rsn_ie - 2, 2 + elems->rsn_ie_len);
 	pos += 2 + elems->rsn_ie_len;
 	/* 6) Timeout Interval IE */
-	os_memcpy(pos, elems->timeout_int - 2, 2 + elems->timeout_int_len);
-	pos += 2 + elems->timeout_int_len;
+	os_memcpy(pos, elems->timeout_int - 2, 2 + 5);
+	pos += 2 + 5;
 	/* 7) FTIE, with the MIC field of the FTIE set to 0 */
 	os_memcpy(pos, elems->ftie - 2, 2 + elems->ftie_len);
 	pos += 2;

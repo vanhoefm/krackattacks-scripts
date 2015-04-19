@@ -348,7 +348,6 @@ static void rx_mgmt_assoc_resp(struct wlantest *wt, const u8 *data, size_t len)
 				 "AssocResp from " MACSTR,
 				 MAC2STR(mgmt->sa));
 		} else if (elems.timeout_int == NULL ||
-			   elems.timeout_int_len != 5 ||
 			   elems.timeout_int[0] !=
 			   WLAN_TIMEOUT_ASSOC_COMEBACK) {
 			add_note(wt, MSG_INFO, "No valid Timeout Interval IE "
@@ -481,7 +480,6 @@ static void rx_mgmt_reassoc_resp(struct wlantest *wt, const u8 *data,
 				 "ReassocResp from " MACSTR,
 				 MAC2STR(mgmt->sa));
 		} else if (elems.timeout_int == NULL ||
-			   elems.timeout_int_len != 5 ||
 			   elems.timeout_int[0] !=
 			   WLAN_TIMEOUT_ASSOC_COMEBACK) {
 			add_note(wt, MSG_INFO, "No valid Timeout Interval IE "

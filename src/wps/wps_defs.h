@@ -42,6 +42,10 @@ extern int wps_corrupt_pkhash;
 #define WPS_OOB_DEVICE_PASSWORD_LEN 32
 #define WPS_OOB_PUBKEY_HASH_LEN 20
 #define WPS_DEV_NAME_MAX_LEN 32
+#define WPS_MANUFACTURER_MAX_LEN 64
+#define WPS_MODEL_NAME_MAX_LEN 32
+#define WPS_MODEL_NUMBER_MAX_LEN 32
+#define WPS_SERIAL_NUMBER_MAX_LEN 32
 
 /* Attribute Types */
 enum wps_attribute {

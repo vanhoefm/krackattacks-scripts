@@ -274,22 +274,22 @@ struct p2p_peer_info {
 	/**
 	 * manufacturer - Manufacturer (0..64 octets encoded in UTF-8)
 	 */
-	char manufacturer[65];
+	char manufacturer[WPS_MANUFACTURER_MAX_LEN + 1];
 
 	/**
 	 * model_name - Model Name (0..32 octets encoded in UTF-8)
 	 */
-	char model_name[33];
+	char model_name[WPS_MODEL_NAME_MAX_LEN + 1];
 
 	/**
 	 * model_number - Model Number (0..32 octets encoded in UTF-8)
 	 */
-	char model_number[33];
+	char model_number[WPS_MODEL_NUMBER_MAX_LEN + 1];
 
 	/**
 	 * serial_number - Serial Number (0..32 octets encoded in UTF-8)
 	 */
-	char serial_number[33];
+	char serial_number[WPS_SERIAL_NUMBER_MAX_LEN + 1];
 
 	/**
 	 * level - Signal level

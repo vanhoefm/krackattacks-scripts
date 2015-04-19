@@ -447,19 +447,31 @@ static int wps_set_attr(struct wps_parse_attr *attr, u16 type,
 		break;
 	case ATTR_MANUFACTURER:
 		attr->manufacturer = pos;
-		attr->manufacturer_len = len;
+		if (len > WPS_MANUFACTURER_MAX_LEN)
+			attr->manufacturer_len = WPS_MANUFACTURER_MAX_LEN;
+		else
+			attr->manufacturer_len = len;
 		break;
 	case ATTR_MODEL_NAME:
 		attr->model_name = pos;
-		attr->model_name_len = len;
+		if (len > WPS_MODEL_NAME_MAX_LEN)
+			attr->model_name_len = WPS_MODEL_NAME_MAX_LEN;
+		else
+			attr->model_name_len = len;
 		break;
 	case ATTR_MODEL_NUMBER:
 		attr->model_number = pos;
-		attr->model_number_len = len;
+		if (len > WPS_MODEL_NUMBER_MAX_LEN)
+			attr->model_number_len = WPS_MODEL_NUMBER_MAX_LEN;
+		else
+			attr->model_number_len = len;
 		break;
 	case ATTR_SERIAL_NUMBER:
 		attr->serial_number = pos;
-		attr->serial_number_len = len;
+		if (len > WPS_SERIAL_NUMBER_MAX_LEN)
+			attr->serial_number_len = WPS_SERIAL_NUMBER_MAX_LEN;
+		else
+			attr->serial_number_len = len;
 		break;
 	case ATTR_DEV_NAME:
 		if (len > WPS_DEV_NAME_MAX_LEN) {

@@ -270,8 +270,9 @@ ParseRes ieee802_11_parse_elems(const u8 *start, size_t len,
 			elems->ht_capabilities = pos;
 			break;
 		case WLAN_EID_HT_OPERATION:
+			if (elen < sizeof(struct ieee80211_ht_operation))
+				break;
 			elems->ht_operation = pos;
-			elems->ht_operation_len = elen;
 			break;
 		case WLAN_EID_MESH_CONFIG:
 			elems->mesh_config = pos;

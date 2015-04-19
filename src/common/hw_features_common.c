@@ -152,8 +152,7 @@ void get_pri_sec_chan(struct wpa_scan_res *bss, int *pri_chan, int *sec_chan)
 	*pri_chan = *sec_chan = 0;
 
 	ieee802_11_parse_elems((u8 *) (bss + 1), bss->ie_len, &elems, 0);
-	if (elems.ht_operation &&
-	    elems.ht_operation_len >= sizeof(*oper)) {
+	if (elems.ht_operation) {
 		oper = (struct ieee80211_ht_operation *) elems.ht_operation;
 		*pri_chan = oper->primary_chan;
 		if (oper->ht_param & HT_INFO_HT_PARAM_STA_CHNL_WIDTH) {
@@ -253,8 +252,7 @@ int check_20mhz_bss(struct wpa_scan_res *bss, int pri_freq, int start, int end)
 		return 1;
 	}
 
-	if (elems.ht_operation &&
-	    elems.ht_operation_len >= sizeof(*oper)) {
+	if (elems.ht_operation) {
 		oper = (struct ieee80211_ht_operation *) elems.ht_operation;
 		if (oper->ht_param & HT_INFO_HT_PARAM_SECONDARY_CHNL_OFF_MASK)
 			return 0;

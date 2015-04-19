@@ -64,7 +64,6 @@ struct ieee802_11_elems {
 	u8 mesh_config_len;
 	u8 mesh_id_len;
 	u8 peer_mgmt_len;
-	u8 vht_operation_len;
 	u8 vendor_ht_cap_len;
 	u8 vendor_vht_len;
 	u8 p2p_len;

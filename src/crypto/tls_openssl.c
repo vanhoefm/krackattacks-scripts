@@ -2703,8 +2703,7 @@ static int openssl_tls_prf(void *tls_ctx, struct tls_connection *conn,
 		return -1;
 	ssl = conn->ssl;
 	if (ssl == NULL || ssl->s3 == NULL || ssl->session == NULL ||
-	    ssl->s3->client_random == NULL || ssl->s3->server_random == NULL ||
-	    ssl->session->master_key == NULL)
+	    ssl->session->master_key_length <= 0)
 		return -1;
 
 	if (skip_keyblock) {

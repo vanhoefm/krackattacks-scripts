@@ -484,6 +484,18 @@ static int wps_set_attr(struct wps_parse_attr *attr, u16 type,
 		attr->dev_name_len = len;
 		break;
 	case ATTR_PUBLIC_KEY:
+		/*
+		 * The Public Key attribute is supposed to be exactly 192 bytes
+		 * in length. Allow couple of bytes shorter one to try to
+		 * interoperate with implementations that do not use proper
+		 * zero-padding.
+		 */
+		if (len < 190 || len > 192) {
+			wpa_printf(MSG_DEBUG,
+				   "WPS: Ignore Public Key with unexpected length %u",
+				   len);
+			break;
+		}
 		attr->public_key = pos;
 		attr->public_key_len = len;
 		break;

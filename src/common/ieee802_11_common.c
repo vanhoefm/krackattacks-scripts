@@ -1,6 +1,6 @@
 /*
  * IEEE 802.11 Common routines
- * Copyright (c) 2002-2013, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -10,6 +10,7 @@
 
 #include "common.h"
 #include "defs.h"
+#include "wpa_common.h"
 #include "ieee802_11_defs.h"
 #include "ieee802_11_common.h"
 
@@ -245,14 +246,20 @@ ParseRes ieee802_11_parse_elems(const u8 *start, size_t len,
 			elems->supp_channels_len = elen;
 			break;
 		case WLAN_EID_MOBILITY_DOMAIN:
+			if (elen < sizeof(struct rsn_mdie))
+				break;
 			elems->mdie = pos;
 			elems->mdie_len = elen;
 			break;
 		case WLAN_EID_FAST_BSS_TRANSITION:
+			if (elen < sizeof(struct rsn_ftie))
+				break;
 			elems->ftie = pos;
 			elems->ftie_len = elen;
 			break;
 		case WLAN_EID_TIMEOUT_INTERVAL:
+			if (elen != 5)
+				break;
 			elems->timeout_int = pos;
 			elems->timeout_int_len = elen;
 			break;

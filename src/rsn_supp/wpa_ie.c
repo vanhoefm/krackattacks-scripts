@@ -511,12 +511,14 @@ int wpa_supplicant_parse_ies(const u8 *buf, size_t len,
 			ie->rsn_ie_len = pos[1] + 2;
 			wpa_hexdump(MSG_DEBUG, "WPA: RSN IE in EAPOL-Key",
 				    ie->rsn_ie, ie->rsn_ie_len);
-		} else if (*pos == WLAN_EID_MOBILITY_DOMAIN) {
+		} else if (*pos == WLAN_EID_MOBILITY_DOMAIN &&
+			   pos[1] >= sizeof(struct rsn_mdie)) {
 			ie->mdie = pos;
 			ie->mdie_len = pos[1] + 2;
 			wpa_hexdump(MSG_DEBUG, "WPA: MDIE in EAPOL-Key",
 				    ie->mdie, ie->mdie_len);
-		} else if (*pos == WLAN_EID_FAST_BSS_TRANSITION) {
+		} else if (*pos == WLAN_EID_FAST_BSS_TRANSITION &&
+			   pos[1] >= sizeof(struct rsn_ftie)) {
 			ie->ftie = pos;
 			ie->ftie_len = pos[1] + 2;
 			wpa_hexdump(MSG_DEBUG, "WPA: FTIE in EAPOL-Key",

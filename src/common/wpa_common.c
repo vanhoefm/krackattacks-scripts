@@ -356,6 +356,8 @@ int wpa_ft_parse_ies(const u8 *ies, size_t ies_len,
 				parse->rsn_pmkid = data.pmkid;
 			break;
 		case WLAN_EID_MOBILITY_DOMAIN:
+			if (pos[1] < sizeof(struct rsn_mdie))
+				return -1;
 			parse->mdie = pos + 2;
 			parse->mdie_len = pos[1];
 			break;
@@ -368,6 +370,8 @@ int wpa_ft_parse_ies(const u8 *ies, size_t ies_len,
 				return -1;
 			break;
 		case WLAN_EID_TIMEOUT_INTERVAL:
+			if (pos[1] != 5)
+				break;
 			parse->tie = pos + 2;
 			parse->tie_len = pos[1];
 			break;

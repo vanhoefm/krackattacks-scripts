@@ -62,7 +62,7 @@ void hostapd_get_vht_capab(struct hostapd_data *hapd,
 			   struct ieee80211_vht_capabilities *vht_cap,
 			   struct ieee80211_vht_capabilities *neg_vht_cap);
 u16 copy_sta_ht_capab(struct hostapd_data *hapd, struct sta_info *sta,
-		      const u8 *ht_capab, size_t ht_capab_len);
+		      const u8 *ht_capab);
 u16 copy_sta_vendor_vht(struct hostapd_data *hapd, struct sta_info *sta,
 			const u8 *ie, size_t len);
 

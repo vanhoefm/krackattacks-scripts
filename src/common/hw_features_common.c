@@ -335,9 +335,7 @@ int check_40mhz_2g4(struct hostapd_hw_modes *mode,
 
 		ieee802_11_parse_elems((u8 *) (bss + 1), bss->ie_len, &elems,
 				       0);
-		if (elems.ht_capabilities &&
-		    elems.ht_capabilities_len >=
-		    sizeof(struct ieee80211_ht_capabilities)) {
+		if (elems.ht_capabilities) {
 			struct ieee80211_ht_capabilities *ht_cap =
 				(struct ieee80211_ht_capabilities *)
 				elems.ht_capabilities;

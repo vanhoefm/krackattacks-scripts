@@ -553,9 +553,9 @@ int wpa_supplicant_parse_ies(const u8 *buf, size_t len,
 		} else if (*pos == WLAN_EID_EXT_SUPP_RATES) {
 			ie->ext_supp_rates = pos;
 			ie->ext_supp_rates_len = pos[1] + 2;
-		} else if (*pos == WLAN_EID_HT_CAP) {
+		} else if (*pos == WLAN_EID_HT_CAP &&
+			   pos[1] >= sizeof(struct ieee80211_ht_capabilities)) {
 			ie->ht_capabilities = pos + 2;
-			ie->ht_capabilities_len = pos[1];
 		} else if (*pos == WLAN_EID_VHT_AID) {
 			if (pos[1] >= 2)
 				ie->aid = WPA_GET_LE16(pos + 2) & 0x3fff;

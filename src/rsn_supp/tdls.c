@@ -1577,9 +1577,7 @@ static int copy_supp_rates(const struct wpa_eapol_ie_parse *kde,
 static int copy_peer_ht_capab(const struct wpa_eapol_ie_parse *kde,
 			      struct wpa_tdls_peer *peer)
 {
-	if (!kde->ht_capabilities ||
-	    kde->ht_capabilities_len <
-	    sizeof(struct ieee80211_ht_capabilities) ) {
+	if (!kde->ht_capabilities) {
 		wpa_printf(MSG_DEBUG, "TDLS: No supported ht capabilities "
 			   "received");
 		return 0;

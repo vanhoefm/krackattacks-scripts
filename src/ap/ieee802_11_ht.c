@@ -310,7 +310,7 @@ void hostapd_2040_coex_action(struct hostapd_data *hapd,
 
 
 u16 copy_sta_ht_capab(struct hostapd_data *hapd, struct sta_info *sta,
-		      const u8 *ht_capab, size_t ht_capab_len)
+		      const u8 *ht_capab)
 {
 	/*
 	 * Disable HT caps for STAs associated to no-HT BSSes, or for stations
@@ -318,7 +318,6 @@ u16 copy_sta_ht_capab(struct hostapd_data *hapd, struct sta_info *sta,
 	 * frame.
 	 */
 	if (!ht_capab ||
-	    ht_capab_len < sizeof(struct ieee80211_ht_capabilities) ||
 	    !(sta->flags & WLAN_STA_WMM) || hapd->conf->disable_11n) {
 		sta->flags &= ~WLAN_STA_HT;
 		os_free(sta->ht_capabilities);

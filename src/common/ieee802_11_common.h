@@ -61,7 +61,6 @@ struct ieee802_11_elems {
 	u8 supp_channels_len;
 	u8 mdie_len;
 	u8 ftie_len;
-	u8 ht_capabilities_len;
 	u8 ht_operation_len;
 	u8 mesh_config_len;
 	u8 mesh_id_len;

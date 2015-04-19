@@ -551,8 +551,7 @@ static struct sta_info * mesh_mpm_add_peer(struct wpa_supplicant *wpa_s,
 	mesh_mpm_init_link(wpa_s, sta);
 
 #ifdef CONFIG_IEEE80211N
-	copy_sta_ht_capab(data, sta, elems->ht_capabilities,
-			elems->ht_capabilities_len);
+	copy_sta_ht_capab(data, sta, elems->ht_capabilities);
 	update_ht_state(data, sta);
 #endif /* CONFIG_IEEE80211N */
 

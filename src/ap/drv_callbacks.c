@@ -126,8 +126,6 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 #ifdef CONFIG_IEEE80211N
 #ifdef NEED_AP_MLME
 	if (elems.ht_capabilities &&
-	    elems.ht_capabilities_len >=
-	    sizeof(struct ieee80211_ht_capabilities) &&
 	    (hapd->iface->conf->ht_capab &
 	     HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET)) {
 		struct ieee80211_ht_capabilities *ht_cap =

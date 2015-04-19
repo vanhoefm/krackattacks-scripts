@@ -265,8 +265,9 @@ ParseRes ieee802_11_parse_elems(const u8 *start, size_t len,
 			elems->timeout_int = pos;
 			break;
 		case WLAN_EID_HT_CAP:
+			if (elen < sizeof(struct ieee80211_ht_capabilities))
+				break;
 			elems->ht_capabilities = pos;
-			elems->ht_capabilities_len = elen;
 			break;
 		case WLAN_EID_HT_OPERATION:
 			elems->ht_operation = pos;

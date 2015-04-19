@@ -588,7 +588,7 @@ void handle_probe_req(struct hostapd_data *hapd,
 	 * is less likely to see them (Probe Request frame sent on a
 	 * neighboring, but partially overlapping, channel).
 	 */
-	if (elems.ds_params && elems.ds_params_len == 1 &&
+	if (elems.ds_params &&
 	    hapd->iface->current_mode &&
 	    (hapd->iface->current_mode->mode == HOSTAPD_MODE_IEEE80211G ||
 	     hapd->iface->current_mode->mode == HOSTAPD_MODE_IEEE80211B) &&

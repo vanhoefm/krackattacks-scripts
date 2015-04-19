@@ -198,7 +198,7 @@ void ap_list_process_beacon(struct hostapd_iface *iface,
 	else
 		ap->erp = -1;
 
-	if (elems->ds_params && elems->ds_params_len == 1)
+	if (elems->ds_params)
 		ap->channel = elems->ds_params[0];
 	else if (elems->ht_operation && elems->ht_operation_len >= 1)
 		ap->channel = elems->ht_operation[0];

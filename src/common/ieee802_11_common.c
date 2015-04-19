@@ -211,8 +211,9 @@ ParseRes ieee802_11_parse_elems(const u8 *start, size_t len,
 			elems->supp_rates_len = elen;
 			break;
 		case WLAN_EID_DS_PARAMS:
+			if (elen < 1)
+				break;
 			elems->ds_params = pos;
-			elems->ds_params_len = elen;
 			break;
 		case WLAN_EID_CF_PARAMS:
 		case WLAN_EID_TIM:

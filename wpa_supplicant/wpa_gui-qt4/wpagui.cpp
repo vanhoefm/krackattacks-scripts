@@ -1503,8 +1503,8 @@ void WpaGui::updateTrayIcon(TrayIconType type)
 	if (!tray_icon || currentIconType == type)
 		return;
 
-	QIcon icon;
 	QIcon fallback_icon;
+	QStringList names;
 
 	if (QImageReader::supportedImageFormats().contains(QByteArray("svg")))
 		fallback_icon = QIcon(":/icons/wpa_gui.svg");
@@ -1513,41 +1513,59 @@ void WpaGui::updateTrayIcon(TrayIconType type)
 
 	switch (type) {
 	case TrayIconOffline:
-		icon = QIcon::fromTheme("network-wireless-offline",
-					fallback_icon);
+		names << "network-wireless-offline-symbolic"
+		      << "network-wireless-offline"
+		      << "network-wireless-signal-none-symbolic"
+		      << "network-wireless-signal-none";
 		break;
 	case TrayIconAcquiring:
-		icon = QIcon::fromTheme("network-wireless-acquiring",
-					fallback_icon);
+		names << "network-wireless-acquiring-symbolic"
+		      << "network-wireless-acquiring";
 		break;
 	case TrayIconConnected:
-		icon = QIcon::fromTheme("network-wireless-connected",
-					fallback_icon);
+		names << "network-wireless-connected-symbolic"
+		      << "network-wireless-connected";
 		break;
 	case TrayIconSignalNone:
-		icon = QIcon::fromTheme("network-wireless-signal-none",
-					fallback_icon);
+		names << "network-wireless-signal-none-symbolic"
+		      << "network-wireless-signal-none";
 		break;
 	case TrayIconSignalWeak:
-		icon = QIcon::fromTheme("network-wireless-signal-weak",
-					fallback_icon);
+		names << "network-wireless-signal-weak-symbolic"
+		      << "network-wireless-signal-weak";
 		break;
 	case TrayIconSignalOk:
-		icon = QIcon::fromTheme("network-wireless-signal-ok",
-					fallback_icon);
+		names << "network-wireless-signal-ok-symbolic"
+		      << "network-wireless-signal-ok";
 		break;
 	case TrayIconSignalGood:
-		icon = QIcon::fromTheme("network-wireless-signal-good",
-					fallback_icon);
+		names << "network-wireless-signal-good-symbolic"
+		      << "network-wireless-signal-good";
 		break;
 	case TrayIconSignalExcellent:
-		icon = QIcon::fromTheme("network-wireless-signal-excellent",
-					fallback_icon);
+		names << "network-wireless-signal-excellent-symbolic"
+		      << "network-wireless-signal-excellent";
 		break;
 	}
 
 	currentIconType = type;
-	tray_icon->setIcon(icon);
+	tray_icon->setIcon(loadThemedIcon(names, fallback_icon));
+}
+
+
+QIcon WpaGui::loadThemedIcon(const QStringList &names,
+			     const QIcon &fallback)
+{
+	QIcon icon;
+
+	for (QStringList::ConstIterator it = names.begin();
+	     it != names.end(); it++) {
+		icon = QIcon::fromTheme(*it);
+		if (!icon.isNull())
+			return icon;
+	}
+
+	return fallback;
 }
 
 

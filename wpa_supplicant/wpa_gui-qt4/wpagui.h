@@ -85,6 +85,8 @@ public slots:
 	virtual void showTrayStatus();
 	virtual void updateTrayIcon(TrayIconType type);
 	virtual void updateTrayToolTip(const QString &msg);
+	virtual QIcon loadThemedIcon(const QStringList &names,
+				     const QIcon &fallback);
 	virtual void wpsDialog();
 	virtual void peersDialog();
 	virtual void tabChanged(int index);

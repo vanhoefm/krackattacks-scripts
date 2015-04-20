@@ -1652,7 +1652,7 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 
 	switch (hdr->code) {
 	case RADIUS_CODE_ACCESS_ACCEPT:
-		if (sta->ssid->dynamic_vlan == DYNAMIC_VLAN_DISABLED)
+		if (hapd->conf->ssid.dynamic_vlan == DYNAMIC_VLAN_DISABLED)
 			vlan_id = 0;
 #ifndef CONFIG_NO_VLAN
 		else
@@ -1671,7 +1671,8 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 				       "Invalid VLAN ID %d received from RADIUS server",
 				       vlan_id);
 			break;
-		} else if (sta->ssid->dynamic_vlan == DYNAMIC_VLAN_REQUIRED) {
+		} else if (hapd->conf->ssid.dynamic_vlan ==
+			   DYNAMIC_VLAN_REQUIRED) {
 			sta->eapol_sm->authFail = TRUE;
 			hostapd_logger(hapd, sta->addr,
 				       HOSTAPD_MODULE_IEEE8021X,

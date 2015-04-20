@@ -132,8 +132,7 @@ u8 * hostapd_eid_ext_supp_rates(struct hostapd_data *hapd, u8 *eid)
 }
 
 
-u16 hostapd_own_capab_info(struct hostapd_data *hapd, struct sta_info *sta,
-			   int probe)
+u16 hostapd_own_capab_info(struct hostapd_data *hapd)
 {
 	int capab = WLAN_CAPABILITY_ESS;
 	int privacy;
@@ -165,20 +164,6 @@ u16 hostapd_own_capab_info(struct hostapd_data *hapd, struct sta_info *sta,
 	if (hapd->conf->osen)
 		privacy = 1;
 #endif /* CONFIG_HS20 */
-
-	if (sta) {
-		int policy, def_klen;
-		if (probe && sta->ssid_probe) {
-			policy = sta->ssid_probe->security_policy;
-			def_klen = sta->ssid_probe->wep.default_len;
-		} else {
-			policy = sta->ssid->security_policy;
-			def_klen = sta->ssid->wep.default_len;
-		}
-		privacy = policy != SECURITY_PLAINTEXT;
-		if (policy == SECURITY_IEEE_802_1X && def_klen == 0)
-			privacy = 0;
-	}
 
 	if (privacy)
 		capab |= WLAN_CAPABILITY_PRIVACY;
@@ -1594,7 +1579,7 @@ static void send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 	send_len = IEEE80211_HDRLEN;
 	send_len += sizeof(reply->u.assoc_resp);
 	reply->u.assoc_resp.capab_info =
-		host_to_le16(hostapd_own_capab_info(hapd, sta, 0));
+		host_to_le16(hostapd_own_capab_info(hapd));
 	reply->u.assoc_resp.status_code = host_to_le16(status_code);
 	reply->u.assoc_resp.aid = host_to_le16(sta->aid | BIT(14) | BIT(15));
 	/* Supported rates */
@@ -2335,7 +2320,7 @@ static void hostapd_set_wds_encryption(struct hostapd_data *hapd,
 				       char *ifname_wds)
 {
 	int i;
-	struct hostapd_ssid *ssid = sta->ssid;
+	struct hostapd_ssid *ssid = &hapd->conf->ssid;
 
 	if (hapd->conf->ieee802_1x || hapd->conf->wpa)
 		return;

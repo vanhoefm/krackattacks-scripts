@@ -117,9 +117,6 @@ struct sta_info {
 	struct wpa_state_machine *wpa_sm;
 	struct rsn_preauth_interface *preauth_iface;
 
-	struct hostapd_ssid *ssid; /* SSID selection based on (Re)AssocReq */
-	struct hostapd_ssid *ssid_probe; /* SSID selection based on ProbeReq */
-
 	int vlan_id; /* 0: none, >0: VID */
 	int vlan_id_bound; /* updated by ap_sta_bind_vlan() */
 	 /* PSKs from RADIUS authentication server */

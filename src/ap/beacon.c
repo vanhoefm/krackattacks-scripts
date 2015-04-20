@@ -360,7 +360,6 @@ static u8 * hostapd_add_csa_elems(struct hostapd_data *hapd, u8 *pos,
 
 
 static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
-				   struct sta_info *sta,
 				   const struct ieee80211_mgmt *req,
 				   int is_p2p, size_t *resp_len)
 {
@@ -402,7 +401,7 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 
 	/* hardware or low-level driver will setup seq_ctrl and timestamp */
 	resp->u.probe_resp.capab_info =
-		host_to_le16(hostapd_own_capab_info(hapd, sta, 1));
+		host_to_le16(hostapd_own_capab_info(hapd));
 
 	pos = resp->u.probe_resp.variable;
 	*pos++ = WLAN_EID_SSID;
@@ -548,7 +547,6 @@ void handle_probe_req(struct hostapd_data *hapd,
 	struct ieee802_11_elems elems;
 	const u8 *ie;
 	size_t ie_len;
-	struct sta_info *sta = NULL;
 	size_t i, resp_len;
 	int noack;
 	enum ssid_match_result res;
@@ -635,8 +633,6 @@ void handle_probe_req(struct hostapd_data *hapd,
 		return;
 	}
 
-	sta = ap_get_sta(hapd, mgmt->sa);
-
 #ifdef CONFIG_P2P
 	if ((hapd->conf->p2p & P2P_GROUP_OWNER) &&
 	    elems.ssid_len == P2P_WILDCARD_SSID_LEN &&
@@ -649,10 +645,7 @@ void handle_probe_req(struct hostapd_data *hapd,
 
 	res = ssid_match(hapd, elems.ssid, elems.ssid_len,
 			 elems.ssid_list, elems.ssid_list_len);
-	if (res != NO_SSID_MATCH) {
-		if (sta)
-			sta->ssid_probe = &hapd->conf->ssid;
-	} else {
+	if (res == NO_SSID_MATCH) {
 		if (!(mgmt->da[0] & 0x01)) {
 			wpa_printf(MSG_MSGDUMP, "Probe Request from " MACSTR
 				   " for foreign SSID '%s' (DA " MACSTR ")%s",
@@ -719,7 +712,7 @@ void handle_probe_req(struct hostapd_data *hapd,
 	}
 #endif /* CONFIG_TESTING_OPTIONS */
 
-	resp = hostapd_gen_probe_resp(hapd, sta, mgmt, elems.p2p != NULL,
+	resp = hostapd_gen_probe_resp(hapd, mgmt, elems.p2p != NULL,
 				      &resp_len);
 	if (resp == NULL)
 		return;
@@ -774,7 +767,7 @@ static u8 * hostapd_probe_resp_offloads(struct hostapd_data *hapd,
 			   "this");
 
 	/* Generate a Probe Response template for the non-P2P case */
-	return hostapd_gen_probe_resp(hapd, NULL, NULL, 0, resp_len);
+	return hostapd_gen_probe_resp(hapd, NULL, 0, resp_len);
 }
 
 #endif /* NEED_AP_MLME */
@@ -833,7 +826,7 @@ int ieee802_11_build_ap_params(struct hostapd_data *hapd,
 		host_to_le16(hapd->iconf->beacon_int);
 
 	/* hardware or low-level driver will setup seq_ctrl and timestamp */
-	capab_info = hostapd_own_capab_info(hapd, NULL, 0);
+	capab_info = hostapd_own_capab_info(hapd);
 	head->u.beacon.capab_info = host_to_le16(capab_info);
 	pos = &head->u.beacon.variable[0];
 

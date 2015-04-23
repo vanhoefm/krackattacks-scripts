@@ -4260,3 +4260,61 @@ def test_dbus_introspect(dev, apdev):
             raise Exception("No Introspect response")
         if len(res2) >= len(res):
             raise Exception("Unexpected Introspect response")
+
+def test_dbus_ap(dev, apdev):
+    """D-Bus AddNetwork for AP mode"""
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    iface = dbus.Interface(if_obj, WPAS_DBUS_IFACE)
+
+    ssid = "test-wpa2-psk"
+    passphrase = 'qwertyuiop'
+
+    class TestDbusConnect(TestDbus):
+        def __init__(self, bus):
+            TestDbus.__init__(self, bus)
+            self.started = False
+
+        def __enter__(self):
+            gobject.timeout_add(1, self.run_connect)
+            gobject.timeout_add(15000, self.timeout)
+            self.add_signal(self.networkAdded, WPAS_DBUS_IFACE, "NetworkAdded")
+            self.add_signal(self.networkSelected, WPAS_DBUS_IFACE,
+                            "NetworkSelected")
+            self.add_signal(self.propertiesChanged, WPAS_DBUS_IFACE,
+                            "PropertiesChanged")
+            self.loop.run()
+            return self
+
+        def networkAdded(self, network, properties):
+            logger.debug("networkAdded: %s" % str(network))
+            logger.debug(str(properties))
+
+        def networkSelected(self, network):
+            logger.debug("networkSelected: %s" % str(network))
+            self.network_selected = True
+
+        def propertiesChanged(self, properties):
+            logger.debug("propertiesChanged: %s" % str(properties))
+            if 'State' in properties and properties['State'] == "completed":
+                self.started = True
+                self.loop.quit()
+
+        def run_connect(self, *args):
+            logger.debug("run_connect")
+            args = dbus.Dictionary({ 'ssid': ssid,
+                                     'key_mgmt': 'WPA-PSK',
+                                     'psk': passphrase,
+                                     'mode': 2,
+                                     'frequency': 2412 },
+                                   signature='sv')
+            self.netw = iface.AddNetwork(args)
+            iface.SelectNetwork(self.netw)
+            return False
+
+        def success(self):
+            return self.started
+
+    with TestDbusConnect(bus) as t:
+        if not t.success():
+            raise Exception("Expected signals not seen")
+        dev[1].connect(ssid, psk=passphrase, scan_freq="2412")

@@ -5789,8 +5789,6 @@ static enum nl80211_iftype wpa_driver_nl80211_if_type(
 }
 
 
-#if defined(CONFIG_P2P) || defined(CONFIG_MESH)
-
 static int nl80211_addr_in_use(struct nl80211_global *global, const u8 *addr)
 {
 	struct wpa_driver_nl80211_data *drv;
@@ -5825,8 +5823,6 @@ static int nl80211_vif_addr(struct wpa_driver_nl80211_data *drv, u8 *new_addr)
 
 	return 0;
 }
-
-#endif /* CONFIG_P2P || CONFIG_MESH */
 
 
 struct wdev_info {
@@ -5903,21 +5899,21 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 	}
 
 	if (!addr) {
-		if (drv->nlmode == NL80211_IFTYPE_P2P_DEVICE)
+		if (nlmode == NL80211_IFTYPE_P2P_DEVICE)
 			os_memcpy(if_addr, bss->addr, ETH_ALEN);
 		else if (linux_get_ifhwaddr(drv->global->ioctl_sock,
-					    bss->ifname, if_addr) < 0) {
+					    ifname, if_addr) < 0) {
 			if (added)
 				nl80211_remove_iface(drv, ifidx);
 			return -1;
 		}
 	}
 
-#if defined(CONFIG_P2P) || defined(CONFIG_MESH)
 	if (!addr &&
 	    (type == WPA_IF_P2P_CLIENT || type == WPA_IF_P2P_GROUP ||
-	     type == WPA_IF_P2P_GO || type == WPA_IF_MESH)) {
-		/* Enforce unique P2P Interface Address */
+	     type == WPA_IF_P2P_GO || type == WPA_IF_MESH ||
+	     type == WPA_IF_STATION)) {
+		/* Enforce unique address */
 		u8 new_addr[ETH_ALEN];
 
 		if (linux_get_ifhwaddr(drv->global->ioctl_sock, ifname,
@@ -5928,8 +5924,7 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 		}
 		if (nl80211_addr_in_use(drv->global, new_addr)) {
 			wpa_printf(MSG_DEBUG, "nl80211: Allocate new address "
-				   "for %s interface", type == WPA_IF_MESH ?
-				   "mesh" : "P2P group");
+				   "for interface %s type %d", ifname, type);
 			if (nl80211_vif_addr(drv, new_addr) < 0) {
 				if (added)
 					nl80211_remove_iface(drv, ifidx);
@@ -5944,7 +5939,6 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 		}
 		os_memcpy(if_addr, new_addr, ETH_ALEN);
 	}
-#endif /* CONFIG_P2P || CONFIG_MESH */
 
 	if (type == WPA_IF_AP_BSS) {
 		struct i802_bss *new_bss = os_zalloc(sizeof(*new_bss));

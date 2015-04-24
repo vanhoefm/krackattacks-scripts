@@ -35,7 +35,7 @@
  */
 #define RADIUS_MAX_MSG_LEN 3000
 
-static struct eapol_callbacks radius_server_eapol_cb;
+static const struct eapol_callbacks radius_server_eapol_cb;
 
 struct radius_client;
 struct radius_server_data;
@@ -2101,7 +2101,7 @@ static int radius_server_erp_add_key(void *ctx, struct eap_server_erp_key *erp)
 #endif /* CONFIG_ERP */
 
 
-static struct eapol_callbacks radius_server_eapol_cb =
+static const struct eapol_callbacks radius_server_eapol_cb =
 {
 	.get_eap_user = radius_server_get_eap_user,
 	.get_eap_req_id_text = radius_server_get_eap_req_id_text,

@@ -4640,6 +4640,6 @@ wpa_get_wowlan_triggers(const char *wowlan_triggers,
 			const struct wpa_driver_capa *capa);
 
 /* NULL terminated array of linked in driver wrappers */
-extern struct wpa_driver_ops *wpa_drivers[];
+extern const struct wpa_driver_ops *const wpa_drivers[];
 
 #endif /* DRIVER_H */

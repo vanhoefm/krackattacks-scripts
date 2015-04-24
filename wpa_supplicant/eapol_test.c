@@ -30,7 +30,7 @@
 #include "wpas_glue.h"
 
 
-struct wpa_driver_ops *wpa_drivers[] = { NULL };
+const struct wpa_driver_ops *const wpa_drivers[] = { NULL };
 
 
 struct extra_radius_attr {

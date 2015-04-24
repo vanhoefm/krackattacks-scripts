@@ -55,11 +55,11 @@
 #include "wpas_kay.h"
 #include "mesh.h"
 
-const char *wpa_supplicant_version =
+const char *const wpa_supplicant_version =
 "wpa_supplicant v" VERSION_STR "\n"
 "Copyright (c) 2003-2015, Jouni Malinen <j@w1.fi> and contributors";
 
-const char *wpa_supplicant_license =
+const char *const wpa_supplicant_license =
 "This software may be distributed under the terms of the BSD license.\n"
 "See README for more details.\n"
 #ifdef EAP_TLS_OPENSSL
@@ -70,16 +70,16 @@ const char *wpa_supplicant_license =
 
 #ifndef CONFIG_NO_STDOUT_DEBUG
 /* Long text divided into parts in order to fit in C89 strings size limits. */
-const char *wpa_supplicant_full_license1 =
+const char *const wpa_supplicant_full_license1 =
 "";
-const char *wpa_supplicant_full_license2 =
+const char *const wpa_supplicant_full_license2 =
 "This software may be distributed under the terms of the BSD license.\n"
 "\n"
 "Redistribution and use in source and binary forms, with or without\n"
 "modification, are permitted provided that the following conditions are\n"
 "met:\n"
 "\n";
-const char *wpa_supplicant_full_license3 =
+const char *const wpa_supplicant_full_license3 =
 "1. Redistributions of source code must retain the above copyright\n"
 "   notice, this list of conditions and the following disclaimer.\n"
 "\n"
@@ -87,7 +87,7 @@ const char *wpa_supplicant_full_license3 =
 "   notice, this list of conditions and the following disclaimer in the\n"
 "   documentation and/or other materials provided with the distribution.\n"
 "\n";
-const char *wpa_supplicant_full_license4 =
+const char *const wpa_supplicant_full_license4 =
 "3. Neither the name(s) of the above-listed copyright holder(s) nor the\n"
 "   names of its contributors may be used to endorse or promote products\n"
 "   derived from this software without specific prior written permission.\n"
@@ -96,7 +96,7 @@ const char *wpa_supplicant_full_license4 =
 "\"AS IS\" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT\n"
 "LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR\n"
 "A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT\n";
-const char *wpa_supplicant_full_license5 =
+const char *const wpa_supplicant_full_license5 =
 "OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,\n"
 "SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT\n"
 "LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,\n"

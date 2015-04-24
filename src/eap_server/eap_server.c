@@ -1802,7 +1802,7 @@ static void eap_user_free(struct eap_user *user)
  * This function allocates and initializes an EAP state machine.
  */
 struct eap_sm * eap_server_sm_init(void *eapol_ctx,
-				   struct eapol_callbacks *eapol_cb,
+				   const struct eapol_callbacks *eapol_cb,
 				   struct eap_config *conf)
 {
 	struct eap_sm *sm;

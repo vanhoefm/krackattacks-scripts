@@ -8686,7 +8686,7 @@ static int wpa_supplicant_global_iface_list(struct wpa_global *global,
 	char *pos, *end;
 
 	for (i = 0; wpa_drivers[i]; i++) {
-		struct wpa_driver_ops *drv = wpa_drivers[i];
+		const struct wpa_driver_ops *drv = wpa_drivers[i];
 		if (drv->get_interfaces == NULL)
 			continue;
 		tmp = drv->get_interfaces(global->drv_priv[i]);

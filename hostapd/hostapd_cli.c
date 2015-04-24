@@ -17,16 +17,16 @@
 #include "common/version.h"
 
 
-static const char *hostapd_cli_version =
+static const char *const hostapd_cli_version =
 "hostapd_cli v" VERSION_STR "\n"
 "Copyright (c) 2004-2015, Jouni Malinen <j@w1.fi> and contributors";
 
 
-static const char *hostapd_cli_license =
+static const char *const hostapd_cli_license =
 "This software may be distributed under the terms of the BSD license.\n"
 "See README for more details.\n";
 
-static const char *hostapd_cli_full_license =
+static const char *const hostapd_cli_full_license =
 "This software may be distributed under the terms of the BSD license.\n"
 "\n"
 "Redistribution and use in source and binary forms, with or without\n"
@@ -57,7 +57,7 @@ static const char *hostapd_cli_full_license =
 "OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.\n"
 "\n";
 
-static const char *commands_help =
+static const char *const commands_help =
 "Commands:\n"
 "   mib                  get MIB variables (dot1x, dot11, radius)\n"
 "   sta <addr>           get MIB variables for one station\n"
@@ -1015,7 +1015,7 @@ struct hostapd_cli_cmd {
 	int (*handler)(struct wpa_ctrl *ctrl, int argc, char *argv[]);
 };
 
-static struct hostapd_cli_cmd hostapd_cli_commands[] = {
+static const struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	{ "ping", hostapd_cli_cmd_ping },
 	{ "mib", hostapd_cli_cmd_mib },
 	{ "relog", hostapd_cli_cmd_relog },
@@ -1070,7 +1070,7 @@ static struct hostapd_cli_cmd hostapd_cli_commands[] = {
 
 static void wpa_request(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
-	struct hostapd_cli_cmd *cmd, *match = NULL;
+	const struct hostapd_cli_cmd *cmd, *match = NULL;
 	int count;
 
 	count = 0;

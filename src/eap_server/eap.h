@@ -139,7 +139,7 @@ struct eap_config {
 
 
 struct eap_sm * eap_server_sm_init(void *eapol_ctx,
-				   struct eapol_callbacks *eapol_cb,
+				   const struct eapol_callbacks *eapol_cb,
 				   struct eap_config *eap_conf);
 void eap_server_sm_deinit(struct eap_sm *sm);
 int eap_server_sm_step(struct eap_sm *sm);

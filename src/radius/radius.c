@@ -167,7 +167,7 @@ struct radius_attr_type {
 	} data_type;
 };
 
-static struct radius_attr_type radius_attrs[] =
+static const struct radius_attr_type radius_attrs[] =
 {
 	{ RADIUS_ATTR_USER_NAME, "User-Name", RADIUS_ATTR_TEXT },
 	{ RADIUS_ATTR_USER_PASSWORD, "User-Password", RADIUS_ATTR_UNDIST },
@@ -259,7 +259,7 @@ static struct radius_attr_type radius_attrs[] =
 #define RADIUS_ATTRS ARRAY_SIZE(radius_attrs)
 
 
-static struct radius_attr_type *radius_get_attr_type(u8 type)
+static const struct radius_attr_type *radius_get_attr_type(u8 type)
 {
 	size_t i;
 
@@ -274,7 +274,7 @@ static struct radius_attr_type *radius_get_attr_type(u8 type)
 
 static void radius_msg_dump_attr(struct radius_attr_hdr *hdr)
 {
-	struct radius_attr_type *attr;
+	const struct radius_attr_type *attr;
 	int len;
 	unsigned char *pos;
 	char buf[1000];

@@ -3099,7 +3099,7 @@ struct p2p_oper_class_map {
 	enum { BW20, BW40PLUS, BW40MINUS, BW80, BW2160 } bw;
 };
 
-static struct p2p_oper_class_map op_class[] = {
+static const struct p2p_oper_class_map op_class[] = {
 	{ HOSTAPD_MODE_IEEE80211G, 81, 1, 13, 1, BW20 },
 #if 0 /* Do not enable HT40 on 2 GHz for now */
 	{ HOSTAPD_MODE_IEEE80211G, 83, 1, 9, 1, BW40PLUS },
@@ -3232,7 +3232,7 @@ static int wpas_p2p_setup_channels(struct wpa_supplicant *wpa_s,
 	cla = cli_cla = 0;
 
 	for (op = 0; op_class[op].op_class; op++) {
-		struct p2p_oper_class_map *o = &op_class[op];
+		const struct p2p_oper_class_map *o = &op_class[op];
 		u8 ch;
 		struct p2p_reg_class *reg = NULL, *cli_reg = NULL;
 
@@ -3291,7 +3291,7 @@ int wpas_p2p_get_ht40_mode(struct wpa_supplicant *wpa_s,
 	enum chan_allowed ret;
 
 	for (op = 0; op_class[op].op_class; op++) {
-		struct p2p_oper_class_map *o = &op_class[op];
+		const struct p2p_oper_class_map *o = &op_class[op];
 		u8 ch;
 
 		for (ch = o->min_chan; ch <= o->max_chan; ch += o->inc) {

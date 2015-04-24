@@ -22,7 +22,7 @@
 #define STATE_MACHINE_DEBUG_PREFIX "IEEE 802.1X"
 #define STATE_MACHINE_ADDR sm->addr
 
-static struct eapol_callbacks eapol_cb;
+static const struct eapol_callbacks eapol_cb;
 
 /* EAPOL state machines are described in IEEE Std 802.1X-2004, Chap. 8.2 */
 
@@ -1056,7 +1056,7 @@ static int eapol_sm_erp_add_key(void *ctx, struct eap_server_erp_key *erp)
 }
 
 
-static struct eapol_callbacks eapol_cb =
+static const struct eapol_callbacks eapol_cb =
 {
 	eapol_sm_get_eap_user,
 	eapol_sm_get_eap_req_id_text,

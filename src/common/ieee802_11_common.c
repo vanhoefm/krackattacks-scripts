@@ -564,27 +564,27 @@ enum hostapd_hw_mode ieee80211_freq_to_chan(int freq, u8 *channel)
 }
 
 
-static const char *us_op_class_cc[] = {
+static const char *const us_op_class_cc[] = {
 	"US", "CA", NULL
 };
 
-static const char *eu_op_class_cc[] = {
+static const char *const eu_op_class_cc[] = {
 	"AL", "AM", "AT", "AZ", "BA", "BE", "BG", "BY", "CH", "CY", "CZ", "DE",
 	"DK", "EE", "EL", "ES", "FI", "FR", "GE", "HR", "HU", "IE", "IS", "IT",
 	"LI", "LT", "LU", "LV", "MD", "ME", "MK", "MT", "NL", "NO", "PL", "PT",
 	"RO", "RS", "RU", "SE", "SI", "SK", "TR", "UA", "UK", NULL
 };
 
-static const char *jp_op_class_cc[] = {
+static const char *const jp_op_class_cc[] = {
 	"JP", NULL
 };
 
-static const char *cn_op_class_cc[] = {
+static const char *const cn_op_class_cc[] = {
 	"CN", "CA", NULL
 };
 
 
-static int country_match(const char *cc[], const char *country)
+static int country_match(const char *const cc[], const char *const country)
 {
 	int i;
 

@@ -328,7 +328,7 @@ struct eap_sm {
 	/* not defined in RFC 4137 */
 	Boolean changed;
 	void *eapol_ctx;
-	struct eapol_callbacks *eapol_cb;
+	const struct eapol_callbacks *eapol_cb;
 	void *eap_method_priv;
 	int init_phase2;
 	int fast_reauth;

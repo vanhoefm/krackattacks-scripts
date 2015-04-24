@@ -1997,7 +1997,7 @@ static void eapol_sm_set_anon_id(void *ctx, const u8 *id, size_t len)
 }
 
 
-static struct eapol_callbacks eapol_cb =
+static const struct eapol_callbacks eapol_cb =
 {
 	eapol_sm_get_config,
 	eapol_sm_get_bool,

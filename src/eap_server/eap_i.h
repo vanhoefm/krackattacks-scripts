@@ -155,7 +155,7 @@ struct eap_sm {
 	/* not defined in RFC 4137 */
 	Boolean changed;
 	void *eapol_ctx, *msg_ctx;
-	struct eapol_callbacks *eapol_cb;
+	const struct eapol_callbacks *eapol_cb;
 	void *eap_method_priv;
 	u8 *identity;
 	size_t identity_len;

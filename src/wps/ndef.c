@@ -29,8 +29,8 @@ struct ndef_record {
 	u32 total_length;
 };
 
-static char wifi_handover_type[] = "application/vnd.wfa.wsc";
-static char p2p_handover_type[] = "application/vnd.wfa.p2p";
+static const char wifi_handover_type[] = "application/vnd.wfa.wsc";
+static const char p2p_handover_type[] = "application/vnd.wfa.p2p";
 
 static int ndef_parse_record(const u8 *data, u32 size,
 			     struct ndef_record *record)
@@ -97,7 +97,7 @@ static struct wpabuf * ndef_parse_records(const struct wpabuf *buf,
 }
 
 
-static struct wpabuf * ndef_build_record(u8 flags, void *type,
+static struct wpabuf * ndef_build_record(u8 flags, const void *type,
 					 u8 type_length, void *id,
 					 u8 id_length,
 					 const struct wpabuf *payload)

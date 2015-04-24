@@ -743,7 +743,7 @@ struct wpa_driver_ops wpa_driver_privsep_ops = {
 };
 
 
-struct wpa_driver_ops *wpa_drivers[] =
+const struct wpa_driver_ops *const wpa_drivers[] =
 {
 	&wpa_driver_privsep_ops,
 	NULL

@@ -14,7 +14,7 @@
 #include "ap/ieee802_11.h"
 
 
-struct wpa_driver_ops *wpa_drivers[] =
+const struct wpa_driver_ops *const wpa_drivers[] =
 {
 	NULL
 };

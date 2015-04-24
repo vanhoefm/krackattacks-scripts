@@ -161,7 +161,7 @@ struct omac1_test_vector {
 	u8 tag[16];
 };
 
-static struct omac1_test_vector omac1_test_vectors[] =
+static const struct omac1_test_vector omac1_test_vectors[] =
 {
 	{
 		{ 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
@@ -210,7 +210,8 @@ static struct omac1_test_vector omac1_test_vectors[] =
 };
 
 
-static int test_omac1_vector(struct omac1_test_vector *tv, unsigned int i)
+static int test_omac1_vector(const struct omac1_test_vector *tv,
+			     unsigned int i)
 {
 	u8 key[] = {
 		0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
@@ -983,14 +984,14 @@ static int test_eap_fast(void)
 }
 
 
-static u8 key0[] =
+static const u8 key0[] =
 {
 	0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 	0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 	0x0b, 0x0b, 0x0b, 0x0b
 };
-static u8 data0[] = "Hi There";
-static u8 prf0[] =
+static const u8 data0[] = "Hi There";
+static const u8 prf0[] =
 {
 	0xbc, 0xd4, 0xc6, 0x50, 0xb3, 0x0b, 0x96, 0x84,
 	0x95, 0x18, 0x29, 0xe0, 0xd7, 0x5f, 0x9d, 0x54,
@@ -1002,9 +1003,9 @@ static u8 prf0[] =
 	0xdb, 0x83, 0x73, 0x69, 0x83, 0x56, 0xcf, 0x5a
 };
 
-static u8 key1[] = "Jefe";
-static u8 data1[] = "what do ya want for nothing?";
-static u8 prf1[] =
+static const u8 key1[] = "Jefe";
+static const u8 data1[] = "what do ya want for nothing?";
+static const u8 prf1[] =
 {
 	0x51, 0xf4, 0xde, 0x5b, 0x33, 0xf2, 0x49, 0xad,
 	0xf8, 0x1a, 0xeb, 0x71, 0x3a, 0x3c, 0x20, 0xf4,
@@ -1017,13 +1018,13 @@ static u8 prf1[] =
 };
 
 
-static u8 key2[] =
+static const u8 key2[] =
 {
 	0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa,
 	0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa,
 	0xaa, 0xaa, 0xaa, 0xaa
 };
-static u8 data2[] =
+static const u8 data2[] =
 {
 	0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd,
 	0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd,
@@ -1033,7 +1034,7 @@ static u8 data2[] =
 	0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd, 0xdd,
 	0xdd, 0xdd
 };
-static u8 prf2[] =
+static const u8 prf2[] =
 {
 	0xe1, 0xac, 0x54, 0x6e, 0xc4, 0xcb, 0x63, 0x6f,
 	0x99, 0x76, 0x48, 0x7b, 0xe5, 0xc8, 0x6b, 0xe1,
@@ -1052,7 +1053,7 @@ struct passphrase_test {
 	char psk[32];
 };
 
-static struct passphrase_test passphrase_tests[] =
+static const struct passphrase_test passphrase_tests[] =
 {
 	{
 		"password",
@@ -1097,7 +1098,7 @@ struct rfc6070_test {
 	size_t dk_len;
 };
 
-static struct rfc6070_test rfc6070_tests[] =
+static const struct rfc6070_test rfc6070_tests[] =
 {
 	{
 		"password",
@@ -1214,7 +1215,7 @@ static int test_sha1(void)
 	wpa_printf(MSG_INFO, "PBKDF2-SHA1 Passphrase test cases:");
 	for (i = 0; i < NUM_PASSPHRASE_TESTS; i++) {
 		u8 psk[32];
-		struct passphrase_test *test = &passphrase_tests[i];
+		const struct passphrase_test *test = &passphrase_tests[i];
 
 		if (pbkdf2_sha1(test->passphrase,
 				(const u8 *) test->ssid, strlen(test->ssid),
@@ -1230,7 +1231,7 @@ static int test_sha1(void)
 	wpa_printf(MSG_INFO, "PBKDF2-SHA1 test cases (RFC 6070):");
 	for (i = 0; i < NUM_RFC6070_TESTS; i++) {
 		u8 dk[25];
-		struct rfc6070_test *test = &rfc6070_tests[i];
+		const struct rfc6070_test *test = &rfc6070_tests[i];
 
 		if (pbkdf2_sha1(test->p, (const u8 *) test->s, strlen(test->s),
 				test->c, dk, test->dk_len) == 0 &&
@@ -1248,7 +1249,7 @@ static int test_sha1(void)
 }
 
 
-struct {
+const struct {
 	char *data;
 	u8 hash[32];
 } tests[] = {
@@ -1272,7 +1273,7 @@ struct {
 	}
 };
 
-struct hmac_test {
+const struct hmac_test {
 	u8 key[80];
 	size_t key_len;
 	u8 data[128];
@@ -1513,7 +1514,7 @@ static int test_sha256(void)
 	}
 
 	for (i = 0; i < ARRAY_SIZE(hmac_tests); i++) {
-		struct hmac_test *t = &hmac_tests[i];
+		const struct hmac_test *t = &hmac_tests[i];
 
 		wpa_printf(MSG_INFO, "HMAC-SHA256 test case %d:", i + 1);
 

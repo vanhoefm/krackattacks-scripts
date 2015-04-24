@@ -232,7 +232,7 @@ struct gcmp_test {
 	u8 encr[300];
 };
 
-static struct gcmp_test gcmp_vectors[] =
+static const struct gcmp_test gcmp_vectors[] =
 {
 	{
 		.tk = { 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa,
@@ -348,7 +348,7 @@ static struct gcmp_test gcmp_vectors[] =
 };
 
 
-static int run_gcmp(int idx, struct gcmp_test *vector)
+static int run_gcmp(int idx, const struct gcmp_test *vector)
 {
 	u8 *enc, *plain;
 	size_t enc_len, plain_len;

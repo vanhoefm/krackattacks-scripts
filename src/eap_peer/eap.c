@@ -1911,7 +1911,7 @@ static void eap_peer_sm_tls_event(void *ctx, enum tls_event ev,
  * structure remains alive while the EAP state machine is active.
  */
 struct eap_sm * eap_peer_sm_init(void *eapol_ctx,
-				 struct eapol_callbacks *eapol_cb,
+				 const struct eapol_callbacks *eapol_cb,
 				 void *msg_ctx, struct eap_config *conf)
 {
 	struct eap_sm *sm;

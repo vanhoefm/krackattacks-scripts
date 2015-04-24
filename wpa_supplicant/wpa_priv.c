@@ -29,7 +29,7 @@ struct wpa_priv_interface {
 	char *sock_name;
 	int fd;
 
-	struct wpa_driver_ops *driver;
+	const struct wpa_driver_ops *driver;
 	void *drv_priv;
 	struct sockaddr_un drv_addr;
 	int wpas_registered;

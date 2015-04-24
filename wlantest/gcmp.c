@@ -112,9 +112,9 @@ u8 * gcmp_decrypt(const u8 *tk, size_t tk_len, const struct ieee80211_hdr *hdr,
 }
 
 
-u8 * gcmp_encrypt(const u8 *tk, size_t tk_len, u8 *frame, size_t len,
-		  size_t hdrlen, u8 *qos,
-		  u8 *pn, int keyid, size_t *encrypted_len)
+u8 * gcmp_encrypt(const u8 *tk, size_t tk_len, const u8 *frame, size_t len,
+		  size_t hdrlen, const u8 *qos,
+		  const u8 *pn, int keyid, size_t *encrypted_len)
 {
 	u8 aad[30], nonce[12], *crypt, *pos;
 	size_t aad_len, plen;

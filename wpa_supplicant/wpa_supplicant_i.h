@@ -17,14 +17,14 @@
 #include "config_ssid.h"
 #include "wmm_ac.h"
 
-extern const char *wpa_supplicant_version;
-extern const char *wpa_supplicant_license;
+extern const char *const wpa_supplicant_version;
+extern const char *const wpa_supplicant_license;
 #ifndef CONFIG_NO_STDOUT_DEBUG
-extern const char *wpa_supplicant_full_license1;
-extern const char *wpa_supplicant_full_license2;
-extern const char *wpa_supplicant_full_license3;
-extern const char *wpa_supplicant_full_license4;
-extern const char *wpa_supplicant_full_license5;
+extern const char *const wpa_supplicant_full_license1;
+extern const char *const wpa_supplicant_full_license2;
+extern const char *const wpa_supplicant_full_license3;
+extern const char *const wpa_supplicant_full_license4;
+extern const char *const wpa_supplicant_full_license5;
 #endif /* CONFIG_NO_STDOUT_DEBUG */
 
 struct wpa_sm;
@@ -518,7 +518,7 @@ struct wpa_supplicant {
 	unsigned int last_scan_res_size;
 	struct os_reltime last_scan;
 
-	struct wpa_driver_ops *driver;
+	const struct wpa_driver_ops *driver;
 	int interface_removed; /* whether the network interface has been
 				* removed */
 	struct wpa_sm *wpa;

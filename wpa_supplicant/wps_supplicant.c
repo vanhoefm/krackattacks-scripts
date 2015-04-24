@@ -39,6 +39,14 @@
 #define WPS_PIN_SCAN_IGNORE_SEL_REG 3
 #endif /* WPS_PIN_SCAN_IGNORE_SEL_REG */
 
+/*
+ * The minimum time in seconds before trying to associate to a WPS PIN AP that
+ * does not have Selected Registrar TRUE.
+ */
+#ifndef WPS_PIN_TIME_IGNORE_SEL_REG
+#define WPS_PIN_TIME_IGNORE_SEL_REG 5
+#endif /* WPS_PIN_TIME_IGNORE_SEL_REG */
+
 static void wpas_wps_timeout(void *eloop_ctx, void *timeout_ctx);
 static void wpas_clear_wps(struct wpa_supplicant *wpa_s);
 
@@ -1216,6 +1224,7 @@ static int wpas_wps_start_dev_pw(struct wpa_supplicant *wpa_s,
 int wpas_wps_start_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		       const char *pin, int p2p_group, u16 dev_pw_id)
 {
+	os_get_reltime(&wpa_s->wps_pin_start_time);
 	return wpas_wps_start_dev_pw(wpa_s, NULL, bssid, pin, p2p_group,
 				     dev_pw_id, NULL, NULL, 0, 0);
 }
@@ -1609,9 +1618,15 @@ int wpas_wps_ssid_bss_match(struct wpa_supplicant *wpa_s,
 		 * external Registrar.
 		 */
 		if (!wps_is_addr_authorized(wps_ie, wpa_s->own_addr, 1)) {
-			if (wpa_s->scan_runs < WPS_PIN_SCAN_IGNORE_SEL_REG) {
-				wpa_printf(MSG_DEBUG, "   skip - WPS AP "
-					   "without active PIN Registrar");
+			struct os_reltime age;
+
+			os_reltime_age(&wpa_s->wps_pin_start_time, &age);
+
+			if (wpa_s->scan_runs < WPS_PIN_SCAN_IGNORE_SEL_REG ||
+			    age.sec < WPS_PIN_TIME_IGNORE_SEL_REG) {
+				wpa_printf(MSG_DEBUG,
+					   "   skip - WPS AP without active PIN Registrar (scan_runs=%d age=%d)",
+					   wpa_s->scan_runs, (int) age.sec);
 				wpabuf_free(wps_ie);
 				return 0;
 			}

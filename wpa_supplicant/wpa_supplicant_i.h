@@ -639,6 +639,7 @@ struct wpa_supplicant {
 	int wps_success; /* WPS success event received */
 	struct wps_er *wps_er;
 	unsigned int wps_run;
+	struct os_reltime wps_pin_start_time;
 	int blacklist_cleared;
 
 	struct wpabuf *pending_eapol_rx;

@@ -62,6 +62,7 @@ long_tests = [ "ap_roam_open",
                "dbus_connect_oom",
                "proxyarp_open",
                "ap_wps_iteration",
+               "ap_wps_iteration_error",
                "ap_wps_pbc_timeout" ]
 
 def get_failed(vm):

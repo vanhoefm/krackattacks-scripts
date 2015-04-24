@@ -2414,3 +2414,48 @@ def test_ap_wps_iteration(dev, apdev):
     # Provide PIN to one of the APs and verify that connection gets formed
     hapd.request("WPS_PIN any " + pin)
     dev[0].wait_connected(timeout=30)
+
+def test_ap_wps_iteration_error(dev, apdev):
+    """WPS AP iteration on no Selected Registrar and error case with an AP"""
+    ssid = "test-wps-conf-pin"
+    hapd = hostapd.add_ap(apdev[0]['ifname'],
+                          { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                            "wpa_passphrase": "12345678", "wpa": "2",
+                            "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+                            "wps_independent": "1" })
+    hapd.request("SET ext_eapol_frame_io 1")
+    bssid = apdev[0]['bssid']
+    pin = dev[0].wps_read_pin()
+    dev[0].request("WPS_PIN any " + pin)
+
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("No EAPOL-TX (EAP-Request/Identity) from hostapd")
+    dev[0].request("EAPOL_RX " + bssid + " " + ev.split(' ')[2])
+
+    ev = hapd.wait_event(["EAPOL-TX"], timeout=15)
+    if ev is None:
+        raise Exception("No EAPOL-TX (EAP-WSC/Start) from hostapd")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=5)
+    if ev is None:
+        raise Exception("No CTRL-EVENT-EAP-STARTED")
+
+    # Do not forward any more EAPOL frames to test wpa_supplicant behavior for
+    # a case with an incorrectly behaving WPS AP.
+
+    # Start the real target AP and activate registrar on it.
+    hapd2 = hostapd.add_ap(apdev[1]['ifname'],
+                          { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                            "wpa_passphrase": "12345678", "wpa": "2",
+                            "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
+                            "wps_independent": "1" })
+    hapd2.request("WPS_PIN any " + pin)
+
+    dev[0].wait_disconnected(timeout=15)
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-STARTED"], timeout=15)
+    if ev is None:
+        raise Exception("No CTRL-EVENT-EAP-STARTED for the second AP")
+    ev = dev[0].wait_event(["WPS-CRED-RECEIVED"], timeout=15)
+    if ev is None:
+        raise Exception("No WPS-CRED-RECEIVED for the second AP")
+    dev[0].wait_connected(timeout=15)

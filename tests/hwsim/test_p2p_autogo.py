@@ -173,7 +173,7 @@ def test_autogo_m2d(dev):
     if "OK" not in dev[2].global_request(cmd):
         raise Exception("P2P_CONNECT join failed")
 
-    ev = dev[1].wait_global_event(["WPS-M2D"], timeout=10)
+    ev = dev[1].wait_global_event(["WPS-M2D"], timeout=16)
     if ev is None:
         raise Exception("No global M2D event")
     ifaces = dev[1].request("INTERFACES").splitlines()

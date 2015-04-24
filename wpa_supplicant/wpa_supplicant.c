@@ -3077,12 +3077,33 @@ void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 	    (wpa_s->current_ssid == NULL ||
 	     wpa_s->current_ssid->mode != IEEE80211_MODE_IBSS)) {
 		/* Timeout for completing IEEE 802.1X and WPA authentication */
-		wpa_supplicant_req_auth_timeout(
-			wpa_s,
-			(wpa_key_mgmt_wpa_ieee8021x(wpa_s->key_mgmt) ||
-			 wpa_s->key_mgmt == WPA_KEY_MGMT_IEEE8021X_NO_WPA ||
-			 wpa_s->key_mgmt == WPA_KEY_MGMT_WPS) ?
-			70 : 10, 0);
+		int timeout = 10;
+
+		if (wpa_key_mgmt_wpa_ieee8021x(wpa_s->key_mgmt) ||
+		    wpa_s->key_mgmt == WPA_KEY_MGMT_IEEE8021X_NO_WPA ||
+		    wpa_s->key_mgmt == WPA_KEY_MGMT_WPS) {
+			/* Use longer timeout for IEEE 802.1X/EAP */
+			timeout = 70;
+		}
+
+		if (wpa_s->current_ssid && wpa_s->current_bss &&
+		    (wpa_s->current_ssid->key_mgmt & WPA_KEY_MGMT_WPS) &&
+		    eap_is_wps_pin_enrollee(&wpa_s->current_ssid->eap)) {
+			/*
+			 * Use shorter timeout if going through WPS AP iteration
+			 * for PIN config method with an AP that does not
+			 * advertise Selected Registrar.
+			 */
+			struct wpabuf *wps_ie;
+
+			wps_ie = wpa_bss_get_vendor_ie_multi(
+				wpa_s->current_bss, WPS_IE_VENDOR_TYPE);
+			if (wps_ie && !wps_is_selected_pbc_registrar(wps_ie))
+				timeout = 10;
+			wpabuf_free(wps_ie);
+		}
+
+		wpa_supplicant_req_auth_timeout(wpa_s, timeout, 0);
 	}
 	wpa_s->eapol_received++;
 

@@ -988,6 +988,7 @@ LIBS += -lssl
 endif
 OBJS += ../src/crypto/crypto_openssl.o
 OBJS_p += ../src/crypto/crypto_openssl.o
+OBJS_priv += ../src/crypto/crypto_openssl.o
 ifdef NEED_FIPS186_2_PRF
 OBJS += ../src/crypto/fips_prf_openssl.o
 endif
@@ -1006,6 +1007,7 @@ LIBS += -lgnutls -lgpg-error
 endif
 OBJS += ../src/crypto/crypto_gnutls.o
 OBJS_p += ../src/crypto/crypto_gnutls.o
+OBJS_priv += ../src/crypto/crypto_gnutls.o
 ifdef NEED_FIPS186_2_PRF
 OBJS += ../src/crypto/fips_prf_internal.o
 SHA1OBJS += ../src/crypto/sha1-internal.o
@@ -1216,6 +1218,7 @@ MD5OBJS += ../src/crypto/md5-internal.o
 endif
 OBJS += $(MD5OBJS)
 OBJS_p += $(MD5OBJS)
+OBJS_priv += $(MD5OBJS)
 endif
 
 ifdef NEED_MD4
@@ -1452,6 +1455,7 @@ OBJS += $(SHA1OBJS) $(DESOBJS)
 
 OBJS_p += $(SHA1OBJS)
 OBJS_p += $(SHA256OBJS)
+OBJS_priv += $(SHA1OBJS)
 
 ifdef CONFIG_BGSCAN_SIMPLE
 CFLAGS += -DCONFIG_BGSCAN_SIMPLE

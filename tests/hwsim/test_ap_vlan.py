@@ -119,6 +119,11 @@ def test_ap_vlan_wpa2_radius_id_change(dev, apdev):
     state = dev[0].get_status_field('wpa_state')
     if state != "COMPLETED":
         raise Exception("Unexpected state after reauth: " + state)
+    sta = hapd.get_sta(dev[0].own_addr())
+    if 'vlan_id' not in sta:
+        raise Exception("No VLAN ID in STA info")
+    if sta['vlan_id'] != '2':
+        raise Exception("Unexpected VLAN ID: " + sta['vlan_id'])
     hwsim_utils.test_connectivity_iface(dev[0], hapd, "brvlan2")
 
 def test_ap_vlan_wpa2_radius_required(dev, apdev):

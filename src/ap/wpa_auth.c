@@ -45,6 +45,12 @@ static int wpa_group_config_group_keys(struct wpa_authenticator *wpa_auth,
 				       struct wpa_group *group);
 static int wpa_derive_ptk(struct wpa_state_machine *sm, const u8 *snonce,
 			  const u8 *pmk, struct wpa_ptk *ptk);
+static void wpa_group_free(struct wpa_authenticator *wpa_auth,
+			   struct wpa_group *group);
+static void wpa_group_get(struct wpa_authenticator *wpa_auth,
+			  struct wpa_group *group);
+static void wpa_group_put(struct wpa_authenticator *wpa_auth,
+			  struct wpa_group *group);
 
 static const u32 dot11RSNAConfigGroupUpdateCount = 4;
 static const u32 dot11RSNAConfigPairwiseUpdateCount = 4;
@@ -262,15 +268,22 @@ static void wpa_rekey_gmk(void *eloop_ctx, void *timeout_ctx)
 static void wpa_rekey_gtk(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_authenticator *wpa_auth = eloop_ctx;
-	struct wpa_group *group;
+	struct wpa_group *group, *next;
 
 	wpa_auth_logger(wpa_auth, NULL, LOGGER_DEBUG, "rekeying GTK");
-	for (group = wpa_auth->group; group; group = group->next) {
+	group = wpa_auth->group;
+	while (group) {
+		wpa_group_get(wpa_auth, group);
+
 		group->GTKReKey = TRUE;
 		do {
 			group->changed = FALSE;
 			wpa_group_sm_step(wpa_auth, group);
 		} while (group->changed);
+
+		next = group->next;
+		wpa_group_put(wpa_auth, group);
+		group = next;
 	}
 
 	if (wpa_auth->conf.wpa_group_rekey) {
@@ -573,6 +586,7 @@ wpa_auth_sta_init(struct wpa_authenticator *wpa_auth, const u8 *addr,
 
 	sm->wpa_auth = wpa_auth;
 	sm->group = wpa_auth->group;
+	wpa_group_get(sm->wpa_auth, sm->group);
 
 	return sm;
 }
@@ -651,6 +665,7 @@ static void wpa_free_sta_sm(struct wpa_state_machine *sm)
 #endif /* CONFIG_IEEE80211R */
 	os_free(sm->last_rx_eapol_key);
 	os_free(sm->wpa_ie);
+	wpa_group_put(sm->wpa_auth, sm->group);
 	os_free(sm);
 }
 
@@ -3281,6 +3296,63 @@ void wpa_auth_pmksa_remove(struct wpa_authenticator *wpa_auth,
 }
 
 
+/*
+ * Remove and free the group from wpa_authenticator. This is triggered by a
+ * callback to make sure nobody is currently iterating the group list while it
+ * gets modified.
+ */
+static void wpa_group_free(struct wpa_authenticator *wpa_auth,
+			   struct wpa_group *group)
+{
+	struct wpa_group *prev = wpa_auth->group;
+
+	wpa_printf(MSG_DEBUG, "WPA: Remove group state machine for VLAN-ID %d",
+		   group->vlan_id);
+
+	while (prev) {
+		if (prev->next == group) {
+			/* This never frees the special first group as needed */
+			prev->next = group->next;
+			os_free(group);
+			break;
+		}
+		prev = prev->next;
+	}
+
+}
+
+
+/* Increase the reference counter for group */
+static void wpa_group_get(struct wpa_authenticator *wpa_auth,
+			  struct wpa_group *group)
+{
+	/* Skip the special first group */
+	if (wpa_auth->group == group)
+		return;
+
+	group->references++;
+}
+
+
+/* Decrease the reference counter and maybe free the group */
+static void wpa_group_put(struct wpa_authenticator *wpa_auth,
+			  struct wpa_group *group)
+{
+	/* Skip the special first group */
+	if (wpa_auth->group == group)
+		return;
+
+	group->references--;
+	if (group->references)
+		return;
+	wpa_group_free(wpa_auth, group);
+}
+
+
+/*
+ * Add a group that has its references counter set to zero. Caller needs to
+ * call wpa_group_get() on the return value to mark the entry in use.
+ */
 static struct wpa_group *
 wpa_auth_add_group(struct wpa_authenticator *wpa_auth, int vlan_id)
 {
@@ -3331,7 +3403,10 @@ int wpa_auth_sta_set_vlan(struct wpa_state_machine *sm, int vlan_id)
 	wpa_printf(MSG_DEBUG, "WPA: Moving STA " MACSTR " to use group state "
 		   "machine for VLAN ID %d", MAC2STR(sm->addr), vlan_id);
 
+	wpa_group_get(sm->wpa_auth, group);
+	wpa_group_put(sm->wpa_auth, sm->group);
 	sm->group = group;
+
 	return 0;
 }
 

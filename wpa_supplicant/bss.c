@@ -398,7 +398,7 @@ static struct wpa_bss * wpa_bss_add(struct wpa_supplicant *wpa_s,
 
 
 static int are_ies_equal(const struct wpa_bss *old,
-			 const struct wpa_scan_res *new, u32 ie)
+			 const struct wpa_scan_res *new_res, u32 ie)
 {
 	const u8 *old_ie, *new_ie;
 	struct wpabuf *old_ie_buff = NULL;
@@ -408,19 +408,19 @@ static int are_ies_equal(const struct wpa_bss *old,
 	switch (ie) {
 	case WPA_IE_VENDOR_TYPE:
 		old_ie = wpa_bss_get_vendor_ie(old, ie);
-		new_ie = wpa_scan_get_vendor_ie(new, ie);
+		new_ie = wpa_scan_get_vendor_ie(new_res, ie);
 		is_multi = 0;
 		break;
 	case WPS_IE_VENDOR_TYPE:
 		old_ie_buff = wpa_bss_get_vendor_ie_multi(old, ie);
-		new_ie_buff = wpa_scan_get_vendor_ie_multi(new, ie);
+		new_ie_buff = wpa_scan_get_vendor_ie_multi(new_res, ie);
 		is_multi = 1;
 		break;
 	case WLAN_EID_RSN:
 	case WLAN_EID_SUPP_RATES:
 	case WLAN_EID_EXT_SUPP_RATES:
 		old_ie = wpa_bss_get_ie(old, ie);
-		new_ie = wpa_scan_get_ie(new, ie);
+		new_ie = wpa_scan_get_ie(new_res, ie);
 		is_multi = 0;
 		break;
 	default:
@@ -454,15 +454,15 @@ static int are_ies_equal(const struct wpa_bss *old,
 
 
 static u32 wpa_bss_compare_res(const struct wpa_bss *old,
-			       const struct wpa_scan_res *new)
+			       const struct wpa_scan_res *new_res)
 {
 	u32 changes = 0;
-	int caps_diff = old->caps ^ new->caps;
+	int caps_diff = old->caps ^ new_res->caps;
 
-	if (old->freq != new->freq)
+	if (old->freq != new_res->freq)
 		changes |= WPA_BSS_FREQ_CHANGED_FLAG;
 
-	if (old->level != new->level)
+	if (old->level != new_res->level)
 		changes |= WPA_BSS_SIGNAL_CHANGED_FLAG;
 
 	if (caps_diff & IEEE80211_CAP_PRIVACY)
@@ -471,22 +471,22 @@ static u32 wpa_bss_compare_res(const struct wpa_bss *old,
 	if (caps_diff & IEEE80211_CAP_IBSS)
 		changes |= WPA_BSS_MODE_CHANGED_FLAG;
 
-	if (old->ie_len == new->ie_len &&
-	    os_memcmp(old + 1, new + 1, old->ie_len) == 0)
+	if (old->ie_len == new_res->ie_len &&
+	    os_memcmp(old + 1, new_res + 1, old->ie_len) == 0)
 		return changes;
 	changes |= WPA_BSS_IES_CHANGED_FLAG;
 
-	if (!are_ies_equal(old, new, WPA_IE_VENDOR_TYPE))
+	if (!are_ies_equal(old, new_res, WPA_IE_VENDOR_TYPE))
 		changes |= WPA_BSS_WPAIE_CHANGED_FLAG;
 
-	if (!are_ies_equal(old, new, WLAN_EID_RSN))
+	if (!are_ies_equal(old, new_res, WLAN_EID_RSN))
 		changes |= WPA_BSS_RSNIE_CHANGED_FLAG;
 
-	if (!are_ies_equal(old, new, WPS_IE_VENDOR_TYPE))
+	if (!are_ies_equal(old, new_res, WPS_IE_VENDOR_TYPE))
 		changes |= WPA_BSS_WPS_CHANGED_FLAG;
 
-	if (!are_ies_equal(old, new, WLAN_EID_SUPP_RATES) ||
-	    !are_ies_equal(old, new, WLAN_EID_EXT_SUPP_RATES))
+	if (!are_ies_equal(old, new_res, WLAN_EID_SUPP_RATES) ||
+	    !are_ies_equal(old, new_res, WLAN_EID_EXT_SUPP_RATES))
 		changes |= WPA_BSS_RATES_CHANGED_FLAG;
 
 	return changes;

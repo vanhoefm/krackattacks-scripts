@@ -2994,9 +2994,9 @@ void wpa_gtk_rekey(struct wpa_authenticator *wpa_auth)
 }
 
 
-static const char * wpa_bool_txt(int bool)
+static const char * wpa_bool_txt(int val)
 {
-	return bool ? "TRUE" : "FALSE";
+	return val ? "TRUE" : "FALSE";
 }
 
 

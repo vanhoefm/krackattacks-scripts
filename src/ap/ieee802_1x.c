@@ -1285,7 +1285,7 @@ static void ieee802_1x_store_radius_class(struct hostapd_data *hapd,
 					  struct sta_info *sta,
 					  struct radius_msg *msg)
 {
-	u8 *class;
+	u8 *attr_class;
 	size_t class_len;
 	struct eapol_state_machine *sm = sta->eapol_sm;
 	int count, i;
@@ -1307,12 +1307,12 @@ static void ieee802_1x_store_radius_class(struct hostapd_data *hapd,
 
 	nclass_count = 0;
 
-	class = NULL;
+	attr_class = NULL;
 	for (i = 0; i < count; i++) {
 		do {
 			if (radius_msg_get_attr_ptr(msg, RADIUS_ATTR_CLASS,
-						    &class, &class_len,
-						    class) < 0) {
+						    &attr_class, &class_len,
+						    attr_class) < 0) {
 				i = count;
 				break;
 			}
@@ -1322,7 +1322,7 @@ static void ieee802_1x_store_radius_class(struct hostapd_data *hapd,
 		if (nclass[nclass_count].data == NULL)
 			break;
 
-		os_memcpy(nclass[nclass_count].data, class, class_len);
+		os_memcpy(nclass[nclass_count].data, attr_class, class_len);
 		nclass[nclass_count].len = class_len;
 		nclass_count++;
 	}
@@ -2342,9 +2342,9 @@ void ieee802_1x_notify_pre_auth(struct eapol_state_machine *sm, int pre_auth)
 }
 
 
-static const char * bool_txt(Boolean bool)
+static const char * bool_txt(Boolean val)
 {
-	return bool ? "TRUE" : "FALSE";
+	return val ? "TRUE" : "FALSE";
 }
 
 

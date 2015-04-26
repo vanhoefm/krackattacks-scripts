@@ -3931,9 +3931,9 @@ int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s)
 		 */
 		if (p2p_config_get_random_social(&p2p, &p2p.reg_class,
 						 &p2p.channel) != 0) {
-			wpa_printf(MSG_ERROR,
-				   "P2P: Failed to select random social channel as listen channel");
-			return -1;
+			wpa_printf(MSG_INFO,
+				   "P2P: No social channels supported by the driver - do not enable P2P");
+			return 0;
 		}
 		p2p.channel_forced = 0;
 	}

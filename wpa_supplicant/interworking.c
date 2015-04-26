@@ -2058,7 +2058,7 @@ static struct wpa_cred * interworking_credentials_available_helper(
 	int *excluded)
 {
 	struct wpa_cred *cred, *cred2;
-	int excluded1, excluded2;
+	int excluded1, excluded2 = 0;
 
 	if (disallowed_bssid(wpa_s, bss->bssid) ||
 	    disallowed_ssid(wpa_s, bss->ssid, bss->ssid_len)) {

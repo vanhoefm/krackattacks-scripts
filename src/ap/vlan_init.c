@@ -9,6 +9,13 @@
  */
 
 #include "utils/includes.h"
+#ifdef CONFIG_FULL_DYNAMIC_VLAN
+#include <net/if.h>
+#include <sys/ioctl.h>
+#include <linux/sockios.h>
+#include <linux/if_vlan.h>
+#include <linux/if_bridge.h>
+#endif /* CONFIG_FULL_DYNAMIC_VLAN */
 
 #include "utils/common.h"
 #include "hostapd.h"
@@ -19,12 +26,6 @@
 
 
 #ifdef CONFIG_FULL_DYNAMIC_VLAN
-
-#include <net/if.h>
-#include <sys/ioctl.h>
-#include <linux/sockios.h>
-#include <linux/if_vlan.h>
-#include <linux/if_bridge.h>
 
 #include "drivers/priv_netlink.h"
 #include "utils/eloop.h"

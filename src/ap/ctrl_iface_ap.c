@@ -153,6 +153,13 @@ static int hostapd_ctrl_iface_sta_mib(struct hostapd_data *hapd,
 	}
 #endif /* CONFIG_SAE */
 
+	if (sta->vlan_id > 0) {
+		res = os_snprintf(buf + len, buflen - len, "vlan_id=%d\n",
+				  sta->vlan_id);
+		if (!os_snprintf_error(buflen - len, res))
+			len += res;
+	}
+
 	return len;
 }
 

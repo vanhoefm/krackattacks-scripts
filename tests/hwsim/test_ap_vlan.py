@@ -104,6 +104,8 @@ def test_ap_vlan_wpa2_radius_id_change(dev, apdev):
                    scan_freq="2412")
     hwsim_utils.test_connectivity_iface(dev[0], hapd, "brvlan1")
 
+    logger.info("VLAN-ID -> 2")
+
     authserv.disable()
     authserv.set('eap_user_file', "auth_serv/eap_user_vlan.conf")
     authserv.enable()
@@ -125,6 +127,38 @@ def test_ap_vlan_wpa2_radius_id_change(dev, apdev):
     if sta['vlan_id'] != '2':
         raise Exception("Unexpected VLAN ID: " + sta['vlan_id'])
     hwsim_utils.test_connectivity_iface(dev[0], hapd, "brvlan2")
+
+    logger.info("VLAN-ID -> 1")
+    time.sleep(1)
+
+    authserv.disable()
+    authserv.set('eap_user_file', "auth_serv/eap_user.conf")
+    authserv.enable()
+
+    dev[0].dump_monitor()
+    dev[0].request("REAUTHENTICATE")
+    ev = dev[0].wait_event(["CTRL-EVENT-EAP-SUCCESS"], timeout=15)
+    if ev is None:
+        raise Exception("EAP reauthentication timed out")
+    ev = dev[0].wait_event(["WPA: Key negotiation completed"], timeout=5)
+    if ev is None:
+        raise Exception("4-way handshake after reauthentication timed out")
+    state = dev[0].get_status_field('wpa_state')
+    if state != "COMPLETED":
+        raise Exception("Unexpected state after reauth: " + state)
+    sta = hapd.get_sta(dev[0].own_addr())
+    if 'vlan_id' not in sta:
+        raise Exception("No VLAN ID in STA info")
+    if sta['vlan_id'] != '1':
+        raise Exception("Unexpected VLAN ID: " + sta['vlan_id'])
+    time.sleep(0.2)
+    try:
+        hwsim_utils.test_connectivity_iface(dev[0], hapd, "brvlan1")
+    except Exception, e:
+        # It is possible for new bridge setup to not be ready immediately, so
+        # try again to avoid reporting issues related to that.
+        logger.info("First VLAN-ID 1 data test failed - try again")
+        hwsim_utils.test_connectivity_iface(dev[0], hapd, "brvlan1")
 
 def test_ap_vlan_wpa2_radius_required(dev, apdev):
     """AP VLAN with WPA2-Enterprise and RADIUS attributes required"""

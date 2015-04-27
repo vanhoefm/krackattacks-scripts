@@ -2624,6 +2624,7 @@ def _test_ap_hs20_proxyarp_dgaf(dev, apdev, disabled):
     params['hessid'] = bssid
     params['disable_dgaf'] = '1' if disabled else '0'
     params['proxy_arp'] = '1'
+    params['na_mcast_to_ucast'] = '1'
     params['ap_isolate'] = '1'
     params['bridge'] = 'ap-br0'
     hapd = hostapd.add_ap(apdev[0]['ifname'], params, no_enable=True)

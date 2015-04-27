@@ -3138,6 +3138,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		bss->disable_dgaf = atoi(pos);
 	} else if (os_strcmp(buf, "proxy_arp") == 0) {
 		bss->proxy_arp = atoi(pos);
+	} else if (os_strcmp(buf, "na_mcast_to_ucast") == 0) {
+		bss->na_mcast_to_ucast = atoi(pos);
 	} else if (os_strcmp(buf, "osen") == 0) {
 		bss->osen = atoi(pos);
 	} else if (os_strcmp(buf, "anqp_domain_id") == 0) {

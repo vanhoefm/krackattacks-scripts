@@ -81,6 +81,18 @@ static int sta_has_ip6addr(struct sta_info *sta, struct in6_addr *addr)
 }
 
 
+static void ucast_to_stas(struct hostapd_data *hapd, const u8 *buf, size_t len)
+{
+	struct sta_info *sta;
+
+	for (sta = hapd->sta_list; sta; sta = sta->next) {
+		if (!(sta->flags & WLAN_STA_AUTHORIZED))
+			continue;
+		x_snoop_mcast_to_ucast_convert_send(hapd, sta, (u8 *) buf, len);
+	}
+}
+
+
 static void handle_ndisc(void *ctx, const u8 *src_addr, const u8 *buf,
 			 size_t len)
 {
@@ -133,16 +145,12 @@ static void handle_ndisc(void *ctx, const u8 *src_addr, const u8 *buf,
 		}
 		break;
 	case ROUTER_ADVERTISEMENT:
-		if (!hapd->conf->disable_dgaf)
-			return;
-		/* fall through */
+		if (hapd->conf->disable_dgaf)
+			ucast_to_stas(hapd, buf, len);
+		break;
 	case NEIGHBOR_ADVERTISEMENT:
-		for (sta = hapd->sta_list; sta; sta = sta->next) {
-			if (!(sta->flags & WLAN_STA_AUTHORIZED))
-				continue;
-			x_snoop_mcast_to_ucast_convert_send(hapd, sta,
-							    (u8 *) buf, len);
-		}
+		if (hapd->conf->na_mcast_to_ucast)
+			ucast_to_stas(hapd, buf, len);
 		break;
 	default:
 		break;

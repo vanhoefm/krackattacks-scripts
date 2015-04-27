@@ -490,6 +490,7 @@ struct hostapd_bss_config {
 
 	int osen;
 	int proxy_arp;
+	int na_mcast_to_ucast;
 #ifdef CONFIG_HS20
 	int hs20;
 	int disable_dgaf;

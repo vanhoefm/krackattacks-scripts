@@ -4,6 +4,8 @@
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
 
+import os
+
 def get_ifnames():
     ifnames = []
     with open("/proc/net/dev", "r") as f:
@@ -39,3 +41,14 @@ def require_under_vm():
         cmd = f.read()
         if "inside.sh" not in cmd:
             raise HwsimSkip("Not running under VM")
+
+def iface_is_in_bridge(bridge, ifname):
+    fname = "/sys/class/net/"+ifname+"/brport/bridge"
+    if not os.path.exists(fname):
+        return False
+    if not os.path.islink(fname):
+        return False
+    truebridge = os.path.basename(os.readlink(fname))
+    if bridge == truebridge:
+        return True
+    return False

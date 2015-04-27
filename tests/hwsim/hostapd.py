@@ -49,16 +49,17 @@ class HostapdGlobal:
 
 
 class Hostapd:
-    def __init__(self, ifname):
+    def __init__(self, ifname, bssidx=0):
         self.ifname = ifname
         self.ctrl = wpaspy.Ctrl(os.path.join(hapd_ctrl, ifname))
         self.mon = wpaspy.Ctrl(os.path.join(hapd_ctrl, ifname))
         self.mon.attach()
         self.bssid = None
+        self.bssidx = bssidx
 
     def own_addr(self):
         if self.bssid is None:
-            self.bssid = self.get_status_field('bssid[0]')
+            self.bssid = self.get_status_field('bssid[%d]' % self.bssidx)
         return self.bssid
 
     def request(self, cmd):

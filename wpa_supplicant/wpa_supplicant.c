@@ -3098,7 +3098,8 @@ void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 
 			wps_ie = wpa_bss_get_vendor_ie_multi(
 				wpa_s->current_bss, WPS_IE_VENDOR_TYPE);
-			if (wps_ie && !wps_is_selected_pbc_registrar(wps_ie))
+			if (wps_ie &&
+			    !wps_is_addr_authorized(wps_ie, wpa_s->own_addr, 1))
 				timeout = 10;
 			wpabuf_free(wps_ie);
 		}

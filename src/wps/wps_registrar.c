@@ -3226,8 +3226,13 @@ static enum wps_process_res wps_process_wsc_done(struct wps_data *wps,
 		os_memset(&cred, 0, sizeof(cred));
 		os_memcpy(cred.ssid, wps->wps->ssid, wps->wps->ssid_len);
 		cred.ssid_len = wps->wps->ssid_len;
-		cred.auth_type = WPS_AUTH_WPAPSK | WPS_AUTH_WPA2PSK;
-		cred.encr_type = WPS_ENCR_TKIP | WPS_ENCR_AES;
+		if (wps->wps->rf_band_cb(wps->wps->cb_ctx) == WPS_RF_60GHZ) {
+			cred.auth_type = WPS_AUTH_WPA2PSK;
+			cred.encr_type = WPS_ENCR_AES;
+		} else {
+			cred.auth_type = WPS_AUTH_WPAPSK | WPS_AUTH_WPA2PSK;
+			cred.encr_type = WPS_ENCR_TKIP | WPS_ENCR_AES;
+		}
 		os_memcpy(cred.key, wps->new_psk, wps->new_psk_len);
 		cred.key_len = wps->new_psk_len;
 

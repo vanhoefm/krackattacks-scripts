@@ -79,7 +79,7 @@ struct wps_credential {
  * @sec_dev_type: Array of secondary device types
  * @num_sec_dev_type: Number of secondary device types
  * @os_version: OS Version
- * @rf_bands: RF bands (WPS_RF_24GHZ, WPS_RF_50GHZ flags)
+ * @rf_bands: RF bands (WPS_RF_24GHZ, WPS_RF_50GHZ, WPS_RF_60GHZ flags)
  * @p2p: Whether the device is a P2P device
  */
 struct wps_device_data {

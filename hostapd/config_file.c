@@ -2545,7 +2545,9 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			return 1;
 		}
 	} else if (os_strcmp(buf, "wps_rf_bands") == 0) {
-		if (os_strcmp(pos, "a") == 0)
+		if (os_strcmp(pos, "ad") == 0)
+			bss->wps_rf_bands = WPS_RF_60GHZ;
+		else if (os_strcmp(pos, "a") == 0)
 			bss->wps_rf_bands = WPS_RF_50GHZ;
 		else if (os_strcmp(pos, "g") == 0 ||
 			 os_strcmp(pos, "b") == 0)

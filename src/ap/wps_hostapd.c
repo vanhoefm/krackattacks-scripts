@@ -347,8 +347,12 @@ static int hapd_wps_reconfig_in_memory(struct hostapd_data *hapd,
 			bss->wpa_key_mgmt = WPA_KEY_MGMT_PSK;
 
 		bss->wpa_pairwise = 0;
-		if (cred->encr_type & WPS_ENCR_AES)
-			bss->wpa_pairwise |= WPA_CIPHER_CCMP;
+		if (cred->encr_type & WPS_ENCR_AES) {
+			if (hapd->iconf->hw_mode == HOSTAPD_MODE_IEEE80211AD)
+				bss->wpa_pairwise |= WPA_CIPHER_GCMP;
+			else
+				bss->wpa_pairwise |= WPA_CIPHER_CCMP;
+		}
 		if (cred->encr_type & WPS_ENCR_TKIP)
 			bss->wpa_pairwise |= WPA_CIPHER_TKIP;
 		bss->rsn_pairwise = bss->wpa_pairwise;
@@ -530,7 +534,11 @@ static int hapd_wps_cred_cb(struct hostapd_data *hapd, void *ctx)
 		fprintf(nconf, "wpa_pairwise=");
 		prefix = "";
 		if (cred->encr_type & WPS_ENCR_AES) {
-			fprintf(nconf, "CCMP");
+			if (hapd->iconf->hw_mode == HOSTAPD_MODE_IEEE80211AD)
+				fprintf(nconf, "GCMP");
+			else
+				fprintf(nconf, "CCMP");
+
 			prefix = " ";
 		}
 		if (cred->encr_type & WPS_ENCR_TKIP) {
@@ -844,7 +852,9 @@ static int hostapd_wps_rf_band_cb(void *ctx)
 	struct hostapd_data *hapd = ctx;
 
 	return hapd->iconf->hw_mode == HOSTAPD_MODE_IEEE80211A ?
-		WPS_RF_50GHZ : WPS_RF_24GHZ; /* FIX: dualband AP */
+		WPS_RF_50GHZ :
+		hapd->iconf->hw_mode == HOSTAPD_MODE_IEEE80211AD ?
+		WPS_RF_60GHZ : WPS_RF_24GHZ; /* FIX: dualband AP */
 }
 
 
@@ -1041,7 +1051,9 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 	} else {
 		wps->dev.rf_bands =
 			hapd->iconf->hw_mode == HOSTAPD_MODE_IEEE80211A ?
-			WPS_RF_50GHZ : WPS_RF_24GHZ; /* FIX: dualband AP */
+			WPS_RF_50GHZ :
+			hapd->iconf->hw_mode == HOSTAPD_MODE_IEEE80211AD ?
+			WPS_RF_60GHZ : WPS_RF_24GHZ; /* FIX: dualband AP */
 	}
 
 	if (conf->wpa & WPA_PROTO_RSN) {

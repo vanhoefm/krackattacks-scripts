@@ -888,7 +888,8 @@ static int wpa_supplicant_wps_rf_band(void *ctx)
 	if (!wpa_s->current_ssid || !wpa_s->assoc_freq)
 		return 0;
 
-	return (wpa_s->assoc_freq > 2484) ? WPS_RF_50GHZ : WPS_RF_24GHZ;
+	return (wpa_s->assoc_freq > 50000) ? WPS_RF_60GHZ :
+		(wpa_s->assoc_freq > 2484) ? WPS_RF_50GHZ : WPS_RF_24GHZ;
 }
 
 
@@ -1496,6 +1497,8 @@ int wpas_wps_init(struct wpa_supplicant *wpa_s)
 				wps->dev.rf_bands |= WPS_RF_24GHZ;
 			else if (modes[m].mode == HOSTAPD_MODE_IEEE80211A)
 				wps->dev.rf_bands |= WPS_RF_50GHZ;
+			else if (modes[m].mode == HOSTAPD_MODE_IEEE80211AD)
+				wps->dev.rf_bands |= WPS_RF_60GHZ;
 		}
 	}
 	if (wps->dev.rf_bands == 0) {
@@ -2597,6 +2600,10 @@ static int wpas_wps_nfc_rx_handover_sel(struct wpa_supplicant *wpa_s,
 			 (attr.rf_bands == NULL ||
 			  *attr.rf_bands & WPS_RF_50GHZ))
 			freq = 5000 + 5 * chan;
+		else if (chan >= 1 && chan <= 4 &&
+			 (attr.rf_bands == NULL ||
+			  *attr.rf_bands & WPS_RF_60GHZ))
+			freq = 56160 + 2160 * chan;
 
 		if (freq) {
 			wpa_printf(MSG_DEBUG,

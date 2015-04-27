@@ -237,6 +237,7 @@ enum wps_error_indication {
 /* RF Bands */
 #define WPS_RF_24GHZ 0x01
 #define WPS_RF_50GHZ 0x02
+#define WPS_RF_60GHZ 0x04
 
 /* Config Methods */
 #define WPS_CONFIG_USBA 0x0001

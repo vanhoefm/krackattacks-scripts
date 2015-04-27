@@ -2501,7 +2501,7 @@ static int wpa_driver_nl80211_set_key(const char *ifname, struct i802_bss *bss,
 {
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	int ifindex;
-	struct nl_msg *msg;
+	struct nl_msg *msg = NULL;
 	int ret;
 	int tdls = 0;
 
@@ -2534,11 +2534,15 @@ static int wpa_driver_nl80211_set_key(const char *ifname, struct i802_bss *bss,
 		if (!msg)
 			return -ENOBUFS;
 	} else {
+		u32 suite;
+
+		suite = wpa_alg_to_cipher_suite(alg, key_len);
+		if (!suite)
+			goto fail;
 		msg = nl80211_ifindex_msg(drv, ifindex, 0, NL80211_CMD_NEW_KEY);
 		if (!msg ||
 		    nla_put(msg, NL80211_ATTR_KEY_DATA, key_len, key) ||
-		    nla_put_u32(msg, NL80211_ATTR_KEY_CIPHER,
-				wpa_alg_to_cipher_suite(alg, key_len)))
+		    nla_put_u32(msg, NL80211_ATTR_KEY_CIPHER, suite))
 			goto fail;
 		wpa_hexdump_key(MSG_DEBUG, "nl80211: KEY_DATA", key, key_len);
 	}
@@ -2640,7 +2644,13 @@ static int nl_add_key(struct nl_msg *msg, enum wpa_alg alg,
 		      const u8 *key, size_t key_len)
 {
 	struct nlattr *key_attr = nla_nest_start(msg, NL80211_ATTR_KEY);
+	u32 suite;
+
 	if (!key_attr)
+		return -1;
+
+	suite = wpa_alg_to_cipher_suite(alg, key_len);
+	if (!suite)
 		return -1;
 
 	if (defkey && alg == WPA_ALG_IGTK) {
@@ -2652,8 +2662,7 @@ static int nl_add_key(struct nl_msg *msg, enum wpa_alg alg,
 	}
 
 	if (nla_put_u8(msg, NL80211_KEY_IDX, key_idx) ||
-	    nla_put_u32(msg, NL80211_KEY_CIPHER,
-			wpa_alg_to_cipher_suite(alg, key_len)) ||
+	    nla_put_u32(msg, NL80211_KEY_CIPHER, suite) ||
 	    (seq && seq_len &&
 	     nla_put(msg, NL80211_KEY_SEQ, seq_len, seq)) ||
 	    nla_put(msg, NL80211_KEY_DATA, key_len, key))

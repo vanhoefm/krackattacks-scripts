@@ -1021,7 +1021,8 @@ static int wpa_supplicant_key_mgmt_set_pmk(void *ctx, const u8 *pmk,
 {
 	struct wpa_supplicant *wpa_s = ctx;
 
-	if (wpa_s->conf->key_mgmt_offload)
+	if (wpa_s->conf->key_mgmt_offload &&
+	    (wpa_s->drv_flags & WPA_DRIVER_FLAGS_KEY_MGMT_OFFLOAD))
 		return wpa_drv_set_key(wpa_s, WPA_ALG_PMK, NULL, 0, 0,
 				       NULL, 0, pmk, pmk_len);
 	else

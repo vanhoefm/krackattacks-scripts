@@ -117,9 +117,6 @@ struct hostapd_vlan {
 	int dynamic_vlan;
 #ifdef CONFIG_FULL_DYNAMIC_VLAN
 
-#define DVLAN_CLEAN_BR 	0x1
-#define DVLAN_CLEAN_VLAN	0x2
-#define DVLAN_CLEAN_VLAN_PORT	0x4
 #define DVLAN_CLEAN_WLAN_PORT	0x8
 	int clean;
 #endif /* CONFIG_FULL_DYNAMIC_VLAN */

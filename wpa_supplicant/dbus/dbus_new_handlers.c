@@ -1332,14 +1332,25 @@ DBusMessage * wpas_dbus_handler_scan(DBusMessage *message,
 				message,
 				"You can specify only Channels in passive scan");
 			goto out;
-		} else if (params.freqs && params.freqs[0]) {
-			if (wpa_supplicant_trigger_scan(wpa_s, &params)) {
-				reply = wpas_dbus_error_scan_error(
-					message, "Scan request rejected");
-			}
 		} else {
-			wpa_s->scan_req = MANUAL_SCAN_REQ;
-			wpa_supplicant_req_scan(wpa_s, 0, 0);
+			if (wpa_s->sched_scanning) {
+				wpa_printf(MSG_DEBUG,
+					   "%s[dbus]: Stop ongoing sched_scan to allow requested scan to proceed",
+					   __func__);
+				wpa_supplicant_cancel_sched_scan(wpa_s);
+			}
+
+			if (params.freqs && params.freqs[0]) {
+				if (wpa_supplicant_trigger_scan(wpa_s,
+								&params)) {
+					reply = wpas_dbus_error_scan_error(
+						message,
+						"Scan request rejected");
+				}
+			} else {
+				wpa_s->scan_req = MANUAL_SCAN_REQ;
+				wpa_supplicant_req_scan(wpa_s, 0, 0);
+			}
 		}
 	} else if (os_strcmp(type, "active") == 0) {
 		if (!params.num_ssids) {
@@ -1349,6 +1360,13 @@ DBusMessage * wpas_dbus_handler_scan(DBusMessage *message,
 #ifdef CONFIG_AUTOSCAN
 		autoscan_deinit(wpa_s);
 #endif /* CONFIG_AUTOSCAN */
+		if (wpa_s->sched_scanning) {
+			wpa_printf(MSG_DEBUG,
+				   "%s[dbus]: Stop ongoing sched_scan to allow requested scan to proceed",
+				   __func__);
+			wpa_supplicant_cancel_sched_scan(wpa_s);
+		}
+
 		if (wpa_supplicant_trigger_scan(wpa_s, &params)) {
 			reply = wpas_dbus_error_scan_error(
 				message, "Scan request rejected");

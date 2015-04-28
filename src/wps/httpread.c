@@ -608,6 +608,11 @@ static void httpread_read_handler(int sd, void *eloop_ctx, void *sock_ctx)
 				ncopy = nread;
 			}
 			/* Note: should never be 0 */
+			if (ncopy < 0) {
+				wpa_printf(MSG_DEBUG,
+					   "httpread: Invalid ncopy=%d", ncopy);
+				goto bad;
+			}
 			if (ncopy > nread)
 				ncopy = nread;
 			os_memcpy(bbp, rbp, ncopy);

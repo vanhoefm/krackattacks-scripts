@@ -1225,7 +1225,7 @@ int radius_msg_add_mppe_keys(struct radius_msg *msg,
 	}
 
 	/* MS-MPPE-Recv-Key */
-	buf = os_malloc(hlen + send_key_len + 16);
+	buf = os_malloc(hlen + recv_key_len + 16);
 	if (buf == NULL) {
 		return 0;
 	}

@@ -760,6 +760,13 @@ class WpaSupplicant:
             raise Exception("Failed to request TDLS teardown")
         return None
 
+    def tdls_link_status(self, peer):
+        cmd = "TDLS_LINK_STATUS " + peer
+        ret = self.group_request(cmd)
+        if "FAIL" in ret:
+            raise Exception("Failed to request TDLS link status")
+        return ret
+
     def tspecs(self):
         """Return (tsid, up) tuples representing current tspecs"""
         res = self.request("WMM_AC_STATUS")

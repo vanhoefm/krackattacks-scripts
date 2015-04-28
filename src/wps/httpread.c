@@ -44,16 +44,6 @@
 #define HTTPREAD_HEADER_MAX_SIZE 4096   /* max allowed for headers */
 #define HTTPREAD_BODYBUF_DELTA 4096     /* increase allocation by this */
 
-#if 0
-/* httpread_debug -- set this global variable > 0 e.g. from debugger
- * to enable debugs (larger numbers for more debugs)
- * Make this a #define of 0 to eliminate the debugging code.
- */
-int httpread_debug = 99;
-#else
-#define httpread_debug 0        /* eliminates even the debugging code */
-#endif
-
 
 /* control instance -- actual definition (opaque to application)
  */
@@ -136,8 +126,7 @@ static void httpread_timeout_handler(void *eloop_data, void *user_ctx);
  */
 void httpread_destroy(struct httpread *h)
 {
-	if (httpread_debug >= 10)
-		wpa_printf(MSG_DEBUG, "ENTER httpread_destroy(%p)", h);
+	wpa_printf(MSG_DEBUG, "httpread_destroy(%p)", h);
 	if (!h)
 		return;
 
@@ -386,12 +375,10 @@ static void httpread_read_handler(int sd, void *eloop_ctx, void *sock_ctx)
 	char *bbp;      /* pointer into body buffer */
 	char readbuf[HTTPREAD_READBUF_SIZE];  /* temp use to read into */
 
-	if (httpread_debug >= 20)
-		wpa_printf(MSG_DEBUG, "ENTER httpread_read_handler(%p)", h);
-
 	/* read some at a time, then search for the interal
 	 * boundaries between header and data and etc.
 	 */
+	wpa_printf(MSG_DEBUG, "httpread: Trying to read more data(%p)", h);
 	nread = read(h->sd, readbuf, sizeof(readbuf));
 	if (nread < 0)
 		goto bad;
@@ -417,8 +404,7 @@ static void httpread_read_handler(int sd, void *eloop_ctx, void *sock_ctx)
 		 * although dropped connections can cause false
 		 * end
 		 */
-		if (httpread_debug >= 10)
-			wpa_printf(MSG_DEBUG, "httpread ok eof(%p)", h);
+		wpa_printf(MSG_DEBUG, "httpread ok eof(%p)", h);
 		h->got_body = 1;
 		goto got_file;
 	}
@@ -459,16 +445,13 @@ static void httpread_read_handler(int sd, void *eloop_ctx, void *sock_ctx)
 			goto bad;
 		}
 		if (h->max_bytes == 0) {
-			if (httpread_debug >= 10)
-				wpa_printf(MSG_DEBUG,
-					   "httpread no body hdr end(%p)", h);
+			wpa_printf(MSG_DEBUG, "httpread no body hdr end(%p)",
+				   h);
 			goto got_file;
 		}
 		if (h->got_content_length && h->content_length == 0) {
-			if (httpread_debug >= 10)
-				wpa_printf(MSG_DEBUG,
-					   "httpread zero content length(%p)",
-					   h);
+			wpa_printf(MSG_DEBUG,
+				   "httpread zero content length(%p)", h);
 			goto got_file;
 		}
 	}
@@ -481,9 +464,7 @@ static void httpread_read_handler(int sd, void *eloop_ctx, void *sock_ctx)
 	    !os_strncasecmp(h->hdr, "HEAD", 4) ||
 	    !os_strncasecmp(h->hdr, "GET", 3)) {
 		if (!h->got_body) {
-			if (httpread_debug >= 10)
-				wpa_printf(MSG_DEBUG,
-					   "httpread NO BODY for sp. type");
+			wpa_printf(MSG_DEBUG, "httpread NO BODY for sp. type");
 		}
 		h->got_body = 1;
 		goto got_file;
@@ -562,10 +543,9 @@ static void httpread_read_handler(int sd, void *eloop_ctx, void *sock_ctx)
 						/* end of chunking */
 						/* trailer follows */
 						h->in_trailer = 1;
-						if (httpread_debug >= 20)
-							wpa_printf(
-								MSG_DEBUG,
-								"httpread end chunks(%p)", h);
+						wpa_printf(MSG_DEBUG,
+							   "httpread end chunks(%p)",
+							   h);
 						break;
 					}
 					h->in_chunk_data = 1;
@@ -594,10 +574,8 @@ static void httpread_read_handler(int sd, void *eloop_ctx, void *sock_ctx)
 			} else if (h->got_content_length &&
 				   h->body_nbytes >= h->content_length) {
 				h->got_body = 1;
-				if (httpread_debug >= 10)
-					wpa_printf(
-						MSG_DEBUG,
-						"httpread got content(%p)", h);
+				wpa_printf(MSG_DEBUG,
+					   "httpread got content(%p)", h);
 				goto got_file;
 			}
 			if (nread <= 0)
@@ -660,10 +638,9 @@ static void httpread_read_handler(int sd, void *eloop_ctx, void *sock_ctx)
 				if (c == '\n') {
 					h->trailer_state = trailer_line_begin;
 					h->in_trailer = 0;
-					if (httpread_debug >= 10)
-						wpa_printf(
-							MSG_DEBUG,
-							"httpread got content(%p)", h);
+					wpa_printf(MSG_DEBUG,
+						   "httpread got content(%p)",
+						   h);
 					h->got_body = 1;
 					goto got_file;
 				}
@@ -694,10 +671,8 @@ get_more:
 	return;
 
 got_file:
-	if (httpread_debug >= 10)
-		wpa_printf(MSG_DEBUG,
-			   "httpread got file %d bytes type %d",
-			   h->body_nbytes, h->hdr_type);
+	wpa_printf(MSG_DEBUG, "httpread got file %d bytes type %d",
+		   h->body_nbytes, h->hdr_type);
 	/* Null terminate for convenience of some applications */
 	if (h->body)
 		h->body[h->body_nbytes] = 0; /* null terminate */

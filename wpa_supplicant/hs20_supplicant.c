@@ -188,14 +188,16 @@ int hs20_anqp_send_req(struct wpa_supplicant *wpa_s, const u8 *dst, u32 stypes,
 	struct wpa_bss *bss;
 	int res;
 
-	freq = wpa_s->assoc_freq;
 	bss = wpa_bss_get_bssid(wpa_s, dst);
-	if (bss) {
-		wpa_bss_anqp_unshare_alloc(bss);
-		freq = bss->freq;
-	}
-	if (freq <= 0)
+	if (!bss) {
+		wpa_printf(MSG_WARNING,
+			   "ANQP: Cannot send query to unknown BSS "
+			   MACSTR, MAC2STR(dst));
 		return -1;
+	}
+
+	wpa_bss_anqp_unshare_alloc(bss);
+	freq = bss->freq;
 
 	wpa_printf(MSG_DEBUG, "HS20: ANQP Query Request to " MACSTR " for "
 		   "subtypes 0x%x", MAC2STR(dst), stypes);

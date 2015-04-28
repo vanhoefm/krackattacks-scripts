@@ -2222,6 +2222,168 @@ def test_ap_wps_upnp_subscribe(dev, apdev):
     sid = resp.getheader("sid")
     logger.debug("Subscription SID " + sid)
 
+def test_ap_wps_upnp_http_proto(dev, apdev):
+    """WPS AP and UPnP/HTTP protocol testing"""
+    ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
+    add_ssdp_ap(apdev[0]['ifname'], ap_uuid)
+
+    location = ssdp_get_location(ap_uuid)
+
+    url = urlparse.urlparse(location)
+    conn = httplib.HTTPConnection(url.netloc, timeout=0.1)
+    #conn.set_debuglevel(1)
+
+    conn.request("HEAD", "hello")
+    resp = conn.getresponse()
+    if resp.status != 501:
+        raise Exception("Unexpected response to HEAD: " + str(resp.status))
+    conn.close()
+
+    for cmd in [ "PUT", "DELETE", "TRACE", "CONNECT", "M-SEARCH", "M-POST" ]:
+        try:
+            conn.request(cmd, "hello")
+            resp = conn.getresponse()
+        except Exception, e:
+            pass
+        conn.close()
+
+    headers = { "Content-Length": 'abc' }
+    conn.request("HEAD", "hello", "\r\n\r\n", headers)
+    try:
+        resp = conn.getresponse()
+    except Exception, e:
+        pass
+    conn.close()
+
+    headers = { "Content-Length": '-10' }
+    conn.request("HEAD", "hello", "\r\n\r\n", headers)
+    try:
+        resp = conn.getresponse()
+    except Exception, e:
+        pass
+    conn.close()
+
+    headers = { "Content-Length": '10000000000000' }
+    conn.request("HEAD", "hello", "\r\n\r\nhello", headers)
+    try:
+        resp = conn.getresponse()
+    except Exception, e:
+        pass
+    conn.close()
+
+    headers = { "Transfer-Encoding": 'abc' }
+    conn.request("HEAD", "hello", "\r\n\r\n", headers)
+    resp = conn.getresponse()
+    if resp.status != 501:
+        raise Exception("Unexpected response to HEAD: " + str(resp.status))
+    conn.close()
+
+    headers = { "Transfer-Encoding": 'chunked' }
+    conn.request("HEAD", "hello", "\r\n\r\n", headers)
+    resp = conn.getresponse()
+    if resp.status != 501:
+        raise Exception("Unexpected response to HEAD: " + str(resp.status))
+    conn.close()
+
+    # Too long a header
+    conn.request("HEAD", 5000 * 'A')
+    try:
+        resp = conn.getresponse()
+    except Exception, e:
+        pass
+    conn.close()
+
+    # Long URL but within header length limits
+    conn.request("HEAD", 3000 * 'A')
+    resp = conn.getresponse()
+    if resp.status != 501:
+        raise Exception("Unexpected response to HEAD: " + str(resp.status))
+    conn.close()
+
+    headers = { "Content-Length": '20' }
+    conn.request("POST", "hello", 10 * 'A' + "\r\n\r\n", headers)
+    try:
+        resp = conn.getresponse()
+    except Exception, e:
+        pass
+    conn.close()
+
+    conn.request("POST", "hello", 5000 * 'A' + "\r\n\r\n")
+    resp = conn.getresponse()
+    if resp.status != 404:
+        raise Exception("Unexpected HTTP response: %s" % resp.status)
+    conn.close()
+
+    conn.request("POST", "hello", 60000 * 'A' + "\r\n\r\n")
+    try:
+        resp = conn.getresponse()
+    except Exception, e:
+        pass
+    conn.close()
+
+def test_ap_wps_upnp_http_proto_chunked(dev, apdev):
+    """WPS AP and UPnP/HTTP protocol testing for chunked encoding"""
+    ap_uuid = "27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"
+    add_ssdp_ap(apdev[0]['ifname'], ap_uuid)
+
+    location = ssdp_get_location(ap_uuid)
+
+    url = urlparse.urlparse(location)
+    conn = httplib.HTTPConnection(url.netloc)
+    #conn.set_debuglevel(1)
+
+    headers = { "Transfer-Encoding": 'chunked' }
+    conn.request("POST", "hello",
+                 "a\r\nabcdefghij\r\n" + "2\r\nkl\r\n" + "0\r\n\r\n",
+                 headers)
+    resp = conn.getresponse()
+    if resp.status != 404:
+        raise Exception("Unexpected HTTP response: %s" % resp.status)
+    conn.close()
+
+    conn.putrequest("POST", "hello")
+    conn.putheader('Transfer-Encoding', 'chunked')
+    conn.endheaders()
+    conn.send("a\r\nabcdefghij\r\n")
+    time.sleep(0.1)
+    conn.send("2\r\nkl\r\n")
+    conn.send("0\r\n\r\n")
+    resp = conn.getresponse()
+    if resp.status != 404:
+        raise Exception("Unexpected HTTP response: %s" % resp.status)
+    conn.close()
+
+    conn.putrequest("POST", "hello")
+    conn.putheader('Transfer-Encoding', 'chunked')
+    conn.endheaders()
+    completed = False
+    try:
+        for i in range(20000):
+            conn.send("1\r\nZ\r\n")
+        conn.send("0\r\n\r\n")
+        resp = conn.getresponse()
+        completed = True
+    except Exception, e:
+        pass
+    conn.close()
+    if completed:
+        raise Exception("Too long chunked request did not result in connection reset")
+
+    headers = { "Transfer-Encoding": 'chunked' }
+    conn.request("POST", "hello", "80000000\r\na", headers)
+    try:
+        resp = conn.getresponse()
+    except Exception, e:
+        pass
+    conn.close()
+
+    conn.request("POST", "hello", "10000000\r\na", headers)
+    try:
+        resp = conn.getresponse()
+    except Exception, e:
+        pass
+    conn.close()
+
 def test_ap_wps_disabled(dev, apdev):
     """WPS operations while WPS is disabled"""
     ssid = "test-wps-disabled"

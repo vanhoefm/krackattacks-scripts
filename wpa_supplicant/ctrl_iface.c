@@ -760,6 +760,33 @@ static int wpa_supplicant_ctrl_iface_tdls_cancel_chan_switch(
 	return wpa_tdls_disable_chan_switch(wpa_s->wpa, peer);
 }
 
+
+static int wpa_supplicant_ctrl_iface_tdls_link_status(
+	struct wpa_supplicant *wpa_s, const char *addr,
+	char *buf, size_t buflen)
+{
+	u8 peer[ETH_ALEN];
+	const char *tdls_status;
+	int ret;
+
+	if (hwaddr_aton(addr, peer)) {
+		wpa_printf(MSG_DEBUG,
+			   "CTRL_IFACE TDLS_LINK_STATUS: Invalid address '%s'",
+			   addr);
+		return -1;
+	}
+	wpa_printf(MSG_DEBUG, "CTRL_IFACE TDLS_LINK_STATUS " MACSTR,
+		   MAC2STR(peer));
+
+	tdls_status = wpa_tdls_get_link_status(wpa_s->wpa, peer);
+	wpa_printf(MSG_DEBUG, "CTRL_IFACE TDLS_LINK_STATUS: %s", tdls_status);
+	ret = os_snprintf(buf, buflen, "TDLS link status: %s\n", tdls_status);
+	if (os_snprintf_error(buflen, ret))
+		return -1;
+
+	return ret;
+}
+
 #endif /* CONFIG_TDLS */
 
 
@@ -8415,6 +8442,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		if (wpa_supplicant_ctrl_iface_tdls_cancel_chan_switch(wpa_s,
 								      buf + 24))
 			reply_len = -1;
+	} else if (os_strncmp(buf, "TDLS_LINK_STATUS ", 17) == 0) {
+		reply_len = wpa_supplicant_ctrl_iface_tdls_link_status(
+			wpa_s, buf + 17, reply, reply_size);
 #endif /* CONFIG_TDLS */
 	} else if (os_strcmp(buf, "WMM_AC_STATUS") == 0) {
 		reply_len = wpas_wmm_ac_status(wpa_s, reply, reply_size);

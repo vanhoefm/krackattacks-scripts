@@ -2653,6 +2653,13 @@ static int wpa_cli_cmd_tdls_teardown(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int wpa_cli_cmd_tdls_link_status(struct wpa_ctrl *ctrl, int argc,
+					char *argv[])
+{
+	return wpa_cli_cmd(ctrl, "TDLS_LINK_STATUS", 1, argc, argv);
+}
+
+
 static int wpa_cli_cmd_wmm_ac_addts(struct wpa_ctrl *ctrl, int argc,
 				    char *argv[])
 {
@@ -3280,6 +3287,9 @@ static const struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "tdls_teardown", wpa_cli_cmd_tdls_teardown, NULL,
 	  cli_cmd_flag_none,
 	  "<addr> = tear down TDLS with <addr>" },
+	{ "tdls_link_status", wpa_cli_cmd_tdls_link_status, NULL,
+	  cli_cmd_flag_none,
+	  "<addr> = TDLS link status with <addr>" },
 	{ "wmm_ac_addts", wpa_cli_cmd_wmm_ac_addts, NULL,
 	  cli_cmd_flag_none,
 	  "<uplink/downlink/bidi> <tsid=0..7> <up=0..7> [nominal_msdu_size=#] "

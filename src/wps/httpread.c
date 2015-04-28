@@ -177,6 +177,12 @@ static int httpread_hdr_option_analyze(
 		if (!isdigit(*hbp))
 			return -1;
 		h->content_length = atol(hbp);
+		if (h->content_length < 0 || h->content_length > h->max_bytes) {
+			wpa_printf(MSG_DEBUG,
+				   "httpread: Unacceptable Content-Length %d",
+				   h->content_length);
+			return -1;
+		}
 		h->got_content_length = 1;
 		return 0;
 	}
@@ -509,6 +515,13 @@ static void httpread_read_handler(int sd, void *eloop_ctx, void *sock_ctx)
 			if (h->got_content_length &&
 			    new_alloc_nbytes < (h->content_length + 1))
 				new_alloc_nbytes = h->content_length + 1;
+			if (new_alloc_nbytes < h->body_alloc_nbytes ||
+			    new_alloc_nbytes > h->max_bytes) {
+				wpa_printf(MSG_DEBUG,
+					   "httpread: Unacceptable body length %d",
+					   new_alloc_nbytes);
+				goto bad;
+			}
 			if ((new_body = os_realloc(h->body, new_alloc_nbytes))
 			    == NULL)
 				goto bad;

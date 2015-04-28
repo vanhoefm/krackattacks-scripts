@@ -1456,7 +1456,8 @@ static int wpa_cli_cmd_add_network(struct wpa_ctrl *ctrl, int argc,
 				   char *argv[])
 {
 	int res = wpa_ctrl_command(ctrl, "ADD_NETWORK");
-	update_networks(ctrl);
+	if (interactive)
+		update_networks(ctrl);
 	return res;
 }
 
@@ -1465,7 +1466,8 @@ static int wpa_cli_cmd_remove_network(struct wpa_ctrl *ctrl, int argc,
 				      char *argv[])
 {
 	int res = wpa_cli_cmd(ctrl, "REMOVE_NETWORK", 1, argc, argv);
-	update_networks(ctrl);
+	if (interactive)
+		update_networks(ctrl);
 	return res;
 }
 

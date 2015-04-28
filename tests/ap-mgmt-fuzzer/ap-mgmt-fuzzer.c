@@ -12,6 +12,7 @@
 #include "utils/eloop.h"
 #include "ap/hostapd.h"
 #include "ap/ieee802_11.h"
+#include "ap/sta_info.h"
 
 
 const struct wpa_driver_ops *const wpa_drivers[] =
@@ -59,6 +60,7 @@ out:
 static int init_hapd(struct arg_ctx *ctx)
 {
 	struct hostapd_data *hapd = &ctx->hapd;
+	struct sta_info *sta;
 
 	hapd->driver = &ctx->driver;
 	os_memcpy(hapd->own_addr, "\x02\x00\x00\x00\x03\x00", ETH_ALEN);
@@ -69,6 +71,10 @@ static int init_hapd(struct arg_ctx *ctx)
 	hapd->iconf = hapd->iface->conf;
 	hapd->conf = hapd->iconf->bss[0];
 	hostapd_config_defaults_bss(hapd->conf);
+
+	sta = ap_sta_add(hapd, (u8 *) "\x02\x00\x00\x00\x00\x00");
+	if (sta)
+		sta->flags |= WLAN_STA_ASSOC | WLAN_STA_WMM;
 
 	return 0;
 }
@@ -105,6 +111,7 @@ int main(int argc, char *argv[])
 	wpa_printf(MSG_DEBUG, "Starting eloop");
 	eloop_run();
 	wpa_printf(MSG_DEBUG, "eloop done");
+	hostapd_free_stas(&ctx.hapd);
 
 	ret = 0;
 fail:

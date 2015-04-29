@@ -354,7 +354,8 @@ DBusMessage * wpas_dbus_handler_p2p_group_add(DBusMessage *message,
 			pg_object_path, WPAS_DBUS_NEW_PERSISTENT_GROUPS_PART,
 			&net_id_str);
 		if (iface == NULL || net_id_str == NULL ||
-		    os_strcmp(iface, wpa_s->dbus_new_path) != 0) {
+		    !wpa_s->parent->dbus_new_path ||
+		    os_strcmp(iface, wpa_s->parent->dbus_new_path) != 0) {
 			reply =
 			    wpas_dbus_error_invalid_args(message,
 							 pg_object_path);
@@ -649,7 +650,8 @@ DBusMessage * wpas_dbus_handler_p2p_invite(DBusMessage *message,
 			WPAS_DBUS_NEW_PERSISTENT_GROUPS_PART,
 			&net_id_str);
 		if (iface == NULL || net_id_str == NULL ||
-		    os_strcmp(iface, wpa_s->dbus_new_path) != 0) {
+		    !wpa_s->parent->dbus_new_path ||
+		    os_strcmp(iface, wpa_s->parent->dbus_new_path) != 0) {
 			reply = wpas_dbus_error_invalid_args(message,
 							     pg_object_path);
 			goto out;
@@ -1043,7 +1045,8 @@ dbus_bool_t wpas_dbus_getter_p2p_peers(DBusMessageIter *iter, DBusError *error,
 
 	char **peer_obj_paths = NULL;
 
-	if (!wpa_dbus_p2p_check_enabled(wpa_s, NULL, NULL, error))
+	if (!wpa_dbus_p2p_check_enabled(wpa_s, NULL, NULL, error) ||
+	    !wpa_s->parent->parent->dbus_new_path)
 		return FALSE;
 
 	dl_list_init(&peer_objpath_list);
@@ -1064,7 +1067,8 @@ dbus_bool_t wpas_dbus_getter_p2p_peers(DBusMessageIter *iter, DBusError *error,
 		os_snprintf(node->path, WPAS_DBUS_OBJECT_PATH_MAX,
 			    "%s/" WPAS_DBUS_NEW_P2P_PEERS_PART
 			    "/" COMPACT_MACSTR,
-			    wpa_s->dbus_new_path, MAC2STR(addr));
+			    wpa_s->parent->parent->dbus_new_path,
+			    MAC2STR(addr));
 		dl_list_add_tail(&peer_objpath_list, &node->list);
 		num++;
 
@@ -1184,13 +1188,17 @@ dbus_bool_t wpas_dbus_getter_p2p_peergo(DBusMessageIter *iter,
 	struct wpa_supplicant *wpa_s = user_data;
 	char go_peer_obj_path[WPAS_DBUS_OBJECT_PATH_MAX], *path;
 
+	if (!wpa_s->parent->parent->dbus_new_path)
+		return FALSE;
+
 	if (wpas_get_p2p_role(wpa_s) != WPAS_P2P_ROLE_CLIENT)
 		os_snprintf(go_peer_obj_path, WPAS_DBUS_OBJECT_PATH_MAX, "/");
 	else
 		os_snprintf(go_peer_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
 			    "%s/" WPAS_DBUS_NEW_P2P_PEERS_PART "/"
 			    COMPACT_MACSTR,
-			    wpa_s->dbus_new_path, MAC2STR(wpa_s->go_dev_addr));
+			    wpa_s->parent->parent->dbus_new_path,
+			    MAC2STR(wpa_s->go_dev_addr));
 
 	path = go_peer_obj_path;
 	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_OBJECT_PATH,
@@ -1636,6 +1644,11 @@ dbus_bool_t wpas_dbus_getter_persistent_groups(DBusMessageIter *iter,
 	unsigned int i = 0, num = 0;
 	dbus_bool_t success = FALSE;
 
+	if (wpa_s->p2p_dev)
+		wpa_s = wpa_s->p2p_dev;
+	if (!wpa_s->parent->dbus_new_path)
+		return FALSE;
+
 	for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next)
 		if (network_is_persistent_group(ssid))
 			num++;
@@ -1659,7 +1672,7 @@ dbus_bool_t wpas_dbus_getter_persistent_groups(DBusMessageIter *iter,
 		/* Construct the object path for this network. */
 		os_snprintf(paths[i++], WPAS_DBUS_OBJECT_PATH_MAX,
 			    "%s/" WPAS_DBUS_NEW_PERSISTENT_GROUPS_PART "/%d",
-			    wpa_s->dbus_new_path, ssid->id);
+			    wpa_s->parent->dbus_new_path, ssid->id);
 	}
 
 	success = wpas_dbus_simple_array_property_getter(iter,
@@ -1746,7 +1759,10 @@ DBusMessage * wpas_dbus_handler_add_persistent_group(
 
 	dbus_message_iter_init(message, &iter);
 
-	ssid = wpa_config_add_network(wpa_s->conf);
+	if (wpa_s->p2p_dev)
+		wpa_s = wpa_s->p2p_dev;
+	if (wpa_s->parent->dbus_new_path)
+		ssid = wpa_config_add_network(wpa_s->conf);
 	if (ssid == NULL) {
 		wpa_printf(MSG_ERROR,
 			   "dbus: %s: Cannot add new persistent group",
@@ -1779,7 +1795,7 @@ DBusMessage * wpas_dbus_handler_add_persistent_group(
 	/* Construct the object path for this network. */
 	os_snprintf(path, WPAS_DBUS_OBJECT_PATH_MAX,
 		    "%s/" WPAS_DBUS_NEW_PERSISTENT_GROUPS_PART "/%d",
-		    wpa_s->dbus_new_path, ssid->id);
+		    wpa_s->parent->dbus_new_path, ssid->id);
 
 	reply = dbus_message_new_method_return(message);
 	if (reply == NULL) {
@@ -1826,6 +1842,9 @@ DBusMessage * wpas_dbus_handler_remove_persistent_group(
 	dbus_message_get_args(message, NULL, DBUS_TYPE_OBJECT_PATH, &op,
 			      DBUS_TYPE_INVALID);
 
+	if (wpa_s->p2p_dev)
+		wpa_s = wpa_s->p2p_dev;
+
 	/*
 	 * Extract the network ID and ensure the network is actually a child of
 	 * this interface.
@@ -1834,7 +1853,8 @@ DBusMessage * wpas_dbus_handler_remove_persistent_group(
 		op, WPAS_DBUS_NEW_PERSISTENT_GROUPS_PART,
 		&persistent_group_id);
 	if (iface == NULL || persistent_group_id == NULL ||
-	    os_strcmp(iface, wpa_s->dbus_new_path) != 0) {
+	    !wpa_s->parent->dbus_new_path ||
+	    os_strcmp(iface, wpa_s->parent->dbus_new_path) != 0) {
 		reply = wpas_dbus_error_invalid_args(message, op);
 		goto out;
 	}
@@ -1899,6 +1919,8 @@ DBusMessage * wpas_dbus_handler_remove_all_persistent_groups(
 	struct wpa_ssid *ssid, *next;
 	struct wpa_config *config;
 
+	if (wpa_s->p2p_dev)
+		wpa_s = wpa_s->p2p_dev;
 	config = wpa_s->conf;
 	ssid = config->ssid;
 	while (ssid) {
@@ -1928,6 +1950,9 @@ dbus_bool_t wpas_dbus_getter_p2p_group_members(DBusMessageIter *iter,
 	const u8 *addr;
 	dbus_bool_t success = FALSE;
 
+	if (!wpa_s->parent->parent->dbus_new_path)
+		return FALSE;
+
 	/* Verify correct role for this property */
 	if (wpas_get_p2p_role(wpa_s) != WPAS_P2P_ROLE_GO) {
 		return wpas_dbus_simple_array_property_getter(
@@ -1955,7 +1980,8 @@ dbus_bool_t wpas_dbus_getter_p2p_group_members(DBusMessageIter *iter,
 		os_snprintf(paths[i], WPAS_DBUS_OBJECT_PATH_MAX,
 			    "%s/" WPAS_DBUS_NEW_P2P_PEERS_PART
 			    "/" COMPACT_MACSTR,
-			    wpa_s->parent->dbus_new_path, MAC2STR(addr));
+			    wpa_s->parent->parent->dbus_new_path,
+			    MAC2STR(addr));
 		i++;
 	}
 

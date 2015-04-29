@@ -358,6 +358,8 @@ dbus_bool_t wpas_dbus_setter_process_credentials(DBusMessageIter *iter,
 	struct wpa_supplicant *wpa_s = user_data;
 	dbus_bool_t process_credentials, old_pc;
 
+	if (!wpa_s->dbus_new_path)
+		return FALSE;
 	if (!wpas_dbus_simple_property_setter(iter, error, DBUS_TYPE_BOOLEAN,
 					      &process_credentials))
 		return FALSE;

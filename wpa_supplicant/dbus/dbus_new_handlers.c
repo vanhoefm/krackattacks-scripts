@@ -157,7 +157,8 @@ static struct wpa_supplicant * get_iface_by_dbus_path(
 	struct wpa_supplicant *wpa_s;
 
 	for (wpa_s = global->ifaces; wpa_s; wpa_s = wpa_s->next) {
-		if (os_strcmp(wpa_s->dbus_new_path, path) == 0)
+		if (wpa_s->dbus_new_path &&
+		    os_strcmp(wpa_s->dbus_new_path, path) == 0)
 			return wpa_s;
 	}
 	return NULL;
@@ -600,7 +601,7 @@ DBusMessage * wpas_dbus_handler_create_interface(DBusMessage *message,
 		iface.bridge_ifname = bridge_ifname;
 		/* Otherwise, have wpa_supplicant attach to it. */
 		wpa_s = wpa_supplicant_add_iface(global, &iface, NULL);
-		if (wpa_s) {
+		if (wpa_s && wpa_s->dbus_new_path) {
 			const char *path = wpa_s->dbus_new_path;
 
 			reply = dbus_message_new_method_return(message);
@@ -684,7 +685,7 @@ DBusMessage * wpas_dbus_handler_get_interface(DBusMessage *message,
 			      DBUS_TYPE_INVALID);
 
 	wpa_s = wpa_supplicant_get_iface(global, ifname);
-	if (wpa_s == NULL)
+	if (wpa_s == NULL || wpa_s->dbus_new_path == NULL)
 		return wpas_dbus_error_iface_unknown(message);
 
 	path = wpa_s->dbus_new_path;
@@ -876,8 +877,10 @@ dbus_bool_t wpas_dbus_getter_interfaces(DBusMessageIter *iter,
 	unsigned int i = 0, num = 0;
 	dbus_bool_t success;
 
-	for (wpa_s = global->ifaces; wpa_s; wpa_s = wpa_s->next)
-		num++;
+	for (wpa_s = global->ifaces; wpa_s; wpa_s = wpa_s->next) {
+		if (wpa_s->dbus_new_path)
+			num++;
+	}
 
 	paths = os_calloc(num, sizeof(char *));
 	if (!paths) {
@@ -885,8 +888,10 @@ dbus_bool_t wpas_dbus_getter_interfaces(DBusMessageIter *iter,
 		return FALSE;
 	}
 
-	for (wpa_s = global->ifaces; wpa_s; wpa_s = wpa_s->next)
-		paths[i++] = wpa_s->dbus_new_path;
+	for (wpa_s = global->ifaces; wpa_s; wpa_s = wpa_s->next) {
+		if (wpa_s->dbus_new_path)
+			paths[i++] = wpa_s->dbus_new_path;
+	}
 
 	success = wpas_dbus_simple_array_property_getter(iter,
 							 DBUS_TYPE_OBJECT_PATH,
@@ -1478,7 +1483,8 @@ DBusMessage * wpas_dbus_handler_add_network(DBusMessage *message,
 
 	dbus_message_iter_init(message, &iter);
 
-	ssid = wpa_config_add_network(wpa_s->conf);
+	if (wpa_s->dbus_new_path)
+		ssid = wpa_config_add_network(wpa_s->conf);
 	if (ssid == NULL) {
 		wpa_printf(MSG_ERROR, "%s[dbus]: can't add new interface.",
 			   __func__);
@@ -1602,7 +1608,7 @@ DBusMessage * wpas_dbus_handler_remove_network(DBusMessage *message,
 	iface = wpas_dbus_new_decompose_object_path(op,
 						    WPAS_DBUS_NEW_NETWORKS_PART,
 						    &net_id);
-	if (iface == NULL || net_id == NULL ||
+	if (iface == NULL || net_id == NULL || !wpa_s->dbus_new_path ||
 	    os_strcmp(iface, wpa_s->dbus_new_path) != 0) {
 		reply = wpas_dbus_error_invalid_args(message, op);
 		goto out;
@@ -1715,7 +1721,7 @@ DBusMessage * wpas_dbus_handler_select_network(DBusMessage *message,
 	iface = wpas_dbus_new_decompose_object_path(op,
 						    WPAS_DBUS_NEW_NETWORKS_PART,
 						    &net_id);
-	if (iface == NULL || net_id == NULL ||
+	if (iface == NULL || net_id == NULL || !wpa_s->dbus_new_path ||
 	    os_strcmp(iface, wpa_s->dbus_new_path) != 0) {
 		reply = wpas_dbus_error_invalid_args(message, op);
 		goto out;
@@ -1773,7 +1779,7 @@ DBusMessage * wpas_dbus_handler_network_reply(DBusMessage *message,
 	iface = wpas_dbus_new_decompose_object_path(op,
 						    WPAS_DBUS_NEW_NETWORKS_PART,
 						    &net_id);
-	if (iface == NULL || net_id == NULL ||
+	if (iface == NULL || net_id == NULL || !wpa_s->dbus_new_path ||
 	    os_strcmp(iface, wpa_s->dbus_new_path) != 0) {
 		reply = wpas_dbus_error_invalid_args(message, op);
 		goto out;
@@ -2266,12 +2272,14 @@ DBusMessage * wpas_dbus_handler_set_pkcs11_engine_and_module_path(
 			message, DBUS_ERROR_FAILED,
 			"Reinit of the EAPOL state machine with the new PKCS #11 engine and module path failed.");
 
-	wpa_dbus_mark_property_changed(
-		wpa_s->global->dbus, wpa_s->dbus_new_path,
-		WPAS_DBUS_NEW_IFACE_INTERFACE, "PKCS11EnginePath");
-	wpa_dbus_mark_property_changed(
-		wpa_s->global->dbus, wpa_s->dbus_new_path,
-		WPAS_DBUS_NEW_IFACE_INTERFACE, "PKCS11ModulePath");
+	if (wpa_s->dbus_new_path) {
+		wpa_dbus_mark_property_changed(
+			wpa_s->global->dbus, wpa_s->dbus_new_path,
+			WPAS_DBUS_NEW_IFACE_INTERFACE, "PKCS11EnginePath");
+		wpa_dbus_mark_property_changed(
+			wpa_s->global->dbus, wpa_s->dbus_new_path,
+			WPAS_DBUS_NEW_IFACE_INTERFACE, "PKCS11ModulePath");
+	}
 
 	return NULL;
 }
@@ -3024,7 +3032,7 @@ dbus_bool_t wpas_dbus_getter_current_bss(DBusMessageIter *iter,
 	struct wpa_supplicant *wpa_s = user_data;
 	char path_buf[WPAS_DBUS_OBJECT_PATH_MAX], *bss_obj_path = path_buf;
 
-	if (wpa_s->current_bss)
+	if (wpa_s->current_bss && wpa_s->dbus_new_path)
 		os_snprintf(bss_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
 			    "%s/" WPAS_DBUS_NEW_BSSIDS_PART "/%u",
 			    wpa_s->dbus_new_path, wpa_s->current_bss->id);
@@ -3052,7 +3060,7 @@ dbus_bool_t wpas_dbus_getter_current_network(DBusMessageIter *iter,
 	struct wpa_supplicant *wpa_s = user_data;
 	char path_buf[WPAS_DBUS_OBJECT_PATH_MAX], *net_obj_path = path_buf;
 
-	if (wpa_s->current_ssid)
+	if (wpa_s->current_ssid && wpa_s->dbus_new_path)
 		os_snprintf(net_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
 			    "%s/" WPAS_DBUS_NEW_NETWORKS_PART "/%u",
 			    wpa_s->dbus_new_path, wpa_s->current_ssid->id);
@@ -3140,6 +3148,12 @@ dbus_bool_t wpas_dbus_getter_bsss(DBusMessageIter *iter, DBusError *error,
 	unsigned int i = 0;
 	dbus_bool_t success = FALSE;
 
+	if (!wpa_s->dbus_new_path) {
+		dbus_set_error(error, DBUS_ERROR_FAILED,
+			       "%s: no D-Bus interface", __func__);
+		return FALSE;
+	}
+
 	paths = os_calloc(wpa_s->num_bss, sizeof(char *));
 	if (!paths) {
 		dbus_set_error_const(error, DBUS_ERROR_NO_MEMORY, "no memory");
@@ -3190,6 +3204,12 @@ dbus_bool_t wpas_dbus_getter_networks(DBusMessageIter *iter, DBusError *error,
 	char **paths;
 	unsigned int i = 0, num = 0;
 	dbus_bool_t success = FALSE;
+
+	if (!wpa_s->dbus_new_path) {
+		dbus_set_error(error, DBUS_ERROR_FAILED,
+			       "%s: no D-Bus interface", __func__);
+		return FALSE;
+	}
 
 	for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next)
 		if (!network_is_persistent_group(ssid))
@@ -4104,7 +4124,7 @@ void wpas_dbus_signal_preq(struct wpa_supplicant *wpa_s,
 	struct wpas_dbus_priv *priv = wpa_s->global->dbus;
 
 	/* Do nothing if the control interface is not turned on */
-	if (priv == NULL)
+	if (priv == NULL || !wpa_s->dbus_new_path)
 		return;
 
 	if (wpa_s->preq_notify_peer == NULL)

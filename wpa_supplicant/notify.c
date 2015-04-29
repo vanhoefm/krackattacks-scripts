@@ -307,14 +307,12 @@ void wpas_notify_persistent_group_removed(struct wpa_supplicant *wpa_s,
 void wpas_notify_network_removed(struct wpa_supplicant *wpa_s,
 				 struct wpa_ssid *ssid)
 {
-	if (wpa_s->p2p_mgmt)
-		return;
-
 	if (wpa_s->next_ssid == ssid)
 		wpa_s->next_ssid = NULL;
 	if (wpa_s->wpa)
 		wpa_sm_pmksa_cache_flush(wpa_s->wpa, ssid);
-	if (!ssid->p2p_group && wpa_s->global->p2p_group_formation != wpa_s)
+	if (!ssid->p2p_group && wpa_s->global->p2p_group_formation != wpa_s &&
+	    !wpa_s->p2p_mgmt)
 		wpas_dbus_unregister_network(wpa_s, ssid->id);
 	if (network_is_persistent_group(ssid))
 		wpas_notify_persistent_group_removed(wpa_s, ssid);

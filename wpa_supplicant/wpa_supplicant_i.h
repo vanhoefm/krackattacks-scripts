@@ -1118,13 +1118,13 @@ struct wpa_bss * wpa_supplicant_pick_network(struct wpa_supplicant *wpa_s,
 int eap_register_methods(void);
 
 /**
- * Utility method to tell if a given network is a persistent group
+ * Utility method to tell if a given network is for persistent group storage
  * @ssid: Network object
  * Returns: 1 if network is a persistent group, 0 otherwise
  */
 static inline int network_is_persistent_group(struct wpa_ssid *ssid)
 {
-	return ((ssid->disabled == 2) || ssid->p2p_persistent_group);
+	return ssid->disabled == 2 && ssid->p2p_persistent_group;
 }
 
 int wpas_network_disabled(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid);

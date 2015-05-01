@@ -571,6 +571,9 @@ int ibss_rsn_start(struct ibss_rsn *ibss_rsn, const u8 *addr)
 	struct ibss_rsn_peer *peer;
 	int res;
 
+	if (!ibss_rsn)
+		return -1;
+
 	/* if the peer already exists, exit immediately */
 	peer = ibss_rsn_get_peer(ibss_rsn, addr);
 	if (peer)

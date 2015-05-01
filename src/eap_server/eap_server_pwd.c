@@ -656,8 +656,20 @@ eap_pwd_process_commit_resp(struct eap_sm *sm, struct eap_pwd_data *data,
 	BIGNUM *x = NULL, *y = NULL, *cofactor = NULL;
 	EC_POINT *K = NULL, *point = NULL;
 	int res = 0;
+	size_t prime_len, order_len;
 
 	wpa_printf(MSG_DEBUG, "EAP-pwd: Received commit response");
+
+	prime_len = BN_num_bytes(data->grp->prime);
+	order_len = BN_num_bytes(data->grp->order);
+
+	if (payload_len != 2 * prime_len + order_len) {
+		wpa_printf(MSG_INFO,
+			   "EAP-pwd: Unexpected Commit payload length %u (expected %u)",
+			   (unsigned int) payload_len,
+			   (unsigned int) (2 * prime_len + order_len));
+		goto fin;
+	}
 
 	if (((data->peer_scalar = BN_new()) == NULL) ||
 	    ((data->k = BN_new()) == NULL) ||
@@ -773,6 +785,13 @@ eap_pwd_process_confirm_resp(struct eap_sm *sm, struct eap_pwd_data *data,
 	u16 grp;
 	u8 conf[SHA256_MAC_LEN], *cruft = NULL, *ptr;
 	int offset;
+
+	if (payload_len != SHA256_MAC_LEN) {
+		wpa_printf(MSG_INFO,
+			   "EAP-pwd: Unexpected Confirm payload length %u (expected %u)",
+			   (unsigned int) payload_len, SHA256_MAC_LEN);
+		goto fin;
+	}
 
 	/* build up the ciphersuite: group | random_function | prf */
 	grp = htons(data->group_num);

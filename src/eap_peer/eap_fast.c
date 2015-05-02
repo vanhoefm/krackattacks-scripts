@@ -1339,7 +1339,7 @@ continue_req:
 static const u8 * eap_fast_get_a_id(const u8 *buf, size_t len, size_t *id_len)
 {
 	const u8 *a_id;
-	struct pac_tlv_hdr *hdr;
+	const struct pac_tlv_hdr *hdr;
 
 	/*
 	 * Parse authority identity (A-ID) from the EAP-FAST/Start. This
@@ -1349,13 +1349,13 @@ static const u8 * eap_fast_get_a_id(const u8 *buf, size_t len, size_t *id_len)
 	*id_len = len;
 	if (len > sizeof(*hdr)) {
 		int tlen;
-		hdr = (struct pac_tlv_hdr *) buf;
+		hdr = (const struct pac_tlv_hdr *) buf;
 		tlen = be_to_host16(hdr->len);
 		if (be_to_host16(hdr->type) == PAC_TYPE_A_ID &&
 		    sizeof(*hdr) + tlen <= len) {
 			wpa_printf(MSG_DEBUG, "EAP-FAST: A-ID was in TLV "
 				   "(Start)");
-			a_id = (u8 *) (hdr + 1);
+			a_id = (const u8 *) (hdr + 1);
 			*id_len = tlen;
 		}
 	}

@@ -942,11 +942,21 @@ static void eap_pwd_process(struct eap_sm *sm, void *priv,
 	 * the first fragment has a total length
 	 */
 	if (EAP_PWD_GET_LENGTH_BIT(lm_exch)) {
+		if (len < 2) {
+			wpa_printf(MSG_DEBUG,
+				   "EAP-pwd: Frame too short to contain Total-Length field");
+			return;
+		}
 		tot_len = WPA_GET_BE16(pos);
 		wpa_printf(MSG_DEBUG, "EAP-pwd: Incoming fragments, total "
 			   "length = %d", tot_len);
 		if (tot_len > 15000)
 			return;
+		if (data->inbuf) {
+			wpa_printf(MSG_DEBUG,
+				   "EAP-pwd: Unexpected new fragment start when previous fragment is still in use");
+			return;
+		}
 		data->inbuf = wpabuf_alloc(tot_len);
 		if (data->inbuf == NULL) {
 			wpa_printf(MSG_INFO, "EAP-pwd: Out of memory to "

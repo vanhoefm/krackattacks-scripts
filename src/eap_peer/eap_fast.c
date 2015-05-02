@@ -1172,7 +1172,7 @@ static struct wpabuf * eap_fast_pac_request(void)
 static int eap_fast_process_decrypted(struct eap_sm *sm,
 				      struct eap_fast_data *data,
 				      struct eap_method_ret *ret,
-				      const struct eap_hdr *req,
+				      u8 identifier,
 				      struct wpabuf *decrypted,
 				      struct wpabuf **out_data)
 {
@@ -1184,18 +1184,18 @@ static int eap_fast_process_decrypted(struct eap_sm *sm,
 		return 0;
 	if (resp)
 		return eap_fast_encrypt_response(sm, data, resp,
-						 req->identifier, out_data);
+						 identifier, out_data);
 
 	if (tlv.result == EAP_TLV_RESULT_FAILURE) {
 		resp = eap_fast_tlv_result(EAP_TLV_RESULT_FAILURE, 0);
 		return eap_fast_encrypt_response(sm, data, resp,
-						 req->identifier, out_data);
+						 identifier, out_data);
 	}
 
 	if (tlv.iresult == EAP_TLV_RESULT_FAILURE) {
 		resp = eap_fast_tlv_result(EAP_TLV_RESULT_FAILURE, 1);
 		return eap_fast_encrypt_response(sm, data, resp,
-						 req->identifier, out_data);
+						 identifier, out_data);
 	}
 
 	if (tlv.crypto_binding) {
@@ -1277,14 +1277,13 @@ static int eap_fast_process_decrypted(struct eap_sm *sm,
 		resp = wpabuf_alloc(1);
 	}
 
-	return eap_fast_encrypt_response(sm, data, resp, req->identifier,
+	return eap_fast_encrypt_response(sm, data, resp, identifier,
 					 out_data);
 }
 
 
 static int eap_fast_decrypt(struct eap_sm *sm, struct eap_fast_data *data,
-			    struct eap_method_ret *ret,
-			    const struct eap_hdr *req,
+			    struct eap_method_ret *ret, u8 identifier,
 			    const struct wpabuf *in_data,
 			    struct wpabuf **out_data)
 {
@@ -1309,7 +1308,7 @@ static int eap_fast_decrypt(struct eap_sm *sm, struct eap_fast_data *data,
 		/* Received TLS ACK - requesting more fragments */
 		return eap_peer_tls_encrypt(sm, &data->ssl, EAP_TYPE_FAST,
 					    data->fast_version,
-					    req->identifier, NULL, out_data);
+					    identifier, NULL, out_data);
 	}
 
 	res = eap_peer_tls_decrypt(sm, &data->ssl, in_data, &in_decrypted);
@@ -1328,7 +1327,7 @@ continue_req:
 		return -1;
 	}
 
-	res = eap_fast_process_decrypted(sm, data, ret, req,
+	res = eap_fast_process_decrypted(sm, data, ret, identifier,
 					 in_decrypted, out_data);
 
 	wpabuf_free(in_decrypted);
@@ -1551,7 +1550,7 @@ static struct wpabuf * eap_fast_process(struct eap_sm *sm, void *priv,
 		/* Process tunneled (encrypted) phase 2 data. */
 		struct wpabuf msg;
 		wpabuf_set(&msg, pos, left);
-		res = eap_fast_decrypt(sm, data, ret, req, &msg, &resp);
+		res = eap_fast_decrypt(sm, data, ret, id, &msg, &resp);
 		if (res < 0) {
 			ret->methodState = METHOD_DONE;
 			ret->decision = DECISION_FAIL;
@@ -1598,8 +1597,7 @@ static struct wpabuf * eap_fast_process(struct eap_sm *sm, void *priv,
 			data->pending_phase2_req = resp;
 			resp = NULL;
 			wpabuf_set(&msg, pos, left);
-			res = eap_fast_decrypt(sm, data, ret, req, &msg,
-					       &resp);
+			res = eap_fast_decrypt(sm, data, ret, id, &msg, &resp);
 		}
 	}
 

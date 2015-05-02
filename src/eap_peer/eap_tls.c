@@ -228,6 +228,7 @@ static struct wpabuf * eap_tls_process(struct eap_sm *sm, void *priv,
 	u8 flags, id;
 	const u8 *pos;
 	struct eap_tls_data *data = priv;
+	struct wpabuf msg;
 
 	pos = eap_peer_tls_process_init(sm, &data->ssl, data->eap_type, ret,
 					reqData, &left, &flags);
@@ -242,8 +243,9 @@ static struct wpabuf * eap_tls_process(struct eap_sm *sm, void *priv,
 	}
 
 	resp = NULL;
+	wpabuf_set(&msg, pos, left);
 	res = eap_peer_tls_process_helper(sm, &data->ssl, data->eap_type, 0,
-					  id, pos, left, &resp);
+					  id, &msg, &resp);
 
 	if (res < 0) {
 		return eap_tls_failure(sm, data, ret, res, resp, id);

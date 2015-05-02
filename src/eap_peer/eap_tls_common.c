@@ -477,22 +477,19 @@ static const struct wpabuf * eap_peer_tls_data_reassemble(
  * @sm: Pointer to EAP state machine allocated with eap_peer_sm_init()
  * @data: Data for TLS processing
  * @in_data: Message received from the server
- * @in_len: Length of in_data
  * @out_data: Buffer for returning a pointer to application data (if available)
  * Returns: 0 on success, 1 if more input data is needed, 2 if application data
  * is available, -1 on failure
  */
 static int eap_tls_process_input(struct eap_sm *sm, struct eap_ssl_data *data,
-				 const u8 *in_data, size_t in_len,
+				 const struct wpabuf *in_data,
 				 struct wpabuf **out_data)
 {
 	const struct wpabuf *msg;
 	int need_more_input;
 	struct wpabuf *appl_data;
-	struct wpabuf buf;
 
-	wpabuf_set(&buf, in_data, in_len);
-	msg = eap_peer_tls_data_reassemble(data, &buf, &need_more_input);
+	msg = eap_peer_tls_data_reassemble(data, in_data, &need_more_input);
 	if (msg == NULL)
 		return need_more_input ? 1 : -1;
 
@@ -612,7 +609,6 @@ static int eap_tls_process_output(struct eap_ssl_data *data, EapType eap_type,
  * @peap_version: Version number for EAP-PEAP/TTLS
  * @id: EAP identifier for the response
  * @in_data: Message received from the server
- * @in_len: Length of in_data
  * @out_data: Buffer for returning a pointer to the response message
  * Returns: 0 on success, 1 if more input data is needed, 2 if application data
  * is available, or -1 on failure
@@ -635,14 +631,15 @@ static int eap_tls_process_output(struct eap_ssl_data *data, EapType eap_type,
  */
 int eap_peer_tls_process_helper(struct eap_sm *sm, struct eap_ssl_data *data,
 				EapType eap_type, int peap_version,
-				u8 id, const u8 *in_data, size_t in_len,
+				u8 id, const struct wpabuf *in_data,
 				struct wpabuf **out_data)
 {
 	int ret = 0;
 
 	*out_data = NULL;
 
-	if (data->tls_out && wpabuf_len(data->tls_out) > 0 && in_len > 0) {
+	if (data->tls_out && wpabuf_len(data->tls_out) > 0 &&
+	    wpabuf_len(in_data) > 0) {
 		wpa_printf(MSG_DEBUG, "SSL: Received non-ACK when output "
 			   "fragments are waiting to be sent out");
 		return -1;
@@ -653,8 +650,7 @@ int eap_peer_tls_process_helper(struct eap_sm *sm, struct eap_ssl_data *data,
 		 * No more data to send out - expect to receive more data from
 		 * the AS.
 		 */
-		int res = eap_tls_process_input(sm, data, in_data, in_len,
-						out_data);
+		int res = eap_tls_process_input(sm, data, in_data, out_data);
 		if (res) {
 			/*
 			 * Input processing failed (res = -1) or more data is

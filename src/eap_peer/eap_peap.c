@@ -968,6 +968,7 @@ static struct wpabuf * eap_peap_process(struct eap_sm *sm, void *priv,
 	struct wpabuf *resp;
 	const u8 *pos;
 	struct eap_peap_data *data = priv;
+	struct wpabuf msg;
 
 	pos = eap_peer_tls_process_init(sm, &data->ssl, EAP_TYPE_PEAP, ret,
 					reqData, &left, &flags);
@@ -998,17 +999,17 @@ static struct wpabuf * eap_peap_process(struct eap_sm *sm, void *priv,
 			   * should always be, anyway */
 	}
 
+	wpabuf_set(&msg, pos, left);
+
 	resp = NULL;
 	if (tls_connection_established(sm->ssl_ctx, data->ssl.conn) &&
 	    !data->resuming) {
-		struct wpabuf msg;
-		wpabuf_set(&msg, pos, left);
 		res = eap_peap_decrypt(sm, data, ret, req, &msg, &resp);
 	} else {
 		res = eap_peer_tls_process_helper(sm, &data->ssl,
 						  EAP_TYPE_PEAP,
-						  data->peap_version, id, pos,
-						  left, &resp);
+						  data->peap_version, id, &msg,
+						  &resp);
 
 		if (tls_connection_established(sm->ssl_ctx, data->ssl.conn)) {
 			char *label;
@@ -1077,14 +1078,12 @@ static struct wpabuf * eap_peap_process(struct eap_sm *sm, void *priv,
 		}
 
 		if (res == 2) {
-			struct wpabuf msg;
 			/*
 			 * Application data included in the handshake message.
 			 */
 			wpabuf_free(data->pending_phase2_req);
 			data->pending_phase2_req = resp;
 			resp = NULL;
-			wpabuf_set(&msg, pos, left);
 			res = eap_peap_decrypt(sm, data, ret, req, &msg,
 					       &resp);
 		}

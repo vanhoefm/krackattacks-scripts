@@ -1385,14 +1385,14 @@ static int eap_ttls_process_handshake(struct eap_sm *sm,
 				      struct eap_ttls_data *data,
 				      struct eap_method_ret *ret,
 				      u8 identifier,
-				      const u8 *in_data, size_t in_len,
+				      const struct wpabuf *in_data,
 				      struct wpabuf **out_data)
 {
 	int res;
 
 	res = eap_peer_tls_process_helper(sm, &data->ssl, EAP_TYPE_TTLS,
 					  data->ttls_version, identifier,
-					  in_data, in_len, out_data);
+					  in_data, out_data);
 
 	if (tls_connection_established(sm->ssl_ctx, data->ssl.conn)) {
 		wpa_printf(MSG_DEBUG, "EAP-TTLS: TLS done, proceed to "
@@ -1419,15 +1419,13 @@ static int eap_ttls_process_handshake(struct eap_sm *sm,
 	}
 
 	if (res == 2) {
-		struct wpabuf msg;
 		/*
 		 * Application data included in the handshake message.
 		 */
 		wpabuf_free(data->pending_phase2_req);
 		data->pending_phase2_req = *out_data;
 		*out_data = NULL;
-		wpabuf_set(&msg, in_data, in_len);
-		res = eap_ttls_decrypt(sm, data, ret, identifier, &msg,
+		res = eap_ttls_decrypt(sm, data, ret, identifier, in_data,
 				       out_data);
 	}
 
@@ -1477,6 +1475,7 @@ static struct wpabuf * eap_ttls_process(struct eap_sm *sm, void *priv,
 	struct wpabuf *resp;
 	const u8 *pos;
 	struct eap_ttls_data *data = priv;
+	struct wpabuf msg;
 
 	pos = eap_peer_tls_process_init(sm, &data->ssl, EAP_TYPE_TTLS, ret,
 					reqData, &left, &flags);
@@ -1497,15 +1496,15 @@ static struct wpabuf * eap_ttls_process(struct eap_sm *sm, void *priv,
 		left = 0;
 	}
 
+	wpabuf_set(&msg, pos, left);
+
 	resp = NULL;
 	if (tls_connection_established(sm->ssl_ctx, data->ssl.conn) &&
 	    !data->resuming) {
-		struct wpabuf msg;
-		wpabuf_set(&msg, pos, left);
 		res = eap_ttls_decrypt(sm, data, ret, id, &msg, &resp);
 	} else {
 		res = eap_ttls_process_handshake(sm, data, ret, id,
-						 pos, left, &resp);
+						 &msg, &resp);
 	}
 
 	eap_ttls_check_auth_status(sm, data, ret);

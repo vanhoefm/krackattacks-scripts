@@ -1528,6 +1528,7 @@ static struct wpabuf * eap_fast_process(struct eap_sm *sm, void *priv,
 	struct wpabuf *resp;
 	const u8 *pos;
 	struct eap_fast_data *data = priv;
+	struct wpabuf msg;
 
 	pos = eap_peer_tls_process_init(sm, &data->ssl, EAP_TYPE_FAST, ret,
 					reqData, &left, &flags);
@@ -1544,12 +1545,12 @@ static struct wpabuf * eap_fast_process(struct eap_sm *sm, void *priv,
 		left = 0; /* A-ID is not used in further packet processing */
 	}
 
+	wpabuf_set(&msg, pos, left);
+
 	resp = NULL;
 	if (tls_connection_established(sm->ssl_ctx, data->ssl.conn) &&
 	    !data->resuming) {
 		/* Process tunneled (encrypted) phase 2 data. */
-		struct wpabuf msg;
-		wpabuf_set(&msg, pos, left);
 		res = eap_fast_decrypt(sm, data, ret, id, &msg, &resp);
 		if (res < 0) {
 			ret->methodState = METHOD_DONE;
@@ -1564,8 +1565,8 @@ static struct wpabuf * eap_fast_process(struct eap_sm *sm, void *priv,
 		/* Continue processing TLS handshake (phase 1). */
 		res = eap_peer_tls_process_helper(sm, &data->ssl,
 						  EAP_TYPE_FAST,
-						  data->fast_version, id, pos,
-						  left, &resp);
+						  data->fast_version, id, &msg,
+						  &resp);
 
 		if (tls_connection_established(sm->ssl_ctx, data->ssl.conn)) {
 			char cipher[80];
@@ -1589,14 +1590,12 @@ static struct wpabuf * eap_fast_process(struct eap_sm *sm, void *priv,
 		}
 
 		if (res == 2) {
-			struct wpabuf msg;
 			/*
 			 * Application data included in the handshake message.
 			 */
 			wpabuf_free(data->pending_phase2_req);
 			data->pending_phase2_req = resp;
 			resp = NULL;
-			wpabuf_set(&msg, pos, left);
 			res = eap_fast_decrypt(sm, data, ret, id, &msg, &resp);
 		}
 	}

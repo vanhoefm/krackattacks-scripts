@@ -2098,7 +2098,8 @@ static int handle_action(struct hostapd_data *hapd,
 	case WLAN_ACTION_PUBLIC:
 	case WLAN_ACTION_PROTECTED_DUAL:
 #ifdef CONFIG_IEEE80211N
-		if (mgmt->u.action.u.public_action.action ==
+		if (len >= IEEE80211_HDRLEN + 2 &&
+		    mgmt->u.action.u.public_action.action ==
 		    WLAN_PA_20_40_BSS_COEX) {
 			wpa_printf(MSG_DEBUG,
 				   "HT20/40 coex mgmt frame received from STA "

@@ -2123,9 +2123,9 @@ def test_eap_proto_aka(dev, apdev):
         idx += 1
         if ctx['num'] == idx:
             logger.info("Test: Unknown subtype")
-            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
-                               4 + 1 + 1,
-                               EAP_TYPE_AKA, 255)
+            return struct.pack(">BBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3,
+                               EAP_TYPE_AKA, 255, 0)
         idx += 1
         if ctx['num'] == idx:
             logger.info("Test: EAP-Failure")
@@ -2134,9 +2134,9 @@ def test_eap_proto_aka(dev, apdev):
         idx += 1
         if ctx['num'] == idx:
             logger.info("Test: Client Error")
-            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
-                               4 + 1 + 1,
-                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_CLIENT_ERROR)
+            return struct.pack(">BBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3,
+                               EAP_TYPE_AKA, EAP_AKA_SUBTYPE_CLIENT_ERROR, 0)
         idx += 1
         if ctx['num'] == idx:
             logger.info("Test: EAP-Failure")
@@ -2791,6 +2791,7 @@ def test_eap_proto_aka(dev, apdev):
                 if ev is None:
                     raise Exception("Timeout on EAP failure")
             dev[0].request("REMOVE_NETWORK all")
+            dev[0].dump_monitor()
     finally:
         stop_radius_server(srv)
 
@@ -3135,6 +3136,7 @@ def test_eap_proto_aka_prime(dev, apdev):
                 if ev is None:
                     raise Exception("Timeout on EAP failure")
             dev[0].request("REMOVE_NETWORK all")
+            dev[0].dump_monitor()
     finally:
         stop_radius_server(srv)
 
@@ -3496,9 +3498,9 @@ def test_eap_proto_sim(dev, apdev):
         idx += 1
         if ctx['num'] == idx:
             logger.info("Test: Client Error")
-            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
-                               4 + 1 + 1,
-                               EAP_TYPE_SIM, EAP_SIM_SUBTYPE_CLIENT_ERROR)
+            return struct.pack(">BBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3,
+                               EAP_TYPE_SIM, EAP_SIM_SUBTYPE_CLIENT_ERROR, 0)
         idx += 1
         if ctx['num'] == idx:
             logger.info("Test: EAP-Failure")
@@ -3507,9 +3509,9 @@ def test_eap_proto_sim(dev, apdev):
         idx += 1
         if ctx['num'] == idx:
             logger.info("Test: Unknown subtype")
-            return struct.pack(">BBHBB", EAP_CODE_REQUEST, ctx['id'],
-                               4 + 1 + 1,
-                               EAP_TYPE_SIM, 255)
+            return struct.pack(">BBHBBH", EAP_CODE_REQUEST, ctx['id'],
+                               4 + 1 + 3,
+                               EAP_TYPE_SIM, 255, 0)
         idx += 1
         if ctx['num'] == idx:
             logger.info("Test: EAP-Failure")
@@ -3539,6 +3541,7 @@ def test_eap_proto_sim(dev, apdev):
                 if ev is None:
                     raise Exception("Timeout on EAP failure")
             dev[0].request("REMOVE_NETWORK all")
+            dev[0].dump_monitor()
     finally:
         stop_radius_server(srv)
 

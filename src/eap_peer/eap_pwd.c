@@ -889,6 +889,7 @@ eap_pwd_process(struct eap_sm *sm, void *priv, struct eap_method_ret *ret,
 				   "fragments!");
 			return NULL;
 		}
+		data->in_frag_pos = 0;
 		pos += sizeof(u16);
 		len -= sizeof(u16);
 	}

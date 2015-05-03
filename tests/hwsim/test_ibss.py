@@ -344,3 +344,8 @@ def test_ibss_wep(dev):
     id = add_ibss(dev[1], ssid, key_mgmt="NONE", wep_key0='"hello"')
     connect_ibss_cmd(dev[1], id)
     bssid1 = wait_ibss_connection(dev[1])
+
+def test_ibss_rsn_error_case(dev):
+    """IBSS RSN regression test for IBSS_RSN prior IBSS setup"""
+    if "FAIL" not in dev[0].request("IBSS_RSN 02:03:04:05:06:07"):
+        raise Exception("Unexpected IBSS_RSN result")

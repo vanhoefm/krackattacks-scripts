@@ -2485,9 +2485,20 @@ static int p2p_assoc_req_ie_wlan_ap(struct p2p_data *p2p, const u8 *bssid,
 	size_t tmplen;
 	int res;
 	u8 group_capab;
+	struct p2p_message msg;
 
 	if (p2p_ie == NULL)
 		return 0; /* WLAN AP is not a P2P manager */
+
+	os_memset(&msg, 0, sizeof(msg));
+	if (p2p_parse_p2p_ie(p2p_ie, &msg) < 0)
+		return 0;
+
+	p2p_dbg(p2p, "BSS P2P manageability %s",
+		msg.manageability ? "enabled" : "disabled");
+
+	if (!msg.manageability)
+		return 0;
 
 	/*
 	 * (Re)Association Request - P2P IE

@@ -119,7 +119,7 @@ def test_persistent_group(dev):
 
     logger.info("Remove group on the client and try to invite from GO")
     id = None
-    for n in dev[0].list_networks():
+    for n in dev[0].list_networks(p2p=True):
         if "[P2P-PERSISTENT]" in n['flags']:
             id = n['id']
             break
@@ -143,7 +143,7 @@ def test_persistent_group(dev):
     if "FAIL" not in dev[1].request("REMOVE_NETWORK 1234567"):
         raise Exception("REMOVE_NETWORK succeeded unexpectedly")
     dev[1].request("REMOVE_NETWORK all")
-    if len(dev[1].list_networks()) > 0:
+    if len(dev[1].list_networks(p2p=True)) > 0:
         raise Exception("Unexpected network block remaining")
     invite(dev[0], dev[1])
     ev = dev[0].wait_global_event(["P2P-INVITATION-RESULT"], timeout=10)
@@ -201,7 +201,7 @@ def test_persistent_group_per_sta_psk(dev):
     dev[2].dump_monitor()
 
     for i in range(0, 3):
-        networks = dev[i].list_networks()
+        networks = dev[i].list_networks(p2p=True)
         if len(networks) != 1:
             raise Exception("Unexpected number of networks")
         if "[P2P-PERSISTENT]" not in networks[0]['flags']:
@@ -399,7 +399,7 @@ def test_persistent_go_client_list(dev):
 
     res = dev[0].p2p_start_go(persistent=True)
     id = None
-    for n in dev[0].list_networks():
+    for n in dev[0].list_networks(p2p=True):
         if "[P2P-PERSISTENT]" in n['flags']:
             id = n['id']
             break
@@ -548,7 +548,7 @@ def test_persistent_group_already_running(dev):
     listen_freq = peer['listen_freq']
     dev[0].dump_monitor()
     dev[1].dump_monitor()
-    networks = dev[0].list_networks()
+    networks = dev[0].list_networks(p2p=True)
     if len(networks) != 1:
         raise Exception("Unexpected number of networks")
     if "[P2P-PERSISTENT]" not in networks[0]['flags']:

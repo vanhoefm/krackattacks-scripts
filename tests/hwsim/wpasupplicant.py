@@ -198,8 +198,11 @@ class WpaSupplicant:
             raise Exception("SET_NETWORK failed")
         return None
 
-    def list_networks(self):
-        res = self.request("LIST_NETWORKS")
+    def list_networks(self, p2p=False):
+        if p2p:
+            res = self.global_request("LIST_NETWORKS")
+        else:
+            res = self.request("LIST_NETWORKS")
         lines = res.splitlines()
         networks = []
         for l in lines:

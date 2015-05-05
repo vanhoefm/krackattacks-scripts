@@ -113,9 +113,9 @@ def test_p2p_set_ssid_postfix(dev):
         pin = dev[1].wps_read_pin()
         dev[0].p2p_go_authorize_client(pin)
         dev[1].p2p_connect_group(addr0, pin, timeout=20, social=True, freq="2412")
-        if postfix not in dev[1].get_status_field("ssid"):
+        if postfix not in dev[1].get_group_status_field("ssid"):
             raise Exception("SSID postfix missing from status")
-        if postfix not in dev[1].request("SCAN_RESULTS"):
+        if postfix not in dev[1].group_request("SCAN_RESULTS"):
             raise Exception("SSID postfix missing from scan results")
     finally:
         dev[0].request("P2P_SET ssid_postfix ")

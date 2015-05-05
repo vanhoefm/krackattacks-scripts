@@ -523,7 +523,7 @@ def test_p2p_autogo_pref_chan_not_in_regulatory(dev, apdev):
             raise Exception("Unexpected channel selected: " + res['freq'])
         dev[0].remove_group(res['ifname'])
 
-        netw = dev[0].list_networks()
+        netw = dev[0].list_networks(p2p=True)
         if len(netw) != 1:
             raise Exception("Unexpected number of network blocks: " + str(netw))
         id = netw[0]['id']

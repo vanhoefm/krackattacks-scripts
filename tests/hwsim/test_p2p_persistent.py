@@ -41,9 +41,9 @@ def terminate_group(go, cli):
 def invite(inv, resp, extra=None, persistent_reconnect=True):
     addr = resp.p2p_dev_addr()
     if persistent_reconnect:
-        resp.request("SET persistent_reconnect 1")
+        resp.global_request("SET persistent_reconnect 1")
     else:
-        resp.request("SET persistent_reconnect 0")
+        resp.global_request("SET persistent_reconnect 0")
     resp.p2p_listen()
     if not inv.discover_peer(addr, social=True):
         raise Exception("Peer " + addr + " not found")
@@ -276,7 +276,7 @@ def test_persistent_group_per_sta_psk(dev):
     dev[0].dump_monitor()
 
     logger.info("Try to re-invoke persistent group from client")
-    dev[0].request("SET persistent_reconnect 1")
+    dev[0].global_request("SET persistent_reconnect 1")
     dev[0].p2p_listen()
     if not dev[1].discover_peer(addr0, social=True):
         raise Exception("Peer " + peer + " not found")

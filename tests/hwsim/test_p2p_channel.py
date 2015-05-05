@@ -26,7 +26,7 @@ def set_country(country, dev=None):
     time.sleep(0.1)
     if dev:
         for i in range(10):
-            ev = dev.wait_event(["CTRL-EVENT-REGDOM-CHANGE"], timeout=15)
+            ev = dev.wait_global_event(["CTRL-EVENT-REGDOM-CHANGE"], timeout=15)
             if ev is None:
                 raise Exception("No regdom change event seen")
             if "type=COUNTRY alpha2=" + country in ev:

@@ -107,7 +107,7 @@ def test_p2p_device_nfc_invite(dev, apdev):
             raise Exception("Failed to generate NFC connection handover select")
 
         logger.info("Read NFC Tag on the GO to trigger invitation")
-        res = dev[0].request("WPS_NFC_TAG_READ " + sel)
+        res = dev[0].global_request("WPS_NFC_TAG_READ " + sel)
         if "FAIL" in res:
             raise Exception("Failed to provide NFC tag contents to wpa_supplicant")
 

@@ -216,6 +216,7 @@ def test_persistent_group_per_sta_psk(dev):
         ev = dev[i].wait_global_event(["P2P-GROUP-STARTED"], timeout=30)
         if ev is None:
             raise Exception("Timeout on group restart")
+        dev[i].group_form_result(ev)
 
     logger.info("Leave persistent group and rejoin it")
     dev[2].remove_group()
@@ -283,6 +284,8 @@ def test_persistent_group_per_sta_psk(dev):
     dev[1].dump_monitor()
     peer = dev[1].get_peer(addr0)
     dev[1].global_request("P2P_INVITE persistent=" + peer['persistent'] + " peer=" + addr0)
+    ev = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=30)
+    dev[0].group_form_result(ev)
     ev = dev[1].wait_global_event(["P2P-GROUP-STARTED","WPA: 4-Way Handshake failed"], timeout=30)
     if ev is None:
         raise Exception("Timeout on group restart (on client)")
@@ -421,6 +424,7 @@ def test_persistent_go_client_list(dev):
     ev = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=30)
     if ev is None:
         raise Exception("Timeout on group restart (on client)")
+    dev[1].group_form_result(ev)
     clients = dev[0].global_request("GET_NETWORK " + id + " p2p_client_list").rstrip()
     if clients != addr1 + " " + addr2:
         raise Exception("Unexpected p2p_client_list entry(4): " + clients)

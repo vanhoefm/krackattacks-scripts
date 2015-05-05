@@ -138,9 +138,12 @@ def p2p_connect_p2ps_method(i_dev, r_dev, autoaccept):
     ev0 = r_dev.wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
     if ev0 is None:
         raise Exception("P2P-GROUP-STARTED timeout on advertiser side")
+    r_dev.group_form_result(ev0)
+
     ev1 = i_dev.wait_global_event(["P2P-GROUP-STARTED"], timeout=5)
     if ev1 is None:
         raise Exception("P2P-GROUP-STARTED timeout on seeker side")
+    i_dev.group_form_result(ev1)
 
 def p2ps_provision_keypad_method(i_dev, r_dev, autoaccept,
                                  initiator_or_responder):
@@ -231,6 +234,7 @@ def p2ps_connect_pin(pin, i_dev, r_dev, initiator_method):
     ev1 = i_dev.wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
     if ev1 is None:
         raise Exception("P2P-GROUP-STARTED timeout on seeker side")
+    i_dev.group_form_result(ev1)
 
     ev_grpfrm = r_dev.wait_global_event(["P2P-GROUP-FORMATION-SUCCESS"],
                                         timeout=10)
@@ -240,8 +244,9 @@ def p2ps_connect_pin(pin, i_dev, r_dev, initiator_method):
     ev = r_dev.wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
     if ev is None:
         raise Exception("P2P-GROUP-STARTED timeout on advertiser side")
-    Role = ev.split(" ")[2]
-    if Role == "GO":
+    res = r_dev.group_form_result(ev)
+
+    if res['role'] == "GO":
         ev_grpfrm = r_dev.wait_global_event(["AP-STA-CONNECTED"], timeout=10)
         if ev_grpfrm is None:
             raise Exception("AP-STA-CONNECTED timeout on advertiser side")
@@ -489,6 +494,7 @@ def test_p2ps_connect_adv_go_p2ps_method(dev):
     ev0 = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
     if ev0 is None:
         raise Exception("P2P-GROUP-STARTED timeout on advertiser side")
+    dev[0].group_form_result(ev0)
 
     ev1 = dev[1].wait_global_event(["P2PS-PROV-DONE"], timeout=10)
     if ev1 is None:
@@ -502,6 +508,7 @@ def test_p2ps_connect_adv_go_p2ps_method(dev):
         ev1 = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
         if ev1 is None:
             raise Exception("P2P-GROUP-STARTED timeout on seeker side")
+    dev[1].group_form_result(ev1)
 
     ev0 = dev[0].wait_global_event(["AP-STA-CONNECTED"], timeout=5)
     if ev0 is None:
@@ -541,6 +548,7 @@ def test_p2ps_connect_adv_client_p2ps_method(dev):
     ev1 = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
     if ev1 is None:
         raise Exception("P2P-GROUP-STARTED timeout on seeker side")
+    dev[1].group_form_result(ev1)
 
     if "join=" in ev0:
         if "OK" not in dev[0].global_request("P2P_CONNECT " + addr1 + " 12345670 p2ps persistent join"):
@@ -553,6 +561,7 @@ def test_p2ps_connect_adv_client_p2ps_method(dev):
     ev0 = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
     if ev0 is None:
         raise Exception("P2P-GROUP-STARTED timeout on advertiser side")
+    dev[0].group_form_result(ev0)
 
     ev1 = dev[1].wait_global_event(["AP-STA-CONNECTED"], timeout=5)
     if ev1 is None:
@@ -592,6 +601,8 @@ def test_p2ps_connect_adv_go_pin_method(dev):
     ev0 = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
     if ev0 is None:
         raise Exception("P2P-GROUP-STARTED timeout on advertiser side")
+    dev[0].group_form_result(ev0)
+
     ev0 = dev[0].group_request("WPS_PIN any " + pin)
     if ev0 is None:
         raise Exception("Failed to initiate Pin authorization on registrar side")
@@ -601,6 +612,7 @@ def test_p2ps_connect_adv_go_pin_method(dev):
         ev1 = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
         if ev1 is None:
             raise Exception("P2P-GROUP-STARTED timeout on seeker side")
+	dev[1].group_form_result(ev1)
 
         ev0 = dev[0].wait_global_event(["AP-STA-CONNECTED"], timeout=10)
         if ev0 is None:
@@ -642,6 +654,7 @@ def test_p2ps_connect_adv_client_pin_method(dev):
     ev1 = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
     if ev1 is None:
         raise Exception("P2P-GROUP-STARTED timeout on seeker side")
+    dev[1].group_form_result(ev1)
 
     ev1 = dev[1].group_request("WPS_PIN any " + pin)
     if ev1 is None:
@@ -653,6 +666,7 @@ def test_p2ps_connect_adv_client_pin_method(dev):
     ev0 = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
     if ev0 is None:
         raise Exception("Group formation failed to start on seeker side")
+    dev[0].group_form_result(ev0)
 
     ev1 = dev[1].wait_global_event(["AP-STA-CONNECTED"], timeout=10)
     if ev1 is None:
@@ -892,6 +906,7 @@ def test_p2ps_connect_adv_go_persistent(dev):
     ev0 = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
     if ev0 is None:
         raise Exception("P2P-GROUP-STARTED timeout on advertiser side")
+    dev[0].group_form_result(ev0)
 
     ev1 = dev[1].wait_global_event(["P2PS-PROV-DONE"], timeout=10)
     if ev1 is None:
@@ -906,6 +921,7 @@ def test_p2ps_connect_adv_go_persistent(dev):
     ev1 = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
     if ev1 is None:
         raise Exception("P2P-GROUP-STARTED timeout on seeker side")
+    dev[1].group_form_result(ev1)
 
     ev0 = dev[0].wait_global_event(["AP-STA-CONNECTED"], timeout=15)
     if ev0 is None:

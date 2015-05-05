@@ -150,7 +150,7 @@ def test_p2p_device_misuses(dev, apdev):
         # Optimize scan-after-disconnect
         wpas.group_request("SET_NETWORK 0 scan_freq 2412")
 
-        dev[0].request("DISASSOCIATE " + wpas.p2p_interface_addr())
+        dev[0].group_request("DISASSOCIATE " + wpas.p2p_interface_addr())
         ev = wpas.wait_group_event(["CTRL-EVENT-DISCONNECT"])
         if ev is None:
             raise Exception("Did not see disconnect event on P2P group interface")

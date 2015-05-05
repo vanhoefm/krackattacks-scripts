@@ -407,21 +407,21 @@ def test_persistent_go_client_list(dev):
         raise Exception("Could not find persistent group entry")
 
     connect_cli(dev[0], dev[1], social=True, freq=res['freq'])
-    clients = dev[0].request("GET_NETWORK " + id + " p2p_client_list").rstrip()
+    clients = dev[0].global_request("GET_NETWORK " + id + " p2p_client_list").rstrip()
     if clients != addr1:
         raise Exception("Unexpected p2p_client_list entry(2): " + clients)
     connect_cli(dev[0], dev[2], social=True, freq=res['freq'])
-    clients = dev[0].request("GET_NETWORK " + id + " p2p_client_list").rstrip()
+    clients = dev[0].global_request("GET_NETWORK " + id + " p2p_client_list").rstrip()
     if clients != addr2 + " " + addr1:
         raise Exception("Unexpected p2p_client_list entry(3): " + clients)
 
     peer = dev[1].get_peer(res['go_dev_addr'])
     dev[1].remove_group()
-    dev[1].request("P2P_GROUP_ADD persistent=" + peer['persistent'])
+    dev[1].global_request("P2P_GROUP_ADD persistent=" + peer['persistent'])
     ev = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=30)
     if ev is None:
         raise Exception("Timeout on group restart (on client)")
-    clients = dev[0].request("GET_NETWORK " + id + " p2p_client_list").rstrip()
+    clients = dev[0].global_request("GET_NETWORK " + id + " p2p_client_list").rstrip()
     if clients != addr1 + " " + addr2:
         raise Exception("Unexpected p2p_client_list entry(4): " + clients)
 
@@ -429,7 +429,7 @@ def test_persistent_go_client_list(dev):
     dev[1].remove_group()
     dev[0].remove_group()
 
-    clients = dev[0].request("GET_NETWORK " + id + " p2p_client_list").rstrip()
+    clients = dev[0].global_request("GET_NETWORK " + id + " p2p_client_list").rstrip()
     if clients != addr1 + " " + addr2:
         raise Exception("Unexpected p2p_client_list entry(5): " + clients)
 

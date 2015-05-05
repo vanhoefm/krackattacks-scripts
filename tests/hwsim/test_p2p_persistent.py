@@ -219,7 +219,7 @@ def test_persistent_group_per_sta_psk(dev):
 
     logger.info("Leave persistent group and rejoin it")
     dev[2].remove_group()
-    ev = dev[2].wait_event(["P2P-GROUP-REMOVED"], timeout=3)
+    ev = dev[2].wait_global_event(["P2P-GROUP-REMOVED"], timeout=3)
     if ev is None:
         raise Exception("Group removal event timed out")
     if not dev[2].discover_peer(addr0, social=True):

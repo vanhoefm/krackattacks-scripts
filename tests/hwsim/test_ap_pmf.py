@@ -210,7 +210,7 @@ def test_ap_pmf_sta_sa_query(dev, apdev):
 def test_ap_pmf_sta_sa_query_no_response(dev, apdev):
     """WPA2-PSK AP with station using SA Query and getting no response"""
     ssid = "assoc-comeback"
-    addr = dev[0].p2p_dev_addr()
+    addr = dev[0].own_addr()
 
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     wpas.interface_add("wlan5", drv_params="use_monitor=1")
@@ -264,7 +264,7 @@ def test_ap_pmf_sta_unprot_deauth_burst(dev, apdev):
     wpas.set_network(id, "group", "CCMP")
     wpas.set_network(id, "frequency", "2412")
     wpas.connect_network(id)
-    bssid = wpas.p2p_dev_addr()
+    bssid = wpas.own_addr()
 
     dev[0].connect(ssid, psk="12345678", ieee80211w="1",
                    key_mgmt="WPA-PSK WPA-PSK-SHA256", proto="WPA2",

@@ -330,7 +330,7 @@ def test_persistent_group_invite_removed_client(dev):
         raise Exception("Group removal event timed out")
     if "reason=PSK_FAILURE" not in ev:
         raise Exception("Unexpected group removal reason")
-    dev[1].request("REMOVE_NETWORK " + id)
+    dev[1].global_request("REMOVE_NETWORK " + id)
 
     logger.info("Re-invite after client removed persistent group info")
     dev[1].p2p_listen()

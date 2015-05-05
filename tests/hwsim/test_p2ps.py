@@ -14,6 +14,7 @@ from wpasupplicant import WpaSupplicant
 from test_p2p_grpform import check_grpform_results
 from test_p2p_grpform import remove_group
 from test_p2p_persistent import go_neg_pin_authorized_persistent
+from utils import HwsimSkip
 
 # Dev[0] -> Advertiser
 # Dev[1] -> Seeker
@@ -258,6 +259,15 @@ def p2ps_connect_pin(pin, i_dev, r_dev, initiator_method):
             raise Exception("AP-STA-CONNECTED timeout on Seeker side")
     if r_dev.p2p_dev_addr() not in ev1:
         raise Exception("Group formed with unknown Peer")
+
+def set_no_group_iface(dev, enable):
+    if enable:
+        res = dev.get_driver_status()
+	if (int(res['capa.flags'], 0) & 0x20000000):
+	    raise HwsimSkip("P2P Device used. Cannot set enable no_group_iface")
+        dev.global_request("SET p2p_no_group_iface 1")
+    else:
+        dev.global_request("SET p2p_no_group_iface 0")
 
 def test_p2ps_exact_search(dev):
     """P2PS exact service request"""
@@ -834,6 +844,9 @@ def has_string_prefix(vals, prefix):
 
 def test_p2ps_connect_p2ps_method_1(dev):
     """P2PS connection with P2PS method - no group interface"""
+    set_no_group_iface(dev[0], 1)
+    set_no_group_iface(dev[1], 1)
+
     (res0, res1, ifnames) = p2ps_connect_p2ps_method(dev)
     if res0['ifname'] != dev[0].ifname:
         raise Exception("unexpected dev0 group ifname: " + res0['ifname'])
@@ -846,7 +859,9 @@ def test_p2ps_connect_p2ps_method_1(dev):
 
 def test_p2ps_connect_p2ps_method_2(dev):
     """P2PS connection with P2PS method - group interface on dev0"""
-    dev[0].request("SET p2p_no_group_iface 0")
+    set_no_group_iface(dev[0], 0)
+    set_no_group_iface(dev[1], 1)
+
     (res0, res1, ifnames) = p2ps_connect_p2ps_method(dev)
     if not res0['ifname'].startswith('p2p-' + dev[0].ifname + '-'):
         raise Exception("unexpected dev0 group ifname: " + res0['ifname'])
@@ -857,7 +872,9 @@ def test_p2ps_connect_p2ps_method_2(dev):
 
 def test_p2ps_connect_p2ps_method_3(dev):
     """P2PS connection with P2PS method - group interface on dev1"""
-    dev[1].request("SET p2p_no_group_iface 0")
+    set_no_group_iface(dev[0], 1)
+    set_no_group_iface(dev[1], 0)
+
     (res0, res1, ifnames) = p2ps_connect_p2ps_method(dev)
     if res0['ifname'] != dev[0].ifname:
         raise Exception("unexpected dev0 group ifname: " + res0['ifname'])
@@ -868,8 +885,9 @@ def test_p2ps_connect_p2ps_method_3(dev):
 
 def test_p2ps_connect_p2ps_method_4(dev):
     """P2PS connection with P2PS method - group interface on both"""
-    dev[0].request("SET p2p_no_group_iface 0")
-    dev[1].request("SET p2p_no_group_iface 0")
+    set_no_group_iface(dev[0], 0)
+    set_no_group_iface(dev[1], 0)
+
     (res0, res1, ifnames) = p2ps_connect_p2ps_method(dev)
     if not res0['ifname'].startswith('p2p-' + dev[0].ifname + '-'):
         raise Exception("unexpected dev0 group ifname: " + res0['ifname'])

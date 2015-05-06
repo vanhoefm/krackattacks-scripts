@@ -843,6 +843,29 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 }
 
 
+static int hostapd_config_check_cw(struct hostapd_config *conf, int queue)
+{
+	int tx_cwmin = conf->tx_queue[queue].cwmin;
+	int tx_cwmax = conf->tx_queue[queue].cwmax;
+	int ac_cwmin = conf->wmm_ac_params[queue].cwmin;
+	int ac_cwmax = conf->wmm_ac_params[queue].cwmax;
+
+	if (tx_cwmin > tx_cwmax) {
+		wpa_printf(MSG_ERROR,
+			   "Invalid TX queue cwMin/cwMax values. cwMin(%d) greater than cwMax(%d)",
+			   tx_cwmin, tx_cwmax);
+		return -1;
+	}
+	if (ac_cwmin > ac_cwmax) {
+		wpa_printf(MSG_ERROR,
+			   "Invalid WMM AC cwMin/cwMax values. cwMin(%d) greater than cwMax(%d)",
+			   ac_cwmin, ac_cwmax);
+		return -1;
+	}
+	return 0;
+}
+
+
 int hostapd_config_check(struct hostapd_config *conf, int full_config)
 {
 	size_t i;
@@ -870,6 +893,11 @@ int hostapd_config_check(struct hostapd_config *conf, int full_config)
 	    conf->local_pwr_constraint == -1) {
 		wpa_printf(MSG_ERROR, "Cannot set Spectrum Management bit without Country and Power Constraint elements");
 		return -1;
+	}
+
+	for (i = 0; i < NUM_TX_QUEUES; i++) {
+		if (hostapd_config_check_cw(conf, i))
+			return -1;
 	}
 
 	for (i = 0; i < conf->num_bss; i++) {

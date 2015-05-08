@@ -230,6 +230,7 @@ def test_go_neg_with_bss_connected(dev, apdev):
        raise Exception("Group formed on a different frequency than BSS")
     hwsim_utils.test_connectivity(dev[0], hapd)
     dev[0].remove_group(i_res['ifname'])
+    dev[1].wait_go_ending_session()
 
     if dev[0].get_mcc() > 1:
         logger.info("Skip as-client case due to MCC being enabled")
@@ -244,7 +245,7 @@ def test_go_neg_with_bss_connected(dev, apdev):
     if i_res2['freq'] != "2432":
        raise Exception("Group formed on a different frequency than BSS")
     hwsim_utils.test_connectivity(dev[0], hapd)
-    dev[1].remove_group(r_res['ifname'])
+    dev[1].remove_group(r_res2['ifname'])
     dev[0].wait_go_ending_session()
     dev[0].request("DISCONNECT")
     hapd.disable()

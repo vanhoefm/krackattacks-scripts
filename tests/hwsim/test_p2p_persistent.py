@@ -190,7 +190,7 @@ def test_persistent_group_per_sta_psk(dev):
         raise Exception("Joining client did not recognize persistent group")
     if r_res['psk'] == c_res['psk']:
         raise Exception("Same PSK assigned for both clients")
-    hwsim_utils.test_connectivity_p2p_sta(dev[1], dev[2])
+    hwsim_utils.test_connectivity_p2p(dev[1], dev[2])
 
     logger.info("Remove persistent group and re-start it manually")
     dev[0].remove_group()

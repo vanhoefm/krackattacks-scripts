@@ -7,6 +7,7 @@ CFLAGS = -MMD -O2 -Wall -g
 endif
 
 export LIBDIR ?= /usr/local/lib/
+export INCDIR ?= /usr/local/include/
 export BINDIR ?= /usr/local/sbin/
 PKG_CONFIG ?= pkg-config
 
@@ -35,6 +36,9 @@ ALL += systemd/wpa_supplicant-nl80211@.service
 ALL += systemd/wpa_supplicant-wired@.service
 ALL += dbus/fi.epitest.hostap.WPASupplicant.service
 ALL += dbus/fi.w1.wpa_supplicant1.service
+ifdef CONFIG_BUILD_WPA_CLIENT_SO
+ALL += libwpa_client.so
+endif
 
 
 all: verify_config $(ALL) dynamic_eap_methods
@@ -61,6 +65,10 @@ $(DESTDIR)$(BINDIR)/%: %
 
 install: $(addprefix $(DESTDIR)$(BINDIR)/,$(BINALL))
 	$(MAKE) -C ../src install
+ifdef CONFIG_BUILD_WPA_CLIENT_SO
+	install -m 0644 -D libwpa_client.so $(DESTDIR)/$(LIBDIR)/libwpa_client.so
+	install -m 0644 -D ../src/common/wpa_ctrl.h $(DESTDIR)/$(INCDIR)/wpa_ctrl.h
+endif
 
 ifdef CONFIG_FIPS
 CONFIG_NO_RANDOM_POOL=
@@ -106,6 +114,7 @@ OBJS_p += ../src/utils/trace.o
 OBJS_c += ../src/utils/trace.o
 OBJS_priv += ../src/utils/trace.o
 LIBCTRL += ../src/utils/trace.o
+LIBCTRLSO += ../src/utils/trace.c
 LDFLAGS += -rdynamic
 CFLAGS += -funwind-tables
 ifdef CONFIG_WPA_TRACE_BFD
@@ -1636,11 +1645,18 @@ wpa_cli: $(OBJS_c)
 LIBCTRL += ../src/common/wpa_ctrl.o
 LIBCTRL += ../src/utils/os_$(CONFIG_OS).o
 LIBCTRL += ../src/utils/wpa_debug.o
+LIBCTRLSO += ../src/common/wpa_ctrl.c
+LIBCTRLSO += ../src/utils/os_$(CONFIG_OS).c
+LIBCTRLSO += ../src/utils/wpa_debug.c
 
-libwpa_ctrl.a: $(LIBCTRL)
+libwpa_client.a: $(LIBCTRL)
 	$(Q)rm -f $@
 	$(Q)$(AR) crs $@ $?
 	@$(E) "  AR " $@
+
+libwpa_client.so: $(LIBCTRLSO)
+	@$(E) "  CC  $@ ($^)"
+	$(Q)$(CC) $(LDFLAGS) -o $@ $(CFLAGS) -shared -fPIC $^
 
 link_test: $(OBJS) $(OBJS_h) tests/link_test.o
 	$(Q)$(LDO) $(LDFLAGS) -o link_test $(OBJS) $(OBJS_h) tests/link_test.o $(LIBS)
@@ -1761,6 +1777,7 @@ clean:
 	rm -f nfc_pw_token
 	rm -f lcov.info
 	rm -rf lcov-html
-	rm -f libwpa_ctrl.a
+	rm -f libwpa_client.a
+	rm -f libwpa_client.so
 
 -include $(OBJS:%.o=%.d)

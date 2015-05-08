@@ -125,7 +125,7 @@ def test_persistent_group(dev):
             break
     if id is None:
         raise Exception("Could not find persistent group entry")
-    clients = dev[0].request("GET_NETWORK " + id + " p2p_client_list").rstrip()
+    clients = dev[0].global_request("GET_NETWORK " + id + " p2p_client_list").rstrip()
     if dev[1].p2p_dev_addr() not in clients:
         raise Exception("Peer missing from client list")
     if "FAIL" not in dev[1].request("SELECT_NETWORK " + str(id)):
@@ -142,7 +142,7 @@ def test_persistent_group(dev):
         raise Exception("DISABLE_NETWORK succeeded unexpectedly(2)")
     if "FAIL" not in dev[1].request("REMOVE_NETWORK 1234567"):
         raise Exception("REMOVE_NETWORK succeeded unexpectedly")
-    dev[1].request("REMOVE_NETWORK all")
+    dev[1].global_request("REMOVE_NETWORK all")
     if len(dev[1].list_networks(p2p=True)) > 0:
         raise Exception("Unexpected network block remaining")
     invite(dev[0], dev[1])

@@ -221,6 +221,7 @@ enum qca_wlan_vendor_acs_hw_mode {
 	QCA_ACS_MODE_IEEE80211G,
 	QCA_ACS_MODE_IEEE80211A,
 	QCA_ACS_MODE_IEEE80211AD,
+	QCA_ACS_MODE_IEEE80211ANY,
 };
 
 /**
@@ -230,10 +231,13 @@ enum qca_wlan_vendor_acs_hw_mode {
  *	management offload, a mechanism where the station's firmware
  *	does the exchange with the AP to establish the temporal keys
  *	after roaming, rather than having the user space wpa_supplicant do it.
+ * @QCA_WLAN_VENDOR_FEATURE_SUPPORT_HW_MODE_ANY: Device supports automatic
+ *	band selection based on channel selection results.
  * @NUM_QCA_WLAN_VENDOR_FEATURES: Number of assigned feature bits
  */
 enum qca_wlan_vendor_features {
 	QCA_WLAN_VENDOR_FEATURE_KEY_MGMT_OFFLOAD	= 0,
+	QCA_WLAN_VENDOR_FEATURE_SUPPORT_HW_MODE_ANY     = 1,
 	NUM_QCA_WLAN_VENDOR_FEATURES /* keep last */
 };
 

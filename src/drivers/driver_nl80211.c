@@ -8365,6 +8365,8 @@ static int hw_mode_to_qca_acs(enum hostapd_hw_mode hw_mode)
 		return QCA_ACS_MODE_IEEE80211A;
 	case HOSTAPD_MODE_IEEE80211AD:
 		return QCA_ACS_MODE_IEEE80211AD;
+	case HOSTAPD_MODE_IEEE80211ANY:
+		return QCA_ACS_MODE_IEEE80211ANY;
 	default:
 		return -1;
 	}

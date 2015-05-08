@@ -532,12 +532,30 @@ void hostapd_event_connect_failed_reason(struct hostapd_data *hapd,
 static void hostapd_acs_channel_selected(struct hostapd_data *hapd,
 					 struct acs_selected_channels *acs_res)
 {
-	int ret;
+	int ret, i;
 
 	if (hapd->iconf->channel) {
 		wpa_printf(MSG_INFO, "ACS: Channel was already set to %d",
 			   hapd->iconf->channel);
 		return;
+	}
+
+	if (!hapd->iface->current_mode) {
+		for (i = 0; i < hapd->iface->num_hw_features; i++) {
+			struct hostapd_hw_modes *mode =
+				&hapd->iface->hw_features[i];
+
+			if (mode->mode == acs_res->hw_mode) {
+				hapd->iface->current_mode = mode;
+				break;
+			}
+		}
+		if (!hapd->iface->current_mode) {
+			hostapd_logger(hapd, NULL, HOSTAPD_MODULE_IEEE80211,
+				       HOSTAPD_LEVEL_WARNING,
+				       "driver selected to bad hw_mode");
+			return;
+		}
 	}
 
 	hapd->iface->freq = hostapd_hw_get_freq(hapd, acs_res->pri_channel);

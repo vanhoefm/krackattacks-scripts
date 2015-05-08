@@ -895,14 +895,18 @@ int hostapd_select_hw_mode(struct hostapd_iface *iface)
 	}
 
 	if (iface->current_mode == NULL) {
-		wpa_printf(MSG_ERROR, "Hardware does not support configured "
-			   "mode");
-		hostapd_logger(iface->bss[0], NULL, HOSTAPD_MODULE_IEEE80211,
-			       HOSTAPD_LEVEL_WARNING,
-			       "Hardware does not support configured mode "
-			       "(%d) (hw_mode in hostapd.conf)",
-			       (int) iface->conf->hw_mode);
-		return -2;
+		if (!(iface->drv_flags & WPA_DRIVER_FLAGS_ACS_OFFLOAD) ||
+		    !(iface->drv_flags & WPA_DRIVER_FLAGS_SUPPORT_HW_MODE_ANY))
+		{
+			wpa_printf(MSG_ERROR,
+				   "Hardware does not support configured mode");
+			hostapd_logger(iface->bss[0], NULL,
+				       HOSTAPD_MODULE_IEEE80211,
+				       HOSTAPD_LEVEL_WARNING,
+				       "Hardware does not support configured mode (%d) (hw_mode in hostapd.conf)",
+				       (int) iface->conf->hw_mode);
+			return -2;
+		}
 	}
 
 	switch (hostapd_check_chans(iface)) {

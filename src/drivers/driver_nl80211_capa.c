@@ -813,6 +813,9 @@ static void qca_nl80211_get_features(struct wpa_driver_nl80211_data *drv)
 
 	if (check_feature(QCA_WLAN_VENDOR_FEATURE_KEY_MGMT_OFFLOAD, &info))
 		drv->capa.flags |= WPA_DRIVER_FLAGS_KEY_MGMT_OFFLOAD;
+
+	if (check_feature(QCA_WLAN_VENDOR_FEATURE_SUPPORT_HW_MODE_ANY, &info))
+		drv->capa.flags |= WPA_DRIVER_FLAGS_SUPPORT_HW_MODE_ANY;
 }
 
 

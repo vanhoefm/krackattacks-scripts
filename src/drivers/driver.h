@@ -1212,6 +1212,8 @@ struct wpa_driver_capa {
 #define WPA_DRIVER_FLAGS_HT_IBSS		0x0000001000000000ULL
 /** Driver supports IBSS with VHT datarates */
 #define WPA_DRIVER_FLAGS_VHT_IBSS		0x0000002000000000ULL
+/** Driver supports automatic band selection */
+#define WPA_DRIVER_FLAGS_SUPPORT_HW_MODE_ANY	0x0000004000000000ULL
 	u64 flags;
 
 #define WPA_DRIVER_SMPS_MODE_STATIC			0x00000001
@@ -4563,6 +4565,7 @@ union wpa_event_data {
 	 * @ch_width: Selected Channel width by driver. Driver may choose to
 	 *	change hostapd configured ACS channel width due driver internal
 	 *	channel restrictions.
+	 * hw_mode: Selected band (used with hw_mode=any)
 	 */
 	struct acs_selected_channels {
 		u8 pri_channel;
@@ -4570,6 +4573,7 @@ union wpa_event_data {
 		u8 vht_seg0_center_ch;
 		u8 vht_seg1_center_ch;
 		u16 ch_width;
+		enum hostapd_hw_mode hw_mode;
 	} acs_selected_channels;
 };
 

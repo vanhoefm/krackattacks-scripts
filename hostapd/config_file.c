@@ -2539,6 +2539,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			conf->hw_mode = HOSTAPD_MODE_IEEE80211G;
 		else if (os_strcmp(pos, "ad") == 0)
 			conf->hw_mode = HOSTAPD_MODE_IEEE80211AD;
+		else if (os_strcmp(pos, "any") == 0)
+			conf->hw_mode = HOSTAPD_MODE_IEEE80211ANY;
 		else {
 			wpa_printf(MSG_ERROR, "Line %d: unknown hw_mode '%s'",
 				   line, pos);

@@ -31,7 +31,8 @@
 #endif
 
 
-WpaGui::WpaGui(QApplication *_app, QWidget *parent, const char *, Qt::WFlags)
+WpaGui::WpaGui(QApplication *_app, QWidget *parent, const char *,
+	       Qt::WindowFlags)
 	: QMainWindow(parent), app(_app)
 {
 	setupUi(this);
@@ -159,7 +160,7 @@ WpaGui::WpaGui(QApplication *_app, QWidget *parent, const char *, Qt::WFlags)
 	textStatus->setText(tr("connecting to wpa_supplicant"));
 	timer = new QTimer(this);
 	connect(timer, SIGNAL(timeout()), SLOT(ping()));
-	timer->setSingleShot(FALSE);
+	timer->setSingleShot(false);
 	timer->start(1000);
 
 	signalMeterTimer = new QTimer(this);
@@ -238,8 +239,9 @@ void WpaGui::languageChange()
 void WpaGui::parse_argv()
 {
 	int c;
+	WpaGuiApp *app = qobject_cast<WpaGuiApp*>(qApp);
 	for (;;) {
-		c = getopt(qApp->argc(), qApp->argv(), "i:m:p:tq");
+		c = getopt(app->argc, app->argv, "i:m:p:tq");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -750,7 +752,7 @@ void WpaGui::helpContents()
 void WpaGui::helpAbout()
 {
 	QMessageBox::about(this, "wpa_gui for wpa_supplicant",
-			   "Copyright (c) 2003-2013,\n"
+			   "Copyright (c) 2003-2015,\n"
 			   "Jouni Malinen <j@w1.fi>\n"
 			   "and contributors.\n"
 			   "\n"
@@ -1066,7 +1068,7 @@ void WpaGui::selectNetwork( const QString &sel )
 	else
 		cmd = "any";
 	cmd.prepend("SELECT_NETWORK ");
-	ctrlRequest(cmd.toAscii().constData(), reply, &reply_len);
+	ctrlRequest(cmd.toLocal8Bit().constData(), reply, &reply_len);
 	triggerUpdate();
 	stopWpsRun(false);
 }
@@ -1082,11 +1084,11 @@ void WpaGui::enableNetwork(const QString &sel)
 		cmd.truncate(cmd.indexOf(':'));
 	else if (!cmd.startsWith("all")) {
 		debug("Invalid editNetwork '%s'",
-		      cmd.toAscii().constData());
+		      cmd.toLocal8Bit().constData());
 		return;
 	}
 	cmd.prepend("ENABLE_NETWORK ");
-	ctrlRequest(cmd.toAscii().constData(), reply, &reply_len);
+	ctrlRequest(cmd.toLocal8Bit().constData(), reply, &reply_len);
 	triggerUpdate();
 }
 
@@ -1101,11 +1103,11 @@ void WpaGui::disableNetwork(const QString &sel)
 		cmd.truncate(cmd.indexOf(':'));
 	else if (!cmd.startsWith("all")) {
 		debug("Invalid editNetwork '%s'",
-		      cmd.toAscii().constData());
+		      cmd.toLocal8Bit().constData());
 		return;
 	}
 	cmd.prepend("DISABLE_NETWORK ");
-	ctrlRequest(cmd.toAscii().constData(), reply, &reply_len);
+	ctrlRequest(cmd.toLocal8Bit().constData(), reply, &reply_len);
 	triggerUpdate();
 }
 
@@ -1191,11 +1193,11 @@ void WpaGui::removeNetwork(const QString &sel)
 		cmd.truncate(cmd.indexOf(':'));
 	else if (!cmd.startsWith("all")) {
 		debug("Invalid editNetwork '%s'",
-		      cmd.toAscii().constData());
+		      cmd.toLocal8Bit().constData());
 		return;
 	}
 	cmd.prepend("REMOVE_NETWORK ");
-	ctrlRequest(cmd.toAscii().constData(), reply, &reply_len);
+	ctrlRequest(cmd.toLocal8Bit().constData(), reply, &reply_len);
 	triggerUpdate();
 }
 
@@ -1255,14 +1257,14 @@ int WpaGui::getNetworkDisabled(const QString &sel)
 	int pos = cmd.indexOf(':');
 	if (pos < 0) {
 		debug("Invalid getNetworkDisabled '%s'",
-		      cmd.toAscii().constData());
+		      cmd.toLocal8Bit().constData());
 		return -1;
 	}
 	cmd.truncate(pos);
 	cmd.prepend("GET_NETWORK ");
 	cmd.append(" disabled");
 
-	if (ctrlRequest(cmd.toAscii().constData(), reply, &reply_len) >= 0
+	if (ctrlRequest(cmd.toLocal8Bit().constData(), reply, &reply_len) >= 0
 	    && reply_len >= 1) {
 		reply[reply_len] = '\0';
 		if (!str_match(reply, "FAIL"))
@@ -1345,7 +1347,7 @@ void WpaGui::saveConfig()
 
 void WpaGui::selectAdapter( const QString & sel )
 {
-	if (openCtrlConnection(sel.toAscii().constData()) < 0)
+	if (openCtrlConnection(sel.toLocal8Bit().constData()) < 0)
 		debug("Failed to open control connection to "
 		      "wpa_supplicant.");
 	updateStatus();
@@ -1719,7 +1721,7 @@ void WpaGui::wpsApPin()
 	size_t reply_len = sizeof(reply);
 
 	QString cmd("WPS_REG " + bssFromScan + " " + wpsApPinEdit->text());
-	if (ctrlRequest(cmd.toAscii().constData(), reply, &reply_len) < 0)
+	if (ctrlRequest(cmd.toLocal8Bit().constData(), reply, &reply_len) < 0)
 		return;
 
 	wpsStatusText->setText(tr("Waiting for AP/Enrollee"));

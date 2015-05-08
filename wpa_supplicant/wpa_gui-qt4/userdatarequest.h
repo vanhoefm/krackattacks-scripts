@@ -20,7 +20,7 @@ class UserDataRequest : public QDialog, public Ui::UserDataRequest
 
 public:
 	UserDataRequest(QWidget *parent = 0, const char *name = 0,
-			bool modal = false, Qt::WFlags fl = 0);
+			bool modal = false, Qt::WindowFlags fl = 0);
 	~UserDataRequest();
 
 	int setParams(WpaGui *_wpagui, const char *reqMsg);

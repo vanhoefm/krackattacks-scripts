@@ -62,7 +62,7 @@ enum peer_type {
 };
 
 
-Peers::Peers(QWidget *parent, const char *, bool, Qt::WFlags)
+Peers::Peers(QWidget *parent, const char *, bool, Qt::WindowFlags)
 	: QDialog(parent)
 {
 	setupUi(this);
@@ -323,13 +323,13 @@ void Peers::enter_pin()
 
 	if (peer_type == PEER_TYPE_WPS_ER_ENROLLEE) {
 		snprintf(cmd, sizeof(cmd), "WPS_ER_PIN %s %s %s",
-			 uuid.toAscii().constData(),
-			 input.get_string().toAscii().constData(),
-			 addr.toAscii().constData());
+			 uuid.toLocal8Bit().constData(),
+			 input.get_string().toLocal8Bit().constData(),
+			 addr.toLocal8Bit().constData());
 	} else {
 		snprintf(cmd, sizeof(cmd), "WPS_PIN %s %s",
-			 addr.toAscii().constData(),
-			 input.get_string().toAscii().constData());
+			 addr.toLocal8Bit().constData(),
+			 input.get_string().toLocal8Bit().constData());
 	}
 	reply_len = sizeof(reply) - 1;
 	if (wpagui->ctrlRequest(cmd, reply, &reply_len) < 0) {
@@ -868,7 +868,7 @@ void Peers::event_notify(WpaMsg msg)
 		QStandardItem *item = find_addr(addr);
 		if (item == NULL || item->data(peer_role_type).toInt() !=
 		    PEER_TYPE_ASSOCIATED_STATION)
-			add_single_station(addr.toAscii().constData());
+			add_single_station(addr.toLocal8Bit().constData());
 		return;
 	}
 
@@ -1350,8 +1350,8 @@ void Peers::ctx_p2p_connect()
 		char reply[100];
 		size_t reply_len;
 		snprintf(cmd, sizeof(cmd), "P2P_CONNECT %s %s display",
-			 addr.toAscii().constData(),
-			 arg.toAscii().constData());
+			 addr.toLocal8Bit().constData(),
+			 arg.toLocal8Bit().constData());
 		reply_len = sizeof(reply) - 1;
 		if (wpagui->ctrlRequest(cmd, reply, &reply_len) < 0) {
 			QMessageBox msg;
@@ -1384,8 +1384,8 @@ void Peers::ctx_p2p_connect()
 	char reply[100];
 	size_t reply_len;
 	snprintf(cmd, sizeof(cmd), "P2P_CONNECT %s %s",
-		 addr.toAscii().constData(),
-		 arg.toAscii().constData());
+		 addr.toLocal8Bit().constData(),
+		 arg.toLocal8Bit().constData());
 	reply_len = sizeof(reply) - 1;
 	if (wpagui->ctrlRequest(cmd, reply, &reply_len) < 0) {
 		QMessageBox msg;
@@ -1408,7 +1408,7 @@ void Peers::ctx_p2p_req_pin()
 	char reply[100];
 	size_t reply_len;
 	snprintf(cmd, sizeof(cmd), "P2P_PROV_DISC %s display",
-		 addr.toAscii().constData());
+		 addr.toLocal8Bit().constData());
 	reply_len = sizeof(reply) - 1;
 	if (wpagui->ctrlRequest(cmd, reply, &reply_len) < 0) {
 		QMessageBox msg;
@@ -1431,7 +1431,7 @@ void Peers::ctx_p2p_show_pin()
 	char reply[100];
 	size_t reply_len;
 	snprintf(cmd, sizeof(cmd), "P2P_PROV_DISC %s keypad",
-		 addr.toAscii().constData());
+		 addr.toLocal8Bit().constData());
 	reply_len = sizeof(reply) - 1;
 	if (wpagui->ctrlRequest(cmd, reply, &reply_len) < 0) {
 		QMessageBox msg;
@@ -1452,7 +1452,7 @@ void Peers::ctx_p2p_display_pin()
 	char reply[100];
 	size_t reply_len;
 	snprintf(cmd, sizeof(cmd), "P2P_CONNECT %s pin",
-		 addr.toAscii().constData());
+		 addr.toLocal8Bit().constData());
 	reply_len = sizeof(reply) - 1;
 	if (wpagui->ctrlRequest(cmd, reply, &reply_len) < 0) {
 		QMessageBox msg;
@@ -1480,8 +1480,8 @@ void Peers::ctx_p2p_display_pin_pd()
 	char reply[100];
 	size_t reply_len;
 	snprintf(cmd, sizeof(cmd), "P2P_CONNECT %s %s display",
-		 addr.toAscii().constData(),
-		 arg.toAscii().constData());
+		 addr.toLocal8Bit().constData(),
+		 arg.toLocal8Bit().constData());
 	reply_len = sizeof(reply) - 1;
 	if (wpagui->ctrlRequest(cmd, reply, &reply_len) < 0) {
 		QMessageBox msg;
@@ -1515,8 +1515,8 @@ void Peers::ctx_p2p_enter_pin()
 	char reply[100];
 	size_t reply_len;
 	snprintf(cmd, sizeof(cmd), "P2P_CONNECT %s %s keypad",
-		 addr.toAscii().constData(),
-		 arg.toAscii().constData());
+		 addr.toLocal8Bit().constData(),
+		 arg.toLocal8Bit().constData());
 	reply_len = sizeof(reply) - 1;
 	if (wpagui->ctrlRequest(cmd, reply, &reply_len) < 0) {
 		QMessageBox msg;
@@ -1535,7 +1535,7 @@ void Peers::ctx_p2p_remove_group()
 	char reply[100];
 	size_t reply_len;
 	snprintf(cmd, sizeof(cmd), "P2P_GROUP_REMOVE %s",
-		 ctx_item->data(peer_role_ifname).toString().toAscii().
+		 ctx_item->data(peer_role_ifname).toString().toLocal8Bit().
 		 constData());
 	reply_len = sizeof(reply) - 1;
 	if (wpagui->ctrlRequest(cmd, reply, &reply_len) < 0) {
@@ -1713,13 +1713,13 @@ void Peers::connect_pbc()
 	int peer_type = ctx_item->data(peer_role_type).toInt();
 	if (peer_type == PEER_TYPE_WPS_ER_ENROLLEE) {
 		snprintf(cmd, sizeof(cmd), "WPS_ER_PBC %s",
-			 ctx_item->data(peer_role_uuid).toString().toAscii().
+			 ctx_item->data(peer_role_uuid).toString().toLocal8Bit().
 			 constData());
 	} else if (peer_type == PEER_TYPE_P2P ||
 		   peer_type == PEER_TYPE_P2P_CLIENT) {
 		snprintf(cmd, sizeof(cmd), "P2P_CONNECT %s pbc",
 			 ctx_item->data(peer_role_address).toString().
-			 toAscii().constData());
+			 toLocal8Bit().constData());
 	} else {
 		snprintf(cmd, sizeof(cmd), "WPS_PBC");
 	}
@@ -1750,8 +1750,8 @@ void Peers::learn_ap_config()
 	size_t reply_len;
 
 	snprintf(cmd, sizeof(cmd), "WPS_ER_LEARN %s %s",
-		 uuid.toAscii().constData(),
-		 input.get_string().toAscii().constData());
+		 uuid.toLocal8Bit().constData(),
+		 input.get_string().toLocal8Bit().constData());
 	reply_len = sizeof(reply) - 1;
 	if (wpagui->ctrlRequest(cmd, reply, &reply_len) < 0) {
 		QMessageBox msg;

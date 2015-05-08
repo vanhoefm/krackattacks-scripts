@@ -22,7 +22,7 @@ class Peers : public QDialog, public Ui::Peers
 
 public:
 	Peers(QWidget *parent = 0, const char *name = 0,
-		    bool modal = false, Qt::WFlags fl = 0);
+		    bool modal = false, Qt::WindowFlags fl = 0);
 	~Peers();
 	void setWpaGui(WpaGui *_wpagui);
 	void event_notify(WpaMsg msg);

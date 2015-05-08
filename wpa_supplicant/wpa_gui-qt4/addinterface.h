@@ -11,9 +11,9 @@
 
 #include <QObject>
 
-#include <QtGui/QDialog>
-#include <QtGui/QTreeWidget>
-#include <QtGui/QVBoxLayout>
+#include <QDialog>
+#include <QTreeWidget>
+#include <QVBoxLayout>
 
 class WpaGui;
 

@@ -16,6 +16,20 @@
 
 class UserDataRequest;
 
+class WpaGuiApp : public QApplication
+{
+	Q_OBJECT
+public:
+	WpaGuiApp(int &argc, char **argv);
+
+#if !defined(QT_NO_SESSIONMANAGER) && QT_VERSION < 0x050000
+	virtual void saveState(QSessionManager &manager);
+#endif
+
+	WpaGui *w;
+	int argc;
+	char **argv;
+};
 
 class WpaGui : public QMainWindow, public Ui::WpaGui
 {
@@ -35,7 +49,7 @@ public:
 	};
 
 	WpaGui(QApplication *app, QWidget *parent = 0, const char *name = 0,
-	       Qt::WFlags fl = 0);
+	       Qt::WindowFlags fl = 0);
 	~WpaGui();
 
 	virtual int ctrlRequest(const char *cmd, char *buf, size_t *buflen);

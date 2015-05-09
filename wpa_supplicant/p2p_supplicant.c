@@ -5950,7 +5950,11 @@ int wpas_p2p_assoc_req_ie(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 
 	if (wpa_s->global->p2p_disabled)
 		return -1;
-	if (wpa_s->conf->p2p_disabled)
+	/*
+	 * Advertize mandatory cross connection capability even on
+	 * p2p_disabled=1 interface when associating with a P2P Manager WLAN AP.
+	 */
+	if (wpa_s->conf->p2p_disabled && p2p_group)
 		return -1;
 	if (wpa_s->global->p2p == NULL)
 		return -1;

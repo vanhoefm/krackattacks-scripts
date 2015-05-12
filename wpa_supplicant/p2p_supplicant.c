@@ -191,7 +191,11 @@ static void wpas_p2p_set_own_freq_preference(struct wpa_supplicant *wpa_s,
 {
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
 		return;
-	if (wpa_s->parent->conf->p2p_ignore_shared_freq &&
+
+	/* Use the wpa_s used to control the P2P Device operation */
+	wpa_s = wpa_s->global->p2p_init_wpa_s;
+
+	if (wpa_s->conf->p2p_ignore_shared_freq &&
 	    freq > 0 && wpa_s->num_multichan_concurrent > 1 &&
 	    wpas_p2p_num_unused_channels(wpa_s) > 0) {
 		wpa_printf(MSG_DEBUG, "P2P: Ignore own channel preference %d MHz due to p2p_ignore_shared_freq=1 configuration",

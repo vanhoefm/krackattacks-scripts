@@ -127,8 +127,7 @@ DBusMessage * wpas_dbus_handler_p2p_find(DBusMessage *message,
 		wpa_dbus_dict_entry_clear(&entry);
 	}
 
-	if (wpa_s->p2p_dev)
-		wpa_s = wpa_s->p2p_dev;
+	wpa_s = wpa_s->global->p2p_init_wpa_s;
 
 	wpas_p2p_find(wpa_s, timeout, type, num_req_dev_types, req_dev_types,
 		      NULL, 0, 0, NULL, 0);
@@ -147,10 +146,7 @@ error:
 DBusMessage * wpas_dbus_handler_p2p_stop_find(DBusMessage *message,
 					      struct wpa_supplicant *wpa_s)
 {
-	if (wpa_s->p2p_dev)
-		wpa_s = wpa_s->p2p_dev;
-
-	wpas_p2p_stop_find(wpa_s);
+	wpas_p2p_stop_find(wpa_s->global->p2p_init_wpa_s);
 	return NULL;
 }
 
@@ -168,8 +164,7 @@ DBusMessage * wpas_dbus_handler_p2p_rejectpeer(DBusMessage *message,
 	if (parse_peer_object_path(peer_object_path, peer_addr) < 0)
 		return wpas_dbus_error_invalid_args(message, NULL);
 
-	if (wpa_s->p2p_dev)
-		wpa_s = wpa_s->p2p_dev;
+	wpa_s = wpa_s->global->p2p_init_wpa_s;
 
 	if (wpas_p2p_reject(wpa_s, peer_addr) < 0)
 		return wpas_dbus_error_unknown_error(message,
@@ -188,8 +183,7 @@ DBusMessage * wpas_dbus_handler_p2p_listen(DBusMessage *message,
 				   DBUS_TYPE_INVALID))
 		return wpas_dbus_error_no_memory(message);
 
-	if (wpa_s->p2p_dev)
-		wpa_s = wpa_s->p2p_dev;
+	wpa_s = wpa_s->global->p2p_init_wpa_s;
 
 	if (wpas_p2p_listen(wpa_s, (unsigned int) timeout)) {
 		return dbus_message_new_error(message,
@@ -230,8 +224,7 @@ DBusMessage * wpas_dbus_handler_p2p_extendedlisten(
 		wpa_dbus_dict_entry_clear(&entry);
 	}
 
-	if (wpa_s->p2p_dev)
-		wpa_s = wpa_s->p2p_dev;
+	wpa_s = wpa_s->global->p2p_init_wpa_s;
 
 	if (wpas_p2p_ext_listen(wpa_s, period, interval))
 		return wpas_dbus_error_unknown_error(
@@ -336,8 +329,7 @@ DBusMessage * wpas_dbus_handler_p2p_group_add(DBusMessage *message,
 		wpa_dbus_dict_entry_clear(&entry);
 	}
 
-	if (wpa_s->p2p_dev)
-		wpa_s = wpa_s->p2p_dev;
+	wpa_s = wpa_s->global->p2p_init_wpa_s;
 
 	if (pg_object_path != NULL) {
 		char *net_id_str;
@@ -432,8 +424,7 @@ DBusMessage * wpas_dbus_handler_p2p_flush(DBusMessage *message,
 	if (!wpa_dbus_p2p_check_enabled(wpa_s, message, &reply, NULL))
 		return reply;
 
-	if (wpa_s->p2p_dev)
-		wpa_s = wpa_s->p2p_dev;
+	wpa_s = wpa_s->global->p2p_init_wpa_s;
 
 	os_memset(wpa_s->p2p_auth_invite, 0, ETH_ALEN);
 	wpa_s->force_long_sd = 0;
@@ -529,8 +520,7 @@ DBusMessage * wpas_dbus_handler_p2p_connect(DBusMessage *message,
 	if ((!pin || !pin[0]) && wps_method == WPS_PIN_KEYPAD)
 		goto inv_args;
 
-	if (wpa_s->p2p_dev)
-		wpa_s = wpa_s->p2p_dev;
+	wpa_s = wpa_s->global->p2p_init_wpa_s;
 
 	new_pin = wpas_p2p_connect(wpa_s, addr, pin, wps_method,
 				   persistent_group, 0, join, authorize_only,
@@ -632,8 +622,7 @@ DBusMessage * wpas_dbus_handler_p2p_invite(DBusMessage *message,
 	    !p2p_peer_known(wpa_s->global->p2p, peer_addr))
 		goto err;
 
-	if (wpa_s->p2p_dev)
-		wpa_s = wpa_s->p2p_dev;
+	wpa_s = wpa_s->global->p2p_init_wpa_s;
 
 	if (persistent) {
 		char *net_id_str;
@@ -725,8 +714,7 @@ DBusMessage * wpas_dbus_handler_p2p_prov_disc_req(DBusMessage *message,
 	    os_strcmp(config_method, "pushbutton"))
 		return wpas_dbus_error_invalid_args(message, NULL);
 
-	if (wpa_s->p2p_dev)
-		wpa_s = wpa_s->p2p_dev;
+	wpa_s = wpa_s->global->p2p_init_wpa_s;
 
 	if (wpas_p2p_prov_disc(wpa_s, peer_addr, config_method,
 			       WPAS_P2P_PD_FOR_GO_NEG, NULL) < 0)
@@ -757,8 +745,7 @@ dbus_bool_t wpas_dbus_getter_p2p_device_config(DBusMessageIter *iter,
 	if (!wpa_dbus_p2p_check_enabled(wpa_s, NULL, NULL, error))
 		return FALSE;
 
-	if (wpa_s->p2p_dev)
-		wpa_s = wpa_s->p2p_dev;
+	wpa_s = wpa_s->global->p2p_init_wpa_s;
 
 	if (!dbus_message_iter_open_container(iter, DBUS_TYPE_VARIANT,
 					      "a{sv}", &variant_iter) ||
@@ -863,8 +850,7 @@ dbus_bool_t wpas_dbus_setter_p2p_device_config(DBusMessageIter *iter,
 	if (!wpa_dbus_p2p_check_enabled(wpa_s, NULL, NULL, error))
 		return FALSE;
 
-	if (wpa_s->p2p_dev)
-		wpa_s = wpa_s->p2p_dev;
+	wpa_s = wpa_s->global->p2p_init_wpa_s;
 
 	dbus_message_iter_recurse(iter, &variant_iter);
 	if (!wpa_dbus_dict_open_read(&variant_iter, &iter_dict, error))
@@ -1583,8 +1569,7 @@ dbus_bool_t wpas_dbus_getter_p2p_peer_groups(DBusMessageIter *iter,
 	os_memset(&data, 0, sizeof(data));
 
 	wpa_s = peer_args->wpa_s;
-	if (wpa_s->p2p_dev)
-		wpa_s = wpa_s->p2p_dev;
+	wpa_s = wpa_s->global->p2p_init_wpa_s;
 
 	wpa_s_go = wpas_get_p2p_client_iface(wpa_s, info->p2p_device_addr);
 	if (wpa_s_go) {
@@ -1641,8 +1626,7 @@ dbus_bool_t wpas_dbus_getter_persistent_groups(DBusMessageIter *iter,
 	unsigned int i = 0, num = 0;
 	dbus_bool_t success = FALSE;
 
-	if (wpa_s->p2p_dev)
-		wpa_s = wpa_s->p2p_dev;
+	wpa_s = wpa_s->global->p2p_init_wpa_s;
 	if (!wpa_s->parent->dbus_new_path)
 		return FALSE;
 
@@ -1756,8 +1740,7 @@ DBusMessage * wpas_dbus_handler_add_persistent_group(
 
 	dbus_message_iter_init(message, &iter);
 
-	if (wpa_s->p2p_dev)
-		wpa_s = wpa_s->p2p_dev;
+	wpa_s = wpa_s->global->p2p_init_wpa_s;
 	if (wpa_s->parent->dbus_new_path)
 		ssid = wpa_config_add_network(wpa_s->conf);
 	if (ssid == NULL) {
@@ -1839,8 +1822,7 @@ DBusMessage * wpas_dbus_handler_remove_persistent_group(
 	dbus_message_get_args(message, NULL, DBUS_TYPE_OBJECT_PATH, &op,
 			      DBUS_TYPE_INVALID);
 
-	if (wpa_s->p2p_dev)
-		wpa_s = wpa_s->p2p_dev;
+	wpa_s = wpa_s->global->p2p_init_wpa_s;
 
 	/*
 	 * Extract the network ID and ensure the network is actually a child of
@@ -1916,8 +1898,8 @@ DBusMessage * wpas_dbus_handler_remove_all_persistent_groups(
 	struct wpa_ssid *ssid, *next;
 	struct wpa_config *config;
 
-	if (wpa_s->p2p_dev)
-		wpa_s = wpa_s->p2p_dev;
+	wpa_s = wpa_s->global->p2p_init_wpa_s;
+
 	config = wpa_s->conf;
 	ssid = config->ssid;
 	while (ssid) {

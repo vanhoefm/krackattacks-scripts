@@ -3460,7 +3460,6 @@ int wpas_p2p_add_p2pdev_interface(struct wpa_supplicant *wpa_s,
 		wpa_printf(MSG_DEBUG, "P2P: Failed to add P2P Device interface");
 		return -1;
 	}
-	wpa_s->p2p_dev = p2pdev_wpa_s;
 
 	wpa_s->pending_interface_name[0] = '\0';
 	return 0;

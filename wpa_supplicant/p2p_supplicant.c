@@ -2831,6 +2831,7 @@ static void wpas_remove_persistent_peer(struct wpa_supplicant *wpa_s,
 					const u8 *peer, int inv)
 {
 	size_t i;
+	struct wpa_supplicant *p2p_wpa_s = wpa_s->global->p2p_init_wpa_s;
 
 	if (ssid == NULL)
 		return;
@@ -2860,8 +2861,8 @@ static void wpas_remove_persistent_peer(struct wpa_supplicant *wpa_s,
 		   ssid->p2p_client_list + (i + 1) * 2 * ETH_ALEN,
 		   (ssid->num_p2p_clients - i - 1) * 2 * ETH_ALEN);
 	ssid->num_p2p_clients--;
-	if (wpa_s->parent->conf->update_config &&
-	    wpa_config_write(wpa_s->parent->confname, wpa_s->parent->conf))
+	if (p2p_wpa_s->conf->update_config &&
+	    wpa_config_write(p2p_wpa_s->confname, p2p_wpa_s->conf))
 		wpa_printf(MSG_DEBUG, "P2P: Failed to update configuration");
 }
 

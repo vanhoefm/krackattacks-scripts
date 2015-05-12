@@ -1113,13 +1113,14 @@ static void wpas_p2p_add_persistent_group_client(struct wpa_supplicant *wpa_s,
 	u8 *n;
 	size_t i;
 	int found = 0;
+	struct wpa_supplicant *p2p_wpa_s = wpa_s->global->p2p_init_wpa_s;
 
 	ssid = wpa_s->current_ssid;
 	if (ssid == NULL || ssid->mode != WPAS_MODE_P2P_GO ||
 	    !ssid->p2p_persistent_group)
 		return;
 
-	for (s = wpa_s->parent->conf->ssid; s; s = s->next) {
+	for (s = p2p_wpa_s->conf->ssid; s; s = s->next) {
 		if (s->disabled != 2 || s->mode != WPAS_MODE_P2P_GO)
 			continue;
 
@@ -1178,8 +1179,8 @@ static void wpas_p2p_add_persistent_group_client(struct wpa_supplicant *wpa_s,
 			  0xff, ETH_ALEN);
 	}
 
-	if (wpa_s->parent->conf->update_config &&
-	    wpa_config_write(wpa_s->parent->confname, wpa_s->parent->conf))
+	if (p2p_wpa_s->conf->update_config &&
+	    wpa_config_write(p2p_wpa_s->confname, p2p_wpa_s->conf))
 		wpa_printf(MSG_DEBUG, "P2P: Failed to update configuration");
 }
 

@@ -7309,16 +7309,17 @@ void wpas_p2p_remove_client(struct wpa_supplicant *wpa_s, const u8 *peer,
 {
 	struct wpa_ssid *s;
 	struct wpa_supplicant *w;
+	struct wpa_supplicant *p2p_wpa_s = wpa_s->global->p2p_init_wpa_s;
 
 	wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Remove client " MACSTR, MAC2STR(peer));
 
 	/* Remove from any persistent group */
-	for (s = wpa_s->parent->conf->ssid; s; s = s->next) {
+	for (s = p2p_wpa_s->conf->ssid; s; s = s->next) {
 		if (s->disabled != 2 || s->mode != WPAS_MODE_P2P_GO)
 			continue;
 		if (!iface_addr)
-			wpas_remove_persistent_peer(wpa_s, s, peer, 0);
-		wpas_p2p_remove_psk(wpa_s->parent, s, peer, iface_addr);
+			wpas_remove_persistent_peer(p2p_wpa_s, s, peer, 0);
+		wpas_p2p_remove_psk(p2p_wpa_s, s, peer, iface_addr);
 	}
 
 	/* Remove from any operating group */

@@ -168,6 +168,7 @@ void wpas_dbus_signal_debug_timestamp_changed(struct wpa_global *global);
 void wpas_dbus_signal_debug_show_keys_changed(struct wpa_global *global);
 
 int wpas_dbus_register_peer(struct wpa_supplicant *wpa_s, const u8 *dev_addr);
+void wpas_dbus_signal_p2p_find_stopped(struct wpa_supplicant *wpa_s);
 void wpas_dbus_signal_peer_device_found(struct wpa_supplicant *wpa_s,
 					   const u8 *dev_addr);
 int wpas_dbus_unregister_peer(struct wpa_supplicant *wpa_s,
@@ -456,6 +457,11 @@ wpas_dbus_unregister_p2p_groupmember(struct wpa_supplicant *wpa_s,
 static inline void
 wpas_dbus_signal_p2p_peer_joined(struct wpa_supplicant *wpa_s,
 				 const u8 *member)
+{
+}
+
+static inline void
+wpas_dbus_signal_p2p_find_stopped(struct wpa_supplicant *wpa_s)
 {
 }
 

@@ -2248,6 +2248,7 @@ static void wpas_find_stopped(void *ctx)
 {
 	struct wpa_supplicant *wpa_s = ctx;
 	wpa_msg_global(wpa_s, MSG_INFO, P2P_EVENT_FIND_STOPPED);
+	wpas_notify_p2p_find_stopped(wpa_s);
 }
 
 

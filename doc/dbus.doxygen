@@ -1287,6 +1287,10 @@ Interface for performing P2P (Wi-Fi Peer-to-Peer) P2P Device operations.
   </li>
 
   <li>
+    <h3>FindStopped ( )</h3>
+  </li>
+
+  <li>
     <h3>ProvisionDiscoveryRequestDisplayPin ( o : peer_object, s : pin )</h3>
   </li>
 

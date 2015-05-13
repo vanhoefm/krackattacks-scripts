@@ -3039,6 +3039,11 @@ static const struct wpa_dbus_signal_desc wpas_dbus_interface_signals[] = {
 		  END_ARGS
 	  }
 	},
+	{ "FindStopped", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
+	  {
+		  END_ARGS
+	  }
+	},
 	{ "ProvisionDiscoveryRequestDisplayPin", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
 	  {
 		  { "peer_object", "o", ARG_OUT },
@@ -3527,6 +3532,35 @@ int wpas_dbus_unregister_peer(struct wpa_supplicant *wpa_s,
 	ret = wpa_dbus_unregister_object_per_iface(ctrl_iface, peer_obj_path);
 
 	return ret;
+}
+
+
+/**
+ * wpas_dbus_signal_p2p_find_stopped - Send P2P Find stopped signal
+ * @wpa_s: %wpa_supplicant network interface data
+ *
+ * Notify listeners about P2P Find stopped
+ */
+void wpas_dbus_signal_p2p_find_stopped(struct wpa_supplicant *wpa_s)
+{
+	struct wpas_dbus_priv *iface;
+	DBusMessage *msg;
+
+	iface = wpa_s->global->dbus;
+
+	/* Do nothing if the control interface is not turned on */
+	if (iface == NULL || !wpa_s->dbus_new_path)
+		return;
+
+	msg = dbus_message_new_signal(wpa_s->dbus_new_path,
+				      WPAS_DBUS_NEW_IFACE_P2PDEVICE,
+				      "FindStopped");
+	if (msg == NULL)
+		return;
+
+	dbus_connection_send(iface->con, msg, NULL);
+
+	dbus_message_unref(msg);
 }
 
 

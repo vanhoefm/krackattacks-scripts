@@ -894,6 +894,9 @@ static int acs_request_scan(struct hostapd_iface *iface)
 		if (chan->flag & HOSTAPD_CHAN_DISABLED)
 			continue;
 
+		if (!is_in_chanlist(iface, chan))
+			continue;
+
 		*freq++ = chan->freq;
 	}
 	*freq = 0;

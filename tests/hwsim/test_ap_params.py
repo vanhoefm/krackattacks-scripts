@@ -49,11 +49,21 @@ def test_ap_vendor_elements(dev, apdev):
     passphrase = 'qwertyuiop'
     params = hostapd.wpa2_params(ssid=ssid, passphrase=passphrase)
     params['vendor_elements'] = "dd0411223301"
-    hostapd.add_ap(apdev[0]['ifname'], params)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
     dev[0].connect(ssid, psk=passphrase, scan_freq="2412")
     bss = dev[0].get_bss(bssid)
     if "dd0411223301" not in bss['ie']:
         raise Exception("Vendor element not shown in scan results")
+
+    hapd.set('vendor_elements', 'dd051122330203')
+    if "OK" not in hapd.request("UPDATE_BEACON"):
+        raise Exception("UPDATE_BEACON failed")
+    dev[1].scan_for_bss(apdev[0]['bssid'], freq="2412")
+    bss = dev[1].get_bss(bssid)
+    if "dd0411223301" in bss['ie']:
+        raise Exception("Old vendor element still in scan results")
+    if "dd051122330203" not in bss['ie']:
+        raise Exception("New vendor element not shown in scan results")
 
 def test_ap_country(dev, apdev):
     """WPA2-PSK AP setting country code and using 5 GHz band"""

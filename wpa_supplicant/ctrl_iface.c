@@ -6982,6 +6982,8 @@ static void wpas_ctrl_scan(struct wpa_supplicant *wpa_s, char *params,
 	void (*scan_res_handler)(struct wpa_supplicant *wpa_s,
 				 struct wpa_scan_results *scan_res);
 	int *manual_scan_freqs = NULL;
+	struct wpa_ssid_value *ssid = NULL, *ns;
+	unsigned int ssid_count = 0;
 
 	if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED) {
 		*reply_len = -1;
@@ -7036,6 +7038,60 @@ static void wpas_ctrl_scan(struct wpa_supplicant *wpa_s, char *params,
 			*reply_len = -1;
 			goto done;
 		}
+
+		pos = params;
+		while (pos && *pos != '\0') {
+			if (os_strncmp(pos, "ssid ", 5) == 0) {
+				char *end;
+
+				pos += 5;
+				end = pos;
+				while (*end) {
+					if (*end == '\0' || *end == ' ')
+						break;
+					end++;
+				}
+
+				ns = os_realloc_array(
+					ssid, ssid_count + 1,
+					sizeof(struct wpa_ssid_value));
+				if (ns == NULL) {
+					*reply_len = -1;
+					goto done;
+				}
+				ssid = ns;
+
+				if ((end - pos) & 0x01 ||
+				    end - pos > 2 * SSID_MAX_LEN ||
+				    hexstr2bin(pos, ssid[ssid_count].ssid,
+					       (end - pos) / 2) < 0) {
+					wpa_printf(MSG_DEBUG,
+						   "Invalid SSID value '%s'",
+						   pos);
+					*reply_len = -1;
+					goto done;
+				}
+				ssid[ssid_count].ssid_len = (end - pos) / 2;
+				wpa_hexdump_ascii(MSG_DEBUG, "scan SSID",
+						  ssid[ssid_count].ssid,
+						  ssid[ssid_count].ssid_len);
+				ssid_count++;
+				pos = end;
+			}
+
+			pos = os_strchr(pos, ' ');
+			if (pos)
+				pos++;
+		}
+	}
+
+	wpa_s->num_ssids_from_scan_req = ssid_count;
+	os_free(wpa_s->ssids_from_scan_req);
+	if (ssid_count) {
+		wpa_s->ssids_from_scan_req = ssid;
+		ssid = NULL;
+	} else {
+		wpa_s->ssids_from_scan_req = NULL;
 	}
 
 	if (scan_only)
@@ -7099,6 +7155,7 @@ static void wpas_ctrl_scan(struct wpa_supplicant *wpa_s, char *params,
 
 done:
 	os_free(manual_scan_freqs);
+	os_free(ssid);
 }
 
 

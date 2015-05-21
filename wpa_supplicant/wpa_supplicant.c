@@ -4336,6 +4336,8 @@ static void wpa_supplicant_deinit_iface(struct wpa_supplicant *wpa_s,
 		wpa_s->conf = NULL;
 	}
 
+	os_free(wpa_s->ssids_from_scan_req);
+
 	os_free(wpa_s);
 }
 

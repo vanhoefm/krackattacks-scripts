@@ -614,6 +614,37 @@ static void wpa_set_scan_ssids(struct wpa_supplicant *wpa_s,
 }
 
 
+static int wpa_set_ssids_from_scan_req(struct wpa_supplicant *wpa_s,
+				       struct wpa_driver_scan_params *params,
+				       size_t max_ssids)
+{
+	unsigned int i;
+
+	if (wpa_s->ssids_from_scan_req == NULL ||
+	    wpa_s->num_ssids_from_scan_req == 0)
+		return 0;
+
+	if (wpa_s->num_ssids_from_scan_req > max_ssids) {
+		wpa_s->num_ssids_from_scan_req = max_ssids;
+		wpa_printf(MSG_DEBUG, "Over max scan SSIDs from scan req: %u",
+			   (unsigned int) max_ssids);
+	}
+
+	for (i = 0; i < wpa_s->num_ssids_from_scan_req; i++) {
+		params->ssids[i].ssid = wpa_s->ssids_from_scan_req[i].ssid;
+		params->ssids[i].ssid_len =
+			wpa_s->ssids_from_scan_req[i].ssid_len;
+		wpa_hexdump_ascii(MSG_DEBUG, "specific SSID",
+				  params->ssids[i].ssid,
+				  params->ssids[i].ssid_len);
+	}
+
+	params->num_ssids = wpa_s->num_ssids_from_scan_req;
+	wpa_s->num_ssids_from_scan_req = 0;
+	return 1;
+}
+
+
 static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_supplicant *wpa_s = eloop_ctx;
@@ -724,6 +755,12 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	if (wpa_s->autoscan_params != NULL) {
 		scan_params = wpa_s->autoscan_params;
 		goto scan;
+	}
+
+	if (wpa_s->last_scan_req == MANUAL_SCAN_REQ &&
+	    wpa_set_ssids_from_scan_req(wpa_s, &params, max_ssids)) {
+		wpa_printf(MSG_DEBUG, "Use specific SSIDs from SCAN command");
+		goto ssid_list_set;
 	}
 
 #ifdef CONFIG_P2P
@@ -891,10 +928,8 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		wpa_dbg(wpa_s, MSG_DEBUG, "Starting AP scan for wildcard "
 			"SSID");
 	}
-#ifdef CONFIG_P2P
-ssid_list_set:
-#endif /* CONFIG_P2P */
 
+ssid_list_set:
 	wpa_supplicant_optimize_freqs(wpa_s, &params);
 	extra_ie = wpa_supplicant_extra_ies(wpa_s);
 

@@ -72,6 +72,21 @@ def test_ap_acs(dev, apdev):
 
     dev[0].connect("test-acs", psk="12345678", scan_freq=freq)
 
+def test_ap_acs_chanlist(dev, apdev):
+    """Automatic channel selection with chanlist set"""
+    force_prev_ap_on_24g(apdev[0])
+    params = hostapd.wpa2_params(ssid="test-acs", passphrase="12345678")
+    params['channel'] = '0'
+    params['chanlist'] = '1 6 11'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params, wait_enabled=False)
+    wait_acs(hapd)
+
+    freq = hapd.get_status_field("freq")
+    if int(freq) < 2400:
+        raise Exception("Unexpected frequency")
+
+    dev[0].connect("test-acs", psk="12345678", scan_freq=freq)
+
 def test_ap_multi_bss_acs(dev, apdev):
     """hostapd start with a multi-BSS configuration file using ACS"""
     ifname = apdev[0]['ifname']

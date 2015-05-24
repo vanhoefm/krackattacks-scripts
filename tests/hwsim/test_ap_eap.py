@@ -1897,6 +1897,70 @@ def test_ap_wpa2_eap_eke_serverid_nai(dev, apdev):
     hostapd.add_ap(apdev[0]['ifname'], params)
     eap_connect(dev[0], apdev[0], "EKE", "eke user", password="hello")
 
+def test_ap_wpa2_eap_eke_server_oom(dev, apdev):
+    """WPA2-Enterprise connection using EAP-EKE with server OOM"""
+    params = int_eap_server_params()
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq=2412)
+
+    for count,func in [ (1, "eap_eke_build_commit"),
+                        (2, "eap_eke_build_commit"),
+                        (3, "eap_eke_build_commit"),
+                        (1, "eap_eke_build_confirm"),
+                        (2, "eap_eke_build_confirm"),
+                        (1, "eap_eke_process_commit"),
+                        (2, "eap_eke_process_commit"),
+                        (1, "eap_eke_process_confirm"),
+                        (1, "eap_eke_process_identity"),
+                        (2, "eap_eke_process_identity"),
+                        (3, "eap_eke_process_identity"),
+                        (4, "eap_eke_process_identity") ]:
+        with alloc_fail(hapd, count, func):
+            eap_connect(dev[0], apdev[0], "EKE", "eke user", password="hello",
+                        expect_failure=True)
+            dev[0].request("REMOVE_NETWORK all")
+
+    for count,func,pw in [ (1, "eap_eke_init", "hello"),
+                           (1, "eap_eke_get_session_id", "hello"),
+                           (1, "eap_eke_getKey", "hello"),
+                           (1, "eap_eke_build_msg", "hello"),
+                           (1, "eap_eke_build_failure", "wrong"),
+                           (1, "eap_eke_build_identity", "hello"),
+                           (2, "eap_eke_build_identity", "hello") ]:
+        with alloc_fail(hapd, count, func):
+            dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP WPA-EAP-SHA256",
+                           eap="EKE", identity="eke user", password=pw,
+                           wait_connect=False, scan_freq="2412")
+            # This would eventually time out, but we can stop after having
+            # reached the allocation failure.
+            for i in range(20):
+                time.sleep(0.1)
+                if hapd.request("GET_ALLOC_FAIL").startswith('0'):
+                    break
+            dev[0].request("REMOVE_NETWORK all")
+
+    for count in range(1, 1000):
+        try:
+            with alloc_fail(hapd, count, "eap_server_sm_step"):
+                dev[0].connect("test-wpa2-eap",
+                               key_mgmt="WPA-EAP WPA-EAP-SHA256",
+                               eap="EKE", identity="eke user", password=pw,
+                               wait_connect=False, scan_freq="2412")
+                # This would eventually time out, but we can stop after having
+                # reached the allocation failure.
+                for i in range(10):
+                    time.sleep(0.1)
+                    if hapd.request("GET_ALLOC_FAIL").startswith('0'):
+                        break
+                dev[0].request("REMOVE_NETWORK all")
+        except Exception, e:
+            if str(e) == "Allocation failure did not trigger":
+                if count < 30:
+                    raise Exception("Too few allocation failures")
+                logger.info("%d allocation failures tested" % (count - 1))
+                break
+            raise e
+
 def test_ap_wpa2_eap_ikev2(dev, apdev):
     """WPA2-Enterprise connection using EAP-IKEv2"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")

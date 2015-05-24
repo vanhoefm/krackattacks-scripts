@@ -1890,6 +1890,13 @@ def test_ap_wpa2_eap_eke(dev, apdev):
     eap_connect(dev[0], apdev[0], "EKE", "eke user", password="hello1",
                 expect_failure=True)
 
+def test_ap_wpa2_eap_eke_serverid_nai(dev, apdev):
+    """WPA2-Enterprise connection using EAP-EKE with serverid NAI"""
+    params = int_eap_server_params()
+    params['server_id'] = 'example.server@w1.fi'
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "EKE", "eke user", password="hello")
+
 def test_ap_wpa2_eap_ikev2(dev, apdev):
     """WPA2-Enterprise connection using EAP-IKEv2"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")

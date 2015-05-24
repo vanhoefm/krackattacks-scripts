@@ -744,6 +744,29 @@ static u8 * eap_eke_get_emsk(struct eap_sm *sm, void *priv, size_t *len)
 }
 
 
+static u8 * eap_eke_get_session_id(struct eap_sm *sm, void *priv, size_t *len)
+{
+	struct eap_eke_data *data = priv;
+	u8 *sid;
+	size_t sid_len;
+
+	if (data->state != SUCCESS)
+		return NULL;
+
+	sid_len = 1 + 2 * data->sess.nonce_len;
+	sid = os_malloc(sid_len);
+	if (sid == NULL)
+		return NULL;
+	sid[0] = EAP_TYPE_EKE;
+	os_memcpy(sid + 1, data->nonce_p, data->sess.nonce_len);
+	os_memcpy(sid + 1 + data->sess.nonce_len, data->nonce_s,
+		  data->sess.nonce_len);
+	*len = sid_len;
+
+	return sid;
+}
+
+
 int eap_peer_eke_register(void)
 {
 	struct eap_method *eap;
@@ -760,6 +783,7 @@ int eap_peer_eke_register(void)
 	eap->isKeyAvailable = eap_eke_isKeyAvailable;
 	eap->getKey = eap_eke_getKey;
 	eap->get_emsk = eap_eke_get_emsk;
+	eap->getSessionId = eap_eke_get_session_id;
 
 	ret = eap_peer_method_register(eap);
 	if (ret)

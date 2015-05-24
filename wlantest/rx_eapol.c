@@ -661,8 +661,7 @@ static void rx_data_eapol_key_3_of_4(struct wlantest *wt, const u8 *dst,
 			 MAC2STR(bss->bssid));
 		wpa_hexdump(MSG_INFO, "RSN IE in EAPOL-Key",
 			    ie.rsn_ie, ie.rsn_ie_len);
-		wpa_hexdump(MSG_INFO, "RSN IE in (Re)Association "
-			    "Request",
+		wpa_hexdump(MSG_INFO, "RSN IE in Beacon/Probe Response",
 			    bss->rsnie,
 			    bss->rsnie[0] ? 2 + bss->rsnie[1] : 0);
 	}

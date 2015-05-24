@@ -2452,13 +2452,22 @@ def test_ap_wpa2_eap_ttls_dh_params_blob(dev, apdev):
     """WPA2-Enterprise connection using EAP-TTLS/CHAP and setting DH params from blob"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
     hostapd.add_ap(apdev[0]['ifname'], params)
-    dh = read_pem("auth_serv/dh.conf")
+    dh = read_pem("auth_serv/dh2.conf")
     if "OK" not in dev[0].request("SET blob dhparams " + dh.encode("hex")):
         raise Exception("Could not set dhparams blob")
     eap_connect(dev[0], apdev[0], "TTLS", "chap user",
                 anonymous_identity="ttls", password="password",
                 ca_cert="auth_serv/ca.der", phase2="auth=CHAP",
                 dh_file="blob://dhparams")
+
+def test_ap_wpa2_eap_ttls_dh_params_server(dev, apdev):
+    """WPA2-Enterprise using EAP-TTLS and alternative server dhparams"""
+    params = int_eap_server_params()
+    params["dh_file"] = "auth_serv/dh2.conf"
+    hostapd.add_ap(apdev[0]['ifname'], params)
+    eap_connect(dev[0], apdev[0], "TTLS", "chap user",
+                anonymous_identity="ttls", password="password",
+                ca_cert="auth_serv/ca.der", phase2="auth=CHAP")
 
 def test_ap_wpa2_eap_reauth(dev, apdev):
     """WPA2-Enterprise and Authenticator forcing reauthentication"""

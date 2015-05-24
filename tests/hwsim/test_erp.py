@@ -188,9 +188,8 @@ def test_erp_radius_eap_methods(dev, apdev):
              password="90dca4eda45b53cf0f12d7c9c3bc6a89:cb9cccc4b9258e6dca4760379fb82581:000000000123")
     erp_test(dev[0], hapd, eap="AKA'", identity="6555444333222111@example.com",
              password="5122250214c33e723a5dd523fc145fc0:981d464c7c52eb6e5036234984ad0bcf:000000000123")
-    # TODO: EKE getSession
-    #erp_test(dev[0], hapd, eap="EKE", identity="erp-eke@example.com",
-    #         password="hello")
+    erp_test(dev[0], hapd, eap="EKE", identity="erp-eke@example.com",
+             password="hello")
     if "FAST" in dev[0].get_capability("eap"):
         erp_test(dev[0], hapd, eap="FAST", identity="erp-fast@example.com",
                  password="password", ca_cert="auth_serv/ca.pem",

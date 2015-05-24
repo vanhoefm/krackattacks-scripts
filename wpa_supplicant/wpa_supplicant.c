@@ -3086,6 +3086,7 @@ void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 			timeout = 70;
 		}
 
+#ifdef CONFIG_WPS
 		if (wpa_s->current_ssid && wpa_s->current_bss &&
 		    (wpa_s->current_ssid->key_mgmt & WPA_KEY_MGMT_WPS) &&
 		    eap_is_wps_pin_enrollee(&wpa_s->current_ssid->eap)) {
@@ -3103,6 +3104,7 @@ void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 				timeout = 10;
 			wpabuf_free(wps_ie);
 		}
+#endif /* CONFIG_WPS */
 
 		wpa_supplicant_req_auth_timeout(wpa_s, timeout, 0);
 	}

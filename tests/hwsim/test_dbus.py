@@ -2561,6 +2561,7 @@ def test_dbus_p2p_discovery(dev, apdev):
             self.found = False
             self.found2 = False
             self.lost = False
+            self.find_stopped = False
 
         def __enter__(self):
             gobject.timeout_add(1, self.run_test)
@@ -2572,6 +2573,8 @@ def test_dbus_p2p_discovery(dev, apdev):
             self.add_signal(self.provisionDiscoveryResponseEnterPin,
                             WPAS_DBUS_IFACE_P2PDEVICE,
                             "ProvisionDiscoveryResponseEnterPin")
+            self.add_signal(self.findStopped, WPAS_DBUS_IFACE_P2PDEVICE,
+                            "FindStopped")
             self.loop.run()
             return self
 
@@ -2636,6 +2639,10 @@ def test_dbus_p2p_discovery(dev, apdev):
             logger.debug("provisionDiscoveryResponseEnterPin - peer=%s" % peer_object)
             p2p.Flush()
 
+        def findStopped(self):
+            logger.debug("findStopped")
+            self.find_stopped = True
+
         def run_test(self, *args):
             logger.debug("run_test")
             p2p.Find(dbus.Dictionary({'DiscoveryType': 'social',
@@ -2643,7 +2650,7 @@ def test_dbus_p2p_discovery(dev, apdev):
             return False
 
         def success(self):
-            return self.found and self.lost and self.found2
+            return self.found and self.lost and self.found2 and self.find_stopped
 
     with TestDbusP2p(bus) as t:
         if not t.success():

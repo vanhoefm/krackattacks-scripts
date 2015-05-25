@@ -282,9 +282,6 @@ DBusMessage * wpas_dbus_handler_p2p_presence_request(
 		wpa_dbus_dict_entry_clear(&entry);
 	}
 
-	if (wpa_s->p2p_dev)
-		wpa_s = wpa_s->p2p_dev;
-
 	if (wpas_p2p_presence_req(wpa_s, dur1, int1, dur2, int2) < 0)
 		return wpas_dbus_error_unknown_error(message,
 				"Failed to invoke presence request.");

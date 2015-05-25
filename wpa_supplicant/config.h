@@ -1164,6 +1164,14 @@ struct wpa_config {
 	 * reassoc_same_bss_optim - Whether to optimize reassoc-to-same-BSS
 	 */
 	int reassoc_same_bss_optim;
+
+	/**
+	 * wps_priority - Priority for the networks added through WPS
+	 *
+	 * This priority value will be set to each network profile that is added
+	 * by executing the WPS protocol.
+	 */
+	int wps_priority;
 };
 
 

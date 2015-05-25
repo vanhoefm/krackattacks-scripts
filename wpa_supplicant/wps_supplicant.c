@@ -547,6 +547,7 @@ static int wpa_supplicant_wps_cred(void *ctx,
 			return -1;
 		}
 	}
+	ssid->priority = wpa_s->conf->wps_priority;
 
 	wpas_wps_security_workaround(wpa_s, ssid, cred);
 
@@ -559,6 +560,9 @@ static int wpa_supplicant_wps_cred(void *ctx,
 		return -1;
 	}
 #endif /* CONFIG_NO_CONFIG_WRITE */
+
+	if (ssid->priority)
+		wpa_config_update_prio_list(wpa_s->conf);
 
 	/*
 	 * Optimize the post-WPS scan based on the channel used during

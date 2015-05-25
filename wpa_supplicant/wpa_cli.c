@@ -662,7 +662,7 @@ static char ** wpa_cli_complete_set(const char *str, int pos)
 		"tdls_external_control", "osu_dir", "wowlan_triggers",
 		"p2p_search_delay", "mac_addr", "rand_addr_lifetime",
 		"preassoc_mac_addr", "key_mgmt_offload", "passive_scan",
-		"reassoc_same_bss_optim"
+		"reassoc_same_bss_optim", "wps_priority"
 	};
 	int i, num_fields = ARRAY_SIZE(fields);
 

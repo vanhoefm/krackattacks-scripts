@@ -1286,6 +1286,9 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 	if (config->reassoc_same_bss_optim)
 		fprintf(f, "reassoc_same_bss_optim=%d\n",
 			config->reassoc_same_bss_optim);
+
+	if (config->wps_priority)
+		fprintf(f, "wps_priority=%d\n", config->wps_priority);
 }
 
 #endif /* CONFIG_NO_CONFIG_WRITE */

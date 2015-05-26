@@ -877,6 +877,10 @@ Interface for performing WPS (Wi-Fi Simple Config) operations.
 	  <dd>Invalid entries were found in the passed argument.</dd>
 	</dl>
       </li>
+      <li>
+	<h3>Cancel ( nothing ) --> nothing</h3>
+	<p>Cancel ongoing WPS operation.</p>
+      </li>
     </ul>
 
 \subsection dbus_wps_properties Properties

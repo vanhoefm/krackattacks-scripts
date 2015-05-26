@@ -291,6 +291,9 @@ dbus_bool_t wpas_dbus_setter_network_properties(DBusMessageIter *iter,
 DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
 					  struct wpa_supplicant *wpa_s);
 
+DBusMessage * wpas_dbus_handler_wps_cancel(DBusMessage *message,
+					   struct wpa_supplicant *wpa_s);
+
 dbus_bool_t wpas_dbus_getter_process_credentials(DBusMessageIter *iter,
 	DBusError *error, void *user_data);
 

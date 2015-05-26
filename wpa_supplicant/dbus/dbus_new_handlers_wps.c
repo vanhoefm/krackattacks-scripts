@@ -320,6 +320,26 @@ DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
 
 
 /**
+ * wpas_dbus_handler_wps_cancel - Cancel ongoing WPS configuration
+ * @message: Pointer to incoming dbus message
+ * @wpa_s: %wpa_supplicant data structure
+ * Returns: NULL on success or DBus error on failure
+ *
+ * Handler for "Cancel" method call. Returns NULL if WPS cancel successfull
+ * or DBus error on WPS cancel failure
+ */
+DBusMessage * wpas_dbus_handler_wps_cancel(DBusMessage *message,
+					   struct wpa_supplicant *wpa_s)
+{
+	if (wpas_wps_cancel(wpa_s))
+		return wpas_dbus_error_unknown_error(message,
+						     "WPS cancel failed");
+
+	return NULL;
+}
+
+
+/**
  * wpas_dbus_getter_process_credentials - Check if credentials are processed
  * @message: Pointer to incoming dbus message
  * @wpa_s: %wpa_supplicant data structure

@@ -2704,7 +2704,7 @@ static char * get_hostname(const char *url)
 
 	end = os_strchr(pos, '/');
 	end2 = os_strchr(pos, ':');
-	if (end && end2 && end2 < end)
+	if ((end && end2 && end2 < end) || (!end && end2))
 		end = end2;
 	if (end)
 		end--;
@@ -2734,8 +2734,8 @@ static int osu_cert_cb(void *_ctx, struct http_cert *cert)
 	int found;
 	char *host = NULL;
 
-	wpa_printf(MSG_INFO, "osu_cert_cb(osu_cert_validation=%d)",
-		   !ctx->no_osu_cert_validation);
+	wpa_printf(MSG_INFO, "osu_cert_cb(osu_cert_validation=%d, url=%s)",
+		   !ctx->no_osu_cert_validation, ctx->server_url);
 
 	host = get_hostname(ctx->server_url);
 

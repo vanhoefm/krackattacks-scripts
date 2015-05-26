@@ -2648,6 +2648,12 @@ static const struct wpa_dbus_method_desc wpas_dbus_interface_methods[] = {
 		  END_ARGS
 	  }
 	},
+	{ "Cancel", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
+	  (WPADBusMethodHandler) wpas_dbus_handler_p2p_cancel,
+	  {
+		  END_ARGS
+	  }
+	},
 	{ "Invite", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
 	  (WPADBusMethodHandler) wpas_dbus_handler_p2p_invite,
 	  {

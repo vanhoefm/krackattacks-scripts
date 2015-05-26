@@ -1074,6 +1074,11 @@ Interface for performing P2P (Wi-Fi Peer-to-Peer) P2P Device operations.
   </li>
 
   <li>
+    <h3>Cancel ( nothing ) --> nothing</h3>
+    <p>Stop ongoing P2P group formation operation.</p>
+  </li>
+
+  <li>
     <h3>Invite ( a{sv} : args ) --> nothing</h3>
     <p>Invite a peer to join an already operating group or to re-invoke a persistent group.</p>
     <h4>Arguments</h4>

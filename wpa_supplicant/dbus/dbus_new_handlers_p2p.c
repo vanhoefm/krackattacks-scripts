@@ -575,6 +575,26 @@ inv_args:
 }
 
 
+/**
+ * wpas_dbus_handler_p2p_cancel - Cancel P2P group formation
+ * @message: Pointer to incoming dbus message
+ * @wpa_s: %wpa_supplicant data structure
+ * Returns: NULL on success or DBus error on failure
+ *
+ * Handler for "Cancel" method call. Returns NULL if P2P cancel succeeds or DBus
+ * error on P2P cancel failure
+ */
+DBusMessage * wpas_dbus_handler_p2p_cancel(DBusMessage *message,
+					   struct wpa_supplicant *wpa_s)
+{
+	if (wpas_p2p_cancel(wpa_s))
+		return wpas_dbus_error_unknown_error(message,
+						     "P2P cancel failed");
+
+	return NULL;
+}
+
+
 DBusMessage * wpas_dbus_handler_p2p_invite(DBusMessage *message,
 					   struct wpa_supplicant *wpa_s)
 {

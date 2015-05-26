@@ -79,9 +79,14 @@ static void add_mo_container(struct xml_node_ctx *ctx, xml_namespace_t *ns,
 	xml_node_t *fnode, *tnds;
 	char *str;
 
+	errno = 0;
 	fnode = node_from_file(ctx, fname);
-	if (!fnode)
+	if (!fnode) {
+		wpa_printf(MSG_ERROR,
+			   "Failed to create XML node from file: %s, possible error: %s",
+			   fname, strerror(errno));
 		return;
+	}
 	tnds = mo_to_tnds(ctx, fnode, 0, urn, "syncml:dmddf1.2");
 	xml_node_free(ctx, fnode);
 	if (!tnds)

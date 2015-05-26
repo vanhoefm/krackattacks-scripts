@@ -12,6 +12,7 @@ ifndef CFLAGS
 CFLAGS = -MMD -O2 -Wall -g
 endif
 
+CFLAGS += -I../../src
 CFLAGS += -I../../src/utils
 CFLAGS += -I../../src/crypto
 

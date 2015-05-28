@@ -1251,6 +1251,43 @@ dbus_bool_t wpas_dbus_getter_p2p_peer_device_name(DBusMessageIter *iter,
 }
 
 
+dbus_bool_t wpas_dbus_getter_p2p_peer_manufacturer(DBusMessageIter *iter,
+						   DBusError *error,
+						   void *user_data)
+{
+	struct peer_handler_args *peer_args = user_data;
+	const struct p2p_peer_info *info;
+	char *tmp;
+
+	if (!wpa_dbus_p2p_check_enabled(peer_args->wpa_s, NULL, NULL, error))
+		return FALSE;
+
+	/* get the peer info */
+	info = p2p_get_peer_found(peer_args->wpa_s->global->p2p,
+				  peer_args->p2p_device_addr, 0);
+	if (info == NULL) {
+		dbus_set_error(error, DBUS_ERROR_FAILED, "failed to find peer");
+		return FALSE;
+	}
+
+	tmp = os_strdup(info->manufacturer);
+	if (!tmp) {
+		dbus_set_error_const(error, DBUS_ERROR_NO_MEMORY, "no memory");
+		return FALSE;
+	}
+
+	if (!wpas_dbus_simple_property_getter(iter, DBUS_TYPE_STRING, &tmp,
+					      error)) {
+		dbus_set_error_const(error, DBUS_ERROR_NO_MEMORY, "no memory");
+		os_free(tmp);
+		return FALSE;
+	}
+
+	os_free(tmp);
+	return TRUE;
+}
+
+
 dbus_bool_t wpas_dbus_getter_p2p_peer_primary_device_type(
 	DBusMessageIter *iter, DBusError *error, void *user_data)
 {

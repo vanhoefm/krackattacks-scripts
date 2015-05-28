@@ -2400,7 +2400,8 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit)
 	}
 	old_ssid = wpa_s->current_ssid;
 	wpa_s->current_ssid = ssid;
-	wpa_s->current_bss = bss;
+	if (!wpas_driver_bss_selection(wpa_s) || ssid->bssid_set)
+		wpa_s->current_bss = bss;
 	wpa_supplicant_rsn_supp_set_config(wpa_s, wpa_s->current_ssid);
 	wpa_supplicant_initiate_eapol(wpa_s);
 	if (old_ssid != wpa_s->current_ssid)

@@ -5488,6 +5488,23 @@ int wpas_p2p_group_add_persistent(struct wpa_supplicant *wpa_s,
 	    go == (ssid->mode == WPAS_MODE_P2P_GO)) {
 		wpa_printf(MSG_DEBUG, "P2P: Requested persistent group is "
 			   "already running");
+		if (go == 0 &&
+		    eloop_cancel_timeout(wpas_p2p_group_formation_timeout,
+					 wpa_s->parent, NULL)) {
+			/*
+			 * This can happen if Invitation Response frame was lost
+			 * and the peer (GO of a persistent group) tries to
+			 * invite us again. Reschedule the timeout to avoid
+			 * terminating the wait for the connection too early
+			 * since we now know that the peer is still trying to
+			 * invite us instead of having already started the GO.
+			 */
+			wpa_printf(MSG_DEBUG,
+				   "P2P: Reschedule group formation timeout since peer is still trying to invite us");
+			eloop_register_timeout(P2P_MAX_INITIAL_CONN_WAIT, 0,
+					       wpas_p2p_group_formation_timeout,
+					       wpa_s->parent, NULL);
+		}
 		return 0;
 	}
 

@@ -955,8 +955,20 @@ static void wpas_clear_wps(struct wpa_supplicant *wpa_s)
 static void wpas_wps_timeout(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_supplicant *wpa_s = eloop_ctx;
+	union wps_event_data data;
+
 	wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_TIMEOUT "Requested operation timed "
 		"out");
+	os_memset(&data, 0, sizeof(data));
+	data.fail.config_error = WPS_CFG_MSG_TIMEOUT;
+	data.fail.error_indication = WPS_EI_NO_ERROR;
+	/*
+	 * Call wpas_notify_wps_event_fail() directly instead of through
+	 * wpa_supplicant_wps_event() which would end up registering unnecessary
+	 * timeouts (those are only for the case where the failure happens
+	 * during an EAP-WSC exchange).
+	 */
+	wpas_notify_wps_event_fail(wpa_s, &data.fail);
 	wpas_clear_wps(wpa_s);
 }
 

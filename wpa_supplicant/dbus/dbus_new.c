@@ -633,6 +633,10 @@ void wpas_dbus_signal_wps_event_fail(struct wpa_supplicant *wpa_s,
 	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &key) ||
 	    !wpa_dbus_dict_open_write(&iter, &dict_iter) ||
 	    !wpa_dbus_dict_append_int32(&dict_iter, "msg", fail->msg) ||
+	    !wpa_dbus_dict_append_int32(&dict_iter, "config_error",
+					fail->config_error) ||
+	    !wpa_dbus_dict_append_int32(&dict_iter, "error_indication",
+					fail->error_indication) ||
 	    !wpa_dbus_dict_close_write(&iter, &dict_iter))
 		wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
 	else

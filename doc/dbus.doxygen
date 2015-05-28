@@ -919,7 +919,7 @@ Interface for performing WPS (Wi-Fi Simple Config) operations.
 	  "pbc-overlap".</dd>
 	  <dt>a{sv} : args</dt>
 	  <dd>
-	    Event arguments. Empty for success and pbc-voerlap events, one entry ( "msg" : i ) for fail event and following entries for m2d event:
+	    Event arguments. Empty for success and pbc-overlap events, error information ( "msg" : i, "config_error" : i, "error_indication" : i ) for fail event and following entries for m2d event:
 	    <table>
 	      <tr><th>config_methods</th><th>Value type</th>
 	      <tr><td>manufacturer</td><td>q</td>

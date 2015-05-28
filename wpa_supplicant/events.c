@@ -1201,6 +1201,7 @@ int wpa_supplicant_connect(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_P2P */
 
 #ifdef CONFIG_WPS
+		wpas_wps_pbc_overlap(wpa_s);
 		wpas_wps_cancel(wpa_s);
 #endif /* CONFIG_WPS */
 		return -1;

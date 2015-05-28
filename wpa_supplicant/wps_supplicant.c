@@ -1248,6 +1248,22 @@ int wpas_wps_start_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
 }
 
 
+void wpas_wps_pbc_overlap(struct wpa_supplicant *wpa_s)
+{
+	union wps_event_data data;
+
+	os_memset(&data, 0, sizeof(data));
+	data.fail.config_error = WPS_CFG_MULTIPLE_PBC_DETECTED;
+	data.fail.error_indication = WPS_EI_NO_ERROR;
+	/*
+	 * Call wpas_notify_wps_event_fail() directly instead of through
+	 * wpa_supplicant_wps_event() which would end up registering unnecessary
+	 * timeouts (those are only for the case where the failure happens
+	 * during an EAP-WSC exchange).
+	 */
+	wpas_notify_wps_event_fail(wpa_s, &data.fail);
+}
+
 /* Cancel the wps pbc/pin requests */
 int wpas_wps_cancel(struct wpa_supplicant *wpa_s)
 {

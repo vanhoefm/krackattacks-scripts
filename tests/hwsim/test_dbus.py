@@ -4322,6 +4322,53 @@ def test_dbus_p2p_two_groups(dev, apdev):
 
     dev[1].remove_group()
 
+def test_dbus_p2p_cancel(dev, apdev):
+    """D-Bus P2P Cancel"""
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    p2p = dbus.Interface(if_obj, WPAS_DBUS_IFACE_P2PDEVICE)
+    try:
+        p2p.Cancel()
+        raise Exception("Unexpected p2p.Cancel() success")
+    except dbus.exceptions.DBusException, e:
+        pass
+
+    addr0 = dev[0].p2p_dev_addr()
+    dev[1].p2p_listen()
+
+    class TestDbusP2p(TestDbus):
+        def __init__(self, bus):
+            TestDbus.__init__(self, bus)
+            self.done = False
+
+        def __enter__(self):
+            gobject.timeout_add(1, self.run_test)
+            gobject.timeout_add(15000, self.timeout)
+            self.add_signal(self.deviceFound, WPAS_DBUS_IFACE_P2PDEVICE,
+                            "DeviceFound")
+            self.loop.run()
+            return self
+
+        def deviceFound(self, path):
+            logger.debug("deviceFound: path=%s" % path)
+            args = { 'peer': path, 'wps_method': 'keypad', 'pin': '12345670',
+                     'go_intent': 0 }
+            p2p.Connect(args)
+            p2p.Cancel()
+            self.done = True
+            self.loop.quit()
+
+        def run_test(self, *args):
+            logger.debug("run_test")
+            p2p.Find(dbus.Dictionary({'DiscoveryType': 'social'}))
+            return False
+
+        def success(self):
+            return self.done
+
+    with TestDbusP2p(bus) as t:
+        if not t.success():
+            raise Exception("Expected signals not seen")
+
 def test_dbus_introspect(dev, apdev):
     """D-Bus introspection"""
     (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])

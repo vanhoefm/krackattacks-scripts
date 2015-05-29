@@ -583,3 +583,51 @@ def test_persistent_invalid_group_add(dev):
         raise Exception("Invalid P2P_GROUP_ADD accepted")
     if "FAIL" not in dev[0].global_request("P2P_GROUP_ADD foo"):
         raise Exception("Invalid P2P_GROUP_ADD accepted")
+
+def test_persistent_group_missed_inv_resp(dev):
+    """P2P persistent group re-invocation with invitation response getting lost"""
+    form(dev[0], dev[1])
+    addr = dev[1].p2p_dev_addr()
+    dev[1].global_request("SET persistent_reconnect 1")
+    dev[1].p2p_listen()
+    if not dev[0].discover_peer(addr, social=True):
+        raise Exception("Peer " + addr + " not found")
+    dev[0].dump_monitor()
+    peer = dev[0].get_peer(addr)
+    # Drop the first Invitation Response frame
+    if "FAIL" in dev[0].request("SET ext_mgmt_frame_handling 1"):
+        raise Exception("Failed to enable external management frame handling")
+    cmd = "P2P_INVITE persistent=" + peer['persistent'] + " peer=" + addr
+    dev[0].global_request(cmd)
+    rx_msg = dev[0].mgmt_rx()
+    if rx_msg is None:
+        raise Exception("MGMT-RX timeout (no Invitation Response)")
+    time.sleep(2)
+    # Allow following Invitation Response frame to go through
+    if "FAIL" in dev[0].request("SET ext_mgmt_frame_handling 0"):
+        raise Exception("Failed to disable external management frame handling")
+    time.sleep(1)
+    # Force the P2P Client side to be on its Listen channel for retry
+    dev[1].p2p_listen()
+    ev = dev[0].wait_global_event(["P2P-INVITATION-RESULT"], timeout=15)
+    if ev is None:
+        raise Exception("Invitation result timed out")
+    # Allow P2P Client side to continue connection-to-GO attempts
+    dev[1].p2p_stop_find()
+
+    # Verify that group re-invocation goes through
+    ev = dev[1].wait_global_event([ "P2P-GROUP-STARTED",
+                                    "P2P-GROUP-FORMATION-FAILURE" ],
+                                  timeout=20)
+    if ev is None:
+        raise Exception("Group start event timed out")
+    if "P2P-GROUP-STARTED" not in ev:
+        raise Exception("Group re-invocation failed")
+    dev[0].group_form_result(ev)
+
+    ev = dev[0].wait_global_event([ "P2P-GROUP-STARTED" ], timeout=5)
+    if ev is None:
+        raise Exception("Group start event timed out on GO")
+    dev[0].group_form_result(ev)
+
+    terminate_group(dev[0], dev[1])

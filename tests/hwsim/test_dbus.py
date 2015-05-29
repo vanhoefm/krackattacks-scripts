@@ -816,6 +816,22 @@ def _test_dbus_wps_reg(dev, apdev):
 
     dev[0].wait_connected(timeout=10)
 
+def test_dbus_wps_cancel(dev, apdev):
+    """D-Bus WPS Cancel operation"""
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    wps = dbus.Interface(if_obj, WPAS_DBUS_IFACE_WPS)
+
+    hapd = start_ap(apdev[0])
+    bssid = apdev[0]['bssid']
+
+    wps.Cancel()
+    dev[0].scan_for_bss(bssid, freq="2412")
+    bssid_ay = dbus.ByteArray(bssid.replace(':','').decode('hex'))
+    wps.Start({'Role': 'enrollee', 'Type': 'pin', 'Pin': '12345670',
+               'Bssid': bssid_ay})
+    wps.Cancel()
+    dev[0].wait_event(["CTRL-EVENT-SCAN-RESULTS"], 1)
+
 def test_dbus_scan_invalid(dev, apdev):
     """D-Bus invalid scan method"""
     (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])

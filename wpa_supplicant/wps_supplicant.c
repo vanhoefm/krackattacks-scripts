@@ -1187,6 +1187,7 @@ static int wpas_wps_start_dev_pw(struct wpa_supplicant *wpa_s,
 	}
 #ifdef CONFIG_P2P
 	if (p2p_group && wpa_s->go_params && wpa_s->go_params->ssid_len) {
+		os_free(ssid->ssid);
 		ssid->ssid = os_zalloc(wpa_s->go_params->ssid_len + 1);
 		if (ssid->ssid) {
 			ssid->ssid_len = wpa_s->go_params->ssid_len;

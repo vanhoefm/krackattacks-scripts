@@ -493,6 +493,16 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 
 	wpas_mac_addr_rand_scan_clear(wpa_s, MAC_ADDR_RAND_ALL);
 
+	/*
+	 * Need to remove any pending gas-query radio work before the
+	 * gas_query_deinit() call because gas_query::work has not yet been set
+	 * for works that have not been started. gas_query_free() will be unable
+	 * to cancel such pending radio works and once the pending gas-query
+	 * radio work eventually gets removed, the deinit notification call to
+	 * gas_query_start_cb() would result in dereferencing freed memory.
+	 */
+	if (wpa_s->radio)
+		radio_remove_works(wpa_s, "gas-query", 0);
 	gas_query_deinit(wpa_s->gas);
 	wpa_s->gas = NULL;
 

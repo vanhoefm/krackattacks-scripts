@@ -744,6 +744,9 @@ static int hostapd_is_usable_chan(struct hostapd_iface *iface,
 	int i;
 	struct hostapd_channel_data *chan;
 
+	if (!iface->current_mode)
+		return 0;
+
 	for (i = 0; i < iface->current_mode->num_channels; i++) {
 		chan = &iface->current_mode->channels[i];
 		if (chan->chan != channel)
@@ -805,6 +808,12 @@ hostapd_check_chans(struct hostapd_iface *iface)
 
 static void hostapd_notify_bad_chans(struct hostapd_iface *iface)
 {
+	if (!iface->current_mode) {
+		hostapd_logger(iface->bss[0], NULL, HOSTAPD_MODULE_IEEE80211,
+			       HOSTAPD_LEVEL_WARNING,
+			       "Hardware does not support configured mode");
+		return;
+	}
 	hostapd_logger(iface->bss[0], NULL,
 		       HOSTAPD_MODULE_IEEE80211,
 		       HOSTAPD_LEVEL_WARNING,

@@ -185,7 +185,8 @@ void wpas_dbus_signal_p2p_provision_discovery(struct wpa_supplicant *wpa_s,
 					      u16 config_methods,
 					      unsigned int generated_pin);
 void wpas_dbus_signal_p2p_go_neg_req(struct wpa_supplicant *wpa_s,
-				     const u8 *src, u16 dev_passwd_id);
+				     const u8 *src, u16 dev_passwd_id,
+				     u8 go_intent);
 void wpas_dbus_signal_p2p_group_started(struct wpa_supplicant *wpa_s,
 					const struct wpa_ssid *ssid,
 					int client, int network_id);
@@ -378,10 +379,10 @@ wpas_dbus_signal_p2p_provision_discovery(struct wpa_supplicant *wpa_s,
 {
 }
 
-static inline void wpas_dbus_signal_p2p_go_neg_req(
-				struct wpa_supplicant *wpa_s,
-				const u8 *src,
-				u16 dev_passwd_id)
+static inline void wpas_dbus_signal_p2p_go_neg_req(struct wpa_supplicant *wpa_s,
+						   const u8 *src,
+						   u16 dev_passwd_id,
+						   u8 go_intent)
 {
 }
 

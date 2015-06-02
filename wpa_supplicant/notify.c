@@ -561,9 +561,9 @@ void wpas_notify_p2p_group_removed(struct wpa_supplicant *wpa_s,
 
 
 void wpas_notify_p2p_go_neg_req(struct wpa_supplicant *wpa_s,
-				const u8 *src, u16 dev_passwd_id)
+				const u8 *src, u16 dev_passwd_id, u8 go_intent)
 {
-	wpas_dbus_signal_p2p_go_neg_req(wpa_s, src, dev_passwd_id);
+	wpas_dbus_signal_p2p_go_neg_req(wpa_s, src, dev_passwd_id, go_intent);
 }
 
 

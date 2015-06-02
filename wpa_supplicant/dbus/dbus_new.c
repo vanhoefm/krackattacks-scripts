@@ -1063,7 +1063,8 @@ error:
 
 
 void wpas_dbus_signal_p2p_go_neg_req(struct wpa_supplicant *wpa_s,
-				     const u8 *src, u16 dev_passwd_id)
+				     const u8 *src, u16 dev_passwd_id,
+				     u8 go_intent)
 {
 	DBusMessage *msg;
 	DBusMessageIter iter;
@@ -1097,7 +1098,9 @@ void wpas_dbus_signal_p2p_go_neg_req(struct wpa_supplicant *wpa_s,
 	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_OBJECT_PATH,
 					    &path) ||
 	    !dbus_message_iter_append_basic(&iter, DBUS_TYPE_UINT16,
-					    &dev_passwd_id))
+					    &dev_passwd_id) ||
+	    !dbus_message_iter_append_basic(&iter, DBUS_TYPE_BYTE,
+					    &go_intent))
 		wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
 	else
 		dbus_connection_send(iface->con, msg, NULL);
@@ -3123,6 +3126,7 @@ static const struct wpa_dbus_signal_desc wpas_dbus_interface_signals[] = {
 	  {
 		  { "path", "o", ARG_OUT },
 		  { "dev_passwd_id", "i", ARG_OUT },
+		  { "device_go_intent", "y", ARG_OUT },
 		  END_ARGS
 	  }
 	},

@@ -668,7 +668,9 @@ void p2p_process_go_neg_req(struct p2p_data *p2p, const u8 *sa,
 			MAC2STR(sa));
 		status = P2P_SC_FAIL_INFO_CURRENTLY_UNAVAILABLE;
 		p2p->cfg->go_neg_req_rx(p2p->cfg->cb_ctx, sa,
-					msg.dev_password_id);
+					msg.dev_password_id,
+					msg.go_intent ? (*msg.go_intent >> 1) :
+					0);
 	} else if (p2p->go_neg_peer && p2p->go_neg_peer != dev) {
 		p2p_dbg(p2p, "Already in Group Formation with another peer");
 		status = P2P_SC_FAIL_UNABLE_TO_ACCOMMODATE;

@@ -2687,7 +2687,7 @@ static int openssl_get_keyblock_size(SSL *ssl)
 #if OPENSSL_VERSION_NUMBER >= 0x00909000L
 	h = EVP_MD_CTX_md(ssl->read_hash);
 #else
-	h = conn->ssl->read_hash;
+	h = ssl->read_hash;
 #endif
 	if (h)
 		md_size = EVP_MD_size(h);

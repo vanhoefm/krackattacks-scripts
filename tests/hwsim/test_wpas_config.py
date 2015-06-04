@@ -27,6 +27,8 @@ def check_config(config):
         raise Exception("Missing cred")
     if "network={" not in data:
         raise Exception("Missing network")
+    if "wps_priority=5\n" not in data:
+        raise Exception("Missing wps_priority")
     return data
 
 def test_wpas_config_file(dev):
@@ -56,6 +58,8 @@ def test_wpas_config_file(dev):
             f.write("device_name=name#foo\n")
 
         wpas.interface_add("wlan5", config=config)
+
+        wpas.request("SET wps_priority 5")
 
         id = wpas.add_network()
         wpas.set_network_quoted(id, "ssid", "foo")

@@ -2621,3 +2621,27 @@ def test_ap_wps_iteration_error(dev, apdev):
     if ev is None:
         raise Exception("No WPS-CRED-RECEIVED for the second AP")
     dev[0].wait_connected(timeout=15)
+
+def test_ap_wps_priority(dev, apdev):
+    """WPS PIN provisioning with configured AP and wps_priority"""
+    ssid = "test-wps-conf-pin"
+    hostapd.add_ap(apdev[0]['ifname'],
+                   { "ssid": ssid, "eap_server": "1", "wps_state": "2",
+                     "wpa_passphrase": "12345678", "wpa": "2",
+                     "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP"})
+    hapd = hostapd.Hostapd(apdev[0]['ifname'])
+    logger.info("WPS provisioning step")
+    pin = dev[0].wps_read_pin()
+    hapd.request("WPS_PIN any " + pin)
+    dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412")
+    dev[0].dump_monitor()
+    try:
+        dev[0].request("SET wps_priority 6")
+        dev[0].request("WPS_PIN %s %s" % (apdev[0]['bssid'], pin))
+        dev[0].wait_connected(timeout=30)
+        netw = dev[0].list_networks()
+        prio = dev[0].get_network(netw[0]['id'], 'priority')
+        if prio != '6':
+            raise Exception("Unexpected network priority: " + prio)
+    finally:
+        dev[0].request("SET wps_priority 0")

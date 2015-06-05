@@ -777,3 +777,27 @@ def test_scan_trigger_failure(dev, apdev):
     if dev[0].get_status_field('wpa_state') != "COMPLETED":
         raise Exception("wpa_state COMPLETED not restored")
     dev[0].request("SET test_failure 0")
+
+def test_scan_specify_ssid(dev, apdev):
+    """Control interface behavior on scan SSID parameter"""
+    dev[0].flush_scan_cache()
+    hapd = hostapd.add_ap(apdev[0]['ifname'], { "ssid": "test-hidden",
+                                                "ignore_broadcast_ssid": "1" })
+    bssid = apdev[0]['bssid']
+    check_scan(dev[0], "freq=2412 use_id=1 ssid 414243")
+    bss = dev[0].get_bss(bssid)
+    if bss is not None and bss['ssid'] == 'test-hidden':
+        raise Exception("BSS entry for hidden AP present unexpectedly")
+    check_scan(dev[0], "freq=2412 ssid 414243 ssid 746573742d68696464656e ssid 616263313233 use_id=1")
+    bss = dev[0].get_bss(bssid)
+    if bss is None:
+        raise Exception("BSS entry for hidden AP not found")
+    if 'test-hidden' not in dev[0].request("SCAN_RESULTS"):
+        raise Exception("Expected SSID not included in the scan results");
+
+    hapd.disable()
+    dev[0].flush_scan_cache(freq=2432)
+    dev[0].flush_scan_cache()
+
+    if "FAIL" not in dev[0].request("SCAN ssid foo"):
+        raise Exception("Invalid SCAN command accepted")

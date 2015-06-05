@@ -152,6 +152,7 @@ void wpas_dbus_signal_wps_event_m2d(struct wpa_supplicant *wpa_s,
 void wpas_dbus_signal_wps_event_fail(struct wpa_supplicant *wpa_s,
 				     struct wps_event_fail *fail);
 void wpas_dbus_signal_wps_event_success(struct wpa_supplicant *wpa_s);
+void wpas_dbus_signal_wps_event_pbc_overlap(struct wpa_supplicant *wpa_s);
 int wpas_dbus_register_network(struct wpa_supplicant *wpa_s,
 			       struct wpa_ssid *ssid);
 int wpas_dbus_unregister_network(struct wpa_supplicant *wpa_s, int nid);
@@ -293,6 +294,11 @@ static inline void wpas_dbus_signal_wps_event_fail(
 }
 
 static inline void wpas_dbus_signal_wps_event_success(
+	struct wpa_supplicant *wpa_s)
+{
+}
+
+static inline void wpas_dbus_signal_wps_event_pbc_overlap(
 	struct wpa_supplicant *wpa_s)
 {
 }

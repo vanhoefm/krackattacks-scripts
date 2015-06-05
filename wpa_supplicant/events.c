@@ -1179,6 +1179,7 @@ int wpa_supplicant_connect(struct wpa_supplicant *wpa_s,
 	if (wpas_wps_scan_pbc_overlap(wpa_s, selected, ssid)) {
 		wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_OVERLAP
 			"PBC session overlap");
+		wpas_notify_wps_event_pbc_overlap(wpa_s);
 #ifdef CONFIG_P2P
 		if (wpa_s->p2p_group_interface == P2P_GROUP_INTERFACE_CLIENT ||
 		    wpa_s->p2p_in_provisioning) {

@@ -905,10 +905,11 @@ Interface for performing WPS (Wi-Fi Simple Config) operations.
 	<h4>Arguments</h4>
 	<dl>
 	  <dt>s : event</dt>
-	  <dd>Event type. Possible values are: "success, "fail" and "m2d"</dd>
+	  <dd>Event type. Possible values are: "success, "fail", "m2d", and
+	  "pbc-overlap".</dd>
 	  <dt>a{sv} : args</dt>
 	  <dd>
-	    Event arguments. Empty for success event, one entry ( "msg" : i ) for fail event and following entries for m2d event:
+	    Event arguments. Empty for success and pbc-voerlap events, one entry ( "msg" : i ) for fail event and following entries for m2d event:
 	    <table>
 	      <tr><th>config_methods</th><th>Value type</th>
 	      <tr><td>manufacturer</td><td>q</td>

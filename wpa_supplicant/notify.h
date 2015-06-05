@@ -45,6 +45,7 @@ void wpas_notify_wps_event_m2d(struct wpa_supplicant *wpa_s,
 void wpas_notify_wps_event_fail(struct wpa_supplicant *wpa_s,
 				struct wps_event_fail *fail);
 void wpas_notify_wps_event_success(struct wpa_supplicant *wpa_s);
+void wpas_notify_wps_event_pbc_overlap(struct wpa_supplicant *wpa_s);
 void wpas_notify_network_added(struct wpa_supplicant *wpa_s,
 			       struct wpa_ssid *ssid);
 void wpas_notify_network_removed(struct wpa_supplicant *wpa_s,

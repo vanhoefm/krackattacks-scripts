@@ -525,6 +525,44 @@ void wpas_dbus_signal_network_enabled_changed(struct wpa_supplicant *wpa_s,
 #ifdef CONFIG_WPS
 
 /**
+ * wpas_dbus_signal_wps_event_pbc_overlap - Signals PBC overlap WPS event
+ * @wpa_s: %wpa_supplicant network interface data
+ *
+ * Sends Event dbus signal with name "pbc-overlap" and empty dict as arguments
+ */
+void wpas_dbus_signal_wps_event_pbc_overlap(struct wpa_supplicant *wpa_s)
+{
+
+	DBusMessage *msg;
+	DBusMessageIter iter, dict_iter;
+	struct wpas_dbus_priv *iface;
+	char *key = "pbc-overlap";
+
+	iface = wpa_s->global->dbus;
+
+	/* Do nothing if the control interface is not turned on */
+	if (iface == NULL || !wpa_s->dbus_new_path)
+		return;
+
+	msg = dbus_message_new_signal(wpa_s->dbus_new_path,
+				      WPAS_DBUS_NEW_IFACE_WPS, "Event");
+	if (msg == NULL)
+		return;
+
+	dbus_message_iter_init_append(msg, &iter);
+
+	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &key) ||
+	    !wpa_dbus_dict_open_write(&iter, &dict_iter) ||
+	    !wpa_dbus_dict_close_write(&iter, &dict_iter))
+		wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+	else
+		dbus_connection_send(iface->con, msg, NULL);
+
+	dbus_message_unref(msg);
+}
+
+
+/**
  * wpas_dbus_signal_wps_event_success - Signals Success WPS event
  * @wpa_s: %wpa_supplicant network interface data
  *

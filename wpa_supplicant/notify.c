@@ -268,6 +268,16 @@ void wpas_notify_wps_event_success(struct wpa_supplicant *wpa_s)
 #endif /* CONFIG_WPS */
 }
 
+void wpas_notify_wps_event_pbc_overlap(struct wpa_supplicant *wpa_s)
+{
+	if (wpa_s->p2p_mgmt)
+		return;
+
+#ifdef CONFIG_WPS
+	wpas_dbus_signal_wps_event_pbc_overlap(wpa_s);
+#endif /* CONFIG_WPS */
+}
+
 
 void wpas_notify_network_added(struct wpa_supplicant *wpa_s,
 			       struct wpa_ssid *ssid)

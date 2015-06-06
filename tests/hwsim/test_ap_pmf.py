@@ -309,7 +309,28 @@ def test_ap_pmf_required_eap(dev, apdev):
         raise Exception("Unexpected GET_CONFIG(key_mgmt): " + key_mgmt)
     dev[0].connect("test-pmf-required-eap", key_mgmt="WPA-EAP-SHA256",
                    ieee80211w="2", eap="PSK", identity="psk.user@example.com",
-                   password_hex="0123456789abcdef0123456789abcdef")
+                   password_hex="0123456789abcdef0123456789abcdef",
+                   scan_freq="2412")
+    dev[1].connect("test-pmf-required-eap", key_mgmt="WPA-EAP WPA-EAP-SHA256",
+                   ieee80211w="1", eap="PSK", identity="psk.user@example.com",
+                   password_hex="0123456789abcdef0123456789abcdef",
+                   scan_freq="2412")
+
+def test_ap_pmf_optional_eap(dev, apdev):
+    """WPA2EAP AP with PMF optional"""
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    params["ieee80211w"] = "1";
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="TTLS",
+                   identity="pap user", anonymous_identity="ttls",
+                   password="password",
+                   ca_cert="auth_serv/ca.pem", phase2="auth=PAP",
+                   ieee80211w="1", scan_freq="2412")
+    dev[1].connect("test-wpa2-eap", key_mgmt="WPA-EAP WPA-EAP-SHA256",
+                   eap="TTLS", identity="pap user", anonymous_identity="ttls",
+                   password="password",
+                   ca_cert="auth_serv/ca.pem", phase2="auth=PAP",
+                   ieee80211w="2", scan_freq="2412")
 
 def test_ap_pmf_required_sha1(dev, apdev):
     """WPA2-PSK AP with PMF required with SHA1 AKM"""

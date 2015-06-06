@@ -3847,8 +3847,8 @@ def test_dbus_p2p_go_neg_rx(dev, apdev):
         def deviceFound(self, path):
             logger.debug("deviceFound: path=%s" % path)
 
-        def goNegotiationRequest(self, path, dev_passwd_id):
-            logger.debug("goNegotiationRequest: path=%s dev_passwd_id=%d" % (path, dev_passwd_id))
+        def goNegotiationRequest(self, path, dev_passwd_id, go_intent=0):
+            logger.debug("goNegotiationRequest: path=%s dev_passwd_id=%d go_intent=%d" % (path, dev_passwd_id, go_intent))
             if dev_passwd_id != 1:
                 raise Exception("Unexpected dev_passwd_id=%d" % dev_passwd_id)
             args = { 'peer': path, 'wps_method': 'display', 'pin': '12345670',
@@ -4099,8 +4099,8 @@ def test_dbus_p2p_wps_failure(dev, apdev):
             self.loop.run()
             return self
 
-        def goNegotiationRequest(self, path, dev_passwd_id):
-            logger.debug("goNegotiationRequest: path=%s dev_passwd_id=%d" % (path, dev_passwd_id))
+        def goNegotiationRequest(self, path, dev_passwd_id, go_intent=0):
+            logger.debug("goNegotiationRequest: path=%s dev_passwd_id=%d go_intent=%d" % (path, dev_passwd_id, go_intent))
             if dev_passwd_id != 1:
                 raise Exception("Unexpected dev_passwd_id=%d" % dev_passwd_id)
             args = { 'peer': path, 'wps_method': 'display', 'pin': '12345670',

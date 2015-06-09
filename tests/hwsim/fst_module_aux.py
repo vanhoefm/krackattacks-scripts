@@ -69,30 +69,30 @@ def parse_fst_session_event(ev):
         event['reason'] = f.group(1)
     return event
 
-def start_two_ap_sta_pairs(apdev):
+def start_two_ap_sta_pairs(apdev, rsn=False):
     """auxiliary function that creates two pairs of APs and STAs"""
     ap1 = FstAP(apdev[0]['ifname'], 'fst_11a', 'a',
                 fst_test_common.fst_test_def_chan_a,
                 fst_test_common.fst_test_def_group,
                 fst_test_common.fst_test_def_prio_low,
-                fst_test_common.fst_test_def_llt)
+                fst_test_common.fst_test_def_llt, rsn=rsn)
     ap1.start()
     ap2 = FstAP(apdev[1]['ifname'], 'fst_11g', 'g',
                 fst_test_common.fst_test_def_chan_g,
                 fst_test_common.fst_test_def_group,
                 fst_test_common.fst_test_def_prio_high,
-                fst_test_common.fst_test_def_llt)
+                fst_test_common.fst_test_def_llt, rsn=rsn)
     ap2.start()
 
     sta1 = FstSTA('wlan5',
                   fst_test_common.fst_test_def_group,
                   fst_test_common.fst_test_def_prio_low,
-                  fst_test_common.fst_test_def_llt)
+                  fst_test_common.fst_test_def_llt, rsn=rsn)
     sta1.start()
     sta2 = FstSTA('wlan6',
                   fst_test_common.fst_test_def_group,
                   fst_test_common.fst_test_def_prio_high,
-                  fst_test_common.fst_test_def_llt)
+                  fst_test_common.fst_test_def_llt, rsn=rsn)
     sta2.start()
 
     return ap1, ap2, sta1, sta2
@@ -103,15 +103,21 @@ def stop_two_ap_sta_pairs(ap1, ap2, sta1, sta2):
     ap1.stop()
     ap2.stop()
 
-def connect_two_ap_sta_pairs(ap1, ap2, dev1, dev2):
+def connect_two_ap_sta_pairs(ap1, ap2, dev1, dev2, rsn=False):
     """Connects a pair of stations, each one to a separate AP"""
     dev1.scan(freq=fst_test_common.fst_test_def_freq_a)
     dev2.scan(freq=fst_test_common.fst_test_def_freq_g)
 
-    dev1.connect(ap1, key_mgmt="NONE",
-                 scan_freq=fst_test_common.fst_test_def_freq_a)
-    dev2.connect(ap2, key_mgmt="NONE",
-                 scan_freq=fst_test_common.fst_test_def_freq_g)
+    if rsn:
+        dev1.connect(ap1, psk="12345678",
+                     scan_freq=fst_test_common.fst_test_def_freq_a)
+        dev2.connect(ap2, psk="12345678",
+                     scan_freq=fst_test_common.fst_test_def_freq_g)
+    else:
+        dev1.connect(ap1, key_mgmt="NONE",
+                     scan_freq=fst_test_common.fst_test_def_freq_a)
+        dev2.connect(ap2, key_mgmt="NONE",
+                     scan_freq=fst_test_common.fst_test_def_freq_g)
 
 def disconnect_two_ap_sta_pairs(ap1, ap2, dev1, dev2):
     dev1.disconnect()
@@ -145,7 +151,7 @@ def disconnect_external_sta(sta, ap, check_disconnect=True):
 # FST functionality.
 #
 class FstDevice:
-    def __init__(self, iface, fst_group, fst_pri, fst_llt=None):
+    def __init__(self, iface, fst_group, fst_pri, fst_llt=None, rsn=False):
         self.iface = iface
         self.fst_group = fst_group
         self.fst_pri = fst_pri
@@ -158,6 +164,7 @@ class FstDevice:
         s = self.grequest("FST-MANAGER TEST_REQUEST IS_SUPPORTED")
         if not s.startswith('OK'):
             raise utils.HwsimSkip("FST not supported")
+        self.rsn = rsn
 
     def ifname(self):
         return self.iface
@@ -571,7 +578,7 @@ class FstDevice:
 #
 class FstAP (FstDevice):
     def __init__(self, iface, ssid, mode, chan, fst_group, fst_pri,
-                 fst_llt=None):
+                 fst_llt=None, rsn=False):
         """If fst_group is empty, then FST parameters will not be set
         If fst_llt is empty, the parameter will not be set and the default value
         is expected to be configured."""
@@ -581,7 +588,7 @@ class FstAP (FstDevice):
         self.reg_ctrl = fst_test_common.HapdRegCtrl()
         self.reg_ctrl.add_ap(iface, self.chan)
         self.global_instance = hostapd.HostapdGlobal()
-        FstDevice.__init__(self, iface, fst_group, fst_pri, fst_llt)
+        FstDevice.__init__(self, iface, fst_group, fst_pri, fst_llt, rsn)
 
     def start(self):
         """Starts AP the "standard" way as it was intended by hostapd tests.
@@ -592,6 +599,11 @@ class FstAP (FstDevice):
         params['hw_mode'] = self.mode
         params['channel'] = self.chan
         params['country_code'] = 'US'
+        if self.rsn:
+            params['wpa'] = '2'
+            params['wpa_key_mgmt'] = 'WPA-PSK'
+            params['rsn_pairwise'] = 'CCMP'
+            params['wpa_passphrase'] = '12345678'
         self.hapd=hostapd.add_ap(self.iface, params)
         if not self.hapd.ping():
             raise Exception("Could not ping FST hostapd")
@@ -661,11 +673,11 @@ class FstAP (FstDevice):
 # FstSTA class
 #
 class FstSTA (FstDevice):
-    def __init__(self, iface, fst_group, fst_pri, fst_llt=None):
+    def __init__(self, iface, fst_group, fst_pri, fst_llt=None, rsn=False):
         """If fst_group is empty, then FST parameters will not be set
         If fst_llt is empty, the parameter will not be set and the default value
         is expected to be configured."""
-        FstDevice.__init__(self, iface, fst_group, fst_pri, fst_llt)
+        FstDevice.__init__(self, iface, fst_group, fst_pri, fst_llt, rsn)
         self.connected = None # FstAP object the station is connected to
 
     def start(self):

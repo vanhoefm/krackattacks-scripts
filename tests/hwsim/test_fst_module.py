@@ -325,17 +325,18 @@ def fst_initiate_session(apdev, test_params, bad_param_type, init_on_ap):
         else:
             print "Failure. Unexpected exception"
 
-def fst_transfer_session(apdev, test_params, bad_param_type, init_on_ap):
+def fst_transfer_session(apdev, test_params, bad_param_type, init_on_ap,
+                         rsn=False):
     """This function makes the necessary preparations and then adds, sets,
     initiates and attempts to transfer a session using either correct or
     incorrect parameters at each stage depending on the value of bad_param_type.
     If the call ends as expected the function silently exits. Otherwise, it
     throws an exception thus failing the test."""
-    ap1, ap2, sta1, sta2 = fst_module_aux.start_two_ap_sta_pairs(apdev)
+    ap1, ap2, sta1, sta2 = fst_module_aux.start_two_ap_sta_pairs(apdev, rsn=rsn)
     bad_parameter_detected = False
     exception_already_raised = False
     try:
-        fst_module_aux.connect_two_ap_sta_pairs(ap1, ap2, sta1, sta2)
+        fst_module_aux.connect_two_ap_sta_pairs(ap1, ap2, sta1, sta2, rsn=rsn)
         # This call makes sure FstHostapd singleton object is created and, as a
         # result, the global control interface is registered (this is done from
         # the constructor).
@@ -1770,3 +1771,7 @@ def test_fst_sta_remove_session_bad_session_id(dev, apdev, test_params):
     """FST STA remove session - bad session id"""
     fst_remove_session(apdev, test_params, remove_scenario_bad_session_id,
                        False)
+
+def test_fst_rsn_ap_transfer_session(dev, apdev, test_params):
+    """FST RSN AP transfer session"""
+    fst_transfer_session(apdev, test_params, bad_param_none, True, rsn=True)

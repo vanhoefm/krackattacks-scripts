@@ -15,6 +15,7 @@ from hwsim import HWSimRadio
 import hostapd
 import fst_test_common
 import fst_module_aux
+from utils import alloc_fail
 
 #enum - bad parameter types
 bad_param_none = 0
@@ -1479,6 +1480,34 @@ def test_fst_ap_ctrl_iface(dev, apdev, test_params):
     finally:
         fst_module_aux.disconnect_two_ap_sta_pairs(ap1, ap2, sta1, sta2)
         fst_module_aux.stop_two_ap_sta_pairs(ap1, ap2, sta1, sta2)
+
+def test_fst_ap_start_session_oom(dev, apdev, test_params):
+    """FST AP setup failing due to OOM"""
+    ap1 = fst_module_aux.FstAP(apdev[0]['ifname'], 'fst_11a', 'a',
+                               fst_test_common.fst_test_def_chan_a,
+                               fst_test_common.fst_test_def_group,
+                               fst_test_common.fst_test_def_prio_low,
+                               fst_test_common.fst_test_def_llt)
+    ap1.start()
+    with alloc_fail(ap1, 1, "fst_iface_create"):
+        ap2_started = False
+        try:
+            ap2 = fst_module_aux.FstAP(apdev[1]['ifname'], 'fst_11g', 'b',
+                                       fst_test_common.fst_test_def_chan_g,
+                                       fst_test_common.fst_test_def_group,
+                                       fst_test_common.fst_test_def_prio_high,
+                                       fst_test_common.fst_test_def_llt)
+            try:
+                # This will fail in fst_iface_create() OOM
+                ap2.start()
+            except:
+                pass
+        finally:
+            ap1.stop()
+            try:
+                ap2.stop()
+            except:
+                pass
 
 # STA side FST module tests
 

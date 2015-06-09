@@ -479,7 +479,7 @@ int accounting_init(struct hostapd_data *hapd)
 
 
 /**
- * accounting_deinit: Deinitilize accounting
+ * accounting_deinit: Deinitialize accounting
  * @hapd: hostapd BSS data
  */
 void accounting_deinit(struct hostapd_data *hapd)

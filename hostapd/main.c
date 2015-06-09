@@ -661,7 +661,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (hostapd_global_init(&interfaces, entropy_file)) {
-		wpa_printf(MSG_ERROR, "Failed to initilize global context");
+		wpa_printf(MSG_ERROR, "Failed to initialize global context");
 		return -1;
 	}
 

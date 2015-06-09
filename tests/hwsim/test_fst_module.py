@@ -1401,6 +1401,85 @@ def test_fst_ap_remove_session_bad_session_id(dev, apdev, test_params):
     """FST AP remove session - bad session id"""
     fst_remove_session(apdev, test_params, remove_scenario_bad_session_id, True)
 
+def test_fst_ap_ctrl_iface(dev, apdev, test_params):
+    """FST control interface behavior"""
+    ap1, ap2, sta1, sta2 = fst_module_aux.start_two_ap_sta_pairs(apdev)
+    try:
+        fst_module_aux.connect_two_ap_sta_pairs(ap1, ap2, sta1, sta2)
+        initiator = ap1
+        responder = sta1
+        initiator.add_peer(responder, None)
+        initiator.set_fst_parameters(group_id=None)
+        sid = initiator.add_session()
+        res = initiator.get_session_params(sid)
+        logger.info("Initial session params:\n" + str(res))
+        if res['state'] != 'INITIAL':
+            raise Exception("Unexpected state: " + res['state'])
+        initiator.set_fst_parameters(llt=None)
+        initiator.configure_session(sid, ap2.ifname(), None)
+        res = initiator.get_session_params(sid)
+        logger.info("Session params after configuration:\n" + str(res))
+        res = initiator.iface_peers(initiator.ifname())
+        logger.info("Interface peers: " + str(res))
+        if len(res) != 1:
+            raise Exception("Unexpected number of peers")
+        res = initiator.get_peer_mbies(initiator.ifname(),
+                                       initiator.get_new_peer_addr())
+        logger.info("Peer MB IEs: " + str(res))
+        res = initiator.list_ifaces()
+        logger.info("Interfaces: " + str(res))
+        if len(res) != 2:
+            raise Exception("Unexpected number of interfaces")
+        res = initiator.list_groups()
+        logger.info("Groups: " + str(res))
+        if len(res) != 1:
+            raise Exception("Unexpected number of groups")
+
+        tests = [ "LIST_IFACES unknown",
+                  "LIST_IFACES     unknown2",
+                  "SESSION_GET 12345678",
+                  "SESSION_SET " + sid + " unknown=foo",
+                  "SESSION_RESPOND 12345678 foo",
+                  "SESSION_RESPOND " + sid,
+                  "SESSION_RESPOND " + sid + " foo",
+                  "TEST_REQUEST foo",
+                  "GET_PEER_MBIES",
+                  "GET_PEER_MBIES ",
+                  "GET_PEER_MBIES unknown",
+                  "GET_PEER_MBIES unknown unknown",
+                  "GET_PEER_MBIES unknown  " + initiator.get_new_peer_addr(),
+                  "GET_PEER_MBIES " + initiator.ifname() + " 01:ff:ff:ff:ff:ff",
+                  "IFACE_PEERS",
+                  "IFACE_PEERS ",
+                  "IFACE_PEERS unknown",
+                  "IFACE_PEERS unknown unknown",
+                  "IFACE_PEERS " + initiator.fst_group,
+                  "IFACE_PEERS " + initiator.fst_group + " unknown" ]
+        for t in tests:
+            if "FAIL" not in initiator.grequest("FST-MANAGER " + t):
+                raise Exception("Unexpected response for invalid FST-MANAGER command " + t)
+        if "UNKNOWN FST COMMAND" not in initiator.grequest("FST-MANAGER unknown"):
+            raise Exception("Unexpected response for unknown FST-MANAGER command")
+
+        tests = [ "FST-DETACH", "FST-DETACH ", "FST-DETACH unknown",
+                  "FST-ATTACH", "FST-ATTACH ", "FST-ATTACH unknown",
+                  "FST-ATTACH unknown unknown" ]
+        for t in tests:
+            if "FAIL" not in initiator.grequest(t):
+                raise Exception("Unexpected response for invalid command " + t)
+
+        try:
+            # Trying to add same interface again needs to fail.
+            ap1.send_iface_attach_request(ap1.iface, ap1.fst_group,
+                                          ap1.fst_llt, ap1.fst_pri)
+            raise Exception("Duplicate FST-ATTACH succeeded")
+        except Exception, e:
+            if not str(e).startswith("Cannot attach"):
+                raise
+    finally:
+        fst_module_aux.disconnect_two_ap_sta_pairs(ap1, ap2, sta1, sta2)
+        fst_module_aux.stop_two_ap_sta_pairs(ap1, ap2, sta1, sta2)
+
 # STA side FST module tests
 
 def test_fst_sta_start_session(dev, apdev, test_params):

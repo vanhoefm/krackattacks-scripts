@@ -262,6 +262,48 @@ class FstDevice:
             request = request + ' ' + params
         return self.grequest(request)
 
+    def get_session_params(self, sid):
+        request = "FST-MANAGER SESSION_GET " + sid
+        res = self.grequest(request)
+        if res.startswith("FAIL"):
+            return None
+        params = {}
+        for i in res.splitlines():
+            p = i.split('=')
+            params[p[0]] = p[1]
+        return params
+
+    def iface_peers(self, ifname):
+        grp = self.fst_group if self.fst_group != '' else ''
+        res = self.grequest("FST-MANAGER IFACE_PEERS " + grp + ' ' + ifname)
+        if res.startswith("FAIL"):
+            return None
+        return res.splitlines()
+
+    def get_peer_mbies(self, ifname, peer_addr):
+        return self.grequest("FST-MANAGER GET_PEER_MBIES %s %s" % (ifname, peer_addr))
+
+    def list_ifaces(self):
+        grp = self.fst_group if self.fst_group != '' else ''
+        res = self.grequest("FST-MANAGER LIST_IFACES " + grp)
+        if res.startswith("FAIL"):
+            return None
+        ifaces = []
+        for i in res.splitlines():
+            p = i.split(':')
+            iface = {}
+            iface['name'] = p[0]
+            iface['priority'] = p[1]
+            iface['llt'] = p[2]
+            ifaces.append(iface)
+        return ifaces
+
+    def list_groups(self):
+        res = self.grequest("FST-MANAGER LIST_GROUPS")
+        if res.startswith("FAIL"):
+            return None
+        return res.splitlines()
+
     def configure_session(self, sid, new_iface, old_iface = None):
         """Calls session_set for a number of parameters some of which are stored
         in "self" while others are passed to this function explicitly. If

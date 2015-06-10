@@ -485,8 +485,13 @@ static int ap_probe_req_rx(void *ctx, const u8 *sa, const u8 *da,
 			   int ssi_signal)
 {
 	struct wpa_supplicant *wpa_s = ctx;
+	unsigned int freq = 0;
+
+	if (wpa_s->ap_iface)
+		freq = wpa_s->ap_iface->freq;
+
 	return wpas_p2p_probe_req_rx(wpa_s, sa, da, bssid, ie, ie_len,
-				     0, ssi_signal);
+				     freq, ssi_signal);
 }
 
 

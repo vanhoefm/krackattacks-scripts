@@ -570,12 +570,14 @@ struct p2p_config {
 	 * send_probe_resp - Transmit a Probe Response frame
 	 * @ctx: Callback context from cb_ctx
 	 * @buf: Probe Response frame (including the header and body)
+	 * @freq: Forced frequency (in MHz) to use or 0.
 	 * Returns: 0 on success, -1 on failure
 	 *
 	 * This function is used to reply to Probe Request frames that were
 	 * indicated with a call to p2p_probe_req_rx(). The response is to be
-	 * sent on the same channel or to be dropped if the driver is not
-	 * anymore listening to Probe Request frames.
+	 * sent on the same channel, unless otherwise specified, or to be
+	 * dropped if the driver is not listening to Probe Request frames
+	 * anymore.
 	 *
 	 * Alternatively, the responsibility for building the Probe Response
 	 * frames in Listen state may be in another system component in which
@@ -586,7 +588,8 @@ struct p2p_config {
 	 * Request frames must be indicated by calling p2p_probe_req_rx() even
 	 * if this send_probe_resp() is not used.
 	 */
-	int (*send_probe_resp)(void *ctx, const struct wpabuf *buf);
+	int (*send_probe_resp)(void *ctx, const struct wpabuf *buf,
+			       unsigned int freq);
 
 	/**
 	 * send_action - Transmit an Action frame

@@ -286,11 +286,13 @@ static inline int wpa_drv_set_country(struct wpa_supplicant *wpa_s,
 }
 
 static inline int wpa_drv_send_mlme(struct wpa_supplicant *wpa_s,
-				    const u8 *data, size_t data_len, int noack)
+				    const u8 *data, size_t data_len, int noack,
+				    unsigned int freq)
 {
 	if (wpa_s->driver->send_mlme)
 		return wpa_s->driver->send_mlme(wpa_s->drv_priv,
-						data, data_len, noack, 0);
+						data, data_len, noack,
+						freq);
 	return -1;
 }
 

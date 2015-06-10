@@ -2397,10 +2397,12 @@ static void wpas_stop_listen(void *ctx)
 }
 
 
-static int wpas_send_probe_resp(void *ctx, const struct wpabuf *buf)
+static int wpas_send_probe_resp(void *ctx, const struct wpabuf *buf,
+				unsigned int freq)
 {
 	struct wpa_supplicant *wpa_s = ctx;
-	return wpa_drv_send_mlme(wpa_s, wpabuf_head(buf), wpabuf_len(buf), 1);
+	return wpa_drv_send_mlme(wpa_s, wpabuf_head(buf), wpabuf_len(buf), 1,
+				 freq);
 }
 
 

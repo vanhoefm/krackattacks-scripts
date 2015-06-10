@@ -2440,7 +2440,7 @@ p2p_reply_probe(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 	wpabuf_put_buf(buf, ies);
 	wpabuf_free(ies);
 
-	p2p->cfg->send_probe_resp(p2p->cfg->cb_ctx, buf);
+	p2p->cfg->send_probe_resp(p2p->cfg->cb_ctx, buf, rx_freq);
 
 	wpabuf_free(buf);
 

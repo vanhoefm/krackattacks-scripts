@@ -551,8 +551,6 @@ void p2p_buf_add_service_instance(struct wpabuf *buf, struct p2p_data *p2p,
 		return;
 
 	p2ps_wildcard = p2ps_wildcard_hash(p2p, hash, hash_count);
-	if (p2ps_wildcard)
-		goto end;
 
 	/* Allocate temp buffer, allowing for overflow of 1 instance */
 	tmp_buf = wpabuf_alloc(MAX_SVC_ADV_IE_LEN + 256 + P2PS_HASH_LEN);
@@ -572,6 +570,12 @@ void p2p_buf_add_service_instance(struct wpabuf *buf, struct p2p_data *p2p,
 	WPA_PUT_LE16(attr_len, (u16) total_len);
 	p2p_buf_update_ie_hdr(tmp_buf, ie_len);
 	pos = wpabuf_put(tmp_buf, 0);
+
+	if (p2ps_wildcard) {
+		p2p_buf_add_service_info(tmp_buf, p2p, 0, 0, P2PS_WILD_HASH_STR,
+					 &ie_len, &pos, &total_len, attr_len);
+		p2ps_wildcard = 0;
+	}
 
 	/* add advertised service info of matching services */
 	for (adv = adv_list; adv && total_len <= MAX_SVC_ADV_LEN;
@@ -606,9 +610,8 @@ void p2p_buf_add_service_instance(struct wpabuf *buf, struct p2p_data *p2p,
 end:
 	if (p2ps_wildcard) {
 		/*
-		 * Add the attribute with P2PS wildcard if either a wildcard
-		 * hash was present in a Probe Request frame hash attribute or
-		 * we failed to add at least one matching advertisement.
+		 * Add a single attribute with P2PS wildcard if we failed
+		 * to add at least one matching advertisement.
 		 */
 		ie_len = p2p_buf_add_ie_hdr(buf);
 		wpabuf_put_u8(buf, P2P_ATTR_ADVERTISED_SERVICE);

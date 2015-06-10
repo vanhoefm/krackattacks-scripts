@@ -468,7 +468,8 @@ static void p2p_copy_client_info(struct p2p_device *dev,
 
 static int p2p_add_group_clients(struct p2p_data *p2p, const u8 *go_dev_addr,
 				 const u8 *go_interface_addr, int freq,
-				 const u8 *gi, size_t gi_len)
+				 const u8 *gi, size_t gi_len,
+				 struct os_reltime *rx_time)
 {
 	struct p2p_group_info info;
 	size_t c;
@@ -536,7 +537,7 @@ static int p2p_add_group_clients(struct p2p_data *p2p, const u8 *go_dev_addr,
 
 		os_memcpy(dev->interface_addr, cli->p2p_interface_addr,
 			  ETH_ALEN);
-		os_get_reltime(&dev->last_seen);
+		os_memcpy(&dev->last_seen, rx_time, sizeof(struct os_reltime));
 		os_memcpy(dev->member_in_go_dev, go_dev_addr, ETH_ALEN);
 		os_memcpy(dev->member_in_go_iface, go_interface_addr,
 			  ETH_ALEN);
@@ -844,7 +845,8 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq,
 
 	if (scan_res) {
 		p2p_add_group_clients(p2p, p2p_dev_addr, addr, freq,
-				      msg.group_info, msg.group_info_len);
+				      msg.group_info, msg.group_info_len,
+				      rx_time);
 	}
 
 	p2p_parse_free(&msg);

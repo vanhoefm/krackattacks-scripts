@@ -91,12 +91,12 @@ class alloc_fail_dbus(object):
             raise Exception("%s did not trigger allocation failure" % self._operation)
         return False
 
-def start_ap(ap):
-    ssid = "test-wps"
+def start_ap(ap, ssid="test-wps",
+             ap_uuid="27ea801a-9e5c-4e73-bd82-f89cbcd10d7e"):
     params = { "ssid": ssid, "eap_server": "1", "wps_state": "2",
                "wpa_passphrase": "12345678", "wpa": "2",
                "wpa_key_mgmt": "WPA-PSK", "rsn_pairwise": "CCMP",
-               "ap_pin": "12345670"}
+               "ap_pin": "12345670", "uuid": ap_uuid}
     return hostapd.add_ap(ap['ifname'], params)
 
 def test_dbus_getall(dev, apdev):
@@ -570,6 +570,57 @@ def _test_dbus_wps_pbc(dev, apdev):
             raise Exception("Failure in D-Bus operations")
 
     dev[0].wait_connected(timeout=10)
+    dev[0].request("DISCONNECT")
+    hapd.disable()
+    dev[0].flush_scan_cache()
+
+def test_dbus_wps_pbc_overlap(dev, apdev):
+    """D-Bus WPS/PBC operation and signal for PBC overlap"""
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    wps = dbus.Interface(if_obj, WPAS_DBUS_IFACE_WPS)
+
+    hapd = start_ap(apdev[0])
+    hapd2 = start_ap(apdev[1], ssid="test-wps2",
+                     ap_uuid="27ea801a-9e5c-4e73-bd82-f89cbcd10d7f")
+    hapd.request("WPS_PBC")
+    hapd2.request("WPS_PBC")
+    bssid = apdev[0]['bssid']
+    dev[0].scan_for_bss(bssid, freq="2412")
+    bssid2 = apdev[1]['bssid']
+    dev[0].scan_for_bss(bssid2, freq="2412")
+
+    class TestDbusWps(TestDbus):
+        def __init__(self, bus, wps):
+            TestDbus.__init__(self, bus)
+            self.overlap_seen = False
+            self.wps = wps
+
+        def __enter__(self):
+            gobject.timeout_add(1, self.start_pbc)
+            gobject.timeout_add(15000, self.timeout)
+            self.add_signal(self.wpsEvent, WPAS_DBUS_IFACE_WPS, "Event")
+            self.loop.run()
+            return self
+
+        def wpsEvent(self, name, args):
+            logger.debug("wpsEvent: %s args='%s'" % (name, str(args)))
+            if name == "pbc-overlap":
+                self.overlap_seen = True
+                self.loop.quit()
+
+        def start_pbc(self, *args):
+            logger.debug("start_pbc")
+            self.wps.Start({'Role': 'enrollee', 'Type': 'pbc'})
+            return False
+
+        def success(self):
+            return self.overlap_seen
+
+    with TestDbusWps(bus, wps) as t:
+        if not t.success():
+            raise Exception("Failure in D-Bus operations")
+
+    dev[0].request("WPS_CANCEL")
     dev[0].request("DISCONNECT")
     hapd.disable()
     dev[0].flush_scan_cache()

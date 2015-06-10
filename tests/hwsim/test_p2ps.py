@@ -622,7 +622,7 @@ def test_p2ps_connect_adv_go_pin_method(dev):
         ev1 = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=10)
         if ev1 is None:
             raise Exception("P2P-GROUP-STARTED timeout on seeker side")
-	dev[1].group_form_result(ev1)
+        dev[1].group_form_result(ev1)
 
         ev0 = dev[0].wait_global_event(["AP-STA-CONNECTED"], timeout=10)
         if ev0 is None:

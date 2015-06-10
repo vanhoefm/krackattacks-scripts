@@ -631,3 +631,23 @@ def test_persistent_group_missed_inv_resp(dev):
     dev[0].group_form_result(ev)
 
     terminate_group(dev[0], dev[1])
+
+def test_persistent_group_profile_add(dev):
+    """Create a P2P persistent group with ADD_NETWORK"""
+    passphrase="passphrase here"
+    id = dev[0].add_network()
+    dev[0].set_network_quoted(id, "ssid", "DIRECT-ab")
+    dev[0].set_network_quoted(id, "psk", passphrase)
+    dev[0].set_network(id, "mode", "3")
+    dev[0].set_network(id, "disabled", "2")
+    dev[0].p2p_start_go(persistent=id, freq=2412)
+
+    pin = dev[1].wps_read_pin()
+    dev[0].p2p_go_authorize_client(pin)
+    res = dev[1].p2p_connect_group(dev[0].p2p_dev_addr(), pin, timeout=60,
+                                   social=True, freq=2412)
+    if res['result'] != 'success':
+        raise Exception("Joining the group did not succeed")
+
+    dev[0].remove_group()
+    dev[1].wait_go_ending_session()

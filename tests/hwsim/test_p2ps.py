@@ -45,7 +45,8 @@ def p2ps_advertise(r_dev, r_role, svc_name, srv_info, rsp_info=None):
     r_dev.p2p_listen()
     return advid
 
-def p2ps_exact_seek(i_dev, r_dev, svc_name, srv_info=None):
+def p2ps_exact_seek(i_dev, r_dev, svc_name, srv_info=None,
+                    single_peer_expected=True):
     """P2PS exact service seek request"""
     if srv_info is not None:
         ev1 = i_dev.global_request("P2P_SERV_DISC_REQ 00:00:00:00:00:00 asp 1 " + svc_name + " '" + srv_info + "'")
@@ -55,7 +56,16 @@ def p2ps_exact_seek(i_dev, r_dev, svc_name, srv_info=None):
     if "OK" not in i_dev.global_request("P2P_FIND 10 type=social seek=" + svc_name):
         raise Exception("Failed to initiate seek operation")
 
+    timeout = time.time() + 10
     ev1 = i_dev.wait_global_event(["P2P-DEVICE-FOUND"], timeout=10)
+    while ev1 is not None and not single_peer_expected:
+        if r_dev.p2p_dev_addr() in ev1 and "adv_id=" in ev1:
+            break
+        ev1 = i_dev.wait_global_event(["P2P-DEVICE-FOUND"], timeout=10)
+
+        if timeout < time.time():
+            raise Exception("Device not found")
+
     if ev1 is None:
         raise Exception("P2P-DEVICE-FOUND timeout on seeker side")
     if r_dev.p2p_dev_addr() not in ev1:
@@ -581,8 +591,7 @@ def test_p2ps_connect_adv_client_p2ps_method(dev):
         raise Exception("Unable to remove the advertisement instance")
     remove_group(dev[0], dev[1])
 
-def test_p2ps_connect_adv_go_pin_method(dev):
-    """P2PS advertiser as GO with keypad config method on seeker side and auto-accept"""
+def p2ps_connect_adv_go_pin_method(dev, keep_group=False):
     addr0 = dev[0].p2p_dev_addr()
     addr1 = dev[1].p2p_dev_addr()
     p2ps_advertise(r_dev=dev[0], r_role='4', svc_name='org.wi-fi.wfds.send.rx',
@@ -627,10 +636,16 @@ def test_p2ps_connect_adv_go_pin_method(dev):
         ev0 = dev[0].wait_global_event(["AP-STA-CONNECTED"], timeout=10)
         if ev0 is None:
             raise Exception("AP-STA-CONNECTED timeout on advertiser side")
-    ev0 = dev[0].global_request("P2P_SERVICE_DEL asp " + str(adv_id))
-    if ev0 is None:
-        raise Exception("Unable to remove the advertisement instance")
-    remove_group(dev[0], dev[1])
+
+    if not keep_group:
+        ev0 = dev[0].global_request("P2P_SERVICE_DEL asp " + str(adv_id))
+        if ev0 is None:
+            raise Exception("Unable to remove the advertisement instance")
+        remove_group(dev[0], dev[1])
+
+def test_p2ps_connect_adv_go_pin_method(dev):
+    """P2PS advertiser as GO with keypad config method on seeker side and auto-accept"""
+    p2ps_connect_adv_go_pin_method(dev)
 
 def test_p2ps_connect_adv_client_pin_method(dev):
     """P2PS advertiser as client with keypad config method on seeker side and auto-accept"""
@@ -788,7 +803,7 @@ def get_ifnames():
         ifnames.append(ifname)
     return ifnames
 
-def p2ps_connect_p2ps_method(dev):
+def p2ps_connect_p2ps_method(dev, keep_group=False):
     addr0 = dev[0].p2p_dev_addr()
     addr1 = dev[1].p2p_dev_addr()
     dev[0].flush_scan_cache()
@@ -815,7 +830,7 @@ def p2ps_connect_p2ps_method(dev):
     if ev1 is None:
         raise Exception("P2P-GROUP-STARTED timeout on seeker side")
     res1 = dev[1].group_form_result(ev1)
-    ifnames1 = get_ifnames()
+    ifnames = get_ifnames()
 
     if "OK" not in dev[0].global_request("P2P_CONNECT " + addr1 + " 12345670 p2ps persistent join"):
         raise Exception("P2P_CONNECT failed on seeker side")
@@ -828,13 +843,16 @@ def p2ps_connect_p2ps_method(dev):
     ev1 = dev[1].wait_global_event(["AP-STA-CONNECTED"], timeout=5)
     if ev1 is None:
         raise Exception("Group formation failed")
-    ev0 = dev[0].global_request("P2P_SERVICE_DEL asp " + str(adv_id))
-    if ev0 is None:
-        raise Exception("Unable to remove the advertisement instance")
-    ifnames2 = get_ifnames()
-    remove_group(dev[0], dev[1])
-    ifnames3 = get_ifnames()
-    return (res0, res1, ifnames1 + ifnames2 + ifnames3)
+
+    if not keep_group:
+        ev0 = dev[0].global_request("P2P_SERVICE_DEL asp " + str(adv_id))
+        if ev0 is None:
+            raise Exception("Unable to remove the advertisement instance")
+        ifnames = ifnames + get_ifnames()
+        remove_group(dev[0], dev[1])
+        ifnames = ifnames + get_ifnames()
+
+    return (res0, res1, ifnames)
 
 def has_string_prefix(vals, prefix):
     for val in vals:
@@ -947,4 +965,23 @@ def test_p2ps_connect_adv_go_persistent(dev):
     ev0 = dev[0].global_request("P2P_SERVICE_DEL asp " + str(adv_id))
     if ev0 is None:
         raise Exception("Unable to remove the advertisement instance")
+    remove_group(dev[0], dev[1])
+
+def test_p2ps_client_probe(dev):
+    """P2PS CLI discoverability on operating channel"""
+    cli_probe = dev[0].global_request("SET p2p_cli_probe 1")
+    p2ps_connect_p2ps_method(dev, keep_group=True)
+    [adv_id, rcvd_svc_name] = p2ps_exact_seek(i_dev=dev[2], r_dev=dev[0],
+                                              svc_name='org.wi-fi.wfds.send.rx',
+                                              single_peer_expected=False)
+    dev[0].global_request("P2P_SERVICE_DEL asp " + str(adv_id))
+    remove_group(dev[0], dev[1])
+
+def test_p2ps_go_probe(dev):
+    """P2PS GO discoverability on operating channel"""
+    p2ps_connect_adv_go_pin_method(dev, keep_group=True)
+    [adv_id, rcvd_svc_name] = p2ps_exact_seek(i_dev=dev[2], r_dev=dev[0],
+                                              svc_name='org.wi-fi.wfds.send.rx',
+                                              single_peer_expected=False)
+    dev[0].global_request("P2P_SERVICE_DEL asp " + str(adv_id))
     remove_group(dev[0], dev[1])

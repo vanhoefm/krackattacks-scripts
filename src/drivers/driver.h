@@ -1940,10 +1940,12 @@ struct wpa_driver_ops {
 	 * @data: IEEE 802.11 management frame with IEEE 802.11 header
 	 * @data_len: Size of the management frame
 	 * @noack: Do not wait for this frame to be acked (disable retries)
+	 * @freq: Frequency (in MHz) to send the frame on, or 0 to let the
+	 * driver decide
 	 * Returns: 0 on success, -1 on failure
 	 */
 	int (*send_mlme)(void *priv, const u8 *data, size_t data_len,
-			 int noack);
+			 int noack, unsigned int freq);
 
 	/**
 	 * update_ft_ies - Update FT (IEEE 802.11r) IEs

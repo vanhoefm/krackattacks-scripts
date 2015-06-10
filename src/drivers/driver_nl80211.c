@@ -7245,11 +7245,12 @@ static int driver_nl80211_if_remove(void *priv, enum wpa_driver_if_type type,
 
 
 static int driver_nl80211_send_mlme(void *priv, const u8 *data,
-				    size_t data_len, int noack)
+				    size_t data_len, int noack,
+				    unsigned int freq)
 {
 	struct i802_bss *bss = priv;
 	return wpa_driver_nl80211_send_mlme(bss, data, data_len, noack,
-					    0, 0, 0, 0);
+					    freq, 0, 0, 0);
 }
 
 

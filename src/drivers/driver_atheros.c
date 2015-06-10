@@ -1840,7 +1840,7 @@ static int atheros_set_ap(void *priv, struct wpa_driver_ap_params *params)
 #ifdef CONFIG_IEEE80211R
 
 static int atheros_send_mgmt(void *priv, const u8 *frm, size_t data_len,
-			     int noack)
+			     int noack, unsigned int freq)
 {
 	struct atheros_driver_data *drv = priv;
 	u8 buf[1510];

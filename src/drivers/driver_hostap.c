@@ -266,7 +266,8 @@ static int hostap_init_sockets(struct hostap_driver_data *drv, u8 *own_addr)
 }
 
 
-static int hostap_send_mlme(void *priv, const u8 *msg, size_t len, int noack)
+static int hostap_send_mlme(void *priv, const u8 *msg, size_t len, int noack,
+			    unsigned int freq)
 {
 	struct hostap_driver_data *drv = priv;
 	struct ieee80211_hdr *hdr = (struct ieee80211_hdr *) msg;

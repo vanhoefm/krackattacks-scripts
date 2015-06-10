@@ -633,7 +633,7 @@ int hostapd_drv_send_mlme(struct hostapd_data *hapd,
 {
 	if (hapd->driver == NULL || hapd->driver->send_mlme == NULL)
 		return 0;
-	return hapd->driver->send_mlme(hapd->drv_priv, msg, len, noack);
+	return hapd->driver->send_mlme(hapd->drv_priv, msg, len, noack, 0);
 }
 
 

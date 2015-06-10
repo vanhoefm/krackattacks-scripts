@@ -3478,3 +3478,37 @@ def test_proxyarp_open_ebtables(dev, apdev, params):
                         stderr=open('/dev/null', 'w'))
         subprocess.call(['brctl', 'delbr', 'ap-br0'],
                         stderr=open('/dev/null', 'w'))
+
+def test_ap_hs20_connect_deinit(dev, apdev):
+    """Hotspot 2.0 connection interrupted with deinit"""
+    bssid = apdev[0]['bssid']
+    params = hs20_ap_params()
+    params['hessid'] = bssid
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5", drv_params="")
+    wpas.hs20_enable()
+    wpas.flush_scan_cache()
+    wpas.add_cred_values({ 'realm': "example.com",
+                           'username': "hs20-test",
+                           'password': "password",
+                           'ca_cert': "auth_serv/ca.pem",
+                           'domain': "example.com" })
+
+    wpas.scan_for_bss(bssid, freq=2412)
+    hapd.disable()
+
+    wpas.request("INTERWORKING_SELECT freq=2412")
+
+    id = wpas.request("RADIO_WORK add block-work")
+    ev = wpas.wait_event(["GAS-QUERY-START", "EXT-RADIO-WORK-START"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout while waiting radio work to start")
+    ev = wpas.wait_event(["GAS-QUERY-START", "EXT-RADIO-WORK-START"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout while waiting radio work to start (2)")
+
+    # Remove the interface while the gas-query radio work is still pending and
+    # GAS query has not yet been started.
+    wpas.interface_remove("wlan5")

@@ -843,3 +843,27 @@ def test_gas_missing_payload(dev, apdev):
         raise Exception("Timeout on MGMT-TX-STATUS")
     if "result=SUCCESS" not in ev:
         raise Exception("AP did not ack Action frame")
+
+def test_gas_query_deinit(dev, apdev):
+    """Pending GAS/ANQP query during deinit"""
+    hapd = start_ap(apdev[0])
+    bssid = apdev[0]['bssid']
+
+    wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
+    wpas.interface_add("wlan5")
+
+    wpas.scan_for_bss(bssid, freq="2412", force_scan=True)
+    id = wpas.request("RADIO_WORK add block-work")
+    if "OK" not in wpas.request("ANQP_GET " + bssid + " 258"):
+        raise Exception("ANQP_GET command failed")
+
+    ev = wpas.wait_event(["GAS-QUERY-START", "EXT-RADIO-WORK-START"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout while waiting radio work to start")
+    ev = wpas.wait_event(["GAS-QUERY-START", "EXT-RADIO-WORK-START"], timeout=5)
+    if ev is None:
+        raise Exception("Timeout while waiting radio work to start (2)")
+
+    # Remove the interface while the gas-query radio work is still pending and
+    # GAS query has not yet been started.
+    wpas.interface_remove("wlan5")

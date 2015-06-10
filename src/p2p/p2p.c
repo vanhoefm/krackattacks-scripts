@@ -541,6 +541,7 @@ static int p2p_add_group_clients(struct p2p_data *p2p, const u8 *go_dev_addr,
 		os_memcpy(dev->member_in_go_dev, go_dev_addr, ETH_ALEN);
 		os_memcpy(dev->member_in_go_iface, go_interface_addr,
 			  ETH_ALEN);
+		dev->flags |= P2P_DEV_LAST_SEEN_AS_GROUP_CLIENT;
 	}
 
 	return 0;
@@ -759,22 +760,30 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq,
 
 	/*
 	 * Update the device entry only if the new peer
-	 * entry is newer than the one previously stored.
+	 * entry is newer than the one previously stored, or if
+	 * the device was previously seen as a P2P Client in a group
+	 * and the new entry isn't older than a threshold.
 	 */
 	if (dev->last_seen.sec > 0 &&
-	    os_reltime_before(rx_time, &dev->last_seen)) {
-		p2p_dbg(p2p, "Do not update peer entry based on old frame (rx_time=%u.%06u last_seen=%u.%06u)",
+	    os_reltime_before(rx_time, &dev->last_seen) &&
+	    (!(dev->flags & P2P_DEV_LAST_SEEN_AS_GROUP_CLIENT) ||
+	     os_reltime_expired(&dev->last_seen, rx_time,
+				P2P_DEV_GROUP_CLIENT_RESP_THRESHOLD))) {
+		p2p_dbg(p2p,
+			"Do not update peer entry based on old frame (rx_time=%u.%06u last_seen=%u.%06u flags=0x%x)",
 			(unsigned int) rx_time->sec,
 			(unsigned int) rx_time->usec,
 			(unsigned int) dev->last_seen.sec,
-			(unsigned int) dev->last_seen.usec);
+			(unsigned int) dev->last_seen.usec,
+			dev->flags);
 		p2p_parse_free(&msg);
 		return -1;
 	}
 
 	os_memcpy(&dev->last_seen, rx_time, sizeof(struct os_reltime));
 
-	dev->flags &= ~(P2P_DEV_PROBE_REQ_ONLY | P2P_DEV_GROUP_CLIENT_ONLY);
+	dev->flags &= ~(P2P_DEV_PROBE_REQ_ONLY | P2P_DEV_GROUP_CLIENT_ONLY |
+			P2P_DEV_LAST_SEEN_AS_GROUP_CLIENT);
 
 	if (os_memcmp(addr, p2p_dev_addr, ETH_ALEN) != 0)
 		os_memcpy(dev->interface_addr, addr, ETH_ALEN);
@@ -4167,7 +4176,7 @@ int p2p_get_peer_info_txt(const struct p2p_peer_info *info,
 			  "country=%c%c\n"
 			  "oper_freq=%d\n"
 			  "req_config_methods=0x%x\n"
-			  "flags=%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n"
+			  "flags=%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n"
 			  "status=%d\n"
 			  "invitation_reqs=%u\n",
 			  (int) (now.sec - dev->last_seen.sec),
@@ -4211,6 +4220,8 @@ int p2p_get_peer_info_txt(const struct p2p_peer_info *info,
 			  "[FORCE_FREQ]" : "",
 			  dev->flags & P2P_DEV_PD_FOR_JOIN ?
 			  "[PD_FOR_JOIN]" : "",
+			  dev->flags & P2P_DEV_LAST_SEEN_AS_GROUP_CLIENT ?
+			  "[LAST_SEEN_AS_GROUP_CLIENT]" : "",
 			  dev->status,
 			  dev->invitation_reqs);
 	if (os_snprintf_error(end - pos, res))

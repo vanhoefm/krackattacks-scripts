@@ -14,6 +14,12 @@
 
 #define P2P_GO_NEG_CNF_MAX_RETRY_COUNT 1
 
+/*
+ * A threshold (in seconds) to prefer a direct Probe Response frame from a P2P
+ * Device over the P2P Client Info received from a GO.
+ */
+#define P2P_DEV_GROUP_CLIENT_RESP_THRESHOLD 1
+
 enum p2p_role_indication;
 
 /*
@@ -107,6 +113,8 @@ struct p2p_device {
 #define P2P_DEV_WAIT_INV_REQ_ACK BIT(19)
 #define P2P_DEV_P2PS_REPORTED BIT(20)
 #define P2P_DEV_PD_PEER_P2PS BIT(21)
+#define P2P_DEV_LAST_SEEN_AS_GROUP_CLIENT BIT(22)
+
 	unsigned int flags;
 
 	int status; /* enum p2p_status_code */

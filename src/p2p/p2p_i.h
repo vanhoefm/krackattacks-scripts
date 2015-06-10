@@ -514,9 +514,8 @@ struct p2p_data {
 	struct p2ps_advertisement *p2ps_adv_list;
 	struct p2ps_provision *p2ps_prov;
 	u8 wild_card_hash[P2PS_HASH_LEN];
-	u8 query_hash[P2P_MAX_QUERY_HASH * P2PS_HASH_LEN];
-	u8 query_count;
 	u8 p2ps_seek;
+	u8 p2ps_seek_hash[P2P_MAX_QUERY_HASH * P2PS_HASH_LEN];
 	u8 p2ps_seek_count;
 
 #ifdef CONFIG_WIFI_DISPLAY
@@ -848,7 +847,9 @@ void p2p_go_complete(struct p2p_data *p2p, struct p2p_device *peer);
 int p2p_match_dev_type(struct p2p_data *p2p, struct wpabuf *wps);
 int dev_type_list_match(const u8 *dev_type, const u8 *req_dev_type[],
 			size_t num_req_dev_type);
-struct wpabuf * p2p_build_probe_resp_ies(struct p2p_data *p2p);
+struct wpabuf * p2p_build_probe_resp_ies(struct p2p_data *p2p,
+					 const u8 *query_hash,
+					 u8 query_count);
 void p2p_build_ssid(struct p2p_data *p2p, u8 *ssid, size_t *ssid_len);
 int p2p_send_action(struct p2p_data *p2p, unsigned int freq, const u8 *dst,
 		    const u8 *src, const u8 *bssid, const u8 *buf,

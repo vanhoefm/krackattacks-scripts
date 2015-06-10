@@ -353,10 +353,10 @@ void p2p_buf_add_service_hash(struct wpabuf *buf, struct p2p_data *p2p)
 	/* Service Hash */
 	wpabuf_put_u8(buf, P2P_ATTR_SERVICE_HASH);
 	wpabuf_put_le16(buf, p2p->p2ps_seek_count * P2PS_HASH_LEN);
-	wpabuf_put_data(buf, p2p->query_hash,
+	wpabuf_put_data(buf, p2p->p2ps_seek_hash,
 			p2p->p2ps_seek_count * P2PS_HASH_LEN);
 	wpa_hexdump(MSG_DEBUG, "P2P: * Service Hash",
-		    p2p->query_hash, p2p->p2ps_seek_count * P2PS_HASH_LEN);
+		    p2p->p2ps_seek_hash, p2p->p2ps_seek_count * P2PS_HASH_LEN);
 }
 
 

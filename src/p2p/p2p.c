@@ -297,7 +297,7 @@ static void p2p_listen_in_find(struct p2p_data *p2p, int dev_disc)
 		return;
 	}
 
-	ies = p2p_build_probe_resp_ies(p2p);
+	ies = p2p_build_probe_resp_ies(p2p, NULL, 0);
 	if (ies == NULL)
 		return;
 
@@ -346,7 +346,7 @@ int p2p_listen(struct p2p_data *p2p, unsigned int timeout)
 		return 0;
 	}
 
-	ies = p2p_build_probe_resp_ies(p2p);
+	ies = p2p_build_probe_resp_ies(p2p, NULL, 0);
 	if (ies == NULL)
 		return -1;
 
@@ -1198,9 +1198,8 @@ int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 		p2p->p2ps_seek = 1;
 	} else if (seek && seek_count <= P2P_MAX_QUERY_HASH) {
 		u8 buf[P2PS_HASH_LEN];
-		int i;
+		int i, count = 0;
 
-		p2p->p2ps_seek_count = seek_count;
 		for (i = 0; i < seek_count; i++) {
 			if (!p2ps_gen_hash(p2p, seek[i], buf))
 				continue;
@@ -1208,13 +1207,16 @@ int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 			/* If asking for wildcard, don't do others */
 			if (os_memcmp(buf, p2p->wild_card_hash,
 				      P2PS_HASH_LEN) == 0) {
-				p2p->p2ps_seek_count = 0;
+				count = 0;
 				break;
 			}
 
-			os_memcpy(&p2p->query_hash[i * P2PS_HASH_LEN], buf,
-				  P2PS_HASH_LEN);
+			os_memcpy(&p2p->p2ps_seek_hash[count * P2PS_HASH_LEN],
+				  buf, P2PS_HASH_LEN);
+			count++;
 		}
+
+		p2p->p2ps_seek_count = count;
 		p2p->p2ps_seek = 1;
 	} else {
 		p2p->p2ps_seek_count = 0;
@@ -1224,7 +1226,8 @@ int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 	/* Special case to perform wildcard search */
 	if (p2p->p2ps_seek_count == 0 && p2p->p2ps_seek) {
 		p2p->p2ps_seek_count = 1;
-		os_memcpy(&p2p->query_hash, p2p->wild_card_hash, P2PS_HASH_LEN);
+		os_memcpy(&p2p->p2ps_seek_hash, p2p->wild_card_hash,
+			  P2PS_HASH_LEN);
 	}
 
 	p2p->start_after_scan = P2P_AFTER_SCAN_NOTHING;
@@ -2159,7 +2162,9 @@ int p2p_match_dev_type(struct p2p_data *p2p, struct wpabuf *wps)
 }
 
 
-struct wpabuf * p2p_build_probe_resp_ies(struct p2p_data *p2p)
+struct wpabuf * p2p_build_probe_resp_ies(struct p2p_data *p2p,
+					 const u8 *query_hash,
+					 u8 query_count)
 {
 	struct wpabuf *buf;
 	u8 *len;
@@ -2174,7 +2179,7 @@ struct wpabuf * p2p_build_probe_resp_ies(struct p2p_data *p2p)
 	if (p2p->vendor_elem && p2p->vendor_elem[VENDOR_ELEM_PROBE_RESP_P2P])
 		extra += wpabuf_len(p2p->vendor_elem[VENDOR_ELEM_PROBE_RESP_P2P]);
 
-	if (p2p->query_count)
+	if (query_count)
 		extra += MAX_SVC_ADV_IE_LEN;
 
 	buf = wpabuf_alloc(1000 + extra);
@@ -2211,9 +2216,8 @@ struct wpabuf * p2p_build_probe_resp_ies(struct p2p_data *p2p)
 	p2p_buf_add_device_info(buf, p2p, NULL);
 	p2p_buf_update_ie_hdr(buf, len);
 
-	if (p2p->query_count) {
-		p2p_buf_add_service_instance(buf, p2p, p2p->query_count,
-					     p2p->query_hash,
+	if (query_count) {
+		p2p_buf_add_service_instance(buf, p2p, query_count, query_hash,
 					     p2p->p2ps_adv_list);
 	}
 
@@ -2253,6 +2257,8 @@ p2p_reply_probe(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 	struct ieee80211_mgmt *resp;
 	struct p2p_message msg;
 	struct wpabuf *ies;
+	u8 query_hash[P2P_MAX_QUERY_HASH * P2PS_HASH_LEN];
+	u8 query_count;
 	u8 channel, op_class;
 
 	if (ieee802_11_parse_elems((u8 *) ie, ie_len, &elems, 0) ==
@@ -2305,13 +2311,13 @@ p2p_reply_probe(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 		return P2P_PREQ_NOT_P2P;
 	}
 
+	query_count = 0;
 	if (msg.service_hash && msg.service_hash_count) {
 		const u8 *hash = msg.service_hash;
-		u8 *dest = p2p->query_hash;
+		u8 *dest = query_hash;
 		u8 i;
 		int p2ps_svc_found = 0;
 
-		p2p->query_count = 0;
 		for (i = 0; i < msg.service_hash_count; i++) {
 			if (p2p_service_find_asp(p2p, hash)) {
 				p2ps_svc_found = 1;
@@ -2320,21 +2326,21 @@ p2p_reply_probe(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 					       P2PS_HASH_LEN)) {
 					/* We found match(es) but wildcard
 					 * will return all */
-					p2p->query_count = 1;
-					os_memcpy(p2p->query_hash, hash,
+					query_count = 1;
+					os_memcpy(query_hash, hash,
 						  P2PS_HASH_LEN);
 					break;
 				}
 
 				/* Save each matching hash */
-				if (p2p->query_count < P2P_MAX_QUERY_HASH) {
+				if (query_count < P2P_MAX_QUERY_HASH) {
 					os_memcpy(dest, hash, P2PS_HASH_LEN);
 					dest += P2PS_HASH_LEN;
-					p2p->query_count++;
+					query_count++;
 				} else {
 					/* We found match(es) but too many to
 					 * return all */
-					p2p->query_count = 0;
+					query_count = 0;
 					break;
 				}
 			}
@@ -2350,7 +2356,6 @@ p2p_reply_probe(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 		}
 	} else {
 		/* This is not a P2PS Probe Request */
-		p2p->query_count = 0;
 		p2p_dbg(p2p, "No P2PS Hash in Probe Request");
 
 		if (!p2p->in_listen || !p2p->drv_in_listen) {
@@ -2395,7 +2400,7 @@ p2p_reply_probe(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 	 * really only used for discovery purposes, not to learn exact BSS
 	 * parameters.
 	 */
-	ies = p2p_build_probe_resp_ies(p2p);
+	ies = p2p_build_probe_resp_ies(p2p, query_hash, query_count);
 	if (ies == NULL)
 		return P2P_PREQ_NOT_PROCESSED;
 
@@ -2468,8 +2473,6 @@ p2p_probe_req_rx(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 	p2p_add_dev_from_probe_req(p2p, addr, ie, ie_len);
 
 	res = p2p_reply_probe(p2p, addr, dst, bssid, ie, ie_len, rx_freq);
-	p2p->query_count = 0;
-
 	if (res != P2P_PREQ_PROCESSED && res != P2P_PREQ_NOT_PROCESSED)
 		return res;
 

@@ -2970,7 +2970,7 @@ void p2p_deinit(struct p2p_data *p2p)
 	os_free(p2p->cfg->serial_number);
 	os_free(p2p->cfg->pref_chan);
 	os_free(p2p->groups);
-	os_free(p2p->p2ps_prov);
+	p2ps_prov_free(p2p);
 	wpabuf_free(p2p->sd_resp);
 	os_free(p2p->after_scan_tx);
 	p2p_remove_wps_vendor_extensions(p2p);

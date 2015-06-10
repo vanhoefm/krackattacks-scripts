@@ -803,6 +803,7 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 int p2p_send_prov_disc_req(struct p2p_data *p2p, struct p2p_device *dev,
 			   int join, int force_freq);
 void p2p_reset_pending_pd(struct p2p_data *p2p);
+void p2ps_prov_free(struct p2p_data *p2p);
 
 /* p2p_invitation.c */
 void p2p_process_invitation_req(struct p2p_data *p2p, const u8 *sa,

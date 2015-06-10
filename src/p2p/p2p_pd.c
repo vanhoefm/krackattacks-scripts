@@ -881,8 +881,7 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 						 P2P_PROV_DISC_REJECTED,
 						 adv_id, adv_mac, NULL);
 		p2p_parse_free(&msg);
-		os_free(p2p->p2ps_prov);
-		p2p->p2ps_prov = NULL;
+		p2ps_prov_free(p2p);
 		goto out;
 	}
 
@@ -920,8 +919,7 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 				conncap, passwd_id, msg.persistent_ssid,
 				msg.persistent_ssid_len, 1, 0, NULL);
 		}
-		os_free(p2p->p2ps_prov);
-		p2p->p2ps_prov = NULL;
+		p2ps_prov_free(p2p);
 	}
 
 	if (status != P2P_SC_SUCCESS &&
@@ -933,8 +931,7 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 				p2p->p2ps_prov->session_mac,
 				group_mac, adv_id, p2p->p2ps_prov->session_id,
 				0, 0, NULL, 0, 1, 0, NULL);
-		os_free(p2p->p2ps_prov);
-		p2p->p2ps_prov = NULL;
+		p2ps_prov_free(p2p);
 	}
 
 	if (status == P2P_SC_FAIL_INFO_CURRENTLY_UNAVAILABLE) {
@@ -950,8 +947,7 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 
 			if (!deferred_sess_resp) {
 				p2p_parse_free(&msg);
-				os_free(p2p->p2ps_prov);
-				p2p->p2ps_prov = NULL;
+				p2ps_prov_free(p2p);
 				goto out;
 			}
 			utf8_escape((char *) msg.session_info, info_len,
@@ -978,8 +974,7 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 						 P2P_PROV_DISC_REJECTED, 0,
 						 NULL, NULL);
 		p2p_parse_free(&msg);
-		os_free(p2p->p2ps_prov);
-		p2p->p2ps_prov = NULL;
+		p2ps_prov_free(p2p);
 		goto out;
 	}
 
@@ -1120,7 +1115,7 @@ int p2p_prov_disc_req(struct p2p_data *p2p, const u8 *peer_addr,
 
 	/* Reset provisioning info */
 	dev->wps_prov_info = 0;
-	os_free(p2p->p2ps_prov);
+	p2ps_prov_free(p2p);
 	p2p->p2ps_prov = p2ps_prov;
 
 	dev->req_config_methods = config_methods;
@@ -1175,4 +1170,11 @@ void p2p_reset_pending_pd(struct p2p_data *p2p)
 	os_memset(p2p->pending_pd_devaddr, 0, ETH_ALEN);
 	p2p->pd_retries = 0;
 	p2p->pd_force_freq = 0;
+}
+
+
+void p2ps_prov_free(struct p2p_data *p2p)
+{
+	os_free(p2p->p2ps_prov);
+	p2p->p2ps_prov = NULL;
 }

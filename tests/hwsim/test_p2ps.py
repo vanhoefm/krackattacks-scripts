@@ -174,10 +174,10 @@ def p2ps_provision_keypad_method(i_dev, r_dev, autoaccept,
         ev1 = i_dev.wait_global_event(["P2PS-PROV-DONE"], timeout=10)
         if ev1 is None:
             raise Exception("P2PS-PROV-DONE timeout on seeker side")
-        ev1 = i_dev.wait_global_event(["P2P-PROV-DISC-ENTER-PIN"], timeout=10)
-        if ev1 is None:
+        ev2 = i_dev.wait_global_event(["P2P-PROV-DISC-ENTER-PIN"], timeout=10)
+        if ev2 is None:
             raise Exception("P2P-PROV-DISC-ENTER-PIN failed on seeker side")
-        if r_dev.p2p_dev_addr() not in ev1:
+        if r_dev.p2p_dev_addr() not in ev2:
             raise Exception("Unknown peer ")
         return ev1
 

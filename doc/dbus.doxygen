@@ -1647,6 +1647,14 @@ Interface implemented by objects representing P2P peer devices.
   </li>
 
   <li>
+    <h3>ModelNumber - s - (read)</h3>
+  </li>
+
+  <li>
+    <h3>SerialNumber - s - (read)</h3>
+  </li>
+
+  <li>
     <h3>PrimaryDeviceType - ay - (read)</h3>
   </li>
 

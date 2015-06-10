@@ -3319,6 +3319,14 @@ static const struct wpa_dbus_property_desc wpas_dbus_p2p_peer_properties[] = {
 	  wpas_dbus_getter_p2p_peer_modelname,
 	  NULL
 	},
+	{ "ModelNumber", WPAS_DBUS_NEW_IFACE_P2P_PEER, "s",
+	  wpas_dbus_getter_p2p_peer_modelnumber,
+	  NULL
+	},
+	{ "SerialNumber", WPAS_DBUS_NEW_IFACE_P2P_PEER, "s",
+	  wpas_dbus_getter_p2p_peer_serialnumber,
+	  NULL
+	},
 	{ "PrimaryDeviceType", WPAS_DBUS_NEW_IFACE_P2P_PEER, "ay",
 	  wpas_dbus_getter_p2p_peer_primary_device_type,
 	  NULL

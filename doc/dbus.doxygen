@@ -1643,6 +1643,10 @@ Interface implemented by objects representing P2P peer devices.
   </li>
 
   <li>
+    <h3>ModelName - s - (read)</h3>
+  </li>
+
+  <li>
     <h3>PrimaryDeviceType - ay - (read)</h3>
   </li>
 

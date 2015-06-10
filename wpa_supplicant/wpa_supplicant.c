@@ -873,7 +873,8 @@ int wpa_supplicant_reload_configuration(struct wpa_supplicant *wpa_s)
 
 	eapol_sm_invalidate_cached_session(wpa_s->eapol);
 	if (wpa_s->current_ssid) {
-		wpa_s->own_disconnect_req = 1;
+		if (wpa_s->wpa_state >= WPA_AUTHENTICATING)
+			wpa_s->own_disconnect_req = 1;
 		wpa_supplicant_deauthenticate(wpa_s,
 					      WLAN_REASON_DEAUTH_LEAVING);
 	}
@@ -2604,7 +2605,8 @@ void wpa_supplicant_select_network(struct wpa_supplicant *wpa_s,
 	int disconnected = 0;
 
 	if (ssid && ssid != wpa_s->current_ssid && wpa_s->current_ssid) {
-		wpa_s->own_disconnect_req = 1;
+		if (wpa_s->wpa_state >= WPA_AUTHENTICATING)
+			wpa_s->own_disconnect_req = 1;
 		wpa_supplicant_deauthenticate(
 			wpa_s, WLAN_REASON_DEAUTH_LEAVING);
 		disconnected = 1;

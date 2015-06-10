@@ -2444,7 +2444,7 @@ p2p_reply_probe(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 
 	wpabuf_free(buf);
 
-	return P2P_PREQ_NOT_PROCESSED;
+	return P2P_PREQ_PROCESSED;
 }
 
 
@@ -2460,6 +2460,17 @@ p2p_probe_req_rx(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 	res = p2p_reply_probe(p2p, addr, dst, bssid, ie, ie_len, rx_freq);
 	p2p->query_count = 0;
 
+	if (res != P2P_PREQ_PROCESSED && res != P2P_PREQ_NOT_PROCESSED)
+		return res;
+
+	/*
+	 * Activate a pending GO Negotiation/Invite flow if a received Probe
+	 * Request frame is from an expected peer. Some devices may share the
+	 * same address for P2P and non-P2P STA running simultaneously. The
+	 * P2P_PREQ_PROCESSED and P2P_PREQ_NOT_PROCESSED p2p_reply_probe()
+	 * return values verified above ensure we are handling a Probe Request
+	 * frame from a P2P peer.
+	 */
 	if ((p2p->state == P2P_CONNECT || p2p->state == P2P_CONNECT_LISTEN) &&
 	    p2p->go_neg_peer &&
 	    os_memcmp(addr, p2p->go_neg_peer->info.p2p_device_addr, ETH_ALEN)
@@ -2469,7 +2480,7 @@ p2p_probe_req_rx(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 		p2p_dbg(p2p, "Found GO Negotiation peer - try to start GO negotiation from timeout");
 		eloop_cancel_timeout(p2p_go_neg_start, p2p, NULL);
 		eloop_register_timeout(0, 0, p2p_go_neg_start, p2p, NULL);
-		return P2P_PREQ_PROCESSED;
+		return res;
 	}
 
 	if ((p2p->state == P2P_INVITE || p2p->state == P2P_INVITE_LISTEN) &&
@@ -2481,7 +2492,7 @@ p2p_probe_req_rx(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 		p2p_dbg(p2p, "Found Invite peer - try to start Invite from timeout");
 		eloop_cancel_timeout(p2p_invite_start, p2p, NULL);
 		eloop_register_timeout(0, 0, p2p_invite_start, p2p, NULL);
-		return P2P_PREQ_PROCESSED;
+		return res;
 	}
 
 	return res;

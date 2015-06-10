@@ -1249,6 +1249,7 @@ Interface for performing P2P (Wi-Fi Peer-to-Peer) P2P Device operations.
     <tr><td>GOIntent</td><td>u</td><td></td></tr>
     <tr><td>PersistentReconnect</td><td>b</td><td></td></tr>
     <tr><td>ListenRegClass</td><td>u</td><td></td></tr>
+    <tr><td>ListenChannel</td><td>u</td><td></td></tr>
     <tr><td>OperRegClass</td><td>u</td><td></td></tr>
     <tr><td>OperChannel</td><td>u</td><td></td></tr>
     <tr><td>SsidPostfix</td><td>s</td><td></td></tr>

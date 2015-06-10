@@ -1163,8 +1163,6 @@ static int hostapd_config_vht_capab(struct hostapd_config *conf,
 		conf->vht_capab |= (1 << VHT_CAP_SOUNDING_DIMENSION_OFFSET);
 	if (os_strstr(capab, "[MU-BEAMFORMER]"))
 		conf->vht_capab |= VHT_CAP_MU_BEAMFORMER_CAPABLE;
-	if (os_strstr(capab, "[MU-BEAMFORMEE]"))
-		conf->vht_capab |= VHT_CAP_MU_BEAMFORMEE_CAPABLE;
 	if (os_strstr(capab, "[VHT-TXOP-PS]"))
 		conf->vht_capab |= VHT_CAP_VHT_TXOP_PS;
 	if (os_strstr(capab, "[HTC-VHT]"))

@@ -728,6 +728,30 @@ void wpa_supplicant_set_state(struct wpa_supplicant *wpa_s,
 		wpa_s->normal_scans = 0;
 	}
 
+#ifdef CONFIG_P2P
+	/*
+	 * P2PS client has to reply to Probe Request frames received on the
+	 * group operating channel. Enable Probe Request frame reporting for
+	 * P2P connected client in case p2p_cli_probe configuration property is
+	 * set to 1.
+	 */
+	if (wpa_s->conf->p2p_cli_probe && wpa_s->current_ssid &&
+	    wpa_s->current_ssid->mode == WPAS_MODE_INFRA &&
+	    wpa_s->current_ssid->p2p_group) {
+		if (state == WPA_COMPLETED && !wpa_s->p2p_cli_probe) {
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"P2P: Enable CLI Probe Request RX reporting");
+			wpa_s->p2p_cli_probe =
+				wpa_drv_probe_req_report(wpa_s, 1) >= 0;
+		} else if (state != WPA_COMPLETED && wpa_s->p2p_cli_probe) {
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"P2P: Disable CLI Probe Request RX reporting");
+			wpa_s->p2p_cli_probe = 0;
+			wpa_drv_probe_req_report(wpa_s, 0);
+		}
+	}
+#endif /* CONFIG_P2P */
+
 	if (state != WPA_SCANNING)
 		wpa_supplicant_notify_scanning(wpa_s, 0);
 

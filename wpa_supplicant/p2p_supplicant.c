@@ -1874,6 +1874,7 @@ static void wpas_p2p_clone_config(struct wpa_supplicant *dst,
 		d->wps_nfc_dh_privkey = wpabuf_dup(s->wps_nfc_dh_privkey);
 		d->wps_nfc_dh_pubkey = wpabuf_dup(s->wps_nfc_dh_pubkey);
 	}
+	d->p2p_cli_probe = s->p2p_cli_probe;
 }
 
 
@@ -2384,7 +2385,14 @@ static void wpas_stop_listen(void *ctx)
 		wpa_s->roc_waiting_drv_freq = 0;
 	}
 	wpa_drv_set_ap_wps_ie(wpa_s, NULL, NULL, NULL);
-	wpa_drv_probe_req_report(wpa_s, 0);
+
+	/*
+	 * Don't cancel Probe Request RX reporting for a connected P2P Client
+	 * handling Probe Request frames.
+	 */
+	if (!wpa_s->p2p_cli_probe)
+		wpa_drv_probe_req_report(wpa_s, 0);
+
 	wpas_p2p_listen_work_done(wpa_s);
 }
 

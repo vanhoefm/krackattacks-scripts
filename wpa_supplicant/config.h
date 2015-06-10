@@ -968,6 +968,18 @@ struct wpa_config {
 	int p2p_no_group_iface;
 
 	/**
+	 * p2p_cli_probe - Enable/disable P2P CLI probe request handling
+	 *
+	 * If this parameter is set to 1, a connected P2P Client will receive
+	 * and handle Probe Request frames. Setting this parameter to 0
+	 * disables this option. Default value: 0.
+	 *
+	 * Note: Setting this property at run time takes effect on the following
+	 * interface state transition to/from the WPA_COMPLETED state.
+	 */
+	int p2p_cli_probe;
+
+	/**
 	 * okc - Whether to enable opportunistic key caching by default
 	 *
 	 * By default, OKC is disabled unless enabled by the per-network

@@ -518,7 +518,6 @@ struct p2p_data {
 	u8 query_count;
 	u8 p2ps_seek;
 	u8 p2ps_seek_count;
-	u8 p2ps_svc_found;
 
 #ifdef CONFIG_WIFI_DISPLAY
 	struct wpabuf *wfd_ie_beacon;

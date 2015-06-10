@@ -2305,17 +2305,16 @@ p2p_reply_probe(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 		return P2P_PREQ_NOT_P2P;
 	}
 
-	p2p->p2ps_svc_found = 0;
-
 	if (msg.service_hash && msg.service_hash_count) {
 		const u8 *hash = msg.service_hash;
 		u8 *dest = p2p->query_hash;
 		u8 i;
+		int p2ps_svc_found = 0;
 
 		p2p->query_count = 0;
 		for (i = 0; i < msg.service_hash_count; i++) {
 			if (p2p_service_find_asp(p2p, hash)) {
-				p2p->p2ps_svc_found = 1;
+				p2ps_svc_found = 1;
 
 				if (!os_memcmp(hash, p2p->wild_card_hash,
 					       P2PS_HASH_LEN)) {
@@ -2342,10 +2341,10 @@ p2p_reply_probe(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 			hash += P2PS_HASH_LEN;
 		}
 
-		p2p_dbg(p2p, "ASP adv found: %d", p2p->p2ps_svc_found);
+		p2p_dbg(p2p, "ASP adv found: %d", p2ps_svc_found);
 
 		/* Probed hash unknown */
-		if (!p2p->p2ps_svc_found) {
+		if (!p2ps_svc_found) {
 			p2p_parse_free(&msg);
 			return P2P_PREQ_NOT_PROCESSED;
 		}

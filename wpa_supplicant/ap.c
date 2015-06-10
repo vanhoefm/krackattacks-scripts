@@ -486,7 +486,7 @@ static int ap_probe_req_rx(void *ctx, const u8 *sa, const u8 *da,
 {
 	struct wpa_supplicant *wpa_s = ctx;
 	return wpas_p2p_probe_req_rx(wpa_s, sa, da, bssid, ie, ie_len,
-				     ssi_signal);
+				     0, ssi_signal);
 }
 
 

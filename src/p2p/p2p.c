@@ -2234,13 +2234,15 @@ static int p2p_service_find_asp(struct p2p_data *p2p, const u8 *hash)
 
 static enum p2p_probe_req_status
 p2p_reply_probe(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
-		const u8 *bssid, const u8 *ie, size_t ie_len)
+		const u8 *bssid, const u8 *ie, size_t ie_len,
+		unsigned int rx_freq)
 {
 	struct ieee802_11_elems elems;
 	struct wpabuf *buf;
 	struct ieee80211_mgmt *resp;
 	struct p2p_message msg;
 	struct wpabuf *ies;
+	u8 channel, op_class;
 
 	if (ieee802_11_parse_elems((u8 *) ie, ie_len, &elems, 0) ==
 	    ParseFailed) {
@@ -2423,9 +2425,17 @@ p2p_reply_probe(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 	wpabuf_put_u8(buf, 480 / 5);
 	wpabuf_put_u8(buf, 540 / 5);
 
+	if (!rx_freq) {
+		channel = p2p->cfg->channel;
+	} else if (p2p_freq_to_channel(rx_freq, &op_class, &channel)) {
+		wpabuf_free(ies);
+		wpabuf_free(buf);
+		return P2P_PREQ_NOT_PROCESSED;
+	}
+
 	wpabuf_put_u8(buf, WLAN_EID_DS_PARAMS);
 	wpabuf_put_u8(buf, 1);
-	wpabuf_put_u8(buf, p2p->cfg->channel);
+	wpabuf_put_u8(buf, channel);
 
 	wpabuf_put_buf(buf, ies);
 	wpabuf_free(ies);
@@ -2440,13 +2450,14 @@ p2p_reply_probe(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 
 enum p2p_probe_req_status
 p2p_probe_req_rx(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
-		 const u8 *bssid, const u8 *ie, size_t ie_len)
+		 const u8 *bssid, const u8 *ie, size_t ie_len,
+		 unsigned int rx_freq)
 {
 	enum p2p_probe_req_status res;
 
 	p2p_add_dev_from_probe_req(p2p, addr, ie, ie_len);
 
-	res = p2p_reply_probe(p2p, addr, dst, bssid, ie, ie_len);
+	res = p2p_reply_probe(p2p, addr, dst, bssid, ie, ie_len, rx_freq);
 	p2p->query_count = 0;
 
 	if ((p2p->state == P2P_CONNECT || p2p->state == P2P_CONNECT_LISTEN) &&

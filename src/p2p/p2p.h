@@ -1463,11 +1463,13 @@ enum p2p_probe_req_status {
  * @bssid: BSSID if available or %NULL
  * @ie: Information elements from the Probe Request frame body
  * @ie_len: Length of ie buffer in octets
+ * @rx_freq: Probe Request frame RX frequency
  * Returns: value indicating the type and status of the probe request
  */
 enum p2p_probe_req_status
 p2p_probe_req_rx(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
-		 const u8 *bssid, const u8 *ie, size_t ie_len);
+		 const u8 *bssid, const u8 *ie, size_t ie_len,
+		 unsigned int rx_freq);
 
 /**
  * p2p_rx_action - Report received Action frame

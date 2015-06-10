@@ -3491,6 +3491,7 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 				wpas_p2p_probe_req_rx(
 					wpa_s, src, mgmt->da,
 					mgmt->bssid, ie, ie_len,
+					data->rx_mgmt.freq,
 					data->rx_mgmt.ssi_signal);
 				break;
 			}
@@ -3562,6 +3563,7 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 				      data->rx_probe_req.bssid,
 				      data->rx_probe_req.ie,
 				      data->rx_probe_req.ie_len,
+				      0,
 				      data->rx_probe_req.ssi_signal);
 		break;
 	case EVENT_REMAIN_ON_CHANNEL:

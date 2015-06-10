@@ -158,7 +158,7 @@ void wpas_p2p_update_config(struct wpa_supplicant *wpa_s);
 int wpas_p2p_probe_req_rx(struct wpa_supplicant *wpa_s, const u8 *addr,
 			  const u8 *dst, const u8 *bssid,
 			  const u8 *ie, size_t ie_len,
-			  int ssi_signal);
+			  unsigned int rx_freq, int ssi_signal);
 void wpas_p2p_wps_success(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 			  int registrar);
 void wpas_p2p_update_channel_list(struct wpa_supplicant *wpa_s);
@@ -212,7 +212,7 @@ static inline int wpas_p2p_probe_req_rx(struct wpa_supplicant *wpa_s,
 					const u8 *addr,
 					const u8 *dst, const u8 *bssid,
 					const u8 *ie, size_t ie_len,
-					int ssi_signal)
+					unsigned int rx_freq, int ssi_signal)
 {
 	return 0;
 }

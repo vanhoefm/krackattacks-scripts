@@ -239,6 +239,7 @@ struct hostapd_bss_config {
 	struct hostapd_eap_user *eap_user;
 	char *eap_user_sqlite;
 	char *eap_sim_db;
+	unsigned int eap_sim_db_timeout;
 	int eap_server_erp; /* Whether ERP is enabled on internal EAP server */
 	struct hostapd_ip_addr own_ip_addr;
 	char *nas_identifier;

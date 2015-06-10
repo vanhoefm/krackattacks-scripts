@@ -65,6 +65,7 @@ void hostapd_config_defaults_bss(struct hostapd_bss_config *bss)
 	bss->dtim_period = 2;
 
 	bss->radius_server_auth_port = 1812;
+	bss->eap_sim_db_timeout = 1;
 	bss->ap_max_inactivity = AP_MAX_INACTIVITY;
 	bss->eapol_version = EAPOL_VERSION;
 

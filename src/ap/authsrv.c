@@ -193,6 +193,7 @@ int authsrv_init(struct hostapd_data *hapd)
 	if (hapd->conf->eap_sim_db) {
 		hapd->eap_sim_db_priv =
 			eap_sim_db_init(hapd->conf->eap_sim_db,
+					hapd->conf->eap_sim_db_timeout,
 					hostapd_sim_db_cb, hapd);
 		if (hapd->eap_sim_db_priv == NULL) {
 			wpa_printf(MSG_ERROR, "Failed to initialize EAP-SIM "

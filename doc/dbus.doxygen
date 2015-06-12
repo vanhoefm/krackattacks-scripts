@@ -1388,7 +1388,7 @@ Interface for performing P2P (Wi-Fi Peer-to-Peer) P2P Device operations.
   </li>
 
   <li>
-    <h3>GONegotiationRequest ( o : path, i : dev_passwd_id )</h3>
+    <h3>GONegotiationRequest ( o : path, i : dev_passwd_id, y : device_go_intent )</h3>
   </li>
 
   <li>

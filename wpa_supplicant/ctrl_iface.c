@@ -5523,7 +5523,7 @@ static int p2p_ctrl_group_add_persistent(struct wpa_supplicant *wpa_s,
 
 static int p2p_ctrl_group_add(struct wpa_supplicant *wpa_s, char *cmd)
 {
-	int freq = 0, ht40, vht;
+	int freq = 0, persistent_group = 0, ht40, vht;
 	char *pos;
 
 	pos = os_strstr(cmd, "freq=");
@@ -5539,15 +5539,15 @@ static int p2p_ctrl_group_add(struct wpa_supplicant *wpa_s, char *cmd)
 						     ht40, vht);
 	if (os_strcmp(cmd, "persistent") == 0 ||
 	    os_strncmp(cmd, "persistent ", 11) == 0)
-		return wpas_p2p_group_add(wpa_s, 1, freq, ht40, vht);
-	if (os_strncmp(cmd, "freq=", 5) == 0)
-		return wpas_p2p_group_add(wpa_s, 0, freq, ht40, vht);
-	if (ht40)
-		return wpas_p2p_group_add(wpa_s, 0, freq, ht40, vht);
+		persistent_group = 1;
 
-	wpa_printf(MSG_DEBUG, "CTRL: Invalid P2P_GROUP_ADD parameters '%s'",
-		   cmd);
-	return -1;
+	if (!persistent_group && !freq && !ht40) {
+		wpa_printf(MSG_DEBUG,
+			   "CTRL: Invalid P2P_GROUP_ADD parameters '%s'", cmd);
+		return -1;
+	}
+
+	return wpas_p2p_group_add(wpa_s, persistent_group, freq, ht40, vht);
 }
 
 

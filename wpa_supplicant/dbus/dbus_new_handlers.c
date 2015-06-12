@@ -1601,6 +1601,30 @@ DBusMessage * wpas_dbus_handler_reattach(DBusMessage *message,
 
 
 /**
+ * wpas_dbus_handler_reconnect - Reconnect if disconnected
+ * @message: Pointer to incoming dbus message
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * Returns: InterfaceDisabled DBus error message if disabled
+ * or NULL otherwise.
+ *
+ * Handler function for "Reconnect" method call of network interface.
+ */
+DBusMessage * wpas_dbus_handler_reconnect(DBusMessage *message,
+		struct wpa_supplicant *wpa_s)
+{
+	if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED) {
+		return dbus_message_new_error(message,
+					      WPAS_DBUS_ERROR_IFACE_DISABLED,
+					      "This interface is disabled");
+	}
+
+	if (wpa_s->disconnected)
+		wpas_request_connection(wpa_s);
+	return NULL;
+}
+
+
+/**
  * wpas_dbus_handler_remove_network - Remove a configured network
  * @message: Pointer to incoming dbus message
  * @wpa_s: wpa_supplicant structure for a network interface

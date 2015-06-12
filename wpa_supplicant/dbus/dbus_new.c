@@ -2552,6 +2552,12 @@ static const struct wpa_dbus_method_desc wpas_dbus_interface_methods[] = {
 		  END_ARGS
 	  }
 	},
+	{ "Reconnect", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  (WPADBusMethodHandler) wpas_dbus_handler_reconnect,
+	  {
+		  END_ARGS
+	  }
+	},
 	{ "RemoveNetwork", WPAS_DBUS_NEW_IFACE_INTERFACE,
 	  (WPADBusMethodHandler) wpas_dbus_handler_remove_network,
 	  {

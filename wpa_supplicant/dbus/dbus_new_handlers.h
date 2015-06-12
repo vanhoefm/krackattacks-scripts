@@ -107,6 +107,9 @@ DBusMessage * wpas_dbus_handler_reassociate(DBusMessage *message,
 DBusMessage * wpas_dbus_handler_reattach(DBusMessage *message,
 					 struct wpa_supplicant *wpa_s);
 
+DBusMessage * wpas_dbus_handler_reconnect(DBusMessage *message,
+					  struct wpa_supplicant *wpa_s);
+
 DBusMessage * wpas_dbus_handler_remove_network(DBusMessage *message,
 					       struct wpa_supplicant *wpa_s);
 

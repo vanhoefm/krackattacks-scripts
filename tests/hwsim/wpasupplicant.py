@@ -914,6 +914,13 @@ class WpaSupplicant:
     def flush_scan_cache(self, freq=2417):
         self.request("BSS_FLUSH 0")
         self.scan(freq=freq, only_new=True)
+        res = self.request("SCAN_RESULTS")
+        if len(res.splitlines()) > 1:
+            self.request("BSS_FLUSH 0")
+            self.scan(freq=2422, only_new=True)
+            res = self.request("SCAN_RESULTS")
+            if len(res.splitlines()) > 1:
+                logger.info("flush_scan_cache: Could not clear all BSS entries. These remain:\n" + res)
 
     def roam(self, bssid, fail_test=False):
         self.dump_monitor()

@@ -580,7 +580,7 @@ static const char *const jp_op_class_cc[] = {
 };
 
 static const char *const cn_op_class_cc[] = {
-	"CN", "CA", NULL
+	"CN", NULL
 };
 
 

@@ -1,6 +1,6 @@
 # GAS tests
 # Copyright (c) 2013, Qualcomm Atheros, Inc.
-# Copyright (c) 2013-2014, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2015, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -14,6 +14,7 @@ import struct
 
 import hostapd
 from wpasupplicant import WpaSupplicant
+from utils import alloc_fail
 
 def hs20_ap_params():
     params = hostapd.wpa2_params(ssid="test-gas")
@@ -867,3 +868,63 @@ def test_gas_query_deinit(dev, apdev):
     # Remove the interface while the gas-query radio work is still pending and
     # GAS query has not yet been started.
     wpas.interface_remove("wlan5")
+
+def test_gas_anqp_oom_wpas(dev, apdev):
+    """GAS/ANQP query and OOM in wpa_supplicant"""
+    hapd = start_ap(apdev[0])
+    bssid = apdev[0]['bssid']
+
+    dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
+
+    with alloc_fail(dev[0], 1, "gas_build_req"):
+        if "FAIL" not in dev[0].request("ANQP_GET " + bssid + " 258"):
+            raise Exception("Unexpected ANQP_GET command success (OOM)")
+
+def test_gas_anqp_oom_hapd(dev, apdev):
+    """GAS/ANQP query and OOM in hostapd"""
+    hapd = start_ap(apdev[0])
+    bssid = apdev[0]['bssid']
+
+    dev[0].scan_for_bss(bssid, freq="2412", force_scan=True)
+
+    with alloc_fail(hapd, 1, "gas_build_resp"):
+        # This query will time out due to the AP not sending a response (OOM).
+        if "OK" not in dev[0].request("ANQP_GET " + bssid + " 258"):
+            raise Exception("ANQP_GET command failed")
+
+        ev = dev[0].wait_event(["GAS-QUERY-START"], timeout=5)
+        if ev is None:
+            raise Exception("GAS query start timed out")
+
+        ev = dev[0].wait_event(["GAS-QUERY-DONE"], timeout=10)
+        if ev is None:
+            raise Exception("GAS query timed out")
+        if "result=TIMEOUT" not in ev:
+            raise Exception("Unexpected result: " + ev)
+
+        ev = dev[0].wait_event(["ANQP-QUERY-DONE"], timeout=10)
+        if ev is None:
+            raise Exception("ANQP-QUERY-DONE event not seen")
+        if "result=FAILURE" not in ev:
+            raise Exception("Unexpected result: " + ev)
+
+    with alloc_fail(hapd, 1, "gas_anqp_build_comeback_resp"):
+        hapd.set("gas_frag_limit", "50")
+
+        # This query will time out due to the AP not sending a response (OOM).
+        print dev[0].request("FETCH_ANQP")
+        ev = dev[0].wait_event(["GAS-QUERY-START"], timeout=5)
+        if ev is None:
+            raise Exception("GAS query start timed out")
+
+        ev = dev[0].wait_event(["GAS-QUERY-DONE"], timeout=10)
+        if ev is None:
+            raise Exception("GAS query timed out")
+        if "result=TIMEOUT" not in ev:
+            raise Exception("Unexpected result: " + ev)
+
+        ev = dev[0].wait_event(["ANQP-QUERY-DONE"], timeout=10)
+        if ev is None:
+            raise Exception("ANQP-QUERY-DONE event not seen")
+        if "result=FAILURE" not in ev:
+            raise Exception("Unexpected result: " + ev)

@@ -1,6 +1,6 @@
 /*
  * common module tests
- * Copyright (c) 2014, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2014-2015, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -10,6 +10,8 @@
 
 #include "utils/common.h"
 #include "ieee802_11_common.h"
+#include "ieee802_11_defs.h"
+#include "gas.h"
 #include "wpa_common.h"
 
 
@@ -158,6 +160,34 @@ static int rsn_ie_parse_tests(void)
 }
 
 
+static int gas_tests(void)
+{
+	struct wpabuf *buf;
+
+	wpa_printf(MSG_INFO, "gas tests");
+	gas_anqp_set_len(NULL);
+
+	buf = wpabuf_alloc(1);
+	if (buf == NULL)
+		return -1;
+	gas_anqp_set_len(buf);
+	wpabuf_free(buf);
+
+	buf = wpabuf_alloc(20);
+	if (buf == NULL)
+		return -1;
+	wpabuf_put_u8(buf, WLAN_ACTION_PUBLIC);
+	wpabuf_put_u8(buf, WLAN_PA_GAS_INITIAL_REQ);
+	wpabuf_put_u8(buf, 0);
+	wpabuf_put_be32(buf, 0);
+	wpabuf_put_u8(buf, 0);
+	gas_anqp_set_len(buf);
+	wpabuf_free(buf);
+
+	return 0;
+}
+
+
 int common_module_tests(void)
 {
 	int ret = 0;
@@ -165,6 +195,7 @@ int common_module_tests(void)
 	wpa_printf(MSG_INFO, "common module tests");
 
 	if (ieee802_11_parse_tests() < 0 ||
+	    gas_tests() < 0 ||
 	    rsn_ie_parse_tests() < 0)
 		ret = -1;
 

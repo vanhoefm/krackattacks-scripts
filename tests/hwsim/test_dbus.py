@@ -1124,6 +1124,9 @@ def test_dbus_connect(dev, apdev):
                     iface.Reattach()
                 elif self.state == 5:
                     self.state = 6
+                    iface.Disconnect()
+                elif self.state == 7:
+                    self.state = 8
                     res = iface.SignalPoll()
                     logger.debug("SignalPoll: " + str(res))
                     if 'frequency' not in res or res['frequency'] != 2412:
@@ -1139,6 +1142,9 @@ def test_dbus_connect(dev, apdev):
                     iface.Reassociate()
                 elif self.state == 6:
                     self.state = 7
+                    iface.Reconnect()
+                elif self.state == 8:
+                    self.state = 9
                     self.loop.quit()
 
         def run_connect(self, *args):
@@ -1157,7 +1163,7 @@ def test_dbus_connect(dev, apdev):
                not self.network_removed or \
                not self.network_selected:
                 return False
-            return self.state == 7
+            return self.state == 9
 
     with TestDbusConnect(bus) as t:
         if not t.success():

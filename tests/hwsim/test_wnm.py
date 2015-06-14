@@ -519,3 +519,137 @@ def test_wnm_bss_tm(dev, apdev):
             hapd2.request("DISABLE")
         subprocess.call(['iw', 'reg', 'set', '00'])
         dev[0].flush_scan_cache()
+
+def start_wnm_tm(ap, country, dev):
+    params = { "ssid": "test-wnm",
+               "country_code": country,
+               "ieee80211d": "1",
+               "hw_mode": "g",
+               "channel": "1",
+               "bss_transition": "1" }
+    hapd = hostapd.add_ap(ap['ifname'], params)
+    id = dev.connect("test-wnm", key_mgmt="NONE", scan_freq="2412")
+    dev.dump_monitor()
+    dev.set_network(id, "scan_freq", "")
+    return hapd, id
+
+def stop_wnm_tm(hapd, dev):
+    dev.request("DISCONNECT")
+    try:
+        dev.wait_disconnected()
+    except:
+        pass
+    if hapd:
+        hapd.request("DISABLE")
+    subprocess.call(['iw', 'reg', 'set', '00'])
+    dev.flush_scan_cache()
+
+def wnm_bss_tm_check(hapd, dev, data):
+    addr = dev.p2p_interface_addr()
+    if "OK" not in hapd.request("BSS_TM_REQ " + addr + " " + data):
+        raise Exception("BSS_TM_REQ command failed")
+    ev = dev.wait_event(["CTRL-EVENT-SCAN-STARTED"], timeout=5)
+    if ev is None:
+        raise Exception("No scan started")
+    ev = dev.wait_event(["CTRL-EVENT-SCAN-RESULTS"], 15)
+    if ev is None:
+        raise Exception("Scan did not complete")
+
+    ev = hapd.wait_event(['BSS-TM-RESP'], timeout=10)
+    if ev is None:
+        raise Exception("No BSS Transition Management Response")
+    if "status_code=7" not in ev:
+        raise Exception("Unexpected response: " + ev)
+
+def test_wnm_bss_tm_country_us(dev, apdev):
+    """WNM BSS Transition Management (US)"""
+    try:
+        hapd = None
+        hapd, id = start_wnm_tm(apdev[0], "US", dev[0])
+
+        logger.info("Preferred Candidate List (no matching neighbor, known channels)")
+        wnm_bss_tm_check(hapd, dev[0], "pref=1 neighbor=11:22:33:44:55:66,0x0000,12,3,7,0301ff neighbor=00:11:22:33:44:55,0x0000,2,52,7,03010a neighbor=00:11:22:33:44:57,0x0000,4,100,7 neighbor=00:11:22:33:44:59,0x0000,3,149,7 neighbor=00:11:22:33:44:5b,0x0000,34,1,7 neighbor=00:11:22:33:44:5d,0x0000,5,149,7")
+
+        # Make the test take less time by limiting full scans
+        dev[0].set_network(id, "scan_freq", "2412")
+        logger.info("Preferred Candidate List (no matching neighbor, unknown channels)")
+        wnm_bss_tm_check(hapd, dev[0], "pref=1 neighbor=11:22:33:44:55:66,0x0000,12,0,7,0301ff neighbor=22:33:44:55:66:77,0x0000,12,12,7 neighbor=00:11:22:33:44:55,0x0000,2,35,7,03010a neighbor=00:11:22:33:44:56,0x0000,2,65,7 neighbor=00:11:22:33:44:57,0x0000,4,99,7 neighbor=00:11:22:33:44:58,0x0000,4,145,7")
+
+        logger.info("Preferred Candidate List (no matching neighbor, unknown channels 2)")
+        wnm_bss_tm_check(hapd, dev[0], "pref=1 neighbor=00:11:22:33:44:59,0x0000,3,148,7 neighbor=00:11:22:33:44:5a,0x0000,3,162,7 neighbor=00:11:22:33:44:5b,0x0000,34,0,7 neighbor=00:11:22:33:44:5c,0x0000,34,4,7 neighbor=00:11:22:33:44:5d,0x0000,5,148,7 neighbor=00:11:22:33:44:5e,0x0000,5,166,7 neighbor=00:11:22:33:44:5f,0x0000,0,0,7")
+    finally:
+        stop_wnm_tm(hapd, dev[0])
+
+def test_wnm_bss_tm_country_fi(dev, apdev):
+    """WNM BSS Transition Management (FI)"""
+    addr = dev[0].p2p_interface_addr()
+    try:
+        hapd = None
+        hapd, id = start_wnm_tm(apdev[0], "FI", dev[0])
+
+        logger.info("Preferred Candidate List (no matching neighbor, known channels)")
+        wnm_bss_tm_check(hapd, dev[0], "pref=1 neighbor=11:22:33:44:55:66,0x0000,4,3,7,0301ff neighbor=00:11:22:33:44:55,0x0000,1,36,7,03010a neighbor=00:11:22:33:44:57,0x0000,3,100,7 neighbor=00:11:22:33:44:59,0x0000,17,149,7 neighbor=00:11:22:33:44:5c,0x0000,18,1,7")
+
+        # Make the test take less time by limiting full scans
+        dev[0].set_network(id, "scan_freq", "2412")
+        logger.info("Preferred Candidate List (no matching neighbor, unknown channels)")
+        wnm_bss_tm_check(hapd, dev[0], "pref=1 neighbor=00:11:22:33:44:00,0x0000,4,0,7 neighbor=00:11:22:33:44:01,0x0000,4,14,7 neighbor=00:11:22:33:44:02,0x0000,1,35,7 neighbor=00:11:22:33:44:03,0x0000,1,65,7 neighbor=00:11:22:33:44:04,0x0000,3,99,7 neighbor=00:11:22:33:44:05,0x0000,3,141,7 neighbor=00:11:22:33:44:06,0x0000,17,148,7 neighbor=00:11:22:33:44:07,0x0000,17,170,7 neighbor=00:11:22:33:44:08,0x0000,18,0,7 neighbor=00:11:22:33:44:09,0x0000,18,5,7")
+
+        logger.info("Preferred Candidate List (no matching neighbor, unknown channels 2)")
+        wnm_bss_tm_check(hapd, dev[0], "pref=1 neighbor=00:11:22:33:44:00,0x0000,0,0,7")
+    finally:
+        stop_wnm_tm(hapd, dev[0])
+
+def test_wnm_bss_tm_country_jp(dev, apdev):
+    """WNM BSS Transition Management (JP)"""
+    addr = dev[0].p2p_interface_addr()
+    try:
+        hapd = None
+        hapd, id = start_wnm_tm(apdev[0], "JP", dev[0])
+
+        logger.info("Preferred Candidate List (no matching neighbor, known channels)")
+        wnm_bss_tm_check(hapd, dev[0], "pref=1 neighbor=11:22:33:44:55:66,0x0000,30,3,7,0301ff neighbor=00:11:22:33:44:55,0x0000,31,14,7,03010a neighbor=00:11:22:33:44:57,0x0000,1,36,7 neighbor=00:11:22:33:44:59,0x0000,34,100,7 neighbor=00:11:22:33:44:5c,0x0000,59,1,7")
+
+        # Make the test take less time by limiting full scans
+        dev[0].set_network(id, "scan_freq", "2412")
+        logger.info("Preferred Candidate List (no matching neighbor, unknown channels)")
+        wnm_bss_tm_check(hapd, dev[0], "pref=1 neighbor=11:22:33:44:55:66,0x0000,30,0,7,0301ff neighbor=22:33:44:55:66:77,0x0000,30,14,7 neighbor=00:11:22:33:44:56,0x0000,31,13,7 neighbor=00:11:22:33:44:57,0x0000,1,33,7 neighbor=00:11:22:33:44:58,0x0000,1,65,7 neighbor=00:11:22:33:44:5a,0x0000,34,99,7 neighbor=00:11:22:33:44:5b,0x0000,34,141,7 neighbor=00:11:22:33:44:5d,0x0000,59,0,7 neighbor=00:11:22:33:44:5e,0x0000,59,4,7 neighbor=00:11:22:33:44:5f,0x0000,0,0,7")
+    finally:
+        stop_wnm_tm(hapd, dev[0])
+
+def test_wnm_bss_tm_country_cn(dev, apdev):
+    """WNM BSS Transition Management (CN)"""
+    addr = dev[0].p2p_interface_addr()
+    try:
+        hapd = None
+        hapd, id = start_wnm_tm(apdev[0], "CN", dev[0])
+
+        logger.info("Preferred Candidate List (no matching neighbor, known channels)")
+        wnm_bss_tm_check(hapd, dev[0], "pref=1 neighbor=11:22:33:44:55:66,0x0000,7,3,7,0301ff neighbor=00:11:22:33:44:55,0x0000,1,36,7,03010a neighbor=00:11:22:33:44:57,0x0000,3,149,7 neighbor=00:11:22:33:44:59,0x0000,6,149,7")
+
+        # Make the test take less time by limiting full scans
+        dev[0].set_network(id, "scan_freq", "2412")
+        logger.info("Preferred Candidate List (no matching neighbor, unknown channels)")
+        wnm_bss_tm_check(hapd, dev[0], "pref=1 neighbor=11:22:33:44:55:66,0x0000,7,0,7,0301ff neighbor=22:33:44:55:66:77,0x0000,7,14,7 neighbor=00:11:22:33:44:56,0x0000,1,35,7 neighbor=00:11:22:33:44:57,0x0000,1,65,7 neighbor=00:11:22:33:44:58,0x0000,3,148,7 neighbor=00:11:22:33:44:5a,0x0000,3,166,7 neighbor=00:11:22:33:44:5f,0x0000,0,0,7")
+    finally:
+        stop_wnm_tm(hapd, dev[0])
+
+def test_wnm_bss_tm_global(dev, apdev):
+    """WNM BSS Transition Management (global)"""
+    addr = dev[0].p2p_interface_addr()
+    try:
+        hapd = None
+        hapd, id = start_wnm_tm(apdev[0], "XX", dev[0])
+
+        logger.info("Preferred Candidate List (no matching neighbor, known channels)")
+        wnm_bss_tm_check(hapd, dev[0], "pref=1 neighbor=11:22:33:44:55:66,0x0000,81,3,7,0301ff neighbor=00:11:22:33:44:55,0x0000,82,14,7,03010a neighbor=00:11:22:33:44:57,0x0000,83,1,7 neighbor=00:11:22:33:44:59,0x0000,115,36,7 neighbor=00:11:22:33:44:5a,0x0000,121,100,7 neighbor=00:11:22:33:44:5c,0x0000,124,149,7 neighbor=00:11:22:33:44:5d,0x0000,125,149,7 neighbor=00:11:22:33:44:5e,0x0000,128,42,7 neighbor=00:11:22:33:44:5f,0x0000,129,50,7 neighbor=00:11:22:33:44:60,0x0000,180,1,7")
+
+        # Make the test take less time by limiting full scans
+        dev[0].set_network(id, "scan_freq", "2412")
+        logger.info("Preferred Candidate List (no matching neighbor, unknown channels)")
+        wnm_bss_tm_check(hapd, dev[0], "pref=1 neighbor=00:11:22:33:44:00,0x0000,81,0,7 neighbor=00:11:22:33:44:01,0x0000,81,14,7 neighbor=00:11:22:33:44:02,0x0000,82,13,7 neighbor=00:11:22:33:44:03,0x0000,83,0,7 neighbor=00:11:22:33:44:04,0x0000,83,14,7 neighbor=00:11:22:33:44:05,0x0000,115,35,7 neighbor=00:11:22:33:44:06,0x0000,115,65,7 neighbor=00:11:22:33:44:07,0x0000,121,99,7 neighbor=00:11:22:33:44:08,0x0000,121,141,7 neighbor=00:11:22:33:44:09,0x0000,124,148,7")
+
+        logger.info("Preferred Candidate List (no matching neighbor, unknown channels 2)")
+        wnm_bss_tm_check(hapd, dev[0], "pref=1 neighbor=00:11:22:33:44:00,0x0000,124,162,7 neighbor=00:11:22:33:44:01,0x0000,125,148,7 neighbor=00:11:22:33:44:02,0x0000,125,170,7 neighbor=00:11:22:33:44:03,0x0000,128,35,7 neighbor=00:11:22:33:44:04,0x0000,128,162,7 neighbor=00:11:22:33:44:05,0x0000,129,49,7 neighbor=00:11:22:33:44:06,0x0000,129,115,7 neighbor=00:11:22:33:44:07,0x0000,180,0,7 neighbor=00:11:22:33:44:08,0x0000,180,5,7 neighbor=00:11:22:33:44:09,0x0000,0,0,7")
+    finally:
+        stop_wnm_tm(hapd, dev[0])

@@ -4411,10 +4411,25 @@ static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 					       wpa_s->pending_join_iface_addr);
 	}
 	if (bss) {
+		u8 dev_addr[ETH_ALEN];
+
 		freq = bss->freq;
 		wpa_printf(MSG_DEBUG, "P2P: Target GO operating frequency "
 			   "from BSS table: %d MHz (SSID %s)", freq,
 			   wpa_ssid_txt(bss->ssid, bss->ssid_len));
+		if (p2p_parse_dev_addr((const u8 *) (bss + 1), bss->ie_len,
+				       dev_addr) == 0 &&
+		    os_memcmp(wpa_s->pending_join_dev_addr,
+			      wpa_s->pending_join_iface_addr, ETH_ALEN) == 0 &&
+		    os_memcmp(dev_addr, wpa_s->pending_join_dev_addr,
+			      ETH_ALEN) != 0) {
+			wpa_printf(MSG_DEBUG,
+				   "P2P: Update target GO device address based on BSS entry: " MACSTR " (was " MACSTR ")",
+				   MAC2STR(dev_addr),
+				   MAC2STR(wpa_s->pending_join_dev_addr));
+			os_memcpy(wpa_s->pending_join_dev_addr, dev_addr,
+				  ETH_ALEN);
+		}
 	}
 	if (freq > 0) {
 		u16 method;

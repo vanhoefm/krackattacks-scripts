@@ -1,5 +1,5 @@
 # IBSS test cases
-# Copyright (c) 2013, Jouni Malinen <j@w1.fi>
+# Copyright (c) 2013-2015, Jouni Malinen <j@w1.fi>
 #
 # This software may be distributed under the terms of the BSD license.
 # See README for more details.
@@ -12,9 +12,9 @@ import subprocess
 
 import hwsim_utils
 
-def connect_ibss_cmd(dev, id):
+def connect_ibss_cmd(dev, id, freq=2412):
     dev.dump_monitor()
-    dev.select_network(id, freq="2412")
+    dev.select_network(id, freq=str(freq))
 
 def wait_ibss_connection(dev):
     logger.info(dev.ifname + " waiting for IBSS start/join to complete")
@@ -48,10 +48,10 @@ def wait_4way_handshake2(dev1, dev2, dev3):
 
 def add_ibss(dev, ssid, psk=None, proto=None, key_mgmt=None, pairwise=None,
              group=None, beacon_int=None, bssid=None, scan_freq=None,
-             wep_key0=None):
+             wep_key0=None, freq=2412):
     id = dev.add_network()
     dev.set_network(id, "mode", "1")
-    dev.set_network(id, "frequency", "2412")
+    dev.set_network(id, "frequency", str(freq))
     if scan_freq:
         dev.set_network(id, "scan_freq", str(scan_freq))
     dev.set_network_quoted(id, "ssid", ssid)
@@ -349,3 +349,40 @@ def test_ibss_rsn_error_case(dev):
     """IBSS RSN regression test for IBSS_RSN prior IBSS setup"""
     if "FAIL" not in dev[0].request("IBSS_RSN 02:03:04:05:06:07"):
         raise Exception("Unexpected IBSS_RSN result")
+
+def test_ibss_5ghz(dev):
+    """IBSS on 5 GHz band"""
+    try:
+        _test_ibss_5ghz(dev)
+    finally:
+        subprocess.call(['iw', 'reg', 'set', '00'])
+        dev[0].flush_scan_cache()
+        dev[1].flush_scan_cache()
+
+def _test_ibss_5ghz(dev):
+    subprocess.call(['iw', 'reg', 'set', 'US'])
+    for i in range(2):
+        for j in range(5):
+            ev = dev[i].wait_event(["CTRL-EVENT-REGDOM-CHANGE"], timeout=5)
+            if ev is None:
+                raise Exception("No regdom change event")
+            if "alpha2=US" in ev:
+                break
+        dev[i].dump_monitor()
+
+    ssid="ibss"
+    id = add_ibss(dev[0], ssid, key_mgmt="NONE", beacon_int="150", freq=5180)
+    connect_ibss_cmd(dev[0], id, freq=5180)
+    bssid0 = wait_ibss_connection(dev[0])
+
+    dev[1].scan_for_bss(bssid0, freq=5180)
+    id = add_ibss(dev[1], ssid, key_mgmt="NONE", beacon_int="200", freq=5180)
+    connect_ibss_cmd(dev[1], id, freq=5180)
+    bssid1 = wait_ibss_connection(dev[1])
+    if bssid0 != bssid1:
+        logger.info("STA0 BSSID " + bssid0 + " differs from STA1 BSSID " + bssid1)
+
+    dev[0].request("DISCONNECT")
+    dev[1].request("DISCONNECT")
+    dev[0].dump_monitor()
+    dev[1].dump_monitor()

@@ -48,6 +48,10 @@ static const struct ieee802_11_parse_test_data parse_tests[] = {
 	{ (u8 *) "\x6e\x00", 2, ParseOK, 1 },
 	{ (u8 *) "\xc7\x00", 2, ParseOK, 1 },
 	{ (u8 *) "\xc7\x01\x00", 3, ParseOK, 1 },
+	{ (u8 *) "\x03\x00\x2a\x00\x36\x00\x37\x00\x38\x00\x2d\x00\x3d\x00\xbf\x00\xc0\x00",
+	  18, ParseOK, 9 },
+	{ (u8 *) "\x8b\x00", 2, ParseOK, 1 },
+	{ (u8 *) "\xdd\x04\x00\x90\x4c\x04", 6, ParseUnknown, 1 },
 	{ NULL, 0, ParseOK, 0 }
 };
 

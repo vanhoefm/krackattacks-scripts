@@ -126,6 +126,8 @@ static void wpas_p2p_psk_failure_removal(void *eloop_ctx, void *timeout_ctx);
 static void wpas_p2p_group_deinit(struct wpa_supplicant *wpa_s);
 static int wpas_p2p_add_group_interface(struct wpa_supplicant *wpa_s,
 					enum wpa_driver_if_type type);
+static void wpas_p2p_group_formation_failed(struct wpa_supplicant *wpa_s,
+					    int already_deleted);
 
 
 /*
@@ -1231,7 +1233,7 @@ static void wpas_p2p_group_started(struct wpa_supplicant *wpa_s,
 
 
 static void wpas_group_formation_completed(struct wpa_supplicant *wpa_s,
-					   int success)
+					   int success, int already_deleted)
 {
 	struct wpa_ssid *ssid;
 	int client;
@@ -1256,6 +1258,8 @@ static void wpas_group_formation_completed(struct wpa_supplicant *wpa_s,
 	if (!success) {
 		wpa_msg_global(wpa_s->parent, MSG_INFO,
 			       P2P_EVENT_GROUP_FORMATION_FAILURE);
+		if (already_deleted)
+			return;
 		wpas_p2p_group_delete(wpa_s,
 				      P2P_GROUP_REMOVAL_FORMATION_FAILED);
 		return;
@@ -2020,17 +2024,18 @@ static void wpas_p2p_group_formation_timeout(void *eloop_ctx,
 {
 	struct wpa_supplicant *wpa_s = eloop_ctx;
 	wpa_printf(MSG_DEBUG, "P2P: Group Formation timed out");
-	wpas_p2p_group_formation_failed(wpa_s);
+	wpas_p2p_group_formation_failed(wpa_s, 0);
 }
 
 
-void wpas_p2p_group_formation_failed(struct wpa_supplicant *wpa_s)
+static void wpas_p2p_group_formation_failed(struct wpa_supplicant *wpa_s,
+					    int already_deleted)
 {
 	eloop_cancel_timeout(wpas_p2p_group_formation_timeout,
 			     wpa_s->parent, NULL);
 	if (wpa_s->global->p2p)
 		p2p_group_formation_failed(wpa_s->global->p2p);
-	wpas_group_formation_completed(wpa_s, 0);
+	wpas_group_formation_completed(wpa_s, 0, already_deleted);
 }
 
 
@@ -2111,7 +2116,7 @@ static void wpas_go_neg_completed(void *ctx, struct p2p_go_neg_results *res)
 			wpas_p2p_remove_pending_group_interface(wpa_s);
 			eloop_cancel_timeout(wpas_p2p_long_listen_timeout,
 					     wpa_s, NULL);
-			wpas_p2p_group_formation_failed(wpa_s);
+			wpas_p2p_group_formation_failed(wpa_s, 1);
 			return;
 		}
 		if (group_wpa_s != wpa_s) {
@@ -5748,7 +5753,7 @@ void wpas_p2p_wps_success(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 	}
 	if (wpa_s->global->p2p)
 		p2p_wps_success_cb(wpa_s->global->p2p, peer_addr);
-	wpas_group_formation_completed(wpa_s, 1);
+	wpas_group_formation_completed(wpa_s, 1, 0);
 }
 
 
@@ -6765,7 +6770,7 @@ int wpas_p2p_notif_pbc_overlap(struct wpa_supplicant *wpa_s)
 		   "session overlap");
 	if (wpa_s != wpa_s->parent)
 		wpa_msg_ctrl(wpa_s->parent, MSG_INFO, WPS_EVENT_OVERLAP);
-	wpas_p2p_group_formation_failed(wpa_s);
+	wpas_p2p_group_formation_failed(wpa_s, 0);
 	return 1;
 }
 
@@ -6875,7 +6880,7 @@ int wpas_p2p_cancel(struct wpa_supplicant *wpa_s)
 			eloop_cancel_timeout(wpas_p2p_group_formation_timeout,
 					     wpa_s->parent, NULL);
 			if (wpa_s->p2p_in_provisioning) {
-				wpas_group_formation_completed(wpa_s, 0);
+				wpas_group_formation_completed(wpa_s, 0, 0);
 				break;
 			}
 			wpas_p2p_group_delete(wpa_s,
@@ -6885,7 +6890,7 @@ int wpas_p2p_cancel(struct wpa_supplicant *wpa_s)
 			wpa_printf(MSG_DEBUG, "P2P: Interface %s in invitation found - cancelling",
 				   wpa_s->ifname);
 			found = 1;
-			wpas_p2p_group_formation_failed(wpa_s);
+			wpas_p2p_group_formation_failed(wpa_s, 0);
 		}
 	}
 
@@ -7081,7 +7086,7 @@ void wpas_p2p_notify_ap_sta_authorized(struct wpa_supplicant *wpa_s,
 			 */
 			if (wpa_s->global->p2p)
 				p2p_wps_success_cb(wpa_s->global->p2p, addr);
-			wpas_group_formation_completed(wpa_s, 1);
+			wpas_group_formation_completed(wpa_s, 1, 0);
 		}
 	}
 	if (!wpa_s->p2p_go_group_formation_completed) {

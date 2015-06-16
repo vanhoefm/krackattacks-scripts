@@ -56,6 +56,9 @@ DBusMessage *wpas_dbus_handler_p2p_invite(
 DBusMessage *wpas_dbus_handler_p2p_disconnect(
 	DBusMessage *message, struct wpa_supplicant *wpa_s);
 
+DBusMessage * wpas_dbus_handler_p2p_remove_client(
+	DBusMessage *message, struct wpa_supplicant *wpa_s);
+
 DBusMessage *wpas_dbus_handler_p2p_flush(
 	DBusMessage *message, struct wpa_supplicant *wpa_s);
 

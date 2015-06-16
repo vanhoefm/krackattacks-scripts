@@ -416,6 +416,64 @@ static dbus_bool_t wpa_dbus_p2p_check_enabled(struct wpa_supplicant *wpa_s,
 }
 
 
+DBusMessage * wpas_dbus_handler_p2p_remove_client(DBusMessage *message,
+						  struct wpa_supplicant *wpa_s)
+{
+	DBusMessageIter iter_dict;
+	DBusMessage *reply = NULL;
+	DBusMessageIter iter;
+	struct wpa_dbus_dict_entry entry;
+	char *peer_object_path = NULL;
+	char *interface_addr = NULL;
+	u8 peer_addr[ETH_ALEN];
+
+	if (!wpa_dbus_p2p_check_enabled(wpa_s, message, &reply, NULL))
+		return reply;
+
+	dbus_message_iter_init(message, &iter);
+
+	if (!wpa_dbus_dict_open_read(&iter, &iter_dict, NULL))
+		goto err;
+
+	while (wpa_dbus_dict_has_dict_entry(&iter_dict)) {
+		if (!wpa_dbus_dict_get_entry(&iter_dict, &entry))
+			goto err;
+
+		if (os_strcmp(entry.key, "peer") == 0 &&
+		    entry.type == DBUS_TYPE_OBJECT_PATH) {
+			os_free(peer_object_path);
+			peer_object_path = os_strdup(entry.str_value);
+			wpa_dbus_dict_entry_clear(&entry);
+		} else if (os_strcmp(entry.key, "iface") == 0 &&
+			   entry.type == DBUS_TYPE_STRING) {
+			os_free(interface_addr);
+			interface_addr = os_strdup(entry.str_value);
+			wpa_dbus_dict_entry_clear(&entry);
+		} else {
+			wpa_dbus_dict_entry_clear(&entry);
+			goto err;
+		}
+	}
+
+	if ((!peer_object_path && !interface_addr) ||
+	    (peer_object_path &&
+	     (parse_peer_object_path(peer_object_path, peer_addr) < 0 ||
+	      !p2p_peer_known(wpa_s->global->p2p, peer_addr))) ||
+	    (interface_addr && hwaddr_aton(interface_addr, peer_addr) < 0))
+		goto err;
+
+	wpas_p2p_remove_client(wpa_s, peer_addr, interface_addr != NULL);
+	reply = NULL;
+out:
+	os_free(peer_object_path);
+	os_free(interface_addr);
+	return reply;
+err:
+	reply = wpas_dbus_error_invalid_args(message, "Invalid address format");
+	goto out;
+}
+
+
 DBusMessage * wpas_dbus_handler_p2p_flush(DBusMessage *message,
 					  struct wpa_supplicant *wpa_s)
 {

@@ -1119,6 +1119,23 @@ Interface for performing P2P (Wi-Fi Peer-to-Peer) P2P Device operations.
   </li>
 
   <li>
+    <h3>RemoveClient ( a{sv} : args ) --> nothing</h3>
+    <p>Remove the client from all groups (operating and persistent) from the local GO.</p>
+    <h4>Arguments</h4>
+    <dl>
+      <dt>a{sv} : args</dt>
+      <dd>
+	A dictionary with parameters for removing a client:
+	<table>
+	<tr><th>Key</th><th>Value type</th><th>Description</th><th>Required</th></tr>
+	<tr><td>peer</td><td>o</td><td>Object path for peer's P2P Device Address</td><td>yes</td></tr>
+	<tr><td>iface</td><td>s</td><td>Interface address[MAC Address format] of the peer to be disconnected. Required if object path is not provided.</td><td>no</td></tr>
+	</table>
+      </dd>
+    </dl>
+  </li>
+
+  <li>
     <h3>Flush ( nothing ) --> nothing</h3>
     <p>Flush P2P peer table and state.</p>
   </li>

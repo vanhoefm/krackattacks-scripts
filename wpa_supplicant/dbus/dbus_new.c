@@ -1100,6 +1100,16 @@ error:
 }
 
 
+/**
+ * wpas_dbus_signal_p2p_go_neg_req - Signal P2P GO Negotiation Request RX
+ * @wpa_s: %wpa_supplicant network interface data
+ * @src: Source address of the message triggering this notification
+ * @dev_passwd_id: WPS Device Password Id
+ * @go_intent: Peer's GO Intent value
+ *
+ * Sends signal to notify that a peer P2P Device is requesting group owner
+ * negotiation with us.
+ */
 void wpas_dbus_signal_p2p_go_neg_req(struct wpa_supplicant *wpa_s,
 				     const u8 *src, u16 dev_passwd_id,
 				     u8 go_intent)

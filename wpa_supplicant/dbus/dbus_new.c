@@ -3521,7 +3521,7 @@ void wpas_dbus_signal_peer_device_lost(struct wpa_supplicant *wpa_s,
 /**
  * wpas_dbus_register_peer - Register a discovered peer object with dbus
  * @wpa_s: wpa_supplicant interface structure
- * @ssid: network configuration data
+ * @dev_addr: P2P Device Address of the peer
  * Returns: 0 on success, -1 on failure
  *
  * Registers network representing object with dbus

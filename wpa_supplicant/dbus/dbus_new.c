@@ -1307,10 +1307,9 @@ void wpas_dbus_signal_p2p_group_started(struct wpa_supplicant *wpa_s,
 
 
 /**
- *
- * Method to emit GONegotiation Success or Failure signals based
- * on status.
- * @status: Status of the GO neg request. 0 for success, other for errors.
+ * wpas_dbus_signal_p2p_go_neg_resp - Emit GONegotiation Success/Failure signal
+ * @wpa_s: %wpa_supplicant network interface data
+ * @res: Result of the GO Neg Request
  */
 void wpas_dbus_signal_p2p_go_neg_resp(struct wpa_supplicant *wpa_s,
 				      struct p2p_go_neg_results *res)

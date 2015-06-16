@@ -603,6 +603,7 @@ void wpas_dbus_signal_wps_event_success(struct wpa_supplicant *wpa_s)
 /**
  * wpas_dbus_signal_wps_event_fail - Signals Fail WPS event
  * @wpa_s: %wpa_supplicant network interface data
+ * @fail: WPS failure information
  *
  * Sends Event dbus signal with name "fail" and dictionary containing
  * "msg field with fail message number (int32) as arguments
@@ -644,6 +645,7 @@ void wpas_dbus_signal_wps_event_fail(struct wpa_supplicant *wpa_s,
 /**
  * wpas_dbus_signal_wps_event_m2d - Signals M2D WPS event
  * @wpa_s: %wpa_supplicant network interface data
+ * @m2d: M2D event data information
  *
  * Sends Event dbus signal with name "m2d" and dictionary containing
  * fields of wps_event_m2d structure.
@@ -709,6 +711,7 @@ void wpas_dbus_signal_wps_event_m2d(struct wpa_supplicant *wpa_s,
 /**
  * wpas_dbus_signal_wps_cred - Signals new credentials
  * @wpa_s: %wpa_supplicant network interface data
+ * @cred: WPS Credential information
  *
  * Sends signal with credentials in directory argument
  */
@@ -1810,6 +1813,7 @@ static void wpas_dbus_signal_persistent_group_removed(
 /**
  * wpas_dbus_signal_p2p_wps_failed - Signals WpsFailed event
  * @wpa_s: %wpa_supplicant network interface data
+ * @fail: WPS failure information
  *
  * Sends Event dbus signal with name "fail" and dictionary containing
  * "msg" field with fail message number (int32) as arguments

@@ -197,6 +197,13 @@ static void wpa_supplicant_ctrl_iface_receive(int sock, void *eloop_ctx,
 		reply_buf = wpa_supplicant_ctrl_iface_process(wpa_s, buf,
 							      &reply_len);
 		reply = reply_buf;
+
+		/*
+		 * There could be some password/key material in the command, so
+		 * clear the buffer explicitly now that it is not needed
+		 * anymore.
+		 */
+		os_memset(buf, 0, res);
 	}
 
 	if (!reply && reply_len == 1) {
@@ -846,6 +853,13 @@ static void wpa_supplicant_global_ctrl_iface_receive(int sock, void *eloop_ctx,
 		reply_buf = wpa_supplicant_global_ctrl_iface_process(
 			global, buf, &reply_len);
 		reply = reply_buf;
+
+		/*
+		 * There could be some password/key material in the command, so
+		 * clear the buffer explicitly now that it is not needed
+		 * anymore.
+		 */
+		os_memset(buf, 0, res);
 	}
 
 	if (!reply && reply_len == 1) {

@@ -324,4 +324,34 @@ enum qca_set_band {
 	QCA_SETBAND_2G,
 };
 
+/* IEEE 802.11 Vendor Specific elements */
+
+/**
+ * enum qca_vendor_element_id - QCA Vendor Specific element types
+ *
+ * These values are used to identify QCA Vendor Specific elements. The
+ * payload of the element starts with the three octet OUI (OUI_QCA) and
+ * is followed by a single octet type which is defined by this enum.
+ *
+ * @QCA_VENDOR_ELEM_P2P_PREF_CHAN_LIST: P2P preferred channel list.
+ *	This element can be used to specify preference order for supported
+ *	channels. The channels in this list are in preference order (the first
+ *	one has the highest preference) and are described as a pair of
+ *	(global) Operating Class and Channel Number (each one octet) fields.
+ *
+ *	This extends the standard P2P functionality by providing option to have
+ *	more than one preferred operating channel. When this element is present,
+ *	it replaces the preference indicated in the Operating Channel attribute.
+ *	For supporting other implementations, the Operating Channel attribute is
+ *	expected to be used with the highest preference channel. Similarly, all
+ *	the channels included in this Preferred channel list element are
+ *	expected to be included in the Channel List attribute.
+ *
+ *	This vendor element may be included in GO Negotiation Request, P2P
+ *	Invitation Request, and Provision Discovery Request frames.
+ */
+enum qca_vendor_element_id {
+	QCA_VENDOR_ELEM_P2P_PREF_CHAN_LIST = 0,
+};
+
 #endif /* QCA_VENDOR_H */

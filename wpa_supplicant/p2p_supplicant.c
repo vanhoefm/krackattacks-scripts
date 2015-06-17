@@ -3321,7 +3321,8 @@ int wpas_p2p_get_ht40_mode(struct wpa_supplicant *wpa_s,
 
 		for (ch = o->min_chan; ch <= o->max_chan; ch += o->inc) {
 			if (o->mode != HOSTAPD_MODE_IEEE80211A ||
-			    o->bw == BW20 || ch != channel)
+			    (o->bw != BW40PLUS && o->bw != BW40MINUS) ||
+			    ch != channel)
 				continue;
 			ret = wpas_p2p_verify_channel(wpa_s, mode, ch, o->bw);
 			if (ret == ALLOWED)

@@ -5505,13 +5505,10 @@ static int p2p_ctrl_invite(struct wpa_supplicant *wpa_s, char *cmd)
 
 
 static int p2p_ctrl_group_add_persistent(struct wpa_supplicant *wpa_s,
-					 char *cmd, int freq, int ht40,
-					 int vht)
+					 int id, int freq, int ht40, int vht)
 {
-	int id;
 	struct wpa_ssid *ssid;
 
-	id = atoi(cmd);
 	ssid = wpa_config_get_network(wpa_s->conf, id);
 	if (ssid == NULL || ssid->disabled != 2) {
 		wpa_printf(MSG_DEBUG, "CTRL_IFACE: Could not find SSID id=%d "
@@ -5527,31 +5524,35 @@ static int p2p_ctrl_group_add_persistent(struct wpa_supplicant *wpa_s,
 
 static int p2p_ctrl_group_add(struct wpa_supplicant *wpa_s, char *cmd)
 {
-	int freq = 0, persistent_group = 0, ht40, vht;
-	char *pos;
+	int freq = 0, persistent = 0, group_id = -1;
+	int vht = wpa_s->conf->p2p_go_vht;
+	int ht40 = wpa_s->conf->p2p_go_ht40 || vht;
+	char *token, *context = NULL;
 
-	pos = os_strstr(cmd, "freq=");
-	if (pos)
-		freq = atoi(pos + 5);
-
-	vht = (os_strstr(cmd, "vht") != NULL) || wpa_s->conf->p2p_go_vht;
-	ht40 = (os_strstr(cmd, "ht40") != NULL) || wpa_s->conf->p2p_go_ht40 ||
-		vht;
-
-	if (os_strncmp(cmd, "persistent=", 11) == 0)
-		return p2p_ctrl_group_add_persistent(wpa_s, cmd + 11, freq,
-						     ht40, vht);
-	if (os_strcmp(cmd, "persistent") == 0 ||
-	    os_strncmp(cmd, "persistent ", 11) == 0)
-		persistent_group = 1;
-
-	if (!persistent_group && !freq && !ht40) {
-		wpa_printf(MSG_DEBUG,
-			   "CTRL: Invalid P2P_GROUP_ADD parameters '%s'", cmd);
-		return -1;
+	while ((token = str_token(cmd, " ", &context))) {
+		if (sscanf(token, "freq=%d", &freq) == 1 ||
+		    sscanf(token, "persistent=%d", &group_id) == 1) {
+			continue;
+		} else if (os_strcmp(token, "ht40") == 0) {
+			ht40 = 1;
+		} else if (os_strcmp(token, "vht") == 0) {
+			vht = 1;
+			ht40 = 1;
+		} else if (os_strcmp(token, "persistent") == 0) {
+			persistent = 1;
+		} else {
+			wpa_printf(MSG_DEBUG,
+				   "CTRL: Invalid P2P_GROUP_ADD parameter: '%s'",
+				   token);
+			return -1;
+		}
 	}
 
-	return wpas_p2p_group_add(wpa_s, persistent_group, freq, ht40, vht);
+	if (group_id >= 0)
+		return p2p_ctrl_group_add_persistent(wpa_s, group_id,
+						     freq, ht40, vht);
+
+	return wpas_p2p_group_add(wpa_s, persistent, freq, ht40, vht);
 }
 
 

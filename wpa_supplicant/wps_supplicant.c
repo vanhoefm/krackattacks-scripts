@@ -1717,10 +1717,10 @@ int wpas_wps_ssid_wildcard_ok(struct wpa_supplicant *wpa_s,
 int wpas_wps_scan_pbc_overlap(struct wpa_supplicant *wpa_s,
 			      struct wpa_bss *selected, struct wpa_ssid *ssid)
 {
-	const u8 *sel_uuid, *uuid;
+	const u8 *sel_uuid;
 	struct wpabuf *wps_ie;
 	int ret = 0;
-	struct wpa_bss *bss;
+	size_t i;
 
 	if (!eap_is_wps_pbc_enrollee(&ssid->eap))
 		return 0;
@@ -1741,40 +1741,28 @@ int wpas_wps_scan_pbc_overlap(struct wpa_supplicant *wpa_s,
 		sel_uuid = NULL;
 	}
 
-	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {
-		struct wpabuf *ie;
-		if (bss == selected)
+	for (i = 0; i < wpa_s->num_wps_ap; i++) {
+		struct wps_ap_info *ap = &wpa_s->wps_ap[i];
+
+		if (!ap->pbc_active ||
+		    os_memcmp(selected->bssid, ap->bssid, ETH_ALEN) == 0)
 			continue;
-		ie = wpa_bss_get_vendor_ie_multi(bss, WPS_IE_VENDOR_TYPE);
-		if (!ie)
-			continue;
-		if (!wps_is_selected_pbc_registrar(ie)) {
-			wpabuf_free(ie);
-			continue;
-		}
+
 		wpa_printf(MSG_DEBUG, "WPS: Another BSS in active PBC mode: "
-			   MACSTR, MAC2STR(bss->bssid));
-		uuid = wps_get_uuid_e(ie);
+			   MACSTR, MAC2STR(ap->bssid));
 		wpa_hexdump(MSG_DEBUG, "WPS: UUID of the other BSS",
-			    uuid, UUID_LEN);
-		if (os_memcmp(selected->bssid, bss->bssid, ETH_ALEN) == 0) {
-			wpabuf_free(ie);
-			continue;
-		}
-		if (sel_uuid == NULL || uuid == NULL ||
-		    os_memcmp(sel_uuid, uuid, UUID_LEN) != 0) {
+			    ap->uuid, UUID_LEN);
+		if (sel_uuid == NULL ||
+		    os_memcmp(sel_uuid, ap->uuid, UUID_LEN) != 0) {
 			ret = 1; /* PBC overlap */
 			wpa_msg(wpa_s, MSG_INFO, "WPS: PBC overlap detected: "
 				MACSTR " and " MACSTR,
 				MAC2STR(selected->bssid),
-				MAC2STR(bss->bssid));
-			wpabuf_free(ie);
+				MAC2STR(ap->bssid));
 			break;
 		}
 
 		/* TODO: verify that this is reasonable dual-band situation */
-
-		wpabuf_free(ie);
 	}
 
 	wpabuf_free(wps_ie);
@@ -2798,7 +2786,8 @@ static void wpas_wps_update_ap_info_bss(struct wpa_supplicant *wpa_s,
 	struct wpabuf *wps;
 	enum wps_ap_info_type type;
 	struct wps_ap_info *ap;
-	int r;
+	int r, pbc_active;
+	const u8 *uuid;
 
 	if (wpa_scan_get_vendor_ie(res, WPS_IE_VENDOR_TYPE) == NULL)
 		return;
@@ -2815,7 +2804,8 @@ static void wpas_wps_update_ap_info_bss(struct wpa_supplicant *wpa_s,
 	else
 		type = WPS_AP_NOT_SEL_REG;
 
-	wpabuf_free(wps);
+	uuid = wps_get_uuid_e(wps);
+	pbc_active = wps_is_selected_pbc_registrar(wps);
 
 	ap = wpas_wps_get_ap_info(wpa_s, res->bssid);
 	if (ap) {
@@ -2827,13 +2817,16 @@ static void wpas_wps_update_ap_info_bss(struct wpa_supplicant *wpa_s,
 			if (type != WPS_AP_NOT_SEL_REG)
 				wpa_blacklist_del(wpa_s, ap->bssid);
 		}
-		return;
+		ap->pbc_active = pbc_active;
+		if (uuid)
+			os_memcpy(ap->uuid, uuid, WPS_UUID_LEN);
+		goto out;
 	}
 
 	ap = os_realloc_array(wpa_s->wps_ap, wpa_s->num_wps_ap + 1,
 			      sizeof(struct wps_ap_info));
 	if (ap == NULL)
-		return;
+		goto out;
 
 	wpa_s->wps_ap = ap;
 	ap = &wpa_s->wps_ap[wpa_s->num_wps_ap];
@@ -2842,8 +2835,14 @@ static void wpas_wps_update_ap_info_bss(struct wpa_supplicant *wpa_s,
 	os_memset(ap, 0, sizeof(*ap));
 	os_memcpy(ap->bssid, res->bssid, ETH_ALEN);
 	ap->type = type;
+	ap->pbc_active = pbc_active;
+	if (uuid)
+		os_memcpy(ap->uuid, uuid, WPS_UUID_LEN);
 	wpa_printf(MSG_DEBUG, "WPS: AP " MACSTR " type %d added",
 		   MAC2STR(ap->bssid), ap->type);
+
+out:
+	wpabuf_free(wps);
 }
 
 

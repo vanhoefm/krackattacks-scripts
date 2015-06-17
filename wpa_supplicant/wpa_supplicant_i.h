@@ -366,6 +366,8 @@ struct wps_ap_info {
 	} type;
 	unsigned int tries;
 	struct os_reltime last_attempt;
+	unsigned int pbc_active;
+	u8 uuid[WPS_UUID_LEN];
 };
 
 struct wpa_ssid_value {

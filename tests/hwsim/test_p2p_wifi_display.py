@@ -55,7 +55,7 @@ def test_wifi_display(dev):
         raise Exception("Could not fetch back configured subelement")
 
     dev[0].p2p_listen()
-    if "FAIL" in dev[1].request("P2P_SERV_DISC_REQ " + dev[0].p2p_dev_addr() + " wifi-display [source][pri-sink] 2,3,4,5"):
+    if "FAIL" in dev[1].global_request("P2P_SERV_DISC_REQ " + dev[0].p2p_dev_addr() + " wifi-display [source][pri-sink] 2,3,4,5"):
         raise Exception("Setting SD request failed")
     dev[1].p2p_find(social=True)
     ev = dev[0].wait_global_event(["P2P-SERV-DISC-REQ"], timeout=10)
@@ -120,11 +120,11 @@ def test_wifi_display(dev):
     dev[2].request("SET wifi_display 1")
     dev[2].request("WFD_SUBELEM_SET 0 0006" + wfd_devinfo3)
     dev[2].p2p_find(social=True)
-    ev = dev[2].wait_event(["P2P-DEVICE-FOUND"], timeout=5)
+    ev = dev[2].wait_global_event(["P2P-DEVICE-FOUND"], timeout=5)
     if ev is None:
         raise Exception("Device discovery timed out")
     if dev[1].p2p_dev_addr() not in ev:
-        ev = dev[2].wait_event(["P2P-DEVICE-FOUND"], timeout=5)
+        ev = dev[2].wait_global_event(["P2P-DEVICE-FOUND"], timeout=5)
         if ev is None:
             raise Exception("Device discovery timed out")
         if dev[1].p2p_dev_addr() not in ev:

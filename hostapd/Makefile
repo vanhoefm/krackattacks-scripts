@@ -108,6 +108,7 @@ LIBS_n += -lrt
 endif
 
 OBJS += ../src/utils/common.o
+OBJS_c += ../src/utils/common.o
 OBJS += ../src/utils/wpa_debug.o
 OBJS_c += ../src/utils/wpa_debug.o
 OBJS += ../src/utils/wpabuf.o

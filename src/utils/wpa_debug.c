@@ -307,7 +307,7 @@ static void _wpa_hexdump(int level, const char *title, const u8 *buf,
 				    "%s - hexdump(len=%lu):%s%s",
 				    title, (long unsigned int) len, display,
 				    len > slen ? " ..." : "");
-		os_free(strbuf);
+		bin_clear_free(strbuf, 1 + 3 * slen);
 		return;
 	}
 #else /* CONFIG_ANDROID_LOG */
@@ -339,7 +339,7 @@ static void _wpa_hexdump(int level, const char *title, const u8 *buf,
 
 		syslog(syslog_priority(level), "%s - hexdump(len=%lu):%s",
 		       title, (unsigned long) len, display);
-		os_free(strbuf);
+		bin_clear_free(strbuf, 1 + 3 * len);
 		return;
 	}
 #endif /* CONFIG_DEBUG_SYSLOG */
@@ -636,7 +636,7 @@ void wpa_msg(void *ctx, int level, const char *fmt, ...)
 	wpa_printf(level, "%s%s", prefix, buf);
 	if (wpa_msg_cb)
 		wpa_msg_cb(ctx, level, WPA_MSG_PER_INTERFACE, buf, len);
-	os_free(buf);
+	bin_clear_free(buf, buflen);
 }
 
 
@@ -664,7 +664,7 @@ void wpa_msg_ctrl(void *ctx, int level, const char *fmt, ...)
 	len = vsnprintf(buf, buflen, fmt, ap);
 	va_end(ap);
 	wpa_msg_cb(ctx, level, WPA_MSG_PER_INTERFACE, buf, len);
-	os_free(buf);
+	bin_clear_free(buf, buflen);
 }
 
 
@@ -691,7 +691,7 @@ void wpa_msg_global(void *ctx, int level, const char *fmt, ...)
 	wpa_printf(level, "%s", buf);
 	if (wpa_msg_cb)
 		wpa_msg_cb(ctx, level, WPA_MSG_GLOBAL, buf, len);
-	os_free(buf);
+	bin_clear_free(buf, buflen);
 }
 
 
@@ -719,7 +719,7 @@ void wpa_msg_global_ctrl(void *ctx, int level, const char *fmt, ...)
 	len = vsnprintf(buf, buflen, fmt, ap);
 	va_end(ap);
 	wpa_msg_cb(ctx, level, WPA_MSG_GLOBAL, buf, len);
-	os_free(buf);
+	bin_clear_free(buf, buflen);
 }
 
 
@@ -746,7 +746,7 @@ void wpa_msg_no_global(void *ctx, int level, const char *fmt, ...)
 	wpa_printf(level, "%s", buf);
 	if (wpa_msg_cb)
 		wpa_msg_cb(ctx, level, WPA_MSG_NO_GLOBAL, buf, len);
-	os_free(buf);
+	bin_clear_free(buf, buflen);
 }
 
 #endif /* CONFIG_NO_WPA_MSG */
@@ -789,6 +789,6 @@ void hostapd_logger(void *ctx, const u8 *addr, unsigned int module, int level,
 			   MAC2STR(addr), buf);
 	else
 		wpa_printf(MSG_DEBUG, "hostapd_logger: %s", buf);
-	os_free(buf);
+	bin_clear_free(buf, buflen);
 }
 #endif /* CONFIG_NO_HOSTAPD_LOGGER */

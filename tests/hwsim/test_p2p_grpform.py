@@ -877,6 +877,8 @@ def test_grpform_wait_peer(dev):
     ev = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
     if ev is None:
         raise Exception("Group formation timed out")
+    dev[0].group_form_result(ev)
+
     dev[0].request("SET extra_roc_dur 0")
     ev = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=15)
     if ev is None:

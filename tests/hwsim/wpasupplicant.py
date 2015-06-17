@@ -120,11 +120,12 @@ class WpaSupplicant:
         if not "OK" in res:
             logger.info("FLUSH to " + self.ifname + " failed: " + res)
         self.global_request("REMOVE_NETWORK all")
-        self.request("SET p2p_add_cli_chan 0")
-        self.request("SET p2p_no_go_freq ")
-        self.request("SET p2p_pref_chan ")
-        self.request("SET p2p_no_group_iface 1")
-        self.request("SET p2p_go_intent 7")
+        self.global_request("SET p2p_add_cli_chan 0")
+        self.global_request("SET p2p_no_go_freq ")
+        self.global_request("SET p2p_pref_chan ")
+        self.global_request("SET p2p_no_group_iface 1")
+        self.global_request("SET p2p_go_intent 7")
+        self.global_request("P2P_FLUSH")
         self.request("SET ignore_old_scan_res 0")
         if self.gctrl_mon:
             try:

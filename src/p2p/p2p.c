@@ -5254,6 +5254,7 @@ int p2p_process_nfc_connection_handover(struct p2p_data *p2p,
 
 	if (!msg.oob_go_neg_channel) {
 		p2p_dbg(p2p, "OOB GO Negotiation Channel attribute not included");
+		p2p_parse_free(&msg);
 		return -1;
 	}
 
@@ -5265,6 +5266,7 @@ int p2p_process_nfc_connection_handover(struct p2p_data *p2p,
 					   msg.oob_go_neg_channel[4]);
 	if (freq < 0) {
 		p2p_dbg(p2p, "Unknown peer OOB GO Neg channel");
+		p2p_parse_free(&msg);
 		return -1;
 	}
 	role = msg.oob_go_neg_channel[5];
@@ -5285,6 +5287,7 @@ int p2p_process_nfc_connection_handover(struct p2p_data *p2p,
 					   p2p->cfg->channel);
 		if (freq < 0) {
 			p2p_dbg(p2p, "Own listen channel not known");
+			p2p_parse_free(&msg);
 			return -1;
 		}
 		p2p_dbg(p2p, "Use own Listen channel as OOB GO Neg channel: %u MHz", freq);

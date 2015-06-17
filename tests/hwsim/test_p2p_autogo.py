@@ -68,12 +68,12 @@ def test_autogo(dev):
         raise Exception("Timeout while waiting for Presence Response")
     if "FAIL" in dev[1].group_request("P2P_PRESENCE_REQ 30000 102400 20000 102400"):
         raise Exception("Could not send presence request")
-    ev = dev[1].wait_event(["P2P-PRESENCE-RESPONSE"])
+    ev = dev[1].wait_group_event(["P2P-PRESENCE-RESPONSE"])
     if ev is None:
         raise Exception("Timeout while waiting for Presence Response")
     if "FAIL" in dev[1].group_request("P2P_PRESENCE_REQ"):
         raise Exception("Could not send presence request")
-    ev = dev[1].wait_event(["P2P-PRESENCE-RESPONSE"])
+    ev = dev[1].wait_group_event(["P2P-PRESENCE-RESPONSE"])
     if ev is None:
         raise Exception("Timeout while waiting for Presence Response")
 
@@ -227,7 +227,7 @@ def test_autogo_2cli(dev):
 
 def test_autogo_pbc(dev):
     """P2P autonomous GO and PBC"""
-    dev[1].request("SET p2p_no_group_iface 0")
+    dev[1].global_request("SET p2p_no_group_iface 0")
     autogo(dev[0], freq=2412)
     if "FAIL" not in dev[0].group_request("WPS_PBC p2p_dev_addr=00:11:22:33:44"):
         raise Exception("Invalid WPS_PBC succeeded")
@@ -501,12 +501,12 @@ def test_autogo_join_auto_go_not_found(dev):
     time.sleep(0.02)
     dev[1].global_request("P2P_CONNECT " + addr + " pbc auto")
 
-    ev = dev[1].wait_group_event(["P2P-FALLBACK-TO-GO-NEG-ENABLED"], 15)
+    ev = dev[1].wait_global_event(["P2P-FALLBACK-TO-GO-NEG-ENABLED"], 15)
     if ev is None:
         raise Exception("Could not trigger old-scan-only case")
         return
 
-    ev = dev[1].wait_group_event(["P2P-FALLBACK-TO-GO-NEG"], 15)
+    ev = dev[1].wait_global_event(["P2P-FALLBACK-TO-GO-NEG"], 15)
     wpas.remove_group()
     if ev is None:
         raise Exception("Fallback to GO Negotiation not seen")
@@ -612,11 +612,11 @@ def test_go_search_non_social(dev):
     addr0 = dev[0].p2p_dev_addr()
     autogo(dev[0], freq=2422)
     dev[1].p2p_find(freq=2422)
-    ev = dev[1].wait_event(["P2P-DEVICE-FOUND"], timeout=3.5)
+    ev = dev[1].wait_global_event(["P2P-DEVICE-FOUND"], timeout=3.5)
     if ev is None:
         raise Exception("Did not find GO quickly enough")
     dev[2].p2p_listen()
-    ev = dev[1].wait_event(["P2P-DEVICE-FOUND"], timeout=5)
+    ev = dev[1].wait_global_event(["P2P-DEVICE-FOUND"], timeout=5)
     if ev is None:
         raise Exception("Did not find peer")
     dev[2].p2p_stop_find()
@@ -650,9 +650,9 @@ def test_autogo_many_clients(dev):
     try:
         _test_autogo_many_clients(dev)
     finally:
-        dev[0].request("SET device_name Device A")
-        dev[1].request("SET device_name Device B")
-        dev[2].request("SET device_name Device C")
+        dev[0].global_request("SET device_name Device A")
+        dev[1].global_request("SET device_name Device B")
+        dev[2].global_request("SET device_name Device C")
 
 def _test_autogo_many_clients(dev):
     # These long device names will push the P2P IE contents beyond the limit
@@ -661,9 +661,9 @@ def _test_autogo_many_clients(dev):
     name1 = "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
     name2 = "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"
     name3 = "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD"
-    dev[0].request("SET device_name " + name0)
-    dev[1].request("SET device_name " + name1)
-    dev[2].request("SET device_name " + name2)
+    dev[0].global_request("SET device_name " + name0)
+    dev[1].global_request("SET device_name " + name1)
+    dev[2].global_request("SET device_name " + name2)
 
     addr0 = dev[0].p2p_dev_addr()
     res = autogo(dev[0], freq=2412)
@@ -676,12 +676,12 @@ def _test_autogo_many_clients(dev):
 
     wpas = WpaSupplicant(global_iface='/tmp/wpas-wlan5')
     wpas.interface_add("wlan5")
-    wpas.request("SET device_name " + name3)
-    wpas.request("SET sec_device_type 1-11111111-1")
-    wpas.request("SET sec_device_type 2-22222222-2")
-    wpas.request("SET sec_device_type 3-33333333-3")
-    wpas.request("SET sec_device_type 4-44444444-4")
-    wpas.request("SET sec_device_type 5-55555555-5")
+    wpas.global_request("SET device_name " + name3)
+    wpas.global_request("SET sec_device_type 1-11111111-1")
+    wpas.global_request("SET sec_device_type 2-22222222-2")
+    wpas.global_request("SET sec_device_type 3-33333333-3")
+    wpas.global_request("SET sec_device_type 4-44444444-4")
+    wpas.global_request("SET sec_device_type 5-55555555-5")
     connect_cli(dev[0], wpas, social=True, freq=2412)
     dev[0].dump_monitor()
 

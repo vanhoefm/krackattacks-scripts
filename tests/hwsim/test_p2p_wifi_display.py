@@ -267,13 +267,18 @@ def test_wifi_display_persistent_group(dev):
 
         dev[0].dump_monitor()
         dev[1].dump_monitor()
-        networks = dev[0].list_networks()
+        networks = dev[0].list_networks(p2p=True)
         if len(networks) != 1:
             raise Exception("Unexpected number of networks")
         if "[P2P-PERSISTENT]" not in networks[0]['flags']:
             raise Exception("Not the persistent group data")
         if "OK" not in dev[0].global_request("P2P_GROUP_ADD persistent=" + networks[0]['id'] + " freq=" + listen_freq):
             raise Exception("Could not start GO")
+        ev = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=2)
+        if ev is None:
+            raise Exception("GO start up timed out")
+        dev[0].group_form_result(ev)
+
         connect_cli(dev[0], dev[2], social=True, freq=listen_freq)
         dev[0].dump_monitor()
         dev[1].dump_monitor()
@@ -281,6 +286,8 @@ def test_wifi_display_persistent_group(dev):
         ev = dev[1].wait_global_event(["P2P-GROUP-STARTED"], timeout=30)
         if ev is None:
             raise Exception("Timeout on group re-invocation (on client)")
+        dev[1].group_form_result(ev)
+
         ev = dev[0].wait_global_event(["P2P-GROUP-STARTED"], timeout=0.1)
         if ev is not None:
             raise Exception("Unexpected P2P-GROUP-START on GO")

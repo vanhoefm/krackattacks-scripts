@@ -61,7 +61,9 @@ def test_p2p_set_discoverability(dev):
         raise Exception("P2P_SET discoverability 1 failed")
     dev[1].dump_monitor()
     dev[1].group_request("REASSOCIATE")
-    dev[1].wait_connected(timeout=20)
+    ev = dev[1].wait_group_event(["CTRL-EVENT-CONNECTED"], timeout=20)
+    if ev is None:
+        raise Exception("Connection timed out")
 
     dev[2].request("P2P_FLUSH")
     if not dev[2].discover_peer(addr1, timeout=10):

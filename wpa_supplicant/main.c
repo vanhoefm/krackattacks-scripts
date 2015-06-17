@@ -237,7 +237,7 @@ int main(int argc, char *argv[])
 			goto out;
 #ifdef CONFIG_P2P
 		case 'm':
-			iface->conf_p2p_dev = optarg;
+			params.conf_p2p_dev = optarg;
 			break;
 #endif /* CONFIG_P2P */
 		case 'o':

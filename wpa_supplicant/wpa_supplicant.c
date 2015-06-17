@@ -4451,7 +4451,8 @@ struct wpa_supplicant * wpa_supplicant_add_iface(struct wpa_global *global,
 	if (wpa_s->global->p2p == NULL &&
 	    !wpa_s->global->p2p_disabled && !wpa_s->conf->p2p_disabled &&
 	    (wpa_s->drv_flags & WPA_DRIVER_FLAGS_DEDICATED_P2P_DEVICE) &&
-	    wpas_p2p_add_p2pdev_interface(wpa_s, iface->conf_p2p_dev) < 0) {
+	    wpas_p2p_add_p2pdev_interface(
+		    wpa_s, wpa_s->global->params.conf_p2p_dev) < 0) {
 		wpa_printf(MSG_INFO,
 			   "P2P: Failed to enable P2P Device interface");
 		/* Try to continue without. P2P will be disabled. */

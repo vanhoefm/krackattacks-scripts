@@ -66,17 +66,6 @@ struct wpa_interface {
 	 */
 	const char *confanother;
 
-#ifdef CONFIG_P2P
-	/**
-	 * conf_p2p_dev - Configuration file used to hold the
-	 * P2P Device configuration parameters.
-	 *
-	 * This can also be %NULL. In such a case, if a P2P Device dedicated
-	 * interfaces is created, the main configuration file will be used.
-	 */
-	const char *conf_p2p_dev;
-#endif /* CONFIG_P2P */
-
 	/**
 	 * ctrl_interface - Control interface parameter
 	 *
@@ -227,6 +216,18 @@ struct wpa_params {
 	 * its internal entropy store over restarts.
 	 */
 	char *entropy_file;
+
+#ifdef CONFIG_P2P
+	/**
+	 * conf_p2p_dev - Configuration file used to hold the
+	 * P2P Device configuration parameters.
+	 *
+	 * This can also be %NULL. In such a case, if a P2P Device dedicated
+	 * interfaces is created, the main configuration file will be used.
+	 */
+	const char *conf_p2p_dev;
+#endif /* CONFIG_P2P */
+
 };
 
 struct p2p_srv_bonjour {

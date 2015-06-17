@@ -87,7 +87,6 @@ static void nl80211_handle_destroy(struct nl_handle *handle)
 #undef nl_socket_set_nonblocking
 #define nl_socket_set_nonblocking(h) android_nl_socket_set_nonblocking(h)
 
-#define genl_ctrl_resolve android_genl_ctrl_resolve
 #endif /* ANDROID */
 
 

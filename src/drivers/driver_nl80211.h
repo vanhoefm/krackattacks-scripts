@@ -232,7 +232,6 @@ int process_bss_event(struct nl_msg *msg, void *arg);
 
 #ifdef ANDROID
 int android_nl_socket_set_nonblocking(struct nl_handle *handle);
-int android_genl_ctrl_resolve(struct nl_handle *handle, const char *name);
 int android_pno_start(struct i802_bss *bss,
 		      struct wpa_driver_scan_params *params);
 int android_pno_stop(struct i802_bss *bss);

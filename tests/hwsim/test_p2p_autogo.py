@@ -235,7 +235,7 @@ def test_autogo_pbc(dev):
         raise Exception("WPS_PBC failed")
     dev[2].p2p_connect_group(dev[0].p2p_dev_addr(), "pbc", timeout=0,
                              social=True)
-    ev = dev[2].wait_event(["WPS-M2D"], timeout=15)
+    ev = dev[2].wait_global_event(["WPS-M2D"], timeout=15)
     if ev is None:
         raise Exception("WPS-M2D not reported")
     if "config_error=12" not in ev:

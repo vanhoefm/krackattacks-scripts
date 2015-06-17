@@ -7807,7 +7807,7 @@ static int nl80211_set_wowlan(void *priv,
 
 	wpa_printf(MSG_DEBUG, "nl80211: Setting wowlan");
 
-	if (!(msg = nl80211_drv_msg(drv, 0, NL80211_CMD_SET_WOWLAN)) ||
+	if (!(msg = nl80211_cmd_msg(bss, 0, NL80211_CMD_SET_WOWLAN)) ||
 	    !(wowlan_triggers = nla_nest_start(msg,
 					       NL80211_ATTR_WOWLAN_TRIGGERS)) ||
 	    (triggers->any &&

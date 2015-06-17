@@ -2747,8 +2747,11 @@ static int openssl_tls_prf(void *tls_ctx, struct tls_connection *conn,
 	}
 
 	rnd = os_malloc(2 * SSL3_RANDOM_SIZE);
-	if (rnd == NULL)
+	if (!rnd) {
+		os_free(tmp_out);
 		return -1;
+	}
+
 	if (server_random_first) {
 		os_memcpy(rnd, ssl->s3->server_random, SSL3_RANDOM_SIZE);
 		os_memcpy(rnd + SSL3_RANDOM_SIZE, ssl->s3->client_random,

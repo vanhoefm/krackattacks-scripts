@@ -7111,7 +7111,7 @@ static int wpas_p2p_fallback_to_go_neg(struct wpa_supplicant *wpa_s,
 
 	if (wpa_s->global->p2p_group_formation)
 		group = wpa_s->global->p2p_group_formation;
-	wpa_s = wpa_s->parent;
+	wpa_s = wpa_s->global->p2p_init_wpa_s;
 	offchannel_send_action_done(wpa_s);
 	if (group_added)
 		ret = wpas_p2p_group_delete(group, P2P_GROUP_REMOVAL_SILENT);

@@ -3086,7 +3086,8 @@ static int wpa_supplicant_ctrl_iface_get_network(
 
 
 static int wpa_supplicant_ctrl_iface_dup_network(
-	struct wpa_supplicant *wpa_s, char *cmd)
+	struct wpa_supplicant *wpa_s, char *cmd,
+	struct wpa_supplicant *dst_wpa_s)
 {
 	struct wpa_ssid *ssid_s, *ssid_d;
 	char *name, *id, *value;
@@ -3105,8 +3106,10 @@ static int wpa_supplicant_ctrl_iface_dup_network(
 
 	id_s = atoi(cmd);
 	id_d = atoi(id);
-	wpa_printf(MSG_DEBUG, "CTRL_IFACE: DUP_NETWORK id=%d -> %d name='%s'",
-		   id_s, id_d, name);
+
+	wpa_printf(MSG_DEBUG,
+		   "CTRL_IFACE: DUP_NETWORK ifname=%s->%s id=%d->%d name='%s'",
+		   wpa_s->ifname, dst_wpa_s->ifname, id_s, id_d, name);
 
 	ssid_s = wpa_config_get_network(wpa_s->conf, id_s);
 	if (ssid_s == NULL) {
@@ -3115,7 +3118,7 @@ static int wpa_supplicant_ctrl_iface_dup_network(
 		return -1;
 	}
 
-	ssid_d = wpa_config_get_network(wpa_s->conf, id_d);
+	ssid_d = wpa_config_get_network(dst_wpa_s->conf, id_d);
 	if (ssid_d == NULL) {
 		wpa_printf(MSG_DEBUG, "CTRL_IFACE: Could not find "
 			   "network id=%d", id_d);
@@ -3129,7 +3132,7 @@ static int wpa_supplicant_ctrl_iface_dup_network(
 		return -1;
 	}
 
-	ret = wpa_supplicant_ctrl_iface_update_network(wpa_s, ssid_d, name,
+	ret = wpa_supplicant_ctrl_iface_update_network(dst_wpa_s, ssid_d, name,
 						       value);
 
 	os_free(value);
@@ -8459,7 +8462,8 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		reply_len = wpa_supplicant_ctrl_iface_get_network(
 			wpa_s, buf + 12, reply, reply_size);
 	} else if (os_strncmp(buf, "DUP_NETWORK ", 12) == 0) {
-		if (wpa_supplicant_ctrl_iface_dup_network(wpa_s, buf + 12))
+		if (wpa_supplicant_ctrl_iface_dup_network(wpa_s, buf + 12,
+							  wpa_s))
 			reply_len = -1;
 	} else if (os_strcmp(buf, "LIST_CREDS") == 0) {
 		reply_len = wpa_supplicant_ctrl_iface_list_creds(
@@ -9059,6 +9063,41 @@ static int wpas_global_ctrl_iface_set(struct wpa_global *global, char *cmd)
 }
 
 
+static int wpas_global_ctrl_iface_dup_network(struct wpa_global *global,
+					      char *cmd)
+{
+	struct wpa_supplicant *wpa_s[2]; /* src, dst */
+	char *p;
+	unsigned int i;
+
+	/* cmd: "<src ifname> <dst ifname> <src network id> <dst network id>
+	 * <variable name> */
+
+	for (i = 0; i < ARRAY_SIZE(wpa_s) ; i++) {
+		p = os_strchr(cmd, ' ');
+		if (p == NULL)
+			return -1;
+		*p = '\0';
+
+		wpa_s[i] = global->ifaces;
+		for (; wpa_s[i]; wpa_s[i] = wpa_s[i]->next) {
+			if (os_strcmp(cmd, wpa_s[i]->ifname) == 0)
+				break;
+		}
+
+		if (!wpa_s[i]) {
+			wpa_printf(MSG_DEBUG,
+				   "CTRL_IFACE: Could not find iface=%s", cmd);
+			return -1;
+		}
+
+		cmd = p + 1;
+	}
+
+	return wpa_supplicant_ctrl_iface_dup_network(wpa_s[0], cmd, wpa_s[1]);
+}
+
+
 #ifndef CONFIG_NO_CONFIG_WRITE
 static int wpas_global_ctrl_iface_save_config(struct wpa_global *global)
 {
@@ -9272,6 +9311,9 @@ char * wpa_supplicant_global_ctrl_iface_process(struct wpa_global *global,
 #endif /* CONFIG_P2P */
 			reply_len = -1;
 		}
+	} else if (os_strncmp(buf, "DUP_NETWORK ", 12) == 0) {
+		if (wpas_global_ctrl_iface_dup_network(global, buf + 12))
+			reply_len = -1;
 #ifndef CONFIG_NO_CONFIG_WRITE
 	} else if (os_strcmp(buf, "SAVE_CONFIG") == 0) {
 		if (wpas_global_ctrl_iface_save_config(global))

@@ -174,7 +174,7 @@ def test_persistent_group_per_sta_psk(dev):
     addr0 = dev[0].p2p_dev_addr()
     addr1 = dev[1].p2p_dev_addr()
     addr2 = dev[2].p2p_dev_addr()
-    dev[0].request("P2P_SET per_sta_psk 1")
+    dev[0].global_request("P2P_SET per_sta_psk 1")
     logger.info("Form a persistent group")
     [i_res, r_res] = go_neg_pin_authorized_persistent(i_dev=dev[0], i_intent=15,
                                                       r_dev=dev[1], r_intent=0)

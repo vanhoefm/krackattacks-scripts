@@ -1017,7 +1017,7 @@ def test_wpas_ctrl_country(dev, apdev):
             raise Exception("Failed to set country code")
         if dev[0].request("GET country") != "FI":
             raise Exception("Country code set failed")
-        ev = dev[0].wait_event(["CTRL-EVENT-REGDOM-CHANGE"])
+        ev = dev[0].wait_global_event(["CTRL-EVENT-REGDOM-CHANGE"], 10)
         if ev is None:
             raise Exception("regdom change event not seen")
         if "init=USER type=COUNTRY alpha2=FI" not in ev:
@@ -1025,7 +1025,7 @@ def test_wpas_ctrl_country(dev, apdev):
         dev[0].request("SET country 00")
         if dev[0].request("GET country") != "00":
             raise Exception("Country code set failed")
-        ev = dev[0].wait_event(["CTRL-EVENT-REGDOM-CHANGE"])
+        ev = dev[0].wait_global_event(["CTRL-EVENT-REGDOM-CHANGE"], 10)
         if ev is None:
             raise Exception("regdom change event not seen")
         if "init=CORE type=WORLD" not in ev:

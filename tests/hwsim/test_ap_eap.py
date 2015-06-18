@@ -2234,6 +2234,24 @@ def test_ap_wpa2_eap_fast_gtc_identity_change(dev, apdev):
         raise Exception("EAP failure not reported")
     dev[0].wait_disconnected()
 
+def test_ap_wpa2_eap_fast_prf_oom(dev, apdev):
+    """WPA2-Enterprise connection using EAP-FAST and OOM in PRF"""
+    check_eap_capa(dev[0], "FAST")
+    params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    with alloc_fail(dev[0], 2, "openssl_tls_prf"):
+        dev[0].connect("test-wpa2-eap", key_mgmt="WPA-EAP", eap="FAST",
+                       identity="user", anonymous_identity="FAST",
+                       password="password", ca_cert="auth_serv/ca.pem",
+                       phase2="auth=GTC",
+                       phase1="fast_provisioning=2",
+                       pac_file="blob://fast_pac_auth",
+                       wait_connect=False, scan_freq="2412")
+        ev = dev[0].wait_event(["CTRL-EVENT-EAP-FAILURE"], timeout=15)
+        if ev is None:
+            raise Exception("EAP failure not reported")
+    dev[0].request("DISCONNECT")
+
 def test_ap_wpa2_eap_tls_ocsp(dev, apdev):
     """WPA2-Enterprise connection using EAP-TLS and verifying OCSP"""
     params = hostapd.wpa2_eap_params(ssid="test-wpa2-eap")

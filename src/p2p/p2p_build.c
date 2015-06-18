@@ -429,6 +429,7 @@ static int p2p_buf_add_service_info(struct wpabuf *buf, struct p2p_data *p2p,
 	size_t remaining;
 	size_t info_len;
 
+	p2p_dbg(p2p, "Add service info for %s (adv_id=%u)", svc_name, adv_id);
 	svc_len = os_strlen(svc_name);
 	info_len = sizeof(adv_id) + sizeof(config_methods) + sizeof(u8) +
 		svc_len;
@@ -550,6 +551,8 @@ void p2p_buf_add_service_instance(struct wpabuf *buf, struct p2p_data *p2p,
 	if (!adv_list || !hash || !hash_count)
 		return;
 
+	wpa_hexdump(MSG_DEBUG, "P2PS: Probe Request service hash values",
+		    hash, hash_count * P2PS_HASH_LEN);
 	p2ps_wildcard = p2ps_wildcard_hash(p2p, hash, hash_count);
 
 	/* Allocate temp buffer, allowing for overflow of 1 instance */

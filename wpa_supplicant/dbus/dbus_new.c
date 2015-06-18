@@ -1896,6 +1896,63 @@ void wpas_dbus_signal_p2p_group_formation_failure(struct wpa_supplicant *wpa_s,
 	dbus_message_unref(msg);
 }
 
+
+/**
+ * wpas_dbus_signal_p2p_invitation_received - Emit InvitationReceived signal
+ * @wpa_s: %wpa_supplicant network interface data
+ * @sa: Source address of the Invitation Request
+ * @dev_add: GO Device Address
+ * @bssid: P2P Group BSSID or %NULL if not received
+ * @id: Persistent group id or %0 if not persistent group
+ * @op_freq: Operating frequency for the group
+ */
+
+void wpas_dbus_signal_p2p_invitation_received(struct wpa_supplicant *wpa_s,
+					      const u8 *sa, const u8 *dev_addr,
+					      const u8 *bssid, int id,
+					      int op_freq)
+{
+	DBusMessage *msg;
+	DBusMessageIter iter, dict_iter;
+	struct wpas_dbus_priv *iface;
+
+	iface = wpa_s->global->dbus;
+
+	/* Do nothing if the control interface is not turned on */
+	if (iface == NULL)
+		return;
+
+	msg = dbus_message_new_signal(wpa_s->dbus_new_path,
+				      WPAS_DBUS_NEW_IFACE_P2PDEVICE,
+				      "InvitationReceived");
+	if (msg == NULL)
+		return;
+
+	dbus_message_iter_init_append(msg, &iter);
+	if (!wpa_dbus_dict_open_write(&iter, &dict_iter) ||
+	    (sa &&
+	     !wpa_dbus_dict_append_byte_array(&dict_iter, "sa",
+					      (const char *) sa, ETH_ALEN)) ||
+	    (dev_addr &&
+	     !wpa_dbus_dict_append_byte_array(&dict_iter, "go_dev_addr",
+					      (const char *) dev_addr,
+					      ETH_ALEN)) ||
+	    (bssid &&
+	     !wpa_dbus_dict_append_byte_array(&dict_iter, "bssid",
+					      (const char *) bssid,
+					      ETH_ALEN)) ||
+	    (id &&
+	     !wpa_dbus_dict_append_int32(&dict_iter, "persistent_id", id)) ||
+	    !wpa_dbus_dict_append_int32(&dict_iter, "op_freq", op_freq) ||
+	    !wpa_dbus_dict_close_write(&iter, &dict_iter)) {
+		dbus_message_unref(msg);
+		return;
+	}
+
+	dbus_connection_send(iface->con, msg, NULL);
+}
+
+
 #endif /* CONFIG_P2P */
 
 
@@ -3278,6 +3335,12 @@ static const struct wpa_dbus_signal_desc wpas_dbus_interface_signals[] = {
 	  {
 		  { "name", "s", ARG_OUT },
 		  { "args", "a{sv}", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ "InvitationReceived", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
+	  {
+		  { "properties", "a{sv}", ARG_OUT },
 		  END_ARGS
 	  }
 	},

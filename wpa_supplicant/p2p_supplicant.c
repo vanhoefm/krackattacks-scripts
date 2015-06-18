@@ -2927,6 +2927,8 @@ static void wpas_invitation_received(void *ctx, const u8 *sa, const u8 *bssid,
 				       " unknown-network",
 				       MAC2STR(sa), MAC2STR(go_dev_addr));
 		}
+		wpas_notify_p2p_invitation_received(wpa_s, sa, go_dev_addr,
+						    bssid, 0, op_freq);
 		return;
 	}
 
@@ -2939,6 +2941,8 @@ static void wpas_invitation_received(void *ctx, const u8 *sa, const u8 *bssid,
 			       "sa=" MACSTR " persistent=%d",
 			       MAC2STR(sa), s->id);
 	}
+	wpas_notify_p2p_invitation_received(wpa_s, sa, go_dev_addr, bssid,
+					    s->id, op_freq);
 }
 
 

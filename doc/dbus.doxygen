@@ -1535,6 +1535,25 @@ Interface for performing P2P (Wi-Fi Peer-to-Peer) P2P Device operations.
   </li>
 
   <li>
+    <h3>InvitationReceived ( a{sv} : properties )</h3>
+    <p></p>
+    <h4>Arguments</h4>
+    <dl>
+      <dt>a{sv} : properties</dt>
+      <dd>A dictionary with following information:
+	<table>
+	  <tr><th>Key</th><th>Value type</th><th>Description</th></tr>
+	  <tr><td>sa</td><td>ay</td><td>Optionally present</td></tr>
+	  <tr><td>go_dev_addr</td><td>ay</td><td>Optionally present</td></tr>
+	  <tr><td>bssid</td><td>ay</td><td>Optionally present</td></tr>
+	  <tr><td>persistent_id</td><td>i</td><td>Optionally present</td></tr>
+	  <tr><td>op_freq</td><td>i</td><td></td></tr>
+	</table>
+      </dd>
+    </dl>
+  </li>
+
+  <li>
     <h3>GroupFormationFailure ( s : reason )</h3>
     <p></p>
     <h4>Arguments</h4>

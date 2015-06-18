@@ -233,6 +233,10 @@ void wpas_dbus_signal_sta_authorized(struct wpa_supplicant *wpa_s,
 				     const u8 *sta);
 void wpas_dbus_signal_sta_deauthorized(struct wpa_supplicant *wpa_s,
 				       const u8 *sta);
+void wpas_dbus_signal_p2p_invitation_received(struct wpa_supplicant *wpa_s,
+					      const u8 *sa, const u8 *dev_addr,
+					      const u8 *bssid, int id,
+					      int op_freq);
 
 #else /* CONFIG_CTRL_IFACE_DBUS_NEW */
 
@@ -537,6 +541,14 @@ void wpas_dbus_signal_sta_authorized(struct wpa_supplicant *wpa_s,
 static inline
 void wpas_dbus_signal_sta_deauthorized(struct wpa_supplicant *wpa_s,
 				       const u8 *sta)
+{
+}
+
+static inline
+void wpas_dbus_signal_p2p_invitation_received(struct wpa_supplicant *wpa_s,
+					      const u8 *sa, const u8 *dev_addr,
+					      const u8 *bssid, int id,
+					      int op_freq)
 {
 }
 

@@ -671,6 +671,16 @@ void wpas_notify_p2p_wps_failed(struct wpa_supplicant *wpa_s,
 	wpas_dbus_signal_p2p_wps_failed(wpa_s, fail);
 }
 
+
+void wpas_notify_p2p_invitation_received(struct wpa_supplicant *wpa_s,
+					 const u8 *sa, const u8 *go_dev_addr,
+					 const u8 *bssid, int id, int op_freq)
+{
+	/* Notify a P2P Invitation Request */
+	wpas_dbus_signal_p2p_invitation_received(wpa_s, sa, go_dev_addr, bssid,
+						 id, op_freq);
+}
+
 #endif /* CONFIG_P2P */
 
 

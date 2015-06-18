@@ -1139,6 +1139,8 @@ static int p2ps_gen_hash(struct p2p_data *p2p, const char *str, u8 *hash)
 
 	adv_array = (u8 *) str_buf;
 	adv_len = os_strlen(str);
+	if (adv_len >= sizeof(str_buf))
+		return 0;
 
 	for (i = 0; str[i] && i < adv_len; i++) {
 		if (str[i] >= 'A' && str[i] <= 'Z')

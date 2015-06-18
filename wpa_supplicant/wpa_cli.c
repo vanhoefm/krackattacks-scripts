@@ -4099,45 +4099,49 @@ static void wpa_cli_interactive(void)
 }
 
 
+static void wpa_cli_action_ping(void *eloop_ctx, void *timeout_ctx)
+{
+	struct wpa_ctrl *ctrl = eloop_ctx;
+	char buf[256];
+	size_t len;
+
+	/* verify that connection is still working */
+	len = sizeof(buf) - 1;
+	if (wpa_ctrl_request(ctrl, "PING", 4, buf, &len,
+			     wpa_cli_action_cb) < 0 ||
+	    len < 4 || os_memcmp(buf, "PONG", 4) != 0) {
+		printf("wpa_supplicant did not reply to PING command - exiting\n");
+		eloop_terminate();
+		return;
+	}
+	eloop_register_timeout(ping_interval, 0, wpa_cli_action_ping,
+			       ctrl, NULL);
+}
+
+
+static void wpa_cli_action_receive(int sock, void *eloop_ctx, void *sock_ctx)
+{
+	struct wpa_ctrl *ctrl = eloop_ctx;
+
+	wpa_cli_recv_pending(ctrl, 1);
+}
+
+
 static void wpa_cli_action(struct wpa_ctrl *ctrl)
 {
 #ifdef CONFIG_ANSI_C_EXTRA
 	/* TODO: ANSI C version(?) */
 	printf("Action processing not supported in ANSI C build.\n");
 #else /* CONFIG_ANSI_C_EXTRA */
-	fd_set rfds;
-	int fd, res;
-	struct timeval tv;
-	char buf[256]; /* note: large enough to fit in unsolicited messages */
-	size_t len;
+	int fd;
 
 	fd = wpa_ctrl_get_fd(ctrl);
-
-	while (!wpa_cli_quit) {
-		FD_ZERO(&rfds);
-		FD_SET(fd, &rfds);
-		tv.tv_sec = ping_interval;
-		tv.tv_usec = 0;
-		res = select(fd + 1, &rfds, NULL, NULL, &tv);
-		if (res < 0 && errno != EINTR) {
-			perror("select");
-			break;
-		}
-
-		if (FD_ISSET(fd, &rfds))
-			wpa_cli_recv_pending(ctrl, 1);
-		else {
-			/* verify that connection is still working */
-			len = sizeof(buf) - 1;
-			if (wpa_ctrl_request(ctrl, "PING", 4, buf, &len,
-					     wpa_cli_action_cb) < 0 ||
-			    len < 4 || os_memcmp(buf, "PONG", 4) != 0) {
-				printf("wpa_supplicant did not reply to PING "
-				       "command - exiting\n");
-				break;
-			}
-		}
-	}
+	eloop_register_timeout(ping_interval, 0, wpa_cli_action_ping,
+			       ctrl, NULL);
+	eloop_register_read_sock(fd, wpa_cli_action_receive, ctrl, NULL);
+	eloop_run();
+	eloop_cancel_timeout(wpa_cli_action_ping, ctrl, NULL);
+	eloop_unregister_read_sock(fd);
 #endif /* CONFIG_ANSI_C_EXTRA */
 }
 

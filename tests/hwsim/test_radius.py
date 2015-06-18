@@ -1027,6 +1027,9 @@ def test_ap_vlan_wpa2_psk_radius_required(dev, apdev):
             reply = self.CreateReplyPacket(pkt)
             reply.code = pyrad.packet.AccessAccept
             secret = reply.secret
+            if self.t_events['extra'].is_set():
+                reply.AddAttribute("Chargeable-User-Identity", "test-cui")
+                reply.AddAttribute("User-Name", "test-user")
             if self.t_events['long'].is_set():
                 reply.AddAttribute("Tunnel-Type", 13)
                 reply.AddAttribute("Tunnel-Medium-Type", 6)
@@ -1061,6 +1064,7 @@ def test_ap_vlan_wpa2_psk_radius_required(dev, apdev):
     t_events = {}
     t_events['stop'] = threading.Event()
     t_events['long'] = threading.Event()
+    t_events['extra'] = threading.Event()
     t = threading.Thread(target=run_pyrad_server, args=(srv, t_events))
     t.start()
 
@@ -1076,8 +1080,10 @@ def test_ap_vlan_wpa2_psk_radius_required(dev, apdev):
         params['wpa_passphrase'] = '0123456789abcdefghi'
         params['auth_server_port'] = "18138"
         hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
         logger.info("connecting without VLAN")
-        dev[0].connect(ssid, psk="0123456789abcdefghi", scan_freq="2412",wait_connect=False)
+        dev[0].connect(ssid, psk="0123456789abcdefghi", scan_freq="2412",
+                       wait_connect=False)
         ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED",
                                 "CTRL-EVENT-SSID-TEMP-DISABLED"], timeout=20)
         if ev is None:
@@ -1085,9 +1091,24 @@ def test_ap_vlan_wpa2_psk_radius_required(dev, apdev):
         if "CTRL-EVENT-CONNECTED" in ev:
             raise Exception("Unexpected success without vlan parameters")
         logger.info("connecting without VLAN failed as expected")
+
+        logger.info("connecting without VLAN (CUI/User-Name)")
+        t_events['extra'].set()
+        dev[1].connect(ssid, psk="0123456789abcdefghi", scan_freq="2412",
+                       wait_connect=False)
+        ev = dev[1].wait_event(["CTRL-EVENT-CONNECTED",
+                                "CTRL-EVENT-SSID-TEMP-DISABLED"], timeout=20)
+        if ev is None:
+            raise Exception("Timeout on connection attempt")
+        if "CTRL-EVENT-CONNECTED" in ev:
+            raise Exception("Unexpected success without vlan parameters(2)")
+        logger.info("connecting without VLAN failed as expected(2)")
+        t_events['extra'].clear()
+
         t_events['long'].set()
         logger.info("connecting with VLAN")
-        dev[2].connect(ssid, psk="0123456789abcdefghi", scan_freq="2412",wait_connect=False)
+        dev[2].connect(ssid, psk="0123456789abcdefghi", scan_freq="2412",
+                       wait_connect=False)
         ev = dev[2].wait_event(["CTRL-EVENT-CONNECTED",
                                 "CTRL-EVENT-SSID-TEMP-DISABLED"], timeout=20)
         if ev is None:

@@ -420,6 +420,20 @@ static int p2ps_wildcard_hash(struct p2p_data *p2p,
 }
 
 
+static int p2p_wfa_service_adv(struct p2p_data *p2p)
+{
+	struct p2ps_advertisement *adv;
+
+	for (adv = p2p->p2ps_adv_list; adv; adv = adv->next) {
+		if (os_strncmp(adv->svc_name, P2PS_WILD_HASH_STR,
+			       os_strlen(P2PS_WILD_HASH_STR)) == 0)
+			return 1;
+	}
+
+	return 0;
+}
+
+
 static int p2p_buf_add_service_info(struct wpabuf *buf, struct p2p_data *p2p,
 				    u32 adv_id, u16 config_methods,
 				    const char *svc_name, u8 **ie_len, u8 **pos,
@@ -553,7 +567,8 @@ void p2p_buf_add_service_instance(struct wpabuf *buf, struct p2p_data *p2p,
 
 	wpa_hexdump(MSG_DEBUG, "P2PS: Probe Request service hash values",
 		    hash, hash_count * P2PS_HASH_LEN);
-	p2ps_wildcard = p2ps_wildcard_hash(p2p, hash, hash_count);
+	p2ps_wildcard = p2ps_wildcard_hash(p2p, hash, hash_count) &&
+		p2p_wfa_service_adv(p2p);
 
 	/* Allocate temp buffer, allowing for overflow of 1 instance */
 	tmp_buf = wpabuf_alloc(MAX_SVC_ADV_IE_LEN + 256 + P2PS_HASH_LEN);

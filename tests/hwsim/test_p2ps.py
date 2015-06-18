@@ -1049,3 +1049,32 @@ def test_p2ps_wildcard_p2ps(dev):
         raise Exception("Unexpected P2P-DEVICE-FOUND event on seeker side")
     dev[1].p2p_stop_find()
     dev[1].dump_monitor()
+
+def test_p2ps_many_services_in_probe(dev):
+    """P2PS with large number of services in Probe Request/Response"""
+    long1 = 'org.example.0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789.a'
+    long2 = 'org.example.0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789.b'
+    long3 = 'org.example.0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789.c'
+    long4 = 'org.example.0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789.d'
+    long5 = 'org.example.0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789.e'
+    for name in [ long1, long2, long3, long4, long5 ]:
+        p2ps_advertise(r_dev=dev[0], r_role='1',
+                       svc_name=name,
+                       srv_info='I can do stuff')
+
+    if "OK" not in dev[1].global_request("P2P_FIND 10 type=social seek=%s seek=%s seek=%s seek=%s seek=%s" % (long1, long2, long3, long4, long5)):
+        raise Exception("Failed on P2P_FIND command")
+
+    events = ""
+    # Note: Require only four events since all the services do not fit within
+    # the length limit.
+    for i in range(4):
+        ev = dev[1].wait_global_event(["P2P-DEVICE-FOUND"], timeout=10)
+        if ev is None:
+            raise Exception("Missing P2P-DEVICE-FOUND")
+        events = events + ev
+    dev[1].p2p_stop_find()
+    dev[1].dump_monitor()
+    for name in [ long2, long3, long4, long5 ]:
+        if name not in events:
+            raise Exception("Service missing from peer events")

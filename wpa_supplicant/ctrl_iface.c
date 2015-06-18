@@ -4597,16 +4597,20 @@ static int p2p_ctrl_find(struct wpa_supplicant *wpa_s, char *cmd)
 
 	/* Must be searched for last, because it adds nul termination */
 	pos = os_strstr(cmd, " seek=");
+	if (pos)
+		pos += 6;
 	while (pos && seek_count < P2P_MAX_QUERY_HASH + 1) {
 		char *term;
 
-		term = os_strchr(pos + 1, ' ');
-		_seek[seek_count++] = pos + 6;
+		_seek[seek_count++] = pos;
 		seek = _seek;
-		pos = os_strstr(pos + 6, " seek=");
-
-		if (term)
-			*term = '\0';
+		term = os_strchr(pos, ' ');
+		if (!term)
+			break;
+		*term = '\0';
+		pos = os_strstr(term + 1, "seek=");
+		if (pos)
+			pos += 5;
 	}
 	if (seek_count > P2P_MAX_QUERY_HASH) {
 		seek[0] = NULL;

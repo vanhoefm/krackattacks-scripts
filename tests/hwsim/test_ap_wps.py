@@ -757,6 +757,9 @@ def test_ap_wps_pbc_overlap_2ap(dev, apdev):
     ev = dev[0].wait_event(["WPS-OVERLAP-DETECTED"], timeout=15)
     if ev is None:
         raise Exception("PBC session overlap not detected")
+    hapd.request("DISABLE")
+    hapd2.request("DISABLE")
+    dev[0].flush_scan_cache()
 
 def test_ap_wps_pbc_overlap_2sta(dev, apdev):
     """WPS PBC session overlap with two active STAs"""
@@ -779,15 +782,22 @@ def test_ap_wps_pbc_overlap_2sta(dev, apdev):
         raise Exception("PBC session overlap not detected (dev0)")
     if "config_error=12" not in ev:
         raise Exception("PBC session overlap not correctly reported (dev0)")
+    dev[0].request("WPS_CANCEL")
+    dev[0].request("DISCONNECT")
     ev = dev[1].wait_event(["WPS-M2D"], timeout=15)
     if ev is None:
         raise Exception("PBC session overlap not detected (dev1)")
     if "config_error=12" not in ev:
         raise Exception("PBC session overlap not correctly reported (dev1)")
+    dev[1].request("WPS_CANCEL")
+    dev[1].request("DISCONNECT")
     hapd.request("WPS_CANCEL")
     ret = hapd.request("WPS_PBC")
     if "FAIL" not in ret:
         raise Exception("PBC mode allowed to be started while PBC overlap still active")
+    hapd.request("DISABLE")
+    dev[0].flush_scan_cache()
+    dev[1].flush_scan_cache()
 
 def test_ap_wps_cancel(dev, apdev):
     """WPS AP cancelling enabled config method"""

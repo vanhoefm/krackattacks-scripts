@@ -2258,8 +2258,6 @@ p2p_reply_probe(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 	struct ieee80211_mgmt *resp;
 	struct p2p_message msg;
 	struct wpabuf *ies;
-	u8 query_hash[P2P_MAX_QUERY_HASH * P2PS_HASH_LEN];
-	u8 query_count;
 	u8 channel, op_class;
 
 	if (ieee802_11_parse_elems((u8 *) ie, ie_len, &elems, 0) ==
@@ -2312,36 +2310,24 @@ p2p_reply_probe(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 		return P2P_PREQ_NOT_P2P;
 	}
 
-	query_count = 0;
 	if (msg.service_hash && msg.service_hash_count) {
 		const u8 *hash = msg.service_hash;
-		u8 *dest = query_hash;
 		u8 i;
 		int p2ps_svc_found = 0;
 
 		for (i = 0; i < msg.service_hash_count; i++) {
 			if (p2p_service_find_asp(p2p, hash)) {
+				p2p_dbg(p2p, "Service Hash match found: "
+					MACSTR, MAC2STR(hash));
 				p2ps_svc_found = 1;
-
-				/* Save each matching hash */
-				if (query_count < P2P_MAX_QUERY_HASH) {
-					os_memcpy(dest, hash, P2PS_HASH_LEN);
-					dest += P2PS_HASH_LEN;
-					query_count++;
-				} else {
-					/* We found match(es) but too many to
-					 * return all */
-					query_count = 0;
-					break;
-				}
+				break;
 			}
 			hash += P2PS_HASH_LEN;
 		}
 
-		p2p_dbg(p2p, "ASP adv found: %d", p2ps_svc_found);
-
 		/* Probed hash unknown */
 		if (!p2ps_svc_found) {
+			p2p_dbg(p2p, "No Service Hash match found");
 			p2p_parse_free(&msg);
 			return P2P_PREQ_NOT_PROCESSED;
 		}
@@ -2375,11 +2361,11 @@ p2p_reply_probe(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 		p2p_parse_free(&msg);
 		return P2P_PREQ_NOT_PROCESSED;
 	}
-	p2p_parse_free(&msg);
 
 	if (!p2p->cfg->send_probe_resp) {
 		/* Response generated elsewhere */
 		p2p_dbg(p2p, "Probe Resp generated elsewhere - do not generate additional response");
+		p2p_parse_free(&msg);
 		return P2P_PREQ_NOT_PROCESSED;
 	}
 
@@ -2391,7 +2377,9 @@ p2p_reply_probe(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 	 * really only used for discovery purposes, not to learn exact BSS
 	 * parameters.
 	 */
-	ies = p2p_build_probe_resp_ies(p2p, query_hash, query_count);
+	ies = p2p_build_probe_resp_ies(p2p, msg.service_hash,
+				       msg.service_hash_count);
+	p2p_parse_free(&msg);
 	if (ies == NULL)
 		return P2P_PREQ_NOT_PROCESSED;
 

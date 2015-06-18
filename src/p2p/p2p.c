@@ -2226,18 +2226,21 @@ struct wpabuf * p2p_build_probe_resp_ies(struct p2p_data *p2p,
 static int p2p_service_find_asp(struct p2p_data *p2p, const u8 *hash)
 {
 	struct p2ps_advertisement *adv_data;
+	int any_wfa;
 
 	p2p_dbg(p2p, "ASP find - ASP list: %p", p2p->p2ps_adv_list);
 
-	/* Wildcard always matches if we have actual services */
-	if (os_memcmp(hash, p2p->wild_card_hash, P2PS_HASH_LEN) == 0)
-		return p2p->p2ps_adv_list != NULL;
+	/* Wildcard org.wi-fi.wfds matches any WFA spec defined service */
+	any_wfa = os_memcmp(hash, p2p->wild_card_hash, P2PS_HASH_LEN) == 0;
 
 	adv_data = p2p->p2ps_adv_list;
 	while (adv_data) {
-		p2p_dbg(p2p, "ASP hash: %x =? %x", hash[0], adv_data->hash[0]);
 		if (os_memcmp(hash, adv_data->hash, P2PS_HASH_LEN) == 0)
-			return 1;
+			return 1; /* exact hash match */
+		if (any_wfa &&
+		    os_strncmp(adv_data->svc_name, P2PS_WILD_HASH_STR,
+			       os_strlen(P2PS_WILD_HASH_STR)) == 0)
+			return 1; /* WFA service match */
 		adv_data = adv_data->next;
 	}
 

@@ -992,7 +992,38 @@ def test_p2ps_wildcard_p2ps(dev):
 
     adv_id = p2ps_advertise(r_dev=dev[0], r_role='1',
                             svc_name='org.foo.service',
-                            srv_info='I can receive files upto size 2 GB')
+                            srv_info='I can do stuff')
+    adv_id2 = p2ps_advertise(r_dev=dev[0], r_role='1',
+                             svc_name='org.wi-fi.wfds.send.rx',
+                             srv_info='I can receive files upto size 2 GB')
+
+    if "OK" not in dev[1].global_request("P2P_FIND 10 type=social seek=org.foo.service seek=" + p2ps_wildcard):
+        raise Exception("Failed on P2P_FIND command")
+
+    ev1 = dev[1].wait_global_event(["P2P-DEVICE-FOUND"], timeout=10)
+    if ev1 is None:
+        raise Exception("P2P-DEVICE-FOUND timeout on seeker side")
+    if dev[0].p2p_dev_addr() not in ev1:
+        raise Exception("Unexpected peer")
+
+    ev2 = dev[1].wait_global_event(["P2P-DEVICE-FOUND"], timeout=10)
+    if ev2 is None:
+        raise Exception("P2P-DEVICE-FOUND timeout on seeker side (2)")
+    if dev[0].p2p_dev_addr() not in ev2:
+        raise Exception("Unexpected peer (2)")
+
+    if p2ps_wildcard not in ev1 + ev2:
+        raise Exception("P2PS Wildcard name not found in P2P-DEVICE-FOUND event")
+    if "org.foo.service" not in ev1 + ev2:
+        raise Exception("Vendor specific service name not found in P2P-DEVICE-FOUND event")
+
+    if "OK" not in dev[1].global_request("P2P_STOP_FIND"):
+        raise Exception("P2P_STOP_FIND failed")
+    dev[1].dump_monitor()
+
+    res = dev[0].global_request("P2P_SERVICE_DEL asp " + str(adv_id))
+    if res is None:
+        raise Exception("Unable to remove the advertisement instance")
 
     if "OK" not in dev[1].global_request("P2P_FIND 10 type=social seek=" + p2ps_wildcard):
         raise Exception("Failed on P2P_FIND command")
@@ -1003,20 +1034,18 @@ def test_p2ps_wildcard_p2ps(dev):
     if dev[0].p2p_dev_addr() not in ev1:
         raise Exception("Unexpected peer")
     if p2ps_wildcard not in ev1:
-        raise Exception("P2PS Wildcard name not found in P2P-DEVICE-FOUND event")
-
-    if "OK" not in dev[1].global_request("P2P_STOP_FIND"):
-        raise Exception("P2P_STOP_FIND failed")
+        raise Exception("P2PS Wildcard name not found in P2P-DEVICE-FOUND event (2)")
     dev[1].dump_monitor()
 
-    ev0 = dev[0].global_request("P2P_SERVICE_DEL asp " + str(adv_id))
-    if ev0 is None:
-        raise Exception("Unable to remove the advertisement instance")
+    res = dev[0].global_request("P2P_SERVICE_DEL asp " + str(adv_id2))
+    if res is None:
+        raise Exception("Unable to remove the advertisement instance 2")
 
     if "OK" not in dev[1].global_request("P2P_FIND 10 type=social seek=" + p2ps_wildcard):
         raise Exception("Failed on P2P_FIND command")
 
-    ev1 = dev[1].wait_global_event(["P2P-DEVICE-FOUND"], timeout=5)
+    ev1 = dev[1].wait_global_event(["P2P-DEVICE-FOUND"], timeout=2)
     if ev1 is not None:
         raise Exception("Unexpected P2P-DEVICE-FOUND event on seeker side")
+    dev[1].p2p_stop_find()
     dev[1].dump_monitor()

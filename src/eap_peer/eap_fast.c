@@ -267,8 +267,8 @@ static int eap_fast_derive_msk(struct eap_fast_data *data)
 }
 
 
-static void eap_fast_derive_key_auth(struct eap_sm *sm,
-				     struct eap_fast_data *data)
+static int eap_fast_derive_key_auth(struct eap_sm *sm,
+				    struct eap_fast_data *data)
 {
 	u8 *sks;
 
@@ -281,7 +281,7 @@ static void eap_fast_derive_key_auth(struct eap_sm *sm,
 	if (sks == NULL) {
 		wpa_printf(MSG_DEBUG, "EAP-FAST: Failed to derive "
 			   "session_key_seed");
-		return;
+		return -1;
 	}
 
 	/*
@@ -294,11 +294,12 @@ static void eap_fast_derive_key_auth(struct eap_sm *sm,
 	data->simck_idx = 0;
 	os_memcpy(data->simck, sks, EAP_FAST_SIMCK_LEN);
 	os_free(sks);
+	return 0;
 }
 
 
-static void eap_fast_derive_key_provisioning(struct eap_sm *sm,
-					     struct eap_fast_data *data)
+static int eap_fast_derive_key_provisioning(struct eap_sm *sm,
+					    struct eap_fast_data *data)
 {
 	os_free(data->key_block_p);
 	data->key_block_p = (struct eap_fast_key_block_provisioning *)
@@ -307,7 +308,7 @@ static void eap_fast_derive_key_provisioning(struct eap_sm *sm,
 				    sizeof(*data->key_block_p));
 	if (data->key_block_p == NULL) {
 		wpa_printf(MSG_DEBUG, "EAP-FAST: Failed to derive key block");
-		return;
+		return -1;
 	}
 	/*
 	 * RFC 4851, Section 5.2:
@@ -326,15 +327,19 @@ static void eap_fast_derive_key_provisioning(struct eap_sm *sm,
 	wpa_hexdump_key(MSG_DEBUG, "EAP-FAST: client_challenge",
 			data->key_block_p->client_challenge,
 			sizeof(data->key_block_p->client_challenge));
+	return 0;
 }
 
 
-static void eap_fast_derive_keys(struct eap_sm *sm, struct eap_fast_data *data)
+static int eap_fast_derive_keys(struct eap_sm *sm, struct eap_fast_data *data)
 {
+	int res;
+
 	if (data->anon_provisioning)
-		eap_fast_derive_key_provisioning(sm, data);
+		res = eap_fast_derive_key_provisioning(sm, data);
 	else
-		eap_fast_derive_key_auth(sm, data);
+		res = eap_fast_derive_key_auth(sm, data);
+	return res;
 }
 
 
@@ -1586,7 +1591,14 @@ static struct wpabuf * eap_fast_process(struct eap_sm *sm, void *priv,
 			} else
 				data->anon_provisioning = 0;
 			data->resuming = 0;
-			eap_fast_derive_keys(sm, data);
+			if (eap_fast_derive_keys(sm, data) < 0) {
+				wpa_printf(MSG_DEBUG,
+					   "EAP-FAST: Could not derive keys");
+				ret->methodState = METHOD_DONE;
+				ret->decision = DECISION_FAIL;
+				wpabuf_free(resp);
+				return NULL;
+			}
 		}
 
 		if (res == 2) {

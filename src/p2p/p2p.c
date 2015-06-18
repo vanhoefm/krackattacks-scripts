@@ -2323,16 +2323,6 @@ p2p_reply_probe(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 			if (p2p_service_find_asp(p2p, hash)) {
 				p2ps_svc_found = 1;
 
-				if (!os_memcmp(hash, p2p->wild_card_hash,
-					       P2PS_HASH_LEN)) {
-					/* We found match(es) but wildcard
-					 * will return all */
-					query_count = 1;
-					os_memcpy(query_hash, hash,
-						  P2PS_HASH_LEN);
-					break;
-				}
-
 				/* Save each matching hash */
 				if (query_count < P2P_MAX_QUERY_HASH) {
 					os_memcpy(dest, hash, P2PS_HASH_LEN);

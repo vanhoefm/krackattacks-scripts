@@ -557,7 +557,7 @@ void p2p_buf_add_service_instance(struct wpabuf *buf, struct p2p_data *p2p,
 				  struct p2ps_advertisement *adv_list)
 {
 	struct p2ps_advertisement *adv;
-	int p2ps_wildcard;
+	int p2ps_wildcard, found = 0;
 	size_t total_len;
 	struct wpabuf *tmp_buf = NULL;
 	u8 *pos, *attr_len, *ie_len = NULL;
@@ -590,9 +590,10 @@ void p2p_buf_add_service_instance(struct wpabuf *buf, struct p2p_data *p2p,
 	pos = wpabuf_put(tmp_buf, 0);
 
 	if (p2ps_wildcard) {
+		/* org.wi-fi.wfds match found */
 		p2p_buf_add_service_info(tmp_buf, p2p, 0, 0, P2PS_WILD_HASH_STR,
 					 &ie_len, &pos, &total_len, attr_len);
-		p2ps_wildcard = 0;
+		found++;
 	}
 
 	/* add advertised service info of matching services */
@@ -610,46 +611,15 @@ void p2p_buf_add_service_instance(struct wpabuf *buf, struct p2p_data *p2p,
 						     adv->svc_name,
 						     &ie_len, &pos,
 						     &total_len,
-						     attr_len)) {
-				/*
-				 * We cannot return all services matching
-				 * the Probe Request frame hash attribute. In
-				 * this case, drop currently written entries and
-				 * return only a single wildcard advertised
-				 * service info in the Probe Response frame.
-				 */
-				p2ps_wildcard = 1;
-				goto end;
-			}
+						     attr_len))
+				break;
+			found++;
 			test += P2PS_HASH_LEN;
 		}
 	}
 
-end:
-	if (p2ps_wildcard) {
-		/*
-		 * Add a single attribute with P2PS wildcard if we failed
-		 * to add at least one matching advertisement.
-		 */
-		ie_len = p2p_buf_add_ie_hdr(buf);
-		wpabuf_put_u8(buf, P2P_ATTR_ADVERTISED_SERVICE);
-		attr_len = wpabuf_put(buf, sizeof(u16));
-		pos = wpabuf_put(buf, 0);
-		total_len = 0;
-
-		p2p_buf_add_service_info(buf, p2p,
-					 0, 0, P2PS_WILD_HASH_STR,
-					 &ie_len, &pos, &total_len, attr_len);
-	} else if (tmp_buf) {
-		/*
-		 * TODO: An empty attribute is returned if a device is not able
-		 * to match advertised services. The P2PS specification defines
-		 * that if the device is not a GO it shall not send a P2PS
-		 * related Probe Response frame in this case.
-		 */
+	if (found)
 		wpabuf_put_buf(buf, tmp_buf);
-	}
-
 	wpabuf_free(tmp_buf);
 }
 

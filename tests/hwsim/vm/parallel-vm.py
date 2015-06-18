@@ -115,6 +115,10 @@ def vm_read_stdout(vm, i):
             total_skipped += 1
         elif line.startswith("START"):
             total_started += 1
+            if len(vm['failed']) == 0:
+                vals = line.split(' ')
+                if len(vals) >= 2:
+                    vm['fail_seq'].append(vals[1])
         vm['out'] += line + '\n'
         lines.append(line)
     vm['pending'] = pending
@@ -426,6 +430,7 @@ def main():
         vm[i]['pending'] = ""
         vm[i]['err'] = ""
         vm[i]['failed'] = []
+        vm[i]['fail_seq'] = []
         for stream in [ vm[i]['proc'].stdout, vm[i]['proc'].stderr ]:
             fd = stream.fileno()
             fl = fcntl.fcntl(fd, fcntl.F_GETFL)
@@ -441,6 +446,19 @@ def main():
     failed = get_failed(vm)
 
     if first_run_failures:
+        print "To re-run same failure sequence(s):"
+        for i in range(0, num_servers):
+            if len(vm[i]['failed']) == 0:
+                continue
+            print "./parallel-vm.py -1 1",
+            skip = len(vm[i]['fail_seq'])
+            skip -= min(skip, 30)
+            for t in vm[i]['fail_seq']:
+                if skip > 0:
+                    skip -= 1
+                    continue
+                print t,
+            print
         print "Failed test cases:"
         for f in first_run_failures:
             print f,

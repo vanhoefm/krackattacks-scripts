@@ -2513,6 +2513,7 @@ def test_ap_wps_ap_scan_2(dev, apdev):
     if "OK" not in wpas.request("AP_SCAN 2"):
         raise Exception("Failed to set AP_SCAN 2")
 
+    wpas.flush_scan_cache()
     wpas.scan_for_bss(apdev[0]['bssid'], freq="2412")
     wpas.request("WPS_PBC " + apdev[0]['bssid'])
     ev = wpas.wait_event(["WPS-SUCCESS"], timeout=15)

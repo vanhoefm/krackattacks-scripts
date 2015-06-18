@@ -539,6 +539,10 @@ def test_scan_and_bss_entry_removed(dev, apdev):
 
     dev[0].wait_connected(timeout=15, error="No connection (sme-connect)")
     wpas.wait_connected(timeout=15, error="No connection (connect)")
+    dev[0].request("DISCONNECT")
+    wpas.request("DISCONNECT")
+    dev[0].flush_scan_cache()
+    wpas.flush_scan_cache()
 
 def test_scan_reqs_with_non_scan_radio_work(dev, apdev):
     """SCAN commands while non-scan radio_work is in progress"""

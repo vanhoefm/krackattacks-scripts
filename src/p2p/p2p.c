@@ -1196,6 +1196,7 @@ int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 		 * An empty seek string means no hash values, but still an ASP
 		 * search.
 		 */
+		p2p_dbg(p2p, "ASP search");
 		p2p->p2ps_seek_count = 0;
 		p2p->p2ps_seek = 1;
 	} else if (seek && seek_count <= P2P_MAX_QUERY_HASH) {
@@ -1206,13 +1207,8 @@ int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 			if (!p2ps_gen_hash(p2p, seek[i], buf))
 				continue;
 
-			/* If asking for wildcard, don't do others */
-			if (os_memcmp(buf, p2p->wild_card_hash,
-				      P2PS_HASH_LEN) == 0) {
-				count = 0;
-				break;
-			}
-
+			p2p_dbg(p2p, "Seek service %s hash " MACSTR,
+				seek[i], MAC2STR(buf));
 			os_memcpy(&p2p->p2ps_seek_hash[count * P2PS_HASH_LEN],
 				  buf, P2PS_HASH_LEN);
 			count++;

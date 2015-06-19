@@ -1628,6 +1628,9 @@ static int wpas_select_network_from_last_scan(struct wpa_supplicant *wpa_s,
 			if (wpa_supplicant_req_sched_scan(wpa_s))
 				wpa_supplicant_req_new_scan(wpa_s, timeout_sec,
 							    timeout_usec);
+
+			wpa_msg_ctrl(wpa_s, MSG_INFO,
+				     WPA_EVENT_NETWORK_NOT_FOUND);
 		}
 	}
 	return 0;

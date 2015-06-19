@@ -2347,6 +2347,19 @@ def test_dbus_p2p_invalid(dev, apdev):
         if "InvalidArgs" not in str(e):
             raise Exception("Unexpected error message for invalid RejectPeer(): " + str(e))
 
+    tests = [ { },
+              { 'peer': 'foo' },
+              { 'foo': "bar" },
+              { 'iface': "abc" },
+              { 'iface': 123 } ]
+    for t in tests:
+        try:
+            p2p.RemoveClient(t)
+            raise Exception("Invalid RemoveClient accepted")
+        except dbus.exceptions.DBusException, e:
+            if "InvalidArgs" not in str(e):
+                raise Exception("Unexpected error message for invalid RemoveClient(): " + str(e))
+
     tests = [ {'DiscoveryType': 'foo'},
               {'RequestedDeviceTypes': 'foo'},
               {'RequestedDeviceTypes': ['foo']},
@@ -3038,6 +3051,7 @@ def test_dbus_p2p_autogo(dev, apdev):
             TestDbus.__init__(self, bus)
             self.first = True
             self.waiting_end = False
+            self.deauthorized = False
             self.done = False
 
         def __enter__(self):
@@ -3060,6 +3074,8 @@ def test_dbus_p2p_autogo(dev, apdev):
                             "ProvisionDiscoveryRequestDisplayPin")
             self.add_signal(self.staAuthorized, WPAS_DBUS_IFACE,
                             "StaAuthorized")
+            self.add_signal(self.staDeauthorized, WPAS_DBUS_IFACE,
+                            "StaDeauthorized")
             self.loop.run()
             return self
 
@@ -3235,10 +3251,16 @@ def test_dbus_p2p_autogo(dev, apdev):
                 if "Error.Failed" not in str(e):
                     raise Exception("Unexpected error message for invalid Set(WPSVendorExtensions): " + str(e))
 
+            p2p.RemoveClient({ 'peer': self.peer_path })
+
             self.waiting_end = True
             group_p2p = dbus.Interface(self.g_if_obj,
                                        WPAS_DBUS_IFACE_P2PDEVICE)
             group_p2p.Disconnect()
+
+        def staDeauthorized(self, name):
+            logger.debug("staDeauthorized: " + name)
+            self.deauthorized = True
 
         def run_test(self, *args):
             logger.debug("run_test")
@@ -3249,7 +3271,7 @@ def test_dbus_p2p_autogo(dev, apdev):
             return False
 
         def success(self):
-            return self.done
+            return self.done and self.deauthorized
 
     with TestDbusP2p(bus) as t:
         if not t.success():

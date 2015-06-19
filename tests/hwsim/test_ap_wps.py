@@ -2240,7 +2240,7 @@ def test_ap_wps_upnp_http_proto(dev, apdev):
     location = ssdp_get_location(ap_uuid)
 
     url = urlparse.urlparse(location)
-    conn = httplib.HTTPConnection(url.netloc, timeout=0.1)
+    conn = httplib.HTTPConnection(url.netloc, timeout=0.2)
     #conn.set_debuglevel(1)
 
     conn.request("HEAD", "hello")

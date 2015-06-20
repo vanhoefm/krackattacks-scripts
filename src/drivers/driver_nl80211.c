@@ -8509,7 +8509,9 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.set_ap_wps_ie = wpa_driver_set_ap_wps_p2p_ie,
 #endif /* ANDROID_P2P */
 #ifdef ANDROID
+#ifndef ANDROID_LIB_STUB
 	.driver_cmd = wpa_driver_nl80211_driver_cmd,
+#endif /* !ANDROID_LIB_STUB */
 #endif /* ANDROID */
 	.vendor_cmd = nl80211_vendor_cmd,
 	.set_qos_map = nl80211_set_qos_map,

@@ -237,7 +237,8 @@ int check_40mhz_5g(struct hostapd_hw_modes *mode,
 }
 
 
-int check_20mhz_bss(struct wpa_scan_res *bss, int pri_freq, int start, int end)
+static int check_20mhz_bss(struct wpa_scan_res *bss, int pri_freq, int start,
+			   int end)
 {
 	struct ieee802_11_elems elems;
 	struct ieee80211_ht_operation *oper;

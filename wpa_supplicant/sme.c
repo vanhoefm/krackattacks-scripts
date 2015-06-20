@@ -831,12 +831,20 @@ void sme_event_auth(struct wpa_supplicant *wpa_s, union wpa_event_data *data)
 
 #ifdef CONFIG_IEEE80211R
 	if (data->auth.auth_type == WLAN_AUTH_FT) {
-		union wpa_event_data edata;
-		os_memset(&edata, 0, sizeof(edata));
-		edata.ft_ies.ies = data->auth.ies;
-		edata.ft_ies.ies_len = data->auth.ies_len;
-		os_memcpy(edata.ft_ies.target_ap, data->auth.peer, ETH_ALEN);
-		wpa_supplicant_event(wpa_s, EVENT_FT_RESPONSE, &edata);
+		if (wpa_ft_process_response(wpa_s->wpa, data->auth.ies,
+					    data->auth.ies_len, 0,
+					    data->auth.peer, NULL, 0) < 0) {
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"SME: FT Authentication response processing failed");
+			wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_DISCONNECTED "bssid="
+				MACSTR
+				" reason=%d locally_generated=1",
+				MAC2STR(wpa_s->pending_bssid),
+				WLAN_REASON_DEAUTH_LEAVING);
+			wpas_connection_failed(wpa_s, wpa_s->pending_bssid);
+			wpa_supplicant_mark_disassoc(wpa_s);
+			return;
+		}
 	}
 #endif /* CONFIG_IEEE80211R */
 

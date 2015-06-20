@@ -1914,3 +1914,60 @@ def test_ap_wpa2_psk_incorrect_passphrase(dev, apdev):
     hapd.enable()
 
     dev[0].wait_connected(timeout=20)
+
+def test_ap_wpa_ie_parsing(dev, apdev):
+    """WPA IE parsing"""
+    ssid = "test-wpa-psk"
+    passphrase = 'qwertyuiop'
+    params = hostapd.wpa_params(ssid=ssid, passphrase=passphrase)
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    id = dev[0].connect(ssid, psk=passphrase, scan_freq="2412",
+                        only_add_network=True)
+
+    tests = [ "dd040050f201",
+              "dd050050f20101",
+              "dd060050f2010100",
+              "dd060050f2010001",
+              "dd070050f201010000",
+              "dd080050f20101000050",
+              "dd090050f20101000050f2",
+              "dd0a0050f20101000050f202",
+              "dd0b0050f20101000050f20201",
+              "dd0c0050f20101000050f2020100",
+              "dd0c0050f20101000050f2020000",
+              "dd0c0050f20101000050f202ffff",
+              "dd0d0050f20101000050f202010000",
+              "dd0e0050f20101000050f20201000050",
+              "dd0f0050f20101000050f20201000050f2",
+              "dd100050f20101000050f20201000050f202",
+              "dd110050f20101000050f20201000050f20201",
+              "dd120050f20101000050f20201000050f2020100",
+              "dd120050f20101000050f20201000050f2020000",
+              "dd120050f20101000050f20201000050f202ffff",
+              "dd130050f20101000050f20201000050f202010000",
+              "dd140050f20101000050f20201000050f20201000050",
+              "dd150050f20101000050f20201000050f20201000050f2" ]
+    for t in tests:
+        try:
+            if "OK" not in dev[0].request("VENDOR_ELEM_ADD 13 " + t):
+                raise Exception("VENDOR_ELEM_ADD failed")
+            dev[0].select_network(id)
+            ev = dev[0].wait_event(["CTRL-EVENT-ASSOC-REJECT"], timeout=10)
+            if ev is None:
+                raise Exception("Association rejection not reported")
+            dev[0].request("DISCONNECT")
+        finally:
+            dev[0].request("VENDOR_ELEM_REMOVE 13 *")
+
+    tests = [ "dd170050f20101000050f20201000050f20201000050f202ff",
+              "dd180050f20101000050f20201000050f20201000050f202ffff",
+              "dd190050f20101000050f20201000050f20201000050f202ffffff" ]
+    for t in tests:
+        try:
+            if "OK" not in dev[0].request("VENDOR_ELEM_ADD 13 " + t):
+                raise Exception("VENDOR_ELEM_ADD failed")
+            dev[0].select_network(id)
+            dev[0].wait_connected()
+            dev[0].request("DISCONNECT")
+        finally:
+            dev[0].request("VENDOR_ELEM_REMOVE 13 *")

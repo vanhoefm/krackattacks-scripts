@@ -13,7 +13,7 @@ logger = logging.getLogger()
 
 import hwsim_utils
 import hostapd
-from utils import HwsimSkip
+from utils import HwsimSkip, alloc_fail
 from test_ap_psk import find_wpas_process, read_process_memory, verify_not_present, get_key_locations
 
 def test_sae(dev, apdev):
@@ -311,3 +311,24 @@ def test_sae_key_lifetime_in_memory(dev, apdev, params):
     verify_not_present(buf, sae_k, fname, "SAE(k)")
     verify_not_present(buf, sae_keyseed, fname, "SAE(keyseed)")
     verify_not_present(buf, sae_kck, fname, "SAE(KCK)")
+
+def test_sae_oom_wpas(dev, apdev):
+    """SAE and OOM in wpa_supplicant"""
+    if "SAE" not in dev[0].get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
+    params = hostapd.wpa2_params(ssid="test-sae",
+                                 passphrase="12345678")
+    params['wpa_key_mgmt'] = 'SAE'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].request("SET sae_groups 25")
+    with alloc_fail(dev[0], 1, "sae_set_group"):
+        dev[0].connect("test-sae", psk="12345678", key_mgmt="SAE",
+                       scan_freq="2412")
+        dev[0].request("REMOVE_NETWORK all")
+
+    dev[0].request("SET sae_groups ")
+    with alloc_fail(dev[0], 2, "sae_set_group"):
+        dev[0].connect("test-sae", psk="12345678", key_mgmt="SAE",
+                       scan_freq="2412")
+        dev[0].request("REMOVE_NETWORK all")

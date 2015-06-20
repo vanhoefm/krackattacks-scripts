@@ -31,7 +31,7 @@ def test_wpas_ctrl_network(dev):
 
     tests = (("key_mgmt", "WPA-PSK WPA-EAP IEEE8021X NONE WPA-NONE FT-PSK FT-EAP WPA-PSK-SHA256 WPA-EAP-SHA256"),
              ("pairwise", "CCMP-256 GCMP-256 CCMP GCMP TKIP"),
-             ("group", "CCMP-256 GCMP-256 CCMP GCMP TKIP WEP104 WEP40"),
+             ("group", "CCMP-256 GCMP-256 CCMP GCMP TKIP"),
              ("auth_alg", "OPEN SHARED LEAP"),
              ("scan_freq", "1 2 3 4 5 6 7 8 9 10 11 12 13 14 15"),
              ("freq_list", "2412 2417"),

@@ -667,3 +667,60 @@ def test_ft_psk_key_lifetime_in_memory(dev, apdev, params):
     verify_not_present(buf, kek, fname, "KEK")
     verify_not_present(buf, tk, fname, "TK")
     verify_not_present(buf, gtk, fname, "GTK")
+
+def test_ap_ft_invalid_resp(dev, apdev):
+    """WPA2-PSK-FT AP and invalid response IEs"""
+    ssid = "test-ft"
+    passphrase="12345678"
+
+    params = ft_params1(ssid=ssid, passphrase=passphrase)
+    hapd0 = hostapd.add_ap(apdev[0]['ifname'], params)
+    dev[0].connect(ssid, psk=passphrase, key_mgmt="FT-PSK", proto="WPA2",
+                   scan_freq="2412")
+
+    params = ft_params2(ssid=ssid, passphrase=passphrase)
+    hapd1 = hostapd.add_ap(apdev[1]['ifname'], params)
+
+    tests = [
+        # Various IEs for test coverage. The last one is FTIE with invalid
+        # R1KH-ID subelement.
+        "020002000000" + "3800" + "38051122334455" + "3754000102030405060708090001020304050607080900010203040506070809000102030405060708090001020304050607080900010203040506070809000102030405060708090001020304050607080900010100",
+        # FTIE with invalid R0KH-ID subelement (len=0).
+        "020002000000" + "3754000102030405060708090001020304050607080900010203040506070809000102030405060708090001020304050607080900010203040506070809000102030405060708090001020304050607080900010300",
+        # FTIE with invalid R0KH-ID subelement (len=49).
+        "020002000000" + "378500010203040506070809000102030405060708090001020304050607080900010203040506070809000102030405060708090001020304050607080900010203040506070809000102030405060708090001033101020304050607080910111213141516171819202122232425262728293031323334353637383940414243444546474849",
+        # Invalid RSNE.
+        "020002000000" + "3000",
+        # Required IEs missing from protected IE count.
+        "020002000000" + "3603a1b201" + "375200010203040506070809000102030405060708090001020304050607080900010203040506070809000102030405060708090001020304050607080900010203040506070809000102030405060708090001" + "3900",
+        # RIC missing from protected IE count.
+        "020002000000" + "3603a1b201" + "375200020203040506070809000102030405060708090001020304050607080900010203040506070809000102030405060708090001020304050607080900010203040506070809000102030405060708090001" + "3900",
+        # Protected IE missing.
+        "020002000000" + "3603a1b201" + "375200ff0203040506070809000102030405060708090001020304050607080900010203040506070809000102030405060708090001020304050607080900010203040506070809000102030405060708090001" + "3900" + "0000" ]
+    for t in tests:
+        dev[0].scan_for_bss(apdev[1]['bssid'], freq="2412")
+        hapd1.set("ext_mgmt_frame_handling", "1")
+        hapd1.dump_monitor()
+        if "OK" not in dev[0].request("ROAM " + apdev[1]['bssid']):
+            raise Exception("ROAM failed")
+        auth = None
+        for i in range(20):
+            msg = hapd1.mgmt_rx()
+            if msg['subtype'] == 11:
+                auth = msg
+                break
+        if not auth:
+            raise Exception("Authentication frame not seen")
+
+        resp = {}
+        resp['fc'] = auth['fc']
+        resp['da'] = auth['sa']
+        resp['sa'] = auth['da']
+        resp['bssid'] = auth['bssid']
+        resp['payload'] = binascii.unhexlify(t)
+        hapd1.mgmt_tx(resp)
+        hapd1.set("ext_mgmt_frame_handling", "0")
+        dev[0].wait_disconnected()
+
+        dev[0].request("RECONNECT")
+        dev[0].wait_connected()

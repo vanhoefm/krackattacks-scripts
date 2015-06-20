@@ -4549,3 +4549,59 @@ def test_dbus_ap(dev, apdev):
         if not t.success():
             raise Exception("Expected signals not seen")
         dev[1].connect(ssid, psk=passphrase, scan_freq="2412")
+
+def test_dbus_connect_wpa_eap(dev, apdev):
+    """D-Bus AddNetwork and connection with WPA+WPA2-Enterprise AP"""
+    (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
+    iface = dbus.Interface(if_obj, WPAS_DBUS_IFACE)
+
+    ssid = "test-wpa-eap"
+    params = hostapd.wpa_eap_params(ssid=ssid)
+    params["wpa"] = "3"
+    params["rsn_pairwise"] = "CCMP"
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    class TestDbusConnect(TestDbus):
+        def __init__(self, bus):
+            TestDbus.__init__(self, bus)
+            self.done = False
+
+        def __enter__(self):
+            gobject.timeout_add(1, self.run_connect)
+            gobject.timeout_add(15000, self.timeout)
+            self.add_signal(self.propertiesChanged, WPAS_DBUS_IFACE,
+                            "PropertiesChanged")
+            self.add_signal(self.eap, WPAS_DBUS_IFACE, "EAP")
+            self.loop.run()
+            return self
+
+        def propertiesChanged(self, properties):
+            logger.debug("propertiesChanged: %s" % str(properties))
+            if 'State' in properties and properties['State'] == "completed":
+                self.done = True
+                self.loop.quit()
+
+        def eap(self, status, parameter):
+            logger.debug("EAP: status=%s parameter=%s" % (status, parameter))
+
+        def run_connect(self, *args):
+            logger.debug("run_connect")
+            args = dbus.Dictionary({ 'ssid': ssid,
+                                     'key_mgmt': 'WPA-EAP',
+                                     'eap': 'PEAP',
+                                     'identity': 'user',
+                                     'password': 'password',
+                                     'ca_cert': 'auth_serv/ca.pem',
+                                     'phase2': 'auth=MSCHAPV2',
+                                     'scan_freq': 2412 },
+                                   signature='sv')
+            self.netw = iface.AddNetwork(args)
+            iface.SelectNetwork(self.netw)
+            return False
+
+        def success(self):
+            return self.done
+
+    with TestDbusConnect(bus) as t:
+        if not t.success():
+            raise Exception("Expected signals not seen")

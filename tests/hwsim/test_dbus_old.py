@@ -637,6 +637,7 @@ def test_dbus_old_wps_pbc(dev, apdev):
 def _test_dbus_old_wps_pbc(dev, apdev):
     (bus,wpas_obj,path,if_obj) = prepare_dbus(dev[0])
 
+    dev[0].flush_scan_cache()
     hapd = start_ap(apdev[0])
     hapd.request("WPS_PBC")
     bssid = apdev[0]['bssid']

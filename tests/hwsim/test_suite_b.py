@@ -11,8 +11,7 @@ logger = logging.getLogger()
 import hostapd
 from utils import HwsimSkip
 
-def test_suite_b(dev, apdev):
-    """WPA2-PSK/GCMP connection at Suite B 128-bit level"""
+def check_suite_b_capa(dev):
     if "GCMP" not in dev[0].get_capability("pairwise"):
         raise HwsimSkip("GCMP not supported")
     if "BIP-GMAC-128" not in dev[0].get_capability("group_mgmt"):
@@ -25,6 +24,9 @@ def test_suite_b(dev, apdev):
     if "build=OpenSSL 1.0.2" not in tls or "run=OpenSSL 1.0.2" not in tls:
         raise HwsimSkip("OpenSSL version not supported for Suite B: " + tls)
 
+def test_suite_b(dev, apdev):
+    """WPA2/GCMP connection at Suite B 128-bit level"""
+    check_suite_b_capa(dev)
     dev[0].flush_scan_cache()
     params = { "ssid": "test-suite-b",
                "wpa": "2",
@@ -70,8 +72,49 @@ def test_suite_b(dev, apdev):
     if "CTRL-EVENT-EAP-STARTED" in ev:
         raise Exception("Unexpected EAP exchange")
 
-def test_suite_b_192(dev, apdev):
-    """WPA2-PSK/GCMP-256 connection at Suite B 192-bit level"""
+def suite_b_as_params():
+    params = {}
+    params['ssid'] = 'as'
+    params['beacon_int'] = '2000'
+    params['radius_server_clients'] = 'auth_serv/radius_clients.conf'
+    params['radius_server_auth_port'] = '18129'
+    params['eap_server'] = '1'
+    params['eap_user_file'] = 'auth_serv/eap_user.conf'
+    params['ca_cert'] = 'auth_serv/ec-ca.pem'
+    params['server_cert'] = 'auth_serv/ec-server.pem'
+    params['private_key'] = 'auth_serv/ec-server.key'
+    params['openssl_ciphers'] = 'SUITEB128'
+    return params
+
+def test_suite_b_radius(dev, apdev):
+    """WPA2/GCMP (RADIUS) connection at Suite B 128-bit level"""
+    check_suite_b_capa(dev)
+    dev[0].flush_scan_cache()
+    params = suite_b_as_params()
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    params = { "ssid": "test-suite-b",
+               "wpa": "2",
+               "wpa_key_mgmt": "WPA-EAP-SUITE-B",
+               "rsn_pairwise": "GCMP",
+               "group_mgmt_cipher": "BIP-GMAC-128",
+               "ieee80211w": "2",
+               "ieee8021x": "1",
+               'auth_server_addr': "127.0.0.1",
+               'auth_server_port': "18129",
+               'auth_server_shared_secret': "radius",
+               'nas_identifier': "nas.w1.fi" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].connect("test-suite-b", key_mgmt="WPA-EAP-SUITE-B", ieee80211w="2",
+                   openssl_ciphers="SUITEB128",
+                   eap="TLS", identity="tls user",
+                   ca_cert="auth_serv/ec-ca.pem",
+                   client_cert="auth_serv/ec-user.pem",
+                   private_key="auth_serv/ec-user.key",
+                   pairwise="GCMP", group="GCMP", scan_freq="2412")
+
+def check_suite_b_192_capa(dev):
     if "GCMP-256" not in dev[0].get_capability("pairwise"):
         raise HwsimSkip("GCMP-256 not supported")
     if "BIP-GMAC-256" not in dev[0].get_capability("group_mgmt"):
@@ -84,6 +127,9 @@ def test_suite_b_192(dev, apdev):
     if "build=OpenSSL 1.0.2" not in tls or "run=OpenSSL 1.0.2" not in tls:
         raise HwsimSkip("OpenSSL version not supported for Suite B: " + tls)
 
+def test_suite_b_192(dev, apdev):
+    """WPA2/GCMP-256 connection at Suite B 192-bit level"""
+    check_suite_b_192_capa(dev)
     dev[0].flush_scan_cache()
     params = { "ssid": "test-suite-b",
                "wpa": "2",
@@ -128,3 +174,36 @@ def test_suite_b_192(dev, apdev):
         raise Exception("Roaming with the AP timed out")
     if "CTRL-EVENT-EAP-STARTED" in ev:
         raise Exception("Unexpected EAP exchange")
+
+def test_suite_b_192_radius(dev, apdev):
+    """WPA2/GCMP-256 (RADIUS) connection at Suite B 192-bit level"""
+    check_suite_b_192_capa(dev)
+    dev[0].flush_scan_cache()
+    params = suite_b_as_params()
+    params['ca_cert'] = 'auth_serv/ec2-ca.pem'
+    params['server_cert'] = 'auth_serv/ec2-server.pem'
+    params['private_key'] = 'auth_serv/ec2-server.key'
+    params['openssl_ciphers'] = 'SUITEB192'
+    hostapd.add_ap(apdev[1]['ifname'], params)
+
+    params = { "ssid": "test-suite-b",
+               "wpa": "2",
+               "wpa_key_mgmt": "WPA-EAP-SUITE-B-192",
+               "rsn_pairwise": "GCMP-256",
+               "group_mgmt_cipher": "BIP-GMAC-256",
+               "ieee80211w": "2",
+               "ieee8021x": "1",
+               'auth_server_addr': "127.0.0.1",
+               'auth_server_port': "18129",
+               'auth_server_shared_secret': "radius",
+               'nas_identifier': "nas.w1.fi" }
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].connect("test-suite-b", key_mgmt="WPA-EAP-SUITE-B-192",
+                   ieee80211w="2",
+                   openssl_ciphers="SUITEB192",
+                   eap="TLS", identity="tls user",
+                   ca_cert="auth_serv/ec2-ca.pem",
+                   client_cert="auth_serv/ec2-user.pem",
+                   private_key="auth_serv/ec2-user.key",
+                   pairwise="GCMP-256", group="GCMP-256", scan_freq="2412")

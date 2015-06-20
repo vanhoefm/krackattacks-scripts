@@ -67,7 +67,7 @@ static int sme_set_sae_group(struct wpa_supplicant *wpa_s)
 
 	for (;;) {
 		int group = groups[wpa_s->sme.sae_group_index];
-		if (group < 0)
+		if (group <= 0)
 			break;
 		if (sae_set_group(&wpa_s->sme.sae, group) == 0) {
 			wpa_dbg(wpa_s, MSG_DEBUG, "SME: Selected SAE group %d",

@@ -151,7 +151,7 @@ int android_pno_stop(struct i802_bss *bss)
 
 
 #ifdef ANDROID_P2P
-#ifdef ANDROID_P2P_STUB
+#ifdef ANDROID_LIB_STUB
 
 int wpa_driver_set_p2p_noa(void *priv, u8 count, int start, int duration)
 {
@@ -178,7 +178,7 @@ int wpa_driver_set_ap_wps_p2p_ie(void *priv, const struct wpabuf *beacon,
 	return 0;
 }
 
-#endif /* ANDROID_P2P_STUB */
+#endif /* ANDROID_LIB_STUB */
 #endif /* ANDROID_P2P */
 
 

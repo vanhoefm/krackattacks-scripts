@@ -29,8 +29,9 @@ L_CFLAGS += -Wno-unused-parameter
 
 # Set Android extended P2P functionality
 L_CFLAGS += -DANDROID_P2P
+
 ifeq ($(BOARD_HOSTAPD_PRIVATE_LIB),)
-L_CFLAGS += -DANDROID_P2P_STUB
+L_CFLAGS += -DANDROID_LIB_STUB
 endif
 
 # Use Android specific directory for control interface sockets

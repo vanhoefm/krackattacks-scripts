@@ -346,7 +346,8 @@ static int add_common_radius_sta_attr_rsn(struct hostapd_data *hapd,
 		return -1;
 	}
 
-	suite = wpa_cipher_to_suite((hapd->conf->wpa & 0x2) ?
+	suite = wpa_cipher_to_suite(((hapd->conf->wpa & 0x2) ||
+				     hapd->conf->osen) ?
 				    WPA_PROTO_RSN : WPA_PROTO_WPA,
 				    hapd->conf->wpa_group);
 	if (!hostapd_config_get_radius_attr(req_attr,
@@ -453,7 +454,7 @@ static int add_common_radius_sta_attr(struct hostapd_data *hapd,
 	}
 #endif /* CONFIG_IEEE80211R */
 
-	if (hapd->conf->wpa && sta->wpa_sm &&
+	if ((hapd->conf->wpa || hapd->conf->osen) && sta->wpa_sm &&
 	    add_common_radius_sta_attr_rsn(hapd, req_attr, sta, msg) < 0)
 		return -1;
 

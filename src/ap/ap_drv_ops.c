@@ -743,6 +743,25 @@ int hostapd_drv_set_qos_map(struct hostapd_data *hapd,
 }
 
 
+static void hostapd_get_hw_mode_any_channels(struct hostapd_data *hapd,
+					     struct hostapd_hw_modes *mode,
+					     int acs_ch_list_all,
+					     int **freq_list)
+{
+	int i;
+
+	for (i = 0; i < mode->num_channels; i++) {
+		struct hostapd_channel_data *chan = &mode->channels[i];
+
+		if ((acs_ch_list_all ||
+		     freq_range_list_includes(&hapd->iface->conf->acs_ch_list,
+					      chan->chan)) &&
+		    !(chan->flag & HOSTAPD_CHAN_DISABLED))
+			int_array_add_unique(freq_list, chan->freq);
+	}
+}
+
+
 int hostapd_drv_do_acs(struct hostapd_data *hapd)
 {
 	struct drv_acs_params params;
@@ -750,6 +769,7 @@ int hostapd_drv_do_acs(struct hostapd_data *hapd)
 	u8 *channels = NULL;
 	unsigned int num_channels = 0;
 	struct hostapd_hw_modes *mode;
+	int *freq_list = NULL;
 
 	if (hapd->driver == NULL || hapd->driver->do_acs == NULL)
 		return 0;
@@ -765,24 +785,35 @@ int hostapd_drv_do_acs(struct hostapd_data *hapd)
 		acs_ch_list_all = 1;
 
 	mode = hapd->iface->current_mode;
-	if (mode == NULL)
-		return -1;
-	channels = os_malloc(mode->num_channels);
-	if (channels == NULL)
-		return -1;
+	if (mode) {
+		channels = os_malloc(mode->num_channels);
+		if (channels == NULL)
+			return -1;
 
-	for (i = 0; i < mode->num_channels; i++) {
-		struct hostapd_channel_data *chan = &mode->channels[i];
-		if (!acs_ch_list_all &&
-		    !freq_range_list_includes(&hapd->iface->conf->acs_ch_list,
-					      chan->chan))
-			continue;
-		if (!(chan->flag & HOSTAPD_CHAN_DISABLED))
-			channels[num_channels++] = chan->chan;
+		for (i = 0; i < mode->num_channels; i++) {
+			struct hostapd_channel_data *chan = &mode->channels[i];
+			if (!acs_ch_list_all &&
+			    !freq_range_list_includes(
+				    &hapd->iface->conf->acs_ch_list,
+				    chan->chan))
+				continue;
+			if (!(chan->flag & HOSTAPD_CHAN_DISABLED)) {
+				channels[num_channels++] = chan->chan;
+				int_array_add_unique(&freq_list, chan->freq);
+			}
+		}
+	} else {
+		for (i = 0; i < hapd->iface->num_hw_features; i++) {
+			mode = &hapd->iface->hw_features[i];
+			hostapd_get_hw_mode_any_channels(hapd, mode,
+							 acs_ch_list_all,
+							 &freq_list);
+		}
 	}
 
 	params.ch_list = channels;
 	params.ch_list_len = num_channels;
+	params.freq_list = freq_list;
 
 	params.ht_enabled = !!(hapd->iface->conf->ieee80211n);
 	params.ht40_enabled = !!(hapd->iface->conf->ht_capab &

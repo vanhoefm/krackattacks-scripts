@@ -1602,6 +1602,7 @@ struct drv_acs_params {
 	/* ACS channel list info */
 	unsigned int ch_list_len;
 	const u8 *ch_list;
+	const int *freq_list;
 };
 
 

@@ -8385,6 +8385,26 @@ static int hw_mode_to_qca_acs(enum hostapd_hw_mode hw_mode)
 }
 
 
+static int add_acs_freq_list(struct nl_msg *msg, const int *freq_list)
+{
+	int i, len, ret;
+	u32 *freqs;
+
+	if (!freq_list)
+		return 0;
+	len = int_array_len(freq_list);
+	freqs = os_malloc(sizeof(u32) * len);
+	if (!freqs)
+		return -1;
+	for (i = 0; i < len; i++)
+		freqs[i] = freq_list[i];
+	ret = nla_put(msg, QCA_WLAN_VENDOR_ATTR_ACS_FREQ_LIST,
+		      sizeof(u32) * len, freqs);
+	os_free(freqs);
+	return ret;
+}
+
+
 static int wpa_driver_do_acs(void *priv, struct drv_acs_params *params)
 {
 	struct i802_bss *bss = priv;
@@ -8414,7 +8434,8 @@ static int wpa_driver_do_acs(void *priv, struct drv_acs_params *params)
 			params->ch_width) ||
 	    (params->ch_list_len &&
 	     nla_put(msg, QCA_WLAN_VENDOR_ATTR_ACS_CH_LIST, params->ch_list_len,
-		     params->ch_list))) {
+		     params->ch_list)) ||
+	    add_acs_freq_list(msg, params->freq_list)) {
 		nlmsg_free(msg);
 		return -ENOBUFS;
 	}

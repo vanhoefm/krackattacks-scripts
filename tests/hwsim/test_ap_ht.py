@@ -944,3 +944,19 @@ def test_prefer_ht20_during_roam(dev, apdev):
     
     if dev[0].get_status_field('bssid') != bssid2:
         raise Exception("Unexpected BSS selected")
+
+def test_ap_ht40_5ghz_invalid_pair(dev, apdev):
+    """HT40 on 5 GHz with invalid channel pair"""
+    clear_scan_cache(apdev[0]['ifname'])
+    try:
+        params = { "ssid": "test-ht40",
+                   "hw_mode": "a",
+                   "channel": "40",
+                   "country_code": "US",
+                   "ht_capab": "[HT40+]"}
+        hapd = hostapd.add_ap(apdev[1]['ifname'], params, wait_enabled=False)
+        ev = hapd.wait_event(["AP-DISABLED"], timeout=10)
+        if not ev:
+            raise Exception("AP setup failure timed out")
+    finally:
+        subprocess.call(['iw', 'reg', 'set', '00'])

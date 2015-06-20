@@ -967,6 +967,13 @@ static int wpa_config_parse_group(const struct parse_data *data,
 	val = wpa_config_parse_cipher(line, value);
 	if (val == -1)
 		return -1;
+
+	/*
+	 * Backwards compatibility - filter out WEP ciphers that were previously
+	 * allowed.
+	 */
+	val &= ~(WPA_CIPHER_WEP104 | WPA_CIPHER_WEP40);
+
 	if (val & ~WPA_ALLOWED_GROUP_CIPHERS) {
 		wpa_printf(MSG_ERROR, "Line %d: not allowed group cipher "
 			   "(0x%x).", line, val);

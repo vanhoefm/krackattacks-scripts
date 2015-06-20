@@ -432,14 +432,10 @@ static int rsn_selector_to_bitfield(const u8 *s)
 {
 	if (RSN_SELECTOR_GET(s) == RSN_CIPHER_SUITE_NONE)
 		return WPA_CIPHER_NONE;
-	if (RSN_SELECTOR_GET(s) == RSN_CIPHER_SUITE_WEP40)
-		return WPA_CIPHER_WEP40;
 	if (RSN_SELECTOR_GET(s) == RSN_CIPHER_SUITE_TKIP)
 		return WPA_CIPHER_TKIP;
 	if (RSN_SELECTOR_GET(s) == RSN_CIPHER_SUITE_CCMP)
 		return WPA_CIPHER_CCMP;
-	if (RSN_SELECTOR_GET(s) == RSN_CIPHER_SUITE_WEP104)
-		return WPA_CIPHER_WEP104;
 #ifdef CONFIG_IEEE80211W
 	if (RSN_SELECTOR_GET(s) == RSN_CIPHER_SUITE_AES_128_CMAC)
 		return WPA_CIPHER_AES_128_CMAC;
@@ -499,8 +495,6 @@ static int rsn_key_mgmt_to_bitfield(const u8 *s)
 static int wpa_cipher_valid_group(int cipher)
 {
 	return wpa_cipher_valid_pairwise(cipher) ||
-		cipher == WPA_CIPHER_WEP104 ||
-		cipher == WPA_CIPHER_WEP40 ||
 		cipher == WPA_CIPHER_GTK_NOT_USED;
 }
 
@@ -695,14 +689,10 @@ static int wpa_selector_to_bitfield(const u8 *s)
 {
 	if (RSN_SELECTOR_GET(s) == WPA_CIPHER_SUITE_NONE)
 		return WPA_CIPHER_NONE;
-	if (RSN_SELECTOR_GET(s) == WPA_CIPHER_SUITE_WEP40)
-		return WPA_CIPHER_WEP40;
 	if (RSN_SELECTOR_GET(s) == WPA_CIPHER_SUITE_TKIP)
 		return WPA_CIPHER_TKIP;
 	if (RSN_SELECTOR_GET(s) == WPA_CIPHER_SUITE_CCMP)
 		return WPA_CIPHER_CCMP;
-	if (RSN_SELECTOR_GET(s) == WPA_CIPHER_SUITE_WEP104)
-		return WPA_CIPHER_WEP104;
 	return 0;
 }
 
@@ -1363,10 +1353,6 @@ int wpa_cipher_key_len(int cipher)
 		return 16;
 	case WPA_CIPHER_TKIP:
 		return 32;
-	case WPA_CIPHER_WEP104:
-		return 13;
-	case WPA_CIPHER_WEP40:
-		return 5;
 	}
 
 	return 0;
@@ -1382,9 +1368,6 @@ int wpa_cipher_rsc_len(int cipher)
 	case WPA_CIPHER_GCMP:
 	case WPA_CIPHER_TKIP:
 		return 6;
-	case WPA_CIPHER_WEP104:
-	case WPA_CIPHER_WEP40:
-		return 0;
 	}
 
 	return 0;
@@ -1404,9 +1387,6 @@ int wpa_cipher_to_alg(int cipher)
 		return WPA_ALG_GCMP;
 	case WPA_CIPHER_TKIP:
 		return WPA_ALG_TKIP;
-	case WPA_CIPHER_WEP104:
-	case WPA_CIPHER_WEP40:
-		return WPA_ALG_WEP;
 	case WPA_CIPHER_AES_128_CMAC:
 		return WPA_ALG_IGTK;
 	case WPA_CIPHER_BIP_GMAC_128:
@@ -1444,12 +1424,6 @@ u32 wpa_cipher_to_suite(int proto, int cipher)
 	if (cipher & WPA_CIPHER_TKIP)
 		return (proto == WPA_PROTO_RSN ?
 			RSN_CIPHER_SUITE_TKIP : WPA_CIPHER_SUITE_TKIP);
-	if (cipher & WPA_CIPHER_WEP104)
-		return (proto == WPA_PROTO_RSN ?
-			RSN_CIPHER_SUITE_WEP104 : WPA_CIPHER_SUITE_WEP104);
-	if (cipher & WPA_CIPHER_WEP40)
-		return (proto == WPA_PROTO_RSN ?
-			RSN_CIPHER_SUITE_WEP40 : WPA_CIPHER_SUITE_WEP40);
 	if (cipher & WPA_CIPHER_NONE)
 		return (proto == WPA_PROTO_RSN ?
 			RSN_CIPHER_SUITE_NONE : WPA_CIPHER_SUITE_NONE);
@@ -1553,10 +1527,6 @@ int wpa_pick_group_cipher(int ciphers)
 		return WPA_CIPHER_GTK_NOT_USED;
 	if (ciphers & WPA_CIPHER_TKIP)
 		return WPA_CIPHER_TKIP;
-	if (ciphers & WPA_CIPHER_WEP104)
-		return WPA_CIPHER_WEP104;
-	if (ciphers & WPA_CIPHER_WEP40)
-		return WPA_CIPHER_WEP40;
 	return -1;
 }
 
@@ -1649,20 +1619,6 @@ int wpa_write_ciphers(char *start, char *end, int ciphers, const char *delim)
 	}
 	if (ciphers & WPA_CIPHER_TKIP) {
 		ret = os_snprintf(pos, end - pos, "%sTKIP",
-				  pos == start ? "" : delim);
-		if (os_snprintf_error(end - pos, ret))
-			return -1;
-		pos += ret;
-	}
-	if (ciphers & WPA_CIPHER_WEP104) {
-		ret = os_snprintf(pos, end - pos, "%sWEP104",
-				  pos == start ? "" : delim);
-		if (os_snprintf_error(end - pos, ret))
-			return -1;
-		pos += ret;
-	}
-	if (ciphers & WPA_CIPHER_WEP40) {
-		ret = os_snprintf(pos, end - pos, "%sWEP40",
 				  pos == start ? "" : delim);
 		if (os_snprintf_error(end - pos, ret))
 			return -1;

@@ -727,11 +727,6 @@ int wpa_parse_wpa_ie_wpa(const u8 *wpa_ie, size_t wpa_ie_len,
 	data->num_pmkid = 0;
 	data->mgmt_group_cipher = 0;
 
-	if (wpa_ie_len == 0) {
-		/* No WPA IE - fail silently */
-		return -1;
-	}
-
 	if (wpa_ie_len < sizeof(struct wpa_ie_hdr)) {
 		wpa_printf(MSG_DEBUG, "%s: ie len too short %lu",
 			   __func__, (unsigned long) wpa_ie_len);

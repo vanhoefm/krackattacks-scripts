@@ -332,3 +332,197 @@ def test_sae_oom_wpas(dev, apdev):
         dev[0].connect("test-sae", psk="12345678", key_mgmt="SAE",
                        scan_freq="2412")
         dev[0].request("REMOVE_NETWORK all")
+
+def test_sae_proto_ecc(dev, apdev):
+    """SAE protocol testing (ECC)"""
+    if "SAE" not in dev[0].get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
+    params = hostapd.wpa2_params(ssid="test-sae",
+                                 passphrase="12345678")
+    params['wpa_key_mgmt'] = 'SAE'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+
+    dev[0].request("SET sae_groups 19")
+
+    tests = [ ("Confirm mismatch",
+               "1300" + "033d3635b39666ed427fd4a3e7d37acec2810afeaf1687f746a14163ff0e6d03" + "559cb8928db4ce4e3cbd6555e837591995e5ebe503ef36b503d9ca519d63728dd3c7c676b8e8081831b6bc3a64bdf136061a7de175e17d1965bfa41983ed02f8",
+               "0000800edebc3f260dc1fe7e0b20888af2b8a3316252ec37388a8504e25b73dc4240"),
+              ("Commit without even full cyclic group field",
+               "13",
+               None),
+              ("Too short commit",
+               "1300" + "033d3635b39666ed427fd4a3e7d37acec2810afeaf1687f746a14163ff0e6d03" + "559cb8928db4ce4e3cbd6555e837591995e5ebe503ef36b503d9ca519d63728dd3c7c676b8e8081831b6bc3a64bdf136061a7de175e17d1965bfa41983ed02",
+               None),
+              ("Invalid commit scalar (0)",
+               "1300" + "0000000000000000000000000000000000000000000000000000000000000000" + "559cb8928db4ce4e3cbd6555e837591995e5ebe503ef36b503d9ca519d63728dd3c7c676b8e8081831b6bc3a64bdf136061a7de175e17d1965bfa41983ed02f8",
+               None),
+              ("Invalid commit scalar (> r)",
+               "1300" + "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff" + "559cb8928db4ce4e3cbd6555e837591995e5ebe503ef36b503d9ca519d63728dd3c7c676b8e8081831b6bc3a64bdf136061a7de175e17d1965bfa41983ed02f8",
+               None),
+              ("Commit element not on curve",
+               "1300" + "033d3635b39666ed427fd4a3e7d37acec2810afeaf1687f746a14163ff0e6d03" + "559cb8928db4ce4e3cbd6555e837591995e5ebe503ef36b503d9ca519d63728d0000000000000000000000000000000000000000000000000000000000000000",
+               None),
+              ("Invalid commit element (y coordinate > P)",
+               "1300" + "033d3635b39666ed427fd4a3e7d37acec2810afeaf1687f746a14163ff0e6d03" + "559cb8928db4ce4e3cbd6555e837591995e5ebe503ef36b503d9ca519d63728dffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+               None),
+              ("Invalid commit element (x coordinate > P)",
+               "1300" + "033d3635b39666ed427fd4a3e7d37acec2810afeaf1687f746a14163ff0e6d03" + "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffd3c7c676b8e8081831b6bc3a64bdf136061a7de175e17d1965bfa41983ed02f8",
+               None),
+              ("Different group in commit",
+               "1400" + "033d3635b39666ed427fd4a3e7d37acec2810afeaf1687f746a14163ff0e6d03" + "559cb8928db4ce4e3cbd6555e837591995e5ebe503ef36b503d9ca519d63728dd3c7c676b8e8081831b6bc3a64bdf136061a7de175e17d1965bfa41983ed02f8",
+               None),
+              ("Too short confirm",
+               "1300" + "033d3635b39666ed427fd4a3e7d37acec2810afeaf1687f746a14163ff0e6d03" + "559cb8928db4ce4e3cbd6555e837591995e5ebe503ef36b503d9ca519d63728dd3c7c676b8e8081831b6bc3a64bdf136061a7de175e17d1965bfa41983ed02f8",
+               "0000800edebc3f260dc1fe7e0b20888af2b8a3316252ec37388a8504e25b73dc42")]
+    for (note, commit, confirm) in tests:
+        logger.info(note)
+        dev[0].scan_for_bss(bssid, freq=2412)
+        hapd.set("ext_mgmt_frame_handling", "1")
+        dev[0].connect("test-sae", psk="12345678", key_mgmt="SAE",
+                       scan_freq="2412", wait_connect=False)
+
+        logger.info("Commit")
+        for i in range(0, 10):
+            req = hapd.mgmt_rx()
+            if req is None:
+                raise Exception("MGMT RX wait timed out (commit)")
+            if req['subtype'] == 11:
+                break
+            req = None
+        if not req:
+            raise Exception("Authentication frame (commit) not received")
+
+        hapd.dump_monitor()
+        resp = {}
+        resp['fc'] = req['fc']
+        resp['da'] = req['sa']
+        resp['sa'] = req['da']
+        resp['bssid'] = req['bssid']
+        resp['payload'] = binascii.unhexlify("030001000000" + commit)
+        hapd.mgmt_tx(resp)
+
+        if confirm:
+            logger.info("Confirm")
+            for i in range(0, 10):
+                req = hapd.mgmt_rx()
+                if req is None:
+                    raise Exception("MGMT RX wait timed out (confirm)")
+                if req['subtype'] == 11:
+                    break
+                req = None
+            if not req:
+                raise Exception("Authentication frame (confirm) not received")
+
+            hapd.dump_monitor()
+            resp = {}
+            resp['fc'] = req['fc']
+            resp['da'] = req['sa']
+            resp['sa'] = req['da']
+            resp['bssid'] = req['bssid']
+            resp['payload'] = binascii.unhexlify("030002000000" + confirm)
+            hapd.mgmt_tx(resp)
+
+        time.sleep(0.1)
+        dev[0].request("REMOVE_NETWORK all")
+        hapd.set("ext_mgmt_frame_handling", "0")
+        hapd.dump_monitor()
+
+def test_sae_proto_ffc(dev, apdev):
+    """SAE protocol testing (FFC)"""
+    if "SAE" not in dev[0].get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
+    params = hostapd.wpa2_params(ssid="test-sae",
+                                 passphrase="12345678")
+    params['wpa_key_mgmt'] = 'SAE'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+
+    dev[0].request("SET sae_groups 2")
+
+    tests = [ ("Confirm mismatch",
+               "0200" + "0c70519d874e3e4930a917cc5e17ea7a26028211159f217bab28b8d6c56691805e49f03249b2c6e22c7c9f86b30e04ccad2deedd5e5108ae07b737c00001c59cd0eb08b1dfc7f1b06a1542e2b6601a963c066e0c65940983a03917ae57a101ce84b5cbbc76ff33ebb990aac2e54aa0f0ab6ec0a58113d927683502b2cb2347d2" + "a8c00117493cdffa5dd671e934bc9cb1a69f39e25e9dd9cd9afd3aea2441a0f5491211c7ba50a753563f9ce943b043557cb71193b28e86ed9544f4289c471bf91b70af5c018cf4663e004165b0fd0bc1d8f3f78adf42eee92bcbc55246fd3ee9f107ab965dc7d4986f23eb71d616ebfe6bfe0a6c1ac5dc1718acee17c9a17486",
+               "0000f3116a9731f1259622e3eb55d4b3b50ba16f8c5f5565b28e609b180c51460251"),
+              ("Too short commit",
+               "0200" + "0c70519d874e3e4930a917cc5e17ea7a26028211159f217bab28b8d6c56691805e49f03249b2c6e22c7c9f86b30e04ccad2deedd5e5108ae07b737c00001c59cd0eb08b1dfc7f1b06a1542e2b6601a963c066e0c65940983a03917ae57a101ce84b5cbbc76ff33ebb990aac2e54aa0f0ab6ec0a58113d927683502b2cb2347d2" + "a8c00117493cdffa5dd671e934bc9cb1a69f39e25e9dd9cd9afd3aea2441a0f5491211c7ba50a753563f9ce943b043557cb71193b28e86ed9544f4289c471bf91b70af5c018cf4663e004165b0fd0bc1d8f3f78adf42eee92bcbc55246fd3ee9f107ab965dc7d4986f23eb71d616ebfe6bfe0a6c1ac5dc1718acee17c9a174",
+               None),
+              ("Invalid element (0) in commit",
+               "0200" + "0c70519d874e3e4930a917cc5e17ea7a26028211159f217bab28b8d6c56691805e49f03249b2c6e22c7c9f86b30e04ccad2deedd5e5108ae07b737c00001c59cd0eb08b1dfc7f1b06a1542e2b6601a963c066e0c65940983a03917ae57a101ce84b5cbbc76ff33ebb990aac2e54aa0f0ab6ec0a58113d927683502b2cb2347d2" + "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+               None),
+              ("Invalid element (1) in commit",
+               "0200" + "0c70519d874e3e4930a917cc5e17ea7a26028211159f217bab28b8d6c56691805e49f03249b2c6e22c7c9f86b30e04ccad2deedd5e5108ae07b737c00001c59cd0eb08b1dfc7f1b06a1542e2b6601a963c066e0c65940983a03917ae57a101ce84b5cbbc76ff33ebb990aac2e54aa0f0ab6ec0a58113d927683502b2cb2347d2" + "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001",
+               None),
+              ("Invalid element (> P) in commit",
+               "0200" + "0c70519d874e3e4930a917cc5e17ea7a26028211159f217bab28b8d6c56691805e49f03249b2c6e22c7c9f86b30e04ccad2deedd5e5108ae07b737c00001c59cd0eb08b1dfc7f1b06a1542e2b6601a963c066e0c65940983a03917ae57a101ce84b5cbbc76ff33ebb990aac2e54aa0f0ab6ec0a58113d927683502b2cb2347d2" + "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+               None) ]
+    for (note, commit, confirm) in tests:
+        logger.info(note)
+        dev[0].scan_for_bss(bssid, freq=2412)
+        hapd.set("ext_mgmt_frame_handling", "1")
+        dev[0].connect("test-sae", psk="12345678", key_mgmt="SAE",
+                       scan_freq="2412", wait_connect=False)
+
+        logger.info("Commit")
+        for i in range(0, 10):
+            req = hapd.mgmt_rx()
+            if req is None:
+                raise Exception("MGMT RX wait timed out (commit)")
+            if req['subtype'] == 11:
+                break
+            req = None
+        if not req:
+            raise Exception("Authentication frame (commit) not received")
+
+        hapd.dump_monitor()
+        resp = {}
+        resp['fc'] = req['fc']
+        resp['da'] = req['sa']
+        resp['sa'] = req['da']
+        resp['bssid'] = req['bssid']
+        resp['payload'] = binascii.unhexlify("030001000000" + commit)
+        hapd.mgmt_tx(resp)
+
+        if confirm:
+            logger.info("Confirm")
+            for i in range(0, 10):
+                req = hapd.mgmt_rx()
+                if req is None:
+                    raise Exception("MGMT RX wait timed out (confirm)")
+                if req['subtype'] == 11:
+                    break
+                req = None
+            if not req:
+                raise Exception("Authentication frame (confirm) not received")
+
+            hapd.dump_monitor()
+            resp = {}
+            resp['fc'] = req['fc']
+            resp['da'] = req['sa']
+            resp['sa'] = req['da']
+            resp['bssid'] = req['bssid']
+            resp['payload'] = binascii.unhexlify("030002000000" + confirm)
+            hapd.mgmt_tx(resp)
+
+        time.sleep(0.1)
+        dev[0].request("REMOVE_NETWORK all")
+        hapd.set("ext_mgmt_frame_handling", "0")
+        hapd.dump_monitor()
+
+def test_sae_no_ffc_by_default(dev, apdev):
+    """SAE and default groups rejecting FFC"""
+    if "SAE" not in dev[0].get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
+    params = hostapd.wpa2_params(ssid="test-sae", passphrase="12345678")
+    params['wpa_key_mgmt'] = 'SAE'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].request("SET sae_groups 5")
+    dev[0].connect("test-sae", psk="12345678", key_mgmt="SAE", scan_freq="2412",
+                   wait_connect=False)
+    ev = dev[0].wait_event(["SME: Trying to authenticate"], timeout=3)
+    if ev is None:
+        raise Exception("Did not try to authenticate")
+    ev = dev[0].wait_event(["SME: Trying to authenticate"], timeout=3)
+    if ev is None:
+        raise Exception("Did not try to authenticate (2)")
+    dev[0].request("REMOVE_NETWORK all")

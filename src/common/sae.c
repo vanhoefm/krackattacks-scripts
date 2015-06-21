@@ -506,15 +506,12 @@ int sae_prepare_commit(const u8 *addr1, const u8 *addr2,
 		       const u8 *password, size_t password_len,
 		       struct sae_data *sae)
 {
-	if (sae->tmp == NULL)
-		return -1;
-	if (sae->tmp->ec && sae_derive_pwe_ecc(sae, addr1, addr2, password,
-					  password_len) < 0)
-		return -1;
-	if (sae->tmp->dh && sae_derive_pwe_ffc(sae, addr1, addr2, password,
-					  password_len) < 0)
-		return -1;
-	if (sae_derive_commit(sae) < 0)
+	if (sae->tmp == NULL ||
+	    (sae->tmp->ec && sae_derive_pwe_ecc(sae, addr1, addr2, password,
+						password_len) < 0) ||
+	    (sae->tmp->dh && sae_derive_pwe_ffc(sae, addr1, addr2, password,
+						password_len) < 0) ||
+	    sae_derive_commit(sae) < 0)
 		return -1;
 	return 0;
 }

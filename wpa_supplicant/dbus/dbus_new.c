@@ -3668,6 +3668,13 @@ void wpas_dbus_signal_p2p_find_stopped(struct wpa_supplicant *wpa_s)
 }
 
 
+/**
+ * wpas_dbus_signal_peer_groups_changed - Send peer group change property signal
+ * @wpa_s: %wpa_supplicant network interface data
+ * @dev_addr: P2P Device Address
+ *
+ * Notify listeners about peer Groups property changes.
+ */
 void wpas_dbus_signal_peer_groups_changed(struct wpa_supplicant *wpa_s,
 					  const u8 *dev_addr)
 {

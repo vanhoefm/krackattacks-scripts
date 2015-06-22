@@ -3337,6 +3337,11 @@ err:
 }
 
 
+/**
+ * wpas_dbus_unregister_interface - Unregister the interface from D-Bus
+ * @wpa_s: wpa_supplicant interface structure
+ * Returns: 0 on success, -1 on failure
+ */
 int wpas_dbus_unregister_interface(struct wpa_supplicant *wpa_s)
 {
 	struct wpas_dbus_priv *ctrl_iface;

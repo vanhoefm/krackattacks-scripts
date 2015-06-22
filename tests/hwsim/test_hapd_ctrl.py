@@ -435,3 +435,17 @@ def test_hapd_ctrl_set_error_cases(dev, apdev):
     for e in no_err:
         if "OK" not in hapd.request("SET " + e):
             raise Exception("Unexpected SET failure: '%s'" % e)
+
+def test_hapd_ctrl_global(dev, apdev):
+    """hostapd and GET ctrl_iface command"""
+    ssid = "hapd-ctrl"
+    params = { "ssid": ssid }
+    ifname = apdev[0]['ifname']
+    hapd = hostapd.add_ap(ifname, params)
+    hapd_global = hostapd.HostapdGlobal()
+    res = hapd_global.request("IFNAME=" + ifname + " PING")
+    if "PONG" not in res:
+            raise Exception("Could not ping hostapd interface " + ifname + " via global control interface")
+    res = hapd_global.request("IFNAME=" + ifname + " GET version")
+    if "FAIL" in res:
+           raise Exception("Could not get hostapd version for " + ifname + " via global control interface")

@@ -44,6 +44,9 @@ class HostapdGlobal:
                 break
         return None
 
+    def request(self, cmd):
+        return self.ctrl.request(cmd)
+
     def add(self, ifname):
         res = self.ctrl.request("ADD " + ifname + " " + hapd_ctrl)
         if not "OK" in res:

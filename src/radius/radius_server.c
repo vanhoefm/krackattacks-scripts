@@ -1711,8 +1711,10 @@ radius_server_init(struct radius_server_conf *conf)
 	data->ipv6 = conf->ipv6;
 	if (conf->pac_opaque_encr_key) {
 		data->pac_opaque_encr_key = os_malloc(16);
-		os_memcpy(data->pac_opaque_encr_key, conf->pac_opaque_encr_key,
-			  16);
+		if (data->pac_opaque_encr_key) {
+			os_memcpy(data->pac_opaque_encr_key,
+				  conf->pac_opaque_encr_key, 16);
+		}
 	}
 	if (conf->eap_fast_a_id) {
 		data->eap_fast_a_id = os_malloc(conf->eap_fast_a_id_len);

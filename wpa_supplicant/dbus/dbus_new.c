@@ -3282,6 +3282,11 @@ static const struct wpa_dbus_signal_desc wpas_dbus_interface_signals[] = {
 };
 
 
+/**
+ * wpas_dbus_register_interface - Register an interface with D-Bus
+ * @wpa_s: wpa_supplicant interface structure
+ * Returns: 0 on success, -1 on failure
+ */
 int wpas_dbus_register_interface(struct wpa_supplicant *wpa_s)
 {
 

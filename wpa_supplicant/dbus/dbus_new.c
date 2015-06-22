@@ -3506,7 +3506,7 @@ static void wpas_dbus_signal_peer(struct wpa_supplicant *wpa_s,
 /**
  * wpas_dbus_signal_peer_found - Send a peer found signal
  * @wpa_s: %wpa_supplicant network interface data
- * @dev: peer device object
+ * @dev_addr: Peer P2P Device Address
  *
  * Notify listeners about find a p2p peer device found
  */
@@ -3521,7 +3521,7 @@ void wpas_dbus_signal_peer_device_found(struct wpa_supplicant *wpa_s,
 /**
  * wpas_dbus_signal_peer_lost - Send a peer lost signal
  * @wpa_s: %wpa_supplicant network interface data
- * @dev: peer device object
+ * @dev_addr: Peer P2P Device Address
  *
  * Notify listeners about lost a p2p peer device
  */

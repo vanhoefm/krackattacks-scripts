@@ -252,8 +252,8 @@ def test_ap_vht160(dev, apdev):
         params = { "ssid": "vht2",
                    "country_code": "FI",
                    "hw_mode": "a",
-                   "channel": "100",
-                   "ht_capab": "[HT40+]",
+                   "channel": "104",
+                   "ht_capab": "[HT40-]",
                    "ieee80211n": "1",
                    "ieee80211ac": "1",
                    "vht_oper_chwidth": "2",
@@ -289,7 +289,7 @@ def test_ap_vht160(dev, apdev):
         ev = wait_dfs_event(hapd2, "DFS-CAC-COMPLETED", 70)
         if "success=1" not in ev:
             raise Exception("CAC failed(2)")
-        if "freq=5500" not in ev:
+        if "freq=5520" not in ev:
             raise Exception("Unexpected DFS freq result(2)")
 
         ev = hapd2.wait_event(["AP-ENABLED"], timeout=5)
@@ -301,7 +301,7 @@ def test_ap_vht160(dev, apdev):
             raise Exception("Unexpected interface state(2)")
 
         freq = hapd2.get_status_field("freq")
-        if freq != "5500":
+        if freq != "5520":
             raise Exception("Unexpected frequency(2)")
 
         dev[0].connect("vht", key_mgmt="NONE", scan_freq="5180")
@@ -311,10 +311,10 @@ def test_ap_vht160(dev, apdev):
             raise Exception("Unexpected SIGNAL_POLL value(1): " + str(sig))
         if "WIDTH=160 MHz" not in sig:
             raise Exception("Unexpected SIGNAL_POLL value(2): " + str(sig))
-        dev[1].connect("vht2", key_mgmt="NONE", scan_freq="5500")
+        dev[1].connect("vht2", key_mgmt="NONE", scan_freq="5520")
         hwsim_utils.test_connectivity(dev[1], hapd2)
         sig = dev[1].request("SIGNAL_POLL").splitlines()
-        if "FREQUENCY=5500" not in sig:
+        if "FREQUENCY=5520" not in sig:
             raise Exception("Unexpected SIGNAL_POLL value(1): " + str(sig))
         if "WIDTH=160 MHz" not in sig:
             raise Exception("Unexpected SIGNAL_POLL value(2): " + str(sig))

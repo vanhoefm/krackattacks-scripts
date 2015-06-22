@@ -1424,12 +1424,10 @@ err:
 
 
 /**
- *
- * Method to emit Invitation Result signal based on status and
- * bssid
- * @status: Status of the Invite request. 0 for success, other
- * for errors
- * @bssid : Basic Service Set Identifier
+ * wpas_dbus_signal_p2p_invitation_result - Emit InvitationResult signal
+ * @wpa_s: %wpa_supplicant network interface data
+ * @status: Status of invitation process
+ * @bssid: Basic Service Set Identifier
  */
 void wpas_dbus_signal_p2p_invitation_result(struct wpa_supplicant *wpa_s,
 					    int status, const u8 *bssid)

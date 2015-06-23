@@ -575,3 +575,45 @@ def test_sae_reflection_attack_ecc(dev, apdev):
 def test_sae_reflection_attack_ffc(dev, apdev):
     """SAE reflection attack (FFC)"""
     sae_reflection_attack(apdev[0], dev[0], 5)
+
+def test_sae_anti_clogging_proto(dev, apdev):
+    """SAE anti clogging protocol testing"""
+    if "SAE" not in dev[0].get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
+    params = hostapd.wpa2_params(ssid="test-sae",
+                                 passphrase="no-knowledge-of-passphrase")
+    params['wpa_key_mgmt'] = 'SAE'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+    bssid = apdev[0]['bssid']
+
+    dev[0].scan_for_bss(bssid, freq=2412)
+    hapd.set("ext_mgmt_frame_handling", "1")
+
+    dev[0].request("SET sae_groups ")
+    dev[0].connect("test-sae", psk="anti-cloggign", key_mgmt="SAE",
+                   scan_freq="2412", wait_connect=False)
+
+    # Commit
+    for i in range(0, 10):
+        req = hapd.mgmt_rx()
+        if req is None:
+            raise Exception("MGMT RX wait timed out")
+        if req['subtype'] == 11:
+            break
+        req = None
+    if not req:
+        raise Exception("Authentication frame not received")
+
+    resp = {}
+    resp['fc'] = req['fc']
+    resp['da'] = req['sa']
+    resp['sa'] = req['da']
+    resp['bssid'] = req['bssid']
+    resp['payload'] = binascii.unhexlify("030001004c00" + "ffff00")
+    hapd.mgmt_tx(resp)
+
+    # Confirm (not received due to DH group being rejected)
+    req = hapd.mgmt_rx(timeout=0.5)
+    if req is not None:
+        if req['subtype'] == 11:
+            raise Exception("Unexpected Authentication frame seen")

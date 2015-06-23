@@ -600,7 +600,7 @@ static void ieee802_1x_encapsulate_radius(struct hostapd_data *hapd,
 		goto fail;
 	}
 
-	if (eap && !radius_msg_add_eap(msg, eap, len)) {
+	if (!radius_msg_add_eap(msg, eap, len)) {
 		wpa_printf(MSG_INFO, "Could not add EAP-Message");
 		goto fail;
 	}

@@ -124,9 +124,7 @@ static struct crypto_bignum * sae_get_rand(struct sae_data *sae)
 		return NULL;
 
 	for (;;) {
-		if (iter++ > 100)
-			return NULL;
-		if (random_get_bytes(val, order_len) < 0)
+		if (iter++ > 100 || random_get_bytes(val, order_len) < 0)
 			return NULL;
 		if (order_len_bits % 8)
 			buf_shift_right(val, order_len, 8 - order_len_bits % 8);

@@ -2389,8 +2389,8 @@ p2p_reply_probe(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 		return P2P_PREQ_NOT_PROCESSED;
 	}
 
-	resp = NULL;
-	resp = wpabuf_put(buf, resp->u.probe_resp.variable - (u8 *) resp);
+	resp = wpabuf_put(buf, offsetof(struct ieee80211_mgmt,
+					u.probe_resp.variable));
 
 	resp->frame_control = host_to_le16((WLAN_FC_TYPE_MGMT << 2) |
 					   (WLAN_FC_STYPE_PROBE_RESP << 4));

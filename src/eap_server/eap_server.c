@@ -745,7 +745,7 @@ static void erp_send_finish_reauth(struct eap_sm *sm,
 	wpabuf_free(sm->lastReqData);
 	sm->lastReqData = NULL;
 
-	if (flags & 0x80) {
+	if ((flags & 0x80) || !erp) {
 		sm->eap_if.eapFail = TRUE;
 		wpa_msg(sm->msg_ctx, MSG_INFO, WPA_EVENT_EAP_FAILURE
 			MACSTR, MAC2STR(sm->peer_addr));

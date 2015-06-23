@@ -1472,8 +1472,7 @@ static int mp_init_multi(mp_int *mp, ...)
                 cur_arg = va_arg(clean_args, mp_int*);
             }
             va_end(clean_args);
-            res = MP_MEM;
-            break;
+            return MP_MEM;
         }
         n++;
         cur_arg = va_arg(args, mp_int*);

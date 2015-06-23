@@ -19,6 +19,7 @@ WpaGuiApp::WpaGuiApp(int &argc, char **argv) :
 	argc(argc),
 	argv(argv)
 {
+	w = NULL;
 }
 
 #if !defined(QT_NO_SESSIONMANAGER) && QT_VERSION < 0x050000

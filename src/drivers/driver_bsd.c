@@ -861,8 +861,7 @@ bad:
 	if (drv->sock >= 0)
 		close(drv->sock);
 	os_free(drv->event_buf);
-	if (drv != NULL)
-		os_free(drv);
+	os_free(drv);
 	return NULL;
 }
 

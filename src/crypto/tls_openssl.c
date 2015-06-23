@@ -29,10 +29,6 @@
 #include "sha1.h"
 #include "tls.h"
 
-#if defined(SSL_CTX_get_app_data) && defined(SSL_CTX_set_app_data)
-#define OPENSSL_SUPPORTS_CTX_APP_DATA
-#endif
-
 #if OPENSSL_VERSION_NUMBER < 0x10000000L
 /* ERR_remove_thread_state replaces ERR_remove_state and the latter is
  * deprecated. However, OpenSSL 0.9.8 doesn't include
@@ -792,24 +788,17 @@ void * tls_init(const struct tls_config *conf)
 		PKCS12_PBE_add();
 #endif  /* PKCS12_FUNCS */
 	} else {
-#ifdef OPENSSL_SUPPORTS_CTX_APP_DATA
-		/* Newer OpenSSL can store app-data per-SSL */
 		context = tls_context_new(conf);
 		if (context == NULL)
 			return NULL;
-#else /* OPENSSL_SUPPORTS_CTX_APP_DATA */
-		context = tls_global;
-#endif /* OPENSSL_SUPPORTS_CTX_APP_DATA */
 	}
 	tls_openssl_ref_count++;
 
 	ssl = SSL_CTX_new(SSLv23_method());
 	if (ssl == NULL) {
 		tls_openssl_ref_count--;
-#ifdef OPENSSL_SUPPORTS_CTX_APP_DATA
 		if (context != tls_global)
 			os_free(context);
-#endif /* OPENSSL_SUPPORTS_CTX_APP_DATA */
 		if (tls_openssl_ref_count == 0) {
 			os_free(tls_global);
 			tls_global = NULL;
@@ -821,9 +810,7 @@ void * tls_init(const struct tls_config *conf)
 	SSL_CTX_set_options(ssl, SSL_OP_NO_SSLv3);
 
 	SSL_CTX_set_info_callback(ssl, ssl_info_cb);
-#ifdef OPENSSL_SUPPORTS_CTX_APP_DATA
 	SSL_CTX_set_app_data(ssl, context);
-#endif /* OPENSSL_SUPPORTS_CTX_APP_DATA */
 
 #ifndef OPENSSL_NO_ENGINE
 	wpa_printf(MSG_DEBUG, "ENGINE: Loading dynamic engine");
@@ -861,11 +848,9 @@ void * tls_init(const struct tls_config *conf)
 void tls_deinit(void *ssl_ctx)
 {
 	SSL_CTX *ssl = ssl_ctx;
-#ifdef OPENSSL_SUPPORTS_CTX_APP_DATA
 	struct tls_context *context = SSL_CTX_get_app_data(ssl);
 	if (context != tls_global)
 		os_free(context);
-#endif /* OPENSSL_SUPPORTS_CTX_APP_DATA */
 	SSL_CTX_free(ssl);
 
 	tls_openssl_ref_count--;
@@ -1060,11 +1045,7 @@ struct tls_connection * tls_connection_init(void *ssl_ctx)
 	SSL_CTX *ssl = ssl_ctx;
 	struct tls_connection *conn;
 	long options;
-#ifdef OPENSSL_SUPPORTS_CTX_APP_DATA
 	struct tls_context *context = SSL_CTX_get_app_data(ssl);
-#else /* OPENSSL_SUPPORTS_CTX_APP_DATA */
-	struct tls_context *context = tls_global;
-#endif /* OPENSSL_SUPPORTS_CTX_APP_DATA */
 
 	conn = os_zalloc(sizeof(*conn));
 	if (conn == NULL)

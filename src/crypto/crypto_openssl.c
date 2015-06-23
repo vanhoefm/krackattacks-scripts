@@ -1326,4 +1326,13 @@ int crypto_ec_point_is_on_curve(struct crypto_ec *e,
 	return EC_POINT_is_on_curve(e->group, (const EC_POINT *) p, e->bnctx);
 }
 
+
+int crypto_ec_point_cmp(const struct crypto_ec *e,
+			const struct crypto_ec_point *a,
+			const struct crypto_ec_point *b)
+{
+	return EC_POINT_cmp(e->group, (const EC_POINT *) a,
+			    (const EC_POINT *) b, e->bnctx);
+}
+
 #endif /* CONFIG_ECC */

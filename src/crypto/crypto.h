@@ -776,4 +776,15 @@ int crypto_ec_point_is_at_infinity(struct crypto_ec *e,
 int crypto_ec_point_is_on_curve(struct crypto_ec *e,
 				const struct crypto_ec_point *p);
 
+/**
+ * crypto_ec_point_cmp - Compare two EC points
+ * @e: EC context from crypto_ec_init()
+ * @a: EC point
+ * @b: EC point
+ * Returns: 0 on equal, non-zero otherwise
+ */
+int crypto_ec_point_cmp(const struct crypto_ec *e,
+			const struct crypto_ec_point *a,
+			const struct crypto_ec_point *b);
+
 #endif /* CRYPTO_H */

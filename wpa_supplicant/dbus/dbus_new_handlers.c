@@ -214,7 +214,7 @@ dbus_bool_t set_network_properties(struct wpa_supplicant *wpa_s,
 		} else if (entry.type == DBUS_TYPE_STRING) {
 			if (should_quote_opt(entry.key)) {
 				size = os_strlen(entry.str_value);
-				if (size <= 0)
+				if (size == 0)
 					goto error;
 
 				size += 3;

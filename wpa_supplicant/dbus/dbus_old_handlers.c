@@ -884,7 +884,7 @@ DBusMessage * wpas_dbus_iface_set_network(DBusMessage *message,
 			if (should_quote_opt(entry.key)) {
 				size = os_strlen(entry.str_value);
 				/* Zero-length option check */
-				if (size <= 0)
+				if (size == 0)
 					goto error;
 				size += 3;  /* For quotes and terminator */
 				value = os_zalloc(size);

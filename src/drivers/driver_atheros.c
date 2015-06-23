@@ -1682,8 +1682,7 @@ bad:
 		l2_packet_deinit(drv->sock_xmit);
 	if (drv->ioctl_sock >= 0)
 		close(drv->ioctl_sock);
-	if (drv != NULL)
-		free(drv);
+	os_free(drv);
 	return NULL;
 }
 
@@ -1711,7 +1710,7 @@ atheros_deinit(void *priv)
 		l2_packet_deinit(drv->sock_xmit);
 	if (drv->sock_raw)
 		l2_packet_deinit(drv->sock_raw);
-	free(drv);
+	os_free(drv);
 }
 
 static int

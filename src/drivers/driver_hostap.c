@@ -322,7 +322,7 @@ static int hostap_send_eapol(void *priv, const u8 *addr, const u8 *data,
 			   "failed: %d (%s)",
 			   (unsigned long) len, errno, strerror(errno));
 	}
-	free(hdr);
+	os_free(hdr);
 
 	return res;
 }
@@ -471,18 +471,18 @@ static int hostap_get_seqnum(const char *ifname, void *priv, const u8 *addr,
 	param = (struct prism2_hostapd_param *) buf;
 	param->cmd = PRISM2_GET_ENCRYPTION;
 	if (addr == NULL)
-		memset(param->sta_addr, 0xff, ETH_ALEN);
+		os_memset(param->sta_addr, 0xff, ETH_ALEN);
 	else
-		memcpy(param->sta_addr, addr, ETH_ALEN);
+		os_memcpy(param->sta_addr, addr, ETH_ALEN);
 	param->u.crypt.idx = idx;
 
 	if (hostapd_ioctl(drv, param, blen)) {
 		printf("Failed to get encryption.\n");
 		ret = -1;
 	} else {
-		memcpy(seq, param->u.crypt.seq, 8);
+		os_memcpy(seq, param->u.crypt.seq, 8);
 	}
-	free(buf);
+	os_free(buf);
 
 	return ret;
 }

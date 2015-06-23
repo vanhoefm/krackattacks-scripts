@@ -500,7 +500,7 @@ DBusMessage * wpas_dbus_iface_capabilities(DBusMessage *message,
 	/* EAP methods */
 	eap_methods = eap_get_names_as_string_array(&num_items);
 	if (eap_methods) {
-		dbus_bool_t success = FALSE;
+		dbus_bool_t success;
 		size_t i = 0;
 
 		success = wpa_dbus_dict_append_string_array(

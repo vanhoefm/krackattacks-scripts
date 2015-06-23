@@ -915,7 +915,34 @@ u16 sae_parse_commit(struct sae_data *sae, const u8 *data, size_t len,
 		return res;
 
 	/* commit-element */
-	return sae_parse_commit_element(sae, pos, end);
+	res = sae_parse_commit_element(sae, pos, end);
+	if (res != WLAN_STATUS_SUCCESS)
+		return res;
+
+	/*
+	 * Check whether peer-commit-scalar and PEER-COMMIT-ELEMENT are same as
+	 * the values we sent which would be evidence of a reflection attack.
+	 */
+	if (!sae->tmp->own_commit_scalar ||
+	    crypto_bignum_cmp(sae->tmp->own_commit_scalar,
+			      sae->peer_commit_scalar) != 0 ||
+	    (sae->tmp->dh &&
+	     (!sae->tmp->own_commit_element_ffc ||
+	      crypto_bignum_cmp(sae->tmp->own_commit_element_ffc,
+				sae->tmp->peer_commit_element_ffc) != 0)) ||
+	    (sae->tmp->ec &&
+	     (!sae->tmp->own_commit_element_ecc ||
+	      crypto_ec_point_cmp(sae->tmp->ec,
+				  sae->tmp->own_commit_element_ecc,
+				  sae->tmp->peer_commit_element_ecc) != 0)))
+		return WLAN_STATUS_SUCCESS; /* scalars/elements are different */
+
+	/*
+	 * This is a reflection attack - return special value to trigger caller
+	 * to silently discard the frame instead of replying with a specific
+	 * status code.
+	 */
+	return SAE_SILENTLY_DISCARD;
 }
 
 

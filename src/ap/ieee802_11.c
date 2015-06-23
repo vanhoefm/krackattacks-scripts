@@ -769,6 +769,12 @@ static void handle_auth_sae(struct hostapd_data *hapd, struct sta_info *sta,
 					((const u8 *) mgmt) + len -
 					mgmt->u.auth.variable, &token,
 					&token_len, hapd->conf->sae_groups);
+		if (resp == SAE_SILENTLY_DISCARD) {
+			wpa_printf(MSG_DEBUG,
+				   "SAE: Drop commit message from " MACSTR " due to reflection attack",
+				   MAC2STR(sta->addr));
+			return;
+		}
 		if (token && check_sae_token(hapd, sta->addr, token, token_len)
 		    < 0) {
 			wpa_printf(MSG_DEBUG, "SAE: Drop commit message with "

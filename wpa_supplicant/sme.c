@@ -698,6 +698,8 @@ static int sme_sae_auth(struct wpa_supplicant *wpa_s, u16 auth_transaction,
 		return -1;
 
 	if (auth_transaction == 1) {
+		u16 res;
+
 		groups = wpa_s->conf->sae_groups;
 
 		wpa_dbg(wpa_s, MSG_DEBUG, "SME SAE commit");
@@ -708,8 +710,14 @@ static int sme_sae_auth(struct wpa_supplicant *wpa_s, u16 auth_transaction,
 			return -1;
 		if (groups && groups[0] <= 0)
 			groups = NULL;
-		if (sae_parse_commit(&wpa_s->sme.sae, data, len, NULL, NULL,
-				     groups) != WLAN_STATUS_SUCCESS)
+		res = sae_parse_commit(&wpa_s->sme.sae, data, len, NULL, NULL,
+				       groups);
+		if (res == SAE_SILENTLY_DISCARD) {
+			wpa_printf(MSG_DEBUG,
+				   "SAE: Drop commit message due to reflection attack");
+			return 0;
+		}
+		if (res != WLAN_STATUS_SUCCESS)
 			return -1;
 
 		if (sae_process_commit(&wpa_s->sme.sae) < 0) {

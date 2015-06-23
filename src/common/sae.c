@@ -488,9 +488,8 @@ static int sae_derive_commit(struct sae_data *sae)
 	crypto_bignum_mod(sae->tmp->own_commit_scalar, sae->tmp->order,
 			  sae->tmp->own_commit_scalar);
 
-	if (sae->tmp->ec && sae_derive_commit_element_ecc(sae, mask) < 0)
-		goto fail;
-	if (sae->tmp->dh && sae_derive_commit_element_ffc(sae, mask) < 0)
+	if ((sae->tmp->ec && sae_derive_commit_element_ecc(sae, mask) < 0) ||
+	    (sae->tmp->dh && sae_derive_commit_element_ffc(sae, mask) < 0))
 		goto fail;
 
 	ret = 0;

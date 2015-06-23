@@ -347,8 +347,13 @@ static void ieee80211n_scan_channels_2g4(struct hostapd_iface *iface,
 		sec_freq = pri_freq + 20;
 	else
 		sec_freq = pri_freq - 20;
-	affected_start = (pri_freq + sec_freq) / 2 - 25;
-	affected_end = (pri_freq + sec_freq) / 2 + 25;
+	/*
+	 * Note: Need to find the PRI channel also in cases where the affected
+	 * channel is the SEC channel of a 40 MHz BSS, so need to include the
+	 * scanning coverage here to be 40 MHz from the center frequency.
+	 */
+	affected_start = (pri_freq + sec_freq) / 2 - 40;
+	affected_end = (pri_freq + sec_freq) / 2 + 40;
 	wpa_printf(MSG_DEBUG, "40 MHz affected channel range: [%d,%d] MHz",
 		   affected_start, affected_end);
 

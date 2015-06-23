@@ -557,7 +557,7 @@ void p2p_buf_add_service_instance(struct wpabuf *buf, struct p2p_data *p2p,
 				  struct p2ps_advertisement *adv_list)
 {
 	struct p2ps_advertisement *adv;
-	int p2ps_wildcard, found = 0;
+	int p2ps_wildcard;
 	size_t total_len;
 	struct wpabuf *tmp_buf = NULL;
 	u8 *pos, *attr_len, *ie_len = NULL;
@@ -593,7 +593,6 @@ void p2p_buf_add_service_instance(struct wpabuf *buf, struct p2p_data *p2p,
 		/* org.wi-fi.wfds match found */
 		p2p_buf_add_service_info(tmp_buf, p2p, 0, 0, P2PS_WILD_HASH_STR,
 					 &ie_len, &pos, &total_len, attr_len);
-		found++;
 	}
 
 	/* add advertised service info of matching services */
@@ -613,12 +612,12 @@ void p2p_buf_add_service_instance(struct wpabuf *buf, struct p2p_data *p2p,
 						     &total_len,
 						     attr_len))
 				break;
-			found++;
+
 			test += P2PS_HASH_LEN;
 		}
 	}
 
-	if (found)
+	if (total_len)
 		wpabuf_put_buf(buf, tmp_buf);
 	wpabuf_free(tmp_buf);
 }

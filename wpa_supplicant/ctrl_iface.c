@@ -4595,6 +4595,14 @@ static int p2p_ctrl_find(struct wpa_supplicant *wpa_s, char *cmd)
 	} else
 		search_delay = wpas_p2p_search_delay(wpa_s);
 
+	pos = os_strstr(cmd, "freq=");
+	if (pos) {
+		pos += 5;
+		freq = atoi(pos);
+		if (freq <= 0)
+			return -1;
+	}
+
 	/* Must be searched for last, because it adds nul termination */
 	pos = os_strstr(cmd, " seek=");
 	if (pos)
@@ -4615,14 +4623,6 @@ static int p2p_ctrl_find(struct wpa_supplicant *wpa_s, char *cmd)
 	if (seek_count > P2P_MAX_QUERY_HASH) {
 		seek[0] = NULL;
 		seek_count = 1;
-	}
-
-	pos = os_strstr(cmd, "freq=");
-	if (pos) {
-		pos += 5;
-		freq = atoi(pos);
-		if (freq <= 0)
-			return -1;
 	}
 
 	return wpas_p2p_find(wpa_s, timeout, type, _dev_type != NULL, _dev_type,

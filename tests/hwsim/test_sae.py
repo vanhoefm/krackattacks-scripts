@@ -39,6 +39,45 @@ def test_sae(dev, apdev):
     if "[WPA2-SAE-CCMP]" not in bss['flags']:
         raise Exception("Unexpected BSS flags: " + bss['flags'])
 
+def test_sae_password_ecc(dev, apdev):
+    """SAE with number of different passwords (ECC)"""
+    if "SAE" not in dev[0].get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
+    params = hostapd.wpa2_params(ssid="test-sae",
+                                 passphrase="12345678")
+    params['wpa_key_mgmt'] = 'SAE'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].request("SET sae_groups 19")
+
+    for i in range(10):
+        password = "12345678-" + str(i)
+        hapd.set("wpa_passphrase", password)
+        dev[0].connect("test-sae", psk=password, key_mgmt="SAE",
+                       scan_freq="2412")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
+def test_sae_password_ffc(dev, apdev):
+    """SAE with number of different passwords (FFC)"""
+    if "SAE" not in dev[0].get_capability("auth_alg"):
+        raise HwsimSkip("SAE not supported")
+    params = hostapd.wpa2_params(ssid="test-sae",
+                                 passphrase="12345678")
+    params['wpa_key_mgmt'] = 'SAE'
+    params['sae_groups'] = '22'
+    hapd = hostapd.add_ap(apdev[0]['ifname'], params)
+
+    dev[0].request("SET sae_groups 22")
+
+    for i in range(10):
+        password = "12345678-" + str(i)
+        hapd.set("wpa_passphrase", password)
+        dev[0].connect("test-sae", psk=password, key_mgmt="SAE",
+                       scan_freq="2412")
+        dev[0].request("REMOVE_NETWORK all")
+        dev[0].wait_disconnected()
+
 def test_sae_pmksa_caching(dev, apdev):
     """SAE and PMKSA caching"""
     if "SAE" not in dev[0].get_capability("auth_alg"):

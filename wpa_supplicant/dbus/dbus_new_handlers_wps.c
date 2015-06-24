@@ -53,7 +53,7 @@ static int wpas_dbus_handler_wps_role(DBusMessage *message,
 	else if (os_strcmp(val, "registrar") == 0)
 		params->role = 2;
 	else {
-		wpa_printf(MSG_DEBUG, "dbus: WPS.Start - Uknown role %s", val);
+		wpa_printf(MSG_DEBUG, "dbus: WPS.Start - Unknown role %s", val);
 		*reply = wpas_dbus_error_invalid_args(message, val);
 		return -1;
 	}
@@ -113,7 +113,7 @@ static int wpas_dbus_handler_wps_bssid(DBusMessage *message,
 	dbus_message_iter_recurse(&variant_iter, &array_iter);
 	dbus_message_iter_get_fixed_array(&array_iter, &params->bssid, &len);
 	if (len != ETH_ALEN) {
-		wpa_printf(MSG_DEBUG, "dbus: WPS.Stsrt - Wrong Bssid length %d",
+		wpa_printf(MSG_DEBUG, "dbus: WPS.Start - Wrong Bssid length %d",
 			   len);
 		*reply = wpas_dbus_error_invalid_args(message,
 						      "Bssid is wrong length");

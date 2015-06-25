@@ -112,7 +112,7 @@ static void usage(void)
 		"\n"
 		"usage: hostapd_cli [-p<path>] [-i<ifname>] [-hvB] "
 		"[-a<path>] \\\n"
-		"                   [-G<ping interval>] [command..]\n"
+		"                   [-P<pid file>] [-G<ping interval>] [command..]\n"
 		"\n"
 		"Options:\n"
 		"   -h           help (show this usage text)\n"
@@ -1317,7 +1317,7 @@ int main(int argc, char *argv[])
 		return -1;
 
 	for (;;) {
-		c = getopt(argc, argv, "a:BhG:i:p:v");
+		c = getopt(argc, argv, "a:BhG:i:p:P:v");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -1342,6 +1342,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'p':
 			ctrl_iface_dir = optarg;
+			break;
+		case 'P':
+			pid_file = optarg;
 			break;
 		default:
 			usage();

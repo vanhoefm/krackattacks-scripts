@@ -1138,6 +1138,26 @@ struct crypto_ec * crypto_ec_init(int group)
 	case 26:
 		nid = NID_secp224r1;
 		break;
+#ifdef NID_brainpoolP224r1
+	case 27:
+		nid = NID_brainpoolP224r1;
+		break;
+#endif /* NID_brainpoolP224r1 */
+#ifdef NID_brainpoolP256r1
+	case 28:
+		nid = NID_brainpoolP256r1;
+		break;
+#endif /* NID_brainpoolP256r1 */
+#ifdef NID_brainpoolP384r1
+	case 29:
+		nid = NID_brainpoolP384r1;
+		break;
+#endif /* NID_brainpoolP384r1 */
+#ifdef NID_brainpoolP512r1
+	case 30:
+		nid = NID_brainpoolP512r1;
+		break;
+#endif /* NID_brainpoolP512r1 */
 	default:
 		return NULL;
 	}

@@ -1107,6 +1107,13 @@ static int hostapd_ctrl_iface_get_config(struct hostapd_data *hapd,
 	}
 #endif /* CONFIG_WPS */
 
+	if (hapd->conf->wpa) {
+		ret = os_snprintf(pos, end - pos, "wpa=%d\n", hapd->conf->wpa);
+		if (os_snprintf_error(end - pos, ret))
+			return pos - buf;
+		pos += ret;
+	}
+
 	if (hapd->conf->wpa && hapd->conf->wpa_key_mgmt) {
 		ret = os_snprintf(pos, end - pos, "key_mgmt=");
 		if (os_snprintf_error(end - pos, ret))

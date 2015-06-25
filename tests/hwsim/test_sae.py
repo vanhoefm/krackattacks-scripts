@@ -127,11 +127,12 @@ def test_sae_groups(dev, apdev):
     """SAE with all supported groups"""
     if "SAE" not in dev[0].get_capability("auth_alg"):
         raise HwsimSkip("SAE not supported")
-    # This would be the full list of supported groups, but groups 14-16
-    # (2048-4096 bit MODP) are a bit too slow on some VMs and can result in
-    # hitting mac80211 authentication timeout, so skip them for now.
-    #sae_groups = [ 19, 25, 26, 20, 21, 2, 5, 14, 15, 16, 22, 23, 24 ]
-    sae_groups = [ 19, 25, 26, 20, 21, 2, 5, 22, 23, 24 ]
+    # This is the full list of supported groups, but groups 14-16 (2048-4096 bit
+    # MODP) and group 21 (521-bit random ECP group) are a bit too slow on some
+    # VMs and can result in hitting the mac80211 authentication timeout, so
+    # allow them to fail and just report such failures in the debug log.
+    sae_groups = [ 19, 25, 26, 20, 21, 2, 5, 14, 15, 16, 22, 23, 24 ]
+    heavy_groups = [ 14, 15, 16 ]
     groups = [str(g) for g in sae_groups]
     params = hostapd.wpa2_params(ssid="test-sae-groups",
                                  passphrase="12345678")
@@ -143,10 +144,23 @@ def test_sae_groups(dev, apdev):
         logger.info("Testing SAE group " + g)
         dev[0].request("SET sae_groups " + g)
         id = dev[0].connect("test-sae-groups", psk="12345678", key_mgmt="SAE",
-                            scan_freq="2412")
+                            scan_freq="2412", wait_connect=False)
+        if int(g) in heavy_groups:
+            ev = dev[0].wait_event(["CTRL-EVENT-CONNECTED"], timeout=5)
+            if ev is None:
+                logger.info("No connection with heavy SAE group %s did not connect - likely hitting timeout in mac80211" % g)
+                dev[0].remove_network(id)
+                time.sleep(0.1)
+                dev[0].dump_monitor()
+                continue
+            logger.info("Connection with heavy SAE group " + g)
+        else:
+            dev[0].wait_connected(timeout=10, error="Connection timed out with group " + g)
         if dev[0].get_status_field('sae_group') != g:
             raise Exception("Expected SAE group not used")
         dev[0].remove_network(id)
+        dev[0].wait_disconnected()
+        dev[0].dump_monitor()
 
 def test_sae_group_nego(dev, apdev):
     """SAE group negotiation"""

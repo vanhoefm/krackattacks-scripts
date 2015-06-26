@@ -423,12 +423,20 @@ static int sae_derive_pwe_ecc(struct sae_data *sae, const u8 *addr1,
 	u8 addrs[2 * ETH_ALEN];
 	const u8 *addr[2];
 	size_t len[2];
+	u8 dummy_password[32];
+	size_t dummy_password_len;
 	int pwd_seed_odd = 0;
 	u8 prime[SAE_MAX_ECC_PRIME_LEN];
 	size_t prime_len;
 	struct crypto_bignum *x = NULL, *qr, *qnr;
 	size_t bits;
 	int res;
+
+	dummy_password_len = password_len;
+	if (dummy_password_len > sizeof(dummy_password))
+		dummy_password_len = sizeof(dummy_password);
+	if (random_get_bytes(dummy_password, dummy_password_len) < 0)
+		return -1;
 
 	prime_len = sae->tmp->prime_len;
 	if (crypto_bignum_to_bin(sae->tmp->prime, prime, sizeof(prime),
@@ -449,8 +457,9 @@ static int sae_derive_pwe_ecc(struct sae_data *sae, const u8 *addr1,
 
 	/*
 	 * H(salt, ikm) = HMAC-SHA256(salt, ikm)
+	 * base = password
 	 * pwd-seed = H(MAX(STA-A-MAC, STA-B-MAC) || MIN(STA-A-MAC, STA-B-MAC),
-	 *              password || counter)
+	 *              base || counter)
 	 */
 	sae_pwd_seed_key(addr1, addr2, addrs);
 
@@ -490,6 +499,13 @@ static int sae_derive_pwe_ecc(struct sae_data *sae, const u8 *addr1,
 			x = x_cand;
 			pwd_seed_odd = pwd_seed[SHA256_MAC_LEN - 1] & 0x01;
 			os_memset(pwd_seed, 0, sizeof(pwd_seed));
+
+			/*
+			 * Use a dummy password for the following rounds, if
+			 * any.
+			 */
+			addr[0] = dummy_password;
+			len[0] = dummy_password_len;
 		} else if (res > 0) {
 			crypto_bignum_deinit(x_cand, 1);
 		}

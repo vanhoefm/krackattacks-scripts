@@ -1412,7 +1412,8 @@ int crypto_ec_point_is_at_infinity(struct crypto_ec *e,
 int crypto_ec_point_is_on_curve(struct crypto_ec *e,
 				const struct crypto_ec_point *p)
 {
-	return EC_POINT_is_on_curve(e->group, (const EC_POINT *) p, e->bnctx);
+	return EC_POINT_is_on_curve(e->group, (const EC_POINT *) p,
+				    e->bnctx) == 1;
 }
 
 

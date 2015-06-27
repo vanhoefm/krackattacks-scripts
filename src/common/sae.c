@@ -1037,7 +1037,8 @@ static u16 sae_parse_commit_element_ecc(struct sae_data *sae, const u8 *pos,
 static u16 sae_parse_commit_element_ffc(struct sae_data *sae, const u8 *pos,
 					const u8 *end)
 {
-	struct crypto_bignum *res;
+	struct crypto_bignum *res, *one;
+	const u8 one_bin[1] = { 0x01 };
 
 	if (pos + sae->tmp->prime_len > end) {
 		wpa_printf(MSG_DEBUG, "SAE: Not enough data for "
@@ -1052,18 +1053,23 @@ static u16 sae_parse_commit_element_ffc(struct sae_data *sae, const u8 *pos,
 		crypto_bignum_init_set(pos, sae->tmp->prime_len);
 	if (sae->tmp->peer_commit_element_ffc == NULL)
 		return WLAN_STATUS_UNSPECIFIED_FAILURE;
-	if (crypto_bignum_is_zero(sae->tmp->peer_commit_element_ffc) ||
+	/* 1 < element < p - 1 */
+	res = crypto_bignum_init();
+	one = crypto_bignum_init_set(one_bin, sizeof(one_bin));
+	if (!res || !one ||
+	    crypto_bignum_sub(sae->tmp->prime, one, res) ||
+	    crypto_bignum_is_zero(sae->tmp->peer_commit_element_ffc) ||
 	    crypto_bignum_is_one(sae->tmp->peer_commit_element_ffc) ||
-	    crypto_bignum_cmp(sae->tmp->peer_commit_element_ffc,
-			      sae->tmp->prime) >= 0) {
+	    crypto_bignum_cmp(sae->tmp->peer_commit_element_ffc, res) >= 0) {
+		crypto_bignum_deinit(res, 0);
+		crypto_bignum_deinit(one, 0);
 		wpa_printf(MSG_DEBUG, "SAE: Invalid peer element");
 		return WLAN_STATUS_UNSPECIFIED_FAILURE;
 	}
+	crypto_bignum_deinit(one, 0);
 
 	/* scalar-op(r, ELEMENT) = 1 modulo p */
-	res = crypto_bignum_init();
-	if (res == NULL ||
-	    crypto_bignum_exptmod(sae->tmp->peer_commit_element_ffc,
+	if (crypto_bignum_exptmod(sae->tmp->peer_commit_element_ffc,
 				  sae->tmp->order, sae->tmp->prime, res) < 0 ||
 	    !crypto_bignum_is_one(res)) {
 		wpa_printf(MSG_DEBUG, "SAE: Invalid peer element (scalar-op)");

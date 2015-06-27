@@ -240,10 +240,20 @@ def test_gas_fragment(dev, apdev):
 
     dev[0].scan_for_bss(apdev[0]['bssid'], freq="2412", force_scan=True)
     dev[0].request("FETCH_ANQP")
+    ev = dev[0].wait_event(["GAS-QUERY-DONE"], timeout=1)
+    if ev is None:
+        raise Exception("No GAS-QUERY-DONE event")
+    if "result=SUCCESS" not in ev:
+        raise Exception("Unexpected GAS result: " + ev)
     for i in range(0, 13):
         ev = dev[0].wait_event(["RX-ANQP", "RX-HS20-ANQP"], timeout=5)
         if ev is None:
             raise Exception("Operation timed out")
+    ev = dev[0].wait_event(["ANQP-QUERY-DONE"], timeout=1)
+    if ev is None:
+        raise Exception("No ANQP-QUERY-DONE event")
+    if "result=SUCCESS" not in ev:
+        raise Exception("Unexpected ANQP result: " + ev)
 
 def test_gas_comeback_delay(dev, apdev):
     """GAS fragmentation"""

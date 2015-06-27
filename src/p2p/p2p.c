@@ -2315,6 +2315,19 @@ p2p_reply_probe(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 		u8 i;
 		int p2ps_svc_found = 0;
 
+		p2p_dbg(p2p, "in_listen=%d drv_in_listen=%d when received P2PS Probe Request at %u MHz; own Listen channel %u, pending listen freq %u MHz",
+			p2p->in_listen, p2p->drv_in_listen, rx_freq,
+			p2p->cfg->channel, p2p->pending_listen_freq);
+
+		if (!p2p->in_listen && !p2p->drv_in_listen &&
+		    p2p->pending_listen_freq && rx_freq &&
+		    rx_freq != p2p->pending_listen_freq) {
+			p2p_dbg(p2p, "Do not reply to Probe Request frame that was received on %u MHz while waiting to start Listen state on %u MHz",
+				rx_freq, p2p->pending_listen_freq);
+			p2p_parse_free(&msg);
+			return P2P_PREQ_NOT_LISTEN;
+		}
+
 		for (i = 0; i < msg.service_hash_count; i++) {
 			if (p2p_service_find_asp(p2p, hash)) {
 				p2p_dbg(p2p, "Service Hash match found: "

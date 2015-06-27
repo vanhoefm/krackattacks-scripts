@@ -650,23 +650,38 @@ static int sae_derive_commit(struct sae_data *sae)
 {
 	struct crypto_bignum *mask;
 	int ret = -1;
+	unsigned int counter = 0;
 
-	mask = sae_get_rand_and_mask(sae);
-	if (mask == NULL) {
-		wpa_printf(MSG_DEBUG, "SAE: Could not get rand/mask");
-		return -1;
-	}
+	do {
+		counter++;
+		if (counter > 100) {
+			/*
+			 * This cannot really happen in practice if the random
+			 * number generator is working. Anyway, to avoid even a
+			 * theoretical infinite loop, break out after 100
+			 * attemps.
+			 */
+			return -1;
+		}
 
-	/* commit-scalar = (rand + mask) modulo r */
-	if (!sae->tmp->own_commit_scalar) {
-		sae->tmp->own_commit_scalar = crypto_bignum_init();
-		if (!sae->tmp->own_commit_scalar)
-			goto fail;
-	}
-	crypto_bignum_add(sae->tmp->sae_rand, mask,
-			  sae->tmp->own_commit_scalar);
-	crypto_bignum_mod(sae->tmp->own_commit_scalar, sae->tmp->order,
-			  sae->tmp->own_commit_scalar);
+		mask = sae_get_rand_and_mask(sae);
+		if (mask == NULL) {
+			wpa_printf(MSG_DEBUG, "SAE: Could not get rand/mask");
+			return -1;
+		}
+
+		/* commit-scalar = (rand + mask) modulo r */
+		if (!sae->tmp->own_commit_scalar) {
+			sae->tmp->own_commit_scalar = crypto_bignum_init();
+			if (!sae->tmp->own_commit_scalar)
+				goto fail;
+		}
+		crypto_bignum_add(sae->tmp->sae_rand, mask,
+				  sae->tmp->own_commit_scalar);
+		crypto_bignum_mod(sae->tmp->own_commit_scalar, sae->tmp->order,
+				  sae->tmp->own_commit_scalar);
+	} while (crypto_bignum_is_zero(sae->tmp->own_commit_scalar) ||
+		 crypto_bignum_is_one(sae->tmp->own_commit_scalar));
 
 	if ((sae->tmp->ec && sae_derive_commit_element_ecc(sae, mask) < 0) ||
 	    (sae->tmp->dh && sae_derive_commit_element_ffc(sae, mask) < 0))
@@ -954,8 +969,9 @@ static u16 sae_parse_commit_scalar(struct sae_data *sae, const u8 **pos,
 		return WLAN_STATUS_UNSPECIFIED_FAILURE;
 	}
 
-	/* 0 < scalar < r */
+	/* 1 < scalar < r */
 	if (crypto_bignum_is_zero(peer_scalar) ||
+	    crypto_bignum_is_one(peer_scalar) ||
 	    crypto_bignum_cmp(peer_scalar, sae->tmp->order) >= 0) {
 		wpa_printf(MSG_DEBUG, "SAE: Invalid peer scalar");
 		crypto_bignum_deinit(peer_scalar, 0);
